@@ -8,8 +8,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Animation/Graph/AnimGraphAsset.h"
-#include "Engine/Animation/Graph/AnimGraphPlayer.h"
+#include "Engine/Animation/Graph/AnimationGraphAsset.h"
+#include "Engine/Animation/Graph/AnimationGraphPlayer.h"
 #include "Engine/Animation/Sprite/SpriteClipPlayable.h"
 #include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -17,21 +17,21 @@
 
 namespace sw
 {
-    class IAnimNotifyListener;
+    class IAnimationNotifyListener;
     class SpriteAnimatorComponent;
     class SpriteClipAsset;
     class SpriteComponent;
 
     /**
      * @class SpriteAnimatorClipSource
-     * @brief 상태 기계(`AnimGraphPlayer`)가 상태 이름을 재생 항목으로 해석할 때 애니메이터의 구간(`SpriteClipPlayable`)을 그 이름으로 맞춰 줍니다.
+     * @brief 상태 기계(`AnimationGraphPlayer`)가 상태 이름을 재생 항목으로 해석할 때 애니메이터의 구간(`SpriteClipPlayable`)을 그 이름으로 맞춰 줍니다.
      * @details 리플렉션 컴포넌트는 기반 클래스 하나만 두므로 인터페이스는 이 작은 객체가 구현한다(스켈레탈 애니메이터의 `SkeletalAnimatorBinding` 과 같은 방식이다).
      */
-    class SW_API SpriteAnimatorClipSource final : public IAnimPlayableSource
+    class SW_API SpriteAnimatorClipSource final : public IAnimationPlayableSource
     {
     public:
         explicit SpriteAnimatorClipSource( SpriteAnimatorComponent& owner );
-        const IAnimPlayable* findPlayable( const hashed_string& name ) const override;
+        const IAnimationPlayable* findPlayable( const hashed_string& name ) const override;
 
     private:
         SpriteAnimatorComponent& _owner;
@@ -66,7 +66,7 @@ namespace sw
      * @class SpriteAnimatorComponent
      * @brief 같은 오브젝트의 `SpriteComponent` 가 가진 클립(`.sprite.json`)의 프레임을 시간에 맞춰 넘깁니다.
      * @details 애니메이션 이름은 클립의 이름 붙은 구간(`SpriteClipAsset::findFrameRange`)을 고르고, 프레임 수와 프레임별 시간도 클립에서 가져온다.
-     *          프레임에 시간이 없으면(0) `_frameRate` 로 넘긴다. 그래프(`_animGraphPath`)는 애니메이션 이름과 "끝나면 다음"을 정한다.
+     *          프레임에 시간이 없으면(0) `_frameRate` 로 넘긴다. 그래프(`_animationGraphPath`)는 애니메이션 이름과 "끝나면 다음"을 정한다.
      *          넘긴 프레임은 스프라이트의 프레임 번호(`SpriteComponent::setClipFrame`)로 간다.
      *
      *          **트랜스폼 키(`transformKeys`).** 클립에 키가 있으면 재생 중 스프라이트의 로컬 위치 x, y 와 Z 축 회전을 키 값으로 정한다
@@ -99,15 +99,15 @@ namespace sw
          */
         void onTick( float32 deltaTime ) override;
         /**
-         * @brief 그래프 경로(`_animGraphPath`)가 바뀌면(인스펙터, 에셋 핫 리로드 알림. 값이 같아도) 그래프를 다시 읽습니다.
+         * @brief 그래프 경로(`_animationGraphPath`)가 바뀌면(인스펙터, 에셋 핫 리로드 알림. 값이 같아도) 그래프를 다시 읽습니다.
          * @details 재생 중이면 현재 애니메이션이 새 그래프에도 있을 때 그대로 이어 가고, 없으면 새 목록의 첫 애니메이션을 처음부터 재생한다.
          */
         void onPropertyChanged( hashed_string propertyName ) override;
 
         /** @brief 이름이 일치하는 구간을 처음부터 재생합니다. 반복 여부는 클립의 구간이 정합니다(구간 이름이 없는 클립은 반복합니다). */
-        void play( const string& animName );
+        void play( const string& animationName );
         /** @brief 이름이 일치하는 구간을 처음부터 재생합니다. 반복 여부를 직접 정합니다(그래프의 "끝나면 다음"은 반복하지 않습니다). */
-        void play( const string& animName, bool loop );
+        void play( const string& animationName, bool loop );
         FUNCTION( Category = "Playback", DisplayName = "Stop", CallInEditor )
         void stop();
         FUNCTION( Category = "Playback", DisplayName = "Pause", CallInEditor )
@@ -118,8 +118,8 @@ namespace sw
         void setFrame( int32 frame );
 
         string        getCurrentAnimation() const;
-        void          setCurrentAnimation( const string& anim );
-        const string& getAnimGraphPath() const { return _animGraphPath; }
+        void          setCurrentAnimation( const string& animation );
+        const string& getAnimationGraphPath() const { return _animationGraphPath; }
 
         bool isRepeating() const;
         void setRepeat( bool bLoop );
@@ -138,14 +138,14 @@ namespace sw
         bool  isPlaying() const;
         bool  isPaused() const;
         /**
-         * @brief 알림을 받는 쪽을 등록합니다(소유하지 않으며, nullptr 이면 해제합니다). 틱(워커)마다 지나간 구간 알림을 넘깁니다(`AnimNotifyFrame::_bFromTick`).
+         * @brief 알림을 받는 쪽을 등록합니다(소유하지 않으며, nullptr 이면 해제합니다). 틱(워커)마다 지나간 구간 알림을 넘깁니다(`AnimationNotifyFrame::_bFromTick`).
          * @details 스프라이트는 재생 항목 하나를 구간마다 다시 쓰므로, 구간이 바뀐 틱에는 `_bRestarted` 를 켠다(받는 쪽이 이전 구간의 열린 알림을 닫는다).
          */
-        void                 setNotifyListener( IAnimNotifyListener* pListener ) { _pNotifyListener = pListener; }
-        IAnimNotifyListener* getNotifyListener() const { return _pNotifyListener; }
+        void                      setNotifyListener( IAnimationNotifyListener* pListener ) { _pNotifyListener = pListener; }
+        IAnimationNotifyListener* getNotifyListener() const { return _pNotifyListener; }
 
     private:
-        void tryLoadAnimGraph();
+        void tryLoadAnimationGraph();
         /** @brief 상태 기계가 다른 상태로 넘어갔으면(끝나면 다음) 이름, 반복, 구간을 따라 맞춥니다. */
         void syncStateFromPlayer();
         /** @brief 같은 오브젝트의 스프라이트입니다. 없으면 nullptr 입니다. */
@@ -156,7 +156,7 @@ namespace sw
          * @brief 이름이 일치하는 구간(시작, 개수, 반복)을 클립에서 찾아 `_playable` 에 맞춥니다. 이름이 클립에 없으면 한 번 알리고 프레임 0 하나로 둡니다.
          * @return 클립이 정한 반복 여부입니다(구간 이름이 없는 클립은 반복).
          */
-        bool configurePlayable( const string& animName );
+        bool configurePlayable( const string& animationName );
         /** @brief 클립이 없을 때와 시간이 없는 프레임이 머무는 시간(1 / `_frameRate`)입니다. */
         float32 getFallbackFrameSeconds() const;
         /** @brief 스프라이트에 현재 프레임(구간 시작 + 현재 프레임)을 넘깁니다. */
@@ -166,22 +166,22 @@ namespace sw
         /** @brief 클립의 트랜스폼 키를 현재 시간에서 읽어 스프라이트의 로컬 위치 x, y 와 Z 회전에 씁니다. 키가 없거나 스프라이트가 루트이면 쓰지 않습니다. */
         void applyTransformKeys();
 
-        PROPERTY( Category = "Animation", DisplayName = "Animation Graph", AssetPath, AssetType = "AnimGraph", Tooltip = "Animation graph asset used by this animator" )
-        string         _animGraphPath;
-        AnimGraphAsset _graph;
+        PROPERTY( Category = "Animation", DisplayName = "Animation Graph", AssetPath, AssetType = "AnimationGraph", Tooltip = "Animation graph asset used by this animator" )
+        string              _animationGraphPath;
+        AnimationGraphAsset _graph;
         PROPERTY( Category = "Animation", DisplayName = "Current Animation", Tooltip = "Currently playing animation name" )
         string _currentAnimation;
         PROPERTY( Category = "Animation", DisplayName = "Animation List", Tooltip = "Available animation names" )
         vector<string> _listAnimation;
         PROPERTY( Category = "Playback", DisplayName = "Frame Rate", Tooltip = "Playback speed in FPS for frames without their own duration", Min = 1.0, Max = 120.0,
                   Units = fps )
-        float32                  _frameRate;
-        SpriteAnimatorClipSource _clipSource;      ///< 상태 이름을 `_playable` 로 해석한다
-        SpriteClipPlayable       _playable;        ///< 현재 구간(재생 항목)이다. 스프라이트는 섞지 않으므로 하나면 된다
-        AnimGraphPlayer          _graphPlayer;     ///< 시간, 반복, 끝, 다음 상태를 처리한다. 스켈레탈 애니메이터와 같은 코드다
-        vector<AnimFiredNotify>  _listFiredNotify; ///< 이번 틱에 울린 알림(받는 쪽이 있을 때만 모은다)
-        IAnimNotifyListener*     _pNotifyListener;
-        SpriteAnimatorLODClient  _lodClient;
+        float32                      _frameRate;
+        SpriteAnimatorClipSource     _clipSource;      ///< 상태 이름을 `_playable` 로 해석한다
+        SpriteClipPlayable           _playable;        ///< 현재 구간(재생 항목)이다. 스프라이트는 섞지 않으므로 하나면 된다
+        AnimationGraphPlayer         _graphPlayer;     ///< 시간, 반복, 끝, 다음 상태를 처리한다. 스켈레탈 애니메이터와 같은 코드다
+        vector<AnimationFiredNotify> _listFiredNotify; ///< 이번 틱에 울린 알림(받는 쪽이 있을 때만 모은다)
+        IAnimationNotifyListener*    _pNotifyListener;
+        SpriteAnimatorLODClient      _lodClient;
         PROPERTY( Category = "Playback", DisplayName = "Current Frame", Tooltip = "Current playback frame index within the animation", Min = 0.0 )
         int32 _currentFrame;
         PROPERTY( Category = "Playback", DisplayName = "Total Frames", Tooltip = "Frame count of the active animation, taken from the sprite clip", ReadOnly )

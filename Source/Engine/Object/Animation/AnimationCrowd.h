@@ -21,7 +21,7 @@
 
 namespace sw
 {
-    class AnimClip;
+    class AnimationClip;
     class JSONValue;
     class Mesh;
     class Skeleton;
@@ -39,15 +39,15 @@ namespace sw
     };
 
     /**
-     * @struct AnimSharedPoseRequest
+     * @struct AnimationSharedPoseRequest
      * @brief 유닛이 "이번 프레임 포즈를 나눌 수 있다"고 답할 때의 내용입니다(`IAnimationPhaseTask::describeSharedPose`).
      */
-    struct AnimSharedPoseRequest
+    struct AnimationSharedPoseRequest
     {
-        const AnimClip* _pClip{ nullptr };              ///< 지금 재생하는 반복 클립 하나
-        float32         _time{ 0.0f };                  ///< 유닛 자신의 클립 시간(초)이다. 변형 구간을 고르는 데 쓴다
-        float32         _playRate{ 1.0f };              ///< 재생 속도 배율(키의 일부)
-        uint8           _bAnchorRootMotion{ SW_FALSE }; ///< 루트 모션 본을 시작 위치에 고정하는지 나타낸다(키의 일부)
+        const AnimationClip* _pClip{ nullptr };              ///< 지금 재생하는 반복 클립 하나
+        float32              _time{ 0.0f };                  ///< 유닛 자신의 클립 시간(초)이다. 변형 구간을 고르는 데 쓴다
+        float32              _playRate{ 1.0f };              ///< 재생 속도 배율(키의 일부)
+        uint8                _bAnchorRootMotion{ SW_FALSE }; ///< 루트 모션 본을 시작 위치에 고정하는지 나타낸다(키의 일부)
     };
 } // namespace sw
 
@@ -84,12 +84,12 @@ namespace sw
      */
     struct AnimationCrowdBucketKey
     {
-        const Skeleton* _pSkeleton{ nullptr };
-        uint64          _skinDataID{ 0 };
-        const AnimClip* _pClip{ nullptr };
-        float32         _playRate{ 1.0f };
-        uint32          _variation{ 0 };
-        uint8           _bAnchorRootMotion{ SW_FALSE };
+        const Skeleton*      _pSkeleton{ nullptr };
+        uint64               _skinDataID{ 0 };
+        const AnimationClip* _pClip{ nullptr };
+        float32              _playRate{ 1.0f };
+        uint32               _variation{ 0 };
+        uint8                _bAnchorRootMotion{ SW_FALSE };
 
         bool operator==( const AnimationCrowdBucketKey& other ) const
         {
@@ -130,7 +130,7 @@ namespace sw
     class SW_API AnimationCrowdBucket
     {
     public:
-        AnimationCrowdBucket( const AnimationCrowdBucketKey& key, shared_ptr<const Skeleton> skeleton, shared_ptr<const AnimClip> clip, shared_ptr<Mesh> mesh );
+        AnimationCrowdBucket( const AnimationCrowdBucketKey& key, shared_ptr<const Skeleton> skeleton, shared_ptr<const AnimationClip> clip, shared_ptr<Mesh> mesh );
         AnimationCrowdBucket( const AnimationCrowdBucket& )            = delete;
         AnimationCrowdBucket& operator=( const AnimationCrowdBucket& ) = delete;
 
@@ -144,7 +144,7 @@ namespace sw
         const vector<float4x4>& getModelSpaceTransforms() const { return _listModelSpace; }
         const vector<float4x4>& getSkinPalette() const { return _listSkinPalette; }
         const Skeleton&         getSkeleton() const { return *_skeleton; }
-        const AnimClip&         getClip() const { return *_clip; }
+        const AnimationClip&    getClip() const { return *_clip; }
         /** @brief 군중 시계 @p clock 에서 이 묶음의 클립 시간을 반환합니다. */
         float32 computeTime( float64 clock ) const;
         /** @brief 이번 프레임 멤버 수(나눔, VAT 아님)와 그중 보이는 수입니다. */
@@ -158,21 +158,21 @@ namespace sw
     private:
         friend class AnimationCrowd;
 
-        AnimationCrowdBucketKey    _key;
-        shared_ptr<const Skeleton> _skeleton;
-        shared_ptr<const AnimClip> _clip;
-        shared_ptr<Mesh>           _mesh;
-        vector<int32>              _listTrackToBone;
-        Pose                       _localPose;
-        Pose                       _scratchTrackPose;
-        vector<float4x4>           _listModelSpace;
-        vector<float4x4>           _listSkinPalette;
-        float64                    _idleSince;
-        float64                    _variationSpan; ///< 변형 한 구간의 시간 폭이다(클립 길이 / 구간 수)
-        uint32                     _memberCount;
-        uint32                     _visibleMemberCount;
-        uint32                     _referenceCount;
-        uint32                     _evaluationCount;
+        AnimationCrowdBucketKey         _key;
+        shared_ptr<const Skeleton>      _skeleton;
+        shared_ptr<const AnimationClip> _clip;
+        shared_ptr<Mesh>                _mesh;
+        vector<int32>                   _listTrackToBone;
+        Pose                            _localPose;
+        Pose                            _scratchTrackPose;
+        vector<float4x4>                _listModelSpace;
+        vector<float4x4>                _listSkinPalette;
+        float64                         _idleSince;
+        float64                         _variationSpan; ///< 변형 한 구간의 시간 폭이다(클립 길이 / 구간 수)
+        uint32                          _memberCount;
+        uint32                          _visibleMemberCount;
+        uint32                          _referenceCount;
+        uint32                          _evaluationCount;
     };
 } // namespace sw
 
@@ -200,8 +200,8 @@ namespace sw
          * @brief 요청에 맞는 묶음을 찾거나 만듭니다. @p pCurrent 가 같은 상태(변형만 다름)면 그대로 둡니다. 시간이 같이 흐르므로 위상이 어긋나지 않습니다.
          * @return 묶음(소유는 군중). 스킨 원본이 없거나 클립 길이가 0 이면 nullptr 입니다.
          */
-        AnimationCrowdBucket* joinBucket( AnimationCrowdBucket* pCurrent, const AnimSharedPoseRequest& request, const shared_ptr<const Skeleton>& skeleton,
-                                          const shared_ptr<Mesh>& sourceMesh, const shared_ptr<const AnimClip>& clip );
+        AnimationCrowdBucket* joinBucket( AnimationCrowdBucket* pCurrent, const AnimationSharedPoseRequest& request, const shared_ptr<const Skeleton>& skeleton,
+                                          const shared_ptr<Mesh>& sourceMesh, const shared_ptr<const AnimationClip>& clip );
         /** @brief 유닛이 묶음을 가리키기 시작하거나 그쳤음을 알립니다(참조 수이며, 가리키는 묶음은 지우지 않습니다). */
         static void addReference( AnimationCrowdBucket* pBucket );
         static void releaseReference( AnimationCrowdBucket* pBucket );
@@ -222,7 +222,7 @@ namespace sw
          * @details 같은 (원본, 클립)을 쓰는 먼 캐릭터가 모두 이 메시 하나를 그려 한 배치가 된다.
          * @param meshPath 스킨 원본의 메시 경로(`.mesh`)입니다. 쿠킹본 이름을 만드는 데 씁니다. 비었으면 베이크만 합니다.
          */
-        shared_ptr<Mesh> findVertexAnimationMesh( const shared_ptr<Mesh>& sourceMesh, const Skeleton& skeleton, const AnimClip& clip, bool bAnchorRootMotion,
+        shared_ptr<Mesh> findVertexAnimationMesh( const shared_ptr<Mesh>& sourceMesh, const Skeleton& skeleton, const AnimationClip& clip, bool bAnchorRootMotion,
                                                   string_view meshPath );
         /** @brief 쿠킹본에서 읽은 VAT 수입니다(진단과 테스트용). */
         uint32 getCookedVertexAnimationCount() const { return _cookedVertexAnimationCount; }
@@ -242,16 +242,16 @@ namespace sw
 
     private:
         /** @brief 클립 한 바퀴 안에서 유닛 시간에 가장 가까운 변형 구간을 고릅니다. */
-        uint32 selectVariation( const AnimSharedPoseRequest& request, float32 duration ) const;
+        uint32 selectVariation( const AnimationSharedPoseRequest& request, float32 duration ) const;
 
         /** @brief 베이크한 VAT 메시 하나입니다. */
         struct VertexAnimationEntry
         {
-            uint64           _skinDataID{ 0 };
-            const Skeleton*  _pSkeleton{ nullptr };
-            const AnimClip*  _pClip{ nullptr };
-            uint8            _bAnchorRootMotion{ SW_FALSE };
-            shared_ptr<Mesh> _mesh;
+            uint64               _skinDataID{ 0 };
+            const Skeleton*      _pSkeleton{ nullptr };
+            const AnimationClip* _pClip{ nullptr };
+            uint8                _bAnchorRootMotion{ SW_FALSE };
+            shared_ptr<Mesh>     _mesh;
         };
 
         AnimationCrowdSettings                                                                     _settings;

@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimClip.h"
+#include "Engine/Animation/AnimationClip.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -148,7 +148,7 @@ namespace sw
         _listWindow.push_back( window );
     }
 
-    void MotionWarpingComponent::endWindow( const hashed_string& target, const IAnimPlayable* pClip )
+    void MotionWarpingComponent::endWindow( const hashed_string& target, const IAnimationPlayable* pClip )
     {
         for ( size_t windowIndex = 0; windowIndex < _listWindow.size(); ++windowIndex )
         {
@@ -176,14 +176,14 @@ namespace sw
             const float32 remainingBefore = window._endTime - inoutFrame._previousClipTime;
             if ( remainingBefore <= 1.0e-5f )
                 continue;
-            const float32   frameTime = inoutFrame._clipTime - inoutFrame._previousClipTime;
-            const float32   fraction  = MathUtil::clamp( frameTime / remainingBefore, 0.0f, 1.0f );
-            const AnimClip& clip      = *static_cast<const AnimClip*>( inoutFrame._pClip );
+            const float32        frameTime = inoutFrame._clipTime - inoutFrame._previousClipTime;
+            const float32        fraction  = MathUtil::clamp( frameTime / remainingBefore, 0.0f, 1.0f );
+            const AnimationClip& clip      = *static_cast<const AnimationClip*>( inoutFrame._pClip );
             // 이번 프레임 뒤에 클립이 창 끝까지 더 갈 루트 모션(캐릭터 공간 → 지금 월드 회전).
             BoneTransform remaining{};
             if ( inoutFrame._clipTime < window._endTime )
             {
-                AnimTimeStep rest{};
+                AnimationTimeStep rest{};
                 rest._previousTime = inoutFrame._clipTime;
                 rest._currentTime  = window._endTime;
                 remaining          = clip.computeRootMotionDelta( rest );

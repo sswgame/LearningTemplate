@@ -11,7 +11,7 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Animation/Notify/AnimNotifyPhase.h"
+#include "Engine/Animation/Notify/AnimationNotifyPhase.h"
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -265,15 +265,15 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct AnimNotifyInfo
-     * @brief 애니메이션 알림이 이 오브젝트의 컴포넌트에 보내는 게임플레이 이벤트입니다(알림 테이블의 `GameplayEvent` 처리기이며, 언리얼 AnimNotify 의 이벤트에 해당).
+     * @struct AnimationNotifyInfo
+     * @brief 애니메이션 알림이 이 오브젝트의 컴포넌트에 보내는 게임플레이 이벤트입니다(알림 테이블의 `GameplayEvent` 처리기이며, 언리얼 AnimationNotify 의 이벤트에 해당).
      */
-    struct AnimNotifyInfo
+    struct AnimationNotifyInfo
     {
-        hashed_string   _notify{};                          ///< 클립의 알림 이름
-        hashed_string   _event{};                           ///< 알림 테이블이 정한 이벤트 이름
-        float32         _weight{ 1.0f };                    ///< 알림을 울린 클립의 블렌딩 가중치
-        AnimNotifyPhase _phase{ AnimNotifyPhase::Instant }; ///< 구간 알림이면 시작인지 끝인지 나타낸다
+        hashed_string        _notify{};                               ///< 클립의 알림 이름
+        hashed_string        _event{};                                ///< 알림 테이블이 정한 이벤트 이름
+        float32              _weight{ 1.0f };                         ///< 알림을 울린 클립의 블렌딩 가중치
+        AnimationNotifyPhase _phase{ AnimationNotifyPhase::Instant }; ///< 구간 알림이면 시작인지 끝인지 나타낸다
     };
 } // namespace sw
 
@@ -368,7 +368,7 @@ namespace sw
          */
         virtual void onHitReceived( const HitInfo& hit ) { (void)hit; }
         /** @brief 이 오브젝트의 애니메이션이 게임플레이 이벤트 알림을 울렸을 때 불립니다(알림 테이블의 `GameplayEvent`). 게임 스레드에서 켜진 컴포넌트마다 불립니다. */
-        virtual void onAnimNotify( const AnimNotifyInfo& notify ) { (void)notify; }
+        virtual void onAnimationNotify( const AnimationNotifyInfo& notify ) { (void)notify; }
         /**
          * @brief 소유 GameObject 에 붙은 직후 불립니다.
          * @details 컴포넌트가 어느 레지스트리에 들어가야 하는지는 컴포넌트 자신이 안다. GameObject 가 `castTo` 로

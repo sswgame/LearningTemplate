@@ -198,7 +198,7 @@ namespace sw
         /** @brief 모든 단계 뒤에 게임 스레드에서 처리하는 작업입니다. */
         void finishAnimationFrame();
         /** @brief 동기 그룹 후보를 모읍니다(게임 스레드). */
-        void collectSyncPlayers( vector<AnimPlayer*>& inoutListPlayer, vector<float32>& inoutListWeight, vector<hashed_string>& inoutListGroup );
+        void collectSyncPlayers( vector<AnimationPlayer*>& inoutListPlayer, vector<float32>& inoutListWeight, vector<hashed_string>& inoutListGroup );
 
     private:
         /** @brief 스켈레톤을 경로에서 다시 읽습니다. 경로가 비어 있고 코드가 정한 스켈레톤이 있으면 그대로 둡니다. */
@@ -222,7 +222,7 @@ namespace sw
         /** @brief 보간 프레임의 포즈를 만듭니다(직전 표시 포즈에서 마지막 평가 포즈로). 스킨 팔레트 단계에서 부릅니다. */
         void applySkippedFrameInterpolation( bool bEvaluatedThisFrame );
         /** @brief 이번 프레임 포즈를 묶음과 나눌 수 있으면 요청을 채웁니다. 조건은 작업이 애니메이터 하나이고 리더가 없으며 그 작업이 나눌 수 있다고 답하는 것입니다. */
-        bool describeSharedPose( AnimSharedPoseRequest& outRequest ) const;
+        bool describeSharedPose( AnimationSharedPoseRequest& outRequest ) const;
         /** @brief 묶음 참조와 사본을 해제합니다(@p pCrowd 가 있으면 사본을 풀에 반환합니다). */
         void leaveCrowd( AnimationCrowd* pCrowd );
 
@@ -259,7 +259,7 @@ namespace sw
         vector<float32>                   _listMorphWeight;       ///< 그리는 메시의 모프 타깃 가중치(타깃 순서)
         AnimationCrowdBucket*             _pCrowdBucket;          ///< 나누는 묶음이다. 군중이 소유하며 참조 수로 보호된다
         shared_ptr<Mesh>                  _soloMesh;              ///< 혼자 평가할 때 빌린 사본
-        const AnimClip*                   _pVertexAnimationClip;  ///< VAT 로 그리는 클립이다. 바뀌면 시간 오프셋을 다시 기록한다
+        const AnimationClip*              _pVertexAnimationClip;  ///< VAT 로 그리는 클립이다. 바뀌면 시간 오프셋을 다시 기록한다
         AnimationCrowdMode                _crowdMode;
         PROPERTY( Category = "Animation", DisplayName = "Follow Parent Pose", Tooltip = "Use the parent object's skeletal mesh as the leader pose" )
         uint8 _bFollowParentPose : 1;

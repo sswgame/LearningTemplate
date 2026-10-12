@@ -17,7 +17,7 @@
 
 namespace sw
 {
-    class AnimPlayer;
+    class AnimationPlayer;
     class Component;
     class GameObjectManager;
     class SkeletalMeshComponent;
@@ -82,7 +82,7 @@ namespace sw
         /** @brief 단계 하나를 처리합니다(워커). */
         virtual void runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) = 0;
         /** @brief 동기 그룹에 속하면 그룹 이름과 가중치, 맞출 플레이어를 반환합니다. 아니면 nullptr 입니다(시간 단계 뒤, 게임 스레드). */
-        virtual AnimPlayer* findSyncPlayer( hashed_string& outGroupName, float32& outWeight )
+        virtual AnimationPlayer* findSyncPlayer( hashed_string& outGroupName, float32& outWeight )
         {
             (void)outGroupName;
             (void)outWeight;
@@ -94,13 +94,13 @@ namespace sw
          * @brief 이번 프레임 포즈를 군중 묶음과 나눌 수 있으면 요청을 채우고 true 를 반환합니다(시간 단계 뒤, 게임 스레드).
          * @details 나눌 수 있는 경우는 반복 클립 하나를 블렌드나 레이어, 시퀀서 덮어쓰기 없이 재생 중일 때다. 기본은 나눌 수 없음이다(IK 같은 후처리 작업은 유닛마다 다르다).
          */
-        virtual bool describeSharedPose( AnimSharedPoseRequest& outRequest ) const
+        virtual bool describeSharedPose( AnimationSharedPoseRequest& outRequest ) const
         {
             (void)outRequest;
             return false;
         }
         /** @brief 요청한 클립의 소유권입니다(묶음이 보관하게). 모르는 클립이면 nullptr 입니다. */
-        virtual shared_ptr<const AnimClip> findSharedPoseClip( const AnimClip* pClip ) const
+        virtual shared_ptr<const AnimationClip> findSharedPoseClip( const AnimationClip* pClip ) const
         {
             (void)pClip;
             return nullptr;

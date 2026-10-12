@@ -10,8 +10,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Animation/Graph/AnimGraphAsset.h"
-#include "Engine/Animation/Graph/AnimGraphPlayer.h"
+#include "Engine/Animation/Graph/AnimationGraphAsset.h"
+#include "Engine/Animation/Graph/AnimationGraphPlayer.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/Component.h"
@@ -19,16 +19,16 @@
 
 namespace sw
 {
-    class AnimClip;
-    class IAnimNotifyListener;
+    class AnimationClip;
+    class IAnimationNotifyListener;
     class IRootMotionModifier;
     class SkeletalAnimatorComponent;
 
     /**
-     * @enum AnimLayerBlend
+     * @enum AnimationLayerBlend
      * @brief 레이어가 아래 포즈에 합쳐지는 방법입니다.
      */
-    enum class AnimLayerBlend : uint8
+    enum class AnimationLayerBlend : uint8
     {
         Override = 0, ///< 마스크 안의 본을 가중치만큼 레이어 포즈로 섞습니다(상체만 조준).
         Additive,     ///< 레이어 클립의 시각 0 포즈 기준 차이를 가중치만큼 더합니다(숨쉬기, 맞음 움찔).
@@ -38,16 +38,16 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct AnimLayerDesc
+     * @struct AnimationLayerDesc
      * @brief 레이어 하나의 서술입니다. 마스크는 본 하나와 그 자손입니다(비었으면 모든 본).
      */
-    struct AnimLayerDesc
+    struct AnimationLayerDesc
     {
-        hashed_string  _clipName;
-        hashed_string  _maskRootBone;
-        float32        _weight{ 1.0f };
-        AnimLayerBlend _blend{ AnimLayerBlend::Override };
-        uint8          _bLoop{ SW_TRUE };
+        hashed_string       _clipName;
+        hashed_string       _maskRootBone;
+        float32             _weight{ 1.0f };
+        AnimationLayerBlend _blend{ AnimationLayerBlend::Override };
+        uint8               _bLoop{ SW_TRUE };
     };
 } // namespace sw
 
@@ -58,20 +58,20 @@ namespace sw
      * @brief 애니메이터가 유닛과 상태 기계에 노출하는 인터페이스 구현입니다(단계 작업, 클립 해석). 컴포넌트가 하나 보관하고 그대로 넘깁니다.
      * @details 리플렉션 컴포넌트는 기반 클래스 하나만 둔다(타입 정보와 `castTo` 가 단일 상속을 가정한다). 그래서 인터페이스는 이 작은 객체가 구현한다.
      */
-    class SW_API SkeletalAnimatorBinding final : public IAnimationPhaseTask, public IAnimPlayableSource
+    class SW_API SkeletalAnimatorBinding final : public IAnimationPhaseTask, public IAnimationPlayableSource
     {
     public:
         explicit SkeletalAnimatorBinding( SkeletalAnimatorComponent& owner );
 
-        bool                       isAnimationActive() const override;
-        void                       runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
-        AnimPlayer*                findSyncPlayer( hashed_string& outGroupName, float32& outWeight ) override;
-        void                       finishAnimationFrame( SkeletalMeshComponent& unit ) override;
-        void                       onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
-        bool                       describeSharedPose( AnimSharedPoseRequest& outRequest ) const override;
-        shared_ptr<const AnimClip> findSharedPoseClip( const AnimClip* pClip ) const override;
-        const IAnimPlayable*       findPlayable( const hashed_string& name ) const override;
-        void                       collectDebugState( AnimationDebugState& inoutState ) const override;
+        bool                            isAnimationActive() const override;
+        void                            runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
+        AnimationPlayer*                findSyncPlayer( hashed_string& outGroupName, float32& outWeight ) override;
+        void                            finishAnimationFrame( SkeletalMeshComponent& unit ) override;
+        void                            onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
+        bool                            describeSharedPose( AnimationSharedPoseRequest& outRequest ) const override;
+        shared_ptr<const AnimationClip> findSharedPoseClip( const AnimationClip* pClip ) const override;
+        const IAnimationPlayable*       findPlayable( const hashed_string& name ) const override;
+        void                            collectDebugState( AnimationDebugState& inoutState ) const override;
 
     private:
         SkeletalAnimatorComponent& _owner;
@@ -84,7 +84,7 @@ namespace sw
      * @class SkeletalAnimatorComponent
      * @brief 같은 오브젝트의 `SkeletalMeshComponent`(유닛)에 단계 작업으로 붙어 포즈를 냅니다. 자기 onTick 에서 평가하지 않습니다.
      * @details - **클립**: 상태 이름이 곧 클립 이름이고, 파일은 `_clipFolder/<소문자 이름>.animclip` 입니다(임포트가 그렇게 씁니다).
-     *          - **그래프**: `_animGraphPath` 의 노드가 상태, 링크가 전이입니다(`AnimGraphPlayer`). 그래프가 없으면 `play( 이름 )` 이 바로 재생합니다.
+     *          - **그래프**: `_animationGraphPath` 의 노드가 상태, 링크가 전이입니다(`AnimationGraphPlayer`). 그래프가 없으면 `play( 이름 )` 이 바로 재생합니다.
      *          - **단계**: 시간(상태 기계, 알림, 루트 모션, 커브. 매 프레임) → 기본 포즈(샘플, 크로스페이드, 레이어, 시퀀서 덮어쓰기. LOD 가
      *            허락한 프레임) → 게임 스레드에서 루트 모션을 오브젝트 트랜스폼에 씁니다.
      *          - **핫 리로드**: 현재 상태와 시간을 PROPERTY(`_currentState`, `_stateTime`)로 보관해 모듈이 바뀌어도 그 자리에서 이어 갑니다.
@@ -119,20 +119,20 @@ namespace sw
         /** @brief 시작 상태를 이 시각(초)부터 재생합니다(다음 시작부터 적용하며, 군중이 모두 같은 프레임으로 시작하지 않게 합니다). */
         void setInitialTime( float32 seconds ) { _initialTime = seconds > 0.0f ? seconds : 0.0f; }
         /** @brief 그래프 경로를 바꾸고 다시 읽습니다. */
-        void setAnimGraphPath( string_view path );
+        void setAnimationGraphPath( string_view path );
         /** @brief 클립을 미리 읽어 둡니다(게임 스레드). 워커의 전이는 읽어 둔 클립만 찾습니다. */
         bool preloadClip( const hashed_string& clipName );
 
         /** @brief 상태 기계 파라미터입니다. 게임 코드가 틱에서 씁니다. */
-        AnimParameterSet&       getParameters() { return _parameters; }
-        const AnimParameterSet& getParameters() const { return _parameters; }
+        AnimationParameterSet&       getParameters() { return _parameters; }
+        const AnimationParameterSet& getParameters() const { return _parameters; }
         /** @brief 그래프 플레이어(현재 상태, 재생)를 반환합니다. */
-        const AnimGraphPlayer& getGraphPlayer() const { return _graphPlayer; }
+        const AnimationGraphPlayer& getGraphPlayer() const { return _graphPlayer; }
         /** @brief 현재 상태 이름을 반환합니다. */
         const hashed_string& getCurrentStateName() const { return _graphPlayer.getCurrentStateName(); }
 
         /** @brief 레이어를 더하고 그 인덱스를 반환합니다. 클립을 못 찾으면 -1 입니다. */
-        int32 addLayer( const AnimLayerDesc& desc );
+        int32 addLayer( const AnimationLayerDesc& desc );
         /** @brief 레이어 가중치를 바꿉니다. */
         void setLayerWeight( uint32 layerIndex, float32 weight );
         /** @brief 레이어 클립을 처음부터 다시 재생합니다(맞음 움찔처럼 한 번 도는 가산 레이어). */
@@ -144,14 +144,14 @@ namespace sw
          * @brief 시퀀서 덮어쓰기 슬롯입니다. 시퀀서가 클립과 시간을 정해 그래프 결과 위에 @p weight 만큼 섞습니다. 시간은 시퀀서가 진행시킵니다.
          * @param clip nullptr 이거나 weight 가 0 이면 덮어쓰기가 꺼집니다.
          */
-        void setSequencerOverride( shared_ptr<const AnimClip> clip, float32 time, float32 weight );
+        void setSequencerOverride( shared_ptr<const AnimationClip> clip, float32 time, float32 weight );
 
         /** @brief 이번 프레임에 울린 알림입니다(다음 평가까지 유효). 이름에 따른 처리기 연결은 받는 쪽(`setNotifyListener`)이 맡습니다. */
-        const vector<AnimFiredNotify>& getFiredNotifies() const { return _listFiredNotify; }
+        const vector<AnimationFiredNotify>& getFiredNotifies() const { return _listFiredNotify; }
         /** @brief 알림을 받는 쪽을 등록합니다(소유하지 않으며, nullptr 이면 해제합니다). 매 평가 프레임의 게임 스레드 마무리에서 루트 모션 적용 전에 불립니다. */
-        void setNotifyListener( IAnimNotifyListener* pListener ) { _pNotifyListener = pListener; }
+        void setNotifyListener( IAnimationNotifyListener* pListener ) { _pNotifyListener = pListener; }
         /** @brief 등록된 알림 수신자를 반환합니다. */
-        IAnimNotifyListener* getNotifyListener() const { return _pNotifyListener; }
+        IAnimationNotifyListener* getNotifyListener() const { return _pNotifyListener; }
         /** @brief 루트 모션을 옮기기 전에 고치는 쪽을 등록합니다(소유하지 않으므로 사라지기 전에 해제해야 합니다). 등록한 순서대로 불립니다. */
         void addRootMotionModifier( IRootMotionModifier* pModifier );
         /** @brief 고치는 쪽을 해제합니다. */
@@ -161,7 +161,7 @@ namespace sw
         /** @brief 재생 속도 배율을 반환합니다. */
         float32 getPlayRate() const { return _playRate; }
         /** @brief 지금 재생 중인 항목(현재와 다음 슬롯, 레이어)을 @p outListPlayable 에 채웁니다(비우고 채웁니다). */
-        void collectActivePlayables( vector<const IAnimPlayable*>& outListPlayable ) const;
+        void collectActivePlayables( vector<const IAnimationPlayable*>& outListPlayable ) const;
         /** @brief 이번 프레임의 커브 값입니다. 없는 커브는 0 입니다. */
         float32 getCurveValue( const hashed_string& curveName ) const;
         /** @brief 마지막 프레임의 루트 모션(부모 공간의 이동과 회전 차이)입니다. */
@@ -176,12 +176,12 @@ namespace sw
         /** @brief 지금 할 일이 있으면(재생 중, 레이어, 시퀀서 덮어쓰기) true 입니다. */
         bool isAnimationActive() const;
         /** @brief 이름이 일치하는 클립을 반환합니다(미리 읽어 둔 것만). 없으면 nullptr 입니다. */
-        const AnimClip* findClip( const hashed_string& name ) const;
+        const AnimationClip* findClip( const hashed_string& name ) const;
         /**
          * @brief 이번 프레임 포즈를 군중 묶음과 나눌 수 있으면 요청을 채웁니다. 반복 클립 하나를 블렌드, 레이어, 시퀀서 덮어쓰기 없이 재생 중일 때입니다.
          * @details 시간, 상태 기계, 알림, 루트 모션, 커브는 나눠도 이 애니메이터가 계속 처리한다(시간 단계). 나누는 것은 포즈뿐이다.
          */
-        bool describeSharedPose( AnimSharedPoseRequest& outRequest ) const;
+        bool describeSharedPose( AnimationSharedPoseRequest& outRequest ) const;
         /** @brief 유닛과 상태 기계에 노출하는 인터페이스 구현을 반환합니다. */
         SkeletalAnimatorBinding& getBinding() { return _binding; }
 
@@ -189,12 +189,12 @@ namespace sw
         /** @brief 레이어 하나의 실행 상태입니다. */
         struct LayerState
         {
-            AnimLayerDesc              _desc;
-            shared_ptr<const AnimClip> _clip;
-            AnimPlayer                 _player;
-            vector<float32>            _listBoneWeight; ///< 본 마스크(본 수 크기)다. 스켈레톤이 바뀌면 다시 만든다
-            const Skeleton*            _pMaskSkeleton{ nullptr };
-            Pose                       _additiveReference; ///< 가산 기준(클립 시각 0, 본 포즈)
+            AnimationLayerDesc              _desc;
+            shared_ptr<const AnimationClip> _clip;
+            AnimationPlayer                 _player;
+            vector<float32>                 _listBoneWeight; ///< 본 마스크(본 수 크기)다. 스켈레톤이 바뀌면 다시 만든다
+            const Skeleton*                 _pMaskSkeleton{ nullptr };
+            Pose                            _additiveReference; ///< 가산 기준(클립 시각 0, 본 포즈)
         };
 
         /** @brief 같은 오브젝트의 유닛에 붙습니다. */
@@ -202,12 +202,12 @@ namespace sw
         /** @brief 그래프를 다시 읽고 노드의 클립을 미리 읽습니다. */
         void loadGraph();
         /** @brief 클립의 트랙에서 본으로 가는 테이블입니다(유닛 스켈레톤 기준이며, 처음 쓸 때 만듭니다). */
-        const vector<int32>& getTrackMap( const AnimClip& clip, const Skeleton& skeleton );
+        const vector<int32>& getTrackMap( const AnimationClip& clip, const Skeleton& skeleton );
         /**
          * @brief 클립을 @p time 에 샘플해 @p inoutPose(레퍼런스로 시작한 본 포즈)에 씁니다.
          * @param pBoneMask 본 LOD 마스크(본 수 크기이며 0 이면 평가하지 않고 레퍼런스로 둔다). nullptr 이면 모든 본입니다.
          */
-        void sampleClipIntoPose( const AnimClip& clip, float32 time, const Skeleton& skeleton, Pose& inoutPose, const uint8* pBoneMask = nullptr );
+        void sampleClipIntoPose( const AnimationClip& clip, float32 time, const Skeleton& skeleton, Pose& inoutPose, const uint8* pBoneMask = nullptr );
         /** @brief 레이어의 본 마스크를 스켈레톤에 맞춥니다. */
         void refreshLayerMask( LayerState& layer, const Skeleton& skeleton );
         /** @brief 시간 단계입니다. */
@@ -221,8 +221,8 @@ namespace sw
         /** @brief 루트 모션을 오브젝트에 옮깁니다(게임 스레드). */
         void applyRootMotion( SkeletalMeshComponent& unit );
 
-        PROPERTY( Category = "Animation", DisplayName = "Animation Graph", AssetPath, AssetType = "AnimGraph", Tooltip = "State machine graph; nodes name clips" )
-        string _animGraphPath;
+        PROPERTY( Category = "Animation", DisplayName = "Animation Graph", AssetPath, AssetType = "AnimationGraph", Tooltip = "State machine graph; nodes name clips" )
+        string _animationGraphPath;
         PROPERTY( Category = "Animation", DisplayName = "Clip Folder", Tooltip = "Folder holding <clip>.animclip files (lowercase names)" )
         string _clipFolder;
         PROPERTY( Category = "Animation", DisplayName = "Initial State", Tooltip = "State (or clip) played at begin play; empty uses the graph entry node" )
@@ -240,36 +240,36 @@ namespace sw
         PROPERTY( Category = "Sync", DisplayName = "Sync Weight", Tooltip = "Leader is the member with the largest weight", Min = 0.0 )
         float32 _syncWeight;
 
-        SkeletalAnimatorBinding                                  _binding;
-        AnimGraphAsset                                           _graph;
-        AnimGraphPlayer                                          _graphPlayer;
-        AnimParameterSet                                         _parameters;
-        unordered_map<hashed_string, shared_ptr<const AnimClip>> _mapClip;
-        unordered_map<const AnimClip*, vector<int32>>            _mapTrackToBone;
-        const Skeleton*                                          _pTrackMapSkeleton;
-        vector<LayerState>                                       _listLayer;
-        vector<AnimFiredNotify>                                  _listFiredNotify;
-        vector<const IAnimPlayable*>                             _listActivePlayable; ///< 받는 쪽에 넘길 재생 중인 항목이다(재사용)
-        vector<IRootMotionModifier*>                             _listRootMotionModifier;
-        vector<hashed_string>                                    _listCurveName;  ///< 이번 프레임 커브 이름
-        vector<float32>                                          _listCurveValue; ///< `_listCurveName` 과 인덱스가 같은 값
-        Pose                                                     _scratchPose;
-        Pose                                                     _scratchTrackPose;
-        Pose                                                     _scratchLayerPose;
-        vector<uint8>                                            _listScratchTrackMask; ///< 본 LOD 마스크를 트랙 순서로 옮긴 것(샘플마다 재사용)
-        Pose                                                     _lastBasePose;         ///< 지난 기본 포즈(레이어 전)다. 페이드가 끊기면 여기서 이어 섞는다
-        Pose                                                     _carryOverPose;        ///< 끊긴 순간의 포즈다. 새 페이드 길이 동안 현재 포즈로 섞이며 사라진다
-        shared_ptr<const AnimClip>                               _sequencerClip;
-        BoneTransform                                            _rootMotionDelta;
-        SkeletalMeshComponent*                                   _pUnit;
-        IAnimNotifyListener*                                     _pNotifyListener;
-        float32                                                  _lastDeltaSeconds; ///< 마지막 시간 단계의 델타 시간(배율 적용)
-        float32                                                  _sequencerTime;
-        float32                                                  _sequencerWeight;
-        float32                                                  _initialTime; ///< 시작 상태의 첫 시각(초, 저장하지 않는 런타임 값)
-        float32                                                  _carryOverElapsed;
-        float32                                                  _carryOverDuration;
-        uint32                                                   _seenInterruptCount; ///< 플레이어의 중단 횟수를 마지막으로 확인한 값
+        SkeletalAnimatorBinding                                       _binding;
+        AnimationGraphAsset                                           _graph;
+        AnimationGraphPlayer                                          _graphPlayer;
+        AnimationParameterSet                                         _parameters;
+        unordered_map<hashed_string, shared_ptr<const AnimationClip>> _mapClip;
+        unordered_map<const AnimationClip*, vector<int32>>            _mapTrackToBone;
+        const Skeleton*                                               _pTrackMapSkeleton;
+        vector<LayerState>                                            _listLayer;
+        vector<AnimationFiredNotify>                                  _listFiredNotify;
+        vector<const IAnimationPlayable*>                             _listActivePlayable; ///< 받는 쪽에 넘길 재생 중인 항목이다(재사용)
+        vector<IRootMotionModifier*>                                  _listRootMotionModifier;
+        vector<hashed_string>                                         _listCurveName;  ///< 이번 프레임 커브 이름
+        vector<float32>                                               _listCurveValue; ///< `_listCurveName` 과 인덱스가 같은 값
+        Pose                                                          _scratchPose;
+        Pose                                                          _scratchTrackPose;
+        Pose                                                          _scratchLayerPose;
+        vector<uint8>                                                 _listScratchTrackMask; ///< 본 LOD 마스크를 트랙 순서로 옮긴 것(샘플마다 재사용)
+        Pose                                                          _lastBasePose;         ///< 지난 기본 포즈(레이어 전)다. 페이드가 끊기면 여기서 이어 섞는다
+        Pose                                                          _carryOverPose;        ///< 끊긴 순간의 포즈다. 새 페이드 길이 동안 현재 포즈로 섞이며 사라진다
+        shared_ptr<const AnimationClip>                               _sequencerClip;
+        BoneTransform                                                 _rootMotionDelta;
+        SkeletalMeshComponent*                                        _pUnit;
+        IAnimationNotifyListener*                                     _pNotifyListener;
+        float32                                                       _lastDeltaSeconds; ///< 마지막 시간 단계의 델타 시간(배율 적용)
+        float32                                                       _sequencerTime;
+        float32                                                       _sequencerWeight;
+        float32                                                       _initialTime; ///< 시작 상태의 첫 시각(초, 저장하지 않는 런타임 값)
+        float32                                                       _carryOverElapsed;
+        float32                                                       _carryOverDuration;
+        uint32                                                        _seenInterruptCount; ///< 플레이어의 중단 횟수를 마지막으로 확인한 값
         PROPERTY( Category = "Animation", DisplayName = "Extract Root Motion", Tooltip = "Move the object by the clip's root motion track" )
         uint8 _bExtractRootMotion : 1;
         PROPERTY( Category = "Animation", DisplayName = "Play On Begin", Tooltip = "Start the initial state at begin play" )

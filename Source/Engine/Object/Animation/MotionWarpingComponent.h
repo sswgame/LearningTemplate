@@ -14,7 +14,7 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Animation/Notify/AnimNotifyListener.h"
+#include "Engine/Animation/Notify/AnimationNotifyListener.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -36,13 +36,13 @@ namespace sw
     /** @brief 열린 워프 창 하나입니다. */
     struct MotionWarpWindow
     {
-        hashed_string        _target{};
-        const IAnimPlayable* _pClip{ nullptr };
-        float32              _endTime{ 0.0f }; ///< 클립 시각(초)
-        bool                 _bTranslation{ true };
-        bool                 _bRotation{ true };
-        bool                 _bVertical{ false };
-        bool                 _bEnding{ false }; ///< 구간 끝이 울렸다 — 이번 프레임의 루트 모션까지 휜 뒤 닫는다(끝 프레임이 비율 1 을 받는다)
+        hashed_string             _target{};
+        const IAnimationPlayable* _pClip{ nullptr };
+        float32                   _endTime{ 0.0f }; ///< 클립 시각(초)
+        bool                      _bTranslation{ true };
+        bool                      _bRotation{ true };
+        bool                      _bVertical{ false };
+        bool                      _bEnding{ false }; ///< 구간 끝이 울렸다 — 이번 프레임의 루트 모션까지 휜 뒤 닫는다(끝 프레임이 비율 1 을 받는다)
     };
 } // namespace sw
 
@@ -92,7 +92,7 @@ namespace sw
         /** @brief 창을 엽니다(`MotionWarp` 처리기가 구간 시작에서 부릅니다). 같은 클립의 같은 목표 창이 열려 있으면 바꿉니다. */
         void beginWindow( const MotionWarpWindow& window );
         /** @brief 창을 닫습니다(구간 끝). 이번 프레임의 루트 모션까지는 휘고 닫습니다 — 알림이 루트 모션보다 먼저 처리된다. */
-        void endWindow( const hashed_string& target, const IAnimPlayable* pClip );
+        void endWindow( const hashed_string& target, const IAnimationPlayable* pClip );
         /** @brief 열린 창 수입니다. */
         uint32 getOpenWindowCount() const { return static_cast<uint32>( _listWindow.size() ); }
 
