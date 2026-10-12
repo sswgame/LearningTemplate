@@ -65,8 +65,8 @@ namespace sw
 
     string_view PortraitBatchUtil::makeFileStem( string_view prefabPath )
     {
-        const size_t slash = prefabPath.find_last_of( '/' );
-        string_view  stem  = prefabPath.substr( slash == string_view::npos ? 0 : slash + 1 );
+        string_view stem;
+        FileUtil::getFileNamePart( prefabPath, stem );
         return stem.substr( 0, stem.find( '.' ) );
     }
 } // namespace sw

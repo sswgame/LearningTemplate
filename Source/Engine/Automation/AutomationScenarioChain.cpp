@@ -3,6 +3,7 @@
 #include "Engine/Automation/AutomationScenarioChain.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/File/FileUtil.h"
 
 namespace sw
 {
@@ -36,12 +37,15 @@ namespace sw
         if ( reportPath.empty() || stageCount <= 1 )
             return string( reportPath );
         // 폴더 이름의 점이 확장자로 읽히지 않게 마지막 구분자 뒤에서만 확장자를 찾는다.
-        const size_t nameBegin = reportPath.find_last_of( "/\\" );
-        const size_t dot       = reportPath.find_last_of( '.' );
-        const string suffix    = "." + to_string( stageIndex + 1 );
-        if ( dot == string_view::npos || ( nameBegin != string_view::npos && dot < nameBegin ) )
+        string_view directory;
+        string_view fileName;
+        FileUtil::splitPath( reportPath, directory, fileName );
+        const size_t dot    = fileName.find_last_of( '.' );
+        const string suffix = "." + to_string( stageIndex + 1 );
+        if ( dot == string_view::npos )
             return string( reportPath ) + suffix;
-        return string( reportPath.substr( 0, dot ) ) + suffix + string( reportPath.substr( dot ) );
+        const size_t extensionBegin = directory.size() + dot;
+        return string( reportPath.substr( 0, extensionBegin ) ) + suffix + string( reportPath.substr( extensionBegin ) );
     }
 
     void AutomationScenarioChain::begin( vector<string> listPath, bool bKeepGoing )
