@@ -1,6 +1,6 @@
 /**
  * @file TerrainHeightfield.h
- * @brief 지형의 CPU 질의입니다. 월드 높이, 노멀, 구멍, 레이어 가중치를 제공하며, 렌더 메시, 배치, (나중에) 물리 높이장이 같은 값을 읽습니다.
+ * @brief 지형의 CPU 질의입니다. 월드 높이, 노멀, 구멍, 레이어 가중치를 제공하며, 렌더 메시, 배치, 물리 충돌 메시(`TerrainCollisionUtil`)가 같은 값을 읽습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -45,7 +45,7 @@ namespace sw
         const float2& getSize() const { return _size; }
         /** @brief 셀 한 변의 길이(x, z)입니다. */
         const float2& getCellSize() const { return _cellSize; }
-        /** @brief 월드 높이 샘플 전부(N × N, 행 우선)입니다. 물리 높이장이 그대로 받습니다. */
+        /** @brief 월드 높이 샘플 전부(N × N, 행 우선)입니다. */
         const vector<float32>& getHeightSamples() const { return _listHeight; }
         /** @brief CPU 로 읽은 스플랫 맵의 너비입니다. 없으면 0 입니다. */
         uint32 getSplatWidth() const { return _splatWidth; }

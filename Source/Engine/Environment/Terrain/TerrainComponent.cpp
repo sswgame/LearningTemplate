@@ -80,6 +80,7 @@ namespace sw
         , _listWantedLOD{}
         , _material{}
         , _pPrimitiveRegistry{ nullptr }
+        , _heightfieldGeneration{ 0 }
         , _bOriginDirty{ false }
     {
         setCanEverTick( true );
@@ -180,6 +181,7 @@ namespace sw
     {
         releaseChunks();
         _heightfield.shutdown();
+        ++_heightfieldGeneration; // 실패해도 오른다 — 비워진 높이장으로 만든 바디도 낡았다
         if ( _heightfieldPath.empty() )
             return false;
 
