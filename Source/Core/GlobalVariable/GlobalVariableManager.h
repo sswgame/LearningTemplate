@@ -26,14 +26,21 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 1) GlobalVariableType / GlobalVariableInfo. 이름, 타입, 기본값, 콜백을 정의한다.
     // ------------------------------------------------------------------------------
-    /** @brief 전역 변수의 저장 타입입니다. Enum 은 int32 로 저장합니다. */
+    /**
+     * @brief 전역 변수의 저장 타입입니다. Enum 은 int32 로 저장합니다.
+     * @details 타입마다 다른 처리(문자열 변환 · 파싱 · 기본값 쓰기 · 명령줄 인자)는 `GlobalVariableManager.cpp` 의 처리 테이블에 타입당 한 행으로
+     *          모여 있습니다. 새 타입은 여기 열거자 하나와 그 테이블의 행 하나, 에디터 위젯 테이블(`GlobalVariablesPanel.cpp`)의 행 하나를 더합니다.
+     *          행 수는 `Count` 와 `static_assert` 로 맞춥니다.
+     */
     enum class GlobalVariableType : uint8
     {
         Boolean,
         Int32,
         Float,
         String,
-        Enum
+        Enum,
+        /** @brief 열거자 수입니다. 변수의 타입이 아니며 `registerVariable` 이 거절합니다. */
+        Count
     };
 
     /**
@@ -116,6 +123,11 @@ namespace sw
         float32 getValueAsFloat() const;
         /** @brief 타입에 맞게 문자열로 바꿉니다. */
         string getValueAsString() const;
+        /**
+         * @brief 타입을 표시 · 프리셋용 이름으로 반환합니다(`Bool` · `Int32` · `Float` · `String`). enum 변수는 enum 타입 이름입니다.
+         * @details 에디터 패널과 프리셋 저장이 같은 이름을 쓰도록 여기 한 곳에서 정합니다.
+         */
+        string getTypeName() const;
 
         /** @brief *_pData 에 Boolean 값을 쓰고 콜백을 부릅니다. */
         bool setValueAsBool( bool val );

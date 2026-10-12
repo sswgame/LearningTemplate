@@ -14,7 +14,6 @@
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/RHIBackendType.h"
-#include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingValidator.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
