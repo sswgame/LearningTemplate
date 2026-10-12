@@ -167,7 +167,8 @@ namespace sw
             resolveCamera();
             return;
         }
-        pManager->executeOrDeferPostTick( SW_DELEGATE_METHOD( GameObjectManager::PostTickDelegate, &CameraDirectorComponent::resolveCamera, this ) );
+        pManager->executeOrDeferPostTickOnComponent<CameraDirectorComponent>( getHandle(), []( CameraDirectorComponent& component )
+        { component.resolveCamera(); } );
     }
 
     void CameraDirectorComponent::gatherInput( float32 deltaTime )
@@ -257,7 +258,10 @@ namespace sw
                     listPoint.push_back( position );
             }
             if ( listPoint.empty() == false )
-                return makeGroupCameraTarget( listPoint.data(), static_cast<uint32>( listPoint.size() ) );
+            {
+                target = makeGroupCameraTarget( listPoint.data(), static_cast<uint32>( listPoint.size() ) );
+                return target;
+            }
         }
         const GameObject* pObject = pManager->resolveGameObject( _target );
         if ( pObject != nullptr )

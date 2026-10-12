@@ -130,6 +130,7 @@ Scripts/
   │     │     ├── CheckSourceGlob.py          # CMake GLOB 소스 누락 (짓지 않는 소스는 CMake 가 적은 UnbuiltSources.txt 로만 안다)
   │     │     ├── CheckDataFileReferences.py  # 아무도 include 하지 않는 죽은 데이터 파일
   │     │     ├── CheckNoDelayLoad.py         # /DELAYLOAD · delayimp 금지(lld 20 지연 로드 썽크가 첫 호출의 float 인자를 망가뜨린다)
+  │     │     ├── CheckPostTickThisBinding.py # 틱 뒤 실행에 this 메서드 델리게이트 금지(핸들로 다시 찾는 executeOrDeferPostTickOnComponent 로)
   │     │     ├── CheckResourceCasing.py      # 리소스 소문자 명명
   │     │     ├── CheckTextureFolders.py      # 런타임 textures/ 에는 DDS 만, 원본 이미지는 textures_raw/ 에만
   │     │     ├── CheckClockReads.py          # std::chrono 시계가 아니라 MonotonicClock · Stopwatch · Deadline

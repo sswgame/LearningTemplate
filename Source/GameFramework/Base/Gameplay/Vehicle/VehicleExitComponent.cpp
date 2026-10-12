@@ -36,7 +36,8 @@ namespace sw
         GameObjectManager*   pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pPawn == nullptr || pManager == nullptr || pPawn->wasButtonTriggered( _exitIndex ) == false )
             return;
-        pManager->executeOrDeferPostTick( SW_DELEGATE_METHOD( GameObjectManager::PostTickDelegate, &VehicleExitComponent::exitDriver, this ) );
+        pManager->executeOrDeferPostTickOnComponent<VehicleExitComponent>( getHandle(), []( VehicleExitComponent& component )
+        { component.exitDriver(); } );
     }
 
     void VehicleExitComponent::exitDriver()

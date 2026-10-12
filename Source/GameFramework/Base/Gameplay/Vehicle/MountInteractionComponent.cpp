@@ -35,7 +35,8 @@ namespace sw
         GameObjectManager*   pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pPawn == nullptr || pManager == nullptr || pPawn->wasButtonTriggered( _interactIndex ) == false )
             return;
-        pManager->executeOrDeferPostTick( SW_DELEGATE_METHOD( GameObjectManager::PostTickDelegate, &MountInteractionComponent::toggleMount, this ) );
+        pManager->executeOrDeferPostTickOnComponent<MountInteractionComponent>( getHandle(), []( MountInteractionComponent& component )
+        { component.toggleMount(); } );
     }
 
     void MountInteractionComponent::toggleMount()

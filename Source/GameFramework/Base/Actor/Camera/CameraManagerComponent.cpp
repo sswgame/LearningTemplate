@@ -141,7 +141,8 @@ namespace sw
             resolveCamera();
             return;
         }
-        pManager->executeOrDeferPostTick( SW_DELEGATE_METHOD( GameObjectManager::PostTickDelegate, &CameraManagerComponent::resolveCamera, this ) );
+        pManager->executeOrDeferPostTickOnComponent<CameraManagerComponent>( getHandle(), []( CameraManagerComponent& component )
+        { component.resolveCamera(); } );
     }
 
     CameraComponent* CameraManagerComponent::findTargetCamera( const GameObjectHandle& target ) const

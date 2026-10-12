@@ -58,7 +58,8 @@ namespace sw
         GameObject*                pOwner   = getOwner();
         GameObjectManager*         pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( reaction == WesternHorseReaction::Bucked && pManager != nullptr )
-            pManager->executeOrDeferPostTick( SW_DELEGATE_METHOD( GameObjectManager::PostTickDelegate, &WesternHorseMountComponent::throwRiders, this ) );
+            pManager->executeOrDeferPostTickOnComponent<WesternHorseMountComponent>( getHandle(), []( WesternHorseMountComponent& component )
+            { component.throwRiders(); } );
         return reaction;
     }
 

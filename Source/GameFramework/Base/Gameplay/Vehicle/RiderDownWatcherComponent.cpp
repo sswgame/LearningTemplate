@@ -19,7 +19,8 @@ namespace sw
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager != nullptr )
-            pManager->executeOrDeferPostTick( SW_DELEGATE_METHOD( GameObjectManager::PostTickDelegate, &RiderDownWatcherComponent::forceDismount, this ) );
+            pManager->executeOrDeferPostTickOnComponent<RiderDownWatcherComponent>( getHandle(), []( RiderDownWatcherComponent& component )
+            { component.forceDismount(); } );
     }
 
     void RiderDownWatcherComponent::forceDismount()
