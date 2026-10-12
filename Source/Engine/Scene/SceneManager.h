@@ -5,6 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Task/TaskFuture.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -15,6 +16,12 @@ namespace sw
     class GameObject;
     class IRHIDevice;
     class Scene;
+
+    /**
+     * @brief 이전 씬의 오브젝트를 가리키는 기록이 무효가 됐다는 알림입니다(활성 씬을 바꿨을 때 · 매니저 종료).
+     * @details 오브젝트 포인터 · id 를 붙잡는 기록(되돌리기 스택 등)을 가진 쪽이 구독해 비웁니다. 씬 매니저는 구독자가 누구인지 모릅니다.
+     */
+    using SceneObjectsInvalidatedDelegate = MulticastDelegate<void()>;
 
     /**
      * @class SceneManager
@@ -118,6 +125,12 @@ namespace sw
         /** @brief 씬 전환 너머로 가져갈 오브젝트로 표시되어 있으면 true 입니다. */
         bool isPersistent( const GameObject* pObject ) const;
 
+        /**
+         * @brief 이전 씬의 오브젝트가 무효가 될 때(활성 씬 교체 · `shutdown`) 알리는 델리게이트입니다. 알림은 이전 씬을 언로드하기 전에 갑니다.
+         * @details 구독자는 이 매니저보다 오래 살아야 합니다. 호스트는 매니저를 먼저 해제하므로 구독을 따로 해제하지 않습니다.
+         */
+        SceneObjectsInvalidatedDelegate& onSceneObjectsInvalidated() { return _onSceneObjectsInvalidated; }
+
     private:
         /** @brief 씬을 언로드하고 목록에서 제거합니다. */
         void unloadScene( Scene* pScene );
@@ -125,8 +138,8 @@ namespace sw
         void activateScene( Scene* pScene );
         /** @brief 표시된 영속 루트와 그 자손을 @p pFrom 에서 @p pTo 로 같은 id 로 옮겨 심습니다. 사라진 루트는 표시에서 뺍니다. */
         void carryPersistentObjects( Scene* pFrom, Scene* pTo );
-        /** @brief 받은 되돌리기 기록을 비웁니다(활성 씬이 바뀔 때 · 종료). 기록이 없거나 배포본이면 아무것도 하지 않습니다. */
-        void clearCommandStack();
+        /** @brief `onSceneObjectsInvalidated` 구독자에게 알립니다(활성 씬이 바뀔 때 · 종료). */
+        void broadcastSceneObjectsInvalidated();
         /** @brief 받은 에셋 매니저에 더 이상 참조되지 않는 에셋을 정리하게 합니다(활성 씬이 바뀐 뒤). 없으면 아무것도 하지 않습니다. */
         void garbageCollectUnusedAssets();
         /**
@@ -161,10 +174,11 @@ namespace sw
         shared_ptr<AsyncLoadSlot> _asyncLoad;
         string                    _queuedPath;
         /** @brief 대기열에 든 요청의 약속. 대기열은 한 자리이므로 이것도 하나다. */
-        TaskPromise<Scene*> _queuedPromise;
-        atomic<bool>        _bLoadInFlight;
-        TaskHandle          _loadHandle;
-        string              _saveBlockReason; ///< 비어 있지 않으면 씬 저장을 막는다(`setSaveBlockReason`)
-        bool                _bInitialized;
+        TaskPromise<Scene*>             _queuedPromise;
+        atomic<bool>                    _bLoadInFlight;
+        TaskHandle                      _loadHandle;
+        string                          _saveBlockReason;           ///< 비어 있지 않으면 씬 저장을 막는다(`setSaveBlockReason`)
+        SceneObjectsInvalidatedDelegate _onSceneObjectsInvalidated; ///< `onSceneObjectsInvalidated`
+        bool                            _bInitialized;
     };
 } // namespace sw

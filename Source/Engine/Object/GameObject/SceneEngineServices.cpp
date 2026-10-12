@@ -15,7 +15,6 @@ namespace sw
         sceneServices._pDefaultAssets = services._pEngineDefaultAssets;
         sceneServices._pTaskManager   = services._pTaskManager;
         sceneServices._pTypeRegistry  = services._pTypeRegistry;
-        sceneServices._pCommandStack  = services._pCommandStack;
         return sceneServices;
     }
 

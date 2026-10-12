@@ -228,7 +228,12 @@ namespace
             {
                 // 앱과 같다 — 표를 묶은 뒤 씬 쪽 묶음을 넘긴다(씬 매니저는 묶기 전에 만들어졌다).
                 const sw::SceneEngineServices services = sw::SceneEngineServices::makeFromBoundEngine();
-                return host._pOwned->_pSceneManager->initialize( services ) ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
+                if ( host._pOwned->_pSceneManager->initialize( services ) == false )
+                    return sw::EngineInitResult::Failed;
+                // 앱과 같다 — 씬이 바뀌면 되돌리기 기록을 소유자가 비운다(씬 매니저보다 기록이 늦게 해제된다).
+                host._pOwned->_pSceneManager->onSceneObjectsInvalidated().add(
+                    SW_DELEGATE_METHOD( sw::Delegate<void()>, &sw::CommandStack::clear, host._commandStack.get() ) );
+                return sw::EngineInitResult::Succeeded;
             }
             static void shutdown( TestHost& host ) { host._pOwned->_pSceneManager->shutdown(); }
             static void destroy( TestHost& host )

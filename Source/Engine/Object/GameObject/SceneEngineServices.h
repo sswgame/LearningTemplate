@@ -16,7 +16,6 @@ namespace sw
     struct EngineServices;
 
     class AssetManager;
-    class CommandStack;
     class IAudioSystem;
     class PhysicsSystem;
     class TaskManager;
@@ -31,7 +30,6 @@ namespace sw
         const EngineDefaultAssets* _pDefaultAssets{ nullptr }; ///< 씬 기본 머티리얼 경로
         TaskManager*               _pTaskManager{ nullptr };   ///< 비동기 씬 로드를 띄우고 기다리는 곳
         TypeRegistry*              _pTypeRegistry{ nullptr };  ///< 씬을 읽어도 되는지(모듈 타입 등록 완료)와 타입 표 세대
-        CommandStack*              _pCommandStack{ nullptr };  ///< 씬을 바꿀 때 비우는 되돌리기 기록(배포본에는 없다)
 
         /** @brief 서비스 표 @p services 에서 이 묶음의 칸을 골라 만듭니다. 호스트가 자기 표로 부릅니다. */
         static SceneEngineServices makeFromEngineServices( const EngineServices& services );

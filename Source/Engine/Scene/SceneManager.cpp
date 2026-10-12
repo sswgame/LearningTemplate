@@ -18,7 +18,6 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
-#include "Engine/Utility/CommandStack.h"
 
 namespace sw
 {
@@ -37,6 +36,7 @@ namespace sw
         , _bLoadInFlight{ false }
         , _loadHandle{}
         , _saveBlockReason{}
+        , _onSceneObjectsInvalidated{}
         , _bInitialized{ false }
     {
         _asyncLoad->_services = _services;
@@ -119,7 +119,7 @@ namespace sw
             scene->shutdown();
         }
         _listLoadedScene.clear();
-        clearCommandStack();
+        broadcastSceneObjectsInvalidated();
         SW_LOG_INFO( "Shut down." );
     }
 
@@ -157,7 +157,7 @@ namespace sw
         if ( _pRHIDevice != nullptr )
             pScene->initialize( _pRHIDevice );
 
-        clearCommandStack();
+        broadcastSceneObjectsInvalidated();
 
         if ( pPrevious != nullptr && pPrevious != pScene )
             unloadScene( pPrevious );
@@ -480,7 +480,7 @@ namespace sw
         if ( bQueuedSatisfiedByThisLoad )
             _queuedPromise.setValue( _pActiveScene );
 
-        clearCommandStack();
+        broadcastSceneObjectsInvalidated();
 
         // 이전 활성 씬을 언로드한다
         if ( pPreviousActive != nullptr && pPreviousActive != _pActiveScene )
@@ -653,13 +653,9 @@ namespace sw
             _listLoadedScene.end() );
     }
 
-    void SceneManager::clearCommandStack()
+    void SceneManager::broadcastSceneObjectsInvalidated()
     {
-#if !defined( SW_SHIPPING )
-        // 되돌리기 기록은 나간 씬의 오브젝트를 가리킨다.
-        if ( _services._pCommandStack != nullptr )
-            _services._pCommandStack->clear();
-#endif
+        _onSceneObjectsInvalidated.broadcast();
     }
 
     void SceneManager::garbageCollectUnusedAssets()
