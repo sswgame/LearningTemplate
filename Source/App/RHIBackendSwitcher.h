@@ -9,6 +9,8 @@
 
 namespace sw
 {
+    enum class RHIBackend : uint32;
+
     struct GlobalVariableInfo;
 
     class EditorModuleHost;
@@ -49,6 +51,21 @@ namespace sw
         /** @brief 예약된 교체가 있으면 적용합니다. 프레임 경계에서만 부릅니다. */
         void applyIfPending();
 
+        // --- 자동화 창구(시나리오 단계 `SwapBackend` 와 탐침 `RHI.*` — `RHIBackendSwitcherAutomation.cpp`) -------------------------------------------------
+        /** @brief `initialize` 한 교체기입니다. 시나리오 단계와 탐침이 이것으로 교체를 요청하고 읽습니다. 없으면 nullptr 입니다. */
+        static RHIBackendSwitcher* findActive();
+        /** @brief 지금 확정된(디바이스가 실제로 쓰는) 백엔드입니다. RHI 가 없으면 false 입니다. */
+        [[nodiscard]] bool findCommittedBackend( RHIBackend& outBackend ) const;
+        /** @brief 요청했지만 아직 적용하지 않은 교체가 있으면 true 입니다. */
+        bool isSwapPending() const;
+        /** @brief 이 프로세스에서 교체에 실패한 횟수입니다(실패하면 이전 백엔드로 복구한다). */
+        uint32 getFailedSwapCount() const { return _failedSwapCount; }
+        /**
+         * @brief 백엔드 교체를 요청합니다 — 메뉴 · 콘솔 · `-gv_rhiSwapAtFrame` 과 같은 길(`gv_rhiBackend` 의 `setValueAsInt` → 변경 콜백)이며, 적용은 이 프레임 끝의 `applyIfPending` 입니다.
+         * @return 요청했으면(이미 그 백엔드이면 요청 없이도) true 입니다. 변수를 찾지 못하면 false 입니다.
+         */
+        [[nodiscard]] bool requestSwap( RHIBackend backend );
+
         // IEngineFrameObserver — 프레임 시작만 쓴다(`-gv_rhiSwapAtFrame` 진단). 나머지는 아무것도 하지 않고 종료를 정하지 않는다.
         /** @brief `-gv_rhiSwapAtFrame` 의 프레임이면 `gv_rhiBackend` 를 `-gv_rhiSwapTo` 로 바꿔 교체를 요청합니다(한 번만). Shipping 에서는 아무것도 하지 않습니다. */
         void                onFrameBegin( const EngineFrameContext& context ) override;
@@ -65,6 +82,8 @@ namespace sw
     private:
         EngineLoop*       _pEngineLoop; // 소유하지 않는다
         EditorModuleHost* _pModuleHost; // 소유하지 않는다
+
+        uint32 _failedSwapCount;
 
         uint8 _bEnableEditor : 1;
         /** @brief gv_rhiBackend 를 되돌리는 대입이 변경 콜백을 재귀 호출하지 않게 막습니다. */

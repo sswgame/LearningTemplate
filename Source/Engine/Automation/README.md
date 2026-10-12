@@ -214,6 +214,22 @@ echo $LASTEXITCODE
 | `Module.GraphBroken` | 탐침 | 실패한 리로드가 그래프를 막았으면 1(프로세스를 다시 시작해야 한다) |
 | `Module.BindingsOk` | 탐침 | 모든 모듈이 지금 보관한 의존 이미지에 묶였으면 1(`LiveReloadManager::verifyModuleBindings`) |
 | `Scene.ObjectCount` | 탐침 | 활성 씬의 오브젝트 수(리로드 앞뒤로 씬이 사라지지 않았는지) |
+| `Scene.Transitioning` | 탐침 | 비동기 씬 로드나 전환이 진행 중이면 1(`scene.open` 은 요청만 하고 돌아오므로 끝은 이 탐침이 0 인 것으로 본다 — 에디터 체인 초기화가 쓴다) |
+
+### 백엔드 교체 시나리오
+
+`<SwapBackend backend="dx11|dx12|vulkan|opengl"/>`(App 의 `RHIBackendSwitcherAutomation.cpp`)는 한 프로세스가 백엔드를 차례로 건너게 합니다. 단계는 `-gv_rhiSwapAtFrame` 과 메뉴 · 콘솔이 가는 길
+(`gv_rhiBackend` 의 `setValueAsInt` → 변경 콜백 → 프레임 끝의 `applyIfPending`)로 교체를 **요청만** 하고, 끝은 시나리오가 기다립니다.
+
+| 이름 | 종류 | 뜻 |
+|---|---|---|
+| `SwapBackend backend=…` | 단계 | 그 백엔드로 교체를 요청합니다. 이미 그 백엔드이고 대기 중인 교체가 없으면 아무것도 하지 않습니다. Shipping 에는 없습니다 |
+| `RHI.Backend` | 탐침 | 디바이스가 실제로 쓰는 백엔드(0 DirectX11 · 1 DirectX12 · 2 Vulkan · 3 OpenGL) |
+| `RHI.SwapPending` | 탐침 | 교체를 요청한 뒤 프레임 끝의 교체가 돌기 전까지 1 — `<WaitUntil probe="RHI.SwapPending" equals="0"/>` 로 기다린다 |
+| `RHI.SwapFailedCount` | 탐침 | 프로세스가 시작한 뒤 실패한 교체 수(실패하면 이전 백엔드로 복구한다) |
+
+교체 뒤의 모듈과 씬은 `Module.BindingsOk` · `Module.GraphBroken` · `Scene.ObjectCount` 로 같이 봅니다. 예는 `Resource/engine/automation/rhiswap/swapbackends.scenario.xml` 입니다(DX11 → DX12 → Vulkan → OpenGL → DX12).
+네 백엔드가 모두 있는 PC 에서만 통과하므로(없는 백엔드로 건너뛰면 교체가 실패한다) `AppScenarioTest` 가 줍는 `engine/automation` 바로 아래가 아니라 하위 폴더에 둡니다.
 
 리로드는 벽시계 디바운스(300 ms)와 DLL 복사를 거치므로 `WaitUntil` 의 `timeoutFrames` 를 넉넉히 둡니다(빠른 백엔드는 프레임이 훨씬 빨리 돈다). 키트나 에디터 확장을 리로드하려면 게임 팩의 시나리오에서 그 모듈 이름을 줍니다.
 
@@ -224,6 +240,7 @@ echo $LASTEXITCODE
 
 체인은 시나리오마다 앞에 **초기화**(`editor/chain/reset.scenario.xml`)를 끼워 새 에디터 세션과 같은 출발점으로 되돌립니다. 플레이 중지, 시작 씬 다시 열기(되돌리기 스택 · 선택 · 변경 표시가
 씬 교체와 함께 비워진다), 창을 엔진 기본 크기(1280x720)로, UI 배율 1, 도구 · 확장 패널 닫기(`panel.closeOptional`), 도크 기본 배치입니다.
+씬이 다시 열렸는지는 고정 프레임이 아니라 탐침으로 기다립니다(`Scene.Transitioning` 이 0 이고 오브젝트 수가 시작 씬의 값이며 되돌리기 · 변경 표시 · 선택이 비면 다음 단계) — 창 크기와 도크가 자리 잡는 짧은 간격만 고정입니다.
 6 개마다 **모듈 리로드**가 끼고 게임 모듈(`reloadgame`) → 키트와 서버 전용 키트 연쇄(`reloadkit`, `GF_Chat`) → 키트와 에디터 확장(`reloadkitext`, `GF_ThemePark`) → 에디터 모듈(`reloadeditor`) 순서로 돕니다.
 리로드 뒤에도 초기화가 먼저 도므로 다음 시나리오는 새 이미지 위에서 시작합니다 — 실제 개발에서 편집 중에 모듈을 다시 올리는 것과 같은 조건입니다.
 
