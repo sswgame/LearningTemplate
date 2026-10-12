@@ -118,6 +118,20 @@ OGG 디코더(stb_vorbis)의 메모리는 엔진 아레나에서 받고, 256KB �
   사용자 볼륨은 옵션 메뉴의 `audio.busVolume` 이 `IAudioService::setBusVolume` 으로 넣고, 그래프를 바꿔도 버스 이름으로 유지됩니다. 음소거(`setMute`)는 `master` 한 곳에만 겁니다.
 - 버스 하나라도 솔로면, 솔로 버스의 조상(신호가 지나는 경로)과 자손만 소리를 냅니다. DAW 와 Wwise 의 솔로와 같습니다.
 
+### 사이드체인 덕킹
+
+다른 버스가 시끄러우면 이 버스를 눌러 줍니다. 대사가 나올 때 음악 낮추기가 대표입니다(Wwise Auto-Ducking, 언리얼 서브믹스 Ducking). 눌리는 버스(음악)에 적습니다.
+
+```xml
+<AudioBusDesc _name="music" _parent="master">
+    <_listDuck><AudioDuckDesc _sourceBus="voice" _thresholdDb="-40" _depthDb="-9" _attackSeconds="0.05" _releaseSeconds="0.5" /></_listDuck>
+</AudioBusDesc>
+```
+
+소스 버스의 **지난 블록** 출력 피크(페이더 뒤)가 `_thresholdDb` 이상이면 목표가 `_depthDb`(0 이하), 아니면 0 입니다. 눌림은 dB 축에서 `_attackSeconds`(더 깊어질 때)와 `_releaseSeconds`(돌아올 때)로 따라가고,
+버스 페이더에 더해집니다(`AudioMixer::getBusDuckDb`). 지난 블록 값을 쓰므로 한 블록(약 5 ms) 늦지만 처리 순서에 제약이 없고 고리가 생겨도 재귀하지 않습니다. 덕이 여럿이면 가장 깊은 하나를 씁니다.
+모르는 소스, 자기 자신, 양수 깊이는 읽기 오류입니다. 기본 그래프에는 덕이 없습니다 — 게임이 믹서를 바꿀 때 넣습니다(`loadMixer`). 조건 없이 늘 낮추는 것은 스냅샷(`PauseMenu` 처럼 버스 오프셋)이 맞습니다.
+
 ### 이펙트
 
 버스마다 인서트 체인(`AudioBusDesc::_listEffect`)이 있고, 센드와 페이더 전에 순서대로 실행합니다. 이펙트 종류는 `AudioEffectRegistry` 에 이름으로 등록되어 있습니다(`DSP/AudioEffect`).

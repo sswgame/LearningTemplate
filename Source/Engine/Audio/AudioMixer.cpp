@@ -49,6 +49,16 @@ namespace sw
                 send._bPreFader   = sendDesc._bPreFader;
                 bus._listSend.push_back( send );
             }
+            for ( const AudioDuckDesc& duckDesc : busDesc._listDuck )
+            {
+                Duck duck;
+                duck._sourceIndex    = static_cast<uint32>( desc.findBusIndex( duckDesc._sourceBus ) );
+                duck._thresholdDb    = duckDesc._thresholdDb;
+                duck._depthDb        = duckDesc._depthDb;
+                duck._attackSeconds  = duckDesc._attackSeconds;
+                duck._releaseSeconds = duckDesc._releaseSeconds;
+                bus._listDuck.push_back( duck );
+            }
             for ( const AudioEffectDesc& effectDesc : busDesc._listEffect )
             {
                 unique_ptr<IAudioEffect> pEffect = AudioEffectRegistry::createEffect( effectDesc._type );
@@ -170,7 +180,29 @@ namespace sw
         const Bus& bus = _listBusState[busIndex];
         if ( bus._bMuted == SW_TRUE || bus._bAudible == SW_FALSE )
             return 0.0f;
-        return AudioMath::dbToLinear( bus._volumeDb + bus._volumeOffsetDb ) * bus._userVolume;
+        return AudioMath::dbToLinear( bus._volumeDb + bus._volumeOffsetDb + bus._duckDb ) * bus._userVolume;
+    }
+
+    void AudioMixer::updateDucking( uint32 blockFrames )
+    {
+        const float32 blockSeconds = static_cast<float32>( blockFrames ) / static_cast<float32>( audio::kSampleRate );
+        for ( Bus& bus : _listBusState )
+        {
+            if ( bus._listDuck.empty() )
+                continue;
+            float32 deepestDb = 0.0f;
+            for ( Duck& duck : bus._listDuck )
+            {
+                const float32 sourceDb = AudioMath::linearToDb( _listBusState[duck._sourceIndex]._peak );
+                const float32 targetDb = duck._thresholdDb <= sourceDb ? duck._depthDb : 0.0f;
+                // 더 깊어지는 방향이 공격, 되돌아오는 방향이 릴리스이다. 시간 0 은 한 블록에 끝까지 간다.
+                const float32 seconds     = targetDb < duck._currentDb ? duck._attackSeconds : duck._releaseSeconds;
+                const float32 coefficient = seconds <= 0.0f ? 1.0f : 1.0f - MathUtil::exp( -blockSeconds / seconds );
+                duck._currentDb += ( targetDb - duck._currentDb ) * coefficient;
+                deepestDb = MathUtil::min( deepestDb, duck._currentDb );
+            }
+            bus._duckDb = deepestDb;
+        }
     }
 
     void AudioMixer::beginBlock( uint32 frameCount )
@@ -187,6 +219,7 @@ namespace sw
     {
         const uint32  blockFrames = MathUtil::min( frameCount, _blockFrameCount );
         const float32 invFrames   = blockFrames > 0 ? 1.0f / static_cast<float32>( blockFrames ) : 0.0f;
+        updateDucking( blockFrames );
         for ( const uint32 busIndex : _listOrder )
         {
             Bus&     bus    = _listBusState[busIndex];

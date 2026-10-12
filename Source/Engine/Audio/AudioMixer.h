@@ -80,8 +80,12 @@ namespace sw
         float32 computeBusGain( uint32 busIndex ) const;
         /** @brief 마지막 블록의 버스 출력 피크(절댓값 최대)입니다. */
         float32 getBusPeak( uint32 busIndex ) const { return _listBusState[busIndex]._peak; }
+        /** @brief 사이드체인 덕이 지금 이 버스에 거는 눌림(dB, 0 이하)입니다. */
+        float32 getBusDuckDb( uint32 busIndex ) const { return _listBusState[busIndex]._duckDb; }
 
     private:
+        /** @brief 덕 소스 버스의 지난 블록 피크로 눌림 양을 한 블록만큼 옮깁니다. */
+        void updateDucking( uint32 blockFrames );
         /** @brief 솔로가 걸린 버스가 있으면, 각 버스가 솔로 경로 위에 있는지 다시 셉니다. */
         void refreshSoloPaths();
 
@@ -95,17 +99,30 @@ namespace sw
             bool    _bPreFader{ false };
         };
 
+        /** @brief 사이드체인 덕 하나의 실행 상태입니다. */
+        struct Duck
+        {
+            uint32  _sourceIndex{ 0 };
+            float32 _thresholdDb{ 0.0f };
+            float32 _depthDb{ 0.0f };
+            float32 _attackSeconds{ 0.0f };
+            float32 _releaseSeconds{ 0.0f };
+            float32 _currentDb{ 0.0f }; ///< 지금 눌림(0 이하)
+        };
+
         /** @brief 버스 하나의 실행 상태입니다. */
         struct Bus
         {
             vector<float32>                  _listInput{};
             vector<Send>                     _listSend{};
+            vector<Duck>                     _listDuck{};
             vector<unique_ptr<IAudioEffect>> _listEffect{};
             vector<hashed_string>            _listEffectName{};
             hashed_string                    _name{};
             int32                            _parentIndex{ -1 };
             float32                          _volumeDb{ 0.0f };
             float32                          _volumeOffsetDb{ 0.0f };
+            float32                          _duckDb{ 0.0f }; ///< 덕들 가운데 가장 깊은 눌림(dB, 0 이하)
             float32                          _userVolume{ 1.0f };
             float32                          _gain{ 0.0f }; ///< 지난 블록 끝의 페이더 게인(램프 시작점)
             float32                          _peak{ 0.0f };

@@ -99,6 +99,24 @@ namespace sw
                     }
                 }
             }
+            for ( const AudioDuckDesc& duck : bus._listDuck )
+            {
+                if ( findBusIndex( duck._sourceBus ) < 0 )
+                {
+                    SW_LOG_ERROR( "%#: bus '%#' is ducked by unknown bus '%#'", sourceName, bus._name.c_str(), duck._sourceBus.c_str() );
+                    bValid = false;
+                }
+                else if ( duck._sourceBus == bus._name )
+                {
+                    SW_LOG_ERROR( "%#: bus '%#' ducks itself", sourceName, bus._name.c_str() );
+                    bValid = false;
+                }
+                if ( 0.0f < duck._depthDb || duck._attackSeconds < 0.0f || duck._releaseSeconds < 0.0f )
+                {
+                    SW_LOG_ERROR( "%#: bus '%#' has a duck with a positive depth or a negative time", sourceName, bus._name.c_str() );
+                    bValid = false;
+                }
+            }
             for ( const AudioSendDesc& send : bus._listSend )
             {
                 if ( findBusIndex( send._bus ) < 0 )
