@@ -6,10 +6,12 @@
 
 #include "Engine/Object/GameObject/SceneOverlapWorld2D.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
 {
@@ -47,7 +49,10 @@ namespace sw
         {
             pCollider->syncPhysicsBody();
         }
-        _physicsWorld.step( deltaTime );
+        {
+            SW_PROFILE_SCOPE( "GT.Scene.tick.physics.overlapStep" );
+            _physicsWorld.step( deltaTime );
+        }
 
         const vector<PhysicsOverlapEvent>& listEvent = _physicsWorld.getOverlapEvents();
         if ( listEvent.empty() )

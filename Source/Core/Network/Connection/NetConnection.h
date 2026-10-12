@@ -87,6 +87,8 @@ namespace sw
         static int32 getMaxMessageSize( NetChannelType channel );
         /** @brief 받은 메시지 하나를 꺼냅니다. 없으면 false 를 반환합니다. */
         [[nodiscard]] bool receiveMessage( NetChannelType channel, vector<uint8>& outBuffer );
+        /** @brief 받은 메시지 하나를 꺼내 @p inoutBytes 뒤에 덧붙입니다. 여러 메시지를 아레나 하나에 모을 때 중간 버퍼 복사가 없습니다. 없으면 false 이고 그대로 둡니다. */
+        [[nodiscard]] bool receiveMessageAppend( NetChannelType channel, vector<uint8>& inoutBytes );
 
         /**
          * @brief 패킷 본문을 씁니다. 헤더(시퀀스, ack, ack 비트), 들어가는 만큼의 메시지, 확인 요청 비트 순서입니다.

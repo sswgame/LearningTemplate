@@ -6,6 +6,7 @@
  */
 #include "pch.h"
 
+#include "Core/Container/IndexFreeList.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EnginePlatformHeaders.h"
@@ -35,13 +36,11 @@ namespace sw
         SW_ASSERT( lock.owns_lock() );
         (void)lock;
 
-        // 반납된 슬롯이 있으면 그것부터 쓴다(펜스 뒤에 회수된 것들이다).
-        if ( _pDevice->_listFreeBindless.empty() == false )
-        {
-            const RHIDescriptorIndex reused = _pDevice->_listFreeBindless.back();
-            _pDevice->_listFreeBindless.pop_back();
+        // 반납된 슬롯이 있으면 그것부터 쓴다(펜스 뒤에 회수된 것들이다). 새 인덱스는 레지스트리 크기가 아니라 힙 카운터다 —
+        // SRV/CBV 와 UAV 가 레지스트리 둘에 나뉘어도 힙 인덱스 공간은 하나라서다.
+        RHIDescriptorIndex reused{ kInvalidDescriptorIndex };
+        if ( tryPopFreeListIndex( _pDevice->_listFreeBindless, reused ) )
             return reused;
-        }
 
         if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kBindlessDescriptorCapacity )
         {

@@ -78,14 +78,6 @@ namespace sw
     }
 
     /**
-     * @brief 타입 테이블의 세대입니다(`TypeRegistry::getGeneration()` 의 값). 등록, 별칭, 모듈 해제가 일어날 때마다 오릅니다.
-     * @details 레지스트리 객체 밖의 내보낸 전역에 둔 이유는 `TypeLookupCache::find` 가 인라인이기 때문이다. 빈 결과(미등록)를
-     *          다시 찾을지 정하려고 이 값을 읽는데, 캐스트마다 두 번 읽는 값이다. 그래서 서비스 테이블을 거치거나 DLL 경계를 넘는 호출을
-     *          하지 않고 헤더에서 원자 로드로 읽는다. 레지스트리는 엔진에 하나뿐이라 값이 같다. 쓰는 쪽은 `TypeRegistry` 뿐이다.
-     */
-    extern SW_API atomic<uint32> gv_typeTableGeneration;
-
-    /**
      * @brief FQN 하나의 `findType` 결과를 기록해 두는 캐시입니다.
      * @details 코드젠의 `StaticType()` 이 캐스트마다 `findType( hashed_string( "sw::Foo" ) )`(문자열 intern, shared_mutex 잠금,
      *          해시맵 조회)을 하지 않도록, 이 캐시가 한 번 찾은 포인터를 그대로 반환한다.
@@ -93,7 +85,8 @@ namespace sw
      *          **세대를 보지 않는 이유.** `TypeInfo` 의 주소는 고정이다. 레지스트리가 `unique_ptr` 로 보관하고,
      *          테이블이 커져도 옮기지 않으며, 모듈을 해제하면 지우는 대신 `_bAlive` 를 내린다(묘비). 같은 FQN 이 다시
      *          등록되면 같은 객체에 덮어써서 복원한다. 그래서 적중 경로는 "포인터 하나와 살아 있는지 확인"으로 끝난다(캐스트마다 두 번 거치는 경로다).
-     *          세대(`gv_typeTableGeneration`)는 **빈 결과**(미등록)를 매번 다시 찾지 않으려는 용도로만 쓴다.
+     *          세대(`TypeRegistry::getGeneration`)는 **빈 결과**(미등록)를 매번 다시 찾지 않으려는 용도로만 쓰고, 그 비교는
+     *          `findSlow` 안에 있다. 적중 경로만 인라인이라 세대 값을 헤더에 내보낼 필요가 없다(데이터 export 는 모듈 경계에 걸린다).
      *          핫 리로드로 모듈이 사라지면 그 모듈의 정적 캐시도 같이 사라지고, 다시 로드된 모듈의 캐시는
      *          비어 있어서 첫 호출에 찾는다.
      */
@@ -105,18 +98,19 @@ namespace sw
         /**
          * @brief fqn 의 TypeInfo 입니다. 찾아 둔 포인터가 있으면 그것(해제됐으면 nullptr), 없으면 `findSlow` 로 찾습니다. 미등록이면 nullptr 입니다.
          * @details 적중 경로는 여기 인라인이다. 캐스트마다 `StaticType()` 과 `getTypeInfo()` 로 두 번 거치므로
-         *          DLL 경계 호출 하나가 곧 비용이다.
+         *          DLL 경계 호출 하나가 곧 비용이다. 미등록 경로는 `findSlow` 호출 하나다.
          */
         const TypeInfo* find( const hashed_string& fqn ) const
         {
             const TypeInfo* pType = _pType.load( std::memory_order_acquire );
             if ( pType != nullptr )
                 return pType->isAlive() ? pType : nullptr;
-            if ( _generation.load( std::memory_order_acquire ) == gv_typeTableGeneration.load( std::memory_order_acquire ) )
-                return nullptr;
             return findSlow( fqn );
         }
-        /** @brief 아직 찾지 못했거나 빈 결과의 세대가 지났을 때의 경로입니다. 레지스트리가 없으면 캐시를 건드리지 않고 nullptr 을 반환합니다. */
+        /**
+         * @brief 찾아 둔 포인터가 없을 때의 경로입니다. 빈 결과를 기록한 세대가 그대로면 찾지 않고 nullptr 입니다.
+         *        레지스트리가 없으면 캐시를 건드리지 않고 nullptr 을 반환합니다.
+         */
         const TypeInfo* findSlow( const hashed_string& fqn ) const;
         /** @brief 다음 호출이 반드시 다시 찾게 합니다(조회 키가 바뀌었을 때). */
         void reset()
@@ -193,11 +187,11 @@ namespace sw
          * @brief 타입 테이블이 바뀔 때마다 오르는 세대입니다. 기록해 둔 빈 결과(`TypeLookupCache` 의 미등록, 찾지 못한 부모)를
          *        다시 찾을지 이 값으로 정합니다.
          * @details 등록, 별칭, 모듈 해제 모두에서 오른다. 0 은 "아직 아무것도 등록되지 않음"을 뜻하므로
-         *          `TypeLookupCache` 의 초기값과 구별된다. 값은 `gv_typeTableGeneration` 이다. 왜 레지스트리 객체
-         *          밖에 있는지는 그 선언에 적혀 있다. `findType` 이 반환한 포인터는 세대와 무관하게 **영원히 유효**하다
-         *          (주소 고정, 묘비). 살아 있는지는 `TypeInfo::isAlive()` 가 알려 준다.
+         *          `TypeLookupCache` 의 초기값과 구별된다. 레지스트리는 엔진에 하나뿐이라 정적 함수다(서비스 조회 없이 읽는다).
+         *          `findType` 이 반환한 포인터는 세대와 무관하게 **영원히 유효**하다(주소 고정, 묘비). 살아 있는지는
+         *          `TypeInfo::isAlive()` 가 알려 준다.
          */
-        uint32 getGeneration() const;
+        static uint32 getGeneration();
         /**
          * @brief 이름, FQN, 별칭으로 EnumInfo 를 찾습니다. 어느 이름으로 찾든 같은 객체이고, 등록이 더 일어나도 주소는 바뀌지 않습니다.
          * @details 모듈이 언로드되면 nullptr 를 반환하지만 객체는 남는다(묘비). 같은 FQN 이 다시 로드되면 그 객체에 덮어쓴다.

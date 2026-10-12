@@ -6,13 +6,13 @@
  */
 #include "pch.h"
 
+#include "Core/Container/IndexFreeList.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIResourceFactory.h"
-#include "Engine/Graphics/RHI/Support/RHIIndexFreeList.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -58,17 +58,15 @@ namespace sw
     {
         _pDevice->assertRegistryMutableNow( "unregisterBindlessResource" );
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
-        // 이중 해제 가드는 `releaseFreeListIndex` 안에 있다. 종류 이름만 넘겨 로그를 맞춘다.
-        releaseFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree, index, RHIBufferHandle{ 0 },
-                              "buffer" );
+        // 이중 해제 가드는 `releaseFreeListIndex` 안에 있다.
+        releaseFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree, index, RHIBufferHandle{ 0 } );
     }
 
     void D3D11RHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
     {
         _pDevice->assertRegistryMutableNow( "unregisterBindlessTexture" );
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
-        releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree, index, RHITextureHandle{ 0 },
-                              "texture" );
+        releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree, index, RHITextureHandle{ 0 } );
     }
 
     RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessBufferUav( RHIBufferHandle buffer )

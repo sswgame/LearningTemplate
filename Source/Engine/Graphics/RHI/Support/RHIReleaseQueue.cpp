@@ -7,6 +7,7 @@ namespace sw
     RHIReleaseQueue::RHIReleaseQueue( uint32 frameLatency )
         : _listFrameEntry{}
         , _listGPUEntry{}
+        , _listReadyScratch{}
         , _spinLock{}
         , _currentFrame{ 0 }
         , _frameLatency{ frameLatency } {}
@@ -22,10 +23,7 @@ namespace sw
             return;
 
         std::scoped_lock<SpinLock> lock{ _spinLock };
-        FrameDeferredEntry         entry{};
-        entry._releaseDelegate = releaseDelegate;
-        entry._targetFrame     = _currentFrame + static_cast<uint64>( _frameLatency );
-        _listFrameEntry.push_back( entry );
+        _listFrameEntry.push( releaseDelegate, _currentFrame + static_cast<uint64>( _frameLatency ) );
     }
 
     void RHIReleaseQueue::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate, uint64 fenceValue )
@@ -34,13 +32,25 @@ namespace sw
             return;
 
         std::scoped_lock<SpinLock> lock{ _spinLock };
-        GPUDeferredEntry           entry{};
-        entry._releaseDelegate = releaseDelegate;
-        entry._targetFence     = fenceValue;
-        _listGPUEntry.push_back( entry );
+        _listGPUEntry.push( releaseDelegate, fenceValue );
     }
 
     void RHIReleaseQueue::tickFrame()
+    {
+        uint64 currentFrame{ 0 };
+        {
+            std::scoped_lock<SpinLock> lock{ _spinLock };
+            currentFrame = ++_currentFrame;
+        }
+        releaseReady( _listFrameEntry, currentFrame );
+    }
+
+    void RHIReleaseQueue::tickCompleted( uint64 completedFence )
+    {
+        releaseReady( _listGPUEntry, completedFence );
+    }
+
+    void RHIReleaseQueue::releaseReady( KeyedPendingList<RHIResourceReleaseDelegate>& list, uint64 threshold )
     {
         // 스크래치를 빌려 쓴다. 콜백이 다시 tick 을 부르는 드문 재진입에도 안전하도록 잠깐 꺼내 두고 끝나면 돌려놓는다.
         // 꺼내고 돌려놓는 것도 잠금 안에서 한다 — DX12 는 렌더 스레드의 endFrame 과 리소스를 만드는 스레드의
@@ -50,69 +60,16 @@ namespace sw
         {
             std::unique_lock<SpinLock> lock{ _spinLock };
             listReady.swap( _listReadyScratch );
-            const uint64 currentFrame = ++_currentFrame;
             for ( ;; )
             {
-                const size_t readyCount = static_cast<size_t>( std::count_if( _listFrameEntry.begin(), _listFrameEntry.end(), [currentFrame]( const FrameDeferredEntry& entry )
-                { return entry._targetFrame <= currentFrame; } ) );
+                const size_t readyCount = list.countReady( threshold );
                 if ( readyCount <= listReady.capacity() )
                     break;
                 lock.unlock();
                 listReady.reserve( readyCount );
                 lock.lock();
             }
-
-            auto partitionIter = std::stable_partition( _listFrameEntry.begin(), _listFrameEntry.end(), [currentFrame]( const FrameDeferredEntry& entry )
-            {
-                return entry._targetFrame > currentFrame;
-            } );
-
-            for ( auto iter = partitionIter; iter != _listFrameEntry.end(); ++iter )
-            {
-                listReady.push_back( iter->_releaseDelegate );
-            }
-            _listFrameEntry.erase( partitionIter, _listFrameEntry.end() );
-        }
-
-        for ( const RHIResourceReleaseDelegate& callback : listReady )
-        {
-            if ( callback.isBound() )
-                callback();
-        }
-        listReady.clear();
-        std::scoped_lock<SpinLock> lock{ _spinLock };
-        // 그사이 다른 tick 이 돌려놓은 것이 더 크면 그것을 둔다.
-        if ( listReady.capacity() > _listReadyScratch.capacity() )
-            _listReadyScratch.swap( listReady );
-    }
-
-    void RHIReleaseQueue::tickCompleted( uint64 completedFence )
-    {
-        // 스크래치를 빌려 쓴다(tickFrame 과 같은 이유로 잠금 안에서 꺼내고 돌려놓고, 같은 방식으로 잠금 안에서는 할당하지 않는다).
-        vector<RHIResourceReleaseDelegate> listReady;
-        {
-            std::unique_lock<SpinLock> lock{ _spinLock };
-            listReady.swap( _listReadyScratch );
-            for ( ;; )
-            {
-                const size_t readyCount = static_cast<size_t>( std::count_if( _listGPUEntry.begin(), _listGPUEntry.end(), [completedFence]( const GPUDeferredEntry& entry )
-                { return entry._targetFence <= completedFence; } ) );
-                if ( readyCount <= listReady.capacity() )
-                    break;
-                lock.unlock();
-                listReady.reserve( readyCount );
-                lock.lock();
-            }
-            auto partitionIter = std::stable_partition( _listGPUEntry.begin(), _listGPUEntry.end(), [completedFence]( const GPUDeferredEntry& entry )
-            {
-                return entry._targetFence > completedFence;
-            } );
-
-            for ( auto iter = partitionIter; iter != _listGPUEntry.end(); ++iter )
-            {
-                listReady.push_back( iter->_releaseDelegate );
-            }
-            _listGPUEntry.erase( partitionIter, _listGPUEntry.end() );
+            list.extractReady( threshold, listReady );
         }
 
         for ( const RHIResourceReleaseDelegate& callback : listReady )
@@ -129,23 +86,22 @@ namespace sw
 
     void RHIReleaseQueue::flushAll()
     {
-        vector<FrameDeferredEntry> listFrameFlush;
-        vector<GPUDeferredEntry>   listGPUFlush;
+        KeyedPendingList<RHIResourceReleaseDelegate> listFrameFlush;
+        KeyedPendingList<RHIResourceReleaseDelegate> listGPUFlush;
         {
             std::scoped_lock<SpinLock> lock{ _spinLock };
             listFrameFlush.swap( _listFrameEntry );
             listGPUFlush.swap( _listGPUEntry );
         }
 
-        for ( const FrameDeferredEntry& entry : listFrameFlush )
+        vector<RHIResourceReleaseDelegate> listFlush;
+        listFlush.reserve( listFrameFlush.size() + listGPUFlush.size() );
+        listFrameFlush.extractAll( listFlush );
+        listGPUFlush.extractAll( listFlush );
+        for ( const RHIResourceReleaseDelegate& callback : listFlush )
         {
-            if ( entry._releaseDelegate.isBound() )
-                entry._releaseDelegate();
-        }
-        for ( const GPUDeferredEntry& entry : listGPUFlush )
-        {
-            if ( entry._releaseDelegate.isBound() )
-                entry._releaseDelegate();
+            if ( callback.isBound() )
+                callback();
         }
     }
 

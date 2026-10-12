@@ -8,6 +8,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestEnvironment.h"
 #include "TestFramework/TestFramework.h"

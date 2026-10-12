@@ -6,11 +6,10 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/File/KeyValueFile.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorExports.h"
-
-#include "Engine/Utility/KeyValueFile.h"
 
 namespace sw::editor
 {

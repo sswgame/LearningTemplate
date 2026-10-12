@@ -4,6 +4,7 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "GameFramework/Base/Online/Service/OnlineReplyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -118,10 +119,8 @@ namespace sw
 
     bool EconomyProtocol::readReply( BitReader& reader, EconomyReply& outReply )
     {
-        const uint64 result = reader.readVarUint();
-        if ( result >= static_cast<uint64>( EconomyResult::Count ) )
+        if ( OnlineReplyUtil::readEnum( reader, EconomyResult::Count, outReply._result ) == false )
             return false;
-        outReply._result    = static_cast<EconomyResult>( result );
         outReply._bReplayed = reader.readBool() ? SW_TRUE : SW_FALSE;
         if ( readBalances( reader, outReply._listBalance ) == false )
             return false;
@@ -148,18 +147,12 @@ namespace sw
 
     EconomyResult EconomyProtocol::fromErrorCode( uint16 errorCode )
     {
-        switch ( errorCode )
-        {
-            case OnlineError::kOk:
-                return EconomyResult::Ok;
-            case OnlineError::kUnauthenticated:
-                return EconomyResult::NotSignedIn;
-            case OnlineError::kInvalidRequest:
-                return EconomyResult::InvalidRequest;
-            case OnlineError::kConflict:
-                return EconomyResult::Busy;
-            default:
-                return EconomyResult::Unavailable;
-        }
+        static constexpr OnlineErrorResult<EconomyResult> kArrErrorResult[] = {
+            {             OnlineError::kOk,             EconomyResult::Ok},
+            {OnlineError::kUnauthenticated,    EconomyResult::NotSignedIn},
+            { OnlineError::kInvalidRequest, EconomyResult::InvalidRequest},
+            {       OnlineError::kConflict,           EconomyResult::Busy},
+        };
+        return OnlineError::toResult( errorCode, kArrErrorResult, EconomyResult::Unavailable );
     }
 } // namespace sw

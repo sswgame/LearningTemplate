@@ -47,6 +47,8 @@ namespace sw
         , _pRHI{ nullptr }
         , _pWindow{ nullptr }
         , _pRenderThread{ nullptr }
+        , _pSceneManager{ nullptr }
+        , _pUISystem{ nullptr }
         , _listGameSavedState{}
         , _frameState{}
     {
@@ -136,6 +138,11 @@ namespace sw
         _pWindow            = pWindow;
         _pRenderThread      = pRenderThread;
 
+        // 프레임 경로가 매 프레임 전역 조회를 하지 않도록 여기서 한 번 읽는다. 서비스 테이블이 비어 있으면 그 일을 건너뛴다.
+        const bool bServicesBound = engine::areEngineServicesBound();
+        _pSceneManager            = bServicesBound ? engine::getBoundEngineServices()._pSceneManager : nullptr;
+        _pUISystem                = bServicesBound ? engine::getBoundEngineServices()._pUISystem : nullptr;
+
 #if !defined( SW_SHIPPING )
         _moduleCompiler = make_unique<ModuleCompiler>( _pLiveReloadManager );
         if ( _pLiveReloadManager != nullptr )
@@ -208,12 +215,13 @@ namespace sw
         _frameState._bGameplayActive = queryGameplayActive() ? SW_TRUE : SW_FALSE;
         // 호스트 모듈(에디터)이 없으면 월드는 처음부터 플레이 중이다(에디터가 있으면 Play, Stop 이 정한다). 켜지 않으면 onBeginPlay 가 불리지 않는다.
         // 이미 켜져 있으면 아무 일도 없다.
-        if ( controlsWorldPlay() == false && engine::getSceneManager().isWorldPlaying() == false )
-            engine::getSceneManager().setWorldPlaying( true );
+        const bool bStartWorldPlay = _pSceneManager != nullptr && controlsWorldPlay() == false && _pSceneManager->isWorldPlaying() == false;
+        if ( bStartWorldPlay )
+            _pSceneManager->setWorldPlaying( true );
         // 게임 update 가 돌지 않는 동안(에디터 일시정지, Simulate)은 게임이 연 화면(로딩, HUD, 메뉴)을 그리지 않는다. 그 화면을 닫을 게임 코드가
         // 돌지 않으므로, 그리면 첫 Play 전까지 로딩 화면이 게임 뷰를 덮는다. 오프스크린 미리보기(UI Preview)는 그대로 그린다.
-        if ( engine::areEngineServicesBound() )
-            engine::getUISystem().setOnScreenSuppressed( _frameState._bGameplayActive == SW_FALSE );
+        if ( _pUISystem != nullptr )
+            _pUISystem->setOnScreenSuppressed( _frameState._bGameplayActive == SW_FALSE );
     }
 
     void ModuleHost::updateGame( float32 deltaTime )

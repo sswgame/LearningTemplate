@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/KeyValueFile.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/UUID/UUID.h"
@@ -11,7 +12,6 @@
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
-#include "Engine/Utility/KeyValueFile.h"
 
 namespace sw
 {
@@ -418,8 +418,9 @@ namespace sw
         if ( ResourceIO::hasResource( metaRel ) == false )
             return false;
 
+        string      metaText;
         KeyValueMap mapData;
-        if ( KeyValueFile::loadResource( metaRel, mapData ) == false )
+        if ( ResourceIO::readTextResource( metaRel, metaText ) == false || KeyValueFile::parse( metaText, mapData ) == false )
             return false;
 
         const utf8* pGuidStr = KeyValueFile::get( mapData, "guid", nullptr );

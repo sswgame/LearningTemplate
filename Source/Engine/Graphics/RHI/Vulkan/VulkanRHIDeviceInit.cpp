@@ -218,8 +218,8 @@ namespace sw
             {
                 SW_LOG_WARNING( "Skipping Vulkan device '%#': API %#.%# is below the required %#.%# (shaders are SPIR-V for that target)",
                                 candidateProperties.deviceName, VK_API_VERSION_MAJOR( candidateProperties.apiVersion ),
-                                VK_API_VERSION_MINOR( candidateProperties.apiVersion ), VulkanRHIRequiredVersion::kRequiredMajor,
-                                VulkanRHIRequiredVersion::kRequiredMinor );
+                                VK_API_VERSION_MINOR( candidateProperties.apiVersion ), constant::kVulkanRequiredMajor,
+                                constant::kVulkanRequiredMinor );
                 continue;
             }
             // 소프트웨어 어댑터를 요청했으면(gv_rhiSoftwareAdapter) CPU 디바이스(lavapipe · SwiftShader)만 후보다.
@@ -273,8 +273,8 @@ namespace sw
             _initResult = RHIInitResult::DriverUnsupported;
         }
         else if ( _physicalDevice == nullptr )
-            SW_LOG_ERROR( "No Vulkan %#.%# device with a graphics queue that can present to this surface", VulkanRHIRequiredVersion::kRequiredMajor,
-                          VulkanRHIRequiredVersion::kRequiredMinor );
+            SW_LOG_ERROR( "No Vulkan %#.%# device with a graphics queue that can present to this surface", constant::kVulkanRequiredMajor,
+                          constant::kVulkanRequiredMinor );
         return _physicalDevice != nullptr;
     }
 

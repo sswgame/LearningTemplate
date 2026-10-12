@@ -6,7 +6,6 @@
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/Support/RHIConstantBufferMirror.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
-#include "Engine/Graphics/RHI/Support/RHIIndexFreeList.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
@@ -238,46 +237,6 @@ SW_TEST_CASE( RHIShaderRequestTest, ResolvesEntryPointsDefinesAndDepthOnly )
 }
 
 /**
- * @brief [RHIIndexFreeListTest] 이미 빈 슬롯을 다시 반납하면 **거절한다**
- * @details 거절하지 않으면 프리리스트에 같은 인덱스가 **두 번** 들어가고, 다음 두 번의 할당이
- *          그 인덱스를 **서로 다른 리소스에 발급한다**. 그 뒤로는 한쪽이 다른 쪽의 디스크립터를
- *          덮어쓴다.
- *
- *          가드는 이 헬퍼 한 자리에 있다 — 백엔드 · 자원 종류마다 손으로 적으면 어느 한 종류에서 가드가 빠져
- *          그 종류의 이중 해제만 통과한다.
- */
-SW_TEST_CASE( RHIIndexFreeListTest, DoubleReleaseIsRejected )
-{
-    sw::vector<uint32> listRegistered;
-    sw::vector<uint32> listFree;
-
-    const uint32 indexA = sw::allocateFreeListIndex( listRegistered, listFree, 100u );
-    const uint32 indexB = sw::allocateFreeListIndex( listRegistered, listFree, 200u );
-    SW_ASSERT_TRUE( indexA != indexB );
-
-    // 한 번 반납하면 그 자리가 프리리스트로 간다.
-    SW_EXPECT_EQUAL( 100u, sw::releaseFreeListIndex( listRegistered, listFree, indexA, 0u, "test" ) );
-    SW_ASSERT_EQUAL( size_t( 1 ), listFree.size() );
-
-    // **두 번째 반납은 거절된다** — 안 그러면 프리리스트에 같은 인덱스가 둘이 된다.
-    {
-        test::ScopedLogSuppressor suppressor;
-        SW_EXPECT_EQUAL( 0u, sw::releaseFreeListIndex( listRegistered, listFree, indexA, 0u, "test" ) );
-    }
-    SW_EXPECT_TRUE_MSG( listFree.size() == 1, "이중 해제가 프리리스트에 같은 인덱스를 두 번 넣었습니다" );
-
-    // 그래서 다음 두 할당이 서로 다른 인덱스를 받는다.
-    const uint32 reused = sw::allocateFreeListIndex( listRegistered, listFree, 300u );
-    const uint32 fresh  = sw::allocateFreeListIndex( listRegistered, listFree, 400u );
-    SW_EXPECT_EQUAL( indexA, reused );
-    SW_EXPECT_TRUE_MSG( fresh != reused, "같은 인덱스가 두 리소스에 발급됐습니다" );
-    SW_EXPECT_TRUE( fresh != indexB );
-
-    // 범위 밖은 조용히 무시한다(로그도 남기지 않는다).
-    SW_EXPECT_EQUAL( 0u, sw::releaseFreeListIndex( listRegistered, listFree, 9999u, 0u, "test" ) );
-}
-
-/**
  * @brief [RHITimestampTest] 기준점은 가장 이른 틱이고, 안 적힌 칸은 음수다. 기준점은 GPU 시계 나노초로도 남는다
  * @details 외부 프로파일러(Tracy)는 기준점 + 칸 값으로 절대 GPU 시각을 만들어 `readGPUClockNanos` 로 맞춘 CPU 시계 위에 놓는다.
  *          기준점의 환산이 칸 값과 다르면 GPU 구간이 타임라인에서 통째로 밀린다.
@@ -471,20 +430,20 @@ SW_TEST_CASE( RHINativeHandlesTest, QueryRejectsAnotherLayoutAndFillsTheMatching
 SW_TEST_CASE( VulkanAPIVersionTest, DeviceBelowTheShaderTargetIsRejected )
 {
     using sw::VulkanRHIRequiredVersion;
-    const uint32 kRequiredMajor = VulkanRHIRequiredVersion::kRequiredMajor;
-    const uint32 kRequiredMinor = VulkanRHIRequiredVersion::kRequiredMinor;
-    SW_ASSERT_TRUE( kRequiredMinor > 0u );
+    using sw::constant::kVulkanRequiredMajor;
+    using sw::constant::kVulkanRequiredMinor;
+    SW_ASSERT_TRUE( kVulkanRequiredMinor > 0u );
 
-    const uint32 belowWithPatch = VulkanRHIRequiredVersion::makeAPIVersion( kRequiredMajor, kRequiredMinor - 1u ) | 0xFFFu;
+    const uint32 belowWithPatch = VulkanRHIRequiredVersion::makeAPIVersion( kVulkanRequiredMajor, kVulkanRequiredMinor - 1u ) | 0xFFFu;
     SW_EXPECT_FALSE( VulkanRHIRequiredVersion::isAPIVersionSupported( belowWithPatch ) );
     SW_EXPECT_FALSE( VulkanRHIRequiredVersion::isAPIVersionSupported( belowWithPatch | ( 1u << 29u ) ) );
-    SW_EXPECT_TRUE( VulkanRHIRequiredVersion::isAPIVersionSupported( VulkanRHIRequiredVersion::makeAPIVersion( kRequiredMajor, kRequiredMinor ) ) );
-    SW_EXPECT_TRUE( VulkanRHIRequiredVersion::isAPIVersionSupported( VulkanRHIRequiredVersion::makeAPIVersion( kRequiredMajor, kRequiredMinor + 1u ) ) );
+    SW_EXPECT_TRUE( VulkanRHIRequiredVersion::isAPIVersionSupported( VulkanRHIRequiredVersion::makeAPIVersion( kVulkanRequiredMajor, kVulkanRequiredMinor ) ) );
+    SW_EXPECT_TRUE( VulkanRHIRequiredVersion::isAPIVersionSupported( VulkanRHIRequiredVersion::makeAPIVersion( kVulkanRequiredMajor, kVulkanRequiredMinor + 1u ) ) );
 }
 
 /**
  * @brief [VulkanAPIVersionTest] 쿠킹된 Vulkan SPIR-V 의 판이 디바이스 요구 판의 타깃과 같다.
- * @details 셰이더 쿠킹 타깃(`-fspv-target-env`)과 물리 디바이스의 최소 판은 `VulkanRHIRequiredVersion` 하나에서 나온다. 한쪽만 바꾸거나 다시 쿠킹하지 않으면
+ * @details 셰이더 쿠킹 타깃(`-fspv-target-env`)과 물리 디바이스의 최소 버전은 `constant::kVulkanRequiredMajor` · `kVulkanRequiredMinor`(RHITypes.h) 하나에서 나온다. 한쪽만 바꾸거나 다시 쿠킹하지 않으면
  *          디바이스가 받지 못하는 판의 모듈이 남는다. 커밋된 vulkan 폴더 .spv 헤더의 판을 읽어 대조한다.
  */
 SW_TEST_CASE( VulkanAPIVersionTest, CookedVulkanSpirvMatchesTheRequiredAPI )
@@ -492,7 +451,7 @@ SW_TEST_CASE( VulkanAPIVersionTest, CookedVulkanSpirvMatchesTheRequiredAPI )
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     constexpr uint32 kSpirvMagic     = 0x07230203u;
-    const uint32     expectedVersion = sw::VulkanRHIRequiredVersion::computeSpirvVersion( sw::VulkanRHIRequiredVersion::kRequiredMinor );
+    const uint32     expectedVersion = sw::VulkanRHIRequiredVersion::computeSpirvVersion( sw::constant::kVulkanRequiredMinor );
     const utf8*      arrDomain[]     = { "engine", "common" };
 
     uint32 checkedCount{ 0 };

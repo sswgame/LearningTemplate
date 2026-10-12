@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -24,34 +25,46 @@ namespace sw
     bool GameDataXML::loadRoot( XMLDocument& doc, string_view path, const utf8* pRootName, XMLNode& outRoot, string& outSourceName )
     {
         outSourceName = string( path );
-        if ( doc.loadPath( path, &outSourceName ) == false )
+        switch ( XMLReadUtil::loadRoot( doc, path, pRootName, outRoot, &outSourceName ) )
         {
-            SW_LOG_WARNING( "Failed to read %#", path );
-            return false;
+            case XMLRootStatus::Found:
+            {
+                return true;
+            }
+            case XMLRootStatus::NotLoaded:
+            {
+                SW_LOG_WARNING( "Failed to read %#", path );
+                return false;
+            }
+            case XMLRootStatus::RootMissing:
+            {
+                SW_LOG_WARNING( "Missing <%#> root in %#", pRootName, outSourceName );
+                return false;
+            }
         }
-        outRoot = doc.getRoot( pRootName );
-        if ( outRoot.isValid() == false )
-        {
-            SW_LOG_WARNING( "Missing <%#> root in %#", pRootName, outSourceName );
-            return false;
-        }
-        return true;
+        return false;
     }
 
     bool GameDataXML::parseRoot( XMLDocument& doc, string_view xmlText, string_view sourceName, const utf8* pRootName, XMLNode& outRoot )
     {
-        if ( doc.parse( xmlText, sourceName ) == false )
+        switch ( XMLReadUtil::parseRoot( doc, xmlText, sourceName, pRootName, outRoot ) )
         {
-            SW_LOG_WARNING( "Failed to parse %#", sourceName );
-            return false;
+            case XMLRootStatus::Found:
+            {
+                return true;
+            }
+            case XMLRootStatus::NotLoaded:
+            {
+                SW_LOG_WARNING( "Failed to parse %#", sourceName );
+                return false;
+            }
+            case XMLRootStatus::RootMissing:
+            {
+                SW_LOG_WARNING( "Missing <%#> root in %#", pRootName, sourceName );
+                return false;
+            }
         }
-        outRoot = doc.getRoot( pRootName );
-        if ( outRoot.isValid() == false )
-        {
-            SW_LOG_WARNING( "Missing <%#> root in %#", pRootName, sourceName );
-            return false;
-        }
-        return true;
+        return false;
     }
 
     bool GameDataXML::loadFileWith( void* pCall, ReadRootFunction pReadRoot, string_view path, const utf8* pRootName )
@@ -82,10 +95,7 @@ namespace sw
 
     hashed_string GameDataXML::readName( const XMLNode& node, const utf8* pAttribute )
     {
-        const utf8* pText = node.findAttribute( pAttribute );
-        if ( StringUtil::isNullOrEmpty( pText ) )
-            return hashed_string{};
-        return hashed_string( pText );
+        return XMLReadUtil::readName( node, pAttribute );
     }
 
     void GameDataXML::parseNameList( string_view text, string_view separators, vector<hashed_string>& outListName )

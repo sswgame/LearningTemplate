@@ -153,6 +153,29 @@ SW_TEST_CASE( RagdollTest, WeaponTraceResolvesHitZone )
 }
 
 /**
+ * @brief [RagdollTest] makeHitInfo 는 광선 맞음과 때린 쪽 값을 그대로 옮기고 방향을 단위로 만든다 — 오브젝트가 없으면 히트 존은 비고 배율은 1 이다
+ */
+SW_TEST_CASE( RagdollTest, MakeHitInfoCopiesTheRayHitAndNormalizesDirection )
+{
+    CharacterRayHit rayHit;
+    rayHit._point     = float3{ 1.0f, 2.0f, 3.0f };
+    rayHit._normal    = float3{ 0.0f, 1.0f, 0.0f };
+    rayHit._bIs2D     = true;
+    const HitInfo hit = CharacterHitUtil::makeHitInfo( rayHit, nullptr, float3{ 0.0f, 0.0f, 4.0f }, 25.0f, 60.0f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, hit._direction._z, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, hit._point._y, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, hit._normal._y, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 25.0f, hit._damage, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 60.0f, hit._impulse, 1e-6f );
+    SW_EXPECT_TRUE( hit._bIs2D );
+    SW_EXPECT_TRUE( hit._zone == hashed_string{} );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, hit._damageMultiplier, 1e-6f );
+
+    const HitInfo still = CharacterHitUtil::makeHitInfo( rayHit, nullptr, float3{}, 1.0f, 0.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, still._direction.getLengthSquared(), 1e-12f );
+}
+
+/**
  * @brief [RagdollTest] 치명적 맞음 → 모든 바디가 동적으로 넘어져 바닥에 눕고 가라앉는다 → 기상: 오브젝트가 골반 아래로 옮겨지고 래그돌 자세에서 클립으로 섞여 돌아온다
  */
 SW_TEST_CASE( RagdollTest, FatalHitRagdollsSettlesAndGetsUp )

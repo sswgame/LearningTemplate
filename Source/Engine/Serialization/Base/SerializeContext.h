@@ -9,6 +9,8 @@ namespace sw
 {
     struct TypeInfo;
 
+    class TypeRegistry;
+
     /**
      * @class SerializeContext
      * @brief 직렬화 한 번에 쓰는 설정 묶음입니다. 타입별 커스텀 바이너리/텍스트 핸들러, 키 정책,
@@ -60,6 +62,7 @@ namespace sw
             , _mapBinaryReader{}
             , _mapTextWriter{}
             , _mapTextReader{}
+            , _pTypeRegistry{ nullptr }
             , _pOuterInstance{ nullptr }
             , _pOwnedPointerCreateFn{ nullptr }
             , _pRuntimeTypeInfoFn{ nullptr }
@@ -123,6 +126,20 @@ namespace sw
         bool allowsUnknownProperties() const { return _bAllowUnknownProperties == SW_TRUE; }
         /** @brief 세이브 직렬화인지(`setSaveGameOnly`) 반환합니다. */
         bool isSaveGameOnly() const { return _bSaveGameOnly == SW_TRUE; }
+
+        /**
+         * @brief 타입 · enum 을 찾을 레지스트리를 정합니다. nullptr 이면 엔진 전역 레지스트리입니다(기본).
+         * @details 직렬화의 깊은 경로(`SerializerUtil`)는 전역을 직접 부르지 않고 이 컨텍스트에게 묻는다. 테스트는 자기 레지스트리를
+         *          넣어 전역 등록 상태와 떨어진 채로 직렬화를 돌린다. 레지스트리는 이 컨텍스트로 직렬화하는 동안 살아 있어야 한다.
+         */
+        SerializeContext& setTypeRegistry( const TypeRegistry* pTypeRegistry )
+        {
+            _pTypeRegistry = pTypeRegistry;
+            return *this;
+        }
+
+        /** @brief 이 컨텍스트가 타입 · enum 을 찾는 레지스트리입니다(`setTypeRegistry`, 없으면 엔진 전역). */
+        const TypeRegistry& getTypeRegistry() const;
 
         /** @brief 소유 포인터 팩토리에 넘길 outer(소유자) 인스턴스를 설정합니다. */
         SerializeContext& setOuterInstance( void* pOuter )
@@ -201,15 +218,17 @@ namespace sw
         unordered_map<hashed_string, TextReadFn>    _mapTextReader;
         /** @brief 자기 표에 없을 때 물어볼 곳입니다. 전역 기본 컨텍스트라 수명은 프로그램 전체입니다. */
         const SerializeContext* _pHandlerFallback{ nullptr };
-        void*                   _pOuterInstance;
-        OwnedPointerCreateFn    _pOwnedPointerCreateFn;
-        RuntimeTypeInfoFn       _pRuntimeTypeInfoFn;
-        OpaqueElementKeepFn     _pOpaqueKeepFn;
-        OpaqueElementQueryFn    _pOpaqueQueryFn;
-        uint8                   _bIgnoreCaseKeys         : 1;
-        uint8                   _bAllowUnknownProperties : 1;
-        uint8                   _bSaveGameOnly           : 1;
-        [[maybe_unused]] uint8  _reservedFlags           : 5;
+        /** @brief 타입 · enum 을 찾을 곳입니다. nullptr 이면 엔진 전역 레지스트리입니다. */
+        const TypeRegistry*    _pTypeRegistry;
+        void*                  _pOuterInstance;
+        OwnedPointerCreateFn   _pOwnedPointerCreateFn;
+        RuntimeTypeInfoFn      _pRuntimeTypeInfoFn;
+        OpaqueElementKeepFn    _pOpaqueKeepFn;
+        OpaqueElementQueryFn   _pOpaqueQueryFn;
+        uint8                  _bIgnoreCaseKeys         : 1;
+        uint8                  _bAllowUnknownProperties : 1;
+        uint8                  _bSaveGameOnly           : 1;
+        [[maybe_unused]] uint8 _reservedFlags           : 5;
     };
 
 } // namespace sw

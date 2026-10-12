@@ -76,7 +76,7 @@ namespace sw
         static float32 getSurfaceArea( const AABB& box );
 
         vector<BVHNode3D>                _listNode;
-        vector<int32>                    _listFreeNode;
+        vector<uint32>                   _listFreeNode;
         unordered_map<SlotHandle, int32> _mapHandleToNode;
         int32                            _rootIndex;
     };

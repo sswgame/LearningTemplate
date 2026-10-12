@@ -184,9 +184,9 @@ namespace sw
                     return;
                 }
                 const ScenePhysics& physics = pManager->getScenePhysics();
-                if ( const IPhysicsScene3D* pScene3D = physics.findScene3D() )
+                if ( const IPhysicsBodyScene3D* pScene3D = physics.findScene3D() )
                     writer.addLineFormat( "bodies 3D", "%#", pScene3D->getBodyCount() );
-                if ( const IPhysicsScene2D* pScene2D = physics.findScene2D() )
+                if ( const IPhysicsBodyScene2D* pScene2D = physics.findScene2D() )
                     writer.addLineFormat( "bodies 2D", "%#", pScene2D->getBodyCount() );
                 writer.addLineFormat( "components", "%#", physics.getComponentCount() );
                 writer.addLineFormat( "contacts", "%#", static_cast<uint32>( physics.getFrameEvents3D().size() + physics.getFrameEvents2D().size() ) );

@@ -235,17 +235,9 @@ namespace sw
                     if ( std::find( state._listHitObjectID.begin(), state._listHitObjectID.end(), targetID ) != state._listHitObjectID.end() )
                         return;
                     state._listHitObjectID.push_back( targetID );
-                    HitInfo hit;
-                    hit._pInstigator = &context._owner;
-                    hit._body        = rayHit._body;
-                    hit._kind        = context._fired._name;
-                    hit._point       = rayHit._point;
-                    hit._normal      = rayHit._normal;
-                    hit._direction   = ( to - from ).getLengthSquared() > 1.0e-12f ? ( to - from ).normalize() : float3{};
-                    hit._damage      = context._entry.getFloatParam( s_damage, 1.0f );
-                    hit._impulse     = context._entry.getFloatParam( s_impulse, 0.0f );
-                    hit._bIs2D       = rayHit._bIs2D;
-                    CharacterHitUtil::resolveHitZone( *rayHit._pObject, rayHit._body, hit );
+                    HitInfo hit = CharacterHitUtil::makeHitInfo( rayHit, &context._owner, to - from, context._entry.getFloatParam( s_damage, 1.0f ),
+                                                                 context._entry.getFloatParam( s_impulse, 0.0f ) );
+                    hit._kind   = context._fired._name;
                     record( context, hit._zone, hit._point, targetID, context._fired._phase );
                     CharacterHitUtil::deliverHit( *rayHit._pObject, hit );
                 }

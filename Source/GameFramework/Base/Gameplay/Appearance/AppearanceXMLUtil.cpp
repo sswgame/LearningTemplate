@@ -8,6 +8,7 @@
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceTypes.h"
@@ -63,8 +64,7 @@ namespace sw
 
     hashed_string AppearanceXMLUtil::readName( const XMLNode& node, const utf8* pAttribute )
     {
-        const string_view text = StringUtil::trim( node.getAttributeText( pAttribute ) );
-        return text.empty() ? hashed_string{} : hashed_string( text );
+        return XMLReadUtil::readName( node, pAttribute );
     }
 
     void AppearanceXMLUtil::readNameList( const XMLNode& node, const utf8* pAttribute, vector<hashed_string>& outListName )

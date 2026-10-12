@@ -14,7 +14,7 @@
 #include "Engine/Object/Component/Physics/SocketPhysicsBody.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
-#include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/IPhysicsBodyScene.h"
 #include "Engine/Physics/PhysicsDesc.h"
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -67,7 +67,7 @@ namespace sw
         /** @brief 바디 핸들입니다(시작 전 · 꺼짐이면 무효). 질의 결과 · 이벤트의 바디와 견줍니다. */
         PhysicsBodyHandle getBodyHandle() const { return _body; }
         /** @brief 바디가 사는 3D 씬입니다(없으면 nullptr). */
-        IPhysicsScene3D* findScene() const;
+        IPhysicsBodyScene3D* findScene() const;
 
         PhysicsBodyType getBodyType() const { return _bodyType; }
         /** @brief 바디 종류를 바꿉니다. 시작했으면 다음 물리 프레임에 바디에도 듭니다. */
@@ -129,7 +129,7 @@ namespace sw
 
     private:
         /** @brief 지금 속성 · 자세로 바디를 만듭니다. */
-        void createBody( ScenePhysics& physics, IPhysicsScene3D& scene, const float3& position, const quaternion& rotation, const float3& scale );
+        void createBody( ScenePhysics& physics, IPhysicsBodyScene3D& scene, const float3& position, const quaternion& rotation, const float3& scale );
 
         PROPERTY( Category = "Body", Tooltip = "Static never moves, Kinematic follows the transform, Dynamic is simulated" )
         PhysicsBodyType _bodyType;

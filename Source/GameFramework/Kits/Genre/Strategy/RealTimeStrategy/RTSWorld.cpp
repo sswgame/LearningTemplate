@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
 
+#include "Core/Container/IndexFreeList.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -157,14 +158,13 @@ namespace sw
     // ------------------------------------------------------------------------------
     RTSUnitID RTSWorld::allocateUnit()
     {
-        if ( _listFreeSlot.empty() == false )
+        // 빈 슬롯은 마지막에 놓인 것부터 다시 나간다(LIFO). 유닛 id 가 그 순서를 따른다.
+        const uint32 index = reserveFreeListIndex( _listUnit, _listFreeSlot );
+        if ( index < _listUnit.size() )
         {
-            const uint32 index = _listFreeSlot.back();
-            _listFreeSlot.pop_back();
             _listUnit[index] = RTSUnit{};
             return RTSUnitID::make( index, _listGeneration[index] );
         }
-        const uint32 index = static_cast<uint32>( _listUnit.size() );
         _listUnit.emplace_back();
         _listGeneration.push_back( 1u );
         return RTSUnitID::make( index, 1u );

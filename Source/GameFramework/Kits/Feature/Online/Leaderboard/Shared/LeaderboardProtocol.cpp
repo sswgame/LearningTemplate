@@ -5,6 +5,7 @@
 #include "Core/Network/BitStream.h"
 
 #include "GameFramework/Base/Online/Guard/RequestLimits.h"
+#include "GameFramework/Base/Online/Service/OnlineReplyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -62,10 +63,8 @@ namespace sw
 
     bool LeaderboardProtocol::readReply( BitReader& reader, LeaderboardReply& outReply )
     {
-        const uint64 result = reader.readVarUint();
-        if ( result >= static_cast<uint64>( LeaderboardResult::Count ) )
+        if ( OnlineReplyUtil::readEnum( reader, LeaderboardResult::Count, outReply._result ) == false )
             return false;
-        outReply._result        = static_cast<LeaderboardResult>( result );
         outReply._periodID      = reader.readVarUint();
         outReply._score         = reader.readVarInt();
         const uint64 entryCount = reader.readVarUint();
@@ -118,18 +117,12 @@ namespace sw
 
     LeaderboardResult LeaderboardProtocol::fromErrorCode( uint16 errorCode )
     {
-        switch ( errorCode )
-        {
-            case OnlineError::kOk:
-                return LeaderboardResult::Ok;
-            case OnlineError::kUnauthenticated:
-                return LeaderboardResult::NotSignedIn;
-            case OnlineError::kInvalidRequest:
-                return LeaderboardResult::Invalid;
-            case OnlineError::kConflict:
-                return LeaderboardResult::Conflict;
-            default:
-                return LeaderboardResult::Unavailable;
-        }
+        static constexpr OnlineErrorResult<LeaderboardResult> kArrErrorResult[] = {
+            {             OnlineError::kOk,          LeaderboardResult::Ok},
+            {OnlineError::kUnauthenticated, LeaderboardResult::NotSignedIn},
+            { OnlineError::kInvalidRequest,     LeaderboardResult::Invalid},
+            {       OnlineError::kConflict,    LeaderboardResult::Conflict},
+        };
+        return OnlineError::toResult( errorCode, kArrErrorResult, LeaderboardResult::Unavailable );
     }
 } // namespace sw

@@ -179,16 +179,11 @@ namespace sw
 
     LiveOpsResult LiveOpsProtocol::fromErrorCode( uint16 errorCode )
     {
-        switch ( errorCode )
-        {
-            case OnlineError::kOk:
-                return LiveOpsResult::Ok;
-            case OnlineError::kInvalidRequest:
-                return LiveOpsResult::Invalid;
-            case OnlineError::kRateLimited:
-                return LiveOpsResult::RateLimited;
-            default:
-                return LiveOpsResult::Unavailable;
-        }
+        static constexpr OnlineErrorResult<LiveOpsResult> kArrErrorResult[] = {
+            {            OnlineError::kOk,          LiveOpsResult::Ok},
+            {OnlineError::kInvalidRequest,     LiveOpsResult::Invalid},
+            {   OnlineError::kRateLimited, LiveOpsResult::RateLimited},
+        };
+        return OnlineError::toResult( errorCode, kArrErrorResult, LiveOpsResult::Unavailable );
     }
 } // namespace sw

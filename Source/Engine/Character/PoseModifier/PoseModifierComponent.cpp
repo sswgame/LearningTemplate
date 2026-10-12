@@ -50,16 +50,16 @@ namespace sw
                     const ScenePhysics& physics = _manager.getScenePhysics();
                     if ( _bPlanar )
                     {
-                        const IPhysicsScene2D* pScene = physics.findScene2D();
-                        PhysicsCastHit2D       hit{};
+                        const IPhysicsQueryScene2D* pScene = physics.findScene2D();
+                        PhysicsCastHit2D            hit{};
                         if ( pScene == nullptr || pScene->raycast( float2{ origin._x, origin._y }, float2{ direction._x, direction._y }, maxDistance, filter, hit ) == false )
                             return false;
                         outHit._position = float3{ hit._point._x, hit._point._y, origin._z };
                         outHit._normal   = float3{ hit._normal._x, hit._normal._y, 0.0f };
                         return true;
                     }
-                    const IPhysicsScene3D* pScene = physics.findScene3D();
-                    PhysicsCastHit3D       hit{};
+                    const IPhysicsQueryScene3D* pScene = physics.findScene3D();
+                    PhysicsCastHit3D            hit{};
                     if ( pScene == nullptr || pScene->raycast( origin, direction, maxDistance, filter, hit ) == false )
                         return false;
                     outHit._position = hit._point;

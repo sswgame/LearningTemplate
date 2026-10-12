@@ -77,7 +77,7 @@ namespace sw
     {
     }
 
-    IPhysicsScene2D* RigidBody2DComponent::findScene() const
+    IPhysicsBodyScene2D* RigidBody2DComponent::findScene() const
     {
         return getScenePhysics() != nullptr ? getScenePhysics()->findScene2D() : nullptr;
     }
@@ -175,17 +175,17 @@ namespace sw
 
     float32 RigidBody2DComponent::getBodyMass() const
     {
-        const IPhysicsScene2D* pScene = findScene();
+        const IPhysicsBodyScene2D* pScene = findScene();
         return pScene != nullptr ? pScene->getBodyMass( _body ) : 0.0f;
     }
 
     bool RigidBody2DComponent::isSleeping() const
     {
-        const IPhysicsScene2D* pScene = findScene();
+        const IPhysicsBodyScene2D* pScene = findScene();
         return pScene != nullptr && pScene->isBodySleeping( _body );
     }
 
-    void RigidBody2DComponent::createBody( ScenePhysics& physics, IPhysicsScene2D& scene, const float2& position, float32 angle, const float3& scale )
+    void RigidBody2DComponent::createBody( ScenePhysics& physics, IPhysicsBodyScene2D& scene, const float2& position, float32 angle, const float3& scale )
     {
         PhysicsBodyDesc2D desc;
         desc._listShape.reserve( _listShape.size() );
@@ -226,7 +226,7 @@ namespace sw
             releasePhysics( physics );
             return;
         }
-        IPhysicsScene2D* pScene = physics.getScene2D();
+        IPhysicsBodyScene2D* pScene = physics.getScene2D();
         if ( pScene == nullptr )
             return;
         if ( consumeRebuild() )
@@ -299,7 +299,7 @@ namespace sw
 
     void RigidBody2DComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
     {
-        IPhysicsScene2D* pScene = physics.findScene2D();
+        IPhysicsBodyScene2D* pScene = physics.findScene2D();
         if ( pScene == nullptr || _body.isValid() == false )
             return;
         if ( _bodyType == PhysicsBodyType::Kinematic )
@@ -327,7 +327,7 @@ namespace sw
 
     void RigidBody2DComponent::postPhysicsStep( ScenePhysics& physics )
     {
-        IPhysicsScene2D* pScene = physics.findScene2D();
+        IPhysicsBodyScene2D* pScene = physics.findScene2D();
         if ( pScene == nullptr || _body.isValid() == false )
             return;
         _previousPosition = _currentPosition;
@@ -363,7 +363,7 @@ namespace sw
     {
         if ( _body.isValid() == false )
             return;
-        IPhysicsScene2D* pScene = physics.findScene2D();
+        IPhysicsBodyScene2D* pScene = physics.findScene2D();
         if ( pScene != nullptr )
             pScene->destroyBody( _body );
         _body        = PhysicsBodyHandle{};

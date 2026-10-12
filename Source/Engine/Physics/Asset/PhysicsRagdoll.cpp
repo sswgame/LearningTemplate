@@ -170,7 +170,7 @@ namespace sw
         return true;
     }
 
-    void PhysicsRagdollBuilder::destroy( IPhysicsScene3D& scene, PhysicsRagdoll& inoutRagdoll )
+    void PhysicsRagdollBuilder::destroy( IPhysicsBodyScene3D& scene, PhysicsRagdoll& inoutRagdoll )
     {
         // 바디를 지우면 붙은 관절도 지워진다.
         vector<PhysicsBodyHandle> listValid;
@@ -183,7 +183,7 @@ namespace sw
         inoutRagdoll = PhysicsRagdoll{};
     }
 
-    void PhysicsRagdollBuilder::setBodyType( IPhysicsScene3D& scene, const PhysicsRagdoll& ragdoll, PhysicsBodyType type )
+    void PhysicsRagdollBuilder::setBodyType( IPhysicsBodyScene3D& scene, const PhysicsRagdoll& ragdoll, PhysicsBodyType type )
     {
         for ( const PhysicsBodyHandle& body : ragdoll._listBody )
         {
@@ -191,7 +191,7 @@ namespace sw
         }
     }
 
-    void PhysicsRagdollBuilder::driveToPose( IPhysicsScene3D& scene, const PhysicsRagdoll& ragdoll, const PhysicsSkeletonView& skeleton, const float4x4& worldFromModel,
+    void PhysicsRagdollBuilder::driveToPose( IPhysicsBodyScene3D& scene, const PhysicsRagdoll& ragdoll, const PhysicsSkeletonView& skeleton, const float4x4& worldFromModel,
                                              float32 deltaTime )
     {
         for ( size_t bodyIndex = 0; bodyIndex < ragdoll._listBody.size(); ++bodyIndex )
@@ -212,7 +212,7 @@ namespace sw
         }
     }
 
-    void PhysicsRagdollBuilder::readBoneTransforms( const IPhysicsScene3D& scene, const PhysicsRagdoll& ragdoll, const PhysicsSkeletonView& skeleton,
+    void PhysicsRagdollBuilder::readBoneTransforms( const IPhysicsBodyScene3D& scene, const PhysicsRagdoll& ragdoll, const PhysicsSkeletonView& skeleton,
                                                     const float4x4& worldFromModel, span<float4x4> outListModelSpaceBone )
     {
         const size_t boneCount = skeleton._listModelSpaceBone.size();

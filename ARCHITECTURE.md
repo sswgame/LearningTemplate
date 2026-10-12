@@ -27,7 +27,7 @@ graph TD
 
 **App** 은 엔진 루프와 모듈 호스트만 가진 실행 파일입니다. 링크하는 것은 `Engine`, `RuntimeAPI`, `ModuleHost` 셋입니다.
 
-**ModuleHost**(`Source/ModuleHost`)는 모듈 호스트와 핫 리로드를 묶은 정적 라이브러리입니다. 고정 스텝 시간 정책(`FixedTimestep`)은 Engine(`Engine/Config`)에 있습니다. App과 전용 서버 실행 파일이 같이 씁니다.
+**ModuleHost**(`Source/ModuleHost`)는 모듈 호스트와 핫 리로드를 묶은 정적 라이브러리입니다. 고정 스텝 시간 정책(`FixedTimestep`)은 Core(`Core/Time`)에 있습니다. App과 전용 서버 실행 파일이 같이 씁니다.
 
 **Server** 는 전용 서버 실행 파일입니다. 창, RHI, 플레이어 설정 단계 없이 게임 모듈을 고정 틱으로 돌립니다. 자세한 내용은 [Source/Server/README.md](Source/Server/README.md)에 있습니다.
 
