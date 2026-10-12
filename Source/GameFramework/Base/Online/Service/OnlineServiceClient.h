@@ -56,8 +56,14 @@ namespace sw
     class SW_GF_API IOnlineClientService
     {
     public:
-        IOnlineClientService()          = default;
-        virtual ~IOnlineClientService() = default;
+        IOnlineClientService() = default;
+        /**
+         * @brief 올린 서비스 클라이언트에서 스스로 내립니다.
+         * @details 그 영역의 대기 · 보낸 요청의 응답 델리게이트를 부르지 않고 버린다(`OnlineServiceClient::unregisterClientService`).
+         *          키트 클라이언트가 서비스 클라이언트보다 먼저 파괴되어도 시한 안에 온 응답이 파괴된 객체를 부르지 않는다.
+         *          서비스 클라이언트가 먼저 파괴되면 그 소멸자가 이 키트에서 자기를 지워 두므로 파괴된 객체를 부르지 않는다.
+         */
+        virtual ~IOnlineClientService();
 
         IOnlineClientService( const IOnlineClientService& )            = delete;
         IOnlineClientService& operator=( const IOnlineClientService& ) = delete;
@@ -69,6 +75,12 @@ namespace sw
         virtual void onClientReady( OnlineServiceClient& client ) { (void)client; }
         /** @brief 연결이 끊겼을 때 불립니다. 다시 연결을 기다리며, 계정 키트는 로그인 상태를 내립니다. */
         virtual void onClientDisconnected( OnlineServiceClient& client ) { (void)client; }
+
+    private:
+        friend class OnlineServiceClient;
+
+        vector<OnlineServiceClient*> _listRegisteredClient{}; ///< 올린 서비스 클라이언트들(테스트는 한 키트를 여럿에 올린다). 소멸자에서 내릴 때 쓴다
+        uint16                       _registeredRange{ 0 };   ///< 올릴 때의 영역. 기반 소멸자에서는 가상 함수를 부를 수 없어 담아 둔다
     };
 } // namespace sw
 
@@ -111,6 +123,16 @@ namespace sw
 
         /** @brief 키트를 올립니다. 빌려 쓰며 초기화 전에 불러야 합니다. 영역이 겹치면 false 입니다. */
         [[nodiscard]] bool registerClientService( IOnlineClientService* pService );
+        /**
+         * @brief 키트를 내리고 그 영역의 요청을 `cancelRequestsOf` 로 버립니다. 올리지 않은 키트면 아무것도 하지 않습니다.
+         * @details 키트 기반 소멸자가 부른다. 다시 연결하면 Hello 에 그 키트가 빠진다.
+         */
+        void unregisterClientService( IOnlineClientService* pService );
+        /**
+         * @brief 영역 @p methodRange 의 대기 요청과 보낸 요청에서 응답 델리게이트를 부르지 않고 버립니다.
+         * @details 델리게이트 주인(키트 클라이언트)이 먼저 사라질 때 쓴다. 보낸 요청의 응답이 나중에 와도 버려진다.
+         */
+        void cancelRequestsOf( uint16 methodRange );
 
         /** @brief 자기 엔드포인트 모드로 시작합니다. 전송(빌려 쓴다)을 띄우고 서버에 연결을 겁니다. */
         [[nodiscard]] bool initialize( IStreamTransport* pTransport, const OnlineServiceClientSettings& settings, string& outError );
@@ -167,6 +189,7 @@ namespace sw
         {
             OnlineResponseDelegate _onResponse{};
             uint64                 _requestID{ 0 };
+            uint16                 _method{ 0 }; ///< `cancelRequestsOf` 가 영역으로 가린다
         };
 
         void        sendHello();

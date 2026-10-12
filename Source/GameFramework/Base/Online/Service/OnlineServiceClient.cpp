@@ -50,7 +50,23 @@ namespace sw
     {
     }
 
-    OnlineServiceClient::~OnlineServiceClient() { shutdown(); }
+    IOnlineClientService::~IOnlineClientService()
+    {
+        while ( _listRegisteredClient.empty() == false )
+        {
+            _listRegisteredClient.back()->unregisterClientService( this ); // 목록에서 자기를 지운다
+        }
+    }
+
+    OnlineServiceClient::~OnlineServiceClient()
+    {
+        shutdown();
+        for ( IOnlineClientService* pService : _listService ) // 키트가 더 오래 살면 그 소멸자가 파괴된 이 객체를 부르지 않게 끊는다
+        {
+            vector<OnlineServiceClient*>& listClient = pService->_listRegisteredClient;
+            listClient.erase( std::remove( listClient.begin(), listClient.end(), this ), listClient.end() );
+        }
+    }
 
     bool OnlineServiceClient::registerClientService( IOnlineClientService* pService )
     {
@@ -61,7 +77,35 @@ namespace sw
                 return false;
         }
         _listService.push_back( pService );
+        pService->_listRegisteredClient.push_back( this );
+        pService->_registeredRange = pService->getMethodRange();
         return true;
+    }
+
+    void OnlineServiceClient::unregisterClientService( IOnlineClientService* pService )
+    {
+        vector<OnlineServiceClient*>& listClient = pService->_listRegisteredClient;
+        listClient.erase( std::remove( listClient.begin(), listClient.end(), this ), listClient.end() );
+        const auto serviceIt = std::find( _listService.begin(), _listService.end(), pService );
+        if ( serviceIt == _listService.end() )
+            return;
+        _listService.erase( serviceIt );
+        cancelRequestsOf( pService->_registeredRange ); // 기반 소멸자에서 불리므로 getMethodRange(가상)는 부르지 않는다
+    }
+
+    void OnlineServiceClient::cancelRequestsOf( uint16 methodRange )
+    {
+        const auto queuedEnd = std::remove_if( _listQueuedCall.begin(), _listQueuedCall.end(),
+                                               [methodRange]( const QueuedCall& call )
+        { return OnlineMethodRange::getRangeBase( call._method ) == methodRange; } );
+        _listQueuedCall.erase( queuedEnd, _listQueuedCall.end() );
+        for ( auto pendingIt = _mapPendingCall.begin(); pendingIt != _mapPendingCall.end(); )
+        {
+            if ( OnlineMethodRange::getRangeBase( pendingIt->second._method ) == methodRange )
+                pendingIt = _mapPendingCall.erase( pendingIt ); // 요청 클라이언트의 항목은 남는다 — 응답이 오면 onNetResponse 가 찾지 못해 버린다
+            else
+                ++pendingIt;
+        }
     }
 
     bool OnlineServiceClient::initialize( IStreamTransport* pTransport, const OnlineServiceClientSettings& settings, string& outError )
@@ -271,7 +315,7 @@ namespace sw
                                                                       options, Delegate<void( const NetResponse& )>::create<&OnlineServiceClient::onNetResponse>( this ) );
         _pSendingCall                 = nullptr;
         if ( netRequestID != 0 )
-            _mapPendingCall[netRequestID] = PendingCall{ call._onResponse, call._requestID };
+            _mapPendingCall[netRequestID] = PendingCall{ call._onResponse, call._requestID, call._method };
     }
 
     void OnlineServiceClient::flushQueuedCalls()
