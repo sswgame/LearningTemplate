@@ -49,7 +49,7 @@ namespace sw
         /** @brief 앞으로 올 차례 @p count 개를 미리 봅니다(상태를 바꾸지 않는다). */
         void  previewOrder( int32 count, vector<int32>& outListActor ) const;
         int32 getRound() const { return _round; }
-        int32 getActorCount() const { return static_cast<int32>( _listActor.size() ); }
+        int32 getActorCount() const { return static_cast<int32>( _listCombatant.size() ); }
 
         /** @brief 배우(속도 · 게이지 · id · 우선 · 동률깨기) · 라운드 대기열 · 난수 · 라운드 · 모드을 씁니다.  */
         void writeState( Archive& outArchive ) const;
@@ -57,7 +57,7 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
-        struct Actor
+        struct Combatant
         {
             float32 _speed{ 1.0f };
             float32 _gauge{ 0.0f }; ///< 타임라인 — 다음 차례까지 남은 양
@@ -66,14 +66,14 @@ namespace sw
             uint32  _tieBreak{ 0 };
         };
 
-        Actor*       findActor( int32 actorID );
-        void         makeRoundQueue( vector<int32>& outListQueue, const vector<Actor>& listActor, GameRandom& random ) const;
-        static int32 popTimeline( vector<Actor>& listActor );
+        Combatant*   findCombatant( int32 actorID );
+        void         makeRoundQueue( vector<int32>& outListQueue, const vector<Combatant>& listActor, GameRandom& random ) const;
+        static int32 popTimeline( vector<Combatant>& listActor );
 
-        vector<Actor> _listActor;
-        vector<int32> _listRoundQueue; ///< 라운드제 — 이번 라운드에 남은 차례(앞부터)
-        GameRandom    _random;
-        int32         _round;
-        TurnOrderMode _mode;
+        vector<Combatant> _listCombatant;
+        vector<int32>     _listRoundQueue; ///< 라운드제 — 이번 라운드에 남은 차례(앞부터)
+        GameRandom        _random;
+        int32             _round;
+        TurnOrderMode     _mode;
     };
 } // namespace sw
