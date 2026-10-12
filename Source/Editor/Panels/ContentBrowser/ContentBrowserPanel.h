@@ -84,7 +84,7 @@ namespace sw::editor
         /** @brief 현재 폴더에 새 폴더를 만들고 목록을 다시 읽게 합니다. */
         [[nodiscard]] bool createNewFolder();
         /** @brief 현재 폴더에 새 에셋을 만들고 선택합니다. */
-        [[nodiscard]] bool createNewAsset( EditorNewAssetKind kind );
+        [[nodiscard]] bool createNewAsset( const EditorNewAssetTemplate& assetTemplate );
         /** @brief 에셋을 같은 폴더에 복제하고 사본을 선택합니다. */
         bool duplicateAsset( string_view absolutePath );
         /** @brief 에셋 이름을 그 자리에서 바꾸는 입력을 시작합니다. 입력란에는 확장자를 뺀 이름이 들어갑니다. 폴더는 받지 않습니다. */

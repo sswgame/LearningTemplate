@@ -263,6 +263,7 @@ VRM 은 같은 길로 임포트하고, MToon 머티리얼이 있으면 머티리
 1. `Common/Workspace/EditorAssetType.h` 의 `EditorAssetType` 에 값을 하나 더합니다.
 2. `Common/Workspace/EditorAssetType.cpp` 의 두 표에 줄을 더합니다. `kArrAssetMatch` 는 어떤 경로가 그 종류인지와 핫 리로드 칸을 정하고, `kArrKindInfo` 는 이름, 라벨, 패널 제목, 아이콘, 색, 임포트를 정합니다. 줄이나 칸이 빠지면 `static_assert` 가 컴파일을 멈춥니다.
 3. 썸네일, 열기, 뷰포트 드롭이 따로 필요하면 `AssetActions/<Kind>AssetTypeActions.cpp` 에 `IEditorAssetTypeActions` 를 구현하고 같은 파일에 등록 객체를 둡니다.
+4. 콘텐츠 브라우저 Add 메뉴로 새로 만들 수 있게 하려면 `Common/Commands/EditorAssetFileCommands.cpp` 의 `kArrNewAssetTemplate` 에 줄을 더합니다. 메뉴 항목과 표지(`contentBrowser.add.<id>`)가 그 줄에서 나옵니다.
 
 ### 확장 모듈 — 키트와 게임의 에디터 코드
 
