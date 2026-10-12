@@ -2,7 +2,7 @@
 
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/Commands/EditorSceneFileCommands.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorAssetTypeActions.h"
@@ -37,11 +37,11 @@ namespace sw::editor
                 return true;
             }
 
-            [[nodiscard]] virtual bool open( string_view relativePath ) const override { return EditorAssetCommands::tryOpenScene( relativePath ); }
+            [[nodiscard]] virtual bool open( string_view relativePath ) const override { return EditorSceneFileCommands::tryOpenScene( relativePath ); }
 
             virtual bool dropInViewport( GameObjectManager* /*pManager*/, const utf8* pPath, const float3& /*spawnPos*/ ) const override
             {
-                (void)EditorAssetCommands::tryOpenScene( pPath ); // 실패는 tryOpenScene 이 알린다
+                (void)EditorSceneFileCommands::tryOpenScene( pPath ); // 실패는 tryOpenScene 이 알린다
                 return true;
             }
         };

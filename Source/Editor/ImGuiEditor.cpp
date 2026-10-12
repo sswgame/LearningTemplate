@@ -13,8 +13,8 @@
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Backend/ImGuiOsInputFilter.h"
-#include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorPlayCommands.h"
+#include "Editor/Common/Commands/EditorSceneFileCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
@@ -343,7 +343,7 @@ namespace sw::editor
             if ( startupScene.empty() == false )
             {
                 SW_LOG_INFO( "시작 씬을 엽니다: %#", startupScene.c_str() );
-                if ( EditorAssetCommands::loadScene( startupScene ) == false )
+                if ( EditorSceneFileCommands::loadScene( startupScene ) == false )
                     SW_LOG_ERROR( "시작 씬을 열지 못했습니다: %#", startupScene.c_str() );
             }
         }
@@ -666,7 +666,7 @@ namespace sw::editor
 
     bool ImGuiEditor::onWindowCloseQuery()
     {
-        return EditorAssetCommands::tryBeginQuit();
+        return EditorSceneFileCommands::tryBeginQuit();
     }
 
     void ImGuiEditor::beginFrame()

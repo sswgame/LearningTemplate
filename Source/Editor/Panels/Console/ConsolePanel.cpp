@@ -7,7 +7,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/Commands/EditorAssetFileCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
@@ -633,11 +633,11 @@ namespace sw::editor
         vector<string> listFilePath;
         if ( FileUtil::collectFiles( pSink->getLogFolderPath(), ".txt", listFilePath, false ) == false || listFilePath.empty() )
         {
-            (void)EditorAssetCommands::showInFileExplorer( pSink->getLogFolderPath() );
+            (void)EditorAssetFileCommands::showInFileExplorer( pSink->getLogFolderPath() );
             return;
         }
         std::sort( listFilePath.begin(), listFilePath.end() );
-        (void)EditorAssetCommands::showInFileExplorer( listFilePath.back() );
+        (void)EditorAssetFileCommands::showInFileExplorer( listFilePath.back() );
     }
 
     void ConsolePanel::updatePlayReactions()

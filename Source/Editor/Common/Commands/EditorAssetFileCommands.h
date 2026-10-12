@@ -1,11 +1,12 @@
 /**
  * @file EditorAssetFileCommands.h
- * @brief 콘텐츠 브라우저의 에셋 파일 관리입니다. 새 폴더와 새 에셋, 이름 바꾸기와 옮기기(참조 고침), 복제, 휴지통 삭제를 맡습니다(ImGui 없음).
+ * @brief 콘텐츠 브라우저의 에셋 파일 관리입니다. 새 폴더와 새 에셋, 이름 바꾸기와 옮기기(참조 고침), 복제, 임포트, 휴지통 삭제, 탐색기에서 보기를 맡습니다(ImGui 없음).
  */
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 
 namespace sw::editor
 {
@@ -67,5 +68,19 @@ namespace sw::editor
         [[nodiscard]] static bool moveAsset( string_view sourceAbs, string_view destinationAbs, EditorReferenceIndex& inoutIndex, uint32& outFixedFileCount );
         /** @brief 에셋과 짝 `.meta` 를 OS 휴지통으로 보냅니다. 휴지통이 없는 플랫폼은 지웁니다. */
         [[nodiscard]] static bool moveToTrash( string_view absolutePath );
+        /** @brief 에셋 파일과 짝이 되는 .meta 파일을 삭제합니다. */
+        [[nodiscard]] static bool deleteAsset( string_view absolutePath );
+        /**
+         * @brief 파일을 Content Browser 폴더로 복사하고 메타를 만듭니다. 같은 이름이 있으면 덮지 않고 `_2` 처럼 새 이름으로 둡니다.
+         * @return 복사한 파일 수입니다. 이미 그 폴더에 있는 파일과 없는 파일은 건너뜁니다.
+         */
+        static uint32 importFiles( string_view destFolderAbs, const vector<string>& listSourcePath );
+
+        /**
+         * @brief 파일 탐색기에서 이 경로를 선택한 채로 엽니다.
+         * @details 셸 없이 프로세스를 직접 실행한다. 셸(`system`)을 거치면 경로 안의 `&` 와 `"` 가 명령으로 해석되고 콘솔 창이
+         *          한 번 깜빡인다.
+         */
+        static bool showInFileExplorer( string_view absolutePath );
     };
 } // namespace sw::editor

@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/Commands/EditorAssetFileCommands.h"
 #include "Editor/Common/EditorExternalToolJob.h"
 #include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/EditorUtil.h"
@@ -249,7 +249,7 @@ namespace sw::editor
         const bool bHasFolder = _progress._state == PackagingState::Succeeded && _progress._outputFolder.empty() == false;
         ImGui::BeginDisabled( bHasFolder == false );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kFolderOpen, "Open Folder" ) ) )
-            (void)EditorAssetCommands::showInFileExplorer( _progress._outputFolder ); // 탐색기를 못 띄우면 경고가 남는다
+            (void)EditorAssetFileCommands::showInFileExplorer( _progress._outputFolder ); // 탐색기를 못 띄우면 경고가 남는다
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "OpenFolder" ) );
 

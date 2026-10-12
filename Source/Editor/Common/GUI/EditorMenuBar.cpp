@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/Commands/EditorSceneFileCommands.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorDockLayout.h"
@@ -329,12 +329,12 @@ namespace sw::editor
         if ( pContext->getWorkspace().consumeLoadScene( scenePath ) == false )
             return;
 
-        (void)EditorAssetCommands::tryOpenScene( scenePath ); // 실패는 tryOpenScene 이 알린다
+        (void)EditorSceneFileCommands::tryOpenScene( scenePath ); // 실패는 tryOpenScene 이 알린다
     }
 
     void EditorMenuBar::processSceneSession()
     {
-        EditorAssetCommands::syncAfterSceneGenerationChange();
+        EditorSceneFileCommands::syncAfterSceneGenerationChange();
         processPendingSceneLoad();
 
         EditorContext* pContext = EditorContext::get();
@@ -356,6 +356,6 @@ namespace sw::editor
 
         const EditorUnsavedChoice choice = EditorWidgets::drawUnsavedChangesModal( "##UnsavedSceneAction", pMessage );
         if ( choice != EditorUnsavedChoice::None )
-            EditorAssetCommands::applyUnsavedSceneChoice( choice );
+            EditorSceneFileCommands::applyUnsavedSceneChoice( choice );
     }
 } // namespace sw::editor

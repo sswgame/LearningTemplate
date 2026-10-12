@@ -120,3 +120,35 @@ SW_TEST_CASE( EditorAssetFileCommandsTest, CreateAssetWritesTheTemplateText )
     SW_EXPECT_STREQ( FileUtil::joinPath( folder, string( pTextTemplate->_pStem ) + "_2" + pTextTemplate->_pSuffix ).c_str(), second.c_str() );
     (void)FileUtil::removeDirectory( folder ); // 임시 폴더라 남아도 다음 실행이 지운다
 }
+
+/**
+ * @brief [EditorAssetFileCommandsTest] 임포트는 같은 이름의 에셋을 덮지 않고 새 이름으로 두며, 없는 파일과 이미 그 폴더에 있는 파일은 건너뛴다
+ */
+SW_TEST_CASE( EditorAssetFileCommandsTest, ImportKeepsExistingAssetsAndSkipsMissingFiles )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "missing source and empty destination are skipped with warnings" );
+    const string root        = FileUtil::joinPath( FileUtil::getTempDirectory(), "sw_editor_asset_import" );
+    const string sourceDir   = FileUtil::joinPath( root, "source" );
+    const string destination = FileUtil::joinPath( root, "destination" );
+    (void)FileUtil::removeDirectory( root ); // 앞 실행이 남긴 것 — 없으면 그대로다
+    SW_ASSERT_TRUE( FileUtil::ensureDirectoryExists( sourceDir ) );
+    SW_ASSERT_TRUE( FileUtil::ensureDirectoryExists( destination ) );
+    const string sourcePath = FileUtil::joinPath( sourceDir, "x.txt" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( sourcePath, "new" ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( destination, "x.txt" ), "old" ) );
+
+    const vector<string> listSourcePath{ sourcePath, FileUtil::joinPath( sourceDir, "missing.txt" ) };
+    SW_EXPECT_EQUAL( 1u, EditorAssetFileCommands::importFiles( destination, listSourcePath ) );
+
+    string existingText;
+    SW_ASSERT_TRUE( FileUtil::readTextFile( FileUtil::joinPath( destination, "x.txt" ), existingText ) );
+    SW_EXPECT_STREQ( "old", existingText.c_str() );
+    vector<string> listFilePath;
+    (void)FileUtil::collectFiles( destination, {}, listFilePath, false ); // 빈 목록이면 아래 개수 단언이 잡는다
+    SW_EXPECT_EQUAL( size_t{ 2 }, listFilePath.size() );
+
+    const vector<string> listAlreadyThere{ FileUtil::joinPath( destination, "x.txt" ) };
+    SW_EXPECT_EQUAL( 0u, EditorAssetFileCommands::importFiles( destination, listAlreadyThere ) );
+    SW_EXPECT_EQUAL( 0u, EditorAssetFileCommands::importFiles( "", listSourcePath ) );
+    (void)FileUtil::removeDirectory( root ); // 임시 폴더라 남아도 다음 실행이 지운다
+}

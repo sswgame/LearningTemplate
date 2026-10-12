@@ -2,259 +2,27 @@
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 
-#include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Process/Process.h"
 
-#include "Editor/Common/Asset/EditorAssetValidation.h"
-#include "Editor/Common/Commands/EditorInspectorCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorAssetTypeActions.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
-#include "Editor/Common/Workspace/EditorSceneGenerationSync.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/IEditorPanelHost.h"
 
-#include "Engine/Common/EngineDefines.h"
-#include "Engine/Config/GameConfig.h"
-#include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourcePaths.h"
-#include "Engine/Scene/Scene.h"
-#include "Engine/Scene/SceneManager.h"
-#include "Engine/Utility/CommandStack.h"
-#include "Engine/Window/IWindow.h"
-
-namespace sw::editor
-{
-    namespace
-    {
-        struct EditorAssetCommandsInternal
-        {
-            /** @brief 프리팹을 스폰합니다. 부모가 있으면 그 아래에 스폰합니다. 실패하면 로그를 남기고 nullptr 을 반환합니다. */
-            static GameObject* spawnPrefabFromAssetPath( GameObjectManager* pManager, const utf8* pPath, GameObject* pParent )
-            {
-                if ( pManager == nullptr || StringUtil::isNullOrEmpty( pPath ) )
-                    return nullptr;
-
-                if ( EditorAssetTypeRegistry::matches( EditorAssetType::Prefab, pPath ) == false )
-                {
-                    SW_LOG_TRACE( "Not a prefab path: %#", pPath );
-                    return nullptr;
-                }
-
-                // `getService<T>()` 는 nullptr 을 반환할 수 있다. 역참조하기 전에 확인한다.
-                AssetManager* pResources = editor::getService<AssetManager>();
-                if ( pResources == nullptr )
-                {
-                    SW_LOG_WARNING( "AssetManager 서비스가 없어 프리팹을 스폰할 수 없습니다: %#", pPath );
-                    return nullptr;
-                }
-
-                GameObject* pSpawned = pResources->getAssetCache<PrefabCache>().spawn( pManager, pPath );
-                if ( pSpawned == nullptr )
-                {
-                    SW_LOG_WARNING( "Failed to spawn prefab: %#", pPath );
-                    return nullptr;
-                }
-
-                if ( pParent != nullptr && pSpawned->attachToParent( pParent ) == false )
-                    SW_LOG_WARNING( "Spawned prefab could not be put under '%#' - it stays at the root", pParent->getName().c_str() );
-
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr )
-                    pContext->getWorkspace().setGameObjectPrefabPath( pSpawned->getObjectID(), pPath );
-
-                SW_LOG_TRACE( "Spawned prefab from %#", pPath );
-                return pSpawned;
-            }
-
-            /** @brief `collectChildFolders` 가 디스크를 읽은 횟수입니다. `getChildFolderScanCount` 가 반환합니다. */
-            static atomic<uint64>& getChildFolderScanCounter()
-            {
-                static atomic<uint64> s_scanCount{ 0 };
-                return s_scanCount;
-            }
-
-            /// @brief 파일 대화상자의 결과를 받습니다. `FileUtil::pumpFileDialogResults` 가 메인 스레드에서 호출합니다.
-            static void onSaveSceneDialogResult( const vector<string>& listPath )
-            {
-                if ( listPath.empty() )
-                    return;
-
-                // 컨텍스트는 한 번 받아 검사하고, 그 값만 쓴다.
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext == nullptr )
-                    return;
-
-                if ( EditorAssetCommands::saveActiveScene( listPath[0] ) == false )
-                {
-                    pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaveFailed" ), NotificationType::Error );
-                    return;
-                }
-
-                pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaved" ), NotificationType::Success );
-                if ( pContext->getWorkspace().getPendingSceneAction() != EditorPendingSceneAction::None )
-                    EditorAssetCommands::applyUnsavedSceneChoice( EditorUnsavedChoice::Discard );
-            }
-
-            static bool isPlayStoppedForSceneSwap()
-            {
-                if ( EditorPlaySession::isStopped() )
-                    return true;
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr )
-                    pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifyStopPlayFirst" ),
-                                                             NotificationType::Warning );
-                return false;
-            }
-
-            static void runPendingSceneAction()
-            {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext == nullptr )
-                    return;
-                EditorWorkspace&               ws     = pContext->getWorkspace();
-                const EditorPendingSceneAction action = ws.getPendingSceneAction();
-                const string                   path   = ws.getPendingSceneActionPath();
-                ws.clearPendingSceneAction();
-                // 실패는 각 함수가 알린다. 씬을 읽지 못했거나 플레이 중일 때가 해당한다.
-                if ( action == EditorPendingSceneAction::Load )
-                    (void)EditorAssetCommands::loadScene( path ); // 실패는 loadScene 이 알린다
-                else if ( action == EditorPendingSceneAction::New )
-                    (void)EditorAssetCommands::tryCreateNewScene(); // 실패는 tryCreateNewScene 이 알린다(플레이 중)
-                else if ( action == EditorPendingSceneAction::Quit )
-                {
-                    IWindow* pWindow = IWindow::getActiveWindow();
-                    if ( pWindow != nullptr )
-                        pWindow->requestClose();
-                }
-            }
-
-            static void appendFolderListingEntry( vector<EditorFolderListingEntry>& outList, const string& path, bool bIsDirectory,
-                                                  const string& rootNorm )
-            {
-                EditorFolderListingEntry item;
-                item._absolutePath = FileUtil::normalizeSeparators( path );
-                item._name         = FileUtil::getFileNamePart( item._absolutePath );
-                item._bIsDirectory = bIsDirectory;
-                if ( item._bIsDirectory == false )
-                {
-                    item._extension = FileUtil::getExtension( item._name );
-                    item._bReadOnly = FileUtil::isReadOnlyFile( item._absolutePath );
-                }
-
-                if ( rootNorm.empty() == false )
-                {
-                    const string absNorm = FileUtil::normalizePath( item._absolutePath );
-                    if ( FileUtil::startsWithPathComponent( absNorm, rootNorm ) )
-                        item._relativePath = FileUtil::suffixAfterPathComponent( absNorm, rootNorm );
-                }
-                if ( item._relativePath.empty() )
-                    item._relativePath = FileUtil::normalizePath( item._name );
-
-                if ( item._bIsDirectory == false && FileUtil::hasExtension( item._name, path::kMetaExtension ) )
-                    return;
-
-                outList.push_back( std::move( item ) );
-            }
-
-            static bool matchesPrefabPath( const EditorWorkspace& ws, const GameObject* pObject, string_view prefabPath )
-            {
-                if ( pObject == nullptr || prefabPath.empty() )
-                    return false;
-                const string_view mapped = ws.getGameObjectPrefabPath( pObject->getObjectID() );
-                if ( mapped.empty() == false && FileUtil::pathsEqualNormalized( mapped, prefabPath ) )
-                    return true;
-                return false;
-            }
-
-            static GameObject* findPrefabInstance( GameObjectManager* pManager, EditorWorkspace& ws, string_view prefabPath,
-                                                   GameObject* pUnderRoot )
-            {
-                if ( pManager == nullptr )
-                    return nullptr;
-
-                GameObject* pPrimary = ws.getSelectedObject();
-                if ( pPrimary != nullptr && matchesPrefabPath( ws, pPrimary, prefabPath ) )
-                {
-                    if ( pUnderRoot == nullptr || pPrimary->isDescendantOf( pUnderRoot ) )
-                        return pPrimary;
-                }
-
-                GameObject*               pFallback  = nullptr;
-                const vector<GameObject*> listObject = pManager->getAllGameObjects();
-                for ( GameObject* pObject : listObject )
-                {
-                    if ( pObject == nullptr || pObject->isPendingDestroy() )
-                        continue;
-                    if ( matchesPrefabPath( ws, pObject, prefabPath ) == false )
-                        continue;
-                    if ( pUnderRoot != nullptr && pObject->isDescendantOf( pUnderRoot ) == false )
-                        continue;
-                    if ( pUnderRoot != nullptr )
-                        return pObject;
-                    if ( pFallback == nullptr )
-                        pFallback = pObject;
-                }
-                return pFallback;
-            }
-
-            static void hideObjectsOutsideIsolation( GameObjectManager* pManager, GameObject* pRoot,
-                                                     vector<PrefabIsolationHiddenObject>& outHidden )
-            {
-                outHidden.clear();
-                if ( pManager == nullptr || pRoot == nullptr )
-                    return;
-
-                const vector<GameObject*> listObject = pManager->getAllGameObjects();
-                for ( GameObject* pObject : listObject )
-                {
-                    if ( pObject == nullptr || pObject->isPendingDestroy() )
-                        continue;
-                    if ( pObject->isDescendantOf( pRoot ) )
-                        continue;
-                    if ( pRoot->isDescendantOf( pObject ) )
-                        continue;
-
-                    PrefabIsolationHiddenObject entry{};
-                    entry._objectID   = pObject->getObjectID();
-                    entry._bWasActive = pObject->isActive() ? SW_TRUE : SW_FALSE;
-                    outHidden.push_back( entry );
-                    pObject->setActive( false );
-                }
-            }
-
-            static void restoreIsolationHidden( GameObjectManager* pManager, const vector<PrefabIsolationHiddenObject>& listHidden )
-            {
-                if ( pManager == nullptr )
-                    return;
-                for ( const PrefabIsolationHiddenObject& entry : listHidden )
-                {
-                    GameObject* pObject = pManager->findGameObjectByID( entry._objectID );
-                    if ( pObject == nullptr )
-                        continue;
-                    pObject->setActive( entry._bWasActive == SW_TRUE );
-                }
-            }
-        };
-    } // namespace
-} // namespace sw::editor
 
 namespace sw::editor
 {
@@ -279,170 +47,6 @@ namespace sw::editor
         return pActions != nullptr && pActions->open( relativePath );
     }
 
-    bool EditorAssetCommands::loadScene( string_view path )
-    {
-        // 리소스 트리 안이면 리소스 id 로 연다. 절대 경로, 프로젝트 기준 경로, id 모두 받는다. 밖이면 받은 경로를 그대로 쓴다.
-        string loadPath = ResourcePaths::toResourceID( path );
-        if ( loadPath.empty() )
-            loadPath = string{ path };
-
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
-        if ( pSceneManager == nullptr )
-        {
-            SW_LOG_ERROR( "Open Scene: SceneManager unavailable" );
-            return false;
-        }
-
-        if ( pSceneManager->requestLoadAsync( loadPath ) == false )
-        {
-            // 여기서 알린다. 호출하는 쪽이 이 반환값을 읽지 않으므로, 조용히 false 만 반환하면 사용자가 씬을 선택했는데 아무 일도
-            // 일어나지 않고 로그에도 남지 않는다.
-            SW_LOG_ERROR( "Open Scene: 로드 요청 실패 — %#", loadPath );
-            EditorContext* pFailContext = EditorContext::get();
-            if ( pFailContext != nullptr )
-            {
-                pFailContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySceneOpenFailed" ),
-                                                             NotificationType::Error );
-            }
-            return false;
-        }
-
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr )
-            pContext->getWorkspace().clearSelection();
-
-        SW_LOG_INFO( "Open Scene: %#", loadPath );
-        return true;
-    }
-
-    bool EditorAssetCommands::tryOpenScene( string_view path )
-    {
-        if ( EditorAssetCommandsInternal::isPlayStoppedForSceneSwap() == false )
-            return false;
-
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr && EditorSessionPolicy::needsUnsavedPrompt( pContext->getWorkspace().isSceneDirty() ) )
-        {
-            pContext->getWorkspace().setPendingSceneAction( EditorPendingSceneAction::Load, path );
-            return true;
-        }
-        return loadScene( path );
-    }
-
-    bool EditorAssetCommands::tryCreateNewScene()
-    {
-        if ( EditorAssetCommandsInternal::isPlayStoppedForSceneSwap() == false )
-            return false;
-
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr && EditorSessionPolicy::needsUnsavedPrompt( pContext->getWorkspace().isSceneDirty() ) )
-        {
-            pContext->getWorkspace().setPendingSceneAction( EditorPendingSceneAction::New );
-            return true;
-        }
-
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
-        if ( pSceneManager == nullptr )
-            return false;
-        Scene* pScene = pSceneManager->createEmptyActiveScene( "Untitled" );
-        if ( pScene == nullptr )
-            return false;
-        syncAfterSceneGenerationChange();
-        if ( pContext != nullptr )
-            pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifyNewScene" ), NotificationType::Info );
-        return true;
-    }
-
-    void EditorAssetCommands::saveFocusedOrScene()
-    {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr && pContext->getPanelHost().saveFocusedDirtyDocument() )
-            return;
-        saveActiveSceneOrPrompt();
-    }
-
-    void EditorAssetCommands::applyUnsavedSceneChoice( EditorUnsavedChoice choice )
-    {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
-        EditorWorkspace& ws = pContext->getWorkspace();
-        if ( ws.getPendingSceneAction() == EditorPendingSceneAction::None )
-            return;
-
-        if ( EditorSessionPolicy::shouldSaveBeforeAction( choice ) )
-        {
-            if ( pContext->getPanelHost().saveAllDirtyDocuments() == false )
-            {
-                pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifyEditorTitle" ), SW_LOCKEY( "EdCommon", "NotifyDocumentSaveFailed" ), NotificationType::Error );
-                return;
-            }
-            if ( ws.isSceneDirty() )
-            {
-                Scene* pScene = editor::getActiveScene();
-                if ( pScene != nullptr && pScene->getSourcePath().empty() == false )
-                {
-                    if ( saveActiveScene( {} ) == false )
-                    {
-                        pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaveFailed" ), NotificationType::Error );
-                        return;
-                    }
-                }
-                else
-                {
-                    saveActiveSceneOrPrompt();
-                    return;
-                }
-            }
-        }
-
-        if ( EditorSessionPolicy::shouldClearDirtyWithoutSave( choice ) )
-        {
-            ws.clearSceneDirty();
-            pContext->getPanelHost().discardAllDirtyDocuments();
-        }
-
-        if ( EditorSessionPolicy::shouldProceedWithAction( choice ) )
-            EditorAssetCommandsInternal::runPendingSceneAction();
-        else
-            ws.clearPendingSceneAction();
-    }
-
-    void EditorAssetCommands::syncAfterSceneGenerationChange()
-    {
-        EditorContext* pContext      = EditorContext::get();
-        SceneManager*  pSceneManager = editor::getService<SceneManager>();
-        if ( pContext == nullptr || pSceneManager == nullptr )
-            return;
-
-        // 이전 씬을 가리키던 상태(선택, dirty, Undo, 프리팹 격리)를 버린다. 이유는 `EditorSceneGenerationSync::apply` 에 있다.
-        (void)EditorSceneGenerationSync::apply( pContext->getWorkspace(), pSceneManager->getSceneGeneration(), editor::getService<CommandStack>() );
-    }
-
-    bool EditorAssetCommands::tryBeginQuit()
-    {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return true;
-        if ( pContext->getWorkspace().getPendingSceneAction() != EditorPendingSceneAction::None )
-            return false;
-
-        const bool   bSceneDirty = pContext->getWorkspace().isSceneDirty();
-        const uint32 dirtyDocs   = pContext->getPanelHost().countDirtyDocuments();
-        if ( EditorSessionPolicy::needsQuitPrompt( bSceneDirty, dirtyDocs ) == false )
-            return true;
-
-        pContext->getWorkspace().setPendingSceneAction( EditorPendingSceneAction::Quit );
-        return false;
-    }
-
-    void EditorAssetCommands::requestExit()
-    {
-        IWindow* pWindow = IWindow::getActiveWindow();
-        if ( pWindow != nullptr )
-            (void)pWindow->tryBeginClose(); // 닫기를 거절해도(저장 확인 중) 여기서 할 일이 없다
-    }
-
     void EditorAssetCommands::focusPath( string_view relativePath )
     {
         EditorContext* pContext = EditorContext::get();
@@ -456,13 +60,50 @@ namespace sw::editor
     {
         if ( EditorPlaySession::areSceneEditsAllowed() == false )
             return nullptr;
-        GameObject* pSpawned = EditorAssetCommandsInternal::spawnPrefabFromAssetPath( pManager, pPath, pParent );
+        GameObject* pSpawned = spawnPrefabWithoutUndo( pManager, pPath, pParent );
         if ( pSpawned == nullptr )
             return nullptr;
 
         const utf8* pLabel = ( pUndoLabel != nullptr ) ? pUndoLabel : "Spawn Prefab";
         EditorTransaction::recordCreation( pSpawned, pLabel );
         EditorSceneCommands::select( pSpawned, SelectionMode::Replace );
+        return pSpawned;
+    }
+
+    GameObject* EditorAssetCommands::spawnPrefabWithoutUndo( GameObjectManager* pManager, const utf8* pPath, GameObject* pParent )
+    {
+        if ( pManager == nullptr || StringUtil::isNullOrEmpty( pPath ) )
+            return nullptr;
+
+        if ( EditorAssetTypeRegistry::matches( EditorAssetType::Prefab, pPath ) == false )
+        {
+            SW_LOG_TRACE( "Not a prefab path: %#", pPath );
+            return nullptr;
+        }
+
+        // `getService<T>()` 는 nullptr 을 반환할 수 있다. 역참조하기 전에 확인한다.
+        AssetManager* pResources = editor::getService<AssetManager>();
+        if ( pResources == nullptr )
+        {
+            SW_LOG_WARNING( "AssetManager 서비스가 없어 프리팹을 스폰할 수 없습니다: %#", pPath );
+            return nullptr;
+        }
+
+        GameObject* pSpawned = pResources->getAssetCache<PrefabCache>().spawn( pManager, pPath );
+        if ( pSpawned == nullptr )
+        {
+            SW_LOG_WARNING( "Failed to spawn prefab: %#", pPath );
+            return nullptr;
+        }
+
+        if ( pParent != nullptr && pSpawned->attachToParent( pParent ) == false )
+            SW_LOG_WARNING( "Spawned prefab could not be put under '%#' - it stays at the root", pParent->getName().c_str() );
+
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext != nullptr )
+            pContext->getWorkspace().setGameObjectPrefabPath( pSpawned->getObjectID(), pPath );
+
+        SW_LOG_TRACE( "Spawned prefab from %#", pPath );
         return pSpawned;
     }
 
@@ -512,306 +153,5 @@ namespace sw::editor
         if ( pActions != nullptr && pActions->dropInViewport( pManager, pPath, spawnPos ) )
             return;
         (void)openPath( pPath ); // 실패는 openPath 가 알린다
-    }
-
-    bool EditorAssetCommands::saveActiveScene( string_view path )
-    {
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
-        if ( pSceneManager == nullptr )
-            return false;
-
-        // 버전 관리가 읽기 전용으로 둔 파일(git LFS lockable, 잠그기 전)에는 쓰지 않고 이유를 알린다. 쓰기 실패 로그만으로는 "잠가야 한다" 는 사실이 드러나지 않는다.
-        Scene*         pScene     = pSceneManager->getActiveScene();
-        const string   targetPath = path.empty() && pScene != nullptr ? pScene->getSourcePath() : string{ path };
-        const string   targetAbs  = FileUtil::isAbsolutePath( targetPath ) ? targetPath : FileUtil::joinPath( ResourcePaths::getRootFolderPath(), targetPath );
-        EditorContext* pContext   = EditorContext::get();
-        if ( targetPath.empty() == false && FileUtil::isReadOnlyFile( targetAbs ) )
-        {
-            if ( pContext != nullptr )
-                pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySaveTitle" ), SW_LOCKEY( "EdCommon", "NotifySceneReadOnly" ),
-                                                         NotificationType::Warning );
-            SW_LOG_WARNING( "Scene '%#' is read-only (not checked out) - not saved", targetAbs.c_str() );
-            return false;
-        }
-
-        if ( pSceneManager->saveActiveScene( path ) == false )
-            return false;
-        if ( pContext != nullptr )
-        {
-            pContext->getWorkspace().clearSceneDirty();
-            // 저장한 씬에 검증 규칙을 실행한다. 결과는 로그로 알리고 저장을 막지 않는다.
-            pScene = pSceneManager->getActiveScene();
-            if ( pScene != nullptr )
-                pContext->getAssetValidation().requestValidation( pScene->getSourcePath() );
-        }
-        return true;
-    }
-
-    void EditorAssetCommands::saveActiveSceneOrPrompt()
-    {
-        EditorContext* pContext = EditorContext::get();
-        Scene*         pScene   = editor::getActiveScene();
-        if ( pScene != nullptr && pScene->getSourcePath().empty() == false )
-        {
-            if ( saveActiveScene( {} ) )
-            {
-                if ( pContext != nullptr )
-                    pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaved" ), NotificationType::Success );
-            }
-            else if ( pContext != nullptr )
-                pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaveFailed" ), NotificationType::Error );
-            return;
-        }
-
-        FileDialogParams params{};
-        params._type               = FileDialogParams::Type::Save;
-        params._title              = "Save Scene";
-        params._description        = "Scene";
-        params._bEnableMultiselect = false;
-        // 씬 이름은 쿠커의 규칙 하나를 따른다(`EditorAssetTypeRegistry` → `AssetCookPath`). 맨 `.xml` 은 쿠커가 쿠킹하지 않는 이름이다.
-        EditorAssetTypeRegistry::appendSuffixes( EditorAssetType::Scene, params._listFilterExtension );
-        const string mapsDir = ResourcePaths::getDomainFolderPath( GameConfig::getActive()._packRoot, path::kMapsFolder );
-        if ( FileUtil::isDirectory( mapsDir ) )
-            params._initialDirectory = mapsDir;
-        FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, EditorAssetCommandsInternal::onSaveSceneDialogResult ) );
-    }
-
-    uint32 EditorAssetCommands::importFiles( string_view destFolderAbs, const vector<string>& listSourcePath )
-    {
-        if ( destFolderAbs.empty() )
-        {
-            SW_LOG_WARNING( "Import cancelled — no destination folder." );
-            return 0;
-        }
-
-        uint32 copied{ 0 };
-        for ( const string& sourcePath : listSourcePath )
-        {
-            if ( FileUtil::exists( sourcePath ) == false )
-            {
-                SW_LOG_WARNING( "Import skipped (missing): %#", sourcePath.c_str() );
-                continue;
-            }
-
-            const string fileName = FileUtil::getFileNamePart( sourcePath );
-
-            if ( FileUtil::pathsEqualNormalized( sourcePath, ResourcePaths::makeSavePath( destFolderAbs, fileName ) ) )
-            {
-                SW_LOG_TRACE( "Already in folder: %#", fileName.c_str() );
-                continue;
-            }
-
-            // 이미 있는 애셋을 덮어쓰지 않는다. 같은 이름의 파일을 드롭해 폴더에 있던 것을 덮으면 아무 말 없이 사라지고,
-            // 에디터의 임포트에는 되돌리기가 없으므로 그대로 잃는다.
-            // "원래 있던 것과 같은 파일인가" 는 바로 위에서 경로로 이미 걸렀으므로, 여기까지 온 것은 다른 파일인데 이름만 같은
-            // 경우다.
-            const string destPath = ResourcePaths::makeUniqueSavePath( destFolderAbs, fileName );
-
-            FileUtil::ensureParentDirectoryExists( destPath );
-            if ( FileUtil::copyFile( sourcePath, destPath ) == false )
-            {
-                SW_LOG_ERROR( "Failed to import: %#", sourcePath.c_str() );
-                continue;
-            }
-
-            ++copied;
-            const string rel = AssetDatabase::toRelativePath( destPath );
-            if ( rel.empty() == false )
-            {
-                AssetManager* pResources = editor::getService<AssetManager>();
-                if ( pResources != nullptr )
-                    pResources->getAssetDatabase().ensureMeta( rel, true );
-            }
-            SW_LOG_TRACE( "Imported: %# -> %#", sourcePath.c_str(), destPath.c_str() );
-        }
-        return copied;
-    }
-
-    bool EditorAssetCommands::deleteAsset( string_view absolutePath )
-    {
-        return AssetDatabase::deleteAssetFile( absolutePath );
-    }
-
-    bool EditorAssetCommands::showInFileExplorer( string_view absolutePath )
-    {
-        if ( absolutePath.empty() )
-            return false;
-
-        const string path = FileUtil::normalizeSeparators( absolutePath );
-        string       command;
-#if defined( SW_PLATFORM_WINDOWS )
-        // explorer 는 백슬래시만 받는다. 슬래시를 주면 선택이 안 되고 내 문서를 연다.
-        string windowsPath = path;
-        for ( utf8& ch : windowsPath )
-        {
-            if ( ch == '/' )
-                ch = '\\';
-        }
-        command = "explorer.exe /select,\"" + windowsPath + "\"";
-#else
-        // 리눅스 파일 관리자에는 "선택한 채로 열기" 표준이 없다. 그래서 폴더까지만 연다.
-        command = "xdg-open \"" + FileUtil::getDirectoryPart( path ) + "\"";
-#endif
-
-        // 실행하고 기다리지 않는다. `Process::execute` 로 기다리면 UI 스레드가 탐색기(또는 탐색기가 띄운 창)가 출력 파이프를 놓을
-        // 때까지 멈추고, `explorer.exe /select,` 는 성공해도 종료 코드 1 을 반환한다. 알 수 있는 실패는 "실행하지 못했다" 뿐이다.
-        if ( Process::launchDetached( command ) == false )
-        {
-            SW_LOG_WARNING( "Failed to open file explorer for %#", path.c_str() );
-            return false;
-        }
-        return true;
-    }
-
-    void EditorAssetCommands::collectFolderListing( string_view folderAbs, vector<EditorFolderListingEntry>& outList, bool bRecursive )
-    {
-        outList.clear();
-        if ( folderAbs.empty() || FileUtil::isDirectory( folderAbs ) == false )
-            return;
-
-        vector<string> listFolder;
-        vector<string> listFile;
-        FileUtil::collectFolders( folderAbs, listFolder, false );
-        FileUtil::collectFiles( folderAbs, {}, listFile, bRecursive );
-
-        const string& resourceRoot = ResourcePaths::getRootFolderPath();
-        const string  rootNorm     = resourceRoot.empty() ? string{} : FileUtil::normalizePath( resourceRoot );
-
-        for ( const string& folder : listFolder )
-        {
-            EditorAssetCommandsInternal::appendFolderListingEntry( outList, folder, true, rootNorm );
-        }
-        for ( const string& file : listFile )
-        {
-            EditorAssetCommandsInternal::appendFolderListingEntry( outList, file, false, rootNorm );
-        }
-    }
-
-    void EditorAssetCommands::collectChildFolders( string_view folderAbs, vector<string>& outList )
-    {
-        outList.clear();
-        ++EditorAssetCommandsInternal::getChildFolderScanCounter();
-        if ( folderAbs.empty() || FileUtil::isDirectory( folderAbs ) == false )
-            return;
-
-        FileUtil::collectFolders( folderAbs, outList, false );
-        for ( string& child : outList )
-        {
-            child = FileUtil::normalizeSeparators( child );
-        }
-    }
-
-    uint64 EditorAssetCommands::getChildFolderScanCount()
-    {
-        return EditorAssetCommandsInternal::getChildFolderScanCounter().load();
-    }
-
-    bool EditorAssetCommands::enterPrefabIsolation( string_view prefabPath )
-    {
-        if ( prefabPath.empty() )
-            return false;
-        if ( EditorPlaySession::isStopped() == false )
-            return false;
-
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return false;
-        EditorWorkspace& ws = pContext->getWorkspace();
-        if ( ws.isPrefabIsolationActive() == false && ws.isSceneDirty() &&
-             EditorSessionPolicy::requiresCleanSceneForPrefabIsolation() )
-        {
-            pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifyPrefabTitle" ), SW_LOCKEY( "EdCommon", "NotifyPrefabSaveFirst" ),
-                                                     NotificationType::Warning );
-            return false;
-        }
-
-        Scene* pScene = editor::getActiveScene();
-        if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
-            return false;
-        GameObjectManager* pManager = pScene->getObjectManager();
-
-        GameObject* pUnderRoot = nullptr;
-        if ( ws.isPrefabIsolationActive() )
-            pUnderRoot = pManager->findGameObjectByID( ws.getPrefabIsolationRootID() );
-
-        const string pathStr{ prefabPath };
-        GameObject*  pRoot = EditorAssetCommandsInternal::findPrefabInstance( pManager, ws, prefabPath, pUnderRoot );
-        uint8        bSpawnedRoot{ SW_FALSE };
-        if ( pRoot == nullptr )
-        {
-            pRoot = EditorAssetCommandsInternal::spawnPrefabFromAssetPath( pManager, pathStr.c_str(), pUnderRoot );
-            if ( pRoot == nullptr )
-                return false;
-            bSpawnedRoot = SW_TRUE;
-        }
-
-        PrefabIsolationFrame frame{};
-        frame._prefabPath   = pathStr;
-        frame._rootObjectID = pRoot->getObjectID();
-        frame._bSpawnedRoot = bSpawnedRoot;
-        EditorAssetCommandsInternal::hideObjectsOutsideIsolation( pManager, pRoot, frame._listHidden );
-        ws.pushPrefabIsolation( std::move( frame ) );
-        ws.selectGameObject( pRoot );
-        ws.setFocusedAssetPath( pathStr.c_str() );
-        ws.requestOpenPanel( "Prefab Editor" );
-        pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifyPrefabTitle" ), SW_LOCKEY( "EdCommon", "NotifyPrefabIsolated" ), NotificationType::Info );
-        return true;
-    }
-
-    bool EditorAssetCommands::exitPrefabIsolation( bool bSaveToPrefab )
-    {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return false;
-        EditorWorkspace& ws = pContext->getWorkspace();
-        if ( ws.isPrefabIsolationActive() == false )
-            return false;
-        const PrefabIsolationFrame* pFrame = ws.getPrefabIsolationFrame();
-        if ( pFrame == nullptr )
-            return false;
-
-        const PrefabIsolationFrame frame         = *pFrame;
-        SceneManager*              pSceneManager = editor::getService<SceneManager>();
-        if ( pSceneManager == nullptr )
-            return false;
-        Scene*             pScene   = pSceneManager->getActiveScene();
-        GameObjectManager* pManager = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
-        GameObject*        pRoot    = nullptr;
-        if ( pManager != nullptr )
-            pRoot = pManager->findGameObjectByID( frame._rootObjectID );
-
-        // 저장하지 못하면 격리를 끝내지 않는다. 끝내면 편집한 프리팹 내용이 저장 없이 사라진다.
-        if ( bSaveToPrefab && pRoot != nullptr && EditorInspectorCommands::applyToPrefab( pRoot, frame._prefabPath ) == false )
-        {
-            SW_LOG_ERROR( "Prefab isolation could not save '%#' - still editing it", frame._prefabPath.c_str() );
-            return false;
-        }
-
-        EditorAssetCommandsInternal::restoreIsolationHidden( pManager, frame._listHidden );
-
-        const bool bFullyExit = ws.popPrefabIsolation();
-        if ( frame._bSpawnedRoot == SW_TRUE && bSaveToPrefab == false && pManager != nullptr && pRoot != nullptr )
-        {
-            if ( pContext->getEditorSelection().hasObject( pRoot ) )
-                pContext->getEditorSelection().selectObject( pRoot, SelectionMode::Remove );
-            pManager->destroyObject( pRoot );
-            pRoot = nullptr;
-        }
-        else if ( frame._bSpawnedRoot == SW_TRUE && bSaveToPrefab )
-            ws.markSceneDirty();
-
-        if ( bFullyExit )
-        {
-            pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifyPrefabTitle" ), SW_LOCKEY( "EdCommon", "NotifyPrefabIsolationExited" ), NotificationType::Info );
-            return true;
-        }
-
-        GameObject* pParentRoot = nullptr;
-        if ( pManager != nullptr )
-            pParentRoot = pManager->findGameObjectByID( ws.getPrefabIsolationRootID() );
-        if ( pParentRoot != nullptr )
-            ws.selectGameObject( pParentRoot );
-        ws.setFocusedAssetPath( ws.getPrefabIsolationPrefabPath().c_str() );
-        return true;
     }
 } // namespace sw::editor

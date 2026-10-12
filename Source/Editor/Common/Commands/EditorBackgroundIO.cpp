@@ -172,7 +172,7 @@ namespace sw::editor
             return;
 
         vector<EditorFolderListingEntry> listEntry;
-        EditorAssetCommands::collectFolderListing( input._folder, listEntry, input._bRecursive );
+        EditorFolderListing::collectFolderListing( input._folder, listEntry, input._bRecursive );
 
         publish( pState, generation, std::move( listEntry ) );
     }

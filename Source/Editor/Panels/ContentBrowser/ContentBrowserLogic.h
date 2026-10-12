@@ -48,7 +48,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 폴더의 직속 하위 폴더 절대 경로를 디스크에서 읽어 채우는 함수 타입입니다(`EditorAssetCommands::collectChildFolders`). */
+    /** @brief 폴더의 직속 하위 폴더 절대 경로를 디스크에서 읽어 채우는 함수 타입입니다(`EditorFolderListing::collectChildFolders`). */
     using ContentBrowserFolderScanFunc = void ( * )( string_view folderAbs, vector<string>& outListChild );
 
     /**

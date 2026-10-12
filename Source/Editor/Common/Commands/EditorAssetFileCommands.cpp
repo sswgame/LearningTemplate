@@ -6,12 +6,15 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/EditorReferenceIndex.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Resource/AssetDatabase.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -292,5 +295,89 @@ namespace sw::editor
         // 휴지통 규약(freedesktop Trash)은 데스크톱마다 다르다. 지운다.
         return AssetDatabase::deleteAssetFile( absolutePath );
 #endif
+    }
+
+    bool EditorAssetFileCommands::deleteAsset( string_view absolutePath ) { return AssetDatabase::deleteAssetFile( absolutePath ); }
+
+    uint32 EditorAssetFileCommands::importFiles( string_view destFolderAbs, const vector<string>& listSourcePath )
+    {
+        if ( destFolderAbs.empty() )
+        {
+            SW_LOG_WARNING( "Import cancelled — no destination folder." );
+            return 0;
+        }
+
+        uint32 copied{ 0 };
+        for ( const string& sourcePath : listSourcePath )
+        {
+            if ( FileUtil::exists( sourcePath ) == false )
+            {
+                SW_LOG_WARNING( "Import skipped (missing): %#", sourcePath.c_str() );
+                continue;
+            }
+
+            const string fileName = FileUtil::getFileNamePart( sourcePath );
+
+            if ( FileUtil::pathsEqualNormalized( sourcePath, ResourcePaths::makeSavePath( destFolderAbs, fileName ) ) )
+            {
+                SW_LOG_TRACE( "Already in folder: %#", fileName.c_str() );
+                continue;
+            }
+
+            // 이미 있는 애셋을 덮어쓰지 않는다. 같은 이름의 파일을 드롭해 폴더에 있던 것을 덮으면 아무 말 없이 사라지고,
+            // 에디터의 임포트에는 되돌리기가 없으므로 그대로 잃는다.
+            // "원래 있던 것과 같은 파일인가" 는 바로 위에서 경로로 이미 걸렀으므로, 여기까지 온 것은 다른 파일인데 이름만 같은
+            // 경우다.
+            const string destPath = ResourcePaths::makeUniqueSavePath( destFolderAbs, fileName );
+
+            FileUtil::ensureParentDirectoryExists( destPath );
+            if ( FileUtil::copyFile( sourcePath, destPath ) == false )
+            {
+                SW_LOG_ERROR( "Failed to import: %#", sourcePath.c_str() );
+                continue;
+            }
+
+            ++copied;
+            const string rel = AssetDatabase::toRelativePath( destPath );
+            if ( rel.empty() == false )
+            {
+                AssetManager* pResources = editor::getService<AssetManager>();
+                if ( pResources != nullptr )
+                    pResources->getAssetDatabase().ensureMeta( rel, true );
+            }
+            SW_LOG_TRACE( "Imported: %# -> %#", sourcePath.c_str(), destPath.c_str() );
+        }
+        return copied;
+    }
+
+    bool EditorAssetFileCommands::showInFileExplorer( string_view absolutePath )
+    {
+        if ( absolutePath.empty() )
+            return false;
+
+        const string path = FileUtil::normalizeSeparators( absolutePath );
+        string       command;
+#if defined( SW_PLATFORM_WINDOWS )
+        // explorer 는 백슬래시만 받는다. 슬래시를 주면 선택이 안 되고 내 문서를 연다.
+        string windowsPath = path;
+        for ( utf8& ch : windowsPath )
+        {
+            if ( ch == '/' )
+                ch = '\\';
+        }
+        command = "explorer.exe /select,\"" + windowsPath + "\"";
+#else
+        // 리눅스 파일 관리자에는 "선택한 채로 열기" 표준이 없다. 그래서 폴더까지만 연다.
+        command = "xdg-open \"" + FileUtil::getDirectoryPart( path ) + "\"";
+#endif
+
+        // 실행하고 기다리지 않는다. `Process::execute` 로 기다리면 UI 스레드가 탐색기(또는 탐색기가 띄운 창)가 출력 파이프를 놓을
+        // 때까지 멈추고, `explorer.exe /select,` 는 성공해도 종료 코드 1 을 반환한다. 알 수 있는 실패는 "실행하지 못했다" 뿐이다.
+        if ( Process::launchDetached( command ) == false )
+        {
+            SW_LOG_WARNING( "Failed to open file explorer for %#", path.c_str() );
+            return false;
+        }
+        return true;
     }
 } // namespace sw::editor

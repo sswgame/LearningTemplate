@@ -4,7 +4,7 @@
 
 #include "Core/Log/Logger.h"
 
-#include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/Commands/EditorPrefabIsolationCommands.h"
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
@@ -92,17 +92,17 @@ namespace sw::editor
             ImGui::TextColored( EditorColorUtil::toImVec4( PrefabPanelInternal::kIsolationText ), "Isolation: %s",
                                 pContext->getWorkspace().getPrefabIsolationPrefabPath().c_str() );
             if ( ImGui::Button( "Save Prefab & Exit Isolation" ) )
-                EditorAssetCommands::exitPrefabIsolation( true );
+                EditorPrefabIsolationCommands::exitPrefabIsolation( true );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "SavePrefabExitIsolation" ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Exit Isolation" ) )
-                EditorAssetCommands::exitPrefabIsolation( false );
+                EditorPrefabIsolationCommands::exitPrefabIsolation( false );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "ExitIsolation" ) );
         }
         else if ( _selectedPrefabPath.empty() == false )
         {
             if ( ImGui::Button( "Open Prefab Isolation" ) )
-                EditorAssetCommands::enterPrefabIsolation( _selectedPrefabPath );
+                EditorPrefabIsolationCommands::enterPrefabIsolation( _selectedPrefabPath );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "OpenPrefabIsolation" ) );
         }
 
@@ -156,7 +156,7 @@ namespace sw::editor
                 ImGui::BulletText( "[Nested] %s", _listNestedPrefab[prefabIndex].c_str() );
                 ImGui::SameLine();
                 if ( ImGui::SmallButton( "Edit" ) )
-                    EditorAssetCommands::enterPrefabIsolation( _listNestedPrefab[prefabIndex] );
+                    EditorPrefabIsolationCommands::enterPrefabIsolation( _listNestedPrefab[prefabIndex] );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "EditNestedPrefab" ) );
                 ImGui::PopID();
             }

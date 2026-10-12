@@ -8,9 +8,9 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/TagID.h"
 
-#include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
+#include "Editor/Common/Commands/EditorSceneFileCommands.h"
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
@@ -135,7 +135,7 @@ namespace sw::editor
                 if ( listArgument.size() != 1 || resolveScenePath( listArgument[0], absolutePath ) == false )
                     return false;
                 (void)FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( absolutePath ) );
-                if ( EditorAssetCommands::saveActiveScene( absolutePath ) == false )
+                if ( EditorSceneFileCommands::saveActiveScene( absolutePath ) == false )
                 {
                     outReply = "could not save the active scene to '" + absolutePath + "'";
                     return false;
@@ -150,7 +150,7 @@ namespace sw::editor
                 if ( listArgument.size() != 1 || resolveScenePath( listArgument[0], absolutePath ) == false )
                     return false;
                 // 미저장 씬이면 대화상자를 띄우는 길(tryOpenScene)이 아니라 바로 연다 — 무인 실행에서 대화상자는 아무도 닫지 않는다.
-                if ( EditorAssetCommands::loadScene( absolutePath ) == false )
+                if ( EditorSceneFileCommands::loadScene( absolutePath ) == false )
                 {
                     outReply = "could not open '" + absolutePath + "'";
                     return false;

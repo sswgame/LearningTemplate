@@ -10,8 +10,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorDataTableCommands.h"
+#include "Editor/Common/Commands/EditorFolderListing.h"
 #include "Editor/Common/Commands/EditorReferenceIndex.h"
 #include "Editor/Common/Commands/EditorResourceIndex.h"
 #include "Editor/Common/EditorBackgroundTask.h"

@@ -10,6 +10,8 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/Commands/EditorAssetFileCommands.h"
+#include "Editor/Common/Commands/EditorFolderListing.h"
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -327,7 +329,7 @@ namespace sw::editor
         if ( ImGui::BeginPopupContextItem( "AssetCtx" ) )
         {
             if ( ImGui::MenuItem( "Show in Explorer" ) )
-                EditorAssetCommands::showInFileExplorer( entry._absolutePath );
+                EditorAssetFileCommands::showInFileExplorer( entry._absolutePath );
 
             if ( ImGui::MenuItem( "Copy Relative Path" ) )
                 ImGui::SetClipboardText( entry._relativePath.c_str() );
@@ -398,7 +400,7 @@ namespace sw::editor
         , _lastFallbackGlyphCount{ 0 }
         , _viewMode{ ViewMode::Tiles }
         , _folderJob{}
-        , _folderCache{ &EditorAssetCommands::collectChildFolders }
+        , _folderCache{ &EditorFolderListing::collectChildFolders }
         , _bRootsDirty{ SW_TRUE }
         , _bFolderDirty{ SW_TRUE }
         , _bOpenDeleteConfirm{ SW_FALSE }
@@ -1435,7 +1437,7 @@ namespace sw::editor
             return;
         }
 
-        if ( EditorAssetCommands::importFiles( _selectedFolderAbs, listPath ) > 0 )
+        if ( EditorAssetFileCommands::importFiles( _selectedFolderAbs, listPath ) > 0 )
             _bFolderDirty = SW_TRUE;
     }
 } // namespace sw::editor

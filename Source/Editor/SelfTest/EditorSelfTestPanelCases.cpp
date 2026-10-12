@@ -4,7 +4,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/Commands/EditorFolderListing.h"
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -289,7 +289,7 @@ namespace sw::editor
                         if ( phaseStepCount < kSettleStepCount )
                             return EditorSelfTestStep::Continue;
                         pPanel->clearFolderTreeCache();
-                        probe._scanCountAtStart = EditorAssetCommands::getChildFolderScanCount();
+                        probe._scanCountAtStart = EditorFolderListing::getChildFolderScanCount();
                         probe._phase            = kPhaseWarmUp;
                         probe._phaseStartStep   = stepIndex;
                         return EditorSelfTestStep::Continue;
@@ -298,7 +298,7 @@ namespace sw::editor
                     {
                         if ( phaseStepCount < kWarmUpStepCount )
                             return EditorSelfTestStep::Continue;
-                        probe._scanCountAfterWarmUp = EditorAssetCommands::getChildFolderScanCount();
+                        probe._scanCountAfterWarmUp = EditorFolderListing::getChildFolderScanCount();
                         if ( context.expect( probe._scanCountAfterWarmUp > probe._scanCountAtStart, "the content browser folder tree was not drawn" ) == false )
                         {
                             probe = FolderTreeProbe{};
@@ -312,7 +312,7 @@ namespace sw::editor
                     {
                         if ( phaseStepCount < kSteadyStepCount )
                             return EditorSelfTestStep::Continue;
-                        (void)context.expect( EditorAssetCommands::getChildFolderScanCount() == probe._scanCountAfterWarmUp,
+                        (void)context.expect( EditorFolderListing::getChildFolderScanCount() == probe._scanCountAfterWarmUp,
                                               "the folder tree read the disk again on later frames" );
                         probe = FolderTreeProbe{};
                         return EditorSelfTestStep::Done;
