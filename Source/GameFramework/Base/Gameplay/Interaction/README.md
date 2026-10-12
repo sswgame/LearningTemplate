@@ -45,7 +45,7 @@
 없으면 오브젝트 원점과 앞을 씁니다. 상호작용을 시작하면 하는 쪽의 `MotionWarpingComponent` 에 그 위치와 요를 워프 목표로 넣습니다. 목표 이름은 마커 이름이고, 없으면 `Interaction` 입니다.
 그래서 상호작용 클립의 `MotionWarp` 구간이 손을 문고리에 맞춥니다.
 
-**시야**는 `WorldQuery` 로 묻습니다. 물리 서비스가 없으면 씬의 강체 물리(`ScenePhysicsWorldQuery`)와 `PhysicsWorld` AABB 중 가까운 것을 씁니다. 쏘는 쪽의 바디는 건너뛰고, 트리거는 막지 않습니다.
+**시야**는 `WorldQuery` 로 묻습니다. 물리 서비스가 없으면 씬의 강체 물리(`ScenePhysicsWorldQuery`)와 `PhysicsOverlapWorld` AABB 중 가까운 것을 씁니다. 쏘는 쪽의 바디는 건너뛰고, 트리거는 막지 않습니다.
 틱 워커에서 묻지만, 물리 스텝은 틱 그룹 사이에 돌므로 질의와 겹치지 않습니다.
 
 **집기의 물리.** 서비스가 없으면 강체 백엔드(`RigidBodyGrabPhysics`)를 씁니다. 3D 와 2D 강체를 키네마틱으로 손에 묶고, 놓을 때 동적으로 돌리며 속도를 줍니다.

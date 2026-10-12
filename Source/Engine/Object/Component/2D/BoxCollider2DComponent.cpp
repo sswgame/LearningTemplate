@@ -7,7 +7,7 @@
 #include "Core/Math/MatrixMath.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Physics/PhysicsWorld.h"
+#include "Engine/Physics/PhysicsOverlapWorld.h"
 
 namespace sw
 {
@@ -108,7 +108,7 @@ namespace sw
     void BoxCollider2DComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
-        _pPhysics = &manager.getOverlapWorld2D().getPhysicsWorld();
+        _pPhysics = &manager.getOverlapWorld2D().getPhysicsOverlapWorld();
         manager.getOverlapWorld2D().registerCollider( this );
     }
 
@@ -136,7 +136,7 @@ namespace sw
 
         // 바디(지난 step 의 상자)가 아니라 지금 상자로 측정한다 — 등록 전후로 답이 갈리지 않는다. 판정 식은 물리 step 의 것 그대로다.
         static const CollisionLayers s_defaultLayers{};
-        const PhysicsWorld*          pPhysics = _pPhysics != nullptr ? _pPhysics : pOther->_pPhysics;
+        const PhysicsOverlapWorld*   pPhysics = _pPhysics != nullptr ? _pPhysics : pOther->_pPhysics;
         const CollisionLayers&       layers   = pPhysics != nullptr ? pPhysics->layers() : s_defaultLayers;
 
         float2 aMin{}, aMax{}, bMin{}, bMax{};

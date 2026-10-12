@@ -4,7 +4,7 @@
 
 #include "Engine/Physics/Collision/CollisionLayers.h"
 #include "Engine/Physics/Collision/ContinuousCollision.h"
-#include "Engine/Physics/PhysicsWorld.h"
+#include "Engine/Physics/PhysicsOverlapWorld.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -63,18 +63,18 @@ SW_TEST_CASE( PhysicsTest, CollisionLayersFilter )
     SW_EXPECT_TRUE( queryOverlaps( a, 0, b, 1, layers ) );
 }
 
-SW_TEST_CASE( PhysicsTest, PhysicsWorldOverlapAndGeneration )
+SW_TEST_CASE( PhysicsTest, PhysicsOverlapWorldOverlapAndGeneration )
 {
-    PhysicsWorld world;
-    AABB         boxA;
+    PhysicsOverlapWorld world;
+    AABB                boxA;
     boxA._min = float3( 0.0f, 0.0f, 0.0f );
     boxA._max = float3( 1.0f, 1.0f, 1.0f );
     AABB boxB = boxA;
     boxB._min = float3( 0.5f, 0.5f, 0.5f );
     boxB._max = float3( 2.0f, 2.0f, 2.0f );
 
-    const PhysicsWorld::BodyHandle a = world.addBody( boxA, 0 );
-    const PhysicsWorld::BodyHandle b = world.addBody( boxB, 1 );
+    const PhysicsOverlapWorld::BodyHandle a = world.addBody( boxA, 0 );
+    const PhysicsOverlapWorld::BodyHandle b = world.addBody( boxB, 1 );
     SW_EXPECT_TRUE( a.isValid() );
     SW_EXPECT_TRUE( world.overlaps( a, b ) );
 
@@ -82,21 +82,21 @@ SW_TEST_CASE( PhysicsTest, PhysicsWorldOverlapAndGeneration )
     PhysicsBody removed{};
     SW_EXPECT_FALSE( world.tryGetBody( a, removed ) );
 
-    const PhysicsWorld::BodyHandle reused = world.addBody( boxA, 0 );
+    const PhysicsOverlapWorld::BodyHandle reused = world.addBody( boxA, 0 );
     SW_EXPECT_EQUAL( a.index(), reused.index() );
     SW_EXPECT_NOT_EQUAL( a, reused );
     SW_EXPECT_FALSE( world.tryGetBody( a, removed ) );
     SW_EXPECT_TRUE( world.overlaps( reused, b ) );
 
-    vector<PhysicsWorld::BodyHandle> hits;
+    vector<PhysicsOverlapWorld::BodyHandle> hits;
     world.queryAABB( boxA, 0, hits );
     SW_EXPECT_TRUE( hits.size() >= 1u );
 }
 
 SW_TEST_CASE( PhysicsTest, SpatialGridMultiCellQuery )
 {
-    PhysicsWorld world;
-    AABB         nearBox;
+    PhysicsOverlapWorld world;
+    AABB                nearBox;
     nearBox._min = float3( 10.0f, 10.0f, 10.0f );
     nearBox._max = float3( 20.0f, 20.0f, 20.0f );
 
@@ -108,8 +108,8 @@ SW_TEST_CASE( PhysicsTest, SpatialGridMultiCellQuery )
     auto hFar  = world.addBody( farBox, 0 );
     (void)hFar;
 
-    vector<PhysicsWorld::BodyHandle> hits;
-    AABB                             queryBox;
+    vector<PhysicsOverlapWorld::BodyHandle> hits;
+    AABB                                    queryBox;
     queryBox._min = float3( 5.0f, 5.0f, 5.0f );
     queryBox._max = float3( 15.0f, 15.0f, 15.0f );
     world.queryAABB( queryBox, 0, hits );
@@ -121,15 +121,15 @@ SW_TEST_CASE( PhysicsTest, SpatialGridMultiCellQuery )
 
 SW_TEST_CASE( PhysicsTest, BodyAABBDynamicRelocation )
 {
-    PhysicsWorld world;
-    AABB         initialBox;
+    PhysicsOverlapWorld world;
+    AABB                initialBox;
     initialBox._min = float3( 0.0f, 0.0f, 0.0f );
     initialBox._max = float3( 10.0f, 10.0f, 10.0f );
 
     auto handle = world.addBody( initialBox, 0 );
 
     // 원래 위치 질의
-    vector<PhysicsWorld::BodyHandle> hits;
+    vector<PhysicsOverlapWorld::BodyHandle> hits;
     world.queryAABB( initialBox, 0, hits );
     SW_EXPECT_EQUAL( 1u, hits.size() );
 
@@ -154,9 +154,9 @@ SW_TEST_CASE( PhysicsTest, BodyAABBDynamicRelocation )
 
 SW_TEST_CASE( PhysicsTest, SpatialGridMassiveBodiesStressTest )
 {
-    PhysicsWorld                         world;
-    constexpr int32                      kGridDim = 10; // 10x10x10 = 1000개 바디
-    sw::vector<PhysicsWorld::BodyHandle> handles;
+    PhysicsOverlapWorld                         world;
+    constexpr int32                             kGridDim = 10; // 10x10x10 = 1000개 바디
+    sw::vector<PhysicsOverlapWorld::BodyHandle> handles;
     handles.reserve( kGridDim * kGridDim * kGridDim );
 
     for ( int32 gridX = 0; gridX < kGridDim; ++gridX )
@@ -181,7 +181,7 @@ SW_TEST_CASE( PhysicsTest, SpatialGridMassiveBodiesStressTest )
     queryBox._min = float3( -10.0f, -10.0f, -10.0f );
     queryBox._max = float3( 120.0f, 120.0f, 120.0f );
 
-    vector<PhysicsWorld::BodyHandle> hits;
+    vector<PhysicsOverlapWorld::BodyHandle> hits;
     world.queryAABB( queryBox, 0, hits );
     SW_EXPECT_EQUAL( 8u, hits.size() );
 }
@@ -238,11 +238,11 @@ SW_TEST_CASE( PhysicsTest, ContinuousCollision_SweptSphere )
 }
 
 /**
- * @brief [PhysicsTest] PhysicsWorld sweepTest 브로드페이즈 & 최단 충돌체 선별 검증
+ * @brief [PhysicsTest] PhysicsOverlapWorld sweepTest 브로드페이즈 & 최단 충돌체 선별 검증
  */
-SW_TEST_CASE( PhysicsTest, ContinuousCollision_PhysicsWorldSweepTest )
+SW_TEST_CASE( PhysicsTest, ContinuousCollision_PhysicsOverlapWorldSweepTest )
 {
-    PhysicsWorld world;
+    PhysicsOverlapWorld world;
 
     AABB nearObstacle{
         float3{-5.0f, -5.0f, 30.0f},
@@ -362,14 +362,14 @@ SW_TEST_CASE( PhysicsTest, MissedSweepLeavesNoStaleHit )
  */
 SW_TEST_CASE( PhysicsTest, MultiCellBodyIsFoundInEveryCellItSpans )
 {
-    PhysicsWorld world;
+    PhysicsOverlapWorld world;
 
     // 셀 크기는 64 — 0..200 은 축마다 셀 4개(0,1,2,3)라 합쳐서 64개 셀을 덮는다.
     AABB wideBox;
     wideBox._min = float3( 0.0f, 0.0f, 0.0f );
     wideBox._max = float3( 200.0f, 200.0f, 200.0f );
 
-    const PhysicsWorld::BodyHandle handle = world.addBody( wideBox, 0 );
+    const PhysicsOverlapWorld::BodyHandle handle = world.addBody( wideBox, 0 );
 
     /** @brief 한 셀 안에 들어가는 작은 질의 — 그리드 경로를 확실히 태웁니다. */
     const auto findAtPoint = [&world]( float32 x, float32 y, float32 z )
@@ -378,7 +378,7 @@ SW_TEST_CASE( PhysicsTest, MultiCellBodyIsFoundInEveryCellItSpans )
         probe._min = float3( x - 1.0f, y - 1.0f, z - 1.0f );
         probe._max = float3( x + 1.0f, y + 1.0f, z + 1.0f );
 
-        vector<PhysicsWorld::BodyHandle> listHit;
+        vector<PhysicsOverlapWorld::BodyHandle> listHit;
         world.queryAABB( probe, 0, listHit );
         return listHit.size();
     };
@@ -419,7 +419,7 @@ SW_TEST_CASE( PhysicsTest, MultiCellBodyIsFoundInEveryCellItSpans )
  */
 SW_TEST_CASE( PhysicsTest, OversizedBodyDoesNotInflateTheGrid )
 {
-    PhysicsWorld world;
+    PhysicsOverlapWorld world;
     world.layers().setLayerCollision( 0, 0, true );
 
     // 20,000 x 10 x 20,000 — 흔한 지형/바닥 콜라이더 크기다.
@@ -427,14 +427,14 @@ SW_TEST_CASE( PhysicsTest, OversizedBodyDoesNotInflateTheGrid )
     ground._min = float3( -10000.0f, -5.0f, -10000.0f );
     ground._max = float3( 10000.0f, 5.0f, 10000.0f );
 
-    const PhysicsWorld::BodyHandle groundHandle = world.addBody( ground, 0, 1 );
+    const PhysicsOverlapWorld::BodyHandle groundHandle = world.addBody( ground, 0, 1 );
     SW_ASSERT_TRUE( groundHandle.isValid() );
 
     // 셀 하나에 들어가는 평범한 바디도 하나 둔다.
     AABB crate;
-    crate._min                                 = float3( 0.0f, 0.0f, 0.0f );
-    crate._max                                 = float3( 2.0f, 2.0f, 2.0f );
-    const PhysicsWorld::BodyHandle crateHandle = world.addBody( crate, 0, 2 );
+    crate._min                                        = float3( 0.0f, 0.0f, 0.0f );
+    crate._max                                        = float3( 2.0f, 2.0f, 2.0f );
+    const PhysicsOverlapWorld::BodyHandle crateHandle = world.addBody( crate, 0, 2 );
     SW_ASSERT_TRUE( crateHandle.isValid() );
 
     // 흩뿌리면 여기가 십만 가까이 된다. 상자가 차지한 셀들뿐이어야 한다.
@@ -445,12 +445,12 @@ SW_TEST_CASE( PhysicsTest, OversizedBodyDoesNotInflateTheGrid )
     probe._min = float3( 0.5f, -1.0f, 0.5f );
     probe._max = float3( 1.5f, 1.0f, 1.5f );
 
-    vector<PhysicsWorld::BodyHandle> listHit;
+    vector<PhysicsOverlapWorld::BodyHandle> listHit;
     world.queryAABB( probe, 0, listHit );
 
     bool bFoundGround = false;
     bool bFoundCrate  = false;
-    for ( const PhysicsWorld::BodyHandle& handle : listHit )
+    for ( const PhysicsOverlapWorld::BodyHandle& handle : listHit )
     {
         if ( handle == groundHandle )
             bFoundGround = true;
@@ -463,7 +463,7 @@ SW_TEST_CASE( PhysicsTest, OversizedBodyDoesNotInflateTheGrid )
     // 큰 바디를 지우면 목록에서도 빠져야 한다 — 넣을 때와 뺄 때의 판단이 같아야 성립한다.
     world.removeBody( groundHandle );
     world.queryAABB( probe, 0, listHit );
-    for ( const PhysicsWorld::BodyHandle& handle : listHit )
+    for ( const PhysicsOverlapWorld::BodyHandle& handle : listHit )
     {
         SW_EXPECT_TRUE( handle != groundHandle );
     }
@@ -480,7 +480,7 @@ SW_TEST_CASE( PhysicsTest, OversizedBodyDoesNotInflateTheGrid )
  */
 SW_TEST_CASE( PhysicsTest, BodyBeyondCellCoordinateRangeIsStillFound )
 {
-    PhysicsWorld world;
+    PhysicsOverlapWorld world;
     world.layers().setLayerCollision( 0, 0, true );
 
     // 셀 크기(64)로 나눠도 int32 를 한참 넘는 좌표다.
@@ -488,7 +488,7 @@ SW_TEST_CASE( PhysicsTest, BodyBeyondCellCoordinateRangeIsStillFound )
     enormous._min = float3( -1.0e12f, -1.0e12f, -1.0e12f );
     enormous._max = float3( 1.0e12f, 1.0e12f, 1.0e12f );
 
-    const PhysicsWorld::BodyHandle enormousHandle = world.addBody( enormous, 0, 1 );
+    const PhysicsOverlapWorld::BodyHandle enormousHandle = world.addBody( enormous, 0, 1 );
     SW_ASSERT_TRUE( enormousHandle.isValid() );
 
     // 셀 표에 흩뿌려지지 않아야 한다 — 넘치는 바디는 목록으로 간다.
@@ -498,11 +498,11 @@ SW_TEST_CASE( PhysicsTest, BodyBeyondCellCoordinateRangeIsStillFound )
     probe._min = float3( -1.0f, -1.0f, -1.0f );
     probe._max = float3( 1.0f, 1.0f, 1.0f );
 
-    vector<PhysicsWorld::BodyHandle> listHit;
+    vector<PhysicsOverlapWorld::BodyHandle> listHit;
     world.queryAABB( probe, 0, listHit );
 
     bool bFound = false;
-    for ( const PhysicsWorld::BodyHandle& handle : listHit )
+    for ( const PhysicsOverlapWorld::BodyHandle& handle : listHit )
     {
         if ( handle == enormousHandle )
             bFound = true;
@@ -511,7 +511,7 @@ SW_TEST_CASE( PhysicsTest, BodyBeyondCellCoordinateRangeIsStillFound )
 
     world.removeBody( enormousHandle );
     world.queryAABB( probe, 0, listHit );
-    for ( const PhysicsWorld::BodyHandle& handle : listHit )
+    for ( const PhysicsOverlapWorld::BodyHandle& handle : listHit )
     {
         SW_EXPECT_TRUE( handle != enormousHandle );
     }
@@ -524,18 +524,18 @@ SW_TEST_CASE( PhysicsTest, BodyBeyondCellCoordinateRangeIsStillFound )
  */
 SW_TEST_CASE( PhysicsTest, BodyAtTheCellRangeLimitDoesNotHang )
 {
-    PhysicsWorld world;
-    AABB         farBox;
+    PhysicsOverlapWorld world;
+    AABB                farBox;
     farBox._min = float3( 1.0e12f, 0.0f, 0.0f );
     farBox._max = float3( 1.0e12f, 0.5f, 0.5f );
 
-    const PhysicsWorld::BodyHandle handle = world.addBody( farBox, 0 );
+    const PhysicsOverlapWorld::BodyHandle handle = world.addBody( farBox, 0 );
     SW_ASSERT_TRUE( handle.isValid() );
 
-    vector<PhysicsWorld::BodyHandle> hits;
+    vector<PhysicsOverlapWorld::BodyHandle> hits;
     world.queryAABB( farBox, 0, hits );
     bool bFound{ false };
-    for ( const PhysicsWorld::BodyHandle& hit : hits )
+    for ( const PhysicsOverlapWorld::BodyHandle& hit : hits )
     {
         bFound = bFound || hit == handle;
     }
@@ -607,9 +607,9 @@ namespace
  */
 SW_TEST_CASE( PhysicsTest, StepReportsOverlapsThatBeginAndEnd )
 {
-    PhysicsWorld                   world;
-    const PhysicsWorld::BodyHandle a = world.addBody( makeUnitBox( 0.0f ), 0, 11 );
-    const PhysicsWorld::BodyHandle b = world.addBody( makeUnitBox( 0.5f ), 0, 22 );
+    PhysicsOverlapWorld                   world;
+    const PhysicsOverlapWorld::BodyHandle a = world.addBody( makeUnitBox( 0.0f ), 0, 11 );
+    const PhysicsOverlapWorld::BodyHandle b = world.addBody( makeUnitBox( 0.5f ), 0, 22 );
     world.addBody( makeUnitBox( 50.0f ), 0, 33 );
 
     world.step( 0.016f );
@@ -640,7 +640,7 @@ SW_TEST_CASE( PhysicsTest, StepReportsOverlapsThatBeginAndEnd )
  */
 SW_TEST_CASE( PhysicsTest, StepRespectsTheLayerMatrix )
 {
-    PhysicsWorld world;
+    PhysicsOverlapWorld world;
     world.layers().setLayerCollision( 0, 1, false );
     world.addBody( makeUnitBox( 0.0f ), 0, 11 );
     world.addBody( makeUnitBox( 0.5f ), 1, 22 );
@@ -656,12 +656,12 @@ SW_TEST_CASE( PhysicsTest, StepRespectsTheLayerMatrix )
  */
 SW_TEST_CASE( PhysicsTest, ContinuousBodyOverlapsWhatItPassedThroughInOneStep )
 {
-    PhysicsWorld world;
+    PhysicsOverlapWorld world;
     world.layers().setLayerCollision( 0, 1, false );
     world.addBody( makeWallBox( 5.0f ), 0, 1 );
     world.addBody( makeWallBox( 7.0f ), 1, 2 ); // 레이어가 막은 벽
-    const PhysicsWorld::BodyHandle fast = world.addBody( makeContinuousState( makeBoxAt( 0.0f, 0.0f ) ), 3 );
-    const PhysicsWorld::BodyHandle slow = world.addBody( makeBoxAt( 0.0f, 10.0f ), 0, 4 );
+    const PhysicsOverlapWorld::BodyHandle fast = world.addBody( makeContinuousState( makeBoxAt( 0.0f, 0.0f ) ), 3 );
+    const PhysicsOverlapWorld::BodyHandle slow = world.addBody( makeBoxAt( 0.0f, 10.0f ), 0, 4 );
     world.step( 0.016f );
     SW_EXPECT_TRUE( world.getOverlapEvents().empty() );
 
@@ -692,9 +692,9 @@ SW_TEST_CASE( PhysicsTest, ContinuousBodyOverlapsWhatItPassedThroughInOneStep )
  */
 SW_TEST_CASE( PhysicsTest, ContinuousBodyLeavingAnOverlapEndsItInThatStep )
 {
-    PhysicsWorld world;
+    PhysicsOverlapWorld world;
     world.addBody( makeWallBox( 5.0f ), 0, 1 );
-    const PhysicsWorld::BodyHandle fast = world.addBody( makeContinuousState( makeBoxAt( 4.6f, 0.0f ) ), 3 );
+    const PhysicsOverlapWorld::BodyHandle fast = world.addBody( makeContinuousState( makeBoxAt( 4.6f, 0.0f ) ), 3 );
     world.step( 0.016f );
     SW_ASSERT_EQUAL( 1u, countOverlapEvent( world.getOverlapEvents(), 3, 1, true ) );
 
@@ -710,10 +710,10 @@ SW_TEST_CASE( PhysicsTest, ContinuousBodyLeavingAnOverlapEndsItInThatStep )
  */
 SW_TEST_CASE( PhysicsTest, SweptOverlapsComeInTheOrderTheyWereTouched )
 {
-    PhysicsWorld world;
+    PhysicsOverlapWorld world;
     world.addBody( makeWallBox( 8.0f ), 0, 1 );
     world.addBody( makeWallBox( 4.0f ), 0, 2 );
-    const PhysicsWorld::BodyHandle fast = world.addBody( makeContinuousState( makeBoxAt( 0.0f, 0.0f ) ), 3 );
+    const PhysicsOverlapWorld::BodyHandle fast = world.addBody( makeContinuousState( makeBoxAt( 0.0f, 0.0f ) ), 3 );
     world.step( 0.016f );
 
     world.setAABB( fast, makeBoxAt( 10.0f, 0.0f ) );
@@ -733,7 +733,7 @@ SW_TEST_CASE( PhysicsTest, SweptOverlapsComeInTheOrderTheyWereTouched )
  */
 SW_TEST_CASE( PhysicsTest, ContinuousBodyMeetsABodyThatCrossesItsPathInOneStep )
 {
-    PhysicsWorld world;
+    PhysicsOverlapWorld world;
     // 멀리 떨어진 바디를 채워 둔다 — 바디가 적으면 질의가 그리드를 건너뛰고 모든 바디를 돌아, 범위를 넓히지 않아도 찾는다.
     for ( uint64 fillerIndex = 0; fillerIndex < 60; ++fillerIndex )
     {
@@ -741,10 +741,10 @@ SW_TEST_CASE( PhysicsTest, ContinuousBodyMeetsABodyThatCrossesItsPathInOneStep )
     }
 
     AABB crosser;
-    crosser._min                         = float3( 100.0f, -100.0f, 0.0f );
-    crosser._max                         = float3( 100.1f, -99.0f, 1.0f );
-    const PhysicsWorld::BodyHandle enemy = world.addBody( crosser, 0, 1 );
-    const PhysicsWorld::BodyHandle fast  = world.addBody( makeContinuousState( makeBoxAt( 0.0f, 0.0f ) ), 3 );
+    crosser._min                                = float3( 100.0f, -100.0f, 0.0f );
+    crosser._max                                = float3( 100.1f, -99.0f, 1.0f );
+    const PhysicsOverlapWorld::BodyHandle enemy = world.addBody( crosser, 0, 1 );
+    const PhysicsOverlapWorld::BodyHandle fast  = world.addBody( makeContinuousState( makeBoxAt( 0.0f, 0.0f ) ), 3 );
     world.step( 0.016f );
     SW_EXPECT_TRUE( world.getOverlapEvents().empty() );
 
@@ -767,9 +767,9 @@ SW_TEST_CASE( PhysicsTest, ContinuousBodyMeetsABodyThatCrossesItsPathInOneStep )
  */
 SW_TEST_CASE( PhysicsTest, TeleportedContinuousBodyDoesNotSweepTheGap )
 {
-    PhysicsWorld world;
+    PhysicsOverlapWorld world;
     world.addBody( makeWallBox( 5.0f ), 0, 1 );
-    const PhysicsWorld::BodyHandle fast = world.addBody( makeContinuousState( makeBoxAt( 0.0f, 0.0f ) ), 3 );
+    const PhysicsOverlapWorld::BodyHandle fast = world.addBody( makeContinuousState( makeBoxAt( 0.0f, 0.0f ) ), 3 );
     world.step( 0.016f );
 
     // 벽 너머로 순간이동 — 닿지 않는다.
@@ -790,12 +790,12 @@ SW_TEST_CASE( PhysicsTest, TeleportedContinuousBodyDoesNotSweepTheGap )
  */
 SW_TEST_CASE( PhysicsTest, OverlapEventsSayWhichBodyIsATrigger )
 {
-    PhysicsWorld     world;
-    PhysicsBodyState triggerState;
-    triggerState._aabb                    = makeUnitBox( 0.0f );
-    triggerState._bTrigger                = SW_TRUE;
-    const PhysicsWorld::BodyHandle sensor = world.addBody( triggerState, 11 );
-    const PhysicsWorld::BodyHandle body   = world.addBody( makeUnitBox( 0.5f ), 0, 22 );
+    PhysicsOverlapWorld world;
+    PhysicsBodyState    triggerState;
+    triggerState._aabb                           = makeUnitBox( 0.0f );
+    triggerState._bTrigger                       = SW_TRUE;
+    const PhysicsOverlapWorld::BodyHandle sensor = world.addBody( triggerState, 11 );
+    const PhysicsOverlapWorld::BodyHandle body   = world.addBody( makeUnitBox( 0.5f ), 0, 22 );
     world.step( 0.016f );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( world.getOverlapEvents().size() ) );
     SW_EXPECT_TRUE( isTriggerSide( world.getOverlapEvents()[0], 11 ) );

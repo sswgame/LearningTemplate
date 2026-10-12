@@ -3,7 +3,7 @@
 #include "Core/Math/AABB.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Physics/PhysicsWorld.h"
+#include "Engine/Physics/PhysicsOverlapWorld.h"
 
 #include "TestFramework/TestBench.h"
 #include "TestFramework/TestFramework.h"
@@ -33,8 +33,8 @@ namespace
      */
     void measureSteps( bool bWithFarMover, sw::vector<int64>& outListSample )
     {
-        sw::PhysicsWorld world;
-        uint64           objectID = 1;
+        sw::PhysicsOverlapWorld world;
+        uint64                  objectID = 1;
         for ( uint32 row = 0; row < kStaticRowCount; ++row )
         {
             for ( uint32 column = 0; column < kStaticRowCount; ++column )
@@ -43,8 +43,8 @@ namespace
             }
         }
 
-        sw::vector<sw::PhysicsWorld::BodyHandle> listContinuousBody;
-        sw::vector<sw::float2>                   listPosition;
+        sw::vector<sw::PhysicsOverlapWorld::BodyHandle> listContinuousBody;
+        sw::vector<sw::float2>                          listPosition;
         for ( uint32 index = 0; index < kContinuousCount; ++index )
         {
             // 정지 바디 사이(격자 칸의 가운데)를 지나간다 — 겹침 이벤트가 아니라 후보 모으기를 측정한다.
@@ -55,7 +55,7 @@ namespace
             listContinuousBody.push_back( world.addBody( state, objectID++ ) );
             listPosition.push_back( position );
         }
-        const sw::PhysicsWorld::BodyHandle farMover = world.addBody( makeBoxAt( -50.0f, -50.0f ), 0, objectID++ );
+        const sw::PhysicsOverlapWorld::BodyHandle farMover = world.addBody( makeBoxAt( -50.0f, -50.0f ), 0, objectID++ );
         world.step( 0.016f );
 
         outListSample.clear();
@@ -92,6 +92,6 @@ SW_TEST_CASE( PhysicsBenchTest, ContinuousStepWithAFarMover )
     measureSteps( true, listFar );
     SW_EXPECT_EQUAL( static_cast<size_t>( kMeasuredStepCount ), listCalm.size() );
     SW_EXPECT_EQUAL( static_cast<size_t>( kMeasuredStepCount ), listFar.size() );
-    test::logBenchSamples( "PhysicsWorld::step  150 continuous / 3025 static", listCalm );
-    test::logBenchSamples( "PhysicsWorld::step  + one body moving 1000 per step", listFar );
+    test::logBenchSamples( "PhysicsOverlapWorld::step  150 continuous / 3025 static", listCalm );
+    test::logBenchSamples( "PhysicsOverlapWorld::step  + one body moving 1000 per step", listFar );
 }

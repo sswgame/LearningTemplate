@@ -8,7 +8,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Collision/ContinuousCollision.h"
-#include "Engine/Physics/PhysicsWorld.h"
+#include "Engine/Physics/PhysicsOverlapWorld.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 
@@ -26,12 +26,12 @@ namespace sw
 
 namespace sw
 {
-    PhysicsWorldQuery::PhysicsWorldQuery( const PhysicsWorld& physicsWorld )
+    PhysicsOverlapWorldQuery::PhysicsOverlapWorldQuery( const PhysicsOverlapWorld& physicsWorld )
         : _physicsWorld{ physicsWorld }
     {
     }
 
-    bool PhysicsWorldQuery::raycast( const float3& from, const float3& to, uint64 ignoreObjectID, WorldRayHit& outHit ) const
+    bool PhysicsOverlapWorldQuery::raycast( const float3& from, const float3& to, uint64 ignoreObjectID, WorldRayHit& outHit ) const
     {
         outHit                     = WorldRayHit{};
         const float3 halfThickness = float3{ WorldQueryInternal::kRayHalfThickness };
@@ -41,10 +41,10 @@ namespace sw
         AABB sweptBounds{ float3::min( from, to ) - halfThickness, float3::max( from, to ) + halfThickness };
         sweptBounds._min._z = MathUtil::min( sweptBounds._min._z, -WorldQueryInternal::kRayHalfThickness );
         sweptBounds._max._z = MathUtil::max( sweptBounds._max._z, WorldQueryInternal::kRayHalfThickness );
-        vector<PhysicsWorld::BodyHandle> listHandle;
+        vector<PhysicsOverlapWorld::BodyHandle> listHandle;
         _physicsWorld.queryAABB( sweptBounds, WorldQueryInternal::kQueryLayer, listHandle );
         bool bHit = false;
-        for ( const PhysicsWorld::BodyHandle handle : listHandle )
+        for ( const PhysicsOverlapWorld::BodyHandle handle : listHandle )
         {
             PhysicsBody body;
             if ( _physicsWorld.tryGetBody( handle, body ) == false || body._bTrigger == SW_TRUE || body._objectID == ignoreObjectID )
@@ -111,12 +111,12 @@ namespace sw
         if ( pService != nullptr )
             return pService->raycast( from, to, ignoreObjectID, outHit );
         // 강체 물리와 겹침 월드(BoxCollider2D) 중 가까운 것 — 두 세계가 한 씬에 섞여 있을 수 있다.
-        const ScenePhysicsWorldQuery rigid{ manager };
-        const PhysicsWorldQuery      fallback{ manager.getOverlapWorld2D().getPhysicsWorld() };
-        WorldRayHit                  rigidHit;
-        WorldRayHit                  fallbackHit;
-        const bool                   bRigid    = rigid.raycast( from, to, ignoreObjectID, rigidHit );
-        const bool                   bFallback = fallback.raycast( from, to, ignoreObjectID, fallbackHit );
+        const ScenePhysicsWorldQuery   rigid{ manager };
+        const PhysicsOverlapWorldQuery fallback{ manager.getOverlapWorld2D().getPhysicsOverlapWorld() };
+        WorldRayHit                    rigidHit;
+        WorldRayHit                    fallbackHit;
+        const bool                     bRigid    = rigid.raycast( from, to, ignoreObjectID, rigidHit );
+        const bool                     bFallback = fallback.raycast( from, to, ignoreObjectID, fallbackHit );
         if ( bRigid && ( bFallback == false || rigidHit._fraction <= fallbackHit._fraction ) )
         {
             outHit = rigidHit;

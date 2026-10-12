@@ -69,7 +69,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 월드 질의로 시야를 판정합니다. 물리 백엔드 서비스(`WorldQuery`)를 쓰고, 없으면 `PhysicsWorld` 폴백을 씁니다. */
+    /** @brief 월드 질의로 시야를 판정합니다. 물리 백엔드 서비스(`WorldQuery`)를 쓰고, 없으면 `PhysicsOverlapWorld` 폴백을 씁니다. */
     class SW_GF_API WorldLineOfSightQuery final : public ILineOfSightQuery
     {
     public:

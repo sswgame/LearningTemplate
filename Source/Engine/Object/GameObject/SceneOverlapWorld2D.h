@@ -1,18 +1,18 @@
 /**
  * @file SceneOverlapWorld2D.h
- * @brief 씬 하나의 겹침 월드 — AABB 질의 월드(`PhysicsWorld`), 바디를 맞출 2D 콜라이더 목록, 겹침 이벤트를 컴포넌트에 나눠 주기입니다.
+ * @brief 씬 하나의 겹침 월드 — AABB 질의 월드(`PhysicsOverlapWorld`), 바디를 맞출 2D 콜라이더 목록, 겹침 이벤트를 컴포넌트에 나눠 주기입니다.
  * @details `GameObjectManager` 가 소유만 하고(`ScenePhysics` · `PrimitiveRegistry` 와 같은 자리), 프레임마다 강체 물리 앞에서 `step` 을 한 번 부릅니다.
  *          강체(`ScenePhysics`)와 따로 돕니다 — 이쪽은 적분하지 않고 겹침 시작 · 끝만 냅니다(유니티 `Physics2D` 트리거, 언리얼 Begin/EndOverlap 의 자리).
  *
  *          콜라이더는 병렬 틱에서 제 바디를 맞추지 않습니다 — 같은 그룹에서 겹침을 묻는 쪽이 스케줄에 따라 옛 · 새 자리를 보게 된다. 그래서 등록받아
- *          `step` 직전에 한 번에 맞춥니다. 질의(`getPhysicsWorld`)는 키트의 투사체 · 근접 판정 · 카메라 탐침 · 에디터 쓸기가 씁니다.
+ *          `step` 직전에 한 번에 맞춥니다. 질의(`getPhysicsOverlapWorld`)는 키트의 투사체 · 근접 판정 · 카메라 탐침 · 에디터 쓸기가 씁니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Physics/PhysicsWorld.h"
+#include "Engine/Physics/PhysicsOverlapWorld.h"
 
 namespace sw
 {
@@ -31,9 +31,9 @@ namespace sw
         SceneOverlapWorld2D& operator=( const SceneOverlapWorld2D& ) = delete;
 
         /** @brief AABB 질의 월드입니다(겹침 · 쓸기 · 레이어 표). */
-        PhysicsWorld& getPhysicsWorld() { return _physicsWorld; }
+        PhysicsOverlapWorld& getPhysicsOverlapWorld() { return _physicsWorld; }
         /** @brief AABB 질의 월드입니다. */
-        const PhysicsWorld& getPhysicsWorld() const { return _physicsWorld; }
+        const PhysicsOverlapWorld& getPhysicsOverlapWorld() const { return _physicsWorld; }
 
         /** @brief 바디를 맞출 콜라이더를 등록합니다(`BoxCollider2DComponent::onRegister`). 이미 있으면 아무것도 하지 않습니다. */
         void registerCollider( BoxCollider2DComponent* pCollider );
@@ -51,7 +51,7 @@ namespace sw
         void step( GameObjectManager& manager, float32 deltaTime );
 
     private:
-        PhysicsWorld                    _physicsWorld;
+        PhysicsOverlapWorld             _physicsWorld;
         vector<BoxCollider2DComponent*> _listCollider;  ///< 콜라이더가 자기 자리(`_colliderIndex`)를 든다
         vector<PhysicsOverlapEvent>     _listDelivered; ///< 나눠 주는 동안 도는 이벤트 사본(할당 재사용)
         vector<Component*>              _listTarget;    ///< 한 오브젝트에 나눠 주는 동안 도는 컴포넌트 사본(할당 재사용)

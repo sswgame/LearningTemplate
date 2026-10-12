@@ -35,7 +35,7 @@ namespace sw
      *
      *          대상은 오브젝트 하나(`_target`)이거나 묶음(`_listGroupTarget`, 프레이밍의 그룹 맞추기)이다. 초점은 월드 자리이고, 요와 피치는 그 오브젝트가 보는 쪽이다.
      *          입력(`<Input>` 이 있는 프리셋)은 `InputManager` 에서 읽는다.
-     *          암 충돌(`<Collision>`)은 따로 준 질의(`setCollisionProbe`)가 없으면 매니저의 `PhysicsWorld` 바디에 쓸어 본다. 대상 자신은 뺀다.
+     *          암 충돌(`<Collision>`)은 따로 준 질의(`setCollisionProbe`)가 없으면 매니저의 `PhysicsOverlapWorld` 바디에 쓸어 본다. 대상 자신은 뺀다.
      *          입력 맵 액션 `_cycleAction` 이 발동하면 카탈로그 순서로 다음 프리셋을 켠다.
      *          블렌드 없는 전환(컷)은 카메라에 컷 표시를 넣어서 렌더러가 TAA 기록을 버리게 한다.
      *          켠 프리셋과 블렌드 진행은 저장하지 않는다.
@@ -69,7 +69,7 @@ namespace sw
         void setCycleAction( const hashed_string& action ) { _cycleAction = action; }
         /** @brief 함께 담을 오브젝트 묶음입니다. 프레이밍의 그룹 맞추기에 쓰며, 비어 있지 않으면 대상(`_target`) 대신 묶음을 따라갑니다. */
         void setGroupTargets( const vector<GameObjectHandle>& listTarget ) { _listGroupTarget = listTarget; }
-        /** @brief 암 충돌 질의를 정합니다. 수명은 부르는 쪽이 쥐며, nullptr 이면 매니저의 `PhysicsWorld` 를 씁니다. */
+        /** @brief 암 충돌 질의를 정합니다. 수명은 부르는 쪽이 쥐며, nullptr 이면 매니저의 `PhysicsOverlapWorld` 를 씁니다. */
         void setCollisionProbe( const ICameraCollisionProbe* pProbe ) { _pExternalProbe = pProbe; }
         /** @brief 입력을 읽을지 정합니다. 자동 플레이와 테스트는 끕니다. */
         void setInputEnabled( bool bEnabled ) { _bReadInput = bEnabled; }

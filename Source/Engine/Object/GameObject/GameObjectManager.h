@@ -187,7 +187,7 @@ namespace sw
 
         /**
          * @brief 트랜스폼 계층입니다(루트 목록 · 더티 세대 · 플러시 알고리즘). 매니저는 소유하고 tick 의 단계만 정합니다.
-         * @details `PhysicsWorld` · `PrimitiveRegistry` 와 같은 자리입니다. 능력은 별도 타입이 갖고, 매니저는 순서만 정합니다. 병렬 시스템을
+         * @details `PhysicsOverlapWorld` · `PrimitiveRegistry` 와 같은 자리입니다. 능력은 별도 타입이 갖고, 매니저는 순서만 정합니다. 병렬 시스템을
          *          하나 더하려면 이런 타입 하나와 tick 의 한 줄이면 됩니다. 매니저가 그 알고리즘을 알 필요가 없습니다.
          */
         SceneTransformHierarchy&       getTransformHierarchy() { return _transformHierarchy; }
@@ -292,7 +292,7 @@ namespace sw
 
         /**
          * @brief 그릴 수 있는 컴포넌트의 레지스트리입니다.
-         * @details PhysicsWorld 와 같은 자리입니다. 능력은 별도 타입으로 두고 매니저는 그것을 소유만
+         * @details PhysicsOverlapWorld 와 같은 자리입니다. 능력은 별도 타입으로 두고 매니저는 그것을 소유만
          *          합니다. 컴포넌트는 등록 시점에 이것을 받아 들고 있으므로, 매니저 전체를 알 필요가 없습니다.
          */
         PrimitiveRegistry& getPrimitiveRegistry() { return _primitiveRegistry; }
@@ -375,7 +375,7 @@ namespace sw
             return static_cast<const TService&>( *pService );
         }
 
-        /** @brief 이 씬의 겹침 월드입니다(AABB 질의 월드 · 2D 콜라이더 등록 · 겹침 이벤트). 질의는 `getOverlapWorld2D().getPhysicsWorld()` 입니다. */
+        /** @brief 이 씬의 겹침 월드입니다(AABB 질의 월드 · 2D 콜라이더 등록 · 겹침 이벤트). 질의는 `getOverlapWorld2D().getPhysicsOverlapWorld()` 입니다. */
         SceneOverlapWorld2D& getOverlapWorld2D() { return _overlapWorld2D; }
         /** @brief 이 씬의 겹침 월드입니다. */
         const SceneOverlapWorld2D& getOverlapWorld2D() const { return _overlapWorld2D; }

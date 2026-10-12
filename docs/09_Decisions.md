@@ -56,7 +56,7 @@
   (`Dialogue` · `Sequencer` · `Destruction` · `Environment` · `Automation` · `UI` · `Animation` · `Scene` 등)는 Engine 말고 둘 곳이 없습니다.
   서버 실행 파일도 `GameFramework` 를 모르므로 서버가 `MetricRegistry` · `OpsHTTPEndpoint` 를 쓰는 `Observability` 도 남습니다.
   `Character` 는 에디터가 쓰는 `Destruction` 이 쓰고, `Spatial` 은 `Character/Fit` 이 씁니다. `Telemetry` 는 `EngineLoop` · App · 게임이 쓰고, `Compression` 은 Core 인터페이스의 코덱 공급자라 Core 가 서드파티를 몰라야 하는 규칙 때문에 남습니다.
-- **SOLID 리팩토링에서 핫 경로라 손대지 않는 것**(2026-10-12 감사). `IRHICommandList` · `IRHIResourceFactory` 의 가상 호출 구조, `GPUSceneBuilder` 내부 병렬 루프, `PhysicsWorld` 셀 해시,
+- **SOLID 리팩토링에서 핫 경로라 손대지 않는 것**(2026-10-12 감사). `IRHICommandList` · `IRHIResourceFactory` 의 가상 호출 구조, `GPUSceneBuilder` 내부 병렬 루프, `PhysicsOverlapWorld` 셀 해시,
   Box2D · Jolt 어댑터의 switch(외부 라이브러리 경계), RHI 백엔드 `CommandContext` 큰 파일(백엔드 하나의 기록이라 한 이유로 바뀐다), `AbilitySystemComponent` 의 modifier switch(닫힌 열거 + `-Wswitch`)입니다.
   의도된 예외는 `App.cpp` 의 `kArrHeadlessTask` 표, `EditorPanelManager::syncWithRegistry`, 에디터 `getService<T>()`(모듈 경계 주입), `EngineInitSequence` 단계 표입니다.
   나머지 단위는 [구조 리팩토링 계획](plans/StructureRefactor.md)에 있습니다.
@@ -364,7 +364,7 @@
 - **엔진의 각도 필드는 라디안입니다**(2026-10-06). 도 단위 필드를 두지 않고, `PropertyUnitsTest` 가 이 규칙에 예외를 두지 않습니다.
 
 - **이름은 상용 엔진과 견주어 정한다(2026-10-10, 이름 점검).** 이름 점검이 모호하다고 한 것을 모두 바꾸지 않는다. 그대로 두는 것: `GameObjectManager`(한 씬의 `GameObject` 를 만들고 소유하고 틱한다),
-  `GPUScene`(언리얼 `GPUScene` 과 같은 용어), `PhysicsWorld`(사용자 결정 — `IPhysicsScene` 과 이름이 비슷해도 둔다), `GameConfig`(프리셋 JSON) 와 `GameSettings`(팩의 `gamesettings.xml`) — 언리얼도 프로젝트
+  `GPUScene`(언리얼 `GPUScene` 과 같은 용어), `PhysicsOverlapWorld`(겹침 질의 전용 월드 — 강체 씬 `IPhysicsScene` 과 헷갈리지 않게 2026-10-13 `PhysicsWorld` 에서 바꿨다), `GameConfig`(프리셋 JSON) 와 `GameSettings`(팩의 `gamesettings.xml`) — 언리얼도 프로젝트
   설정과 게임 설정이 따로 있다, `GameplayAbilityDef`(카탈로그 정의: id · 클래스 이름 · `GameplayAbilityConfig`)와 `GameplayAbilityConfig`(어빌리티 하나의 설정) — 정의가 설정을 품는 층이라 둘 다 필요하다,
   `AbilitySpec`(언리얼 `FGameplayAbilitySpec` — 부여된 인스턴스), `TypeInfo` · `Info` 값 묶음, `InputManager` · `AssetManager`. 나눈다: `ResourceUtil` 은 경로 쪽 `ResourcePaths` 와 읽기 쪽 `ResourceIO` 로(언리얼 `FPaths` / `FFileHelper` 가 같은 선 — 끝났다),
   `EditorUtil` 은 경로를 `EditorPaths` 로 뺀다. `FrameRendererUtil` 은 그대로(언리얼 `RenderUtils` 도 같은 묶음). 파일 이름과 타입이 어긋난 곳은 `EditorColor.h`(색 타입 + 색 상수 묶음) · `EventType.h`(이벤트 ID 와 `IEvent`) · `Crafting.h`(제작 모듈 헤더)를 그대로 둔다 — 파일이 한 모듈의 묶음이다. 기각한 제안의 목록과 이유는 아래 표. `MathUtil::getRandom` · `getRandomRange` 는 스레드마다 씨앗이 다른 비결정 난수라 그대로 둔다(언리얼 `FMath::Rand` 와 같은 자리) — 결정적 난수는 `Core/Math/XorShift32.h` · `HashUtil::splitMix64Next`.

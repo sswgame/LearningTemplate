@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Physics/PhysicsWorld.h"
+#include "Engine/Physics/PhysicsOverlapWorld.h"
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -12,7 +12,7 @@ namespace sw
 {
     namespace
     {
-        struct PhysicsWorldInternal
+        struct PhysicsOverlapWorldInternal
         {
             /**
              * @brief 부동소수점 월드 좌표를 정수 그리드 셀 번호로 바꿉니다.
@@ -43,23 +43,23 @@ namespace sw
 
 namespace sw
 {
-    PhysicsWorld::CellRange PhysicsWorld::CellRange::fromAABB( const AABB& aabb, float32 cellSize )
+    PhysicsOverlapWorld::CellRange PhysicsOverlapWorld::CellRange::fromAABB( const AABB& aabb, float32 cellSize )
     {
         // 뒤집힌 AABB(min > max)도 받는다. 부르는 쪽마다 정규화를 적으면 그중 하나가 빠진다.
         const float3 normMin = float3::min( aabb._min, aabb._max );
         const float3 normMax = float3::max( aabb._min, aabb._max );
 
         CellRange range{};
-        range._minX = PhysicsWorldInternal::toCellCoord( normMin._x, cellSize );
-        range._maxX = PhysicsWorldInternal::toCellCoord( normMax._x, cellSize );
-        range._minY = PhysicsWorldInternal::toCellCoord( normMin._y, cellSize );
-        range._maxY = PhysicsWorldInternal::toCellCoord( normMax._y, cellSize );
-        range._minZ = PhysicsWorldInternal::toCellCoord( normMin._z, cellSize );
-        range._maxZ = PhysicsWorldInternal::toCellCoord( normMax._z, cellSize );
+        range._minX = PhysicsOverlapWorldInternal::toCellCoord( normMin._x, cellSize );
+        range._maxX = PhysicsOverlapWorldInternal::toCellCoord( normMax._x, cellSize );
+        range._minY = PhysicsOverlapWorldInternal::toCellCoord( normMin._y, cellSize );
+        range._maxY = PhysicsOverlapWorldInternal::toCellCoord( normMax._y, cellSize );
+        range._minZ = PhysicsOverlapWorldInternal::toCellCoord( normMin._z, cellSize );
+        range._maxZ = PhysicsOverlapWorldInternal::toCellCoord( normMax._z, cellSize );
         return range;
     }
 
-    int64 PhysicsWorld::CellRange::getCellCount() const noexcept
+    int64 PhysicsOverlapWorld::CellRange::getCellCount() const noexcept
     {
         const int64 spanX = static_cast<int64>( _maxX ) - static_cast<int64>( _minX ) + 1;
         const int64 spanY = static_cast<int64>( _maxY ) - static_cast<int64>( _minY ) + 1;
@@ -81,25 +81,25 @@ namespace sw
         return cellCount * spanZ;
     }
 
-    bool PhysicsWorld::shouldScanAllBodies( const CellRange& range ) const
+    bool PhysicsOverlapWorld::shouldScanAllBodies( const CellRange& range ) const
     {
         const int64 cellCount = range.getCellCount();
         return cellCount <= 0 || cellCount > kMaxQueryCellCount || cellCount > static_cast<int64>( _bodies.size() );
     }
 
-    bool PhysicsWorld::isOversizedForGrid( const AABB& aabb )
+    bool PhysicsOverlapWorld::isOversizedForGrid( const AABB& aabb )
     {
         const int64 cellCount = CellRange::fromAABB( aabb, kCellSize ).getCellCount();
         return cellCount <= 0 || cellCount > kMaxBodyCellCount;
     }
 
-    size_t PhysicsWorld::getGridCellCount() const
+    size_t PhysicsOverlapWorld::getGridCellCount() const
     {
         std::shared_lock<std::shared_mutex> lock{ _mutex };
         return _mapGrid.size();
     }
 
-    void PhysicsWorld::gatherCandidateHandles( const CellRange& range, vector<BodyHandle>& outListHandle ) const
+    void PhysicsOverlapWorld::gatherCandidateHandles( const CellRange& range, vector<BodyHandle>& outListHandle ) const
     {
         outListHandle.clear();
         outListHandle.reserve( 64 );
@@ -121,7 +121,7 @@ namespace sw
     /**
      * @brief 대상 AABB 가 덮는 모든 3D 그리드 셀에 바디 핸들을 등록합니다(너무 큰 바디는 따로 둡니다).
      */
-    void PhysicsWorld::insertBodyToGrid( BodyHandle handle, const AABB& aabb )
+    void PhysicsOverlapWorld::insertBodyToGrid( BodyHandle handle, const AABB& aabb )
     {
         if ( aabb.isValid() == false )
             return;
@@ -142,7 +142,7 @@ namespace sw
     /**
      * @brief 대상 AABB 가 덮던 그리드 셀들에서 바디 핸들을 뺍니다.
      */
-    void PhysicsWorld::removeBodyFromGrid( BodyHandle handle, const AABB& aabb )
+    void PhysicsOverlapWorld::removeBodyFromGrid( BodyHandle handle, const AABB& aabb )
     {
         if ( aabb.isValid() == false )
             return;
@@ -174,7 +174,7 @@ namespace sw
         } );
     }
 
-    void PhysicsWorld::gatherStepCandidates( const CellRange& range, vector<BodyHandle>& outListHandle ) const
+    void PhysicsOverlapWorld::gatherStepCandidates( const CellRange& range, vector<BodyHandle>& outListHandle ) const
     {
         if ( shouldScanAllBodies( range ) == false )
         {
@@ -189,7 +189,7 @@ namespace sw
     /**
      * @brief 새 물리 바디를 월드에 등록하고 공간 그리드에 배치합니다.
      */
-    PhysicsWorld::BodyHandle PhysicsWorld::addBody( const AABB& aabb, uint8 layer, uint64 objectID )
+    PhysicsOverlapWorld::BodyHandle PhysicsOverlapWorld::addBody( const AABB& aabb, uint8 layer, uint64 objectID )
     {
         SW_MEMORY_SCOPE( Physics );
         PhysicsBodyState state{};
@@ -198,7 +198,7 @@ namespace sw
         return addBody( state, objectID );
     }
 
-    PhysicsWorld::BodyHandle PhysicsWorld::addBody( const PhysicsBodyState& state, uint64 objectID )
+    PhysicsOverlapWorld::BodyHandle PhysicsOverlapWorld::addBody( const PhysicsBodyState& state, uint64 objectID )
     {
         SW_MEMORY_SCOPE( Physics );
         PhysicsBody body{};
@@ -217,7 +217,7 @@ namespace sw
     /**
      * @brief 물리 바디를 월드에서 빼고 공간 그리드에서도 지웁니다.
      */
-    void PhysicsWorld::removeBody( BodyHandle handle )
+    void PhysicsOverlapWorld::removeBody( BodyHandle handle )
     {
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         const PhysicsBody*                  pBody = _bodies.get( handle );
@@ -229,7 +229,7 @@ namespace sw
     /**
      * @brief 바디의 위치와 크기(AABB)를 갱신하고, 공간 그리드에서 차지하는 셀을 다시 맞춥니다.
      */
-    void PhysicsWorld::setAABB( BodyHandle handle, const AABB& aabb )
+    void PhysicsOverlapWorld::setAABB( BodyHandle handle, const AABB& aabb )
     {
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         PhysicsBody*                        pBody = _bodies.get( handle );
@@ -238,7 +238,7 @@ namespace sw
         setAABBLocked( handle, *pBody, aabb );
     }
 
-    void PhysicsWorld::updateBody( BodyHandle handle, const PhysicsBodyState& state, BodyMoveType moveType )
+    void PhysicsOverlapWorld::updateBody( BodyHandle handle, const PhysicsBodyState& state, BodyMoveType moveType )
     {
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         PhysicsBody*                        pBody = _bodies.get( handle );
@@ -254,7 +254,7 @@ namespace sw
             pBody->_stepAABB = state._aabb;
     }
 
-    void PhysicsWorld::setAABBLocked( BodyHandle handle, PhysicsBody& body, const AABB& aabb )
+    void PhysicsOverlapWorld::setAABBLocked( BodyHandle handle, PhysicsBody& body, const AABB& aabb )
     {
         const AABB oldAABB = body._aabb;
         if ( oldAABB.isValid() && aabb.isValid() )
@@ -278,7 +278,7 @@ namespace sw
     /**
      * @brief 바디 핸들로 물리 바디 정보를 찾아 복사합니다(스레드 안전).
      */
-    bool PhysicsWorld::tryGetBody( BodyHandle handle, PhysicsBody& outBody ) const
+    bool PhysicsOverlapWorld::tryGetBody( BodyHandle handle, PhysicsBody& outBody ) const
     {
         std::shared_lock<std::shared_mutex> lock{ _mutex };
         const PhysicsBody*                  pBody = _bodies.get( handle );
@@ -293,7 +293,7 @@ namespace sw
     /**
      * @brief 바디 쌍의 겹침을 다시 재 지난 step 과 달라진 쌍을 이벤트로 냅니다. 적분하는 솔버는 없습니다(강체가 없다).
      */
-    void PhysicsWorld::step( float32 deltaTime )
+    void PhysicsOverlapWorld::step( float32 deltaTime )
     {
         (void)deltaTime; // 적분하지 않는다. 강체가 없으므로 겹침만 다시 측정한다.
         std::unique_lock<std::shared_mutex> lock{ _mutex };
@@ -391,8 +391,8 @@ namespace sw
         _listOverlapPair.swap( _listScratchPair );
     }
 
-    void PhysicsWorld::addSweptPairs( BodyHandle handle, const PhysicsBody& body, const float3& maxNearDisplacement, const vector<BodyHandle>& listFarMover,
-                                      vector<BodyHandle>& inoutListCandidate )
+    void PhysicsOverlapWorld::addSweptPairs( BodyHandle handle, const PhysicsBody& body, const float3& maxNearDisplacement, const vector<BodyHandle>& listFarMover,
+                                             vector<BodyHandle>& inoutListCandidate )
     {
         const AABB& from = body._stepAABB;
         if ( from.isValid() == false || body._aabb.isValid() == false )
@@ -418,7 +418,7 @@ namespace sw
         }
     }
 
-    void PhysicsWorld::addSweptPairIfTouched( BodyHandle handle, const PhysicsBody& body, const float3& displacement, BodyHandle candidate )
+    void PhysicsOverlapWorld::addSweptPairIfTouched( BodyHandle handle, const PhysicsBody& body, const float3& displacement, BodyHandle candidate )
     {
         if ( candidate == handle )
             return;
@@ -441,7 +441,7 @@ namespace sw
         _listScratchPair.push_back( OverlapPair::makeOrdered( handle, body, candidate, *pOther, hit._hitFraction ) );
     }
 
-    bool PhysicsWorld::isFarMover( const PhysicsBody& body )
+    bool PhysicsOverlapWorld::isFarMover( const PhysicsBody& body )
     {
         if ( body._aabb.isValid() == false || body._stepAABB.isValid() == false )
             return false;
@@ -452,7 +452,7 @@ namespace sw
     /**
      * @brief 두 바디가 레이어 마스크와 AABB 모두에서 겹치는지 검사합니다.
      */
-    bool PhysicsWorld::overlaps( BodyHandle a, BodyHandle b ) const
+    bool PhysicsOverlapWorld::overlaps( BodyHandle a, BodyHandle b ) const
     {
         std::shared_lock<std::shared_mutex> lock{ _mutex };
         const PhysicsBody*                  pBodyA = _bodies.get( a );
@@ -468,7 +468,7 @@ namespace sw
      * 1. 박스가 걸치는 그리드 셀을 돌며 중복 없는 후보 바디 목록을 모읍니다(범위가 비었거나 너무 넓으면 모든 바디를 봅니다).
      * 2. 후보마다 레이어 마스크와 정확한 AABB 교차를 검사해 outListHandle 에 넣습니다.
      */
-    void PhysicsWorld::queryAABB( const AABB& box, uint8 layer, vector<BodyHandle>& outListHandle ) const
+    void PhysicsOverlapWorld::queryAABB( const AABB& box, uint8 layer, vector<BodyHandle>& outListHandle ) const
     {
         std::shared_lock<std::shared_mutex> lock{ _mutex };
         outListHandle.clear();
@@ -501,7 +501,7 @@ namespace sw
         }
     }
 
-    bool PhysicsWorld::sweepTest( const AABB& movingBox, const float3& displacement, uint8 layer, SweepHit& outHit ) const
+    bool PhysicsOverlapWorld::sweepTest( const AABB& movingBox, const float3& displacement, uint8 layer, SweepHit& outHit ) const
     {
         std::shared_lock<std::shared_mutex> lock{ _mutex };
         outHit._bHit        = false;

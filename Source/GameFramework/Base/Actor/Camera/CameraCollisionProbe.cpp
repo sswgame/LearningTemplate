@@ -8,8 +8,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ScenePhysics.h"
 #include "Engine/Physics/Collision/ContinuousCollision.h"
+#include "Engine/Physics/PhysicsOverlapWorld.h"
 #include "Engine/Physics/PhysicsSettings.h"
-#include "Engine/Physics/PhysicsWorld.h"
 
 namespace sw
 {
@@ -58,27 +58,27 @@ namespace sw
         return bHit;
     }
 
-    PhysicsWorldCameraProbe::PhysicsWorldCameraProbe( const PhysicsWorld& world, uint8 layer, uint64 ignoredObjectID )
+    PhysicsOverlapWorldCameraProbe::PhysicsOverlapWorldCameraProbe( const PhysicsOverlapWorld& world, uint8 layer, uint64 ignoredObjectID )
         : _pWorld{ &world }
         , _ignoredObjectID{ ignoredObjectID }
         , _layer{ layer }
     {
     }
 
-    bool PhysicsWorldCameraProbe::sweepSphere( const float3& from, const float3& to, float32 radius, float32& outDistance ) const
+    bool PhysicsOverlapWorldCameraProbe::sweepSphere( const float3& from, const float3& to, float32 radius, float32& outDistance ) const
     {
         const float3  displacement = to - from;
         const float32 length       = displacement.getLength();
         if ( _pWorld == nullptr || length <= MathUtil::kEpsilon )
             return false;
         // 쓸리는 구간을 덮는 상자로 후보를 모으고, 바디마다 구를 쓸어 가장 가까운 것을 고른다. 대상 자신(피벗이 그 안에 있다)은 건너뛴다.
-        const float3                     extent{ radius, radius, radius };
-        const AABB                       sweptBounds{ float3::min( from, to ) - extent, float3::max( from, to ) + extent };
-        vector<PhysicsWorld::BodyHandle> listHandle;
+        const float3                            extent{ radius, radius, radius };
+        const AABB                              sweptBounds{ float3::min( from, to ) - extent, float3::max( from, to ) + extent };
+        vector<PhysicsOverlapWorld::BodyHandle> listHandle;
         _pWorld->queryAABB( sweptBounds, _layer, listHandle );
         float32 nearest = length;
         bool    bHit    = false;
-        for ( const PhysicsWorld::BodyHandle handle : listHandle )
+        for ( const PhysicsOverlapWorld::BodyHandle handle : listHandle )
         {
             PhysicsBody body{};
             if ( _pWorld->tryGetBody( handle, body ) == false || body._bTrigger == SW_TRUE )
@@ -123,8 +123,8 @@ namespace sw
             nearest = hit._distance;
             bHit    = true;
         }
-        const PhysicsWorldCameraProbe overlapProbe( _manager.getOverlapWorld2D().getPhysicsWorld(), 0, _ignoredObjectID );
-        float32                       overlapDistance = 0.0f;
+        const PhysicsOverlapWorldCameraProbe overlapProbe( _manager.getOverlapWorld2D().getPhysicsOverlapWorld(), 0, _ignoredObjectID );
+        float32                              overlapDistance = 0.0f;
         if ( overlapProbe.sweepSphere( from, to, radius, overlapDistance ) && overlapDistance < nearest )
         {
             nearest = overlapDistance;

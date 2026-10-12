@@ -256,7 +256,7 @@ SW_TEST_CASE( ActionCombatTest, ProjectilePassesItsInstigatorAndWhatIsAttachedTo
 SW_TEST_CASE( ActionCombatTest, ProjectileIgnoresUnitsOnALayerItDoesNotCollideWith )
 {
     GameObjectManager manager;
-    manager.getOverlapWorld2D().getPhysicsWorld().layers().setLayerCollision( 1, 2, false );
+    manager.getOverlapWorld2D().getPhysicsOverlapWorld().layers().setLayerCollision( 1, 2, false );
     UnitStatsComponent*  pAlly       = spawnUnit( manager, "Ally", 3.0f, 100, 0, 0.0f );
     ProjectileComponent* pProjectile = spawnBullet( manager, 0.0f, 0.0f, 6.0f, 10 );
     SW_ASSERT_TRUE( pAlly != nullptr && pProjectile != nullptr );
@@ -278,7 +278,7 @@ SW_TEST_CASE( ActionCombatTest, ProjectileIgnoresUnitsOnALayerItDoesNotCollideWi
  * @brief [ActionCombatTest] 한 프레임에 얇은 유닛을 통째로 건너뛰는 빠른 투사체도 맞힌다(터널링 없음)
  * @details 겹침을 step 마다 끝 자리만 보면 초당 600 으로 나는 총알은 한 프레임(1/60 초)에 10 을 가서 두께 0.1 인 유닛과 한 번도 겹치지
  *          않는다. 투사체는 시작할 때 제 콜라이더를 연속 충돌로 켜고(`setContinuous`), 물리가 지난 자리에서 지금 자리까지 쓸어 지나간 유닛과의
- *          겹침을 낸다(`PhysicsWorld::step`).
+ *          겹침을 낸다(`PhysicsOverlapWorld::step`).
  */
 SW_TEST_CASE( ActionCombatTest, FastProjectileHitsAThinUnitItCrossesInOneFrame )
 {

@@ -201,7 +201,7 @@ namespace sw
     struct OverlapInfo
     {
         GameObject*            _pOther{ nullptr };   ///< 상대 오브젝트. 끝 이벤트에서 상대가 이미 사라졌으면 nullptr
-        PhysicsBodyHandle      _selfBody{};          ///< 강체 물리의 트리거이면 이 오브젝트 쪽 바디다. 히트 존이나 래그돌 뼈를 구분한다. 겹침 월드(`PhysicsWorld`)이면 무효다
+        PhysicsBodyHandle      _selfBody{};          ///< 강체 물리의 트리거이면 이 오브젝트 쪽 바디다. 히트 존이나 래그돌 뼈를 구분한다. 겹침 월드(`PhysicsOverlapWorld`)이면 무효다
         PhysicsBodyHandle      _otherBody{};         ///< 강체 물리의 트리거면 상대 쪽 바디
         float32                _hitFraction{ 1.0f }; ///< 이번 물리 step 안에서 닿은 시점(0..1)이다. 연속 바디가 쓸려 가며 닿은 시작 이벤트만 1 보다 작다
         uint8                  _bSelfTrigger  : 1;   ///< 이 오브젝트 쪽 콜라이더가 트리거인지

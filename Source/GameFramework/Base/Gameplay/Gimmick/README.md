@@ -110,7 +110,7 @@ cd build/Ninja-Debug/Bin
 **틱 시점.** 회로는 `PrePhysics` 그룹에서 틱합니다. 겹침은 물리 스텝 뒤에 오므로, 센서 변화는 다음 틱에 보입니다(한 프레임 늦음).
 다른 오브젝트의 위치는 세터(틱 쓰기 큐)로 쓰고, 켜기와 빛과 스폰과 소리는 틱 뒤(`executeOrDeferPostTick`)에 겁니다.
 
-광선과 시야(`Laser` 센서, 터렛)는 `WorldQuery` 로 묻습니다. 물리 서비스가 등록되어 있으면 그것을, 없으면 씬의 강체 물리나 `PhysicsWorld` AABB 를 씁니다.
+광선과 시야(`Laser` 센서, 터렛)는 `WorldQuery` 로 묻습니다. 물리 서비스가 등록되어 있으면 그것을, 없으면 씬의 강체 물리나 `PhysicsOverlapWorld` AABB 를 씁니다.
 
 ### 원소 규칙표
 

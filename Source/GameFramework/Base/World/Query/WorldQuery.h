@@ -5,7 +5,7 @@
  *          게임이 `IWorldQuery` 를 게임 서비스로 걸면 그것을 쓴다.
  *          없으면 두 질의 중 **가까운 것**을 쓴다.
  *          하나는 씬의 강체 물리(`ScenePhysicsWorldQuery`)이며 Jolt 3D 와 Box2D 2D 씬의 광선을 쏘고 트리거는 제외한다.
- *          다른 하나는 엔진 `PhysicsWorld` 의 AABB 바디(`PhysicsWorldQuery`)이며 `BoxCollider2DComponent` 만 있는 씬의 폴백이다.
+ *          다른 하나는 엔진 `PhysicsOverlapWorld` 의 AABB 바디(`PhysicsOverlapWorldQuery`)이며 `BoxCollider2DComponent` 만 있는 씬의 폴백이다.
  *          AABB 폴백은 트리거 바디를 막는 것으로 치지 않고, 레이어 0 의 충돌 행렬로 거른다.
  *          2D 콜라이더의 바디는 깊이가 없으므로(Z 0 한 점) 광선의 Z 와 상관없이 맞힌다.
  */
@@ -19,7 +19,7 @@
 namespace sw
 {
     class GameObjectManager;
-    class PhysicsWorld;
+    class PhysicsOverlapWorld;
 
     /** @brief 광선이 처음 맞은 것입니다. */
     struct WorldRayHit
@@ -49,16 +49,16 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 엔진 `PhysicsWorld`(AABB 바디와 겹침 그리드) 위의 폴백 질의입니다. 선분을 아주 얇은 상자로 쓸어 맞은 바디를 고릅니다. */
-    class SW_GF_API PhysicsWorldQuery final : public IWorldQuery
+    /** @brief 엔진 `PhysicsOverlapWorld`(AABB 바디와 겹침 그리드) 위의 폴백 질의입니다. 선분을 아주 얇은 상자로 쓸어 맞은 바디를 고릅니다. */
+    class SW_GF_API PhysicsOverlapWorldQuery final : public IWorldQuery
     {
     public:
-        explicit PhysicsWorldQuery( const PhysicsWorld& physicsWorld );
+        explicit PhysicsOverlapWorldQuery( const PhysicsOverlapWorld& physicsWorld );
 
         bool raycast( const float3& from, const float3& to, uint64 ignoreObjectID, WorldRayHit& outHit ) const override;
 
     private:
-        const PhysicsWorld& _physicsWorld;
+        const PhysicsOverlapWorld& _physicsWorld;
     };
 } // namespace sw
 
@@ -85,7 +85,7 @@ namespace sw
 {
     /**
      * @struct WorldQuery
-     * @brief 걸린 서비스(`IWorldQuery`)가 있으면 그것으로 묻고, 없으면 씬의 강체 물리와 `PhysicsWorld` 폴백 중 가까운 쪽으로 묻습니다.
+     * @brief 걸린 서비스(`IWorldQuery`)가 있으면 그것으로 묻고, 없으면 씬의 강체 물리와 `PhysicsOverlapWorld` 폴백 중 가까운 쪽으로 묻습니다.
      */
     struct SW_GF_API WorldQuery
     {

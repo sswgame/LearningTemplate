@@ -8,7 +8,7 @@
 
 - **강체 물리.** 바디, 셰이프, 관절, 캐릭터 컨트롤러, 질의, 고정 스텝, 접촉 이벤트를 다룹니다. 3D 는 Jolt, 2D 는 Box2D v3 가 계산합니다.
   엔진 코드는 두 라이브러리를 직접 부르지 않고 엔진 인터페이스(`IPhysicsScene3D`, `IPhysicsScene2D`)만 부릅니다. 언리얼의 Chaos, 유니티의 PhysX 와 Box2D 통합에 해당합니다.
-- **겹침 월드**(`PhysicsWorld`). AABB 겹침, 연속 스윕, 겹침 이벤트만 계산하는 가벼운 월드입니다. 힘이나 속도를 적분하지 않습니다.
+- **겹침 월드**(`PhysicsOverlapWorld`). AABB 겹침, 연속 스윕, 겹침 이벤트만 계산하는 가벼운 월드입니다. 힘이나 속도를 적분하지 않습니다.
   `BoxCollider2DComponent` 와 GameFramework 키트의 투사체, 근접 공격 판정이 씁니다. 강체 씬과 따로 돌지만 같은 레이어 충돌 테이블(`CollisionLayers`)을 씁니다.
 
 라이브러리를 인터페이스 뒤에 감싸 두면 라이브러리를 바꿀 때 백엔드 폴더 하나만 바뀝니다. 또 Jolt 와 Box2D 의 헤더가 엔진 전체로 퍼지지 않아 빌드가 가벼워집니다.
@@ -21,7 +21,7 @@ flowchart TD
   SP --> I3["IPhysicsScene3D"] --> J["Jolt 백엔드"]
   SP --> I2["IPhysicsScene2D"] --> B["Box2D 백엔드"]
   PS["PhysicsSystem<br/>설정 로드, 씬 생성"] --> SP
-  BC["BoxCollider2DComponent<br/>키트의 투사체"] --> OW["SceneOverlapWorld2D"] --> PW["PhysicsWorld<br/>겹침 월드"]
+  BC["BoxCollider2DComponent<br/>키트의 투사체"] --> OW["SceneOverlapWorld2D"] --> PW["PhysicsOverlapWorld<br/>겹침 월드"]
 ```
 
 **씬의 물리.** 씬마다 `GameObjectManager` 가 `ScenePhysics` 를 하나 가지고 있습니다. 3D 씬과 2D 씬은 처음 쓸 때 만듭니다.
@@ -196,9 +196,9 @@ Jolt 의 `VehicleConstraint` 와 `WheeledVehicleController` 를 스텝 리스너
 
 `ContinuousCollision::sweepAABB` 는 이동하는 AABB 의 반 크기만큼 대상 AABB 를 늘린(민코프스키 합) 뒤, 이동 중심에서 이동 벡터 방향으로 슬랩 광선을 쏩니다.
 진입 시각 `t` 가 0 과 1 사이에 있으면 충돌이고, 그 시각과 접촉점, 접촉 법선을 `SweepHit` 에 담아 돌려줍니다. 구를 쓸 때는 `sweepSphere` 를 씁니다.
-`PhysicsWorld::sweepTest` 는 월드의 바디 가운데 이동 경로의 경계에 걸치는 것을 공간 그리드로 먼저 고르고, 가장 먼저 닿는 바디를 찾습니다.
+`PhysicsOverlapWorld::sweepTest` 는 월드의 바디 가운데 이동 경로의 경계에 걸치는 것을 공간 그리드로 먼저 고르고, 가장 먼저 닿는 바디를 찾습니다.
 
-**겹침 이벤트.** `PhysicsWorld::step` 은 적분하지 않고 **겹침만 다시 계산합니다.** 지난 step 과 비교해 새로 겹친 쌍은 시작, 떨어졌거나 바디가 사라진 쌍은 끝으로 `getOverlapEvents()` 에 냅니다.
+**겹침 이벤트.** `PhysicsOverlapWorld::step` 은 적분하지 않고 **겹침만 다시 계산합니다.** 지난 step 과 비교해 새로 겹친 쌍은 시작, 떨어졌거나 바디가 사라진 쌍은 끝으로 `getOverlapEvents()` 에 냅니다.
 계속 겹친 쌍은 다시 내지 않습니다. 유니티의 `OnTriggerEnter2D`, 언리얼의 `BeginOverlap` 에 해당합니다.
 
 `SceneOverlapWorld2D` 가 매 프레임 게임 스레드에서 한 번 다음 순서로 실행합니다.
@@ -261,8 +261,8 @@ Jolt 의 `VehicleConstraint` 와 `WheeledVehicleController` 를 스텝 리스너
 **Jolt 의 AVX2 옵션은 Jolt 백엔드 소스에만 붙이세요.** 엔진 전체가 AVX2 로 컴파일되면 AVX2 가 없는 CPU 에서 실행되지 않습니다.
 그래서 Jolt 임포트 타깃의 `-mavx2` 는 `$<LINK_ONLY:>` 와 소스 속성으로 백엔드 소스에만 붙고, 그 소스는 PCH 를 쓰지 않습니다.
 
-**2D 콜라이더 바디에는 깊이가 없습니다.** 바디는 Z = 0 의 한 점 두께입니다. 3D 광선이나 상자 질의를 `PhysicsWorld` 에 그대로 던지면, Z 가 0 이 아닌 2D 씬에서는 아무것도 맞지 않습니다.
-`PhysicsWorldQuery` 는 깊이 없는 바디를 Z 와 관계없이 맞힙니다.
+**2D 콜라이더 바디에는 깊이가 없습니다.** 바디는 Z = 0 의 한 점 두께입니다. 3D 광선이나 상자 질의를 `PhysicsOverlapWorld` 에 그대로 던지면, Z 가 0 이 아닌 2D 씬에서는 아무것도 맞지 않습니다.
+`PhysicsOverlapWorldQuery` 는 깊이 없는 바디를 Z 와 관계없이 맞힙니다.
 
 **연속 바디의 후보 범위를 먼 이동 바디로 넓히지 마세요.** 후보 범위는 셀 하나 이내로 움직인 바디만으로 넓히고, 멀리 움직인 바디(`isFarMover`)는 하나씩 따로 계산합니다.
 하나가 멀리 끌려가면 모든 연속 바디가 월드 전체를 훑게 되기 때문입니다.
@@ -286,6 +286,6 @@ Jolt 의 `VehicleConstraint` 와 `WheeledVehicleController` 를 스텝 리스너
 | `IPhysicsScene.h` | 씬 인터페이스 |
 | `PhysicsSettings.h` | 레이어, 재질, 중력, 서브 스텝 |
 | `Asset/PhysicsRagdoll.h` | 래그돌과 히트박스 빌더 |
-| `PhysicsWorld.h` | 겹침 월드 |
+| `PhysicsOverlapWorld.h` | 겹침 월드 |
 | `Collision/ContinuousCollision.h` | AABB 와 구의 스윕 |
 | `Object/GameObject/ScenePhysics.h` | 씬의 물리, 고정 스텝 |

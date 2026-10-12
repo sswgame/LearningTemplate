@@ -17,7 +17,7 @@
 namespace sw
 {
     class GameObjectManager;
-    class PhysicsWorld;
+    class PhysicsOverlapWorld;
 
     REFLECT( Category = "Physics 2D", DisplayName = "Box Collider 2D", Tooltip = "2D Box collision volume" )
     class SW_API BoxCollider2DComponent : public SceneComponent
@@ -49,7 +49,7 @@ namespace sw
         /**
          * @brief 연속 충돌(ContinuousCollision)로 판정하는지입니다(유니티 `Rigidbody2D.collisionDetectionMode = Continuous` · 언리얼 `bUseContinuousCollision`).
          * @details 켜면 물리가 지난 step 의 자리에서 지금 자리까지 상자를 쓸어, 한 프레임에 얇은 콜라이더를 건너뛴 것도 겹침으로 냅니다
-         *          (`PhysicsWorld::step`). 빠른 것(투사체)에만 켭니다. 순간이동은 `SceneComponent::teleportTo` 로 합니다 — 그냥 옮기면 그 길도 쓸립니다.
+         *          (`PhysicsOverlapWorld::step`). 빠른 것(투사체)에만 켭니다. 순간이동은 `SceneComponent::teleportTo` 로 합니다 — 그냥 옮기면 그 길도 쓸립니다.
          */
         bool isContinuous() const { return _bContinuous; }
         void setContinuous( bool bContinuous ) { _bContinuous = bContinuous; }
@@ -86,7 +86,7 @@ namespace sw
         bool containsPoint( const float2& point ) const;
         /**
          * @brief 두 콜라이더가 물리 규칙으로 겹치는지입니다 — 상자가 겹치고 레이어 행렬이 그 쌍을 허용해야 합니다(유니티 `Collider2D.IsTouching`).
-         * @details 물리 step 과 같은 판정(`queryOverlaps` · `PhysicsWorld::layers`)을 지금 상자로 합니다. 바디가 아직 없어도(시작 전 · 에디터) 같은 답을
+         * @details 물리 step 과 같은 판정(`queryOverlaps` · `PhysicsOverlapWorld::layers`)을 지금 상자로 합니다. 바디가 아직 없어도(시작 전 · 에디터) 같은 답을
          *          냅니다. 레이어 행렬은 등록된 물리 월드의 것이고, 어느 쪽도 매니저에 없으면 기본 행렬(모든 쌍 허용)입니다.
          */
         bool isTouching( const BoxCollider2DComponent* pOther ) const;
@@ -109,8 +109,8 @@ namespace sw
         PROPERTY( Category = "Collider", DisplayName = "Offset Scale", Tooltip = "Collider box size" )
         float2 _offsetScale;
         /** @brief 등록 시점에 받은 물리 월드입니다. 소유자를 거슬러 올라가 매니저를 찾지 않습니다. */
-        PhysicsWorld* _pPhysics;
-        SlotHandle    _physicsBody;
+        PhysicsOverlapWorld* _pPhysics;
+        SlotHandle           _physicsBody;
         PROPERTY( Category = "Collider", DisplayName = "Collider Type", Tooltip = "Physics collider type index" )
         int32  _colliderType;
         uint32 _colliderIndex; ///< 겹침 월드의 콜라이더 목록 자리(`SceneOverlapWorld2D::registerCollider`). 없으면 `kNotRegistered`

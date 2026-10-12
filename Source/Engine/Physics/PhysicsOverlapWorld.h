@@ -13,7 +13,7 @@
 namespace sw
 {
     struct SweepHit;
-    /** @brief PhysicsWorld 에 등록된 AABB 바디입니다. */
+    /** @brief PhysicsOverlapWorld 에 등록된 AABB 바디입니다. */
     struct PhysicsBody
     {
         AABB   _aabb{};
@@ -27,7 +27,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 콜라이더가 바디에 맞추는 값 한 세트입니다. 위치, 레이어, 판정 방식을 담습니다(`PhysicsWorld::addBody`, `updateBody`). */
+    /** @brief 콜라이더가 바디에 맞추는 값 한 세트입니다. 위치, 레이어, 판정 방식을 담습니다(`PhysicsOverlapWorld::addBody`, `updateBody`). */
     struct PhysicsBodyState
     {
         AABB  _aabb{};
@@ -69,16 +69,16 @@ namespace sw
 namespace sw
 {
     /**
-     * @class PhysicsWorld
+     * @class PhysicsOverlapWorld
      * @brief 겹침 질의, 레이어 필터, 겹침 이벤트를 담당합니다. 강체가 없어서 `step` 은 적분하지 않고 겹침만 다시 측정합니다.
      */
-    class SW_API PhysicsWorld
+    class SW_API PhysicsOverlapWorld
     {
     public:
         using BodyHandle = SlotHandle;
 
         /** @brief 기본 레이어 행렬로 빈 월드를 만듭니다. */
-        PhysicsWorld() = default;
+        PhysicsOverlapWorld() = default;
 
         /** @brief 막는 이산 AABB 바디를 등록합니다. 출발점(`_stepAABB`)은 현재 위치입니다. */
         BodyHandle addBody( const AABB& aabb, uint8 layer, uint64 objectID = 0 );

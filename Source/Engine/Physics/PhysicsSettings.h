@@ -2,7 +2,7 @@
  * @file PhysicsSettings.h
  * @brief 사람이 고치는 물리 설정입니다. 충돌 레이어와 레이어끼리의 충돌 테이블, 물리 재질, 중력, 고정 스텝을 담습니다(`engine/physics/physicssettings.xml`).
  * @details 코드는 이름으로만 고른다(`findLayerIndex`, `findMaterial`). 테이블에 없는 이름, 32 개를 넘는 레이어, 겹친 이름은 읽을 때 오류다.
- *          레이어 테이블은 2D 와 3D 가 함께 쓰고, 겹침 월드(`PhysicsWorld`)도 같은 행렬을 받는다(`makeCollisionLayers`).
+ *          레이어 테이블은 2D 와 3D 가 함께 쓰고, 겹침 월드(`PhysicsOverlapWorld`)도 같은 행렬을 받는다(`makeCollisionLayers`).
  */
 #pragma once
 #include "Core/Common/Macros.h"
