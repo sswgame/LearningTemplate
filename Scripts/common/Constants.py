@@ -109,18 +109,12 @@ kKeyDxilDllPath = "dxil_dll_path"
 kKeyMsvcToolsDir = "msvc_tools_dir"
 kKeyVcpkgRoot = "vcpkg_root"
 kKeyNinjaPath = "ninja_path"
-kKeySccachePath = "sccache_path"
 
 # Search Roots & Downloads (search_paths.json)
 kKeyNinjaToolsSubdir = "ninja_tools_subdir"
 kKeyNinjaSearchRoots = "ninja_search_roots"
 kKeyNinjaDownloadUrls = "ninja_download_urls"
 
-kKeySccacheToolsSubdir = "sccache_tools_subdir"
-kKeySccacheSearchRoots = "sccache_search_roots"
-kKeySccacheDownloadUrls = "sccache_download_urls"
-kKeySccacheVersion = "sccache_version"
-kKeySccacheSha256 = "sccache_sha256"
 
 kKeyLlvmToolsSubdir = "llvm_tools_subdir"
 kKeyLlvmSearchRoots = "llvm_search_roots"
@@ -167,7 +161,7 @@ kLintProductRelDirs: tuple[str, ...] = tuple(root for root in kLintTargetRelDirs
 kLintTargetBaseDirNames: tuple[str, ...] = tuple(dict.fromkeys(root.split("/")[0] for root in kLintTargetRelDirs))
 
 #: 저장소 안에 있어도 **우리 코드가 아닌** 폴더 이름입니다. 저장소를 훑는 린트는 이 이름의 폴더로 내려가지 않습니다
-#: (`collectRepositoryFiles`). 빌드 산출물과, 부트스트랩이 `Tools/` 아래로 내려받는 외부 도구(vcpkg · LLVM · sccache ·
+#: (`collectRepositoryFiles`). 빌드 산출물과, 부트스트랩이 `Tools/` 아래로 내려받는 외부 도구(vcpkg · LLVM ·
 #: ninja · 캐시)입니다. 게이트마다 제외 목록을 따로 들지 말 것 — 목록이 서로 갈리고, 저장소 전체를 다 걸은 뒤에 거르는
 #: 게이트는 `Tools/vcpkg` 의 외부 헤더 수천 개까지 훑느라 한 번에 십수 초를 씁니다.
 #: `ThirdParty/` 는 여기 없습니다 — 저장소에 들어 있고 우리 CMake 연결 파일도 있어, 빼는 것은 게이트가 정합니다.
@@ -179,7 +173,6 @@ kNotOurDirNames: frozenset[str] = frozenset({
     ".venv",
     "vcpkg",
     "LLVM",
-    "Sccache",
     "Ninja",
     "_cache",
     "_deps",

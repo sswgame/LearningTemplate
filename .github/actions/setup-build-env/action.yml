@@ -1,5 +1,5 @@
 name: Setup build environment
-description: sccache · 컴파일러 · 리눅스 의존 패키지를 준비하고 CC · CXX · VCPKG_OVERLAY_TRIPLETS · PY 를 뒷 단계에 내보낸다.
+description: 컴파일러 · 리눅스 의존 패키지를 준비하고 CC · CXX · VCPKG_OVERLAY_TRIPLETS · PY 를 뒷 단계에 내보낸다.
 
 # ci.yml · fuzz.yml · header-self-contained.yml 이 같이 쓴다 — 준비 단계를 바꾸면 세 워크플로가 함께 바뀐다.
 # 호출하는 쪽이 먼저 저장소를 받아 둬야 한다(이 액션 자체가 저장소 안에 있다).
@@ -12,9 +12,6 @@ description: sccache · 컴파일러 · 리눅스 의존 패키지를 준비하�
 runs:
   using: composite
   steps:
-  - name: Setup sccache
-    uses: mozilla-actions/sccache-action@v0.0.11
-
   - name: MSVC developer environment (Windows)
     if: runner.os == 'Windows'
     uses: ilammy/msvc-dev-cmd@v1

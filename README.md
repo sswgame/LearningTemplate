@@ -21,7 +21,7 @@ Windows(clang-cl)와 Linux(Clang)를 지원합니다. macOS는 지원하지 않�
 ## 빌드
 
 ```powershell
-py -3 Scripts/setup/SetupEnvironment.py       # LLVM, Ninja, sccache 받기
+py -3 Scripts/setup/SetupEnvironment.py       # LLVM, Ninja 받기
 py -3 Scripts/setup/SetupVcpkg.py --install   # vcpkg 라이브러리 설치
 py -3 Scripts/setup/InstallGitHooks.py        # 커밋 전에 규칙과 포맷을 검사하는 훅 설치
 cmake --preset Ninja-Debug

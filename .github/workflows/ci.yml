@@ -17,7 +17,6 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
-  SCCACHE_GHA_ENABLED: "true"
   # 아직 Node 20 으로 선언된 액션(ilammy/msvc-dev-cmd@v1 — 더 새 판이 없다)을 Node 24 로 돌린다.
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
@@ -141,8 +140,6 @@ jobs:
         triplet-hash-glob: ${{ matrix.vcpkgCache && 'cmake/Modules/Toolchain/VcpkgTsan/**' || '' }}
 
     # Configure, Build, and Test
-    # Windows 는 PCH 를 끈다. clang-cl 의 PCH 는 MSVC 방식(`/Yc` · `/Yu` · `/Fp`)이라 sccache 가 캐시하지 못하고("Non-cacheable reasons: /Fp"),
-    # PCH 를 쓰는 TU 가 매번 처음부터 컴파일된다. 리눅스 clang 의 `-include-pch` 는 sccache 가 캐시하므로 그대로 둔다.
     - name: Configure (${{ matrix.preset }})
       id: configure
       # 출력을 파일로도 받는다(아래 실패 보고가 읽는다). CC · CXX · VCPKG_OVERLAY_TRIPLETS 는 준비 단계가 내보낸다.
@@ -151,7 +148,7 @@ jobs:
       shell: pwsh
       run: |
         New-Item -ItemType Directory -Force build | Out-Null
-        cmake --preset ${{ matrix.preset }} ${{ runner.os == 'Windows' && '-DSW_ENABLE_PCH=OFF' || '' }} 2>&1 | Tee-Object -FilePath build/configure.log
+        cmake --preset ${{ matrix.preset }} 2>&1 | Tee-Object -FilePath build/configure.log
         exit $LASTEXITCODE
 
     # 구성(vcpkg 설치)에서 진 잡은 "vcpkg install failed" 한 줄만 남는다 — vcpkg 가 가리킨 포트 로그의 끝을 주석으로 올린다.

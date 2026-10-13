@@ -8,7 +8,7 @@
     py -3 -m Scripts worktree-make <이름> --base wt/apply5      # 다른 브랜치에서 갈라 만든다
     py -3 -m Scripts worktree-make <이름> --dry-run             # 무엇을 할지만 보인다
 
-워크트리마다 LLVM · Ninja · sccache · vcpkg 를 새로 받고 vcpkg 포트를 다시 빌드하면 수십 분이 걸립니다. 그래서 `kSharedFolders` 의 폴더는
+워크트리마다 LLVM · Ninja · vcpkg 를 새로 받고 vcpkg 포트를 다시 빌드하면 수십 분이 걸립니다. 그래서 `kSharedFolders` 의 폴더는
 main 체크아웃의 것을 가리키는 링크(Windows 는 정션, 그 밖은 심볼릭 링크)로 둡니다. 이 링크는 지우거나 고치지 않습니다 — 지우는 것은
 `RemoveWorktree.py` 가 링크를 먼저 끊은 뒤에 합니다. 작업 방식은 `docs/11_Workflow.md` 에 있습니다.
 """
@@ -26,7 +26,7 @@ import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(co
 from common import getProjectRoot, runGit, runProcess  # noqa: E402
 
 #: main 체크아웃과 나눠 쓰는 폴더(저장소 루트 기준). 내려받은 도구와 vcpkg 설치 트리 · 바이너리 캐시다.
-kSharedFolders: tuple[str, ...] = ("Tools/LLVM", "Tools/Ninja", "Tools/Sccache", "Tools/vcpkg", "Tools/_cache",
+kSharedFolders: tuple[str, ...] = ("Tools/LLVM", "Tools/Ninja", "Tools/vcpkg", "Tools/_cache",
                                    "build/vcpkg_installed", "build/vcpkg_cache")
 #: 워크트리를 모아 두는 폴더 이름(main 체크아웃의 부모 아래). Windows 는 드라이브 루트 아래의 짧은 이름을 쓴다 — 경로가 길면 오브젝트 경로(260)와 명령 줄(32767)이 한도를 넘는다.
 kWorktreeFolderName = "LT-wt"

@@ -59,7 +59,6 @@ def addDefenderExclusions() -> None:
         "ninja.exe",
         "clang-cl.exe",
         "lld-link.exe",
-        "sccache.exe",
         "App.exe",
         "ReflectionParser.exe",
         "CoreTest.exe",

@@ -7,7 +7,6 @@ if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	return()
 endif()
 
-# sccache/ccache는 DetectToolchain.cmake(SW_USE_SCCACHE)에서만 설정한다.
 add_library(sw_compiler_clang INTERFACE)
 
 # ------------------------------------------------------------------------------
@@ -56,7 +55,7 @@ target_compile_options(sw_compiler_clang INTERFACE
 	-Wno-unknown-warning-option # 다양한 Clang 버전 간 신규/미지원 경고 옵션 억제 경고 방지
 	-Wno-unsafe-buffer-usage # RHI/그래픽스/SIMD 등 네이티브 포인터 버퍼 연산 허용
 
-	# sccache 캐시 적중률 — PCH 타임스탬프 검사를 끈다
+	# PCH 에 헤더 타임스탬프를 넣지 않는다 — 내용이 같은 PCH 는 같은 바이트다(바꿨는지는 ninja 의 의존 추적이 정한다)
 	-Xclang
 	-fno-pch-timestamp
 )
@@ -79,12 +78,12 @@ if(MSVC)
 		/external:W0
 
 		$<$<CONFIG:Debug>:/Od>
-		$<$<CONFIG:Debug>:/Z7> # CodeView 심볼을 오브젝트에 직접 (sccache 친화)
+		$<$<CONFIG:Debug>:/Z7> # CodeView 심볼을 오브젝트에 직접(공유 PDB 쓰기 경합이 없다)
 		# -g 는 GNU 드라이버만이 아니라 clang-cl 에도 건다(/Z7 와 겹친다). 빼는 것은 디버그 정보 동작을
 		# 바꾸는 일이라 검증 없이 하지 말 것.
 		$<$<CONFIG:Debug>:-g>
 
-		# Release · Shipping 디버그 정보(`SW_RELEASE_DEBUG_INFO`). /Z7 은 정보를 오브젝트에 넣어 sccache 가 캐시한다(/Zi 의 공유 PDB 는 캐시되지 않는다).
+		# Release · Shipping 디버그 정보(`SW_RELEASE_DEBUG_INFO`). /Z7 은 정보를 오브젝트에 넣는다(/Zi 의 공유 PDB 는 병렬 컴파일이 한 파일을 다툰다).
 		$<$<AND:$<CONFIG:Release>,$<STREQUAL:${SW_RELEASE_DEBUG_INFO},full>>:/Z7>
 		$<$<AND:$<CONFIG:Release>,$<STREQUAL:${SW_RELEASE_DEBUG_INFO},lines>>:-gline-tables-only>
 

@@ -9,12 +9,12 @@
 
 | 시나리오 | 무엇을 재나 | 어디서 |
 | --- | --- | --- |
-| `full` | `clean` 뒤 기본 타깃 전체(sccache 없이 — 진짜 콜드) | `build/<프리셋>-Baseline`(`SW_USE_SCCACHE=OFF` 로 따로 구성) |
+| `full` | `clean` 뒤 기본 타깃 전체 | `build/<프리셋>-Baseline`(따로 구성) |
 | `header` | 헤더 하나의 mtime 을 올린 뒤 증분 빌드(`--header`, 기본 `Core/Container/vector.h`) | 같은 폴더 |
 | `cpp` | `.cpp` 하나의 mtime 을 올린 뒤 증분 빌드(`--source`) | 같은 폴더 |
-| `worktree` | 새 워크트리(같은 커밋)에서 구성 + 빌드, sccache 웜 | `<워크트리 루트>/baseline-bench`, 첫 회는 데우기라 세지 않는다 |
+| `worktree` | 새 워크트리(같은 커밋)에서 구성 + 빌드 | `<워크트리 루트>/baseline-bench`, 첫 회는 데우기라 세지 않는다 |
 
-`full` · `header` · `cpp` 는 sccache 를 끈 별도 빌드 폴더에서 재므로 개발 트리(`build/<프리셋>`)와 공유 sccache 캐시를 건드리지 않는다.
+`full` · `header` · `cpp` 는 별도 빌드 폴더에서 재므로 개발 트리(`build/<프리셋>`)를 건드리지 않는다.
 `worktree` 는 HEAD 커밋으로 워크트리를 만든다 — 커밋하지 않은 변경은 들지 않는다. 끝나면 그 워크트리를 지운다.
 
 사용법:
@@ -47,7 +47,7 @@ from MakeWorktree import findMainRoot, kWorktreeFolderName  # noqa: E402
 kScenarioNames: tuple[str, ...] = ("full", "header", "cpp", "worktree")
 kDefaultHeader = "Source/Core/Container/vector.h"
 kDefaultSource = "Source/Engine/Object/GameObject/GameObjectManager.cpp"
-#: 기준선을 측정하는 별도 빌드 폴더의 접미 — 개발 트리와 sccache 를 건드리지 않는다.
+#: 기준선을 측정하는 별도 빌드 폴더의 접미 — 개발 트리를 건드리지 않는다.
 kBaselineDirSuffix = "-Baseline"
 #: 워크트리 콜드를 측정하는 임시 워크트리 이름(`py -3 -m Scripts worktree-make`).
 kWorktreeName = "baseline-bench"
@@ -119,15 +119,15 @@ def touchFile(path: Path) -> None:
 
 
 def configureBaselineTree(repositoryRoot: Path, preset: str) -> BuildTree:
-    """`build/<프리셋>-Baseline` 을 sccache 없이 구성한다(이미 구성돼 있으면 다시 구성만)."""
+    """`build/<프리셋>-Baseline` 을 구성한다(이미 구성돼 있으면 다시 구성만)."""
     tree = BuildTree.fromPreset(f"{preset}{kBaselineDirSuffix}", repositoryRoot)
-    runTimed(["cmake", "--preset", preset, "-B", str(tree.path), "-DSW_USE_SCCACHE=OFF"], cwd=repositoryRoot)
+    runTimed(["cmake", "--preset", preset, "-B", str(tree.path)], cwd=repositoryRoot)
     return tree
 
 
 def measureLocalScenarios(repositoryRoot: Path, preset: str, listScenario: list[str], args: argparse.Namespace,
                           listTarget: list[str]) -> list[ScenarioResult]:
-    """full · header · cpp — sccache 없는 별도 빌드 폴더에서."""
+    """full · header · cpp — 별도 빌드 폴더에서."""
     listResult: list[ScenarioResult] = []
     tree = configureBaselineTree(repositoryRoot, preset)
     buildCommand = tree.buildCommand(listTarget, args.jobs)
@@ -153,7 +153,7 @@ def measureLocalScenarios(repositoryRoot: Path, preset: str, listScenario: list[
 
 
 def measureWorktreeScenario(repositoryRoot: Path, preset: str, args: argparse.Namespace, listTarget: list[str]) -> ScenarioResult:
-    """같은 커밋의 새 워크트리에서 구성 + 빌드(sccache 웜). 첫 회는 데우기라 세지 않는다."""
+    """같은 커밋의 새 워크트리에서 구성 + 빌드. 첫 회는 데우기라 세지 않는다."""
     commit = runGit(["rev-parse", "HEAD"], cwd=repositoryRoot).stdout.strip()
     # worktree-make 은 main 체크아웃의 부모 아래에 만든다 — 이 스크립트를 워크트리에서 불러도 같은 자리를 본다.
     worktreeRoot = findMainRoot(repositoryRoot).parent / kWorktreeFolderName / kWorktreeName

@@ -175,7 +175,7 @@ cd build/Ninja-Debug/Bin
 
 ### 빌드 속도
 
-- **빌드 시간 기준선은 `Scripts/dev/RunBuildBaseline.py`** — 풀 빌드(sccache 없는 별도 폴더) · 헤더 하나 수정 · `.cpp` 하나 수정 · 워크트리 콜드(sccache 웜)를 각 3 회 측정해서
+- **빌드 시간 기준선은 `Scripts/dev/RunBuildBaseline.py`** — 풀 빌드(별도 폴더) · 헤더 하나 수정 · `.cpp` 하나 수정 · 워크트리 콜드(구성 + 빌드)를 각 3 회 측정해서
   중앙값 표를 내고 머리에 PC 이름 · CPU 를 적는다. 다른 빌드가 돌면 멈춘다. 헤더별 누적 파싱 시간 상위는 `Scripts/lint/report/RunIncludeCost.py`(전 TU `-ftime-trace`, PCH 없이)다.
   표는 같은 PC 의 전후만 견준다. 측정하는 동안은 `LT-wt/.slot1` ~ `.slot3` 를 모두 잡아 다른 에이전트의 빌드를 막는다. 남은 단계는 [빌드 속도 계획](plans/BuildSpeed.md)에 있다.
 - **CPU 시간 나눔**(빌드 속도 계획을 세울 때의 Debug `.ninja_log`, 명령 하나당 한 번 센 값이라 시점이 섞였을 수 있다): 일반 컴파일 2,435 s(2,413 TU, 약 85 %), PCH 생성 370 s(86 개, 13 %),
@@ -186,13 +186,13 @@ cd build/Ninja-Debug/Bin
 
   | 시나리오 | 1 회(s) | 2 회(s) | 3 회(s) | 중앙값(s) |
   |---|---:|---:|---:|---:|
-  | 풀 빌드(sccache 없음) | 125.9 | 131.5 | 131.7 | **131.5** |
+  | 풀 빌드 | 125.9 | 131.5 | 131.7 | **131.5** |
   | 헤더 하나 수정(`Core/Container/vector.h`) | 131.6 | 132.7 | 130.7 | **131.6** |
   | `.cpp` 하나 수정(`GameObjectManager.cpp`) | 7.4 | 7.2 | 7.0 | **7.2** |
-  | 워크트리 콜드(구성 + 빌드, sccache 웜) | 141.2 | 146.8 | 142.9 | **142.9** |
+  | 워크트리 콜드(구성 + 빌드) | 141.2 | 146.8 | 142.9 | **142.9** |
 
   헤더 시나리오가 풀 빌드와 같다 — Core 기본 헤더 하나를 고치면 사실상 전 TU 를 다시 컴파일한다(2 단계 헤더 다이어트의 근거).
-  워크트리 콜드가 풀 빌드보다 느린 것은 PCH 를 켠 Windows 빌드가 sccache 에 거의 맞지 않기 때문이다(`/Yu` 캐시 불가, `Scripts/setup/README.md`). Release 는 측정하지 않았다(풀 1 회 192.3 s 만 있다).
+  워크트리 콜드가 풀 빌드보다 느린 것은 구성 시간이 더해지기 때문이다. Release 는 측정하지 않았다(풀 1 회 192.3 s 만 있다).
 
 - **OS 헤더를 PCH 에서 뺀 효과**(2026-10-11, PC `SW`, Debug, `EngineMinimal.h` 가 `Windows.h` 묶음을 더는 넣지 않음): PCH 없이 `-fsyntax-only` 한 번역 단위의 중앙값(5 회)이 `GameObjectManager.cpp` 2.63 → 2.18 s ·
   `Scene.cpp` 2.74 → 2.24 s · `AudioClip.cpp` 2.56 → 2.11 s · `AnimationClip.cpp` 2.66 → 2.06 s(약 −19 %, TU 하나에 −0.5 s). PCH 를 켠 개발 풀 빌드는 131.5 → 127 s(−3 %)로 작다 — 이득은 PCH 를 끄는 구성(Windows CI)에서 크다.
@@ -204,22 +204,18 @@ cd build/Ninja-Debug/Bin
   남은 헤더 시간의 바닥: UCRT `wchar.h` → clang `intrin.h` → `immintrin.h`(AVX-512 하위 헤더 전부)가 TU 하나에 약 0.25 s 다(`__SCE__` 가 아니면 늘 전부 읽는다 — 엔진이 피할 수 없다).
   명령 다루는 법: 정규식으로 토큰만 지운다(문자열을 다시 쪼개면 `-DSW_LOG_TAG=\"…\"` 의 따옴표가 깨진다). `-ftime-trace` 는 구문 검사만으로는 파일을 쓰지 않으므로 `/Fo<임시>.obj` 로 실제 컴파일한다.
 - **킷 PCH**(2026-10-11, PC `SW`, Debug): 첫 시도(131.1 → 113.0 s, PCH 컴파일 154 → 94)는 실제로는 킷이 **PCH 없이** 지어진 결과였다 — `REUSE_PRECOMPILE_HEADERS_FROM`
-  속성이 무시돼 킷 PCH 60 개를 안 지은 이득이 킷 TU 약 420 개의 헤더 파싱 손해보다 컸다. 진짜 공유(`sw_useSharedPch`)를 같은 날 sccache 없는 별도 폴더(`build/Ninja-Debug-Bench`)에서
+  속성이 무시돼 킷 PCH 60 개를 안 지은 이득이 킷 TU 약 420 개의 헤더 파싱 손해보다 컸다. 진짜 공유(`sw_useSharedPch`)를 같은 날 별도 폴더(`build/Ninja-Debug-Bench`)에서
   `--clean-first` 교차 3 쌍으로 측정했다: 공유 117.5 · 115.2 · 111.7 s(중앙값 **115.2**) · PCH 없는 킷 137.3 · 135.8 · 133.2 s(중앙값 **135.8**) — −20.6 s(−15 %).
-  에이전트 빌드가 겹친 측정은 편차가 ±40 s 라 쓸 수 없다(`busy_before` 로 겹침을 먼저 센다). 개발 트리(sccache 켬)의 `--clean-first` 는 PCH 없는 TU 가 캐시에 맞아 공유 효과를 가린다.
+  에이전트 빌드가 겹친 측정은 편차가 ±40 s 라 쓸 수 없다(`busy_before` 로 겹침을 먼저 센다).
   `.ninja_log` 는 `--clean-first` 뒤에도 이전 실행 항목이 남아 CPU 합을 그대로 더하면 틀린다.
 - **구성별 풀 빌드**(2026-10-11, PC `SW`, Debug, 킷 PCH 공유 뒤, `build/Ninja-Debug-Bench` 에서 `--clean-first`, 세 슬롯을 잡고 다른 빌드 없음):
 
-  | 구성 | 캐시 | 회차(s) | 중앙값(s) |
-  |---|---|---|---:|
-  | 개발(PCH, 유니티 끔) | 없음 | 117.5 · 115.2 · 111.7 | **115.2** |
-  | PCH + 유니티 | 없음 | 145.2 · 146.2 · 144.8 | **145.2** |
-  | 유니티만(PCH 끔, Windows CI 와 같다) | 없음 | 150.0 · 144.6 | **147.3** |
-  | 둘 다 끔 | 없음 | 295.5 · 283.7 | **289.6** |
-  | 개발 | sccache 웜 | 45.9 · 44.4 · 44.7 | **44.7** |
-  | 유니티만 | sccache 웜 | 45.4 · 45.5 · 44.1 | **45.4** |
-
-  웜 측정은 같은 빌드 폴더에서 한 번 지어 캐시를 채운 뒤 측정한다. 구성을 번갈아 측정하면 로컬 캐시가 서로를 밀어내 44 ~ 80 s 로 흔들린다 — 구성마다 따로 측정한다.
+  | 구성 | 회차(s) | 중앙값(s) |
+  |---|---|---:|
+  | 개발(PCH, 유니티 끔) | 117.5 · 115.2 · 111.7 | **115.2** |
+  | PCH + 유니티 | 145.2 · 146.2 · 144.8 | **145.2** |
+  | 유니티만(PCH 끔) | 150.0 · 144.6 | **147.3** |
+  | 둘 다 끔 | 295.5 · 283.7 | **289.6** |
   `cmake --preset` · `--clean-first` 는 공유 vcpkg 설치 폴더를 다시 깔 수 있으니 `py -3 -m Scripts shared-lock acquire vcpkg` 를 쥐고 측정한다(다른 쪽이 설치 중이면 헤더가 사라져 빌드가 진다).
 - **헤더 파싱 비용 상위 20 개는 `Scripts/lint/report/RunIncludeCost.py --preset Ninja-Debug --jobs 8` 로 뽑는다.**
   0 단계 집계(2026-10-10, 위와 같은 PC · 커밋, `RunIncludeCost.py --preset Ninja-Debug --jobs 8`, 다른 빌드와 겹쳐 돌았으므로 순위만 믿는다):
@@ -333,12 +329,12 @@ py -3 -m Scripts ci-jobs <실행 id> --annotations   # 실패한 잡과 실패 �
 
 - **CI 가 끝까지 돌게 하는 세 가지**(`.github/workflows/ci.yml`). ① main 은 `cancel-in-progress: false` — push 가 실행 시간보다 잦으면 끝나는 실행이 0 건이 된다(10-04 7 시간).
   ② vcpkg 바이너리 캐시는 구성 직후 `actions/cache/save` 로 저장한다 — `actions/cache` 의 post 저장은 잡이 성공할 때만 돌아, 테스트 하나가 지면 1 시간 지은 포트를 버렸다
-  (Configure 50~90 분이 매번). 키는 OS 별 하나(트리플릿이 OS 당 하나). ③ Windows 는 `SW_ENABLE_PCH=OFF` — sccache 는 clang-cl 의 `/Yu` · `/Fp` 를 캐시하지 못해 적중률 0 % 였다
-  (`sccache --show-stats` 의 "Non-cacheable reasons: /Fp"). PCH 를 끄면 PCH 가 가리던 오류가 드러난다(템플릿 본문의 `-Wcovered-switch-default`) — PCH 를 끈 구성도 짓는다.
+  (Configure 50~90 분이 매번). 키는 OS 별 하나(트리플릿이 OS 당 하나). ③ 모든 잡이 PCH 를 켠 채 짓는다(로컬과 같은 구성). PCH 가 가리는 include 누락은
+  하루 한 번 도는 헤더 단독 컴파일 잡(`header-self-contained.yml`)이 잡는다.
   작업 로그 · 아티팩트는 API 로 403 이라 진 테스트는 주석(annotation)으로 올린다 — 실행 목록 · 잡 단계 · 주석은 로그인 없이 읽힌다(시간당 60 회 한도를 여럿이 나눠 쓴다).
 - **리눅스 CI 는 ubuntu-22.04 의 `libclang-dev`(16 미만)다.** 파서에 새 libclang API 를 쓰면 리눅스 잡만 선다 — `CINDEX_VERSION` 으로 가른다. CI 러너 파이썬은 3.10 이라
   f-string 식 안의 백슬래시 · 여러 줄 식이 configure 를 죽인다(`CheckPythonMinimumVersion.py`). GH Windows 러너는 cp1252 라 한글을 print 하는 스크립트가 빌드째 죽는다
-  (증상: `sccache stats: 0 hits, 0 misses`) — 진입점은 `Scripts/common` 을 **모듈 수준에서** import 한다(UTF-8 stdout, 게이트 `CheckScriptEntryPoints` —
+  (증상: 구성 단계의 파이썬 생성기가 `UnicodeEncodeError` 로 끝난다) — 진입점은 `Scripts/common` 을 **모듈 수준에서** import 한다(UTF-8 stdout, 게이트 `CheckScriptEntryPoints` —
   함수 안의 import 는 치지 않는다: 한 갈래에서만 끌어오면 다른 갈래의 print 가 죽는다). 재현은 `PYTHONIOENCODING=cp1252`(cp949 는 `—` 에서 죽는다).
 - **CI 실패는 실패한 잡과 같은 프리셋으로 재현한다.** Debug(Engine SHARED)는 Shipping 정적 링크 결함을 원리상 못 낸다. Windows CI 러너의 TEMP 는 8.3 짧은 이름
   (`RUNNER~1`)이라 경로를 글자로 비교하면 틀린다. 빨간 CI 는 다음 결함을 숨긴다(55 런 연속 실패를 아무도 몰랐다) — 런 상태:

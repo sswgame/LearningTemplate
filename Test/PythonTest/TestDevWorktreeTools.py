@@ -126,7 +126,7 @@ class ListCiJobsTest(unittest.TestCase):
                        {"name": "Upload", "conclusion": "skipped"}]},
         ]}
         listAnnotation = [
-            {"annotation_level": "notice", "title": "sccache", "message": "Process completed with exit code 99."},
+            {"annotation_level": "notice", "title": "vcpkg", "message": "Process completed with exit code 99."},
             {"annotation_level": "failure", "title": "ctest EngineTest_Shard1 [Timeout 180.0 s / 180 s]", "message": "..."},
             {"annotation_level": "failure", "title": "ctest EngineTest_Shard2 [exit 1 after 12.3 s / 180 s]", "message": "..."},
             {"annotation_level": "failure", "title": "", "message": "Process completed with exit code 8."},

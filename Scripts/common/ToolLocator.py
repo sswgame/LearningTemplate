@@ -1,7 +1,7 @@
 """
 Scripts/common/ToolLocator.py
 
-도구(Ninja, Sccache, LLVM, vcpkg 등) 탐색 및 설정을 위한 선언적 프레임워크:
+도구(Ninja, LLVM, vcpkg 등) 탐색 및 설정을 위한 선언적 프레임워크:
   1. OS 환경 변수 검사
   2. 시스템 PATH (shutil.which) 검사
   3. search_paths.json 탐색 루트 검사
@@ -31,7 +31,7 @@ class ToolSpec:
     외부 빌드/호스트 도구의 탐색 및 설정 규격을 정의하는 데이터클래스입니다.
 
     Attributes:
-        name: 도구 표시명 (예: 'Ninja', 'Sccache', 'LLVM', 'vcpkg').
+        name: 도구 표시명 (예: 'Ninja', 'LLVM', 'vcpkg').
         tools_subdir_key: search_paths 내 로컬 서브디렉터리 키 (예: 'ninja_tools_subdir').
         search_roots_key: search_paths 내 탐색 루트 배열 키 (예: 'ninja_search_roots').
         bin_names: 시스템 PATH 상에서 탐색할 실행 파일 이름 튜플 (예: ('ninja.exe', 'ninja')).

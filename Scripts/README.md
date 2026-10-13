@@ -70,7 +70,6 @@ Scripts/
   │     ├── SetupEnvironment.py       # 통합 환경 설정 (ToolLocator 기반) → toolchain_config.json
   │     ├── SetupLlvm.py              # LLVM/libclang 부트스트랩 (kLlvmToolSpec 적용)
   │     ├── SetupVcpkg.py             # vcpkg 부트스트랩 (kVcpkgToolSpec 적용)
-  │     ├── SetupSccache.py           # sccache 설정(basedirs = 저장소 + 워크트리 뿌리 전부)
   │     ├── SetupLinuxDevEnvironment.py # Linux · WSL 홈 디렉터리 설정
   │     ├── HostTools.py              # MSVC, WinSDK, DXC, system include 탐색 (라이브러리 — SetupEnvironment 가 쓴다)
   │     ├── InstallGitHooks.py        # Git pre-commit 훅 설치
@@ -407,7 +406,7 @@ git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
   선택 의존성, 없으면 그 자리에서 멈춘다 — zlib 으로 조용히 물러나면 안 된다), 팩 계약 SSOT 는 `Config/Engine/PackFormat.json`(고치면 configure) · 파이썬 `PackFormatSpec`
   (`PackStruct.pack()` 은 필드 **이름으로만**).
 - **경고를 재기 전에 그 프리셋을 한 번 빌드한다**(생성 헤더 `FlagOps.gen.h` 가 없으면 `-fsyntax-only` 가 가짜 오류 32 건). 파일을 옮긴 뒤 옛 compile DB 면 "no such file".
-  주석만 바뀐 TU 는 sccache 가 캐시를 재생해 `-Wdocumentation` 이 안 보인다 — `RunBuildWarnings.py --preset Ninja-Debug`. 리눅스 전용 경고는 Windows 의 `RunBuildWarnings` 가 못 본다
+  트리 전체의 경고는 `RunBuildWarnings.py --preset Ninja-Debug`. 리눅스 전용 경고는 Windows 의 `RunBuildWarnings` 가 못 본다
   (WSL-Debug 로그). 한 플랫폼에서만 읽는 필드는 `[[maybe_unused]]`.
 - **include 를 지울 때는 단독 컴파일로 확인한다**(PCH 가 가린다). `.xxx` X-매크로 include 는 빼도 컴파일되지만 함수 본문이 빈다 — 기계로 지우지 말 것. 헤더 안 `= default`
   소멸자가 `unique_ptr<T>` 멤버를 파괴하면 전방 선언으로는 안 선다.

@@ -4233,14 +4233,6 @@
    ]
   },
   {
-   "name": "SW_USE_SCCACHE",
-   "type": "BOOL",
-   "default": "ON",
-   "choices": [],
-   "description": "사용 가능 시 sccache 컴파일러 캐시를 활성화하여 빌드 가속",
-   "presets": []
-  },
-  {
    "name": "SW_USE_VCPKG",
    "type": "BOOL",
    "default": "ON",

@@ -408,8 +408,6 @@ def splitCommandInternal(entry: dict) -> list[str]:
 def makeParseArgumentsInternal(entry: dict, listExtraDefine: tuple[str, ...]) -> tuple[str, list[str]]:
     """(컴파일러 경로, libclang 인자) — 출력 · PCH 인자와 소스 파일을 떼고 드라이버 모드를 밝힌다."""
     listToken = splitCommandInternal(entry)
-    if listToken and "sccache" in Path(listToken[0]).name.lower():
-        listToken = listToken[1:]
     if not listToken:
         return "", []
     compilerPath = listToken[0]

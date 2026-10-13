@@ -7,7 +7,7 @@
 # - sw_snake_case     : 프로젝트 내부 변수 및 INTERFACE 타겟명 (예: sw_flag_libraries)
 # - SW_UPPER_SNAKE    : option() / CACHE 빌드 옵션 및 C++ 컴파일 매크로 (예: SW_ENABLE_PCH, SW_SHIPPING_BUILD)
 # - camelCase         : 함수/매크로 내부 로컬 변수
-# 이 파일은 옵션(SW_*)과 메타데이터만 둔다 — 타깃 함수는 cmake/Engine/, 찾은 도구 경로 캐시(SW_SCCACHE_EXE 등)는 찾는 파일이 둔다.
+# 이 파일은 옵션(SW_*)과 메타데이터만 둔다 — 타깃 함수는 cmake/Engine/, 찾은 도구 경로 캐시는 찾는 파일이 둔다.
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -93,7 +93,6 @@ option(SW_ENABLE_FUZZING "리눅스 clang + ASan 에서 libFuzzer 대상(LoaderF
 option(SW_ENABLE_TESTING "단위/통합 테스트 프로젝트 빌드 및 CTest 등록" ON)
 option(SW_ENABLE_UNITY_BUILD "대형 라이브러리 타겟에 CMake UNITY_BUILD(여러 소스를 합쳐 컴파일) 사용" OFF)
 option(SW_REQUIRE_REFLECTION "Engine/SWGame 등 리플렉션 타겟에 ReflectionParser 및 libclang 필수 요구" ON)
-option(SW_USE_SCCACHE "사용 가능 시 sccache 컴파일러 캐시를 활성화하여 빌드 가속" ON)
 
 # 2-2) 도구 및 vcpkg 부트스트랩 옵션
 option(SW_LLVM_AUTO_BOOTSTRAP "LLVM이 없을 때 SetupLlvm.py를 통해 Tools/LLVM에 최소 clang-cl+libclang 키트 자동 다운로드 허용" ON)

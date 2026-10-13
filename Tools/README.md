@@ -22,7 +22,6 @@
 |---|---|
 | `LLVM/` | clang-cl, clang, lld, clang-format |
 | `Ninja/` | Ninja 빌드 시스템 |
-| `Sccache/` | 컴파일 캐시 |
 | `vcpkg/` | 패키지 매니저 |
 | `_cache/`, `_deps/` | 다운로드 캐시 |
 | `Tracy/` | Tracy 뷰어. 직접 받아 둡니다 |

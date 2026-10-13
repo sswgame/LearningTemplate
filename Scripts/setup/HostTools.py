@@ -179,7 +179,7 @@ def findWindowsSdkPath() -> tuple[str, str]:
 
 
 # ==============================================================================
-# 빌드 도구 탐색 및 다운로드 (Ninja / Sccache)
+# 빌드 도구 탐색 및 다운로드 (Ninja)
 # ==============================================================================
 
 def setupBuildToolInternal(toolName: str,
@@ -192,7 +192,7 @@ def setupBuildToolInternal(toolName: str,
                            acceptExe: Callable[[Path], bool] | None = None,
                            sha256Key: str = "") -> str:
     """
-    공통 도구(Ninja, Sccache 등) 탐색 및 다운로드 추상화 함수.
+    공통 도구(Ninja 등) 탐색 및 다운로드 추상화 함수.
 
     - `acceptExe` : 찾은 실행 파일을 쓸지 고른다(버전 핀) — 거절하면 찾지 못한 것으로 보고 받는다.
     - `sha256Key` : search_paths 의 `{플랫폼: 해시}` 키 — 받은 압축 파일을 그 해시로 검사한다.

@@ -115,21 +115,3 @@ if(SW_TOOLCHAIN_CONFIG_FOUND)
 	endif()
 endif()
 
-# ------------------------------------------------------------------------------
-# 3) sccache — SW_USE_SCCACHE일 때만 컴파일러 런처
-# ------------------------------------------------------------------------------
-if(SW_USE_SCCACHE)
-	if(SW_TOOLCHAIN_SCCACHE_PATH AND EXISTS "${SW_TOOLCHAIN_SCCACHE_PATH}")
-		set(SW_SCCACHE_EXE "${SW_TOOLCHAIN_SCCACHE_PATH}")
-	else()
-		find_program(SW_SCCACHE_EXE sccache)
-	endif()
-
-	if(SW_SCCACHE_EXE)
-		set(CMAKE_C_COMPILER_LAUNCHER "${SW_SCCACHE_EXE}" CACHE FILEPATH "C 컴파일러 런처" FORCE)
-		set(CMAKE_CXX_COMPILER_LAUNCHER "${SW_SCCACHE_EXE}" CACHE FILEPATH "CXX 컴파일러 런처" FORCE)
-		message(STATUS "[DetectToolchain] Using sccache: ${SW_SCCACHE_EXE}")
-	else()
-		message(STATUS "[DetectToolchain] sccache not found. Skipping compiler cache.")
-	endif()
-endif()

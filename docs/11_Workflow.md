@@ -18,7 +18,7 @@ py -3 -m Scripts shared-lock acquire vcpkg --owner <이름> --purpose "configure
 py -3 -m Scripts shared-lock release vcpkg --owner <이름>                          # 끝나면 바로 놓는다(status 로 누가 쓰는지 본다)
 ```
 
-- 워크트리는 내려받은 도구(LLVM, Ninja, sccache, vcpkg)와 vcpkg 설치 폴더를 main 체크아웃과 링크로 나눠 씁니다. 이 링크 폴더(`Tools/*`, `build/vcpkg_*`)는 지우거나 고치지 않습니다.
+- 워크트리는 내려받은 도구(LLVM, Ninja, vcpkg)와 vcpkg 설치 폴더를 main 체크아웃과 링크로 나눠 씁니다. 이 링크 폴더(`Tools/*`, `build/vcpkg_*`)는 지우거나 고치지 않습니다.
   그래서 `vcpkg.json`, 포트, `cmake/Modules/Toolchain/Vcpkg/*` 를 바꿔야 하면 워크트리에서 바꾸지 않고 main 에서 먼저 바꿉니다.
 - **공유 설치 폴더를 건드리기 전에 쓰는 쪽이 있는지 묻습니다.** `cmake --preset`, `--clean-first` 빌드, vcpkg 설치처럼 vcpkg 를 부르는 일은 먼저 `shared-lock acquire vcpkg` 로 잡고 끝나면 놓습니다.
   의존성 정의가 다른 트리가 같은 `build/vcpkg_installed` 에 설치하면 main 의 라이브러리가 지워져 main 빌드가 `libpq.lib` 같은 링크 오류로 섭니다. 기다려도 안 풀리면 사용자에게 알립니다.
@@ -34,14 +34,13 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 
 ## 2. 빌드와 CPU
 
-- **동시에 빌드하는 작업은 최대 둘입니다**(적용 담당과 도우미 하나). 나머지 도우미는 코드 적용과 빌드 없는 검사만 합니다. 워크트리마다 빌드 폴더가 따로라 sccache 가 거의 맞지 않고, 전체 빌드가 겹치면 CPU 가 100 % 에 붙어 테스트 시간 제한이 가짜로 집니다.
+- **동시에 빌드하는 작업은 최대 둘입니다**(적용 담당과 도우미 하나). 나머지 도우미는 코드 적용과 빌드 없는 검사만 합니다. 워크트리마다 빌드 폴더가 따로라 전체를 다시 컴파일하고, 전체 빌드가 겹치면 CPU 가 100 % 에 붙어 테스트 시간 제한이 가짜로 집니다.
 - 도우미의 빌드와 테스트는 낮은 우선순위로 돌립니다. Git Bash 에서 `cmd //c "start /belownormal /wait /b cmake --build --preset Ninja-Debug -j 4"`, ctest 는 `-j 2` 입니다. 끌 때는 자기 PID 만 끕니다.
   이 빌드는 테스트를 짓지 않습니다. 테스트를 돌릴 도우미는 `--target all AllTests` 를 붙여 낮은 우선순위로 먼저 짓습니다(ctest · `py -3 -m Scripts test` 가 대신 지으면 보통 우선순위로 돈다).
 - **게임 코드는 `Ninja-Debug` 한 빌드가 모두 짓습니다(`SW_GAMES=ALL`).** 게임 실행 확인은 `App.exe -game=<게임>` 으로 합니다. 도우미가 `Ninja-Debug-Lean` 처럼 게임을 줄인 구성으로 지었으면 "게임 빌드 미확인" 으로 보고합니다.
 - 도우미가 동시에 빌드할 때는 `D:\Projects\Personal\LT-wt\BUILD-LOCK-README.txt` 의 슬롯 잠금(`LT-wt/.slot1` ~ `.slot3`)을 씁니다.
 - 스크립트로 파일을 고칠 때의 규칙(heredoc 금지 등)은 [AGENTS.md](../AGENTS.md) "Editing traps" 가 원본입니다. 임시 파일은 scratchpad 에 두고 이름 앞에 에이전트 이름을 붙입니다.
 - 컴파일러 경고 전체 조사(`Scripts/lint/report/RunBuildWarnings.py`, 세 프리셋)는 사용자가 요청할 때만 돌립니다. 내 변경이 만든 경고는 그 빌드가 이미 보여 줍니다.
-  빌드 로그의 경고가 이상하면(sccache 가 옛 경고를 재생한 경우) 조사를 돌릴지 사용자에게 묻습니다.
 
 ## 3. 검증 단계
 
@@ -88,7 +87,7 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 ## 8. 리눅스 빌드
 
 리눅스는 WSL 안의 별도 클론에서 빌드합니다. Windows 체크아웃에서 `WSL-*` 프리셋을 돌리면 공유 vcpkg 설치 트리를 망가뜨립니다.
-클론 위치, sccache 포트(WSL 은 4227), gdb 없는 환경의 진단법, 뒤처진 클론을 맞추는 법은 [Scripts/setup README](../Scripts/setup/README.md) "함정 · 계약" 절에 있습니다.
+클론 위치, gdb 없는 환경의 진단법, 뒤처진 클론을 맞추는 법은 [Scripts/setup README](../Scripts/setup/README.md) "함정 · 계약" 절에 있습니다.
 리눅스 분기 코드를 고쳤으면 WSL 에서 빌드하거나, 못 했으면 보고에 적습니다.
 
 ## 9. 에이전트 정의와 세션 가드

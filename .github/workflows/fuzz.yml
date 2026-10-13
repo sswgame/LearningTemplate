@@ -11,9 +11,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  SCCACHE_GHA_ENABLED: "true"
-
 jobs:
   fuzz:
     name: LoaderFuzzer (Linux Clang + ASan)

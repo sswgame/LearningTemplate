@@ -39,7 +39,6 @@ cmake --preset Ninja-Debug
 cmake --build --preset Ninja-Debug
 ```
 
-- `SW_USE_SCCACHE` is `ON` by default and uses sccache when it is available.
 - Build outputs are in `build/Ninja-Debug/Bin`.
 - The compilation database is `build/Ninja-Debug/compile_commands.json`.
 

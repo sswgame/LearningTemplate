@@ -45,7 +45,6 @@ from common import (
     kKeyParserArgsPlatform,
     kKeyParserArgsSection,
     kKeyPaths,
-    kKeySccachePath,
     kKeyTuning,
     kKeyVcpkgAutoBootstrap,
     kKeyVcpkgRoot,
@@ -63,7 +62,6 @@ from setup.HostTools import (
     setupNinja,
 )
 from setup.SetupLlvm import findLibClangDllPath, isMinimalLlvmRoot
-from setup.SetupSccache import applySccacheConfig, isPinnedSccache, setupSccache
 
 
 def asDictInternal(value: Any) -> dict:
@@ -112,7 +110,6 @@ class EngineConfig:
     msvc_tools_dir: str
     vcpkg_root: str
     ninja_path: str
-    sccache_path: str
 
 
 # ==============================================================================
@@ -168,7 +165,7 @@ class EnvironmentSetupManager:
         msvcPath = getOrFindCached(self.existing_config, kKeyMsvcToolsDir, findMsvcPath)
         return sdkDirectory, sdkVersion, foundDxc, foundDxil, msvcPath
 
-    def resolveToolsInternal(self) -> tuple[str, str, str]:
+    def resolveToolsInternal(self) -> tuple[str, str]:
         cachedVcpkg = self.existing_config.get(kKeyVcpkgRoot, "")
         if cachedVcpkg and isVcpkgRoot(cachedVcpkg):
             vcpkgPath = normalizePath(str(cachedVcpkg))
@@ -192,20 +189,8 @@ class EnvironmentSetupManager:
             lambda: normalizePath(setupNinja() or ""),
         )
         ninjaPath = normalizePath(str(ninjaFound)) if ninjaFound else ""
-        sccacheFound = self.safeCallInternal(
-            "SetupSccache",
-            getOrFindCached,
-            self.existing_config,
-            kKeySccachePath,
-            lambda: normalizePath(setupSccache() or ""),
-            validate=lambda cached: Path(cached).is_file() and isPinnedSccache(Path(cached)),
-        )
-        sccachePath = normalizePath(str(sccacheFound)) if sccacheFound else ""
-        if sccachePath:
-            # 워크트리를 더하면 configure 가 여기를 지나며 basedirs 를 넓힌다.
-            self.safeCallInternal("SetupSccacheConfig", applySccacheConfig, self.project_root, Path(sccachePath))
 
-        return vcpkgPath, ninjaPath, sccachePath
+        return vcpkgPath, ninjaPath
 
     def runLinuxSetupInternal(self) -> None:
         if platform.system() == "Linux":
@@ -228,7 +213,7 @@ class EnvironmentSetupManager:
     def run(self) -> EngineConfig:
         llvmPath, libclangPath = self.resolveLlvmInternal()
         sdkDirectory, sdkVersion, dxcPath, dxilPath, msvcPath = self.resolveWindowsSdkInternal()
-        vcpkgPath, ninjaPath, sccachePath = self.resolveToolsInternal()
+        vcpkgPath, ninjaPath = self.resolveToolsInternal()
 
         config = EngineConfig(
             target_platform=platform.system().lower(),
@@ -242,7 +227,6 @@ class EnvironmentSetupManager:
             msvc_tools_dir=msvcPath,
             vcpkg_root=vcpkgPath,
             ninja_path=ninjaPath,
-            sccache_path=sccachePath,
         )
 
         newJson = json.dumps(asdict(config), indent=4)

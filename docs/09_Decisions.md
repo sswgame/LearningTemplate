@@ -88,9 +88,6 @@
 
 ## 3. 기각한 것 — 측정값과 함께 (다시 제안하지 말 것)
 
-- **PCH 를 끄고 sccache 로 짓기**(2026-10-14, Debug `Ninja-Debug` = 게임 8개 `all`, 한 번씩, 혼자 빌드): 깨끗한 빌드 PCH 켬 150 초 · 끔(빈 캐시) 459 초 · 끔(폴더를 지우고 다시, 적중 100 %) 92 초,
-  `.cpp` 하나 고침 11 → 9 초, PCH 안 헤더(`GameConfig.h`, 104 TU) 고침 19 → 12 초. 캐시가 차 있는 같은 폴더 다시 짓기만 이긴다 — 새 빌드 폴더 · 새 워크트리 · 헤더를 바꾼 첫 빌드는
-  세 배 느리다. PCH 켬에서 sccache 는 PCH 를 쓰지 않는 10 건만 받는다(2161 중). 기본은 PCH 켬을 둔다.
 
 - **`common` 지연 import(PEP 562 `__getattr__`)**(2026-10-06, 12 회 중앙값): `import common` 누적 81.0 → 1.8 ms 이지만 `GenerateCookContract.py` 한 번이 110.5 → 110.1 ms — 생성기는 결국 같은 하위 모듈(GeneratedFile · CookContract · 그 앞의 탐색 순서)을 다 올린다.
   기준(생성기 30 % 이상)에 한참 못 미치고, 하위 모듈 이름과 같은 공개 이름(`BuildTree`)이 하위 모듈 import 순서에 따라 모듈로 바뀌는 함정이 생긴다.
@@ -150,7 +147,7 @@
 - **늘 상위에 오는 정당한 중복**(`RunDuplicateCode`): 백엔드 인터페이스 선언 · 레이스 래퍼 전달 · 플랫폼 구현 · enum 레이블 나열 · 서비스 로케이터 둘(`sw::editor` 는 nullptr, `sw::game` 은
   assert) · `MaterialPacking` 숫자 case(`-Wswitch-enum`) · DX12 상태 조회 · `TypeInfo` 생성자 · RLE · 콜스택 관문 · 셰이더 반사 D3D11/12(확인 중 — 백로그 `D2`) · Win32 마우스 case · include 묶음.
 - **콜드 · 워크트리용 프리셋 `Ninja-Debug-Cold`(PCH 끔 + 유니티)**(BuildSpeed 4 단계, 2026-10-11, PC `SW`, 풀 빌드 `--clean-first`): 캐시 없이 115.2 s(개발) 대 147.3 s,
-  sccache 웜이면 44.7 대 45.4 s(각 3 회 중앙값) — 어느 쪽에서도 이기지 못한다. PCH + 유니티는 145.2 s 로 개발보다 느리다. Windows CI 는 PCH 끔 + 유니티 + sccache 그대로.
+  어느 구성도 이기지 못한다. PCH + 유니티는 145.2 s 로 개발보다 느리다.
 - **킷 밖 묶음의 PCH 공유**(BuildSpeed 3 단계, 2026-10-11): 컴파일 정의 차이를 `compile_commands.json` 에서 타깃별로 모으면 PCH 를 따로 짓는 것은
   시험 9(`SW_TEST_INTERNAL` 공통, EngineTest 는 `SW_GF_IMPORTS` · 킷 `FlagOps.gen.h` 강제 포함, EditorTest · EditorUITest 는 서드파티 정의가 더 붙는다) · RHI 백엔드 4(`<타깃>_EXPORTS` 만 다름) ·
   App · Server · ModuleHost 3 · 에디터 확장 · `SWGame` 이다. PCH 하나가 약 2.7 CPU 초라 다 합쳐도 16 스레드에서 2 ~ 3 s(측정 편차 ±3 s 안) — 킷(PCH 60 개 → 1, −20.6 s)만 했다.

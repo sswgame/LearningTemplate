@@ -4,8 +4,8 @@ name: Header self-containment (daily)
 # 커밋 훅은 빌드 폴더가 있는 PC 에서 staged 헤더만 본다(Scripts/lint/gate/CheckHeaderSelfContained.py) — 이 잡은 훅이 못 본 것(빌드 없이 한 커밋,
 # 다른 헤더를 정리해 생긴 깨짐)을 잡는다.
 #
-# 준비 단계는 ci.yml 과 같은 액션(.github/actions)을 쓰고, 구성은 ci.yml 의 Windows Debug 잡과 같은 프리셋 · 같은 PCH 끔이다 —
-# 그래야 sccache 와 vcpkg 바이너리 캐시를 그 잡과 나눠 써 빌드가 거의 적중한다. ci.yml 의 구성을 바꾸면 여기도 맞춘다.
+# 준비 단계는 ci.yml 과 같은 액션(.github/actions)을 쓰고, 구성은 ci.yml 의 Windows Debug 잡과 같은 프리셋이다 —
+# 그래야 vcpkg 바이너리 캐시를 그 잡과 나눠 쓴다. ci.yml 의 구성을 바꾸면 여기도 맞춘다. 헤더 단독 컴파일은 PCH 플래그를 떼고 돈다(`HeaderSelfContained.py`).
 # vcpkg 캐시는 복원만 한다(저장은 ci.yml 이 한다 — 캐시 한도 10 GB 를 나눠 쓴다).
 
 on:
@@ -18,7 +18,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  SCCACHE_GHA_ENABLED: "true"
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
@@ -42,7 +41,7 @@ jobs:
 
     - name: Configure (CI-Debug)
       run: |
-        cmake --preset CI-Debug -DSW_ENABLE_PCH=OFF
+        cmake --preset CI-Debug
 
     # 단독 컴파일은 생성 헤더(리플렉션 FlagOps.gen.h · *.gen.h)가 있어야 가짜 오류가 안 난다 — 구성만 한 폴더는 자리 표시자다.
     - name: Build
