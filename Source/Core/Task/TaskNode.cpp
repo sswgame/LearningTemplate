@@ -35,19 +35,23 @@ namespace sw
 
     void TaskNode::resolveOneDependency()
     {
-        if ( _pOwner != nullptr )
-            _pOwner->resolveDependency( this, true );
+        TaskManager* const pOwner = _pPool->getOwner();
+        if ( pOwner != nullptr )
+            pOwner->resolveDependency( this, true );
         else
             _unresolvedDependencies.fetch_sub( 1, std::memory_order_acq_rel );
     }
 
     void TaskNode::release()
     {
-        if ( _refCount.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
-        {
-            if ( _pOwner != nullptr )
-                _pOwner->deallocateNode( this );
-        }
+        if ( _refCount.fetch_sub( 1, std::memory_order_acq_rel ) != 1 )
+            return;
+        // 매니저가 살아 있으면 완료 처리(만들기만 한 태스크)를 거쳐 돌려준다. 이미 없으면 풀로 바로 돌려준다 — 풀은 마지막 참조까지 산다.
+        TaskManager* const pOwner = _pPool->getOwner();
+        if ( pOwner != nullptr )
+            pOwner->deallocateNode( this );
+        else
+            _pPool->deallocate( this );
     }
 
     void StageNode::release()

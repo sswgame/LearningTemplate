@@ -550,6 +550,47 @@ SW_TEST_CASE( TaskManagerTest, DestroyedManagerReturnsItsStageNodes )
 }
 
 /**
+ * @brief [TaskManagerTest] 매니저보다 오래 산 태스크 · 스테이지 핸들은 그 뒤에도 노드를 읽고 놓을 수 있고, 마지막 핸들이 풀을 돌려놓는다
+ * @details 핸들의 노드는 매니저의 풀에 있다. 풀이 매니저와 함께 사라지면 뒤늦게 놓이는 핸들이 해제된 메모리의 참조 수를 내린다
+ *          (핸들을 든 씬이 매니저보다 늦게 내려가는 순서). 그래서 풀은 핸들이 남아 있는 동안 살고, 마지막 핸들이 놓일 때 사라져야 한다 —
+ *          매니저가 사라질 때 풀이 사라지면 "핸들을 놓을 때 줄어드는 할당" 이 0 이다.
+ */
+SW_TEST_CASE( TaskManagerTest, HandlesOutlivingTheManagerKeepTheirNodes )
+{
+    sw::MemoryProfiler* pMemory = sw::MemoryProfiler::getActive();
+    SW_ASSERT_NOT_NULL( pMemory );
+    const bool bWasTracking = pMemory->isTrackingEnabled();
+    pMemory->setTrackingEnabled( true );
+
+    sw::TaskHandle      task;
+    sw::TaskStageHandle stage;
+    {
+        sw::TaskManager manager;
+        SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+        task = manager.emplaceTask( "OutlivesManager", SW_DELEGATE_LAMBDA( sw::TaskDelegate, []() {} ) );
+        task.setPriority( sw::TaskPriority::High );
+        stage = manager.createStage();
+        stage.addTask( task );
+        task.submit();
+        manager.waitStage( stage );
+        SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
+    }
+
+    SW_EXPECT_TRUE_MSG( task.isCompleted(), "매니저가 사라진 뒤 핸들의 노드를 읽을 수 없습니다" );
+    SW_EXPECT_TRUE_MSG( task.getPriority() == sw::TaskPriority::High, "매니저가 사라진 뒤 핸들의 노드를 읽을 수 없습니다" );
+    const uint64 heldCount     = pMemory->getLiveAllocationCount();
+    task                       = sw::TaskHandle{};
+    stage                      = sw::TaskStageHandle{};
+    const uint64 releasedCount = pMemory->getLiveAllocationCount();
+    pMemory->setTrackingEnabled( bWasTracking );
+
+    // 풀 하나 · 태스크 슬랩 하나 · 스테이지 하나가 마지막 핸들과 함께 돌아가야 한다.
+    const uint64 returnedCount = heldCount > releasedCount ? heldCount - releasedCount : 0;
+    SW_EXPECT_TRUE_MSG( returnedCount >= 3,
+                        ( sw::string( "마지막 핸들을 놓을 때 돌아간 할당이 " ) + sw::to_string( returnedCount ) + " 개다 — 풀이 매니저와 함께 사라졌다" ).c_str() );
+}
+
+/**
  * @brief [TaskManagerTest] 스테이지를 기다리다 잠든 메인 스레드는 메인 전용 작업이 생기면 깨어난다
  * @details 메인은 자기 워드 하나에 잠든다. 그 스테이지의 워커 태스크가 뒤늦게 `MainThread` 친화도 태스크를 같은
  *          스테이지에 넣으면, 그 작업은 메인만 돌릴 수 있으므로 **메인을 깨우지 않으면 둘 다 영원히 기다린다.**

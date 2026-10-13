@@ -11,6 +11,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
 {
@@ -115,6 +116,11 @@ namespace sw
         }
 
         clearComponents();
+
+        // 검증 결과는 이 오브젝트가 출처다. 오브젝트와 함께 사라진다(파괴 · 씬 언로드 · 매니저 소멸이 모두 여기를 지난다).
+        ValidationIssueLog* const pIssueLog = ValidationIssueLog::find();
+        if ( pIssueLog != nullptr )
+            pIssueLog->removeSource( _objectID );
     }
 
     const TypeInfo* GameObject::getTypeInfo() const

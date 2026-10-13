@@ -173,7 +173,7 @@ namespace sw
         , _arrHelperWaiter{}
         , _activeTaskCount{ 0 }
         , _clearEpoch{ 0 }
-        , _nodePool{ sw::make_unique<TaskNodePool>() }
+        , _nodePool{ sw::make_unique<TaskNodePool>( this ) }
     {
     }
 
@@ -183,6 +183,9 @@ namespace sw
     TaskManager::~TaskManager()
     {
         shutdown();
+        // 아직 핸들이 쥔 노드 · 스테이지가 있으면 풀은 그 핸들들의 몫으로 남고, 마지막 핸들이 놓일 때 스스로 소멸한다.
+        if ( _nodePool->detachOwner() == false )
+            (void)_nodePool.release(); // 소유를 핸들에 넘겼다 — 여기서 지우면 뒤늦게 놓이는 핸들이 해제된 노드를 만진다
     }
 
     bool TaskManager::initialize( uint32 threadCount )
@@ -424,7 +427,6 @@ namespace sw
         }
 
         TaskNode* pNode    = _nodePool->allocate();
-        pNode->_pOwner     = this;
         pNode->_clearEpoch = _clearEpoch.load( std::memory_order_acquire );
         pNode->setName( name );
         pNode->_affinity = affinity;
