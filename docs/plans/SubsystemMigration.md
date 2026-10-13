@@ -58,6 +58,13 @@
 | LiveShader | `ShaderRecompiler`(`EngineLoop`, Debug) | 렌더 스레드 · 렌더러(재컴파일 콜백) | 안 씀 | 중간 | 지금 옮길 수 있다(아무도 기대지 않는다) |
 | SceneRHI | 없음 | `SceneManager` · 디바이스 | 안 씀 | 낮음 | 지금 옮길 수 있다 — `FunctionSubsystem` |
 
+## 목록으로 옮기지 않는 것
+
+- `OnlineServerRuntime`(GameFramework 온라인 서버 조립). 정상 종료 순서는 두 패스(`stopSubsystem` → `shutdownSubsystem`)로 그대로 적힌다
+  (등록 해제 · 키트 stop → 호스트 → 스케줄러 · 저장소 비우기 → 키트 shutdown → 캐시). 하지만 키트 계약(`IOnlineServerKit::stop` 은 "`start` 에 실패했어도 불린다")이
+  "만든 키트는 어느 단계에서 멈췄든 모두 stop · shutdown 을 받는다" 이고, 목록은 **초기화에 성공한 것만** 내린다. 키트 초기화나 호스트 기동이 실패하면
+  키트 stop 을 받을 서브시스템이 없고, 실패한 서브시스템이 스스로 되돌리면 키트 shutdown 이 저장소 비우기보다 앞서 남은 완료가 내려간 키트를 부른다.
+
 ## 끝난 모습
 
 - `EngineInitStepList.xxx` · `EngineInitNoStepBody` · `EngineInitStepTable` · `EngineLoop::StartupStepBody` · 하네스의 `TestHost` 본문이 없다.

@@ -196,6 +196,11 @@ namespace sw
 
     void SubsystemCollection::shutdownAll()
     {
+        // 모두를 멈춘 뒤에 놓는다 — 한 서브시스템이 비우는 남은 일(완료 콜백)이 먼저 놓인 다른 서브시스템을 부르지 않게.
+        for ( size_t order = _listInitialized.size(); order > 0; --order )
+        {
+            _listSubsystem[_listInitialized[order - 1]]->stopSubsystem();
+        }
         while ( _listInitialized.empty() == false )
         {
             const uint32 index = _listInitialized.back();
@@ -235,18 +240,23 @@ namespace sw
             }
         }
 
-        // 초기화한 순서의 역순으로 내리고, 내린 것은 초기화 순서로 기억한다.
+        // 내릴 것을 초기화 순서로 나누고, `shutdownAll` 과 같이 역순으로 모두 멈춘 뒤 역순으로 모두 종료한다.
         vector<uint32> listStopped;
-        for ( size_t order = _listInitialized.size(); order > 0; --order )
+        vector<uint32> listRemaining;
+        for ( const uint32 index : _listInitialized )
         {
-            const uint32 index = _listInitialized[order - 1];
-            if ( listDependent[index] == SW_FALSE )
-                continue;
-            _listSubsystem[index]->shutdownSubsystem();
-            listStopped.insert( listStopped.begin(), index );
-            _listInitialized.erase( _listInitialized.begin() + static_cast<ptrdiff_t>( order - 1 ) );
+            ( listDependent[index] == SW_TRUE ? listStopped : listRemaining ).push_back( index );
         }
-        _listStopped = std::move( listStopped );
+        for ( size_t order = listStopped.size(); order > 0; --order )
+        {
+            _listSubsystem[listStopped[order - 1]]->stopSubsystem();
+        }
+        for ( size_t order = listStopped.size(); order > 0; --order )
+        {
+            _listSubsystem[listStopped[order - 1]]->shutdownSubsystem();
+        }
+        _listInitialized = std::move( listRemaining );
+        _listStopped     = std::move( listStopped );
     }
 
     bool SubsystemCollection::restartStopped()

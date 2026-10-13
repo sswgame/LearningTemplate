@@ -125,10 +125,11 @@ py -3 Scripts/lint/gate/CheckEngineLayers.py
 **순서의 진실은 의존 하나입니다.** `SubsystemCollection`(`Common/SubsystemCollection.h`)이 서브시스템을 `vector<unique_ptr<ISubsystem>>` 로 소유하고, 의존으로 위상 정렬해 계산합니다(동점은 이름 순이라 결정적).
 추가한 순서는 뜻이 없습니다. "A 가 B 보다 먼저" 가 필요하면 의존을 적습니다. 같은 이름, 모르는 의존, 순환, 대상 어긋남(서버에서 도는 것이 `Client` 전용에 의존)은 정렬 오류이고 기동하지 않습니다.
 
-목록은 세 번 돕니다.
+목록은 네 번 돕니다(종료가 두 패스).
 
 1. `initializeAll( target )` 이 계산한 순서로 `initializeSubsystem` 을 부릅니다. `Failed` 면 멈추고, `SkipDependents` 면 그에 의존하는 것을 건너뜁니다(헤드리스 작업).
-2. `shutdownAll` 이 초기화에 성공한 것만 역순으로 `shutdownSubsystem` 합니다. 이때 다른 서브시스템은 모두 살아 있습니다.
+2. `shutdownAll` 이 초기화에 성공한 것만 두 번 역순으로 돕니다. 먼저 모두에 `stopSubsystem`(종료 전 단계 — 새 일 받기를 멈추고 남은 일을 비운다, 기본은 빈 동작)을, 그다음 모두에 `shutdownSubsystem` 을 부릅니다.
+   언리얼이 PreExit 를 `Deinitialize` 앞에 두는 것과 같은 자리입니다. 한 서브시스템이 비우는 남은 일(완료 콜백)이 먼저 내려간 다른 서브시스템을 부르지 않게 합니다. 이때 다른 서브시스템은 모두 살아 있습니다.
 3. `destroyAll`(목록의 소멸자도 같습니다)이 **모두**를 역순으로 소멸시킵니다. 실패했거나 건너뛰었거나 도달하지 못한 것도 포함합니다.
 
 백엔드 교체는 `shutdownDependentsOf` 와 `restartStopped` 로 RHI 에 기대는 것만 내렸다가 같은 초기화로 다시 세웁니다. 그래서 `initializeSubsystem` 은 다시 불릴 수 있어야 합니다.
@@ -269,9 +270,10 @@ class SW_API MySystem : public ISubsystem   // 다중 상속이면 ISubsystem �
 
 1. 메모리 태그가 `EngineMisc` 가 아니면 `getSubsystemMemoryTag` 를 덮어씁니다. 다른 서비스는 `engine::get…()` 로 찾습니다(의존에 적은 것만 살아 있습니다).
 2. `EngineLoop::initialize` 에서 `_startup.addSubsystem( make_unique<MySystem>() )` 로 넘깁니다. 이미 서비스 저장소가 만드는 서비스면 `std::move( _owned._pX )` 로 소유를 넘깁니다.
-3. 소유 객체가 없는 "한 번 하는 일" 은 타입을 짓지 않고 `FunctionSubsystem`(이름, 의존, 대상, 초기화와 종료 델리게이트) 하나로 적습니다.
-4. 의존 글은 실행 시간에만 풀리므로 `EngineInitSequenceTest.EngineSubsystemsJoinTheTableOrder` 처럼 실제 객체를 넣어 정렬 오류가 없는지 테스트합니다.
-5. 지금은 표의 줄이 서브시스템 이름을 의존으로 부를 수 없습니다(표의 의존은 컴파일 때 식별자로 검사합니다). 표의 다른 줄이 기대는 단계는 그 줄과 함께 옮깁니다.
+3. 종료할 때 남은 일(대기 중인 요청 · 완료 콜백)을 비워야 하면 `stopSubsystem` 을 덮어씁니다. 모든 서브시스템이 멈춘 뒤에 종료가 돕니다.
+4. 소유 객체가 없는 "한 번 하는 일" 은 타입을 짓지 않고 `FunctionSubsystem`(이름, 의존, 대상, 초기화와 종료 델리게이트) 하나로 적습니다.
+5. 의존 글은 실행 시간에만 풀리므로 `EngineInitSequenceTest.EngineSubsystemsJoinTheTableOrder` 처럼 실제 객체를 넣어 정렬 오류가 없는지 테스트합니다.
+6. 지금은 표의 줄이 서브시스템 이름을 의존으로 부를 수 없습니다(표의 의존은 컴파일 때 식별자로 검사합니다). 표의 다른 줄이 기대는 단계는 그 줄과 함께 옮깁니다.
 
 ### 새 엔진 서비스 넣기
 
