@@ -524,7 +524,8 @@ namespace sw
     void LiveReloadManager::clearContexts()
     {
         // `clear()` 는 용량을 남긴다. 이 관리자는 엔진의 종료 누수 보고 뒤에 사라지므로, 기준선 뒤 모듈 등록이 키운 표를 여기서 놓는다.
-        _mapModule = unordered_map<string, ModuleContext>{};
+        _mapModule.clear();
+        _mapModule.shrink_to_fit();
         _dependencyGraph.clear();
     }
 

@@ -67,6 +67,8 @@ namespace sw
         {
             return Base::find( Key( key ) ) != Base::end();
         }
+        /** @brief 밀집 구현과 같은 이름으로 남는 버킷을 놓는다. */
+        void shrink_to_fit() { Base::rehash( 0 ); }
     };
 #else
     /**
@@ -341,7 +343,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 3) 변경 — insert/erase. erase 뒤 이터레이터가 무효화될 수 있다
         // ------------------------------------------------------------------------------
-        /** @brief 모든 원소를 제거합니다. */
+        /** @brief 모든 원소를 제거합니다. 용량은 남깁니다(놓으려면 이어서 `shrink_to_fit()`). */
         void clear() noexcept
         {
             SW_SCOPED_RACE_WRITE();
@@ -724,6 +726,12 @@ namespace sw
             {
                 bucketCount *= 2;
             }
+            rebuild_buckets( bucketCount );
+        }
+
+        /** @brief 버킷 표를 bucketCount(2의 거듭제곱) 개로 다시 만들고 밀집 배열의 체인을 다시 잇습니다. */
+        void rebuild_buckets( size_t bucketCount )
+        {
             _listBucket.assign( bucketCount, kEmptySlot );
             for ( size_t denseIndex = 0; denseIndex < _listDenseData.size(); ++denseIndex )
             {
@@ -736,6 +744,33 @@ namespace sw
 
         /** @brief rehash( count ) 와 같습니다(버킷을 미리 잡습니다). */
         void reserve( size_type count ) { rehash( count ); }
+
+        /**
+         * @brief 남는 용량을 놓습니다. 비었으면 버킷 표와 밀집 배열의 버퍼를 모두 놓아 처음 상태로 돌아갑니다.
+         * @details `clear()` 는 용량을 남긴다(다시 채울 때 할당하지 않도록). 버퍼까지 놓는 비우기는 `clear()` + `shrink_to_fit()` 이다.
+         *          원소가 있으면 버킷 수를 원소 수 이상인 가장 작은 2의 거듭제곱(최소 `kMinBucketCount`)으로 줄인다.
+         */
+        void shrink_to_fit()
+        {
+            SW_SCOPED_RACE_WRITE();
+            _listDenseData.shrink_to_fit();
+            if ( _listDenseData.empty() )
+            {
+                _listBucket.clear();
+                _listBucket.shrink_to_fit();
+                return;
+            }
+            size_t bucketCount = kMinBucketCount;
+            while ( bucketCount < _listDenseData.size() )
+            {
+                bucketCount *= 2;
+            }
+            if ( bucketCount < _listBucket.size() )
+            {
+                rebuild_buckets( bucketCount );
+                _listBucket.shrink_to_fit();
+            }
+        }
     };
 #endif
 } // namespace sw

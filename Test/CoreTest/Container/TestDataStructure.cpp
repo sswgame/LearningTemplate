@@ -1352,6 +1352,60 @@ SW_TEST_CASE( DataStructureTest, HashMapOddReserveGrowAndEraseStaysConsistent )
 }
 
 /**
+ * @brief [DataStructureTest] 해시맵 `shrink_to_fit` 은 버킷을 줄여도 모든 키를 찾고, `clear()` 뒤에 부르면 처음 상태로 돌아가 다시 쓸 수 있다
+ * @details 버킷을 줄이면 체인을 새 버킷 수로 다시 이어야 한다 — 하나라도 빠지면 그 키를 못 찾는다. 빈 맵은 버킷 표까지 놓으므로
+ *          다음 삽입이 빈 표에서 다시 자라는 경로를 탄다.
+ */
+SW_TEST_CASE( DataStructureTest, HashMapShrinkToFitKeepsKeysAndReleasesWhenEmpty )
+{
+    auto mixKey = []( uint64 value )
+    {
+        value += sw::HashUtil::kGoldenRatio64;
+        return sw::HashUtil::mix64( value );
+    };
+    constexpr uint64 kCount = 3000;
+
+    sw::unordered_map<uint64, uint64> map;
+    for ( uint64 index = 0; index < kCount; ++index )
+    {
+        map.emplace( mixKey( index ), index );
+    }
+    for ( uint64 index = 100; index < kCount; ++index )
+    {
+        map.erase( mixKey( index ) );
+    }
+    map.shrink_to_fit();
+    SW_ASSERT_EQUAL( size_t( 100 ), map.size() );
+
+    uint32 wrongCount = 0;
+    for ( uint64 index = 0; index < kCount; ++index )
+    {
+        const auto iter   = map.find( mixKey( index ) );
+        const bool bFound = iter != map.end() && iter->second == index;
+        if ( bFound != ( index < 100 ) )
+            ++wrongCount;
+    }
+    SW_EXPECT_EQUAL( 0u, wrongCount );
+
+    map.clear();
+    map.shrink_to_fit();
+    SW_EXPECT_TRUE( map.empty() );
+    SW_EXPECT_TRUE( map.find( mixKey( 0 ) ) == map.end() );
+
+    for ( uint64 index = 0; index < 64; ++index )
+    {
+        map.emplace( mixKey( index ), index + 1 );
+    }
+    for ( uint64 index = 0; index < 64; ++index )
+    {
+        const auto iter = map.find( mixKey( index ) );
+        if ( iter == map.end() || iter->second != index + 1 )
+            ++wrongCount;
+    }
+    SW_EXPECT_EQUAL( 0u, wrongCount );
+}
+
+/**
  * @brief [DataStructureTest] 문자열 키 해시는 `string` · `string_view` · C 문자열에서 같은 값이고, 서로 다른 키는 갈린다
  * @details 해시 컨테이너의 이종 조회(`find( string_view )`)는 세 모양이 같은 바이트에 같은 해시를 낼 때만 맞다 — 하나라도
  *          다르면 넣은 키를 다른 모양으로 못 찾는다. 해시는 8 바이트씩 읽으므로 끝 자투리(0 ~ 7 바이트)와 길이만 다른 키
