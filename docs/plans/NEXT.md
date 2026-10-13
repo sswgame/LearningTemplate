@@ -31,12 +31,9 @@
 
 ## 진행 중: 서브시스템 정리 (2026-10-14, 단계마다 main 에 병합)
 
-순서: ① ISubsystem · SubsystemCollection 을 Core 로(호스트 마스크 일반화 — 끝) ② RHI 이전(끝) ③ 엔진 수명 매니저가 ISubsystem 직접 상속 +
-`FunctionSubsystem` · `FunctionSubsystemDesc` · `EngineFunctionStep` 삭제 ④ EngineServiceCollection · 전역 서비스 표를 SubsystemCollection 소유 + 조회로 흡수
-⑤ EngineBootstrap → Logger · NamePool · CommandLine · CrashHandler · Diagnostics 서브시스템 ⑥ EngineLoop → Engine 개명(조정자가 시점을 알림).
-- ③ 대상: Core TaskManager · AsyncFileIO · CompressionCodecRegistry · CommandLineManager · GlobalVariableManager, Engine ConfigManager · InputManager ·
-  LocalizationManager · AssetManager · ResourcePakManager · SceneManager · UserSettingsManager · ServerServiceManager · 오디오 구현 · 렌더러. 매니저가 아닌 호스트 엮기
-  (Reflection · ModuleTypes · ModuleImages · Headless · SceneRHI · EngineDefaultAssets)만 작은 `<대상>Subsystem` 클래스. 하네스와 본문이 다른 단계는 하네스 서브클래스.
+순서: ① ISubsystem · SubsystemCollection 을 Core 로(끝) ② RHI 이전(끝) ③ 엔진 수명 매니저가 ISubsystem 직접 상속(끝, `93f0693e1`, EngineLoop.cpp 1361 → 822 줄)
+④ EngineServiceCollection · 전역 서비스 표를 SubsystemCollection 소유 + 조회로 흡수 ⑤ EngineBootstrap → Logger · NamePool · CommandLine · CrashHandler ·
+Diagnostics 서브시스템 ⑥ EngineLoop → Engine 개명(조정자가 시점을 알림). 그 뒤 후보는 백로그 `C-26` · `C-27`.
 - ③ 끝: FunctionSubsystem · FunctionSubsystemDesc · EngineFunctionStep · EngineInitSequence.h 가 없다. 엔진 수명 매니저(TaskManager · AsyncFileIO ·
   CompressionCodecRegistry · ConfigManager · AssetManager · IAudioService · InputManager · AssetStreamingQueue · SceneManager · UserSettingsManager)가 직접 상속하고,
   호스트 엮기는 작은 클래스다 — Reflection · ModuleImages · ModuleTypes(Engine/Module), EngineDefaultAssets(Localization), Headless(Engine 루트),
@@ -52,7 +49,7 @@
 
 ## 이어서 할 정리 (사용자가 순서를 정하면 시작)
 
-- 서브시스템: 기동 단계를 서브시스템 클래스로(진행 중 — RHI 이전은 끝), 플랫폼 플래그 `_bHostStarted` · `_bSchedulerStarted` 제거. `OnlineServerRuntime` · `App` · `ModuleHost` · `FrameRenderer` · `ServerApp` · `OnlineServiceHost` 는 LIFO 가 아니라 일부러 안 옮겼다.
+- 서브시스템: 플랫폼 플래그 `_bHostStarted` · `_bSchedulerStarted` 제거. `OnlineServerRuntime` · `App` · `ModuleHost` · `FrameRenderer` · `ServerApp` · `OnlineServiceHost` 는 LIFO 가 아니라 일부러 안 옮겼다.
 - 감사에서 나온 반복 패턴: 등록자 템플릿 `ScopedRegistration<TRegistry,TEntry>`(등록자 11 + 테스트 4), 에디터 프로브 상태 `caseState<T>()`, `IServiceStoreWork` 람다(29), 온라인 메서드 X-macro(`kVersion` 올림 필요), 알림 핸들러, 컴포넌트 인스펙터, `GameObjectManager` 프레임 단계 표.
 - 폴더: 평평한 `Editor/Common/Commands`(61) · `Engine/Object/GameObject`(45) · `Engine/Renderer/Frame`(43) 쪼개기. `EditorNetPlaySession.h` → `Workspace/`.
 - 서버 디버그 `S3 · S6 · S7`(`S8` 은 다중 월드 필요), 다중 월드 `D3-7`, 에디터 보강 `D3-1` 남은 것.

@@ -201,6 +201,20 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   구조로 줄이고 네 백엔드의 공통 코드를 공통 서브시스템 + 백엔드별 구현으로 나눈다. 조건: 프레임마다 도는 경로에는 이름 조회를 두지 않고 초기화 때 얻은 타입 있는
   포인터를 든다(상용 엔진 RHI 는 내부 레지스트리 없이 명시 소유와 소멸자 순서로 하는 것으로 알고 있다 — 이쪽의 확장이다). 백엔드는 별도 MODULE DLL 이라 Core 의
   `SubsystemCollection` export 로 경계를 넘는다. 검증: 네 백엔드 × 에디터 유무 8 조합 hostgpu, 렌더 벤치 전후(측정 없이 최적화하지 않는다).
+- `C-27` **서브시스템 패턴을 넓힐 곳**(2026-10-14, 서브시스템 정리 다음 · 효과 큰 순). 판정 기준: 수명 범위 · 초기화/종료 순서 · 의존이 있는 서비스는 서브시스템이고,
+  프레임마다 도는 핫 데이터 · 게임플레이 객체 · 값 객체는 서브시스템이 아니다.
+  ① 씬 범위 — `ISceneService`(SceneAudio · SceneNavigation · ScenePhysics · PrefabInstanceRegistry 등)를 같은 `ISubsystem` + `SubsystemCollection` 으로 통일하고
+  GameObjectManager 가 씬 범위 컬렉션을 소유한다(언리얼 `UWorldSubsystem` 에 대응하는 것으로 알고 있다). 씬 서비스 조회는 범위 로케이터로.
+  ② 에셋 캐시 — AssetManager 의 `IAssetCache` 구현(TextureCache · MeshCache · MaterialCache · GlyphCache · ShaderBindingLayoutCache 등)을 리소스 범위 서브시스템으로,
+  등록 · 초기화 · 종료 순서와 의존을 선언한다.
+  ③ 개발 도구 — AutomationRunner · Session · StepRegistry, DevCommandRegistry, 프로파일러 · 텔레메트리를 `Dev` 호스트 비트의 서브시스템으로. Shipping 은 등록 자체를
+  컴파일에서 뺀다(구성별 `#if` 분산을 줄인다).
+  ④ 렌더러 내부 — FrameRenderer(Renderer/Frame)의 PSO 캐시 · 트랜지언트 풀 · 리드백 · 캔버스를 서브시스템으로. 모듈이 렌더 패스를 등록하는 창구(`G-1`)를
+  "모듈이 서브시스템을 기여하는" 지점으로 푼다(핫 패스는 타입 있는 포인터).
+  ⑤ 백엔드 선택 — 물리(Box2D · Jolt) · 오디오(XAudio2 · Null) 같은 역할별 팩토리를 호스트 종류에 따라 갈아 끼우는 서브시스템 구현으로(언리얼 오디오 믹서 플랫폼 ·
+  RHI 모듈 선택과 같은 모양으로 알고 있다).
+  ⑥ 모든 실행 파일의 기동 — App · Server · 테스트 하네스 · Tools/OnlineLoadBot 이 같은 기반 서브시스템(Logger · CommandLine · CrashHandler …)을 써서 흩어진
+  시작 · 종료 코드를 없앤다.
 
 ## D. 기능 로드맵
 
