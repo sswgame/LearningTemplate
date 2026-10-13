@@ -640,10 +640,34 @@ float4 swSampleIndexWith( uint index, uint samplerId, float2 uv )
 	return swSampleSlotWith( g_SwSlot0, samplerId, uv );
 }
 #else
-/** @brief OpenGL 은 결합 샘플러뿐(ARB_gl_spirv 는 분리 샘플러를 못 쓴다)이라 samplerId 를 무시한다 — 슬롯의 샘플러 상태는 엔진이 정한다. */
+/** @brief 슬롯 텍스처를 샘플러 없이 가장 가까운 텍셀 하나로 읽습니다(점 샘플 · 클램프) — 결합 샘플러가 선형으로 묶인 OpenGL 에서 점 샘플을 얻는 길이다. */
+float4 swSampleSlotPoint( Texture2D slotTexture, float2 uv )
+{
+	float2 size;
+	slotTexture.GetDimensions( size.x, size.y );
+	const int2 texel = clamp( int2( floor( uv * size ) ), int2( 0, 0 ), int2( size ) - int2( 1, 1 ) );
+	return slotTexture.Load( int3( texel, 0 ) );
+}
+/**
+ * @brief OpenGL 은 결합 샘플러뿐(ARB_gl_spirv 는 분리 샘플러를 못 쓴다)이라 슬롯의 샘플러 상태는 엔진이 정한다(t0..t3 는 선형 · 클램프).
+ * @details 점 샘플(`SW_SAMPLER_POINT_CLAMP`)을 달라는 호출은 샘플러를 거치지 않고 텍셀을 직접 읽는다 — 안 그러면 정수 업스케일 뷰(`SW_PASS_FLAG_POINT_UPSCALE`)의
+ *          Present 가 GL 에서만 선형으로 섞는다. 나머지 samplerId 는 슬롯의 샘플러를 그대로 쓴다.
+ */
 float4 swSampleIndexWith( uint index, uint samplerId, float2 uv )
 {
-	return swSampleIndex( index, uv ); // samplerId 는 쓰지 않는다
+	if ( samplerId != SW_SAMPLER_POINT_CLAMP )
+		return swSampleIndex( index, uv );
+	if ( index == kInvalidIndex )
+		return float4( 0, 0, 0, 1 );
+	if ( index == g_ShadowMapIndex || index == g_SourceColorIndex )
+		return swSampleSlotPoint( g_SwSlot0, uv );
+	if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex )
+		return swSampleSlotPoint( g_SwSlot1, uv );
+	if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex )
+		return swSampleSlotPoint( g_SwSlot2, uv );
+	if ( index == g_SceneDepthIndex )
+		return swSampleSlotPoint( g_SwSlot3, uv );
+	return swSampleSlotPoint( g_SwSlot0, uv );
 }
 #endif
 /**

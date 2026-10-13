@@ -1,7 +1,6 @@
 SWCOOK 3
 00366b6bd91c13af taa.hlsl
 03c54d10a1c6143d postoutline.hlsl
-10c88445bf74d155 binding.hlsli
 1795b4868f75033e gerstner.hlsli
 2634f1e7dd1ddc24 postbloom.hlsl
 26a9b881ace73b82 forwardlit.hlsl
@@ -15,6 +14,7 @@ SWCOOK 3
 8687732d87cba8ec fullscreenblit.hlsl
 8e21d601cc7aff7d bindingslots.hlsli
 980c18c4c174d3fb postoutline.hlsli
+9cb83e9d0eaa8f66 binding.hlsli
 9d98e045b0f2f92f meshskin.hlsl
 9ee00d8a59ae021e common.hlsli
 a16db7b2113a3424 colorvision.hlsli
