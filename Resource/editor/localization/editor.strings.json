@@ -2187,6 +2187,90 @@
                 "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
             ]
         },
+        "EditorMultiplayer.ProfilerClear": {
+            "source": "Forget the collected history",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ProfilerKinds": {
+            "source": "Received messages by kind",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ProfilerKindsAllProcesses": {
+            "source": "Add up the message kinds every process received instead of only the selected one",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ProfilerLoss": {
+            "source": "Packet loss (highest connection, %)",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ProfilerNoKinds": {
+            "source": "No messages received yet",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ProfilerNoSession": {
+            "source": "Start a multiplayer session (Net Mode on the toolbar) to see its traffic",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ProfilerReceivedBytes": {
+            "source": "Received bytes per second (last second, all connections)",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ProfilerReceivedPackets": {
+            "source": "Received packets per second",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ProfilerResent": {
+            "source": "Reliable messages resent per second",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ProfilerRtt": {
+            "source": "Round-trip time (highest connection, ms)",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ProfilerSentBytes": {
+            "source": "Sent bytes per second (last second, all connections)",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ProfilerSentPackets": {
+            "source": "Sent packets per second",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ProfilerSource": {
+            "source": "Numbers the process already counts (connection stats, message kinds), asked with net.stats every 0.5 s while this tab is shown",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ProfilerWaiting": {
+            "source": "Waiting for the first net.stats report from this process",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp"
+            ]
+        },
         "EditorMultiplayer.RecordTraces": {
             "source": "Record a timeline per process and merge them into one file (merged.trace.json) on Stop - open it with Load Trace in the Profiler window or with Perfetto",
             "origins": [

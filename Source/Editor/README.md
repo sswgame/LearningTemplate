@@ -190,11 +190,17 @@ Play 는 활성 씬을 스냅샷으로 찍고 월드를 시작합니다. Stop �
 - 회선 조절의 개발 명령 `netplay.command <server|client<N>|clients|all> <명령>`(그 프로세스들의 표준 입력에 한 줄) · `netplay.stats [<초>]`(모두에게 `net.emulation stats` 를 묻고 답을 기다림),
   탐침 `Editor.NetPlayResentMessages` · `Editor.NetPlayEmulationDroppedPackets` · `Editor.NetPlayMeasuredLossPercent` — 시나리오 `netconditions.scenario.xml` 이 손실 30 % 와 `net.traffic` 부하로 확인합니다.
   보고 줄 형식은 Core `NetEmulationReport` 하나를 쓰는 쪽(게임 세션)과 읽는 쪽(세션 · 탐침)이 나눠 씁니다.
+- Profiler 탭(언리얼 Network Insights · 유니티 Netcode Runtime Stats Monitor 의 자리): 고른 대상의 시간축 그래프(보낸 · 받은 바이트 / 초, 보낸 · 받은 패킷 / 초, 재전송 / 초, RTT, 손실)와
+  받은 메시지 종류별 비중 표(All processes 를 켜면 모든 프로세스의 합). 탭이 보이는 동안 0.5 초마다 모든 프로세스에 개발 명령 `net.stats` 를 묻고, 답(Core `NetStatsReport` 한 줄)이
+  올 때마다 프로세스마다 링 버퍼(240 표본, 2 분)에 표본 하나를 넣습니다. 자식은 이미 세는 값(연결 통계, 라우터의 종류별 셈)을 한 줄로 옮길 뿐이라 프레임에 수집이 더해지지 않고,
+  답 줄은 세션이 보관만 하고 Output Log 로 옮기지 않습니다. 누적 값(패킷 · 재전송)을 초당 값으로 바꾸는 계산과 비중은 ImGui 없는 `Common/Workspace/EditorNetProfilerHistory` 입니다.
+  개발 명령 `netplay.profile [<초>]`(탭 없이 그 시간 동안 같은 일을 하며 프레임을 붙잡음), 탐침 `Editor.NetPlayProfilerSamples` · `Editor.NetPlayProfilerPeakSentBytesPerSecond` —
+  시나리오 `netprofiler.scenario.xml` 이 `net.traffic` 부하로 확인합니다. 스냅숏 크기와 오브젝트별 복제 빈도는 키트마다 원천이 달라 아직 없습니다([서버 디버깅 계획](../../docs/plans/ServerDebug.md) S5 남은 것).
 
 탭을 더하는 법(서버 디버깅의 다음 단위 · 확장 모듈):
 
 1. `Panels/Multiplayer/Multiplayer<이름>Tab.cpp` 에 `IMultiplayerTab` 을 상속한 클래스를 두고 `drawTab( const MultiplayerTabContext& )` 을 구현합니다. 문맥은 세션(`_pSession`)과 고른 대상(`_targetProcessIndex`, 세션이 없으면 -1)입니다.
-2. 같은 파일에 `SW_EDITOR_MULTIPLAYER_TAB( MyTab, "my_tab", 300, "My Tab" );` 한 줄을 둡니다. 순서 키가 탭 막대 순서입니다(Session 100 · Conditions 200).
+2. 같은 파일에 `SW_EDITOR_MULTIPLAYER_TAB( MyTab, "my_tab", 400, "My Tab" );` 한 줄을 둡니다. 순서 키가 탭 막대 순서입니다(Session 100 · Conditions 200 · Profiler 300).
 3. 창(`MultiplayerPanel`)은 고치지 않습니다. 등록 세대가 바뀌면 탭 인스턴스를 다시 만드므로 확장 모듈의 탭도 핫 리로드를 따라갑니다(탭 상태는 그때 사라집니다).
 4. 자식 프로세스에 무언가 시킬 때는 `EditorNetPlaySession::sendProcessCommand( 번호, 줄 )` 로 개발 명령을 보내고, 답은 로그 줄로 옵니다. 서버 코드는 에디터를 모릅니다.
 5. 확인은 `-gv_editorRegistryDump=1` 의 `EditorExtensionRegistry|multiplayerTab|<id>` 줄과 `AppSmokeTest.EditorRegistriesKeepTheirOrder` 입니다.
@@ -391,7 +397,7 @@ Tile Map Tool 은 도구 단추 `tileMap.tool.brush` · `tileMap.tool.rect` · `
 | 뷰포트 시각화 | `SW_EDITOR_VISUALIZER( Name, "id", 300, editoricon::kBug, "Lbl", "툴팁", true, &draw );` | 툴바 토글 순서 |
 | 프로퍼티 타입 그리기 | `SW_EDITOR_PROPERTY_DRAWER( Name, "TypeName", Drawer );` | 타입 이름이 정함 |
 | 상태 막대 항목 | `SW_EDITOR_STATUS_BAR_ITEM( Name, "id", 100, &draw );` (`Common/GUI/EditorStatusBar.h`) | 메뉴 막대 오른쪽 상태 영역의 순서 |
-| Multiplayer 창 탭 | `SW_EDITOR_MULTIPLAYER_TAB( MyTab, "my_tab", 300, "My Tab" );` (`Panels/Multiplayer/MultiplayerTab.h`) | 탭 막대 순서 |
+| Multiplayer 창 탭 | `SW_EDITOR_MULTIPLAYER_TAB( MyTab, "my_tab", 400, "My Tab" );` (`Panels/Multiplayer/MultiplayerTab.h`) | 탭 막대 순서 |
 
 1. 순서 키는 지금 100 간격입니다. 사이에 끼우려면 그 사이 값을 씁니다.
 2. 패널 id 는 `windows.ini` 의 가시성 키이고 `-gv_editorOpenPanel` 의 값입니다. 바꾸면 저장된 배치가 그 창을 잊습니다.

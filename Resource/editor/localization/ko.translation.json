@@ -1457,6 +1457,62 @@
             "text": "고른 Net Mode 로 서버와 클라이언트를 시작합니다",
             "sourceHash": "6a5be5838aced527"
         },
+        "EditorMultiplayer.ProfilerClear": {
+            "text": "모은 기록을 지웁니다",
+            "sourceHash": "e9fdfcfffd494bf0"
+        },
+        "EditorMultiplayer.ProfilerKinds": {
+            "text": "받은 메시지 종류별 비중",
+            "sourceHash": "31b3c1f16f666fbb"
+        },
+        "EditorMultiplayer.ProfilerKindsAllProcesses": {
+            "text": "고른 프로세스 대신 모든 프로세스가 받은 메시지 종류를 합쳐 봅니다",
+            "sourceHash": "51810d3676d429ac"
+        },
+        "EditorMultiplayer.ProfilerLoss": {
+            "text": "패킷 손실 (가장 큰 연결, %)",
+            "sourceHash": "98cda942dfc670ee"
+        },
+        "EditorMultiplayer.ProfilerNoKinds": {
+            "text": "아직 받은 메시지가 없습니다",
+            "sourceHash": "d8b7c54f7554458b"
+        },
+        "EditorMultiplayer.ProfilerNoSession": {
+            "text": "멀티플레이 세션을 시작하면(툴바의 Net Mode) 트래픽이 보입니다",
+            "sourceHash": "98335b41a9d883a3"
+        },
+        "EditorMultiplayer.ProfilerReceivedBytes": {
+            "text": "받은 바이트 / 초 (최근 1 초, 모든 연결)",
+            "sourceHash": "90f3f291bab2fdbf"
+        },
+        "EditorMultiplayer.ProfilerReceivedPackets": {
+            "text": "받은 패킷 / 초",
+            "sourceHash": "87737fc2254e7748"
+        },
+        "EditorMultiplayer.ProfilerResent": {
+            "text": "다시 보낸 신뢰 메시지 / 초",
+            "sourceHash": "aaf42fcd05234ae5"
+        },
+        "EditorMultiplayer.ProfilerRtt": {
+            "text": "RTT (가장 큰 연결, ms)",
+            "sourceHash": "ea3b18e0f4b16bed"
+        },
+        "EditorMultiplayer.ProfilerSentBytes": {
+            "text": "보낸 바이트 / 초 (최근 1 초, 모든 연결)",
+            "sourceHash": "cc3e06518e77000a"
+        },
+        "EditorMultiplayer.ProfilerSentPackets": {
+            "text": "보낸 패킷 / 초",
+            "sourceHash": "45f4f36629fc1b23"
+        },
+        "EditorMultiplayer.ProfilerSource": {
+            "text": "프로세스가 이미 세는 값(연결 통계, 메시지 종류)을 이 탭이 보이는 동안 0.5 초마다 net.stats 로 묻습니다",
+            "sourceHash": "8c25b0608f20e385"
+        },
+        "EditorMultiplayer.ProfilerWaiting": {
+            "text": "이 프로세스의 첫 net.stats 보고를 기다리는 중입니다",
+            "sourceHash": "733ab36b5f7365c3"
+        },
         "EditorMultiplayer.RecordTraces": {
             "text": "프로세스마다 타임라인을 기록해 Stop 때 한 파일(merged.trace.json)로 합칩니다 — Profiler 창 Load Trace · Perfetto 로 엽니다",
             "sourceHash": "7f1cef38313676ca"

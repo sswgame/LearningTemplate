@@ -57,6 +57,7 @@ namespace sw
     NetMessageRouter::NetMessageRouter()
         : _listHandler{}
         , _arrKindHandler{}
+        , _arrKindTally{}
         , _inbound{}
         , _malformedCount{ 0 }
     {
@@ -155,6 +156,12 @@ namespace sw
         for ( const NetInboundMessage& message : _inbound._listMessage )
         {
             const uint8* pData = _inbound._bytes.data() + message._offset;
+            if ( message._size > 0 )
+            {
+                NetMessageKindTally& tally = _arrKindTally[pData[0]];
+                ++tally._messageCount;
+                tally._byteCount += static_cast<uint64>( message._size );
+            }
             if ( dispatch( NetMessageContext{ pData, message._size, message._connectionID, message._channel, message._size > 0 ? pData[0] : uint8{ 0 } }, pData, message._size ) !=
                      NetHandleResult::NotMine ||
                  pOutUnhandled == nullptr )

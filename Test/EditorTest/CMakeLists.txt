@@ -34,6 +34,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorNavigationCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorNetConditions.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorNetPlaySession.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorNetProfilerHistory.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorMultiEdit.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorSceneCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorShortcutOverrides.cpp"
