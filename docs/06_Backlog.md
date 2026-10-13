@@ -18,11 +18,11 @@
 
 | 분류 | 뜻 | 항목 수 |
 |---|---|---|
-| **A. 결함 · 정확성** | 재현됐거나 코드로 확인된 열린 결함. 다른 어떤 일보다 먼저 본다. | 4 |
+| **A. 결함 · 정확성** | 재현됐거나 코드로 확인된 열린 결함. 다른 어떤 일보다 먼저 본다. | 5 |
 | **B. 검증 · 측정 대기** | 코드는 들어갔고 돌려 보는 일이 남은 것. 이 PC 에서 못 돌린 환경(리눅스 · 실기)과 사용자 눈이 필요한 것도 여기다. | 14 |
 | **C. 구조 · 성능 · 정리** | 기능이 아니라 고칠 곳을 줄이는 일: 구조 분할 계획, 중복 · 의존 정리, 측정 뒤 정할 성능 후보, 린트 · 문서 정리. | 22 |
 | **D. 기능 로드맵** | 영역별로 묶은 새 기능 · 기능의 남은 조각. 위에 있을수록 먼저 볼 것이다. | 42 |
-| **E. 관찰 중** | 간헐 실패 · 원인 미상. 다시 보이면 그때 원인을 판다. CI 읽는 법은 [검증과 측정](08_Verification.md) 4절. | 8 |
+| **E. 관찰 중** | 간헐 실패 · 원인 미상. 다시 보이면 그때 원인을 판다. CI 읽는 법은 [검증과 측정](08_Verification.md) 4절. | 9 |
 | **F. 결정 대기** | 사용자 결정이 있어야 움직이는 질문. | 1 |
 | **G. 조건부 · 낮은 우선순위** | 조건이 오면 하는 일(쓰는 게임이 생기면, 측정해서 이기면 …)과 이득이 작은 후보. | 12 |
 | **H. 보류 (사용자 결정)** | 사용자가 "나중에"로 정한 것. 풀 때까지 하지 않는다. | 3 |
@@ -48,6 +48,9 @@
   ([Physics README](../Source/Engine/Physics/README.md)). 엔진 조립 지점에서 `MeshAssetFormat::loadFromResource` 로 넣고, `MeshCache` 리로드 때 `PhysicsMeshShapeCache::clear()` 를 부른다. 테스트는 읽기 함수를 직접 넣어서 통과한다.
 - `A-10` **OpenGL 에서 `RenderPassGPUTest.UpscaledViewDrawsUniformZoomBlocks` 가 실패한다** — 4 × 4 칸 4800 개 중 1406 개가 섞였다(DX11 · DX12 · Vulkan 은 0). 정수 업스케일(`e56d3544e`)의 GL 경로.
   GL 의 `swSampleIndexWith` 는 결합 샘플러라 `samplerId`(점 샘플)를 무시한다 — Present 가 원본을 선형으로 읽는지부터 본다. 지금까지는 같은 테스트의 DX12 디바이스 제거로 GL 차례가 오지 않아 가려져 있었다.
+- `A-11` **에디터 체인(모듈 리로드 넷 포함, 125 단계)을 끝내면 종료 누수 보고가 'tag Editor grew by 2946 bytes in 10 blocks' · 'tag Unknown grew by 2448 bytes in 6 blocks' 다**
+  (2026-10-13, DX12 · Vulkan 같은 값). 리로드 없는 실행은 `AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline` 이 0 을 확인한다. 체인 테스트는 종료 코드만 봐서 이 줄을 세지 않는다.
+  자리는 [Engine README](../Source/Engine/README.md) 종료 누수 절의 세부 추적(기준선 직후 `setDetailedTrackingEnabled`, 보고 직전 `getTopCallStacks( LiveBytes )`)으로 찾는다.
 
 ---
 
@@ -530,6 +533,10 @@
 - `E-8` **CI Windows 러너(WARP)의 픽셀 테스트 실패**(`RenderPassGPUTest` 를 host 스위트로 빼서 우회) — 이 PC 에서 `SW_RHI_SOFTWARE_ADAPTER=1`(`-gv_rhiSoftwareAdapter=1`)로
   같은 래스터라이저를 고를 수 있다. 2026-10-06 이 PC 의 WARP(DX12 · DX11)로 `RenderPassGPUTest.*` 71 개 픽셀 테스트이 모두 통과했다(Vulkan 은 CPU 디바이스가
   없어 빠지고 GL 은 하드웨어) — WARP 자체는 컴퓨트 컬링 · 인디렉트를 한다. 러너 쪽(WARP 판 · 창 없는 세션)을 다음 CI 실패의 주석으로 가른다.
+
+- `E-9` **에디터 체인에서 uipreview 의 첫 Quick Open(Ctrl+P → `confirm_unsaved.ui.xml` → Enter)이 가끔 아무것도 열지 않는다**(2026-10-13, AppScenarioTest Vulkan 체인 한 번 —
+  UI Preview 패널이 끝내 열리지 않아 뒤 WaitUntil 이 모두 900 프레임씩 기다렸다). 같은 체인을 직접 돌리면 Vulkan · DX12 모두 통과했고 `toolbaricons → uipreview` 작은 체인은 5/5 통과.
+  다시 나면 `Saved/Automation/chain_editor_<백엔드>.log` 에서 그 단계의 Quick Open 줄(목록 도착 · 연 경로)과 키 입력이 어느 창에 갔는지 본다.
 
 ---
 
