@@ -359,6 +359,8 @@ $env:SW_FUZZ_ITERATIONS=20000; $env:SW_FUZZ_TRACE=1; cd build/Ninja-Debug/Bin; .
   해시가 갈리면 사건마다 적용 전후 해시를 서버와 클라이언트에 찍어 같은 (오브젝트, 번호) 끼리 맞춰 봅니다. 결정성 결함인지 테스트 가정인지 한 번에 갈립니다.
 - **공개 API 는 단언 뒤에 진짜 if 가드를 둡니다**(Release 에서 단언이 사라진다). 그런 경로의 테스트는 Debug 에서 건너뛰고 Release · Shipping 에서 봅니다.
   작업 스레드 안의 `SW_ASSERT_*` 는 그 람다만 끝냅니다. future 테스트에서 `wait()` 를 부르지 마세요(회귀가 정지가 된다). `isValid()` 와 짧은 `waitFor` 를 씁니다.
+- **여러 스레드가 결과를 적는 칸은 고정 배열로 둡니다.** `sw::vector` 의 비 const 첨자는 레이스 탐지기에 컨테이너 쓰기로 잡혀, 스레드마다 다른 칸에 써도 드물게(30 번에 한 번꼴) 동시 쓰기로 크래시합니다.
+  `T arrResult[kThreadCount]{}` 나 atomic 을 씁니다(`RenderPassGPUTest.ConcurrentTextureAcquireCreatesOnce`).
 - **모듈 코드 정리 테스트에 이미지 전체를 범위로 주지 마세요.** Shipping 은 엔진까지 한 exe 입니다. 스텁이나 vtable 하나씩으로 좁힙니다.
 - **큰 `reserve` 는 실패하지 않을 수 있습니다.** 상한 테스트는 할당 바이트로 단언합니다.
 - **할당 0 을 보는 테스트는 여러 번 재서 최솟값을 봅니다**(누계는 프로세스 전체 값). 누수 테스트는 `MemoryProfiler::getLiveAllocationCount` 로, 노드를 동시에 여럿 쥐고 봅니다.
