@@ -75,12 +75,10 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   ② 시스템 호출이 지배적이면 `INetTransport` 일괄 받기 · 보내기 하나의 계약 — 리눅스 `recvmmsg`/`sendmmsg`(+ GSO/GRO), Windows RIO(+ USO/URO, 없으면 `WSARecvMsg`)
   ③ 스레드 하나가 차면 포트 샤딩(두 플랫폼 같은 계약 — 로그인 토큰이 포트를 준다, 리눅스는 `SO_REUSEPORT` 를 선택) + 샤드마다 `NetHost`. 둘 다 `NetUDPBenchTest` 숫자로 전후를 측정한다.
 
-- `B-11` **어노테이션 키 완성은 clangd 만 켜져 있다 — Visual Studio IntelliSense(EDG)는 확인하지 못했다.** `ReflectionMacros.h` 의 조건에
-  `defined( __INTELLISENSE__ )` 를 더하면 VS 도 같은 풀이(`ReflectionIntellisense.h`)를 읽는다. 풀이는 MS 호환 모드의 dependent base 찾기 ·
-  `_Pragma( "clang diagnostic" )` · static_assert 안의 제네릭 람다 지역 클래스에 기댄다. EDG 가 이것을 오류 없이 읽는지 먼저 본다.
-  DTE `ErrorList.ErrorItems` 로는 IntelliSense 오류가 나오지 않아(일부러 넣은 오류도 0건) 자동 확인 길을 찾지 못했다.
-  손 확인 순서: 조건에 `__INTELLISENSE__` 를 더하고 VS 로 저장소 폴더를 연다 → `CameraComponent.h` 의 `PROPERTY( ` 안에서 Ctrl+Space 로 키 목록을 본다 →
-  오류 목록(IntelliSense 만)에서 어노테이션 헤더에 새 오류가 없는지 본다.
+- `B-11` **어노테이션 키 완성을 Visual Studio IntelliSense(EDG)에서 손으로 확인하지 못했다.** `ReflectionMacros.h` 는 `__INTELLISENSE__` 에서도 풀이(`ReflectionIntellisense.h`)를 읽는다.
+  풀이는 MS 호환 모드의 dependent base 찾기 · `_Pragma( "clang diagnostic" )` · static_assert 안의 제네릭 람다 지역 클래스에 기댄다 — EDG 가 오류 없이 읽는지 본다.
+  DTE `ErrorList.ErrorItems` 로는 IntelliSense 오류가 나오지 않아 자동 확인 길이 없다. 손 확인: VS 로 저장소 폴더를 연다 → `CameraComponent.h` 의 `PROPERTY( ` 안에서
+  Ctrl+Space 로 키 목록을 본다 → 오류 목록(IntelliSense 만)에서 어노테이션 헤더에 새 오류가 없는지 본다. 오류가 나면 조건에서 `__INTELLISENSE__` 를 뺀다.
 
 - `B-12` **통합 3(`8fce26aaf..6f3373831`, 81 커밋)의 검증이 반쯤 남았다.**
   - **할 일**: Debug `-L hostgpu`(`ctest -j 1`, 약 16 분), Shipping `-L nogpu` · `-L hostgpu`, 게임 넷(Shooter3D · StarSkirmish · HarvestValley · VoxelCraft)을 `-game=` 으로 실행,
