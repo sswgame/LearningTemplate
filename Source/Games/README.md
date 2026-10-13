@@ -15,6 +15,8 @@ CMake 옵션 `SW_ACTIVE_GAME`(기본 `Empty`)은 `-game=` 이 없을 때의 게�
 `-game=` 이 없으면 빌드의 활성 게임입니다. 이 빌드가 짓지 않은 게임을 고르면 기동이 오류로 섭니다. Shipping 은 구운 게임 하나라 `-game=` 을 보지 않습니다.
 게임 이름은 엔진 TU 에 굽지 않으므로(활성 게임은 `Bin/Modules/ActiveGame.txt`) 활성 게임을 바꿔도 다시 컴파일되는 것은 게임 모듈뿐입니다.
 `Ninja-Debug-Lean` 은 `SW_BUILD_UNUSED_KITS=OFF` 라 활성 게임과 `SW_GAMES` 로 고른 게임이 의존으로 닿는 키트의 합집합만 짓습니다(`-DSW_GAMES=NileCity;Shooter3D`).
+실행할 때는 고른 게임이 닿지 않고 다른 게임 팩만 닿는 키트(와 그에 기대는 에디터 확장)를 올리지 않습니다(`ModuleCatalogLoader`, 로그 `Module <이름> is off — not used by <게임>`).
+아무 게임도 닿지 않는 키트(`SW_BUILD_UNUSED_KITS=ON` 으로 지은 것, 온라인 서버 키트 등)는 그대로 올라옵니다.
 
 ## 머릿속 그림
 

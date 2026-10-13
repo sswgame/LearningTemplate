@@ -24,7 +24,7 @@ namespace sw
             static constexpr string_view kSceneSuffix   = ".scene.xml";
             static constexpr string_view kSurfaceMarker = "NavMeshSurfaceComponent";
 
-            static bool isInOtherGamePack( string_view relativePath, string_view activePackRoot )
+            static bool isInInactiveGamePack( string_view relativePath, string_view activePackRoot )
             {
                 if ( activePackRoot.empty() || StringUtil::startsWith( relativePath, "game/", true ) == false )
                     return false;
@@ -98,7 +98,7 @@ namespace sw
                 continue;
             const string normalizedFile = FileUtil::normalizeSeparators( filePath );
             const string relativePath   = normalizedFile.substr( std::min( normalizedRoot.size() + 1, normalizedFile.size() ) );
-            if ( Internal::isInOtherGamePack( relativePath, activePackRoot ) )
+            if ( Internal::isInInactiveGamePack( relativePath, activePackRoot ) )
                 continue;
             // 표면이 없는 씬은 세우지 않는다 — 글에 컴포넌트 이름이 없으면 넘긴다.
             string text;

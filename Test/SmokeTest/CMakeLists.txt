@@ -28,6 +28,9 @@ if(NOT SW_SHIPPING_BUILD)
 		TestModuleImagePatch.cpp
 		TestModuleCallGuard.cpp
 		TestShadowCopyName.cpp
+		# 매니페스트 로더는 이 빌드의 `Bin/Modules` · `Bin/Games` 를 읽는다(Shipping 은 매니페스트가 없다).
+		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ModuleCatalogLoader.cpp
+		TestModuleCatalogLoader.cpp
 		# 의존 그래프와 지연 언로드 큐는 DLL 없이 본다.
 		TestModuleDependencyGraph.cpp
 		TestDeferredImageUnloadQueue.cpp

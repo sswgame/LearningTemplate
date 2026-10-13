@@ -26,7 +26,7 @@ namespace sw
         struct VertexAnimationCookerInternal
         {
             /** @brief 상대 경로가 활성 게임이 아닌 게임 팩 아래인지입니다(SceneCooker 와 같은 규칙). */
-            static bool isInOtherGamePack( string_view relativePath, string_view activePackRoot )
+            static bool isInInactiveGamePack( string_view relativePath, string_view activePackRoot )
             {
                 if ( activePackRoot.empty() || StringUtil::startsWith( relativePath, "game/", true ) == false )
                     return false;
@@ -159,7 +159,7 @@ namespace sw
                 continue;
             const string normalizedFile = FileUtil::normalizeSeparators( filePath );
             const string relativePath   = normalizedFile.substr( std::min( normalizedRoot.size() + 1, normalizedFile.size() ) );
-            if ( VertexAnimationCookerInternal::isInOtherGamePack( relativePath, activePackRoot ) )
+            if ( VertexAnimationCookerInternal::isInInactiveGamePack( relativePath, activePackRoot ) )
                 continue;
             VertexAnimationCookList list;
             if ( list.loadFromResource( relativePath ) == false )

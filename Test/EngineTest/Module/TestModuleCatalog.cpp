@@ -1,7 +1,7 @@
 /**
  * @file TestModuleCatalog.cpp
  * @brief 모듈 매니페스트 — 읽기 · 거절, 의존 순서, 순환 · 없는 의존 · 꺼진 의존 · 낮은 버전 오류, 프로젝트가 끈 모듈 · 플랫폼 · 구성, 저장소 매니페스트와 빌드 해석의 일치,
- *        게임 팩(`SW_GAMES`)의 매니페스트 바꾸기 · 옮긴 모듈 자리.
+ *        게임 팩(`SW_GAMES`)의 옮긴 모듈 자리.
  */
 #include "pch.h"
 
@@ -234,7 +234,8 @@ SW_TEST_CASE( ModuleCatalogTest, ParsesManifestsStrictly )
 /**
  * @brief [ModuleCatalogTest] 저장소의 매니페스트가 모두 읽히고, 빌드가 해석한 적재 순서(`Bin/Modules/ResolvedModules.txt`)와 런타임 해석이 같다
  * @details CMake(`cmake/Engine/ModuleManifest.cmake`)와 C++(`ModuleCatalog`)가 같은 규칙을 따로 구현한다 — 어긋나면 빌드한 모듈과 App 이 올리는 모듈이 갈린다.
- *          배포본은 매니페스트를 복사하지 않는다(올릴 이미지가 없다).
+ *          배포본은 매니페스트를 복사하지 않는다(올릴 이미지가 없다). 호스트 로더가 고른 게임이 쓰지 않는 키트를 빼는 단계는
+ *          `ModuleCatalogLoaderTest`(SmokeTest)가 본다 — 여기서는 `Bin/Modules` 전체를 같은 규칙으로 해석한 결과만 비교한다.
  */
 SW_TEST_CASE( ModuleCatalogTest, BuildAndRuntimeAgree )
 {
@@ -380,28 +381,6 @@ SW_TEST_CASE( ModuleCatalogTest, EditorExtensionFollowsItsDependencies )
     shipping._configuration = sw::ModuleConfiguration::Shipping;
     SW_ASSERT_TRUE_MSG( catalog.resolve( shipping, resolution, error ), error.c_str() );
     SW_EXPECT_FALSE( resolution.isActive( "GF_EditorPlugIn_Mine" ) ); // 배포본에는 에디터도 확장도 없다
-}
-
-/**
- * @brief [ModuleCatalogTest] 게임을 고르면 프로젝트 매니페스트가 그 게임의 것으로 바뀐다 — 켜짐 표 · 의존이 게임별이다
- * @details `-game=` 으로 함께 지은 게임 팩을 고르면 `ModuleCatalogLoader` 가 `Bin/Modules/SWGame.module.json` 을 그 게임의 것으로 바꾼다.
- *          없는 이름을 바꾸려 하면 오류여야 한다 — 조용히 더하면 같은 이름이 둘이 된다.
- */
-SW_TEST_CASE( ModuleCatalogTest, ReplaceManifestSwapsTheProjectTable )
-{
-    sw::ModuleCatalog catalog = makeCatalog( { makeManifest( "GameFramework", sw::ModuleKind::GameFramework, {} ), makeManifest( "GF_Farming", sw::ModuleKind::Kit, { "GameFramework" } ),
-                                               makeManifest( "SWGame", sw::ModuleKind::Game, { "GameFramework" } ) } );
-    sw::string        error;
-    SW_ASSERT_TRUE_MSG( catalog.replaceManifest( makeManifest( "SWGame", sw::ModuleKind::Game, { "GameFramework", "GF_Farming" } ), error ), error.c_str() );
-    SW_EXPECT_TRUE( catalog.getManifestCount() == 3 );
-
-    sw::ModuleResolveContext context{};
-    sw::ModuleResolution     resolution;
-    SW_ASSERT_TRUE_MSG( catalog.resolve( context, resolution, error ), error.c_str() );
-    SW_EXPECT_STREQ( joinOrder( resolution ).c_str(), "GameFramework GF_Farming SWGame" );
-
-    SW_EXPECT_FALSE( catalog.replaceManifest( makeManifest( "GF_Missing", sw::ModuleKind::Kit, {} ), error ) );
-    SW_EXPECT_TRUE( sw::StringUtil::contains( error, "GF_Missing" ) );
 }
 
 /**

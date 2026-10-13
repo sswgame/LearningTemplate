@@ -9,6 +9,7 @@
 #include "Engine/Audio/AudioStream.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 namespace sw
 {
@@ -168,6 +169,12 @@ namespace sw
             entry._status = AudioClipStatus::Loading;
         }
 
+        // 이 호스트(전용 서버)의 패키지에 없는 종류다 — 디코드 작업을 띄우지 않고 없는 것으로 친다(경고 없음, ResourcePaths::setHostTarget).
+        if ( ResourcePaths::isExcludedForHost( path.view() ) )
+        {
+            storeResult( path, nullptr );
+            return;
+        }
         if ( engine::areEngineServicesBound() == false )
         {
             storeResult( path, decodeClip( path ) );
@@ -193,8 +200,10 @@ namespace sw
     shared_ptr<const AudioClipData> AudioClipCache::decodeClip( const hashed_string& path ) const
     {
         const string_view pathView = path.view();
-        AudioPcm          pcm;
-        bool              bDecoded = false;
+        if ( ResourcePaths::isExcludedForHost( pathView ) )
+            return nullptr; // 이 호스트의 패키지에 없는 종류 — 없는 것으로 친다(위 requestClip 과 같다)
+        AudioPcm pcm;
+        bool     bDecoded = false;
         if ( AudioClipDecoder::isSupportedExtension( pathView ) )
         {
             vector<uint8> bytes;

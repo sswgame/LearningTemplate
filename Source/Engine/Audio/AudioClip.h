@@ -102,7 +102,8 @@ namespace sw
 
         /**
          * @brief 디코드를 요청합니다. 엔진 태스크가 있으면 워커에서, 없으면 지금 디코드합니다. 이미 준비됐거나 디코드 중이면 아무것도 하지 않습니다.
-         * @details 실패한 경로는 다시 요청하면 다시 시도한다.
+         * @details 실패한 경로는 다시 요청하면 다시 시도한다. 이 호스트가 읽지 않는 종류(전용 서버의 오디오, `ResourcePaths::isExcludedForHost`)는
+         *          디코드하지 않고 경고 없이 실패로 둔다 — 서버 패키지에는 오디오가 없다(언리얼 전용 서버가 사운드 웨이브를 쿠킹에서 빼는 것과 같다).
          */
         void requestClip( const hashed_string& path );
 

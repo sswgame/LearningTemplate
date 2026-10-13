@@ -232,11 +232,6 @@ namespace sw
 
         /** @brief 매니페스트를 더합니다. 같은 이름이 이미 있으면 오류입니다. */
         [[nodiscard]] bool addManifest( ModuleManifest manifest, string& outError );
-        /**
-         * @brief 같은 이름의 매니페스트를 바꿉니다. 그 이름이 없으면 오류입니다.
-         * @details 함께 지은 게임 팩을 고르면(`-game=`) `Bin/Modules` 의 활성 게임 `SWGame` 매니페스트 대신 그 게임의 것(`Bin/Games/<게임>/`)을 쓴다 — 켜짐 표가 게임별이다.
-         */
-        [[nodiscard]] bool replaceManifest( ModuleManifest manifest, string& outError );
         /** @brief 폴더의 `*.module.json` 을 모두 읽어 더합니다. 폴더가 없거나 하나라도 틀리면 false 입니다. */
         [[nodiscard]] bool loadDirectory( string_view directoryPath, string& outError );
 

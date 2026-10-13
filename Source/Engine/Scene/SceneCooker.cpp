@@ -80,7 +80,7 @@ namespace sw
             }
 
             /** @brief @p relativePath(리소스 기준)가 활성 게임이 아닌 게임 팩(`game/<다른 게임>/`)에 있으면 true 입니다. 활성 팩을 모르면 false 입니다. */
-            static bool isInOtherGamePack( string_view relativePath, string_view activePackRoot )
+            static bool isInInactiveGamePack( string_view relativePath, string_view activePackRoot )
             {
                 if ( activePackRoot.empty() || StringUtil::startsWith( relativePath, "game/", true ) == false )
                     return false;
@@ -256,7 +256,7 @@ namespace sw
             // 다른 게임의 씬이 그 게임 모듈의 컴포넌트를 쓰면 건너뛴다 — 이 빌드에 없는 모듈이고, 배포본은 활성 게임의 팩만 연다.
             // 엔진 · 공용 타입만 쓰는 씬은 그대로 쿠킹한다(활성 팩의 모르는 타입은 아래에서 실패로 센다).
             const string relativeScene = FileUtil::normalizeSeparators( scenePath ).substr( std::min( normalizedRoot.size() + 1, scenePath.size() ) );
-            if ( SceneCookerInternal::isInOtherGamePack( relativeScene, activePackRoot ) && SceneCookerInternal::usesUnregisteredComponentTypes( doc ) )
+            if ( SceneCookerInternal::isInInactiveGamePack( relativeScene, activePackRoot ) && SceneCookerInternal::usesUnregisteredComponentTypes( doc ) )
             {
                 SW_LOG_INFO( "Scene cook: '%#' uses components of another game's module - skipped", relativeScene );
                 continue;
