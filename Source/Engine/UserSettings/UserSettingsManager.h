@@ -14,7 +14,9 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Module/ModuleUnloadListener.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/UserSettings/UserSettingApplierRegistry.h"
 #include "Engine/UserSettings/UserSettingsEngineAppliers.h"
 #include "Engine/UserSettings/UserSettingsSchema.h"
@@ -99,7 +101,7 @@ namespace sw
      * @details **게임 스레드 전용**이다. 대상 적용은 게임 스레드에서 일어나고, 창과 스왑체인 변경은 화면 요청으로 미뤄 호스트가 프레임 맨 앞에서
      *          처리한다(`consumeDisplayRequest`). 모듈이 등록한 통보와 적용기는 모듈을 언로드하기 전에 제거한다(IModuleUnloadListener).
      */
-    class SW_API UserSettingsManager : public IModuleUnloadListener
+    class SW_API UserSettingsManager : public IModuleUnloadListener, public ISubsystem
     {
     public:
         UserSettingsManager();
@@ -114,6 +116,22 @@ namespace sw
         void initialize( const UserSettingsTargets& targets );
         /** @brief 값, 스키마, 통보, 적용기를 모두 비웁니다. */
         void shutdown();
+
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "UserSettings";
+        /**
+         * @brief 기동 순서의 자리 — 대상(전역 변수 · 명령줄 · 입력 맵 · 오디오 · 로컬라이제이션)을 묶고, 엔진 · 게임 스키마와 기동 전에 더한 스키마(`addStartupSchema`)를
+         *        읽은 뒤 사용자 파일(없으면 하드웨어로 고른 프리셋)을 적용합니다. 화면 값은 창을 만드는 RHI 가 읽는다.
+         * @details 스키마 · 사용자 파일이 틀려도 기동은 멈추지 않는다(오류로 알리고 옵션 메뉴가 비거나 기본값이다) — 화면을 못 띄우는 설정 파일 하나로
+         *          게임이 안 뜨면 플레이어가 고칠 길이 없다.
+         */
+        SubsystemInitResult     initializeSubsystem() override;
+        void                    shutdownSubsystem() override { shutdown(); }
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override;
+        SubsystemHostMask       getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
+        /** @brief `initializeSubsystem` 이 사용자 파일보다 먼저 읽을 스키마를 더합니다(개발 도구의 스키마 — 저장된 값이 버려지지 않게). 기동 전에 부릅니다. */
+        void addStartupSchema( string_view schemaPath ) { _listStartupSchemaPath.push_back( string( schemaPath ) ); }
 
         /** @brief 스키마 XML 을 덧붙이고 검사합니다. 실패하면 덧붙인 것을 버리고 false 입니다. 새 설정은 기본값으로 시작합니다. */
         [[nodiscard]] bool loadSchema( string_view resourcePath );
@@ -284,6 +302,7 @@ namespace sw
         string                     _userFilePath;
         float32                    _confirmSecondsLeft;
         bool                       _bUserFileLoaded;
-        bool                       _bStartupApplied; ///< 첫 `reapplyAll`(기동 적용)이 지났는지 나타냅니다. 그 뒤로 `NeedsRestart` 값은 바뀌지 않습니다.
+        bool                       _bStartupApplied;       ///< 첫 `reapplyAll`(기동 적용)이 지났는지 나타냅니다. 그 뒤로 `NeedsRestart` 값은 바뀌지 않습니다.
+        vector<string>             _listStartupSchemaPath; ///< `addStartupSchema` 가 더한 스키마(기동이 사용자 파일보다 먼저 읽는다)
     };
 } // namespace sw

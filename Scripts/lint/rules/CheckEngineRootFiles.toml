@@ -14,4 +14,6 @@ root_file = [
     "EngineInitSequence.h",
     "EngineServiceCollection.h",
     "EngineServiceCollection.cpp",
+    "HeadlessSubsystem.h",
+    "HeadlessSubsystem.cpp",
 ]

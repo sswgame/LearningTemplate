@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Module/ModuleUnloadListener.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
@@ -55,7 +56,7 @@ namespace sw
      * @details 모듈이 단 콜백(장치 변경, 게임패드 연결, 글자 입력, 조합)과 모듈이 등록한 장치를 가지므로 `IModuleUnloadListener` 를 구현한다.
      *          모듈 이미지를 언로드하기 전에 그 범위의 콜백을 해제하고, 그 범위에 vtable 이 있는 장치를 등록에서 제거한다(`onModuleUnloading`).
      */
-    class SW_API InputManager final : public IModuleUnloadListener
+    class SW_API InputManager final : public IModuleUnloadListener, public ISubsystem
     {
     public:
         using ActiveDeviceChangedDelegate = Delegate<void( InputGlyphStyle )>;
@@ -73,6 +74,13 @@ namespace sw
         // ------------------------------------------------------------------------------
         bool initialize();
         void shutdown();
+
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "Input";
+        /** @brief 기동 순서의 자리 — 모듈이 등록한 장치 · 콜백을 든다(서버는 이벤트가 오지 않는 장치 목록이다). */
+        SubsystemInitResult initializeSubsystem() override { return initialize() ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed; }
+        void                shutdownSubsystem() override { shutdown(); }
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /**
          * @brief 프레임을 시작합니다. 장치를 폴링하고, 락프리 큐를 비워 이벤트를 들어온 순서대로 적용하고, 프레임 엣지를 맞춥니다.

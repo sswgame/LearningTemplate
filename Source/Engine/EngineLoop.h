@@ -14,7 +14,9 @@
 #include "Engine/EngineBootstrap.h"
 #include "Engine/EngineServiceCollection.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
+#include "Engine/HeadlessSubsystem.h"
 #include "Engine/Input/ShellInputActions.h"
+#include "Engine/Module/ModuleTypesSubsystem.h"
 #include "Engine/Profiling/FrameProfileSession.h"
 #include "Engine/Profiling/MemoryBudgetMonitor.h"
 #include "Engine/Renderer/Frame/PresentHookDelegate.h"
@@ -56,13 +58,6 @@ namespace sw
     class UISystem;
 
     // `ViewCameraProviderDelegate`(씬 뷰 카메라 조회)는 그것을 부르는 패킷 빌더 헤더(`RenderPacketBuilder.h`)에 있습니다.
-
-    /**
-     * @brief 호스트가 동적으로 올리는 타입 공급자(GameFramework · 킷 · 게임 모듈)를 올려 그 타입을 등록합니다. 실패하면 false 입니다.
-     * @details 기동 단계 `ModuleTypes` 가 부릅니다. 이것이 돌아온 뒤 엔진은 "모든 타입이 등록됐다" 고 적고(`TypeRegistry::markAllModuleTypesRegistered`),
-     *          그때부터 씬을 읽을 수 있습니다.
-     */
-    SW_DECLARE_DELEGATE( bool, ModuleTypeLoaderDelegate, void );
 
     /** @brief 엔진을 띄우는 호스트의 역할입니다 — 기동 표의 대상(`SubsystemHostMask`) · 오디오 장치 · 허용하는 헤드리스 작업을 가릅니다. */
     enum class EngineHostRole : uint8
@@ -180,7 +175,7 @@ namespace sw
         CommandLineManager* getCommandLineManager() const { return _owned._pCommandLineManager.get(); }
         RHI*                getRHI() const { return _pRHI; }
         RenderThread*       getRenderThread() const { return _pRenderThread; }
-        bool                isHeadless() const { return _bHeadless; }
+        bool                isHeadless() const { return _headlessState._bHeadless; }
         /** @brief 이 엔진을 띄운 호스트의 역할입니다(`initialize` 의 인자). */
         EngineHostRole getHostRole() const { return _hostRole; }
         /**
@@ -190,7 +185,7 @@ namespace sw
          */
         [[nodiscard]] bool renderPortraits( string_view prefabList, string_view outputDirectory, uint32 size );
         /** @brief 헤드리스 작업(셰이더 쿠킹 · 씬 쿠킹)이 실패했는지 반환합니다. 부르는 쪽은 이것을 종료 코드로 내보냅니다. */
-        bool didHeadlessTaskFail() const { return _bHeadlessTaskFailed; }
+        bool didHeadlessTaskFail() const { return _headlessState._bFailed; }
         /** @brief RHI 기동 단계의 결과입니다. 그 단계가 돌지 않았으면(헤드리스 · 앞 단계 실패) `NotStarted` 입니다. App 이 기동 실패의 종료 코드를 고를 때 읽습니다. */
         RHIInitResult getRHIInitResult() const { return _rhiInitResult; }
 
@@ -205,13 +200,6 @@ namespace sw
         void onConfigReloaded( const hashed_string& configTypeName );
         /** @brief 프레임 관찰자에게 넘길 이번 프레임의 문맥(입력 · 렌더 스레드가 쓴 스크린샷 수 · 프레임 시간 · 활성 씬)을 만듭니다. */
         EngineFrameContext makeFrameContext() const;
-        /**
-         * @brief 기동 단계 `Headless` 입니다 — 명령줄의 헤드리스 작업(셰이더 · 씬 쿠킹, 리플렉션 문서, 리타깃 굽기, 립싱크, 임포트 · 로컬라이제이션 준비)을 돌립니다.
-         * @return 작업이 있었으면 `SkipDependents`(창 · RHI · 렌더러를 세우지 않는다)이고 결과는 `isHeadless` · `didHeadlessTaskFail` 입니다. 없으면 `Succeeded` 입니다.
-         */
-        SubsystemInitResult runHeadlessTask();
-        /** @brief 기동 단계 `UserSettings` 입니다 — 스키마 · 사용자 파일을 읽어 대상(오디오 · 입력 · 전역 변수 · 셸 맵 경로)에 넣습니다. 틀린 파일로 기동을 세우지 않습니다. */
-        SubsystemInitResult loadUserSettings();
 
     private:
         /**
@@ -234,10 +222,8 @@ namespace sw
         Delegate<void()>          _onScenesReleased;
         /** @brief 기동 단계 `ModuleTypes` 가 부르는 호스트의 타입 공급자 로더입니다(`setModuleTypeLoader`). */
         ModuleTypeLoaderDelegate _moduleTypeLoader;
-        /** @brief 에디터 Undo/Redo 전용이라 배포본에는 만들지 않습니다(목록의 HostCreated). 서비스 표에 묶은 뒤 소유를 서브시스템 `Scene` 으로 넘긴다. */
+        /** @brief 에디터 Undo/Redo 전용이라 배포본에는 만들지 않습니다(목록의 HostCreated). 씬이 바뀌면 씬 매니저가 비운다. 모든 서브시스템이 소멸한 뒤 놓는다. */
         unique_ptr<CommandStack> _commandStack;
-        /** @brief 씬 매니저의 `onSceneObjectsInvalidated` 에 단 기록 비우기 구독입니다. 씬 단계 종료가 떼어 낸다. */
-        DelegateHandle _sceneObjectsInvalidatedHandle;
         /**
          * @brief 프레임 관찰자 목록입니다(소유하지 않는다). 프레임 앞(입력 전) · 씬 틱 뒤(UI 앞) · 패킷 채우기 · 프레임 뒤(렌더 제출 뒤) · 창 닫힘에서 붙인 순서대로 부르고,
          *        종료 코드를 내면 `requestQuit` 입니다. 텔레메트리(기동 단계 `Telemetry` 가 붙인다)와 App 의 진단 · 자동화도 여기로 붙습니다.
@@ -246,9 +232,9 @@ namespace sw
 
         /** @brief 이 엔진을 띄운 호스트의 역할입니다. 서비스를 만들기 전에 정한다(오디오 장치 · 기동 표 대상). */
         EngineHostRole _hostRole;
-        bool           _bHeadless;
-        bool           _bHeadlessTaskFailed;
-        bool           _bQuitRequested;
+        /** @brief 헤드리스 작업의 결과입니다(서브시스템 `Headless` 가 적는다 · 크래시 보고 프로세스도 헤드리스다). */
+        HeadlessTaskState _headlessState;
+        bool              _bQuitRequested;
         /** @brief RHI 기동 단계의 결과입니다(getRHIInitResult 참고). */
         RHIInitResult _rhiInitResult;
         /** @brief 이번 프레임 씬이 흘린 시간(초)입니다. 씬을 틱하지 않은 프레임은 0 — 디버그 드로우의 지속 시간이 이 값으로 흐릅니다. */

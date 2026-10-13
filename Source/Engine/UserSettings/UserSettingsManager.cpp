@@ -8,11 +8,18 @@
 #include "Core/File/UserDataPath.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
+#include "Engine/Audio/IAudioService.h"
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputMap.h"
+#include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/UserSettings/HardwareProbe.h"
 #include "Engine/UserSettings/UserSettingsFile.h"
+#include "Engine/UserSettings/UserSettingsVariables.h"
 
 namespace sw
 {
@@ -951,5 +958,50 @@ namespace sw
         if ( _userFilePath.empty() )
             return false;
         return saveUserFile( _userFilePath );
+    }
+} // namespace sw
+
+namespace sw
+{
+    SubsystemInitResult UserSettingsManager::initializeSubsystem()
+    {
+        UserSettingsTargets targets;
+        targets._pGlobalVariableManager = &engine::getGlobalVariableManager();
+        targets._pCommandLineManager    = &engine::getCommandLineManager();
+        targets._pInputMap              = &engine::getInputManager().getInputMap();
+        targets._pAudioService          = &engine::getAudioService();
+        targets._pLocalizationManager   = &engine::getLocalizationManager();
+        initialize( targets );
+
+        const GameConfig& gameConfig = GameConfig::getActive();
+        if ( loadSchema( engine::getEngineDefaultAssets()._userSettingsSchema ) && gameConfig._userSettingsSchema.empty() == false )
+        {
+            const string gameSchema = FileUtil::joinPath( FileUtil::trimTrailingSlashes( gameConfig._packRoot ), gameConfig._userSettingsSchema );
+            if ( loadSchema( gameSchema ) == false )
+                SW_LOG_ERROR( "Game user settings schema '%#' is not loaded", gameSchema.c_str() );
+        }
+        for ( const string& schemaPath : _listStartupSchemaPath )
+        {
+            if ( loadSchema( schemaPath ) == false )
+                SW_LOG_ERROR( "User settings schema '%#' is not loaded", schemaPath.c_str() );
+        }
+        for ( const auto& [settingID, value] : gameConfig._mapUserSettingDefault )
+        {
+            (void)setGameDefault( hashed_string( settingID ), value );
+        }
+
+        // 사용자 폴더의 파일이다(세이브 게임과 별개). 자동화는 `-gv_userSettingsFile` 로 사용자 폴더를 건드리지 않는다.
+        const string gameName = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( gameConfig._packRoot ) );
+        setUserFilePath( gv_userSettingsFile.empty() ? makeDefaultUserFilePath( gameName ) : gv_userSettingsFile );
+        if ( loadUserFile( getUserFilePath() ) == false )
+            (void)applyAutoDetectedPreset( HardwareProbe::probe() ); // 맞는 프리셋이 없으면 기본값 그대로다
+        reapplyAll();
+        return SubsystemInitResult::Succeeded;
+    }
+
+    span<const utf8* const> UserSettingsManager::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { IAudioService::kSubsystemName, InputManager::kSubsystemName, AssetManager::kSubsystemName };
+        return kArrDependency;
     }
 } // namespace sw

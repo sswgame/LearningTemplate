@@ -44,12 +44,15 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderRecompiler.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/HeadlessSubsystem.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/EngineDefaultAssetsSubsystem.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/StringTable.h"
+#include "Engine/Module/ModuleImagesSubsystem.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
+#include "Engine/Module/ModuleTypesSubsystem.h"
 #include "Engine/Module/ReflectionSubsystem.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/GameObject/CameraRegistry.h"
@@ -123,11 +126,9 @@ namespace sw
         , _audioService{ nullptr }
         , _frameRenderer{ nullptr }
         , _commandStack{ nullptr }
-        , _sceneObjectsInvalidatedHandle{}
         , _listFrameObserver{}
         , _hostRole{ EngineHostRole::Client }
-        , _bHeadless{ false }
-        , _bHeadlessTaskFailed{ false }
+        , _headlessState{}
         , _bQuitRequested{ false }
         , _rhiInitResult{ RHIInitResult::NotStarted }
         , _sceneDeltaSeconds{ 0.0f }
@@ -169,8 +170,8 @@ namespace sw
         {
             // 다른 헤드리스 작업처럼 작업 직전에 누수 기준선을 잡는다 — 없으면 종료 때 살아 있는 부트스트랩 블록을 모두 누수로 찍는다.
             MemoryProfiler::captureMemoryLeakBaseline();
-            _hostRole  = role;
-            _bHeadless = true;
+            _hostRole                 = role;
+            _headlessState._bHeadless = true;
             return true;
         }
         // 역할은 서비스를 만들기 전에 정한다 — 오디오 장치 · 기동 표 대상 · 읽지 않는 에셋 종류가 이것을 본다. 빌드에 없는 역할로는 서지 않는다.
@@ -240,32 +241,8 @@ namespace sw
                 _owned._pAsyncFileIO->setSubsystemSettings( fileIOSettings );
                 _startup.add( std::move( _owned._pAsyncFileIO ) );
             }
-            {
-                // 종료 쪽 자리 — 씬은 방금 사라졌고 서비스는 아직 살아 있다. 모듈 DLL 을 내리기에 알맞은 유일한 자리다.
-                // Engine 은 거기서 무슨 일이 일어나는지 모른다(App 이 핫 리로드를 건다 — 훅은 기동 뒤에 걸린다).
-                auto releaseModuleImages = [this]()
-                {
-                    if ( _onScenesReleased.isBound() )
-                        _onScenesReleased();
-                };
-                _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kModuleImages, SubsystemInitializeDelegate{},
-                                                              SW_DELEGATE_LAMBDA( SubsystemShutdownDelegate, releaseModuleImages ) ) );
-            }
-            {
-                // 호스트가 동적으로 올리는 타입 공급자(개발 구성의 GameFramework · 킷 · 게임 DLL)를 여기서 올린다. 로더가 없으면 올릴 것이 없다
-                // (배포 구성은 정적 링크라 리플렉션 단계가 이미 다 모았다). 이 뒤로 씬을 읽는다 — 헤드리스 쿠킹이 이 단계에 의존한다.
-                auto loadModuleTypes = [this]()
-                {
-                    if ( _moduleTypeLoader.isBound() && _moduleTypeLoader() == false )
-                    {
-                        SW_LOG_ERROR( "The host could not load its type-providing modules - scenes are not read" );
-                        return SubsystemInitResult::Failed;
-                    }
-                    engine::getTypeRegistry().markAllModuleTypesRegistered();
-                    return SubsystemInitResult::Succeeded;
-                };
-                _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kModuleTypes, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, loadModuleTypes ) ) );
-            }
+            _startup.add( sw::make_unique<ModuleImagesSubsystem>( &_onScenesReleased ) );
+            _startup.add( sw::make_unique<ModuleTypesSubsystem>( &_moduleTypeLoader ) );
             {
                 // 창 · 디바이스. RHI 객체는 여기서 만들어 단계가 소유하고(소멸 자리 = 이 단계의 해제), 단계가 선 뒤부터 `_pRHI` 로 빌려 쓴다.
                 unique_ptr<RHI> rhi;
@@ -347,15 +324,7 @@ namespace sw
                 _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kSceneRHI, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, attachSceneDevice ),
                                                               SW_DELEGATE_LAMBDA( SubsystemShutdownDelegate, detachSceneDevice ) ) );
             }
-            {
-                InputManager* const pInputManager   = _owned._pInputManager.get();
-                auto                initializeInput = [pInputManager]()
-                { return pInputManager->initialize() ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed; };
-                _pInputManager = &_startup
-                                      .add( make_unique<FunctionSubsystem>( EngineFunctionStep::kInput, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeInput ),
-                                                                            SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &InputManager::shutdown, pInputManager ) ) )
-                                      .takeOwnership( std::move( _owned._pInputManager ) );
-            }
+            _pInputManager = &_startup.add( std::move( _owned._pInputManager ) );
             {
                 // 설정 표는 Config 서브시스템이다 — 엔진 · 게임 설정을 읽고 주 표로 알린다(Resource 가 그 뒤에 서서 팩 루트를 안다). 다시 읽기 알림은 엔진 루프가 받는다.
                 unique_ptr<ConfigManager> configManager;
@@ -369,58 +338,17 @@ namespace sw
                 _startup.add( std::move( _owned._pAssetManager ) );
                 _startup.add( sw::make_unique<EngineDefaultAssetsSubsystem>( std::move( _owned._pEngineDefaultAssets ) ) );
             }
-            {
-                IAudioService* const pAudioService   = _audioService.get();
-                auto                 initializeAudio = [pAudioService]()
-                { return pAudioService->initialize() ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed; };
-                _pAudioService = &_startup
-                                      .add( make_unique<FunctionSubsystem>( EngineFunctionStep::kAudio, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeAudio ),
-                                                                            SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &IAudioService::shutdown, pAudioService ) ) )
-                                      .takeOwnership( std::move( _audioService ) );
-            }
-            {
-                // 씬 매니저는 표를 묶기 전에 만들어졌다 — 묶은 표에서 씬 쪽 묶음을 골라 여기서 넘긴다. 씬과 오브젝트 매니저는 이것만 쓴다.
-                // 되돌리기 기록은 나간 씬의 오브젝트를 가리킨다 — 씬이 바뀌면 소유자(여기)가 비운다. 씬 매니저는 기록을 모른다.
-                // 구독은 핸들로 들고 종료가 뗀다(다시 초기화해도 겹치지 않는다). 구독 대상은 Engine 코드라 핫 리로드와 무관하다.
-                SceneManager* const pSceneManager   = _owned._pSceneManager.get();
-                CommandStack* const pCommandStack   = _commandStack.get();
-                auto                initializeScene = [this, pSceneManager, pCommandStack]()
-                {
-                    if ( pSceneManager->initialize( SceneEngineServices::makeFromBoundEngine() ) == false )
-                        return SubsystemInitResult::Failed;
-                    SceneObjectsInvalidatedDelegate& onInvalidated = pSceneManager->onSceneObjectsInvalidated();
-                    if ( _sceneObjectsInvalidatedHandle.isValid() )
-                        onInvalidated.remove( _sceneObjectsInvalidatedHandle );
-                    _sceneObjectsInvalidatedHandle = DelegateHandle{};
-                    if ( pCommandStack != nullptr )
-                        _sceneObjectsInvalidatedHandle = onInvalidated.add( SW_DELEGATE_METHOD( Delegate<void()>, &CommandStack::clear, pCommandStack ) );
-                    return SubsystemInitResult::Succeeded;
-                };
-                // 종료도 알린다(기록을 비운다) — 그 뒤에 구독을 뗀다.
-                auto shutdownScene = [this, pSceneManager]()
-                {
-                    pSceneManager->shutdown();
-                    if ( _sceneObjectsInvalidatedHandle.isValid() )
-                        pSceneManager->onSceneObjectsInvalidated().remove( _sceneObjectsInvalidatedHandle );
-                    _sceneObjectsInvalidatedHandle = DelegateHandle{};
-                };
-                FunctionSubsystem& scene = _startup.add( make_unique<FunctionSubsystem>(
-                    EngineFunctionStep::kScene, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeScene ), SW_DELEGATE_LAMBDA( SubsystemShutdownDelegate, shutdownScene ) ) );
-                // 넘긴 역순으로 소멸한다: 씬 매니저 → 에셋 스트리밍 큐(소멸자가 태스크를 기다린다 — Task 보다 먼저) → 에디터 되돌리기 기록(씬 객체를 가리킨다).
-                if ( _commandStack != nullptr )
-                    (void)scene.takeOwnership( std::move( _commandStack ) );
-                (void)scene.takeOwnership( std::move( _owned._pAssetStreamingQueue ) );
-                _pSceneManager = &scene.takeOwnership( std::move( _owned._pSceneManager ) );
-            }
+            _pAudioService = &_startup.add( std::move( _audioService ) );
+            // 씬 매니저가 서브시스템이다 — 씬이 바뀌면 되돌리기 기록을 비우는 구독도 그것이 건다. 스트리밍 큐의 소멸자는 태스크를 기다리므로 Task 보다 먼저 놓는다.
+            _startup.add( std::move( _owned._pAssetStreamingQueue ) );
+            _pSceneManager = &_startup.add( std::move( _owned._pSceneManager ) );
             // 헤드리스 작업(셰이더 · 씬 쿠킹, 임포트)이면 그에 기대는 단계(창 · RHI · 렌더러)를 건너뛴다 — 결과는 `isHeadless` · `didHeadlessTaskFail`.
-            _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kHeadless, SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &EngineLoop::runHeadlessTask, this ) ) );
-            {
-                UserSettingsManager* const pUserSettings = _owned._pUserSettingsManager.get();
-                _startup
-                    .add( make_unique<FunctionSubsystem>( EngineFunctionStep::kUserSettings, SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &EngineLoop::loadUserSettings, this ),
-                                                          SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &UserSettingsManager::shutdown, pUserSettings ) ) )
-                    .takeOwnership( std::move( _owned._pUserSettingsManager ) );
-            }
+            _startup.add( sw::make_unique<HeadlessSubsystem>( bDedicatedServer, _headlessState ) );
+#if SW_DEV_COMMANDS_ENABLED
+            // 디버그 HUD 설정(개발 도구) — Dev 만 덧붙인다. 사용자 파일보다 먼저 읽어야 저장된 HUD 값이 버려지지 않는다.
+            _owned._pUserSettingsManager->addStartupSchema( DebugHUD::kSettingsSchemaPath );
+#endif
+            _startup.add( std::move( _owned._pUserSettingsManager ) );
             {
                 // 씬 스냅샷 · 패킷 · 업로드 큐는 그리는 쪽의 것이다. 렌더러를 세우지 않는 헤드리스 작업에는 없다.
                 // 백엔드 교체로 다시 설 때(`restartStopped`)는 있는 것을 그대로 쓰고, 디바이스에 매인 설정만 새로 건다.
@@ -550,6 +478,9 @@ namespace sw
             SW_LOG_ERROR( "Engine startup failed: %#", _startup.getError().c_str() );
             return false;
         }
+        // 셸 키(콘솔 여는 키 …)를 플레이어가 바꾼 것도 사용자 설정과 같은 폴더에 둔다. 셸 맵은 처음 돌 때 만들므로 그 전에 경로를 알려 준다.
+        if ( bDedicatedServer == false && _headlessState._bHeadless == false )
+            _shellActions.setUserBindingsPath( ShellInputActions::makeUserBindingsPath( engine::getUserSettingsManager().getUserFilePath() ) );
         // 장면별 프레임 시간 · flush 는 프레임 관찰자로 돈다(씬 틱 뒤 — `TelemetryService::onAfterSceneTick`). 텔레메트리가 섰을 때만 붙인다.
         // 떼는 것은 `shutdown` 이 단계 종료 전에 관찰자 목록을 비우는 것으로 끝난다.
         if ( telemetryService.isInitialized() )
@@ -571,7 +502,7 @@ namespace sw
             SW_LOG_INFO( "Dedicated server: startup steps not run - %#", skipped.c_str() );
         }
         // 헤드리스 작업(셰이더 · 씬 쿠킹, 텍스처 임포트)은 RHI 이후 단계를 건너뛰고 여기서 끝난다. 누수 기준선은 그 작업 직전에 잡았다.
-        if ( _bHeadless )
+        if ( _headlessState._bHeadless )
             return true;
 
         _profileSession.begin();
@@ -588,7 +519,7 @@ namespace sw
     {
 #if SW_PROFILER_TRACE_ENABLED
         // 종료 트레이스(`-gv_traceSaveOnExit`)는 서비스 · 프로파일러가 아직 있을 때 쓴다. 기동이 서비스 표 전에 멈췄으면 쓸 것이 없다.
-        if ( engine::areEngineServicesBound() && _bHeadless == false )
+        if ( engine::areEngineServicesBound() && _headlessState._bHeadless == false )
             ProfilerTraceExport::finishExitCapture( engine::getFrameProfiler(), _hostRole == EngineHostRole::DedicatedServer ? "Server" : "App" );
 #endif
         // 프레임 관찰자는 붙인 쪽이 서비스보다 먼저 내린다(로그 리스너 · 입력을 빌려 쓴다). 남은 것은 더 부르지 않는다.
@@ -602,6 +533,7 @@ namespace sw
         // 단계가 소유한 객체를 초기화 순서의 역순으로 소멸시킨다: UI → 텔레메트리 → 렌더러 쪽 → RHI →
         // 글꼴 → 씬 → 입력 · 오디오 → 태스크 → 셰이더 캐시 → 엔진 데이터 → 리소스 → 설정 → 리플렉션 → 압축. 기동이 어디서 멈췄든 모든 단계를 해제한다.
         _startup.destroyAll();
+        _commandStack.reset();
         _pRHISubsystem  = nullptr;
         _pRHI           = nullptr;
         _pFontService   = nullptr;
@@ -640,204 +572,6 @@ namespace sw
         // 수직 동기화는 다음에 스왑체인을 만들 때(창 크기 변경 · 백엔드 교체) 적용된다.
         if ( _pRHI != nullptr )
             _pRHI->setPreferredVSync( pEngineConfig->_window._bVSync );
-    }
-
-    SubsystemInitResult EngineLoop::runHeadlessTask()
-    {
-        // 전용 서버가 하는 헤드리스 작업은 씬 쿠킹(서버 팩)까지다. 셰이더 쿠킹(DXC) · 원본 임포트(에디터 모듈)는 App 의 일이다 — 조용히 넘기지 않고 실패한다.
-        if ( _hostRole == EngineHostRole::DedicatedServer )
-        {
-            static constexpr CommandLineArgument kArrClientOnlyTask[] = {
-                CommandLineArgument::COOK_SHADERS,
-                CommandLineArgument::IMPORT_TEXTURES,
-                CommandLineArgument::CHECK_TEXTURES,
-                CommandLineArgument::IMPORT_MODELS,
-                CommandLineArgument::CHECK_MODELS,
-                CommandLineArgument::IMPORT_HEIGHTFIELDS,
-                CommandLineArgument::CHECK_HEIGHTFIELDS,
-            };
-            for ( const CommandLineArgument argument : kArrClientOnlyTask )
-            {
-                bool bGiven = false;
-                if ( _owned._pCommandLineManager->getArgument( argument, bGiven ) && bGiven )
-                {
-                    SW_LOG_ERROR( "This headless task runs in the client build (App), not in the dedicated server" );
-                    _bHeadless           = true;
-                    _bHeadlessTaskFailed = true;
-                    return SubsystemInitResult::SkipDependents;
-                }
-            }
-        }
-
-        // 헤드리스 작업은 보통 실행이 누수 기준선을 잡는 자리(`initialize` 끝)에 닿지 않는다. 기준선이 없으면 종료 때 살아 있는 블록을 모두
-        // 누수로 찍으므로, 작업 직전에 같은 기준선을 잡는다 — 작업이 만든 것을 종료까지 놓지 않을 때만 누수로 보인다.
-        bool bCookShaders = false;
-        if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::COOK_SHADERS, bCookShaders ) && bCookShaders )
-        {
-            MemoryProfiler::captureMemoryLeakBaseline();
-            _bHeadless = true;
-            SW_LOG_INFO( "Starting Headless (CookShaders)..." );
-            const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders();
-            _bHeadlessTaskFailed            = summary.isClean() == false;
-            return SubsystemInitResult::SkipDependents;
-        }
-
-        // 리플렉션 문서도 같은 자리다 — 모든 타입 공급자가 등록을 끝낸 뒤(ModuleTypes)라 게임 · 킷의 타입까지 든다.
-        string reflectionDocsDir;
-        if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::WRITE_REFLECTION_DOCS, reflectionDocsDir ) && reflectionDocsDir.empty() == false )
-        {
-            _bHeadless           = true;
-            _bHeadlessTaskFailed = ReflectionDocWriter::writeMarkdown( engine::getTypeRegistry(), reflectionDocsDir ) == 0;
-            return SubsystemInitResult::SkipDependents;
-        }
-
-        // 리타깃 굽기(`--bake-retarget=<프로필>,<원본 클립>,<출력 클립>`) — 클립 · 스켈레톤 · 코덱이 모두 엔진 것이라 여기서 한다.
-        string bakeRetarget;
-        if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::BAKE_RETARGET, bakeRetarget ) && bakeRetarget.empty() == false )
-        {
-            MemoryProfiler::captureMemoryLeakBaseline();
-            _bHeadless = true;
-            const string_splitter      parts( bakeRetarget, { "," } );
-            const vector<string_view>& listArgument = parts.getSplitList();
-            const bool                 bWellFormed  = listArgument.size() == 3;
-            if ( bWellFormed == false )
-                SW_LOG_ERROR( "--bake-retarget expects <profile>,<source clip>,<output clip>" );
-            _bHeadlessTaskFailed = bWellFormed == false ||
-                                   RetargetBakeUtil::bakeClipFile( StringUtil::trim( listArgument[0] ), StringUtil::trim( listArgument[1] ), StringUtil::trim( listArgument[2] ) ) == false;
-            return SubsystemInitResult::SkipDependents;
-        }
-
-        // 씬 쿠킹도 같은 자리다. 엔티티 상태를 바이너리로 구우려면 리플렉션이 필요하고,
-        // 그것은 엔진 안에만 있어서 `CookAssets.py` 가 이쪽으로 넘겨준다.
-        bool bCookScenes = false;
-        if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::COOK_SCENES, bCookScenes ) && bCookScenes )
-        {
-            MemoryProfiler::captureMemoryLeakBaseline();
-            _bHeadless = true;
-            string cookedDir;
-            _owned._pCommandLineManager->getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
-            SW_LOG_INFO( "Starting Headless (CookScenes) -> '%#'...", cookedDir );
-            const string& resourceRoot     = ResourcePaths::getRootFolderPath();
-            uint32        sceneFailedCount = 0;
-            const uint32  sceneCount       = SceneCooker::cookAllScenes( resourceRoot, cookedDir, sceneFailedCount );
-            // 프리팹 · GUID 레지스트리도 여기서 만든다 — 형식과 규칙을 쓰는 곳이 엔진 하나여야 한다.
-            uint32                        prefabFailedCount   = 0;
-            [[maybe_unused]] const uint32 prefabCount         = PrefabCache::cookAllPrefabs( resourceRoot, cookedDir, prefabFailedCount );
-            uint32                        registryFailedCount = 0;
-            [[maybe_unused]] const uint32 registryCount       = AssetDatabase::writeRegistryFiles( resourceRoot, cookedDir, registryFailedCount );
-            // 정점 애니메이션(VAT) — 데이터가 고른 (메시, 클립)을 굽는다. 프레임율은 군중 표의 것이라 런타임 굽기와 같다.
-            AnimationCrowdSettings crowdSettings{};
-            if ( ResourceIO::hasResource( AnimationCrowdSettings::kResourcePath ) )
-                (void)crowdSettings.loadFromResource( AnimationCrowdSettings::kResourcePath ); // 실패는 loadFromResource 가 오류로 남기고 기본 프레임율로 굽는다
-            uint32                        vertexAnimationFailedCount = 0;
-            [[maybe_unused]] const uint32 vertexAnimationCount =
-                VertexAnimationCooker::cookAll( resourceRoot, cookedDir, crowdSettings._vertexAnimationFramesPerSecond, vertexAnimationFailedCount );
-            // 내비메시 — 표면이 놓인 씬마다 런타임 베이크와 같은 함수로 `<씬>.navmesh` 를 쓴다.
-            uint32                        navMeshFailedCount = 0;
-            [[maybe_unused]] const uint32 navMeshCount       = SceneNavigationCooker::cookAll( resourceRoot, cookedDir, navMeshFailedCount );
-            SW_LOG_INFO( "Cooked %# scenes (%# failures), %# prefabs (%# failures), %# asset registries (%# failures), %# vertex animations (%# failures), "
-                         "%# navmeshes (%# failures).",
-                         sceneCount, sceneFailedCount, prefabCount, prefabFailedCount, registryCount, registryFailedCount, vertexAnimationCount,
-                         vertexAnimationFailedCount, navMeshCount, navMeshFailedCount );
-            _bHeadlessTaskFailed = sceneCount == 0 || sceneFailedCount > 0 || prefabFailedCount > 0 || registryFailedCount > 0 ||
-                                   vertexAnimationFailedCount > 0 || navMeshFailedCount > 0;
-            return SubsystemInitResult::SkipDependents;
-        }
-
-        // 립싱크 분석 — 음성마다 비즘 트랙을 곁에 쓴다. 분석 표가 엔진 데이터라 엔진이 한다.
-        bool bImportLipSync = false;
-        if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_LIPSYNC, bImportLipSync ) && bImportLipSync )
-        {
-            MemoryProfiler::captureMemoryLeakBaseline();
-            _bHeadless = true;
-            SW_LOG_INFO( "Starting Headless (ImportLipSync)..." );
-            LipSyncSettings         lipSyncSettings{};
-            uint32                  lipSyncFailedCount = 0;
-            [[maybe_unused]] uint32 lipSyncCount       = 0; // 로그로만 쓴다(Shipping 은 빠진다)
-            if ( lipSyncSettings.loadFromResource( LipSyncSettings::kResourcePath ) )
-                lipSyncCount = LipSyncImport::importAll( ResourcePaths::getRootFolderPath(), lipSyncSettings, lipSyncFailedCount );
-            else
-                ++lipSyncFailedCount;
-            SW_LOG_INFO( "Imported %# viseme tracks (%# failures).", lipSyncCount, lipSyncFailedCount );
-            _bHeadlessTaskFailed = lipSyncFailedCount > 0;
-            return SubsystemInitResult::SkipDependents;
-        }
-
-        // 로컬라이제이션 도구(글 수집 · PO 교환)와 원본 임포트 · 대조(텍스처 · 모델 · 높이장)는 에디터 모듈이 한다(엔진은 에디터를 모른다).
-        // 여기서는 창 · RHI 없이 세우기만 하고, 모듈을 올려 부르는 것은 App 이다(`EditorModuleHost::runLocalizationWithEditorModule` ·
-        // `importAssetsWithEditorModule`). 이 단계는 타입 공급자 모듈 뒤라 글 수집이 리플렉션 프로퍼티(`Meta = "Localizable"`)를 본다.
-        bool   bGatherText = false;
-        bool   bCheckText  = false;
-        bool   bExportPo   = false;
-        string importPoPath;
-        _owned._pCommandLineManager->getArgument( CommandLineArgument::GATHER_TEXT, bGatherText );
-        _owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_TEXT, bCheckText );
-        _owned._pCommandLineManager->getArgument( CommandLineArgument::EXPORT_PO, bExportPo );
-        _owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_PO, importPoPath );
-        const bool bAnyLocalization = bGatherText || bCheckText || bExportPo || importPoPath.empty() == false;
-
-        bool bImportTextures     = false;
-        bool bCheckTextures      = false;
-        bool bImportModels       = false;
-        bool bCheckModels        = false;
-        bool bImportHeightfields = false;
-        bool bCheckHeightfields  = false;
-        _owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_TEXTURES, bImportTextures );
-        _owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_TEXTURES, bCheckTextures );
-        _owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_MODELS, bImportModels );
-        _owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_MODELS, bCheckModels );
-        _owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_HEIGHTFIELDS, bImportHeightfields );
-        _owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_HEIGHTFIELDS, bCheckHeightfields );
-        const bool bAnyImport = bImportTextures || bCheckTextures || bImportModels || bCheckModels || bImportHeightfields || bCheckHeightfields;
-        if ( bAnyLocalization || bAnyImport )
-        {
-            MemoryProfiler::captureMemoryLeakBaseline();
-            _bHeadless = true;
-            SW_LOG_INFO( "Starting Headless (%#)...", bAnyLocalization ? "localization tools" : "asset import/check" );
-            return SubsystemInitResult::SkipDependents;
-        }
-        return SubsystemInitResult::Succeeded;
-    }
-
-    SubsystemInitResult EngineLoop::loadUserSettings()
-    {
-        UserSettingsManager& settings = engine::getUserSettingsManager();
-        UserSettingsTargets  targets;
-        targets._pGlobalVariableManager = _owned._pGlobalVariableManager.get();
-        targets._pCommandLineManager    = _owned._pCommandLineManager.get();
-        targets._pInputMap              = &engine::getInputManager().getInputMap();
-        targets._pAudioService          = _pAudioService;
-        targets._pLocalizationManager   = _owned._pLocalizationManager.get();
-        settings.initialize( targets );
-
-        // 스키마 · 사용자 파일이 틀려도 기동은 멈추지 않는다(오류로 알리고 옵션 메뉴가 비거나 기본값이다). 화면을 못 띄우는 설정 파일 하나로
-        // 게임이 안 뜨면 플레이어가 고칠 길이 없다.
-        const GameConfig& gameConfig = GameConfig::getActive();
-        if ( settings.loadSchema( engine::getEngineDefaultAssets()._userSettingsSchema ) && gameConfig._userSettingsSchema.empty() == false )
-        {
-            const string gameSchema = FileUtil::joinPath( FileUtil::trimTrailingSlashes( gameConfig._packRoot ), gameConfig._userSettingsSchema );
-            if ( settings.loadSchema( gameSchema ) == false )
-                SW_LOG_ERROR( "Game user settings schema '%#' is not loaded", gameSchema.c_str() );
-        }
-#if SW_DEV_COMMANDS_ENABLED
-        // 디버그 HUD 설정(개발 도구) — Dev 만 덧붙인다. 사용자 파일보다 먼저 읽어야 저장된 HUD 값이 버려지지 않는다.
-        if ( settings.loadSchema( DebugHUD::kSettingsSchemaPath ) == false )
-            SW_LOG_ERROR( "Debug HUD user settings schema '%#' is not loaded", DebugHUD::kSettingsSchemaPath );
-#endif
-        for ( const auto& [settingID, value] : gameConfig._mapUserSettingDefault )
-        {
-            (void)settings.setGameDefault( hashed_string( settingID ), value );
-        }
-
-        // 사용자 폴더의 파일이다(세이브 게임과 별개). 자동화는 `-gv_userSettingsFile` 로 사용자 폴더를 건드리지 않는다.
-        const string gameName = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( gameConfig._packRoot ) );
-        settings.setUserFilePath( gv_userSettingsFile.empty() ? UserSettingsManager::makeDefaultUserFilePath( gameName ) : gv_userSettingsFile );
-        // 셸 키(콘솔 여는 키 …)를 플레이어가 바꾼 것도 같은 사용자 폴더에 둔다. 셸 맵은 처음 돌 때 만들므로 그 전에 경로를 알려 준다.
-        _shellActions.setUserBindingsPath( ShellInputActions::makeUserBindingsPath( settings.getUserFilePath() ) );
-        if ( settings.loadUserFile( settings.getUserFilePath() ) == false )
-            (void)settings.applyAutoDetectedPreset( HardwareProbe::probe() ); // 맞는 프리셋이 없으면 기본값 그대로다
-        settings.reapplyAll();
-        return SubsystemInitResult::Succeeded;
     }
 
     bool EngineLoop::renderPortraits( string_view prefabList, string_view outputDirectory, uint32 size )
@@ -953,7 +687,7 @@ namespace sw
         const bool            bSceneMain = views.isSceneViewMain();
         _frameDeltaSeconds               = deltaTime;
 
-        if ( _bHeadless )
+        if ( _headlessState._bHeadless )
             return;
 
         FrameProfiler& profiler = engine::getFrameProfiler();

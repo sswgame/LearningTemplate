@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Task/TaskFuture.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -27,7 +28,7 @@ namespace sw
      * @class SceneManager
      * @brief 로드된 씬들을 관리하고 활성 씬을 추적합니다.
      */
-    class SW_API SceneManager
+    class SW_API SceneManager : public ISubsystem
     {
     public:
         /**
@@ -36,7 +37,7 @@ namespace sw
          */
         SceneManager();
         /** @brief 매니저를 해제합니다. */
-        ~SceneManager();
+        ~SceneManager() override;
 
         /** @brief 복사를 금지합니다. */
         SceneManager( const SceneManager& ) = delete;
@@ -53,6 +54,18 @@ namespace sw
         bool initialize();
         /** @brief 로드된 씬을 내리고 종료합니다. */
         void shutdown();
+
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "Scene";
+        /**
+         * @brief 기동 순서의 자리 — 묶인 표의 씬 쪽 묶음으로 초기화하고, 씬이 바뀌면(오브젝트 무효) 되돌리기 기록(있으면)을 비우게 구독합니다.
+         * @details 컴포넌트가 입력 · 오디오 · 모듈 코드 · 에셋 · 물리 씬을 들고, 스트리밍은 비동기 IO 다. 종료도 기록을 비운 뒤 구독을 뗀다.
+         */
+        SubsystemInitResult     initializeSubsystem() override;
+        void                    shutdownSubsystem() override;
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override;
+        MemoryTag               getSubsystemMemoryTag() const override { return MemoryTag::Scene; }
 
         /** @brief 새 씬을 만들고, 활성 씬이 없으면 활성으로 정합니다. */
         Scene* createScene( string_view name );
@@ -179,6 +192,7 @@ namespace sw
         TaskHandle                      _loadHandle;
         string                          _saveBlockReason;           ///< 비어 있지 않으면 씬 저장을 막는다(`setSaveBlockReason`)
         SceneObjectsInvalidatedDelegate _onSceneObjectsInvalidated; ///< `onSceneObjectsInvalidated`
+        DelegateHandle                  _commandStackClearHandle;   ///< 기동 순서가 건 되돌리기 기록 비우기 구독(`initializeSubsystem`)
         bool                            _bInitialized;
     };
 } // namespace sw

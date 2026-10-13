@@ -3,22 +3,29 @@
 #include "Engine/Scene/SceneManager.h"
 
 #include "Core/Concurrency/mutex.h"
+#include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/GameTimer.h"
 
+#include "Engine/Audio/IAudioService.h"
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Input/InputManager.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
+#include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
+#include "Engine/Utility/CommandStack.h"
 
 namespace sw
 {
@@ -38,6 +45,7 @@ namespace sw
         , _loadHandle{}
         , _saveBlockReason{}
         , _onSceneObjectsInvalidated{}
+        , _commandStackClearHandle{}
         , _bInitialized{ false }
     {
         _asyncLoad->_services = _services;
@@ -672,5 +680,37 @@ namespace sw
     {
         if ( _services._pAssetManager != nullptr )
             _services._pAssetManager->garbageCollectUnusedAssets();
+    }
+} // namespace sw
+
+namespace sw
+{
+    SubsystemInitResult SceneManager::initializeSubsystem()
+    {
+        if ( initialize( SceneEngineServices::makeFromBoundEngine() ) == false )
+            return SubsystemInitResult::Failed;
+        // 되돌리기 기록은 나간 씬의 오브젝트를 가리킨다 — 씬이 바뀌면 비운다. 다시 초기화해도 구독이 겹치지 않는다.
+        if ( _commandStackClearHandle.isValid() )
+            _onSceneObjectsInvalidated.remove( _commandStackClearHandle );
+        _commandStackClearHandle          = DelegateHandle{};
+        CommandStack* const pCommandStack = engine::areEngineServicesBound() ? engine::getBoundEngineServices()._pCommandStack : nullptr;
+        if ( pCommandStack != nullptr )
+            _commandStackClearHandle = _onSceneObjectsInvalidated.add( SW_DELEGATE_METHOD( Delegate<void()>, &CommandStack::clear, pCommandStack ) );
+        return SubsystemInitResult::Succeeded;
+    }
+
+    void SceneManager::shutdownSubsystem()
+    {
+        shutdown(); // 종료도 알린다(기록을 비운다) — 그 뒤에 구독을 뗀다
+        if ( _commandStackClearHandle.isValid() )
+            _onSceneObjectsInvalidated.remove( _commandStackClearHandle );
+        _commandStackClearHandle = DelegateHandle{};
+    }
+
+    span<const utf8* const> SceneManager::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { IAudioService::kSubsystemName, AssetStreamingQueue::kSubsystemName, AsyncFileIO::kSubsystemName, InputManager::kSubsystemName,
+                                                          PhysicsSystem::kSubsystemName, AssetManager::kSubsystemName, TaskManager::kSubsystemName };
+        return kArrDependency;
     }
 } // namespace sw

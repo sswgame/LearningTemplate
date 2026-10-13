@@ -12,6 +12,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Audio/IAudioService.h"
+#include "Engine/Audio/NullAudioBackend.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Config/ConfigManager.h"
@@ -30,7 +31,9 @@
 #include "Engine/Localization/EngineDefaultAssetsSubsystem.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/StringTable.h"
+#include "Engine/Module/ModuleImagesSubsystem.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
+#include "Engine/Module/ModuleTypesSubsystem.h"
 #include "Engine/Module/ReflectionSubsystem.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/GameObject/SceneEngineServices.h"
@@ -66,9 +69,8 @@ namespace
      */
     struct TestHost
     {
-        sw::unique_ptr<sw::IAudioService> _audioService{};                  ///< 만든 뒤 서비스 표에 묶고 소유를 Audio 단계로 넘긴다
-        sw::unique_ptr<sw::CommandStack>  _commandStack{};                  ///< 만든 뒤 서비스 표에 묶고 소유를 Scene 단계로 넘긴다
-        sw::DelegateHandle                _sceneObjectsInvalidatedHandle{}; ///< 씬 매니저에 단 기록 비우기 구독(씬 단계 종료가 뗀다)
+        sw::unique_ptr<sw::IAudioService> _audioService{}; ///< 만든 뒤 서비스 표에 묶고 소유를 Audio 서브시스템으로 넘긴다
+        sw::unique_ptr<sw::CommandStack>  _commandStack{}; ///< 서비스 표에 묶는다 — 씬 매니저가 씬이 바뀌면 비운다. 서브시스템이 모두 소멸한 뒤 놓는다
     };
     /** @brief 하네스의 Reflection — 엔진 타입에 더해 GameFramework · 테스트 타입까지 모은다(테스트 실행 파일과 함께 올라왔다). */
     class TestReflectionSubsystem final : public sw::ReflectionSubsystem
@@ -84,6 +86,13 @@ namespace
             return bindEnumNames();
         }
     };
+    /** @brief 하네스는 오디오 장치를 열지 않는다(초기화 없음) — 종료는 앱과 같다(초기화하지 않았으니 할 일이 없다). */
+    class TestAudioService final : public sw::NullAudioBackend
+    {
+    public:
+        sw::SubsystemInitResult initializeSubsystem() override { return sw::SubsystemInitResult::Succeeded; }
+    };
+
     /** @brief 하네스는 엔진 데이터를 읽지 않는다 — 저장소가 만든 기본값을 소유만 한다. */
     class TestEngineDefaultAssetsSubsystem final : public sw::EngineDefaultAssetsSubsystem
     {
@@ -150,7 +159,7 @@ namespace test
         state._bBootstrapped = true;
 
         state._owned.createAll();
-        host._audioService = sw::IAudioService::create();
+        host._audioService = sw::make_unique<TestAudioService>();
         host._commandStack = sw::make_unique<sw::CommandStack>();
 
         sw::EngineServices services{};
@@ -176,64 +185,17 @@ namespace test
             state._owned._pAsyncFileIO->setSubsystemSettings( fileIOSettings );
             startup.add( std::move( state._owned._pAsyncFileIO ) );
         }
-        // 하네스는 모듈 DLL 을 올리고 내리지 않는다 — 자리만 둔다(다른 단계가 이 이름에 의존한다).
-        startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kModuleImages ) );
-        {
-            // 타입 공급자는 리플렉션 단계가 이미 모았다. 앱과 같이 이 단계가 끝나야 씬을 읽는다(`SceneManager::requestLoadFuture` · `SceneCooker::cookAllScenes`).
-            auto markModuleTypes = []()
-            {
-                sw::engine::getTypeRegistry().markAllModuleTypesRegistered();
-                return sw::SubsystemInitResult::Succeeded;
-            };
-            startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kModuleTypes, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, markModuleTypes ) ) );
-        }
-        {
-            sw::InputManager* const pInputManager   = state._owned._pInputManager.get();
-            auto                    initializeInput = [pInputManager]()
-            { return pInputManager->initialize() ? sw::SubsystemInitResult::Succeeded : sw::SubsystemInitResult::Failed; };
-            startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kInput, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeInput ),
-                                                                 SW_DELEGATE_METHOD( sw::SubsystemShutdownDelegate, &sw::InputManager::shutdown, pInputManager ) ) )
-                .takeOwnership( std::move( state._owned._pInputManager ) );
-        }
+        // 하네스는 모듈 DLL 을 올리고 내리지 않는다(훅 없이 자리만). 타입 공급자는 리플렉션 단계가 이미 모았다 — 로더 없이 등록을 끝낸 것으로 적는다.
+        startup.add( sw::make_unique<sw::ModuleImagesSubsystem>() );
+        startup.add( sw::make_unique<sw::ModuleTypesSubsystem>() );
+        startup.add( std::move( state._owned._pInputManager ) );
         // 설정 · 리소스는 앱과 같은 서브시스템이다(설정이 먼저 — `loadAssetRegistries` 가 게임 레지스트리 경로를 GameConfig 로 만든다).
         startup.add( sw::make_unique<sw::ConfigManager>() );
         startup.add( std::move( state._owned._pAssetManager ) );
         startup.add( sw::make_unique<TestEngineDefaultAssetsSubsystem>( std::move( state._owned._pEngineDefaultAssets ) ) );
-        {
-            // 하네스는 오디오 장치를 열지 않는다(초기화 없음) — 종료만 앱과 같이 부른다.
-            sw::IAudioService* const pAudioService = host._audioService.get();
-            startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kAudio, sw::SubsystemInitializeDelegate{},
-                                                                 SW_DELEGATE_METHOD( sw::SubsystemShutdownDelegate, &sw::IAudioService::shutdown, pAudioService ) ) )
-                .takeOwnership( std::move( host._audioService ) );
-        }
-        {
-            // 앱과 같다 — 표를 묶은 뒤 씬 쪽 묶음을 넘기고(씬 매니저는 묶기 전에 만들어졌다), 씬이 바뀌면 되돌리기 기록을 소유자가 비운다.
-            sw::SceneManager* const pSceneManager   = state._owned._pSceneManager.get();
-            sw::CommandStack* const pCommandStack   = host._commandStack.get();
-            auto                    initializeScene = [&host, pSceneManager, pCommandStack]()
-            {
-                if ( pSceneManager->initialize( sw::SceneEngineServices::makeFromBoundEngine() ) == false )
-                    return sw::SubsystemInitResult::Failed;
-                sw::SceneObjectsInvalidatedDelegate& onInvalidated = pSceneManager->onSceneObjectsInvalidated();
-                if ( host._sceneObjectsInvalidatedHandle.isValid() )
-                    onInvalidated.remove( host._sceneObjectsInvalidatedHandle );
-                host._sceneObjectsInvalidatedHandle = onInvalidated.add( SW_DELEGATE_METHOD( sw::Delegate<void()>, &sw::CommandStack::clear, pCommandStack ) );
-                return sw::SubsystemInitResult::Succeeded;
-            };
-            auto shutdownScene = [&host, pSceneManager]()
-            {
-                pSceneManager->shutdown();
-                if ( host._sceneObjectsInvalidatedHandle.isValid() )
-                    pSceneManager->onSceneObjectsInvalidated().remove( host._sceneObjectsInvalidatedHandle );
-                host._sceneObjectsInvalidatedHandle = sw::DelegateHandle{};
-            };
-            sw::FunctionSubsystem& scene = startup.add( sw::make_unique<sw::FunctionSubsystem>(
-                sw::EngineFunctionStep::kScene, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeScene ), SW_DELEGATE_LAMBDA( sw::SubsystemShutdownDelegate, shutdownScene ) ) );
-            // 넘긴 역순으로 소멸한다: 씬 매니저 → 에셋 스트리밍 큐(소멸자가 태스크를 기다린다 — Task 보다 먼저) → 되돌리기 기록.
-            (void)scene.takeOwnership( std::move( host._commandStack ) );
-            (void)scene.takeOwnership( std::move( state._owned._pAssetStreamingQueue ) );
-            (void)scene.takeOwnership( std::move( state._owned._pSceneManager ) );
-        }
+        startup.add( std::move( host._audioService ) );
+        startup.add( std::move( state._owned._pAssetStreamingQueue ) );
+        startup.add( std::move( state._owned._pSceneManager ) );
         startup.add( std::move( state._owned._pShaderCache ) );
         startup.add( std::move( state._owned._pPhysicsSystem ) );
         if ( startup.initializeAll( sw::EngineSubsystemHost::kClient ) )
@@ -258,6 +220,7 @@ namespace test
             std::fprintf( stdout, "[TestHost] stopping: destroying objects\n" );
             std::fflush( stdout );
             _pState->_startup.destroyAll();
+            _pState->_host._commandStack.reset(); // 씬 매니저가 구독을 뗀 뒤 — 앱과 같다
             std::fprintf( stdout, "[TestHost] stopping: bootstrap\n" );
             std::fflush( stdout );
             _pState->_bootstrap.shutdown();

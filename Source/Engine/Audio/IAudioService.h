@@ -14,6 +14,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Audio/AudioTypes.h"
 
@@ -38,7 +39,7 @@ namespace sw
      * @class IAudioService
      * @brief 오디오 재생과 관리를 위한 서비스입니다. 백엔드(XAudio2, Null)는 출력 장치를 열고 닫는 일만 재정의합니다.
      */
-    class SW_API IAudioService
+    class SW_API IAudioService : public ISubsystem
     {
     public:
         /** @brief 엔진의 기본 믹서 그래프 경로입니다. 없으면 코드의 기본 그래프(`AudioMixerDesc::makeDefault`)를 씁니다. */
@@ -50,7 +51,7 @@ namespace sw
         static unique_ptr<IAudioService> createNull();
 
         IAudioService();
-        virtual ~IAudioService();
+        ~IAudioService() override;
 
         IAudioService( const IAudioService& )            = delete;
         IAudioService& operator=( const IAudioService& ) = delete;
@@ -61,6 +62,15 @@ namespace sw
         bool initialize();
         /** @brief 출력 장치를 닫고 엔진을 내립니다. */
         void shutdown();
+
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "Audio";
+        /** @brief 기동 순서의 자리 — 장치를 열지 못해도 오프라인으로 선다. 음성 스트리밍이 태스크를 쓴다(서버는 장치 없는 NullAudioBackend). */
+        SubsystemInitResult     initializeSubsystem() override { return initialize() ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed; }
+        void                    shutdownSubsystem() override { shutdown(); }
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override;
+        MemoryTag               getSubsystemMemoryTag() const override { return MemoryTag::Audio; }
         /** @brief 초기화가 끝났는지 반환합니다. */
         bool isInitialized() const { return _bInitialized; }
         /** @brief 출력 장치가 엔진을 당기고 있는지입니다. false 면 `update` 가 렌더합니다. */

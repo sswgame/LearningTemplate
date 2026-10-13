@@ -299,7 +299,7 @@ namespace sw
 
     span<const utf8* const> TelemetryService::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { "UserSettings" };
+        static constexpr const utf8* kArrDependency[] = { UserSettingsManager::kSubsystemName };
         return kArrDependency;
     }
 

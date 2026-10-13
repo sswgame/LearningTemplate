@@ -7,19 +7,27 @@
 #include "Core/Subsystem/SubsystemCollection.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Audio/IAudioService.h"
 #include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/EngineInitSequence.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+#include "Engine/HeadlessSubsystem.h"
+#include "Engine/Input/InputManager.h"
 #include "Engine/Localization/EngineDefaultAssetsSubsystem.h"
+#include "Engine/Module/ModuleImagesSubsystem.h"
+#include "Engine/Module/ModuleTypesSubsystem.h"
 #include "Engine/Module/ReflectionSubsystem.h"
 #include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Resource/AssetStreamingQueue.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/UI/UISystem.h"
+#include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -116,6 +124,15 @@ namespace
         listSubsystem.push_back( make_unique<ConfigManager>() );
         listSubsystem.push_back( make_unique<AssetManager>() );
         listSubsystem.push_back( sw::make_unique<EngineDefaultAssetsSubsystem>( sw::make_unique<EngineDefaultAssets>() ) );
+        listSubsystem.push_back( sw::make_unique<ModuleImagesSubsystem>() );
+        listSubsystem.push_back( sw::make_unique<ModuleTypesSubsystem>() );
+        listSubsystem.push_back( IAudioService::createNull() );
+        listSubsystem.push_back( make_unique<InputManager>() );
+        listSubsystem.push_back( make_unique<AssetStreamingQueue>() );
+        listSubsystem.push_back( make_unique<SceneManager>() );
+        listSubsystem.push_back( make_unique<UserSettingsManager>() );
+        static HeadlessTaskState s_headlessState; // 선언만 본다 — 본문은 돌지 않는다
+        listSubsystem.push_back( sw::make_unique<HeadlessSubsystem>( false, s_headlessState ) );
         listSubsystem.push_back( make_unique<ShaderCache>() );
         listSubsystem.push_back( make_unique<PhysicsSystem>() );
         listSubsystem.push_back( make_unique<FontService>() );

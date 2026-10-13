@@ -35,6 +35,7 @@
 #include "Engine/UI/Style/UIStyleSet.h"
 #include "Engine/UI/Style/UIStyleSheet.h"
 #include "Engine/UI/World/WidgetComponent.h"
+#include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 #include "Engine/Utility/GameTimeScale.h"
 
@@ -171,7 +172,7 @@ namespace sw
 
     span<const utf8* const> UISystem::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { FontService::kSubsystemName, "Input", "UserSettings" };
+        static constexpr const utf8* kArrDependency[] = { FontService::kSubsystemName, InputManager::kSubsystemName, UserSettingsManager::kSubsystemName };
         return kArrDependency;
     }
 

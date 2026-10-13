@@ -96,7 +96,7 @@ namespace sw
         SubsystemInitResult initializeSubsystem() override;
         void                shutdownSubsystem() override { shutdown(); }
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
-        /** @brief 문화권 표(EngineDefaultAssets)를 읽은 뒤에 서고, 쿠킹(Headless)이면 열지 않는다. */
+        /** @brief 문화권 표(EngineDefaultAssets)를 읽은 뒤에 선다. 쿠킹(Headless)이면 열지 않는데, 그 순서는 높은 층인 `HeadlessSubsystem` 이 역방향으로 적는다. */
         span<const utf8* const> getSubsystemDependencies() const override;
         SubsystemHostMask       getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
 

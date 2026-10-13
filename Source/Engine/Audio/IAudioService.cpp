@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioMixerDesc.h"
@@ -333,5 +334,14 @@ namespace sw
     {
         _bMuted = bMute;
         _pEngine->setBusMuted( hashed_string( AudioBusNames::kMaster ), bMute );
+    }
+} // namespace sw
+
+namespace sw
+{
+    span<const utf8* const> IAudioService::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { TaskManager::kSubsystemName };
+        return kArrDependency;
     }
 } // namespace sw

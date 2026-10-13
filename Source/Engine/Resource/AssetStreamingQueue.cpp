@@ -2,6 +2,7 @@
 
 #include "Engine/Resource/AssetStreamingQueue.h"
 
+#include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Task/TaskManager.h"
@@ -491,5 +492,20 @@ namespace sw
             if ( item._dataCallback.isBound() )
                 item._dataCallback( item._path, item._bSuccess, item._bytes );
         }
+    }
+} // namespace sw
+
+namespace sw
+{
+    SubsystemInitResult AssetStreamingQueue::initializeSubsystem()
+    {
+        initialize();
+        return SubsystemInitResult::Succeeded;
+    }
+
+    span<const utf8* const> AssetStreamingQueue::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { AsyncFileIO::kSubsystemName, TaskManager::kSubsystemName };
+        return kArrDependency;
     }
 } // namespace sw

@@ -126,7 +126,7 @@ namespace sw
 
     span<const utf8* const> FontService::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { EngineDefaultAssetsSubsystem::kSubsystemName, "Headless", AssetManager::kSubsystemName };
+        static constexpr const utf8* kArrDependency[] = { EngineDefaultAssetsSubsystem::kSubsystemName, AssetManager::kSubsystemName };
         return kArrDependency;
     }
 
