@@ -20,7 +20,7 @@
 |---|---|---|
 | **A. 결함 · 정확성** | 재현됐거나 코드로 확인된 열린 결함. 다른 어떤 일보다 먼저 본다. | 0 |
 | **B. 검증 · 측정 대기** | 코드는 들어갔고 돌려 보는 일이 남은 것. 이 PC 에서 못 돌린 환경(리눅스 · 실기)과 사용자 눈이 필요한 것도 여기다. | 12 |
-| **C. 구조 · 성능 · 정리** | 기능이 아니라 고칠 곳을 줄이는 일: 구조 분할 계획, 중복 · 의존 정리, 측정 뒤 정할 성능 후보, 린트 · 문서 정리. | 22 |
+| **C. 구조 · 성능 · 정리** | 기능이 아니라 고칠 곳을 줄이는 일: 구조 분할 계획, 중복 · 의존 정리, 측정 뒤 정할 성능 후보, 린트 · 문서 정리. | 23 |
 | **D. 기능 로드맵** | 영역별로 묶은 새 기능 · 기능의 남은 조각. 위에 있을수록 먼저 볼 것이다. | 42 |
 | **E. 관찰 중** | 간헐 실패 · 원인 미상. 다시 보이면 그때 원인을 판다. CI 읽는 법은 [검증과 측정](08_Verification.md) 4절. | 9 |
 | **F. 결정 대기** | 사용자 결정이 있어야 움직이는 질문. | 1 |
@@ -214,6 +214,18 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   ③ 그림자 PassCB 슬롯 재사용 — GPU 가 나중에 읽는 순서 문제, ④ `TaskHandle` · `TaskStageHandle` 이 `TaskManager` 소멸 뒤 해제될 때 노드를 풀로 돌려주는 수명 순서. (컨테이너 레이스 `ConcurrentTextureAcquireCreatesOnce` 만 탐지기가 정확히 잡았다.)
   후보: (a) `thread::join` · 이벤트 대기도 대기 그래프(잠금 관찰자 인터페이스)에 넣고, 정적 소멸자 · `DllMain` 안의 `join` 을 막는 린트 · 단언을 둔다, (b) `EditorBackgroundTask` 처럼 '대기 여부 + 결과' 를 따로 읽게 하는 API 는 한 번에 돌려주는 형태로 바꿔 틀릴 수 없게 한다,
   (c) 풀을 가리키는 핸들에 세대 · 생존 확인을 둔다. 탐지기가 과거에 몇 건을 잡았는지 이력은 확인하지 않았다. 설계: 새 전용 함수를 늘리지 말고 기존 관찰자 · API 모양을 고친다.
+- `C-25` **게임 8개를 빌드 한 번에 짓는다**(2026-10-13, 사용자 확정). 지금은 `SW_ACTIVE_GAME` 하나만 `add_subdirectory` 하고 타깃 이름이 항상 `SWGame` 이라, 게임을 확인하려면 프리셋마다 빌드 폴더를 따로 두고
+  엔진 · 프레임워크 · 키트를 처음부터 다시 컴파일한다(게임 하나 약 150초 × 8). 설계: ① 모듈 이름 `SWGame` 은 엔진과의 계약이라 그대로, ② CMake 타깃은 `SWGame_<게임>` 으로 나누고 출력 DLL 이름만 `SWGame`,
+  출력 폴더는 `Bin/Games/<게임>/`, ③ 한 빌드에서 게임 전부를 짓고 엔진 · 프레임워크 · 키트는 한 번만 컴파일, ④ Dev 는 실행할 때 `-game=<이름>` 으로 그 폴더의 DLL 을 로드(언리얼과 같다),
+  ⑤ Shipping 은 게임 하나를 정적으로 링크하는 지금 구조를 유지. 걸림돌: `SW_ACTIVE_GAME` 이 게임 프리셋 · 서버 설정 · Shipping 구움(`GenerateConfigConstants.cmake`)을 정하고,
+  `SWGame` 이름이 83 파일 304곳(모듈 호스트 · 매니페스트 · 라이브 리로드 · SmokeTest 129곳)에 나온다.
+  조사로 알아낸 걸림돌(2026-10-13): ① `ModuleManifest.cmake` 가 `SW_ACTIVE_GAME` 이 아닌 게임의 `SWGame.module.json` 을 읽지 않고, 그 매니페스트의 `_listModuleOverride` 가 켜질 키트를 정한다 —
+  게임마다 켜진 키트가 달라 `Bin/Modules/ResolvedModules.txt` 도 게임마다 다르다(8게임을 한 빌드로 짓는다면 키트는 합집합, 켜짐 표는 게임별로 둔다),
+  ② `ConfigConstants.h` 가 `kFileRuntimeGameConfig`(`Config/Game/<게임>.json`)와 `kTargetGameModule` 을 굽는다 — 이 헤더를 읽는 TU 가 게임마다 다시 컴파일되므로 실행 시점 값으로 옮기는 것이 엔진 공유의 전제,
+  ③ `Source/Engine` · `GameFramework` 22 파일이 `SW_ACTIVE_GAME` 관련 이름을 쓴다(`Scene.cpp` · `FrameRenderer.cpp` · `GameConfig.h` · `ServerConfig.h` …), ④ 게임마다 `pch.h` · `SWGame.module.json` · `CMakeLists.txt` 가 한 벌씩 있고 타깃 이름은 `sw_addGameModule(SWGame)` 인자,
+  ⑤ 검증된 것: 현재 구조의 게임 프리셋 8개 Debug 빌드는 모두 경고 0 · 오류 0(각 약 155초).
+  함께 잴 것: **sccache 가 거의 쓰이지 않는다** — 요청 19,477건 중 캐시 가능 96건, 나머지는 PCH(`/Fp` 19,202 · `/Yc` 179)라 캐시 불가(`Tools/Sccache/sccache.exe --show-stats`).
+  게임 8개를 한 빌드로 모은 뒤, `SW_ENABLE_PCH=OFF` + sccache(빈 캐시 · 폴더를 지우고 다시 지은 캐시 적중) 대 PCH ON 의 전체 빌드 시간과 한 파일 고쳐 다시 짓는 시간을 Release 가 아니어도 같은 조건으로 비교한다.
 
 ## D. 기능 로드맵
 
