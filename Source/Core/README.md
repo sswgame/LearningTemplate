@@ -75,6 +75,7 @@ SW_LOG_INFO( "move speed %#", gv_tutorialMoveSpeed );
 ```
 
 `SW_LOG_CALLER` 는 이 파일의 로그 줄에 붙을 이름을 정합니다. `%#` 은 타입을 가리지 않는 자리표입니다.
+모든 모듈의 Caller 는 고정 크기 표 하나(`Logger.cpp` 의 `kMaxCallerEntries`)에 들어갑니다. 넘치면 그 파일의 줄은 Caller 없이 분류되어 Output Log 의 Caller 필터가 못 가리고, 첫 로그 줄에 오류가 한 번 남습니다.
 `SW_LOG_INFO` 는 Shipping에서 사라지고, `SW_LOG_WARNING` 과 `SW_LOG_ERROR` 는 남습니다. 로그 문자열은 영어로 씁니다.
 
 ### 3단계 — 실행 인자로 값 바꾸기

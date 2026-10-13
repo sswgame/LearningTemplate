@@ -361,7 +361,11 @@ Godot처럼 "노드는 RID만 안다"로 바꾸면 모든 컴포넌트에 해석
 번역 문자열 저장소(`StringTable::releaseTextStorage`), 활성 2D 렌더 설정(`Render2DSettings::releaseActive` — 다음 `getActive` 가 다시 읽는다)과 레지스트리 용량(`RegistrationList::shrinkToFit` — 개발 명령 · 자동화 단계 · 탐침 · 모듈 언로드 리스너)은 `EngineBootstrap::shutdown` 이,
 창 제목 사본은 App 이 엔진을 내리기 전에 놓습니다. 레지스트리 저장소는 넣는 쪽과 관계없이 `EngineMisc` 로 세어, 다시 잡아도 다른 태그로 옮겨 가지 않습니다.
 Debug STL 은 문자열 객체마다 16 B 컨테이너 프록시를 잡습니다. 함수 안 `static const string` 은 처음 부른 자리의 태그로 프로세스 끝까지 남으므로 이미지 적재 때 서는 정적 멤버로 둡니다.
-스레드 지역 컨테이너도 스레드가 종료 보고보다 오래 살므로 인라인 버퍼(`small_vector`)로 둡니다.
+스레드 지역 컨테이너도 스레드가 종료 보고보다 오래 살므로 인라인 버퍼(`small_vector`)로 두거나, 종료 때 빈 객체를 이동 대입해 놓습니다(`UIPaintPass::releaseScratch`).
+내리지 않는 공유 모듈(GameFramework)의 함수 안 정적 표는 처음 부른 쪽(에디터 창 · 컴포넌트)이 기준선 뒤에 세웁니다. 그런 표는 모듈의 타입 등록 단계(`ModuleTypes`, 기준선 전)에
+`TypeRegistrar` 로 미리 세웁니다(`GimmickNodeRegistry::getDefault`). 정적 초기화로 세우면 안 됩니다 — `hashed_string` 은 이름 풀이 선 뒤에만 만들 수 있고, 정적 링크 · 테스트 실행 파일은 `main` 앞에서 돕니다.
+묻기만 하는 코드는 `TagID::request` 를 부르지 않습니다 — 프로세스 태그 표가 자랍니다. 비교는 `TagID{ TagID::computeID( … ), 이름 }` 으로 합니다.
+App 이 엔진 뒤에 내리는 객체(`LiveReloadManager`)도 엔진 종료 전에 비울 때 빈 객체를 대입합니다.
 진단은 `captureTagBaseline` 직후 `setDetailedTrackingEnabled( true )`, 보고 직전 `getTopCallStacks( LiveBytes )` 를 stderr 나 파일로 찍고, 기록을 의심 태그로만 거르면 빨리 좁혀집니다.
 
 **모듈 인스턴스를 해제할 때는 타입을 정리한 뒤에 서비스를 끊습니다.** 에디터와 게임 모두 같은 순서입니다(`ModuleHostInternal::destroyInstance`).
