@@ -18,7 +18,7 @@
 
 | 분류 | 뜻 | 항목 수 |
 |---|---|---|
-| **A. 결함 · 정확성** | 재현됐거나 코드로 확인된 열린 결함. 다른 어떤 일보다 먼저 본다. | 5 |
+| **A. 결함 · 정확성** | 재현됐거나 코드로 확인된 열린 결함. 다른 어떤 일보다 먼저 본다. | 4 |
 | **B. 검증 · 측정 대기** | 코드는 들어갔고 돌려 보는 일이 남은 것. 이 PC 에서 못 돌린 환경(리눅스 · 실기)과 사용자 눈이 필요한 것도 여기다. | 14 |
 | **C. 구조 · 성능 · 정리** | 기능이 아니라 고칠 곳을 줄이는 일: 구조 분할 계획, 중복 · 의존 정리, 측정 뒤 정할 성능 후보, 린트 · 문서 정리. | 21 |
 | **D. 기능 로드맵** | 영역별로 묶은 새 기능 · 기능의 남은 조각. 위에 있을수록 먼저 볼 것이다. | 42 |
@@ -46,7 +46,6 @@
 
 - `A-7` **`_meshPath` 로 적은 물리 셰이프가 게임에서는 늘 오류다** — `PhysicsMeshShapeCache::setLoadFunction` 을 부르는 곳이 없다. 물리는 그래픽스보다 아래 티어라 `.mesh` 읽기 함수를 위층이 넣어야 한다
   ([Physics README](../Source/Engine/Physics/README.md)). 엔진 조립 지점에서 `MeshAssetFormat::loadFromResource` 로 넣고, `MeshCache` 리로드 때 `PhysicsMeshShapeCache::clear()` 를 부른다. 테스트는 읽기 함수를 직접 넣어서 통과한다.
-- `A-9` **`PrototypeGridMaterialIsAnchoredToTheWorld` 가 네 백엔드 모두 실패한다**(처음엔 OpenGL 만으로 보였으나 평균 차이 15.82 로 같다) — 바닥을 1 m 옮기자 격자가 따라 움직였다(평균 차이 15.8, 격자 창 116..128). 월드 좌표 UV 머티리얼(`59e850480`, `MATERIAL_WORLD_UV`)의 GL 경로.
 - `A-10` **OpenGL 에서 `RenderPassGPUTest.UpscaledViewDrawsUniformZoomBlocks` 가 실패한다** — 4 × 4 칸 4800 개 중 1406 개가 섞였다(DX11 · DX12 · Vulkan 은 0). 정수 업스케일(`e56d3544e`)의 GL 경로.
   GL 의 `swSampleIndexWith` 는 결합 샘플러라 `samplerId`(점 샘플)를 무시한다 — Present 가 원본을 선형으로 읽는지부터 본다. 지금까지는 같은 테스트의 DX12 디바이스 제거로 GL 차례가 오지 않아 가려져 있었다.
 

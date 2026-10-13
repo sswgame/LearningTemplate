@@ -6193,6 +6193,11 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasDrawsOverScreenRectView )
  * @brief [RenderPassGPUTest] 프로토타입 격자 머티리얼은 월드에 붙어 있다 — 바닥을 정확히 1 m 옮겨도 화면의 격자가 그대로다(4 백엔드, Unlit 캡처)
  * @details `MATERIAL_WORLD_UV`(forwardlit.hlsl 트라이플래너)는 월드 위치로 텍스처를 읽고 한 장이 1 m 다. 그래서 12 m 바닥을 1 m 옮기면 화면 가운데
  *          아래(바닥이 덮는 곳)의 픽셀이 같다. 변이: 메시 UV 로 읽으면 바닥과 함께 격자가 1/12 장 움직여 그 창의 픽셀이 바뀐다. 언리얼 WorldGridMaterial 과 같은 동작이다.
+ *          주의 셋 — 하나라도 어기면 창의 무늬가 텍스처가 아닌 데서 나오거나 아예 없어 네 백엔드가 똑같이 실패한다.
+ *          - 바닥은 흰 정점 색(createPrimitive)이다. `createPlane` 은 검증용 체크무늬 정점 색이라 그 무늬가 바닥과 함께 움직인다.
+ *          - 머티리얼은 `initialize` 로 읽는다. `loadFromFile` 만이면 텍스처가 디바이스에 없어 흰색으로 샘플한다.
+ *          - 텍스처는 체커(test/checker.dds)로 덮어쓴다. 격자 텍스처는 밝은 바탕에 가는 선이라 이 해상도에서 밉으로 뭉개져 창의 대비가 몇 단계뿐이다.
+ *            define(MATERIAL_WORLD_UV)은 부모 머티리얼의 것이라 인스턴스도 같은 퍼뮤테이션으로 그린다.
  */
 SW_TEST_CASE( RenderPassGPUTest, PrototypeGridMaterialIsAnchoredToTheWorld )
 {
@@ -6200,12 +6205,16 @@ SW_TEST_CASE( RenderPassGPUTest, PrototypeGridMaterialIsAnchoredToTheWorld )
     uint32                comparedCount{ 0 };
     for ( test::RHITestDevice& device : sweep )
     {
-        const sw::string             label = sw::string( device->getBackendName() ) + ": ";
-        sw::shared_ptr<sw::Material> grid  = sw::Material::create();
-        sw::shared_ptr<sw::Mesh>     plane = sw::MeshUtil::createPlane();
-        bool                         bOk   = grid->loadFromFile( "engine/materials/prototypegrid_light.material" ) && plane != nullptr;
-        sw::vector<uint8>            arrBytes[2];
-        sw::RHITextureMipSpan        arrLayout[2]{};
+        const sw::string                     label   = sw::string( device->getBackendName() ) + ": ";
+        sw::shared_ptr<sw::Material>         grid    = sw::Material::create();
+        sw::shared_ptr<sw::Mesh>             plane   = sw::MeshUtil::createPrimitive( "plane", sw::PrimitiveVertexColor::White );
+        bool                                 bOk     = grid->initialize( device.get(), "engine/materials/prototypegrid_light.material" ) && plane != nullptr;
+        sw::shared_ptr<sw::MaterialInstance> checker = bOk ? sw::MaterialInstance::create( grid.get() ) : nullptr;
+        bOk                                          = checker != nullptr;
+        if ( bOk )
+            checker->setTextureParameter( sw::hashed_string( "albedoMap" ), "engine/textures/test/checker.dds" );
+        sw::vector<uint8>     arrBytes[2];
+        sw::RHITextureMipSpan arrLayout[2]{};
         for ( uint32 shiftIndex = 0; shiftIndex < 2 && bOk; ++shiftIndex )
         {
             sw::Scene scene{ "PrototypeGridScene" };
@@ -6217,6 +6226,7 @@ SW_TEST_CASE( RenderPassGPUTest, PrototypeGridMaterialIsAnchoredToTheWorld )
             {
                 pMesh->setMesh( plane );
                 pMesh->setMaterial( grid.get() );
+                pMesh->setMaterialInstance( checker );
                 pMesh->setLocalScale( sw::float3{ 12.0f, 1.0f, 12.0f } );
                 pMesh->setLocalPosition( sw::float3{ static_cast<float32>( shiftIndex ), 0.0f, 0.0f } ); // 0 m · 1 m
                 scene.getObjectManager()->flushSceneTransforms();
