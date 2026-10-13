@@ -183,7 +183,7 @@ namespace sw
                     writer.addLine( "scene", "none" );
                     return;
                 }
-                const ScenePhysics& physics = pManager->getSceneService<ScenePhysics>();
+                const ScenePhysics& physics = pManager->getSceneService<sw::ScenePhysics>();
                 if ( const IPhysicsBodyScene3D* pScene3D = physics.findScene3D() )
                     writer.addLineFormat( "bodies 3D", "%#", pScene3D->getBodyCount() );
                 if ( const IPhysicsBodyScene2D* pScene2D = physics.findScene2D() )

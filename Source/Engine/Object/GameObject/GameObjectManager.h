@@ -346,7 +346,7 @@ namespace sw
         /**
          * @brief 이 씬의 서비스 @p TService 입니다(`ISceneService.h`). 레지스트리의 서비스는 매니저마다 하나씩 늘 있습니다.
          * @details 언리얼 `UWorld::GetSubsystem<T>()` 와 같은 자리입니다. 코어는 서비스 타입을 모르고, 부르는 쪽이 그 타입의 헤더를 듭니다
-         *          (`manager.getSceneService<ScenePhysics>()` · `getSceneService<SceneAudio>()` · `getSceneService<SceneNavigation>()`).
+         *          (`manager.getSceneService<sw::ScenePhysics>()` · `getSceneService<sw::SceneAudio>()` · `getSceneService<SceneNavigation>()`).
          */
         template <typename TService>
         TService& getSceneService()

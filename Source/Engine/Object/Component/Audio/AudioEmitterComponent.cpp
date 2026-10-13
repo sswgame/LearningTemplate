@@ -22,12 +22,12 @@ namespace sw
     void AudioEmitterComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
-        manager.getSceneService<SceneAudio>().addEmitter( this );
+        manager.getSceneService<sw::SceneAudio>().addEmitter( this );
     }
 
     void AudioEmitterComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getSceneService<SceneAudio>().removeEmitter( this );
+        manager.getSceneService<sw::SceneAudio>().removeEmitter( this );
         SceneComponent::onUnregister( manager );
     }
 
@@ -50,7 +50,7 @@ namespace sw
         const GameObject* pOwner = getOwner();
         if ( pOwner == nullptr || pOwner->getManager() == nullptr )
             return nullptr;
-        return pOwner->getManager()->getSceneService<SceneAudio>().findAudioEngine();
+        return pOwner->getManager()->getSceneService<sw::SceneAudio>().findAudioEngine();
     }
 
     AudioPlayingID AudioEmitterComponent::post( const hashed_string& eventName )

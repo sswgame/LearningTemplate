@@ -64,7 +64,7 @@ namespace sw
             /** @brief 탑승자 캡슐을 @p feet 에 두었을 때 무엇과 겹치는지 구합니다. 물리 씬이나 컨트롤러가 없으면 비어 있는 것으로 봅니다. */
             static bool isSpotFree( GameObjectManager& manager, const GameObject& rider, const float3& feet )
             {
-                const IPhysicsQueryScene3D*         pScene      = manager.getSceneService<ScenePhysics>().findScene3D();
+                const IPhysicsQueryScene3D*         pScene      = manager.getSceneService<sw::ScenePhysics>().findScene3D();
                 const CharacterControllerComponent* pController = rider.getComponent<CharacterControllerComponent>();
                 if ( pScene == nullptr || pController == nullptr )
                     return true;

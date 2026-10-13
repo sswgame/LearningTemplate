@@ -1078,7 +1078,7 @@ SW_TEST_CASE( SceneTest, SceneManagerHandsItsInjectedServicesDownToScenes )
     SW_EXPECT_TRUE( pScene->getEngineServices()._pAssetManager == services._pAssetManager );
     SW_EXPECT_TRUE( pScene->getEngineServices()._pDefaultAssets == services._pDefaultAssets );
     SW_EXPECT_TRUE( pObjects->findAssetManager() == services._pAssetManager );
-    SW_EXPECT_TRUE( pObjects->getSceneService<SceneAudio>().findAudioService() == services._pAudioService );
+    SW_EXPECT_TRUE( pObjects->getSceneService<sw::SceneAudio>().findAudioService() == services._pAudioService );
     manager.shutdown();
 
     sw::SceneManager isolated;
@@ -1088,10 +1088,10 @@ SW_TEST_CASE( SceneTest, SceneManagerHandsItsInjectedServicesDownToScenes )
     sw::GameObjectManager* pIsolatedObjects = pIsolated->getObjectManager();
     SW_ASSERT_NOT_NULL( pIsolatedObjects );
     SW_EXPECT_NULL( pIsolatedObjects->findAssetManager() );
-    SW_EXPECT_NULL( pIsolatedObjects->getSceneService<SceneAudio>().findAudioService() );
-    SW_EXPECT_NULL( pIsolatedObjects->getSceneService<SceneAudio>().findAudioEngine() );
-    SW_EXPECT_NULL( pIsolatedObjects->getSceneService<ScenePhysics>().getScene3D() );
-    SW_EXPECT_NULL( pIsolatedObjects->getSceneService<ScenePhysics>().findSettings() );
+    SW_EXPECT_NULL( pIsolatedObjects->getSceneService<sw::SceneAudio>().findAudioService() );
+    SW_EXPECT_NULL( pIsolatedObjects->getSceneService<sw::SceneAudio>().findAudioEngine() );
+    SW_EXPECT_NULL( pIsolatedObjects->getSceneService<sw::ScenePhysics>().getScene3D() );
+    SW_EXPECT_NULL( pIsolatedObjects->getSceneService<sw::ScenePhysics>().findSettings() );
     {
         test::ScopedDefensiveTestLog expected( "a scene manager without a type registry" );
         SW_EXPECT_FALSE( isolated.requestLoadFuture( "game/demo/maps/none.scene.xml" ).isValid() );

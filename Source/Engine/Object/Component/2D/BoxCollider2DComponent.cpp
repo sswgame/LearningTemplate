@@ -109,14 +109,14 @@ namespace sw
     void BoxCollider2DComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
-        _pPhysics = &manager.getSceneService<ScenePhysics>().getOverlapWorld2D().getPhysicsOverlapWorld();
-        manager.getSceneService<ScenePhysics>().getOverlapWorld2D().registerCollider( this );
+        _pPhysics = &manager.getSceneService<sw::ScenePhysics>().getOverlapWorld2D().getPhysicsOverlapWorld();
+        manager.getSceneService<sw::ScenePhysics>().getOverlapWorld2D().registerCollider( this );
     }
 
     void BoxCollider2DComponent::onUnregister( GameObjectManager& manager )
     {
         unregisterPhysicsBody();
-        manager.getSceneService<ScenePhysics>().getOverlapWorld2D().unregisterCollider( this );
+        manager.getSceneService<sw::ScenePhysics>().getOverlapWorld2D().unregisterCollider( this );
         _pPhysics = nullptr;
         SceneComponent::onUnregister( manager );
     }

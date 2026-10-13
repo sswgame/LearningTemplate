@@ -1,7 +1,7 @@
 /**
  * @file ScenePhysics.h
  * @brief 씬 하나의 강체 물리 — 3D · 2D 물리 씬(처음 쓸 때 만든다), 고정 스텝 누적기, 물리 컴포넌트 레지스트리, 접촉 이벤트를 컴포넌트에 나눠 주기입니다.
- * @details 씬 서비스(`ISceneService`)입니다. 이 .cpp 의 `SW_SCENE_SERVICE` 줄로 매니저마다 하나 생기고(`manager.getSceneService<ScenePhysics>()`),
+ * @details 씬 서비스(`ISceneService`)입니다. 이 .cpp 의 `SW_SCENE_SERVICE` 줄로 매니저마다 하나 생기고(`manager.getSceneService<sw::ScenePhysics>()`),
  *          매니저는 프레임 표의 `Physics` 단계(`SceneFrameStepList.xxx`)에서 게임 스레드로 `update` 를 한 번 부릅니다. 물리 서비스(`PhysicsSystem`)는
  *          매니저의 서비스 묶음(`SceneEngineServices`)에서 받습니다. 겹침만 측정하는 겹침 월드(`SceneOverlapWorld2D` — AABB · 연속 쓸기 ·
  *          `BoxCollider2DComponent` · 키트의 투사체 · 근접 판정)도 이 서비스가 들고, `update` 가 겹침 → 강체 순서로 진행합니다 — 강체 씬과 같은 레이어 표를 받습니다.

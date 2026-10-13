@@ -333,7 +333,7 @@ addSubTickPrerequisite( kRideSubTick, pVehicleComponent->getTickHandle() );
 
 엔진의 기능 폴더가 씬마다 하나씩 두는 서비스(물리 `ScenePhysics`, 오디오 `SceneAudio`, 내비게이션 `SceneNavigation`)는 씬 서비스(`ISceneService`)로 등록합니다.
 서비스 .cpp 에 `SW_SCENE_SERVICE( 타입, 단계 )` 한 줄을 두면 매니저가 만들 때 함께 만들어지고, 그 단계에서 `update`, `clear` 에서 `shutdown` 이 불립니다.
-부르는 쪽은 `manager.getSceneService<ScenePhysics>()` 처럼 얻고, 그 서비스의 헤더를 직접 include 합니다. 서비스는 만들어질 때 `manager.getSceneEngineServices()` 에서 자기 엔진 서비스(물리, 오디오)를 읽습니다.
+부르는 쪽은 `manager.getSceneService<sw::ScenePhysics>()` 처럼 얻고, 그 서비스의 헤더를 직접 include 합니다. 서비스는 만들어질 때 `manager.getSceneEngineServices()` 에서 자기 엔진 서비스(물리, 오디오)를 읽습니다.
 레지스트리는 Engine 이미지 안에서만 채웁니다(핫 리로드 모듈은 프레임 시스템을 씁니다).
 
 ### 코어와 기능 컴포넌트

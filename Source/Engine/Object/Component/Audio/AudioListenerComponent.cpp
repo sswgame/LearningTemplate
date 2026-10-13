@@ -19,12 +19,12 @@ namespace sw
     void AudioListenerComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
-        manager.getSceneService<SceneAudio>().addListener( this );
+        manager.getSceneService<sw::SceneAudio>().addListener( this );
     }
 
     void AudioListenerComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getSceneService<SceneAudio>().removeListener( this );
+        manager.getSceneService<sw::SceneAudio>().removeListener( this );
         SceneComponent::onUnregister( manager );
     }
 

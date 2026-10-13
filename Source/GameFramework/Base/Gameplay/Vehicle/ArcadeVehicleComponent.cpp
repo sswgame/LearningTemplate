@@ -40,7 +40,7 @@ namespace sw
     float32 ArcadeVehicleComponent::PhysicsGround::sampleHeight( float32 x, float32 z ) const
     {
         using Internal                     = ArcadeVehicleComponentInternal;
-        const IPhysicsQueryScene3D* pScene = _pManager != nullptr ? _pManager->getSceneService<ScenePhysics>().findScene3D() : nullptr;
+        const IPhysicsQueryScene3D* pScene = _pManager != nullptr ? _pManager->getSceneService<sw::ScenePhysics>().findScene3D() : nullptr;
         if ( pScene == nullptr )
             return _fallbackHeight;
         IPhysicsQueryScene3D::CastHit hit;

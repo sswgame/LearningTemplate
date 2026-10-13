@@ -19,12 +19,12 @@ namespace sw
     void AudioReverbZoneComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
-        manager.getSceneService<SceneAudio>().addReverbZone( this );
+        manager.getSceneService<sw::SceneAudio>().addReverbZone( this );
     }
 
     void AudioReverbZoneComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getSceneService<SceneAudio>().removeReverbZone( this );
+        manager.getSceneService<sw::SceneAudio>().removeReverbZone( this );
         SceneComponent::onUnregister( manager );
     }
 
