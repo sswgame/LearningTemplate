@@ -184,6 +184,9 @@ namespace sw
         void onNetRequest( NetRequestServer& server, const NetRequestContext& context ) override;
 
     private:
+        /** @brief `initialize` 가 도중에 실패했을 때와 `shutdown` 이 함께 쓰는 정리입니다 — 전송 · 요청 서버 · 엔드포인트를 내리고 연결 표를 비웁니다. 아직 서지 않은 것을 내려도 안전합니다. */
+        void releaseTransportSide();
+
         struct ConnectionState
         {
             uint64    _remoteKey{ 0 };

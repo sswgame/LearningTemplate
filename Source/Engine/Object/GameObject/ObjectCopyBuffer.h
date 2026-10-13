@@ -1,7 +1,7 @@
 /**
  * @file ObjectCopyBuffer.h
  * @brief 복사한 GameObject 의 직렬화 상태를 담는 프로세스 범위 버퍼입니다(복사 · 붙여 넣기).
- * @details 버퍼는 Engine 이 가진다. 복사를 하는 쪽(에디터 모듈)이 핫 리로드로 내려갔다 올라와도 복사한 내용이 남는다.
+ * @details 버퍼는 엔진 수명 범위(`ScopeOwned`)가 가진다. 복사를 하는 쪽(에디터 모듈)이 핫 리로드로 내려갔다 올라와도 복사한 내용이 남고, 엔진 종료에서 소멸한다.
  *          언리얼은 액터 복사를 텍스트로 내보내 OS 클립보드에 두고(`edactCopySelected` → `FPlatformApplicationMisc::ClipboardCopy`),
  *          유니티는 에디터 프로세스의 내부 붙여 넣기 버퍼에 둔다. 여기는 후자다 — 바이너리 상태라 OS 클립보드에 올리지 않는다.
  */

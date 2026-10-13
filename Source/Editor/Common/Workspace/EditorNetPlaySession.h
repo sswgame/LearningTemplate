@@ -26,8 +26,12 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Message/NetStatsReport.h"
 #include "Core/Network/Transport/NetEmulation.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/EditorExports.h"
+
+#include <chrono>
+#include <thread>
 
 namespace sw::editor
 {
@@ -104,6 +108,8 @@ namespace sw::editor
         static constexpr int32 kServerProcessIndex = 0;
         /** @brief 합친 트레이스의 파일 이름입니다. */
         static constexpr const utf8* kMergedTraceFileName = "merged.trace.json";
+        /** @brief `updateUntil` 이 조건을 다시 보는 간격입니다. */
+        static constexpr int64 kUpdatePollMilliseconds = 50;
 
         EditorNetPlaySession();
         ~EditorNetPlaySession();
@@ -120,6 +126,23 @@ namespace sw::editor
         string stop();
         /** @brief 모은 줄을 에디터 로그로 옮기고, 먼저 끝난 프로세스를 알립니다. 프레임마다 호출합니다. */
         void update();
+        /**
+         * @brief @p isDone 이 true 를 돌려주거나 시한이 지날 때까지 `update` 를 돌리며 부른 스레드를 붙잡습니다.
+         * @details 자동화 명령(`netplay.wait` · `netplay.stats` · `netplay.profile`)과 정상 종료가 씁니다. 시나리오는 프레임 단위라
+         *          게임 스레드를 막고 기다리는 것이 의도입니다. 조건은 `update` 뒤에 보므로 마지막으로 모은 줄까지 반영합니다.
+         */
+        template <typename Predicate>
+        void updateUntil( int64 timeoutMilliseconds, const Predicate& isDone )
+        {
+            const Deadline deadline = Deadline::afterMilliseconds( timeoutMilliseconds );
+            while ( true )
+            {
+                update();
+                if ( isDone() || deadline.isExpired() )
+                    return;
+                std::this_thread::sleep_for( std::chrono::milliseconds( kUpdatePollMilliseconds ) );
+            }
+        }
 
         /** @brief 서버(전용 서버 또는 리슨 호스트)의 표준 입력에 한 줄을 보냅니다. `pause`, `step 3`, `resume`, 개발 명령을 보낼 수 있습니다. 보냈으면 true 입니다. */
         [[nodiscard]] bool sendServerCommand( string_view command );

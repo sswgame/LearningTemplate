@@ -48,7 +48,6 @@ SW_TEST_CASE( NavMeshRebakeQueueTest, DirtyTileIsQueuedOnceAndInFlightTileIsSeen
     sw::unique_ptr<sw::NavTileBakeJob> pJob = sw::make_unique<sw::NavTileBakeJob>();
     pJob->_tileX                            = 3;
     pJob->_tileZ                            = 4;
-    pJob->_bDone.store( true, std::memory_order_release ); // 런타임 소멸자가 끝나기를 기다린다
     runtime._listJob.push_back( std::move( pJob ) );
     SW_EXPECT_TRUE( runtime.isTileInFlight( sw::int2{ 3, 4 } ) );
     SW_EXPECT_FALSE( runtime.isTileInFlight( sw::int2{ 4, 3 } ) );

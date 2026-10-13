@@ -14,8 +14,6 @@
 #include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
-#include <chrono>
-#include <thread>
 
 namespace sw::editor
 {
@@ -27,8 +25,6 @@ namespace sw::editor
         {
             /** @brief `netplay.profile` 의 기본 시간(초)입니다. */
             static constexpr int32 kDefaultProfileSeconds = 3;
-            /** @brief `netplay.profile` 이 세션을 다시 보는 간격입니다. */
-            static constexpr int64 kProfilePollMilliseconds = 50;
             /** @brief 그래프 한 장의 높이(글자 높이 배수)입니다. */
             static constexpr float32 kGraphHeightInLines = 3.0f;
 
@@ -127,16 +123,12 @@ namespace sw::editor
                     outReply = "no multiplayer session is running";
                     return true;
                 }
-                EditorNetProfilerHistory& history  = getHistory();
-                const Deadline            deadline = Deadline::afterMilliseconds( static_cast<int64>( seconds ) * 1000 );
-                while ( true )
+                EditorNetProfilerHistory& history = getHistory();
+                pSession->updateUntil( static_cast<int64>( seconds ) * 1000, [&]()
                 {
-                    pSession->update();
                     history.update( *pSession, nowSeconds() );
-                    if ( deadline.isExpired() )
-                        break;
-                    std::this_thread::sleep_for( std::chrono::milliseconds( kProfilePollMilliseconds ) );
-                }
+                    return false; // 시한까지 모은다
+                } );
                 outReply = "netplay profile has " + to_string( history.computeSampleCount() ) + " sample(s) from " + to_string( history.getTrackCount() ) +
                            " process(es), peak sent " + to_string( static_cast<int64>( history.computePeak( EditorNetProfilerChannel::SentBytesPerSecond ) ) ) + " B/s";
                 return true;

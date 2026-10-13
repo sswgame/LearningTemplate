@@ -46,9 +46,8 @@
 
 - `A-7` **`_meshPath` 로 적은 물리 셰이프가 게임에서는 늘 오류다** — `PhysicsMeshShapeCache::setLoadFunction` 을 부르는 곳이 없다. 물리는 그래픽스보다 아래 티어라 `.mesh` 읽기 함수를 위층이 넣어야 한다
   ([Physics README](../Source/Engine/Physics/README.md)). 엔진 조립 지점에서 `MeshAssetFormat::loadFromResource` 로 넣고, `MeshCache` 리로드 때 `PhysicsMeshShapeCache::clear()` 를 부른다. 테스트는 읽기 함수를 직접 넣어서 통과한다.
-- `A-11` **에디터 체인(모듈 리로드 넷 포함, 125 단계)을 끝내면 종료 누수 보고가 'tag Editor grew by 2946 bytes in 10 blocks' · 'tag Unknown grew by 2448 bytes in 6 blocks' 다**
-  (2026-10-13, DX12 · Vulkan 같은 값). 리로드 없는 실행은 `AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline` 이 0 을 확인한다. 체인 테스트는 종료 코드만 봐서 이 줄을 세지 않는다.
-  자리는 [Engine README](../Source/Engine/README.md) 종료 누수 절의 세부 추적(기준선 직후 `setDetailedTrackingEnabled`, 보고 직전 `getTopCallStacks( LiveBytes )`)으로 찾는다.
+- `A-12` **`ValidationIssueLog` 가 사라진 오브젝트의 결과를 들고 있다** — `removeSource` 를 부르는 곳이 에디터 셀프 테스트뿐이라, 검증 결과가 있던 오브젝트를 지우거나 씬을 바꿔도 맵 검사 패널에 남는다(2026-10-13, 에디터 체인을 끝낼 때 표에 결과가 남아 있었다 — 표는 이제 엔진 종료에서 소멸하므로 누수 보고에는 나오지 않는다).
+  오브젝트 파괴 · 씬 언로드에서 그 출처를 지우거나 표를 씬이 소유하게 한다. 체인 테스트는 종료 코드와 누수 줄만 봐서 이것을 세지 않는다.
 
 
 ---
@@ -532,10 +531,6 @@
 - `E-8` **CI Windows 러너(WARP)의 픽셀 테스트 실패**(`RenderPassGPUTest` 를 host 스위트로 빼서 우회) — 이 PC 에서 `SW_RHI_SOFTWARE_ADAPTER=1`(`-gv_rhiSoftwareAdapter=1`)로
   같은 래스터라이저를 고를 수 있다. 2026-10-06 이 PC 의 WARP(DX12 · DX11)로 `RenderPassGPUTest.*` 71 개 픽셀 테스트이 모두 통과했다(Vulkan 은 CPU 디바이스가
   없어 빠지고 GL 은 하드웨어) — WARP 자체는 컴퓨트 컬링 · 인디렉트를 한다. 러너 쪽(WARP 판 · 창 없는 세션)을 다음 CI 실패의 주석으로 가른다.
-
-- `E-9` **에디터 체인에서 uipreview 의 첫 Quick Open(Ctrl+P → `confirm_unsaved.ui.xml` → Enter)이 가끔 아무것도 열지 않는다**(2026-10-13, AppScenarioTest Vulkan 체인 한 번 —
-  UI Preview 패널이 끝내 열리지 않아 뒤 WaitUntil 이 모두 900 프레임씩 기다렸다). 같은 체인을 직접 돌리면 Vulkan · DX12 모두 통과했고 `toolbaricons → uipreview` 작은 체인은 5/5 통과.
-  다시 나면 `Saved/Automation/chain_editor_<백엔드>.log` 에서 그 단계의 Quick Open 줄(목록 도착 · 연 경로)과 키 입력이 어느 창에 갔는지 본다.
 
 ---
 
