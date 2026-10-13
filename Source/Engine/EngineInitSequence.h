@@ -61,11 +61,25 @@ namespace sw
         static constexpr FunctionSubsystemDesc kInput{ "Input", "ModuleImages", EngineInitTarget::All, MemoryTag::EngineMisc };
         /** @brief 호스트가 타입 공급자(GF · 킷 · 게임 모듈)를 올려 등록을 끝낸다 — 씬을 읽는 일은 이 뒤다. */
         static constexpr FunctionSubsystemDesc kModuleTypes{ "ModuleTypes", "Config ModuleImages Reflection", EngineInitTarget::All, MemoryTag::Reflection };
+        /**
+         * @brief 헤드리스 작업 — 셰이더 쿠킹 · 씬 쿠킹(모든 컴포넌트 타입이 있어야 쿠킹한다) · 임포트 준비. 하면 뒤 단계(창 · RHI · 렌더러)를 건너뛴다.
+         *        서버는 씬 쿠킹만 하고 셰이더 쿠킹 · 임포트는 거절한다.
+         */
+        static constexpr FunctionSubsystemDesc kHeadless{ "Headless", "EngineDefaultAssets ModuleTypes Scene ShaderCache", EngineInitTarget::All, MemoryTag::EngineMisc };
+        /** @brief 플레이어 옵션 — 스키마 · 사용자 파일을 읽어 대상(오디오 · 입력 · 전역 변수)에 넣는다. 화면 값은 창을 만드는 RHI 가 읽는다. */
+        static constexpr FunctionSubsystemDesc kUserSettings{ "UserSettings", "Audio Headless Input Resource", EngineInitTarget::Client, MemoryTag::EngineMisc };
+        /** @brief 렌더러와 GT 쪽 패킷 빌더(씬 스냅샷 · 업로드 큐). 백엔드 교체로 다시 선다. */
+        static constexpr FunctionSubsystemDesc kFrameRenderer{ "FrameRenderer", "RHI Task", EngineInitTarget::Client, MemoryTag::RenderCPU };
+        /** @brief 렌더 스레드. 다시 설 때 같은 객체에 붙는다(훅 · 포인터 유지). */
+        static constexpr FunctionSubsystemDesc kRenderThread{ "RenderThread", "FrameRenderer", EngineInitTarget::Client, MemoryTag::RenderCPU };
+        /** @brief 셰이더 라이브 리로드(Debug). 재컴파일이 렌더 스레드를 세우고 렌더러에 알린다. */
+        static constexpr FunctionSubsystemDesc kLiveShader{ "LiveShader", "FrameRenderer RenderThread", EngineInitTarget::Client, MemoryTag::Shader };
         /** @brief 씬에 디바이스를 건다 — 렌더러 쪽 단계 가운데 종료가 가장 먼저다. */
         static constexpr FunctionSubsystemDesc kSceneRHI{ "SceneRHI", "RHI Scene", EngineInitTarget::Client, MemoryTag::RenderCPU };
 
         /** @brief 위 선언 모두입니다(테스트가 엔진 목록을 본문 없이 짓는다). */
-        static constexpr const FunctionSubsystemDesc* kArrAll[] = { &kCompression, &kReflection, &kConfig, &kResource, &kEngineDefaultAssets, &kAudio, &kScene, &kTask, &kModuleImages, &kFileIO, &kInput, &kModuleTypes, &kSceneRHI };
+        static constexpr const FunctionSubsystemDesc* kArrAll[] = { &kCompression, &kReflection, &kConfig, &kResource, &kEngineDefaultAssets, &kAudio, &kScene, &kTask, &kModuleImages, &kFileIO, &kInput, &kModuleTypes,
+                                                                    &kHeadless, &kUserSettings, &kFrameRenderer, &kRenderThread, &kLiveShader, &kSceneRHI };
     };
 } // namespace sw
 
@@ -215,7 +229,7 @@ namespace sw
          *          @p target 과 겹치지 않는 대상의 단계는 부르지 않고 건너뜁니다(전용 서버의 RHI · 렌더러 · 플레이어 설정).
          *          @p host 를 기억해 두었다가 `shutdownAll` · `destroyAll` 이 같은 호스트로 부릅니다. 호스트는 그때까지 살아 있어야 합니다.
          * @tparam TBody 본문 모음입니다(`EngineInitNoStepBody` 를 상속하고 필요한 `initialize<단계>` · `shutdown<단계>` · `destroy<단계>` 만 정의).
-         * @param target 이 호스트의 대상. App · 테스트 하네스는 `Client`, 전용 서버는 `Server` 입니다.
+         * @param target 이 호스트의 대상. App 은 `Client`, 전용 서버는 `Server` 입니다.
          * @return 순서가 유효하고 실패한 단계가 없으면 true 입니다.
          */
         template <class TBody, class THost>

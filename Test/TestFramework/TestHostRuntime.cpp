@@ -50,11 +50,11 @@ namespace
 {
     /**
      * @brief 하네스의 호스트 상태입니다. 순서는 `EngineLoop` 과 같은 선언(`EngineFunctionStep` · 서비스 클래스 · 표의 남은 줄)이 정합니다.
-     * @details 표에 남은 단계(헤드리스 작업 · 플레이어 설정 · RHI · 렌더러)는 하네스가 세우지 않으므로 본문이 없다(`EngineInitNoStepBody`).
+     * @details 하네스는 헤드리스 작업 · 플레이어 설정 · RHI · 렌더러를 세우지 않으므로 그 단계를 넣지 않는다(그것에 기대는 단계도 없다).
      *          서브시스템은 `TestHostRuntime::start` 가 앱과 같은 선언 · 같은 객체로 넣고, 본문이 다른 것만 하네스가 준다
      *          (글꼴 · UI 테스트는 자기 FontService · UISystem 을 만든다). 오디오는 초기화하지 않고 종료만 부른다. 해제는 `EngineLoop` 과 같은 역순이다.
      */
-    struct TestHost : sw::EngineInitNoStepBody
+    struct TestHost
     {
         sw::unique_ptr<sw::IAudioService> _audioService{};                  ///< 만든 뒤 서비스 표에 묶고 소유를 Audio 단계로 넘긴다
         sw::unique_ptr<sw::CommandStack>  _commandStack{};                  ///< 만든 뒤 서비스 표에 묶고 소유를 Scene 단계로 넘긴다
@@ -74,13 +74,13 @@ namespace test
 
 namespace test
 {
-    /** @brief 하네스 하나의 상태입니다. 선언 순서가 소멸 순서의 역이다 — 저장소 → 부트스트랩 → 호스트 → 기동 표. */
+    /** @brief 하네스 하나의 상태입니다. 선언 순서가 소멸 순서의 역이다 — 저장소 → 부트스트랩 → 호스트 → 기동 단계. */
     struct TestHostRuntime::State
     {
         sw::EngineServiceCollection _owned{};
         sw::EngineBootstrap         _bootstrap{};
         TestHost                    _host{};
-        sw::EngineInitSequence      _startup{};
+        sw::SubsystemCollection     _startup{};
         bool                        _bBootstrapped{ false };
     };
 
@@ -132,10 +132,9 @@ namespace test
         // ------------------------------------------------------------------------------
         // 1) 기동 단계 — 리플렉션 · 설정 · 리소스 · 태스크 · 입력 · 씬
         // ------------------------------------------------------------------------------
-        // 순서는 손으로 적지 않는다. `EngineLoop` 과 같은 표(`EngineInitStepList.xxx`)를 위상 정렬한 순서로 본문(`TestHost::initialize<단계>`)을
-        // 부른다 — 하네스가 앱과 다른 순서로 서는 일이 구조로 막힌다. 종료와 해제는 `stop` 이 그 역순으로 한다.
-        // 서브시스템으로 옮긴 단계는 앱과 같은 객체 · 같은 선언(`EngineFunctionStep`)으로 넣는다 — 본문이 다른 것만 여기서 준다.
-        sw::EngineInitSequence& startup = state._startup;
+        // 순서는 손으로 적지 않는다. `EngineLoop` 과 같은 선언(`EngineFunctionStep` · 서비스 클래스)을 의존으로 위상 정렬한 순서로 세운다 —
+        // 하네스가 앱과 다른 순서로 서는 일이 구조로 막힌다. 본문이 다른 것만 여기서 준다. 종료와 해제는 `stop` 이 그 역순으로 한다.
+        sw::SubsystemCollection& startup = state._startup;
         {
             // 앱과 달리 외부 코덱을 붙이지 않는다(테스트가 코덱을 직접 갈아 끼운다). 서비스와 **같은 인스턴스**를 Core 슬롯에도 꽂는다 —
             // 안 꽂으면 CompressionStream 이 다른 레지스트리를 보게 되어 등록한 코덱이 테스트에서만 조용히 무시된다.
@@ -146,8 +145,8 @@ namespace test
                 sw::CompressionCodecRegistry::setActive( pCodecRegistry );
                 return sw::EngineInitResult::Succeeded;
             };
-            startup.addSubsystem( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kCompression,
-                                                                          SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeCompression ) ) )
+            startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kCompression,
+                                                                 SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeCompression ) ) )
                 .takeOwnership( std::move( state._owned._pCompressionCodecRegistry ) );
         }
         {
@@ -163,17 +162,17 @@ namespace test
                 sw::engine::unbindGlobalVariableEnumNames();
                 return sw::EngineInitResult::Failed;
             };
-            startup.addSubsystem( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kReflection,
-                                                                          SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeReflection ),
-                                                                          SW_DELEGATE_FUNCTION( sw::SubsystemShutdownDelegate, &sw::engine::unbindGlobalVariableEnumNames ) ) )
+            startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kReflection,
+                                                                 SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeReflection ),
+                                                                 SW_DELEGATE_FUNCTION( sw::SubsystemShutdownDelegate, &sw::engine::unbindGlobalVariableEnumNames ) ) )
                 .takeOwnership( std::move( state._owned._pTypeRegistry ) );
         }
         {
             sw::TaskManager* const pTaskManager   = state._owned._pTaskManager.get();
             auto                   initializeTask = [pTaskManager]()
             { return pTaskManager->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed; };
-            startup.addSubsystem( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kTask, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeTask ),
-                                                                          SW_DELEGATE_METHOD( sw::SubsystemShutdownDelegate, &sw::TaskManager::shutdown, pTaskManager ) ) )
+            startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kTask, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeTask ),
+                                                                 SW_DELEGATE_METHOD( sw::SubsystemShutdownDelegate, &sw::TaskManager::shutdown, pTaskManager ) ) )
                 .takeOwnership( std::move( state._owned._pTaskManager ) );
         }
         {
@@ -184,11 +183,11 @@ namespace test
                 settings._pTaskManager = &sw::engine::getTaskManager();
                 return pAsyncFileIO->initialize( settings ) ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
             };
-            startup.addSubsystem( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kFileIO, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeFileIO ),
-                                                                          SW_DELEGATE_METHOD( sw::SubsystemShutdownDelegate, &sw::AsyncFileIO::shutdown, pAsyncFileIO ) ) );
+            startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kFileIO, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeFileIO ),
+                                                                 SW_DELEGATE_METHOD( sw::SubsystemShutdownDelegate, &sw::AsyncFileIO::shutdown, pAsyncFileIO ) ) );
         }
         // 하네스는 모듈 DLL 을 올리고 내리지 않는다 — 자리만 둔다(다른 단계가 이 이름에 의존한다).
-        startup.addSubsystem( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kModuleImages ) );
+        startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kModuleImages ) );
         {
             // 타입 공급자는 리플렉션 단계가 이미 모았다. 앱과 같이 이 단계가 끝나야 씬을 읽는다(`SceneManager::requestLoadFuture` · `SceneCooker::cookAllScenes`).
             auto markModuleTypes = []()
@@ -196,14 +195,14 @@ namespace test
                 sw::engine::getTypeRegistry().markAllModuleTypesRegistered();
                 return sw::EngineInitResult::Succeeded;
             };
-            startup.addSubsystem( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kModuleTypes, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, markModuleTypes ) ) );
+            startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kModuleTypes, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, markModuleTypes ) ) );
         }
         {
             sw::InputManager* const pInputManager   = state._owned._pInputManager.get();
             auto                    initializeInput = [pInputManager]()
             { return pInputManager->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed; };
-            startup.addSubsystem( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kInput, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeInput ),
-                                                                          SW_DELEGATE_METHOD( sw::SubsystemShutdownDelegate, &sw::InputManager::shutdown, pInputManager ) ) )
+            startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kInput, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeInput ),
+                                                                 SW_DELEGATE_METHOD( sw::SubsystemShutdownDelegate, &sw::InputManager::shutdown, pInputManager ) ) )
                 .takeOwnership( std::move( state._owned._pInputManager ) );
         }
         {
@@ -236,7 +235,7 @@ namespace test
                 sw::GameConfig::setActive( *pGameConfig );
                 return sw::EngineInitResult::Succeeded;
             };
-            startup.addSubsystem( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kConfig, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeConfig ) ) )
+            startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kConfig, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeConfig ) ) )
                 .takeOwnership( std::move( configManager ) );
         }
         {
@@ -249,17 +248,17 @@ namespace test
                 pAssetManager->mountContent( host._pEngineConfig->_listResourcePriority );
                 return sw::EngineInitResult::Succeeded;
             };
-            startup.addSubsystem( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kResource, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeResource ) ) )
+            startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kResource, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeResource ) ) )
                 .takeOwnership<&sw::AssetManager::shutdown>( std::move( state._owned._pAssetManager ) );
         }
         // 하네스는 엔진 데이터를 읽지 않는다 — 저장소가 만든 기본값을 소유만 한다.
-        startup.addSubsystem( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kEngineDefaultAssets ) )
+        startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kEngineDefaultAssets ) )
             .takeOwnership( std::move( state._owned._pEngineDefaultAssets ) );
         {
             // 하네스는 오디오 장치를 열지 않는다(초기화 없음) — 종료만 앱과 같이 부른다.
             sw::IAudioService* const pAudioService = host._audioService.get();
-            startup.addSubsystem( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kAudio, sw::SubsystemInitializeDelegate{},
-                                                                          SW_DELEGATE_METHOD( sw::SubsystemShutdownDelegate, &sw::IAudioService::shutdown, pAudioService ) ) )
+            startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kAudio, sw::SubsystemInitializeDelegate{},
+                                                                 SW_DELEGATE_METHOD( sw::SubsystemShutdownDelegate, &sw::IAudioService::shutdown, pAudioService ) ) )
                 .takeOwnership( std::move( host._audioService ) );
         }
         {
@@ -283,16 +282,16 @@ namespace test
                     pSceneManager->onSceneObjectsInvalidated().remove( host._sceneObjectsInvalidatedHandle );
                 host._sceneObjectsInvalidatedHandle = sw::DelegateHandle{};
             };
-            sw::FunctionSubsystem& scene = startup.addSubsystem( sw::make_unique<sw::FunctionSubsystem>(
+            sw::FunctionSubsystem& scene = startup.add( sw::make_unique<sw::FunctionSubsystem>(
                 sw::EngineFunctionStep::kScene, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeScene ), SW_DELEGATE_LAMBDA( sw::SubsystemShutdownDelegate, shutdownScene ) ) );
             // 넘긴 역순으로 소멸한다: 씬 매니저 → 에셋 스트리밍 큐(소멸자가 태스크를 기다린다 — Task 보다 먼저) → 되돌리기 기록.
             (void)scene.takeOwnership( std::move( host._commandStack ) );
             (void)scene.takeOwnership( std::move( state._owned._pAssetStreamingQueue ) );
             (void)scene.takeOwnership( std::move( state._owned._pSceneManager ) );
         }
-        startup.addSubsystem( std::move( state._owned._pShaderCache ) );
-        startup.addSubsystem( std::move( state._owned._pPhysicsSystem ) );
-        return startup.initializeAll<TestHost>( host );
+        startup.add( std::move( state._owned._pShaderCache ) );
+        startup.add( std::move( state._owned._pPhysicsSystem ) );
+        return startup.initializeAll( sw::EngineInitTarget::Client );
     }
 
     void TestHostRuntime::stop()

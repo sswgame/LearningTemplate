@@ -179,7 +179,7 @@ namespace sw
         ConfigManager*      getConfigManager() const { return _pConfigManager; }
         CommandLineManager* getCommandLineManager() const { return _owned._pCommandLineManager.get(); }
         RHI*                getRHI() const { return _rhi.get(); }
-        RenderThread*       getRenderThread() const { return _renderThread.get(); }
+        RenderThread*       getRenderThread() const { return _pRenderThread; }
         bool                isHeadless() const { return _bHeadless; }
         /** @brief 이 엔진을 띄운 호스트의 역할입니다(`initialize` 의 인자). */
         EngineHostRole getHostRole() const { return _hostRole; }
@@ -205,6 +205,13 @@ namespace sw
         void onConfigReloaded( const hashed_string& configTypeName );
         /** @brief 프레임 관찰자에게 넘길 이번 프레임의 문맥(입력 · 렌더 스레드가 쓴 스크린샷 수 · 프레임 시간 · 활성 씬)을 만듭니다. */
         EngineFrameContext makeFrameContext() const;
+        /**
+         * @brief 기동 단계 `Headless` 입니다 — 명령줄의 헤드리스 작업(셰이더 · 씬 쿠킹, 리플렉션 문서, 리타깃 굽기, 립싱크, 임포트 · 로컬라이제이션 준비)을 돌립니다.
+         * @return 작업이 있었으면 `SkipDependents`(창 · RHI · 렌더러를 세우지 않는다)이고 결과는 `isHeadless` · `didHeadlessTaskFail` 입니다. 없으면 `Succeeded` 입니다.
+         */
+        EngineInitResult runHeadlessTask();
+        /** @brief 기동 단계 `UserSettings` 입니다 — 스키마 · 사용자 파일을 읽어 대상(오디오 · 입력 · 전역 변수 · 셸 맵 경로)에 넣습니다. 틀린 파일로 기동을 세우지 않습니다. */
+        EngineInitResult loadUserSettings();
 
         // 기동 단계의 본문 모음이다(`EngineLoop.cpp`). 표(`EngineInitStepList.xxx`)의 단계마다 `initialize<단계>` · `shutdown<단계>` ·
         // `destroy<단계>` 중 필요한 정적 함수만 둔다. 중첩 타입이라 이 클래스의 private 을 그대로 쓴다.
@@ -227,24 +234,11 @@ namespace sw
         ShellInputActions _shellActions;
         /** @brief 만든 오디오 서비스입니다(역할별 팩토리). 서비스 표에 묶은 뒤 소유를 서브시스템 `Audio` 로 넘긴다 — 이 뒤로는 비어 있다. */
         unique_ptr<IAudioService> _audioService;
+        /** @brief 만든 렌더러입니다(서비스 표에 실린다). 묶은 뒤 소유를 서브시스템 `FrameRenderer` 로 넘긴다 — 이 뒤로는 비어 있다. */
         unique_ptr<FrameRenderer> _frameRenderer;
-        unique_ptr<RenderThread>  _renderThread;
-        /**
-         * @brief 프레임 패킷을 채우는 GT 쪽 상태(씬 스냅샷 빌더 · 패킷 · 업로드 큐 · 추가 뷰 스케줄러)입니다. FrameRenderer 단계가 세우고 해제합니다
-         *        (헤드리스 작업에는 없습니다).
-         */
-        RenderPacketBuilder _packetBuilder;
-        Delegate<void()>    _onScenesReleased;
+        Delegate<void()>          _onScenesReleased;
         /** @brief 기동 단계 `ModuleTypes` 가 부르는 호스트의 타입 공급자 로더입니다(`setModuleTypeLoader`). */
         ModuleTypeLoaderDelegate _moduleTypeLoader;
-        /**
-         * @brief 셰이더 라이브 리로드입니다. **Shipping 에는 없고**(파일째 빌드에서 빠집니다) Debug 에서만 실제로 만들어집니다.
-         * @details 셰이더 파일을 지켜보다 다시 컴파일하는 **개발 도구**입니다. RHI 는 디바이스 추상화이지 파일 감시자가 있을 곳이
-         *          아니므로 돌리는 쪽(EngineLoop)이 갖습니다.
-         */
-#if !defined( SW_SHIPPING )
-        unique_ptr<ShaderRecompiler> _shaderRecompiler;
-#endif
         /** @brief 에디터 Undo/Redo 전용이라 배포본에는 만들지 않습니다(목록의 HostCreated). 서비스 표에 묶은 뒤 소유를 서브시스템 `Scene` 으로 넘긴다. */
         unique_ptr<CommandStack> _commandStack;
         /** @brief 씬 매니저의 `onSceneObjectsInvalidated` 에 단 기록 비우기 구독입니다. 씬 단계 종료가 떼어 낸다. */
@@ -285,6 +279,23 @@ namespace sw
         IAudioService* _pAudioService;
         /** @brief 서브시스템 `Scene` 의 씬 매니저입니다(`_startup` 소유 — 빌려 쓴다). 프레임마다 전환 · 틱 · 디버그 그리기 · 패킷이 쓴다. */
         SceneManager* _pSceneManager;
+        /** @brief 서브시스템 `FrameRenderer` 의 렌더러입니다(`_startup` 소유 — 빌려 쓴다). */
+        FrameRenderer* _pFrameRenderer;
+        /**
+         * @brief 프레임 패킷을 채우는 GT 쪽 상태(씬 스냅샷 빌더 · 패킷 · 업로드 큐 · 추가 뷰 스케줄러)입니다(서브시스템 `FrameRenderer` 소유 — 빌려 쓴다).
+         *        그 단계가 세우고 내린다(헤드리스 작업에서는 서지 않는다).
+         */
+        RenderPacketBuilder* _pPacketBuilder;
+        /** @brief 서브시스템 `RenderThread` 의 렌더 스레드입니다(소유는 그 단계 — 처음 설 때부터 해제까지 빌려 쓴다). 전용 서버에는 없다. */
+        RenderThread* _pRenderThread;
+        /**
+         * @brief 셰이더 라이브 리로드입니다(서브시스템 `LiveShader` 소유 — 빌려 쓴다). **Shipping 에는 없고** Debug 클라이언트에서만 실제로 만들어진다.
+         * @details 셰이더 파일을 지켜보다 다시 컴파일하는 **개발 도구**입니다. RHI 는 디바이스 추상화이지 파일 감시자가 있을 곳이
+         *          아니므로 돌리는 쪽(EngineLoop)이 갖습니다.
+         */
+#if !defined( SW_SHIPPING )
+        ShaderRecompiler* _pShaderRecompiler;
+#endif
         /** @brief Config 단계가 읽은 엔진 설정입니다(설정 표 소유). Resource · RHI 단계가 읽습니다. */
         const EngineConfig* _pEngineConfig;
     };
