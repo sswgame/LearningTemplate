@@ -102,27 +102,19 @@ namespace sw
         [[nodiscard]] bool requestEntranceScene();
 
         // --------------------------------------------------------------------------
-        // 화면 전환 · 로딩 화면
-        // --------------------------------------------------------------------------
-        /** @brief 화면 페이드 · 전환 순서(FadeOut → 실행 → FadeIn)를 맡습니다. 페이드 알파는 로딩 화면 제어가 전체 화면 검은 패널로 그립니다. */
-        ScreenTransitionManager& getScreenTransition() { return _screenTransition; }
-        /**
-         * @brief 로딩 화면을 제어합니다.
-         * @details `requestFirstScene` 이나 `requestEntranceScene` 으로 씬 로드를 요청하면 gamesettings 의 `_loadingScreen` 문서를 Loading 층에 띄운다.
-         *          로드가 끝나고 최소 표시 시간이 지나면 화면을 닫고 페이드 인을 건다. UI 시스템이 없으면(전용 서버) 아무것도 띄우지 않는다.
-         */
-        LoadingScreenController& getLoadingScreen() { return *_pLoadingScreen; }
-
-        // --------------------------------------------------------------------------
-        // 네트워크 세션
+        // 게임 인스턴스 서브시스템
         // --------------------------------------------------------------------------
         /**
-         * @brief 이 인스턴스의 네트워크 역할(서버, 클라이언트, 없음)을 맡는 세션입니다.
-         * @details 역할은 실행 인자 `-gv_netListenPort` 와 `-gv_netConnectAddress` 가 정하고, `initialize` 가 `onInitialize` 앞에서 세션을 연다.
-         *          키트와 게임은 `getNetSession().getRouter()` 에 메시지 처리기를 단다.
-         *          `update` 는 프레임마다 `onUpdate` 앞에서 이벤트와 메시지를 처리기에 나눠 준다.
+         * @brief 이 인스턴스가 소유한 서브시스템 @p T 입니다(`ScreenTransitionManager` · `LoadingScreenController` · `GameNetSession`). 생성 뒤에는 늘 있다.
+         * @details 언리얼 `UGameInstance::GetSubsystem<T>()` 자리다. 게임 범위에 있으므로 키트는 인스턴스 없이 `game::getService<T>()` 로도 찾는다.
+         *          화면 전환은 FadeOut → 실행 → FadeIn 을, 로딩 화면은 씬 로드 동안 gamesettings 의 `_loadingScreen` 문서를, 네트워크 세션은 실행 인자가 정한
+         *          역할(서버 · 클라이언트 · 없음)을 맡는다 — 키트와 게임은 `getSubsystem<GameNetSession>().getRouter()` 에 메시지 처리기를 단다.
          */
-        GameNetSession& getNetSession() { return *_pNetSession; }
+        template <class T>
+        T& getSubsystem() const
+        {
+            return _gameScope.get<T>();
+        }
 
     protected:
         /** @brief 파생 클래스가 팩 루트 · 부트스트랩을 설정합니다. */
@@ -295,13 +287,10 @@ namespace sw
             }
         }
 
-        vector<PendingSceneLoad>            _listPendingSceneLoad; ///< 맡겼지만 아직 끝을 알리지 않은 씬 로드
-        vector<StatefulComponentType>       _listStatefulType;     ///< 상태 스냅샷에 오른 컴포넌트 타입(등록 순서대로 싣고 걷고 돌려준다)
-        unique_ptr<ComponentStateStore>     _pComponentStateStore; ///< 스냅샷 봉투의 컴포넌트 상태 섹션
-        ScreenTransitionManager             _screenTransition;     ///< 화면 페이드 · 전환 순서
-        unique_ptr<LoadingScreenController> _pLoadingScreen;       ///< 로딩 화면 · 페이드 패널(UI 시스템에 화면을 띄운다)
-        unique_ptr<GameNetSession>          _pNetSession;          ///< 네트워크 역할 — 실행 인자가 없으면 열지 않는다
-        SubsystemScope                      _gameScope;            ///< 게임 범위 — 기동부터 종료까지 `game::getService<T>()` 의 지금 범위다
-        uint8                               _bResumingWorld;       ///< `initialize` 때 이미 활성 씬이 있었다(다시 선 인스턴스) — 첫 씬을 요청하지 않는다
+        vector<PendingSceneLoad>        _listPendingSceneLoad; ///< 맡겼지만 아직 끝을 알리지 않은 씬 로드
+        vector<StatefulComponentType>   _listStatefulType;     ///< 상태 스냅샷에 오른 컴포넌트 타입(등록 순서대로 싣고 걷고 돌려준다)
+        unique_ptr<ComponentStateStore> _pComponentStateStore; ///< 스냅샷 봉투의 컴포넌트 상태 섹션
+        SubsystemScope                  _gameScope;            ///< 게임 범위 — 인스턴스 서브시스템(화면 전환 · 로딩 화면 · 네트워크 세션)을 소유하고, 기동부터 종료까지 `game::getService<T>()` 의 지금 범위다
+        uint8                           _bResumingWorld;       ///< `initialize` 때 이미 활성 씬이 있었다(다시 선 인스턴스) — 첫 씬을 요청하지 않는다
     };
 } // namespace sw

@@ -35,6 +35,7 @@
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/Task/TaskFuture.h"
 
+#include "GameFramework/Base/Foundation/Framework/GameInstanceSubsystem.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -81,14 +82,24 @@ namespace sw
      *     session.shutdown();
      * @endcode
      */
-    class SW_GF_API GameNetSession
+    class SW_GF_API GameNetSession final : public GameInstanceSubsystem
     {
     public:
+        static constexpr const utf8* kSubsystemName = "GameNetSession";
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        /**
+         * @brief 실행 인자(`-gv_netListenPort` · `-gv_netConnectAddress`)가 정한 역할로 세션을 엽니다. 인자가 없으면 열지 않습니다.
+         * @details 포트가 사용 중이라 열지 못해도 게임은 혼자 뜬다 — 늘 성공으로 답하고 실패는 `initialize` 가 로그에 남긴다.
+         */
+        SubsystemInitResult initializeSubsystem() override;
+        /** @brief 세션을 닫습니다. 게임 인스턴스가 `onShutdown`(키트 처리기가 내려간 뒤) 다음에 부른다. */
+        void shutdownSubsystem() override { shutdown(); }
+
         /** @brief 주소에 포트가 없을 때의 기본 게임 포트입니다. 언리얼 기본 포트와 같으며 `ServerConfig::_gamePort` 기본값도 같습니다. */
         static constexpr uint16 kDefaultPort = 7777;
 
         GameNetSession();
-        ~GameNetSession();
+        ~GameNetSession() override;
 
         GameNetSession( const GameNetSession& )            = delete;
         GameNetSession& operator=( const GameNetSession& ) = delete;

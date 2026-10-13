@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Delegate/Delegate.h"
 
+#include "GameFramework/Base/Foundation/Framework/GameInstanceSubsystem.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -76,9 +77,14 @@ namespace sw
     // 3) ScreenTransitionManager — 페이드 효과와 결합된 범용 화면 전환 관리자
     // ------------------------------------------------------------------------------
     /** @brief 화면 페이드와 연동해 씬 전환 시퀀스(FadeOut → Execute → FadeIn)를 한곳에서 관리합니다. */
-    class SW_GF_API ScreenTransitionManager
+    class SW_GF_API ScreenTransitionManager final : public GameInstanceSubsystem
     {
     public:
+        static constexpr const utf8* kSubsystemName = "ScreenTransitionManager";
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 게임 인스턴스가 내려갈 때 전환 상태를 지웁니다. */
+        void shutdownSubsystem() override { reset(); }
+
         /** @brief 전환 단계입니다(None → FadeOut → Loading → FadeIn → None). */
         enum class Phase : uint8
         {

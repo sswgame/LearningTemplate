@@ -7,8 +7,12 @@
 
 - push 는 통합 조정자가 한다. 이번 세션에 들어간 것: 게임별 프리셋 삭제 · sccache 제거(PCH 는 모든 구성에서 켬) · CI 수정 둘(`427a2e8c6` · 오디오 디코드 태스크 수명 `ef6e5cda8`) · B-11 · B-13 · B-14 · 쿠킹 스탬프 지문(`054a116fd`) ·
   게임 · 에디터 서비스의 범위 서브시스템(`SubsystemScope`, `6ccdeb60e`)과 에디터 내부 정리(`EditorContext` 는 범위를 드는 얇은 껍데기 — 상태는 `EditorRenderViews` · `EditorPlaySessionState` · `EditorTheme`, 결정 기록 5-8).
-  에디터 정리의 검증: Debug `all AllTests` 경고 0, `ctest -L "lint|nogpu"` 113/113, 네 백엔드 `-EnableEditor` 120 프레임 오류 0. **에디터 시나리오(`EditorScenariosPassOn*`) 네 백엔드는 조정자가 돌린다.** 전체 `hostgpu` 는 `29c15ad22` 뒤 **다시 안 돌렸다**.
-- 대기 중(조정자 신호): GameFramework 분류 보고(서브시스템 · 게임플레이 객체 · 정적 약 109 곳) → 실행, 그 뒤 RHI 안(`C-26`) · 렌더러 안(`C-27` ④). PCH 측정(조용한 기계 필요). `Tools/Sccache` 폴더 · `%APPDATA%/Mozilla/sccache` 는 다른 빌드가 끝난 뒤 지운다.
+  에디터 정리의 검증: Debug `all AllTests` 경고 0, `ctest -L "lint|nogpu"` 112/112, 네 백엔드 `-EnableEditor` 120 프레임 오류 0. **에디터 시나리오(`EditorScenariosPassOn*`) 네 백엔드는 조정자가 돌린다.** 전체 `hostgpu` 는 `29c15ad22` 뒤 **다시 안 돌렸다**.
+- GameFramework 분류(2026-10-14, 결정 기록 5-8): **서브시스템으로 옮김** — 화면 전환 · 로딩 화면 · 네트워크 세션(`GameInstanceSubsystem`, 게임 범위 소유, 세션의 정적 `s_pActiveSession` 삭제).
+  **제외(게임플레이 객체 · 데이터)** — 카탈로그 · gamesettings(빌려 건다), 스냅샷 상태 저장소 · 씬 로드 대기(인스턴스 흐름), 키트 시스템 · 컴포넌트.
+  **정적 남김(정의 약 75)** — 테이블 이름 상수 43 · 빈 값 7 · 불변 표 · 상태 없는 드라이버(Postgres · SQLite · OpenSSL) · 링크 때 등록 표(SQL 드라이버 · 로컬 저장소 · 서버 키트 팩토리 · 저장소 드라이버 표 ·
+  GameDataCache — 이것은 `C-27` ② 에셋 캐시와 함께) · 프로세스 공유 메모리 DB · 원샷 이미터 id · 스크래치 버퍼 · 지금 게임 범위 포인터. **나중에 옮김** — 에디터 플러그인 함수 정적 둘(`C-27` ④ 의 모듈 기여 창구 뒤).
+- 다음: RHI 안(`C-26`) · 렌더러 안(`C-27` ④) — 검증 요청 보고. PCH 측정(조용한 기계 필요). `Tools/Sccache` 폴더 · `%APPDATA%/Mozilla/sccache` 는 다른 빌드가 끝난 뒤 지운다.
 - 사용자 방침: 폴리싱에 집중, 운영 · 배포는 보류(`H-3`). **성능 증거는 반드시** 남긴다.
 
 ## 사용자가 나중에 하기로 한 것

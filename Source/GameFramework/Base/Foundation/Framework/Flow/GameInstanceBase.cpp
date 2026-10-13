@@ -58,12 +58,13 @@ namespace sw
         , _listPendingSceneLoad{}
         , _listStatefulType{}
         , _pComponentStateStore{ make_unique<ComponentStateStore>() }
-        , _screenTransition{}
-        , _pLoadingScreen{ make_unique<LoadingScreenController>() }
-        , _pNetSession{ make_unique<GameNetSession>() }
         , _gameScope{}
         , _bResumingWorld{ SW_FALSE }
     {
+        // 인스턴스 서브시스템 — initialize 가 onInitialize 앞에 초기화하고 shutdown 이 onShutdown 뒤에 역순으로 종료한다.
+        _gameScope.addSubsystem( make_unique<ScreenTransitionManager>() );
+        _gameScope.addSubsystem( make_unique<LoadingScreenController>() );
+        _gameScope.addSubsystem( make_unique<GameNetSession>() );
     }
 
     GameInstanceBase::~GameInstanceBase()
@@ -124,17 +125,9 @@ namespace sw
         game::setGameScope( &_gameScope );
         bindScopedService( &_bootstrap._data );
         applyBootstrap();
-        // 로딩 화면은 첫 씬 요청(onInitialize 안)이 띄울 수 있게 그 앞에 묶는다. UI 시스템이 없으면(전용 서버) 띄우지 않는다.
-        LoadingScreenSettings loadingSettings = _pLoadingScreen->getSettings();
-        loadingSettings._documentPath         = _bootstrap._data._loadingScreen;
-        _pLoadingScreen->setSettings( loadingSettings );
-        UISystem* pUISystem = game::getService<UISystem>();
-        _pLoadingScreen->bindUISystem( pUISystem != nullptr && pUISystem->isInitialized() ? pUISystem : nullptr );
-        // 네트워크 역할은 실행 인자가 정한다. 파생의 onInitialize 가 역할을 보고 키트 처리기를 달 수 있게 그 앞에서 연다.
-        // 포트가 사용 중이라 열지 못해도 게임은 혼자 뜬다. 실패는 세션이 로그에 남긴다.
-        GameNetSessionParams netParams;
-        if ( GameNetSession::makeParamsFromGlobalVariables( netParams ) )
-            (void)_pNetSession->initialize( netParams ); // 실패는 initialize 가 알린다
+        // 인스턴스 서브시스템을 onInitialize 앞에 세운다 — 첫 씬 요청(onInitialize 안)이 로딩 화면을 띄우고, 파생이 네트워크 역할을 보고 키트 처리기를 단다.
+        if ( _gameScope.getCollection().initializeAll( SubsystemHostMask::All ) == false )
+            SW_LOG_ERROR( "Game instance subsystems did not all initialize: %#", _gameScope.getCollection().getError().c_str() );
         const bool bInitialized = onInitialize();
 
         // 플레이어 설정을 다시 넣는다. 언어 팩과 입력 맵(키 바인딩, 누르기/토글)은 위에서 막 생겼고, 엔진 기동 때의 적용은 그 대상이 없을 때 한 것이다.
@@ -148,12 +141,10 @@ namespace sw
     void GameInstanceBase::shutdown()
     {
         onShutdown();
-        // 키트 처리기는 onShutdown 에서 내려갔다. 연결은 그 뒤에 끊어야 끊김 이벤트가 이미 내려간 처리기에 가지 않는다.
-        _pNetSession->shutdown();
+        // 키트 처리기는 onShutdown 에서 내려갔다. 연결은 그 뒤에 끊어야 끊김 이벤트가 이미 내려간 처리기에 가지 않는다(세션 · 로딩 화면 · 전환 종료).
+        _gameScope.getCollection().shutdownAll();
         detachGameScope();
         _listPendingSceneLoad.clear();
-        _pLoadingScreen->bindUISystem( nullptr );
-        _screenTransition.reset();
         _pWindow    = nullptr;
         _pRHIDevice = nullptr;
     }
@@ -228,8 +219,9 @@ namespace sw
             return false;
         }
         _listPendingSceneLoad.push_back( PendingSceneLoad{ scenePath, std::move( future ) } );
-        if ( _pLoadingScreen->getSettings()._documentPath.empty() == false )
-            (void)_pLoadingScreen->beginLoading();
+        LoadingScreenController& loadingScreen = getSubsystem<LoadingScreenController>();
+        if ( loadingScreen.getSettings()._documentPath.empty() == false )
+            (void)loadingScreen.beginLoading();
 
         SceneLoadRequestedEvent event{};
         event._levelName = scenePath;
@@ -265,12 +257,13 @@ namespace sw
         const SceneManager* pSceneManager = game::getService<SceneManager>();
         const bool          bLoading      = _listPendingSceneLoad.empty() == false || ( pSceneManager != nullptr && pSceneManager->isTransitioning() );
         // 페이드와 로딩 화면은 실제 시간으로 돌린다. 게임 시간으로 돌리면 정지 메뉴(게임 시간 0)가 뜬 동안 페이드가 반쯤 검은 채로 멈춘다.
-        const float32 realDeltaTime = GameTimeScale::getUnscaledDeltaTime( deltaTime );
-        _screenTransition.update( realDeltaTime );
-        _pLoadingScreen->update( realDeltaTime, bLoading, _screenTransition.fade() );
+        const float32            realDeltaTime    = GameTimeScale::getUnscaledDeltaTime( deltaTime );
+        ScreenTransitionManager& screenTransition = getSubsystem<ScreenTransitionManager>();
+        screenTransition.update( realDeltaTime );
+        getSubsystem<LoadingScreenController>().update( realDeltaTime, bLoading, screenTransition.fade() );
         if ( _listPendingSceneLoad.empty() == false )
             publishFinishedSceneLoads();
-        _pNetSession->update(); // 받은 이벤트와 메시지를 게임 프레임 앞에서 처리기에 나눠 준다. 세션이 없으면 바로 돌아온다.
+        getSubsystem<GameNetSession>().update(); // 받은 이벤트와 메시지를 게임 프레임 앞에서 처리기에 나눠 준다. 세션이 없으면 바로 돌아온다.
         onUpdate( deltaTime );
     }
 

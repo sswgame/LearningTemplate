@@ -10,6 +10,8 @@
 #include "Core/Network/Message/NetStatsReport.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
 
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "GameNetSession" );
@@ -33,14 +35,14 @@ namespace sw
              * @details 재전송 수치를 보려고 신뢰 메시지를 흘리는 용도다 — 키트가 없는 게임(Empty)의 세션은 연결 유지 패킷만 오가서 다시 보낼 것이 없다.
              */
             [[maybe_unused]] static constexpr uint8 kTrafficMessageKind = NetMessageRange::kFramework - 1;
-            /** @brief 지금 열린 세션 — 개발 명령 `net.*` 이 읽는다(게임 스레드에서만 쓰고 읽는다). */
-            static inline GameNetSession* s_pActiveSession{ nullptr };
+            /** @brief 지금 게임 인스턴스의 세션입니다(게임 범위의 서브시스템) — 개발 명령 `net.*` 이 읽는다(게임 스레드). 없으면 nullptr 입니다. */
+            static GameNetSession* findActiveSession() { return game::getService<GameNetSession>(); }
 
 #if SW_DEV_COMMANDS_ENABLED
             /** @brief 명령을 받을 세션 — 없으면 답을 채우고 nullptr 입니다. */
             static GameNetSession* findCommandSession( string& outReply )
             {
-                GameNetSession* pSession = s_pActiveSession;
+                GameNetSession* pSession = findActiveSession();
                 if ( pSession == nullptr || pSession->isActive() == false )
                 {
                     outReply = "net session: none (start with -gv_netListenPort=<port> or -gv_netConnectAddress=<host:port>)";
@@ -205,7 +207,7 @@ namespace sw
             static bool runStatus( const vector<string>& listArgument, string& outReply )
             {
                 (void)listArgument;
-                const GameNetSession* pSession = s_pActiveSession;
+                const GameNetSession* pSession = findActiveSession();
                 if ( pSession == nullptr || pSession->isActive() == false )
                 {
                     outReply = "net session: none (start with -gv_netListenPort=<port> or -gv_netConnectAddress=<host:port>)";
@@ -352,8 +354,7 @@ namespace sw
             _transport.reset();
             return false;
         }
-        _role                                    = params._role;
-        GameNetSessionInternal::s_pActiveSession = this;
+        _role = params._role;
         if ( _role == GameNetRole::Server )
             SW_LOG_INFO( "Net session listening on UDP port %#", _listenPort );
         else
@@ -361,10 +362,16 @@ namespace sw
         return true;
     }
 
+    SubsystemInitResult GameNetSession::initializeSubsystem()
+    {
+        GameNetSessionParams params;
+        if ( makeParamsFromGlobalVariables( params ) )
+            (void)initialize( params ); // 실패는 initialize 가 알린다 — 게임은 혼자 뜬다
+        return SubsystemInitResult::Succeeded;
+    }
+
     void GameNetSession::shutdown()
     {
-        if ( GameNetSessionInternal::s_pActiveSession == this )
-            GameNetSessionInternal::s_pActiveSession = nullptr;
         if ( _role == GameNetRole::None && _transport == nullptr )
             return;
         // 스레드를 먼저 멈춘다 — 끊기 패킷은 disconnectAll 이 바로 보낸다(update 를 돌 스레드가 없어도).

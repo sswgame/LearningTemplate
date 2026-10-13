@@ -13,6 +13,7 @@
 #include "Engine/UI/Base/WidgetTypes.h"
 #include "Engine/UI/Screen/UIScreen.h"
 
+#include "GameFramework/Base/Foundation/Framework/GameInstanceSubsystem.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -37,7 +38,8 @@ namespace sw
     /**
      * @class LoadingScreenController
      * @brief 로딩 화면과 화면 페이드를 그립니다. 언리얼 Lyra 의 `ULoadingScreenManager` 에 해당합니다.
-     * @details `GameInstanceBase` 가 들고 매 프레임 `update` 한다.
+     * @details 게임 인스턴스 서브시스템이다(`game::getService<LoadingScreenController>()`). `GameInstanceBase` 가 매 프레임 `update` 한다.
+     *          초기화(`onInitialize` 앞)에서 gamesettings 의 `_loadingScreen` 문서와 UI 시스템을 묶어, 첫 씬 요청이 로딩 화면을 띄울 수 있다.
      *          - **로딩 화면**: `beginLoading` 이 Loading 층 화면(문서 `_documentPath`)을 연다. 이 화면은 입력을 막고 Back 으로 닫히지 않는다.
      *            `update` 는 로드가 끝났고 최소 표시 시간이 지났으면 화면을 닫고 페이드 인을 건다.
      *            닫기 애니메이션 역할이며, 검은 화면에서 씬이 드러난다. 페이드는 입력을 막지 않는다.
@@ -47,9 +49,16 @@ namespace sw
      *            0 이 되면 닫는다.
      *          UI 시스템이 없으면(전용 서버, 헤드리스) 아무것도 하지 않는다. 게임 스레드에서만 써야 한다.
      */
-    class SW_GF_API LoadingScreenController
+    class SW_GF_API LoadingScreenController final : public GameInstanceSubsystem
     {
     public:
+        static constexpr const utf8* kSubsystemName = "LoadingScreenController";
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        /** @brief gamesettings 의 로딩 문서와 UI 시스템을 묶습니다. UI 시스템이 없으면(전용 서버) 아무것도 띄우지 않습니다. */
+        SubsystemInitResult initializeSubsystem() override;
+        /** @brief UI 시스템을 풉니다(연 화면을 닫는다). */
+        void shutdownSubsystem() override { bindUISystem( nullptr ); }
+
         /** @brief 문서에서 이 이름의 위젯을 돌립니다. 속도는 초당 라디안이며 3π/2 는 270° 입니다. */
         static constexpr float32 kSpinnerRadiansPerSecond = MathUtil::kPi * 1.5f;
         /** @brief 로딩 문서에서 돌릴 위젯과 팁 글 위젯의 이름입니다. */
@@ -57,7 +66,7 @@ namespace sw
         static constexpr const utf8* kTipWidgetName     = "Tip";
 
         LoadingScreenController();
-        ~LoadingScreenController();
+        ~LoadingScreenController() override;
         LoadingScreenController( const LoadingScreenController& )            = delete;
         LoadingScreenController& operator=( const LoadingScreenController& ) = delete;
 

@@ -10,6 +10,7 @@
 #include "Engine/UI/Widgets/BorderPanel.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
+#include "GameFramework/Base/Foundation/Data/GameSettings.h"
 #include "GameFramework/Base/Foundation/Framework/Flow/ScreenTransitionManager.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 
@@ -45,6 +46,20 @@ namespace sw
         , _spinnerAngle{ 0.0f }
         , _tipRandom{ GameRandom::kDefaultSeed }
     {
+    }
+
+    SubsystemInitResult LoadingScreenController::initializeSubsystem()
+    {
+        // 게임 인스턴스가 초기화 앞에 gamesettings 를 게임 범위에 건다. 없으면(테스트 범위) 문서 기본값을 둔다.
+        if ( const GameSettings* pSettings = game::getService<GameSettings>() )
+        {
+            LoadingScreenSettings settings = _settings;
+            settings._documentPath         = pSettings->_loadingScreen;
+            setSettings( settings );
+        }
+        UISystem* pUISystem = game::getService<UISystem>();
+        bindUISystem( pUISystem != nullptr && pUISystem->isInitialized() ? pUISystem : nullptr );
+        return SubsystemInitResult::Succeeded;
     }
 
     LoadingScreenController::~LoadingScreenController()
