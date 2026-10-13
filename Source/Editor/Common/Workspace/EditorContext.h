@@ -1,13 +1,12 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Subsystem/SubsystemCollection.h"
 
 #include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorViewTargetUtil.h"
-
-#include "Engine/Common/SubsystemCollection.h"
 
 namespace sw
 {

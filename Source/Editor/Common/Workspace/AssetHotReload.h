@@ -35,14 +35,16 @@ namespace sw::editor
         ~AssetHotReload() override;
 
         // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
-        EngineInitResult initializeSubsystem() override
+        SubsystemInitResult initializeSubsystem() override
         {
             (void)initialize(); // 리소스 루트가 없으면(팩만 실린 실행) 꺼진 채로 둔다
-            return EngineInitResult::Succeeded;
+            return SubsystemInitResult::Succeeded;
         }
-        void        shutdownSubsystem() override { shutdown(); }
-        const utf8* getSubsystemName() const override { return "AssetHotReload"; }
-        const utf8* getSubsystemDependencies() const override { return "EditorAssetValidation"; }
+        void shutdownSubsystem() override { shutdown(); }
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "AssetHotReload";
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const>      getSubsystemDependencies() const override;
 
         AssetHotReload( const AssetHotReload& )            = delete;
         AssetHotReload& operator=( const AssetHotReload& ) = delete;

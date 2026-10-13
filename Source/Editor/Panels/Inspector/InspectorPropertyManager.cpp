@@ -40,6 +40,12 @@
 
 namespace sw::editor
 {
+    span<const utf8* const> InspectorPropertyManager::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { EditorPanelManager::kSubsystemName };
+        return kArrDependency;
+    }
+
     namespace
     {
         /** @brief 애셋 경로 필드에서 이번 프레임에 일어난 일을 나타냅니다. */

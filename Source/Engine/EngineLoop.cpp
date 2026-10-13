@@ -23,6 +23,7 @@
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Audio/LipSyncImport.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Compression/EngineCompressionCodecUtil.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
@@ -241,7 +242,7 @@ namespace sw
                     CompressionCodecRegistry::setActive( pCodecRegistry );
                     // 외부 라이브러리 코덱은 **목록이 있는 자리**에서 붙인다(EngineCompressionCodecUtil).
                     EngineCompressionCodecUtil::registerAll( *pCodecRegistry );
-                    return EngineInitResult::Succeeded;
+                    return SubsystemInitResult::Succeeded;
                 };
                 _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kCompression, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeCompression ) ) )
                     .takeOwnership( std::move( _owned._pCompressionCodecRegistry ) );
@@ -254,9 +255,9 @@ namespace sw
                 {
                     engine::registerModuleTypes( "Engine" );
                     if ( engine::bindGlobalVariableEnumNames() )
-                        return EngineInitResult::Succeeded;
+                        return SubsystemInitResult::Succeeded;
                     engine::unbindGlobalVariableEnumNames();
-                    return EngineInitResult::Failed;
+                    return SubsystemInitResult::Failed;
                 };
                 // enum 이름 풀이는 타입 표를 본다 — 표가 소멸하기 전(종료)에 뗀다.
                 _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kReflection, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeReflection ),
@@ -266,7 +267,7 @@ namespace sw
             {
                 TaskManager* const pTaskManager   = _owned._pTaskManager.get();
                 auto               initializeTask = [pTaskManager]()
-                { return pTaskManager->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed; };
+                { return pTaskManager->initialize() ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed; };
                 _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kTask, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeTask ),
                                                               SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &TaskManager::shutdown, pTaskManager ) ) )
                     .takeOwnership( std::move( _owned._pTaskManager ) );
@@ -279,7 +280,7 @@ namespace sw
                 {
                     AsyncFileIOSettings settings{};
                     settings._pTaskManager = &engine::getTaskManager();
-                    return pAsyncFileIO->initialize( settings ) ? EngineInitResult::Succeeded : EngineInitResult::Failed;
+                    return pAsyncFileIO->initialize( settings ) ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
                 };
                 _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kFileIO, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeFileIO ),
                                                               SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &AsyncFileIO::shutdown, pAsyncFileIO ) ) );
@@ -303,10 +304,10 @@ namespace sw
                     if ( _moduleTypeLoader.isBound() && _moduleTypeLoader() == false )
                     {
                         SW_LOG_ERROR( "The host could not load its type-providing modules - scenes are not read" );
-                        return EngineInitResult::Failed;
+                        return SubsystemInitResult::Failed;
                     }
                     engine::getTypeRegistry().markAllModuleTypesRegistered();
-                    return EngineInitResult::Succeeded;
+                    return SubsystemInitResult::Succeeded;
                 };
                 _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kModuleTypes, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, loadModuleTypes ) ) );
             }
@@ -355,7 +356,7 @@ namespace sw
                     // 실패의 이유를 남긴다 — App 이 이것으로 종료 코드를 고른다.
                     _rhiInitResult = pRHI->getInitResult();
                     if ( bRHIReady == false )
-                        return EngineInitResult::Failed;
+                        return SubsystemInitResult::Failed;
                     _pRHI = pRHI;
                     // 백엔드가 정해졌으니 크래시 리포트에 남긴다 — "어느 백엔드에서 났는가" 가 범위를 좁히는 첫 질문이다.
                     CrashHandler::setContextValue( "RHI", pRHI->getDevice().getBackendName() );
@@ -363,7 +364,7 @@ namespace sw
                     // `-gv_crashTest=1`: 크래시 리포트 경로를 실제로 확인하는 유일한 방법이다(리포트는 크래시가 나야만 만들어진다).
                     if ( gv_crashTest != 0 )
                         CrashHandler::crashForTest( static_cast<CrashTestKind>( gv_crashTest ) );
-                    return EngineInitResult::Succeeded;
+                    return SubsystemInitResult::Succeeded;
                 };
                 auto shutdownRHI = [pRHI]()
                 {
@@ -383,7 +384,7 @@ namespace sw
                 auto attachSceneDevice = [this]()
                 {
                     engine::getSceneManager().setRHIDevice( &_pRHI->getDevice() );
-                    return EngineInitResult::Succeeded;
+                    return SubsystemInitResult::Succeeded;
                 };
                 auto detachSceneDevice = []()
                 { engine::getSceneManager().setRHIDevice( nullptr ); };
@@ -393,7 +394,7 @@ namespace sw
             {
                 InputManager* const pInputManager   = _owned._pInputManager.get();
                 auto                initializeInput = [pInputManager]()
-                { return pInputManager->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed; };
+                { return pInputManager->initialize() ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed; };
                 _pInputManager = &_startup
                                       .add( make_unique<FunctionSubsystem>( EngineFunctionStep::kInput, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeInput ),
                                                                             SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &InputManager::shutdown, pInputManager ) ) )
@@ -418,7 +419,7 @@ namespace sw
 
                     _pEngineConfig = _pConfigManager->ensureConfig<EngineConfig>( config::kFileRuntimeEngineConfig, shipping_host::kEngineConfigJSON );
                     if ( _pEngineConfig == nullptr )
-                        return EngineInitResult::Failed;
+                        return SubsystemInitResult::Failed;
                     EngineConfig::setActive( *_pEngineConfig );
 
                     // 틀린 설정 파일은 nullptr 이다(키 이름은 이미 오류로 남았다) — 기본값으로 뜨면 고친 값이 무시된 것을 아무도 모른다.
@@ -430,12 +431,12 @@ namespace sw
 #endif
                     const GameConfig* pGameConfig = _pConfigManager->ensureConfig<GameConfig>( GameSelection::getConfigPath(), pGameConfigJSON );
                     if ( pGameConfig == nullptr )
-                        return EngineInitResult::Failed;
+                        return SubsystemInitResult::Failed;
                     GameConfig::setActive( *pGameConfig );
 
                     // 메모리 태그 예산(데이터). 틀린 표는 오류를 남기고 예산 없이 간다 — 진단 설정 하나로 기동을 세우지 않는다.
                     (void)_memoryBudgetMonitor.loadBudgetFile( FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), MemoryBudgetMonitor::kBudgetFile ) );
-                    return EngineInitResult::Succeeded;
+                    return SubsystemInitResult::Succeeded;
                 };
                 _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kConfig, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeConfig ) ) )
                     .takeOwnership( std::move( configManager ) );
@@ -447,12 +448,12 @@ namespace sw
                 auto                initializeResource = [this, pAssetManager]()
                 {
                     if ( pAssetManager->initialize() == false )
-                        return EngineInitResult::Failed;
+                        return SubsystemInitResult::Failed;
                     bool bCookScenes = false;
                     _owned._pCommandLineManager->getArgument( CommandLineArgument::COOK_SCENES, bCookScenes );
                     const ContentSource contentSource = bCookScenes ? ContentSource::SourceTree : ContentSource::Cooked;
                     pAssetManager->mountContent( _pEngineConfig->_listResourcePriority, contentSource );
-                    return EngineInitResult::Succeeded;
+                    return SubsystemInitResult::Succeeded;
                 };
                 _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kResource, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeResource ) ) )
                     .takeOwnership<&AssetManager::shutdown>( std::move( _owned._pAssetManager ) );
@@ -472,7 +473,7 @@ namespace sw
                     string commandLineLanguage;
                     if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::LANGUAGE, commandLineLanguage ) && localization.hasLanguage( commandLineLanguage ) )
                         localization.setCurrentLanguage( commandLineLanguage );
-                    return EngineInitResult::Succeeded;
+                    return SubsystemInitResult::Succeeded;
                 };
                 _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kEngineDefaultAssets, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeEngineDefaultAssets ) ) )
                     .takeOwnership( std::move( _owned._pEngineDefaultAssets ) );
@@ -480,7 +481,7 @@ namespace sw
             {
                 IAudioService* const pAudioService   = _audioService.get();
                 auto                 initializeAudio = [pAudioService]()
-                { return pAudioService->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed; };
+                { return pAudioService->initialize() ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed; };
                 _pAudioService = &_startup
                                       .add( make_unique<FunctionSubsystem>( EngineFunctionStep::kAudio, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeAudio ),
                                                                             SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &IAudioService::shutdown, pAudioService ) ) )
@@ -495,14 +496,14 @@ namespace sw
                 auto                initializeScene = [this, pSceneManager, pCommandStack]()
                 {
                     if ( pSceneManager->initialize( SceneEngineServices::makeFromBoundEngine() ) == false )
-                        return EngineInitResult::Failed;
+                        return SubsystemInitResult::Failed;
                     SceneObjectsInvalidatedDelegate& onInvalidated = pSceneManager->onSceneObjectsInvalidated();
                     if ( _sceneObjectsInvalidatedHandle.isValid() )
                         onInvalidated.remove( _sceneObjectsInvalidatedHandle );
                     _sceneObjectsInvalidatedHandle = DelegateHandle{};
                     if ( pCommandStack != nullptr )
                         _sceneObjectsInvalidatedHandle = onInvalidated.add( SW_DELEGATE_METHOD( Delegate<void()>, &CommandStack::clear, pCommandStack ) );
-                    return EngineInitResult::Succeeded;
+                    return SubsystemInitResult::Succeeded;
                 };
                 // 종료도 알린다(기록을 비운다) — 그 뒤에 구독을 뗀다.
                 auto shutdownScene = [this, pSceneManager]()
@@ -546,9 +547,9 @@ namespace sw
                     if ( _pFrameRenderer->initialize( &_pRHI->getDevice(), &engine::getTaskManager() ) == false )
                     {
                         SW_LOG_ERROR( "Failed to initialize FrameRenderer!" );
-                        return EngineInitResult::Failed;
+                        return SubsystemInitResult::Failed;
                     }
-                    return EngineInitResult::Succeeded;
+                    return SubsystemInitResult::Succeeded;
                 };
                 auto shutdownFrameRenderer = [this]()
                 {
@@ -578,9 +579,9 @@ namespace sw
                     if ( pRenderThread->attach( &_pRHI->getDevice(), _pFrameRenderer ) == false )
                     {
                         SW_LOG_ERROR( "Failed to attach RenderThread!" );
-                        return EngineInitResult::Failed;
+                        return SubsystemInitResult::Failed;
                     }
-                    return EngineInitResult::Succeeded;
+                    return SubsystemInitResult::Succeeded;
                 };
                 auto stopRenderThread = [pRenderThread]()
                 {
@@ -612,7 +613,7 @@ namespace sw
                     if ( pShaderRecompiler->initialize( "Shaders" ) == false )
                     {
                         SW_LOG_ERROR( "Failed to initialize ShaderRecompiler!" );
-                        return EngineInitResult::Succeeded; // 개발 도구 하나로 기동을 세우지 않는다
+                        return SubsystemInitResult::Succeeded; // 개발 도구 하나로 기동을 세우지 않는다
                     }
                     _pShaderRecompiler = pShaderRecompiler;
                     auto onRecompiled  = [this]( string_view shaderPath, const ShaderCompileResult& result )
@@ -622,7 +623,7 @@ namespace sw
                         _pFrameRenderer->onShaderRecompiled( shaderPath, result );
                     };
                     pShaderRecompiler->setOnAnyShaderRecompiled( SW_DELEGATE_LAMBDA( ShaderRecompiledDelegate, onRecompiled ) );
-                    return EngineInitResult::Succeeded;
+                    return SubsystemInitResult::Succeeded;
                 };
                 auto shutdownLiveShader = [pShaderRecompiler]()
                 { pShaderRecompiler->shutdown(); };
@@ -649,9 +650,12 @@ namespace sw
         ProfilerBackend::initialize();
 
         // 초기화의 순서는 손으로 적지 않는다. 서브시스템마다 먼저 서야 하는 것을 적고, 여기서는 위상 순서로 부른다. 종료와 해제는 그 역순이다(`shutdown`).
-        const bool bStarted = _startup.initializeAll( bDedicatedServer ? EngineInitTarget::Server : EngineInitTarget::Client );
+        const bool bStarted = _startup.initializeAll( bDedicatedServer ? EngineSubsystemHost::kServer : EngineSubsystemHost::kClient );
         if ( bStarted == false )
+        {
+            SW_LOG_ERROR( "Engine startup failed: %#", _startup.getError().c_str() );
             return false;
+        }
         // 장면별 프레임 시간 · flush 는 프레임 관찰자로 돈다(씬 틱 뒤 — `TelemetryService::onAfterSceneTick`). 텔레메트리가 섰을 때만 붙인다.
         // 떼는 것은 `shutdown` 이 단계 종료 전에 관찰자 목록을 비우는 것으로 끝난다.
         if ( telemetryService.isInitialized() )
@@ -664,7 +668,7 @@ namespace sw
             for ( const uint32 index : subsystems.getInitializeOrder() )
             {
                 const ISubsystem& subsystem = subsystems.getSubsystem( index );
-                if ( ( static_cast<uint8>( subsystem.getSubsystemTarget() ) & static_cast<uint8>( EngineInitTarget::Server ) ) != 0 )
+                if ( ( static_cast<uint8>( subsystem.getSubsystemHost() ) & static_cast<uint8>( EngineSubsystemHost::kServer ) ) != 0 )
                     continue;
                 if ( skipped.empty() == false )
                     skipped += " ";
@@ -744,7 +748,7 @@ namespace sw
             _pRHI->setPreferredVSync( _pEngineConfig->_window._bVSync );
     }
 
-    EngineInitResult EngineLoop::runHeadlessTask()
+    SubsystemInitResult EngineLoop::runHeadlessTask()
     {
         // 전용 서버가 하는 헤드리스 작업은 씬 쿠킹(서버 팩)까지다. 셰이더 쿠킹(DXC) · 원본 임포트(에디터 모듈)는 App 의 일이다 — 조용히 넘기지 않고 실패한다.
         if ( _hostRole == EngineHostRole::DedicatedServer )
@@ -766,7 +770,7 @@ namespace sw
                     SW_LOG_ERROR( "This headless task runs in the client build (App), not in the dedicated server" );
                     _bHeadless           = true;
                     _bHeadlessTaskFailed = true;
-                    return EngineInitResult::SkipDependents;
+                    return SubsystemInitResult::SkipDependents;
                 }
             }
         }
@@ -781,7 +785,7 @@ namespace sw
             SW_LOG_INFO( "Starting Headless (CookShaders)..." );
             const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders();
             _bHeadlessTaskFailed            = summary.isClean() == false;
-            return EngineInitResult::SkipDependents;
+            return SubsystemInitResult::SkipDependents;
         }
 
         // 리플렉션 문서도 같은 자리다 — 모든 타입 공급자가 등록을 끝낸 뒤(ModuleTypes)라 게임 · 킷의 타입까지 든다.
@@ -790,7 +794,7 @@ namespace sw
         {
             _bHeadless           = true;
             _bHeadlessTaskFailed = ReflectionDocWriter::writeMarkdown( engine::getTypeRegistry(), reflectionDocsDir ) == 0;
-            return EngineInitResult::SkipDependents;
+            return SubsystemInitResult::SkipDependents;
         }
 
         // 리타깃 굽기(`--bake-retarget=<프로필>,<원본 클립>,<출력 클립>`) — 클립 · 스켈레톤 · 코덱이 모두 엔진 것이라 여기서 한다.
@@ -806,7 +810,7 @@ namespace sw
                 SW_LOG_ERROR( "--bake-retarget expects <profile>,<source clip>,<output clip>" );
             _bHeadlessTaskFailed = bWellFormed == false ||
                                    RetargetBakeUtil::bakeClipFile( StringUtil::trim( listArgument[0] ), StringUtil::trim( listArgument[1] ), StringUtil::trim( listArgument[2] ) ) == false;
-            return EngineInitResult::SkipDependents;
+            return SubsystemInitResult::SkipDependents;
         }
 
         // 씬 쿠킹도 같은 자리다. 엔티티 상태를 바이너리로 구우려면 리플렉션이 필요하고,
@@ -843,7 +847,7 @@ namespace sw
                          vertexAnimationFailedCount, navMeshCount, navMeshFailedCount );
             _bHeadlessTaskFailed = sceneCount == 0 || sceneFailedCount > 0 || prefabFailedCount > 0 || registryFailedCount > 0 ||
                                    vertexAnimationFailedCount > 0 || navMeshFailedCount > 0;
-            return EngineInitResult::SkipDependents;
+            return SubsystemInitResult::SkipDependents;
         }
 
         // 립싱크 분석 — 음성마다 비즘 트랙을 곁에 쓴다. 분석 표가 엔진 데이터라 엔진이 한다.
@@ -862,7 +866,7 @@ namespace sw
                 ++lipSyncFailedCount;
             SW_LOG_INFO( "Imported %# viseme tracks (%# failures).", lipSyncCount, lipSyncFailedCount );
             _bHeadlessTaskFailed = lipSyncFailedCount > 0;
-            return EngineInitResult::SkipDependents;
+            return SubsystemInitResult::SkipDependents;
         }
 
         // 로컬라이제이션 도구(글 수집 · PO 교환)와 원본 임포트 · 대조(텍스처 · 모델 · 높이장)는 에디터 모듈이 한다(엔진은 에디터를 모른다).
@@ -896,12 +900,12 @@ namespace sw
             MemoryProfiler::captureMemoryLeakBaseline();
             _bHeadless = true;
             SW_LOG_INFO( "Starting Headless (%#)...", bAnyLocalization ? "localization tools" : "asset import/check" );
-            return EngineInitResult::SkipDependents;
+            return SubsystemInitResult::SkipDependents;
         }
-        return EngineInitResult::Succeeded;
+        return SubsystemInitResult::Succeeded;
     }
 
-    EngineInitResult EngineLoop::loadUserSettings()
+    SubsystemInitResult EngineLoop::loadUserSettings()
     {
         UserSettingsManager& settings = engine::getUserSettingsManager();
         UserSettingsTargets  targets;
@@ -939,7 +943,7 @@ namespace sw
         if ( settings.loadUserFile( settings.getUserFilePath() ) == false )
             (void)settings.applyAutoDetectedPreset( HardwareProbe::probe() ); // 맞는 프리셋이 없으면 기본값 그대로다
         settings.reapplyAll();
-        return EngineInitResult::Succeeded;
+        return SubsystemInitResult::Succeeded;
     }
 
     bool EngineLoop::renderPortraits( string_view prefabList, string_view outputDirectory, uint32 size )
@@ -1283,6 +1287,8 @@ namespace sw
         // 내렸던 단계를 기동과 같은 본문으로 다시 세운다: 렌더러(업로드 큐 · 배치 합치기 설정을 새 디바이스로) → 렌더 스레드 → 라이브 셰이더 →
         // 씬의 디바이스. 본문은 이미 있는 객체를 다시 쓰므로 렌더 스레드에 걸린 훅과 그것을 가리키는 포인터가 그대로다.
         const bool bRestarted = _startup.restartStopped();
+        if ( bRestarted == false )
+            SW_LOG_ERROR( "Backend change: %#", _startup.getError().c_str() );
 
         Scene* pScene = _pSceneManager != nullptr ? _pSceneManager->getActiveScene() : nullptr;
         if ( pScene != nullptr )

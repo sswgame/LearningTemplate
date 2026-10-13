@@ -13,6 +13,12 @@
 
 namespace sw::editor
 {
+    span<const utf8* const> EditorPanelHost::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { EditorPanelManager::kSubsystemName, EditorWorkspace::kSubsystemName };
+        return kArrDependency;
+    }
+
     EditorPanelHost::EditorPanelHost( EditorContext& context, EditorPanelManager& panelManager )
         : _context{ context }
         , _panelManager{ panelManager }

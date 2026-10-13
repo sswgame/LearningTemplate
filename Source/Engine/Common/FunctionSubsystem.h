@@ -6,23 +6,23 @@
  *          성공으로 칩니다). 객체를 넘기면(`takeOwnership`) 이 서브시스템의 소멸 자리 — 모든 종료 뒤, 초기화의 역순 — 에서 함께 소멸합니다.
  *
  * ```cpp
- * startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "Reflection", "", EngineInitTarget::All, MemoryTag::Reflection },
+ * startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "Reflection", {}, SubsystemHostMask::All, MemoryTag::Reflection },
  *                                                       SW_DELEGATE_FUNCTION( SubsystemInitializeDelegate, &registerReflection ) ) );
  * ```
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/span.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryTag.h"
-
-#include "Engine/Common/ISubsystem.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 namespace sw
 {
     /** @brief `FunctionSubsystem` 의 초기화 본문입니다. */
-    SW_DECLARE_DELEGATE( EngineInitResult, SubsystemInitializeDelegate, void );
+    SW_DECLARE_DELEGATE( SubsystemInitResult, SubsystemInitializeDelegate, void );
     /** @brief `FunctionSubsystem` 의 종료 본문입니다. */
     SW_DECLARE_DELEGATE( void, SubsystemShutdownDelegate, void );
 } // namespace sw
@@ -32,10 +32,10 @@ namespace sw
     /** @brief `FunctionSubsystem` 의 선언(이름 · 의존 · 대상 · 메모리 태그)입니다. 글은 문자열 리터럴(프로세스 수명)이어야 합니다. */
     struct FunctionSubsystemDesc
     {
-        const utf8*      _pName;         ///< 이름(의존 칸이 부르는 식별자)
-        const utf8*      _pDependencies; ///< 먼저 서야 하는 이름들(쉼표 · 공백 · 중괄호로 구분)
-        EngineInitTarget _target;        ///< 도는 호스트
-        MemoryTag        _memoryTag;     ///< 초기화가 할당하는 메모리의 용도
+        const utf8*             _pName;          ///< 이름(의존 칸이 부르는 식별자)
+        span<const utf8* const> _listDependency; ///< 먼저 서야 하는 이름들(프로세스 수명의 배열)
+        SubsystemHostMask       _host;           ///< 도는 호스트
+        MemoryTag               _memoryTag;      ///< 초기화가 할당하는 메모리의 용도
     };
 } // namespace sw
 
@@ -67,8 +67,8 @@ namespace sw
         FunctionSubsystem( const FunctionSubsystem& )            = delete;
         FunctionSubsystem& operator=( const FunctionSubsystem& ) = delete;
 
-        EngineInitResult initializeSubsystem() override { return _initialize.isBound() ? _initialize() : EngineInitResult::Succeeded; }
-        void             shutdownSubsystem() override
+        SubsystemInitResult initializeSubsystem() override { return _initialize.isBound() ? _initialize() : SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override
         {
             if ( _shutdown.isBound() )
                 _shutdown();
@@ -91,10 +91,10 @@ namespace sw
             return takeOwnershipInternal( std::move( owned ), &releaseAndDestroyOwned<pRelease, TOwned> );
         }
 
-        const utf8*      getSubsystemName() const override { return _desc._pName; }
-        const utf8*      getSubsystemDependencies() const override { return _desc._pDependencies; }
-        EngineInitTarget getSubsystemTarget() const override { return _desc._target; }
-        MemoryTag        getSubsystemMemoryTag() const override { return _desc._memoryTag; }
+        const utf8*             getSubsystemName() const override { return _desc._pName; }
+        span<const utf8* const> getSubsystemDependencies() const override { return _desc._listDependency; }
+        SubsystemHostMask       getSubsystemHost() const override { return _desc._host; }
+        MemoryTag               getSubsystemMemoryTag() const override { return _desc._memoryTag; }
 
     private:
         /** @brief 넘겨받은 객체 하나와 그 타입으로 소멸시키는 함수입니다. */

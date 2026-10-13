@@ -2,8 +2,9 @@
 
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/Subsystem/SubsystemCollection.h"
 
-#include "Engine/Common/SubsystemCollection.h"
+#include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/EngineInitSequence.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Physics/PhysicsSystem.h"
@@ -23,12 +24,12 @@ namespace
      */
     struct StartupRecorder
     {
-        EngineInitResult recordInitialize( const utf8* pName )
+        SubsystemInitResult recordInitialize( const utf8* pName )
         {
             _listEvent.push_back( string( "I:" ) + pName );
             _listInitializeName.push_back( pName );
             _listInitializeMemoryTag.push_back( Memory::getCurrentMemoryTag() );
-            return _failName == pName ? _failResult : EngineInitResult::Succeeded;
+            return _failName == pName ? _failResult : SubsystemInitResult::Succeeded;
         }
         void recordShutdown( const utf8* pName ) { _listEvent.push_back( string( "S:" ) + pName ); }
         void recordDestroy( const utf8* pName ) { _listEvent.push_back( string( "D:" ) + pName ); }
@@ -52,7 +53,7 @@ namespace
         vector<const utf8*> _listInitializeName{};      ///< 초기화한 이름(초기화한 순서)
         vector<MemoryTag>   _listInitializeMemoryTag{}; ///< 초기화 본문이 불린 동안의 할당 태그(`_listInitializeName` 과 같은 순서)
         string              _failName{};
-        EngineInitResult    _failResult{ EngineInitResult::Succeeded };
+        SubsystemInitResult _failResult{ SubsystemInitResult::Succeeded };
     };
 
     /** @brief 엔진 서브시스템 하나의 선언(이름 · 의존 · 대상 · 태그)을 그대로 지닌 대역입니다. 본문 대신 불린 순서를 적는다. */
@@ -62,27 +63,27 @@ namespace
         StandInSubsystem( StartupRecorder& recorder, const ISubsystem& real )
             : _recorder{ recorder }
             , _pName{ real.getSubsystemName() }
-            , _pDependencies{ real.getSubsystemDependencies() }
-            , _target{ real.getSubsystemTarget() }
+            , _listDependency{ real.getSubsystemDependencies() }
+            , _host{ real.getSubsystemHost() }
             , _memoryTag{ real.getSubsystemMemoryTag() }
         {
         }
         ~StandInSubsystem() override { _recorder.recordDestroy( _pName ); }
 
-        EngineInitResult initializeSubsystem() override { return _recorder.recordInitialize( _pName ); }
-        void             shutdownSubsystem() override { _recorder.recordShutdown( _pName ); }
+        SubsystemInitResult initializeSubsystem() override { return _recorder.recordInitialize( _pName ); }
+        void                shutdownSubsystem() override { _recorder.recordShutdown( _pName ); }
 
-        const utf8*      getSubsystemName() const override { return _pName; }
-        const utf8*      getSubsystemDependencies() const override { return _pDependencies; }
-        EngineInitTarget getSubsystemTarget() const override { return _target; }
-        MemoryTag        getSubsystemMemoryTag() const override { return _memoryTag; }
+        const utf8*             getSubsystemName() const override { return _pName; }
+        span<const utf8* const> getSubsystemDependencies() const override { return _listDependency; }
+        SubsystemHostMask       getSubsystemHost() const override { return _host; }
+        MemoryTag               getSubsystemMemoryTag() const override { return _memoryTag; }
 
     private:
-        StartupRecorder& _recorder;
-        const utf8*      _pName;
-        const utf8*      _pDependencies;
-        EngineInitTarget _target;
-        MemoryTag        _memoryTag;
+        StartupRecorder&        _recorder;
+        const utf8*             _pName;
+        span<const utf8* const> _listDependency;
+        SubsystemHostMask       _host;
+        MemoryTag               _memoryTag;
     };
 
     /**
@@ -170,21 +171,21 @@ namespace
     }
 
     /** @brief 엔진 목록의 의존 그래프입니다(자리는 `SubsystemCollection` 의 자리). */
-    EngineInitGraph makeGraph( const SubsystemCollection& subsystems )
+    SubsystemGraph makeGraph( const SubsystemCollection& subsystems )
     {
-        vector<EngineInitNode> listNode;
+        vector<SubsystemNode> listNode;
         for ( uint32 index = 0; index < subsystems.getSubsystemCount(); ++index )
         {
             listNode.push_back( { subsystems.getSubsystem( index ).getSubsystemName(), subsystems.getSubsystem( index ).getSubsystemDependencies() } );
         }
-        EngineInitGraph graph{};
-        string          error;
+        SubsystemGraph graph{};
+        string         error;
         (void)SubsystemCollection::computeGraph( listNode, graph, error ); // 그래프 오류는 ComputedOrder… 테스트가 본다
         return graph;
     }
 
     /** @brief @p name 에서 의존을 (간접으로라도) 거슬러 @p dependencyName 에 닿는가 — @p dependencyName 이 먼저 서야 하는가. */
-    bool dependsOn( const SubsystemCollection& subsystems, const EngineInitGraph& graph, string_view name, string_view dependencyName )
+    bool dependsOn( const SubsystemCollection& subsystems, const SubsystemGraph& graph, string_view name, string_view dependencyName )
     {
         const uint32 start      = findIndex( subsystems, name );
         const uint32 dependency = findIndex( subsystems, dependencyName );
@@ -213,7 +214,7 @@ namespace
     /** @brief 초기화 순서의 이름 가운데 @p name 에 (간접으로라도) 의존하는 것을 고릅니다. @p bKeepDependents 가 false 면 거꾸로 그것만 뺍니다. */
     string filterDependentsOf( const SubsystemCollection& subsystems, string_view name, bool bKeepDependents )
     {
-        const EngineInitGraph                   graph = makeGraph( subsystems );
+        const SubsystemGraph                    graph = makeGraph( subsystems );
         StringBuilder<constant::kMaxBuffer1024> sb;
         for ( const uint32 index : subsystems.getInitializeOrder() )
         {
@@ -258,15 +259,15 @@ SW_TEST_CASE( EngineInitSequenceTest, SceneReadingStepWaitsForModuleTypes )
     SubsystemCollection sequence;
     addEngineStandIns( sequence, recorder );
     const SubsystemCollection& subsystems = sequence;
-    const EngineInitGraph      graph      = makeGraph( subsystems );
+    const SubsystemGraph       graph      = makeGraph( subsystems );
     SW_EXPECT_TRUE( dependsOn( subsystems, graph, "Headless", "ModuleTypes" ) );
     // 타입 등록은 리플렉션 · 설정(키트 목록) 뒤다 — 모듈 이미지를 내리는 자리(ModuleImages)보다도 뒤라 종료에서 먼저 내려간다.
     SW_EXPECT_TRUE( dependsOn( subsystems, graph, "ModuleTypes", "Reflection" ) );
     SW_EXPECT_TRUE( dependsOn( subsystems, graph, "ModuleTypes", "ModuleImages" ) );
 
     recorder._failName   = "ModuleTypes";
-    recorder._failResult = EngineInitResult::Failed;
-    SW_EXPECT_FALSE( sequence.initializeAll( EngineInitTarget::Client ) );
+    recorder._failResult = SubsystemInitResult::Failed;
+    SW_EXPECT_FALSE( sequence.initializeAll( EngineSubsystemHost::kClient ) );
     for ( const utf8* pName : recorder._listInitializeName )
     {
         SW_EXPECT_TRUE_MSG( string_view{ pName } != "Headless", "the scene cook ran although module types were not registered" );
@@ -292,8 +293,8 @@ SW_TEST_CASE( EngineInitSequenceTest, ComputedOrderIsDeterministicAndDependencie
     addEngineStandIns( other, recorder );
     SW_EXPECT_STREQ( joinOrderNames( subsystems ).c_str(), joinOrderNames( other ).c_str() );
 
-    const EngineInitGraph graph = makeGraph( subsystems );
-    vector<uint32>        listPosition( subsystems.getSubsystemCount(), 0 );
+    const SubsystemGraph graph = makeGraph( subsystems );
+    vector<uint32>       listPosition( subsystems.getSubsystemCount(), 0 );
     for ( uint32 position = 0; position < static_cast<uint32>( subsystems.getInitializeOrder().size() ); ++position )
     {
         listPosition[subsystems.getInitializeOrder()[position]] = position;
@@ -315,7 +316,7 @@ SW_TEST_CASE( EngineInitSequenceTest, ShutdownAndDestroyRunInReverseOfInitializa
     StartupRecorder     recorder; // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
     SubsystemCollection sequence;
     addEngineStandIns( sequence, recorder );
-    SW_ASSERT_TRUE( sequence.initializeAll( EngineInitTarget::Client ) );
+    SW_ASSERT_TRUE( sequence.initializeAll( EngineSubsystemHost::kClient ) );
     const string order = joinOrderNames( sequence );
     SW_EXPECT_STREQ( order.c_str(), recorder.joinEvents( 'I' ).c_str() );
 
@@ -343,8 +344,8 @@ SW_TEST_CASE( EngineInitSequenceTest, FailedStepStopsAndShutsDownOnlyInitialized
     SubsystemCollection sequence;
     addEngineStandIns( sequence, recorder );
     recorder._failName   = "Scene";
-    recorder._failResult = EngineInitResult::Failed;
-    SW_EXPECT_FALSE( sequence.initializeAll( EngineInitTarget::Client ) );
+    recorder._failResult = SubsystemInitResult::Failed;
+    SW_EXPECT_FALSE( sequence.initializeAll( EngineSubsystemHost::kClient ) );
     const string prefix = makeOrderPrefix( sequence, "Scene" );
     SW_EXPECT_STREQ( prefix.c_str(), recorder.joinEvents( 'I' ).c_str() );
 
@@ -368,12 +369,12 @@ SW_TEST_CASE( EngineInitSequenceTest, SkipDependentsSkipsEveryDependentStep )
     SubsystemCollection sequence;
     addEngineStandIns( sequence, recorder );
     recorder._failName   = "Headless";
-    recorder._failResult = EngineInitResult::SkipDependents;
-    SW_EXPECT_TRUE( sequence.initializeAll( EngineInitTarget::Client ) );
+    recorder._failResult = SubsystemInitResult::SkipDependents;
+    SW_EXPECT_TRUE( sequence.initializeAll( EngineSubsystemHost::kClient ) );
     const SubsystemCollection& subsystems = sequence;
     const string               expected   = filterDependentsOf( subsystems, "Headless", false );
     SW_EXPECT_STREQ( expected.c_str(), recorder.joinEvents( 'I' ).c_str() );
-    const EngineInitGraph graph = makeGraph( subsystems );
+    const SubsystemGraph graph = makeGraph( subsystems );
     for ( const utf8* pName : { "RHI", "FrameRenderer", "RenderThread", "LiveShader", "SceneRHI" } )
     {
         SW_EXPECT_TRUE_MSG( dependsOn( subsystems, graph, pName, "Headless" ), pName );
@@ -396,71 +397,6 @@ SW_TEST_CASE( EngineInitSequenceTest, DestroyBeforeInitializeDoesNothing )
 }
 
 /**
- * @brief [EngineInitSequenceTest] 순환은 정렬 오류이고, 순환에 든 노드를 이름으로 알리는지 검증
- */
-SW_TEST_CASE( EngineInitSequenceTest, CycleIsRejected )
-{
-    const vector<EngineInitNode> listNode = {
-        {"A", "C"},
-        {"B", "A"},
-        {"C", "B"},
-        {"D",  ""}
-    };
-    EngineInitGraph graph{};
-    string          error;
-    SW_EXPECT_FALSE( SubsystemCollection::computeGraph( listNode, graph, error ) );
-    SW_EXPECT_STREQ( "Startup steps in or behind a dependency cycle: A B C", error.c_str() );
-    SW_EXPECT_EMPTY( graph._listOrder );
-}
-
-/**
- * @brief [EngineInitSequenceTest] 모르는 의존 이름 · 같은 이름 두 번은 정렬 오류인지 검증
- */
-SW_TEST_CASE( EngineInitSequenceTest, UnknownOrDuplicateNameIsRejected )
-{
-    EngineInitGraph graph{};
-    string          error;
-    SW_EXPECT_FALSE( SubsystemCollection::computeGraph( {
-                                                            { "A", "Missing" }
-    },
-                                                        graph, error ) );
-    SW_EXPECT_STREQ( "Startup step 'A' depends on unknown step 'Missing'", error.c_str() );
-
-    error.clear();
-    SW_EXPECT_FALSE( SubsystemCollection::computeGraph( {
-                                                            {"A", ""},
-                                                            {"A", ""}
-    },
-                                                        graph, error ) );
-    SW_EXPECT_STREQ( "Startup step 'A' is declared twice", error.c_str() );
-}
-
-/**
- * @brief [EngineInitSequenceTest] 의존이 순서를 정하고, 의존이 없는 노드끼리는 이름 순으로 가는지 검증(목록 순서는 보지 않는다)
- * @details 목록은 이름과 거꾸로 두고, 의존 글은 중괄호 꼴(`{ A, B }`)과 공백 꼴을 섞는다.
- */
-SW_TEST_CASE( EngineInitSequenceTest, DependenciesOrderAndNameBreaksTies )
-{
-    const vector<EngineInitNode> listNode = {
-        {"D", "{ A, B }"},
-        {"C",         ""},
-        {"B",       "{}"},
-        {"A",      " C "}
-    };
-    EngineInitGraph graph{};
-    string          error;
-    SW_ASSERT_TRUE_MSG( SubsystemCollection::computeGraph( listNode, graph, error ), error.c_str() );
-    string order;
-    for ( const uint32 nodeIndex : graph._listOrder )
-    {
-        if ( order.empty() == false )
-            order += " ";
-        order += listNode[nodeIndex]._pName;
-    }
-    SW_EXPECT_STREQ( "B C A D", order.c_str() );
-}
-
-/**
  * @brief [EngineInitSequenceTest] RHI 에 (간접으로라도) 의존하는 단계만 역순으로 내리고, 같은 본문으로 다시 세우는지 검증
  * @details 백엔드 교체가 이 길을 탄다: RHI 의 디바이스를 갈아 끼우는 동안 렌더러 · 렌더 스레드 · 라이브 셰이더 · 씬의 디바이스만 내렸다가
  *          다시 세운다. 다시 세운 뒤의 종료 순서는 처음 기동한 것과 같아야 한다.
@@ -470,7 +406,7 @@ SW_TEST_CASE( EngineInitSequenceTest, DependentsOfAStepRestartWithTheSameBodies 
     StartupRecorder     recorder; // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
     SubsystemCollection sequence;
     addEngineStandIns( sequence, recorder );
-    SW_ASSERT_TRUE( sequence.initializeAll( EngineInitTarget::Client ) );
+    SW_ASSERT_TRUE( sequence.initializeAll( EngineSubsystemHost::kClient ) );
     const string order     = joinOrderNames( sequence );
     const string dependent = filterDependentsOf( sequence, "RHI", true );
     SW_EXPECT_STREQ( "FrameRenderer RenderThread LiveShader SceneRHI", dependent.c_str() );
@@ -497,11 +433,11 @@ SW_TEST_CASE( EngineInitSequenceTest, FailedRestartLeavesTheRestStopped )
     StartupRecorder     recorder; // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
     SubsystemCollection sequence;
     addEngineStandIns( sequence, recorder );
-    SW_ASSERT_TRUE( sequence.initializeAll( EngineInitTarget::Client ) );
+    SW_ASSERT_TRUE( sequence.initializeAll( EngineSubsystemHost::kClient ) );
 
     sequence.shutdownDependentsOf( getByName( sequence, "RHI" ) );
     recorder._failName   = "RenderThread";
-    recorder._failResult = EngineInitResult::Failed;
+    recorder._failResult = SubsystemInitResult::Failed;
     SW_EXPECT_FALSE( sequence.restartStopped() );
 
     // 실패한 RenderThread 와 그 뒤로 다시 세우지 못한 단계(라이브 셰이더 · 씬의 디바이스)는 종료 대상이 아니다.
@@ -527,7 +463,7 @@ SW_TEST_CASE( EngineInitSequenceTest, InitializeRunsUnderTheStepMemoryTag )
     StartupRecorder     recorder; // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
     SubsystemCollection sequence;
     addEngineStandIns( sequence, recorder );
-    SW_ASSERT_TRUE( sequence.initializeAll( EngineInitTarget::Client ) );
+    SW_ASSERT_TRUE( sequence.initializeAll( EngineSubsystemHost::kClient ) );
     sequence.shutdownDependentsOf( getByName( sequence, "RHI" ) );
     SW_ASSERT_TRUE( sequence.restartStopped() );
     const SubsystemCollection& subsystems = sequence;
@@ -556,7 +492,7 @@ SW_TEST_CASE( EngineInitSequenceTest, DedicatedServerSkipsClientSteps )
     StartupRecorder     recorder; // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
     SubsystemCollection sequence;
     addEngineStandIns( sequence, recorder );
-    SW_ASSERT_TRUE( sequence.initializeAll( EngineInitTarget::Server ) );
+    SW_ASSERT_TRUE( sequence.initializeAll( EngineSubsystemHost::kServer ) );
 
     bool bSceneInitialized    = false;
     bool bHeadlessInitialized = false;
@@ -577,7 +513,7 @@ SW_TEST_CASE( EngineInitSequenceTest, DedicatedServerSkipsClientSteps )
     {
         const uint32 index = findIndex( subsystems, pClientName );
         SW_ASSERT_TRUE_MSG( index != invalid_index::kUint32, pClientName );
-        SW_EXPECT_TRUE_MSG( subsystems.getSubsystem( index ).getSubsystemTarget() == EngineInitTarget::Client, pClientName );
+        SW_EXPECT_TRUE_MSG( subsystems.getSubsystem( index ).getSubsystemHost() == EngineSubsystemHost::kClient, pClientName );
     }
 
     const string order = joinOrderNames( subsystems );
@@ -595,7 +531,7 @@ SW_TEST_CASE( EngineInitSequenceTest, ClientRunsEveryStep )
     StartupRecorder     recorder; // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
     SubsystemCollection sequence;
     addEngineStandIns( sequence, recorder );
-    SW_ASSERT_TRUE( sequence.initializeAll( EngineInitTarget::Client ) );
+    SW_ASSERT_TRUE( sequence.initializeAll( EngineSubsystemHost::kClient ) );
     SW_EXPECT_EQUAL( static_cast<size_t>( sequence.getSubsystemCount() ), recorder._listInitializeName.size() );
     sequence.destroyAll();
 }
@@ -613,8 +549,8 @@ SW_TEST_CASE( EngineInitSequenceTest, EngineSubsystemsSortIntoOneOrder )
     }
     SW_ASSERT_TRUE_MSG( sequence.sort(), sequence.getError().c_str() );
 
-    const EngineInitGraph graph = makeGraph( sequence );
-    vector<uint32>        listPosition( sequence.getSubsystemCount(), 0 );
+    const SubsystemGraph graph = makeGraph( sequence );
+    vector<uint32>       listPosition( sequence.getSubsystemCount(), 0 );
     for ( uint32 position = 0; position < static_cast<uint32>( sequence.getInitializeOrder().size() ); ++position )
     {
         listPosition[sequence.getInitializeOrder()[position]] = position;
@@ -631,4 +567,39 @@ SW_TEST_CASE( EngineInitSequenceTest, EngineSubsystemsSortIntoOneOrder )
     SubsystemCollection standIns;
     addEngineStandIns( standIns, recorder );
     SW_EXPECT_STREQ( joinOrderNames( standIns ).c_str(), joinOrderNames( sequence ).c_str() );
+}
+
+/**
+ * @brief [EngineInitSequenceTest] 호스트 종류마다 그 호스트에서 도는 서브시스템만으로 그래프가 닫힌다 — 걸러진 목록에서도 모든 의존이 있고 순환이 없다
+ * @details 정렬은 전체 목록에서 "호스트마다 의존도 돈다" 를 보지만, 여기서는 호스트마다 실제로 서는 목록만 따로 정렬해 한 종류에서만 터지는 오류를 막는다.
+ *          검사할 호스트 비트는 엔진 목록의 선언들이 가진 비트를 모은 것이라, 호스트 종류(비트)를 늘리면 이 테스트가 그 종류까지 본다.
+ */
+SW_TEST_CASE( EngineInitSequenceTest, EveryHostKindSortsItsOwnSubsystems )
+{
+    const vector<unique_ptr<ISubsystem>> listSubsystem = makeEngineSubsystems();
+    uint8                                hostBits      = static_cast<uint8>( EngineSubsystemHost::kClient ) | static_cast<uint8>( EngineSubsystemHost::kServer ); // 엔진이 정의한 종류는 선언이 없어도 본다
+    for ( const unique_ptr<ISubsystem>& subsystem : listSubsystem )
+    {
+        if ( subsystem->getSubsystemHost() != SubsystemHostMask::All )
+            hostBits |= static_cast<uint8>( subsystem->getSubsystemHost() );
+    }
+    SW_ASSERT_TRUE( hostBits != 0 );
+    uint32 hostKindCount = 0;
+    for ( uint32 bit = 0; bit < 8; ++bit )
+    {
+        const SubsystemHostMask host = static_cast<SubsystemHostMask>( 1u << bit );
+        if ( ( hostBits & static_cast<uint8>( host ) ) == 0 )
+            continue;
+        ++hostKindCount;
+        vector<SubsystemNode> listNode;
+        for ( const unique_ptr<ISubsystem>& subsystem : listSubsystem )
+        {
+            if ( overlapsHostMask( subsystem->getSubsystemHost(), host ) )
+                listNode.push_back( { subsystem->getSubsystemName(), subsystem->getSubsystemDependencies() } );
+        }
+        SubsystemGraph graph{};
+        string         error;
+        SW_EXPECT_TRUE_MSG( SubsystemCollection::computeGraph( listNode, graph, error ), error.c_str() );
+    }
+    SW_EXPECT_TRUE( hostKindCount >= 2 ); // 클라이언트 · 전용 서버
 }

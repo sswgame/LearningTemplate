@@ -399,6 +399,15 @@
   언리얼은 `UNavigationSystem` 이 월드에 등록되는 서브시스템이고(`UWorld::GetSubsystem<T>()`), 유니티의 `NavMeshManager` 도 씬 코어 밖 모듈이라 같은 방향입니다 — 그래서 `GameObject/` 는 `Component/Navigation` 을 include 하지 않습니다(`getSceneNavigation` 은 지웠습니다).
 - **`AABB` 는 Core 수학 타입입니다**(2026-10-11, 엔진 분할). `Engine/Physics/Collision/AABB.h` → `Core/Math/AABB.h`(`Frustum.h` 옆) — 언리얼 `FBox` · `FBoxSphereBounds` 와 유니티 `Bounds` 도 물리가 아닌 수학 타입입니다. 레이어를 보는 겹침 질의 `queryOverlaps` 만 물리의 `CollisionLayers.h` 에 남고, `Spatial` 은 티어 4 → 1 로, Object → Physics include 는 41 → 36 으로 줄었습니다.
 
+- **서브시스템(초기화 · 종료 짝 + 의존 순서)은 Core 의 계약입니다**(2026-10-14). `ISubsystem` · `SubsystemCollection` 은 `Core/Subsystem/`(티어 4 — 로그를 남기지 않아
+  Log 아래)에 있고, 호스트 종류는 Core 의 비트 마스크(`SubsystemHostMask`)이며 비트의 뜻(클라이언트 · 전용 서버)은 엔진(`EngineSubsystemHost`)이 정합니다.
+  언리얼은 서브시스템을 `UEngineSubsystem` · `UWorldSubsystem` 처럼 수명 범위마다 나누고 `ShouldCreateSubsystem` 으로 호스트를 거르며, 순서는 `InitializeDependency`
+  호출로 실행 중에 정하는 것으로 알고 있다. 여기서는 같은 모양(서브시스템이 이름 · 의존 · 호스트를 스스로 선언하고 목록이 호스트로 거른다)을 취하되 두 가지를 더 했다:
+  의존은 선언 전체로 위상 정렬하고(동점은 이름 순 — 결정적), 의존 칸은 다른 서브시스템의 이름 상수(`kSubsystemName`)를 가리켜 철자가 틀리면 컴파일 오류다.
+  모르는 이름 · 순환 · 호스트 어긋남은 `EngineInitSequenceTest` 가 호스트 종류마다 걸러진 실제 목록으로 잡는다(`EveryHostKindSortsItsOwnSubsystems`).
+  목록은 로그를 남기지 않고 오류 글을 돌려준다 — 로거도 이 목록의 서브시스템이 될 수 있게 하기 위해서다. 정렬 오류는 부른 쪽이 표준 오류로 낸다.
+  선택 의존("있으면 그 뒤")은 두지 않았다 — 지금 선언에는 다른 호스트에 없는 것에 기대는 선언이 없다(정렬의 호스트 검사가 0 건). 필요한 선언이 생기면 그때 칸을 더한다.
+
 ### 5-4. 데이터, 직렬화, 설정
 
 - **엔진 데이터에는 별칭을 두지 않습니다**(2026-10-03). 실제로 출시한 게임 데이터가 없으므로, 이름을 바꾸면 데이터를 다시 씁니다. 옛 `SaveGame` 파일도 읽지 않습니다. 계약은 Serialization README 에 있습니다.

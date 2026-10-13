@@ -12,8 +12,9 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Module/ModuleUnloadListener.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Subsystem/ISubsystem.h"
 
-#include "Engine/Common/ISubsystem.h"
+#include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/UI/Base/WidgetTypes.h"
 #include "Engine/UI/Binding/UIBindingConverterRegistry.h"
@@ -94,12 +95,15 @@ namespace sw
         bool isInitialized() const { return _input.getInputManager() != nullptr; }
 
         // ISubsystem — 기동 단계 `UI`. 배율 규칙 · 테마 목록 · UI 행동 맵을 못 읽으면 데이터 오류라 기동 실패다.
-        EngineInitResult initializeSubsystem() override;
-        void             shutdownSubsystem() override;
-        const utf8*      getSubsystemName() const override { return "UI"; }
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "UI";
+
+        SubsystemInitResult initializeSubsystem() override;
+        void                shutdownSubsystem() override;
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
         /** @brief 입력(행동 · 포인터)을 읽고 글꼴로 측정한다. UI 배율 · 글자 크기는 사용자 설정이다. */
-        const utf8*      getSubsystemDependencies() const override { return "Fonts Input UserSettings"; }
-        EngineInitTarget getSubsystemTarget() const override { return EngineInitTarget::Client; }
+        span<const utf8* const> getSubsystemDependencies() const override;
+        SubsystemHostMask       getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
 #if SW_DEV_COMMANDS_ENABLED
         /** @brief 서브시스템이 붙인 디버그 HUD 입니다(Dev 전용, 서브시스템으로 서지 않았으면 nullptr). 엔진 루프가 `update` 앞에서 셸 맵 단축키와 함께 돌린다. */
         DebugHUD* getDebugHUD() const { return _debugHUD.get(); }

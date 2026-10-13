@@ -297,7 +297,13 @@ namespace sw
         _bInitialized = SW_FALSE;
     }
 
-    EngineInitResult TelemetryService::initializeSubsystem()
+    span<const utf8* const> TelemetryService::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { "UserSettings" };
+        return kArrDependency;
+    }
+
+    SubsystemInitResult TelemetryService::initializeSubsystem()
     {
         // 문맥은 파일마다 첫 줄 — 크래시 보고 · 로그와 같은 세션 id, 심볼과 짝지을 빌드 id.
         const GameConfig&    gameConfig   = GameConfig::getActive();
@@ -338,7 +344,7 @@ namespace sw
             (void)crashReports.collectNewCrashes();
             (void)crashReports.launchReporterProcess();
         }
-        return EngineInitResult::Succeeded;
+        return SubsystemInitResult::Succeeded;
     }
 
     void TelemetryService::shutdownSubsystem()

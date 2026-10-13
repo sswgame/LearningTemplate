@@ -32,13 +32,15 @@ namespace sw::editor
         ~ConfigHotReload() override;
 
         // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
-        EngineInitResult initializeSubsystem() override
+        SubsystemInitResult initializeSubsystem() override
         {
             (void)initialize(); // Config 폴더가 없으면 꺼진 채로 둔다
-            return EngineInitResult::Succeeded;
+            return SubsystemInitResult::Succeeded;
         }
-        void        shutdownSubsystem() override { shutdown(); }
-        const utf8* getSubsystemName() const override { return "ConfigHotReload"; }
+        void shutdownSubsystem() override { shutdown(); }
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "ConfigHotReload";
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
         ConfigHotReload( const ConfigHotReload& )            = delete;
         ConfigHotReload& operator=( const ConfigHotReload& ) = delete;

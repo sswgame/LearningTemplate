@@ -19,6 +19,12 @@
 
 namespace sw::editor
 {
+    span<const utf8* const> EditorWorkspace::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { EditorSelection::kSubsystemName };
+        return kArrDependency;
+    }
+
     // ------------------------------------------------------------------------------
     // 생성자
     // ------------------------------------------------------------------------------

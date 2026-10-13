@@ -169,7 +169,13 @@ namespace sw
         _pFontService = nullptr;
     }
 
-    EngineInitResult UISystem::initializeSubsystem()
+    span<const utf8* const> UISystem::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { FontService::kSubsystemName, "Input", "UserSettings" };
+        return kArrDependency;
+    }
+
+    SubsystemInitResult UISystem::initializeSubsystem()
     {
         // UI 배율 규칙 — 게임 프리셋이 팩 상대 경로로 덮어쓰면 그것, 아니면 엔진 기본(engine/ui/uiscale.xml). 모르는 키는 기동 오류다.
         const EngineDefaultAssets& defaultAssets = engine::getEngineDefaultAssets();
@@ -178,11 +184,11 @@ namespace sw
         const string               scalePath     = gameConfig._uiScaleSettings.empty() ? string( defaultAssets._uiScaleSettings ) : FileUtil::joinPath( packRoot, gameConfig._uiScaleSettings );
         UIScaleSettings            scaleSettings{};
         if ( scaleSettings.loadFromResource( scalePath ) == false )
-            return EngineInitResult::Failed;
+            return SubsystemInitResult::Failed;
         setScaleSettings( scaleSettings );
         // UI 행동 맵(탐색 · 확인 · 뒤로)을 못 읽으면 메뉴를 패드로 다룰 수 없다 — 데이터 오류라 기동 실패다.
         if ( initialize( engine::getInputManager(), &engine::getFontService(), defaultAssets._uiInputMap ) == false )
-            return EngineInitResult::Failed;
+            return SubsystemInitResult::Failed;
         // UI 문서 · 스타일 시트 캐시를 에셋 캐시 레지스트리에 올린다 — 핫 리로드 · 종료 · 진단이 다른 에셋과 같은 길로 간다.
         AssetManager& assetManager = engine::getAssetManager();
         assetManager.registerAssetCache( &_documentCache );
@@ -191,7 +197,7 @@ namespace sw
         const string   themePath = gameConfig._uiThemes.empty() ? string( defaultAssets._uiThemes ) : FileUtil::joinPath( packRoot, gameConfig._uiThemes );
         UIThemeCatalog themes{};
         if ( themes.loadFromResource( themePath ) == false )
-            return EngineInitResult::Failed;
+            return SubsystemInitResult::Failed;
         setThemeCatalog( themes );
         // 엔진 기본 메뉴(옵션 · 일시정지) — 게임 프리셋이 팩 상대 경로로 문서를 덮어쓴다. 일시정지 메뉴는 게임이 켤 때만.
         setOptionsMenuDocument( gameConfig._uiOptionsMenu.empty() ? string( defaultAssets._uiOptionsMenu ) : FileUtil::joinPath( packRoot, gameConfig._uiOptionsMenu ) );
@@ -201,7 +207,7 @@ namespace sw
         _debugHUD = make_unique<DebugHUD>();
         _debugHUD->initialize( *this, &engine::getUserSettingsManager() );
 #endif
-        return EngineInitResult::Succeeded;
+        return SubsystemInitResult::Succeeded;
     }
 
     void UISystem::shutdownSubsystem()

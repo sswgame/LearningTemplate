@@ -40,6 +40,7 @@
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Common/FunctionSubsystem.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
@@ -68,6 +69,20 @@ namespace sw::editor
         struct ImGuiEditorInternal
         {
             static constexpr Color kNotificationWindowBg{ 0.10f, 0.10f, 0.10f, 1.00f };
+
+            // 기동 단계 이름과 의존 — 의존 칸은 이름 상수를 가리켜 철자가 틀리면 컴파일 오류다.
+            static constexpr const utf8* kEditorData                      = "EditorData";
+            static constexpr const utf8* kImGuiContext                    = "ImGuiContext";
+            static constexpr const utf8* kPlatformBackend                 = "PlatformBackend";
+            static constexpr const utf8* kRendererBackend                 = "RendererBackend";
+            static constexpr const utf8* kSplash                          = "Splash";
+            static constexpr const utf8* kEditorContext                   = "EditorContext";
+            static constexpr const utf8* kWindowCloseQuery                = "WindowCloseQuery";
+            static constexpr const utf8* kArrImGuiContextDependency[]     = { kEditorData };
+            static constexpr const utf8* kArrPlatformBackendDependency[]  = { kImGuiContext };
+            static constexpr const utf8* kArrRendererBackendDependency[]  = { kImGuiContext, kPlatformBackend };
+            static constexpr const utf8* kArrEditorContextDependency[]    = { kEditorData, kImGuiContext, kPlatformBackend, kRendererBackend, kSplash };
+            static constexpr const utf8* kArrWindowCloseQueryDependency[] = { kEditorContext };
 
             /// @brief 글자 배율(모니터 DPI)과 테마 배율이 이 값보다 크게 다르면 테마 배율을 글자 배율에 맞춘다(beginFrame).
             static constexpr float32 kDpiFollowTolerance = 0.001f;
@@ -202,28 +217,29 @@ namespace sw::editor
         _pRHIDevice = pRHIDevice;
 
         // 단계마다 먼저 서야 하는 단계를 적는다. 목록이 그 순서로 초기화하고, 실패하면 초기화한 단계만 역순으로 종료한다.
-        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "EditorData", "", EngineInitTarget::Client, MemoryTag::Editor },
+        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ ImGuiEditorInternal::kEditorData, {}, EngineSubsystemHost::kClient, MemoryTag::Editor },
                                                       SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializeEditorData, this ),
                                                       SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownEditorData, this ) ) );
-        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "ImGuiContext", "EditorData", EngineInitTarget::Client, MemoryTag::Editor },
+        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ ImGuiEditorInternal::kImGuiContext, ImGuiEditorInternal::kArrImGuiContextDependency, EngineSubsystemHost::kClient, MemoryTag::Editor },
                                                       SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializeImGuiContext, this ),
                                                       SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownImGuiContext, this ) ) );
-        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "PlatformBackend", "ImGuiContext", EngineInitTarget::Client, MemoryTag::Editor },
+        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ ImGuiEditorInternal::kPlatformBackend, ImGuiEditorInternal::kArrPlatformBackendDependency, EngineSubsystemHost::kClient, MemoryTag::Editor },
                                                       SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializePlatformBackend, this ),
                                                       SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownPlatformBackend, this ) ) );
-        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "RendererBackend", "ImGuiContext PlatformBackend", EngineInitTarget::Client, MemoryTag::Editor },
+        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ ImGuiEditorInternal::kRendererBackend, ImGuiEditorInternal::kArrRendererBackendDependency, EngineSubsystemHost::kClient, MemoryTag::Editor },
                                                       SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializeRendererBackend, this ),
                                                       SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownRendererBackend, this ) ) );
-        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "Splash", "", EngineInitTarget::Client, MemoryTag::Editor },
+        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ ImGuiEditorInternal::kSplash, {}, EngineSubsystemHost::kClient, MemoryTag::Editor },
                                                       SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::loadSplashAssets, this ), SubsystemShutdownDelegate{} ) );
-        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "EditorContext", "EditorData ImGuiContext PlatformBackend RendererBackend Splash", EngineInitTarget::Client, MemoryTag::Editor },
+        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ ImGuiEditorInternal::kEditorContext, ImGuiEditorInternal::kArrEditorContextDependency, EngineSubsystemHost::kClient, MemoryTag::Editor },
                                                       SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializeEditorContext, this ),
                                                       SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownEditorContext, this ) ) );
-        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "WindowCloseQuery", "EditorContext", EngineInitTarget::Client, MemoryTag::Editor },
+        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ ImGuiEditorInternal::kWindowCloseQuery, ImGuiEditorInternal::kArrWindowCloseQueryDependency, EngineSubsystemHost::kClient, MemoryTag::Editor },
                                                       SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializeWindowCloseQuery, this ),
                                                       SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownWindowCloseQuery, this ) ) );
-        if ( _startup.initializeAll( EngineInitTarget::Client ) == false )
+        if ( _startup.initializeAll( EngineSubsystemHost::kClient ) == false )
         {
+            SW_LOG_ERROR( "Editor startup failed: %#", _startup.getError().c_str() );
             _startup.destroyAll();
             return false;
         }
@@ -232,7 +248,7 @@ namespace sw::editor
         return true;
     }
 
-    EngineInitResult ImGuiEditor::initializeEditorData()
+    SubsystemInitResult ImGuiEditor::initializeEditorData()
     {
 #if !defined( SW_SHIPPING )
         // 처음 실행이면 파일이 없으므로 기본값을 그대로 쓴다.
@@ -243,7 +259,7 @@ namespace sw::editor
             SW_LOG_WARNING( "Editor data could not be read - using defaults" );
         editor::setEditorToolDefaults( _editorToolDefaults.get() );
 #endif
-        return EngineInitResult::Succeeded;
+        return SubsystemInitResult::Succeeded;
     }
 
     void ImGuiEditor::shutdownEditorData()
@@ -252,7 +268,7 @@ namespace sw::editor
         _editorToolDefaults.reset();
     }
 
-    EngineInitResult ImGuiEditor::initializeImGuiContext()
+    SubsystemInitResult ImGuiEditor::initializeImGuiContext()
     {
         SW_LOG_TRACE( "Checking ImGui version and creating context" );
         IMGUI_CHECKVERSION();
@@ -277,7 +293,7 @@ namespace sw::editor
         _dockLayout.applyIniFilename();
 
         EditorFontSetup::apply();
-        return EngineInitResult::Succeeded;
+        return SubsystemInitResult::Succeeded;
     }
 
     void ImGuiEditor::shutdownImGuiContext()
@@ -290,14 +306,14 @@ namespace sw::editor
             ImGui::DestroyContext();
     }
 
-    EngineInitResult ImGuiEditor::initializePlatformBackend()
+    SubsystemInitResult ImGuiEditor::initializePlatformBackend()
     {
         SW_LOG_TRACE( "Creating Platform Backend" );
         _platformBackend = IImGuiPlatformBackend::createPlatformBackend();
         if ( _platformBackend == nullptr )
         {
             SW_LOG_ERROR( "Failed to create platform backend" );
-            return EngineInitResult::Failed;
+            return SubsystemInitResult::Failed;
         }
 
         SW_LOG_TRACE( "Initializing Platform Backend" );
@@ -305,9 +321,9 @@ namespace sw::editor
         {
             SW_LOG_ERROR( "Platform backend initialization failed" );
             shutdownPlatformBackend();
-            return EngineInitResult::Failed;
+            return SubsystemInitResult::Failed;
         }
-        return EngineInitResult::Succeeded;
+        return SubsystemInitResult::Succeeded;
     }
 
     void ImGuiEditor::shutdownPlatformBackend()
@@ -318,7 +334,7 @@ namespace sw::editor
         _platformBackend.reset();
     }
 
-    EngineInitResult ImGuiEditor::initializeRendererBackend()
+    SubsystemInitResult ImGuiEditor::initializeRendererBackend()
     {
         SW_LOG_TRACE( "Creating Renderer Backend" );
         _rendererBackend = IImGuiRendererBackend::createRendererBackend( _pRHIDevice->getBackendType() );
@@ -326,9 +342,9 @@ namespace sw::editor
         {
             SW_LOG_ERROR( "Renderer backend initialization failed" );
             shutdownRendererBackend();
-            return EngineInitResult::Failed;
+            return SubsystemInitResult::Failed;
         }
-        return EngineInitResult::Succeeded;
+        return SubsystemInitResult::Succeeded;
     }
 
     void ImGuiEditor::shutdownRendererBackend()
@@ -339,7 +355,7 @@ namespace sw::editor
         _rendererBackend.reset();
     }
 
-    EngineInitResult ImGuiEditor::loadSplashAssets()
+    SubsystemInitResult ImGuiEditor::loadSplashAssets()
     {
         SW_LOG_TRACE( "Splash: loading DefaultRenderPass / ForwardPipeline..." );
 
@@ -350,7 +366,7 @@ namespace sw::editor
         if ( pTaskManager == nullptr )
         {
             SW_LOG_ERROR( "TaskManager service is not bound — cannot load splash resources" );
-            return EngineInitResult::Failed;
+            return SubsystemInitResult::Failed;
         }
 
         TaskHandle hDefault = pTaskManager->emplaceTask(
@@ -370,10 +386,10 @@ namespace sw::editor
         hForward.submit();
 
         pTaskManager->waitStage( stage );
-        return EngineInitResult::Succeeded;
+        return SubsystemInitResult::Succeeded;
     }
 
-    EngineInitResult ImGuiEditor::initializeEditorContext()
+    SubsystemInitResult ImGuiEditor::initializeEditorContext()
     {
         _editorContext = make_unique<EditorContext>();
         _editorContext->initialize();
@@ -417,7 +433,7 @@ namespace sw::editor
             if ( EditorSceneFileCommands::loadScene( startupScene ) == false )
                 SW_LOG_ERROR( "시작 씬을 열지 못했습니다: %#", startupScene.c_str() );
         }
-        return EngineInitResult::Succeeded;
+        return SubsystemInitResult::Succeeded;
     }
 
     void ImGuiEditor::shutdownEditorContext()
@@ -433,10 +449,10 @@ namespace sw::editor
         _editorContext.reset();
     }
 
-    EngineInitResult ImGuiEditor::initializeWindowCloseQuery()
+    SubsystemInitResult ImGuiEditor::initializeWindowCloseQuery()
     {
         _pWindow->setCloseQueryHandler( SW_DELEGATE_METHOD( WindowCloseQueryDelegate, &ImGuiEditor::onWindowCloseQuery, this ) );
-        return EngineInitResult::Succeeded;
+        return SubsystemInitResult::Succeeded;
     }
 
     void ImGuiEditor::shutdownWindowCloseQuery()

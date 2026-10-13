@@ -29,6 +29,23 @@
 
 - 범위 밖 관찰: GL 체인 1회에서 `editor.bugit` · `editor.viewportgrid` 가 SceneViewCameraX 기대 미달로 졌다(창이 앞에 오지 못해 건너뛴 단계가 같이 있었다).- TDR 뒤 행(hang)의 원인은 알 수 없음.
 
+## 진행 중: 서브시스템 정리 (2026-10-14, 단계마다 main 에 병합)
+
+순서: ① ISubsystem · SubsystemCollection 을 Core 로(호스트 마스크 일반화 — 끝) ② RHI 이전(끝) ③ 엔진 수명 매니저가 ISubsystem 직접 상속 +
+`FunctionSubsystem` · `FunctionSubsystemDesc` · `EngineFunctionStep` 삭제 ④ EngineServiceCollection · 전역 서비스 표를 SubsystemCollection 소유 + 조회로 흡수
+⑤ EngineBootstrap → Logger · NamePool · CommandLine · CrashHandler · Diagnostics 서브시스템 ⑥ EngineLoop → Engine 개명(조정자가 시점을 알림).
+- ③ 대상: Core TaskManager · AsyncFileIO · CompressionCodecRegistry · CommandLineManager · GlobalVariableManager, Engine ConfigManager · InputManager ·
+  LocalizationManager · AssetManager · ResourcePakManager · SceneManager · UserSettingsManager · ServerServiceManager · 오디오 구현 · 렌더러. 매니저가 아닌 호스트 엮기
+  (Reflection · ModuleTypes · ModuleImages · Headless · SceneRHI · EngineDefaultAssets)만 작은 `<대상>Subsystem` 클래스. 하네스와 본문이 다른 단계는 하네스 서브클래스.
+- ③ 중 의존 칸의 철자 검사: 지금 Physics · Fonts · Telemetry · UI 의 의존 중 아직 FunctionSubsystem 인 단계 이름은 글자다(Engine 루트 헤더를 낮은 층이 include
+  못 한다). 그 단계가 클래스가 되면 `kSubsystemName` 상수로 바꾼다.
+- ④ 요구(조정자): Engine 클래스는 호스트만 안다(Games · GameFramework · Editor 가 include 하면 층 게이트 실패), 모듈 조회 창구는 읽기 전용 `ISubsystemLocator`
+  (Core 의 SubsystemCollection 이 구현, 호스트가 모듈 API 표로 넘김), 컴포넌트는 `SceneEngineServices` 주입 유지 · 확대, 씬 수명은 `ISceneService` 로 따로,
+  DLL 경계 조회는 이름 · TypeInfo 기반(핫 리로드 SmokeTest 로 확인). 호스트 범위 컬렉션(App · ServerApp · ModuleHost)이 엔진 범위 위에 얹힐 수 있게 로케이터에 범위 체인을 열어 둔다.
+- 설계 메모(구현은 ⑥ 뒤): 엔진의 ModuleImages · ModuleTypes 단계가 ModuleHost 델리게이트를 부르는 호스트-엔진 고리는 호스트 범위 서브시스템
+  (ModuleHost)을 엔진 범위의 부모로 두고, 엔진의 ModuleImages 가 "부모 범위의 모듈 호스트" 에 의존하는 꼴로 표현할 수 있는지 본다 — DLL 언로드는 씬 뒤 ·
+  서비스 앞 구간이라 엔진 범위의 종료 두 패스(stop → shutdown) 사이에 있어야 한다.
+
 ## 이어서 할 정리 (사용자가 순서를 정하면 시작)
 
 - 서브시스템: 기동 단계를 서브시스템 클래스로(진행 중 — RHI 이전은 끝), 플랫폼 플래그 `_bHostStarted` · `_bSchedulerStarted` 제거. `OnlineServerRuntime` · `App` · `ModuleHost` · `FrameRenderer` · `ServerApp` · `OnlineServiceHost` 는 LIFO 가 아니라 일부러 안 옮겼다.

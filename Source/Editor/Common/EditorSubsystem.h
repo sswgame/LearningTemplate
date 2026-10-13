@@ -8,8 +8,9 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Memory/MemoryTag.h"
+#include "Core/Subsystem/ISubsystem.h"
 
-#include "Engine/Common/ISubsystem.h"
+#include "Engine/Common/EngineSubsystemHost.h"
 
 namespace sw::editor
 {
@@ -20,10 +21,9 @@ namespace sw::editor
     class EditorSubsystem : public ISubsystem
     {
     public:
-        EngineInitResult initializeSubsystem() override { return EngineInitResult::Succeeded; }
-        void             shutdownSubsystem() override {}
-        const utf8*      getSubsystemDependencies() const override { return ""; }
-        EngineInitTarget getSubsystemTarget() const override { return EngineInitTarget::Client; }
-        MemoryTag        getSubsystemMemoryTag() const override { return MemoryTag::Editor; }
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        SubsystemHostMask   getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
+        MemoryTag           getSubsystemMemoryTag() const override { return MemoryTag::Editor; }
     };
 } // namespace sw::editor

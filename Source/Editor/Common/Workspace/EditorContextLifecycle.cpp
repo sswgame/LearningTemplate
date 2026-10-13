@@ -33,6 +33,7 @@
 #include "Editor/Panels/Inspector/InspectorComponentManager.h"
 #include "Editor/Panels/Inspector/InspectorPropertyManager.h"
 
+#include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Localization/LocalizationManager.h"
@@ -128,8 +129,8 @@ namespace sw::editor
                 SW_LOG_WARNING( "Editor localization project '%#' is not (fully) loaded", EditorPaths::kLocalizationProject );
         }
 
-        if ( _subsystems.initializeAll( EngineInitTarget::Client ) == false )
-            SW_LOG_ERROR( "Editor subsystems did not all initialize" );
+        if ( _subsystems.initializeAll( EngineSubsystemHost::kClient ) == false )
+            SW_LOG_ERROR( "Editor subsystems did not all initialize: %#", _subsystems.getError().c_str() );
     }
 
     void EditorContext::shutdown()

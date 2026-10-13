@@ -217,7 +217,9 @@ namespace sw::editor
         ~EditorCommandRegistry() override                                = default;
 
         // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
-        const utf8* getSubsystemName() const override { return "EditorCommandRegistry"; }
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "EditorCommandRegistry";
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief 등록된 커맨드를 모두 지웁니다. */
         void clear();

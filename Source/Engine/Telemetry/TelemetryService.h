@@ -14,8 +14,9 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Subsystem/ISubsystem.h"
 
-#include "Engine/Common/ISubsystem.h"
+#include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Telemetry/TelemetrySchema.h"
 #include "Engine/Utility/EngineFrameObserver.h"
 
@@ -142,13 +143,16 @@ namespace sw
         void shutdown();
 
         // ISubsystem — 기동 단계 `Telemetry`. 스키마가 틀려도 기동은 멈추지 않는다(스키마에 없는 사건은 기록되지 않을 뿐이다).
-        EngineInitResult initializeSubsystem() override;
-        void             shutdownSubsystem() override;
-        const utf8*      getSubsystemName() const override { return "Telemetry"; }
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "Telemetry";
+
+        SubsystemInitResult initializeSubsystem() override;
+        void                shutdownSubsystem() override;
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
         /** @brief 동의는 사용자 설정이다. 종료가 맨 처음 쪽이라 마지막 장면 요약 · 묶음을 쓴다. */
-        const utf8* getSubsystemDependencies() const override { return "UserSettings"; }
+        span<const utf8* const> getSubsystemDependencies() const override;
         /** @brief 서버 크래시 묶기 · 텔레메트리는 후속이다(동의가 플레이어 설정이다). */
-        EngineInitTarget getSubsystemTarget() const override { return EngineInitTarget::Client; }
+        SubsystemHostMask getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
 
         [[nodiscard]] bool loadSchema( string_view path );
         [[nodiscard]] bool loadSchemaText( string_view xmlText, string_view sourceName );

@@ -8,11 +8,12 @@
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Subsystem/SubsystemCollection.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Common/SubsystemCollection.h"
+#include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -149,7 +150,7 @@ namespace test
             {
                 pCodecRegistry->initialize();
                 sw::CompressionCodecRegistry::setActive( pCodecRegistry );
-                return sw::EngineInitResult::Succeeded;
+                return sw::SubsystemInitResult::Succeeded;
             };
             startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kCompression,
                                                                  SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeCompression ) ) )
@@ -164,9 +165,9 @@ namespace test
                 sw::engine::registerModuleTypes( "GameFramework" );
                 pTypeRegistry->registerPendingTypes( "TestFramework", sw::TypeRegistrar::getHead(), sw::EnumRegistrar::getHead() );
                 if ( sw::engine::bindGlobalVariableEnumNames() )
-                    return sw::EngineInitResult::Succeeded;
+                    return sw::SubsystemInitResult::Succeeded;
                 sw::engine::unbindGlobalVariableEnumNames();
-                return sw::EngineInitResult::Failed;
+                return sw::SubsystemInitResult::Failed;
             };
             startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kReflection,
                                                                  SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeReflection ),
@@ -176,7 +177,7 @@ namespace test
         {
             sw::TaskManager* const pTaskManager   = state._owned._pTaskManager.get();
             auto                   initializeTask = [pTaskManager]()
-            { return pTaskManager->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed; };
+            { return pTaskManager->initialize() ? sw::SubsystemInitResult::Succeeded : sw::SubsystemInitResult::Failed; };
             startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kTask, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeTask ),
                                                                  SW_DELEGATE_METHOD( sw::SubsystemShutdownDelegate, &sw::TaskManager::shutdown, pTaskManager ) ) )
                 .takeOwnership( std::move( state._owned._pTaskManager ) );
@@ -187,7 +188,7 @@ namespace test
             {
                 sw::AsyncFileIOSettings settings{};
                 settings._pTaskManager = &sw::engine::getTaskManager();
-                return pAsyncFileIO->initialize( settings ) ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
+                return pAsyncFileIO->initialize( settings ) ? sw::SubsystemInitResult::Succeeded : sw::SubsystemInitResult::Failed;
             };
             startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kFileIO, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeFileIO ),
                                                                  SW_DELEGATE_METHOD( sw::SubsystemShutdownDelegate, &sw::AsyncFileIO::shutdown, pAsyncFileIO ) ) );
@@ -199,14 +200,14 @@ namespace test
             auto markModuleTypes = []()
             {
                 sw::engine::getTypeRegistry().markAllModuleTypesRegistered();
-                return sw::EngineInitResult::Succeeded;
+                return sw::SubsystemInitResult::Succeeded;
             };
             startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kModuleTypes, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, markModuleTypes ) ) );
         }
         {
             sw::InputManager* const pInputManager   = state._owned._pInputManager.get();
             auto                    initializeInput = [pInputManager]()
-            { return pInputManager->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed; };
+            { return pInputManager->initialize() ? sw::SubsystemInitResult::Succeeded : sw::SubsystemInitResult::Failed; };
             startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kInput, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeInput ),
                                                                  SW_DELEGATE_METHOD( sw::SubsystemShutdownDelegate, &sw::InputManager::shutdown, pInputManager ) ) )
                 .takeOwnership( std::move( state._owned._pInputManager ) );
@@ -227,13 +228,13 @@ namespace test
                     if ( sw::JSONSerializer::deserialize( &probe, *sw::EngineConfig::StaticType(), sw::shipping_host::kEngineConfigJSON ) == false )
                     {
                         SW_LOG_ERROR( "The generated EngineConfig JSON does not deserialize in this test executable - a reflection registrar was dropped at link time" );
-                        return sw::EngineInitResult::Failed;
+                        return sw::SubsystemInitResult::Failed;
                     }
                 }
 #endif
                 host._pEngineConfig = pConfigManager->ensureConfig<sw::EngineConfig>( sw::config::kFileRuntimeEngineConfig, sw::shipping_host::kEngineConfigJSON );
                 if ( host._pEngineConfig == nullptr )
-                    return sw::EngineInitResult::Failed;
+                    return sw::SubsystemInitResult::Failed;
                 sw::EngineConfig::setActive( *host._pEngineConfig );
 #if defined( SW_SHIPPING )
                 const utf8* const pGameConfigJSON = sw::shipping_host::kGameConfigJSON;
@@ -242,9 +243,9 @@ namespace test
 #endif
                 const sw::GameConfig* pGameConfig = pConfigManager->ensureConfig<sw::GameConfig>( sw::GameSelection::getConfigPath(), pGameConfigJSON );
                 if ( pGameConfig == nullptr )
-                    return sw::EngineInitResult::Failed;
+                    return sw::SubsystemInitResult::Failed;
                 sw::GameConfig::setActive( *pGameConfig );
-                return sw::EngineInitResult::Succeeded;
+                return sw::SubsystemInitResult::Succeeded;
             };
             startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kConfig, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeConfig ) ) )
                 .takeOwnership( std::move( configManager ) );
@@ -255,9 +256,9 @@ namespace test
             auto                    initializeResource = [&host, pAssetManager]()
             {
                 if ( pAssetManager->initialize() == false )
-                    return sw::EngineInitResult::Failed;
+                    return sw::SubsystemInitResult::Failed;
                 pAssetManager->mountContent( host._pEngineConfig->_listResourcePriority );
-                return sw::EngineInitResult::Succeeded;
+                return sw::SubsystemInitResult::Succeeded;
             };
             startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kResource, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeResource ) ) )
                 .takeOwnership<&sw::AssetManager::shutdown>( std::move( state._owned._pAssetManager ) );
@@ -279,12 +280,12 @@ namespace test
             auto                    initializeScene = [&host, pSceneManager, pCommandStack]()
             {
                 if ( pSceneManager->initialize( sw::SceneEngineServices::makeFromBoundEngine() ) == false )
-                    return sw::EngineInitResult::Failed;
+                    return sw::SubsystemInitResult::Failed;
                 sw::SceneObjectsInvalidatedDelegate& onInvalidated = pSceneManager->onSceneObjectsInvalidated();
                 if ( host._sceneObjectsInvalidatedHandle.isValid() )
                     onInvalidated.remove( host._sceneObjectsInvalidatedHandle );
                 host._sceneObjectsInvalidatedHandle = onInvalidated.add( SW_DELEGATE_METHOD( sw::Delegate<void()>, &sw::CommandStack::clear, pCommandStack ) );
-                return sw::EngineInitResult::Succeeded;
+                return sw::SubsystemInitResult::Succeeded;
             };
             auto shutdownScene = [&host, pSceneManager]()
             {
@@ -302,7 +303,11 @@ namespace test
         }
         startup.add( std::move( state._owned._pShaderCache ) );
         startup.add( std::move( state._owned._pPhysicsSystem ) );
-        return startup.initializeAll( sw::EngineInitTarget::Client );
+        if ( startup.initializeAll( sw::EngineSubsystemHost::kClient ) )
+            return true;
+        // 하네스 기동 실패는 표준 오류로 알린다 — 정렬 오류(선언 오타 · 순환)는 로거가 무엇이든 같은 길로 보인다.
+        std::fprintf( stderr, "[TestHost] startup failed: %s\n", startup.getError().c_str() );
+        return false;
     }
 
     void TestHostRuntime::stop()

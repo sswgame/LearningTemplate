@@ -40,7 +40,9 @@ namespace sw::editor
         ~EditorAssetValidation() override;
 
         // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
-        const utf8* getSubsystemName() const override { return "EditorAssetValidation"; }
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "EditorAssetValidation";
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
         EditorAssetValidation( const EditorAssetValidation& )            = delete;
         EditorAssetValidation& operator=( const EditorAssetValidation& ) = delete;

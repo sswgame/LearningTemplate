@@ -23,6 +23,12 @@
 
 namespace sw::editor
 {
+    span<const utf8* const> AssetHotReload::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { EditorAssetValidation::kSubsystemName };
+        return kArrDependency;
+    }
+
     namespace
     {
         struct AssetHotReloadInternal

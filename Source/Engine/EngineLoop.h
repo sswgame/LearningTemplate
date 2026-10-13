@@ -9,8 +9,8 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Subsystem/SubsystemCollection.h"
 
-#include "Engine/Common/SubsystemCollection.h"
 #include "Engine/EngineBootstrap.h"
 #include "Engine/EngineServiceCollection.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
@@ -64,7 +64,7 @@ namespace sw
      */
     SW_DECLARE_DELEGATE( bool, ModuleTypeLoaderDelegate, void );
 
-    /** @brief 엔진을 띄우는 호스트의 역할입니다 — 기동 표의 대상(`EngineInitTarget`) · 오디오 장치 · 허용하는 헤드리스 작업을 가릅니다. */
+    /** @brief 엔진을 띄우는 호스트의 역할입니다 — 기동 표의 대상(`SubsystemHostMask`) · 오디오 장치 · 허용하는 헤드리스 작업을 가릅니다. */
     enum class EngineHostRole : uint8
     {
         Client,          ///< App — 창 · 렌더러 · 플레이어 설정(에디터 포함)
@@ -209,9 +209,9 @@ namespace sw
          * @brief 기동 단계 `Headless` 입니다 — 명령줄의 헤드리스 작업(셰이더 · 씬 쿠킹, 리플렉션 문서, 리타깃 굽기, 립싱크, 임포트 · 로컬라이제이션 준비)을 돌립니다.
          * @return 작업이 있었으면 `SkipDependents`(창 · RHI · 렌더러를 세우지 않는다)이고 결과는 `isHeadless` · `didHeadlessTaskFail` 입니다. 없으면 `Succeeded` 입니다.
          */
-        EngineInitResult runHeadlessTask();
+        SubsystemInitResult runHeadlessTask();
         /** @brief 기동 단계 `UserSettings` 입니다 — 스키마 · 사용자 파일을 읽어 대상(오디오 · 입력 · 전역 변수 · 셸 맵 경로)에 넣습니다. 틀린 파일로 기동을 세우지 않습니다. */
-        EngineInitResult loadUserSettings();
+        SubsystemInitResult loadUserSettings();
 
     private:
         /**

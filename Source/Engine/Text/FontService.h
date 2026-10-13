@@ -12,8 +12,9 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Subsystem/ISubsystem.h"
 
-#include "Engine/Common/ISubsystem.h"
+#include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Text/FontCatalog.h"
 #include "Engine/Text/GlyphCache.h"
@@ -89,12 +90,15 @@ namespace sw
         void shutdown();
 
         // ISubsystem — 기동 단계 `Fonts`. 기본 가족(저장소 글꼴)을 못 열면 글자를 그릴 수 없으므로 기동 오류다.
-        EngineInitResult initializeSubsystem() override;
-        void             shutdownSubsystem() override { shutdown(); }
-        const utf8*      getSubsystemName() const override { return "Fonts"; }
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "Fonts";
+
+        SubsystemInitResult initializeSubsystem() override;
+        void                shutdownSubsystem() override { shutdown(); }
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
         /** @brief 문화권 표(EngineDefaultAssets)를 읽은 뒤에 서고, 쿠킹(Headless)이면 열지 않는다. */
-        const utf8*      getSubsystemDependencies() const override { return "EngineDefaultAssets Headless Resource"; }
-        EngineInitTarget getSubsystemTarget() const override { return EngineInitTarget::Client; }
+        span<const utf8* const> getSubsystemDependencies() const override;
+        SubsystemHostMask       getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
 
         /**
          * @brief 파일 대신 메모리의 폰트 바이트를 그 경로로 등록합니다(테스트나 게임이 폰트를 묶어 넣을 때). 카탈로그 면 경로가 같으면 이것을 먼저 씁니다.

@@ -11,6 +11,7 @@ Memory = 2          # 할당기 · 메모리 태그 · 할당 기록기 인터�
 Container = 3       # 컨테이너 · 문자열 타입과 StringUtil · formatString · 동시 큐
 Delegate = 4
 UUID = 4
+Subsystem = 4       # 서브시스템 계약(ISubsystem)과 의존 순서 목록(SubsystemCollection) — 로그를 남기지 않아 Log 아래에 선다
 Log = 5             # 로그 매크로와 전역 창구(Logger) — 기본 싱크는 LogSink
 CommandLine = 6
 Compression = 6

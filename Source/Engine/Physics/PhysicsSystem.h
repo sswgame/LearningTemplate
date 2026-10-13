@@ -9,8 +9,8 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Subsystem/ISubsystem.h"
 
-#include "Engine/Common/ISubsystem.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsSettings.h"
 
@@ -38,12 +38,16 @@ namespace sw
         void shutdown();
 
         // ISubsystem — 기동 단계 `Physics`. 기본 설정 표로 선다.
-        EngineInitResult initializeSubsystem() override { return initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed; }
-        void             shutdownSubsystem() override { shutdown(); }
-        const utf8*      getSubsystemName() const override { return "Physics"; }
-        const utf8*      getSubsystemDependencies() const override { return "Resource Task"; }
-        EngineInitTarget getSubsystemTarget() const override { return EngineInitTarget::All; }
-        MemoryTag        getSubsystemMemoryTag() const override { return MemoryTag::Physics; }
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "Physics";
+
+        SubsystemInitResult initializeSubsystem() override { return initialize() ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed; }
+        void                shutdownSubsystem() override { shutdown(); }
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 메시 셰이프 캐시가 에셋을 읽고, 병렬 스텝이 태스크를 쓴다. */
+        span<const utf8* const> getSubsystemDependencies() const override;
+        SubsystemHostMask       getSubsystemHost() const override { return SubsystemHostMask::All; }
+        MemoryTag               getSubsystemMemoryTag() const override { return MemoryTag::Physics; }
 
         /** @brief 올라와 있으면 true 입니다. */
         bool isInitialized() const { return _bInitialized; }

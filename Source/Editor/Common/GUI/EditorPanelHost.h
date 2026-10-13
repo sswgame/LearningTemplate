@@ -24,8 +24,10 @@ namespace sw::editor
         EditorPanelHost( EditorContext& context, EditorPanelManager& panelManager );
 
         // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
-        const utf8* getSubsystemName() const override { return "EditorPanelHost"; }
-        const utf8* getSubsystemDependencies() const override { return "EditorPanelManager EditorWorkspace"; }
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "EditorPanelHost";
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const>      getSubsystemDependencies() const override;
 
         bool               focusPanel( string_view panelID ) override;
         [[nodiscard]] bool maximizePanel( string_view keepPanelID ) override;

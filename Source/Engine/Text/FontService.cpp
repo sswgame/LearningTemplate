@@ -122,9 +122,15 @@ namespace sw
         return true;
     }
 
-    EngineInitResult FontService::initializeSubsystem()
+    span<const utf8* const> FontService::getSubsystemDependencies() const
     {
-        return initialize( engine::getEngineDefaultAssets()._fontCatalog ) ? EngineInitResult::Succeeded : EngineInitResult::Failed;
+        static constexpr const utf8* kArrDependency[] = { "EngineDefaultAssets", "Headless", "Resource" };
+        return kArrDependency;
+    }
+
+    SubsystemInitResult FontService::initializeSubsystem()
+    {
+        return initialize( engine::getEngineDefaultAssets()._fontCatalog ) ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
     }
 
     void FontService::shutdown()

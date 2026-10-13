@@ -25,6 +25,12 @@ namespace sw
         shutdown();
     }
 
+    span<const utf8* const> PhysicsSystem::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { "Resource", "Task" };
+        return kArrDependency;
+    }
+
     bool PhysicsSystem::initialize( string_view settingsPath )
     {
         if ( _bInitialized )

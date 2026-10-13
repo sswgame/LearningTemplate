@@ -13,6 +13,12 @@
 
 namespace sw::editor
 {
+    span<const utf8* const> EditorModuleUnloadListener::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { EditorPanelManager::kSubsystemName, EditorPopupManager::kSubsystemName, InspectorComponentManager::kSubsystemName, InspectorPropertyManager::kSubsystemName, EditorDefaultObjects::kSubsystemName };
+        return kArrDependency;
+    }
+
     EditorModuleUnloadListener::EditorModuleUnloadListener( EditorContext& context )
         : _context{ context }
     {
