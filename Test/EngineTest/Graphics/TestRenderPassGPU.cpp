@@ -2802,6 +2802,7 @@ SW_TEST_CASE( RenderPassGPUTest, DeferredPipelineDrawsGeometry )
     }
 }
 
+#if !defined( SW_SHIPPING ) // 멀티 드로우 · 정점 풀 켜고 끄기(`setDrawMergeEnabled` · `setVertexPoolEnabled`)는 배포본에 없다
 /**
  * @brief [RenderPassGPUTest] 씬 배치를 멀티 드로우로 묶어도 그림이 같고, 호출 수는 배치 수보다 적다
  * @details 배치마다 다른 값(인스턴스 시작·모프 풀·정점 풀 시작)을 배치 표(g_SwBatches)로 옮기고, 같은 PSO·머티리얼의 연속
@@ -2959,6 +2960,7 @@ SW_TEST_CASE( RenderPassGPUTest, MergedSceneDrawsMatchPerBatch )
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the merged draw test" );
 }
+#endif // !SW_SHIPPING
 
 /**
  * @brief [RenderPassGPUTest] SSAO 결과가 실제로 그림에 닿는다 — 끄면 밝아진다

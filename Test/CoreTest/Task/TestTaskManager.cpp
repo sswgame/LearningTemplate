@@ -557,6 +557,8 @@ SW_TEST_CASE( TaskManagerTest, DestroyedManagerReturnsItsStageNodes )
  */
 SW_TEST_CASE( TaskManagerTest, HandlesOutlivingTheManagerKeepTheirNodes )
 {
+    if constexpr ( sw::kMemoryTagScopesEnabled == false )
+        SW_TEST_SKIP( "allocation headers are compiled out in this configuration" );
     sw::MemoryProfiler* pMemory = sw::MemoryProfiler::getActive();
     SW_ASSERT_NOT_NULL( pMemory );
     const bool bWasTracking = pMemory->isTrackingEnabled();

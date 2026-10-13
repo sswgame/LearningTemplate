@@ -495,6 +495,7 @@ SW_TEST_CASE( DevCommandRegistryTest, IsCompiledOutOfShipping )
 
 #endif
 
+#if SW_DEV_COMMANDS_ENABLED // 아래 둘은 개발 명령이 있는 빌드의 `DevConsoleRig` 를 쓴다(배포본에는 없다)
 /**
  * @brief [DevConsoleControllerTest] 콘솔이 열린 동안 게임 맵은 패드 바인딩을 "안 눌림" 으로 보고(셸 맵은 그대로 읽는다), 닫는 B 는 뗄 때까지 게임에 보이지 않는다
  * @details 패드로 콘솔을 조작(Back 열기 · A 실행 · B 닫기)하는 동안 같은 입력이 게임에도 가면 shooter3d 의 Back(카메라 전환) 같은 게임 액션이 같이 발화한다.
@@ -581,3 +582,4 @@ SW_TEST_CASE( DevConsoleControllerTest, ShellRebindingsPersistPerPlayer )
     SW_EXPECT_STREQ( "", ShellInputActions::makeUserBindingsPath( "" ).c_str() );
     SW_EXPECT_STREQ( "C:/Users/p/swengine/shooter3d/shellbindings.xml", ShellInputActions::makeUserBindingsPath( "C:/Users/p/swengine/shooter3d/usersettings.json" ).c_str() );
 }
+#endif // SW_DEV_COMMANDS_ENABLED
