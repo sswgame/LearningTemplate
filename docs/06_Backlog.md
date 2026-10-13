@@ -49,7 +49,6 @@
   확인한 것: 셰이더 셋(`binding` · `lighting` · `toon`)을 부모 커밋 것으로 되돌리면 통과하고, `lighting.hlsli` `swSampleLocalShadow` 의 `swFilterShadowAtlas(...)` 호출 하나를 상수로 바꿔도 통과한다. 검증 레이어 오류는 없다.
   **효과 없던 시도**: 그 호출을 비교 탭 하나(`swSampleShadowComparison`)로 줄이기, `swSampleShadowComparison` 의 `NonUniformResourceIndex` 빼기(인덱스는 패스 상수라 균일), 삼항 → `if` / `[branch]`, 라이트 버퍼 동적 읽기 제거, PCF 루프 `[loop]`.
   남은 가설: 호출 지점 수가 아니라 이 호출이 있는 경로의 SPIR-V 생성 · 드라이버 컴파일 문제. 다음 단계는 검증 레이어와 `spirv-val` 이 있는 장비에서 `vkQueueSubmit` 의 `VkResult`(`DEVICE_LOST` 여부)를 `readbackTexture2D` 실패 로그에 찍는 것.
-- `A-9` **OpenGL 에서 `PrototypeGridMaterialIsAnchoredToTheWorld` 가 실패한다** — 바닥을 1 m 옮기자 격자가 따라 움직였다(평균 차이 15.8, 격자 창 116..128). 월드 좌표 UV 머티리얼(`59e850480`, `MATERIAL_WORLD_UV`)의 GL 경로.
   ([Physics README](../Source/Engine/Physics/README.md)). 엔진 조립 지점에서 `MeshAssetFormat::loadFromResource` 로 넣고, `MeshCache` 리로드 때 `PhysicsMeshShapeCache::clear()` 를 부른다. 테스트는 읽기 함수를 직접 넣어서 통과한다.
 
 ---
