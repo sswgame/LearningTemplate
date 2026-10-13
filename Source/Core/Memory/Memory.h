@@ -326,8 +326,17 @@ namespace sw
     {
         constexpr default_delete() noexcept = default;
 
+        /**
+         * @brief 파생 타입의 해제자에서 기반 타입의 해제자로 바꿉니다(`unique_ptr<Derived>` → `unique_ptr<Base>`).
+         * @details 정렬 할당 타입(`kUsesAlignedAllocation`)은 정렬 해제로만 놓아야 한다. 기반 타입이 기본 정렬이면 기반 포인터로 지우는 해제는 일반 해제를
+         *          골라 할당 헤더를 엉뚱한 자리에서 읽는다(배포본 · ASan 에서 힙 손상, Debug 는 조용하다). 그래서 정렬 할당 여부가 다른 변환은 컴파일 오류다 —
+         *          그런 객체는 제 타입으로 들거나, 넘긴 타입으로 지우는 소유자(`SubsystemCollection::add`)에 넘긴다.
+         */
         template <typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
-        default_delete( const default_delete<U>& ) noexcept {}
+        default_delete( const default_delete<U>& ) noexcept
+        {
+            static_assert( kUsesAlignedAllocation<U> == kUsesAlignedAllocation<T>, "an over-aligned object must be deleted as its own type" );
+        }
 
         void operator()( T* pPtr ) const
         {

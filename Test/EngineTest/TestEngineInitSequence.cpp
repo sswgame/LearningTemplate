@@ -129,42 +129,42 @@ namespace
     };
 
     /**
-     * @brief `EngineLoop::initialize` 가 넣는 서브시스템을 실제 객체로 만듭니다. 엔진 루프에 서브시스템을 더하면 여기도 더한다.
-     * @details 서브시스템마다 그 클래스가 이름 · 의존 · 호스트를 말한다.
+     * @brief 엔진 범위를 `EngineLoop::initialize` 와 같은 실제 객체 · 같은 거는 타입으로 채웁니다(초기화하지 않는다). 엔진 루프에 서브시스템을 더하면 여기도 더한다.
+     * @details 서브시스템마다 그 클래스가 이름 · 의존 · 호스트를 말한다. 객체는 넘긴 타입으로 지우는 범위가 소유한다 — 기반 포인터(`unique_ptr<ISubsystem>`)로
+     *          들면 정렬 할당 타입(태스크 매니저 · 입력)을 일반 해제로 놓아 배포본 힙을 깨뜨린다(`default_delete` 의 변환이 컴파일 오류로 막는다).
      */
-    vector<unique_ptr<ISubsystem>> makeEngineSubsystems()
+    void addEngineSubsystems( SubsystemScope& engineScope )
     {
-        vector<unique_ptr<ISubsystem>> listSubsystem;
-        listSubsystem.push_back( make_unique<CompressionCodecRegistry>() );
-        listSubsystem.push_back( sw::make_unique<ReflectionSubsystem>( sw::make_unique<TypeRegistry>() ) );
-        listSubsystem.push_back( make_unique<TaskManager>() );
-        listSubsystem.push_back( make_unique<AsyncFileIO>() );
-        listSubsystem.push_back( make_unique<ConfigManager>() );
-        listSubsystem.push_back( make_unique<AssetManager>() );
-        listSubsystem.push_back( sw::make_unique<EngineDefaultAssetsSubsystem>( sw::make_unique<EngineDefaultAssets>() ) );
-        listSubsystem.push_back( sw::make_unique<ModuleImagesSubsystem>() );
-        listSubsystem.push_back( sw::make_unique<ModuleTypesSubsystem>() );
-        listSubsystem.push_back( IAudioService::createNull() );
-        listSubsystem.push_back( make_unique<InputManager>() );
-        listSubsystem.push_back( make_unique<AssetStreamingQueue>() );
-        listSubsystem.push_back( make_unique<SceneManager>() );
-        listSubsystem.push_back( make_unique<UserSettingsManager>() );
+        engineScope.addSubsystem( make_unique<CompressionCodecRegistry>() );
+        const ReflectionSubsystem& reflection = engineScope.addSubsystem( sw::make_unique<ReflectionSubsystem>( sw::make_unique<TypeRegistry>() ) );
+        (void)engineScope.bind( &reflection.getTypeRegistry() ); // 새 범위 — 겹치지 않는다
+        engineScope.addSubsystem( make_unique<TaskManager>() );
+        engineScope.addSubsystem( make_unique<AsyncFileIO>() );
+        engineScope.addSubsystem( make_unique<ConfigManager>() );
+        engineScope.addSubsystem( make_unique<AssetManager>() );
+        const EngineDefaultAssetsSubsystem& defaultAssets = engineScope.addSubsystem( sw::make_unique<EngineDefaultAssetsSubsystem>( sw::make_unique<EngineDefaultAssets>() ) );
+        (void)engineScope.bind( &defaultAssets.getDefaultAssets() ); // 새 범위 — 겹치지 않는다
+        engineScope.addSubsystem( sw::make_unique<ModuleImagesSubsystem>() );
+        engineScope.addSubsystem( sw::make_unique<ModuleTypesSubsystem>() );
+        engineScope.addSubsystem( IAudioService::createNull() );
+        engineScope.addSubsystem( make_unique<InputManager>() );
+        engineScope.addSubsystem( make_unique<AssetStreamingQueue>() );
+        engineScope.addSubsystem( make_unique<SceneManager>() );
+        engineScope.addSubsystem( make_unique<UserSettingsManager>() );
         static HeadlessTaskState s_headlessState; // 선언만 본다 — 본문은 돌지 않는다
-        listSubsystem.push_back( sw::make_unique<HeadlessSubsystem>( false, s_headlessState ) );
-        listSubsystem.push_back( make_unique<ShaderCache>() );
-        // 렌더 쪽은 서로를 참조로 받는다 — 목록이 살아 있는 동안만 쓴다(대역은 선언만 베낀다).
-        RHISubsystem&           rhiSubsystem           = static_cast<RHISubsystem&>( *listSubsystem.emplace_back( sw::make_unique<RHISubsystem>() ) );
-        FrameRendererSubsystem& frameRendererSubsystem = static_cast<FrameRendererSubsystem&>(
-            *listSubsystem.emplace_back( sw::make_unique<FrameRendererSubsystem>( sw::make_unique<FrameRenderer>(), rhiSubsystem ) ) );
-        RenderThreadSubsystem& renderThreadSubsystem =
-            static_cast<RenderThreadSubsystem&>( *listSubsystem.emplace_back( sw::make_unique<RenderThreadSubsystem>( rhiSubsystem, frameRendererSubsystem ) ) );
-        listSubsystem.push_back( sw::make_unique<LiveShaderSubsystem>( frameRendererSubsystem, renderThreadSubsystem ) );
-        listSubsystem.push_back( sw::make_unique<SceneRHISubsystem>( rhiSubsystem ) );
-        listSubsystem.push_back( make_unique<PhysicsSystem>() );
-        listSubsystem.push_back( make_unique<FontService>() );
-        listSubsystem.push_back( make_unique<TelemetryService>() );
-        listSubsystem.push_back( make_unique<UISystem>() );
-        return listSubsystem;
+        engineScope.addSubsystem( sw::make_unique<HeadlessSubsystem>( false, s_headlessState ) );
+        engineScope.addSubsystem( make_unique<ShaderCache>() );
+        // 렌더 쪽은 서로를 참조로 받는다 — 범위가 살아 있는 동안만 쓴다(대역은 선언만 베낀다).
+        RHISubsystem&           rhiSubsystem           = engineScope.addSubsystem( sw::make_unique<RHISubsystem>() );
+        FrameRendererSubsystem& frameRendererSubsystem = engineScope.addSubsystem( sw::make_unique<FrameRendererSubsystem>( sw::make_unique<FrameRenderer>(), rhiSubsystem ) );
+        (void)engineScope.bind( &frameRendererSubsystem.getFrameRenderer() ); // 새 범위 — 겹치지 않는다
+        RenderThreadSubsystem& renderThreadSubsystem = engineScope.addSubsystem( sw::make_unique<RenderThreadSubsystem>( rhiSubsystem, frameRendererSubsystem ) );
+        engineScope.addSubsystem( sw::make_unique<LiveShaderSubsystem>( frameRendererSubsystem, renderThreadSubsystem ) );
+        engineScope.addSubsystem( sw::make_unique<SceneRHISubsystem>( rhiSubsystem ) );
+        engineScope.addSubsystem( make_unique<PhysicsSystem>() );
+        engineScope.addSubsystem( make_unique<FontService>() );
+        engineScope.addSubsystem( make_unique<TelemetryService>() );
+        engineScope.addSubsystem( make_unique<UISystem>() );
     }
 
     /** @brief 부트스트랩 범위를 엔진 루프 · 하네스와 같은 클래스로 채웁니다(초기화하지 않는다 — 선언과 소유만 본다). */
@@ -196,39 +196,15 @@ namespace
         services.addSubsystem( sw::make_unique<RHIBackendRegistry>() );
     }
 
-    /**
-     * @brief 엔진 범위를 엔진 루프와 같은 클래스 · 같은 거는 타입으로 채웁니다(초기화하지 않는다).
-     * @details `makeEngineSubsystems` 는 선언만 보려고 `ISubsystem` 으로 담아 타입을 잃는다 — 범위는 넣은 타입으로 찾으므로 여기서는 타입대로 넣는다.
-     */
-    void addEngineScopeSubsystems( SubsystemScope& engineScope )
-    {
-        engineScope.addSubsystem( make_unique<CompressionCodecRegistry>() );
-        const ReflectionSubsystem& reflection = engineScope.addSubsystem( sw::make_unique<ReflectionSubsystem>( sw::make_unique<TypeRegistry>() ) );
-        (void)engineScope.bind( &reflection.getTypeRegistry() ); // 새 범위 — 겹치지 않는다
-        engineScope.addSubsystem( make_unique<TaskManager>() );
-        engineScope.addSubsystem( make_unique<AsyncFileIO>() );
-        engineScope.addSubsystem( make_unique<ConfigManager>() );
-        engineScope.addSubsystem( make_unique<AssetManager>() );
-        const EngineDefaultAssetsSubsystem& defaultAssets = engineScope.addSubsystem( sw::make_unique<EngineDefaultAssetsSubsystem>( sw::make_unique<EngineDefaultAssets>() ) );
-        (void)engineScope.bind( &defaultAssets.getDefaultAssets() ); // 새 범위 — 겹치지 않는다
-        engineScope.addSubsystem( IAudioService::createNull() );
-        engineScope.addSubsystem( make_unique<InputManager>() );
-        engineScope.addSubsystem( make_unique<AssetStreamingQueue>() );
-        engineScope.addSubsystem( make_unique<SceneManager>() );
-        engineScope.addSubsystem( make_unique<UserSettingsManager>() );
-        engineScope.addSubsystem( make_unique<ShaderCache>() );
-        engineScope.addSubsystem( make_unique<PhysicsSystem>() );
-        engineScope.addSubsystem( make_unique<FontService>() );
-        engineScope.addSubsystem( make_unique<TelemetryService>() );
-        engineScope.addSubsystem( make_unique<UISystem>() );
-    }
-
     /** @brief 엔진 서브시스템마다 대역을 @p subsystems 에 넣고 정렬합니다 — 엔진의 기동 목록과 같은 그래프다(본문은 돌지 않는다). */
     void addEngineStandIns( SubsystemCollection& subsystems, StartupRecorder& recorder )
     {
-        for ( const unique_ptr<ISubsystem>& real : makeEngineSubsystems() )
+        SubsystemScope real;
+        addEngineSubsystems( real );
+        const SubsystemCollection& listReal = real.getCollection();
+        for ( uint32 index = 0; index < listReal.getSubsystemCount(); ++index )
         {
-            subsystems.add( make_unique<StandInSubsystem>( recorder, *real ) );
+            subsystems.add( make_unique<StandInSubsystem>( recorder, listReal.getSubsystem( index ) ) );
         }
         (void)subsystems.sort(); // 오류는 getError 로 본다
     }
@@ -661,11 +637,9 @@ SW_TEST_CASE( EngineInitSequenceTest, ClientRunsEveryStep )
  */
 SW_TEST_CASE( EngineInitSequenceTest, EngineSubsystemsSortIntoOneOrder )
 {
-    SubsystemCollection sequence;
-    for ( unique_ptr<ISubsystem>& real : makeEngineSubsystems() )
-    {
-        sequence.add( std::move( real ) );
-    }
+    SubsystemScope engineScope;
+    addEngineSubsystems( engineScope );
+    SubsystemCollection& sequence = engineScope.getCollection();
     SW_ASSERT_TRUE_MSG( sequence.sort(), sequence.getError().c_str() );
 
     const SubsystemGraph graph = makeGraph( sequence );
@@ -695,12 +669,15 @@ SW_TEST_CASE( EngineInitSequenceTest, EngineSubsystemsSortIntoOneOrder )
  */
 SW_TEST_CASE( EngineInitSequenceTest, EveryHostKindSortsItsOwnSubsystems )
 {
-    const vector<unique_ptr<ISubsystem>> listSubsystem = makeEngineSubsystems();
-    uint8                                hostBits      = static_cast<uint8>( EngineSubsystemHost::kClient ) | static_cast<uint8>( EngineSubsystemHost::kServer ); // 엔진이 정의한 종류는 선언이 없어도 본다
-    for ( const unique_ptr<ISubsystem>& subsystem : listSubsystem )
+    SubsystemScope engineScope;
+    addEngineSubsystems( engineScope );
+    const SubsystemCollection& listSubsystem = engineScope.getCollection();
+    uint8                      hostBits      = static_cast<uint8>( EngineSubsystemHost::kClient ) | static_cast<uint8>( EngineSubsystemHost::kServer ); // 엔진이 정의한 종류는 선언이 없어도 본다
+    for ( uint32 index = 0; index < listSubsystem.getSubsystemCount(); ++index )
     {
-        if ( subsystem->getSubsystemHost() != SubsystemHostMask::All )
-            hostBits |= static_cast<uint8>( subsystem->getSubsystemHost() );
+        const ISubsystem& subsystem = listSubsystem.getSubsystem( index );
+        if ( subsystem.getSubsystemHost() != SubsystemHostMask::All )
+            hostBits |= static_cast<uint8>( subsystem.getSubsystemHost() );
     }
     SW_ASSERT_TRUE( hostBits != 0 );
     uint32 hostKindCount = 0;
@@ -711,10 +688,11 @@ SW_TEST_CASE( EngineInitSequenceTest, EveryHostKindSortsItsOwnSubsystems )
             continue;
         ++hostKindCount;
         vector<SubsystemNode> listNode;
-        for ( const unique_ptr<ISubsystem>& subsystem : listSubsystem )
+        for ( uint32 index = 0; index < listSubsystem.getSubsystemCount(); ++index )
         {
-            if ( overlapsHostMask( subsystem->getSubsystemHost(), host ) )
-                listNode.push_back( { subsystem->getSubsystemName(), subsystem->getSubsystemDependencies(), subsystem->getSubsystemDependents() } );
+            const ISubsystem& subsystem = listSubsystem.getSubsystem( index );
+            if ( overlapsHostMask( subsystem.getSubsystemHost(), host ) )
+                listNode.push_back( { subsystem.getSubsystemName(), subsystem.getSubsystemDependencies(), subsystem.getSubsystemDependents() } );
         }
         SubsystemGraph graph{};
         string         error;
@@ -729,9 +707,13 @@ SW_TEST_CASE( EngineInitSequenceTest, EveryHostKindSortsItsOwnSubsystems )
  */
 SW_TEST_CASE( EngineInitSequenceTest, EverySubsystemHasAMemoryTag )
 {
-    for ( const unique_ptr<ISubsystem>& subsystem : makeEngineSubsystems() )
+    SubsystemScope engineScope;
+    addEngineSubsystems( engineScope );
+    const SubsystemCollection& listSubsystem = engineScope.getCollection();
+    for ( uint32 index = 0; index < listSubsystem.getSubsystemCount(); ++index )
     {
-        SW_EXPECT_TRUE_MSG( subsystem->getSubsystemMemoryTag() != MemoryTag::Unknown, subsystem->getSubsystemName() );
+        const ISubsystem& subsystem = listSubsystem.getSubsystem( index );
+        SW_EXPECT_TRUE_MSG( subsystem.getSubsystemMemoryTag() != MemoryTag::Unknown, subsystem.getSubsystemName() );
     }
 }
 
@@ -760,7 +742,7 @@ SW_TEST_CASE( EngineInitSequenceTest, EveryRequiredServiceIsInTheHostScopes )
     SubsystemScope services{ &bootstrap };
     addServiceSubsystems( services );
     SubsystemScope engineScope{ &services };
-    addEngineScopeSubsystems( engineScope );
+    addEngineSubsystems( engineScope );
     SW_ASSERT_TRUE_MSG( services.getCollection().sort(), services.getCollection().getError().c_str() );
     SW_ASSERT_TRUE_MSG( engineScope.getCollection().sort(), engineScope.getCollection().getError().c_str() );
     const utf8* pMissing = engine::findUnboundRequiredServiceName( engineScope );
