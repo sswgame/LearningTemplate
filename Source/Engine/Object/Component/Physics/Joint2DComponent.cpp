@@ -20,6 +20,7 @@ namespace sw
         , _bLimitsEnabled{ false }
         , _bCollideConnectedBodies{ false }
         , _bConnectToWorld{ false }
+        , _bJointCreateFailed{ false }
         , _joint{}
         , _jointBodyA{}
         , _jointBodyB{}
@@ -98,6 +99,13 @@ namespace sw
             releasePhysics( physics );
         if ( _joint.isValid() || pScene->isBodyValid( bodyA ) == false )
             return;
+        if ( _bJointCreateFailed )
+        {
+            const bool bSameBodies = bodyA == _jointBodyA && bodyB == _jointBodyB;
+            if ( bSameBodies )
+                return; // 같은 입력으로 이미 실패했다 — 설정(requestRebuild)이나 바디가 바뀔 때까지 기다린다
+            _bJointCreateFailed = false;
+        }
         if ( pBodyB != nullptr && pScene->isBodyValid( bodyB ) == false )
             return; // 부모 바디가 아직 없다 — 다음 프레임
 
@@ -123,6 +131,7 @@ namespace sw
         _joint                        = pScene->createJoint( desc );
         _jointBodyA                   = bodyA;
         _jointBodyB                   = bodyB;
+        _bJointCreateFailed           = _joint.isValid() == false;
     }
 
     void Joint2DComponent::releasePhysics( ScenePhysics& physics )
@@ -133,8 +142,9 @@ namespace sw
             if ( pScene != nullptr )
                 pScene->destroyJoint( _joint );
         }
-        _joint      = PhysicsJointHandle{};
-        _jointBodyA = PhysicsBodyHandle{};
-        _jointBodyB = PhysicsBodyHandle{};
+        _joint              = PhysicsJointHandle{};
+        _jointBodyA         = PhysicsBodyHandle{};
+        _jointBodyB         = PhysicsBodyHandle{};
+        _bJointCreateFailed = false;
     }
 } // namespace sw

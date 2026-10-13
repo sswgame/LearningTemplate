@@ -4,6 +4,7 @@
 
 #include "Engine/Object/Component/Physics/CharacterController2DComponent.h"
 #include "Engine/Object/Component/Physics/CharacterControllerComponent.h"
+#include "Engine/Object/Component/Physics/Joint2DComponent.h"
 #include "Engine/Object/Component/Physics/JointComponent.h"
 #include "Engine/Object/Component/Physics/RigidBody2DComponent.h"
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
@@ -115,6 +116,39 @@ namespace
         pBody->setLocalPosition( position );
         return pBody;
     }
+
+    /** @brief Error 로그 수만 세는 싱크입니다(출력은 하지 않는다). */
+    class PhysicsComponentErrorCountingSink final : public sw::ILogSink
+    {
+    public:
+        void initialize() override {}
+        void shutdown() override {}
+        void writeLog( sw::LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line ) override
+        {
+            (void)pTag;
+            (void)pCaller;
+            (void)pMessage;
+            (void)pFile;
+            (void)line;
+            if ( level == sw::LogLevel::Error )
+                ++_errorCount;
+        }
+        sw::DelegateHandle registerLogWrittenListener( const sw::LogWrittenDelegate& listener ) override
+        {
+            (void)listener;
+            return sw::DelegateHandle{};
+        }
+        void   unregisterLogWrittenListener( const sw::DelegateHandle& handle ) override { (void)handle; }
+        uint32 removeListenerCodeWithin( const void* pBegin, const void* pEnd ) override
+        {
+            (void)pBegin;
+            (void)pEnd;
+            return 0;
+        }
+        sw::string_view getLogFolderPath() override { return {}; }
+
+        uint32 _errorCount{ 0 };
+    };
 
 } // namespace
 
@@ -285,6 +319,40 @@ SW_TEST_CASE( PhysicsComponentTest, Components2DLandAndWalk )
     pHero->setMoveVelocity( 2.0f );
     test::tickFrames( manager, 60 );
     SW_EXPECT_NEAR_EQUAL( -1.0f, pHero->getWorldPosition()._x, 0.2f );
+    manager.endPlay();
+}
+
+/**
+ * @brief [PhysicsComponentTest] 2D 관절에 Cone 을 고르면 만들기는 한 번만 실패한다 — 프레임마다 다시 시도해 오류를 쌓지 않고, 종류를 바꾸면 만든다
+ */
+SW_TEST_CASE( PhysicsComponentTest, Joint2DConeFailsOnceUntilSettingsChange )
+{
+    sw::GameObjectManager     manager;
+    sw::GameObject*           pObject = manager.createGameObject( sw::hashed_string( "Pendulum2D" ) );
+    sw::RigidBody2DComponent* pBody   = pObject->addComponent<sw::RigidBody2DComponent>();
+    sw::Joint2DComponent*     pJoint  = pObject->addComponent<sw::Joint2DComponent>();
+    SW_ASSERT_NOT_NULL( pBody );
+    SW_ASSERT_NOT_NULL( pJoint );
+    pBody->setLocalPosition( sw::float3{ 0.0f, 3.0f, 0.0f } );
+    pJoint->setConnectToWorld( true );
+    pJoint->setJointType( sw::PhysicsJointType::Cone );
+
+    sw::ILogSink*                     pOldSink = sw::Logger::getGlobalSink();
+    PhysicsComponentErrorCountingSink countingSink;
+    sw::Logger::setGlobalSink( &countingSink );
+    manager.beginPlay();
+    test::tickFrames( manager, 30 );
+    const uint32 coneErrorCount = countingSink._errorCount;
+    const bool   bConeJoint     = pJoint->getJointHandle().isValid();
+    pJoint->setJointType( sw::PhysicsJointType::Hinge );
+    test::tickFrames( manager, 2 );
+    const uint32 hingeErrorCount = countingSink._errorCount - coneErrorCount;
+    sw::Logger::setGlobalSink( pOldSink );
+
+    SW_EXPECT_FALSE( bConeJoint );
+    SW_EXPECT_EQUAL( 1u, coneErrorCount );
+    SW_EXPECT_TRUE( pJoint->getJointHandle().isValid() );
+    SW_EXPECT_EQUAL( 0u, hingeErrorCount );
     manager.endPlay();
 }
 

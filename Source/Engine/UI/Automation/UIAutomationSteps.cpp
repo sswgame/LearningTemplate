@@ -86,11 +86,6 @@ namespace sw
 
 namespace sw
 {
-    void UIAutomationSteps::ensureLinked()
-    {
-        // 등록자는 이 번역 단위의 정적 객체다. 이 함수를 부르는 쪽이 있으면 링커가 이 단위를 버리지 않는다.
-    }
-
     bool UIAutomationSteps::validateExpectUI( const AutomationStep& step, string& outError )
     {
         if ( step._listAttribute.empty() )
