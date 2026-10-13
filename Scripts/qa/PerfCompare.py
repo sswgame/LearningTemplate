@@ -89,7 +89,12 @@ class CaseSample:
 
 
 def findTestExecutableInternal(appPath: Path) -> Path:
-    return appPath.resolve().parent / f"EngineTest{appPath.suffix}"
+    """`EngineTest` 의 자리 — 빌드는 테스트 실행 파일을 App 옆(`Bin`)이 아니라 형제 `TestBin` 에 둔다."""
+    binFolder = appPath.resolve().parent
+    candidate = binFolder / f"EngineTest{appPath.suffix}"
+    if candidate.exists():
+        return candidate
+    return binFolder.parent / "TestBin" / candidate.name
 
 
 def collectInternal(case: PerfCase, listLine: list[str], sample: CaseSample) -> None:
@@ -117,7 +122,9 @@ def collectInternal(case: PerfCase, listLine: list[str], sample: CaseSample) -> 
 
 
 def runSideInternal(case: PerfCase, executable: Path, listArgument: list[str], sample: CaseSample, timeoutSeconds: float) -> None:
-    result = runApp(executable, listArgument, timeoutSeconds=timeoutSeconds)
+    # TestBin 의 테스트 실행 파일은 Engine.dll 이 있는 형제 Bin 에서 돌린다(없으면 DLL 을 못 찾아 시작하자마자 죽는다).
+    workingFolder = executable.resolve().parent.parent / "Bin" if executable.resolve().parent.name == "TestBin" else None
+    result = runApp(executable, listArgument, cwd=workingFolder, timeoutSeconds=timeoutSeconds)
     if result.bBackendUnusable:
         sample.listFailure.append("backend unusable on this machine")
         return

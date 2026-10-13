@@ -157,7 +157,8 @@ cd build/Ninja-Debug/Bin
 
 - **지형 LOD 교체**(`TerrainBenchTest.LODSweepWorstFrame`, Release, 쇼케이스 지형을 600 프레임 동안 가로지름, 3 회): 교체 프레임 111 개에서 updateLODs(청크 메시) p50 0.1 ms · 최악 4.0 ~ 5.1 ms,
   GPUScene 수집 p50 0.95 ms · 최악 5.0 ~ 5.2 ms 입니다. 기준은 GT 2 ms 입니다.
-- **파괴 첫 프레임**(`FractureBenchTest.ShowcaseBeginPlay`, Release, beginPlay + 첫 틱 — 첫 물리 스텝 앞에서 상태와 잎 셰이프를 만든다): p50 20.2 · 27.2 · 20.7 ms 입니다.
+- **파괴 첫 프레임**(`FractureBenchTest.ShowcaseBeginPlay`, Release, beginPlay + 첫 틱 — 첫 물리 스텝 앞에서 상태와 잎 셰이프를 만든다): 잎 셰이프를 시작 때 모두 지으면(`-gv_fractureShapeWarmMicroseconds=-1`) p50 19.4 ms, 기본(틱마다 약 0.57 ms 예산으로 나눠 지음)은 p50 7.7 ms 입니다(`PerfCompare.py` fractureWarm, 3 회).
+  대신 셰이프가 준비된 뒤 벽이 깨지는 프레임이 p50 2.4 → 3.2 ms 로 늘었다(`fractureDefer`, 7 회 재측정 1.33 배 — 첫 프레임 12 ms 절감과 맞바꾼 값으로 유지한다).
   쇼케이스 파괴물 여섯 · 잎 312 개이고, 200 조각 벽 하나의 볼록 껍질이 약 11 ms(잎당 약 55 us)입니다. 깨지는 프레임은 200 조각 벽에서 4 ~ 7 ms(그중 사건 처리 2 ~ 4 ms)입니다.
 - **UDP 소켓 계층**(`NetUDPBenchTest`, 호스트 스위트, 서버 20 Hz 200 B · 클라이언트 30 Hz 40 B, 서버와 클라이언트가 한 PC, Release 3 회 가운데 값, 다른 빌드로 CPU 20 ~ 46 % 부하, Windows):
   클라이언트 500 은 받기 10.7k · 보내기 10.7k pkt/s, 서버 스레드 14 %, 패킷당 6.6 us, RTT p50 48 · p99 48 ms 입니다.
