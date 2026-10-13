@@ -4,11 +4,12 @@
   게임 스레드(GT.Frame)와 렌더 스레드(RT.Frame)가 모두 있어야 한다(Editor.ProfilerTimelineThreadCount 2 이상). 다시 누르면 녹화가 멈춘다.
   Load Trace 는 가장 최근 저장 파일을 살아 있는 스레드 아래에 겹쳐 그리고(첫 시각을 맞춘다), 검색 칸은 맞는 구간만 또렷하게 둔다. Unload 로 지운다.
   Save Trace 단추(profiler.timeline.saveTrace)는 보이는 프레임을 Saved/Traces/trace_<시각>.trace.json(Chrome Trace Event)으로 저장하고 로그에 "Timeline trace: saved" 를 남긴다.
-  격리: 타임라인 기록은 패널이 아니라 엔진 서비스(FrameProfiler 의 ProfilerTimeline)가 프로세스 동안 들고 있다 — 녹화를 멈춰도 남은 사건이 보이므로
-  같은 프로세스의 다음 실행은 녹화 전 스레드 수 0 으로 시작하지 않는다(체인 초기화는 엔진 서비스를 비우지 않는다).
+  시작 상태: 타임라인 기록은 패널이 아니라 엔진 서비스(FrameProfiler 의 ProfilerTimeline)가 프로세스 동안 들고 있다 — 녹화를 멈춰도 남은 사건이 보이고
+  체인 초기화는 엔진 서비스를 비우지 않는다. 그래서 같은 프레임에 `profile.trace on`(기록을 비우고 켠다)과 `off` 를 이어 불러, 앞 실행의 기록을 지우고 녹화 전 스레드 수 0 에서 시작한다.
   실행: App.exe -EnableEditor -scenario=engine/automation/editor/profilertimeline.scenario.xml -gv_editorStateDir=<빈 폴더> -dx12
 -->
-<Scenario name="editor.profilertimeline" isolated="true" fixedDelta="0.0166667" timeoutFrames="700" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.profilertimeline" fixedDelta="0.0166667" timeoutFrames="700" startAfter="Immediately" input="exclusive">
+	<At frame="3"><DevCommand line="profile.trace on"/><DevCommand line="profile.trace off"/></At>
 	<At frame="5"><DevCommand line="layout.reset"/></At>
 	<At frame="10"><ResizeWindow width="1600" height="900"/></At>
 	<At frame="30"><DevCommand line="panel.focus profiler"/></At>
