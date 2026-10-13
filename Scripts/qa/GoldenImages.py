@@ -3,7 +3,7 @@
 """
 골든 이미지 회귀 — 테스트 게임의 자동 플레이를 네 백엔드(dx12 · dx11 · vk · gl)로 그려 정해 둔 프레임을 캡처하고, 기준과 **배경을 뺀 지표**로 견준다.
 
-    py -3 -m Scripts golden --app build/Ninja-Debug-NileCity/Bin/App.exe              # 그 빌드의 활성 게임, 네 백엔드
+    py -3 -m Scripts golden --app build/Ninja-Debug/Bin/App.exe --game NileCity       # 그 게임(-game=), 네 백엔드
     py -3 -m Scripts golden --app <App> --backends dx12 vk                             # 백엔드를 골라
     py -3 -m Scripts golden --app <App> --record [--runs 3]                            # 기준을 새로 뜬다(같은 조건 여러 판 → 허용 오차)
 
@@ -154,7 +154,8 @@ def main(listArgument: list[str] | None = None) -> int:
     if not args.app.is_file():
         print(f"[Golden] App 이 없습니다: {args.app}", file=sys.stderr)
         return 1
-    game = dict(table["games"][gameName], extra_arguments=list(args.extra_arg))
+    # 같은 빌드가 게임 전부를 짓는다(`SW_GAMES`) — 그릴 게임은 App 의 `-game=` 으로 고른다(Shipping 은 구운 게임 하나라 보지 않는다).
+    game = dict(table["games"][gameName], extra_arguments=[f"-game={gameName}", *args.extra_arg])
     goldenDir = repositoryRoot / kGoldenRelativeDir / gameName
     diffDir = (args.diff_dir / gameName) if args.diff_dir is not None else None
 

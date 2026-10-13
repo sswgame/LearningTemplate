@@ -249,7 +249,7 @@ py -3 -m Scripts docs                 # Doxygen API 레퍼런스 문서 생성 (
 py -3 -m Scripts test SceneTest.*     # 스위트 · 케이스 이름으로 테스트 실행 (RunTests)
 py -3 -m Scripts validate-assets      # 에셋 검증 표 (ValidateAssets) — `--severity error` 는 게이트와 같은 판정
 py -3 -m Scripts asset-merge diff a.scene.xml b.scene.xml   # XML 에셋 의미 비교 (AssetMerge)
-py -3 -m Scripts golden --app build/Ninja-Debug-NileCity/Bin/App.exe   # 골든 이미지 (GoldenImages)
+py -3 -m Scripts golden --app build/Ninja-Debug/Bin/App.exe --game NileCity   # 골든 이미지 (GoldenImages)
 py -3 -m Scripts soak --app <App> --minutes 10                # 장시간 실행 (Soak)
 py -3 -m Scripts perf --app build/Ninja-Release/Bin/App.exe   # 성능 회귀 (PerfRegression)
 py -3 -m Scripts symbols --preset Ninja-Shipping --store <저장소>   # 심볼 저장소 배치 (StoreSymbols)

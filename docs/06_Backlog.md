@@ -45,7 +45,7 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
 코드는 들어갔고 돌려 보는 일이 남은 것. 이 PC 에서 못 돌린 환경(리눅스 · 실기)과 사용자 눈이 필요한 것도 여기다.
 
 - `B-3` **에디터 구조 개편(층 게이트 · 의존 역전 · Panels 하위 폴더) 뒤에 돌리지 않은 검증.** 3 · 4 단계 뒤 네 백엔드 에디터 시나리오(`AppTest --test_filter=*Editor*`),
-  Shipping 빌드와 `-L hostgpu`, 게임별 프리셋 빌드(ThemePark 밖의 에디터 확장 모듈)를 배치 끝 검증에서 본다. 결정은 [결정 기록](09_Decisions.md) 5-11.
+  Shipping 빌드와 `-L hostgpu`, 게임 전부를 짓는 `Ninja-Debug` 빌드(ThemePark 밖의 에디터 확장 모듈)를 배치 끝 검증에서 본다. 결정은 [결정 기록](09_Decisions.md) 5-11.
 
 - `B-4` **에디터 작은 단위(E5 · G2 · G3 · H1)와 실기동으로 아직 확인하지 못한 것.** 리눅스 X11 · dlopen 분기(CI), 실제 RenderDoc 캡처(이 PC 에 RenderDoc 이 없다),
   단언 대화상자의 세 단추(모달), Tracy 0.14.1 뷰어 연결(주소 `localhost:8086` 을 직접 입력해 연결되는지), 배율 1.5 · 2 의 에디터, Dialogue Graph 첫 열기,
@@ -83,7 +83,7 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   오류 목록(IntelliSense 만)에서 어노테이션 헤더에 새 오류가 없는지 본다.
 
 - `B-12` **통합 3(`8fce26aaf..6f3373831`, 81 커밋)의 검증이 반쯤 남았다.**
-  - **할 일**: Debug `-L hostgpu`(`ctest -j 1`, 약 16 분), Shipping `-L nogpu` · `-L hostgpu`, 게임 프리셋 넷(`Ninja-Debug-Shooter3D` · `-StarSkirmish` · `-HarvestValley` · `-VoxelCraft`) 빌드(경고 0 · 링크 0),
+  - **할 일**: Debug `-L hostgpu`(`ctest -j 1`, 약 16 분), Shipping `-L nogpu` · `-L hostgpu`, 게임 넷(Shooter3D · StarSkirmish · HarvestValley · VoxelCraft)을 `-game=` 으로 실행,
     `ctest -N` 개수를 병합 전과 견줘 옮긴 테스트(`TestDismemberment` · `TestWitcherRPG` · `TestTacticsSRPG` · `TestProgression` · `TestSpatial` · `ProfilerTimeline`)가 사라지거나 두 번 잡히지 않았는지.
     정적: `dumpbin /exports` 로 `GameFramework.dll` 이 `SW_GF_API` 심볼과 `bindGameService` · `unbindGameService`(C 링크)를 내보내고 `SWGame.dll` 이 가져오는지. 같은 이름의 반사 헤더 둘이면 구성이 `FATAL`, 구성 뒤 기존 헤더에 반사 매크로를 넣으면 빌드가 서는지
     (`cmake/Engine/CheckReflectionCandidates.cmake`, `--target <타깃>` 만 지으면 검사가 안 돈다). `StringBuilder::append( string )` 과 `VulkanRHIRequiredVersion` include 빌드.
@@ -215,10 +215,9 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   후보: (a) `thread::join` · 이벤트 대기도 대기 그래프(잠금 관찰자 인터페이스)에 넣고, 정적 소멸자 · `DllMain` 안의 `join` 을 막는 린트 · 단언을 둔다, (b) `EditorBackgroundTask` 처럼 '대기 여부 + 결과' 를 따로 읽게 하는 API 는 한 번에 돌려주는 형태로 바꿔 틀릴 수 없게 한다,
   (c) 풀을 가리키는 핸들에 세대 · 생존 확인을 둔다. 탐지기가 과거에 몇 건을 잡았는지 이력은 확인하지 않았다. 설계: 새 전용 함수를 늘리지 말고 기존 관찰자 · API 모양을 고친다.
 - `C-25` **게임 여럿을 빌드 한 번에 짓고, 실행할 때 고르고, 키트는 필요한 것만**(2026-10-13, 사용자 확정). 결정은 [결정 기록](09_Decisions.md) 5-2, 쓰는 법은 `Source/Games/README.md`.
-  남은 것: (1) 게임 프리셋 8개(`Ninja-Debug-<게임>`)는 이제 `Ninja-Debug` + `-game=` 이 대신한다 — Shipping 게임 빌드(`-DSW_ACTIVE_GAME`)만 남기고 지울지 정한다(문서 · 스크립트의 프리셋 언급도 함께).
-  (2) `SW_GAMES` 로 더한 키트도 활성 게임 실행에서 올라온다(카탈로그는 `Bin/Modules` 의 매니페스트 전부, 켜짐은 고른 게임의 표) — 고른 게임이 닿지 않는 키트는 올리지 않게.
-  (3) 전용 서버 `-game=NileCity` 는 기동 · 60 틱 종료까지 확인했다(게임 팩 DLL · `Config/Server/<게임>.json`, 없으면 Dev 기본값). 서버에서 팩의 `.ogg` 디코드 경고가 난다 — 서버가 오디오를 읽을 이유가 있는지 본다.
-  (4) 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸다(DX12 직접 실행으로 10 시나리오 통과만 확인).
+  남은 것: (1) `SW_GAMES` 로 더한 키트도 활성 게임 실행에서 올라온다(카탈로그는 `Bin/Modules` 의 매니페스트 전부, 켜짐은 고른 게임의 표) — 고른 게임이 닿지 않는 키트는 올리지 않게.
+  (2) 전용 서버 `-game=NileCity` 는 기동 · 60 틱 종료까지 확인했다(게임 팩 DLL · `Config/Server/<게임>.json`, 없으면 Dev 기본값). 서버에서 팩의 `.ogg` 디코드 경고가 난다 — 서버가 오디오를 읽을 이유가 있는지 본다.
+  (3) 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸다(DX12 직접 실행으로 10 시나리오 통과만 확인).
 
 ## D. 기능 로드맵
 

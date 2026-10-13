@@ -13,11 +13,11 @@
 ## 빌드와 실행
 
 ```powershell
-cmake --preset Ninja-Debug-MeadowVillage
-cmake --build --preset Ninja-Debug-MeadowVillage
-cd build/Ninja-Debug-MeadowVillage/Bin
-./App.exe -dx12
-./App.exe -dx12 -gv_meadowAutoPlay=1    # 늘 8배속
+cmake --preset Ninja-Debug
+cmake --build --preset Ninja-Debug
+cd build/Ninja-Debug/Bin
+./App.exe -game=MeadowVillage -dx12
+./App.exe -game=MeadowVillage -dx12 -gv_meadowAutoPlay=1    # 늘 8배속
 ```
 
 이 게임에는 아직 자동화 시나리오가 없습니다. 같은 흐름을 EngineTest 의 `KitCompositionTest` 가 모의 디렉터로 확인하고,

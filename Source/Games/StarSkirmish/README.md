@@ -16,12 +16,12 @@
 ## 빌드와 실행
 
 ```powershell
-cmake --preset Ninja-Debug-StarSkirmish
-cmake --build --preset Ninja-Debug-StarSkirmish
-cd build/Ninja-Debug-StarSkirmish/Bin
-./App.exe -dx12                           # 사람(파랑) 대 컴퓨터(빨강)
-./App.exe -dx12 -gv_skirmishAutoPlay=1    # 컴퓨터(러시) 대 컴퓨터(운영), 승패까지
-./App.exe -dx12 -scenario=game/starskirmish/automation/control.scenario.xml
+cmake --preset Ninja-Debug
+cmake --build --preset Ninja-Debug
+cd build/Ninja-Debug/Bin
+./App.exe -game=StarSkirmish -dx12                           # 사람(파랑) 대 컴퓨터(빨강)
+./App.exe -game=StarSkirmish -dx12 -gv_skirmishAutoPlay=1    # 컴퓨터(러시) 대 컴퓨터(운영), 승패까지
+./App.exe -game=StarSkirmish -dx12 -scenario=game/starskirmish/automation/control.scenario.xml
 ```
 
 `control.scenario.xml` 은 커서를 옮겨(`MousePosition`) 본진 근처를 패드 A 로 끌어 고르고, 빈 땅에 패드 B 로 명령합니다.

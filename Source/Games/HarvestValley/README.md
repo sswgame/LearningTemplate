@@ -15,13 +15,13 @@
 ## 빌드와 실행
 
 ```powershell
-cmake --preset Ninja-Debug-HarvestValley
-cmake --build --preset Ninja-Debug-HarvestValley
-cd build/Ninja-Debug-HarvestValley/Bin
-./App.exe -dx12
-./App.exe -dx12 -gv_farmAutoPlay=1      # 자동 농부 AI 가 농부를 잡는다: 갈기, 심기, 물, 거두기, 출하, 잠
-./App.exe -dx12 -gv_farmAutoPlay=1 -gv_reloadGameAtFrame=1500   # 1500 프레임에 게임 모듈 핫 리로드
-./App.exe -dx12 -scenario=game/harvestvalley/automation/control.scenario.xml
+cmake --preset Ninja-Debug
+cmake --build --preset Ninja-Debug
+cd build/Ninja-Debug/Bin
+./App.exe -game=HarvestValley -dx12
+./App.exe -game=HarvestValley -dx12 -gv_farmAutoPlay=1      # 자동 농부 AI 가 농부를 잡는다: 갈기, 심기, 물, 거두기, 출하, 잠
+./App.exe -game=HarvestValley -dx12 -gv_farmAutoPlay=1 -gv_reloadGameAtFrame=1500   # 1500 프레임에 게임 모듈 핫 리로드
+./App.exe -game=HarvestValley -dx12 -scenario=game/harvestvalley/automation/control.scenario.xml
 ```
 
 `control.scenario.xml` 은 가상 키로 농부를 걷게 하고(D 를 반 초, 2m 이동) 도구를 바꾼 뒤(2 키, 물뿌리개),

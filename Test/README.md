@@ -261,7 +261,7 @@ cd build/Ninja-Debug/Bin
 세 스위트 모두 종료 코드 13(건너뜀)과 77(이 기계에 없는 백엔드)은 건너뜁니다. 게임은 프리셋마다 하나이므로, 게임 시나리오는 그 게임의 프리셋에서 돕니다.
 
 ```powershell
-ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --output-on-failure
+ctest --test-dir build/Ninja-Debug -L hostgpu -R AppTest_HostOnly --output-on-failure   # 게임 팩마다 -game= 으로 돈다
 ```
 
 **벤치 장면 골든 이미지.** `AppSmokeTest.BenchFrameMatchesGoldenImage` 는 벤치 큐브 장면(`-W=256 -H=144 -gv_benchMeshes=8 -gv_benchAnimate=0`)을 불투명과 투명 두 장으로 백엔드마다 찍습니다.
@@ -275,9 +275,9 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 `soak` 와 `perf` 는 몇 분씩 걸려서 `hostgpu` 에 넣지 않았고, `ctest -L soak` 처럼 직접 고릅니다.
 
 ```powershell
-py -3 -m Scripts golden --app build/Ninja-Debug-NileCity/Bin/App.exe                         # 네 백엔드로 그려 기준과 비교
-py -3 -m Scripts golden --app build/Ninja-Debug-NileCity/Bin/App.exe --record --runs 3       # 기준을 새로 만든다
-py -3 -m Scripts soak --app build/Ninja-Debug-NileCity/Bin/App.exe --minutes 10 --out soak.json
+py -3 -m Scripts golden --app build/Ninja-Debug/Bin/App.exe --game NileCity                   # 네 백엔드로 그려 기준과 비교
+py -3 -m Scripts golden --app build/Ninja-Debug/Bin/App.exe --game NileCity --record --runs 3 # 기준을 새로 만든다
+py -3 -m Scripts soak --app build/Ninja-Debug/Bin/App.exe --game NileCity --minutes 10 --out soak.json
 py -3 -m Scripts perf --app build/Ninja-Release/Bin/App.exe [--record]
 ```
 

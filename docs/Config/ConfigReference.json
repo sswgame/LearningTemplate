@@ -3994,17 +3994,8 @@
    "type": "STRING",
    "default": "Empty",
    "choices": [],
-   "description": "활성화할 Source/Games 게임 팩 — 게임을 바꿀 때는 이 값이 아니라 프리셋(Ninja-Debug-<게임>)을 고른다",
-   "presets": [
-    "Ninja-Debug-AbilityArena",
-    "Ninja-Debug-HarvestValley",
-    "Ninja-Debug-MeadowVillage",
-    "Ninja-Debug-NileCity",
-    "Ninja-Debug-Shooter3D",
-    "Ninja-Debug-StarSkirmish",
-    "Ninja-Debug-ThemeParkTycoon",
-    "Ninja-Debug-VoxelCraft"
-   ]
+   "description": "활성 게임(Source/Games 폴더 이름) — Bin/Modules/SWGame · Shipping 이 굽는 게임. Dev 는 실행할 때 -game=<게임> 으로 다른 게임도 고른다",
+   "presets": []
   },
   {
    "name": "SW_BUILD_DOCS",
@@ -4150,15 +4141,7 @@
    "description": "활성 게임과 함께 지을 게임 팩(Dev 전용): 비움 | ALL | 이름 목록",
    "presets": [
     "Ninja-Debug",
-    "Ninja-Debug-AbilityArena",
-    "Ninja-Debug-HarvestValley",
-    "Ninja-Debug-Lean",
-    "Ninja-Debug-MeadowVillage",
-    "Ninja-Debug-NileCity",
-    "Ninja-Debug-Shooter3D",
-    "Ninja-Debug-StarSkirmish",
-    "Ninja-Debug-ThemeParkTycoon",
-    "Ninja-Debug-VoxelCraft"
+    "Ninja-Debug-Lean"
    ]
   },
   {

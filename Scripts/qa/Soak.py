@@ -3,7 +3,7 @@
 """
 봇 플레이 장시간 실행(soak) — 테스트 게임의 자동 플레이를 오래 돌리며 메모리 · 핸들 증가와 프레임 p99 를 본다.
 
-    py -3 -m Scripts soak --app build/Ninja-Debug-NileCity/Bin/App.exe --minutes 10
+    py -3 -m Scripts soak --app build/Ninja-Debug/Bin/App.exe --game NileCity --minutes 10
     py -3 -m Scripts soak --app <App> --backend vk --minutes 30 --out soak.json
 
 App 은 `-gv_profileSeconds=<분 × 60>` 으로 그 시간을 재고 스스로 끝난다(프레임 수로 끊으면 장면마다 몇 초인지 모른다). 그동안 이 스크립트가
@@ -50,7 +50,7 @@ def main(listArgument: list[str] | None = None) -> int:
         print(f"[Soak] 모르는 게임 '{gameName}' — Test/QA/Games.json 에 더하십시오", file=sys.stderr)
         return 1
     seconds = max(10, int(args.minutes * 60))
-    listAppArgument = [*table["games"][gameName]["arguments"], f"-gv_profileSeconds={seconds}", kBackendSwitch[args.backend]]
+    listAppArgument = [f"-game={gameName}", *table["games"][gameName]["arguments"], f"-gv_profileSeconds={seconds}", kBackendSwitch[args.backend]]
     print(f"[Soak] {gameName} on {args.backend} for {seconds} s: App {' '.join(listAppArgument)}", flush=True)
     result = runApp(args.app, listAppArgument, timeoutSeconds=seconds + 180.0, sampleIntervalSeconds=args.sample_seconds)
 

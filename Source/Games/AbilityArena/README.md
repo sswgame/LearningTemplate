@@ -15,13 +15,13 @@
 ## 빌드와 실행
 
 ```powershell
-cmake --preset Ninja-Debug-AbilityArena
-cmake --build --preset Ninja-Debug-AbilityArena
-cd build/Ninja-Debug-AbilityArena/Bin
-./App.exe -dx12                          # 에디터 없이. 월드가 처음부터 플레이 중이다
-./App.exe -dx12 -gv_arenaAutoPlay=1      # 자동 전투 AI 조종자가 플레이어 폰을 잡는다
-./App.exe -dx12 -scenario=game/abilityarena/automation/control.scenario.xml
-./App.exe -dx12 -EnableEditor "-gv_editorStartupScene=game/abilityarena/maps/arena.scene.xml"
+cmake --preset Ninja-Debug
+cmake --build --preset Ninja-Debug
+cd build/Ninja-Debug/Bin
+./App.exe -game=AbilityArena -dx12                          # 에디터 없이. 월드가 처음부터 플레이 중이다
+./App.exe -game=AbilityArena -dx12 -gv_arenaAutoPlay=1      # 자동 전투 AI 조종자가 플레이어 폰을 잡는다
+./App.exe -game=AbilityArena -dx12 -scenario=game/abilityarena/automation/control.scenario.xml
+./App.exe -game=AbilityArena -dx12 -EnableEditor "-gv_editorStartupScene=game/abilityarena/maps/arena.scene.xml"
 ```
 
 에디터로 띄우면 Play 를 눌러야 디렉터가 플레이어와 첫 웨이브를 만들고, Stop 은 플레이 전 씬으로 돌아갑니다.

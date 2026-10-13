@@ -5,7 +5,8 @@
 엔진 위에서 실제로 도는 게임이 이 폴더에 있습니다. 게임 하나는 폴더 하나(`Source/Games/<게임>/`)이고, 리소스는 게임 팩(`Resource/game/<게임 소문자>/`)에 있습니다.
 여기 있는 게임은 모두 테스트 게임입니다. 장르 키트와 엔진 기능이 실제 게임 흐름에서 맞물리는지 확인하고, 새 게임을 만들 때 본보기로 씁니다.
 
-App 이 올리는 활성 게임은 하나입니다. CMake 옵션 `SW_ACTIVE_GAME` 이 고르고, 게임마다 Debug 프리셋 `Ninja-Debug-<게임>` 이 있습니다.
+빌드 하나(`Ninja-Debug`)가 게임 전부를 짓고, 돌릴 게임은 실행할 때 `App.exe -game=<게임>` 으로 고릅니다. 게임별 CMake 프리셋은 없습니다.
+CMake 옵션 `SW_ACTIVE_GAME`(기본 `Empty`)은 `-game=` 이 없을 때의 게임이고, Shipping 이 정적으로 링크해 굽는 게임입니다.
 게임마다 빌드 타깃은 `SWGame_<게임>` 이고 모듈 이름 · 산출물은 늘 `SWGame` 입니다. 핫 리로드가 다시 로드할 모듈을 고정된 이름으로 찾기 때문입니다.
 활성 게임은 `Bin/Modules/SWGame` 이고, Shipping 링크 · 테스트 의존은 타깃 이름을 적지 않고 전역 속성 `SW_ACTIVE_GAME_TARGET` 으로 묻습니다.
 
@@ -50,25 +51,25 @@ CI 는 기본 게임 `Empty` 만 빌드합니다. 로컬 `Ninja-Debug` 는 여�
 ## 따라 해 보기 — 게임 하나를 빌드하고 시나리오 돌리기
 
 ```powershell
-cmake --preset Ninja-Debug-HarvestValley          # 빌드 폴더 build/Ninja-Debug-HarvestValley
-cmake --build --preset Ninja-Debug-HarvestValley
-cd build/Ninja-Debug-HarvestValley/Bin
-./App.exe -dx12                                     # 에디터 없이, 시작 씬이 바로 플레이 중
-./App.exe -dx12 -gv_farmAutoPlay=1                  # 자동 플레이
-./App.exe -dx12 -scenario=game/harvestvalley/automation/control.scenario.xml
+cmake --preset Ninja-Debug                          # 빌드 폴더 build/Ninja-Debug — 게임 전부(SW_GAMES=ALL)
+cmake --build --preset Ninja-Debug
+cd build/Ninja-Debug/Bin
+./App.exe -game=HarvestValley -dx12                 # 에디터 없이, 시작 씬이 바로 플레이 중
+./App.exe -game=HarvestValley -dx12 -gv_farmAutoPlay=1   # 자동 플레이
+./App.exe -game=HarvestValley -dx12 -scenario=game/harvestvalley/automation/control.scenario.xml
 echo $LASTEXITCODE                                  # 0 통과, 10 실패, 11 읽기 오류, 12 시간 초과, 13 건너뜀
 ```
 
-프리셋마다 빌드 폴더가 따로이므로, 게임을 바꿀 때 한 빌드 폴더를 다시 configure 하지 않습니다. 두 작업이 한 폴더를 나눠 쓰면 서로의 빌드를 깨뜨립니다.
+게임을 바꿀 때 다시 configure 하지 않습니다. 같은 빌드에서 `-game=` 만 바꿉니다.
 
 **자동화 시나리오**는 팩의 `automation/*.scenario.xml` 입니다. 고정 프레임 시간과 가상 입력으로 돌고, 결과를 종료 코드로 냅니다. 형식은 Automation에 있습니다.
-그 게임의 시나리오를 모든 백엔드로 한꺼번에 돌리려면 그 프리셋의 호스트 테스트를 씁니다. GPU 와 창이 필요해서 CI 는 돌리지 못합니다.
+게임 팩의 시나리오를 모든 백엔드로 한꺼번에 돌리려면 호스트 테스트를 씁니다. GPU 와 창이 필요해서 CI 는 돌리지 못합니다.
 
 ```powershell
-ctest --test-dir build/Ninja-Debug-HarvestValley -R AppTest_HostOnly --output-on-failure
+ctest --test-dir build/Ninja-Debug -R AppTest_HostOnly --output-on-failure
 ```
 
-`AppScenarioTest` 가 엔진 시나리오(`engine/automation`)와 활성 게임 팩의 시나리오를 백엔드마다 띄웁니다. 시나리오 파일을 놓기만 하면 돌고, CMake 에 목록을 적지 않습니다.
+`AppScenarioTest` 가 엔진 시나리오(`engine/automation`)와 활성 게임 팩의 시나리오, 그리고 함께 지은 게임 팩마다 그 팩의 시나리오(`-game=<게임>`)를 백엔드마다 띄웁니다. 시나리오 파일을 놓기만 하면 돌고, CMake 에 목록을 적지 않습니다.
 로그는 `Bin/Saved/Automation/<시나리오>_<백엔드>.log` 에 남습니다.
 
 ## 새로운 게임 추가하는 방법
@@ -78,8 +79,8 @@ ctest --test-dir build/Ninja-Debug-HarvestValley -R AppTest_HostOnly --output-on
    이 파일들은 측정용이고 게임 코드가 아닙니다(아래 "Empty 에 벤치가 있는 이유").
 3. **키트 연결.** `<게임>/SWGame.module.json` 의 `_listDependency` 에 쓸 키트를 적습니다. `_kind` 는 `Game` 입니다.
 4. **리소스 폴더와 게임 프리셋.** `Resource/game/<게임 소문자>/` 를 만들고, `Config/Game/<게임>.json` 에 `_packRoot`(`"game/<게임 소문자>"`)와 창 제목 `_windowTitle` 을 적습니다.
-   파일 이름은 게임 폴더 이름과 같아야 하고, 프리셋이 없으면 configure 가 멈춥니다. 시작 씬은 팩의 `data/gamesettings.xml` 의 `startMap`(타이틀 화면이 있으면 `titleScene`) 하나입니다.
-5. **CMake 프리셋.** `CMakePresets.json` 에 `Ninja-Debug-<게임>`(configure 와 build, `SW_ACTIVE_GAME=<게임>`)을 더합니다. `CheckGamePresets.py` 가 검사합니다.
+   파일 이름은 게임 폴더 이름과 같아야 하고, 프리셋이 없으면 그 게임을 고른 기동(`-game=`) · configure 가 멈춥니다. 시작 씬은 팩의 `data/gamesettings.xml` 의 `startMap`(타이틀 화면이 있으면 `titleScene`) 하나입니다.
+5. **빌드와 실행.** CMake 프리셋은 더하지 않습니다. `Ninja-Debug` 가 새 게임도 짓고(`SW_GAMES=ALL`) `App.exe -game=<게임>` 으로 돌립니다. 프리셋 · 매니페스트는 `CheckGamePresets.py` 가 검사합니다.
 6. **쓰지 않는 키트 끄기(선택).** `_listModuleOverride` 에 `{ "_name": "GF_…", "_bEnabled": false }` 를 적으면 그 키트는 이 게임의 빌드와 실행에서 빠집니다.
 7. **씬과 디렉터.** 아래 절의 구조로 첫 씬과 디렉터를 만듭니다. 자동화 시나리오 하나를 `automation/` 에 두면 호스트 테스트가 함께 돌립니다.
 

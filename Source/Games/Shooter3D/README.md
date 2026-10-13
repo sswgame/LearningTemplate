@@ -17,14 +17,14 @@
 ## 빌드와 실행
 
 ```powershell
-cmake --preset Ninja-Debug-Shooter3D
-cmake --build --preset Ninja-Debug-Shooter3D
-cd build/Ninja-Debug-Shooter3D/Bin
-./App.exe -dx12
-./App.exe -dx12 -gv_shooterAutoPlay=1                     # 조준과 사격과 이동도 AI
-./App.exe -dx12 -gv_shooterAutoPlay=1 -gv_navDebugDraw=23  # 내비메시 걷는 면과 적의 경로를 화면에
-./App.exe -dx12 -gv_cameraPreset=thirdperson               # 시작 카메라 프리셋(firstperson, thirdperson, orbit, cctv)
-./App.exe -dx12 -EnableEditor "-gv_editorStartupScene=game/shooter3d/maps/arena.scene.xml"
+cmake --preset Ninja-Debug
+cmake --build --preset Ninja-Debug
+cd build/Ninja-Debug/Bin
+./App.exe -game=Shooter3D -dx12
+./App.exe -game=Shooter3D -dx12 -gv_shooterAutoPlay=1                     # 조준과 사격과 이동도 AI
+./App.exe -game=Shooter3D -dx12 -gv_shooterAutoPlay=1 -gv_navDebugDraw=23  # 내비메시 걷는 면과 적의 경로를 화면에
+./App.exe -game=Shooter3D -dx12 -gv_cameraPreset=thirdperson               # 시작 카메라 프리셋(firstperson, thirdperson, orbit, cctv)
+./App.exe -game=Shooter3D -dx12 -EnableEditor "-gv_editorStartupScene=game/shooter3d/maps/arena.scene.xml"
 ```
 
 `-gv_navDebugDraw` 는 비트 값입니다. 16 이 게임 화면의 걷는 면과 경로이고, 1, 2, 4 는 에디터 뷰포트의 선입니다.
@@ -32,19 +32,19 @@ cd build/Ninja-Debug-Shooter3D/Bin
 움직임이 튀는 것을 진단할 때는 프레임마다 dt, 발과 몸의 위치와 요, 주요 본, 카메라, 적 하나를 CSV 로 남기고(끝날 때 씁니다) 연속 스크린샷과 같이 봅니다.
 
 ```powershell
-./App.exe -dx11 -gv_shooterAutoPlay=1 -gv_cameraPreset=thirdperson -gv_profileFrames=2700 "-gv_shooterMotionTrace=trace.csv" `
+./App.exe -game=Shooter3D -dx11 -gv_shooterAutoPlay=1 -gv_cameraPreset=thirdperson -gv_profileFrames=2700 "-gv_shooterMotionTrace=trace.csv" `
           -gv_screenshotFrame=2500 -gv_screenshotCount=30 -gv_screenshotInterval=2 "-gv_screenshot=tp.ppm"
 ```
 
 ### 자동화 시나리오
 
 시나리오는 `Resource/game/shooter3d/automation/` 에 있습니다. 고정 프레임 시간과 가상 입력으로 돌고, 결과는 종료 코드입니다.
-`ctest --test-dir build/Ninja-Debug-Shooter3D -R AppTest_HostOnly` 가 셋을 백엔드마다 돌립니다.
+`ctest --test-dir build/Ninja-Debug -R AppTest_HostOnly` 가 셋을 백엔드마다 돌립니다.
 
 ```powershell
-./App.exe -dx12 -scenario=game/shooter3d/automation/weaponswitch.scenario.xml   # E/Q 와 숫자 키가 무기를 정확히 한 단계씩
-./App.exe -dx12 -scenario=game/shooter3d/automation/closewindow.scenario.xml    # 커서 잠금, Esc, 창 닫기
-./App.exe -dx12 -scenario=game/shooter3d/automation/autoplay.scenario.xml       # 자동 플레이 = AI 빙의, 끄면 플레이어 키가 먹는다
+./App.exe -game=Shooter3D -dx12 -scenario=game/shooter3d/automation/weaponswitch.scenario.xml   # E/Q 와 숫자 키가 무기를 정확히 한 단계씩
+./App.exe -game=Shooter3D -dx12 -scenario=game/shooter3d/automation/closewindow.scenario.xml    # 커서 잠금, Esc, 창 닫기
+./App.exe -game=Shooter3D -dx12 -scenario=game/shooter3d/automation/autoplay.scenario.xml       # 자동 플레이 = AI 빙의, 끄면 플레이어 키가 먹는다
 ```
 
 - `weaponswitch` 는 E 와 Q 를 짧게, 길게, 같은 프레임에 눌러 무기 번호가 정확히 한 단계씩 바뀌는지 봅니다. 누르는 동안 매 프레임 바뀌는 회귀를 잡습니다.

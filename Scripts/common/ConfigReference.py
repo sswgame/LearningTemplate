@@ -854,8 +854,8 @@ def makeArgumentPage(listArgument: list[ArgumentDoc], outMetadata: dict) -> str:
 def makeBuildOptionPage(listOption: list[BuildOptionDoc], outMetadata: dict) -> str:
     """CMake 캐시 옵션 표입니다."""
     lines = [_kGeneratedBanner, "", "# CMake 빌드 옵션 (`SW_*`)", "", "[설정 색인](README.md)", "",
-             "configure 때 정한다(`cmake --preset <프리셋>` 또는 `-D<이름>=<값>`). 값을 바꾸면 다시 configure 한다. 게임을 바꾸는 것은 옵션이 아니라 "
-             "프리셋이다(`Ninja-Debug-<게임>` — 빌드 폴더가 따로).", "",
+             "configure 때 정한다(`cmake --preset <프리셋>` 또는 `-D<이름>=<값>`). 값을 바꾸면 다시 configure 한다. Dev 에서 게임을 바꾸는 것은 옵션이 아니라 "
+             "실행 인자다(`App.exe -game=<게임>` — `Ninja-Debug` 가 게임 전부를 짓는다, `SW_GAMES`).", "",
              "| 이름 | 타입 | 기본값 | 고를 수 있는 값 | 설명 | 정하는 프리셋 | 선언 |", "|---|---|---|---|---|---|---|"]
     for option in listOption:
         choices = " · ".join(f"`{choice}`" for choice in option.listChoice)

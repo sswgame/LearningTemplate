@@ -15,17 +15,17 @@
 ## 빌드와 실행
 
 ```powershell
-cmake --preset Ninja-Debug-ThemeParkTycoon
-cmake --build --preset Ninja-Debug-ThemeParkTycoon
-cd build/Ninja-Debug-ThemeParkTycoon/Bin
-./App.exe -dx12
-./App.exe -dx12 -gv_parkAutoBuild=1     # 돈이 모이는 대로 남은 것 중 가장 싼 놀이기구를 짓는다
-./App.exe -dx12 -scenario=game/themepark/automation/shadow.scenario.xml
+cmake --preset Ninja-Debug
+cmake --build --preset Ninja-Debug
+cd build/Ninja-Debug/Bin
+./App.exe -game=ThemeParkTycoon -dx12
+./App.exe -game=ThemeParkTycoon -dx12 -gv_parkAutoBuild=1     # 돈이 모이는 대로 남은 것 중 가장 싼 놀이기구를 짓는다
+./App.exe -game=ThemeParkTycoon -dx12 -scenario=game/themepark/automation/shadow.scenario.xml
 ```
 
 `shadow.scenario.xml` 은 고정 카메라와 고정 해, 자동 건설을 끈 상태에서 직교 카메라가 화면 끝까지 그림자를 받는지 봅니다.
 화면 띠와 나무 줄과 가운데 영역의 어두운 픽셀 비율을 단언하고, 측정값은 보고 JSON 과 `[Scenario] metric` 로그 줄에 남습니다.
-`ctest --test-dir build/Ninja-Debug-ThemeParkTycoon -R AppTest_HostOnly` 가 이 시나리오를 네 백엔드로 돌립니다.
+`ctest --test-dir build/Ninja-Debug -R AppTest_HostOnly` 가 이 시나리오를 네 백엔드로 돌립니다.
 
 ## 조작
 

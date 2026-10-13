@@ -37,7 +37,7 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 - **동시에 빌드하는 작업은 최대 둘입니다**(적용 담당과 도우미 하나). 나머지 도우미는 코드 적용과 빌드 없는 검사만 합니다. 워크트리마다 빌드 폴더가 따로라 sccache 가 거의 맞지 않고, 전체 빌드가 겹치면 CPU 가 100 % 에 붙어 테스트 시간 제한이 가짜로 집니다.
 - 도우미의 빌드와 테스트는 낮은 우선순위로 돌립니다. Git Bash 에서 `cmd //c "start /belownormal /wait /b cmake --build --preset Ninja-Debug -j 4"`, ctest 는 `-j 2` 입니다. 끌 때는 자기 PID 만 끕니다.
   이 빌드는 테스트를 짓지 않습니다. 테스트를 돌릴 도우미는 `--target all AllTests` 를 붙여 낮은 우선순위로 먼저 짓습니다(ctest · `py -3 -m Scripts test` 가 대신 지으면 보통 우선순위로 돈다).
-- **게임별 프리셋(`Ninja-Debug-<Game>`) 빌드는 배치 끝에 적용 담당이 한 번 합니다.** 도우미는 게임 소스를 고쳤으면 "게임 빌드 미확인" 으로 보고합니다.
+- **게임 코드는 `Ninja-Debug` 한 빌드가 모두 짓습니다(`SW_GAMES=ALL`).** 게임 실행 확인은 `App.exe -game=<게임>` 으로 합니다. 도우미가 `Ninja-Debug-Lean` 처럼 게임을 줄인 구성으로 지었으면 "게임 빌드 미확인" 으로 보고합니다.
 - 도우미가 동시에 빌드할 때는 `D:\Projects\Personal\LT-wt\BUILD-LOCK-README.txt` 의 슬롯 잠금(`LT-wt/.slot1` ~ `.slot3`)을 씁니다.
 - 스크립트로 파일을 고칠 때의 규칙(heredoc 금지 등)은 [AGENTS.md](../AGENTS.md) "Editing traps" 가 원본입니다. 임시 파일은 scratchpad 에 두고 이름 앞에 에이전트 이름을 붙입니다.
 - 컴파일러 경고 전체 조사(`Scripts/lint/report/RunBuildWarnings.py`, 세 프리셋)는 사용자가 요청할 때만 돌립니다. 내 변경이 만든 경고는 그 빌드가 이미 보여 줍니다.

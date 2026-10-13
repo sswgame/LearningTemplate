@@ -17,12 +17,12 @@
 ## 빌드와 실행
 
 ```powershell
-cmake --preset Ninja-Debug-NileCity
-cmake --build --preset Ninja-Debug-NileCity
-cd build/Ninja-Debug-NileCity/Bin
-./App.exe -dx12
-./App.exe -dx12 -gv_nileAutoPlay=1      # 계획대로 도로, 우물, 농장, 창고, 시장, 집을 지으며 달마다 [Nile] month N pop P money M
-./App.exe -dx12 -scenario=game/nilecity/automation/control.scenario.xml
+cmake --preset Ninja-Debug
+cmake --build --preset Ninja-Debug
+cd build/Ninja-Debug/Bin
+./App.exe -game=NileCity -dx12
+./App.exe -game=NileCity -dx12 -gv_nileAutoPlay=1      # 계획대로 도로, 우물, 농장, 창고, 시장, 집을 지으며 달마다 [Nile] month N pop P money M
+./App.exe -game=NileCity -dx12 -scenario=game/nilecity/automation/control.scenario.xml
 ```
 
 `control.scenario.xml` 은 커서를 화면 가운데(`MousePosition`, 카메라 리그의 초점 셀)에 두고 패드 A(`Nile.Place`)로 도로를 깐 뒤 패드 B(`Nile.Demolish`)로 같은 셀을 허뭅니다.

@@ -14,13 +14,13 @@
 ## 빌드와 실행
 
 ```powershell
-cmake --preset Ninja-Debug-VoxelCraft
-cmake --build --preset Ninja-Debug-VoxelCraft
-cd build/Ninja-Debug-VoxelCraft/Bin
-./App.exe -dx12
-./App.exe -dx12 -gv_voxelAutoPlay=1     # 걷고 뛰고 부수고 놓는 것도 AI 조종자가
-./App.exe -dx12 -scenario=game/voxelcraft/automation/control.scenario.xml
-./App.exe -dx12 -EnableEditor "-gv_editorStartupScene=game/voxelcraft/maps/island.scene.xml"
+cmake --preset Ninja-Debug
+cmake --build --preset Ninja-Debug
+cd build/Ninja-Debug/Bin
+./App.exe -game=VoxelCraft -dx12
+./App.exe -game=VoxelCraft -dx12 -gv_voxelAutoPlay=1     # 걷고 뛰고 부수고 놓는 것도 AI 조종자가
+./App.exe -game=VoxelCraft -dx12 -scenario=game/voxelcraft/automation/control.scenario.xml
+./App.exe -game=VoxelCraft -dx12 -EnableEditor "-gv_editorStartupScene=game/voxelcraft/maps/island.scene.xml"
 ```
 
 `control.scenario.xml` 은 가상 키와 마우스로 1초 걷고(W), 핫바 셋째 슬롯을 고르고(3), 마우스를 100픽셀 움직여 시선을 돌리고, 아래를 보며 왼쪽 버튼을 4초 눌러 블록을 부숩니다.

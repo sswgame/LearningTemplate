@@ -37,7 +37,7 @@
 - **개발 PC의 경로**는 LLVM, SDK, 파서 플래그 같은 값입니다. 로컬 파일은 git이 무시하고, 커밋하는 것은 시드 파일(`*.defaults.json`)뿐입니다.
 - **전용 서버 운영 값**(`ServerConfig`)은 주소, 포트, 틱, 저장소, TLS입니다. 운영자가 고치는 파일이라 배포본도 디스크에서 읽습니다.
 - **비밀**은 DB 비밀번호, 캐시 AUTH, 키 암호입니다. 설정 파일에는 그 환경 변수의 이름만 적습니다(`_secretEnvironment` 필드).
-- **빌드 형태**는 Shipping 여부, 새니타이저, 링크할 백엔드, 활성 게임입니다. 활성 게임은 프리셋(`Ninja-Debug-<게임>`)으로 고릅니다. 표는 [`BuildOptions.md`](Config/BuildOptions.md)에 있습니다.
+- **빌드 형태**는 Shipping 여부, 새니타이저, 링크할 백엔드, 활성 게임입니다. Dev 에서 돌릴 게임은 실행 인자 `-game=<게임>` 으로 고르고(`Ninja-Debug` 가 게임 전부를 짓는다), `SW_ACTIVE_GAME` 은 기본 게임 · Shipping 이 굽는 게임입니다. 표는 [`BuildOptions.md`](Config/BuildOptions.md)에 있습니다.
 - **모듈 켜고 끄기**는 매니페스트의 `_bEnabledByDefault` 와, 게임 매니페스트의 `_listModuleOverride` 로 정합니다(`ModuleCatalog`).
 - **전역 변수와 명령줄 인자**의 목록은 [`GlobalVariables.md`](Config/GlobalVariables.md)와 [`CommandLine.md`](Config/CommandLine.md)에 있습니다.
 
