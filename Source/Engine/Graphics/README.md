@@ -227,6 +227,12 @@ pMesh->setMaterialInstance( std::move( tint ) );
 그러면 DirectX 12 가 0xFFFFFFFF × 32 를 32 비트로 계산한 힙 시작 + 0xFFFFFFE0 을 읽어 페이지 폴트(`DEVICE_HUNG`)가 납니다. DRED 의 `PageFault VA` 가 힙 시작 + 0xFFFFF000 이면 이 경우입니다.
 첨자는 배열 칸 수(`bindingslots.hlsli` 의 `SW_DX12_DESCRIPTOR_HEAP_SIZE` 등, 2 의 거듭제곱)로 마스크해 늘 배열 안을 가리키게 하고, 값은 분기가 고릅니다. GPU 기반 검증(GBV)을 켜면 셰이더가 바뀌어 재현되지 않습니다.
 
+**셰이더에 넘기는 bindless 번호는 바인드 시점에 검사됩니다(`BindlessIndexValidator`, Debug · Dev).** `-gv_validateBindlessIndex` 가 수준을 정합니다. 0 은 끔, 1 은 죽은 번호(Debug 기본, Release 는 0), 2 는 "없음" 번호가 가는 자리까지입니다.
+수준 1 은 해제했거나 발급한 적 없는 번호, 다른 종류(텍스처 자리에 버퍼)의 번호를 `[BindlessIndex] pass '<패스>' field '<필드>'[<원소>] = <값> is not a live texture slot` 오류로 자리마다 한 번 남깁니다. 판정은 백엔드의 `IRHIDevice::isBindlessIndexLive` 가 합니다.
+수준 2 는 `kInvalidDescriptorIndex` 가 셰이더로 가는 자리를 `= absent` 정보 줄로 더 남깁니다. 위 항목처럼 분기로 거른 번호가 디바이스 손실을 내면 이 목록에서 후보 패스 · 필드를 고릅니다.
+필드 이름은 셰이더 쪽 이름(`g_ShadowMapIndex`, 구조버퍼 `SwMaterials`, 머티리얼 텍스처 서수 `MaterialTexture[n]`)이고, 패스 이름은 파이프라인 XML 의 패스 이름입니다.
+디바이스를 잃었을 때의 로그(Vulkan `VK_EXT_device_fault` 결함 주소 · 마지막 제출 패스, DX12 DRED 할당 이름)는 [검증과 측정](../../../docs/08_Verification.md) 3절의 "디바이스 손실" 항목에서 읽습니다.
+
 **같은 기본 도형을 여러 컴포넌트가 쓰면 `MeshUtil::acquirePrimitive` 로 공유 메시를 받으세요.** `MeshUtil::createPrimitive` 는 부를 때마다 새 메시를 만듭니다.
 컴포넌트마다 새 메시를 만들면 같은 도형이라도 배치와 정점 버퍼가 컴포넌트 수만큼 생깁니다. 벤치는 배치를 일부러 나누려고 `createPrimitive` 를 씁니다.
 
