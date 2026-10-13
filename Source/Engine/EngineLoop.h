@@ -205,13 +205,9 @@ namespace sw
         /** @brief 프레임 관찰자에게 넘길 이번 프레임의 문맥(입력 · 렌더 스레드가 쓴 스크린샷 수 · 프레임 시간 · 활성 씬)을 만듭니다. */
         EngineFrameContext makeFrameContext() const;
 
-        // 기동 단계의 본문이다(`EngineLoop.cpp`). 표(`EngineInitStepList.xxx`)의 줄마다 `<단계>StartupStep` 하나이고, 빠지면 컴파일 오류다.
-        // 중첩 타입이라 이 클래스의 private 을 그대로 쓰고, 바깥에서는 본문 표(`EngineInitStepTable`)만 이름을 본다.
-#define SW_ENGINE_STARTUP_STEP( Name, ... ) struct Name##StartupStep;
-#include "Engine/EngineInitStepList.xxx"
-#undef SW_ENGINE_STARTUP_STEP
-        template <class>
-        friend struct EngineInitStepTable;
+        // 기동 단계의 본문 모음이다(`EngineLoop.cpp`). 표(`EngineInitStepList.xxx`)의 단계마다 `initialize<단계>` · `shutdown<단계>` ·
+        // `destroy<단계>` 중 필요한 정적 함수만 둔다. 중첩 타입이라 이 클래스의 private 을 그대로 쓴다.
+        struct StartupStepBody;
 
     private:
         /**

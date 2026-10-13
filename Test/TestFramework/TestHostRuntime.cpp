@@ -50,10 +50,11 @@ namespace
 {
     /**
      * @brief 하네스의 기동 단계 본문입니다. 순서는 `EngineLoop` 과 같은 표(`EngineInitStepList.xxx`)가 정합니다.
-     * @details 줄마다 `<단계>StartupStep` 하나다(`EngineInitStepDefaults` 상속 — 필요한 것만 정의). 하네스는 창 · RHI · 렌더러 · 헤드리스
-     *          작업을 세우지 않으므로 그 단계는 기본값이고, 오디오는 초기화하지 않고 종료만 부른다. 해제는 `EngineLoop` 과 같은 역순이다.
+     * @details 호스트 자신이 본문 모음이다 — 필요한 `initialize<단계>` · `shutdown<단계>` · `destroy<단계>` 만 정적 함수로 둔다(`EngineInitNoStepBody`).
+     *          하네스는 모듈 이미지 · 헤드리스 작업 · 글꼴 · 창 · RHI · 렌더러 · 플레이어 설정 · 텔레메트리 · UI 를 세우지 않으므로 그 단계의 함수가 없고
+     *          (글꼴 · UI 테스트는 자기 FontService · UISystem 을 만든다), 오디오는 초기화하지 않고 종료만 부른다. 해제는 `EngineLoop` 과 같은 역순이다.
      */
-    struct TestHost
+    struct TestHost : sw::EngineInitNoStepBody
     {
         sw::EngineServiceCollection*      _pOwned{ nullptr };
         sw::unique_ptr<sw::ConfigManager> _configManager{};
@@ -62,210 +63,156 @@ namespace
         sw::DelegateHandle                _sceneObjectsInvalidatedHandle{}; ///< 씬 매니저에 단 기록 비우기 구독(씬 단계 해제가 뗀다)
         const sw::EngineConfig*           _pEngineConfig{ nullptr };
 
-        using Defaults = sw::EngineInitStepDefaults<TestHost>;
-
-        struct CompressionStartupStep : Defaults
+        static sw::EngineInitResult initializeCompression( TestHost& host )
         {
-            static sw::EngineInitResult initialize( TestHost& host )
-            {
-                host._pOwned->_pCompressionCodecRegistry->initialize();
-                // 서비스와 **같은 인스턴스**를 Core 슬롯에도 꽂는다 — 안 꽂으면 CompressionStream 이
-                // 다른 레지스트리를 보게 되어 등록한 코덱이 테스트에서만 조용히 무시된다.
-                sw::CompressionCodecRegistry::setActive( host._pOwned->_pCompressionCodecRegistry.get() );
-                return sw::EngineInitResult::Succeeded;
-            }
-            // `EngineLoop` 과 같이 종료는 하지 않는다 — Core 슬롯이 이 레지스트리를 가리키는 동안 코덱을 비우면 뒤 단계의 해제(팩 내리기)가
-            // 빈 레지스트리를 본다. 슬롯을 끊고 통째로 없애는 것은 해제다.
-            static void destroy( TestHost& host ) { host._pOwned->destroyCompressionCodecRegistry(); }
-        };
+            host._pOwned->_pCompressionCodecRegistry->initialize();
+            // 서비스와 **같은 인스턴스**를 Core 슬롯에도 꽂는다 — 안 꽂으면 CompressionStream 이
+            // 다른 레지스트리를 보게 되어 등록한 코덱이 테스트에서만 조용히 무시된다.
+            sw::CompressionCodecRegistry::setActive( host._pOwned->_pCompressionCodecRegistry.get() );
+            return sw::EngineInitResult::Succeeded;
+        }
+        // `EngineLoop` 과 같이 종료는 하지 않는다 — Core 슬롯이 이 레지스트리를 가리키는 동안 코덱을 비우면 뒤 단계의 해제(팩 내리기)가
+        // 빈 레지스트리를 본다. 슬롯을 끊고 통째로 없애는 것은 해제다.
+        static void destroyCompression( TestHost& host ) { host._pOwned->destroyCompressionCodecRegistry(); }
 
-        struct ReflectionStartupStep : Defaults
+        static sw::EngineInitResult initializeReflection( TestHost& host )
         {
-            static sw::EngineInitResult initialize( TestHost& host )
-            {
-                // 리플렉션은 설정보다 먼저다 — 설정(EngineConfig·GameConfig) 역직렬화가 TypeInfo 를 쓴다.
-                sw::engine::registerModuleTypes( "Engine" );
-                sw::engine::registerModuleTypes( "GameFramework" );
-                host._pOwned->_pTypeRegistry->registerPendingTypes( "TestFramework", sw::TypeRegistrar::getHead(), sw::EnumRegistrar::getHead() );
-                if ( sw::engine::bindGlobalVariableEnumNames() == false )
-                    return sw::EngineInitResult::Failed;
-                return sw::EngineInitResult::Succeeded;
-            }
-            static void destroy( TestHost& host )
-            {
-                sw::engine::unbindGlobalVariableEnumNames();
-                host._pOwned->_pTypeRegistry.reset();
-            }
-        };
+            // 리플렉션은 설정보다 먼저다 — 설정(EngineConfig·GameConfig) 역직렬화가 TypeInfo 를 쓴다.
+            sw::engine::registerModuleTypes( "Engine" );
+            sw::engine::registerModuleTypes( "GameFramework" );
+            host._pOwned->_pTypeRegistry->registerPendingTypes( "TestFramework", sw::TypeRegistrar::getHead(), sw::EnumRegistrar::getHead() );
+            if ( sw::engine::bindGlobalVariableEnumNames() == false )
+                return sw::EngineInitResult::Failed;
+            return sw::EngineInitResult::Succeeded;
+        }
+        static void destroyReflection( TestHost& host )
+        {
+            sw::engine::unbindGlobalVariableEnumNames();
+            host._pOwned->_pTypeRegistry.reset();
+        }
 
-        struct ConfigStartupStep : Defaults
+        static sw::EngineInitResult initializeConfig( TestHost& host )
         {
-            static sw::EngineInitResult initialize( TestHost& host )
-            {
-                // 설정은 리소스 초기화보다 먼저 읽는다. `loadAssetRegistries` 는 `GameConfig::getActive()._packRoot` 로 게임
-                // 레지스트리 경로를 만든다 — 활성 설정이 없으면 시작 시점 GUID 표가 반쪽이 된다.
-                host._configManager = sw::make_unique<sw::ConfigManager>();
-                host._configManager->setRootDirectory( sw::ResourcePaths::getProjectFolderPath() );
+            // 설정은 리소스 초기화보다 먼저 읽는다. `loadAssetRegistries` 는 `GameConfig::getActive()._packRoot` 로 게임
+            // 레지스트리 경로를 만든다 — 활성 설정이 없으면 시작 시점 GUID 표가 반쪽이 된다.
+            host._configManager = sw::make_unique<sw::ConfigManager>();
+            host._configManager->setRootDirectory( sw::ResourcePaths::getProjectFolderPath() );
 #if defined( SW_SHIPPING )
-                // 배포 구성은 생성된 JSON 만 읽는다. 그것이 역직렬화되지 않으면(정적 링크에서 리플렉션 등록기가 빠졌다) 모든 테스트가 C++ 기본값
-                // 설정으로 돈다 — 기동 실패로 드러낸다(`sw_addTestExecutable` 의 통째 링크).
+            // 배포 구성은 생성된 JSON 만 읽는다. 그것이 역직렬화되지 않으면(정적 링크에서 리플렉션 등록기가 빠졌다) 모든 테스트가 C++ 기본값
+            // 설정으로 돈다 — 기동 실패로 드러낸다(`sw_addTestExecutable` 의 통째 링크).
+            {
+                sw::EngineConfig probe;
+                if ( sw::JSONSerializer::deserialize( &probe, *sw::EngineConfig::StaticType(), sw::shipping_host::kEngineConfigJSON ) == false )
                 {
-                    sw::EngineConfig probe;
-                    if ( sw::JSONSerializer::deserialize( &probe, *sw::EngineConfig::StaticType(), sw::shipping_host::kEngineConfigJSON ) == false )
-                    {
-                        SW_LOG_ERROR( "The generated EngineConfig JSON does not deserialize in this test executable - a reflection registrar was dropped at link time" );
-                        return sw::EngineInitResult::Failed;
-                    }
+                    SW_LOG_ERROR( "The generated EngineConfig JSON does not deserialize in this test executable - a reflection registrar was dropped at link time" );
+                    return sw::EngineInitResult::Failed;
                 }
+            }
 #endif
-                host._pEngineConfig = host._configManager->ensureConfig<sw::EngineConfig>( sw::config::kFileRuntimeEngineConfig, sw::shipping_host::kEngineConfigJSON );
-                if ( host._pEngineConfig == nullptr )
-                    return sw::EngineInitResult::Failed;
-                sw::EngineConfig::setActive( *host._pEngineConfig );
-                const sw::GameConfig* pGameConfig = host._configManager->ensureConfig<sw::GameConfig>( sw::config::kFileRuntimeGameConfig, sw::shipping_host::kGameConfigJSON );
-                if ( pGameConfig == nullptr )
-                    return sw::EngineInitResult::Failed;
-                sw::GameConfig::setActive( *pGameConfig );
-                return sw::EngineInitResult::Succeeded;
-            }
-            static void destroy( TestHost& host )
-            {
-                host._pEngineConfig = nullptr;
-                host._configManager.reset();
-            }
-        };
-
-        struct ResourceStartupStep : Defaults
+            host._pEngineConfig = host._configManager->ensureConfig<sw::EngineConfig>( sw::config::kFileRuntimeEngineConfig, sw::shipping_host::kEngineConfigJSON );
+            if ( host._pEngineConfig == nullptr )
+                return sw::EngineInitResult::Failed;
+            sw::EngineConfig::setActive( *host._pEngineConfig );
+            const sw::GameConfig* pGameConfig = host._configManager->ensureConfig<sw::GameConfig>( sw::config::kFileRuntimeGameConfig, sw::shipping_host::kGameConfigJSON );
+            if ( pGameConfig == nullptr )
+                return sw::EngineInitResult::Failed;
+            sw::GameConfig::setActive( *pGameConfig );
+            return sw::EngineInitResult::Succeeded;
+        }
+        static void destroyConfig( TestHost& host )
         {
-            static sw::EngineInitResult initialize( TestHost& host )
-            {
-                if ( host._pOwned->_pAssetManager->initialize() == false )
-                    return sw::EngineInitResult::Failed;
-                // GameConfig 가 활성화된 뒤라야 "game" 토큰이 팩 루트로 풀린다 — 그 전제는 `mountContent` 의 인자에 드러나 있다.
-                if ( host._pEngineConfig != nullptr )
-                    host._pOwned->_pAssetManager->mountContent( host._pEngineConfig->_listResourcePriority );
-                else
-                    host._pOwned->_pAssetManager->mountContent( {} );
-                return sw::EngineInitResult::Succeeded;
-            }
-            static void destroy( TestHost& host ) { host._pOwned->destroyAssetManager(); }
-        };
+            host._pEngineConfig = nullptr;
+            host._configManager.reset();
+        }
 
-        struct EngineDefaultAssetsStartupStep : Defaults
+        static sw::EngineInitResult initializeResource( TestHost& host )
         {
-            static void destroy( TestHost& host ) { host._pOwned->_pEngineDefaultAssets.reset(); }
-        };
+            if ( host._pOwned->_pAssetManager->initialize() == false )
+                return sw::EngineInitResult::Failed;
+            // GameConfig 가 활성화된 뒤라야 "game" 토큰이 팩 루트로 풀린다 — 그 전제는 `mountContent` 의 인자에 드러나 있다.
+            if ( host._pEngineConfig != nullptr )
+                host._pOwned->_pAssetManager->mountContent( host._pEngineConfig->_listResourcePriority );
+            else
+                host._pOwned->_pAssetManager->mountContent( {} );
+            return sw::EngineInitResult::Succeeded;
+        }
+        static void destroyResource( TestHost& host ) { host._pOwned->destroyAssetManager(); }
 
-        struct ShaderCacheStartupStep : Defaults
+        static void destroyEngineDefaultAssets( TestHost& host ) { host._pOwned->_pEngineDefaultAssets.reset(); }
+
+        static sw::EngineInitResult initializeShaderCache( TestHost& host )
         {
-            static sw::EngineInitResult initialize( TestHost& host )
-            {
-                return host._pOwned->_pShaderCache->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
-            }
-            static void shutdown( TestHost& host ) { host._pOwned->_pShaderCache->shutdown(); }
-            static void destroy( TestHost& host ) { host._pOwned->_pShaderCache.reset(); }
-        };
+            return host._pOwned->_pShaderCache->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
+        }
+        static void shutdownShaderCache( TestHost& host ) { host._pOwned->_pShaderCache->shutdown(); }
+        static void destroyShaderCache( TestHost& host ) { host._pOwned->_pShaderCache.reset(); }
 
-        struct TaskStartupStep : Defaults
+        static sw::EngineInitResult initializeTask( TestHost& host )
         {
-            static sw::EngineInitResult initialize( TestHost& host )
-            {
-                return host._pOwned->_pTaskManager->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
-            }
-            static void shutdown( TestHost& host ) { host._pOwned->_pTaskManager->shutdown(); }
-            static void destroy( TestHost& host ) { host._pOwned->_pTaskManager.reset(); }
-        };
+            return host._pOwned->_pTaskManager->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
+        }
+        static void shutdownTask( TestHost& host ) { host._pOwned->_pTaskManager->shutdown(); }
+        static void destroyTask( TestHost& host ) { host._pOwned->_pTaskManager.reset(); }
 
-        struct FileIOStartupStep : Defaults
+        static sw::EngineInitResult initializeFileIO( TestHost& host )
         {
-            static sw::EngineInitResult initialize( TestHost& host )
-            {
-                sw::AsyncFileIOSettings settings{};
-                settings._pTaskManager = host._pOwned->_pTaskManager.get();
-                return host._pOwned->_pAsyncFileIO->initialize( settings ) ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
-            }
-            static void shutdown( TestHost& host ) { host._pOwned->_pAsyncFileIO->shutdown(); }
-        };
+            sw::AsyncFileIOSettings settings{};
+            settings._pTaskManager = host._pOwned->_pTaskManager.get();
+            return host._pOwned->_pAsyncFileIO->initialize( settings ) ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
+        }
+        static void shutdownFileIO( TestHost& host ) { host._pOwned->_pAsyncFileIO->shutdown(); }
 
-        struct AudioStartupStep : Defaults
+        static void shutdownAudio( TestHost& host ) { host._audioService->shutdown(); }
+        static void destroyAudio( TestHost& host ) { host._audioService.reset(); }
+
+        static sw::EngineInitResult initializeInput( TestHost& host )
         {
-            static void shutdown( TestHost& host ) { host._audioService->shutdown(); }
-            static void destroy( TestHost& host ) { host._audioService.reset(); }
-        };
+            return host._pOwned->_pInputManager->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
+        }
+        static void shutdownInput( TestHost& host ) { host._pOwned->_pInputManager->shutdown(); }
+        static void destroyInput( TestHost& host ) { host._pOwned->_pInputManager.reset(); }
 
-        struct InputStartupStep : Defaults
+        static sw::EngineInitResult initializeModuleTypes( TestHost& host )
         {
-            static sw::EngineInitResult initialize( TestHost& host )
-            {
-                return host._pOwned->_pInputManager->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
-            }
-            static void shutdown( TestHost& host ) { host._pOwned->_pInputManager->shutdown(); }
-            static void destroy( TestHost& host ) { host._pOwned->_pInputManager.reset(); }
-        };
+            // 하네스의 타입 공급자(엔진 · GameFramework · 테스트 타입)는 테스트 실행 파일과 함께 올라와 리플렉션 단계가 이미 모았다.
+            // 앱과 같이 이 단계가 끝나야 씬을 읽는다(`SceneManager::requestLoadFuture` · `SceneCooker::cookAllScenes`).
+            host._pOwned->_pTypeRegistry->markAllModuleTypesRegistered();
+            return sw::EngineInitResult::Succeeded;
+        }
 
-        struct ModuleTypesStartupStep : Defaults
+        static sw::EngineInitResult initializePhysics( TestHost& host )
         {
-            static sw::EngineInitResult initialize( TestHost& host )
-            {
-                // 하네스의 타입 공급자(엔진 · GameFramework · 테스트 타입)는 테스트 실행 파일과 함께 올라와 리플렉션 단계가 이미 모았다.
-                // 앱과 같이 이 단계가 끝나야 씬을 읽는다(`SceneManager::requestLoadFuture` · `SceneCooker::cookAllScenes`).
-                host._pOwned->_pTypeRegistry->markAllModuleTypesRegistered();
-                return sw::EngineInitResult::Succeeded;
-            }
-        };
+            return host._pOwned->_pPhysicsSystem->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
+        }
+        static void shutdownPhysics( TestHost& host ) { host._pOwned->_pPhysicsSystem->shutdown(); }
 
-        struct PhysicsStartupStep : Defaults
+        static sw::EngineInitResult initializeScene( TestHost& host )
         {
-            static sw::EngineInitResult initialize( TestHost& host )
-            {
-                return host._pOwned->_pPhysicsSystem->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
-            }
-            static void shutdown( TestHost& host ) { host._pOwned->_pPhysicsSystem->shutdown(); }
-        };
-
-        struct SceneStartupStep : Defaults
+            // 앱과 같다 — 표를 묶은 뒤 씬 쪽 묶음을 넘긴다(씬 매니저는 묶기 전에 만들어졌다).
+            const sw::SceneEngineServices services = sw::SceneEngineServices::makeFromBoundEngine();
+            if ( host._pOwned->_pSceneManager->initialize( services ) == false )
+                return sw::EngineInitResult::Failed;
+            // 앱과 같다 — 씬이 바뀌면 되돌리기 기록을 소유자가 비운다(씬 매니저보다 기록이 늦게 해제된다).
+            sw::SceneObjectsInvalidatedDelegate& onInvalidated = host._pOwned->_pSceneManager->onSceneObjectsInvalidated();
+            if ( host._sceneObjectsInvalidatedHandle.isValid() )
+                onInvalidated.remove( host._sceneObjectsInvalidatedHandle );
+            host._sceneObjectsInvalidatedHandle = onInvalidated.add( SW_DELEGATE_METHOD( sw::Delegate<void()>, &sw::CommandStack::clear, host._commandStack.get() ) );
+            return sw::EngineInitResult::Succeeded;
+        }
+        static void shutdownScene( TestHost& host )
         {
-            static sw::EngineInitResult initialize( TestHost& host )
-            {
-                // 앱과 같다 — 표를 묶은 뒤 씬 쪽 묶음을 넘긴다(씬 매니저는 묶기 전에 만들어졌다).
-                const sw::SceneEngineServices services = sw::SceneEngineServices::makeFromBoundEngine();
-                if ( host._pOwned->_pSceneManager->initialize( services ) == false )
-                    return sw::EngineInitResult::Failed;
-                // 앱과 같다 — 씬이 바뀌면 되돌리기 기록을 소유자가 비운다(씬 매니저보다 기록이 늦게 해제된다).
-                sw::SceneObjectsInvalidatedDelegate& onInvalidated = host._pOwned->_pSceneManager->onSceneObjectsInvalidated();
-                if ( host._sceneObjectsInvalidatedHandle.isValid() )
-                    onInvalidated.remove( host._sceneObjectsInvalidatedHandle );
-                host._sceneObjectsInvalidatedHandle = onInvalidated.add( SW_DELEGATE_METHOD( sw::Delegate<void()>, &sw::CommandStack::clear, host._commandStack.get() ) );
-                return sw::EngineInitResult::Succeeded;
-            }
-            static void shutdown( TestHost& host )
-            {
-                host._pOwned->_pSceneManager->shutdown();
-                if ( host._sceneObjectsInvalidatedHandle.isValid() )
-                    host._pOwned->_pSceneManager->onSceneObjectsInvalidated().remove( host._sceneObjectsInvalidatedHandle );
-                host._sceneObjectsInvalidatedHandle = sw::DelegateHandle{};
-            }
-            static void destroy( TestHost& host )
-            {
-                host._pOwned->_pSceneManager.reset();
-                // 소멸자가 태스크를 기다린다 — Task 해제보다 먼저다.
-                host._pOwned->_pAssetStreamingQueue.reset();
-                host._commandStack.reset();
-            }
-        };
-
-        // 하네스가 세우지 않는 단계다(모듈 이미지 · 헤드리스 작업 · 창 · RHI · 렌더러).
-        using ModuleImagesStartupStep  = Defaults;
-        using HeadlessStartupStep      = Defaults;
-        using FontsStartupStep         = Defaults; // 글꼴 테스트는 자기 FontService 을 만든다(가짜 래스터라이저 · 테스트 카탈로그)
-        using UserSettingsStartupStep  = Defaults;
-        using RHIStartupStep           = Defaults;
-        using FrameRendererStartupStep = Defaults;
-        using RenderThreadStartupStep  = Defaults;
-        using LiveShaderStartupStep    = Defaults;
-        using SceneRHIStartupStep      = Defaults;
-        using TelemetryStartupStep     = Defaults;
-        using UIStartupStep            = Defaults; // UI 테스트는 자기 UISystem 을 만든다(자기 입력 관리자)
+            host._pOwned->_pSceneManager->shutdown();
+            if ( host._sceneObjectsInvalidatedHandle.isValid() )
+                host._pOwned->_pSceneManager->onSceneObjectsInvalidated().remove( host._sceneObjectsInvalidatedHandle );
+            host._sceneObjectsInvalidatedHandle = sw::DelegateHandle{};
+        }
+        static void destroyScene( TestHost& host )
+        {
+            host._pOwned->_pSceneManager.reset();
+            // 소멸자가 태스크를 기다린다 — Task 해제보다 먼저다.
+            host._pOwned->_pAssetStreamingQueue.reset();
+            host._commandStack.reset();
+        }
     };
 } // namespace
 
@@ -339,9 +286,9 @@ namespace test
         // ------------------------------------------------------------------------------
         // 1) 기동 단계 — 리플렉션 · 설정 · 리소스 · 태스크 · 입력 · 씬
         // ------------------------------------------------------------------------------
-        // 순서는 손으로 적지 않는다. `EngineLoop` 과 같은 표(`EngineInitStepList.xxx`)를 위상 정렬한 순서로 단계 구조체(`TestHost::<단계>StartupStep`)를
+        // 순서는 손으로 적지 않는다. `EngineLoop` 과 같은 표(`EngineInitStepList.xxx`)를 위상 정렬한 순서로 본문(`TestHost::initialize<단계>`)을
         // 부른다 — 하네스가 앱과 다른 순서로 서는 일이 구조로 막힌다. 종료와 해제는 `stop` 이 그 역순으로 한다.
-        return state._startup.initializeAll( host );
+        return state._startup.initializeAll<TestHost>( host );
     }
 
     void TestHostRuntime::stop()

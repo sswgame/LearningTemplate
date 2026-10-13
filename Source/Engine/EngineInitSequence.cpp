@@ -42,6 +42,22 @@ namespace sw
 
             static constexpr uint32 kNotFound = invalid_index::kUint32;
 
+            /** @brief 단계 하나를 그 단계의 메모리 태그 아래에서 초기화합니다. 본문이 없는 단계는 성공입니다. */
+            static EngineInitResult initializeStep( const EngineInitStepEntry& entry, void* pHost, EngineInitStep step )
+            {
+                if ( entry._pInitialize == nullptr )
+                    return EngineInitResult::Succeeded;
+                const ScopedMemoryTag stepMemoryTag{ EngineInitSequence::getStepMemoryTag( step ) };
+                return entry._pInitialize( pHost );
+            }
+
+            /** @brief 종료 · 해제 본문을 부릅니다. 본문이 없는 단계는 아무것도 하지 않습니다. */
+            static void callStep( EngineInitStepEntry::StepFunction pFunction, void* pHost )
+            {
+                if ( pFunction != nullptr )
+                    pFunction( pHost );
+            }
+
             /** @brief 의존 글의 구분자입니다 — 표는 `{ A, B }`, 테스트는 공백으로 이은 이름을 넘긴다. */
             static constexpr bool isDependencySeparator( utf8 ch ) { return ch == ' ' || ch == ',' || ch == '{' || ch == '}'; }
 
@@ -97,7 +113,7 @@ namespace sw
 
 namespace sw
 {
-    // 표의 의존이 모두 자기보다 위 줄에 있는지 컴파일 때 본다 — 표를 기동 순서로 읽을 수 있게(오타도 여기서 컴파일 오류).
+    // 표를 컴파일 때 본다: 의존 이름 오타 · 순환 · 대상 어긋남이 컴파일 오류다. 줄 순서는 보지 않는다(순서는 의존에서 계산한다).
     namespace EngineInitTableCheck
     {
         enum Index : uint32
@@ -105,18 +121,66 @@ namespace sw
 #define SW_ENGINE_STARTUP_STEP( Name, ... ) Name,
 #include "Engine/EngineInitStepList.xxx"
 #undef SW_ENGINE_STARTUP_STEP
+            Count
         };
 
-        /** @brief @p listDependency 가 모두 @p self 보다 앞 줄이면 true 입니다. */
-        constexpr bool areAllAbove( uint32 self, std::initializer_list<uint32> listDependency )
+        /** @brief 한 단계의 의존 칸입니다(자리). 의존이 `kMaxDependency` 를 넘으면 상수 평가가 실패해 컴파일 오류다. */
+        struct DependencyRow
         {
+            static constexpr uint32 kMaxDependency = 16;
+
+            uint32 _count;
+            uint32 _arrIndex[kMaxDependency];
+        };
+
+        constexpr DependencyRow makeDependencyRow( std::initializer_list<uint32> listDependency )
+        {
+            DependencyRow row{};
             for ( const uint32 dependency : listDependency )
             {
-                if ( dependency >= self )
-                    return false;
+                row._arrIndex[row._count] = dependency;
+                ++row._count;
             }
-            return true;
+            return row;
         }
+
+        /** @brief 표의 의존 칸(줄 순서)입니다. */
+        constexpr DependencyRow kArrDependencyRow[] = {
+#define SW_ENGINE_STARTUP_STEP( Name, Tag, Target, ... ) makeDependencyRow( std::initializer_list<uint32> __VA_ARGS__ ),
+#include "Engine/EngineInitStepList.xxx"
+#undef SW_ENGINE_STARTUP_STEP
+        };
+
+        /** @brief 의존이 모두 선 단계를 되풀이해 세운다(Kahn). 끝까지 서지 못한 단계가 있으면 순환이다. */
+        constexpr bool isAcyclic()
+        {
+            bool   arrStarted[Count]{};
+            uint32 startedCount = 0;
+            bool   bProgress    = true;
+            while ( bProgress )
+            {
+                bProgress = false;
+                for ( uint32 stepIndex = 0; stepIndex < Count; ++stepIndex )
+                {
+                    if ( arrStarted[stepIndex] )
+                        continue;
+                    bool bReady = true;
+                    for ( uint32 dependencyIndex = 0; dependencyIndex < kArrDependencyRow[stepIndex]._count; ++dependencyIndex )
+                    {
+                        if ( arrStarted[kArrDependencyRow[stepIndex]._arrIndex[dependencyIndex]] == false )
+                            bReady = false;
+                    }
+                    if ( bReady )
+                    {
+                        arrStarted[stepIndex] = true;
+                        ++startedCount;
+                        bProgress = true;
+                    }
+                }
+            }
+            return startedCount == Count;
+        }
+        static_assert( isAcyclic(), "EngineInitStepList.xxx: the step dependencies form a cycle" );
 
         /** @brief 표의 대상 칸(줄 순서)입니다. 아래 검사가 의존의 대상을 자리로 찾는다. */
         constexpr uint8 kArrTargetMask[] = {
@@ -138,8 +202,6 @@ namespace sw
 
 // `{ A, B }` 의 쉼표는 매크로 인자를 가르므로 가변 인자로 받아 다시 붙인다(`__VA_ARGS__` = `{ A, B }`).
 #define SW_ENGINE_STARTUP_STEP( Name, Tag, Target, ... )                                                                           \
-    static_assert( areAllAbove( Name, std::initializer_list<uint32> __VA_ARGS__ ),                                                 \
-                   "EngineInitStepList.xxx: step " #Name " must be listed below every step it depends on" );                       \
     static_assert( areTargetsCovered( static_cast<uint8>( EngineInitTarget::Target ), std::initializer_list<uint32> __VA_ARGS__ ), \
                    "EngineInitStepList.xxx: step " #Name " runs on a target where one of its dependencies does not" );
 #include "Engine/EngineInitStepList.xxx"
@@ -187,6 +249,7 @@ namespace sw
         {
             const uint32 stepIndex = static_cast<uint32>( step );
             // 이 호스트의 대상이 아닌 단계는 돌리지 않는다(전용 서버의 RHI · 렌더러 · 플레이어 설정). 그에 의존하는 단계도 같은 대상뿐이다(표의 컴파일 검사).
+            // 본문이 없는 단계도 순서 · 건너뛰기 판정은 같다 — 본문만 부르지 않는다.
             if ( ( static_cast<uint8>( EngineInitSequenceInternal::kArrStepTarget[stepIndex] ) & static_cast<uint8>( target ) ) == 0 )
             {
                 listBlocked[stepIndex] = SW_TRUE;
@@ -204,8 +267,7 @@ namespace sw
                 continue;
             }
 
-            const ScopedMemoryTag  stepMemoryTag{ getStepMemoryTag( step ) };
-            const EngineInitResult result = pArrEntry[stepIndex]._pInitialize( pHost );
+            const EngineInitResult result = EngineInitSequenceInternal::initializeStep( pArrEntry[stepIndex], pHost, step );
             if ( result == EngineInitResult::Failed )
             {
                 SW_LOG_ERROR( "Startup step '%#' failed", getStepName( step ) );
@@ -224,7 +286,7 @@ namespace sw
         {
             const EngineInitStep step = _listInitialized.back();
             _listInitialized.pop_back();
-            _pArrEntry[static_cast<uint32>( step )]._pShutdown( _pHost );
+            EngineInitSequenceInternal::callStep( _pArrEntry[static_cast<uint32>( step )]._pShutdown, _pHost );
         }
     }
 
@@ -234,11 +296,13 @@ namespace sw
         shutdownAll();
         if ( _pArrEntry == nullptr )
             return;
-        // 표의 줄 순서는 의존을 지키는 기동 순서이므로(`EngineInitTableCheck`) 줄의 역순이 곧 해제 순서다. 정렬 결과(`_listOrder`)를
-        // 쓰지 않는 것은 표 오류로 정렬이 비었어도 부트스트랩이 만든 객체를 해제해야 하기 때문이다.
-        for ( uint32 stepIndex = static_cast<uint32>( EngineInitStep::Count ); stepIndex > 0; --stepIndex )
+        // 초기화 순서(의존에서 계산한 위상 순서)의 역순으로 모든 단계를 해제한다. 정렬이 비었으면(표 오류 — 실제로는 컴파일 검사가 막는다)
+        // 줄의 역순으로라도 해제한다 — 부트스트랩이 만든 객체는 기동이 어디서 멈췄든 놓아야 한다.
+        const bool bOrderComputed = _listOrder.size() == static_cast<size_t>( EngineInitStep::Count );
+        for ( uint32 order = static_cast<uint32>( EngineInitStep::Count ); order > 0; --order )
         {
-            _pArrEntry[stepIndex - 1]._pDestroy( _pHost );
+            const uint32 stepIndex = bOrderComputed ? static_cast<uint32>( _listOrder[order - 1] ) : order - 1;
+            EngineInitSequenceInternal::callStep( _pArrEntry[stepIndex]._pDestroy, _pHost );
         }
     }
 
@@ -263,7 +327,7 @@ namespace sw
             const EngineInitStep initializedStep = _listInitialized[order - 1];
             if ( listDependent[static_cast<uint32>( initializedStep )] == SW_FALSE )
                 continue;
-            _pArrEntry[static_cast<uint32>( initializedStep )]._pShutdown( _pHost );
+            EngineInitSequenceInternal::callStep( _pArrEntry[static_cast<uint32>( initializedStep )]._pShutdown, _pHost );
             listStopped.insert( listStopped.begin(), initializedStep );
             _listInitialized.erase( _listInitialized.begin() + static_cast<ptrdiff_t>( order - 1 ) );
         }
@@ -277,8 +341,7 @@ namespace sw
         bool bRestarted = true;
         for ( const EngineInitStep step : listStopped )
         {
-            const ScopedMemoryTag stepMemoryTag{ getStepMemoryTag( step ) };
-            if ( _pArrEntry[static_cast<uint32>( step )]._pInitialize( _pHost ) == EngineInitResult::Failed )
+            if ( EngineInitSequenceInternal::initializeStep( _pArrEntry[static_cast<uint32>( step )], _pHost, step ) == EngineInitResult::Failed )
             {
                 SW_LOG_ERROR( "Startup step '%#' failed to restart", getStepName( step ) );
                 bRestarted = false;
@@ -286,7 +349,7 @@ namespace sw
             }
             _listInitialized.push_back( step );
         }
-        // 종료가 역순으로 돌도록 초기화한 단계를 표의 순서로 되돌린다(다시 세운 단계는 끝에 붙었다).
+        // 종료가 역순으로 돌도록 초기화한 단계를 초기화 순서로 되돌린다(다시 세운 단계는 끝에 붙었다).
         vector<EngineInitStep> listOrdered;
         listOrdered.reserve( _listInitialized.size() );
         for ( const EngineInitStep orderStep : _listOrder )
@@ -360,7 +423,7 @@ namespace sw
         }
 
         // 남은 의존이 0 인 노드 중 **이름이 가장 앞인** 것을 고른다(`TopologicalSortUtil` — 모듈 적재 순서와 같은 규칙). 목록 순서를 보지 않으므로
-        // 순서는 의존 칸만이 정한다(표를 기동 순서로 적고, 그것이 이 결과와 같은지 테스트가 본다).
+        // 순서는 의존 칸만이 정한다 — 표의 줄 위치는 뜻이 없다.
         vector<string_view> listName;
         listName.reserve( nodeCount );
         for ( const EngineInitNode& node : listNode )
