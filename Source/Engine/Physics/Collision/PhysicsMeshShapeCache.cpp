@@ -7,6 +7,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Spatial/PositionWelder.h"
 
 #include "Engine/Physics/Collision/PhysicsShape.h"
 
@@ -40,18 +41,6 @@ namespace sw
 
             /** @brief 표의 키입니다. 리소스 id 는 소문자로 찾으므로(`normalizePath`) 다른 철자도 같은 칸에 닿습니다. */
             static string makeKey( string_view path ) { return FileUtil::normalizePath( path ); }
-
-            /** @brief 위치 둘이 같은지 봅니다. 합치기는 비트가 같은 위치만 합친다(임포터가 삼각형마다 같은 값을 복사한다). */
-            static bool isSamePosition( const float3& lhs, const float3& rhs ) { return lhs._x == rhs._x && lhs._y == rhs._y && lhs._z == rhs._z; }
-
-            static bool isLessPosition( const float3& lhs, const float3& rhs )
-            {
-                if ( lhs._x != rhs._x )
-                    return lhs._x < rhs._x;
-                if ( lhs._y != rhs._y )
-                    return lhs._y < rhs._y;
-                return lhs._z < rhs._z;
-            }
         };
     } // namespace
 } // namespace sw
@@ -139,30 +128,11 @@ namespace sw
         if ( positionCount == 0 )
             return;
 
-        // 위치 순서로 정렬해 같은 위치를 이웃으로 모은 뒤 번호를 매긴다(해시 없이 결정적이다 — 점 순서는 위치 순서다).
-        vector<uint32> listOrder( positionCount );
-        for ( size_t index = 0; index < positionCount; ++index )
-        {
-            listOrder[index] = static_cast<uint32>( index );
-        }
-        std::sort( listOrder.begin(), listOrder.end(), [&listTrianglePosition]( uint32 lhs, uint32 rhs )
-        {
-            const float3& positionA = listTrianglePosition[lhs];
-            const float3& positionB = listTrianglePosition[rhs];
-            if ( PhysicsMeshShapeCacheInternal::isSamePosition( positionA, positionB ) )
-                return lhs < rhs;
-            return PhysicsMeshShapeCacheInternal::isLessPosition( positionA, positionB );
-        } );
-
-        vector<uint32> listRemap( positionCount );
-        for ( const uint32 positionIndex : listOrder )
-        {
-            const float3& position  = listTrianglePosition[positionIndex];
-            const bool    bNewPoint = outData._listPoint.empty() || PhysicsMeshShapeCacheInternal::isSamePosition( outData._listPoint.back(), position ) == false;
-            if ( bNewPoint )
-                outData._listPoint.push_back( position );
-            listRemap[positionIndex] = static_cast<uint32>( outData._listPoint.size() - 1 );
-        }
+        // 허용 오차 안의 위치를 한 점으로 합친다. 점 순서는 처음 본 순서라 같은 입력이면 같은 점 · 인덱스가 나온다(`PositionWelder`).
+        PositionWelder welder;
+        vector<uint32> listRemap;
+        welder.weldAll( listTrianglePosition.first( positionCount ), listRemap );
+        outData._listPoint = welder.getPoints();
 
         outData._listIndex.reserve( positionCount );
         for ( size_t triangleStart = 0; triangleStart < positionCount; triangleStart += 3 )

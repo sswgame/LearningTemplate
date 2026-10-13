@@ -6,6 +6,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Spatial/PositionWelder.h"
 
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/GeometryCut.h"
@@ -73,49 +74,11 @@ namespace sw
             static uint64 makeEdgeKey( uint64 from, uint64 to ) { return from * HashUtil::kGoldenRatio64 ^ ( to + 0x632BE59BD9B4E019ull + ( from << 6 ) + ( from >> 2 ) ); }
 
             /**
-             * @brief 허용 오차 안의 위치를 처음 본 위치로 맞추는 용접기입니다. 격자 셀과 이웃 27 셀을 모두 봐서 셀 경계에 걸친 점도 맞춥니다.
+             * @brief 허용 오차(`PositionWelder::kDefaultTolerance`) 안의 위치를 처음 본 위치로 맞춥니다.
              * @details 셀 꼭짓점(세 평면이 만나는 점)은 서로 다른 모서리에서 따로 구해져 1e-7 m 쯤 어긋난 두 점이 된다.
              *          그대로 두면 아주 짧은 변이 생기고, 다음 자르기에서 그 둘을 다른 점으로 다뤄 한 모서리에 면이 넷 붙은 조각이 남는다.
              */
-            struct PositionWelder
-            {
-                static constexpr float32 kTolerance = 1.0e-5f;
-
-                unordered_map<uint64, vector<float3>> _mapCell;
-
-                static int64 toCell( float32 value ) { return static_cast<int64>( MathUtil::floor( value / kTolerance ) ); }
-
-                static uint64 makeCellKey( int64 cellX, int64 cellY, int64 cellZ )
-                {
-                    return makePointKey( float3{ static_cast<float32>( cellX ), static_cast<float32>( cellY ), static_cast<float32>( cellZ ) } );
-                }
-
-                float3 weld( const float3& position )
-                {
-                    const int64 cellX = toCell( position._x );
-                    const int64 cellY = toCell( position._y );
-                    const int64 cellZ = toCell( position._z );
-                    for ( int64 offsetZ = -1; offsetZ <= 1; ++offsetZ )
-                    {
-                        for ( int64 offsetY = -1; offsetY <= 1; ++offsetY )
-                        {
-                            for ( int64 offsetX = -1; offsetX <= 1; ++offsetX )
-                            {
-                                const auto iter = _mapCell.find( makeCellKey( cellX + offsetX, cellY + offsetY, cellZ + offsetZ ) );
-                                if ( iter == _mapCell.end() )
-                                    continue;
-                                for ( const float3& existing : iter->second )
-                                {
-                                    if ( float3::getDistanceSquared( existing, position ) <= kTolerance * kTolerance )
-                                        return existing;
-                                }
-                            }
-                        }
-                    }
-                    _mapCell[makeCellKey( cellX, cellY, cellZ )].push_back( position );
-                    return position;
-                }
-            };
+            static float3 weldPosition( PositionWelder& inoutWelder, const float3& position ) { return inoutWelder.getPoint( inoutWelder.weld( position ) ); }
 
             static void setPosition( RHIVertex& inoutVertex, const float3& position )
             {
@@ -130,7 +93,7 @@ namespace sw
                 PositionWelder welder;
                 for ( RHIVertex& vertex : inoutListVertex )
                 {
-                    setPosition( vertex, welder.weld( getPosition( vertex ) ) );
+                    setPosition( vertex, weldPosition( welder, getPosition( vertex ) ) );
                 }
             }
 
@@ -327,8 +290,8 @@ namespace sw
                 PositionWelder welder;
                 for ( const Segment& segment : listSegment )
                 {
-                    const float3 weldedFrom = welder.weld( segment._from );
-                    const float3 weldedTo   = welder.weld( segment._to );
+                    const float3 weldedFrom = weldPosition( welder, segment._from );
+                    const float3 weldedTo   = weldPosition( welder, segment._to );
                     if ( isSamePoint( weldedFrom, segment._from ) == false || isSamePoint( weldedTo, segment._to ) == false )
                         outbNearDuplicate = true;
                 }
@@ -530,7 +493,7 @@ namespace sw
                 {
                     for ( RHIVertex& vertex : triangle._arrVertex )
                     {
-                        setPosition( vertex, welder.weld( getPosition( vertex ) ) );
+                        setPosition( vertex, weldPosition( welder, getPosition( vertex ) ) );
                     }
                 }
                 vector<Triangle> listKept;
