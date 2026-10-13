@@ -757,4 +757,24 @@ namespace sw
         }
         return "Unknown";
     }
+
+} // namespace sw
+
+namespace sw
+{
+    SubsystemInitResult AsyncFileIO::initializeSubsystem()
+    {
+        return initialize( _subsystemSettings ) ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
+    }
+
+    void AsyncFileIO::shutdownSubsystem()
+    {
+        shutdown();
+    }
+
+    span<const utf8* const> AsyncFileIO::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { TaskManager::kSubsystemName };
+        return kArrDependency;
+    }
 } // namespace sw

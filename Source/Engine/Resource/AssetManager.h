@@ -20,6 +20,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Module/ModuleUnloadListener.h"
 #include "Core/String/RegistrationList.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetFormat.h"
@@ -40,7 +41,7 @@ namespace sw
      * @class AssetManager
      * @brief 에셋 식별자, 스키마, 인스턴스 캐시와 VFS 팩 매니저를 한 객체로 소유합니다.
      */
-    class SW_API AssetManager final : public IModuleUnloadListener
+    class SW_API AssetManager final : public IModuleUnloadListener, public ISubsystem
     {
     public:
         /** @brief 빈 매니저로 만듭니다. initialize() 전에 바인딩해도 됩니다. */
@@ -78,6 +79,21 @@ namespace sw
 
         /** @brief 마운트된 팩을 언마운트하고, 등록된 에셋 캐시와 GUID 테이블을 비웁니다. */
         void shutdown();
+
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "Resource";
+        /**
+         * @brief 기동 순서의 자리 — 리소스 루트를 잡고 활성 엔진 설정의 우선순위로 콘텐츠를 마운트합니다(`-cook-scenes` 면 소스 트리 — 팩은 쿠킹의 산출물이다).
+         * @details 팩 루트는 GameConfig, 팩 스트림은 코덱이다. 종료(`shutdown`)가 에셋 캐시를 비운다 — 에셋을 드는 서브시스템이 모두 이 뒤에 서므로,
+         *          역순 해제에서 그들의 소멸자가 에셋을 놓은 뒤다.
+         */
+        SubsystemInitResult     initializeSubsystem() override;
+        void                    shutdownSubsystem() override { shutdown(); }
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override;
+        /** @brief 물리(메시 셰이프 캐시가 에셋을 읽는다)는 낮은 층이라 이것의 이름을 모른다 — 역방향으로 적는다. */
+        span<const utf8* const> getSubsystemDependents() const override;
+        MemoryTag               getSubsystemMemoryTag() const override { return MemoryTag::Asset; }
         /**
          * @brief 에셋 식별자(GUID) 테이블을 채웁니다. 반환값은 등록 수입니다.
          * @details 팩이면 쿠커가 도메인마다 넣는 `assetregistry.txt` 를 읽고(배포본은 .meta 를 싣지 않는다), 하나도

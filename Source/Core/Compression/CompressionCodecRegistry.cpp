@@ -130,4 +130,15 @@ namespace sw
         _mapCodec[CompressionCodecType::None] = make_unique<NullCompressionCodec>();
         _mapCodec[CompressionCodecType::RLE]  = make_unique<RleCompressionCodec>();
     }
+
+} // namespace sw
+
+namespace sw
+{
+    SubsystemInitResult CompressionCodecRegistry::initializeSubsystem()
+    {
+        initialize();
+        setActive( this );
+        return SubsystemInitResult::Succeeded;
+    }
 } // namespace sw

@@ -3,10 +3,21 @@
 #include "Engine/Config/ConfigManager.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineConfig.h"
+#include "Engine/Config/GameConfig.h"
+#include "Engine/Config/GameSelection.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
+
+#include "sw/config/ConfigConstants.h"
+#include "sw/config/ShippingHostDefaults.h"
+
+#if defined( SW_SHIPPING )
+    #include "sw/config/ShippingGameDefaults.h" // 구운 게임의 프리셋 — Dev 는 디스크에서 고른 게임의 것을 읽어 활성 게임과 무관하다
+#endif
 
 namespace sw
 {
@@ -172,5 +183,35 @@ namespace sw
     void ConfigManager::setPrimary( ConfigManager* pManager )
     {
         s_pPrimaryConfigManager = pManager;
+    }
+
+} // namespace sw
+
+namespace sw
+{
+    SubsystemInitResult ConfigManager::initializeSubsystem()
+    {
+        setRootDirectory( ResourcePaths::getProjectFolderPath() );
+        setPrimary( this ); // 거두는 것은 이 표의 소멸자다
+#if defined( SW_SHIPPING )
+        EngineConfig probe;
+        if ( JSONSerializer::deserialize( &probe, *EngineConfig::StaticType(), shipping_host::kEngineConfigJSON ) == false )
+        {
+            SW_LOG_ERROR( "The generated EngineConfig JSON does not deserialize - a reflection registrar was dropped at link time" );
+            return SubsystemInitResult::Failed;
+        }
+        const utf8* const pGameConfigJSON = shipping_host::kGameConfigJSON;
+#else
+        const utf8* const pGameConfigJSON = nullptr;
+#endif
+        const EngineConfig* pEngineConfig = ensureConfig<EngineConfig>( config::kFileRuntimeEngineConfig, shipping_host::kEngineConfigJSON );
+        if ( pEngineConfig == nullptr )
+            return SubsystemInitResult::Failed;
+        EngineConfig::setActive( *pEngineConfig );
+        const GameConfig* pGameConfig = ensureConfig<GameConfig>( GameSelection::getConfigPath(), pGameConfigJSON );
+        if ( pGameConfig == nullptr )
+            return SubsystemInitResult::Failed;
+        GameConfig::setActive( *pGameConfig );
+        return SubsystemInitResult::Succeeded;
     }
 } // namespace sw

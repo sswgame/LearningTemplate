@@ -83,7 +83,7 @@ namespace sw
         listNode.reserve( _listEntry.size() );
         for ( const Entry& entry : _listEntry )
         {
-            listNode.push_back( { entry._pSubsystem->getSubsystemName(), entry._pSubsystem->getSubsystemDependencies() } );
+            listNode.push_back( { entry._pSubsystem->getSubsystemName(), entry._pSubsystem->getSubsystemDependencies(), entry._pSubsystem->getSubsystemDependents() } );
         }
         SubsystemGraph graph{};
         if ( computeGraph( listNode, graph, _error ) == false )
@@ -272,6 +272,19 @@ namespace sw
             }
             if ( SubsystemCollectionInternal::resolveDependencies( listNode, nodeIndex, outGraph._listDependency[nodeIndex], outError ) == false )
                 return false;
+        }
+        // 역방향 의존: 노드가 적은 뒤에 설 이름은 그 이름의 의존이 된다. 이 목록에 없는 이름은 건너뛴다(그 호스트에 없는 서브시스템).
+        for ( uint32 nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
+        {
+            for ( const utf8* const pDependentName : listNode[nodeIndex]._listDependent )
+            {
+                const uint32 dependentIndex = SubsystemCollectionInternal::findNodeIndex( listNode, pDependentName );
+                if ( dependentIndex == SubsystemCollectionInternal::kNotFound )
+                    continue;
+                vector<uint32>& listDependency = outGraph._listDependency[dependentIndex];
+                if ( std::find( listDependency.begin(), listDependency.end(), nodeIndex ) == listDependency.end() )
+                    listDependency.push_back( nodeIndex );
+            }
         }
 
         // 남은 의존이 0 인 노드 중 **이름이 가장 앞인** 것을 고른다(`TopologicalSortUtil` — 모듈 적재 순서와 같은 규칙). 목록 순서를 보지 않으므로

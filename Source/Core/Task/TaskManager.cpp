@@ -1336,4 +1336,18 @@ namespace sw
 
         t_currentWorkerIndex = -1;
     }
+
+} // namespace sw
+
+namespace sw
+{
+    SubsystemInitResult TaskManager::initializeSubsystem()
+    {
+        return initialize() ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
+    }
+
+    void TaskManager::shutdownSubsystem()
+    {
+        shutdown();
+    }
 } // namespace sw

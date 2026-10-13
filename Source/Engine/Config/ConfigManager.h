@@ -17,6 +17,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Config/IConfig.h"
 
@@ -38,14 +39,25 @@ namespace sw
      * @brief 호스트 설정(EngineConfig, GameConfig 등)의 테이블입니다. 파일에서 읽은 설정은 그 경로를 기억해 실행 중에 다시 읽을 수 있습니다
      *        (`reloadConfigFile`. 에디터의 설정 파일 감시가 부릅니다).
      */
-    class SW_API ConfigManager
+    class SW_API ConfigManager : public ISubsystem
     {
     public:
         ConfigManager() = default;
         /** @brief 이 표가 주 표(`setPrimary`)면 알림을 거둡니다 — 사라진 표를 게임 모듈이 찾지 않는다. */
-        ~ConfigManager();
+        ~ConfigManager() override;
         ConfigManager( const ConfigManager& )            = delete;
         ConfigManager& operator=( const ConfigManager& ) = delete;
+
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "Config";
+        /**
+         * @brief 기동 순서의 자리 — 프로젝트 루트를 기준으로 엔진 · 게임 설정(EngineConfig · GameConfig)을 읽어 활성으로 두고, 이 표를 주 표로 알립니다.
+         * @details 틀린 설정 파일은 실패다(키 이름은 이미 오류로 남았다) — 기본값으로 뜨면 고친 값이 무시된 것을 아무도 모른다. Dev 는 고른 게임(`-game=`)의
+         *          파일만 읽는다. 배포 구성은 생성된 JSON 을 읽으며, 그것이 역직렬화되지 않으면(정적 링크에서 리플렉션 등록기가 빠졌다) 실패로 드러낸다.
+         */
+        SubsystemInitResult initializeSubsystem() override;
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /**
          * @brief 상대 Config 경로의 기준 디렉터리(보통 프로젝트 루트)를 지정합니다.

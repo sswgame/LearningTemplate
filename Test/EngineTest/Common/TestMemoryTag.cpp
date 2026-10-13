@@ -17,9 +17,11 @@
 #include "Engine/EngineInitSequence.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Module/ReflectionSubsystem.h"
 #include "Engine/Object/Component/3D/MeshInstanceBatch.h"
 #include "Engine/Object/Component/SceneTransformStorage.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -52,8 +54,8 @@ SW_TEST_CASE( MemoryTagTest, EveryStartupStepHasATag )
     {
         SW_EXPECT_TRUE_MSG( pDesc->_memoryTag != sw::MemoryTag::Unknown, pDesc->_pName );
     }
-    SW_EXPECT_TRUE( sw::EngineFunctionStep::kTask._memoryTag == sw::MemoryTag::Task );
-    SW_EXPECT_TRUE( sw::EngineFunctionStep::kReflection._memoryTag == sw::MemoryTag::Reflection );
+    SW_EXPECT_TRUE( sw::TaskManager{}.getSubsystemMemoryTag() == sw::MemoryTag::Task );
+    SW_EXPECT_TRUE( sw::ReflectionSubsystem{ sw::make_unique<sw::TypeRegistry>() }.getSubsystemMemoryTag() == sw::MemoryTag::Reflection );
 }
 
 /**

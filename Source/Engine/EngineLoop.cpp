@@ -46,9 +46,11 @@
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
+#include "Engine/Localization/EngineDefaultAssetsSubsystem.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
+#include "Engine/Module/ReflectionSubsystem.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -92,11 +94,6 @@
 #include "Engine/Window/IWindow.h"
 
 #include "sw/config/ConfigConstants.h"
-#include "sw/config/ShippingHostDefaults.h"
-
-#if defined( SW_SHIPPING )
-    #include "sw/config/ShippingGameDefaults.h" // 구운 게임의 프리셋 — Dev 는 디스크에서 고른 게임의 것을 읽어 활성 게임과 무관하다
-#endif
 
 namespace sw
 {
@@ -151,7 +148,6 @@ namespace sw
 #if !defined( SW_SHIPPING )
         , _pShaderRecompiler{ nullptr }
 #endif
-        , _pEngineConfig{ nullptr }
     {
     }
 
@@ -233,57 +229,16 @@ namespace sw
             // 단계 객체 · 본문 델리게이트의 할당은 엔진 기타 줄로 센다(만드는 객체는 제 용도 태그를 다시 건다).
             SW_MEMORY_SCOPE( EngineMisc );
             {
-                CompressionCodecRegistry* const pCodecRegistry = _owned._pCompressionCodecRegistry.get();
-                // Core 의 CompressionStream 은 엔진 서비스 표에 닿지 못해 슬롯으로 본다(Logger::setGlobalSink 와 같은 모양). 슬롯은 레지스트리의 소멸자가 끊는다.
-                // 종료는 하지 않는다 — 모듈이 등록한 코덱을 거두는 것은 등록한 모듈의 책임이다(registerCodec 주석 참고).
-                auto initializeCompression = [pCodecRegistry]()
-                {
-                    pCodecRegistry->initialize();
-                    CompressionCodecRegistry::setActive( pCodecRegistry );
-                    // 외부 라이브러리 코덱은 **목록이 있는 자리**에서 붙인다(EngineCompressionCodecUtil).
-                    EngineCompressionCodecUtil::registerAll( *pCodecRegistry );
-                    return SubsystemInitResult::Succeeded;
-                };
-                _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kCompression, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeCompression ) ) )
-                    .takeOwnership( std::move( _owned._pCompressionCodecRegistry ) );
-            }
-            {
-                // 이 프로세스에 이미 올라온 등록기만 모은다. 배포 구성은 GameFramework · 킷 · 게임이 정적 링크라 "Engine" 이 다 모으고,
-                // 개발 구성의 모듈 DLL 은 `ModuleTypes` 단계에서 호스트 로더가 올리며 제 이름으로 등록한다.
-                // 명령줄의 enum 이름(`-gv_rhiBackend=Vulkan`)은 enum 표가 선 지금 적용한다. 모르는 이름이면 기본값으로 돌지 않고 멈춘다.
-                auto initializeReflection = []()
-                {
-                    engine::registerModuleTypes( "Engine" );
-                    if ( engine::bindGlobalVariableEnumNames() )
-                        return SubsystemInitResult::Succeeded;
-                    engine::unbindGlobalVariableEnumNames();
-                    return SubsystemInitResult::Failed;
-                };
-                // enum 이름 풀이는 타입 표를 본다 — 표가 소멸하기 전(종료)에 뗀다.
-                _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kReflection, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeReflection ),
-                                                              SW_DELEGATE_FUNCTION( SubsystemShutdownDelegate, &engine::unbindGlobalVariableEnumNames ) ) )
-                    .takeOwnership( std::move( _owned._pTypeRegistry ) );
-            }
-            {
-                TaskManager* const pTaskManager   = _owned._pTaskManager.get();
-                auto               initializeTask = [pTaskManager]()
-                { return pTaskManager->initialize() ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed; };
-                _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kTask, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeTask ),
-                                                              SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &TaskManager::shutdown, pTaskManager ) ) )
-                    .takeOwnership( std::move( _owned._pTaskManager ) );
-            }
-            {
+                // 외부 라이브러리 코덱은 **목록이 있는 자리**에서 붙인다(EngineCompressionCodecUtil). 레지스트리는 만들 때 내장 코덱을 갖추므로 기동 전에 붙여도 된다.
+                EngineCompressionCodecUtil::registerAll( *_owned._pCompressionCodecRegistry );
+                _startup.add( std::move( _owned._pCompressionCodecRegistry ) );
+                _startup.add( sw::make_unique<ReflectionSubsystem>( std::move( _owned._pTypeRegistry ) ) );
+                _startup.add( std::move( _owned._pTaskManager ) );
                 // 완료 콜백(팩 해제 · CRC · 스트리밍 완료 기록)은 태스크 워커에서 돈다 — IO 스레드는 다음 읽기를 거는 일만 한다.
-                // 종료는 큐를 비우고 걸린 읽기와 완료 콜백(태스크)을 다 기다린다. Task 보다 먼저, 모듈을 내리기 전에 내려간다.
-                AsyncFileIO* const pAsyncFileIO     = _owned._pAsyncFileIO.get();
-                auto               initializeFileIO = [pAsyncFileIO]()
-                {
-                    AsyncFileIOSettings settings{};
-                    settings._pTaskManager = &engine::getTaskManager();
-                    return pAsyncFileIO->initialize( settings ) ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
-                };
-                _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kFileIO, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeFileIO ),
-                                                              SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &AsyncFileIO::shutdown, pAsyncFileIO ) ) );
+                AsyncFileIOSettings fileIOSettings{};
+                fileIOSettings._pTaskManager = &engine::getTaskManager();
+                _owned._pAsyncFileIO->setSubsystemSettings( fileIOSettings );
+                _startup.add( std::move( _owned._pAsyncFileIO ) );
             }
             {
                 // 종료 쪽 자리 — 씬은 방금 사라졌고 서비스는 아직 살아 있다. 모듈 DLL 을 내리기에 알맞은 유일한 자리다.
@@ -325,16 +280,17 @@ namespace sw
                     RenderDocCapture::initialize( _owned._pCommandLineManager->isArgumentProvided( CommandLineArgument::RENDERDOC ) );
 
                     // 커맨드라인이 백엔드를 명시하지 않았을 때만 설정 기본값이 이긴다.
-                    RHIBackend commandLineBackend{};
+                    RHIBackend          commandLineBackend{};
+                    const EngineConfig& engineConfig = EngineConfig::getActive();
                     if ( RHIBackendUtil::findCommandLineBackend( *_owned._pCommandLineManager, commandLineBackend ) == false )
-                        gv_rhiBackend = _pEngineConfig->_window._defaultRHI;
+                        gv_rhiBackend = engineConfig._window._defaultRHI;
 
                     // 화면 값의 순서: 엔진 설정(EngineConfig) → 플레이어가 고른 사용자 설정(기본값이 아닌 것) → 명령줄.
                     const DisplaySettingsRequest& display = engine::getUserSettingsManager().getDisplayRequest();
                     if ( IWindow::getActiveWindow() == nullptr )
                     {
-                        uint32 windowWidth  = display._bHasResolution ? display._width : _pEngineConfig->_window._width;
-                        uint32 windowHeight = display._bHasResolution ? display._height : _pEngineConfig->_window._height;
+                        uint32 windowWidth  = display._bHasResolution ? display._width : engineConfig._window._width;
+                        uint32 windowHeight = display._bHasResolution ? display._height : engineConfig._window._height;
                         // 인자를 주지 않으면 getArgument 가 false 를 돌려주므로 설정값이 그대로 남는다.
                         _owned._pCommandLineManager->getArgument( CommandLineArgument::WIDTH, windowWidth );
                         _owned._pCommandLineManager->getArgument( CommandLineArgument::HEIGHT, windowHeight );
@@ -350,7 +306,7 @@ namespace sw
                         }
                     }
 
-                    pRHI->setPreferredVSync( display._bHasVSync ? display._bVSync : _pEngineConfig->_window._bVSync );
+                    pRHI->setPreferredVSync( display._bHasVSync ? display._bVSync : engineConfig._window._bVSync );
                     // RHI 는 창 시스템을 모른다. 표면(IRenderSurface)만 넘긴다. 창은 위에서 만들었거나 호스트가 들고 있다.
                     const bool bRHIReady = pRHI->initialize( IWindow::getActiveWindow() );
                     // 실패의 이유를 남긴다 — App 이 이것으로 종료 코드를 고른다.
@@ -401,82 +357,17 @@ namespace sw
                                       .takeOwnership( std::move( _owned._pInputManager ) );
             }
             {
-                // 설정은 리소스 초기화보다 먼저 읽는다(Resource 의 의존). `AssetManager::mountContent` 는 GameConfig 의 `_packRoot` 가
-                // 정해져 있어야 팩을 제대로 마운트하고 게임 도메인의 `assetregistry.txt` 를 읽는다.
-                // Config/ 는 프로젝트 루트에 있고 실행 파일은 build/<preset>/Bin 에서 돈다. 작업 디렉터리 기준으로만 찾으면
-                // 모두 "없음" 이 되어 조용히 기본값으로 떨어지므로, Resource/ 를 찾을 때 알아낸 프로젝트 루트를 넘긴다.
+                // 설정 표는 Config 서브시스템이다 — 엔진 · 게임 설정을 읽고 주 표로 알린다(Resource 가 그 뒤에 서서 팩 루트를 안다). 다시 읽기 알림은 엔진 루프가 받는다.
                 unique_ptr<ConfigManager> configManager;
                 {
                     SW_MEMORY_SCOPE( EngineMisc );
                     configManager = make_unique<ConfigManager>();
                 }
-                _pConfigManager       = configManager.get();
-                auto initializeConfig = [this]()
-                {
-                    _pConfigManager->setRootDirectory( ResourcePaths::getProjectFolderPath() );
-                    ConfigManager::setPrimary( _pConfigManager ); // 거두는 것은 설정 표의 소멸자다
-                    _pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &EngineLoop::onConfigReloaded, this ) );
-
-                    _pEngineConfig = _pConfigManager->ensureConfig<EngineConfig>( config::kFileRuntimeEngineConfig, shipping_host::kEngineConfigJSON );
-                    if ( _pEngineConfig == nullptr )
-                        return SubsystemInitResult::Failed;
-                    EngineConfig::setActive( *_pEngineConfig );
-
-                    // 틀린 설정 파일은 nullptr 이다(키 이름은 이미 오류로 남았다) — 기본값으로 뜨면 고친 값이 무시된 것을 아무도 모른다.
-                    // Dev 는 고른 게임(`-game=`)의 파일만 읽는다 — 활성 게임의 구운 사본으로 대체하면 다른 게임의 팩 루트로 뜬다.
-#if defined( SW_SHIPPING )
-                    const utf8* const pGameConfigJSON = shipping_host::kGameConfigJSON;
-#else
-                    const utf8* const pGameConfigJSON = nullptr;
-#endif
-                    const GameConfig* pGameConfig = _pConfigManager->ensureConfig<GameConfig>( GameSelection::getConfigPath(), pGameConfigJSON );
-                    if ( pGameConfig == nullptr )
-                        return SubsystemInitResult::Failed;
-                    GameConfig::setActive( *pGameConfig );
-
-                    // 메모리 태그 예산(데이터). 틀린 표는 오류를 남기고 예산 없이 간다 — 진단 설정 하나로 기동을 세우지 않는다.
-                    (void)_memoryBudgetMonitor.loadBudgetFile( FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), MemoryBudgetMonitor::kBudgetFile ) );
-                    return SubsystemInitResult::Succeeded;
-                };
-                _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kConfig, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeConfig ) ) )
-                    .takeOwnership( std::move( configManager ) );
-            }
-            {
-                // GameConfig 가 활성화된 뒤라야 "game" 토큰이 팩 루트로 풀린다. 그 전제는 `mountContent` 의 인자에 드러나 있다.
-                // 씬 쿠킹(Headless 단계)의 입력은 소스 트리다 — 팩은 그 산출물이다.
-                AssetManager* const pAssetManager      = _owned._pAssetManager.get();
-                auto                initializeResource = [this, pAssetManager]()
-                {
-                    if ( pAssetManager->initialize() == false )
-                        return SubsystemInitResult::Failed;
-                    bool bCookScenes = false;
-                    _owned._pCommandLineManager->getArgument( CommandLineArgument::COOK_SCENES, bCookScenes );
-                    const ContentSource contentSource = bCookScenes ? ContentSource::SourceTree : ContentSource::Cooked;
-                    pAssetManager->mountContent( _pEngineConfig->_listResourcePriority, contentSource );
-                    return SubsystemInitResult::Succeeded;
-                };
-                _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kResource, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeResource ) ) )
-                    .takeOwnership<&AssetManager::shutdown>( std::move( _owned._pAssetManager ) );
-            }
-            {
-                // 문화권 표 · 엔진 문자열 — 플레이어 설정(언어)이 이 뒤(`UserSettings`)에 적용되고, 게임은 자기 프로젝트를 위에 올린다.
-                EngineDefaultAssets* const pDefaultAssets                = _owned._pEngineDefaultAssets.get();
-                auto                       initializeEngineDefaultAssets = [this, pDefaultAssets]()
-                {
-                    if ( pDefaultAssets->loadFromResource( path::kEngineDefaultAssets ) == false )
-                        SW_LOG_WARNING( "Engine data could not be read - using built-in defaults" );
-                    LocalizationManager& localization = *_owned._pLocalizationManager;
-                    if ( pDefaultAssets->_cultureTable.empty() == false )
-                        (void)localization.loadCultureTable( pDefaultAssets->_cultureTable ); // 실패는 loadCultureTable 이 오류로 남긴다
-                    if ( pDefaultAssets->_localizationProject.empty() == false && localization.mountProject( pDefaultAssets->_localizationProject, LocalizationScope::Engine ) == false )
-                        SW_LOG_ERROR( "Engine localization project '%#' is not (fully) loaded", pDefaultAssets->_localizationProject.c_str() );
-                    string commandLineLanguage;
-                    if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::LANGUAGE, commandLineLanguage ) && localization.hasLanguage( commandLineLanguage ) )
-                        localization.setCurrentLanguage( commandLineLanguage );
-                    return SubsystemInitResult::Succeeded;
-                };
-                _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kEngineDefaultAssets, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeEngineDefaultAssets ) ) )
-                    .takeOwnership( std::move( _owned._pEngineDefaultAssets ) );
+                _pConfigManager = configManager.get();
+                _pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &EngineLoop::onConfigReloaded, this ) );
+                _startup.add( std::move( configManager ) );
+                _startup.add( std::move( _owned._pAssetManager ) );
+                _startup.add( sw::make_unique<EngineDefaultAssetsSubsystem>( std::move( _owned._pEngineDefaultAssets ) ) );
             }
             {
                 IAudioService* const pAudioService   = _audioService.get();
@@ -651,6 +542,9 @@ namespace sw
 
         // 초기화의 순서는 손으로 적지 않는다. 서브시스템마다 먼저 서야 하는 것을 적고, 여기서는 위상 순서로 부른다. 종료와 해제는 그 역순이다(`shutdown`).
         const bool bStarted = _startup.initializeAll( bDedicatedServer ? EngineSubsystemHost::kServer : EngineSubsystemHost::kClient );
+        // 메모리 태그 예산(데이터)은 설정 루트가 선 뒤에 읽는다.
+        if ( bStarted )
+            (void)_memoryBudgetMonitor.loadBudgetFile( FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), MemoryBudgetMonitor::kBudgetFile ) ); // 틀린 표는 오류를 남기고 예산 없이 간다 — 진단 설정 하나로 기동을 세우지 않는다
         if ( bStarted == false )
         {
             SW_LOG_ERROR( "Engine startup failed: %#", _startup.getError().c_str() );
@@ -722,7 +616,6 @@ namespace sw
         _pShaderRecompiler = nullptr;
 #endif
         _pConfigManager = nullptr;
-        _pEngineConfig  = nullptr; // 설정 표가 든 객체를 가리켰다
         // 할당 관찰을 떼고 출력을 비운다. 출력 객체(Tracy)는 프로세스 수명이라 남아 있는 구간을 닫을 수 있다.
         ProfilerBackend::shutdown();
         // 표 밖 부트스트랩을 세운 역순으로 내린다(테스트 하네스와 같은 끝 정리).
@@ -740,12 +633,13 @@ namespace sw
                 GameConfig::setActive( *pGameConfig );
             return;
         }
-        if ( configTypeName != EngineConfig::StaticType()->_fullyQualifiedName || _pEngineConfig == nullptr )
+        const EngineConfig* pEngineConfig = _pConfigManager != nullptr ? _pConfigManager->getConfig<EngineConfig>() : nullptr;
+        if ( configTypeName != EngineConfig::StaticType()->_fullyQualifiedName || pEngineConfig == nullptr )
             return;
-        EngineConfig::setActive( *_pEngineConfig );
+        EngineConfig::setActive( *pEngineConfig );
         // 수직 동기화는 다음에 스왑체인을 만들 때(창 크기 변경 · 백엔드 교체) 적용된다.
         if ( _pRHI != nullptr )
-            _pRHI->setPreferredVSync( _pEngineConfig->_window._bVSync );
+            _pRHI->setPreferredVSync( pEngineConfig->_window._bVSync );
     }
 
     SubsystemInitResult EngineLoop::runHeadlessTask()

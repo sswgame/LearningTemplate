@@ -2,11 +2,16 @@
 
 #include "Engine/Resource/AssetManager.h"
 
+#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/ConfigManager.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/Cache/BuiltInAssetCache.h"
 #include "Engine/Resource/Cache/IAssetCache.h"
@@ -263,5 +268,32 @@ namespace sw
     const ResourcePakManager& AssetManager::getPackManager() const
     {
         return *_pPackManager;
+    }
+
+} // namespace sw
+
+namespace sw
+{
+    SubsystemInitResult AssetManager::initializeSubsystem()
+    {
+        if ( initialize() == false )
+            return SubsystemInitResult::Failed;
+        bool bCookScenes = false;
+        if ( engine::areEngineServicesBound() )
+            (void)engine::getCommandLineManager().getArgument( CommandLineArgument::COOK_SCENES, bCookScenes );                                 // 없으면 false 그대로
+        (void)mountContent( EngineConfig::getActive()._listResourcePriority, bCookScenes ? ContentSource::SourceTree : ContentSource::Cooked ); // 느슨한 트리만 있어도 기동한다
+        return SubsystemInitResult::Succeeded;
+    }
+
+    span<const utf8* const> AssetManager::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { CompressionCodecRegistry::kSubsystemName, ConfigManager::kSubsystemName };
+        return kArrDependency;
+    }
+
+    span<const utf8* const> AssetManager::getSubsystemDependents() const
+    {
+        static constexpr const utf8* kArrDependent[] = { PhysicsSystem::kSubsystemName };
+        return kArrDependent;
     }
 } // namespace sw

@@ -267,6 +267,27 @@ SW_TEST_CASE( SubsystemCollectionTest, DestroyWithoutInitializeOnlyDestroys )
 }
 
 /**
+ * @brief [SubsystemCollectionTest] 역방향 의존(`getSubsystemDependents`)은 적은 이름을 자기 뒤에 세우고, 목록에 없는 이름은 건너뛴다
+ * @details 낮은 층의 서브시스템은 높은 층의 이름 상수를 include 할 수 없다 — 높은 층 쪽이 "이것들은 내 뒤" 라고 적는다. 이름이 앞인 것이 먼저라는 동점 규칙을
+ *          거슬러야 순서가 바뀐 것을 확인할 수 있으므로, 뒤에 서야 하는 쪽 이름을 앞 글자로 둔다.
+ */
+SW_TEST_CASE( SubsystemCollectionTest, DependentsInitializeAfterTheDeclarer )
+{
+    static constexpr const utf8* kArrDependent[] = { "Alpha", "NotRegistered" };
+    SubsystemNode                later{ "Alpha", {} };
+    SubsystemNode                declarer{ "Zulu", {} };
+    declarer._listDependent = kArrDependent;
+    SubsystemGraph graph{};
+    string         error;
+    SW_ASSERT_TRUE_MSG( SubsystemCollection::computeGraph( { later, declarer }, graph, error ), error.c_str() );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 2 ), graph._listOrder.size() );
+    SW_EXPECT_EQUAL( 1u, graph._listOrder[0] ); // Zulu 가 먼저
+    SW_EXPECT_EQUAL( 0u, graph._listOrder[1] );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), graph._listDependency[0].size() );
+    SW_EXPECT_EQUAL( 1u, graph._listDependency[0][0] );
+}
+
+/**
  * @brief [SubsystemCollectionTest] 순환 · 모르는 의존 · 같은 이름은 정렬 오류이고 기동하지 않는다(소멸은 추가의 역순으로라도 한다)
  */
 SW_TEST_CASE( SubsystemCollectionTest, InvalidGraphIsRejected )

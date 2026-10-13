@@ -75,6 +75,12 @@ namespace sw
         virtual const utf8* getSubsystemName() const = 0;
         /** @brief 먼저 서야 하는 서브시스템 이름들입니다(없으면 빈 구간). 배열은 프로세스 수명이어야 합니다(`static constexpr`). */
         virtual span<const utf8* const> getSubsystemDependencies() const { return {}; }
+        /**
+         * @brief 이 서브시스템 **뒤에** 서야 하는 서브시스템 이름들입니다(그들이 이것에 의존한다 — 역방향 의존). 목록에 없는 이름은 건너뜁니다.
+         * @details 이름 상수는 층을 따라 아래로만 include 된다. 그래서 낮은 층의 서브시스템(비동기 IO · 오디오 · 입력)이 높은 층의 것(모듈 이미지)보다
+         *          늦게 서야 하면, 높은 층 쪽이 이 칸에 낮은 층의 이름을 적는다. 그 호스트에 없는 이름은 순서에 영향이 없다(선택 의존).
+         */
+        virtual span<const utf8* const> getSubsystemDependents() const { return {}; }
         /** @brief 이 서브시스템이 도는 호스트 종류입니다. 호스트마다 그 의존도 돌아야 합니다(정렬이 검사). */
         virtual SubsystemHostMask getSubsystemHost() const { return SubsystemHostMask::All; }
         /** @brief 초기화가 할당하는 메모리의 용도입니다. 초기화 · 재시작을 부르는 동안 이 태그가 걸립니다. */

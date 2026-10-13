@@ -9,6 +9,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 namespace sw
 {
@@ -29,12 +30,12 @@ namespace sw
      *          디스크에 기록하고, 두 enum 은 서로 다른 파일의 독립된 포맷이라 값이 다릅니다. 숫자를 건너다니지 않고 표 한 곳
      *          (`ResourcePakCompressionUtil::kArrCodecMapping`, Engine)에서 옮긴 뒤 조회합니다.
      */
-    class SW_API CompressionCodecRegistry
+    class SW_API CompressionCodecRegistry : public ISubsystem
     {
     public:
         CompressionCodecRegistry();
         /** @brief 슬롯(`getActive`)이 이 레지스트리를 가리키면 비웁니다. */
-        ~CompressionCodecRegistry();
+        ~CompressionCodecRegistry() override;
 
         CompressionCodecRegistry( const CompressionCodecRegistry& )            = delete;
         CompressionCodecRegistry& operator=( const CompressionCodecRegistry& ) = delete;
@@ -57,6 +58,16 @@ namespace sw
 
         void initialize();
         void shutdown();
+
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "Compression";
+        /**
+         * @brief 기동 순서의 자리 — 내장 코덱을 갖추고 슬롯(`setActive`)에 연결합니다. 맨 먼저 서므로 맨 나중에 소멸한다(팩을 내리는 Resource 해제까지 코덱이 산다).
+         * @details 종료는 코덱을 거두지 않는다 — 모듈이 등록한 코덱을 거두는 것은 등록한 모듈의 책임이다(`registerCodec`). 외부 라이브러리 코덱은 호스트가 기동 전에 붙인다.
+         */
+        SubsystemInitResult initializeSubsystem() override;
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /**
          * @brief 코덱을 등록합니다. 같은 타입이 이미 있으면 교체합니다.

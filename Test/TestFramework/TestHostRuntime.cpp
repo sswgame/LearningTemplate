@@ -27,14 +27,17 @@
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Localization/EngineDefaultAssetsSubsystem.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
+#include "Engine/Module/ReflectionSubsystem.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/GameObject/SceneEngineServices.h"
 #include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -66,7 +69,28 @@ namespace
         sw::unique_ptr<sw::IAudioService> _audioService{};                  ///< 만든 뒤 서비스 표에 묶고 소유를 Audio 단계로 넘긴다
         sw::unique_ptr<sw::CommandStack>  _commandStack{};                  ///< 만든 뒤 서비스 표에 묶고 소유를 Scene 단계로 넘긴다
         sw::DelegateHandle                _sceneObjectsInvalidatedHandle{}; ///< 씬 매니저에 단 기록 비우기 구독(씬 단계 종료가 뗀다)
-        const sw::EngineConfig*           _pEngineConfig{ nullptr };        ///< Config 단계가 읽은 엔진 설정(설정 표 소유)
+    };
+    /** @brief 하네스의 Reflection — 엔진 타입에 더해 GameFramework · 테스트 타입까지 모은다(테스트 실행 파일과 함께 올라왔다). */
+    class TestReflectionSubsystem final : public sw::ReflectionSubsystem
+    {
+    public:
+        using sw::ReflectionSubsystem::ReflectionSubsystem;
+
+        sw::SubsystemInitResult initializeSubsystem() override
+        {
+            sw::engine::registerModuleTypes( "Engine" );
+            sw::engine::registerModuleTypes( "GameFramework" );
+            getTypeRegistry().registerPendingTypes( "TestFramework", sw::TypeRegistrar::getHead(), sw::EnumRegistrar::getHead() );
+            return bindEnumNames();
+        }
+    };
+    /** @brief 하네스는 엔진 데이터를 읽지 않는다 — 저장소가 만든 기본값을 소유만 한다. */
+    class TestEngineDefaultAssetsSubsystem final : public sw::EngineDefaultAssetsSubsystem
+    {
+    public:
+        using sw::EngineDefaultAssetsSubsystem::EngineDefaultAssetsSubsystem;
+
+        sw::SubsystemInitResult initializeSubsystem() override { return sw::SubsystemInitResult::Succeeded; }
     };
 } // namespace
 
@@ -142,56 +166,15 @@ namespace test
         // 순서는 손으로 적지 않는다. `EngineLoop` 과 같은 선언(`EngineFunctionStep` · 서비스 클래스)을 의존으로 위상 정렬한 순서로 세운다 —
         // 하네스가 앱과 다른 순서로 서는 일이 구조로 막힌다. 본문이 다른 것만 여기서 준다. 종료와 해제는 `stop` 이 그 역순으로 한다.
         sw::SubsystemCollection& startup = state._startup;
+        // 앱과 달리 외부 코덱을 붙이지 않는다(테스트가 코덱을 직접 갈아 끼운다). 서비스와 **같은 인스턴스**가 Core 슬롯에도 꽂힌다(레지스트리의 초기화).
+        startup.add( std::move( state._owned._pCompressionCodecRegistry ) );
+        startup.add( sw::make_unique<TestReflectionSubsystem>( std::move( state._owned._pTypeRegistry ) ) );
+        startup.add( std::move( state._owned._pTaskManager ) );
         {
-            // 앱과 달리 외부 코덱을 붙이지 않는다(테스트가 코덱을 직접 갈아 끼운다). 서비스와 **같은 인스턴스**를 Core 슬롯에도 꽂는다 —
-            // 안 꽂으면 CompressionStream 이 다른 레지스트리를 보게 되어 등록한 코덱이 테스트에서만 조용히 무시된다.
-            sw::CompressionCodecRegistry* const pCodecRegistry        = state._owned._pCompressionCodecRegistry.get();
-            auto                                initializeCompression = [pCodecRegistry]()
-            {
-                pCodecRegistry->initialize();
-                sw::CompressionCodecRegistry::setActive( pCodecRegistry );
-                return sw::SubsystemInitResult::Succeeded;
-            };
-            startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kCompression,
-                                                                 SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeCompression ) ) )
-                .takeOwnership( std::move( state._owned._pCompressionCodecRegistry ) );
-        }
-        {
-            // 하네스의 타입 공급자(엔진 · GameFramework · 테스트 타입)는 테스트 실행 파일과 함께 올라와 여기서 모두 모은다.
-            sw::TypeRegistry* const pTypeRegistry        = state._owned._pTypeRegistry.get();
-            auto                    initializeReflection = [pTypeRegistry]()
-            {
-                sw::engine::registerModuleTypes( "Engine" );
-                sw::engine::registerModuleTypes( "GameFramework" );
-                pTypeRegistry->registerPendingTypes( "TestFramework", sw::TypeRegistrar::getHead(), sw::EnumRegistrar::getHead() );
-                if ( sw::engine::bindGlobalVariableEnumNames() )
-                    return sw::SubsystemInitResult::Succeeded;
-                sw::engine::unbindGlobalVariableEnumNames();
-                return sw::SubsystemInitResult::Failed;
-            };
-            startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kReflection,
-                                                                 SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeReflection ),
-                                                                 SW_DELEGATE_FUNCTION( sw::SubsystemShutdownDelegate, &sw::engine::unbindGlobalVariableEnumNames ) ) )
-                .takeOwnership( std::move( state._owned._pTypeRegistry ) );
-        }
-        {
-            sw::TaskManager* const pTaskManager   = state._owned._pTaskManager.get();
-            auto                   initializeTask = [pTaskManager]()
-            { return pTaskManager->initialize() ? sw::SubsystemInitResult::Succeeded : sw::SubsystemInitResult::Failed; };
-            startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kTask, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeTask ),
-                                                                 SW_DELEGATE_METHOD( sw::SubsystemShutdownDelegate, &sw::TaskManager::shutdown, pTaskManager ) ) )
-                .takeOwnership( std::move( state._owned._pTaskManager ) );
-        }
-        {
-            sw::AsyncFileIO* const pAsyncFileIO     = state._owned._pAsyncFileIO.get();
-            auto                   initializeFileIO = [pAsyncFileIO]()
-            {
-                sw::AsyncFileIOSettings settings{};
-                settings._pTaskManager = &sw::engine::getTaskManager();
-                return pAsyncFileIO->initialize( settings ) ? sw::SubsystemInitResult::Succeeded : sw::SubsystemInitResult::Failed;
-            };
-            startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kFileIO, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeFileIO ),
-                                                                 SW_DELEGATE_METHOD( sw::SubsystemShutdownDelegate, &sw::AsyncFileIO::shutdown, pAsyncFileIO ) ) );
+            sw::AsyncFileIOSettings fileIOSettings{};
+            fileIOSettings._pTaskManager = &sw::engine::getTaskManager();
+            state._owned._pAsyncFileIO->setSubsystemSettings( fileIOSettings );
+            startup.add( std::move( state._owned._pAsyncFileIO ) );
         }
         // 하네스는 모듈 DLL 을 올리고 내리지 않는다 — 자리만 둔다(다른 단계가 이 이름에 의존한다).
         startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kModuleImages ) );
@@ -212,60 +195,10 @@ namespace test
                                                                  SW_DELEGATE_METHOD( sw::SubsystemShutdownDelegate, &sw::InputManager::shutdown, pInputManager ) ) )
                 .takeOwnership( std::move( state._owned._pInputManager ) );
         }
-        {
-            // 설정은 리소스 초기화보다 먼저 읽는다. `loadAssetRegistries` 는 `GameConfig::getActive()._packRoot` 로 게임
-            // 레지스트리 경로를 만든다 — 활성 설정이 없으면 시작 시점 GUID 표가 반쪽이 된다. 하네스는 주 표 알림 · 다시 읽기 · 메모리 예산이 없다.
-            sw::unique_ptr<sw::ConfigManager> configManager    = sw::make_unique<sw::ConfigManager>();
-            sw::ConfigManager* const          pConfigManager   = configManager.get();
-            auto                              initializeConfig = [&host, pConfigManager]()
-            {
-                pConfigManager->setRootDirectory( sw::ResourcePaths::getProjectFolderPath() );
-#if defined( SW_SHIPPING )
-                // 배포 구성은 생성된 JSON 만 읽는다. 그것이 역직렬화되지 않으면(정적 링크에서 리플렉션 등록기가 빠졌다) 모든 테스트가 C++ 기본값
-                // 설정으로 돈다 — 기동 실패로 드러낸다(`sw_addTestExecutable` 의 통째 링크).
-                {
-                    sw::EngineConfig probe;
-                    if ( sw::JSONSerializer::deserialize( &probe, *sw::EngineConfig::StaticType(), sw::shipping_host::kEngineConfigJSON ) == false )
-                    {
-                        SW_LOG_ERROR( "The generated EngineConfig JSON does not deserialize in this test executable - a reflection registrar was dropped at link time" );
-                        return sw::SubsystemInitResult::Failed;
-                    }
-                }
-#endif
-                host._pEngineConfig = pConfigManager->ensureConfig<sw::EngineConfig>( sw::config::kFileRuntimeEngineConfig, sw::shipping_host::kEngineConfigJSON );
-                if ( host._pEngineConfig == nullptr )
-                    return sw::SubsystemInitResult::Failed;
-                sw::EngineConfig::setActive( *host._pEngineConfig );
-#if defined( SW_SHIPPING )
-                const utf8* const pGameConfigJSON = sw::shipping_host::kGameConfigJSON;
-#else
-                const utf8* const pGameConfigJSON = nullptr;
-#endif
-                const sw::GameConfig* pGameConfig = pConfigManager->ensureConfig<sw::GameConfig>( sw::GameSelection::getConfigPath(), pGameConfigJSON );
-                if ( pGameConfig == nullptr )
-                    return sw::SubsystemInitResult::Failed;
-                sw::GameConfig::setActive( *pGameConfig );
-                return sw::SubsystemInitResult::Succeeded;
-            };
-            startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kConfig, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeConfig ) ) )
-                .takeOwnership( std::move( configManager ) );
-        }
-        {
-            // GameConfig 가 활성화된 뒤라야 "game" 토큰이 팩 루트로 풀린다 — 그 전제는 `mountContent` 의 인자에 드러나 있다.
-            sw::AssetManager* const pAssetManager      = state._owned._pAssetManager.get();
-            auto                    initializeResource = [&host, pAssetManager]()
-            {
-                if ( pAssetManager->initialize() == false )
-                    return sw::SubsystemInitResult::Failed;
-                pAssetManager->mountContent( host._pEngineConfig->_listResourcePriority );
-                return sw::SubsystemInitResult::Succeeded;
-            };
-            startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kResource, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeResource ) ) )
-                .takeOwnership<&sw::AssetManager::shutdown>( std::move( state._owned._pAssetManager ) );
-        }
-        // 하네스는 엔진 데이터를 읽지 않는다 — 저장소가 만든 기본값을 소유만 한다.
-        startup.add( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kEngineDefaultAssets ) )
-            .takeOwnership( std::move( state._owned._pEngineDefaultAssets ) );
+        // 설정 · 리소스는 앱과 같은 서브시스템이다(설정이 먼저 — `loadAssetRegistries` 가 게임 레지스트리 경로를 GameConfig 로 만든다).
+        startup.add( sw::make_unique<sw::ConfigManager>() );
+        startup.add( std::move( state._owned._pAssetManager ) );
+        startup.add( sw::make_unique<TestEngineDefaultAssetsSubsystem>( std::move( state._owned._pEngineDefaultAssets ) ) );
         {
             // 하네스는 오디오 장치를 열지 않는다(초기화 없음) — 종료만 앱과 같이 부른다.
             sw::IAudioService* const pAudioService = host._audioService.get();

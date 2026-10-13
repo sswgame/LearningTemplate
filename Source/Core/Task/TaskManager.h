@@ -11,6 +11,7 @@
 #include "Core/Container/ConcurrentQueue.h"
 #include "Core/Container/WorkStealingDeque.h"
 #include "Core/Container/span.h"
+#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Task/TaskTypes.h"
 
 namespace sw
@@ -38,13 +39,13 @@ namespace sw
      *   장을 큐에 넣고, 티켓을 가져간 스레드는 원자 카운터로 남은 청크를 계속 가져와 실행합니다. 호출 스레드도 바로 함께
      *   실행합니다.
      */
-    class SW_API TaskManager
+    class SW_API TaskManager : public ISubsystem
     {
         friend struct TaskNode;
 
     public:
         TaskManager();
-        ~TaskManager();
+        ~TaskManager() override;
 
         /**
          * @brief 태스크 매니저와 워커 스레드 풀을 초기화합니다.
@@ -55,6 +56,14 @@ namespace sw
 
         /** @brief 모든 워커 스레드를 멈추고 풀을 종료합니다. */
         void shutdown();
+
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "Task";
+        /** @brief 기동 순서의 자리 — 워커 수는 논리 CPU 수입니다. 소멸자가 태스크를 기다리는 객체는 이것에 의존해 먼저 놓는다. */
+        SubsystemInitResult initializeSubsystem() override;
+        void                shutdownSubsystem() override;
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        MemoryTag           getSubsystemMemoryTag() const override { return MemoryTag::Task; }
 
         /**
          * @brief 매개변수가 없는 기본 태스크를 만듭니다.

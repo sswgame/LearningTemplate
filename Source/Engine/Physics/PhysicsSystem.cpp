@@ -3,6 +3,7 @@
 #include "Engine/Physics/PhysicsSystem.h"
 
 #include "Core/Memory/Memory.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Physics/Box2D/Box2DPhysicsBackend.h"
@@ -27,7 +28,7 @@ namespace sw
 
     span<const utf8* const> PhysicsSystem::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { "Resource", "Task" };
+        static constexpr const utf8* kArrDependency[] = { TaskManager::kSubsystemName };
         return kArrDependency;
     }
 

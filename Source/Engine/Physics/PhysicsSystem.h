@@ -44,7 +44,7 @@ namespace sw
         SubsystemInitResult initializeSubsystem() override { return initialize() ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed; }
         void                shutdownSubsystem() override { shutdown(); }
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
-        /** @brief 메시 셰이프 캐시가 에셋을 읽고, 병렬 스텝이 태스크를 쓴다. */
+        /** @brief 병렬 스텝이 태스크를 쓴다. 에셋(메시 셰이프 캐시)을 읽으므로 Resource 뒤에 서는데, 그 순서는 높은 층인 `AssetManager` 가 역방향으로 적는다. */
         span<const utf8* const> getSubsystemDependencies() const override;
         SubsystemHostMask       getSubsystemHost() const override { return SubsystemHostMask::All; }
         MemoryTag               getSubsystemMemoryTag() const override { return MemoryTag::Physics; }

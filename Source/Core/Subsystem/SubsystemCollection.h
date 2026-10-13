@@ -22,8 +22,9 @@ namespace sw
     /** @brief 의존 그래프의 노드 하나입니다(이름과 먼저 서야 하는 이름들). */
     struct SubsystemNode
     {
-        const utf8*             _pName;          ///< 이름
-        span<const utf8* const> _listDependency; ///< 먼저 서야 하는 이름들
+        const utf8*             _pName;           ///< 이름
+        span<const utf8* const> _listDependency;  ///< 먼저 서야 하는 이름들(없으면 오류)
+        span<const utf8* const> _listDependent{}; ///< 뒤에 서야 하는 이름들(역방향 의존, 없으면 건너뛴다)
     };
 } // namespace sw
 

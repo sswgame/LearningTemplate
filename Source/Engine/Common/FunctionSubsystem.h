@@ -32,10 +32,11 @@ namespace sw
     /** @brief `FunctionSubsystem` 의 선언(이름 · 의존 · 대상 · 메모리 태그)입니다. 글은 문자열 리터럴(프로세스 수명)이어야 합니다. */
     struct FunctionSubsystemDesc
     {
-        const utf8*             _pName;          ///< 이름(의존 칸이 부르는 식별자)
-        span<const utf8* const> _listDependency; ///< 먼저 서야 하는 이름들(프로세스 수명의 배열)
-        SubsystemHostMask       _host;           ///< 도는 호스트
-        MemoryTag               _memoryTag;      ///< 초기화가 할당하는 메모리의 용도
+        const utf8*             _pName;           ///< 이름(의존 칸이 부르는 식별자)
+        span<const utf8* const> _listDependency;  ///< 먼저 서야 하는 이름들(프로세스 수명의 배열)
+        SubsystemHostMask       _host;            ///< 도는 호스트
+        MemoryTag               _memoryTag;       ///< 초기화가 할당하는 메모리의 용도
+        span<const utf8* const> _listDependent{}; ///< 뒤에 서야 하는 이름들(역방향 의존 — `ISubsystem::getSubsystemDependents`)
     };
 } // namespace sw
 
@@ -93,6 +94,7 @@ namespace sw
 
         const utf8*             getSubsystemName() const override { return _desc._pName; }
         span<const utf8* const> getSubsystemDependencies() const override { return _desc._listDependency; }
+        span<const utf8* const> getSubsystemDependents() const override { return _desc._listDependent; }
         SubsystemHostMask       getSubsystemHost() const override { return _desc._host; }
         MemoryTag               getSubsystemMemoryTag() const override { return _desc._memoryTag; }
 

@@ -24,6 +24,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Task/TaskFuture.h"
 
 namespace sw
@@ -185,7 +186,7 @@ namespace sw
      * @class AsyncFileIO
      * @brief 비동기 파일 읽기 매니저입니다. 엔진은 하나를 서비스로 들고(`engine::getAsyncFileIO()`), 테스트는 따로 만들어 씁니다.
      */
-    class SW_API AsyncFileIO
+    class SW_API AsyncFileIO : public ISubsystem
     {
     public:
         /** @brief `readRange` 의 크기로 주면 @p offset 부터 파일 끝까지 읽습니다. */
@@ -194,7 +195,7 @@ namespace sw
         /** @brief 시작하지 않은 매니저입니다. 시작 전 요청은 `ShutDown` 으로 끝납니다. */
         AsyncFileIO();
         /** @brief `shutdown` 을 부릅니다. */
-        ~AsyncFileIO();
+        ~AsyncFileIO() override;
 
         /** @brief 복사를 금지합니다. */
         AsyncFileIO( const AsyncFileIO& ) = delete;
@@ -211,6 +212,17 @@ namespace sw
          * @note 완료 콜백을 태스크로 싣는 설정이면 그 `TaskManager` 가 아직 돌고 있어야 합니다(엔진은 Task 단계가 FileIO 보다 늦게 내려간다).
          */
         void shutdown();
+
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "FileIO";
+        /** @brief 기동 순서가 `initialize` 에 넘길 설정입니다(완료 콜백을 싣는 태스크 매니저). 기동 전에 호스트가 정한다. */
+        void                setSubsystemSettings( const AsyncFileIOSettings& settings ) { _subsystemSettings = settings; }
+        SubsystemInitResult initializeSubsystem() override;
+        void                shutdownSubsystem() override;
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 완료 콜백을 태스크로 싣는다 — 태스크 매니저가 이것보다 늦게 내려간다. */
+        span<const utf8* const> getSubsystemDependencies() const override;
+        MemoryTag               getSubsystemMemoryTag() const override { return MemoryTag::Asset; }
 
         /** @brief 시작했으면 true 입니다. */
         bool isInitialized() const;
@@ -243,5 +255,6 @@ namespace sw
 
         unique_ptr<AsyncFileIOQueue>    _queue;
         unique_ptr<IAsyncFileIOBackend> _backend;
+        AsyncFileIOSettings             _subsystemSettings; ///< `initializeSubsystem` 이 넘길 설정(`setSubsystemSettings`)
     };
 } // namespace sw

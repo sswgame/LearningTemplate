@@ -8,7 +8,9 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Localization/EngineDefaultAssetsSubsystem.h"
 #include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Text/SystemFontLocator.h"
 
@@ -124,7 +126,7 @@ namespace sw
 
     span<const utf8* const> FontService::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { "EngineDefaultAssets", "Headless", "Resource" };
+        static constexpr const utf8* kArrDependency[] = { EngineDefaultAssetsSubsystem::kSubsystemName, "Headless", AssetManager::kSubsystemName };
         return kArrDependency;
     }
 

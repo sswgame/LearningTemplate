@@ -37,8 +37,10 @@
 - ③ 대상: Core TaskManager · AsyncFileIO · CompressionCodecRegistry · CommandLineManager · GlobalVariableManager, Engine ConfigManager · InputManager ·
   LocalizationManager · AssetManager · ResourcePakManager · SceneManager · UserSettingsManager · ServerServiceManager · 오디오 구현 · 렌더러. 매니저가 아닌 호스트 엮기
   (Reflection · ModuleTypes · ModuleImages · Headless · SceneRHI · EngineDefaultAssets)만 작은 `<대상>Subsystem` 클래스. 하네스와 본문이 다른 단계는 하네스 서브클래스.
-- ③ 중 의존 칸의 철자 검사: 지금 Physics · Fonts · Telemetry · UI 의 의존 중 아직 FunctionSubsystem 인 단계 이름은 글자다(Engine 루트 헤더를 낮은 층이 include
-  못 한다). 그 단계가 클래스가 되면 `kSubsystemName` 상수로 바꾼다.
+- ③a 끝: TaskManager · AsyncFileIO · CompressionCodecRegistry · ConfigManager · AssetManager 가 직접 상속, ReflectionSubsystem(Module) · EngineDefaultAssetsSubsystem
+  (Localization) 이 작은 클래스. 역방향 의존(`getSubsystemDependents`)을 더해 높은 층이 낮은 층의 순서를 적는다. 남은 FunctionSubsystem 단계: ModuleImages · Audio · Input ·
+  ModuleTypes · Scene · Headless · UserSettings · RHI · FrameRenderer · RenderThread · LiveShader · SceneRHI(③b · ③c). 아직 단계인 이름을 낮은 층 클래스가 부르는
+  곳(Fonts → Headless, UI → Input · UserSettings, Telemetry → UserSettings)은 글자다 — 그 단계가 클래스가 되면 상수 · 역방향으로 바꾼다.
 - ④ 요구(조정자): Engine 클래스는 호스트만 안다(Games · GameFramework · Editor 가 include 하면 층 게이트 실패), 모듈 조회 창구는 읽기 전용 `ISubsystemLocator`
   (Core 의 SubsystemCollection 이 구현, 호스트가 모듈 API 표로 넘김), 컴포넌트는 `SceneEngineServices` 주입 유지 · 확대, 씬 수명은 `ISceneService` 로 따로,
   DLL 경계 조회는 이름 · TypeInfo 기반(핫 리로드 SmokeTest 로 확인). 호스트 범위 컬렉션(App · ServerApp · ModuleHost)이 엔진 범위 위에 얹힐 수 있게 로케이터에 범위 체인을 열어 둔다.

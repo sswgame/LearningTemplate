@@ -1,13 +1,22 @@
 #include "pch.h"
 
+#include "Core/Compression/CompressionCodecRegistry.h"
+#include "Core/File/AsyncFileIO.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Subsystem/SubsystemCollection.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineSubsystemHost.h"
+#include "Engine/Config/ConfigManager.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/EngineInitSequence.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+#include "Engine/Localization/EngineDefaultAssetsSubsystem.h"
+#include "Engine/Module/ReflectionSubsystem.h"
 #include "Engine/Physics/PhysicsSystem.h"
+#include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/UI/UISystem.h"
@@ -64,6 +73,7 @@ namespace
             : _recorder{ recorder }
             , _pName{ real.getSubsystemName() }
             , _listDependency{ real.getSubsystemDependencies() }
+            , _listDependent{ real.getSubsystemDependents() }
             , _host{ real.getSubsystemHost() }
             , _memoryTag{ real.getSubsystemMemoryTag() }
         {
@@ -75,6 +85,7 @@ namespace
 
         const utf8*             getSubsystemName() const override { return _pName; }
         span<const utf8* const> getSubsystemDependencies() const override { return _listDependency; }
+        span<const utf8* const> getSubsystemDependents() const override { return _listDependent; }
         SubsystemHostMask       getSubsystemHost() const override { return _host; }
         MemoryTag               getSubsystemMemoryTag() const override { return _memoryTag; }
 
@@ -82,6 +93,7 @@ namespace
         StartupRecorder&        _recorder;
         const utf8*             _pName;
         span<const utf8* const> _listDependency;
+        span<const utf8* const> _listDependent;
         SubsystemHostMask       _host;
         MemoryTag               _memoryTag;
     };
@@ -97,6 +109,13 @@ namespace
         {
             listSubsystem.push_back( make_unique<FunctionSubsystem>( *pDesc ) );
         }
+        listSubsystem.push_back( make_unique<CompressionCodecRegistry>() );
+        listSubsystem.push_back( sw::make_unique<ReflectionSubsystem>( sw::make_unique<TypeRegistry>() ) );
+        listSubsystem.push_back( make_unique<TaskManager>() );
+        listSubsystem.push_back( make_unique<AsyncFileIO>() );
+        listSubsystem.push_back( make_unique<ConfigManager>() );
+        listSubsystem.push_back( make_unique<AssetManager>() );
+        listSubsystem.push_back( sw::make_unique<EngineDefaultAssetsSubsystem>( sw::make_unique<EngineDefaultAssets>() ) );
         listSubsystem.push_back( make_unique<ShaderCache>() );
         listSubsystem.push_back( make_unique<PhysicsSystem>() );
         listSubsystem.push_back( make_unique<FontService>() );
@@ -176,7 +195,8 @@ namespace
         vector<SubsystemNode> listNode;
         for ( uint32 index = 0; index < subsystems.getSubsystemCount(); ++index )
         {
-            listNode.push_back( { subsystems.getSubsystem( index ).getSubsystemName(), subsystems.getSubsystem( index ).getSubsystemDependencies() } );
+            const ISubsystem& subsystem = subsystems.getSubsystem( index );
+            listNode.push_back( { subsystem.getSubsystemName(), subsystem.getSubsystemDependencies(), subsystem.getSubsystemDependents() } );
         }
         SubsystemGraph graph{};
         string         error;
@@ -595,7 +615,7 @@ SW_TEST_CASE( EngineInitSequenceTest, EveryHostKindSortsItsOwnSubsystems )
         for ( const unique_ptr<ISubsystem>& subsystem : listSubsystem )
         {
             if ( overlapsHostMask( subsystem->getSubsystemHost(), host ) )
-                listNode.push_back( { subsystem->getSubsystemName(), subsystem->getSubsystemDependencies() } );
+                listNode.push_back( { subsystem->getSubsystemName(), subsystem->getSubsystemDependencies(), subsystem->getSubsystemDependents() } );
         }
         SubsystemGraph graph{};
         string         error;

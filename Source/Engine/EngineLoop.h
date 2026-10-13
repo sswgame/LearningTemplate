@@ -295,7 +295,5 @@ namespace sw
 #if !defined( SW_SHIPPING )
         ShaderRecompiler* _pShaderRecompiler;
 #endif
-        /** @brief Config 단계가 읽은 엔진 설정입니다(설정 표 소유). Resource · RHI 단계가 읽습니다. */
-        const EngineConfig* _pEngineConfig;
     };
 } // namespace sw
