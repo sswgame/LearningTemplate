@@ -99,15 +99,8 @@ namespace sw
         }
 
         /**
-         * @brief `AssetManager` 를 종료하고 해제합니다. 호스트의 Resource 단계 해제(`destroy`)가 부릅니다.
-         * @details 에셋 캐시를 비우므로 에셋을 든 다른 매니저가 모두 해제된 **뒤**여야 합니다. 표에서 Resource 는 Scene · Audio · Input ·
-         *          렌더러보다 먼저 서므로 역순 해제에서 자연히 그 뒤입니다.
-         */
-        void destroyAssetManager();
-
-        /**
          * @brief 남은 소유를 목록의 **역순**으로 모두 놓습니다(소멸자와 같은 순서).
-         * @details 단계가 소유한 서비스는 호스트가 기동 표의 해제(`EngineInitSequence::destroyAll`)로 먼저 놓습니다. 이것은 그 뒤에 남은
+         * @details 기동 단계가 소유한 서비스는 호스트가 소유를 기동 순서로 넘겼고 그 해제(`EngineInitSequence::destroyAll`)로 먼저 사라집니다. 이것은 그 뒤에 남은
          *          표 밖 서비스(명령줄 · 전역 변수 · 이벤트 · 디버그 도구 등)를 쓸어 담는 자리입니다. 목록 앞줄의 명령줄 · 전역 변수가
          *          맨 나중에 사라집니다.
          */

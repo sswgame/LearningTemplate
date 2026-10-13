@@ -176,7 +176,7 @@ namespace sw
         // ----------------------------------------------------------------------
         // Getter (App 이 ModuleHost 등과 연동하는 데 필요)
         // ----------------------------------------------------------------------
-        ConfigManager*      getConfigManager() const { return _configManager.get(); }
+        ConfigManager*      getConfigManager() const { return _pConfigManager; }
         CommandLineManager* getCommandLineManager() const { return _owned._pCommandLineManager.get(); }
         RHI*                getRHI() const { return _rhi.get(); }
         RenderThread*       getRenderThread() const { return _renderThread.get(); }
@@ -219,11 +219,13 @@ namespace sw
         EngineServiceCollection _owned;
 
         /** @brief 기동 표 밖의 부트스트랩(로거 · 크래시 핸들러 · 진단 도구 · 명령줄 · 전역 변수)입니다. 테스트 하네스와 같은 것을 쓴다. `_owned` 보다 먼저 사라진다. */
-        EngineBootstrap           _bootstrap;
-        unique_ptr<ConfigManager> _configManager;
-        unique_ptr<RHI>           _rhi;
+        EngineBootstrap _bootstrap;
+        /** @brief 서브시스템 `Config` 의 설정 표입니다(`_startup` 소유 — 빌려 쓴다). App · 서버가 `getConfigManager` 로 읽는다. */
+        ConfigManager*  _pConfigManager;
+        unique_ptr<RHI> _rhi;
         /** @brief 셸 디버그 액션 맵입니다(`updateShellActions` 가 처음 부를 때 만든다). `shutdown` 이 단계 종료 뒤 · 해제 전에(입력 매니저가 소멸하기 전에) 놓는다. */
-        ShellInputActions         _shellActions;
+        ShellInputActions _shellActions;
+        /** @brief 만든 오디오 서비스입니다(역할별 팩토리). 서비스 표에 묶은 뒤 소유를 서브시스템 `Audio` 로 넘긴다 — 이 뒤로는 비어 있다. */
         unique_ptr<IAudioService> _audioService;
         unique_ptr<FrameRenderer> _frameRenderer;
         unique_ptr<RenderThread>  _renderThread;
@@ -243,9 +245,9 @@ namespace sw
 #if !defined( SW_SHIPPING )
         unique_ptr<ShaderRecompiler> _shaderRecompiler;
 #endif
-        /** @brief 에디터 Undo/Redo 전용이라 배포본에는 만들지 않습니다(목록의 HostCreated). */
+        /** @brief 에디터 Undo/Redo 전용이라 배포본에는 만들지 않습니다(목록의 HostCreated). 서비스 표에 묶은 뒤 소유를 서브시스템 `Scene` 으로 넘긴다. */
         unique_ptr<CommandStack> _commandStack;
-        /** @brief 씬 매니저의 `onSceneObjectsInvalidated` 에 단 기록 비우기 구독입니다. 씬 단계 해제가 떼어 낸다. */
+        /** @brief 씬 매니저의 `onSceneObjectsInvalidated` 에 단 기록 비우기 구독입니다. 씬 단계 종료가 떼어 낸다. */
         DelegateHandle _sceneObjectsInvalidatedHandle;
         /**
          * @brief 프레임 관찰자 목록입니다(소유하지 않는다). 프레임 앞(입력 전) · 씬 틱 뒤(UI 앞) · 패킷 채우기 · 프레임 뒤(렌더 제출 뒤) · 창 닫힘에서 붙인 순서대로 부르고,
@@ -279,7 +281,11 @@ namespace sw
         UISystem* _pUISystem;
         /** @brief 서브시스템 `Input` 입니다(`_startup` 소유 — 빌려 쓴다). 프레임마다 입력 프레임 · 셸 맵 · 관찰자 문맥이 쓴다. */
         InputManager* _pInputManager;
-        /** @brief Config 단계가 읽은 엔진 설정입니다(`_configManager` 소유). Resource · EngineDefaultAssets · RHI 단계가 읽습니다. */
+        /** @brief 서브시스템 `Audio` 의 오디오 서비스입니다(`_startup` 소유 — 빌려 쓴다). 프레임마다 갱신하고 플레이어 설정이 볼륨을 넣는다. */
+        IAudioService* _pAudioService;
+        /** @brief 서브시스템 `Scene` 의 씬 매니저입니다(`_startup` 소유 — 빌려 쓴다). 프레임마다 전환 · 틱 · 디버그 그리기 · 패킷이 쓴다. */
+        SceneManager* _pSceneManager;
+        /** @brief Config 단계가 읽은 엔진 설정입니다(설정 표 소유). Resource · RHI 단계가 읽습니다. */
         const EngineConfig* _pEngineConfig;
     };
 } // namespace sw

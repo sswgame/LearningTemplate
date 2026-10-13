@@ -12,6 +12,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryTag.h"
@@ -51,14 +52,16 @@ namespace sw
             : _initialize{ std::move( initialize ) }
             , _shutdown{ std::move( shutdown ) }
             , _desc{ desc }
-            , _pOwned{ nullptr }
-            , _pDestroyOwned{ nullptr }
+            , _listOwned{}
         {
         }
+        /** @brief 넘겨받은 객체를 넘겨받은 역순으로 소멸시킵니다. */
         ~FunctionSubsystem() override
         {
-            if ( _pDestroyOwned != nullptr )
-                _pDestroyOwned( _pOwned );
+            for ( size_t index = _listOwned.size(); index > 0; --index )
+            {
+                _listOwned[index - 1]._pDestroy( _listOwned[index - 1]._pObject );
+            }
         }
 
         FunctionSubsystem( const FunctionSubsystem& )            = delete;
@@ -72,17 +75,20 @@ namespace sw
         }
 
         /**
-         * @brief @p owned 를 넘겨받아 이 서브시스템과 함께 소멸시킵니다(한 번만). 넘긴 객체를 돌려줍니다.
-         * @details 서비스 저장소가 만든 Core 서비스의 소유를 기동 순서로 옮길 때 씁니다 — 해제가 그 단계의 소멸 자리(초기화의 역순)에서 일어납니다.
+         * @brief @p owned 를 넘겨받아 이 서브시스템과 함께 소멸시킵니다. 넘긴 객체를 돌려줍니다.
+         * @details 서비스 저장소가 만든 서비스의 소유를 기동 순서로 옮길 때 씁니다 — 해제가 그 단계의 소멸 자리(초기화의 역순)에서 일어납니다.
+         *          여럿을 넘기면 넘긴 역순으로 소멸합니다(먼저 넘긴 것이 나중까지 산다).
          */
         template <class TOwned>
         TOwned& takeOwnership( unique_ptr<TOwned> owned )
         {
-            SW_ASSERT( _pOwned == nullptr && owned != nullptr );
-            TOwned& taken  = *owned;
-            _pOwned        = owned.release();
-            _pDestroyOwned = &destroyOwned<TOwned>;
-            return taken;
+            return takeOwnershipInternal( std::move( owned ), &destroyOwned<TOwned> );
+        }
+        /** @brief `takeOwnership` 과 같고, 소멸 직전에 @p pRelease 를 부릅니다(`AssetManager::shutdown` 처럼 소멸자가 하지 않는 해제). */
+        template <auto pRelease, class TOwned>
+        TOwned& takeOwnership( unique_ptr<TOwned> owned )
+        {
+            return takeOwnershipInternal( std::move( owned ), &releaseAndDestroyOwned<pRelease, TOwned> );
         }
 
         const utf8*      getSubsystemName() const override { return _desc._pName; }
@@ -91,17 +97,37 @@ namespace sw
         MemoryTag        getSubsystemMemoryTag() const override { return _desc._memoryTag; }
 
     private:
-        template <class TOwned>
-        static void destroyOwned( void* pOwned )
+        /** @brief 넘겨받은 객체 하나와 그 타입으로 소멸시키는 함수입니다. */
+        struct OwnedObject
         {
-            default_delete<TOwned>{}( static_cast<TOwned*>( pOwned ) );
+            void* _pObject;
+            void ( *_pDestroy )( void* pObject );
+        };
+
+        template <class TOwned>
+        TOwned& takeOwnershipInternal( unique_ptr<TOwned> owned, void ( *pDestroy )( void* pObject ) )
+        {
+            SW_ASSERT( owned != nullptr );
+            TOwned& taken = *owned;
+            _listOwned.push_back( { owned.release(), pDestroy } );
+            return taken;
+        }
+        template <class TOwned>
+        static void destroyOwned( void* pObject )
+        {
+            default_delete<TOwned>{}( static_cast<TOwned*>( pObject ) );
+        }
+        template <auto pRelease, class TOwned>
+        static void releaseAndDestroyOwned( void* pObject )
+        {
+            ( static_cast<TOwned*>( pObject )->*pRelease )();
+            default_delete<TOwned>{}( static_cast<TOwned*>( pObject ) );
         }
 
     private:
         SubsystemInitializeDelegate _initialize;
         SubsystemShutdownDelegate   _shutdown;
         FunctionSubsystemDesc       _desc;
-        void*                       _pOwned;      ///< `takeOwnership` 으로 넘겨받은 객체(없으면 nullptr)
-        void ( *_pDestroyOwned )( void* pOwned ); ///< `_pOwned` 의 타입으로 소멸시키는 함수
+        vector<OwnedObject>         _listOwned; ///< `takeOwnership` 으로 넘겨받은 객체(넘겨받은 순서)
     };
 } // namespace sw

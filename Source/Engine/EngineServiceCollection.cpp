@@ -130,13 +130,6 @@ namespace sw
 #undef SW_ENGINE_SERVICE_OPT
     }
 
-    void EngineServiceCollection::destroyAssetManager()
-    {
-        if ( _pAssetManager != nullptr )
-            _pAssetManager->shutdown();
-        _pAssetManager.reset();
-    }
-
     void EngineServiceCollection::destroyAll()
     {
         // X-macro 는 목록 순서로만 펼쳐지므로 해제 표를 만들어 거꾸로 돈다.

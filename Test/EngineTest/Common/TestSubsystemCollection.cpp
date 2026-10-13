@@ -129,16 +129,20 @@ namespace
         uint32 _shutdownCount{ 0 };
     };
 
-    /** @brief 소멸을 적는 객체입니다(`FunctionSubsystem::takeOwnership` 의 소멸 자리를 본다). */
+    /** @brief 해제 · 소멸을 적는 객체입니다(`FunctionSubsystem::takeOwnership` 의 소멸 자리를 본다). */
     struct OwnedProbe
     {
-        explicit OwnedProbe( SubsystemRecorder& recorder )
+        OwnedProbe( SubsystemRecorder& recorder, const utf8* pName )
             : _recorder{ recorder }
+            , _pName{ pName }
         {
         }
-        ~OwnedProbe() { _recorder._listEvent.push_back( string( "D:Probe" ) ); }
+        ~OwnedProbe() { _recorder._listEvent.push_back( string( "D:" ) + _pName ); }
+
+        void release() { _recorder._listEvent.push_back( string( "R:" ) + _pName ); }
 
         SubsystemRecorder& _recorder;
+        const utf8*        _pName;
     };
 } // namespace
 
@@ -429,11 +433,14 @@ SW_TEST_CASE( SubsystemCollectionTest, FunctionSubsystemDestroysWhatItOwnsInItsP
     SubsystemCollection collection;
     collection.add( make_unique<RecordingSubsystem>( recorder, "Later", "Owner" ) );
     FunctionSubsystem& owner = collection.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "Owner", "Earlier", EngineInitTarget::All, MemoryTag::EngineMisc } ) );
-    OwnedProbe&        probe = owner.takeOwnership( make_unique<OwnedProbe>( recorder ) );
-    SW_EXPECT_TRUE( &probe._recorder == &recorder );
+    OwnedProbe&        first = owner.takeOwnership( make_unique<OwnedProbe>( recorder, "First" ) );
+    SW_EXPECT_TRUE( &first._recorder == &recorder );
+    (void)owner.takeOwnership<&OwnedProbe::release>( make_unique<OwnedProbe>( recorder, "Second" ) );
     collection.add( make_unique<RecordingSubsystem>( recorder, "Earlier", "" ) );
     SW_ASSERT_TRUE_MSG( collection.initializeAll( EngineInitTarget::Client ), collection.getError().c_str() );
 
+    // 여럿은 넘긴 역순으로, 해제 함수를 준 것은 그것을 부른 뒤 소멸한다.
     collection.destroyAll();
-    SW_EXPECT_STREQ( "Later Probe Earlier", recorder.joinEvents( 'D' ).c_str() );
+    SW_EXPECT_STREQ( "Later Second First Earlier", recorder.joinEvents( 'D' ).c_str() );
+    SW_EXPECT_STREQ( "Second", recorder.joinEvents( 'R' ).c_str() );
 }

@@ -32,6 +32,22 @@ namespace sw
         static constexpr FunctionSubsystemDesc kCompression{ "Compression", "", EngineInitTarget::All, MemoryTag::EngineMisc };
         /** @brief 이 프로세스에 올라온 타입 등록기를 모으고 명령줄의 enum 이름을 적용한다. 설정 · 에셋 · 씬 객체가 이 뒤에 서서 먼저 소멸한다. */
         static constexpr FunctionSubsystemDesc kReflection{ "Reflection", "", EngineInitTarget::All, MemoryTag::Reflection };
+        /** @brief 엔진 · 게임 설정(EngineConfig · GameConfig)과 설정 표. 설정 역직렬화가 TypeInfo 를 쓴다. */
+        static constexpr FunctionSubsystemDesc kConfig{ "Config", "Reflection", EngineInitTarget::All, MemoryTag::EngineMisc };
+        /**
+         * @brief 에셋 매니저 + 콘텐츠 마운트. 팩 루트는 GameConfig, 팩 스트림은 코덱이다.
+         * @details 해제(`AssetManager::shutdown`)가 에셋 캐시를 비운다 — 에셋을 드는 단계가 모두 이 뒤에 서므로, 역순 해제에서 그들의 소멸자가 에셋을 놓은 뒤다.
+         */
+        static constexpr FunctionSubsystemDesc kResource{ "Resource", "Compression Config", EngineInitTarget::All, MemoryTag::Asset };
+        /** @brief 엔진 데이터(EngineDefaultAssets)와 엔진 문화권 표 · 문자열. 하네스는 읽지 않고 소유만 한다. */
+        static constexpr FunctionSubsystemDesc kEngineDefaultAssets{ "EngineDefaultAssets", "Reflection Resource", EngineInitTarget::All, MemoryTag::EngineMisc };
+        /** @brief 오디오 서비스. 음성 스트리밍이 태스크를 쓰고, 모듈 콜백을 든다 — 서버는 장치 없는 NullAudioBackend. */
+        static constexpr FunctionSubsystemDesc kAudio{ "Audio", "ModuleImages Task", EngineInitTarget::All, MemoryTag::Audio };
+        /**
+         * @brief 씬 매니저 · 에셋 스트리밍 큐 · 되돌리기 기록. 컴포넌트가 입력 · 오디오 · 모듈 코드 · 에셋 · 물리 씬을 든다(스트리밍은 비동기 IO).
+         * @details 스트리밍 큐의 소멸자는 태스크를 기다린다 — Task 에 의존하는 이 단계가 Task 보다 먼저 놓는다.
+         */
+        static constexpr FunctionSubsystemDesc kScene{ "Scene", "Audio FileIO Input ModuleImages Physics Resource Task", EngineInitTarget::All, MemoryTag::Scene };
         /** @brief 태스크 매니저. 소멸자가 태스크를 기다리는 객체(에셋 스트리밍 큐)는 이것에 의존하는 단계(Scene)가 먼저 놓는다. */
         static constexpr FunctionSubsystemDesc kTask{ "Task", "", EngineInitTarget::All, MemoryTag::Task };
         /** @brief 종료 쪽 자리 — 씬은 사라지고 서비스는 살아 있는 구간에서 모듈 DLL 을 내리는 호스트 훅. 타입 · 코덱 · 캐시를 떼고 태스크를 기다린다. */
@@ -49,7 +65,7 @@ namespace sw
         static constexpr FunctionSubsystemDesc kSceneRHI{ "SceneRHI", "RHI Scene", EngineInitTarget::Client, MemoryTag::RenderCPU };
 
         /** @brief 위 선언 모두입니다(테스트가 엔진 목록을 본문 없이 짓는다). */
-        static constexpr const FunctionSubsystemDesc* kArrAll[] = { &kCompression, &kReflection, &kTask, &kModuleImages, &kFileIO, &kInput, &kModuleTypes, &kSceneRHI };
+        static constexpr const FunctionSubsystemDesc* kArrAll[] = { &kCompression, &kReflection, &kConfig, &kResource, &kEngineDefaultAssets, &kAudio, &kScene, &kTask, &kModuleImages, &kFileIO, &kInput, &kModuleTypes, &kSceneRHI };
     };
 } // namespace sw
 
