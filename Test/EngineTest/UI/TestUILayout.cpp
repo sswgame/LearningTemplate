@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/UI/Base/UIEvents.h"
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
@@ -13,6 +14,7 @@
 #include "EngineTest/LocalizationTestUtil.h"
 #include "EngineTest/UI/UILayoutTestUtil.h"
 
+#include "TestFramework/TestEnvironment.h"
 #include "TestFramework/TestFramework.h"
 
 // UILayoutTest — 레이아웃 두 걷기(measure · arrange)와 패널. 결과는 사각형 덤프 글(UILayoutDump)로 견준다. 디바이스 없음(nogpu).
@@ -633,4 +635,24 @@ SW_TEST_CASE( UILayoutTest, UISystemFollowsCultureDirection )
     SW_ASSERT_TRUE( loc.setCurrentLanguage( "en" ) );
     ui.update( 1.0f / 60.0f, viewport );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pA->getGeometry()._position._x, 0.001f );
+}
+
+/**
+ * @brief [UILayoutTest] `setLocalization` 을 부르지 않은 `UISystem`(운영 경로)도 엔진 서비스의 문화권으로 방향을 정한다
+ * @details 변이: `makeLayoutContext` 가 `findLocalization()` 대신 세터 멤버만 보면 방향이 늘 왼쪽에서 오른쪽이라 진다.
+ */
+SW_TEST_CASE( UILayoutTest, UISystemFollowsBoundServiceCultureDirection )
+{
+    sw::LocalizationManager loc;
+    SW_ASSERT_TRUE( sw::test::LocalizationTestUtil::loadEngineCultures( loc ) );
+    SW_ASSERT_TRUE( loc.setCurrentLanguage( "qps-plocm" ) );
+    const sw::EngineServices saved   = sw::engine::getBoundEngineServices();
+    sw::EngineServices       withRTL = saved;
+    withRTL._pLocalizationManager    = &loc;
+    test::rebindEngineServices( withRTL );
+
+    sw::UISystem ui;
+    const bool   bRightToLeft = ui.makeLayoutContext()._bRightToLeft;
+    test::rebindEngineServices( saved );
+    SW_EXPECT_TRUE( bRightToLeft );
 }

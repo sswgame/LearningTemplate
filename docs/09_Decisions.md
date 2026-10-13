@@ -410,6 +410,8 @@
 - **자체 JSON 로더를 리플렉션 구조체로 옮기는 기준**(2026-10-12). 모듈 매니페스트, `AnimationLODSettings`, `MemoryBudgetFile`, `FacialRig`, `LipSync` 는 옮겼습니다. 다음은 옮기지 않습니다.
   `TextureImportConfig` · `ModelImportConfig` 는 적지 않은 값이 부모 프리셋을 따르는 "적지 않음" 의미가 필요한데 리플렉션은 "없음" 과 "0" 을 가르지 못합니다.
   `CrashReportService` 는 동적 JSON 문서이고, JWT · Chrome 트레이스 · VRM 은 외부 형식입니다.
+  `CultureInfo` 는 적지 않은 필드가 부모 문화권을 따르고(`parent`), `LocalizationDocuments` 는 키가 데이터인 문자열 표이며, `AnimationGraphAsset` 은 노드 종류마다 필드가 다른 그래프라
+  고정 구조체 하나로 읽을 수 없습니다(2026-10-14 R4 판정).
   enum 이름 테이블 45 곳도 그대로 둡니다. 배열 인덱스라 해시 조회보다 빠르고 `static_assert` 가 지키며, 일부는 와이어 문자열이라 열거자 이름과 다릅니다.
 - **게임플레이 튜닝 값은 컴포넌트 `PROPERTY` 나 키트 설정 구조체 필드로 둡니다**(2026-10-06). 언리얼의 UPROPERTY 와 데이터 에셋 방식입니다. 성능 임계값은 측정으로 정한 이름 붙은 상수로 두고, 언리얼처럼 실제로 조절할 것만 전역 변수로 만듭니다.
 - **중력의 출처는 물리 설정 하나입니다**(2026-10-06). 코드는 `PhysicsSystem::getConfiguredGravity` 로 읽고, 셰이더(파도)는 머티리얼 상수로 같은 값을 받습니다. 언리얼의 `UWorld::GetGravityZ` 에 해당합니다.

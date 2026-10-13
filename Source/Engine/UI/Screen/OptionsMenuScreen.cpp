@@ -39,6 +39,37 @@ namespace sw
             static constexpr utf8 kTabClass[]          = "tab";
             static constexpr utf8 kSelectedTabClass[]  = "tab selected";
 
+            /** @brief 설정 종류 하나의 행 UI — 행 문서와 값 위젯에 연결하는 필드(설정 바인딩 규약)입니다. */
+            struct RowWidgetDef
+            {
+                UserSettingType _type;
+                const utf8*     _pValueProperty;         ///< 키 바인딩은 버튼이라 nullptr 입니다.
+                const utf8*     _pRowDocument;           ///< 마우스 · 키보드 모드의 행 문서입니다.
+                const utf8*     _pNavigationRowDocument; ///< 패드 탐색 모드(`UIInputMode::Navigation`)의 행 문서입니다.
+            };
+
+            /** @brief 종류마다 한 줄, 열거자 순서입니다 — 아래 static_assert 가 순서와 줄 수를 지킵니다. */
+            static constexpr RowWidgetDef kArrRowWidget[] = {
+                {      UserSettingType::Bool,      "_bChecked",       "engine/ui/parts/setting_bool.ui.xml",       "engine/ui/parts/setting_bool.ui.xml"},
+                {       UserSettingType::Int,         "_value",        "engine/ui/parts/setting_int.ui.xml",        "engine/ui/parts/setting_int.ui.xml"},
+                {     UserSettingType::Float,         "_value",      "engine/ui/parts/setting_float.ui.xml",      "engine/ui/parts/setting_float.ui.xml"},
+                {      UserSettingType::Enum, "_selectedIndex",       "engine/ui/parts/setting_enum.ui.xml",   "engine/ui/parts/setting_enum_pad.ui.xml"},
+                {UserSettingType::KeyBinding,          nullptr, "engine/ui/parts/setting_keybinding.ui.xml", "engine/ui/parts/setting_keybinding.ui.xml"},
+                {    UserSettingType::String,          "_text",     "engine/ui/parts/setting_string.ui.xml",     "engine/ui/parts/setting_string.ui.xml"},
+            };
+
+            static constexpr bool isRowWidgetInEnumOrder()
+            {
+                for ( size_t index = 0; index < std::size( kArrRowWidget ); ++index )
+                {
+                    if ( static_cast<size_t>( kArrRowWidget[index]._type ) != index )
+                        return false;
+                }
+                return true;
+            }
+
+            static const RowWidgetDef& getRowWidget( UserSettingType type ) { return kArrRowWidget[static_cast<size_t>( type )]; }
+
             /** @brief @p widget 과 그 자손의 이름을 `<접두>.<이름>` 으로 감쌉니다(같은 견본을 행마다 써도 이름이 겹치지 않게). */
             static void prefixNames( Widget& widget, const string& prefix )
             {
@@ -74,6 +105,10 @@ namespace sw
                 return screen;
             }
         };
+
+        static_assert( OptionsMenuScreenInternal::isRowWidgetInEnumOrder(), "kArrRowWidget rows must follow UserSettingType order" );
+        static_assert( std::size( OptionsMenuScreenInternal::kArrRowWidget ) == static_cast<size_t>( UserSettingType::String ) + 1,
+                       "kArrRowWidget needs one row per UserSettingType" );
     } // namespace
 
     SW_UI_SCREEN_SWITCH( OptionsMenu, "OptionsMenu", 2, &OptionsMenuScreenInternal::syncSwitch );
@@ -111,8 +146,8 @@ namespace sw
 
     const utf8* OptionsMenuScreen::findRowDocument( const UserSettingDef& setting, UIInputMode mode )
     {
-        const UserSettingTypeTraits& traits = UserSettingsSchema::getTypeTraits( setting._type );
-        return mode == UIInputMode::Navigation ? traits._pNavigationRowDocument : traits._pRowDocument;
+        const OptionsMenuScreenInternal::RowWidgetDef& rowWidget = OptionsMenuScreenInternal::getRowWidget( setting._type );
+        return mode == UIInputMode::Navigation ? rowWidget._pNavigationRowDocument : rowWidget._pRowDocument;
     }
 
     bool OptionsMenuScreen::onCommand( const hashed_string& command, Widget& source )
@@ -337,7 +372,8 @@ namespace sw
             addBinding( binding );
         }
 
-        if ( TextWidget* pLabel = tree.findWidget<TextWidget>( hashed_string( prefix + "." + Internal::kLabelName ) ); pLabel != nullptr )
+        TextWidget* pLabel = tree.findWidget<TextWidget>( hashed_string( prefix + "." + Internal::kLabelName ) );
+        if ( pLabel != nullptr )
             pLabel->setText( setting._textKey.empty() ? string_view( prefix ) : string_view( setting._textKey ) );
         RowEntry entry{};
         entry._settingID = setting._id;
@@ -349,12 +385,14 @@ namespace sw
         }
         entry._value            = pValue->getID();
         const string expression = "{setting:" + prefix + "}";
-        const utf8*  pProperty  = UserSettingsSchema::getTypeTraits( setting._type )._pValueProperty;
+        const utf8*  pProperty  = Internal::getRowWidget( setting._type )._pValueProperty;
         if ( pProperty != nullptr )
             addBinding( UIBindingDesc{ pProperty, expression, pValue->getID(), 0 } );
-        if ( Widget* pValueText = tree.findWidgetByName( hashed_string( prefix + "." + Internal::kValueTextName ) ); pValueText != nullptr )
+        Widget* pValueText = tree.findWidgetByName( hashed_string( prefix + "." + Internal::kValueTextName ) );
+        if ( pValueText != nullptr )
             addBinding( UIBindingDesc{ "_text", "{setting:" + prefix + ", mode=OneWay}", pValueText->getID(), 0 } );
-        if ( Widget* pGlyph = tree.findWidgetByName( hashed_string( prefix + "." + Internal::kGlyphName ) ); pGlyph != nullptr )
+        Widget* pGlyph = tree.findWidgetByName( hashed_string( prefix + "." + Internal::kGlyphName ) );
+        if ( pGlyph != nullptr )
             entry._glyph = pGlyph->getID();
         _listRow.push_back( entry );
         return true;
@@ -374,7 +412,8 @@ namespace sw
             const string glyph = _pSettings->getBindingGlyph( row._settingID, style );
             if ( pGlyph->getText() != glyph )
                 pGlyph->setText( glyph );
-            if ( Widget* pValue = getTree().findWidgetByID( row._value ); pValue != nullptr )
+            Widget* pValue = getTree().findWidgetByID( row._value );
+            if ( pValue != nullptr )
                 pValue->setEnabled( _pSettings->isSettingEnabled( row._settingID ) );
         }
     }
@@ -402,7 +441,8 @@ namespace sw
         pPrompt->registerCommand( "Apply", SW_DELEGATE_LAMBDA( UICommandDelegate, [pPrompt, findMenu]( const hashed_string&, Widget& )
         {
             pPrompt->close();
-            if ( OptionsMenuScreen* pMenu = findMenu(); pMenu != nullptr )
+            OptionsMenuScreen* pMenu = findMenu();
+            if ( pMenu != nullptr )
             {
                 pMenu->apply();
                 pMenu->close();
@@ -411,7 +451,8 @@ namespace sw
         pPrompt->registerCommand( "Discard", SW_DELEGATE_LAMBDA( UICommandDelegate, [pPrompt, findMenu]( const hashed_string&, Widget& )
         {
             pPrompt->close();
-            if ( OptionsMenuScreen* pMenu = findMenu(); pMenu != nullptr )
+            OptionsMenuScreen* pMenu = findMenu();
+            if ( pMenu != nullptr )
             {
                 if ( pMenu->_pSettings != nullptr )
                     pMenu->_pSettings->revertPending();

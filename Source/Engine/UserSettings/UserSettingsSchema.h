@@ -131,14 +131,11 @@ namespace sw
     /**
      * @brief 설정 종류 하나의 성질입니다. 종류마다 다른 데이터(스키마 이름 · 파일 모양 · 전역 변수 대상 · 옵션 메뉴 행)는 이 표의 한 줄에서 읽습니다.
      * @details 표는 `UserSettingsSchema::getTypeTraits` 가 돌려줍니다. 종류를 더하면 열거자와 표 한 줄을 같이 더합니다 — 표 순서가 열거자 순서와
-     *          어긋나면 컴파일이 멈춥니다. 값 정규화 · 위젯 바인딩처럼 종류마다 코드가 다른 것은 각자의 switch 에 남습니다.
+     *          어긋나면 컴파일이 멈춥니다. 값 정규화처럼 종류마다 코드가 다른 것은 각자의 switch 에 남고, UI 쪽 성질(행 문서 · 값 위젯 필드)은 그것을 그리는 옵션 메뉴(`OptionsMenuScreen`)가 갖습니다.
      */
     struct UserSettingTypeTraits
     {
         const utf8*            _pName;                  ///< 스키마 XML 의 `type` 값입니다.
-        const utf8*            _pValueProperty;         ///< 값 위젯에 연결하는 필드(설정 바인딩 규약)입니다. 키 바인딩은 버튼이라 nullptr 입니다.
-        const utf8*            _pRowDocument;           ///< 옵션 메뉴 행 UI 문서입니다.
-        const utf8*            _pNavigationRowDocument; ///< 패드 탐색 모드(`UIInputMode::Navigation`)의 행 UI 문서입니다.
         uint32                 _globalVariableTypeMask; ///< 대상으로 받을 수 있는 전역 변수 타입 비트(`SW_BIT( GlobalVariableType )`)입니다.
         UserSettingType        _type;
         UserSettingStorageKind _storageKind;

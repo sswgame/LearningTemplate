@@ -2,10 +2,11 @@
  * @file PositionWelder.h
  * @brief 허용 오차 안의 위치를 처음 본 위치 하나로 합치는(weld) 격자 용접기입니다. 메시 정점 합치기의 정본입니다.
  * @details 위치를 차례로 넣으면 대표 점 번호를 돌려줍니다. 오차 안에 이미 넣은 점이 있으면 그 번호, 없으면 새 번호입니다.
- *          격자 셀(한 변이 허용 오차)과 이웃 26 셀을 함께 봐서 셀 경계에 걸친 두 점도 합칩니다.
+ *          격자 셀의 한 변은 허용 오차의 두 배라, 오차 안의 점은 축마다 자기 셀과 가까운 쪽 이웃 하나에만 있을 수 있다 — 2x2x2 셀만 본다
+ *          (한 변이 오차면 27 셀을 봐야 해 정렬 합치기보다 느렸다). 셀 안의 점은 셀마다 하나의 사슬(`_listNextInCell`)로 이어 할당이 셀 수가 아니라 점 수만큼이다.
  *
  *          **결정성.** 같은 위치를 같은 순서로 넣으면 번호와 대표 점이 언제나 같습니다. 해시 표는 찾기에만 쓰고 순회하지 않으며,
- *          이웃 셀은 정해진 순서(z → y → x, 각각 -1 → +1)로, 셀 안의 점은 넣은 순서로 봅니다. 쿠킹 해시와 파괴 해시가 이 성질에 기댑니다.
+ *          이웃 셀은 정해진 순서(z → y → x, 각각 작은 셀 → 큰 셀)로, 셀 안의 점은 넣은 순서로 봅니다. 쿠킹 해시와 파괴 해시가 이 성질에 기댑니다.
  *          대표 점은 오차 안에서 **처음 넣은 점**이라 합친 결과가 넣는 순서에 따라 달라질 수 있습니다(같은 입력이면 같다).
  *
  *          쓰는 곳: 물리 메시 셰이프(`PhysicsMeshShapeCache::makeShapeData`), 메시 파괴(`MeshFracture`), 캐릭터 기하 자르기(`GeometryCutUtil`).
@@ -46,8 +47,16 @@ namespace sw
         void clear();
 
     private:
-        float32                               _tolerance;
-        vector<float3>                        _listPoint;
-        unordered_map<uint64, vector<uint32>> _mapCellToPoint; ///< 셀 키 → 그 셀에 든 대표 점 번호(넣은 순서). 찾기에만 쓰고 순회하지 않는다.
+        /** @brief 셀 하나의 사슬 — 처음 넣은 점과 마지막 점(넣은 순서로 잇는다). */
+        struct CellChain
+        {
+            uint32 _first;
+            uint32 _last;
+        };
+
+        float32                          _tolerance;
+        vector<float3>                   _listPoint;
+        vector<uint32>                   _listNextInCell; ///< 점 번호 → 같은 셀의 다음 점(넣은 순서). 끝이면 `invalid_index::kUint32`
+        unordered_map<uint64, CellChain> _mapCellToChain; ///< 셀 키 → 그 셀의 사슬. 찾기에만 쓰고 순회하지 않는다.
     };
 } // namespace sw

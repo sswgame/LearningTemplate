@@ -1098,8 +1098,8 @@ namespace sw
         context._viewportSize  = _viewport._size;
         context._uiScale       = _viewport._uiScale;
         context._textScale     = gv_uiTextScale > 0.0f ? static_cast<float32>( gv_uiTextScale ) : 1.0f;
-        context._bRightToLeft  = UILayoutPass::isCultureRightToLeft( _pLocalization );
         context._pLocalization = findLocalization();
+        context._bRightToLeft  = UILayoutPass::isCultureRightToLeft( context._pLocalization ); // 세터를 안 부른 운영 경로도 엔진 서비스의 문화권을 본다
         context._textRevision  = context._pLocalization != nullptr ? context._pLocalization->getTextRevision() : 0;
         context._pActionGlyphs = &_actionGlyphs;
         return context;

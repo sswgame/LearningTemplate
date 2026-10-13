@@ -184,31 +184,15 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   뽑는다(단순 정규식은 틀린다).
 
 - `C-19` **구조 리팩토링의 남은 후보.**
-  - **자체 포맷 로더를 리플렉션으로(R4)**: `SpriteClipAsset` · `SequenceAsset` · `Skeleton` · `AnimationGraphAsset` · `DialogueGraphAsset` · `LocalizationDocuments` · `CultureInfo`. 파일 하나가 한 단위라 서로 충돌하지 않는다.
+  - **자체 포맷 로더를 리플렉션으로(R4)**: `SpriteClipAsset` · `SequenceAsset` · `Skeleton` · `DialogueGraphAsset`. 파일 하나가 한 단위라 서로 충돌하지 않는다.
     먼저 판정한다 — 적지 않은 값의 의미가 필요한가(부모 상속, "없음" 과 "0" 구분)? 그렇다면 옮기지 않는다(기준은 [결정 기록](09_Decisions.md) 5-4). 옮긴다면 구조체에 `REFLECT` · `PROPERTY`,
     `ConfigManager::readConfigJSON` 으로 읽기(모르는 키 · 읽지 못한 값 · 범위는 거기서 오류), 의미 검사만 직접. 데이터 파일은 키를 `_이름` 규약으로 다시 쓰고(옛 이름 별칭 없음) 설정 카탈로그를 `typeName` 방식으로 바꿔 문서를 생성한다.
     검증: 그 로더의 기존 테스트, `ResourceDataSchemaTest`, 설정 · 리소스 스키마 게이트.
-  - **`getBoundEngineServices()` 직접 읽기**: `SceneEngineServices` 주입(S10)과 같은 패턴이 범위 밖에 남았다 — `FacialAnimationComponent` · `WidgetComponent` · `UISystem` · `FontService`,
+  - **`getBoundEngineServices()` 직접 읽기**: `SceneEngineServices` 주입(S10)과 같은 패턴이 범위 밖에 남았다 — `WidgetComponent`(`UISystem` 조회만 남음) · `UISystem` · `FontService`,
     `SceneCooker` · `SceneNavigationCooker` · `PortraitRenderer` 의 인자 없는 `Scene` 생성.
-  - `UIAutomationSteps::ensureLinked` 호출(`UISystem::initialize`)은 Engine 이 통째 링크라 불필요해 보인다 — 지울 수 있는지 확인.
-  - `Joint2DComponent` 는 Cone 을 고르면 `createJoint` 를 프레임마다 다시 시도해 오류 로그를 반복한다.
 
-- `C-20` **오디오 데이터 핫 리로드가 두 벌이다.** 엔진(`IAudioService::isDataFile` · `reloadDataFile` — `AudioEngine::findEventLibraryName`, 에셋 캐시 `AudioData`)과
-  에디터(`Editor/Panels/AudioMixer/AudioDataHotReload` — `FileWatchDispatcher` · `AudioEngine::hasEventLibrary`)가 같은 파일을 각자 다시 읽는다. 에디터 쪽을 엔진 경로로 합친다
-  (에디터 경로 표 `EditorAssetType.cpp` 에서 `*.audiomixer.xml` · `*.audioevents.xml` 을 `kAnyCacheHoldingPath` 로). 함정: 에디터 감시기는 `EditorContext` 가 소유하고 로더 락 밖에서 정리한다 —
-  함수 정적 객체로 두면 에디터 DLL 언로드 중(로더 락 보유) 감시 스레드 join 이 교착한다.
+- `C-22` **작은 정리 후보(2026-10-13 병합 검토에서 모음).** `IPhysicsScene3D/2D` 전방 선언용 `*Fwd.h`, Core → Log 예외 다섯 파일(티어마다 필요한 것이 달라 함수 포인터 하나로 풀리지 않는다), 프렐류드 예외 제거(184 파일).
 
-- `C-21` **정점 위치 합치기가 세 벌이다** — `PhysicsMeshShapeCache`(정렬 기반, 결정적) · `MeshFracture` 의 위치 합치기 · `Character/Fit/GeometryCut`. Core 도우미 하나로 모은다.
-  같은 입력이면 같은 순서가 나오는 결정성을 지킨다(쿠킹 해시 · 파괴 해시가 기대는 성질이다).
-
-- `C-22` **작은 정리 후보(2026-10-13 병합 검토에서 모음).** `LoopbackStreamTransport.cpp` 의 직접 짠 프리리스트(306 줄 근처) · `AutomationScenarioChain::splitList` 의 손으로 짠 토큰 루프를 공용 도우미로,
-  `IPhysicsScene3D/2D` 전방 선언용 `*Fwd.h`, Core → Log 예외 다섯 파일(티어마다 필요한 것이 달라 함수 포인터 하나로 풀리지 않는다), 프렐류드 예외 제거(184 파일),
-  `UserSettingType` 처리 분기(Engine 파일 세 곳)를 표 하나로, 모프 풀 준비에 프로파일 구간이 없다, `Scripts/qa/PerfCompare.py` · `SceneLoadBench.py` 를 `Scripts/__main__.py` 서브커맨드로 등록하고
-  [검증과 측정](08_Verification.md) 2절에 측정 명령을 적는다.
-
-- `C-23` **컨테이너의 "비우기" 가 용량을 남긴다.** `sw::vector` 는 `x = {}` 가 initializer_list 대입이라 버퍼를 두고, `shrink_to_fit` 도 빈 벡터면 그냥 돌아간다(`vector.h`, `_size == 0`).
-  `sw::unordered_map::clear` 도 용량을 남긴다. 종료 때 놓아야 하는 저장소는 지금 빈 객체 이동 대입으로 피한다(`UIPaintPass::releaseScratch` · `LiveReloadManager::clearContexts`).
-  `shrink_to_fit` 의 빈 벡터 동작을 고칠지, 놓기 전용 도우미를 둘지, `= {}` 대입을 린트로 막을지 정한다.
 - `C-24` **스레드 안전 탐지기가 못 보는 결함 종류를 메운다**(2026-10-13, 사용자가 '나중에' 하기로 함). `DataRaceDetector` 는 `sw::` 컨테이너 래퍼 안의 읽기 · 쓰기 겹침만, `DeadlockDetector` 는 `sw::mutex` 대기 그래프의 사이클만 본다.
   이번 세션에 나온 스레드 결함은 대부분 그 밖이었다: ① 에디터 종료 교착 — `DllMain` 정적 소멸자(로더 락) 안의 `thread::join`(`sw::mutex` 가 아니라 탐지기가 못 봄), ② E-9 Quick Open — `isPending()` 을 읽은 시점과 결과를 꺼낸 시점이 어긋나는 논리 경합(TOCTOU, 각각은 atomic 이라 데이터 레이스가 아님),
   ③ 그림자 PassCB 슬롯 재사용 — GPU 가 나중에 읽는 순서 문제, ④ `TaskHandle` · `TaskStageHandle` 이 `TaskManager` 소멸 뒤 해제될 때 노드를 풀로 돌려주는 수명 순서. (컨테이너 레이스 `ConcurrentTextureAcquireCreatesOnce` 만 탐지기가 정확히 잡았다.)
@@ -387,7 +371,7 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
 
 - `D5-1` **오디오 엔진(`Engine/Audio/README.md`)의 남은 것.** (2) 에디터 — 이벤트 브라우저는 로드된 라이브러리의 이벤트 이름 목록뿐이다(이벤트별 파라미터 편집 · 인스턴스 목록 없음), 보이스 · 가상화 프로파일러.
   (4) 출력: HRTF(바이노럴) · 5.1/7.1(지금 출력은 스테레오), 리눅스 출력 백엔드(지금 Null — 후보는 `G-11`). (5) 회절. (6) 컨볼루션 리버브, 그래뉼러 · 절차 소리
-  그래프(MetaSounds 급). 데이터 핫 리로드가 엔진 · 에디터 두 벌인 것은 `C-20`.
+  그래프(MetaSounds 급).
 
 - `D5-2` **로컬라이제이션 — 남은 것**(`Engine/Localization/README.md`). 아랍어 이외 RTL 문화권 데이터 · `ja` 번역(`po/ja.po` 의 글이 비어 있다).
   아이템 이름(Shooter3D)은 표에 모이지만 화면에 쓰는 코드가 아직 없다(무기 이름은 HUD 가 `getStringByText` 로 쓴다).

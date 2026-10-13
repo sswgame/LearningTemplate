@@ -38,18 +38,12 @@ namespace sw
 
             /** @brief 설정 종류의 성질 표입니다. 열거자 순서대로 한 줄씩 둡니다 — 아래 static_assert 가 순서와 줄 수를 지킵니다. */
             static constexpr UserSettingTypeTraits kArrTypeTraits[] = {
-                {      "bool",      "_bChecked",       "engine/ui/parts/setting_bool.ui.xml",       "engine/ui/parts/setting_bool.ui.xml",kBooleanVariable,       UserSettingType::Bool,
-                 UserSettingStorageKind::Bool, false                                                                               },
-                {       "int",         "_value",        "engine/ui/parts/setting_int.ui.xml",        "engine/ui/parts/setting_int.ui.xml", kInt32Variable | kEnumVariable,        UserSettingType::Int,
-                 UserSettingStorageKind::Number,  true                                                                             },
-                {     "float",         "_value",      "engine/ui/parts/setting_float.ui.xml",      "engine/ui/parts/setting_float.ui.xml",                 kFloatVariable,      UserSettingType::Float,
-                 UserSettingStorageKind::Number,  true                                                                             },
-                {      "enum", "_selectedIndex",       "engine/ui/parts/setting_enum.ui.xml",   "engine/ui/parts/setting_enum_pad.ui.xml",
-                 kInt32Variable | kEnumVariable | kStringVariable,       UserSettingType::Enum, UserSettingStorageKind::Text, false},
-                {"keyBinding",          nullptr, "engine/ui/parts/setting_keybinding.ui.xml", "engine/ui/parts/setting_keybinding.ui.xml",                              0, UserSettingType::KeyBinding,
-                 UserSettingStorageKind::Text, false                                                                               },
-                {    "string",          "_text",     "engine/ui/parts/setting_string.ui.xml",     "engine/ui/parts/setting_string.ui.xml",                kStringVariable,     UserSettingType::String,
-                 UserSettingStorageKind::Text, false                                                                               },
+                {      "bool",                                 kBooleanVariable,       UserSettingType::Bool,   UserSettingStorageKind::Bool, false},
+                {       "int",                   kInt32Variable | kEnumVariable,        UserSettingType::Int, UserSettingStorageKind::Number,  true},
+                {     "float",                                   kFloatVariable,      UserSettingType::Float, UserSettingStorageKind::Number,  true},
+                {      "enum", kInt32Variable | kEnumVariable | kStringVariable,       UserSettingType::Enum,   UserSettingStorageKind::Text, false},
+                {"keyBinding",                                                0, UserSettingType::KeyBinding,   UserSettingStorageKind::Text, false},
+                {    "string",                                  kStringVariable,     UserSettingType::String,   UserSettingStorageKind::Text, false},
             };
             static constexpr NamedValue<UserSettingApplyTiming> kArrTimingName[] = {
                 {"immediate",    UserSettingApplyTiming::Immediate},
