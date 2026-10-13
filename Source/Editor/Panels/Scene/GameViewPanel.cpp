@@ -15,6 +15,7 @@
 #include "Editor/Common/Widgets/EditorDebugHUDControls.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/ViewportInputOverlay.h"
@@ -42,8 +43,8 @@ namespace sw::editor
         EditorContext* pClosedContext = EditorContext::get();
         if ( pClosedContext != nullptr )
         {
-            pClosedContext->setGameViewFocused( false );
-            pClosedContext->setGameViewHovered( false );
+            pClosedContext->getSubsystem<EditorRenderViews>().setGameViewFocused( false );
+            pClosedContext->getSubsystem<EditorRenderViews>().setGameViewHovered( false );
         }
     }
 
@@ -54,10 +55,10 @@ namespace sw::editor
             return;
 
         // Play 중 게임 입력은 이 패널 위에서만 게임으로 간다(`ImGuiEditor::processEvent`). 씬 뷰 위의 입력은 에디터 카메라 몫이다.
-        pEditorContext->setGameViewFocused( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) );
-        if ( pEditorContext->isGameViewFocused() )
+        pEditorContext->getSubsystem<EditorRenderViews>().setGameViewFocused( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) );
+        if ( pEditorContext->getSubsystem<EditorRenderViews>().isGameViewFocused() )
             EditorScreenshotCommands::noteFocusedView( EditorViewKind::Game );
-        pEditorContext->setGameViewHovered( ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows ) );
+        pEditorContext->getSubsystem<EditorRenderViews>().setGameViewHovered( ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows ) );
 
         drawToolbar();
 
@@ -67,19 +68,19 @@ namespace sw::editor
         const uint32         height    = static_cast<uint32>( rect._size._y );
         if ( width > 1 && height > 1 )
         {
-            const EditorViewTarget& view = pEditorContext->getViewTarget( EditorViewKind::Game );
+            const EditorViewTarget& view = pEditorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game );
             if ( EditorViewTargetUtil::needsResize( view._width, view._height, width, height ) )
-                pEditorContext->ensureViewTargetSize( EditorViewKind::Game, width, height );
+                pEditorContext->getSubsystem<EditorRenderViews>().ensureViewTargetSize( EditorViewKind::Game, width, height );
         }
         // 이 패널이 보이는 프레임만 게임 뷰를 그린다(접힘 · 닫힘 · 다른 탭이면 drawContent 가 불리지 않는다 — 게임 뷰 RT 요청 0).
-        pEditorContext->markViewDrawn( EditorViewKind::Game );
+        pEditorContext->getSubsystem<EditorRenderViews>().markViewDrawn( EditorViewKind::Game );
 
         // 레터박스 — 남는 쪽은 비워 둔다. 이미지는 RT 크기 그대로(늘이지 않는다).
         const ImVec2 origin = ImGui::GetCursorScreenPos();
         const ImVec2 imagePos{ origin.x + rect._offset._x, origin.y + rect._offset._y };
         const ImVec2 imageSize{ rect._size._x, rect._size._y };
         ImGui::SetCursorScreenPos( imagePos );
-        const void* pTextureID = pEditorContext->getViewTarget( EditorViewKind::Game )._pTextureID;
+        const void* pTextureID = pEditorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game )._pTextureID;
         if ( pTextureID != nullptr && imageSize.x > 1.0f && imageSize.y > 1.0f )
             ImGui::Image( reinterpret_cast<ImTextureID>( pTextureID ), imageSize );
         else

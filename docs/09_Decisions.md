@@ -515,6 +515,10 @@
   언리얼은 서브시스템을 범위(엔진 · 에디터 · 게임 인스턴스)마다 그 범위 객체가 소유하고 `GetSubsystem<T>()` 로 찾는 것으로 알고 있다(기억에 의존). 같은 모양을 Core 에 두고(`ISubsystemLocator` · `SubsystemScope` ·
   `locateSubsystem` 이 상위 범위로 올라간다), 게임 · 에디터 창구의 복제 템플릿(타입 해시 · 서비스 칸 trait · 로컬 표)을 지웠다. 이전의 "건 이미지" 를 반환 주소로 기록해 언로드 때 훑어 회수하던
   장치는 없앴다 — 범위가 인스턴스와 함께 사라져 풀지 않은 칸이 남을 수 없다(우리 쪽이 더 단순해진 확장). 테스트는 자기 범위를 `ScopedGameScope` · `ScopedEditorScope` 로 잠시 건다.
+- **`EditorContext` 는 범위를 들고 하위 객체를 만드는 얇은 껍데기다 — 상태는 모두 에디터 서브시스템이 든다**(2026-10-14). 하위 객체마다 두던 포인터 · 접근자 열다섯은
+  `getSubsystem<T>()` 하나로(언리얼 `GEditor->GetEditorSubsystem<T>()`), 컨텍스트에 직접 있던 뷰 렌더 타깃 · RHI 디바이스 · 렌더러 백엔드 · 게임 뷰 입력은 `EditorRenderViews`,
+  플레이 세션 상태는 `EditorPlaySessionState`, 테마 값은 `EditorTheme` 으로 옮겼다. 셸의 독 레이아웃은 범위에 빌려 건다(`findSubsystem<EditorDockLayout>()`).
+  활성 컨텍스트 정적 포인터도 지웠다 — 컨텍스트가 자기 범위에 자신을 걸어 `EditorContext::get()` 은 지금 에디터 범위의 주인을 찾는다(첫 칸이라 비교 한 번). 정적 상태는 "지금 에디터 범위" 하나뿐이다.
 
 - **GameFramework 최상위에는 `Base/`(장르 공통 기반)와 `Kits/`(장르 키트)만 둡니다**(2026-10-06). 게이트가 다른 폴더를 막습니다.
 - **기반은 `Base/<층>/<폴더>/` 두 단이고, 층은 아래에서 `Online` < `Foundation` < `World` < `Actor` < `UI` < `Gameplay` 입니다**(2026-10-10).
@@ -622,8 +626,8 @@
 - **패널과 커맨드의 `EditorContext::get()`(62 파일 224 곳)은 생성자 · 인자 주입으로 바꾸지 않습니다**(2026-10-11). 패널은 레지스트리가 인자 없이 만들고(`createEditorPanel<T>`),
   상용 엔진도 에디터 하위 시스템을 전역 창구로 줍니다(언리얼 `GEditor->GetEditorSubsystem<T>()`, 유니티 `Selection.activeObject` · `EditorWindow.GetWindow<T>()`).
   EditorTest 는 UI 매니저 때문에 `EditorContext` 를 만들 수 없으므로 컨텍스트를 인자로 바꿔도 테스트가 늘지 않습니다. 테스트할 판단이 생기면 그 함수만 필요한 서비스 하나(작업 공간, 선택)를 인자로 받습니다.
-  `get()` 은 정적 포인터 하나를 돌려줍니다(Debug 에서 호출당 550 → 8 ns, 프레임당 57 회 — 최적화가 아니라 조회 경로를 하나로 줄인 단순화입니다).
-  `EditorService.h` 는 호스트(엔진) 서비스 창구이고 `EditorContext` 는 에디터가 소유한 하위 시스템이라 둘을 합치지 않습니다. 언리얼도 `GEngine` 서브시스템과 `GEditor` 서브시스템을 가릅니다.
+  `get()` 은 지금 에디터 범위의 주인을 돌려줍니다(범위의 첫 칸 — 프레임당 57 회 호출에 비교 한 번).
+  `editor::getService<T>()` 는 에디터 범위(컨텍스트의 하위 객체)를 먼저 보고 없으면 호스트(엔진) 표를 봅니다. 언리얼이 `GEditor` 서브시스템과 `GEngine` 서브시스템을 범위로 가르는 것과 같은 순서입니다.
 - **임포터(`Editor/Common/Asset`)를 라이브러리로 떼지 않습니다**(2026-10-11). 명령 줄 임포트(`App --import-*` · `--check-*`)는 App 이 에디터 모듈을 인스턴스 없이 로드해 C-ABI 진입점 `importEditorAssets` 를 부르고,
   쿠킹은 임포트 산출물만 읽으며, 전용 서버와 Shipping 은 임포트하지 않습니다. 상용 엔진도 에디터 바이너리를 머리 없이 돌립니다(언리얼 커맨드릿, 유니티 `-batchmode`, Godot `--headless --import`).
   `Common/Asset` 은 이미 ImGui 를 모르는 층 1 이라, 에디터 없는 빌드 팜이나 쿠킹 서버에서 임포트할 일이 생기면 그때 정적 라이브러리로 묶는 비용이 작습니다.

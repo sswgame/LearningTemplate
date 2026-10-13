@@ -10,6 +10,7 @@
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Scene/HierarchyPanel.h"
@@ -685,8 +686,8 @@ namespace sw::editor
                 // 패널과 같은 순서로 크기를 맞춘 뒤 그 프레임의 텍스처를 그린다. 이 프레임에서 해제한 텍스처는 앞 프레임의 스냅샷만 그렸다.
                 const uint32 width  = 256u + ( stepIndex % 2u ) * 64u;
                 const uint32 height = 144u + ( stepIndex % 2u ) * 36u;
-                pContext->ensureViewTargetSize( EditorViewKind::Scene, width, height );
-                const EditorViewTarget& view = pContext->getViewTarget( EditorViewKind::Scene );
+                pContext->getSubsystem<EditorRenderViews>().ensureViewTargetSize( EditorViewKind::Scene, width, height );
+                const EditorViewTarget& view = pContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene );
                 (void)context.expect( view._width == width && view._height == height && view._pTextureID != nullptr,
                                       "the scene view target was not recreated at the requested size" );
 
@@ -743,7 +744,7 @@ namespace sw::editor
                 constexpr uint32      kMaxStepCount    = 30;
 
                 EditorContext* pContext = EditorContext::get();
-                if ( context.expect( pContext != nullptr && pContext->getRHIDevice() != nullptr, "no editor context or RHI device" ) == false )
+                if ( context.expect( pContext != nullptr && pContext->getSubsystem<EditorRenderViews>().getRHIDevice() != nullptr, "no editor context or RHI device" ) == false )
                     return EditorSelfTestStep::Done;
 
                 const uint32 stepIndex = context.getStepIndex();
@@ -761,7 +762,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue;
                 }
                 (void)context.expect( pTable != nullptr, "the profiler GPU Memory tab never drew its ledger table" );
-                const RHIMemoryLedger& ledger = pContext->getRHIDevice()->getMemoryLedger();
+                const RHIMemoryLedger& ledger = pContext->getSubsystem<EditorRenderViews>().getRHIDevice()->getMemoryLedger();
                 (void)context.expect( ledger.getTrackedBytes() > 0, "the GPU memory ledger is empty in a running editor" );
                 (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kProfilerPanelID, false );
                 return EditorSelfTestStep::Done;
@@ -852,9 +853,9 @@ namespace sw::editor
                     HWND           hWnd = static_cast<HWND>( ImGui::GetMainViewport()->PlatformHandleRaw );
                     RECT           client{};
                     EditorContext* pContext = EditorContext::get();
-                    if ( hWnd != nullptr && GetClientRect( hWnd, &client ) && pContext != nullptr && pContext->getRHIDevice() != nullptr )
+                    if ( hWnd != nullptr && GetClientRect( hWnd, &client ) && pContext != nullptr && pContext->getSubsystem<EditorRenderViews>().getRHIDevice() != nullptr )
                     {
-                        const IRHIDevice* pDevice    = pContext->getRHIDevice();
+                        const IRHIDevice* pDevice    = pContext->getSubsystem<EditorRenderViews>().getRHIDevice();
                         const bool        bGrew      = ( probe._suggestedRect.right - probe._suggestedRect.left ) > ( probe._originalRect.right - probe._originalRect.left );
                         const bool        bMatchesBb = pDevice->getBackBufferWidth() == static_cast<uint32>( client.right ) &&
                                                 pDevice->getBackBufferHeight() == static_cast<uint32>( client.bottom );

@@ -19,6 +19,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorLayoutStore.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
+#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -275,7 +276,7 @@ namespace sw::editor
             ImGui::SameLine();
         }
 
-        IRHIDevice* pRHIDevice = ( pContext != nullptr ) ? pContext->getRHIDevice() : nullptr;
+        IRHIDevice* pRHIDevice = ( pContext != nullptr ) ? pContext->getSubsystem<EditorRenderViews>().getRHIDevice() : nullptr;
         const utf8* pBackend   = ( pRHIDevice != nullptr ) ? pRHIDevice->getBackendName() : "n/a";
         ImGui::TextDisabled( "RHI %s | %.0f FPS", pBackend, static_cast<float64>( ImGui::GetIO().Framerate ) );
         if ( ImGui::IsItemHovered() )

@@ -11,6 +11,7 @@
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -70,15 +71,15 @@ namespace sw::editor
         {
             const uint32            targetWidth  = static_cast<uint32>( size.x );
             const uint32            targetHeight = static_cast<uint32>( size.y );
-            const EditorViewTarget& view         = pEditorContext->getViewTarget( EditorViewKind::Scene );
+            const EditorViewTarget& view         = pEditorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene );
             if ( EditorViewTargetUtil::needsResize( view._width, view._height, targetWidth, targetHeight ) )
-                pEditorContext->ensureViewTargetSize( EditorViewKind::Scene, targetWidth, targetHeight );
+                pEditorContext->getSubsystem<EditorRenderViews>().ensureViewTargetSize( EditorViewKind::Scene, targetWidth, targetHeight );
         }
         // 이 패널이 보이는 프레임만 씬 뷰를 그린다(접힘 · 닫힘 · 다른 탭이면 drawContent 가 불리지 않는다).
-        pEditorContext->markViewDrawn( EditorViewKind::Scene );
+        pEditorContext->getSubsystem<EditorRenderViews>().markViewDrawn( EditorViewKind::Scene );
 
         const ImVec2 imagePos = ImGui::GetCursorScreenPos();
-        _viewportClient.draw( pEditorContext->getViewTarget( EditorViewKind::Scene )._pTextureID, float2{ size.x, size.y } );
+        _viewportClient.draw( pEditorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene )._pTextureID, float2{ size.x, size.y } );
 
         _viewportClient.drawOverlays( float2{ imagePos.x, imagePos.y }, float2{ size.x, size.y } );
     }

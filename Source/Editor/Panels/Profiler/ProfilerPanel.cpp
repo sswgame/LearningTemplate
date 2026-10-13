@@ -18,6 +18,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
+#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -925,7 +926,7 @@ namespace sw::editor
     void ProfilerPanel::drawGPUMemoryTab()
     {
         EditorContext* pContext = EditorContext::get();
-        IRHIDevice*    pDevice  = ( pContext != nullptr ) ? pContext->getRHIDevice() : nullptr;
+        IRHIDevice*    pDevice  = ( pContext != nullptr ) ? pContext->getSubsystem<EditorRenderViews>().getRHIDevice() : nullptr;
         if ( pDevice == nullptr )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorProfiler", "NoRHIDevice" ) );

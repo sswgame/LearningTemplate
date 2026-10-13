@@ -4,6 +4,7 @@
 
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
+#include "Editor/Common/Workspace/EditorRenderViews.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Renderer/Capture/ScreenshotPathUtil.h"
@@ -42,7 +43,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
         // 씬 뷰 RT 는 에디터가 만든 R8G8B8A8_UNORM 이다(`EditorContext::ensureViewTargetSize`).
-        const uint64 renderTarget = pContext->getViewTarget( EditorViewKind::Scene )._renderTarget;
+        const uint64 renderTarget = pContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene )._renderTarget;
         if ( renderTarget == 0 )
         {
             pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyScreenshotTitle" ), SW_LOCKEY( "EdCommon", "NotifyScreenshotNoSceneView" ), NotificationType::Warning );

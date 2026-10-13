@@ -16,6 +16,7 @@
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Material/MaterialPreviewShading.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -425,7 +426,7 @@ namespace sw::editor
         AssetManager*  pResources = editor::getService<AssetManager>();
         EditorContext* pContext   = EditorContext::get();
         if ( pResources != nullptr && pContext != nullptr )
-            pResources->getAssetCache<MaterialCache>().reload( getLoadedAssetPath(), pContext->getRHIDevice() );
+            pResources->getAssetCache<MaterialCache>().reload( getLoadedAssetPath(), pContext->getSubsystem<EditorRenderViews>().getRHIDevice() );
         applyLivePreview();
         _status = SW_LOCKEY( "EditorMaterial", "SavedStatus" );
         clearDocumentDirty();

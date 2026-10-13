@@ -17,6 +17,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -382,8 +383,8 @@ namespace sw::editor
         if ( _pTextureID == nullptr )
             return;
         EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr && pContext->getRendererBackend() != nullptr )
-            pContext->getRendererBackend()->unregisterTexture( _pTextureID );
+        if ( pContext != nullptr && pContext->getSubsystem<EditorRenderViews>().getRendererBackend() != nullptr )
+            pContext->getSubsystem<EditorRenderViews>().getRendererBackend()->unregisterTexture( _pTextureID );
         _pTextureID = nullptr;
         _texture    = 0;
     }
@@ -546,9 +547,9 @@ namespace sw::editor
             return;
         releaseTexture();
         EditorContext* pContext = EditorContext::get();
-        if ( texture == 0 || pContext == nullptr || pContext->getRendererBackend() == nullptr )
+        if ( texture == 0 || pContext == nullptr || pContext->getSubsystem<EditorRenderViews>().getRendererBackend() == nullptr )
             return; // 렌더 스레드가 아직 만들지 않았다(다음 프레임)
-        _pTextureID = pContext->getRendererBackend()->registerTexture( texture );
+        _pTextureID = pContext->getSubsystem<EditorRenderViews>().getRendererBackend()->registerTexture( texture );
         _texture    = _pTextureID != nullptr ? texture : 0;
     }
 

@@ -10,6 +10,7 @@
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -90,8 +91,8 @@ namespace sw::editor
     void RenderTargetPanel::releaseSnapshotTexture( IRHIDevice* pRHIDevice )
     {
         EditorContext*         pContext = EditorContext::get();
-        IImGuiRendererBackend* pBackend = pContext != nullptr ? pContext->getRendererBackend() : nullptr;
-        IRHIDevice*            pDevice  = pRHIDevice != nullptr ? pRHIDevice : ( pContext != nullptr ? pContext->getRHIDevice() : nullptr );
+        IImGuiRendererBackend* pBackend = pContext != nullptr ? pContext->getSubsystem<EditorRenderViews>().getRendererBackend() : nullptr;
+        IRHIDevice*            pDevice  = pRHIDevice != nullptr ? pRHIDevice : ( pContext != nullptr ? pContext->getSubsystem<EditorRenderViews>().getRHIDevice() : nullptr );
         if ( _pSnapshotTextureID != nullptr && pBackend != nullptr )
             pBackend->unregisterTexture( _pSnapshotTextureID );
         _pSnapshotTextureID = nullptr;
@@ -121,8 +122,8 @@ namespace sw::editor
 
         EditorContext* pContext = EditorContext::get();
         // 컨텍스트가 이미 내려갔으면 놓아 줄 상대가 없다. 백엔드가 자기 힙을 통째로 버린 뒤다.
-        if ( pContext != nullptr && pContext->getRendererBackend() != nullptr )
-            pContext->getRendererBackend()->unregisterTexture( _pPreviewTextureID );
+        if ( pContext != nullptr && pContext->getSubsystem<EditorRenderViews>().getRendererBackend() != nullptr )
+            pContext->getSubsystem<EditorRenderViews>().getRendererBackend()->unregisterTexture( _pPreviewTextureID );
         _pPreviewTextureID = nullptr;
         _previewTexture    = 0;
     }
@@ -163,9 +164,9 @@ namespace sw::editor
             return;
 
         EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr || pContext->getRendererBackend() == nullptr )
+        if ( pContext == nullptr || pContext->getSubsystem<EditorRenderViews>().getRendererBackend() == nullptr )
             return;
-        _pPreviewTextureID = pContext->getRendererBackend()->registerTexture( texture );
+        _pPreviewTextureID = pContext->getSubsystem<EditorRenderViews>().getRendererBackend()->registerTexture( texture );
         _previewTexture    = ( _pPreviewTextureID != nullptr ) ? texture : 0;
     }
 
@@ -225,8 +226,8 @@ namespace sw::editor
         _snapshotDepthRange = float2{ image._depthLow, image._depthHigh };
 
         EditorContext* pContext = EditorContext::get();
-        IRHIDevice*    pDevice  = pContext != nullptr ? pContext->getRHIDevice() : nullptr;
-        if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr || pContext->getRendererBackend() == nullptr )
+        IRHIDevice*    pDevice  = pContext != nullptr ? pContext->getSubsystem<EditorRenderViews>().getRHIDevice() : nullptr;
+        if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr || pContext->getSubsystem<EditorRenderViews>().getRendererBackend() == nullptr )
             return;
 
         // 스냅샷마다 새 텍스처를 만든다. 쓰던 것에 다시 올리면 아직 그것을 그리는 프레임과 겹친다(옛 것은 해제 큐가 그 뒤에 부순다).
@@ -251,7 +252,7 @@ namespace sw::editor
             releaseSnapshotTexture( pDevice );
             return;
         }
-        _pSnapshotTextureID = pContext->getRendererBackend()->registerTexture( _snapshotTexture );
+        _pSnapshotTextureID = pContext->getSubsystem<EditorRenderViews>().getRendererBackend()->registerTexture( _snapshotTexture );
     }
 
     void RenderTargetPanel::drawToolbar()

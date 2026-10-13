@@ -12,6 +12,7 @@
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 namespace sw::editor
@@ -39,7 +40,7 @@ namespace sw::editor
             static bool runLayoutSave( const vector<string>& listArgument, string& outReply )
             {
                 EditorContext*    pContext = EditorContext::get();
-                EditorDockLayout* pDock    = pContext != nullptr ? pContext->findDockLayout() : nullptr;
+                EditorDockLayout* pDock    = pContext != nullptr ? pContext->findSubsystem<EditorDockLayout>() : nullptr;
                 if ( listArgument.size() != 1 || pDock == nullptr || pDock->saveNamedLayout( listArgument[0] ) == false )
                     return false;
                 outReply = "saved layout " + listArgument[0];
@@ -49,7 +50,7 @@ namespace sw::editor
             static bool runLayoutLoad( const vector<string>& listArgument, string& outReply )
             {
                 EditorContext*    pContext = EditorContext::get();
-                EditorDockLayout* pDock    = pContext != nullptr ? pContext->findDockLayout() : nullptr;
+                EditorDockLayout* pDock    = pContext != nullptr ? pContext->findSubsystem<EditorDockLayout>() : nullptr;
                 if ( listArgument.size() != 1 || pDock == nullptr || pDock->requestLoadNamedLayout( listArgument[0] ) == false )
                     return false;
                 outReply = "loading layout " + listArgument[0];
@@ -83,7 +84,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( listArgument.empty() == false || pContext == nullptr )
                     return false;
-                const uint32 resetCount = pContext->getSubsystem<EditorPanelManager>().resetOptionalPanels( pContext->getRHIDevice() );
+                const uint32 resetCount = pContext->getSubsystem<EditorPanelManager>().resetOptionalPanels( pContext->getSubsystem<EditorRenderViews>().getRHIDevice() );
                 outReply                = "reset " + to_string( resetCount ) + " optional panel(s)";
                 return true;
             }
@@ -91,7 +92,7 @@ namespace sw::editor
             static bool runLayoutReset( const vector<string>& listArgument, string& outReply )
             {
                 EditorContext*    pContext = EditorContext::get();
-                EditorDockLayout* pDock    = pContext != nullptr ? pContext->findDockLayout() : nullptr;
+                EditorDockLayout* pDock    = pContext != nullptr ? pContext->findSubsystem<EditorDockLayout>() : nullptr;
                 if ( listArgument.empty() == false || pDock == nullptr )
                     return false;
                 pDock->requestResetDefault();

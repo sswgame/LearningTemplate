@@ -9,6 +9,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/EditorSubsystem.h"
+
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 
 namespace sw
@@ -29,8 +31,8 @@ namespace sw::editor
 
     /**
      * @struct PlaySessionData
-     * @brief 플레이 세션의 모든 상태를 담습니다. 소유자는 `EditorContext` 입니다.
-     * @details 컨텍스트가 보관하므로 컨텍스트와 함께 생기고 사라진다. 파일 정적 변수로 두면 수명을 소유한 객체가 없어,
+     * @brief 플레이 세션의 모든 상태를 담습니다. 소유자는 에디터 서브시스템 `EditorPlaySessionState` 입니다.
+     * @details 에디터 범위가 보관하므로 컨텍스트와 함께 생기고 사라진다. 파일 정적 변수로 두면 수명을 소유한 객체가 없어,
      *          컨텍스트를 다시 만들어도 이전 세션의 스냅샷과 재생 상태가 그대로 남는다.
      */
     struct PlaySessionData
@@ -101,9 +103,28 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
+     * @class EditorPlaySessionState
+     * @brief 플레이 세션 상태(`PlaySessionData`)를 드는 에디터 서브시스템입니다. 조작은 정적 파사드 `EditorPlaySession` 이 합니다.
+     */
+    class EditorPlaySessionState final : public EditorSubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "EditorPlaySessionState";
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+
+        PlaySessionData& getData() { return _data; }
+
+    private:
+        PlaySessionData _data{};
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
      * @class EditorPlaySession
      * @brief 에디터 Play-In-Editor(PIE) 시뮬레이션의 수명 주기와 씬 롤백을 관리합니다.
-     * @details 상태는 `EditorContext` 가 보관하고(`PlaySessionData`), 이 클래스는 그 상태를 조작하는 정적 파사드이다.
+     * @details 상태는 에디터 서브시스템 `EditorPlaySessionState` 가 보관하고(`PlaySessionData`), 이 클래스는 그 상태를 조작하는 정적 파사드이다.
      *          컨텍스트가 없으면 "정지" 로 응답한다.
      */
     class EditorPlaySession

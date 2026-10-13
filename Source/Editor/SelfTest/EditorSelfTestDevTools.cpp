@@ -18,6 +18,7 @@
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorLayoutStore.h"
+#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -282,7 +283,7 @@ namespace sw::editor
                 constexpr const utf8* kPanelID    = "history";
                 constexpr const utf8* kLayoutName = "selftest";
                 EditorContext*        pContext    = EditorContext::get();
-                EditorDockLayout*     pDock       = pContext != nullptr ? pContext->findDockLayout() : nullptr;
+                EditorDockLayout*     pDock       = pContext != nullptr ? pContext->findSubsystem<EditorDockLayout>() : nullptr;
                 if ( context.expect( pDock != nullptr, "no dock layout" ) == false )
                     return EditorSelfTestStep::Done;
                 const string folder = FileUtil::joinPath( FileUtil::getTempDirectory(), "sw_editor_selftest_layouts" );
@@ -485,7 +486,7 @@ namespace sw::editor
                 const EditorViewportClient& client    = pPanel->getViewportClient();
                 const bool                  bGrid     = grid._frame == frame;
                 const bool                  bGizmo    = client.getLastGizmoFrame() == frame && client.getLastGizmoObjectCount() >= 1;
-                const bool                  bSceneRan = pContext->wasViewDrawn( EditorViewKind::Scene );
+                const bool                  bSceneRan = pContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Scene );
                 if ( ( bGrid == false || bGizmo == false || bSceneRan == false ) && stepIndex < kMaxWaitFrame )
                     return EditorSelfTestStep::Continue;
                 (void)context.expect( bSceneRan, "the scene view was not drawn while its tab was in front" );
@@ -540,14 +541,14 @@ namespace sw::editor
                     (void)context.expect( _s_overlayProbeObjectID != 0, "could not create the probe object" );
                     return EditorSelfTestStep::Continue;
                 }
-                const EditorViewTarget& view        = pContext->getViewTarget( EditorViewKind::Game );
+                const EditorViewTarget& view        = pContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game );
                 int32                   vertexCount = 0;
                 const bool              bImage      = view._pTextureID != nullptr && countVerticesAfterGameImage( reinterpret_cast<ImTextureID>( view._pTextureID ), vertexCount );
                 if ( ( bImage == false || stepIndex < kSettleFrameCount ) && stepIndex < kMaxWaitFrame )
                     return EditorSelfTestStep::Continue;
                 (void)context.expect( bImage, "the game view image was not drawn while its tab was in front" );
-                (void)context.expect( pContext->wasViewDrawn( EditorViewKind::Game ), "the game view did not mark itself drawn" );
-                (void)context.expect( pContext->wasViewDrawn( EditorViewKind::Scene ) == false, "the scene view was drawn behind the game view tab" );
+                (void)context.expect( pContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Game ), "the game view did not mark itself drawn" );
+                (void)context.expect( pContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Scene ) == false, "the scene view was drawn behind the game view tab" );
                 (void)context.expect( EditorGridStats::get()._frame != ImGui::GetFrameCount(), "the grid was drawn while only the game view was visible" );
                 // 카메라 없음 안내가 없으면 이미지 뒤에 그린 것이 하나도 없어야 한다. 격자, 기즈모, 시각화, 통계, 방향 큐브는 씬 뷰가 그린다.
                 if ( pPanel->wasNoCameraHintShown() == false )

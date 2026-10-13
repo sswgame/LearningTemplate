@@ -64,7 +64,7 @@ namespace sw::editor
                 SW_EDITOR_PROFILE_SCOPE( "GT.Editor.step.panels" );
                 context.getSubsystem<EditorPanelManager>().drawOpenPanels();
                 // 패널이 처음 나타나며 가져간 포커스보다 나중에 실행해야 한다
-                EditorDockLayout* pDockLayout = context.findDockLayout();
+                EditorDockLayout* pDockLayout = context.findSubsystem<EditorDockLayout>();
                 if ( pDockLayout != nullptr )
                     pDockLayout->updateDefaultTabSelection();
                 context.getSubsystem<EditorPopupManager>().drawOpenPopups();

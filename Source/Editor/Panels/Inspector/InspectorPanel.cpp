@@ -20,6 +20,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
+#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
@@ -314,7 +315,7 @@ namespace sw::editor
     {
         ImGui::SeparatorText( "Components" );
         EditorContext* pSelEditorContext = EditorContext::get();
-        IRHIDevice*    pRHIDevice        = ( pSelEditorContext != nullptr ) ? pSelEditorContext->getRHIDevice() : nullptr;
+        IRHIDevice*    pRHIDevice        = ( pSelEditorContext != nullptr ) ? pSelEditorContext->getSubsystem<EditorRenderViews>().getRHIDevice() : nullptr;
         // 복사한다. 아래 루프가 컴포넌트를 제거할 수 있어 원본을 순회할 수 없다.
         const vector<Component*> listComponent( pObj->getComponents().begin(), pObj->getComponents().end() );
         for ( Component* pComp : listComponent )

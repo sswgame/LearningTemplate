@@ -22,6 +22,7 @@
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
+#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWindowTitle.h"
@@ -866,11 +867,11 @@ namespace sw::editor
                 const EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                const bool bSceneDrawn = pContext->wasViewDrawn( EditorViewKind::Scene );
-                const bool bGameDrawn  = pContext->wasViewDrawn( EditorViewKind::Game );
+                const bool bSceneDrawn = pContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Scene );
+                const bool bGameDrawn  = pContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Game );
                 const bool bRequested  = kind == EditorViewKind::Scene ? EditorViewTargetUtil::shouldRequestSceneView( bSceneDrawn, bGameDrawn )
                                                                        : EditorViewTargetUtil::shouldRequestGameView( bGameDrawn );
-                outValue               = ( bRequested && pContext->getViewTarget( kind )._renderTarget != 0 ) ? 1.0 : 0.0;
+                outValue               = ( bRequested && pContext->getSubsystem<EditorRenderViews>().getViewTarget( kind )._renderTarget != 0 ) ? 1.0 : 0.0;
                 return true;
             }
 
@@ -890,7 +891,7 @@ namespace sw::editor
                 const EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                outValue = pContext->wasViewDrawn( EditorViewKind::Scene ) ? 1.0 : 0.0;
+                outValue = pContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Scene ) ? 1.0 : 0.0;
                 return true;
             }
 

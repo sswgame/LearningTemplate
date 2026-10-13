@@ -34,6 +34,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
+#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/SelfTest/EditorExtensionRegistryDump.h"
@@ -544,8 +545,8 @@ namespace sw::editor
         // 테마는 컨텍스트가 활성화된 뒤에 읽어야 한다. 테마 상태를 컨텍스트가 보관하므로, 그 전에 부르면 적용한 테마가 갈 곳이
         // 없어 조용히 버려진다. 이때 stored preset 이 0 에 머문다.
         EditorThemeUtil::loadFromConfig();
-        _editorContext->setRHIDevice( _pRHIDevice );
-        _editorContext->setRendererBackend( _rendererBackend.get() );
+        _editorContext->getSubsystem<EditorRenderViews>().setRHIDevice( _pRHIDevice );
+        _editorContext->getSubsystem<EditorRenderViews>().setRendererBackend( _rendererBackend.get() );
 
         _editorContext->getSubsystem<EditorPanelManager>().registerDefaultPanels();
         // 사용자 단축키(Saved/Editor/Shortcuts.json)는 레지스트리를 만들 때 적용한다. 처음 실행이면 파일이 없다.
@@ -589,7 +590,7 @@ namespace sw::editor
         ImGuiEditorInternal::releaseModuleUndoCommands();
         if ( _editorContext == nullptr )
             return;
-        _editorContext->destroyViewTargets();
+        _editorContext->getSubsystem<EditorRenderViews>().destroyViewTargets();
         _editorContext->getSubsystem<EditorPanelManager>().shutdownAllPanels( nullptr );
         _editorContext->getSubsystem<EditorPanelManager>().clear();
         _editorContext->shutdown();
@@ -669,9 +670,9 @@ namespace sw::editor
             if ( EditorPreferencesStore::hasNewSections() )
                 (void)EditorPreferencesStore::loadNewSections( EditorPreferencesStore::getDefaultFilePath() ); // 입힌 수는 쓰지 않는다
 #endif
-            _editorContext->setGameViewFocused( false );
-            _editorContext->setGameViewHovered( false );
-            _editorContext->clearViewDrawnMarks();
+            _editorContext->getSubsystem<EditorRenderViews>().setGameViewFocused( false );
+            _editorContext->getSubsystem<EditorRenderViews>().setGameViewHovered( false );
+            _editorContext->getSubsystem<EditorRenderViews>().clearViewDrawnMarks();
         }
 
         // 프레임 열기는 단계로 옮기지 않는다. 메뉴 · 툴바는 도크스페이스보다 먼저 그려야 도크 영역이 그만큼 줄고, 도크스페이스는 어느 단계보다 먼저 열려야
@@ -811,8 +812,8 @@ namespace sw::editor
 
         // ImGui 가 가져간 입력은 게임으로 넘기지 않는다. 게임 뷰 위에서는 예외다. 씬 뷰 위의 입력은 에디터 카메라가 처리한다.
         const ImGuiIO& io               = ImGui::GetIO();
-        const bool     bGameViewHovered = _editorContext != nullptr && _editorContext->isGameViewHovered();
-        const bool     bGameViewFocused = _editorContext != nullptr && _editorContext->isGameViewFocused();
+        const bool     bGameViewHovered = _editorContext != nullptr && _editorContext->getSubsystem<EditorRenderViews>().isGameViewHovered();
+        const bool     bGameViewFocused = _editorContext != nullptr && _editorContext->getSubsystem<EditorRenderViews>().isGameViewFocused();
 
         // Simulate 는 월드만 실행하므로 게임 입력을 주지 않는다. 에디터 카메라와 패널은 위의 ImGui 처리에서 이미 입력을 받았다.
         if ( EditorPlaySession::isSimulating() && ( event.isMouseInput() || event.isKeyboardInput() ) )
@@ -836,15 +837,15 @@ namespace sw::editor
 
     void ImGuiEditor::getGameViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const
     {
-        const bool bRequest = _editorContext != nullptr && EditorViewTargetUtil::shouldRequestGameView( _editorContext->wasViewDrawn( EditorViewKind::Game ) );
-        ImGuiEditorInternal::writeViewport( bRequest ? &_editorContext->getViewTarget( EditorViewKind::Game ) : nullptr, pRenderTarget, pWidth, pHeight );
+        const bool bRequest = _editorContext != nullptr && EditorViewTargetUtil::shouldRequestGameView( _editorContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Game ) );
+        ImGuiEditorInternal::writeViewport( bRequest ? &_editorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game ) : nullptr, pRenderTarget, pWidth, pHeight );
     }
 
     void ImGuiEditor::getSceneViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const
     {
-        const bool bRequest = _editorContext != nullptr && EditorViewTargetUtil::shouldRequestSceneView( _editorContext->wasViewDrawn( EditorViewKind::Scene ),
-                                                                                                         _editorContext->wasViewDrawn( EditorViewKind::Game ) );
-        ImGuiEditorInternal::writeViewport( bRequest ? &_editorContext->getViewTarget( EditorViewKind::Scene ) : nullptr, pRenderTarget, pWidth, pHeight );
+        const bool bRequest = _editorContext != nullptr && EditorViewTargetUtil::shouldRequestSceneView( _editorContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Scene ),
+                                                                                                         _editorContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Game ) );
+        ImGuiEditorInternal::writeViewport( bRequest ? &_editorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene ) : nullptr, pRenderTarget, pWidth, pHeight );
     }
 
     CameraComponent* ImGuiEditor::getSceneViewCamera() const

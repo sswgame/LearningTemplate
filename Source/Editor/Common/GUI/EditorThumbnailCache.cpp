@@ -7,6 +7,7 @@
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Graphics/Texture/Texture2D.h"
@@ -28,13 +29,13 @@ namespace sw::editor
             static IImGuiRendererBackend* findRendererBackend()
             {
                 EditorContext* pContext = EditorContext::get();
-                return pContext != nullptr ? pContext->getRendererBackend() : nullptr;
+                return pContext != nullptr ? pContext->getSubsystem<EditorRenderViews>().getRendererBackend() : nullptr;
             }
 
             static IRHIDevice* findDevice()
             {
                 EditorContext* pContext = EditorContext::get();
-                return pContext != nullptr ? pContext->getRHIDevice() : nullptr;
+                return pContext != nullptr ? pContext->getSubsystem<EditorRenderViews>().getRHIDevice() : nullptr;
             }
 
             static bool contains( const vector<string>& listID, const string& resourceID )

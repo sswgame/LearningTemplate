@@ -13,6 +13,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
@@ -44,19 +45,18 @@ namespace sw::editor
                 return kFallback;
             }
 
-            /** @brief 현재 적용된 테마를 반환합니다. `EditorContext` 가 소유하며, 컨텍스트가 없으면 기본값을 봅니다. */
+            /** @brief 현재 적용된 테마를 반환합니다. 에디터 서브시스템 `EditorTheme` 이 들며, 에디터 범위가 없으면 기본값을 봅니다. */
             static const EditorThemeConfig& activeTheme()
             {
-                EditorContext* pContext = EditorContext::get();
-                return pContext != nullptr ? pContext->getThemeConfig() : fallbackTheme();
+                const EditorTheme* pTheme = getService<EditorTheme>();
+                return pTheme != nullptr ? pTheme->getConfig() : fallbackTheme();
             }
 
-            /** @brief 테마를 교체합니다. 컨텍스트가 없으면 적용할 UI 가 없으므로 조용히 무시합니다. */
+            /** @brief 테마를 교체합니다. 에디터 범위가 없으면 적용할 UI 가 없으므로 조용히 무시합니다. */
             static void setActiveTheme( const EditorThemeConfig& config )
             {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr )
-                    pContext->getThemeConfig() = config;
+                if ( EditorTheme* pTheme = getService<EditorTheme>() )
+                    pTheme->getConfig() = config;
             }
 
             /** @brief 테마 고정 색입니다. 팔레트에서 오지 않는 항목입니다. */

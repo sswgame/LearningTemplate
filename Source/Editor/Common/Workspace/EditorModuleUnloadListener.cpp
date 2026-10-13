@@ -8,6 +8,7 @@
 #include "Editor/Common/GUI/EditorPopupManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorDefaultObjects.h"
+#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Panels/Inspector/InspectorComponentManager.h"
 #include "Editor/Panels/Inspector/InspectorPropertyManager.h"
 
@@ -34,7 +35,7 @@ namespace sw::editor
             (void)EditorPreferencesStore::saveAll( EditorPreferencesStore::getDefaultFilePath() ); // 실패는 saveAll 이 경고로 알린다
         // 다시 올라오면 새 이미지의 섹션은 기본값이다. 기록에서 빼 두어야 다음 프레임(또는 다음 saveAll)에 파일에서 다시 읽는다.
         EditorPreferencesStore::forgetSectionsWithin( pBegin, pEnd );
-        uint32 releasedCount = _context.getSubsystem<EditorPanelManager>().releasePanelsWithin( pBegin, pEnd, _context.getRHIDevice() );
+        uint32 releasedCount = _context.getSubsystem<EditorPanelManager>().releasePanelsWithin( pBegin, pEnd, _context.getSubsystem<EditorRenderViews>().getRHIDevice() );
         releasedCount += _context.getSubsystem<EditorPopupManager>().releasePopupsWithin( pBegin, pEnd );
         releasedCount += _context.getSubsystem<InspectorComponentManager>().releaseInspectorsWithin( pBegin, pEnd );
         releasedCount += _context.getSubsystem<InspectorPropertyManager>().releaseDrawersWithin( pBegin, pEnd );

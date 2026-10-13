@@ -231,14 +231,14 @@ namespace sw::editor
             }
 
             /**
-             * @brief 컨텍스트가 보관한 플레이 상태를 반환합니다. 컨텍스트가 없으면 nullptr 입니다.
+             * @brief 에디터 범위가 보관한 플레이 상태를 반환합니다. 에디터 범위가 없으면 nullptr 입니다.
              * @details 에디터 셸이 아직 만들어지지 않았거나 이미 종료된 시점에도 이 파사드가 호출될 수 있다(패널 정리 경로). 그때는
              *          "정지" 로 응답해야 한다.
              */
             static PlaySessionData* data()
             {
-                EditorContext* pContext = EditorContext::get();
-                return pContext != nullptr ? &pContext->getPlaySessionData() : nullptr;
+                EditorPlaySessionState* pState = getService<EditorPlaySessionState>();
+                return pState != nullptr ? &pState->getData() : nullptr;
             }
         };
     } // namespace

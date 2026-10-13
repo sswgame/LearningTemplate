@@ -1,11 +1,12 @@
 /**
  * @file EditorThemeConfig.h
- * @brief 에디터 테마 값(프리셋 · 색 · 라운딩)입니다. 적용과 조회는 `EditorThemeUtil`(GUI)이 하고, 값은 `EditorContext` 가 듭니다.
+ * @brief 에디터 테마 값(프리셋 · 색 · 라운딩)입니다. 적용과 조회는 `EditorThemeUtil`(GUI)이 하고, 값은 에디터 서브시스템 `EditorTheme` 이 듭니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
 
 #include "Editor/Common/EditorColor.h"
+#include "Editor/Common/EditorSubsystem.h"
 
 namespace sw::editor
 {
@@ -42,5 +43,25 @@ namespace sw::editor
         float32 _tabRounding{ 4.0f };
         float32 _scrollbarRounding{ 6.0f };
         float32 _grabRounding{ 3.0f };
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @class EditorTheme
+     * @brief 지금 적용된 테마 값을 드는 에디터 서브시스템입니다. 조회 · 교체는 `EditorThemeUtil` 이 `editor::getService<EditorTheme>()` 로 합니다.
+     */
+    class EditorTheme final : public EditorSubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "EditorTheme";
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+
+        EditorThemeConfig&       getConfig() { return _config; }
+        const EditorThemeConfig& getConfig() const { return _config; }
+
+    private:
+        EditorThemeConfig _config{};
     };
 } // namespace sw::editor

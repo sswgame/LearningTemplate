@@ -10,6 +10,7 @@
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/ContentBrowser/ContentBrowserPanel.h"
@@ -658,7 +659,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue;
                 }
 
-                const EditorViewTarget& view         = pContext->getViewTarget( EditorViewKind::Scene );
+                const EditorViewTarget& view         = pContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene );
                 const ImTextureID       textureID    = reinterpret_cast<ImTextureID>( view._pTextureID );
                 const ImGuiContext&     imguiContext = *ImGui::GetCurrentContext();
                 int32                   imageCommandIndex{ -1 };

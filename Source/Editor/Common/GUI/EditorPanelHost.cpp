@@ -36,7 +36,7 @@ namespace sw::editor
 
     bool EditorPanelHost::maximizePanel( string_view keepPanelID )
     {
-        EditorDockLayout* pDock = _context.findDockLayout();
+        EditorDockLayout* pDock = _context.findSubsystem<EditorDockLayout>();
         if ( pDock == nullptr )
             return false;
         // 직전 배치는 에디터 상태 폴더의 임시 레이아웃으로 둔다(이름 붙인 레이아웃 목록에 섞이지 않게).
@@ -59,7 +59,7 @@ namespace sw::editor
 
     bool EditorPanelHost::restoreMaximizedLayout()
     {
-        EditorDockLayout* pDock = _context.findDockLayout();
+        EditorDockLayout* pDock = _context.findSubsystem<EditorDockLayout>();
         if ( pDock == nullptr )
             return false;
         const string folder = FileUtil::joinPath( EditorPaths::getEditorStateDirectory(), "Temp" );
