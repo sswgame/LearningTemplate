@@ -3,9 +3,9 @@
 #include "Engine/Character/Fit/GeometryCut.h"
 
 #include "Core/Common/Defines.h"
-#include "Core/Common/HashUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Spatial/PositionWelder.h"
 
 namespace sw
 {
@@ -13,24 +13,30 @@ namespace sw
     {
         struct GeometryCutInternal
         {
-            static constexpr uint32  kNoVertex       = invalid_index::kUint32;
-            static constexpr float32 kWeldResolution = 1.0e-5f;
+            static constexpr uint32 kNoVertex = invalid_index::kUint32;
 
             static uint64 makeEdgeKey( uint32 from, uint32 to ) { return ( static_cast<uint64>( from ) << 32 ) | static_cast<uint64>( to ); }
 
             /**
-             * @brief 위치를 격자로 반올림한 키입니다. 용접(같은 위치는 같은 정점)에 씁니다.
-             * @details 성분을 차례로 섞어 이어 붙인다. 성분마다 곱해 XOR 로 합치면 부호만 다른 대칭 꼭짓점(±1, ±0.5, ±0.25 상자)이 같은 키가 되어
-             *          서로 다른 꼭짓점이 하나로 용접된다.
+             * @brief 정점마다, 허용 오차 안의 같은 위치를 가진 첫 정점 번호를 씁니다(용접). UV 이음매로 갈라진 정점이 한 정점으로 보입니다.
+             * @details 대표는 정점 번호 순서로 처음 본 정점이라 같은 입력이면 같은 결과다.
              */
-            static uint64 makePositionKey( const float3& position )
+            static void makeWeldedVertexMap( const AppearanceGeometry& geometry, vector<uint32>& outListWelded )
             {
-                const int64 quantX = static_cast<int64>( MathUtil::round( position._x / kWeldResolution ) );
-                const int64 quantY = static_cast<int64>( MathUtil::round( position._y / kWeldResolution ) );
-                const int64 quantZ = static_cast<int64>( MathUtil::round( position._z / kWeldResolution ) );
-                uint64      hash   = HashUtil::mix64( static_cast<uint64>( quantX ) + HashUtil::kGoldenRatio64 );
-                hash               = HashUtil::mix64( hash ^ ( static_cast<uint64>( quantY ) + 0xC2B2AE3D27D4EB4Full ) );
-                return HashUtil::mix64( hash ^ ( static_cast<uint64>( quantZ ) + 0x165667B19E3779F9ull ) );
+                vector<uint32> listPointIndex;
+                PositionWelder welder;
+                welder.weldAll( span<const float3>{ geometry._listPosition.data(), geometry._listPosition.size() }, listPointIndex );
+                // 대표 점 번호는 처음 본 순서로 매겨지므로, 새 번호가 나올 때의 정점이 그 점의 첫 정점이다.
+                vector<uint32> listFirstVertex;
+                listFirstVertex.reserve( welder.getPointCount() );
+                outListWelded.resize( listPointIndex.size() );
+                for ( uint32 vertex = 0; vertex < listPointIndex.size(); ++vertex )
+                {
+                    const uint32 pointIndex = listPointIndex[vertex];
+                    if ( pointIndex == listFirstVertex.size() )
+                        listFirstVertex.push_back( vertex );
+                    outListWelded[vertex] = listFirstVertex[pointIndex];
+                }
             }
 
             static uint16 findOrAddGroup( AppearanceGeometry& inoutTarget, const hashed_string& name )
@@ -234,23 +240,8 @@ namespace sw
     {
         outListLoop.clear();
         // 같은 위치의 정점을 하나로 본다. UV 이음매로 갈라진 정점이 가짜 경계를 만들지 않게 하려는 것이다.
-        const uint32                  vertexCount = geometry.getVertexCount();
-        vector<uint32>                listWelded( vertexCount );
-        unordered_map<uint64, uint32> mapPositionToVertex;
-        for ( uint32 vertex = 0; vertex < vertexCount; ++vertex )
-        {
-            const uint64 key   = GeometryCutInternal::makePositionKey( geometry._listPosition[vertex] );
-            const auto   found = mapPositionToVertex.find( key );
-            if ( found == mapPositionToVertex.end() )
-            {
-                mapPositionToVertex.emplace( key, vertex );
-                listWelded[vertex] = vertex;
-            }
-            else
-            {
-                listWelded[vertex] = found->second;
-            }
-        }
+        vector<uint32> listWelded;
+        GeometryCutInternal::makeWeldedVertexMap( geometry, listWelded );
         unordered_map<uint64, uint32> mapEdgeCount;
         for ( uint32 triangle = 0; triangle < geometry.getTriangleCount(); ++triangle )
         {
@@ -378,16 +369,8 @@ namespace sw
     {
         if ( geometry.getTriangleCount() == 0 )
             return false;
-        unordered_map<uint64, uint32> mapPositionToVertex;
-        vector<uint32>                listWelded( geometry.getVertexCount() );
-        for ( uint32 vertex = 0; vertex < geometry.getVertexCount(); ++vertex )
-        {
-            const uint64 key   = GeometryCutInternal::makePositionKey( geometry._listPosition[vertex] );
-            const auto   found = mapPositionToVertex.find( key );
-            listWelded[vertex] = found == mapPositionToVertex.end() ? vertex : found->second;
-            if ( found == mapPositionToVertex.end() )
-                mapPositionToVertex.emplace( key, vertex );
-        }
+        vector<uint32> listWelded;
+        GeometryCutInternal::makeWeldedVertexMap( geometry, listWelded );
         // 방향 있는 모서리가 각각 한 번, 그 반대가 한 번 있으면 감음까지 맞는 닫힌 면이다.
         unordered_map<uint64, uint32> mapEdgeCount;
         for ( uint32 triangle = 0; triangle < geometry.getTriangleCount(); ++triangle )

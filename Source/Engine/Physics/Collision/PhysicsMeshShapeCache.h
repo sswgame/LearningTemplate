@@ -25,7 +25,7 @@ namespace sw
 {
     struct PhysicsShapeDesc3D;
 
-    /** @brief 메시 하나에서 만든 셰이프 기하입니다. 같은 위치의 정점을 하나로 합쳤고, 퇴화 삼각형(세 점 중 둘이 같다)은 뺐습니다. */
+    /** @brief 메시 하나에서 만든 셰이프 기하입니다. 허용 오차(`PositionWelder`) 안의 위치를 한 점으로 합쳤고(점 순서는 처음 본 순서), 퇴화 삼각형(세 점 중 둘이 같다)은 뺐습니다. */
     struct PhysicsMeshShapeData
     {
         vector<float3> _listPoint; ///< 합친 점(메시 로컬). 볼록 껍질은 이것만 쓴다.
@@ -68,7 +68,7 @@ namespace sw
          * @details 서술자 자신의 것이면 잠그지 않는다. 메시를 읽지 못했으면 빈 창이다.
          */
         static PhysicsShapeGeometry acquireGeometry( const PhysicsShapeDesc3D& shape );
-        /** @brief 삼각형 목록(@p listTrianglePosition, 셋씩)의 같은 위치를 합쳐 점과 인덱스로 만듭니다. 셋으로 나누어떨어지지 않는 끝은 버립니다. */
+        /** @brief 삼각형 목록(@p listTrianglePosition, 셋씩)의 허용 오차 안 위치를 합쳐(`PositionWelder`) 점과 인덱스로 만듭니다. 셋으로 나누어떨어지지 않는 끝은 버립니다. */
         static void makeShapeData( span<const float3> listTrianglePosition, PhysicsMeshShapeData& outData );
 
         /** @brief 표와 실패 기억을 비웁니다. 다음 요청은 파일을 새로 읽습니다(이미 만든 바디는 옛 기하 그대로). */
