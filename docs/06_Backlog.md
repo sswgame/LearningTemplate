@@ -196,8 +196,6 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   남은 것: 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸다(DX12 직접 실행으로 10 시나리오 통과만 확인).
 - `C-27` **서브시스템 패턴을 넓힐 곳**(2026-10-14, 서브시스템 정리 다음 · 효과 큰 순). 판정 기준: 수명 범위 · 초기화/종료 순서 · 의존이 있는 서비스는 서브시스템이고,
   프레임마다 도는 핫 데이터 · 게임플레이 객체 · 값 객체는 서브시스템이 아니다.
-  ② 에셋 캐시 — AssetManager 의 `IAssetCache` 구현(TextureCache · MeshCache · MaterialCache · GlyphCache · ShaderBindingLayoutCache 등)을 리소스 범위 서브시스템으로,
-  등록 · 초기화 · 종료 순서와 의존을 선언한다.
   ③ 개발 도구 — AutomationRunner · Session · StepRegistry, DevCommandRegistry, 프로파일러 · 텔레메트리를 `Dev` 호스트 비트의 서브시스템으로. Shipping 은 등록 자체를
   컴파일에서 뺀다(구성별 `#if` 분산을 줄인다).
   ⑤ 백엔드 선택 — 물리(Box2D · Jolt) · 오디오(XAudio2 · Null) 같은 역할별 팩토리를 호스트 종류에 따라 갈아 끼우는 서브시스템 구현으로(언리얼 오디오 믹서 플랫폼 ·

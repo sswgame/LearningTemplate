@@ -353,6 +353,8 @@ SW_TEST_CASE( RHIDeviceShutdownTest, StepsRunInContractOrder )
  */
 SW_TEST_CASE( RHIDeviceShutdownTest, PendingReleasesAfterShutdownAssert )
 {
+    if constexpr ( test::ScopedAssertCapture::kAssertsAreActive == false )
+        SW_TEST_SKIP( "asserts are compiled out in this configuration" );
     test::FakeRHIDevice device;
     device._pendingReleaseCount = 2;
     {
@@ -376,6 +378,8 @@ SW_TEST_CASE( RHIDeviceShutdownTest, PendingReleasesAfterShutdownAssert )
  */
 SW_TEST_CASE( RHIDeviceShutdownTest, ReleasesQueuedAfterShutdownAssert )
 {
+    if constexpr ( test::ScopedAssertCapture::kAssertsAreActive == false )
+        SW_TEST_SKIP( "asserts are compiled out in this configuration" );
     test::FakeRHIDevice device;
     device.shutdown();
     device._pendingReleaseCount = 1; // 종료 뒤에 누군가 해제를 넣었다(가짜는 비우지 않으므로 이후 단계 단언도 함께 센다)

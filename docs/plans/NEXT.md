@@ -41,7 +41,10 @@
 ④ 소유 · 조회 흡수 ⑤ 부트스트랩 분해 — 조회 창구는 main 의 `SubsystemScope`(`6ccdeb60e`)를 쓰고 ④b(세 범위 + ⑤ 를 함께 — 서비스 범위의 객체는 이름 풀 · 로거 뒤에 만들어야 해서 둘을 나눌 수 없었다)
 끝, EngineLoop.cpp 822 → 887 줄(부트스트랩 · 서비스 범위 등록이 들어왔고 EngineBootstrap 201 줄 · EngineServiceCollection 265 줄이 없어졌다).
 ④c(모듈은 호스트가 넘긴 서비스 범위에서 찾는다 — ModuleServiceTable · 호스트 서비스 목록 삭제) · ④d(엔진 루프 · 부트스트랩 · 헤드리스 헤더는
-호스트만 — CheckEngineLayers) 끝. ⑥ EngineLoop → Engine 개명(조정자가 시점을 알림). 그 뒤 C-27 ① ② ③ ⑤ ⑥(조정자 분담 — C-26 · C-27 ④ 는 다른 통합 담당).
+호스트만 — CheckEngineLayers) 끝. ⑥ EngineLoop → Engine 개명(조정자가 시점을 알림). 그 뒤 C-27: ① 씬 범위 끝(`GameObjectManager` 가 씬 `SubsystemScope` 소유), ② 에셋 캐시는 판정 기준 밖이라 하지 않음(결정 기록 — 값 저장소),
+남은 ③ 개발 도구 · ⑤ 백엔드 선택 · ⑥ 실행 파일 공통 기동 · 호스트 범위(App · ServerApp · ModuleHost)(조정자 분담 — C-26 · C-27 ④ 는 다른 통합 담당).
+**검증에 Shipping 빌드 + Shipping nogpu 를 넣는다** — Debug 는 정렬 할당 객체를 기반 포인터로 지우는 힙 손상을 못 본다(`f23458eb2`, `default_delete` 가 이제 컴파일 오류로 막는다).
+관찰: Shipping nogpu 한 회차에서 CrashBundleTest.RealCrashLeavesABundle 의 crash.dmp 0 바이트(병렬 부하, 단독 3회 통과).
 - ④b 모양: 호스트는 `_bootstrap` → `_services` → `_startup` 세 컬렉션을 부모로 잇는다. 서비스 표(`engine::getXxx`)는 소유 없이 바인딩 때 한 번 찾아 둔 캐시이고,
   필수 행이 비면 호스트가 서지 않는다(`CheckEngineServiceBinding` 게이트는 지웠다). 세 범위는 `SubsystemScope`(타입 해시), 서브시스템이 아닌 행은 호스트가 `bind`.
   하네스는 `EngineSubsystemHost::kTestHarness` 로 서서 클라이언트 전용을 표의 자리로만 둔다. 테스트의 서비스 갈아 끼우기는 `test::ScopedEngineServiceOverride`.
