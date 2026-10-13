@@ -1,6 +1,7 @@
 SWCOOK 3
 00366b6bd91c13af taa.hlsl
 03c54d10a1c6143d postoutline.hlsl
+10c88445bf74d155 binding.hlsli
 1795b4868f75033e gerstner.hlsli
 2634f1e7dd1ddc24 postbloom.hlsl
 26a9b881ace73b82 forwardlit.hlsl
@@ -8,11 +9,11 @@ SWCOOK 3
 4877783fcd0ecf62 tonemap.hlsl
 50e78d8a12f071af shadowdepth.hlsl
 5cf5e0caed4fbcb8 foliage.hlsl
-5f80a690d2efe44f binding.hlsli
 63d2e93ed89908c3 gbuffer.hlsl
 69949ff778c35fbc gpucull.hlsl
 7644e2dfc592ed60 deferredlighting.hlsl
 8687732d87cba8ec fullscreenblit.hlsl
+8e21d601cc7aff7d bindingslots.hlsli
 980c18c4c174d3fb postoutline.hlsli
 9d98e045b0f2f92f meshskin.hlsl
 9ee00d8a59ae021e common.hlsli
@@ -23,7 +24,6 @@ be6b517dd765ba39 terrain.hlsl
 bfc1abf7672a9a07 ssao.hlsl
 c3624bf660a037a8 lighting.hlsli
 c89df4040ce009e9 sprite2dlit.hlsl
-cc4552308b1a7e55 bindingslots.hlsli
 cd950cde23768c4b instanceanimation.hlsl
 d4c27f6d50f42c87 postchain.hlsl
 d7245240951d50cb water.hlsl

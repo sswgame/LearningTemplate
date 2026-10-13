@@ -51,6 +51,8 @@
   남은 가설: 호출 지점 수가 아니라 이 호출이 있는 경로의 SPIR-V 생성 · 드라이버 컴파일 문제. 다음 단계는 검증 레이어와 `spirv-val` 이 있는 장비에서 `vkQueueSubmit` 의 `VkResult`(`DEVICE_LOST` 여부)를 `readbackTexture2D` 실패 로그에 찍는 것.
 - `A-9` **OpenGL 에서 `PrototypeGridMaterialIsAnchoredToTheWorld` 가 실패한다** — 바닥을 1 m 옮기자 격자가 따라 움직였다(평균 차이 15.8, 격자 창 116..128). 월드 좌표 UV 머티리얼(`59e850480`, `MATERIAL_WORLD_UV`)의 GL 경로.
   ([Physics README](../Source/Engine/Physics/README.md)). 엔진 조립 지점에서 `MeshAssetFormat::loadFromResource` 로 넣고, `MeshCache` 리로드 때 `PhysicsMeshShapeCache::clear()` 를 부른다. 테스트는 읽기 함수를 직접 넣어서 통과한다.
+- `A-10` **OpenGL 에서 `RenderPassGPUTest.UpscaledViewDrawsUniformZoomBlocks` 가 실패한다** — 4 × 4 칸 4800 개 중 1406 개가 섞였다(DX11 · DX12 · Vulkan 은 0). 정수 업스케일(`e56d3544e`)의 GL 경로.
+  GL 의 `swSampleIndexWith` 는 결합 샘플러라 `samplerId`(점 샘플)를 무시한다 — Present 가 원본을 선형으로 읽는지부터 본다. 지금까지는 같은 테스트의 DX12 디바이스 제거로 GL 차례가 오지 않아 가려져 있었다.
 
 ---
 

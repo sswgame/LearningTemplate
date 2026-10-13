@@ -453,7 +453,7 @@ namespace sw
         // 셰이더 가시 힙 하나는 [레지스트리 구간 | 온라인 블록 구간]으로 나뉜다. 레지스트리는 bindless 인덱스가 곧 힙 슬롯이다(텍스처 배열이 힙 시작을
         // 가리킨다). 온라인 구간은 슬롯 테이블을 확정하는 블록들이다(컨텍스트가 빌리고 펜스 뒤 반납한다). 언리얼의 bindless 힙과 서브할당
         // 온라인 힙을 나누는 방식과 같다. 오프라인(CPU 전용) 힙은 레지스트리와 같은 인덱스 공간에 null 뷰 둘을 더한 것이다.
-        static constexpr uint32 kMaxShaderVisibleDescriptors = 65536;
+        static constexpr uint32 kMaxShaderVisibleDescriptors = shaderslot::bindless::kDx12DescriptorHeapSize; ///< 셰이더가 첨자를 이 크기로 마스크한다
         static constexpr uint32 kBindlessDescriptorCapacity  = 32768;
         static constexpr uint32 kOnlineBlockDescriptorCount  = 512;
         static constexpr uint32 kOnlineBlockCount            = ( kMaxShaderVisibleDescriptors - kBindlessDescriptorCapacity ) / kOnlineBlockDescriptorCount;

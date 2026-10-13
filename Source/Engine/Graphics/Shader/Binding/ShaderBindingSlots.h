@@ -157,6 +157,13 @@ namespace sw
             inline constexpr uint32 kVkSamplerBinding       = SW_VK_SAMPLER_BINDING;        ///< set 1 binding 1은 immutable sampler 배열이다.
             inline constexpr uint32 kVkShadowSamplerBinding = SW_VK_SHADOW_SAMPLER_BINDING; ///< set 1 binding 2는 비교 샘플러다.
             inline constexpr uint32 kVkRwTextureBinding     = SW_VK_RWTEXTURE_BINDING;      ///< set 1 binding 3은 STORAGE_IMAGE 배열이다.
+            /// @brief 배열 칸 수입니다. 셰이더가 첨자를 (칸 수 - 1) 로 마스크하므로(binding.hlsli swBindlessTextureSlot) 2 의 거듭제곱이고, 백엔드는 이 크기로 만든다.
+            inline constexpr uint32 kDx12DescriptorHeapSize = SW_DX12_DESCRIPTOR_HEAP_SIZE;       ///< DX12 셰이더 가시 힙(텍스처 · RW 텍스처 공용)
+            inline constexpr uint32 kVkTextureCount         = SW_VK_BINDLESS_TEXTURE_COUNT;       ///< Vulkan set 1 binding 0
+            inline constexpr uint32 kVkStorageImageCount    = SW_VK_BINDLESS_STORAGE_IMAGE_COUNT; ///< Vulkan set 1 binding 3
+            static_assert( ( kDx12DescriptorHeapSize & ( kDx12DescriptorHeapSize - 1 ) ) == 0 && ( kVkTextureCount & ( kVkTextureCount - 1 ) ) == 0 &&
+                               ( kVkStorageImageCount & ( kVkStorageImageCount - 1 ) ) == 0,
+                           "bindless 배열 칸 수는 2 의 거듭제곱이어야 한다 (셰이더가 첨자를 마스크한다)" );
         } // namespace bindless
 
         /// @brief Vulkan 슬롯 세트(set 0)입니다. binding 은 종류별 시프트에 레지스터 번호를 더한 값입니다(DXC -fvk-*-shift 와 같은 값).

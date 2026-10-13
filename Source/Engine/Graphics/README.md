@@ -223,6 +223,10 @@ pMesh->setMaterialInstance( std::move( tint ) );
 
 **상수 버퍼 하나를 여러 드로우가 나눠 쓰지 마세요.** GPU는 제출된 뒤에 버퍼를 읽기 때문에, 드로우 사이에 값을 바꿔도 모든 드로우가 마지막 값을 봅니다. 드로우마다 슬롯을 따로 받으세요(`PassConstantRing`).
 
+**bindless 배열 첨자는 `swBindlessTextureSlot` 으로만 만드세요.** `if ( index == kInvalidIndex )` 로 막아도 드라이버 컴파일러는 서술자 읽기를 분기 앞으로 끌어올릴 수 있습니다.
+그러면 DirectX 12 가 0xFFFFFFFF × 32 를 32 비트로 계산한 힙 시작 + 0xFFFFFFE0 을 읽어 페이지 폴트(`DEVICE_HUNG`)가 납니다. DRED 의 `PageFault VA` 가 힙 시작 + 0xFFFFF000 이면 이 경우입니다.
+첨자는 배열 칸 수(`bindingslots.hlsli` 의 `SW_DX12_DESCRIPTOR_HEAP_SIZE` 등, 2 의 거듭제곱)로 마스크해 늘 배열 안을 가리키게 하고, 값은 분기가 고릅니다. GPU 기반 검증(GBV)을 켜면 셰이더가 바뀌어 재현되지 않습니다.
+
 **같은 기본 도형을 여러 컴포넌트가 쓰면 `MeshUtil::acquirePrimitive` 로 공유 메시를 받으세요.** `MeshUtil::createPrimitive` 는 부를 때마다 새 메시를 만듭니다.
 컴포넌트마다 새 메시를 만들면 같은 도형이라도 배치와 정점 버퍼가 컴포넌트 수만큼 생깁니다. 벤치는 배치를 일부러 나누려고 `createPrimitive` 를 씁니다.
 

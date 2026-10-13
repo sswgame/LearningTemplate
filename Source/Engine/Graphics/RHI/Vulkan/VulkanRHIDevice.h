@@ -391,9 +391,9 @@ namespace sw
         const VulkanTextureRecord* resolveTexture( RHITextureHandle handle ) const;
 
         /** @brief 텍스처 배열 세트(set 1)의 원소 수입니다. DX12 는 힙 하나(kMaxShaderVisibleDescriptors)를 쓰므로 값이 다릅니다. */
-        static constexpr uint32 kBindlessTextureCount = 4096;
+        static constexpr uint32 kBindlessTextureCount = shaderslot::bindless::kVkTextureCount;
         /** @brief RW 텍스처 배열(set 1 binding 3)의 원소 수입니다. UAV 인덱스가 이 값 미만이어야 등록됩니다. */
-        static constexpr uint32 kBindlessStorageImageCount = 1024;
+        static constexpr uint32 kBindlessStorageImageCount = shaderslot::bindless::kVkStorageImageCount;
         /** @brief 슬롯 세트(set 0) 풀 하나의 세트 수입니다. 바인딩 상태가 바뀔 때마다 하나씩 쓰며(배치, 패스 단위), 차면 풀을 하나 더 만듭니다. */
         static constexpr uint32 kSlotSetsPerPool = 4096;
         /** @brief 풀 묶음 하나가 가질 수 있는 최대 풀 수입니다. 넘으면 에러 로그를 남기고 직전 세트로 그립니다. */
