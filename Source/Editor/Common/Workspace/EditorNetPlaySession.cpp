@@ -8,13 +8,11 @@
 #include "Core/Log/Logger.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
 #include "Core/Process/Process.h"
-#include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"
 
 #include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Resource/ResourcePaths.h"
 
-#include <chrono>
 #include <thread>
 
 namespace sw::editor
@@ -53,8 +51,6 @@ namespace sw::editor
             static constexpr const utf8* kConnectedLine = "Net session connected to ";
             /** @brief 로그 출력이 사건 줄 다음에 붙이는 소스 위치 줄의 머리입니다. */
             static constexpr const utf8* kSourceLocationPrefix = " -> ";
-            /** @brief 정상 종료를 기다리며 다시 보는 간격입니다. */
-            static constexpr int64 kStopPollMilliseconds = 50;
             /** @brief 트레이스 파일 확장자입니다(`ProfilerTraceExport::kFileExtension` 과 같은 글 — 트레이스가 빠진 빌드에도 이름은 있어야 한다). */
 #if SW_PROFILER_TRACE_ENABLED
             static constexpr const utf8* kTraceExtension = ProfilerTraceExport::kFileExtension;
@@ -341,18 +337,15 @@ namespace sw::editor
             if ( child._exited.load() == 0 && child._process.writeInput( "quit\n" ) == false )
                 SW_LOG_WARNING( "Could not send quit to %# - it is terminated after the timeout", child._label );
         }
-        const Deadline deadline   = Deadline::afterMilliseconds( static_cast<int64>( _settings._stopTimeoutSeconds * 1000.0f ) );
-        bool           bAllExited = false;
-        while ( bAllExited == false && deadline.isExpired() == false )
+        updateUntil( static_cast<int64>( _settings._stopTimeoutSeconds * 1000.0f ), [this]()
         {
-            bAllExited = true;
             for ( const unique_ptr<ChildProcess>& pChild : _listProcess )
             {
-                bAllExited = bAllExited && pChild->_exited.load() != 0;
+                if ( pChild->_exited.load() == 0 )
+                    return false;
             }
-            if ( bAllExited == false )
-                std::this_thread::sleep_for( std::chrono::milliseconds( EditorNetPlaySessionInternal::kStopPollMilliseconds ) );
-        }
+            return true;
+        } );
         for ( const unique_ptr<ChildProcess>& pChild : _listProcess )
         {
             if ( pChild->_exited.load() == 0 )

@@ -7,15 +7,16 @@
 #pragma once
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
-#include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/Math.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Task/TaskManager.h"
 #include "Core/Task/TaskTypes.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Navigation/INavMesh.h"
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
@@ -49,25 +50,23 @@ namespace sw
         shared_ptr<const NavMeshGeometry>         _pGeometry;
         shared_ptr<const vector<NavConvexVolume>> _pVolume;
         NavTileData                               _result;
-        TaskHandle                                _task;
+        TaskHandle                                _task;  ///< 비어 있으면 인라인으로 이미 돌았다(`isCompleted()` 가 true).
+        TaskStageHandle                           _stage; ///< `_task` 하나만 담는다 — 기다리는 동안 다른 일을 돕는다.
         int32                                     _tileX{ 0 };
         int32                                     _tileZ{ 0 };
-        atomic<bool>                              _bDone{ false };
         bool                                      _bSucceeded{ false };
 
         void run()
         {
             SW_MEMORY_SCOPE( Navigation );
             _bSucceeded = _pNavMesh->bakeTile( *_pGeometry, _pVolume.get(), _tileX, _tileZ, _result );
-            _bDone.store( true, std::memory_order_release );
         }
 
+        /** @brief 끝나지 않았을 때만 매니저를 부른다 — 인라인 경로 · 엔진 종료(`waitAll`) 뒤에는 매니저가 없어도 된다. */
         void waitDone() const
         {
-            while ( _bDone.load( std::memory_order_acquire ) == false )
-            {
-                std::this_thread::yield();
-            }
+            if ( _task.isCompleted() == false )
+                engine::getTaskManager().waitStage( _stage );
         }
     };
 } // namespace sw
