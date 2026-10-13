@@ -31,10 +31,13 @@ namespace test
         [[nodiscard]] static bool launchApp( sw::Process& outProcess, sw::string_view arguments );
 
         /**
-         * @brief 이 빌드의 활성 게임 프리셋(`Config/Game/<게임>.json`)의 `_packRoot`(`game/<팩>`)입니다. 못 읽으면 빈 문자열입니다.
-         * @details 게임 프리셋(`Ninja-Debug-<게임>`)마다 App 이 그리는 게임이 다르다 — 게임에 매인 테스트(시나리오 · 골든 이미지)이 고른다.
+         * @brief 게임 @p gameName 의 프리셋(`Config/Game/<게임>.json`)의 `_packRoot`(`game/<팩>`)입니다. 못 읽으면 빈 문자열입니다.
+         * @details `-game=` 없이 띄운 App 은 빌드의 활성 게임(`GameSelection::getName`)을 그린다 — 게임에 매인 테스트(시나리오 · 골든 이미지)가 고른다.
          */
-        static sw::string readActivePackRoot();
+        static sw::string readPackRoot( sw::string_view gameName );
+
+        /** @brief 이 빌드가 함께 지은 게임 팩(`Bin/Games/<게임>/`, `SW_GAMES`)의 이름입니다(이름순). 없으면 비어 있다(Shipping · `SW_GAMES` 비움). */
+        static sw::vector<sw::string> collectBuiltGamePacks();
 
         /** @brief 시나리오 하나의 프로세스 시한(초) — 넘으면 죽이고 -1 입니다(시나리오의 프레임 시한이 먼저 끝내야 한다). */
         static constexpr uint32 kScenarioTimeoutSeconds = 180;

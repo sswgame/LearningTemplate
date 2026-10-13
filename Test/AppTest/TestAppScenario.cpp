@@ -8,6 +8,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Automation/AutomationScenario.h"
+#include "Engine/Config/GameSelection.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
@@ -56,7 +57,7 @@ namespace
         static sw::vector<sw::string> collectGameScenarioPaths()
         {
             sw::vector<sw::string> listFolder{ "engine/automation" };
-            const sw::string       packRoot = test::AppTestUtil::readActivePackRoot();
+            const sw::string       packRoot = test::AppTestUtil::readPackRoot( sw::GameSelection::getName() );
             if ( packRoot.empty() == false )
                 listFolder.push_back( packRoot + "/automation" );
             return collectScenarioPaths( listFolder );
@@ -256,6 +257,30 @@ SW_TEST_CASE( AppScenarioTest, EveryScenarioPassesOnEveryBackend )
         SW_TEST_SKIP( "no automation scenario for the engine or this game" );
     if ( AppScenarioTestInternal::runEveryBackend( listScenario, {} ) == 0 )
         SW_TEST_SKIP( "no scenario could run on this machine" );
+}
+
+/**
+ * @brief [AppScenarioTest] 같은 빌드가 함께 지은 게임 팩(`Bin/Games/<게임>/`, `SW_GAMES`)마다 그 팩의 시나리오가 `-game=<게임>` 으로 모든 백엔드에서 통과한다
+ * @details 게임마다 프리셋 빌드를 따로 두지 않고 한 빌드에서 게임 전부를 확인한다(언리얼 Gauntlet 이 프로젝트를 명령줄로 받는 것과 같다).
+ *          엔진 시나리오는 활성 게임의 사례가 이미 돈다. 게임 팩을 짓지 않은 빌드(Shipping · `SW_GAMES` 비움)는 건너뛴다.
+ */
+SW_TEST_CASE( AppScenarioTest, EveryGamePackScenarioPassesOnEveryBackend )
+{
+    const sw::vector<sw::string> listGame = test::AppTestUtil::collectBuiltGamePacks();
+    if ( listGame.empty() )
+        SW_TEST_SKIP( "no game packs in Bin/Games (Shipping or SW_GAMES is empty)" );
+    uint32 ranCount = 0;
+    for ( const sw::string& gameName : listGame )
+    {
+        const sw::string packRoot = test::AppTestUtil::readPackRoot( gameName );
+        SW_EXPECT_TRUE_MSG( packRoot.empty() == false, ( "no _packRoot in the preset of " + gameName ).c_str() );
+        if ( packRoot.empty() )
+            continue;
+        const sw::vector<sw::string> listScenario = AppScenarioTestInternal::collectScenarioPaths( { packRoot + "/automation" } );
+        ranCount += AppScenarioTestInternal::runEveryBackend( listScenario, "-game=" + gameName );
+    }
+    if ( ranCount == 0 )
+        SW_TEST_SKIP( "no game pack scenario could run on this machine" );
 }
 
 /**

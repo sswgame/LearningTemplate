@@ -3,11 +3,11 @@
 #include "AppTest/AppTestUtil.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Config/GameSelection.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -72,14 +72,14 @@ namespace test
         return outProcess.launch( command );
     }
 
-    sw::string AppTestUtil::readActivePackRoot()
+    sw::string AppTestUtil::readPackRoot( sw::string_view gameName )
     {
         sw::string packRoot;
         if ( sw::ResourcePaths::initialize() == false )
             return packRoot;
         const sw::string repositoryRoot = sw::FileUtil::getDirectoryPart( sw::ResourcePaths::getRootFolderPath() );
         sw::string       text;
-        if ( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( repositoryRoot, sw::GameSelection::getConfigPath() ), text ) == false )
+        if ( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( repositoryRoot, sw::FileUtil::joinPath( sw::config::kDirRuntimeGamePreset, sw::string( gameName ) + ".json" ) ), text ) == false )
             return packRoot;
         const size_t keyIndex = text.find( "\"_packRoot\"" );
         const size_t open     = keyIndex == sw::string::npos ? sw::string::npos : text.find( '"', text.find( ':', keyIndex ) );
@@ -87,6 +87,27 @@ namespace test
         if ( close != sw::string::npos )
             packRoot = text.substr( open + 1, close - open - 1 );
         return packRoot;
+    }
+
+    sw::vector<sw::string> AppTestUtil::collectBuiltGamePacks()
+    {
+        sw::vector<sw::string> listGame;
+#if !defined( SW_SHIPPING )
+        const sw::string       gamesDirectory = sw::FileUtil::joinPath( sw::FileUtil::getBinaryDirectory(), sw::config::kDirBinGames );
+        sw::vector<sw::string> listFile;
+        if ( sw::FileUtil::isDirectory( gamesDirectory ) == false || sw::FileUtil::collectFiles( gamesDirectory, ".json", listFile, true ) == false )
+            return listGame;
+        for ( const sw::string& filePath : listFile )
+        {
+            // `Bin/Games/<게임>/SWGame.module.json` — 폴더 이름이 게임 이름이다.
+            const sw::string manifestName = sw::string( sw::config::kTargetGameModule ) + ".module.json";
+            if ( sw::StringUtil::equals( sw::FileUtil::getFileNamePart( filePath ).c_str(), manifestName.c_str() ) == false )
+                continue;
+            listGame.push_back( sw::FileUtil::getFileNamePart( sw::FileUtil::trimTrailingSlashes( sw::FileUtil::getDirectoryPart( filePath ) ) ) );
+        }
+        std::sort( listGame.begin(), listGame.end() );
+#endif
+        return listGame;
     }
 
     int32 AppTestUtil::runScenario( const sw::string& scenarioPath, const utf8* pBackendSwitch, sw::string& outScenarioLines, sw::string_view extraArguments )
