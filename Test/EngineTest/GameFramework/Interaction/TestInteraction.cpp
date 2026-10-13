@@ -66,9 +66,8 @@ namespace
             : _resources{ resources }
             , _bBound{ true }
         {
-            ModuleServiceTable service{};
-            service.arrServices[internal::toRawServiceID( internal::ModuleServiceID::AssetManager )] = &_resources;
-            game::bindGameService( service );
+            (void)_hostServices.bind( &_resources ); // 새 범위 — 겹치지 않는다
+            game::bindGameService( _hostServices );
         }
 
         ~ScopedCatalogServiceBinding() { release(); }
@@ -89,8 +88,9 @@ namespace
         }
 
     private:
-        AssetManager& _resources;
-        bool          _bBound;
+        AssetManager&  _resources;
+        bool           _bBound;
+        SubsystemScope _hostServices{}; ///< 게임 모듈이 찾는 호스트 서비스(이 가드가 사는 동안)
     };
 
     struct InteractionTestInternal

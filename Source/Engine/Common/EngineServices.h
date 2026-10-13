@@ -21,7 +21,7 @@ namespace sw
 #define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility )       Tag Type;
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility ) Tag Type;
 #define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility )                Tag Type;
-#include "RuntimeAPI/Service/EngineServiceList.xxx"
+#include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
@@ -39,13 +39,13 @@ namespace sw
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility ) Type* member{ nullptr };
 #define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility )                Type* member{ nullptr };
 // NOLINTEND(bugprone-macro-parentheses)
-#include "RuntimeAPI/Service/EngineServiceList.xxx"
+#include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
     };
 
-    struct ModuleServiceTable;
+    class SubsystemScope;
 
     namespace engine
     {
@@ -78,11 +78,11 @@ namespace sw
         /** @brief 바인딩한 범위의 로케이터입니다. 목록에 없는 서브시스템을 이름으로 찾을 때 씁니다. 바인딩 전이면 nullptr 입니다. */
         SW_API const ISubsystemLocator* getEngineSubsystems();
         /**
-         * @brief ModuleServiceTable 테이블에 현재 바인딩된 Engine 서비스를 채웁니다.
-         * @param bGameModuleOnly true 면 `GameVisible` 인 것만 채웁니다. 나머지 자리는 nullptr 입니다.
-         * @note 표를 먼저 통째로 비우므로, 호스트 전용 서비스는 **이 호출 뒤에** 채워야 합니다.
+         * @brief 모듈(게임 · 에디터)에 넘길 범위 @p outScope 에 지금 찾아 둔 서비스를 그 타입으로 겁니다(빌려 건다 — 서비스가 범위보다 오래 산다).
+         * @param bGameModuleOnly true 면 `GameVisible` 행만 겁니다 — 게임 모듈은 호스트 전용 서비스를 찾지 못한다.
+         * @note 빈 행은 걸지 않는다. 호스트 전용 서비스(모듈 컴파일러)는 호스트가 그 뒤에 더 건다.
          */
-        SW_API void fillModuleServices( ModuleServiceTable& outService, bool bGameModuleOnly = false );
+        SW_API void bindModuleServices( SubsystemScope& outScope, bool bGameModuleOnly );
 
         // ------------------------------------------------------------------------------
         // 3) 서비스 조회 — bind 이후에만 호출 (EngineServiceList.xxx 에서 생성)
@@ -90,7 +90,7 @@ namespace sw
 #define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility )       SW_API Type& getter();
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility ) SW_API const Type& getter();
 #define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility )                SW_API Type* getter();
-#include "RuntimeAPI/Service/EngineServiceList.xxx"
+#include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT

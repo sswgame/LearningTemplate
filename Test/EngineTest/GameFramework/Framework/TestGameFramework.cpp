@@ -117,14 +117,15 @@ namespace
     {
         explicit ScopedSceneGameService( SceneManager& manager )
         {
-            ModuleServiceTable service{};
-            service.arrServices[internal::toRawServiceID( internal::ModuleServiceID::SceneManager )] = &manager;
-            game::bindGameService( service );
+            (void)_hostServices.bind( &manager ); // 새 범위 — 겹치지 않는다
+            game::bindGameService( _hostServices );
         }
         ~ScopedSceneGameService() { game::unbindGameService(); }
 
         ScopedSceneGameService( const ScopedSceneGameService& )            = delete;
         ScopedSceneGameService& operator=( const ScopedSceneGameService& ) = delete;
+
+        SubsystemScope _hostServices{}; ///< 게임 모듈이 찾는 호스트 서비스(이 가드가 사는 동안)
     };
 
     /** @brief "game" 채널 이벤트가 이 디스패처로 가게 게임 범위에 겁니다(`GameEventUtil::send` 가 여기서 찾습니다). */
@@ -2756,11 +2757,10 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
 
         ScopedRunState()
         {
-            (void)_input.initialize(); // 장치 등록뿐이다 — 아래 단언이 통합 맵을 본다
-            ModuleServiceTable service{};
-            service.arrServices[internal::toRawServiceID( internal::ModuleServiceID::InputManager )]        = &_input;
-            service.arrServices[internal::toRawServiceID( internal::ModuleServiceID::LocalizationManager )] = &engine::getLocalizationManager();
-            game::bindGameService( service );
+            (void)_input.initialize();                                     // 장치 등록뿐이다 — 아래 단언이 통합 맵을 본다
+            (void)_hostServices.bind( &_input );                           // 새 범위 — 겹치지 않는다
+            (void)_hostServices.bind( &engine::getLocalizationManager() ); // 타입이 달라 겹치지 않는다
+            game::bindGameService( _hostServices );
         }
         ~ScopedRunState()
         {
@@ -2772,6 +2772,8 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
         }
         ScopedRunState( const ScopedRunState& )            = delete;
         ScopedRunState& operator=( const ScopedRunState& ) = delete;
+
+        SubsystemScope _hostServices{}; ///< 게임 모듈이 찾는 호스트 서비스(이 가드가 사는 동안)
     };
     ScopedRunState runState;
 

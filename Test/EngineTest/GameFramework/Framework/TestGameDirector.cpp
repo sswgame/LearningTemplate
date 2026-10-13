@@ -146,14 +146,15 @@ namespace
     {
         explicit ScopedDirectorSceneService( SceneManager& manager )
         {
-            ModuleServiceTable service{};
-            service.arrServices[internal::toRawServiceID( internal::ModuleServiceID::SceneManager )] = &manager;
-            game::bindGameService( service );
+            (void)_hostServices.bind( &manager ); // 새 범위 — 겹치지 않는다
+            game::bindGameService( _hostServices );
         }
         ~ScopedDirectorSceneService() { game::unbindGameService(); }
 
         ScopedDirectorSceneService( const ScopedDirectorSceneService& )            = delete;
         ScopedDirectorSceneService& operator=( const ScopedDirectorSceneService& ) = delete;
+
+        SubsystemScope _hostServices{}; ///< 게임 모듈이 찾는 호스트 서비스(이 가드가 사는 동안)
     };
 
     /** @brief 활성 씬 하나와 그 씬을 가리키는 게임 서비스입니다 — `GameInstanceBase` 가 활성 씬의 매니저를 여기서 찾습니다. */

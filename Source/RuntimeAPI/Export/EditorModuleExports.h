@@ -66,7 +66,7 @@ namespace sw
         { sw::ModuleForwardUtil::callVoid<EditorClass>( editorHandle, &EditorClass::getSceneViewport, pRenderTarget, pWidth, pHeight ); };                                                                         \
         pOutAPI->getSceneViewCamera = []( sw::EditorHandle editorHandle ) -> void*                                                                                                                                 \
         { return sw::ModuleForwardUtil::callOr<EditorClass, void*>( editorHandle, nullptr, &EditorClass::getSceneViewCamera ); };                                                                                  \
-        pOutAPI->bindService = []( const sw::ModuleServiceTable* pService )                                                                                                                                        \
+        pOutAPI->bindService = []( const sw::ISubsystemLocator* pService )                                                                                                                                         \
         {                                                                                                                                                                                                          \
             if ( pService != nullptr )                                                                                                                                                                             \
                 sw::editor::bindEditorService( *pService );                                                                                                                                                        \

@@ -9,7 +9,6 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "RuntimeAPI/Service/GameServiceBinding.h"
-#include "RuntimeAPI/Service/ModuleServiceTable.h"
 
 namespace sw
 {
@@ -17,8 +16,8 @@ namespace sw
     {
         namespace internal
         {
-            /** @brief App 이 넘긴 호스트 서비스 표입니다(`bindGameService`). */
-            SW_GAMESERVICE_API const ModuleServiceTable& getHostServiceTable();
+            /** @brief App 이 넘긴 호스트 서비스 범위입니다(`bindGameService`). 없으면 nullptr 입니다. */
+            SW_GAMESERVICE_API const ISubsystemLocator* findHostServices();
         } // namespace internal
 
         // bindGameService · unbindGameService 는 RuntimeAPI/Service/GameServiceBinding.h 가 선언한다(진입점 매크로가 RuntimeAPI 안에서 부른다).
@@ -43,7 +42,7 @@ namespace sw
             T* pScoped = locateSubsystem<T>( findGameScope() );
             if ( pScoped != nullptr )
                 return pScoped;
-            return internal::getHostServiceTable().find<T>();
+            return locateSubsystem<T>( internal::findHostServices() );
         }
 
         /** @brief 서비스 @p T 가 지금 묶여 있는지 묻습니다. `getService<T>()` 와 같은 순서(게임 범위 → 호스트)로 본다. */

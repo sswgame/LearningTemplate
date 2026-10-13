@@ -419,6 +419,10 @@
   서지 않는다(옛 `CheckEngineServiceBinding` 게이트를 대신한다). 서브시스템이 아닌 행(값 묶음 · 소유한 서브시스템 안의 객체)은 호스트가 그 객체를
   범위에 `bind` 한다. 테스트는 하네스 범위를 부모로 둔 범위에 같은 타입을 넣어 서비스를 갈아 끼운다(`test::ScopedEngineServiceOverride`).
   하네스는 자기 호스트 비트(`kTestHarness`)로 서서 클라이언트 전용(글꼴 · UI · 텔레메트리 · 플레이어 설정)을 표의 자리로만 둔다.
+  모듈(게임 · 에디터)이 받는 호스트 서비스도 범위다(정리 ④c): 호스트가 `SubsystemScope` 에 표의 행을 그 타입으로 걸어 포인터를 넘기고
+  (`engine::bindModuleServices` — 게임 모듈에는 `GameVisible` 행만, 에디터에는 모듈 컴파일러까지), 모듈은 자기 범위 다음에 그 범위에서 찾는다.
+  서비스 id 열거형 · id 배열 표(`ModuleServiceTable`) · 호스트 서비스 목록은 지웠다 — 찾는 열쇠는 범위와 같은 타입 해시 하나다. 엔진 루프 ·
+  부트스트랩 · 헤드리스 헤더는 호스트만 include 한다(`CheckEngineLayers` 가 Games · GameFramework · Editor 에서 막는다).
 
 ### 5-4. 데이터, 직렬화, 설정
 

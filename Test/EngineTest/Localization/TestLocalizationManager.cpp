@@ -288,8 +288,8 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageChangedCallbackNotification )
  */
 SW_TEST_CASE( LocalizationManagerTest, GameStringsMountsTheGameProject )
 {
-    sw::ModuleServiceTable gameService{};
-    gameService.arrServices[sw::internal::toRawServiceID( sw::internal::ModuleServiceID::LocalizationManager )] = &sw::engine::getLocalizationManager();
+    sw::SubsystemScope gameService;
+    SW_ASSERT_TRUE( gameService.bind( &sw::engine::getLocalizationManager() ) );
     sw::test::ScopedGameServiceBinding scopedBinding{ gameService };
 
     const sw::string folder           = test::makeTempDirectory( "loc_gamestrings" );

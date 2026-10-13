@@ -11,8 +11,6 @@
 
 #include "Editor/Common/EditorExports.h"
 
-#include "RuntimeAPI/Service/ModuleServiceTable.h"
-
 namespace sw
 {
     class Component;
@@ -27,11 +25,12 @@ namespace sw::editor
 
     namespace internal
     {
-        /** @brief App 이 넘긴 호스트 서비스 표입니다(`bindEditorService`). */
-        SW_EDITOR_API const ModuleServiceTable& getHostServiceTable();
+        /** @brief App 이 넘긴 호스트 서비스 범위입니다(`bindEditorService`). 없으면 nullptr 입니다. */
+        SW_EDITOR_API const ISubsystemLocator* findHostServices();
     } // namespace internal
 
-    void bindEditorService( const ModuleServiceTable& service );
+    /** @brief App 이 넘긴 호스트 서비스 범위를 연결합니다. 범위는 `unbindEditorService` 까지 살아 있어야 합니다(호스트가 소유). */
+    void bindEditorService( const ISubsystemLocator& hostServices );
     void unbindEditorService();
 
     /** @brief 지금 에디터 범위입니다. 에디터 컨텍스트가 활성이 아니고 테스트가 건 범위도 없으면 nullptr 입니다. */
@@ -50,7 +49,7 @@ namespace sw::editor
         T* pScoped = locateSubsystem<T>( findEditorScope() );
         if ( pScoped != nullptr )
             return pScoped;
-        return internal::getHostServiceTable().find<T>();
+        return locateSubsystem<T>( internal::findHostServices() );
     }
 
     /**

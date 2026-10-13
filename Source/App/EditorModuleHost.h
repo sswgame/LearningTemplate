@@ -144,7 +144,7 @@ namespace sw
         /** @brief 이번 프레임의 게임 뷰와 씬 뷰 RT 핸들과 크기를 에디터에서 조회해 프레임 상태에 담습니다(보이지 않는 패널의 뷰는 비어 있습니다). */
         void sampleViewTargets();
 
-        /** @brief ModuleServiceTable 를 다시 만들어 에디터 모듈에 넘깁니다. */
+        /** @brief 호스트 서비스 범위를 다시 만들어 에디터 모듈에 넘깁니다. */
         void rebindEditorService();
         /**
          * @brief 에디터 인스턴스를 shutdown, destroy 하고 핸들을 비웁니다.
@@ -170,6 +170,7 @@ namespace sw
 
         EditorAPI                     _editorAPI;
         EditorHandle                  _editor;
+        unique_ptr<SubsystemScope>    _editorServices;      ///< 에디터 모듈에 넘긴 호스트 서비스 범위(`rebindEditorService` 가 새로 만든다)
         vector<EditorExtensionModule> _listEditorExtension; ///< 켜진 확장 모듈(로드 순서이며, `loadModuleImages` 가 모은다).
 
         uint8                  _bEnableEditor       : 1;

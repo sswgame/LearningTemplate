@@ -11,9 +11,10 @@ namespace sw::test
     class ScopedGameServiceBinding
     {
     public:
-        explicit ScopedGameServiceBinding( const ModuleServiceTable& service )
+        /** @brief @p hostServices 를 호스트 서비스 범위로 겁니다. 범위는 이 가드보다 오래 살아야 합니다. */
+        explicit ScopedGameServiceBinding( const ISubsystemLocator& hostServices )
         {
-            game::bindGameService( service );
+            game::bindGameService( hostServices );
         }
 
         ~ScopedGameServiceBinding()

@@ -36,9 +36,8 @@
 순서: ① ISubsystem · SubsystemCollection 을 Core 로(끝) ② RHI 이전(끝) ③ 엔진 수명 매니저가 ISubsystem 직접 상속(끝, `93f0693e1`, EngineLoop.cpp 1361 → 822 줄)
 ④ 소유 · 조회 흡수 ⑤ 부트스트랩 분해 — 조회 창구는 main 의 `SubsystemScope`(`6ccdeb60e`)를 쓰고 ④b(세 범위 + ⑤ 를 함께 — 서비스 범위의 객체는 이름 풀 · 로거 뒤에 만들어야 해서 둘을 나눌 수 없었다)
 끝, EngineLoop.cpp 822 → 887 줄(부트스트랩 · 서비스 범위 등록이 들어왔고 EngineBootstrap 201 줄 · EngineServiceCollection 265 줄이 없어졌다).
-남은 ④: ④c 모듈 조회 창구(호스트 서비스 표 ModuleServiceTable 을 엔진 범위 위의 `ISubsystemLocator` 로 — 게임 · 에디터 범위(`6ccdeb60e`)가 이미 그 위에 얹혀
-있으니 게임 모듈에는 GameVisible 만 보이는 거름 범위를 둔다) ④d 층 게이트(Games · GameFramework ·
-Editor 가 EngineLoop 헤더를 include 하면 실패). ⑥ EngineLoop → Engine 개명(조정자가 시점을 알림). 그 뒤 C-27 ① ② ③ ⑤ ⑥(조정자 분담 — C-26 · C-27 ④ 는 다른 통합 담당).
+④c(모듈은 호스트가 넘긴 서비스 범위에서 찾는다 — ModuleServiceTable · 호스트 서비스 목록 삭제) · ④d(엔진 루프 · 부트스트랩 · 헤드리스 헤더는
+호스트만 — CheckEngineLayers) 끝. ⑥ EngineLoop → Engine 개명(조정자가 시점을 알림). 그 뒤 C-27 ① ② ③ ⑤ ⑥(조정자 분담 — C-26 · C-27 ④ 는 다른 통합 담당).
 - ④b 모양: 호스트는 `_bootstrap` → `_services` → `_startup` 세 컬렉션을 부모로 잇는다. 서비스 표(`engine::getXxx`)는 소유 없이 바인딩 때 한 번 찾아 둔 캐시이고,
   필수 행이 비면 호스트가 서지 않는다(`CheckEngineServiceBinding` 게이트는 지웠다). 세 범위는 `SubsystemScope`(타입 해시), 서브시스템이 아닌 행은 호스트가 `bind`.
   하네스는 `EngineSubsystemHost::kTestHarness` 로 서서 클라이언트 전용을 표의 자리로만 둔다. 테스트의 서비스 갈아 끼우기는 `test::ScopedEngineServiceOverride`.

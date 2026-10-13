@@ -13,19 +13,19 @@ namespace sw::editor
 {
     namespace
     {
-        ModuleServiceTable  s_editorService{};         ///< App 이 넘긴 호스트 서비스 표
-        SubsystemScope*     s_pEditorScope{ nullptr }; ///< 지금 에디터 범위(에디터 컨텍스트 · 테스트가 건다)
-        EditorToolDefaults* s_pEditorToolDefaults{ nullptr };
+        const ISubsystemLocator* s_pHostServices{ nullptr }; ///< App 이 넘긴 호스트 서비스 범위
+        SubsystemScope*          s_pEditorScope{ nullptr };  ///< 지금 에디터 범위(에디터 컨텍스트 · 테스트가 건다)
+        EditorToolDefaults*      s_pEditorToolDefaults{ nullptr };
     } // namespace
 
-    void bindEditorService( const ModuleServiceTable& service )
+    void bindEditorService( const ISubsystemLocator& hostServices )
     {
-        s_editorService = service;
+        s_pHostServices = &hostServices;
     }
 
     void unbindEditorService()
     {
-        s_editorService = {};
+        s_pHostServices = nullptr;
     }
 
     SubsystemScope* findEditorScope()
@@ -40,9 +40,9 @@ namespace sw::editor
 
     namespace internal
     {
-        const ModuleServiceTable& getHostServiceTable()
+        const ISubsystemLocator* findHostServices()
         {
-            return s_editorService;
+            return s_pHostServices;
         }
     } // namespace internal
 

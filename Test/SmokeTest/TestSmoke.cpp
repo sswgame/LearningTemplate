@@ -158,10 +158,10 @@ namespace sw
             if ( pfnExport( &api ) == false || api.create == nullptr || api.destroy == nullptr )
                 return false;
 
-            sw::ModuleServiceTable gameService{};
+            sw::SubsystemScope gameService;
             if ( api.bindService != nullptr )
             {
-                sw::engine::fillModuleServices( gameService, true );
+                sw::engine::bindModuleServices( gameService, true );
                 api.bindService( &gameService );
             }
             sw::GameHandle game     = api.create();
@@ -1687,10 +1687,10 @@ SW_TEST_CASE( ModuleAPITest, FullGameSceneAndComponentLifecycle )
     sw::GameAPI api{};
     SW_EXPECT_TRUE( pfnExport( &api ) );
 
+    sw::SubsystemScope gameService;
     if ( api.bindService )
     {
-        sw::ModuleServiceTable gameService{};
-        sw::engine::fillModuleServices( gameService, true );
+        sw::engine::bindModuleServices( gameService, true );
         api.bindService( &gameService );
     }
 
@@ -1808,10 +1808,10 @@ SW_TEST_CASE( ModuleAPITest, SharedModuleChildKeepsItsRegistrations )
     SW_ASSERT_NOT_NULL( pfnExport );
     sw::GameAPI api{};
     SW_ASSERT_TRUE( pfnExport( &api ) );
-    sw::ModuleServiceTable gameService{};
+    sw::SubsystemScope gameService;
     if ( api.bindService != nullptr )
     {
-        sw::engine::fillModuleServices( gameService, true );
+        sw::engine::bindModuleServices( gameService, true );
         api.bindService( &gameService );
     }
     sw::engine::registerModuleTypes( "SWGame" );
@@ -1931,10 +1931,10 @@ SW_TEST_CASE( ModuleAPITest, GameModuleRepeatedReloadCycle )
         sw::GameAPI api{};
         SW_EXPECT_TRUE( pfnExport( &api ) );
 
+        sw::SubsystemScope gameService;
         if ( api.bindService )
         {
-            sw::ModuleServiceTable gameService{};
-            sw::engine::fillModuleServices( gameService, true );
+            sw::engine::bindModuleServices( gameService, true );
             api.bindService( &gameService );
         }
 
@@ -1998,10 +1998,10 @@ SW_TEST_CASE( ModuleAPITest, UnloadChildReleasesTheChannelsItsImageCreated )
     SW_ASSERT_NOT_NULL( pfnExport );
     sw::GameAPI api{};
     SW_ASSERT_TRUE( pfnExport( &api ) );
-    sw::ModuleServiceTable gameService{};
+    sw::SubsystemScope gameService;
     if ( api.bindService != nullptr )
     {
-        sw::engine::fillModuleServices( gameService, true );
+        sw::engine::bindModuleServices( gameService, true );
         api.bindService( &gameService );
     }
     sw::GameHandle game = api.create();

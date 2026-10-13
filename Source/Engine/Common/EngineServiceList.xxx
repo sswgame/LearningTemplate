@@ -1,11 +1,9 @@
 /**
- * @file RuntimeAPI/Service/EngineServiceList.xxx
- * @brief 호스트가 소유하고 Engine.dll 이 조회하는 코어 서비스의 단일 등록표입니다(X-macro). 서비스 id(`ModuleServiceID`)가 여기서 나옵니다.
+ * @file Engine/Common/EngineServiceList.xxx
+ * @brief 엔진 서비스 표(`engine::getXxx()` — 바인딩 때 범위에서 한 번 찾아 둔 캐시)의 단일 등록표입니다(X-macro).
  * @details include 하기 전에 아래 매크로를 정의한 뒤 여러 번 include 합니다(#pragma once 없음).
- *          전방 선언 · EngineServices 멤버 · engine::getXxx() 선언/정의 · areEngineServicesBound() 본문 ·
- *          ModuleServiceID 열거형 · ModuleServiceTraits 가 이 목록에서 생성됩니다.
- *          RuntimeAPI 에 있는 이유: 서비스 id 는 호스트 ↔ 모듈 계약이다(모듈은 `getService<T>()` 로 타입에서 id 를 찾는다). 줄의 타입 이름은 전방
- *          선언만 만들고 Engine 헤더를 include 하지 않는다. member · getter · requirement 칸은 Engine(`EngineServices`)만 읽는다.
+ *          전방 선언 · EngineServices 멤버 · engine::getXxx() 선언/정의 · 필수 행 검사 · 모듈 범위 채우기(`bindModuleServices`)가 이 목록에서 생성됩니다.
+ *          모듈은 이 목록을 모른다 — 호스트가 넘긴 범위에서 타입으로 찾는다(`game::getService<T>()` · `editor::getService<T>()`).
  *
  * SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility )
  *   Type& getter()        — 바인딩되지 않았으면 assert.
@@ -21,7 +19,7 @@
  *         `Type` 이 서브시스템이 아니면(값 묶음 · 소유한 서브시스템 안의 객체) 호스트가 그 객체를 범위에 `bind` 합니다.
  *         필수 행이 비면 엔진 루프가 서지 않습니다(호스트가 그 서브시스템을 넣지 않았다).
  *
- * 칸은 숫자가 아니라 낱말입니다. 값이 필요한 곳은 `RuntimeAPI/Service/ServiceListColumns.h` 의 매크로로 바꿉니다.
+ * 칸은 숫자가 아니라 낱말입니다. 값이 필요한 곳은 `Engine/Common/EngineServiceListColumns.h` 의 매크로로 바꿉니다.
  *
  * 정의하지 않은 변형은 include 하는 쪽이 빈 매크로로 채워야 합니다.
  */

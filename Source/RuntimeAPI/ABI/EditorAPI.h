@@ -12,8 +12,9 @@ namespace sw
 {
     // 핸들은 ABI/RuntimeHandles.h 가 모아 들고 있다. EditorHandle 포함.
 
-    struct ModuleServiceTable;
     struct NativeWindowEvent;
+
+    class ISubsystemLocator;
 
     // ------------------------------------------------------------------------------
     // 1) EditorAPI — C ABI 함수 테이블
@@ -35,7 +36,7 @@ namespace sw
         void ( *getGameViewport )( EditorHandle editor, uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ){ nullptr };  /**< @brief 이번 프레임 게임 뷰 RT 핸들과 크기를 조회합니다(패널이 안 보이면 0). */
         void ( *getSceneViewport )( EditorHandle editor, uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ){ nullptr }; /**< @brief 이번 프레임 씬 뷰 RT 핸들과 크기를 조회합니다(패널이 안 보이면 0). */
         void* ( *getSceneViewCamera )(EditorHandle editor){ nullptr };                                                        /**< @brief 이번 프레임 씬 뷰 카메라(에디터 카메라, CameraComponent*)를 반환합니다. */
-        void ( *bindService )( const ModuleServiceTable* pService ){ nullptr };                                               /**< @brief ModuleServiceTable 를 에디터 모듈에 주입하거나 nullptr 로 해제합니다. */
+        void ( *bindService )( const ISubsystemLocator* pService ){ nullptr };                                                /**< @brief 호스트 서비스 범위를 에디터 모듈에 주입하거나 nullptr 로 해제합니다. */
         bool ( *isPlaying )( EditorHandle editor ){ nullptr };                                                                /**< @brief 에디터 시뮬레이션(PIE)이 실행 중인지 반환합니다. */
         bool ( *isPaused )( EditorHandle editor ){ nullptr };                                                                 /**< @brief 에디터 시뮬레이션이 일시정지인지 반환합니다. */
         void ( *stopSimulation )( EditorHandle editor ){ nullptr };                                                           /**< @brief 에디터 시뮬레이션(PIE)을 정지합니다(핫 리로드 등). */
@@ -54,7 +55,7 @@ namespace sw
     };
 
     /** @brief 헤드리스 에셋 임포트 진입점의 형입니다(심볼 이름: `kImportEditorAssetsSymbol`). */
-    using PFN_ImportEditorAssets = int32 ( * )( uint32 kind, uint32 checkOnly, const ModuleServiceTable* pService );
+    using PFN_ImportEditorAssets = int32 ( * )( uint32 kind, uint32 checkOnly, const ISubsystemLocator* pService );
 
     /** @brief `importEditorAssets` 의 심볼 이름입니다. 에디터 인스턴스 없이 모듈만 올려 부릅니다(`App --import-textures` · `--import-models`). */
     inline constexpr const utf8* kImportEditorAssetsSymbol = "importEditorAssets";
@@ -69,7 +70,7 @@ namespace sw
     };
 
     /** @brief 헤드리스 로컬라이제이션 진입점의 형입니다(심볼 이름: `kRunEditorLocalizationTaskSymbol`). */
-    using PFN_RunEditorLocalizationTask = int32 ( * )( uint32 task, const utf8* pPoPath, const utf8* pProjectArgument, const ModuleServiceTable* pService );
+    using PFN_RunEditorLocalizationTask = int32 ( * )( uint32 task, const utf8* pPoPath, const utf8* pProjectArgument, const ISubsystemLocator* pService );
 
     /** @brief `runEditorLocalizationTask` 의 심볼 이름입니다. 에디터 인스턴스 없이 모듈만 올려 부릅니다(`App --gather-text` · `--check-text`). */
     inline constexpr const utf8* kRunEditorLocalizationTaskSymbol = "runEditorLocalizationTask";
@@ -94,7 +95,7 @@ extern "C"
      *          @p pService 가 있으면 임포트하는 동안 에디터 서비스로 묶습니다 — 텍스처 압축이 작업 시스템(`TaskManager`)으로 나뉩니다. 없으면 한 스레드로 돕니다.
      * @return 남은 문제 수입니다(0 이면 원본과 임포트 결과가 맞습니다). 설정을 읽지 못하거나 모르는 종류면 음수입니다.
      */
-    SW_MODULE_API int32 importEditorAssets( uint32 kind, uint32 checkOnly, const sw::ModuleServiceTable* pService );
+    SW_MODULE_API int32 importEditorAssets( uint32 kind, uint32 checkOnly, const sw::ISubsystemLocator* pService );
 
     /**
      * @brief 로컬라이제이션 작업 @p task(`sw::EditorLocalizationTask`) 하나를 돌립니다. 소스 트리 · 리소스 트리가 있어야 합니다.
@@ -102,5 +103,5 @@ extern "C"
      *          @p pPoPath 는 `ImportPo` 에서만 읽고, @p pProjectArgument 가 비면(nullptr 포함) 엔진 프로젝트와 활성 게임 팩의 프로젝트 전부입니다.
      * @return 0 이면 성공(확인 모드는 표가 최신), 아니면 실패입니다.
      */
-    SW_MODULE_API int32 runEditorLocalizationTask( uint32 task, const utf8* pPoPath, const utf8* pProjectArgument, const sw::ModuleServiceTable* pService );
+    SW_MODULE_API int32 runEditorLocalizationTask( uint32 task, const utf8* pPoPath, const utf8* pProjectArgument, const sw::ISubsystemLocator* pService );
 }

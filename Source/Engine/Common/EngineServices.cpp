@@ -5,8 +5,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "RuntimeAPI/Service/ModuleServiceTable.h"
-#include "RuntimeAPI/Service/ServiceListColumns.h"
+#include "Engine/Common/EngineServiceListColumns.h"
 
 // 서비스 **타입의 정의는 하나도 필요 없다.** 행마다 `locateSubsystem<Type>()` 이 타입 해시(함수 서명 글)로 찾으므로 전방 선언(EngineServices.h 가
 // 목록에서 생성한다)으로 충분하다 — 매니저 헤더를 끌어오면 이 접착 파일이 엔진 전체에 의존하게 된다. 서브시스템이 아닌 행(타입 레지스트리 ·
@@ -37,7 +36,7 @@ namespace sw
 #define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility )       services.member = locateSubsystem<Type>( &subsystems );
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility ) services.member = locateSubsystem<Type>( &subsystems );
 #define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility )                services.member = locateSubsystem<Type>( &subsystems );
-#include "RuntimeAPI/Service/EngineServiceList.xxx"
+#include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
@@ -55,7 +54,7 @@ namespace sw
     }
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility ) SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility )
 #define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility )
-#include "RuntimeAPI/Service/EngineServiceList.xxx"
+#include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
@@ -107,19 +106,16 @@ namespace sw
             return s_bServicesBound.load( std::memory_order_acquire );
         }
 
-        void fillModuleServices( ModuleServiceTable& outService, bool bGameModuleOnly )
+        void bindModuleServices( SubsystemScope& outScope, bool bGameModuleOnly )
         {
-            using namespace sw::internal;
-            outService = {};
-
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility )              \
-    if ( bGameModuleOnly == false || ( SW_SERVICE_IS_GAME_VISIBLE( visibility ) == 1 ) )     \
-    {                                                                                        \
-        outService.arrServices[toRawServiceID( ModuleServiceID::Type )] = s_services.member; \
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility )                                              \
+    if ( s_services.member != nullptr && ( bGameModuleOnly == false || ( SW_SERVICE_IS_GAME_VISIBLE( visibility ) == 1 ) ) ) \
+    {                                                                                                                        \
+        (void)outScope.bind( s_services.member ); /* 행마다 타입이 달라 겹치지 않는다 — 부른 쪽이 새 범위를 넘긴다 */        \
     }
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility ) SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility )
 #define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility )                SW_ENGINE_SERVICE( member, Tag, Type, getter, Optional, visibility )
-#include "RuntimeAPI/Service/EngineServiceList.xxx"
+#include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
@@ -142,7 +138,7 @@ namespace sw
     {                                                                  \
         return s_services.member;                                      \
     }
-#include "RuntimeAPI/Service/EngineServiceList.xxx"
+#include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT

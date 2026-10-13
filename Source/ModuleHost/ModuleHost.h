@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Renderer/Frame/RenderView.h"
 
@@ -17,7 +18,6 @@
 namespace sw
 {
     struct ModuleResolution;
-    struct ModuleServiceTable;
 
     class IWindow;
     class LiveReloadManager;
@@ -130,7 +130,7 @@ namespace sw
 
         /** @brief 이번 프레임의 모듈 상태를 반환합니다. beginFrame 뒤에만 유효합니다. */
         const ModuleFrameState& getFrameState() const { return _frameState; }
-        /** @brief ModuleCompiler 인스턴스를 반환합니다. HostServiceList.xxx 가 모듈에 넘깁니다. */
+        /** @brief ModuleCompiler 인스턴스를 반환합니다. 에디터 모듈의 서비스 범위에 건다(`fillModuleServiceScope`). */
         ModuleCompiler* getModuleCompiler() const { return _moduleCompiler.get(); }
 
         // 3) LiveReload 콜백. LiveReloadManager 의 델리게이트가 부른다
@@ -205,7 +205,7 @@ namespace sw
         /** @brief RHI 교체 뒤 게임을 다시 만듭니다. 테이블이 비었으면 모듈에서 다시 바인딩합니다. */
         [[nodiscard]] bool recreateGameInstance( void* pGameModule );
         /** @brief 호스트가 모듈에 넘기는 서비스 테이블을 채웁니다. @p bGameModule 이면 게임에 허용된 것(GameVisible)만 채웁니다. */
-        void fillModuleService( ModuleServiceTable& outService, bool bGameModule ) const;
+        void fillModuleServiceScope( SubsystemScope& outScope, bool bGameModule ) const;
 
         /** @brief 이번 프레임 상태를 호스트 모듈이 채웁니다(뷰 RT, 씬 틱 여부). */
         ModuleFrameState&  getMutableFrameState() { return _frameState; }
@@ -226,7 +226,7 @@ namespace sw
         virtual void onRenderWorkersDrained() {}
 
     private:
-        /** @brief ModuleServiceTable 를 다시 만들어 게임 모듈에 넘깁니다(게임에 허용된 것만 채웁니다). */
+        /** @brief 호스트 서비스 범위를 다시 만들어 게임 모듈에 넘깁니다(게임에 허용된 것만 겁니다). */
         void rebindGameService();
         /** @brief 게임 인스턴스를 shutdown, destroy 하고 핸들을 비웁니다. @p bReleaseAPITable 은 `suspendModules` 와 같습니다. */
         void destroyGameInstance( bool bReleaseAPITable );
@@ -256,6 +256,8 @@ namespace sw
 
         GameAPI    _gameAPI;
         GameHandle _game;
+        /** @brief 게임 모듈에 넘긴 호스트 서비스 범위입니다(`rebindGameService` 가 새로 만든다 — 모듈이 들고 있는 동안 산다). */
+        unique_ptr<SubsystemScope> _gameServices;
 
         LiveReloadManager* _pLiveReloadManager; // 소유하지 않는다.
         RHI*               _pRHI;               // 소유하지 않는다.

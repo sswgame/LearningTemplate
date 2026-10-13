@@ -11,8 +11,6 @@
 #include "ModuleHost/LiveReloadManager.h"
 #include "ModuleHost/ModuleInstanceUtil.h"
 
-#include "RuntimeAPI/Service/ModuleServiceTable.h"
-
 #include "sw/config/ConfigConstants.h"
 
 namespace sw
@@ -35,6 +33,7 @@ namespace sw
         : ModuleHost{}
         , _editorAPI{}
         , _editor{ nullptr }
+        , _editorServices{ nullptr }
         , _listEditorExtension{}
         , _bEnableEditor{ SW_FALSE }
         , _bEditorModuleActive{ SW_TRUE }
@@ -368,9 +367,11 @@ namespace sw
         if ( _editorAPI.bindService == nullptr )
             return;
 
-        ModuleServiceTable editorService{};
-        fillModuleService( editorService, false );
-        _editorAPI.bindService( &editorService );
+        // 새 범위를 채워 넘긴 뒤에 앞 범위를 놓는다 — 모듈이 앞 범위를 들고 있는 동안 사라지지 않게.
+        unique_ptr<SubsystemScope> editorServices = make_unique<SubsystemScope>();
+        fillModuleServiceScope( *editorServices, false );
+        _editorAPI.bindService( editorServices.get() );
+        _editorServices = std::move( editorServices );
     }
 
     void EditorModuleHost::destroyEditorInstance( bool bReleaseAPITable )

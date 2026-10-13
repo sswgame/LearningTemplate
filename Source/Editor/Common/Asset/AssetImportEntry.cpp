@@ -91,9 +91,9 @@ namespace sw::editor
     } // namespace
 } // namespace sw::editor
 
-extern "C" SW_MODULE_API int32 importEditorAssets( uint32 kind, uint32 checkOnly, const sw::ModuleServiceTable* pService )
+extern "C" SW_MODULE_API int32 importEditorAssets( uint32 kind, uint32 checkOnly, const sw::ISubsystemLocator* pService )
 {
-    // 인스턴스가 없는 헤드리스 호출이라 서비스 표를 이 호출 동안만 묶는다(작업 시스템 · 로거 같은 엔진 서비스).
+    // 인스턴스가 없는 헤드리스 호출이라 서비스 범위를 이 호출 동안만 묶는다(작업 시스템 · 로거 같은 엔진 서비스).
     if ( pService != nullptr )
         sw::editor::bindEditorService( *pService );
     const int32 result = sw::editor::AssetImportEntryInternal::importAssets( static_cast<sw::EditorImportKind>( kind ), checkOnly != 0 );

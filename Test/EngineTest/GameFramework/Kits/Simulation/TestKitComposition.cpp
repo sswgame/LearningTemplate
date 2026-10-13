@@ -661,14 +661,15 @@ namespace
     {
         explicit ScopedCompositionSceneService( SceneManager& manager )
         {
-            ModuleServiceTable service{};
-            service.arrServices[internal::toRawServiceID( internal::ModuleServiceID::SceneManager )] = &manager;
-            game::bindGameService( service );
+            (void)_hostServices.bind( &manager ); // 새 범위 — 겹치지 않는다
+            game::bindGameService( _hostServices );
         }
         ~ScopedCompositionSceneService() { game::unbindGameService(); }
 
         ScopedCompositionSceneService( const ScopedCompositionSceneService& )            = delete;
         ScopedCompositionSceneService& operator=( const ScopedCompositionSceneService& ) = delete;
+
+        SubsystemScope _hostServices{}; ///< 게임 모듈이 찾는 호스트 서비스(이 가드가 사는 동안)
     };
 
     /** @brief 활성 씬 하나 + 공유 상태 · 밭 · 마을을 (그 순서로) 붙인 오브젝트 하나입니다. */

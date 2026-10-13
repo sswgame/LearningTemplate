@@ -3,6 +3,7 @@
 #include "ModuleHost/ModuleHost.h"
 
 #include "Core/Memory/Memory.h"
+#include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -17,9 +18,6 @@
 #include "ModuleHost/LiveReloadManager.h"
 #include "ModuleHost/ModuleCompiler.h"
 #include "ModuleHost/ModuleInstanceUtil.h"
-
-#include "RuntimeAPI/Service/ModuleServiceTable.h"
-#include "RuntimeAPI/Service/ServiceListColumns.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -43,6 +41,7 @@ namespace sw
         : _moduleCompiler{ nullptr }
         , _gameAPI{}
         , _game{ nullptr }
+        , _gameServices{ nullptr }
         , _pLiveReloadManager{ nullptr }
         , _pRHI{ nullptr }
         , _pWindow{ nullptr }
@@ -519,18 +518,12 @@ namespace sw
     // 인스턴스 생성과 파괴. 리로드 경로와 RHI 핫스왑 경로가 같은 코드를 쓴다.
     // ======================================================================
 
-    void ModuleHost::fillModuleService( ModuleServiceTable& outService, bool bGameModule ) const
+    void ModuleHost::fillModuleServiceScope( SubsystemScope& outScope, bool bGameModule ) const
     {
-        engine::fillModuleServices( outService, bGameModule );
-
-#define SW_HOST_SERVICE( member, Tag, Type, getter, visibility )                                        \
-    if ( bGameModule == false || ( SW_SERVICE_IS_GAME_VISIBLE( visibility ) == 1 ) )                    \
-    {                                                                                                   \
-        outService.arrServices[internal::toRawServiceID( internal::ModuleServiceID::Type )] = getter(); \
-    }
-
-#include "RuntimeAPI/Service/HostServiceList.xxx"
-#undef SW_HOST_SERVICE
+        engine::bindModuleServices( outScope, bGameModule );
+        // 호스트 전용 서비스 — 에디터 모듈만 찾는다(게임 모듈의 범위에는 걸지 않는다).
+        if ( bGameModule == false )
+            (void)outScope.bind( getModuleCompiler() ); // 엔진 행과 타입이 달라 겹치지 않는다(없으면 걸지 않는다)
     }
 
     void ModuleHost::rebindGameService()
@@ -538,9 +531,11 @@ namespace sw
         if ( _gameAPI.bindService == nullptr )
             return;
 
-        ModuleServiceTable gameService{};
-        fillModuleService( gameService, true );
-        _gameAPI.bindService( &gameService );
+        // 새 범위를 채워 넘긴 뒤에 앞 범위를 놓는다 — 모듈이 앞 범위를 들고 있는 동안 사라지지 않게.
+        unique_ptr<SubsystemScope> gameServices = make_unique<SubsystemScope>();
+        fillModuleServiceScope( *gameServices, true );
+        _gameAPI.bindService( gameServices.get() );
+        _gameServices = std::move( gameServices );
     }
 
     void ModuleHost::destroyGameInstance( bool bReleaseAPITable )

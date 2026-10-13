@@ -259,14 +259,14 @@ namespace
     uint32 s_editorUnbindCount{ 0 };
     uint32 s_gameUnbindCount{ 0 };
 
-    void recordEditorBindService( const ModuleServiceTable* pService )
+    void recordEditorBindService( const ISubsystemLocator* pService )
     {
         if ( pService != nullptr )
             return;
         ++s_editorUnbindCount;
         s_bEditorTypesGoneAtUnbind = engine::getGlobalVariableManager().findVariable( kEditorTeardownProbe ) == nullptr;
     }
-    void recordGameBindService( const ModuleServiceTable* pService )
+    void recordGameBindService( const ISubsystemLocator* pService )
     {
         if ( pService != nullptr )
             return;

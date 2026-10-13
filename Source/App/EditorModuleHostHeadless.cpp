@@ -11,7 +11,7 @@
 
     #include "ModuleHost/ModuleInstanceUtil.h"
 
-    #include "RuntimeAPI/Service/ModuleServiceTable.h"
+    #include "Core/Subsystem/SubsystemScope.h"
 
     #include "sw/config/ConfigConstants.h"
 #endif
@@ -26,7 +26,7 @@ namespace sw
         {
             /**
              * @brief 에디터 인스턴스 없이 에디터 모듈만 올려 진입점 @p pSymbol 하나를 부르고 내립니다(헤드리스 임포트 · 로컬라이제이션 공통).
-             * @details 모듈 ABI 를 대조하고, 모듈 타입을 등록했다가 걷습니다. @p call 은 `( TEntryFn, const ModuleServiceTable& ) -> bool` 이고 엔진 서비스 표를 받습니다.
+             * @details 모듈 ABI 를 대조하고, 모듈 타입을 등록했다가 걷습니다. @p call 은 `( TEntryFn, const ISubsystemLocator& ) -> bool` 이고 엔진 서비스 범위를 받습니다.
              * @param symbols 에디터 모듈의 ABI 심볼 이름(`EditorModuleHost::getModuleSymbols`)입니다.
              * @param pPurpose 로그에 쓰는 작업 이름입니다(`"Asset importing"`).
              */
@@ -52,9 +52,9 @@ namespace sw
                         SW_LOG_ERROR( "The editor module does not export %#", pSymbol );
                     else
                     {
-                        ModuleServiceTable service{};
-                        engine::fillModuleServices( service );
-                        bSucceeded = call( pfnEntry, static_cast<const ModuleServiceTable&>( service ) );
+                        SubsystemScope service;
+                        engine::bindModuleServices( service, false );
+                        bSucceeded = call( pfnEntry, static_cast<const ISubsystemLocator&>( service ) );
                     }
                 }
 
@@ -80,9 +80,9 @@ namespace sw
         SW_LOG_ERROR( "Asset importing needs the editor module, which a Shipping build does not have - run it from a Dev build." );
         return false;
 #else
-        // 인스턴스 없이 부르므로 엔진 서비스 테이블을 직접 넘긴다. 임포터가 작업 시스템으로 압축을 나눈다.
+        // 인스턴스 없이 부르므로 엔진 서비스 범위를 직접 넘긴다. 임포터가 작업 시스템으로 압축을 나눈다.
         return EditorModuleHostHeadlessInternal::callEditorModuleEntry<PFN_ImportEditorAssets>(
-            getModuleSymbols(), kImportEditorAssetsSymbol, "Asset importing", [kind, bCheckOnly]( PFN_ImportEditorAssets pfnImport, const ModuleServiceTable& service )
+            getModuleSymbols(), kImportEditorAssetsSymbol, "Asset importing", [kind, bCheckOnly]( PFN_ImportEditorAssets pfnImport, const ISubsystemLocator& service )
         {
             return pfnImport( static_cast<uint32>( kind ), bCheckOnly ? 1u : 0u, &service ) == 0;
         } );
@@ -102,7 +102,7 @@ namespace sw
         const string projectText( projectArgument );
         return EditorModuleHostHeadlessInternal::callEditorModuleEntry<PFN_RunEditorLocalizationTask>(
             getModuleSymbols(), kRunEditorLocalizationTaskSymbol, "Localization tools",
-            [task, &poPathText, &projectText]( PFN_RunEditorLocalizationTask pfnRun, const ModuleServiceTable& service )
+            [task, &poPathText, &projectText]( PFN_RunEditorLocalizationTask pfnRun, const ISubsystemLocator& service )
         {
             return pfnRun( static_cast<uint32>( task ), poPathText.c_str(), projectText.c_str(), &service ) == 0;
         } );

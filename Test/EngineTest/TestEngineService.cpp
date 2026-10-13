@@ -5,11 +5,10 @@
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Common/EngineServiceListColumns.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
-
-#include "RuntimeAPI/Service/ModuleServiceTable.h"
-#include "RuntimeAPI/Service/ServiceListColumns.h"
+#include "Engine/Scene/SceneManager.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -24,50 +23,36 @@ using namespace sw;
 // ------------------------------------------------------------------------------
 
 /**
- * @brief [EngineServiceTest] 게임 모듈용 표에 HostOnly 인 서비스가 하나도 없는지 검증
+ * @brief [EngineServiceTest] 게임 모듈의 범위에는 HostOnly 인 서비스가 하나도 없다
+ * @details 목록의 `visibility` 칸이 게임 모듈이 손댈 수 있는 것과 없는 것의 경계다. 칸을 잘못 바꿔도 빌드는 통과하므로 검사도 같은 목록에서 생성한다.
  */
-SW_TEST_CASE( EngineServiceTest, GameModuleTableHidesHostOnlyServices )
+SW_TEST_CASE( EngineServiceTest, GameModuleScopeHidesHostOnlyServices )
 {
-    ModuleServiceTable editorTable{};
-    ModuleServiceTable gameTable{};
-    engine::fillModuleServices( editorTable, false );
-    engine::fillModuleServices( gameTable, true );
+    SubsystemScope editorScope;
+    SubsystemScope gameScope;
+    engine::bindModuleServices( editorScope, false );
+    engine::bindModuleServices( gameScope, true );
 
-#define SW_CHECK_SERVICE_VISIBILITY( Type, visibility )                                      \
-    {                                                                                        \
-        const uint32 rawID = internal::toRawServiceID( internal::ModuleServiceID::Type );    \
-        if constexpr ( SW_SERVICE_IS_GAME_VISIBLE( visibility ) == 0 )                       \
-            SW_EXPECT_NULL( gameTable.arrServices[rawID] );                                  \
-        else                                                                                 \
-            SW_EXPECT_EQUAL( editorTable.arrServices[rawID], gameTable.arrServices[rawID] ); \
+#define SW_CHECK_SERVICE_VISIBILITY( Type, visibility )                          \
+    {                                                                            \
+        if constexpr ( SW_SERVICE_IS_GAME_VISIBLE( visibility ) == 0 )           \
+            SW_EXPECT_NULL( gameScope.find<Type>() );                            \
+        else                                                                     \
+            SW_EXPECT_EQUAL( editorScope.find<Type>(), gameScope.find<Type>() ); \
     }
 
 #define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility )       SW_CHECK_SERVICE_VISIBILITY( Type, visibility )
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility ) SW_CHECK_SERVICE_VISIBILITY( Type, visibility )
 #define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility )                SW_CHECK_SERVICE_VISIBILITY( Type, visibility )
-#include "RuntimeAPI/Service/EngineServiceList.xxx"
+#include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
 #undef SW_CHECK_SERVICE_VISIBILITY
-}
 
-/**
- * @brief [EngineServiceTest] 호스트 전용 서비스 자리는 fillModuleServices 가 건드리지 않는지 검증
- * @details `fillModuleServices` 는 표를 먼저 통째로 비운다. 그래서 호스트 서비스는 **그 뒤에**
- *          채워야 하고, ModuleHost 가 실제로 그 순서를 지킨다. 순서가 뒤집히면 에디터 모듈이
- *          모듈 컴파일러를 잃는다.
- */
-SW_TEST_CASE( EngineServiceTest, FillClearsTheWholeTableFirst )
-{
-    ModuleServiceTable table{};
-    // 호스트 서비스 자리에 미리 값을 넣어 둔다 — Engine 이 채우는 자리가 아니다.
-    const uint32 hostRawID       = internal::toRawServiceID( internal::ModuleServiceID::IModuleCompiler );
-    table.arrServices[hostRawID] = &table;
-
-    engine::fillModuleServices( table, false );
-
-    SW_EXPECT_NULL( table.arrServices[hostRawID] );
+    // 게임에 보이는 필수 행은 실제로 걸린다(비어 있으면 위 비교가 nullptr == nullptr 로 지나간다).
+    SW_EXPECT_NOT_NULL( gameScope.find<SceneManager>() );
+    SW_EXPECT_NULL( gameScope.find<TaskManager>() ); // HostOnly
 }
 
 /**
