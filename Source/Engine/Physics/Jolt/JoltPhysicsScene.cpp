@@ -34,6 +34,8 @@ namespace sw
             static constexpr JPH::uint kMaxBodyPairCount      = 65536;
             static constexpr JPH::uint kMaxContactCount       = 32768;
             static constexpr JPH::uint kTempAllocatorByteSize = 16u * 1024u * 1024u;
+            /** @brief 삼각 메시 바디에 주는 질량 상자의 가장 얇은 변(m)입니다 — 평평한 메시의 질량이 0 이 되지 않게 한다. */
+            static constexpr float32 kMinMeshMassBoxSize = 0.1f;
 
             static JPH::EMotionType toMotionType( PhysicsBodyType type )
             {
@@ -502,7 +504,19 @@ namespace sw
         settings.mAngularVelocity         = JoltPhysicsSceneInternal::clampAngularVelocity( JoltUtil::toJolt( desc._angularVelocity ), settings.mMaxAngularVelocity );
         if ( desc._bLockRotation )
             settings.mAllowedDOFs = JPH::EAllowedDOFs::TranslationX | JPH::EAllowedDOFs::TranslationY | JPH::EAllowedDOFs::TranslationZ;
-        if ( desc._mass > 0.0f && bMoving )
+        const bool bHasMotion = bMoving || desc._bAllowTypeChange;
+        if ( bHasMotion && pShape->MustBeStatic() )
+        {
+            // 삼각 메시는 부피가 없어 Jolt 가 질량을 셀 수 없다(움직임 정보를 만들면 단언) — 경계 상자의 질량 · 관성을 준다. 평평한 메시도 두께를 둔다.
+            const JPH::Vec3     boxSize = JPH::Vec3::sMax( pShape->GetLocalBounds().GetSize(), JPH::Vec3::sReplicate( JoltPhysicsSceneInternal::kMinMeshMassBoxSize ) );
+            JPH::MassProperties massProperties;
+            massProperties.SetMassAndInertiaOfSolidBox( boxSize, material._density );
+            if ( desc._mass > 0.0f )
+                massProperties.ScaleToMass( desc._mass );
+            settings.mOverrideMassProperties = JPH::EOverrideMassProperties::MassAndInertiaProvided;
+            settings.mMassPropertiesOverride = massProperties;
+        }
+        else if ( desc._mass > 0.0f && bMoving )
         {
             settings.mOverrideMassProperties       = JPH::EOverrideMassProperties::CalculateInertia;
             settings.mMassPropertiesOverride.mMass = desc._mass;

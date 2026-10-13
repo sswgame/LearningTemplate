@@ -10,6 +10,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Physics/Collision/PhysicsMeshShapeCache.h"
 #include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/Cache/BuiltInAssetCache.h"
 #include "Engine/Resource/Cache/WeakInternTable.h"
@@ -56,12 +57,32 @@ namespace sw
                 if ( warned._uniquePath.insert( makeKey( path ) ).second )
                     SW_LOG_WARNING( "Mesh asset '%#' could not be loaded - nothing is drawn for it", path );
             }
+
+            /** @brief 물리 셰이프 캐시의 읽기 함수입니다 — `.mesh` 정점(삼각형 목록)의 위치만 꺼냅니다. */
+            [[nodiscard]] static bool loadTrianglePositions( string_view path, vector<float3>& outListPosition )
+            {
+                vector<RHIVertex> listVertex;
+                if ( MeshAssetFormat::loadFromResource( path, listVertex ) == false )
+                    return false;
+                outListPosition.clear();
+                outListPosition.reserve( listVertex.size() );
+                for ( const RHIVertex& vertex : listVertex )
+                {
+                    outListPosition.push_back( float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] } );
+                }
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
+    MeshCache::MeshCache()
+    {
+        PhysicsMeshShapeCache::setLoadFunction( &MeshCacheInternal::loadTrianglePositions );
+    }
+
     shared_ptr<Mesh> MeshCache::acquire( string_view path )
     {
         SW_MEMORY_SCOPE( Mesh );
@@ -127,6 +148,7 @@ namespace sw
     void MeshCache::reload( string_view relativePath, IRHIDevice* pDevice )
     {
         (void)reloadShared( relativePath, pDevice ); // 쥔 쪽이 없으면 다시 읽을 것이 없다 — 다음에 읽는 쪽이 새 내용을 읽는다
+        PhysicsMeshShapeCache::clear();              // 물리 표는 렌더 메시를 쥔 쪽과 따로 붙든다 — 이미 만든 바디는 옛 기하 그대로다
     }
 
     size_t MeshCache::getCachedCount() const
@@ -140,6 +162,7 @@ namespace sw
         MeshCacheInternal::WarnedPathSet& warned = MeshCacheInternal::getWarnedPathSet();
         std::scoped_lock<mutex>           lock{ warned._mutex };
         warned._uniquePath = unordered_set<string>{};
+        PhysicsMeshShapeCache::clear();
     }
 } // namespace sw
 

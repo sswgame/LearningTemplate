@@ -120,7 +120,8 @@ pBoxBody->addImpulse( float3{ 0.0f, 5.0f, 0.0f } );
 3D 셰이프는 상자, 구, 캡슐, 볼록 껍질, 삼각 메시이고 2D 셰이프는 상자, 원, 캡슐, 다각형, 사슬입니다.
 볼록 껍질과 삼각 메시는 점을 직접 적거나 `_meshPath` 에 메시 에셋(`.mesh`)을 적습니다. 메시를 적으면 `PhysicsMeshShapeCache` 가 경로마다 한 번 읽어
 같은 위치의 정점을 합치고(weld) 퇴화 삼각형을 뺀 뒤 바디 생성과 디버그 그리기에 나눠 줍니다. 언리얼이 스태틱 메시의 정점에서 충돌을 만드는 것과 같은 자리입니다.
-물리는 그래픽스보다 아래 티어라 `.mesh` 를 직접 읽지 못하므로, 엔진 조립 지점이 읽기 함수 하나를 `setLoadFunction` 으로 넣습니다. 넣지 않았거나 파일을 읽지 못하면
+물리는 그래픽스보다 아래 티어라 `.mesh` 를 직접 읽지 못하므로, `.mesh` 를 아는 `MeshCache` 가 만들어질 때(`AssetManager` 생성자) 읽기 함수 하나를 `setLoadFunction` 으로 넣고,
+메시를 다시 읽거나(핫 리로드) 비울 때 이 표도 비웁니다. 그래서 `AssetManager` 가 선 곳이면 게임 · 에디터 · 서버 · 테스트 호스트 모두 같은 길로 읽습니다. 읽기 함수가 없거나 파일을 읽지 못하면
 경로마다 오류 한 번을 남기고 그 셰이프의 바디는 만들지 않습니다. `.mesh` 의 감기(엔진 앞면)는 Jolt 의 앞면과 같아 뒤집지 않습니다.
 바디와 관절 서술자는 차원 하나(`PhysicsDimension3D`, `PhysicsDimension2D`)로 갈리는 템플릿이라 3D 와 2D 가 같은 코드를 씁니다.
 
@@ -270,6 +271,9 @@ Jolt 의 `VehicleConstraint` 와 `WheeledVehicleController` 를 스텝 리스너
 
 **바디의 각속도를 새 바디에 그대로 넘기지 마세요.** Jolt 의 각속도 상한(기본 초당 15바퀴)에 붙어 돌던 바디에서 읽은 값은 반올림으로 상한을 1 ulp 넘을 수 있고, 그러면 Jolt 가 assert 합니다.
 파괴 조각이 갈라질 때 이런 일이 생깁니다. `createBody` 가 시작 각속도를 상한 조금 안쪽으로 줄입니다(`StartingAngularVelocityIsClampedToBodyLimit`).
+
+**삼각 메시 바디에 움직임 정보를 만들 때는 질량을 직접 줍니다.** 삼각 메시는 부피가 없어 Jolt 가 질량을 셀 수 없고, 움직임 정보(Kinematic, 또는 `_bAllowTypeChange` 로 만든 Static —
+`RigidBodyComponent` 는 늘 이렇게 만든다)를 만들면 `Invalid mass` 로 assert 합니다. `createBody` 가 그 바디에 경계 상자의 질량 · 관성을 줍니다(`RigidBodyMeshShapeLoadsThroughEngineMeshCache`).
 
 **Box2D 의 `totalNormalImpulse` 를 충격량으로 쓰지 마세요.** 이완 반복까지 더한 값이라 약 두 배입니다. 백엔드는 마지막 서브 스텝의 `normalImpulse` 에 서브 스텝 수를 곱해 씁니다.
 

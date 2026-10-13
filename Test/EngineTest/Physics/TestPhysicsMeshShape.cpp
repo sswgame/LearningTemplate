@@ -2,11 +2,16 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
+#include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Object/Component/Physics/RigidBodyComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Collision/PhysicsMeshShapeCache.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Physics/PhysicsSystem.h"
+#include "Engine/Resource/AssetManager.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -16,18 +21,18 @@ namespace
 {
     constexpr float32 kMeshShapeStep = 1.0f / 60.0f;
 
-    /** @brief 반 크기 0.5 인 정육면체의 삼각형 목록(36 위치, 모서리 8 개를 삼각형마다 복사 — 임포터가 쓰는 모양)입니다. */
-    sw::vector<sw::float3> makeCubeTriangleList()
+    /** @brief 반 크기 @p size 인 정육면체의 삼각형 목록(36 위치, 모서리 8 개를 삼각형마다 복사 — 임포터가 쓰는 모양)입니다. */
+    sw::vector<sw::float3> makeCubeTriangleList( float32 size = 0.5f )
     {
         const sw::float3 arrCorner[8] = {
-            sw::float3{-0.5f, -0.5f, -0.5f},
-            sw::float3{ 0.5f, -0.5f, -0.5f},
-            sw::float3{ 0.5f,  0.5f, -0.5f},
-            sw::float3{-0.5f,  0.5f, -0.5f},
-            sw::float3{-0.5f, -0.5f,  0.5f},
-            sw::float3{ 0.5f, -0.5f,  0.5f},
-            sw::float3{ 0.5f,  0.5f,  0.5f},
-            sw::float3{-0.5f,  0.5f,  0.5f},
+            sw::float3{-size, -size, -size},
+            sw::float3{ size, -size, -size},
+            sw::float3{ size,  size, -size},
+            sw::float3{-size,  size, -size},
+            sw::float3{-size, -size,  size},
+            sw::float3{ size, -size,  size},
+            sw::float3{ size,  size,  size},
+            sw::float3{-size,  size,  size},
         };
         // 면마다 두 삼각형. 감기는 엔진 앞면(왼손 좌표계에서 시계 방향)이다 — (b - a) × (c - a) 가 바깥을 향하므로 Jolt 에서도 앞면이다.
         const uint32           arrIndex[36] = { 0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4, 3, 7, 6, 3, 6, 2, 0, 4, 7, 0, 7, 3, 1, 2, 6, 1, 6, 5 };
@@ -39,26 +44,11 @@ namespace
         return listPosition;
     }
 
-    /** @brief 엔진 조립 지점이 넣을 읽기 함수와 같은 일을 합니다 — `.mesh` 정점(삼각형 목록)의 위치만 꺼냅니다. */
-    [[nodiscard]] bool loadMeshPositions( sw::string_view path, sw::vector<sw::float3>& outListPosition )
+    /** @brief 반 크기 @p halfExtent 인 정육면체 `.mesh` 를 임시 폴더의 @p pFileName 으로 쓰고 그 경로를 돌려줍니다. */
+    sw::string writeCubeMesh( const utf8* pFileName = "cube.mesh", float32 halfExtent = 0.5f )
     {
         sw::vector<sw::RHIVertex> listVertex;
-        if ( sw::MeshAssetFormat::loadFromResource( path, listVertex ) == false )
-            return false;
-        outListPosition.clear();
-        outListPosition.reserve( listVertex.size() );
-        for ( const sw::RHIVertex& vertex : listVertex )
-        {
-            outListPosition.push_back( sw::float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] } );
-        }
-        return true;
-    }
-
-    /** @brief 정육면체 `.mesh` 를 임시 폴더에 쓰고 그 경로를 돌려줍니다. */
-    sw::string writeCubeMesh()
-    {
-        sw::vector<sw::RHIVertex> listVertex;
-        for ( const sw::float3& position : makeCubeTriangleList() )
+        for ( const sw::float3& position : makeCubeTriangleList( halfExtent ) )
         {
             sw::RHIVertex vertex{};
             vertex._arrPosition[0] = position._x;
@@ -67,26 +57,40 @@ namespace
             vertex._arrNormal[1]   = 1.0f;
             listVertex.push_back( vertex );
         }
-        const sw::string path = test::makeTempPath( "cube.mesh" );
+        const sw::string path = test::makeTempPath( pFileName );
         SW_EXPECT_TRUE( sw::MeshAssetFormat::saveToFile( path, listVertex ) );
         return path;
     }
 
-    /** @brief 테스트가 끝나면 읽기 함수와 표를 처음 상태로 돌립니다(같은 프로세스의 다른 테스트에 남기지 않는다). */
+    /** @brief 기하에서 가장 큰 x 입니다(정육면체면 반 크기). 점이 없으면 0 입니다. */
+    float32 findMaxPointX( const sw::PhysicsShapeGeometry& geometry )
+    {
+        float32 maxX{ 0.0f };
+        for ( const sw::float3& point : geometry._listPoint )
+        {
+            maxX = point._x > maxX ? point._x : maxX;
+        }
+        return maxX;
+    }
+
+    /** @brief 읽기 함수를 잠시 바꾸고, 끝나면 엔진이 넣어 둔 것(`MeshCache`)과 빈 표로 돌립니다(같은 프로세스의 다른 테스트에 남기지 않는다). */
     struct ScopedMeshLoader
     {
         explicit ScopedMeshLoader( sw::PhysicsMeshShapeCache::LoadTriangleListFunction pfnLoad )
+            : _pfnPrevious{ sw::PhysicsMeshShapeCache::getLoadFunction() }
         {
             sw::PhysicsMeshShapeCache::clear();
             sw::PhysicsMeshShapeCache::setLoadFunction( pfnLoad );
         }
         ~ScopedMeshLoader()
         {
-            sw::PhysicsMeshShapeCache::setLoadFunction( nullptr );
+            sw::PhysicsMeshShapeCache::setLoadFunction( _pfnPrevious );
             sw::PhysicsMeshShapeCache::clear();
         }
         ScopedMeshLoader( const ScopedMeshLoader& )            = delete;
         ScopedMeshLoader& operator=( const ScopedMeshLoader& ) = delete;
+
+        sw::PhysicsMeshShapeCache::LoadTriangleListFunction _pfnPrevious;
     };
 
     sw::unique_ptr<sw::IPhysicsScene3D> makeScene()
@@ -147,7 +151,7 @@ SW_TEST_CASE( PhysicsMeshShapeTest, MakeShapeDataWeldsSharedCornersAndDropsDegen
  */
 SW_TEST_CASE( PhysicsMeshShapeTest, MeshPathFillsTriangleMeshAndConvexHull )
 {
-    const ScopedMeshLoader loader{ &loadMeshPositions };
+    const ScopedMeshLoader loader{ sw::PhysicsMeshShapeCache::getLoadFunction() };
     const sw::string       meshPath = writeCubeMesh();
 
     sw::unique_ptr<sw::IPhysicsScene3D> pScene = makeScene();
@@ -205,14 +209,49 @@ SW_TEST_CASE( PhysicsMeshShapeTest, MissingMeshOrLoaderIsRejected )
     SW_TEST_DEFENSIVE_SCOPE( "a mesh shape without a load function or file is rejected" );
     {
         const ScopedMeshLoader loader{ nullptr };
-        SW_EXPECT_FALSE( sw::PhysicsMeshShapeCache::hasLoadFunction() );
+        SW_EXPECT_TRUE( sw::PhysicsMeshShapeCache::getLoadFunction() == nullptr );
         SW_EXPECT_FALSE( addBody( *pScene, makeMeshShape( sw::PhysicsShapeType3D::ConvexHull, "physics/never.mesh" ), sw::float3{}, sw::PhysicsBodyType::Dynamic ).isValid() );
     }
     {
-        const ScopedMeshLoader loader{ &loadMeshPositions };
+        const ScopedMeshLoader loader{ sw::PhysicsMeshShapeCache::getLoadFunction() };
         const sw::string       missing = test::makeTempPath( "never_written.mesh" );
         SW_EXPECT_FALSE( addBody( *pScene, makeMeshShape( sw::PhysicsShapeType3D::TriangleMesh, missing ), sw::float3{}, sw::PhysicsBodyType::Static ).isValid() );
         SW_EXPECT_TRUE( sw::PhysicsMeshShapeCache::acquire( missing ) == nullptr );
         SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), sw::PhysicsMeshShapeCache::getCachedCount() );
     }
+}
+
+/**
+ * @brief [PhysicsMeshShapeTest] 게임 경로 — 강체 컴포넌트의 `_meshPath` 셰이프는 테스트가 읽기 함수를 넣지 않아도 바디가 되고(엔진의 메시 캐시가 넣는다),
+ *        메시 캐시가 그 메시를 다시 읽으면 물리 표도 비워져 다음 셰이프가 새 정점을 읽는다
+ */
+SW_TEST_CASE( PhysicsMeshShapeTest, RigidBodyMeshShapeLoadsThroughEngineMeshCache )
+{
+    sw::PhysicsMeshShapeCache::clear();
+    const sw::string meshPath = writeCubeMesh( "engine_cube.mesh", 0.5f );
+
+    sw::GameObjectManager manager;
+    sw::GameObject*       pObject = manager.createGameObject( sw::hashed_string( "MeshCollider" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    sw::RigidBodyComponent* pBody = pObject->addComponent<sw::RigidBodyComponent>();
+    SW_ASSERT_NOT_NULL( pBody );
+    pBody->setBodyType( sw::PhysicsBodyType::Static );
+    pBody->setShape( makeMeshShape( sw::PhysicsShapeType3D::TriangleMesh, meshPath ) );
+    {
+        // 컴포넌트는 종류를 바꿀 수 있게 바디를 만든다 — 삼각 메시도 Jolt 의 질량 단언 없이 만들어져야 한다.
+        const test::ScopedLogCollector log;
+        manager.beginPlay();
+        manager.tick( kMeshShapeStep );
+        SW_EXPECT_TRUE_MSG( log.countContaining( "" ) == 0u, log.joined().c_str() );
+    }
+    SW_EXPECT_TRUE_MSG( pBody->getBodyHandle().isValid(), "a _meshPath shape must become a body without a test-installed load function" );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), sw::PhysicsMeshShapeCache::getCachedCount() );
+
+    // 파일을 두 배 크기로 다시 쓰고 메시 캐시로 다시 읽는다(에디터 핫 리로드가 부르는 길) — 물리 표도 비고 새 정점을 읽는다.
+    (void)writeCubeMesh( "engine_cube.mesh", 1.0f );
+    sw::engine::getAssetManager().getAssetCache<sw::MeshCache>().reload( meshPath, nullptr );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), sw::PhysicsMeshShapeCache::getCachedCount() );
+    const sw::PhysicsShapeGeometry geometry = sw::PhysicsMeshShapeCache::acquireGeometry( makeMeshShape( sw::PhysicsShapeType3D::ConvexHull, meshPath ) );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, findMaxPointX( geometry ), 1e-6f );
+    sw::PhysicsMeshShapeCache::clear();
 }

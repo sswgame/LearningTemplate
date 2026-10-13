@@ -20,10 +20,16 @@ namespace sw
      * @details 표는 프로세스에 하나이고(Engine.dll 안) 약한 참조입니다 — `MeshUtil::acquirePrimitive` · `SpriteClipCache` 와 같은 모양이라
      *          마지막 사용자가 놓으면 메시도 사라지고, 디바이스가 내려갈 때 이 표가 붙든 GPU 자원이 없습니다. 같은 경로는 같은 `Mesh` 라서
      *          배치 키(메시 포인터)가 갈리지 않습니다. 씬 로드 워커에서 불려도 됩니다(잠급니다).
+     *
+     *          `.mesh` 형식을 아는 것은 이 캐시라서, 물리 셰이프 캐시(`PhysicsMeshShapeCache`, 아래 티어)의 `.mesh` 읽기 함수도 이 캐시가 넣고(생성자)
+     *          메시를 다시 읽거나 비울 때 그 표도 비웁니다 — `_meshPath` 셰이프는 `AssetManager` 가 선 프로세스(게임 · 에디터 · 서버 · 테스트 호스트)면 어디서나 읽힙니다.
      */
     class SW_API MeshCache final : public IAssetCache
     {
     public:
+        /** @brief 물리 셰이프 캐시에 `.mesh` 읽기 함수를 넣습니다(매니저가 여럿이어도 같은 함수다 — 둘 다 Engine 이미지 안이라 빼지 않는다). */
+        MeshCache();
+
         /**
          * @brief 경로의 메시를 **나눠 받습니다**. 처음이면 읽고, 읽을 수 없으면 nullptr 입니다.
          * @details 읽지 못한 경로는 경로마다 한 번만 경고합니다(같은 메시를 쓰는 컴포넌트 수백 개가 같은 줄을 찍지 않게). 실패는 기억하지
@@ -45,11 +51,11 @@ namespace sw
         const utf8* getAssetKindName() const override { return kAssetKindName; }
         /** @brief 그 경로의 메시를 누가 쥐고 있는지 반환합니다. */
         bool isCached( string_view relativePath ) const override;
-        /** @brief 사용 중이면 제자리로 다시 읽습니다(`reloadShared`). */
+        /** @brief 사용 중이면 제자리로 다시 읽습니다(`reloadShared`). 물리 셰이프 표는 쥔 쪽이 없어도 비웁니다(다음 셰이프가 새 정점을 읽는다). */
         void reload( string_view relativePath, IRHIDevice* pDevice ) override;
         /** @brief 지금 누가 쥔 메시 수입니다. */
         size_t getCachedCount() const override;
-        /** @brief 표와 경고 기록을 비웁니다. 쥔 쪽의 메시는 그대로이고, 다음 요청은 파일을 새로 읽습니다. */
+        /** @brief 표와 경고 기록, 물리 셰이프 표를 비웁니다. 쥔 쪽의 메시는 그대로이고, 다음 요청은 파일을 새로 읽습니다. */
         void clear() override;
     };
 } // namespace sw

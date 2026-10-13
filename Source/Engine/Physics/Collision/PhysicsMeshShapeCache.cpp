@@ -63,9 +63,9 @@ namespace sw
         PhysicsMeshShapeCacheInternal::getLoadFunction().store( pfnLoad, std::memory_order_release );
     }
 
-    bool PhysicsMeshShapeCache::hasLoadFunction()
+    PhysicsMeshShapeCache::LoadTriangleListFunction PhysicsMeshShapeCache::getLoadFunction()
     {
-        return PhysicsMeshShapeCacheInternal::getLoadFunction().load( std::memory_order_acquire ) != nullptr;
+        return PhysicsMeshShapeCacheInternal::getLoadFunction().load( std::memory_order_acquire );
     }
 
     shared_ptr<const PhysicsMeshShapeData> PhysicsMeshShapeCache::acquire( string_view path )
