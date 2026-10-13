@@ -33,7 +33,8 @@ namespace sw
     {
     public:
         CompressionCodecRegistry();
-        ~CompressionCodecRegistry() = default;
+        /** @brief 슬롯(`getActive`)이 이 레지스트리를 가리키면 비웁니다. */
+        ~CompressionCodecRegistry();
 
         CompressionCodecRegistry( const CompressionCodecRegistry& )            = delete;
         CompressionCodecRegistry& operator=( const CompressionCodecRegistry& ) = delete;

@@ -117,418 +117,11 @@ namespace sw
     // 해제하는지(`destroy<단계>`)를 필요한 것만 적는다. 없는 함수는 아무것도 하지 않는다(`EngineInitNoStepBody`). 순서는 표의 의존이
     // 정한다: 초기화는 위상 순서, 종료와 해제는 그 역순. 종료는 초기화한 단계에만 불린다. 해제는 모든 종료 뒤에 **모든 단계**에
     // 불리므로(기동이 어디서 멈췄든) null 안전해야 한다. 아래는 읽기 좋게 초기화 순서대로 적었을 뿐이다.
-    // 이 모음은 옮기는 중이다 — 새 단계는 여기에 함수를 더하지 않고 `ISubsystem` 을 상속한다(Fonts · Telemetry · UI 가 옮겨 갔다).
+    // 이 모음은 옮기는 중이다 — 새 단계는 여기에 함수를 더하지 않고 `ISubsystem` 을 상속하거나 `FunctionSubsystem` 으로 적는다(`initialize`).
     // ------------------------------------------------------------------------------
 
     struct EngineLoop::StartupStepBody : EngineInitNoStepBody
     {
-        static EngineInitResult initializeCompression( EngineLoop& loop )
-        {
-            // 압축 레지스트리는 여기가 소유하고, Core 의 CompressionStream 이 볼 수 있도록 슬롯에 연결한다.
-            // 스트림이 Core 에 있어서 엔진 서비스 테이블에는 닿지 못한다(Logger::setGlobalSink 와 같은 모양).
-            loop._owned._pCompressionCodecRegistry->initialize();
-            CompressionCodecRegistry::setActive( loop._owned._pCompressionCodecRegistry.get() );
-            // 외부 라이브러리 코덱은 **목록이 있는 자리**에서 붙인다(EngineCompressionCodecUtil).
-            EngineCompressionCodecUtil::registerAll( *loop._owned._pCompressionCodecRegistry );
-            return EngineInitResult::Succeeded;
-        }
-        // 종료는 하지 않는다. 모듈이 등록한 코덱을 거두는 것은 등록한 모듈의 책임이다(registerCodec 주석 참고). 슬롯을 끊고 통째로 없앤다.
-        // 맨 먼저 서므로 맨 나중에 해제된다 — 팩을 내리는 Resource 해제까지 코덱이 살아 있다.
-        static void destroyCompression( EngineLoop& loop ) { loop._owned.destroyCompressionCodecRegistry(); }
-
-        static EngineInitResult initializeReflection( EngineLoop& )
-        {
-            // 여기서는 이미 이 프로세스에 올라온 등록기만 모은다. 배포 구성은 GameFramework · 킷 · 게임이 정적 링크라 "Engine" 이 다 모으고,
-            // 개발 구성의 모듈 DLL 은 `ModuleTypes` 단계에서 호스트 로더가 올리며 제 이름으로 등록한다.
-            engine::registerModuleTypes( "Engine" );
-            // 명령줄의 enum 이름(`-gv_rhiBackend=Vulkan`)은 enum 표가 선 지금 적용한다. 모르는 이름이면 기본값으로 돌지 않고 멈춘다.
-            if ( engine::bindGlobalVariableEnumNames() == false )
-                return EngineInitResult::Failed;
-            return EngineInitResult::Succeeded;
-        }
-        // 설정 · 에셋 · 씬 객체는 이 단계에 의존하므로 모두 먼저 해제된다.
-        static void destroyReflection( EngineLoop& loop )
-        {
-            engine::unbindGlobalVariableEnumNames();
-            loop._owned._pTypeRegistry.reset();
-        }
-
-        static EngineInitResult initializeConfig( EngineLoop& loop )
-        {
-            // 설정은 리소스 초기화보다 먼저 읽는다(Resource 의 의존 칸). `AssetManager::mountContent` 는 GameConfig 의 `_packRoot` 가
-            // 정해져 있어야 팩을 제대로 마운트하고 게임 도메인의 `assetregistry.txt` 를 읽는다.
-            // Config/ 는 프로젝트 루트에 있고 실행 파일은 build/<preset>/Bin 에서 돈다. 작업 디렉터리 기준으로만 찾으면
-            // 모두 "없음" 이 되어 조용히 기본값으로 떨어지므로, Resource/ 를 찾을 때 알아낸 프로젝트 루트를 넘긴다.
-            loop._configManager = make_unique<ConfigManager>();
-            loop._configManager->setRootDirectory( ResourcePaths::getProjectFolderPath() );
-            ConfigManager::setPrimary( loop._configManager.get() );
-            loop._configManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &EngineLoop::onConfigReloaded, &loop ) );
-
-            loop._pEngineConfig = loop._configManager->ensureConfig<EngineConfig>( config::kFileRuntimeEngineConfig, shipping_host::kEngineConfigJSON );
-            if ( loop._pEngineConfig == nullptr )
-                return EngineInitResult::Failed;
-            EngineConfig::setActive( *loop._pEngineConfig );
-
-            // 틀린 설정 파일은 nullptr 이다(키 이름은 이미 오류로 남았다) — 기본값으로 뜨면 고친 값이 무시된 것을 아무도 모른다.
-            const GameConfig* pGameConfig = loop._configManager->ensureConfig<GameConfig>( config::kFileRuntimeGameConfig, shipping_host::kGameConfigJSON );
-            if ( pGameConfig == nullptr )
-                return EngineInitResult::Failed;
-            GameConfig::setActive( *pGameConfig );
-
-            // 메모리 태그 예산(데이터). 틀린 표는 오류를 남기고 예산 없이 간다 — 진단 설정 하나로 기동을 세우지 않는다.
-            (void)loop._memoryBudgetMonitor.loadBudgetFile( FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), MemoryBudgetMonitor::kBudgetFile ) );
-            return EngineInitResult::Succeeded;
-        }
-        static void destroyConfig( EngineLoop& loop )
-        {
-            // `_pEngineConfig` 는 설정 매니저가 든 객체를 가리킨다. 같이 놓는다.
-            loop._pEngineConfig = nullptr;
-            ConfigManager::setPrimary( nullptr );
-            loop._configManager.reset();
-        }
-
-        static EngineInitResult initializeResource( EngineLoop& loop )
-        {
-            if ( loop._owned._pAssetManager->initialize() == false )
-                return EngineInitResult::Failed;
-            // GameConfig 가 활성화된 뒤라야 "game" 토큰이 팩 루트로 풀린다. 그 전제는 `mountContent` 의 인자에 드러나 있다.
-            // 설정의 우선순위 목록이 비어 있으면 지금 것을 쓴다. 씬 쿠킹(Headless 단계)의 입력은 소스 트리다 — 팩은 그 산출물이다.
-            bool bCookScenes = false;
-            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::COOK_SCENES, bCookScenes );
-            const ContentSource contentSource = bCookScenes ? ContentSource::SourceTree : ContentSource::Cooked;
-            loop._owned._pAssetManager->mountContent( loop._pEngineConfig->_listResourcePriority, contentSource );
-            return EngineInitResult::Succeeded;
-        }
-        // 에셋 캐시를 비운다(`AssetManager::shutdown`). 에셋을 드는 단계(셰이더 캐시 · 오디오 · 입력 · 씬 · 렌더러)는 모두 이 단계 뒤에
-        // 서므로, 역순 해제에서 그들의 소멸자가 에셋을 놓은 다음이다.
-        static void destroyResource( EngineLoop& loop ) { loop._owned.destroyAssetManager(); }
-
-        static EngineInitResult initializeEngineDefaultAssets( EngineLoop& loop )
-        {
-            const bool bEngineDefaultAssetsLoaded = loop._owned._pEngineDefaultAssets->loadFromResource( path::kEngineDefaultAssets );
-            if ( bEngineDefaultAssetsLoaded == false )
-                SW_LOG_WARNING( "Engine data could not be read - using built-in defaults" );
-
-            // 문화권 표 · 엔진 문자열 — 플레이어 설정(언어)이 이 뒤(`UserSettings`)에 적용되고, 게임은 자기 프로젝트를 위에 올린다.
-            LocalizationManager&       localization  = *loop._owned._pLocalizationManager;
-            const EngineDefaultAssets& defaultAssets = *loop._owned._pEngineDefaultAssets;
-            if ( defaultAssets._cultureTable.empty() == false )
-                (void)localization.loadCultureTable( defaultAssets._cultureTable ); // 실패는 loadCultureTable 이 오류로 남긴다
-            if ( defaultAssets._localizationProject.empty() == false && localization.mountProject( defaultAssets._localizationProject, LocalizationScope::Engine ) == false )
-                SW_LOG_ERROR( "Engine localization project '%#' is not (fully) loaded", defaultAssets._localizationProject.c_str() );
-            string commandLineLanguage;
-            if ( loop._owned._pCommandLineManager->getArgument( CommandLineArgument::LANGUAGE, commandLineLanguage ) && localization.hasLanguage( commandLineLanguage ) )
-                localization.setCurrentLanguage( commandLineLanguage );
-            return EngineInitResult::Succeeded;
-        }
-        static void destroyEngineDefaultAssets( EngineLoop& loop ) { loop._owned._pEngineDefaultAssets.reset(); }
-
-        static EngineInitResult initializeShaderCache( EngineLoop& loop )
-        {
-            return loop._owned._pShaderCache->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed;
-        }
-        static void shutdownShaderCache( EngineLoop& loop ) { loop._owned._pShaderCache->shutdown(); }
-        static void destroyShaderCache( EngineLoop& loop ) { loop._owned._pShaderCache.reset(); }
-
-        static EngineInitResult initializeTask( EngineLoop& loop )
-        {
-            return loop._owned._pTaskManager->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed;
-        }
-        static void shutdownTask( EngineLoop& loop ) { loop._owned._pTaskManager->shutdown(); }
-        // 소멸자에서 태스크를 기다리는 객체(에셋 스트리밍 큐)는 이 단계에 의존하는 단계(Scene)가 먼저 해제한다.
-        static void destroyTask( EngineLoop& loop ) { loop._owned._pTaskManager.reset(); }
-
-        static EngineInitResult initializeFileIO( EngineLoop& loop )
-        {
-            // 완료 콜백(팩 해제 · CRC · 스트리밍 완료 기록)은 태스크 워커에서 돈다 — IO 스레드는 다음 읽기를 거는 일만 한다.
-            AsyncFileIOSettings settings{};
-            settings._pTaskManager = loop._owned._pTaskManager.get();
-            return loop._owned._pAsyncFileIO->initialize( settings ) ? EngineInitResult::Succeeded : EngineInitResult::Failed;
-        }
-        // 큐를 비우고 걸린 읽기와 완료 콜백(태스크)을 다 기다린다. Task 보다 먼저, 모듈을 내리기 전에 내려간다.
-        static void shutdownFileIO( EngineLoop& loop ) { loop._owned._pAsyncFileIO->shutdown(); }
-
-        // 모듈은 이 뒤(`ModuleTypes` 단계의 호스트 로더 · App 의 ModuleHost)에 오른다. 이 단계는 종료 쪽 자리(모듈을 내리는 구간)를 순서에 박아 둔다.
-        static void shutdownModuleImages( EngineLoop& loop )
-        {
-            // 씬은 방금 사라졌고 서비스는 아직 살아 있다. 모듈 DLL 을 내리기에 알맞은 유일한 자리다.
-            // Engine 은 거기서 무슨 일이 일어나는지 모른다(App 이 핫 리로드를 건다).
-            if ( loop._onScenesReleased.isBound() )
-                loop._onScenesReleased();
-        }
-
-        static EngineInitResult initializeAudio( EngineLoop& loop )
-        {
-            return loop._audioService->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed;
-        }
-        static void shutdownAudio( EngineLoop& loop ) { loop._audioService->shutdown(); }
-        static void destroyAudio( EngineLoop& loop ) { loop._audioService.reset(); }
-
-        static EngineInitResult initializeInput( EngineLoop& loop )
-        {
-            return loop._owned._pInputManager->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed;
-        }
-        static void shutdownInput( EngineLoop& loop ) { loop._owned._pInputManager->shutdown(); }
-        static void destroyInput( EngineLoop& loop )
-        {
-            // 셸 디버그 액션 맵은 입력 매니저를 가리킨다. 먼저 놓는다(`updateShellActions` 가 처음 쓸 때 만든다).
-            loop._shellActions.reset();
-            loop._owned._pInputManager.reset();
-        }
-
-        static EngineInitResult initializeModuleTypes( EngineLoop& loop )
-        {
-            // 호스트가 동적으로 올리는 타입 공급자(개발 구성의 GameFramework · 킷 · 게임 DLL)를 여기서 올린다. 로더가 없으면 올릴 것이 없다
-            // (배포 구성은 정적 링크라 리플렉션 단계가 이미 다 모았다). 이 뒤로 씬을 읽는다 — 헤드리스 쿠킹이 이 단계에 의존한다.
-            if ( loop._moduleTypeLoader.isBound() && loop._moduleTypeLoader() == false )
-            {
-                SW_LOG_ERROR( "The host could not load its type-providing modules - scenes are not read" );
-                return EngineInitResult::Failed;
-            }
-            loop._owned._pTypeRegistry->markAllModuleTypesRegistered();
-            return EngineInitResult::Succeeded;
-        }
-
-        static EngineInitResult initializePhysics( EngineLoop& loop )
-        {
-            return loop._owned._pPhysicsSystem->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed;
-        }
-        // 씬(과 그 물리 씬)은 Scene 단계 종료에서 이미 사라졌다 — 백엔드를 내린다.
-        static void shutdownPhysics( EngineLoop& loop ) { loop._owned._pPhysicsSystem->shutdown(); }
-
-        static EngineInitResult initializeScene( EngineLoop& loop )
-        {
-            // 씬 매니저는 표를 묶기 전에 만들어졌다 — 묶은 표에서 씬 쪽 묶음을 골라 여기서 넘긴다. 씬과 오브젝트 매니저는 이것만 쓴다.
-            const SceneEngineServices services = SceneEngineServices::makeFromBoundEngine();
-            if ( loop._owned._pSceneManager->initialize( services ) == false )
-                return EngineInitResult::Failed;
-            // 되돌리기 기록은 나간 씬의 오브젝트를 가리킨다 — 씬이 바뀌면 소유자(여기)가 비운다. 씬 매니저는 기록을 모른다.
-            // 구독은 핸들로 들고 해제 단계가 뗀다(다시 초기화해도 겹치지 않는다). 구독 대상은 Engine 코드라 핫 리로드와 무관하다.
-            SceneObjectsInvalidatedDelegate& onInvalidated = loop._owned._pSceneManager->onSceneObjectsInvalidated();
-            if ( loop._sceneObjectsInvalidatedHandle.isValid() )
-                onInvalidated.remove( loop._sceneObjectsInvalidatedHandle );
-            loop._sceneObjectsInvalidatedHandle = DelegateHandle{};
-            if ( loop._commandStack != nullptr )
-                loop._sceneObjectsInvalidatedHandle = onInvalidated.add( SW_DELEGATE_METHOD( Delegate<void()>, &CommandStack::clear, loop._commandStack.get() ) );
-            return EngineInitResult::Succeeded;
-        }
-        static void shutdownScene( EngineLoop& loop )
-        {
-            // 종료도 알린다(기록을 비운다) — 그 뒤에 구독을 뗀다.
-            loop._owned._pSceneManager->shutdown();
-            if ( loop._sceneObjectsInvalidatedHandle.isValid() )
-                loop._owned._pSceneManager->onSceneObjectsInvalidated().remove( loop._sceneObjectsInvalidatedHandle );
-            loop._sceneObjectsInvalidatedHandle = DelegateHandle{};
-        }
-        static void destroyScene( EngineLoop& loop )
-        {
-            loop._owned._pSceneManager.reset();
-            // 씬 · 컴포넌트가 에셋을 요청하는 큐다. 소멸자가 태스크를 기다리므로(`waitAll`) Task 해제보다 먼저여야 한다 — 이 단계가 Task 에 의존한다.
-            loop._owned._pAssetStreamingQueue.reset();
-            // 에디터 Undo 기록은 씬 객체를 가리킨다(`SceneManager::shutdown` 이 이미 비웠다).
-            loop._commandStack.reset();
-        }
-
-        static EngineInitResult initializeHeadless( EngineLoop& loop )
-        {
-            // 전용 서버가 하는 헤드리스 작업은 씬 쿠킹(서버 팩)까지다. 셰이더 쿠킹(DXC) · 원본 임포트(에디터 모듈)는 App 의 일이다 — 조용히 넘기지 않고 실패한다.
-            if ( loop._hostRole == EngineHostRole::DedicatedServer )
-            {
-                static constexpr CommandLineArgument kArrClientOnlyTask[] = {
-                    CommandLineArgument::COOK_SHADERS,
-                    CommandLineArgument::IMPORT_TEXTURES,
-                    CommandLineArgument::CHECK_TEXTURES,
-                    CommandLineArgument::IMPORT_MODELS,
-                    CommandLineArgument::CHECK_MODELS,
-                    CommandLineArgument::IMPORT_HEIGHTFIELDS,
-                    CommandLineArgument::CHECK_HEIGHTFIELDS,
-                };
-                for ( const CommandLineArgument argument : kArrClientOnlyTask )
-                {
-                    bool bGiven = false;
-                    if ( loop._owned._pCommandLineManager->getArgument( argument, bGiven ) && bGiven )
-                    {
-                        SW_LOG_ERROR( "This headless task runs in the client build (App), not in the dedicated server" );
-                        loop._bHeadless           = true;
-                        loop._bHeadlessTaskFailed = true;
-                        return EngineInitResult::SkipDependents;
-                    }
-                }
-            }
-
-            // 헤드리스 작업은 보통 실행이 누수 기준선을 잡는 자리(`initialize` 끝)에 닿지 않는다. 기준선이 없으면 종료 때 살아 있는 블록을 모두
-            // 누수로 찍으므로, 작업 직전에 같은 기준선을 잡는다 — 작업이 만든 것을 종료까지 놓지 않을 때만 누수로 보인다.
-            bool bCookShaders = false;
-            if ( loop._owned._pCommandLineManager->getArgument( CommandLineArgument::COOK_SHADERS, bCookShaders ) && bCookShaders )
-            {
-                MemoryProfiler::captureMemoryLeakBaseline();
-                loop._bHeadless = true;
-                SW_LOG_INFO( "Starting Headless (CookShaders)..." );
-                const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders();
-                loop._bHeadlessTaskFailed       = summary.isClean() == false;
-                return EngineInitResult::SkipDependents;
-            }
-
-            // 리플렉션 문서도 같은 자리다 — 모든 타입 공급자가 등록을 끝낸 뒤(ModuleTypes)라 게임 · 킷의 타입까지 든다.
-            string reflectionDocsDir;
-            if ( loop._owned._pCommandLineManager->getArgument( CommandLineArgument::WRITE_REFLECTION_DOCS, reflectionDocsDir ) && reflectionDocsDir.empty() == false )
-            {
-                loop._bHeadless           = true;
-                loop._bHeadlessTaskFailed = ReflectionDocWriter::writeMarkdown( engine::getTypeRegistry(), reflectionDocsDir ) == 0;
-                return EngineInitResult::SkipDependents;
-            }
-
-            // 리타깃 굽기(`--bake-retarget=<프로필>,<원본 클립>,<출력 클립>`) — 클립 · 스켈레톤 · 코덱이 모두 엔진 것이라 여기서 한다.
-            string bakeRetarget;
-            if ( loop._owned._pCommandLineManager->getArgument( CommandLineArgument::BAKE_RETARGET, bakeRetarget ) && bakeRetarget.empty() == false )
-            {
-                MemoryProfiler::captureMemoryLeakBaseline();
-                loop._bHeadless = true;
-                const string_splitter      parts( bakeRetarget, { "," } );
-                const vector<string_view>& listArgument = parts.getSplitList();
-                const bool                 bWellFormed  = listArgument.size() == 3;
-                if ( bWellFormed == false )
-                    SW_LOG_ERROR( "--bake-retarget expects <profile>,<source clip>,<output clip>" );
-                loop._bHeadlessTaskFailed = bWellFormed == false ||
-                                            RetargetBakeUtil::bakeClipFile( StringUtil::trim( listArgument[0] ), StringUtil::trim( listArgument[1] ), StringUtil::trim( listArgument[2] ) ) == false;
-                return EngineInitResult::SkipDependents;
-            }
-
-            // 씬 쿠킹도 같은 자리다. 엔티티 상태를 바이너리로 구우려면 리플렉션이 필요하고,
-            // 그것은 엔진 안에만 있어서 `CookAssets.py` 가 이쪽으로 넘겨준다.
-            bool bCookScenes = false;
-            if ( loop._owned._pCommandLineManager->getArgument( CommandLineArgument::COOK_SCENES, bCookScenes ) && bCookScenes )
-            {
-                MemoryProfiler::captureMemoryLeakBaseline();
-                loop._bHeadless = true;
-                string cookedDir;
-                loop._owned._pCommandLineManager->getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
-                SW_LOG_INFO( "Starting Headless (CookScenes) -> '%#'...", cookedDir );
-                const string& resourceRoot     = ResourcePaths::getRootFolderPath();
-                uint32        sceneFailedCount = 0;
-                const uint32  sceneCount       = SceneCooker::cookAllScenes( resourceRoot, cookedDir, sceneFailedCount );
-                // 프리팹 · GUID 레지스트리도 여기서 만든다 — 형식과 규칙을 쓰는 곳이 엔진 하나여야 한다.
-                uint32                        prefabFailedCount   = 0;
-                [[maybe_unused]] const uint32 prefabCount         = PrefabCache::cookAllPrefabs( resourceRoot, cookedDir, prefabFailedCount );
-                uint32                        registryFailedCount = 0;
-                [[maybe_unused]] const uint32 registryCount       = AssetDatabase::writeRegistryFiles( resourceRoot, cookedDir, registryFailedCount );
-                // 정점 애니메이션(VAT) — 데이터가 고른 (메시, 클립)을 굽는다. 프레임율은 군중 표의 것이라 런타임 굽기와 같다.
-                AnimationCrowdSettings crowdSettings{};
-                if ( ResourceIO::hasResource( AnimationCrowdSettings::kResourcePath ) )
-                    (void)crowdSettings.loadFromResource( AnimationCrowdSettings::kResourcePath ); // 실패는 loadFromResource 가 오류로 남기고 기본 프레임율로 굽는다
-                uint32                        vertexAnimationFailedCount = 0;
-                [[maybe_unused]] const uint32 vertexAnimationCount =
-                    VertexAnimationCooker::cookAll( resourceRoot, cookedDir, crowdSettings._vertexAnimationFramesPerSecond, vertexAnimationFailedCount );
-                // 내비메시 — 표면이 놓인 씬마다 런타임 베이크와 같은 함수로 `<씬>.navmesh` 를 쓴다.
-                uint32                        navMeshFailedCount = 0;
-                [[maybe_unused]] const uint32 navMeshCount       = SceneNavigationCooker::cookAll( resourceRoot, cookedDir, navMeshFailedCount );
-                SW_LOG_INFO( "Cooked %# scenes (%# failures), %# prefabs (%# failures), %# asset registries (%# failures), %# vertex animations (%# failures), "
-                             "%# navmeshes (%# failures).",
-                             sceneCount, sceneFailedCount, prefabCount, prefabFailedCount, registryCount, registryFailedCount, vertexAnimationCount,
-                             vertexAnimationFailedCount, navMeshCount, navMeshFailedCount );
-                loop._bHeadlessTaskFailed = sceneCount == 0 || sceneFailedCount > 0 || prefabFailedCount > 0 || registryFailedCount > 0 ||
-                                            vertexAnimationFailedCount > 0 || navMeshFailedCount > 0;
-                return EngineInitResult::SkipDependents;
-            }
-
-            // 립싱크 분석 — 음성마다 비즘 트랙을 곁에 쓴다. 분석 표가 엔진 데이터라 엔진이 한다.
-            bool bImportLipSync = false;
-            if ( loop._owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_LIPSYNC, bImportLipSync ) && bImportLipSync )
-            {
-                MemoryProfiler::captureMemoryLeakBaseline();
-                loop._bHeadless = true;
-                SW_LOG_INFO( "Starting Headless (ImportLipSync)..." );
-                LipSyncSettings         lipSyncSettings{};
-                uint32                  lipSyncFailedCount = 0;
-                [[maybe_unused]] uint32 lipSyncCount       = 0; // 로그로만 쓴다(Shipping 은 빠진다)
-                if ( lipSyncSettings.loadFromResource( LipSyncSettings::kResourcePath ) )
-                    lipSyncCount = LipSyncImport::importAll( ResourcePaths::getRootFolderPath(), lipSyncSettings, lipSyncFailedCount );
-                else
-                    ++lipSyncFailedCount;
-                SW_LOG_INFO( "Imported %# viseme tracks (%# failures).", lipSyncCount, lipSyncFailedCount );
-                loop._bHeadlessTaskFailed = lipSyncFailedCount > 0;
-                return EngineInitResult::SkipDependents;
-            }
-
-            // 로컬라이제이션 도구(글 수집 · PO 교환)와 원본 임포트 · 대조(텍스처 · 모델 · 높이장)는 에디터 모듈이 한다(엔진은 에디터를 모른다).
-            // 여기서는 창 · RHI 없이 세우기만 하고, 모듈을 올려 부르는 것은 App 이다(`EditorModuleHost::runLocalizationWithEditorModule` ·
-            // `importAssetsWithEditorModule`). 이 단계는 타입 공급자 모듈 뒤라 글 수집이 리플렉션 프로퍼티(`Meta = "Localizable"`)를 본다.
-            bool   bGatherText = false;
-            bool   bCheckText  = false;
-            bool   bExportPo   = false;
-            string importPoPath;
-            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::GATHER_TEXT, bGatherText );
-            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_TEXT, bCheckText );
-            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::EXPORT_PO, bExportPo );
-            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_PO, importPoPath );
-            const bool bAnyLocalization = bGatherText || bCheckText || bExportPo || importPoPath.empty() == false;
-
-            bool bImportTextures     = false;
-            bool bCheckTextures      = false;
-            bool bImportModels       = false;
-            bool bCheckModels        = false;
-            bool bImportHeightfields = false;
-            bool bCheckHeightfields  = false;
-            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_TEXTURES, bImportTextures );
-            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_TEXTURES, bCheckTextures );
-            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_MODELS, bImportModels );
-            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_MODELS, bCheckModels );
-            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_HEIGHTFIELDS, bImportHeightfields );
-            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_HEIGHTFIELDS, bCheckHeightfields );
-            const bool bAnyImport = bImportTextures || bCheckTextures || bImportModels || bCheckModels || bImportHeightfields || bCheckHeightfields;
-            if ( bAnyLocalization || bAnyImport )
-            {
-                MemoryProfiler::captureMemoryLeakBaseline();
-                loop._bHeadless = true;
-                SW_LOG_INFO( "Starting Headless (%#)...", bAnyLocalization ? "localization tools" : "asset import/check" );
-                return EngineInitResult::SkipDependents;
-            }
-            return EngineInitResult::Succeeded;
-        }
-
-        static EngineInitResult initializeUserSettings( EngineLoop& loop )
-        {
-            UserSettingsManager& settings = *loop._owned._pUserSettingsManager;
-            UserSettingsTargets  targets;
-            targets._pGlobalVariableManager = loop._owned._pGlobalVariableManager.get();
-            targets._pCommandLineManager    = loop._owned._pCommandLineManager.get();
-            targets._pInputMap              = &loop._owned._pInputManager->getInputMap();
-            targets._pAudioService          = loop._audioService.get();
-            targets._pLocalizationManager   = loop._owned._pLocalizationManager.get();
-            settings.initialize( targets );
-
-            // 스키마 · 사용자 파일이 틀려도 기동은 멈추지 않는다(오류로 알리고 옵션 메뉴가 비거나 기본값이다). 화면을 못 띄우는 설정 파일 하나로
-            // 게임이 안 뜨면 플레이어가 고칠 길이 없다.
-            const GameConfig& gameConfig = GameConfig::getActive();
-            if ( settings.loadSchema( engine::getEngineDefaultAssets()._userSettingsSchema ) && gameConfig._userSettingsSchema.empty() == false )
-            {
-                const string gameSchema = FileUtil::joinPath( FileUtil::trimTrailingSlashes( gameConfig._packRoot ), gameConfig._userSettingsSchema );
-                if ( settings.loadSchema( gameSchema ) == false )
-                    SW_LOG_ERROR( "Game user settings schema '%#' is not loaded", gameSchema.c_str() );
-            }
-#if SW_DEV_COMMANDS_ENABLED
-            // 디버그 HUD 설정(개발 도구) — Dev 만 덧붙인다. 사용자 파일보다 먼저 읽어야 저장된 HUD 값이 버려지지 않는다.
-            if ( settings.loadSchema( DebugHUD::kSettingsSchemaPath ) == false )
-                SW_LOG_ERROR( "Debug HUD user settings schema '%#' is not loaded", DebugHUD::kSettingsSchemaPath );
-#endif
-            for ( const auto& [settingID, value] : gameConfig._mapUserSettingDefault )
-            {
-                (void)settings.setGameDefault( hashed_string( settingID ), value );
-            }
-
-            // 사용자 폴더의 파일이다(세이브 게임과 별개). 자동화는 `-gv_userSettingsFile` 로 사용자 폴더를 건드리지 않는다.
-            const string gameName = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( gameConfig._packRoot ) );
-            settings.setUserFilePath( gv_userSettingsFile.empty() ? UserSettingsManager::makeDefaultUserFilePath( gameName ) : gv_userSettingsFile );
-            // 셸 키(콘솔 여는 키 …)를 플레이어가 바꾼 것도 같은 사용자 폴더에 둔다. 셸 맵은 처음 돌 때 만들므로 그 전에 경로를 알려 준다.
-            loop._shellActions.setUserBindingsPath( ShellInputActions::makeUserBindingsPath( settings.getUserFilePath() ) );
-            if ( settings.loadUserFile( settings.getUserFilePath() ) == false )
-                (void)settings.applyAutoDetectedPreset( HardwareProbe::probe() ); // 맞는 프리셋이 없으면 기본값 그대로다
-            settings.reapplyAll();
-            return EngineInitResult::Succeeded;
-        }
-        static void shutdownUserSettings( EngineLoop& loop ) { loop._owned._pUserSettingsManager->shutdown(); }
-        static void destroyUserSettings( EngineLoop& loop ) { loop._owned._pUserSettingsManager.reset(); }
-
         static EngineInitResult initializeRHI( EngineLoop& loop )
         {
             // RenderDoc 은 그래픽 API 를 만들 때 끼어든다 — 디바이스보다 먼저 찾고(`-renderdoc` 면 올리고) 백엔드 교체 뒤에도 그대로 쓴다.
@@ -540,7 +133,7 @@ namespace sw
                 gv_rhiBackend = loop._pEngineConfig->_window._defaultRHI;
 
             // 화면 값의 순서: 엔진 설정(EngineConfig) → 플레이어가 고른 사용자 설정(기본값이 아닌 것) → 명령줄.
-            const DisplaySettingsRequest& display = loop._owned._pUserSettingsManager->getDisplayRequest();
+            const DisplaySettingsRequest& display = engine::getUserSettingsManager().getDisplayRequest();
             if ( IWindow::getActiveWindow() == nullptr )
             {
                 uint32 windowWidth  = display._bHasResolution ? display._width : loop._pEngineConfig->_window._width;
@@ -591,114 +184,15 @@ namespace sw
         }
         // 종료가 디바이스와 백엔드 모듈을 이미 내렸다. 남은 것은 디바이스가 없는 팩토리 객체다.
         static void destroyRHI( EngineLoop& loop ) { loop._rhi.reset(); }
-
-        static EngineInitResult initializeFrameRenderer( EngineLoop& loop )
-        {
-            // 씬 스냅샷 · 패킷 · 업로드 큐는 그리는 쪽의 것이다. 렌더러를 세우지 않는 헤드리스 작업에는 없다.
-            // 백엔드 교체로 다시 설 때(`restartStoppedSteps`)는 있는 것을 그대로 쓰고, 디바이스에 매인 설정만 새로 건다.
-            loop._packetBuilder.initialize( loop._rhi->getDevice(), loop._owned._pTaskManager.get() );
-
-            if ( loop._frameRenderer->initialize( &loop._rhi->getDevice(), loop._owned._pTaskManager.get() ) == false )
-            {
-                SW_LOG_ERROR( "Failed to initialize FrameRenderer!" );
-                return EngineInitResult::Failed;
-            }
-            return EngineInitResult::Succeeded;
-        }
-        static void shutdownFrameRenderer( EngineLoop& loop )
-        {
-            // GT 쪽 GPUScene 도 스냅샷의 소유(머티리얼 · 인스턴스)를 들고 있다. 렌더러와 같은 시점에, **디바이스가 살아 있을 때** 놓는다.
-            // 해제(destroy)까지 미루면 디바이스가 사라진 뒤에 놓게 된다.
-            loop._packetBuilder.shutdown();
-            loop._frameRenderer->shutdown();
-        }
-        static void destroyFrameRenderer( EngineLoop& loop )
-        {
-            loop._packetBuilder.destroy();
-            loop._frameRenderer.reset();
-        }
-
-        static EngineInitResult initializeRenderThread( EngineLoop& loop )
-        {
-            // 다시 설 때는 같은 객체에 붙인다 — 호스트가 건 프레젠트 훅과 렌더 스레드 포인터(ModuleHost)가 그대로 남는다.
-            if ( loop._renderThread == nullptr )
-                loop._renderThread = make_unique<RenderThread>();
-            if ( loop._renderThread->attach( &loop._rhi->getDevice(), loop._frameRenderer.get() ) == false )
-            {
-                SW_LOG_ERROR( "Failed to attach RenderThread!" );
-                return EngineInitResult::Failed;
-            }
-            return EngineInitResult::Succeeded;
-        }
-        static void shutdownRenderThread( EngineLoop& loop )
-        {
-            loop._renderThread->waitIdle();
-            loop._renderThread->stop();
-        }
-        static void destroyRenderThread( EngineLoop& loop ) { loop._renderThread.reset(); }
-
-        static EngineInitResult initializeLiveShader( EngineLoop& loop )
-        {
-#if defined( SW_DEBUG )
-            // 셰이더 라이브 리로드는 개발 도구다. Debug 에서만 만든다(Shipping 에는 코드 자체가 없다).
-            if ( loop._shaderRecompiler == nullptr )
-                loop._shaderRecompiler = make_unique<ShaderRecompiler>();
-            if ( loop._shaderRecompiler->initialize( "Shaders" ) == false )
-            {
-                SW_LOG_ERROR( "Failed to initialize ShaderRecompiler!" );
-                loop._shaderRecompiler.reset();
-            }
-#endif
-            ShaderRecompiler* pShaderRecompiler = loop.getShaderRecompiler();
-            if ( pShaderRecompiler == nullptr )
-                return EngineInitResult::Succeeded;
-            // onShaderRecompiled 는 셰이더 바인딩 레이아웃 캐시 항목을 **파괴**하는데,
-            // FrameRenderer::_mapPSOLayout 과 패스 컨텍스트의 1-entry 캐시가 그 실체를 가리키는
-            // 생포인터를 들고 있다. 이 콜백은 게임 스레드(tick 의 핫 리로드 블록)에서 불리고
-            // 렌더 스레드는 직전 패킷을 그리는 중이라, 렌더 스레드를 세운 뒤에 반영한다.
-            // 재컴파일은 개발 중 가끔 일어나는 일이라 이때의 스톨은 문제가 되지 않는다.
-            EngineLoop* pLoop        = &loop;
-            auto        onRecompiled = [pLoop]( string_view shaderPath, const ShaderCompileResult& result )
-            {
-                if ( pLoop->_renderThread != nullptr )
-                    pLoop->_renderThread->waitIdle();
-                pLoop->_frameRenderer->onShaderRecompiled( shaderPath, result );
-            };
-            pShaderRecompiler->setOnAnyShaderRecompiled( SW_DELEGATE_LAMBDA( ShaderRecompiledDelegate, onRecompiled ) );
-            return EngineInitResult::Succeeded;
-        }
-        static void shutdownLiveShader( [[maybe_unused]] EngineLoop& loop )
-        {
-#if !defined( SW_SHIPPING )
-            if ( loop._shaderRecompiler != nullptr )
-                loop._shaderRecompiler->shutdown();
-#endif
-        }
-        static void destroyLiveShader( [[maybe_unused]] EngineLoop& loop )
-        {
-#if !defined( SW_SHIPPING )
-            loop._shaderRecompiler.reset();
-#endif
-        }
-
-        static EngineInitResult initializeSceneRHI( EngineLoop& loop )
-        {
-            loop._owned._pSceneManager->setRHIDevice( &loop._rhi->getDevice() );
-            return EngineInitResult::Succeeded;
-        }
-        // 렌더러 쪽 단계 가운데 종료가 가장 먼저다 — 씬에서 디바이스를 먼저 뗀다.
-        static void shutdownSceneRHI( EngineLoop& loop ) { loop._owned._pSceneManager->setRHIDevice( nullptr ); }
     };
 
     EngineLoop::EngineLoop()
         : _bootstrap{}
-        , _configManager{ nullptr }
+        , _pConfigManager{ nullptr }
         , _rhi{ nullptr }
         , _shellActions{}
         , _audioService{ nullptr }
         , _frameRenderer{ nullptr }
-        , _renderThread{ nullptr }
-        , _packetBuilder{}
         , _commandStack{ nullptr }
         , _sceneObjectsInvalidatedHandle{}
         , _listFrameObserver{}
@@ -714,6 +208,15 @@ namespace sw
         , _startup{}
         , _pFontService{ nullptr }
         , _pUISystem{ nullptr }
+        , _pInputManager{ nullptr }
+        , _pAudioService{ nullptr }
+        , _pSceneManager{ nullptr }
+        , _pFrameRenderer{ nullptr }
+        , _pPacketBuilder{ nullptr }
+        , _pRenderThread{ nullptr }
+#if !defined( SW_SHIPPING )
+        , _pShaderRecompiler{ nullptr }
+#endif
         , _pEngineConfig{ nullptr }
     {
     }
@@ -787,11 +290,352 @@ namespace sw
             engine::bindEngineServices( services );
         }
 
-        // `ISubsystem` 으로 옮긴 서비스는 기동 순서가 소유한다 — 표의 단계와 한 순서로 정렬되어 돌고, 해제는 그 역순 자리에서 객체를 지운다.
+        // 기동 단계는 서브시스템이다 — 서비스는 스스로 이름 · 의존 · 대상을 선언하고, 클래스가 없는 단계는 `EngineFunctionStep` 의 선언에 본문을 준다.
+        // 추가 순서는 뜻이 없다(의존이 정한다). 서비스의 소유는 기동 순서로 넘어가고, 해제는 그 역순 자리에서 소멸이다.
         // 서비스 표는 위에서 같은 객체를 가리키도록 이미 묶였다(저장소가 만들고, 소유만 여기로 넘긴다).
-        _pFontService                      = &_startup.addSubsystem( std::move( _owned._pFontService ) );
-        TelemetryService& telemetryService = _startup.addSubsystem( std::move( _owned._pTelemetryService ) );
-        _pUISystem                         = &_startup.addSubsystem( std::move( _owned._pUISystem ) );
+        TelemetryService* pTelemetryService = nullptr;
+        BLOCK( "기동 단계 구성" )
+        {
+            // 단계 객체 · 본문 델리게이트의 할당은 엔진 기타 줄로 센다(만드는 객체는 제 용도 태그를 다시 건다).
+            SW_MEMORY_SCOPE( EngineMisc );
+            {
+                CompressionCodecRegistry* const pCodecRegistry = _owned._pCompressionCodecRegistry.get();
+                // Core 의 CompressionStream 은 엔진 서비스 표에 닿지 못해 슬롯으로 본다(Logger::setGlobalSink 와 같은 모양). 슬롯은 레지스트리의 소멸자가 끊는다.
+                // 종료는 하지 않는다 — 모듈이 등록한 코덱을 거두는 것은 등록한 모듈의 책임이다(registerCodec 주석 참고).
+                auto initializeCompression = [pCodecRegistry]()
+                {
+                    pCodecRegistry->initialize();
+                    CompressionCodecRegistry::setActive( pCodecRegistry );
+                    // 외부 라이브러리 코덱은 **목록이 있는 자리**에서 붙인다(EngineCompressionCodecUtil).
+                    EngineCompressionCodecUtil::registerAll( *pCodecRegistry );
+                    return EngineInitResult::Succeeded;
+                };
+                _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kCompression, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeCompression ) ) )
+                    .takeOwnership( std::move( _owned._pCompressionCodecRegistry ) );
+            }
+            {
+                // 이 프로세스에 이미 올라온 등록기만 모은다. 배포 구성은 GameFramework · 킷 · 게임이 정적 링크라 "Engine" 이 다 모으고,
+                // 개발 구성의 모듈 DLL 은 `ModuleTypes` 단계에서 호스트 로더가 올리며 제 이름으로 등록한다.
+                // 명령줄의 enum 이름(`-gv_rhiBackend=Vulkan`)은 enum 표가 선 지금 적용한다. 모르는 이름이면 기본값으로 돌지 않고 멈춘다.
+                auto initializeReflection = []()
+                {
+                    engine::registerModuleTypes( "Engine" );
+                    if ( engine::bindGlobalVariableEnumNames() )
+                        return EngineInitResult::Succeeded;
+                    engine::unbindGlobalVariableEnumNames();
+                    return EngineInitResult::Failed;
+                };
+                // enum 이름 풀이는 타입 표를 본다 — 표가 소멸하기 전(종료)에 뗀다.
+                _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kReflection, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeReflection ),
+                                                                       SW_DELEGATE_FUNCTION( SubsystemShutdownDelegate, &engine::unbindGlobalVariableEnumNames ) ) )
+                    .takeOwnership( std::move( _owned._pTypeRegistry ) );
+            }
+            {
+                TaskManager* const pTaskManager   = _owned._pTaskManager.get();
+                auto               initializeTask = [pTaskManager]()
+                { return pTaskManager->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed; };
+                _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kTask, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeTask ),
+                                                                       SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &TaskManager::shutdown, pTaskManager ) ) )
+                    .takeOwnership( std::move( _owned._pTaskManager ) );
+            }
+            {
+                // 완료 콜백(팩 해제 · CRC · 스트리밍 완료 기록)은 태스크 워커에서 돈다 — IO 스레드는 다음 읽기를 거는 일만 한다.
+                // 종료는 큐를 비우고 걸린 읽기와 완료 콜백(태스크)을 다 기다린다. Task 보다 먼저, 모듈을 내리기 전에 내려간다.
+                AsyncFileIO* const pAsyncFileIO     = _owned._pAsyncFileIO.get();
+                auto               initializeFileIO = [pAsyncFileIO]()
+                {
+                    AsyncFileIOSettings settings{};
+                    settings._pTaskManager = &engine::getTaskManager();
+                    return pAsyncFileIO->initialize( settings ) ? EngineInitResult::Succeeded : EngineInitResult::Failed;
+                };
+                _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kFileIO, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeFileIO ),
+                                                                       SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &AsyncFileIO::shutdown, pAsyncFileIO ) ) );
+            }
+            {
+                // 종료 쪽 자리 — 씬은 방금 사라졌고 서비스는 아직 살아 있다. 모듈 DLL 을 내리기에 알맞은 유일한 자리다.
+                // Engine 은 거기서 무슨 일이 일어나는지 모른다(App 이 핫 리로드를 건다 — 훅은 기동 뒤에 걸린다).
+                auto releaseModuleImages = [this]()
+                {
+                    if ( _onScenesReleased.isBound() )
+                        _onScenesReleased();
+                };
+                _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kModuleImages, SubsystemInitializeDelegate{},
+                                                                       SW_DELEGATE_LAMBDA( SubsystemShutdownDelegate, releaseModuleImages ) ) );
+            }
+            {
+                // 호스트가 동적으로 올리는 타입 공급자(개발 구성의 GameFramework · 킷 · 게임 DLL)를 여기서 올린다. 로더가 없으면 올릴 것이 없다
+                // (배포 구성은 정적 링크라 리플렉션 단계가 이미 다 모았다). 이 뒤로 씬을 읽는다 — 헤드리스 쿠킹이 이 단계에 의존한다.
+                auto loadModuleTypes = [this]()
+                {
+                    if ( _moduleTypeLoader.isBound() && _moduleTypeLoader() == false )
+                    {
+                        SW_LOG_ERROR( "The host could not load its type-providing modules - scenes are not read" );
+                        return EngineInitResult::Failed;
+                    }
+                    engine::getTypeRegistry().markAllModuleTypesRegistered();
+                    return EngineInitResult::Succeeded;
+                };
+                _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kModuleTypes, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, loadModuleTypes ) ) );
+            }
+            {
+                // 렌더러 쪽 단계 가운데 종료가 가장 먼저다 — 씬에서 디바이스를 먼저 뗀다. 백엔드 교체 뒤 다시 서며 새 디바이스를 건다.
+                auto attachSceneDevice = [this]()
+                {
+                    engine::getSceneManager().setRHIDevice( &_rhi->getDevice() );
+                    return EngineInitResult::Succeeded;
+                };
+                auto detachSceneDevice = []()
+                { engine::getSceneManager().setRHIDevice( nullptr ); };
+                _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kSceneRHI, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, attachSceneDevice ),
+                                                                       SW_DELEGATE_LAMBDA( SubsystemShutdownDelegate, detachSceneDevice ) ) );
+            }
+            {
+                InputManager* const pInputManager   = _owned._pInputManager.get();
+                auto                initializeInput = [pInputManager]()
+                { return pInputManager->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed; };
+                _pInputManager = &_startup
+                                      .addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kInput, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeInput ),
+                                                                                     SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &InputManager::shutdown, pInputManager ) ) )
+                                      .takeOwnership( std::move( _owned._pInputManager ) );
+            }
+            {
+                // 설정은 리소스 초기화보다 먼저 읽는다(Resource 의 의존). `AssetManager::mountContent` 는 GameConfig 의 `_packRoot` 가
+                // 정해져 있어야 팩을 제대로 마운트하고 게임 도메인의 `assetregistry.txt` 를 읽는다.
+                // Config/ 는 프로젝트 루트에 있고 실행 파일은 build/<preset>/Bin 에서 돈다. 작업 디렉터리 기준으로만 찾으면
+                // 모두 "없음" 이 되어 조용히 기본값으로 떨어지므로, Resource/ 를 찾을 때 알아낸 프로젝트 루트를 넘긴다.
+                unique_ptr<ConfigManager> configManager;
+                {
+                    SW_MEMORY_SCOPE( EngineMisc );
+                    configManager = make_unique<ConfigManager>();
+                }
+                _pConfigManager       = configManager.get();
+                auto initializeConfig = [this]()
+                {
+                    _pConfigManager->setRootDirectory( ResourcePaths::getProjectFolderPath() );
+                    ConfigManager::setPrimary( _pConfigManager ); // 거두는 것은 설정 표의 소멸자다
+                    _pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &EngineLoop::onConfigReloaded, this ) );
+
+                    _pEngineConfig = _pConfigManager->ensureConfig<EngineConfig>( config::kFileRuntimeEngineConfig, shipping_host::kEngineConfigJSON );
+                    if ( _pEngineConfig == nullptr )
+                        return EngineInitResult::Failed;
+                    EngineConfig::setActive( *_pEngineConfig );
+
+                    // 틀린 설정 파일은 nullptr 이다(키 이름은 이미 오류로 남았다) — 기본값으로 뜨면 고친 값이 무시된 것을 아무도 모른다.
+                    const GameConfig* pGameConfig = _pConfigManager->ensureConfig<GameConfig>( config::kFileRuntimeGameConfig, shipping_host::kGameConfigJSON );
+                    if ( pGameConfig == nullptr )
+                        return EngineInitResult::Failed;
+                    GameConfig::setActive( *pGameConfig );
+
+                    // 메모리 태그 예산(데이터). 틀린 표는 오류를 남기고 예산 없이 간다 — 진단 설정 하나로 기동을 세우지 않는다.
+                    (void)_memoryBudgetMonitor.loadBudgetFile( FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), MemoryBudgetMonitor::kBudgetFile ) );
+                    return EngineInitResult::Succeeded;
+                };
+                _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kConfig, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeConfig ) ) )
+                    .takeOwnership( std::move( configManager ) );
+            }
+            {
+                // GameConfig 가 활성화된 뒤라야 "game" 토큰이 팩 루트로 풀린다. 그 전제는 `mountContent` 의 인자에 드러나 있다.
+                // 씬 쿠킹(Headless 단계)의 입력은 소스 트리다 — 팩은 그 산출물이다.
+                AssetManager* const pAssetManager      = _owned._pAssetManager.get();
+                auto                initializeResource = [this, pAssetManager]()
+                {
+                    if ( pAssetManager->initialize() == false )
+                        return EngineInitResult::Failed;
+                    bool bCookScenes = false;
+                    _owned._pCommandLineManager->getArgument( CommandLineArgument::COOK_SCENES, bCookScenes );
+                    const ContentSource contentSource = bCookScenes ? ContentSource::SourceTree : ContentSource::Cooked;
+                    pAssetManager->mountContent( _pEngineConfig->_listResourcePriority, contentSource );
+                    return EngineInitResult::Succeeded;
+                };
+                _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kResource, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeResource ) ) )
+                    .takeOwnership<&AssetManager::shutdown>( std::move( _owned._pAssetManager ) );
+            }
+            {
+                // 문화권 표 · 엔진 문자열 — 플레이어 설정(언어)이 이 뒤(`UserSettings`)에 적용되고, 게임은 자기 프로젝트를 위에 올린다.
+                EngineDefaultAssets* const pDefaultAssets                = _owned._pEngineDefaultAssets.get();
+                auto                       initializeEngineDefaultAssets = [this, pDefaultAssets]()
+                {
+                    if ( pDefaultAssets->loadFromResource( path::kEngineDefaultAssets ) == false )
+                        SW_LOG_WARNING( "Engine data could not be read - using built-in defaults" );
+                    LocalizationManager& localization = *_owned._pLocalizationManager;
+                    if ( pDefaultAssets->_cultureTable.empty() == false )
+                        (void)localization.loadCultureTable( pDefaultAssets->_cultureTable ); // 실패는 loadCultureTable 이 오류로 남긴다
+                    if ( pDefaultAssets->_localizationProject.empty() == false && localization.mountProject( pDefaultAssets->_localizationProject, LocalizationScope::Engine ) == false )
+                        SW_LOG_ERROR( "Engine localization project '%#' is not (fully) loaded", pDefaultAssets->_localizationProject.c_str() );
+                    string commandLineLanguage;
+                    if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::LANGUAGE, commandLineLanguage ) && localization.hasLanguage( commandLineLanguage ) )
+                        localization.setCurrentLanguage( commandLineLanguage );
+                    return EngineInitResult::Succeeded;
+                };
+                _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kEngineDefaultAssets, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeEngineDefaultAssets ) ) )
+                    .takeOwnership( std::move( _owned._pEngineDefaultAssets ) );
+            }
+            {
+                IAudioService* const pAudioService   = _audioService.get();
+                auto                 initializeAudio = [pAudioService]()
+                { return pAudioService->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed; };
+                _pAudioService = &_startup
+                                      .addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kAudio, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeAudio ),
+                                                                                     SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &IAudioService::shutdown, pAudioService ) ) )
+                                      .takeOwnership( std::move( _audioService ) );
+            }
+            {
+                // 씬 매니저는 표를 묶기 전에 만들어졌다 — 묶은 표에서 씬 쪽 묶음을 골라 여기서 넘긴다. 씬과 오브젝트 매니저는 이것만 쓴다.
+                // 되돌리기 기록은 나간 씬의 오브젝트를 가리킨다 — 씬이 바뀌면 소유자(여기)가 비운다. 씬 매니저는 기록을 모른다.
+                // 구독은 핸들로 들고 종료가 뗀다(다시 초기화해도 겹치지 않는다). 구독 대상은 Engine 코드라 핫 리로드와 무관하다.
+                SceneManager* const pSceneManager   = _owned._pSceneManager.get();
+                CommandStack* const pCommandStack   = _commandStack.get();
+                auto                initializeScene = [this, pSceneManager, pCommandStack]()
+                {
+                    if ( pSceneManager->initialize( SceneEngineServices::makeFromBoundEngine() ) == false )
+                        return EngineInitResult::Failed;
+                    SceneObjectsInvalidatedDelegate& onInvalidated = pSceneManager->onSceneObjectsInvalidated();
+                    if ( _sceneObjectsInvalidatedHandle.isValid() )
+                        onInvalidated.remove( _sceneObjectsInvalidatedHandle );
+                    _sceneObjectsInvalidatedHandle = DelegateHandle{};
+                    if ( pCommandStack != nullptr )
+                        _sceneObjectsInvalidatedHandle = onInvalidated.add( SW_DELEGATE_METHOD( Delegate<void()>, &CommandStack::clear, pCommandStack ) );
+                    return EngineInitResult::Succeeded;
+                };
+                // 종료도 알린다(기록을 비운다) — 그 뒤에 구독을 뗀다.
+                auto shutdownScene = [this, pSceneManager]()
+                {
+                    pSceneManager->shutdown();
+                    if ( _sceneObjectsInvalidatedHandle.isValid() )
+                        pSceneManager->onSceneObjectsInvalidated().remove( _sceneObjectsInvalidatedHandle );
+                    _sceneObjectsInvalidatedHandle = DelegateHandle{};
+                };
+                FunctionSubsystem& scene = _startup.addSubsystem( make_unique<FunctionSubsystem>(
+                    EngineFunctionStep::kScene, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeScene ), SW_DELEGATE_LAMBDA( SubsystemShutdownDelegate, shutdownScene ) ) );
+                // 넘긴 역순으로 소멸한다: 씬 매니저 → 에셋 스트리밍 큐(소멸자가 태스크를 기다린다 — Task 보다 먼저) → 에디터 되돌리기 기록(씬 객체를 가리킨다).
+                if ( _commandStack != nullptr )
+                    (void)scene.takeOwnership( std::move( _commandStack ) );
+                (void)scene.takeOwnership( std::move( _owned._pAssetStreamingQueue ) );
+                _pSceneManager = &scene.takeOwnership( std::move( _owned._pSceneManager ) );
+            }
+            // 헤드리스 작업(셰이더 · 씬 쿠킹, 임포트)이면 그에 기대는 단계(창 · RHI · 렌더러)를 건너뛴다 — 결과는 `isHeadless` · `didHeadlessTaskFail`.
+            _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kHeadless, SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &EngineLoop::runHeadlessTask, this ) ) );
+            {
+                UserSettingsManager* const pUserSettings = _owned._pUserSettingsManager.get();
+                _startup
+                    .addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kUserSettings, SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &EngineLoop::loadUserSettings, this ),
+                                                                   SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &UserSettingsManager::shutdown, pUserSettings ) ) )
+                    .takeOwnership( std::move( _owned._pUserSettingsManager ) );
+            }
+            {
+                // 씬 스냅샷 · 패킷 · 업로드 큐는 그리는 쪽의 것이다. 렌더러를 세우지 않는 헤드리스 작업에는 없다.
+                // 백엔드 교체로 다시 설 때(`restartStoppedSteps`)는 있는 것을 그대로 쓰고, 디바이스에 매인 설정만 새로 건다.
+                // GT 쪽 GPUScene 도 스냅샷의 소유(머티리얼 · 인스턴스)를 들고 있다 — 렌더러와 같은 시점에, **디바이스가 살아 있을 때**(종료) 놓는다.
+                unique_ptr<RenderPacketBuilder> packetBuilder;
+                {
+                    SW_MEMORY_SCOPE( RenderCPU );
+                    packetBuilder = make_unique<RenderPacketBuilder>();
+                }
+                _pPacketBuilder              = packetBuilder.get();
+                _pFrameRenderer              = _frameRenderer.get();
+                auto initializeFrameRenderer = [this]()
+                {
+                    _pPacketBuilder->initialize( _rhi->getDevice(), &engine::getTaskManager() );
+                    if ( _pFrameRenderer->initialize( &_rhi->getDevice(), &engine::getTaskManager() ) == false )
+                    {
+                        SW_LOG_ERROR( "Failed to initialize FrameRenderer!" );
+                        return EngineInitResult::Failed;
+                    }
+                    return EngineInitResult::Succeeded;
+                };
+                auto shutdownFrameRenderer = [this]()
+                {
+                    _pPacketBuilder->shutdown();
+                    _pFrameRenderer->shutdown();
+                };
+                FunctionSubsystem& frameRenderer =
+                    _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kFrameRenderer, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeFrameRenderer ),
+                                                                           SW_DELEGATE_LAMBDA( SubsystemShutdownDelegate, shutdownFrameRenderer ) ) );
+                // 넘긴 역순으로 소멸한다: 패킷 빌더(해제 `destroy` 뒤) → 렌더러.
+                (void)frameRenderer.takeOwnership( std::move( _frameRenderer ) );
+                (void)frameRenderer.takeOwnership<&RenderPacketBuilder::destroy>( std::move( packetBuilder ) );
+            }
+            {
+                // 다시 설 때는 같은 객체에 붙인다 — 호스트가 건 프레젠트 훅과 렌더 스레드 포인터(ModuleHost)가 그대로 남는다. 클라이언트만 만든다(전용 서버는 이 단계를 돌리지 않는다).
+                RenderThread*            pRenderThread = nullptr;
+                unique_ptr<RenderThread> renderThread;
+                if ( bDedicatedServer == false )
+                {
+                    SW_MEMORY_SCOPE( RenderCPU );
+                    renderThread  = make_unique<RenderThread>();
+                    pRenderThread = renderThread.get();
+                }
+                auto attachRenderThread = [this, pRenderThread]()
+                {
+                    _pRenderThread = pRenderThread;
+                    if ( pRenderThread->attach( &_rhi->getDevice(), _pFrameRenderer ) == false )
+                    {
+                        SW_LOG_ERROR( "Failed to attach RenderThread!" );
+                        return EngineInitResult::Failed;
+                    }
+                    return EngineInitResult::Succeeded;
+                };
+                auto stopRenderThread = [pRenderThread]()
+                {
+                    pRenderThread->waitIdle();
+                    pRenderThread->stop();
+                };
+                FunctionSubsystem& renderThreadStep =
+                    _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kRenderThread, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, attachRenderThread ),
+                                                                           SW_DELEGATE_LAMBDA( SubsystemShutdownDelegate, stopRenderThread ) ) );
+                if ( renderThread != nullptr )
+                    (void)renderThreadStep.takeOwnership( std::move( renderThread ) );
+            }
+            {
+                // 셰이더 라이브 리로드는 개발 도구다. Debug 클라이언트에서만 만든다(Shipping 에는 코드 자체가 없다).
+                // onShaderRecompiled 는 셰이더 바인딩 레이아웃 캐시 항목을 **파괴**하는데, FrameRenderer::_mapPSOLayout 과 패스 컨텍스트의
+                // 1-entry 캐시가 그 실체를 가리키는 생포인터를 들고 있다. 이 콜백은 게임 스레드(tick 의 핫 리로드 블록)에서 불리고
+                // 렌더 스레드는 직전 패킷을 그리는 중이라, 렌더 스레드를 세운 뒤에 반영한다. 재컴파일은 개발 중 가끔 일어나는 일이라 이때의 스톨은 문제가 되지 않는다.
+#if defined( SW_DEBUG )
+                unique_ptr<ShaderRecompiler> shaderRecompiler;
+                if ( bDedicatedServer == false )
+                {
+                    SW_MEMORY_SCOPE( Shader );
+                    shaderRecompiler = make_unique<ShaderRecompiler>();
+                }
+                ShaderRecompiler* const pShaderRecompiler    = shaderRecompiler.get();
+                auto                    initializeLiveShader = [this, pShaderRecompiler]()
+                {
+                    _pShaderRecompiler = nullptr;
+                    if ( pShaderRecompiler->initialize( "Shaders" ) == false )
+                    {
+                        SW_LOG_ERROR( "Failed to initialize ShaderRecompiler!" );
+                        return EngineInitResult::Succeeded; // 개발 도구 하나로 기동을 세우지 않는다
+                    }
+                    _pShaderRecompiler = pShaderRecompiler;
+                    auto onRecompiled  = [this]( string_view shaderPath, const ShaderCompileResult& result )
+                    {
+                        if ( _pRenderThread != nullptr )
+                            _pRenderThread->waitIdle();
+                        _pFrameRenderer->onShaderRecompiled( shaderPath, result );
+                    };
+                    pShaderRecompiler->setOnAnyShaderRecompiled( SW_DELEGATE_LAMBDA( ShaderRecompiledDelegate, onRecompiled ) );
+                    return EngineInitResult::Succeeded;
+                };
+                auto shutdownLiveShader = [pShaderRecompiler]()
+                { pShaderRecompiler->shutdown(); };
+                FunctionSubsystem& liveShader =
+                    _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kLiveShader, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeLiveShader ),
+                                                                           SW_DELEGATE_LAMBDA( SubsystemShutdownDelegate, shutdownLiveShader ) ) );
+                if ( shaderRecompiler != nullptr )
+                    (void)liveShader.takeOwnership( std::move( shaderRecompiler ) );
+#else
+                // Debug 가 아니면 라이브 리로드가 없다 — 자리만 둔다(순서 · 백엔드 교체의 재시작 목록이 구성마다 같다).
+                _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kLiveShader ) );
+#endif
+            }
+            _startup.addSubsystem( std::move( _owned._pShaderCache ) );
+            _startup.addSubsystem( std::move( _owned._pPhysicsSystem ) );
+            _pFontService     = &_startup.addSubsystem( std::move( _owned._pFontService ) );
+            pTelemetryService = &_startup.addSubsystem( std::move( _owned._pTelemetryService ) );
+            _pUISystem        = &_startup.addSubsystem( std::move( _owned._pUISystem ) );
+        }
+        TelemetryService& telemetryService = *pTelemetryService;
 
         // 외부 프로파일러(`-gv_tracy`)는 서비스 표가 선 직후에 켠다 — 기동 단계부터 타임라인에 남고, 켤 때 엔진 프로파일러도 같이 켠다.
         ThreadName::setCurrentThreadName( "GameThread" );
@@ -849,11 +693,24 @@ namespace sw
         AssetLoadProfiler::get().reportIfRequested( "session" );
         // 초기화한 단계만 역순으로 내린다: UI → 텔레메트리 → 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI → 씬 → 입력 · 오디오 → 모듈 이미지 → 태스크 → 셰이더 캐시.
         _startup.shutdownAll();
+        // 셸 디버그 액션 맵은 입력 매니저를 가리킨다 — 매니저가 소멸하기(Input 의 해제 자리) 전에 놓는다(`updateShellActions` 가 처음 쓸 때 만든다).
+        _shellActions.reset();
         // 단계가 소유한 객체를 초기화 순서의 역순으로 해제한다(표의 줄은 `StartupStepBody::destroy<단계>`, 서브시스템은 소멸): UI → 텔레메트리 → 렌더러 쪽 → RHI →
         // 글꼴 → 씬 → 입력 · 오디오 → 태스크 → 셰이더 캐시 → 엔진 데이터 → 리소스 → 설정 → 리플렉션 → 압축. 기동이 어디서 멈췄든 모든 단계를 해제한다.
         _startup.destroyAll();
-        _pFontService = nullptr;
-        _pUISystem    = nullptr;
+        _pFontService   = nullptr;
+        _pUISystem      = nullptr;
+        _pInputManager  = nullptr;
+        _pAudioService  = nullptr;
+        _pSceneManager  = nullptr;
+        _pFrameRenderer = nullptr;
+        _pPacketBuilder = nullptr;
+        _pRenderThread  = nullptr;
+#if !defined( SW_SHIPPING )
+        _pShaderRecompiler = nullptr;
+#endif
+        _pConfigManager = nullptr;
+        _pEngineConfig  = nullptr; // 설정 표가 든 객체를 가리켰다
         // 할당 관찰을 떼고 출력을 비운다. 출력 객체(Tracy)는 프로세스 수명이라 남아 있는 구간을 닫을 수 있다.
         ProfilerBackend::shutdown();
         // 표 밖 부트스트랩을 세운 역순으로 내린다(테스트 하네스와 같은 끝 정리).
@@ -866,7 +723,7 @@ namespace sw
     {
         if ( configTypeName == GameConfig::StaticType()->_fullyQualifiedName )
         {
-            const GameConfig* pGameConfig = _configManager != nullptr ? _configManager->getConfig<GameConfig>() : nullptr;
+            const GameConfig* pGameConfig = _pConfigManager != nullptr ? _pConfigManager->getConfig<GameConfig>() : nullptr;
             if ( pGameConfig != nullptr )
                 GameConfig::setActive( *pGameConfig );
             return;
@@ -879,11 +736,209 @@ namespace sw
             _rhi->setPreferredVSync( _pEngineConfig->_window._bVSync );
     }
 
+    EngineInitResult EngineLoop::runHeadlessTask()
+    {
+        // 전용 서버가 하는 헤드리스 작업은 씬 쿠킹(서버 팩)까지다. 셰이더 쿠킹(DXC) · 원본 임포트(에디터 모듈)는 App 의 일이다 — 조용히 넘기지 않고 실패한다.
+        if ( _hostRole == EngineHostRole::DedicatedServer )
+        {
+            static constexpr CommandLineArgument kArrClientOnlyTask[] = {
+                CommandLineArgument::COOK_SHADERS,
+                CommandLineArgument::IMPORT_TEXTURES,
+                CommandLineArgument::CHECK_TEXTURES,
+                CommandLineArgument::IMPORT_MODELS,
+                CommandLineArgument::CHECK_MODELS,
+                CommandLineArgument::IMPORT_HEIGHTFIELDS,
+                CommandLineArgument::CHECK_HEIGHTFIELDS,
+            };
+            for ( const CommandLineArgument argument : kArrClientOnlyTask )
+            {
+                bool bGiven = false;
+                if ( _owned._pCommandLineManager->getArgument( argument, bGiven ) && bGiven )
+                {
+                    SW_LOG_ERROR( "This headless task runs in the client build (App), not in the dedicated server" );
+                    _bHeadless           = true;
+                    _bHeadlessTaskFailed = true;
+                    return EngineInitResult::SkipDependents;
+                }
+            }
+        }
+
+        // 헤드리스 작업은 보통 실행이 누수 기준선을 잡는 자리(`initialize` 끝)에 닿지 않는다. 기준선이 없으면 종료 때 살아 있는 블록을 모두
+        // 누수로 찍으므로, 작업 직전에 같은 기준선을 잡는다 — 작업이 만든 것을 종료까지 놓지 않을 때만 누수로 보인다.
+        bool bCookShaders = false;
+        if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::COOK_SHADERS, bCookShaders ) && bCookShaders )
+        {
+            MemoryProfiler::captureMemoryLeakBaseline();
+            _bHeadless = true;
+            SW_LOG_INFO( "Starting Headless (CookShaders)..." );
+            const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders();
+            _bHeadlessTaskFailed            = summary.isClean() == false;
+            return EngineInitResult::SkipDependents;
+        }
+
+        // 리플렉션 문서도 같은 자리다 — 모든 타입 공급자가 등록을 끝낸 뒤(ModuleTypes)라 게임 · 킷의 타입까지 든다.
+        string reflectionDocsDir;
+        if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::WRITE_REFLECTION_DOCS, reflectionDocsDir ) && reflectionDocsDir.empty() == false )
+        {
+            _bHeadless           = true;
+            _bHeadlessTaskFailed = ReflectionDocWriter::writeMarkdown( engine::getTypeRegistry(), reflectionDocsDir ) == 0;
+            return EngineInitResult::SkipDependents;
+        }
+
+        // 리타깃 굽기(`--bake-retarget=<프로필>,<원본 클립>,<출력 클립>`) — 클립 · 스켈레톤 · 코덱이 모두 엔진 것이라 여기서 한다.
+        string bakeRetarget;
+        if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::BAKE_RETARGET, bakeRetarget ) && bakeRetarget.empty() == false )
+        {
+            MemoryProfiler::captureMemoryLeakBaseline();
+            _bHeadless = true;
+            const string_splitter      parts( bakeRetarget, { "," } );
+            const vector<string_view>& listArgument = parts.getSplitList();
+            const bool                 bWellFormed  = listArgument.size() == 3;
+            if ( bWellFormed == false )
+                SW_LOG_ERROR( "--bake-retarget expects <profile>,<source clip>,<output clip>" );
+            _bHeadlessTaskFailed = bWellFormed == false ||
+                                   RetargetBakeUtil::bakeClipFile( StringUtil::trim( listArgument[0] ), StringUtil::trim( listArgument[1] ), StringUtil::trim( listArgument[2] ) ) == false;
+            return EngineInitResult::SkipDependents;
+        }
+
+        // 씬 쿠킹도 같은 자리다. 엔티티 상태를 바이너리로 구우려면 리플렉션이 필요하고,
+        // 그것은 엔진 안에만 있어서 `CookAssets.py` 가 이쪽으로 넘겨준다.
+        bool bCookScenes = false;
+        if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::COOK_SCENES, bCookScenes ) && bCookScenes )
+        {
+            MemoryProfiler::captureMemoryLeakBaseline();
+            _bHeadless = true;
+            string cookedDir;
+            _owned._pCommandLineManager->getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
+            SW_LOG_INFO( "Starting Headless (CookScenes) -> '%#'...", cookedDir );
+            const string& resourceRoot     = ResourcePaths::getRootFolderPath();
+            uint32        sceneFailedCount = 0;
+            const uint32  sceneCount       = SceneCooker::cookAllScenes( resourceRoot, cookedDir, sceneFailedCount );
+            // 프리팹 · GUID 레지스트리도 여기서 만든다 — 형식과 규칙을 쓰는 곳이 엔진 하나여야 한다.
+            uint32                        prefabFailedCount   = 0;
+            [[maybe_unused]] const uint32 prefabCount         = PrefabCache::cookAllPrefabs( resourceRoot, cookedDir, prefabFailedCount );
+            uint32                        registryFailedCount = 0;
+            [[maybe_unused]] const uint32 registryCount       = AssetDatabase::writeRegistryFiles( resourceRoot, cookedDir, registryFailedCount );
+            // 정점 애니메이션(VAT) — 데이터가 고른 (메시, 클립)을 굽는다. 프레임율은 군중 표의 것이라 런타임 굽기와 같다.
+            AnimationCrowdSettings crowdSettings{};
+            if ( ResourceIO::hasResource( AnimationCrowdSettings::kResourcePath ) )
+                (void)crowdSettings.loadFromResource( AnimationCrowdSettings::kResourcePath ); // 실패는 loadFromResource 가 오류로 남기고 기본 프레임율로 굽는다
+            uint32                        vertexAnimationFailedCount = 0;
+            [[maybe_unused]] const uint32 vertexAnimationCount =
+                VertexAnimationCooker::cookAll( resourceRoot, cookedDir, crowdSettings._vertexAnimationFramesPerSecond, vertexAnimationFailedCount );
+            // 내비메시 — 표면이 놓인 씬마다 런타임 베이크와 같은 함수로 `<씬>.navmesh` 를 쓴다.
+            uint32                        navMeshFailedCount = 0;
+            [[maybe_unused]] const uint32 navMeshCount       = SceneNavigationCooker::cookAll( resourceRoot, cookedDir, navMeshFailedCount );
+            SW_LOG_INFO( "Cooked %# scenes (%# failures), %# prefabs (%# failures), %# asset registries (%# failures), %# vertex animations (%# failures), "
+                         "%# navmeshes (%# failures).",
+                         sceneCount, sceneFailedCount, prefabCount, prefabFailedCount, registryCount, registryFailedCount, vertexAnimationCount,
+                         vertexAnimationFailedCount, navMeshCount, navMeshFailedCount );
+            _bHeadlessTaskFailed = sceneCount == 0 || sceneFailedCount > 0 || prefabFailedCount > 0 || registryFailedCount > 0 ||
+                                   vertexAnimationFailedCount > 0 || navMeshFailedCount > 0;
+            return EngineInitResult::SkipDependents;
+        }
+
+        // 립싱크 분석 — 음성마다 비즘 트랙을 곁에 쓴다. 분석 표가 엔진 데이터라 엔진이 한다.
+        bool bImportLipSync = false;
+        if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_LIPSYNC, bImportLipSync ) && bImportLipSync )
+        {
+            MemoryProfiler::captureMemoryLeakBaseline();
+            _bHeadless = true;
+            SW_LOG_INFO( "Starting Headless (ImportLipSync)..." );
+            LipSyncSettings         lipSyncSettings{};
+            uint32                  lipSyncFailedCount = 0;
+            [[maybe_unused]] uint32 lipSyncCount       = 0; // 로그로만 쓴다(Shipping 은 빠진다)
+            if ( lipSyncSettings.loadFromResource( LipSyncSettings::kResourcePath ) )
+                lipSyncCount = LipSyncImport::importAll( ResourcePaths::getRootFolderPath(), lipSyncSettings, lipSyncFailedCount );
+            else
+                ++lipSyncFailedCount;
+            SW_LOG_INFO( "Imported %# viseme tracks (%# failures).", lipSyncCount, lipSyncFailedCount );
+            _bHeadlessTaskFailed = lipSyncFailedCount > 0;
+            return EngineInitResult::SkipDependents;
+        }
+
+        // 로컬라이제이션 도구(글 수집 · PO 교환)와 원본 임포트 · 대조(텍스처 · 모델 · 높이장)는 에디터 모듈이 한다(엔진은 에디터를 모른다).
+        // 여기서는 창 · RHI 없이 세우기만 하고, 모듈을 올려 부르는 것은 App 이다(`EditorModuleHost::runLocalizationWithEditorModule` ·
+        // `importAssetsWithEditorModule`). 이 단계는 타입 공급자 모듈 뒤라 글 수집이 리플렉션 프로퍼티(`Meta = "Localizable"`)를 본다.
+        bool   bGatherText = false;
+        bool   bCheckText  = false;
+        bool   bExportPo   = false;
+        string importPoPath;
+        _owned._pCommandLineManager->getArgument( CommandLineArgument::GATHER_TEXT, bGatherText );
+        _owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_TEXT, bCheckText );
+        _owned._pCommandLineManager->getArgument( CommandLineArgument::EXPORT_PO, bExportPo );
+        _owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_PO, importPoPath );
+        const bool bAnyLocalization = bGatherText || bCheckText || bExportPo || importPoPath.empty() == false;
+
+        bool bImportTextures     = false;
+        bool bCheckTextures      = false;
+        bool bImportModels       = false;
+        bool bCheckModels        = false;
+        bool bImportHeightfields = false;
+        bool bCheckHeightfields  = false;
+        _owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_TEXTURES, bImportTextures );
+        _owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_TEXTURES, bCheckTextures );
+        _owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_MODELS, bImportModels );
+        _owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_MODELS, bCheckModels );
+        _owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_HEIGHTFIELDS, bImportHeightfields );
+        _owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_HEIGHTFIELDS, bCheckHeightfields );
+        const bool bAnyImport = bImportTextures || bCheckTextures || bImportModels || bCheckModels || bImportHeightfields || bCheckHeightfields;
+        if ( bAnyLocalization || bAnyImport )
+        {
+            MemoryProfiler::captureMemoryLeakBaseline();
+            _bHeadless = true;
+            SW_LOG_INFO( "Starting Headless (%#)...", bAnyLocalization ? "localization tools" : "asset import/check" );
+            return EngineInitResult::SkipDependents;
+        }
+        return EngineInitResult::Succeeded;
+    }
+
+    EngineInitResult EngineLoop::loadUserSettings()
+    {
+        UserSettingsManager& settings = engine::getUserSettingsManager();
+        UserSettingsTargets  targets;
+        targets._pGlobalVariableManager = _owned._pGlobalVariableManager.get();
+        targets._pCommandLineManager    = _owned._pCommandLineManager.get();
+        targets._pInputMap              = &engine::getInputManager().getInputMap();
+        targets._pAudioService          = _pAudioService;
+        targets._pLocalizationManager   = _owned._pLocalizationManager.get();
+        settings.initialize( targets );
+
+        // 스키마 · 사용자 파일이 틀려도 기동은 멈추지 않는다(오류로 알리고 옵션 메뉴가 비거나 기본값이다). 화면을 못 띄우는 설정 파일 하나로
+        // 게임이 안 뜨면 플레이어가 고칠 길이 없다.
+        const GameConfig& gameConfig = GameConfig::getActive();
+        if ( settings.loadSchema( engine::getEngineDefaultAssets()._userSettingsSchema ) && gameConfig._userSettingsSchema.empty() == false )
+        {
+            const string gameSchema = FileUtil::joinPath( FileUtil::trimTrailingSlashes( gameConfig._packRoot ), gameConfig._userSettingsSchema );
+            if ( settings.loadSchema( gameSchema ) == false )
+                SW_LOG_ERROR( "Game user settings schema '%#' is not loaded", gameSchema.c_str() );
+        }
+#if SW_DEV_COMMANDS_ENABLED
+        // 디버그 HUD 설정(개발 도구) — Dev 만 덧붙인다. 사용자 파일보다 먼저 읽어야 저장된 HUD 값이 버려지지 않는다.
+        if ( settings.loadSchema( DebugHUD::kSettingsSchemaPath ) == false )
+            SW_LOG_ERROR( "Debug HUD user settings schema '%#' is not loaded", DebugHUD::kSettingsSchemaPath );
+#endif
+        for ( const auto& [settingID, value] : gameConfig._mapUserSettingDefault )
+        {
+            (void)settings.setGameDefault( hashed_string( settingID ), value );
+        }
+
+        // 사용자 폴더의 파일이다(세이브 게임과 별개). 자동화는 `-gv_userSettingsFile` 로 사용자 폴더를 건드리지 않는다.
+        const string gameName = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( gameConfig._packRoot ) );
+        settings.setUserFilePath( gv_userSettingsFile.empty() ? UserSettingsManager::makeDefaultUserFilePath( gameName ) : gv_userSettingsFile );
+        // 셸 키(콘솔 여는 키 …)를 플레이어가 바꾼 것도 같은 사용자 폴더에 둔다. 셸 맵은 처음 돌 때 만들므로 그 전에 경로를 알려 준다.
+        _shellActions.setUserBindingsPath( ShellInputActions::makeUserBindingsPath( settings.getUserFilePath() ) );
+        if ( settings.loadUserFile( settings.getUserFilePath() ) == false )
+            (void)settings.applyAutoDetectedPreset( HardwareProbe::probe() ); // 맞는 프리셋이 없으면 기본값 그대로다
+        settings.reapplyAll();
+        return EngineInitResult::Succeeded;
+    }
+
     bool EngineLoop::renderPortraits( string_view prefabList, string_view outputDirectory, uint32 size )
     {
         if ( _rhi == nullptr || _rhi->hasDevice() == false )
             return false;
-        return PortraitBatchUtil::renderPrefabList( _rhi->getDevice(), _renderThread.get(), prefabList, outputDirectory, size );
+        return PortraitBatchUtil::renderPrefabList( _rhi->getDevice(), _pRenderThread, prefabList, outputDirectory, size );
     }
 
     void EngineLoop::requestQuit( int32 exitCode )
@@ -921,10 +976,10 @@ namespace sw
     EngineFrameContext EngineLoop::makeFrameContext() const
     {
         EngineFrameContext context;
-        context._pInput                   = _owned._pInputManager.get();
-        context._completedScreenshotCount = _renderThread != nullptr ? _renderThread->getCompletedScenarioScreenshotCount() : 0u;
+        context._pInput                   = _pInputManager;
+        context._completedScreenshotCount = _pRenderThread != nullptr ? _pRenderThread->getCompletedScenarioScreenshotCount() : 0u;
         context._deltaSeconds             = _frameDeltaSeconds;
-        const Scene* pActiveScene         = _owned._pSceneManager != nullptr ? _owned._pSceneManager->getActiveScene() : nullptr;
+        const Scene* pActiveScene         = _pSceneManager != nullptr ? _pSceneManager->getActiveScene() : nullptr;
         if ( pActiveScene != nullptr )
             context._activeSceneID = pActiveScene->getSourcePath().empty() ? pActiveScene->getName() : pActiveScene->getSourcePath();
         return context;
@@ -959,8 +1014,8 @@ namespace sw
                 pObserver->onFrameBegin( context );
             }
         }
-        if ( _owned._pInputManager != nullptr )
-            _owned._pInputManager->beginFrame( deltaSeconds );
+        if ( _pInputManager != nullptr )
+            _pInputManager->beginFrame( deltaSeconds );
         // UI 는 게임 틱보다 먼저 입력을 받는다 — UI 가 먹은 행동 · 마우스 버튼은 이번 프레임 폰의 의도에 들지 않는다(플레이어 조종자가 본다).
         if ( _pUISystem != nullptr && _pUISystem->isInitialized() )
             _pUISystem->processInput( GameTimeScale::getUnscaledDeltaTime( deltaSeconds ) ); // 정지 메뉴의 탐색 반복은 실제 시간
@@ -1018,12 +1073,12 @@ namespace sw
             FileUtil::pumpFileDialogResults();
             engine::getAssetStreamingQueue().update();
 
-            if ( _owned._pSceneManager != nullptr )
-                _owned._pSceneManager->tickTransitions();
+            if ( _pSceneManager != nullptr )
+                _pSceneManager->tickTransitions();
             if ( _owned._pEventDispatcher != nullptr )
                 _owned._pEventDispatcher->processEvents();
-            if ( _audioService != nullptr )
-                _audioService->update( deltaTime );
+            if ( _pAudioService != nullptr )
+                _pAudioService->update( deltaTime );
         }
 
         _sceneDeltaSeconds = bTickScene ? deltaTime : 0.0f;
@@ -1031,16 +1086,16 @@ namespace sw
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick" );
             // 게임 카메라가 그리는 뷰포트 크기를 틱 전에 적는다 — 픽셀 퍼펙트 카메라가 배율을 고른다(`CameraRegistry::getViewportWidth`).
-            Scene* pTickScene = ( _owned._pSceneManager != nullptr ) ? _owned._pSceneManager->getActiveScene() : nullptr;
+            Scene* pTickScene = ( _pSceneManager != nullptr ) ? _pSceneManager->getActiveScene() : nullptr;
             if ( pTickScene != nullptr && pTickScene->getObjectManager() != nullptr )
                 pTickScene->getObjectManager()->getCameraRegistry().setViewportSize( vpWidth, vpHeight );
-            if ( _owned._pSceneManager != nullptr && bTickScene )
-                _owned._pSceneManager->tick( deltaTime );
+            if ( _pSceneManager != nullptr && bTickScene )
+                _pSceneManager->tick( deltaTime );
         }
 
         // 물리 · 내비 디버그 선 — 씬 틱이 이번 프레임의 바디 · 경로를 정한 **뒤**, 관찰자 · UI · 패킷 **앞**이다(이번 프레임에 넣은 선이 endFrame 에서 확정된다).
-        if ( _owned._pSceneManager != nullptr )
-            SceneDebugDraw::update( _owned._pSceneManager->getActiveScene(), engine::getDebugDrawQueue() );
+        if ( _pSceneManager != nullptr )
+            SceneDebugDraw::update( _pSceneManager->getActiveScene(), engine::getDebugDrawQueue() );
 
         // 관찰자 훅 `onAfterSceneTick` — 이 프레임의 게임 상태가 정해진 뒤(씬 틱 · 디버그 그리기 뒤), 런타임 UI · 렌더 패킷 앞이라는 순서가 뜻이 있다(텔레메트리의 장면별 프레임 시간).
         if ( _listFrameObserver.empty() == false )
@@ -1083,24 +1138,24 @@ namespace sw
         // 처음 쓰는 머티리얼의 스폰)만 렌더 스레드를 기다린다.
         if ( _rhi != nullptr && _rhi->hasDevice() )
         {
-            MaterialCache& materials = _owned._pAssetManager->getAssetCache<MaterialCache>();
-            if ( materials.hasPendingInitialize() && _renderThread != nullptr )
-                _renderThread->waitIdle();
+            MaterialCache& materials = engine::getAssetManager().getAssetCache<MaterialCache>();
+            if ( materials.hasPendingInitialize() && _pRenderThread != nullptr )
+                _pRenderThread->waitIdle();
             materials.initializePending( &_rhi->getDevice() );
         }
 
         // 패킷 · 씬 스냅샷은 FrameRenderer 단계가 만든다. 그 단계가 서지 않았으면(헤드리스 작업) 낼 패킷이 없다.
-        if ( _packetBuilder.isInitialized() == false )
+        if ( _pPacketBuilder == nullptr || _pPacketBuilder->isInitialized() == false )
             return;
 
-        Scene* pActiveScene = _owned._pSceneManager != nullptr ? _owned._pSceneManager->getActiveScene() : nullptr;
+        Scene* pActiveScene = _pSceneManager != nullptr ? _pSceneManager->getActiveScene() : nullptr;
 
         // 패킷 채우기의 순서는 여기서 보인다: 열기 → 관찰자 → 씬 · 뷰 → 캔버스 → 제출. 씬 · 뷰는 위의 씬 틱 · 디버그 그리기 · UI 갱신 **뒤**라
         // 이번 프레임의 게임 상태를 싣고, 캔버스는 UI 갱신이 칠한 목록을 싣는다.
         BLOCK( "RenderFramePacket 제출" )
         {
             SW_MEMORY_SCOPE( RenderCPU );
-            RenderFramePacket& packet = _packetBuilder.beginPacket();
+            RenderFramePacket& packet = _pPacketBuilder->beginPacket();
             // 관찰자가 실을 것(시나리오 `<Screenshot>` 의 경로)은 다음에 그리는 이 패킷에 싣는다.
             if ( _listFrameObserver.empty() == false )
             {
@@ -1112,14 +1167,14 @@ namespace sw
                 }
             }
 
-            _packetBuilder.populateScene( packet, views, sceneViewCameraProvider, pActiveScene, deltaTime, *_rhi, _frameRenderer.get() );
+            _pPacketBuilder->populateScene( packet, views, sceneViewCameraProvider, pActiveScene, deltaTime, *_rhi, _pFrameRenderer );
             RenderPacketBuilder::populateCanvas( packet, bSceneMain, _pUISystem, _pFontService, _rhi.get() );
 
-            if ( _renderThread != nullptr )
+            if ( _pRenderThread != nullptr )
             {
                 // GT 가 여기서 기다린다면 그것은 렌더 스레드가 밀린 것이다. 링이 차면 submit 이 막는다.
                 SW_PROFILE_SCOPE( "GT.Packet.submit" );
-                _renderThread->submit( packet );
+                _pRenderThread->submit( packet );
             }
         }
     }
@@ -1154,8 +1209,8 @@ namespace sw
                     requestQuit( observerExitCode ); // 여럿이면 처음 것의 코드다
             }
         }
-        if ( _owned._pInputManager != nullptr )
-            _owned._pInputManager->endFrame();
+        if ( _pInputManager != nullptr )
+            _pInputManager->endFrame();
         // 이번 프레임에 넣은 디버그 도형을 보이는 목록으로 확정하고, 씬이 흘린 시간만큼 지속 시간을 줄인다(일시정지면 그대로 남는다).
         engine::getDebugDrawQueue().endFrame( _sceneDeltaSeconds );
     }
@@ -1182,8 +1237,7 @@ namespace sw
 
             // 옛 디바이스의 GPU 자원은 recreateDevice 안의 shutdown 이 레지스트리에 통보하며 거둔다.
             _rhi->getDevice().waitIdle();
-            if ( _owned._pShaderCache != nullptr )
-                _owned._pShaderCache->clearCache();
+            engine::getShaderCache().clearCache();
         }
 
         if ( _rhi->recreateDevice( requested ) == false )
@@ -1204,7 +1258,7 @@ namespace sw
             return false;
         // 교체 뒤 디바이스에 매인 설정이 새 디바이스를 따르는지 한 줄로 남긴다(AppSmokeTest.BackendSwapFollowsTheNewDevice 가 읽는다).
         SW_LOG_INFO( "Active backend is now %# (merge batches across materials %#, native bindless sampling %#)", RHI::getBackendTypeName( _rhi->getCommittedBackend() ),
-                     _packetBuilder.isMergeBatchesAcrossMaterials() ? 1 : 0,
+                     _pPacketBuilder->isMergeBatchesAcrossMaterials() ? 1 : 0,
                      _rhi->getDevice().supportsNativeBindlessSampling() ? 1 : 0 );
         return true;
     }
@@ -1222,7 +1276,7 @@ namespace sw
         // 씬의 디바이스. 본문은 이미 있는 객체를 다시 쓰므로 렌더 스레드에 걸린 훅과 그것을 가리키는 포인터가 그대로다.
         const bool bRestarted = _startup.restartStoppedSteps();
 
-        Scene* pScene = _owned._pSceneManager != nullptr ? _owned._pSceneManager->getActiveScene() : nullptr;
+        Scene* pScene = _pSceneManager != nullptr ? _pSceneManager->getActiveScene() : nullptr;
         if ( pScene != nullptr )
             pScene->ensureDefaultCameras();
         return bRestarted;
@@ -1233,7 +1287,7 @@ namespace sw
 #if defined( SW_SHIPPING )
         return nullptr;
 #else
-        return _shaderRecompiler.get();
+        return _pShaderRecompiler;
 #endif
     }
 
@@ -1249,21 +1303,21 @@ namespace sw
 
     void EngineLoop::setPresentHook( PresentHookDelegate presentHook )
     {
-        if ( _renderThread != nullptr )
-            _renderThread->setPresentHook( std::move( presentHook ) );
+        if ( _pRenderThread != nullptr )
+            _pRenderThread->setPresentHook( std::move( presentHook ) );
     }
 
     void EngineLoop::setPostPresentHook( PresentHookDelegate postPresentHook )
     {
-        if ( _renderThread != nullptr )
-            _renderThread->setPostPresentHook( std::move( postPresentHook ) );
+        if ( _pRenderThread != nullptr )
+            _pRenderThread->setPostPresentHook( std::move( postPresentHook ) );
     }
 
     void EngineLoop::updateShellActions( float32 deltaTime )
     {
-        if ( _owned._pInputManager == nullptr )
+        if ( _pInputManager == nullptr )
             return;
-        _shellActions.update( *_owned._pInputManager, deltaTime );
+        _shellActions.update( *_pInputManager, deltaTime );
     }
 
     unique_ptr<InputMap> EngineLoop::createShellInputMap( string_view inputMapPath )
