@@ -657,8 +657,9 @@ SW_TEST_CASE( AppSmokeTest, EditorRegistriesKeepTheirOrder )
         "transform.distributeX,transform.distributeY,transform.distributeZ",
         "EditorExtensionRegistry|menu|MainMenu/File|scene.new,scene.open,asset.save,scene.saveScene,-,editor.quickOpen,editor.commandPalette,-,"
         "editor.exit",
-        "EditorExtensionRegistry|menu|MainMenu/Edit|edit.undo,edit.redo,-,editor.themeSettings,editor.preferences,-,help.reportBug",
-        "EditorExtensionRegistry|menu|MainMenu/Build|build.compileGame,build.compileEditor,build.compileAll,-,build.cancel",
+        "EditorExtensionRegistry|menu|MainMenu/Edit|edit.undo,edit.redo,-,editor.themeSettings,editor.preferences,editor.projectSettings,-,"
+        "scene.moveSiblingUp,scene.moveSiblingDown,scene.createFolder,-,help.reportBug",
+        "EditorExtensionRegistry|menu|MainMenu/Build|build.compileGame,build.compileEditor,build.compileAll,-,build.cancel,-,navigation.bake",
     };
 
     const AppRunResult result = runApp( "-gv_profileFrames=5 -EnableEditor -dx12 -gv_editorRegistryDump=1", "EditorExtensionRegistry|" );
