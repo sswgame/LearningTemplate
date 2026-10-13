@@ -12,7 +12,8 @@
 
 // libFuzzer 진입점 — 대상은 환경 변수 SW_FUZZ_TARGET(LoaderFuzzTargets.cpp 의 표 이름). SW_FUZZ_LIST=1 이면 대상 이름을 줄마다 찍고 끝나고,
 // SW_FUZZ_DUMP_SEEDS=<폴더> 면 그 대상의 씨앗을 파일로 쓰고 끝난다(fuzz.yml 이 말뭉치 첫 판으로 쓴다). 엔진은 테스트 하네스와 같은 기동으로 한 번만 세운다.
-// 엔진 단언(`SW_ASSERT`)이 멈추면 libFuzzer 는 그것을 크래시로 본다 — 원하는 판정이다(죽지 않고 · 단언하지 않고). 종료 정리는 libFuzzer 의 exit 에 맡긴다.
+// 엔진 단언(`SW_ASSERT`)이 멈추면 libFuzzer 는 그것을 크래시로 본다 — 원하는 판정이다(죽지 않고 · 단언하지 않고).
+// 엔진 정리를 정적 소멸에 맡기지 않는다 — `std::exit` 앞에서 하네스를 명시적으로 내린다(정적 소멸 순서는 엔진 범위의 역순을 지키지 않는다).
 
 namespace
 {
@@ -64,6 +65,7 @@ extern "C" int32 LLVMFuzzerInitialize( int32* pArgc, FuzzerArgumentList* pArgume
     if ( s_runtime.start( 1, arrArgument ) == false )
     {
         std::fprintf( stderr, "LoaderFuzzer: engine harness did not start\n" );
+        s_runtime.stop();
         std::exit( 2 );
     }
     const utf8*                   pTargetName = std::getenv( "SW_FUZZ_TARGET" );
@@ -71,6 +73,7 @@ extern "C" int32 LLVMFuzzerInitialize( int32* pArgc, FuzzerArgumentList* pArgume
     if ( pTarget == nullptr )
     {
         std::fprintf( stderr, "LoaderFuzzer: set SW_FUZZ_TARGET to one of the names SW_FUZZ_LIST=1 prints\n" );
+        s_runtime.stop();
         std::exit( 2 );
     }
     LoaderFuzzerInternal::getTarget() = pTarget;
@@ -78,6 +81,7 @@ extern "C" int32 LLVMFuzzerInitialize( int32* pArgc, FuzzerArgumentList* pArgume
     if ( pSeedFolder != nullptr )
     {
         LoaderFuzzerInternal::dumpSeeds( *pTarget, pSeedFolder );
+        s_runtime.stop();
         std::exit( 0 );
     }
     return 0;

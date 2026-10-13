@@ -47,7 +47,12 @@ jobs:
         : > fuzz/failed.txt
         for target in $(SW_FUZZ_LIST=1 "$fuzzer"); do
           mkdir -p "fuzz/$target/corpus" "fuzz/$target/seeds"
-          (cd build/CI-Fuzz/Bin && SW_FUZZ_TARGET="$target" SW_FUZZ_DUMP_SEEDS="$GITHUB_WORKSPACE/fuzz/$target/seeds" ./LoaderFuzzer)
+          # 씨앗 덤프가 지면 그 대상만 실패로 적고 다음 대상으로 간다(한 대상의 실패가 나머지를 막지 않는다).
+          if ! (cd build/CI-Fuzz/Bin && SW_FUZZ_TARGET="$target" SW_FUZZ_DUMP_SEEDS="$GITHUB_WORKSPACE/fuzz/$target/seeds" ./LoaderFuzzer); then
+            echo "$target" >> fuzz/failed.txt
+            echo "::error title=fuzz $target::seed dump failed - see the job log"
+            continue
+          fi
           if ! (cd build/CI-Fuzz/Bin && SW_FUZZ_TARGET="$target" ./LoaderFuzzer "$GITHUB_WORKSPACE/fuzz/$target/corpus" "$GITHUB_WORKSPACE/fuzz/$target/seeds" \
                 -max_total_time=60 -timeout=10 -rss_limit_mb=4096 -artifact_prefix="$GITHUB_WORKSPACE/fuzz/$target/"); then
             echo "$target" >> fuzz/failed.txt

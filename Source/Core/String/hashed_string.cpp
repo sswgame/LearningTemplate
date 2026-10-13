@@ -21,7 +21,11 @@ namespace sw
     {
         SW_ASSERT( s_pInstance == nullptr );
 
-        static hashed_string::AllocationInfo s_instance;
+        // 표의 수명은 `initialize` · `shutdown`(이름 풀 서브시스템)이 정한다 — 프로세스 종료의 정적 소멸에 맡기지 않는다. 함수 지역 static 객체로 두면
+        // `exit()` 중 정적 소멸이 그것을 먼저 지우고, 뒤이어 도는 엔진 정리(`shutdown`)가 지워진 표를 읽는다. 그래서 정적 저장소에 한 번 세우고 소멸자는 부르지
+        // 않는다(블록은 `shutdown` 의 `clear` 가 모두 돌려준다).
+        alignas( hashed_string::AllocationInfo ) static uint8 s_arrStorage[sizeof( hashed_string::AllocationInfo )];
+        static hashed_string::AllocationInfo&                 s_instance = *sw_placement_new( s_arrStorage ) hashed_string::AllocationInfo();
 
         // 함수 지역 static 은 **한 번만** 생성된다. shutdown 이 `clear()` 로 0번 청크와 미리 정의된 이름까지 돌려주므로, 두 번째
         // initialize 에서는 생성자가 돌지 않아 **빈 테이블**을 가리키게 된다. 그러면 `hashed_string( NameType_float3 )` 의

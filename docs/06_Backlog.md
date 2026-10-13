@@ -52,9 +52,8 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   스크린샷 토스트의 "Show in Explorer" 단추(알림 매니저에 동작 단추가 없다), `screenshotbutton` 시나리오가 `Bin/Saved/Screenshots` 에 남기는 PNG, Engine README 개발 명령 줄의 경로.
   RenderDoc 은 RHI 단계 맨 앞에서 로드하고, `ThirdParty/renderdoc` 에 원문 헤더를 두며 그 폴더의 `.clang-format` 은 `DisableFormat` 이다.
 
-- `B-5` **커버리지 안내 퍼저(`LoaderFuzzer`)는 아직 한 번도 지어지지 않았다**(2026-10-06 들임, 리눅스 전용 — 이 PC 는 WSL 을 쓰지 않았다). 첫 `fuzz.yml` 실행
-  (밤 또는 `workflow_dispatch`)이 구성 · 링크(`-fsanitize=fuzzer-no-link` 엔진 + ASan, `-fsanitize=fuzzer` 실행 파일)와 대상마다 60 초가 끝나는지 본다.
-  지면 그 실행의 주석 · 아티팩트(`fuzz-findings`)로 고친다.
+- `B-5` **커버리지 안내 퍼저(`LoaderFuzzer`)의 첫 퍼징 결과를 본다**(2026-10-06 들임, 리눅스 전용). 구성 · 빌드 · 링크는 CI 에서 성공했다(실행 38477313606).
+  남은 것은 대상마다 60 초 퍼징이 끝나는지 — 지면 그 실행의 주석 · 아티팩트(`fuzz-findings`)로 고친다.
 
 - `B-6` **리눅스 RPATH 는 CI 결과로 확인한다**(사용자 결정 2026-10-10 — 로컬 WSL 빌드는 하지 않는다).
 
