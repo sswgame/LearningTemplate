@@ -2,7 +2,7 @@
  * @file MultiplayerTab.h
  * @brief Multiplayer 창에 탭 하나를 더하는 등록 줄(`SW_EDITOR_MULTIPLAYER_TAB`)과 탭이 받는 문맥입니다. ImGui 에 의존하지 않습니다.
  * @details 창은 탭을 모르고, 등록 순서대로 탭 막대를 그리고 고른 탭의 `drawTab` 만 부른다. Session · Conditions 가 첫 사용처이고
- *          서버 디버깅의 다음 단위(Inspector · Profiler · Sync)와 확장 모듈(게임별 상태 보기)도 자기 .cpp 에 같은 한 줄을 둔다.
+ *          서버 디버깅의 다음 단위(Inspector · Sync)와 확장 모듈(게임별 상태 보기)도 자기 .cpp 에 같은 한 줄을 둔다.
  */
 #pragma once
 #include "Core/Common/Types.h"
