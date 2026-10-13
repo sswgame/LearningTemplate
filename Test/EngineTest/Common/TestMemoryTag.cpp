@@ -14,7 +14,6 @@
 #include "Engine/Compression/Lz4CompressionCodec.h"
 #include "Engine/Compression/ZlibCompressionCodec.h"
 #include "Engine/Compression/ZstdCompressionCodec.h"
-#include "Engine/EngineInitSequence.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Module/ReflectionSubsystem.h"
@@ -43,20 +42,6 @@ namespace
         return profiler.getStats( tag )._totalAllocatedBytes.load();
     }
 } // namespace
-
-/**
- * @brief [MemoryTagTest] 기동 단계마다 Unknown 이 아닌 태그가 있다
- * @details 단계 초기화는 그 단계의 태그(서브시스템 선언) 아래에서 돈다. 새 단계를 Unknown 으로 두면 그 단계의 할당이 모두 Unknown 줄로 간다.
- */
-SW_TEST_CASE( MemoryTagTest, EveryStartupStepHasATag )
-{
-    for ( const sw::FunctionSubsystemDesc* pDesc : sw::EngineFunctionStep::kArrAll )
-    {
-        SW_EXPECT_TRUE_MSG( pDesc->_memoryTag != sw::MemoryTag::Unknown, pDesc->_pName );
-    }
-    SW_EXPECT_TRUE( sw::TaskManager{}.getSubsystemMemoryTag() == sw::MemoryTag::Task );
-    SW_EXPECT_TRUE( sw::ReflectionSubsystem{ sw::make_unique<sw::TypeRegistry>() }.getSubsystemMemoryTag() == sw::MemoryTag::Reflection );
-}
 
 /**
  * @brief [MemoryTagTest] 하네스 기동 뒤 주요 태그(태스크 · 리플렉션 · 씬 · 에셋 · 셰이더)에 살아 있는 바이트가 있다

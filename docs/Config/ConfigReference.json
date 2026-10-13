@@ -2759,7 +2759,7 @@
    "default": "0",
    "kind": "시험 · 배포본에도",
    "description": "일부러 크래시를 내 리포트 경로를 검증합니다 (1=널 쓰기 2=스택 오버플로 3=작업 스레드 스택 오버플로 4=abort 5=순수 가상 호출)",
-   "source": "Source/Engine/EngineLoop.cpp"
+   "source": "Source/Engine/Renderer/RHISubsystem.cpp"
   },
   {
    "name": "gv_debugHUD",

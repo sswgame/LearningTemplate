@@ -37,10 +37,12 @@
 - ③ 대상: Core TaskManager · AsyncFileIO · CompressionCodecRegistry · CommandLineManager · GlobalVariableManager, Engine ConfigManager · InputManager ·
   LocalizationManager · AssetManager · ResourcePakManager · SceneManager · UserSettingsManager · ServerServiceManager · 오디오 구현 · 렌더러. 매니저가 아닌 호스트 엮기
   (Reflection · ModuleTypes · ModuleImages · Headless · SceneRHI · EngineDefaultAssets)만 작은 `<대상>Subsystem` 클래스. 하네스와 본문이 다른 단계는 하네스 서브클래스.
-- ③a · ③b 끝: 직접 상속 — TaskManager · AsyncFileIO · CompressionCodecRegistry · ConfigManager · AssetManager · IAudioService · InputManager · AssetStreamingQueue ·
-  SceneManager(되돌리기 기록 비우기 구독 포함) · UserSettingsManager(기동 전 스키마는 addStartupSchema). 작은 클래스 — ReflectionSubsystem · ModuleImagesSubsystem ·
-  ModuleTypesSubsystem(Engine/Module) · EngineDefaultAssetsSubsystem(Localization) · HeadlessSubsystem(Engine 루트). 역방향 의존(getSubsystemDependents)으로 높은 층이
-  낮은 층의 순서를 적는다. 남은 FunctionSubsystem 단계: RHI · FrameRenderer · RenderThread · LiveShader · SceneRHI(③c), 그리고 ImGuiEditor 의 기동 단계 일곱.
+- ③ 끝: FunctionSubsystem · FunctionSubsystemDesc · EngineFunctionStep · EngineInitSequence.h 가 없다. 엔진 수명 매니저(TaskManager · AsyncFileIO ·
+  CompressionCodecRegistry · ConfigManager · AssetManager · IAudioService · InputManager · AssetStreamingQueue · SceneManager · UserSettingsManager)가 직접 상속하고,
+  호스트 엮기는 작은 클래스다 — Reflection · ModuleImages · ModuleTypes(Engine/Module), EngineDefaultAssets(Localization), Headless(Engine 루트),
+  RHI · FrameRenderer · RenderThread · LiveShader · SceneRHI(Engine/Renderer). 에디터의 기동 단계 일곱은 ImGuiEditor 의 중첩 클래스다.
+  역방향 의존(`getSubsystemDependents`)으로 높은 층이 낮은 층의 순서를 적는다. 남은 Core 매니저 CommandLineManager · GlobalVariableManager 는 ⑤(부트스트랩) 에서,
+  LocalizationManager · ResourcePakManager · ServerServiceManager 는 ④ 에서 본다(지금은 기동 순서 밖 — 초기화 · 종료 짝이 없다).
 - ④ 요구(조정자): Engine 클래스는 호스트만 안다(Games · GameFramework · Editor 가 include 하면 층 게이트 실패), 모듈 조회 창구는 읽기 전용 `ISubsystemLocator`
   (Core 의 SubsystemCollection 이 구현, 호스트가 모듈 API 표로 넘김), 컴포넌트는 `SceneEngineServices` 주입 유지 · 확대, 씬 수명은 `ISceneService` 로 따로,
   DLL 경계 조회는 이름 · TypeInfo 기반(핫 리로드 SmokeTest 로 확인). 호스트 범위 컬렉션(App · ServerApp · ModuleHost)이 엔진 범위 위에 얹힐 수 있게 로케이터에 범위 체인을 열어 둔다.
@@ -69,7 +71,8 @@
 - **무효 bindless 인덱스(0xFFFFFFFF)** 는 DX12 에서 페이지 폴트, Vulkan 에서 DEVICE_LOST 가 된다. 셰이더는 `swBindlessTextureSlot` 으로 마스킹한다. 셰이더를 바꾼 뒤에는 `App.exe --cook-shaders` 로 다시 굽는다.
 - **`castTo<Component>( Component*, 타입 )` 은 항상 성공한다.** 종류 거르기는 `getTypeInfo()->isDerivedFrom( 타입 )`.
 - **테스트에서 워커가 공유 `sw::vector` 의 칸에 쓰면** 레이스 탐지기가 컨테이너 전체 동시 쓰기로 본다. 고정 배열을 쓴다.
-- **`FunctionSubsystem`** 선언은 `FunctionSubsystemDesc{ 이름, 의존, 대상, 태그 }` 하나로 넘긴다. 의존 글은 실행 시간에만 풀리므로 새 단계를 넣으면 `EngineInitSequenceTest` 가 정렬 오류를 잡는다.
+- **서브시스템**은 `ISubsystem` 을 상속하는 클래스이고 `kSubsystemName` 상수를 둔다. 의존 칸은 다른 클래스의 상수를 가리키며(철자는 컴파일 오류), 낮은 층이 높은 층보다
+  늦게 서야 하면 높은 층이 역방향 의존으로 적는다. 정렬 오류(순환 · 호스트 어긋남)는 `EngineInitSequenceTest` 가 호스트 종류마다 잡는다.
 - 새 `SW_API`/`SW_GF_API` 클래스가 다른 모듈에서 쓰이면 선언에 매크로를 붙이고 `Core/Common/Macros.h` 를 직접 include 한다.
 - 같은 기능을 두 작업자가 따로 만들 수 있다: 병렬 지시 때 소유 범위가 겹치는 기능은 한 명에게만. 작업자는 커밋만 하고 병합 · 빌드 · push 는 사용자 세션에서.
 - 워크트리 정리: 정션(`Tools/*`, `build/vcpkg_*`)을 `cmd //c rmdir` 로 **먼저** 끊고 폴더를 지운다. 안 그러면 공유 도구가 지워진다.

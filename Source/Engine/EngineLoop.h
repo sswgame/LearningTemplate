@@ -51,6 +51,7 @@ namespace sw
     class RenderThread;
     class RHI;
     class RHIBackendRegistry;
+    class RHISubsystem;
     class SceneManager;
     class ShaderRecompiler;
     class TaskManager;
@@ -251,7 +252,7 @@ namespace sw
         /** @brief 기동 단계(서브시스템)의 목록입니다 — 선언된 의존으로 위상 정렬해 초기화하고 역순으로 종료 · 소멸합니다. 서브시스템 객체를 소유합니다. */
         SubsystemCollection _startup;
         /** @brief 서브시스템 `RHI` 입니다(`_startup` 소유). 백엔드 교체가 이것에 기대는 단계만 내렸다가 다시 세운다. */
-        ISubsystem* _pRHISubsystem;
+        RHISubsystem* _pRHISubsystem;
         /** @brief 서브시스템 `RHI` 의 RHI 입니다(`_startup` 소유 — 그 단계가 선 뒤부터 빌려 쓴다). 서지 않았으면(전용 서버 · 헤드리스) nullptr 입니다. */
         RHI* _pRHI;
         /** @brief 서브시스템 `Fonts` 입니다(`_startup` 소유 — 빌려 쓴다). 렌더 패킷의 캔버스가 글리프 캐시를 싣는다. */

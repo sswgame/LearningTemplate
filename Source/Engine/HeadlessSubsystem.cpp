@@ -19,6 +19,7 @@
 #include "Engine/Reflection/ReflectionDocWriter.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Cook/ShaderCookDriver.h"
+#include "Engine/Renderer/RHISubsystem.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -205,7 +206,7 @@ namespace sw
 
     span<const utf8* const> HeadlessSubsystem::getSubsystemDependents() const
     {
-        static constexpr const utf8* kArrDependent[] = { FontService::kSubsystemName, UserSettingsManager::kSubsystemName };
+        static constexpr const utf8* kArrDependent[] = { FontService::kSubsystemName, RHISubsystem::kSubsystemName, UserSettingsManager::kSubsystemName };
         return kArrDependent;
     }
 } // namespace sw

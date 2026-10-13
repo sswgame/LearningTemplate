@@ -11,7 +11,6 @@
 #include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/EngineInitSequence.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/HeadlessSubsystem.h"
 #include "Engine/Input/InputManager.h"
@@ -21,6 +20,12 @@
 #include "Engine/Module/ReflectionSubsystem.h"
 #include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Renderer/Frame/FrameRenderer.h"
+#include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
+#include "Engine/Renderer/LiveShaderSubsystem.h"
+#include "Engine/Renderer/RHISubsystem.h"
+#include "Engine/Renderer/RenderThreadSubsystem.h"
+#include "Engine/Renderer/SceneRHISubsystem.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Scene/SceneManager.h"
@@ -108,15 +113,11 @@ namespace
 
     /**
      * @brief `EngineLoop::initialize` 가 넣는 서브시스템을 실제 객체로 만듭니다. 엔진 루프에 서브시스템을 더하면 여기도 더한다.
-     * @details 클래스가 있는 단계는 그 객체가, 클래스가 없는 단계는 `EngineFunctionStep` 의 선언이 이름 · 의존 · 대상을 말한다.
+     * @details 서브시스템마다 그 클래스가 이름 · 의존 · 호스트를 말한다.
      */
     vector<unique_ptr<ISubsystem>> makeEngineSubsystems()
     {
         vector<unique_ptr<ISubsystem>> listSubsystem;
-        for ( const FunctionSubsystemDesc* pDesc : EngineFunctionStep::kArrAll )
-        {
-            listSubsystem.push_back( make_unique<FunctionSubsystem>( *pDesc ) );
-        }
         listSubsystem.push_back( make_unique<CompressionCodecRegistry>() );
         listSubsystem.push_back( sw::make_unique<ReflectionSubsystem>( sw::make_unique<TypeRegistry>() ) );
         listSubsystem.push_back( make_unique<TaskManager>() );
@@ -134,6 +135,14 @@ namespace
         static HeadlessTaskState s_headlessState; // 선언만 본다 — 본문은 돌지 않는다
         listSubsystem.push_back( sw::make_unique<HeadlessSubsystem>( false, s_headlessState ) );
         listSubsystem.push_back( make_unique<ShaderCache>() );
+        // 렌더 쪽은 서로를 참조로 받는다 — 목록이 살아 있는 동안만 쓴다(대역은 선언만 베낀다).
+        RHISubsystem&           rhiSubsystem           = static_cast<RHISubsystem&>( *listSubsystem.emplace_back( sw::make_unique<RHISubsystem>() ) );
+        FrameRendererSubsystem& frameRendererSubsystem = static_cast<FrameRendererSubsystem&>(
+            *listSubsystem.emplace_back( sw::make_unique<FrameRendererSubsystem>( sw::make_unique<FrameRenderer>(), rhiSubsystem ) ) );
+        RenderThreadSubsystem& renderThreadSubsystem =
+            static_cast<RenderThreadSubsystem&>( *listSubsystem.emplace_back( sw::make_unique<RenderThreadSubsystem>( rhiSubsystem, frameRendererSubsystem ) ) );
+        listSubsystem.push_back( sw::make_unique<LiveShaderSubsystem>( frameRendererSubsystem, renderThreadSubsystem ) );
+        listSubsystem.push_back( sw::make_unique<SceneRHISubsystem>( rhiSubsystem ) );
         listSubsystem.push_back( make_unique<PhysicsSystem>() );
         listSubsystem.push_back( make_unique<FontService>() );
         listSubsystem.push_back( make_unique<TelemetryService>() );
@@ -639,4 +648,16 @@ SW_TEST_CASE( EngineInitSequenceTest, EveryHostKindSortsItsOwnSubsystems )
         SW_EXPECT_TRUE_MSG( SubsystemCollection::computeGraph( listNode, graph, error ), error.c_str() );
     }
     SW_EXPECT_TRUE( hostKindCount >= 2 ); // 클라이언트 · 전용 서버
+}
+
+/**
+ * @brief [EngineInitSequenceTest] 엔진 서브시스템마다 Unknown 이 아닌 메모리 태그가 있다
+ * @details 초기화는 그 서브시스템의 태그 아래에서 돈다. 새 서브시스템을 Unknown 으로 두면 그 초기화의 할당이 모두 Unknown 줄로 간다.
+ */
+SW_TEST_CASE( EngineInitSequenceTest, EverySubsystemHasAMemoryTag )
+{
+    for ( const unique_ptr<ISubsystem>& subsystem : makeEngineSubsystems() )
+    {
+        SW_EXPECT_TRUE_MSG( subsystem->getSubsystemMemoryTag() != MemoryTag::Unknown, subsystem->getSubsystemName() );
+    }
 }

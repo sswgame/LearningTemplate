@@ -41,7 +41,6 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Common/EngineSubsystemHost.h"
-#include "Engine/Common/FunctionSubsystem.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -69,20 +68,6 @@ namespace sw::editor
         struct ImGuiEditorInternal
         {
             static constexpr Color kNotificationWindowBg{ 0.10f, 0.10f, 0.10f, 1.00f };
-
-            // 기동 단계 이름과 의존 — 의존 칸은 이름 상수를 가리켜 철자가 틀리면 컴파일 오류다.
-            static constexpr const utf8* kEditorData                      = "EditorData";
-            static constexpr const utf8* kImGuiContext                    = "ImGuiContext";
-            static constexpr const utf8* kPlatformBackend                 = "PlatformBackend";
-            static constexpr const utf8* kRendererBackend                 = "RendererBackend";
-            static constexpr const utf8* kSplash                          = "Splash";
-            static constexpr const utf8* kEditorContext                   = "EditorContext";
-            static constexpr const utf8* kWindowCloseQuery                = "WindowCloseQuery";
-            static constexpr const utf8* kArrImGuiContextDependency[]     = { kEditorData };
-            static constexpr const utf8* kArrPlatformBackendDependency[]  = { kImGuiContext };
-            static constexpr const utf8* kArrRendererBackendDependency[]  = { kImGuiContext, kPlatformBackend };
-            static constexpr const utf8* kArrEditorContextDependency[]    = { kEditorData, kImGuiContext, kPlatformBackend, kRendererBackend, kSplash };
-            static constexpr const utf8* kArrWindowCloseQueryDependency[] = { kEditorContext };
 
             /// @brief 글자 배율(모니터 DPI)과 테마 배율이 이 값보다 크게 다르면 테마 배율을 글자 배율에 맞춘다(beginFrame).
             static constexpr float32 kDpiFollowTolerance = 0.001f;
@@ -162,6 +147,181 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    /** @brief 에디터 기동 단계 `EditorData` 입니다(`ImGuiEditor::initializeEditorData`). */
+    class ImGuiEditor::EditorDataSubsystem final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "EditorData";
+
+        explicit EditorDataSubsystem( ImGuiEditor& editor )
+            : _editor{ editor }
+        {
+        }
+
+        SubsystemInitResult initializeSubsystem() override { return _editor.initializeEditorData(); }
+        void                shutdownSubsystem() override { _editor.shutdownEditorData(); }
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        SubsystemHostMask   getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
+        MemoryTag           getSubsystemMemoryTag() const override { return MemoryTag::Editor; }
+
+    private:
+        ImGuiEditor& _editor;
+    };
+
+    /** @brief 에디터 기동 단계 `ImGuiContext` 입니다(`ImGuiEditor::initializeImGuiContext`). */
+    class ImGuiEditor::ImGuiContextSubsystem final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "ImGuiContext";
+
+        explicit ImGuiContextSubsystem( ImGuiEditor& editor )
+            : _editor{ editor }
+        {
+        }
+
+        SubsystemInitResult     initializeSubsystem() override { return _editor.initializeImGuiContext(); }
+        void                    shutdownSubsystem() override { _editor.shutdownImGuiContext(); }
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override
+        {
+            static constexpr const utf8* kArrDependency[] = { EditorDataSubsystem::kSubsystemName };
+            return kArrDependency;
+        }
+        SubsystemHostMask getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
+        MemoryTag         getSubsystemMemoryTag() const override { return MemoryTag::Editor; }
+
+    private:
+        ImGuiEditor& _editor;
+    };
+
+    /** @brief 에디터 기동 단계 `PlatformBackend` 입니다(`ImGuiEditor::initializePlatformBackend`). */
+    class ImGuiEditor::PlatformBackendSubsystem final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "PlatformBackend";
+
+        explicit PlatformBackendSubsystem( ImGuiEditor& editor )
+            : _editor{ editor }
+        {
+        }
+
+        SubsystemInitResult     initializeSubsystem() override { return _editor.initializePlatformBackend(); }
+        void                    shutdownSubsystem() override { _editor.shutdownPlatformBackend(); }
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override
+        {
+            static constexpr const utf8* kArrDependency[] = { ImGuiContextSubsystem::kSubsystemName };
+            return kArrDependency;
+        }
+        SubsystemHostMask getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
+        MemoryTag         getSubsystemMemoryTag() const override { return MemoryTag::Editor; }
+
+    private:
+        ImGuiEditor& _editor;
+    };
+
+    /** @brief 에디터 기동 단계 `RendererBackend` 입니다(`ImGuiEditor::initializeRendererBackend`). */
+    class ImGuiEditor::RendererBackendSubsystem final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "RendererBackend";
+
+        explicit RendererBackendSubsystem( ImGuiEditor& editor )
+            : _editor{ editor }
+        {
+        }
+
+        SubsystemInitResult     initializeSubsystem() override { return _editor.initializeRendererBackend(); }
+        void                    shutdownSubsystem() override { _editor.shutdownRendererBackend(); }
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override
+        {
+            static constexpr const utf8* kArrDependency[] = { ImGuiContextSubsystem::kSubsystemName, PlatformBackendSubsystem::kSubsystemName };
+            return kArrDependency;
+        }
+        SubsystemHostMask getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
+        MemoryTag         getSubsystemMemoryTag() const override { return MemoryTag::Editor; }
+
+    private:
+        ImGuiEditor& _editor;
+    };
+
+    /** @brief 에디터 기동 단계 `Splash` 입니다(`ImGuiEditor::loadSplashAssets`). */
+    class ImGuiEditor::SplashSubsystem final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "Splash";
+
+        explicit SplashSubsystem( ImGuiEditor& editor )
+            : _editor{ editor }
+        {
+        }
+
+        SubsystemInitResult initializeSubsystem() override { return _editor.loadSplashAssets(); }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        SubsystemHostMask   getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
+        MemoryTag           getSubsystemMemoryTag() const override { return MemoryTag::Editor; }
+
+    private:
+        ImGuiEditor& _editor;
+    };
+
+    /** @brief 에디터 기동 단계 `EditorContext` 입니다(`ImGuiEditor::initializeEditorContext`). */
+    class ImGuiEditor::EditorContextSubsystem final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "EditorContext";
+
+        explicit EditorContextSubsystem( ImGuiEditor& editor )
+            : _editor{ editor }
+        {
+        }
+
+        SubsystemInitResult     initializeSubsystem() override { return _editor.initializeEditorContext(); }
+        void                    shutdownSubsystem() override { _editor.shutdownEditorContext(); }
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override
+        {
+            static constexpr const utf8* kArrDependency[] = { EditorDataSubsystem::kSubsystemName, ImGuiContextSubsystem::kSubsystemName, PlatformBackendSubsystem::kSubsystemName, RendererBackendSubsystem::kSubsystemName, SplashSubsystem::kSubsystemName };
+            return kArrDependency;
+        }
+        SubsystemHostMask getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
+        MemoryTag         getSubsystemMemoryTag() const override { return MemoryTag::Editor; }
+
+    private:
+        ImGuiEditor& _editor;
+    };
+
+    /** @brief 에디터 기동 단계 `WindowCloseQuery` 입니다(`ImGuiEditor::initializeWindowCloseQuery`). */
+    class ImGuiEditor::WindowCloseQuerySubsystem final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "WindowCloseQuery";
+
+        explicit WindowCloseQuerySubsystem( ImGuiEditor& editor )
+            : _editor{ editor }
+        {
+        }
+
+        SubsystemInitResult     initializeSubsystem() override { return _editor.initializeWindowCloseQuery(); }
+        void                    shutdownSubsystem() override { _editor.shutdownWindowCloseQuery(); }
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override
+        {
+            static constexpr const utf8* kArrDependency[] = { EditorContextSubsystem::kSubsystemName };
+            return kArrDependency;
+        }
+        SubsystemHostMask getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
+        MemoryTag         getSubsystemMemoryTag() const override { return MemoryTag::Editor; }
+
+    private:
+        ImGuiEditor& _editor;
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
     SW_LOG_CALLER( "ImGuiEditor" );
 
     // 이 파일만 읽으므로 여기서 정의하고 헤더에는 선언하지 않는다.
@@ -217,26 +377,13 @@ namespace sw::editor
         _pRHIDevice = pRHIDevice;
 
         // 단계마다 먼저 서야 하는 단계를 적는다. 목록이 그 순서로 초기화하고, 실패하면 초기화한 단계만 역순으로 종료한다.
-        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ ImGuiEditorInternal::kEditorData, {}, EngineSubsystemHost::kClient, MemoryTag::Editor },
-                                                      SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializeEditorData, this ),
-                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownEditorData, this ) ) );
-        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ ImGuiEditorInternal::kImGuiContext, ImGuiEditorInternal::kArrImGuiContextDependency, EngineSubsystemHost::kClient, MemoryTag::Editor },
-                                                      SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializeImGuiContext, this ),
-                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownImGuiContext, this ) ) );
-        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ ImGuiEditorInternal::kPlatformBackend, ImGuiEditorInternal::kArrPlatformBackendDependency, EngineSubsystemHost::kClient, MemoryTag::Editor },
-                                                      SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializePlatformBackend, this ),
-                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownPlatformBackend, this ) ) );
-        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ ImGuiEditorInternal::kRendererBackend, ImGuiEditorInternal::kArrRendererBackendDependency, EngineSubsystemHost::kClient, MemoryTag::Editor },
-                                                      SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializeRendererBackend, this ),
-                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownRendererBackend, this ) ) );
-        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ ImGuiEditorInternal::kSplash, {}, EngineSubsystemHost::kClient, MemoryTag::Editor },
-                                                      SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::loadSplashAssets, this ), SubsystemShutdownDelegate{} ) );
-        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ ImGuiEditorInternal::kEditorContext, ImGuiEditorInternal::kArrEditorContextDependency, EngineSubsystemHost::kClient, MemoryTag::Editor },
-                                                      SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializeEditorContext, this ),
-                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownEditorContext, this ) ) );
-        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ ImGuiEditorInternal::kWindowCloseQuery, ImGuiEditorInternal::kArrWindowCloseQueryDependency, EngineSubsystemHost::kClient, MemoryTag::Editor },
-                                                      SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializeWindowCloseQuery, this ),
-                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownWindowCloseQuery, this ) ) );
+        _startup.add( make_unique<EditorDataSubsystem>( *this ) );
+        _startup.add( make_unique<ImGuiContextSubsystem>( *this ) );
+        _startup.add( make_unique<PlatformBackendSubsystem>( *this ) );
+        _startup.add( make_unique<RendererBackendSubsystem>( *this ) );
+        _startup.add( make_unique<SplashSubsystem>( *this ) );
+        _startup.add( make_unique<EditorContextSubsystem>( *this ) );
+        _startup.add( make_unique<WindowCloseQuerySubsystem>( *this ) );
         if ( _startup.initializeAll( EngineSubsystemHost::kClient ) == false )
         {
             SW_LOG_ERROR( "Editor startup failed: %#", _startup.getError().c_str() );

@@ -68,7 +68,7 @@ namespace sw::editor
 
     private:
         // ------------------------------------------------------------------------------
-        // 기동 단계. `initialize` 가 `_startup` 에 `FunctionSubsystem` 으로 넣고, 순서는 단계마다 선언한 의존이 정한다.
+        // 기동 단계. 단계마다 작은 서브시스템 클래스(아래 중첩 클래스 — 정의는 `ImGuiEditor.cpp`)가 이 함수들을 부르고, 순서는 단계마다 선언한 의존이 정한다.
         // 실패하면 목록이 초기화에 성공한 단계만 역순으로 종료한다. 초기화가 실패하면 그 단계가 만든 것은 그 자리에서 놓는다.
         // ------------------------------------------------------------------------------
         /** @brief 환경설정과 에디터 데이터(`EditorToolDefaults`)를 읽습니다. 단계 `EditorData`. */
@@ -92,6 +92,14 @@ namespace sw::editor
         SubsystemInitResult initializeWindowCloseQuery();
         void                shutdownWindowCloseQuery();
         bool                onWindowCloseQuery();
+
+        class EditorContextSubsystem;
+        class EditorDataSubsystem;
+        class ImGuiContextSubsystem;
+        class PlatformBackendSubsystem;
+        class RendererBackendSubsystem;
+        class SplashSubsystem;
+        class WindowCloseQuerySubsystem;
         // ------------------------------------------------------------------------------
         // 3) ImGui 프레임과 백엔드 렌더
         // ------------------------------------------------------------------------------

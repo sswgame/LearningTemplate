@@ -21,7 +21,6 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/GameSelection.h"
 #include "Engine/EngineBootstrap.h"
-#include "Engine/EngineInitSequence.h"
 #include "Engine/EngineServiceCollection.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
@@ -62,7 +61,7 @@
 namespace
 {
     /**
-     * @brief 하네스의 호스트 상태입니다. 순서는 `EngineLoop` 과 같은 선언(`EngineFunctionStep` · 서비스 클래스 · 표의 남은 줄)이 정합니다.
+     * @brief 하네스의 호스트 상태입니다. 순서는 `EngineLoop` 과 같은 서브시스템 클래스가 스스로 선언한 의존이 정합니다.
      * @details 하네스는 헤드리스 작업 · 플레이어 설정 · RHI · 렌더러를 세우지 않으므로 그 단계를 넣지 않는다(그것에 기대는 단계도 없다).
      *          서브시스템은 `TestHostRuntime::start` 가 앱과 같은 선언 · 같은 객체로 넣고, 본문이 다른 것만 하네스가 준다
      *          (글꼴 · UI 테스트는 자기 FontService · UISystem 을 만든다). 오디오는 초기화하지 않고 종료만 부른다. 해제는 `EngineLoop` 과 같은 역순이다.
@@ -172,7 +171,7 @@ namespace test
         // ------------------------------------------------------------------------------
         // 1) 기동 단계 — 리플렉션 · 설정 · 리소스 · 태스크 · 입력 · 씬
         // ------------------------------------------------------------------------------
-        // 순서는 손으로 적지 않는다. `EngineLoop` 과 같은 선언(`EngineFunctionStep` · 서비스 클래스)을 의존으로 위상 정렬한 순서로 세운다 —
+        // 순서는 손으로 적지 않는다. `EngineLoop` 과 같은 서브시스템 클래스를 그 의존으로 위상 정렬한 순서로 세운다 —
         // 하네스가 앱과 다른 순서로 서는 일이 구조로 막힌다. 본문이 다른 것만 여기서 준다. 종료와 해제는 `stop` 이 그 역순으로 한다.
         sw::SubsystemCollection& startup = state._startup;
         // 앱과 달리 외부 코덱을 붙이지 않는다(테스트가 코덱을 직접 갈아 끼운다). 서비스와 **같은 인스턴스**가 Core 슬롯에도 꽂힌다(레지스트리의 초기화).
