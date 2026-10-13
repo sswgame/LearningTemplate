@@ -30,6 +30,14 @@ namespace sw
         String,     ///< 자유 텍스트입니다.
     };
 
+    /** @brief 설정 값을 사용자 파일(JSON)에 적는 모양입니다. */
+    enum class UserSettingStorageKind : uint8
+    {
+        Bool,   ///< JSON 불입니다.
+        Number, ///< JSON 숫자입니다. 숫자로 읽히지 않는 글은 글 그대로 적습니다.
+        Text,   ///< JSON 글입니다.
+    };
+
     /** @brief 값이 대상에 닿는 때입니다. */
     enum class UserSettingApplyTiming : uint8
     {
@@ -115,6 +123,26 @@ namespace sw
         UserSettingApplyTiming       _applyTiming{ UserSettingApplyTiming::OnConfirm };
         UserSettingTargetKind        _targetKind{ UserSettingTargetKind::None };
         uint8                        _platformMask{ 0xFF }; ///< `UserSettingsPlatform` 비트입니다. 그 플랫폼에서만 보이고 적용됩니다.
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 설정 종류 하나의 성질입니다. 종류마다 다른 데이터(스키마 이름 · 파일 모양 · 전역 변수 대상 · 옵션 메뉴 행)는 이 표의 한 줄에서 읽습니다.
+     * @details 표는 `UserSettingsSchema::getTypeTraits` 가 돌려줍니다. 종류를 더하면 열거자와 표 한 줄을 같이 더합니다 — 표 순서가 열거자 순서와
+     *          어긋나면 컴파일이 멈춥니다. 값 정규화 · 위젯 바인딩처럼 종류마다 코드가 다른 것은 각자의 switch 에 남습니다.
+     */
+    struct UserSettingTypeTraits
+    {
+        const utf8*            _pName;                  ///< 스키마 XML 의 `type` 값입니다.
+        const utf8*            _pValueProperty;         ///< 값 위젯에 연결하는 필드(설정 바인딩 규약)입니다. 키 바인딩은 버튼이라 nullptr 입니다.
+        const utf8*            _pRowDocument;           ///< 옵션 메뉴 행 UI 문서입니다.
+        const utf8*            _pNavigationRowDocument; ///< 패드 탐색 모드(`UIInputMode::Navigation`)의 행 UI 문서입니다.
+        uint32                 _globalVariableTypeMask; ///< 대상으로 받을 수 있는 전역 변수 타입 비트(`SW_BIT( GlobalVariableType )`)입니다.
+        UserSettingType        _type;
+        UserSettingStorageKind _storageKind;
+        bool                   _bNumeric; ///< min · max · step 이 있습니다.
     };
 } // namespace sw
 
@@ -249,6 +277,9 @@ namespace sw
          *          "기본 바인딩" 으로 받는다.
          */
         static UserSettingValueResult normalizeValue( const UserSettingDef& def, string_view text, string& outValue );
+
+        /** @brief @p type 의 성질 표 한 줄입니다. */
+        static const UserSettingTypeTraits& getTypeTraits( UserSettingType type );
 
         /** @brief 사용자 파일 버전 번호입니다(`version` 속성). */
         uint32                                 getVersion() const { return _version; }

@@ -3,9 +3,9 @@
 """
 성능 변경의 전/후 비교를 한 번에 — 케이스마다 A(전) · B(후)를 번갈아 여러 판 재고, 구간 · 벤치 값의 중앙값을 표로 낸다.
 
-    py -3 Scripts/qa/PerfCompare.py --app build/Ninja-Release/Bin/App.exe                               # 같은 바이너리 스위치 A/B 만
-    py -3 Scripts/qa/PerfCompare.py --app <후>/App.exe --app-before <전>/App.exe                         # 바이너리 A/B 까지
-    py -3 Scripts/qa/PerfCompare.py --app <후>/App.exe --cases tickBatch fractureWarm --runs 5           # 고른 케이스만
+    py -3 -m Scripts perf-compare --app build/Ninja-Release/Bin/App.exe                               # 같은 바이너리 스위치 A/B 만
+    py -3 -m Scripts perf-compare --app <후>/App.exe --app-before <전>/App.exe                         # 바이너리 A/B 까지
+    py -3 -m Scripts perf-compare --app <후>/App.exe --cases tickBatch fractureWarm --runs 5           # 고른 케이스만
 
 케이스는 두 종류다. **스위치 A/B** 는 한 바이너리에서 `-gv_` 스위치만 바꾼다(전 바이너리가 없어도 된다). **바이너리 A/B** 는
 `--app-before` 의 바이너리(전 커밋을 전체 빌드한 것)와 `--app` 을 같은 인자로 돌린다 — 없으면 그 케이스는 건너뛴다.

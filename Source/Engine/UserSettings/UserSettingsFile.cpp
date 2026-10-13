@@ -140,15 +140,14 @@ namespace sw
             const UserSettingDef* pDef  = schema.findSetting( hashed_string( entry._key ) );
             const UserSettingType type  = pDef != nullptr ? pDef->_type : UserSettingType::String;
             const JSONValue       field = values.set( entry._key.c_str(), false );
-            switch ( type )
+            switch ( UserSettingsSchema::getTypeTraits( type )._storageKind )
             {
-                case UserSettingType::Bool:
+                case UserSettingStorageKind::Bool:
                 {
                     field.setBool( StringUtil::parseBool( entry._value, false ) );
                     break;
                 }
-                case UserSettingType::Int:
-                case UserSettingType::Float:
+                case UserSettingStorageKind::Number:
                 {
                     float64 number{ 0.0 };
                     if ( StringUtil::parseDouble( entry._value, number ) )
@@ -157,9 +156,7 @@ namespace sw
                         field.setString( entry._value );
                     break;
                 }
-                case UserSettingType::Enum:
-                case UserSettingType::KeyBinding:
-                case UserSettingType::String:
+                case UserSettingStorageKind::Text:
                 {
                     field.setString( entry._value );
                     break;

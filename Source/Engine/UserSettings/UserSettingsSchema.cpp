@@ -30,13 +30,26 @@ namespace sw
                 TEnum       _value;
             };
 
-            static constexpr NamedValue<UserSettingType> kArrTypeName[] = {
-                {      "bool",       UserSettingType::Bool},
-                {       "int",        UserSettingType::Int},
-                {     "float",      UserSettingType::Float},
-                {      "enum",       UserSettingType::Enum},
-                {"keyBinding", UserSettingType::KeyBinding},
-                {    "string",     UserSettingType::String},
+            static constexpr uint32 kBooleanVariable = SW_BIT( static_cast<uint32>( GlobalVariableType::Boolean ) );
+            static constexpr uint32 kInt32Variable   = SW_BIT( static_cast<uint32>( GlobalVariableType::Int32 ) );
+            static constexpr uint32 kFloatVariable   = SW_BIT( static_cast<uint32>( GlobalVariableType::Float ) );
+            static constexpr uint32 kStringVariable  = SW_BIT( static_cast<uint32>( GlobalVariableType::String ) );
+            static constexpr uint32 kEnumVariable    = SW_BIT( static_cast<uint32>( GlobalVariableType::Enum ) );
+
+            /** @brief 설정 종류의 성질 표입니다. 열거자 순서대로 한 줄씩 둡니다 — 아래 static_assert 가 순서와 줄 수를 지킵니다. */
+            static constexpr UserSettingTypeTraits kArrTypeTraits[] = {
+                {      "bool",      "_bChecked",       "engine/ui/parts/setting_bool.ui.xml",       "engine/ui/parts/setting_bool.ui.xml",kBooleanVariable,       UserSettingType::Bool,
+                 UserSettingStorageKind::Bool, false                                                                               },
+                {       "int",         "_value",        "engine/ui/parts/setting_int.ui.xml",        "engine/ui/parts/setting_int.ui.xml", kInt32Variable | kEnumVariable,        UserSettingType::Int,
+                 UserSettingStorageKind::Number,  true                                                                             },
+                {     "float",         "_value",      "engine/ui/parts/setting_float.ui.xml",      "engine/ui/parts/setting_float.ui.xml",                 kFloatVariable,      UserSettingType::Float,
+                 UserSettingStorageKind::Number,  true                                                                             },
+                {      "enum", "_selectedIndex",       "engine/ui/parts/setting_enum.ui.xml",   "engine/ui/parts/setting_enum_pad.ui.xml",
+                 kInt32Variable | kEnumVariable | kStringVariable,       UserSettingType::Enum, UserSettingStorageKind::Text, false},
+                {"keyBinding",          nullptr, "engine/ui/parts/setting_keybinding.ui.xml", "engine/ui/parts/setting_keybinding.ui.xml",                              0, UserSettingType::KeyBinding,
+                 UserSettingStorageKind::Text, false                                                                               },
+                {    "string",          "_text",     "engine/ui/parts/setting_string.ui.xml",     "engine/ui/parts/setting_string.ui.xml",                kStringVariable,     UserSettingType::String,
+                 UserSettingStorageKind::Text, false                                                                               },
             };
             static constexpr NamedValue<UserSettingApplyTiming> kArrTimingName[] = {
                 {"immediate",    UserSettingApplyTiming::Immediate},
@@ -210,29 +223,35 @@ namespace sw
                 return MathUtil::abs( inoutValue - original ) > 1.0e-6;
             }
 
-            static bool isNumeric( UserSettingType type ) { return type == UserSettingType::Int || type == UserSettingType::Float; }
-
-            /** @brief 전역 변수 타입이 설정 종류의 값을 받을 수 있는지 봅니다. */
-            static bool acceptsGlobalVariable( UserSettingType settingType, GlobalVariableType variableType )
+            /** @brief 스키마 XML 의 `type` 값(대소문자 무시)으로 설정 종류를 찾습니다. */
+            static bool findTypeByName( string_view name, UserSettingType& outType )
             {
-                switch ( settingType )
+                for ( const UserSettingTypeTraits& traits : kArrTypeTraits )
                 {
-                    case UserSettingType::Bool:
-                        return variableType == GlobalVariableType::Boolean;
-                    case UserSettingType::Int:
-                        return variableType == GlobalVariableType::Int32 || variableType == GlobalVariableType::Enum;
-                    case UserSettingType::Float:
-                        return variableType == GlobalVariableType::Float;
-                    case UserSettingType::Enum:
-                        return variableType == GlobalVariableType::Int32 || variableType == GlobalVariableType::Enum || variableType == GlobalVariableType::String;
-                    case UserSettingType::KeyBinding:
-                        return false;
-                    case UserSettingType::String:
-                        return variableType == GlobalVariableType::String;
+                    if ( StringUtil::equals( name, traits._pName, true ) )
+                    {
+                        outType = traits._type;
+                        return true;
+                    }
                 }
                 return false;
             }
+
+            /** @brief 표 순서가 열거자 순서와 같은지 봅니다(`getTypeTraits` 가 열거자 값으로 줄을 고른다). */
+            static constexpr bool isTypeTraitsInEnumOrder()
+            {
+                for ( size_t index = 0; index < std::size( kArrTypeTraits ); ++index )
+                {
+                    if ( static_cast<size_t>( kArrTypeTraits[index]._type ) != index )
+                        return false;
+                }
+                return true;
+            }
         };
+
+        static_assert( UserSettingsSchemaInternal::isTypeTraitsInEnumOrder(), "kArrTypeTraits rows must follow UserSettingType order" );
+        static_assert( std::size( UserSettingsSchemaInternal::kArrTypeTraits ) == static_cast<size_t>( UserSettingType::String ) + 1,
+                       "kArrTypeTraits needs one row per UserSettingType" );
     } // namespace
 } // namespace sw
 
@@ -352,7 +371,7 @@ namespace sw
                     continue;
                 }
 
-                if ( Internal::findNamedValue( Internal::kArrTypeName, child.getAttributeText( "type" ), def._type ) == false )
+                if ( Internal::findTypeByName( child.getAttributeText( "type" ), def._type ) == false )
                 {
                     SW_LOG_ERROR( "%#: setting '%#' has an unknown type '%#'", sourceName, def._id.c_str(), child.getAttributeText( "type" ) );
                     bOk = false;
@@ -568,6 +587,11 @@ namespace sw
         return nullptr;
     }
 
+    const UserSettingTypeTraits& UserSettingsSchema::getTypeTraits( UserSettingType type )
+    {
+        return UserSettingsSchemaInternal::kArrTypeTraits[static_cast<size_t>( type )];
+    }
+
     UserSettingValueResult UserSettingsSchema::normalizeValue( const UserSettingDef& def, string_view text, string& outValue )
     {
         using Internal          = UserSettingsSchemaInternal;
@@ -645,8 +669,7 @@ namespace sw
 
     bool UserSettingsSchema::validate( const UserSettingApplierRegistry& registry, GlobalVariableManager* pGlobalVariableManager ) const
     {
-        using Internal = UserSettingsSchemaInternal;
-        bool bOk       = true;
+        bool bOk = true;
 
         for ( const UserSettingDef& def : _listSetting )
         {
@@ -656,7 +679,7 @@ namespace sw
                 SW_LOG_ERROR( "setting '%#' names an unknown category '%#'", pID, def._category.c_str() );
                 bOk = false;
             }
-            if ( Internal::isNumeric( def._type ) )
+            if ( getTypeTraits( def._type )._bNumeric )
             {
                 const bool bRangeValid = def._minValue <= def._maxValue && def._step >= 0.0;
                 if ( bRangeValid == false )
@@ -719,7 +742,7 @@ namespace sw
                         SW_LOG_ERROR( "setting '%#' targets an unknown global variable '%#'", pID, def._targetName.c_str() );
                         bOk = false;
                     }
-                    else if ( Internal::acceptsGlobalVariable( def._type, pVariable->_type ) == false )
+                    else if ( ( getTypeTraits( def._type )._globalVariableTypeMask & SW_BIT( static_cast<uint32>( pVariable->_type ) ) ) == 0 )
                     {
                         SW_LOG_ERROR( "setting '%#' cannot drive global variable '%#' (type mismatch)", pID, def._targetName.c_str() );
                         bOk = false;

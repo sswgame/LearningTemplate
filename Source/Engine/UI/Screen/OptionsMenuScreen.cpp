@@ -53,26 +53,6 @@ namespace sw
                 }
             }
 
-            /** @brief 값 위젯에 연결하는 필드입니다. 형식마다 위젯의 값 필드가 다릅니다(6-3 설정 바인딩의 규약). 키 바인딩은 버튼이라 필드가 없습니다. */
-            static const utf8* findValueProperty( UserSettingType type )
-            {
-                switch ( type )
-                {
-                    case UserSettingType::Bool:
-                        return "_bChecked";
-                    case UserSettingType::Int:
-                    case UserSettingType::Float:
-                        return "_value";
-                    case UserSettingType::Enum:
-                        return "_selectedIndex";
-                    case UserSettingType::String:
-                        return "_text";
-                    case UserSettingType::KeyBinding:
-                        return nullptr;
-                }
-                return nullptr;
-            }
-
             /** @brief 화면 스위치: `gv_uiOptionsMenu` 를 따라 옵션 메뉴를 열고 닫습니다(개발용 스위치이며, 스크린샷과 네 백엔드 확인에 씁니다). */
             static UIScreenHandle syncSwitch( UISystem& uiSystem, UIScreenHandle current )
             {
@@ -131,22 +111,8 @@ namespace sw
 
     const utf8* OptionsMenuScreen::findRowDocument( const UserSettingDef& setting, UIInputMode mode )
     {
-        switch ( setting._type )
-        {
-            case UserSettingType::Bool:
-                return "engine/ui/parts/setting_bool.ui.xml";
-            case UserSettingType::Int:
-                return "engine/ui/parts/setting_int.ui.xml";
-            case UserSettingType::Float:
-                return "engine/ui/parts/setting_float.ui.xml";
-            case UserSettingType::Enum:
-                return mode == UIInputMode::Navigation ? "engine/ui/parts/setting_enum_pad.ui.xml" : "engine/ui/parts/setting_enum.ui.xml";
-            case UserSettingType::KeyBinding:
-                return "engine/ui/parts/setting_keybinding.ui.xml";
-            case UserSettingType::String:
-                return "engine/ui/parts/setting_string.ui.xml";
-        }
-        return "engine/ui/parts/setting_string.ui.xml";
+        const UserSettingTypeTraits& traits = UserSettingsSchema::getTypeTraits( setting._type );
+        return mode == UIInputMode::Navigation ? traits._pNavigationRowDocument : traits._pRowDocument;
     }
 
     bool OptionsMenuScreen::onCommand( const hashed_string& command, Widget& source )
@@ -383,7 +349,8 @@ namespace sw
         }
         entry._value            = pValue->getID();
         const string expression = "{setting:" + prefix + "}";
-        if ( const utf8* pProperty = Internal::findValueProperty( setting._type ); pProperty != nullptr )
+        const utf8*  pProperty  = UserSettingsSchema::getTypeTraits( setting._type )._pValueProperty;
+        if ( pProperty != nullptr )
             addBinding( UIBindingDesc{ pProperty, expression, pValue->getID(), 0 } );
         if ( Widget* pValueText = tree.findWidgetByName( hashed_string( prefix + "." + Internal::kValueTextName ) ); pValueText != nullptr )
             addBinding( UIBindingDesc{ "_text", "{setting:" + prefix + ", mode=OneWay}", pValueText->getID(), 0 } );
