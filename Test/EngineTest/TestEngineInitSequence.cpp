@@ -13,33 +13,41 @@ namespace
 {
     /**
      * @brief 단계 본문 대신 불린 순서를 적고, 정해 둔 단계에서 정해 둔 결과를 돌려주는 호스트입니다.
-     * @details 표의 줄마다 `<단계>StartupStep` 을 같은 기록 구조체로 둔다(X-macro). 호스트가 구조체를 빠뜨리면 컴파일 오류인 것도 이 모양이 보인다.
+     * @details 호스트 자신이 본문 모음이다 — 표의 줄마다 `initialize<단계>` · `shutdown<단계>` · `destroy<단계>` 를 X-macro 로 모두 둔다.
      */
     struct StartupStepRecorder
     {
-        template <EngineInitStep Step>
-        struct RecordingStep
+        EngineInitResult recordInitialize( EngineInitStep step )
         {
-            static EngineInitResult initialize( StartupStepRecorder& recorder )
-            {
-                recorder._listInitialized.push_back( Step );
-                recorder._listInitializeMemoryTag.push_back( Memory::getCurrentMemoryTag() );
-                recorder._listEvent.push_back( string( "I:" ) + EngineInitSequence::getStepName( Step ) );
-                return ( Step == recorder._resultStep ) ? recorder._result : EngineInitResult::Succeeded;
-            }
-            static void shutdown( StartupStepRecorder& recorder )
-            {
-                recorder._listShutdown.push_back( Step );
-                recorder._listEvent.push_back( string( "S:" ) + EngineInitSequence::getStepName( Step ) );
-            }
-            static void destroy( StartupStepRecorder& recorder )
-            {
-                recorder._listDestroyed.push_back( Step );
-                recorder._listEvent.push_back( string( "D:" ) + EngineInitSequence::getStepName( Step ) );
-            }
-        };
+            _listInitialized.push_back( step );
+            _listInitializeMemoryTag.push_back( Memory::getCurrentMemoryTag() );
+            _listEvent.push_back( string( "I:" ) + EngineInitSequence::getStepName( step ) );
+            return ( step == _resultStep ) ? _result : EngineInitResult::Succeeded;
+        }
+        void recordShutdown( EngineInitStep step )
+        {
+            _listShutdown.push_back( step );
+            _listEvent.push_back( string( "S:" ) + EngineInitSequence::getStepName( step ) );
+        }
+        void recordDestroy( EngineInitStep step )
+        {
+            _listDestroyed.push_back( step );
+            _listEvent.push_back( string( "D:" ) + EngineInitSequence::getStepName( step ) );
+        }
 
-#define SW_ENGINE_STARTUP_STEP( Name, ... ) using Name##StartupStep = RecordingStep<EngineInitStep::Name>;
+#define SW_ENGINE_STARTUP_STEP( Name, ... )                                   \
+    static EngineInitResult initialize##Name( StartupStepRecorder& recorder ) \
+    {                                                                         \
+        return recorder.recordInitialize( EngineInitStep::Name );             \
+    }                                                                         \
+    static void shutdown##Name( StartupStepRecorder& recorder )               \
+    {                                                                         \
+        recorder.recordShutdown( EngineInitStep::Name );                      \
+    }                                                                         \
+    static void destroy##Name( StartupStepRecorder& recorder )                \
+    {                                                                         \
+        recorder.recordDestroy( EngineInitStep::Name );                       \
+    }
 #include "Engine/EngineInitStepList.xxx"
 #undef SW_ENGINE_STARTUP_STEP
 
@@ -52,10 +60,12 @@ namespace
         EngineInitResult       _result{ EngineInitResult::Succeeded };
     };
 
-    /** @brief 표의 줄을 거꾸로 적은 단계 이름입니다 — 해제는 기동이 어디서 멈췄든 이 순서로 모든 단계를 돈다. */
-    constexpr const utf8* kFullDestroyOrder =
-        "UI Telemetry SceneRHI LiveShader RenderThread FrameRenderer RHI UserSettings Fonts Headless Scene Physics ModuleTypes Input FileIO Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
-        "Config Reflection Compression";
+    /** @brief 본문을 두 단계에만 둔 본문 모음입니다 — 나머지 자리는 `EngineInitNoStepBody` 의 null 이다. */
+    struct PartialStepBody : EngineInitNoStepBody
+    {
+        static EngineInitResult initializeScene( StartupStepRecorder& recorder ) { return recorder.recordInitialize( EngineInitStep::Scene ); }
+        static void             destroyTask( StartupStepRecorder& recorder ) { recorder.recordDestroy( EngineInitStep::Task ); }
+    };
 
     string joinStepNames( const vector<EngineInitStep>& listStep )
     {
@@ -87,16 +97,13 @@ namespace
         return listReversed;
     }
 
-    /** @brief 표에 적힌 줄 순서 그대로의 단계 이름입니다. */
-    string joinTableOrder()
+    /** @brief 표의 의존 그래프입니다. */
+    EngineInitGraph makeTableGraph()
     {
-        const vector<EngineInitNode> listNode = EngineInitSequence::makeStepNodes();
-        vector<uint32>               listIndex;
-        for ( uint32 nodeIndex = 0; nodeIndex < static_cast<uint32>( listNode.size() ); ++nodeIndex )
-        {
-            listIndex.push_back( nodeIndex );
-        }
-        return joinNodeOrder( listNode, listIndex );
+        EngineInitGraph graph{};
+        string          error;
+        (void)EngineInitSequence::computeGraph( EngineInitSequence::makeStepNodes(), graph, error ); // 표 오류는 컴파일 검사가 막고, ComputedOrder… 테스트가 다시 본다
+        return graph;
     }
 
     /** @brief @p step 에서 의존 칸을 (간접으로라도) 거슬러 @p dependency 에 닿는가 — @p dependency 가 @p step 보다 먼저 서야 하는가. */
@@ -121,6 +128,31 @@ namespace
         }
         return false;
     }
+
+    /** @brief 초기화 순서에서 @p step 까지(포함)의 앞부분입니다. */
+    vector<EngineInitStep> makeOrderPrefix( const vector<EngineInitStep>& listOrder, EngineInitStep step )
+    {
+        vector<EngineInitStep> listPrefix;
+        for ( const EngineInitStep orderStep : listOrder )
+        {
+            listPrefix.push_back( orderStep );
+            if ( orderStep == step )
+                break;
+        }
+        return listPrefix;
+    }
+
+    /** @brief 초기화 순서에서 @p step 에 (간접으로라도) 의존하는 단계를 뺀 것입니다. @p bKeepDependents 면 거꾸로 그 단계만 남깁니다. */
+    vector<EngineInitStep> filterDependentsOf( const EngineInitGraph& graph, const vector<EngineInitStep>& listOrder, EngineInitStep step, bool bKeepDependents )
+    {
+        vector<EngineInitStep> listFiltered;
+        for ( const EngineInitStep orderStep : listOrder )
+        {
+            if ( dependsOnStep( graph, orderStep, step ) == bKeepDependents )
+                listFiltered.push_back( orderStep );
+        }
+        return listFiltered;
+    }
 } // namespace
 
 /**
@@ -130,9 +162,7 @@ namespace
  */
 SW_TEST_CASE( EngineInitSequenceTest, SceneReadingStepWaitsForModuleTypes )
 {
-    EngineInitGraph graph{};
-    string          error;
-    SW_ASSERT_TRUE_MSG( EngineInitSequence::computeGraph( EngineInitSequence::makeStepNodes(), graph, error ), error.c_str() );
+    const EngineInitGraph graph = makeTableGraph();
     SW_EXPECT_TRUE( dependsOnStep( graph, EngineInitStep::Headless, EngineInitStep::ModuleTypes ) );
     // 타입 등록은 리플렉션 · 설정(키트 목록) 뒤다 — 모듈 이미지를 내리는 자리(ModuleImages)보다도 뒤라 종료에서 먼저 내려간다.
     SW_EXPECT_TRUE( dependsOnStep( graph, EngineInitStep::ModuleTypes, EngineInitStep::Reflection ) );
@@ -142,7 +172,7 @@ SW_TEST_CASE( EngineInitSequenceTest, SceneReadingStepWaitsForModuleTypes )
     StartupStepRecorder recorder;
     recorder._resultStep = EngineInitStep::ModuleTypes;
     recorder._result     = EngineInitResult::Failed;
-    SW_EXPECT_FALSE( sequence.initializeAll( recorder ) );
+    SW_EXPECT_FALSE( sequence.initializeAll<StartupStepRecorder>( recorder ) );
     for ( const EngineInitStep step : recorder._listInitialized )
     {
         SW_EXPECT_TRUE_MSG( step != EngineInitStep::Headless, "the scene cook ran although module types were not registered" );
@@ -151,36 +181,57 @@ SW_TEST_CASE( EngineInitSequenceTest, SceneReadingStepWaitsForModuleTypes )
 }
 
 /**
- * @brief [EngineInitSequenceTest] 표(`EngineInitStepList.xxx`)가 실제 기동 순서대로 적혀 있는지 검증
- * @details 정렬은 의존 칸만 본다(동점은 이름 순, 줄 위치는 보지 않는다). 그 결과가 표의 줄 순서와 같아야 표를 위에서 아래로 기동 순서로
- *          읽을 수 있다. 의존을 빼먹어 계산 순서가 바뀌면(예: Config 의 Reflection) 이 테스트가 진다 — 줄을 의존보다 위로 옮기는 것은
- *          컴파일 오류다(static_assert).
+ * @brief [EngineInitSequenceTest] 초기화 순서는 의존에서 계산되고, 결정적이며, 모든 의존이 앞에 선다
+ * @details 순서의 진실은 의존 칸 하나다 — 표의 줄 위치는 보지 않는다. 같은 표를 거꾸로 넘겨도 같은 순서가 나와야 하고(동점은 이름 순),
+ *          어느 단계든 그 의존은 순서에서 그보다 앞이다.
  */
-SW_TEST_CASE( EngineInitSequenceTest, TableIsWrittenInStartupOrder )
+SW_TEST_CASE( EngineInitSequenceTest, ComputedOrderIsDeterministicAndDependenciesComeFirst )
 {
     const EngineInitSequence sequence;
     SW_ASSERT_TRUE_MSG( sequence.getError().empty(), sequence.getError().c_str() );
-    SW_ASSERT_TRUE( sequence.getInitializeOrder().size() == static_cast<size_t>( EngineInitStep::Count ) );
-    SW_EXPECT_STREQ( joinTableOrder().c_str(), joinStepNames( sequence.getInitializeOrder() ).c_str() );
+    const vector<EngineInitStep>& listOrder = sequence.getInitializeOrder();
+    SW_ASSERT_TRUE( listOrder.size() == static_cast<size_t>( EngineInitStep::Count ) );
+
+    // 다시 만들어도 같다.
+    const EngineInitSequence other;
+    SW_EXPECT_STREQ( joinStepNames( listOrder ).c_str(), joinStepNames( other.getInitializeOrder() ).c_str() );
+
+    // 줄을 거꾸로 넘겨도 같다 — 줄 위치는 순서에 뜻이 없다.
+    const vector<EngineInitNode> listNode = EngineInitSequence::makeStepNodes();
+    const vector<EngineInitNode> listReversedNode( listNode.rbegin(), listNode.rend() );
+    EngineInitGraph              reversedGraph{};
+    string                       error;
+    SW_ASSERT_TRUE_MSG( EngineInitSequence::computeGraph( listReversedNode, reversedGraph, error ), error.c_str() );
+    SW_EXPECT_STREQ( joinStepNames( listOrder ).c_str(), joinNodeOrder( listReversedNode, reversedGraph._listOrder ).c_str() );
+
+    // 모든 의존이 앞에 선다.
+    const EngineInitGraph graph = makeTableGraph();
+    vector<uint32>        listPosition( listOrder.size(), 0 );
+    for ( uint32 position = 0; position < static_cast<uint32>( listOrder.size() ); ++position )
+    {
+        listPosition[static_cast<uint32>( listOrder[position] )] = position;
+    }
+    for ( uint32 stepIndex = 0; stepIndex < static_cast<uint32>( EngineInitStep::Count ); ++stepIndex )
+    {
+        for ( const uint32 dependencyIndex : graph._listDependency[stepIndex] )
+        {
+            SW_EXPECT_TRUE_MSG( listPosition[dependencyIndex] < listPosition[stepIndex], EngineInitSequence::getStepName( static_cast<EngineInitStep>( stepIndex ) ) );
+        }
+    }
 }
 
 /**
  * @brief [EngineInitSequenceTest] 종료가 초기화의 정확한 역순인지 검증
- * @details 기동을 다 마친 엔진의 종료 순서다: 씬의 디바이스를 떼는 것이 처음, 씬이 입력 · 오디오보다, 입력 · 오디오가 모듈 이미지보다,
- *          모듈 이미지가 태스크보다 먼저 내려간다.
  */
 SW_TEST_CASE( EngineInitSequenceTest, ShutdownRunsInReverseOfInitialization )
 {
     EngineInitSequence  sequence;
     StartupStepRecorder recorder;
-    SW_ASSERT_TRUE( sequence.initializeAll( recorder ) );
-    SW_EXPECT_STREQ( joinTableOrder().c_str(), joinStepNames( recorder._listInitialized ).c_str() );
+    SW_ASSERT_TRUE( sequence.initializeAll<StartupStepRecorder>( recorder ) );
+    SW_EXPECT_STREQ( joinStepNames( sequence.getInitializeOrder() ).c_str(), joinStepNames( recorder._listInitialized ).c_str() );
 
     sequence.shutdownAll();
     SW_EXPECT_STREQ( joinStepNames( makeReversed( recorder._listInitialized ) ).c_str(), joinStepNames( recorder._listShutdown ).c_str() );
-    SW_EXPECT_STREQ( "UI Telemetry SceneRHI LiveShader RenderThread FrameRenderer RHI UserSettings Fonts Headless Scene Physics ModuleTypes Input FileIO Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
-                     "Config Reflection Compression",
-                     joinStepNames( recorder._listShutdown ).c_str() );
 
     // 두 번 불러도 다시 내리지 않는다.
     sequence.shutdownAll();
@@ -196,17 +247,17 @@ SW_TEST_CASE( EngineInitSequenceTest, FailedStepStopsAndShutsDownOnlyInitialized
     StartupStepRecorder recorder;
     recorder._resultStep = EngineInitStep::Scene;
     recorder._result     = EngineInitResult::Failed;
-    SW_EXPECT_FALSE( sequence.initializeAll( recorder ) );
-    SW_EXPECT_STREQ( "Compression Reflection Config Resource EngineDefaultAssets ShaderCache Task ModuleImages Audio FileIO Input ModuleTypes Physics Scene",
-                     joinStepNames( recorder._listInitialized ).c_str() );
+    SW_EXPECT_FALSE( sequence.initializeAll<StartupStepRecorder>( recorder ) );
+    vector<EngineInitStep> listExpected = makeOrderPrefix( sequence.getInitializeOrder(), EngineInitStep::Scene );
+    SW_EXPECT_STREQ( joinStepNames( listExpected ).c_str(), joinStepNames( recorder._listInitialized ).c_str() );
 
     sequence.shutdownAll();
-    SW_EXPECT_STREQ( "Physics ModuleTypes Input FileIO Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource Config Reflection Compression",
-                     joinStepNames( recorder._listShutdown ).c_str() );
+    listExpected.pop_back(); // 실패한 Scene 은 종료를 받지 않는다
+    SW_EXPECT_STREQ( joinStepNames( makeReversed( listExpected ) ).c_str(), joinStepNames( recorder._listShutdown ).c_str() );
 
     // 해제는 실패한 단계(Scene — 종료는 받지 않았다)와 닿지 못한 단계까지 모두 돈다. 부트스트랩이 미리 만든 객체가 있기 때문이다.
     sequence.destroyAll();
-    SW_EXPECT_STREQ( kFullDestroyOrder, joinStepNames( recorder._listDestroyed ).c_str() );
+    SW_EXPECT_STREQ( joinStepNames( makeReversed( sequence.getInitializeOrder() ) ).c_str(), joinStepNames( recorder._listDestroyed ).c_str() );
 }
 
 /**
@@ -219,35 +270,38 @@ SW_TEST_CASE( EngineInitSequenceTest, SkipDependentsSkipsEveryDependentStep )
     StartupStepRecorder recorder;
     recorder._resultStep = EngineInitStep::Headless;
     recorder._result     = EngineInitResult::SkipDependents;
-    SW_EXPECT_TRUE( sequence.initializeAll( recorder ) );
-    SW_EXPECT_STREQ( "Compression Reflection Config Resource EngineDefaultAssets ShaderCache Task ModuleImages Audio FileIO Input ModuleTypes Physics Scene Headless",
-                     joinStepNames( recorder._listInitialized ).c_str() );
+    SW_EXPECT_TRUE( sequence.initializeAll<StartupStepRecorder>( recorder ) );
+    const EngineInitGraph        graph        = makeTableGraph();
+    const vector<EngineInitStep> listExpected = filterDependentsOf( graph, sequence.getInitializeOrder(), EngineInitStep::Headless, false );
+    SW_EXPECT_STREQ( joinStepNames( listExpected ).c_str(), joinStepNames( recorder._listInitialized ).c_str() );
+    for ( const EngineInitStep step : { EngineInitStep::RHI, EngineInitStep::FrameRenderer, EngineInitStep::RenderThread, EngineInitStep::LiveShader, EngineInitStep::SceneRHI } )
+    {
+        SW_EXPECT_TRUE_MSG( dependsOnStep( graph, step, EngineInitStep::Headless ), EngineInitSequence::getStepName( step ) );
+    }
 
     sequence.shutdownAll();
-    SW_EXPECT_STREQ( "Headless Scene Physics ModuleTypes Input FileIO Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource Config Reflection Compression",
-                     joinStepNames( recorder._listShutdown ).c_str() );
+    SW_EXPECT_STREQ( joinStepNames( makeReversed( listExpected ) ).c_str(), joinStepNames( recorder._listShutdown ).c_str() );
 
     // 건너뛴 단계(RHI 이후)도 해제는 받는다 — 그 단계의 서비스가 부트스트랩에서 만들어져 있을 수 있다.
     sequence.destroyAll();
-    SW_EXPECT_STREQ( kFullDestroyOrder, joinStepNames( recorder._listDestroyed ).c_str() );
+    SW_EXPECT_STREQ( joinStepNames( makeReversed( sequence.getInitializeOrder() ) ).c_str(), joinStepNames( recorder._listDestroyed ).c_str() );
 }
 
 /**
- * @brief [EngineInitSequenceTest] 해제가 표의 모든 단계를 줄의 역순으로, 모든 종료가 끝난 **뒤에** 도는지 검증
+ * @brief [EngineInitSequenceTest] 해제가 모든 단계를 초기화 순서의 역순으로, 모든 종료가 끝난 **뒤에** 도는지 검증
  * @details `destroyAll` 은 아직 내리지 않은 단계가 있으면 먼저 `shutdownAll` 을 한다 — 해제된 객체를 다른 단계의 종료가 보는 일이 없다.
- *          `EngineLoop::shutdown` 의 해제 순서가 이 줄이다(렌더러 쪽 → RHI → 씬 → 입력 · 오디오 → 태스크 → … → 압축).
  */
-SW_TEST_CASE( EngineInitSequenceTest, DestroyRunsAfterEveryShutdownInReverseTableOrder )
+SW_TEST_CASE( EngineInitSequenceTest, DestroyRunsAfterEveryShutdownInReverseOrder )
 {
     EngineInitSequence  sequence;
     StartupStepRecorder recorder;
-    SW_ASSERT_TRUE( sequence.initializeAll( recorder ) );
+    SW_ASSERT_TRUE( sequence.initializeAll<StartupStepRecorder>( recorder ) );
 
     sequence.destroyAll();
-    SW_EXPECT_STREQ( kFullDestroyOrder, joinStepNames( recorder._listDestroyed ).c_str() );
+    SW_EXPECT_STREQ( joinStepNames( makeReversed( sequence.getInitializeOrder() ) ).c_str(), joinStepNames( recorder._listDestroyed ).c_str() );
     SW_EXPECT_STREQ( joinStepNames( makeReversed( recorder._listInitialized ) ).c_str(), joinStepNames( recorder._listShutdown ).c_str() );
 
-    // 종료 열여덟이 모두 해제 열여덟보다 앞이다.
+    // 종료가 모두 해제보다 앞이다.
     const size_t stepCount = static_cast<size_t>( EngineInitStep::Count );
     SW_ASSERT_TRUE( recorder._listEvent.size() == stepCount * 3 );
     for ( size_t eventIndex = 0; eventIndex < recorder._listEvent.size(); ++eventIndex )
@@ -256,6 +310,24 @@ SW_TEST_CASE( EngineInitSequenceTest, DestroyRunsAfterEveryShutdownInReverseTabl
                                                                                                     : 'D';
         SW_EXPECT_TRUE_MSG( recorder._listEvent[eventIndex][0] == expectedKind, recorder._listEvent[eventIndex].c_str() );
     }
+}
+
+/**
+ * @brief [EngineInitSequenceTest] 본문 모음이 정의하지 않은 자리는 부르지 않고, 순서 · 판정은 그대로인지 검증
+ * @details 단계를 더할 때 호스트마다 타입을 짓지 않는다 — 본문 모음(`EngineInitNoStepBody` 상속)이 필요한 함수만 둔다.
+ */
+SW_TEST_CASE( EngineInitSequenceTest, MissingBodiesAreSkipped )
+{
+    EngineInitSequence  sequence;
+    StartupStepRecorder recorder;
+    SW_ASSERT_TRUE( sequence.initializeAll<PartialStepBody>( recorder ) );
+    SW_EXPECT_STREQ( "Scene", joinStepNames( recorder._listInitialized ).c_str() );
+    // 본문이 없는 단계도 초기화된 것으로 친다 — 종료 · 재시작 판정이 본문 유무에 따라 달라지지 않는다.
+    SW_EXPECT_EQUAL( static_cast<size_t>( EngineInitStep::Count ), sequence.getInitializedSteps().size() );
+
+    sequence.destroyAll();
+    SW_EXPECT_TRUE( recorder._listShutdown.empty() );
+    SW_EXPECT_STREQ( "Task", joinStepNames( recorder._listDestroyed ).c_str() );
 }
 
 /**
@@ -271,6 +343,7 @@ SW_TEST_CASE( EngineInitSequenceTest, DestroyBeforeInitializeDoesNothing )
 
 /**
  * @brief [EngineInitSequenceTest] 순환은 정렬 오류이고, 순환에 든 노드를 이름으로 알리는지 검증
+ * @details 표(`EngineInitStepList.xxx`)의 순환은 컴파일 오류다(`EngineInitTableCheck::isAcyclic`). 이것은 같은 판정의 실행 시간 쪽이다.
  */
 SW_TEST_CASE( EngineInitSequenceTest, CycleIsRejected )
 {
@@ -336,23 +409,24 @@ SW_TEST_CASE( EngineInitSequenceTest, DependentsOfAStepRestartWithTheSameBodies 
 {
     EngineInitSequence  sequence;
     StartupStepRecorder recorder;
-    SW_ASSERT_TRUE( sequence.initializeAll( recorder ) );
+    SW_ASSERT_TRUE( sequence.initializeAll<StartupStepRecorder>( recorder ) );
     recorder._listInitialized.clear();
 
+    const vector<EngineInitStep> listDependent = filterDependentsOf( makeTableGraph(), sequence.getInitializeOrder(), EngineInitStep::RHI, true );
+    SW_EXPECT_STREQ( "FrameRenderer RenderThread LiveShader SceneRHI", joinStepNames( listDependent ).c_str() );
+
     sequence.shutdownDependentsOf( EngineInitStep::RHI );
-    SW_EXPECT_STREQ( "SceneRHI LiveShader RenderThread FrameRenderer", joinStepNames( recorder._listShutdown ).c_str() );
-    SW_EXPECT_STREQ( "FrameRenderer RenderThread LiveShader SceneRHI", joinStepNames( sequence.getStoppedSteps() ).c_str() );
+    SW_EXPECT_STREQ( joinStepNames( makeReversed( listDependent ) ).c_str(), joinStepNames( recorder._listShutdown ).c_str() );
+    SW_EXPECT_STREQ( joinStepNames( listDependent ).c_str(), joinStepNames( sequence.getStoppedSteps() ).c_str() );
     SW_EXPECT_TRUE( recorder._listDestroyed.empty() );
 
     SW_EXPECT_TRUE( sequence.restartStoppedSteps() );
-    SW_EXPECT_STREQ( "FrameRenderer RenderThread LiveShader SceneRHI", joinStepNames( recorder._listInitialized ).c_str() );
+    SW_EXPECT_STREQ( joinStepNames( listDependent ).c_str(), joinStepNames( recorder._listInitialized ).c_str() );
     SW_EXPECT_TRUE( sequence.getStoppedSteps().empty() );
 
     recorder._listShutdown.clear();
     sequence.shutdownAll();
-    SW_EXPECT_STREQ( "UI Telemetry SceneRHI LiveShader RenderThread FrameRenderer RHI UserSettings Fonts Headless Scene Physics ModuleTypes Input FileIO Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
-                     "Config Reflection Compression",
-                     joinStepNames( recorder._listShutdown ).c_str() );
+    SW_EXPECT_STREQ( joinStepNames( makeReversed( sequence.getInitializeOrder() ) ).c_str(), joinStepNames( recorder._listShutdown ).c_str() );
 }
 
 /**
@@ -362,17 +436,38 @@ SW_TEST_CASE( EngineInitSequenceTest, FailedRestartLeavesTheRestStopped )
 {
     EngineInitSequence  sequence;
     StartupStepRecorder recorder;
-    SW_ASSERT_TRUE( sequence.initializeAll( recorder ) );
+    SW_ASSERT_TRUE( sequence.initializeAll<StartupStepRecorder>( recorder ) );
 
     sequence.shutdownDependentsOf( EngineInitStep::RHI );
-    recorder._resultStep = EngineInitStep::RenderThread;
-    recorder._result     = EngineInitResult::Failed;
+    const vector<EngineInitStep> listStopped = sequence.getStoppedSteps();
+    recorder._resultStep                     = EngineInitStep::RenderThread;
+    recorder._result                         = EngineInitResult::Failed;
     SW_EXPECT_FALSE( sequence.restartStoppedSteps() );
+
+    // 실패한 RenderThread 와 그 뒤로 다시 세우지 못한 단계는 종료 대상이 아니다.
+    vector<EngineInitStep> listNotRestarted;
+    bool                   bReachedFailure = false;
+    for ( const EngineInitStep step : listStopped )
+    {
+        bReachedFailure = bReachedFailure || step == EngineInitStep::RenderThread;
+        if ( bReachedFailure )
+            listNotRestarted.push_back( step );
+    }
+    vector<EngineInitStep> listExpected;
+    for ( const EngineInitStep step : makeReversed( sequence.getInitializeOrder() ) )
+    {
+        bool bNotRestarted = false;
+        for ( const EngineInitStep notRestarted : listNotRestarted )
+        {
+            bNotRestarted = bNotRestarted || step == notRestarted;
+        }
+        if ( bNotRestarted == false )
+            listExpected.push_back( step );
+    }
 
     recorder._listShutdown.clear();
     sequence.shutdownAll();
-    SW_EXPECT_STREQ( "UI Telemetry FrameRenderer RHI UserSettings Fonts Headless Scene Physics ModuleTypes Input FileIO Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource Config Reflection Compression",
-                     joinStepNames( recorder._listShutdown ).c_str() );
+    SW_EXPECT_STREQ( joinStepNames( listExpected ).c_str(), joinStepNames( recorder._listShutdown ).c_str() );
 }
 
 /**
@@ -387,7 +482,7 @@ SW_TEST_CASE( EngineInitSequenceTest, InitializeRunsUnderTheStepMemoryTag )
 
     EngineInitSequence  sequence;
     StartupStepRecorder recorder;
-    SW_ASSERT_TRUE( sequence.initializeAll( recorder ) );
+    SW_ASSERT_TRUE( sequence.initializeAll<StartupStepRecorder>( recorder ) );
     sequence.shutdownDependentsOf( EngineInitStep::RHI );
     SW_ASSERT_TRUE( sequence.restartStoppedSteps() );
     SW_ASSERT_TRUE( recorder._listInitialized.size() > static_cast<size_t>( EngineInitStep::Count ) );
@@ -413,7 +508,7 @@ SW_TEST_CASE( EngineInitSequenceTest, DedicatedServerSkipsClientSteps )
 {
     EngineInitSequence  sequence;
     StartupStepRecorder recorder;
-    SW_ASSERT_TRUE( sequence.initializeAll( recorder, EngineInitTarget::Server ) );
+    SW_ASSERT_TRUE( sequence.initializeAll<StartupStepRecorder>( recorder, EngineInitTarget::Server ) );
 
     const EngineInitStep arrClientOnly[]   = { EngineInitStep::UserSettings, EngineInitStep::RHI, EngineInitStep::FrameRenderer, EngineInitStep::RenderThread,
                                                EngineInitStep::LiveShader, EngineInitStep::SceneRHI, EngineInitStep::Telemetry, EngineInitStep::Fonts, EngineInitStep::UI };
@@ -432,7 +527,7 @@ SW_TEST_CASE( EngineInitSequenceTest, DedicatedServerSkipsClientSteps )
     sequence.shutdownAll();
     SW_EXPECT_STREQ( joinStepNames( makeReversed( recorder._listInitialized ) ).c_str(), joinStepNames( recorder._listShutdown ).c_str() );
     sequence.destroyAll();
-    SW_EXPECT_STREQ( kFullDestroyOrder, joinStepNames( recorder._listDestroyed ).c_str() );
+    SW_EXPECT_STREQ( joinStepNames( makeReversed( sequence.getInitializeOrder() ) ).c_str(), joinStepNames( recorder._listDestroyed ).c_str() );
 }
 
 /**
@@ -442,7 +537,7 @@ SW_TEST_CASE( EngineInitSequenceTest, ClientRunsEveryStep )
 {
     EngineInitSequence  sequence;
     StartupStepRecorder recorder;
-    SW_ASSERT_TRUE( sequence.initializeAll( recorder ) );
+    SW_ASSERT_TRUE( sequence.initializeAll<StartupStepRecorder>( recorder ) );
     SW_EXPECT_EQUAL( static_cast<size_t>( EngineInitStep::Count ), recorder._listInitialized.size() );
     sequence.destroyAll();
 }
@@ -452,9 +547,7 @@ SW_TEST_CASE( EngineInitSequenceTest, ClientRunsEveryStep )
  */
 SW_TEST_CASE( EngineInitSequenceTest, EveryStepRunsWhereItsDependenciesRun )
 {
-    EngineInitGraph graph{};
-    string          error;
-    SW_ASSERT_TRUE_MSG( EngineInitSequence::computeGraph( EngineInitSequence::makeStepNodes(), graph, error ), error.c_str() );
+    const EngineInitGraph graph = makeTableGraph();
     for ( uint32 stepIndex = 0; stepIndex < static_cast<uint32>( EngineInitStep::Count ); ++stepIndex )
     {
         const uint8 selfMask = static_cast<uint8>( EngineInitSequence::getStepTarget( static_cast<EngineInitStep>( stepIndex ) ) );
