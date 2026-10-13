@@ -25,8 +25,6 @@ namespace sw
         static constexpr utf8 kExpectUIKind[]   = "ExpectUI";
         static constexpr utf8 kLayoutDumpKind[] = "UILayoutDump"; ///< `<UILayoutDump file="x.txt"/>` 입니다. `UISystem::makeLayoutDump` 를 산출물 폴더에 씁니다.
 
-        /** @brief 등록자(단계, 로딩 화면 시작 차단)가 있는 번역 단위를 링크에 남깁니다(`UISystem::initialize` 가 부르며, 실행기는 UI 를 모릅니다). */
-        static void ensureLinked();
         /** @brief 속성을 검사합니다. 모르는 속성, 빈 단계, 수가 아닌 `screens` 면 false 와 이유를 반환합니다. */
         [[nodiscard]] static bool validateExpectUI( const AutomationStep& step, string& outError );
         /** @brief @p ui 가 단계의 기대와 같으면 true 입니다. 다르면 false 를 반환하고 @p outFailure 에 기대와 실제를 둡니다. */
