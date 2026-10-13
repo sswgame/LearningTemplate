@@ -102,7 +102,7 @@ namespace
     {
         EngineInitGraph graph{};
         string          error;
-        (void)EngineInitSequence::computeGraph( EngineInitSequence::makeStepNodes(), graph, error ); // 표 오류는 컴파일 검사가 막고, ComputedOrder… 테스트가 다시 본다
+        (void)SubsystemCollection::computeGraph( EngineInitSequence::makeStepNodes(), graph, error ); // 표 오류는 컴파일 검사가 막고, ComputedOrder… 테스트가 다시 본다
         return graph;
     }
 
@@ -201,7 +201,7 @@ SW_TEST_CASE( EngineInitSequenceTest, ComputedOrderIsDeterministicAndDependencie
     const vector<EngineInitNode> listReversedNode( listNode.rbegin(), listNode.rend() );
     EngineInitGraph              reversedGraph{};
     string                       error;
-    SW_ASSERT_TRUE_MSG( EngineInitSequence::computeGraph( listReversedNode, reversedGraph, error ), error.c_str() );
+    SW_ASSERT_TRUE_MSG( SubsystemCollection::computeGraph( listReversedNode, reversedGraph, error ), error.c_str() );
     SW_EXPECT_STREQ( joinStepNames( listOrder ).c_str(), joinNodeOrder( listReversedNode, reversedGraph._listOrder ).c_str() );
 
     // 모든 의존이 앞에 선다.
@@ -355,7 +355,7 @@ SW_TEST_CASE( EngineInitSequenceTest, CycleIsRejected )
     };
     EngineInitGraph graph{};
     string          error;
-    SW_EXPECT_FALSE( EngineInitSequence::computeGraph( listNode, graph, error ) );
+    SW_EXPECT_FALSE( SubsystemCollection::computeGraph( listNode, graph, error ) );
     SW_EXPECT_STREQ( "Startup steps in or behind a dependency cycle: A B C", error.c_str() );
     SW_EXPECT_EMPTY( graph._listOrder );
 }
@@ -367,18 +367,18 @@ SW_TEST_CASE( EngineInitSequenceTest, UnknownOrDuplicateNameIsRejected )
 {
     EngineInitGraph graph{};
     string          error;
-    SW_EXPECT_FALSE( EngineInitSequence::computeGraph( {
-                                                           { "A", "Missing" }
+    SW_EXPECT_FALSE( SubsystemCollection::computeGraph( {
+                                                            { "A", "Missing" }
     },
-                                                       graph, error ) );
+                                                        graph, error ) );
     SW_EXPECT_STREQ( "Startup step 'A' depends on unknown step 'Missing'", error.c_str() );
 
     error.clear();
-    SW_EXPECT_FALSE( EngineInitSequence::computeGraph( {
-                                                           {"A", ""},
-                                                           {"A", ""}
+    SW_EXPECT_FALSE( SubsystemCollection::computeGraph( {
+                                                            {"A", ""},
+                                                            {"A", ""}
     },
-                                                       graph, error ) );
+                                                        graph, error ) );
     SW_EXPECT_STREQ( "Startup step 'A' is declared twice", error.c_str() );
 }
 
@@ -396,7 +396,7 @@ SW_TEST_CASE( EngineInitSequenceTest, DependenciesOrderAndNameBreaksTies )
     };
     EngineInitGraph graph{};
     string          error;
-    SW_ASSERT_TRUE_MSG( EngineInitSequence::computeGraph( listNode, graph, error ), error.c_str() );
+    SW_ASSERT_TRUE_MSG( SubsystemCollection::computeGraph( listNode, graph, error ), error.c_str() );
     SW_EXPECT_STREQ( "B C A D", joinNodeOrder( listNode, graph._listOrder ).c_str() );
 }
 
