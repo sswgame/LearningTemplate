@@ -189,9 +189,10 @@ SW_TEST_CASE( ServiceClientCallTableTest, KitDestroyedDuringReadyNotificationIsS
     MemoryServiceDatabase   database;
     MemoryEphemeralDatabase cacheDatabase;
     LocalServerBusHub       hub;
-    test::OnlineTestServer  server( network, &database, &cacheDatabase, &hub, 1 );
-    StubOnlineService       killerService( OnlineMethodRange::kGame + OnlineMethodRange::kSize ); // 서버가 클라이언트 키트의 영역을 알아야 Hello 가 통과한다
-    StubOnlineService       victimService( OnlineMethodRange::kGame + 2 * OnlineMethodRange::kSize );
+    // 서비스는 서버보다 먼저 — 서버 소멸(호스트 종료)이 등록된 서비스의 onHostShutdown 을 부른다.
+    StubOnlineService      killerService( OnlineMethodRange::kGame + OnlineMethodRange::kSize ); // 서버가 클라이언트 키트의 영역을 알아야 Hello 가 통과한다
+    StubOnlineService      victimService( OnlineMethodRange::kGame + 2 * OnlineMethodRange::kSize );
+    test::OnlineTestServer server( network, &database, &cacheDatabase, &hub, 1 );
     SW_ASSERT_TRUE( server._host.registerHostService( &killerService ) );
     SW_ASSERT_TRUE( server._host.registerHostService( &victimService ) );
     server.start();

@@ -4,6 +4,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/Connection/NetHostThread.h"
+#include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
 #include "Core/Process/Process.h"
 #include "Core/Time/MonotonicClock.h"
@@ -115,6 +116,33 @@ namespace
         SW_EXPECT_TRUE_MSG( run._output.find( requested ) != string::npos, requested.c_str() );
         SW_EXPECT_TRUE( run._output.find( kCompleteLine ) != string::npos );
     }
+
+#if !defined( SW_SHIPPING ) // 서비스 포트 테스트만 쓴다 — Shipping 은 그 테스트를 건너뛴다
+    /** @brief 아무것도 하지 않는 스트림 처리기 — 빈 TCP 포트를 고르려고 잠깐 여는 전송에 준다. */
+    struct NullStreamHandler final : IStreamHandler
+    {
+        void onStreamOpened( StreamConnectionHandle, const NetAddress&, bool ) override {}
+        void onStreamReceived( StreamConnectionHandle, const uint8*, int32 ) override {}
+        void onStreamClosed( StreamConnectionHandle, StreamCloseReason ) override {}
+    };
+
+    /**
+     * @brief 지금 비어 있는 루프백 TCP 포트 번호입니다(받기를 열어 OS 가 고른 번호를 읽고 닫는다). 못 열면 0 입니다.
+     * @note UDP 로 고른 번호를 TCP 에 쓰지 말 것 — Windows 는 TCP 포트 구간을 따로 예약해(Hyper-V · WinNAT) 그 번호의 TCP listen 이 10013(WSAEACCES)으로 진다.
+     */
+    uint16 findFreeStreamPort()
+    {
+        unique_ptr<IStreamTransport> probe = StreamTransportFactory::createPlatformTransport();
+        NullStreamHandler            handler;
+        if ( probe == nullptr || probe->initialize( &handler, StreamTransportSettings{} ) == false )
+            return 0;
+        uint16 port = 0;
+        if ( probe->listen( NetAddress::makeLoopback( 0 ) ) )
+            port = probe->getListenPort();
+        probe->shutdown();
+        return port;
+    }
+#endif
 } // namespace
 
 /**
@@ -306,13 +334,8 @@ SW_TEST_CASE( ServerBootTest, OnlineServicesStartFromTheOnlineConfigBesideTheSer
 #else
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
-    uint16 port = 0;
-    {
-        UDPNetTransport probe; // 비어 있을 법한 번호를 고른다(같은 번호의 TCP 포트를 쓴다)
-        SW_ASSERT_TRUE( probe.open( 0, true ) );
-        port = probe.getLocalAddress()._port;
-        probe.close();
-    }
+    const uint16 port = findFreeStreamPort(); // 서비스 포트는 TCP 다 — TCP 로 고른다
+    SW_ASSERT_TRUE( port != 0 );
     const string folder = FileUtil::joinPath( FileUtil::getTempDirectory(), "sw_server_online_" + to_string( Process::getCurrentProcessID() ) );
     SW_ASSERT_TRUE( FileUtil::ensureDirectoryExists( folder ) );
     const string serverConfigPath = FileUtil::joinPath( folder, "online_test.json" );

@@ -267,8 +267,8 @@ namespace
  */
 SW_TEST_CASE( EngineInitSequenceTest, SceneReadingStepWaitsForModuleTypes )
 {
+    StartupRecorder    recorder; // 시퀀스보다 먼저 — 시퀀스 소멸자가 서브시스템을 지우며 recorder 에 적는다
     EngineInitSequence sequence;
-    StartupRecorder    recorder;
     addEngineStandIns( sequence, recorder );
     const SubsystemCollection& subsystems = sequence.getSubsystems();
     const EngineInitGraph      graph      = makeGraph( subsystems );
@@ -325,8 +325,8 @@ SW_TEST_CASE( EngineInitSequenceTest, ComputedOrderIsDeterministicAndDependencie
  */
 SW_TEST_CASE( EngineInitSequenceTest, ShutdownAndDestroyRunInReverseOfInitialization )
 {
+    StartupRecorder    recorder; // 시퀀스보다 먼저 — 시퀀스 소멸자가 서브시스템을 지우며 recorder 에 적는다
     EngineInitSequence sequence;
-    StartupRecorder    recorder;
     addEngineStandIns( sequence, recorder );
     SW_ASSERT_TRUE( sequence.initializeAll<StartupRecorder>( recorder ) );
     const string order = joinOrderNames( sequence.getSubsystems() );
@@ -352,8 +352,8 @@ SW_TEST_CASE( EngineInitSequenceTest, ShutdownAndDestroyRunInReverseOfInitializa
  */
 SW_TEST_CASE( EngineInitSequenceTest, FailedStepStopsAndShutsDownOnlyInitializedSteps )
 {
+    StartupRecorder    recorder; // 시퀀스보다 먼저 — 시퀀스 소멸자가 서브시스템을 지우며 recorder 에 적는다
     EngineInitSequence sequence;
-    StartupRecorder    recorder;
     addEngineStandIns( sequence, recorder );
     recorder._failName   = "Scene";
     recorder._failResult = EngineInitResult::Failed;
@@ -377,8 +377,8 @@ SW_TEST_CASE( EngineInitSequenceTest, FailedStepStopsAndShutsDownOnlyInitialized
  */
 SW_TEST_CASE( EngineInitSequenceTest, SkipDependentsSkipsEveryDependentStep )
 {
+    StartupRecorder    recorder; // 시퀀스보다 먼저 — 시퀀스 소멸자가 서브시스템을 지우며 recorder 에 적는다
     EngineInitSequence sequence;
-    StartupRecorder    recorder;
     addEngineStandIns( sequence, recorder );
     recorder._failName   = "Headless";
     recorder._failResult = EngineInitResult::SkipDependents;
@@ -403,8 +403,8 @@ SW_TEST_CASE( EngineInitSequenceTest, SkipDependentsSkipsEveryDependentStep )
  */
 SW_TEST_CASE( EngineInitSequenceTest, MissingBodiesAreSkipped )
 {
+    StartupRecorder    recorder; // 시퀀스보다 먼저 — 시퀀스 소멸자가 서브시스템을 지우며 recorder 에 적는다
     EngineInitSequence sequence;
-    StartupRecorder    recorder;
     addEngineStandIns( sequence, recorder );
     SW_ASSERT_TRUE( sequence.initializeAll<PartialStepBody>( recorder ) );
     // 본문이 없는 표의 줄도 초기화된 것으로 친다 — 종료 · 재시작 판정이 본문 유무에 따라 달라지지 않는다.
@@ -521,8 +521,8 @@ SW_TEST_CASE( EngineInitSequenceTest, DependenciesOrderAndNameBreaksTies )
  */
 SW_TEST_CASE( EngineInitSequenceTest, DependentsOfAStepRestartWithTheSameBodies )
 {
+    StartupRecorder    recorder; // 시퀀스보다 먼저 — 시퀀스 소멸자가 서브시스템을 지우며 recorder 에 적는다
     EngineInitSequence sequence;
-    StartupRecorder    recorder;
     addEngineStandIns( sequence, recorder );
     SW_ASSERT_TRUE( sequence.initializeAll<StartupRecorder>( recorder ) );
     const string order     = joinOrderNames( sequence.getSubsystems() );
@@ -548,8 +548,8 @@ SW_TEST_CASE( EngineInitSequenceTest, DependentsOfAStepRestartWithTheSameBodies 
  */
 SW_TEST_CASE( EngineInitSequenceTest, FailedRestartLeavesTheRestStopped )
 {
+    StartupRecorder    recorder; // 시퀀스보다 먼저 — 시퀀스 소멸자가 서브시스템을 지우며 recorder 에 적는다
     EngineInitSequence sequence;
-    StartupRecorder    recorder;
     addEngineStandIns( sequence, recorder );
     SW_ASSERT_TRUE( sequence.initializeAll<StartupRecorder>( recorder ) );
 
@@ -578,8 +578,8 @@ SW_TEST_CASE( EngineInitSequenceTest, InitializeRunsUnderTheStepMemoryTag )
     if constexpr ( kMemoryTagScopesEnabled == false )
         SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
 
+    StartupRecorder    recorder; // 시퀀스보다 먼저 — 시퀀스 소멸자가 서브시스템을 지우며 recorder 에 적는다
     EngineInitSequence sequence;
-    StartupRecorder    recorder;
     addEngineStandIns( sequence, recorder );
     SW_ASSERT_TRUE( sequence.initializeAll<StartupRecorder>( recorder ) );
     sequence.shutdownDependentsOf( EngineInitStep::RHI );
@@ -607,8 +607,8 @@ SW_TEST_CASE( EngineInitSequenceTest, InitializeRunsUnderTheStepMemoryTag )
  */
 SW_TEST_CASE( EngineInitSequenceTest, DedicatedServerSkipsClientSteps )
 {
+    StartupRecorder    recorder; // 시퀀스보다 먼저 — 시퀀스 소멸자가 서브시스템을 지우며 recorder 에 적는다
     EngineInitSequence sequence;
-    StartupRecorder    recorder;
     addEngineStandIns( sequence, recorder );
     SW_ASSERT_TRUE( sequence.initializeAll<StartupRecorder>( recorder, EngineInitTarget::Server ) );
 
@@ -646,8 +646,8 @@ SW_TEST_CASE( EngineInitSequenceTest, DedicatedServerSkipsClientSteps )
  */
 SW_TEST_CASE( EngineInitSequenceTest, ClientRunsEveryStep )
 {
+    StartupRecorder    recorder; // 시퀀스보다 먼저 — 시퀀스 소멸자가 서브시스템을 지우며 recorder 에 적는다
     EngineInitSequence sequence;
-    StartupRecorder    recorder;
     addEngineStandIns( sequence, recorder );
     SW_ASSERT_TRUE( sequence.initializeAll<StartupRecorder>( recorder ) );
     SW_EXPECT_EQUAL( static_cast<size_t>( sequence.getSubsystems().getSubsystemCount() ), recorder._listInitializeName.size() );

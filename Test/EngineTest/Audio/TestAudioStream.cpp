@@ -282,6 +282,9 @@ SW_TEST_CASE( AudioStreamTest, EngineRendersStreamedClipLikeMemoryClip )
  */
 SW_TEST_CASE( AudioStreamTest, OggStreamMatchesFullDecode )
 {
+#if defined( SW_SHIPPING ) && !defined( SW_WITH_CLIENT_CODE )
+    SW_TEST_SKIP( "the shipping server pack has no audio (CookContract target_excluded_asset_kinds)" );
+#endif
     sw::vector<uint8> bytes;
     SW_ASSERT_TRUE( sw::ResourceIO::readBinaryResource( "game/empty/sounds/click.ogg", bytes ) );
     sw::AudioPcm pcm;

@@ -28,11 +28,11 @@ namespace sw
     {
         struct AccountOnlineServerKitInternal
         {
-            static constexpr uint32 kLightHashMemoryKiB  = 256; ///< 테스트용 가벼운 Argon2id
-            static constexpr uint32 kLightHashIterations = 1;
-            static constexpr uint8  kDevTicketKeyByte    = 0x5A; ///< 개발용 주 키(모든 바이트 같은 값). Shipping 은 쓰지 않는다
-            static constexpr int32  kHexDigitsPerChunk   = ServiceKeyUtil::kHexWidth;
-            static constexpr int32  kBytesPerChunk       = 8;
+            [[maybe_unused]] static constexpr uint32 kLightHashMemoryKiB  = 256; ///< 테스트용 가벼운 Argon2id
+            [[maybe_unused]] static constexpr uint32 kLightHashIterations = 1;
+            [[maybe_unused]] static constexpr uint8  kDevTicketKeyByte    = 0x5A; ///< 개발용 주 키(모든 바이트 같은 값). Shipping 은 쓰지 않는다
+            static constexpr int32                   kHexDigitsPerChunk   = ServiceKeyUtil::kHexWidth;
+            static constexpr int32                   kBytesPerChunk       = 8;
 
             /** @brief 16 진수 64 자를 32 바이트로 읽습니다(앞이 높은 자리). 형식이 틀리면 false 입니다. */
             [[nodiscard]] static bool parseTicketKey( string_view text, uint8 ( &outArrKey )[LoginTicketAuthority::kMasterKeySize] )
@@ -74,8 +74,8 @@ namespace sw
 
             bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                using Internal         = AccountOnlineServerKitInternal;
-                const string* pUnknown = entry.findUnknownOption( { "ticketKeySecretEnvironment", "attemptBurst", "lightPasswordHash" } );
+                using Internal [[maybe_unused]] = AccountOnlineServerKitInternal;
+                const string* pUnknown          = entry.findUnknownOption( { "ticketKeySecretEnvironment", "attemptBurst", "lightPasswordHash" } );
                 if ( pUnknown != nullptr )
                 {
                     outError = "unknown option '" + *pUnknown + "'";

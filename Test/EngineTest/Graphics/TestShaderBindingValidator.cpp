@@ -618,6 +618,11 @@ SW_TEST_CASE( ShaderBindingValidatorTest, MaterialTextureIndexFieldsAreRecognize
         SW_TEST_SKIP( "sprite2d 픽셀 셰이더를 쿠킹한 바이너리가 없습니다 (--cook-shaders 를 먼저 돌리세요)" );
     for ( uint32 formatIndex = 0; formatIndex < kFormatCount; ++formatIndex )
     {
+#if !defined( SW_PLATFORM_WINDOWS )
+        // DXBC · DXIL 리플렉션은 Windows 만 된다(`ShaderReflection::reflect` 가 빈 결과) — 리눅스는 SPIR-V 둘만 본다.
+        if ( arrFormat[formatIndex] == sw::ShaderTargetFormat::DXBC_D3D11 || arrFormat[formatIndex] == sw::ShaderTargetFormat::DXIL_D3D12 )
+            continue;
+#endif
         SW_EXPECT_TRUE_MSG( arrChecked[formatIndex] > 0, ( sw::string( arrFormatName[formatIndex] ) + " 의 sprite2d 픽셀 셰이더 머티리얼 원소를 찾지 못했다" ).c_str() );
     }
 }

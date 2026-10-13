@@ -95,6 +95,9 @@ namespace sw
         struct rusage    usage{};
         if ( getrusage( RUSAGE_SELF, &usage ) == 0 )
             outPeakResidentBytes = static_cast<uint64>( usage.ru_maxrss ) * kBytesPerKibibyte;
+        // 커널은 최대값(hiwater)을 메모리 사상이 바뀔 때만 갱신한다 — 막 늘어난 상주량이 기록된 최대보다 클 수 있다. 최대는 지금 값보다 작을 수 없다.
+        if ( outPeakResidentBytes < outResidentBytes )
+            outPeakResidentBytes = outResidentBytes;
         return true;
 #else
         return false;

@@ -234,7 +234,7 @@ namespace sw
         outInfo._sampleRate   = info.sample_rate;
         outInfo._frameCount   = frameCount;
         outInfo._channelCount = static_cast<uint16>( info.channels );
-        return make_unique<OggStreamDecoder>( pVorbis, std::move( listArena ), info.channels, frameCount );
+        return sw::make_unique<OggStreamDecoder>( pVorbis, std::move( listArena ), info.channels, frameCount );
     }
 
     bool AudioClipDecoder::decodeOgg( const uint8* pBytes, size_t byteCount, AudioPcm& outPcm )

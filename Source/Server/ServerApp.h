@@ -132,7 +132,7 @@ namespace sw
         uint8                  _bReady                  : 1;
         uint8                  _bSignalHandlerInstalled : 1;
         uint8                  _bPaused                 : 1; ///< Dev `pause`. 게임 틱을 멈춘다(콘솔, 종료 신호, 네트워크 스레드는 돈다).
-        uint8                  _bRestartServerServices  : 1; ///< 모듈 리로드로 서버 서비스를 멈췄다. 다음 틱에 다시 시작한다
+        [[maybe_unused]] uint8 _bRestartServerServices  : 1; ///< 모듈 리로드로 서버 서비스를 멈췄다. 다음 틱에 다시 시작한다
         uint8                  _bCrashReportsStarted    : 1; ///< 크래시 보고 서비스를 이 서버가 초기화했다(종료 때 내린다)
         [[maybe_unused]] uint8 _reserved                : 3;
     };

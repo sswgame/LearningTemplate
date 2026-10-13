@@ -15,6 +15,9 @@
 #include "TestFramework/TestBench.h"
 #include "TestFramework/TestFramework.h"
 
+// 시스템 한글 글꼴(malgun · Noto CJK)을 읽는다 — CI 러너 이미지에는 없다. 측정 탐침이라 호스트 스위트로 둔다(`--host_suites=only`).
+SW_TEST_REQUIRES_HOST( GlyphBenchTest, "rasterizes a system Korean font - CI images have none" );
+
 namespace
 {
     struct GlyphBenchInternal
