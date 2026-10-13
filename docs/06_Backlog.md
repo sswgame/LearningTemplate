@@ -109,9 +109,6 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
     Shipping(단일 백엔드 정적 링크, `SW_PROFILE_COMPILED` 꺼짐), Linux(GLX 컨텍스트 · 다중 상속 경고), `OpenGLRHICommandList.cpp`(compile_commands 에 없어 문법 검사도 못 했다), 에디터 실기동(Present 훅),
     `assertdialog.scenario.xml`, `-gv_reloadGameAtFrame`, `-gv_standardInputCommands`. S18 의 새 클래스는 ImGui 에 의존해 단위 테스트가 없다 — 에디터 자체 테스트 · `AppScenarioTest` 에디터 케이스가 본다.
 
-- `B-14` **셰이더 쿠킹 스탬프에 컴파일러 도구 지문을 넣는 커밋 `8021b9337`(`SWCOOK 3` → `4`)이 통합에서 일부러 빠졌다**(`54b50db93` 이 되돌림). Shipping 쿠킹 단계가 `--verify-shaders`(`cmake/Engine/AssetAndToolTargets.cmake` 71 줄)로 쿠킹본과 스탬프를 대조하고,
-  체크인된 쿠킹 셰이더 약 3424 개와 `cook.stamp` 가 `SWCOOK 3` 이라 다시 쿠킹 없이는 빌드가 선다. 쿠킹 가능한 환경에서: `54b50db93` 을 되돌린다 → `App.exe --cook-shaders` → 쿠킹 셰이더와 `cook.stamp` 를 같은 커밋에 넣는다 → Shipping 빌드가 `--verify-shaders` 를 통과하는지 본다.
-
 ## C. 구조 · 성능 · 정리
 
 기능이 아니라 고칠 곳을 줄이는 일: 구조 분할 계획, 중복 · 의존 정리, 측정 뒤 정할 성능 후보, 린트 · 문서 정리.

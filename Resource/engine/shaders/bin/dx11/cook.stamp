@@ -1,10 +1,11 @@
-SWCOOK 3
+SWCOOK 4
 00366b6bd91c13af taa.hlsl
 03c54d10a1c6143d postoutline.hlsl
 1795b4868f75033e gerstner.hlsli
 2634f1e7dd1ddc24 postbloom.hlsl
 26a9b881ace73b82 forwardlit.hlsl
 30ca18ffc0224bf4 postbloom.hlsli
+38a6a3f6ba9cdccc @toolchain
 4877783fcd0ecf62 tonemap.hlsl
 50e78d8a12f071af shadowdepth.hlsl
 5cf5e0caed4fbcb8 foliage.hlsl
