@@ -4,7 +4,6 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Transport/NetEmulation.h"
-#include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Commands/EditorNetConditions.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -16,8 +15,6 @@
 #include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
-#include <chrono>
-#include <thread>
 
 namespace sw::editor
 {
@@ -29,8 +26,6 @@ namespace sw::editor
         {
             /** @brief `netplay.stats` 의 기본 시한(초)입니다. */
             static constexpr int32 kDefaultStatsWaitSeconds = 30;
-            /** @brief `netplay.stats` 가 세션을 다시 보는 간격입니다. */
-            static constexpr int64 kStatsPollMilliseconds = 50;
             /** @brief 자식 프로세스에 보고를 묻는 명령입니다(`GameNetSession` 의 개발 명령). */
             static constexpr const utf8* kStatsCommand = "net.emulation stats";
 
@@ -139,20 +134,16 @@ namespace sw::editor
                     listReportCount.push_back( pSession->getProcessStatus( processIndex )._emulationReportCount );
                     askedCount += pSession->sendProcessCommand( processIndex, kStatsCommand ) ? 1 : 0;
                 }
-                const Deadline deadline      = Deadline::afterMilliseconds( static_cast<int64>( seconds ) * 1000 );
-                int32          answeredCount = 0;
-                while ( true )
+                int32 answeredCount = 0;
+                pSession->updateUntil( static_cast<int64>( seconds ) * 1000, [&]()
                 {
-                    pSession->update();
                     answeredCount = 0;
                     for ( int32 processIndex = 0; processIndex < processCount; ++processIndex )
                     {
                         answeredCount += pSession->getProcessStatus( processIndex )._emulationReportCount != listReportCount[static_cast<size_t>( processIndex )] ? 1 : 0;
                     }
-                    if ( answeredCount >= askedCount || deadline.isExpired() )
-                        break;
-                    std::this_thread::sleep_for( std::chrono::milliseconds( kStatsPollMilliseconds ) );
-                }
+                    return answeredCount >= askedCount;
+                } );
                 const NetEmulationReport total = sumReports( *pSession );
                 outReply                       = "netplay stats from " + to_string( answeredCount ) + " of " + to_string( askedCount ) + " process(es): resent " +
                            to_string( total._resentMessageCount ) + ", dropped " + to_string( total._droppedPacketCount ) + ", measured loss " +

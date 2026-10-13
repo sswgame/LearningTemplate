@@ -6,7 +6,6 @@
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/Widgets/EditorNetModeCombo.h"
@@ -18,8 +17,6 @@
 #include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
-#include <chrono>
-#include <thread>
 
 namespace sw::editor
 {
@@ -31,8 +28,6 @@ namespace sw::editor
         {
             /** @brief `netplay.wait` 의 기본 시한(초)입니다. */
             static constexpr int32 kDefaultWaitSeconds = 60;
-            /** @brief `netplay.wait` 가 세션을 다시 보는 간격입니다. */
-            static constexpr int64 kWaitPollMilliseconds = 50;
 
             static EditorNetPlaySession* findSession()
             {
@@ -113,12 +108,8 @@ namespace sw::editor
                     outReply = "no multiplayer session is running";
                     return true;
                 }
-                const Deadline deadline = Deadline::afterMilliseconds( static_cast<int64>( seconds ) * 1000 );
-                while ( pSession->getConnectedClientCount() < clientCount && deadline.isExpired() == false )
-                {
-                    pSession->update();
-                    std::this_thread::sleep_for( std::chrono::milliseconds( kWaitPollMilliseconds ) );
-                }
+                pSession->updateUntil( static_cast<int64>( seconds ) * 1000, [&]()
+                { return pSession->getConnectedClientCount() >= clientCount; } );
                 outReply = "netplay connected clients " + to_string( pSession->getConnectedClientCount() ) + " of " + to_string( clientCount );
                 return true;
             }
