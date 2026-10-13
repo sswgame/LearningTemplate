@@ -32,16 +32,29 @@ namespace sw
                 bool    _bText{ false };
             };
 
-            static const vector<hashed_string>& getNameTable()
+            static constexpr const utf8* kArrBuiltinTypeName[] = {
+#define SW_REFLECT_BUILTIN_TYPE( Canon, ... ) #Canon,
+#define SW_REFLECT_BUILTIN_CONTAINER( ... )
+#include "Engine/Reflection/ReflectBuiltins.xxx"
+#undef SW_REFLECT_BUILTIN_TYPE
+#undef SW_REFLECT_BUILTIN_CONTAINER
+            };
+            static constexpr size_t kBuiltinTypeCount = std::size( kArrBuiltinTypeName );
+
+            /**
+             * @brief 기본 타입 이름 표입니다(`ReflectBuiltins.xxx` 순서).
+             * @details 힙을 쓰지 않는 고정 배열이다 — 처음 부르는 쪽(기준선 뒤의 에디터 · UI 바인딩)이 프로세스 끝까지 남는 블록을 만들지 않는다. 글자는 이름 풀이 든다.
+             */
+            static const array<hashed_string, kBuiltinTypeCount>& getNameTable()
             {
-                static const vector<hashed_string> s_listName{
+                static const array<hashed_string, kBuiltinTypeCount> s_arrName{ {
 #define SW_REFLECT_BUILTIN_TYPE( Canon, ... ) hashed_string( #Canon ),
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER
-                };
-                return s_listName;
+                } };
+                return s_arrName;
             }
 
             static void setNumber( SourceValue& out, const float64 value, const bool bInteger, const int64 intValue )
@@ -284,7 +297,7 @@ namespace sw
 
     const hashed_string& ReflectValueUtil::getBuiltinTypeName( const int32 builtinIndex )
     {
-        const vector<hashed_string>& listName = ReflectValueInternal::getNameTable();
+        const auto& listName = ReflectValueInternal::getNameTable();
         SW_ASSERT( 0 <= builtinIndex && static_cast<size_t>( builtinIndex ) < listName.size() );
         return listName[static_cast<size_t>( builtinIndex )];
     }
@@ -293,7 +306,7 @@ namespace sw
     {
         if ( typeName.empty() )
             return -1;
-        const vector<hashed_string>& listName = ReflectValueInternal::getNameTable();
+        const auto& listName = ReflectValueInternal::getNameTable();
         for ( size_t index = 0; index < listName.size(); ++index )
         {
             if ( listName[index] == typeName )

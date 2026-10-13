@@ -78,5 +78,7 @@ namespace sw
         {
             unloadOldestBatch();
         }
+        // 다 내렸으면 목록의 용량도 돌려준다(`erase` 는 용량을 남긴다). 이 큐를 든 관리자는 엔진의 종료 누수 보고 뒤에 사라진다.
+        _listImage = vector<DeferredImage>{};
     }
 } // namespace sw
