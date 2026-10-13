@@ -9,6 +9,8 @@
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "GameFramework/PlugIn/Editor/Admin/AdminToolSession.h"
@@ -104,14 +106,20 @@ namespace sw::editor
         drawSanctionSection();
         drawAuditSection();
 
-        const AdminToolSession& session = AdminToolSession::get();
+        const AdminToolSession* pSession = getService<AdminToolSession>();
+        if ( pSession == nullptr )
+            return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
+        const AdminToolSession& session = *pSession;
         ImGui::Separator();
         EditorWidgets::drawPanelStatus( session.getStatusLine().empty() ? "Ready" : session.getStatusLine().c_str() );
     }
 
     void AdminToolPanel::drawProviderBar()
     {
-        AdminToolSession& session = AdminToolSession::get();
+        AdminToolSession* pSession = getService<AdminToolSession>();
+        if ( pSession == nullptr )
+            return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
+        AdminToolSession& session = *pSession;
         ImGui::Text( "Provider: %s", session.getProvider().getProviderName() );
         if ( session.getProvider().isLive() == false )
         {
@@ -136,7 +144,10 @@ namespace sw::editor
 
     void AdminToolPanel::drawAccountSection()
     {
-        AdminToolSession& session = AdminToolSession::get();
+        AdminToolSession* pSession = getService<AdminToolSession>();
+        if ( pSession == nullptr )
+            return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
+        AdminToolSession& session = *pSession;
         EditorWidgets::drawSectionHeader( "Account" );
 
         EditorWidgets::drawTextField( "Account id (hex)", _accountText, 160.0f * EditorThemeUtil::getDpiScale() );
@@ -190,7 +201,10 @@ namespace sw::editor
 
     void AdminToolPanel::drawAdjustSection()
     {
-        AdminToolSession& session = AdminToolSession::get();
+        AdminToolSession* pSession = getService<AdminToolSession>();
+        if ( pSession == nullptr )
+            return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
+        AdminToolSession& session = *pSession;
         EditorWidgets::drawSectionHeader( "Grant / Revoke" );
 
         EditorWidgets::drawTextField( "Asset id", _assetText, 160.0f * EditorThemeUtil::getDpiScale() );
@@ -216,7 +230,10 @@ namespace sw::editor
 
     void AdminToolPanel::drawSanctionSection()
     {
-        AdminToolSession& session = AdminToolSession::get();
+        AdminToolSession* pSession = getService<AdminToolSession>();
+        if ( pSession == nullptr )
+            return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
+        AdminToolSession& session = *pSession;
         EditorWidgets::drawSectionHeader( "Sanction" );
 
         constexpr ServiceSanctionKind kArrKind[] = { ServiceSanctionKind::ChatMute, ServiceSanctionKind::Suspend, ServiceSanctionKind::Ban };
@@ -249,7 +266,10 @@ namespace sw::editor
 
     void AdminToolPanel::drawAuditSection()
     {
-        AdminToolSession& session = AdminToolSession::get();
+        AdminToolSession* pSession = getService<AdminToolSession>();
+        if ( pSession == nullptr )
+            return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
+        AdminToolSession& session = *pSession;
         EditorWidgets::drawSectionHeader( "Audit log" );
 
         EditorWidgets::drawTextField( "Subject prefix", _auditSubjectText, 200.0f * EditorThemeUtil::getDpiScale() );
@@ -284,5 +304,7 @@ namespace sw::editor
         ImGui::EndTable();
     }
 
+    // 세션의 등록 줄은 여기 둔다 — EngineTest 가 세션 .cpp 를 에디터 없이 직접 컴파일한다.
+    SW_EDITOR_SUBSYSTEM( AdminToolSession, 9200 );
     SW_EDITOR_PANEL( AdminToolPanel, "admin.tool", EditorPanelCategory::Custom, 9200 );
 } // namespace sw::editor

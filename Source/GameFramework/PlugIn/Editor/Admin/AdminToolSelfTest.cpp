@@ -6,6 +6,7 @@
 
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
 #include "GameFramework/PlugIn/Editor/Admin/AdminToolSession.h"
@@ -37,6 +38,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Done;
                 if ( context.getStepIndex() == 0 )
                 {
+                    context.expect( getService<AdminToolSession>() != nullptr, "the extension subsystem AdminToolSession is not bound in the editor scope" );
                     context.expect( pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "admin.tool", true ), "GM tool panel is not registered" );
                     return EditorSelfTestStep::Continue;
                 }

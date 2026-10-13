@@ -203,8 +203,6 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   등록 · 초기화 · 종료 순서와 의존을 선언한다.
   ③ 개발 도구 — AutomationRunner · Session · StepRegistry, DevCommandRegistry, 프로파일러 · 텔레메트리를 `Dev` 호스트 비트의 서브시스템으로. Shipping 은 등록 자체를
   컴파일에서 뺀다(구성별 `#if` 분산을 줄인다).
-  ④ 렌더러 내부 — FrameRenderer(Renderer/Frame)의 PSO 캐시 · 트랜지언트 풀 · 리드백 · 캔버스를 서브시스템으로. 모듈이 렌더 패스를 등록하는 창구(`G-1`)를
-  "모듈이 서브시스템을 기여하는" 지점으로 푼다(핫 패스는 타입 있는 포인터).
   ⑤ 백엔드 선택 — 물리(Box2D · Jolt) · 오디오(XAudio2 · Null) 같은 역할별 팩토리를 호스트 종류에 따라 갈아 끼우는 서브시스템 구현으로(언리얼 오디오 믹서 플랫폼 ·
   RHI 모듈 선택과 같은 모양으로 알고 있다).
   ⑥ 모든 실행 파일의 기동 — App · Server · 테스트 하네스 · Tools/OnlineLoadBot 이 같은 기반 서브시스템(Logger · CommandLine · CrashHandler …)을 써서 흩어진

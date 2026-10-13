@@ -8,6 +8,7 @@
 #include "Editor/Common/GUI/EditorPopupManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorDefaultObjects.h"
+#include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Panels/Inspector/InspectorComponentManager.h"
 #include "Editor/Panels/Inspector/InspectorPropertyManager.h"
@@ -16,7 +17,7 @@ namespace sw::editor
 {
     span<const utf8* const> EditorModuleUnloadListener::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { EditorPanelManager::kSubsystemName, EditorPopupManager::kSubsystemName, InspectorComponentManager::kSubsystemName, InspectorPropertyManager::kSubsystemName, EditorDefaultObjects::kSubsystemName };
+        static constexpr const utf8* kArrDependency[] = { EditorPanelManager::kSubsystemName, EditorPopupManager::kSubsystemName, InspectorComponentManager::kSubsystemName, InspectorPropertyManager::kSubsystemName, EditorDefaultObjects::kSubsystemName, EditorExtensionSubsystems::kSubsystemName };
         return kArrDependency;
     }
 
@@ -40,6 +41,8 @@ namespace sw::editor
         releasedCount += _context.getSubsystem<InspectorComponentManager>().releaseInspectorsWithin( pBegin, pEnd );
         releasedCount += _context.getSubsystem<InspectorPropertyManager>().releaseDrawersWithin( pBegin, pEnd );
         releasedCount += EditorCommandGUI::releaseCommandsWithin( pBegin, pEnd );
+        // 확장이 기여한 서브시스템은 그 모듈의 패널 · 명령이 쓴다 — 그것들을 내린 뒤에 내린다.
+        releasedCount += _context.getSubsystem<EditorExtensionSubsystems>().releaseSubsystemsWithin( pBegin, pEnd );
         // 기본값 인스턴스는 어느 모듈의 컴포넌트든 될 수 있다 — 무엇이 언로드되든 모두 지운다(다음에 물을 때 다시 만든다). 세지 않는다(떼는 등록이 아니다).
         _context.getSubsystem<EditorDefaultObjects>().clear();
         return releasedCount;

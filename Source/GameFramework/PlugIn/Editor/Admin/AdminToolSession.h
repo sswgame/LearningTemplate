@@ -10,6 +10,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "Editor/Common/EditorSubsystem.h"
+
 #include "GameFramework/PlugIn/Editor/Admin/AdminCommandProvider.h"
 
 namespace sw::editor
@@ -17,19 +19,20 @@ namespace sw::editor
     /**
      * @class AdminToolSession
      * @brief GM 도구 패널 하나가 쓰는 명령 보내기와 결과 보관입니다.
+     * @details 이 확장이 기여하는 에디터 서브시스템이다(`SW_EDITOR_SUBSYSTEM`) — 에디터 범위가 소유하고 패널은 `editor::getService<AdminToolSession>()` 로 찾는다.
      */
-    class AdminToolSession
+    class AdminToolSession final : public EditorSubsystem
     {
     public:
+        static constexpr const utf8* kSubsystemName = "AdminToolSession";
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+
         /** @brief 감사 열람이 한 번에 가져오는 줄 수입니다. */
         static constexpr int32 kAuditRequestCount = 20;
 
         AdminToolSession();
         AdminToolSession( const AdminToolSession& )            = delete; // 활성 제공자가 자기 멤버를 가리킨다
         AdminToolSession& operator=( const AdminToolSession& ) = delete;
-
-        /** @brief 에디터가 쓰는 세션입니다. */
-        static AdminToolSession& get();
 
         // ------------------------------------------------------------------------------
         // 1) 제공자

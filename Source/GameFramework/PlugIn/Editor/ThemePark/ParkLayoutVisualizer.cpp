@@ -5,6 +5,7 @@
 #include "pch.h"
 
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
@@ -20,7 +21,10 @@ namespace sw::editor
         {
             static void draw( const EditorViewportVisualizerArgs& args )
             {
-                ParkLayoutPreview& preview = ParkLayoutPreview::get();
+                ParkLayoutPreview* pPreview = getService<ParkLayoutPreview>();
+                if ( pPreview == nullptr )
+                    return;
+                ParkLayoutPreview& preview = *pPreview;
                 (void)preview.refresh(); // 바뀌었을 때만 다시 읽는다. 읽기 실패는 refresh 가 알린다
                 if ( preview.isLoaded() == false )
                     return;

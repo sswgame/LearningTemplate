@@ -48,12 +48,6 @@ namespace sw::editor
     {
     }
 
-    AdminToolSession& AdminToolSession::get()
-    {
-        static AdminToolSession s_session;
-        return s_session;
-    }
-
     void AdminToolSession::useFake()
     {
         _pActive = &_fake;
@@ -141,4 +135,5 @@ namespace sw::editor
             requestLookup( _lookupAccountID ); // 잔액과 제재를 바뀐 값으로 새로 고친다
         }
     }
+
 } // namespace sw::editor

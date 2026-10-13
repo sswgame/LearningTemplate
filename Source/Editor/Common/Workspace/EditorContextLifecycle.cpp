@@ -21,6 +21,7 @@
 #include "Editor/Common/Workspace/ConfigHotReload.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorDefaultObjects.h"
+#include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorModuleUnloadListener.h"
 #include "Editor/Common/Workspace/EditorNetPlaySession.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
@@ -74,6 +75,7 @@ namespace sw::editor
         _scope.addSubsystem( make_unique<EditorRenderViews>() );
         _scope.addSubsystem( make_unique<EditorPlaySessionState>() );
         _scope.addSubsystem( make_unique<EditorTheme>() );
+        _scope.addSubsystem( make_unique<EditorExtensionSubsystems>( _scope ) ); // 확장이 기여한 서브시스템(SW_EDITOR_SUBSYSTEM) — 프레임 앞 syncExtensionRegistrations 가 만든다
         // 확장 모듈이 언로드되기 전에 그 모듈의 등록 줄로 만든 인스턴스를 지운다 — 훑는 매니저들에 의존하므로 그들보다 먼저 내려간다.
         _scope.addSubsystem( make_unique<EditorModuleUnloadListener>( *this ) );
 
@@ -99,6 +101,9 @@ namespace sw::editor
             pLocalization->unmountProjects( LocalizationScope::Editor );
 
         // 초기화한 것을 역순으로 종료하고, 모두를 역순으로 소멸시킨다(넷 플레이 세션의 자식 프로세스 종료도 여기 — 엔진 로거는 아직 있다).
+        // 확장이 기여한 서브시스템은 내장 서브시스템을 쓸 수 있다 — 그들보다 먼저 내린다.
+        if ( EditorExtensionSubsystems* pExtensions = findSubsystem<EditorExtensionSubsystems>() )
+            pExtensions->releaseAll();
         _scope.destroyAll(); // 뷰 렌더 타깃은 EditorRenderViews 의 종료가 놓는다
     }
 
@@ -111,6 +116,7 @@ namespace sw::editor
 
     void EditorContext::syncExtensionRegistrations()
     {
+        getSubsystem<EditorExtensionSubsystems>().syncWithRegistry(); // 패널이 그리기 전에 찾을 수 있게 먼저
         getSubsystem<EditorPanelManager>().syncWithRegistry( getSubsystem<EditorRenderViews>().getRHIDevice() );
         getSubsystem<EditorPopupManager>().syncWithRegistry();
         getSubsystem<InspectorComponentManager>().syncWithRegistry();

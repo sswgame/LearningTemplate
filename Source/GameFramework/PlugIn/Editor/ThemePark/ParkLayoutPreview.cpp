@@ -5,6 +5,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
+
 #include "Engine/Resource/ResourceIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
@@ -159,9 +161,5 @@ namespace sw::editor
         }
     }
 
-    ParkLayoutPreview& ParkLayoutPreview::get()
-    {
-        static ParkLayoutPreview s_preview;
-        return s_preview;
-    }
+    SW_EDITOR_SUBSYSTEM( ParkLayoutPreview, 9300 );
 } // namespace sw::editor

@@ -6,6 +6,7 @@
 
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
 #include "GameFramework/PlugIn/Editor/ThemePark/ParkLayoutPreview.h"
@@ -27,6 +28,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Done;
                 if ( context.getStepIndex() == 0 )
                 {
+                    context.expect( getService<ParkLayoutPreview>() != nullptr, "the extension subsystem ParkLayoutPreview is not bound in the editor scope" );
                     context.expect( pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "themepark.layout", true ), "extension panel is not registered" );
                     return EditorSelfTestStep::Continue; // 한 프레임 그린다
                 }

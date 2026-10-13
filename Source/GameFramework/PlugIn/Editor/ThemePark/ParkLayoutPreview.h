@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Viewport/EditorVisualizerGeometry.h"
 
 namespace sw::editor
@@ -31,10 +32,14 @@ namespace sw::editor
     /**
      * @class ParkLayoutPreview
      * @brief 배치 파일 하나(기본 `game/themepark/data/rides.xml`)를 키트의 로더로 읽어 보관합니다. 파일 내용이 바뀌면 다시 읽습니다.
+     * @details 이 확장이 기여하는 에디터 서브시스템이다(`SW_EDITOR_SUBSYSTEM`) — 패널과 시각화가 `editor::getService<ParkLayoutPreview>()` 로 같이 본다.
      */
-    class ParkLayoutPreview
+    class ParkLayoutPreview final : public EditorSubsystem
     {
     public:
+        static constexpr const utf8* kSubsystemName = "ParkLayoutPreview";
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+
         /** @brief 놀이기구 배치 파일과 코스터 레이아웃 파일의 경로입니다. 게임(`ParkDirectorComponent`)과 같은 경로를 씁니다. */
         static constexpr const utf8* kLayoutPath  = "game/themepark/data/rides.xml";
         static constexpr const utf8* kCoasterPath = "game/themepark/data/coasters.xml";
@@ -52,9 +57,6 @@ namespace sw::editor
         const vector<ParkRidePreview>& getRides() const { return _listRide; }
         const float3&                  getGatePosition() const { return _gatePosition; }
         bool                           isLoaded() const { return _bLoaded; }
-
-        /** @brief 에디터 하나가 쓰는 미리보기를 반환합니다(패널과 시각화가 같이 봅니다). */
-        static ParkLayoutPreview& get();
 
     private:
         vector<ParkRidePreview> _listRide;

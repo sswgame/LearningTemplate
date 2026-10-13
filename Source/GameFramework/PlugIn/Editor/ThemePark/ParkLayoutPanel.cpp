@@ -8,6 +8,7 @@
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Scene/EditorSceneViewUtil.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -25,7 +26,10 @@ namespace sw::editor
 
     void ParkLayoutPanel::drawContent()
     {
-        ParkLayoutPreview& preview = ParkLayoutPreview::get();
+        ParkLayoutPreview* pPreview = getService<ParkLayoutPreview>();
+        if ( pPreview == nullptr )
+            return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
+        ParkLayoutPreview& preview = *pPreview;
         bool               bForce  = false;
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kRefresh, "Reload" ) ) )
             bForce = true;
