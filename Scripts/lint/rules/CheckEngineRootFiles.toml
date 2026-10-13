@@ -12,8 +12,6 @@ root_file = [
     "EngineBootstrap.h",
     "EngineBootstrap.cpp",
     "EngineInitSequence.h",
-    "EngineInitSequence.cpp",
-    "EngineInitStepList.xxx",
     "EngineServiceCollection.h",
     "EngineServiceCollection.cpp",
 ]

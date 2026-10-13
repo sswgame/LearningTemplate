@@ -1,6 +1,6 @@
 /**
  * @file Engine/EngineBootstrap.h
- * @brief 기동 표(`EngineInitStepList.xxx`) **앞**의 고정 부트스트랩과 표 **뒤**의 끝 정리입니다. 두 호스트(`EngineLoop` · 테스트 하네스)가 함께 씁니다.
+ * @brief 기동 단계(서브시스템) **앞**의 고정 부트스트랩과 그 **뒤**의 끝 정리입니다. 두 호스트(`EngineLoop` · 테스트 하네스)가 함께 씁니다.
  * @details 이름 풀 · 로거 · 크래시 핸들러 · 리소스 루트 · 진단 도구(교착 감지기 · 메모리 프로파일러) · 명령줄 · 전역 변수가 여기서 서고,
  *          `shutdown` 이 그 역순으로 내린다. 서비스 표를 언제 끊는지(`unbindEngineServices`) · 로거를 언제 세우는지도 여기 한 곳에서 정한다.
  *          표를 **채우는** 일(`bindEngineServices`)은 호스트가 한다 — 호스트마다 직접 만드는 서비스(`HostCreated`)가 다르고,
@@ -49,7 +49,7 @@ namespace sw
          */
         void fillServices( EngineServices& outServices ) const;
         /**
-         * @brief 표 밖 부트스트랩을 세운 역순으로 내립니다. 기동 단계의 종료 · 해제(`EngineInitSequence`) 뒤에 부릅니다. 두 번 불러도 됩니다.
+         * @brief 표 밖 부트스트랩을 세운 역순으로 내립니다. 기동 단계의 종료 · 해제(`SubsystemCollection`) 뒤에 부릅니다. 두 번 불러도 됩니다.
          * @details 전역 변수 기본값 복원 → 표 밖 서비스 해제(목록의 역순) → 서비스 표 끊기 → 로거 스레드 → 메모리 프로파일러 →
          *          교착 감지기 → 이름 풀 → 크래시 핸들러 → 로거 객체.
          */

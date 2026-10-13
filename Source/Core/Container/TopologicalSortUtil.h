@@ -1,6 +1,6 @@
 /**
  * @file TopologicalSortUtil.h
- * @brief 의존 그래프의 위상 정렬(Kahn)과 순환 찾기입니다. 엔진 기동 단계(`EngineInitSequence`)와 모듈 적재 순서(`ModuleCatalog`)가 같은 규칙을 씁니다.
+ * @brief 의존 그래프의 위상 정렬(Kahn)과 순환 찾기입니다. 엔진 기동 단계(`SubsystemCollection`)와 모듈 적재 순서(`ModuleCatalog`)가 같은 규칙을 씁니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

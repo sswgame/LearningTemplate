@@ -3,6 +3,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Common/SubsystemCollection.h"
 #include "Engine/EngineInitSequence.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Physics/PhysicsSystem.h"
@@ -18,7 +19,7 @@ namespace
 {
     /**
      * @brief 단계가 불린 순서를 이름으로 적습니다 — "I:" 초기화, "S:" 종료, "D:" 해제. 정해 둔 이름의 초기화는 정해 둔 결과를 돌려줍니다.
-     * @details 표의 줄은 본문 모음(아래 X-macro)이, 서브시스템은 대역(`StandInSubsystem`)이 같은 목록에 적는다.
+     * @details 엔진 서브시스템마다 같은 선언을 지닌 대역(`StandInSubsystem`)이 이 목록에 적는다.
      */
     struct StartupRecorder
     {
@@ -47,34 +48,11 @@ namespace
             return string( sb.c_str() );
         }
 
-#define SW_ENGINE_STARTUP_STEP( Name, ... )                               \
-    static EngineInitResult initialize##Name( StartupRecorder& recorder ) \
-    {                                                                     \
-        return recorder.recordInitialize( #Name );                        \
-    }                                                                     \
-    static void shutdown##Name( StartupRecorder& recorder )               \
-    {                                                                     \
-        recorder.recordShutdown( #Name );                                 \
-    }                                                                     \
-    static void destroy##Name( StartupRecorder& recorder )                \
-    {                                                                     \
-        recorder.recordDestroy( #Name );                                  \
-    }
-#include "Engine/EngineInitStepList.xxx"
-#undef SW_ENGINE_STARTUP_STEP
-
         vector<string>      _listEvent{};
         vector<const utf8*> _listInitializeName{};      ///< 초기화한 이름(초기화한 순서)
         vector<MemoryTag>   _listInitializeMemoryTag{}; ///< 초기화 본문이 불린 동안의 할당 태그(`_listInitializeName` 과 같은 순서)
         string              _failName{};
         EngineInitResult    _failResult{ EngineInitResult::Succeeded };
-    };
-
-    /** @brief 본문을 RHI 에만 둔 본문 모음입니다 — 나머지 자리는 `EngineInitNoStepBody` 의 null 이다. */
-    struct PartialStepBody : EngineInitNoStepBody
-    {
-        static EngineInitResult initializeRHI( StartupRecorder& recorder ) { return recorder.recordInitialize( "RHI" ); }
-        static void             destroyRHI( StartupRecorder& recorder ) { recorder.recordDestroy( "RHI" ); }
     };
 
     /** @brief 엔진 서브시스템 하나의 선언(이름 · 의존 · 대상 · 태그)을 그대로 지닌 대역입니다. 본문 대신 불린 순서를 적는다. */
@@ -108,7 +86,7 @@ namespace
     };
 
     /**
-     * @brief `EngineLoop::initialize` 가 표의 줄과 함께 넣는 서브시스템을 실제 객체로 만듭니다. 엔진 루프에 서브시스템을 더하면 여기도 더한다.
+     * @brief `EngineLoop::initialize` 가 넣는 서브시스템을 실제 객체로 만듭니다. 엔진 루프에 서브시스템을 더하면 여기도 더한다.
      * @details 클래스가 있는 단계는 그 객체가, 클래스가 없는 단계는 `EngineFunctionStep` 의 선언이 이름 · 의존 · 대상을 말한다.
      */
     vector<unique_ptr<ISubsystem>> makeEngineSubsystems()
@@ -126,13 +104,14 @@ namespace
         return listSubsystem;
     }
 
-    /** @brief 엔진 서브시스템마다 대역을 @p sequence 에 넣습니다 — 표의 줄과 합쳐 엔진의 기동 목록과 같은 그래프다(본문은 돌지 않는다). */
-    void addEngineStandIns( EngineInitSequence& sequence, StartupRecorder& recorder )
+    /** @brief 엔진 서브시스템마다 대역을 @p subsystems 에 넣고 정렬합니다 — 엔진의 기동 목록과 같은 그래프다(본문은 돌지 않는다). */
+    void addEngineStandIns( SubsystemCollection& subsystems, StartupRecorder& recorder )
     {
         for ( const unique_ptr<ISubsystem>& real : makeEngineSubsystems() )
         {
-            sequence.addSubsystem( make_unique<StandInSubsystem>( recorder, *real ) );
+            subsystems.add( make_unique<StandInSubsystem>( recorder, *real ) );
         }
+        (void)subsystems.sort(); // 오류는 getError 로 본다
     }
 
     /** @brief 순서(자리)를 이름으로 이어 붙입니다. */
@@ -180,6 +159,14 @@ namespace
                 return index;
         }
         return invalid_index::kUint32;
+    }
+
+    /** @brief @p name 의 서브시스템입니다(있어야 한다). */
+    const ISubsystem& getByName( const SubsystemCollection& subsystems, string_view name )
+    {
+        const uint32 index = findIndex( subsystems, name );
+        SW_ASSERT( index != invalid_index::kUint32 );
+        return subsystems.getSubsystem( index );
     }
 
     /** @brief 엔진 목록의 의존 그래프입니다(자리는 `SubsystemCollection` 의 자리). */
@@ -267,10 +254,10 @@ namespace
  */
 SW_TEST_CASE( EngineInitSequenceTest, SceneReadingStepWaitsForModuleTypes )
 {
-    StartupRecorder    recorder; // 시퀀스보다 먼저 — 시퀀스 소멸자가 서브시스템을 지우며 recorder 에 적는다
-    EngineInitSequence sequence;
+    StartupRecorder     recorder; // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
+    SubsystemCollection sequence;
     addEngineStandIns( sequence, recorder );
-    const SubsystemCollection& subsystems = sequence.getSubsystems();
+    const SubsystemCollection& subsystems = sequence;
     const EngineInitGraph      graph      = makeGraph( subsystems );
     SW_EXPECT_TRUE( dependsOn( subsystems, graph, "Headless", "ModuleTypes" ) );
     // 타입 등록은 리플렉션 · 설정(키트 목록) 뒤다 — 모듈 이미지를 내리는 자리(ModuleImages)보다도 뒤라 종료에서 먼저 내려간다.
@@ -279,7 +266,7 @@ SW_TEST_CASE( EngineInitSequenceTest, SceneReadingStepWaitsForModuleTypes )
 
     recorder._failName   = "ModuleTypes";
     recorder._failResult = EngineInitResult::Failed;
-    SW_EXPECT_FALSE( sequence.initializeAll<StartupRecorder>( recorder ) );
+    SW_EXPECT_FALSE( sequence.initializeAll( EngineInitTarget::Client ) );
     for ( const utf8* pName : recorder._listInitializeName )
     {
         SW_EXPECT_TRUE_MSG( string_view{ pName } != "Headless", "the scene cook ran although module types were not registered" );
@@ -288,22 +275,22 @@ SW_TEST_CASE( EngineInitSequenceTest, SceneReadingStepWaitsForModuleTypes )
 }
 
 /**
- * @brief [EngineInitSequenceTest] 엔진 기동 순서(표의 줄 + 서브시스템)는 오류 없이 계산되고, 결정적이며, 모든 의존이 앞에 선다
+ * @brief [EngineInitSequenceTest] 엔진 기동 순서는 오류 없이 계산되고, 결정적이며, 모든 의존이 앞에 선다
  * @details 순서의 진실은 의존 하나다 — 추가 순서는 보지 않는다. 같은 목록을 다시 만들어도 같은 순서가 나와야 하고(동점은 이름 순),
  *          어느 단계든 그 의존은 순서에서 그보다 앞이다. 의존 이름이 틀리거나 대상이 어긋나면 여기서 진다.
  */
 SW_TEST_CASE( EngineInitSequenceTest, ComputedOrderIsDeterministicAndDependenciesComeFirst )
 {
-    StartupRecorder    recorder;
-    EngineInitSequence sequence;
+    StartupRecorder     recorder;
+    SubsystemCollection sequence;
     addEngineStandIns( sequence, recorder );
     SW_ASSERT_TRUE_MSG( sequence.getError().empty(), sequence.getError().c_str() );
-    const SubsystemCollection& subsystems = sequence.getSubsystems();
+    const SubsystemCollection& subsystems = sequence;
     SW_ASSERT_EQUAL( subsystems.getSubsystemCount(), static_cast<uint32>( subsystems.getInitializeOrder().size() ) );
 
-    EngineInitSequence other;
+    SubsystemCollection other;
     addEngineStandIns( other, recorder );
-    SW_EXPECT_STREQ( joinOrderNames( subsystems ).c_str(), joinOrderNames( other.getSubsystems() ).c_str() );
+    SW_EXPECT_STREQ( joinOrderNames( subsystems ).c_str(), joinOrderNames( other ).c_str() );
 
     const EngineInitGraph graph = makeGraph( subsystems );
     vector<uint32>        listPosition( subsystems.getSubsystemCount(), 0 );
@@ -321,15 +308,15 @@ SW_TEST_CASE( EngineInitSequenceTest, ComputedOrderIsDeterministicAndDependencie
 }
 
 /**
- * @brief [EngineInitSequenceTest] 종료가 초기화의 정확한 역순이고, 해제는 모든 종료 뒤에 모든 단계를 역순으로 돈다(표의 줄과 서브시스템이 섞여도)
+ * @brief [EngineInitSequenceTest] 종료가 초기화의 정확한 역순이고, 해제는 모든 종료 뒤에 모든 단계를 역순으로 돈다
  */
 SW_TEST_CASE( EngineInitSequenceTest, ShutdownAndDestroyRunInReverseOfInitialization )
 {
-    StartupRecorder    recorder; // 시퀀스보다 먼저 — 시퀀스 소멸자가 서브시스템을 지우며 recorder 에 적는다
-    EngineInitSequence sequence;
+    StartupRecorder     recorder; // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
+    SubsystemCollection sequence;
     addEngineStandIns( sequence, recorder );
-    SW_ASSERT_TRUE( sequence.initializeAll<StartupRecorder>( recorder ) );
-    const string order = joinOrderNames( sequence.getSubsystems() );
+    SW_ASSERT_TRUE( sequence.initializeAll( EngineInitTarget::Client ) );
+    const string order = joinOrderNames( sequence );
     SW_EXPECT_STREQ( order.c_str(), recorder.joinEvents( 'I' ).c_str() );
 
     sequence.shutdownAll();
@@ -352,16 +339,16 @@ SW_TEST_CASE( EngineInitSequenceTest, ShutdownAndDestroyRunInReverseOfInitializa
  */
 SW_TEST_CASE( EngineInitSequenceTest, FailedStepStopsAndShutsDownOnlyInitializedSteps )
 {
-    StartupRecorder    recorder; // 시퀀스보다 먼저 — 시퀀스 소멸자가 서브시스템을 지우며 recorder 에 적는다
-    EngineInitSequence sequence;
+    StartupRecorder     recorder; // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
+    SubsystemCollection sequence;
     addEngineStandIns( sequence, recorder );
     recorder._failName   = "Scene";
     recorder._failResult = EngineInitResult::Failed;
-    SW_EXPECT_FALSE( sequence.initializeAll<StartupRecorder>( recorder ) );
-    const string prefix = makeOrderPrefix( sequence.getSubsystems(), "Scene" );
+    SW_EXPECT_FALSE( sequence.initializeAll( EngineInitTarget::Client ) );
+    const string prefix = makeOrderPrefix( sequence, "Scene" );
     SW_EXPECT_STREQ( prefix.c_str(), recorder.joinEvents( 'I' ).c_str() );
 
-    const string order = joinOrderNames( sequence.getSubsystems() );
+    const string order = joinOrderNames( sequence );
     sequence.shutdownAll();
     const string withoutScene = string( string_view{ prefix }.substr( 0, prefix.size() - string_view{ " Scene" }.size() ) ); // 실패한 Scene 은 종료를 받지 않는다
     SW_EXPECT_STREQ( reverseNames( withoutScene ).c_str(), recorder.joinEvents( 'S' ).c_str() );
@@ -377,13 +364,13 @@ SW_TEST_CASE( EngineInitSequenceTest, FailedStepStopsAndShutsDownOnlyInitialized
  */
 SW_TEST_CASE( EngineInitSequenceTest, SkipDependentsSkipsEveryDependentStep )
 {
-    StartupRecorder    recorder; // 시퀀스보다 먼저 — 시퀀스 소멸자가 서브시스템을 지우며 recorder 에 적는다
-    EngineInitSequence sequence;
+    StartupRecorder     recorder; // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
+    SubsystemCollection sequence;
     addEngineStandIns( sequence, recorder );
     recorder._failName   = "Headless";
     recorder._failResult = EngineInitResult::SkipDependents;
-    SW_EXPECT_TRUE( sequence.initializeAll<StartupRecorder>( recorder ) );
-    const SubsystemCollection& subsystems = sequence.getSubsystems();
+    SW_EXPECT_TRUE( sequence.initializeAll( EngineInitTarget::Client ) );
+    const SubsystemCollection& subsystems = sequence;
     const string               expected   = filterDependentsOf( subsystems, "Headless", false );
     SW_EXPECT_STREQ( expected.c_str(), recorder.joinEvents( 'I' ).c_str() );
     const EngineInitGraph graph = makeGraph( subsystems );
@@ -398,55 +385,18 @@ SW_TEST_CASE( EngineInitSequenceTest, SkipDependentsSkipsEveryDependentStep )
 }
 
 /**
- * @brief [EngineInitSequenceTest] 본문 모음이 정의하지 않은 표의 자리는 부르지 않고, 순서 · 판정은 그대로인지 검증
- * @details 표의 줄을 더할 때 호스트마다 타입을 짓지 않는다 — 본문 모음(`EngineInitNoStepBody` 상속)이 필요한 함수만 둔다.
- */
-SW_TEST_CASE( EngineInitSequenceTest, MissingBodiesAreSkipped )
-{
-    StartupRecorder    recorder; // 시퀀스보다 먼저 — 시퀀스 소멸자가 서브시스템을 지우며 recorder 에 적는다
-    EngineInitSequence sequence;
-    addEngineStandIns( sequence, recorder );
-    SW_ASSERT_TRUE( sequence.initializeAll<PartialStepBody>( recorder ) );
-    // 본문이 없는 표의 줄도 초기화된 것으로 친다 — 종료 · 재시작 판정이 본문 유무에 따라 달라지지 않는다.
-    SW_EXPECT_EQUAL( static_cast<size_t>( EngineInitStep::Count ), sequence.getInitializedSteps().size() );
-    sequence.destroyAll();
-
-    // 표의 줄 가운데 본문을 둔 RHI 만 적힌다(서브시스템 대역은 제 이름으로 적는다).
-    for ( uint32 stepIndex = 0; stepIndex < static_cast<uint32>( EngineInitStep::Count ); ++stepIndex )
-    {
-        const utf8* const pName           = EngineInitSequence::getStepName( static_cast<EngineInitStep>( stepIndex ) );
-        const uint32      expectedCount   = string_view{ pName } == "RHI" ? 1u : 0u;
-        uint32            initializeCount = 0;
-        uint32            shutdownCount   = 0;
-        uint32            destroyCount    = 0;
-        for ( const string& event : recorder._listEvent )
-        {
-            if ( string_view{ event }.substr( 2 ) != pName )
-                continue;
-            initializeCount += event[0] == 'I' ? 1u : 0u;
-            shutdownCount += event[0] == 'S' ? 1u : 0u;
-            destroyCount += event[0] == 'D' ? 1u : 0u;
-        }
-        SW_EXPECT_TRUE_MSG( initializeCount == expectedCount, pName );
-        SW_EXPECT_TRUE_MSG( shutdownCount == 0u, pName );
-        SW_EXPECT_TRUE_MSG( destroyCount == expectedCount, pName );
-    }
-}
-
-/**
- * @brief [EngineInitSequenceTest] 호스트를 받기 전(`initializeAll` 전)의 해제는 표의 본문을 부르지 않는지 검증
+ * @brief [EngineInitSequenceTest] 초기화하지 않은 목록의 종료 · 해제는 아무것도 부르지 않는다
  */
 SW_TEST_CASE( EngineInitSequenceTest, DestroyBeforeInitializeDoesNothing )
 {
-    EngineInitSequence sequence;
+    SubsystemCollection sequence;
     sequence.shutdownAll();
     sequence.destroyAll();
-    SW_EXPECT_TRUE( sequence.getInitializedSteps().empty() );
+    SW_EXPECT_TRUE( sequence.getInitializedIndices().empty() );
 }
 
 /**
  * @brief [EngineInitSequenceTest] 순환은 정렬 오류이고, 순환에 든 노드를 이름으로 알리는지 검증
- * @details 표(`EngineInitStepList.xxx`)의 줄과 서브시스템이 같은 판정을 받는다.
  */
 SW_TEST_CASE( EngineInitSequenceTest, CycleIsRejected )
 {
@@ -483,15 +433,11 @@ SW_TEST_CASE( EngineInitSequenceTest, UnknownOrDuplicateNameIsRejected )
     },
                                                         graph, error ) );
     SW_EXPECT_STREQ( "Startup step 'A' is declared twice", error.c_str() );
-
-    // 표의 줄도 같은 판정이다 — 서브시스템을 넣지 않은 표만으로는 표가 부르는 서브시스템 이름을 모른다.
-    const EngineInitSequence tableOnly;
-    SW_EXPECT_FALSE( tableOnly.getError().empty() );
 }
 
 /**
  * @brief [EngineInitSequenceTest] 의존이 순서를 정하고, 의존이 없는 노드끼리는 이름 순으로 가는지 검증(목록 순서는 보지 않는다)
- * @details 목록은 이름과 거꾸로 두고, 의존 글은 표의 꼴(`{ A, B }`)과 공백 꼴을 섞는다.
+ * @details 목록은 이름과 거꾸로 두고, 의존 글은 중괄호 꼴(`{ A, B }`)과 공백 꼴을 섞는다.
  */
 SW_TEST_CASE( EngineInitSequenceTest, DependenciesOrderAndNameBreaksTies )
 {
@@ -521,22 +467,22 @@ SW_TEST_CASE( EngineInitSequenceTest, DependenciesOrderAndNameBreaksTies )
  */
 SW_TEST_CASE( EngineInitSequenceTest, DependentsOfAStepRestartWithTheSameBodies )
 {
-    StartupRecorder    recorder; // 시퀀스보다 먼저 — 시퀀스 소멸자가 서브시스템을 지우며 recorder 에 적는다
-    EngineInitSequence sequence;
+    StartupRecorder     recorder; // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
+    SubsystemCollection sequence;
     addEngineStandIns( sequence, recorder );
-    SW_ASSERT_TRUE( sequence.initializeAll<StartupRecorder>( recorder ) );
-    const string order     = joinOrderNames( sequence.getSubsystems() );
-    const string dependent = filterDependentsOf( sequence.getSubsystems(), "RHI", true );
+    SW_ASSERT_TRUE( sequence.initializeAll( EngineInitTarget::Client ) );
+    const string order     = joinOrderNames( sequence );
+    const string dependent = filterDependentsOf( sequence, "RHI", true );
     SW_EXPECT_STREQ( "FrameRenderer RenderThread LiveShader SceneRHI", dependent.c_str() );
     recorder._listEvent.clear();
 
-    sequence.shutdownDependentsOf( EngineInitStep::RHI );
+    sequence.shutdownDependentsOf( getByName( sequence, "RHI" ) );
     SW_EXPECT_STREQ( reverseNames( dependent ).c_str(), recorder.joinEvents( 'S' ).c_str() );
     SW_EXPECT_TRUE( recorder.joinEvents( 'D' ).empty() );
 
-    SW_EXPECT_TRUE( sequence.restartStoppedSteps() );
+    SW_EXPECT_TRUE( sequence.restartStopped() );
     SW_EXPECT_STREQ( dependent.c_str(), recorder.joinEvents( 'I' ).c_str() );
-    SW_EXPECT_TRUE( sequence.getStoppedSteps().empty() );
+    SW_EXPECT_TRUE( sequence.getStoppedIndices().empty() );
 
     recorder._listEvent.clear();
     sequence.shutdownAll();
@@ -548,15 +494,15 @@ SW_TEST_CASE( EngineInitSequenceTest, DependentsOfAStepRestartWithTheSameBodies 
  */
 SW_TEST_CASE( EngineInitSequenceTest, FailedRestartLeavesTheRestStopped )
 {
-    StartupRecorder    recorder; // 시퀀스보다 먼저 — 시퀀스 소멸자가 서브시스템을 지우며 recorder 에 적는다
-    EngineInitSequence sequence;
+    StartupRecorder     recorder; // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
+    SubsystemCollection sequence;
     addEngineStandIns( sequence, recorder );
-    SW_ASSERT_TRUE( sequence.initializeAll<StartupRecorder>( recorder ) );
+    SW_ASSERT_TRUE( sequence.initializeAll( EngineInitTarget::Client ) );
 
-    sequence.shutdownDependentsOf( EngineInitStep::RHI );
+    sequence.shutdownDependentsOf( getByName( sequence, "RHI" ) );
     recorder._failName   = "RenderThread";
     recorder._failResult = EngineInitResult::Failed;
-    SW_EXPECT_FALSE( sequence.restartStoppedSteps() );
+    SW_EXPECT_FALSE( sequence.restartStopped() );
 
     // 실패한 RenderThread 와 그 뒤로 다시 세우지 못한 단계(라이브 셰이더 · 씬의 디바이스)는 종료 대상이 아니다.
     recorder._listEvent.clear();
@@ -570,7 +516,7 @@ SW_TEST_CASE( EngineInitSequenceTest, FailedRestartLeavesTheRestStopped )
 }
 
 /**
- * @brief [EngineInitSequenceTest] 단계 초기화(기동 · 재시작)는 그 단계의 메모리 태그 아래에서 돈다(표의 줄 · 서브시스템 모두)
+ * @brief [EngineInitSequenceTest] 단계 초기화(기동 · 재시작)는 그 단계의 메모리 태그 아래에서 돈다
  * @details 단계 초기화가 잡는 메모리(태스크 큐 · 타입 표 · 디바이스 · 렌더러)가 용도 줄로 세이는 근거다. 백엔드 교체처럼 단계를 다시 세울 때도 같다.
  */
 SW_TEST_CASE( EngineInitSequenceTest, InitializeRunsUnderTheStepMemoryTag )
@@ -578,13 +524,13 @@ SW_TEST_CASE( EngineInitSequenceTest, InitializeRunsUnderTheStepMemoryTag )
     if constexpr ( kMemoryTagScopesEnabled == false )
         SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
 
-    StartupRecorder    recorder; // 시퀀스보다 먼저 — 시퀀스 소멸자가 서브시스템을 지우며 recorder 에 적는다
-    EngineInitSequence sequence;
+    StartupRecorder     recorder; // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
+    SubsystemCollection sequence;
     addEngineStandIns( sequence, recorder );
-    SW_ASSERT_TRUE( sequence.initializeAll<StartupRecorder>( recorder ) );
-    sequence.shutdownDependentsOf( EngineInitStep::RHI );
-    SW_ASSERT_TRUE( sequence.restartStoppedSteps() );
-    const SubsystemCollection& subsystems = sequence.getSubsystems();
+    SW_ASSERT_TRUE( sequence.initializeAll( EngineInitTarget::Client ) );
+    sequence.shutdownDependentsOf( getByName( sequence, "RHI" ) );
+    SW_ASSERT_TRUE( sequence.restartStopped() );
+    const SubsystemCollection& subsystems = sequence;
     SW_ASSERT_TRUE( recorder._listInitializeName.size() > subsystems.getSubsystemCount() );
     SW_ASSERT_EQUAL( recorder._listInitializeName.size(), recorder._listInitializeMemoryTag.size() );
 
@@ -607,10 +553,10 @@ SW_TEST_CASE( EngineInitSequenceTest, InitializeRunsUnderTheStepMemoryTag )
  */
 SW_TEST_CASE( EngineInitSequenceTest, DedicatedServerSkipsClientSteps )
 {
-    StartupRecorder    recorder; // 시퀀스보다 먼저 — 시퀀스 소멸자가 서브시스템을 지우며 recorder 에 적는다
-    EngineInitSequence sequence;
+    StartupRecorder     recorder; // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
+    SubsystemCollection sequence;
     addEngineStandIns( sequence, recorder );
-    SW_ASSERT_TRUE( sequence.initializeAll<StartupRecorder>( recorder, EngineInitTarget::Server ) );
+    SW_ASSERT_TRUE( sequence.initializeAll( EngineInitTarget::Server ) );
 
     bool bSceneInitialized    = false;
     bool bHeadlessInitialized = false;
@@ -625,7 +571,7 @@ SW_TEST_CASE( EngineInitSequenceTest, DedicatedServerSkipsClientSteps )
     }
     SW_EXPECT_TRUE( bSceneInitialized );
     SW_EXPECT_TRUE( bHeadlessInitialized );
-    const SubsystemCollection& subsystems = sequence.getSubsystems();
+    const SubsystemCollection& subsystems = sequence;
     SW_EXPECT_EQUAL( static_cast<size_t>( subsystems.getSubsystemCount() ) - SW_COUNT_OF( kArrClientOnlyName ), recorder._listInitializeName.size() );
     for ( const utf8* pClientName : kArrClientOnlyName )
     {
@@ -646,44 +592,43 @@ SW_TEST_CASE( EngineInitSequenceTest, DedicatedServerSkipsClientSteps )
  */
 SW_TEST_CASE( EngineInitSequenceTest, ClientRunsEveryStep )
 {
-    StartupRecorder    recorder; // 시퀀스보다 먼저 — 시퀀스 소멸자가 서브시스템을 지우며 recorder 에 적는다
-    EngineInitSequence sequence;
+    StartupRecorder     recorder; // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
+    SubsystemCollection sequence;
     addEngineStandIns( sequence, recorder );
-    SW_ASSERT_TRUE( sequence.initializeAll<StartupRecorder>( recorder ) );
-    SW_EXPECT_EQUAL( static_cast<size_t>( sequence.getSubsystems().getSubsystemCount() ), recorder._listInitializeName.size() );
+    SW_ASSERT_TRUE( sequence.initializeAll( EngineInitTarget::Client ) );
+    SW_EXPECT_EQUAL( static_cast<size_t>( sequence.getSubsystemCount() ), recorder._listInitializeName.size() );
     sequence.destroyAll();
 }
 
 /**
- * @brief [EngineInitSequenceTest] 엔진이 넘기는 실제 서브시스템 객체가 표의 줄과 오류 없이 한 순서로 정렬되고, 클래스 단계의 선언이 대역과 같다
+ * @brief [EngineInitSequenceTest] 엔진이 넘기는 실제 서브시스템 객체가 오류 없이 한 순서로 정렬되고, 그 순서가 대역 목록과 같다
  * @details 의존 글은 실행 시간에만 풀린다. 의존 이름이 틀리거나 대상이 어긋나면 여기서 진다. 의존이 있는 단계는 그 의존이 모두 앞에 선다.
  */
-SW_TEST_CASE( EngineInitSequenceTest, EngineSubsystemsJoinTheTableOrder )
+SW_TEST_CASE( EngineInitSequenceTest, EngineSubsystemsSortIntoOneOrder )
 {
-    EngineInitSequence sequence;
+    SubsystemCollection sequence;
     for ( unique_ptr<ISubsystem>& real : makeEngineSubsystems() )
     {
-        sequence.addSubsystem( std::move( real ) );
+        sequence.add( std::move( real ) );
     }
-    SW_ASSERT_TRUE_MSG( sequence.getError().empty(), sequence.getError().c_str() );
+    SW_ASSERT_TRUE_MSG( sequence.sort(), sequence.getError().c_str() );
 
-    const SubsystemCollection& subsystems = sequence.getSubsystems();
-    const EngineInitGraph      graph      = makeGraph( subsystems );
-    vector<uint32>             listPosition( subsystems.getSubsystemCount(), 0 );
-    for ( uint32 position = 0; position < static_cast<uint32>( subsystems.getInitializeOrder().size() ); ++position )
+    const EngineInitGraph graph = makeGraph( sequence );
+    vector<uint32>        listPosition( sequence.getSubsystemCount(), 0 );
+    for ( uint32 position = 0; position < static_cast<uint32>( sequence.getInitializeOrder().size() ); ++position )
     {
-        listPosition[subsystems.getInitializeOrder()[position]] = position;
+        listPosition[sequence.getInitializeOrder()[position]] = position;
     }
-    for ( uint32 index = 0; index < subsystems.getSubsystemCount(); ++index )
+    for ( uint32 index = 0; index < sequence.getSubsystemCount(); ++index )
     {
         for ( const uint32 dependencyIndex : graph._listDependency[index] )
         {
-            SW_EXPECT_TRUE_MSG( listPosition[dependencyIndex] < listPosition[index], subsystems.getSubsystem( index ).getSubsystemName() );
+            SW_EXPECT_TRUE_MSG( listPosition[dependencyIndex] < listPosition[index], sequence.getSubsystem( index ).getSubsystemName() );
         }
     }
     // 서브시스템이 가는 자리는 대역 목록과 같다 — 대역으로 본 순서 테스트가 실제 객체에도 맞는다.
-    StartupRecorder    recorder;
-    EngineInitSequence standIns;
+    StartupRecorder     recorder;
+    SubsystemCollection standIns;
     addEngineStandIns( standIns, recorder );
-    SW_EXPECT_STREQ( joinOrderNames( standIns.getSubsystems() ).c_str(), joinOrderNames( subsystems ).c_str() );
+    SW_EXPECT_STREQ( joinOrderNames( standIns ).c_str(), joinOrderNames( sequence ).c_str() );
 }

@@ -30,7 +30,7 @@
 
 ## 이어서 할 정리 (사용자가 순서를 정하면 시작)
 
-- 서브시스템: 남은 RHI 단계(백엔드 교체 기준점이라 별도 단위), 플랫폼 플래그 `_bHostStarted` · `_bSchedulerStarted` 제거. `OnlineServerRuntime` · `App` · `ModuleHost` · `FrameRenderer` · `ServerApp` · `OnlineServiceHost` 는 LIFO 가 아니라 일부러 안 옮겼다.
+- 서브시스템: 기동 단계를 서브시스템 클래스로(진행 중 — RHI 이전은 끝), 플랫폼 플래그 `_bHostStarted` · `_bSchedulerStarted` 제거. `OnlineServerRuntime` · `App` · `ModuleHost` · `FrameRenderer` · `ServerApp` · `OnlineServiceHost` 는 LIFO 가 아니라 일부러 안 옮겼다.
 - 감사에서 나온 반복 패턴: 등록자 템플릿 `ScopedRegistration<TRegistry,TEntry>`(등록자 11 + 테스트 4), 에디터 프로브 상태 `caseState<T>()`, `IServiceStoreWork` 람다(29), 온라인 메서드 X-macro(`kVersion` 올림 필요), 알림 핸들러, 컴포넌트 인스펙터, `GameObjectManager` 프레임 단계 표.
 - 폴더: 평평한 `Editor/Common/Commands`(61) · `Engine/Object/GameObject`(45) · `Engine/Renderer/Frame`(43) 쪼개기. `EditorNetPlaySession.h` → `Workspace/`.
 - 서버 디버그 `S3 · S6 · S7`(`S8` 은 다중 월드 필요), 다중 월드 `D3-7`, 에디터 보강 `D3-1` 남은 것.

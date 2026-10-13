@@ -29,6 +29,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/GameSelection.h"
+#include "Engine/EngineInitSequence.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -117,84 +118,9 @@ namespace sw
 {
     SW_LOG_CALLER( "EngineLoop" );
 
-    // ------------------------------------------------------------------------------
-    // 기동 단계 본문 — 표(`EngineInitStepList.xxx`)의 단계마다 무엇을 세우고(`initialize<단계>`) · 내리고(`shutdown<단계>`) ·
-    // 해제하는지(`destroy<단계>`)를 필요한 것만 적는다. 없는 함수는 아무것도 하지 않는다(`EngineInitNoStepBody`). 순서는 표의 의존이
-    // 정한다: 초기화는 위상 순서, 종료와 해제는 그 역순. 종료는 초기화한 단계에만 불린다. 해제는 모든 종료 뒤에 **모든 단계**에
-    // 불리므로(기동이 어디서 멈췄든) null 안전해야 한다. 아래는 읽기 좋게 초기화 순서대로 적었을 뿐이다.
-    // 이 모음은 옮기는 중이다 — 새 단계는 여기에 함수를 더하지 않고 `ISubsystem` 을 상속하거나 `FunctionSubsystem` 으로 적는다(`initialize`).
-    // ------------------------------------------------------------------------------
-
-    struct EngineLoop::StartupStepBody : EngineInitNoStepBody
-    {
-        static EngineInitResult initializeRHI( EngineLoop& loop )
-        {
-            // RenderDoc 은 그래픽 API 를 만들 때 끼어든다 — 디바이스보다 먼저 찾고(`-renderdoc` 면 올리고) 백엔드 교체 뒤에도 그대로 쓴다.
-            RenderDocCapture::initialize( loop._owned._pCommandLineManager->isArgumentProvided( CommandLineArgument::RENDERDOC ) );
-
-            // 커맨드라인이 백엔드를 명시하지 않았을 때만 설정 기본값이 이긴다.
-            RHIBackend commandLineBackend{};
-            if ( RHIBackendUtil::findCommandLineBackend( *loop._owned._pCommandLineManager, commandLineBackend ) == false )
-                gv_rhiBackend = loop._pEngineConfig->_window._defaultRHI;
-
-            // 화면 값의 순서: 엔진 설정(EngineConfig) → 플레이어가 고른 사용자 설정(기본값이 아닌 것) → 명령줄.
-            const DisplaySettingsRequest& display = engine::getUserSettingsManager().getDisplayRequest();
-            if ( IWindow::getActiveWindow() == nullptr )
-            {
-                uint32 windowWidth  = display._bHasResolution ? display._width : loop._pEngineConfig->_window._width;
-                uint32 windowHeight = display._bHasResolution ? display._height : loop._pEngineConfig->_window._height;
-                // 인자를 주지 않으면 getArgument 가 false 를 돌려주므로 설정값이 그대로 남는다.
-                loop._owned._pCommandLineManager->getArgument( CommandLineArgument::WIDTH, windowWidth );
-                loop._owned._pCommandLineManager->getArgument( CommandLineArgument::HEIGHT, windowHeight );
-
-                unique_ptr<IWindow> defaultWindow = IWindow::createPlatformWindow();
-                if ( defaultWindow != nullptr && defaultWindow->initializeWindow( GameConfig::getActive()._windowTitle.c_str(), windowWidth, windowHeight ) )
-                {
-                    // 전체 화면은 스왑체인을 만들기 전에 고른다 — 스왑체인이 처음부터 모니터 크기다.
-                    if ( display._bHasMode && display._mode != WindowDisplayMode::Windowed )
-                        (void)defaultWindow->setDisplayMode( display._mode, windowWidth, windowHeight );
-                    // 소유권은 App::initialize 가 IWindow::getActiveWindow() 로 넘겨받는다.
-                    // (App 이 없는 임베드 시나리오라면 부르는 쪽이 getActiveWindow() 를 직접 소유해야 한다.)
-                    IWindow::setActiveWindow( defaultWindow.release() );
-                }
-            }
-
-            loop._rhi = make_unique<RHI>();
-            loop._rhi->setPreferredVSync( display._bHasVSync ? display._bVSync : loop._pEngineConfig->_window._bVSync );
-            // RHI 는 창 시스템을 모른다. 표면(IRenderSurface)만 넘긴다. 창은 위에서 만들었거나 호스트가 들고 있다.
-            const bool bRHIReady = loop._rhi->initialize( IWindow::getActiveWindow() );
-            // 단계가 내려가면(destroy 는 모든 단계를 돈다) _rhi 가 사라진다 — 실패의 이유를 그 전에 남긴다. App 이 이것으로 종료 코드를 고른다.
-            loop._rhiInitResult = loop._rhi->getInitResult();
-            if ( bRHIReady == false )
-                return EngineInitResult::Failed;
-            // 백엔드가 정해졌으니 크래시 리포트에 남긴다. 이 저장소는 백엔드가 넷이라 "어느
-            // 백엔드에서 났는가" 가 범위를 좁히는 첫 질문이다.
-            CrashHandler::setContextValue( "RHI", loop._rhi->getDevice().getBackendName() );
-
-            // `-gv_crashTest=1`: 크래시 리포트 경로를 실제로 확인하는 유일한 방법이다. 리포트는
-            // 크래시가 나야만 만들어지므로, 일부러 한 번 죽여 보지 않으면 배포 뒤에야 안 되는 것을 안다.
-            if ( gv_crashTest != 0 )
-                CrashHandler::crashForTest( static_cast<CrashTestKind>( gv_crashTest ) );
-            return EngineInitResult::Succeeded;
-        }
-        static void shutdownRHI( EngineLoop& loop )
-        {
-            // 디바이스 생성이 실패하면 RHI 객체는 있어도 **디바이스가 없다.** getDevice() 는
-            // 널 참조를 역참조하므로 hasDevice() 로 먼저 막는다.
-            if ( loop._rhi->hasDevice() )
-                loop._rhi->getDevice().waitIdle();
-            // GPU 자원을 든 객체들은 여기서 손으로 훑지 않는다. IRHIDevice::shutdown 이 내려가기 직전에
-            // 레지스트리 전체에 releaseRHI 를 부른다(RHIRenderResource). 백엔드 모듈 DLL 도 여기서 내린다.
-            loop._rhi->shutdown();
-        }
-        // 종료가 디바이스와 백엔드 모듈을 이미 내렸다. 남은 것은 디바이스가 없는 팩토리 객체다.
-        static void destroyRHI( EngineLoop& loop ) { loop._rhi.reset(); }
-    };
-
     EngineLoop::EngineLoop()
         : _bootstrap{}
         , _pConfigManager{ nullptr }
-        , _rhi{ nullptr }
         , _shellActions{}
         , _audioService{ nullptr }
         , _frameRenderer{ nullptr }
@@ -211,6 +137,8 @@ namespace sw
         , _exitCode{ 0 }
         , _profileSession{}
         , _startup{}
+        , _pRHISubsystem{ nullptr }
+        , _pRHI{ nullptr }
         , _pFontService{ nullptr }
         , _pUISystem{ nullptr }
         , _pInputManager{ nullptr }
@@ -315,7 +243,7 @@ namespace sw
                     EngineCompressionCodecUtil::registerAll( *pCodecRegistry );
                     return EngineInitResult::Succeeded;
                 };
-                _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kCompression, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeCompression ) ) )
+                _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kCompression, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeCompression ) ) )
                     .takeOwnership( std::move( _owned._pCompressionCodecRegistry ) );
             }
             {
@@ -331,16 +259,16 @@ namespace sw
                     return EngineInitResult::Failed;
                 };
                 // enum 이름 풀이는 타입 표를 본다 — 표가 소멸하기 전(종료)에 뗀다.
-                _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kReflection, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeReflection ),
-                                                                       SW_DELEGATE_FUNCTION( SubsystemShutdownDelegate, &engine::unbindGlobalVariableEnumNames ) ) )
+                _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kReflection, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeReflection ),
+                                                              SW_DELEGATE_FUNCTION( SubsystemShutdownDelegate, &engine::unbindGlobalVariableEnumNames ) ) )
                     .takeOwnership( std::move( _owned._pTypeRegistry ) );
             }
             {
                 TaskManager* const pTaskManager   = _owned._pTaskManager.get();
                 auto               initializeTask = [pTaskManager]()
                 { return pTaskManager->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed; };
-                _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kTask, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeTask ),
-                                                                       SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &TaskManager::shutdown, pTaskManager ) ) )
+                _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kTask, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeTask ),
+                                                              SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &TaskManager::shutdown, pTaskManager ) ) )
                     .takeOwnership( std::move( _owned._pTaskManager ) );
             }
             {
@@ -353,8 +281,8 @@ namespace sw
                     settings._pTaskManager = &engine::getTaskManager();
                     return pAsyncFileIO->initialize( settings ) ? EngineInitResult::Succeeded : EngineInitResult::Failed;
                 };
-                _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kFileIO, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeFileIO ),
-                                                                       SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &AsyncFileIO::shutdown, pAsyncFileIO ) ) );
+                _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kFileIO, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeFileIO ),
+                                                              SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &AsyncFileIO::shutdown, pAsyncFileIO ) ) );
             }
             {
                 // 종료 쪽 자리 — 씬은 방금 사라졌고 서비스는 아직 살아 있다. 모듈 DLL 을 내리기에 알맞은 유일한 자리다.
@@ -364,8 +292,8 @@ namespace sw
                     if ( _onScenesReleased.isBound() )
                         _onScenesReleased();
                 };
-                _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kModuleImages, SubsystemInitializeDelegate{},
-                                                                       SW_DELEGATE_LAMBDA( SubsystemShutdownDelegate, releaseModuleImages ) ) );
+                _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kModuleImages, SubsystemInitializeDelegate{},
+                                                              SW_DELEGATE_LAMBDA( SubsystemShutdownDelegate, releaseModuleImages ) ) );
             }
             {
                 // 호스트가 동적으로 올리는 타입 공급자(개발 구성의 GameFramework · 킷 · 게임 DLL)를 여기서 올린다. 로더가 없으면 올릴 것이 없다
@@ -380,27 +308,95 @@ namespace sw
                     engine::getTypeRegistry().markAllModuleTypesRegistered();
                     return EngineInitResult::Succeeded;
                 };
-                _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kModuleTypes, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, loadModuleTypes ) ) );
+                _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kModuleTypes, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, loadModuleTypes ) ) );
+            }
+            {
+                // 창 · 디바이스. RHI 객체는 여기서 만들어 단계가 소유하고(소멸 자리 = 이 단계의 해제), 단계가 선 뒤부터 `_pRHI` 로 빌려 쓴다.
+                unique_ptr<RHI> rhi;
+                {
+                    SW_MEMORY_SCOPE( RenderCPU );
+                    rhi = make_unique<RHI>();
+                }
+                RHI* const pRHI          = rhi.get();
+                auto       initializeRHI = [this, pRHI]()
+                {
+                    // RenderDoc 은 그래픽 API 를 만들 때 끼어든다 — 디바이스보다 먼저 찾고(`-renderdoc` 면 올리고) 백엔드 교체 뒤에도 그대로 쓴다.
+                    RenderDocCapture::initialize( _owned._pCommandLineManager->isArgumentProvided( CommandLineArgument::RENDERDOC ) );
+
+                    // 커맨드라인이 백엔드를 명시하지 않았을 때만 설정 기본값이 이긴다.
+                    RHIBackend commandLineBackend{};
+                    if ( RHIBackendUtil::findCommandLineBackend( *_owned._pCommandLineManager, commandLineBackend ) == false )
+                        gv_rhiBackend = _pEngineConfig->_window._defaultRHI;
+
+                    // 화면 값의 순서: 엔진 설정(EngineConfig) → 플레이어가 고른 사용자 설정(기본값이 아닌 것) → 명령줄.
+                    const DisplaySettingsRequest& display = engine::getUserSettingsManager().getDisplayRequest();
+                    if ( IWindow::getActiveWindow() == nullptr )
+                    {
+                        uint32 windowWidth  = display._bHasResolution ? display._width : _pEngineConfig->_window._width;
+                        uint32 windowHeight = display._bHasResolution ? display._height : _pEngineConfig->_window._height;
+                        // 인자를 주지 않으면 getArgument 가 false 를 돌려주므로 설정값이 그대로 남는다.
+                        _owned._pCommandLineManager->getArgument( CommandLineArgument::WIDTH, windowWidth );
+                        _owned._pCommandLineManager->getArgument( CommandLineArgument::HEIGHT, windowHeight );
+
+                        unique_ptr<IWindow> defaultWindow = IWindow::createPlatformWindow();
+                        if ( defaultWindow != nullptr && defaultWindow->initializeWindow( GameConfig::getActive()._windowTitle.c_str(), windowWidth, windowHeight ) )
+                        {
+                            // 전체 화면은 스왑체인을 만들기 전에 고른다 — 스왑체인이 처음부터 모니터 크기다.
+                            if ( display._bHasMode && display._mode != WindowDisplayMode::Windowed )
+                                (void)defaultWindow->setDisplayMode( display._mode, windowWidth, windowHeight );
+                            // 소유권은 App::initialize 가 IWindow::getActiveWindow() 로 넘겨받는다(App 이 없는 임베드라면 부르는 쪽이 직접 소유한다).
+                            IWindow::setActiveWindow( defaultWindow.release() );
+                        }
+                    }
+
+                    pRHI->setPreferredVSync( display._bHasVSync ? display._bVSync : _pEngineConfig->_window._bVSync );
+                    // RHI 는 창 시스템을 모른다. 표면(IRenderSurface)만 넘긴다. 창은 위에서 만들었거나 호스트가 들고 있다.
+                    const bool bRHIReady = pRHI->initialize( IWindow::getActiveWindow() );
+                    // 실패의 이유를 남긴다 — App 이 이것으로 종료 코드를 고른다.
+                    _rhiInitResult = pRHI->getInitResult();
+                    if ( bRHIReady == false )
+                        return EngineInitResult::Failed;
+                    _pRHI = pRHI;
+                    // 백엔드가 정해졌으니 크래시 리포트에 남긴다 — "어느 백엔드에서 났는가" 가 범위를 좁히는 첫 질문이다.
+                    CrashHandler::setContextValue( "RHI", pRHI->getDevice().getBackendName() );
+
+                    // `-gv_crashTest=1`: 크래시 리포트 경로를 실제로 확인하는 유일한 방법이다(리포트는 크래시가 나야만 만들어진다).
+                    if ( gv_crashTest != 0 )
+                        CrashHandler::crashForTest( static_cast<CrashTestKind>( gv_crashTest ) );
+                    return EngineInitResult::Succeeded;
+                };
+                auto shutdownRHI = [pRHI]()
+                {
+                    // 디바이스 생성이 실패하면 RHI 객체는 있어도 디바이스가 없다 — getDevice() 를 부르기 전에 hasDevice() 로 막는다.
+                    if ( pRHI->hasDevice() )
+                        pRHI->getDevice().waitIdle();
+                    // GPU 자원을 든 객체는 손으로 훑지 않는다. IRHIDevice::shutdown 이 레지스트리 전체에 releaseRHI 를 부른다. 백엔드 모듈 DLL 도 여기서 내린다.
+                    pRHI->shutdown();
+                };
+                FunctionSubsystem& rhiSubsystem = _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kRHI, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeRHI ),
+                                                                                                SW_DELEGATE_LAMBDA( SubsystemShutdownDelegate, shutdownRHI ) ) );
+                (void)rhiSubsystem.takeOwnership( std::move( rhi ) );
+                _pRHISubsystem = &rhiSubsystem;
             }
             {
                 // 렌더러 쪽 단계 가운데 종료가 가장 먼저다 — 씬에서 디바이스를 먼저 뗀다. 백엔드 교체 뒤 다시 서며 새 디바이스를 건다.
                 auto attachSceneDevice = [this]()
                 {
-                    engine::getSceneManager().setRHIDevice( &_rhi->getDevice() );
+                    engine::getSceneManager().setRHIDevice( &_pRHI->getDevice() );
                     return EngineInitResult::Succeeded;
                 };
                 auto detachSceneDevice = []()
                 { engine::getSceneManager().setRHIDevice( nullptr ); };
-                _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kSceneRHI, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, attachSceneDevice ),
-                                                                       SW_DELEGATE_LAMBDA( SubsystemShutdownDelegate, detachSceneDevice ) ) );
+                _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kSceneRHI, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, attachSceneDevice ),
+                                                              SW_DELEGATE_LAMBDA( SubsystemShutdownDelegate, detachSceneDevice ) ) );
             }
             {
                 InputManager* const pInputManager   = _owned._pInputManager.get();
                 auto                initializeInput = [pInputManager]()
                 { return pInputManager->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed; };
                 _pInputManager = &_startup
-                                      .addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kInput, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeInput ),
-                                                                                     SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &InputManager::shutdown, pInputManager ) ) )
+                                      .add( make_unique<FunctionSubsystem>( EngineFunctionStep::kInput, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeInput ),
+                                                                            SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &InputManager::shutdown, pInputManager ) ) )
                                       .takeOwnership( std::move( _owned._pInputManager ) );
             }
             {
@@ -441,7 +437,7 @@ namespace sw
                     (void)_memoryBudgetMonitor.loadBudgetFile( FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), MemoryBudgetMonitor::kBudgetFile ) );
                     return EngineInitResult::Succeeded;
                 };
-                _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kConfig, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeConfig ) ) )
+                _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kConfig, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeConfig ) ) )
                     .takeOwnership( std::move( configManager ) );
             }
             {
@@ -458,7 +454,7 @@ namespace sw
                     pAssetManager->mountContent( _pEngineConfig->_listResourcePriority, contentSource );
                     return EngineInitResult::Succeeded;
                 };
-                _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kResource, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeResource ) ) )
+                _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kResource, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeResource ) ) )
                     .takeOwnership<&AssetManager::shutdown>( std::move( _owned._pAssetManager ) );
             }
             {
@@ -478,7 +474,7 @@ namespace sw
                         localization.setCurrentLanguage( commandLineLanguage );
                     return EngineInitResult::Succeeded;
                 };
-                _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kEngineDefaultAssets, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeEngineDefaultAssets ) ) )
+                _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kEngineDefaultAssets, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeEngineDefaultAssets ) ) )
                     .takeOwnership( std::move( _owned._pEngineDefaultAssets ) );
             }
             {
@@ -486,8 +482,8 @@ namespace sw
                 auto                 initializeAudio = [pAudioService]()
                 { return pAudioService->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed; };
                 _pAudioService = &_startup
-                                      .addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kAudio, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeAudio ),
-                                                                                     SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &IAudioService::shutdown, pAudioService ) ) )
+                                      .add( make_unique<FunctionSubsystem>( EngineFunctionStep::kAudio, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeAudio ),
+                                                                            SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &IAudioService::shutdown, pAudioService ) ) )
                                       .takeOwnership( std::move( _audioService ) );
             }
             {
@@ -516,7 +512,7 @@ namespace sw
                         pSceneManager->onSceneObjectsInvalidated().remove( _sceneObjectsInvalidatedHandle );
                     _sceneObjectsInvalidatedHandle = DelegateHandle{};
                 };
-                FunctionSubsystem& scene = _startup.addSubsystem( make_unique<FunctionSubsystem>(
+                FunctionSubsystem& scene = _startup.add( make_unique<FunctionSubsystem>(
                     EngineFunctionStep::kScene, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeScene ), SW_DELEGATE_LAMBDA( SubsystemShutdownDelegate, shutdownScene ) ) );
                 // 넘긴 역순으로 소멸한다: 씬 매니저 → 에셋 스트리밍 큐(소멸자가 태스크를 기다린다 — Task 보다 먼저) → 에디터 되돌리기 기록(씬 객체를 가리킨다).
                 if ( _commandStack != nullptr )
@@ -525,17 +521,17 @@ namespace sw
                 _pSceneManager = &scene.takeOwnership( std::move( _owned._pSceneManager ) );
             }
             // 헤드리스 작업(셰이더 · 씬 쿠킹, 임포트)이면 그에 기대는 단계(창 · RHI · 렌더러)를 건너뛴다 — 결과는 `isHeadless` · `didHeadlessTaskFail`.
-            _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kHeadless, SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &EngineLoop::runHeadlessTask, this ) ) );
+            _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kHeadless, SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &EngineLoop::runHeadlessTask, this ) ) );
             {
                 UserSettingsManager* const pUserSettings = _owned._pUserSettingsManager.get();
                 _startup
-                    .addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kUserSettings, SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &EngineLoop::loadUserSettings, this ),
-                                                                   SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &UserSettingsManager::shutdown, pUserSettings ) ) )
+                    .add( make_unique<FunctionSubsystem>( EngineFunctionStep::kUserSettings, SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &EngineLoop::loadUserSettings, this ),
+                                                          SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &UserSettingsManager::shutdown, pUserSettings ) ) )
                     .takeOwnership( std::move( _owned._pUserSettingsManager ) );
             }
             {
                 // 씬 스냅샷 · 패킷 · 업로드 큐는 그리는 쪽의 것이다. 렌더러를 세우지 않는 헤드리스 작업에는 없다.
-                // 백엔드 교체로 다시 설 때(`restartStoppedSteps`)는 있는 것을 그대로 쓰고, 디바이스에 매인 설정만 새로 건다.
+                // 백엔드 교체로 다시 설 때(`restartStopped`)는 있는 것을 그대로 쓰고, 디바이스에 매인 설정만 새로 건다.
                 // GT 쪽 GPUScene 도 스냅샷의 소유(머티리얼 · 인스턴스)를 들고 있다 — 렌더러와 같은 시점에, **디바이스가 살아 있을 때**(종료) 놓는다.
                 unique_ptr<RenderPacketBuilder> packetBuilder;
                 {
@@ -546,8 +542,8 @@ namespace sw
                 _pFrameRenderer              = _frameRenderer.get();
                 auto initializeFrameRenderer = [this]()
                 {
-                    _pPacketBuilder->initialize( _rhi->getDevice(), &engine::getTaskManager() );
-                    if ( _pFrameRenderer->initialize( &_rhi->getDevice(), &engine::getTaskManager() ) == false )
+                    _pPacketBuilder->initialize( _pRHI->getDevice(), &engine::getTaskManager() );
+                    if ( _pFrameRenderer->initialize( &_pRHI->getDevice(), &engine::getTaskManager() ) == false )
                     {
                         SW_LOG_ERROR( "Failed to initialize FrameRenderer!" );
                         return EngineInitResult::Failed;
@@ -560,8 +556,8 @@ namespace sw
                     _pFrameRenderer->shutdown();
                 };
                 FunctionSubsystem& frameRenderer =
-                    _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kFrameRenderer, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeFrameRenderer ),
-                                                                           SW_DELEGATE_LAMBDA( SubsystemShutdownDelegate, shutdownFrameRenderer ) ) );
+                    _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kFrameRenderer, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeFrameRenderer ),
+                                                                  SW_DELEGATE_LAMBDA( SubsystemShutdownDelegate, shutdownFrameRenderer ) ) );
                 // 넘긴 역순으로 소멸한다: 패킷 빌더(해제 `destroy` 뒤) → 렌더러.
                 (void)frameRenderer.takeOwnership( std::move( _frameRenderer ) );
                 (void)frameRenderer.takeOwnership<&RenderPacketBuilder::destroy>( std::move( packetBuilder ) );
@@ -579,7 +575,7 @@ namespace sw
                 auto attachRenderThread = [this, pRenderThread]()
                 {
                     _pRenderThread = pRenderThread;
-                    if ( pRenderThread->attach( &_rhi->getDevice(), _pFrameRenderer ) == false )
+                    if ( pRenderThread->attach( &_pRHI->getDevice(), _pFrameRenderer ) == false )
                     {
                         SW_LOG_ERROR( "Failed to attach RenderThread!" );
                         return EngineInitResult::Failed;
@@ -592,8 +588,8 @@ namespace sw
                     pRenderThread->stop();
                 };
                 FunctionSubsystem& renderThreadStep =
-                    _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kRenderThread, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, attachRenderThread ),
-                                                                           SW_DELEGATE_LAMBDA( SubsystemShutdownDelegate, stopRenderThread ) ) );
+                    _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kRenderThread, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, attachRenderThread ),
+                                                                  SW_DELEGATE_LAMBDA( SubsystemShutdownDelegate, stopRenderThread ) ) );
                 if ( renderThread != nullptr )
                     (void)renderThreadStep.takeOwnership( std::move( renderThread ) );
             }
@@ -631,20 +627,20 @@ namespace sw
                 auto shutdownLiveShader = [pShaderRecompiler]()
                 { pShaderRecompiler->shutdown(); };
                 FunctionSubsystem& liveShader =
-                    _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kLiveShader, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeLiveShader ),
-                                                                           SW_DELEGATE_LAMBDA( SubsystemShutdownDelegate, shutdownLiveShader ) ) );
+                    _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kLiveShader, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeLiveShader ),
+                                                                  SW_DELEGATE_LAMBDA( SubsystemShutdownDelegate, shutdownLiveShader ) ) );
                 if ( shaderRecompiler != nullptr )
                     (void)liveShader.takeOwnership( std::move( shaderRecompiler ) );
 #else
                 // Debug 가 아니면 라이브 리로드가 없다 — 자리만 둔다(순서 · 백엔드 교체의 재시작 목록이 구성마다 같다).
-                _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kLiveShader ) );
+                _startup.add( make_unique<FunctionSubsystem>( EngineFunctionStep::kLiveShader ) );
 #endif
             }
-            _startup.addSubsystem( std::move( _owned._pShaderCache ) );
-            _startup.addSubsystem( std::move( _owned._pPhysicsSystem ) );
-            _pFontService     = &_startup.addSubsystem( std::move( _owned._pFontService ) );
-            pTelemetryService = &_startup.addSubsystem( std::move( _owned._pTelemetryService ) );
-            _pUISystem        = &_startup.addSubsystem( std::move( _owned._pUISystem ) );
+            _startup.add( std::move( _owned._pShaderCache ) );
+            _startup.add( std::move( _owned._pPhysicsSystem ) );
+            _pFontService     = &_startup.add( std::move( _owned._pFontService ) );
+            pTelemetryService = &_startup.add( std::move( _owned._pTelemetryService ) );
+            _pUISystem        = &_startup.add( std::move( _owned._pUISystem ) );
         }
         TelemetryService& telemetryService = *pTelemetryService;
 
@@ -652,9 +648,8 @@ namespace sw
         ThreadName::setCurrentThreadName( "GameThread" );
         ProfilerBackend::initialize();
 
-        // 초기화(`initialize()`)의 순서는 손으로 적지 않는다. 단계와 서브시스템마다 먼저 서야 하는 것을 적고, 여기서는 위상 순서로
-        // 표의 본문 모음(`StartupStepBody::initialize<단계>`)과 서브시스템(`initializeSubsystem`)을 부른다. 종료와 해제는 그 역순이다(`shutdown`).
-        const bool bStarted = _startup.initializeAll<StartupStepBody>( *this, bDedicatedServer ? EngineInitTarget::Server : EngineInitTarget::Client );
+        // 초기화의 순서는 손으로 적지 않는다. 서브시스템마다 먼저 서야 하는 것을 적고, 여기서는 위상 순서로 부른다. 종료와 해제는 그 역순이다(`shutdown`).
+        const bool bStarted = _startup.initializeAll( bDedicatedServer ? EngineInitTarget::Server : EngineInitTarget::Client );
         if ( bStarted == false )
             return false;
         // 장면별 프레임 시간 · flush 는 프레임 관찰자로 돈다(씬 틱 뒤 — `TelemetryService::onAfterSceneTick`). 텔레메트리가 섰을 때만 붙인다.
@@ -664,7 +659,7 @@ namespace sw
         if ( bDedicatedServer )
         {
             // 실제 바이너리에서 단계가 빠졌는지 테스트(ServerBootTest)가 이 줄로 본다. 초기화 순서대로 적는다.
-            const SubsystemCollection& subsystems = _startup.getSubsystems();
+            const SubsystemCollection& subsystems = _startup;
             string                     skipped;
             for ( const uint32 index : subsystems.getInitializeOrder() )
             {
@@ -706,9 +701,11 @@ namespace sw
         _startup.shutdownAll();
         // 셸 디버그 액션 맵은 입력 매니저를 가리킨다 — 매니저가 소멸하기(Input 의 해제 자리) 전에 놓는다(`updateShellActions` 가 처음 쓸 때 만든다).
         _shellActions.reset();
-        // 단계가 소유한 객체를 초기화 순서의 역순으로 해제한다(표의 줄은 `StartupStepBody::destroy<단계>`, 서브시스템은 소멸): UI → 텔레메트리 → 렌더러 쪽 → RHI →
+        // 단계가 소유한 객체를 초기화 순서의 역순으로 소멸시킨다: UI → 텔레메트리 → 렌더러 쪽 → RHI →
         // 글꼴 → 씬 → 입력 · 오디오 → 태스크 → 셰이더 캐시 → 엔진 데이터 → 리소스 → 설정 → 리플렉션 → 압축. 기동이 어디서 멈췄든 모든 단계를 해제한다.
         _startup.destroyAll();
+        _pRHISubsystem  = nullptr;
+        _pRHI           = nullptr;
         _pFontService   = nullptr;
         _pUISystem      = nullptr;
         _pInputManager  = nullptr;
@@ -743,8 +740,8 @@ namespace sw
             return;
         EngineConfig::setActive( *_pEngineConfig );
         // 수직 동기화는 다음에 스왑체인을 만들 때(창 크기 변경 · 백엔드 교체) 적용된다.
-        if ( _rhi != nullptr )
-            _rhi->setPreferredVSync( _pEngineConfig->_window._bVSync );
+        if ( _pRHI != nullptr )
+            _pRHI->setPreferredVSync( _pEngineConfig->_window._bVSync );
     }
 
     EngineInitResult EngineLoop::runHeadlessTask()
@@ -947,9 +944,9 @@ namespace sw
 
     bool EngineLoop::renderPortraits( string_view prefabList, string_view outputDirectory, uint32 size )
     {
-        if ( _rhi == nullptr || _rhi->hasDevice() == false )
+        if ( _pRHI == nullptr || _pRHI->hasDevice() == false )
             return false;
-        return PortraitBatchUtil::renderPrefabList( _rhi->getDevice(), _pRenderThread, prefabList, outputDirectory, size );
+        return PortraitBatchUtil::renderPrefabList( _pRHI->getDevice(), _pRenderThread, prefabList, outputDirectory, size );
     }
 
     void EngineLoop::requestQuit( int32 exitCode )
@@ -1072,7 +1069,7 @@ namespace sw
         {
 #if !defined( SW_SHIPPING )
     #if defined( SW_DEBUG )
-            if ( _rhi != nullptr )
+            if ( _pRHI != nullptr )
             {
                 if ( ShaderRecompiler* pShaderRecompiler = getShaderRecompiler() )
                     pShaderRecompiler->update();
@@ -1131,13 +1128,13 @@ namespace sw
             // 뷰포트 0 은 "백버퍼 전체"(게임 창 — 패킷 · 캔버스 테스트 그림과 같은 규칙)다.
             const IWindow* const pWindow      = IWindow::getActiveWindow();
             const float32        contentScale = pWindow != nullptr ? pWindow->getContentScale() : 1.0f;
-            const bool           bHasDevice   = _rhi != nullptr && _rhi->hasDevice();
+            const bool           bHasDevice   = _pRHI != nullptr && _pRHI->hasDevice();
             uint32               uiWidth      = vpWidth;
             uint32               uiHeight     = vpHeight;
             if ( uiWidth == 0 || uiHeight == 0 )
             {
-                uiWidth  = bHasDevice ? _rhi->getDevice().getBackBufferWidth() : ( pWindow != nullptr ? pWindow->getWidth() : 0 );
-                uiHeight = bHasDevice ? _rhi->getDevice().getBackBufferHeight() : ( pWindow != nullptr ? pWindow->getHeight() : 0 );
+                uiWidth  = bHasDevice ? _pRHI->getDevice().getBackBufferWidth() : ( pWindow != nullptr ? pWindow->getWidth() : 0 );
+                uiHeight = bHasDevice ? _pRHI->getDevice().getBackBufferHeight() : ( pWindow != nullptr ? pWindow->getHeight() : 0 );
             }
             const UIViewport viewport =
                 _pUISystem->computeViewport( float2{ static_cast<float32>( uiWidth ), static_cast<float32>( uiHeight ) }, contentScale );
@@ -1147,12 +1144,12 @@ namespace sw
         // 이번 틱에 경로로 잡힌 머티리얼(메시의 저장된 참조)을 패킷을 내기 **전에** 올린다. 컴포넌트는 디바이스를 모른다(`MaterialCache::requestInitialize`).
         // 올리기는 bindless 표에 등록하므로 렌더 스레드가 지난 프레임을 병렬로 기록하는 동안 하면 안 된다 — 올릴 것이 있는 프레임(씬 로드 ·
         // 처음 쓰는 머티리얼의 스폰)만 렌더 스레드를 기다린다.
-        if ( _rhi != nullptr && _rhi->hasDevice() )
+        if ( _pRHI != nullptr && _pRHI->hasDevice() )
         {
             MaterialCache& materials = engine::getAssetManager().getAssetCache<MaterialCache>();
             if ( materials.hasPendingInitialize() && _pRenderThread != nullptr )
                 _pRenderThread->waitIdle();
-            materials.initializePending( &_rhi->getDevice() );
+            materials.initializePending( &_pRHI->getDevice() );
         }
 
         // 패킷 · 씬 스냅샷은 FrameRenderer 단계가 만든다. 그 단계가 서지 않았으면(헤드리스 작업) 낼 패킷이 없다.
@@ -1178,8 +1175,8 @@ namespace sw
                 }
             }
 
-            _pPacketBuilder->populateScene( packet, views, sceneViewCameraProvider, pActiveScene, deltaTime, *_rhi, _pFrameRenderer );
-            RenderPacketBuilder::populateCanvas( packet, bSceneMain, _pUISystem, _pFontService, _rhi.get() );
+            _pPacketBuilder->populateScene( packet, views, sceneViewCameraProvider, pActiveScene, deltaTime, *_pRHI, _pFrameRenderer );
+            RenderPacketBuilder::populateCanvas( packet, bSceneMain, _pUISystem, _pFontService, _pRHI );
 
             if ( _pRenderThread != nullptr )
             {
@@ -1204,8 +1201,8 @@ namespace sw
         _profileSession.onFrameEnd();
         // CPU 메모리 태그 표 옆에 GPU 메모리 표를 둔다. 보고 세션은 Utility 층이라 Graphics 의 장부를 볼 수 없어 여기서 잇는다.
         const bool bReportedNow = bReportedBefore == false && _profileSession.hasReported();
-        if ( bReportedNow && _rhi != nullptr && _rhi->hasDevice() )
-            _rhi->getDevice().getMemoryLedger().report( _rhi->getDevice().getBackendName() );
+        if ( bReportedNow && _pRHI != nullptr && _pRHI->hasDevice() )
+            _pRHI->getDevice().getMemoryLedger().report( _pRHI->getDevice().getBackendName() );
 
         _memoryBudgetMonitor.onFrameEnd();
 
@@ -1228,11 +1225,11 @@ namespace sw
 
     bool EngineLoop::applyPendingBackendChange()
     {
-        if ( _rhi == nullptr )
+        if ( _pRHI == nullptr )
             return false;
 
-        const RHIBackend requested = _rhi->consumePendingBackendChange();
-        const RHIBackend previous  = _rhi->getCommittedBackend();
+        const RHIBackend requested = _pRHI->consumePendingBackendChange();
+        const RHIBackend previous  = _pRHI->getCommittedBackend();
         if ( requested == previous )
             return true;
 
@@ -1244,19 +1241,19 @@ namespace sw
         {
             // RHI 에 (간접으로라도) 의존하는 단계(씬의 디바이스 · 라이브 셰이더 · 렌더 스레드 · 렌더러)를 기동 표의 역순으로, 기동과 같은
             // 본문으로 내린다. 씬 스냅샷 빌더가 든 머티리얼 · 인스턴스도 FrameRenderer 단계의 종료가 옛 디바이스가 살아 있을 때 놓는다.
-            _startup.shutdownDependentsOf( EngineInitStep::RHI );
+            _startup.shutdownDependentsOf( *_pRHISubsystem );
 
             // 옛 디바이스의 GPU 자원은 recreateDevice 안의 shutdown 이 레지스트리에 통보하며 거둔다.
-            _rhi->getDevice().waitIdle();
+            _pRHI->getDevice().waitIdle();
             engine::getShaderCache().clearCache();
         }
 
-        if ( _rhi->recreateDevice( requested ) == false )
+        if ( _pRHI->recreateDevice( requested ) == false )
         {
             SW_LOG_ERROR( "recreateDevice failed; restoring previous backend %#",
                           RHI::getBackendTypeName( previous ) );
             gv_rhiBackend = previous;
-            if ( _rhi->recreateDevice( previous ) == false )
+            if ( _pRHI->recreateDevice( previous ) == false )
             {
                 SW_LOG_ERROR( "Failed to restore previous RHI backend — device is gone." );
                 return false;
@@ -1268,24 +1265,24 @@ namespace sw
         if ( rebindSceneAfterDeviceRecreate() == false )
             return false;
         // 교체 뒤 디바이스에 매인 설정이 새 디바이스를 따르는지 한 줄로 남긴다(AppSmokeTest.BackendSwapFollowsTheNewDevice 가 읽는다).
-        SW_LOG_INFO( "Active backend is now %# (merge batches across materials %#, native bindless sampling %#)", RHI::getBackendTypeName( _rhi->getCommittedBackend() ),
+        SW_LOG_INFO( "Active backend is now %# (merge batches across materials %#, native bindless sampling %#)", RHI::getBackendTypeName( _pRHI->getCommittedBackend() ),
                      _pPacketBuilder->isMergeBatchesAcrossMaterials() ? 1 : 0,
-                     _rhi->getDevice().supportsNativeBindlessSampling() ? 1 : 0 );
+                     _pRHI->getDevice().supportsNativeBindlessSampling() ? 1 : 0 );
         return true;
     }
 
     bool EngineLoop::rebindSceneAfterDeviceRecreate()
     {
-        if ( _rhi == nullptr || _rhi->hasDevice() == false )
+        if ( _pRHI == nullptr || _pRHI->hasDevice() == false )
             return false;
 
         // 새 디바이스가 섰다. 레지스트리 전체에 "다시 올려라" 를 알린다. 어떤 캐시를 빠뜨렸는지
         // 기억할 필요가 없는 것이 이 구조의 요점이다(언리얼 FRenderResource::InitRHI 와 같은 자리).
-        RHIRenderResource::initAllFor( &_rhi->getDevice() );
+        RHIRenderResource::initAllFor( &_pRHI->getDevice() );
 
         // 내렸던 단계를 기동과 같은 본문으로 다시 세운다: 렌더러(업로드 큐 · 배치 합치기 설정을 새 디바이스로) → 렌더 스레드 → 라이브 셰이더 →
         // 씬의 디바이스. 본문은 이미 있는 객체를 다시 쓰므로 렌더 스레드에 걸린 훅과 그것을 가리키는 포인터가 그대로다.
-        const bool bRestarted = _startup.restartStoppedSteps();
+        const bool bRestarted = _startup.restartStopped();
 
         Scene* pScene = _pSceneManager != nullptr ? _pSceneManager->getActiveScene() : nullptr;
         if ( pScene != nullptr )
@@ -1342,7 +1339,7 @@ namespace sw
         // 셰이더 리로드는 **Engine 자신의** 개발 도구다(ShaderRecompiler 를 여기서 소유한다). 그래서
         // 바깥에 콜백을 달라고 하지 않고 여기서 끝낸다. 셸 맵(`ShellInputActions`)은 입력 사실만 내주므로 단축키의 뜻은 소유자인 여기서 읽는다.
         // 모듈을 다시 올리는 일은 App 의 것이라 App 이 묻는다.
-        if ( _rhi == nullptr )
+        if ( _pRHI == nullptr )
             return;
         if ( _shellActions.wasActionTriggered( InputMapDefaults::kReloadShadersAction ) == false )
             return;

@@ -12,6 +12,7 @@
 
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Common/SubsystemCollection.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"

@@ -10,8 +10,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Common/SubsystemCollection.h"
 #include "Engine/EngineBootstrap.h"
-#include "Engine/EngineInitSequence.h"
 #include "Engine/EngineServiceCollection.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Input/ShellInputActions.h"
@@ -178,7 +178,7 @@ namespace sw
         // ----------------------------------------------------------------------
         ConfigManager*      getConfigManager() const { return _pConfigManager; }
         CommandLineManager* getCommandLineManager() const { return _owned._pCommandLineManager.get(); }
-        RHI*                getRHI() const { return _rhi.get(); }
+        RHI*                getRHI() const { return _pRHI; }
         RenderThread*       getRenderThread() const { return _pRenderThread; }
         bool                isHeadless() const { return _bHeadless; }
         /** @brief 이 엔진을 띄운 호스트의 역할입니다(`initialize` 의 인자). */
@@ -213,10 +213,6 @@ namespace sw
         /** @brief 기동 단계 `UserSettings` 입니다 — 스키마 · 사용자 파일을 읽어 대상(오디오 · 입력 · 전역 변수 · 셸 맵 경로)에 넣습니다. 틀린 파일로 기동을 세우지 않습니다. */
         EngineInitResult loadUserSettings();
 
-        // 기동 단계의 본문 모음이다(`EngineLoop.cpp`). 표(`EngineInitStepList.xxx`)의 단계마다 `initialize<단계>` · `shutdown<단계>` ·
-        // `destroy<단계>` 중 필요한 정적 함수만 둔다. 중첩 타입이라 이 클래스의 private 을 그대로 쓴다.
-        struct StartupStepBody;
-
     private:
         /**
          * @brief 목록(`EngineServiceList.xxx`)의 `EngineCreated` 서비스 저장소입니다. 생성 · 바인딩이 여기서 나옵니다.
@@ -228,8 +224,7 @@ namespace sw
         /** @brief 기동 표 밖의 부트스트랩(로거 · 크래시 핸들러 · 진단 도구 · 명령줄 · 전역 변수)입니다. 테스트 하네스와 같은 것을 쓴다. `_owned` 보다 먼저 사라진다. */
         EngineBootstrap _bootstrap;
         /** @brief 서브시스템 `Config` 의 설정 표입니다(`_startup` 소유 — 빌려 쓴다). App · 서버가 `getConfigManager` 로 읽는다. */
-        ConfigManager*  _pConfigManager;
-        unique_ptr<RHI> _rhi;
+        ConfigManager* _pConfigManager;
         /** @brief 셸 디버그 액션 맵입니다(`updateShellActions` 가 처음 부를 때 만든다). `shutdown` 이 단계 종료 뒤 · 해제 전에(입력 매니저가 소멸하기 전에) 놓는다. */
         ShellInputActions _shellActions;
         /** @brief 만든 오디오 서비스입니다(역할별 팩토리). 서비스 표에 묶은 뒤 소유를 서브시스템 `Audio` 로 넘긴다 — 이 뒤로는 비어 있다. */
@@ -267,8 +262,12 @@ namespace sw
         FrameProfileSession _profileSession;
         /** @brief 메모리 태그 예산 · 보고(배포본에서는 아무 일도 하지 않는다). */
         MemoryBudgetMonitor _memoryBudgetMonitor;
-        /** @brief 기동 단계의 순서(`EngineInitStepList.xxx` 의 줄과 `ISubsystem` 을 위상 정렬)와 초기화한 단계입니다. 서브시스템 객체를 소유합니다. */
-        EngineInitSequence _startup;
+        /** @brief 기동 단계(서브시스템)의 목록입니다 — 선언된 의존으로 위상 정렬해 초기화하고 역순으로 종료 · 소멸합니다. 서브시스템 객체를 소유합니다. */
+        SubsystemCollection _startup;
+        /** @brief 서브시스템 `RHI` 입니다(`_startup` 소유). 백엔드 교체가 이것에 기대는 단계만 내렸다가 다시 세운다. */
+        ISubsystem* _pRHISubsystem;
+        /** @brief 서브시스템 `RHI` 의 RHI 입니다(`_startup` 소유 — 그 단계가 선 뒤부터 빌려 쓴다). 서지 않았으면(전용 서버 · 헤드리스) nullptr 입니다. */
+        RHI* _pRHI;
         /** @brief 서브시스템 `Fonts` 입니다(`_startup` 소유 — 빌려 쓴다). 렌더 패킷의 캔버스가 글리프 캐시를 싣는다. */
         FontService* _pFontService;
         /** @brief 서브시스템 `UI` 입니다(`_startup` 소유 — 빌려 쓴다). 프레임마다 입력 · 갱신 · 캔버스가 돈다. */

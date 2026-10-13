@@ -6,7 +6,7 @@
  *          성공으로 칩니다). 객체를 넘기면(`takeOwnership`) 이 서브시스템의 소멸 자리 — 모든 종료 뒤, 초기화의 역순 — 에서 함께 소멸합니다.
  *
  * ```cpp
- * startup.addSubsystem( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "Reflection", "", EngineInitTarget::All, MemoryTag::Reflection },
+ * startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "Reflection", "", EngineInitTarget::All, MemoryTag::Reflection },
  *                                                       SW_DELEGATE_FUNCTION( SubsystemInitializeDelegate, &registerReflection ) ) );
  * ```
  */

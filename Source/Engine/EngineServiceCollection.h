@@ -79,7 +79,7 @@ namespace sw
          *          `EngineLoop` 는 명령줄을 파싱하려고 `CommandLineManager` 와 `GlobalVariableManager` 를
          *          이 호출보다 앞에서 만듭니다. 덮어쓰면 파싱 결과가 통째로 사라집니다.
          *          나머지는 목록 순서로 만듭니다. 이 타입들의 생성자는 서로를 보지 않으므로 순서에 의미가
-         *          없습니다. **의미가 있는 것은 초기화 순서**이고, 그것은 기동 단계 표(`EngineInitStepList.xxx`)가 정합니다.
+         *          없습니다. **의미가 있는 것은 초기화 순서**이고, 그것은 서브시스템이 선언한 의존(`SubsystemCollection`)이 정합니다.
          */
         void createAll();
 
@@ -100,7 +100,7 @@ namespace sw
 
         /**
          * @brief 남은 소유를 목록의 **역순**으로 모두 놓습니다(소멸자와 같은 순서).
-         * @details 기동 단계가 소유한 서비스는 호스트가 소유를 기동 순서로 넘겼고 그 해제(`EngineInitSequence::destroyAll`)로 먼저 사라집니다. 이것은 그 뒤에 남은
+         * @details 기동 단계가 소유한 서비스는 호스트가 소유를 기동 순서로 넘겼고 그 해제(`SubsystemCollection::destroyAll`)로 먼저 사라집니다. 이것은 그 뒤에 남은
          *          표 밖 서비스(명령줄 · 전역 변수 · 이벤트 · 디버그 도구 등)를 쓸어 담는 자리입니다. 목록 앞줄의 명령줄 · 전역 변수가
          *          맨 나중에 사라집니다.
          */
