@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Console/DevCommandsEnabled.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
@@ -12,6 +13,7 @@
 #include "Core/Module/ModuleUnloadListener.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Common/ISubsystem.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/UI/Base/WidgetTypes.h"
 #include "Engine/UI/Binding/UIBindingConverterRegistry.h"
@@ -33,6 +35,7 @@
 
 namespace sw
 {
+    class DebugHUD;
     class FontService;
     class InputManager;
     class InputMap;
@@ -50,7 +53,8 @@ namespace sw
      * @details 언리얼의 `FSlateApplication` 과 CommonUI 의 `UCommonUIActionRouter` 에 해당한다.
      *          틱은 둘로 나뉜다. `processInput` 은 입력 갱신 직후, 게임 틱 앞에서 돌아서 UI 가 처리한 입력을 폰이 보지 못하게 한다.
      *          `update` 는 게임 틱 뒤, 렌더 패킷 앞에서 돌며 이번 프레임의 게임 상태로 애니메이션, 바인딩, 스타일, 레이아웃, 그리기를 순서대로 처리한다.
-     *          기동 단계 `UI`(Client 대상)가 `initialize` 한다.
+     *          엔진에서는 서브시스템 `UI`(Client 대상)입니다 — 배율 규칙 · 테마 · 기본 메뉴를 엔진 데이터(게임 프리셋이 덮어씀)로 정하고
+     *          문서 · 스타일 시트 캐시를 에셋 캐시 레지스트리에 올리며, Dev 에서는 디버그 HUD 를 붙입니다(`initializeSubsystem`).
      *
      *          **화면 스택**: 화면은 레이어(`UILayer`)마다 쌓인다. 그리기 순서는 레이어 순서, 같은 레이어 안에서는 쌓인 순서이고, 입력은 그 역순이다.
      *          맨 위에서 포커스를 받는 화면이 **활성 화면**이며 포커스와 UI 액션을 받는다.
@@ -69,7 +73,7 @@ namespace sw
      *          **나눈 책임**(값 멤버, 비가상 직접 호출): 입력 라우팅은 `UIInputRouter`, 테마 고르기와 스타일 세트 짓기는 `UIThemeController`,
      *          화면 스택 밖 미리보기는 `UIOffscreenScreens` 가 한다. 화면 스택과 프레임 순서는 이 클래스에 남는다(순서는 `processInput` 과 `update` 본문이 정본이다).
      */
-    class SW_API UISystem final : public IModuleUnloadListener
+    class SW_API UISystem final : public ISubsystem, public IModuleUnloadListener
     {
     public:
         UISystem();
@@ -88,6 +92,18 @@ namespace sw
         /** @brief 화면을 모두 즉시 닫고 입력을 놓습니다. 걸어 둔 게임 정지 요청도 해제합니다. */
         void shutdown();
         bool isInitialized() const { return _input.getInputManager() != nullptr; }
+
+        // ISubsystem — 기동 단계 `UI`. 배율 규칙 · 테마 목록 · UI 행동 맵을 못 읽으면 데이터 오류라 기동 실패다.
+        EngineInitResult initializeSubsystem() override;
+        void             shutdownSubsystem() override;
+        const utf8*      getSubsystemName() const override { return "UI"; }
+        /** @brief 입력(행동 · 포인터)을 읽고 글꼴로 측정한다. UI 배율 · 글자 크기는 사용자 설정이다. */
+        const utf8*      getSubsystemDependencies() const override { return "Fonts Input UserSettings"; }
+        EngineInitTarget getSubsystemTarget() const override { return EngineInitTarget::Client; }
+#if SW_DEV_COMMANDS_ENABLED
+        /** @brief 서브시스템이 붙인 디버그 HUD 입니다(Dev 전용, 서브시스템으로 서지 않았으면 nullptr). 엔진 루프가 `update` 앞에서 셸 맵 단축키와 함께 돌린다. */
+        DebugHUD* getDebugHUD() const { return _debugHUD.get(); }
+#endif
 
         /** @brief 입력을 UI 이벤트로 처리합니다(게임 틱 앞). 순서는 뗀 입력 해제, UI 맵 갱신, 입력 방식 결정, 포인터, 액션, 텍스트 포커스, 닫기 요청 적용입니다. */
         void processInput( float32 deltaSeconds );
@@ -385,27 +401,30 @@ namespace sw
         const LocalizationManager*   _pLocalization; ///< 문화권 출처입니다(nullptr 이면 엔진 서비스).
         UserSettingsManager*         _pUserSettings; ///< 설정 바인딩 출처입니다(nullptr 이면 엔진 서비스).
         unique_ptr<TextLayoutEngine> _textLayout;
-        UIScaleSettings              _scaleSettings;
-        UISubtitleService            _subtitles;
-        UIViewport                   _viewport;
-        CanvasDrawList               _canvas;         ///< 이번 프레임의 그리기 목록입니다.
-        CanvasDrawList               _canvasScratch;  ///< 칠하는 중인 목록입니다(같은 내용이면 버립니다).
-        uint64                       _canvasRevision; ///< `_canvas` 내용의 번호입니다.
-        UIScreenHandle               _activeScreen;
-        UIScreenHandle               _markerScreen;        ///< 화면 마커를 담는 HUD 화면입니다(없으면 무효).
-        vector<WidgetComponent*>     _listWidgetComponent; ///< 등록된 위젯 컴포넌트입니다(소유하지 않으며, 끝날 때 스스로 뺍니다).
-        vector<UIScreenHandle>       _listTickScratch;     ///< `tickScreens` 가 도는 번호입니다(프레임마다 다시 씁니다).
-        vector<SwitchScreen>         _listSwitchScreen;    ///< 화면 스위치(`UIScreenSwitches`)마다 연 화면입니다(이름으로 찾습니다).
-        string                       _optionsMenuDocument; ///< 옵션 메뉴 문서입니다.
-        string                       _pauseMenuDocument;   ///< 일시정지 메뉴 문서입니다(비면 일시정지 메뉴가 없습니다).
-        UIScreenHandle               _nextScreenHandle;
-        uint32                       _nextPushOrder;
-        uint32                       _textRevision;            ///< 마지막 바인딩 단계가 본 텍스트 버전입니다.
-        InputGlyphStyle              _glyphStyle;              ///< 마지막으로 본 입력 장치 종류입니다(`refreshInputGlyphs`).
-        uint8                        _bPauseRequested     : 1; ///< 게임 정지 요청을 걸어 두었는지 나타냅니다(정지 화면이 하나라도 있으면 true).
-        uint8                        _bPendingClose       : 1; ///< 닫기를 요청한 화면이 있는지 나타냅니다.
-        uint8                        _bTextRevisionKnown  : 1; ///< `_textRevision` 을 한 번 읽었는지 나타냅니다.
-        uint8                        _bGlyphStyleKnown    : 1; ///< `_glyphStyle` 을 한 번 읽었는지 나타냅니다.
-        uint8                        _bOnScreenSuppressed : 1; ///< 화면 그리기와 포인터 입력을 막는지 나타냅니다(`setOnScreenSuppressed`).
+#if SW_DEV_COMMANDS_ENABLED
+        unique_ptr<DebugHUD> _debugHUD; ///< 서브시스템이 붙인 디버그 HUD 입니다(Dev 전용).
+#endif
+        UIScaleSettings          _scaleSettings;
+        UISubtitleService        _subtitles;
+        UIViewport               _viewport;
+        CanvasDrawList           _canvas;         ///< 이번 프레임의 그리기 목록입니다.
+        CanvasDrawList           _canvasScratch;  ///< 칠하는 중인 목록입니다(같은 내용이면 버립니다).
+        uint64                   _canvasRevision; ///< `_canvas` 내용의 번호입니다.
+        UIScreenHandle           _activeScreen;
+        UIScreenHandle           _markerScreen;        ///< 화면 마커를 담는 HUD 화면입니다(없으면 무효).
+        vector<WidgetComponent*> _listWidgetComponent; ///< 등록된 위젯 컴포넌트입니다(소유하지 않으며, 끝날 때 스스로 뺍니다).
+        vector<UIScreenHandle>   _listTickScratch;     ///< `tickScreens` 가 도는 번호입니다(프레임마다 다시 씁니다).
+        vector<SwitchScreen>     _listSwitchScreen;    ///< 화면 스위치(`UIScreenSwitches`)마다 연 화면입니다(이름으로 찾습니다).
+        string                   _optionsMenuDocument; ///< 옵션 메뉴 문서입니다.
+        string                   _pauseMenuDocument;   ///< 일시정지 메뉴 문서입니다(비면 일시정지 메뉴가 없습니다).
+        UIScreenHandle           _nextScreenHandle;
+        uint32                   _nextPushOrder;
+        uint32                   _textRevision;            ///< 마지막 바인딩 단계가 본 텍스트 버전입니다.
+        InputGlyphStyle          _glyphStyle;              ///< 마지막으로 본 입력 장치 종류입니다(`refreshInputGlyphs`).
+        uint8                    _bPauseRequested     : 1; ///< 게임 정지 요청을 걸어 두었는지 나타냅니다(정지 화면이 하나라도 있으면 true).
+        uint8                    _bPendingClose       : 1; ///< 닫기를 요청한 화면이 있는지 나타냅니다.
+        uint8                    _bTextRevisionKnown  : 1; ///< `_textRevision` 을 한 번 읽었는지 나타냅니다.
+        uint8                    _bGlyphStyleKnown    : 1; ///< `_glyphStyle` 을 한 번 읽었는지 나타냅니다.
+        uint8                    _bOnScreenSuppressed : 1; ///< 화면 그리기와 포인터 입력을 막는지 나타냅니다(`setOnScreenSuppressed`).
     };
 } // namespace sw

@@ -4,6 +4,9 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/EngineInitSequence.h"
+#include "Engine/Telemetry/TelemetryService.h"
+#include "Engine/Text/FontService.h"
+#include "Engine/UI/UISystem.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -500,8 +503,9 @@ SW_TEST_CASE( EngineInitSequenceTest, InitializeRunsUnderTheStepMemoryTag )
 }
 
 /**
- * @brief [EngineInitSequenceTest] 전용 서버(대상 Server)는 창 · RHI · 렌더러 · 플레이어 설정 · 텔레메트리 · 글꼴 단계를 돌리지 않고, 씬 · 씬 쿠킹까지는 선다
- * @details 서버에 GPU 가 없으므로 RHI 단계가 돌면 기동이 실패한다. `initializeAllInternal` 의 대상 검사를 빼면 진다.
+ * @brief [EngineInitSequenceTest] 전용 서버(대상 Server)는 창 · RHI · 렌더러 · 플레이어 설정 단계를 돌리지 않고, 씬 · 씬 쿠킹까지는 선다
+ * @details 서버에 GPU 가 없으므로 RHI 단계가 돌면 기동이 실패한다. `SubsystemCollection::initializeAll` 의 대상 검사를 빼면 진다.
+ *          서브시스템으로 옮긴 클라이언트 단계(텔레메트리 · 글꼴 · UI)는 `EngineSubsystemsJoinTheTableOrder` 가 본다.
  *          해제는 기동이 어디까지 갔든 모든 단계를 돈다(클라이언트 단계의 객체는 만들지 않았으니 null 안전한 해제가 아무것도 하지 않는다).
  */
 SW_TEST_CASE( EngineInitSequenceTest, DedicatedServerSkipsClientSteps )
@@ -511,7 +515,7 @@ SW_TEST_CASE( EngineInitSequenceTest, DedicatedServerSkipsClientSteps )
     SW_ASSERT_TRUE( sequence.initializeAll<StartupStepRecorder>( recorder, EngineInitTarget::Server ) );
 
     const EngineInitStep arrClientOnly[]   = { EngineInitStep::UserSettings, EngineInitStep::RHI, EngineInitStep::FrameRenderer, EngineInitStep::RenderThread,
-                                               EngineInitStep::LiveShader, EngineInitStep::SceneRHI, EngineInitStep::Telemetry, EngineInitStep::Fonts, EngineInitStep::UI };
+                                               EngineInitStep::LiveShader, EngineInitStep::SceneRHI };
     bool                 bSceneInitialized = false;
     for ( const EngineInitStep step : recorder._listInitialized )
     {
@@ -555,6 +559,48 @@ SW_TEST_CASE( EngineInitSequenceTest, EveryStepRunsWhereItsDependenciesRun )
         {
             const uint8 dependencyMask = static_cast<uint8>( EngineInitSequence::getStepTarget( static_cast<EngineInitStep>( dependencyIndex ) ) );
             SW_EXPECT_TRUE_MSG( ( selfMask & static_cast<uint8>( ~dependencyMask ) ) == 0, EngineInitSequence::getStepName( static_cast<EngineInitStep>( stepIndex ) ) );
+        }
+    }
+}
+
+/**
+ * @brief [EngineInitSequenceTest] 엔진이 `ISubsystem` 으로 넘기는 단계(글꼴 · 텔레메트리 · UI)가 표의 줄과 한 순서로 정렬되고, 표의 순서는 그대로다
+ * @details 서브시스템의 의존 글은 실행 시간에만 풀린다(표처럼 컴파일 검사가 없다). 의존 이름이 틀리거나 대상이 어긋나면 여기서 진다.
+ *          세 단계는 클라이언트 전용이고, 의존이 모두 그보다 앞에 선다.
+ */
+SW_TEST_CASE( EngineInitSequenceTest, EngineSubsystemsJoinTheTableOrder )
+{
+    const EngineInitSequence tableOnly;
+    EngineInitSequence       sequence;
+    sequence.addSubsystem( make_unique<FontService>() );
+    sequence.addSubsystem( make_unique<TelemetryService>() );
+    sequence.addSubsystem( make_unique<UISystem>() );
+    SW_ASSERT_TRUE_MSG( sequence.getError().empty(), sequence.getError().c_str() );
+    SW_EXPECT_STREQ( joinStepNames( tableOnly.getInitializeOrder() ).c_str(), joinStepNames( sequence.getInitializeOrder() ).c_str() );
+
+    const SubsystemCollection& subsystems = sequence.getSubsystems();
+    SW_ASSERT_EQUAL( static_cast<uint32>( EngineInitStep::Count ) + 3u, subsystems.getSubsystemCount() );
+    vector<uint32> listPosition( subsystems.getSubsystemCount(), 0 );
+    for ( uint32 position = 0; position < static_cast<uint32>( subsystems.getInitializeOrder().size() ); ++position )
+    {
+        listPosition[subsystems.getInitializeOrder()[position]] = position;
+    }
+    vector<EngineInitNode> listNode;
+    for ( uint32 index = 0; index < subsystems.getSubsystemCount(); ++index )
+    {
+        listNode.push_back( { subsystems.getSubsystem( index ).getSubsystemName(), subsystems.getSubsystem( index ).getSubsystemDependencies() } );
+    }
+    EngineInitGraph graph{};
+    string          error;
+    SW_ASSERT_TRUE_MSG( SubsystemCollection::computeGraph( listNode, graph, error ), error.c_str() );
+    for ( uint32 index = static_cast<uint32>( EngineInitStep::Count ); index < subsystems.getSubsystemCount(); ++index )
+    {
+        const ISubsystem& subsystem = subsystems.getSubsystem( index );
+        SW_EXPECT_TRUE_MSG( subsystem.getSubsystemTarget() == EngineInitTarget::Client, subsystem.getSubsystemName() );
+        SW_EXPECT_FALSE_MSG( graph._listDependency[index].empty(), subsystem.getSubsystemName() );
+        for ( const uint32 dependencyIndex : graph._listDependency[index] )
+        {
+            SW_EXPECT_TRUE_MSG( listPosition[dependencyIndex] < listPosition[index], subsystem.getSubsystemName() );
         }
     }
 }

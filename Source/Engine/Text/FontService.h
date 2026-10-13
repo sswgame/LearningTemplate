@@ -13,6 +13,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Common/ISubsystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Text/FontCatalog.h"
 #include "Engine/Text/GlyphCache.h"
@@ -64,8 +65,9 @@ namespace sw
      * @brief 엔진 폰트 서비스입니다(`engine::getFontService()`).
      * @details 폰트가 하나도 없는 기계(시스템 폰트가 없는 리눅스 CI, 서버)에서도 저장소 폰트(기본 패밀리)는 항상 열린다. 연쇄의 끝이 기본 패밀리이고,
      *          시스템 패밀리를 찾지 못하면 처음 한 번 경고하고 건너뛴다. 그 문자는 두부(글리프 0)로 그려진다.
+     *          엔진에서는 서브시스템 `Fonts`(Client 대상)입니다 — 엔진 데이터의 글꼴 카탈로그로 서고, 쿠킹(Headless)이면 열지 않는다.
      */
-    class SW_API FontService
+    class SW_API FontService : public ISubsystem
     {
     public:
         FontService();
@@ -74,7 +76,7 @@ namespace sw
          * @param pLocalization 대체 목록을 묻는 곳. nullptr 이면 엔진 서비스(`engine::getLocalizationManager()`)를 씁니다.
          */
         explicit FontService( unique_ptr<IFontRasterizer> rasterizer, const LocalizationManager* pLocalization = nullptr );
-        ~FontService();
+        ~FontService() override;
 
         FontService( const FontService& )            = delete;
         FontService& operator=( const FontService& ) = delete;
@@ -85,6 +87,14 @@ namespace sw
         [[nodiscard]] bool initializeFromCatalog( FontCatalogDesc catalog );
         /** @brief 연 면, 연쇄, 경고 기록을 모두 해제합니다. 다시 `initialize` 할 수 있습니다. */
         void shutdown();
+
+        // ISubsystem — 기동 단계 `Fonts`. 기본 가족(저장소 글꼴)을 못 열면 글자를 그릴 수 없으므로 기동 오류다.
+        EngineInitResult initializeSubsystem() override;
+        void             shutdownSubsystem() override { shutdown(); }
+        const utf8*      getSubsystemName() const override { return "Fonts"; }
+        /** @brief 문화권 표(EngineDefaultAssets)를 읽은 뒤에 서고, 쿠킹(Headless)이면 열지 않는다. */
+        const utf8*      getSubsystemDependencies() const override { return "EngineDefaultAssets Headless Resource"; }
+        EngineInitTarget getSubsystemTarget() const override { return EngineInitTarget::Client; }
 
         /**
          * @brief 파일 대신 메모리의 폰트 바이트를 그 경로로 등록합니다(테스트나 게임이 폰트를 묶어 넣을 때). 카탈로그 면 경로가 같으면 이것을 먼저 씁니다.

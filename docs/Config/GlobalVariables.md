@@ -76,7 +76,6 @@
 |---|---|---|---|---|---|
 | `gv_crashTest` | `int32` | `0` | 시험 · 배포본에도 | 일부러 크래시를 내 리포트 경로를 검증합니다 (1=널 쓰기 2=스택 오버플로 3=작업 스레드 스택 오버플로 4=abort 5=순수 가상 호출) | [EngineLoop.cpp](../../Source/Engine/EngineLoop.cpp) |
 | `gv_dumpReflection` | `string` | — | 시험 | 첫 프레임에 이 이름들(쉼표로 여럿)의 리플렉션 등록 내용을 로그로 남긴다 — 타입 · enum (비우면 사용 안 함) | [EngineLoop.cpp](../../Source/Engine/EngineLoop.cpp) |
-| `gv_telemetryFolder` | `string` | — | 시험 · 배포본에도 | 텔레메트리 스풀 폴더 (비면 사용자 폴더의 telemetry/) | [EngineLoop.cpp](../../Source/Engine/EngineLoop.cpp) |
 
 ## `Source/Engine/Destruction`
 
@@ -162,6 +161,12 @@
 | `gv_defaultMaterial` | `string` | — | 일반 | 씬 기본 머티리얼 경로 덮어쓰기 (비면 EngineDefaultAssets) | [Scene.cpp](../../Source/Engine/Scene/Scene.cpp) |
 | `gv_navDebugDraw` | `int32` | `0` | 일반 | 내비메시 디버그 — 선(편집기 뷰포트): 1 폴리곤 테두리 · 2 에이전트 경로 · 4 에이전트 속도 · 8 장애물, 16 걷는 면 · 경로를 게임 화면의 메시로 (31 = 모두, 0 = 끔) | [SceneDebugDraw.cpp](../../Source/Engine/Scene/SceneDebugDraw.cpp) |
 | `gv_physicsDebugDraw` | `bool` | `false` | 일반 | 강체 물리 바디 · 캐릭터를 디버그 선으로 그린다 | [SceneDebugDraw.cpp](../../Source/Engine/Scene/SceneDebugDraw.cpp) |
+
+## `Source/Engine/Telemetry`
+
+| 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
+|---|---|---|---|---|---|
+| `gv_telemetryFolder` | `string` | — | 시험 · 배포본에도 | 텔레메트리 스풀 폴더 (비면 사용자 폴더의 telemetry/) | [TelemetryService.cpp](../../Source/Engine/Telemetry/TelemetryService.cpp) |
 
 ## `Source/Engine/UI`
 

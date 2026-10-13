@@ -3471,7 +3471,7 @@
    "default": "",
    "kind": "시험 · 배포본에도",
    "description": "텔레메트리 스풀 폴더 (비면 사용자 폴더의 telemetry/)",
-   "source": "Source/Engine/EngineLoop.cpp"
+   "source": "Source/Engine/Telemetry/TelemetryService.cpp"
   },
   {
    "name": "gv_textureQuality",

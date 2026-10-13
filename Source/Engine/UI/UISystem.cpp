@@ -7,11 +7,14 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/Text/GlyphAtlas.h"
 #include "Engine/Text/GlyphCache.h"
@@ -21,6 +24,7 @@
 #include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Binding/UIBindingSet.h"
 #include "Engine/UI/Binding/UIViewModel.h"
+#include "Engine/UI/Debug/DebugHUD.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Document/UIDocumentLoader.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
@@ -89,6 +93,9 @@ namespace sw
         , _pLocalization{ nullptr }
         , _pUserSettings{ nullptr }
         , _textLayout{}
+#if SW_DEV_COMMANDS_ENABLED
+        , _debugHUD{}
+#endif
         , _scaleSettings{}
         , _subtitles{ *this }
         , _viewport{}
@@ -162,6 +169,54 @@ namespace sw
         UIPaintPass::releaseScratch();
         _textLayout.reset();
         _pFontService = nullptr;
+    }
+
+    EngineInitResult UISystem::initializeSubsystem()
+    {
+        // UI 배율 규칙 — 게임 프리셋이 팩 상대 경로로 덮어쓰면 그것, 아니면 엔진 기본(engine/ui/uiscale.xml). 모르는 키는 기동 오류다.
+        const EngineDefaultAssets& defaultAssets = engine::getEngineDefaultAssets();
+        const GameConfig&          gameConfig    = GameConfig::getActive();
+        const string               packRoot      = FileUtil::trimTrailingSlashes( gameConfig._packRoot );
+        const string               scalePath     = gameConfig._uiScaleSettings.empty() ? string( defaultAssets._uiScaleSettings ) : FileUtil::joinPath( packRoot, gameConfig._uiScaleSettings );
+        UIScaleSettings            scaleSettings{};
+        if ( scaleSettings.loadFromResource( scalePath ) == false )
+            return EngineInitResult::Failed;
+        setScaleSettings( scaleSettings );
+        // UI 행동 맵(탐색 · 확인 · 뒤로)을 못 읽으면 메뉴를 패드로 다룰 수 없다 — 데이터 오류라 기동 실패다.
+        if ( initialize( engine::getInputManager(), &engine::getFontService(), defaultAssets._uiInputMap ) == false )
+            return EngineInitResult::Failed;
+        // UI 문서 · 스타일 시트 캐시를 에셋 캐시 레지스트리에 올린다 — 핫 리로드 · 종료 · 진단이 다른 에셋과 같은 길로 간다.
+        AssetManager& assetManager = engine::getAssetManager();
+        assetManager.registerAssetCache( &_documentCache );
+        assetManager.registerAssetCache( &_styleSheetCache );
+        // 테마 목록 — 게임 프리셋이 덮어쓰면 그것, 아니면 엔진 기본. 모르는 키는 기동 오류다(배율 규칙과 같다).
+        const string   themePath = gameConfig._uiThemes.empty() ? string( defaultAssets._uiThemes ) : FileUtil::joinPath( packRoot, gameConfig._uiThemes );
+        UIThemeCatalog themes{};
+        if ( themes.loadFromResource( themePath ) == false )
+            return EngineInitResult::Failed;
+        setThemeCatalog( themes );
+        // 엔진 기본 메뉴(옵션 · 일시정지) — 게임 프리셋이 팩 상대 경로로 문서를 덮어쓴다. 일시정지 메뉴는 게임이 켤 때만.
+        setOptionsMenuDocument( gameConfig._uiOptionsMenu.empty() ? string( defaultAssets._uiOptionsMenu ) : FileUtil::joinPath( packRoot, gameConfig._uiOptionsMenu ) );
+        if ( gameConfig._bUIPauseMenu )
+            setPauseMenuDocument( gameConfig._uiPauseMenu.empty() ? string( defaultAssets._uiPauseMenu ) : FileUtil::joinPath( packRoot, gameConfig._uiPauseMenu ) );
+#if SW_DEV_COMMANDS_ENABLED
+        _debugHUD = make_unique<DebugHUD>();
+        _debugHUD->initialize( *this, &engine::getUserSettingsManager() );
+#endif
+        return EngineInitResult::Succeeded;
+    }
+
+    void UISystem::shutdownSubsystem()
+    {
+#if SW_DEV_COMMANDS_ENABLED
+        if ( _debugHUD != nullptr )
+            _debugHUD->shutdown();
+        _debugHUD.reset();
+#endif
+        AssetManager& assetManager = engine::getAssetManager();
+        assetManager.unregisterAssetCache( &_styleSheetCache );
+        assetManager.unregisterAssetCache( &_documentCache );
+        shutdown();
     }
 
     void UISystem::processInput( float32 deltaSeconds )

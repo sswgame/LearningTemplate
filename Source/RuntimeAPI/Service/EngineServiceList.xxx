@@ -59,12 +59,13 @@ SW_ENGINE_SERVICE( _pShaderCache, class, ShaderCache, getShaderCache, Required, 
 SW_ENGINE_SERVICE( _pComponentDefaults, class, ComponentDefaults, getComponentDefaults, Required, GameVisible, EngineCreated )
 SW_ENGINE_SERVICE( _pFrameProfiler, class, FrameProfiler, getFrameProfiler, Required, GameVisible, EngineCreated )
 SW_ENGINE_SERVICE( _pUserSettingsManager, class, UserSettingsManager, getUserSettingsManager, Required, GameVisible, EngineCreated )
-// 글꼴 — 카탈로그 · 면 · 문화권 대체 사슬. 시작은 기동 표의 Fonts 단계(Client 대상)다.
+// 글꼴 — 카탈로그 · 면 · 문화권 대체 사슬. 시작은 서브시스템 Fonts(Client 대상)이고, 만든 뒤 소유는 엔진 루프의 기동 순서로 넘어간다.
 SW_ENGINE_SERVICE( _pFontService, class, FontService, getFontService, Required, GameVisible, EngineCreated )
-// 런타임 UI — 화면 스택 · 입력 → UI 사건 · 갱신. 시작은 기동 표의 UI 단계(Client 대상)다.
+// 런타임 UI — 화면 스택 · 입력 → UI 사건 · 갱신. 시작은 서브시스템 UI(Client 대상)이고, 만든 뒤 소유는 엔진 루프의 기동 순서로 넘어간다.
 SW_ENGINE_SERVICE( _pUISystem, class, UISystem, getUISystem, Required, GameVisible, EngineCreated )
 SW_ENGINE_SERVICE( _pPhysicsSystem, class, PhysicsSystem, getPhysicsSystem, Required, GameVisible, EngineCreated )
 // 텔레메트리 — 동의(사용자 설정 telemetry.enabled, 기본 꺼짐)가 없으면 아무것도 모으지 않는다. 게임은 진행 사건을 `record` 한다.
+// 시작은 서브시스템 Telemetry(Client 대상)이고, 만든 뒤 소유는 엔진 루프의 기동 순서로 넘어간다.
 SW_ENGINE_SERVICE( _pTelemetryService, class, TelemetryService, getTelemetryService, Required, GameVisible, EngineCreated )
 // 크래시 보고 — 다음 실행이 지난 크래시를 묶는다. 게임 UI 는 "보낼까요?" 를 `collectReports` · `decide` 로 묻는다(동의가 ask 일 때).
 SW_ENGINE_SERVICE( _pCrashReportService, class, CrashReportService, getCrashReportService, Required, GameVisible, EngineCreated )

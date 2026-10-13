@@ -7,6 +7,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Text/SystemFontLocator.h"
@@ -119,6 +120,11 @@ namespace sw
         }
         _bInitialized = true;
         return true;
+    }
+
+    EngineInitResult FontService::initializeSubsystem()
+    {
+        return initialize( engine::getEngineDefaultAssets()._fontCatalog ) ? EngineInitResult::Succeeded : EngineInitResult::Failed;
     }
 
     void FontService::shutdown()

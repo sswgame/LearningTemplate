@@ -35,8 +35,8 @@ namespace sw
     class CompressionCodecRegistry;
     class ConfigManager;
     class DebugDrawQueue;
-    class DebugHUD;
     class EventDispatcher;
+    class FontService;
     class FrameProfiler;
     class FrameRenderer;
     class GlobalVariableManager;
@@ -53,6 +53,7 @@ namespace sw
     class ShaderRecompiler;
     class TaskManager;
     class TypeRegistry;
+    class UISystem;
 
     // `ViewCameraProviderDelegate`(씬 뷰 카메라 조회)는 그것을 부르는 패킷 빌더 헤더(`RenderPacketBuilder.h`)에 있습니다.
 
@@ -241,8 +242,6 @@ namespace sw
          */
 #if !defined( SW_SHIPPING )
         unique_ptr<ShaderRecompiler> _shaderRecompiler;
-        /** @brief 디버그 HUD 조종자입니다(Dev 전용 — UI 기동 단계가 만들고, 프레임마다 `UISystem::update` 앞에서 셸 맵 단축키와 함께 돈다). */
-        unique_ptr<DebugHUD> _debugHUD;
 #endif
         /** @brief 에디터 Undo/Redo 전용이라 배포본에는 만들지 않습니다(목록의 HostCreated). */
         unique_ptr<CommandStack> _commandStack;
@@ -272,8 +271,12 @@ namespace sw
         FrameProfileSession _profileSession;
         /** @brief 메모리 태그 예산 · 보고(배포본에서는 아무 일도 하지 않는다). */
         MemoryBudgetMonitor _memoryBudgetMonitor;
-        /** @brief 기동 단계의 순서(`EngineInitStepList.xxx` 를 위상 정렬)와 초기화한 단계입니다. */
+        /** @brief 기동 단계의 순서(`EngineInitStepList.xxx` 의 줄과 `ISubsystem` 을 위상 정렬)와 초기화한 단계입니다. 서브시스템 객체를 소유합니다. */
         EngineInitSequence _startup;
+        /** @brief 서브시스템 `Fonts` 입니다(`_startup` 소유 — 빌려 쓴다). 렌더 패킷의 캔버스가 글리프 캐시를 싣는다. */
+        FontService* _pFontService;
+        /** @brief 서브시스템 `UI` 입니다(`_startup` 소유 — 빌려 쓴다). 프레임마다 입력 · 갱신 · 캔버스가 돈다. */
+        UISystem* _pUISystem;
         /** @brief Config 단계가 읽은 엔진 설정입니다(`_configManager` 소유). Resource · EngineDefaultAssets · RHI 단계가 읽습니다. */
         const EngineConfig* _pEngineConfig;
     };

@@ -16,8 +16,12 @@
  *   (`EngineLoop::StartupStepBody` — `EngineLoop.cpp`, 테스트 하네스의 `TestHost`). 단계마다 타입을 짓지 않고, 없는 함수는 아무것도 하지
  *   않습니다(`EngineInitNoStepBody`). 시그니처가 틀리면 컴파일 오류이고, 이름이 틀리면(`initializeScnee`) 어느 단계에도 걸리지 않습니다.
  *   로거 · 명령줄 · 서비스 생성과 바인딩은 이 표 앞의 고정 부트스트랩이고, 그 종료는 표의 해제 뒤(`EngineBootstrap::shutdown`)입니다.
+ * - **이 표는 옮기는 중입니다.** 새 단계는 표에 줄을 더하지 않고 `ISubsystem` 을 상속해 이름 · 의존 · 대상을 스스로 선언합니다
+ *   (`EngineLoop::initialize` 가 `addSubsystem` 으로 넘긴다 — 표의 줄과 한 순서로 섞여 정렬된다). 옮긴 단계: Fonts(`FontService`) ·
+ *   Telemetry(`TelemetryService`) · UI(`UISystem`). 남은 줄의 계획은 `docs/plans/SubsystemMigration.md` 입니다.
+ *   표의 의존 칸은 컴파일 때 식별자로 검사하므로 서브시스템 이름을 부를 수 없습니다 — 다른 줄이 기대는 단계는 그 줄과 함께 옮깁니다.
  *
- * 단계를 더하는 법:
+ * 표에 단계를 더하는 법(옮기기 전의 방식 — 새 단계는 `ISubsystem` 으로 만든다, `Source/Engine/README.md`):
  *   1. 이 표에 한 줄 — 이름 · 메모리 태그 · 대상 · 먼저 서야 하는 단계. 줄 위치는 어디든 됩니다.
  *   2. `EngineLoop::StartupStepBody` 에 필요한 본문(`initialize<단계>` · `shutdown<단계>` · `destroy<단계>`)만 정적 함수로 둡니다.
  *   3. 테스트 하네스가 그 단계를 세워야 하면 `TestHost` 에도 같은 이름의 함수를 둡니다(아니면 손대지 않습니다).
@@ -41,15 +45,12 @@ SW_ENGINE_STARTUP_STEP( ModuleTypes,         Reflection, All,    { Config, Modul
 SW_ENGINE_STARTUP_STEP( Physics,             Physics,    All,    { Resource, Task } )            // 설정 표(레이어 · 재질)는 리소스, Jolt 잡은 태스크
 SW_ENGINE_STARTUP_STEP( Scene,               Scene,      All,    { Audio, FileIO, Input, ModuleImages, Physics, Resource, Task } ) // 컴포넌트가 입력 · 오디오 · 모듈 코드 · 에셋 · 물리 씬을 든다(스트리밍은 비동기 IO)
 SW_ENGINE_STARTUP_STEP( Headless,            EngineMisc, All,    { EngineDefaultAssets, ModuleTypes, Scene, ShaderCache } ) // 셰이더 쿠킹 · 씬 쿠킹(모든 컴포넌트 타입이 있어야 쿠킹한다) — 하면 뒤 단계(창 · RHI · 렌더러)를 건너뛴다 — 서버는 씬 쿠킹만(셰이더 쿠킹 · 임포트는 거절)
-SW_ENGINE_STARTUP_STEP( Fonts,               EngineMisc, Client, { EngineDefaultAssets, Headless, Resource } ) // 글꼴 카탈로그 · 기본 가족 — 문화권 표(EngineDefaultAssets)를 읽은 뒤, 쿠킹(Headless)이면 열지 않는다
 SW_ENGINE_STARTUP_STEP( UserSettings,        EngineMisc, Client, { Audio, Headless, Input, Resource } ) // 플레이어 옵션 — 스키마 · 사용자 파일을 읽어 대상(오디오 · 입력 · 전역 변수)에 넣는다. 화면 값은 창을 만드는 RHI 가 읽는다
 SW_ENGINE_STARTUP_STEP( RHI,                 RenderCPU,  Client, { Config, Headless, UserSettings } ) // 백엔드 선택 · 창 · 디바이스
 SW_ENGINE_STARTUP_STEP( FrameRenderer,       RenderCPU,  Client, { RHI, Task } )                
 SW_ENGINE_STARTUP_STEP( RenderThread,        RenderCPU,  Client, { FrameRenderer } )            
 SW_ENGINE_STARTUP_STEP( LiveShader,          Shader,     Client, { FrameRenderer, RenderThread } ) // 재컴파일이 렌더 스레드를 세우고 렌더러에 알린다(Debug)
 SW_ENGINE_STARTUP_STEP( SceneRHI,            RenderCPU,  Client, { RHI, Scene } )                // 씬에 디바이스를 건다 — 렌더러 쪽 단계 가운데 종료가 가장 먼저다
-SW_ENGINE_STARTUP_STEP( Telemetry,           EngineMisc, Client, { UserSettings } )              // 동의는 사용자 설정 — 종료가 맨 처음이라 마지막 장면 요약 · 묶음을 쓴다 — 서버 크래시 묶기 · 텔레메트리는 후속(동의가 플레이어 설정이다)
-SW_ENGINE_STARTUP_STEP( UI,                  EngineMisc, Client, { Fonts, Input, UserSettings } ) // 런타임 UI — 입력(행동 · 포인터)을 읽고 글꼴로 측정한다, UI 배율 · 글자 크기는 사용자 설정
 
 // `AssetManager::shutdown` 은 Resource 단계의 해제에 있다 — 에셋을 드는 단계가 모두 Resource 뒤에 서므로, 역순 해제에서 그들의 소멸자가
 // 에셋을 놓은 뒤에 캐시를 비운다. 소멸자가 태스크를 기다리는 객체(에셋 스트리밍 큐)는 Task 에 의존하는 단계(Scene)가 해제한다.

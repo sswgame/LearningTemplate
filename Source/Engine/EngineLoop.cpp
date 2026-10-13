@@ -7,7 +7,6 @@
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Container/StringUtil.h"
-#include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Event/EventDispatcher.h"
@@ -15,7 +14,6 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MatrixMath.h"
-#include "Core/Module/ModuleBuildID.h"
 #include "Core/String/hashed_string.h"
 #include "Core/String/string_splitter.h"
 #include "Core/Task/TaskManager.h"
@@ -78,7 +76,6 @@
 #include "Engine/Scene/SceneDebugDraw.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneNavigationCooker.h"
-#include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/UI/Debug/DebugHUD.h"
@@ -108,8 +105,6 @@ namespace sw
      * @details 첫 프레임이라 게임 · 에디터 모듈의 타입까지 등록된 뒤다. 한 번 찍고 비운다.
      */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_dumpReflection, "", "첫 프레임에 이 이름들(쉼표로 여럿)의 리플렉션 등록 내용을 로그로 남긴다 — 타입 · enum (비우면 사용 안 함)" );
-    /** @brief `-gv_telemetryFolder=<경로>`: 텔레메트리 스풀 폴더입니다(자동화 — 사용자 폴더를 건드리지 않는다). 비면 사용자 설정 파일 옆의 `telemetry/`. */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::string, gv_telemetryFolder, "", "텔레메트리 스풀 폴더 (비면 사용자 폴더의 telemetry/)" );
 
 } // namespace sw
 
@@ -122,6 +117,7 @@ namespace sw
     // 해제하는지(`destroy<단계>`)를 필요한 것만 적는다. 없는 함수는 아무것도 하지 않는다(`EngineInitNoStepBody`). 순서는 표의 의존이
     // 정한다: 초기화는 위상 순서, 종료와 해제는 그 역순. 종료는 초기화한 단계에만 불린다. 해제는 모든 종료 뒤에 **모든 단계**에
     // 불리므로(기동이 어디서 멈췄든) null 안전해야 한다. 아래는 읽기 좋게 초기화 순서대로 적었을 뿐이다.
+    // 이 모음은 옮기는 중이다 — 새 단계는 여기에 함수를 더하지 않고 `ISubsystem` 을 상속한다(Fonts · Telemetry · UI 가 옮겨 갔다).
     // ------------------------------------------------------------------------------
 
     struct EngineLoop::StartupStepBody : EngineInitNoStepBody
@@ -226,15 +222,6 @@ namespace sw
             return EngineInitResult::Succeeded;
         }
         static void destroyEngineDefaultAssets( EngineLoop& loop ) { loop._owned._pEngineDefaultAssets.reset(); }
-
-        static EngineInitResult initializeFonts( EngineLoop& loop )
-        {
-            // 기본 가족(저장소 글꼴)을 못 열면 글자를 그릴 수 없다 — 기동 오류다. 시스템 대체 가족은 없어도 경고만 한다.
-            const EngineDefaultAssets& defaultAssets = *loop._owned._pEngineDefaultAssets;
-            return loop._owned._pFontService->initialize( defaultAssets._fontCatalog ) ? EngineInitResult::Succeeded : EngineInitResult::Failed;
-        }
-        static void shutdownFonts( EngineLoop& loop ) { loop._owned._pFontService->shutdown(); }
-        static void destroyFonts( EngineLoop& loop ) { loop._owned._pFontService.reset(); }
 
         static EngineInitResult initializeShaderCache( EngineLoop& loop )
         {
@@ -701,111 +688,6 @@ namespace sw
         }
         // 렌더러 쪽 단계 가운데 종료가 가장 먼저다 — 씬에서 디바이스를 먼저 뗀다.
         static void shutdownSceneRHI( EngineLoop& loop ) { loop._owned._pSceneManager->setRHIDevice( nullptr ); }
-
-        static EngineInitResult initializeTelemetry( EngineLoop& loop )
-        {
-            // 문맥은 파일마다 첫 줄 — 크래시 보고 · 로그와 같은 세션 id, 심볼과 짝지을 빌드 id.
-            const GameConfig& gameConfig = GameConfig::getActive();
-            TelemetryContext  context;
-            context._sessionID   = CrashHandler::getSessionID();
-            context._buildConfig = build::kConfigName;
-            context._platform    = build::kPlatformName;
-            context._buildID     = ModuleBuildID::find( nullptr )._id;
-            context._game        = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( gameConfig._packRoot ) );
-            const string folder  = gv_telemetryFolder.empty()
-                                     ? FileUtil::joinPath( FileUtil::getDirectoryPart( loop._owned._pUserSettingsManager->getUserFilePath() ), "telemetry" )
-                                     : string( gv_telemetryFolder );
-
-            TelemetryService& telemetry = *loop._owned._pTelemetryService;
-            // 스키마가 틀려도 기동은 멈추지 않는다 — 스키마에 없는 사건은 기록되지 않을 뿐이다.
-            if ( telemetry.loadSchema( engine::getEngineDefaultAssets()._telemetrySchema ) == false )
-                SW_LOG_ERROR( "Engine telemetry schema '%#' is not loaded", engine::getEngineDefaultAssets()._telemetrySchema.c_str() );
-            if ( gameConfig._telemetrySchema.empty() == false )
-            {
-                const string gameSchema = FileUtil::joinPath( FileUtil::trimTrailingSlashes( gameConfig._packRoot ), gameConfig._telemetrySchema );
-                if ( telemetry.loadSchema( gameSchema ) == false )
-                    SW_LOG_ERROR( "Game telemetry schema '%#' is not loaded", gameSchema.c_str() );
-            }
-            telemetry.initialize( folder, context );
-            // 동의는 플레이어 옵션(기본 꺼짐)이다. 꺼져 있으면 지난 실행이 남긴 스풀까지 지운다.
-            telemetry.bindConsentSetting( *loop._owned._pUserSettingsManager );
-            // 장면별 프레임 시간 · flush 는 프레임 관찰자로 돈다(씬 틱 뒤 — `TelemetryService::onAfterSceneTick`). 루프는 목록만 안다.
-            loop.addFrameObserver( &telemetry );
-
-            // 지난 실행의 크래시를 묶는다(덤프 · 로그 폴더 옆의 Saved/CrashReports). 기본 동의(local)는 묶기만 하고, 보낼 것이 있을 때만 보고 프로세스를 띄운다.
-            const string crashFolder = getCrashReportFolder();
-            if ( crashFolder.empty() == false )
-            {
-                CrashReportService& crashReports = *loop._owned._pCrashReportService;
-                const string        reportsFolder =
-                    FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( crashFolder ) ), CrashReportService::kReportsFolderName );
-                crashReports.initialize( crashFolder, reportsFolder, CrashHandler::getSessionID() );
-                crashReports.bindConsentSetting( *loop._owned._pUserSettingsManager );
-                crashReports.setReporterExecutable( FileUtil::getExecutablePath() ); // App 이 -crash-reporter 를 알아듣는다(App::initialize 헤드리스 분기)
-                (void)crashReports.collectNewCrashes();
-                (void)crashReports.launchReporterProcess();
-            }
-            return EngineInitResult::Succeeded;
-        }
-        static void shutdownTelemetry( EngineLoop& loop )
-        {
-            loop._owned._pCrashReportService->shutdown();
-            loop.removeFrameObserver( loop._owned._pTelemetryService.get() );
-            loop._owned._pTelemetryService->shutdown();
-        }
-
-        static EngineInitResult initializeUI( EngineLoop& loop )
-        {
-            // UI 배율 규칙 — 게임 프리셋이 팩 상대 경로로 덮어쓰면 그것, 아니면 엔진 기본(engine/ui/uiscale.xml). 모르는 키는 기동 오류다.
-            const EngineDefaultAssets& defaultAssets = *loop._owned._pEngineDefaultAssets;
-            const GameConfig&          gameConfig    = GameConfig::getActive();
-            const string               scalePath     = gameConfig._uiScaleSettings.empty()
-                                                         ? string( defaultAssets._uiScaleSettings )
-                                                         : FileUtil::joinPath( FileUtil::trimTrailingSlashes( gameConfig._packRoot ), gameConfig._uiScaleSettings );
-            UIScaleSettings            scaleSettings{};
-            if ( scaleSettings.loadFromResource( scalePath ) == false )
-                return EngineInitResult::Failed;
-            UISystem& ui = *loop._owned._pUISystem;
-            ui.setScaleSettings( scaleSettings );
-            // UI 행동 맵(탐색 · 확인 · 뒤로)을 못 읽으면 메뉴를 패드로 다룰 수 없다 — 데이터 오류라 기동 실패다.
-            if ( ui.initialize( *loop._owned._pInputManager, loop._owned._pFontService.get(), defaultAssets._uiInputMap ) == false )
-                return EngineInitResult::Failed;
-            // UI 문서 · 스타일 시트 캐시를 에셋 캐시 레지스트리에 올린다 — 핫 리로드 · 종료 · 진단이 다른 에셋과 같은 길로 간다.
-            loop._owned._pAssetManager->registerAssetCache( &ui.getDocumentCache() );
-            loop._owned._pAssetManager->registerAssetCache( &ui.getStyleSheetCache() );
-            // 테마 목록 — 게임 프리셋이 덮어쓰면 그것, 아니면 엔진 기본. 모르는 키는 기동 오류다(배율 규칙과 같다).
-            const string   themePath = gameConfig._uiThemes.empty() ? string( defaultAssets._uiThemes )
-                                                                    : FileUtil::joinPath( FileUtil::trimTrailingSlashes( gameConfig._packRoot ), gameConfig._uiThemes );
-            UIThemeCatalog themes{};
-            if ( themes.loadFromResource( themePath ) == false )
-                return EngineInitResult::Failed;
-            ui.setThemeCatalog( themes );
-            // 엔진 기본 메뉴(옵션 · 일시정지) — 게임 프리셋이 팩 상대 경로로 문서를 덮어쓴다. 일시정지 메뉴는 게임이 켤 때만.
-            const string packRoot = FileUtil::trimTrailingSlashes( gameConfig._packRoot );
-            ui.setOptionsMenuDocument( gameConfig._uiOptionsMenu.empty() ? string( defaultAssets._uiOptionsMenu )
-                                                                         : FileUtil::joinPath( packRoot, gameConfig._uiOptionsMenu ) );
-            if ( gameConfig._bUIPauseMenu )
-                ui.setPauseMenuDocument( gameConfig._uiPauseMenu.empty() ? string( defaultAssets._uiPauseMenu )
-                                                                         : FileUtil::joinPath( packRoot, gameConfig._uiPauseMenu ) );
-#if SW_DEV_COMMANDS_ENABLED
-            loop._debugHUD = make_unique<DebugHUD>();
-            loop._debugHUD->initialize( ui, loop._owned._pUserSettingsManager.get() );
-#endif
-            return EngineInitResult::Succeeded;
-        }
-        static void shutdownUI( EngineLoop& loop )
-        {
-#if SW_DEV_COMMANDS_ENABLED
-            if ( loop._debugHUD != nullptr )
-                loop._debugHUD->shutdown();
-            loop._debugHUD.reset();
-#endif
-            UISystem& ui = *loop._owned._pUISystem;
-            loop._owned._pAssetManager->unregisterAssetCache( &ui.getStyleSheetCache() );
-            loop._owned._pAssetManager->unregisterAssetCache( &ui.getDocumentCache() );
-            ui.shutdown();
-        }
-        static void destroyUI( EngineLoop& loop ) { loop._owned._pUISystem.reset(); }
     };
 
     EngineLoop::EngineLoop()
@@ -830,6 +712,8 @@ namespace sw
         , _exitCode{ 0 }
         , _profileSession{}
         , _startup{}
+        , _pFontService{ nullptr }
+        , _pUISystem{ nullptr }
         , _pEngineConfig{ nullptr }
     {
     }
@@ -903,27 +787,38 @@ namespace sw
             engine::bindEngineServices( services );
         }
 
+        // `ISubsystem` 으로 옮긴 서비스는 기동 순서가 소유한다 — 표의 단계와 한 순서로 정렬되어 돌고, 해제는 그 역순 자리에서 객체를 지운다.
+        // 서비스 표는 위에서 같은 객체를 가리키도록 이미 묶였다(저장소가 만들고, 소유만 여기로 넘긴다).
+        _pFontService                      = &_startup.addSubsystem( std::move( _owned._pFontService ) );
+        TelemetryService& telemetryService = _startup.addSubsystem( std::move( _owned._pTelemetryService ) );
+        _pUISystem                         = &_startup.addSubsystem( std::move( _owned._pUISystem ) );
+
         // 외부 프로파일러(`-gv_tracy`)는 서비스 표가 선 직후에 켠다 — 기동 단계부터 타임라인에 남고, 켤 때 엔진 프로파일러도 같이 켠다.
         ThreadName::setCurrentThreadName( "GameThread" );
         ProfilerBackend::initialize();
 
-        // 초기화(`initialize()`)의 순서는 손으로 적지 않는다. 단계마다 먼저 서야 하는 단계를 `EngineInitStepList.xxx` 에 적고,
-        // 여기서는 위상 순서로 본문 모음(`StartupStepBody::initialize<단계>`)을 부른다. 종료와 해제는 그 역순이다(`shutdown`).
+        // 초기화(`initialize()`)의 순서는 손으로 적지 않는다. 단계와 서브시스템마다 먼저 서야 하는 것을 적고, 여기서는 위상 순서로
+        // 표의 본문 모음(`StartupStepBody::initialize<단계>`)과 서브시스템(`initializeSubsystem`)을 부른다. 종료와 해제는 그 역순이다(`shutdown`).
         const bool bStarted = _startup.initializeAll<StartupStepBody>( *this, bDedicatedServer ? EngineInitTarget::Server : EngineInitTarget::Client );
         if ( bStarted == false )
             return false;
+        // 장면별 프레임 시간 · flush 는 프레임 관찰자로 돈다(씬 틱 뒤 — `TelemetryService::onAfterSceneTick`). 텔레메트리가 섰을 때만 붙인다.
+        // 떼는 것은 `shutdown` 이 단계 종료 전에 관찰자 목록을 비우는 것으로 끝난다.
+        if ( telemetryService.isInitialized() )
+            addFrameObserver( &telemetryService );
         if ( bDedicatedServer )
         {
-            // 실제 바이너리에서 단계가 빠졌는지 테스트(ServerBootTest)이 이 줄로 본다.
-            string skipped;
-            for ( uint32 stepIndex = 0; stepIndex < static_cast<uint32>( EngineInitStep::Count ); ++stepIndex )
+            // 실제 바이너리에서 단계가 빠졌는지 테스트(ServerBootTest)가 이 줄로 본다. 초기화 순서대로 적는다.
+            const SubsystemCollection& subsystems = _startup.getSubsystems();
+            string                     skipped;
+            for ( const uint32 index : subsystems.getInitializeOrder() )
             {
-                const EngineInitStep step = static_cast<EngineInitStep>( stepIndex );
-                if ( ( static_cast<uint8>( EngineInitSequence::getStepTarget( step ) ) & static_cast<uint8>( EngineInitTarget::Server ) ) != 0 )
+                const ISubsystem& subsystem = subsystems.getSubsystem( index );
+                if ( ( static_cast<uint8>( subsystem.getSubsystemTarget() ) & static_cast<uint8>( EngineInitTarget::Server ) ) != 0 )
                     continue;
                 if ( skipped.empty() == false )
                     skipped += " ";
-                skipped += EngineInitSequence::getStepName( step );
+                skipped += subsystem.getSubsystemName();
             }
             SW_LOG_INFO( "Dedicated server: startup steps not run - %#", skipped.c_str() );
         }
@@ -952,11 +847,13 @@ namespace sw
         // 목록의 용량은 기동 뒤에 잡았으므로 누수 보고 전에 해제한다.
         vector<IEngineFrameObserver*>{}.swap( _listFrameObserver );
         AssetLoadProfiler::get().reportIfRequested( "session" );
-        // 단계 본문을 초기화한 것만 역순으로 내린다: 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI → 씬 → 입력 · 오디오 → 모듈 이미지 → 태스크 → 셰이더 캐시.
+        // 초기화한 단계만 역순으로 내린다: UI → 텔레메트리 → 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI → 씬 → 입력 · 오디오 → 모듈 이미지 → 태스크 → 셰이더 캐시.
         _startup.shutdownAll();
-        // 단계가 소유한 객체를 초기화 순서의 역순으로 해제한다(`StartupStepBody::destroy<단계>`):렌더러 쪽 → RHI → 씬 → 입력 · 오디오 → 태스크 → 셰이더 캐시 →
-        // 엔진 데이터 → 리소스 → 설정 → 리플렉션 → 압축. 기동이 어디서 멈췄든 모든 단계를 해제한다.
+        // 단계가 소유한 객체를 초기화 순서의 역순으로 해제한다(표의 줄은 `StartupStepBody::destroy<단계>`, 서브시스템은 소멸): UI → 텔레메트리 → 렌더러 쪽 → RHI →
+        // 글꼴 → 씬 → 입력 · 오디오 → 태스크 → 셰이더 캐시 → 엔진 데이터 → 리소스 → 설정 → 리플렉션 → 압축. 기동이 어디서 멈췄든 모든 단계를 해제한다.
         _startup.destroyAll();
+        _pFontService = nullptr;
+        _pUISystem    = nullptr;
         // 할당 관찰을 떼고 출력을 비운다. 출력 객체(Tracy)는 프로세스 수명이라 남아 있는 구간을 닫을 수 있다.
         ProfilerBackend::shutdown();
         // 표 밖 부트스트랩을 세운 역순으로 내린다(테스트 하네스와 같은 끝 정리).
@@ -1065,8 +962,8 @@ namespace sw
         if ( _owned._pInputManager != nullptr )
             _owned._pInputManager->beginFrame( deltaSeconds );
         // UI 는 게임 틱보다 먼저 입력을 받는다 — UI 가 먹은 행동 · 마우스 버튼은 이번 프레임 폰의 의도에 들지 않는다(플레이어 조종자가 본다).
-        if ( _owned._pUISystem != nullptr && _owned._pUISystem->isInitialized() )
-            _owned._pUISystem->processInput( GameTimeScale::getUnscaledDeltaTime( deltaSeconds ) ); // 정지 메뉴의 탐색 반복은 실제 시간
+        if ( _pUISystem != nullptr && _pUISystem->isInitialized() )
+            _pUISystem->processInput( GameTimeScale::getUnscaledDeltaTime( deltaSeconds ) ); // 정지 메뉴의 탐색 반복은 실제 시간
 
         if ( gv_dumpReflection.empty() == false )
         {
@@ -1157,12 +1054,13 @@ namespace sw
 
         // 런타임 UI — 이번 프레임의 게임 상태로 애니메이션 · 스타일 · 레이아웃을 돌린다(게임 틱 뒤 · 렌더 패킷 앞). 뷰포트는 게임이 그려지는 화면이고,
         // UI 단위 크기 · 배율 · 안전 영역은 해상도 규칙과 사용자 배율(gv_uiScale)로 정한다.
-        if ( _owned._pUISystem != nullptr && _owned._pUISystem->isInitialized() )
+        if ( _pUISystem != nullptr && _pUISystem->isInitialized() )
         {
 #if SW_DEV_COMMANDS_ENABLED
             // 디버그 HUD — 꺼져 있으면 셸 맵 액션 하나를 읽고 끝난다. 켜져 있으면 HUD 화면이 아래 update 의 틱에서 섹션을 부른다.
-            if ( _debugHUD != nullptr )
-                _debugHUD->update( _shellActions.getInputMap() );
+            DebugHUD* const pDebugHUD = _pUISystem->getDebugHUD();
+            if ( pDebugHUD != nullptr )
+                pDebugHUD->update( _shellActions.getInputMap() );
 #endif
             // 뷰포트 0 은 "백버퍼 전체"(게임 창 — 패킷 · 캔버스 테스트 그림과 같은 규칙)다.
             const IWindow* const pWindow      = IWindow::getActiveWindow();
@@ -1176,8 +1074,8 @@ namespace sw
                 uiHeight = bHasDevice ? _rhi->getDevice().getBackBufferHeight() : ( pWindow != nullptr ? pWindow->getHeight() : 0 );
             }
             const UIViewport viewport =
-                _owned._pUISystem->computeViewport( float2{ static_cast<float32>( uiWidth ), static_cast<float32>( uiHeight ) }, contentScale );
-            _owned._pUISystem->update( GameTimeScale::getUnscaledDeltaTime( deltaTime ), viewport ); // 애니메이션 · 자막 · 알림은 정지 메뉴 아래서도 흐른다
+                _pUISystem->computeViewport( float2{ static_cast<float32>( uiWidth ), static_cast<float32>( uiHeight ) }, contentScale );
+            _pUISystem->update( GameTimeScale::getUnscaledDeltaTime( deltaTime ), viewport ); // 애니메이션 · 자막 · 알림은 정지 메뉴 아래서도 흐른다
         }
 
         // 이번 틱에 경로로 잡힌 머티리얼(메시의 저장된 참조)을 패킷을 내기 **전에** 올린다. 컴포넌트는 디바이스를 모른다(`MaterialCache::requestInitialize`).
@@ -1215,7 +1113,7 @@ namespace sw
             }
 
             _packetBuilder.populateScene( packet, views, sceneViewCameraProvider, pActiveScene, deltaTime, *_rhi, _frameRenderer.get() );
-            RenderPacketBuilder::populateCanvas( packet, bSceneMain, _owned._pUISystem.get(), _owned._pFontService.get(), _rhi.get() );
+            RenderPacketBuilder::populateCanvas( packet, bSceneMain, _pUISystem, _pFontService, _rhi.get() );
 
             if ( _renderThread != nullptr )
             {
