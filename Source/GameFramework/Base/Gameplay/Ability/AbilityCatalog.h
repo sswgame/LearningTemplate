@@ -111,7 +111,7 @@ namespace sw
      * @class AbilityCatalog
      * @brief 이펙트, 어빌리티, 세트의 정의를 id 로 찾고, 클래스 이름으로 어빌리티, 어트리뷰트 세트, 실행 계산을 만듭니다.
      * @details **소유자**: 게임이 카탈로그를 하나 만들어 `GameInstanceBase` 의 멤버로 보관하고, 게임 서비스로 등록한다.
-     *          등록은 `game::bindLocalService<AbilityCatalog>( &_abilityCatalog )` 로 한다. 컴포넌트에 카탈로그를 따로 정하지 않았으면 이 서비스를 쓴다.
+     *          등록은 게임 인스턴스가 `bindScopedService( &_abilityCatalog )` 로 게임 범위에 건다. 컴포넌트에 카탈로그를 따로 정하지 않았으면 이 서비스를 쓴다.
      *          등록한 팩토리는 게임 모듈의 코드이므로 카탈로그의 수명은 게임 모듈과 같아야 한다. 핫 리로드를 하면 새 인스턴스가 다시 등록한다.
      *
      *          **기본 등록**: 어트리뷰트 세트는 "Generic"(`AttributeSet`, 어트리뷰트를 데이터가 정함)과 "Combat"(`CombatAttributeSet`),

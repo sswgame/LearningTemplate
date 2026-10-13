@@ -8,6 +8,8 @@
 
 #include "Editor/Common/Workspace/EditorContext.h"
 
+#include "Editor/Common/Workspace/EditorService.h"
+
 namespace sw::editor
 {
     EditorContext* EditorContext::s_pActiveContext = nullptr;
@@ -15,5 +17,11 @@ namespace sw::editor
     EditorContext* EditorContext::get()
     {
         return s_pActiveContext;
+    }
+
+    void EditorContext::setActive( EditorContext* pContext )
+    {
+        s_pActiveContext = pContext;
+        setEditorScope( pContext != nullptr ? &pContext->_scope : nullptr );
     }
 } // namespace sw::editor

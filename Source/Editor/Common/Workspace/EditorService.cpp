@@ -2,8 +2,6 @@
 
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Core/Container/map.h"
-
 #include "Editor/Common/Config/EditorToolDefaults.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -15,8 +13,8 @@ namespace sw::editor
 {
     namespace
     {
-        ModuleServiceTable  s_editorService{};
-        map<uint64, void*>  s_mapLocalService{};
+        ModuleServiceTable  s_editorService{};         ///< App 이 넘긴 호스트 서비스 표
+        SubsystemScope*     s_pEditorScope{ nullptr }; ///< 지금 에디터 범위(에디터 컨텍스트 · 테스트가 건다)
         EditorToolDefaults* s_pEditorToolDefaults{ nullptr };
     } // namespace
 
@@ -28,31 +26,23 @@ namespace sw::editor
     void unbindEditorService()
     {
         s_editorService = {};
-        s_mapLocalService.clear();
+    }
+
+    SubsystemScope* findEditorScope()
+    {
+        return s_pEditorScope;
+    }
+
+    void setEditorScope( SubsystemScope* pScope )
+    {
+        s_pEditorScope = pScope;
     }
 
     namespace internal
     {
-        void* getRawService( sw::internal::ModuleServiceID id )
+        const ModuleServiceTable& getHostServiceTable()
         {
-            const uint32 rawID = sw::internal::toRawServiceID( id );
-            if ( rawID >= sw::internal::kModuleServiceCount )
-                return nullptr;
-            return const_cast<void*>( s_editorService.arrServices[rawID] );
-        }
-
-        void bindRawLocalService( uint64 typeHash, void* pService )
-        {
-            if ( pService != nullptr )
-                s_mapLocalService[typeHash] = pService;
-            else
-                s_mapLocalService.erase( typeHash );
-        }
-
-        void* getRawLocalService( uint64 typeHash )
-        {
-            const auto it = s_mapLocalService.find( typeHash );
-            return it != s_mapLocalService.end() ? it->second : nullptr;
+            return s_editorService;
         }
     } // namespace internal
 

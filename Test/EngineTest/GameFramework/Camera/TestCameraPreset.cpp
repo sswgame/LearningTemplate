@@ -629,7 +629,9 @@ SW_TEST_CASE( CameraPresetTest, CycleActionSwitchesToTheNextPreset )
 {
     InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
-    game::bindLocalService<InputManager>( &input );
+    SubsystemScope        scope; // input 보다 먼저 사라진다(뒤에 선언)
+    game::ScopedGameScope activeScope( scope );
+    SW_EXPECT_TRUE( scope.bind( &input ) );
     input.getInputMap().bind( "CycleCamera", Key::C );
 
     GameObjectManager manager;
@@ -655,6 +657,6 @@ SW_TEST_CASE( CameraPresetTest, CycleActionSwitchesToTheNextPreset )
     SW_EXPECT_TRUE( pDirector->getActivePresetID() == hashed_string( "second" ) );
 
     manager.endPlay();
-    game::unbindLocalService<InputManager>();
+    scope.unbind<InputManager>();
     input.shutdown();
 }

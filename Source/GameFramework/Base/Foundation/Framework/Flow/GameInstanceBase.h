@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Task/TaskFuture.h"
 
 #include "GameFramework/Base/Foundation/Data/GameSettings.h"
@@ -200,6 +201,20 @@ namespace sw
         /** @brief 활성 씬의 오브젝트 매니저입니다. 게임 서비스가 묶이지 않았거나 활성 씬이 없으면 nullptr 입니다. */
         static GameObjectManager* findActiveObjectManager();
 
+        /**
+         * @brief 이 인스턴스의 게임 범위에 객체(카탈로그 · 데이터베이스 — 보통 파생의 멤버)를 겁니다. `game::getService<T>()` 가 찾는다.
+         * @details 범위는 이 인스턴스가 소유하므로 인스턴스가 내려가면 함께 풀린다 — 짝으로 풀 일이 없다. 같은 타입이 이미 걸려 있으면
+         *          알리고 걸지 않는다(키트 둘이 같은 카탈로그 타입을 서비스로 쓰는 조립 — 나중 것이 앞 것을 소리 없이 덮지 않는다).
+         */
+        template <class T>
+        void bindScopedService( T* pService )
+        {
+            if ( _gameScope.bind( pService ) == false )
+                reportScopedServiceConflict( getSubsystemTypeHash<T>() );
+        }
+        /** @brief 이 인스턴스의 게임 범위입니다(기동 뒤 `game::findGameScope()` 와 같다). */
+        SubsystemScope& getGameScope() { return _gameScope; }
+
         /** @brief `deserializeSceneObjects` 가 읽는 씬 오브젝트 데이터의 형식입니다. */
         enum class SceneObjectFormat : uint8
         {
@@ -238,6 +253,10 @@ namespace sw
 
         /** @brief `GameSettings` 의 다국어 · 입력 맵 칸을 적용합니다. 못 읽은 것은 알리고 넘어갑니다(게임은 뜬다). */
         void applyBootstrap();
+        /** @brief 이 인스턴스의 게임 범위를 지금 범위 사슬에서 뗍니다(지금 범위면 앞 범위로 되돌리고, 다른 범위가 이 범위를 상위로 이었으면 그 위를 잇게 한다). */
+        void detachGameScope();
+        /** @brief 게임 범위에 같은 타입이 이미 걸려 있음을 알립니다(`bindScopedService`). */
+        void reportScopedServiceConflict( uint64 typeHash ) const;
         /**
          * @brief @p scenePath 의 로드를 `SceneManager` 에 맡기고 `SceneLoadRequestedEvent` 를 냅니다.
          * @return 경로가 비었으면 조용히 false, 맡기지 못했으면 알리고 false 입니다(그때는 이벤트도 없습니다).
@@ -282,6 +301,7 @@ namespace sw
         ScreenTransitionManager             _screenTransition;     ///< 화면 페이드 · 전환 순서
         unique_ptr<LoadingScreenController> _pLoadingScreen;       ///< 로딩 화면 · 페이드 패널(UI 시스템에 화면을 띄운다)
         unique_ptr<GameNetSession>          _pNetSession;          ///< 네트워크 역할 — 실행 인자가 없으면 열지 않는다
+        SubsystemScope                      _gameScope;            ///< 게임 범위 — 기동부터 종료까지 `game::getService<T>()` 의 지금 범위다
         uint8                               _bResumingWorld;       ///< `initialize` 때 이미 활성 씬이 있었다(다시 선 인스턴스) — 첫 씬을 요청하지 않는다
     };
 } // namespace sw

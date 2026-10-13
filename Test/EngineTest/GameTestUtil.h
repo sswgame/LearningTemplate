@@ -30,17 +30,28 @@ namespace sw::test
 
 namespace sw::test
 {
-    /** @brief 게임 로컬 서비스 하나(`game::bindLocalService<T>`)를 스코프 동안 묶는 RAII 가드입니다 — 어서션이 빠져나가도 풀립니다. */
+    /**
+     * @brief 서비스 하나를 스코프 동안 게임 범위에 거는 RAII 가드입니다 — 자기 범위를 만들어 지금 게임 범위로 걸고(앞 범위를 상위로 잇는다), 사라지면 되돌린다.
+     * @details 어서션이 빠져나가도 풀린다. 여럿을 겹쳐 쓰면 범위가 이어져 모두 찾힌다.
+     */
     template <typename T>
-    class ScopedLocalServiceBinding
+    class ScopedGameScopeService
     {
     public:
-        explicit ScopedLocalServiceBinding( T& service ) { game::bindLocalService<T>( &service ); }
-        ~ScopedLocalServiceBinding() { game::unbindLocalService<T>(); }
+        explicit ScopedGameScopeService( T& service )
+            : _scope{}
+            , _activeScope{ _scope }
+        {
+            (void)_scope.bind( &service ); // 새 범위라 겹치지 않는다
+        }
 
-        ScopedLocalServiceBinding( const ScopedLocalServiceBinding& )            = delete;
-        ScopedLocalServiceBinding& operator=( const ScopedLocalServiceBinding& ) = delete;
-        ScopedLocalServiceBinding( ScopedLocalServiceBinding&& )                 = delete;
-        ScopedLocalServiceBinding& operator=( ScopedLocalServiceBinding&& )      = delete;
+        ScopedGameScopeService( const ScopedGameScopeService& )            = delete;
+        ScopedGameScopeService& operator=( const ScopedGameScopeService& ) = delete;
+        ScopedGameScopeService( ScopedGameScopeService&& )                 = delete;
+        ScopedGameScopeService& operator=( ScopedGameScopeService&& )      = delete;
+
+    private:
+        SubsystemScope        _scope;       ///< 이 서비스만 든 범위
+        game::ScopedGameScope _activeScope; ///< 사는 동안 지금 게임 범위로 건다
     };
 } // namespace sw::test

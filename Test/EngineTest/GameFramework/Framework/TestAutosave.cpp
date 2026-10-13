@@ -239,11 +239,12 @@ SW_TEST_CASE( AutosaveTest, TriggerVolumeReachesTheCheckpointOnceForTheTaggedAct
     const string        directory = test::makeTempDirectory( "autosave_trigger" );
     AutosaveTestHarness harness;
     harness.initialize( makeAutosaveTestSettings( directory ) );
-    game::bindLocalService<AutosaveManager>( &harness._manager );
+    SubsystemScope        scope;
+    game::ScopedGameScope activeScope( scope );
+    SW_EXPECT_TRUE( scope.bind( &harness._manager ) );
     SW_EXPECT_FALSE( pTrigger->activate( pCrate ) ); // 태그가 없다
     SW_EXPECT_TRUE( pTrigger->activate( pPlayer ) );
     SW_EXPECT_TRUE( harness._manager.getPendingTrigger() == AutosaveTrigger::Checkpoint );
     SW_EXPECT_TRUE( harness._manager.getLastCheckpointID() == hashed_string( "Shrine" ) );
     SW_EXPECT_FALSE( pTrigger->activate( pPlayer ) ); // 한 번
-    game::unbindLocalService<AutosaveManager>();
 }

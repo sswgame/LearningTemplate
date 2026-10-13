@@ -1,17 +1,17 @@
 /**
  * @file EditorService.h
- * @brief 에디터 모듈 안에서 쓰는 C++ 서비스 로케이터와 활성 씬 바로가기입니다.
+ * @brief 에디터 모듈 안에서 쓰는 서비스 창구와 활성 씬 바로가기입니다 — 에디터 범위(`SubsystemScope`)에서 찾고, 없으면 호스트(엔진) 서비스 표를 봅니다.
+ * @details 에디터 범위는 에디터 컨텍스트(`EditorContext`)가 소유하고 활성이 될 때 "지금 범위" 로 건다(언리얼 `UEditorSubsystem` 을 에디터가 드는 자리).
+ *          에디터 컨텍스트 없이 도는 테스트는 자기 범위를 만들어 `ScopedEditorScope` 로 잠시 건다. 게임 쪽 짝은 `GameService.h` 다.
  */
 #pragma once
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/GameObjectHandle.h"
-#include "Core/Container/StringUtil.h"
+#include "Core/Subsystem/SubsystemScope.h"
 
 #include "Editor/Common/EditorExports.h"
 
 #include "RuntimeAPI/Service/ModuleServiceTable.h"
-
-#include <type_traits>
 
 namespace sw
 {
@@ -27,62 +27,54 @@ namespace sw::editor
 
     namespace internal
     {
-        template <typename T, typename = void>
-        struct HasModuleServiceTraits : std::false_type
-        {
-        };
-
-        template <typename T>
-        struct HasModuleServiceTraits<T, std::void_t<decltype( sw::internal::ModuleServiceTraits<T>::id )>> : std::true_type
-        {
-        };
-    } // namespace internal
-
-    namespace internal
-    {
-        template <typename T>
-        constexpr uint64 getServiceTypeHash() noexcept
-        {
-            return StringUtil::computeHash64( SW_FUNCTION_SIGNATURE, sizeof( SW_FUNCTION_SIGNATURE ) - 1, false );
-        }
-
-        SW_EDITOR_API void* getRawService( sw::internal::ModuleServiceID id );
-        SW_EDITOR_API void  bindRawLocalService( uint64 typeHash, void* pService );
-        SW_EDITOR_API void* getRawLocalService( uint64 typeHash );
+        /** @brief App 이 넘긴 호스트 서비스 표입니다(`bindEditorService`). */
+        SW_EDITOR_API const ModuleServiceTable& getHostServiceTable();
     } // namespace internal
 
     void bindEditorService( const ModuleServiceTable& service );
     void unbindEditorService();
 
-    template <typename T>
-    void bindLocalService( T* pService )
-    {
-        internal::bindRawLocalService( internal::getServiceTypeHash<T>(), static_cast<void*>( pService ) );
-    }
-
-    template <typename T>
-    void unbindLocalService()
-    {
-        internal::bindRawLocalService( internal::getServiceTypeHash<T>(), nullptr );
-    }
+    /** @brief 지금 에디터 범위입니다. 에디터 컨텍스트가 활성이 아니고 테스트가 건 범위도 없으면 nullptr 입니다. */
+    SW_EDITOR_API SubsystemScope* findEditorScope();
+    /** @brief 지금 에디터 범위를 겁니다(nullptr 이면 풉니다). 에디터 컨텍스트가 활성이 될 때(`EditorContext::setActive`) 부른다. */
+    SW_EDITOR_API void setEditorScope( SubsystemScope* pScope );
 
     /**
      * @brief 에디터 서비스를 찾습니다. **없으면 nullptr 이므로** 받는 쪽이 확인해야 합니다.
-     * @details 짝인 `game::getService<T>()` 와 같은 계약입니다 — 한쪽만 실패 자리에 assert 를 두면 **Debug 에서만** 프로세스가
-     *          죽습니다. `CheckNullableServiceUse` 린트가 두 창구를 모두 봅니다.
-     * @return 찾은 서비스. 로컬에도 호스트에도 없으면 nullptr
+     * @details 지금 에디터 범위(그 상위 범위까지)에서 먼저 찾고, 없으면 호스트 서비스 표를 본다. 짝인 `game::getService<T>()` 와 같은 계약이다 —
+     *          한쪽만 실패 자리에 assert 를 두면 **Debug 에서만** 프로세스가 죽는다. `CheckNullableServiceUse` 린트가 두 창구를 모두 본다.
      */
     template <typename T>
     T* getService()
     {
-        void* pLocal = internal::getRawLocalService( internal::getServiceTypeHash<T>() );
-        if ( pLocal != nullptr )
-            return static_cast<T*>( pLocal );
-
-        if constexpr ( internal::HasModuleServiceTraits<T>::value )
-            return static_cast<T*>( internal::getRawService( sw::internal::ModuleServiceTraits<T>::id ) );
-        return nullptr;
+        T* pScoped = locateSubsystem<T>( findEditorScope() );
+        if ( pScoped != nullptr )
+            return pScoped;
+        return internal::getHostServiceTable().find<T>();
     }
+
+    /**
+     * @class ScopedEditorScope
+     * @brief 범위 @p scope 를 이 객체가 사는 동안 "지금 에디터 범위" 로 겁니다. 앞 범위를 상위로 이어, 그 범위에 없는 것은 앞 범위에서 찾는다.
+     * @details 에디터 컨텍스트 없이 도는 테스트가 서비스를 잠시 걸 때 쓴다. 끝나면 앞 범위를 되돌린다(중첩해도 된다).
+     */
+    class ScopedEditorScope
+    {
+    public:
+        explicit ScopedEditorScope( SubsystemScope& scope )
+            : _pPrevious{ findEditorScope() }
+        {
+            scope.setParentScope( _pPrevious );
+            setEditorScope( &scope );
+        }
+        ~ScopedEditorScope() { setEditorScope( _pPrevious ); }
+
+        ScopedEditorScope( const ScopedEditorScope& )            = delete;
+        ScopedEditorScope& operator=( const ScopedEditorScope& ) = delete;
+
+    private:
+        SubsystemScope* _pPrevious; ///< 걸기 전의 지금 범위
+    };
 
     EditorToolDefaults& getEditorToolDefaults();
     void                setEditorToolDefaults( EditorToolDefaults* pData );

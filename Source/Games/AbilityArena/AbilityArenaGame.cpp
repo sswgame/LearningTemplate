@@ -46,7 +46,7 @@ namespace sw
             return true; // 모듈은 뜬다(에디터에서 데이터를 고칠 수 있게) — 디렉터만 서지 않는다
         }
         // 어빌리티 시스템이 찾는 자리. 모듈이 다시 올라오면 새 인스턴스가 다시 건다.
-        game::bindLocalService<AbilityCatalog>( &_abilityCatalog );
+        bindScopedService( &_abilityCatalog );
         // 아레나 씬(시작 맵)을 연다. 에디터가 자기 시작 씬을 열면 그 요청이 뒤에 와서 이긴다.
         (void)requestFirstScene();
         return true;
@@ -55,7 +55,6 @@ namespace sw
     void AbilityArenaGame::onShutdown()
     {
         GameSound::unloadEvents( AbilityArenaGameInternal::kAudioEvents );
-        game::unbindLocalService<AbilityCatalog>();
     }
 
 } // namespace sw

@@ -127,14 +127,21 @@ namespace
         ScopedSceneGameService& operator=( const ScopedSceneGameService& ) = delete;
     };
 
-    /** @brief "game" 채널 이벤트가 이 디스패처로 가게 게임 로컬 서비스로 묶습니다(`GameEventUtil::send` 가 여기서 찾습니다). */
+    /** @brief "game" 채널 이벤트가 이 디스패처로 가게 게임 범위에 겁니다(`GameEventUtil::send` 가 여기서 찾습니다). */
     struct ScopedGameEventDispatcher
     {
-        explicit ScopedGameEventDispatcher( EventDispatcher& dispatcher ) { game::bindLocalService<EventDispatcher>( &dispatcher ); }
-        ~ScopedGameEventDispatcher() { game::unbindLocalService<EventDispatcher>(); }
+        explicit ScopedGameEventDispatcher( EventDispatcher& dispatcher )
+            : _scope{}
+            , _activeScope{ _scope }
+        {
+            (void)_scope.bind( &dispatcher ); // 새 범위라 겹치지 않는다
+        }
 
         ScopedGameEventDispatcher( const ScopedGameEventDispatcher& )            = delete;
         ScopedGameEventDispatcher& operator=( const ScopedGameEventDispatcher& ) = delete;
+
+        SubsystemScope        _scope;       ///< 이 테스트의 게임 범위
+        game::ScopedGameScope _activeScope; ///< 사는 동안 지금 게임 범위로 건다
     };
 
     /**
@@ -2652,11 +2659,14 @@ SW_TEST_CASE( GameFrameworkTest, UnboundGameServiceReturnsNullInsteadOfBreaking 
     // EngineTest 프로세스에는 게임이 붙어 있지 않다.
     SW_EXPECT_TRUE_MSG( game::getService<GameSettings>() == nullptr, "테스트 프로세스에 GameSettings 가 붙어 있습니다" );
 
-    // 붙이면 그것이 돌아오고, 떼면 다시 nullptr 이다.
+    // 게임 범위에 걸면 그것이 돌아오고, 범위가 사라지면 다시 nullptr 이다.
     GameSettings gameSettings;
-    game::bindLocalService<GameSettings>( &gameSettings );
-    SW_EXPECT_EQUAL( &gameSettings, game::getService<GameSettings>() );
-    game::unbindLocalService<GameSettings>();
+    {
+        SubsystemScope        scope;
+        game::ScopedGameScope activeScope( scope );
+        SW_EXPECT_TRUE( scope.bind( &gameSettings ) );
+        SW_EXPECT_EQUAL( &gameSettings, game::getService<GameSettings>() );
+    }
     SW_EXPECT_TRUE( game::getService<GameSettings>() == nullptr );
 }
 

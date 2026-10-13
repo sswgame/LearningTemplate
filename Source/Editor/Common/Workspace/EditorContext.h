@@ -1,7 +1,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/SubsystemCollection.h"
+#include "Core/Subsystem/SubsystemScope.h"
 
 #include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/EditorExports.h"
@@ -68,12 +68,12 @@ namespace sw::editor
 
         /**
          * @brief 현재 활성화된 전역 에디터 컨텍스트 포인터를 반환합니다. 셸이 `initialize` 에서 설정하고 `shutdown` 에서 해제합니다. 없으면 nullptr 입니다.
-         * @details 접근 경로는 이 함수 하나다. 로컬 서비스(`getService<EditorContext>`)로 다시 등록하지 않는다. 호스트(엔진) 서비스는 `EditorService.h` 의
+         * @details 접근 경로는 이 함수 하나다. 에디터 범위(`getService<EditorContext>`)에 다시 걸지 않는다. 호스트(엔진) 서비스는 `EditorService.h` 의
          *          `getService<T>()` 가, 에디터가 소유한 하위 시스템은 이 컨텍스트의 접근자가 반환한다.
          */
         static EditorContext* get();
-        /** @brief 활성 에디터 컨텍스트 포인터를 설정합니다. */
-        static void setActive( EditorContext* pContext ) { s_pActiveContext = pContext; }
+        /** @brief 활성 에디터 컨텍스트를 설정합니다. 그 컨텍스트의 범위가 지금 에디터 범위가 된다(`editor::getService<T>()` 가 거기서 찾는다). */
+        static void setActive( EditorContext* pContext );
 
         EditorSelection&           getEditorSelection() { return *_pEditorSelection; }
         EditorWorkspace&           getWorkspace() { return *_pWorkspace; }
@@ -138,8 +138,8 @@ namespace sw::editor
         EditorThemeConfig& getThemeConfig() { return _themeConfig; }
 
     private:
-        /** @brief 아래 하위 객체(`EditorSubsystem`)를 소유합니다. 선언된 의존 순서로 초기화하고 역순으로 종료 · 소멸합니다. 포인터는 빌린 것이고 `shutdown` 뒤에는 쓰지 않습니다. */
-        SubsystemCollection        _subsystems;
+        /** @brief 에디터 범위 — 아래 하위 객체(`EditorSubsystem`)를 소유하고 타입으로 찾게 합니다. 선언된 의존 순서로 초기화하고 역순으로 종료 · 소멸합니다. 포인터는 빌린 것이고 `shutdown` 뒤에는 쓰지 않습니다. */
+        SubsystemScope             _scope;
         EditorSelection*           _pEditorSelection;
         EditorWorkspace*           _pWorkspace;
         EditorNotificationManager* _pNotificationManager;

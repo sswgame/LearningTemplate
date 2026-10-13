@@ -61,11 +61,37 @@ namespace sw
         , _screenTransition{}
         , _pLoadingScreen{ make_unique<LoadingScreenController>() }
         , _pNetSession{ make_unique<GameNetSession>() }
+        , _gameScope{}
         , _bResumingWorld{ SW_FALSE }
     {
     }
 
-    GameInstanceBase::~GameInstanceBase() = default;
+    GameInstanceBase::~GameInstanceBase()
+    {
+        // shutdown 을 거치지 않고 지워져도 지금 범위가 지운 범위를 가리키지 않게 한다.
+        detachGameScope();
+    }
+
+    void GameInstanceBase::detachGameScope()
+    {
+        SubsystemScope* pCurrent = game::findGameScope();
+        if ( pCurrent == &_gameScope )
+        {
+            // 이어 둔 앞 범위로 되돌린다(테스트가 건 범위). 게임 범위만 상위로 잇므로 그 범위는 SubsystemScope 다.
+            game::setGameScope( static_cast<SubsystemScope*>( const_cast<ISubsystemLocator*>( _gameScope.getParentScope() ) ) );
+        }
+        else if ( pCurrent != nullptr && pCurrent->getParentScope() == &_gameScope )
+        {
+            // 리로드가 먼저 세운 새 인스턴스가 이 범위를 상위로 이었다 — 지워질 이 범위 대신 이 범위의 상위를 잇게 한다.
+            pCurrent->setParentScope( _gameScope.getParentScope() );
+        }
+        _gameScope.setParentScope( nullptr );
+    }
+
+    void GameInstanceBase::reportScopedServiceConflict( uint64 typeHash ) const
+    {
+        SW_LOG_ERROR( "Game scoped service %# is already bound to another instance - two kits share one service type", typeHash );
+    }
 
     GameObjectManager* GameInstanceBase::findActiveObjectManager()
     {
@@ -91,9 +117,12 @@ namespace sw
             _bootstrap._packRoot = gameCfg._packRoot;
         if ( _bootstrap.load( path::kGameSettingsFile ) == false )
             SW_LOG_TRACE( "No custom bootstrap in pack '%#' — using defaults.", _bootstrap._packRoot );
-        // 이 코드는 GameFramework.dll 이라 반환 주소로 소유자를 정하면 GameFramework.dll 이 된다. 칸은 게임 인스턴스(파생 · 게임 모듈)가 들므로
-        // 그 vtable 의 이미지를 소유자로 넘겨, 파생이 unbind 를 빠뜨려도 게임 모듈 언로드 때 회수되게 한다.
-        game::bindLocalService<GameSettings>( &_bootstrap._data, game::getPolymorphicOwnerAddress( *this ) );
+        // 이 인스턴스의 범위를 지금 게임 범위로 건다 — 파생의 onInitialize 가 거는 카탈로그와 이 설정을 게임 서비스가 찾는다.
+        // 앞 범위(테스트가 건 범위 · 리로드에서 아직 안 내려간 옛 인스턴스의 범위)를 상위로 이어, 거기 걸린 것도 찾힌다.
+        if ( game::findGameScope() != &_gameScope )
+            _gameScope.setParentScope( game::findGameScope() );
+        game::setGameScope( &_gameScope );
+        bindScopedService( &_bootstrap._data );
         applyBootstrap();
         // 로딩 화면은 첫 씬 요청(onInitialize 안)이 띄울 수 있게 그 앞에 묶는다. UI 시스템이 없으면(전용 서버) 띄우지 않는다.
         LoadingScreenSettings loadingSettings = _pLoadingScreen->getSettings();
@@ -121,9 +150,7 @@ namespace sw
         onShutdown();
         // 키트 처리기는 onShutdown 에서 내려갔다. 연결은 그 뒤에 끊어야 끊김 이벤트가 이미 내려간 처리기에 가지 않는다.
         _pNetSession->shutdown();
-        // 다른 인스턴스(리로드가 먼저 만든 새 것)가 묶은 것은 건드리지 않는다.
-        if ( game::getService<GameSettings>() == &_bootstrap._data )
-            game::unbindLocalService<GameSettings>();
+        detachGameScope();
         _listPendingSceneLoad.clear();
         _pLoadingScreen->bindUISystem( nullptr );
         _screenTransition.reset();

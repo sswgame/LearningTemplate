@@ -73,8 +73,23 @@ namespace sw
 #undef SW_HOST_SERVICE
     } // namespace internal
 
+    /**
+     * @struct ModuleServiceTable
+     * @brief 호스트(엔진 · App)가 모듈에 넘기는 서비스 칸 표입니다. 게임 · 에디터의 서비스 창구가 범위(`SubsystemScope`)에서 못 찾으면 여기를 봅니다.
+     */
     struct ModuleServiceTable
     {
         const void* arrServices[internal::kModuleServiceCount]{ nullptr };
+
+        /** @brief 서비스 표에 칸이 있는 타입(`ModuleServiceTraits<T>`)이면 그 칸, 아니면 nullptr 입니다. */
+        template <typename T>
+        T* find() const
+        {
+            constexpr internal::ModuleServiceID id = internal::ModuleServiceTraits<T>::id;
+            if constexpr ( id == internal::ModuleServiceID::Count )
+                return nullptr;
+            else
+                return static_cast<T*>( const_cast<void*>( arrServices[internal::toRawServiceID( id )] ) );
+        }
     };
 } // namespace sw

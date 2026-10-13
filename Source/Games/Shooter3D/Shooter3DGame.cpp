@@ -47,13 +47,13 @@ namespace sw
             return true;
         }
         // 플레이어 컴포넌트가 찾는 자리. 모듈이 다시 올라오면 새 인스턴스가 다시 건다.
-        game::bindLocalService<WeaponCatalog>( &_weaponCatalog );
+        bindScopedService( &_weaponCatalog );
         // 외형 — 플레이어 몸 · 스켈레톤의 외형 컴포넌트가 프리셋을 여기서 푼다.
         if ( _itemCatalog.loadFromResource( "game/shooter3d/data/items.xml" ) == false ||
              _appearanceDatabase.loadFromFolder( "game/shooter3d/data/appearance", &_itemCatalog ) == false )
             SW_LOG_ERROR( "[Shooter] appearance data could not be loaded - %#", _appearanceDatabase.getReport().joined().c_str() );
         else
-            game::bindLocalService<AppearanceDatabase>( &_appearanceDatabase );
+            bindScopedService( &_appearanceDatabase );
         // 아레나 씬(시작 맵)을 연다. 에디터가 자기 시작 씬을 열면 그 요청이 뒤에 와서 이긴다.
         (void)requestFirstScene();
         return true;
@@ -62,9 +62,6 @@ namespace sw
     void Shooter3DGame::onShutdown()
     {
         GameSound::unloadEvents( Shooter3DGameInternal::kAudioEvents );
-        game::unbindLocalService<WeaponCatalog>();
-        if ( game::getService<AppearanceDatabase>() == &_appearanceDatabase )
-            game::unbindLocalService<AppearanceDatabase>();
     }
 
 } // namespace sw

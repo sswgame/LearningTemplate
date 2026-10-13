@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    /** @struct MeadowVillageData @brief 하루 2 분(1 초 = 게임 12 분), 계절 넷 × 28 일. 카탈로그는 게임 인스턴스가 로컬 서비스로 건 것. */
+    /** @struct MeadowVillageData @brief 하루 2 분(1 초 = 게임 12 분), 계절 넷 × 28 일. 카탈로그는 게임 인스턴스가 게임 범위에 건 것. */
     struct MeadowVillageData
     {
         static constexpr const utf8* kFastForwardAction = "Village.FastForward"; ///< 누르는 동안 8 배속

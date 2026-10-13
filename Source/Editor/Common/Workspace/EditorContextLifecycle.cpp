@@ -67,7 +67,7 @@ namespace sw::editor
 namespace sw::editor
 {
     EditorContext::EditorContext()
-        : _subsystems{}
+        : _scope{}
         , _pEditorSelection{ nullptr }
         , _pWorkspace{ nullptr }
         , _pNotificationManager{ nullptr }
@@ -102,23 +102,25 @@ namespace sw::editor
     {
         // 하위 객체는 목록이 소유한다. 넣는 순서는 뜻이 없고, 초기화 순서는 각자 선언한 의존이 정하며 종료 · 소멸은 그 역순이다.
         // 애셋 · 설정 핫 리로드(개발 기능)는 에디터가 켜져 있을 때만 감시하고, 버전 관리는 git LFS 를 비동기로 묻는다(각 initializeSubsystem).
-        _pEditorSelection           = &_subsystems.add( make_unique<EditorSelection>() );
-        _pWorkspace                 = &_subsystems.add( make_unique<EditorWorkspace>( _pEditorSelection ) );
-        _pNotificationManager       = &_subsystems.add( make_unique<EditorNotificationManager>() );
-        _pCommandRegistry           = &_subsystems.add( make_unique<EditorCommandRegistry>() );
-        _pPanelManager              = &_subsystems.add( make_unique<EditorPanelManager>() );
-        _pPanelHost                 = &_subsystems.add( make_unique<EditorPanelHost>( *this, *_pPanelManager ) );
-        _pPopupManager              = &_subsystems.add( make_unique<EditorPopupManager>() );
-        _pAssetHotReload            = &_subsystems.add( make_unique<AssetHotReload>() );
-        _pConfigHotReload           = &_subsystems.add( make_unique<ConfigHotReload>() );
-        _pAssetValidation           = &_subsystems.add( make_unique<EditorAssetValidation>() );
-        _pSourceControl             = &_subsystems.add( sw::make_unique<EditorSourceControl>( EditorPaths::getProjectRootPath() ) );
-        _pInspectorComponentManager = &_subsystems.add( make_unique<InspectorComponentManager>() );
-        _pInspectorPropertyManager  = &_subsystems.add( make_unique<InspectorPropertyManager>() );
-        _pDefaultObjects            = &_subsystems.add( make_unique<EditorDefaultObjects>() );
-        _pNetPlaySession            = &_subsystems.add( make_unique<EditorNetPlaySession>() );
+        _pEditorSelection          = &_scope.addSubsystem( make_unique<EditorSelection>() );
+        _pWorkspace                = &_scope.addSubsystem( make_unique<EditorWorkspace>( _pEditorSelection ) );
+        _pNotificationManager      = &_scope.addSubsystem( make_unique<EditorNotificationManager>() );
+        _pCommandRegistry          = &_scope.addSubsystem( make_unique<EditorCommandRegistry>() );
+        _pPanelManager             = &_scope.addSubsystem( make_unique<EditorPanelManager>() );
+        EditorPanelHost& panelHost = _scope.addSubsystem( make_unique<EditorPanelHost>( *this, *_pPanelManager ) );
+        _pPanelHost                = &panelHost;
+        (void)_scope.expose<IEditorPanelHost>( panelHost ); // 패널 매니저(GUI)를 모르는 레이어가 인터페이스로 찾는다 — 새 범위라 겹치지 않는다
+        _pPopupManager              = &_scope.addSubsystem( make_unique<EditorPopupManager>() );
+        _pAssetHotReload            = &_scope.addSubsystem( make_unique<AssetHotReload>() );
+        _pConfigHotReload           = &_scope.addSubsystem( make_unique<ConfigHotReload>() );
+        _pAssetValidation           = &_scope.addSubsystem( make_unique<EditorAssetValidation>() );
+        _pSourceControl             = &_scope.addSubsystem( sw::make_unique<EditorSourceControl>( EditorPaths::getProjectRootPath() ) );
+        _pInspectorComponentManager = &_scope.addSubsystem( make_unique<InspectorComponentManager>() );
+        _pInspectorPropertyManager  = &_scope.addSubsystem( make_unique<InspectorPropertyManager>() );
+        _pDefaultObjects            = &_scope.addSubsystem( make_unique<EditorDefaultObjects>() );
+        _pNetPlaySession            = &_scope.addSubsystem( make_unique<EditorNetPlaySession>() );
         // 확장 모듈이 언로드되기 전에 그 모듈의 등록 줄로 만든 인스턴스를 지운다 — 훑는 매니저들에 의존하므로 그들보다 먼저 내려간다.
-        _subsystems.add( make_unique<EditorModuleUnloadListener>( *this ) );
+        _scope.addSubsystem( make_unique<EditorModuleUnloadListener>( *this ) );
 
         setActive( this );
 
@@ -129,8 +131,8 @@ namespace sw::editor
                 SW_LOG_WARNING( "Editor localization project '%#' is not (fully) loaded", EditorPaths::kLocalizationProject );
         }
 
-        if ( _subsystems.initializeAll( EngineSubsystemHost::kClient ) == false )
-            SW_LOG_ERROR( "Editor subsystems did not all initialize: %#", _subsystems.getError().c_str() );
+        if ( _scope.getCollection().initializeAll( EngineSubsystemHost::kClient ) == false )
+            SW_LOG_ERROR( "Editor subsystems did not all initialize: %#", _scope.getCollection().getError().c_str() );
     }
 
     void EditorContext::shutdown()
@@ -144,7 +146,7 @@ namespace sw::editor
             pLocalization->unmountProjects( LocalizationScope::Editor );
 
         // 초기화한 것을 역순으로 종료하고, 모두를 역순으로 소멸시킨다(넷 플레이 세션의 자식 프로세스 종료도 여기 — 엔진 로거는 아직 있다).
-        _subsystems.destroyAll();
+        _scope.destroyAll();
         _pRendererBackend = nullptr;
         _pRHIDevice       = nullptr;
     }

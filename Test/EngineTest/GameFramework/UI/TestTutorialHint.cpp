@@ -28,7 +28,9 @@ SW_TEST_CASE( TutorialHintTest, PostsOnceAndHonorsTheSetting )
     SW_ASSERT_TRUE( settings.loadSchemaFromXMLText(
         R"(<UserSettingsSchema version="1"><Category id="gameplay"/><Setting id="gameplay.showTutorials" category="gameplay" type="bool" default="false"/></UserSettingsSchema>)",
         "hint.settings.xml" ) );
-    game::bindLocalService<UserSettingsManager>( &settings );
+    SubsystemScope        scope; // settings 보다 먼저 사라진다(뒤에 선언)
+    game::ScopedGameScope activeScope( scope );
+    SW_EXPECT_TRUE( scope.bind( &settings ) );
 
     GameObjectManager objects;
     GameObject*       pVolume = objects.createGameObject( hashed_string( "HintVolume" ) );
@@ -55,7 +57,7 @@ SW_TEST_CASE( TutorialHintTest, PostsOnceAndHonorsTheSetting )
     SW_ASSERT_EQUAL( 1u, ui.getNotifications().getVisibleCount() );
     SW_EXPECT_STREQ( "[action=Interact] to open", ui.getNotifications().getVisibleText( 0 ).c_str() );
 
-    game::unbindLocalService<UserSettingsManager>();
+    scope.unbind<UserSettingsManager>();
     ui.shutdown();
     input.shutdown();
     settings.shutdown();

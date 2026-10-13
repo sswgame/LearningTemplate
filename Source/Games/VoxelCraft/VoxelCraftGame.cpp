@@ -45,7 +45,7 @@ namespace sw
             return true;
         }
         // 디렉터 · 플레이어가 찾는 자리. 모듈이 다시 올라오면 새 인스턴스가 다시 건다.
-        game::bindLocalService<VoxelBlockCatalog>( &_blockCatalog );
+        bindScopedService( &_blockCatalog );
         // 섬 씬(시작 맵)을 연다. 에디터가 자기 시작 씬을 열면 그 요청이 뒤에 와서 이긴다.
         (void)requestFirstScene();
         return true;
@@ -54,7 +54,6 @@ namespace sw
     void VoxelCraftGame::onShutdown()
     {
         GameSound::unloadEvents( VoxelCraftGameInternal::kAudioEvents );
-        game::unbindLocalService<VoxelBlockCatalog>();
     }
 
 } // namespace sw

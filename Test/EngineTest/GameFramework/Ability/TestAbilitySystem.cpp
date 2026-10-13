@@ -163,11 +163,18 @@ namespace
     /** @brief 이 테스트 동안만 이벤트 버스를 게임 서비스로 겁니다. */
     struct AbilityTestScopedDispatcher
     {
-        explicit AbilityTestScopedDispatcher( EventDispatcher& dispatcher ) { game::bindLocalService<EventDispatcher>( &dispatcher ); }
-        ~AbilityTestScopedDispatcher() { game::unbindLocalService<EventDispatcher>(); }
+        explicit AbilityTestScopedDispatcher( EventDispatcher& dispatcher )
+            : _scope{}
+            , _activeScope{ _scope }
+        {
+            (void)_scope.bind( &dispatcher ); // 새 범위라 겹치지 않는다
+        }
 
         AbilityTestScopedDispatcher( const AbilityTestScopedDispatcher& )            = delete;
         AbilityTestScopedDispatcher& operator=( const AbilityTestScopedDispatcher& ) = delete;
+
+        SubsystemScope        _scope;       ///< 이 테스트의 게임 범위
+        game::ScopedGameScope _activeScope; ///< 사는 동안 지금 게임 범위로 건다
     };
 
     /** @brief 어빌리티 시스템을 단 오브젝트를 만듭니다. */

@@ -31,7 +31,7 @@ using namespace sw::editor;
 // 모듈 export 매크로의 `bindService` 콜백이 채우는데, 테스트는 그것을 부르지 않는다. 그래서
 // **EditorTest 안에서는 커맨드 스택 서비스가 처음부터 nullptr 이다** — 즉 이 파일은 "서비스가
 // 없는 상태" 를 따로 만들 필요 없이 그냥 그 상태다. 반대 방향(있을 때)은
-// `bindLocalService<CommandStack>` 으로 만든다.
+// `ScopedCommandStackService`(EditorTestServices.h)로 만든다.
 
 namespace
 {

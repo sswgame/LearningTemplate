@@ -76,21 +76,35 @@ namespace
     /** @brief 이 테스트 동안만 이벤트 버스를 게임 서비스로 겁니다 — 피해 · 룸 이벤트가 여기로 온다. 어서션이 빠져나가도 풀린다. */
     struct ScopedEventDispatcherService
     {
-        explicit ScopedEventDispatcherService( EventDispatcher& dispatcher ) { game::bindLocalService<EventDispatcher>( &dispatcher ); }
-        ~ScopedEventDispatcherService() { game::unbindLocalService<EventDispatcher>(); }
+        explicit ScopedEventDispatcherService( EventDispatcher& dispatcher )
+            : _scope{}
+            , _activeScope{ _scope }
+        {
+            (void)_scope.bind( &dispatcher ); // 새 범위라 겹치지 않는다
+        }
 
         ScopedEventDispatcherService( const ScopedEventDispatcherService& )            = delete;
         ScopedEventDispatcherService& operator=( const ScopedEventDispatcherService& ) = delete;
+
+        SubsystemScope        _scope;       ///< 이 테스트의 게임 범위
+        game::ScopedGameScope _activeScope; ///< 사는 동안 지금 게임 범위로 건다
     };
 
     /** @brief 이 테스트 동안만 몬스터 카탈로그를 게임 서비스로 겁니다 — 액션 룸이 여기서 적을 읽는다. 어서션이 빠져나가도 풀린다. */
     struct ScopedMonsterCatalogService
     {
-        explicit ScopedMonsterCatalogService( MonsterCatalog& catalog ) { game::bindLocalService<MonsterCatalog>( &catalog ); }
-        ~ScopedMonsterCatalogService() { game::unbindLocalService<MonsterCatalog>(); }
+        explicit ScopedMonsterCatalogService( MonsterCatalog& catalog )
+            : _scope{}
+            , _activeScope{ _scope }
+        {
+            (void)_scope.bind( &catalog ); // 새 범위라 겹치지 않는다
+        }
 
         ScopedMonsterCatalogService( const ScopedMonsterCatalogService& )            = delete;
         ScopedMonsterCatalogService& operator=( const ScopedMonsterCatalogService& ) = delete;
+
+        SubsystemScope        _scope;       ///< 이 테스트의 게임 범위
+        game::ScopedGameScope _activeScope; ///< 사는 동안 지금 게임 범위로 건다
     };
 
     /** @brief @p size 크기 콜라이더를 primary 씬 컴포넌트로 단 오브젝트를 (x, y) 에 만듭니다. */

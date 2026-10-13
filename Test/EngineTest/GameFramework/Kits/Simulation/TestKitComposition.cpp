@@ -38,7 +38,7 @@
 
 namespace sw
 {
-    /** @brief 조립 테스트의 카탈로그입니다 — 디렉터는 복원할 때 새로 서므로 포인터를 들지 않고 여기서 얻는다(게임에서는 게임 인스턴스가 로컬 서비스로 든다). */
+    /** @brief 조립 테스트의 카탈로그입니다 — 디렉터는 복원할 때 새로 서므로 포인터를 들지 않고 여기서 얻는다(게임에서는 게임 인스턴스가 게임 범위에 건다). */
     struct KitCompositionCatalogs
     {
         static constexpr const utf8* kCropXML       = R"(
