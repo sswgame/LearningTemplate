@@ -605,3 +605,25 @@ SW_TEST_CASE( VectorTest, ResizeFromOwnElementAndRangeInsertIterator )
     SW_EXPECT_EQUAL( 7, *it );
     SW_EXPECT_EQUAL( 11u, static_cast<uint32>( listNumber.size() ) );
 }
+
+/**
+ * @brief [VectorTest] 빈 벡터의 `shrink_to_fit` 은 힙 버퍼를 놓는다(std::vector 와 같다). `clear()` 만으로는 용량이 남는다.
+ * @details 종료 때 저장소를 놓는 정식 경로는 `clear()` + `shrink_to_fit()` 이다. 빈 벡터에서 그냥 돌아가면 그 경로가 아무것도 놓지 않는다.
+ */
+SW_TEST_CASE( VectorTest, ShrinkToFitReleasesBufferWhenEmpty )
+{
+    sw::vector<sw::vector<int32>> listNested;
+    listNested.resize( 8 );
+    listNested[3].push_back( 7 );
+    listNested.clear();
+    SW_EXPECT_TRUE( listNested.capacity() >= 8u );
+
+    listNested.shrink_to_fit();
+    SW_EXPECT_EQUAL( size_t( 0 ), listNested.capacity() );
+    SW_EXPECT_TRUE( listNested.empty() );
+
+    // 놓은 뒤에도 다시 자란다.
+    listNested.emplace_back().push_back( 11 );
+    SW_ASSERT_EQUAL( size_t( 1 ), listNested.size() );
+    SW_EXPECT_EQUAL( 11, listNested[0][0] );
+}

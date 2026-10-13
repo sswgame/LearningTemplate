@@ -245,9 +245,9 @@ namespace sw
 
     void UIPaintPass::releaseScratch()
     {
-        // `= {}` 는 initializer_list 대입이라 안쪽 목록만 부수고 바깥 버퍼는 남긴다. 빈 벡터를 이동 대입해야 버퍼까지 놓는다.
-        t_listPaintOrderByDepth = vector<vector<uint32>>{};
-        t_paintOrderDepth       = 0;
+        t_listPaintOrderByDepth.clear();
+        t_listPaintOrderByDepth.shrink_to_fit();
+        t_paintOrderDepth = 0;
     }
 
     uint32 UIPaintPass::paintChild( Widget& widget, const UIPaintContext& context, CanvasPainter& painter, CanvasDrawList& outCanvas, bool bForce,

@@ -71,7 +71,7 @@ namespace sw
 
         vector& operator=( const vector& other );
         vector& operator=( vector&& other ) noexcept;
-        vector& operator=( std::initializer_list<T> ilist );
+        vector& operator=( std::initializer_list<T> ilist ); ///< 주의: `x = {}` 도 이 대입이라 버퍼를 남긴다. 놓으려면 `clear()` + `shrink_to_fit()`.
         void    assign( size_type count, const T& value );
         template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int32> = 0>
         void assign( InputIt first, InputIt last );
@@ -768,10 +768,15 @@ namespace sw
                 _pData    = pNewData;
                 _capacity = get_inline_cap();
             }
+            else if ( _size == 0 )
+            {
+                // 빈 벡터는 힙 버퍼를 놓고 처음 상태로 돌아간다(std::vector 와 같다). 버퍼까지 놓는 비우기는 `clear()` + `shrink_to_fit()` 이다.
+                do_deallocate( _pData, _capacity );
+                _pData    = nullptr;
+                _capacity = 0;
+            }
             else
             {
-                if ( _size == 0 )
-                    return;
                 T* pNewData = do_allocate( _size );
                 for ( size_t index = 0; index < _size; ++index )
                 {
