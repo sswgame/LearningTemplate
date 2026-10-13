@@ -105,7 +105,7 @@ namespace
     {
         EngineInitGraph graph{};
         string          error;
-        (void)SubsystemCollection::computeGraph( EngineInitSequence::makeStepNodes(), graph, error ); // 표 오류는 컴파일 검사가 막고, ComputedOrder… 테스트가 다시 본다
+        (void)SubsystemCollection::computeGraph( EngineInitSequence::makeStepNodes(), graph, error ); // 표 오류는 ComputedOrder… 테스트가 본다
         return graph;
     }
 
@@ -346,7 +346,7 @@ SW_TEST_CASE( EngineInitSequenceTest, DestroyBeforeInitializeDoesNothing )
 
 /**
  * @brief [EngineInitSequenceTest] 순환은 정렬 오류이고, 순환에 든 노드를 이름으로 알리는지 검증
- * @details 표(`EngineInitStepList.xxx`)의 순환은 컴파일 오류다(`EngineInitTableCheck::isAcyclic`). 이것은 같은 판정의 실행 시간 쪽이다.
+ * @details 표(`EngineInitStepList.xxx`)의 줄과 서브시스템이 같은 판정을 받는다.
  */
 SW_TEST_CASE( EngineInitSequenceTest, CycleIsRejected )
 {
@@ -547,7 +547,7 @@ SW_TEST_CASE( EngineInitSequenceTest, ClientRunsEveryStep )
 }
 
 /**
- * @brief [EngineInitSequenceTest] 단계가 도는 대상마다 그 의존도 돈다(컴파일 검사 `areTargetsCovered` 를 실행 시간에 다시 본다 — 검사가 빠져도 이 테스트가 남는다)
+ * @brief [EngineInitSequenceTest] 단계가 도는 대상마다 그 의존도 돈다(정렬의 대상 검사가 빠져도 이 테스트가 남는다)
  */
 SW_TEST_CASE( EngineInitSequenceTest, EveryStepRunsWhereItsDependenciesRun )
 {
@@ -565,7 +565,7 @@ SW_TEST_CASE( EngineInitSequenceTest, EveryStepRunsWhereItsDependenciesRun )
 
 /**
  * @brief [EngineInitSequenceTest] 엔진이 `ISubsystem` 으로 넘기는 단계(글꼴 · 텔레메트리 · UI)가 표의 줄과 한 순서로 정렬되고, 표의 순서는 그대로다
- * @details 서브시스템의 의존 글은 실행 시간에만 풀린다(표처럼 컴파일 검사가 없다). 의존 이름이 틀리거나 대상이 어긋나면 여기서 진다.
+ * @details 의존 글은 실행 시간에만 풀린다. 의존 이름이 틀리거나 대상이 어긋나면 여기서 진다.
  *          세 단계는 클라이언트 전용이고, 의존이 모두 그보다 앞에 선다.
  */
 SW_TEST_CASE( EngineInitSequenceTest, EngineSubsystemsJoinTheTableOrder )

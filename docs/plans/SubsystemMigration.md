@@ -20,10 +20,8 @@
 
 ## 옮기는 순서를 막는 것
 
-1. **표의 의존은 서브시스템 이름을 부르지 못한다.** 표의 `{ A, B }` 는 컴파일 때 식별자로 검사한다(`EngineInitTableCheck`). 그래서 다른 줄이 기대는 단계는
-   그 줄과 함께 옮겨야 하고, 지금 바로 옮길 수 있는 것은 아무도 기대지 않는 끝(SceneRHI · LiveShader)뿐이다.
-   **2단계 첫 일**: 표의 의존 칸을 실행 시간 검사로 바꾼다 — `SubsystemCollection::sort` 가 이미 같은 판정(모르는 이름 · 순환 · 대상 어긋남)을 하고,
-   `EngineInitSequenceTest` 가 실제 표로 그것을 돌린다. 그러면 어느 줄이든 순서와 상관없이 옮길 수 있다.
+1. ~~표의 의존은 서브시스템 이름을 부르지 못한다.~~ 2단계에서 풀었다 — 표의 의존 칸도 이름 글이고 판정은 `SubsystemCollection::sort` 하나다
+   (모르는 이름 · 순환 · 대상 어긋남은 기동 실패, `EngineInitSequenceTest` 가 실제 목록으로 본다). 이제 어느 줄이든 순서와 상관없이 옮길 수 있다.
 2. **테스트 하네스도 같은 표를 쓴다**(`Test/TestFramework/TestHostRuntime.cpp` 의 `TestHost`). 하네스의 본문은 앱과 다르다(GameFramework 타입 등록,
    오디오는 종료만, 글꼴 · UI · RHI 없음). 하네스가 쓰는 단계는 서브시스템이 하네스와 앱에서 같은 동작을 하거나, 호스트가 서로 다른
    `FunctionSubsystem` 을 넣게 해야 한다.

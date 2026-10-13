@@ -134,7 +134,7 @@ py -3 Scripts/lint/gate/CheckEngineLayers.py
 백엔드 교체는 `shutdownDependentsOf` 와 `restartStopped` 로 RHI 에 기대는 것만 내렸다가 같은 초기화로 다시 세웁니다. 그래서 `initializeSubsystem` 은 다시 불릴 수 있어야 합니다.
 
 **옮기는 중입니다.** 예전 기동 단계는 X-macro 표 `EngineInitStepList.xxx` 의 줄(단계 이름, 메모리 태그, 대상, `{ 의존 }`)과 호스트마다의 본문 정적 함수(`initialize<단계>`, `shutdown<단계>`, `destroy<단계>` — `EngineLoop::StartupStepBody`, 테스트 하네스의 `TestHost`)였습니다.
-`EngineInitSequence` 는 표의 줄마다 어댑터 하나를 같은 목록에 넣어, 남은 표의 줄과 새 서브시스템을 **한 순서 계산 안에서** 섞어 돌립니다. 표의 의존은 식별자라 오타, 순환, 대상 어긋남이 컴파일 오류입니다(`EngineInitTableCheck`).
+`EngineInitSequence` 는 표의 줄마다 어댑터 하나를 같은 목록에 넣어, 남은 표의 줄과 새 서브시스템을 **한 순서 계산 안에서** 섞어 돌립니다. 표의 의존 칸도 이름 글이라 표의 줄이 서브시스템 이름을 부를 수 있고, 오타, 순환, 대상 어긋남은 서브시스템과 같은 정렬 오류입니다.
 옮긴 서브시스템은 셋입니다 — `Fonts`(`FontService`), `Telemetry`(`TelemetryService`, 크래시 보고 묶기 포함), `UI`(`UISystem`, Dev 의 디버그 HUD 포함). 표에 남은 단계는 21개이고, 계획은 [서브시스템 이전 계획](../../docs/plans/SubsystemMigration.md)에 있습니다.
 옮긴 서비스는 서비스 저장소(`EngineServiceCollection`)가 만들고 서비스 표에 묶은 뒤, `EngineLoop::initialize` 가 소유를 기동 순서로 넘깁니다(`addSubsystem( std::move( _owned._pFontService ) )`).
 
@@ -271,7 +271,6 @@ class SW_API MySystem : public ISubsystem   // 다중 상속이면 ISubsystem �
 2. `EngineLoop::initialize` 에서 `_startup.addSubsystem( make_unique<MySystem>() )` 로 넘깁니다. 이미 서비스 저장소가 만드는 서비스면 `std::move( _owned._pX )` 로 소유를 넘깁니다.
 3. 소유 객체가 없는 "한 번 하는 일" 은 타입을 짓지 않고 `FunctionSubsystem`(이름, 의존, 대상, 초기화와 종료 델리게이트) 하나로 적습니다.
 4. 의존 글은 실행 시간에만 풀리므로 `EngineInitSequenceTest.EngineSubsystemsJoinTheTableOrder` 처럼 실제 객체를 넣어 정렬 오류가 없는지 테스트합니다.
-5. 지금은 표의 줄이 서브시스템 이름을 의존으로 부를 수 없습니다(표의 의존은 컴파일 때 식별자로 검사합니다). 표의 다른 줄이 기대는 단계는 그 줄과 함께 옮깁니다.
 
 ### 새 엔진 서비스 넣기
 

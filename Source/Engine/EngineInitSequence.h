@@ -146,8 +146,8 @@ namespace sw
 
         /**
          * @brief `ISubsystem` 단계를 넘겨받아 표의 줄과 한 순서로 정렬합니다. `initializeAll` **전에** 넣습니다. 넘긴 객체를 돌려줍니다(소유는 이 순서).
-         * @details 의존 칸은 표의 단계 이름도, 다른 서브시스템 이름도 부를 수 있습니다. 표의 줄은 아직 서브시스템 이름을 부르지 못합니다(표의 의존은
-         *          컴파일 때 식별자로 검사한다) — 그래서 옮기는 단계는 표의 다른 줄이 기대지 않는 것부터입니다.
+         * @details 의존 칸은 표의 단계 이름도, 다른 서브시스템 이름도 부를 수 있습니다(표의 줄도 서브시스템 이름을 부른다). 모르는 이름 ·
+         *          순환 · 대상 어긋남은 `initializeAll` 이 정렬 오류로 알리고 실패합니다.
          */
         template <class TSubsystem>
         TSubsystem& addSubsystem( unique_ptr<TSubsystem> subsystem )
