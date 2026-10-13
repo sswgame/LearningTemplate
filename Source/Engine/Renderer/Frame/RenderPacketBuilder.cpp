@@ -76,8 +76,9 @@ namespace sw
 
     void RenderPacketBuilder::destroy()
     {
-        _gpuUploadQueue.reset();
+        // 만든 순서(initialize)의 역순이다.
         _renderViewScheduler.reset();
+        _gpuUploadQueue.reset();
         _packetScratch.reset();
         _gpuSceneBuilder.reset();
     }
