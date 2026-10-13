@@ -195,23 +195,34 @@ namespace sw
         return s_closedFallback;
     }
 
+    ValidationIssueLog* ValidationIssueLog::find()
+    {
+        return ReflectionValidationInternal::s_validationIssueLog.find();
+    }
+
     void ValidationIssueLog::replaceIssues( const uint64 sourceID, const vector<ValidationIssue>& listIssue )
     {
-        std::lock_guard<mutex>  lock( _mutex );
-        vector<ValidationIssue> listKept;
-        listKept.reserve( _listIssue.size() + listIssue.size() );
-        for ( ValidationIssue& issue : _listIssue )
+        std::lock_guard<mutex> lock( _mutex );
+        if ( _listIssue.empty() && listIssue.empty() )
+            return;
+        // 제자리에서 지운다. 씬 언로드는 오브젝트마다 여기를 지나므로 새 목록을 만들지 않는다.
+        const size_t sizeBefore = _listIssue.size();
+        size_t       keptCount  = 0;
+        for ( size_t issueIndex = 0; issueIndex < sizeBefore; ++issueIndex )
         {
-            if ( issue._sourceID != sourceID )
-                listKept.push_back( std::move( issue ) );
+            if ( _listIssue[issueIndex]._sourceID == sourceID )
+                continue;
+            if ( keptCount != issueIndex )
+                _listIssue[keptCount] = std::move( _listIssue[issueIndex] );
+            ++keptCount;
         }
-        const bool bRemovedAny = listKept.size() != _listIssue.size();
+        _listIssue.resize( keptCount );
+        const bool bRemovedAny = keptCount != sizeBefore;
         for ( const ValidationIssue& issue : listIssue )
         {
-            listKept.push_back( issue );
-            listKept.back()._sourceID = sourceID;
+            _listIssue.push_back( issue );
+            _listIssue.back()._sourceID = sourceID;
         }
-        _listIssue = std::move( listKept );
         if ( bRemovedAny || listIssue.empty() == false )
             _revision.fetch_add( 1, std::memory_order_acq_rel );
     }

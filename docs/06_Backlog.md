@@ -46,8 +46,6 @@
 
 - `A-7` **`_meshPath` 로 적은 물리 셰이프가 게임에서는 늘 오류다** — `PhysicsMeshShapeCache::setLoadFunction` 을 부르는 곳이 없다. 물리는 그래픽스보다 아래 티어라 `.mesh` 읽기 함수를 위층이 넣어야 한다
   ([Physics README](../Source/Engine/Physics/README.md)). 엔진 조립 지점에서 `MeshAssetFormat::loadFromResource` 로 넣고, `MeshCache` 리로드 때 `PhysicsMeshShapeCache::clear()` 를 부른다. 테스트는 읽기 함수를 직접 넣어서 통과한다.
-- `A-12` **`ValidationIssueLog` 가 사라진 오브젝트의 결과를 들고 있다** — `removeSource` 를 부르는 곳이 에디터 셀프 테스트뿐이라, 검증 결과가 있던 오브젝트를 지우거나 씬을 바꿔도 맵 검사 패널에 남는다(2026-10-13, 에디터 체인을 끝낼 때 표에 결과가 남아 있었다 — 표는 이제 엔진 종료에서 소멸하므로 누수 보고에는 나오지 않는다).
-  오브젝트 파괴 · 씬 언로드에서 그 출처를 지우거나 표를 씬이 소유하게 한다. 체인 테스트는 종료 코드와 누수 줄만 봐서 이것을 세지 않는다.
 
 
 ---
