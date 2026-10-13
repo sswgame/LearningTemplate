@@ -135,6 +135,7 @@ namespace sw
         // 탐지기가 벡터에 대한 쓰기로 잡아 워커 둘이 동시에 들어오면 울린다. const 로 읽고 슬롯만 고쳐 쓴다.
         FramePassContext& passContext = const_cast<FramePassContext&>( std::as_const( _listPassContext ).data()[passSlot] );
         passContext                   = _frameContext;
+        passContext._passName         = graphContext._passName;
         if ( graphContext._pCmdList != nullptr )
             passContext._pCmd = graphContext._pCmdList;
         // 상수 버퍼도 패스마다 따로 잡는다. 커맨드 기록은 지연되는데 상수 쓰기는 즉시 일어나므로,

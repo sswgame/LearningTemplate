@@ -303,7 +303,7 @@ namespace sw
         vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, kConsumerStage, 0, 0, nullptr, 1, &barrier, 0, nullptr );
 
         if ( oneShot.has_value() && oneShot->endSubmitAndWait() == false )
-            SW_LOG_ERROR( "updateStructuredBuffer: vkQueueSubmit failed" );
+            _pDevice->reportQueueResult( static_cast<int32>( oneShot->getLastResult() ), "updateStructuredBuffer: one-shot submit" );
     }
 
     RHIBufferHandle VulkanRHIResourceFactory::createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride )
@@ -617,7 +617,7 @@ namespace sw
 
         if ( bSubmitted == false )
         {
-            SW_LOG_ERROR( "uploadTexture2D: vkQueueSubmit failed" );
+            _pDevice->reportQueueResult( static_cast<int32>( oneShot.getLastResult() ), "uploadTexture2D: one-shot submit" );
             return false;
         }
         pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
@@ -688,7 +688,7 @@ namespace sw
         destroyBuffer( staging );
         if ( bSubmitted == false )
         {
-            SW_LOG_ERROR( "uploadTexture2DRegion: vkQueueSubmit failed" );
+            _pDevice->reportQueueResult( static_cast<int32>( oneShot.getLastResult() ), "uploadTexture2DRegion: one-shot submit" );
             return false;
         }
         pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
@@ -799,7 +799,7 @@ namespace sw
         }
         else
         {
-            SW_LOG_ERROR( "readbackTexture2D: vkQueueSubmit failed (VkResult=%#)", static_cast<int32>( oneShot.getLastResult() ) );
+            _pDevice->reportQueueResult( static_cast<int32>( oneShot.getLastResult() ), "readbackTexture2D: one-shot submit" );
         }
         destroyBuffer( staging );
         return bOk;

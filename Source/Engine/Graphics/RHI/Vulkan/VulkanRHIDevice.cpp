@@ -77,7 +77,7 @@ namespace sw
         , _bMemoryBudget{ SW_FALSE }
         , _linuxWsi{ 0 }
         , _bSurfaceLost{ SW_FALSE }
-        , _reservedVulkan{ 0 }
+        , _bDeviceFault{ SW_FALSE }
         , _bSwapChainRecreateFailing{ SW_FALSE }
         , _bFrameAcquireWaitPending{ SW_FALSE }
         , _bTimestampEnabled{ SW_FALSE }
@@ -116,6 +116,9 @@ namespace sw
         , _pipelineCache{ nullptr }
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
+        , _lastSubmittedEventMarker{}
+        , _submittedMarkerMutex{}
+        , _bDeviceLostReported{ SW_FALSE }
     {
         _resourceImpl       = sw::make_unique<VulkanRHIResourceFactory>( this );
         _pTimestampProvider = this;

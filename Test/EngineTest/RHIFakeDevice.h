@@ -128,6 +128,15 @@ namespace test
             return sw::IRHIDevice::queryNativeHandlesInternal( outHandles );
         }
 
+#if !defined( SW_SHIPPING )
+        /** @brief `_listLiveTextureIndex` · `_listLiveBufferIndex` 에 든 번호만 살아 있다고 답합니다. */
+        bool isBindlessIndexLive( sw::RHIBindlessIndexSpace space, sw::RHIDescriptorIndex index ) const override
+        {
+            const sw::vector<sw::RHIDescriptorIndex>& listLive = ( space == sw::RHIBindlessIndexSpace::Texture ) ? _listLiveTextureIndex : _listLiveBufferIndex;
+            return std::find( listLive.begin(), listLive.end(), index ) != listLive.end();
+        }
+#endif
+
         uint32                                     _maxCreatable{ 0xFFFFFFFFu }; /**< 이만큼 만든 뒤로는 만들지 못한다 */
         uint32                                     _createdCount{ 0 };           /**< 지금까지 만든 리스트 수 */
         sw::vector<FakeRHICommandList*>            _listExecuted;                /**< 제출된 순서 그대로의 리스트 */
@@ -135,5 +144,7 @@ namespace test
         void*                                      _pNativeDevice{ nullptr };    /**< `getNativeDevice` 가 돌려줄 값 */
         mutable uint32                             _nativeHandleQueryCount{ 0 }; /**< 백엔드 훅 `queryNativeHandlesInternal` 이 불린 횟수 */
         sw::vector<sw::RHIResourceReleaseDelegate> _listGPURelease;              /**< `enqueueGPURelease` 로 받은 콜백(받은 순서) */
+        sw::vector<sw::RHIDescriptorIndex>         _listLiveTextureIndex;        /**< `isBindlessIndexLive` 가 살아 있다고 답할 텍스처 번호 */
+        sw::vector<sw::RHIDescriptorIndex>         _listLiveBufferIndex;         /**< `isBindlessIndexLive` 가 살아 있다고 답할 버퍼 번호 */
     };
 } // namespace test

@@ -3642,6 +3642,14 @@
    "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
   },
   {
+   "name": "gv_validateBindlessIndex",
+   "type": "int32",
+   "default": "kDefaultLevel",
+   "kind": "시험",
+   "description": "셰이더에 넘기는 bindless 인덱스 검사 — 0 끔, 1 죽은 번호(Debug 기본), 2 '없음' 번호가 가는 자리까지",
+   "source": "Source/Engine/Graphics/RHI/Support/BindlessIndexValidator.cpp"
+  },
+  {
    "name": "gv_vertexPool",
    "type": "int32",
    "default": "1",

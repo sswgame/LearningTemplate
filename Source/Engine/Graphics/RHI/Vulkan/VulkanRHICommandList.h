@@ -38,6 +38,8 @@ namespace sw
 
         /** @brief `IRHIDevice::executeCommandList` 가 프레임 스트림에 끼워 넣는 네이티브 버퍼입니다. */
         VkCommandBuffer nativeCommandBuffer() const { return _entry._buffer; }
+        /** @brief 이 리스트가 마지막으로 연 이벤트 마커(패스 이름)입니다. 디바이스 손실 로그용입니다. */
+        const utf8* getLastEventMarker() const { return _context.getLastEventMarker(); }
 
         void beginCommandList() override;
         void endCommandList() override;

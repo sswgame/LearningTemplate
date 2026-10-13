@@ -210,6 +210,11 @@ namespace sw
         /** @brief VS 가 슬롯 테이블의 t4(g_SwInstances)에서 인스턴스를 읽을 수 있으면 true 입니다(루트 시그니처가 만들어졌을 때). */
         bool supportsInstancedSceneDraw() const override { return _bBindlessRootSignature != SW_FALSE; }
 
+    #if !defined( SW_SHIPPING )
+        /** @brief 힙 슬롯 @p index 에 그 종류(텍스처 · 버퍼)의 뷰가 등록돼 있으면 true 입니다. 텍스처와 버퍼는 힙 하나를 나눠 쓴다. */
+        bool isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const override;
+    #endif
+
         /** @brief 정적 테이블에 런타임 값(네이티브 bindless)을 반영해 반환합니다. */
         RHICapabilities getCapabilities() const override
         {
@@ -350,6 +355,10 @@ namespace sw
         [[nodiscard]] bool createMappedUploadBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped );
         /** @brief ComPtr 을 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 장부의 `kind` 항목에 할당 크기를 올리는 유일한 지점입니다. */
         RHITextureHandle storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture, RHIMemoryKind kind );
+    #if defined( SW_DEBUG )
+        /** @brief 리소스에 `SW <종류> <핸들> (<폭>x<높이> fmt <포맷>)` 이름을 붙입니다. DRED 페이지 폴트 출력이 폴트 주소의 할당을 이 이름으로 보여 줍니다(Debug 전용). */
+        static void nameResourceForDiagnostics( ID3D12Resource* pResource, const utf16* pKind, uint64 handle );
+    #endif
         /** @brief 자원 하나가 차지하는 실제 할당 크기입니다(`GetResourceAllocationInfo`이며 정렬과 패딩을 포함합니다). */
         uint64 computeAllocationBytes( ID3D12Resource* pResource ) const;
         /**
@@ -618,7 +627,7 @@ namespace sw
         /// 기록 중에는 레지스트리가 바뀌지 않는다는 규칙(IRHIDevice::setParallelRecording, assertRegistryMutableNow)이
         /// 그것을 보장합니다. 주의: 기록 중에 레지스트리를 락 없이 순회하는 동안 재할당이 일어나면 GPU 가 쓰레기 디스크립터를
         /// 읽어 PageFault(VA=0)가 나고 DEVICE_HUNG 으로 이어집니다.
-        std::shared_mutex              _bindlessMutex;
+        mutable std::shared_mutex      _bindlessMutex;
         vector<BindlessResourceRecord> _listRegisteredBindless;
         vector<uint32>                 _listFreeBindless;
 

@@ -158,6 +158,11 @@ namespace sw
         /** @brief VS 가 GPUScene 인스턴스 버퍼를 구조 버퍼 SRV(g_SwInstances, t4)로 읽을 수 있어 true 입니다. */
         bool supportsInstancedSceneDraw() const override { return true; }
 
+    #if !defined( SW_SHIPPING )
+        /** @brief 텍스처 · 버퍼 등록 표의 그 자리에 핸들이 있으면 true 입니다(DX11 은 인덱스를 슬롯 바인딩으로 흉내 낸다). */
+        bool isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const override;
+    #endif
+
         /**
          * @brief 병렬 커맨드 기록 지원 여부를 런타임에 반영해 반환합니다.
          * @details 리스트마다 자기 Deferred Context 를 소유하므로 구조적으로는 병렬 기록이 가능하다.

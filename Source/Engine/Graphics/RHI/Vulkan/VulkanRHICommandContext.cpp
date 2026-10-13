@@ -1008,6 +1008,9 @@ namespace sw
 
     void VulkanRHICommandContext::beginEventMarker( const utf8* pName )
     {
+        // 디버그 라벨 함수가 없어도(검증 레이어 없는 실행) 패스 이름은 남긴다 — 디바이스 손실 로그가 이것을 읽는다.
+        if ( pName != nullptr )
+            _lastEventMarker = pName;
         VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE || pName == nullptr || _pDevice->_instance == VK_NULL_HANDLE )
             return;

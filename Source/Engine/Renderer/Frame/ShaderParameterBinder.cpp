@@ -7,6 +7,7 @@
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/Support/BindlessIndexValidator.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Renderer/Frame/FrameResourceRegistry.h"
@@ -92,7 +93,8 @@ namespace sw
                                               RHIDescriptorIndex              materialCb,
                                               bool                            bNativeBindless,
                                               const RHIDescriptorIndex*       pMaterialTexSrv,
-                                              bool                            bEngineCbUpToDate )
+                                              bool                            bEngineCbUpToDate,
+                                              const BindlessIndexCheckSite*   pIndexCheck )
     {
         if ( layout.isEmpty() )
             return;
@@ -100,6 +102,14 @@ namespace sw
         // 이 함수는 드로우마다 불린다. 리터럴이라도 hashed_string 을 여기서 만들면 드로우마다
         // 전역 레지스트리 intern(FNV + 샤드 뮤텍스)이 붙는다. 함수 지역 static 으로 한 번만 만든다.
         static const hashed_string s_materialCbName{ shaderslot::cbname::kMaterial };
+
+#if !defined( SW_SHIPPING )
+        // 넘기는 bindless 인덱스가 살아 있는 슬롯인가(BindlessIndexValidator). 죽은 번호는 DX12 · Vulkan 에서 디바이스 손실로 끝난다.
+        static const hashed_string s_materialTextureName{ "MaterialTexture" };
+        const bool                 bValidateIndex = pIndexCheck != nullptr && BindlessIndexValidator::isEnabled();
+#else
+        (void)pIndexCheck;
+#endif
 
         // 1) 엔진 CB 채우기.
         //    크기 · 멤버 키 · 자동 인덱스 키는 모두 레이아웃 빌드 때 미리 계산해 뒀다(ShaderBindingLayout::
@@ -127,7 +137,8 @@ namespace sw
                 uint32 autoIndex = kInvalidDescriptorIndex;
                 if ( ( pValue == nullptr || valueSize == 0 ) && member._autoIndexKey.empty() == false )
                 {
-                    const RegisteredTexture* pTex = registry.findTexture( member._autoIndexKey );
+                    RHIBindlessIndexSpace    autoSpace = RHIBindlessIndexSpace::Texture;
+                    const RegisteredTexture* pTex      = registry.findTexture( member._autoIndexKey );
                     if ( pTex != nullptr )
                     {
                         autoIndex = pTex->_srv;
@@ -137,7 +148,14 @@ namespace sw
                         const RegisteredBuffer* pBuffer = registry.findBuffer( member._autoIndexKey );
                         if ( pBuffer != nullptr )
                             autoIndex = pBuffer->_index;
+                        autoSpace = RHIBindlessIndexSpace::Buffer;
                     }
+#if !defined( SW_SHIPPING )
+                    if ( bValidateIndex )
+                        (void)BindlessIndexValidator::validate( *pIndexCheck, autoSpace, autoIndex, member._valueKey ); // 죽은 번호는 검사가 로그로 남긴다
+#else
+                    (void)autoSpace;
+#endif
                     pValue    = reinterpret_cast<const uint8*>( &autoIndex );
                     valueSize = sizeof( uint32 );
                 }
@@ -163,15 +181,14 @@ namespace sw
                     // `_registerIndex` 는 백엔드마다 뜻이 다를 수 있다(세트 · 시프트 규약). 그대로 넘기면 한 CB 가
                     // 다른 CB 자리를 덮어쓰거나 어느 슬롯에도 안 걸리는데, 같은 UNIFORM_BUFFER 라 검증 에러도 안 난다.
                     // bindingslots.hlsli 가 정하는 b0=PassCB / b1=MaterialCB 를 그대로 쓴다.
-                    if ( slot._name == s_materialCbName )
-                    {
-                        if ( materialCb != kInvalidDescriptorIndex )
-                            cmd.bindConstantBuffer( materialCb, shaderslot::kMaterialConstantBuffer );
-                    }
-                    else if ( engineCb._index != kInvalidDescriptorIndex )
-                    {
-                        cmd.bindConstantBuffer( engineCb._index, shaderslot::kPassConstantBuffer );
-                    }
+                    const bool               bMaterialCb = slot._name == s_materialCbName;
+                    const RHIDescriptorIndex cbIndex     = bMaterialCb ? materialCb : engineCb._index;
+#if !defined( SW_SHIPPING )
+                    if ( bValidateIndex )
+                        (void)BindlessIndexValidator::validate( *pIndexCheck, RHIBindlessIndexSpace::Buffer, cbIndex, slot._name ); // 죽은 번호는 검사가 로그로 남긴다
+#endif
+                    if ( cbIndex != kInvalidDescriptorIndex )
+                        cmd.bindConstantBuffer( cbIndex, bMaterialCb ? shaderslot::kMaterialConstantBuffer : shaderslot::kPassConstantBuffer );
                     break;
                 }
                 // 두 묶음 모두 break 지만 뜻이 다르다. 위는 "여기서 안 하고 아래 표에서 한다",
@@ -191,6 +208,18 @@ namespace sw
                 }
             }
         }
+
+#if !defined( SW_SHIPPING )
+        // 머티리얼 텍스처 인덱스는 네이티브 bindless 백엔드에서도 같은 번호가 머티리얼 데이터에 들어가 있다 — 네 백엔드 모두 검사한다.
+        if ( bValidateIndex && pMaterialTexSrv != nullptr )
+        {
+            for ( uint32 texIndex = 0; texIndex < shaderslot::kMaterialTextureCount; ++texIndex )
+            {
+                (void)BindlessIndexValidator::validate( *pIndexCheck, RHIBindlessIndexSpace::Texture, pMaterialTexSrv[texIndex], s_materialTextureName,
+                                                        texIndex ); // 죽은 번호는 검사가 로그로 남긴다
+            }
+        }
+#endif
 
         // 머티리얼 텍스처: 에뮬 백엔드(DX11 · GL)만. 셰이더가 서수로 t5..t8 을 고르므로 그 순서대로 건다.
         // 네이티브 bindless 백엔드는 인덱스가 이미 MaterialCB 에 있어 아무것도 걸 필요가 없다.
@@ -218,7 +247,13 @@ namespace sw
                     continue; // 인덱스는 이미 CB 에 기록됨
                 const RegisteredTexture* pTex = registry.findTexture( bind._lookupKey );
                 if ( pTex != nullptr && pTex->_srv != kInvalidDescriptorIndex )
+                {
+#if !defined( SW_SHIPPING )
+                    if ( bValidateIndex )
+                        (void)BindlessIndexValidator::validate( *pIndexCheck, RHIBindlessIndexSpace::Texture, pTex->_srv, bind._lookupKey ); // 죽은 번호는 검사가 로그로 남긴다
+#endif
                     cmd.bindShaderResource( pTex->_srv, bind._registerIndex );
+                }
                 continue;
             }
 
@@ -227,7 +262,13 @@ namespace sw
             // 바인딩 자체는 패스 · 배치마다 한 번이다.
             const RegisteredBuffer* pBuffer = registry.findBuffer( bind._lookupKey );
             if ( pBuffer != nullptr && pBuffer->_index != kInvalidDescriptorIndex )
+            {
+#if !defined( SW_SHIPPING )
+                if ( bValidateIndex )
+                    (void)BindlessIndexValidator::validate( *pIndexCheck, RHIBindlessIndexSpace::Buffer, pBuffer->_index, bind._lookupKey ); // 죽은 번호는 검사가 로그로 남긴다
+#endif
                 cmd.bindStructuredBuffer( pBuffer->_index, bind._registerIndex );
+            }
         }
     }
 } // namespace sw

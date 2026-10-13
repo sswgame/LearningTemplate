@@ -311,6 +311,8 @@ namespace sw
             uint32 _cullViewIndex{ 0 };
             /// @brief 지금 기록하는 패스의 종류입니다. `executePass` 가 정하며, 드로우 루프가 이 패스에서 그리지 않는 머티리얼의 배치를 거를 때 봅니다.
             RenderPassType _passType{ RenderPassType::Invalid };
+            /// @brief 지금 기록하는 패스의 파이프라인 이름입니다(진단 로그용 — bindless 인덱스 검사가 어느 패스인지 적는다). 패스 밖이면 비어 있습니다.
+            hashed_string _passName;
             /// @brief 이 드로우 그룹의 루트 상수 값(머티리얼 원소 수)입니다. 배치마다 다른 값(인스턴스 시작, 모프 풀, 정점 풀)은
             ///        배치 테이블(g_SwBatches)과 인스턴스 슬롯 스트림이 제공하므로 그룹 안에서 루트 상수를 다시 바인딩하지 않습니다.
             ///        PassCB 에 넣으면 한 패스의 드로우들이 서로를 덮어씁니다(binding.hlsli 1-0 참고).
