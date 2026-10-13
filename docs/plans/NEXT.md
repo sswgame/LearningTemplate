@@ -16,7 +16,7 @@
 
 ## 남은 검증 (이 순서)
 
-1. **성능 증거(반드시)**: Release 를 최신 트리로 다시 짓고(`build/Ninja-Release` 는 최신이 아님) `Scripts/qa/PerfCompare.py --app <새 App> --app-before <변경 전 App> --runs 3`(케이스: tickBatch · fractureWarm · fractureDefer · physicsStep · netHostCopy · morphPool · uiPaintOrder · uiNameplates · hangulGlyphs), `SceneLoadBench.py --count 8000 --asset-report`, 백로그 `B-1` · `B-2` · `B-13`. 나쁘면 해당 변경을 되돌리고 결정 기록에 숫자와 함께 적는다. 이번 세션의 `TaskNode` 소유 포인터 변경(노드→매니저가 포인터 두 번)도 이때 같이 본다.
+1. **성능 증거(반드시)**: `PerfCompare` 9케이스와 `SceneLoadBench` 는 2026-10-13 에 쟀다(기준값은 [검증과 측정](../08_Verification.md), 중립이면 유지). 남은 것은 백로그 `B-13` 의 측정(`GT.GPUScene.build` · `GT.Editor.updateUI` · `EngineLoop.tick` 구간)과 이번 세션의 `TaskNode` 소유 포인터 변경(노드→매니저가 포인터 두 번)이다. 비교용 기준선은 워크트리 `D:\w\perfbase`(커밋 `2772e1a7a` 의 Release `App` · `EngineTest`)를 남겨 두었다.
 2. 전체 `hostgpu`(직렬 약 17분) 다시. 에디터 체인 DX11 · GL · Vulkan 은 최신 병합 뒤 안 돌렸다.
 3. Shipping 전체 빌드(App · 테스트까지 — Engine 타깃만 확인됨), 게임 프리셋 8개(`Ninja-Debug-<Game>`) 빌드, 네 백엔드 스크린샷 비교.
 4. `nogpu` 가 느리다(합 540초, `-j 2` 실제 약 324초): AppTest HostOnly 샤드 세 개가 86~136초, EngineTest NoGPU 샤드 여섯 개가 39~66초. 샤드를 더 쪼개거나 기동 체인 중복을 줄일 것(사용자가 물었음, 결정 대기).

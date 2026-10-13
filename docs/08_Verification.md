@@ -137,6 +137,7 @@ cd build/Ninja-Debug/Bin
 - **프레임당 힙 할당**은 `-gv_profileFrames` 보고의 `alloc/frame`, 콜스택은 `-gv_profileAllocSites=N`(Debug App — 횟수는 최적화와 무관, 시간은 같이 측정하지 말 것).
 - **씬 로드 측정**: `Scripts/dev/MakeStressScene.py` 로 큰 씬(도형 섞기) → `-gv_firstScene=<씬>`(또는 Empty 팩 `data/gamesettings.xml` 의 `startMap`) → `[SceneLoad]` 줄. Dev 는 `Cooked/` 를 마운트하지
   않으므로 쿠킹 효과는 `--cooked-dir=<repo>/Resource` 로 쿠킹하고 재고 지운다. `[SceneLoad]` 가 `.xml` 을 가리키면 쿠킹본을 안 읽은 것이다.
+  기준값(`SceneLoadBench.py --count 8000`, Release dx12, 3 회 가운데 값, Empty 팩): XML 은 파싱 26.1 ms · 인스턴스화 80.2 ms · 로드 중 `GT.Frame` 최악 29.9 ms, 쿠킹본은 파싱 5.9 ms · 인스턴스화 25.3 ms · 최악 14.7 ms 입니다(쿠킹본 변형은 논리 경로가 같아 하니스 줄에는 `.xml` 로 찍히지만 `Scene` 에셋 로드 기록이 없고 파싱 시간이 4 배 짧아 쿠킹본 경로를 탄 것이다).
 - **벤치가 상태를 공유하면 단계 순서를 측정한다.** 손대지 않은 대조군이 움직이면 하니스를 의심한다. 벤치 메시가 공유라 배치 결함을 가린 적이 있다 — 씬에서 온 메시로도 본다.
 - **GPU 업로드 비용은 호출당이다**(DX12 ~3.3 us) — 쪼개면 느려진다. 구간을 배열로 묶어 한 번에.
 - **워커가 쓴 데이터를 다른 코어가 읽으면** 캐시 이동이 항목당 일(~40 ns)보다 비싸다. 쓰는 스레드와 읽는 스레드를 같게 둔다.
