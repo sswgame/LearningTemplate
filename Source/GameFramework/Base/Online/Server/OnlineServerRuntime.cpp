@@ -305,9 +305,9 @@ namespace sw
         }
         if ( parts._host.initialize( pTransport, hostSettings, outError ) == false )
             return false;
-        parts._bHostStarted     = SW_TRUE;
-        parts._context._pRouter = parts._host.getEphemeralRouter();
-        const bool bRouterBound = parts._bus->bindRouter( parts._context._pRouter );
+        parts._bHostStarted                      = SW_TRUE;
+        parts._context._pRouter                  = parts._host.getEphemeralRouter();
+        [[maybe_unused]] const bool bRouterBound = parts._bus->bindRouter( parts._context._pRouter );
         SW_ASSERT( bRouterBound ); // 호스트를 띄우기 전에는 아무도 버스를 구독하지 않았다
         return true;
     }

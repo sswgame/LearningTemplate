@@ -28,6 +28,7 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Config/GameSelection.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -90,6 +91,10 @@
 
 #include "sw/config/ConfigConstants.h"
 #include "sw/config/ShippingHostDefaults.h"
+
+#if defined( SW_SHIPPING )
+    #include "sw/config/ShippingGameDefaults.h" // 구운 게임의 프리셋 — Dev 는 디스크에서 고른 게임의 것을 읽어 활성 게임과 무관하다
+#endif
 
 namespace sw
 {
@@ -421,7 +426,13 @@ namespace sw
                     EngineConfig::setActive( *_pEngineConfig );
 
                     // 틀린 설정 파일은 nullptr 이다(키 이름은 이미 오류로 남았다) — 기본값으로 뜨면 고친 값이 무시된 것을 아무도 모른다.
-                    const GameConfig* pGameConfig = _pConfigManager->ensureConfig<GameConfig>( config::kFileRuntimeGameConfig, shipping_host::kGameConfigJSON );
+                    // Dev 는 고른 게임(`-game=`)의 파일만 읽는다 — 활성 게임의 구운 사본으로 대체하면 다른 게임의 팩 루트로 뜬다.
+#if defined( SW_SHIPPING )
+                    const utf8* const pGameConfigJSON = shipping_host::kGameConfigJSON;
+#else
+                    const utf8* const pGameConfigJSON = nullptr;
+#endif
+                    const GameConfig* pGameConfig = _pConfigManager->ensureConfig<GameConfig>( GameSelection::getConfigPath(), pGameConfigJSON );
                     if ( pGameConfig == nullptr )
                         return EngineInitResult::Failed;
                     GameConfig::setActive( *pGameConfig );

@@ -52,8 +52,12 @@ SW_REGISTER_ARGUMENT( COOK_SCENES, false, false, "cook-scenes" )
 // `-cook-scenes` 가 쿠킹 결과를 쓸 폴더
 SW_REGISTER_ARGUMENT( COOKED_DIR, "", false, "cooked-dir" )
 
-// 전용 서버(Server)의 운영 설정 파일(`ServerConfig`) — 비우면 `Config/Server/<SW_ACTIVE_GAME>.json`. Shipping 도 디스크에서 읽는다.
+// 전용 서버(Server)의 운영 설정 파일(`ServerConfig`) — 비우면 `Config/Server/<게임>.json`(`-game=` 으로 고른 게임). Shipping 도 디스크에서 읽는다.
 SW_REGISTER_ARGUMENT( SERVER_CONFIG, "", false, "server-config" )
+
+// 돌릴 게임(Dev 만) — `Source/Games/<이름>`. 비우면 빌드의 활성 게임(`SW_ACTIVE_GAME`), 다른 게임은 같은 빌드가 함께 지은 것(`SW_GAMES`, `Bin/Games/<이름>/`)이어야 한다.
+// Shipping 은 구운 게임 하나라 보지 않는다(`GameSelection`)
+SW_REGISTER_ARGUMENT( GAME, "", false, "game" )
 
 // 전용 서버를 Windows 서비스(SCM)로 돈다(`Server --service`). SCM 이 띄운 프로세스만 된다.
 SW_REGISTER_ARGUMENT( SERVICE, false, false, "service" )

@@ -20,6 +20,7 @@
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/GameSelection.h"
 #include "Engine/EngineServiceCollection.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Object/Component/SceneTransformStorage.h"
@@ -106,7 +107,12 @@ namespace sw
             return false;
         }
 
+        // 돌릴 게임을 고른다(Dev `-game=`) — 모듈 카탈로그 · 게임 프리셋을 읽기 전이어야 한다. 이 빌드에 없는 게임이면 서지 않는다.
+        if ( GameSelection::select( *owned._pCommandLineManager ) == false )
+            return false;
+
         // 크래시 리포트에 함께 나갈 값들이다. 덤프만으로는 알 수 없는 것들이다. 백엔드는 RHI 단계가 덮어쓴다.
+        CrashHandler::setContextValue( "Game", GameSelection::getName().c_str() );
         CrashHandler::setContextValue( "Build", build::kConfigName );
         CrashHandler::setContextValue( "Platform", build::kPlatformName );
         // 심볼과 짝짓는 열쇠 — 실행 파일과(다르면) 엔진 모듈의 빌드 id. 덤프의 모듈 목록에도 같은 값이 있다.

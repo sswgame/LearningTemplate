@@ -3785,7 +3785,15 @@
     "server-config"
    ],
    "value": "글 값(`-이름=값`)",
-   "description": "전용 서버(Server)의 운영 설정 파일(`ServerConfig`) — 비우면 `Config/Server/<SW_ACTIVE_GAME>.json`. Shipping 도 디스크에서 읽는다."
+   "description": "전용 서버(Server)의 운영 설정 파일(`ServerConfig`) — 비우면 `Config/Server/<게임>.json`(`-game=` 으로 고른 게임). Shipping 도 디스크에서 읽는다."
+  },
+  {
+   "name": "GAME",
+   "spellings": [
+    "game"
+   ],
+   "value": "글 값(`-이름=값`)",
+   "description": "돌릴 게임(Dev 만) — `Source/Games/<이름>`. 비우면 빌드의 활성 게임(`SW_ACTIVE_GAME`), 다른 게임은 같은 빌드가 함께 지은 것(`SW_GAMES`, `Bin/Games/<이름>/`)이어야 한다. Shipping 은 구운 게임 하나라 보지 않는다(`GameSelection`)"
   },
   {
    "name": "SERVICE",

@@ -129,8 +129,8 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
     ConfigFileEntry(
         page="GameConfig", pathPattern="Config/Game/*.json", layer=kLayerGamePreset, fileFormat="json",
         reader="`ConfigManager::ensureConfig<GameConfig>` (`EngineLoop` Config 단계)",
-        readWhen="기동 · 에디터 핫 리로드 — `SW_ACTIVE_GAME` 이 파일 하나를 고른다",
-        shipping="configure 때 exe 에 구워 넣음(`ShippingHostDefaults.h`)", bCommitted=True,
+        readWhen="기동 · 에디터 핫 리로드 — Dev 는 `-game=<이름>`(없으면 빌드의 활성 게임 `SW_ACTIVE_GAME`)이 파일 하나를 고른다(`GameSelection`)",
+        shipping="configure 때 exe 에 구워 넣음(`ShippingGameDefaults.h`)", bCommitted=True,
         typeName="GameConfig", header="Source/Engine/Config/GameConfig.h", keyStyle=kKeyStyleJsonMember,
         note="게임마다 하나 — `CheckGamePresets` 가 팩 · CMake 프리셋과 대조한다"),
     # --- 팩 데이터 ----------------------------------------------------------------------------------------------------------

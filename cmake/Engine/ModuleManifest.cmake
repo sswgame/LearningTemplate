@@ -450,6 +450,8 @@ function(sw_resolveModuleManifests)
 
 		list(JOIN swOrder "\n" swOrderText)
 		file(CONFIGURE OUTPUT "${swCatalogDirectory}/ResolvedModules.txt" CONTENT "${swOrderText}\n")
+		# `Modules/SWGame` 이 어느 게임인가 — `-game=` 이 없을 때 `GameSelection` 이 읽는다(이름을 엔진 TU 에 굽지 않는다).
+		file(CONFIGURE OUTPUT "${swCatalogDirectory}/${SW_FILE_ACTIVE_GAME}" CONTENT "${SW_ACTIVE_GAME}\n")
 
 		sw_removeStaleBinaryOutputs("${swOrder}")
 	endif()

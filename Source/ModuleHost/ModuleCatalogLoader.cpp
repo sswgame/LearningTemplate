@@ -20,6 +20,25 @@ namespace sw
             SW_LOG_ERROR( "Module catalog: %#", moduleError.c_str() );
             return false;
         }
+        // 다른 폴더로 옮긴 모듈(함께 지은 게임 팩, `GameSelection`)은 그 폴더의 매니페스트가 `Modules/` 의 같은 이름을 대신한다 — 켜짐 표가 게임별이다.
+        string movedModule;
+        string movedDirectory;
+        if ( ModuleImageUtil::getModuleSubdirectory( movedModule, movedDirectory ) )
+        {
+            const string   manifestPath = FileUtil::joinPath( FileUtil::joinPath( FileUtil::getBinaryDirectory(), movedDirectory ), movedModule + ModuleCatalog::kManifestExtension );
+            string         text;
+            ModuleManifest manifest;
+            if ( FileUtil::readTextFile( manifestPath, text ) == false )
+            {
+                SW_LOG_ERROR( "Module catalog: cannot read %#", manifestPath.c_str() );
+                return false;
+            }
+            if ( ModuleCatalog::parseManifest( text, manifestPath, manifest, moduleError ) == false || outCatalog.replaceManifest( std::move( manifest ), moduleError ) == false )
+            {
+                SW_LOG_ERROR( "Module catalog: %#", moduleError.c_str() );
+                return false;
+            }
+        }
         ModuleResolveContext resolveContext{};
         resolveContext._platform      = ModuleCatalog::getCurrentPlatform();
         resolveContext._configuration = ModuleCatalog::getCurrentConfiguration();

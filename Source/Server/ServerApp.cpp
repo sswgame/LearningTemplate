@@ -27,6 +27,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Config/GameSelection.h"
 #include "Engine/Config/Server/ServerConfig.h"
 #include "Engine/Observability/MetricRegistry.h"
 #include "Engine/Observability/OpsHTTPEndpoint.h"
@@ -235,7 +236,7 @@ namespace sw
     {
         ConfigManager*            pConfigManager = _engineLoop.getConfigManager();
         const CommandLineManager* pCommandLine   = _engineLoop.getCommandLineManager();
-        string                    path           = config::kFileRuntimeServerConfig;
+        string                    path           = GameSelection::getServerConfigPath();
         if ( pCommandLine != nullptr )
         {
             string overridePath;

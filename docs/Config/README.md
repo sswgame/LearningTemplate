@@ -32,7 +32,7 @@
 
 | 파일 | 읽는 곳과 시점 | 배포본 | 커밋 | 문서 |
 |---|---|---|---|---|
-| `Config/Game/*.json` | `ConfigManager::ensureConfig<GameConfig>` (`EngineLoop` Config 단계) — 기동 · 에디터 핫 리로드 — `SW_ACTIVE_GAME` 이 파일 하나를 고른다. 게임마다 하나 — `CheckGamePresets` 가 팩 · CMake 프리셋과 대조한다 | configure 때 exe 에 구워 넣음(`ShippingHostDefaults.h`) | 한다 | [GameConfig](GameConfig.md) |
+| `Config/Game/*.json` | `ConfigManager::ensureConfig<GameConfig>` (`EngineLoop` Config 단계) — 기동 · 에디터 핫 리로드 — Dev 는 `-game=<이름>`(없으면 빌드의 활성 게임 `SW_ACTIVE_GAME`)이 파일 하나를 고른다(`GameSelection`). 게임마다 하나 — `CheckGamePresets` 가 팩 · CMake 프리셋과 대조한다 | configure 때 exe 에 구워 넣음(`ShippingGameDefaults.h`) | 한다 | [GameConfig](GameConfig.md) |
 
 ## 팩 데이터
 

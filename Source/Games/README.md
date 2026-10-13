@@ -9,7 +9,9 @@ App 이 올리는 활성 게임은 하나입니다. CMake 옵션 `SW_ACTIVE_GAME
 활성 게임의 빌드 타깃 이름은 늘 `SWGame` 입니다. 핫 리로드가 다시 로드할 모듈을 고정된 이름으로 찾기 때문입니다.
 
 `SW_GAMES`(Dev 전용)로 다른 게임도 같은 빌드에서 짓습니다. `Ninja-Debug` 는 `ALL` 이라 여덟 게임을 한 번에 짓고, 엔진 · 프레임워크 · 키트는 한 번만 컴파일합니다.
-함께 짓는 게임은 타깃 `SWGame_<게임>`, 산출물 `Bin/Games/<게임>/SWGame.dll`(PDB 는 `Bin/Symbols/Games/<게임>/`)입니다. 아직 App 이 올리지 않습니다 — 실행 시점 선택(`-game=`)은 백로그 `C-25` 의 다음 단계입니다.
+함께 짓는 게임은 타깃 `SWGame_<게임>`, 산출물 `Bin/Games/<게임>/SWGame.dll`(PDB 는 `Bin/Symbols/Games/<게임>/`)입니다. `App.exe -game=<게임>`(Dev)으로 고르면 그 게임의 프리셋(`Config/Game/<게임>.json`) · 매니페스트(켜짐 표) · DLL 을 쓰고, 핫 리로드도 그 DLL 을 봅니다(`GameSelection`).
+`-game=` 이 없으면 빌드의 활성 게임입니다. 이 빌드가 짓지 않은 게임을 고르면 기동이 오류로 섭니다. Shipping 은 구운 게임 하나라 `-game=` 을 보지 않습니다.
+게임 이름은 엔진 TU 에 굽지 않으므로(활성 게임은 `Bin/Modules/ActiveGame.txt`) 활성 게임을 바꿔도 다시 컴파일되는 것은 게임 모듈뿐입니다.
 `Ninja-Debug-Lean` 은 `SW_BUILD_UNUSED_KITS=OFF` 라 활성 게임과 `SW_GAMES` 로 고른 게임이 의존으로 닿는 키트의 합집합만 짓습니다(`-DSW_GAMES=NileCity;Shooter3D`).
 
 ## 머릿속 그림
@@ -42,7 +44,7 @@ Resource/game/<게임 소문자>/               → 팩: data/gamesettings.xml, 
 | [`ThemeParkTycoon`](ThemeParkTycoon/README.md) | 롤러코스터 타이쿤 | 씬, 프리팹, 디렉터, 뷰 구조의 본보기 |
 | [`VoxelCraft`](VoxelCraft/README.md) | 복셀 샌드박스 | 절차 메시, 1인칭 몸, 청크 다시 만들기 |
 
-CI 는 기본 게임 `Empty` 만 빌드합니다. 로컬 `Ninja-Debug` 는 여덟 게임을 모두 컴파일하므로 게임 코드의 빌드 오류는 거기서 드러납니다. 실행 확인은 아직 그 게임의 프리셋으로 합니다.
+CI 는 기본 게임 `Empty` 만 빌드합니다. 로컬 `Ninja-Debug` 는 여덟 게임을 모두 컴파일하므로 게임 코드의 빌드 오류는 거기서 드러납니다. 실행 확인은 `App.exe -game=<게임>` 으로 합니다. 그 게임의 호스트 테스트(시나리오 묶음)는 아직 게임 프리셋 빌드에서 돕니다.
 
 ## 따라 해 보기 — 게임 하나를 빌드하고 시나리오 돌리기
 

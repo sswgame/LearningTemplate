@@ -36,7 +36,8 @@ namespace sw
         static string getDebugSymbolPath( string_view libraryPath );
         /**
          * @brief 빌드가 낸 라이브러리의 디버그 심볼 파일을 찾습니다. `Bin/Symbols/<이름>` 을 먼저 보고, 없으면 라이브러리 옆을 봅니다. 둘 다 없으면 빈 문자열을 반환합니다.
-         * @details Dev 빌드는 PDB 를 `Bin/Symbols` 에 낸다(`cmake/Engine/BuildLayout.cmake`).
+         * @details Dev 빌드는 PDB 를 `Bin/Symbols` 에 낸다(`cmake/Engine/BuildLayout.cmake`). `setModuleSubdirectory` 로 옮긴 모듈은 `Bin/Symbols/<그 폴더>` 다 —
+         *          게임 팩마다 PDB 이름이 같아(`SWGame.pdb`) 폴더로 가른다.
          */
         static string findBuiltDebugSymbolPath( string_view libraryPath );
 
@@ -54,6 +55,15 @@ namespace sw
          * @details 둘 다 없으면 `Bin/Modules` 의 경로를 반환한다. 부르는 쪽은 이 경로로 "없다"를 알린다.
          */
         static string findModuleLibraryPath( string_view baseName );
+        /**
+         * @brief 모듈 @p baseName 을 `Bin/Modules` 대신 `Bin/<binRelativeDirectory>` 에서 찾게 합니다. 디버그 심볼은 `Bin/Symbols/<binRelativeDirectory>` 입니다.
+         * @details 함께 지은 게임 팩(`Bin/Games/<게임>/SWGame`)을 `-game=` 으로 고를 때 기동이 모듈을 올리기 전에 한 번 부른다. 모듈 하나만 둔다 —
+         *          다시 부르면 바꾸고, 빈 @p binRelativeDirectory 는 되돌린다.
+         * @note 기동 스레드에서만 부른다. 읽는 쪽(핫 리로드 감시)은 그 뒤에 돈다.
+         */
+        static void setModuleSubdirectory( string_view baseName, string_view binRelativeDirectory );
+        /** @brief `setModuleSubdirectory` 로 옮긴 모듈이 있으면 그 이름과 `Bin` 상대 폴더를 채우고 true 를 반환합니다. */
+        static bool getModuleSubdirectory( string& outBaseName, string& outBinRelativeDirectory );
 
         // ------------------------------------------------------------------------------
         // 2) 로드, 심볼, 언로드(OS 로더). 등록을 해제하지 않는다. 엔진 코드를 가리킬 수 있는 모듈은 4)의 함수로 언로드한다.

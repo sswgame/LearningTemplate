@@ -7,6 +7,7 @@
 #include "Core/Process/Process.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Config/GameSelection.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -78,7 +79,7 @@ namespace test
             return packRoot;
         const sw::string repositoryRoot = sw::FileUtil::getDirectoryPart( sw::ResourcePaths::getRootFolderPath() );
         sw::string       text;
-        if ( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( repositoryRoot, sw::config::kFileRuntimeGameConfig ), text ) == false )
+        if ( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( repositoryRoot, sw::GameSelection::getConfigPath() ), text ) == false )
             return packRoot;
         const size_t keyIndex = text.find( "\"_packRoot\"" );
         const size_t open     = keyIndex == sw::string::npos ? sw::string::npos : text.find( '"', text.find( ':', keyIndex ) );

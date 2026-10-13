@@ -27,12 +27,12 @@ namespace sw
             /** @brief 초당 킬로비트(`NetConnectionStats::_sentBandwidth`)를 초당 바이트로 바꾸는 배수입니다(1000 / 8). */
             static constexpr float32 kBytesPerKilobit = 125.0f;
             /** @brief `net.traffic` 이 한 번에 보낼 수 있는 메시지 상한(신뢰 창 `NetConnection::kReliableWindow` 를 넘으면 보내기가 거절된다). */
-            static constexpr int32 kMaxTrafficMessageCount = 200;
+            [[maybe_unused]] static constexpr int32 kMaxTrafficMessageCount = 200; // 개발 명령만 쓴다(Shipping 에는 없다)
             /**
              * @brief `net.traffic` 메시지의 종류 바이트입니다. 프레임워크 영역(`NetMessageRange::kFramework`) 바로 아래라 처리기가 없고, 받는 쪽 라우터가 버린다.
              * @details 재전송 수치를 보려고 신뢰 메시지를 흘리는 용도다 — 키트가 없는 게임(Empty)의 세션은 연결 유지 패킷만 오가서 다시 보낼 것이 없다.
              */
-            static constexpr uint8 kTrafficMessageKind = NetMessageRange::kFramework - 1;
+            [[maybe_unused]] static constexpr uint8 kTrafficMessageKind = NetMessageRange::kFramework - 1;
             /** @brief 지금 열린 세션 — 개발 명령 `net.*` 이 읽는다(게임 스레드에서만 쓰고 읽는다). */
             static inline GameNetSession* s_pActiveSession{ nullptr };
 

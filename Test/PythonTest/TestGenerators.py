@@ -36,7 +36,7 @@ def listGeneratorInternal(tree: BuildTree) -> list[tuple[str, list[str], list[st
         ("GenerateCMakeConstants.py", ["ConfigVars.cmake"], []),
         ("GeneratePackFormat.py", ["PackFormat.gen.h"], []),
         ("GenerateCookContract.py", ["CookContract.gen.h", "CookContract.cmake"], []),
-        ("GenerateShippingHostDefaults.py", ["ShippingHostDefaults.h"], [gameConfig]),
+        ("GenerateShippingHostDefaults.py", ["ShippingHostDefaults.h", "ShippingGameDefaults.h"], [gameConfig]),
         ("GenerateToolchainCMake.py", ["ToolchainVars.cmake"], []),
         ("GenerateLintTargets.py", ["LintTargets.cmake"], []),
     ]
@@ -74,7 +74,7 @@ class GeneratorsTest(unittest.TestCase):
                                     cwd=kRepositoryRoot, capture_output=True, text=True, encoding="utf-8", errors="replace")
             self.assertEqual(result.returncode, 0, result.stderr)
             for name in ("ConfigVars.cmake", "PackFormat.gen.h", "CookContract.gen.h", "CookContract.cmake", "ShippingHostDefaults.h",
-                         "LintTargets.cmake"):
+                         "ShippingGameDefaults.h", "LintTargets.cmake"):
                 with self.subTest(output=name):
                     self.assertEqual((Path(tempDir) / name).read_bytes(), (tree.path / "generated/sw/config" / name).read_bytes())
 

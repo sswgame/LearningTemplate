@@ -22,6 +22,28 @@ namespace sw
     {
         struct ModuleImageUtilInternal
         {
+            /** @brief `setModuleSubdirectory` 가 옮긴 모듈 하나 — 고정 배열이라 정적 소멸 · 할당자 순서와 엮이지 않는다. */
+            struct ModuleSubdirectory
+            {
+                utf8 _arrBaseName[64]{};
+                utf8 _arrDirectory[constant::kMaxPathSize]{};
+            };
+
+            static ModuleSubdirectory& getModuleSubdirectory()
+            {
+                static ModuleSubdirectory s_moduleSubdirectory;
+                return s_moduleSubdirectory;
+            }
+
+            /** @brief @p baseName 이 옮긴 모듈이면 그 `Bin` 상대 폴더를, 아니면 빈 뷰를 돌려줍니다. */
+            static string_view findModuleSubdirectory( string_view baseName )
+            {
+                const ModuleSubdirectory& entry = getModuleSubdirectory();
+                if ( entry._arrDirectory[0] == '\0' || baseName != string_view{ entry._arrBaseName } )
+                    return {};
+                return string_view{ entry._arrDirectory };
+            }
+
 #if defined( SW_PLATFORM_LINUX )
             /** @brief `dl_iterate_phdr` 가 이미지마다 부르는 곳에 넘기는 문맥입니다. */
             struct ImageRangeQuery
@@ -136,7 +158,16 @@ namespace sw
         const string besideLibrary = getDebugSymbolPath( libraryPath );
         string_view  fileName;
         FileUtil::getFileNamePart( besideLibrary, fileName );
-        string found = FileUtil::joinPath( FileUtil::joinPath( FileUtil::getBinaryDirectory(), kSymbolFolder ), fileName );
+        string symbolDirectory = FileUtil::joinPath( FileUtil::getBinaryDirectory(), kSymbolFolder );
+        // 옮긴 모듈(게임 팩)은 그 폴더에서 낸 라이브러리일 때만 `Symbols/<폴더>` 다 — 같은 이름의 `Bin/Symbols/SWGame.pdb` 는 활성 게임의 것이다.
+        const ModuleImageUtilInternal::ModuleSubdirectory& moved = ModuleImageUtilInternal::getModuleSubdirectory();
+        if ( moved._arrDirectory[0] != '\0' )
+        {
+            const string movedDirectory = FileUtil::joinPath( FileUtil::getBinaryDirectory(), moved._arrDirectory );
+            if ( FileUtil::pathsEqualNormalized( FileUtil::getDirectoryPart( libraryPath ), movedDirectory ) )
+                symbolDirectory = FileUtil::joinPath( symbolDirectory, moved._arrDirectory );
+        }
+        string found = FileUtil::joinPath( symbolDirectory, fileName );
         if ( FileUtil::exists( found ) == false )
             found = FileUtil::exists( besideLibrary ) ? besideLibrary : string{};
         return found;
@@ -147,10 +178,39 @@ namespace sw
         return FileUtil::joinPath( FileUtil::getBinaryDirectory(), kModuleFolder );
     }
 
+    void ModuleImageUtil::setModuleSubdirectory( string_view baseName, string_view binRelativeDirectory )
+    {
+        ModuleImageUtilInternal::ModuleSubdirectory& entry = ModuleImageUtilInternal::getModuleSubdirectory();
+        entry                                              = ModuleImageUtilInternal::ModuleSubdirectory{};
+        if ( binRelativeDirectory.empty() )
+            return;
+        if ( baseName.size() >= std::size( entry._arrBaseName ) || binRelativeDirectory.size() >= std::size( entry._arrDirectory ) )
+        {
+            SW_LOG_ERROR( "Module subdirectory for %# is too long - the module stays in %#", string{ baseName }.c_str(), kModuleFolder );
+            return;
+        }
+        StringUtil::strncpy( entry._arrBaseName, string{ baseName }.c_str(), static_cast<uint32>( std::size( entry._arrBaseName ) ) );
+        StringUtil::strncpy( entry._arrDirectory, string{ binRelativeDirectory }.c_str(), static_cast<uint32>( std::size( entry._arrDirectory ) ) );
+    }
+
+    bool ModuleImageUtil::getModuleSubdirectory( string& outBaseName, string& outBinRelativeDirectory )
+    {
+        const ModuleImageUtilInternal::ModuleSubdirectory& entry = ModuleImageUtilInternal::getModuleSubdirectory();
+        if ( entry._arrDirectory[0] == '\0' )
+            return false;
+        outBaseName             = entry._arrBaseName;
+        outBinRelativeDirectory = entry._arrDirectory;
+        return true;
+    }
+
     string ModuleImageUtil::findModuleLibraryPath( string_view baseName )
     {
-        const string fileName   = formatSharedLibraryName( baseName );
-        string       modulePath = FileUtil::joinPath( getModuleDirectory(), fileName );
+        const string fileName = formatSharedLibraryName( baseName );
+        // 옮긴 모듈은 그 폴더에만 있다 — 없으면 그 경로를 돌려 부르는 쪽이 "없다" 를 알리게 한다(활성 게임의 `Bin/Modules` 사본으로 넘어가지 않는다).
+        const string_view movedDirectory = ModuleImageUtilInternal::findModuleSubdirectory( baseName );
+        if ( movedDirectory.empty() == false )
+            return FileUtil::joinPath( FileUtil::joinPath( FileUtil::getBinaryDirectory(), movedDirectory ), fileName );
+        string modulePath = FileUtil::joinPath( getModuleDirectory(), fileName );
         if ( FileUtil::exists( modulePath ) == false )
         {
             const string binaryPath = FileUtil::joinPath( FileUtil::getBinaryDirectory(), fileName );

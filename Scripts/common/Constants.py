@@ -22,10 +22,14 @@ kFileSearchPathsDefaults = "search_paths.defaults.json"
 kFileRuntimeEngineConfig = "Config/Engine/EngineConfig.json"
 # 에디터가 쓰는 상태(도킹 · 레이아웃 · 캔버스 · 테마 · gv 프리셋) — 사람이 쓰는 설정(Config/)과 폴더를 나눈다. git 무시(/Saved/).
 kDirSavedEditor = "Saved/Editor"
-# 게임 프리셋 폴더 — 게임마다 `<SW_ACTIVE_GAME>.json` 하나(팩 루트 — 시작 씬은 팩의 gamesettings). 활성 게임이 어느 것을 쓸지 고른다.
+# 게임 프리셋 폴더 — 게임마다 `<게임>.json` 하나(팩 루트 — 시작 씬은 팩의 gamesettings). Dev 는 실행할 때 고른 게임(`-game=`), Shipping 은 구운 게임의 것을 쓴다.
 kDirRuntimeGamePreset = "Config/Game"
-# 전용 서버 운영 설정 폴더 — `<SW_ACTIVE_GAME>.json`(ServerConfig). Shipping 도 굽지 않고 디스크에서 읽는다.
+# 전용 서버 운영 설정 폴더 — `<게임>.json`(ServerConfig). Shipping 도 굽지 않고 디스크에서 읽는다.
 kDirRuntimeServerPreset = "Config/Server"
+# 빌드의 활성 게임 이름을 담는 파일(Dev, `Bin/Modules/<이 이름>`) — `-game=` 이 없을 때 `GameSelection` 이 읽는다. 엔진 TU 에 게임 이름을 굽지 않으려고 파일로 둔다.
+kFileActiveGame = "ActiveGame.txt"
+# 함께 지은 게임 팩 폴더(Dev, `Bin/<이 이름>/<게임>/SWGame` · `Bin/Symbols/<이 이름>/<게임>/`) — `SW_GAMES`.
+kDirBinGames = "Games"
 # 사람이 쓰는 에디터 도구 값 — 기본값과 다른 값이 있을 때만 만든다(없으면 기본값).
 kFileRuntimeEditorToolDefaults = "Config/Editor/editortooldefaults.json"
 kFilePackConfig = "Config/Engine/PackConfig.json"

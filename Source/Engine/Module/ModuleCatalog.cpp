@@ -242,6 +242,20 @@ namespace sw
         return true;
     }
 
+    bool ModuleCatalog::replaceManifest( ModuleManifest manifest, string& outError )
+    {
+        for ( ModuleManifest& existing : _listManifest )
+        {
+            if ( existing._name == manifest._name )
+            {
+                existing = std::move( manifest );
+                return true;
+            }
+        }
+        outError = "Module '" + manifest._name + "' has no manifest to replace (" + manifest._sourcePath + ")";
+        return false;
+    }
+
     bool ModuleCatalog::loadDirectory( string_view directoryPath, string& outError )
     {
         if ( FileUtil::isDirectory( directoryPath ) == false )

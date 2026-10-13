@@ -9,8 +9,8 @@
 | 파일 | `Config/Game/*.json` |
 | 층 | 게임 프리셋 |
 | 읽는 곳 | `ConfigManager::ensureConfig<GameConfig>` (`EngineLoop` Config 단계) |
-| 언제 | 기동 · 에디터 핫 리로드 — `SW_ACTIVE_GAME` 이 파일 하나를 고른다 |
-| 배포본 | configure 때 exe 에 구워 넣음(`ShippingHostDefaults.h`) |
+| 언제 | 기동 · 에디터 핫 리로드 — Dev 는 `-game=<이름>`(없으면 빌드의 활성 게임 `SW_ACTIVE_GAME`)이 파일 하나를 고른다(`GameSelection`) |
+| 배포본 | configure 때 exe 에 구워 넣음(`ShippingGameDefaults.h`) |
 | 커밋 | 한다 |
 | 참고 | 게임마다 하나 — `CheckGamePresets` 가 팩 · CMake 프리셋과 대조한다 |
 
@@ -18,7 +18,7 @@ JSON 키는 아래 필드 이름 그대로입니다(앞의 `_` 포함). 적지 �
 
 ## 필드
 
-활성 게임의 프리셋(`Config/Game/<SW_ACTIVE_GAME>.json`)입니다 — 팩을 마운트하기 전에 알아야 하는 것(팩 루트 · 스키마)만. 시작 씬은 팩의 `data/gamesettings.xml` 하나다. 빌드가 `SW_ACTIVE_GAME` 으로 프리셋 파일을 고른다(`config::kFileRuntimeGameConfig`). Shipping 은 그 파일을 생성 헤더로 구워 넣어 디스크의 Config/Game 을 요구하지 않습니다. 게임마다 하나라, 게임을 바꿔도 다른 게임의 팩 루트를 읽지 않습니다.
+돌리는 게임의 프리셋(`Config/Game/<게임>.json`)입니다 — 팩을 마운트하기 전에 알아야 하는 것(팩 루트 · 스키마)만. 시작 씬은 팩의 `data/gamesettings.xml` 하나다. Dev 는 실행할 때 고른 게임(`-game=`, 없으면 빌드의 활성 게임)의 파일을 읽는다(`GameSelection::getConfigPath`). Shipping 은 구운 게임의 파일을 생성 헤더로 구워 넣어 디스크의 Config/Game 을 요구하지 않습니다. 게임마다 하나라, 게임을 바꿔도 다른 게임의 팩 루트를 읽지 않습니다.
 
 원본: [`Source/Engine/Config/GameConfig.h`](../../Source/Engine/Config/GameConfig.h)
 

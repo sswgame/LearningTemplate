@@ -15,6 +15,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Config/GameSelection.h"
 #include "Engine/Localization/LocText.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -55,13 +56,10 @@ namespace sw::editor
                 return "";
             }
 
-            /** @brief 활성 게임의 프로젝트 매니페스트 소스 경로입니다(`Config/Game/<게임>.json` 의 이름이 게임 폴더 이름이다). */
+            /** @brief 돌고 있는 게임의 프로젝트 매니페스트 소스 경로입니다(게임 이름이 `Source/Games/` 의 폴더 이름이다). */
             static string getProjectManifestPath()
             {
-                string       gameName = FileUtil::getFileNamePart( config::kFileRuntimeGameConfig );
-                const size_t dot      = gameName.rfind( '.' );
-                if ( dot != string::npos )
-                    gameName.resize( dot );
+                const string gameName = GameSelection::getName();
                 return EditorPaths::resolveProjectRelativePath( "Source/Games/" + gameName + "/" + config::kTargetGameModule + ModuleCatalog::kManifestExtension );
             }
 

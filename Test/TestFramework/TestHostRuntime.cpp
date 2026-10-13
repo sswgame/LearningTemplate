@@ -16,6 +16,7 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Config/GameSelection.h"
 #include "Engine/EngineBootstrap.h"
 #include "Engine/EngineInitSequence.h"
 #include "Engine/EngineServiceCollection.h"
@@ -45,6 +46,10 @@
 
 #include "sw/config/ConfigConstants.h"
 #include "sw/config/ShippingHostDefaults.h"
+
+#if defined( SW_SHIPPING )
+    #include "sw/config/ShippingGameDefaults.h"
+#endif
 
 namespace
 {
@@ -229,7 +234,12 @@ namespace test
                 if ( host._pEngineConfig == nullptr )
                     return sw::EngineInitResult::Failed;
                 sw::EngineConfig::setActive( *host._pEngineConfig );
-                const sw::GameConfig* pGameConfig = pConfigManager->ensureConfig<sw::GameConfig>( sw::config::kFileRuntimeGameConfig, sw::shipping_host::kGameConfigJSON );
+#if defined( SW_SHIPPING )
+                const utf8* const pGameConfigJSON = sw::shipping_host::kGameConfigJSON;
+#else
+                const utf8* const pGameConfigJSON = nullptr;
+#endif
+                const sw::GameConfig* pGameConfig = pConfigManager->ensureConfig<sw::GameConfig>( sw::GameSelection::getConfigPath(), pGameConfigJSON );
                 if ( pGameConfig == nullptr )
                     return sw::EngineInitResult::Failed;
                 sw::GameConfig::setActive( *pGameConfig );

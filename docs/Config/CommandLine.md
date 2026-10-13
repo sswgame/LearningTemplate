@@ -20,7 +20,8 @@
 | `-cook-shaders` | 플래그(`-이름`) | 셰이더를 모든 백엔드의 바이너리로 쿠킹하고 끝낸다(헤드리스) | `COOK_SHADERS` |
 | `-cook-scenes` | 플래그(`-이름`) | 씬과 프리팹을 바이너리(SCN1, PFB2)로 쿠킹하고 끝낸다. 쓸 폴더는 `-cooked-dir=<폴더>` 다(CookAssets.py 가 부른다) | `COOK_SCENES` |
 | `-cooked-dir` | 글 값(`-이름=값`) | `-cook-scenes` 가 쿠킹 결과를 쓸 폴더 | `COOKED_DIR` |
-| `-server-config` | 글 값(`-이름=값`) | 전용 서버(Server)의 운영 설정 파일(`ServerConfig`) — 비우면 `Config/Server/<SW_ACTIVE_GAME>.json`. Shipping 도 디스크에서 읽는다. | `SERVER_CONFIG` |
+| `-server-config` | 글 값(`-이름=값`) | 전용 서버(Server)의 운영 설정 파일(`ServerConfig`) — 비우면 `Config/Server/<게임>.json`(`-game=` 으로 고른 게임). Shipping 도 디스크에서 읽는다. | `SERVER_CONFIG` |
+| `-game` | 글 값(`-이름=값`) | 돌릴 게임(Dev 만) — `Source/Games/<이름>`. 비우면 빌드의 활성 게임(`SW_ACTIVE_GAME`), 다른 게임은 같은 빌드가 함께 지은 것(`SW_GAMES`, `Bin/Games/<이름>/`)이어야 한다. Shipping 은 구운 게임 하나라 보지 않는다(`GameSelection`) | `GAME` |
 | `-service` | 플래그(`-이름`) | 전용 서버를 Windows 서비스(SCM)로 돈다(`Server --service`). SCM 이 띄운 프로세스만 된다. | `SERVICE` |
 | `-write-reflection-docs` | 글 값(`-이름=값`) | 등록된 리플렉션 타입(엔진 · GameFramework · 킷 · 게임)으로 Markdown API 문서를 그 폴더에 쓰고 끝난다(헤드리스). 빌드 산출물이라 커밋하지 않는다. | `WRITE_REFLECTION_DOCS` |
 | `-import-textures` | 플래그(`-이름`) | 텍스처 원본(`textures_raw/`)을 DDS 로 임포트한다 · 원본과 DDS 가 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다. | `IMPORT_TEXTURES` |

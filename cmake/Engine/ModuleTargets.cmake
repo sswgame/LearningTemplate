@@ -270,8 +270,10 @@ function(sw_addGamePackModule MODULE_NAME GAME_NAME)
 		NO_REGISTRY
 	)
 
-	set(outputDir "${CMAKE_BINARY_DIR}/Bin/Games/${GAME_NAME}")
-	set(symbolDir "${CMAKE_BINARY_DIR}/Bin/Symbols/Games/${GAME_NAME}")
+	set(outputDir "${CMAKE_BINARY_DIR}/Bin/${SW_DIR_BIN_GAMES}/${GAME_NAME}")
+	set(symbolDir "${CMAKE_BINARY_DIR}/Bin/Symbols/${SW_DIR_BIN_GAMES}/${GAME_NAME}")
+	# 그 게임의 매니페스트를 DLL 옆에 둔다 — `-game=` 으로 고르면 모듈 카탈로그가 `Modules/SWGame.module.json` 대신 읽는다(켜짐 표가 게임별).
+	configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${MODULE_NAME}.module.json" "${outputDir}/${MODULE_NAME}.module.json" COPYONLY)
 	set_target_properties(${targetName} PROPERTIES
 		OUTPUT_NAME "${MODULE_NAME}"
 		RUNTIME_OUTPUT_DIRECTORY "${outputDir}$<0:>"

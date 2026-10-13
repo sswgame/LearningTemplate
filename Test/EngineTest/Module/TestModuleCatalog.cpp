@@ -1,6 +1,7 @@
 /**
  * @file TestModuleCatalog.cpp
- * @brief 모듈 매니페스트 — 읽기 · 거절, 의존 순서, 순환 · 없는 의존 · 꺼진 의존 · 낮은 버전 오류, 프로젝트가 끈 모듈 · 플랫폼 · 구성, 저장소 매니페스트와 빌드 해석의 일치.
+ * @brief 모듈 매니페스트 — 읽기 · 거절, 의존 순서, 순환 · 없는 의존 · 꺼진 의존 · 낮은 버전 오류, 프로젝트가 끈 모듈 · 플랫폼 · 구성, 저장소 매니페스트와 빌드 해석의 일치,
+ *        게임 팩(`SW_GAMES`)의 매니페스트 바꾸기 · 옮긴 모듈 자리.
  */
 #include "pch.h"
 
@@ -12,6 +13,8 @@
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
+
+#include "sw/config/ConfigConstants.h"
 
 namespace
 {
@@ -377,4 +380,94 @@ SW_TEST_CASE( ModuleCatalogTest, EditorExtensionFollowsItsDependencies )
     shipping._configuration = sw::ModuleConfiguration::Shipping;
     SW_ASSERT_TRUE_MSG( catalog.resolve( shipping, resolution, error ), error.c_str() );
     SW_EXPECT_FALSE( resolution.isActive( "GF_EditorPlugIn_Mine" ) ); // 배포본에는 에디터도 확장도 없다
+}
+
+/**
+ * @brief [ModuleCatalogTest] 게임을 고르면 프로젝트 매니페스트가 그 게임의 것으로 바뀐다 — 켜짐 표 · 의존이 게임별이다
+ * @details `-game=` 으로 함께 지은 게임 팩을 고르면 `ModuleCatalogLoader` 가 `Bin/Modules/SWGame.module.json` 을 그 게임의 것으로 바꾼다.
+ *          없는 이름을 바꾸려 하면 오류여야 한다 — 조용히 더하면 같은 이름이 둘이 된다.
+ */
+SW_TEST_CASE( ModuleCatalogTest, ReplaceManifestSwapsTheProjectTable )
+{
+    sw::ModuleCatalog catalog = makeCatalog( { makeManifest( "GameFramework", sw::ModuleKind::GameFramework, {} ), makeManifest( "GF_Farming", sw::ModuleKind::Kit, { "GameFramework" } ),
+                                               makeManifest( "SWGame", sw::ModuleKind::Game, { "GameFramework" } ) } );
+    sw::string        error;
+    SW_ASSERT_TRUE_MSG( catalog.replaceManifest( makeManifest( "SWGame", sw::ModuleKind::Game, { "GameFramework", "GF_Farming" } ), error ), error.c_str() );
+    SW_EXPECT_TRUE( catalog.getManifestCount() == 3 );
+
+    sw::ModuleResolveContext context{};
+    sw::ModuleResolution     resolution;
+    SW_ASSERT_TRUE_MSG( catalog.resolve( context, resolution, error ), error.c_str() );
+    SW_EXPECT_STREQ( joinOrder( resolution ).c_str(), "GameFramework GF_Farming SWGame" );
+
+    SW_EXPECT_FALSE( catalog.replaceManifest( makeManifest( "GF_Missing", sw::ModuleKind::Kit, {} ), error ) );
+    SW_EXPECT_TRUE( sw::StringUtil::contains( error, "GF_Missing" ) );
+}
+
+/**
+ * @brief [ModuleCatalogTest] 옮긴 모듈은 그 폴더에서만 찾는다 — 활성 게임의 `Bin/Modules` 사본으로 넘어가지 않는다
+ * @details `GameSelection` 이 함께 지은 게임 팩을 고르면 `SWGame` 을 `Bin/Games/<게임>/` 으로 옮긴다. 옮긴 뒤에도 `Bin/Modules/SWGame` 을 찾으면
+ *          다른 게임이 뜬다(이름이 같다). 빈 폴더로 되돌리면 원래 자리다.
+ */
+SW_TEST_CASE( ModuleCatalogTest, MovedModuleIsFoundOnlyInItsFolder )
+{
+    const sw::string moduleFile    = sw::ModuleImageUtil::formatSharedLibraryName( "SWGameMoveProbe" );
+    const sw::string packDirectory = sw::FileUtil::joinPath( sw::config::kDirBinGames, "MoveProbe" );
+    const sw::string expectedPath  = sw::FileUtil::joinPath( sw::FileUtil::joinPath( sw::FileUtil::getBinaryDirectory(), packDirectory ), moduleFile );
+    const sw::string unmovedPath   = sw::FileUtil::joinPath( sw::ModuleImageUtil::getModuleDirectory(), moduleFile );
+    sw::string       previousModule;
+    sw::string       previousDirectory;
+    const bool       bHadMovedModule = sw::ModuleImageUtil::getModuleSubdirectory( previousModule, previousDirectory );
+
+    sw::ModuleImageUtil::setModuleSubdirectory( "SWGameMoveProbe", packDirectory );
+    SW_EXPECT_STREQ( sw::ModuleImageUtil::findModuleLibraryPath( "SWGameMoveProbe" ).c_str(), expectedPath.c_str() );
+    sw::string movedModule;
+    sw::string movedDirectory;
+    SW_EXPECT_TRUE( sw::ModuleImageUtil::getModuleSubdirectory( movedModule, movedDirectory ) );
+    SW_EXPECT_STREQ( movedModule.c_str(), "SWGameMoveProbe" );
+    SW_EXPECT_STREQ( movedDirectory.c_str(), packDirectory.c_str() );
+
+    sw::ModuleImageUtil::setModuleSubdirectory( "SWGameMoveProbe", {} );
+    SW_EXPECT_FALSE( sw::ModuleImageUtil::getModuleSubdirectory( movedModule, movedDirectory ) );
+    SW_EXPECT_STREQ( sw::ModuleImageUtil::findModuleLibraryPath( "SWGameMoveProbe" ).c_str(), unmovedPath.c_str() );
+
+    if ( bHadMovedModule )
+        sw::ModuleImageUtil::setModuleSubdirectory( previousModule, previousDirectory );
+}
+
+/**
+ * @brief [ModuleCatalogTest] 함께 지은 게임 팩(`Bin/Games/<게임>/`)마다 매니페스트가 있고, 그 게임의 의존은 이 빌드의 모듈 카탈로그에 모두 있다
+ * @details CMake 는 키트를 고른 게임들의 합집합으로 짓는다(`sw_collectUnusedKits`). 한 게임의 키트가 빠지면 `-game=` 으로 그 게임을 고를 때 의존이 없어 기동이 선다.
+ *          게임 팩을 짓지 않은 빌드(`SW_GAMES` 비움 · Shipping)는 건너뛴다.
+ */
+SW_TEST_CASE( ModuleCatalogTest, EveryBuiltGamePackFindsItsDependencies )
+{
+    const sw::string gamesDirectory  = sw::FileUtil::joinPath( sw::FileUtil::getBinaryDirectory(), sw::config::kDirBinGames );
+    const sw::string moduleDirectory = sw::ModuleImageUtil::getModuleDirectory();
+    if ( sw::FileUtil::isDirectory( gamesDirectory ) == false || sw::FileUtil::isDirectory( moduleDirectory ) == false )
+        SW_TEST_SKIP( "no game packs in Bin/Games (SW_GAMES is empty or Shipping)" );
+
+    sw::ModuleCatalog catalog;
+    sw::string        error;
+    SW_ASSERT_TRUE_MSG( catalog.loadDirectory( moduleDirectory, error ), error.c_str() );
+
+    sw::vector<sw::string> listFile;
+    SW_ASSERT_TRUE( sw::FileUtil::collectFiles( gamesDirectory, ".json", listFile, true ) );
+    uint32 packCount = 0;
+    for ( const sw::string& filePath : listFile )
+    {
+        if ( sw::StringUtil::endsWith( filePath, sw::ModuleCatalog::kManifestExtension, true ) == false )
+            continue;
+        sw::string text;
+        SW_ASSERT_TRUE( sw::FileUtil::readTextFile( filePath, text ) );
+        sw::ModuleManifest manifest;
+        SW_ASSERT_TRUE_MSG( sw::ModuleCatalog::parseManifest( text, filePath, manifest, error ), error.c_str() );
+        SW_EXPECT_TRUE( manifest._kind == sw::ModuleKind::Game );
+        for ( const sw::ModuleDependency& dependency : manifest._listDependency )
+        {
+            SW_EXPECT_TRUE_MSG( catalog.findManifest( dependency._name ) != nullptr, ( filePath + " needs " + dependency._name ).c_str() );
+        }
+        ++packCount;
+    }
+    SW_EXPECT_TRUE( packCount > 0 );
 }
