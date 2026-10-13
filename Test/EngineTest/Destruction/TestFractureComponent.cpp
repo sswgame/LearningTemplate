@@ -279,7 +279,7 @@ SW_TEST_CASE( FractureComponentTest, DebrisBudgetIsCountedPerScene )
         pRight->applyRadialDamageAtWorld( sw::float3{ 5.0f, 1.5f, 0.0f }, 10.0f, 1000.0f, 0.0f );
         test::tickFrames( manager, 3 );
         arrBodyCount[world] = pLeft->getDynamicBodyCount() + pRight->getDynamicBodyCount();
-        SW_EXPECT_EQUAL( arrBodyCount[world], manager.getSceneService<ScenePhysics>().getDebrisBodyCount() );
+        SW_EXPECT_EQUAL( arrBodyCount[world], manager.getSceneService<sw::ScenePhysics>().getDebrisBodyCount() );
     }
     // 벽 하나가 잎 156 개 — 둘이면 312 개로 한 월드는 예산 안이고, 두 월드를 합치면 넘는다.
     SW_EXPECT_TRUE( arrBodyCount[0] > 256u );
@@ -333,7 +333,7 @@ SW_TEST_CASE( FractureComponentTest, NetworkSnapshotRebuildsTheBrokenState )
     pClientWall->collectGroupPoses( listClientPose );
     SW_ASSERT_EQUAL( listServerPose.size(), listClientPose.size() );
     uint8 debrisLayer = 0;
-    SW_ASSERT_TRUE( client.getSceneService<ScenePhysics>().findSettings() != nullptr && client.getSceneService<ScenePhysics>().findSettings()->findLayerIndex( "Debris", debrisLayer ) );
+    SW_ASSERT_TRUE( client.getSceneService<sw::ScenePhysics>().findSettings() != nullptr && client.getSceneService<sw::ScenePhysics>().findSettings()->findLayerIndex( "Debris", debrisLayer ) );
     for ( size_t index = 0; index < listClientPose.size(); ++index )
     {
         const sw::FractureGroupPose& serverPose = listServerPose[index];
