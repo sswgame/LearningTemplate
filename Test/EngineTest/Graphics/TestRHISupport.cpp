@@ -348,6 +348,45 @@ SW_TEST_CASE( RHIDeviceShutdownTest, StepsRunInContractOrder )
 }
 
 /**
+ * @brief [RHIDeviceShutdownTest] 종료가 끝났는데 해제 큐에 남은 것이 있으면 단언한다 — 그 해제는 네이티브 디바이스가 사라진 뒤에 불린다.
+ * @details 해제 큐는 2 단계(GPU 대기)에서 비워야 한다. 남은 채로 3 · 4 단계를 지나면 해제 큐의 소멸자가 죽은 디바이스로 콜백을 부른다.
+ */
+SW_TEST_CASE( RHIDeviceShutdownTest, PendingReleasesAfterShutdownAssert )
+{
+    test::FakeRHIDevice device;
+    device._pendingReleaseCount = 2;
+    {
+        test::ScopedDefensiveTestLog defensiveLog( "a GPU release left after shutdown" );
+        test::ScopedAssertCapture    assertCapture;
+        device.shutdown();
+        SW_EXPECT_EQUAL( 2u, assertCapture.getCount() ); // GPU 대기 뒤 · 4 단계 뒤
+    }
+
+    // 비운 채로 끝나면 단언이 없다.
+    device._pendingReleaseCount = 0;
+    {
+        test::ScopedAssertCapture assertCapture;
+        device.shutdown();
+        SW_EXPECT_EQUAL( 0u, assertCapture.getCount() );
+    }
+}
+
+/**
+ * @brief [RHIDeviceShutdownTest] 끝난 종료 뒤에 넣은 해제는 다음 종료(백엔드 소멸자)가 먼저 단언한다 — 그 해제를 부를 네이티브 디바이스가 없다.
+ */
+SW_TEST_CASE( RHIDeviceShutdownTest, ReleasesQueuedAfterShutdownAssert )
+{
+    test::FakeRHIDevice device;
+    device.shutdown();
+    device._pendingReleaseCount = 1; // 종료 뒤에 누군가 해제를 넣었다(가짜는 비우지 않으므로 이후 단계 단언도 함께 센다)
+    test::ScopedDefensiveTestLog defensiveLog( "a GPU release queued after shutdown" );
+    test::ScopedAssertCapture    assertCapture;
+    device.shutdown();
+    SW_EXPECT_EQUAL( 3u, assertCapture.getCount() ); // 종료 뒤에 쌓인 것 · GPU 대기 뒤 · 4 단계 뒤
+    device._pendingReleaseCount = 0;                 // 소멸자의 종료는 조용히
+}
+
+/**
  * @brief [RHIDeferredHandleTest] 렌더 스레드가 프레임을 들고 있는 동안 다른 스레드가 내리는 핸들은 미뤄지고, 프레임이 끝난 뒤 · `waitIdle` 이 내린다
  * @details 게임 스레드가 GPU 머티리얼(인스턴스)의 마지막 소유를 놓는 순간 렌더 스레드가 병렬 기록 중이면 bindless 표를 바꾸면 안 된다 — 핫 리로드로 뷰를
  *          걷은 StarSkirmish · VoxelCraft · Shooter3D 가 Debug 단언으로 죽었다. 렌더 스레드 자신 · 쉬는 렌더 스레드에서는 바로 내린다.

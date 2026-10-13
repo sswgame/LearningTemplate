@@ -126,7 +126,8 @@ namespace sw
         [[nodiscard]] bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) override;
 
         /** @brief 프레임 지연(`kGPUReleaseFrameLatency`) 뒤 해제 큐에 넣습니다. GL 은 펜스 대신 endFrame 횟수로 셉니다. */
-        void enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
+        void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
+        uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
 
         /** @brief 백엔드 타입(OpenGL)을 반환합니다. */
         RHIBackend getBackendType() const override { return RHIBackend::OpenGL; }

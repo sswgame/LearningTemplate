@@ -170,7 +170,8 @@ namespace sw
         [[nodiscard]] bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) override;
 
         /** @brief 이번 프레임이 Signal 할 펜스 값(`_fenceValue`)을 기준으로 해제 큐에 넣습니다. */
-        void enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
+        void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
+        uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
 
         /** @brief 리소스 생성과 파괴 인터페이스(D3D12RHIResourceFactory)를 반환합니다. */
         IRHIResourceFactory* getResourceFactory() override;

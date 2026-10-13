@@ -243,6 +243,7 @@ namespace sw
         , _bParallelRecording{ false }
         , _bSoftwareAdapter{ false }
         , _initResult{ RHIInitResult::NotStarted }
+        , _bShutDown{ false }
         , _memoryLedger{ make_unique<RHIMemoryLedger>() }
         , _pDeferredHandleQueue{ make_unique<RHIDeferredHandleQueue>() }
     {
@@ -261,6 +262,7 @@ namespace sw
     {
         // 백엔드가 이유를 좁히지 않고 물러나면 결함일 수 있는 실패다. 환경 탓이면 백엔드가 initializeInternal 안에서 고쳐 적는다.
         _initResult = RHIInitResult::Failed;
+        _bShutDown  = false;
         if ( _pSurface == nullptr )
             return false;
 
@@ -325,11 +327,20 @@ namespace sw
     void IRHIDevice::shutdown()
     {
         // 순서가 계약이다(헤더 참고). 백엔드는 이 순서를 다시 적지 않고 단계 훅만 채운다.
+        // 끝난 종료 뒤(백엔드 소멸자가 다시 부른다)에 쌓인 해제는 이번 2 단계가 불러 주지만, 네이티브 자원은 이미 4 단계에서 사라졌다.
+        if ( _bShutDown )
+            SW_LOG_ASSERT( getPendingReleaseCount() == 0, "%# GPU releases were queued after %# shut down - they run against destroyed native objects",
+                           getPendingReleaseCount(), getBackendName() );
         // 1 은 **자원을 내리기 전에** 알린다 — 언리얼 FRenderResource::ReleaseRHI 자리. 든 쪽이 해제 큐에 넘긴 자원은 2 가 GPU 를 기다린 뒤 비운다.
         RHIRenderResource::releaseAllFor( this );
         flushDeferredHandleReleases();
         waitIdleInternal();
+        SW_LOG_ASSERT( getPendingReleaseCount() == 0, "%# kept %# GPU releases after waiting for the GPU", getBackendName(), getPendingReleaseCount() );
         detachCommandRecordingInternal();
         shutdownInternal();
+        // 3 · 4 단계가 넣은 해제는 부를 단계가 남지 않았다 — 네이티브 디바이스가 사라진 뒤 해제 큐의 소멸자에서 불린다.
+        SW_LOG_ASSERT( getPendingReleaseCount() == 0, "%# queued %# GPU releases while shutting down - release them before the native device goes",
+                       getBackendName(), getPendingReleaseCount() );
+        _bShutDown = true;
     }
 } // namespace sw

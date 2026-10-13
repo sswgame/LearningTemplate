@@ -183,7 +183,8 @@ namespace sw
         [[nodiscard]] bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) override;
 
         /** @brief 이번 프레임이 제출할 세대(`_frameFenceCounter + 1`)로 해제 큐에 넣습니다. */
-        void enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
+        void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
+        uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
 
         /** @brief 크기를 기록하고, 스왑체인 재생성은 beginFrame 까지 미룹니다. */
         void resizeInternal( uint32 width, uint32 height ) override;

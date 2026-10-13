@@ -361,6 +361,9 @@ namespace sw
                     vkFreeMemory( _device, record._memory, nullptr );
             } );
             _gpuTextures.clear();
+            // 오프스크린 프레임버퍼는 해제 큐로 놓인다(`enqueueFramebufferRelease`). GPU 는 2 단계에서 이미 쉬고 있으니 디바이스가 살아 있는 지금 부른다 —
+            // 남기면 해제 큐의 소멸자가 부순 VkDevice 로 vkDestroyFramebuffer 를 부른다(`IRHIDevice::shutdown` 이 단언한다).
+            _releaseQueue.flushAll();
             _listBindlessSourceBuffer.clear();
             _listUavSourceBuffer.clear();
             // 합성 프레임버퍼 · PSO 호환 RP · desc RP 는 캐시가 한 번에 놓는다. 스왑체인 RP(_renderPass)는 아래에서 따로.

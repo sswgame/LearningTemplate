@@ -113,6 +113,8 @@ namespace sw
          *          4) 백엔드 자원, 스왑체인, 네이티브 디바이스를 해제한다(`shutdownInternal`).
          *
          *          렌더 스레드는 이미 멈춰 있어야 한다. 이 함수는 렌더 스레드를 비우지 않는다(`waitIdle` 과 다른 점).
+         *          2 · 4 단계 뒤에 해제 큐가 비었는지 단언한다(`getPendingReleaseCount`). 4 단계에서 넣은 해제나, 끝난 종료 뒤에 넣은 해제는
+         *          네이티브 디바이스가 사라진 뒤(백엔드 소멸자 · 다음 `shutdown`)에 불리기 때문이다. 두 번째 `shutdown`(소멸자)은 그 사이에 쌓인 것을 먼저 단언한다.
          */
         void shutdown();
 
@@ -150,6 +152,8 @@ namespace sw
          *          콜백은 백엔드가 완료를 확인하는 스레드에서 불리고, `waitIdle` 과 `shutdown` 이 남은 콜백을 모두 부른다.
          */
         virtual void enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) = 0;
+        /** @brief 백엔드 해제 큐에서 아직 불리지 않은 해제 수입니다. `waitIdle` 과 `shutdown` 뒤에는 0 이어야 합니다(`shutdown` 이 단언한다). */
+        virtual uint32 getPendingReleaseCount() const = 0;
 
         /** @brief 렌더 스레드가 받은 작업을 모두 끝낼 때까지 기다리는 함수의 타입입니다. 호출하는 쪽은 렌더 스레드가 아닙니다. */
         using RenderThreadDrainFunction = void ( * )( void* pContext );
@@ -462,6 +466,8 @@ namespace sw
         bool _bSoftwareAdapter;
         /// @brief 마지막 `initialize` 의 결과입니다(getInitResult 참고).
         RHIInitResult _initResult;
+        /// @brief `shutdown` 을 끝냈다. 그 뒤에 쌓인 해제는 다음 `shutdown`(백엔드 소멸자)이 단언한다. `initialize` 가 지운다.
+        bool _bShutDown;
         /// @brief GPU 자원 장부입니다(getMemoryLedger 참고). 기반 클래스 멤버이므로 해제 큐를 비우는 백엔드 소멸자보다 오래 삽니다.
         unique_ptr<RHIMemoryLedger> _memoryLedger;
         /// @brief 렌더 스레드가 프레임을 끝낼 때까지 미룬 핸들 반환과, 렌더 스레드가 잡고 있는 프레임 수입니다(releaseHandle 참고).

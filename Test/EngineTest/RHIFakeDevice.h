@@ -120,7 +120,8 @@ namespace test
         void executeCommandList( sw::IRHICommandList* pCmdList ) override { _listExecuted.push_back( static_cast<FakeRHICommandList*>( pCmdList ) ); }
 
         /** @brief 부르지 않고 쌓기만 합니다. 테스트가 "GPU 가 그 프레임을 끝냈다" 를 흉내 내어 `_listGPURelease` 를 부릅니다. */
-        void enqueueGPURelease( const sw::RHIResourceReleaseDelegate& releaseDelegate ) override { _listGPURelease.push_back( releaseDelegate ); }
+        void   enqueueGPURelease( const sw::RHIResourceReleaseDelegate& releaseDelegate ) override { _listGPURelease.push_back( releaseDelegate ); }
+        uint32 getPendingReleaseCount() const override { return _pendingReleaseCount; }
 
         [[nodiscard]] bool queryNativeHandlesInternal( sw::RHINativeHandles& outHandles ) const override
         {
@@ -144,6 +145,7 @@ namespace test
         void*                                      _pNativeDevice{ nullptr };    /**< `getNativeDevice` 가 돌려줄 값 */
         mutable uint32                             _nativeHandleQueryCount{ 0 }; /**< 백엔드 훅 `queryNativeHandlesInternal` 이 불린 횟수 */
         sw::vector<sw::RHIResourceReleaseDelegate> _listGPURelease;              /**< `enqueueGPURelease` 로 받은 콜백(받은 순서) */
+        uint32                                     _pendingReleaseCount{ 0 };    /**< `getPendingReleaseCount` 가 답할 값 — 종료 단언 테스트가 정한다 */
         sw::vector<sw::RHIDescriptorIndex>         _listLiveTextureIndex;        /**< `isBindlessIndexLive` 가 살아 있다고 답할 텍스처 번호 */
         sw::vector<sw::RHIDescriptorIndex>         _listLiveBufferIndex;         /**< `isBindlessIndexLive` 가 살아 있다고 답할 버퍼 번호 */
     };
