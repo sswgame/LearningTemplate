@@ -10,6 +10,7 @@
 #include "Core/Delegate/Delegate.h"
 
 #include "Editor/Common/EditorExports.h"
+#include "Editor/Common/EditorSubsystem.h"
 
 namespace sw
 {
@@ -34,13 +35,16 @@ namespace sw::editor
      *          (`editor::findGameObject`). 입력도 `GameObject*` 로 받고 반환하는 것도 푼 포인터입니다. 이번 호출 안에서만
      *          쓰십시오. 되돌리기 · 플레이 세션 복원은 같은 id 로 오브젝트를 복원하므로 그 너머로도 선택이 이어집니다.
      */
-    class SW_EDITOR_API EditorSelection
+    class SW_EDITOR_API EditorSelection : public EditorSubsystem
     {
     public:
         EditorSelection()                                    = default;
         EditorSelection( const EditorSelection& )            = delete;
         EditorSelection& operator=( const EditorSelection& ) = delete;
-        ~EditorSelection()                                   = default;
+        ~EditorSelection() override                          = default;
+
+        // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
+        const utf8* getSubsystemName() const override { return "EditorSelection"; }
 
         // ------------------------------------------------------------------------------
         // 멤버 메서드

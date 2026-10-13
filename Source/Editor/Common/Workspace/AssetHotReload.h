@@ -7,6 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 
+#include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/FileWatchDispatcher.h"
 
 namespace sw
@@ -25,13 +26,23 @@ namespace sw::editor
      *          엔진 캐시는 자기 런타임 파일을 그 자리에서 다시 읽을 뿐이고(로드), 소스 임포트, 감시, 씬 알림은 여기(에디터)에 있다.
      *          새 에셋 종류를 추가해도 이 파일은 고치지 않는다.
      */
-    class AssetHotReload
+    class AssetHotReload : public EditorSubsystem
     {
     public:
         /** @brief 감시를 시작하지 않은 채 만듭니다. */
         AssetHotReload();
         /** @brief 감시를 정리합니다. */
-        ~AssetHotReload();
+        ~AssetHotReload() override;
+
+        // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
+        EngineInitResult initializeSubsystem() override
+        {
+            (void)initialize(); // 리소스 루트가 없으면(팩만 실린 실행) 꺼진 채로 둔다
+            return EngineInitResult::Succeeded;
+        }
+        void        shutdownSubsystem() override { shutdown(); }
+        const utf8* getSubsystemName() const override { return "AssetHotReload"; }
+        const utf8* getSubsystemDependencies() const override { return "EditorAssetValidation"; }
 
         AssetHotReload( const AssetHotReload& )            = delete;
         AssetHotReload& operator=( const AssetHotReload& ) = delete;

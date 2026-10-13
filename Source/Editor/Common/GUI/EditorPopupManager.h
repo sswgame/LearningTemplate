@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/GUI/IEditorPopup.h"
 #include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
@@ -52,11 +53,19 @@ namespace sw::editor
      * @class EditorPopupManager
      * @brief 에디터 팝업 인스턴스를 한곳에서 등록하고 관리합니다(EditorContext 소유).
      */
-    class EditorPopupManager
+    class EditorPopupManager : public EditorSubsystem
     {
     public:
-        EditorPopupManager()  = default;
-        ~EditorPopupManager() = default;
+        EditorPopupManager()           = default;
+        ~EditorPopupManager() override = default;
+
+        // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
+        EngineInitResult initializeSubsystem() override
+        {
+            registerDefaultPopups();
+            return EngineInitResult::Succeeded;
+        }
+        const utf8* getSubsystemName() const override { return "EditorPopupManager"; }
 
         void registerPopup( unique_ptr<IEditorPopup> pPopup );
 

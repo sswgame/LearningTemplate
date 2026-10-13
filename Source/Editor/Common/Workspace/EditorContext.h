@@ -7,6 +7,8 @@
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorViewTargetUtil.h"
 
+#include "Engine/Common/SubsystemCollection.h"
+
 namespace sw
 {
     class IRHIDevice;
@@ -21,7 +23,6 @@ namespace sw::editor
     class EditorCommandRegistry;
     class EditorDefaultObjects;
     class EditorDockLayout;
-    class EditorModuleUnloadListener;
     class EditorNetPlaySession;
     class EditorNotificationManager;
     class EditorPanelManager;
@@ -140,29 +141,30 @@ namespace sw::editor
         EditorThemeConfig& getThemeConfig() { return _themeConfig; }
 
     private:
-        unique_ptr<EditorSelection>            _pEditorSelection;
-        unique_ptr<EditorWorkspace>            _pWorkspace;
-        unique_ptr<EditorNotificationManager>  _pNotificationManager;
-        unique_ptr<EditorCommandRegistry>      _pCommandRegistry;
-        unique_ptr<EditorPanelManager>         _pPanelManager;
-        unique_ptr<IEditorPanelHost>           _pPanelHost; ///< 패널 매니저 뒤에 만들고 앞에 지운다
-        unique_ptr<EditorPopupManager>         _pPopupManager;
-        unique_ptr<AssetHotReload>             _pAssetHotReload;
-        unique_ptr<ConfigHotReload>            _pConfigHotReload;
-        unique_ptr<AudioDataHotReload>         _pAudioDataHotReload;
-        unique_ptr<EditorAssetValidation>      _pAssetValidation;
-        unique_ptr<EditorSourceControl>        _pSourceControl;
-        unique_ptr<InspectorComponentManager>  _pInspectorComponentManager;
-        unique_ptr<InspectorPropertyManager>   _pInspectorPropertyManager;
-        unique_ptr<EditorModuleUnloadListener> _pModuleUnloadListener; ///< 매니저들보다 먼저 지운다(shutdown)
-        unique_ptr<EditorDefaultObjects>       _pDefaultObjects;
-        unique_ptr<EditorNetPlaySession>       _pNetPlaySession;
-        IRHIDevice*                            _pRHIDevice;
-        EditorDockLayout*                      _pDockLayout;
-        IImGuiRendererBackend*                 _pRendererBackend;
-        EditorViewTarget                       _arrViewTarget[static_cast<uint32>( EditorViewKind::Count )];
-        PlaySessionData                        _playSessionData;
-        EditorThemeConfig                      _themeConfig;
+        /** @brief 아래 하위 객체(`EditorSubsystem`)를 소유합니다. 선언된 의존 순서로 초기화하고 역순으로 종료 · 소멸합니다. 포인터는 빌린 것이고 `shutdown` 뒤에는 쓰지 않습니다. */
+        SubsystemCollection        _subsystems;
+        EditorSelection*           _pEditorSelection;
+        EditorWorkspace*           _pWorkspace;
+        EditorNotificationManager* _pNotificationManager;
+        EditorCommandRegistry*     _pCommandRegistry;
+        EditorPanelManager*        _pPanelManager;
+        IEditorPanelHost*          _pPanelHost;
+        EditorPopupManager*        _pPopupManager;
+        AssetHotReload*            _pAssetHotReload;
+        ConfigHotReload*           _pConfigHotReload;
+        AudioDataHotReload*        _pAudioDataHotReload;
+        EditorAssetValidation*     _pAssetValidation;
+        EditorSourceControl*       _pSourceControl;
+        InspectorComponentManager* _pInspectorComponentManager;
+        InspectorPropertyManager*  _pInspectorPropertyManager;
+        EditorDefaultObjects*      _pDefaultObjects;
+        EditorNetPlaySession*      _pNetPlaySession;
+        IRHIDevice*                _pRHIDevice;
+        EditorDockLayout*          _pDockLayout;
+        IImGuiRendererBackend*     _pRendererBackend;
+        EditorViewTarget           _arrViewTarget[static_cast<uint32>( EditorViewKind::Count )];
+        PlaySessionData            _playSessionData;
+        EditorThemeConfig          _themeConfig;
 
         uint8                  _bGameViewHovered : 1;
         uint8                  _bGameViewFocused : 1;

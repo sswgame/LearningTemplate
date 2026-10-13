@@ -7,6 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 
+#include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/FileWatchDispatcher.h"
 
 namespace sw
@@ -24,12 +25,16 @@ namespace sw::editor
      *          다른 이름으로 로드되면 이벤트 이름이 겹쳐 오류가 되기 때문이다. 깨진 파일은 경고를 남기고 지금 데이터를 그대로 둔다(엔진의 로드 검사가 막는다).
      *          언리얼 Wwise · FMOD 연동의 뱅크 핫 리로드와 같은 흐름이다.
      */
-    class AudioDataHotReload
+    class AudioDataHotReload : public EditorSubsystem
     {
     public:
         /** @brief 감시를 시작하지 않은 채 만듭니다. */
         AudioDataHotReload();
-        ~AudioDataHotReload();
+        ~AudioDataHotReload() override;
+
+        // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
+        void        shutdownSubsystem() override { shutdown(); }
+        const utf8* getSubsystemName() const override { return "AudioDataHotReload"; }
 
         AudioDataHotReload( const AudioDataHotReload& )            = delete;
         AudioDataHotReload& operator=( const AudioDataHotReload& ) = delete;

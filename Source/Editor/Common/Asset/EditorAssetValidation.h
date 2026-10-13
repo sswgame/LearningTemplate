@@ -8,6 +8,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "Editor/Common/EditorSubsystem.h"
+
 namespace sw::editor
 {
     class EditorExternalToolJob;
@@ -31,11 +33,14 @@ namespace sw::editor
      * @details 규칙과 검사는 파이썬 한 곳(`Scripts/common/AssetValidation.py`)에 있다 — 커밋 훅 · CI · 이 에디터가 같은 코드를 부른다.
      *          스크립트가 없는 실행(배포된 에디터 없음 · 저장소 밖)이면 한 번 알리고 꺼진다. 검증은 저장을 막지 않는다 — 결과를 보고 사람이 고친다.
      */
-    class EditorAssetValidation
+    class EditorAssetValidation : public EditorSubsystem
     {
     public:
         EditorAssetValidation();
-        ~EditorAssetValidation();
+        ~EditorAssetValidation() override;
+
+        // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
+        const utf8* getSubsystemName() const override { return "EditorAssetValidation"; }
 
         EditorAssetValidation( const EditorAssetValidation& )            = delete;
         EditorAssetValidation& operator=( const EditorAssetValidation& ) = delete;
