@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
@@ -70,11 +71,13 @@ namespace sw
      * @brief 경로별로 디코드한 클립을 보관하는 캐시입니다. 모든 함수는 어느 스레드에서 호출해도 됩니다.
      * @details 요청(`requestClip`)은 엔진 태스크가 있으면 워커에서 디코드하고, 없으면(테스트, 헤드리스) 호출한 자리에서 바로 디코드한다.
      *          같은 경로를 두 번 요청해도 디코드는 한 번이다. 클립은 `shared_ptr<const>` 라서 재생 중인 보이스가 참조하는 클립은 `clear` 뒤에도 살아 있다.
+     * @note 워커 디코드 태스크는 이 캐시를 가리킨다 — 소멸자가 띄운 태스크가 모두 끝날 때까지 기다린다(기다리는 동안 다른 태스크를 돕는다).
      */
     class SW_API AudioClipCache
     {
     public:
         AudioClipCache();
+        /** @brief 이 캐시가 띄운 디코드 태스크가 모두 끝날 때까지 기다립니다 — 태스크가 해제된 캐시에 결과를 쓰지 않게. */
         ~AudioClipCache();
 
         AudioClipCache( const AudioClipCache& )            = delete;
@@ -129,9 +132,10 @@ namespace sw
             AudioClipStatus                 _status{ AudioClipStatus::Missing };
         };
 
-        unordered_map<hashed_string, Entry, hashed_string::HashFunc> _mapPathToEntry;   /**< 경로에서 엔트리로 가는 맵입니다. */
-        AudioFallbackDecodeFunction                                  _pFallbackDecoder; /**< 대체 디코더입니다(없으면 nullptr). */
-        float32                                                      _streamMinSeconds; /**< 이보다 긴 소리는 스트리밍합니다. */
-        mutable mutex                                                _mutex;            /**< `_mapPathToEntry` 를 지킵니다. */
+        unordered_map<hashed_string, Entry, hashed_string::HashFunc> _mapPathToEntry;     /**< 경로에서 엔트리로 가는 맵입니다. */
+        AudioFallbackDecodeFunction                                  _pFallbackDecoder;   /**< 대체 디코더입니다(없으면 nullptr). */
+        float32                                                      _streamMinSeconds;   /**< 이보다 긴 소리는 스트리밍합니다. */
+        mutable mutex                                                _mutex;              /**< `_mapPathToEntry` 를 지킵니다. */
+        atomic<uint32>                                               _pendingDecodeCount; /**< 띄웠지만 아직 끝나지 않은 워커 디코드 태스크 수입니다(소멸자가 0 을 기다린다). */
     };
 } // namespace sw
