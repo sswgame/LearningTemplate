@@ -107,7 +107,7 @@ namespace sw
     {
         for ( SceneServiceEntry& entry : _listSceneService )
         {
-            if ( entry._pService != nullptr && entry._pRegistration->_frameStep == step )
+            if ( entry._pRegistration->_frameStep == step )
                 entry._pService->update( deltaTime );
         }
     }

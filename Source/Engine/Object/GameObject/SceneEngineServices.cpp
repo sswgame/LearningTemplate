@@ -20,6 +20,8 @@ namespace sw
 
     SceneEngineServices SceneEngineServices::makeFromBoundEngine()
     {
-        return makeFromEngineServices( engine::getBoundEngineServices() );
+        SceneEngineServices sceneServices = makeFromEngineServices( engine::getBoundEngineServices() );
+        sceneServices._pEngineSubsystems  = engine::getEngineSubsystems();
+        return sceneServices;
     }
 } // namespace sw

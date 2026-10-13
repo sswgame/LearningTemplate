@@ -101,6 +101,9 @@ namespace sw
 
         /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
         static const SceneServiceRegistration& getSceneServiceRegistration();
+        /** @brief 서브시스템 이름입니다(씬 범위의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "SceneNavigation";
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief @p manager 의 기하를 모으는 내비게이션을 만듭니다(레지스트리가 매니저마다 부른다). */
         explicit SceneNavigation( GameObjectManager& manager );
@@ -110,7 +113,7 @@ namespace sw
         SceneNavigation& operator=( const SceneNavigation& ) = delete;
 
         /** @brief 베이크하던 일을 기다리고 내비메시 · 군중을 모두 놓습니다. 레지스트리는 그대로입니다(컴포넌트가 스스로 뺀다). */
-        void shutdown() override;
+        void onSceneCleared() override;
 
         /** @brief 씬 소스 경로 — 쿠킹본(`<씬>.navmesh`)을 찾는 데 씁니다(`Scene::instantiate`). */
         void          setSourcePath( string_view path ) { _sourcePath = string{ path }; }

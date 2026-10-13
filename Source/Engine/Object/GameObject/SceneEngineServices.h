@@ -17,6 +17,7 @@ namespace sw
 
     class AssetManager;
     class IAudioService;
+    class ISubsystemLocator;
     class PhysicsSystem;
     class TaskManager;
     class TypeRegistry;
@@ -24,12 +25,13 @@ namespace sw
     /** @struct SceneEngineServices @brief 씬 쪽이 쓰는 엔진 서비스 포인터 묶음입니다(소유하지 않음). 파일 머리말 참고. */
     struct SW_API SceneEngineServices
     {
-        AssetManager*              _pAssetManager{ nullptr };  ///< 머티리얼 · 프리팹 캐시와 에셋 정리
-        PhysicsSystem*             _pPhysicsSystem{ nullptr }; ///< 씬마다의 3D · 2D 물리 씬을 만드는 백엔드
-        IAudioService*             _pAudioService{ nullptr };  ///< 씬 오디오 · 애니메이션 알림의 소리
-        const EngineDefaultAssets* _pDefaultAssets{ nullptr }; ///< 씬 기본 머티리얼 경로
-        TaskManager*               _pTaskManager{ nullptr };   ///< 비동기 씬 로드를 띄우고 기다리는 곳
-        TypeRegistry*              _pTypeRegistry{ nullptr };  ///< 씬을 읽어도 되는지(모듈 타입 등록 완료)와 타입 표 세대
+        AssetManager*              _pAssetManager{ nullptr };     ///< 머티리얼 · 프리팹 캐시와 에셋 정리
+        PhysicsSystem*             _pPhysicsSystem{ nullptr };    ///< 씬마다의 3D · 2D 물리 씬을 만드는 백엔드
+        IAudioService*             _pAudioService{ nullptr };     ///< 씬 오디오 · 애니메이션 알림의 소리
+        const EngineDefaultAssets* _pDefaultAssets{ nullptr };    ///< 씬 기본 머티리얼 경로
+        TaskManager*               _pTaskManager{ nullptr };      ///< 비동기 씬 로드를 띄우고 기다리는 곳
+        TypeRegistry*              _pTypeRegistry{ nullptr };     ///< 씬을 읽어도 되는지(모듈 타입 등록 완료)와 타입 표 세대
+        const ISubsystemLocator*   _pEngineSubsystems{ nullptr }; ///< 엔진 범위 — 씬 범위의 부모(씬 범위에서 엔진 서비스를 타입으로 찾는다)
 
         /** @brief 서비스 표 @p services 에서 이 묶음의 칸을 골라 만듭니다. 호스트가 자기 표로 부릅니다. */
         static SceneEngineServices makeFromEngineServices( const EngineServices& services );

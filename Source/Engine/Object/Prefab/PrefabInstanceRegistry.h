@@ -34,13 +34,16 @@ namespace sw
      *          씁니다. 언리얼의 차일드 액터가 저장되지 않고 부모 컴포넌트가 다시 스폰하는 것과 같습니다.
      *
      *          항목은 오브젝트가 없어져도 지우지 않습니다. 에디터 되돌리기와 플레이 종료 복원은 지운 오브젝트를 **같은 id 로** 다시 만들므로, 그때 표시가
-     *          남아 있어야 부품으로 판정됩니다. id 는 다시 쓰이지 않으므로 남은 항목이 다른 오브젝트를 가리키지 않습니다. 씬을 비울 때(`shutdown`) 모두 버립니다.
+     *          남아 있어야 부품으로 판정됩니다. id 는 다시 쓰이지 않으므로 남은 항목이 다른 오브젝트를 가리키지 않습니다. 씬을 비울 때(`onSceneCleared`) 모두 버립니다.
      */
     class SW_API PrefabInstanceRegistry final : public ISceneService
     {
     public:
         /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
         static const SceneServiceRegistration& getSceneServiceRegistration();
+        /** @brief 서브시스템 이름입니다(씬 범위의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "PrefabInstanceRegistry";
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief @p manager 의 부품 레지스트리를 만듭니다(서비스 레지스트리가 매니저마다 부른다). */
         explicit PrefabInstanceRegistry( GameObjectManager& manager );
@@ -51,7 +54,7 @@ namespace sw
         /** @brief 프레임마다 할 일은 없습니다. */
         void update( float32 deltaTime ) override;
         /** @brief 씬을 비울 때 항목을 모두 버립니다. */
-        void shutdown() override;
+        void onSceneCleared() override;
 
         /** @brief @p objectID 를 @p ownerObjectID 인스턴스의 부품으로 기록합니다. 이미 있으면 바꿉니다. */
         void registerNestedPart( uint64 objectID, uint64 ownerObjectID, string_view prefabPath );

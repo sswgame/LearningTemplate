@@ -38,6 +38,9 @@ namespace sw
     public:
         /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
         static const SceneServiceRegistration& getSceneServiceRegistration();
+        /** @brief 서브시스템 이름입니다(씬 범위의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "ScenePhysics";
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
         /**
          * @brief 매니저 @p manager 의 서비스 묶음에 든 물리 서비스로 씬을 만들 물리를 둡니다(소유하지 않음).
@@ -50,7 +53,7 @@ namespace sw
         ScenePhysics& operator=( const ScenePhysics& ) = delete;
 
         /** @brief 물리 씬을 모두 내립니다(바디 · 관절 · 캐릭터가 함께 사라진다). 매니저가 비울 때 부릅니다. */
-        void shutdown() override;
+        void onSceneCleared() override;
         /** @brief 겹침 월드를 진행한 뒤 강체 물리를 진행합니다(`Physics` 단계, 게임 스레드). */
         void update( float32 deltaTime ) override;
 

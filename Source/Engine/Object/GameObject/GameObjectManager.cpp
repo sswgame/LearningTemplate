@@ -109,6 +109,7 @@ namespace sw
         , _animationSystem{}
         , _tickScheduler{ *this, _transformHierarchy, _primitiveRegistry, _structuralChangeBuffer }
         , _store{ *this, _tickScheduler, _structuralChangeBuffer }
+        , _sceneScope{ services._pEngineSubsystems }
         , _listSceneService{}
         , _frameStepObserver{}
         , _listFrameSystem{}
@@ -117,12 +118,27 @@ namespace sw
         , _bRunningFrameSystems{ false }
     {
         _animationSystem.setObjectManager( this );
-        // 기능 서비스는 기능 폴더가 정적 초기화에서 올린 줄로 만든다 — 코어는 그 타입을 모른다(`ISceneService.h`).
+        // 기능 서비스는 기능 폴더가 정적 초기화에서 올린 줄로 만든다 — 코어는 그 타입을 모른다(`ISceneService.h`). 씬 범위가 소유하고 의존 순서로 세운다.
         const vector<const SceneServiceRegistration*>& listRegistration = SceneServiceRegistry::getAll();
-        _listSceneService.reserve( listRegistration.size() );
+        vector<SceneServiceEntry>                      listCreated;
+        listCreated.reserve( listRegistration.size() );
         for ( const SceneServiceRegistration* pRegistration : listRegistration )
         {
-            _listSceneService.push_back( SceneServiceEntry{ pRegistration, pRegistration->_pCreate( *this ) } );
+            listCreated.push_back( SceneServiceEntry{ pRegistration, &pRegistration->_pCreate( *this, _sceneScope ) } );
+        }
+        SubsystemCollection& collection = _sceneScope.getCollection();
+        if ( collection.initializeAll( SubsystemHostMask::All ) == false )
+            SW_LOG_ERROR( "Scene services failed to start: %#", collection.getError().c_str() );
+        // 갱신도 초기화 순서다 — 같은 단계의 서비스가 서로 기대면 의존으로 적는다.
+        _listSceneService.reserve( listCreated.size() );
+        for ( const uint32 index : collection.getInitializeOrder() )
+        {
+            const ISubsystem& subsystem = collection.getSubsystem( index );
+            for ( const SceneServiceEntry& entry : listCreated )
+            {
+                if ( entry._pService == &subsystem )
+                    _listSceneService.push_back( entry );
+            }
         }
     }
 
@@ -145,19 +161,8 @@ namespace sw
         // 컴포넌트가 바디 · 등록을 놓았다 — 서비스가 남은 것을 버린다(물리는 빈 씬과 쌓인 시간을 버리고 다음 씬은 처음 쓸 때 새로 만든다).
         for ( SceneServiceEntry& entry : _listSceneService )
         {
-            if ( entry._pService != nullptr )
-                entry._pService->shutdown();
+            entry._pService->onSceneCleared();
         }
-    }
-
-    ISceneService* GameObjectManager::findSceneService( const SceneServiceRegistration& registration ) const
-    {
-        for ( const SceneServiceEntry& entry : _listSceneService )
-        {
-            if ( entry._pRegistration == &registration )
-                return entry._pService.get();
-        }
-        return nullptr;
     }
 
     ISceneFrameSystem* GameObjectManager::findFrameSystem( const hashed_string& key ) const

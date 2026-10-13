@@ -7,7 +7,9 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -1115,3 +1117,18 @@ SW_TEST_CASE( GameObjectManagerTest, ModuleSweepSurvivesCallbacksRemovingSibling
     manager.clear();
 }
 #endif
+
+/**
+ * @brief [GameObjectManagerTest] 씬 서비스는 매니저의 씬 범위에 있고, 씬 범위의 부모는 엔진 범위다
+ * @details 언리얼 `UWorld::GetSubsystem<T>()` 와 같은 자리 — 씬 범위에서 씬 서비스를 타입으로 찾고, 없는 것은 엔진 범위로 올라가 찾는다.
+ */
+SW_TEST_CASE( GameObjectManagerTest, SceneScopeOwnsSceneServicesAndChainsToTheEngineScope )
+{
+    sw::GameObjectManager     manager;
+    const sw::SubsystemScope& sceneScope = manager.getSceneScope();
+    SW_EXPECT_TRUE( sceneScope.find<sw::ScenePhysics>() == &manager.getSceneService<sw::ScenePhysics>() );
+    SW_EXPECT_TRUE( sceneScope.find<sw::TaskManager>() == nullptr ); // 씬 범위 자신에는 없다
+    SW_EXPECT_TRUE( sw::locateSubsystem<sw::TaskManager>( &sceneScope ) == &sw::engine::getTaskManager() );
+    // 씬 서비스는 모두 섰다(초기화 순서에 든다).
+    SW_EXPECT_EQUAL( sceneScope.getCollection().getSubsystemCount(), static_cast<uint32>( sceneScope.getCollection().getInitializedIndices().size() ) );
+}

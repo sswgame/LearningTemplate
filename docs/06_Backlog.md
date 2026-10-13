@@ -197,8 +197,6 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   남은 것: 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸다(DX12 직접 실행으로 10 시나리오 통과만 확인).
 - `C-27` **서브시스템 패턴을 넓힐 곳**(2026-10-14, 서브시스템 정리 다음 · 효과 큰 순). 판정 기준: 수명 범위 · 초기화/종료 순서 · 의존이 있는 서비스는 서브시스템이고,
   프레임마다 도는 핫 데이터 · 게임플레이 객체 · 값 객체는 서브시스템이 아니다.
-  ① 씬 범위 — `ISceneService`(SceneAudio · SceneNavigation · ScenePhysics · PrefabInstanceRegistry 등)를 같은 `ISubsystem` + `SubsystemCollection` 으로 통일하고
-  GameObjectManager 가 씬 범위 컬렉션을 소유한다(언리얼 `UWorldSubsystem` 에 대응하는 것으로 알고 있다). 씬 서비스 조회는 범위 로케이터로.
   ② 에셋 캐시 — AssetManager 의 `IAssetCache` 구현(TextureCache · MeshCache · MaterialCache · GlyphCache · ShaderBindingLayoutCache 등)을 리소스 범위 서브시스템으로,
   등록 · 초기화 · 종료 순서와 의존을 선언한다.
   ③ 개발 도구 — AutomationRunner · Session · StepRegistry, DevCommandRegistry, 프로파일러 · 텔레메트리를 `Dev` 호스트 비트의 서브시스템으로. Shipping 은 등록 자체를

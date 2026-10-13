@@ -341,8 +341,11 @@ namespace sw
          * @details 씬 안의 엔진 코드(스프라이트 배치 · 애니메이션 알림)가 전역 조회 대신 씁니다. 게임 모듈은 `game::getService<AssetManager>()` 를 씁니다.
          */
         AssetManager* findAssetManager() const { return _services._pAssetManager; }
-        /** @brief 등록 줄(`SW_SCENE_SERVICE`)로 만든 이 씬의 서비스입니다. 이 매니저가 만들지 않은 줄이면 nullptr 입니다. */
-        ISceneService* findSceneService( const SceneServiceRegistration& registration ) const;
+        /**
+         * @brief 이 씬의 범위입니다 — 씬 서비스를 소유하고, 부모가 엔진 범위라 엔진 서비스도 타입으로 찾는다(`locateSubsystem<T>( &scope )`).
+         * @details 언리얼 `UWorld` 의 서브시스템 컬렉션과 같은 자리입니다.
+         */
+        const SubsystemScope& getSceneScope() const { return _sceneScope; }
         /**
          * @brief 이 씬의 서비스 @p TService 입니다(`ISceneService.h`). 레지스트리의 서비스는 매니저마다 하나씩 늘 있습니다.
          * @details 언리얼 `UWorld::GetSubsystem<T>()` 와 같은 자리입니다. 코어는 서비스 타입을 모르고, 부르는 쪽이 그 타입의 헤더를 듭니다
@@ -351,17 +354,13 @@ namespace sw
         template <typename TService>
         TService& getSceneService()
         {
-            ISceneService* pService = findSceneService( TService::getSceneServiceRegistration() );
-            SW_ASSERT( pService != nullptr );
-            return static_cast<TService&>( *pService );
+            return _sceneScope.get<TService>();
         }
         /** @brief 이 씬의 서비스 @p TService 입니다. */
         template <typename TService>
         const TService& getSceneService() const
         {
-            const ISceneService* pService = findSceneService( TService::getSceneServiceRegistration() );
-            SW_ASSERT( pService != nullptr );
-            return static_cast<const TService&>( *pService );
+            return _sceneScope.get<TService>();
         }
 
         /**
@@ -447,14 +446,14 @@ namespace sw
          */
         void stepPhysics( float32 deltaTime );
 
-        /** @brief 등록 줄의 단계가 @p step 인 서비스를 등록 순서대로 갱신합니다. */
+        /** @brief 등록 줄의 단계가 @p step 인 서비스를 씬 범위의 초기화 순서(의존 순서)로 갱신합니다. */
         void updateSceneServices( SceneFrameStep step, float32 deltaTime );
 
-        /** @brief 이 매니저가 만든 씬 서비스 하나입니다. */
+        /** @brief 이 매니저가 만든 씬 서비스 하나입니다(소유는 씬 범위 — 갱신 단계를 알려고 등록 줄과 짝지어 든다). */
         struct SceneServiceEntry
         {
             const SceneServiceRegistration* _pRegistration;
-            unique_ptr<ISceneService>       _pService;
+            ISceneService*                  _pService;
         };
 
         /** @brief 붙은 프레임 시스템 하나입니다. */
@@ -488,7 +487,9 @@ namespace sw
         SceneTickScheduler _tickScheduler;
         /** @brief 오브젝트 저장소(생성 · 이름 · id 표 · 조회 · 지연 파괴 · 컴포넌트 풀 · 시작 줄)입니다. 게임이 부르는 API 는 위의 전달 함수입니다. */
         GameObjectStore _store;
-        /** @brief 레지스트리(`SceneServiceRegistry`)에서 만든 기능 서비스입니다(물리 · 오디오 · 내비게이션 …). 코어는 타입을 모르고 단계마다 `update` 만 부른다. */
+        /** @brief 씬 범위입니다 — 레지스트리(`SceneServiceRegistry`)에서 만든 기능 서비스(물리 · 오디오 · 내비게이션 …)를 소유한다. 부모는 엔진 범위. */
+        SubsystemScope _sceneScope;
+        /** @brief 씬 서비스를 범위의 초기화 순서로 든 목록입니다. 코어는 타입을 모르고 단계마다 `update` 만 부른다. */
         vector<SceneServiceEntry> _listSceneService;
         /** @brief 단계마다 돌기 직전에 부르는 관찰자(`setFrameStepObserver`)입니다. 보통 비어 있습니다. */
         FrameStepObserver _frameStepObserver;

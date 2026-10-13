@@ -21,7 +21,7 @@ namespace sw
         (void)deltaTime;
     }
 
-    void PrefabInstanceRegistry::shutdown()
+    void PrefabInstanceRegistry::onSceneCleared()
     {
         _mapNestedPart.clear();
     }

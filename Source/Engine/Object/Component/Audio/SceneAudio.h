@@ -42,6 +42,9 @@ namespace sw
 
         /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
         static const SceneServiceRegistration& getSceneServiceRegistration();
+        /** @brief 서브시스템 이름입니다(씬 범위의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "SceneAudio";
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
         /**
          * @brief 매니저 @p manager 의 서비스 묶음에 든 오디오 서비스로 소리를 낼 씬 오디오를 둡니다(소유하지 않음).
@@ -63,7 +66,7 @@ namespace sw
         /** @brief 단계 목록이 부르는 진행입니다. 아무것도 하지 않습니다 — 진행은 카메라를 받는 위 `update` 를 `Scene::tick` 이 부른다. */
         void update( float32 deltaTime ) override { (void)deltaTime; }
         /** @brief 씬을 비울 때 부릅니다. 등록은 컴포넌트가 스스로 풀므로 할 일이 없습니다. */
-        void shutdown() override {}
+        void onSceneCleared() override {}
 
         /** @brief 쓸 엔진을 정합니다(테스트). nullptr 이면 생성자로 받은 오디오 서비스의 엔진입니다. */
         void setAudioEngine( AudioEngine* pEngine ) { _pEngineOverride = pEngine; }

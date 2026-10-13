@@ -71,10 +71,10 @@ namespace sw
 
     SceneNavigation::~SceneNavigation()
     {
-        shutdown();
+        onSceneCleared();
     }
 
-    void SceneNavigation::shutdown()
+    void SceneNavigation::onSceneCleared()
     {
         NavTileRebaker::waitForAllBakes( _listRuntime );
         for ( NavMeshAgentComponent* pAgent : _listAgent )
@@ -94,7 +94,7 @@ namespace sw
 
     void SceneNavigation::setSettings( const NavMeshSettings& settings )
     {
-        shutdown();
+        onSceneCleared();
         _settings        = settings;
         _bSettingsLoaded = true;
         _listFailedAgentType.clear();
@@ -441,7 +441,7 @@ namespace sw
                 listAgentType.push_back( agentType );
             }
         }
-        shutdown();
+        onSceneCleared();
         _listFailedAgentType.clear();
         _bIgnoreCooked = true;
         for ( const hashed_string& agentType : listAgentType )

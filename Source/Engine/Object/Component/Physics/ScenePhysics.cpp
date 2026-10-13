@@ -54,7 +54,7 @@ namespace sw
 
     ScenePhysics::~ScenePhysics()
     {
-        shutdown();
+        onSceneCleared();
     }
 
     void ScenePhysics::update( float32 deltaTime )
@@ -65,7 +65,7 @@ namespace sw
         step( _manager, deltaTime );
     }
 
-    void ScenePhysics::shutdown()
+    void ScenePhysics::onSceneCleared()
     {
         // 남은 컴포넌트가 들고 있는 핸들은 씬과 함께 무효가 된다 — 먼저 놓게 한다.
         for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
