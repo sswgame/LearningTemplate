@@ -90,7 +90,8 @@ namespace test
 
     int32 AppTestUtil::runScenario( const sw::string& scenarioPath, const utf8* pBackendSwitch, sw::string& outScenarioLines, sw::string_view extraArguments )
     {
-        return runScenarioArgument( scenarioPath, AppTestUtilInternal::getScenarioStem( scenarioPath ), pBackendSwitch, outScenarioLines, extraArguments );
+        return runScenarioArgument( scenarioPath, AppTestUtilInternal::getScenarioStem( scenarioPath ), pBackendSwitch, outScenarioLines, extraArguments,
+                                    kScenarioTimeoutSeconds );
     }
 
     int32 AppTestUtil::runScenarioChain( const sw::vector<sw::string>& listScenarioPath, const sw::string& chainName, const utf8* pBackendSwitch,
@@ -102,11 +103,13 @@ namespace test
             argument += argument.empty() ? "" : ",";
             argument += scenarioPath;
         }
-        return runScenarioArgument( argument, "chain_" + chainName, pBackendSwitch, outScenarioLines, extraArguments );
+        const uint32 stageTimeoutSeconds = static_cast<uint32>( listScenarioPath.size() ) * kChainStageTimeoutSeconds;
+        const uint32 timeoutSeconds      = stageTimeoutSeconds > kScenarioTimeoutSeconds ? stageTimeoutSeconds : kScenarioTimeoutSeconds;
+        return runScenarioArgument( argument, "chain_" + chainName, pBackendSwitch, outScenarioLines, extraArguments, timeoutSeconds );
     }
 
     int32 AppTestUtil::runScenarioArgument( const sw::string& scenarioArgument, const sw::string& outputStem, const utf8* pBackendSwitch, sw::string& outScenarioLines,
-                                            sw::string_view extraArguments )
+                                            sw::string_view extraArguments, uint32 timeoutSeconds )
     {
         const sw::string backend    = pBackendSwitch[0] == '-' ? sw::string( pBackendSwitch + 1 ) : sw::string( "default" );
         const sw::string outputBase = "Saved/Automation/" + outputStem + "_" + backend;
@@ -125,9 +128,9 @@ namespace test
         // 시한 감시 — 멈춘 App 이 CTest 시한까지 붙잡지 않게 죽인다(`terminate` 는 다른 스레드가 읽는 중에도 안전하다).
         sw::atomic<bool> bDone{ false };
         sw::atomic<bool> bKilled{ false };
-        std::thread      watchdog( [&process, &bDone, &bKilled]()
+        std::thread      watchdog( [&process, &bDone, &bKilled, timeoutSeconds]()
         {
-            const int64 deadline = sw::MonotonicClock::nowMicroseconds() + static_cast<int64>( kScenarioTimeoutSeconds ) * 1000000;
+            const int64 deadline = sw::MonotonicClock::nowMicroseconds() + static_cast<int64>( timeoutSeconds ) * 1000000;
             while ( bDone.load() == false && sw::MonotonicClock::nowMicroseconds() < deadline )
             {
                 std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );

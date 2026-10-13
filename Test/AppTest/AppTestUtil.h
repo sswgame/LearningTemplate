@@ -38,6 +38,11 @@ namespace test
 
         /** @brief 시나리오 하나의 프로세스 시한(초) — 넘으면 죽이고 -1 입니다(시나리오의 프레임 시한이 먼저 끝내야 한다). */
         static constexpr uint32 kScenarioTimeoutSeconds = 180;
+        /**
+         * @brief 체인의 단계 하나에 주는 시한(초)입니다. 체인의 시한은 이것 × 단계 수와 `kScenarioTimeoutSeconds` 가운데 큰 쪽입니다.
+         * @details 에디터 체인(125 단계, Debug)은 혼자 돌아도 2 분 남짓이라 고정 180 초로는 부하에 따라 끝 단계에서 죽었다(-1).
+         */
+        static constexpr uint32 kChainStageTimeoutSeconds = 5;
         /** @brief 시나리오가 건너뜀으로 끝났다(전경 창을 못 얻음 등 — `AutomationResult::Skipped`). */
         static constexpr int32 kSkippedExitCode = 13;
         /** @brief App 을 띄우지 못했다(실행 파일이 없다). */
@@ -64,6 +69,6 @@ namespace test
     private:
         /** @brief `-scenario=` 인자(경로 하나 또는 쉼표 목록)를 받아 App 을 띄우고 종료 코드를 돌려줍니다. */
         static int32 runScenarioArgument( const sw::string& scenarioArgument, const sw::string& outputStem, const utf8* pBackendSwitch, sw::string& outScenarioLines,
-                                          sw::string_view extraArguments );
+                                          sw::string_view extraArguments, uint32 timeoutSeconds );
     };
 } // namespace test

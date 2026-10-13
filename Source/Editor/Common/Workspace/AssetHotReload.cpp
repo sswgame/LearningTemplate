@@ -163,7 +163,11 @@ namespace sw::editor
 
     void AssetHotReload::onResourceFileChanged( const FileChangeEvent& changeEvent )
     {
-        if ( changeEvent._action != FileWatcherAction::Modified )
+        // 저장은 원자적이다(임시 파일 → 이름 바꿔 끼우기, `FileUtil::writeTextFile`) — 그 저장은 Modified 가 아니라 새 이름(RenamedNewName)으로 온다.
+        // 바깥 편집기의 "안전한 저장" 도 같다. 새로 생긴 파일(Added)은 아직 든 캐시가 없어 할 일이 없지만 검증은 돈다.
+        const bool bContentChanged = changeEvent._action == FileWatcherAction::Modified || changeEvent._action == FileWatcherAction::RenamedNewName ||
+                                     changeEvent._action == FileWatcherAction::Added;
+        if ( bContentChanged == false )
             return;
 
         string relPath{};

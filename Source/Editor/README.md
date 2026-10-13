@@ -489,6 +489,7 @@ GameFramework 와 키트의 에디터 확장은 `Source/GameFramework/PlugIn/Edi
 
 ### 문서, 되돌리기, 플레이
 
+- **에셋 핫 리로드는 Modified 만 보면 안 됩니다.** 저장은 원자적이라(`FileUtil::writeTextFile` — 임시 파일 → 이름 바꿔 끼우기) 감시 이벤트가 RenamedNewName 으로 옵니다(`AssetHotReload::onResourceFileChanged`).
 - **자기 dirty 플래그를 만들지 않습니다.** 계약 밖의 플래그는 Ctrl+S 가 포커스된 문서 대신 씬을 저장하게 하고, 종료 확인이 그 편집을 세지 않아 편집이 조용히 사라집니다.
   저장이 실패하면 dirty 를 지우지 않습니다. 로드 실패는 `markDocumentLoadFailed` 로 저장을 막습니다.
 - **한 패널이 문서를 둘 이상 들면 기반 비트는 "무언가 바뀌었다" 만 말합니다**(`DataTablePanel`). 어느 쪽인지는 패널이 반쪽 비트로 알고 한곳에서 맞춥니다(`syncDocumentDirty`).
@@ -501,6 +502,8 @@ GameFramework 와 키트의 에디터 확장은 `Source/GameFramework/PlugIn/Edi
 
 ### 뷰와 도킹
 
+- **씬 뷰 카메라 값은 씬을 다시 열어도 이어집니다**(`EditorViewportCamera` 는 `EditorViewportClient` 의 값 멤버다). 새 세션의 카메라로 시작해야 하는 시나리오 체인은 `camera.reset` 으로 되돌립니다(`chain/reset.scenario.xml`).
+  에디터 카메라 오브젝트는 씬 뷰가 그려질 때 생기므로(`EditorCamera::ensure`) Game 탭이 앞이면 오브젝트 수에 없습니다.
 - **탭 뒤의 패널은 그리지 않고 레이블도 남기지 않습니다.** 자체 테스트와 시나리오는 먼저 그 탭을 앞으로 가져옵니다(`ImGui::SetWindowFocus`, `panel.focus <id>`). 씬 뷰가 보이는지는 `Editor.SceneViewDrawn` 으로 봅니다. `Editor.SceneViewRequested` 는 두 뷰가 다 가려져도 1 입니다.
 - **기본 배치의 앞 탭은 붙인 순서로 정해지지 않습니다.** ImGui 는 새로 붙은 탭 가운데 마지막 것을 고르므로, 열린 채 시작하는 도구 창이 가운데 영역에 붙으면 씬 뷰가 그려지지 않습니다.
   그래서 `EditorDockLayout::updateDefaultTabSelection` 이 Scene 탭이 골라질 때까지 두 프레임 이상 포커스를 줍니다. 이름 붙인 레이아웃을 읽은 뒤에도 같습니다.
@@ -535,6 +538,7 @@ GameFramework 와 키트의 에디터 확장은 `Source/GameFramework/PlugIn/Edi
 
 ### ImGui 위젯
 
+- **그림 위에 겹친 손잡이는 그림의 클릭보다 뒤에 제출됩니다.** 그림 클릭으로 고르기를 바로 처리하면 손잡이를 누른 클릭이 아래 위젯을 고릅니다. 고르기는 손잡이를 그린 뒤에 정합니다(`UIPreviewPanel::drawImage`).
 - **에디터 ImGui 의 픽셀 리터럴은 UI 단위이며 `EditorThemeUtil::getDpiScale()` 을 곱합니다.** ImGui 스타일 값은 테마 적용이 이미 곱하므로 거듭 곱하지 않습니다.
 - **위젯 크기에 픽셀 상수를 쓰지 않습니다.** `GetFrameHeight` 와 글자 폭에서 측정합니다. 24 px 고정 단추가 150 % 배율에서 잘렸습니다. 레이블 줄 바꿈은 `EditorWidgets::drawClampedLabel` 을 씁니다.
 - **테마 적용은 스타일 크기를 ImGui 기본(96 DPI)에서 다시 시작합니다**(`EditorThemeInternal::resetSizesToDefault`). 그러지 않으면 적용마다 배율이 거듭 곱해져 도킹 구분선의 호버 여백이 옆 패널의 클릭을 가로챕니다.
@@ -550,6 +554,7 @@ GameFramework 와 키트의 에디터 확장은 `Source/GameFramework/PlugIn/Edi
 
 ### 인스펙터와 패널
 
+- **콤보에서 고른 값은 `trackPod` 로 되돌리기에 남지 않습니다.** 콤보 단추는 편집 없이 풀리고 고른 항목은 팝업 창의 위젯이라, 쓰기 직전에 `InspectorPropertyUndo::recordImmediateEdit` 를 부릅니다.
 - **리플렉션 객체 그리기는 `EditorPropertyGrid` 하나입니다**(인스펙터, 환경설정, 다중 선택). 값 칸마다 레이블 `inspector.property.<타입>.<프로퍼티>` 를 남깁니다. 드래그 칸은 Ctrl+클릭이 글 입력입니다.
 - **기본값과 다른 프로퍼티의 기준은 컴포넌트 타입마다의 기본 인스턴스입니다**(`EditorDefaultObjects`, 언리얼 CDO). 모듈이 언로드되면 모두 지웁니다.
 - **인스펙터 위젯과 CallInEditor 인자는 `ReflectBuiltins.xxx` 를 펼친 표 하나입니다**(`InspectorBuiltinValue.h`). 내장 타입을 더하면 `InspectorWidgetFor<T>` 특수화가 없을 때 컴파일이 멈춥니다.
