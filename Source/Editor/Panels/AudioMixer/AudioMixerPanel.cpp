@@ -14,9 +14,7 @@
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Panels/AudioMixer/AudioDataHotReload.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Audio/AudioEngine.h"
@@ -79,22 +77,6 @@ namespace sw::editor
                     (void)pContext->getPanelManager().setPanelOpen( "audiomixer", true ); // 패널은 이 파일에 등록되어 있다
             }
 
-            /** @brief 오디오 데이터 감시를 켭니다. 프레임 단계가 처음 돌 때 부른다. 감시기는 `EditorContext` 가 소유한다(소멸을 DLL 정리에 맡기면 종료가 매달린다). */
-            static void runHotReloadStep( EditorContext& context )
-            {
-                AudioDataHotReload& hotReload = context.getAudioDataHotReload();
-                if ( hotReload.isWatching() == false )
-                {
-                    static bool s_bTried = false; // 리소스 루트가 없으면(팩만 있는 실행) 한 번만 시도한다
-                    if ( s_bTried )
-                        return;
-                    s_bTried = true;
-                    if ( hotReload.initialize() == false )
-                        return;
-                }
-                hotReload.update();
-            }
-
             [[nodiscard]] static bool readBusCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( AudioMixerPanel::getBusCount() );
@@ -116,15 +98,6 @@ namespace sw::editor
             [[nodiscard]] static bool readBusVolume( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( AudioMixerPanel::getProbedBusVolume() );
-                return true;
-            }
-
-            [[nodiscard]] static bool readReloadCount( const GameObjectManager* /*pManager*/, float64& outValue )
-            {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext == nullptr )
-                    return false;
-                outValue = static_cast<float64>( pContext->getAudioDataHotReload().getReloadCount() );
                 return true;
             }
         };
@@ -309,13 +282,10 @@ namespace sw::editor
     SW_EDITOR_PANEL( AudioMixerPanel, "audiomixer", EditorPanelCategory::Tool, 2100 );
     SW_EDITOR_COMMAND( AudioMixerOpen, "window.audioMixer", 2230, "Audio Mixer", editoricon::kSettings, "Audio", "오디오 믹서 창을 엽니다(버스 미터 · 음소거 · 솔로 · 볼륨)", "Open the audio mixer",
                        {}, &AudioMixerPanelInternal::openPanel, nullptr, "MainMenu/Window" );
-    SW_EDITOR_FRAME_STEP( AudioDataReload, "audioDataReload", 250, &AudioMixerPanelInternal::runHotReloadStep );
 
     SW_AUTOMATION_PROBE( editorAudioMixerBusCount, "Editor.AudioMixerBusCount", "Mixer buses the Audio Mixer window lists", &AudioMixerPanelInternal::readBusCount );
     SW_AUTOMATION_PROBE( editorAudioMixerMutedCount, "Editor.AudioMixerMutedCount", "Mixer buses that are muted", &AudioMixerPanelInternal::readMutedCount );
     SW_AUTOMATION_PROBE( editorAudioMixerSoloCount, "Editor.AudioMixerSoloCount", "Mixer buses that are solo", &AudioMixerPanelInternal::readSoloCount );
     SW_AUTOMATION_PROBE( editorAudioMixerBusVolume, "Editor.AudioMixerBusVolume", "User volume of the bus named by gv_editorProbeBus (-1 when there is none)",
                          &AudioMixerPanelInternal::readBusVolume );
-    SW_AUTOMATION_PROBE( editorAudioDataReloadCount, "Editor.AudioDataReloadCount", "Audio mixer / event files the editor reloaded after they changed on disk",
-                         &AudioMixerPanelInternal::readReloadCount );
 } // namespace sw::editor

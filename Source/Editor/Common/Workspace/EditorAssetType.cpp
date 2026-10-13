@@ -64,6 +64,7 @@ namespace sw::editor
         constexpr string_view kArrUIDocumentSuffix[]   = { UIDocumentAsset::kExtension };                                                                  ///< UI 문서다. 그 문서로 연 화면을 다시 만든다(`UISystem`)
         constexpr string_view kArrUIStyleSuffix[]      = { UIStyleSheetAsset::kExtension };                                                                ///< UI 스타일 시트다. 쓰는 화면을 다시 맞춘다
         constexpr string_view kArrModuleDataSuffix[]   = { ".interactions.xml", ".elements.xml" };                                                         ///< 모듈이 로드한 데이터 테이블 캐시다(GameFramework 의 상호작용 테이블과 원소 규칙 테이블)
+        constexpr string_view kArrAudioDataSuffix[]    = { ".audiomixer.xml", ".audioevents.xml" };                                                        ///< 오디오 서비스가 쓰는 믹서 그래프 · 이벤트 라이브러리다(엔진 캐시 `AudioData` 가 지금 쓰는 파일만 다시 읽는다)
         /**
          * @struct AssetMatchRow
          * @brief 경로 판정 규칙 하나입니다. 어느 종류인지와 핫 리로드가 그 파일을 어떻게 다시 읽는지를 담습니다.
@@ -106,6 +107,7 @@ namespace sw::editor
             {    EditorAssetType::UIDocument,       MatchMode::EndsWith,   kArrUIDocumentSuffix,   SW_COUNT_OF( kArrUIDocumentSuffix ), AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr},
             {          EditorAssetType::Data,       MatchMode::EndsWith,      kArrUIStyleSuffix,      SW_COUNT_OF( kArrUIStyleSuffix ), AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr},
             {          EditorAssetType::Data,       MatchMode::EndsWith,   kArrModuleDataSuffix,   SW_COUNT_OF( kArrModuleDataSuffix ), AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr},
+            {          EditorAssetType::Data,       MatchMode::EndsWith,    kArrAudioDataSuffix,    SW_COUNT_OF( kArrAudioDataSuffix ), AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr},
             {          EditorAssetType::Data,      MatchMode::Extension,            kArrDataExt,            SW_COUNT_OF( kArrDataExt ),                                nullptr,                                              nullptr},
         };
 

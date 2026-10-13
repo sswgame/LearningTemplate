@@ -25,7 +25,7 @@ namespace sw::editor
      * @brief 언리얼 Audio Mixer · 유니티 Audio Mixer 창 · Wwise Mixer 에 해당합니다. 버스 하나가 세로 띠 하나입니다.
      * @details 값은 오디오 스레드가 블록마다 게시한 사본(`AudioEngine::getBusStatuses`)에서 읽는다. 고치는 일은 게임 스레드 명령(`setBusVolume` · `setBusMuted` · `setBusSolo`)이고
      *          다음 블록(약 5 ms)에 적용된다. 사용자 볼륨은 옵션 메뉴와 같은 값이라 에디터에서 올린 소리가 게임 옵션에도 그대로 보인다.
-     *          미터는 피크(절댓값 최대)를 dB 로 보이고 천천히 내려간다. 믹서 그래프 데이터를 고치면 `AudioDataHotReload` 가 다시 읽어 이 창이 따라간다.
+     *          미터는 피크(절댓값 최대)를 dB 로 보이고 천천히 내려간다. 믹서 그래프 데이터를 고치면 에셋 핫 리로드(`AssetHotReload` → 엔진 캐시 `AudioData`)가 다시 읽어 이 창이 따라간다.
      */
     class AudioMixerPanel final : public IEditorPanel
     {
