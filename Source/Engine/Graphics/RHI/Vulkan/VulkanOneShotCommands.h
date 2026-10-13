@@ -85,12 +85,16 @@ namespace sw
             submitInfo.commandBufferCount = 1;
             submitInfo.pCommandBuffers    = &_commandBuffer;
             std::scoped_lock<mutex> queueLock{ _queueMutex };
-            if ( vkQueueSubmit( _queue, 1, &submitInfo, VK_NULL_HANDLE ) != VK_SUCCESS )
+            _lastResult = vkQueueSubmit( _queue, 1, &submitInfo, VK_NULL_HANDLE );
+            if ( _lastResult != VK_SUCCESS )
                 return false;
 
-            vkQueueWaitIdle( _queue );
-            return true;
+            _lastResult = vkQueueWaitIdle( _queue );
+            return _lastResult == VK_SUCCESS;
         }
+
+        /** @brief 마지막 `endSubmitAndWait` 가 본 `VkResult` 입니다(제출 실패의 이유 — `VK_ERROR_DEVICE_LOST` 인지 가린다). */
+        [[nodiscard]] VkResult getLastResult() const { return _lastResult; }
 
     private:
         std::scoped_lock<mutex> _poolLock;
@@ -99,5 +103,6 @@ namespace sw
         VkCommandPool           _commandPool;
         VkQueue                 _queue;
         VkCommandBuffer         _commandBuffer;
+        VkResult                _lastResult{ VK_SUCCESS };
     };
 } // namespace sw

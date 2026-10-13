@@ -799,7 +799,7 @@ namespace sw
         }
         else
         {
-            SW_LOG_ERROR( "readbackTexture2D: vkQueueSubmit failed" );
+            SW_LOG_ERROR( "readbackTexture2D: vkQueueSubmit failed (VkResult=%#)", static_cast<int32>( oneShot.getLastResult() ) );
         }
         destroyBuffer( staging );
         return bOk;
