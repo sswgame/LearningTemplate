@@ -18,7 +18,7 @@ namespace sw
 
     /**
      * @class Joint2DComponent
-     * @brief 2D 관절입니다(유니티 Joint2D). Cone 은 없습니다(평면에는 스윙이 없다 — 고르면 만들 때 오류). Hinge 축은 늘 Z 이고 `_axis` 의 XY 는 Slider 의 축입니다.
+     * @brief 2D 관절입니다(유니티 Joint2D). Cone 은 없습니다(평면에는 스윙이 없다 — 고르면 만들 때 오류 한 번, 설정이 바뀔 때까지 다시 만들지 않는다). Hinge 축은 늘 Z 이고 `_axis` 의 XY 는 Slider 의 축입니다.
      * @details 바디 A 는 이 오브젝트의 `RigidBody2DComponent`, 바디 B 는 부모 사슬에서 가장 가까운 `RigidBody2DComponent` 를 가진 오브젝트입니다
      *          (`_bConnectToWorld` 면 월드). 관절 자리는 이 컴포넌트의 월드 자리, 축은 이 컴포넌트의 회전으로 돌린 `_axis` 입니다.
      *          두 바디가 생긴 뒤 첫 물리 프레임에 만들고, 어느 바디든 사라지면 다시 만들 때까지 기다립니다.
@@ -73,6 +73,8 @@ namespace sw
         bool _bCollideConnectedBodies;
         PROPERTY( Category = "Joint", Tooltip = "Connect to the world instead of the parent's body" )
         bool _bConnectToWorld;
+        /// 이 바디 쌍으로 만들기가 실패했다(Cone 등) — 바디 · 설정이 바뀔 때까지 다시 시도하지 않는다(실패는 프레임마다 오류 로그를 남긴다)
+        bool _bJointCreateFailed;
 
         PhysicsJointHandle _joint;
         PhysicsBodyHandle  _jointBodyA; ///< 관절을 만들 때의 바디(바뀌면 다시 짓는다)
