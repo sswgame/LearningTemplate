@@ -8,7 +8,8 @@
 # ------------------------------------------------------------------------------
 set(smokeLibs Engine RuntimeAPI)
 if(SW_SHIPPING_BUILD)
-	list(APPEND smokeLibs SWGame)
+	get_property(swActiveGameTarget GLOBAL PROPERTY SW_ACTIVE_GAME_TARGET) # SWGame_<활성 게임>(`sw_addGameModule`)
+	list(APPEND smokeLibs ${swActiveGameTarget})
 endif()
 
 # 핫리로드 · 모듈 백그라운드 컴파일은 Dev 에만 있다 — Shipping 스모크는 정적 exportGameAPI 경로만 본다.

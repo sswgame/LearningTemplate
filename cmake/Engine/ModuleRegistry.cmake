@@ -17,8 +17,8 @@
 # 서버 전용 모듈(매니페스트 `_listTarget` 이 Server 뿐)에 표식 글 `sw-server-only-module:<이름>` 을 박는다 — 클라이언트 산출물에 그 글이 없음을
 # `BuildTargetImageTest` 가 바이트로 확인한다. 정적 초기화 객체가 글을 읽어(volatile) 링커가 Shipping 정적 링크 · 섹션 GC 에서 버리지 못한다
 # (Shipping 은 모듈을 통째로 링크한다 — `sw_linkWholeArchive`). 서버 실행 파일 자신의 표식은 `Source/Server/ServerApp.cpp` 에 있다.
-function(sw_addServerOnlyMarker TARGET_NAME)
-	get_property(swTargets GLOBAL PROPERTY SW_MODULE_${TARGET_NAME}_TARGETS)
+function(sw_addServerOnlyMarker TARGET_NAME MODULE_NAME)
+	get_property(swTargets GLOBAL PROPERTY SW_MODULE_${MODULE_NAME}_TARGETS)
 	if(NOT swTargets STREQUAL "Server")
 		return()
 	endif()
@@ -46,16 +46,22 @@ namespace
 	set_source_files_properties("${swMarkerSource}" PROPERTIES SKIP_PRECOMPILE_HEADERS ON SKIP_UNITY_BUILD_INCLUSION ON)
 endfunction()
 
+# MODULE_NAME 은 매니페스트 · ABI 스탬프의 모듈 이름이다(기본 타깃 이름 — 게임은 타깃 `SWGame_<게임>`, 모듈 `SWGame`). 레지스트리에는 타깃 이름이 든다.
 function(sw_registerDynamicModule TARGET_NAME KIND)
+	cmake_parse_arguments(ARG "" "MODULE_NAME" "" ${ARGN})
+	set(swModuleName ${TARGET_NAME})
+	if(ARG_MODULE_NAME)
+		set(swModuleName ${ARG_MODULE_NAME})
+	endif()
 	# 모든 동적 모듈은 매니페스트를 갖는다(없으면 여기서 구성이 선다) — App 이 그것으로 적재 순서를 정한다.
-	sw_isModuleActive(${TARGET_NAME} swModuleActive)
+	sw_isModuleActive(${swModuleName} swModuleActive)
 	if(NOT swModuleActive)
 		message(FATAL_ERROR "[Module] ${TARGET_NAME} is registered but its manifest says it is off — the creating function must skip it (sw_skipInactiveModule)")
 	endif()
 	set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES ${TARGET_NAME})
 	set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES_${KIND} ${TARGET_NAME})
-	sw_addModuleEngineStamp(${TARGET_NAME})
-	sw_addServerOnlyMarker(${TARGET_NAME})
+	sw_addModuleEngineStamp(${TARGET_NAME} MODULE_NAME ${swModuleName})
+	sw_addServerOnlyMarker(${TARGET_NAME} ${swModuleName})
 endfunction()
 
 # 등록된 동적 모듈 중 **실제로 타겟이 있는 것**을 OUT_VAR 에 담습니다.
@@ -108,7 +114,7 @@ endfunction()
 # 빠진 것이 있으면 **구성이 선다.** 조용히 빠지는 것보다 낫다.
 function(sw_verifyDynamicModuleRegistry)
 	get_property(listRegistered GLOBAL PROPERTY SW_DYNAMIC_MODULES)
-	# 함께 짓는 게임 팩 사본(`sw_addGamePackModule`)은 App 이 `Bin/Modules` 에서 올리지 않으므로 레지스트리 밖이다.
+	# 함께 짓는 게임 팩(`sw_addGameModule`, 활성 게임이 아닌 것)은 App 이 `Bin/Modules` 에서 올리지 않으므로 레지스트리 밖이다.
 	get_property(listGamePackTarget GLOBAL PROPERTY SW_GAME_PACK_TARGETS)
 	list(APPEND listRegistered ${listGamePackTarget})
 

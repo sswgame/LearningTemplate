@@ -4,8 +4,8 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# 1) 활성 게임 팩 — 타겟명은 항상 SWGame
-# App LiveReload / Shipping 정적 링크가 이 이름을 본다
+# 1) 활성 게임 팩 — 타깃 SWGame_<게임>, 모듈 이름 · 산출물은 SWGame(`Bin/Modules/SWGame`)
+# App LiveReload 는 모듈 이름을, Shipping 정적 링크는 전역 속성 SW_ACTIVE_GAME_TARGET 을 본다
 # ------------------------------------------------------------------------------
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${SW_ACTIVE_GAME}/CMakeLists.txt")
 	# 무엇을 고를 수 있는지, 어떻게 고치는지까지 알려준다. 여기 걸리는 흔한 경우가 **낡은 캐시**다 —
@@ -26,11 +26,11 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${SW_ACTIVE_GAME}/CMakeLists.txt")
 		"  Fix: cmake --preset <preset> -DSW_ACTIVE_GAME=<name> (an existing build cache keeps the old value)")
 endif()
 
-message(STATUS "[Games] SW_ACTIVE_GAME=${SW_ACTIVE_GAME} -> target SWGame")
+message(STATUS "[Games] SW_ACTIVE_GAME=${SW_ACTIVE_GAME} -> target SWGame_${SW_ACTIVE_GAME} (Bin/Modules/SWGame)")
 add_subdirectory(${SW_ACTIVE_GAME})
 
 # ------------------------------------------------------------------------------
-# 2) 함께 짓는 게임 팩(`SW_GAMES`, Dev 전용) — 타깃 SWGame_<게임>, 산출물 Bin/Games/<게임>/SWGame(`sw_addGamePackModule`).
+# 2) 함께 짓는 게임 팩(`SW_GAMES`, Dev 전용) — 타깃 SWGame_<게임>, 산출물 Bin/Games/<게임>/SWGame(`sw_addGameModule`).
 # 고르지 않은 게임 팩은 짓지 않는다 — 소스 검사 게이트에 적는다.
 # ------------------------------------------------------------------------------
 get_property(_swListGamePack GLOBAL PROPERTY SW_GAME_PACKS)

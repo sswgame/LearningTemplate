@@ -54,10 +54,11 @@ endfunction()
 #   REFLECTION_HEADERS  리플렉션 입력 헤더. 비우면 폴더를 재귀로 훑는다(`sw_addReflectionStep` 자동 훑기)
 #   REFLECTION_EXCLUDE  자동 훑기에서 뺄 경로 정규식(하위 폴더의 다른 모듈 — 키트 · 게임의 `/Editor/`)
 #   NO_REFLECTION       리플렉션 단계를 두지 않는다(RHI 백엔드)
-#   NO_REGISTRY         동적 모듈 레지스트리에 넣지 않는다 — App 이 `Bin/Modules` 에서 올리지 않는 게임 팩 사본(`sw_addGamePackModule`)
+#   NO_REGISTRY         동적 모듈 레지스트리에 넣지 않는다 — App 이 `Bin/Modules` 에서 올리지 않는 게임 팩(`sw_addGameModule`, 활성 게임이 아닌 것)
+#   MODULE_NAME         매니페스트 · 산출물 · ABI 스탬프의 모듈 이름(기본 타깃 이름) — 게임은 타깃 `SWGame_<게임>`, 모듈 `SWGame` 이다
 # ------------------------------------------------------------------------------
 function(sw_addModuleLibrary TARGET_NAME)
-	cmake_parse_arguments(ARG "NO_REFLECTION;NO_REGISTRY" "KIND;DEV_TYPE;EXPORTS;LOG_TAG;FOLDER;UNITY_BATCH;REFLECTION_EXCLUDE"
+	cmake_parse_arguments(ARG "NO_REFLECTION;NO_REGISTRY" "KIND;DEV_TYPE;EXPORTS;LOG_TAG;FOLDER;UNITY_BATCH;REFLECTION_EXCLUDE;MODULE_NAME"
 		"SOURCES;LINK_PUBLIC;LINK_PRIVATE;DEFINITIONS;REFLECTION_HEADERS" ${ARGN})
 
 	if(NOT ARG_DEV_TYPE MATCHES "^(SHARED|MODULE)$")
@@ -67,6 +68,14 @@ function(sw_addModuleLibrary TARGET_NAME)
 		set(libType STATIC)
 	else()
 		set(libType ${ARG_DEV_TYPE})
+	endif()
+	if(NOT ARG_MODULE_NAME)
+		set(ARG_MODULE_NAME ${TARGET_NAME})
+	endif()
+	# 게임 팩끼리 PCH 하나(`sw_game_pch`)를 나눠 쓴다 — 명령줄 정의가 같아야 하므로 Dev · clang-cl · PCH 켬일 때만(키트의 `sw_kit_pch` 와 같은 장치).
+	set(bShareGamePch OFF)
+	if(ARG_KIND STREQUAL "game" AND SW_ENABLE_PCH AND MSVC AND NOT libType STREQUAL "STATIC")
+		set(bShareGamePch ON)
 	endif()
 
 	# `Bin/Modules` 에 가는 모듈은 vcpkg applocal 을 끄고(이 함수 범위만) 서드파티 DLL 을 `Bin` 으로 모은다(`sw_stageModuleRuntimeDlls`).
@@ -80,6 +89,9 @@ function(sw_addModuleLibrary TARGET_NAME)
 		sw_stageModuleRuntimeDlls(${TARGET_NAME})
 	endif()
 	set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "${ARG_FOLDER}")
+	if(NOT ARG_MODULE_NAME STREQUAL TARGET_NAME)
+		set_target_properties(${TARGET_NAME} PROPERTIES OUTPUT_NAME "${ARG_MODULE_NAME}")
+	endif()
 	target_include_directories(${TARGET_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 	if(ARG_LINK_PUBLIC)
 		target_link_libraries(${TARGET_NAME} PUBLIC ${ARG_LINK_PUBLIC})
@@ -100,6 +112,14 @@ function(sw_addModuleLibrary TARGET_NAME)
 		sw_setTargetDefsHeader(${TARGET_NAME} ${listTargetDefsOption})
 		sw_addSharedPchOwner(sw_kit_pch "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h"
 			LINK GameFramework Engine sw_public_source_includes sw_global_options)
+	elseif(bShareGamePch)
+		# 자동 정의 `<타깃>_EXPORTS`(`SWGame_<게임>_EXPORTS`)는 게임마다 달라 PCH 를 나눌 수 없고 아무도 쓰지 않는다.
+		set_target_properties(${TARGET_NAME} PROPERTIES DEFINE_SYMBOL "")
+		target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" ${ARG_DEFINITIONS})
+		sw_configureDllExports(${TARGET_NAME} ${libType} ${ARG_EXPORTS})
+		sw_addSharedPchOwner(sw_game_pch "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h"
+			LINK Engine RuntimeAPI GameFramework sw_global_options
+			DEFINITIONS "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" SW_MODULE_EXPORTS ${ARG_DEFINITIONS})
 	else()
 		target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" ${ARG_DEFINITIONS})
 		sw_configurePch(${TARGET_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
@@ -111,7 +131,7 @@ function(sw_addModuleLibrary TARGET_NAME)
 	endif()
 
 	if(NOT ARG_NO_REGISTRY)
-		sw_registerDynamicModule(${TARGET_NAME} ${ARG_KIND})
+		sw_registerDynamicModule(${TARGET_NAME} ${ARG_KIND} MODULE_NAME ${ARG_MODULE_NAME})
 	endif()
 
 	if(ARG_UNITY_BATCH)
@@ -128,6 +148,8 @@ function(sw_addModuleLibrary TARGET_NAME)
 
 	if(ARG_KIND STREQUAL "kit")
 		sw_useSharedPch(${TARGET_NAME} sw_kit_pch)   # 소스(리플렉션 산출물 포함)가 다 붙은 뒤
+	elseif(bShareGamePch)
+		sw_useSharedPch(${TARGET_NAME} sw_game_pch)
 	endif()
 endfunction()
 
@@ -195,67 +217,52 @@ function(sw_linkSharedKit KIT_NAME SHARED_KIT_NAME)
 	target_link_libraries(${KIT_NAME} PUBLIC ${SHARED_KIT_NAME})
 endfunction()
 
-# 게임 팩 모듈(SWGame) — 링크하는 키트는 게임 매니페스트(`SWGame.module.json`)의 의존 가운데 Kit 인 것이다(CMake 에 다시 적지 않는다).
-# 활성 게임(`SW_ACTIVE_GAME`)이 아닌 폴더에서 부르면 함께 짓는 게임 팩(`SW_GAMES`)의 사본을 만든다(`sw_addGamePackModule`).
-function(sw_addGameModule TARGET_NAME)
+# ------------------------------------------------------------------------------
+# sw_addGameModule — 게임 팩 모듈 하나. 게임 폴더의 CMakeLists 한 줄(`sw_addGameModule(SWGame)`), 인자는 모듈 이름(엔진과의 계약 `SWGame`)이다.
+#
+# 타깃은 `SWGame_<게임>` 이고 산출물 · 매니페스트 · ABI 스탬프는 모듈 이름 그대로(`SWGame`)다 — 핫 리로드 · 모듈 호스트는 모듈 이름으로 찾는다.
+# 활성 게임(`SW_ACTIVE_GAME`): 동적 모듈 레지스트리에 들어가고(App 이 먼저 짓고 Shipping 이 정적으로 링크한다) `Bin/Modules/SWGame` 이다.
+#   타깃 이름은 전역 속성 `SW_ACTIVE_GAME_TARGET` 에 둔다 — 링크 · 테스트 의존은 이 속성으로 묻는다(이름을 적지 않는다).
+# 함께 짓는 게임(`SW_GAMES`, Dev 전용): 레지스트리 밖(`SW_GAME_PACK_TARGETS`)이고 `Bin/Games/<게임>/SWGame`, 링크 PDB 는 `Bin/Symbols/Games/<게임>/` 이다 —
+#   게임마다 같은 파일 이름이라 폴더로 가른다. 그 게임의 매니페스트를 DLL 옆에 둔다(`-game=` 으로 고르면 모듈 카탈로그가 읽는다).
+# 링크하는 키트는 그 게임 매니페스트의 의존 가운데 Kit 인 것이다(CMake 에 다시 적지 않는다) — 활성 게임은 모듈 표, 함께 짓는 게임은
+#   `sw_resolveModuleManifests` 가 읽어 둔 `SW_GAME_PACK_<게임>_DEPENDENCIES`. 게임의 에디터 확장(Editor/)은 활성 게임만 짓는다.
+# 엔진 · GameFramework · 키트는 모든 게임이 같은 타깃을 링크하므로 한 번만 컴파일되고, 게임끼리 PCH 하나(`sw_game_pch`)를 나눠 쓴다.
+# ------------------------------------------------------------------------------
+function(sw_addGameModule MODULE_NAME)
 	get_filename_component(gameName "${CMAKE_CURRENT_SOURCE_DIR}" NAME)
-	if(NOT gameName STREQUAL SW_ACTIVE_GAME)
-		sw_addGamePackModule(${TARGET_NAME} ${gameName})
-		return()
+	set(targetName "${MODULE_NAME}_${gameName}")
+	set(bActiveGame OFF)
+	if(gameName STREQUAL SW_ACTIVE_GAME)
+		set(bActiveGame ON)
 	endif()
 
-	sw_getModuleDependenciesOfKind(${TARGET_NAME} Kit listKit)
+	if(bActiveGame)
+		sw_getModuleDependenciesOfKind(${MODULE_NAME} Kit listKit)
+		set(listRegistryOption "")
+	else()
+		get_property(listDependency GLOBAL PROPERTY SW_GAME_PACK_${gameName}_DEPENDENCIES)
+		get_property(listModuleName GLOBAL PROPERTY SW_MODULE_NAMES)
+		set(listKit "")
+		foreach(dependency IN LISTS listDependency)
+			if(NOT dependency IN_LIST listModuleName)
+				message(FATAL_ERROR "[Games] ${gameName}: ${MODULE_NAME}.module.json depends on '${dependency}', which has no manifest (missing module)")
+			endif()
+			get_property(dependencyKind GLOBAL PROPERTY SW_MODULE_${dependency}_KIND)
+			get_property(dependencyActive GLOBAL PROPERTY SW_MODULE_${dependency}_ACTIVE)
+			if(NOT dependencyActive)
+				get_property(dependencyReason GLOBAL PROPERTY SW_MODULE_${dependency}_REASON)
+				message(FATAL_ERROR "[Games] ${gameName}: ${MODULE_NAME}.module.json depends on '${dependency}', which is ${dependencyReason}")
+			endif()
+			if(dependencyKind STREQUAL "Kit")
+				list(APPEND listKit ${dependency})
+			endif()
+		endforeach()
+		set(listRegistryOption NO_REGISTRY)
+	endif()
 
 	file(GLOB_RECURSE listGameSource CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 	# 게임의 에디터 확장(Editor/)은 따로 짓는 모듈이다(SWGameEditor).
-	list(FILTER listGameSource EXCLUDE REGEX "/Editor/")
-	sw_addModuleLibrary(${TARGET_NAME}
-		KIND game
-		DEV_TYPE MODULE
-		EXPORTS MODULE
-		LOG_TAG "Game"
-		FOLDER "Source/Games"
-		SOURCES ${listGameSource}
-		LINK_PRIVATE Engine RuntimeAPI GameFramework ${listKit}
-		UNITY_BATCH 8
-		REFLECTION_EXCLUDE "/Editor/"
-	)
-	if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Editor/CMakeLists.txt")
-		add_subdirectory(Editor)
-	endif()
-endfunction()
-
-# ------------------------------------------------------------------------------
-# sw_addGamePackModule — 활성 게임이 아닌 게임 팩 하나를 같은 빌드에서 짓는다(Dev 전용, `SW_GAMES` 가 고른 것).
-#
-# 엔진 · GameFramework · 키트는 활성 게임과 같은 타깃을 링크하므로 한 번만 컴파일된다. 산출물은 모듈 이름 그대로(`SWGame`)
-# `Bin/Games/<게임>/` 에 두고, 링크 PDB 는 `Bin/Symbols/Games/<게임>/` 이다 — 게임마다 같은 파일 이름이라 폴더로 가른다.
-# 주의: 동적 모듈 레지스트리에 넣지 않는다 — App 은 아직 `Bin/Modules` 의 활성 게임만 올리고, 이 DLL 을 먼저 지을 필요가 없다.
-#       ABI 스탬프 심볼은 모듈 이름(`sw_moduleEngineAbiStamp_SWGame`)이어야 핫 리로드가 같은 규칙으로 읽는다.
-#       링크하는 키트는 그 게임의 매니페스트 의존 가운데 Kit 인 것이다(`sw_resolveModuleManifests` 가 읽어 둔 `SW_GAME_PACK_<게임>_DEPENDENCIES`).
-#       게임의 에디터 확장(Editor/)은 활성 게임만 짓는다.
-# ------------------------------------------------------------------------------
-function(sw_addGamePackModule MODULE_NAME GAME_NAME)
-	set(targetName "${MODULE_NAME}_${GAME_NAME}")
-	get_property(listDependency GLOBAL PROPERTY SW_GAME_PACK_${GAME_NAME}_DEPENDENCIES)
-	get_property(listModuleName GLOBAL PROPERTY SW_MODULE_NAMES)
-	set(listKit "")
-	foreach(dependency IN LISTS listDependency)
-		if(NOT dependency IN_LIST listModuleName)
-			message(FATAL_ERROR "[Games] ${GAME_NAME}: ${MODULE_NAME}.module.json depends on '${dependency}', which has no manifest (missing module)")
-		endif()
-		get_property(dependencyKind GLOBAL PROPERTY SW_MODULE_${dependency}_KIND)
-		get_property(dependencyActive GLOBAL PROPERTY SW_MODULE_${dependency}_ACTIVE)
-		if(NOT dependencyActive)
-			get_property(dependencyReason GLOBAL PROPERTY SW_MODULE_${dependency}_REASON)
-			message(FATAL_ERROR "[Games] ${GAME_NAME}: ${MODULE_NAME}.module.json depends on '${dependency}', which is ${dependencyReason}")
-		endif()
-		if(dependencyKind STREQUAL "Kit")
-			list(APPEND listKit ${dependency})
-		endif()
-	endforeach()
-
-	file(GLOB_RECURSE listGameSource CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 	list(FILTER listGameSource EXCLUDE REGEX "/Editor/")
 	sw_addModuleLibrary(${targetName}
 		KIND game
@@ -267,15 +274,22 @@ function(sw_addGamePackModule MODULE_NAME GAME_NAME)
 		LINK_PRIVATE Engine RuntimeAPI GameFramework ${listKit}
 		UNITY_BATCH 8
 		REFLECTION_EXCLUDE "/Editor/"
-		NO_REGISTRY
+		MODULE_NAME ${MODULE_NAME}
+		${listRegistryOption}
 	)
 
-	set(outputDir "${CMAKE_BINARY_DIR}/Bin/${SW_DIR_BIN_GAMES}/${GAME_NAME}")
-	set(symbolDir "${CMAKE_BINARY_DIR}/Bin/Symbols/${SW_DIR_BIN_GAMES}/${GAME_NAME}")
-	# 그 게임의 매니페스트를 DLL 옆에 둔다 — `-game=` 으로 고르면 모듈 카탈로그가 `Modules/SWGame.module.json` 대신 읽는다(켜짐 표가 게임별).
+	if(bActiveGame)
+		set_property(GLOBAL PROPERTY SW_ACTIVE_GAME_TARGET ${targetName})
+		if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Editor/CMakeLists.txt")
+			add_subdirectory(Editor)
+		endif()
+		return()
+	endif()
+
+	set(outputDir "${CMAKE_BINARY_DIR}/Bin/${SW_DIR_BIN_GAMES}/${gameName}")
+	set(symbolDir "${CMAKE_BINARY_DIR}/Bin/Symbols/${SW_DIR_BIN_GAMES}/${gameName}")
 	configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${MODULE_NAME}.module.json" "${outputDir}/${MODULE_NAME}.module.json" COPYONLY)
 	set_target_properties(${targetName} PROPERTIES
-		OUTPUT_NAME "${MODULE_NAME}"
 		RUNTIME_OUTPUT_DIRECTORY "${outputDir}$<0:>"
 		LIBRARY_OUTPUT_DIRECTORY "${outputDir}$<0:>"
 		PDB_OUTPUT_DIRECTORY "${symbolDir}"
@@ -284,7 +298,6 @@ function(sw_addGamePackModule MODULE_NAME GAME_NAME)
 	)
 	sw_addModuleEngineStamp(${targetName} MODULE_NAME ${MODULE_NAME})
 	set_property(GLOBAL APPEND PROPERTY SW_GAME_PACK_TARGETS ${targetName})
-
 	if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Editor")
 		sw_declareUnbuiltDirectory("${CMAKE_CURRENT_SOURCE_DIR}/Editor")
 	endif()

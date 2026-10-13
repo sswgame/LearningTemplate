@@ -136,7 +136,7 @@ string(REPLACE ".json" "" swGameNames "${swGamePresetFiles}")
 set_property(CACHE SW_ACTIVE_GAME PROPERTY STRINGS ${swGameNames})
 
 # 활성 게임과 함께 지을 게임 팩(Dev 전용) — 비우면 활성 게임만, `ALL` 이면 Source/Games 전부, 아니면 이름 목록(`NileCity;Shooter3D`).
-# 함께 짓는 게임은 `SWGame_<게임>` 타깃으로 `Bin/Games/<게임>/SWGame` 에 나오고 엔진 · 프레임워크 · 키트는 한 번만 컴파일된다(`sw_addGamePackModule`).
+# 함께 짓는 게임은 `SWGame_<게임>` 타깃으로 `Bin/Games/<게임>/SWGame` 에 나오고 엔진 · 프레임워크 · 키트는 한 번만 컴파일된다(`sw_addGameModule`).
 # `SW_BUILD_UNUSED_KITS=OFF` 이면 고른 게임들이 의존으로 닿는 키트의 합집합만 짓는다. Shipping 은 활성 게임 하나를 정적으로 링크하므로 이 값을 보지 않는다.
 set(SW_GAMES "" CACHE STRING "활성 게임과 함께 지을 게임 팩(Dev 전용): 비움 | ALL | 이름 목록")
 

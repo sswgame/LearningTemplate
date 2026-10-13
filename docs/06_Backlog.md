@@ -214,15 +214,10 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   ③ 그림자 PassCB 슬롯 재사용 — GPU 가 나중에 읽는 순서 문제, ④ `TaskHandle` · `TaskStageHandle` 이 `TaskManager` 소멸 뒤 해제될 때 노드를 풀로 돌려주는 수명 순서. (컨테이너 레이스 `ConcurrentTextureAcquireCreatesOnce` 만 탐지기가 정확히 잡았다.)
   후보: (a) `thread::join` · 이벤트 대기도 대기 그래프(잠금 관찰자 인터페이스)에 넣고, 정적 소멸자 · `DllMain` 안의 `join` 을 막는 린트 · 단언을 둔다, (b) `EditorBackgroundTask` 처럼 '대기 여부 + 결과' 를 따로 읽게 하는 API 는 한 번에 돌려주는 형태로 바꿔 틀릴 수 없게 한다,
   (c) 풀을 가리키는 핸들에 세대 · 생존 확인을 둔다. 탐지기가 과거에 몇 건을 잡았는지 이력은 확인하지 않았다. 설계: 새 전용 함수를 늘리지 말고 기존 관찰자 · API 모양을 고친다.
-- `C-25` **게임 여럿을 빌드 한 번에 짓고, 실행할 때 고르고, 키트는 필요한 것만**(2026-10-13, 사용자 확정). 목표: Engine 을 뺀 나머지(GameFramework · 키트 · 게임 · RHI · 에디터)는
-  빌드할 때 고른 조합에 필요한 DLL 만 컴파일하고, 실행 중에는 핫 리로드로 바꾼다. 결정은 [결정 기록](09_Decisions.md) 5-2. 들어간 것: `SW_GAMES` · `SWGame_<게임>` → `Bin/Games/<게임>/`,
-  `Ninja-Debug-Lean`(키트 합집합만), Dev `-game=<이름>`(`GameSelection` — 프리셋 · 매니페스트 · DLL · 핫 리로드가 그 게임의 것), Dev 의 `ConfigConstants.h` 에서 게임 이름을 뺌.
-  남은 것: (1) 활성 게임도 `SWGame_<게임>` 으로 옮기고 `Bin/Modules/SWGame` 을 없앤다 — `TARGET SWGame`(Shipping 링크 `ExecutableTargets.cmake`) · 테스트 · SmokeTest 가 그 이름을 본다.
-  그 뒤 게임 프리셋 8개(`Ninja-Debug-<게임>`)는 Shipping · 호스트 테스트용만 남기거나 지운다. (2) 호스트 테스트(`AppScenarioTest`)가 `-game=` 으로 게임마다 시나리오를 돌게 한다 — 지금은 프리셋 빌드의 활성 게임만.
-  (3) **실행 중 키트 더하기 · 빼기** — 적재 순서는 기동 때 매니페스트로 한 번 정해진다. 실행 중 매니페스트 변경을 받아 의존 순서대로 올리고 내리는 경로가 필요하다.
-  (4) `SW_GAMES` 로 더한 키트도 활성 게임 실행에서 올라온다(카탈로그는 `Bin/Modules` 의 매니페스트 전부, 켜짐은 고른 게임의 표) — 고른 게임이 닿지 않는 키트는 올리지 않게.
-  (5) 게임 팩마다 PCH 를 따로 컴파일한다 — 키트처럼 `sw_addSharedPchOwner` 로 나눌 수 있는지. (6) `sw_removeStaleBinaryOutputs` 는 `Bin/Modules` 만 보므로 고르지 않게 된 게임의 `Bin/Games/<게임>/` 이 남는다.
-  (7) 전용 서버(`Server`)도 `-game=` 을 받지만 서버 쪽 게임 팩 실행은 확인하지 않았다.
+- `C-25` **게임 여럿을 빌드 한 번에 짓고, 실행할 때 고르고, 키트는 필요한 것만**(2026-10-13, 사용자 확정). 결정은 [결정 기록](09_Decisions.md) 5-2, 쓰는 법은 `Source/Games/README.md`.
+  남은 것: (1) 호스트 테스트(`AppScenarioTest`)가 `-game=` 으로 게임마다 시나리오를 돌게 한다 — 지금은 활성 게임만. 그 뒤 게임 프리셋 8개(`Ninja-Debug-<게임>`)는 Shipping 용만 남기거나 지운다.
+  (2) `SW_GAMES` 로 더한 키트도 활성 게임 실행에서 올라온다(카탈로그는 `Bin/Modules` 의 매니페스트 전부, 켜짐은 고른 게임의 표) — 고른 게임이 닿지 않는 키트는 올리지 않게.
+  (3) 전용 서버 `-game=NileCity` 는 기동 · 60 틱 종료까지 확인했다(게임 팩 DLL · `Config/Server/<게임>.json`, 없으면 Dev 기본값). 서버에서 팩의 `.ogg` 디코드 경고가 난다 — 서버가 오디오를 읽을 이유가 있는지 본다.
   **sccache 가 거의 쓰이지 않는다** — 요청 19,477건 중 캐시 가능 96건, 나머지는 PCH(`/Fp` 19,202 · `/Yc` 179)라 캐시 불가(`Tools/Sccache/sccache.exe --show-stats`).
   `SW_ENABLE_PCH=OFF` + sccache(빈 캐시 · 폴더를 지우고 다시 지은 캐시 적중) 대 PCH ON 의 전체 빌드 시간과 한 파일 고쳐 다시 짓는 시간을 같은 조건으로 비교한다.
 

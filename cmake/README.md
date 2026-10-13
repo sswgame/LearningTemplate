@@ -112,7 +112,7 @@ Dev 와 Shipping · Server 는 다른 갈래를 탄다 — 고친 갈래의 프�
 ## 함정 · 계약
 
 - **Dev 산출물 자리**: 모듈 DLL(GF_* · RHI_* · EditorModule · SWGame)은 `Bin/Modules`, Engine · GameFramework · 서드파티 DLL 은 `Bin`, Windows PDB 는 `Bin/Symbols`,
-  함께 짓는 게임 팩(`SW_GAMES`, `sw_addGamePackModule`)은 `Bin/Games/<게임>/SWGame` · `Bin/Symbols/Games/<게임>/`, 테스트 실행 파일은 `TestBin` 이다. 런타임은 `FileUtil::getBinaryDirectory`(TestBin → Bin) · `ModuleImageUtil::findModuleLibraryPath`(Modules → Bin)로 찾는다.
+  함께 짓는 게임 팩(`SW_GAMES`, `sw_addGameModule` — 타깃은 게임마다 `SWGame_<게임>`)은 `Bin/Games/<게임>/SWGame` · `Bin/Symbols/Games/<게임>/`, 테스트 실행 파일은 `TestBin` 이다. 런타임은 `FileUtil::getBinaryDirectory`(TestBin → Bin) · `ModuleImageUtil::findModuleLibraryPath`(Modules → Bin)로 찾는다.
   테스트가 키트를 링크하면 그 DLL 을 TestBin 에 복사한다(OS 로더가 `Bin/Modules` 를 보지 않는다).
   옛 자리 산출물과 꺼진 모듈의 DLL 은 configure 가 지운다(`sw_removeStaleBinaryOutputs`, 잠긴 파일은 경고).
 - **서드파티 DLL 은 `Bin` 에 한 벌이다.** vcpkg 의 `add_library` 래퍼는 타깃을 만드는 순간 `VCPKG_APPLOCAL_DEPS` 를 읽어 의존 DLL 을 타깃 **옆에** 복사하는 POST_BUILD 를 단다.

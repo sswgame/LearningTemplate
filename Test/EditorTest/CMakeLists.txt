@@ -138,8 +138,9 @@ target_include_directories(EditorTest PRIVATE "${CMAKE_SOURCE_DIR}/Source")
 if(TARGET Server)
 	add_dependencies(EditorTest Server)
 endif()
-if(TARGET SWGame)
-	add_dependencies(EditorTest SWGame)
+get_property(swActiveGameTarget GLOBAL PROPERTY SW_ACTIVE_GAME_TARGET)
+if(swActiveGameTarget AND TARGET ${swActiveGameTarget})
+	add_dependencies(EditorTest ${swActiveGameTarget})
 endif()
 
 # EditorConfig·EditorToolDefaults 는 REFLECT 타입이라 StaticType() 이 코드젠에서 나온다. EditorModule 을

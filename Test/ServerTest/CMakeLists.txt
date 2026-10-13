@@ -18,6 +18,7 @@ sw_addTestExecutable(ServerTest
 )
 # 테스트는 빌드된 Server 를 띄운다 — 옆에 서 있어야 한다(Dev 는 게임 모듈도).
 add_dependencies(ServerTest Server)
-if(TARGET SWGame)
-	add_dependencies(ServerTest SWGame)
+get_property(swActiveGameTarget GLOBAL PROPERTY SW_ACTIVE_GAME_TARGET)
+if(swActiveGameTarget AND TARGET ${swActiveGameTarget})
+	add_dependencies(ServerTest ${swActiveGameTarget})
 endif()

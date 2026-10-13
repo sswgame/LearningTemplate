@@ -6,10 +6,11 @@
 여기 있는 게임은 모두 테스트 게임입니다. 장르 키트와 엔진 기능이 실제 게임 흐름에서 맞물리는지 확인하고, 새 게임을 만들 때 본보기로 씁니다.
 
 App 이 올리는 활성 게임은 하나입니다. CMake 옵션 `SW_ACTIVE_GAME` 이 고르고, 게임마다 Debug 프리셋 `Ninja-Debug-<게임>` 이 있습니다.
-활성 게임의 빌드 타깃 이름은 늘 `SWGame` 입니다. 핫 리로드가 다시 로드할 모듈을 고정된 이름으로 찾기 때문입니다.
+게임마다 빌드 타깃은 `SWGame_<게임>` 이고 모듈 이름 · 산출물은 늘 `SWGame` 입니다. 핫 리로드가 다시 로드할 모듈을 고정된 이름으로 찾기 때문입니다.
+활성 게임은 `Bin/Modules/SWGame` 이고, Shipping 링크 · 테스트 의존은 타깃 이름을 적지 않고 전역 속성 `SW_ACTIVE_GAME_TARGET` 으로 묻습니다.
 
 `SW_GAMES`(Dev 전용)로 다른 게임도 같은 빌드에서 짓습니다. `Ninja-Debug` 는 `ALL` 이라 여덟 게임을 한 번에 짓고, 엔진 · 프레임워크 · 키트는 한 번만 컴파일합니다.
-함께 짓는 게임은 타깃 `SWGame_<게임>`, 산출물 `Bin/Games/<게임>/SWGame.dll`(PDB 는 `Bin/Symbols/Games/<게임>/`)입니다. `App.exe -game=<게임>`(Dev)으로 고르면 그 게임의 프리셋(`Config/Game/<게임>.json`) · 매니페스트(켜짐 표) · DLL 을 쓰고, 핫 리로드도 그 DLL 을 봅니다(`GameSelection`).
+함께 짓는 게임의 산출물은 `Bin/Games/<게임>/SWGame.dll`(PDB 는 `Bin/Symbols/Games/<게임>/`)이고, 게임끼리 PCH 하나(`sw_game_pch`)를 나눠 씁니다. `SW_GAMES` 를 줄이면 남은 `Bin/Games/<게임>/` 은 지우면 됩니다. `App.exe -game=<게임>`(Dev)으로 고르면 그 게임의 프리셋(`Config/Game/<게임>.json`) · 매니페스트(켜짐 표) · DLL 을 쓰고, 핫 리로드도 그 DLL 을 봅니다(`GameSelection`).
 `-game=` 이 없으면 빌드의 활성 게임입니다. 이 빌드가 짓지 않은 게임을 고르면 기동이 오류로 섭니다. Shipping 은 구운 게임 하나라 `-game=` 을 보지 않습니다.
 게임 이름은 엔진 TU 에 굽지 않으므로(활성 게임은 `Bin/Modules/ActiveGame.txt`) 활성 게임을 바꿔도 다시 컴파일되는 것은 게임 모듈뿐입니다.
 `Ninja-Debug-Lean` 은 `SW_BUILD_UNUSED_KITS=OFF` 라 활성 게임과 `SW_GAMES` 로 고른 게임이 의존으로 닿는 키트의 합집합만 짓습니다(`-DSW_GAMES=NileCity;Shooter3D`).

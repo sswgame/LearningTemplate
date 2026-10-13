@@ -66,8 +66,9 @@ function(sw_configureAppDependencies TARGET_NAME)
 	#    쿠킹이 App 뒤인 이유: 씬 쿠킹이 App --cook-scenes 라서다. 반대로 걸면 깨끗한 트리에서 App 이
 	#    없는 채로 쿠커가 돌아 죽는다(리눅스 CI). 기본 빌드(all)에 넣어 `cmake --build` 한 번이면 팩까지 선다.
 	if(SW_SHIPPING_BUILD)
-		if(TARGET SWGame)
-			target_link_libraries(${TARGET_NAME} PRIVATE SWGame)
+		get_property(swActiveGameTarget GLOBAL PROPERTY SW_ACTIVE_GAME_TARGET) # SWGame_<활성 게임>(`sw_addGameModule`)
+		if(swActiveGameTarget AND TARGET ${swActiveGameTarget})
+			target_link_libraries(${TARGET_NAME} PRIVATE ${swActiveGameTarget})
 		endif()
 
 		# 3) 리플렉션을 담은 정적 라이브러리(Engine · GameFramework · 킷 · 게임)는 통째로 링크한다. 생성된 *.gen.cpp 의 등록기는 파일 범위
