@@ -23,6 +23,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 
@@ -69,11 +70,19 @@ namespace sw
      * @note 매 프레임 갱신하지 않습니다. 트랜지언트는 **구성이 바뀔 때만** 다시 만들어지므로
      *       그때 한 번 공개하면 됩니다. 세대 번호로 "목록이 바뀌었나" 를 알 수 있습니다.
      */
-    class SW_API RenderTargetRegistry
+    class SW_API RenderTargetRegistry : public ISubsystem
     {
     public:
+        /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
+        static constexpr const utf8* kSubsystemName = "RenderTargetRegistry";
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        MemoryTag           getSubsystemMemoryTag() const override { return MemoryTag::RenderCPU; }
+
         RenderTargetRegistry()                                         = default;
-        ~RenderTargetRegistry()                                        = default;
+        ~RenderTargetRegistry() override                               = default;
         RenderTargetRegistry( const RenderTargetRegistry& )            = delete;
         RenderTargetRegistry& operator=( const RenderTargetRegistry& ) = delete;
 

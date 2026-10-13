@@ -1048,20 +1048,6 @@ SW_TEST_CASE( MaterialTest, UnknownEnumTextKeepsTheValueAndSaysSo )
  */
 SW_TEST_CASE( MaterialTest, FormatCheckDoesNotNeedTheAssetManager )
 {
-    /** @brief 이 범위 동안 엔진 서비스를 풀고, 나갈 때 원래 표로 되묶는다(단언이 일찍 나가도). */
-    struct ScopedUnboundEngineServices
-    {
-        sw::EngineServices _saved;
-
-        ScopedUnboundEngineServices()
-            : _saved{ sw::engine::getBoundEngineServices() }
-        {
-            sw::engine::unbindEngineServices();
-        }
-
-        ~ScopedUnboundEngineServices() { test::rebindEngineServices( _saved ); }
-    };
-
     const sw::string futureMaterialPath = test::makeTempPath( "future.material" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( futureMaterialPath, "<MaterialDesc formatVersion=\"999\" name=\"Future\"/>" ) );
     const sw::string futureInstancePath = test::makeTempPath( "future.materialinstance" );
@@ -1069,7 +1055,7 @@ SW_TEST_CASE( MaterialTest, FormatCheckDoesNotNeedTheAssetManager )
 
     SW_ASSERT_TRUE( sw::engine::areEngineServicesBound() );
     {
-        const ScopedUnboundEngineServices unbound;
+        const test::ScopedUnboundEngineServices unbound;
         SW_ASSERT_FALSE( sw::engine::areEngineServicesBound() );
 
         test::ScopedDefensiveTestLog expected( "material files newer than this build" );

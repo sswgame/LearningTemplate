@@ -643,16 +643,16 @@ SW_TEST_CASE( UILayoutTest, UISystemFollowsCultureDirection )
  */
 SW_TEST_CASE( UILayoutTest, UISystemFollowsBoundServiceCultureDirection )
 {
-    sw::LocalizationManager loc;
-    SW_ASSERT_TRUE( sw::test::LocalizationTestUtil::loadEngineCultures( loc ) );
-    SW_ASSERT_TRUE( loc.setCurrentLanguage( "qps-plocm" ) );
-    const sw::EngineServices saved   = sw::engine::getBoundEngineServices();
-    sw::EngineServices       withRTL = saved;
-    withRTL._pLocalizationManager    = &loc;
-    test::rebindEngineServices( withRTL );
+    bool bRightToLeft = false;
+    {
+        test::ScopedEngineServiceOverride withRTL;
+        sw::LocalizationManager&          loc = withRTL.add( sw::make_unique<sw::LocalizationManager>() );
+        SW_ASSERT_TRUE( sw::test::LocalizationTestUtil::loadEngineCultures( loc ) );
+        SW_ASSERT_TRUE( loc.setCurrentLanguage( "qps-plocm" ) );
+        SW_ASSERT_TRUE( withRTL.bind() == nullptr );
 
-    sw::UISystem ui;
-    const bool   bRightToLeft = ui.makeLayoutContext()._bRightToLeft;
-    test::rebindEngineServices( saved );
+        sw::UISystem ui;
+        bRightToLeft = ui.makeLayoutContext()._bRightToLeft;
+    }
     SW_EXPECT_TRUE( bRightToLeft );
 }

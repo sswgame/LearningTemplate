@@ -9,6 +9,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 namespace sw
 {
@@ -26,8 +27,15 @@ namespace sw
      * @brief 장르에 묶이지 않는 디버그 오버레이 상태입니다.
      * @details float32 게이지 · 짧은 문자열을 hashed_string 키로 기록합니다.
      */
-    struct SW_API DebugOverlayState
+    struct SW_API DebugOverlayState : public ISubsystem
     {
+        /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
+        static constexpr const utf8* kSubsystemName = "DebugOverlay";
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+
         unordered_map<hashed_string, float32> _mapFloat;
         unordered_map<hashed_string, string>  _mapString;
         uint8                                 _bVisible : 1;

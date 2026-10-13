@@ -32,16 +32,22 @@
 ## 진행 중: 서브시스템 정리 (2026-10-14, 단계마다 main 에 병합)
 
 순서: ① ISubsystem · SubsystemCollection 을 Core 로(끝) ② RHI 이전(끝) ③ 엔진 수명 매니저가 ISubsystem 직접 상속(끝, `93f0693e1`, EngineLoop.cpp 1361 → 822 줄)
-④ EngineServiceCollection · 전역 서비스 표를 SubsystemCollection 소유 + 조회로 흡수 ⑤ EngineBootstrap → Logger · NamePool · CommandLine · CrashHandler ·
-Diagnostics 서브시스템 ⑥ EngineLoop → Engine 개명(조정자가 시점을 알림). 그 뒤 후보는 백로그 `C-26` · `C-27`.
+④ 소유 · 조회 흡수 ⑤ 부트스트랩 분해 — 조회 창구는 main 의 `SubsystemScope`(`6ccdeb60e`)를 쓰고 ④b(세 범위 + ⑤ 를 함께 — 서비스 범위의 객체는 이름 풀 · 로거 뒤에 만들어야 해서 둘을 나눌 수 없었다)
+끝, EngineLoop.cpp 822 → 887 줄(부트스트랩 · 서비스 범위 등록이 들어왔고 EngineBootstrap 201 줄 · EngineServiceCollection 265 줄이 없어졌다).
+남은 ④: ④c 모듈 조회 창구(호스트 서비스 표 ModuleServiceTable 을 엔진 범위 위의 `ISubsystemLocator` 로 — 게임 · 에디터 범위(`6ccdeb60e`)가 이미 그 위에 얹혀
+있으니 게임 모듈에는 GameVisible 만 보이는 거름 범위를 둔다) ④d 층 게이트(Games · GameFramework ·
+Editor 가 EngineLoop 헤더를 include 하면 실패). ⑥ EngineLoop → Engine 개명(조정자가 시점을 알림). 그 뒤 C-27 ① ② ③ ⑤ ⑥(조정자 분담 — C-26 · C-27 ④ 는 다른 통합 담당).
+- ④b 모양: 호스트는 `_bootstrap` → `_services` → `_startup` 세 컬렉션을 부모로 잇는다. 서비스 표(`engine::getXxx`)는 소유 없이 바인딩 때 한 번 찾아 둔 캐시이고,
+  필수 행이 비면 호스트가 서지 않는다(`CheckEngineServiceBinding` 게이트는 지웠다). 세 범위는 `SubsystemScope`(타입 해시), 서브시스템이 아닌 행은 호스트가 `bind`.
+  하네스는 `EngineSubsystemHost::kTestHarness` 로 서서 클라이언트 전용을 표의 자리로만 둔다. 테스트의 서비스 갈아 끼우기는 `test::ScopedEngineServiceOverride`.
 - ③ 끝: FunctionSubsystem · FunctionSubsystemDesc · EngineFunctionStep · EngineInitSequence.h 가 없다. 엔진 수명 매니저(TaskManager · AsyncFileIO ·
   CompressionCodecRegistry · ConfigManager · AssetManager · IAudioService · InputManager · AssetStreamingQueue · SceneManager · UserSettingsManager)가 직접 상속하고,
   호스트 엮기는 작은 클래스다 — Reflection · ModuleImages · ModuleTypes(Engine/Module), EngineDefaultAssets(Localization), Headless(Engine 루트),
   RHI · FrameRenderer · RenderThread · LiveShader · SceneRHI(Engine/Renderer). 에디터의 기동 단계 일곱은 ImGuiEditor 의 중첩 클래스다.
-  역방향 의존(`getSubsystemDependents`)으로 높은 층이 낮은 층의 순서를 적는다. 남은 Core 매니저 CommandLineManager · GlobalVariableManager 는 ⑤(부트스트랩) 에서,
-  LocalizationManager · ResourcePakManager · ServerServiceManager 는 ④ 에서 본다(지금은 기동 순서 밖 — 초기화 · 종료 짝이 없다).
+  역방향 의존(`getSubsystemDependents`)으로 높은 층이 낮은 층의 순서를 적는다. ResourcePakManager · ServerServiceManager 는 아직 범위 밖이다(서비스 표의 행이 아니다 —
+  C-27 정리 때 본다).
 - ④ 요구(조정자): Engine 클래스는 호스트만 안다(Games · GameFramework · Editor 가 include 하면 층 게이트 실패), 모듈 조회 창구는 읽기 전용 `ISubsystemLocator`
-  (Core 의 SubsystemCollection 이 구현, 호스트가 모듈 API 표로 넘김), 컴포넌트는 `SceneEngineServices` 주입 유지 · 확대, 씬 수명은 `ISceneService` 로 따로,
+  (Core 의 SubsystemScope 가 구현, 호스트가 모듈 API 표로 넘김), 컴포넌트는 `SceneEngineServices` 주입 유지 · 확대, 씬 수명은 `ISceneService` 로 따로,
   DLL 경계 조회는 이름 · TypeInfo 기반(핫 리로드 SmokeTest 로 확인). 호스트 범위 컬렉션(App · ServerApp · ModuleHost)이 엔진 범위 위에 얹힐 수 있게 로케이터에 범위 체인을 열어 둔다.
 - 설계 메모(구현은 ⑥ 뒤): 엔진의 ModuleImages · ModuleTypes 단계가 ModuleHost 델리게이트를 부르는 호스트-엔진 고리는 호스트 범위 서브시스템
   (ModuleHost)을 엔진 범위의 부모로 두고, 엔진의 ModuleImages 가 "부모 범위의 모듈 호스트" 에 의존하는 꼴로 표현할 수 있는지 본다 — DLL 언로드는 씬 뒤 ·

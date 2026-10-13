@@ -12,6 +12,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 namespace sw
 {
@@ -67,9 +68,16 @@ namespace sw
      *          **동의**를 바꾸면 이미 있는 묶음에도 적용합니다: `local` 로 바꾸면 기다리던 · 보낼 줄의 묶음이 기계 안으로 돌아오고(철회), `send` 로 바꾸면
      *          답을 기다리던 묶음이 보낼 줄에 섭니다(이미 `local` 로 모인 묶음은 소급해 보내지 않는다).
      */
-    class SW_API CrashReportService
+    class SW_API CrashReportService : public ISubsystem
     {
     public:
+        /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
+        static constexpr const utf8* kSubsystemName = "CrashReport";
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+
         static constexpr const utf8* kConsentSettingID = "telemetry.crashReports";
         /** @brief 보고 프로세스를 띄우는 명령줄 키입니다 — `ArgumentList.xxx` 의 CRASH_REPORTER 철자(`-crash-reporter=<폴더>`). */
         static constexpr const utf8* kReporterArgument  = "-crash-reporter";
@@ -81,7 +89,7 @@ namespace sw
         static constexpr uint64      kMaxLogBytes       = 512u * 1024u;
 
         CrashReportService();
-        ~CrashReportService();
+        ~CrashReportService() override;
         CrashReportService( const CrashReportService& )            = delete;
         CrashReportService& operator=( const CrashReportService& ) = delete;
 

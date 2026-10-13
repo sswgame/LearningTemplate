@@ -9,10 +9,8 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
-#include "Core/Subsystem/SubsystemCollection.h"
+#include "Core/Subsystem/SubsystemScope.h"
 
-#include "Engine/EngineBootstrap.h"
-#include "Engine/EngineServiceCollection.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/HeadlessSubsystem.h"
 #include "Engine/Input/ShellInputActions.h"
@@ -33,6 +31,7 @@ namespace sw
     class AssetStreamingQueue;
     class CameraComponent;
     class CommandLineManager;
+    class CommandLineSubsystem;
     class CommandStack;
     class CompressionCodecRegistry;
     class ConfigManager;
@@ -172,8 +171,9 @@ namespace sw
         // ----------------------------------------------------------------------
         // Getter (App 이 ModuleHost 등과 연동하는 데 필요)
         // ----------------------------------------------------------------------
-        ConfigManager*      getConfigManager() const { return _pConfigManager; }
-        CommandLineManager* getCommandLineManager() const { return _owned._pCommandLineManager.get(); }
+        ConfigManager* getConfigManager() const { return _pConfigManager; }
+        /** @brief 부트스트랩 범위의 명령줄입니다. 기동 전 · 종료 뒤에는 nullptr 입니다. */
+        CommandLineManager* getCommandLineManager() const;
         RHI*                getRHI() const { return _pRHI; }
         RenderThread*       getRenderThread() const { return _pRenderThread; }
         bool                isHeadless() const { return _headlessState._bHeadless; }
@@ -204,27 +204,23 @@ namespace sw
 
     private:
         /**
-         * @brief 목록(`EngineServiceList.xxx`)의 `EngineCreated` 서비스 저장소입니다. 생성 · 바인딩이 여기서 나옵니다.
-         * @details 목록에 줄을 더하면 이 저장소가 같이 자랍니다. 만드는 방법이 특별한 셋
-         *          (팩토리 · 구성별 조건부)만 아래에 손으로 남아 있습니다.
+         * @brief 부트스트랩 범위입니다 — 진단 도구 · 이름 풀 · 로거 · 명령줄(전역 변수) · 크래시 핸들러 · 정적 저장소. 가장 먼저 서고 가장 나중에 사라진다.
+         * @details 멤버 중 맨 앞이라 소멸도 맨 마지막이다(기동이 중간에 멈춰 `shutdown` 없이 소멸해도 위 범위가 먼저 사라진다).
          */
-        EngineServiceCollection _owned;
-
-        /** @brief 기동 표 밖의 부트스트랩(로거 · 크래시 핸들러 · 진단 도구 · 명령줄 · 전역 변수)입니다. 테스트 하네스와 같은 것을 쓴다. `_owned` 보다 먼저 사라진다. */
-        EngineBootstrap _bootstrap;
+        SubsystemScope _bootstrap;
+        /** @brief 서비스 범위입니다 — 엔진 범위의 어느 것보다 오래 사는 공용 서비스(이벤트 · 지역화 · 디버그 도구 · 프로파일러 · 백엔드 레지스트리 …). 부모는 `_bootstrap`. */
+        SubsystemScope _services;
+        /** @brief 부트스트랩 범위의 명령줄 서브시스템입니다(`_bootstrap` 소유 — 빌려 쓴다). */
+        CommandLineSubsystem* _pCommandLineSubsystem;
+        /** @brief 서비스 범위의 이벤트 디스패처입니다(`_services` 소유 — 빌려 쓴다). 프레임마다 큐를 비운다. */
+        EventDispatcher* _pEventDispatcher;
         /** @brief 서브시스템 `Config` 의 설정 표입니다(`_startup` 소유 — 빌려 쓴다). App · 서버가 `getConfigManager` 로 읽는다. */
         ConfigManager* _pConfigManager;
         /** @brief 셸 디버그 액션 맵입니다(`updateShellActions` 가 처음 부를 때 만든다). `shutdown` 이 단계 종료 뒤 · 해제 전에(입력 매니저가 소멸하기 전에) 놓는다. */
         ShellInputActions _shellActions;
-        /** @brief 만든 오디오 서비스입니다(역할별 팩토리). 서비스 표에 묶은 뒤 소유를 서브시스템 `Audio` 로 넘긴다 — 이 뒤로는 비어 있다. */
-        unique_ptr<IAudioService> _audioService;
-        /** @brief 만든 렌더러입니다(서비스 표에 실린다). 묶은 뒤 소유를 서브시스템 `FrameRenderer` 로 넘긴다 — 이 뒤로는 비어 있다. */
-        unique_ptr<FrameRenderer> _frameRenderer;
-        Delegate<void()>          _onScenesReleased;
+        Delegate<void()>  _onScenesReleased;
         /** @brief 기동 단계 `ModuleTypes` 가 부르는 호스트의 타입 공급자 로더입니다(`setModuleTypeLoader`). */
         ModuleTypeLoaderDelegate _moduleTypeLoader;
-        /** @brief 에디터 Undo/Redo 전용이라 배포본에는 만들지 않습니다(목록의 HostCreated). 씬이 바뀌면 씬 매니저가 비운다. 모든 서브시스템이 소멸한 뒤 놓는다. */
-        unique_ptr<CommandStack> _commandStack;
         /**
          * @brief 프레임 관찰자 목록입니다(소유하지 않는다). 프레임 앞(입력 전) · 씬 틱 뒤(UI 앞) · 패킷 채우기 · 프레임 뒤(렌더 제출 뒤) · 창 닫힘에서 붙인 순서대로 부르고,
          *        종료 코드를 내면 `requestQuit` 입니다. 텔레메트리(기동 단계 `Telemetry` 가 붙인다)와 App 의 진단 · 자동화도 여기로 붙습니다.
@@ -249,8 +245,8 @@ namespace sw
         FrameProfileSession _profileSession;
         /** @brief 메모리 태그 예산 · 보고(배포본에서는 아무 일도 하지 않는다). */
         MemoryBudgetMonitor _memoryBudgetMonitor;
-        /** @brief 기동 단계(서브시스템)의 목록입니다 — 선언된 의존으로 위상 정렬해 초기화하고 역순으로 종료 · 소멸합니다. 서브시스템 객체를 소유합니다. */
-        SubsystemCollection _startup;
+        /** @brief 엔진 범위(기동 단계)입니다 — 선언된 의존으로 위상 정렬해 초기화하고 역순으로 종료 · 소멸합니다. 부모는 `_services`. 서브시스템 객체를 소유합니다. */
+        SubsystemScope _startup;
         /** @brief 서브시스템 `RHI` 입니다(`_startup` 소유). 백엔드 교체가 이것에 기대는 단계만 내렸다가 다시 세운다. */
         RHISubsystem* _pRHISubsystem;
         /** @brief 서브시스템 `RHI` 의 RHI 입니다(`_startup` 소유 — 그 단계가 선 뒤부터 빌려 쓴다). 서지 않았으면(전용 서버 · 헤드리스) nullptr 입니다. */

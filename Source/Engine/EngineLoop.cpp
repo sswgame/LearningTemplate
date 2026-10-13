@@ -16,12 +16,19 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/hashed_string.h"
 #include "Core/String/string_splitter.h"
+#include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Audio/LipSyncImport.h"
+#include "Engine/Bootstrap/CommandLineSubsystem.h"
+#include "Engine/Bootstrap/CrashHandlerSubsystem.h"
+#include "Engine/Bootstrap/DiagnosticsSubsystem.h"
+#include "Engine/Bootstrap/LoggerSubsystem.h"
+#include "Engine/Bootstrap/NamePoolSubsystem.h"
+#include "Engine/Bootstrap/StaticStorageSubsystem.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Compression/EngineCompressionCodecUtil.h"
@@ -65,6 +72,7 @@
 #include "Engine/Profiling/ProfilerBackend.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Reflection/ReflectionDocWriter.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Capture/PortraitBatchUtil.h"
 #include "Engine/Renderer/Capture/RenderDocCapture.h"
 #include "Engine/Renderer/Cook/ShaderCookDriver.h"
@@ -88,6 +96,7 @@
 #include "Engine/Scene/SceneDebugDraw.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneNavigationCooker.h"
+#include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/UI/Debug/DebugHUD.h"
@@ -96,6 +105,7 @@
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 #include "Engine/Utility/CommandStack.h"
+#include "Engine/Utility/DebugOverlayState.h"
 #include "Engine/Utility/EngineFrameObserver.h"
 #include "Engine/Utility/GameTimeScale.h"
 #include "Engine/Window/IWindow.h"
@@ -118,11 +128,11 @@ namespace sw
 
     EngineLoop::EngineLoop()
         : _bootstrap{}
+        , _services{}
+        , _pCommandLineSubsystem{ nullptr }
+        , _pEventDispatcher{ nullptr }
         , _pConfigManager{ nullptr }
         , _shellActions{}
-        , _audioService{ nullptr }
-        , _frameRenderer{ nullptr }
-        , _commandStack{ nullptr }
         , _listFrameObserver{}
         , _hostRole{ EngineHostRole::Client }
         , _headlessState{}
@@ -151,19 +161,45 @@ namespace sw
 
     EngineLoop::~EngineLoop() = default;
 
+    CommandLineManager* EngineLoop::getCommandLineManager() const
+    {
+        return _pCommandLineSubsystem != nullptr ? _pCommandLineSubsystem->findCommandLine() : nullptr;
+    }
+
     bool EngineLoop::initialize( int32 argc, utf8* pArgv[], EngineHostRole role )
     {
-        // 이름 풀 · 로거 · 크래시 핸들러 · 리소스 루트 · 진단 도구(Debug) · 명령줄 · 전역 변수 — 테스트 하네스와 같은 부트스트랩이다.
+        // 범위는 셋이다. 부트스트랩(진단 도구 · 이름 풀 · 로거 · 명령줄 · 크래시 핸들러 · 정적 저장소) → 서비스(엔진 범위의 모든 것보다 오래 사는
+        // 공용 서비스) → 엔진(기동 단계). 아래 범위가 모두 선 뒤에 위 범위를 세우고, 위 범위가 모두 사라진 뒤에 아래 범위를 내린다 — 범위 사이의
+        // 순서는 의존으로 적지 않는다. 서비스 범위의 객체는 이름 풀 · 로거가 선 뒤에 만든다(생성자가 이름 · 블록을 잡는다). 테스트 하네스도 같은 세 범위다.
 #if defined( SW_DEBUG )
         constexpr bool kDiagnostics = true;
 #else
         constexpr bool kDiagnostics = false;
 #endif
-        if ( _bootstrap.initialize( _owned, kDiagnostics, argc, pArgv ) == false )
+        CrashHandlerSubsystem* pCrashHandler = nullptr;
+        DiagnosticsSubsystem*  pDiagnostics  = nullptr;
+        {
+            pDiagnostics = &_bootstrap.addSubsystem( sw::make_unique<DiagnosticsSubsystem>( kDiagnostics ) );
+            _bootstrap.addSubsystem( sw::make_unique<NamePoolSubsystem>() );
+            _bootstrap.addSubsystem( sw::make_unique<LoggerSubsystem>() );
+            _pCommandLineSubsystem = &_bootstrap.addSubsystem( sw::make_unique<CommandLineSubsystem>( argc, pArgv ) );
+            pCrashHandler          = &_bootstrap.addSubsystem( sw::make_unique<CrashHandlerSubsystem>( *_pCommandLineSubsystem ) );
+            _bootstrap.addSubsystem( sw::make_unique<StaticStorageSubsystem>() );
+            // 서브시스템 안의 객체도 서비스 표의 행이다 — 그 타입으로 건다(새 범위라 겹치지 않는다).
+            (void)_bootstrap.bind( _pCommandLineSubsystem->findCommandLine() );     // 새 범위 — 겹치지 않는다
+            (void)_bootstrap.bind( _pCommandLineSubsystem->findGlobalVariables() ); // 새 범위 — 겹치지 않는다
+        }
+        if ( _bootstrap.getCollection().initializeAll( SubsystemHostMask::All ) == false )
+        {
+            // 정렬 오류(선언 오타 · 순환)는 로거가 서기 전이다 — 표준 오류로도 낸다.
+            std::fprintf( stderr, "[EngineLoop] bootstrap failed: %s\n", _bootstrap.getCollection().getError().c_str() );
+            SW_LOG_ERROR( "Engine bootstrap failed: %#", _bootstrap.getCollection().getError().c_str() );
             return false;
+        }
+        (void)_bootstrap.bind( pDiagnostics->findMemoryProfiler() ); // 배포본에는 없어(nullptr) 걸지 않는다 — 선택 행이다
         // 크래시 보고 프로세스(`-crash-reporter=<폴더>`)는 헤드리스다 — 서비스 · 기동 단계를 세우지 않고 App 이 묶음을 보내고 끝낸다.
-        // 부트스트랩이 이 모드에서는 크래시 핸들러(죽으면 보고 프로세스를 또 띄운다) · 리소스 루트를 세우지 않았다.
-        if ( _bootstrap.isCrashReporterRun() )
+        // 이 모드에서는 크래시 핸들러(죽으면 보고 프로세스를 또 띄운다) · 리소스 루트를 세우지 않았다.
+        if ( pCrashHandler->isCrashReporterRun() )
         {
             // 다른 헤드리스 작업처럼 작업 직전에 누수 기준선을 잡는다 — 없으면 종료 때 살아 있는 부트스트랩 블록을 모두 누수로 찍는다.
             MemoryProfiler::captureMemoryLeakBaseline();
@@ -179,48 +215,41 @@ namespace sw
             SW_LOG_ERROR( "The %# build cannot host the %# role", build::kTargetName, bDedicatedServer ? "dedicated server" : "client" );
             return false;
         }
+        const SubsystemHostMask hostMask = bDedicatedServer ? EngineSubsystemHost::kServer : EngineSubsystemHost::kClient;
         // 서버 패키지에 없는 에셋 종류(텍스처 · 셰이더 바이너리 · 오디오 — 쿠킹 표의 target_excluded_asset_kinds)는 서버가 읽지 않는다.
         ResourcePaths::setHostTarget( bDedicatedServer ? "Server" : "Client" );
         // `-gv_memoryTracking=1` 은 기동의 할당부터 센다(Release 는 추적이 꺼진 채 선다).
         _memoryBudgetMonitor.applyTrackingSetting();
 
-        BLOCK( "Core Services 생성 및 바인딩" )
+        BLOCK( "서비스 범위" )
         {
-            // 목록(`EngineServiceList.xxx`)의 `EngineCreated` 은 여기서 **한 줄로** 만들어진다. 생성자는 서로를 보지 않으므로 순서가 없다.
-            _owned.createAll();
-
-            // 만드는 방법이 특별한 것만 손으로 남는다(목록의 HostCreated 셋).
-            {
-                SW_MEMORY_SCOPE( Audio );
-                // 전용 서버는 장치를 열지 않는다 — 씬 컴포넌트가 드는 오디오 서비스는 그대로 있고 소리 요청을 받아 버린다.
-                _audioService = bDedicatedServer ? IAudioService::createNull() : IAudioService::create();
-            }
+            // 초기화 · 종료할 것이 없고 수명만 있는 공용 서비스다 — 엔진 범위의 어느 것보다 먼저 서고 나중에 사라진다(누가 소멸자에서 부르든 살아 있다).
+            SW_MEMORY_SCOPE( EngineMisc );
+            _services.setParentScope( &_bootstrap );
+            _pEventDispatcher = &_services.addSubsystem( sw::make_unique<EventDispatcher>() );
+            _services.addSubsystem( sw::make_unique<LocalizationManager>() );
 #if !defined( SW_SHIPPING )
-            {
-                SW_MEMORY_SCOPE( EngineMisc );
-                _commandStack = make_unique<CommandStack>();
-            }
+            // 에디터 Undo/Redo 전용이라 배포본에는 만들지 않는다(목록의 선택 행). 씬이 바뀌면 씬 매니저가 비운다.
+            _services.addSubsystem( sw::make_unique<CommandStack>() );
 #endif
-            // 렌더러는 서비스 표에 실리므로(아래) 여기서 만든다. 초기화와 해제는 FrameRenderer 단계가 한다.
+            _services.addSubsystem( sw::make_unique<DebugOverlayState>() );
+            _services.addSubsystem( sw::make_unique<ComponentDefaults>() );
+            _services.addSubsystem( sw::make_unique<FrameProfiler>() );
+            _services.addSubsystem( sw::make_unique<CrashReportService>() );
             {
                 SW_MEMORY_SCOPE( RenderCPU );
-                _frameRenderer = make_unique<FrameRenderer>();
+                _services.addSubsystem( sw::make_unique<DebugDrawQueue>() );
+                _services.addSubsystem( sw::make_unique<RenderTargetRegistry>() );
+                _services.addSubsystem( sw::make_unique<RHIBackendRegistry>() );
             }
-
-            EngineServices services{};
-            _bootstrap.fillServices( services );
-            // HostCreated 인 자리만 손으로 연결한다.
-            services._pAudioService = _audioService.get();
-            services._pCommandStack = _commandStack.get();
-            // 렌더러는 씬이 아니라 **호스트**가 내준다. 에디터가 뷰 모드를 바꾸려고 찾는 창구다.
-            services._pFrameRenderer = _frameRenderer.get();
-
-            engine::bindEngineServices( services );
+            if ( _services.getCollection().initializeAll( hostMask ) == false )
+            {
+                SW_LOG_ERROR( "Engine services failed: %#", _services.getCollection().getError().c_str() );
+                return false;
+            }
         }
 
-        // 기동 단계는 서브시스템이다 — 서브시스템이 스스로 이름 · 의존 · 호스트를 선언한다.
-        // 추가 순서는 뜻이 없다(의존이 정한다). 서비스의 소유는 기동 순서로 넘어가고, 해제는 그 역순 자리에서 소멸이다.
-        // 서비스 표는 위에서 같은 객체를 가리키도록 이미 묶였다(저장소가 만들고, 소유만 여기로 넘긴다).
+        // 기동 단계는 서브시스템이다 — 서브시스템이 스스로 이름 · 의존 · 호스트를 선언한다. 추가 순서는 뜻이 없다(의존이 정한다). 해제는 그 역순이다.
         TelemetryService*      pTelemetryService      = nullptr;
         RenderThreadSubsystem* pRenderThreadSubsystem = nullptr;
         LiveShaderSubsystem*   pLiveShaderSubsystem   = nullptr;
@@ -228,31 +257,48 @@ namespace sw
         {
             // 단계 객체 · 본문 델리게이트의 할당은 엔진 기타 줄로 센다(만드는 객체는 제 용도 태그를 다시 건다).
             SW_MEMORY_SCOPE( EngineMisc );
+            _startup.setParentScope( &_services );
             {
                 // 외부 라이브러리 코덱은 **목록이 있는 자리**에서 붙인다(EngineCompressionCodecUtil). 레지스트리는 만들 때 내장 코덱을 갖추므로 기동 전에 붙여도 된다.
-                EngineCompressionCodecUtil::registerAll( *_owned._pCompressionCodecRegistry );
-                _startup.add( std::move( _owned._pCompressionCodecRegistry ) );
-                _startup.add( sw::make_unique<ReflectionSubsystem>( std::move( _owned._pTypeRegistry ) ) );
-                _startup.add( std::move( _owned._pTaskManager ) );
+                CompressionCodecRegistry& codecRegistry = _startup.addSubsystem( sw::make_unique<CompressionCodecRegistry>() );
+                EngineCompressionCodecUtil::registerAll( codecRegistry );
+                {
+                    SW_MEMORY_SCOPE( Reflection );
+                    const ReflectionSubsystem& reflection = _startup.addSubsystem( sw::make_unique<ReflectionSubsystem>( sw::make_unique<TypeRegistry>() ) );
+                    (void)_startup.bind( &reflection.getTypeRegistry() ); // 새 범위 — 겹치지 않는다
+                }
+                TaskManager* pTaskManager = nullptr;
+                {
+                    SW_MEMORY_SCOPE( Task );
+                    pTaskManager = &_startup.addSubsystem( sw::make_unique<TaskManager>() );
+                }
                 // 완료 콜백(팩 해제 · CRC · 스트리밍 완료 기록)은 태스크 워커에서 돈다 — IO 스레드는 다음 읽기를 거는 일만 한다.
                 AsyncFileIOSettings fileIOSettings{};
-                fileIOSettings._pTaskManager = &engine::getTaskManager();
-                _owned._pAsyncFileIO->setSubsystemSettings( fileIOSettings );
-                _startup.add( std::move( _owned._pAsyncFileIO ) );
+                fileIOSettings._pTaskManager = pTaskManager;
+                {
+                    SW_MEMORY_SCOPE( Asset );
+                    _startup.addSubsystem( sw::make_unique<AsyncFileIO>() ).setSubsystemSettings( fileIOSettings );
+                }
             }
-            _startup.add( sw::make_unique<ModuleImagesSubsystem>( &_onScenesReleased ) );
-            _startup.add( sw::make_unique<ModuleTypesSubsystem>( &_moduleTypeLoader ) );
-            // 창 · 디바이스 · 렌더러 · 렌더 스레드 · 라이브 셰이더 · 씬의 디바이스 — 클라이언트 호스트의 것이다(전용 서버는 거른다). 렌더러는 서비스 표에 실렸으므로
-            // 여기서 넘긴다. 객체를 서로 참조로 넘긴다(같은 목록 — 의존이 먼저 서고 나중에 소멸한다).
-            RHISubsystem& rhiSubsystem                     = _startup.add( sw::make_unique<RHISubsystem>() );
-            _pRHISubsystem                                 = &rhiSubsystem;
-            FrameRendererSubsystem& frameRendererSubsystem = _startup.add( sw::make_unique<FrameRendererSubsystem>( std::move( _frameRenderer ), rhiSubsystem ) );
+            _startup.addSubsystem( sw::make_unique<ModuleImagesSubsystem>( &_onScenesReleased ) );
+            _startup.addSubsystem( sw::make_unique<ModuleTypesSubsystem>( &_moduleTypeLoader ) );
+            // 창 · 디바이스 · 렌더러 · 렌더 스레드 · 라이브 셰이더 · 씬의 디바이스 — 클라이언트 호스트의 것이다(전용 서버는 거른다).
+            // 객체를 서로 참조로 넘긴다(같은 목록 — 의존이 먼저 서고 나중에 소멸한다).
+            RHISubsystem& rhiSubsystem = _startup.addSubsystem( sw::make_unique<RHISubsystem>() );
+            _pRHISubsystem             = &rhiSubsystem;
+            unique_ptr<FrameRenderer> frameRenderer;
+            {
+                SW_MEMORY_SCOPE( RenderCPU );
+                frameRenderer = make_unique<FrameRenderer>();
+            }
+            FrameRendererSubsystem& frameRendererSubsystem = _startup.addSubsystem( sw::make_unique<FrameRendererSubsystem>( std::move( frameRenderer ), rhiSubsystem ) );
             _pFrameRenderer                                = &frameRendererSubsystem.getFrameRenderer();
-            _pPacketBuilder                                = &frameRendererSubsystem.getPacketBuilder();
-            pRenderThreadSubsystem                         = &_startup.add( sw::make_unique<RenderThreadSubsystem>( rhiSubsystem, frameRendererSubsystem ) );
-            pLiveShaderSubsystem                           = &_startup.add( sw::make_unique<LiveShaderSubsystem>( frameRendererSubsystem, *pRenderThreadSubsystem ) );
-            _startup.add( sw::make_unique<SceneRHISubsystem>( rhiSubsystem ) );
-            _pInputManager = &_startup.add( std::move( _owned._pInputManager ) );
+            (void)_startup.bind( _pFrameRenderer ); // 새 범위 — 겹치지 않는다
+            _pPacketBuilder        = &frameRendererSubsystem.getPacketBuilder();
+            pRenderThreadSubsystem = &_startup.addSubsystem( sw::make_unique<RenderThreadSubsystem>( rhiSubsystem, frameRendererSubsystem ) );
+            pLiveShaderSubsystem   = &_startup.addSubsystem( sw::make_unique<LiveShaderSubsystem>( frameRendererSubsystem, *pRenderThreadSubsystem ) );
+            _startup.addSubsystem( sw::make_unique<SceneRHISubsystem>( rhiSubsystem ) );
+            _pInputManager = &_startup.addSubsystem( sw::make_unique<InputManager>() );
             {
                 // 설정 표는 Config 서브시스템이다 — 엔진 · 게임 설정을 읽고 주 표로 알린다(Resource 가 그 뒤에 서서 팩 루트를 안다). 다시 읽기 알림은 엔진 루프가 받는다.
                 unique_ptr<ConfigManager> configManager;
@@ -262,26 +308,51 @@ namespace sw
                 }
                 _pConfigManager = configManager.get();
                 _pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &EngineLoop::onConfigReloaded, this ) );
-                _startup.add( std::move( configManager ) );
-                _startup.add( std::move( _owned._pAssetManager ) );
-                _startup.add( sw::make_unique<EngineDefaultAssetsSubsystem>( std::move( _owned._pEngineDefaultAssets ) ) );
+                _startup.addSubsystem( std::move( configManager ) );
+                {
+                    SW_MEMORY_SCOPE( Asset );
+                    _startup.addSubsystem( sw::make_unique<AssetManager>() );
+                }
+                const EngineDefaultAssetsSubsystem& defaultAssets = _startup.addSubsystem( sw::make_unique<EngineDefaultAssetsSubsystem>( sw::make_unique<EngineDefaultAssets>() ) );
+                (void)_startup.bind( &defaultAssets.getDefaultAssets() ); // 새 범위 — 겹치지 않는다
             }
-            _pAudioService = &_startup.add( std::move( _audioService ) );
+            {
+                SW_MEMORY_SCOPE( Audio );
+                // 전용 서버는 장치를 열지 않는다 — 씬 컴포넌트가 드는 오디오 서비스는 그대로 있고 소리 요청을 받아 버린다.
+                _pAudioService = &_startup.addSubsystem( bDedicatedServer ? IAudioService::createNull() : IAudioService::create() );
+            }
             // 씬 매니저가 서브시스템이다 — 씬이 바뀌면 되돌리기 기록을 비우는 구독도 그것이 건다. 스트리밍 큐의 소멸자는 태스크를 기다리므로 Task 보다 먼저 놓는다.
-            _startup.add( std::move( _owned._pAssetStreamingQueue ) );
-            _pSceneManager = &_startup.add( std::move( _owned._pSceneManager ) );
+            {
+                SW_MEMORY_SCOPE( Asset );
+                _startup.addSubsystem( sw::make_unique<AssetStreamingQueue>() );
+            }
+            {
+                SW_MEMORY_SCOPE( Scene );
+                _pSceneManager = &_startup.addSubsystem( sw::make_unique<SceneManager>() );
+            }
             // 헤드리스 작업(셰이더 · 씬 쿠킹, 임포트)이면 그에 기대는 단계(창 · RHI · 렌더러)를 건너뛴다 — 결과는 `isHeadless` · `didHeadlessTaskFail`.
-            _startup.add( sw::make_unique<HeadlessSubsystem>( bDedicatedServer, _headlessState ) );
+            _startup.addSubsystem( sw::make_unique<HeadlessSubsystem>( bDedicatedServer, _headlessState ) );
+            UserSettingsManager& userSettings = _startup.addSubsystem( sw::make_unique<UserSettingsManager>() );
 #if SW_DEV_COMMANDS_ENABLED
             // 디버그 HUD 설정(개발 도구) — Dev 만 덧붙인다. 사용자 파일보다 먼저 읽어야 저장된 HUD 값이 버려지지 않는다.
-            _owned._pUserSettingsManager->addStartupSchema( DebugHUD::kSettingsSchemaPath );
+            userSettings.addStartupSchema( DebugHUD::kSettingsSchemaPath );
+#else
+            (void)userSettings; // 배포본은 덧붙일 스키마가 없다
 #endif
-            _startup.add( std::move( _owned._pUserSettingsManager ) );
-            _startup.add( std::move( _owned._pShaderCache ) );
-            _startup.add( std::move( _owned._pPhysicsSystem ) );
-            _pFontService     = &_startup.add( std::move( _owned._pFontService ) );
-            pTelemetryService = &_startup.add( std::move( _owned._pTelemetryService ) );
-            _pUISystem        = &_startup.add( std::move( _owned._pUISystem ) );
+            {
+                SW_MEMORY_SCOPE( Shader );
+                _startup.addSubsystem( sw::make_unique<ShaderCache>() );
+            }
+            _startup.addSubsystem( sw::make_unique<PhysicsSystem>() );
+            _pFontService     = &_startup.addSubsystem( sw::make_unique<FontService>() );
+            pTelemetryService = &_startup.addSubsystem( sw::make_unique<TelemetryService>() );
+            _pUISystem        = &_startup.addSubsystem( sw::make_unique<UISystem>() );
+        }
+        // 서비스 표는 엔진 범위(부모 범위까지)에서 행마다 한 번 찾아 둔다. 필수 행이 비면 서지 않는다 — 넣지 않은 서브시스템이다.
+        if ( const utf8* pMissing = engine::bindEngineServices( _startup ) )
+        {
+            SW_LOG_ERROR( "Required engine service '%#' is not in any subsystem scope", pMissing );
+            return false;
         }
         TelemetryService& telemetryService = *pTelemetryService;
 
@@ -290,7 +361,7 @@ namespace sw
         ProfilerBackend::initialize();
 
         // 초기화의 순서는 손으로 적지 않는다. 서브시스템마다 먼저 서야 하는 것을 적고, 여기서는 위상 순서로 부른다. 종료와 해제는 그 역순이다(`shutdown`).
-        const bool bStarted = _startup.initializeAll( bDedicatedServer ? EngineSubsystemHost::kServer : EngineSubsystemHost::kClient );
+        const bool bStarted = _startup.getCollection().initializeAll( hostMask );
         // 서지 않은 것(전용 서버 · 헤드리스 · 실패)은 nullptr 다. 실패의 이유는 App 이 종료 코드를 고를 때 읽는다.
         _pRHI          = _pRHISubsystem->findRHI();
         _rhiInitResult = _pRHISubsystem->getInitResult();
@@ -305,7 +376,7 @@ namespace sw
             (void)_memoryBudgetMonitor.loadBudgetFile( FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), MemoryBudgetMonitor::kBudgetFile ) ); // 틀린 표는 오류를 남기고 예산 없이 간다 — 진단 설정 하나로 기동을 세우지 않는다
         if ( bStarted == false )
         {
-            SW_LOG_ERROR( "Engine startup failed: %#", _startup.getError().c_str() );
+            SW_LOG_ERROR( "Engine startup failed: %#", _startup.getCollection().getError().c_str() );
             return false;
         }
         // 셸 키(콘솔 여는 키 …)를 플레이어가 바꾼 것도 사용자 설정과 같은 폴더에 둔다. 셸 맵은 처음 돌 때 만들므로 그 전에 경로를 알려 준다.
@@ -318,7 +389,7 @@ namespace sw
         if ( bDedicatedServer )
         {
             // 실제 바이너리에서 단계가 빠졌는지 테스트(ServerBootTest)가 이 줄로 본다. 초기화 순서대로 적는다.
-            const SubsystemCollection& subsystems = _startup;
+            const SubsystemCollection& subsystems = _startup.getCollection();
             string                     skipped;
             for ( const uint32 index : subsystems.getInitializeOrder() )
             {
@@ -357,13 +428,12 @@ namespace sw
         vector<IEngineFrameObserver*>{}.swap( _listFrameObserver );
         AssetLoadProfiler::get().reportIfRequested( "session" );
         // 초기화한 단계만 역순으로 내린다: UI → 텔레메트리 → 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI → 씬 → 입력 · 오디오 → 모듈 이미지 → 태스크 → 셰이더 캐시.
-        _startup.shutdownAll();
+        _startup.getCollection().shutdownAll();
         // 셸 디버그 액션 맵은 입력 매니저를 가리킨다 — 매니저가 소멸하기(Input 의 해제 자리) 전에 놓는다(`updateShellActions` 가 처음 쓸 때 만든다).
         _shellActions.reset();
         // 단계가 소유한 객체를 초기화 순서의 역순으로 소멸시킨다: UI → 텔레메트리 → 렌더러 쪽 → RHI →
         // 글꼴 → 씬 → 입력 · 오디오 → 태스크 → 셰이더 캐시 → 엔진 데이터 → 리소스 → 설정 → 리플렉션 → 압축. 기동이 어디서 멈췄든 모든 단계를 해제한다.
         _startup.destroyAll();
-        _commandStack.reset();
         _pRHISubsystem  = nullptr;
         _pRHI           = nullptr;
         _pFontService   = nullptr;
@@ -380,8 +450,12 @@ namespace sw
         _pConfigManager = nullptr;
         // 할당 관찰을 떼고 출력을 비운다. 출력 객체(Tracy)는 프로세스 수명이라 남아 있는 구간을 닫을 수 있다.
         ProfilerBackend::shutdown();
-        // 표 밖 부트스트랩을 세운 역순으로 내린다(테스트 하네스와 같은 끝 정리).
-        _bootstrap.shutdown();
+        // 서비스 범위 → (표 끊기) → 부트스트랩 범위. 테스트 하네스와 같은 끝 정리다.
+        _services.destroyAll();
+        _pEventDispatcher = nullptr;
+        engine::unbindEngineServices();
+        _bootstrap.destroyAll();
+        _pCommandLineSubsystem = nullptr;
 
         MemoryProfiler::reportMemoryLeaks( "EngineLoop::shutdown" );
     }
@@ -545,8 +619,8 @@ namespace sw
 
             if ( _pSceneManager != nullptr )
                 _pSceneManager->tickTransitions();
-            if ( _owned._pEventDispatcher != nullptr )
-                _owned._pEventDispatcher->processEvents();
+            if ( _pEventDispatcher != nullptr )
+                _pEventDispatcher->processEvents();
             if ( _pAudioService != nullptr )
                 _pAudioService->update( deltaTime );
         }
@@ -703,7 +777,7 @@ namespace sw
         {
             // RHI 에 (간접으로라도) 의존하는 단계(씬의 디바이스 · 라이브 셰이더 · 렌더 스레드 · 렌더러)를 기동 표의 역순으로, 기동과 같은
             // 본문으로 내린다. 씬 스냅샷 빌더가 든 머티리얼 · 인스턴스도 FrameRenderer 단계의 종료가 옛 디바이스가 살아 있을 때 놓는다.
-            _startup.shutdownDependentsOf( *_pRHISubsystem );
+            _startup.getCollection().shutdownDependentsOf( *_pRHISubsystem );
 
             // 옛 디바이스의 GPU 자원은 recreateDevice 안의 shutdown 이 레지스트리에 통보하며 거둔다.
             _pRHI->getDevice().waitIdle();
@@ -744,9 +818,9 @@ namespace sw
 
         // 내렸던 단계를 기동과 같은 본문으로 다시 세운다: 렌더러(업로드 큐 · 배치 합치기 설정을 새 디바이스로) → 렌더 스레드 → 라이브 셰이더 →
         // 씬의 디바이스. 본문은 이미 있는 객체를 다시 쓰므로 렌더 스레드에 걸린 훅과 그것을 가리키는 포인터가 그대로다.
-        const bool bRestarted = _startup.restartStopped();
+        const bool bRestarted = _startup.getCollection().restartStopped();
         if ( bRestarted == false )
-            SW_LOG_ERROR( "Backend change: %#", _startup.getError().c_str() );
+            SW_LOG_ERROR( "Backend change: %#", _startup.getCollection().getError().c_str() );
 
         Scene* pScene = _pSceneManager != nullptr ? _pSceneManager->getActiveScene() : nullptr;
         if ( pScene != nullptr )

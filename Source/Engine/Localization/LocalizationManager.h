@@ -13,6 +13,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Localization/LocalizationBinaryTable.h"
@@ -51,13 +52,20 @@ namespace sw
      *          의사 문화권(`qps_ploc`, `qps_plocm`, 문화권 테이블의 `pseudo`)은 원문을 변환해 만든 테이블이고 Dev 빌드에서만 고를 수 있습니다.
      *          조회가 돌려주는 `const utf8*` 는 추가 전용 저장소(`StringTable.cpp`)에 있어 다시 읽기와 언어 변경 뒤에도 유효합니다.
      */
-    class SW_API LocalizationManager
+    class SW_API LocalizationManager : public ISubsystem
     {
     public:
+        /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
+        static constexpr const utf8* kSubsystemName = "Localization";
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+
         using LanguageChangedCallback = sw::Delegate<void( string_view oldLanguage, string_view newLanguage )>;
 
         LocalizationManager();
-        ~LocalizationManager();
+        ~LocalizationManager() override;
 
         LocalizationManager( const LocalizationManager& )            = delete;
         LocalizationManager& operator=( const LocalizationManager& ) = delete;

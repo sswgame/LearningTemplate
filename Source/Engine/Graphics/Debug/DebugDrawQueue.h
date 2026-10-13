@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 namespace sw
 {
@@ -66,9 +67,17 @@ namespace sw
      *          - 넣기는 어느 스레드에서 해도 됩니다(병렬 onTick). `endFrame` · `getVisible*` 는 게임 스레드에서만 부릅니다.
      *          - 2D 는 Z 가 같은 평면의 도형입니다. 반 크기 중 0 인 축이 있는 상자는 사각형 하나(선 넷)로 펼칩니다.
      */
-    class SW_API DebugDrawQueue
+    class SW_API DebugDrawQueue : public ISubsystem
     {
     public:
+        /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
+        static constexpr const utf8* kSubsystemName = "DebugDraw";
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        MemoryTag           getSubsystemMemoryTag() const override { return MemoryTag::RenderCPU; }
+
         /** @brief 카테고리를 주지 않은 도형의 카테고리 이름입니다. */
         static constexpr const utf8* kDefaultCategoryName = "Default";
         /** @brief 화살표 머리 길이가 화살표 길이에서 차지하는 비율입니다. */

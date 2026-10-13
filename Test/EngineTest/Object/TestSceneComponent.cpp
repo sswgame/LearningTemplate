@@ -482,7 +482,7 @@ SW_TEST_CASE( SceneComponentTest, TransformValuesLiveInTheStorageSlot )
 
 /**
  * @brief [SceneComponentTest] 칸이 하나도 없을 때만 저장소를 놓고, 놓은 뒤 받은 칸은 새 페이지에 든다
- * @details 엔진 종료 끝(`EngineBootstrap::shutdown`)이 `releaseStorage` 로 페이지를 놓는다 — 놓지 않으면 첫 SceneComponent 가 잡은 페이지가 종료 누수
+ * @details 엔진 종료 끝(`StaticStorageSubsystem::shutdownSubsystem`)이 `releaseStorage` 로 페이지를 놓는다 — 놓지 않으면 첫 SceneComponent 가 잡은 페이지가 종료 누수
  *          보고(기준선 대비 태그 증가)에 남는다. 살아 있는 칸이 있으면 놓지 않는다(컴포넌트가 페이지 포인터를 들고 있다).
  */
 SW_TEST_CASE( SceneComponentTest, StorageIsReleasedOnlyWhenNoSlotIsLive )

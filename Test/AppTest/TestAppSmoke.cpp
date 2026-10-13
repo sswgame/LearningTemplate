@@ -892,7 +892,7 @@ SW_TEST_CASE( AppSmokeTest, HeadlessRunReportsLeaksAgainstABaseline )
 
 /**
  * @brief [AppSmokeTest] 보통 실행과 에디터를 켠 실행 모두, 끝내면 어느 메모리 태그도 기동 뒤 기준선보다 크지 않다
- * @details 종료 끝(`EngineBootstrap::shutdown`)이 태그별로 기준선과 견줘 `[MemoryLeak]` 줄을 남긴다. 프로세스 정적 저장소(이름 풀 · 트랜스폼 페이지 ·
+ * @details 종료 끝(부트스트랩 범위의 `DiagnosticsSubsystem` 소멸)이 태그별로 기준선과 견줘 `[MemoryLeak]` 줄을 남긴다. 프로세스 정적 저장소(이름 풀 · 트랜스폼 페이지 ·
  *          경로 캐시 · 번역 문자열 · 레지스트리 용량)가 기동 뒤 자란 몫을 돌려주지 않으면 "tag … grew by" 줄이 나온다. CRT 검사는 합계만 봐 이것을
  *          "no CRT leaks" 라고 한다. 에디터와 게임 모듈은 기준선 뒤에 오르므로 에디터를 켠 실행이 그 몫을 따로 본다.
  */

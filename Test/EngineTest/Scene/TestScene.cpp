@@ -9,6 +9,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Module/ReflectionSubsystem.h"
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -1032,19 +1033,20 @@ SW_TEST_CASE( SceneTest, SceneIsNotReadBeforeEveryModuleRegisteredItsTypes )
     // 하네스는 앱과 같은 기동 표를 지났다 — `ModuleTypes` 단계가 적어 두었다.
     SW_ASSERT_TRUE( sw::engine::getTypeRegistry().areAllModuleTypesRegistered() );
 
-    const sw::EngineServices saved = sw::engine::getBoundEngineServices();
-    sw::EngineServices       early = saved;
-    early._pTypeRegistry           = &registryBeforeModuleTypes;
-    test::rebindEngineServices( early );
     bool   bRequestAccepted{ true };
     uint32 earlyCookedCount{ 0 };
     uint32 earlyFailedCount{ 0 };
     {
+        // 쿠커가 보는 표의 타입 레지스트리도 등록이 끝나기 전의 것으로 갈아 끼운다(그것을 소유한 서브시스템 `Reflection` 을 가린다).
+        test::ScopedEngineServiceOverride early;
+        const sw::ReflectionSubsystem&    earlyReflection = early.add( sw::make_unique<sw::ReflectionSubsystem>( sw::make_unique<sw::TypeRegistry>() ) );
+        SW_ASSERT_TRUE( early.bindObject( &earlyReflection.getTypeRegistry() ) );
+        SW_ASSERT_TRUE( early.bind() == nullptr );
+        SW_ASSERT_FALSE( sw::engine::getTypeRegistry().areAllModuleTypesRegistered() );
         test::ScopedDefensiveTestLog expected( "a scene read before the ModuleTypes startup step" );
         bRequestAccepted = manager.requestLoadFuture( scenePath ).isValid();
         earlyCookedCount = sw::SceneCooker::cookAllScenes( root, cooked, earlyFailedCount );
     }
-    test::rebindEngineServices( saved );
 
     SW_EXPECT_FALSE( bRequestAccepted );
     SW_EXPECT_EQUAL( 0u, earlyCookedCount );
@@ -1723,23 +1725,9 @@ SW_TEST_CASE( SceneTest, XMLAssetsLoadWithoutEngineServices )
     const sw::string prefabPath = test::makeTempPath( "standalone.prefab.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( prefabPath, "<Prefab name=\"Crate\">\n  <GameObject _name=\"Crate\"/>\n</Prefab>\n" ) );
 
-    /** @brief 이 범위 동안 엔진 서비스를 풀고, 나갈 때 원래 표로 되묶는다(단언이 일찍 나가도). */
-    struct ScopedUnboundEngineServices
-    {
-        sw::EngineServices _saved;
-
-        ScopedUnboundEngineServices()
-            : _saved{ sw::engine::getBoundEngineServices() }
-        {
-            sw::engine::unbindEngineServices();
-        }
-
-        ~ScopedUnboundEngineServices() { test::rebindEngineServices( _saved ); }
-    };
-
     SW_ASSERT_TRUE( sw::engine::areEngineServicesBound() );
     {
-        const ScopedUnboundEngineServices unbound;
+        const test::ScopedUnboundEngineServices unbound;
         SW_ASSERT_FALSE( sw::engine::areEngineServicesBound() );
 
         sw::SceneDocument document;

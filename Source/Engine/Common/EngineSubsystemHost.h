@@ -12,9 +12,14 @@ namespace sw
     /** @brief 엔진 호스트 종류의 비트입니다. 종류를 늘리면 비트 하나를 더하고, 그 호스트에서 돌 서브시스템 선언만 고친다. */
     struct EngineSubsystemHost
     {
-        /** @brief 창 · 렌더러 · 플레이어 설정이 있는 호스트(App · 에디터 · 테스트 하네스)입니다. */
+        /** @brief 창 · 렌더러 · 플레이어 설정이 있는 호스트(App · 에디터)입니다. */
         static constexpr SubsystemHostMask kClient = static_cast<SubsystemHostMask>( 1 << 0 );
         /** @brief 전용 서버(Server 실행 파일)입니다. */
         static constexpr SubsystemHostMask kServer = static_cast<SubsystemHostMask>( 1 << 1 );
+        /**
+         * @brief 테스트 하네스입니다. 창 · GPU · 플레이어 설정 · 글꼴 · UI · 텔레메트리를 세우지 않는다(클라이언트 전용인 것은 서비스 표의 자리로만 있다).
+         * @details 어디서나 도는 것(`SubsystemHostMask::All`)만 이 호스트에서 돈다 — 하네스가 클라이언트 전용 서브시스템을 넣어도 서지 않는다.
+         */
+        static constexpr SubsystemHostMask kTestHarness = static_cast<SubsystemHostMask>( 1 << 2 );
     };
 } // namespace sw

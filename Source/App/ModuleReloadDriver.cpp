@@ -7,6 +7,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/EngineLoop.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Profiling/FrameProfiler.h"

@@ -1,24 +1,38 @@
 #include "pch.h"
 
 #include "Core/Compression/CompressionCodecRegistry.h"
+#include "Core/Event/EventDispatcher.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/Subsystem/SubsystemCollection.h"
+#include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Audio/IAudioService.h"
+#include "Engine/Bootstrap/CommandLineSubsystem.h"
+#include "Engine/Bootstrap/CrashHandlerSubsystem.h"
+#include "Engine/Bootstrap/DiagnosticsSubsystem.h"
+#include "Engine/Bootstrap/LoggerSubsystem.h"
+#include "Engine/Bootstrap/NamePoolSubsystem.h"
+#include "Engine/Bootstrap/StaticStorageSubsystem.h"
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Common/EngineSubsystemHost.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/Debug/RenderTargetRegistry.h"
+#include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/HeadlessSubsystem.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Localization/EngineDefaultAssetsSubsystem.h"
+#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Module/ModuleImagesSubsystem.h"
 #include "Engine/Module/ModuleTypesSubsystem.h"
 #include "Engine/Module/ReflectionSubsystem.h"
+#include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Physics/PhysicsSystem.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
@@ -29,10 +43,13 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
+#include "Engine/Utility/CommandStack.h"
+#include "Engine/Utility/DebugOverlayState.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -148,6 +165,62 @@ namespace
         listSubsystem.push_back( make_unique<TelemetryService>() );
         listSubsystem.push_back( make_unique<UISystem>() );
         return listSubsystem;
+    }
+
+    /** @brief 부트스트랩 범위를 엔진 루프 · 하네스와 같은 클래스로 채웁니다(초기화하지 않는다 — 선언과 소유만 본다). */
+    void addBootstrapSubsystems( SubsystemScope& bootstrap )
+    {
+        bootstrap.addSubsystem( sw::make_unique<DiagnosticsSubsystem>( false ) );
+        bootstrap.addSubsystem( sw::make_unique<NamePoolSubsystem>() );
+        bootstrap.addSubsystem( sw::make_unique<LoggerSubsystem>() );
+        const CommandLineSubsystem& commandLine = bootstrap.addSubsystem( sw::make_unique<CommandLineSubsystem>( 0, nullptr ) );
+        bootstrap.addSubsystem( sw::make_unique<CrashHandlerSubsystem>( commandLine ) );
+        bootstrap.addSubsystem( sw::make_unique<StaticStorageSubsystem>() );
+        // 엔진 루프와 같이 서브시스템 안의 객체를 건다(메모리 프로파일러는 초기화 뒤에 생겨 여기서는 걸지 않는다 — 선택 행이다).
+        (void)bootstrap.bind( commandLine.findCommandLine() );     // 새 범위 — 겹치지 않는다
+        (void)bootstrap.bind( commandLine.findGlobalVariables() ); // 새 범위 — 겹치지 않는다
+    }
+
+    /** @brief 서비스 범위를 엔진 루프와 같은 클래스로 채웁니다(초기화하지 않는다). */
+    void addServiceSubsystems( SubsystemScope& services )
+    {
+        services.addSubsystem( sw::make_unique<EventDispatcher>() );
+        services.addSubsystem( sw::make_unique<LocalizationManager>() );
+        services.addSubsystem( sw::make_unique<CommandStack>() );
+        services.addSubsystem( sw::make_unique<DebugOverlayState>() );
+        services.addSubsystem( sw::make_unique<ComponentDefaults>() );
+        services.addSubsystem( sw::make_unique<FrameProfiler>() );
+        services.addSubsystem( sw::make_unique<CrashReportService>() );
+        services.addSubsystem( sw::make_unique<DebugDrawQueue>() );
+        services.addSubsystem( sw::make_unique<RenderTargetRegistry>() );
+        services.addSubsystem( sw::make_unique<RHIBackendRegistry>() );
+    }
+
+    /**
+     * @brief 엔진 범위를 엔진 루프와 같은 클래스 · 같은 거는 타입으로 채웁니다(초기화하지 않는다).
+     * @details `makeEngineSubsystems` 는 선언만 보려고 `ISubsystem` 으로 담아 타입을 잃는다 — 범위는 넣은 타입으로 찾으므로 여기서는 타입대로 넣는다.
+     */
+    void addEngineScopeSubsystems( SubsystemScope& engineScope )
+    {
+        engineScope.addSubsystem( make_unique<CompressionCodecRegistry>() );
+        const ReflectionSubsystem& reflection = engineScope.addSubsystem( sw::make_unique<ReflectionSubsystem>( sw::make_unique<TypeRegistry>() ) );
+        (void)engineScope.bind( &reflection.getTypeRegistry() ); // 새 범위 — 겹치지 않는다
+        engineScope.addSubsystem( make_unique<TaskManager>() );
+        engineScope.addSubsystem( make_unique<AsyncFileIO>() );
+        engineScope.addSubsystem( make_unique<ConfigManager>() );
+        engineScope.addSubsystem( make_unique<AssetManager>() );
+        const EngineDefaultAssetsSubsystem& defaultAssets = engineScope.addSubsystem( sw::make_unique<EngineDefaultAssetsSubsystem>( sw::make_unique<EngineDefaultAssets>() ) );
+        (void)engineScope.bind( &defaultAssets.getDefaultAssets() ); // 새 범위 — 겹치지 않는다
+        engineScope.addSubsystem( IAudioService::createNull() );
+        engineScope.addSubsystem( make_unique<InputManager>() );
+        engineScope.addSubsystem( make_unique<AssetStreamingQueue>() );
+        engineScope.addSubsystem( make_unique<SceneManager>() );
+        engineScope.addSubsystem( make_unique<UserSettingsManager>() );
+        engineScope.addSubsystem( make_unique<ShaderCache>() );
+        engineScope.addSubsystem( make_unique<PhysicsSystem>() );
+        engineScope.addSubsystem( make_unique<FontService>() );
+        engineScope.addSubsystem( make_unique<TelemetryService>() );
+        engineScope.addSubsystem( make_unique<UISystem>() );
     }
 
     /** @brief 엔진 서브시스템마다 대역을 @p subsystems 에 넣고 정렬합니다 — 엔진의 기동 목록과 같은 그래프다(본문은 돌지 않는다). */
@@ -660,4 +733,36 @@ SW_TEST_CASE( EngineInitSequenceTest, EverySubsystemHasAMemoryTag )
     {
         SW_EXPECT_TRUE_MSG( subsystem->getSubsystemMemoryTag() != MemoryTag::Unknown, subsystem->getSubsystemName() );
     }
+}
+
+/**
+ * @brief [EngineInitSequenceTest] 부트스트랩 범위는 진단 도구에서 시작해 정적 저장소로 끝난다
+ * @details 메모리 프로파일러가 가장 먼저 서고 가장 나중에 사라진다(그 앞의 sw 블록이 없다). 정적 저장소 정리는 가장 먼저 내려간다 —
+ *          이름 풀 · 로거가 아직 있을 때 남은 칸을 알린다. 순서는 의존 하나로 정해진다(동점 없음).
+ */
+SW_TEST_CASE( EngineInitSequenceTest, BootstrapScopeRunsFromDiagnosticsToStaticStorage )
+{
+    SubsystemScope bootstrap;
+    addBootstrapSubsystems( bootstrap );
+    SW_ASSERT_TRUE_MSG( bootstrap.getCollection().sort(), bootstrap.getCollection().getError().c_str() );
+    SW_EXPECT_STREQ( "Diagnostics NamePool Logger CommandLine CrashHandler StaticStorage", joinOrderNames( bootstrap.getCollection() ).c_str() );
+}
+
+/**
+ * @brief [EngineInitSequenceTest] 서비스 표의 필수 행은 모두 호스트의 세 범위(부트스트랩 · 서비스 · 엔진) 어딘가에 있다
+ * @details 엔진 루프 · 하네스는 표를 묶을 때 빈 필수 행이 있으면 서지 않는다. 여기서는 같은 클래스로 세 범위를 만들어(초기화하지 않는다) 부모로
+ *          잇고 묻는다 — 목록에 행을 더하고 서브시스템을 어느 범위에도 넣지 않으면 진다.
+ */
+SW_TEST_CASE( EngineInitSequenceTest, EveryRequiredServiceIsInTheHostScopes )
+{
+    SubsystemScope bootstrap;
+    addBootstrapSubsystems( bootstrap );
+    SubsystemScope services{ &bootstrap };
+    addServiceSubsystems( services );
+    SubsystemScope engineScope{ &services };
+    addEngineScopeSubsystems( engineScope );
+    SW_ASSERT_TRUE_MSG( services.getCollection().sort(), services.getCollection().getError().c_str() );
+    SW_ASSERT_TRUE_MSG( engineScope.getCollection().sort(), engineScope.getCollection().getError().c_str() );
+    const utf8* pMissing = engine::findUnboundRequiredServiceName( engineScope );
+    SW_EXPECT_TRUE_MSG( pMissing == nullptr, pMissing != nullptr ? pMissing : "" );
 }

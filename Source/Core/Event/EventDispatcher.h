@@ -14,6 +14,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Module/ModuleUnloadListener.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 #include <thread>
 
@@ -49,9 +50,16 @@ namespace sw
      *       안에서의 안전성이 깨집니다. 잠금을 재귀로 바꿔 broadcast 전체를 감싸는 방법은, 임의의 콜백이 도는 내내 다른
      *       스레드를 스핀하게 만듭니다. 제대로 열려면 reader-writer 방식으로 다시 설계해야 합니다.
      */
-    class SW_API EventDispatcher final : public IModuleUnloadListener
+    class SW_API EventDispatcher final : public IModuleUnloadListener, public ISubsystem
     {
     public:
+        /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
+        static constexpr const utf8* kSubsystemName = "Event";
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+
         /** @brief 버스와 큐 락, 더블 버퍼 아레나를 준비합니다. */
         EventDispatcher();
         /** @brief 구독과 대기 큐를 비웁니다. */

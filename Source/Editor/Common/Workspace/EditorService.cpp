@@ -59,7 +59,7 @@ namespace sw::editor
         //
         // `engine::getXxx()` 의 같은 모양은 기본값으로 떨어지지 않는다. 그쪽은 `TaskManager` 같은 하위
         // 시스템이라 지어낼 기본값이 없고, 필수 서비스가 연결됐는지는
-        // `CheckEngineServiceBinding` 린트가 따로 지킨다.
+        // 엔진 루프가 기동에서 지킨다(필수 행이 비면 서지 않는다).
         SW_LOG_ASSERT( s_pEditorToolDefaults != nullptr, "EditorToolDefaults is not bound — falling back to defaults" );
         if ( s_pEditorToolDefaults == nullptr )
         {

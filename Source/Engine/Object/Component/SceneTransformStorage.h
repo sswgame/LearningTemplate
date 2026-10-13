@@ -149,7 +149,7 @@ namespace sw
         /** @brief 지금 쓰이는 슬롯 수입니다(테스트와 진단용). */
         uint32 getLiveSlotCount() const;
         /**
-         * @brief 쓰이는 슬롯이 하나도 없으면 페이지와 빈 슬롯 목록을 모두 해제하고 처음 상태로 되돌립니다. 엔진 종료 끝(`EngineBootstrap::shutdown`)이 부릅니다.
+         * @brief 쓰이는 슬롯이 하나도 없으면 페이지와 빈 슬롯 목록을 모두 해제하고 처음 상태로 되돌립니다. 엔진 종료 끝(`StaticStorageSubsystem::shutdownSubsystem`)이 부릅니다.
          * @details 저장소는 함수 정적이라 그대로 두면 페이지가 프로세스 끝까지 남아 종료 누수 보고(기준선 대비 태그 증가)에 보입니다. 다시 슬롯을 받으면
          *          페이지를 새로 만듭니다(슬롯 번호는 0 부터).
          * @return 해제했으면 true 입니다. 살아 있는 슬롯이 있으면(그 컴포넌트가 페이지 포인터를 가지고 있다) 아무것도 하지 않고 false 입니다.

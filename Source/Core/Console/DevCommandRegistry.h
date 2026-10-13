@@ -64,7 +64,7 @@ namespace sw
         void collectNames( string_view prefix, vector<string>& outListName ) const;
         /** @brief 등록된 명령 수입니다. */
         uint32 getCount() const;
-        /** @brief 내려간 모듈이 키운 용량을 놓습니다(`RegistrationList::shrinkToFit`). 엔진 종료 끝(`EngineBootstrap::shutdown`)이 모듈을 모두 내린 뒤 부릅니다. */
+        /** @brief 내려간 모듈이 키운 용량을 놓습니다(`RegistrationList::shrinkToFit`). 엔진 종료 끝(`StaticStorageSubsystem::shutdownSubsystem`)이 모듈을 모두 내린 뒤 부릅니다. */
         void releaseUnusedStorage();
 
     private:

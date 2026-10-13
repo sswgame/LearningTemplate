@@ -37,7 +37,7 @@ namespace sw
         static void unregisterProbe( const AutomationProbeRegistration* pRegistration );
         /** @brief 이름으로 찾습니다. 없으면 nullptr 입니다. */
         static const AutomationProbeRegistration* find( string_view name );
-        /** @brief 언로드된 모듈이 키운 레지스트리 용량을 해제합니다. 엔진 종료 끝(`EngineBootstrap::shutdown`)이 모듈을 모두 언로드한 뒤 부릅니다. */
+        /** @brief 언로드된 모듈이 키운 레지스트리 용량을 해제합니다. 엔진 종료 끝(`StaticStorageSubsystem::shutdownSubsystem`)이 모듈을 모두 언로드한 뒤 부릅니다. */
         static void releaseUnusedStorage();
     };
 } // namespace sw

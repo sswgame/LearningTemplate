@@ -14,6 +14,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -30,11 +31,18 @@ namespace sw
      * @class ComponentDefaults
      * @brief 게임 부트스트랩이 지정한 gamesettings.xml 의 `<Defaults>` 를 리플렉션으로 주입하는 서비스입니다.
      */
-    class SW_API ComponentDefaults
+    class SW_API ComponentDefaults : public ISubsystem
     {
     public:
+        /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
+        static constexpr const utf8* kSubsystemName = "ComponentDefaults";
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+
         ComponentDefaults();
-        ~ComponentDefaults();
+        ~ComponentDefaults() override;
 
         ComponentDefaults( const ComponentDefaults& )            = delete;
         ComponentDefaults& operator=( const ComponentDefaults& ) = delete;

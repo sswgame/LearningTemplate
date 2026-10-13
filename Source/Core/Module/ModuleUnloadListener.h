@@ -69,7 +69,7 @@ namespace sw
 
         /** @brief 지금 목록에 오른 리스너 수입니다(진단 · 테스트). */
         static uint32 getListenerCount();
-        /** @brief 기동 뒤에 만든 리스너(모듈 · 컴포넌트)가 키운 목록 용량을 놓습니다. 엔진 종료 끝(`EngineBootstrap::shutdown`)이 모듈을 모두 내린 뒤 부릅니다. */
+        /** @brief 기동 뒤에 만든 리스너(모듈 · 컴포넌트)가 키운 목록 용량을 놓습니다. 엔진 종료 끝(`StaticStorageSubsystem::shutdownSubsystem`)이 모듈을 모두 내린 뒤 부릅니다. */
         static void releaseUnusedStorage();
 
         /** @brief 주소 @p pCode 가 [@p pBegin, @p pEnd) 안인지 봅니다. nullptr 은 늘 밖입니다. */

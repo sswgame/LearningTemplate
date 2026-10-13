@@ -118,7 +118,6 @@ Scripts/
   │     │     ├── CheckCoreLayers.py          # Core 폴더 티어(Common → … → LogSink), 아래 층의 pch 로그 사용
   │     │     ├── CheckEditorLayers.py        # Editor 폴더 층(Common → Workspace → Commands → GUI → Viewport · Popups → Panels → SelfTest → 셸)
   │     │     ├── CheckCoreNetworkLayers.py   # Core/Network 폴더 층(뿌리 ← Transport · Security ← Connection ← Message ← Replication)
-  │     │     ├── CheckEngineServiceBinding.py # 엔진 서비스 표와 바인딩 호스트 대조
   │     │     ├── CheckNullableServiceUse.py  # nullptr 가능 서비스 조회를 확인 없이 역참조
   │     │     ├── CheckControlBoundary.py     # 입력을 읽는 파일은 플레이어 조종자 · 플레이어 뷰 · 명령 디렉터만(폰은 의도만)
   │     │     ├── CheckLogViewArgument.py     # 로그 인자의 string_view::data()

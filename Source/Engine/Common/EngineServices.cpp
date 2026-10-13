@@ -3,13 +3,14 @@
 #include "Engine/Common/EngineServices.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Subsystem/SubsystemScope.h"
 
 #include "RuntimeAPI/Service/ModuleServiceTable.h"
 #include "RuntimeAPI/Service/ServiceListColumns.h"
 
-// 서비스 **타입의 정의는 하나도 필요 없다.** 이 파일이 하는 일은 포인터를 담아 두고 참조로
-// 돌려주는 것뿐이라 전방 선언(EngineServices.h 가 목록에서 생성한다)으로 충분하다 — 매니저 헤더를 끌어오면
-// 이 접착 파일이 엔진 전체에 의존하게 된다.
+// 서비스 **타입의 정의는 하나도 필요 없다.** 행마다 `locateSubsystem<Type>()` 이 타입 해시(함수 서명 글)로 찾으므로 전방 선언(EngineServices.h 가
+// 목록에서 생성한다)으로 충분하다 — 매니저 헤더를 끌어오면 이 접착 파일이 엔진 전체에 의존하게 된다. 서브시스템이 아닌 행(타입 레지스트리 ·
+// 엔진 기본 에셋 · 렌더러 · 명령줄 · 전역 변수 · 메모리 프로파일러)은 호스트가 소유자의 객체를 범위에 `bind` 한다.
 
 namespace sw
 {
@@ -17,67 +18,88 @@ namespace sw
 
     namespace
     {
-        /** @brief App 이 바인딩해 둔 서비스 포인터 묶음입니다. */
+        /** @brief 찾아 둔 서비스 포인터 묶음입니다. */
         EngineServices s_services{};
+        /** @brief 바인딩한 범위입니다(목록 밖의 이름 조회 창구). */
+        const ISubsystemLocator* s_pSubsystems{ nullptr };
         /**
          * @brief `areEngineServicesBound()` 의 답입니다. bind/unbind 때만 바뀝니다.
-         * @details 표는 bind/unbind 에서만 바뀌므로 그때 한 번 셉니다 — `Component::getTypeInfo()` 가 캐스트마다 이것을 부르므로
-         *          부를 때마다 필수 서비스를 훑으면 캐스트 비용의 절반이 됩니다.
+         * @details `Component::getTypeInfo()` 가 캐스트마다 이것을 부르므로 부를 때마다 필수 서비스를 훑으면 캐스트 비용의 절반이 됩니다.
          */
         atomic<bool> s_bServicesBound{ false };
-    } // namespace
 
-    namespace engine
-    {
-        void bindEngineServices( const EngineServices& services )
+        struct EngineServicesInternal
         {
-            s_services = services;
-
-            // 빠뜨린 것을 **여기서 한 번** 분명하게 알린다. 이것이 없으면 증상은 바인딩이 아니라 한참 뒤
-            // 엉뚱한 자리에서 나타난다. `areEngineServicesBound()` 로 게이팅되는 스무 곳이 모두
-            // 조용히 폴백으로 가기 때문이다(배포본이면 셰이더 캐시를 건너뛰고 DXC 를 부르다 죽는다).
-            const utf8* pMissing = findUnboundRequiredServiceName( s_services );
-            s_bServicesBound.store( pMissing == nullptr, std::memory_order_release );
-            if ( pMissing != nullptr )
+            /** @brief @p subsystems 에서 목록의 행을 모두 찾습니다. 없는 행은 nullptr 입니다. */
+            static EngineServices resolve( const ISubsystemLocator& subsystems )
             {
-                SW_LOG_WARNING( "필수 엔진 서비스 '%#' 가 비어 있습니다 — areEngineServicesBound() 가 false 가 되어 "
-                                "그것으로 게이팅되는 경로가 전부 폴백으로 갑니다.",
-                                pMissing );
-            }
-        }
-
-        void unbindEngineServices()
-        {
-            s_services = {};
-            s_bServicesBound.store( false, std::memory_order_release );
-        }
-
-        const utf8* findUnboundRequiredServiceName( const EngineServices& services )
-        {
-            // 행 순서가 곧 보고 순서다. 같은 표를 두 번 물으면 같은 이름이 나온다.
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator ) \
-    if constexpr ( SW_SERVICE_IS_REQUIRED( requirement ) != 0 )                          \
-    {                                                                                    \
-        if ( services.member == nullptr )                                                \
-            return #Type;                                                                \
-    }
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator )
+                EngineServices services{};
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility )       services.member = locateSubsystem<Type>( &subsystems );
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility ) services.member = locateSubsystem<Type>( &subsystems );
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility )                services.member = locateSubsystem<Type>( &subsystems );
 #include "RuntimeAPI/Service/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
-            return nullptr;
+                return services;
+            }
+
+            /** @brief @p services 에서 비어 있는 첫 필수 행의 타입 이름입니다. 행 순서가 곧 보고 순서다. */
+            static const utf8* findMissing( const EngineServices& services )
+            {
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility ) \
+    if constexpr ( SW_SERVICE_IS_REQUIRED( requirement ) != 0 )                 \
+    {                                                                           \
+        if ( services.member == nullptr )                                       \
+            return #Type;                                                       \
+    }
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility ) SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility )
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility )
+#include "RuntimeAPI/Service/EngineServiceList.xxx"
+#undef SW_ENGINE_SERVICE
+#undef SW_ENGINE_SERVICE_CONST
+#undef SW_ENGINE_SERVICE_OPT
+                return nullptr;
+            }
+        };
+    } // namespace
+
+    namespace engine
+    {
+        const utf8* bindEngineServices( const ISubsystemLocator& subsystems )
+        {
+            s_services           = EngineServicesInternal::resolve( subsystems );
+            s_pSubsystems        = &subsystems;
+            const utf8* pMissing = EngineServicesInternal::findMissing( s_services );
+            s_bServicesBound.store( pMissing == nullptr, std::memory_order_release );
+            return pMissing;
+        }
+
+        void unbindEngineServices()
+        {
+            s_services    = {};
+            s_pSubsystems = nullptr;
+            s_bServicesBound.store( false, std::memory_order_release );
+        }
+
+        const utf8* findUnboundRequiredServiceName( const ISubsystemLocator& subsystems )
+        {
+            return EngineServicesInternal::findMissing( EngineServicesInternal::resolve( subsystems ) );
         }
 
         const utf8* findUnboundRequiredServiceName()
         {
-            return findUnboundRequiredServiceName( s_services );
+            return EngineServicesInternal::findMissing( s_services );
         }
 
         const EngineServices& getBoundEngineServices()
         {
             return s_services;
+        }
+
+        const ISubsystemLocator* getEngineSubsystems()
+        {
+            return s_pSubsystems;
         }
 
         bool areEngineServicesBound()
@@ -90,37 +112,35 @@ namespace sw
             using namespace sw::internal;
             outService = {};
 
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )     \
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility )              \
     if ( bGameModuleOnly == false || ( SW_SERVICE_IS_GAME_VISIBLE( visibility ) == 1 ) )     \
     {                                                                                        \
         outService.arrServices[toRawServiceID( ModuleServiceID::Type )] = s_services.member; \
     }
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) \
-    SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator ) \
-    SW_ENGINE_SERVICE( member, Tag, Type, getter, Optional, visibility, creator )
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility ) SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility )
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility )                SW_ENGINE_SERVICE( member, Tag, Type, getter, Optional, visibility )
 #include "RuntimeAPI/Service/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
         }
 
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator ) \
-    Type& getter()                                                                       \
-    {                                                                                    \
-        SW_LOG_ASSERT( s_services.member != nullptr, #Type " is not bound" );            \
-        return *s_services.member;                                                       \
-    }
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) \
-    const Type& getter()                                                                       \
-    {                                                                                          \
-        SW_LOG_ASSERT( s_services.member != nullptr, #Type " is not bound" );                  \
-        return *s_services.member;                                                             \
-    }
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator ) \
-    Type* getter()                                                              \
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility ) \
+    Type& getter()                                                              \
     {                                                                           \
-        return s_services.member;                                               \
+        SW_LOG_ASSERT( s_services.member != nullptr, #Type " is not bound" );   \
+        return *s_services.member;                                              \
+    }
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility ) \
+    const Type& getter()                                                              \
+    {                                                                                 \
+        SW_LOG_ASSERT( s_services.member != nullptr, #Type " is not bound" );         \
+        return *s_services.member;                                                    \
+    }
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility ) \
+    Type* getter()                                                     \
+    {                                                                  \
+        return s_services.member;                                      \
     }
 #include "RuntimeAPI/Service/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE

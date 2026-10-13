@@ -25,6 +25,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Diagnostics/ProfilerTimeline.h"
 #include "Core/Log/Logger.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Profiling/ProfilerBackend.h"
 
@@ -54,9 +55,16 @@ namespace sw
      *          소유는 `EngineLoop` 이고 조회는 `engine::getFrameProfiler()` 입니다(함수 지역 static 싱글턴은 수명이 아무에게도
      *          속하지 않아 종료 순서를 정할 수 없습니다).
      */
-    class SW_API FrameProfiler
+    class SW_API FrameProfiler : public ISubsystem
     {
     public:
+        /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
+        static constexpr const utf8* kSubsystemName = "FrameProfiler";
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+
         /** @brief 등록할 수 있는 구간 수입니다. 넘으면 새 구간은 조용히 무시됩니다(측정이 실행을 막으면 안 되기 때문입니다). */
         static constexpr uint32 kMaxScope = 128;
         /** @brief 슬롯을 받지 못했을 때의 값입니다. */

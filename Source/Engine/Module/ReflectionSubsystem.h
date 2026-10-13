@@ -24,7 +24,7 @@ namespace sw
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "Reflection";
 
-        /** @brief @p typeRegistry 를 넘겨받습니다(서비스 표에는 호스트가 이미 묶었다). */
+        /** @brief @p typeRegistry 를 넘겨받습니다(호스트가 범위에 `bind` 해 서비스 표가 찾는다). */
         explicit ReflectionSubsystem( unique_ptr<TypeRegistry> typeRegistry );
         ~ReflectionSubsystem() override;
 

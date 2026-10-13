@@ -11,6 +11,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
@@ -39,9 +40,17 @@ namespace sw
      * @class RHIBackendRegistry
      * @brief 백엔드 팩토리의 등록 · 조회와 MODULE 로드를 맡습니다.
      */
-    class SW_API RHIBackendRegistry
+    class SW_API RHIBackendRegistry : public ISubsystem
     {
     public:
+        /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
+        static constexpr const utf8* kSubsystemName = "RHIBackendRegistry";
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        MemoryTag           getSubsystemMemoryTag() const override { return MemoryTag::RenderCPU; }
+
     public:
         // ------------------------------------------------------------------------------
         // 2) 등록 · 조회 · 생성
@@ -78,7 +87,7 @@ namespace sw
         /** @brief 빈 레지스트리로 만듭니다. */
         RHIBackendRegistry();
         /** @brief 로드된 모듈을 정리합니다. */
-        ~RHIBackendRegistry();
+        ~RHIBackendRegistry() override;
 
         /** @brief 복사를 금지합니다. */
         RHIBackendRegistry( const RHIBackendRegistry& ) = delete;

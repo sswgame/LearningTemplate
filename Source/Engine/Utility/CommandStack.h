@@ -10,6 +10,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Module/ModuleUnloadListener.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 namespace sw
 {
@@ -29,9 +30,16 @@ namespace sw
      *          - **모듈 명령**: undo 와 redo 가 모듈 이미지의 코드(람다, 패널 메서드)인 명령이다. 그 모듈이 언로드되기 전에 `removeCodeWithin` 이 분리한다.
      *          언리얼의 `FTransaction`(오브젝트 상태를 직렬화해 기록)과 유니티의 `Undo`(직렬화한 객체 상태)가 코드 리로드를 넘는 것과 같은 구조다.
      */
-    class SW_API CommandStack final : public IModuleUnloadListener
+    class SW_API CommandStack final : public IModuleUnloadListener, public ISubsystem
     {
     public:
+        /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
+        static constexpr const utf8* kSubsystemName = "CommandStack";
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+
         /**
          * @struct Command
          * @brief 레이블과 undo/redo 델리게이트를 담는 한 명령입니다.

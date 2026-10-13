@@ -66,7 +66,7 @@ SW_TEST_CASE( MemoryTagTest, HarnessStartupIsAttributed )
 
 /**
  * @brief [MemoryTagTest] 진단 구성의 부트스트랩이 플랫폼 누수 추적을 켜 둔다
- * @details `EngineBootstrap::initialize( owned, true )` 는 `EngineLoop`(Debug) 와 이 하네스가 함께 부른다. 그래서 이 프로세스의 CRT 상태가
+ * @details 진단 구성의 `DiagnosticsSubsystem( true )` 은 `EngineLoop`(Debug) 와 이 하네스가 함께 세운다. 그래서 이 프로세스의 CRT 상태가
  *          곧 Debug App 의 상태다. 할당 추적 플래그가 켜져 있고, 누수 덤프(`_CRT_WARN`) · CRT 오류(`_CRT_ERROR`)가 디버거 출력과 함께 stderr 로도
  *          나가야 `MemoryProfiler::reportMemoryLeaks` 의 결과가 콘솔 · CI 로그에 남는다.
  */

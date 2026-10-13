@@ -9,10 +9,6 @@ root_file = [
     "EngineMinimal.h",
     "EngineLoop.h",
     "EngineLoop.cpp",
-    "EngineBootstrap.h",
-    "EngineBootstrap.cpp",
-    "EngineServiceCollection.h",
-    "EngineServiceCollection.cpp",
     "HeadlessSubsystem.h",
     "HeadlessSubsystem.cpp",
 ]

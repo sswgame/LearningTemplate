@@ -6,7 +6,7 @@
 
 `AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline` 은 엔진 기동 뒤 기준선과 종료 보고를 견줘, 자란 메모리 태그가 없어야 통과합니다.
 이 테스트를 통과시키려고 저장소마다 종료 때만 부르는 해제 함수(`releaseTextStorage`, `releaseActive`, `releaseStorage`, `releaseUnusedStorage`, `releaseScratch`, `releaseTitleStorage` …)가 늘었습니다.
-저장소가 하나 늘 때마다 함수 하나와 `EngineBootstrap::shutdown` 의 호출 한 줄이 늘어나는 구조입니다.
+저장소가 하나 늘 때마다 함수 하나와 `StaticStorageSubsystem::shutdownSubsystem` 의 호출 한 줄이 늘어나는 구조입니다.
 
 방향은 소유 관계입니다. 저장소는 소유자만 선언하고, 소유 범위(엔진 수명 · 모듈 · 씬 · 스레드)가 끝나면 저절로 사라집니다.
 초기화도 같습니다. 처음 쓸 때 만들어지고(지연 생성), 별도 init 함수를 두지 않습니다.
@@ -15,7 +15,7 @@
 
 `Core/Memory/LifetimeScope.h` 의 두 타입입니다.
 
-- `LifetimeScope` — 소유 범위입니다. 등록된 값을 `close()` 가 등록의 역순으로 소멸시킵니다. 전역 범위(`LifetimeScope::getGlobal()`)는 엔진 종료(`EngineBootstrap::shutdown`)가 닫습니다.
+- `LifetimeScope` — 소유 범위입니다. 등록된 값을 `close()` 가 등록의 역순으로 소멸시킵니다. 전역 범위(`LifetimeScope::getGlobal()`)는 엔진 종료(`StaticStorageSubsystem::shutdownSubsystem`)가 닫습니다.
 - `ScopeOwned<T>` — 처음 `getOrCreate()` 할 때 만들어져 범위에 등록되는 값입니다. 범위가 닫힌 뒤의 접근은 nullptr 이고 Debug 에서 단언합니다. 상수 초기화되므로 익명 네임스페이스의 정적 변수로 둡니다.
 
 ```cpp
@@ -42,21 +42,21 @@ LocalizedTextArena* const pArena = s_localizedTextArena.getOrCreate();
 
 | 이름 | 파일 | 종류 | 소유해야 하는 쪽 | 부르는 곳 | 상태 |
 |---|---|---|---|---|---|
-| `StringTable::releaseTextStorage`(`LocalizedTextArena`) | `Engine/Localization/StringTable.cpp` | ① | 엔진 수명 범위 | `EngineBootstrap::shutdown` | 옮김 — `ScopeOwned`, 함수 삭제 |
-| `Render2DSettings::releaseActive`(활성 표) | `Engine/Graphics/2D/Render2DSettings.cpp` | ① | 엔진 수명 범위 | `EngineBootstrap::shutdown` | 옮김 — `ScopeOwned`, 함수 삭제 |
-| `AssetLoadProfiler::releaseStorage` | `Engine/Resource/AssetLoadProfiler.cpp` | ① | 엔진 수명 범위 | `EngineBootstrap::shutdown` | 옮김 — `ScopeOwned`, 함수 삭제 |
-| `IModuleUnloadListener::releaseUnusedStorage` | `Core/Module/ModuleUnloadListener.cpp` | ① | 등록한 모듈(빈 목록이 되면 용량 반납) | `EngineBootstrap::shutdown` | 다음 단위 |
-| `AutomationStepRegistry::releaseUnusedStorage` | `Engine/Automation/AutomationStepRegistry.cpp` | ① | 등록한 모듈 | `EngineBootstrap::shutdown` | 다음 단위 |
-| `AutomationProbes::releaseUnusedStorage` | `Engine/Automation/AutomationProbe.cpp` | ① | 등록한 모듈 | `EngineBootstrap::shutdown` | 다음 단위 |
-| `DevCommandRegistry::releaseUnusedStorage` | `Core/Console/DevCommandRegistry.cpp` | ① | 등록한 모듈 | `EngineBootstrap::shutdown` | 다음 단위 |
+| `StringTable::releaseTextStorage`(`LocalizedTextArena`) | `Engine/Localization/StringTable.cpp` | ① | 엔진 수명 범위 | `StaticStorageSubsystem::shutdownSubsystem` | 옮김 — `ScopeOwned`, 함수 삭제 |
+| `Render2DSettings::releaseActive`(활성 표) | `Engine/Graphics/2D/Render2DSettings.cpp` | ① | 엔진 수명 범위 | `StaticStorageSubsystem::shutdownSubsystem` | 옮김 — `ScopeOwned`, 함수 삭제 |
+| `AssetLoadProfiler::releaseStorage` | `Engine/Resource/AssetLoadProfiler.cpp` | ① | 엔진 수명 범위 | `StaticStorageSubsystem::shutdownSubsystem` | 옮김 — `ScopeOwned`, 함수 삭제 |
+| `IModuleUnloadListener::releaseUnusedStorage` | `Core/Module/ModuleUnloadListener.cpp` | ① | 등록한 모듈(빈 목록이 되면 용량 반납) | `StaticStorageSubsystem::shutdownSubsystem` | 다음 단위 |
+| `AutomationStepRegistry::releaseUnusedStorage` | `Engine/Automation/AutomationStepRegistry.cpp` | ① | 등록한 모듈 | `StaticStorageSubsystem::shutdownSubsystem` | 다음 단위 |
+| `AutomationProbes::releaseUnusedStorage` | `Engine/Automation/AutomationProbe.cpp` | ① | 등록한 모듈 | `StaticStorageSubsystem::shutdownSubsystem` | 다음 단위 |
+| `DevCommandRegistry::releaseUnusedStorage` | `Core/Console/DevCommandRegistry.cpp` | ① | 등록한 모듈 | `StaticStorageSubsystem::shutdownSubsystem` | 다음 단위 |
 | `GameAutoplay::unregisterAutoplay` 의 `shrinkToFit` | `Engine/Utility/GameAutoplay.cpp` | ① | 등록한 모듈 | 등록 해제 때(목록이 비면) | 이미 반응형 — 위 넷의 본보기 |
-| `SceneTransformStorage::releaseStorage` | `Engine/Object/Component/SceneTransformStorage.cpp` | ① + ④ 검출 | 엔진 수명 범위(소멸자에서 남은 칸 경고) | `EngineBootstrap::shutdown` | 다음 단위 |
-| `RHIRenderResource::releaseRegistryStorage` | `Engine/Graphics/RHI/RHIRenderResource.cpp` | ① + ④ 검출 | 엔진 수명 범위(소멸자에서 남은 등록 경고) | `EngineBootstrap::shutdown` | 다음 단위 |
-| `ResourcePaths::clearPathCache` | `Engine/Resource/ResourcePaths.cpp` | ① | 엔진 수명 범위(`initialize` 의 비우기는 남는다) | `EngineBootstrap::shutdown`, `ResourcePaths::initialize` | 다음 단위 |
+| `SceneTransformStorage::releaseStorage` | `Engine/Object/Component/SceneTransformStorage.cpp` | ① + ④ 검출 | 엔진 수명 범위(소멸자에서 남은 칸 경고) | `StaticStorageSubsystem::shutdownSubsystem` | 다음 단위 |
+| `RHIRenderResource::releaseRegistryStorage` | `Engine/Graphics/RHI/RHIRenderResource.cpp` | ① + ④ 검출 | 엔진 수명 범위(소멸자에서 남은 등록 경고) | `StaticStorageSubsystem::shutdownSubsystem` | 다음 단위 |
+| `ResourcePaths::clearPathCache` | `Engine/Resource/ResourcePaths.cpp` | ① | 엔진 수명 범위(`initialize` 의 비우기는 남는다) | `StaticStorageSubsystem::shutdownSubsystem`, `ResourcePaths::initialize` | 다음 단위 |
 | `ShaderReflectionLibrary::clearCache`(매니페스트) | `Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.cpp` | ① | 엔진 수명 범위 또는 `ShaderCache` | `ShaderCache` 종료, 재컴파일, 쿠킹 | 다음 단위(재컴파일 · 쿠킹의 비우기는 남는다) |
 | `MeshCache::clear` 의 경고 경로 집합 | `Engine/Graphics/Mesh/MeshCache.cpp` | ① | 엔진 수명 범위 | `MeshCache::clear` | 다음 단위 |
 | `PhysicsMeshShapeCache::clear` | `Engine/Physics/Collision/PhysicsMeshShapeCache.cpp` | ① | 엔진 수명 범위 | `PhysicsMeshShapeCache::clear` | 다음 단위 |
-| `HashedStringPool::shutdown` | `Core/String/hashed_string.cpp` | ① | 부트스트랩(모든 `hashed_string` 뒤) | `EngineBootstrap::shutdown` | 유지 — 순서가 계약이다(범위가 닫힌 뒤 내린다) |
+| `HashedStringPool::shutdown` | `Core/String/hashed_string.cpp` | ① | 부트스트랩(모든 `hashed_string` 뒤) | `NamePoolSubsystem` 소멸자 | 유지 — 순서가 계약이다(범위가 닫힌 뒤 내린다) |
 | `UIPaintPass::releaseScratch`(`t_listPaintOrderByDepth`) | `Engine/UI/Render/UIPaintPass.cpp` | ② | `UISystem`(칠하기 문맥으로 스크래치를 넘긴다) | `UISystem::shutdown` | 다음 단위 — `ded0a6fd6` 의 이동 대입 수정은 그대로 둔다 |
 | `BinarySerializer` 의 `thread_local` 버퍼 넷 | `Engine/Serialization/Format/BinarySerializer.cpp` | ② | 스레드 슬롯별 스크래치 | 없음 | 다음 단위 — 기준선 뒤에 자라는지 먼저 잰다 |
 | `ShaderParameterBinder` 의 `s_cbBytes` | `Engine/Renderer/Frame/ShaderParameterBinder.cpp` | ② | 바인더(렌더 스레드) | 없음 | 다음 단위 — 기준선 뒤에 자라는지 먼저 잰다 |

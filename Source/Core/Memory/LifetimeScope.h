@@ -2,7 +2,7 @@
  * @file LifetimeScope.h
  * @brief 소유 범위(`LifetimeScope`)와 그 범위가 닫히면 함께 사라지는 지연 생성 값(`ScopeOwned<T>`)입니다.
  * @details 프로세스 정적 저장소는 소유자만 선언하고, 비우는 함수를 따로 두지 않습니다. 값은 처음 쓸 때 만들어져 범위에 등록되고,
- *          범위가 닫히면 만든 역순으로 소멸합니다. 전역 범위(`LifetimeScope::getGlobal`)는 엔진 종료(`EngineBootstrap::shutdown`)가 닫으므로,
+ *          범위가 닫히면 만든 역순으로 소멸합니다. 전역 범위(`LifetimeScope::getGlobal`)는 엔진 종료(`StaticStorageSubsystem::shutdownSubsystem`)가 닫으므로,
  *          엔진이 기동한 뒤에 자란 저장소가 종료 누수 보고 전에 돌아갑니다. 엔진을 세우지 않는 프로세스(Core 테스트)에서는 값이 프로세스 끝에 소멸합니다.
  */
 #pragma once
@@ -56,7 +56,7 @@ namespace sw
         /** @brief 복사 대입을 금지합니다. */
         LifetimeScope& operator=( const LifetimeScope& ) = delete;
 
-        /** @brief 엔진 수명 범위입니다. 엔진 종료(`EngineBootstrap::shutdown`)가 닫습니다. */
+        /** @brief 엔진 수명 범위입니다. 엔진 종료(`StaticStorageSubsystem::shutdownSubsystem`)가 닫습니다. */
         static LifetimeScope& getGlobal();
 
         /**
