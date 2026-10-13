@@ -218,8 +218,7 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   남은 것: (1) 게임 프리셋 8개(`Ninja-Debug-<게임>`)는 이제 `Ninja-Debug` + `-game=` 이 대신한다 — Shipping 게임 빌드(`-DSW_ACTIVE_GAME`)만 남기고 지울지 정한다(문서 · 스크립트의 프리셋 언급도 함께).
   (2) `SW_GAMES` 로 더한 키트도 활성 게임 실행에서 올라온다(카탈로그는 `Bin/Modules` 의 매니페스트 전부, 켜짐은 고른 게임의 표) — 고른 게임이 닿지 않는 키트는 올리지 않게.
   (3) 전용 서버 `-game=NileCity` 는 기동 · 60 틱 종료까지 확인했다(게임 팩 DLL · `Config/Server/<게임>.json`, 없으면 Dev 기본값). 서버에서 팩의 `.ogg` 디코드 경고가 난다 — 서버가 오디오를 읽을 이유가 있는지 본다.
-  **sccache 가 거의 쓰이지 않는다** — 요청 19,477건 중 캐시 가능 96건, 나머지는 PCH(`/Fp` 19,202 · `/Yc` 179)라 캐시 불가(`Tools/Sccache/sccache.exe --show-stats`).
-  `SW_ENABLE_PCH=OFF` + sccache(빈 캐시 · 폴더를 지우고 다시 지은 캐시 적중) 대 PCH ON 의 전체 빌드 시간과 한 파일 고쳐 다시 짓는 시간을 같은 조건으로 비교한다.
+  (4) 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸다(DX12 직접 실행으로 10 시나리오 통과만 확인).
 
 ## D. 기능 로드맵
 
