@@ -119,20 +119,23 @@ py -3 Scripts/lint/gate/CheckEngineLayers.py
 
 ### 기동과 종료
 
-엔진의 기동 순서는 `EngineInitStepList.xxx` 한 파일에 적혀 있습니다. X-macro 목록이고, 줄마다 단계 이름, 그 단계에서 쓸 메모리 태그, 실행할 호스트, 먼저 초기화되어야 하는 단계 목록을 적습니다.
+엔진의 기동 단계는 `EngineInitStepList.xxx` 한 파일에 적혀 있습니다. X-macro 목록이고, 줄마다 단계 이름, 그 단계에서 쓸 메모리 태그, 실행할 호스트, 먼저 초기화되어야 하는 단계 목록을 적습니다.
 호스트 값은 `All`, `Client`, `Server` 이고, 전용 서버는 `Client` 줄을 건너뜁니다. 언리얼의 `USubsystem` 이 `InitializeDependency` 로 의존을 선언하는 것과 같은 방식입니다.
 
-의존은 `{ A, B }` 같은 식별자 목록입니다. 오타가 있거나 자기보다 아래 줄에 의존하면 컴파일 오류가 납니다(`EngineInitSequence.cpp` 의 `static_assert`).
-의존만으로 위상 정렬한 순서(동점은 이름 순)는 줄 순서와 같아야 합니다. 의존을 빠뜨리면 `EngineInitSequenceTest.TableIsWrittenInStartupOrder` 가 실패합니다.
+**순서의 진실은 의존 목록 하나입니다.** 초기화 순서는 의존으로 위상 정렬해 계산하고(동점은 이름 순이라 결정적), 줄 위치는 뜻이 없습니다.
+표는 읽기 좋게 계산 순서대로 적어 두었을 뿐입니다. "A 가 B 보다 먼저" 가 필요하면 줄을 옮기지 않고 의존을 적습니다.
+의존은 `{ A, B }` 같은 식별자 목록이라 오타는 컴파일 오류이고, 순환과 대상 어긋남(서버에서 도는 단계가 `Client` 단계에 의존)도 컴파일 오류입니다(`EngineInitSequence.cpp` 의 `EngineInitTableCheck`).
 
 `EngineInitSequence` 가 이 목록을 읽고 세 번 돕니다.
 
-1. `initializeAll` 이 위에서부터 초기화합니다.
+1. `initializeAll` 이 계산한 순서로 초기화합니다.
 2. `shutdownAll` 이 초기화에 성공한 단계만 역순으로 종료합니다.
 3. `destroyAll` 이 **모든 단계**를 역순으로 해제합니다. 실패했거나 건너뛰었거나 도달하지 못한 단계도 포함하므로, 해제 본문은 null을 안전하게 다뤄야 합니다.
 
-단계의 본문은 호스트가 단계마다 구조체 하나(`<단계>StartupStep`)로 줍니다. 구조체는 `EngineInitStepDefaults` 를 상속하고 `initialize`, `shutdown`, `destroy` 를 가집니다.
-호스트는 `EngineLoop.cpp` 와 테스트 하네스(`Test/TestFramework/main.cpp`) 두 곳이고, 같은 목록을 씁니다. 구조체가 빠지면 `EngineInitStepTable` 이 컴파일 오류를 냅니다.
+단계의 본문은 호스트마다 **본문 모음 하나**에 정적 함수로 둡니다. 이름은 `initialize<단계>`, `shutdown<단계>`, `destroy<단계>` 이고, 필요한 것만 정의합니다.
+본문 모음은 `EngineInitNoStepBody` 를 상속하고, 정의하지 않은 자리는 아무것도 하지 않습니다(초기화는 성공으로 칩니다). 단계마다 타입을 짓지 않습니다.
+호스트는 `EngineLoop.cpp`(`EngineLoop::StartupStepBody`)와 테스트 하네스(`Test/TestFramework/TestHostRuntime.cpp` 의 `TestHost`) 두 곳이고, 같은 목록을 씁니다.
+시그니처가 틀린 본문은 컴파일 오류입니다. 이름이 틀린 본문(`initializeScnee`)은 어느 단계에도 걸리지 않으니, 새 본문은 그 단계가 실제로 도는지 확인합니다.
 
 씬은 `ModuleTypes` 단계가 끝난 뒤에만 읽고 쿠킹합니다. 이 단계에서 호스트가 GameFramework, 키트, 게임 모듈을 로드해 타입 등록을 끝냅니다. `Headless` 단계는 그 뒤에 있습니다.
 
@@ -250,9 +253,11 @@ XML · JSON 문서(`XMLDocument`, `JSONDocument`, `ConfigKeyDoc`)는 `Serializat
 
 ### 새 기동 단계 넣기
 
-1. `EngineInitStepList.xxx` 에 기동 순서대로 줄 하나를 넣고, 먼저 초기화되어야 하는 단계를 의존 목록에 적습니다.
-2. 두 호스트(`EngineLoop.cpp`, `Test/TestFramework/main.cpp`)에 `<단계>StartupStep` 구조체를 더합니다. 기본 구현은 아무것도 하지 않습니다.
-3. `initialize` 본문은 다시 실행될 수 있어야 합니다. 백엔드 교체가 `shutdownDependentsOf( RHI )` 와 `restartStoppedSteps()` 로 같은 본문을 다시 부르기 때문입니다.
+1. `EngineInitStepList.xxx` 에 줄 하나를 넣습니다(위치는 어디든 됩니다). 먼저 초기화되어야 하는 단계를 의존 목록에 적습니다.
+2. `EngineLoop::StartupStepBody`(`EngineLoop.cpp`)에 필요한 본문만 정적 함수로 둡니다 — `initialize<단계>`, `shutdown<단계>`, `destroy<단계>`.
+3. 테스트 하네스도 그 단계를 세워야 하면 `TestHost` 에 같은 이름의 함수를 둡니다. 아니면 손대지 않습니다.
+4. 서버에서 돌면 안 되는 단계는 대상을 `Client` 로 적습니다. `Client` 단계에 의존하는 단계도 `Client` 여야 합니다(컴파일 검사).
+5. `initialize<단계>` 는 다시 실행될 수 있어야 합니다. 백엔드 교체가 `shutdownDependentsOf( RHI )` 와 `restartStoppedSteps()` 로 같은 본문을 다시 부르기 때문입니다.
    객체가 이미 있으면 다시 쓰고, 디바이스 설정은 매번 다시 적용합니다.
 
 ### 새 엔진 서비스 넣기
