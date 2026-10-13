@@ -254,7 +254,7 @@ cd build/Ninja-Debug/Bin
 
 - **`AppSmokeTest`** 는 App을 네 백엔드와 에디터 유무 조합으로 띄워 종료 코드와 `[Error]` 로그를 봅니다. 창 닫기, 백엔드 교체, 메모리 태그 보고, 골든 이미지 비교도 여기에 있습니다.
 - **`AppScenarioTest`** 는 자동화 시나리오(`*.scenario.xml`)를 백엔드마다 돌리고 종료 코드 0을 확인합니다. 엔진 시나리오와 활성 게임 팩의 시나리오를 모두 찾으므로, 파일을 두기만 하면 돕니다.
-  시나리오 형식과 실행기는 [Automation README](../Source/Engine/Automation/README.md)에 있습니다.
+  시나리오 형식과 실행기는 `Source/Engine/Automation/` 의 소스와 헤더 주석에 있습니다.
 - **`AppUITest`** 는 엔진 시나리오 `engine/automation/uidemo.scenario.xml` 을 백엔드마다 돌려 UI 견본 화면의 스크린샷과 레이아웃 덤프(`UILayoutDump`)를 받습니다.
   덤프에서 위젯 이름으로 사각형을 찾아, 알려진 영역의 색을 확인하고(주 버튼 가운데는 강조색), 영역마다 평균 색과 가장자리 수를 첫 백엔드와 비교합니다(평균 차 0.02 이하, 가장자리 수 차 2% 이하).
 
@@ -382,5 +382,5 @@ $env:SW_FUZZ_ITERATIONS=20000; $env:SW_FUZZ_TRACE=1; cd build/Ninja-Debug/Bin; .
 | `cmake/Engine/TestTargets.cmake` | `sw_addTestExecutable`, `HOST_SPLIT`, `SHARDS`, `sw_registerTestRun` |
 
 - 검증 절차 전반: [docs/08_Verification.md](../docs/08_Verification.md)
-- 자동화 시나리오: [Automation README](../Source/Engine/Automation/README.md)
+- 자동화 시나리오: `Source/Engine/Automation/` 의 소스와 헤더 주석
 - 상위 문서: [문서 지도](../docs/02_DocumentMap.md)

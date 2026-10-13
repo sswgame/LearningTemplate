@@ -6,7 +6,7 @@
 루트는 기동 · 종료를 엮는 자리(`EngineLoop` · `EngineBootstrap` · `EngineInitSequence` · `EngineServiceCollection`)와
 prelude · PCH · 빌드 파일뿐이다. 기능은 자기 폴더에 둔다 — 루트 파일은 층 검사(`CheckEngineLayers`)에서 맨 위 티어라
 무엇이든 include 할 수 있어서, 기능 파일이 루트에 앉으면 그 기능이 어느 층을 올려다보는지가 감춰진다.
-새 기능 파일의 자리는 `Source/Engine/README.md` 의 티어 표에서 그 파일이 include 하는 폴더보다 높거나 같은 폴더다.
+새 기능 파일의 자리는 `Scripts/lint/rules/CheckEngineLayers.toml` 의 티어 표에서 그 파일이 include 하는 폴더보다 높거나 같은 폴더다.
 
 규칙 데이터(예외 표 · 목록)는 `Scripts/lint/rules/CheckEngineRootFiles.toml` 에 있다.
 
@@ -55,7 +55,7 @@ class CheckEngineRootFilesGate(LintGate):
     preCommitFileArgument = ""
     violationHeader = "엔진 루트에 둘 수 없는 파일"
     hint = ("  엔진 루트는 기동 · 종료를 엮는 파일만 둡니다. 기능 파일은 자기 폴더로 옮기세요 — 자리는 그 파일이 include 하는\n"
-            "  폴더보다 티어가 높거나 같은 폴더입니다(Source/Engine/README.md 의 티어 표, CheckEngineLayers).")
+            "  폴더보다 티어가 높거나 같은 폴더입니다(Scripts/lint/rules/CheckEngineLayers.toml 의 티어 표).")
     selfTestCases = [
         {
             "name": "엔진 루트의 기능 파일",

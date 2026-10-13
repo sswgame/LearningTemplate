@@ -23,8 +23,8 @@
 | `Resource/engine/navigation/navmeshsettings.xml` | `NavMeshSettings` (`ResourceCatalog`) — 처음 쓸 때 · 내비메시 쿠킹 | 엔진 팩에 실림 | 한다 | [NavMeshSettings](NavMeshSettings.md) |
 | `Resource/engine/animation/lipsync.json` | `LipSyncSettings::loadFromResource` (`FacialAnimationComponent::speak` · `App --import-lipsync`) — 처음 말할 때 · 립싱크 임포트. 비즘 이름은 얼굴 리그(`*.facial.json`)의 `_listViseme` 와 맞춘다 | 엔진 팩에 실림 | 한다 | [LipSyncSettings](LipSyncSettings.md) |
 | `Resource/engine/data/render2d.xml` | `Render2DSettings::getActive` (손으로 읽음 — 모르는 요소 · 속성은 오류) — 처음 쓸 때 · `reloadActive`. 활성 게임 팩의 `data/render2d.xml` 이 있으면 통째로 대신한다 | 엔진 팩에 실림 | 한다 | [형식 설명](../../Source/Engine/Graphics/2D/Render2DSettings.h) |
-| `Resource/engine/input/default.input.xml` | `InputMap::loadFromResource` (셸 입력 맵 — `EngineDefaultAssets::_shellInputMap`) — 기동 · 에셋 핫 리로드 | 엔진 팩에 실림 | 한다 | [형식 설명](../../Source/Engine/Input/README.md) |
-| `Resource/engine/input/ui.input.xml` | `InputMap::loadFromResource` (런타임 UI 행동 맵 — `EngineDefaultAssets::_uiInputMap`, `UISystem::initialize`) — 기동(UI 단계) | 엔진 팩에 실림 | 한다 | [형식 설명](../../Source/Engine/UI/README.md) |
+| `Resource/engine/input/default.input.xml` | `InputMap::loadFromResource` (셸 입력 맵 — `EngineDefaultAssets::_shellInputMap`) — 기동 · 에셋 핫 리로드 | 엔진 팩에 실림 | 한다 |  |
+| `Resource/engine/input/ui.input.xml` | `InputMap::loadFromResource` (런타임 UI 행동 맵 — `EngineDefaultAssets::_uiInputMap`, `UISystem::initialize`) — 기동(UI 단계) | 엔진 팩에 실림 | 한다 |  |
 | `Resource/engine/settings/engine.settings.xml` | `UserSettingsManager::loadSchema` (`EngineLoop` UserSettings 단계) — 기동. 플레이어 옵션 메뉴의 스키마 — 설정 표는 생성 페이지 `UserSettings.md` | 엔진 팩에 실림 | 한다 | [UserSettings](UserSettings.md) |
 | `Resource/engine/settings/debughud.settings.xml` | `UserSettingsManager::loadSchema` (`EngineLoop` UserSettings 단계 — Dev 만) — 기동. 디버그 HUD 상태(`debug.*`) — 엔진 스키마에 덧붙는다 | 엔진 팩에 실리지만 Shipping 은 읽지 않음(디버그 HUD 가 없다) | 한다 | [UserSettings](UserSettings.md) |
 
@@ -41,7 +41,7 @@
 | `Resource/game/*/data/gamesettings.xml` | `GameSettings::loadFromResource` (`GameInstanceBase::initialize`) — 게임 인스턴스 초기화 · 게임 모듈 핫 리로드. 시작 씬(`startMap` · `titleScene`)은 이 파일 하나다 — 모르는 원소는 로드 오류, 커스텀 값은 `<custom><prop key>` | 게임 팩에 실림 | 한다 | [GameSettings](GameSettings.md) |
 | `Resource/game/*/data/render2d.xml` | `Render2DSettings::getActive` — 처음 쓸 때 · `reloadActive`. 엔진 기본 `render2d.xml` 을 통째로 대신한다 | 게임 팩에 실림 | 한다 | [형식 설명](../../Source/Engine/Graphics/2D/Render2DSettings.h) |
 | `Resource/game/*/data/*.settings.xml` | `UserSettingsManager::loadSchema` (게임 프리셋 `_userSettingsSchema`) — 기동. 엔진 스키마에 덧붙는 게임 설정 | 게임 팩에 실림 | 한다 | [UserSettings](UserSettings.md) |
-| `Resource/game/*/data/*.input.xml` | `InputMap::loadFromResource` (`GameSettings::_inputMap`) — 게임 인스턴스 초기화 | 게임 팩에 실림 | 한다 | [형식 설명](../../Source/Engine/Input/README.md) |
+| `Resource/game/*/data/*.input.xml` | `InputMap::loadFromResource` (`GameSettings::_inputMap`) — 게임 인스턴스 초기화 | 게임 팩에 실림 | 한다 |  |
 | `Resource/game/*/models/*.facial.json` | `FacialRig::loadFromResource` (`FacialAnimationComponent::_facialRigPath`) — 컴포넌트 시작 · 경로를 바꿀 때. 메시에 없는 모프 타깃 · 스켈레톤에 없는 눈 본은 바인딩할 때 오류(`FacialRig::validate`) | 게임 팩에 실림 | 한다 | [FacialRig](FacialRig.md) |
 
 ## 사용자 설정
@@ -55,11 +55,11 @@
 | 파일 | 읽는 곳과 시점 | 배포본 | 커밋 | 문서 |
 |---|---|---|---|---|
 | `Config/Editor/editortooldefaults.json` | `EditorToolDefaults::loadFromHostPath` (에디터 모듈 기동) — 에디터 기동 · 에디터 핫 리로드. 기본값과 다른 값이 있을 때만 만든다 — 없으면 기본값 | 없음(에디터 없음) | 한다 | [EditorToolDefaults](EditorToolDefaults.md) |
-| `Saved/Editor/EditorPreferences.json` | `EditorPreferencesStore::loadAll` · `saveAll` — 에디터 기동 · 환경설정 창에서 값을 바꾼 0.5 초 뒤 · 테마 저장 때 **앱이 통째로 다시 쓴다**. 환경설정 섹션(`SW_EDITOR_SETTINGS`)마다 기본과 다른 값만 — 앱이 쓰는 상태(`Saved/`, git 무시) | 없음(에디터 없음) | 안 한다 | [형식 설명](../../Source/Editor/README.md) |
+| `Saved/Editor/EditorPreferences.json` | `EditorPreferencesStore::loadAll` · `saveAll` — 에디터 기동 · 환경설정 창에서 값을 바꾼 0.5 초 뒤 · 테마 저장 때 **앱이 통째로 다시 쓴다**. 환경설정 섹션(`SW_EDITOR_SETTINGS`)마다 기본과 다른 값만 — 앱이 쓰는 상태(`Saved/`, git 무시) | 없음(에디터 없음) | 안 한다 |  |
 | `Config/Editor/TextureImportConfig.json` | `TextureImportConfig::loadFromFile` (손으로 읽음) — 텍스처 임포트(에디터 · `App --import-textures`) | 없음(임포트는 Dev 만) | 한다 | [TextureImportConfig](TextureImportConfig.md) |
 | `Config/Editor/ModelImportConfig.json` | `ModelImportConfig::loadFromFile` (손으로 읽음) — 모델 임포트(에디터 · `App --import-models`) | 없음(임포트는 Dev 만) | 한다 | [ModelImportConfig](ModelImportConfig.md) |
 | `Config/Editor/AssetValidationRules.json` | `Scripts/common/AssetValidation.py` (에디터 `EditorAssetValidation` 도 이것을 돌린다) — 저장 · 임포트 직후(에디터) · `CheckAssetRules` 게이트 · `py -3 -m Scripts validate-assets` | 없음 | 한다 | [형식 설명](../../Scripts/common/AssetValidation.py) |
-| `Saved/Editor/*` | ImGui · `EditorDockLayout` · `EditorLayoutStore` · 노드 캔버스 · 도구 문서 임시본 · gv 프리셋(`GlobalVariablePresets/<팩>/`) — 에디터가 쓰고 읽는다. 앱이 쓰는 에디터 상태 — `EditorPaths::getEditorStateDirectory`(git 무시) | 없음 | 안 한다 | [형식 설명](../../Source/Editor/README.md) |
+| `Saved/Editor/*` | ImGui · `EditorDockLayout` · `EditorLayoutStore` · 노드 캔버스 · 도구 문서 임시본 · gv 프리셋(`GlobalVariablePresets/<팩>/`) — 에디터가 쓰고 읽는다. 앱이 쓰는 에디터 상태 — `EditorPaths::getEditorStateDirectory`(git 무시) | 없음 | 안 한다 |  |
 
 ## 서버 운영
 

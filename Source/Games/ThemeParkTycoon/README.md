@@ -83,4 +83,3 @@ cd build/Ninja-Debug-ThemeParkTycoon/Bin
 ## 더 볼 곳
 
 - [Games](../README.md) — 이 구조를 일반화한 "새 게임 = 씬 + 프리팹 + 디렉터와 뷰 컴포넌트"
-- [Kits](../../GameFramework/Kits/README.md) — `GF_ThemePark` 와 다른 키트

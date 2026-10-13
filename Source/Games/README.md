@@ -54,7 +54,7 @@ echo $LASTEXITCODE                                  # 0 통과, 10 실패, 11 �
 
 프리셋마다 빌드 폴더가 따로이므로, 게임을 바꿀 때 한 빌드 폴더를 다시 configure 하지 않습니다. 두 작업이 한 폴더를 나눠 쓰면 서로의 빌드를 깨뜨립니다.
 
-**자동화 시나리오**는 팩의 `automation/*.scenario.xml` 입니다. 고정 프레임 시간과 가상 입력으로 돌고, 결과를 종료 코드로 냅니다. 형식은 [Automation](../Engine/Automation/README.md)에 있습니다.
+**자동화 시나리오**는 팩의 `automation/*.scenario.xml` 입니다. 고정 프레임 시간과 가상 입력으로 돌고, 결과를 종료 코드로 냅니다. 형식은 Automation에 있습니다.
 그 게임의 시나리오를 모든 백엔드로 한꺼번에 돌리려면 그 프리셋의 호스트 테스트를 씁니다. GPU 와 창이 필요해서 CI 는 돌리지 못합니다.
 
 ```powershell
@@ -88,7 +88,7 @@ ctest --test-dir build/Ninja-Debug-HarvestValley -R AppTest_HostOnly --output-on
 ```
 
 - `_listTarget`(필수)은 모듈이 들어가는 빌드 타깃입니다. 게임과 공유 키트는 `["Client", "Server"]`, 서버 키트 `GF_Server_<X>` 는 `["Server"]`, 에디터와 RHI 는 `["Client"]` 입니다.
-  나뉘는 규칙은 [Kits](../GameFramework/Kits/README.md)의 "클라이언트와 서버로 나뉘는 기능"에 있습니다.
+  나뉘는 규칙은 Kits의 "클라이언트와 서버로 나뉘는 기능"에 있습니다.
 - 게임이 링크하는 키트는 `_listDependency` 가 정합니다. `sw_addGameModule` 이 이 목록을 읽으므로 CMake 에 다시 적지 않습니다.
 - `_listModuleOverride` 로 끈 모듈은 빌드하지 않고, 테스트 실행 파일에서도 그 키트를 include 하는 테스트가 빠지며, App 도 로드하지 않습니다.
   Shipping 은 켜진 키트만 정적 링크합니다. 켜진 모듈이 꺼진 모듈에 의존하면 configure 가 무엇이 왜 꺼졌는지 알려 줍니다.
@@ -162,7 +162,3 @@ ctest --test-dir build/Ninja-Debug-HarvestValley -R AppTest_HostOnly --output-on
 
 ## 더 볼 곳
 
-- [GameFramework](../GameFramework/README.md) — 기반, 폰과 조종자, 디렉터 베이스
-- [Kits](../GameFramework/Kits/README.md) — 키트 목록과 키트 여럿을 섞는 규칙
-- [Automation](../Engine/Automation/README.md) — 시나리오 형식과 종료 코드
-- [시작하기](../../docs/01_GettingStarted.md) — 첫 빌드와 첫 게임 오브젝트

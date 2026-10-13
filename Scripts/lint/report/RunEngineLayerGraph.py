@@ -18,7 +18,7 @@ Engine 폴더 간 include 그래프를 다시 측정해서 **강결합 묶음과
 사용법:
   py -3 Scripts/lint/report/RunEngineLayerGraph.py            # 묶음과 티어
   py -3 Scripts/lint/report/RunEngineLayerGraph.py --edges    # 묶음 안의 엣지를 파일 단위로
-  py -3 Scripts/lint/report/RunEngineLayerGraph.py --apply    # 폴더를 옮긴 뒤 — 게이트 티어 표와 Source/Engine/README.md 티어 표를 계산값으로
+  py -3 Scripts/lint/report/RunEngineLayerGraph.py --apply    # 폴더를 옮긴 뒤 — 게이트 티어 표를 계산값으로
 """
 
 from __future__ import annotations
@@ -165,7 +165,7 @@ def readKeepingNewlineInternal(path: Path) -> tuple[str, str]:
 
 def writeTierTablesInternal(repositoryRoot: Path, mapTier: dict[str, int]) -> list[str]:
     """
-    티어 표(`Scripts/lint/rules/CheckEngineLayers.toml` 의 `[tier]`)와 `Source/Engine/README.md` 의 `| 티어 | 폴더 |` 표를 계산값으로 고쳐 쓴다.
+    티어 표(`Scripts/lint/rules/CheckEngineLayers.toml` 의 `[tier]`)를 계산값으로 고쳐 쓴다.
     TOML 항목(바로 위 주석 줄 + 키 줄)은 (티어, 원래 순서)로 다시 줄 세운다. 고친 파일의 저장소 상대 경로를 돌려준다.
     """
     listChanged: list[str] = []
@@ -196,38 +196,16 @@ def writeTierTablesInternal(repositoryRoot: Path, mapTier: dict[str, int]) -> li
             stream.write(newText)
         listChanged.append("Scripts/lint/rules/CheckEngineLayers.toml")
 
-    mapRow: dict[int, list[str]] = defaultdict(list)
-    for tier, _, layerName, _ in listEntry:
-        mapRow[tier].append(layerName)
-    readmePath = repositoryRoot / kDirSourceEngine / "README.md"
-    readmeText, newline = readKeepingNewlineInternal(readmePath)
-    listReadmeLine = readmeText.split(newline)
-    headerIndex = next((index for index, line in enumerate(listReadmeLine) if line.startswith("| 티어 | 폴더 |")), None)
-    if headerIndex is None:
-        return listChanged
-    endRowIndex = headerIndex + 2
-    while endRowIndex < len(listReadmeLine) and listReadmeLine[endRowIndex].startswith("|"):
-        endRowIndex += 1
-    listRow = []
-    for tier in sorted(mapRow):
-        listName = ["`EngineLoop` 등 루트 파일" if name == gate._kRootLayerName else f"`{name}`" for name in mapRow[tier]]
-        listRow.append(f"| {tier} | {', '.join(listName)} |")
-    listReadmeLine[headerIndex:endRowIndex] = ["| 티어 | 폴더 |", "|---|---|"] + listRow
-    newReadmeText = newline.join(listReadmeLine)
-    if newReadmeText != readmeText:
-        with readmePath.open("w", encoding="utf-8", newline="") as stream:
-            stream.write(newReadmeText)
-        listChanged.append(f"{kDirSourceEngine}/README.md")
     return listChanged
 
 
 class RunEngineLayerGraphReport(LintReport):
-    description = "Engine 폴더 include 그래프의 묶음과 티어를 계산한다(`--apply` 는 티어 표 둘을 고쳐 쓴다)"
+    description = "Engine 폴더 include 그래프의 묶음과 티어를 계산한다(`--apply` 는 티어 표를 고쳐 쓴다)"
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("--edges", action="store_true", help="묶음 안의 엣지를 파일 단위로 찍는다")
         parser.add_argument("--apply", action="store_true",
-                            help="게이트 티어 표(rules/CheckEngineLayers.toml)와 Source/Engine/README.md 티어 표를 계산값으로 고쳐 쓴다(폴더를 옮긴 뒤)")
+                            help="게이트 티어 표(rules/CheckEngineLayers.toml)를 계산값으로 고쳐 쓴다(폴더를 옮긴 뒤)")
 
     def produce(self, context: ReportContext, args: argparse.Namespace) -> int:
         repositoryRoot = context.repositoryRoot

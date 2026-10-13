@@ -4,7 +4,7 @@
 
 미룬 일은 틱이 끝난 뒤 돈다. 그 사이에 컴포넌트가 지워지면 `SW_DELEGATE_METHOD( ..., this )` 는 지워진 객체를 부른다(핸들을 거치지 않는다).
 컴포넌트 자신에 대한 일은 `GameObjectManager::executeOrDeferPostTickOnComponent<T>( getHandle(), []( T& component ) { ... } )` 로 넘긴다 —
-실행할 때 핸들로 다시 찾고, 사라졌거나 삭제 대기면 부르지 않는다(Object README 함정 절).
+실행할 때 핸들로 다시 찾고, 사라졌거나 삭제 대기면 부르지 않는다(Object 헤더 주석).
 
   python Scripts/lint/gate/CheckPostTickThisBinding.py [--root <repo>]
 """
@@ -52,7 +52,7 @@ class CheckPostTickThisBindingGate(LintGate):
     preCommitFileArgument = "--files"
     violationHeader = "틱 뒤 실행에 this 를 묶은 델리게이트"
     hint = ("  미룬 사이에 컴포넌트가 지워질 수 있습니다. executeOrDeferPostTickOnComponent<T>( getHandle(), []( T& component ) { ... } ) 로\n"
-            "  넘기면 실행할 때 핸들로 다시 찾고, 사라졌거나 삭제 대기면 부르지 않습니다(Source/Engine/Object/README.md).")
+            "  넘기면 실행할 때 핸들로 다시 찾고, 사라졌거나 삭제 대기면 부르지 않습니다(Source/Engine/Object/ 의 헤더 주석).")
     selfTestCases = [
         {
             "name": "executeOrDeferPostTick 에 this 메서드",

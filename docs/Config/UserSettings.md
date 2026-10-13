@@ -2,7 +2,7 @@
 
 # 사용자 설정 (플레이어 옵션)
 
-[설정 색인](README.md) · 스키마 형식: [`Source/Engine/UserSettings/README.md`](../../Source/Engine/UserSettings/README.md)
+[설정 색인](README.md)
 
 플레이어 값은 `usersettings.json`(사용자 폴더)에 **기본값과 다른 것만** 쓰인다. `target` 이 `gv:` 면 그 전역 변수에 값을 넣는다 — 기동 때 명령줄 `-gv_*` 로 준 변수는 덮지 않는다(명령줄이 이긴다, `docs/07_Configuration.md` 우선순위).
 

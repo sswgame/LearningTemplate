@@ -76,5 +76,4 @@ cd build/Ninja-Debug-VoxelCraft/Bin
 ## 더 볼 곳
 
 - [Shooter3D](../Shooter3D/README.md) — 같은 1인칭 카메라와 마우스 잠금을 쓰는 게임
-- [GameFramework](../../GameFramework/README.md) — 폰, 조종자, 1인칭 카메라
 - [Games](../README.md) — 씬, 프리팹, 디렉터 구조

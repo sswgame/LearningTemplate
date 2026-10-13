@@ -23,7 +23,7 @@ build/Ninja-Debug/Bin/OnlineLoadBot.exe --scenario=Tools/OnlineLoadBot/Scenarios
 - `--local-server` 는 같은 프로세스에 서버를 조립합니다(`LoadBotLocalServer`). 전용 서버와 같은 조립(`OnlineServerRuntime`)으로 메모리 저장소, 캐시, 메시지 버스 위에
   서버 키트 일곱을 올리고, 봇은 루프백 TCP(평문)로 붙습니다(기본 포트 7100).
 - 전용 서버에 붙으려면 `--server=127.0.0.1:7780 --tls` 를 씁니다. 서버의 온라인 서비스 포트는 TLS 1.3 이고, `--tls` 만 주면 Dev 개발용 인증서를 신뢰합니다
-  (`--tls=<신뢰 PEM>` 으로 바꾼다). 서버 쪽 설정은 [Server README](../../Source/Server/README.md) 5단계입니다.
+  (`--tls=<신뢰 PEM>` 으로 바꾼다). 서버 쪽 설정은 `Source/Server/` 의 소스와 헤더 주석에 있습니다.
 - `--light-hash` 는 가벼운 Argon2id 설정을 씁니다. 로그인 해시 비용 자체를 측정하려면 빼고 실행합니다.
 
 끝나면 동작별 지연 표가 로그에 나오고, 오류율이 상한 이하면 종료 코드 0입니다.
@@ -87,7 +87,7 @@ OnlineLoadBot --scenario=<json> (--server=<ip:port> [--tls[=<PEM>]] | --local-se
 - 오류 키별 수. 공통 오류는 `code<번호>`, 업무 결과는 `<동작>.result<번호>` 로 셉니다.
 - 알림 종류별 수, 연결 열림과 실패와 닫힘, 경기 수
 
-표는 로그에 나오고, `--report` 를 주면 JSON으로도 씁니다. 봇은 클라이언트 쪽 지표만 봅니다. 서버 쪽 지표는 서버의 운영 엔드포인트 `/metrics` 를 같이 봅니다([Server README](../../Source/Server/README.md)).
+표는 로그에 나오고, `--report` 를 주면 JSON으로도 씁니다. 봇은 클라이언트 쪽 지표만 봅니다. 서버 쪽 지표는 서버의 운영 엔드포인트 `/metrics` 를 같이 봅니다.
 
 ## 함정과 주의
 

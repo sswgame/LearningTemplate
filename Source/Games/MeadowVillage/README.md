@@ -8,7 +8,7 @@
 - 공유 상태와 키트 디렉터 둘을 한 오브젝트에 붙이고, 붙인 순서를 틱 순서로 쓰는 방법
 - 두 디렉터가 입력 맵 하나를 액션 이름 접두로 나눠 쓰는 방법
 
-규칙은 [Kits](../../GameFramework/Kits/README.md)의 "키트 여럿을 한 게임에"에 있습니다.
+규칙은 Kits의 "키트 여럿을 한 게임에"에 있습니다.
 
 ## 빌드와 실행
 
@@ -45,5 +45,4 @@ SmokeTest 의 `ArchitectureTest.LiveReloadOneOfTwoKitsCascadesIntoTheGameOnly` �
 
 ## 더 볼 곳
 
-- [Kits](../../GameFramework/Kits/README.md) — 키트 조립 규칙
 - [HarvestValley](../HarvestValley/README.md) — 농장 키트 하나만 쓰는 게임

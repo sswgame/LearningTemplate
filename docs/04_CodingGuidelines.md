@@ -280,4 +280,4 @@ Python 파일의 모양입니다. 괄호 안 낱말은 `CheckPythonConventions` 
 | `argparse.ArgumentParser()` | `argparse.ArgumentParser(description="서드파티 고지 파일을 씁니다.")` (`argparse`) |
 
 ---
-[◀ 이전: 핫리로드 및 ABI 가이드](03_LiveReload_and_ABI.md) | [🏠 위키 홈으로 돌아가기](../README.md)
+◀ 이전: 핫리로드 및 ABI 가이드 | [🏠 위키 홈으로 돌아가기](../README.md)

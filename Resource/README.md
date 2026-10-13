@@ -29,7 +29,7 @@
 자주 찾는 데이터의 위치는 다음과 같습니다.
 
 - 셸 입력 맵은 `engine/input/default.input.xml` 이고, 게임플레이 입력 맵은 `game/<팩>/input/default.input.xml` 입니다.
-- 옵션 메뉴의 스키마는 `engine/settings/engine.settings.xml` 이고, 게임이 덧붙이는 스키마는 `game/<팩>/data/*.settings.xml` 입니다. 게임 프리셋의 `_userSettingsSchema` 가 가리킵니다. 자세한 내용은 `Source/Engine/UserSettings/README.md` 에 있습니다.
+- 옵션 메뉴의 스키마는 `engine/settings/engine.settings.xml` 이고, 게임이 덧붙이는 스키마는 `game/<팩>/data/*.settings.xml` 입니다. 게임 프리셋의 `_userSettingsSchema` 가 가리킵니다. 자세한 내용은 `Source/Engine/UserSettings/` 의 헤더 주석에 있습니다.
 
 데이터는 현재 형식으로만 읽습니다. 예전 형식을 짐작해서 읽지 않고, 이름을 바꿀 때 별칭(`Alias`, `ValueAlias`)도 두지 않습니다.
 이름이나 형식을 바꾸면 이 폴더의 데이터를 새 형식으로 다시 씁니다. `ResourceDataSchemaTest` 가 이 폴더의 데이터가 모르는 이름 없이 읽히는지 검사합니다.

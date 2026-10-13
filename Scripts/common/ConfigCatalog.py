@@ -110,20 +110,20 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
     ConfigFileEntry(
         page="", pathPattern="Resource/engine/input/default.input.xml", layer=kLayerEngineDefault, fileFormat="xml",
         reader="`InputMap::loadFromResource` (셸 입력 맵 — `EngineDefaultAssets::_shellInputMap`)", readWhen="기동 · 에셋 핫 리로드",
-        shipping="엔진 팩에 실림", bCommitted=True, ownerDoc="Source/Engine/Input/README.md"),
+        shipping="엔진 팩에 실림", bCommitted=True),
     ConfigFileEntry(
         page="", pathPattern="Resource/engine/input/ui.input.xml", layer=kLayerEngineDefault, fileFormat="xml",
         reader="`InputMap::loadFromResource` (런타임 UI 행동 맵 — `EngineDefaultAssets::_uiInputMap`, `UISystem::initialize`)", readWhen="기동(UI 단계)",
-        shipping="엔진 팩에 실림", bCommitted=True, ownerDoc="Source/Engine/UI/README.md"),
+        shipping="엔진 팩에 실림", bCommitted=True),
     ConfigFileEntry(
         page="UserSettings", pathPattern="Resource/engine/settings/engine.settings.xml", layer=kLayerEngineDefault, fileFormat="xml",
         reader="`UserSettingsManager::loadSchema` (`EngineLoop` UserSettings 단계)", readWhen="기동",
-        shipping="엔진 팩에 실림", bCommitted=True, ownerDoc="Source/Engine/UserSettings/README.md",
+        shipping="엔진 팩에 실림", bCommitted=True,
         note="플레이어 옵션 메뉴의 스키마 — 설정 표는 생성 페이지 `UserSettings.md`"),
     ConfigFileEntry(
         page="UserSettings", pathPattern="Resource/engine/settings/debughud.settings.xml", layer=kLayerEngineDefault, fileFormat="xml",
         reader="`UserSettingsManager::loadSchema` (`EngineLoop` UserSettings 단계 — Dev 만)", readWhen="기동",
-        shipping="엔진 팩에 실리지만 Shipping 은 읽지 않음(디버그 HUD 가 없다)", bCommitted=True, ownerDoc="Source/Engine/UI/README.md",
+        shipping="엔진 팩에 실리지만 Shipping 은 읽지 않음(디버그 HUD 가 없다)", bCommitted=True,
         note="디버그 HUD 상태(`debug.*`) — 엔진 스키마에 덧붙는다"),
     # --- 게임 프리셋 --------------------------------------------------------------------------------------------------------
     ConfigFileEntry(
@@ -147,12 +147,12 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
     ConfigFileEntry(
         page="UserSettings", pathPattern="Resource/game/*/data/*.settings.xml", layer=kLayerPackData, fileFormat="xml",
         reader="`UserSettingsManager::loadSchema` (게임 프리셋 `_userSettingsSchema`)", readWhen="기동",
-        shipping="게임 팩에 실림", bCommitted=True, ownerDoc="Source/Engine/UserSettings/README.md", bOptional=True,
+        shipping="게임 팩에 실림", bCommitted=True, bOptional=True,
         note="엔진 스키마에 덧붙는 게임 설정"),
     ConfigFileEntry(
         page="", pathPattern="Resource/game/*/data/*.input.xml", layer=kLayerPackData, fileFormat="xml",
         reader="`InputMap::loadFromResource` (`GameSettings::_inputMap`)", readWhen="게임 인스턴스 초기화",
-        shipping="게임 팩에 실림", bCommitted=True, ownerDoc="Source/Engine/Input/README.md", bOptional=True),
+        shipping="게임 팩에 실림", bCommitted=True, bOptional=True),
     ConfigFileEntry(
         page="FacialRig", pathPattern="Resource/game/*/models/*.facial.json", layer=kLayerPackData, fileFormat="json",
         reader="`FacialRig::loadFromResource` (`FacialAnimationComponent::_facialRigPath`)", readWhen="컴포넌트 시작 · 경로를 바꿀 때",
@@ -163,8 +163,7 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
     ConfigFileEntry(
         page="UserSettings", pathPattern="%LOCALAPPDATA%/SWEngine/<팩>/usersettings.json", layer=kLayerUser, fileFormat="json",
         reader="`UserSettingsManager` (사용자 파일)", readWhen="기동 · 메뉴에서 적용할 때 씀",
-        shipping="플레이어 PC 에 생긴다 — 배포된 플레이어 데이터(이름을 바꾸면 스키마 `<Upgrade>`)", bCommitted=False,
-        ownerDoc="Source/Engine/UserSettings/README.md", bOutsideRepo=True,
+        shipping="플레이어 PC 에 생긴다 — 배포된 플레이어 데이터(이름을 바꾸면 스키마 `<Upgrade>`)", bCommitted=False, bOutsideRepo=True,
         note="Linux 는 `$XDG_CONFIG_HOME/swengine/<팩>/` · 자동화는 `-gv_userSettingsFile=<경로>`"),
     # --- 에디터 도구 --------------------------------------------------------------------------------------------------------
     ConfigFileEntry(
@@ -176,7 +175,7 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
     ConfigFileEntry(
         page="", pathPattern="Saved/Editor/EditorPreferences.json", layer=kLayerEditor, fileFormat="json",
         reader="`EditorPreferencesStore::loadAll` · `saveAll`", readWhen="에디터 기동 · 환경설정 창에서 값을 바꾼 0.5 초 뒤 · 테마 저장 때 **앱이 통째로 다시 쓴다**",
-        shipping="없음(에디터 없음)", bCommitted=False, ownerDoc="Source/Editor/README.md", bOutsideRepo=True,
+        shipping="없음(에디터 없음)", bCommitted=False, bOutsideRepo=True,
         note="환경설정 섹션(`SW_EDITOR_SETTINGS`)마다 기본과 다른 값만 — 앱이 쓰는 상태(`Saved/`, git 무시)"),
     ConfigFileEntry(
         page="TextureImportConfig", pathPattern="Config/Editor/TextureImportConfig.json", layer=kLayerEditor, fileFormat="json",
@@ -249,7 +248,7 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
     ConfigFileEntry(
         page="", pathPattern="Saved/Editor/*", layer=kLayerEditor, fileFormat="ini · json · xml",
         reader="ImGui · `EditorDockLayout` · `EditorLayoutStore` · 노드 캔버스 · 도구 문서 임시본 · gv 프리셋(`GlobalVariablePresets/<팩>/`)",
-        readWhen="에디터가 쓰고 읽는다", shipping="없음", bCommitted=False, bOutsideRepo=True, ownerDoc="Source/Editor/README.md",
+        readWhen="에디터가 쓰고 읽는다", shipping="없음", bCommitted=False, bOutsideRepo=True,
         note="앱이 쓰는 에디터 상태 — `EditorPaths::getEditorStateDirectory`(git 무시)"),
 )
 

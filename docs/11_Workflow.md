@@ -73,7 +73,7 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 ## 6. 백로그를 다루는 방식
 
 - 백로그 갱신은 묻지 않고 작업 커밋에 함께 넣습니다. 새로 알아낸 남은 일과 함정은 더하고, 끝난 항목은 "완료" 표시 없이 그 자리에서 지웁니다.
-- 끝난 일의 교훈은 그 영역 README 의 "함정 · 계약" 절에, 결정은 [결정 기록](09_Decisions.md) 에, 검증법은 [검증과 측정](08_Verification.md) 에 옮깁니다. 백로그에 "참고" 절을 다시 만들지 않습니다.
+- 끝난 일의 교훈은 그 코드의 헤더 주석(주의 · 계약)에, 결정은 [결정 기록](09_Decisions.md) 에, 검증법은 [검증과 측정](08_Verification.md) 에 옮깁니다. 백로그에 "참고" 절을 다시 만들지 않습니다.
 - 여러 PC 에서 고치는 파일이라 작업 중에 pull 과 충돌이 날 수 있습니다. 병합 중이면(`.git/MERGE_HEAD`) 충돌 파일이 내가 만진 것인지부터 봅니다.
   커밋 훅 없이 올라온 커밋은 포맷 위반을 달고 올 수 있으므로, `.clang-format` 과 `Tools/LLVM` 버전이 같은지 확인한 뒤 `py -3 Scripts/lint/fixer/FormatModified.py` 로 정리합니다.
 

@@ -2,7 +2,7 @@
 
 > 여러 PC · 여러 세션이 함께 쓰는 **할 일 목록**입니다. 아직 열린 일과, 그 일을 시작하기 전에 알아야 할 함정만 둡니다.
 >
-> - 일을 끝내면 그 항목을 같은 커밋에서 **지웁니다.** 남길 교훈은 그 영역 README 의 "함정 · 계약" 절에, 정한 방향과 기각한 안은
+> - 일을 끝내면 그 항목을 같은 커밋에서 **지웁니다.** 남길 교훈은 그 코드의 헤더 주석(주의 · 계약)에, 정한 방향과 기각한 안은
 >   [결정 기록](09_Decisions.md) 에, 검증 · 측정 방법은 [검증과 측정](08_Verification.md) 에 한두 줄로 옮깁니다. 무엇을 고쳤는지의 사연은 커밋 메시지에 씁니다.
 > - 새로 찾은 결함과 미룬 일은 아래 분류표에서 **한 곳**을 골라 적습니다. 결정을 기다리는 질문은 F 에 적습니다.
 > - 항목 번호(`A-3` 같은 것)는 **다시 매기지 않습니다.** 항목을 지워도 다른 항목의 번호는 그대로이고, 새 항목은 그 분류의 마지막 번호 다음을 씁니다.
@@ -42,7 +42,7 @@
   2026-10-13 재측정: GL 단독 0/15, GL 체인 0/4(고치기 전 3 · 뒤 1) — 원인 미확정. 약한 곳 셋은 막았다: 체인 초기화가 Material 패널을 새로 만들어 앞 시나리오의 미저장 문서 · 확인 모달이 남지 않고(A-5),
   탭이 가려져 그리지 않은 프레임에는 미리보기 탐침이 옛 값 대신 "값 없음" 이며(`onPanelCollapsed`), 문서 탐침은 읽기에 성공한 문서만 1 이다. 다시 지면 실패 줄이 셋 중 어느 것인지 말한다.
 
-- `A-5` **에디터 체인 밖에 남은 격리 시나리오 둘**([Automation README](../Source/Engine/Automation/README.md) "에디터 시나리오를 한 프로세스로 묶기"). 체인 초기화(`panel.resetOptional`)는 도구 패널을 새로 만들 뿐
+- `A-5` **에디터 체인 밖에 남은 격리 시나리오 둘**(Automation README "에디터 시나리오를 한 프로세스로 묶기"). 체인 초기화(`panel.resetOptional`)는 도구 패널을 새로 만들 뿐
   엔진 서비스와 상태 폴더의 파일은 그대로 둔다. `profilertimeline` 은 타임라인 기록이 `FrameProfiler` 에 남아 다음 실행이 "녹화 전 0" 으로 시작하지 않고,
   `animgraphedit` 은 Save 가 경로 없는 기본 문서(상태 폴더의 `AnimationGraphData.json`)를 덮어 뒤의 `graphaddnode` 가 노드 셋으로 시작한다(둘 다 `[reset, X, reset, X]` 와 전체 체인으로 확인).
   합치려면 `animgraphedit` 이 테스트 폴더의 자기 그래프 에셋을 열어 저장하게 하고, 타임라인은 녹화 전 상태를 시나리오가 정할 길(타임라인 비우기)이 있어야 한다.
@@ -248,13 +248,13 @@
 
 - `D1-2` **강체 물리의 다음 조각.** 겹침 월드(`PhysicsOverlapWorld` · `BoxCollider2DComponent`)는 강체 씬과 따로 돈다 — 키트의 투사체 · 근접 판정이 Box2D 센서로 옮겨 가면 겹침 월드를 제거한다.
 
-- `D1-3` **3D 내비메시(Recast & Detour, `Source/Engine/Navigation/README.md`)의 남은 것.** (2) 식생을 베이크 기하로 — 레이어마다 "길을 막는가" 값이 `FoliageLayer` 에 있어야 한다
+- `D1-3` **3D 내비메시(Recast & Detour, `Source/Engine/Navigation/`)의 남은 것.** (2) 식생을 베이크 기하로 — 레이어마다 "길을 막는가" 값이 `FoliageLayer` 에 있어야 한다
   (지형 높이장은 종류별 기하 레지스트리로 들어갔다) (3) 장애물이 많고 자주 움직이면 TileCache(압축 층) — 지금은 타일을 통째로 다시 베이크
   (6) 다른 테스트 게임(AbilityArena 등)의 적도 내비메시로 — 행동 트리 `MoveTo` 노드가 `INavMover` 를 쓴다.
 
 - `D1-4` **Jolt 소프트 바디(천 · 헤어 카드)는 아직 감싸지 않았다.** 들인 서드파티와 감싼 위치는 [결정 기록](09_Decisions.md) 5-2. vcpkg 를 바꿀 때의 잠금은 [작업 방식](11_Workflow.md) 1절.
 
-- `D1-5` **중첩 프리팹 뒤에 남은 것**(형식 · 스폰 · 순환 오류 · 쿠킹 펼치기는 [Object README](../Source/Engine/Object/README.md) "중첩 프리팹"). 씬에서 부품을 직접 고친 값은 저장되지 않는다 —
+- `D1-5` **중첩 프리팹 뒤에 남은 것**(형식 · 스폰 · 순환 오류 · 쿠킹 펼치기는 Object README "중첩 프리팹"). 씬에서 부품을 직접 고친 값은 저장되지 않는다 —
   씬 인스턴스에 부품 오버라이드를 싣는 길(유니티 nested override). 에디터 쪽 연결(부품 고르기 · 연결 끊기 · 바깥 프리팹에 적용). `PrefabInstanceRegistry` 의 기록은 오브젝트가 없어져도
   씬을 비울 때까지 남는다(되돌리기 · 플레이 종료 복원 때문) — 오래 도는 씬의 정리 시점을 정한다. `Scripts/common/AssetValidation.py` 의 `prefab_guid` 규칙은 씬의 `entity` 만 보고 프리팹 안 `<PrefabInstance prefabGuid>` 는 보지 않는다.
 
@@ -262,11 +262,11 @@
 
 - `D2-1` **2D 의 남은 것** — 2D 빛 텍스처 · 자유 모양 빛 · 부드러운 그림자 · 빛 블렌드 스타일.
 
-- `D2-2` **방향광 그림자의 남은 것** — 그림자 아틀라스(캐스케이드 · 뷰별 볼륨 · 점광 · 스폿 · 경계 구 맞춤)는 들어갔다([Renderer README](../Source/Engine/Renderer/README.md) "다중 뷰").
+- `D2-2` **방향광 그림자의 남은 것** — 그림자 아틀라스(캐스케이드 · 뷰별 볼륨 · 점광 · 스폿 · 경계 구 맞춤)는 들어갔다(Renderer README "다중 뷰").
   (1) 그림자 컬링 상자가 하나(방향광 볼륨 + 로컬 경계 구)라 캐스케이드마다 따로 거르지 않는다. (2) 로컬 그림자 타일은 앞에서부터 나눠 준다 — 타일이 모자랄 때 거리 · 화면 크기로 고르는 우선순위가 없다.
   (3) 바이어스가 텍셀 단위로 줄어 여섯 게임의 여드름을 아직 눈으로 안 봤다 — 경계 구 맞춤 · envshowcase CSM 은 새 빌드로 게임별 스크린샷 전후를 다시 찍는다.
 
-- `D2-5` **환경(지형 · 식생 · 물, `Engine/Environment`)의 남은 것** — 들어간 것과 계약(지형 충돌 · 부력 포함)은 [Environment/README.md](../Source/Engine/Environment/README.md).
+- `D2-5` **환경(지형 · 식생 · 물, `Engine/Environment`)의 남은 것** — 들어간 것과 계약(지형 충돌 · 부력 포함)은 Environment/README.md.
   (2) 강 경로가 점 목록이다 — 스플라인 컴포넌트가 Engine 에 들어오면 그것을 경로로 받는다. (3) 하늘 · 시간 · 높이 안개 + 물속 안개 패스(값은
   `WaterBodyComponent::findUnderwaterFog` 가 이미 준다) — 다중 뷰 병합 뒤. (4) 물의 굴절 · 화면 공간 두께는 반투명 패스가 장면 색 사본 · 장면 깊이를 입력으로 받는
   계약이 있어야 한다(지금은 지형 깊이를 정점에 굽는다). (5) 흔드는 식생의 그림자는 흔들리지 않는다(`shadowdepth.hlsl` 이 머티리얼 정점 변형을 모른다 — 풀은 그림자를 끔).
@@ -297,7 +297,7 @@
   슬롯 손잡이는 부모가 캔버스 패널일 때만 뜨므로 다른 패널의 슬롯 편집 등 UMG 디자이너 수준의 나머지가 남았다.
 
 - `D3-4` **콘솔 · 치트의 남은 것** — 게임 · 키트의 치트 명령(무적 · 아이템 주기 · 돈 …)을 각 게임 · 킷에 `SW_DEV_COMMAND` 로 단다(지금 게임 · 키트 쪽 명령은 `GameNetSession` 하나뿐 — 레지스트리 · 콘솔 ·
-  엔진 명령은 `Source/Engine/README.md` "개발 콘솔"). 리눅스 오버레이(`X11DevConsoleWindow`)는 실기로 띄워 보지 않았고, X11 그리기는 `XDrawString`(Latin-1)이라 한글이 깨진다.
+  엔진 명령은 `Source/Engine/` "개발 콘솔"). 리눅스 오버레이(`X11DevConsoleWindow`)는 실기로 띄워 보지 않았고, X11 그리기는 `XDrawString`(Latin-1)이라 한글이 깨진다.
 
 - `D3-5` **입력 흉내 창구(`EditorSelfTestInput` · `EditorSelfTestMarks::note`)로 아직 안 덮은 것** — 그래프 패널 ↔ 저장 커맨드 배선. 대화 · 애니메이션 그래프 문서 에셋이 저장소에 없어
   시나리오가 저장하면 저장소 리소스가 바뀐다 — 임시 에셋으로 저장하는 길이 필요하다(지금은 저장하지 않은 문서 수 탐침 `Editor.DirtyDocumentCount` 뿐).
@@ -312,20 +312,20 @@
 
 ### D4. 게임플레이 · 캐릭터 · 카메라 · 애니메이션
 
-- `D4-2` **사용자 설정(옵션 메뉴 백엔드)의 남은 것** — 백엔드 · 바인딩 API 는 `Source/Engine/UserSettings/README.md`, 메뉴는 `Engine/UI/Screen/OptionsMenuScreen`.
+- `D4-2` **사용자 설정(옵션 메뉴 백엔드)의 남은 것** — 백엔드 · 바인딩 API 는 `Source/Engine/UserSettings/`, 메뉴는 `Engine/UI/Screen/OptionsMenuScreen`.
   (2) 값만 있고 읽는 곳이 없는 대상: `gv_renderScale`(업스케일 패스) · 시야 거리 · 후처리 ·
   텍스처 · 이펙트 품질 · 모션 블러 · `gv_colorVisionMode` 의 톤맵 쪽(톤맵에 상수 버퍼가 없어 미뤘다 — 함수는 `colorvision.hlsli`, UI 캔버스는 이미 쓴다),
   카메라 `gv_cameraFieldOfView` · `gv_cameraShakeScale` · `gv_cameraHeadBob`(cam-views 가 읽을 자리). (6) X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
 
-- `D4-3` **패드 가상 커서를 명령형 게임에 켜기.** 스틱 시점(바인딩 배율 · 프레임 시간 곱)과 가상 커서(`InputManager::getVirtualCursor`, `Source/Engine/Input/README.md`)는 들어갔다.
+- `D4-3` **패드 가상 커서를 명령형 게임에 켜기.** 스틱 시점(바인딩 배율 · 프레임 시간 곱)과 가상 커서(`InputManager::getVirtualCursor`, `Source/Engine/Input/`)는 들어갔다.
   명령형 게임(StarSkirmish · NileCity)의 패드 A · B 는 커서 위치를 쓰는데 아직 가상 커서를 켜지 않았다.
 
 - `D4-4` **키트 조립 — 남은 것(2026-10-06).** 틀 · 키트 전부 · 조립 테스트 둘(`KitCompositionTest` — Farming + CreatureLife, RTS + CityBuilder)과 `MeadowVillage` 는
-  들어갔다(규칙: `Source/GameFramework/Kits/README.md` "키트 여럿을 한 게임에"). 남은 것 — RTS 가 땅 리비전마다 땅 격자 전체를 다시 칠하는 비용(64 × 64 에서 재고
+  들어갔다(규칙: `Source/GameFramework/Kits/` "키트 여럿을 한 게임에"). 남은 것 — RTS 가 땅 리비전마다 땅 격자 전체를 다시 칠하는 비용(64 × 64 에서 재고
   결정, 1-8), 둘째 조립(RTS + City)의 테스트 게임(필요해지면 MeadowVillage 모양). 땅을 쓰는 게임은 아직 없다 — 격자 키트를 섞는 게임이 생기면 `SessionStateSettings::_land*` 와 키트의 `bindLand` 를 건다(SRPG 는 전투 끝에
   `releaseLand`, 공원 놀이기구 발자국은 상태 바이트에 싣지 않는다 — 지은 칸은 땅이 든다).
 
-- `D4-5` **카메라의 남은 것.** 프리셋 · 블렌드 스택 · 디렉터 · 모드 · 다중 뷰 · 시퀀서 카메라 신호 · 렌즈 값 · 돌리 레일은 들어갔다(`Source/GameFramework/README.md` "카메라" 절, `Source/Engine/Renderer/README.md` "다중 뷰").
+- `D4-5` **카메라의 남은 것.** 프리셋 · 블렌드 스택 · 디렉터 · 모드 · 다중 뷰 · 시퀀서 카메라 신호 · 렌즈 값 · 돌리 레일은 들어갔다(`Source/GameFramework/` "카메라" 절, `Source/Engine/Renderer/` "다중 뷰").
   - 직교 리그 네 게임(ThemePark · Harvest · Nile · StarSkirmish)을 디렉터 + 프리셋 XML 로 옮긴다 — 디렉터에 `setViewOverride` · `findGroundPoint` 가 생겼으니 게임 디렉터(.h/.cpp 네 개)와 씬 · 입력 데이터만 바꾸면 된다.
   - 다중 뷰의 예산 · 보임 판정이 거칠다 — 보임은 "지정한 오브젝트가 주 카메라 절두체 안" 하나(가려짐 · 화면 크기 안 봄), 예산은 프레임당 뷰 수(`gv_renderViewBudget`)지 시간이 아니다.
     화면 사각형 뷰는 에디터 GameView(ImGui 이미지)에서 검증하지 않았다.
@@ -334,8 +334,8 @@
   - 렌더러 쪽: 피사계 심도 패스, 카메라별 후처리 값(`CameraPostProcessValues` — 포즈가 나르기만 한다)을 렌더러가 읽기.
   - 게임이 디렉터 컴포넌트를 `registerStatefulComponent` 로 올려 세이브 · 핫 리로드가 켠 프리셋과 블렌드를 싣게 하는 일.
 
-- `D4-6` **애니메이션(로드맵).** 지금 있는 것은 `Source/Engine/Animation/README.md`(임포트 · 코덱 · 재생 · 상태 기계 · 블렌드 스페이스 · AnimationSystem · GPU 스키닝 · 2D/3D 공용 재생),
-  알림 디스패치(구간 알림 · 처리기 레지스트리 · `*.notifies.xml`)는 `Source/Engine/Character/README.md`. 남은 것 —
+- `D4-6` **애니메이션(로드맵).** 지금 있는 것은 `Source/Engine/Animation/`(임포트 · 코덱 · 재생 · 상태 기계 · 블렌드 스페이스 · AnimationSystem · GPU 스키닝 · 2D/3D 공용 재생),
+  알림 디스패치(구간 알림 · 처리기 레지스트리 · `*.notifies.xml`)는 `Source/Engine/Character/`. 남은 것 —
   ① 그래프에 레이어를 데이터로(지금 레이어는 `addLayer` 코드), 스켈레탈 애니메이터가 블렌드 스페이스 상태를 재생하는 연결(블렌드 스페이스 · 동기 그룹은 그래프 데이터다)
   ② 후처리 리그(`PoseModifierComponent`): 시퀀서 트랙이 `setSlotWeight` 를 쓰기(칸은 있다), 에디터 리그 패널(노드 목록 · 대상 · 기즈모)
   ③ 애니메이션 LOD(`AnimationLOD.h` — 리그 노드도 화면 크기 `min_screen_size` 로 꺼진다): 메시 LOD 가 생기면 본 LOD 를 메시 LOD 와 묶기
@@ -387,7 +387,7 @@
     PCG 저작 그래프 · GI/반사 프로브 · 플랫폼 서비스 · 패치/DLC · 모드/UGC.
   - **아주 큼(XL)**: 비주얼 스크립팅 · 월드 파티션/스트리밍/HLOD · 음성 채팅(온라인 구성은 `D7-5`).
 
-- `D4-10` **Shooter3D 캐릭터 통합의 남은 것.** KayKit 기사 플레이어 · 스켈레톤 적 · 외형 프리셋 · 입력 맵 · 탄도선 풀은 들어갔다(`Source/Games/Shooter3D/README.md`).
+- `D4-10` **Shooter3D 캐릭터 통합의 남은 것.** KayKit 기사 플레이어 · 스켈레톤 적 · 외형 프리셋 · 입력 맵 · 탄도선 풀은 들어갔다(`Source/Games/Shooter3D/`).
   리그: 왼손을 총에 붙이는 손 IK(목표는 무기 소켓 `MainHand.SupportHand`), 1인칭에서 머리만 숨기기(리그 노드 `ScaleBone` 은 있다 — 플레이어 몸에 연결하고 1인칭 화면으로 확인; 지금은 몸 전체를 숨긴다),
   스프링 본(망토). 게임플레이: 래그돌 쓰러짐(지금은 클립), 부위 히트박스(지금은 발에서 키까지 캡슐 하나, 중심 소켓 `Chest`),
   물리 질의 히트스캔 · 시야(지금 상자 목록 · 캡슐), 쓰러질 때 무기 떨어뜨리기(`SocketBindingComponent::release( Physics )` — 무기 프리팹에 강체를 더하면 된다),
@@ -460,7 +460,7 @@
   S1 에서 남은 것: ① 사용자 프리셋 저장("서버 + 클라이언트 2" 를 이름 붙여 에디터 상태에 — 지금은 마지막 구성만 세션이 들고 있고 에디터를 다시 띄우면 Standalone) ② 리슨 호스트(App)의 줄에 틱 번호(전용 서버 줄에는 `[tick=N]` 이 붙는다 — 리슨 호스트는 고정 틱 루프가 없어 프레임 번호로 정해야 한다) ③ Stop 뒤 합친 트레이스를 Profiler 창 Timeline 탭에 저절로 열기(지금은 경로를 로그 · Session 탭에 남기고 Load Trace 로 연다) ④ 게임 모듈 핫 리로드를 넘어 세션 유지 — 게임 인스턴스가 다시 서면 `GameNetSession` 도 닫고 다시 열어 클라이언트가 끊긴다(리로드가 새 인스턴스를 먼저 만들면 포트가 아직 잡혀 있어 다시 열지 못한다; 세션을 엔진 쪽 수명으로 옮긴다 — 언리얼 넷 드라이버는 월드 소유) ⑤ 운영 서버가 `ServerConfig::_gamePort` 를 저절로 여는 길(지금은 `-gv_netListenPort` 를 줄 때만 연다 — 결정 기록 5-10) ⑥ 클라이언트 창 배치(여러 App 창이 겹쳐 뜬다 — 언리얼은 창 위치를 나란히 둔다).
 
 - `D7-5` **네트워크 서비스 계층(로그인 · 채팅 · 거래 키트)의 남은 것.** 구성과 원칙(공통 기반 · 드라이버 키트 · 기능 키트, DB 와 캐시)은 [결정 기록](09_Decisions.md) 5-9, 들어간 기반 · 키트 · 서버 조립
-  (`OnlineServerRuntime`, 키트마다 `<키트>OnlineServerKit.cpp`, 서버 설정 옆 `<이름>.online.json`)은 [Online README](../Source/GameFramework/Base/Online/README.md). 운영 쪽(관측 출력 · 오케스트레이터 · 비밀 배포 · 부하 기준선)은 `H-3`.
+  (`OnlineServerRuntime`, 키트마다 `<키트>OnlineServerKit.cpp`, 서버 설정 옆 `<이름>.online.json`)은 Online README. 운영 쪽(관측 출력 · 오케스트레이터 · 비밀 배포 · 부하 기준선)은 `H-3`.
   - **할 일**
     - 기반: 저장 키트가 SQLite · PostgreSQL · RESP 드라이버의 만들기 함수를 `OnlineStoreDriverTable` 에 묶기(지금은 memory 뿐 — 묶인 것이 없는 드라이버는 기동을 멈춘다), 마이그레이션 SQL(`Resource/common/sql/servicestore`)을 Shipping 서버가 읽는 길(지금은 디스크 폴더를 훑는다 — 팩에는 폴더 목록 API 가 없다), 호스트 이름 해석(Core 주소는 IPv4 뿐 — 실제 외부 로그인 · 영수증 제공자 호스트에 먼저 필요).
     - 계정: 실제 외부 로그인 제공자 설정(구글 · 애플 · 카카오 · 네이버 · 스팀 — 앱 등록 · client id 는 쓰는 게임이 생기면), 애플 client secret JWT · 탈퇴 때 토큰 철회(`Provider/Apple/`), 모바일 SDK 클라이언트,

@@ -28,7 +28,7 @@ cmake --preset Ninja-Debug
 cmake --build --preset Ninja-Debug
 ```
 
-필요한 도구, 프리셋 고르기, Linux와 WSL에서의 준비는 [시작하기](docs/01_GettingStarted.md)에 있습니다.
+필요한 도구, 프리셋 고르기, Linux와 WSL에서의 준비는 시작하기에 있습니다.
 
 ## 실행
 
@@ -64,10 +64,9 @@ CI가 무엇을 빌드하고 어떤 테스트를 돌리는지는 `.github/workfl
 
 ## 문서
 
-처음이라면 [시작하기](docs/01_GettingStarted.md)부터 읽으세요. 빌드부터 첫 게임 오브젝트를 만들고 핫 리로드하는 데까지 안내합니다.
+처음이라면 시작하기부터 읽으세요. 빌드부터 첫 게임 오브젝트를 만들고 핫 리로드하는 데까지 안내합니다.
 
 - [문서 지도](docs/02_DocumentMap.md)는 문서마다 다루는 주제와 모든 모듈 README의 목록입니다.
-- [ARCHITECTURE.md](ARCHITECTURE.md)는 빌드 타깃의 관계, 모듈 경계, 엔진 계층을 설명합니다.
 - [AGENTS.md](AGENTS.md)는 코드 규칙의 원본입니다. [코딩 규칙 예시](docs/04_CodingGuidelines.md)는 같은 규칙을 예시와 함께 한국어로 풀어 씁니다.
 - [설정](docs/07_Configuration.md)은 설정 값을 어느 파일에 두는지 설명합니다. 필드별 표는 생성 문서 [docs/Config](docs/Config/README.md)에 있습니다.
 - [백로그](docs/06_Backlog.md)는 남은 작업 목록입니다. 작업을 시작하기 전에 읽습니다.

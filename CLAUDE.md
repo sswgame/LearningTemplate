@@ -3,7 +3,7 @@
 Claude Code 안내. 이 저장소의 에이전트 규칙.
 
 ## 시작 전 필수 읽기
-- **남은 일**: [docs/06_Backlog.md](docs/06_Backlog.md) — 작업 시작 전에 읽는다. 끝나면 항목을 지우고 교훈은 해당 README / Decisions / Verification으로 옮긴다.
+- **남은 일**: [docs/06_Backlog.md](docs/06_Backlog.md) — 작업 시작 전에 읽는다. 끝나면 항목을 지우고 교훈은 해당 코드의 헤더 주석 / Decisions / Verification으로 옮긴다.
 - **작업 방식**: [docs/11_Workflow.md](docs/11_Workflow.md) — 워크트리, 동시 빌드 제한(최대 2), 검증 단계, push 규칙, 커밋 형식.
 - **코딩 규칙**: [AGENTS.md](AGENTS.md) — 이름·함수 어휘·헤더 순서 등. C++/CMake/Python을 쓰기 전에 반드시 읽는다. (`docs/04_CodingGuidelines.md`는 예시만)
 - **스크립트로 파일을 고칠 때**: heredoc 금지 — [AGENTS.md](AGENTS.md) "Editing traps" 첫 항목.

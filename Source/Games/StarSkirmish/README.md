@@ -89,5 +89,4 @@ cd build/Ninja-Debug-StarSkirmish/Bin
 ## 더 볼 곳
 
 - [NileCity](../NileCity/README.md) — 같은 명령형 디렉터 구조의 도시 건설
-- [Kits](../../GameFramework/Kits/README.md) — `GF_RealTimeStrategy` 와 다른 키트
 - [Games](../README.md) — 씬, 프리팹, 디렉터 구조

@@ -87,5 +87,4 @@ cd build/Ninja-Debug-NileCity/Bin
 ## 더 볼 곳
 
 - [StarSkirmish](../StarSkirmish/README.md) — 같은 명령형 디렉터 구조의 RTS
-- [GameFramework](../../GameFramework/README.md) — 조종 경계와 입력 맵
 - [Games](../README.md) — 씬, 프리팹, 디렉터 구조

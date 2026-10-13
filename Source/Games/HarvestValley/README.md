@@ -83,5 +83,4 @@ cd build/Ninja-Debug-HarvestValley/Bin
 ## 더 볼 곳
 
 - [MeadowVillage](../MeadowVillage/README.md) — 같은 농장 키트를 다른 키트와 섞은 게임
-- [GameFramework](../../GameFramework/README.md) — 폰, 조종자, 자동 플레이 빙의
 - [Games](../README.md) — 씬, 프리팹, 디렉터 구조

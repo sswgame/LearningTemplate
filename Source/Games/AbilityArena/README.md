@@ -94,6 +94,4 @@ HP 바는 어빌리티 시스템의 체력 알림을 받는 `HealthBarComponent`
 
 ## 더 볼 곳
 
-- [Ability](../../GameFramework/Base/Gameplay/Ability/README.md) — 어빌리티 시스템과 카탈로그 형식
-- [GameFramework](../../GameFramework/README.md) — 폰과 조종자
 - [Games](../README.md) — 씬, 프리팹, 디렉터 구조

@@ -10,7 +10,7 @@ ReflectionParser 는 빌드 중에 실행되는 콘솔 도구입니다. 엔진�
 씬 로드, 에디터 인스펙터, 핫 리로드, `addComponentByName` 이 모두 이 도구가 만든 등록 코드에 의존합니다. 그래서 ReflectionParser 는 Engine 보다 먼저 빌드됩니다.
 생성기가 Engine.dll 을 링크하면 "Engine 을 빌드하려면 생성기가 필요하고, 생성기를 빌드하려면 Engine 이 필요한" 순환이 생기므로, 생성기는 `Core` 만 링크합니다.
 
-리플렉션 전체에서 이 도구가 맡는 부분은 [Reflection 의 머릿속 그림](../../Source/Engine/Reflection/README.md#머릿속-그림)에 있습니다.
+리플렉션 전체에서 이 도구가 맡는 부분은 `Source/Engine/Reflection/` 의 헤더 주석에 있습니다.
 이 문서는 그 그림의 빌드 시점 절반, 즉 헤더가 `.gen.cpp` 가 되기까지를 설명합니다. 헤더에 표시를 다는 방법은 Reflection 문서를 보세요.
 
 ## 머릿속 그림
@@ -214,7 +214,7 @@ libclang 은 기본 타깃, 즉 생성기를 빌드한 기계로 헤더를 읽�
 
 2번과 4번이 1번과 맞지 않으면 생성기가 시작할 때 멈춥니다(`AnnotationFields::validateBindings`).
 철자는 있는데 필드 줄이 없거나, 필드 줄은 있는데 철자가 없거나, 종류와 멤버 타입이 다른 경우입니다. 이미 있는 필드에 다른 철자만 더 받으려면 4번만 고칩니다.
-4번을 고쳤으면 `py -3 Scripts/generate/GenerateReflectionAnnotationKeys.py` 로 편집기용 키 목록도 다시 만듭니다([Reflection 의 함정](../../Source/Engine/Reflection/README.md#함정과-주의)).
+4번을 고쳤으면 `py -3 Scripts/generate/GenerateReflectionAnnotationKeys.py` 로 편집기용 키 목록도 다시 만듭니다.
 
 `AnnotationMeta.txt` 의 `flag.X` 한 줄은 단독 토큰 `X` 와 `X = true` 를 함께 등록합니다. 두 형태를 따로 적지 않습니다.
 
@@ -273,9 +273,7 @@ libclang 은 기본 타깃, 즉 생성기를 빌드한 기계로 헤더를 읽�
 
 ## 더 볼 곳
 
-- [Reflection](../../Source/Engine/Reflection/README.md) — 표시를 다는 방법과 실행 중의 타입 정보
 - [Tools](../README.md) — 다른 호스트 도구
-- [ARCHITECTURE.md](../../ARCHITECTURE.md) — 타깃 그래프에서 생성기의 위치
 
 자주 여는 파일은 다음과 같습니다.
 
