@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
@@ -679,6 +680,21 @@ SW_TEST_CASE( ShaderCookStampTest, HeaderInAnotherIncludeRootMakesOutputStale )
 
     SW_EXPECT_FALSE( bCurrentAfterEngineHeaderAdded );
     SW_EXPECT_TRUE( sw::ShaderCooker::isCookedOutputCurrent( binDir, shaderPath ) );
+}
+
+/**
+ * @brief [ShaderCookStampTest] 도구 지문은 상수(컴파일 옵션 판 · Vulkan 타깃 판 · 컴파일러 버전 글)만으로 정해진다 — OS · 파일에 따라 달라지지 않는다
+ * @details 쿠킹본은 Windows 에서 만들어 커밋하고 리눅스도 같은 스탬프를 쓴다. 지문이 실행 파일 옆 컴파일러 라이브러리의 내용 해시였을 때는
+ *          리눅스에서 모든 스탬프가 낡은 것으로 판정됐다. 같은 상수로 다시 계산한 값과 같아야 하고, 셋 중 하나만 바뀌어도 달라야 한다.
+ */
+SW_TEST_CASE( ShaderCookStampTest, ToolchainFingerprintComesFromConstantsOnly )
+{
+    constexpr uint32 kVulkanTargetVersion = sw::constant::kVulkanRequiredMajor * 1000 + sw::constant::kVulkanRequiredMinor;
+    const uint64     expected             = sw::ShaderCooker::makeToolchainFingerprint( sw::ShaderCooker::kCompileOptionsRevision, kVulkanTargetVersion, sw::ShaderCooker::kCompilerVersion );
+    SW_EXPECT_EQUAL( expected, sw::ShaderCooker::getToolchainFingerprint() );
+    SW_EXPECT_TRUE( expected != sw::ShaderCooker::makeToolchainFingerprint( sw::ShaderCooker::kCompileOptionsRevision + 1, kVulkanTargetVersion, sw::ShaderCooker::kCompilerVersion ) );
+    SW_EXPECT_TRUE( expected != sw::ShaderCooker::makeToolchainFingerprint( sw::ShaderCooker::kCompileOptionsRevision, kVulkanTargetVersion + 1, sw::ShaderCooker::kCompilerVersion ) );
+    SW_EXPECT_TRUE( expected != sw::ShaderCooker::makeToolchainFingerprint( sw::ShaderCooker::kCompileOptionsRevision, kVulkanTargetVersion, "directx-dxc other" ) );
 }
 
 /**

@@ -5,7 +5,6 @@ SWCOOK 4
 2634f1e7dd1ddc24 postbloom.hlsl
 26a9b881ace73b82 forwardlit.hlsl
 30ca18ffc0224bf4 postbloom.hlsli
-38a6a3f6ba9cdccc @toolchain
 4877783fcd0ecf62 tonemap.hlsl
 50e78d8a12f071af shadowdepth.hlsl
 5cf5e0caed4fbcb8 foliage.hlsl
@@ -20,6 +19,7 @@ SWCOOK 4
 9ee00d8a59ae021e common.hlsli
 a16db7b2113a3424 colorvision.hlsli
 b36e262f0b0e2701 instancesort.hlsl
+b536aa3df9bce513 @toolchain
 b565a5e10f5ab708 instancedata.hlsli
 be6b517dd765ba39 terrain.hlsl
 bfc1abf7672a9a07 ssao.hlsl

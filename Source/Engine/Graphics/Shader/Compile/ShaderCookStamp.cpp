@@ -10,7 +10,6 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Module/ModuleImageUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -246,36 +245,12 @@ namespace sw
                 return _s_mapStamp.emplace( binDirectory, std::move( info ) ).first->second;
             }
 
-            /**
-             * @brief 도구 지문을 구합니다(`ShaderCooker::getToolchainFingerprint` 의 본체). 프로세스에서 한 번만 계산합니다.
-             * @details 컴파일러 라이브러리는 `ShaderCompiler.cpp` 가 찾는 순서(실행 파일 옆 → Bin)로 찾는다. 이름만으로 로드하는 마지막
-             *          후보는 경로를 모르므로 보지 않는다. D3DCompiler(DX11)는 OS 구성 요소라 넣지 않는다.
-             */
+            /** @brief 도구 지문을 구합니다(`ShaderCooker::getToolchainFingerprint` 의 본체). 상수만으로 정해져 OS · 파일과 무관하다. */
             static uint64 computeToolchainFingerprint()
             {
-                static const uint64 s_fingerprint = []()
-                {
-                    uint64 hash = StringUtil::computeHash64( to_string( ShaderCooker::kCompileOptionsRevision ), false );
-                    hash        = StringUtil::computeHash64( to_string( constant::kVulkanRequiredMajor * 1000 + constant::kVulkanRequiredMinor ), false, hash ); // SPIR-V 타깃 환경(ShaderCompiler 의 -fspv-target-env)
-
-                    const string   libName = ModuleImageUtil::formatSharedLibraryName( "dxcompiler" );
-                    const string   execDir = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-                    vector<string> listCandidate;
-                    if ( execDir.empty() == false )
-                        listCandidate.push_back( FileUtil::joinPath( execDir, libName ) );
-                    listCandidate.push_back( FileUtil::joinPath( FileUtil::getBinaryDirectory(), libName ) );
-                    uint64 libraryHash = 0;
-                    for ( const string& candidatePath : listCandidate )
-                    {
-                        if ( FileUtil::isRegularFile( candidatePath ) )
-                        {
-                            libraryHash = readContentHash( candidatePath );
-                            break;
-                        }
-                    }
-                    return StringUtil::computeHash64( to_string( libraryHash ), false, hash );
-                }();
-                return s_fingerprint;
+                // SPIR-V 타깃 환경(ShaderCompiler 의 -fspv-target-env)은 Vulkan 요구 판이다.
+                constexpr uint32 kVulkanTargetVersion = constant::kVulkanRequiredMajor * 1000 + constant::kVulkanRequiredMinor;
+                return ShaderCooker::makeToolchainFingerprint( ShaderCooker::kCompileOptionsRevision, kVulkanTargetVersion, ShaderCooker::kCompilerVersion );
             }
 
             /** @brief 소스 절대 경로를 스탬프 키(shaders/ 기준 소문자 상대 경로)로 바꿉니다. */
@@ -404,6 +379,13 @@ namespace sw
         // 도구 지문도 섞는다. 디스크 캐시 키가 이 값을 쓰므로, 빠지면 DXC 를 바꿔도 옛 바이트를 돌려준다.
         const uint64 headerHash = StringUtil::computeHash64( to_string( getSharedHeaderContentHash() ), false, sourceHash );
         return StringUtil::computeHash64( to_string( getToolchainFingerprint() ), false, headerHash );
+    }
+
+    uint64 ShaderCooker::makeToolchainFingerprint( uint32 compileOptionsRevision, uint32 vulkanTargetVersion, string_view compilerVersion )
+    {
+        uint64 hash = StringUtil::computeHash64( to_string( compileOptionsRevision ), false );
+        hash        = StringUtil::computeHash64( to_string( vulkanTargetVersion ), false, hash );
+        return StringUtil::computeHash64( string( compilerVersion ), false, hash );
     }
 
     uint64 ShaderCooker::getToolchainFingerprint()
