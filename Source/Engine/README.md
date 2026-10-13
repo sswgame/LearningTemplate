@@ -119,23 +119,24 @@ py -3 Scripts/lint/gate/CheckEngineLayers.py
 
 ### 기동과 종료
 
-엔진의 기동 단계는 `EngineInitStepList.xxx` 한 파일에 적혀 있습니다. X-macro 목록이고, 줄마다 단계 이름, 그 단계에서 쓸 메모리 태그, 실행할 호스트, 먼저 초기화되어야 하는 단계 목록을 적습니다.
-호스트 값은 `All`, `Client`, `Server` 이고, 전용 서버는 `Client` 줄을 건너뜁니다. 언리얼의 `USubsystem` 이 `InitializeDependency` 로 의존을 선언하는 것과 같은 방식입니다.
+엔진의 기동 단계는 **서브시스템**입니다. 서브시스템은 `ISubsystem`(`Common/ISubsystem.h`)을 상속해 이름, 먼저 서야 하는 서브시스템(의존), 도는 호스트(`Client`, `Server`, `All`), 메모리 태그를 스스로 선언하고, 초기화와 종료를 구현합니다.
+언리얼의 `USubsystem` 이 `InitializeDependency` 로 의존을 선언하는 것과 같은 방식입니다. 전용 서버는 `Client` 서브시스템을 건너뜁니다.
 
-**순서의 진실은 의존 목록 하나입니다.** 초기화 순서는 의존으로 위상 정렬해 계산하고(동점은 이름 순이라 결정적), 줄 위치는 뜻이 없습니다.
-표는 읽기 좋게 계산 순서대로 적어 두었을 뿐입니다. "A 가 B 보다 먼저" 가 필요하면 줄을 옮기지 않고 의존을 적습니다.
-의존은 `{ A, B }` 같은 식별자 목록이라 오타는 컴파일 오류이고, 순환과 대상 어긋남(서버에서 도는 단계가 `Client` 단계에 의존)도 컴파일 오류입니다(`EngineInitSequence.cpp` 의 `EngineInitTableCheck`).
+**순서의 진실은 의존 하나입니다.** `SubsystemCollection`(`Common/SubsystemCollection.h`)이 서브시스템을 `vector<unique_ptr<ISubsystem>>` 로 소유하고, 의존으로 위상 정렬해 계산합니다(동점은 이름 순이라 결정적).
+추가한 순서는 뜻이 없습니다. "A 가 B 보다 먼저" 가 필요하면 의존을 적습니다. 같은 이름, 모르는 의존, 순환, 대상 어긋남(서버에서 도는 것이 `Client` 전용에 의존)은 정렬 오류이고 기동하지 않습니다.
 
-`EngineInitSequence` 가 이 목록을 읽고 세 번 돕니다.
+목록은 세 번 돕니다.
 
-1. `initializeAll` 이 계산한 순서로 초기화합니다.
-2. `shutdownAll` 이 초기화에 성공한 단계만 역순으로 종료합니다.
-3. `destroyAll` 이 **모든 단계**를 역순으로 해제합니다. 실패했거나 건너뛰었거나 도달하지 못한 단계도 포함하므로, 해제 본문은 null을 안전하게 다뤄야 합니다.
+1. `initializeAll( target )` 이 계산한 순서로 `initializeSubsystem` 을 부릅니다. `Failed` 면 멈추고, `SkipDependents` 면 그에 의존하는 것을 건너뜁니다(헤드리스 작업).
+2. `shutdownAll` 이 초기화에 성공한 것만 역순으로 `shutdownSubsystem` 합니다. 이때 다른 서브시스템은 모두 살아 있습니다.
+3. `destroyAll`(목록의 소멸자도 같습니다)이 **모두**를 역순으로 소멸시킵니다. 실패했거나 건너뛰었거나 도달하지 못한 것도 포함합니다.
 
-단계의 본문은 호스트마다 **본문 모음 하나**에 정적 함수로 둡니다. 이름은 `initialize<단계>`, `shutdown<단계>`, `destroy<단계>` 이고, 필요한 것만 정의합니다.
-본문 모음은 `EngineInitNoStepBody` 를 상속하고, 정의하지 않은 자리는 아무것도 하지 않습니다(초기화는 성공으로 칩니다). 단계마다 타입을 짓지 않습니다.
-호스트는 `EngineLoop.cpp`(`EngineLoop::StartupStepBody`)와 테스트 하네스(`Test/TestFramework/TestHostRuntime.cpp` 의 `TestHost`) 두 곳이고, 같은 목록을 씁니다.
-시그니처가 틀린 본문은 컴파일 오류입니다. 이름이 틀린 본문(`initializeScnee`)은 어느 단계에도 걸리지 않으니, 새 본문은 그 단계가 실제로 도는지 확인합니다.
+백엔드 교체는 `shutdownDependentsOf` 와 `restartStopped` 로 RHI 에 기대는 것만 내렸다가 같은 초기화로 다시 세웁니다. 그래서 `initializeSubsystem` 은 다시 불릴 수 있어야 합니다.
+
+**옮기는 중입니다.** 예전 기동 단계는 X-macro 표 `EngineInitStepList.xxx` 의 줄(단계 이름, 메모리 태그, 대상, `{ 의존 }`)과 호스트마다의 본문 정적 함수(`initialize<단계>`, `shutdown<단계>`, `destroy<단계>` — `EngineLoop::StartupStepBody`, 테스트 하네스의 `TestHost`)였습니다.
+`EngineInitSequence` 는 표의 줄마다 어댑터 하나를 같은 목록에 넣어, 남은 표의 줄과 새 서브시스템을 **한 순서 계산 안에서** 섞어 돌립니다. 표의 의존은 식별자라 오타, 순환, 대상 어긋남이 컴파일 오류입니다(`EngineInitTableCheck`).
+옮긴 서브시스템은 셋입니다 — `Fonts`(`FontService`), `Telemetry`(`TelemetryService`, 크래시 보고 묶기 포함), `UI`(`UISystem`, Dev 의 디버그 HUD 포함). 표에 남은 단계는 21개이고, 계획은 [서브시스템 이전 계획](../../docs/plans/SubsystemMigration.md)에 있습니다.
+옮긴 서비스는 서비스 저장소(`EngineServiceCollection`)가 만들고 서비스 표에 묶은 뒤, `EngineLoop::initialize` 가 소유를 기동 순서로 넘깁니다(`addSubsystem( std::move( _owned._pFontService ) )`).
 
 씬은 `ModuleTypes` 단계가 끝난 뒤에만 읽고 쿠킹합니다. 이 단계에서 호스트가 GameFramework, 키트, 게임 모듈을 로드해 타입 등록을 끝냅니다. `Headless` 단계는 그 뒤에 있습니다.
 
@@ -251,14 +252,26 @@ XML · JSON 문서(`XMLDocument`, `JSONDocument`, `ConfigKeyDoc`)는 `Serializat
 폴더를 옮길 때는 옮길 파일의 include를 먼저 티어 표와 비교합니다. 옮긴 헤더의 예전 `.gen.cpp` 는 생성 폴더에서 지웁니다.
 폴더 크기와 파일 하나짜리 폴더는 `py -3 Scripts/lint/report/RunFolderFileCount.py` 로 봅니다. 테스트는 소스 폴더 구조를 따릅니다([Test](../../Test/README.md)).
 
-### 새 기동 단계 넣기
+### 새 서브시스템 만들기
 
-1. `EngineInitStepList.xxx` 에 줄 하나를 넣습니다(위치는 어디든 됩니다). 먼저 초기화되어야 하는 단계를 의존 목록에 적습니다.
-2. `EngineLoop::StartupStepBody`(`EngineLoop.cpp`)에 필요한 본문만 정적 함수로 둡니다 — `initialize<단계>`, `shutdown<단계>`, `destroy<단계>`.
-3. 테스트 하네스도 그 단계를 세워야 하면 `TestHost` 에 같은 이름의 함수를 둡니다. 아니면 손대지 않습니다.
-4. 서버에서 돌면 안 되는 단계는 대상을 `Client` 로 적습니다. `Client` 단계에 의존하는 단계도 `Client` 여야 합니다(컴파일 검사).
-5. `initialize<단계>` 는 다시 실행될 수 있어야 합니다. 백엔드 교체가 `shutdownDependentsOf( RHI )` 와 `restartStoppedSteps()` 로 같은 본문을 다시 부르기 때문입니다.
-   객체가 이미 있으면 다시 쓰고, 디바이스 설정은 매번 다시 적용합니다.
+새 기동 단계는 표에 줄을 더하지 않고 `ISubsystem` 을 상속합니다. 다섯 줄이면 됩니다.
+
+```cpp
+class SW_API MySystem : public ISubsystem   // 다중 상속이면 ISubsystem 을 첫 번째 기반으로
+{
+    EngineInitResult initializeSubsystem() override;                 // 다시 불릴 수 있게(백엔드 교체)
+    void             shutdownSubsystem() override;                   // 초기화에 성공했을 때만 불린다
+    const utf8*      getSubsystemName() const override { return "MySystem"; }
+    const utf8*      getSubsystemDependencies() const override { return "Input UserSettings"; }
+    EngineInitTarget getSubsystemTarget() const override { return EngineInitTarget::Client; }
+};
+```
+
+1. 메모리 태그가 `EngineMisc` 가 아니면 `getSubsystemMemoryTag` 를 덮어씁니다. 다른 서비스는 `engine::get…()` 로 찾습니다(의존에 적은 것만 살아 있습니다).
+2. `EngineLoop::initialize` 에서 `_startup.addSubsystem( make_unique<MySystem>() )` 로 넘깁니다. 이미 서비스 저장소가 만드는 서비스면 `std::move( _owned._pX )` 로 소유를 넘깁니다.
+3. 소유 객체가 없는 "한 번 하는 일" 은 타입을 짓지 않고 `FunctionSubsystem`(이름, 의존, 대상, 초기화와 종료 델리게이트) 하나로 적습니다.
+4. 의존 글은 실행 시간에만 풀리므로 `EngineInitSequenceTest.EngineSubsystemsJoinTheTableOrder` 처럼 실제 객체를 넣어 정렬 오류가 없는지 테스트합니다.
+5. 지금은 표의 줄이 서브시스템 이름을 의존으로 부를 수 없습니다(표의 의존은 컴파일 때 식별자로 검사합니다). 표의 다른 줄이 기대는 단계는 그 줄과 함께 옮깁니다.
 
 ### 새 엔진 서비스 넣기
 
@@ -304,7 +317,7 @@ GameFramework의 데이터 테이블 캐시(`GameDataCache`)는 게임 서비스
 | 월드 | `UWorld`, `AActor` | `Scene`, `Object` | 더 좁다 |
 | 월드와 렌더러 | `FScene` 인터페이스 | `SceneManager` | 같다 |
 | 기능 모듈 | `LevelSequence` | `Sequencer` | 같다 |
-| 서브시스템 수명 | `FEngineLoop`, `USubsystem` | `EngineLoop`, 서비스와 기동 목록 | 같다 |
+| 서브시스템 수명 | `FEngineLoop`, `USubsystem` | `EngineLoop`, `ISubsystem` 과 `SubsystemCollection`(옮기는 동안 기동 표와 섞임) | 같다 |
 | 창, 입력 | `ApplicationCore`, `InputCore` | `Window`, `Input` | 같다 |
 | 병렬 | `ParallelFor`, `TaskGraph` | `Core/Task`, `engine::runParallel` | 같다 |
 
