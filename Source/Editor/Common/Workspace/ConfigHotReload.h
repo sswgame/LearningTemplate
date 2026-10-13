@@ -7,6 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 
+#include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/FileWatchDispatcher.h"
 
 namespace sw
@@ -24,11 +25,20 @@ namespace sw::editor
      *          - 에디터 도구 시드(`editortooldefaults.json`)는 여기서 다시 읽는다(IDE 명령 · 핫 리로드 확장자 …).
      *          - 앱이 다시 쓰는 `EditorPreferences.json` · 레이아웃 파일(`.ini`)은 보지 않는다 — 저장할 때마다 자기 변경을 다시 읽게 된다.
      */
-    class ConfigHotReload
+    class ConfigHotReload : public EditorSubsystem
     {
     public:
         ConfigHotReload();
-        ~ConfigHotReload();
+        ~ConfigHotReload() override;
+
+        // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
+        EngineInitResult initializeSubsystem() override
+        {
+            (void)initialize(); // Config 폴더가 없으면 꺼진 채로 둔다
+            return EngineInitResult::Succeeded;
+        }
+        void        shutdownSubsystem() override { shutdown(); }
+        const utf8* getSubsystemName() const override { return "ConfigHotReload"; }
 
         ConfigHotReload( const ConfigHotReload& )            = delete;
         ConfigHotReload& operator=( const ConfigHotReload& ) = delete;

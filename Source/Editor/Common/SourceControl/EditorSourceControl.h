@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/SourceControl/SourceControlProvider.h"
 
 namespace sw::editor
@@ -34,12 +35,20 @@ namespace sw::editor
      *          작업은 한 번에 하나이고 뒤의 요청은 순서를 기다린다. 잠그기와 풀기는 사용자가 선택한 파일에만 하며, 저장이나 열기가 스스로 잠그지 않는다.
      *          언리얼의 "저장할 때 자동 체크아웃" 은 일부러 두지 않았다. 잠금 서버가 없는 저장소에서는 저장할 때마다 실패 로그가 쌓이기 때문이다.
      */
-    class EditorSourceControl
+    class EditorSourceControl : public EditorSubsystem
     {
     public:
         /** @brief @p repositoryRoot 를 작업 폴더로 씁니다. 비어 있으면 공급자를 확인하지 않습니다. */
         explicit EditorSourceControl( string_view repositoryRoot );
-        ~EditorSourceControl();
+        ~EditorSourceControl() override;
+
+        // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
+        EngineInitResult initializeSubsystem() override
+        {
+            initialize();
+            return EngineInitResult::Succeeded;
+        }
+        const utf8* getSubsystemName() const override { return "EditorSourceControl"; }
 
         EditorSourceControl( const EditorSourceControl& )            = delete;
         EditorSourceControl& operator=( const EditorSourceControl& ) = delete;

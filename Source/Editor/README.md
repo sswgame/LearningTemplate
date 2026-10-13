@@ -124,6 +124,16 @@ UI 스레드가 놓은 GPU 자원(ImGui 텍스처, 게임 뷰 렌더 타깃)은 
 
 ImGui 의 할당은 sw 할당자로 보냅니다. `ImGuiEditor::initialize` 가 컨텍스트를 만들기 전에 `ImGui::SetAllocatorFunctions` 를 부르므로, ImGui 메모리도 `Editor` 메모리 태그와 누수 검사에 잡힙니다.
 
+### 기동과 종료
+
+에디터의 기동 순서도 엔진과 같은 서브시스템 목록(`SubsystemCollection`, Source/Engine/README.md "기동과 종료")이 정합니다. 순서의 진실은 각자 선언한 의존 하나입니다.
+
+- **셸(`ImGuiEditor`)** 은 단계 일곱(`EditorData` → `ImGuiContext` → `PlatformBackend` → `RendererBackend` · `Splash` → `EditorContext` → `WindowCloseQuery`)을 `FunctionSubsystem` 으로 넣습니다.
+  단계가 실패하면 목록이 초기화한 단계만 역순으로 종료합니다. 실패한 단계는 자기가 만든 것을 그 자리에서 놓습니다.
+- **`EditorContext`** 는 하위 객체(선택, 작업 공간, 매니저, 핫 리로드, 버전 관리 …)를 목록으로 소유합니다. 각 객체는 `EditorSubsystem`(`Common/EditorSubsystem.h` — 대상 `Client`, 태그 `Editor`)을
+  첫 기반으로 상속해 이름과, 필요하면 의존 · 초기화 · 종료만 적습니다. 새 하위 객체는 클래스에 그것을 적고 `EditorContext::initialize` 에 `add` 한 줄을 더합니다(종료 줄은 없습니다).
+- 확장 모듈 언로드 리스너(`EditorModuleUnloadListener`)는 훑는 매니저들을 의존으로 적어 그들보다 먼저 종료 · 소멸합니다.
+
 ### 폴더의 역할
 
 | 폴더 | 담는 것 |
@@ -614,6 +624,8 @@ GameFramework 와 키트의 에디터 확장은 `Source/GameFramework/PlugIn/Edi
 - **앱이 다시 쓰는 상태는 `Saved/Editor/`, 사람이 쓰는 설정은 `Config/Editor/` 입니다.** 에디터 자기 파일과 폴더 이름은 코드 상수(`EditorUtil::k…FileName`)이고 설정 파일이 제 위치를 정하지 않습니다.
 - **에디터 환경설정은 섹션 하나가 리플렉션 구조체 하나입니다.** 저장은 기본과 다른 값만 하고, 창에서 바꾼 0.5 초 뒤에 합니다. `-gv_editorUiScale` 과 `-gv_editorStartupScene` 은 주어지면 환경설정을 이깁니다.
 - **섹션의 바뀐 뒤 동작은 ImGui 컨텍스트보다 먼저 불릴 수 있습니다.** 기동 때 파일을 읽기 때문입니다. 상태를 소유자에게 옮길 때는 그 소유자가 언제 서는지부터 봅니다. 테마가 `EditorContext::initialize()` 전에 읽혀 조용히 버려진 적이 있습니다.
+- **에디터 하위 객체 사이의 순서는 의존으로만 적습니다.** 넣는 순서와 이름 순서에는 뜻이 없습니다. 한 객체의 초기화 · 종료 · 소멸자가 다른 객체를 쓰면 그 이름을 `getSubsystemDependencies` 에 적습니다.
+  `initializeSubsystem` 은 서브시스템의 메모리 태그 아래에서 도므로 `EditorSubsystem` 을 거치지 않은 `ISubsystem` 은 할당이 `EngineMisc` 로 잡힙니다.
 - **DPI 는 96 DPI 기준값에 배율을 곱합니다.** 테마에서 곱하고 되읽을 때 나눕니다. 짝이 깨지면 배율이 두 번 걸립니다. 모니터를 옮기면 `beginFrame` 이 ImGui 의 FontScaleDpi 를 따라 `setDpiScale` 로 여백까지 맞춥니다.
 - **nullable 조회는 받아서 확인하고 씁니다**(`editor::getService<T>()`, `EditorContext::get()`). 나중에 불리는 람다 안에서는 다시 받습니다. `getService<…>()->` 꼴은 `CheckNullableServiceUse` 가 막습니다.
 - **저장소 파이썬 스크립트는 `EditorUtil::kPythonCommand` 로 띄웁니다**(Windows `py -3`).

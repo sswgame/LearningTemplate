@@ -128,3 +128,38 @@ SW_TEST_CASE( ReflectionValidationTest, LoadSaveAndEditReportToTheIssueLog )
     SW_EXPECT_TRUE( listIssue[0]._sourceID != pObject->getObjectID() );
     sw::ValidationIssueLog::get().clear();
 }
+
+/**
+ * @brief [ReflectionValidationTest] 오브젝트가 파괴되면 그 결과가 표에서 빠지고, 매니저(씬)가 내려가면 남은 오브젝트의 결과도 빠진다
+ * @details 결과는 오브젝트 ID 로 들어간다. 오브젝트가 사라진 뒤에도 남으면 맵 검사 패널이 없는 오브젝트의 줄을 보인다.
+ */
+SW_TEST_CASE( ReflectionValidationTest, DestroyedObjectLeavesTheIssueLog )
+{
+    sw::ValidationIssueLog::get().clear();
+    sw::vector<sw::ValidationIssue> listIssue;
+    {
+        sw::GameObjectManager manager;
+        sw::GameObject*       pDestroyed = manager.createGameObject( sw::hashed_string( "DestroyedMover" ) );
+        sw::GameObject*       pKept      = manager.createGameObject( sw::hashed_string( "KeptMover" ) );
+        SW_ASSERT_NOT_NULL( pDestroyed );
+        SW_ASSERT_NOT_NULL( pKept );
+        sw::ValidatedComponent* pDestroyedComp = pDestroyed->addComponent<sw::ValidatedComponent>();
+        sw::ValidatedComponent* pKeptComp      = pKept->addComponent<sw::ValidatedComponent>();
+        SW_ASSERT_NOT_NULL( pDestroyedComp );
+        SW_ASSERT_NOT_NULL( pKeptComp );
+        pDestroyedComp->_speed = -1.0f;
+        pKeptComp->_speed      = -1.0f;
+        SW_EXPECT_EQUAL( 1u, sw::ObjectValidation::reportGameObject( *pDestroyed, false ) );
+        SW_EXPECT_EQUAL( 1u, sw::ObjectValidation::reportGameObject( *pKept, false ) );
+        SW_EXPECT_EQUAL( 2u, sw::ValidationIssueLog::get().getIssueCount() );
+
+        const uint64 keptID = pKept->getObjectID();
+        manager.destroyObject( pDestroyed );
+        manager.processDeferredDestruction();
+        sw::ValidationIssueLog::get().collectIssues( listIssue );
+        SW_ASSERT_TRUE_MSG( listIssue.size() == 1, "파괴한 오브젝트의 결과가 표에 남았습니다" );
+        SW_EXPECT_EQUAL( keptID, listIssue[0]._sourceID );
+    }
+    SW_EXPECT_TRUE_MSG( sw::ValidationIssueLog::get().getIssueCount() == 0, "매니저가 내려간 뒤에도 그 오브젝트의 결과가 표에 남았습니다" );
+    sw::ValidationIssueLog::get().clear();
+}

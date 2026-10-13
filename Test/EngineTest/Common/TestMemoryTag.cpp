@@ -44,7 +44,7 @@ namespace
 
 /**
  * @brief [MemoryTagTest] 기동 단계마다 Unknown 이 아닌 태그가 있다
- * @details 단계 초기화는 표의 둘째 칸 태그 아래에서 돈다. 새 단계를 Unknown 으로 두면 그 단계의 할당이 모두 Unknown 줄로 간다.
+ * @details 단계 초기화는 그 단계의 태그(표의 둘째 칸 · 서브시스템 선언) 아래에서 돈다. 새 단계를 Unknown 으로 두면 그 단계의 할당이 모두 Unknown 줄로 간다.
  */
 SW_TEST_CASE( MemoryTagTest, EveryStartupStepHasATag )
 {
@@ -53,8 +53,12 @@ SW_TEST_CASE( MemoryTagTest, EveryStartupStepHasATag )
         const sw::EngineInitStep step = static_cast<sw::EngineInitStep>( stepIndex );
         SW_EXPECT_TRUE_MSG( sw::EngineInitSequence::getStepMemoryTag( step ) != sw::MemoryTag::Unknown, sw::EngineInitSequence::getStepName( step ) );
     }
-    SW_EXPECT_TRUE( sw::EngineInitSequence::getStepMemoryTag( sw::EngineInitStep::Task ) == sw::MemoryTag::Task );
-    SW_EXPECT_TRUE( sw::EngineInitSequence::getStepMemoryTag( sw::EngineInitStep::Reflection ) == sw::MemoryTag::Reflection );
+    for ( const sw::FunctionSubsystemDesc* pDesc : sw::EngineFunctionStep::kArrAll )
+    {
+        SW_EXPECT_TRUE_MSG( pDesc->_memoryTag != sw::MemoryTag::Unknown, pDesc->_pName );
+    }
+    SW_EXPECT_TRUE( sw::EngineFunctionStep::kTask._memoryTag == sw::MemoryTag::Task );
+    SW_EXPECT_TRUE( sw::EngineFunctionStep::kReflection._memoryTag == sw::MemoryTag::Reflection );
 }
 
 /**

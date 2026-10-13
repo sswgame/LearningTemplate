@@ -1,56 +1,17 @@
 /**
  * @file Engine/EngineInitStepList.xxx
- * @brief 엔진 기동 · 종료 단계와 그 의존의 단일 등록표입니다(X-macro). `EngineInitSequence` 가 읽습니다.
+ * @brief 아직 `ISubsystem` 으로 옮기지 않은 엔진 기동 단계의 표입니다(X-macro). `EngineInitSequence` 가 읽습니다. 남은 줄은 RHI 하나입니다.
  * @details include 하기 전에 `SW_ENGINE_STARTUP_STEP( Name, MemoryTag, Target, { Dependency, ... } )` 를 정의합니다(#pragma once 없음).
  *
- * - **순서의 진실은 `{}` 칸(의존) 하나입니다.** `{}` 칸은 이 단계보다 **먼저 서야 하는** 단계이고(UE `InitializeDependency`), 초기화 순서는
- *   의존으로 위상 정렬해 **계산합니다**(동점은 이름 순이라 결정적). 종료는 그 역순(초기화한 단계만), 객체 해제는 모든 종료 뒤에 같은 역순으로
- *   **모든 단계**를 돕니다. **줄 위치는 뜻이 없습니다** — 아래 줄은 읽기 좋게 계산 순서대로 적었을 뿐이고, 어디에 더해도 순서는 같습니다.
- *   그래서 "A 가 B 보다 먼저" 가 필요하면 줄을 옮기지 말고 의존을 적습니다.
- * - 의존 이름은 식별자라 오타는 컴파일 오류이고, 순환도 컴파일 오류입니다(`EngineInitSequence.cpp` 의 `EngineInitTableCheck`).
- * - 둘째 칸은 그 단계의 초기화가 할당하는 메모리의 용도(`MemoryTag`)입니다. 초기화를 부르는 동안 그 태그가 걸립니다(`EngineInitSequence`).
- * - 셋째 칸은 그 단계가 도는 호스트(`EngineInitTarget`)입니다: `All` · `Client`(창 · 렌더러 · 플레이어 설정 — App · 에디터) · `Server`(전용 서버만).
- *   전용 서버(`EngineHostRole::DedicatedServer`)는 `Client` 줄을 돌리지 않습니다(초기화 · 종료 둘 다 — 해제는 모든 줄, 본문이 null 안전).
- *   단계가 도는 대상마다 그 의존도 돌아야 합니다 — 어기면 컴파일 오류입니다(`EngineInitSequence.cpp` 의 static_assert).
- * - 단계 본문은 호스트마다 본문 모음 하나에 정적 함수로 둡니다: `initialize<단계>` · `shutdown<단계>` · `destroy<단계>` 중 필요한 것만
- *   (`EngineLoop::StartupStepBody` — `EngineLoop.cpp`, 테스트 하네스의 `TestHost`). 단계마다 타입을 짓지 않고, 없는 함수는 아무것도 하지
- *   않습니다(`EngineInitNoStepBody`). 시그니처가 틀리면 컴파일 오류이고, 이름이 틀리면(`initializeScnee`) 어느 단계에도 걸리지 않습니다.
- *   로거 · 명령줄 · 서비스 생성과 바인딩은 이 표 앞의 고정 부트스트랩이고, 그 종료는 표의 해제 뒤(`EngineBootstrap::shutdown`)입니다.
- * - **이 표는 옮기는 중입니다.** 새 단계는 표에 줄을 더하지 않고 `ISubsystem` 을 상속해 이름 · 의존 · 대상을 스스로 선언합니다
- *   (`EngineLoop::initialize` 가 `addSubsystem` 으로 넘긴다 — 표의 줄과 한 순서로 섞여 정렬된다). 옮긴 단계: Fonts(`FontService`) ·
- *   Telemetry(`TelemetryService`) · UI(`UISystem`). 남은 줄의 계획은 `docs/plans/SubsystemMigration.md` 입니다.
- *   표의 의존 칸은 컴파일 때 식별자로 검사하므로 서브시스템 이름을 부를 수 없습니다 — 다른 줄이 기대는 단계는 그 줄과 함께 옮깁니다.
- *
- * 표에 단계를 더하는 법(옮기기 전의 방식 — 새 단계는 `ISubsystem` 으로 만든다, `Source/Engine/README.md`):
- *   1. 이 표에 한 줄 — 이름 · 메모리 태그 · 대상 · 먼저 서야 하는 단계. 줄 위치는 어디든 됩니다.
- *   2. `EngineLoop::StartupStepBody` 에 필요한 본문(`initialize<단계>` · `shutdown<단계>` · `destroy<단계>`)만 정적 함수로 둡니다.
- *   3. 테스트 하네스가 그 단계를 세워야 하면 `TestHost` 에도 같은 이름의 함수를 둡니다(아니면 손대지 않습니다).
- *   4. 서버에서 돌면 안 되는 단계는 대상을 `Client` 로 적습니다 — `Client` 단계에 의존하는 단계도 `Client` 여야 합니다(컴파일 검사).
- *   5. `EngineInitSequenceTest` 를 돌려 계산된 순서에서 의존이 모두 앞에 서는지 봅니다.
+ * - 다른 기동 단계는 모두 서브시스템입니다(서비스 클래스가 스스로 선언하거나 `EngineFunctionStep` 의 선언 + `FunctionSubsystem`). 표의 줄은 줄마다
+ *   어댑터 하나로 같은 목록(`SubsystemCollection`)에 들어가, 서브시스템과 한 순서 계산 안에서 섞여 돕니다.
+ * - `{}` 칸(의존)은 이 단계보다 **먼저 서야 하는** 이름 글이고 서브시스템 이름을 부릅니다. 모르는 이름 · 순환 · 대상 어긋남은 정렬 오류라
+ *   기동하지 않습니다(`SubsystemCollection::sort` — `EngineInitSequenceTest` 가 실제 목록으로 본다).
+ * - 둘째 칸은 초기화가 할당하는 메모리의 용도(`MemoryTag`), 셋째 칸은 도는 호스트(`EngineInitTarget`)입니다. 전용 서버는 `Client` 줄을 돌리지 않습니다.
+ * - 본문은 `EngineLoop::StartupStepBody` 의 정적 함수(`initialize<단계>` · `shutdown<단계>` · `destroy<단계>`)입니다. 없는 함수는 아무것도 하지
+ *   않습니다(`EngineInitNoStepBody`). 테스트 하네스는 RHI 를 세우지 않으므로 이 표를 쓰지 않습니다.
+ * - RHI 는 백엔드 교체의 기준점(`EngineInitSequence::shutdownDependentsOf( EngineInitStep::RHI )`)이라 따로 옮깁니다(`docs/plans/SubsystemMigration.md`).
  */
 
 //                      단계                 태그        대상    먼저 서야 하는 단계                     // 왜
-SW_ENGINE_STARTUP_STEP( Compression,         EngineMisc, All,    {} )                            // 코덱 레지스트리 + Core 슬롯 + 외부 코덱
-SW_ENGINE_STARTUP_STEP( Reflection,          Reflection, All,    {} )                           
-SW_ENGINE_STARTUP_STEP( Config,              EngineMisc, All,    { Reflection } )                // 설정 역직렬화가 TypeInfo 를 쓴다
-SW_ENGINE_STARTUP_STEP( Resource,            Asset,      All,    { Compression, Config } )       // 팩 루트는 GameConfig, 팩 스트림은 코덱
-SW_ENGINE_STARTUP_STEP( EngineDefaultAssets, EngineMisc, All,    { Reflection, Resource } )     
-SW_ENGINE_STARTUP_STEP( ShaderCache,         Shader,     All,    {} )                            // 서버는 빈 캐시만(씬 쿠킹의 Headless 가 의존)
-SW_ENGINE_STARTUP_STEP( Task,                Task,       All,    {} )                           
-SW_ENGINE_STARTUP_STEP( ModuleImages,        EngineMisc, All,    { Compression, Reflection, Resource, Task } ) // 모듈을 내리며 타입 · 코덱 · 캐시를 떼고 태스크를 기다린다
-SW_ENGINE_STARTUP_STEP( Audio,               Audio,      All,    { ModuleImages, Task } )        // 음성 스트리밍이 태스크를 쓰고, 모듈 콜백을 든다 — 서버는 장치 없는 NullAudioBackend
-SW_ENGINE_STARTUP_STEP( FileIO,              Asset,      All,    { ModuleImages, Task } )        // 완료 콜백을 태스크로 싣는다 — 모듈을 내리기 전에 걸린 읽기를 다 끝낸다
-SW_ENGINE_STARTUP_STEP( Input,               EngineMisc, All,    { ModuleImages } )              // 모듈이 등록한 장치 · 콜백을 든다 — 서버는 이벤트가 오지 않는 장치 목록
-SW_ENGINE_STARTUP_STEP( ModuleTypes,         Reflection, All,    { Config, ModuleImages, Reflection } ) // 호스트가 타입 공급자(GF · 킷 · 게임 모듈)를 올려 등록을 끝낸다 — 씬을 읽는 일은 이 뒤
-SW_ENGINE_STARTUP_STEP( Physics,             Physics,    All,    { Resource, Task } )            // 설정 표(레이어 · 재질)는 리소스, Jolt 잡은 태스크
-SW_ENGINE_STARTUP_STEP( Scene,               Scene,      All,    { Audio, FileIO, Input, ModuleImages, Physics, Resource, Task } ) // 컴포넌트가 입력 · 오디오 · 모듈 코드 · 에셋 · 물리 씬을 든다(스트리밍은 비동기 IO)
-SW_ENGINE_STARTUP_STEP( Headless,            EngineMisc, All,    { EngineDefaultAssets, ModuleTypes, Scene, ShaderCache } ) // 셰이더 쿠킹 · 씬 쿠킹(모든 컴포넌트 타입이 있어야 쿠킹한다) — 하면 뒤 단계(창 · RHI · 렌더러)를 건너뛴다 — 서버는 씬 쿠킹만(셰이더 쿠킹 · 임포트는 거절)
-SW_ENGINE_STARTUP_STEP( UserSettings,        EngineMisc, Client, { Audio, Headless, Input, Resource } ) // 플레이어 옵션 — 스키마 · 사용자 파일을 읽어 대상(오디오 · 입력 · 전역 변수)에 넣는다. 화면 값은 창을 만드는 RHI 가 읽는다
 SW_ENGINE_STARTUP_STEP( RHI,                 RenderCPU,  Client, { Config, Headless, UserSettings } ) // 백엔드 선택 · 창 · 디바이스
-SW_ENGINE_STARTUP_STEP( FrameRenderer,       RenderCPU,  Client, { RHI, Task } )                
-SW_ENGINE_STARTUP_STEP( RenderThread,        RenderCPU,  Client, { FrameRenderer } )            
-SW_ENGINE_STARTUP_STEP( LiveShader,          Shader,     Client, { FrameRenderer, RenderThread } ) // 재컴파일이 렌더 스레드를 세우고 렌더러에 알린다(Debug)
-SW_ENGINE_STARTUP_STEP( SceneRHI,            RenderCPU,  Client, { RHI, Scene } )                // 씬에 디바이스를 건다 — 렌더러 쪽 단계 가운데 종료가 가장 먼저다
-
-// `AssetManager::shutdown` 은 Resource 단계의 해제에 있다 — 에셋을 드는 단계가 모두 Resource 뒤에 서므로, 역순 해제에서 그들의 소멸자가
-// 에셋을 놓은 뒤에 캐시를 비운다. 소멸자가 태스크를 기다리는 객체(에셋 스트리밍 큐)는 Task 에 의존하는 단계(Scene)가 해제한다.

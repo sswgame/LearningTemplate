@@ -64,9 +64,9 @@ export 매크로는 네 가지이고 서로 바꿔 쓰지 않습니다. `SW_API`
 
 ## 엔진의 시작과 종료
 
-엔진을 시작하는 순서는 단계 목록 하나(`Source/Engine/EngineInitStepList.xxx`)가 정합니다.
-목록의 각 줄에는 단계 하나와 그 단계가 기다려야 하는 단계를 적습니다. `EngineInitSequence` 가 이 목록을 위상 정렬해서 그 순서대로 초기화하고, 종료할 때는 역순으로 정리합니다.
-시작과 종료를 목록 하나로 정하기 때문에, 단계를 추가할 때 두 순서를 따로 맞출 필요가 없습니다. `EngineLoop` 와 테스트 하네스는 같은 부트스트랩 코드(`EngineBootstrap`)를 씁니다.
+엔진의 기동 단계는 서브시스템(`ISubsystem`)입니다. 서브시스템마다 이름과 먼저 서야 하는 서브시스템을 스스로 선언하고, `SubsystemCollection` 이 그 의존을 위상 정렬해서
+그 순서대로 초기화하고, 종료와 해제는 역순으로 합니다. 시작과 종료를 의존 하나로 정하기 때문에, 단계를 추가할 때 두 순서를 따로 맞출 필요가 없습니다.
+`EngineLoop` 와 테스트 하네스는 같은 부트스트랩 코드(`EngineBootstrap`)와 같은 단계 선언을 씁니다. 자세한 것은 [Source/Engine/README.md](Source/Engine/README.md) "기동과 종료" 입니다.
 
 엔진 서비스는 `Source/RuntimeAPI/Service/EngineServiceList.xxx` 에 한 줄씩 정의합니다.
 

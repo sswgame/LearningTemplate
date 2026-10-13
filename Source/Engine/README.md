@@ -125,18 +125,28 @@ py -3 Scripts/lint/gate/CheckEngineLayers.py
 **순서의 진실은 의존 하나입니다.** `SubsystemCollection`(`Common/SubsystemCollection.h`)이 서브시스템을 `vector<unique_ptr<ISubsystem>>` 로 소유하고, 의존으로 위상 정렬해 계산합니다(동점은 이름 순이라 결정적).
 추가한 순서는 뜻이 없습니다. "A 가 B 보다 먼저" 가 필요하면 의존을 적습니다. 같은 이름, 모르는 의존, 순환, 대상 어긋남(서버에서 도는 것이 `Client` 전용에 의존)은 정렬 오류이고 기동하지 않습니다.
 
-목록은 세 번 돕니다.
+목록은 네 번 돕니다(종료가 두 패스).
 
 1. `initializeAll( target )` 이 계산한 순서로 `initializeSubsystem` 을 부릅니다. `Failed` 면 멈추고, `SkipDependents` 면 그에 의존하는 것을 건너뜁니다(헤드리스 작업).
-2. `shutdownAll` 이 초기화에 성공한 것만 역순으로 `shutdownSubsystem` 합니다. 이때 다른 서브시스템은 모두 살아 있습니다.
+2. `shutdownAll` 이 초기화에 성공한 것만 두 번 역순으로 돕니다. 먼저 모두에 `stopSubsystem`(종료 전 단계 — 새 일 받기를 멈추고 남은 일을 비운다, 기본은 빈 동작)을, 그다음 모두에 `shutdownSubsystem` 을 부릅니다.
+   언리얼이 PreExit 를 `Deinitialize` 앞에 두는 것과 같은 자리입니다. 한 서브시스템이 비우는 남은 일(완료 콜백)이 먼저 내려간 다른 서브시스템을 부르지 않게 합니다. 이때 다른 서브시스템은 모두 살아 있습니다.
 3. `destroyAll`(목록의 소멸자도 같습니다)이 **모두**를 역순으로 소멸시킵니다. 실패했거나 건너뛰었거나 도달하지 못한 것도 포함합니다.
 
 백엔드 교체는 `shutdownDependentsOf` 와 `restartStopped` 로 RHI 에 기대는 것만 내렸다가 같은 초기화로 다시 세웁니다. 그래서 `initializeSubsystem` 은 다시 불릴 수 있어야 합니다.
 
-**옮기는 중입니다.** 예전 기동 단계는 X-macro 표 `EngineInitStepList.xxx` 의 줄(단계 이름, 메모리 태그, 대상, `{ 의존 }`)과 호스트마다의 본문 정적 함수(`initialize<단계>`, `shutdown<단계>`, `destroy<단계>` — `EngineLoop::StartupStepBody`, 테스트 하네스의 `TestHost`)였습니다.
-`EngineInitSequence` 는 표의 줄마다 어댑터 하나를 같은 목록에 넣어, 남은 표의 줄과 새 서브시스템을 **한 순서 계산 안에서** 섞어 돌립니다. 표의 의존은 식별자라 오타, 순환, 대상 어긋남이 컴파일 오류입니다(`EngineInitTableCheck`).
-옮긴 서브시스템은 셋입니다 — `Fonts`(`FontService`), `Telemetry`(`TelemetryService`, 크래시 보고 묶기 포함), `UI`(`UISystem`, Dev 의 디버그 HUD 포함). 표에 남은 단계는 21개이고, 계획은 [서브시스템 이전 계획](../../docs/plans/SubsystemMigration.md)에 있습니다.
-옮긴 서비스는 서비스 저장소(`EngineServiceCollection`)가 만들고 서비스 표에 묶은 뒤, `EngineLoop::initialize` 가 소유를 기동 순서로 넘깁니다(`addSubsystem( std::move( _owned._pFontService ) )`).
+서브시스템은 두 꼴입니다.
+
+- **서비스 클래스가 스스로** `ISubsystem` 을 상속합니다 — `ShaderCache`, `PhysicsSystem`, `FontService`, `TelemetryService`, `UISystem`.
+- **클래스가 없는 단계**는 `EngineFunctionStep`(`EngineInitSequence.h`)의 선언(이름, 의존, 대상, 태그) 하나와 `FunctionSubsystem` 의 델리게이트 본문입니다.
+  호스트가 엮는 일(모듈 훅, 타입 공급자 로더, 씬의 디바이스, 헤드리스 작업)과 Core 서비스(태스크, 비동기 IO, 코덱 레지스트리 — Core 는 `ISubsystem` 을 모릅니다),
+  정렬이 큰 타입(`InputManager`), 호스트마다 본문이 다른 단계(설정, 리플렉션)가 이쪽입니다. 선언이 한 곳이라 두 호스트(`EngineLoop`, 테스트 하네스)가 같은 순서로 섭니다.
+
+서비스 저장소(`EngineServiceCollection`)가 만든 객체는 서비스 표에 묶은 뒤 소유를 그 단계로 넘깁니다(`addSubsystem( std::move( _owned._pShaderCache ) )`,
+`FunctionSubsystem::takeOwnership`). 그래서 해제 자리가 곧 그 단계의 소멸 자리이고, 손으로 적은 해제 본문이 없습니다. 여러 객체는 넘긴 역순으로,
+소멸자 밖의 해제가 필요하면 `takeOwnership<&AssetManager::shutdown>` 꼴로 그 함수를 부른 뒤 소멸합니다.
+
+**RHI 하나만 옮기는 중입니다.** X-macro 표 `EngineInitStepList.xxx` 에 RHI 줄이 남아 있고, 본문은 `EngineLoop::StartupStepBody` 의 정적 함수입니다.
+`EngineInitSequence` 는 그 줄을 어댑터로 같은 목록에 넣어 서브시스템과 **한 순서 계산 안에서** 돌립니다. 계획은 [서브시스템 이전 계획](../../docs/plans/SubsystemMigration.md)에 있습니다.
 
 씬은 `ModuleTypes` 단계가 끝난 뒤에만 읽고 쿠킹합니다. 이 단계에서 호스트가 GameFramework, 키트, 게임 모듈을 로드해 타입 등록을 끝냅니다. `Headless` 단계는 그 뒤에 있습니다.
 
@@ -269,9 +279,10 @@ class SW_API MySystem : public ISubsystem   // 다중 상속이면 ISubsystem �
 
 1. 메모리 태그가 `EngineMisc` 가 아니면 `getSubsystemMemoryTag` 를 덮어씁니다. 다른 서비스는 `engine::get…()` 로 찾습니다(의존에 적은 것만 살아 있습니다).
 2. `EngineLoop::initialize` 에서 `_startup.addSubsystem( make_unique<MySystem>() )` 로 넘깁니다. 이미 서비스 저장소가 만드는 서비스면 `std::move( _owned._pX )` 로 소유를 넘깁니다.
-3. 소유 객체가 없는 "한 번 하는 일" 은 타입을 짓지 않고 `FunctionSubsystem`(이름, 의존, 대상, 초기화와 종료 델리게이트) 하나로 적습니다.
-4. 의존 글은 실행 시간에만 풀리므로 `EngineInitSequenceTest.EngineSubsystemsJoinTheTableOrder` 처럼 실제 객체를 넣어 정렬 오류가 없는지 테스트합니다.
-5. 지금은 표의 줄이 서브시스템 이름을 의존으로 부를 수 없습니다(표의 의존은 컴파일 때 식별자로 검사합니다). 표의 다른 줄이 기대는 단계는 그 줄과 함께 옮깁니다.
+3. 클래스가 없는 단계(호스트가 엮는 일, Core 서비스, 정렬이 큰 타입)는 타입을 짓지 않고 `EngineFunctionStep` 에 선언 한 줄을 더하고 `FunctionSubsystem`
+   (선언, 초기화와 종료 델리게이트)으로 넣습니다. 객체는 `takeOwnership` 으로 넘겨 그 단계의 소멸 자리에서 사라지게 합니다.
+4. 테스트 하네스(`TestHostRuntime::start`)가 그 단계를 세워야 하면 같은 객체 · 같은 선언으로 넣습니다. 하네스가 넣는 단계가 기대는 단계도 하네스에 있어야 합니다.
+5. 의존 글은 실행 시간에만 풀리므로 `EngineInitSequenceTest` 의 엔진 목록(`makeEngineSubsystems`)에 더해 정렬 오류가 없는지 테스트합니다.
 
 ### 새 엔진 서비스 넣기
 

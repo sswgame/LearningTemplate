@@ -41,8 +41,9 @@ namespace sw
     class SW_API ConfigManager
     {
     public:
-        ConfigManager()                                  = default;
-        ~ConfigManager()                                 = default;
+        ConfigManager() = default;
+        /** @brief 이 표가 주 표(`setPrimary`)면 알림을 거둡니다 — 사라진 표를 게임 모듈이 찾지 않는다. */
+        ~ConfigManager();
         ConfigManager( const ConfigManager& )            = delete;
         ConfigManager& operator=( const ConfigManager& ) = delete;
 

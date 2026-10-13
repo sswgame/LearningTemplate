@@ -76,7 +76,7 @@ namespace sw
          * @return 정렬이 유효하고 실패한 서브시스템이 없으면 true 입니다.
          */
         [[nodiscard]] bool initializeAll( EngineInitTarget target );
-        /** @brief 초기화한 서브시스템을 역순으로 종료합니다(`shutdownSubsystem`). 두 번 불러도 됩니다. */
+        /** @brief 초기화한 서브시스템을 역순으로 모두 멈추고(`stopSubsystem`), 다시 역순으로 모두 종료합니다(`shutdownSubsystem`). 두 번 불러도 됩니다. */
         void shutdownAll();
         /**
          * @brief 모든 서브시스템을 초기화 순서의 역순으로 소멸시키고 목록을 비웁니다. 아직 종료하지 않은 것이 있으면 먼저 `shutdownAll` 합니다.
@@ -85,7 +85,7 @@ namespace sw
         void destroyAll();
 
         /**
-         * @brief @p subsystem 에 (간접으로라도) 의존하는 **초기화된** 서브시스템을 역순으로 종료합니다. @p subsystem 자신은 그대로 둡니다.
+         * @brief @p subsystem 에 (간접으로라도) 의존하는 **초기화된** 서브시스템을 `shutdownAll` 과 같이 역순으로 멈춘 뒤 역순으로 종료합니다. @p subsystem 자신은 그대로 둡니다.
          * @details 기동 중에 하나를 갈아 끼울 때 씁니다(백엔드 교체: RHI 의 디바이스를 다시 만든다). 내린 것은 `restartStopped` 가 다시 세웁니다.
          */
         void shutdownDependentsOf( const ISubsystem& subsystem );

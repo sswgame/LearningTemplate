@@ -269,6 +269,7 @@ struct SpawnerComponent : public Component
 
 플레이나 되돌리기용 바이너리 스냅숏은 검증하지 않습니다. 검증은 결과를 기록만 하고, 값을 고치거나 로드와 저장을 멈추지 않습니다.
 에디터의 맵 검사 패널이 `ValidationIssueLog::collectIssues` 로 결과를 보여 줍니다.
+결과는 출처 오브젝트와 함께 사라집니다. `GameObject` 소멸자가 자기 id 를 표에서 지우므로, 오브젝트 파괴 · 씬 언로드 뒤에는 그 줄이 남지 않습니다.
 
 ### API 문서 만들기
 
@@ -349,6 +350,9 @@ REFLECT · PROPERTY · ENUM 은 키 오타를 잡으려고 인자를 두 번 펼
 
 **타입 비교에 포인터 동일성만 쓰지 마세요.** `castTo` 는 부모 포인터(`_pParentType`)와 세대 검사를 하는 캐시(`TypeLookupCache`)를 씁니다.
 포인터가 다르면 전체 이름(FQN)을 한 번 더 비교합니다. 테스트용 목 타입의 `StaticType()` 은 레지스트리 밖의 사본이라 포인터가 다르기 때문입니다.
+
+**검증 결과를 출처의 수명에 묶으세요.** `ValidationIssueLog` 는 엔진 수명 범위의 표라 씬보다 오래 삽니다. 출처를 지우는 쪽이 따로 있으면 그 호출이 빠진 경로(씬 언로드, 매니저 소멸)마다 결과가 남습니다.
+그래서 출처(`GameObject`)의 소멸자가 지웁니다. 소멸 경로는 `ValidationIssueLog::find` 로 표를 찾습니다(`get` 은 엔진 종료 뒤 단언한다). 새 출처 종류를 더하면 그 소멸자에도 같은 한 줄을 둡니다(`ReflectionValidationTest.DestroyedObjectLeavesTheIssueLog`).
 
 **부모 체인이 순환할 수 있다고 가정하세요.** `registerClass` 는 공개 API 라 넘겨받은 부모 이름을 검사하지 않습니다. 체인을 따라가는 코드는 걸음 수로 깊이를 제한해 멈춥니다.
 상속 캐시를 비울 때는 `clearInheritedProperties` 를 씁니다.

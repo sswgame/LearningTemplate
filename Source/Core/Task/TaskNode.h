@@ -310,7 +310,7 @@ namespace sw
     struct TaskNode
     {
         void retain() { _refCount.fetch_add( 1, std::memory_order_relaxed ); }
-        /** @brief 마지막 참조가 놓이면 소유 매니저의 풀로 돌아갑니다. */
+        /** @brief 마지막 참조가 놓이면 풀로 돌아갑니다(매니저가 살아 있으면 매니저를 거친다). */
         void release();
         /** @brief 선행 하나가 채워졌음을 알립니다. 마지막이었으면 소유 매니저가 큐에 넣습니다. */
         void resolveOneDependency();
@@ -343,9 +343,14 @@ namespace sw
         atomic<bool> _bScheduled{ false };
         atomic<bool> _bCancelled{ false };
 
-        TaskManager* _pOwner{ nullptr };
-        TaskNode*    _pParent{ nullptr }; ///< 이 태스크를 본문 안에서 만든 태스크. 그쪽이 이 태스크의 완료를 기다린다
-        uint32       _clearEpoch{ 0 };    ///< 만들 때의 `TaskManager::_clearEpoch`. `clear()` 가 활성 수를 0 으로 놓은 뒤의 노드를 가린다
+        /**
+         * @brief 이 노드가 든 풀입니다(슬랩을 만들 때 한 번 정한다). 매니저는 풀이 압니다(`TaskNodePool::getOwner`).
+         * @details 노드가 매니저를 직접 가리키지 않는 까닭: 핸들이 매니저보다 오래 살면 풀이 그 핸들들의 몫으로 남고(`detachOwner`),
+         *          그때 매니저가 사라졌다는 것을 노드마다 고치지 않고 풀 하나가 알린다.
+         */
+        TaskNodePool* _pPool{ nullptr };
+        TaskNode*     _pParent{ nullptr }; ///< 이 태스크를 본문 안에서 만든 태스크. 그쪽이 이 태스크의 완료를 기다린다
+        uint32        _clearEpoch{ 0 };    ///< 만들 때의 `TaskManager::_clearEpoch`. `clear()` 가 활성 수를 0 으로 놓은 뒤의 노드를 가린다
         /**
          * @brief 본문 하나 + 아직 끝나지 않은 자식 수입니다. 0 으로 내리는 쪽(본문이든 마지막 자식이든)이 완료를 처리합니다.
          * @details 주의: "자식 수" 와 "상태 = 자식 대기" 를 따로 두면, 본문이 상태를 적고 자식 수를 읽는 사이에 마지막 자식이 수를 내리고

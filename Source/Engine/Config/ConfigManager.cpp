@@ -158,6 +158,12 @@ namespace sw
         return false;
     }
 
+    ConfigManager::~ConfigManager()
+    {
+        if ( s_pPrimaryConfigManager == this )
+            s_pPrimaryConfigManager = nullptr;
+    }
+
     ConfigManager* ConfigManager::findPrimary()
     {
         return s_pPrimaryConfigManager;

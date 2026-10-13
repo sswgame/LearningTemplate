@@ -12,7 +12,7 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 서브시스템이 불린 순서를 적습니다 — "I:" 초기화, "S:" 종료, "D:" 소멸. */
+    /** @brief 서브시스템이 불린 순서를 적습니다 — "I:" 초기화, "P:" 멈춤(stop), "S:" 종료, "D:" 소멸. */
     struct SubsystemRecorder
     {
         vector<string>    _listEvent{};
@@ -57,6 +57,7 @@ namespace
             _recorder._listInitializeMemoryTag.push_back( Memory::getCurrentMemoryTag() );
             return _recorder._failName == _pName ? _recorder._failResult : EngineInitResult::Succeeded;
         }
+        void stopSubsystem() override { _recorder._listEvent.push_back( string( "P:" ) + _pName ); }
         void shutdownSubsystem() override { _recorder._listEvent.push_back( string( "S:" ) + _pName ); }
 
         const utf8*      getSubsystemName() const override { return _pName; }
@@ -128,6 +129,22 @@ namespace
         uint32 _initializeCount{ 0 };
         uint32 _shutdownCount{ 0 };
     };
+
+    /** @brief 해제 · 소멸을 적는 객체입니다(`FunctionSubsystem::takeOwnership` 의 소멸 자리를 본다). */
+    struct OwnedProbe
+    {
+        OwnedProbe( SubsystemRecorder& recorder, const utf8* pName )
+            : _recorder{ recorder }
+            , _pName{ pName }
+        {
+        }
+        ~OwnedProbe() { _recorder._listEvent.push_back( string( "D:" ) + _pName ); }
+
+        void release() { _recorder._listEvent.push_back( string( "R:" ) + _pName ); }
+
+        SubsystemRecorder& _recorder;
+        const utf8*        _pName;
+    };
 } // namespace
 
 /**
@@ -173,8 +190,32 @@ SW_TEST_CASE( SubsystemCollectionTest, ShutdownRunsInReverseOfInitialization )
     SW_ASSERT_TRUE( collection.initializeAll( EngineInitTarget::Client ) );
     collection.shutdownAll();
     collection.shutdownAll();
+    SW_EXPECT_STREQ( reverseNames( kRendererShapedOrder ).c_str(), recorder.joinEvents( 'P' ).c_str() );
     SW_EXPECT_STREQ( reverseNames( kRendererShapedOrder ).c_str(), recorder.joinEvents( 'S' ).c_str() );
     SW_EXPECT_TRUE( collection.getInitializedIndices().empty() );
+}
+
+/**
+ * @brief [SubsystemCollectionTest] 종료 전 단계(stop)는 어느 종료보다도 먼저 모두에 역순으로 한 번씩 불린다(두 패스)
+ * @details 한 서브시스템이 stop 에서 비우는 남은 일이, 그보다 뒤에 초기화된(먼저 내려갈) 서브시스템을 부를 수 있어야 한다 — 그래서 패스가 둘이다.
+ */
+SW_TEST_CASE( SubsystemCollectionTest, StopPassRunsBeforeEveryShutdown )
+{
+    SubsystemRecorder   recorder;
+    SubsystemCollection collection;
+    addRendererShapedGraph( collection, recorder );
+    SW_ASSERT_TRUE( collection.initializeAll( EngineInitTarget::Client ) );
+    recorder._listEvent.clear();
+    collection.shutdownAll();
+
+    const size_t count = 8;
+    SW_ASSERT_EQUAL( count * 2, recorder._listEvent.size() );
+    for ( size_t eventIndex = 0; eventIndex < recorder._listEvent.size(); ++eventIndex )
+    {
+        const utf8 expectedKind = eventIndex < count ? 'P' : 'S';
+        SW_EXPECT_TRUE_MSG( recorder._listEvent[eventIndex][0] == expectedKind, recorder._listEvent[eventIndex].c_str() );
+    }
+    SW_EXPECT_STREQ( reverseNames( kRendererShapedOrder ).c_str(), recorder.joinEvents( 'P' ).c_str() );
 }
 
 /**
@@ -191,6 +232,7 @@ SW_TEST_CASE( SubsystemCollectionTest, FailureStopsAndShutsDownOnlyInitialized )
     SW_EXPECT_STREQ( "Config Device Renderer", recorder.joinEvents( 'I' ).c_str() );
 
     collection.destroyAll();
+    SW_EXPECT_STREQ( "Device Config", recorder.joinEvents( 'P' ).c_str() );
     SW_EXPECT_STREQ( "Device Config", recorder.joinEvents( 'S' ).c_str() );
     SW_EXPECT_STREQ( reverseNames( kRendererShapedOrder ).c_str(), recorder.joinEvents( 'D' ).c_str() );
     SW_EXPECT_EQUAL( 0u, collection.getSubsystemCount() );
@@ -209,6 +251,7 @@ SW_TEST_CASE( SubsystemCollectionTest, SkipDependentsSkipsEveryDependent )
     SW_ASSERT_TRUE( collection.initializeAll( EngineInitTarget::Client ) );
     SW_EXPECT_STREQ( "Config Device Resource Scene Tools", recorder.joinEvents( 'I' ).c_str() );
     collection.shutdownAll();
+    SW_EXPECT_STREQ( "Tools Scene Resource Device Config", recorder.joinEvents( 'P' ).c_str() );
     SW_EXPECT_STREQ( "Tools Scene Resource Device Config", recorder.joinEvents( 'S' ).c_str() );
 }
 
@@ -224,11 +267,11 @@ SW_TEST_CASE( SubsystemCollectionTest, DestroyRunsAfterEveryShutdownInReverseOrd
         SW_ASSERT_TRUE( collection.initializeAll( EngineInitTarget::Client ) );
     }
     const size_t count = 8;
-    SW_ASSERT_EQUAL( count * 3, recorder._listEvent.size() );
+    SW_ASSERT_EQUAL( count * 4, recorder._listEvent.size() );
+    constexpr utf8 kKindByPass[] = { 'I', 'P', 'S', 'D' };
     for ( size_t eventIndex = 0; eventIndex < recorder._listEvent.size(); ++eventIndex )
     {
-        const utf8 expectedKind = ( eventIndex < count ) ? 'I' : ( eventIndex < count * 2 ) ? 'S'
-                                                                                            : 'D';
+        const utf8 expectedKind = kKindByPass[eventIndex / count];
         SW_EXPECT_TRUE_MSG( recorder._listEvent[eventIndex][0] == expectedKind, recorder._listEvent[eventIndex].c_str() );
     }
     SW_EXPECT_STREQ( reverseNames( kRendererShapedOrder ).c_str(), recorder.joinEvents( 'D' ).c_str() );
@@ -244,6 +287,7 @@ SW_TEST_CASE( SubsystemCollectionTest, DestroyWithoutInitializeOnlyDestroys )
     addRendererShapedGraph( collection, recorder );
     SW_ASSERT_TRUE( collection.sort() );
     collection.destroyAll();
+    SW_EXPECT_STREQ( "", recorder.joinEvents( 'P' ).c_str() );
     SW_EXPECT_STREQ( "", recorder.joinEvents( 'S' ).c_str() );
     SW_EXPECT_STREQ( reverseNames( kRendererShapedOrder ).c_str(), recorder.joinEvents( 'D' ).c_str() );
 }
@@ -330,15 +374,20 @@ SW_TEST_CASE( SubsystemCollectionTest, DependentsRestartWithTheSameBodies )
     recorder._listEvent.clear();
 
     collection.shutdownDependentsOf( *pDevice );
+    SW_EXPECT_STREQ( "SceneDevice RenderThread Renderer", recorder.joinEvents( 'P' ).c_str() );
     SW_EXPECT_STREQ( "SceneDevice RenderThread Renderer", recorder.joinEvents( 'S' ).c_str() );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 6 ), recorder._listEvent.size() );
+    SW_EXPECT_TRUE( recorder._listEvent[2][0] == 'P' && recorder._listEvent[3][0] == 'S' ); // 모두 멈춘 뒤에 종료한다
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( collection.getStoppedIndices().size() ) );
 
     SW_EXPECT_TRUE( collection.restartStopped() );
     SW_EXPECT_STREQ( "Renderer RenderThread SceneDevice", recorder.joinEvents( 'I' ).c_str() );
     SW_EXPECT_TRUE( collection.getStoppedIndices().empty() );
 
+    // 다시 선 것도 성공한 초기화 한 번마다 stop · 종료를 한 번씩 받는다.
     recorder._listEvent.clear();
     collection.shutdownAll();
+    SW_EXPECT_STREQ( reverseNames( kRendererShapedOrder ).c_str(), recorder.joinEvents( 'P' ).c_str() );
     SW_EXPECT_STREQ( reverseNames( kRendererShapedOrder ).c_str(), recorder.joinEvents( 'S' ).c_str() );
 }
 
@@ -365,6 +414,7 @@ SW_TEST_CASE( SubsystemCollectionTest, FailedRestartLeavesTheRestStopped )
 
     recorder._listEvent.clear();
     collection.shutdownAll();
+    SW_EXPECT_STREQ( "Tools Scene Resource Renderer Device Config", recorder.joinEvents( 'P' ).c_str() );
     SW_EXPECT_STREQ( "Tools Scene Resource Renderer Device Config", recorder.joinEvents( 'S' ).c_str() );
 }
 
@@ -391,18 +441,41 @@ SW_TEST_CASE( SubsystemCollectionTest, InitializeRunsUnderTheSubsystemMemoryTag 
 
 /**
  * @brief [SubsystemCollectionTest] `FunctionSubsystem` 은 묶은 델리게이트를 부르고, 묶지 않은 초기화는 성공 · 종료는 아무것도 하지 않는다
+ * @details `FunctionSubsystem` 은 `stopSubsystem` 을 덮어쓰지 않는다 — 기본(아무것도 하지 않음)으로 두 패스를 지나도 종료는 한 번이다.
  */
 SW_TEST_CASE( SubsystemCollectionTest, FunctionSubsystemCallsItsDelegates )
 {
     FunctionTarget      target;
     SubsystemCollection collection;
-    collection.add( make_unique<FunctionSubsystem>( "Bound", "Unbound", EngineInitTarget::All,
+    collection.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "Bound", "Unbound", EngineInitTarget::All, MemoryTag::EngineMisc },
                                                     SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &FunctionTarget::initialize, &target ),
                                                     SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &FunctionTarget::shutdown, &target ) ) );
-    collection.add( make_unique<FunctionSubsystem>( "Unbound", "", EngineInitTarget::All, SubsystemInitializeDelegate{} ) );
+    collection.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "Unbound", "", EngineInitTarget::All, MemoryTag::EngineMisc } ) );
     SW_ASSERT_TRUE_MSG( collection.initializeAll( EngineInitTarget::Client ), collection.getError().c_str() );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( collection.getInitializedIndices().size() ) );
     SW_EXPECT_EQUAL( 1u, target._initializeCount );
     collection.shutdownAll();
     SW_EXPECT_EQUAL( 1u, target._shutdownCount );
+}
+
+/**
+ * @brief [SubsystemCollectionTest] `FunctionSubsystem` 이 넘겨받은 객체는 그 서브시스템의 소멸 자리(초기화의 역순)에서 함께 소멸한다
+ * @details Core 서비스(태스크 · 코덱 레지스트리)의 소유를 기동 순서로 옮기는 근거다 — 그에 기대는 것이 모두 소멸한 뒤, 그것이 기대는 것보다 먼저다.
+ */
+SW_TEST_CASE( SubsystemCollectionTest, FunctionSubsystemDestroysWhatItOwnsInItsPlace )
+{
+    SubsystemRecorder   recorder;
+    SubsystemCollection collection;
+    collection.add( make_unique<RecordingSubsystem>( recorder, "Later", "Owner" ) );
+    FunctionSubsystem& owner = collection.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "Owner", "Earlier", EngineInitTarget::All, MemoryTag::EngineMisc } ) );
+    OwnedProbe&        first = owner.takeOwnership( make_unique<OwnedProbe>( recorder, "First" ) );
+    SW_EXPECT_TRUE( &first._recorder == &recorder );
+    (void)owner.takeOwnership<&OwnedProbe::release>( make_unique<OwnedProbe>( recorder, "Second" ) );
+    collection.add( make_unique<RecordingSubsystem>( recorder, "Earlier", "" ) );
+    SW_ASSERT_TRUE_MSG( collection.initializeAll( EngineInitTarget::Client ), collection.getError().c_str() );
+
+    // 여럿은 넘긴 역순으로, 해제 함수를 준 것은 그것을 부른 뒤 소멸한다.
+    collection.destroyAll();
+    SW_EXPECT_STREQ( "Later Second First Earlier", recorder.joinEvents( 'D' ).c_str() );
+    SW_EXPECT_STREQ( "Second", recorder.joinEvents( 'R' ).c_str() );
 }

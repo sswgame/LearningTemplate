@@ -15,9 +15,9 @@
  *
  * [초기화 · 종료 · 해제 순서는 여기 없다]
  * 이 저장소는 "누가 만들고 누가 들고 있는가" 만 압니다. 무엇을 언제 `initialize()` 하고 어떤 순서로
- * 내리고 해제하는지는 기동 단계 표(`Engine/EngineInitStepList.xxx`)의 의존 칸이 정하고, `EngineInitSequence` 가
- * 위상 정렬해 두 호스트(`EngineLoop` · 테스트 하네스)에 같은 순서를 줍니다. 디바이스 · 렌더 스레드 · 모듈 이미지처럼
- * 서비스가 아닌 단계도 같은 표에 있어서 서비스 목록의 칸으로 두지 않았습니다.
+ * 내리고 해제하는지는 기동 단계(서브시스템)가 선언한 의존이 정하고, `SubsystemCollection` 이 위상 정렬해 두 호스트
+ * (`EngineLoop` · 테스트 하네스)에 같은 순서를 줍니다. 기동 순서에 수명이 매인 서비스는 호스트가 만든 뒤 소유를 그 단계로 넘깁니다.
+ * 디바이스 · 렌더 스레드 · 모듈 이미지처럼 서비스가 아닌 단계도 같은 목록에 있어서 서비스 목록의 칸으로 두지 않았습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -99,20 +99,8 @@ namespace sw
         }
 
         /**
-         * @brief `AssetManager` 를 종료하고 해제합니다. 호스트의 Resource 단계 해제(`destroy`)가 부릅니다.
-         * @details 에셋 캐시를 비우므로 에셋을 든 다른 매니저가 모두 해제된 **뒤**여야 합니다. 표에서 Resource 는 Scene · Audio · Input ·
-         *          렌더러보다 먼저 서므로 역순 해제에서 자연히 그 뒤입니다.
-         */
-        void destroyAssetManager();
-        /**
-         * @brief 코덱 레지스트리를 Core 슬롯에서 떼고 해제합니다. 호스트의 Compression 단계 해제가 부릅니다.
-         * @details 슬롯이 이 레지스트리를 가리키면 먼저 비웁니다. 그 뒤의 압축 경로(`CompressionStream`)는 내장 코덱만 씁니다.
-         */
-        void destroyCompressionCodecRegistry();
-
-        /**
          * @brief 남은 소유를 목록의 **역순**으로 모두 놓습니다(소멸자와 같은 순서).
-         * @details 단계가 소유한 서비스는 호스트가 기동 표의 해제(`EngineInitSequence::destroyAll`)로 먼저 놓습니다. 이것은 그 뒤에 남은
+         * @details 기동 단계가 소유한 서비스는 호스트가 소유를 기동 순서로 넘겼고 그 해제(`EngineInitSequence::destroyAll`)로 먼저 사라집니다. 이것은 그 뒤에 남은
          *          표 밖 서비스(명령줄 · 전역 변수 · 이벤트 · 디버그 도구 등)를 쓸어 담는 자리입니다. 목록 앞줄의 명령줄 · 전역 변수가
          *          맨 나중에 사라집니다.
          */

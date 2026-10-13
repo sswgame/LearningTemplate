@@ -29,6 +29,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/EditorExports.h"
+#include "Editor/Common/EditorSubsystem.h"
 
 #include <chrono>
 #include <thread>
@@ -99,7 +100,7 @@ namespace sw::editor
      * @brief 서버와 클라이언트 프로세스를 묶은 세션 하나입니다. `start`, 프레임마다 `update`, `stop` 순서로 씁니다. 게임(UI) 스레드에서만 호출합니다.
      * @details 확장 모듈의 Multiplayer 창 탭(`SW_EDITOR_MULTIPLAYER_TAB`)도 이 세션을 받으므로 EditorModule 밖으로 내보낸다.
      */
-    class SW_EDITOR_API EditorNetPlaySession
+    class SW_EDITOR_API EditorNetPlaySession : public EditorSubsystem
     {
     public:
         /** @brief 패널 필터용으로 보관하는 최근 줄 수입니다. 넘으면 오래된 줄부터 버리며, 에디터 로그에는 모두 남습니다. */
@@ -112,7 +113,10 @@ namespace sw::editor
         static constexpr int64 kUpdatePollMilliseconds = 50;
 
         EditorNetPlaySession();
-        ~EditorNetPlaySession();
+        ~EditorNetPlaySession() override;
+
+        // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
+        const utf8* getSubsystemName() const override { return "EditorNetPlaySession"; }
 
         EditorNetPlaySession( const EditorNetPlaySession& )            = delete;
         EditorNetPlaySession& operator=( const EditorNetPlaySession& ) = delete;

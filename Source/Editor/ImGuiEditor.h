@@ -8,6 +8,7 @@
 #include "Editor/Common/GUI/EditorDockLayout.h"
 #include "Editor/IEditor.h"
 
+#include "Engine/Common/SubsystemCollection.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw::editor
@@ -65,14 +66,31 @@ namespace sw::editor
         void onHostFrameEnd() override;
 
     private:
-        /**
-         * @brief `initialize` 가 초기화한 단계를 초기화의 역순으로 정리합니다. 단계마다 null 에 안전하므로, 어느 단계에서 멈춘 초기화의 실패 경로와
-         *        정상 종료(`shutdown`)가 같은 본문을 씁니다.
-         * @details 초기화 순서는 에디터 데이터, ImGui 와 ImPlot 컨텍스트(글꼴 포함), 플랫폼 백엔드, 렌더 백엔드, (스플래시), 에디터 컨텍스트와 패널과
-         *          Undo 편집 리스너, 창 닫기 질의 처리기다. 단계를 추가하면 이 함수의 같은 위치(역순)에 정리 코드를 추가한다.
-         */
-        void shutdownPartialInitialization();
-        bool onWindowCloseQuery();
+        // ------------------------------------------------------------------------------
+        // 기동 단계. `initialize` 가 `_startup` 에 `FunctionSubsystem` 으로 넣고, 순서는 단계마다 선언한 의존이 정한다.
+        // 실패하면 목록이 초기화에 성공한 단계만 역순으로 종료한다. 초기화가 실패하면 그 단계가 만든 것은 그 자리에서 놓는다.
+        // ------------------------------------------------------------------------------
+        /** @brief 환경설정과 에디터 데이터(`EditorToolDefaults`)를 읽습니다. 단계 `EditorData`. */
+        EngineInitResult initializeEditorData();
+        void             shutdownEditorData();
+        /** @brief ImGui · ImPlot 컨텍스트, IO, 도킹 저장 경로, 글꼴을 세웁니다. 단계 `ImGuiContext`(글꼴이 에디터 데이터를 읽는다). */
+        EngineInitResult initializeImGuiContext();
+        void             shutdownImGuiContext();
+        /** @brief 플랫폼 백엔드. 단계 `PlatformBackend`. */
+        EngineInitResult initializePlatformBackend();
+        void             shutdownPlatformBackend();
+        /** @brief 렌더러 백엔드(플랫폼 백엔드 뒤). 단계 `RendererBackend`. */
+        EngineInitResult initializeRendererBackend();
+        void             shutdownRendererBackend();
+        /** @brief 기본 렌더 패스 · 포워드 파이프라인을 워커에서 읽고 기다립니다. 단계 `Splash`(종료할 것이 없다). */
+        EngineInitResult loadSplashAssets();
+        /** @brief 에디터 컨텍스트, 테마, 기본 패널, 단축키, Undo 편집 리스너, UI 배율, 시작 씬. 단계 `EditorContext`. */
+        EngineInitResult initializeEditorContext();
+        void             shutdownEditorContext();
+        /** @brief 창 닫기 질의 처리기(이 DLL 의 메서드를 가리킨다 — 가장 먼저 내린다). 단계 `WindowCloseQuery`. */
+        EngineInitResult initializeWindowCloseQuery();
+        void             shutdownWindowCloseQuery();
+        bool             onWindowCloseQuery();
         // ------------------------------------------------------------------------------
         // 3) ImGui 프레임과 백엔드 렌더
         // ------------------------------------------------------------------------------
@@ -86,6 +104,9 @@ namespace sw::editor
         void waitForDrawSnapshotIdle();
 
     private:
+        SubsystemCollection               _startup;    ///< 위의 기동 단계들 — 의존 순서로 초기화하고 역순으로 종료한다
+        IWindow*                          _pWindow;    ///< `initialize` 가 받은 창(기동 단계가 읽는다)
+        IRHIDevice*                       _pRHIDevice; ///< `initialize` 가 받은 디바이스(기동 단계가 읽는다)
         unique_ptr<IImGuiPlatformBackend> _platformBackend;
         unique_ptr<IImGuiRendererBackend> _rendererBackend;
         unique_ptr<EditorToolDefaults>    _editorToolDefaults;

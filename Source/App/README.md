@@ -8,7 +8,7 @@ App이 컴파일할 때 링크하는 것은 `Engine`, `RuntimeAPI`, `ModuleHost`
 이렇게 해야 개발 빌드에서 App을 끄지 않고 게임이나 에디터 DLL을 바꿔 끼울 수 있습니다(핫 리로드).
 
 App이 직접 하는 일은 네 가지입니다. 모듈 로더를 엔진에 연결하고, 메인 창을 소유하고, 한 프레임의 순서를 정하고, 콜백을 연결합니다.
-엔진을 시작하고 종료하는 순서는 App이 아니라 엔진의 단계 목록(`Source/Engine/EngineInitStepList.xxx`)이 정합니다.
+엔진을 시작하고 종료하는 순서는 App이 아니라 엔진의 기동 단계(서브시스템)가 선언한 의존이 정합니다([Engine README](../Engine/README.md) "기동과 종료").
 새로운 시스템이 필요하면 App이 아니라 `Engine` 에 둡니다.
 
 모듈 호스트와 핫 리로드는 정적 라이브러리 [ModuleHost](../ModuleHost/README.md)(`Source/ModuleHost`)에 있습니다. 전용 서버 실행 파일(`Source/Server`)도 이 라이브러리를 같이 씁니다.

@@ -4680,9 +4680,11 @@ SW_TEST_CASE( RenderPassGPUTest, ConcurrentTextureAcquireCreatesOnce )
     sw::TextureCache&     textures     = sw::engine::getAssetManager().getAssetCache<sw::TextureCache>();
     const bool            bHeldBefore  = textures.find( kTexture ) != nullptr;
 
-    sw::vector<sw::Texture2D*> listResult( kThreadCount, nullptr );
-    sw::vector<std::thread>    listThread;
-    std::atomic<bool>          bGo{ false };
+    // 스레드마다 자기 칸에 쓴다. 고정 배열이어야 한다 — `sw::vector` 의 비 const 첨자는 레이스 탐지기에 컨테이너 쓰기로 잡혀,
+    // 여덟 스레드가 서로 다른 칸에 써도 동시 쓰기로 크래시한다.
+    sw::Texture2D*          arrResult[kThreadCount]{};
+    sw::vector<std::thread> listThread;
+    std::atomic<bool>       bGo{ false };
     {
         SW_TEST_DEFENSIVE_SCOPE( "the texture does not exist" ); // 로그 싱크는 프로세스 전체라 스레드마다 열면 서로 덮어쓴다 — 메인 스레드에서 한 번만 연다
         for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
@@ -4693,7 +4695,7 @@ SW_TEST_CASE( RenderPassGPUTest, ConcurrentTextureAcquireCreatesOnce )
                 {
                     std::this_thread::yield();
                 }
-                listResult[threadIndex] = textures.acquire( kTexture, device.get() );
+                arrResult[threadIndex] = textures.acquire( kTexture, device.get() );
                 SW_EXPECT_TRUE( textures.acquire( kAbsent, device.get() ) == nullptr );
             } );
         }
@@ -4704,12 +4706,12 @@ SW_TEST_CASE( RenderPassGPUTest, ConcurrentTextureAcquireCreatesOnce )
         }
     }
 
-    SW_ASSERT_TRUE( listResult[0] != nullptr );
-    for ( sw::Texture2D* pResult : listResult )
+    SW_ASSERT_TRUE( arrResult[0] != nullptr );
+    for ( sw::Texture2D* pResult : arrResult )
     {
-        SW_EXPECT_TRUE_MSG( pResult == listResult[0], "두 스레드가 같은 텍스처를 따로 만들었습니다" );
+        SW_EXPECT_TRUE_MSG( pResult == arrResult[0], "두 스레드가 같은 텍스처를 따로 만들었습니다" );
     }
-    SW_EXPECT_TRUE( textures.find( kTexture ) == listResult[0] );
+    SW_EXPECT_TRUE( textures.find( kTexture ) == arrResult[0] );
     SW_EXPECT_FALSE_MSG( textures.isCached( kAbsent ), "실패한 텍스처가 표에 남았습니다" );
 
     // 빌린 만큼 놓으면 표에서 빠진다(이미 누가 들고 있었으면 남는다).

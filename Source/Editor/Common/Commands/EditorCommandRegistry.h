@@ -12,6 +12,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/EditorExports.h"
+#include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
 namespace sw::editor
@@ -207,13 +208,16 @@ namespace sw::editor
      * @class EditorCommandRegistry
      * @brief 에디터 커맨드 정의를 모아 두고 id 로 찾아 실행합니다. `EditorContext` 가 소유합니다.
      */
-    class SW_EDITOR_API EditorCommandRegistry
+    class SW_EDITOR_API EditorCommandRegistry : public EditorSubsystem
     {
     public:
         EditorCommandRegistry()                                          = default;
         EditorCommandRegistry( const EditorCommandRegistry& )            = delete;
         EditorCommandRegistry& operator=( const EditorCommandRegistry& ) = delete;
-        ~EditorCommandRegistry()                                         = default;
+        ~EditorCommandRegistry() override                                = default;
+
+        // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
+        const utf8* getSubsystemName() const override { return "EditorCommandRegistry"; }
 
         /** @brief 등록된 커맨드를 모두 지웁니다. */
         void clear();

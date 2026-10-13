@@ -4,6 +4,7 @@
 
 #include "Core/Task/TaskManager.h"
 #include "Core/Task/TaskNode.h"
+#include "Core/Task/TaskNodePool.h"
 
 namespace sw
 {
@@ -100,10 +101,11 @@ namespace sw
 
     TaskHandle TaskHandle::then( const TaskDelegate& nextTaskDelegate, TaskThreadAffinity affinity )
     {
-        if ( _pNode == nullptr || _pNode->_pOwner == nullptr )
+        TaskManager* const pOwner = _pNode != nullptr ? _pNode->_pPool->getOwner() : nullptr;
+        if ( pOwner == nullptr )
             return TaskHandle{};
 
-        TaskHandle nextTask = _pNode->_pOwner->emplaceTask( "ChainedTask", nextTaskDelegate, affinity );
+        TaskHandle nextTask = pOwner->emplaceTask( "ChainedTask", nextTaskDelegate, affinity );
         runBefore( nextTask );
         return nextTask;
     }
@@ -132,9 +134,10 @@ namespace sw
 
     void TaskHandle::submit()
     {
-        if ( _pNode == nullptr || _pNode->_pOwner == nullptr )
+        TaskManager* const pOwner = _pNode != nullptr ? _pNode->_pPool->getOwner() : nullptr;
+        if ( pOwner == nullptr )
             return;
-        _pNode->_pOwner->submit( *this );
+        pOwner->submit( *this );
     }
 
     // ------------------------------------------------------------------------------

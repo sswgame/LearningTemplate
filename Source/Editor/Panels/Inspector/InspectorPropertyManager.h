@@ -9,6 +9,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/RegistrationList.h"
 
+#include "Editor/Common/EditorSubsystem.h"
+
 namespace sw::editor
 {
     struct EditorPropertyDrawerRegistration;
@@ -17,11 +19,20 @@ namespace sw::editor
     class IInspectorProperty;
 
     /** @brief 타입별 인스펙터 프로퍼티 UI 관리자 (EditorContext 소유) */
-    class InspectorPropertyManager
+    class InspectorPropertyManager : public EditorSubsystem
     {
     public:
         InspectorPropertyManager();
-        ~InspectorPropertyManager();
+        ~InspectorPropertyManager() override;
+
+        // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
+        EngineInitResult initializeSubsystem() override
+        {
+            registerDefaults();
+            return EngineInitResult::Succeeded;
+        }
+        const utf8* getSubsystemName() const override { return "InspectorPropertyManager"; }
+        const utf8* getSubsystemDependencies() const override { return "EditorPanelManager"; }
         InspectorPropertyManager( const InspectorPropertyManager& )            = delete;
         InspectorPropertyManager& operator=( const InspectorPropertyManager& ) = delete;
 

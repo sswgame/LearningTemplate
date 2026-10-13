@@ -40,6 +40,7 @@
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Common/FunctionSubsystem.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -165,7 +166,10 @@ namespace sw::editor
     SW_GLOBAL_VARIABLE( float32, gv_editorUiScale, 0.0f, "에디터 UI 배율 (0 = 모니터 DPI 를 따름)" );
 
     ImGuiEditor::ImGuiEditor()
-        : _platformBackend{ nullptr }
+        : _startup{}
+        , _pWindow{ nullptr }
+        , _pRHIDevice{ nullptr }
+        , _platformBackend{ nullptr }
         , _rendererBackend{ nullptr }
         , _editorToolDefaults{ nullptr }
         , _editorContext{ nullptr }
@@ -192,222 +196,262 @@ namespace sw::editor
         if ( pWindow == nullptr || pRHIDevice == nullptr )
         {
             SW_LOG_ERROR( "Cannot initialize without window and RHI device." );
-            shutdownPartialInitialization();
             return false;
         }
+        _pWindow    = pWindow;
+        _pRHIDevice = pRHIDevice;
 
-#if !defined( SW_SHIPPING )
-        BLOCK( "Editor preferences load" )
+        // 단계마다 먼저 서야 하는 단계를 적는다. 목록이 그 순서로 초기화하고, 실패하면 초기화한 단계만 역순으로 종료한다.
+        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "EditorData", "", EngineInitTarget::Client, MemoryTag::Editor },
+                                                      SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializeEditorData, this ),
+                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownEditorData, this ) ) );
+        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "ImGuiContext", "EditorData", EngineInitTarget::Client, MemoryTag::Editor },
+                                                      SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializeImGuiContext, this ),
+                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownImGuiContext, this ) ) );
+        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "PlatformBackend", "ImGuiContext", EngineInitTarget::Client, MemoryTag::Editor },
+                                                      SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializePlatformBackend, this ),
+                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownPlatformBackend, this ) ) );
+        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "RendererBackend", "ImGuiContext PlatformBackend", EngineInitTarget::Client, MemoryTag::Editor },
+                                                      SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializeRendererBackend, this ),
+                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownRendererBackend, this ) ) );
+        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "Splash", "", EngineInitTarget::Client, MemoryTag::Editor },
+                                                      SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::loadSplashAssets, this ), SubsystemShutdownDelegate{} ) );
+        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "EditorContext", "EditorData ImGuiContext PlatformBackend RendererBackend Splash", EngineInitTarget::Client, MemoryTag::Editor },
+                                                      SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializeEditorContext, this ),
+                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownEditorContext, this ) ) );
+        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "WindowCloseQuery", "EditorContext", EngineInitTarget::Client, MemoryTag::Editor },
+                                                      SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializeWindowCloseQuery, this ),
+                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownWindowCloseQuery, this ) ) );
+        if ( _startup.initializeAll( EngineInitTarget::Client ) == false )
         {
-            // 처음 실행이면 파일이 없으므로 기본값을 그대로 쓴다.
-            if ( EditorPreferencesStore::loadAll( EditorPreferencesStore::getDefaultFilePath() ) == false )
-                SW_LOG_INFO( "Editor preferences: no saved file yet - using defaults" );
-            _editorToolDefaults = make_unique<EditorToolDefaults>();
-            if ( _editorToolDefaults->loadFromHostPath() == false )
-                SW_LOG_WARNING( "Editor data could not be read - using defaults" );
-            editor::setEditorToolDefaults( _editorToolDefaults.get() );
+            _startup.destroyAll();
+            return false;
         }
-#endif
-
-        BLOCK( "ImGui Context / IO / Style" )
-        {
-            SW_LOG_TRACE( "Checking ImGui version and creating context" );
-            IMGUI_CHECKVERSION();
-            // 컨텍스트보다 먼저 등록한다. 그래야 이 모듈의 ImGui 할당과 해제가 모두 같은 할당자를 거친다. 컨텍스트는 shutdown 이 이 모듈 안에서 지운다.
-            ImGui::SetAllocatorFunctions( &ImGuiEditorInternal::allocateForImGui, &ImGuiEditorInternal::freeForImGui, nullptr );
-            ImGui::CreateContext();
-            ImPlot::CreateContext();
-            // 확장 DLL 의 ImGui 사본에 이 컨텍스트를 바인딩한다. 확장마다 CMake 가 만든 바인더를 쓴다. EditorModule 자신은 여기서 CreateContext 를 호출했다.
-            EditorUIContext::publish( EditorUIContextState{ ImGui::GetCurrentContext(), ImPlot::GetCurrentContext() } );
-
-            SW_LOG_TRACE( "Configuring ImGui IO" );
-            ImGuiIO& io = ImGui::GetIO();
-            io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-            io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-            // 멀티 뷰포트는 네 백엔드 모두에 렌더러 백엔드가 있으므로 항상 켠다. 렌더러 백엔드가 없는 백엔드라면 아래
-            // createRendererBackend 가 nullptr 을 반환하고 초기화가 거기서 멈춘다.
-            io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-
-            // 자체 테스트는 저장된 레이아웃을 읽지도 쓰지도 않는다. 도킹은 자체 테스트를 모르므로 셸이 알려 준다.
-            EditorDockLayout::setPanelOverrideRequested( EditorSelfTestRunner::isRequested() );
-            _dockLayout.initializePersistencePaths();
-            _dockLayout.applyIniFilename();
-        }
-
-        EditorFontSetup::apply();
-
-        BLOCK( "Platform Backend create / init" )
-        {
-            SW_LOG_TRACE( "Creating Platform Backend" );
-            _platformBackend = IImGuiPlatformBackend::createPlatformBackend();
-            if ( _platformBackend == nullptr )
-            {
-                SW_LOG_ERROR( "Failed to create platform backend" );
-                shutdownPartialInitialization();
-                return false;
-            }
-
-            SW_LOG_TRACE( "Initializing Platform Backend" );
-            if ( _platformBackend->initialize( pWindow, pRHIDevice->getBackendType() ) == false )
-            {
-                SW_LOG_ERROR( "Platform backend initialization failed" );
-                shutdownPartialInitialization();
-                return false;
-            }
-        }
-
-        BLOCK( "Renderer Backend create / init" )
-        {
-            SW_LOG_TRACE( "Creating Renderer Backend" );
-            _rendererBackend = IImGuiRendererBackend::createRendererBackend( pRHIDevice->getBackendType() );
-            if ( _rendererBackend == nullptr || _rendererBackend->initialize( pRHIDevice ) == false )
-            {
-                SW_LOG_ERROR( "Renderer backend initialization failed" );
-                shutdownPartialInitialization();
-                return false;
-            }
-        }
-
-        BLOCK( "Splash / async RenderPass load then panels" )
-        {
-            SW_LOG_TRACE( "Splash: loading DefaultRenderPass / ForwardPipeline..." );
-
-            const shared_ptr<RenderPassAsset>     defaultPass     = sw::make_shared<RenderPassAsset>();
-            const shared_ptr<RenderPipelineAsset> forwardPipeline = sw::make_shared<RenderPipelineAsset>();
-
-            TaskManager* pTaskManager = editor::getService<TaskManager>();
-            if ( pTaskManager == nullptr )
-            {
-                SW_LOG_ERROR( "TaskManager service is not bound — cannot load splash resources" );
-                shutdownPartialInitialization();
-                return false;
-            }
-
-            TaskHandle hDefault = pTaskManager->emplaceTask(
-                "EditorSplash_DefaultRenderPass",
-                SW_DELEGATE_FUNCTION( TaskArgsDelegate, ImGuiEditorInternal::loadSplashDefaultRenderPass ),
-                MakeTaskArgs( defaultPass ) );
-
-            TaskHandle hForward = pTaskManager->emplaceTask(
-                "EditorSplash_ForwardPipeline",
-                SW_DELEGATE_FUNCTION( TaskArgsDelegate, ImGuiEditorInternal::loadSplashForwardPipeline ),
-                MakeTaskArgs( forwardPipeline ) );
-
-            TaskStageHandle stage = pTaskManager->createStage( "EditorSplashLoad" );
-            stage.addTask( hDefault ).addTask( hForward );
-
-            hDefault.submit();
-            hForward.submit();
-
-            pTaskManager->waitStage( stage );
-        }
-
-        BLOCK( "Register Default Windows" )
-        {
-            _editorContext = make_unique<EditorContext>();
-            _editorContext->initialize();
-            _editorContext->setDockLayout( &_dockLayout );
-            // 테마는 컨텍스트가 활성화된 뒤에 읽어야 한다. 테마 상태를 컨텍스트가 보관하므로, 그 전에 부르면 적용한 테마가 갈 곳이
-            // 없어 조용히 버려진다. 이때 stored preset 이 0 에 머문다.
-            EditorThemeUtil::loadFromConfig();
-            _editorContext->setRHIDevice( pRHIDevice );
-            _editorContext->setRendererBackend( _rendererBackend.get() );
-
-            _editorContext->getPanelManager().registerDefaultPanels();
-            // 사용자 단축키(Saved/Editor/Shortcuts.json)는 레지스트리를 만들 때 적용한다. 처음 실행이면 파일이 없다.
-            if ( EditorCommandGUI::loadShortcutOverrides() == false )
-                SW_LOG_TRACE( "No shortcut overrides yet - default shortcuts" );
-            EditorCommandGUI::registerDefaults();
-            // 리로드 전에 기록한 오브젝트 편집을 되돌려도 이 모듈이 선택과 씬 dirty 상태를 맞춘다.
-            CommandStack* pCommandStack = editor::getService<CommandStack>();
-            if ( pCommandStack != nullptr )
-                EditorTransaction::bindObjectEditListener( *pCommandStack );
-            EditorExtensionRegistryDump::dumpIfRequested();
-            _dockLayout.loadPanelVisibility();
-
-            // 모니터 DPI 에 맞춰 스타일과 글자를 키운다. 테마를 읽은 뒤에 해야 한다. 테마가 96 DPI 기준 크기를 기록하기 때문이다.
-            // 모니터를 옮기면 글자와 플랫폼 창이 따라간다(ImGui 1.92 동적 폰트).
-            // 배율을 직접 정했으면(`gv_editorUiScale`) 모니터를 옮겨도 글자 배율을 덮어쓰지 않는다.
-            // 우선순위는 스위치(자동화), 환경설정(General 의 UI 배율), 모니터 DPI 순이다. 배율이 0 이면 다음 순위로 넘어간다.
-            const float32 fixedUIScale  = gv_editorUiScale > 0.0f ? static_cast<float32>( gv_editorUiScale ) : getPreferences<EditorGeneralPreferences>()._uiScale;
-            const bool    bFixedUIScale = fixedUIScale > 0.0f;
-            EditorThemeUtil::setDpiScale( bFixedUIScale ? fixedUIScale : _platformBackend->getDpiScale() );
-            ImGui::GetIO().ConfigDpiScaleFonts     = bFixedUIScale == false;
-            ImGui::GetIO().ConfigDpiScaleViewports = bFixedUIScale == false;
-            SW_LOG_INFO( "Editor UI scale %# (%#, frame padding %#x%#)", EditorThemeUtil::getDpiScale(), bFixedUIScale ? "fixed" : "monitor DPI",
-                         ImGui::GetStyle().FramePadding.x, ImGui::GetStyle().FramePadding.y );
-
-            // `-gv_editorStartupScene=<경로>` 는 검증용이다. 기동 검증이 오브젝트를 순회하는 코드까지 실행하게 한다. 정의는 이 파일 위쪽에 있다.
-            // 스위치가 있으면 그 값을 쓰고, 없으면 환경설정(General 의 시작 씬)을 쓴다.
-            const string startupScene = gv_editorStartupScene.empty() == false ? string( gv_editorStartupScene ) : getPreferences<EditorGeneralPreferences>()._startupScene;
-            if ( startupScene.empty() == false )
-            {
-                SW_LOG_INFO( "시작 씬을 엽니다: %#", startupScene.c_str() );
-                if ( EditorSceneFileCommands::loadScene( startupScene ) == false )
-                    SW_LOG_ERROR( "시작 씬을 열지 못했습니다: %#", startupScene.c_str() );
-            }
-        }
-
-        if ( pWindow != nullptr )
-            pWindow->setCloseQueryHandler( SW_DELEGATE_METHOD( WindowCloseQueryDelegate, &ImGuiEditor::onWindowCloseQuery, this ) );
 
         _bInitialized = SW_TRUE;
         return true;
     }
 
-    void ImGuiEditor::shutdownPartialInitialization()
+    EngineInitResult ImGuiEditor::initializeEditorData()
     {
-        // 초기화의 역순으로 정리한다(헤더의 단계 목록). 각 단계는 초기화되지 않았으면 아무것도 하지 않는다.
+#if !defined( SW_SHIPPING )
+        // 처음 실행이면 파일이 없으므로 기본값을 그대로 쓴다.
+        if ( EditorPreferencesStore::loadAll( EditorPreferencesStore::getDefaultFilePath() ) == false )
+            SW_LOG_INFO( "Editor preferences: no saved file yet - using defaults" );
+        _editorToolDefaults = make_unique<EditorToolDefaults>();
+        if ( _editorToolDefaults->loadFromHostPath() == false )
+            SW_LOG_WARNING( "Editor data could not be read - using defaults" );
+        editor::setEditorToolDefaults( _editorToolDefaults.get() );
+#endif
+        return EngineInitResult::Succeeded;
+    }
 
-        // 7) 창 닫기 질의 처리기. 이 DLL 의 메서드를 가리키므로 먼저 해제한다.
-        IWindow* pActiveWindow = IWindow::getActiveWindow();
-        if ( pActiveWindow != nullptr )
-        {
-            pActiveWindow->setCloseQueryHandler( {} );
-            // 에디터를 종료하면 창 제목은 게임 프리셋 그대로 돌아간다. 창 제목의 출처는 게임 프리셋 하나뿐이다.
-            pActiveWindow->setTitle( GameConfig::getActive()._windowTitle.c_str() );
-        }
+    void ImGuiEditor::shutdownEditorData()
+    {
+        editor::setEditorToolDefaults( nullptr );
+        _editorToolDefaults.reset();
+    }
 
-        // 6) 에디터 컨텍스트와 패널. Undo 스택에서는 이 모듈의 코드를 가진 명령과 편집 리스너만 제거한다. 오브젝트 편집은 엔진 데이터 명령이므로 남는다.
-        ImGuiEditorInternal::releaseModuleUndoCommands();
-        if ( _editorContext != nullptr )
-        {
-            _editorContext->destroyViewTargets();
-            _editorContext->getPanelManager().shutdownAllPanels( nullptr );
-            _editorContext->getPanelManager().clear();
-            _editorContext->shutdown();
-            _editorContext.reset();
-        }
+    EngineInitResult ImGuiEditor::initializeImGuiContext()
+    {
+        SW_LOG_TRACE( "Checking ImGui version and creating context" );
+        IMGUI_CHECKVERSION();
+        // 컨텍스트보다 먼저 등록한다. 그래야 이 모듈의 ImGui 할당과 해제가 모두 같은 할당자를 거친다. 컨텍스트는 shutdown 이 이 모듈 안에서 지운다.
+        ImGui::SetAllocatorFunctions( &ImGuiEditorInternal::allocateForImGui, &ImGuiEditorInternal::freeForImGui, nullptr );
+        ImGui::CreateContext();
+        ImPlot::CreateContext();
+        // 확장 DLL 의 ImGui 사본에 이 컨텍스트를 바인딩한다. 확장마다 CMake 가 만든 바인더를 쓴다. EditorModule 자신은 여기서 CreateContext 를 호출했다.
+        EditorUIContext::publish( EditorUIContextState{ ImGui::GetCurrentContext(), ImPlot::GetCurrentContext() } );
 
-        // 4) 렌더 백엔드
-        if ( _rendererBackend != nullptr )
-        {
-            _rendererBackend->shutdown();
-            _rendererBackend.reset();
-        }
+        SW_LOG_TRACE( "Configuring ImGui IO" );
+        ImGuiIO& io = ImGui::GetIO();
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+        // 멀티 뷰포트는 네 백엔드 모두에 렌더러 백엔드가 있으므로 항상 켠다. 렌더러 백엔드가 없는 백엔드라면 아래
+        // createRendererBackend 가 nullptr 을 반환하고 초기화가 거기서 멈춘다.
+        io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
-        // 3) 플랫폼 백엔드
-        if ( _platformBackend != nullptr )
-        {
-            _platformBackend->shutdown();
-            _platformBackend.reset();
-        }
+        // 자체 테스트는 저장된 레이아웃을 읽지도 쓰지도 않는다. 도킹은 자체 테스트를 모르므로 셸이 알려 준다.
+        EditorDockLayout::setPanelOverrideRequested( EditorSelfTestRunner::isRequested() );
+        _dockLayout.initializePersistencePaths();
+        _dockLayout.applyIniFilename();
 
-        // 2) ImPlot 과 ImGui 컨텍스트. 글꼴 아틀라스는 컨텍스트가 보관한다. 확장 DLL 의 사본에서 먼저 분리한다
+        EditorFontSetup::apply();
+        return EngineInitResult::Succeeded;
+    }
+
+    void ImGuiEditor::shutdownImGuiContext()
+    {
+        // 글꼴 아틀라스는 컨텍스트가 보관한다. 확장 DLL 의 사본에서 먼저 분리한다.
         EditorUIContext::publish( EditorUIContextState{} );
         if ( ImPlot::GetCurrentContext() != nullptr )
             ImPlot::DestroyContext();
         if ( ImGui::GetCurrentContext() != nullptr )
             ImGui::DestroyContext();
+    }
 
-        // 1) 에디터 데이터
-        editor::setEditorToolDefaults( nullptr );
-        _editorToolDefaults.reset();
+    EngineInitResult ImGuiEditor::initializePlatformBackend()
+    {
+        SW_LOG_TRACE( "Creating Platform Backend" );
+        _platformBackend = IImGuiPlatformBackend::createPlatformBackend();
+        if ( _platformBackend == nullptr )
+        {
+            SW_LOG_ERROR( "Failed to create platform backend" );
+            return EngineInitResult::Failed;
+        }
+
+        SW_LOG_TRACE( "Initializing Platform Backend" );
+        if ( _platformBackend->initialize( _pWindow, _pRHIDevice->getBackendType() ) == false )
+        {
+            SW_LOG_ERROR( "Platform backend initialization failed" );
+            shutdownPlatformBackend();
+            return EngineInitResult::Failed;
+        }
+        return EngineInitResult::Succeeded;
+    }
+
+    void ImGuiEditor::shutdownPlatformBackend()
+    {
+        if ( _platformBackend == nullptr )
+            return;
+        _platformBackend->shutdown();
+        _platformBackend.reset();
+    }
+
+    EngineInitResult ImGuiEditor::initializeRendererBackend()
+    {
+        SW_LOG_TRACE( "Creating Renderer Backend" );
+        _rendererBackend = IImGuiRendererBackend::createRendererBackend( _pRHIDevice->getBackendType() );
+        if ( _rendererBackend == nullptr || _rendererBackend->initialize( _pRHIDevice ) == false )
+        {
+            SW_LOG_ERROR( "Renderer backend initialization failed" );
+            shutdownRendererBackend();
+            return EngineInitResult::Failed;
+        }
+        return EngineInitResult::Succeeded;
+    }
+
+    void ImGuiEditor::shutdownRendererBackend()
+    {
+        if ( _rendererBackend == nullptr )
+            return;
+        _rendererBackend->shutdown();
+        _rendererBackend.reset();
+    }
+
+    EngineInitResult ImGuiEditor::loadSplashAssets()
+    {
+        SW_LOG_TRACE( "Splash: loading DefaultRenderPass / ForwardPipeline..." );
+
+        const shared_ptr<RenderPassAsset>     defaultPass     = sw::make_shared<RenderPassAsset>();
+        const shared_ptr<RenderPipelineAsset> forwardPipeline = sw::make_shared<RenderPipelineAsset>();
+
+        TaskManager* pTaskManager = editor::getService<TaskManager>();
+        if ( pTaskManager == nullptr )
+        {
+            SW_LOG_ERROR( "TaskManager service is not bound — cannot load splash resources" );
+            return EngineInitResult::Failed;
+        }
+
+        TaskHandle hDefault = pTaskManager->emplaceTask(
+            "EditorSplash_DefaultRenderPass",
+            SW_DELEGATE_FUNCTION( TaskArgsDelegate, ImGuiEditorInternal::loadSplashDefaultRenderPass ),
+            MakeTaskArgs( defaultPass ) );
+
+        TaskHandle hForward = pTaskManager->emplaceTask(
+            "EditorSplash_ForwardPipeline",
+            SW_DELEGATE_FUNCTION( TaskArgsDelegate, ImGuiEditorInternal::loadSplashForwardPipeline ),
+            MakeTaskArgs( forwardPipeline ) );
+
+        TaskStageHandle stage = pTaskManager->createStage( "EditorSplashLoad" );
+        stage.addTask( hDefault ).addTask( hForward );
+
+        hDefault.submit();
+        hForward.submit();
+
+        pTaskManager->waitStage( stage );
+        return EngineInitResult::Succeeded;
+    }
+
+    EngineInitResult ImGuiEditor::initializeEditorContext()
+    {
+        _editorContext = make_unique<EditorContext>();
+        _editorContext->initialize();
+        _editorContext->setDockLayout( &_dockLayout );
+        // 테마는 컨텍스트가 활성화된 뒤에 읽어야 한다. 테마 상태를 컨텍스트가 보관하므로, 그 전에 부르면 적용한 테마가 갈 곳이
+        // 없어 조용히 버려진다. 이때 stored preset 이 0 에 머문다.
+        EditorThemeUtil::loadFromConfig();
+        _editorContext->setRHIDevice( _pRHIDevice );
+        _editorContext->setRendererBackend( _rendererBackend.get() );
+
+        _editorContext->getPanelManager().registerDefaultPanels();
+        // 사용자 단축키(Saved/Editor/Shortcuts.json)는 레지스트리를 만들 때 적용한다. 처음 실행이면 파일이 없다.
+        if ( EditorCommandGUI::loadShortcutOverrides() == false )
+            SW_LOG_TRACE( "No shortcut overrides yet - default shortcuts" );
+        EditorCommandGUI::registerDefaults();
+        // 리로드 전에 기록한 오브젝트 편집을 되돌려도 이 모듈이 선택과 씬 dirty 상태를 맞춘다.
+        CommandStack* pCommandStack = editor::getService<CommandStack>();
+        if ( pCommandStack != nullptr )
+            EditorTransaction::bindObjectEditListener( *pCommandStack );
+        EditorExtensionRegistryDump::dumpIfRequested();
+        _dockLayout.loadPanelVisibility();
+
+        // 모니터 DPI 에 맞춰 스타일과 글자를 키운다. 테마를 읽은 뒤에 해야 한다. 테마가 96 DPI 기준 크기를 기록하기 때문이다.
+        // 모니터를 옮기면 글자와 플랫폼 창이 따라간다(ImGui 1.92 동적 폰트).
+        // 배율을 직접 정했으면(`gv_editorUiScale`) 모니터를 옮겨도 글자 배율을 덮어쓰지 않는다.
+        // 우선순위는 스위치(자동화), 환경설정(General 의 UI 배율), 모니터 DPI 순이다. 배율이 0 이면 다음 순위로 넘어간다.
+        const float32 fixedUIScale  = gv_editorUiScale > 0.0f ? static_cast<float32>( gv_editorUiScale ) : getPreferences<EditorGeneralPreferences>()._uiScale;
+        const bool    bFixedUIScale = fixedUIScale > 0.0f;
+        EditorThemeUtil::setDpiScale( bFixedUIScale ? fixedUIScale : _platformBackend->getDpiScale() );
+        ImGui::GetIO().ConfigDpiScaleFonts     = bFixedUIScale == false;
+        ImGui::GetIO().ConfigDpiScaleViewports = bFixedUIScale == false;
+        SW_LOG_INFO( "Editor UI scale %# (%#, frame padding %#x%#)", EditorThemeUtil::getDpiScale(), bFixedUIScale ? "fixed" : "monitor DPI",
+                     ImGui::GetStyle().FramePadding.x, ImGui::GetStyle().FramePadding.y );
+
+        // `-gv_editorStartupScene=<경로>` 는 검증용이다. 기동 검증이 오브젝트를 순회하는 코드까지 실행하게 한다. 정의는 이 파일 위쪽에 있다.
+        // 스위치가 있으면 그 값을 쓰고, 없으면 환경설정(General 의 시작 씬)을 쓴다.
+        const string startupScene = gv_editorStartupScene.empty() == false ? string( gv_editorStartupScene ) : getPreferences<EditorGeneralPreferences>()._startupScene;
+        if ( startupScene.empty() == false )
+        {
+            SW_LOG_INFO( "시작 씬을 엽니다: %#", startupScene.c_str() );
+            if ( EditorSceneFileCommands::loadScene( startupScene ) == false )
+                SW_LOG_ERROR( "시작 씬을 열지 못했습니다: %#", startupScene.c_str() );
+        }
+        return EngineInitResult::Succeeded;
+    }
+
+    void ImGuiEditor::shutdownEditorContext()
+    {
+        // Undo 스택에서는 이 모듈의 코드를 가진 명령과 편집 리스너만 제거한다. 오브젝트 편집은 엔진 데이터 명령이므로 남는다.
+        ImGuiEditorInternal::releaseModuleUndoCommands();
+        if ( _editorContext == nullptr )
+            return;
+        _editorContext->destroyViewTargets();
+        _editorContext->getPanelManager().shutdownAllPanels( nullptr );
+        _editorContext->getPanelManager().clear();
+        _editorContext->shutdown();
+        _editorContext.reset();
+    }
+
+    EngineInitResult ImGuiEditor::initializeWindowCloseQuery()
+    {
+        _pWindow->setCloseQueryHandler( SW_DELEGATE_METHOD( WindowCloseQueryDelegate, &ImGuiEditor::onWindowCloseQuery, this ) );
+        return EngineInitResult::Succeeded;
+    }
+
+    void ImGuiEditor::shutdownWindowCloseQuery()
+    {
+        IWindow* pActiveWindow = IWindow::getActiveWindow();
+        if ( pActiveWindow == nullptr )
+            return;
+        pActiveWindow->setCloseQueryHandler( {} );
+        // 에디터를 종료하면 창 제목은 게임 프리셋 그대로 돌아간다. 창 제목의 출처는 게임 프리셋 하나뿐이다.
+        pActiveWindow->setTitle( GameConfig::getActive()._windowTitle.c_str() );
     }
 
     void ImGuiEditor::shutdown()
     {
-        if ( _bInitialized == SW_FALSE && _editorContext == nullptr && _rendererBackend == nullptr && _platformBackend == nullptr && ImGui::GetCurrentContext() == nullptr )
+        if ( _bInitialized == SW_FALSE )
             return;
 
         // 열려 있는 파일 대화상자의 결과 델리게이트를 해제한다. 모듈을 언로드하기 전에 제거해야 하는 이 DLL 안의 주소다.
@@ -425,9 +469,10 @@ namespace sw::editor
 
         _dockLayout.save();
 
-        // 초기화 단계의 정리 코드는 실패 경로와 같은 본문을 쓴다.
-        shutdownPartialInitialization();
-
+        // 기동 단계를 초기화의 역순으로 종료하고 목록을 비운다(다시 initialize 할 수 있다).
+        _startup.destroyAll();
+        _pWindow      = nullptr;
+        _pRHIDevice   = nullptr;
         _bInitialized = SW_FALSE;
     }
 
