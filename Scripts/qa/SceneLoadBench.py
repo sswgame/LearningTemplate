@@ -15,7 +15,8 @@
 
 Dev 빌드는 `Cooked/` 를 마운트하지 않는다(docs/08_Verification.md 2 절). 그래서 쿠킹본은 `App --cook-scenes --cooked-dir=<repo>/Resource` 로
 원본 옆에 쿠킹하고 재며, 끝나면 이 스크립트가 **새로 생긴 파일만** 지운다(이미 있던 파일을 덮어쓴 것은 지우지 않고 알린다).
-`[SceneLoad]` 줄이 `.xml` 을 가리키면 쿠킹본을 읽지 않은 것이다 — 표의 source 열로 확인한다.
+쿠킹본을 읽었는지는 `[SceneDocument] Loaded … from binary <경로>.scene.bin` 줄로 가린다 — 표 아래 source 줄이 `binary` 이어야 한다
+(`[SceneLoad]` 줄은 쿠킹본이어도 논리 경로 `.scene.xml` 을 찍으므로 판정에 쓰지 않는다).
 만든 씬(`Resource/game/empty/maps/bench_stress<N>.scene.xml`)도 끝나면 지운다(`--keep` 이면 둔다). 커밋하지 않는다.
 쿠킹 상태가 파일 시스템 전체라 XML 과 쿠킹본을 판마다 번갈아 잴 수 없다 — 같은 실행 안에서 XML 판들을 먼저, 쿠킹본 판들을 뒤에 잰다.
 """
@@ -35,7 +36,7 @@ from common.AppRun import addAppRunArguments, kBackendSwitch, parseProfileTable,
 from common.Process import runProcess  # noqa: E402
 
 _kTimerRe = re.compile(r"'(Scene\.load\.(?:parse|instantiate))': ([0-9.]+) ms")
-_kSceneLoadRe = re.compile(r"\[SceneLoad\] '([^']+)'")
+_kSceneLoadedRe = re.compile(r"\[SceneDocument\].*Loaded '[^']*' \(\d+ entities\) from (binary )?(\S+)")
 _kTrackedScope: tuple[str, ...] = ("GT.Frame", "RT.Frame")
 
 
@@ -61,9 +62,9 @@ def measureVariantInternal(args: argparse.Namespace, sceneResourcePath: str, run
             timer = _kTimerRe.search(line)
             if timer is not None:
                 mapValue.setdefault(f"{timer.group(1)} ms", []).append(float(timer.group(2)))
-            loaded = _kSceneLoadRe.search(line)
+            loaded = _kSceneLoadedRe.search(line)
             if loaded is not None:
-                uniqueSource.add(loaded.group(1))
+                uniqueSource.add(("binary " if loaded.group(1) else "xml ") + loaded.group(2))
             if args.asset_report and "[AssetLoad" in line:
                 print(f"    {line}")
         mapProfile = parseProfileTable(result.listLine)
