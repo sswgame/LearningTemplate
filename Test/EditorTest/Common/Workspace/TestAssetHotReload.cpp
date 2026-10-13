@@ -52,6 +52,39 @@ SW_TEST_CASE( AssetHotReloadTest, ModuleDataTableReloadsInTheCacheHoldingItsPath
     SW_EXPECT_EQUAL( 1u, probe._reloadCount );
     resources.unregisterAssetCache( &probe );
 }
+
+/**
+ * @brief [AssetHotReloadTest] 오디오 데이터(믹서 그래프 · 이벤트 라이브러리)는 에셋 핫 리로드가 그 경로를 든 엔진 캐시(`AudioData`)로 다시 읽는다
+ * @details 에디터에 오디오 전용 감시기가 따로 없다. 오디오 서비스가 쓰지 않는 파일(게임이 로드하지 않은 라이브러리)은 아무 캐시도 들지 않아 다시 읽지 않는다.
+ */
+SW_TEST_CASE( AssetHotReloadTest, AudioDataReloadsThroughTheEngineAudioCache )
+{
+    const sw::string_view arrAudioPath[] = { "engine/audio/default.audiomixer.xml", "game/shooter3d/audio/shooter3d.audioevents.xml", "game/x/audio/X.AudioEvents.XML" };
+    for ( const sw::string_view path : arrAudioPath )
+    {
+        const sw::editor::AssetReloadRoute route = sw::editor::EditorAssetTypeRegistry::findReloadRoute( path );
+        SW_ASSERT_NOT_NULL( route._pCacheKindName );
+        SW_EXPECT_TRUE( sw::string_view( route._pCacheKindName ).empty() );
+        SW_EXPECT_NULL( route._pfnImportSource );
+    }
+    SW_EXPECT_NULL( sw::editor::EditorAssetTypeRegistry::findReloadRoute( "game/x/audio/theme.music.xml" )._pCacheKindName );
+
+    sw::vector<sw::string> listSuffix{};
+    sw::editor::EditorAssetTypeRegistry::appendReloadableSuffixes( listSuffix );
+    bool bWatchesMixer  = false;
+    bool bWatchesEvents = false;
+    for ( const sw::string& suffix : listSuffix )
+    {
+        bWatchesMixer  = bWatchesMixer || suffix == ".audiomixer.xml";
+        bWatchesEvents = bWatchesEvents || suffix == ".audioevents.xml";
+    }
+    SW_EXPECT_TRUE( bWatchesMixer && bWatchesEvents );
+
+    sw::AssetManager resources;
+    SW_EXPECT_NOT_NULL( resources.findAssetCache( "AudioData" ) );
+    SW_EXPECT_EQUAL( 0u, sw::editor::AssetHotReload::reloadInCachesHolding( resources, "game/none/audio/none.audioevents.xml", nullptr ) );
+}
+
 /**
  * @brief [AssetHotReloadTest] 다시 읽은 에셋은 그 경로를 에셋 경로 프로퍼티로 든 컴포넌트에만 `onPropertyChanged` 로 알려진다
  * @details 컴포넌트에는 리로드 전용 코드가 없다 — 에디터가 `PROPERTY( AssetPath )` 값을 보고 인스펙터 편집과 같은 알림을 보낸다.

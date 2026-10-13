@@ -17,7 +17,6 @@ namespace sw
 namespace sw::editor
 {
     class AssetHotReload;
-    class AudioDataHotReload;
     class ConfigHotReload;
     class EditorAssetValidation;
     class EditorCommandRegistry;
@@ -85,15 +84,14 @@ namespace sw::editor
         /** @brief 패널 열기, 최대화, 도구 문서 저장을 맡는 호스트입니다. 커맨드와 뷰포트처럼 패널 매니저(GUI)를 모르는 레이어가 씁니다. */
         IEditorPanelHost&   getPanelHost() { return *_pPanelHost; }
         EditorPopupManager& getPopupManager() { return *_pPopupManager; }
-        AssetHotReload&     getAssetHotReload() { return *_pAssetHotReload; }
-        /** @brief `Config/` 설정 파일 감시입니다. */
-        ConfigHotReload& getConfigHotReload() { return *_pConfigHotReload; }
         /**
-         * @brief 오디오 데이터(믹서 · 이벤트 라이브러리) 감시입니다.
-         * @details 컨텍스트가 소유한다. 모듈의 함수 정적 객체로 두면 DLL 을 내릴 때(로더 락을 쥔 채) 소멸자가 감시 스레드를 join 하는데,
+         * @brief `Resource/` 에셋 감시입니다. 오디오 데이터(믹서 · 이벤트 라이브러리)도 이 감시가 엔진 캐시(`AudioData`)로 다시 읽게 합니다.
+         * @details 감시기는 컨텍스트가 소유한다. 모듈의 함수 정적 객체로 두면 DLL 을 내릴 때(로더 락을 쥔 채) 소멸자가 감시 스레드를 join 하는데,
          *          그 스레드는 끝나려면 같은 로더 락이 필요해 종료가 매달린다.
          */
-        AudioDataHotReload& getAudioDataHotReload() { return *_pAudioDataHotReload; }
+        AssetHotReload& getAssetHotReload() { return *_pAssetHotReload; }
+        /** @brief `Config/` 설정 파일 감시입니다. */
+        ConfigHotReload& getConfigHotReload() { return *_pConfigHotReload; }
         /** @brief 에디터 셸의 도킹 레이아웃을 반환합니다. 소유자는 `ImGuiEditor` 입니다. 셸이 만들어지기 전이면 nullptr 입니다. */
         EditorDockLayout* findDockLayout() const { return _pDockLayout; }
         /** @brief 셸이 도킹 레이아웃을 알립니다. 종료할 때는 nullptr 을 넘깁니다. */
@@ -152,7 +150,6 @@ namespace sw::editor
         EditorPopupManager*        _pPopupManager;
         AssetHotReload*            _pAssetHotReload;
         ConfigHotReload*           _pConfigHotReload;
-        AudioDataHotReload*        _pAudioDataHotReload;
         EditorAssetValidation*     _pAssetValidation;
         EditorSourceControl*       _pSourceControl;
         InspectorComponentManager* _pInspectorComponentManager;
