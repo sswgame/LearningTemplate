@@ -167,6 +167,9 @@ namespace sw::editor
 
     void QuickLauncherPopup::drawContent()
     {
+        // 파일 목록이 아직 안 왔는지는 꺼내기 **전에** 한 번 읽고, 이 프레임은 그 값만 쓴다. 꺼낸 뒤에 다시 물으면 그 사이 워커가 끝낸 결과가
+        // "대기 아님 · 목록 비어 있음" 으로 보여 미뤄 둔 Enter 를 버린다(결과는 다음 프레임에야 꺼낸다).
+        const bool bIndexOutstanding = _fileIndexJob.isPending();
         pollFileIndex();
 
         editor::EditorSearchOverlayDesc overlayDesc{};
@@ -278,7 +281,7 @@ namespace sw::editor
 
             if ( filteredCount == 0 )
             {
-                if ( _fileIndexJob.isPending() )
+                if ( bIndexOutstanding )
                     EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "QuickOpenIndexing" ) );
                 else
                     EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "QuickOpenNoMatches" ) );
@@ -291,14 +294,14 @@ namespace sw::editor
         // 이름을 치고 바로 Enter 를 누르면 파일 목록(일 스레드)이 아직 안 왔을 수 있다 — 그때는 목록이 오는 대로 연다.
         // 목록이 비면 `updateListSelection` 이 Enter 를 보지 않으므로 키를 직접 본다.
         const bool bEnterPressed = ImGui::IsKeyPressed( ImGuiKey_Enter, false ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter, false );
-        if ( bEnterPressed && filteredCount == 0 && _fileIndexJob.isPending() )
+        if ( bEnterPressed && filteredCount == 0 && bIndexOutstanding )
             _bExecuteWhenIndexed = true;
         if ( _bExecuteWhenIndexed && filteredCount > 0 )
         {
             _bExecuteWhenIndexed = false;
             bExecute             = true;
         }
-        if ( _bExecuteWhenIndexed && _fileIndexJob.isPending() == false )
+        if ( _bExecuteWhenIndexed && bIndexOutstanding == false )
             _bExecuteWhenIndexed = false; // 목록이 왔는데도 맞는 것이 없다
         if ( bExecute && filteredCount > 0 && 0 <= _selectedIndex && _selectedIndex < filteredCount )
         {
