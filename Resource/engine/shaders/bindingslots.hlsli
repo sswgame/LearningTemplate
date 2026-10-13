@@ -179,6 +179,11 @@
 #define SW_VK_SAMPLER_BINDING          1
 #define SW_VK_SHADOW_SAMPLER_BINDING   2
 #define SW_VK_RWTEXTURE_BINDING        3
+// 배열의 칸 수 — 모두 2 의 거듭제곱이다. 셰이더는 첨자를 (칸 수 - 1) 로 마스크해 늘 배열 안을 가리킨다(binding.hlsli swBindlessTextureSlot).
+// DX12 는 셰이더 가시 힙 하나(CBV · SRV · UAV 공용)라 텍스처 · RW 텍스처가 같은 칸 수를 쓴다.
+#define SW_DX12_DESCRIPTOR_HEAP_SIZE        65536
+#define SW_VK_BINDLESS_TEXTURE_COUNT        4096
+#define SW_VK_BINDLESS_STORAGE_IMAGE_COUNT  1024
 
 // ------------------------------------------------------------------------------
 // 6) Vulkan 슬롯 세트(set 0) — binding = 레지스터 종류별 시프트 + 번호. DXC 에 -fvk-b-shift/-fvk-t-shift/-fvk-u-shift 로

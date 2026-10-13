@@ -456,23 +456,38 @@ SamplerComparisonState g_SwSamplerShadowCmp : register( SW_CAT( s, SW_SAMPLER_SH
 #else
 Texture2D g_SwBindlessTex2D[] : register( t0, SW_CAT( space, SW_SPACE_BINDLESS_TEX ) );
 #endif
+/**
+ * @brief bindless 배열 첨자 — 인덱스를 배열 칸 수로 마스크해 무효 인덱스(kInvalidIndex)도 배열 안을 가리키게 합니다. 유효한 인덱스는 그대로입니다.
+ * @details 주의: `if ( index == kInvalidIndex )` 분기만으로는 모자라다. 드라이버 컴파일러가 서술자 읽기를 분기 앞으로 끌어올리면(서술자 로드는
+ *          부작용이 없다고 본다) 0xFFFFFFFF × 서술자 크기를 32 비트로 계산한 힙 시작 + 0xFFFFFFE0 을 읽어 페이지 폴트(DEVICE_HUNG)가 난다.
+ *          값을 고르는 분기는 그대로 두고 첨자만 마스크한다 — DXC 는 분기 안에서 index != kInvalidIndex 를 알아도 마스크를 지우지 못한다.
+ */
+uint swBindlessTextureSlot( uint index )
+{
+#if defined( __spirv__ )
+	return index & ( SW_VK_BINDLESS_TEXTURE_COUNT - 1u );
+#else
+	return index & ( SW_DX12_DESCRIPTOR_HEAP_SIZE - 1u );
+#endif
+}
 /** @brief 인덱스의 텍스처를 샘플러 세트의 samplerId(SW_SAMPLER_*, 비교 샘플러 제외)로 샘플링합니다. */
 float4 swSampleIndexWith( uint index, uint samplerId, float2 uv )
 {
 	if ( index == kInvalidIndex )
 		return float4( 0, 0, 0, 1 );
+	const uint slot = swBindlessTextureSlot( index );
 #if defined( __spirv__ )
-	return g_SwBindlessTex2D[NonUniformResourceIndex( index )].Sample( SW_SAMPLER_STATE( samplerId ), uv );
+	return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( SW_SAMPLER_STATE( samplerId ), uv );
 #else
 	switch ( samplerId )
 	{
-		case 1: return g_SwBindlessTex2D[NonUniformResourceIndex( index )].Sample( g_SwSampler1, uv );
-		case 2: return g_SwBindlessTex2D[NonUniformResourceIndex( index )].Sample( g_SwSampler2, uv );
-		case 3: return g_SwBindlessTex2D[NonUniformResourceIndex( index )].Sample( g_SwSampler3, uv );
-		case 4: return g_SwBindlessTex2D[NonUniformResourceIndex( index )].Sample( g_SwSampler4, uv );
-		case 5: return g_SwBindlessTex2D[NonUniformResourceIndex( index )].Sample( g_SwSampler5, uv );
-		case 6: return g_SwBindlessTex2D[NonUniformResourceIndex( index )].Sample( g_SwSampler6, uv );
-		default: return g_SwBindlessTex2D[NonUniformResourceIndex( index )].Sample( g_SwSampler0, uv );
+		case 1: return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( g_SwSampler1, uv );
+		case 2: return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( g_SwSampler2, uv );
+		case 3: return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( g_SwSampler3, uv );
+		case 4: return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( g_SwSampler4, uv );
+		case 5: return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( g_SwSampler5, uv );
+		case 6: return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( g_SwSampler6, uv );
+		default: return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].Sample( g_SwSampler0, uv );
 	}
 #endif
 }
@@ -492,10 +507,11 @@ float4 swGatherDepthRed( float2 uv )
 {
 	if ( g_SceneDepthIndex == kInvalidIndex )
 		return float4( 1, 1, 1, 1 );
+	const uint slot = swBindlessTextureSlot( g_SceneDepthIndex );
 #if defined( __spirv__ )
-	return g_SwBindlessTex2D[NonUniformResourceIndex( g_SceneDepthIndex )].GatherRed( SW_SAMPLER_STATE( SW_SAMPLER_POINT_CLAMP ), uv );
+	return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherRed( SW_SAMPLER_STATE( SW_SAMPLER_POINT_CLAMP ), uv );
 #else
-	return g_SwBindlessTex2D[NonUniformResourceIndex( g_SceneDepthIndex )].GatherRed( g_SwSampler3, uv );
+	return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].GatherRed( g_SwSampler3, uv );
 #endif
 }
 /** @brief 깊이 텍스처를 비교 샘플러(LESS_EQUAL)로 읽습니다 — 1 이면 depth 가 저장값 이하(빛 받음). */
@@ -503,7 +519,7 @@ float swSampleShadowComparison( uint index, float2 uv, float depth )
 {
 	if ( index == kInvalidIndex )
 		return 1.0f;
-	return g_SwBindlessTex2D[NonUniformResourceIndex( index )].SampleCmpLevelZero( g_SwSamplerShadowCmp, uv, depth );
+	return g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( index ) )].SampleCmpLevelZero( g_SwSamplerShadowCmp, uv, depth );
 }
 
 #if defined( SW_STAGE_COMPUTE )
@@ -515,17 +531,26 @@ float swSampleShadowComparison( uint index, float2 uv, float depth )
 #else
 RWTexture2D<float4> g_SwBindlessRWTex2D[] : register( u0, SW_CAT( space, SW_SPACE_BINDLESS_TEX ) );
 #endif
+/** @brief RW 텍스처 배열 첨자 — `swBindlessTextureSlot` 과 같은 이유로 배열 칸 수로 마스크합니다. */
+uint swBindlessRwTextureSlot( uint index )
+{
+#if defined( __spirv__ )
+	return index & ( SW_VK_BINDLESS_STORAGE_IMAGE_COUNT - 1u );
+#else
+	return index & ( SW_DX12_DESCRIPTOR_HEAP_SIZE - 1u );
+#endif
+}
 void swStoreRwTexture2D( uint index, uint2 texelPosition, float4 value )
 {
 	if ( index == kInvalidIndex )
 		return;
-	g_SwBindlessRWTex2D[NonUniformResourceIndex( index )][texelPosition] = value;
+	g_SwBindlessRWTex2D[NonUniformResourceIndex( swBindlessRwTextureSlot( index ) )][texelPosition] = value;
 }
 float4 swLoadRwTexture2D( uint index, uint2 texelPosition )
 {
 	if ( index == kInvalidIndex )
 		return float4( 0, 0, 0, 0 );
-	return g_SwBindlessRWTex2D[NonUniformResourceIndex( index )][texelPosition];
+	return g_SwBindlessRWTex2D[NonUniformResourceIndex( swBindlessRwTextureSlot( index ) )][texelPosition];
 }
 #endif // SW_STAGE_COMPUTE
 
@@ -705,7 +730,7 @@ float2 swComputeMaterialTextureSize( uint index )
 	uint height = 1u;
 #if defined( SW_NATIVE_BINDLESS )
 	if ( index != kInvalidIndex )
-		g_SwBindlessTex2D[NonUniformResourceIndex( index )].GetDimensions( width, height );
+		g_SwBindlessTex2D[NonUniformResourceIndex( swBindlessTextureSlot( index ) )].GetDimensions( width, height );
 #else
 	if ( index == 0 ) g_SwMaterialTex0.GetDimensions( width, height );
 	if ( index == 1 ) g_SwMaterialTex1.GetDimensions( width, height );
