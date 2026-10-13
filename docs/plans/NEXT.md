@@ -23,7 +23,6 @@
 
 ## 열린 결함 (백로그 A)
 
-- `A-4`: GL `materialpreview` 가끔 실패. 원인 미확정(재현 0/15). 약한 곳 둘은 막았다. 재측정 결과가 백로그에 있다.
 - 범위 밖 관찰: GL 체인 1회에서 `editor.bugit` · `editor.viewportgrid` 가 SceneViewCameraX 기대 미달로 졌다(창이 앞에 오지 못해 건너뛴 단계가 같이 있었다).- TDR 뒤 행(hang)의 원인은 알 수 없음.
 
 ## 이어서 할 정리 (사용자가 순서를 정하면 시작)
