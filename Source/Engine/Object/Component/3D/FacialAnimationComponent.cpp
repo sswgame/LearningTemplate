@@ -11,7 +11,6 @@
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/IAudioService.h"
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
@@ -282,7 +281,9 @@ namespace sw
             SW_LOG_ERROR( "'%#': neither a viseme track nor decodable audio", string( audioPath ).c_str() );
             return false;
         }
-        IAudioService* pAudio = engine::getBoundEngineServices()._pAudioService;
+        // 소리는 이 오브젝트가 속한 씬이 받은 오디오 서비스로 낸다(`SceneEngineServices` — 전역 표를 다시 찾지 않는다).
+        const GameObjectManager* pManager = getOwner() != nullptr ? getOwner()->getManager() : nullptr;
+        IAudioService*           pAudio   = pManager != nullptr ? pManager->getSceneEngineServices()._pAudioService : nullptr;
         if ( pAudio != nullptr && pAudio->isInitialized() )
             (void)pAudio->play( audioPath );
         return true;
