@@ -13,6 +13,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorExports.h"
+#include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 
@@ -65,11 +66,15 @@ namespace sw::editor
      * @class EditorWorkspace
      * @brief 에디터의 작업 공간 상태(선택, 포커스 애셋, 기즈모, 창 요청)를 관리합니다. `EditorContext` 가 소유합니다.
      */
-    class SW_EDITOR_API EditorWorkspace
+    class SW_EDITOR_API EditorWorkspace : public EditorSubsystem
     {
     public:
         explicit EditorWorkspace( EditorSelection* pEditorSelection );
-        ~EditorWorkspace() = default;
+        ~EditorWorkspace() override = default;
+
+        // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
+        const utf8* getSubsystemName() const override { return "EditorWorkspace"; }
+        const utf8* getSubsystemDependencies() const override { return "EditorSelection"; }
 
         // ------------------------------------------------------------------------------
         // 1) 선택: 오브젝트와 컴포넌트

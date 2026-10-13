@@ -9,6 +9,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/RegistrationList.h"
 
+#include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
 namespace sw
@@ -56,11 +57,19 @@ namespace sw::editor
 namespace sw::editor
 {
     /** @brief 컴포넌트 타입별 인스펙터 UI 를 관리합니다. `EditorContext` 가 소유합니다. */
-    class InspectorComponentManager
+    class InspectorComponentManager : public EditorSubsystem
     {
     public:
         InspectorComponentManager();
-        ~InspectorComponentManager();
+        ~InspectorComponentManager() override;
+
+        // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
+        EngineInitResult initializeSubsystem() override
+        {
+            registerDefaults();
+            return EngineInitResult::Succeeded;
+        }
+        const utf8* getSubsystemName() const override { return "InspectorComponentManager"; }
         InspectorComponentManager( const InspectorComponentManager& )            = delete;
         InspectorComponentManager& operator=( const InspectorComponentManager& ) = delete;
 

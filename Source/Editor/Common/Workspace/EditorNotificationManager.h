@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 
 #include "Editor/Common/EditorExports.h"
+#include "Editor/Common/EditorSubsystem.h"
 
 namespace sw::editor
 {
@@ -39,13 +40,16 @@ namespace sw::editor
      * @brief 화면 오른쪽 아래에 뜨는 토스트 알림과 진행 막대의 목록입니다. 커맨드 · 작업 공간은 이것에 쌓기만 하고, 셸이 프레임마다
      *        `update` 로 시간을 진행한 뒤 `EditorNotificationView::draw` 로 그립니다.
      */
-    class SW_EDITOR_API EditorNotificationManager
+    class SW_EDITOR_API EditorNotificationManager : public EditorSubsystem
     {
     public:
         EditorNotificationManager()                                              = default;
         EditorNotificationManager( const EditorNotificationManager& )            = delete;
         EditorNotificationManager& operator=( const EditorNotificationManager& ) = delete;
-        ~EditorNotificationManager()                                             = default;
+        ~EditorNotificationManager() override                                    = default;
+
+        // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
+        const utf8* getSubsystemName() const override { return "EditorNotificationManager"; }
 
         /**
          * @brief 알림을 하나 쌓습니다. **메인 스레드에서만 부릅니다.**

@@ -8,6 +8,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/EditorExports.h"
+#include "Editor/Common/EditorSubsystem.h"
 
 namespace sw
 {
@@ -26,11 +27,14 @@ namespace sw::editor
      * @details 기본값은 생성자가 정하므로(이 저장소는 초기값을 생성자에 둔다) 리플렉션 메타의 기본값 글보다 정확합니다.
      *          모듈이 언로드되면(핫 리로드) 그 모듈 코드의 컴포넌트가 남지 않게 `clear` 로 모두 지웁니다(EditorModuleUnloadListener).
      */
-    class SW_EDITOR_API EditorDefaultObjects
+    class SW_EDITOR_API EditorDefaultObjects : public EditorSubsystem
     {
     public:
         EditorDefaultObjects();
-        ~EditorDefaultObjects();
+        ~EditorDefaultObjects() override;
+
+        // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
+        const utf8* getSubsystemName() const override { return "EditorDefaultObjects"; }
         EditorDefaultObjects( const EditorDefaultObjects& )            = delete;
         EditorDefaultObjects& operator=( const EditorDefaultObjects& ) = delete;
 

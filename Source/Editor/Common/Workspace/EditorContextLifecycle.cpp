@@ -67,7 +67,24 @@ namespace sw::editor
 namespace sw::editor
 {
     EditorContext::EditorContext()
-        : _pRHIDevice{ nullptr }
+        : _subsystems{}
+        , _pEditorSelection{ nullptr }
+        , _pWorkspace{ nullptr }
+        , _pNotificationManager{ nullptr }
+        , _pCommandRegistry{ nullptr }
+        , _pPanelManager{ nullptr }
+        , _pPanelHost{ nullptr }
+        , _pPopupManager{ nullptr }
+        , _pAssetHotReload{ nullptr }
+        , _pConfigHotReload{ nullptr }
+        , _pAudioDataHotReload{ nullptr }
+        , _pAssetValidation{ nullptr }
+        , _pSourceControl{ nullptr }
+        , _pInspectorComponentManager{ nullptr }
+        , _pInspectorPropertyManager{ nullptr }
+        , _pDefaultObjects{ nullptr }
+        , _pNetPlaySession{ nullptr }
+        , _pRHIDevice{ nullptr }
         , _pDockLayout{ nullptr }
         , _pRendererBackend{ nullptr }
         , _arrViewTarget{}
@@ -84,22 +101,26 @@ namespace sw::editor
 
     void EditorContext::initialize()
     {
-        _pEditorSelection           = make_unique<EditorSelection>();
-        _pWorkspace                 = make_unique<EditorWorkspace>( _pEditorSelection.get() );
-        _pNotificationManager       = make_unique<EditorNotificationManager>();
-        _pCommandRegistry           = make_unique<EditorCommandRegistry>();
-        _pPanelManager              = make_unique<EditorPanelManager>();
-        _pPanelHost                 = make_unique<EditorPanelHost>( *this, *_pPanelManager );
-        _pPopupManager              = make_unique<EditorPopupManager>();
-        _pAssetHotReload            = make_unique<AssetHotReload>();
-        _pConfigHotReload           = make_unique<ConfigHotReload>();
-        _pAudioDataHotReload        = make_unique<AudioDataHotReload>();
-        _pAssetValidation           = make_unique<EditorAssetValidation>();
-        _pSourceControl             = sw::make_unique<EditorSourceControl>( EditorPaths::getProjectRootPath() );
-        _pInspectorComponentManager = make_unique<InspectorComponentManager>();
-        _pInspectorPropertyManager  = make_unique<InspectorPropertyManager>();
-        _pDefaultObjects            = make_unique<EditorDefaultObjects>();
-        _pNetPlaySession            = make_unique<EditorNetPlaySession>();
+        // 하위 객체는 목록이 소유한다. 넣는 순서는 뜻이 없고, 초기화 순서는 각자 선언한 의존이 정하며 종료 · 소멸은 그 역순이다.
+        // 애셋 · 설정 핫 리로드(개발 기능)는 에디터가 켜져 있을 때만 감시하고, 버전 관리는 git LFS 를 비동기로 묻는다(각 initializeSubsystem).
+        _pEditorSelection           = &_subsystems.add( make_unique<EditorSelection>() );
+        _pWorkspace                 = &_subsystems.add( make_unique<EditorWorkspace>( _pEditorSelection ) );
+        _pNotificationManager       = &_subsystems.add( make_unique<EditorNotificationManager>() );
+        _pCommandRegistry           = &_subsystems.add( make_unique<EditorCommandRegistry>() );
+        _pPanelManager              = &_subsystems.add( make_unique<EditorPanelManager>() );
+        _pPanelHost                 = &_subsystems.add( make_unique<EditorPanelHost>( *this, *_pPanelManager ) );
+        _pPopupManager              = &_subsystems.add( make_unique<EditorPopupManager>() );
+        _pAssetHotReload            = &_subsystems.add( make_unique<AssetHotReload>() );
+        _pConfigHotReload           = &_subsystems.add( make_unique<ConfigHotReload>() );
+        _pAudioDataHotReload        = &_subsystems.add( make_unique<AudioDataHotReload>() );
+        _pAssetValidation           = &_subsystems.add( make_unique<EditorAssetValidation>() );
+        _pSourceControl             = &_subsystems.add( sw::make_unique<EditorSourceControl>( EditorPaths::getProjectRootPath() ) );
+        _pInspectorComponentManager = &_subsystems.add( make_unique<InspectorComponentManager>() );
+        _pInspectorPropertyManager  = &_subsystems.add( make_unique<InspectorPropertyManager>() );
+        _pDefaultObjects            = &_subsystems.add( make_unique<EditorDefaultObjects>() );
+        _pNetPlaySession            = &_subsystems.add( make_unique<EditorNetPlaySession>() );
+        // 확장 모듈이 언로드되기 전에 그 모듈의 등록 줄로 만든 인스턴스를 지운다 — 훑는 매니저들에 의존하므로 그들보다 먼저 내려간다.
+        _subsystems.add( make_unique<EditorModuleUnloadListener>( *this ) );
 
         setActive( this );
 
@@ -110,19 +131,8 @@ namespace sw::editor
                 SW_LOG_WARNING( "Editor localization project '%#' is not (fully) loaded", EditorPaths::kLocalizationProject );
         }
 
-        _pInspectorComponentManager->registerDefaults();
-        _pInspectorPropertyManager->registerDefaults();
-        _pPopupManager->registerDefaultPopups();
-        // 확장 모듈이 언로드되기 전에 그 모듈의 등록 줄로 만든 인스턴스를 지운다 — 매니저가 다 선 뒤에 만든다.
-        _pModuleUnloadListener = make_unique<EditorModuleUnloadListener>( *this );
-
-        // 애셋 핫 리로드는 개발 기능이라 **에디터가 켜져 있을 때만** 감시가 돈다.
-        // 리소스 루트가 없으면(팩만 실린 실행) 조용히 꺼진 채로 둔다.
-        _pAssetHotReload->initialize();
-        // 설정 파일(EngineConfig · GameConfig · editortooldefaults)도 같은 방식으로 감시한다.
-        _pConfigHotReload->initialize();
-        // 버전 관리는 git LFS 를 쓸 수 있는지 비동기로 묻는다 — 없으면 읽기 전용 표시만 한다.
-        _pSourceControl->initialize();
+        if ( _subsystems.initializeAll( EngineInitTarget::Client ) == false )
+            SW_LOG_ERROR( "Editor subsystems did not all initialize" );
     }
 
     void EditorContext::shutdown()
@@ -135,23 +145,8 @@ namespace sw::editor
         if ( LocalizationManager* pLocalization = getService<LocalizationManager>() )
             pLocalization->unmountProjects( LocalizationScope::Editor );
 
-        _pModuleUnloadListener.reset(); // 매니저보다 먼저 — 언로드 훑기가 지워진 매니저를 밟지 않게
-        _pNetPlaySession.reset();       // 자식 프로세스를 정상 종료시킨다 — 로거가 아직 있을 때
-        _pDefaultObjects.reset();
-        _pInspectorPropertyManager.reset();
-        _pInspectorComponentManager.reset();
-        _pConfigHotReload.reset();
-        _pAudioDataHotReload.reset();
-        _pSourceControl.reset();
-        _pAssetValidation.reset();
-        _pAssetHotReload.reset();
-        _pPopupManager.reset();
-        _pPanelHost.reset();
-        _pPanelManager.reset();
-        _pCommandRegistry.reset();
-        _pNotificationManager.reset();
-        _pWorkspace.reset();
-        _pEditorSelection.reset();
+        // 초기화한 것을 역순으로 종료하고, 모두를 역순으로 소멸시킨다(넷 플레이 세션의 자식 프로세스 종료도 여기 — 엔진 로거는 아직 있다).
+        _subsystems.destroyAll();
         _pRendererBackend = nullptr;
         _pRHIDevice       = nullptr;
     }

@@ -9,6 +9,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/EditorExports.h"
+#include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
@@ -73,11 +74,14 @@ namespace sw::editor
      * @class EditorPanelManager
      * @brief 에디터 패널 인스턴스를 한곳에서 등록하고 관리합니다. `EditorContext` 가 소유합니다.
      */
-    class SW_EDITOR_API EditorPanelManager
+    class SW_EDITOR_API EditorPanelManager : public EditorSubsystem
     {
     public:
         EditorPanelManager();
-        ~EditorPanelManager();
+        ~EditorPanelManager() override;
+
+        // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
+        const utf8* getSubsystemName() const override { return "EditorPanelManager"; }
         EditorPanelManager( const EditorPanelManager& )            = delete;
         EditorPanelManager& operator=( const EditorPanelManager& ) = delete;
 
