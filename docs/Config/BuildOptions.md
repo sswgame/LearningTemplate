@@ -12,7 +12,7 @@ configure 때 정한다(`cmake --preset <프리셋>` 또는 `-D<이름>=<값>`).
 | `SW_BUILD_DOCS` | BOOL | `OFF` |  | Doxygen 코드 문서화 생성 타겟 추가 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_BUILD_GAME` | BOOL | `ON` |  | GameFramework 및 게임 모듈(SWGame DLL/정적 링크) 빌드 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_BUILD_GAMEFRAMEWORK` | BOOL | `ON` |  | Source/GameFramework 및 게임 장르별 키트 라이브러리 빌드 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
-| `SW_BUILD_UNUSED_KITS` | BOOL | `ON` |  | 활성 게임이 쓰지 않는 장르 키트도 빌드(끄면 게임 의존으로 닿는 키트만) |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
+| `SW_BUILD_UNUSED_KITS` | BOOL | `ON` |  | 활성 게임이 쓰지 않는 장르 키트도 빌드(끄면 게임 의존으로 닿는 키트만) | Ninja-Debug-Lean | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_CPP_STANDARD` | STRING | `17` |  | C++ 표준(17 이상 — 20 · 23) |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_ENABLE_DEADLOCK_DETECTION` | BOOL | `OFF` |  | sw::Mutex 잠금 순서를 실시간 추적하여 데드락 사이클 탐지 (성능 저하 주의) |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_ENABLE_FUZZING` | BOOL | `OFF` |  | 리눅스 clang + ASan 에서 libFuzzer 대상(LoaderFuzzer)과 엔진 커버리지 계측 | CI-Fuzz | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
@@ -24,6 +24,7 @@ configure 때 정한다(`cmake --preset <프리셋>` 또는 `-D<이름>=<값>`).
 | `SW_ENABLE_TIME_TRACE` | BOOL | `OFF` |  | Clang 컴파일 시간 프로파일링(-ftime-trace JSON 출력) |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_ENABLE_TRACY` | BOOL | `${swTracyDefault}` |  | Tracy 프로파일러 클라이언트 링크(개발 빌드, Shipping 은 무시) |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_ENABLE_UNITY_BUILD` | BOOL | `OFF` |  | 대형 라이브러리 타겟에 CMake UNITY_BUILD(여러 소스를 합쳐 컴파일) 사용 | CI-Debug, CI-Debug-ASAN, CI-Debug-TSAN 외 2 | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
+| `SW_GAMES` | STRING | `` |  | 활성 게임과 함께 지을 게임 팩(Dev 전용): 비움 \| ALL \| 이름 목록 | Ninja-Debug, Ninja-Debug-AbilityArena, Ninja-Debug-HarvestValley 외 7 | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_LLVM_AUTO_BOOTSTRAP` | BOOL | `ON` |  | LLVM이 없을 때 SetupLlvm.py를 통해 Tools/LLVM에 최소 clang-cl+libclang 키트 자동 다운로드 허용 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_RELEASE_DEBUG_INFO` | STRING | `lines` | `lines` · `full` · `none` | Release/Shipping debug info: lines \| full \| none |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_REQUIRE_REFLECTION` | BOOL | `ON` |  | Engine/SWGame 등 리플렉션 타겟에 ReflectionParser 및 libclang 필수 요구 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |

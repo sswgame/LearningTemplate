@@ -57,6 +57,7 @@
       "description": "Windows Debug build using Ninja + Clang-cl",
       "inherits": "base-windows",
       "cacheVariables": {
+        "SW_GAMES": "ALL",
         "CMAKE_BUILD_TYPE": "Debug"
       }
     },
@@ -66,6 +67,7 @@
       "description": "Ninja-Debug 와 같고 활성 게임만 AbilityArena (빌드 폴더 build/Ninja-Debug-AbilityArena, 게임 프리셋 Config/Game/AbilityArena.json)",
       "inherits": "Ninja-Debug",
       "cacheVariables": {
+        "SW_GAMES": "",
         "SW_ACTIVE_GAME": "AbilityArena"
       }
     },
@@ -75,6 +77,7 @@
       "description": "Ninja-Debug 와 같고 활성 게임만 HarvestValley (빌드 폴더 build/Ninja-Debug-HarvestValley, 게임 프리셋 Config/Game/HarvestValley.json)",
       "inherits": "Ninja-Debug",
       "cacheVariables": {
+        "SW_GAMES": "",
         "SW_ACTIVE_GAME": "HarvestValley"
       }
     },
@@ -84,6 +87,7 @@
       "description": "Ninja-Debug 와 같고 활성 게임만 MeadowVillage (빌드 폴더 build/Ninja-Debug-MeadowVillage, 게임 프리셋 Config/Game/MeadowVillage.json)",
       "inherits": "Ninja-Debug",
       "cacheVariables": {
+        "SW_GAMES": "",
         "SW_ACTIVE_GAME": "MeadowVillage"
       }
     },
@@ -93,6 +97,7 @@
       "description": "Ninja-Debug 와 같고 활성 게임만 NileCity (빌드 폴더 build/Ninja-Debug-NileCity, 게임 프리셋 Config/Game/NileCity.json)",
       "inherits": "Ninja-Debug",
       "cacheVariables": {
+        "SW_GAMES": "",
         "SW_ACTIVE_GAME": "NileCity"
       }
     },
@@ -102,6 +107,7 @@
       "description": "Ninja-Debug 와 같고 활성 게임만 Shooter3D (빌드 폴더 build/Ninja-Debug-Shooter3D, 게임 프리셋 Config/Game/Shooter3D.json)",
       "inherits": "Ninja-Debug",
       "cacheVariables": {
+        "SW_GAMES": "",
         "SW_ACTIVE_GAME": "Shooter3D"
       }
     },
@@ -111,6 +117,7 @@
       "description": "Ninja-Debug 와 같고 활성 게임만 StarSkirmish (빌드 폴더 build/Ninja-Debug-StarSkirmish, 게임 프리셋 Config/Game/StarSkirmish.json)",
       "inherits": "Ninja-Debug",
       "cacheVariables": {
+        "SW_GAMES": "",
         "SW_ACTIVE_GAME": "StarSkirmish"
       }
     },
@@ -120,6 +127,7 @@
       "description": "Ninja-Debug 와 같고 활성 게임만 ThemeParkTycoon (빌드 폴더 build/Ninja-Debug-ThemeParkTycoon, 게임 프리셋 Config/Game/ThemeParkTycoon.json)",
       "inherits": "Ninja-Debug",
       "cacheVariables": {
+        "SW_GAMES": "",
         "SW_ACTIVE_GAME": "ThemeParkTycoon"
       }
     },
@@ -129,7 +137,18 @@
       "description": "Ninja-Debug 와 같고 활성 게임만 VoxelCraft (빌드 폴더 build/Ninja-Debug-VoxelCraft, 게임 프리셋 Config/Game/VoxelCraft.json)",
       "inherits": "Ninja-Debug",
       "cacheVariables": {
+        "SW_GAMES": "",
         "SW_ACTIVE_GAME": "VoxelCraft"
+      }
+    },
+    {
+      "name": "Ninja-Debug-Lean",
+      "displayName": "Windows Ninja Debug — Lean",
+      "description": "Ninja-Debug 와 같고 활성 게임과 SW_GAMES 로 고른 게임이 의존으로 닿는 키트만 짓는다 (SW_BUILD_UNUSED_KITS=OFF, 기본은 활성 게임만 — -DSW_GAMES=NileCity;Shooter3D 로 더한다)",
+      "inherits": "Ninja-Debug",
+      "cacheVariables": {
+        "SW_GAMES": "",
+        "SW_BUILD_UNUSED_KITS": "OFF"
       }
     },
     {
@@ -357,6 +376,10 @@
     {
       "name": "Ninja-Debug-VoxelCraft",
       "configurePreset": "Ninja-Debug-VoxelCraft"
+    },
+    {
+      "name": "Ninja-Debug-Lean",
+      "configurePreset": "Ninja-Debug-Lean"
     },
     {
       "name": "Ninja-Debug-ASAN",

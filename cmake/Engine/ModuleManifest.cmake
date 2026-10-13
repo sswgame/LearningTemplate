@@ -12,7 +12,7 @@
 # 켜짐 = (프로젝트 `SWGame.module.json` 의 `_listModuleOverride` 에 있으면 그 값, 없으면 `_bEnabledByDefault`)
 # 그리고 이 플랫폼(`_listPlatform`) · 구성(`_listConfiguration` — Dev | Shipping)에 있음
 # 그리고 이 빌드 타깃(`SW_TARGET_TYPE` — Game 은 Client · Server 둘 다)이 `_listTarget`(Client | Server)과 겹침. 프로젝트는 늘 켜져 있다.
-# 그리고 (`SW_BUILD_UNUSED_KITS=OFF` 이면) 키트는 켜진 비키트 모듈에서 의존으로 닿음 — 이 조건만 빌드 쪽에 있고, 뺀 키트는 매니페스트도 복사하지 않는다.
+# 그리고 (`SW_BUILD_UNUSED_KITS=OFF` 이면) 키트는 켜진 비키트 모듈이나 함께 짓는 게임 팩(`SW_GAMES`)에서 의존으로 닿음 — 이 조건만 빌드 쪽에 있고, 뺀 키트는 매니페스트도 복사하지 않는다.
 # 켜진 모듈의 의존은 있어야 하고 · 켜져 있어야 하고 · `_minVersion` 이상이어야 하며 · 순환이 없어야 한다 — 아니면 구성이 선다.
 # 적재 순서 = 의존이 먼저, 동점은 이름 순(`TopologicalSortUtil::sortByDependency` 와 같다).
 #
@@ -181,7 +181,71 @@ function(sw_readModuleManifest MANIFEST_PATH)
 	set_property(GLOBAL PROPERTY SW_MODULE_${swName}_OVERRIDE_VALUES ${swOverrideValues})
 endfunction()
 
-# 저장소의 매니페스트를 모두 읽고 해석한다. 고르지 않은 게임의 매니페스트는 읽지 않는다(게임 모듈 이름은 모두 SWGame 이다).
+# 활성 게임과 함께 지을 게임 팩(`SW_GAMES`, Dev 전용)을 전역 속성 `SW_GAME_PACKS` 에 둔다 — 활성 게임은 늘 지으므로 뺀다. 없는 이름이면 구성을 세운다.
+function(sw_selectGamePacks)
+	set(swPacks "")
+
+	if(NOT SW_SHIPPING_BUILD AND SW_GAMES)
+		set(swGamesDirectory "${CMAKE_SOURCE_DIR}/Source/Games")
+		file(GLOB swListCandidate RELATIVE "${swGamesDirectory}" "${swGamesDirectory}/*")
+		set(swAvailable "")
+
+		foreach(swCandidate IN LISTS swListCandidate)
+			if(EXISTS "${swGamesDirectory}/${swCandidate}/CMakeLists.txt")
+				list(APPEND swAvailable ${swCandidate})
+			endif()
+		endforeach()
+
+		if(SW_GAMES STREQUAL "ALL")
+			set(swRequested ${swAvailable})
+		else()
+			set(swRequested ${SW_GAMES})
+		endif()
+
+		foreach(swGame IN LISTS swRequested)
+			if(NOT swGame IN_LIST swAvailable)
+				message(FATAL_ERROR "[Games] SW_GAMES names '${swGame}', which has no CMakeLists.txt under Source/Games/ (available: ${swAvailable})")
+			endif()
+
+			if(NOT swGame STREQUAL SW_ACTIVE_GAME)
+				list(APPEND swPacks ${swGame})
+			endif()
+		endforeach()
+
+		list(REMOVE_DUPLICATES swPacks)
+		list(SORT swPacks)
+	endif()
+
+	set_property(GLOBAL PROPERTY SW_GAME_PACKS ${swPacks})
+endfunction()
+
+# 함께 짓는 게임 팩(활성 게임이 아닌 것)의 매니페스트에서 의존 이름만 읽어 `SW_GAME_PACK_<게임>_DEPENDENCIES` 에 둔다.
+# 모듈 표(`SW_MODULE_NAMES`)에는 넣지 않는다 — 게임 모듈 이름은 모두 SWGame 이고, 이 빌드의 켜기/끄기 표는 활성 게임의 것이다.
+function(sw_readGamePackManifest MANIFEST_PATH GAME_NAME)
+	file(READ "${MANIFEST_PATH}" swJson)
+	string(JSON swKind ERROR_VARIABLE swError GET "${swJson}" _kind)
+
+	if(swError OR NOT swKind STREQUAL "Game")
+		message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: a game pack manifest must have _kind Game")
+	endif()
+
+	set(swDependencyNames "")
+	string(JSON swCount ERROR_VARIABLE swError LENGTH "${swJson}" _listDependency)
+
+	if(NOT swError AND swCount GREATER 0)
+		math(EXPR swLast "${swCount} - 1")
+
+		foreach(swIndex RANGE ${swLast})
+			string(JSON swDependency GET "${swJson}" _listDependency ${swIndex} _name)
+			list(APPEND swDependencyNames ${swDependency})
+		endforeach()
+	endif()
+
+	set_property(GLOBAL PROPERTY SW_GAME_PACK_${GAME_NAME}_DEPENDENCIES ${swDependencyNames})
+endfunction()
+
+# 저장소의 매니페스트를 모두 읽고 해석한다. 고르지 않은 게임의 매니페스트는 읽지 않고, 함께 짓는 게임 팩(`SW_GAMES`)은 의존만 읽는다
+# (게임 모듈 이름은 모두 SWGame 이다 — `sw_readGamePackManifest`).
 # 결과: 전역 속성 `SW_MODULE_<이름>_ACTIVE`(ON/OFF) · `_REASON`, `SW_MODULE_LOAD_ORDER`. 틀리면 구성을 세운다.
 function(sw_resolveModuleManifests)
 	file(GLOB_RECURSE swListManifest CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Source/*.module.json")
@@ -189,8 +253,18 @@ function(sw_resolveModuleManifests)
 	# 매니페스트의 **내용**(켜짐 · 의존 · 종류)이 무엇을 지을지 정한다 — 내용이 바뀌면 다시 구성해야 한다(GLOB 의 CONFIGURE_DEPENDS 는 목록만 본다).
 	set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${swListManifest})
 
+	sw_selectGamePacks()
+	get_property(swGamePacks GLOBAL PROPERTY SW_GAME_PACKS)
+
 	foreach(swManifest IN LISTS swListManifest)
 		if(swManifest MATCHES "/Source/Games/([^/]+)/" AND NOT CMAKE_MATCH_1 STREQUAL SW_ACTIVE_GAME)
+			set(swGame "${CMAKE_MATCH_1}")
+			get_filename_component(swManifestFile "${swManifest}" NAME)
+
+			if(swGame IN_LIST swGamePacks AND swManifestFile STREQUAL "SWGame.module.json")
+				sw_readGamePackManifest("${swManifest}" ${swGame})
+			endif()
+
 			continue()
 		endif()
 
@@ -281,7 +355,7 @@ function(sw_resolveModuleManifests)
 
 		foreach(swName IN LISTS swUnusedKits)
 			set_property(GLOBAL PROPERTY SW_MODULE_${swName}_ACTIVE OFF)
-			set_property(GLOBAL PROPERTY SW_MODULE_${swName}_REASON "not used by ${SW_ACTIVE_GAME} (SW_BUILD_UNUSED_KITS=OFF)")
+			set_property(GLOBAL PROPERTY SW_MODULE_${swName}_REASON "not used by ${SW_ACTIVE_GAME} or SW_GAMES (SW_BUILD_UNUSED_KITS=OFF)")
 			list(REMOVE_ITEM swActive ${swName})
 		endforeach()
 	endif()
@@ -494,6 +568,14 @@ function(sw_collectUnusedKits ACTIVE_LIST_VAR OUT_VAR)
 		if(swSeed)
 			list(APPEND swPending ${swName})
 		endif()
+	endforeach()
+
+	# 함께 짓는 게임 팩(`SW_GAMES`)의 의존도 쓰는 쪽이다 — 키트는 고른 게임들의 합집합이 된다.
+	get_property(swGamePacks GLOBAL PROPERTY SW_GAME_PACKS)
+
+	foreach(swGame IN LISTS swGamePacks)
+		get_property(swPackDependencies GLOBAL PROPERTY SW_GAME_PACK_${swGame}_DEPENDENCIES)
+		list(APPEND swPending ${swPackDependencies})
 	endforeach()
 
 	set(swReached "")

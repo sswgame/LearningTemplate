@@ -4028,7 +4028,9 @@
    "default": "ON",
    "choices": [],
    "description": "활성 게임이 쓰지 않는 장르 키트도 빌드(끄면 게임 의존으로 닿는 키트만)",
-   "presets": []
+   "presets": [
+    "Ninja-Debug-Lean"
+   ]
   },
   {
    "name": "SW_CPP_STANDARD",
@@ -4130,6 +4132,25 @@
     "CI-Debug-TSAN",
     "CI-Fuzz",
     "CI-Shipping"
+   ]
+  },
+  {
+   "name": "SW_GAMES",
+   "type": "STRING",
+   "default": "",
+   "choices": [],
+   "description": "활성 게임과 함께 지을 게임 팩(Dev 전용): 비움 | ALL | 이름 목록",
+   "presets": [
+    "Ninja-Debug",
+    "Ninja-Debug-AbilityArena",
+    "Ninja-Debug-HarvestValley",
+    "Ninja-Debug-Lean",
+    "Ninja-Debug-MeadowVillage",
+    "Ninja-Debug-NileCity",
+    "Ninja-Debug-Shooter3D",
+    "Ninja-Debug-StarSkirmish",
+    "Ninja-Debug-ThemeParkTycoon",
+    "Ninja-Debug-VoxelCraft"
    ]
   },
   {

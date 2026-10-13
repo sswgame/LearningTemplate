@@ -52,7 +52,13 @@ endfunction()
 #     묻는다. Windows 는 import 표에서 읽지만 리눅스는 그 정보를 밖에 내주지 않는다. 그래서 이름에 타겟 이름을 붙여
 #     모듈마다 고유하게 두고, `dlsym( 모듈, "sw_moduleEngineAbiStamp_<의존>" )` 이 돌려주는 주소로 가린다 — dlsym 은
 #     그 모듈의 검색 범위(자기 + 자기 의존)에서 찾으므로 그 주소가 곧 모듈이 실제로 묶인 의존 이미지의 것이다.
+#   MODULE_NAME 은 심볼 이름에 붙는 모듈 이름이다(기본 타깃 이름) — 타깃 이름과 산출물 이름이 다른 게임 팩 사본(`SWGame_<게임>` → `SWGame`)이 준다.
 function(sw_addModuleEngineStamp TARGET_NAME)
+	cmake_parse_arguments(ARG "" "MODULE_NAME" "" ${ARGN})
+	set(swStampModuleName "${TARGET_NAME}")
+	if(ARG_MODULE_NAME)
+		set(swStampModuleName "${ARG_MODULE_NAME}")
+	endif()
 	if(SW_SHIPPING_BUILD OR NOT TARGET ${TARGET_NAME})
 		return()
 	endif()
@@ -78,8 +84,8 @@ function(sw_addModuleEngineStamp TARGET_NAME)
     #define SW_MODULE_ENGINE_STAMP_EXPORT __attribute__( ( visibility( \"default\" ) ) )
 #endif
 
-extern \"C\" SW_MODULE_ENGINE_STAMP_EXPORT const char sw_moduleEngineAbiStamp_@TARGET_NAME@[];
-extern \"C\" SW_MODULE_ENGINE_STAMP_EXPORT const char sw_moduleEngineAbiStamp_@TARGET_NAME@[] = SW_ENGINE_ABI_STAMP;
+extern \"C\" SW_MODULE_ENGINE_STAMP_EXPORT const char sw_moduleEngineAbiStamp_@swStampModuleName@[];
+extern \"C\" SW_MODULE_ENGINE_STAMP_EXPORT const char sw_moduleEngineAbiStamp_@swStampModuleName@[] = SW_ENGINE_ABI_STAMP;
 " @ONLY)
 
 	target_sources(${TARGET_NAME} PRIVATE "${swStampSource}")

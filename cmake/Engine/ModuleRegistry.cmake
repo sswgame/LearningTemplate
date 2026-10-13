@@ -108,6 +108,9 @@ endfunction()
 # 빠진 것이 있으면 **구성이 선다.** 조용히 빠지는 것보다 낫다.
 function(sw_verifyDynamicModuleRegistry)
 	get_property(listRegistered GLOBAL PROPERTY SW_DYNAMIC_MODULES)
+	# 함께 짓는 게임 팩 사본(`sw_addGamePackModule`)은 App 이 `Bin/Modules` 에서 올리지 않으므로 레지스트리 밖이다.
+	get_property(listGamePackTarget GLOBAL PROPERTY SW_GAME_PACK_TARGETS)
+	list(APPEND listRegistered ${listGamePackTarget})
 
 	# 루트부터 훑는다. `Source/` 에서 시작하면 안 된다 — `Source/Editor` · `Source/Engine` 등은
 	# `Source/CMakeLists.txt` 가 아니라 **루트가** 직접 add_subdirectory 하므로 `Source/` 의
