@@ -185,6 +185,27 @@ namespace sw::editor
         return releasedCount;
     }
 
+    uint32 EditorPanelManager::resetOptionalPanels( IRHIDevice* pRHIDevice )
+    {
+        uint32 resetCount{ 0 };
+        for ( EditorPanelEntry& entry : _listPanel )
+        {
+            if ( entry._category == EditorPanelCategory::Core || entry._pInstance == nullptr )
+                continue;
+            if ( entry._pRegistration == nullptr )
+            {
+                entry._pInstance->setOpen( false );
+                continue;
+            }
+            entry._pInstance->shutdown( pRHIDevice );
+            entry._pInstance = entry._pRegistration->_pCreate();
+            if ( entry._pInstance != nullptr )
+                entry._pInstance->setOpen( false );
+            ++resetCount;
+        }
+        return resetCount;
+    }
+
     void EditorPanelManager::drawOpenPanels()
     {
         const bool bTimed = gv_editorPanelTimes > 0 && _bPanelTimesReported == false;

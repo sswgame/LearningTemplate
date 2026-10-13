@@ -77,24 +77,14 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 핵심(Core)이 아닌 패널(도구 · 커스텀 · 에디터 확장)을 모두 닫습니다 — 새 에디터 세션의 기본 패널만 남깁니다(시나리오 체인의 초기화가 쓴다). */
-            static bool runPanelCloseOptional( const vector<string>& listArgument, string& outReply )
+            /** @brief 핵심(Core)이 아닌 패널(도구 · 커스텀 · 에디터 확장)을 닫고 새 인스턴스로 바꿉니다 — 새 에디터 세션의 패널 상태로 돌립니다(시나리오 체인의 초기화가 쓴다). */
+            static bool runPanelResetOptional( const vector<string>& listArgument, string& outReply )
             {
                 EditorContext* pContext = EditorContext::get();
                 if ( listArgument.empty() == false || pContext == nullptr )
                     return false;
-                EditorPanelManager& panelManager = pContext->getPanelManager();
-                vector<string>      listPanelID;
-                for ( const EditorPanelEntry& entry : panelManager.getPanels() )
-                {
-                    if ( entry._category != EditorPanelCategory::Core )
-                        listPanelID.push_back( entry._id );
-                }
-                for ( const string& panelID : listPanelID )
-                {
-                    (void)panelManager.setPanelOpen( panelID, false ); // 이미 닫힌 패널은 그대로 닫혀 있다
-                }
-                outReply = "closed " + to_string( static_cast<uint32>( listPanelID.size() ) ) + " optional panel(s)";
+                const uint32 resetCount = pContext->getPanelManager().resetOptionalPanels( pContext->getRHIDevice() );
+                outReply                = "reset " + to_string( resetCount ) + " optional panel(s)";
                 return true;
             }
 
@@ -119,8 +109,9 @@ namespace sw::editor
     SW_DEV_COMMAND( PanelFocus, "panel.focus", "panel.focus <panelID>", "Open a panel and bring its window (its tab) to the front on the next frame",
                     &EditorUIDevCommandsInternal::runPanelFocus );
     SW_DEV_COMMAND( PanelClose, "panel.close", "panel.close <panelID>", "Close a panel", &EditorUIDevCommandsInternal::runPanelClose );
-    SW_DEV_COMMAND( PanelCloseOptional, "panel.closeOptional", "panel.closeOptional", "Close every panel that is not a core panel (tools, custom and extension panels)",
-                    &EditorUIDevCommandsInternal::runPanelCloseOptional );
+    SW_DEV_COMMAND( PanelResetOptional, "panel.resetOptional", "panel.resetOptional",
+                    "Close every panel that is not a core panel (tools, custom and extension panels) and replace it with a new instance, as in a new editor session",
+                    &EditorUIDevCommandsInternal::runPanelResetOptional );
     SW_DEV_COMMAND( LayoutReset, "layout.reset", "layout.reset", "Reset the dock layout to the default editor layout on the next frame (scenarios that click by position)",
                     &EditorUIDevCommandsInternal::runLayoutReset );
 } // namespace sw::editor

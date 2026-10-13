@@ -6,7 +6,7 @@
   드래그 칸 · 슬라이더는 Ctrl+클릭이 글 입력이다. Quick Open 은 파일 목록이 온 뒤에 열므로 시퀀서 대상이 생길 때까지 WaitUntil 로 기다린다.
   실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/sequencerkeys.scenario.xml -dx12
 -->
-<Scenario name="editor.sequencerkeys" isolated="true" fixedDelta="0.0166667" timeoutFrames="800" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.sequencerkeys" fixedDelta="0.0166667" timeoutFrames="800" startAfter="Immediately" input="exclusive">
 	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
 	<At frame="25"><DevCommand line="layout.reset"/></At>
 	<At frame="40"><Variable name="gv_editorProbeObject" value="GameCamera"/></At>

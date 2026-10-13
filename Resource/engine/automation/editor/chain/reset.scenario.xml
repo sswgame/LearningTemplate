@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  에디터 체인 사이의 초기화 — 새 에디터 세션과 같은 출발점으로 되돌린다: 플레이 중지 · 시작 씬 다시 열기(되돌리기 스택 · 선택 · 변경 표시가 씬 교체와 함께 비워진다) · 창 크기(엔진 기본 1280x720 — 새 에디터의 시작 크기) · 배율 · 선택 패널(도구 · 확장)을 닫고 도크 레이아웃 · 씬 뷰 카메라(씬을 다시 열어도 이어지므로 `camera.reset`).
+  에디터 체인 사이의 초기화 — 새 에디터 세션과 같은 출발점으로 되돌린다: 플레이 중지 · 시작 씬 다시 열기(되돌리기 스택 · 선택 · 변경 표시가 씬 교체와 함께 비워진다) · 창 크기(엔진 기본 1280x720 — 새 에디터의 시작 크기) · 배율 · 선택 패널(도구 · 확장)을 닫고 새 인스턴스로 바꾼다(연 문서 · 그래프 · 맵 같은 패널 상태가 새 세션 값이 된다) · 도크 레이아웃 · 씬 뷰 카메라(씬을 다시 열어도 이어지므로 `camera.reset`).
   `engine/automation/editor/*.scenario.xml` 을 한 프로세스로 묶을 때(`-scenario=reset,a,reset,b…`) 시나리오 사이에 끼운다. 혼자 돌려도 통과한다.
   씬이 다시 열렸는지는 고정 프레임이 아니라 탐침으로 기다린다 — 비동기 씬 로드가 끝나고(Scene.Transitioning) 오브젝트 수가 시작 씬의 값이며 되돌리기 · 변경 표시 · 선택이 비면 바로 다음 단계로 간다.
   창 크기 · 도크는 창이 자리 잡을 시간이 필요해 짧은 고정 간격을 둔다.
@@ -15,7 +15,7 @@
 	<At frame="5">
 		<ResizeWindow width="1280" height="720"/>
 		<Variable name="gv_editorUiScale" value="1"/>
-		<DevCommand line="panel.closeOptional"/>
+		<DevCommand line="panel.resetOptional"/>
 		<DevCommand line="layout.reset"/>
 		<DevCommand line="camera.reset"/>
 	</At>

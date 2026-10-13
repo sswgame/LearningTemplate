@@ -40,9 +40,10 @@
   (2) 문서는 바뀌었는데 계산이 따라오지 않은 것 둘 중 하나로 본다 — 재현이 한 번뿐이라 가설이다. 시나리오는 이제 탐침 `Editor.MaterialDocumentIsProbeAsset` · `Editor.MaterialSwitchPending` 으로
   문서 교체를 먼저 기다리므로, 다시 지면 실패 줄이 (1) 인지 (2) 인지 가리킨다. 재현: `App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/materialpreview.scenario.xml -opengl` 을 여러 번.
 
-- `A-5` **에디터 체인에 아직 못 합친 시나리오 다섯**([Automation README](../Source/Engine/Automation/README.md) "에디터 시나리오를 한 프로세스로 묶기"). `isolated` 로 뺀 `graphaddnode` · `profilertimeline` · `tilemaptools` · `sequencerkeys` · `contentthumbnails` 는
-  씬 교체로 안 비워지는 패널 상태가 남는다 — 패널 쪽에 "문서 닫기 / 초기화" 를 두고 `panel.closeOptional` 이 그것을 부르게 하면 체인에 합칠 수 있다(지금은 프로세스 다섯 개가 더 뜬다).
-  대화 · 애니메이션 그래프 문서 패널은 `EditorGraphDocumentPanel` 틀 위에 있다. 초기화 뒤 상태가 새 세션과 같은지는 실행으로만 확인되므로, 체인 전체를 깨뜨리지 않게 하나씩 합치고 그때마다 체인을 돌린다.
+- `A-5` **에디터 체인 밖에 남은 격리 시나리오 둘**([Automation README](../Source/Engine/Automation/README.md) "에디터 시나리오를 한 프로세스로 묶기"). 체인 초기화(`panel.resetOptional`)는 도구 패널을 새로 만들 뿐
+  엔진 서비스와 상태 폴더의 파일은 그대로 둔다. `profilertimeline` 은 타임라인 기록이 `FrameProfiler` 에 남아 다음 실행이 "녹화 전 0" 으로 시작하지 않고,
+  `animgraphedit` 은 Save 가 경로 없는 기본 문서(상태 폴더의 `AnimationGraphData.json`)를 덮어 뒤의 `graphaddnode` 가 노드 셋으로 시작한다(둘 다 `[reset, X, reset, X]` 와 전체 체인으로 확인).
+  합치려면 `animgraphedit` 이 테스트 폴더의 자기 그래프 에셋을 열어 저장하게 하고, 타임라인은 녹화 전 상태를 시나리오가 정할 길(타임라인 비우기)이 있어야 한다.
 
 - `A-12` **`ValidationIssueLog` 가 사라진 오브젝트의 결과를 들고 있다** — `removeSource` 를 부르는 곳이 에디터 셀프 테스트뿐이라, 검증 결과가 있던 오브젝트를 지우거나 씬을 바꿔도 맵 검사 패널에 남는다(2026-10-13, 에디터 체인을 끝낼 때 표에 결과가 남아 있었다 — 표는 이제 엔진 종료에서 소멸하므로 누수 보고에는 나오지 않는다).
   오브젝트 파괴 · 씬 언로드에서 그 출처를 지우거나 표를 씬이 소유하게 한다. 체인 테스트는 종료 코드와 누수 줄만 봐서 이것을 세지 않는다.
