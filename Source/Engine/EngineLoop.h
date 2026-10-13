@@ -222,7 +222,7 @@ namespace sw
         EngineBootstrap           _bootstrap;
         unique_ptr<ConfigManager> _configManager;
         unique_ptr<RHI>           _rhi;
-        /** @brief 셸 디버그 액션 맵입니다(`updateShellActions` 가 처음 부를 때 만든다). Input 단계의 해제가 입력 매니저보다 먼저 놓는다. */
+        /** @brief 셸 디버그 액션 맵입니다(`updateShellActions` 가 처음 부를 때 만든다). `shutdown` 이 단계 종료 뒤 · 해제 전에(입력 매니저가 소멸하기 전에) 놓는다. */
         ShellInputActions         _shellActions;
         unique_ptr<IAudioService> _audioService;
         unique_ptr<FrameRenderer> _frameRenderer;
@@ -277,6 +277,8 @@ namespace sw
         FontService* _pFontService;
         /** @brief 서브시스템 `UI` 입니다(`_startup` 소유 — 빌려 쓴다). 프레임마다 입력 · 갱신 · 캔버스가 돈다. */
         UISystem* _pUISystem;
+        /** @brief 서브시스템 `Input` 입니다(`_startup` 소유 — 빌려 쓴다). 프레임마다 입력 프레임 · 셸 맵 · 관찰자 문맥이 쓴다. */
+        InputManager* _pInputManager;
         /** @brief Config 단계가 읽은 엔진 설정입니다(`_configManager` 소유). Resource · EngineDefaultAssets · RHI 단계가 읽습니다. */
         const EngineConfig* _pEngineConfig;
     };

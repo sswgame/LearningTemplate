@@ -137,14 +137,6 @@ namespace sw
         _pAssetManager.reset();
     }
 
-    void EngineServiceCollection::destroyCompressionCodecRegistry()
-    {
-        // 슬롯부터 끊는다. 소유자가 사라진 뒤에도 슬롯이 가리키면 엔진을 내린 다음의 압축 경로가 해제된 레지스트리를 읽는다.
-        if ( _pCompressionCodecRegistry != nullptr && CompressionCodecRegistry::getActive() == _pCompressionCodecRegistry.get() )
-            CompressionCodecRegistry::setActive( nullptr );
-        _pCompressionCodecRegistry.reset();
-    }
-
     void EngineServiceCollection::destroyAll()
     {
         // X-macro 는 목록 순서로만 펼쳐지므로 해제 표를 만들어 거꾸로 돈다.

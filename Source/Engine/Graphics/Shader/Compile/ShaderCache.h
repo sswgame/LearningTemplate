@@ -10,6 +10,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Common/ISubsystem.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
 namespace sw
@@ -26,12 +27,15 @@ namespace sw
 
 namespace sw
 {
-    /// @brief 컴파일 결과 디스크 캐시 매니저입니다.
-    class SW_API ShaderCache
+    /**
+     * @brief 컴파일 결과 디스크 캐시 매니저입니다.
+     * @details 엔진에서는 서브시스템 `ShaderCache`(모든 호스트)입니다. 서버는 빈 캐시만 세운다(씬 쿠킹의 Headless 가 의존).
+     */
+    class SW_API ShaderCache : public ISubsystem
     {
     public:
         ShaderCache();
-        ~ShaderCache();
+        ~ShaderCache() override;
 
         ShaderCache( const ShaderCache& )            = delete;
         ShaderCache& operator=( const ShaderCache& ) = delete;
@@ -40,6 +44,14 @@ namespace sw
         bool initialize();
         /** @brief 셰이더 캐시를 정리하고 종료합니다. 리플렉션 매니페스트 캐시(`ShaderReflectionLibrary`)도 비웁니다. */
         void shutdown();
+
+        // ISubsystem — 기동 단계 `ShaderCache`.
+        EngineInitResult initializeSubsystem() override { return initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed; }
+        void             shutdownSubsystem() override { shutdown(); }
+        const utf8*      getSubsystemName() const override { return "ShaderCache"; }
+        const utf8*      getSubsystemDependencies() const override { return ""; }
+        EngineInitTarget getSubsystemTarget() const override { return EngineInitTarget::All; }
+        MemoryTag        getSubsystemMemoryTag() const override { return MemoryTag::Shader; }
 
         /** @brief 캐시에 있으면 반환하고, 없거나 소스가 바뀌었으면 컴파일한 뒤 캐시합니다. */
         ShaderCompileResult getOrCompile( const ShaderCompileDesc& desc );

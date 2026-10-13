@@ -4,7 +4,7 @@
  * @details 언리얼 `USubsystem`(`Initialize` · `Deinitialize` · `InitializeDependency`)과 같은 자리입니다. 순서는 손으로 적지 않습니다 —
  *          `SubsystemCollection` 이 선언된 의존으로 위상 정렬해(동점은 이름 순) 초기화하고, 역순으로 종료하고, 소멸도 그 역순입니다.
  *          새 서브시스템은 이 인터페이스를 상속하고 엔진 루프가 `EngineInitSequence::addSubsystem` 으로 넘기면 끝납니다(표 · 본문 함수가 없다).
- *          소유 객체가 없는 "한 번 하는 일" 은 `FunctionSubsystem` 하나로 적습니다.
+ *          자기 클래스가 없는 단계(호스트가 엮는 일, Core 서비스를 세우는 일)는 `FunctionSubsystem` 하나로 적습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

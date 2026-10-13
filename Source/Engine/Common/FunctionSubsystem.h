@@ -1,17 +1,19 @@
 /**
  * @file Engine/Common/FunctionSubsystem.h
- * @brief 소유 객체가 없는 "한 번 하는 일" 을 서브시스템으로 적는 단 하나의 타입입니다(이름 · 의존 · 대상 + 초기화 · 종료 델리게이트).
- * @details 리플렉션 등록 · 설정 읽기 · 헤드리스 작업처럼 객체를 소유하지 않는 단계를 위해 단계마다 구조체를 짓지 않습니다. 델리게이트 둘이
- *          본문이고, 묶지 않은 델리게이트는 아무것도 하지 않습니다(초기화는 성공으로 칩니다).
+ * @brief 자기 클래스가 없는 기동 단계를 서브시스템으로 적는 단 하나의 타입입니다(선언 + 초기화 · 종료 델리게이트 + 함께 소멸할 객체).
+ * @details 리플렉션 등록 · 모듈 훅처럼 호스트가 엮는 단계, 그리고 Core 서비스(태스크 · 비동기 IO · 코덱 레지스트리 — Core 는 `ISubsystem` 을 모른다)를
+ *          세우는 단계를 위해 단계마다 구조체를 짓지 않습니다. 델리게이트 둘이 본문이고, 묶지 않은 델리게이트는 아무것도 하지 않습니다(초기화는
+ *          성공으로 칩니다). 객체를 넘기면(`takeOwnership`) 이 서브시스템의 소멸 자리 — 모든 종료 뒤, 초기화의 역순 — 에서 함께 소멸합니다.
  *
  * ```cpp
- * startup.addSubsystem( make_unique<FunctionSubsystem>( "Reflection", "", EngineInitTarget::All,
+ * startup.addSubsystem( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "Reflection", "", EngineInitTarget::All, MemoryTag::Reflection },
  *                                                       SW_DELEGATE_FUNCTION( SubsystemInitializeDelegate, &registerReflection ) ) );
  * ```
  */
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryTag.h"
 
 #include "Engine/Common/ISubsystem.h"
@@ -26,23 +28,41 @@ namespace sw
 
 namespace sw
 {
+    /** @brief `FunctionSubsystem` 의 선언(이름 · 의존 · 대상 · 메모리 태그)입니다. 글은 문자열 리터럴(프로세스 수명)이어야 합니다. */
+    struct FunctionSubsystemDesc
+    {
+        const utf8*      _pName;         ///< 이름(의존 칸이 부르는 식별자)
+        const utf8*      _pDependencies; ///< 먼저 서야 하는 이름들(쉼표 · 공백 · 중괄호로 구분)
+        EngineInitTarget _target;        ///< 도는 호스트
+        MemoryTag        _memoryTag;     ///< 초기화가 할당하는 메모리의 용도
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class FunctionSubsystem
-     * @brief 이름 · 의존 · 대상과 델리게이트 둘로 된 서브시스템입니다. 이름 · 의존 글은 문자열 리터럴(프로세스 수명)이어야 합니다.
+     * @brief 선언(`FunctionSubsystemDesc`)과 델리게이트 둘로 된 서브시스템입니다. 넘겨받은 객체가 있으면 소멸할 때 함께 소멸시킵니다.
      */
     class FunctionSubsystem final : public ISubsystem
     {
     public:
-        FunctionSubsystem( const utf8* pName, const utf8* pDependencies, EngineInitTarget target, SubsystemInitializeDelegate initialize,
-                           SubsystemShutdownDelegate shutdown = {}, MemoryTag memoryTag = MemoryTag::EngineMisc )
+        explicit FunctionSubsystem( const FunctionSubsystemDesc& desc, SubsystemInitializeDelegate initialize = {}, SubsystemShutdownDelegate shutdown = {} )
             : _initialize{ std::move( initialize ) }
             , _shutdown{ std::move( shutdown ) }
-            , _pName{ pName }
-            , _pDependencies{ pDependencies }
-            , _target{ target }
-            , _memoryTag{ memoryTag }
+            , _desc{ desc }
+            , _pOwned{ nullptr }
+            , _pDestroyOwned{ nullptr }
         {
         }
+        ~FunctionSubsystem() override
+        {
+            if ( _pDestroyOwned != nullptr )
+                _pDestroyOwned( _pOwned );
+        }
+
+        FunctionSubsystem( const FunctionSubsystem& )            = delete;
+        FunctionSubsystem& operator=( const FunctionSubsystem& ) = delete;
 
         EngineInitResult initializeSubsystem() override { return _initialize.isBound() ? _initialize() : EngineInitResult::Succeeded; }
         void             shutdownSubsystem() override
@@ -51,17 +71,37 @@ namespace sw
                 _shutdown();
         }
 
-        const utf8*      getSubsystemName() const override { return _pName; }
-        const utf8*      getSubsystemDependencies() const override { return _pDependencies; }
-        EngineInitTarget getSubsystemTarget() const override { return _target; }
-        MemoryTag        getSubsystemMemoryTag() const override { return _memoryTag; }
+        /**
+         * @brief @p owned 를 넘겨받아 이 서브시스템과 함께 소멸시킵니다(한 번만). 넘긴 객체를 돌려줍니다.
+         * @details 서비스 저장소가 만든 Core 서비스의 소유를 기동 순서로 옮길 때 씁니다 — 해제가 그 단계의 소멸 자리(초기화의 역순)에서 일어납니다.
+         */
+        template <class TOwned>
+        TOwned& takeOwnership( unique_ptr<TOwned> owned )
+        {
+            SW_ASSERT( _pOwned == nullptr && owned != nullptr );
+            TOwned& taken  = *owned;
+            _pOwned        = owned.release();
+            _pDestroyOwned = &destroyOwned<TOwned>;
+            return taken;
+        }
+
+        const utf8*      getSubsystemName() const override { return _desc._pName; }
+        const utf8*      getSubsystemDependencies() const override { return _desc._pDependencies; }
+        EngineInitTarget getSubsystemTarget() const override { return _desc._target; }
+        MemoryTag        getSubsystemMemoryTag() const override { return _desc._memoryTag; }
+
+    private:
+        template <class TOwned>
+        static void destroyOwned( void* pOwned )
+        {
+            default_delete<TOwned>{}( static_cast<TOwned*>( pOwned ) );
+        }
 
     private:
         SubsystemInitializeDelegate _initialize;
         SubsystemShutdownDelegate   _shutdown;
-        const utf8*                 _pName;
-        const utf8*                 _pDependencies;
-        EngineInitTarget            _target;
-        MemoryTag                   _memoryTag;
+        FunctionSubsystemDesc       _desc;
+        void*                       _pOwned;      ///< `takeOwnership` 으로 넘겨받은 객체(없으면 nullptr)
+        void ( *_pDestroyOwned )( void* pOwned ); ///< `_pOwned` 의 타입으로 소멸시키는 함수
     };
 } // namespace sw

@@ -128,6 +128,18 @@ namespace
         uint32 _initializeCount{ 0 };
         uint32 _shutdownCount{ 0 };
     };
+
+    /** @brief 소멸을 적는 객체입니다(`FunctionSubsystem::takeOwnership` 의 소멸 자리를 본다). */
+    struct OwnedProbe
+    {
+        explicit OwnedProbe( SubsystemRecorder& recorder )
+            : _recorder{ recorder }
+        {
+        }
+        ~OwnedProbe() { _recorder._listEvent.push_back( string( "D:Probe" ) ); }
+
+        SubsystemRecorder& _recorder;
+    };
 } // namespace
 
 /**
@@ -396,13 +408,32 @@ SW_TEST_CASE( SubsystemCollectionTest, FunctionSubsystemCallsItsDelegates )
 {
     FunctionTarget      target;
     SubsystemCollection collection;
-    collection.add( make_unique<FunctionSubsystem>( "Bound", "Unbound", EngineInitTarget::All,
+    collection.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "Bound", "Unbound", EngineInitTarget::All, MemoryTag::EngineMisc },
                                                     SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &FunctionTarget::initialize, &target ),
                                                     SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &FunctionTarget::shutdown, &target ) ) );
-    collection.add( make_unique<FunctionSubsystem>( "Unbound", "", EngineInitTarget::All, SubsystemInitializeDelegate{} ) );
+    collection.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "Unbound", "", EngineInitTarget::All, MemoryTag::EngineMisc } ) );
     SW_ASSERT_TRUE_MSG( collection.initializeAll( EngineInitTarget::Client ), collection.getError().c_str() );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( collection.getInitializedIndices().size() ) );
     SW_EXPECT_EQUAL( 1u, target._initializeCount );
     collection.shutdownAll();
     SW_EXPECT_EQUAL( 1u, target._shutdownCount );
+}
+
+/**
+ * @brief [SubsystemCollectionTest] `FunctionSubsystem` 이 넘겨받은 객체는 그 서브시스템의 소멸 자리(초기화의 역순)에서 함께 소멸한다
+ * @details Core 서비스(태스크 · 코덱 레지스트리)의 소유를 기동 순서로 옮기는 근거다 — 그에 기대는 것이 모두 소멸한 뒤, 그것이 기대는 것보다 먼저다.
+ */
+SW_TEST_CASE( SubsystemCollectionTest, FunctionSubsystemDestroysWhatItOwnsInItsPlace )
+{
+    SubsystemRecorder   recorder;
+    SubsystemCollection collection;
+    collection.add( make_unique<RecordingSubsystem>( recorder, "Later", "Owner" ) );
+    FunctionSubsystem& owner = collection.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "Owner", "Earlier", EngineInitTarget::All, MemoryTag::EngineMisc } ) );
+    OwnedProbe&        probe = owner.takeOwnership( make_unique<OwnedProbe>( recorder ) );
+    SW_EXPECT_TRUE( &probe._recorder == &recorder );
+    collection.add( make_unique<RecordingSubsystem>( recorder, "Earlier", "" ) );
+    SW_ASSERT_TRUE_MSG( collection.initializeAll( EngineInitTarget::Client ), collection.getError().c_str() );
+
+    collection.destroyAll();
+    SW_EXPECT_STREQ( "Later Probe Earlier", recorder.joinEvents( 'D' ).c_str() );
 }

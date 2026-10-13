@@ -42,6 +42,13 @@ namespace sw
         registerBuiltinCodecs();
     }
 
+    CompressionCodecRegistry::~CompressionCodecRegistry()
+    {
+        // 슬롯이 이 레지스트리를 가리키면 끊는다 — 소유자가 사라진 뒤의 압축 경로(`CompressionStream`)가 해제된 레지스트리를 읽지 않고 내장 코덱으로 간다.
+        CompressionCodecRegistry* pThis = this;
+        (void)s_pActiveRegistry.compare_exchange_strong( pThis, nullptr, std::memory_order_acq_rel, std::memory_order_acquire ); // 다른 레지스트리가 연결돼 있으면 그대로 둔다
+    }
+
     void CompressionCodecRegistry::initialize()
     {
         std::scoped_lock<mutex> lock{ _mutex };

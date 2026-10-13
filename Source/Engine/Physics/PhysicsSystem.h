@@ -2,28 +2,29 @@
  * @file PhysicsSystem.h
  * @brief 물리 엔진 서비스입니다. 설정 테이블을 읽고, 백엔드(3D 는 Jolt, 2D 는 Box2D)를 초기화하고, 씬을 만들어 줍니다(`engine::getPhysicsSystem`).
  * @details 백엔드를 고르는 곳은 여기 하나다(`createScene3D`, `createScene2D`). 다른 엔진 코드는 `IPhysicsScene3D` 와 `IPhysicsScene2D` 만 본다.
- *          기동 단계 `Physics`(`EngineInitStepList.xxx`)가 `initialize` 를, 종료가 `shutdown` 을 호출한다. 씬(`GameObjectManager` 의 `ScenePhysics`)은
- *          그보다 먼저 사라진다(Scene 단계가 Physics 에 의존한다).
+ *          엔진에서는 서브시스템 `Physics` 이고(설정 표는 리소스, Jolt 잡은 태스크라 Resource · Task 뒤에 선다), 씬(`GameObjectManager` 의
+ *          `ScenePhysics`)은 그보다 먼저 사라진다(Scene 단계가 Physics 에 의존한다).
  */
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Common/ISubsystem.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsSettings.h"
 
 namespace sw
 {
     /** @class PhysicsSystem @brief 물리 서비스입니다. 파일 머리말 참고. */
-    class SW_API PhysicsSystem
+    class SW_API PhysicsSystem : public ISubsystem
     {
     public:
         /** @brief 설정 테이블의 기본값입니다. */
         static constexpr const utf8* kSettingsPath = "engine/physics/physicssettings.xml";
 
         PhysicsSystem();
-        ~PhysicsSystem();
+        ~PhysicsSystem() override;
 
         PhysicsSystem( const PhysicsSystem& )            = delete;
         PhysicsSystem& operator=( const PhysicsSystem& ) = delete;
@@ -35,6 +36,15 @@ namespace sw
         [[nodiscard]] bool initialize( string_view settingsPath = kSettingsPath );
         /** @brief 백엔드를 내립니다. 이 서비스로 만든 씬은 먼저 모두 사라져 있어야 합니다. */
         void shutdown();
+
+        // ISubsystem — 기동 단계 `Physics`. 기본 설정 표로 선다.
+        EngineInitResult initializeSubsystem() override { return initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed; }
+        void             shutdownSubsystem() override { shutdown(); }
+        const utf8*      getSubsystemName() const override { return "Physics"; }
+        const utf8*      getSubsystemDependencies() const override { return "Resource Task"; }
+        EngineInitTarget getSubsystemTarget() const override { return EngineInitTarget::All; }
+        MemoryTag        getSubsystemMemoryTag() const override { return MemoryTag::Physics; }
+
         /** @brief 올라와 있으면 true 입니다. */
         bool isInitialized() const { return _bInitialized; }
 

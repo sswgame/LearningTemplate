@@ -117,42 +117,11 @@ namespace sw
     // 해제하는지(`destroy<단계>`)를 필요한 것만 적는다. 없는 함수는 아무것도 하지 않는다(`EngineInitNoStepBody`). 순서는 표의 의존이
     // 정한다: 초기화는 위상 순서, 종료와 해제는 그 역순. 종료는 초기화한 단계에만 불린다. 해제는 모든 종료 뒤에 **모든 단계**에
     // 불리므로(기동이 어디서 멈췄든) null 안전해야 한다. 아래는 읽기 좋게 초기화 순서대로 적었을 뿐이다.
-    // 이 모음은 옮기는 중이다 — 새 단계는 여기에 함수를 더하지 않고 `ISubsystem` 을 상속한다(Fonts · Telemetry · UI 가 옮겨 갔다).
+    // 이 모음은 옮기는 중이다 — 새 단계는 여기에 함수를 더하지 않고 `ISubsystem` 을 상속하거나 `FunctionSubsystem` 으로 적는다(`initialize`).
     // ------------------------------------------------------------------------------
 
     struct EngineLoop::StartupStepBody : EngineInitNoStepBody
     {
-        static EngineInitResult initializeCompression( EngineLoop& loop )
-        {
-            // 압축 레지스트리는 여기가 소유하고, Core 의 CompressionStream 이 볼 수 있도록 슬롯에 연결한다.
-            // 스트림이 Core 에 있어서 엔진 서비스 테이블에는 닿지 못한다(Logger::setGlobalSink 와 같은 모양).
-            loop._owned._pCompressionCodecRegistry->initialize();
-            CompressionCodecRegistry::setActive( loop._owned._pCompressionCodecRegistry.get() );
-            // 외부 라이브러리 코덱은 **목록이 있는 자리**에서 붙인다(EngineCompressionCodecUtil).
-            EngineCompressionCodecUtil::registerAll( *loop._owned._pCompressionCodecRegistry );
-            return EngineInitResult::Succeeded;
-        }
-        // 종료는 하지 않는다. 모듈이 등록한 코덱을 거두는 것은 등록한 모듈의 책임이다(registerCodec 주석 참고). 슬롯을 끊고 통째로 없앤다.
-        // 맨 먼저 서므로 맨 나중에 해제된다 — 팩을 내리는 Resource 해제까지 코덱이 살아 있다.
-        static void destroyCompression( EngineLoop& loop ) { loop._owned.destroyCompressionCodecRegistry(); }
-
-        static EngineInitResult initializeReflection( EngineLoop& )
-        {
-            // 여기서는 이미 이 프로세스에 올라온 등록기만 모은다. 배포 구성은 GameFramework · 킷 · 게임이 정적 링크라 "Engine" 이 다 모으고,
-            // 개발 구성의 모듈 DLL 은 `ModuleTypes` 단계에서 호스트 로더가 올리며 제 이름으로 등록한다.
-            engine::registerModuleTypes( "Engine" );
-            // 명령줄의 enum 이름(`-gv_rhiBackend=Vulkan`)은 enum 표가 선 지금 적용한다. 모르는 이름이면 기본값으로 돌지 않고 멈춘다.
-            if ( engine::bindGlobalVariableEnumNames() == false )
-                return EngineInitResult::Failed;
-            return EngineInitResult::Succeeded;
-        }
-        // 설정 · 에셋 · 씬 객체는 이 단계에 의존하므로 모두 먼저 해제된다.
-        static void destroyReflection( EngineLoop& loop )
-        {
-            engine::unbindGlobalVariableEnumNames();
-            loop._owned._pTypeRegistry.reset();
-        }
-
         static EngineInitResult initializeConfig( EngineLoop& loop )
         {
             // 설정은 리소스 초기화보다 먼저 읽는다(Resource 의 의존 칸). `AssetManager::mountContent` 는 GameConfig 의 `_packRoot` 가
@@ -223,78 +192,12 @@ namespace sw
         }
         static void destroyEngineDefaultAssets( EngineLoop& loop ) { loop._owned._pEngineDefaultAssets.reset(); }
 
-        static EngineInitResult initializeShaderCache( EngineLoop& loop )
-        {
-            return loop._owned._pShaderCache->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed;
-        }
-        static void shutdownShaderCache( EngineLoop& loop ) { loop._owned._pShaderCache->shutdown(); }
-        static void destroyShaderCache( EngineLoop& loop ) { loop._owned._pShaderCache.reset(); }
-
-        static EngineInitResult initializeTask( EngineLoop& loop )
-        {
-            return loop._owned._pTaskManager->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed;
-        }
-        static void shutdownTask( EngineLoop& loop ) { loop._owned._pTaskManager->shutdown(); }
-        // 소멸자에서 태스크를 기다리는 객체(에셋 스트리밍 큐)는 이 단계에 의존하는 단계(Scene)가 먼저 해제한다.
-        static void destroyTask( EngineLoop& loop ) { loop._owned._pTaskManager.reset(); }
-
-        static EngineInitResult initializeFileIO( EngineLoop& loop )
-        {
-            // 완료 콜백(팩 해제 · CRC · 스트리밍 완료 기록)은 태스크 워커에서 돈다 — IO 스레드는 다음 읽기를 거는 일만 한다.
-            AsyncFileIOSettings settings{};
-            settings._pTaskManager = loop._owned._pTaskManager.get();
-            return loop._owned._pAsyncFileIO->initialize( settings ) ? EngineInitResult::Succeeded : EngineInitResult::Failed;
-        }
-        // 큐를 비우고 걸린 읽기와 완료 콜백(태스크)을 다 기다린다. Task 보다 먼저, 모듈을 내리기 전에 내려간다.
-        static void shutdownFileIO( EngineLoop& loop ) { loop._owned._pAsyncFileIO->shutdown(); }
-
-        // 모듈은 이 뒤(`ModuleTypes` 단계의 호스트 로더 · App 의 ModuleHost)에 오른다. 이 단계는 종료 쪽 자리(모듈을 내리는 구간)를 순서에 박아 둔다.
-        static void shutdownModuleImages( EngineLoop& loop )
-        {
-            // 씬은 방금 사라졌고 서비스는 아직 살아 있다. 모듈 DLL 을 내리기에 알맞은 유일한 자리다.
-            // Engine 은 거기서 무슨 일이 일어나는지 모른다(App 이 핫 리로드를 건다).
-            if ( loop._onScenesReleased.isBound() )
-                loop._onScenesReleased();
-        }
-
         static EngineInitResult initializeAudio( EngineLoop& loop )
         {
             return loop._audioService->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed;
         }
         static void shutdownAudio( EngineLoop& loop ) { loop._audioService->shutdown(); }
         static void destroyAudio( EngineLoop& loop ) { loop._audioService.reset(); }
-
-        static EngineInitResult initializeInput( EngineLoop& loop )
-        {
-            return loop._owned._pInputManager->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed;
-        }
-        static void shutdownInput( EngineLoop& loop ) { loop._owned._pInputManager->shutdown(); }
-        static void destroyInput( EngineLoop& loop )
-        {
-            // 셸 디버그 액션 맵은 입력 매니저를 가리킨다. 먼저 놓는다(`updateShellActions` 가 처음 쓸 때 만든다).
-            loop._shellActions.reset();
-            loop._owned._pInputManager.reset();
-        }
-
-        static EngineInitResult initializeModuleTypes( EngineLoop& loop )
-        {
-            // 호스트가 동적으로 올리는 타입 공급자(개발 구성의 GameFramework · 킷 · 게임 DLL)를 여기서 올린다. 로더가 없으면 올릴 것이 없다
-            // (배포 구성은 정적 링크라 리플렉션 단계가 이미 다 모았다). 이 뒤로 씬을 읽는다 — 헤드리스 쿠킹이 이 단계에 의존한다.
-            if ( loop._moduleTypeLoader.isBound() && loop._moduleTypeLoader() == false )
-            {
-                SW_LOG_ERROR( "The host could not load its type-providing modules - scenes are not read" );
-                return EngineInitResult::Failed;
-            }
-            loop._owned._pTypeRegistry->markAllModuleTypesRegistered();
-            return EngineInitResult::Succeeded;
-        }
-
-        static EngineInitResult initializePhysics( EngineLoop& loop )
-        {
-            return loop._owned._pPhysicsSystem->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed;
-        }
-        // 씬(과 그 물리 씬)은 Scene 단계 종료에서 이미 사라졌다 — 백엔드를 내린다.
-        static void shutdownPhysics( EngineLoop& loop ) { loop._owned._pPhysicsSystem->shutdown(); }
 
         static EngineInitResult initializeScene( EngineLoop& loop )
         {
@@ -492,7 +395,7 @@ namespace sw
             UserSettingsTargets  targets;
             targets._pGlobalVariableManager = loop._owned._pGlobalVariableManager.get();
             targets._pCommandLineManager    = loop._owned._pCommandLineManager.get();
-            targets._pInputMap              = &loop._owned._pInputManager->getInputMap();
+            targets._pInputMap              = &engine::getInputManager().getInputMap();
             targets._pAudioService          = loop._audioService.get();
             targets._pLocalizationManager   = loop._owned._pLocalizationManager.get();
             settings.initialize( targets );
@@ -596,9 +499,9 @@ namespace sw
         {
             // 씬 스냅샷 · 패킷 · 업로드 큐는 그리는 쪽의 것이다. 렌더러를 세우지 않는 헤드리스 작업에는 없다.
             // 백엔드 교체로 다시 설 때(`restartStoppedSteps`)는 있는 것을 그대로 쓰고, 디바이스에 매인 설정만 새로 건다.
-            loop._packetBuilder.initialize( loop._rhi->getDevice(), loop._owned._pTaskManager.get() );
+            loop._packetBuilder.initialize( loop._rhi->getDevice(), &engine::getTaskManager() );
 
-            if ( loop._frameRenderer->initialize( &loop._rhi->getDevice(), loop._owned._pTaskManager.get() ) == false )
+            if ( loop._frameRenderer->initialize( &loop._rhi->getDevice(), &engine::getTaskManager() ) == false )
             {
                 SW_LOG_ERROR( "Failed to initialize FrameRenderer!" );
                 return EngineInitResult::Failed;
@@ -680,14 +583,6 @@ namespace sw
             loop._shaderRecompiler.reset();
 #endif
         }
-
-        static EngineInitResult initializeSceneRHI( EngineLoop& loop )
-        {
-            loop._owned._pSceneManager->setRHIDevice( &loop._rhi->getDevice() );
-            return EngineInitResult::Succeeded;
-        }
-        // 렌더러 쪽 단계 가운데 종료가 가장 먼저다 — 씬에서 디바이스를 먼저 뗀다.
-        static void shutdownSceneRHI( EngineLoop& loop ) { loop._owned._pSceneManager->setRHIDevice( nullptr ); }
     };
 
     EngineLoop::EngineLoop()
@@ -714,6 +609,7 @@ namespace sw
         , _startup{}
         , _pFontService{ nullptr }
         , _pUISystem{ nullptr }
+        , _pInputManager{ nullptr }
         , _pEngineConfig{ nullptr }
     {
     }
@@ -787,8 +683,111 @@ namespace sw
             engine::bindEngineServices( services );
         }
 
-        // `ISubsystem` 으로 옮긴 서비스는 기동 순서가 소유한다 — 표의 단계와 한 순서로 정렬되어 돌고, 해제는 그 역순 자리에서 객체를 지운다.
+        // 기동 단계는 서브시스템이다 — 서비스는 스스로 이름 · 의존 · 대상을 선언하고, 클래스가 없는 단계는 `EngineFunctionStep` 의 선언에 본문을 준다.
+        // 추가 순서는 뜻이 없다(의존이 정한다). 서비스의 소유는 기동 순서로 넘어가고, 해제는 그 역순 자리에서 소멸이다.
         // 서비스 표는 위에서 같은 객체를 가리키도록 이미 묶였다(저장소가 만들고, 소유만 여기로 넘긴다).
+        {
+            CompressionCodecRegistry* const pCodecRegistry = _owned._pCompressionCodecRegistry.get();
+            // Core 의 CompressionStream 은 엔진 서비스 표에 닿지 못해 슬롯으로 본다(Logger::setGlobalSink 와 같은 모양). 슬롯은 레지스트리의 소멸자가 끊는다.
+            // 종료는 하지 않는다 — 모듈이 등록한 코덱을 거두는 것은 등록한 모듈의 책임이다(registerCodec 주석 참고).
+            auto initializeCompression = [pCodecRegistry]()
+            {
+                pCodecRegistry->initialize();
+                CompressionCodecRegistry::setActive( pCodecRegistry );
+                // 외부 라이브러리 코덱은 **목록이 있는 자리**에서 붙인다(EngineCompressionCodecUtil).
+                EngineCompressionCodecUtil::registerAll( *pCodecRegistry );
+                return EngineInitResult::Succeeded;
+            };
+            _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kCompression, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeCompression ) ) )
+                .takeOwnership( std::move( _owned._pCompressionCodecRegistry ) );
+        }
+        {
+            // 이 프로세스에 이미 올라온 등록기만 모은다. 배포 구성은 GameFramework · 킷 · 게임이 정적 링크라 "Engine" 이 다 모으고,
+            // 개발 구성의 모듈 DLL 은 `ModuleTypes` 단계에서 호스트 로더가 올리며 제 이름으로 등록한다.
+            // 명령줄의 enum 이름(`-gv_rhiBackend=Vulkan`)은 enum 표가 선 지금 적용한다. 모르는 이름이면 기본값으로 돌지 않고 멈춘다.
+            auto initializeReflection = []()
+            {
+                engine::registerModuleTypes( "Engine" );
+                if ( engine::bindGlobalVariableEnumNames() )
+                    return EngineInitResult::Succeeded;
+                engine::unbindGlobalVariableEnumNames();
+                return EngineInitResult::Failed;
+            };
+            // enum 이름 풀이는 타입 표를 본다 — 표가 소멸하기 전(종료)에 뗀다.
+            _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kReflection, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeReflection ),
+                                                                   SW_DELEGATE_FUNCTION( SubsystemShutdownDelegate, &engine::unbindGlobalVariableEnumNames ) ) )
+                .takeOwnership( std::move( _owned._pTypeRegistry ) );
+        }
+        {
+            TaskManager* const pTaskManager   = _owned._pTaskManager.get();
+            auto               initializeTask = [pTaskManager]()
+            { return pTaskManager->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed; };
+            _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kTask, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeTask ),
+                                                                   SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &TaskManager::shutdown, pTaskManager ) ) )
+                .takeOwnership( std::move( _owned._pTaskManager ) );
+        }
+        {
+            // 완료 콜백(팩 해제 · CRC · 스트리밍 완료 기록)은 태스크 워커에서 돈다 — IO 스레드는 다음 읽기를 거는 일만 한다.
+            // 종료는 큐를 비우고 걸린 읽기와 완료 콜백(태스크)을 다 기다린다. Task 보다 먼저, 모듈을 내리기 전에 내려간다.
+            AsyncFileIO* const pAsyncFileIO     = _owned._pAsyncFileIO.get();
+            auto               initializeFileIO = [pAsyncFileIO]()
+            {
+                AsyncFileIOSettings settings{};
+                settings._pTaskManager = &engine::getTaskManager();
+                return pAsyncFileIO->initialize( settings ) ? EngineInitResult::Succeeded : EngineInitResult::Failed;
+            };
+            _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kFileIO, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeFileIO ),
+                                                                   SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &AsyncFileIO::shutdown, pAsyncFileIO ) ) );
+        }
+        {
+            // 종료 쪽 자리 — 씬은 방금 사라졌고 서비스는 아직 살아 있다. 모듈 DLL 을 내리기에 알맞은 유일한 자리다.
+            // Engine 은 거기서 무슨 일이 일어나는지 모른다(App 이 핫 리로드를 건다 — 훅은 기동 뒤에 걸린다).
+            auto releaseModuleImages = [this]()
+            {
+                if ( _onScenesReleased.isBound() )
+                    _onScenesReleased();
+            };
+            _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kModuleImages, SubsystemInitializeDelegate{},
+                                                                   SW_DELEGATE_LAMBDA( SubsystemShutdownDelegate, releaseModuleImages ) ) );
+        }
+        {
+            // 호스트가 동적으로 올리는 타입 공급자(개발 구성의 GameFramework · 킷 · 게임 DLL)를 여기서 올린다. 로더가 없으면 올릴 것이 없다
+            // (배포 구성은 정적 링크라 리플렉션 단계가 이미 다 모았다). 이 뒤로 씬을 읽는다 — 헤드리스 쿠킹이 이 단계에 의존한다.
+            auto loadModuleTypes = [this]()
+            {
+                if ( _moduleTypeLoader.isBound() && _moduleTypeLoader() == false )
+                {
+                    SW_LOG_ERROR( "The host could not load its type-providing modules - scenes are not read" );
+                    return EngineInitResult::Failed;
+                }
+                engine::getTypeRegistry().markAllModuleTypesRegistered();
+                return EngineInitResult::Succeeded;
+            };
+            _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kModuleTypes, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, loadModuleTypes ) ) );
+        }
+        {
+            // 렌더러 쪽 단계 가운데 종료가 가장 먼저다 — 씬에서 디바이스를 먼저 뗀다. 백엔드 교체 뒤 다시 서며 새 디바이스를 건다.
+            auto attachSceneDevice = [this]()
+            {
+                engine::getSceneManager().setRHIDevice( &_rhi->getDevice() );
+                return EngineInitResult::Succeeded;
+            };
+            auto detachSceneDevice = []()
+            { engine::getSceneManager().setRHIDevice( nullptr ); };
+            _startup.addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kSceneRHI, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, attachSceneDevice ),
+                                                                   SW_DELEGATE_LAMBDA( SubsystemShutdownDelegate, detachSceneDevice ) ) );
+        }
+        {
+            InputManager* const pInputManager   = _owned._pInputManager.get();
+            auto                initializeInput = [pInputManager]()
+            { return pInputManager->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed; };
+            _pInputManager = &_startup
+                                  .addSubsystem( make_unique<FunctionSubsystem>( EngineFunctionStep::kInput, SW_DELEGATE_LAMBDA( SubsystemInitializeDelegate, initializeInput ),
+                                                                                 SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &InputManager::shutdown, pInputManager ) ) )
+                                  .takeOwnership( std::move( _owned._pInputManager ) );
+        }
+        _startup.addSubsystem( std::move( _owned._pShaderCache ) );
+        _startup.addSubsystem( std::move( _owned._pPhysicsSystem ) );
         _pFontService                      = &_startup.addSubsystem( std::move( _owned._pFontService ) );
         TelemetryService& telemetryService = _startup.addSubsystem( std::move( _owned._pTelemetryService ) );
         _pUISystem                         = &_startup.addSubsystem( std::move( _owned._pUISystem ) );
@@ -849,11 +848,14 @@ namespace sw
         AssetLoadProfiler::get().reportIfRequested( "session" );
         // 초기화한 단계만 역순으로 내린다: UI → 텔레메트리 → 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI → 씬 → 입력 · 오디오 → 모듈 이미지 → 태스크 → 셰이더 캐시.
         _startup.shutdownAll();
+        // 셸 디버그 액션 맵은 입력 매니저를 가리킨다 — 매니저가 소멸하기(Input 의 해제 자리) 전에 놓는다(`updateShellActions` 가 처음 쓸 때 만든다).
+        _shellActions.reset();
         // 단계가 소유한 객체를 초기화 순서의 역순으로 해제한다(표의 줄은 `StartupStepBody::destroy<단계>`, 서브시스템은 소멸): UI → 텔레메트리 → 렌더러 쪽 → RHI →
         // 글꼴 → 씬 → 입력 · 오디오 → 태스크 → 셰이더 캐시 → 엔진 데이터 → 리소스 → 설정 → 리플렉션 → 압축. 기동이 어디서 멈췄든 모든 단계를 해제한다.
         _startup.destroyAll();
-        _pFontService = nullptr;
-        _pUISystem    = nullptr;
+        _pFontService  = nullptr;
+        _pUISystem     = nullptr;
+        _pInputManager = nullptr;
         // 할당 관찰을 떼고 출력을 비운다. 출력 객체(Tracy)는 프로세스 수명이라 남아 있는 구간을 닫을 수 있다.
         ProfilerBackend::shutdown();
         // 표 밖 부트스트랩을 세운 역순으로 내린다(테스트 하네스와 같은 끝 정리).
@@ -921,7 +923,7 @@ namespace sw
     EngineFrameContext EngineLoop::makeFrameContext() const
     {
         EngineFrameContext context;
-        context._pInput                   = _owned._pInputManager.get();
+        context._pInput                   = _pInputManager;
         context._completedScreenshotCount = _renderThread != nullptr ? _renderThread->getCompletedScenarioScreenshotCount() : 0u;
         context._deltaSeconds             = _frameDeltaSeconds;
         const Scene* pActiveScene         = _owned._pSceneManager != nullptr ? _owned._pSceneManager->getActiveScene() : nullptr;
@@ -959,8 +961,8 @@ namespace sw
                 pObserver->onFrameBegin( context );
             }
         }
-        if ( _owned._pInputManager != nullptr )
-            _owned._pInputManager->beginFrame( deltaSeconds );
+        if ( _pInputManager != nullptr )
+            _pInputManager->beginFrame( deltaSeconds );
         // UI 는 게임 틱보다 먼저 입력을 받는다 — UI 가 먹은 행동 · 마우스 버튼은 이번 프레임 폰의 의도에 들지 않는다(플레이어 조종자가 본다).
         if ( _pUISystem != nullptr && _pUISystem->isInitialized() )
             _pUISystem->processInput( GameTimeScale::getUnscaledDeltaTime( deltaSeconds ) ); // 정지 메뉴의 탐색 반복은 실제 시간
@@ -1154,8 +1156,8 @@ namespace sw
                     requestQuit( observerExitCode ); // 여럿이면 처음 것의 코드다
             }
         }
-        if ( _owned._pInputManager != nullptr )
-            _owned._pInputManager->endFrame();
+        if ( _pInputManager != nullptr )
+            _pInputManager->endFrame();
         // 이번 프레임에 넣은 디버그 도형을 보이는 목록으로 확정하고, 씬이 흘린 시간만큼 지속 시간을 줄인다(일시정지면 그대로 남는다).
         engine::getDebugDrawQueue().endFrame( _sceneDeltaSeconds );
     }
@@ -1182,8 +1184,7 @@ namespace sw
 
             // 옛 디바이스의 GPU 자원은 recreateDevice 안의 shutdown 이 레지스트리에 통보하며 거둔다.
             _rhi->getDevice().waitIdle();
-            if ( _owned._pShaderCache != nullptr )
-                _owned._pShaderCache->clearCache();
+            engine::getShaderCache().clearCache();
         }
 
         if ( _rhi->recreateDevice( requested ) == false )
@@ -1261,9 +1262,9 @@ namespace sw
 
     void EngineLoop::updateShellActions( float32 deltaTime )
     {
-        if ( _owned._pInputManager == nullptr )
+        if ( _pInputManager == nullptr )
             return;
-        _shellActions.update( *_owned._pInputManager, deltaTime );
+        _shellActions.update( *_pInputManager, deltaTime );
     }
 
     unique_ptr<InputMap> EngineLoop::createShellInputMap( string_view inputMapPath )

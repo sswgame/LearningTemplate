@@ -50,7 +50,8 @@ namespace
 {
     /**
      * @brief 하네스의 기동 단계 본문입니다. 순서는 `EngineLoop` 과 같은 표(`EngineInitStepList.xxx`)가 정합니다.
-     * @details 호스트 자신이 본문 모음이다 — 필요한 `initialize<단계>` · `shutdown<단계>` · `destroy<단계>` 만 정적 함수로 둔다(`EngineInitNoStepBody`).
+     * @details 호스트 자신이 본문 모음이다 — 표에 남은 단계 가운데 필요한 `initialize<단계>` · `shutdown<단계>` · `destroy<단계>` 만 정적 함수로 둔다
+     *          (`EngineInitNoStepBody`). 서브시스템으로 옮긴 단계는 `TestHostRuntime::start` 가 앱과 같은 선언으로 넣는다.
      *          하네스는 모듈 이미지 · 헤드리스 작업 · 글꼴 · 창 · RHI · 렌더러 · 플레이어 설정 · 텔레메트리 · UI 를 세우지 않으므로 그 단계의 함수가 없고
      *          (글꼴 · UI 테스트는 자기 FontService · UISystem 을 만든다), 오디오는 초기화하지 않고 종료만 부른다. 해제는 `EngineLoop` 과 같은 역순이다.
      */
@@ -62,34 +63,6 @@ namespace
         sw::unique_ptr<sw::CommandStack>  _commandStack{};
         sw::DelegateHandle                _sceneObjectsInvalidatedHandle{}; ///< 씬 매니저에 단 기록 비우기 구독(씬 단계 해제가 뗀다)
         const sw::EngineConfig*           _pEngineConfig{ nullptr };
-
-        static sw::EngineInitResult initializeCompression( TestHost& host )
-        {
-            host._pOwned->_pCompressionCodecRegistry->initialize();
-            // 서비스와 **같은 인스턴스**를 Core 슬롯에도 꽂는다 — 안 꽂으면 CompressionStream 이
-            // 다른 레지스트리를 보게 되어 등록한 코덱이 테스트에서만 조용히 무시된다.
-            sw::CompressionCodecRegistry::setActive( host._pOwned->_pCompressionCodecRegistry.get() );
-            return sw::EngineInitResult::Succeeded;
-        }
-        // `EngineLoop` 과 같이 종료는 하지 않는다 — Core 슬롯이 이 레지스트리를 가리키는 동안 코덱을 비우면 뒤 단계의 해제(팩 내리기)가
-        // 빈 레지스트리를 본다. 슬롯을 끊고 통째로 없애는 것은 해제다.
-        static void destroyCompression( TestHost& host ) { host._pOwned->destroyCompressionCodecRegistry(); }
-
-        static sw::EngineInitResult initializeReflection( TestHost& host )
-        {
-            // 리플렉션은 설정보다 먼저다 — 설정(EngineConfig·GameConfig) 역직렬화가 TypeInfo 를 쓴다.
-            sw::engine::registerModuleTypes( "Engine" );
-            sw::engine::registerModuleTypes( "GameFramework" );
-            host._pOwned->_pTypeRegistry->registerPendingTypes( "TestFramework", sw::TypeRegistrar::getHead(), sw::EnumRegistrar::getHead() );
-            if ( sw::engine::bindGlobalVariableEnumNames() == false )
-                return sw::EngineInitResult::Failed;
-            return sw::EngineInitResult::Succeeded;
-        }
-        static void destroyReflection( TestHost& host )
-        {
-            sw::engine::unbindGlobalVariableEnumNames();
-            host._pOwned->_pTypeRegistry.reset();
-        }
 
         static sw::EngineInitResult initializeConfig( TestHost& host )
         {
@@ -140,51 +113,8 @@ namespace
 
         static void destroyEngineDefaultAssets( TestHost& host ) { host._pOwned->_pEngineDefaultAssets.reset(); }
 
-        static sw::EngineInitResult initializeShaderCache( TestHost& host )
-        {
-            return host._pOwned->_pShaderCache->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
-        }
-        static void shutdownShaderCache( TestHost& host ) { host._pOwned->_pShaderCache->shutdown(); }
-        static void destroyShaderCache( TestHost& host ) { host._pOwned->_pShaderCache.reset(); }
-
-        static sw::EngineInitResult initializeTask( TestHost& host )
-        {
-            return host._pOwned->_pTaskManager->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
-        }
-        static void shutdownTask( TestHost& host ) { host._pOwned->_pTaskManager->shutdown(); }
-        static void destroyTask( TestHost& host ) { host._pOwned->_pTaskManager.reset(); }
-
-        static sw::EngineInitResult initializeFileIO( TestHost& host )
-        {
-            sw::AsyncFileIOSettings settings{};
-            settings._pTaskManager = host._pOwned->_pTaskManager.get();
-            return host._pOwned->_pAsyncFileIO->initialize( settings ) ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
-        }
-        static void shutdownFileIO( TestHost& host ) { host._pOwned->_pAsyncFileIO->shutdown(); }
-
         static void shutdownAudio( TestHost& host ) { host._audioService->shutdown(); }
         static void destroyAudio( TestHost& host ) { host._audioService.reset(); }
-
-        static sw::EngineInitResult initializeInput( TestHost& host )
-        {
-            return host._pOwned->_pInputManager->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
-        }
-        static void shutdownInput( TestHost& host ) { host._pOwned->_pInputManager->shutdown(); }
-        static void destroyInput( TestHost& host ) { host._pOwned->_pInputManager.reset(); }
-
-        static sw::EngineInitResult initializeModuleTypes( TestHost& host )
-        {
-            // 하네스의 타입 공급자(엔진 · GameFramework · 테스트 타입)는 테스트 실행 파일과 함께 올라와 리플렉션 단계가 이미 모았다.
-            // 앱과 같이 이 단계가 끝나야 씬을 읽는다(`SceneManager::requestLoadFuture` · `SceneCooker::cookAllScenes`).
-            host._pOwned->_pTypeRegistry->markAllModuleTypesRegistered();
-            return sw::EngineInitResult::Succeeded;
-        }
-
-        static sw::EngineInitResult initializePhysics( TestHost& host )
-        {
-            return host._pOwned->_pPhysicsSystem->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
-        }
-        static void shutdownPhysics( TestHost& host ) { host._pOwned->_pPhysicsSystem->shutdown(); }
 
         static sw::EngineInitResult initializeScene( TestHost& host )
         {
@@ -288,7 +218,81 @@ namespace test
         // ------------------------------------------------------------------------------
         // 순서는 손으로 적지 않는다. `EngineLoop` 과 같은 표(`EngineInitStepList.xxx`)를 위상 정렬한 순서로 본문(`TestHost::initialize<단계>`)을
         // 부른다 — 하네스가 앱과 다른 순서로 서는 일이 구조로 막힌다. 종료와 해제는 `stop` 이 그 역순으로 한다.
-        return state._startup.initializeAll<TestHost>( host );
+        // 서브시스템으로 옮긴 단계는 앱과 같은 객체 · 같은 선언(`EngineFunctionStep`)으로 넣는다 — 본문이 다른 것만 여기서 준다.
+        sw::EngineInitSequence& startup = state._startup;
+        {
+            // 앱과 달리 외부 코덱을 붙이지 않는다(테스트가 코덱을 직접 갈아 끼운다). 서비스와 **같은 인스턴스**를 Core 슬롯에도 꽂는다 —
+            // 안 꽂으면 CompressionStream 이 다른 레지스트리를 보게 되어 등록한 코덱이 테스트에서만 조용히 무시된다.
+            sw::CompressionCodecRegistry* const pCodecRegistry        = state._owned._pCompressionCodecRegistry.get();
+            auto                                initializeCompression = [pCodecRegistry]()
+            {
+                pCodecRegistry->initialize();
+                sw::CompressionCodecRegistry::setActive( pCodecRegistry );
+                return sw::EngineInitResult::Succeeded;
+            };
+            startup.addSubsystem( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kCompression,
+                                                                          SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeCompression ) ) )
+                .takeOwnership( std::move( state._owned._pCompressionCodecRegistry ) );
+        }
+        {
+            // 하네스의 타입 공급자(엔진 · GameFramework · 테스트 타입)는 테스트 실행 파일과 함께 올라와 여기서 모두 모은다.
+            sw::TypeRegistry* const pTypeRegistry        = state._owned._pTypeRegistry.get();
+            auto                    initializeReflection = [pTypeRegistry]()
+            {
+                sw::engine::registerModuleTypes( "Engine" );
+                sw::engine::registerModuleTypes( "GameFramework" );
+                pTypeRegistry->registerPendingTypes( "TestFramework", sw::TypeRegistrar::getHead(), sw::EnumRegistrar::getHead() );
+                if ( sw::engine::bindGlobalVariableEnumNames() )
+                    return sw::EngineInitResult::Succeeded;
+                sw::engine::unbindGlobalVariableEnumNames();
+                return sw::EngineInitResult::Failed;
+            };
+            startup.addSubsystem( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kReflection,
+                                                                          SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeReflection ),
+                                                                          SW_DELEGATE_FUNCTION( sw::SubsystemShutdownDelegate, &sw::engine::unbindGlobalVariableEnumNames ) ) )
+                .takeOwnership( std::move( state._owned._pTypeRegistry ) );
+        }
+        {
+            sw::TaskManager* const pTaskManager   = state._owned._pTaskManager.get();
+            auto                   initializeTask = [pTaskManager]()
+            { return pTaskManager->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed; };
+            startup.addSubsystem( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kTask, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeTask ),
+                                                                          SW_DELEGATE_METHOD( sw::SubsystemShutdownDelegate, &sw::TaskManager::shutdown, pTaskManager ) ) )
+                .takeOwnership( std::move( state._owned._pTaskManager ) );
+        }
+        {
+            sw::AsyncFileIO* const pAsyncFileIO     = state._owned._pAsyncFileIO.get();
+            auto                   initializeFileIO = [pAsyncFileIO]()
+            {
+                sw::AsyncFileIOSettings settings{};
+                settings._pTaskManager = &sw::engine::getTaskManager();
+                return pAsyncFileIO->initialize( settings ) ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
+            };
+            startup.addSubsystem( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kFileIO, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeFileIO ),
+                                                                          SW_DELEGATE_METHOD( sw::SubsystemShutdownDelegate, &sw::AsyncFileIO::shutdown, pAsyncFileIO ) ) );
+        }
+        // 하네스는 모듈 DLL 을 올리고 내리지 않는다 — 자리만 둔다(다른 단계가 이 이름에 의존한다).
+        startup.addSubsystem( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kModuleImages ) );
+        {
+            // 타입 공급자는 리플렉션 단계가 이미 모았다. 앱과 같이 이 단계가 끝나야 씬을 읽는다(`SceneManager::requestLoadFuture` · `SceneCooker::cookAllScenes`).
+            auto markModuleTypes = []()
+            {
+                sw::engine::getTypeRegistry().markAllModuleTypesRegistered();
+                return sw::EngineInitResult::Succeeded;
+            };
+            startup.addSubsystem( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kModuleTypes, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, markModuleTypes ) ) );
+        }
+        {
+            sw::InputManager* const pInputManager   = state._owned._pInputManager.get();
+            auto                    initializeInput = [pInputManager]()
+            { return pInputManager->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed; };
+            startup.addSubsystem( sw::make_unique<sw::FunctionSubsystem>( sw::EngineFunctionStep::kInput, SW_DELEGATE_LAMBDA( sw::SubsystemInitializeDelegate, initializeInput ),
+                                                                          SW_DELEGATE_METHOD( sw::SubsystemShutdownDelegate, &sw::InputManager::shutdown, pInputManager ) ) )
+                .takeOwnership( std::move( state._owned._pInputManager ) );
+        }
+        startup.addSubsystem( std::move( state._owned._pShaderCache ) );
+        startup.addSubsystem( std::move( state._owned._pPhysicsSystem ) );
+        return startup.initializeAll<TestHost>( host );
     }
 
     void TestHostRuntime::stop()

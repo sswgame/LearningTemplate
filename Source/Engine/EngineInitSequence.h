@@ -14,8 +14,44 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/MemoryTag.h"
 
+#include "Engine/Common/FunctionSubsystem.h"
 #include "Engine/Common/ISubsystem.h"
 #include "Engine/Common/SubsystemCollection.h"
+
+namespace sw
+{
+    /**
+     * @brief 자기 클래스가 없는 엔진 기동 단계의 선언(이름 · 의존 · 대상 · 메모리 태그)입니다. 본문은 호스트가 `FunctionSubsystem` 의 델리게이트로 줍니다.
+     * @details 호스트가 엮는 단계(모듈 훅 · 타입 공급자 로더 · 씬의 디바이스)와 Core 서비스(태스크 · 비동기 IO · 코덱 레지스트리 — Core 는 `ISubsystem` 을
+     *          모른다)를 세우는 단계입니다. 본문은 호스트마다 다를 수 있지만(엔진 루프 · 테스트 하네스) 선언은 여기 하나라 두 호스트가 같은 순서로 섭니다.
+     *          클래스가 있는 단계(`ShaderCache` · `PhysicsSystem` …)는 그 클래스가 스스로 선언합니다.
+     */
+    struct EngineFunctionStep
+    {
+        /** @brief 코덱 레지스트리 + Core 슬롯 + (엔진 루프만) 외부 코덱. 맨 먼저 서므로 맨 나중에 소멸한다 — 팩을 내리는 Resource 해제까지 코덱이 살아 있다. */
+        static constexpr FunctionSubsystemDesc kCompression{ "Compression", "", EngineInitTarget::All, MemoryTag::EngineMisc };
+        /** @brief 이 프로세스에 올라온 타입 등록기를 모으고 명령줄의 enum 이름을 적용한다. 설정 · 에셋 · 씬 객체가 이 뒤에 서서 먼저 소멸한다. */
+        static constexpr FunctionSubsystemDesc kReflection{ "Reflection", "", EngineInitTarget::All, MemoryTag::Reflection };
+        /** @brief 태스크 매니저. 소멸자가 태스크를 기다리는 객체(에셋 스트리밍 큐)는 이것에 의존하는 단계(Scene)가 먼저 놓는다. */
+        static constexpr FunctionSubsystemDesc kTask{ "Task", "", EngineInitTarget::All, MemoryTag::Task };
+        /** @brief 종료 쪽 자리 — 씬은 사라지고 서비스는 살아 있는 구간에서 모듈 DLL 을 내리는 호스트 훅. 타입 · 코덱 · 캐시를 떼고 태스크를 기다린다. */
+        static constexpr FunctionSubsystemDesc kModuleImages{ "ModuleImages", "Compression Reflection Resource Task", EngineInitTarget::All, MemoryTag::EngineMisc };
+        /** @brief 비동기 파일 IO. 완료 콜백을 태스크로 싣고, 모듈을 내리기 전에 걸린 읽기를 다 끝낸다. */
+        static constexpr FunctionSubsystemDesc kFileIO{ "FileIO", "ModuleImages Task", EngineInitTarget::All, MemoryTag::Asset };
+        /**
+         * @brief 입력 매니저. 모듈이 등록한 장치 · 콜백을 든다 — 서버는 이벤트가 오지 않는 장치 목록이다.
+         * @note `InputManager` 는 정렬이 큰 타입(락프리 큐)이라 `ISubsystem*` 으로 지울 수 없어 이 선언으로 세운다(`FunctionSubsystem::takeOwnership` 은 제 타입으로 지운다).
+         */
+        static constexpr FunctionSubsystemDesc kInput{ "Input", "ModuleImages", EngineInitTarget::All, MemoryTag::EngineMisc };
+        /** @brief 호스트가 타입 공급자(GF · 킷 · 게임 모듈)를 올려 등록을 끝낸다 — 씬을 읽는 일은 이 뒤다. */
+        static constexpr FunctionSubsystemDesc kModuleTypes{ "ModuleTypes", "Config ModuleImages Reflection", EngineInitTarget::All, MemoryTag::Reflection };
+        /** @brief 씬에 디바이스를 건다 — 렌더러 쪽 단계 가운데 종료가 가장 먼저다. */
+        static constexpr FunctionSubsystemDesc kSceneRHI{ "SceneRHI", "RHI Scene", EngineInitTarget::Client, MemoryTag::RenderCPU };
+
+        /** @brief 위 선언 모두입니다(테스트가 엔진 목록을 본문 없이 짓는다). */
+        static constexpr const FunctionSubsystemDesc* kArrAll[] = { &kCompression, &kReflection, &kTask, &kModuleImages, &kFileIO, &kInput, &kModuleTypes, &kSceneRHI };
+    };
+} // namespace sw
 
 namespace sw
 {
