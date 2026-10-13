@@ -66,6 +66,7 @@ namespace sw
         if ( _endpoint.initialize( pTransport, settings._endpointSettings ) == false )
         {
             outError = "online service host could not set up its stream endpoint";
+            releaseTransportSide();
             return false;
         }
         NetRequestServerSettings requestSettings;
@@ -73,6 +74,7 @@ namespace sw
         if ( _requestServer.registerMethod( OnlineHostMethod::kHello, this ) == false || _requestServer.registerMethod( OnlineHostMethod::kPing, this ) == false )
         {
             outError = "online service host methods are already registered";
+            releaseTransportSide();
             return false;
         }
         for ( IOnlineHostService* pService : _listService )
@@ -85,6 +87,7 @@ namespace sw
         if ( pTransport->initialize( &_endpoint, settings._transportSettings ) == false || pTransport->listen( settings._listenAddress ) == false )
         {
             outError = "online service host could not listen on " + settings._listenAddress.toString();
+            releaseTransportSide(); // 이미 선 엔드포인트 · 요청 서버 · 전송을 내린다 — `_bInitialized` 가 거짓이라 `shutdown` 은 아무것도 하지 않는다
             return false;
         }
         if ( settings._pEphemeralStore != nullptr )
@@ -109,7 +112,13 @@ namespace sw
             _settings._pServerBus->unsubscribe( subscription._topic );
         }
         _listBusSubscription.clear();
-        _pTransport->shutdown();
+        releaseTransportSide();
+    }
+
+    void OnlineServiceHost::releaseTransportSide()
+    {
+        if ( _pTransport != nullptr )
+            _pTransport->shutdown();
         _requestServer.shutdown();
         _endpoint.shutdown();
         _mapConnection.clear();
