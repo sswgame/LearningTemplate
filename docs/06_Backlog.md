@@ -103,7 +103,7 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
     실패 콜백 · Ready 알림 중 키트가 파괴돼도 크래시 없음 · 모듈 언로드 때 `Deferred work kept re-queueing` 오류 로그가 정상 경로에서 안 남.
 
 - `B-13` **구조 리팩토링 이동(S12 ~ S22)의 테스트가 남았다**(측정은 2026-10-13 에 끝나 회귀가 없었다 — [검증과 측정](08_Verification.md) 2절).
-  - **S21 · S22 는 Debug 빌드 · 링크까지만 확인했다**: SmokeTest 소스 목록에 `EditorModuleHostHeadless.cpp` 가 있는지(새 `SW_API` 클래스 포함), `-L nogpu`(`NavMesh*` · `UserSettingsFileTest` · `AppHeadlessTasksTest` · `EditorFolderListing` 테스트),
+  - **S21 · S22 는 Debug 빌드 · 링크까지만 확인했다**: `-L nogpu`(`NavMesh*` · `UserSettingsFileTest` · `AppHeadlessTasksTest` · `EditorFolderListing` 테스트),
     Shipping(단일 백엔드 정적 링크, `SW_PROFILE_COMPILED` 꺼짐), Linux(GLX 컨텍스트 · 다중 상속 경고), `OpenGLRHICommandList.cpp`(compile_commands 에 없어 문법 검사도 못 했다), 에디터 실기동(Present 훅),
     `assertdialog.scenario.xml`, `-gv_reloadGameAtFrame`, `-gv_standardInputCommands`. S18 의 새 클래스는 ImGui 에 의존해 단위 테스트가 없다 — 에디터 자체 테스트 · `AppScenarioTest` 에디터 케이스가 본다.
 
