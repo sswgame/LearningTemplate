@@ -20,6 +20,7 @@
  *
  *          Dev 구성에서는 UDP 전송을 회선 흉내(`NetEmulationTransport`)로 감싼다. 시작 값은 `-gv_netEmu*` 이고, 실행 중에는 개발 명령
  *          `net.emulation` · `net.disconnect` · `net.reconnect` · `net.traffic` 이 바꾼다(에디터 Multiplayer 창 Conditions 탭이 표준 입력으로 보낸다).
+ *          `net.stats` 는 연결 · 트래픽 수치 한 줄(`NetStatsReport`)을 답한다(Profiler 탭이 0.5 초마다 묻는다).
  *          조건이 꺼져 있으면 흉내는 패킷을 그대로 넘긴다. Shipping 에는 흉내가 없다.
  * @warning 게임 모듈 핫 리로드는 게임 인스턴스를 새로 만든다. 세션도 닫고 다시 열므로 클라이언트는 끊겼다가(시간 초과) 다시 붙어야 한다.
  */
@@ -38,6 +39,8 @@
 
 namespace sw
 {
+    struct NetStatsReport;
+
     class UDPNetTransport;
 
     /** @brief 게임 인스턴스의 네트워크 역할입니다. */
@@ -122,6 +125,11 @@ namespace sw
         [[nodiscard]] bool reconnect();
         /** @brief 회선 흉내와 연결들의 수치를 한 보고로 모읍니다(`net.emulation stats` 의 답). 흉내가 없으면 흉내 칸은 0 입니다. */
         NetEmulationReport makeEmulationReport() const;
+        /**
+         * @brief 연결 통계와 라우터의 종류별 셈을 한 보고로 모읍니다(`net.stats` 의 답 — 에디터 Profiler 탭이 묻는다).
+         * @details 이미 세고 있는 값을 읽기만 한다(연결마다 `getConnectionStats` 사본 하나). 세션을 열지 않았으면 빈 보고입니다.
+         */
+        NetStatsReport makeStatsReport() const;
 
     private:
         /** @brief 클라이언트 연결이 끝났으면 로그에 남깁니다. 시간 초과면 다시 시도하는데, 같이 띄운 서버가 아직 기동 중일 수 있기 때문입니다. */

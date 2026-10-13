@@ -6,6 +6,7 @@
 #include "Core/Network/Connection/SequenceBuffer.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/Message/NetSendBudget.h"
+#include "Core/Network/Message/NetStatsReport.h"
 #include "Core/Network/Replication/NetPrioritizer.h"
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/Network/Transport/NetTransport.h"
@@ -1271,6 +1272,17 @@ SW_TEST_CASE( NetworkTest, MessageRouterDispatchesByRangeAndKeepsUnhandled )
     SW_EXPECT_EQUAL( 0x51, static_cast<int32>( listUnhandled[1]._buffer[0] ) );
     SW_EXPECT_EQUAL( 0x22, static_cast<int32>( listUnhandled[2]._buffer[0] ) );
     SW_EXPECT_EQUAL( 0, listUnhandled[0]._connectionID );
+
+    // 종류별 셈은 처리기가 없는 메시지까지 센다(`net.stats` 의 비중). 0x82 는 두 번(종류 1 바이트 + varint 2 바이트씩)이라 바이트가 가장 크다.
+    SW_EXPECT_EQUAL( router.getKindTally( 0x82 )._messageCount, uint64{ 2 } );
+    SW_EXPECT_EQUAL( router.getKindTally( 0x82 )._byteCount, uint64{ 6 } );
+    SW_EXPECT_EQUAL( router.getKindTally( 0x51 )._messageCount, uint64{ 1 } );
+    SW_EXPECT_EQUAL( router.getKindTally( 0x80 )._messageCount, uint64{ 0 } );
+    NetStatsReport report;
+    report.populateKinds( router );
+    SW_ASSERT_EQUAL( 6, static_cast<int32>( report._listKindEntry.size() ) );
+    SW_EXPECT_EQUAL( 0x82, static_cast<int32>( report._listKindEntry[0]._kind ) );
+    SW_EXPECT_EQUAL( report._listKindEntry[0]._messageCount, uint64{ 2 } );
 
     // 뺀 처리기는 더 묻지 않는다. 빈 메시지는 누구에게도 가지 않는다.
     router.removeHandler( &gameFirst );

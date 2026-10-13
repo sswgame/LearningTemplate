@@ -31,6 +31,8 @@ namespace sw::editor
         string             _tracePath{};
         NetEmulationReport _emulationReport{};         ///< 마지막 `net.emulation stats` 답(게임 스레드)
         uint32             _emulationReportCount{ 0 }; ///< 받은 보고 수(게임 스레드)
+        NetStatsReport     _statsReport{};             ///< 마지막 `net.stats` 답(게임 스레드)
+        uint32             _statsReportCount{ 0 };     ///< 받은 `net.stats` 보고 수(게임 스레드)
         atomic<int32>      _exitCode{ 0 };
         atomic<uint32>     _exited{ 0 };    ///< 읽기 스레드가 파이프 끝을 보고 종료 코드를 거뒀다
         int32              _processID{ 0 }; ///< 띄울 때의 pid(거둔 뒤에도 패널에 보인다)
@@ -254,6 +256,12 @@ namespace sw::editor
                 // 자식 로그의 소스 위치 줄(` -> 파일:줄`)은 옮기지 않는다 — 한 사건이 두 줄이 되어 Output Log 를 메운다.
                 if ( line.rfind( EditorNetPlaySessionInternal::kSourceLocationPrefix, 0 ) == 0 )
                     continue;
+                // Profiler 탭의 주기 질의 답은 보관만 한다 — 0.5 초마다 프로세스 수만큼 오므로 Output Log 와 마지막 줄을 메운다.
+                if ( NetStatsReport::tryParseLine( line, child._statsReport ) )
+                {
+                    ++child._statsReportCount;
+                    continue;
+                }
                 // 자식의 오류 줄은 경고로 — 에디터 로그의 오류 수는 에디터 자신의 것으로 남긴다. 줄에는 자식의 수준 꼬리표가 그대로 있다.
                 if ( line.find( "[Error]" ) != string::npos )
                     SW_LOG_WARNING( "[%#] %#", child._label, line );
@@ -312,6 +320,8 @@ namespace sw::editor
         status._tracePath            = child._tracePath;
         status._emulationReport      = child._emulationReport;
         status._emulationReportCount = child._emulationReportCount;
+        status._statsReport          = child._statsReport;
+        status._statsReportCount     = child._statsReportCount;
         status._processID            = child._processID;
         status._bRunning             = child._exited.load() == 0;
         status._bConnected           = child._bConnected;

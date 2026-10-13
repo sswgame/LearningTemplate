@@ -7,6 +7,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetConnection.h"
+#include "Core/Network/Message/NetStatsReport.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
 
 namespace sw
@@ -23,6 +24,8 @@ namespace sw
             static constexpr float32 kPercent = 100.0f;
             /** @brief 초를 밀리초로 바꾸는 배수입니다. */
             static constexpr float32 kMillisecondsPerSecond = 1000.0f;
+            /** @brief 초당 킬로비트(`NetConnectionStats::_sentBandwidth`)를 초당 바이트로 바꾸는 배수입니다(1000 / 8). */
+            static constexpr float32 kBytesPerKilobit = 125.0f;
             /** @brief `net.traffic` 이 한 번에 보낼 수 있는 메시지 상한(신뢰 창 `NetConnection::kReliableWindow` 를 넘으면 보내기가 거절된다). */
             static constexpr int32 kMaxTrafficMessageCount = 200;
             /**
@@ -184,6 +187,17 @@ namespace sw
                     }
                 }
                 outReply = "net traffic queued " + to_string( sentCount ) + " reliable message(s) to " + to_string( listConnection.size() ) + " connection(s)";
+                return true;
+            }
+
+            /** @brief `net.stats` — 이 프로세스의 연결 · 트래픽 수치 한 줄(`NetStatsReport`)입니다. 에디터 Profiler 탭이 표준 입력으로 주기적으로 묻습니다. */
+            static bool runStats( const vector<string>& listArgument, string& outReply )
+            {
+                (void)listArgument;
+                const GameNetSession* pSession = findCommandSession( outReply );
+                if ( pSession == nullptr )
+                    return true;
+                outReply = pSession->makeStatsReport().makeLine();
                 return true;
             }
 
@@ -454,6 +468,31 @@ namespace sw
         return report;
     }
 
+    NetStatsReport GameNetSession::makeStatsReport() const
+    {
+        NetStatsReport report;
+        if ( _role == GameNetRole::None )
+            return report;
+        vector<int32> listConnection;
+        _host.collectConnected( listConnection );
+        report._connectionCount = static_cast<int32>( listConnection.size() );
+        for ( const int32 connectionID : listConnection )
+        {
+            NetConnectionStats stats;
+            if ( _host.getConnectionStats( connectionID, stats ) == false )
+                continue;
+            report._sentPacketCount += stats._sentPacketCount;
+            report._receivedPacketCount += stats._receivedPacketCount;
+            report._resentMessageCount += stats._resentMessageCount;
+            report._sentBytesPerSecond += stats._sentBandwidth * GameNetSessionInternal::kBytesPerKilobit;
+            report._receivedBytesPerSecond += stats._receivedBandwidth * GameNetSessionInternal::kBytesPerKilobit;
+            report._lossPercent     = MathUtil::max( report._lossPercent, stats._packetLoss * GameNetSessionInternal::kPercent );
+            report._rttMilliseconds = MathUtil::max( report._rttMilliseconds, stats._rtt * GameNetSessionInternal::kMillisecondsPerSecond );
+        }
+        report.populateKinds( _router );
+        return report;
+    }
+
     void GameNetSession::reportConnectResult()
     {
         if ( _connectFuture.isValid() == false || _connectFuture.isReady() == false )
@@ -485,4 +524,6 @@ namespace sw
     SW_DEV_COMMAND( NetReconnect, "net.reconnect", "net.reconnect", "Connect a disconnected client to its server again", &GameNetSessionInternal::runReconnect );
     SW_DEV_COMMAND( NetTraffic, "net.traffic", "net.traffic <messages> [<bytes>]", "Send that many reliable messages (1 to 1024 bytes) to every peer (load to watch resends)",
                     &GameNetSessionInternal::runTraffic );
+    SW_DEV_COMMAND( NetStats, "net.stats", "net.stats", "Show the net session's connection and traffic numbers in one line (packets, bytes per second, RTT, loss, message kinds)",
+                    &GameNetSessionInternal::runStats );
 } // namespace sw

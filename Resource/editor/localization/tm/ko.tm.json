@@ -94,6 +94,10 @@
             "text": "바인딩 없이 액션을 추가합니다. 목록에서 선택해 키를 추가합니다."
         },
         {
+            "source": "Add up the message kinds every process received instead of only the selected one",
+            "text": "고른 프로세스 대신 모든 프로세스가 받은 메시지 종류를 합쳐 봅니다"
+        },
+        {
             "source": "Adjust the tile thumbnail size (64px to 160px)",
             "text": "타일 썸네일의 크기를 조절합니다 (64px ~ 160px)"
         },
@@ -534,6 +538,10 @@
             "text": "선택을 따라가는 중입니다 - 클릭하면 이 오브젝트에 고정합니다"
         },
         {
+            "source": "Forget the collected history",
+            "text": "모은 기록을 지웁니다"
+        },
+        {
             "source": "Fraction of the screen trimmed from each edge, 0 to 0.1, as on TVs that cut off the border. The red frame shows the safe area.",
             "text": "가장자리를 잘라 내는 TV 처럼 각 변에서 잘라 낼 화면 비율(0~0.1)입니다. 빨간 테두리가 안전 영역입니다."
         },
@@ -942,6 +950,10 @@
             "text": "일치하는 컴포넌트가 없습니다."
         },
         {
+            "source": "No messages received yet",
+            "text": "아직 받은 메시지가 없습니다"
+        },
+        {
             "source": "No multiplayer session is running. Start one in the Session tab.",
             "text": "실행 중인 멀티플레이 세션이 없습니다. Session 탭에서 시작하세요."
         },
@@ -1030,6 +1042,10 @@
             "text": "Step 이 돌릴 서버 틱 수입니다(1 이상)"
         },
         {
+            "source": "Numbers the process already counts (connection stats, message kinds), asked with net.stats every 0.5 s while this tab is shown",
+            "text": "프로세스가 이미 세는 값(연결 통계, 메시지 종류)을 이 탭이 보이는 동안 0.5 초마다 net.stats 로 묻습니다"
+        },
+        {
             "source": "Object not found in the active scene.",
             "text": "활성 씬에서 오브젝트를 찾지 못했습니다."
         },
@@ -1088,6 +1104,10 @@
         {
             "source": "Package the client (game) or the dedicated server",
             "text": "클라이언트(게임) 또는 전용 서버를 패키징합니다"
+        },
+        {
+            "source": "Packet loss (highest connection, %)",
+            "text": "패킷 손실 (가장 큰 연결, %)"
         },
         {
             "source": "Packets this process receives",
@@ -1270,6 +1290,18 @@
             "text": "파일에서 미리보기를 다시 만듭니다. 에디터 밖에서 XML 을 고친 뒤에 씁니다."
         },
         {
+            "source": "Received bytes per second (last second, all connections)",
+            "text": "받은 바이트 / 초 (최근 1 초, 모든 연결)"
+        },
+        {
+            "source": "Received messages by kind",
+            "text": "받은 메시지 종류별 비중"
+        },
+        {
+            "source": "Received packets per second",
+            "text": "받은 패킷 / 초"
+        },
+        {
             "source": "Recently opened documents. Pick one to open it again.",
             "text": "최근에 연 문서"
         },
@@ -1304,6 +1336,10 @@
         {
             "source": "Refresh the snapshot every 30 editor frames. Costs a GPU wait each time.",
             "text": "에디터 30프레임마다 스냅샷을 새로 읽습니다. 읽을 때마다 GPU 를 기다립니다."
+        },
+        {
+            "source": "Reliable messages resent per second",
+            "text": "다시 보낸 신뢰 메시지 / 초"
         },
         {
             "source": "Reload the clip from disk, discarding unsaved edits.",
@@ -1460,6 +1496,10 @@
         {
             "source": "Rotation snap: rotations jump in steps of the angle on the right.",
             "text": "회전 스냅: 회전이 오른쪽의 각도 단위로 움직입니다."
+        },
+        {
+            "source": "Round-trip time (highest connection, ms)",
+            "text": "RTT (가장 큰 연결, ms)"
         },
         {
             "source": "Run the conversation from the Start node and show each line in the viewport. Lines advance on their own; choices and conditions wait for the buttons that appear.",
@@ -1682,6 +1722,14 @@
             "text": "고른 프로세스 대신 세션의 모든 프로세스에 보냅니다"
         },
         {
+            "source": "Sent bytes per second (last second, all connections)",
+            "text": "보낸 바이트 / 초 (최근 1 초, 모든 연결)"
+        },
+        {
+            "source": "Sent packets per second",
+            "text": "보낸 패킷 / 초"
+        },
+        {
             "source": "Set both directions of the selected process to a line preset",
             "text": "고른 프로세스의 두 방향을 회선 프리셋으로 둡니다"
         },
@@ -1772,6 +1820,10 @@
         {
             "source": "Start Play at the editor camera position (moves the object tagged 'Player', or else the object holding the game camera).",
             "text": "Play 를 에디터 카메라 위치에서 시작합니다 ('Player' 태그 오브젝트, 없으면 게임 카메라를 든 오브젝트를 옮깁니다)"
+        },
+        {
+            "source": "Start a multiplayer session (Net Mode on the toolbar) to see its traffic",
+            "text": "멀티플레이 세션을 시작하면(툴바의 Net Mode) 트래픽이 보입니다"
         },
         {
             "source": "Start a multiplayer session (Session tab) to change its line conditions.",
@@ -2088,6 +2140,10 @@
         {
             "source": "Waiting for input...",
             "text": "입력을 기다리는 중..."
+        },
+        {
+            "source": "Waiting for the first net.stats report from this process",
+            "text": "이 프로세스의 첫 net.stats 보고를 기다리는 중입니다"
         },
         {
             "source": "Waiting for the render thread to create the preview texture...",

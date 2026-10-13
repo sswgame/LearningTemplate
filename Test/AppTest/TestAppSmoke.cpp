@@ -645,6 +645,7 @@ SW_TEST_CASE( AppSmokeTest, EditorRegistriesKeepTheirOrder )
         // Multiplayer 창의 탭(SW_EDITOR_MULTIPLAYER_TAB) — 탭 막대 순서다.
         "EditorExtensionRegistry|multiplayerTab|session",
         "EditorExtensionRegistry|multiplayerTab|conditions",
+        "EditorExtensionRegistry|multiplayerTab|profiler",
         // UI 프레임 단계는 이 순서로 돈다(EditorFrameStepOrder) — 에셋 리로드가 패널보다, 패널이 자체 테스트보다 앞이다.
         "EditorExtensionRegistry|frameStep|commands",
         "EditorExtensionRegistry|frameStep|assetReload",
