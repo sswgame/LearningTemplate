@@ -19,7 +19,7 @@ SW_TEST_CASE( EditorAssetTypeTest, MatchesKnownSuffixes )
 {
     SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Scene, "maps/town.scene.xml" ) );
     SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Prefab, "prefabs/hero.prefab.xml" ) );
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::AnimationGraph, "anim/idle.anim.json" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::AnimationGraph, "anim/idle.animgraph.json" ) );
     SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::TileMap, "maps/overworld.tilemap.xml" ) );
     SW_EXPECT_FALSE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::TileMap, "maps/town.scene.xml" ) );
     // 죽은 확장자는 **음성으로** 못 박는다. 되살아나면 여기서 걸린다.
@@ -132,7 +132,7 @@ SW_TEST_CASE( EditorAssetTypeTest, PanelTitlesAndToolKinds )
 
 SW_TEST_CASE( EditorAssetTypeTest, FindPanelTitleLongestSuffix )
 {
-    const auto animationTitle = sw::editor::EditorAssetTypeRegistry::findPanelTitleForPath( "content/hero.anim.json" );
+    const auto animationTitle = sw::editor::EditorAssetTypeRegistry::findPanelTitleForPath( "content/hero.animgraph.json" );
     SW_EXPECT_STREQ( "Animation Graph", sw::string{ animationTitle }.c_str() );
 
     const auto matTitle = sw::editor::EditorAssetTypeRegistry::findPanelTitleForPath( "content/hero.material" );
@@ -144,8 +144,8 @@ SW_TEST_CASE( EditorAssetTypeTest, FindPanelTitleLongestSuffix )
 
 SW_TEST_CASE( EditorAssetTypeTest, DataDoesNotStealAnimationJSON )
 {
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::AnimationGraph, "a.anim.json" ) );
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Data, "a.anim.json" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::AnimationGraph, "a.animgraph.json" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Data, "a.animgraph.json" ) );
 }
 
 SW_TEST_CASE( EditorAssetTypeTest, AllAssetKindsAndMatchesAny )
@@ -373,7 +373,7 @@ SW_TEST_CASE( EditorAssetTypeTest, FindKindTakesTheFirstMatchingRow )
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "maps/town.scene.xml" ) == EditorAssetType::Scene );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "prefabs/hero.prefab.json" ) == EditorAssetType::Prefab );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "sprites/hero.png" ) == EditorAssetType::Texture );
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "anim/idle.anim.json" ) == EditorAssetType::AnimationGraph );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "anim/idle.animgraph.json" ) == EditorAssetType::AnimationGraph );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "cut/intro.seq.json" ) == EditorAssetType::Sequence );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "maps/overworld.tilemap.xml" ) == EditorAssetType::TileMap );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "config/input.ini" ) == EditorAssetType::Data );

@@ -10,7 +10,7 @@ using namespace sw::editor;
 
 /**
  * @brief [EditorResourceIndexTest] 퀵 런처의 분류는 애셋 종류 표와 같다 — Data 도 표의 Data 다
- * @details 퀵 런처가 분류를 따로 적으면 표와 어긋난다 — 표의 Data(`.xml .json .ini .kv`) 일부가 런처에서 빠지고, `.anim.json` · `.tilemap.xml` 이
+ * @details 퀵 런처가 분류를 따로 적으면 표와 어긋난다 — 표의 Data(`.xml .json .ini .kv`) 일부가 런처에서 빠지고, `.animgraph.json` · `.tilemap.xml` 이
  *          자기 종류 대신 Data 로 뜨고, 표에 있는 종류(머티리얼 · 오디오)가 색인되지 않는다.
  */
 SW_TEST_CASE( EditorResourceIndexTest, CategoryComesFromTheKindTable )
@@ -35,7 +35,7 @@ SW_TEST_CASE( EditorResourceIndexTest, CategoryComesFromTheKindTable )
     };
     const Expectation arrExpectation[] = {
         {       "Resource/game/empty/maps/town.scene.xml",          EditorAssetType::Scene},
-        {       "Resource/game/empty/anim/idle.anim.json", EditorAssetType::AnimationGraph},
+        {  "Resource/game/empty/anim/idle.animgraph.json", EditorAssetType::AnimationGraph},
         {"Resource/game/empty/maps/overworld.tilemap.xml",        EditorAssetType::TileMap},
         {       "Resource/engine/materials/hero.material",       EditorAssetType::Material},
         {             "Resource/game/empty/audio/hit.wav",          EditorAssetType::Audio},
@@ -71,7 +71,7 @@ SW_TEST_CASE( EditorResourceIndexTest, CatalogCountsEveryKindOfTheTable )
         "textures/b.dds",
         "shaders/pbr.hlsl",
         "config/input.ini",
-        "anim/idle.anim.json",
+        "anim/idle.animgraph.json",
         "notes/todo.txt",
     };
     EditorResourceCatalogCounts counts{};

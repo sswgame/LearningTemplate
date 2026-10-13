@@ -46,7 +46,7 @@ namespace sw::editor
         constexpr string_view kArrShaderExt[]          = { ".hlsl", ".hlsli" };
         constexpr string_view kArrAudioExt[]           = { ".wav" };
         constexpr string_view kArrDataExt[]            = { ".xml", ".json", ".ini", ".kv" };
-        constexpr string_view kArrAnimationSuffix[]    = { ".anim.json", ".anim" };
+        constexpr string_view kArrAnimationSuffix[]    = { ".animgraph.json" };
         constexpr string_view kArrDialogueSuffix[]     = { ".dialogue.json", ".dialogue" };
         constexpr string_view kArrSpriteDocSuffix[]    = { ".sprite.json", ".sprite" };
         constexpr string_view kArrSpriteImageExt[]     = { ".png", ".jpg", ".jpeg", ".dds", ".tga" };
@@ -413,7 +413,7 @@ namespace sw::editor
         if ( assetPath.empty() )
             return {};
 
-        // 가장 긴 접미사가 이긴다. `.anim.json` 이 `.json` 보다 구체적이다.
+        // 가장 긴 접미사가 이긴다. `.animgraph.json` 이 `.json` 보다 구체적이다.
         size_t                               bestLen{ 0 };
         EditorAssetType                      bestKind{ EditorAssetType::Unknown };
         uint32                               mappingCount{ 0 };

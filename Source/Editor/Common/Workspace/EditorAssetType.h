@@ -138,7 +138,7 @@ namespace sw::editor
 
         /**
          * @brief 경로가 속한 종류 하나를 반환합니다. 해당하는 종류가 없으면 `Unknown` 입니다.
-         * @details 판정 테이블의 순서대로 처음 맞는 항목이 이긴다. `.anim.json` 은 Data 보다 앞선 AnimationGraph 로, 이미지는 SpriteClip 보다 앞선 Texture 로 판정한다.
+         * @details 판정 테이블의 순서대로 처음 맞는 항목이 이긴다. `.animgraph.json` 은 Data 보다 앞선 AnimationGraph 로, 이미지는 SpriteClip 보다 앞선 Texture 로 판정한다.
          *          아이콘, 색, 퀵 런처 분류, 카탈로그, 썸네일, 열기, 드롭이 모두 이 함수 하나로 종류를 정한다.
          */
         static EditorAssetType findKind( string_view path );

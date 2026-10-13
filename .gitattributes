@@ -23,4 +23,4 @@ Resource/**/localization/** -text
 
 # uipreview 시나리오가 에디터로 저장하는 픽스처 — 에디터는 LF 로 쓰므로 체크아웃도 LF 여야 저장 뒤 작업 트리가 더러워지지 않는다
 Resource/engine/automation/editor/uipreview/*.ui.xml text eol=lf
-Resource/engine/automation/editor/animgraphedit/*.anim.json text eol=lf
+Resource/engine/automation/editor/animgraphedit/*.animgraph.json text eol=lf
