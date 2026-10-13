@@ -3,8 +3,8 @@
 """
 씬 로드 측정 하니스 — 큰 씬을 만들어, 측정 창 안에서 비동기로 열고(로드 중 최악 프레임) 원본 XML 과 쿠킹본을 견준다.
 
-    py -3 Scripts/qa/SceneLoadBench.py --app build/Ninja-Release/Bin/App.exe                    # 엔티티 4000, XML 3 판 → 쿠킹 → 쿠킹본 3 판
-    py -3 Scripts/qa/SceneLoadBench.py --app build/Ninja-Release/Bin/App.exe --count 8000 --runs 5 --asset-report
+    py -3 -m Scripts scene-load-bench --app build/Ninja-Release/Bin/App.exe                    # 엔티티 4000, XML 3 판 → 쿠킹 → 쿠킹본 3 판
+    py -3 -m Scripts scene-load-bench --app build/Ninja-Release/Bin/App.exe --count 8000 --runs 5 --asset-report
 
 무엇을 재는가(백로그 1-8 "직렬화기와 리소스 로드의 리플렉션 비용, 비동기 씬 로드 중 최악 프레임"):
   - 로드 자체: 로그 `'Scene.load.parse': N ms`(문서 읽기 — XML 이면 이름 대조 · 텍스트 파싱, 쿠킹본이면 바이너리)와

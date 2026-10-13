@@ -3,6 +3,7 @@
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/IndexFreeList.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
@@ -67,7 +68,7 @@ namespace sw
         {
             mutable mutex                                   _mutex;
             vector<LoopbackLink>                            _listLink;
-            vector<int32>                                   _listFreeLink;
+            vector<uint32>                                  _listFreeLink;
             unordered_map<uint16, LoopbackStreamTransport*> _mapListener;
             LoopbackStreamConditions                        _conditions;
             uint32                                          _randomState;
@@ -302,17 +303,9 @@ namespace sw
         private:
             StreamConnectionHandle allocateSlotLocked()
             {
-                uint32 index = 0;
-                if ( _listFreeSlot.empty() == false )
-                {
-                    index = _listFreeSlot.back();
-                    _listFreeSlot.pop_back();
-                }
-                else
-                {
-                    index = static_cast<uint32>( _listSlot.size() );
+                const uint32 index = reserveFreeListIndex( _listSlot, _listFreeSlot );
+                if ( index == _listSlot.size() )
                     _listSlot.push_back( LoopbackHandleSlot{} );
-                }
                 LoopbackHandleSlot& slot = _listSlot[index];
                 slot._bUsed              = SW_TRUE;
                 slot._linkIndex          = -1;
@@ -346,7 +339,7 @@ namespace sw
                         if ( bOtherFreed )
                         {
                             link = LoopbackLink{};
-                            _pState->_listFreeLink.push_back( linkIndex );
+                            _pState->_listFreeLink.push_back( static_cast<uint32>( linkIndex ) );
                         }
                     }
                 }
@@ -354,19 +347,11 @@ namespace sw
 
             int32 allocateLinkLocked()
             {
-                int32 linkIndex = 0;
-                if ( _pState->_listFreeLink.empty() == false )
-                {
-                    linkIndex = _pState->_listFreeLink.back();
-                    _pState->_listFreeLink.pop_back();
-                }
-                else
-                {
-                    linkIndex = static_cast<int32>( _pState->_listLink.size() );
+                const uint32 linkIndex = reserveFreeListIndex( _pState->_listLink, _pState->_listFreeLink );
+                if ( linkIndex == _pState->_listLink.size() )
                     _pState->_listLink.emplace_back();
-                }
-                _pState->_listLink[static_cast<size_t>( linkIndex )]._bUsed = SW_TRUE;
-                return linkIndex;
+                _pState->_listLink[linkIndex]._bUsed = SW_TRUE;
+                return static_cast<int32>( linkIndex );
             }
 
             LoopbackLink* findLinkLocked( StreamConnectionHandle handle )

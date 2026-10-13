@@ -97,6 +97,12 @@ cd build/Ninja-Debug/Bin
   재해시를 일으키면 그 버킷 배열이 Unknown 으로 센다. 데이터 파일 몇 개를 더하자 18 KB 가 넘었다. 공유 캐시는 넣는 자리에서 자기 태그를 건다.
 - **성능은 Release 로 측정한다.** Debug 는 레이스 검출기 · 이터레이터 프록시로 컨테이너 코드를 과장한다(668 vs 87 us). 이전 · 이후 바이너리를 같은 스크립트로
   **번갈아** 2~3 회 측정한다(`git stash -u` → 빌드 → 복사 → `stash pop` → 빌드). 아침 기준선과 오후 결과를 비교하면 기계 상태가 결과로 읽힌다.
+- **측정 명령**(Release · VSync 꺼짐, 측정하는 동안 다른 빌드를 막는다):
+  - 전 · 후 비교 — `py -3 -m Scripts perf-compare --app <후>/App.exe [--app-before <전>/App.exe] [--cases <이름…>] [--runs N]`. 케이스마다 A · B 를 번갈아 재고
+    구간 · `[Bench]` 값의 중앙값 표를 낸다. `--app-before` 가 없으면 같은 바이너리의 `-gv_` 스위치 A/B 케이스만 돈다.
+  - 이 기계의 기준과 견주기 — `py -3 -m Scripts perf`(프레임 p50 · p99).
+  - 씬 로드 — `py -3 -m Scripts scene-load-bench --app <Release>/App.exe [--count 8000] [--runs 5] [--asset-report]`. 원본 XML 을 먼저 여러 번, 쿠킹한 뒤 쿠킹본을 여러 번 잰다.
+  - 모프 · 스킨 풀 준비는 `RT.Deform.preparePool` 아래 `RT.Deform.rebuildMorphPool` · `uploadSkinPalettes` · `rebuildVertexAnimationPool` 구간으로 나눠 본다.
 - **측정 기계**: i5-8500(6 코어 6 스레드). 게임 · 렌더 스레드 + 워커 넷이 코어를 나눠, 나눠도 벽시계가 잘 안 준다 — 틱이 쓰는 CPU 총량이 벽시계를 정한다.
   프로파일러가 없으면 `Ninja-Release`(PDB 있음 — 줄 표) + `py -3 -m Scripts stacks <pid>`(DbgHelp 샘플러). ICF 로 함수가 남의 이름으로 보인다.
 - **표 읽기.** 열은 avg · p50 · p99 · min · max · per_frame 이고 카운터 값은 per_frame 열에 있다(시간 열 0 을 "죽은 경로" 로 읽지 말 것). 평균이 히치를 가린다 —
@@ -137,7 +143,7 @@ cd build/Ninja-Debug/Bin
 - **프레임당 힙 할당**은 `-gv_profileFrames` 보고의 `alloc/frame`, 콜스택은 `-gv_profileAllocSites=N`(Debug App — 횟수는 최적화와 무관, 시간은 같이 측정하지 말 것).
 - **씬 로드 측정**: `Scripts/dev/MakeStressScene.py` 로 큰 씬(도형 섞기) → `-gv_firstScene=<씬>`(또는 Empty 팩 `data/gamesettings.xml` 의 `startMap`) → `[SceneLoad]` 줄. Dev 는 `Cooked/` 를 마운트하지
   않으므로 쿠킹 효과는 `--cooked-dir=<repo>/Resource` 로 쿠킹하고 재고 지운다. 쿠킹본을 읽었는지는 `[SceneDocument] Loaded … from binary` 줄로 본다(`[SceneLoad]` 줄은 늘 논리 경로를 찍는다).
-  기준값(`SceneLoadBench.py --count 8000`, Release dx12, 5 회 가운데 값, Empty 팩): XML 은 파싱 25.6 ms · 인스턴스화 86.8 ms, 쿠킹본은 파싱 6.2 ms · 인스턴스화 26.7 ms 입니다. 로드 중 `GT.Frame` 최악은 XML 18.3 ms · 쿠킹본 14.1 ms 인데 판 사이 변동이 크다(3 회 측정에서는 XML 29.9 ms). 쿠킹본을 읽었는지는 하니스 표 아래 source 줄(`binary …scene.bin`)로 본다 — `[SceneLoad]` 줄은 쿠킹본이어도 `.scene.xml` 을 찍는다.
+  기준값(`py -3 -m Scripts scene-load-bench --count 8000`, Release dx12, 5 회 가운데 값, Empty 팩): XML 은 파싱 25.6 ms · 인스턴스화 86.8 ms, 쿠킹본은 파싱 6.2 ms · 인스턴스화 26.7 ms 입니다. 로드 중 `GT.Frame` 최악은 XML 18.3 ms · 쿠킹본 14.1 ms 인데 판 사이 변동이 크다(3 회 측정에서는 XML 29.9 ms). 쿠킹본을 읽었는지는 하니스 표 아래 source 줄(`binary …scene.bin`)로 본다 — `[SceneLoad]` 줄은 쿠킹본이어도 `.scene.xml` 을 찍는다.
 - **벤치가 상태를 공유하면 단계 순서를 측정한다.** 손대지 않은 대조군이 움직이면 하니스를 의심한다. 벤치 메시가 공유라 배치 결함을 가린 적이 있다 — 씬에서 온 메시로도 본다.
 - **GPU 업로드 비용은 호출당이다**(DX12 ~3.3 us) — 쪼개면 느려진다. 구간을 배열로 묶어 한 번에.
 - **워커가 쓴 데이터를 다른 코어가 읽으면** 캐시 이동이 항목당 일(~40 ns)보다 비싸다. 쓰는 스레드와 읽는 스레드를 같게 둔다.

@@ -145,13 +145,23 @@ namespace sw
         SW_PROFILE_COUNT( "RT.Deform.batches", listBatch.size() );
         SW_PROFILE_COUNT( "RT.Deform.uniqueMeshes", _deform._setScratchSeenMesh.size() );
 
-        _deform._meshMorphPool.rebuild( _pDevice, _deform._listScratchMorphMesh, _deform._listScratchSkinMesh );
-        _deform._meshMorphPool.uploadSkinPalettes( _pDevice, _gpuScene.getSkinPalettes(), _gpuScene.findSkinPaletteRows(), _gpuScene.findMorphWeights() );
+        // 아래 세 구간이 preparePool 안의 무거운 단계다 — 목록이 바뀐 프레임의 풀 재구성(GPU 업로드 포함), 매 프레임의 팔레트 업로드, VAT 테이블 풀.
+        {
+            SW_PROFILE_SCOPE( "RT.Deform.rebuildMorphPool" );
+            _deform._meshMorphPool.rebuild( _pDevice, _deform._listScratchMorphMesh, _deform._listScratchSkinMesh );
+        }
+        {
+            SW_PROFILE_SCOPE( "RT.Deform.uploadSkinPalettes" );
+            _deform._meshMorphPool.uploadSkinPalettes( _pDevice, _gpuScene.getSkinPalettes(), _gpuScene.findSkinPaletteRows(), _gpuScene.findMorphWeights() );
+        }
 
         // 배치에 구간을 기록해 둔다. upload() 가 배치 테이블(g_SwBatches)에 싣는다. 풀에 들어가지 못한 메시는 kInvalidBase 라
         // 셰이더가 레스트 포즈로 그린다.
         _gpuScene.assignMorphBases( _deform._meshMorphPool );
-        _deform._vertexAnimationPool.rebuild( _pDevice, _deform._listScratchVertexAnimationMesh );
+        {
+            SW_PROFILE_SCOPE( "RT.Deform.rebuildVertexAnimationPool" );
+            _deform._vertexAnimationPool.rebuild( _pDevice, _deform._listScratchVertexAnimationMesh );
+        }
         _gpuScene.assignVertexAnimationBases( _deform._vertexAnimationPool );
         SW_PROFILE_COUNT( "RT.Skin.instances", _deform._meshMorphPool.getSkinInstanceCount() );
         SW_PROFILE_COUNT( "RT.Skin.vertices", _deform._meshMorphPool.getSkinVertexCount() );

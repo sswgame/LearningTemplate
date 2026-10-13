@@ -22,25 +22,13 @@ namespace sw
     vector<string> AutomationScenarioChain::splitList( string_view text )
     {
         vector<string> listPath;
-        size_t         begin = 0;
-        while ( begin <= text.size() )
+        StringUtil::forEachToken( text, ",",
+                                  [&listPath]( string_view token )
         {
-            size_t end = text.find( ',', begin );
-            if ( end == string_view::npos )
-                end = text.size();
-            string_view part = text.substr( begin, end - begin );
-            while ( part.empty() == false && ( part.front() == ' ' || part.front() == '	' ) )
-            {
-                part.remove_prefix( 1 );
-            }
-            while ( part.empty() == false && ( part.back() == ' ' || part.back() == '	' ) )
-            {
-                part.remove_suffix( 1 );
-            }
-            if ( part.empty() == false )
-                listPath.emplace_back( part );
-            begin = end + 1;
-        }
+            const string_view path = StringUtil::trim( token );
+            if ( path.empty() == false )
+                listPath.emplace_back( path );
+        } );
         return listPath;
     }
 
