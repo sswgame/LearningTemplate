@@ -4,6 +4,21 @@
 
 namespace sw
 {
+    TaskNodePool::TaskNodePool( TaskManager* pOwner )
+        : _pOwner{ pOwner }
+        , _freeQueue{}
+        , _listOverflowFree{}
+        , _listSlab{}
+        , _slabMutex{}
+        , _listStageFree{}
+        , _listStageAll{}
+        , _stageMutex{}
+        , _groupPool{}
+        , _detachedReferenceCount{ 0 }
+        , _bDetached{ false }
+    {
+    }
+
     TaskNodePool::~TaskNodePool()
     {
         std::scoped_lock<mutex> lock{ _slabMutex };
@@ -39,6 +54,8 @@ namespace sw
                 for ( uint32 index = 0; index < kSlabSize; ++index )
                 {
                     sw_placement_new( &pSlab[index] ) TaskNode();
+                    pSlab[index]._pPool = this;
+                    pSlab[index]._refCount.store( 0, std::memory_order_relaxed ); // 자유 노드는 0 이다(`detachOwner` 가 참조 남은 노드를 이것으로 가린다)
                 }
                 {
                     std::scoped_lock<mutex> lock{ _slabMutex };
@@ -61,7 +78,6 @@ namespace sw
         pMem->_bScheduled.store( false, std::memory_order_relaxed );
         pMem->_bCancelled.store( false, std::memory_order_relaxed );
         pMem->_refCount.store( 1, std::memory_order_relaxed );
-        pMem->_pOwner  = nullptr;
         pMem->_pParent = nullptr;
 #if !defined( SW_SHIPPING )
         pMem->_arrName[0] = 0;
@@ -81,7 +97,11 @@ namespace sw
 #if !defined( SW_SHIPPING )
         pNode->_arrName[0] = 0;
 #endif
-        pNode->_pOwner = nullptr;
+        if ( _bDetached.load( std::memory_order_acquire ) )
+        {
+            returnDetachedReference(); // 매니저가 없으니 다시 꺼낼 쪽도 없다 — 자유 목록에 넣지 않는다
+            return;
+        }
 
         if ( _freeQueue.enqueue( pNode ) == false )
         {
@@ -118,27 +138,69 @@ namespace sw
     {
         if ( pStage == nullptr )
             return;
+        if ( _bDetached.load( std::memory_order_acquire ) )
+        {
+            returnDetachedReference();
+            return;
+        }
         std::scoped_lock<mutex> lock{ _stageMutex };
         _listStageFree.push_back( pStage );
     }
 
     void TaskNodePool::resetAllStages()
     {
-        vector<StageNode*> listLive;
+        // 남은 태스크가 있는 스테이지만 그 몫(스테이지가 스스로 잡은 참조 하나)을 놓는다. 핸들이 쥔 참조는 그대로 둔다 —
+        // 0 으로 덮으면 그 핸들이 나중에 놓을 때 이미 재사용된 스테이지의 수를 내린다.
+        vector<StageNode*> listPending;
         {
             std::scoped_lock<mutex> lock{ _stageMutex };
             for ( const unique_ptr<StageNode>& uniqueStage : _listStageAll )
             {
-                if ( uniqueStage != nullptr && uniqueStage->_refCount.load( std::memory_order_relaxed ) > 0 )
-                    listLive.push_back( uniqueStage.get() );
+                if ( uniqueStage != nullptr && uniqueStage->_join.getPending() > 0 )
+                    listPending.push_back( uniqueStage.get() );
             }
         }
-        for ( StageNode* pStage : listLive )
+        for ( StageNode* pStage : listPending )
         {
-            pStage->_refCount.store( 0, std::memory_order_relaxed );
             pStage->_join.reset();
-            deallocateStage( pStage );
+            pStage->release();
         }
+    }
+
+    bool TaskNodePool::detachOwner()
+    {
+        _pOwner               = nullptr;
+        uint32 referenceCount = 0;
+        {
+            std::scoped_lock<mutex> lock{ _slabMutex };
+            for ( TaskNode* pSlab : _listSlab )
+            {
+                for ( uint32 index = 0; index < kSlabSize; ++index )
+                {
+                    if ( pSlab[index]._refCount.load( std::memory_order_acquire ) > 0 )
+                        ++referenceCount;
+                }
+            }
+        }
+        {
+            std::scoped_lock<mutex> lock{ _stageMutex };
+            for ( const unique_ptr<StageNode>& uniqueStage : _listStageAll )
+            {
+                if ( uniqueStage->_refCount.load( std::memory_order_acquire ) > 0 )
+                    ++referenceCount;
+            }
+        }
+        if ( referenceCount == 0 )
+            return true;
+        _detachedReferenceCount.store( referenceCount, std::memory_order_relaxed );
+        _bDetached.store( true, std::memory_order_release );
+        return false;
+    }
+
+    void TaskNodePool::returnDetachedReference()
+    {
+        if ( _detachedReferenceCount.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
+            sw_delete( this );
     }
 
     ParallelGroup* TaskNodePool::allocateGroup()
