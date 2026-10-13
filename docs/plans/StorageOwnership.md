@@ -65,9 +65,16 @@ LocalizedTextArena* const pArena = s_localizedTextArena.getOrCreate();
 | `ModuleDependencyGraph::clear` 의 표 용량 | `ModuleHost/ModuleDependencyGraph.cpp` | ③ | `ModuleDependencyGraph` | 모듈 호스트 종료 | `ded0a6fd6` 에서 고침 — 위와 같이 본다 |
 | `GimmickNodeRegistry::getDefault` | `GameFramework/Base/Gameplay/Gimmick/GimmickNodeRegistry.cpp` | ③ | 엔진 수명 범위(`ScopeOwned` 면 기동 단계 등록이 필요 없다) | `ded0a6fd6` 가 기동 단계로 당김 | 다음 단위 — 병합 뒤 `ScopeOwned` 로 대체할 수 있는지 본다 |
 | `EditorSiblingOrder::isFolder` | `Editor/Common/Commands/EditorSiblingOrder.cpp` | ④ | — | — | `ded0a6fd6` 에서 고침(조회가 태그를 등록하던 결함) |
+| `ObjectCopyBuffer` 의 함수 안 정적 목록 | `Engine/Object/GameObject/ObjectCopyBuffer.cpp` | ① | 엔진 수명 범위 | 없음 | 옮김 — `ScopeOwned` |
+| `RenderThread` 스크린샷 우편함 | `Engine/Renderer/RenderThread.cpp` | ① | 엔진 수명 범위 | 없음 | 옮김 — `ScopeOwned` |
+| `TagID` 등록표 | `Core/String/TagID.cpp` | ① | 엔진 수명 범위(이름 풀보다 먼저 닫힌다) | 없음 | 옮김 — `ScopeOwned` |
+| `ValidationIssueLog::get` | `Engine/Reflection/ReflectionValidation.cpp` | ① | 엔진 수명 범위 | 없음 | 옮김 — `ScopeOwned` |
+| `ReflectValue` 기본 타입 이름 표 | `Engine/Reflection/ReflectValue.cpp` | ③ | — | 없음 | 저장소를 없앰 — 고정 `array` |
+| `AutomationScenarioChain::getCurrentPath` 의 빈 경로 | `Engine/Automation/AutomationScenarioChain.cpp` | ③ | 이미지 적재 | 없음 | 정적 멤버로 옮김 |
+| `DeferredImageUnloadQueue` 목록 용량 | `ModuleHost/DeferredImageUnloadQueue.cpp` | ③ | `LiveReloadManager`(보고 뒤에 사라진다) | `unloadAll` | 다 비우면 빈 객체 대입 |
 | `Win32SplashWindow::releasePaintCache` | `Engine/Window/Windows/Win32SplashWindow.cpp` | 해당 없음 | — | 창 크기 변경 · 파괴 | GDI 자원 정리 도우미다. 종료 누수와 무관하다 |
 
-종류별 개수(해당 없음 제외 23): ① 15 · ② 3 · ③ 4 · ④ 1(`SceneTransformStorage` · `RHIRenderResource` 의 검출 몫은 ①로 셌다).
+종류별 개수(해당 없음 제외 30): ① 19 · ② 3 · ③ 7 · ④ 1(`SceneTransformStorage` · `RHIRenderResource` 의 검출 몫은 ①로 셌다).
 
 ## 다음 단위
 
