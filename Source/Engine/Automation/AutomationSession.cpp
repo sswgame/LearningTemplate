@@ -109,7 +109,9 @@ namespace sw
 
     int32 AutomationSession::onWindowClosed( const EngineFrameContext& context )
     {
-        if ( _pRunner == nullptr )
+        // 이미 끝난 세션은 정하지 않는다 — 종료 코드는 끝낸 프레임(`onStageEnded`)이 체인 전체의 결과로 정했다. 여기서 러너의 결과를 돌려주면
+        // 마지막 단계의 결과(통과 0)가 앞 단계의 실패(10)를 덮는다(엔진 루프는 창 닫힘 관찰자의 코드를 앞선 종료 요청보다 앞세운다).
+        if ( _pRunner == nullptr || _pRunner->hasEnded() )
             return kRunning;
         AutomationResult result = _pRunner->onWindowClosed( context._pInput );
         // 창이 닫히면 루프가 끝난다 — 돌릴 단계가 남아 있으면 체인은 끝까지 가지 못했다(`CloseWindow` 는 마지막 단계에만 둔다).

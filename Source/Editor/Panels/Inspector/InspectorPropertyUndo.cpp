@@ -40,6 +40,27 @@ namespace sw::editor
             return s_listFinished;
         }
 
+        /** @brief 선택한 오브젝트 전부의 "편집 전" 스냅샷을 찍습니다. @p pLabel 이 널이면 "Property" 입니다. */
+        PendingEdit captureSelectionBeforeEdit( EditorContext& context, const utf8* pLabel )
+        {
+            vector<GameObject*> listSelected;
+            context.getEditorSelection().getSelectedObjects( listSelected );
+            if ( listSelected.empty() )
+            {
+                GameObject* pSelected = context.getWorkspace().getSelectedObject();
+                if ( pSelected != nullptr )
+                    listSelected.push_back( pSelected );
+            }
+            PendingEdit pending;
+            for ( GameObject* pSelected : listSelected )
+            {
+                pending._listTarget.push_back( pSelected->getHandle() );
+                pending._listBefore.push_back( EditorTransaction::captureSnapshot( pSelected ) );
+            }
+            pending._label = ( pLabel != nullptr ) ? pLabel : "Property";
+            return pending;
+        }
+
         /**
          * @brief ImGui 위젯의 활성화~해제 사이를 한 번의 Undo 로 묶습니다.
          * @param pLabel Undo 항목에 붙일 이름 (널이면 "Property")
@@ -54,24 +75,7 @@ namespace sw::editor
 
             const ImGuiID id = ImGui::GetItemID();
             if ( ImGui::IsItemActivated() )
-            {
-                vector<GameObject*> listSelected;
-                pContext->getEditorSelection().getSelectedObjects( listSelected );
-                if ( listSelected.empty() )
-                {
-                    GameObject* pSelected = pContext->getWorkspace().getSelectedObject();
-                    if ( pSelected != nullptr )
-                        listSelected.push_back( pSelected );
-                }
-                PendingEdit pending;
-                for ( GameObject* pSelected : listSelected )
-                {
-                    pending._listTarget.push_back( pSelected->getHandle() );
-                    pending._listBefore.push_back( EditorTransaction::captureSnapshot( pSelected ) );
-                }
-                pending._label   = ( pLabel != nullptr ) ? pLabel : "Property";
-                s_mapPending[id] = std::move( pending );
-            }
+                s_mapPending[id] = captureSelectionBeforeEdit( *pContext, pLabel );
 
             if ( ImGui::IsItemDeactivatedAfterEdit() == false )
                 return;
@@ -103,6 +107,14 @@ namespace sw::editor
     void InspectorPropertyUndo::trackLastItem( const utf8* pPropertyLabel )
     {
         trackActiveItemEdit( pPropertyLabel );
+    }
+
+    void InspectorPropertyUndo::recordImmediateEdit( const PropertyInfo& prop )
+    {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+        getFinishedEdits().push_back( captureSelectionBeforeEdit( *pContext, InspectorPropertyLayout::getPropertyLabel( prop ) ) );
     }
 
     void InspectorPropertyUndo::commitFinishedEdits()

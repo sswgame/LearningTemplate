@@ -22,7 +22,7 @@
 	<At frame="95"><EditorKey key="Ctrl+Z"/></At>
 	<At frame="115">
 		<Expect probe="Editor.HierarchyRowIndex" equals="2"/>
-		<Expect probe="Editor.UndoCount" equals="0"/>
+		<Expect probe="Editor.UndoIndex" equals="0"/>
 	</At>
 	<At frame="120"><DevCommand line="editor scene.moveSiblingDown"/></At>
 	<At frame="140"><Expect probe="Editor.HierarchyRowIndex" equals="3"/></At>

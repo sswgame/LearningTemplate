@@ -103,6 +103,11 @@ SW_TEST_CASE( AutomationSessionTest, FailureStopsTheChainUnlessKeepGoing )
         SW_ASSERT_TRUE( session.begin( failing + "," + after, {}, true, 0u ) );
         SW_EXPECT_EQUAL( static_cast<int32>( sw::AutomationResult::Failed ), Internal::run( session, input ) );
         SW_EXPECT_EQUAL( 1u, Internal::s_markCount ); // 이어 돌았다
+        // 끝난 뒤 앱이 창을 닫아도 마지막 단계의 통과(0)가 체인의 실패 코드를 덮지 않는다
+        sw::IEngineFrameObserver& observer = session;
+        sw::EngineFrameContext    context;
+        context._pInput = &input;
+        SW_EXPECT_EQUAL( sw::IEngineFrameObserver::kRunning, observer.onWindowClosed( context ) );
     }
     input.shutdown();
 }

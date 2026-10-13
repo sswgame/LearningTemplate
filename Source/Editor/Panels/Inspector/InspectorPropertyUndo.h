@@ -27,6 +27,12 @@ namespace sw::editor
          */
         static void trackLastItem( const utf8* pPropertyLabel );
         /**
+         * @brief 값을 쓰기 **직전에** 불러 그 한 번의 변경을 되돌리기에 남깁니다. 편집 전을 지금 찍고, 기록은 `commitFinishedEdits` 가 한다.
+         * @details 콤보처럼 고르는 순간 값이 바뀌는 위젯용이다. 콤보 단추는 누를 때 활성화되고 놓을 때 편집 없이 풀리며, 고른 항목은 팝업 창의
+         *          다른 위젯이라 `IsItemDeactivatedAfterEdit` 로는 그 변경이 잡히지 않는다.
+         */
+        static void recordImmediateEdit( const PropertyInfo& prop );
+        /**
          * @brief 이번 프레임에 풀린 편집을 되돌리기에 남깁니다. 인스펙터가 그리기를 마친 뒤 부릅니다.
          * @details 위젯이 풀린 순간이 아니라 그 뒤에 기록하는 까닭: 다중 선택은 편집 통지(위젯 뒤)에서 값을 나머지 오브젝트에 입힌다. 풀린 순간에 "뒤" 스냅샷을 뜨면 그 입히기가 빠진다.
          */
