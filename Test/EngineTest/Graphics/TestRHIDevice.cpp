@@ -524,6 +524,61 @@ SW_TEST_CASE( RHIDeviceTest, BindlessTextureReleaseKeepsBufferIndices )
         SW_TEST_SKIP( "No RHI backend could initialize for bindless index-space test" );
 }
 
+#if !defined( SW_SHIPPING )
+/**
+ * @brief [RHIDeviceTest] bindless 인덱스 생존 질의가 등록 · 해제를 따라간다 (4 백엔드)
+ * @details 바인드 시점 검사(BindlessIndexValidator)는 이 질의 하나로 "셰이더에 넘기는 번호가 살아 있나" 를 본다. 해제 직후(Vulkan 은 해제 대기)
+ *          번호가 살아 있다고 답하면 해제한 디스크립터를 읽는 드로우를 놓치고, 발급한 적 없는 번호를 살아 있다고 답해도 마찬가지다.
+ */
+SW_TEST_CASE( RHIDeviceTest, BindlessIndexLivenessFollowsRegistration )
+{
+    // 어느 백엔드도 이만큼 등록하지 않는다(Vulkan 배열 4096 · DX12 힙 32768 보다 크다).
+    constexpr sw::RHIDescriptorIndex kNeverIssued = 1000000;
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+        const sw::string         label     = sw::string( device->getBackendName() );
+
+        const sw::RHIBufferHandle buffer = pResource->createConstantBuffer( 64 );
+        SW_ASSERT_TRUE( buffer != 0 );
+        const sw::RHIDescriptorIndex bufferIndex = pResource->registerBindlessBufferSrv( buffer );
+        SW_ASSERT_TRUE( bufferIndex != sw::kInvalidDescriptorIndex );
+
+        sw::RHITextureDesc texDesc{};
+        texDesc._width                     = 4;
+        texDesc._height                    = 4;
+        texDesc._format                    = sw::RHIFormat::R8G8B8A8_UNORM;
+        texDesc._bIsRenderTarget           = SW_TRUE;
+        texDesc._bIsShaderResource         = SW_TRUE;
+        const sw::RHITextureHandle texture = pResource->createTexture2D( texDesc );
+        SW_ASSERT_TRUE( texture != 0 );
+        const sw::RHIDescriptorIndex textureIndex = pResource->registerBindlessTexture( texture );
+        SW_ASSERT_TRUE( textureIndex != sw::kInvalidDescriptorIndex );
+
+        SW_EXPECT_TRUE_MSG( device->isBindlessIndexLive( sw::RHIBindlessIndexSpace::Buffer, bufferIndex ), ( label + ": registered buffer" ).c_str() );
+        SW_EXPECT_TRUE_MSG( device->isBindlessIndexLive( sw::RHIBindlessIndexSpace::Texture, textureIndex ), ( label + ": registered texture" ).c_str() );
+        SW_EXPECT_FALSE_MSG( device->isBindlessIndexLive( sw::RHIBindlessIndexSpace::Texture, kNeverIssued ), ( label + ": never-issued texture" ).c_str() );
+        SW_EXPECT_FALSE_MSG( device->isBindlessIndexLive( sw::RHIBindlessIndexSpace::Buffer, kNeverIssued ), ( label + ": never-issued buffer" ).c_str() );
+        // DX12 는 힙 하나라 종류까지 본다 — 버퍼 뷰 자리를 텍스처로 읽으면 잘못된 디스크립터다.
+        if ( device->getBackendType() == sw::RHIBackend::DirectX12 )
+            SW_EXPECT_FALSE_MSG( device->isBindlessIndexLive( sw::RHIBindlessIndexSpace::Texture, bufferIndex ), "DirectX12: buffer view read as a texture" );
+
+        pResource->unregisterBindlessTexture( textureIndex );
+        pResource->unregisterBindlessResource( bufferIndex );
+        SW_EXPECT_FALSE_MSG( device->isBindlessIndexLive( sw::RHIBindlessIndexSpace::Texture, textureIndex ), ( label + ": released texture" ).c_str() );
+        SW_EXPECT_FALSE_MSG( device->isBindlessIndexLive( sw::RHIBindlessIndexSpace::Buffer, bufferIndex ), ( label + ": released buffer" ).c_str() );
+
+        pResource->destroyTexture( texture );
+        pResource->destroyBuffer( buffer );
+    }
+
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend could initialize for bindless liveness test" );
+}
+#endif
+
 #if defined( SW_PLATFORM_WINDOWS )
 /**
  * @brief [RHIDeviceTest] DX12 — 등록에 실패한 CBV 는 집은 힙 인덱스를 돌려준다

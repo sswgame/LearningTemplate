@@ -35,6 +35,13 @@ namespace sw
         Texture               ///< `createTexture` 가 돌려준 핸들이며 `destroyTexture` 로 해제한다.
     };
 
+    /** @brief bindless 인덱스가 속한 공간입니다. DX12 는 둘이 힙 하나를 나눠 쓰고, 나머지 백엔드는 공간마다 번호가 따로입니다. */
+    enum class RHIBindlessIndexSpace : uint8
+    {
+        Texture = 0, ///< `registerBindlessTexture` 가 준 텍스처 SRV 인덱스
+        Buffer       ///< `registerBindlessBufferSrv` 가 준 버퍼(구조 버퍼 SRV · 상수 버퍼) 인덱스
+    };
+
     /** @brief `RHINativeHandles` 의 버전 번호입니다. 필드, 순서, 의미가 바뀌면 올립니다. */
     inline constexpr uint32 kRHINativeHandlesVersion = 2;
 
@@ -237,6 +244,22 @@ namespace sw
          * @note false 면 CPU 가 그 인덱스로 슬롯을 바인딩해야 합니다(DX11, GL 에뮬레이션).
          */
         virtual bool supportsNativeBindlessSampling() const { return false; }
+
+#if !defined( SW_SHIPPING )
+        /**
+         * @brief @p index 가 @p space 에서 지금 살아 있는 리소스를 가리키면 true 입니다(Debug · Dev 진단 전용, Shipping 에는 없습니다).
+         * @details 해제했거나(해제 대기 포함) 발급한 적 없는 번호, 다른 종류(텍스처 자리에 버퍼)를 가리키는 번호는 false 다.
+         *          셰이더에 그 번호를 넘기면 DX12 · Vulkan 은 무효 디스크립터를 읽어 디바이스를 잃을 수 있다. 정책(언제 묻고 무엇을 남기나)은
+         *          Engine 의 `BindlessIndexValidator` 가, 생존 판정(등록 표 읽기)은 백엔드가 한다. `kInvalidDescriptorIndex` 는 묻지 않는다.
+         *          병렬 기록 스레드에서 불러도 된다(등록 표를 읽기 잠금으로 읽는다). 등록 표가 없는 디바이스(테스트 목)는 늘 true 다.
+         */
+        virtual bool isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const
+        {
+            (void)space;
+            (void)index;
+            return true;
+        }
+#endif
 
         /**
          * @brief 그래픽스 VS 가 GPUScene 인스턴스 구조 버퍼(SwInstanceData)를 읽을 수 있으면 true 를 반환합니다.

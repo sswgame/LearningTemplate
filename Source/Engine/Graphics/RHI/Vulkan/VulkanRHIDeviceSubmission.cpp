@@ -11,6 +11,132 @@ namespace sw
 {
     SW_LOG_CALLER( "Vulkan" );
 
+    namespace
+    {
+        struct VulkanRHIDeviceSubmissionInternal
+        {
+            /** @brief 큐 호출이 돌려주는 실패 값의 이름입니다. 모르는 값은 "unknown" 이고 숫자는 로그에 같이 적힌다. */
+            static const utf8* getResultName( VkResult result )
+            {
+                switch ( result )
+                {
+                    case VK_ERROR_DEVICE_LOST:
+                        return "VK_ERROR_DEVICE_LOST";
+                    case VK_ERROR_OUT_OF_HOST_MEMORY:
+                        return "VK_ERROR_OUT_OF_HOST_MEMORY";
+                    case VK_ERROR_OUT_OF_DEVICE_MEMORY:
+                        return "VK_ERROR_OUT_OF_DEVICE_MEMORY";
+                    case VK_TIMEOUT:
+                        return "VK_TIMEOUT";
+                    default:
+                        return "unknown";
+                }
+            }
+
+            /** @brief VK_EXT_device_fault 의 주소 종류 이름입니다. */
+            static const utf8* getFaultAddressTypeName( VkDeviceFaultAddressTypeEXT type )
+            {
+                switch ( type )
+                {
+                    case VK_DEVICE_FAULT_ADDRESS_TYPE_READ_INVALID_EXT:
+                        return "read-invalid";
+                    case VK_DEVICE_FAULT_ADDRESS_TYPE_WRITE_INVALID_EXT:
+                        return "write-invalid";
+                    case VK_DEVICE_FAULT_ADDRESS_TYPE_EXECUTE_INVALID_EXT:
+                        return "execute-invalid";
+                    case VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_UNKNOWN_EXT:
+                        return "instruction-pointer-unknown";
+                    case VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_INVALID_EXT:
+                        return "instruction-pointer-invalid";
+                    case VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_FAULT_EXT:
+                        return "instruction-pointer-fault";
+                    default:
+                        return "none";
+                }
+            }
+        };
+    } // namespace
+
+    void VulkanRHIDevice::reportQueueResult( int32 result, const utf8* pWhere )
+    {
+        const VkResult vkResult = static_cast<VkResult>( result );
+        if ( vkResult == VK_SUCCESS )
+            return;
+
+        fixed_string<constant::kMaxBuffer64> lastMarker;
+        {
+            std::scoped_lock<mutex> lock{ _submittedMarkerMutex };
+            lastMarker = _lastSubmittedEventMarker;
+        }
+        SW_LOG_ERROR( "%#: VkResult=%# (%#) — last pass put in the submission order: '%#'", pWhere != nullptr ? pWhere : "<queue>", result,
+                      VulkanRHIDeviceSubmissionInternal::getResultName( vkResult ), lastMarker.empty() ? "<none>" : lastMarker.c_str() );
+        if ( vkResult != VK_ERROR_DEVICE_LOST || _bDeviceLostReported.exchange( SW_TRUE ) == SW_TRUE )
+            return;
+        reportDeviceFault();
+    }
+
+    void VulkanRHIDevice::noteSubmittedEventMarker( const utf8* pMarker )
+    {
+        if ( pMarker == nullptr || pMarker[0] == '\0' )
+            return;
+        std::scoped_lock<mutex> lock{ _submittedMarkerMutex };
+        _lastSubmittedEventMarker = pMarker;
+    }
+
+    void VulkanRHIDevice::reportDeviceFault()
+    {
+        PFN_vkGetDeviceFaultInfoEXT pfnGetFaultInfo =
+            ( _bDeviceFault != SW_FALSE && _device != VK_NULL_HANDLE )
+                ? reinterpret_cast<PFN_vkGetDeviceFaultInfoEXT>( vkGetDeviceProcAddr( _device, "vkGetDeviceFaultInfoEXT" ) )
+                : nullptr;
+        if ( pfnGetFaultInfo == nullptr )
+        {
+            SW_LOG_ERROR( "Device lost: VK_EXT_device_fault is not enabled on this device — no fault address or vendor code to report" );
+            return;
+        }
+
+        VkDeviceFaultCountsEXT counts{};
+        counts.sType               = VK_STRUCTURE_TYPE_DEVICE_FAULT_COUNTS_EXT;
+        const VkResult countResult = pfnGetFaultInfo( _device, &counts, nullptr );
+        if ( countResult != VK_SUCCESS && countResult != VK_INCOMPLETE )
+        {
+            SW_LOG_ERROR( "Device lost: vkGetDeviceFaultInfoEXT failed to count the fault records (VkResult=%#)", static_cast<int32>( countResult ) );
+            return;
+        }
+
+        vector<VkDeviceFaultAddressInfoEXT> listAddressInfo( counts.addressInfoCount );
+        vector<VkDeviceFaultVendorInfoEXT>  listVendorInfo( counts.vendorInfoCount );
+        VkDeviceFaultInfoEXT                info{};
+        info.sType                = VK_STRUCTURE_TYPE_DEVICE_FAULT_INFO_EXT;
+        info.pAddressInfos        = listAddressInfo.empty() ? nullptr : listAddressInfo.data();
+        info.pVendorInfos         = listVendorInfo.empty() ? nullptr : listVendorInfo.data();
+        info.pVendorBinaryData    = nullptr;
+        counts.vendorBinarySize   = 0; // 공급사 바이너리 덤프는 읽지 않는다(도구 없이는 읽을 수 없다)
+        const VkResult infoResult = pfnGetFaultInfo( _device, &counts, &info );
+        if ( infoResult != VK_SUCCESS && infoResult != VK_INCOMPLETE )
+        {
+            SW_LOG_ERROR( "Device lost: vkGetDeviceFaultInfoEXT failed (VkResult=%#)", static_cast<int32>( infoResult ) );
+            return;
+        }
+
+        SW_LOG_ERROR( "Device lost (VK_EXT_device_fault): '%#' — %# address record(s), %# vendor record(s)", info.description, counts.addressInfoCount,
+                      counts.vendorInfoCount );
+        for ( uint32 index = 0; index < counts.addressInfoCount && index < listAddressInfo.size(); ++index )
+        {
+            const VkDeviceFaultAddressInfoEXT& address = listAddressInfo[index];
+            SW_LOG_ERROR( "  fault address %#: %# at 0x%# (precision %# bytes)", index,
+                          VulkanRHIDeviceSubmissionInternal::getFaultAddressTypeName( address.addressType ),
+                          Fmt( static_cast<uint64>( address.reportedAddress ), Format( 16, Format::Padding::Zero ).hexUpper() ),
+                          static_cast<uint64>( address.addressPrecision ) );
+        }
+        for ( uint32 index = 0; index < counts.vendorInfoCount && index < listVendorInfo.size(); ++index )
+        {
+            const VkDeviceFaultVendorInfoEXT& vendor = listVendorInfo[index];
+            SW_LOG_ERROR( "  vendor record %#: '%#' code %# data %#", index, vendor.description, static_cast<uint64>( vendor.vendorFaultCode ),
+                          static_cast<uint64>( vendor.vendorFaultData ) );
+        }
+    }
+
     void VulkanRHIDevice::waitIdleInternal()
     {
         if ( _device )
@@ -165,7 +291,8 @@ namespace sw
             return;
         }
 
-        vkWaitForFences( _device, 1, &_listInFlightFence[_currentFrame], VK_TRUE, UINT64_MAX );
+        const VkResult fenceResult = vkWaitForFences( _device, 1, &_listInFlightFence[_currentFrame], VK_TRUE, UINT64_MAX );
+        reportQueueResult( static_cast<int32>( fenceResult ), "beginFrame: vkWaitForFences" );
         // **여기가 타임스탬프를 읽는 유일한 안전한 자리다.** 이 슬롯의 펜스를 방금 통과했다.
         ensureTimestampPool();
         collectTimestampsForSlot();
@@ -323,8 +450,11 @@ namespace sw
         // 이 제출에 새 세대 번호를 매긴다. 이번 프레임 기록 중 등록된 지연 해제(enqueueGPURelease)는
         // 이 세대가 실제로 끝났다고 확인될 때까지(beginFrame 의 tickCompleted) 보류된다.
         _listRingFrameNumber[_currentFrame] = ++_frameFenceCounter;
+        if ( _frameStreamContext != nullptr )
+            noteSubmittedEventMarker( _frameStreamContext->getLastEventMarker() );
         std::unique_lock<mutex> queueLock{ _queueMutex };
-        vkQueueSubmit( _graphicsQueue, 1, &submitInfo, _listInFlightFence[_currentFrame] );
+        const VkResult          submitResult = vkQueueSubmit( _graphicsQueue, 1, &submitInfo, _listInFlightFence[_currentFrame] );
+        reportQueueResult( static_cast<int32>( submitResult ), "endFrame: vkQueueSubmit" );
         // 이 링 슬롯의 쿼리 구간은 이제 "리셋 + 제출" 을 한 번은 거쳤다. 그 전에 읽으면 미정의다.
         if ( _bTimestampEnabled != SW_FALSE && _timestampPool != VK_NULL_HANDLE )
             _arrTimestampSubmitted[_currentFrame] = SW_TRUE;
@@ -501,9 +631,12 @@ namespace sw
         submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers    = &listBuffer;
+        noteSubmittedEventMarker( pList->getLastEventMarker() );
         std::scoped_lock<mutex> queueLock{ _queueMutex };
-        if ( vkQueueSubmit( _graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE ) == VK_SUCCESS )
-            vkQueueWaitIdle( _graphicsQueue );
+        VkResult                queueResult = vkQueueSubmit( _graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE );
+        if ( queueResult == VK_SUCCESS )
+            queueResult = vkQueueWaitIdle( _graphicsQueue );
+        reportQueueResult( static_cast<int32>( queueResult ), "executeCommandListImmediate" );
 
         // 제출한 리스트가 바꾼 레이아웃은 실제로 일어났으므로 되돌릴 기록에서 뺀다.
         std::scoped_lock<mutex> layoutLock{ _imageLayoutMutex };
@@ -533,6 +666,7 @@ namespace sw
         vkEndCommandBuffer( _activeFrameBuffer );
         _listPendingSubmit.push_back( _activeFrameBuffer );
         _listPendingSubmit.push_back( listBuffer );
+        noteSubmittedEventMarker( pList->getLastEventMarker() );
 
         // 즉시 모드: 여기서 바로 내보낸다. acquire 세마포어 대기는 '이 프레임의 첫 제출'에만 걸고,
         // renderFinished 신호와 인플라이트 펜스는 endFrame 의 마지막 제출이 담당한다.
@@ -553,7 +687,8 @@ namespace sw
             }
             {
                 std::scoped_lock<mutex> queueLock{ _queueMutex };
-                vkQueueSubmit( _graphicsQueue, 1, &flushInfo, VK_NULL_HANDLE );
+                const VkResult          flushResult = vkQueueSubmit( _graphicsQueue, 1, &flushInfo, VK_NULL_HANDLE );
+                reportQueueResult( static_cast<int32>( flushResult ), "executeCommandList: vkQueueSubmit (immediate)" );
             }
             _listPendingSubmit.clear();
         }

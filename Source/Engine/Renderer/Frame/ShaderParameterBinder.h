@@ -15,6 +15,8 @@
 
 namespace sw
 {
+    struct BindlessIndexCheckSite;
+
     class FrameResourceRegistry;
     class IRHICommandList;
     class IRHIDevice;
@@ -44,6 +46,8 @@ namespace sw
          *        이 플래그로 건너뛰지 않습니다(각 백엔드의 bindStructuredBuffer 가 스스로 판단합니다).
          * @param pMaterialTexSrv 머티리얼 텍스처 SRV 배열(shaderslot::kMaterialTextureCount 개, 서수 순).
          *        bNativeBindless 가 false 일 때만 쓰이며 t5..t8 에 바인딩됩니다. 없으면 nullptr.
+         * @param pIndexCheck 있으면 넘기는 bindless 인덱스(엔진 CB 의 `g_<Name>Index`, 머티리얼 텍스처, 구조버퍼 · 텍스처 슬롯)가 살아 있는
+         *        슬롯인지 검사합니다(`BindlessIndexValidator`, Debug · Dev 전용). Shipping 에서는 무시됩니다.
          */
         static void bindGraphics( IRHICommandList&                cmd,
                                   const ShaderBindingLayout&      layout,
@@ -53,6 +57,7 @@ namespace sw
                                   RHIDescriptorIndex              materialCb,
                                   bool                            bNativeBindless,
                                   const RHIDescriptorIndex*       pMaterialTexSrv   = nullptr,
-                                  bool                            bEngineCbUpToDate = false );
+                                  bool                            bEngineCbUpToDate = false,
+                                  const BindlessIndexCheckSite*   pIndexCheck       = nullptr );
     };
 } // namespace sw

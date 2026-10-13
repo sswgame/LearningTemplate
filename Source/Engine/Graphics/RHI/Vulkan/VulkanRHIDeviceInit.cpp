@@ -397,17 +397,38 @@ namespace sw
         createInfo.queueCreateInfoCount = 1;
         createInfo.pEnabledFeatures     = &deviceFeatures;
         // VK_EXT_memory_budget 은 선택이다. 있으면 켜서 드라이버의 사용량 · 예산을 읽고(queryGPUMemoryBudgetInternal), 없으면 그 값은 "모름" 이다.
-        vector<const utf8*> listDeviceExtension( s_listDeviceExtensions.begin(), s_listDeviceExtensions.end() );
+        vector<const utf8*>           listDeviceExtension( s_listDeviceExtensions.begin(), s_listDeviceExtensions.end() );
+        vector<VkExtensionProperties> listAvailableExt;
         {
             uint32 availableExtCount{ 0 };
             vkEnumerateDeviceExtensionProperties( _physicalDevice, nullptr, &availableExtCount, nullptr );
-            vector<VkExtensionProperties> listAvailableExt( availableExtCount );
+            listAvailableExt.resize( availableExtCount );
             if ( availableExtCount > 0 )
                 vkEnumerateDeviceExtensionProperties( _physicalDevice, nullptr, &availableExtCount, listAvailableExt.data() );
             _bMemoryBudget = VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME ) ? SW_TRUE : SW_FALSE;
             if ( _bMemoryBudget == SW_TRUE )
                 listDeviceExtension.push_back( VK_EXT_MEMORY_BUDGET_EXTENSION_NAME );
         }
+#if !defined( SW_SHIPPING )
+        // VK_EXT_device_fault(진단 전용): 디바이스를 잃었을 때 결함 주소 · 공급사 코드를 읽는다(reportDeviceFault). 기능 비트까지 있어야 켠다.
+        VkPhysicalDeviceFaultFeaturesEXT faultFeatures{};
+        faultFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT;
+        if ( VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_EXT_DEVICE_FAULT_EXTENSION_NAME ) )
+        {
+            VkPhysicalDeviceFeatures2 faultQuery{};
+            faultQuery.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+            faultQuery.pNext = &faultFeatures;
+            vkGetPhysicalDeviceFeatures2( _physicalDevice, &faultQuery );
+            faultFeatures.pNext = nullptr;
+            if ( faultFeatures.deviceFault == VK_TRUE )
+            {
+                faultFeatures.deviceFaultVendorBinary = VK_FALSE; // 공급사 바이너리 덤프는 읽지 않는다
+                vulkan13Features.pNext                = &faultFeatures;
+                listDeviceExtension.push_back( VK_EXT_DEVICE_FAULT_EXTENSION_NAME );
+                _bDeviceFault = SW_TRUE;
+            }
+        }
+#endif
         createInfo.enabledExtensionCount   = static_cast<uint32>( listDeviceExtension.size() );
         createInfo.ppEnabledExtensionNames = listDeviceExtension.data();
 

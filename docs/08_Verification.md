@@ -308,6 +308,12 @@ cd build/Ninja-Debug/Bin
 - **렌더 검증 씬에는 메시 2 종과 머티리얼 2 종 이상을 넣습니다.** 하나짜리 씬은 다중 배치 · 바인딩 경로를 지나지 않습니다. GPU 정렬 · 압축 테스트는 물체마다 보이는 면의 색을 다르게 둡니다(같은 색 · 같은 알파의 층은 순서와 무관해 테스트가 헛돕니다).
 - **셰이더 결과가 화면에 안 보이면 이 순서로 좁힙니다.** ① 게이트 값(PSO · CB · UAV 핸들, 인스턴스 수)을 찍는다 ② 셰이더가 무조건 눈에 띄는 일을 하게 한다 ③ CB 멤버를 하나씩 조건으로 건다 ④ 임계값을 쓰기 전에 그 값의 실제 범위를 확인한다.
   시간에 따라 움직이는 기능은 `-gv_screenshotFrame` 을 다르게 준 두 장으로 먼저 캡처 시점이 다른지 봅니다.
+- **디바이스 손실(Vulkan `VK_ERROR_DEVICE_LOST`, DX12 `DEVICE_HUNG` · `DEVICE_REMOVED`)이 나면 이 세 단계를 먼저 합니다.** Debug 로 돌립니다.
+  ① 결함 주소를 읽습니다. Vulkan 은 `<자리>: VkResult=-4 (VK_ERROR_DEVICE_LOST) — last pass put in the submission order: '<패스>'` 다음 줄의 `fault address 0: read-invalid at 0x…`(VK_EXT_device_fault)를,
+  DX12 는 DRED 의 `PageFault VA=0x…` 와 그 아래 `PageFault VA is inside live/recently freed allocation 'SW Buffer <핸들> …'` 를 봅니다. 실행마다 같은 주소이고 주소가 서술자 힙 · 배열 시작 + 약 4 GB(0xFFFFFFFF × 서술자 크기)이면
+  무효 bindless 번호로 서술자를 읽은 것입니다([Graphics README](../Source/Engine/Graphics/README.md) "bindless 배열 첨자").
+  ② 같은 명령을 `-gv_validateBindlessIndex=2` 로 다시 돌려 `[BindlessIndex]` 줄을 셉니다. `is not a live` 오류가 있으면 그 패스 · 필드가 원인 후보 1 순위이고, 없으면 `= absent` 목록에서 손실 패스의 필드를 고릅니다.
+  ③ 후보 하나만 셰이더에서 바꿔(첨자를 배열 안으로 자르기, 값을 상수로) 3 회 이상 다시 돌려 재현율을 견줍니다. 셰이더는 개발 빌드에서 라이브 컴파일되므로 다시 빌드할 필요가 없고, 끝나면 `App --cook-shaders` 로 다시 굽습니다.
 
 ## 4. CI
 

@@ -239,6 +239,11 @@ namespace sw
         /** @brief VS 가 슬롯 세트의 t4(g_SwInstances)로 GPUScene 인스턴스 버퍼를 읽을 수 있어 true 입니다. */
         bool supportsInstancedSceneDraw() const override { return true; }
 
+#if !defined( SW_SHIPPING )
+        /** @brief 텍스처는 배열 원소가 사용 중(해제 대기 아님)이고 배열 안이면, 버퍼는 인덱스 → 버퍼 표에 버퍼가 있으면 true 입니다. */
+        bool isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const override;
+#endif
+
         /** @brief 백엔드 버전 문자열을 반환합니다. */
         const utf8* getBackendName() const override { return "Vulkan 1.3"; }
 
@@ -343,6 +348,22 @@ namespace sw
         [[nodiscard]] bool recreateSurfaceAndSwapChain();
         /** @brief 서피스를 잃은 것을 세고 경고로 남깁니다(잃은 횟수와 그때의 프레임). 다음에 관찰했을 때 환경 탓인지 가리는 데 씁니다. */
         void noteSurfaceLost( const utf8* pWhere );
+
+    public:
+        /**
+         * @brief 큐 호출(`vkQueueSubmit` · `vkQueueWaitIdle` · `vkWaitForFences`)의 결과를 봅니다. 성공이면 아무것도 하지 않습니다.
+         * @details 실패면 어디서(@p pWhere) · 무슨 `VkResult` 인지와 마지막으로 제출 순서에 넣은 패스(이벤트 마커)를 오류 로그로 남긴다.
+         *          `VK_ERROR_DEVICE_LOST` 면 처음 한 번만 VK_EXT_device_fault 의 결함 정보(설명 · 주소 · 공급사 코드)를 덧붙인다(확장이 켜졌을 때).
+         *          어느 스레드에서 불러도 된다(일회성 업로드는 로더 스레드에서 온다).
+         * @param result `VkResult` 값(이 헤더는 vulkan.h 를 들이지 않아 정수로 받는다)
+         */
+        void reportQueueResult( int32 result, const utf8* pWhere );
+
+    private:
+        /** @brief 제출 순서에 들어간 리스트 · 프레임 세그먼트의 마지막 이벤트 마커를 적어 둡니다(디바이스 손실 로그용). 비어 있으면 그대로 둡니다. */
+        void noteSubmittedEventMarker( const utf8* pMarker );
+        /** @brief VK_EXT_device_fault 로 디바이스 손실의 결함 정보를 읽어 로그로 남깁니다. 확장이 없으면 없다고 한 줄 남깁니다. */
+        void reportDeviceFault();
 
         /** @brief 파이프라인 캐시를 초기화합니다. */
         bool initializePipelineCache();
@@ -617,24 +638,24 @@ namespace sw
         void* _pDisplayHandle;
         /// @brief 스왑체인 제출마다 1씩 증가하는 단조 세대 번호입니다. 해제 큐가 실제 GPU 펜스 완료를 기준으로
         ///        해제하도록(enqueueGPURelease) 프레임 카운트 대신 이 값을 씁니다.
-        uint64                  _frameFenceCounter;
-        uint32                  _width;
-        uint32                  _height;
-        uint32                  _depthFormat;      ///< VkFormat. createTexture2D 와 렌더 패스가 함께 쓰는 깊이 포맷
-        uint32                  _surfaceLostCount; ///< 이 디바이스가 서피스를 잃은 횟수(진단용)
-        uint16                  _bFrameStarted           : 1;
-        uint16                  _bEnableValidationLayers : 1;
-        uint16                  _bMultiDrawIndirect      : 1;
-        uint16                  _bDrawIndirectCount      : 1;
-        uint16                  _bSamplerAnisotropy      : 1; ///< 정적 샘플러 ANISO_WRAP 을 실제로 이방성으로 만들 수 있는가
-        uint16                  _bFillModeNonSolid       : 1; ///< VK_POLYGON_MODE_LINE 을 쓸 수 있는가(와이어프레임 뷰 모드)
-        uint16                  _bSwapChainDirty         : 1; ///< resize 나 present 결과로 예약된 스왑체인 재생성 요청
-        uint16                  _bDepthHasStencil        : 1; ///< _depthFormat 에 스텐실 plane 이 있는가
-        uint16                  _bSwapChainImageHeld     : 1; ///< 획득했지만 아직 present 하지 않은 스왑체인 이미지를 쥐고 있는가
-        uint16                  _bMemoryBudget           : 1; ///< 디바이스에 VK_EXT_memory_budget 을 켰는가(GPU 메모리 사용량과 예산 질의)
-        uint16                  _linuxWsi                : 2; ///< 0은 없음, 1은 xlib, 2는 xcb(Linux 전용)
-        uint16                  _bSurfaceLost            : 1; ///< 서피스를 잃었고 아직 다시 만들지 못했다(다음 beginFrame 이 다시 시도한다).
-        [[maybe_unused]] uint16 _reservedVulkan          : 1;
+        uint64 _frameFenceCounter;
+        uint32 _width;
+        uint32 _height;
+        uint32 _depthFormat;      ///< VkFormat. createTexture2D 와 렌더 패스가 함께 쓰는 깊이 포맷
+        uint32 _surfaceLostCount; ///< 이 디바이스가 서피스를 잃은 횟수(진단용)
+        uint16 _bFrameStarted           : 1;
+        uint16 _bEnableValidationLayers : 1;
+        uint16 _bMultiDrawIndirect      : 1;
+        uint16 _bDrawIndirectCount      : 1;
+        uint16 _bSamplerAnisotropy      : 1; ///< 정적 샘플러 ANISO_WRAP 을 실제로 이방성으로 만들 수 있는가
+        uint16 _bFillModeNonSolid       : 1; ///< VK_POLYGON_MODE_LINE 을 쓸 수 있는가(와이어프레임 뷰 모드)
+        uint16 _bSwapChainDirty         : 1; ///< resize 나 present 결과로 예약된 스왑체인 재생성 요청
+        uint16 _bDepthHasStencil        : 1; ///< _depthFormat 에 스텐실 plane 이 있는가
+        uint16 _bSwapChainImageHeld     : 1; ///< 획득했지만 아직 present 하지 않은 스왑체인 이미지를 쥐고 있는가
+        uint16 _bMemoryBudget           : 1; ///< 디바이스에 VK_EXT_memory_budget 을 켰는가(GPU 메모리 사용량과 예산 질의)
+        uint16 _linuxWsi                : 2; ///< 0은 없음, 1은 xlib, 2는 xcb(Linux 전용)
+        uint16 _bSurfaceLost            : 1; ///< 서피스를 잃었고 아직 다시 만들지 못했다(다음 beginFrame 이 다시 시도한다).
+        uint16 _bDeviceFault            : 1; ///< 디바이스에 VK_EXT_device_fault 를 켰는가(디바이스 손실 때 결함 주소 · 공급사 코드 질의)
         // 1바이트 필드는 위 비트필드 뒤에 모은다. 8바이트 필드 사이에 끼면 필드마다 패딩이 생긴다.
         uint8 _bSwapChainRecreateFailing; ///< 재생성 실패를 한 번만 알린다(성공하면 내린다). 실패하면 프레임마다 다시 시도한다.
         /// @brief 이번 프레임의 acquire 세마포어 대기가 아직 소비되지 않았는지 여부입니다(첫 제출에서만 바인딩합니다).
@@ -698,5 +719,11 @@ namespace sw
 
         sw::unique_ptr<VulkanRHICommandContext>  _frameStreamContext;
         sw::unique_ptr<VulkanRHIResourceFactory> _resourceImpl;
+
+        /// @brief 제출 순서에 마지막으로 들어간 패스 이름입니다(디바이스 손실 로그용). `_submittedMarkerMutex` 가 지킵니다.
+        fixed_string<constant::kMaxBuffer64> _lastSubmittedEventMarker;
+        mutable mutex                        _submittedMarkerMutex;
+        /// @brief 디바이스 손실의 결함 정보를 이미 남겼는가. 손실 뒤의 모든 호출이 같은 덤프를 반복하지 않게 한다.
+        atomic<uint8> _bDeviceLostReported;
     };
 } // namespace sw

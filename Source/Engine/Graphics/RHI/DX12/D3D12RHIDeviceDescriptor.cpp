@@ -266,5 +266,19 @@ namespace sw
         return true;
     }
 
+    #if !defined( SW_SHIPPING )
+    bool D3D12RHIDevice::isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const
+    {
+        std::shared_lock<std::shared_mutex> lock{ _bindlessMutex };
+        if ( index >= _listRegisteredBindless.size() )
+            return false;
+        // 힙 하나를 나눠 쓰므로 종류까지 본다 — 텍스처 자리에 버퍼 뷰가 있으면 Texture2D 로 읽는 셰이더가 잘못된 디스크립터를 읽는다.
+        const BindlessResourceRecord& record = _listRegisteredBindless[index];
+        if ( record._resource == nullptr )
+            return false;
+        return ( space == RHIBindlessIndexSpace::Texture ) ? record._texture != 0 : record._buffer != 0;
+    }
+    #endif
+
 } // namespace sw
 #endif

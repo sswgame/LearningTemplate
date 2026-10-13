@@ -263,9 +263,15 @@ namespace sw
     {
         if ( buffer == nullptr )
             return 0;
-        const uint64          bytes  = computeAllocationBytes( buffer.Get() );
+        const uint64 bytes = computeAllocationBytes( buffer.Get() );
+    #if defined( SW_DEBUG )
+        ID3D12Resource* pNamed = buffer.Get();
+    #endif
         const RHIBufferHandle handle = _gpuBuffers.insert( std::move( buffer ) );
         getMemoryLedger().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, bytes );
+    #if defined( SW_DEBUG )
+        nameResourceForDiagnostics( pNamed, L"Buffer", handle );
+    #endif
         return handle;
     }
 
@@ -328,11 +334,32 @@ namespace sw
     {
         if ( texture == nullptr )
             return 0;
-        const uint64           bytes  = computeAllocationBytes( texture.Get() );
+        const uint64 bytes = computeAllocationBytes( texture.Get() );
+    #if defined( SW_DEBUG )
+        ID3D12Resource* pNamed = texture.Get();
+    #endif
         const RHITextureHandle handle = _gpuTextures.insert( std::move( texture ) );
         getMemoryLedger().recordAllocation( RHIMemoryKey::makeTexture( handle ), kind, bytes );
+    #if defined( SW_DEBUG )
+        nameResourceForDiagnostics( pNamed, L"Texture", handle );
+    #endif
         return handle;
     }
+
+    #if defined( SW_DEBUG )
+    void D3D12RHIDevice::nameResourceForDiagnostics( ID3D12Resource* pResource, const utf16* pKind, uint64 handle )
+    {
+        if ( pResource == nullptr || pKind == nullptr )
+            return;
+        // DRED 페이지 폴트 출력(flushDebugMessages)은 폴트 주소를 덮는 할당을 이 이름으로 보여 준다. 이름이 없으면 "unnamed" 뿐이다.
+        // 핸들 번호를 넣어 RHI 로그(핸들로 적는다)와 맞춰 볼 수 있게 한다. 크기 · 포맷은 같은 종류의 여러 할당을 가린다.
+        const D3D12_RESOURCE_DESC desc = pResource->GetDesc();
+        utf16                     arrName[constant::kMaxBuffer128]{};
+        swprintf_s( arrName, L"SW %ls %llu (%llux%u fmt %u)", pKind, static_cast<uint64>( handle ), static_cast<uint64>( desc.Width ),
+                    static_cast<uint32>( desc.Height ), static_cast<uint32>( desc.Format ) );
+        pResource->SetName( arrName );
+    }
+    #endif
 
     void D3D12RHIDevice::flushDebugMessages( const utf8* pStage )
     {
@@ -395,7 +422,23 @@ namespace sw
 
                 D3D12_DRED_PAGE_FAULT_OUTPUT pageFaultOutput{};
                 if ( SUCCEEDED( dred->GetPageFaultAllocationOutput( &pageFaultOutput ) ) )
+                {
                     SW_LOG_ERROR( "PageFault VA=0x%#", Fmt( static_cast<uint64>( pageFaultOutput.PageFaultVA ), Format( 16, Format::Padding::Zero ).hexUpper() ) );
+                    // 폴트 주소를 덮는 할당을 이름으로 되짚는다 — 살아 있는 것과 최근에 해제된 것(해제 뒤 사용이면 여기 나온다).
+                    // 이름은 storeBuffer · storeTexture 가 붙인다(nameResourceForDiagnostics, `SW Buffer <핸들>`).
+                    for ( const D3D12_DRED_ALLOCATION_NODE* pAllocation = pageFaultOutput.pHeadExistingAllocationNode; pAllocation != nullptr;
+                          pAllocation                                   = pAllocation->pNext )
+                    {
+                        SW_LOG_ERROR( "  PageFault VA is inside live allocation '%#' (type %#)",
+                                      pAllocation->ObjectNameA != nullptr ? pAllocation->ObjectNameA : "unnamed", static_cast<uint32>( pAllocation->AllocationType ) );
+                    }
+                    for ( const D3D12_DRED_ALLOCATION_NODE* pAllocation = pageFaultOutput.pHeadRecentFreedAllocationNode; pAllocation != nullptr;
+                          pAllocation                                   = pAllocation->pNext )
+                    {
+                        SW_LOG_ERROR( "  PageFault VA is inside recently freed allocation '%#' (type %#) — use after free",
+                                      pAllocation->ObjectNameA != nullptr ? pAllocation->ObjectNameA : "unnamed", static_cast<uint32>( pAllocation->AllocationType ) );
+                    }
+                }
             }
         }
     #else

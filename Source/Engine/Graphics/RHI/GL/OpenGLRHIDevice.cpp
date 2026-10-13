@@ -271,4 +271,13 @@ namespace sw
     {
         return _gpuTextures.get( handle );
     }
+
+#if !defined( SW_SHIPPING )
+    bool OpenGLRHIDevice::isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const
+    {
+        if ( space == RHIBindlessIndexSpace::Texture )
+            return index < _listRegisteredTexture.size() && _listRegisteredTexture[index]._texture != 0;
+        return index < _listRegisteredBindless.size() && _listRegisteredBindless[index]._buffer != 0;
+    }
+#endif
 } // namespace sw

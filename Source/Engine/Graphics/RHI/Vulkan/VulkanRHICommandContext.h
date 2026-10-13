@@ -1,5 +1,7 @@
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Types.h"
+#include "Core/String/fixed_string.h"
 
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIHandle.h"
@@ -94,11 +96,16 @@ namespace sw
         VulkanRecordingState* _pState;
         /// @brief 슬롯 세트를 할당받는 풀 묶음입니다. nullptr 이면 디바이스 프레임 스트림의 이번 링 슬롯 묶음을 씁니다.
         VulkanDescriptorPoolSet* _pDescriptorPoolSet;
+        /// @brief 마지막으로 연 이벤트 마커(패스 이름)입니다. 디바이스를 잃었을 때 "마지막으로 제출한 패스" 를 로그에 적는 데 씁니다.
+        fixed_string<constant::kMaxBuffer64> _lastEventMarker;
 
         /** @brief 실제로 기록할 커맨드 버퍼입니다(지정된 것이 있으면 그것, 없으면 디바이스의 현재 버퍼). */
         VkCommandBuffer commandBuffer() const;
 
     public:
+        /** @brief 마지막으로 연 이벤트 마커입니다(없으면 빈 문자열). 기록이 끝난 뒤 제출하는 스레드가 읽습니다. */
+        const utf8* getLastEventMarker() const { return _lastEventMarker.c_str(); }
+
         /** @brief 기록 대상 버퍼와 풀 묶음을 교체합니다(소유자가 버퍼+풀 쌍을 바꿔 낄 때). */
         void rebindCommandBuffer( VkCommandBuffer targetBuffer, VulkanDescriptorPoolSet* pDescriptorPoolSet )
         {

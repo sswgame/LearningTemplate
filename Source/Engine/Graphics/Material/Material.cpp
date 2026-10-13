@@ -11,6 +11,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Graphics/RHI/Support/BindlessIndexValidator.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
@@ -152,8 +153,17 @@ namespace sw
         _textureReloadGeneration      = textures.getReloadGeneration();
         for ( const MaterialProperty& prop : _data._listProperty )
         {
-            if ( MaterialUtil::isTextureType( prop._type ) == false || prop._assetPath.empty() )
+            if ( MaterialUtil::isTextureType( prop._type ) == false )
                 continue;
+            if ( prop._assetPath.empty() )
+            {
+#if !defined( SW_SHIPPING )
+                // 텍스처가 붙지 않은 필드는 머티리얼 데이터에 kInvalidDescriptorIndex 로 실려 셰이더로 간다(-gv_validateBindlessIndex=2 로 자리를 남긴다).
+                if ( BindlessIndexValidator::isTracingAbsent() )
+                    (void)BindlessIndexValidator::noteAbsent( hashed_string( _desc._name.c_str() ), hashed_string( prop._name.c_str() ), 0 ); // 자리마다 한 번만 남긴다
+#endif
+                continue;
+            }
             // 못 읽은 텍스처는 마젠타 체커를 빌린다 — 흰색이면 화면에서 빠진 것을 알 수 없다(Shipping 도 같다).
             string     borrowedPath = prop._assetPath;
             Texture2D* pTexture     = textures.acquire( borrowedPath, pRHI );
