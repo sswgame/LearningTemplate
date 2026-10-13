@@ -3,6 +3,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Common/FunctionSubsystem.h"
 #include "Engine/Common/SubsystemCollection.h"
 
 #include "TestFramework/TestFramework.h"
@@ -113,6 +114,20 @@ namespace
         }
         return string( sb.c_str() );
     }
+
+    /** @brief `FunctionSubsystem` 의 델리게이트 대상입니다. */
+    struct FunctionTarget
+    {
+        EngineInitResult initialize()
+        {
+            ++_initializeCount;
+            return EngineInitResult::Succeeded;
+        }
+        void shutdown() { ++_shutdownCount; }
+
+        uint32 _initializeCount{ 0 };
+        uint32 _shutdownCount{ 0 };
+    };
 } // namespace
 
 /**
@@ -372,4 +387,22 @@ SW_TEST_CASE( SubsystemCollectionTest, InitializeRunsUnderTheSubsystemMemoryTag 
     SW_EXPECT_TRUE( recorder._listInitializeMemoryTag[4] == MemoryTag::Asset );
     SW_EXPECT_TRUE( recorder._listInitializeMemoryTag[5] == MemoryTag::Scene );
     SW_EXPECT_TRUE( Memory::getCurrentMemoryTag() == MemoryTag::Unknown );
+}
+
+/**
+ * @brief [SubsystemCollectionTest] `FunctionSubsystem` 은 묶은 델리게이트를 부르고, 묶지 않은 초기화는 성공 · 종료는 아무것도 하지 않는다
+ */
+SW_TEST_CASE( SubsystemCollectionTest, FunctionSubsystemCallsItsDelegates )
+{
+    FunctionTarget      target;
+    SubsystemCollection collection;
+    collection.add( make_unique<FunctionSubsystem>( "Bound", "Unbound", EngineInitTarget::All,
+                                                    SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &FunctionTarget::initialize, &target ),
+                                                    SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &FunctionTarget::shutdown, &target ) ) );
+    collection.add( make_unique<FunctionSubsystem>( "Unbound", "", EngineInitTarget::All, SubsystemInitializeDelegate{} ) );
+    SW_ASSERT_TRUE_MSG( collection.initializeAll( EngineInitTarget::Client ), collection.getError().c_str() );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( collection.getInitializedIndices().size() ) );
+    SW_EXPECT_EQUAL( 1u, target._initializeCount );
+    collection.shutdownAll();
+    SW_EXPECT_EQUAL( 1u, target._shutdownCount );
 }
