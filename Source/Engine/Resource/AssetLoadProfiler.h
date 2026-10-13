@@ -12,6 +12,9 @@
 
 namespace sw
 {
+    template <class T>
+    class ScopeOwned;
+
     /** @brief 로드 한 번의 단계입니다. 단계를 나눌 수 없는 로더(파일을 읽으며 해석한다)는 `IO` 하나에 모두 적습니다. */
     enum class AssetLoadPhase : uint8
     {
@@ -85,10 +88,10 @@ namespace sw
         /** @brief `-gv_assetLoadReport=1` 이면 `report` 합니다(엔진 종료가 부른다). */
         void reportIfRequested( const utf8* pTitle ) const;
         void reset();
-        /** @brief 종류 표와 느린 로드 목록의 저장소까지 놓습니다(엔진 종료 끝). 남기면 종료 누수 보고에 로드한 쪽의 태그로 남는다. */
-        void releaseStorage();
 
     private:
+        friend class ScopeOwned<AssetLoadProfiler>; ///< 엔진 수명 범위가 만들고 소멸시킨다(AssetLoadProfiler.cpp)
+
         /** @brief 종류 하나의 누적과 프레임 프로파일러 구간 번호(단계마다)입니다. */
         struct KindEntry
         {

@@ -3,6 +3,7 @@
 #include "Engine/Resource/AssetLoadProfiler.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Memory/LifetimeScope.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -35,6 +36,9 @@ namespace sw
             }
         };
         static_assert( std::size( AssetLoadProfilerInternal::kArrPhaseName ) == static_cast<size_t>( AssetLoadPhase::Count ) );
+
+        /** @brief 프로세스에 하나인 기록부입니다. 엔진 수명 범위가 닫히면(엔진 종료) 종류 표 · 느린 로드 목록과 함께 소멸합니다. */
+        ScopeOwned<AssetLoadProfiler> s_assetLoadProfiler;
     } // namespace
 
     /** @brief `-gv_assetLoadProfile=0` — 에셋 로드 기록을 끕니다(기본 켬, 로드마다 시계 몇 번이라 싸다). */
@@ -57,8 +61,12 @@ namespace sw
 
     AssetLoadProfiler& AssetLoadProfiler::get()
     {
-        static AssetLoadProfiler s_profiler;
-        return s_profiler;
+        AssetLoadProfiler* const pProfiler = s_assetLoadProfiler.getOrCreate();
+        if ( pProfiler != nullptr )
+            return *pProfiler;
+        // 엔진 종료 뒤의 접근이다(단언은 `getOrCreate` 가 했다). 아무것도 받지 않은 기록부로 답한다.
+        static AssetLoadProfiler s_closedFallback;
+        return s_closedFallback;
     }
 
     AssetLoadProfiler::AssetLoadProfiler()
@@ -227,15 +235,6 @@ namespace sw
         }
         _listSlowest.clear();
         _loadCount = 0;
-    }
-
-    void AssetLoadProfiler::releaseStorage()
-    {
-        std::scoped_lock<mutex> lock{ _mutex };
-        // `clear()` 는 용량 · 원소의 문자열을 남긴다 — 프레임 프로파일러 구간 번호도 함께 버린다(다시 쓰면 새로 받는다).
-        _listKind    = vector<KindEntry>{};
-        _listSlowest = vector<AssetLoadRecord>{};
-        _loadCount   = 0;
     }
 
     // ------------------------------------------------------------------------------

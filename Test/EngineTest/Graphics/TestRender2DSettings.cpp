@@ -122,17 +122,19 @@ SW_TEST_CASE( Render2DSettingsTest, EngineTableHasWorldUIAboveDefault )
 }
 
 /**
- * @brief [Render2DSettingsTest] 엔진 종료가 활성 표를 놓아도(`releaseActive`) 다음 `getActive` 는 파일을 다시 읽는다
- * @details 같은 프로세스에서 엔진이 다시 서면(테스트 호스트 · 앱 스모크) 놓은 뒤의 빈 표를 쓰면 안 된다.
+ * @brief [Render2DSettingsTest] 활성 표는 한 번 읽혀 같은 자리에 있고, 다시 읽어도 그 자리를 갱신한다
+ * @details 활성 표는 엔진 수명 범위가 소유한다(`ScopeOwned`). 조회는 잠그지 않으므로 다시 읽기가 자리를 옮기면 앞서 받은 참조가 무효가 된다.
  */
-SW_TEST_CASE( Render2DSettingsTest, ReleasedActiveTableReloadsOnNextUse )
+SW_TEST_CASE( Render2DSettingsTest, ActiveTableKeepsItsAddressAcrossReload )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    const uint32 layerCount = sw::Render2DSettings::getActive().getSortingLayerCount();
+    const sw::Render2DSettings& active     = sw::Render2DSettings::getActive();
+    const uint32                layerCount = active.getSortingLayerCount();
     SW_ASSERT_TRUE( layerCount > 1u );
 
-    sw::Render2DSettings::releaseActive();
+    sw::Render2DSettings::reloadActive();
     const sw::Render2DSettings& reloaded = sw::Render2DSettings::getActive();
+    SW_EXPECT_TRUE( &reloaded == &active );
     SW_EXPECT_EQUAL( layerCount, reloaded.getSortingLayerCount() );
     SW_EXPECT_TRUE( reloaded.findSortingLayer( sw::hashed_string( "Default" ) ) >= 0 );
     SW_EXPECT_EQUAL( static_cast<uint32>( reloaded.findSortingLayer( sw::hashed_string( "Default" ) ) ), reloaded.getDefaultSortingLayer() );

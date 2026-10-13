@@ -38,13 +38,6 @@ namespace sw
         size_t size() const;
         bool   empty() const;
 
-        /**
-         * @brief 모든 테이블이 함께 쓰는 번역 문자열 저장소(`LocalizedTextArena`)를 해제합니다. 그 뒤로 앞서 돌려준 문자열 포인터는 모두 무효입니다.
-         * @details 엔진 종료 끝(`EngineBootstrap::shutdown`)이 지역화 서비스와 모듈을 모두 언로드한 뒤 부른다. 기동 뒤에 로드한 모듈(에디터)이 채운 부분이
-         *          종료 보고에 그 태그의 증가로 남지 않게 한다. 해제한 뒤에 다시 넣으면 저장소를 새로 잡는다.
-         */
-        static void releaseTextStorage();
-
     private:
         mutable std::shared_mutex _mutex;
         /// @brief 키 해시 → 번역 문자열 테이블입니다. 문자열은 추가 전용 저장소(StringTable.cpp 의 `LocalizedTextArena`)에 있어 테이블이 바뀌어도 엔진 종료까지 사라지지 않습니다.

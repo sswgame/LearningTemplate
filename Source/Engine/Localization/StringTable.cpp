@@ -4,6 +4,7 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Memory/LifetimeScope.h"
 
 namespace sw
 {
@@ -11,7 +12,7 @@ namespace sw
     {
         /**
          * @struct LocalizedTextArena
-         * @brief 번역 문자열의 저장소입니다. **추가만 하고 엔진 종료 끝(`StringTable::releaseTextStorage`)까지 해제하지 않습니다.** 같은 내용은 한 번만 둡니다.
+         * @brief 번역 문자열의 저장소입니다. **추가만 하고 엔진 수명이 끝날 때(`s_localizedTextArena` 의 범위가 닫힐 때)까지 해제하지 않습니다.** 같은 내용은 한 번만 둡니다.
          * @details `StringTable` 과 `LocalizationManager` 의 조회는 `const utf8*` 를 돌려주고 UI 와 워커가 그것을 가지고 있다. 테이블이 문자열을
          *          값으로 가지면 락을 놓은 뒤 `setString`, 다시 읽기, 언어 언로드가 그 저장소를 바꿀 때 가지고 있던 포인터가 해제된 메모리를
          *          가리킨다(조밀 해시 테이블이라 **다른 키를 넣기만 해도** 짧은 문자열이 옮겨진다). 언리얼 FText 가 공유 문자열을 가지고
@@ -21,27 +22,12 @@ namespace sw
         {
             static constexpr size_t kBlockBytes = 64 * 1024;
 
-            /** @brief 프로세스에 하나입니다. */
-            static LocalizedTextArena& get()
+            ~LocalizedTextArena()
             {
-                static LocalizedTextArena s_arena;
-                return s_arena;
-            }
-
-            ~LocalizedTextArena() { release(); }
-
-            /** @brief 블록과 내용 인덱스를 모두 해제합니다. 빈 객체를 대입해 용량까지 돌려줍니다. */
-            void release()
-            {
-                std::scoped_lock<mutex> lock{ _mutex };
                 for ( utf8* pBlock : _listBlock )
                 {
                     Memory::free( pBlock );
                 }
-                _listBlock      = vector<utf8*>{};
-                _mapByContent   = unordered_map<uint64, const utf8*>{};
-                _pCursor        = nullptr;
-                _remainingBytes = 0;
             }
 
             /** @brief @p text 와 같은 내용의 안정된 C 문자열을 돌려줍니다(없으면 복사해 둡니다). */
@@ -78,6 +64,19 @@ namespace sw
             unordered_map<uint64, const utf8*> _mapByContent;
             utf8*                              _pCursor{ nullptr };
             size_t                             _remainingBytes{ 0 };
+        };
+
+        /** @brief 모든 테이블이 함께 쓰는 저장소입니다. 엔진 수명 범위가 닫히면(엔진 종료) 소멸하고, 그 뒤로 앞서 돌려준 문자열 포인터는 모두 무효입니다. */
+        ScopeOwned<LocalizedTextArena> s_localizedTextArena;
+
+        struct StringTableInternal
+        {
+            /** @brief @p text 를 저장소에 둡니다. 엔진 수명이 끝난 뒤면 nullptr 입니다(테이블을 바꾸지 않는다). */
+            static const utf8* store( string_view text )
+            {
+                LocalizedTextArena* const pArena = s_localizedTextArena.getOrCreate();
+                return pArena != nullptr ? pArena->store( text ) : nullptr;
+            }
         };
     } // namespace
 } // namespace sw
@@ -120,21 +119,16 @@ namespace sw
 
     void StringTable::setString( const hashed_string& key, const string& value )
     {
-        const utf8* const                   pStored = LocalizedTextArena::get().store( value );
-        std::unique_lock<std::shared_mutex> lock( _mutex );
-        _mapTable[key.getHash()] = pStored;
+        setStringByHash( key.getHash(), value );
     }
 
     void StringTable::setStringByHash( uint64 keyHash, string_view value )
     {
-        const utf8* const                   pStored = LocalizedTextArena::get().store( value );
+        const utf8* const pStored = StringTableInternal::store( value );
+        if ( pStored == nullptr )
+            return;
         std::unique_lock<std::shared_mutex> lock( _mutex );
         _mapTable[keyHash] = pStored;
-    }
-
-    void StringTable::releaseTextStorage()
-    {
-        LocalizedTextArena::get().release();
     }
 
     void StringTable::clear()
