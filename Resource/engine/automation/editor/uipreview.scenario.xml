@@ -21,6 +21,8 @@
 	<At frame="110"><EditorKey key="Ctrl+P"/></At>
 	<At frame="125"><EditorText value="pause.ui.xml"/></At>
 	<At frame="140"><EditorKey key="Enter"/></At>
+	<!-- pause 는 위젯 16 개, 앞 문서(confirm_unsaved)는 11 개다 — 글 탐침만 기다리면 앞 문서의 글로 지나가 버린다 -->
+	<At frame="145"><WaitUntil probe="Editor.UIPreviewWidgetCount" atLeast="12" timeoutFrames="900"/></At>
 	<At frame="150"><WaitUntil probe="Editor.UIPreviewFirstTextBytes" atLeast="1" timeoutFrames="900"/></At>
 	<At frame="155"><Expect probe="Editor.UIPreviewWidgetCount" atLeast="9"/></At>
 	<!-- 2) 언어 -->

@@ -57,6 +57,8 @@ namespace sw::editor
         void focusOnPoint( const float3& target, float32 radius ) { _camera.focusOnPoint( target, radius ); }
 
         const float3& getCameraPosition() const { return _camera.getPosition(); }
+        /** @brief 씬 뷰 카메라(위치 · 회전 · 직교 · 속도)를 새 에디터 세션이 시작하는 값으로 되돌립니다. 씬을 다시 열어도 카메라 값은 이어지므로 따로 되돌린다. */
+        void resetCameraToDefault();
         /** @brief 기즈모를 마지막으로 그린 ImGui 프레임 번호입니다. -1 이면 아직 그린 적이 없습니다. 에디터 자체 테스트(`sceneView.gridAndGizmoDraw`)가 읽습니다. */
         int32 getLastGizmoFrame() const { return _gizmo.getLastDrawFrame(); }
         /** @brief 그 프레임에 기즈모를 단 오브젝트 수입니다. */

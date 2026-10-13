@@ -1366,17 +1366,11 @@ namespace sw::editor
             }
             ImGui::EndDragDropTarget();
         }
+        // 그림 클릭으로 고르기는 손잡이를 그린 뒤에 정한다 — 손잡이는 그림 위에 겹쳐 있어, 여기서 바로 고르면 손잡이를 누른 클릭이 그 아래 위젯(자식)을
+        // 골라 손잡이가 사라지고 끌기가 시작되지 않는다.
+        const bool bImageClicked = _bInteract == false && ImGui::IsItemClicked();
         if ( _bInteract )
-        {
             feedPointer( screen, drawSize, origin, bImageHovered );
-        }
-        else if ( ImGui::IsItemClicked() )
-        {
-            const ImVec2 mouse = ImGui::GetMousePos();
-            const float2 point = UIPreviewLogic::mapImageToUI( float2{ mouse.x - origin._x, mouse.y - origin._y }, drawSize, _viewport );
-            _selected          = UIPreviewLogic::findWidgetAt( screen.getTree(), point );
-            _selectedOrdinal   = _selected != kInvalidWidgetID ? UIPreviewLogic::findWidgetOrdinal( screen.getTree(), _selected ) : UIPreviewLogic::kNoOrdinal;
-        }
 
         // 겹쳐 그리기 — 레이아웃 사각형 · 고른 위젯 · 안전 영역(그림 위 ImGui 선, 캔버스는 바꾸지 않는다).
         ImDrawList* pDraw   = ImGui::GetWindowDrawList();
@@ -1405,6 +1399,13 @@ namespace sw::editor
         // 캔버스 자식의 슬롯 손잡이(옮기기 · 네 변) — 끌면 슬롯의 오프셋이 바뀌고 놓으면 되돌리기 항목 하나가 쌓인다. 입력 흉내 중에는 숨긴다(포인터를 가로채지 않게).
         if ( _bInteract == false )
             drawSlotHandles( screen, drawSize, origin );
+        if ( bImageClicked && _bSlotDragging == false )
+        {
+            const ImVec2 mouse = ImGui::GetMousePos();
+            const float2 point = UIPreviewLogic::mapImageToUI( float2{ mouse.x - origin._x, mouse.y - origin._y }, drawSize, _viewport );
+            _selected          = UIPreviewLogic::findWidgetAt( screen.getTree(), point );
+            _selectedOrdinal   = _selected != kInvalidWidgetID ? UIPreviewLogic::findWidgetOrdinal( screen.getTree(), _selected ) : UIPreviewLogic::kNoOrdinal;
+        }
         ImGui::EndChild();
     }
 

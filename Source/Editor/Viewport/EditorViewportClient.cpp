@@ -72,6 +72,12 @@ namespace sw::editor
         _toolbarSettings._bShowOrientationCube       = preferences._bShowOrientationCube;
     }
 
+    void EditorViewportClient::resetCameraToDefault()
+    {
+        _camera                       = EditorViewportCamera{};
+        _toolbarSettings._cameraSpeed = getPreferences<EditorViewportPreferences>()._cameraSpeed;
+    }
+
     void EditorViewportClient::update( float32 deltaTime, bool bWindowFocused, bool bWindowHovered )
     {
         if ( bWindowHovered || bWindowFocused )
