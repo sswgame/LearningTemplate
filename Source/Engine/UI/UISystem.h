@@ -240,6 +240,8 @@ namespace sw
         void setOffscreenNavigationMode( UIScreenHandle handle, bool bNavigationMode );
 
         // --- 핫 리로드 ---------------------------------------------------------------
+        // 문서(`.ui.xml`)와 스타일 시트의 파일 변화는 **에디터**의 파일 감시가 캐시 다시 읽기로 이어 준다(`EditorAssetType` 표의 `kAnyCacheHoldingPath`).
+        // 에디터 없이(`-EnableEditor` 없이) 띄운 App 은 파일을 고쳐도 반영되지 않는다 — 정상이다.
         /**
          * @brief 문서 @p documentPath 가 바뀌었을 때, 그 문서(또는 그것을 조각으로 쓰는 문서)로 연 화면을 새로 생성합니다(캐시의 다시 읽기 알림이 부릅니다).
          * @details 포커스 위젯과 스크롤 패널의 스크롤 오프셋을 이름으로 기억했다가 새 트리의 같은 이름에 복원한다. 생성이 실패하면 기존 트리를 그대로 둔다.
