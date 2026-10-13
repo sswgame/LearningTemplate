@@ -49,10 +49,16 @@ namespace sw
             utf8   _arrCallerName[constant::kMaxBuffer64]{ 0 };
         };
 
-        static constexpr size_t kMaxCallerEntries = 512;
+        /**
+         * @brief 호출자 표의 칸 수입니다. 엔진 · 게임 · 에디터 · 키트 모듈의 `SW_LOG_CALLER` 가 모두 이 한 표에 들어옵니다.
+         * @details 넘친 등록은 버려져 그 파일의 로그가 Caller 없이 분류된다(Output Log 의 Caller 필터가 그 줄을 못 가린다). 넘치면 첫 로그 줄에서 오류를 한 번 남긴다.
+         */
+        static constexpr size_t kMaxCallerEntries = 2048;
         CallerEntry             s_arrCallerEntry[kMaxCallerEntries]{};
         size_t                  s_callerEntryCount{ 0 };
         mutex                   s_callerMutex{};
+        atomic<uint32>          s_droppedCallerCount{ 0 };          ///< 표가 차서 버린 등록 수
+        atomic<bool>            s_bCallerOverflowReported{ false }; ///< 넘침 오류를 이미 남겼으면 true
 
         /// @brief 런타임 상세도입니다. 기본값은 Info 이고, 배포본은 컴파일 상한(Warning)이 더 낮아 자동으로 잘립니다.
         atomic<int32> s_runtimeVerbosity{ static_cast<int32>( LogLevel::Info ) };
@@ -93,7 +99,9 @@ namespace sw
             Memory::copy( s_arrCallerEntry[s_callerEntryCount]._arrCallerName, callerName.data(), copyLen );
             s_arrCallerEntry[s_callerEntryCount]._arrCallerName[copyLen] = '\0';
             ++s_callerEntryCount;
+            return;
         }
+        s_droppedCallerCount.fetch_add( 1, std::memory_order_relaxed ); // 정적 초기화 중일 수 있어 여기서는 로그를 남기지 않는다
     }
 
     const utf8* Logger::getCaller( const utf8* pFile )
@@ -153,6 +161,10 @@ namespace sw
         if ( pSink == nullptr )
             return;
 
+        const bool bCallerDropped = s_droppedCallerCount.load( std::memory_order_relaxed ) > 0;
+        if ( bCallerDropped && s_bCallerOverflowReported.exchange( true ) == false )
+            pSink->writeLog( LogLevel::Error, "Log", nullptr, "The log caller table is full - SW_LOG_CALLER registrations were dropped (raise kMaxCallerEntries)",
+                             __FILE__, __LINE__ );
         pSink->writeLog( level, pTag, pCaller, pMessage, pFile, line );
     }
 

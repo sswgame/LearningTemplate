@@ -392,9 +392,12 @@ namespace sw::editor
         int64       editedValue  = currentValue;
         const auto  commitEdit   = [&enumInfo, pEnumMemory, currentValue, &editedValue, &prop]()
         {
+            // 콤보에서 고른 값은 고르는 순간 바뀐다 — 콤보 단추의 활성화 · 해제로는 잡히지 않으므로 쓰기 직전에 편집 전을 찍어 남긴다.
             if ( editedValue != currentValue )
+            {
+                InspectorPropertyUndo::recordImmediateEdit( prop );
                 enumInfo.writeValueToMemory( pEnumMemory, editedValue );
-            InspectorPropertyUndo::trackPod( pEnumMemory, enumInfo._size, prop );
+            }
         };
 
         if ( enumInfo._bIsBitFlag )

@@ -516,8 +516,9 @@ namespace sw::editor
             // 크기를 정하지 않은 도구 창은 내용 크기로 열려서 Data Table 은 높이가 100 px 가 되고, User Settings 는 값 입력란의 폭이 0 이 된다. Input Map Editor 도 시작할 때 닫혀 있어야 한다.
             // 자체 테스트는 레이아웃을 저장하거나 복원하지 않으므로 이 실행에서 처음 만드는 창에 처음 크기가 적용된다.
             // ------------------------------------------------------------------------------
-            static constexpr const utf8* kArrFloatingToolPanelID[] = { "history", "global_variables", "render_targets", "ui_preview",
-                                                                       "animation_rewind", "data_table", "input_map", "user_settings" };
+            // UI Preview 는 `.ui.xml` 에셋을 여는 패널이라(EditorAssetType::UIDocument) 기본 배치가 다른 에셋 패널처럼 가운데 영역에 도킹한다 — 여기 넣지 않는다.
+            static constexpr const utf8* kArrFloatingToolPanelID[] = { "history", "global_variables", "render_targets", "animation_rewind",
+                                                                       "data_table", "input_map", "user_settings" };
 
             /** @brief 도구 창 테스트의 진행 상태입니다. */
             struct ToolWindowProbe
@@ -596,7 +597,10 @@ namespace sw::editor
                 string             what{ pPanelID };
                 if ( context.expect( pWindow != nullptr, ( what + ": the tool window was not created" ).c_str() ) )
                 {
-                    (void)context.expect( pWindow->Size.x >= minWidth && pWindow->Size.y >= minHeight, ( what + ": the tool window opened too small" ).c_str() );
+                    const string sizeText = " (" + to_string( static_cast<int32>( pWindow->Size.x ) ) + "x" + to_string( static_cast<int32>( pWindow->Size.y ) ) + " < " +
+                                            to_string( static_cast<int32>( minWidth ) ) + "x" + to_string( static_cast<int32>( minHeight ) ) +
+                                            ( pWindow->DockIsActive ? ", docked)" : ")" );
+                    (void)context.expect( pWindow->Size.x >= minWidth && pWindow->Size.y >= minHeight, ( what + ": the tool window opened too small" + sizeText ).c_str() );
                     const bool bInsideViewport = pViewport->Pos.x - kEdgeTolerancePx <= pWindow->Pos.x && pViewport->Pos.y - kEdgeTolerancePx <= pWindow->Pos.y &&
                                                  pWindow->Pos.x + pWindow->Size.x <= pViewport->Pos.x + pViewport->Size.x + kEdgeTolerancePx &&
                                                  pWindow->Pos.y + pWindow->Size.y <= pViewport->Pos.y + pViewport->Size.y + kEdgeTolerancePx;

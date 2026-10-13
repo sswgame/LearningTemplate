@@ -21,7 +21,23 @@ namespace sw::editor
             static constexpr float32 kColumnWidth       = 130.0f; ///< 96 DPI 기준입니다
             static constexpr float32 kActionColumnWidth = 70.0f;
             static constexpr float32 kChildColumnWidth  = 64.0f;
-            static constexpr int32   kExtraColumnCount  = 2; ///< 자식 수 · 행 동작
+            static constexpr int32   kExtraColumnCount  = 2;  ///< 자식 수 · 행 동작
+            static constexpr int32   kMaxVisibleRows    = 12; ///< 넘으면 표 안에서 세로로 스크롤한다
+
+            /**
+             * @brief 그룹 표의 바깥 높이입니다 — 행 수만큼(최대 `kMaxVisibleRows`)만 차지합니다.
+             * @details 스크롤 표(ScrollX · ScrollY)에 바깥 높이 0 을 주면 ImGui 는 남은 높이를 모두 준다. 그러면 첫 그룹이 패널을 다 차지해
+             *          그 아래의 "Add row" 단추와 다음 그룹이 창 밖으로 밀린다.
+             */
+            static float32 computeOuterHeight( size_t rowCount )
+            {
+                const ImGuiStyle& style        = ImGui::GetStyle();
+                const float32     headerHeight = ImGui::GetTextLineHeight() + style.CellPadding.y * 2.0f;
+                const float32     rowHeight    = ImGui::GetFrameHeight() + style.CellPadding.y * 2.0f;
+                const int32       shownRows    = rowCount < static_cast<size_t>( kMaxVisibleRows ) ? static_cast<int32>( rowCount ) : kMaxVisibleRows;
+                const int32       paddedRows   = shownRows > 0 ? shownRows : 1;
+                return headerHeight + rowHeight * static_cast<float32>( paddedRows ) + style.ScrollbarSize + style.FrameBorderSize * 2.0f + 2.0f;
+            }
 
             static string describe( string_view verb, string_view groupName, string_view column )
             {
@@ -77,8 +93,10 @@ namespace sw::editor
             EditorWidgets::drawSectionHeader( group._name.c_str(), subtitle.c_str() );
 
             const int32               columnCount = static_cast<int32>( group._listColumn.size() ) + CatalogTableEditorInternal::kExtraColumnCount;
-            constexpr ImGuiTableFlags kTableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollX;
-            if ( ImGui::BeginTable( "##CatalogRows", columnCount, kTableFlags ) )
+            constexpr ImGuiTableFlags kTableFlags =
+                ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY;
+            const ImVec2 outerSize{ 0.0f, CatalogTableEditorInternal::computeOuterHeight( group._listRow.size() ) };
+            if ( ImGui::BeginTable( "##CatalogRows", columnCount, kTableFlags, outerSize ) )
             {
                 for ( const string& column : group._listColumn )
                 {

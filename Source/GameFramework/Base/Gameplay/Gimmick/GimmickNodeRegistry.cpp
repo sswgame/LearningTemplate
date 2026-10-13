@@ -77,6 +77,12 @@ namespace sw
                 return registry;
             }
 
+            /** @brief GameFramework 타입을 등록할 때(기동의 ModuleTypes 단계) 기본 레지스트리를 세웁니다. */
+            static void buildDefaultRegistryWithTypes( TypeRegistry& )
+            {
+                (void)GimmickNodeRegistry::getDefault();
+            }
+
             static uint32 countBits( uint32 value )
             {
                 uint32 count = 0;
@@ -642,6 +648,11 @@ namespace sw
                 return true;
             }
         };
+
+        // 기본 레지스트리는 프로세스 끝까지 사는 정적이다. 처음 부르는 쪽(기믹 그래프 창 · 기믹 회로 컴포넌트)이 메모리 태그 기준선 뒤에 세우면
+        // 그 쪽 태그(Editor · Scene)의 증가로 종료 보고에 남는다. 그래서 타입 등록 단계(기준선 전)에 세운다. 정적 초기화에서 세우면 안 된다 —
+        // 종류 이름이 hashed_string 이라 이름 풀이 서기 전(정적 링크 · 테스트 실행 파일의 main 앞)에는 만들 수 없다.
+        TypeRegistrar s_defaultRegistryRegistrar{ &GimmickNodeRegistryInternal::buildDefaultRegistryWithTypes };
     } // namespace
 } // namespace sw
 

@@ -31,7 +31,7 @@ namespace sw
 
     void ModuleDependencyGraph::clear()
     {
-        _mapDependsOn.clear();
+        _mapDependsOn = unordered_map<string, vector<string>>{}; // `clear()` 는 용량을 남긴다 — 종료 때 비우므로 용량까지 놓는다
     }
 
     bool ModuleDependencyGraph::hasModule( string_view moduleName ) const
