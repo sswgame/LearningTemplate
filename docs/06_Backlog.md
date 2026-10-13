@@ -39,6 +39,8 @@
   Material 패널의 미리보기는 렌더 타깃이 아니라 머티리얼 값으로 CPU 에서 셰이딩한다(`MaterialPreviewShading`). 그래서 원인은 (1) 문서가 바뀌지 않았거나(Quick Open 의 Enter 가 목록보다 먼저 눌림 · 미저장 확인 모달)
   (2) 문서는 바뀌었는데 계산이 따라오지 않은 것 둘 중 하나로 본다 — 재현이 한 번뿐이라 가설이다. 시나리오는 이제 탐침 `Editor.MaterialDocumentIsProbeAsset` · `Editor.MaterialSwitchPending` 으로
   문서 교체를 먼저 기다리므로, 다시 지면 실패 줄이 (1) 인지 (2) 인지 가리킨다. 재현: `App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/materialpreview.scenario.xml -opengl` 을 여러 번.
+  2026-10-13 재측정: GL 단독 0/15, GL 체인 0/4(고치기 전 3 · 뒤 1) — 원인 미확정. 약한 곳 셋은 막았다: 체인 초기화가 Material 패널을 새로 만들어 앞 시나리오의 미저장 문서 · 확인 모달이 남지 않고(A-5),
+  탭이 가려져 그리지 않은 프레임에는 미리보기 탐침이 옛 값 대신 "값 없음" 이며(`onPanelCollapsed`), 문서 탐침은 읽기에 성공한 문서만 1 이다. 다시 지면 실패 줄이 셋 중 어느 것인지 말한다.
 
 - `A-5` **에디터 체인 밖에 남은 격리 시나리오 둘**([Automation README](../Source/Engine/Automation/README.md) "에디터 시나리오를 한 프로세스로 묶기"). 체인 초기화(`panel.resetOptional`)는 도구 패널을 새로 만들 뿐
   엔진 서비스와 상태 폴더의 파일은 그대로 둔다. `profilertimeline` 은 타임라인 기록이 `FrameProfiler` 에 남아 다음 실행이 "녹화 전 0" 으로 시작하지 않고,

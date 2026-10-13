@@ -357,9 +357,9 @@ humanoid 본 표, 표정, 스프링 본, 1인칭은 옆 폴더의 `<이름>.avat
 | `Editor.ReferenceCount` | 역색인에서 `gv_editorProbeAsset`(리소스 id)을 적은 텍스트 에셋 파일 수 |
 | `Editor.ReferenceIndexReady`, `Editor.ReferenceResultCount` | 참조 역색인이 다 만들어졌으면 1, 마지막 Find References 나 Show Dependencies 의 결과 줄 수 |
 | `Editor.OutputLogVisibleRows` | Output Log 가 지난 그리기에 보인 줄 수(거르기 · Collapse 뒤) |
-| `Editor.MaterialPreviewRedMinusBlue` | Material 패널의 구 미리보기 평균 (R - B)(0..255, 빨간 머티리얼이 크다). 패널이 닫혔거나 문서가 없으면 값이 없다 |
+| `Editor.MaterialPreviewRedMinusBlue` | Material 패널의 구 미리보기 평균 (R - B)(0..255, 빨간 머티리얼이 크다). 패널이 닫혔거나 문서가 없거나 지난 프레임에 내용을 그리지 않았으면(탭이 가려짐) 값이 없다 |
 | `Editor.SelectedEnumValue`, `Editor.ObjectDepth`, `Editor.DirtyDocumentCount` | 주 선택의 `gv_editorProbeProperty` 열거형 값(열거자의 수), `gv_editorProbeObject` 오브젝트가 부모 몇 겹 아래인지(루트 0 — 끌어 놓기 확인), 저장하지 않은 문서 패널 수 |
-| `Editor.MaterialDocumentIsProbeAsset`, `Editor.MaterialSwitchPending` | Material 패널이 연 문서가 `gv_editorProbeAsset` 이면 1(문서 교체와 미리보기 계산을 나눠 본다), 미저장 확인 때문에 새 문서를 못 열고 기다리는 중이면 1 |
+| `Editor.MaterialDocumentIsProbeAsset`, `Editor.MaterialSwitchPending` | Material 패널이 연 문서가 `gv_editorProbeAsset` 이고 읽기에 성공했으면 1(문서 교체와 미리보기 계산을 나눠 본다), 미저장 확인 때문에 새 문서를 못 열고 기다리는 중이면 1 |
 | `Editor.UIPreviewWidgetCount`, `Editor.UIPreviewFirstTextBytes`, `Editor.UIPreviewRightToLeft` | UI Preview 트리의 위젯 수, 문서 순서로 첫 글 위젯이 화면에 보이는 글의 UTF-8 바이트 수(의사 문화권이면 늘어난다), 루트가 오른쪽에서 왼쪽으로 배치됐으면 1(`qps-plocm`). 패널이 닫혔거나 문서가 없으면 값이 없다 |
 | `Editor.UIPreviewHoveredOrdinal`, `Editor.UIPreviewHoveredFocusable`, `Editor.UIPreviewFocusedOrdinal` | 입력 흉내가 호버한 위젯의 문서 순서 번호(없으면 -1)와 그 위젯이 포커스를 받는지, 탐색 방향 단추가 옮긴 포커스 위젯의 번호(없으면 -1) |
 | `Editor.UIPreviewSelectedOpacity`, `Editor.UIPreviewDirty`, `Editor.UIPreviewReloadedAfterSave` | 고른 위젯의 불투명도(고른 것이 없으면 값이 없다), 저장하지 않은 편집이 있으면 1, 저장한 뒤 핫 리로드가 문서를 다시 읽어 트리를 새로 지었으면 1 |
