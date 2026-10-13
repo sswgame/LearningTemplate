@@ -533,7 +533,7 @@ namespace sw::editor
                     if ( pObj == nullptr || pObj->isPendingDestroy() || pObj->getName().isEqual( name, NameCase::CaseSensitive ) == false )
                         continue;
                     ++foundCount;
-                    if ( pContext != nullptr && pContext->getEditorSelection().hasObject( pObj ) )
+                    if ( pContext != nullptr && pContext->getSubsystem<EditorSelection>().hasObject( pObj ) )
                         ++pickCount;
                 }
                 if ( foundCount != expectedCount )
@@ -652,7 +652,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                outValue = pContext->getWorkspace().isSceneDirty() ? 1.0 : 0.0;
+                outValue = pContext->getSubsystem<EditorWorkspace>().isSceneDirty() ? 1.0 : 0.0;
                 return true;
             }
 
@@ -693,7 +693,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                outValue = static_cast<float64>( pContext->getEditorSelection().getSelectedObjectCount() );
+                outValue = static_cast<float64>( pContext->getSubsystem<EditorSelection>().getSelectedObjectCount() );
                 return true;
             }
 
@@ -701,7 +701,7 @@ namespace sw::editor
             {
                 EditorContext*        pContext = EditorContext::get();
                 const HierarchyPanel* pHierarchy =
-                    pContext != nullptr ? static_cast<const HierarchyPanel*>( pContext->getPanelManager().findPanel( "hierarchy" ) ) : nullptr;
+                    pContext != nullptr ? static_cast<const HierarchyPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "hierarchy" ) ) : nullptr;
                 if ( pHierarchy == nullptr )
                     return false;
                 outValue = static_cast<float64>( pHierarchy->getVisibleRootCount() );
@@ -736,7 +736,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                const GameObject*      pPrimary = pContext->getEditorSelection().getPrimaryObject();
+                const GameObject*      pPrimary = pContext->getSubsystem<EditorSelection>().getPrimaryObject();
                 const CameraComponent* pCamera  = pPrimary != nullptr ? pPrimary->getComponent<CameraComponent>() : nullptr;
                 outValue                        = ( pCamera != nullptr && pCamera->getRole() == CameraRole::Viewport ) ? 1.0 : 0.0;
                 return true;
@@ -906,7 +906,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                const SceneViewPanel*               pPanel        = static_cast<const SceneViewPanel*>( pContext->getPanelManager().findPanel( "scene_view" ) );
+                const SceneViewPanel*               pPanel        = static_cast<const SceneViewPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "scene_view" ) );
                 const EditorVisualizerRegistration* pRegistration = EditorExtensionRegistry<EditorVisualizerRegistration>::find( gv_editorProbeVisualizer );
                 if ( pPanel == nullptr || pRegistration == nullptr )
                     return false;
@@ -923,7 +923,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                GameObject*  pObject = pContext->getEditorSelection().getPrimaryObject();
+                GameObject*  pObject = pContext->getSubsystem<EditorSelection>().getPrimaryObject();
                 const size_t dot     = gv_editorProbeProperty.find( '.' );
                 if ( pObject == nullptr || dot == string::npos )
                     return false;
@@ -952,7 +952,7 @@ namespace sw::editor
                 if ( pContext == nullptr || dot == string::npos )
                     return false;
                 vector<GameObject*> listSelected;
-                pContext->getEditorSelection().getSelectedObjects( listSelected );
+                pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSelected );
                 const hashed_string typeName( gv_editorProbeProperty.substr( 0, dot ).c_str() );
                 const hashed_string propertyName( gv_editorProbeProperty.substr( dot + 1 ).c_str() );
                 float64             sum{ 0.0 };
@@ -982,7 +982,7 @@ namespace sw::editor
                 const size_t   dot      = gv_editorProbeProperty.find( '.' );
                 if ( pContext == nullptr || dot == string::npos )
                     return false;
-                GameObject* pObject = pContext->getEditorSelection().getPrimaryObject();
+                GameObject* pObject = pContext->getSubsystem<EditorSelection>().getPrimaryObject();
                 if ( pObject == nullptr )
                     return false;
                 Component* pComponent = pObject->findComponentByTypeName( hashed_string( gv_editorProbeProperty.substr( 0, dot ).c_str() ) );
@@ -1048,7 +1048,7 @@ namespace sw::editor
             [[nodiscard]] static bool readSelectedComponentCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 EditorContext* pContext = EditorContext::get();
-                GameObject*    pObject  = pContext != nullptr ? pContext->getEditorSelection().getPrimaryObject() : nullptr;
+                GameObject*    pObject  = pContext != nullptr ? pContext->getSubsystem<EditorSelection>().getPrimaryObject() : nullptr;
                 if ( pObject == nullptr )
                     return false;
                 outValue = static_cast<float64>( pObject->getComponentCount() );
@@ -1059,7 +1059,7 @@ namespace sw::editor
             static const EditorViewportClient* findSceneViewClient()
             {
                 EditorContext*        pContext = EditorContext::get();
-                const SceneViewPanel* pPanel   = pContext != nullptr ? static_cast<const SceneViewPanel*>( pContext->getPanelManager().findPanel( "scene_view" ) ) : nullptr;
+                const SceneViewPanel* pPanel   = pContext != nullptr ? static_cast<const SceneViewPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "scene_view" ) ) : nullptr;
                 return pPanel != nullptr ? &pPanel->getViewportClient() : nullptr;
             }
 
@@ -1203,7 +1203,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                outValue = static_cast<float64>( pContext->getWorkspace().getGizmoOperation() );
+                outValue = static_cast<float64>( pContext->getSubsystem<EditorWorkspace>().getGizmoOperation() );
                 return true;
             }
 
@@ -1220,7 +1220,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                const AnimationGraphPanel* pPanel = static_cast<const AnimationGraphPanel*>( pContext->getPanelManager().findPanel( "animation_graph" ) );
+                const AnimationGraphPanel* pPanel = static_cast<const AnimationGraphPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "animation_graph" ) );
                 if ( pPanel == nullptr )
                     return false;
                 outValue = static_cast<float64>( bConditionOnly ? pPanel->countConditionLinks() : pPanel->getLinkCount() );
@@ -1243,7 +1243,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                const IEditorPanel* pPanel = pContext->getPanelManager().findPanel( gv_editorProbePanel );
+                const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel( gv_editorProbePanel );
                 if ( pPanel == nullptr )
                     return false;
                 outValue = pPanel->isOpen() ? 1.0 : 0.0;
@@ -1291,7 +1291,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                outValue = static_cast<float64>( pContext->getPanelManager().getPanels().size() );
+                outValue = static_cast<float64>( pContext->getSubsystem<EditorPanelManager>().getPanels().size() );
                 return true;
             }
 
@@ -1326,7 +1326,7 @@ namespace sw::editor
             [[nodiscard]] static bool readInputMapValue( uint32 which, float64& outValue )
             {
                 EditorContext*       pContext = EditorContext::get();
-                const InputMapPanel* pPanel   = pContext != nullptr ? static_cast<const InputMapPanel*>( pContext->getPanelManager().findPanel( "input_map" ) ) : nullptr;
+                const InputMapPanel* pPanel   = pContext != nullptr ? static_cast<const InputMapPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "input_map" ) ) : nullptr;
                 if ( pPanel == nullptr )
                     return false;
                 uint32 value{ 0 };
@@ -1346,7 +1346,7 @@ namespace sw::editor
             [[nodiscard]] static bool readProfilerPanelValue( uint32 which, float64& outValue )
             {
                 EditorContext*       pContext = EditorContext::get();
-                const ProfilerPanel* pPanel   = pContext != nullptr ? static_cast<const ProfilerPanel*>( pContext->getPanelManager().findPanel( "profiler" ) ) : nullptr;
+                const ProfilerPanel* pPanel   = pContext != nullptr ? static_cast<const ProfilerPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "profiler" ) ) : nullptr;
                 if ( pPanel == nullptr || pPanel->isOpen() == false )
                     return false;
                 switch ( which )
@@ -1404,7 +1404,7 @@ namespace sw::editor
             [[nodiscard]] static bool readRenderTargetPanelValue( uint32 which, float64& outValue )
             {
                 EditorContext*           pContext = EditorContext::get();
-                const RenderTargetPanel* pPanel   = pContext != nullptr ? static_cast<const RenderTargetPanel*>( pContext->getPanelManager().findPanel( "render_targets" ) )
+                const RenderTargetPanel* pPanel   = pContext != nullptr ? static_cast<const RenderTargetPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "render_targets" ) )
                                                                         : nullptr;
                 if ( pPanel == nullptr || pPanel->isOpen() == false )
                     return false;
@@ -1479,7 +1479,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                const SequencerPanel* pPanel = static_cast<const SequencerPanel*>( pContext->getPanelManager().findPanel( "sequencer" ) );
+                const SequencerPanel* pPanel = static_cast<const SequencerPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "sequencer" ) );
                 uint32                count{ 0 };
                 if ( pPanel == nullptr || pPanel->isOpen() == false || pPanel->findSelectedTrackKeyFrameCount( count ) == false )
                     return false;

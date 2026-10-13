@@ -29,7 +29,7 @@ namespace sw::editor
                     return;
 
                 if ( ImGui::SmallButton( "Open Sprite Clip Tool" ) )
-                    pContext->getWorkspace().requestOpenPanel( EditorAssetTypeRegistry::getPanelTitle( EditorAssetType::SpriteClip ) );
+                    pContext->getSubsystem<EditorWorkspace>().requestOpenPanel( EditorAssetTypeRegistry::getPanelTitle( EditorAssetType::SpriteClip ) );
             }
         };
     } // namespace

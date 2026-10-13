@@ -60,7 +60,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return nullptr;
-                return static_cast<const PackagingPanel*>( pContext->getPanelManager().findPanel( PackagingPanel::kPanelID ) );
+                return static_cast<const PackagingPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( PackagingPanel::kPanelID ) );
             }
 
             [[nodiscard]] static bool readPackagingState( const GameObjectManager* /*pManager*/, float64& outValue )

@@ -32,7 +32,7 @@ namespace sw::editor
             static EditorNetPlaySession* findSession()
             {
                 EditorContext* pContext = EditorContext::get();
-                return pContext != nullptr ? &pContext->getNetPlaySession() : nullptr;
+                return pContext != nullptr ? &pContext->getSubsystem<EditorNetPlaySession>() : nullptr;
             }
 
             /** @brief 돌고 있는 프로세스마다의 마지막 보고를 모읍니다. 재전송 · 버림은 합, 손실 · RTT 는 가장 큰 값입니다. */

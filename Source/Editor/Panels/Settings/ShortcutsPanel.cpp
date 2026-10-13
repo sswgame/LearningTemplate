@@ -57,7 +57,7 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
             return;
-        EditorCommandRegistry& registry = pContext->getCommandRegistry();
+        EditorCommandRegistry& registry = pContext->getSubsystem<EditorCommandRegistry>();
 
         // 조합 받기 — 수정자만 누른 동안은 기다린다. Esc 는 취소, Backspace 는 지운다(유니티 · 언리얼과 같다).
         if ( _captureCommandID.empty() == false && _conflictCommandID.empty() )

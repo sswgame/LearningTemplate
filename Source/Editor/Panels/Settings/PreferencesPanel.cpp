@@ -54,7 +54,7 @@ namespace sw::editor
             {
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext != nullptr )
-                    (void)pContext->getPanelManager().setPanelOpen( "preferences", true ); // 패널은 이 파일에 등록되어 있다
+                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "preferences", true ); // 패널은 이 파일에 등록되어 있다
             }
         };
     } // namespace

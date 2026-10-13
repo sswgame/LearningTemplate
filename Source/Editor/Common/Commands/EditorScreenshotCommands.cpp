@@ -45,7 +45,7 @@ namespace sw::editor
         const uint64 renderTarget = pContext->getViewTarget( EditorViewKind::Scene )._renderTarget;
         if ( renderTarget == 0 )
         {
-            pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifyScreenshotTitle" ), SW_LOCKEY( "EdCommon", "NotifyScreenshotNoSceneView" ), NotificationType::Warning );
+            pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyScreenshotTitle" ), SW_LOCKEY( "EdCommon", "NotifyScreenshotNoSceneView" ), NotificationType::Warning );
             return;
         }
         EditorScreenshotCommandsInternal::request( ScreenshotPathUtil::makeDefaultPathNow(), static_cast<RHITextureHandle>( renderTarget ) );
@@ -76,8 +76,8 @@ namespace sw::editor
             return;
         const string path = RenderThread::getLastScreenshotPath();
         if ( path.empty() )
-            pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifyScreenshotTitle" ), SW_LOCKEY( "EdCommon", "NotifyScreenshotFailed" ), NotificationType::Error );
+            pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyScreenshotTitle" ), SW_LOCKEY( "EdCommon", "NotifyScreenshotFailed" ), NotificationType::Error );
         else
-            pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifyScreenshotSaved" ), path, NotificationType::Success );
+            pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyScreenshotSaved" ), path, NotificationType::Success );
     }
 } // namespace sw::editor

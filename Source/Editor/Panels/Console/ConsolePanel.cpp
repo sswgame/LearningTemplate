@@ -92,7 +92,7 @@ namespace sw::editor
             static ConsolePanel* findPanel()
             {
                 EditorContext* pContext = EditorContext::get();
-                return pContext != nullptr ? static_cast<ConsolePanel*>( pContext->getPanelManager().findPanel( "console" ) ) : nullptr;
+                return pContext != nullptr ? static_cast<ConsolePanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "console" ) ) : nullptr;
             }
 
             /** @brief Output Log 가 지난 그리기에 보인 줄 수입니다(접기 · 거르기 뒤). */

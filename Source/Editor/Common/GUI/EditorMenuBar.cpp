@@ -79,7 +79,7 @@ namespace sw::editor
                 // 람다는 바깥의 `pContext` 를 캡처하지 않는다. 여기서 다시 받아 다시 확인한다.
                 EditorContext* pMenuContext = EditorContext::get();
                 if ( pMenuContext != nullptr && ImGui::MenuItem( pTitle ) )
-                    pMenuContext->getWorkspace().requestOpenPanel( pTitle );
+                    pMenuContext->getSubsystem<EditorWorkspace>().requestOpenPanel( pTitle );
             } );
             ImGui::EndMenu();
         }
@@ -94,7 +94,7 @@ namespace sw::editor
         if ( ImGui::BeginMenu( "Panel" ) )
         {
             ImGui::SeparatorText( "Panels" );
-            for ( const EditorPanelEntry& entry : pContext->getPanelManager().getPanels() )
+            for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
             {
                 if ( entry._pInstance == nullptr || entry._category != EditorPanelCategory::Core )
                     continue;
@@ -104,7 +104,7 @@ namespace sw::editor
             }
 
             ImGui::SeparatorText( "Tools" );
-            for ( const EditorPanelEntry& entry : pContext->getPanelManager().getPanels() )
+            for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
             {
                 if ( entry._pInstance == nullptr || entry._category == EditorPanelCategory::Core )
                     continue;
@@ -196,12 +196,12 @@ namespace sw::editor
                 fixed_string<constant::kMaxBuffer32> secondsBuf;
                 formatstring( secondsBuf.data(), secondsBuf.capacity(), "%#", Fmt( static_cast<float64>( duration ), Format().precision( 2 ) ) );
                 const string content = SW_LOCKEYFORMAT( "EdCommon", "LiveCodingSucceeded", TextArgumentList().addText( "target", displayName ).addText( "seconds", secondsBuf.c_str() ) );
-                pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "LiveCodingSucceededTitle" ), content, NotificationType::Success, 4.0f );
+                pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "LiveCodingSucceededTitle" ), content, NotificationType::Success, 4.0f );
             }
             else if ( state == BuildState::Failed )
             {
                 const string content = SW_LOCKEYFORMAT( "EdCommon", "LiveCodingFailed", TextArgumentList().addText( "target", displayName ).addInteger( "code", compiler.getLastExitCode() ) );
-                pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "LiveCodingFailedTitle" ), content, NotificationType::Error, 6.0f );
+                pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "LiveCodingFailedTitle" ), content, NotificationType::Error, 6.0f );
             }
         }
 
@@ -313,9 +313,9 @@ namespace sw::editor
             return;
 
         string openTitle;
-        if ( pContext->getWorkspace().consumeOpenPanel( openTitle ) == false )
+        if ( pContext->getSubsystem<EditorWorkspace>().consumeOpenPanel( openTitle ) == false )
             return;
-        if ( pContext->getPanelManager().setPanelOpen( openTitle, true ) )
+        if ( pContext->getSubsystem<EditorPanelManager>().setPanelOpen( openTitle, true ) )
             ImGui::SetWindowFocus( openTitle.c_str() );
     }
 
@@ -326,7 +326,7 @@ namespace sw::editor
             return;
 
         string scenePath;
-        if ( pContext->getWorkspace().consumeLoadScene( scenePath ) == false )
+        if ( pContext->getSubsystem<EditorWorkspace>().consumeLoadScene( scenePath ) == false )
             return;
 
         (void)EditorSceneFileCommands::tryOpenScene( scenePath ); // 실패는 tryOpenScene 이 알린다
@@ -340,18 +340,18 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
             return;
-        if ( pContext->getWorkspace().getPendingSceneAction() == EditorPendingSceneAction::None )
+        if ( pContext->getSubsystem<EditorWorkspace>().getPendingSceneAction() == EditorPendingSceneAction::None )
             return;
 
         if ( ImGui::IsPopupOpen( "##UnsavedSceneAction" ) == false )
             ImGui::OpenPopup( "##UnsavedSceneAction" );
 
         const utf8* pMessage = "You have unsaved changes. Continue?";
-        if ( pContext->getWorkspace().getPendingSceneAction() == EditorPendingSceneAction::New )
+        if ( pContext->getSubsystem<EditorWorkspace>().getPendingSceneAction() == EditorPendingSceneAction::New )
             pMessage = "Scene has unsaved changes. Create a new scene anyway?";
-        else if ( pContext->getWorkspace().getPendingSceneAction() == EditorPendingSceneAction::Load )
+        else if ( pContext->getSubsystem<EditorWorkspace>().getPendingSceneAction() == EditorPendingSceneAction::Load )
             pMessage = "Scene has unsaved changes. Open another scene anyway?";
-        else if ( pContext->getWorkspace().getPendingSceneAction() == EditorPendingSceneAction::Quit )
+        else if ( pContext->getSubsystem<EditorWorkspace>().getPendingSceneAction() == EditorPendingSceneAction::Quit )
             pMessage = "You have unsaved changes. Exit anyway?";
 
         const EditorUnsavedChoice choice = EditorWidgets::drawUnsavedChangesModal( "##UnsavedSceneAction", pMessage );

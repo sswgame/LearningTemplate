@@ -123,12 +123,12 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
             return false;
-        EditorWorkspace& ws = pContext->getWorkspace();
+        EditorWorkspace& ws = pContext->getSubsystem<EditorWorkspace>();
         if ( ws.isPrefabIsolationActive() == false && ws.isSceneDirty() &&
              EditorSessionPolicy::requiresCleanSceneForPrefabIsolation() )
         {
-            pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifyPrefabTitle" ), SW_LOCKEY( "EdCommon", "NotifyPrefabSaveFirst" ),
-                                                     NotificationType::Warning );
+            pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPrefabTitle" ), SW_LOCKEY( "EdCommon", "NotifyPrefabSaveFirst" ),
+                                                                      NotificationType::Warning );
             return false;
         }
 
@@ -161,7 +161,7 @@ namespace sw::editor
         ws.selectGameObject( pRoot );
         ws.setFocusedAssetPath( pathStr.c_str() );
         ws.requestOpenPanel( "Prefab Editor" );
-        pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifyPrefabTitle" ), SW_LOCKEY( "EdCommon", "NotifyPrefabIsolated" ), NotificationType::Info );
+        pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPrefabTitle" ), SW_LOCKEY( "EdCommon", "NotifyPrefabIsolated" ), NotificationType::Info );
         return true;
     }
 
@@ -170,7 +170,7 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
             return false;
-        EditorWorkspace& ws = pContext->getWorkspace();
+        EditorWorkspace& ws = pContext->getSubsystem<EditorWorkspace>();
         if ( ws.isPrefabIsolationActive() == false )
             return false;
         const PrefabIsolationFrame* pFrame = ws.getPrefabIsolationFrame();
@@ -199,8 +199,8 @@ namespace sw::editor
         const bool bFullyExit = ws.popPrefabIsolation();
         if ( frame._bSpawnedRoot == SW_TRUE && bSaveToPrefab == false && pManager != nullptr && pRoot != nullptr )
         {
-            if ( pContext->getEditorSelection().hasObject( pRoot ) )
-                pContext->getEditorSelection().selectObject( pRoot, SelectionMode::Remove );
+            if ( pContext->getSubsystem<EditorSelection>().hasObject( pRoot ) )
+                pContext->getSubsystem<EditorSelection>().selectObject( pRoot, SelectionMode::Remove );
             pManager->destroyObject( pRoot );
             pRoot = nullptr;
         }
@@ -209,7 +209,7 @@ namespace sw::editor
 
         if ( bFullyExit )
         {
-            pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifyPrefabTitle" ), SW_LOCKEY( "EdCommon", "NotifyPrefabIsolationExited" ), NotificationType::Info );
+            pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPrefabTitle" ), SW_LOCKEY( "EdCommon", "NotifyPrefabIsolationExited" ), NotificationType::Info );
             return true;
         }
 

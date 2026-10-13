@@ -74,7 +74,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        pContext->getWorkspace().setGameObjectPrefabPath( pObj->getObjectID(), "" );
-        pContext->getWorkspace().markSceneDirty();
+        pContext->getSubsystem<EditorWorkspace>().setGameObjectPrefabPath( pObj->getObjectID(), "" );
+        pContext->getSubsystem<EditorWorkspace>().markSceneDirty();
     }
 } // namespace sw::editor

@@ -34,13 +34,13 @@ namespace sw::editor
             (void)EditorPreferencesStore::saveAll( EditorPreferencesStore::getDefaultFilePath() ); // 실패는 saveAll 이 경고로 알린다
         // 다시 올라오면 새 이미지의 섹션은 기본값이다. 기록에서 빼 두어야 다음 프레임(또는 다음 saveAll)에 파일에서 다시 읽는다.
         EditorPreferencesStore::forgetSectionsWithin( pBegin, pEnd );
-        uint32 releasedCount = _context.getPanelManager().releasePanelsWithin( pBegin, pEnd, _context.getRHIDevice() );
-        releasedCount += _context.getPopupManager().releasePopupsWithin( pBegin, pEnd );
-        releasedCount += _context.getInspectorComponentManager().releaseInspectorsWithin( pBegin, pEnd );
-        releasedCount += _context.getInspectorPropertyManager().releaseDrawersWithin( pBegin, pEnd );
+        uint32 releasedCount = _context.getSubsystem<EditorPanelManager>().releasePanelsWithin( pBegin, pEnd, _context.getRHIDevice() );
+        releasedCount += _context.getSubsystem<EditorPopupManager>().releasePopupsWithin( pBegin, pEnd );
+        releasedCount += _context.getSubsystem<InspectorComponentManager>().releaseInspectorsWithin( pBegin, pEnd );
+        releasedCount += _context.getSubsystem<InspectorPropertyManager>().releaseDrawersWithin( pBegin, pEnd );
         releasedCount += EditorCommandGUI::releaseCommandsWithin( pBegin, pEnd );
         // 기본값 인스턴스는 어느 모듈의 컴포넌트든 될 수 있다 — 무엇이 언로드되든 모두 지운다(다음에 물을 때 다시 만든다). 세지 않는다(떼는 등록이 아니다).
-        _context.getDefaultObjects().clear();
+        _context.getSubsystem<EditorDefaultObjects>().clear();
         return releasedCount;
     }
 } // namespace sw::editor

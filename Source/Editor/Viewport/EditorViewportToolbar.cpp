@@ -191,7 +191,7 @@ namespace sw::editor
             EditorContext* pContext = EditorContext::get();
             if ( pContext != nullptr )
             {
-                EditorWorkspace& ws = pContext->getWorkspace();
+                EditorWorkspace& ws = pContext->getSubsystem<EditorWorkspace>();
                 for ( uint32 slot = 0; slot < 9; ++slot )
                 {
                     const bool                           bHas = ws.hasCameraBookmark( slot );
@@ -218,7 +218,7 @@ namespace sw::editor
 
         // 정렬은 둘 이상 골랐을 때만 쓴다 — 단추는 늘 두고 막아 둔다(바 크기가 선택마다 바뀌지 않게).
         EditorContext* pContext  = EditorContext::get();
-        const bool     bCanAlign = pContext != nullptr && pContext->getEditorSelection().getSelectedObjectCount() >= 2;
+        const bool     bCanAlign = pContext != nullptr && pContext->getSubsystem<EditorSelection>().getSelectedObjectCount() >= 2;
         nextItem( bVertical );
         ImGui::BeginDisabled( bCanAlign == false );
         if ( ImGui::Button( editoricon::kAlign, ImVec2{ side, side } ) )

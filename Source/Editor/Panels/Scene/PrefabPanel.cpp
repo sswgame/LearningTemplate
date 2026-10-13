@@ -33,7 +33,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return nullptr;
-                return pContext->getEditorSelection().getPrimaryObject();
+                return pContext->getSubsystem<EditorSelection>().getPrimaryObject();
             }
         };
     } // namespace
@@ -70,7 +70,7 @@ namespace sw::editor
         uint64         objectID{ 0 };
         if ( pContext != nullptr )
         {
-            GameObject* pPrimary       = pContext->getEditorSelection().getPrimaryObject();
+            GameObject* pPrimary       = pContext->getSubsystem<EditorSelection>().getPrimaryObject();
             objectID                   = pPrimary != nullptr ? pPrimary->getObjectID() : 0;
             const string_view matching = EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetType::Prefab );
             if ( matching.empty() == false )
@@ -87,10 +87,10 @@ namespace sw::editor
         ImGui::SameLine();
         ImGui::Text( "%s", _selectedInstanceName.empty() ? "(none)" : _selectedInstanceName.c_str() );
 
-        if ( pContext != nullptr && pContext->getWorkspace().isPrefabIsolationActive() )
+        if ( pContext != nullptr && pContext->getSubsystem<EditorWorkspace>().isPrefabIsolationActive() )
         {
             ImGui::TextColored( EditorColorUtil::toImVec4( PrefabPanelInternal::kIsolationText ), "Isolation: %s",
-                                pContext->getWorkspace().getPrefabIsolationPrefabPath().c_str() );
+                                pContext->getSubsystem<EditorWorkspace>().getPrefabIsolationPrefabPath().c_str() );
             if ( ImGui::Button( "Save Prefab & Exit Isolation" ) )
                 EditorPrefabIsolationCommands::exitPrefabIsolation( true );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "SavePrefabExitIsolation" ) );

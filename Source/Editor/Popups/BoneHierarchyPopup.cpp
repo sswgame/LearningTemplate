@@ -103,7 +103,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        pContext->getPopupManager().openPopup( kPopupID );
+        pContext->getSubsystem<EditorPopupManager>().openPopup( kPopupID );
     }
 
     void BoneHierarchyPopup::close()
@@ -112,7 +112,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        pContext->getPopupManager().closePopup( kPopupID );
+        pContext->getSubsystem<EditorPopupManager>().closePopup( kPopupID );
     }
 
     void BoneHierarchyPopup::toggle()
@@ -121,7 +121,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        pContext->getPopupManager().togglePopup( kPopupID );
+        pContext->getSubsystem<EditorPopupManager>().togglePopup( kPopupID );
     }
 
     bool BoneHierarchyPopup::isOpen()
@@ -130,7 +130,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return false;
 
-        return pContext->getPopupManager().isPopupOpen( kPopupID );
+        return pContext->getSubsystem<EditorPopupManager>().isPopupOpen( kPopupID );
     }
 
     // ------------------------------------------------------------------------------
@@ -148,7 +148,7 @@ namespace sw::editor
             return;
         }
 
-        EditorWorkspace& ws   = pContext->getWorkspace();
+        EditorWorkspace& ws   = pContext->getSubsystem<EditorWorkspace>();
         const string     name = ws.getSelectedObjectName();
         if ( name.empty() || ws.getSelectedObjectID() == 0 )
         {

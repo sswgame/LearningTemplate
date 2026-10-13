@@ -68,21 +68,6 @@ namespace sw::editor
 {
     EditorContext::EditorContext()
         : _scope{}
-        , _pEditorSelection{ nullptr }
-        , _pWorkspace{ nullptr }
-        , _pNotificationManager{ nullptr }
-        , _pCommandRegistry{ nullptr }
-        , _pPanelManager{ nullptr }
-        , _pPanelHost{ nullptr }
-        , _pPopupManager{ nullptr }
-        , _pAssetHotReload{ nullptr }
-        , _pConfigHotReload{ nullptr }
-        , _pAssetValidation{ nullptr }
-        , _pSourceControl{ nullptr }
-        , _pInspectorComponentManager{ nullptr }
-        , _pInspectorPropertyManager{ nullptr }
-        , _pDefaultObjects{ nullptr }
-        , _pNetPlaySession{ nullptr }
         , _pRHIDevice{ nullptr }
         , _pDockLayout{ nullptr }
         , _pRendererBackend{ nullptr }
@@ -102,23 +87,22 @@ namespace sw::editor
     {
         // 하위 객체는 목록이 소유한다. 넣는 순서는 뜻이 없고, 초기화 순서는 각자 선언한 의존이 정하며 종료 · 소멸은 그 역순이다.
         // 애셋 · 설정 핫 리로드(개발 기능)는 에디터가 켜져 있을 때만 감시하고, 버전 관리는 git LFS 를 비동기로 묻는다(각 initializeSubsystem).
-        _pEditorSelection          = &_scope.addSubsystem( make_unique<EditorSelection>() );
-        _pWorkspace                = &_scope.addSubsystem( make_unique<EditorWorkspace>( _pEditorSelection ) );
-        _pNotificationManager      = &_scope.addSubsystem( make_unique<EditorNotificationManager>() );
-        _pCommandRegistry          = &_scope.addSubsystem( make_unique<EditorCommandRegistry>() );
-        _pPanelManager             = &_scope.addSubsystem( make_unique<EditorPanelManager>() );
-        EditorPanelHost& panelHost = _scope.addSubsystem( make_unique<EditorPanelHost>( *this, *_pPanelManager ) );
-        _pPanelHost                = &panelHost;
+        EditorSelection&    selection    = _scope.addSubsystem( make_unique<EditorSelection>() );
+        EditorPanelManager& panelManager = _scope.addSubsystem( make_unique<EditorPanelManager>() );
+        EditorPanelHost&    panelHost    = _scope.addSubsystem( make_unique<EditorPanelHost>( *this, panelManager ) );
         (void)_scope.expose<IEditorPanelHost>( panelHost ); // 패널 매니저(GUI)를 모르는 레이어가 인터페이스로 찾는다 — 새 범위라 겹치지 않는다
-        _pPopupManager              = &_scope.addSubsystem( make_unique<EditorPopupManager>() );
-        _pAssetHotReload            = &_scope.addSubsystem( make_unique<AssetHotReload>() );
-        _pConfigHotReload           = &_scope.addSubsystem( make_unique<ConfigHotReload>() );
-        _pAssetValidation           = &_scope.addSubsystem( make_unique<EditorAssetValidation>() );
-        _pSourceControl             = &_scope.addSubsystem( sw::make_unique<EditorSourceControl>( EditorPaths::getProjectRootPath() ) );
-        _pInspectorComponentManager = &_scope.addSubsystem( make_unique<InspectorComponentManager>() );
-        _pInspectorPropertyManager  = &_scope.addSubsystem( make_unique<InspectorPropertyManager>() );
-        _pDefaultObjects            = &_scope.addSubsystem( make_unique<EditorDefaultObjects>() );
-        _pNetPlaySession            = &_scope.addSubsystem( make_unique<EditorNetPlaySession>() );
+        _scope.addSubsystem( make_unique<EditorWorkspace>( &selection ) );
+        _scope.addSubsystem( make_unique<EditorNotificationManager>() );
+        _scope.addSubsystem( make_unique<EditorCommandRegistry>() );
+        _scope.addSubsystem( make_unique<EditorPopupManager>() );
+        _scope.addSubsystem( make_unique<AssetHotReload>() );
+        _scope.addSubsystem( make_unique<ConfigHotReload>() );
+        _scope.addSubsystem( make_unique<EditorAssetValidation>() );
+        _scope.addSubsystem( sw::make_unique<EditorSourceControl>( EditorPaths::getProjectRootPath() ) );
+        _scope.addSubsystem( make_unique<InspectorComponentManager>() );
+        _scope.addSubsystem( make_unique<InspectorPropertyManager>() );
+        _scope.addSubsystem( make_unique<EditorDefaultObjects>() );
+        _scope.addSubsystem( make_unique<EditorNetPlaySession>() );
         // 확장 모듈이 언로드되기 전에 그 모듈의 등록 줄로 만든 인스턴스를 지운다 — 훑는 매니저들에 의존하므로 그들보다 먼저 내려간다.
         _scope.addSubsystem( make_unique<EditorModuleUnloadListener>( *this ) );
 
@@ -153,10 +137,10 @@ namespace sw::editor
 
     void EditorContext::syncExtensionRegistrations()
     {
-        _pPanelManager->syncWithRegistry( _pRHIDevice );
-        _pPopupManager->syncWithRegistry();
-        _pInspectorComponentManager->syncWithRegistry();
-        _pInspectorPropertyManager->syncWithRegistry();
+        getSubsystem<EditorPanelManager>().syncWithRegistry( _pRHIDevice );
+        getSubsystem<EditorPopupManager>().syncWithRegistry();
+        getSubsystem<InspectorComponentManager>().syncWithRegistry();
+        getSubsystem<InspectorPropertyManager>().syncWithRegistry();
         EditorCommandGUI::syncWithRegistry();
     }
 

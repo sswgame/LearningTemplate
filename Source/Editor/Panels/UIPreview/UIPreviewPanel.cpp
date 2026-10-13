@@ -118,7 +118,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return nullptr;
-                const UIPreviewPanel* pPanel = static_cast<const UIPreviewPanel*>( pContext->getPanelManager().findPanel( "ui_preview" ) );
+                const UIPreviewPanel* pPanel = static_cast<const UIPreviewPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "ui_preview" ) );
                 if ( pPanel == nullptr || pPanel->isOpen() == false || pPanel->getProbe()._bValid == false )
                     return nullptr;
                 return &pPanel->getProbe();

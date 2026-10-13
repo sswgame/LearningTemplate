@@ -12,7 +12,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return {};
 
-        const string& focused = pContext->getWorkspace().getFocusedAssetPath();
+        const string& focused = pContext->getSubsystem<EditorWorkspace>().getFocusedAssetPath();
         if ( matches( kind, focused ) == false )
             return {};
         return focused;
@@ -24,7 +24,7 @@ namespace sw::editor
         string         scanKey;
         if ( pContext != nullptr )
         {
-            scanKey = pContext->getWorkspace().getFocusedAssetPath();
+            scanKey = pContext->getSubsystem<EditorWorkspace>().getFocusedAssetPath();
             scanKey += '|';
             scanKey += to_string( extraToken );
         }

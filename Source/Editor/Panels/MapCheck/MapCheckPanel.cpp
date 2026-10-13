@@ -75,7 +75,7 @@ namespace sw::editor
                 if ( counts._errorCount == 0 )
                     return;
                 const string message = SW_LOCKEYFORMAT( "EditorMapCheck", "SceneIssuesToast", TextArgumentList().addInteger( "errorCount", counts._errorCount ).addInteger( "warningCount", counts._warningCount ) );
-                context.getNotificationManager().push( "Map Check", message.c_str(), NotificationType::Warning, 6.0f );
+                context.getSubsystem<EditorNotificationManager>().push( "Map Check", message.c_str(), NotificationType::Warning, 6.0f );
             }
 
             /** @brief 상태줄의 맵 검사 수 — 오류가 있으면 빨강, 경고만 있으면 주황, 없으면 흐리게. 누르면 Map Check 창. */
@@ -95,7 +95,7 @@ namespace sw::editor
                 ImGui::PopStyleColor();
                 EditorSelfTestMarks::note( "statusBar.mapCheck" );
                 if ( bOpen && pContext != nullptr )
-                    pContext->getWorkspace().requestOpenPanel( "Map Check" );
+                    pContext->getSubsystem<EditorWorkspace>().requestOpenPanel( "Map Check" );
                 if ( ImGui::IsItemHovered() )
                 {
                     const string tooltipText = SW_LOCKEYFORMAT( "EditorMapCheck", "StatusTooltip", TextArgumentList().addInteger( "errorCount", counts._errorCount ).addInteger( "warningCount", counts._warningCount ) );
@@ -156,7 +156,7 @@ namespace sw::editor
         GameObject* pObject = MapCheckPanelInternal::findIssueObject( _listRow[rowIndex] );
         if ( pObject == nullptr )
             return false;
-        pContext->getEditorSelection().selectObject( pObject );
+        pContext->getSubsystem<EditorSelection>().selectObject( pObject );
         return true;
     }
 
@@ -233,7 +233,7 @@ namespace sw::editor
         ImGui::TableHeadersRow();
 
         EditorContext*    pContext = EditorContext::get();
-        const GameObject* pPrimary = pContext != nullptr ? pContext->getEditorSelection().getPrimaryObject() : nullptr;
+        const GameObject* pPrimary = pContext != nullptr ? pContext->getSubsystem<EditorSelection>().getPrimaryObject() : nullptr;
         for ( uint32 rowIndex = 0; rowIndex < static_cast<uint32>( _listRow.size() ); ++rowIndex )
         {
             const ValidationIssue& issue   = _listRow[rowIndex];

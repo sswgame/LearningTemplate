@@ -43,12 +43,12 @@ namespace sw::editor
 
                 if ( EditorSceneFileCommands::saveActiveScene( listPath[0] ) == false )
                 {
-                    pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaveFailed" ), NotificationType::Error );
+                    pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaveFailed" ), NotificationType::Error );
                     return;
                 }
 
-                pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaved" ), NotificationType::Success );
-                if ( pContext->getWorkspace().getPendingSceneAction() != EditorPendingSceneAction::None )
+                pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaved" ), NotificationType::Success );
+                if ( pContext->getSubsystem<EditorWorkspace>().getPendingSceneAction() != EditorPendingSceneAction::None )
                     EditorSceneFileCommands::applyUnsavedSceneChoice( EditorUnsavedChoice::Discard );
             }
 
@@ -58,8 +58,8 @@ namespace sw::editor
                     return true;
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext != nullptr )
-                    pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifyStopPlayFirst" ),
-                                                             NotificationType::Warning );
+                    pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifyStopPlayFirst" ),
+                                                                              NotificationType::Warning );
                 return false;
             }
 
@@ -68,7 +68,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return;
-                EditorWorkspace&               ws     = pContext->getWorkspace();
+                EditorWorkspace&               ws     = pContext->getSubsystem<EditorWorkspace>();
                 const EditorPendingSceneAction action = ws.getPendingSceneAction();
                 const string                   path   = ws.getPendingSceneActionPath();
                 ws.clearPendingSceneAction();
@@ -114,15 +114,15 @@ namespace sw::editor
             EditorContext* pFailContext = EditorContext::get();
             if ( pFailContext != nullptr )
             {
-                pFailContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySceneOpenFailed" ),
-                                                             NotificationType::Error );
+                pFailContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySceneOpenFailed" ),
+                                                                              NotificationType::Error );
             }
             return false;
         }
 
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
-            pContext->getWorkspace().clearSelection();
+            pContext->getSubsystem<EditorWorkspace>().clearSelection();
 
         SW_LOG_INFO( "Open Scene: %#", loadPath );
         return true;
@@ -134,9 +134,9 @@ namespace sw::editor
             return false;
 
         EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr && EditorSessionPolicy::needsUnsavedPrompt( pContext->getWorkspace().isSceneDirty() ) )
+        if ( pContext != nullptr && EditorSessionPolicy::needsUnsavedPrompt( pContext->getSubsystem<EditorWorkspace>().isSceneDirty() ) )
         {
-            pContext->getWorkspace().setPendingSceneAction( EditorPendingSceneAction::Load, path );
+            pContext->getSubsystem<EditorWorkspace>().setPendingSceneAction( EditorPendingSceneAction::Load, path );
             return true;
         }
         return loadScene( path );
@@ -148,9 +148,9 @@ namespace sw::editor
             return false;
 
         EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr && EditorSessionPolicy::needsUnsavedPrompt( pContext->getWorkspace().isSceneDirty() ) )
+        if ( pContext != nullptr && EditorSessionPolicy::needsUnsavedPrompt( pContext->getSubsystem<EditorWorkspace>().isSceneDirty() ) )
         {
-            pContext->getWorkspace().setPendingSceneAction( EditorPendingSceneAction::New );
+            pContext->getSubsystem<EditorWorkspace>().setPendingSceneAction( EditorPendingSceneAction::New );
             return true;
         }
 
@@ -162,14 +162,14 @@ namespace sw::editor
             return false;
         syncAfterSceneGenerationChange();
         if ( pContext != nullptr )
-            pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifyNewScene" ), NotificationType::Info );
+            pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifyNewScene" ), NotificationType::Info );
         return true;
     }
 
     void EditorSceneFileCommands::saveFocusedOrScene()
     {
         EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr && pContext->getPanelHost().saveFocusedDirtyDocument() )
+        if ( pContext != nullptr && pContext->getSubsystem<IEditorPanelHost>().saveFocusedDirtyDocument() )
             return;
         saveActiveSceneOrPrompt();
     }
@@ -179,15 +179,15 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
             return;
-        EditorWorkspace& ws = pContext->getWorkspace();
+        EditorWorkspace& ws = pContext->getSubsystem<EditorWorkspace>();
         if ( ws.getPendingSceneAction() == EditorPendingSceneAction::None )
             return;
 
         if ( EditorSessionPolicy::shouldSaveBeforeAction( choice ) )
         {
-            if ( pContext->getPanelHost().saveAllDirtyDocuments() == false )
+            if ( pContext->getSubsystem<IEditorPanelHost>().saveAllDirtyDocuments() == false )
             {
-                pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifyEditorTitle" ), SW_LOCKEY( "EdCommon", "NotifyDocumentSaveFailed" ), NotificationType::Error );
+                pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyEditorTitle" ), SW_LOCKEY( "EdCommon", "NotifyDocumentSaveFailed" ), NotificationType::Error );
                 return;
             }
             if ( ws.isSceneDirty() )
@@ -197,7 +197,7 @@ namespace sw::editor
                 {
                     if ( saveActiveScene( {} ) == false )
                     {
-                        pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaveFailed" ), NotificationType::Error );
+                        pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaveFailed" ), NotificationType::Error );
                         return;
                     }
                 }
@@ -212,7 +212,7 @@ namespace sw::editor
         if ( EditorSessionPolicy::shouldClearDirtyWithoutSave( choice ) )
         {
             ws.clearSceneDirty();
-            pContext->getPanelHost().discardAllDirtyDocuments();
+            pContext->getSubsystem<IEditorPanelHost>().discardAllDirtyDocuments();
         }
 
         if ( EditorSessionPolicy::shouldProceedWithAction( choice ) )
@@ -229,7 +229,7 @@ namespace sw::editor
             return;
 
         // 이전 씬을 가리키던 상태(선택, dirty, Undo, 프리팹 격리)를 버린다. 이유는 `EditorSceneGenerationSync::apply` 에 있다.
-        (void)EditorSceneGenerationSync::apply( pContext->getWorkspace(), pSceneManager->getSceneGeneration(), editor::getService<CommandStack>() );
+        (void)EditorSceneGenerationSync::apply( pContext->getSubsystem<EditorWorkspace>(), pSceneManager->getSceneGeneration(), editor::getService<CommandStack>() );
     }
 
     bool EditorSceneFileCommands::tryBeginQuit()
@@ -237,15 +237,15 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
             return true;
-        if ( pContext->getWorkspace().getPendingSceneAction() != EditorPendingSceneAction::None )
+        if ( pContext->getSubsystem<EditorWorkspace>().getPendingSceneAction() != EditorPendingSceneAction::None )
             return false;
 
-        const bool   bSceneDirty = pContext->getWorkspace().isSceneDirty();
-        const uint32 dirtyDocs   = pContext->getPanelHost().countDirtyDocuments();
+        const bool   bSceneDirty = pContext->getSubsystem<EditorWorkspace>().isSceneDirty();
+        const uint32 dirtyDocs   = pContext->getSubsystem<IEditorPanelHost>().countDirtyDocuments();
         if ( EditorSessionPolicy::needsQuitPrompt( bSceneDirty, dirtyDocs ) == false )
             return true;
 
-        pContext->getWorkspace().setPendingSceneAction( EditorPendingSceneAction::Quit );
+        pContext->getSubsystem<EditorWorkspace>().setPendingSceneAction( EditorPendingSceneAction::Quit );
         return false;
     }
 
@@ -270,8 +270,8 @@ namespace sw::editor
         if ( targetPath.empty() == false && FileUtil::isReadOnlyFile( targetAbs ) )
         {
             if ( pContext != nullptr )
-                pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySaveTitle" ), SW_LOCKEY( "EdCommon", "NotifySceneReadOnly" ),
-                                                         NotificationType::Warning );
+                pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySaveTitle" ), SW_LOCKEY( "EdCommon", "NotifySceneReadOnly" ),
+                                                                          NotificationType::Warning );
             SW_LOG_WARNING( "Scene '%#' is read-only (not checked out) - not saved", targetAbs.c_str() );
             return false;
         }
@@ -280,11 +280,11 @@ namespace sw::editor
             return false;
         if ( pContext != nullptr )
         {
-            pContext->getWorkspace().clearSceneDirty();
+            pContext->getSubsystem<EditorWorkspace>().clearSceneDirty();
             // 저장한 씬에 검증 규칙을 실행한다. 결과는 로그로 알리고 저장을 막지 않는다.
             pScene = pSceneManager->getActiveScene();
             if ( pScene != nullptr )
-                pContext->getAssetValidation().requestValidation( pScene->getSourcePath() );
+                pContext->getSubsystem<EditorAssetValidation>().requestValidation( pScene->getSourcePath() );
         }
         return true;
     }
@@ -298,10 +298,10 @@ namespace sw::editor
             if ( saveActiveScene( {} ) )
             {
                 if ( pContext != nullptr )
-                    pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaved" ), NotificationType::Success );
+                    pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaved" ), NotificationType::Success );
             }
             else if ( pContext != nullptr )
-                pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaveFailed" ), NotificationType::Error );
+                pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaveFailed" ), NotificationType::Error );
             return;
         }
 

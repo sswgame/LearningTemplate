@@ -18,7 +18,7 @@ namespace sw::editor
             static void openPanel()
             {
                 EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr && pContext->getPanelManager().setPanelOpen( "gimmick_graph", true ) )
+                if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "gimmick_graph", true ) )
                     SW_LOG_INFO( "Gimmick Graph panel opened" );
             }
         };

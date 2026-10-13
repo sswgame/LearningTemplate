@@ -63,9 +63,9 @@ namespace sw::editor
         GameObject* pObject    = nullptr;
         Component*  pComponent = nullptr;
         if ( findObjectUnderMouse( canvasPos, canvasSize, pCamera, settings, pObject, pComponent ) )
-            pContext->getWorkspace().selectComponent( pObject, pComponent );
+            pContext->getSubsystem<EditorWorkspace>().selectComponent( pObject, pComponent );
         else
-            pContext->getWorkspace().clearSelection();
+            pContext->getSubsystem<EditorWorkspace>().clearSelection();
     }
 
     void EditorViewportPicker::processHover( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, bool bCanvasHovered, bool bGizmoDragging,
@@ -98,7 +98,7 @@ namespace sw::editor
         _hoveredObjectID       = findObjectUnderMouse( canvasPos, canvasSize, pCamera, settings, pObject, pComponent ) ? pObject->getObjectID() : 0;
         // 이미 선택한 오브젝트는 호버로 취급하지 않는다. 선택 상자와 기즈모가 이미 있다. 그 위의 기즈모 핸들과 겹치는 판정도 여기서 없어진다.
         EditorContext* pContext = EditorContext::get();
-        if ( pObject != nullptr && pContext != nullptr && pContext->getEditorSelection().hasObject( pObject ) )
+        if ( pObject != nullptr && pContext != nullptr && pContext->getSubsystem<EditorSelection>().hasObject( pObject ) )
             _hoveredObjectID = 0;
         _lastHoverPickSeconds = static_cast<float64>( MonotonicClock::nowNanoseconds() - startNanos ) * 1e-9;
         _lastHoverPickTime    = now;
@@ -133,7 +133,7 @@ namespace sw::editor
             const uint32 index = EditorViewportBillboard::findAt( listItem, float2{ mouse.x, mouse.y } );
             if ( index != invalid_index::kUint32 )
             {
-                if ( pContext->getWorkspace().isObjectLocked( listItem[index]._pObject->getObjectID() ) )
+                if ( pContext->getSubsystem<EditorWorkspace>().isObjectLocked( listItem[index]._pObject->getObjectID() ) )
                     return false;
                 pOutObject    = listItem[index]._pObject;
                 pOutComponent = listItem[index]._pComponent;
@@ -144,7 +144,7 @@ namespace sw::editor
         // 어떤 컴포넌트 종류를 집을 수 있는지는 EditorViewportRayPick 의 테이블이 정한다. ImGui 없이 테스트한다.
         EditorPickResult pickResult{};
         if ( EditorViewportRayPick::pick( pManager, pickRay, settings._bIs2DMode, pickResult ) == false || pickResult._pObject == nullptr ||
-             pContext->getWorkspace().isObjectLocked( pickResult._pObject->getObjectID() ) || pickResult._pObject->isHiddenInEditor() )
+             pContext->getSubsystem<EditorWorkspace>().isObjectLocked( pickResult._pObject->getObjectID() ) || pickResult._pObject->isHiddenInEditor() )
             return false;
         pOutObject    = pickResult._pObject;
         pOutComponent = pickResult._pComponent;

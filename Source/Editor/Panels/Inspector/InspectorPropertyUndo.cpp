@@ -44,10 +44,10 @@ namespace sw::editor
         PendingEdit captureSelectionBeforeEdit( EditorContext& context, const utf8* pLabel )
         {
             vector<GameObject*> listSelected;
-            context.getEditorSelection().getSelectedObjects( listSelected );
+            context.getSubsystem<EditorSelection>().getSelectedObjects( listSelected );
             if ( listSelected.empty() )
             {
-                GameObject* pSelected = context.getWorkspace().getSelectedObject();
+                GameObject* pSelected = context.getSubsystem<EditorWorkspace>().getSelectedObject();
                 if ( pSelected != nullptr )
                     listSelected.push_back( pSelected );
             }

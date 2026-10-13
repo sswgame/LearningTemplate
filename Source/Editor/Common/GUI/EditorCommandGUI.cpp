@@ -82,7 +82,7 @@ namespace sw::editor
                     return;
 
                 if ( listPath.empty() == false )
-                    pContext->getWorkspace().requestLoadScene( listPath[0] );
+                    pContext->getSubsystem<EditorWorkspace>().requestLoadScene( listPath[0] );
             }
 
             /// @brief 테이블은 `void()` 를 요구하는데 `tryCreateNewScene` 은 `bool` 을 반환합니다. 이 차이를 맞추려고 둡니다.
@@ -159,10 +159,10 @@ namespace sw::editor
             static void commandPlay()
             {
                 EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr && pContext->getWorkspace().isSceneDirty() && EditorPlaySession::isStopped() )
+                if ( pContext != nullptr && pContext->getSubsystem<EditorWorkspace>().isSceneDirty() && EditorPlaySession::isStopped() )
                 {
-                    pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifyPlayTitle" ), SW_LOCKEY( "EdCommon", "NotifyPlayUnsaved" ),
-                                                             NotificationType::Warning );
+                    pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPlayTitle" ), SW_LOCKEY( "EdCommon", "NotifyPlayUnsaved" ),
+                                                                              NotificationType::Warning );
                     return;
                 }
                 EditorPlaySession::play();
@@ -173,7 +173,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return nullptr;
-                return pContext->getEditorSelection().getPrimaryObject();
+                return pContext->getSubsystem<EditorSelection>().getPrimaryObject();
             }
 
             static Component* selectedComponent()
@@ -182,7 +182,7 @@ namespace sw::editor
                 GameObject*    pObj     = primaryObject();
                 if ( pContext == nullptr || pObj == nullptr )
                     return nullptr;
-                const uint64 componentID = pContext->getWorkspace().getSelectedComponentID();
+                const uint64 componentID = pContext->getSubsystem<EditorWorkspace>().getSelectedComponentID();
                 if ( componentID == 0 )
                     return nullptr;
                 return pObj->findComponentByID( componentID );
@@ -192,7 +192,7 @@ namespace sw::editor
             {
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext != nullptr )
-                    pContext->getNotificationManager().push( pTitle, pDetail, NotificationType::Warning );
+                    pContext->getSubsystem<EditorNotificationManager>().push( pTitle, pDetail, NotificationType::Warning );
             }
 
             static void commandPasteComponentValues()
@@ -204,12 +204,12 @@ namespace sw::editor
                     warn( SW_LOCKEY( "EdCommon", "NotifyPasteTitle" ), SW_LOCKEY( "EdCommon", "NotifySelectComponent" ) );
                     return;
                 }
-                if ( pContext->getWorkspace().hasCopiedComponent() == false )
+                if ( pContext->getSubsystem<EditorWorkspace>().hasCopiedComponent() == false )
                 {
                     warn( SW_LOCKEY( "EdCommon", "NotifyPasteTitle" ), SW_LOCKEY( "EdCommon", "NotifyClipboardEmpty" ) );
                     return;
                 }
-                (void)EditorTransformCommands::pasteCopiedComponentValues( pContext->getWorkspace(), pComp ); // 실패는 붙여넣기 함수가 로그로 알린다
+                (void)EditorTransformCommands::pasteCopiedComponentValues( pContext->getSubsystem<EditorWorkspace>(), pComp ); // 실패는 붙여넣기 함수가 로그로 알린다
             }
 
             static void commandPasteComponentAsNew()
@@ -221,12 +221,12 @@ namespace sw::editor
                     warn( SW_LOCKEY( "EdCommon", "NotifyPasteTitle" ), SW_LOCKEY( "EdCommon", "NotifySelectObject" ) );
                     return;
                 }
-                if ( pContext->getWorkspace().hasCopiedComponent() == false )
+                if ( pContext->getSubsystem<EditorWorkspace>().hasCopiedComponent() == false )
                 {
                     warn( SW_LOCKEY( "EdCommon", "NotifyPasteTitle" ), SW_LOCKEY( "EdCommon", "NotifyClipboardEmpty" ) );
                     return;
                 }
-                (void)EditorTransformCommands::pasteCopiedComponentAsNew( pContext->getWorkspace(), pObj ); // 실패는 붙여넣기 함수가 로그로 알린다
+                (void)EditorTransformCommands::pasteCopiedComponentAsNew( pContext->getSubsystem<EditorWorkspace>(), pObj ); // 실패는 붙여넣기 함수가 로그로 알린다
             }
 
             static void onLoadPresetDialogResult( const vector<string>& listPath )
@@ -311,10 +311,10 @@ namespace sw::editor
             static string findSelectedPrefabPath( GameObject*& pOutObj )
             {
                 EditorContext* pContext = EditorContext::get();
-                pOutObj                 = ( pContext != nullptr ) ? pContext->getEditorSelection().getPrimaryObject() : nullptr;
+                pOutObj                 = ( pContext != nullptr ) ? pContext->getSubsystem<EditorSelection>().getPrimaryObject() : nullptr;
                 if ( pOutObj == nullptr )
                     return {};
-                return string{ pContext->getWorkspace().getGameObjectPrefabPath( pOutObj->getObjectID() ) };
+                return string{ pContext->getSubsystem<EditorWorkspace>().getGameObjectPrefabPath( pOutObj->getObjectID() ) };
             }
 
             static void commandApplyPrefabOverrides()
@@ -358,7 +358,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return 0;
-                return pContext->getEditorSelection().getSelectedObjectCount();
+                return pContext->getSubsystem<EditorSelection>().getSelectedObjectCount();
             }
 
             static bool hasSelection()
@@ -666,7 +666,7 @@ namespace sw::editor
             return 0;
         }
 
-        EditorCommandRegistry& registry = pContext->getCommandRegistry();
+        EditorCommandRegistry& registry = pContext->getSubsystem<EditorCommandRegistry>();
         registry.clear();
         getSyncedGeneration() = EditorExtensionRegistry<EditorCommandRegistration>::getList().getGeneration();
 
@@ -716,7 +716,7 @@ namespace sw::editor
         if ( ImGui::GetIO().WantTextInput )
             return;
 
-        const EditorCommandRegistry& registry = pContext->getCommandRegistry();
+        const EditorCommandRegistry& registry = pContext->getSubsystem<EditorCommandRegistry>();
         for ( const EditorCommandDesc& desc : registry.getCommands() )
         {
             const bool bPressed = ( EditorCommandGUIInternal::isShortcutPressed( desc._shortcut ) ||
@@ -736,7 +736,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        const EditorCommandRegistry& registry = pContext->getCommandRegistry();
+        const EditorCommandRegistry& registry = pContext->getSubsystem<EditorCommandRegistry>();
         for ( const EditorMenu& menu : registry.getMenus() )
         {
             if ( menu._parentPath != commandmenu::kMainMenuBar )
@@ -755,7 +755,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        const EditorCommandRegistry& registry = pContext->getCommandRegistry();
+        const EditorCommandRegistry& registry = pContext->getSubsystem<EditorCommandRegistry>();
         const EditorMenu*            pMenu    = registry.findMenu( menuPath );
         if ( pMenu != nullptr )
             EditorCommandGUIInternal::drawMenu( registry, *pMenu );

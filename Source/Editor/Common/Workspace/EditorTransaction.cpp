@@ -32,7 +32,7 @@ namespace sw::editor
             static void markActiveSceneDirty()
             {
                 EditorContext*   pContext   = EditorContext::get();
-                EditorWorkspace* pWorkspace = ( pContext != nullptr ) ? &pContext->getWorkspace() : editor::getService<EditorWorkspace>();
+                EditorWorkspace* pWorkspace = ( pContext != nullptr ) ? &pContext->getSubsystem<EditorWorkspace>() : editor::getService<EditorWorkspace>();
                 if ( pWorkspace != nullptr )
                     pWorkspace->markSceneDirty();
             }
@@ -47,7 +47,7 @@ namespace sw::editor
                 GameObject*    pTarget  = editor::findGameObject( GameObjectHandle::make( notice._objectID ) );
                 if ( pContext != nullptr && pTarget != nullptr )
                 {
-                    EditorSelection& selection = pContext->getEditorSelection();
+                    EditorSelection& selection = pContext->getSubsystem<EditorSelection>();
                     if ( notice._kind == ObjectEditKind::Destroyed && selection.hasObject( pTarget ) )
                         selection.selectObject( pTarget, SelectionMode::Remove );
                     else if ( notice._kind == ObjectEditKind::Recreated )

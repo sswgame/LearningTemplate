@@ -547,7 +547,7 @@ namespace sw::editor
         _editorContext->setRHIDevice( _pRHIDevice );
         _editorContext->setRendererBackend( _rendererBackend.get() );
 
-        _editorContext->getPanelManager().registerDefaultPanels();
+        _editorContext->getSubsystem<EditorPanelManager>().registerDefaultPanels();
         // 사용자 단축키(Saved/Editor/Shortcuts.json)는 레지스트리를 만들 때 적용한다. 처음 실행이면 파일이 없다.
         if ( EditorCommandGUI::loadShortcutOverrides() == false )
             SW_LOG_TRACE( "No shortcut overrides yet - default shortcuts" );
@@ -590,8 +590,8 @@ namespace sw::editor
         if ( _editorContext == nullptr )
             return;
         _editorContext->destroyViewTargets();
-        _editorContext->getPanelManager().shutdownAllPanels( nullptr );
-        _editorContext->getPanelManager().clear();
+        _editorContext->getSubsystem<EditorPanelManager>().shutdownAllPanels( nullptr );
+        _editorContext->getSubsystem<EditorPanelManager>().clear();
         _editorContext->shutdown();
         _editorContext.reset();
     }
@@ -644,7 +644,7 @@ namespace sw::editor
         if ( _bInitialized == SW_FALSE || _editorContext == nullptr )
             return;
 
-        _editorContext->getPanelManager().preRenderOpenPanels( pRHIDevice );
+        _editorContext->getSubsystem<EditorPanelManager>().preRenderOpenPanels( pRHIDevice );
     }
 
     void ImGuiEditor::updateUI()

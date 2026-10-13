@@ -114,7 +114,7 @@ namespace sw::editor
         if ( pContext != nullptr )
         {
             vector<GameObject*> listSelected;
-            pContext->getEditorSelection().getSelectedObjects( listSelected );
+            pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSelected );
             for ( GameObject* pObject : listSelected )
             {
                 GimmickCircuitComponent* pCircuit = pObject != nullptr ? pObject->getComponent<GimmickCircuitComponent>() : nullptr;
@@ -584,7 +584,7 @@ namespace sw::editor
             EditorContext*      pContext = EditorContext::get();
             vector<GameObject*> listSelected;
             if ( pContext != nullptr )
-                pContext->getEditorSelection().getSelectedObjects( listSelected );
+                pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSelected );
             if ( listSelected.empty() == false && listSelected[0] != nullptr )
             {
                 editSetTarget( circuit, node._graphID, listSelected[0]->getHandle() );

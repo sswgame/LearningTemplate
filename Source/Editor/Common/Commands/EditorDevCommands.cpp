@@ -54,7 +54,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( listArgument.size() != 1 || pContext == nullptr )
                     return false;
-                if ( pContext->getCommandRegistry().execute( listArgument[0] ) == false )
+                if ( pContext->getSubsystem<EditorCommandRegistry>().execute( listArgument[0] ) == false )
                 {
                     outReply = "no enabled editor command '" + listArgument[0] + "'";
                     return false;
@@ -184,7 +184,7 @@ namespace sw::editor
                 if ( listArgument.size() != 1 || pContext == nullptr )
                     return false;
                 vector<GameObject*> listSelected;
-                pContext->getEditorSelection().getSelectedObjects( listSelected );
+                pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSelected );
                 uint32 addedCount{ 0 };
                 for ( GameObject* pObject : listSelected )
                 {

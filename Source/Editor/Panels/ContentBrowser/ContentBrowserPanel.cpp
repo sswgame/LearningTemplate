@@ -100,7 +100,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return nullptr;
-                return static_cast<const ContentBrowserPanel*>( pContext->getPanelManager().findPanel( "content_browser" ) );
+                return static_cast<const ContentBrowserPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "content_browser" ) );
             }
 
             [[nodiscard]] static bool readGameRootCount( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -128,9 +128,9 @@ namespace sw::editor
                 if ( listArgument.size() != 1 || pContext == nullptr )
                     return false;
                 const string folderAbs = FileUtil::joinPath( ResourcePaths::getRootFolderPath(), FileUtil::normalizePath( listArgument[0] ) );
-                if ( FileUtil::isDirectory( folderAbs ) == false || pContext->getPanelManager().setPanelOpen( "content_browser", true ) == false )
+                if ( FileUtil::isDirectory( folderAbs ) == false || pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "content_browser", true ) == false )
                     return false;
-                ContentBrowserPanel* pPanel = static_cast<ContentBrowserPanel*>( pContext->getPanelManager().findPanel( "content_browser" ) );
+                ContentBrowserPanel* pPanel = static_cast<ContentBrowserPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "content_browser" ) );
                 if ( pPanel == nullptr )
                     return false;
                 pPanel->openFolder( folderAbs );
@@ -306,7 +306,7 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr || entry._bIsDirectory )
             return {};
-        return pContext->getSourceControl().describeStatus( entry._absolutePath, entry._bReadOnly );
+        return pContext->getSubsystem<EditorSourceControl>().describeStatus( entry._absolutePath, entry._bReadOnly );
     }
 
     void ContentBrowserPanel::drawSourceControlBadge( ImDrawList* pDrawList, const float2& topRight, const AssetEntry& entry )
@@ -316,7 +316,7 @@ namespace sw::editor
             return;
         // 잠금은 누가 걸었든 주황 자물쇠로, 읽기 전용(잠그기 전)은 회색 자물쇠로 그린다. 바로 아래 버튼의 툴팁이 이유를 설명한다.
         EditorContext* pContext = EditorContext::get();
-        const bool     bLocked  = pContext != nullptr && pContext->getSourceControl().findLock( entry._absolutePath ) != nullptr;
+        const bool     bLocked  = pContext != nullptr && pContext->getSubsystem<EditorSourceControl>().findLock( entry._absolutePath ) != nullptr;
         const ImU32    color    = bLocked ? EditorColorUtil::toImU32( ContentBrowserPanelInternal::kLockBadgeLocked ) : EditorColorUtil::toImU32( ContentBrowserPanelInternal::kLockBadgeReadOnly );
         const ImVec2   textSize = ImGui::CalcTextSize( editoricon::kLock );
         pDrawList->AddText( ImVec2( topRight._x - textSize.x, topRight._y ), color, editoricon::kLock );
@@ -353,7 +353,7 @@ namespace sw::editor
             EditorContext* pContext = EditorContext::get();
             if ( pContext != nullptr && entry._bIsDirectory == false )
             {
-                EditorSourceControl& sourceControl = pContext->getSourceControl();
+                EditorSourceControl& sourceControl = pContext->getSubsystem<EditorSourceControl>();
                 const bool           bCanLock      = sourceControl.getProvider().canLock();
                 const bool           bLocked       = sourceControl.findLock( entry._absolutePath ) != nullptr;
                 ImGui::Separator();
@@ -477,7 +477,7 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
             return;
-        const uint64 serial = pContext->getAssetHotReload().getContentChangeSerial();
+        const uint64 serial = pContext->getSubsystem<AssetHotReload>().getContentChangeSerial();
         if ( serial == _seenContentChangeSerial )
             return;
         _seenContentChangeSerial = serial;
@@ -495,7 +495,7 @@ namespace sw::editor
         _referenceSearch.takeFinishedScan();
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
-            _referenceSearch.requestScanIfStale( pContext->getAssetHotReload().getContentChangeSerial() );
+            _referenceSearch.requestScanIfStale( pContext->getSubsystem<AssetHotReload>().getContentChangeSerial() );
     }
 
     void ContentBrowserPanel::selectAfterFileChange( string_view absolutePath )
@@ -1396,7 +1396,7 @@ namespace sw::editor
 
         _selectedAssetAbs = entry._absolutePath;
         if ( entry._bIsDirectory == false )
-            pContext->getWorkspace().setFocusedAssetPath( entry._relativePath.c_str() );
+            pContext->getSubsystem<EditorWorkspace>().setFocusedAssetPath( entry._relativePath.c_str() );
     }
 
     void ContentBrowserPanel::openAsset( const AssetEntry& entry )

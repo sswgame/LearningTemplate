@@ -63,7 +63,7 @@ namespace sw::editor
                 if ( pContext == nullptr )
                     return;
 
-                for ( const EditorPanelEntry& entry : pContext->getPanelManager().getPanels() )
+                for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
                 {
                     if ( entry._title == pTitle )
                         return;
@@ -134,7 +134,7 @@ namespace sw::editor
             return false;
 
         KeyValueMap visibilityKv;
-        for ( const EditorPanelEntry& entry : pContext->getPanelManager().getPanels() )
+        for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
         {
             if ( entry._pInstance != nullptr )
                 visibilityKv[entry._id] = entry._pInstance->isOpen() ? "1" : "0";
@@ -174,7 +174,7 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr && _pendingLayoutVisibility.empty() == false )
         {
-            for ( const EditorPanelEntry& entry : pContext->getPanelManager().getPanels() )
+            for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
             {
                 if ( entry._pInstance != nullptr )
                     entry._pInstance->setOpen( KeyValueFile::getBool( _pendingLayoutVisibility, entry._id.c_str(), entry._pInstance->isOpen() ) );
@@ -237,7 +237,7 @@ namespace sw::editor
         // windows.ini 도 닫힘으로 기억하므로, 등록 시점에 열어 두어도 여기서 곧바로 닫힌다.
         if ( isOpeningAllPanels() )
         {
-            for ( const EditorPanelEntry& entry : pContext->getPanelManager().getPanels() )
+            for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
             {
                 if ( entry._pInstance != nullptr )
                     entry._pInstance->setOpen( true );
@@ -257,7 +257,7 @@ namespace sw::editor
         if ( isPanelOverrideActive() )
         {
             bool bFound = false;
-            for ( const EditorPanelEntry& entry : pContext->getPanelManager().getPanels() )
+            for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
             {
                 if ( entry._pInstance == nullptr )
                     continue;
@@ -282,7 +282,7 @@ namespace sw::editor
             return;
         }
 
-        for ( const EditorPanelEntry& entry : pContext->getPanelManager().getPanels() )
+        for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
         {
             if ( entry._pInstance == nullptr )
                 continue;
@@ -304,7 +304,7 @@ namespace sw::editor
         if ( _windowsIniPath.empty() == false && isPanelOverrideActive() == false )
         {
             KeyValueMap visibilityKv;
-            for ( const EditorPanelEntry& entry : pContext->getPanelManager().getPanels() )
+            for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
             {
                 if ( entry._pInstance == nullptr )
                     continue;

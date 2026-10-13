@@ -217,22 +217,22 @@ namespace sw::editor
             SW_LOCKEY( "EdCommon", "GizmoRotate" ),
             SW_LOCKEY( "EdCommon", "GizmoScale" ),
         };
-        const int32 operation = pContext->getWorkspace().getGizmoOperation();
+        const int32 operation = pContext->getSubsystem<EditorWorkspace>().getGizmoOperation();
         for ( int32 index = 0; index < 3; ++index )
         {
             const GizmoButton& button = kArrGizmoButton[index];
             if ( drawIconToggle( button._pID, button._pIcon, operation == index, arrTooltip[index] ) )
-                pContext->getWorkspace().setGizmoOperation( index );
+                pContext->getSubsystem<EditorWorkspace>().setGizmoOperation( index );
             EditorSelfTestMarks::note( button._pMark );
             if ( bVertical == false )
                 ImGui::SameLine();
         }
 
-        const bool bLocalSpace = pContext->getWorkspace().isGizmoLocalSpace();
+        const bool bLocalSpace = pContext->getSubsystem<EditorWorkspace>().isGizmoLocalSpace();
         if ( drawToggleIconButton( "##gizmoSpace", bLocalSpace, editoricon::kAxes, editoricon::kGlobe,
                                    SW_LOCKEY( "EdCommon", "GizmoLocalSpace" ),
                                    SW_LOCKEY( "EdCommon", "GizmoWorldSpace" ) ) )
-            pContext->getWorkspace().setGizmoLocalSpace( bLocalSpace == false );
+            pContext->getSubsystem<EditorWorkspace>().setGizmoLocalSpace( bLocalSpace == false );
         EditorSelfTestMarks::note( "gizmo.space" );
     }
 

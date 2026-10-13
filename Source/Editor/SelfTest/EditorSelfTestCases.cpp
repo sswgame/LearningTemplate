@@ -73,7 +73,7 @@ namespace sw::editor
                 EditorContext*     pContext = EditorContext::get();
                 GameObjectManager* pManager = editor::getActiveObjectManager();
                 if ( pContext != nullptr )
-                    pContext->getWorkspace().clearSelection();
+                    pContext->getSubsystem<EditorWorkspace>().clearSelection();
                 GameObject* pObj = ( pManager != nullptr ) ? pManager->findGameObjectByID( objectID ) : nullptr;
                 if ( pObj != nullptr )
                     pManager->destroyObject( pObj );
@@ -214,7 +214,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Done;
 
                 uint32 checkedCount{ 0 };
-                for ( const EditorPanelEntry& entry : pContext->getPanelManager().getPanels() )
+                for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
                 {
                     if ( entry._category != EditorPanelCategory::Core || entry._pInstance == nullptr || entry._pInstance->isOpen() == false )
                         continue;
@@ -420,8 +420,8 @@ namespace sw::editor
                     pCamera->setOrthographic( true );
                     probe._objectID  = pObj->getObjectID();
                     probe._xmlBefore = ObjectStateSerializer::saveToXMLString( pObj );
-                    (void)pContext->getPanelManager().setPanelOpen( "inspector", true );
-                    pContext->getWorkspace().selectGameObject( pObj );
+                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "inspector", true );
+                    pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj );
                     return EditorSelfTestStep::Continue;
                 }
                 if ( context.getStepIndex() < 3 )
@@ -500,8 +500,8 @@ namespace sw::editor
                 EditorContext*  pContext = EditorContext::get();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
-                (void)pContext->getPanelManager().setPanelOpen( "hierarchy", true );
-                HierarchyPanel* pHierarchy = static_cast<HierarchyPanel*>( pContext->getPanelManager().findPanel( "hierarchy" ) );
+                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "hierarchy", true );
+                HierarchyPanel* pHierarchy = static_cast<HierarchyPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "hierarchy" ) );
                 if ( context.expect( pHierarchy != nullptr, "no hierarchy panel" ) == false )
                     return EditorSelfTestStep::Done;
 
@@ -574,8 +574,8 @@ namespace sw::editor
                 EditorContext*     pContext = EditorContext::get();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
-                (void)pContext->getPanelManager().setPanelOpen( "hierarchy", true );
-                HierarchyPanel*    pHierarchy = static_cast<HierarchyPanel*>( pContext->getPanelManager().findPanel( "hierarchy" ) );
+                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "hierarchy", true );
+                HierarchyPanel*    pHierarchy = static_cast<HierarchyPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "hierarchy" ) );
                 GameObjectManager* pManager   = editor::getActiveObjectManager();
                 if ( context.expect( pHierarchy != nullptr && pManager != nullptr, "no hierarchy panel or active scene" ) == false )
                     return EditorSelfTestStep::Done;
@@ -673,12 +673,12 @@ namespace sw::editor
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    (void)pContext->getPanelManager().setPanelOpen( kSceneViewPanelID, false );
+                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kSceneViewPanelID, false );
                     return EditorSelfTestStep::Continue;
                 }
                 if ( stepIndex > kResizeFrameCount )
                 {
-                    (void)pContext->getPanelManager().setPanelOpen( kSceneViewPanelID, true );
+                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kSceneViewPanelID, true );
                     return EditorSelfTestStep::Done;
                 }
 
@@ -749,7 +749,7 @@ namespace sw::editor
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    (void)pContext->getPanelManager().setPanelOpen( kProfilerPanelID, true );
+                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kProfilerPanelID, true );
                     return EditorSelfTestStep::Continue;
                 }
 
@@ -763,7 +763,7 @@ namespace sw::editor
                 (void)context.expect( pTable != nullptr, "the profiler GPU Memory tab never drew its ledger table" );
                 const RHIMemoryLedger& ledger = pContext->getRHIDevice()->getMemoryLedger();
                 (void)context.expect( ledger.getTrackedBytes() > 0, "the GPU memory ledger is empty in a running editor" );
-                (void)pContext->getPanelManager().setPanelOpen( kProfilerPanelID, false );
+                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kProfilerPanelID, false );
                 return EditorSelfTestStep::Done;
             }
 
@@ -888,7 +888,7 @@ namespace sw::editor
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    (void)pContext->getPanelManager().setPanelOpen( kPanelID, true );
+                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, true );
                     return EditorSelfTestStep::Continue;
                 }
 
@@ -897,7 +897,7 @@ namespace sw::editor
                 const uint32                          categoryIndex = ( stepIndex - 1 ) / 2;
                 if ( categoryIndex >= static_cast<uint32>( listCategory.size() ) )
                 {
-                    (void)pContext->getPanelManager().setPanelOpen( kPanelID, false );
+                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, false );
                     return EditorSelfTestStep::Done;
                 }
                 if ( ( stepIndex % 2 ) == 1 )

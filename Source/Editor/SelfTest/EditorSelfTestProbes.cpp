@@ -40,7 +40,7 @@ namespace sw::editor
                 const size_t   dot       = gv_editorProbeProperty.find( '.' );
                 if ( pContext == nullptr || pRegistry == nullptr || dot == string::npos )
                     return false;
-                GameObject* pObject = pContext->getEditorSelection().getPrimaryObject();
+                GameObject* pObject = pContext->getSubsystem<EditorSelection>().getPrimaryObject();
                 if ( pObject == nullptr )
                     return false;
                 Component* pComponent = pObject->findComponentByTypeName( hashed_string( gv_editorProbeProperty.substr( 0, dot ).c_str() ) );
@@ -81,7 +81,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                outValue = static_cast<float64>( pContext->getPanelManager().countDirtyDocuments() );
+                outValue = static_cast<float64>( pContext->getSubsystem<EditorPanelManager>().countDirtyDocuments() );
                 return true;
             }
         };

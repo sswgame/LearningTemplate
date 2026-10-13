@@ -74,7 +74,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        pContext->getPopupManager().openPopup( kPopupID );
+        pContext->getSubsystem<EditorPopupManager>().openPopup( kPopupID );
     }
 
     void CommandPalettePopup::close()
@@ -83,7 +83,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        pContext->getPopupManager().closePopup( kPopupID );
+        pContext->getSubsystem<EditorPopupManager>().closePopup( kPopupID );
     }
 
     void CommandPalettePopup::toggle()
@@ -92,7 +92,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        pContext->getPopupManager().togglePopup( kPopupID );
+        pContext->getSubsystem<EditorPopupManager>().togglePopup( kPopupID );
     }
 
     bool CommandPalettePopup::isOpen()
@@ -101,7 +101,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return false;
 
-        return pContext->getPopupManager().isPopupOpen( kPopupID );
+        return pContext->getSubsystem<EditorPopupManager>().isPopupOpen( kPopupID );
     }
 
     // ------------------------------------------------------------------------------
@@ -124,7 +124,7 @@ namespace sw::editor
         _listAllCommand.clear();
 
         // 1) 커맨드 레지스트리에 등록된 커맨드. 메뉴 · 단축키와 같은 정의다
-        for ( const EditorCommandDesc& desc : pContext->getCommandRegistry().getCommands() )
+        for ( const EditorCommandDesc& desc : pContext->getSubsystem<EditorCommandRegistry>().getCommands() )
         {
             if ( desc._bPaletteVisible == false )
                 continue;
@@ -139,13 +139,13 @@ namespace sw::editor
             {
                 EditorContext* pRunContext = EditorContext::get();
                 if ( pRunContext != nullptr )
-                    pRunContext->getCommandRegistry().execute( commandID );
+                    pRunContext->getSubsystem<EditorCommandRegistry>().execute( commandID );
             };
             _listAllCommand.push_back( std::move( entry ) );
         }
 
         // 2) 등록된 모든 에디터 패널 토글 커맨드
-        for ( const EditorPanelEntry& win : pContext->getPanelManager().getPanels() )
+        for ( const EditorPanelEntry& win : pContext->getSubsystem<EditorPanelManager>().getPanels() )
         {
             const string        panelID  = win._id;
             const string        winTitle = win._title;
@@ -157,7 +157,7 @@ namespace sw::editor
             {
                 EditorContext* pRunContext = EditorContext::get();
                 if ( pRunContext != nullptr )
-                    pRunContext->getPanelManager().setPanelOpen( panelID.c_str(), true );
+                    pRunContext->getSubsystem<EditorPanelManager>().setPanelOpen( panelID.c_str(), true );
             };
             _listAllCommand.push_back( std::move( entry ) );
         }
@@ -183,7 +183,7 @@ namespace sw::editor
                 GameObject*        pFound          = ( pCurrentObjects != nullptr ) ? pCurrentObjects->findGameObjectByID( objID ) : nullptr;
                 EditorContext*     pRunContext     = EditorContext::get();
                 if ( pFound != nullptr && pRunContext != nullptr )
-                    pRunContext->getEditorSelection().selectObject( pFound, SelectionMode::Replace );
+                    pRunContext->getSubsystem<EditorSelection>().selectObject( pFound, SelectionMode::Replace );
             };
             _listAllCommand.push_back( std::move( entry ) );
         } );

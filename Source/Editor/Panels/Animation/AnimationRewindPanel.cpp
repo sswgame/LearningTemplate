@@ -46,7 +46,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr || pScene == nullptr || pScene->getObjectManager() == nullptr )
                     return ComponentHandle{};
-                const uint64                 objectID = pContext->getWorkspace().getSelectedObjectID();
+                const uint64                 objectID = pContext->getSubsystem<EditorWorkspace>().getSelectedObjectID();
                 GameObject*                  pObject  = objectID != 0 ? pScene->getObjectManager()->findGameObjectByID( objectID ) : nullptr;
                 const SkeletalMeshComponent* pUnit    = pObject != nullptr ? pObject->getComponent<SkeletalMeshComponent>() : nullptr;
                 return pUnit != nullptr ? pUnit->getHandle() : ComponentHandle{};

@@ -37,14 +37,14 @@ namespace sw::editor
                     return EditorSelfTestStep::Done;
                 if ( context.getStepIndex() == 0 )
                 {
-                    context.expect( pContext->getPanelManager().setPanelOpen( "admin.tool", true ), "GM tool panel is not registered" );
+                    context.expect( pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "admin.tool", true ), "GM tool panel is not registered" );
                     return EditorSelfTestStep::Continue;
                 }
                 if ( context.getStepIndex() < 3 )
                     return EditorSelfTestStep::Continue;
                 const ImGuiWindow* pWindow = ImGui::FindWindowByName( "GM Tool" );
                 context.expect( pWindow != nullptr && pWindow->DrawList->VtxBuffer.Size > 0, "GM tool panel drew nothing in the editor's ImGui context" );
-                (void)pContext->getPanelManager().setPanelOpen( "admin.tool", false ); // 닫기 실패는 위의 expect 가 이미 알렸다
+                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "admin.tool", false ); // 닫기 실패는 위의 expect 가 이미 알렸다
                 return EditorSelfTestStep::Done;
             }
 

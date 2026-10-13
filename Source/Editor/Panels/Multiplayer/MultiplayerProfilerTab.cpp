@@ -91,7 +91,7 @@ namespace sw::editor
             static EditorNetPlaySession* findSession()
             {
                 EditorContext* pContext = EditorContext::get();
-                return pContext != nullptr ? &pContext->getNetPlaySession() : nullptr;
+                return pContext != nullptr ? &pContext->getSubsystem<EditorNetPlaySession>() : nullptr;
             }
 
             /** @brief 탐침 `Editor.NetPlayProfilerSamples` — Profiler 시계열에 쌓인 표본 수(모든 프로세스의 합)입니다. */

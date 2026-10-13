@@ -52,23 +52,23 @@ namespace sw::editor
             static void runAssetReload( EditorContext& context )
             {
                 SW_EDITOR_PROFILE_SCOPE( "GT.Editor.step.assetReload" );
-                context.getAssetHotReload().update();
-                context.getConfigHotReload().update();
-                context.getAssetValidation().update();
-                context.getSourceControl().update();
+                context.getSubsystem<AssetHotReload>().update();
+                context.getSubsystem<ConfigHotReload>().update();
+                context.getSubsystem<EditorAssetValidation>().update();
+                context.getSubsystem<EditorSourceControl>().update();
             }
 
             /** @brief 3) 열린 패널, 팝업, 알림을 그립니다. */
             static void runPanels( EditorContext& context )
             {
                 SW_EDITOR_PROFILE_SCOPE( "GT.Editor.step.panels" );
-                context.getPanelManager().drawOpenPanels();
+                context.getSubsystem<EditorPanelManager>().drawOpenPanels();
                 // 패널이 처음 나타나며 가져간 포커스보다 나중에 실행해야 한다
                 EditorDockLayout* pDockLayout = context.findDockLayout();
                 if ( pDockLayout != nullptr )
                     pDockLayout->updateDefaultTabSelection();
-                context.getPopupManager().drawOpenPopups();
-                EditorNotificationManager& notificationManager = context.getNotificationManager();
+                context.getSubsystem<EditorPopupManager>().drawOpenPopups();
+                EditorNotificationManager& notificationManager = context.getSubsystem<EditorNotificationManager>();
                 notificationManager.update( ImGui::GetIO().DeltaTime );
                 EditorNotificationView::draw( notificationManager, kFallbackScreenWidth, kFallbackScreenHeight );
             }
@@ -89,7 +89,7 @@ namespace sw::editor
                     return;
                 const Scene* pScene    = editor::getActiveScene();
                 const string scenePath = pScene == nullptr ? string{} : ( pScene->getSourcePath().empty() ? pScene->getName() : pScene->getSourcePath() );
-                const bool   bDirty    = context.getWorkspace().isSceneDirty() || context.getPanelManager().countDirtyDocuments() > 0;
+                const bool   bDirty    = context.getSubsystem<EditorWorkspace>().isSceneDirty() || context.getSubsystem<EditorPanelManager>().countDirtyDocuments() > 0;
                 const utf8*  pPlayState{ nullptr };
                 if ( EditorPlaySession::isStopped() == false )
                     pPlayState = EditorPlaySession::isSimulating() ? "Simulating" : ( EditorPlaySession::isPaused() ? "Paused" : "Playing" );

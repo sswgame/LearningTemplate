@@ -116,7 +116,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
         // 기즈모 모드는 유니티, 언리얼, Godot 모두 W, E, R 이다. Q 와 Space 는 다음 모드로 순환한다(Space 는 언리얼).
-        EditorWorkspace& ws = pContext->getWorkspace();
+        EditorWorkspace& ws = pContext->getSubsystem<EditorWorkspace>();
         if ( io.KeyShift == false )
         {
             if ( ImGui::IsKeyPressed( ImGuiKey_W, false ) )
@@ -151,18 +151,18 @@ namespace sw::editor
         if ( _bMaximized == SW_TRUE )
         {
             _bMaximized = SW_FALSE;
-            if ( pContext->getPanelHost().restoreMaximizedLayout() == false )
+            if ( pContext->getSubsystem<IEditorPanelHost>().restoreMaximizedLayout() == false )
                 SW_LOG_WARNING( "The layout before maximizing is gone - use Panel > Reset Layout" );
             return;
         }
-        if ( pContext->getPanelHost().maximizePanel( "scene_view" ) )
+        if ( pContext->getSubsystem<IEditorPanelHost>().maximizePanel( "scene_view" ) )
             _bMaximized = SW_TRUE;
     }
 
     void EditorViewportClient::drawOverlays( const float2& canvasMin, const float2& canvasSize )
     {
         EditorContext* pContext      = EditorContext::get();
-        const bool     bHasSelection = pContext != nullptr && pContext->getEditorSelection().getSelectedObjectCount() > 0;
+        const bool     bHasSelection = pContext != nullptr && pContext->getSubsystem<EditorSelection>().getSelectedObjectCount() > 0;
         _overlays.draw( canvasMin, canvasSize, _toolbarSettings, bHasSelection );
     }
 

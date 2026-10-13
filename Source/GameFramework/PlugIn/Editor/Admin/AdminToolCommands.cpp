@@ -18,7 +18,7 @@ namespace sw::editor
             static void openPanel()
             {
                 EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr && pContext->getPanelManager().setPanelOpen( "admin.tool", true ) )
+                if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "admin.tool", true ) )
                     SW_LOG_INFO( "GM Tool panel opened" );
             }
         };

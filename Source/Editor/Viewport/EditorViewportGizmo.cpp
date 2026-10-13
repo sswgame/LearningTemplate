@@ -45,7 +45,7 @@ namespace sw::editor
         }
 
         vector<GameObject*> listSelected;
-        pContext->getEditorSelection().getSelectedObjects( listSelected );
+        pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSelected );
         vector<GameObject*> listGizmo;
         listGizmo.reserve( listSelected.size() );
         for ( GameObject* pRaw : listSelected )
@@ -67,7 +67,7 @@ namespace sw::editor
         // beginFrame 이 프레임마다 끈다. 캔버스가 이번 프레임에 그려졌고 편집이 허용될 때(위에서 걸렀다)만 켠다. 꺼 둔 상태이면 그리기만 하고 조작을 받지 않는다.
         ImGuizmo::Enable( true );
 
-        EditorWorkspace&    ws    = pContext->getWorkspace();
+        EditorWorkspace&    ws    = pContext->getSubsystem<EditorWorkspace>();
         const int32         opInt = ws.getGizmoOperation();
         ImGuizmo::OPERATION op    = ImGuizmo::TRANSLATE;
         if ( opInt == 1 )

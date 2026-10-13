@@ -1,7 +1,7 @@
 /**
  * @file MultiplayerPanel.h
  * @brief Multiplayer 창 — 멀티 프로세스 재생을 보는 창 하나입니다. 위쪽의 대상 고르기와, 등록된 탭(`SW_EDITOR_MULTIPLAYER_TAB`)을 그립니다.
- * @details 언리얼 Network Insights · 유니티 Multiplayer Play Mode 창 + Network Simulator 의 자리입니다. 세션은 `EditorContext::getNetPlaySession()` 하나이고,
+ * @details 언리얼 Network Insights · 유니티 Multiplayer Play Mode 창 + Network Simulator 의 자리입니다. 세션은 `EditorContext::getSubsystem<EditorNetPlaySession>()` 하나이고,
  *          툴바의 Net Mode 드롭다운과 이 창이 같은 세션을 봅니다. 탭은 이 폴더의 `Multiplayer<이름>Tab.cpp` 가 한 줄로 더하고(Session · Conditions),
  *          서버 디버깅의 다음 단위(`docs/plans/ServerDebug.md` 의 S3 · S5 · S7)와 확장 모듈도 같은 줄을 씁니다.
  */

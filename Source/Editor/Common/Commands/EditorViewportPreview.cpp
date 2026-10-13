@@ -37,7 +37,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return nullptr;
-                return pContext->getWorkspace().getSelectedObject();
+                return pContext->getSubsystem<EditorWorkspace>().getSelectedObject();
             }
 
             static GameObjectManager* getActiveObjectManager()
@@ -128,7 +128,7 @@ namespace sw::editor
                 {
                     EditorContext* pContext = EditorContext::get();
                     if ( pContext != nullptr )
-                        pContext->getWorkspace().selectGameObject( pSpeaker );
+                        pContext->getSubsystem<EditorWorkspace>().selectGameObject( pSpeaker );
                 }
             }
 

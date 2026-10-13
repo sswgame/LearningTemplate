@@ -67,28 +67,28 @@ namespace sw::editor
     {
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
-            pContext->getPopupManager().openPopup( kPopupID );
+            pContext->getSubsystem<EditorPopupManager>().openPopup( kPopupID );
     }
 
     void QuickLauncherPopup::close()
     {
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
-            pContext->getPopupManager().closePopup( kPopupID );
+            pContext->getSubsystem<EditorPopupManager>().closePopup( kPopupID );
     }
 
     void QuickLauncherPopup::toggle()
     {
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
-            pContext->getPopupManager().togglePopup( kPopupID );
+            pContext->getSubsystem<EditorPopupManager>().togglePopup( kPopupID );
     }
 
     bool QuickLauncherPopup::isOpen()
     {
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
-            return pContext->getPopupManager().isPopupOpen( kPopupID );
+            return pContext->getSubsystem<EditorPopupManager>().isPopupOpen( kPopupID );
         return false;
     }
 

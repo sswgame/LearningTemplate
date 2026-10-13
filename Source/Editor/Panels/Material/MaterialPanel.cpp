@@ -189,7 +189,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                const MaterialPanel* pPanel = static_cast<const MaterialPanel*>( pContext->getPanelManager().findPanel( "material" ) );
+                const MaterialPanel* pPanel = static_cast<const MaterialPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "material" ) );
                 float32              value{ 0.0f };
                 if ( pPanel == nullptr || pPanel->isOpen() == false || pPanel->findPreviewRedMinusBlue( value ) == false )
                     return false;
@@ -203,7 +203,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return nullptr;
-                const MaterialPanel* pPanel = static_cast<const MaterialPanel*>( pContext->getPanelManager().findPanel( "material" ) );
+                const MaterialPanel* pPanel = static_cast<const MaterialPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "material" ) );
                 return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
             }
 

@@ -201,9 +201,9 @@ namespace sw::editor
             static void revealInContentBrowser( string_view resourcePath )
             {
                 EditorContext* pContext = EditorContext::get();
-                if ( pContext == nullptr || pContext->getPanelManager().setPanelOpen( "content_browser", true ) == false )
+                if ( pContext == nullptr || pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "content_browser", true ) == false )
                     return;
-                ContentBrowserPanel* pPanel = static_cast<ContentBrowserPanel*>( pContext->getPanelManager().findPanel( "content_browser" ) );
+                ContentBrowserPanel* pPanel = static_cast<ContentBrowserPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "content_browser" ) );
                 if ( pPanel == nullptr )
                     return;
                 const string fileAbs = FileUtil::joinPath( ResourcePaths::getRootFolderPath(), FileUtil::normalizePath( resourcePath ) );

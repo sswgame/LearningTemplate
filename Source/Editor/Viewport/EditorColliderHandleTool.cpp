@@ -110,7 +110,7 @@ namespace sw::editor
             {
                 outValue                           = 0.0;
                 EditorContext*            pContext = EditorContext::get();
-                const GameObject*         pObject  = pContext != nullptr ? pContext->getEditorSelection().getPrimaryObject() : nullptr;
+                const GameObject*         pObject  = pContext != nullptr ? pContext->getSubsystem<EditorSelection>().getPrimaryObject() : nullptr;
                 const RigidBodyComponent* pBody    = pObject != nullptr ? pObject->getComponent<RigidBodyComponent>() : nullptr;
                 if ( pBody != nullptr && pBody->getShapes().empty() == false )
                     outValue = static_cast<float64>( pBody->getShapes()[0]._halfExtents._x );
@@ -144,8 +144,8 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( state._bDragging )
             pObject = editor::findGameObject( state._object );
-        else if ( pContext != nullptr && pContext->getEditorSelection().getSelectedObjectCount() == 1 )
-            pObject = pContext->getEditorSelection().getPrimaryObject();
+        else if ( pContext != nullptr && pContext->getSubsystem<EditorSelection>().getSelectedObjectCount() == 1 )
+            pObject = pContext->getSubsystem<EditorSelection>().getPrimaryObject();
         RigidBodyComponent* pBody = pObject != nullptr ? pObject->getComponent<RigidBodyComponent>() : nullptr;
         if ( pBody == nullptr || args._pViewProj == nullptr || args._pDrawList == nullptr || EditorPlaySession::areSceneEditsAllowed() == false )
         {

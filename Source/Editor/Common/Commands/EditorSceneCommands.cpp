@@ -158,10 +158,10 @@ namespace sw::editor
         EditorTransaction::beginTransaction( "Duplicate GameObject" );
         for ( size_t copyIndex = 0; copyIndex < listCopy.size(); ++copyIndex )
         {
-            const string prefabPath{ ( pContext != nullptr ) ? pContext->getWorkspace().getGameObjectPrefabPath( listSource[copyIndex]->getObjectID() )
+            const string prefabPath{ ( pContext != nullptr ) ? pContext->getSubsystem<EditorWorkspace>().getGameObjectPrefabPath( listSource[copyIndex]->getObjectID() )
                                                              : string_view{} };
             if ( prefabPath.empty() == false && pContext != nullptr )
-                pContext->getWorkspace().setGameObjectPrefabPath( listCopy[copyIndex]->getObjectID(), prefabPath );
+                pContext->getSubsystem<EditorWorkspace>().setGameObjectPrefabPath( listCopy[copyIndex]->getObjectID(), prefabPath );
             EditorTransaction::recordCreation( listCopy[copyIndex], "Duplicate GameObject" );
         }
         EditorTransaction::endTransaction();
@@ -281,7 +281,7 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
         {
-            EditorSelection& sel = pContext->getEditorSelection();
+            EditorSelection& sel = pContext->getSubsystem<EditorSelection>();
             for ( GameObject* pDoomed : listSubtree )
             {
                 if ( sel.hasObject( pDoomed ) )
@@ -353,7 +353,7 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
         {
-            EditorWorkspace& ws = pContext->getWorkspace();
+            EditorWorkspace& ws = pContext->getSubsystem<EditorWorkspace>();
             if ( ws.getSelectedObjectID() == pObj->getObjectID() &&
                  ws.getSelectedComponentID() == pComp->getComponentID() )
             {
@@ -379,7 +379,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        pContext->getWorkspace().selectGameObject( pObj, mode );
+        pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj, mode );
     }
 
     void EditorSceneCommands::collectObjectsWithComponent( GameObjectManager& manager, const TypeInfo* pComponentType, vector<GameObject*>& outListObject )
@@ -420,7 +420,7 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr || listObject.empty() )
             return 0;
-        EditorWorkspace& workspace = pContext->getWorkspace();
+        EditorWorkspace& workspace = pContext->getSubsystem<EditorWorkspace>();
         workspace.selectGameObject( listObject[0], SelectionMode::Replace );
         for ( size_t index = 1; index < listObject.size(); ++index )
         {
@@ -640,7 +640,7 @@ namespace sw::editor
                 if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, copied._stateBytes ) == false )
                     return 0;
                 if ( pContext != nullptr )
-                    copied._prefabPath = pContext->getWorkspace().getGameObjectPrefabPath( pObj->getObjectID() );
+                    copied._prefabPath = pContext->getSubsystem<EditorWorkspace>().getGameObjectPrefabPath( pObj->getObjectID() );
                 listCopied.push_back( std::move( copied ) );
             }
             ++rootCount;
@@ -706,16 +706,16 @@ namespace sw::editor
                 outListCreated.push_back( pCopy );
             }
             if ( listCopied[copyIndex]._prefabPath.empty() == false && pContext != nullptr )
-                pContext->getWorkspace().setGameObjectPrefabPath( pCopy->getObjectID(), listCopied[copyIndex]._prefabPath );
+                pContext->getSubsystem<EditorWorkspace>().setGameObjectPrefabPath( pCopy->getObjectID(), listCopied[copyIndex]._prefabPath );
             EditorTransaction::recordCreation( pCopy, label );
         }
         EditorTransaction::endTransaction();
         if ( pContext != nullptr )
         {
-            pContext->getEditorSelection().clearObjectSelection();
+            pContext->getSubsystem<EditorSelection>().clearObjectSelection();
             for ( GameObject* pRoot : outListCreated )
             {
-                pContext->getEditorSelection().selectObject( pRoot, SelectionMode::Add );
+                pContext->getSubsystem<EditorSelection>().selectObject( pRoot, SelectionMode::Add );
             }
         }
     }

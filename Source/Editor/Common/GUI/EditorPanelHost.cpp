@@ -30,7 +30,7 @@ namespace sw::editor
         const IEditorPanel* pPanel = _panelManager.findPanel( panelID );
         if ( pPanel == nullptr )
             return false;
-        _context.getWorkspace().requestOpenPanel( pPanel->getPanelTitle() );
+        _context.getSubsystem<EditorWorkspace>().requestOpenPanel( pPanel->getPanelTitle() );
         return true;
     }
 

@@ -60,10 +60,10 @@ namespace sw::editor
             static bool runPanelFocus( const vector<string>& listArgument, string& outReply )
             {
                 EditorContext*      pContext = EditorContext::get();
-                const IEditorPanel* pPanel   = ( listArgument.size() == 1 && pContext != nullptr ) ? pContext->getPanelManager().findPanel( listArgument[0] ) : nullptr;
+                const IEditorPanel* pPanel   = ( listArgument.size() == 1 && pContext != nullptr ) ? pContext->getSubsystem<EditorPanelManager>().findPanel( listArgument[0] ) : nullptr;
                 if ( pPanel == nullptr )
                     return false;
-                pContext->getWorkspace().requestOpenPanel( pPanel->getPanelTitle() );
+                pContext->getSubsystem<EditorWorkspace>().requestOpenPanel( pPanel->getPanelTitle() );
                 outReply = string{ "focusing " } + pPanel->getPanelTitle();
                 return true;
             }
@@ -71,7 +71,7 @@ namespace sw::editor
             static bool runPanelClose( const vector<string>& listArgument, string& outReply )
             {
                 EditorContext* pContext = EditorContext::get();
-                if ( listArgument.size() != 1 || pContext == nullptr || pContext->getPanelManager().setPanelOpen( listArgument[0], false ) == false )
+                if ( listArgument.size() != 1 || pContext == nullptr || pContext->getSubsystem<EditorPanelManager>().setPanelOpen( listArgument[0], false ) == false )
                     return false;
                 outReply = "closed " + listArgument[0];
                 return true;
@@ -83,7 +83,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( listArgument.empty() == false || pContext == nullptr )
                     return false;
-                const uint32 resetCount = pContext->getPanelManager().resetOptionalPanels( pContext->getRHIDevice() );
+                const uint32 resetCount = pContext->getSubsystem<EditorPanelManager>().resetOptionalPanels( pContext->getRHIDevice() );
                 outReply                = "reset " + to_string( resetCount ) + " optional panel(s)";
                 return true;
             }

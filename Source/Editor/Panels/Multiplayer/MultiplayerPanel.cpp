@@ -32,7 +32,7 @@ namespace sw::editor
             static EditorNetPlaySession* findSession()
             {
                 EditorContext* pContext = EditorContext::get();
-                return pContext != nullptr ? &pContext->getNetPlaySession() : nullptr;
+                return pContext != nullptr ? &pContext->getSubsystem<EditorNetPlaySession>() : nullptr;
             }
 
             /** @brief 탐침 `Editor.NetPlayProcessCount` — 돌고 있는 멀티 프로세스 재생의 프로세스 수입니다. */

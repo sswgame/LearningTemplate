@@ -38,8 +38,8 @@ namespace sw::editor
         const string_view panelTitle = EditorAssetTypeRegistry::findPanelTitleForPath( relativePath );
         if ( panelTitle.empty() == false )
         {
-            pContext->getWorkspace().setFocusedAssetPath( string{ relativePath }.c_str() );
-            pContext->getWorkspace().requestOpenPanel( string{ panelTitle }.c_str() );
+            pContext->getSubsystem<EditorWorkspace>().setFocusedAssetPath( string{ relativePath }.c_str() );
+            pContext->getSubsystem<EditorWorkspace>().requestOpenPanel( string{ panelTitle }.c_str() );
             return true;
         }
 
@@ -52,7 +52,7 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
             return;
-        pContext->getWorkspace().setFocusedAssetPath( string{ relativePath }.c_str() );
+        pContext->getSubsystem<EditorWorkspace>().setFocusedAssetPath( string{ relativePath }.c_str() );
     }
 
     GameObject* EditorAssetCommands::spawnPrefab( GameObjectManager* pManager, const utf8* pPath, GameObject* pParent,
@@ -101,7 +101,7 @@ namespace sw::editor
 
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
-            pContext->getWorkspace().setGameObjectPrefabPath( pSpawned->getObjectID(), pPath );
+            pContext->getSubsystem<EditorWorkspace>().setGameObjectPrefabPath( pSpawned->getObjectID(), pPath );
 
         SW_LOG_TRACE( "Spawned prefab from %#", pPath );
         return pSpawned;

@@ -257,7 +257,7 @@ namespace sw::editor
             return;
 
         vector<GameObject*> listSel;
-        pContext->getEditorSelection().getSelectedObjects( listSel );
+        pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSel );
         snapObjectsToGround( listSel );
     }
 
@@ -301,7 +301,7 @@ namespace sw::editor
             return;
 
         vector<GameObject*> listSel;
-        pContext->getEditorSelection().getSelectedObjects( listSel );
+        pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSel );
         alignObjects( listSel, axis, type );
     }
 
@@ -356,7 +356,7 @@ namespace sw::editor
             return;
 
         vector<GameObject*> listSel;
-        pContext->getEditorSelection().getSelectedObjects( listSel );
+        pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSel );
         distributeObjects( std::move( listSel ), axis );
     }
 

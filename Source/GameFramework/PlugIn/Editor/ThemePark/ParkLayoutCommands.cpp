@@ -19,7 +19,7 @@ namespace sw::editor
             static void openPanel()
             {
                 EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr && pContext->getPanelManager().setPanelOpen( "themepark.layout", true ) )
+                if ( pContext != nullptr && pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "themepark.layout", true ) )
                     SW_LOG_INFO( "Park Layout panel opened" );
             }
             // [/doc:command-open]

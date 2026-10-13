@@ -119,7 +119,7 @@ namespace sw::editor
             {
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext != nullptr )
-                    (void)pContext->getCommandRegistry().execute( "build.compileAll" ); // 막혀 있으면 빌드 상태 표시가 알린다
+                    (void)pContext->getSubsystem<EditorCommandRegistry>().execute( "build.compileAll" ); // 막혀 있으면 빌드 상태 표시가 알린다
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "BuildModules" ) );
         }

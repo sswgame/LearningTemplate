@@ -66,9 +66,9 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
-                pContext->getInspectorPropertyManager().syncWithRegistry();
-                context.expect( pContext->getInspectorPropertyManager().find( "SelfTestDrawerProbe" ) != nullptr, "the registered property drawer is not in the manager" );
-                context.expect( pContext->getInspectorPropertyManager().find( "float32" ) != nullptr, "the built-in float32 widget is gone" );
+                pContext->getSubsystem<InspectorPropertyManager>().syncWithRegistry();
+                context.expect( pContext->getSubsystem<InspectorPropertyManager>().find( "SelfTestDrawerProbe" ) != nullptr, "the registered property drawer is not in the manager" );
+                context.expect( pContext->getSubsystem<InspectorPropertyManager>().find( "float32" ) != nullptr, "the built-in float32 widget is gone" );
                 return EditorSelfTestStep::Done;
             }
 
@@ -89,8 +89,8 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return nullptr;
-                (void)pContext->getPanelManager().setPanelOpen( pPanelID, true );
-                IEditorPanel* pPanel = pContext->getPanelManager().findPanel( pPanelID );
+                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( pPanelID, true );
+                IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel( pPanelID );
                 if ( context.expect( pPanel != nullptr, "the panel is not registered" ) == false )
                     return nullptr;
                 if ( context.getStepIndex() == 0 )
@@ -153,8 +153,8 @@ namespace sw::editor
                 EditorContext*        pContext      = EditorContext::get();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
-                (void)pContext->getPanelManager().setPanelOpen( "console", true );
-                ConsolePanel* pConsole = static_cast<ConsolePanel*>( pContext->getPanelManager().findPanel( "console" ) );
+                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "console", true );
+                ConsolePanel* pConsole = static_cast<ConsolePanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "console" ) );
                 if ( context.expect( pConsole != nullptr, "no console panel" ) == false )
                     return EditorSelfTestStep::Done;
 
@@ -224,8 +224,8 @@ namespace sw::editor
                 EditorContext*        pContext = EditorContext::get();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
-                (void)pContext->getPanelManager().setPanelOpen( "console", true );
-                ConsolePanel* pConsole = static_cast<ConsolePanel*>( pContext->getPanelManager().findPanel( "console" ) );
+                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "console", true );
+                ConsolePanel* pConsole = static_cast<ConsolePanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "console" ) );
                 if ( context.expect( pConsole != nullptr, "no console panel" ) == false )
                     return EditorSelfTestStep::Done;
 
@@ -266,9 +266,9 @@ namespace sw::editor
                 vector<GameObject*> listMatch;
                 EditorSceneCommands::collectObjectsWithTag( *pManager, tag, listMatch );
                 (void)context.expect( EditorSceneCommands::selectObjects( listMatch ) == 2, "selectObjects did not take both tagged objects" );
-                (void)context.expect( pContext->getEditorSelection().getSelectedObjectCount() == 2, "the editor selection does not hold both tagged objects" );
+                (void)context.expect( pContext->getSubsystem<EditorSelection>().getSelectedObjectCount() == 2, "the editor selection does not hold both tagged objects" );
 
-                pContext->getWorkspace().clearSelection();
+                pContext->getSubsystem<EditorWorkspace>().clearSelection();
                 pManager->destroyObject( pFirst );
                 pManager->destroyObject( pOther );
                 return EditorSelfTestStep::Done;
@@ -290,7 +290,7 @@ namespace sw::editor
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    (void)pContext->getPanelManager().setPanelOpen( kPanelID, true );
+                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, true );
                     return EditorSelfTestStep::Continue;
                 }
                 if ( stepIndex == 1 )
@@ -301,18 +301,18 @@ namespace sw::editor
                     (void)FileUtil::readTextFile( EditorLayoutStore::makeImguiIniPath( folder, kLayoutName ), iniText ); // 없으면 아래 단언이 알린다
                     (void)context.expect( iniText.find( "[Docking]" ) != string::npos && iniText.find( "[Window][Hierarchy]" ) != string::npos,
                                           "the saved layout has no docking section or no hierarchy window" );
-                    (void)pContext->getPanelManager().setPanelOpen( kPanelID, false );
+                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, false );
                     (void)context.expect( pDock->requestLoadNamedLayout( kLayoutName, folder ), "could not load the named layout" );
                     return EditorSelfTestStep::Continue;
                 }
                 if ( stepIndex < 4 )
                     return EditorSelfTestStep::Continue; // 다음 프레임 시작에 적용되고, 그 프레임에 창이 다시 만들어진다
 
-                const IEditorPanel* pPanel = pContext->getPanelManager().findPanel( kPanelID );
+                const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel( kPanelID );
                 (void)context.expect( pPanel != nullptr && pPanel->isOpen(), "loading the layout did not reopen the panel it saved open" );
                 const ImGuiWindow* pHierarchy = ImGui::FindWindowByName( "Hierarchy" );
                 (void)context.expect( pHierarchy != nullptr && pHierarchy->DockId != 0, "the hierarchy is no longer docked after loading the layout" );
-                (void)pContext->getPanelManager().setPanelOpen( kPanelID, false );
+                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, false );
                 (void)EditorLayoutStore::remove( folder, kLayoutName ); // 임시 폴더이므로 남아도 다음 실행이 덮어쓴다
                 return EditorSelfTestStep::Done;
             }
@@ -342,7 +342,7 @@ namespace sw::editor
                 EditorSelfTestInput::moveMouse( float2{ -10000.0f, -10000.0f } );
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext != nullptr )
-                    pContext->getWorkspace().clearSelection();
+                    pContext->getSubsystem<EditorWorkspace>().clearSelection();
                 GameObject* pObj = pManager != nullptr ? pManager->findGameObjectByID( probe._objectID ) : nullptr;
                 if ( pObj != nullptr )
                     pManager->destroyObject( pObj );
@@ -456,7 +456,7 @@ namespace sw::editor
             {
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext != nullptr )
-                    pContext->getWorkspace().clearSelection();
+                    pContext->getSubsystem<EditorWorkspace>().clearSelection();
                 GameObject* pObj = pManager != nullptr ? pManager->findGameObjectByID( objectID ) : nullptr;
                 if ( pObj != nullptr )
                     pManager->destroyObject( pObj );

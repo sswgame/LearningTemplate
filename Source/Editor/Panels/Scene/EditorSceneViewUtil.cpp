@@ -15,7 +15,7 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
             return false;
-        SceneViewPanel* pPanel = static_cast<SceneViewPanel*>( pContext->getPanelManager().findPanel( "scene_view" ) );
+        SceneViewPanel* pPanel = static_cast<SceneViewPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "scene_view" ) );
         if ( pPanel == nullptr )
             return false;
         pPanel->getViewportClient().focusOnPoint( target, radius );

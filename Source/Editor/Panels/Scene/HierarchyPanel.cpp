@@ -142,7 +142,7 @@ namespace sw::editor
             {
                 EditorContext*     pContext = EditorContext::get();
                 GameObjectManager* pManager = editor::getActiveObjectManager();
-                GameObject*        pObject  = pContext != nullptr ? pContext->getEditorSelection().getPrimaryObject() : nullptr;
+                GameObject*        pObject  = pContext != nullptr ? pContext->getSubsystem<EditorSelection>().getPrimaryObject() : nullptr;
                 if ( pManager != nullptr && pObject != nullptr )
                     (void)EditorSiblingOrder::moveStep( *pManager, pObject, bDown, findEditorCameraObject() ); // 끝이면 아무것도 하지 않는다
             }
@@ -164,7 +164,7 @@ namespace sw::editor
                 GameObjectManager* pManager = editor::getActiveObjectManager();
                 if ( pManager == nullptr )
                     return;
-                GameObject* pSelected = pContext != nullptr ? pContext->getEditorSelection().getPrimaryObject() : nullptr;
+                GameObject* pSelected = pContext != nullptr ? pContext->getSubsystem<EditorSelection>().getPrimaryObject() : nullptr;
                 GameObject* pParent   = pSelected != nullptr && EditorSiblingOrder::isFolder( *pSelected ) ? pSelected : nullptr;
                 (void)EditorSiblingOrder::createFolder( *pManager, pParent ); // 편집이 막혔으면 nullptr 이고 아무것도 바뀌지 않는다
             }
@@ -302,7 +302,7 @@ namespace sw::editor
                 }
 
                 if ( ImGui::MenuItem( "Select Owner GameObject" ) )
-                    pContext->getWorkspace().selectGameObject( pObj );
+                    pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj );
 
                 const bool bEditsAllowed = EditorPlaySession::areSceneEditsAllowed();
                 if ( bEditsAllowed == false )
@@ -402,10 +402,10 @@ namespace sw::editor
 
                 EditorContext* pContext             = EditorContext::get();
                 GameObject*    pSelected            = ( pContext != nullptr )
-                                                        ? pManager->findGameObjectByID( pContext->getWorkspace().getSelectedObjectID() )
+                                                        ? pManager->findGameObjectByID( pContext->getSubsystem<EditorWorkspace>().getSelectedObjectID() )
                                                         : nullptr;
                 const bool     bCanParentToSelected = pContext != nullptr && pSelected != nullptr && pSelected != pObj &&
-                                                  pContext->getWorkspace().getSelectedComponentID() == 0;
+                                                  pContext->getSubsystem<EditorWorkspace>().getSelectedComponentID() == 0;
                 if ( bCanParentToSelected )
                 {
                     if ( EditorSceneCommands::wouldCreateParentCycle( pObj, pSelected ) == false )
@@ -441,7 +441,7 @@ namespace sw::editor
 
                 ImGui::PushID( static_cast<int32>( pSceneComp->getComponentID() ) );
 
-                EditorWorkspace& ws        = pContext->getWorkspace();
+                EditorWorkspace& ws        = pContext->getSubsystem<EditorWorkspace>();
                 const bool       bSelected = ( ws.getSelectedObjectID() == pObj->getObjectID() &&
                                          ws.getSelectedComponentID() == pSceneComp->getComponentID() );
 
@@ -505,7 +505,7 @@ namespace sw::editor
                 }
 
                 const uint64 objectID  = pObj->getObjectID();
-                const bool   bSelected = pContext->getEditorSelection().hasObject( pObj );
+                const bool   bSelected = pContext->getSubsystem<EditorSelection>().hasObject( pObj );
 
                 ImGui::PushID( static_cast<int32>( objectID ) );
 
@@ -519,10 +519,10 @@ namespace sw::editor
                     EditorSelfTestMarks::note( ( string( "hierarchy.toggle." ) + pObj->getName().c_str() ).c_str() );
                 ImGui::SameLine();
                 // 2) 자물쇠 아이콘은 뷰포트에서 선택하지 못하게 한다. Hierarchy 에서는 선택할 수 있다. 저장하지 않는다.
-                const bool bLocked = pContext->getWorkspace().isObjectLocked( objectID );
+                const bool bLocked = pContext->getSubsystem<EditorWorkspace>().isObjectLocked( objectID );
                 if ( EditorWidgets::drawToggleIconButton( "##lock", bLocked, editoricon::kLock, editoricon::kUnlock, SW_LOCKEY( "EditorScene", "LockedInViewport" ),
                                                           SW_LOCKEY( "EditorScene", "PickableInViewport" ) ) )
-                    pContext->getWorkspace().setObjectLocked( objectID, bLocked == false );
+                    pContext->getSubsystem<EditorWorkspace>().setObjectLocked( objectID, bLocked == false );
                 if ( EditorSelfTestMarks::isEnabled() )
                     EditorSelfTestMarks::note( ( string( "hierarchy.lock." ) + pObj->getName().c_str() ).c_str() );
                 ImGui::SameLine();
@@ -558,7 +558,7 @@ namespace sw::editor
                 if ( pRevealTarget != nullptr && isAncestorOf( pObj, pRevealTarget ) )
                     ImGui::SetNextItemOpen( true );
                 // 프리팹 인스턴스는 이름을 파랗게 표시한다(유니티 Hierarchy).
-                const bool bPrefabInstance = pContext->getWorkspace().getGameObjectPrefabPath( objectID ).empty() == false;
+                const bool bPrefabInstance = pContext->getSubsystem<EditorWorkspace>().getGameObjectPrefabPath( objectID ).empty() == false;
                 if ( bPrefabInstance )
                     ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( HierarchyPanelInternal::kPrefabInstanceText ) );
                 // SpanAvailWidth 를 쓰면 선택 배경과 클릭 영역이 앞의 가시성 토글 오른쪽부터 시작한다. SpanFullWidth 는 창 왼쪽부터 칠해서 토글을 덮는다.
@@ -601,23 +601,23 @@ namespace sw::editor
                             const size_t first = MathUtil::min( anchorIndex, clickIndex );
                             const size_t last  = MathUtil::max( anchorIndex, clickIndex );
                             if ( io.KeyCtrl == false )
-                                pContext->getEditorSelection().clearObjectSelection();
+                                pContext->getSubsystem<EditorSelection>().clearObjectSelection();
                             for ( size_t rowIndex = first; rowIndex <= last; ++rowIndex )
                             {
                                 GameObject* pRow = pManager->findGameObjectByID( listRow[rowIndex] );
                                 if ( pRow != nullptr )
-                                    pContext->getWorkspace().selectGameObject( pRow, SelectionMode::Add );
+                                    pContext->getSubsystem<EditorWorkspace>().selectGameObject( pRow, SelectionMode::Add );
                             }
-                            pContext->getWorkspace().selectGameObject( pObj, SelectionMode::Add ); // 누른 행이 주 선택이다
+                            pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj, SelectionMode::Add ); // 누른 행이 주 선택이다
                         }
                         else
                         {
-                            pContext->getWorkspace().selectGameObject( pObj, SelectionMode::Add );
+                            pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj, SelectionMode::Add );
                         }
                     }
                     else
                     {
-                        pContext->getWorkspace().selectGameObject( pObj, io.KeyCtrl ? SelectionMode::Toggle : SelectionMode::Replace );
+                        pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj, io.KeyCtrl ? SelectionMode::Toggle : SelectionMode::Replace );
                         rowState._anchorObjectID = objectID;
                     }
                 }
@@ -679,7 +679,7 @@ namespace sw::editor
 
                         ImGui::PushID( static_cast<int32>( pComp->getComponentID() ) );
 
-                        EditorWorkspace& ws            = pContext->getWorkspace();
+                        EditorWorkspace& ws            = pContext->getSubsystem<EditorWorkspace>();
                         const bool       bCompSelected = ( ws.getSelectedObjectID() == pObj->getObjectID() &&
                                                      ws.getSelectedComponentID() == pComp->getComponentID() );
 
@@ -749,7 +749,7 @@ namespace sw::editor
         rowState._listDrawnRow.clear();
         {
             EditorContext*    pContext  = EditorContext::get();
-            const GameObject* pPrimary  = pContext != nullptr ? pContext->getEditorSelection().getPrimaryObject() : nullptr;
+            const GameObject* pPrimary  = pContext != nullptr ? pContext->getSubsystem<EditorSelection>().getPrimaryObject() : nullptr;
             const uint64      primaryID = pPrimary != nullptr ? pPrimary->getObjectID() : 0;
             if ( primaryID != rowState._lastPrimaryID && rowState._bClickedThisFrame == false && primaryID != 0 )
                 rowState._revealObjectID = primaryID;
@@ -888,7 +888,7 @@ namespace sw::editor
         if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) && ImGui::GetIO().WantTextInput == false )
         {
             const ImGuiIO&   io              = ImGui::GetIO();
-            EditorSelection& editorSelection = pContext->getEditorSelection();
+            EditorSelection& editorSelection = pContext->getSubsystem<EditorSelection>();
             // 복사본으로 받는다. 아래 삭제가 순회 도중 선택 목록에서 항목을 빼기 때문이다.
             vector<GameObject*> listSel;
             editorSelection.getSelectedObjects( listSel );
@@ -927,7 +927,7 @@ namespace sw::editor
                 GameObject*  pNext = pManager->findGameObjectByID( listRow[next] );
                 if ( pNext != nullptr )
                 {
-                    pContext->getWorkspace().selectGameObject( pNext, SelectionMode::Replace );
+                    pContext->getSubsystem<EditorWorkspace>().selectGameObject( pNext, SelectionMode::Replace );
                     rowState._anchorObjectID    = pNext->getObjectID();
                     rowState._bClickedThisFrame = true; // 키로 선택한 것이므로 펼쳐 보이기 대상이 아니다
                 }

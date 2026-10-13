@@ -98,7 +98,7 @@ namespace sw::editor
                     pHierarchy->setFilterText( "" );
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext != nullptr )
-                    pContext->getWorkspace().clearSelection();
+                    pContext->getSubsystem<EditorWorkspace>().clearSelection();
                 GameObject* pObj = ( pManager != nullptr ) ? pManager->findGameObjectByID( probe._objectID ) : nullptr;
                 if ( pObj != nullptr )
                     pManager->destroyObject( pObj );
@@ -111,8 +111,8 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
-                (void)pContext->getPanelManager().setPanelOpen( "hierarchy", true );
-                HierarchyPanel*    pHierarchy = static_cast<HierarchyPanel*>( pContext->getPanelManager().findPanel( "hierarchy" ) );
+                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "hierarchy", true );
+                HierarchyPanel*    pHierarchy = static_cast<HierarchyPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "hierarchy" ) );
                 GameObjectManager* pManager   = editor::getActiveObjectManager();
                 if ( context.expect( pHierarchy != nullptr && pManager != nullptr, "no hierarchy panel or active scene" ) == false )
                     return EditorSelfTestStep::Done;
@@ -381,8 +381,8 @@ namespace sw::editor
                 GameObjectManager* pManager = editor::getActiveObjectManager();
                 if ( context.expect( pContext != nullptr && pManager != nullptr, "no editor context or active scene" ) == false )
                     return EditorSelfTestStep::Done;
-                (void)pContext->getPanelManager().setPanelOpen( "hierarchy", true );
-                HierarchyPanel* pHierarchy = static_cast<HierarchyPanel*>( pContext->getPanelManager().findPanel( "hierarchy" ) );
+                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "hierarchy", true );
+                HierarchyPanel* pHierarchy = static_cast<HierarchyPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "hierarchy" ) );
                 uint64&         objectID   = getToggleProbeObjectID();
                 const uint32    stepIndex  = context.getStepIndex();
                 if ( stepIndex == 0 )
@@ -442,8 +442,8 @@ namespace sw::editor
                 GameObjectManager*    pManager         = editor::getActiveObjectManager();
                 if ( context.expect( pContext != nullptr && pManager != nullptr, "no editor context or active scene" ) == false )
                     return EditorSelfTestStep::Done;
-                (void)pContext->getPanelManager().setPanelOpen( "hierarchy", true );
-                HierarchyPanel* pHierarchy = static_cast<HierarchyPanel*>( pContext->getPanelManager().findPanel( "hierarchy" ) );
+                (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "hierarchy", true );
+                HierarchyPanel* pHierarchy = static_cast<HierarchyPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "hierarchy" ) );
                 uint64&         objectID   = getRowProbeObjectID();
                 const uint32    stepIndex  = context.getStepIndex();
                 if ( stepIndex == 0 )
@@ -454,7 +454,7 @@ namespace sw::editor
                     if ( context.expect( pObj != nullptr, "could not create the probe object" ) == false )
                         return EditorSelfTestStep::Done;
                     objectID = pObj->getObjectID();
-                    pContext->getWorkspace().selectGameObject( pObj );
+                    pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj );
                     return EditorSelfTestStep::Continue;
                 }
 
@@ -470,7 +470,7 @@ namespace sw::editor
                     what += to_string( row._min._x ) + ", over the toggle that ends at x " + to_string( toggle._max._x );
                     (void)context.expect( toggle._max._x <= row._min._x + 0.5f, what.c_str() );
                 }
-                pContext->getWorkspace().clearSelection();
+                pContext->getSubsystem<EditorWorkspace>().clearSelection();
                 GameObject* pObj = pManager->findGameObjectByID( objectID );
                 if ( pObj != nullptr )
                     pManager->destroyObject( pObj );

@@ -54,7 +54,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                const TileMapPanel* pPanel = static_cast<const TileMapPanel*>( pContext->getPanelManager().findPanel( "tile_map" ) );
+                const TileMapPanel* pPanel = static_cast<const TileMapPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "tile_map" ) );
                 if ( pPanel == nullptr )
                     return false;
                 outValue = static_cast<float64>( pPanel->countSelectedFlagCells() );
@@ -66,7 +66,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                const TileMapPanel* pPanel = static_cast<const TileMapPanel*>( pContext->getPanelManager().findPanel( "tile_map" ) );
+                const TileMapPanel* pPanel = static_cast<const TileMapPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "tile_map" ) );
                 if ( pPanel == nullptr )
                     return false;
                 outValue = static_cast<float64>( pPanel->getPaintToolIndex() );
@@ -513,7 +513,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        const string& focused = pContext->getWorkspace().getFocusedAssetPath();
+        const string& focused = pContext->getSubsystem<EditorWorkspace>().getFocusedAssetPath();
         if ( focused.empty() == false )
             ImGui::TextDisabled( "Focused: %s", focused.c_str() );
 

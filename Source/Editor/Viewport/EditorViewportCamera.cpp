@@ -139,11 +139,11 @@ namespace sw::editor
                         fixed_string<constant::kMaxBuffer32> arrName;
                         formatstring( arrName.data(), arrName.capacity(), "POI %d", keyIndex + 1 );
                         bm._name = arrName.c_str();
-                        pContext->getWorkspace().setCameraBookmark( static_cast<uint32>( keyIndex ), bm );
+                        pContext->getSubsystem<EditorWorkspace>().setCameraBookmark( static_cast<uint32>( keyIndex ), bm );
                     }
                     else if ( io.KeyAlt == false && io.KeyShift == false )
                     {
-                        const CameraBookmark* pBm = pContext->getWorkspace().getCameraBookmark( static_cast<uint32>( keyIndex ) );
+                        const CameraBookmark* pBm = pContext->getSubsystem<EditorWorkspace>().getCameraBookmark( static_cast<uint32>( keyIndex ) );
                         if ( pBm != nullptr && pBm->_bValid )
                             applyBookmark( *pBm );
                     }
@@ -159,7 +159,7 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
         {
-            const CameraBookmark* pBm = pContext->getWorkspace().getCameraBookmark( static_cast<uint32>( inoutSlot ) );
+            const CameraBookmark* pBm = pContext->getSubsystem<EditorWorkspace>().getCameraBookmark( static_cast<uint32>( inoutSlot ) );
             if ( pBm != nullptr && pBm->_bValid )
                 applyBookmark( *pBm );
         }
@@ -198,7 +198,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        GameObject* pRaw = pContext->getEditorSelection().getPrimaryObject();
+        GameObject* pRaw = pContext->getSubsystem<EditorSelection>().getPrimaryObject();
         if ( pRaw == nullptr )
             return;
 

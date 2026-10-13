@@ -213,7 +213,7 @@ namespace sw::editor
         const void*    pDefaultInstance = nullptr;
         EditorContext* pDefaultContext  = EditorContext::get();
         if ( _pEditTargetComponent != nullptr && pInstance == _pEditTargetComponent && pDefaultContext != nullptr )
-            pDefaultInstance = pDefaultContext->getDefaultObjects().findDefault( *pTypeInfo );
+            pDefaultInstance = pDefaultContext->getSubsystem<EditorDefaultObjects>().findDefault( *pTypeInfo );
         for ( const InspectorPropertyGroup& group : listGroup )
         {
             const string& category = group._category;
@@ -339,7 +339,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        IInspectorProperty* pProperty = pContext->getInspectorPropertyManager().find( prop._typeName.c_str() );
+        IInspectorProperty* pProperty = pContext->getSubsystem<InspectorPropertyManager>().find( prop._typeName.c_str() );
         if ( pProperty != nullptr )
         {
             if ( pProperty->draw( pInstance, prop, *this ) )

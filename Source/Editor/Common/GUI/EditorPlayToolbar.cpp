@@ -83,7 +83,7 @@ namespace sw::editor
              */
             static bool drawNetPlayControls( EditorContext& context )
             {
-                EditorNetPlaySession& session = context.getNetPlaySession();
+                EditorNetPlaySession& session = context.getSubsystem<EditorNetPlaySession>();
                 (void)EditorNetModeCombo::draw( session ); // 바뀐 구성은 다음 Play 에 쓰인다
                 // 툴바는 한 줄 높이다 — 뒤 단추(Standalone 이면 에디터 안 Play)가 다음 줄로 내려가면 잘려 눌리지 않는다.
                 ImGui::SameLine();
@@ -114,7 +114,7 @@ namespace sw::editor
             {
                 const PlaySessionState currentState = EditorPlaySession::getState();
                 EditorContext*         pContext     = EditorContext::get();
-                const bool             bSceneDirty  = ( pContext != nullptr && pContext->getWorkspace().isSceneDirty() );
+                const bool             bSceneDirty  = ( pContext != nullptr && pContext->getSubsystem<EditorWorkspace>().isSceneDirty() );
                 const bool             bSimulating  = EditorPlaySession::isSimulating();
 
                 // Net Mode 고르기는 에디터 안 재생이 멈췄을 때만 — 재생 중에 바꾸면 Stop 단추가 사라진다.
@@ -188,7 +188,7 @@ namespace sw::editor
                     EditorPlaySession::stop();
                     GameObjectManager* pObjectManager = editor::getActiveObjectManager();
                     if ( pObjectManager != nullptr && pContext != nullptr )
-                        pContext->getWorkspace().remapSelectionByObjectName( pObjectManager );
+                        pContext->getSubsystem<EditorWorkspace>().remapSelectionByObjectName( pObjectManager );
                 }
                 EditorSelfTestMarks::note( "toolbar.stop" );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayStop" ) );
@@ -280,7 +280,7 @@ namespace sw::editor
         // 멀티 프로세스 재생의 로그 · 종료 알림은 툴바가 프레임마다 모은다(Multiplayer 창을 닫아도).
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
-            pContext->getNetPlaySession().update();
+            pContext->getSubsystem<EditorNetPlaySession>().update();
 
         ImGuiViewport*             pViewport = ImGui::GetMainViewport();
         const ImGuiStyle&          style     = ImGui::GetStyle();

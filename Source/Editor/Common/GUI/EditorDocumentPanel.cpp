@@ -178,7 +178,7 @@ namespace sw::editor
     {
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
-            pContext->getWorkspace().setFocusedAssetPath( string{ assetPath }.c_str() );
+            pContext->getSubsystem<EditorWorkspace>().setFocusedAssetPath( string{ assetPath }.c_str() );
     }
 
     void EditorDocumentPanel::rememberRecentDocument( string_view assetPath )
@@ -313,6 +313,6 @@ namespace sw::editor
         _pendingFocusPath.clear();
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr && _loadedAssetPath.empty() == false )
-            pContext->getWorkspace().setFocusedAssetPath( _loadedAssetPath.c_str() );
+            pContext->getSubsystem<EditorWorkspace>().setFocusedAssetPath( _loadedAssetPath.c_str() );
     }
 } // namespace sw::editor

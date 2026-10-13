@@ -52,7 +52,7 @@ namespace sw::editor
             {
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext != nullptr )
-                    (void)pContext->getPanelManager().setPanelOpen( "projectsettings", true ); // 패널은 이 파일에 등록되어 있다
+                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "projectsettings", true ); // 패널은 이 파일에 등록되어 있다
             }
 
             [[nodiscard]] static bool readPageCount( const GameObjectManager* /*pManager*/, float64& outValue )
