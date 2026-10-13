@@ -202,27 +202,26 @@ namespace sw::editor
         _pRHIDevice = pRHIDevice;
 
         // 단계마다 먼저 서야 하는 단계를 적는다. 목록이 그 순서로 초기화하고, 실패하면 초기화한 단계만 역순으로 종료한다.
-        _startup.add( make_unique<FunctionSubsystem>( "EditorData", "", EngineInitTarget::Client,
+        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "EditorData", "", EngineInitTarget::Client, MemoryTag::Editor },
                                                       SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializeEditorData, this ),
-                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownEditorData, this ), MemoryTag::Editor ) );
-        _startup.add( make_unique<FunctionSubsystem>( "ImGuiContext", "EditorData", EngineInitTarget::Client,
+                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownEditorData, this ) ) );
+        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "ImGuiContext", "EditorData", EngineInitTarget::Client, MemoryTag::Editor },
                                                       SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializeImGuiContext, this ),
-                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownImGuiContext, this ), MemoryTag::Editor ) );
-        _startup.add( make_unique<FunctionSubsystem>( "PlatformBackend", "ImGuiContext", EngineInitTarget::Client,
+                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownImGuiContext, this ) ) );
+        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "PlatformBackend", "ImGuiContext", EngineInitTarget::Client, MemoryTag::Editor },
                                                       SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializePlatformBackend, this ),
-                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownPlatformBackend, this ), MemoryTag::Editor ) );
-        _startup.add( make_unique<FunctionSubsystem>( "RendererBackend", "ImGuiContext PlatformBackend", EngineInitTarget::Client,
+                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownPlatformBackend, this ) ) );
+        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "RendererBackend", "ImGuiContext PlatformBackend", EngineInitTarget::Client, MemoryTag::Editor },
                                                       SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializeRendererBackend, this ),
-                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownRendererBackend, this ), MemoryTag::Editor ) );
-        _startup.add( make_unique<FunctionSubsystem>( "Splash", "", EngineInitTarget::Client,
-                                                      SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::loadSplashAssets, this ), SubsystemShutdownDelegate{},
-                                                      MemoryTag::Editor ) );
-        _startup.add( make_unique<FunctionSubsystem>( "EditorContext", "EditorData ImGuiContext PlatformBackend RendererBackend Splash", EngineInitTarget::Client,
+                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownRendererBackend, this ) ) );
+        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "Splash", "", EngineInitTarget::Client, MemoryTag::Editor },
+                                                      SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::loadSplashAssets, this ), SubsystemShutdownDelegate{} ) );
+        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "EditorContext", "EditorData ImGuiContext PlatformBackend RendererBackend Splash", EngineInitTarget::Client, MemoryTag::Editor },
                                                       SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializeEditorContext, this ),
-                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownEditorContext, this ), MemoryTag::Editor ) );
-        _startup.add( make_unique<FunctionSubsystem>( "WindowCloseQuery", "EditorContext", EngineInitTarget::Client,
+                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownEditorContext, this ) ) );
+        _startup.add( make_unique<FunctionSubsystem>( FunctionSubsystemDesc{ "WindowCloseQuery", "EditorContext", EngineInitTarget::Client, MemoryTag::Editor },
                                                       SW_DELEGATE_METHOD( SubsystemInitializeDelegate, &ImGuiEditor::initializeWindowCloseQuery, this ),
-                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownWindowCloseQuery, this ), MemoryTag::Editor ) );
+                                                      SW_DELEGATE_METHOD( SubsystemShutdownDelegate, &ImGuiEditor::shutdownWindowCloseQuery, this ) ) );
         if ( _startup.initializeAll( EngineInitTarget::Client ) == false )
         {
             _startup.destroyAll();
