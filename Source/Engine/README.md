@@ -377,7 +377,8 @@ Godot처럼 "노드는 RID만 안다"로 바꾸면 모든 컴포넌트에 해석
 
 **기준선은 `EngineLoop::initialize` 끝이고, 게임 · 에디터 모듈은 그 뒤에 오릅니다.** 그 모듈이 키운 프로세스 정적 저장소는 넣는 쪽 태그(Editor · Scene)에 남습니다.
 **새 프로세스 정적 저장소는 비우는 함수를 만들지 않고 `ScopeOwned<T>`(`Core/Memory/LifetimeScope.h`)로 둡니다.** 처음 쓸 때 만들어지고, `EngineBootstrap::shutdown` 이 엔진 수명 범위(`LifetimeScope::getGlobal`)를 닫으면 만든 역순으로 소멸합니다.
-번역 문자열 저장소, 활성 2D 렌더 설정, 에셋 로드 기록부가 이렇게 있습니다. 범위가 닫힌 뒤의 접근은 Debug 에서 단언합니다. 아직 옮기지 않은 저장소의 목록은 `docs/plans/StorageOwnership.md` 입니다.
+번역 문자열 저장소, 활성 2D 렌더 설정, 에셋 로드 기록부, 오브젝트 복사 버퍼, 스크린샷 우편함, 태그 등록표(`TagID`), 검증 결과 표(`ValidationIssueLog`)가 이렇게 있습니다.
+고정 개수의 표는 저장소를 두지 않고 힙을 쓰지 않는 `array` 로 둡니다(`ReflectValue` 의 기본 타입 이름 표). 다 비운 큐는 빈 객체를 대입해 용량을 돌려줍니다(`DeferredImageUnloadQueue::unloadAll`). 범위가 닫힌 뒤의 접근은 Debug 에서 단언합니다. 아직 옮기지 않은 저장소의 목록은 `docs/plans/StorageOwnership.md` 입니다.
 레지스트리 용량(`RegistrationList::shrinkToFit` — 개발 명령 · 자동화 단계 · 탐침 · 모듈 언로드 리스너)은 `EngineBootstrap::shutdown` 이,
 창 제목 사본은 App 이 엔진을 내리기 전에 놓습니다. 레지스트리 저장소는 넣는 쪽과 관계없이 `EngineMisc` 로 세어, 다시 잡아도 다른 태그로 옮겨 가지 않습니다.
 Debug STL 은 문자열 객체마다 16 B 컨테이너 프록시를 잡습니다. 함수 안 `static const string` 은 처음 부른 자리의 태그로 프로세스 끝까지 남으므로 이미지 적재 때 서는 정적 멤버로 둡니다.
@@ -387,6 +388,9 @@ Debug STL 은 문자열 객체마다 16 B 컨테이너 프록시를 잡습니다
 묻기만 하는 코드는 `TagID::request` 를 부르지 않습니다 — 프로세스 태그 표가 자랍니다. 비교는 `TagID{ TagID::computeID( … ), 이름 }` 으로 합니다.
 App 이 엔진 뒤에 내리는 객체(`LiveReloadManager`)도 엔진 종료 전에 비울 때 빈 객체를 대입합니다.
 진단은 `captureTagBaseline` 직후 `setDetailedTrackingEnabled( true )`, 보고 직전 `getTopCallStacks( LiveBytes )` 를 stderr 나 파일로 찍고, 기록을 의심 태그로만 거르면 빨리 좁혀집니다.
+콜 스택 기록에는 태그가 없으므로 진단하는 동안만 기록에 태그를 붙여 찍고, 그 합이 보고의 바이트 · 블록 수와 같은지 먼저 맞춥니다. 레지스트리 재배치(`shrinkToFit`)처럼 기준선 전 블록을 바꿔 끼운 기록은 합이 0 이라 빼고 봅니다.
+보고 시점에는 게임 · 에디터 모듈이 이미 언로드되어 그 프레임이 주소로만 나옵니다. 모듈을 내리기 전(`App::shutdown` 처음)에 한 번 더 찍어 같은 크기 · 해시로 맞춥니다.
+모듈 리로드가 낀 실행이면 리로드 수를 늘려 증가가 비례하는지 봅니다. 비례하지 않으면 누수가 아니라 한 번 자란 용량입니다.
 
 **모듈 인스턴스를 해제할 때는 타입을 정리한 뒤에 서비스를 끊습니다.** 에디터와 게임 모두 같은 순서입니다(`ModuleHostInternal::destroyInstance`).
 

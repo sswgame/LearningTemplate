@@ -7,6 +7,18 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct AutomationScenarioChainInternal
+        {
+            /**
+             * @brief 진행 중인 단계가 없을 때 돌려주는 빈 경로입니다.
+             * @details 이미지 적재 때 선다 — 함수 안 정적 변수면 처음 부른 때(기준선 뒤)에 Debug STL 프록시를 잡아 종료 누수 보고에 남는다.
+             */
+            static inline const string s_emptyPath{};
+        };
+    } // namespace
+
     vector<string> AutomationScenarioChain::splitList( string_view text )
     {
         vector<string> listPath;
@@ -60,8 +72,7 @@ namespace sw
 
     const string& AutomationScenarioChain::getCurrentPath() const
     {
-        static const string s_empty;
-        return _stageIndex < _listPath.size() && _bFinished == false ? _listPath[_stageIndex] : s_empty;
+        return _stageIndex < _listPath.size() && _bFinished == false ? _listPath[_stageIndex] : AutomationScenarioChainInternal::s_emptyPath;
     }
 
     bool AutomationScenarioChain::onStageEnded( AutomationResult result )

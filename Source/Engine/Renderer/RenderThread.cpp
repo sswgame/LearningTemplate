@@ -6,6 +6,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Process/ThreadCrashStack.h"
 #include "Core/String/StringBuilder.h"
@@ -44,10 +45,17 @@ namespace sw
                 atomic<uint32>   _completedSerial{ 0 };
             };
 
+            /** @brief 우편함 본체입니다. 엔진 수명 범위가 닫히면(엔진 종료) 마지막 경로와 함께 소멸합니다. */
+            static inline ScopeOwned<ScreenshotMailbox> s_screenshotMailbox;
+
             static ScreenshotMailbox& getMailbox()
             {
-                static ScreenshotMailbox s_mailbox;
-                return s_mailbox;
+                ScreenshotMailbox* const pMailbox = s_screenshotMailbox.getOrCreate();
+                if ( pMailbox != nullptr )
+                    return *pMailbox;
+                // 엔진 종료 뒤의 접근이다(단언은 `getOrCreate` 가 했다). 요청을 받지 않은 빈 우편함으로 답한다.
+                static ScreenshotMailbox s_closedFallback;
+                return s_closedFallback;
             }
 
             /** @brief 컨텍스트가 스레드에 묶이는 디바이스(DX11, GL)면 이 스레드에서 컨텍스트를 뗍니다. 그 능력이 없는 디바이스는 할 일이 없습니다. */

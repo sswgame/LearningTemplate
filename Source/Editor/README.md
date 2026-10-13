@@ -587,6 +587,9 @@ GameFramework 와 키트의 에디터 확장은 `Source/GameFramework/PlugIn/Edi
   탐색 이력(`ContentBrowserHistory`)은 패널이 값으로 가진 클래스이고 ImGui 를 모릅니다. 작업이 성공하면 그 결과로 선택하고 다시 읽는 일만 패널이 합니다. 이력 · 이름 바꾸기 대상 · 대기열은 EditorTest 가 화면 없이 테스트합니다.
 - **콘텐츠 브라우저는 `AssetHotReload::getContentChangeSerial` 이 바뀌면 다시 읽습니다.** 에디터 안의 삭제처럼 결과를 바로 아는 경로는 그 자리에서 다시 읽습니다. 감시는 한두 프레임 늦습니다.
 - **에셋 핫 리로드에 종류별 코드를 넣지 않습니다.** 새 종류는 엔진에 `IAssetCache` 를 등록하고 `EditorAssetTypeRegistry` 줄의 `_pCacheKindName` 을 채웁니다. 컴포넌트는 `onPropertyChanged` 로 알림을 받으며, 값이 같아도 에셋에서 계산한 상태를 다시 맞춰야 합니다.
+- **워커 잡(`EditorBackgroundTask`)의 `isPending()` 은 결과를 꺼낼 때가 아니라 워커가 결과를 실을 때 내려갑니다.** 한 프레임 안에서 `take` 를 한 뒤 `isPending()` 을 다시 물으면,
+  그 사이 끝난 결과가 "목록 없음 · 대기 아님" 으로 보입니다. Quick Open 이 그렇게 미뤄 둔 Enter 를 버려 아무것도 열지 않았습니다. 꺼내기 전에 한 번 읽은 값으로 그 프레임을 판단합니다(`QuickLauncherPopup::drawContent`).
+  창이 짧아 자연 재현은 드뭅니다. 워커가 결과를 늦게 싣고 게임 스레드가 그 완료를 기다리게 하는 변이로 확인합니다.
 - **에셋 종류별 if 체인을 다시 만들지 않습니다.** 도구 문서 IO 는 `loadToolDocument` 와 `saveToolDocument<TAsset>` 하나입니다. 복합 접미사 `.prefab.xml` 은 접미사 비교로 봅니다. `hasExtension` 은 마지막 점 뒤만 봅니다.
 
 ### 임포트
