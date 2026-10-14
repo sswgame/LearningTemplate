@@ -520,17 +520,17 @@ namespace sw::editor
                     }
                     ImGui::Separator();
 
-                    if ( _bComponentPresetDirty == SW_TRUE && _componentPresetJob.isPending() == false )
-                    {
-                        _componentPresetJob.request(
-                            EditorGlobalVariableCommands::getComponentPresetFolderPath(), ".preset.xml", false );
-                    }
-
-                    vector<string> listNewPresetFile;
-                    if ( _componentPresetJob.take( listNewPresetFile ) )
+                    vector<string>       listNewPresetFile;
+                    const EditorTaskPoll presetPoll = _componentPresetJob.take( listNewPresetFile );
+                    if ( presetPoll == EditorTaskPoll::Ready )
                     {
                         _listComponentPresetFile = std::move( listNewPresetFile );
                         _bComponentPresetDirty   = SW_FALSE;
+                    }
+                    else if ( _bComponentPresetDirty == SW_TRUE && presetPoll == EditorTaskPoll::Idle )
+                    {
+                        _componentPresetJob.request(
+                            EditorGlobalVariableCommands::getComponentPresetFolderPath(), ".preset.xml", false );
                     }
 
                     bool bFoundPresets{ false };

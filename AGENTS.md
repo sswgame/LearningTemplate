@@ -317,6 +317,9 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   A UTC timestamp (expiry, record time, event windows) is `WallClock::nowUnixMilliseconds()` (`Core/Time/WallClock.h`); services take it
   as a `nowMs` parameter so tests can pass a fake time.
   Exceptions live in one table with their reason. Enforced by `CheckClockReads.py`.
+- **Start threads with `sw::thread`** (`Core/Concurrency/thread.h`), never `std::thread` in `Source/`: it has the same shape, tells the lock
+  observer what `join` waits for (so a join cycle shows up in the deadlock detector), and asserts instead of hanging when `join` runs under the
+  loader lock (`DllMain`, a module's static destructor). Tests may use `std::thread`. Enforced by `CheckStdThread.py`.
 - Construct into memory you already hold with `sw_placement_new( pMemory ) T( ... )`
   (`Core/Memory/Memory.h`), never a bare `new ( pMemory ) T( ... )`. Enforced by
   `CheckCodeConventions.py` (`Style/PlacementNew`).

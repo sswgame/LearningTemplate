@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -54,7 +55,7 @@ namespace sw
 
     private:
         // 큐 · 뮤텍스 · 감시 경로 · 넘침 표시는 IFileWatcher 가 가진다. 세 플랫폼이 똑같이 가져야 하는 것들이다.
-        std::thread        _workerThread;
+        sw::thread         _workerThread;
         mutex              _watchMutex;
         map<int32, string> _mapWatchDescriptorToPath;
         int32              _inotifyFd;

@@ -6,6 +6,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
@@ -97,7 +98,7 @@ namespace sw
         }
 
         _bIsWatching  = true;
-        _workerThread = std::thread( &LinuxFileWatcher::workerThreadMain, this, Memory::getCurrentMemoryTag() );
+        _workerThread = sw::thread( &LinuxFileWatcher::workerThreadMain, this, Memory::getCurrentMemoryTag() );
 
         SW_LOG_INFO( "Started watching directory: %#", _directoryPath.c_str() );
         return true;

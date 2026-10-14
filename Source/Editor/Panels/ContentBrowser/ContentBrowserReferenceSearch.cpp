@@ -22,19 +22,21 @@ namespace sw::editor
     {
     }
 
-    void ContentBrowserReferenceSearch::takeFinishedScan()
+    EditorTaskPoll ContentBrowserReferenceSearch::takeFinishedScan()
     {
         EditorReferenceIndexData data{};
-        if ( _job.take( data ) == false )
-            return;
+        const EditorTaskPoll     poll = _job.take( data );
+        if ( poll != EditorTaskPoll::Ready )
+            return poll;
         SW_LOG_INFO( "Reference index ready: %# text asset(s), %# reference(s) in %# ms", data._scannedFileCount, data._listReference.size(), data._scanMilliseconds );
         _index.assign( std::move( data ) );
+        return poll;
     }
 
-    void ContentBrowserReferenceSearch::requestScanIfStale( uint64 contentChangeSerial )
+    void ContentBrowserReferenceSearch::requestScanIfStale( uint64 contentChangeSerial, EditorTaskPoll poll )
     {
         // 스캔하는 동안 바뀐 것은 스캔이 끝난 뒤 번호가 달라지므로 다시 스캔한다. 저장이 몰려도 스캔은 하나씩 실행한다.
-        if ( _job.isPending() )
+        if ( poll == EditorTaskPoll::Running )
             return;
         if ( _bScanRequested == SW_TRUE && contentChangeSerial == _scanSerial )
             return;
@@ -45,7 +47,9 @@ namespace sw::editor
 
     void ContentBrowserReferenceSearch::discardPendingScan()
     {
-        if ( _job.isPending() )
+        // 대기 여부를 따로 읽지 않고 꺼내 본다 — 막 끝난 낡은 결과는 여기서 버려지고, 아직 도는 스캔은 다시 요청해 그 세대를 버린다.
+        EditorReferenceIndexData staleData{};
+        if ( _job.take( staleData ) == EditorTaskPoll::Running )
             _job.request( ResourcePaths::getRootFolderPath() );
     }
 

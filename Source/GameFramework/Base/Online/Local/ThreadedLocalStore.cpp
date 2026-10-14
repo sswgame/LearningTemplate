@@ -16,7 +16,7 @@ namespace sw
         , _pendingCount{ 0 }
         , _bStopping{ SW_FALSE }
     {
-        _worker = std::thread( &ThreadedLocalStore::runWorker, this );
+        _worker = sw::thread( &ThreadedLocalStore::runWorker, this );
     }
 
     ThreadedLocalStore::~ThreadedLocalStore()

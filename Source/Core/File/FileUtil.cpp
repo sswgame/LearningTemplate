@@ -4,6 +4,7 @@
 
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -684,7 +685,7 @@ namespace sw
             openGeneration = FileDialogQueueInternal::_s_generation;
         }
 
-        std::thread(
+        sw::thread(
             [delegateCallback = std::move( onSuccess ), params, openGeneration, memoryTag = Memory::getCurrentMemoryTag()]
         {
             // 이 스레드의 할당은 대화상자를 연 쪽의 용도로 센다.

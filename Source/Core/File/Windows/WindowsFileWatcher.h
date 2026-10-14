@@ -6,6 +6,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/IFileWatcher.h"
@@ -48,7 +49,7 @@ namespace sw
         // 큐 · 뮤텍스 · 감시 경로 · 넘침 표시는 IFileWatcher 가 가진다. 세 플랫폼이 똑같이 가져야 하는 것들이다.
         HANDLE       _hDirectory;
         HANDLE       _hCompletionPort;
-        std::thread  _workerThread;
+        sw::thread   _workerThread;
         atomic<bool> _bIsWatching;
         bool         _bRecursive;
     };

@@ -2,6 +2,7 @@
 
 #include "Core/Common/Defines.h"
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/File/AsyncFileIOBackend.h"
 
 #if defined( SW_PLATFORM_LINUX )
@@ -192,7 +193,7 @@ namespace sw
                 return false;
             }
 
-            _thread = std::thread( &IOUringAsyncFileIOBackend::run, this, Memory::getCurrentMemoryTag() );
+            _thread = sw::thread( &IOUringAsyncFileIOBackend::run, this, Memory::getCurrentMemoryTag() );
             return true;
         }
 
@@ -405,7 +406,7 @@ namespace sw
             _ringFd  = -1;
         }
 
-        std::thread       _thread;
+        sw::thread        _thread;
         AsyncFileIOQueue* _pQueue;
         void*             _pSqRing;
         void*             _pCqRing;

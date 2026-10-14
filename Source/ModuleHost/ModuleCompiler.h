@@ -8,6 +8,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/GameTimer.h"
@@ -86,7 +87,7 @@ namespace sw
         ///        소유자(ModuleHost)가 빌드 구성에 따라 달라지지 않도록 필드 자체는 그대로 둡니다.
         [[maybe_unused]] LiveReloadManager* _pLiveReloadManager;
         unique_ptr<Process>                 _pCurrentProcess;
-        std::thread                         _workerThread;
+        sw::thread                          _workerThread;
         GameTimer                           _buildTimer;
         string                              _targetName;
         mutable mutex                       _mutex;

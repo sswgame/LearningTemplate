@@ -11,6 +11,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
@@ -46,7 +47,7 @@ namespace sw
         bool takeLine( string& outLine );
 
     private:
-        std::thread    _thread;
+        sw::thread     _thread;
         mutex          _mutex;
         vector<string> _listLine;    ///< 읽기 스레드가 넣고 게임 스레드가 꺼낸다(_mutex)
         string         _partialLine; ///< 읽기 스레드만 — 줄바꿈을 기다리는 조각
