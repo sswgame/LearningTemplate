@@ -235,7 +235,8 @@ namespace sw
                 const int32  result      = LinuxAsyncFileIOBackendInternal::enterRing( _ringFd, submitCount, 1, IORING_ENTER_GETEVENTS );
                 if ( result < 0 )
                 {
-                    if ( errno == EINTR || errno == EAGAIN || errno == EBUSY )
+                    const bool bRetryableError = errno == EINTR || errno == EAGAIN || errno == EBUSY;
+                    if ( bRetryableError )
                         continue;
                     SW_LOG_ERROR( "io_uring_enter failed (errno %#)", errno );
                     return;
@@ -314,10 +315,11 @@ namespace sw
         {
             while ( *_pSqTail - __atomic_load_n( _pSqHead, __ATOMIC_ACQUIRE ) >= _sqEntryCount )
             {
-                const int32 result = LinuxAsyncFileIOBackendInternal::enterRing( _ringFd, _pendingSubmitCount, 0, 0 );
+                const int32 result       = LinuxAsyncFileIOBackendInternal::enterRing( _ringFd, _pendingSubmitCount, 0, 0 );
+                const bool  bEnterFailed = result < 0 && errno != EINTR && errno != EAGAIN && errno != EBUSY;
                 if ( result > 0 )
                     _pendingSubmitCount -= static_cast<uint32>( result ) < _pendingSubmitCount ? static_cast<uint32>( result ) : _pendingSubmitCount;
-                else if ( result < 0 && errno != EINTR && errno != EAGAIN && errno != EBUSY )
+                else if ( bEnterFailed )
                     break;
             }
             const uint32  tail = *_pSqTail;

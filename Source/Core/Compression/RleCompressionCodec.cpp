@@ -53,8 +53,11 @@ namespace sw
         {
             // 1) 같은 바이트가 이어지는 런을 찾는다
             size_t runLength = 1;
-            while ( readPos + runLength < srcSize && runLength < kMaxRunLength && pInput[readPos + runLength] == pInput[readPos] )
+            while ( true )
             {
+                const bool bRunContinues = readPos + runLength < srcSize && runLength < kMaxRunLength && pInput[readPos + runLength] == pInput[readPos];
+                if ( bRunContinues == false )
+                    break;
                 ++runLength;
             }
 
@@ -75,9 +78,10 @@ namespace sw
                 while ( readPos + literalLength < srcSize && literalLength < kMaxLiteralLength )
                 {
                     // 여기서부터 같은 바이트가 3개 이상 이어지면 리터럴을 끊고 반복 런으로 넘긴다
-                    if ( readPos + literalLength + 2 < srcSize &&
-                         pInput[readPos + literalLength] == pInput[readPos + literalLength + 1] &&
-                         pInput[readPos + literalLength] == pInput[readPos + literalLength + 2] )
+                    const bool bRepeatRunStarts = readPos + literalLength + 2 < srcSize &&
+                                                  pInput[readPos + literalLength] == pInput[readPos + literalLength + 1] &&
+                                                  pInput[readPos + literalLength] == pInput[readPos + literalLength + 2];
+                    if ( bRepeatRunStarts )
                         break;
                     ++literalLength;
                 }

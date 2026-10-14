@@ -36,8 +36,9 @@ namespace sw
 
     bool NetInputSendWindow::push( uint32 tick, const uint8* pData, int32 byteCount, uint32 stamp )
     {
-        const bool bValidData = _format.isValidEntrySize( byteCount ) && ( byteCount == 0 || pData != nullptr );
-        if ( _listEntry.getCapacity() == 0 || bValidData == false || tick == TickRingBuffer<NetInputEntry>::kEmpty )
+        const bool bValidData        = _format.isValidEntrySize( byteCount ) && ( byteCount == 0 || pData != nullptr );
+        const bool bCannotStoreInput = _listEntry.getCapacity() == 0 || bValidData == false || tick == TickRingBuffer<NetInputEntry>::kEmpty;
+        if ( bCannotStoreInput )
             return false;
         if ( _bHasEntry == SW_TRUE && tick == _latestTick )
             return false; // 이미 있다 — 처음 값이 남는다
@@ -242,8 +243,9 @@ namespace sw
 
     bool NetInputReceiveBuffer::canStore( uint32 tick ) const
     {
-        const bool bInWindow = _windowFirst <= tick && tick < _windowEnd;
-        if ( _listEntry.getCapacity() == 0 || bInWindow == false || tick < _firstMissingTick )
+        const bool bInWindow      = _windowFirst <= tick && tick < _windowEnd;
+        const bool bTickNotNeeded = _listEntry.getCapacity() == 0 || bInWindow == false || tick < _firstMissingTick;
+        if ( bTickNotNeeded )
             return false;
         return find( tick ) == nullptr; // 이미 있다(다시 보낸 것)
     }

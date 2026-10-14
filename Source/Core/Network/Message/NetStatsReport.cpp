@@ -44,7 +44,8 @@ namespace sw
                 const bool bValid = StringUtil::parseInt( text.substr( 0, firstColon ), kind ) &&
                                     StringUtil::parseUint64( text.substr( firstColon + 1, secondColon - firstColon - 1 ), outEntry._messageCount ) &&
                                     StringUtil::parseUint64( text.substr( secondColon + 1 ), outEntry._byteCount );
-                if ( bValid == false || kind < 0 || NetMessageRouter::kKindCount <= kind )
+                const bool bInvalidEntry = bValid == false || kind < 0 || NetMessageRouter::kKindCount <= kind;
+                if ( bInvalidEntry )
                     return false;
                 outEntry._kind = static_cast<uint8>( kind );
                 return true;

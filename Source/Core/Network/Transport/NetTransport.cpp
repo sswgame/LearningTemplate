@@ -113,7 +113,8 @@ namespace sw
 
     bool LoopbackTransport::send( const NetAddress& to, const uint8* pData, int32 size )
     {
-        if ( size <= 0 || size > kNetMaxPacketSize || pData == nullptr )
+        const bool bInvalidPacket = size <= 0 || size > kNetMaxPacketSize || pData == nullptr;
+        if ( bInvalidPacket )
             return false;
         _pNetwork->enqueue( _address, to, pData, size );
         return true;

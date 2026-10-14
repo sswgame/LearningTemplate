@@ -106,7 +106,8 @@ namespace sw
 
     void LinuxFileWatcher::stopWatching()
     {
-        if ( _bIsWatching == false && _inotifyFd < 0 && _wakeFd < 0 )
+        const bool bAlreadyStopped = _bIsWatching == false && _inotifyFd < 0 && _wakeFd < 0;
+        if ( bAlreadyStopped )
             return;
 
         _bIsWatching = false;
@@ -227,7 +228,8 @@ namespace sw
                     const string name( pEvent->name );
                     const bool   bIsDir = ( pEvent->mask & IN_ISDIR ) != 0;
 
-                    if ( ( pEvent->mask & IN_CREATE ) && bIsDir && _bRecursive )
+                    const bool bNewRecursiveDirectory = ( pEvent->mask & IN_CREATE ) && bIsDir && _bRecursive;
+                    if ( bNewRecursiveDirectory )
                     {
                         const string childDir = FileUtil::normalizeSeparators( FileUtil::joinPath( watchedDir, name ) );
                         if ( addWatchDirectory( childDir ) == false )

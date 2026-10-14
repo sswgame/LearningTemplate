@@ -689,10 +689,11 @@ namespace sw
 
     void NetHost::handlePacket( float64 nowSeconds, const NetAddress& from, const uint8* pData, int32 size )
     {
-        const uint32 headerID = size > NetHostInternal::kHeaderSize ? LittleEndianUtil::readUint32( pData ) : 0u;
-        if ( size <= NetHostInternal::kHeaderSize || ( headerID != _protocolID && headerID != NetProtocol::kHandshakeID ) ||
-             LittleEndianUtil::readUint32( pData + 4 ) !=
-                 computePacketChecksum( headerID, pData + NetHostInternal::kHeaderSize, size - NetHostInternal::kHeaderSize ) )
+        const uint32 headerID        = size > NetHostInternal::kHeaderSize ? LittleEndianUtil::readUint32( pData ) : 0u;
+        const bool   bRejectedPacket = size <= NetHostInternal::kHeaderSize || ( headerID != _protocolID && headerID != NetProtocol::kHandshakeID ) ||
+                                     LittleEndianUtil::readUint32( pData + 4 ) !=
+                                         computePacketChecksum( headerID, pData + NetHostInternal::kHeaderSize, size - NetHostInternal::kHeaderSize );
+        if ( bRejectedPacket )
         {
             ++_rejectedPacketCount; // 다른 버전, 다른 게임, 깨진 패킷.
             return;
@@ -718,8 +719,9 @@ namespace sw
             {
                 // 서버는 수락했지만 클라이언트가 Accepted 를 받지 못한 경우다. 수락에만 서버가 지정한 번호가 있으므로, 데이터 패킷으로는 연결로 인정하지 않는다.
                 // 응답을 바로 다시 보내면 서버가 수락을 다시 보낸다. 이 패킷에 든 신뢰 메시지는 확인하지 않았으므로 서버가 다시 보낸다.
-                if ( _bServer == SW_FALSE && pSlot != nullptr && pSlot->_state == NetConnectionState::Connecting && pSlot->_serverSalt != 0 &&
-                     token == static_cast<uint32>( pSlot->getConnectionToken() ) )
+                const bool bClientAwaitingAccept = _bServer == SW_FALSE && pSlot != nullptr && pSlot->_state == NetConnectionState::Connecting && pSlot->_serverSalt != 0 &&
+                                                   token == static_cast<uint32>( pSlot->getConnectionToken() );
+                if ( bClientAwaitingAccept )
                 {
                     sendChallengeResponse( *pSlot );
                     pSlot->_lastSendTime = nowSeconds;
@@ -911,8 +913,9 @@ namespace sw
         if ( bReady == false )
         {
             // 평문 방식과 같다. 클라이언트가 Accepted 를 받지 못했으면 응답을 다시 보내(서버가 수락을 다시 보낸다), 아니면 버린다.
-            if ( type == PacketType::Payload && _bServer == SW_FALSE && pSlot != nullptr && pSlot->_state == NetConnectionState::Connecting && pSlot->_serverSalt != 0 &&
-                 token == static_cast<uint32>( pSlot->getConnectionToken() ) )
+            const bool bClientAwaitingAcceptPayload = type == PacketType::Payload && _bServer == SW_FALSE && pSlot != nullptr && pSlot->_state == NetConnectionState::Connecting && pSlot->_serverSalt != 0 &&
+                                                      token == static_cast<uint32>( pSlot->getConnectionToken() );
+            if ( bClientAwaitingAcceptPayload )
             {
                 sendChallengeResponse( *pSlot );
                 pSlot->_lastSendTime = nowSeconds;

@@ -97,8 +97,9 @@ namespace sw
 
     bool NetPrioritizer::findUnconfirmedSendTick( uint32 entityID, uint32& outSentTick ) const
     {
-        const size_t index = findLowerIndex( entityID );
-        if ( index == _listEntry.size() || _listEntry[index]._entityID != entityID || _listEntry[index]._bUnconfirmed == SW_FALSE )
+        const size_t index               = findLowerIndex( entityID );
+        const bool   bNoUnconfirmedEntry = index == _listEntry.size() || _listEntry[index]._entityID != entityID || _listEntry[index]._bUnconfirmed == SW_FALSE;
+        if ( bNoUnconfirmedEntry )
             return false;
         outSentTick = _listEntry[index]._unconfirmedTick;
         return true;

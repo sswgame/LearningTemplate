@@ -270,7 +270,8 @@ namespace sw
                 _sentBytes.fetch_add( static_cast<uint64>( sent ), std::memory_order_relaxed );
                 _sendCallCount.fetch_add( 1, std::memory_order_relaxed );
             }
-            if ( connection._fd >= 0 && connection._sendQueue.isEmpty() && connection._state == EpollConnectionState::Closing )
+            const bool bClosingQueueDrained = connection._fd >= 0 && connection._sendQueue.isEmpty() && connection._state == EpollConnectionState::Closing;
+            if ( bClosingQueueDrained )
             {
                 if ( connection._bShutdownSent == SW_FALSE )
                 {
@@ -638,9 +639,10 @@ namespace sw
         {
             EpollLoop& loop = state.getLoop( index );
             loop._listReceiveScratch.resize( static_cast<size_t>( settings._receiveChunkBytes ) );
-            loop._epollFd = epoll_create1( EPOLL_CLOEXEC );
-            loop._wakeFd  = eventfd( 0, EFD_NONBLOCK | EFD_CLOEXEC );
-            if ( loop._epollFd < 0 || loop._wakeFd < 0 || state.registerFd( index, loop._wakeFd, EpollStreamTransportInternal::kWakeTag ) == false )
+            loop._epollFd                    = epoll_create1( EPOLL_CLOEXEC );
+            loop._wakeFd                     = eventfd( 0, EFD_NONBLOCK | EFD_CLOEXEC );
+            const bool bEventLoopSetupFailed = loop._epollFd < 0 || loop._wakeFd < 0 || state.registerFd( index, loop._wakeFd, EpollStreamTransportInternal::kWakeTag ) == false;
+            if ( bEventLoopSetupFailed )
             {
                 SW_LOG_ERROR( "epoll_create1 / eventfd failed (%#)", errno );
                 return false; // shutdown 이 연 것을 닫는다.
@@ -736,10 +738,11 @@ namespace sw
             return false;
         const int32 reuse = 1; // TIME_WAIT 에 남은 이전 서버의 포트를 바로 다시 연다(SO_REUSEPORT 가 아니므로 다른 프로세스와 포트를 나누지 않는다).
         (void)setsockopt( fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof( reuse ) );
-        sockaddr_in local  = EpollStreamTransportInternal::makeNativeAddress( bindAddress );
-        socklen_t   length = sizeof( local );
-        if ( bind( fd, reinterpret_cast<const sockaddr*>( &local ), sizeof( local ) ) != 0 || ::listen( fd, state._settings._listenBacklog ) != 0 ||
-             getsockname( fd, reinterpret_cast<sockaddr*>( &local ), &length ) != 0 )
+        sockaddr_in local              = EpollStreamTransportInternal::makeNativeAddress( bindAddress );
+        socklen_t   length             = sizeof( local );
+        const bool  bListenSetupFailed = bind( fd, reinterpret_cast<const sockaddr*>( &local ), sizeof( local ) ) != 0 || ::listen( fd, state._settings._listenBacklog ) != 0 ||
+                                        getsockname( fd, reinterpret_cast<sockaddr*>( &local ), &length ) != 0;
+        if ( bListenSetupFailed )
         {
             SW_LOG_ERROR( "Could not listen on stream address %# (%#)", bindAddress.toString().c_str(), errno );
             ::close( fd );
@@ -801,9 +804,10 @@ namespace sw
         const bool              bAccepting = pConnection->_state == EpollConnectionState::Open || pConnection->_state == EpollConnectionState::Connecting;
         if ( State::isLive( *pConnection, handle ) == false || bAccepting == false )
             return StreamSendResult::Closed;
-        const bool             bWasEmpty = pConnection->_sendQueue.isEmpty();
-        const StreamSendResult result    = pConnection->_sendQueue.append( pData, size );
-        if ( result != StreamSendResult::QueueFull && bWasEmpty && pConnection->_state == EpollConnectionState::Open )
+        const bool             bWasEmpty       = pConnection->_sendQueue.isEmpty();
+        const StreamSendResult result          = pConnection->_sendQueue.append( pData, size );
+        const bool             bShouldFlushNow = result != StreamSendResult::QueueFull && bWasEmpty && pConnection->_state == EpollConnectionState::Open;
+        if ( bShouldFlushNow )
             (void)_state->flushLocked( *pConnection ); // 큐가 비어 있었으므로 바로 보낸다(쓰기 가능 알림은 큐가 넘친 적이 없으면 오지 않는다).
         if ( pConnection->_state == EpollConnectionState::Closed )
             _state->scheduleCommand( pConnection->_loopIndex, handle._index ); // 보내다가 RST 가 났다. 닫힘은 루프가 낸다.

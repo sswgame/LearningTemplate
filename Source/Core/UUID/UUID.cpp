@@ -55,7 +55,8 @@ namespace sw
     {
         if ( text.size() != 36 )
             return false;
-        if ( text[8] != '-' || text[13] != '-' || text[18] != '-' || text[23] != '-' )
+        const bool bMisplacedDashes = text[8] != '-' || text[13] != '-' || text[18] != '-' || text[23] != '-';
+        if ( bMisplacedDashes )
             return false;
 
         UUID   uuid{};
@@ -66,9 +67,10 @@ namespace sw
                 continue;
             if ( charIndex + 1 >= text.size() )
                 return false;
-            const int32 hi = UUIDInternal::hexNibble( text[charIndex] );
-            const int32 lo = UUIDInternal::hexNibble( text[charIndex + 1] );
-            if ( hi < 0 || lo < 0 || byteIndex >= 16 )
+            const int32 hi              = UUIDInternal::hexNibble( text[charIndex] );
+            const int32 lo              = UUIDInternal::hexNibble( text[charIndex + 1] );
+            const bool  bInvalidHexPair = hi < 0 || lo < 0 || byteIndex >= 16;
+            if ( bInvalidHexPair )
                 return false;
             uuid._arrBytes[byteIndex++] = static_cast<uint8>( ( hi << 4 ) | lo );
             ++charIndex;
@@ -87,7 +89,8 @@ namespace sw
         uint32 outIndex{ 0 };
         for ( uint32 byteIndex = 0; byteIndex < 16; ++byteIndex )
         {
-            if ( byteIndex == 4 || byteIndex == 6 || byteIndex == 8 || byteIndex == 10 )
+            const bool bDashPosition = byteIndex == 4 || byteIndex == 6 || byteIndex == 8 || byteIndex == 10;
+            if ( bDashPosition )
                 out[outIndex++] = '-';
             out[outIndex++] = kArrHex[( _arrBytes[byteIndex] >> 4 ) & 0x0f];
             out[outIndex++] = kArrHex[_arrBytes[byteIndex] & 0x0f];

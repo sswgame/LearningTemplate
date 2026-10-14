@@ -120,8 +120,9 @@ namespace sw
         vector<uint32>                                  listPath;
         for ( const uint32 node : listCandidate )
         {
-            if ( node < listState.size() && listState[node] == TopologicalSortUtilInternal::VisitState::Unvisited &&
-                 TopologicalSortUtilInternal::visit( node, listDependency, listCandidateMask, listState, listPath, outListCycle ) )
+            const bool bCycleFoundFromNode = node < listState.size() && listState[node] == TopologicalSortUtilInternal::VisitState::Unvisited &&
+                                             TopologicalSortUtilInternal::visit( node, listDependency, listCandidateMask, listState, listPath, outListCycle );
+            if ( bCycleFoundFromNode )
                 return true;
         }
         return false;

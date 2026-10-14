@@ -288,14 +288,16 @@ namespace sw
 
     void* Memory::copy( void* pDest, const void* pSrc, size_t size )
     {
-        if ( pDest == nullptr || pSrc == nullptr || size == 0 )
+        const bool bNothingToCopy = pDest == nullptr || pSrc == nullptr || size == 0;
+        if ( bNothingToCopy )
             return pDest;
         return std::memcpy( pDest, pSrc, size );
     }
 
     void* Memory::move( void* pDest, const void* pSrc, size_t size )
     {
-        if ( pDest == nullptr || pSrc == nullptr || size == 0 )
+        const bool bNothingToMove = pDest == nullptr || pSrc == nullptr || size == 0;
+        if ( bNothingToMove )
             return pDest;
         return std::memmove( pDest, pSrc, size );
     }

@@ -29,7 +29,8 @@ namespace sw
             // **디렉터리까지 같아야 같은 변경이다.** Windows · Linux 는 감시 루트 하나를 `directory` 로 주고 하위 경로를
             // `filename` 에 담지만, 이벤트마다 그 파일이 있는 디렉터리를 주는 워처라면 서로 다른 폴더의 같은 이름(`config.json`
             // 두 개)이 잇달아 온다. 디렉터리까지 보면 워처가 무엇을 넘기든 뒤의 것이 조용히 사라지지 않는다.
-            if ( last._action == action && last._filename == filename && last._directory == directory )
+            const bool bDuplicateEvent = last._action == action && last._filename == filename && last._directory == directory;
+            if ( bDuplicateEvent )
                 return;
         }
 

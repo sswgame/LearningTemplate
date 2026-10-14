@@ -164,10 +164,11 @@ namespace sw
             StreamConnectionHandle connect( const NetAddress& remote ) override
             {
                 std::scoped_lock<mutex>        lock{ _pState->_mutex };
-                const StreamConnectionHandle   handle = allocateSlotLocked();
-                const auto                     found  = _pState->_mapListener.find( remote._port );
-                LoopbackStreamTransport* const pPeer  = found != _pState->_mapListener.end() ? found->second : nullptr;
-                if ( pPeer == nullptr || pPeer->_bInitialized == SW_FALSE || pPeer->countOpenLocked() >= pPeer->_settings._maxConnections )
+                const StreamConnectionHandle   handle          = allocateSlotLocked();
+                const auto                     found           = _pState->_mapListener.find( remote._port );
+                LoopbackStreamTransport* const pPeer           = found != _pState->_mapListener.end() ? found->second : nullptr;
+                const bool                     bConnectRefused = pPeer == nullptr || pPeer->_bInitialized == SW_FALSE || pPeer->countOpenLocked() >= pPeer->_settings._maxConnections;
+                if ( bConnectRefused )
                 {
                     // 실제 전송처럼 핸들은 주고 다음 pollIO 에 ConnectFailed 로 닫는다.
                     _listSlot[handle._index]._linkIndex = -1;
@@ -200,9 +201,10 @@ namespace sw
             StreamSendResult send( StreamConnectionHandle handle, const uint8* pData, int32 size ) override
             {
                 std::scoped_lock<mutex> lock{ _pState->_mutex };
-                LoopbackLink*           pLink = findLinkLocked( handle );
-                const uint8             side  = pLink != nullptr ? _listSlot[handle._index]._side : 0;
-                if ( pLink == nullptr || pLink->_arrFinRequested[side] == SW_TRUE || pLink->_arrClosed[side] == SW_TRUE )
+                LoopbackLink*           pLink                   = findLinkLocked( handle );
+                const uint8             side                    = pLink != nullptr ? _listSlot[handle._index]._side : 0;
+                const bool              bLinkUnavailableForSend = pLink == nullptr || pLink->_arrFinRequested[side] == SW_TRUE || pLink->_arrClosed[side] == SW_TRUE;
+                if ( bLinkUnavailableForSend )
                     return StreamSendResult::Closed;
                 const StreamSendResult result = pLink->_arrQueue[side].append( pData, size );
                 if ( result != StreamSendResult::QueueFull )
@@ -327,8 +329,9 @@ namespace sw
                 ++_stats._closedCount;
                 if ( linkIndex >= 0 )
                 {
-                    LoopbackLink& link = _pState->_listLink[static_cast<size_t>( linkIndex )];
-                    if ( link._arrClosed[0] == SW_TRUE && link._arrClosed[1] == SW_TRUE && link._bUsed == SW_TRUE )
+                    LoopbackLink& link             = _pState->_listLink[static_cast<size_t>( linkIndex )];
+                    const bool    bLinkFullyClosed = link._arrClosed[0] == SW_TRUE && link._arrClosed[1] == SW_TRUE && link._bUsed == SW_TRUE;
+                    if ( bLinkFullyClosed )
                     {
                         // 두 쪽이 모두 닫힘을 넘겨받았는지는 두 번째 free 가 본다 — 처음 free 에서 링크를 지우면 저쪽 자리가 지운 링크를 가리킨다.
                         const uint8                  otherSide   = static_cast<uint8>( 1 - slot._side );
@@ -358,8 +361,9 @@ namespace sw
             {
                 if ( handle.isValid() == false || handle._index >= _listSlot.size() )
                     return nullptr;
-                const LoopbackHandleSlot& slot = _listSlot[handle._index];
-                if ( slot._bUsed == SW_FALSE || slot._generation != handle._generation || slot._linkIndex < 0 )
+                const LoopbackHandleSlot& slot         = _listSlot[handle._index];
+                const bool                bStaleHandle = slot._bUsed == SW_FALSE || slot._generation != handle._generation || slot._linkIndex < 0;
+                if ( bStaleHandle )
                     return nullptr;
                 return &_pState->_listLink[static_cast<size_t>( slot._linkIndex )];
             }
@@ -404,8 +408,11 @@ namespace sw
                     if ( link._arrClosed[side] == SW_TRUE )
                         continue;
                     StreamSendQueue& queue = link._arrQueue[peerSide];
-                    while ( link._arrPaused[side] == SW_FALSE && queue.isEmpty() == false && budget > 0 )
+                    while ( true )
                     {
+                        const bool bCanDeliver = link._arrPaused[side] == SW_FALSE && queue.isEmpty() == false && budget > 0;
+                        if ( bCanDeliver == false )
+                            break;
                         int32 take = queue.getQueuedBytes();
                         if ( _pState->_conditions._maxChunkBytes > 0 )
                             take = MathUtil::min( take, _pState->nextRandomInRange( _pState->_conditions._maxChunkBytes ) );
@@ -426,7 +433,8 @@ namespace sw
                             link._arrSide[peerSide]->pushEventLocked( LoopbackEvent{ {}, {}, link._arrHandle[peerSide], StreamCloseReason::None, LoopbackEventKind::Writable, SW_FALSE } );
                     }
                     // 저쪽의 EOF — 저쪽 줄을 다 넘겨받은 뒤. 이쪽이 아직 닫지 않았으면 실제 전송처럼 이쪽도 우아하게 닫는다(반쯤 열린 연결은 두지 않는다).
-                    if ( link._arrFinRequested[peerSide] == SW_TRUE && queue.isEmpty() && link._arrFinDelivered[peerSide] == SW_FALSE )
+                    const bool bPeerFinPending = link._arrFinRequested[peerSide] == SW_TRUE && queue.isEmpty() && link._arrFinDelivered[peerSide] == SW_FALSE;
+                    if ( bPeerFinPending )
                     {
                         link._arrFinDelivered[peerSide] = SW_TRUE;
                         if ( link._arrFinRequested[side] == SW_FALSE )

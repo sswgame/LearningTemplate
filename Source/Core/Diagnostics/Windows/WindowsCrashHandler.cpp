@@ -103,7 +103,8 @@ namespace sw
         /** @brief 넘긴 핸들이 스냅샷이라고 덤프에 알립니다(`IsProcessSnapshotCallback` 에 S_FALSE). 나머지 질문은 기본값 그대로 둡니다. */
         BOOL CALLBACK onSnapshotDumpCallbackInternal( PVOID, const PMINIDUMP_CALLBACK_INPUT pInput, PMINIDUMP_CALLBACK_OUTPUT pOutput )
         {
-            if ( pInput != nullptr && pOutput != nullptr && pInput->CallbackType == IsProcessSnapshotCallback )
+            const bool bSnapshotCallbackForProcess = pInput != nullptr && pOutput != nullptr && pInput->CallbackType == IsProcessSnapshotCallback;
+            if ( bSnapshotCallbackForProcess )
                 pOutput->Status = S_FALSE;
             return TRUE;
         }
@@ -325,9 +326,10 @@ namespace sw
             uint64      offset  = 0;
             const utf8* pName   = "?";
             utf16       arrWideModule[260]{};
-            if ( GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, static_cast<LPCWSTR>( record.ExceptionAddress ), &hModule ) &&
-                 GetModuleFileNameW( hModule, arrWideModule, static_cast<DWORD>( sizeof( arrWideModule ) / sizeof( arrWideModule[0] ) ) ) > 0 &&
-                 WideCharToMultiByte( CP_UTF8, 0, arrWideModule, -1, arrModule, static_cast<int32>( sizeof( arrModule ) - 1 ), nullptr, nullptr ) > 0 )
+            const bool  bModuleResolved = GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, static_cast<LPCWSTR>( record.ExceptionAddress ), &hModule ) &&
+                                         GetModuleFileNameW( hModule, arrWideModule, static_cast<DWORD>( sizeof( arrWideModule ) / sizeof( arrWideModule[0] ) ) ) > 0 &&
+                                         WideCharToMultiByte( CP_UTF8, 0, arrWideModule, -1, arrModule, static_cast<int32>( sizeof( arrModule ) - 1 ), nullptr, nullptr ) > 0;
+            if ( bModuleResolved )
             {
                 offset = reinterpret_cast<uint64>( record.ExceptionAddress ) - reinterpret_cast<uint64>( hModule );
                 pName  = arrModule;

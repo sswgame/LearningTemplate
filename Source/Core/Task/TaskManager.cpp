@@ -624,8 +624,9 @@ namespace sw
             return;
         // 임계값 아래이거나 워커가 없으면 이 스레드가 한 번에 실행한다. 나누는 비용이 일보다 크다.
         // 그래도 병렬 본문이다 — 본문에서 만든 태스크가 최상위인 것이 개수 · 워커 수에 따라 달라지지 않게 한다.
-        const uint32 workerCount = getWorkerCount();
-        if ( _bInitialized == false || workerCount == 0 || count < serialThreshold )
+        const uint32 workerCount  = getWorkerCount();
+        const bool   bRunSerially = _bInitialized == false || workerCount == 0 || count < serialThreshold;
+        if ( bRunSerially )
         {
             const ParallelTaskScope bodyScope{};
             body( 0, count );
@@ -1148,7 +1149,8 @@ namespace sw
                 return true;
         }
 
-        if ( bTakeLowQueue && _globalLowQueue.dequeue( outItem ) && outItem != 0 )
+        const bool bLowQueueItemTaken = bTakeLowQueue && _globalLowQueue.dequeue( outItem ) && outItem != 0;
+        if ( bLowQueueItemTaken )
             return true;
 
         outItem = 0;

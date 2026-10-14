@@ -100,6 +100,9 @@ namespace sw
         /** @brief UTF-16 문자열을 UTF-8(sw::string)로 바꿉니다. */
         static string utf16ToUtf8( const utf16* pInput );
 
+        /** @brief ASCII 숫자('0'~'9')인지 봅니다. */
+        static constexpr bool isDigitChar( const utf8 ch ) { return '0' <= ch && ch <= '9'; }
+
         /** @brief UTF-8 문자 하나를 소문자로 바꿉니다(ASCII 만). */
         static constexpr utf8 toLowerChar( const utf8 ch ) { return ( 'A' <= ch && ch <= 'Z' ) ? static_cast<utf8>( ch + ( 'a' - 'A' ) ) : ch; }
 

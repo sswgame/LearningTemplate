@@ -436,7 +436,7 @@ namespace sw
             // 2) 너비
             uint32 widthValue{ 0 };
             bool   bHasWidth{ false };
-            while ( cursor < format.size() && format[cursor] >= '0' && format[cursor] <= '9' )
+            while ( cursor < format.size() && StringUtil::isDigitChar( format[cursor] ) )
             {
                 widthValue = widthValue * 10u + static_cast<uint32>( format[cursor] - '0' );
                 bHasWidth  = true;
@@ -453,7 +453,7 @@ namespace sw
             {
                 ++cursor;
                 uint32 precisionValue{ 0 };
-                while ( cursor < format.size() && format[cursor] >= '0' && format[cursor] <= '9' )
+                while ( cursor < format.size() && StringUtil::isDigitChar( format[cursor] ) )
                 {
                     precisionValue = precisionValue * 10u + static_cast<uint32>( format[cursor] - '0' );
                     ++cursor;
@@ -578,7 +578,8 @@ namespace sw
             size_t prefixIndex{ 0 };
             while ( prefixIndex < prefix.size() && pos < capacity - 1 )
             {
-                if ( prefix[prefixIndex] == '%' && prefixIndex + 1 < prefix.size() && prefix[prefixIndex + 1] == '%' )
+                const bool bEscapedPercent = prefix[prefixIndex] == '%' && prefixIndex + 1 < prefix.size() && prefix[prefixIndex + 1] == '%';
+                if ( bEscapedPercent )
                 {
                     pBuffer[pos++] = '%';
                     prefixIndex += 2;
@@ -713,7 +714,8 @@ namespace sw
                 }
                 else if constexpr ( std::is_same_v<DecayT, utf8> )
                 {
-                    if ( format.getBase() != Format::Base::Decimal || format.hasWidth() || format.isShowSign() )
+                    const bool bNeedsIntegerFormatting = format.getBase() != Format::Base::Decimal || format.hasWidth() || format.isShowSign();
+                    if ( bNeedsIntegerFormatting )
                         return integerToString( pBuf, static_cast<int32>( value ), format );
                     pBuf[0] = value;
                     pBuf[1] = '\0';

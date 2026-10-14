@@ -32,7 +32,8 @@ namespace sw
         if ( srcSize == 0 )
             return true;
 
-        if ( pSrc == nullptr || pDst == nullptr || dstCapacity < srcSize )
+        const bool bInvalidBuffers = pSrc == nullptr || pDst == nullptr || dstCapacity < srcSize;
+        if ( bInvalidBuffers )
             return false;
 
         Memory::copy( pDst, pSrc, srcSize );
@@ -50,7 +51,8 @@ namespace sw
         if ( srcSize == 0 )
             return true;
 
-        if ( pSrc == nullptr || pDst == nullptr || dstCapacity < srcSize )
+        const bool bInvalidBuffers = pSrc == nullptr || pDst == nullptr || dstCapacity < srcSize;
+        if ( bInvalidBuffers )
             return false;
 
         Memory::copy( pDst, pSrc, srcSize );

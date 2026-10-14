@@ -81,8 +81,9 @@ namespace sw
     {
         if ( text.empty() == false && text.front() == '#' )
             text.remove_prefix( 1 );
-        const size_t digitCount = text.size();
-        if ( digitCount != 3 && digitCount != 4 && digitCount != 6 && digitCount != 8 )
+        const size_t digitCount            = text.size();
+        const bool   bInvalidHexDigitCount = digitCount != 3 && digitCount != 4 && digitCount != 6 && digitCount != 8;
+        if ( bInvalidHexDigitCount )
             return false;
 
         uint32       arrChannel[4]{ 0, 0, 0, 255 };

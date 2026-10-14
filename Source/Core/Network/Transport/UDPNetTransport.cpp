@@ -40,7 +40,8 @@ namespace sw
 
     bool UDPNetTransport::send( const NetAddress& to, const uint8* pData, int32 size )
     {
-        if ( isOpen() == false || size <= 0 || size > kNetMaxPacketSize )
+        const bool bCannotSendPacket = isOpen() == false || size <= 0 || size > kNetMaxPacketSize;
+        if ( bCannotSendPacket )
             return false;
         return PlatformSocketUtil::sendTo( _socketHandle, to, pData, size );
     }
@@ -66,7 +67,8 @@ namespace sw
             const SocketReceiveResult result = PlatformSocketUtil::receiveFrom( _socketHandle, outFrom, outBuffer.data(), static_cast<int32>( outBuffer.size() ), size );
             if ( result == SocketReceiveResult::WouldBlock )
                 break;
-            if ( result == SocketReceiveResult::Received && size > 0 && size <= kNetMaxPacketSize )
+            const bool bValidPacketReceived = result == SocketReceiveResult::Received && size > 0 && size <= kNetMaxPacketSize;
+            if ( bValidPacketReceived )
             {
                 outBuffer.resize( static_cast<size_t>( size ) );
                 return true;
