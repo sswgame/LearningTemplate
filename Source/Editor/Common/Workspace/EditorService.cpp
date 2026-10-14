@@ -7,6 +7,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Utility/CommandStack.h"
 
 SW_LOG_CALLER( "EditorService" );
 namespace sw::editor
@@ -16,6 +17,7 @@ namespace sw::editor
         const ISubsystemLocator* s_pHostServices{ nullptr }; ///< App 이 넘긴 호스트 서비스 범위
         SubsystemScope*          s_pEditorScope{ nullptr };  ///< 지금 에디터 범위(에디터 컨텍스트 · 테스트가 건다)
         EditorToolDefaults*      s_pEditorToolDefaults{ nullptr };
+        CommandStack*            s_pFocusedCommandStack{ nullptr }; ///< 포커스된 툴 창의 Undo 스택(`setFocusedCommandStack`)
     } // namespace
 
     void bindEditorService( const ISubsystemLocator& hostServices )
@@ -78,6 +80,22 @@ namespace sw::editor
     {
         SceneManager* pSceneManager = getService<SceneManager>();
         return pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
+    }
+
+    Scene* getFocusedScene()
+    {
+        SceneManager* pSceneManager = getService<SceneManager>();
+        return pSceneManager != nullptr ? pSceneManager->getFocusedScene() : nullptr;
+    }
+
+    CommandStack* getFocusedCommandStack()
+    {
+        return s_pFocusedCommandStack != nullptr ? s_pFocusedCommandStack : getService<CommandStack>();
+    }
+
+    void setFocusedCommandStack( CommandStack* pStack )
+    {
+        s_pFocusedCommandStack = pStack;
     }
 
     GameObjectManager* getActiveObjectManager()
