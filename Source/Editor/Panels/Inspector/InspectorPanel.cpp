@@ -91,6 +91,7 @@ namespace sw::editor
 
     InspectorPanel::InspectorPanel()
         : _propertyGrid{}
+        , _favorites{}
         , _listMultiEditComponent{}
         , _pMultiEditCurrent{ nullptr }
         , _nameEditBuffer{}
@@ -102,12 +103,20 @@ namespace sw::editor
         , _pendingMoveDirection{ 0 }
         , _addComponentSearch{}
         , _bComponentPresetDirty{ SW_TRUE }
+        , _bFavoritesLoaded{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
 
     void InspectorPanel::drawContent()
     {
+        // 저장 파일은 처음 그릴 때 읽는다. 패널을 만들 때는 에디터 상태 폴더가 아직 정해지지 않았을 수 있다.
+        if ( _bFavoritesLoaded == SW_FALSE )
+        {
+            (void)_favorites.loadFile( InspectorFavorites::getDefaultFilePath() ); // 없으면 빈 집합이다(처음 실행)
+            _bFavoritesLoaded = SW_TRUE;
+        }
+        _propertyGrid.setFavorites( &_favorites );
         EditorWidgets::pushInspectorStyle();
         drawSelectionSection();
         _propertyGrid.endFrame(); // 모두 펼치기 · 접기 요청은 이번 프레임의 머리에만 적용한다
@@ -189,6 +198,7 @@ namespace sw::editor
 
         _propertyGrid.drawSearchBarWithOptions( SW_LOCKEY( "EditorInspector", "SearchTooltip" ) );
         ImGui::Spacing();
+        drawFavoritesSection( pObj );
 
         const TypeInfo* pTypeInfo = pObj->getTypeInfo();
         if ( pTypeInfo != nullptr )
@@ -236,6 +246,7 @@ namespace sw::editor
         }
 
         _propertyGrid.drawSearchBarWithOptions( SW_LOCKEY( "EditorInspector", "SearchTooltip" ) );
+        drawFavoritesSection( pPrimary ); // 다중 선택의 즐겨찾기는 주 선택 오브젝트 기준이다
         ImGui::SeparatorText( "Components" );
         EditorMultiEditUtil::collectCommonComponents( listObject, _listMultiEditComponent );
         for ( EditorMultiEditComponent& common : _listMultiEditComponent )
@@ -287,6 +298,36 @@ namespace sw::editor
             listInstance.push_back( pComponent );
         }
         return EditorMultiEditUtil::hasMixedValues( prop, listInstance );
+    }
+
+    void InspectorPanel::drawFavoritesSection( GameObject* pObj )
+    {
+        if ( pObj == nullptr || _favorites.isEmpty() )
+            return;
+        // 그릴 것이 있는 대상만 모은다. 하나도 없으면 구역 머리도 그리지 않는다.
+        vector<EditorPropertyGridTarget> listTarget;
+        const TypeInfo*                  pObjectType = pObj->getTypeInfo();
+        if ( pObjectType != nullptr && _favorites.hasAnyForType( pObjectType->_name.c_str() ) )
+            listTarget.push_back( EditorPropertyGridTarget{ pObj, pObjectType, nullptr, pObj, {}, {} } );
+        for ( Component* pComp : pObj->getComponents() )
+        {
+            if ( pComp == nullptr || pComp->getTypeInfo() == nullptr || _favorites.hasAnyForType( pComp->getTypeInfo()->_name.c_str() ) == false )
+                continue;
+            listTarget.push_back( EditorPropertyGridTarget{ pComp, pComp->getTypeInfo(), pComp, pComp->getOwner(), {}, {} } );
+        }
+        if ( listTarget.empty() )
+            return;
+
+        ImGui::SeparatorText( SW_LOCKEY( "EditorInspector", "FavoritesSection" ) );
+        EditorSelfTestMarks::note( "inspector.favorites" );
+        for ( const EditorPropertyGridTarget& target : listTarget )
+        {
+            // 같은 타입의 컴포넌트가 둘이면 id 가 겹치므로 인스턴스 주소로 나눈다.
+            ImGui::PushID( target._pInstance );
+            _propertyGrid.drawFavoriteProperties( target );
+            ImGui::PopID();
+        }
+        ImGui::Spacing();
     }
 
     void InspectorPanel::drawPrefabLinkSection( GameObject* pObj, string_view prefabPath )
