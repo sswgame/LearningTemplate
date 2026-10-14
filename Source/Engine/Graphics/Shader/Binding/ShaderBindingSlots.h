@@ -248,6 +248,7 @@ namespace sw
             inline constexpr const utf8* kVertexAnimation      = "g_SwVertexAnimation";    ///< t14(그래픽스). 정점 애니메이션(VAT) 테이블
             inline constexpr const utf8* kCanvasQuads          = "g_SwCanvasQuads";        ///< t15(캔버스 패스). 화면 2D 사각형
             inline constexpr const utf8* kMorphRestVertices    = "g_RestVertices";         ///< meshmorph t0. 레스트 포즈
+            inline constexpr const utf8* kMorphDeformPrograms  = "g_DeformPrograms";       ///< meshmorph t1. 메시 칸 표 + 변형 프로그램(meshmodifier.hlsli)
             inline constexpr const utf8* kMorphVerticesRw      = "g_MorphVerticesRW";      ///< meshmorph 와 meshskin 의 u0. 변형 결과
             inline constexpr const utf8* kSkinWeights          = "g_SkinWeights";          ///< meshskin t1. 스킨 정점의 가중치와 팔레트 행 번호
             inline constexpr const utf8* kSkinPalette          = "g_SkinPalette";          ///< meshskin t2. 본 팔레트(본 하나가 float4 세 개)

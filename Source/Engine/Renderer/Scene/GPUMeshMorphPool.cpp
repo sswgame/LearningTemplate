@@ -195,8 +195,11 @@ namespace sw
         }
 
         // 모프 구간 — 레스트 정점을 한 줄로 잇는다. 구간 시작이 곧 그 메시의 base 다.
+        // 레스트 노멀의 w 는 칸 번호 + 1 이다 - 컴퓨트가 프로그램 버퍼의 칸 표에서 그 메시의 변형 프로그램을 찾는다(updateDeformPrograms).
         vector<GPUMorphVertex> listRest;
         uint32                 morphCount = 0;
+        _listPoolMorph.clear();
+        _listDeformProgramGeneration.clear(); // 칸이 바뀌었을 수 있다 - 다음 updateDeformPrograms 가 다시 올린다
         for ( Mesh* pMesh : listMorphMesh )
         {
             if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )
@@ -210,11 +213,15 @@ namespace sw
                 continue;
             }
             _mapBase.emplace( pMesh, morphCount );
+            const float32 slotTag = static_cast<float32>( _listPoolMorph.size() + 1 ); // float 로 정확한 정수(2^24 미만) - 비트 재해석은 비정규 수로 지워질 수 있다
+            _listPoolMorph.push_back( pMesh );
             if ( bSameMorph == false )
             {
                 for ( const RHIVertex& vertex : pMesh->getVertices() )
                 {
-                    listRest.push_back( GPUMeshMorphPoolInternal::makeRestVertex( vertex ) );
+                    GPUMorphVertex restVertex = GPUMeshMorphPoolInternal::makeRestVertex( vertex );
+                    restVertex._normal._w     = slotTag;
+                    listRest.push_back( restVertex );
                 }
             }
             morphCount += count;
@@ -287,6 +294,40 @@ namespace sw
             SW_LOG_WARNING( "모프 결과 버퍼에 UAV 를 걸지 못했습니다 — 이 백엔드에서는 모프가 꺼집니다." );
     }
 
+    void GPUMeshMorphPool::updateDeformPrograms( IRHIDevice* pDevice )
+    {
+        if ( pDevice == nullptr )
+            return;
+        if ( _listPoolMorph.empty() )
+        {
+            _deformProgram.release( pDevice );
+            _listDeformProgramGeneration.clear();
+            return;
+        }
+        // 칸마다 번호만 본다(프로그램을 바꾸지 않는 프레임은 잠금도 없다). 하나라도 다르면 표와 프로그램을 통째로 다시 올린다 - 미리보기 몇 개 규모다.
+        bool bSame = _listDeformProgramGeneration.size() == _listPoolMorph.size() && _deformProgram.isValid();
+        for ( size_t slot = 0; slot < _listPoolMorph.size() && bSame; ++slot )
+        {
+            bSame = _listDeformProgramGeneration[slot] == _listPoolMorph[slot]->getGPUDeformProgramGeneration();
+        }
+        if ( bSame )
+            return;
+
+        _listDeformProgramGeneration.resize( _listPoolMorph.size() );
+        _listScratchDeformProgram.assign( _listPoolMorph.size(), float4{ -1.0f, 0.0f, 0.0f, 0.0f } );
+        for ( size_t slot = 0; slot < _listPoolMorph.size(); ++slot )
+        {
+            const Mesh* pMesh                              = _listPoolMorph[slot];
+            _listDeformProgramGeneration[slot]             = pMesh->getGPUDeformProgramGeneration(); // 사본보다 먼저 읽는다 - 사이에 바뀌면 다음 프레임에 다시 올린다
+            const shared_ptr<const vector<float4>> program = pMesh->getGPUDeformProgram();
+            if ( program == nullptr || program->empty() )
+                continue;
+            _listScratchDeformProgram[slot]._x = static_cast<float32>( _listScratchDeformProgram.size() );
+            _listScratchDeformProgram.insert( _listScratchDeformProgram.end(), program->begin(), program->end() );
+        }
+        GPUMeshMorphPoolInternal::uploadAll( pDevice, _deformProgram, _listScratchDeformProgram.data(), static_cast<uint32>( _listScratchDeformProgram.size() ) );
+    }
+
     void GPUMeshMorphPool::uploadSkinPalettes( IRHIDevice* pDevice, const vector<GPUSkinPalette>& listPalette, const vector<float4>* pListRow,
                                                const vector<float32>* pListMorphWeight )
     {
@@ -350,6 +391,9 @@ namespace sw
         _skinWeight.release( pDevice );
         _skinInstance.release( pDevice );
         _skinPalette.release( pDevice );
+        _deformProgram.release( pDevice );
+        _listPoolMorph.clear();
+        _listDeformProgramGeneration.clear();
         _mapBase.clear();
         _listBuiltMorph.clear();
         _listBuiltMorphContentID.clear();

@@ -97,6 +97,23 @@ namespace sw
         _contentID       = allocateContentID();
     }
 
+    void Mesh::setGPUDeformProgram( const vector<float4>& listProgram )
+    {
+        // 사본은 잠금 밖에서 만든다 - 렌더 스레드가 잠금을 오래 기다리지 않게 한다
+        shared_ptr<const vector<float4>> program = listProgram.empty() ? nullptr : sw::make_shared<const vector<float4>>( listProgram );
+        {
+            std::lock_guard<mutex> lock( _deformProgramMutex );
+            _deformProgram = std::move( program );
+        }
+        _deformProgramGeneration.fetch_add( 1u, std::memory_order_acq_rel );
+    }
+
+    shared_ptr<const vector<float4>> Mesh::getGPUDeformProgram() const
+    {
+        std::lock_guard<mutex> lock( _deformProgramMutex );
+        return _deformProgram;
+    }
+
     void Mesh::refreshBoundingRadius()
     {
         float32 maxLengthSquared = 0.0f;

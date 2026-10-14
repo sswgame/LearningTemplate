@@ -255,6 +255,11 @@ namespace sw::editor
         float32                    _time{ 0.0f };       ///< 초. 애니메이션 모디파이어(Waving · Dynamic Ripple · Vertex Anim)가 씁니다
         /** @brief 스택에 들어온 변형 전 정점 위치(메시 로컬)입니다. 스택이 채우고, 없거나 정점 수가 다르면 각 모디파이어의 입력 위치를 대신 씁니다. */
         const vector<float3>* _pListStackInputPosition{ nullptr };
+        /**
+         * @brief 넣으면 `MeshModifier::apply` 가 켜진 모디파이어마다 입력 상자(모디파이어 공간, 앞 모디파이어까지 건 결과)를 차례로 붙입니다.
+         * @details GPU 프로그램(`MeshModifierGPUProgram`)이 CPU 정본과 같은 상자를 싣는 데 쓴다 — 미리보기가 이미 도는 CPU 적용에서 공짜로 얻는다. 게임 스레드에서만 채운다.
+         */
+        vector<MeshModifierBounds>* _pListInputBounds{ nullptr };
     };
 } // namespace sw::editor
 
@@ -418,6 +423,12 @@ namespace sw::editor
         /** @brief 병렬 덩어리 하나의 정점 수입니다. 디스패치 비용(수십 us)보다 덩어리 일이 충분히 크게 잡는다. */
         static constexpr uint32 kChunkVertexCount = 4096;
 
+        /** @brief 야코비안 법선 차분의 걸음을 상자 대각선에 곱하는 비율과 그 하한입니다(GPU 프로그램도 같은 걸음을 싣는다). */
+        static constexpr float32 kJacobianStepRatio = 1e-3f;
+        static constexpr float32 kMinJacobianStep   = 1e-5f;
+
+        /** @brief 입력 상자(모디파이어 공간)의 야코비안 차분 걸음입니다. */
+        static float32 computeJacobianStep( const MeshModifierBounds& bounds );
         /** @brief 정점 수를 `kChunkVertexCount` 로 나눈 덩어리 수입니다. */
         static uint32 computeChunkCount( size_t vertexCount );
         /**

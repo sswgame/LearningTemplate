@@ -222,8 +222,26 @@
                 "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
             ]
         },
+        "EdMeshModifiers.EnterNestedStack": {
+            "source": "Edit this group's nested stack",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
         "EdMeshModifiers.FitBounds": {
             "source": "Fit to Bounds",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.GPUPreviewBlockedBy": {
+            "source": "CPU only:",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.GPUPreviewBlockedByStack": {
+            "source": "CPU only (Recompute Normals)",
             "origins": [
                 "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
             ]
@@ -266,6 +284,30 @@
         },
         "EdMeshModifiers.Name": {
             "source": "Name",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.NestedDepth": {
+            "source": "Depth",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.NestedEmpty": {
+            "source": "Empty - add modifiers to group them.",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.NestedStack": {
+            "source": "Nested Stack",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.NestedUp": {
+            "source": "Up",
             "origins": [
                 "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
             ]
@@ -350,6 +392,18 @@
         },
         "EdMeshModifiers.SaveStack": {
             "source": "Save Stack",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.ShadedPreview": {
+            "source": "Shaded Preview",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.ShadedPreviewTooltip": {
+            "source": "Shade the target mesh with the stack result. Runs on a compute shader when every enabled modifier supports it, otherwise the CPU result is uploaded as vertices. Off leaves the original mesh and the wire preview.",
             "origins": [
                 "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
             ]
