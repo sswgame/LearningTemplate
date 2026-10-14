@@ -164,7 +164,7 @@ namespace sw
      * @details 상태를 갖지 않으므로 여러 정의가 인스턴스 하나를 함께 쓴다(`shared_ptr<const ...>`). 데이터에서 매개변수를 받는 공식은
      *          카탈로그가 만들 때 매개변수를 넣는다(`DamageExecution` 의 SetByCaller 이름과 계수).
      */
-    class SW_GF_API IGameplayEffectExecution
+    class IGameplayEffectExecution
     {
     public:
         IGameplayEffectExecution()          = default;

@@ -76,7 +76,7 @@ namespace sw
      * @class LoginService
      * @brief 로그인 서비스입니다. 서버 프로세스마다 하나이며 서비스 스레드 하나에서만 호출합니다.
      */
-    class SW_KIT_API LoginService final : public IAccountDirectory
+    class SW_KIT_SERVER_API LoginService final : public IAccountDirectory
     {
     public:
         static constexpr size_t kMaxTrackedClientCount = 4096; ///< 시도 버킷의 상한이다. 넘으면 가득 찬 버킷(새 버킷과 같은 상태)을 지운다

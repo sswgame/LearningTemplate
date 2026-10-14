@@ -48,7 +48,7 @@ namespace sw
      * @class CacheRecordUpdater
      * @brief 비교 후 쓰기를 반복하는 클래스입니다.
      */
-    class SW_KIT_API CacheRecordUpdater
+    class SW_KIT_SERVER_API CacheRecordUpdater
     {
     public:
         static constexpr int32 kMaxAttempt = 4;

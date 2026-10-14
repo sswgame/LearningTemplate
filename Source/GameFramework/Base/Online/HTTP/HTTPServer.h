@@ -23,7 +23,7 @@ namespace sw
      * @class IHTTPRequestHandler
      * @brief 요청 하나에 답을 채웁니다(`HTTPServer::tick` 의 스레드).
      */
-    class SW_GF_API IHTTPRequestHandler
+    class IHTTPRequestHandler
     {
     public:
         IHTTPRequestHandler()          = default;

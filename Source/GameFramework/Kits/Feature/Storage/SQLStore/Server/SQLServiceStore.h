@@ -25,7 +25,7 @@ namespace sw
      * @class SQLServiceStore
      * @brief SQL 서비스 저장소입니다. 작업은 풀 워커에서 실행하고, 완료 콜백은 `pollCompletions` 를 부른 스레드에서 실행합니다.
      */
-    class SW_KIT_API SQLServiceStore final : public IServiceStore
+    class SW_KIT_SERVER_API SQLServiceStore final : public IServiceStore
     {
     public:
         /** @brief 서비스 저장소 마이그레이션의 리소스 폴더입니다. */

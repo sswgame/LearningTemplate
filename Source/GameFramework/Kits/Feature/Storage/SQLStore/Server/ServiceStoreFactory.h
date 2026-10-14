@@ -20,7 +20,7 @@ namespace sw
      * @struct ServiceStoreFactory
      * @brief 저장소 팩토리입니다.
      */
-    struct SW_KIT_API ServiceStoreFactory
+    struct SW_KIT_SERVER_API ServiceStoreFactory
     {
         static constexpr const utf8* kMemoryDriverName = "memory";
 

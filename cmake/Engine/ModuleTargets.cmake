@@ -105,14 +105,23 @@ function(sw_addModuleLibrary TARGET_NAME)
 			target_compile_definitions(${TARGET_NAME} PRIVATE ${ARG_DEFINITIONS})
 		endif()
 		set(listTargetDefsOption LOG_TAG "${ARG_LOG_TAG}")
+		set(listPchDefinition "")
 		if(libType STREQUAL "SHARED")
-			# 키트 TU 는 `SW_KIT_EXPORTS` 만 정의한다 — `SW_GF_EXPORTS` 를 주면 include 한 Base 선언까지 dllexport 로 풀린다(C-3).
-			list(APPEND listTargetDefsOption KIT_EXPORTS)
-			target_compile_definitions(${TARGET_NAME} INTERFACE SW_KIT_IMPORTS)
+			# 키트 TU 는 `SW_GF_EXPORTS` 를 주지 않는다 — 주면 include 한 Base 선언까지 dllexport 로 풀린다(C-3).
+			# 서버 키트(`GF_Server_<X>`)는 `SW_KIT_SERVER_EXPORTS`, 그 밖은 `SW_KIT_EXPORTS` 만 내보낸다 — 서버 키트가 include 한 공유 키트 헤더(`SW_KIT_API`)는
+			# dllimport 로 남아 공유 키트 클래스를 다시 내보내지 않는다. `SW_KIT_IMPORTS` 는 모든 키트 TU 가 가진다(자기 내보내기 매크로가 먼저 읽힌다) —
+			# 키트 PCH 하나를 나눠 쓰려면 명령줄 정의가 같아야 한다.
+			if(TARGET_NAME MATCHES "^GF_Server_")
+				list(APPEND listTargetDefsOption KIT_SERVER_EXPORTS)
+			else()
+				list(APPEND listTargetDefsOption KIT_EXPORTS)
+			endif()
+			target_compile_definitions(${TARGET_NAME} PUBLIC SW_KIT_IMPORTS)
+			set(listPchDefinition DEFINITIONS SW_KIT_IMPORTS)
 		endif()
 		sw_setTargetDefsHeader(${TARGET_NAME} ${listTargetDefsOption})
 		sw_addSharedPchOwner(sw_kit_pch "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h"
-			LINK GameFramework Engine sw_public_source_includes sw_global_options)
+			LINK GameFramework Engine sw_public_source_includes sw_global_options ${listPchDefinition})
 	elseif(bShareGamePch)
 		# 자동 정의 `<타깃>_EXPORTS`(`SWGame_<게임>_EXPORTS`)는 게임마다 달라 PCH 를 나눌 수 없고 아무도 쓰지 않는다.
 		set_target_properties(${TARGET_NAME} PROPERTIES DEFINE_SYMBOL "")

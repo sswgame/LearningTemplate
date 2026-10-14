@@ -57,7 +57,7 @@ namespace sw
 namespace sw
 {
     /** @brief 회차를 차지했을 때 불리는 처리기입니다. */
-    class SW_GF_API IScheduledJobHandler
+    class IScheduledJobHandler
     {
     public:
         IScheduledJobHandler()          = default;

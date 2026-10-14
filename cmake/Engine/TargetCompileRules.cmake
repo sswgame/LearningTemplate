@@ -6,7 +6,7 @@
 # ------------------------------------------------------------------------------
 # 내보내기 매크로 — 종류(KIND)마다 짝이 정해져 있다. STATIC(배포)에는 아무것도 붙이지 않는다.
 #   ENGINE : SHARED 면 SW_EXPORTS(PRIVATE) · SW_IMPORTS(INTERFACE)        — Engine.dll
-#   GF     : SHARED 면 SW_GF_EXPORTS(PRIVATE) · SW_GF_IMPORTS(INTERFACE)  — GameFramework.dll (키트는 SW_KIT_EXPORTS · SW_KIT_IMPORTS, `sw_addModuleLibrary`)
+#   GF     : SHARED 면 SW_GF_EXPORTS(PRIVATE) · SW_GF_IMPORTS(INTERFACE)  — GameFramework.dll (키트는 SW_KIT_EXPORTS · SW_KIT_SERVER_EXPORTS · SW_KIT_IMPORTS, `sw_addModuleLibrary`)
 #   MODULE : MODULE 이면 SW_MODULE_EXPORTS(PRIVATE)                       — C-ABI 진입점을 내보내는 플러그인(RHI · 게임 · 에디터)
 # ------------------------------------------------------------------------------
 function(sw_configureDllExports TARGET_NAME LIB_TYPE KIND)
@@ -93,14 +93,17 @@ endfunction()
 # ------------------------------------------------------------------------------
 # sw_setTargetDefsHeader — 타깃 고유 정의(`SW_LOG_TAG` · `SW_KIT_EXPORTS`)를 `-D` 대신 PCH 뒤에 강제 포함하는 헤더로 준다.
 #   PCH 를 나눠 쓰려면 명령줄 정의가 같아야 하므로 타깃마다 다른 값은 여기로 옮긴다. `Logger.h` 가 PCH 안에서 기본 `SW_LOG_TAG` 를 정의해
-#   두므로 `#undef` 로 덮는다. 인자: LOG_TAG, KIT_EXPORTS(켜면 `SW_KIT_EXPORTS` 정의).
+#   두므로 `#undef` 로 덮는다. 인자: LOG_TAG, KIT_EXPORTS(켜면 `SW_KIT_EXPORTS` 정의), KIT_SERVER_EXPORTS(서버 키트 — `SW_KIT_SERVER_EXPORTS` 정의).
 #   PCH 안의 헤더가 읽는 정의는 여기 둘 수 없다(PCH 를 만들 때 이미 정해졌다) — `SW_KIT_EXPORTS` 를 읽는 키트 헤더(`SW_KIT_API`)도 PCH 밖이다.
 # ------------------------------------------------------------------------------
 function(sw_setTargetDefsHeader TARGET_NAME)
-	cmake_parse_arguments(ARG "KIT_EXPORTS" "LOG_TAG" "" ${ARGN})
+	cmake_parse_arguments(ARG "KIT_EXPORTS;KIT_SERVER_EXPORTS" "LOG_TAG" "" ${ARGN})
 	set(content "// ${TARGET_NAME}: per-target definitions (generated)\n#pragma once\n#undef SW_LOG_TAG\n#define SW_LOG_TAG \"${ARG_LOG_TAG}\"\n")
 	if(ARG_KIT_EXPORTS)
 		string(APPEND content "#define SW_KIT_EXPORTS\n")
+	endif()
+	if(ARG_KIT_SERVER_EXPORTS)
+		string(APPEND content "#define SW_KIT_SERVER_EXPORTS\n")
 	endif()
 	set(header "${CMAKE_BINARY_DIR}/generated/sw/targetdefs/${TARGET_NAME}.h")
 	file(GENERATE OUTPUT "${header}" CONTENT "${content}")

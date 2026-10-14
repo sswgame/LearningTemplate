@@ -23,7 +23,7 @@ namespace sw
      * @class IAIDirectorIntensityModel
      * @brief 감독이 읽는 긴장도 모델입니다. 감독은 `update` 를 프레임마다 한 번 부르고 값을 읽기만 하며, 신호는 게임이 모델에 직접 넣습니다.
      */
-    class SW_GF_API IAIDirectorIntensityModel
+    class IAIDirectorIntensityModel
     {
     public:
         IAIDirectorIntensityModel()                                              = default;

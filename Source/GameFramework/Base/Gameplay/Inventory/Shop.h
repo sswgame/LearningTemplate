@@ -173,7 +173,7 @@ namespace sw
      * @class IShopConditionEvaluator
      * @brief 진열 항목의 `requires` 식을 평가합니다. 가게는 식을 보관만 하고 뜻은 모릅니다. 키트나 게임이 플래그, 퀘스트, 평판으로 판정해서 답합니다.
      */
-    class SW_GF_API IShopConditionEvaluator
+    class IShopConditionEvaluator
     {
     public:
         IShopConditionEvaluator()          = default;

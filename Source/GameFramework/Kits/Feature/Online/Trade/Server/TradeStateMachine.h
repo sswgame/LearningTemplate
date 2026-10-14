@@ -18,7 +18,7 @@ namespace sw
      * @class ITradePolicy
      * @brief 무엇을 거래할 수 있는지 정하는 정책입니다. 귀속 아이템이나 이벤트 재화를 막는 일은 게임이 정합니다. 저장소 스레드에서도 불리므로 읽기만 해야 합니다.
      */
-    class SW_KIT_API ITradePolicy
+    class ITradePolicy
     {
     public:
         ITradePolicy()          = default;
@@ -35,7 +35,7 @@ namespace sw
 namespace sw
 {
     /** @brief 기본 정책입니다. `item.` 과 `cur.` 접두어만 허용하고 한쪽에 8항목까지 둡니다. */
-    class SW_KIT_API DefaultTradePolicy final : public ITradePolicy
+    class SW_KIT_SERVER_API DefaultTradePolicy final : public ITradePolicy
     {
     public:
         bool  isTradable( string_view assetID ) const override;
@@ -71,7 +71,7 @@ namespace sw
 namespace sw
 {
     /** @brief 거래 상태 기계입니다. */
-    struct SW_KIT_API TradeStateMachine
+    struct SW_KIT_SERVER_API TradeStateMachine
     {
         /** @brief @p command 를 @p inoutTrade 에 적용합니다. Ok 가 아니면 @p inoutTrade 는 그대로입니다. @p nowMs 는 `_updatedMs` 에 기록합니다. */
         static TradeResult apply( TradeSnapshot& inoutTrade, const TradeCommand& command, const ITradePolicy& policy, int64 nowMs );

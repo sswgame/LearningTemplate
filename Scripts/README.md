@@ -134,6 +134,7 @@ Scripts/
   │     │     ├── CheckTextureFolders.py      # 런타임 textures/ 에는 DDS 만, 원본 이미지는 textures_raw/ 에만
   │     │     ├── CheckClockReads.py          # std::chrono 시계가 아니라 MonotonicClock · Stopwatch · Deadline
   │     │     ├── CheckStdThread.py           # Source 의 스레드는 std::thread 가 아니라 sw::thread(합류 대기 관찰 · 로더 락 안 join 단언)
+  │     │     ├── CheckExportMacros.py        # GameFramework 헤더의 내보내기 매크로(Base · 키트 · 서버 키트)와 순수 인터페이스에 매크로 금지
   │     │     ├── CheckConfigReference.py     # docs/Config 가 코드와 같은지 · 설정 파일이 모두 목록에 있는지
   │     │     ├── CheckDuplicateTypeNames.py  # 같은 이름의 타입 정의(ODR)
   │     │     ├── CheckEngineRootFiles.py     # Source/Engine 루트에는 기동 · 종료 배선 파일만

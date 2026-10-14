@@ -53,7 +53,7 @@ namespace sw
 namespace sw
 {
     /** @brief 설정에서 제공자를 만들고 설정 목록을 읽는 팩토리입니다. */
-    struct SW_KIT_API PlatformLoginProviderFactory
+    struct SW_KIT_SERVER_API PlatformLoginProviderFactory
     {
         /** @brief 설정으로 공통 구현을 만듭니다. @p pHTTPClient 는 빌려 쓰며 이 제공자만 응답을 회수합니다. 응답을 다른 쪽과 나누지 않습니다. 설정이 틀리면 nullptr 을 반환합니다. */
         static unique_ptr<IPlatformLoginProvider> create( const PlatformLoginProviderSettings& settings, INetSecurityProvider* pProvider, HTTPClient* pHTTPClient );

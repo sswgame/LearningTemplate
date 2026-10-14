@@ -55,7 +55,7 @@ namespace sw
      * @class RespConnection
      * @brief RESP 연결 하나입니다. 명령 연결과 구독 연결이 같은 타입입니다.
      */
-    class SW_KIT_API RespConnection
+    class SW_KIT_SERVER_API RespConnection
     {
     public:
         /** @brief AUTH 답에 다는 단계 번호입니다. 요청의 단계 번호와 겹치지 않습니다. */

@@ -106,7 +106,7 @@ namespace sw
 namespace sw
 {
     /** @brief 자산마다 계정 잔액 상한을 알려 주는 인터페이스입니다. 화폐 카탈로그가 구현합니다. */
-    class SW_GF_API ILedgerPolicy
+    class ILedgerPolicy
     {
     public:
         ILedgerPolicy()          = default;

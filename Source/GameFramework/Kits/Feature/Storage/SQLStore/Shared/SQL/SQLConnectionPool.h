@@ -28,7 +28,7 @@ namespace sw
      * @class ISQLJob
      * @brief 풀의 작업 하나입니다. `run` 은 워커에서, `complete` 는 완료를 회수하는 스레드에서 실행합니다.
      */
-    class SW_KIT_API ISQLJob
+    class ISQLJob
     {
     public:
         ISQLJob()          = default;

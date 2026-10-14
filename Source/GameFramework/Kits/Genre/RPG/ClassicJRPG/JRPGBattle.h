@@ -60,7 +60,7 @@ namespace sw
      * @class IJRPGTimingInput
      * @brief 전투가 타이밍 순간마다 "목표 시각에서 얼마나 어긋나게 눌렀는가"를 묻는 인터페이스입니다. 실제 게임은 연출을 멈추고 입력을 기다린 결과를 반환하고, 테스트와 AI 는 정해 둔 값을 반환합니다.
      */
-    class SW_KIT_API IJRPGTimingInput
+    class IJRPGTimingInput
     {
     public:
         IJRPGTimingInput()          = default;

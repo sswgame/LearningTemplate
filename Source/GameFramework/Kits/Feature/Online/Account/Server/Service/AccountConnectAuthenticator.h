@@ -22,7 +22,7 @@ namespace sw
      * @class AccountConnectAuthenticator
      * @brief 접속 티켓 확인기입니다.
      */
-    class SW_KIT_API AccountConnectAuthenticator final : public INetConnectAuthenticator
+    class SW_KIT_SERVER_API AccountConnectAuthenticator final : public INetConnectAuthenticator
     {
     public:
         /** @brief @p pAuthority 는 초기화를 마친 것을 빌려 씁니다. @p serverID 는 티켓이 가리켜야 하는 이 게임 서버의 id 입니다. */

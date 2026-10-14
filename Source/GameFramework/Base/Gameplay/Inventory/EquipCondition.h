@@ -81,7 +81,7 @@ namespace sw
      * @class IEquipSetLookup
      * @brief 장비 세트의 조각 정보를 `Equipment` 에 넘기는 인터페이스입니다. 세트 데이터는 외형 쪽(`EquipSetCatalog`)에 있고, 장착 규칙은 그 데이터를 참조만 합니다.
      */
-    class SW_GF_API IEquipSetLookup
+    class IEquipSetLookup
     {
     public:
         IEquipSetLookup()                                        = default;
