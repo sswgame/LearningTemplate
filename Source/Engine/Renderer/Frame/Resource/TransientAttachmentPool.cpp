@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Frame/TransientAttachmentPool.h"
+#include "Engine/Renderer/Frame/Resource/TransientAttachmentPool.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"

@@ -19,8 +19,8 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Renderer/Frame/RenderFramePacket.h"
-#include "Engine/Renderer/Frame/RenderViewCollector.h"
+#include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
+#include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAssetCache.h"
 #include "Engine/Resource/AssetManager.h"
 

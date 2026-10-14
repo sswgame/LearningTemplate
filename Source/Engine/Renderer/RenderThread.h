@@ -12,7 +12,7 @@
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Renderer/Frame/RenderFramePacket.h"
+#include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 
 #include <condition_variable>
 

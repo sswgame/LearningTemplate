@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Frame/PassConstantRing.h"
+#include "Engine/Renderer/Frame/Resource/PassConstantRing.h"
 
 #include "Core/Math/MathUtil.h"
 

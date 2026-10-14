@@ -12,7 +12,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
-#include "Engine/Renderer/Frame/GPUTimelineExporter.h"
+#include "Engine/Renderer/Frame/Timeline/GPUTimelineExporter.h"
 
 namespace sw
 {

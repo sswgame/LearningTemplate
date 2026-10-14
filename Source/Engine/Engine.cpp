@@ -82,7 +82,7 @@
 #include "Engine/Renderer/Cook/ShaderCookDriver.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
-#include "Engine/Renderer/Frame/RenderFramePacket.h"
+#include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/LiveShaderSubsystem.h"
 #include "Engine/Renderer/RHISubsystem.h"
 #include "Engine/Renderer/RenderThread.h"

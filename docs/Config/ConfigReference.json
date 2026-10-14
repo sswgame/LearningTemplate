@@ -2759,7 +2759,7 @@
    "default": "false",
    "kind": "시험",
    "description": "주 출력에 캔버스(화면 2D) 시험 그림을 그린다 — 사각형 · 자르기 · 그림자 · 글자",
-   "source": "Source/Engine/Renderer/Frame/RenderPacketBuilder.cpp"
+   "source": "Source/Engine/Renderer/Frame/Packet/RenderPacketBuilder.cpp"
   },
   {
    "name": "gv_colorVisionMode",
@@ -3335,7 +3335,7 @@
    "default": "4",
    "kind": "일반",
    "description": "한 프레임에 그리는 추가 뷰(CCTV · 백미러 · PiP)의 최대 수 (0 = 제한 없음)",
-   "source": "Source/Engine/Renderer/Frame/RenderViewCollector.cpp"
+   "source": "Source/Engine/Renderer/Frame/View/RenderViewCollector.cpp"
   },
   {
    "name": "gv_rhiBackBufferFormat",

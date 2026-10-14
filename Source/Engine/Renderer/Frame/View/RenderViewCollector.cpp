@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Frame/RenderViewCollector.h"
+#include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/Frustum.h"
@@ -13,7 +13,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Renderer/Frame/RenderViewScheduler.h"
+#include "Engine/Renderer/Frame/View/RenderViewScheduler.h"
 
 namespace sw
 {

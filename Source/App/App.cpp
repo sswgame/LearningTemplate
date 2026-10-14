@@ -24,7 +24,7 @@
 #include "Engine/Module/ModuleImageHost.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Renderer/Frame/RenderFramePacket.h"
+#include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/RenderThread.h"
 #include "Engine/Utility/GameTimeScale.h"
 #include "Engine/Window/IWindow.h"

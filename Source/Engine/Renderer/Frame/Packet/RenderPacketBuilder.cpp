@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Frame/RenderPacketBuilder.h"
+#include "Engine/Renderer/Frame/Packet/RenderPacketBuilder.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
@@ -16,10 +16,10 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
-#include "Engine/Renderer/Frame/RenderFramePacket.h"
-#include "Engine/Renderer/Frame/RenderView.h"
-#include "Engine/Renderer/Frame/RenderViewCollector.h"
-#include "Engine/Renderer/Frame/RenderViewScheduler.h"
+#include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
+#include "Engine/Renderer/Frame/View/RenderView.h"
+#include "Engine/Renderer/Frame/View/RenderViewCollector.h"
+#include "Engine/Renderer/Frame/View/RenderViewScheduler.h"
 #include "Engine/Renderer/Light/GPULightBuffer.h"
 #include "Engine/Renderer/Light/ShadowSetup.h"
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"

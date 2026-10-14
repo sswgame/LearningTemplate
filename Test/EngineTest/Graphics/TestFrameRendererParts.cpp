@@ -5,10 +5,10 @@
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Renderer/Frame/Capture/PresentCaptureTarget.h"
+#include "Engine/Renderer/Frame/Capture/RenderTargetImageFile.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Renderer/Frame/GPUPassTimeline.h"
-#include "Engine/Renderer/Frame/PresentCaptureTarget.h"
-#include "Engine/Renderer/Frame/RenderTargetImageFile.h"
+#include "Engine/Renderer/Frame/Timeline/GPUPassTimeline.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
 
 #include "TestFramework/TestFramework.h"

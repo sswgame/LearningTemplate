@@ -25,7 +25,7 @@
 
 ### 1.3 뷰 — 이미 여러 개지만 모두 같은 씬
 
-- `RenderViewRequest`(`Renderer/Frame/RenderView.h`)는 "값만 가지며 씬을 가리키지 않는" 추가 뷰입니다. 출력은 `RenderViewOutputKind`(렌더 텍스처 · `HostTarget` · 화면 사각형)이고 `_viewID` 로 뷰별 상태를 찾습니다.
+- `RenderViewRequest`(`Renderer/Frame/View/RenderView.h`)는 "값만 가지며 씬을 가리키지 않는" 추가 뷰입니다. 출력은 `RenderViewOutputKind`(렌더 텍스처 · `HostTarget` · 화면 사각형)이고 `_viewID` 로 뷰별 상태를 찾습니다.
 - 호스트(에디터)가 넘기는 것은 `HostViewTargets` 의 `_game` · `_scene` **두 슬롯 고정**입니다.
 - `RenderViewCollector` · `RenderViewScheduler` 가 카메라에서 추가 뷰를 모으고 갱신 주기 · 예산으로 `_bRender` 를 정합니다.
 
@@ -110,7 +110,7 @@ Undo 를 창마다 두는 것은 두 엔진과 다릅니다. 두 엔진 모두 �
   미리보기 씬은 디바이스가 있으면 만들 때 `Scene::initialize( pRHIDevice )` 를 부른다.
 
 ### 단계 2 — 씬별 GPUScene (렌더러)
-- 파일: `Renderer/Frame/RenderFramePacket.h`, `RenderPacketBuilder.h/.cpp`(빌더를 씬 키 맵으로), `FrameRenderer.h` · `FrameRendererViews.cpp` · `FrameRendererDraw.cpp`(`_gpuScene` → 씬 키 맵), `Renderer/Scene/GPUScene.*`(공유 풀을 외부 참조로), `Renderer/Frame/RenderView.h`(`_sceneID`).
+- 파일: `Renderer/Frame/Packet/RenderFramePacket.h`, `RenderPacketBuilder.h/.cpp`(빌더를 씬 키 맵으로), `FrameRenderer.h` · `FrameRendererViews.cpp` · `FrameRendererDraw.cpp`(`_gpuScene` → 씬 키 맵), `Renderer/Scene/GPUScene.*`(공유 풀을 외부 참조로), `Renderer/Frame/View/RenderView.h`(`_sceneID`).
 - 위험: 가장 큽니다. `CheckRenderOwnership.py` 의 소유 규칙, 컬링 슬롯 수를 업로드 전에 정해야 하는 제약(`FrameRenderer` 463행 주석), bindless 인덱스 해제 지연. 네 백엔드 모두 영향.
 - 확인: RenderPass GPU 테스트 · 이미지 비교 테스트가 그대로(주 씬만 있을 때 동일 이미지), 새 테스트 — 두 씬을 두 타깃에 그려 서로 섞이지 않음. `Scripts/dev/BackendSmoke.py` 로 네 백엔드. Shipping 도 확인.
 - **구현됨(2026-10-15, 모양을 바꿈)**: `FrameRenderer` 안의 `_gpuScene` 을 씬 키 맵으로 바꾸지 않고, **미리보기 씬마다 `FrameRenderer` 인스턴스 하나**를 주 렌더러가 소유한다

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Frame/ShaderParameterBinder.h"
+#include "Engine/Renderer/Frame/Resource/ShaderParameterBinder.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -10,8 +10,8 @@
 #include "Engine/Graphics/RHI/Support/BindlessIndexValidator.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Renderer/Frame/FrameResourceRegistry.h"
-#include "Engine/Renderer/Frame/PassConstantValues.h"
+#include "Engine/Renderer/Frame/Resource/FrameResourceRegistry.h"
+#include "Engine/Renderer/Frame/Resource/PassConstantValues.h"
 
 namespace sw
 {

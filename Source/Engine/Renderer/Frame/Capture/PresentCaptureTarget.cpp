@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Frame/PresentCaptureTarget.h"
+#include "Engine/Renderer/Frame/Capture/PresentCaptureTarget.h"
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"

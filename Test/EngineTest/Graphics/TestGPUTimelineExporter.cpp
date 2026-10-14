@@ -3,7 +3,7 @@
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Renderer/Frame/GPUTimelineExporter.h"
+#include "Engine/Renderer/Frame/Timeline/GPUTimelineExporter.h"
 
 #include "EngineTest/ProfilerTestUtil.h"
 

@@ -11,7 +11,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "Engine/Renderer/Frame/RenderView.h"
+#include "Engine/Renderer/Frame/View/RenderView.h"
 
 #include "RuntimeAPI/ABI/GameAPI.h"
 

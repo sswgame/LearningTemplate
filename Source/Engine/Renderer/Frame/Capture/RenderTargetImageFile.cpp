@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Frame/RenderTargetImageFile.h"
+#include "Engine/Renderer/Frame/Capture/RenderTargetImageFile.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"

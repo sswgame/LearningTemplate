@@ -15,9 +15,9 @@
 #include "Engine/HeadlessSubsystem.h"
 #include "Engine/Input/ShellInputActions.h"
 #include "Engine/Profiling/FrameProfileSession.h"
-#include "Engine/Renderer/Frame/PresentHookDelegate.h"
-#include "Engine/Renderer/Frame/RenderPacketBuilder.h"
-#include "Engine/Renderer/Frame/RenderView.h"
+#include "Engine/Renderer/Frame/Capture/PresentHookDelegate.h"
+#include "Engine/Renderer/Frame/Packet/RenderPacketBuilder.h"
+#include "Engine/Renderer/Frame/View/RenderView.h"
 
 namespace sw
 {

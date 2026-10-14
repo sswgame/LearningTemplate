@@ -12,7 +12,7 @@
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Renderer/Frame/RenderView.h"
+#include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Scene/GPUMeshVertexPool.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 

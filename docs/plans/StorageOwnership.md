@@ -59,7 +59,7 @@ LocalizedTextArena* const pArena = s_localizedTextArena.getOrCreate();
 | `HashedStringPool::shutdown` | `Core/String/hashed_string.cpp` | ① | 부트스트랩(모든 `hashed_string` 뒤) | `NamePoolSubsystem` 소멸자 | 유지 — 순서가 계약이다(범위가 닫힌 뒤 내린다) |
 | `UIPaintPass::releaseScratch`(`t_listPaintOrderByDepth`) | `Engine/UI/Render/UIPaintPass.cpp` | ② | `UISystem`(칠하기 문맥으로 스크래치를 넘긴다) | `UISystem::shutdown` | 다음 단위 — `ded0a6fd6` 의 이동 대입 수정은 그대로 둔다 |
 | `BinarySerializer` 의 `thread_local` 버퍼 넷 | `Engine/Serialization/Format/BinarySerializer.cpp` | ② | 스레드 슬롯별 스크래치 | 없음 | 다음 단위 — 기준선 뒤에 자라는지 먼저 잰다 |
-| `ShaderParameterBinder` 의 `s_cbBytes` | `Engine/Renderer/Frame/ShaderParameterBinder.cpp` | ② | 바인더(렌더 스레드) | 없음 | 다음 단위 — 기준선 뒤에 자라는지 먼저 잰다 |
+| `ShaderParameterBinder` 의 `s_cbBytes` | `Engine/Renderer/Frame/Resource/ShaderParameterBinder.cpp` | ② | 바인더(렌더 스레드) | 없음 | 다음 단위 — 기준선 뒤에 자라는지 먼저 잰다 |
 | `IWindow::releaseTitleStorage` | `Engine/Window/IWindow.h` | ③ | App 의 창(엔진보다 오래 산다) | `App::shutdown` | 다음 단위 — 보고를 창 파괴 뒤로 옮기거나 창 수명을 엔진 범위 안으로 |
 | `LiveReloadManager::clearContexts` 의 표 용량 | `ModuleHost/LiveReloadManager.cpp` | ③ | `LiveReloadManager`(소멸자가 용량을 돌려준다) | 모듈 호스트 종료 | `ded0a6fd6` 에서 이동 대입으로 고침 — 소유자 소멸 시점이 보고 뒤인지 다음 단위에서 본다 |
 | `ModuleDependencyGraph::clear` 의 표 용량 | `ModuleHost/ModuleDependencyGraph.cpp` | ③ | `ModuleDependencyGraph` | 모듈 호스트 종료 | `ded0a6fd6` 에서 고침 — 위와 같이 본다 |

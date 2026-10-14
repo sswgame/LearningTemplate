@@ -1,5 +1,5 @@
 /**
- * @file Engine/Renderer/Frame/RenderPacketBuilder.h
+ * @file Engine/Renderer/Frame/Packet/RenderPacketBuilder.h
  * @brief 게임 스레드가 프레임마다 렌더 스레드에 넘길 패킷(`RenderFramePacket`)을 채웁니다. `Engine` 의 값 멤버입니다.
  * @details 씬 스냅샷 빌더 · 패킷 저장소 · GPU 업로드 큐 · 추가 뷰 스케줄러가 여기 있고, 기동 단계 `FrameRenderer` 가 세우고 내립니다.
  *          렌더 스레드는 씬을 보지 못하므로(패킷이 유일한 통로) 씬에서 읽을 것은 모두 여기서 패킷에 담습니다.
