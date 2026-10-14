@@ -7,6 +7,8 @@
 #pragma once
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Character/Fit/SurfaceBvh.h"
+
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifier.h"
 
 namespace sw::editor
@@ -238,13 +240,55 @@ namespace sw::editor
         }
 
         /**
+         * @brief BVH(`SurfaceBvh`)로 한 점을 표면에 맞춥니다 — `tryConformPoint` 의 전수 탐색과 같은 규칙이고 질의가 대상 삼각형 수에 로그로 늘어난다.
+         * @details `SurfaceBvh` 의 질의는 멤버 스크래치를 쓰므로 한 인스턴스를 한 스레드에서만 묻는다(`conformMesh` 는 단일 스레드 루프다).
+         */
+        [[nodiscard]] static bool tryConformPointBvh( const SurfaceBvh& bvh, const float3& point, const float3& rayDirection, ConformMode mode, float32 offset,
+                                                      float32 maxDistance, float3& outPosition )
+        {
+            float3 bestPoint{ 0.0f, 0.0f, 0.0f };
+            float3 bestNormal{ 0.0f, 1.0f, 0.0f };
+            if ( mode == ConformMode::Closest )
+            {
+                GeometryClosestPoint closest{};
+                if ( bvh.findClosestPoint( point, maxDistance, closest ) == false )
+                    return false;
+                bestPoint  = closest._point;
+                bestNormal = closest._normal;
+            }
+            else
+            {
+                GeometryRayHit hit{};
+                if ( bvh.findNearestHit( point, rayDirection, maxDistance, hit ) == false )
+                    return false;
+                bestPoint  = point + rayDirection * hit._distance;
+                bestNormal = hit._normal;
+            }
+            float3 normal = MeshModifierUtil::normalizeOr( bestNormal, float3::UnitY );
+            if ( normal.dot( point - bestPoint ) < 0.0f )
+                normal = normal * -1.0f;
+            outPosition = bestPoint + normal * offset;
+            return true;
+        }
+
+        /**
          * @brief 메시 전체를 표면으로 옮깁니다(세기 × 선택 가중치로 섞음). 법선이 있으면 면 법선으로 다시 만듭니다.
+         * @details 대상 삼각형으로 BVH 를 한 번 만들고 정점마다 묻는다(정점 수 × 삼각형 수 전수 탐색이 아니다).
          */
         static void conformMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context, const vector<float3>& listTriangle, ConformMode mode, float32 offset,
                                  float32 maxDistance, float32 amount )
         {
             if ( listTriangle.size() < 3 || amount <= 0.0f )
                 return;
+            // 삼각형 목록(정점 3 개씩)을 인덱스 0..n-1 의 표면 하나로 넣는다.
+            vector<uint32> listIndex;
+            listIndex.reserve( listTriangle.size() );
+            for ( uint32 index = 0; index < static_cast<uint32>( listTriangle.size() ); ++index )
+                listIndex.push_back( index );
+            SurfaceBvh bvh;
+            bvh.addSurface( 0, listTriangle, listIndex );
+            bvh.build();
+
             float3 axisDirection{ 0.0f, 0.0f, 0.0f };
             MeshModifierUtil::setComponent( axisDirection, context._axisIndex, -1.0f );
             bool bMoved = false;
@@ -257,7 +301,7 @@ namespace sw::editor
                     direction = inoutMesh.hasNormal() ? MeshModifierUtil::normalizeOr( inoutMesh._listNormal[index] * -1.0f, axisDirection ) : axisDirection;
                 }
                 float3 target{ 0.0f, 0.0f, 0.0f };
-                if ( tryConformPoint( listTriangle, point, direction, mode, offset, maxDistance, target ) == false )
+                if ( tryConformPointBvh( bvh, point, direction, mode, offset, maxDistance, target ) == false )
                     continue;
                 const float32 blend               = MathUtil::saturate( amount * inoutMesh.getWeight( index ) );
                 inoutMesh._listPosition[index] = float3::lerp( point, target, blend );

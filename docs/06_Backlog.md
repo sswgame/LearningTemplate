@@ -324,7 +324,8 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
     없고(`readbackTexture2D` 는 텍스처 전용) 디버그 그리기는 CPU 큐라 그리기를 GPU 안에서 끝내야 한다 — 모프 풀 출력 버퍼를 `swLoadMorphedVertex` 가 읽는 경로를 쓴다. 권고 첫 단계: 변형 로직은 CPU 스택 그대로 두고
     미리보기 전용 메시가 모프 풀 결과 경로로 그려지게 하는 한 디스패치. 모디파이어마다 셰이더를 만들지 않고 `종류 id + 매개변수 구조 버퍼` 를 순서대로 적용하는 uber 셰이더 하나. `supportsGPU()` 가 true 인 점 단위
     모디파이어(약 40 개)만 옮기고 나머지는 CPU. GL 은 `swComputeMorphElement` 드라이버 버그 주의(`RHIBackendInfo.h`). 검증은 `RenderPassGPUTest.MorphPoolIdentityMatchesRest` 류 GPU 테스트가 필요해 이 PC 에서 못 한다.
-  - **Conform / Conform Multi 가속**: 정점 × 삼각형 전수 탐색 단일 스레드 → 격자 · BVH 와 정점 병렬화. 큰 대상 메시에서 느리다.
+  - **Conform / Conform Multi**: 엔진의 `SurfaceBvh`(`Engine/Character/Fit/SurfaceBvh.h`)로 질의한다(정점 × 삼각형 전수 탐색을 걷어냄). 남은 것: `SurfaceBvh` 질의가 멤버 스크래치를 써서 한 스레드에서만 묻는다 →
+    정점 병렬화는 스레드별 BVH 또는 상태 없는 질의가 필요하고, 적용마다 BVH 를 새로 만드는 것을 대상 메시 변경 감지로 캐시할 수 있다.
   - **입력 창구(`IMeshModifierInputs`)를 넓히기**: 경로 프레임(법선 · 비법선), 정적 텍스처 CPU 표본(`trySampleTexture` 가 지금 false → Displace 계열이 항등), 변형 전 위치(Displace Limits 가 변위량을 자르려면).
   - **매개변수 종류 추가**: 곡선 목록(Curve Sculpt Layered 층별 곡선) · 참조 목록(Conform Multi 대상 N 개).
   - **패널**: Deformable 하위 스택 편집 UI, 뷰포트에서 제어점 끌기와 고른 점 강조(지금은 패널 입력칸), 정점 버퍼를 건드리는 실제 미리보기(지금은 와이어).

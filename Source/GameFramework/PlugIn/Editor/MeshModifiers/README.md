@@ -49,7 +49,8 @@
 - **Displace Limits** 는 변위량이 아니라 결과 위치를 상자 · 구 안으로 자른다 — 스택이 모디파이어에 이전 결과만 넘기고 변형 전 위치를 넘기지 않는다.
 - **경로 계열**(Path Deform · World Path Deform · Rope Deform)은 입력 창구가 곡선의 위치와 단위 접선만 주므로 접선과 고정 기준 축으로 프레임을 만든다(2D 경로 가정). 3D 경로에서는 단면이 뒤집힐 수 있다.
   창구가 경로 프레임(법선 · 비법선)을 주도록 넓히는 것이 정공법이다.
-- **Conform / Conform Multi** 는 정점 수 × 삼각형 수를 다 훑는 단일 스레드 구현이다. 큰 대상 메시에서는 느리다 — 격자 또는 BVH 가속과 정점 병렬화가 필요하다.
+- **Conform / Conform Multi** 는 엔진에 이미 있는 `SurfaceBvh`(`Engine/Character/Fit/SurfaceBvh.h`, 최근접점 · 광선 질의)로 대상 삼각형을 한 번 BVH 로 만들어 정점마다 묻는다(`PathModifierUtil::conformMesh`).
+  `SurfaceBvh` 의 질의는 멤버 스크래치를 써서 한 인스턴스를 한 스레드에서만 묻는다 — 정점 병렬화를 하려면 스레드마다 BVH 를 두거나 질의를 상태 없는 형태로 바꿔야 한다. 적용마다 BVH 를 새로 만든다(대상이 안 바뀌면 캐시할 수 있다).
 - **Curve Sculpt Layered** 는 층마다 곡선이 없고 Shape 곡선 하나를 공유한다(매개변수에 곡선 목록 종류가 없다). **Conform Multi** 는 참조 목록 대신 칸 4개다(참조 목록 종류가 없다).
 - **Deformable** 은 하위 스택을 품지만 패널에서 편집하는 UI 가 없다. 하위 스택은 `extra.stack` 한 줄 JSON 으로 저장된다.
 - **Point Cache** 는 경로를 파일 경로로 그대로 읽는다(리소스 id 를 절대 경로로 푸는 일은 엔진 서비스가 필요하다).
