@@ -35,15 +35,14 @@
 
 재현됐거나 코드로 확인된 열린 결함. 다른 어떤 일보다 먼저 본다.
 
-- `A-1` **`editor.uipreview` 가 속성 편집 단계(프레임 375)에서 모든 백엔드 결정적으로 진다**(2026-10-15, main `42f6b251c`, DX12 · Vulkan · GL, 단독 · 전체 체인 10 회 이상).
-  `Editor.UIPreviewSelectedOpacity` 가 0.5 대신 1, `UIPreviewDirty` 0, `UndoCount` 0 — `inspector.property.BorderPanel._opacity` Ctrl+클릭 → `Ctrl+A` → `0.5` → `Enter` 가 값을 안 바꾼다.
-  언어 버튼 단계(`uipreview.language*`)는 전부 통과한다. 포커스 탓이 아니다(전경을 얻어도 · 에디터 포커스 필터를 빼도 같다). 검증 창(NEXT 4절)의 통과 이후 170 커밋 안의 회귀로 보이며
-  첫 의심은 인스펙터 즐겨찾기 `f46dc5fde` · 뷰포트 마우스 양보 `62bd5b3f7` · `999eef7d1`. 이분 탐색으로 첫 나쁜 커밋을 찾는다.
-- `A-2` **TDR 뒤 행의 원인 미상**(재현 못 함). 코드로는 DX12 `waitForFenceValue` · `waitForRingSlot` · `waitForPreviousFrame` 이 장치 제거를 보고 빠져나온다. 다음 가설: 종료 경로(`waitIdle` ·
-  해제 큐 비우기)나 업로드 큐 워커, Vulkan `VK_ERROR_DEVICE_LOST` 뒤의 대기가 제거를 안 본다. 실제 TDR 은 반복하면 어댑터가 망가지므로 `ID3D12Device5::RemoveDevice` 를 부르는 개발 명령으로
-  장치 제거를 흉내 내 종료까지 가는지 본다(RHI 백엔드는 별도 DLL 이라 가상 창구가 필요하다).
-- `A-3` **`editor.uipreview` Vulkan 1 회 "언어 버튼 이름표 없음"은 재현 못 했다**: Vulkan 단독 5 회 · 전체 체인 3 회 모두 언어 단계는 통과한다(`A-1` 만 진다). 이름표는 직전 프레임에 그려져야 하므로
+- `A-2` **TDR 뒤 행의 원인 미상**(실제 TDR 은 재현 못 함). DX12 는 개발 명령 `rhi.removeDevice`(`ID3D12Device5::RemoveDevice`, 시나리오 `rhiswap/removedevice`)로 흉내 내면
+  런타임 3/3 · 에디터 2/2 가 프레임을 계속 돌고 종료 코드 0 으로 끝난다 — DX12 의 대기 · 종료 경로에는 행이 없다. 남은 가설: Vulkan `VK_ERROR_DEVICE_LOST` 뒤의 대기(흉내 낼 API 가 없다 —
+  `IRHIDevice::debugRemoveDevice` 는 DX12 만 구현), 드라이버 안의 대기(실제 TDR). 다시 보이면 `py -3 -m Scripts stacks <pid>` 로 매달린 스레드의 스택을 남긴다.
+- `A-3` **`editor.uipreview` Vulkan 1 회 "언어 버튼 이름표 없음"은 재현 못 했다**: Vulkan 단독 5 회 · 전체 체인 3 회 모두 언어 단계는 통과한다. 이름표는 직전 프레임에 그려져야 하므로
   패널이 그려지지 못한 프레임 틈(로딩 · 리사이즈)이 의심된다. 다시 보이면 E 에 로그를 붙인다.
+- `A-4` **D3D12 디버그 레이어가 `DrawInstanced: Vertex Buffer at the input vertex slot 0 is not big enough` 를 쌓는다**(2026-10-15, Empty 기본 씬, DX12 Debug, 장치 제거 전 약 30 건).
+  InfoQueue 는 `flushDebugMessages` 가 실패 때만 비우므로 평소 로그에는 나오지 않는다. 어느 패스의 비색인 드로우인지(정점 수가 묶인 정점 버퍼보다 큼) 찾는다 — 경고를 그때그때 로그로 내는
+  `ID3D12InfoQueue1::RegisterMessageCallback`(Debug 만)을 먼저 두면 패스 이름 구간과 함께 보인다.
 
 
 ---
@@ -579,6 +578,8 @@
 - `E-10` **Linux Shipping `EngineTest_NoGPU_Shard5` 가 종료에서 멈춰 180 초 시간 초과**(CI 실행 38439985866). 케이스는 모두 통과하고 요약까지 찍힌 뒤
   `[TestHost] stopping: destroying objects`(`TestHostRuntime::stop` 의 `destroyAll`)에서 끝나지 않았다. 같은 실행의 오디오 디코드 태스크 수명 결함(해제된 `AudioClipCache` 를 워커가 씀 — 고쳤다)이
   워커를 망가뜨려 태스크 매니저 join 이 멈춘 것인지 미확정. 종료 경로가 서브시스템 분해로 다시 쓰인 뒤 새 기준에서 다시 본다.
+- `E-11` **`editor.netconditions` 가 hostgpu 격리 실행 DX11 에서 한 번 졌다**(2026-10-15, `Editor.NetPlayResentMessages >= 1` 이 0, 프레임 91). 같은 날 DX11 단독 3/3 · 다른 백엔드 통과.
+  지연 · 손실 조건이 프레임 91 안에 재전송을 한 번도 일으키지 못한 시간 문제로 보인다. 다시 지면 그 실행의 전송 통계(보낸 · 잃은 수)를 함께 남긴다.
 
 ---
 
