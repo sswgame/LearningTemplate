@@ -168,6 +168,15 @@ namespace sw
         hashed_string _photoRiseAction;
         PROPERTY( Category = "Photo Mode", DisplayName = "Exposure Action", Tooltip = "InputMap action (1D axis, Pressed) whose sign steps the photo mode exposure; missing from the map: no exposure" )
         hashed_string _photoExposureAction;
+        PROPERTY( Category = "Photo Mode", DisplayName = "Move Speed", Min = 0.0, Tooltip = "Photo mode camera move speed in a perspective view (m/s)" )
+        float32 _photoMoveSpeed;
+        PROPERTY( Category = "Photo Mode", DisplayName = "Look Sensitivity", Min = 0.0, Tooltip = "Photo mode look sensitivity (rad per input unit)" )
+        float32 _photoLookSensitivity;
+        PROPERTY( Category = "Photo Mode", DisplayName = "Zoom Step", Min = 0.01, Max = 1.0,
+                  Tooltip = "Scale per wheel notch applied to the field of view or ortho height (below 1 zooms in)" )
+        float32 _photoZoomStep;
+        PROPERTY( Category = "Photo Mode", DisplayName = "Max Exposure Offset", Min = 0.0, Tooltip = "Photo mode exposure compensation limit (+/- EV)", Meta = "Units=EV" )
+        float32 _photoMaxExposureOffset;
         PROPERTY( Category = "Camera", DisplayName = "Read Input", Tooltip = "Feed the look, zoom, pan and rotate actions to presets with an <Input> section" )
         bool _bReadInput;
         PROPERTY( Category = "Camera", DisplayName = "Override Blend", Tooltip = "Blend into and out of a view override (ride camera)" )
