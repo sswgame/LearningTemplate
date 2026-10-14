@@ -77,10 +77,6 @@
             "text": "항목 추가",
             "sourceHash": "1373a4ab54d88333"
         },
-        "EdMeshModifiers.AddKey": {
-            "text": "키 추가",
-            "sourceHash": "7a0e4cc6bfd9c40b"
-        },
         "EdMeshModifiers.AddModifier": {
             "text": "모디파이어 추가",
             "sourceHash": "f4d95a66cf236fed"
@@ -105,6 +101,14 @@
             "text": "제어점",
             "sourceHash": "7551ef17ae7e064d"
         },
+        "EdMeshModifiers.CurveEditHint": {
+            "text": "눌러서 곡선 편집",
+            "sourceHash": "d2457db110d81830"
+        },
+        "EdMeshModifiers.DuplicateRow": {
+            "text": "행 복제",
+            "sourceHash": "1eb11810b6d41e8e"
+        },
         "EdMeshModifiers.FitBounds": {
             "text": "경계 상자에 맞추기",
             "sourceHash": "402ad59bb6ed0112"
@@ -124,6 +128,14 @@
         "EdMeshModifiers.Mirror": {
             "text": "대칭",
             "sourceHash": "1e5ff0f50c741122"
+        },
+        "EdMeshModifiers.MoveRowDown": {
+            "text": "행을 아래로",
+            "sourceHash": "e614e211c8b34f94"
+        },
+        "EdMeshModifiers.MoveRowUp": {
+            "text": "행을 위로",
+            "sourceHash": "8ae65593ed9e4275"
         },
         "EdMeshModifiers.Name": {
             "text": "이름",
@@ -153,13 +165,21 @@
             "text": "다시 하기",
             "sourceHash": "7417792bbe720149"
         },
+        "EdMeshModifiers.ReferenceNoMatch": {
+            "text": "이 컴포넌트를 가진 오브젝트가 없습니다:",
+            "sourceHash": "4e824d53a2525bd0"
+        },
+        "EdMeshModifiers.ReferenceNone": {
+            "text": "(없음)",
+            "sourceHash": "cc766cf900364200"
+        },
         "EdMeshModifiers.ReloadStack": {
             "text": "스택 다시 읽기",
             "sourceHash": "372f2d0fa36ebb0c"
         },
-        "EdMeshModifiers.RemoveItem": {
-            "text": "항목 제거",
-            "sourceHash": "336c8e1678a8ff80"
+        "EdMeshModifiers.RemoveRow": {
+            "text": "행 삭제",
+            "sourceHash": "77318393dfdb0775"
         },
         "EdMeshModifiers.ResetLattice": {
             "text": "격자 초기화",
@@ -186,6 +206,10 @@
             "sourceHash": "8f4be9f086eb530f"
         },
         "EdMeshModifiers.UseSelection": {
+            "text": "선택 사용",
+            "sourceHash": "18163441a7dc78f2"
+        },
+        "EdMeshModifiers.UseSelectionForParam": {
             "text": "선택 사용",
             "sourceHash": "18163441a7dc78f2"
         },
@@ -496,38 +520,6 @@
         "settings.restartRequired": {
             "text": "설정 {count}개는 다시 시작한 뒤에 적용됩니다.",
             "sourceHash": "6462a7414eb6a4f5"
-        },
-        "EdMeshModifiers.CurveEditHint": {
-            "text": "눌러서 곡선 편집",
-            "sourceHash": "d2457db110d81830"
-        },
-        "EdMeshModifiers.MoveRowUp": {
-            "text": "행을 위로",
-            "sourceHash": "8ae65593ed9e4275"
-        },
-        "EdMeshModifiers.MoveRowDown": {
-            "text": "행을 아래로",
-            "sourceHash": "e614e211c8b34f94"
-        },
-        "EdMeshModifiers.DuplicateRow": {
-            "text": "행 복제",
-            "sourceHash": "1eb11810b6d41e8e"
-        },
-        "EdMeshModifiers.RemoveRow": {
-            "text": "행 삭제",
-            "sourceHash": "77318393dfdb0775"
-        },
-        "EdMeshModifiers.ReferenceNone": {
-            "text": "(없음)",
-            "sourceHash": "cc766cf900364200"
-        },
-        "EdMeshModifiers.ReferenceNoMatch": {
-            "text": "이 컴포넌트를 가진 오브젝트가 없습니다:",
-            "sourceHash": "4e824d53a2525bd0"
-        },
-        "EdMeshModifiers.UseSelectionForParam": {
-            "text": "선택 사용",
-            "sourceHash": "18163441a7dc78f2"
         }
     }
 }

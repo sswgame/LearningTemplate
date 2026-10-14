@@ -174,12 +174,6 @@
                 "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
             ]
         },
-        "EdMeshModifiers.AddKey": {
-            "source": "Add Key",
-            "origins": [
-                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
-            ]
-        },
         "EdMeshModifiers.AddModifier": {
             "source": "Add Modifier",
             "origins": [
@@ -216,6 +210,18 @@
                 "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
             ]
         },
+        "EdMeshModifiers.CurveEditHint": {
+            "source": "Click to edit the curve",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.DuplicateRow": {
+            "source": "Duplicate row",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
         "EdMeshModifiers.FitBounds": {
             "source": "Fit to Bounds",
             "origins": [
@@ -242,6 +248,18 @@
         },
         "EdMeshModifiers.Mirror": {
             "source": "Mirror",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.MoveRowDown": {
+            "source": "Move row down",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.MoveRowUp": {
+            "source": "Move row up",
             "origins": [
                 "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
             ]
@@ -288,14 +306,26 @@
                 "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
             ]
         },
+        "EdMeshModifiers.ReferenceNoMatch": {
+            "source": "No object has component:",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.ReferenceNone": {
+            "source": "(None)",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
         "EdMeshModifiers.ReloadStack": {
             "source": "Reload Stack",
             "origins": [
                 "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
             ]
         },
-        "EdMeshModifiers.RemoveItem": {
-            "source": "Remove Item",
+        "EdMeshModifiers.RemoveRow": {
+            "source": "Remove row",
             "origins": [
                 "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
             ]
@@ -337,6 +367,12 @@
             ]
         },
         "EdMeshModifiers.UseSelection": {
+            "source": "Use Selection",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.UseSelectionForParam": {
             "source": "Use Selection",
             "origins": [
                 "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
@@ -1129,38 +1165,6 @@
             "source": "{count, plural, one {# setting takes} other {# settings take}} effect after a restart.",
             "comment": "Shown after applying settings marked apply=restart",
             "maxLength": 80
-        },
-        "EdMeshModifiers.CurveEditHint": {
-            "source": "Click to edit the curve",
-            "origins": []
-        },
-        "EdMeshModifiers.MoveRowUp": {
-            "source": "Move row up",
-            "origins": []
-        },
-        "EdMeshModifiers.MoveRowDown": {
-            "source": "Move row down",
-            "origins": []
-        },
-        "EdMeshModifiers.DuplicateRow": {
-            "source": "Duplicate row",
-            "origins": []
-        },
-        "EdMeshModifiers.RemoveRow": {
-            "source": "Remove row",
-            "origins": []
-        },
-        "EdMeshModifiers.ReferenceNone": {
-            "source": "(None)",
-            "origins": []
-        },
-        "EdMeshModifiers.ReferenceNoMatch": {
-            "source": "No object has component:",
-            "origins": []
-        },
-        "EdMeshModifiers.UseSelectionForParam": {
-            "source": "Use Selection",
-            "origins": []
         }
     }
 }
