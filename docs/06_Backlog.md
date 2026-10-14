@@ -301,15 +301,15 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   - **UI 디자이너**(`D3-3`)의 상자 · 격자 손잡이는 들어갔다. 상자 순서 계산은 "가운데 좌표가 커지면 자식 번호도 커진다" 고 가정해 RTL · 음수 간격에서 거꾸로 나온다. 격자 줄은 자식 사각형으로 추정해
     걸친 칸(span)이 섞이고 빈 행 · 열로는 끌어 놓을 수 없다.
 
-- `D3-9` **에디터 보강 묶음(2026-10-14, 브랜치 `wt/editor`) — 실행으로 확인할 것.** 빌드(Debug `all AllTests` 경고 0)와 `ctest` nogpu 48/49(실패 하나는 이 PC 에서 파이썬이 git 출력을 못 받는 환경 문제)는 통과했다.
-  아직 사람이 눈으로 · 실제 실행으로 본 적 없는 것: 버그 리포트 창(`BugItPanel`, Window 메뉴에 실리는지) · 인스펙터 보기 옵션(펼치기 · 접기가 컴포넌트 카드에 먹는지, 검색란 폭) · 하이어라키 · 콘텐츠 브라우저 ·
-  뷰포트 우클릭 메뉴 확장(`SW_EDITOR_CONTEXT_MENU_ENTRY`, 비행 모드의 끌기 판정, ThemePark "Nearest Park Ride") · UI 디자이너 슬롯 편집 · 앵커 프리셋 · 시나리오 녹화 · 포토 모드 ·
-  `LightingOnly` 보기 모드의 4 백엔드 그림과 Shipping 베이크(`D2-10`) · 입력 맵 패널의 시간 · Negate · `taps` 칸 · `D3-5` 시나리오 둘 · 어빌리티 디버거(`ability_debugger`) · NPC 일정 창(`npc_schedule`) ·
-  오디오 이벤트 창(`audioevents`) · 리그 디버그 창(`rig_debug`)과 시퀀서 `RigSlot` 트랙 · 모듈 창 상세와 확인 창 · 인스펙터 즐겨찾기(저장 · 복원) · UI 디자이너 끌기 손잡이 · 지형 브러시 원 시각화 ·
-  치트 명령(`cheat.*`) · 포토 모드. 2차 묶음의 `nogpu` 테스트도 48/49 로 통과했다(실패 하나는 위 환경 문제). 두 번째 묶음에서 실제 빌드가 잡은 것: 확장 모듈이 쓰는 `EditorPlaySession::isStopped` 의 내보내기 누락,
-  `EditorTest` 의 직접 컴파일 목록 누락, GameFramework 패널 키가 editor 표에 들어갔던 일 — 에이전트가 이 PC 에서 빌드 없이 쓴 코드는 이런 종류의 누락이 있을 수 있다.
-  **이 PC 의 환경 문제**: 파이썬이 git 을 띄워 출력을 파이프로 받으면 항상 빈 문자열이다(`worktree-make` · pre-commit 훅 · `PythonTest_TestAcronymSpelling` 이 죽는다). 이 묶음의 커밋은 모두 `--no-verify` 라
-  정상 환경에서 훅(`PreCommitLint`)을 한 번 돌려 린트 위반이 없는지 봐야 한다.
+- `D3-9` **에디터 보강 묶음 — 캡처로 확인하고 남은 것(2026-10-15, 브랜치 `wt/visual`).** 시나리오 + `CaptureWindow` 로 DX12 에서 눈으로 확인한 것(결함 4건은 고침): 버그 리포트 창 ·
+  인스펙터 보기 옵션(펼치기 · 접기 · 즐겨찾기 복원) · 하이어라키(행 메뉴 · 만들기 메뉴 · 걸러 보기) · 콘텐츠 브라우저 · 뷰포트 우클릭 메뉴(ThemePark 확장 항목) · UI 디자이너 슬롯 손잡이 · 입력 맵 패널(시간 · Negate · taps 칸,
+  `inputmaptaps` 시나리오로 남김) · 모듈 창 상세 · 확인 창 · `LightingOnly` 4 백엔드(DX12 · DX11 · Vulkan · GL 이 Lit · LightingOnly 모두 바이트 동일) · 포토 모드 · 치트 명령(로그 응답) · E-11 리로드 로그.
+  **남은 것**: (1) 지형 브러시 원 시각화 — 시각화 단추는 켜지지만 `envshowcase` 씬의 에디터 카메라에서 원이 안 보였다(마우스 레이가 지형에 안 닿는지 카메라가 지형 밑인지 가르지 못함, 카메라를 지형 위로 옮겨 다시 볼 것).
+  (2) 시나리오 녹화 — 자동화가 주입한 입력은 녹화기가 기록하지 않아(`0 steps`) 실제 입력으로만 확인된다. (3) 어빌리티 디버거 · NPC 일정 · 오디오 이벤트 · 리그 디버그 · 시퀀서 `RigSlot` 트랙 · UI 디자이너 앵커 프리셋 — 빈 상태(안내 글)까지만 봤다.
+  저장소에 이 기능들을 쓰는 데이터(일정 시스템 · 리그 · 오디오 이벤트 라이브러리)가 없다. (4) 시작 크래시 1회: `-game=AbilityArena -EnableEditor` 첫 실행이 모듈 로드 중 `DataRaceDetector` 로 죽었다
+  (`TypeRegistry::registerClass` → `clearInheritedProperties`, 읽는 스레드가 같은 `TypeInfo` 를 읽는 중; 이후 재실행은 통과해 간헐 — 재현율을 재고 읽는 쪽을 찾을 것). (5) 포토 모드는 게임 HUD 를 그대로 둔다(의도인지 확인).
+  (6) 뷰포트 옵션 팝업은 패널이 화면 오른쪽 끝이면 메인 창 밖으로 나가 클라이언트 캡처에 안 잡힌다. (7) 이 PC 의 파이썬이 git 출력을 못 받는 문제는 이 묶음 때 있었으나 이번 커밋 훅은 통과했다.
+  캡처: `D:\wisual\captures\`.
 
 - `D3-10` **메시 모디파이어 스택 플러그인(`GF_EditorPlugIn_MeshModifiers`, 2026-10-14)의 남은 것.** 구조 · 추가 방법 · 알려진 근사는 [모듈 README](../Source/GameFramework/PlugIn/Editor/MeshModifiers/README.md).
   MegaFiers 류 변형 모음의 기능 이름 목록을 기준으로 56 id 를 등록했다(Debug 전체 빌드 경고 0, 모디파이어 단위 테스트 81 개 통과). 눈으로 · 실제 에디터로 본 확인은 없다.
