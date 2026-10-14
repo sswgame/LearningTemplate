@@ -48,7 +48,7 @@
 | `gv_editorPanelTimes` | `int32` | `0` | 시험 | N 프레임 동안 에디터 패널마다 그리기 시간을 모아 한 번 로그로 찍는다 (0=끄기) | [EditorPanelManager.cpp](../../Source/Editor/Common/GUI/EditorPanelManager.cpp) |
 | `gv_editorPreviewScreenshot` | `string` | — | 시험 | 미리보기 씬 뷰포트의 렌더 타깃을 이 경로에 한 번 찍는다 (시나리오 눈 확인용, 비우면 안 함) | [EditorPreviewViewport.cpp](../../Source/Editor/Common/GUI/EditorPreviewViewport.cpp) |
 | `gv_editorStateDir` | `string` | — | 시험 | 에디터 상태 폴더(Saved/Editor 대신, 프로젝트 루트 기준 상대 또는 절대 경로) — 자동화가 빈 폴더로 시작할 때 쓴다 (비우면 Saved/Editor) | [EditorPaths.cpp](../../Source/Editor/Common/EditorPaths.cpp) |
-| `gv_tracyViewerPath` | `string` | — | 일반 | Tracy 뷰어(tracy-profiler 0.14.1) 경로 — 파일이나 폴더 (비우면 Tools/Tracy) | [EditorTracyLauncher.cpp](../../Source/Editor/Common/Commands/EditorTracyLauncher.cpp) |
+| `gv_tracyViewerPath` | `string` | — | 일반 | Tracy 뷰어(tracy-profiler 0.14.1) 경로 — 파일이나 폴더 (비우면 Tools/Tracy) | [EditorTracyLauncher.cpp](../../Source/Editor/Common/Commands/Dev/EditorTracyLauncher.cpp) |
 
 ## `Source/Editor/Panels`
 

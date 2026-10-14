@@ -5,8 +5,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Module/ModuleImageUtil.h"
 
+#include "Editor/Common/Commands/Dev/EditorModuleOverrides.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
-#include "Editor/Common/Commands/EditorModuleOverrides.h"
 #include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"

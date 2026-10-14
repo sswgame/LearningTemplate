@@ -4,7 +4,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/String/TagID.h"
 
-#include "Editor/Common/Commands/EditorViewportPreview.h"
+#include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"

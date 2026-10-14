@@ -4,8 +4,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Editor/Common/Commands/EditorFolderListing.h"
-#include "Editor/Common/Commands/EditorToolAssetCommands.h"
+#include "Editor/Common/Commands/Asset/EditorFolderListing.h"
+#include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"

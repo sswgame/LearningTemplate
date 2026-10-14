@@ -5,7 +5,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Commands/EditorToolAssetCommands.h"
+#include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/GUI/EditorDocumentPanel.h"
 #include "Editor/Common/GUI/EditorThumbnailCache.h"
 

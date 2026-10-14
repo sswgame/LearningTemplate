@@ -5,7 +5,7 @@
 #include "Core/Common/Defines.h"
 #include "Core/File/FileUtil.h"
 
-#include "Editor/Common/Commands/EditorAssetFileCommands.h"
+#include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"

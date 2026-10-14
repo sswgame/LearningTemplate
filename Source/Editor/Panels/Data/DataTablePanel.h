@@ -8,8 +8,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
-#include "Editor/Common/Commands/EditorDataTableCommands.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Panels/Catalog/CatalogDocument.h"
 #include "Editor/Panels/Catalog/CatalogTableEditor.h"

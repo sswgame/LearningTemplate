@@ -6,8 +6,8 @@
 #include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Editor/Common/Commands/EditorToolAssetCommands.h"
-#include "Editor/Common/Commands/EditorViewportPreview.h"
+#include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
+#include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"

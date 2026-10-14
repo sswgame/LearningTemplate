@@ -4,7 +4,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Common/Commands/EditorToolAssetCommands.h"
+#include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 

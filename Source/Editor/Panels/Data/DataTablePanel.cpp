@@ -6,7 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/Commands/EditorDataTableCommands.h"
+#include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"

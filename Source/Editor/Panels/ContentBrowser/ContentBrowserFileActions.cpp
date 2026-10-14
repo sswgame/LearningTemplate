@@ -6,8 +6,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Editor/Common/Commands/EditorAssetFileCommands.h"
-#include "Editor/Common/Commands/EditorReferenceIndex.h"
+#include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
+#include "Editor/Common/Commands/Asset/EditorReferenceIndex.h"
 
 namespace sw::editor
 {

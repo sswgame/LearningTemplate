@@ -9,8 +9,8 @@
 #include "Core/Common/Defines.h"
 #include "Core/Container/vector.h"
 
+#include "Editor/Common/Commands/Dev/EditorTracyLauncher.h"
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
-#include "Editor/Common/Commands/EditorTracyLauncher.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Panels/Profiler/ProfilerCallTree.h"
 #include "Editor/Panels/Profiler/ProfilerScopeHistory.h"

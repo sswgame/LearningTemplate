@@ -10,8 +10,8 @@
 #include "Core/String/fixed_string.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Editor/Common/Commands/EditorSceneCommands.h"
-#include "Editor/Common/Commands/EditorTracyLauncher.h"
+#include "Editor/Common/Commands/Dev/EditorTracyLauncher.h"
+#include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"

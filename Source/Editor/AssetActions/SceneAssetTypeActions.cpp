@@ -2,7 +2,7 @@
 
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Common/Commands/EditorSceneFileCommands.h"
+#include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorAssetTypeActions.h"
