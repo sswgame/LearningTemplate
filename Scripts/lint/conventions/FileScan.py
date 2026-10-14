@@ -284,8 +284,9 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
             ctorInitMembers = []
 
         # 중괄호 열림 { 처리
-        if "{" in trimmed:
-            openCount = trimmed.count("{")
+        # 중괄호는 문자열 · 문자 리터럴 · 주석을 뺀 코드에서만 센다 — `"{"` · `'{'` · `// {` 를 세면 깊이가 어긋나 함수가 안 끝난 것으로 남고,
+        # 뒤따르는 클래스 멤버 선언이 지역 변수로 읽힌다.
+        if "{" in codeWithoutStrings:
             if pendingClass:
                 classStack.append((pendingClass, braceDepth))
                 pendingClass = None
@@ -308,14 +309,14 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                 violations.extend(rule.onLine(scanContext))
 
         # 중괄호 증감 및 스택 정리
-        openBraces = trimmed.count("{")
-        closeBraces = trimmed.count("}")
+        openBraces = codeWithoutStrings.count("{")
+        closeBraces = codeWithoutStrings.count("}")
         braceDepth += openBraces - closeBraces
 
-        while funcStack and braceDepth <= funcStack[-1] and "}" in trimmed:
+        while funcStack and braceDepth <= funcStack[-1] and "}" in codeWithoutStrings:
             funcStack.pop()
 
-        while classStack and braceDepth <= classStack[-1][1] and "}" in trimmed:
+        while classStack and braceDepth <= classStack[-1][1] and "}" in codeWithoutStrings:
             classStack.pop()
 
     return violations

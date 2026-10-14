@@ -310,6 +310,43 @@ def checkBlockCommentScopeInternal(tempRoot: Path, bVerbose: bool) -> list[str]:
     return listError
 
 
+# 중괄호 깊이 추적 — 클래스 안 인라인 함수 본문에 문자열 · 문자 리터럴 · 주석 속 `{` 가 있으면, 그것을 세면 함수가 끝나도 "함수 안" 으로 남아
+# 뒤따르는 **클래스 멤버 선언**(`vector<Foo> _listItem;`)을 지역 변수로 읽는다. 조각마다 까다로운 줄을 인라인 함수에 두고, 뒤따르는 멤버가
+# 지역 변수 규칙(Naming/Local*)에 걸리지 않아야 하며, 클래스 뒤의 진짜 지역 변수 위반은 여전히 잡혀야 한다.
+_kBraceScopeCases: list[tuple[str, str]] = [
+    ("문자열 안의 {", '        emit( "{" );\n'),
+    ("문자 리터럴 안의 {", "        return c == '{';\n"),
+    ("줄 끝 // 주석 안의 {", "        run(); // {\n"),
+    ("줄 끝 /* */ 주석 안의 {", "        run(); /* { */\n"),
+]
+_kBraceScopeLocalRules = ("Naming/LocalNoUnderscore", "Naming/LocalContainer", "Naming/LocalPointer")
+_kBraceScopeFirstFunctionLine = 13   # 아래 조각에서 클래스 뒤 함수(`braceAfter`)가 시작하는 줄 — 그 앞은 클래스 본문이다
+
+
+def checkBraceScopeInternal(tempRoot: Path, bVerbose: bool) -> list[str]:
+    """중괄호 깊이가 문자열 · 문자 리터럴 · 주석 속 `{` `}` 에 속지 않는지 봅니다(`_kBraceScopeCases`)."""
+    listError: list[str] = []
+    for caseIndex, (label, trickyLine) in enumerate(_kBraceScopeCases):
+        content = (
+            "#pragma once\n\nclass BraceProbe\n{\n    bool go( char c )\n    {\n" + trickyLine + "    }\n"
+            "    vector<Foo> _listItem;\n    unique_ptr<Bar> _pItem;\n};\n\n"
+            "inline void braceAfter()\n{\n    int32 _val = 0;\n}\n"
+        )
+        caseRoot = tempRoot / f"brace_scope_{caseIndex}"
+        path = writeFixtureInternal(caseRoot, "Source/Probe/BraceScope.h", content)
+        resetPathMapCacheInternal()
+        listViolation = [v for v in CheckCodeConventions.runConventionsCheck(caseRoot, [str(path)]) if v.rule_category in _kBraceScopeLocalRules]
+        listMemberLine = sorted({v.line_number for v in listViolation if v.line_number < _kBraceScopeFirstFunctionLine})
+        bCaughtLocal = any(v.rule_category == "Naming/LocalNoUnderscore" and v.line_number >= _kBraceScopeFirstFunctionLine for v in listViolation)
+        if bVerbose:
+            print(f"  [중괄호 깊이: {label}] 멤버 줄에서 걸린 곳={listMemberLine} 클래스 뒤 지역 변수 잡음={bCaughtLocal}")
+        if listMemberLine:
+            listError.append(f"중괄호 깊이({label}): 클래스 멤버 선언을 지역 변수로 읽었습니다 (줄 {listMemberLine})")
+        if not bCaughtLocal:
+            listError.append(f"중괄호 깊이({label}): 클래스 뒤 함수의 지역 변수 위반을 놓쳤습니다")
+    return listError
+
+
 def resetPathMapCacheInternal() -> None:
     """
     `CheckCodeConventions` 의 경로 맵 캐시를 비웁니다.
@@ -425,6 +462,9 @@ class CheckCodeConventionsSelfTestGate(LintGate):
 
             # --- 블록 주석 범위 (문자열 · `//` 안의 `/*`) ---
             errors.extend(checkBlockCommentScopeInternal(tempRoot, args.verbose))
+
+            # --- 중괄호 깊이 (문자열 · 문자 리터럴 · 주석 속 `{`) ---
+            errors.extend(checkBraceScopeInternal(tempRoot, args.verbose))
 
             # --- 오탐 확인 (파일 단위) ---
             cleanRoot = tempRoot / "clean"

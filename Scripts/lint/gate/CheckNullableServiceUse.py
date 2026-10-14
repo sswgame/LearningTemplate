@@ -3,18 +3,18 @@
 """
 nullptr 을 돌려줄 수 있는 조회 함수를 곧바로 `->` 로 따라가는 곳을 잡는다.
 
-에디터의 `editor::getService<T>()` 는 **문서대로 nullptr 을 돌려줄 수 있다** — 지역 등록도
-없고 모듈 서비스 표에도 없으면 그렇다. 커맨드 스택처럼 EditorModule 보다 오래 사는 서비스는
-종료할 때 결합이 먼저 풀리므로, 그 창에 걸리면 널 역참조다. 같은 파일 안에서 어떤 호출부는
-확인하고 어떤 호출부는 확인하지 않는 모양이 되기 쉬우므로, 사람이 지킬 규칙이 아니라 기계가 본다.
+`findSubsystem<T>()` 는 **문서대로 nullptr 을 돌려줄 수 있다** — 엔진(`engine::`) · 게임(`game::`) · 에디터(`editor::`) 범위에도 호스트 표에도 없으면
+그렇다. 범위를 든 객체의 멤버(`pContext->findSubsystem<T>()`, `_scope.find<T>()`)도 같다. 커맨드 스택처럼 EditorModule 보다 오래 사는 서비스는
+종료할 때 결합이 먼저 풀리므로, 그 창에 걸리면 널 역참조다. 같은 파일 안에서 어떤 호출부는 확인하고 어떤 호출부는 확인하지 않는 모양이 되기
+쉬우므로, 사람이 지킬 규칙이 아니라 기계가 본다. (`getSubsystem<T>()` 는 반드시 있는 쪽이라 보지 않는다.)
 
 **같은 함정에 문이 셋이다.**
-  - `getService<T>()->` — 받자마자 따라간다.
-  - `EditorContext::get()->` — 속으로 `getService<EditorContext>()` 를 부르므로 이것도 nullptr 이 될 수 있다.
+  - `findSubsystem<T>()->` — 받자마자 따라간다.
+  - `EditorContext::get()->` — 속으로 `findSubsystem<EditorContext>()` 를 부르므로 이것도 nullptr 이 될 수 있다.
     이름만 달라 같은 모양을 놓치지 않도록 같이 본다.
-  - "받아 두고 확인은 안 하는" 것 — `T* p = getService<T>();` 는 한 줄짜리 정규식을 통과하지만, 그 뒤에
+  - "받아 두고 확인은 안 하는" 것 — `T* p = findSubsystem<T>();` 는 한 줄짜리 정규식을 통과하지만, 그 뒤에
     확인 없이 `p->` 를 쓰면 결과는 같다. 그래서 선언 뒤를 함수 끝까지 훑어 "확인이 먼저인가
-역참조가 먼저인가" 를 본다 — 확인으로 치는 모양은 아래 `_kCheckTemplate` 에 적혀 있다.
+    역참조가 먼저인가" 를 본다 — 확인으로 치는 모양은 아래 `_kCheckTemplate` 에 적혀 있다.
 
   python Scripts/lint/gate/CheckNullableServiceUse.py [--root <repo>] [--files a.cpp b.cpp]
 """
@@ -33,20 +33,24 @@ from common import normalizePath  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 # 곧바로 화살표가 붙는 모양만 잡는다 — 포인터를 받아 두고 확인한 뒤 쓰는 형태
-# (`T* p = getService<T>();`)는 걸리지 않는다.
+# (`T* p = findSubsystem<T>();`)는 걸리지 않는다.
 #
-#   getService<T>()->        · getService< T >()->
-#   EditorContext::get()->   — 속으로 getService<EditorContext>() 를 부르는 같은 함정의 다른 문
+#   findSubsystem<T>()->     · engine:: / game:: / editor:: 한정 · pContext->findSubsystem<T>()->
+#   scope.find<T>()->        — 범위 객체의 멤버 `find`
+#   EditorContext::get()->   — 속으로 findSubsystem<EditorContext>() 를 부르는 같은 함정의 다른 문
 _kListNullableCallRe = (
-    re.compile(r"\bgetService\s*<[^<>()]{1,80}>\s*\(\s*\)\s*->"),
+    re.compile(r"\bfindSubsystem\s*<[^<>()]{1,80}>\s*\(\s*\)\s*->"),
+    re.compile(r"(?:\.|->)\s*find\s*<[^<>()]{1,80}>\s*\(\s*\)\s*->"),
     re.compile(r"\bEditorContext\s*::\s*get\s*\(\s*\)\s*->"),
 )
 
 # 세 번째 문: 받아 두기만 하고 확인하지 않는 것.
-#   T* pName = getService<T>();   ·   EditorContext* pName = EditorContext::get();
+#   T* pName = findSubsystem<T>();   ·   T* pName = pContext->findSubsystem<T>();   ·   EditorContext* pName = EditorContext::get();
 _kNullableDeclRe = re.compile(
     r"^(\s*)(?:auto|[A-Za-z_][\w:<>,\* ]*?)\*\s+(p[A-Z]\w*)\s*=\s*"
-    r"(?:(?:editor|game)::)?(?:getService\s*<|EditorContext\s*::\s*get\s*\()"
+    r"(?:(?:(?:engine|game|editor)::)?findSubsystem\s*<"
+    r"|[\w\]\)]+\s*(?:\.|->)\s*(?:findSubsystem|find)\s*<"
+    r"|EditorContext\s*::\s*get\s*\()"
 )
 
 # 확인으로 치는 모양. 이 중 하나가 역참조보다 먼저 나오면 통과다.
@@ -81,13 +85,13 @@ def findUncheckedStores(relative: str, lines: list[str]) -> list[str]:
                 break
     return violations
 
-# 같은 함정이 세 곳에 있다 — 에디터의 `editor::getService`, 게임의 `game::getService`.
+# 같은 함정이 곳곳에 있다 — 엔진 · 게임 · 에디터의 `findSubsystem`.
 # 게임 쪽은 `SW_ASSERT( false )` 를 거치는데 **그 단정은 Shipping 에서 사라진다.**
-_kListScanRoot = ( "Source/Editor", "Source/GameFramework", "Source/Games" )
+_kListScanRoot = ( "Source/Engine", "Source/Editor", "Source/GameFramework", "Source/Games" )
 
 
 def findDirectDereferences(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
-    """`getService<T>()->` 꼴을 모아 위반 문자열로 돌려줍니다."""
+    """`findSubsystem<T>()->` 꼴을 모아 위반 문자열로 돌려줍니다."""
     violations: list[str] = []
     for path in LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=(".cpp", ".h")):
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
@@ -110,17 +114,18 @@ class CheckNullableServiceUseGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있다."""
 
     description = "nullptr 가능 서비스 조회를 확인 없이 역참조하는 곳 검사"
-    buildComment = "Checking nullable editor service dereferences..."
+    buildComment = "Checking nullable subsystem lookups dereferenced without a check..."
     timeoutSeconds = 15
-    preCommitPattern = ("Source/Editor/*", "Source/GameFramework/*", "Source/Games/*")
+    preCommitPattern = ("Source/Engine/*", "Source/Editor/*", "Source/GameFramework/*", "Source/Games/*")
     preCommitFileArgument = "--files"
     violationHeader = "확인 없이 역참조한 서비스 조회"
     hint = (
-        "  editor::getService<T>() 와 EditorContext::get() 은 nullptr 을 돌려줄 수 있습니다.\n"
+        "  findSubsystem<T>() 와 EditorContext::get() 은 nullptr 을 돌려줄 수 있습니다.\n"
         "  포인터를 받아 두고 확인한 뒤 쓰십시오:\n"
-        "      CommandStack* pStack = editor::getService<CommandStack>();\n"
+        "      CommandStack* pStack = editor::findSubsystem<CommandStack>();\n"
         "      if ( pStack == nullptr )\n"
         "          return;\n"
+        "  반드시 있는 서비스는 getSubsystem<T>() 가 참조를 돌려줍니다.\n"
         "  나중에 불리는 람다·델리게이트 안에서는 바깥 포인터를 쓰지 말고 그 자리에서 다시 받으십시오."
     )
     selfTestCases = [
@@ -130,7 +135,18 @@ class CheckNullableServiceUseGate(LintGate):
                 "Source/Editor/Probe/ProbeService.cpp": (
                     "void probe()\n"
                     "{\n"
-                    "    editor::getService<CommandStack>()->undo();\n"
+                    "    editor::findSubsystem<CommandStack>()->undo();\n"
+                    "}\n"
+                ),
+            },
+        },
+        {
+            "name": "범위 객체 멤버 조회를 바로 역참조",
+            "files": {
+                "Source/Editor/Probe/ProbeMember.cpp": (
+                    "void probe( EditorContext* pContext )\n"
+                    "{\n"
+                    "    pContext->findSubsystem<CommandStack>()->undo();\n"
                     "}\n"
                 ),
             },
@@ -152,8 +168,20 @@ class CheckNullableServiceUseGate(LintGate):
                 "Source/Editor/Probe/ProbeStored.cpp": (
                     "void probe()\n"
                     "{\n"
-                    "    InputManager* pInput = getService<InputManager>();\n"
+                    "    InputManager* pInput = findSubsystem<InputManager>();\n"
                     "    pInput->update();\n"
+                    "}\n"
+                ),
+            },
+        },
+        {
+            "name": "범위 객체 멤버로 받아 두고 확인 없이 역참조",
+            "files": {
+                "Source/Editor/Probe/ProbeStoredMember.cpp": (
+                    "void probe( EditorContext& context )\n"
+                    "{\n"
+                    "    CommandStack* pStack = context.findSubsystem<CommandStack>();\n"
+                    "    pStack->undo();\n"
                     "}\n"
                 ),
             },
@@ -161,11 +189,11 @@ class CheckNullableServiceUseGate(LintGate):
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 Editor · GameFramework · Games 전체)")
+        self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 Engine · Editor · GameFramework · Games 전체)")
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         violations = findDirectDereferences(repositoryRoot, args.files)
-        return GateResult(listViolation=violations, summary="Editor · GameFramework · Games 의 서비스 조회 역참조")
+        return GateResult(listViolation=violations, summary="Engine · Editor · GameFramework · Games 의 서비스 조회 역참조")
 
 
 main = CheckNullableServiceUseGate.run

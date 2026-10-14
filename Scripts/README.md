@@ -120,6 +120,7 @@ Scripts/
   │     │     ├── CheckEditorLayers.py        # Editor 폴더 층(Common → Workspace → Commands → GUI → Viewport · Popups → Panels → SelfTest → 셸)
   │     │     ├── CheckCoreNetworkLayers.py   # Core/Network 폴더 층(뿌리 ← Transport · Security ← Connection ← Message ← Replication)
   │     │     ├── CheckNullableServiceUse.py  # nullptr 가능 서비스 조회를 확인 없이 역참조
+  │     │     ├── CheckServiceAccess.py       # 서비스 접근은 getSubsystem / findSubsystem 한 어휘 · 헤더에 새 전역 단일체(getInstance) 금지
   │     │     ├── CheckControlBoundary.py     # 입력을 읽는 파일은 플레이어 조종자 · 플레이어 뷰 · 명령 디렉터만(폰은 의도만)
   │     │     ├── CheckLogViewArgument.py     # 로그 인자의 string_view::data()
   │     │     ├── CheckGlobalVariableKinds.py # 전역 변수 정의와 extern 참조의 종류 일치
@@ -193,6 +194,7 @@ Scripts/
   │           ├── CheckLintsAreAlive.py       # gate/ 를 훑어 각 게이트가 아직 무는지 확인
   │           ├── CheckFixersAreAlive.py      # fixer/ 가 아직 고치는지, 고치면 안 되는 것은 안 고치는지
   │           ├── CheckCodeConventionsSelfTest.py # CheckCodeConventions 의 규칙마다 아직 무는지 확인
+  │           ├── CheckServiceAccessSelfTest.py   # CheckServiceAccess 의 모양마다 잡히는지 · 허용 모양이 안 잡히는지
   │           ├── CheckMergeCommitScope.py    # 병합 커밋에서 훅이 새 내용 파일을 빠뜨리지 않고 줄이는지 (임시 git 저장소)
   │           ├── CheckExemptionTables.py     # 게이트의 예외가 rules/<게이트>.toml 한 자리에만 있는지 · rules/ 파일이 3.10 에서도 같게 읽히는지
   │           ├── CheckLintScanRoots.py       # 게이트가 대상 뿌리를 손으로 조립하지 않는지(kLintTargetRelDirs 하나)
