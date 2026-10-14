@@ -290,3 +290,55 @@ SW_TEST_CASE( UIPreviewLogicTest, SlotHandlesMoveTheMatchingOffsets )
     SW_EXPECT_TRUE( UIPreviewLogic::canEditSlotByHandle( *pChild ) );
     SW_EXPECT_FALSE( UIPreviewLogic::canEditSlotByHandle( *pCanvas ) ); // 루트는 부모가 없다
 }
+
+/**
+ * @brief [UIPreviewLogicTest] 앵커 프리셋: 표의 앵커 값을 넣고, 위젯 사각형이 그대로 나오도록 오프셋을 다시 채운다. 같은 프리셋을 다시 고르면 바뀌지 않는다
+ */
+SW_TEST_CASE( UIPreviewLogicTest, AnchorPresetKeepsTheWidgetInPlace )
+{
+    using sw::editor::UIPreviewAnchorPreset;
+    using sw::editor::UIPreviewLogic;
+    const sw::UIRect rect{ 100.0f, 50.0f, 300.0f, 90.0f }; // 부모 왼쪽 위 원점
+    const sw::float2 parentSize{ 1000.0f, 500.0f };
+
+    sw::WidgetLayoutSlot slot{};
+    slot._offsetMin = sw::float2{ 100.0f, 50.0f };
+    slot._offsetMax = sw::float2{ 300.0f, 90.0f };
+    SW_EXPECT_FALSE( UIPreviewLogic::applyAnchorPreset( slot, UIPreviewAnchorPreset::TopLeft, rect, parentSize ) ); // 이미 좌상
+
+    SW_EXPECT_TRUE( UIPreviewLogic::applyAnchorPreset( slot, UIPreviewAnchorPreset::Center, rect, parentSize ) );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, slot._anchorMin._x, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, slot._anchorMax._y, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( -400.0f, slot._offsetMin._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( -200.0f, slot._offsetMin._y, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( -200.0f, slot._offsetMax._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( -160.0f, slot._offsetMax._y, 1e-4f );
+
+    SW_EXPECT_TRUE( UIPreviewLogic::applyAnchorPreset( slot, UIPreviewAnchorPreset::StretchHorizontal, rect, parentSize ) );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, slot._anchorMin._x, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, slot._anchorMax._x, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, slot._anchorMin._y, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 100.0f, slot._offsetMin._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( -700.0f, slot._offsetMax._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( -160.0f, slot._offsetMax._y, 1e-4f );
+
+    SW_EXPECT_TRUE( UIPreviewLogic::applyAnchorPreset( slot, UIPreviewAnchorPreset::StretchAll, rect, parentSize ) );
+    SW_EXPECT_NEAR_EQUAL( 100.0f, slot._offsetMin._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 50.0f, slot._offsetMin._y, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( -700.0f, slot._offsetMax._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( -410.0f, slot._offsetMax._y, 1e-4f );
+    SW_EXPECT_FALSE( UIPreviewLogic::applyAnchorPreset( slot, UIPreviewAnchorPreset::StretchAll, rect, parentSize ) );
+
+    // 어느 프리셋이든 앵커 × 부모 크기 + 오프셋이 원래 사각형이다(CanvasPanel 의 배치 식).
+    for ( uint32 index = 0; index < static_cast<uint32>( UIPreviewAnchorPreset::Count ); ++index )
+    {
+        const auto preset = static_cast<UIPreviewAnchorPreset>( index );
+        (void)UIPreviewLogic::applyAnchorPreset( slot, preset, rect, parentSize );
+        SW_EXPECT_NEAR_EQUAL( rect._left, slot._anchorMin._x * parentSize._x + slot._offsetMin._x, 1e-3f );
+        SW_EXPECT_NEAR_EQUAL( rect._bottom, slot._anchorMax._y * parentSize._y + slot._offsetMax._y, 1e-3f );
+        SW_EXPECT_TRUE( UIPreviewLogic::getAnchorPresetMark( preset )[0] != '\0' );
+    }
+    const sw::editor::UIPreviewAnchorValues outOfRange = UIPreviewLogic::getAnchorPreset( UIPreviewAnchorPreset::Count ); // 범위 밖은 좌상
+    SW_EXPECT_NEAR_EQUAL( 0.0f, outOfRange._anchorMax._x, 1e-6f );
+    SW_EXPECT_STREQ( "topleft", UIPreviewLogic::getAnchorPresetMark( UIPreviewAnchorPreset::Count ) );
+}
