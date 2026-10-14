@@ -147,7 +147,8 @@ namespace
     {
         for ( const FightingEvent& event : listEvent )
         {
-            if ( event._kind == FightingEvent::Kind::Hit && event._player == player && event._moveID == moveID )
+            const bool bHitEventMatches = event._kind == FightingEvent::Kind::Hit && event._player == player && event._moveID == moveID;
+            if ( bHitEventMatches )
                 return event._value;
         }
         return -1;
@@ -432,7 +433,8 @@ SW_TEST_CASE( FightingTest, LauncherJuggleScalesDamageAndScrewOncePerCombo )
         {
             const int32 hitsBefore = countEvents( listStepEvent, FightingEvent::Kind::Hit, 0 );
             runFrames( match, 1, makeInput( 0, 6 ), walk1, listStepEvent );
-            if ( button == kButton4 && countEvents( listStepEvent, FightingEvent::Kind::Hit, 0 ) > hitsBefore && screwVelocityIndex < 2 )
+            const bool bScrewLiftSample = button == kButton4 && countEvents( listStepEvent, FightingEvent::Kind::Hit, 0 ) > hitsBefore && screwVelocityIndex < 2;
+            if ( bScrewLiftSample )
                 arrLiftAfterScrew[screwVelocityIndex++] = match.getFighter( 1 )._velocityY;
         }
         for ( const FightingEvent& event : listStepEvent )

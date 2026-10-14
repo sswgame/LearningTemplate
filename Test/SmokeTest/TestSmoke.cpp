@@ -156,7 +156,8 @@ namespace sw
             if ( pfnExport == nullptr )
                 return false;
             sw::GameAPI api{};
-            if ( pfnExport( &api ) == false || api.create == nullptr || api.destroy == nullptr )
+            const bool  bInvalidGameExport = pfnExport( &api ) == false || api.create == nullptr || api.destroy == nullptr;
+            if ( bInvalidGameExport )
                 return false;
 
             sw::SubsystemScope gameService;
@@ -870,7 +871,8 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadGenreKitsIndividuallyAndCascaded )
  */
 SW_TEST_CASE( ArchitectureTest, MultiModuleFullStackLiveReload )
 {
-    if ( sw::isModuleBuilt( "GF_Overworld" ) == false || sw::isModuleBuilt( "SWGame" ) == false || sw::isModuleBuilt( "EditorModule" ) == false )
+    const bool bModulesMissing = sw::isModuleBuilt( "GF_Overworld" ) == false || sw::isModuleBuilt( "SWGame" ) == false || sw::isModuleBuilt( "EditorModule" ) == false;
+    if ( bModulesMissing )
         SW_TEST_SKIP( "a module this case reloads is not built in this configuration" );
 
     sw::LiveReloadManager manager;
@@ -1005,7 +1007,8 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadOneOfTwoKitsCascadesIntoTheGameOnly )
  */
 SW_TEST_CASE( ArchitectureTest, ReloadedDependentsBindToTheCurrentImages )
 {
-    if ( sw::isModuleBuilt( "GameFramework" ) == false || sw::isModuleBuilt( "GF_Overworld" ) == false || sw::isModuleBuilt( "SWGame" ) == false )
+    const bool bModulesMissing = sw::isModuleBuilt( "GameFramework" ) == false || sw::isModuleBuilt( "GF_Overworld" ) == false || sw::isModuleBuilt( "SWGame" ) == false;
+    if ( bModulesMissing )
         SW_TEST_SKIP( "a module this case reloads is not built in this configuration" );
 
     sw::LiveReloadManager manager;

@@ -250,15 +250,17 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveNormalsAndUvsAreUsable )
             // 안쪽을 향하는 노멀은 빛을 반대로 받는다 — 그림에서는 "저 면만 어둡다" 로만 보인다.
             if ( normal.dot( position ) < -0.001f )
                 ++inwardCount;
-            if ( vertex._arrUv[0] < -0.001f || vertex._arrUv[0] > 1.001f || vertex._arrUv[1] < -0.001f ||
-                 vertex._arrUv[1] > 1.001f )
+            const bool bBadUv = vertex._arrUv[0] < -0.001f || vertex._arrUv[0] > 1.001f || vertex._arrUv[1] < -0.001f ||
+                                vertex._arrUv[1] > 1.001f;
+            if ( bBadUv )
                 ++badUvCount;
         }
 
         SW_EXPECT_TRUE_MSG( badLengthCount == 0, "정점 노멀이 정규화되어 있지 않다" );
         SW_EXPECT_TRUE_MSG( inwardCount == 0, "정점 노멀이 안쪽을 향한다" );
         SW_EXPECT_TRUE_MSG( badUvCount == 0, "UV 가 0..1 밖이다" );
-        if ( badLengthCount != 0 || inwardCount != 0 || badUvCount != 0 )
+        const bool bAnyDefect = badLengthCount != 0 || inwardCount != 0 || badUvCount != 0;
+        if ( bAnyDefect )
         {
             SW_LOG_ERROR( "[MeshPrimitiveTest] %# — 노멀 길이 %#, 안쪽 %#, UV 범위 %#", pID, badLengthCount,
                           inwardCount, badUvCount );

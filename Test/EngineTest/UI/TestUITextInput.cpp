@@ -397,7 +397,8 @@ SW_TEST_CASE( UITextInputTest, PointerPlacesCaretAndSelectionIsPainted )
     bool bFoundSelection = false;
     for ( const sw::CanvasQuad& quad : fixture._ui.getCanvas()._listQuad )
     {
-        if ( quad._color._z > 0.9f && quad._color._x < 0.35f && quad._color._w > 0.3f && quad._color._w < 0.5f )
+        const bool bSelectionQuad = quad._color._z > 0.9f && quad._color._x < 0.35f && quad._color._w > 0.3f && quad._color._w < 0.5f;
+        if ( bSelectionQuad )
         {
             bFoundSelection = true;
             SW_EXPECT_NEAR_EQUAL( glyphWidth * 4.0f, quad._rect._z, 0.6f );

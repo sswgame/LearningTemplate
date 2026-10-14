@@ -147,8 +147,9 @@ namespace sw
             uint32     tag     = 0;
             uint32     version = 0;
             Archive    body;
-            const bool bFrameRead = StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) && StateArchiveUtil::readSection( archive, tag, version, body );
-            if ( bFrameRead == false || tag != FarmField::kStateTag || version != FarmField::kStateVersion )
+            const bool bFrameRead          = StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) && StateArchiveUtil::readSection( archive, tag, version, body );
+            const bool bFieldFrameMismatch = bFrameRead == false || tag != FarmField::kStateTag || version != FarmField::kStateVersion;
+            if ( bFieldFrameMismatch )
                 return false;
             FarmField field;
             field.initialize( kFieldWidth, 1, &KitCompositionCatalogs::get()._crops );
@@ -276,7 +277,8 @@ namespace sw
             Archive                body;
             const bool             bFrameRead = pState != nullptr && StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) &&
                                     StateArchiveUtil::readSection( archive, tag, version, body );
-            if ( bFrameRead == false || tag != CreatureTown::kStateTag || version != CreatureTown::kStateVersion )
+            const bool bTownFrameMismatch = bFrameRead == false || tag != CreatureTown::kStateTag || version != CreatureTown::kStateVersion;
+            if ( bTownFrameMismatch )
                 return false;
             CreatureTown town;
             initializeTown( town, *pState );
@@ -458,11 +460,13 @@ namespace sw
             if ( bHeadRead == false )
                 return false;
             archive >> bLaidOut;
-            if ( archive.isError() || StateArchiveUtil::readSection( archive, tag, version, body ) == false || tag != CitySimulation::kStateTag )
+            const bool bInvalidCityHeader = archive.isError() || StateArchiveUtil::readSection( archive, tag, version, body ) == false || tag != CitySimulation::kStateTag;
+            if ( bInvalidCityHeader )
                 return false;
             CitySimulation city;
             initializeCity( city, *pState );
-            if ( city.readState( body ) == false || body.getRemainingBytes() != 0 || archive.getRemainingBytes() != 0 )
+            const bool bInvalidCityBody = city.readState( body ) == false || body.getRemainingBytes() != 0 || archive.getRemainingBytes() != 0;
+            if ( bInvalidCityBody )
                 return false;
             _city     = std::move( city );
             _bLaidOut = bLaidOut;
@@ -571,7 +575,8 @@ namespace sw
             archive >> marineValue;
             RTSWorld world;
             initializeWorld( world, *pState );
-            if ( archive.isError() || world.readState( archive ) == false || archive.getRemainingBytes() != 0 )
+            const bool bInvalidWorldState = archive.isError() || world.readState( archive ) == false || archive.getRemainingBytes() != 0;
+            if ( bInvalidWorldState )
                 return false;
             _world     = std::move( world );
             _tickCount = tickCount;

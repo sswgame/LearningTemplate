@@ -191,9 +191,10 @@ SW_TEST_CASE( NetworkThreadTest, GameThreadsSendAndReceiveConcurrently )
                     std::this_thread::sleep_for( std::chrono::microseconds( 100 ) );
                     continue;
                 }
-                const int32 sender   = readInt( buffer, 0 );
-                const int32 sequence = readInt( buffer, 4 );
-                if ( sender < 0 || sender >= kSenderCount || connectionID != ( sender % 2 == 0 ? 0 : 1 ) )
+                const int32 sender         = readInt( buffer, 0 );
+                const int32 sequence       = readInt( buffer, 4 );
+                const bool  bInvalidSender = sender < 0 || sender >= kSenderCount || connectionID != ( sender % 2 == 0 ? 0 : 1 );
+                if ( bInvalidSender )
                 {
                     orderErrorCount.fetch_add( 1 );
                     continue;

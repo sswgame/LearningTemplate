@@ -54,9 +54,10 @@ namespace
 
         static bool capture( const NetAddress& to, const uint8* pData, int32 size, void* pContext )
         {
-            DatagramTap* pTap = static_cast<DatagramTap*>( pContext );
-            if ( pTap->_bCapturing == SW_TRUE && to._port != NetCompressionBenchInternal::kServerPort && size > 8 &&
-                 NetHost::peekPacketType( pData, size ) == NetHost::PacketType::Payload )
+            DatagramTap* pTap            = static_cast<DatagramTap*>( pContext );
+            const bool   bCapturePayload = pTap->_bCapturing == SW_TRUE && to._port != NetCompressionBenchInternal::kServerPort && size > 8 &&
+                                         NetHost::peekPacketType( pData, size ) == NetHost::PacketType::Payload;
+            if ( bCapturePayload )
                 pTap->_listBody.emplace_back( pData + 8, pData + size );
             return false;
         }
@@ -321,7 +322,8 @@ namespace
         string text;
         for ( const utf8* pCursor = pTemplate; *pCursor != '\0'; ++pCursor )
         {
-            if ( pCursor[0] == '{' && pCursor[1] >= '0' && pCursor[1] <= '2' && pCursor[2] == '}' )
+            const bool bPlaceholder = pCursor[0] == '{' && pCursor[1] >= '0' && pCursor[1] <= '2' && pCursor[2] == '}';
+            if ( bPlaceholder )
             {
                 if ( pCursor[1] == '0' )
                     text += pName;

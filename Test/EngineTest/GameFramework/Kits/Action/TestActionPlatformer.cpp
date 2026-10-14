@@ -155,7 +155,8 @@ namespace
             // 탄이 가까워지면 패리.
             for ( const ActionProjectile& projectile : rig.getProjectiles() )
             {
-                if ( bParry && bParryPressed == false && projectile._team == ActionTeam::Enemy && float2::getDistance( projectile._position, playerPosition ) < 2.5f )
+                const bool bShouldParry = bParry && bParryPressed == false && projectile._team == ActionTeam::Enemy && float2::getDistance( projectile._position, playerPosition ) < 2.5f;
+                if ( bShouldParry )
                 {
                     rig.pressParry();
                     bParryPressed = true;

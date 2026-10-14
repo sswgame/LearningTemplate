@@ -65,9 +65,10 @@ namespace
         const size_t     operationCount = 1 + random.below( 4 );
         for ( size_t operationIndex = 0; operationIndex < operationCount; ++operationIndex )
         {
-            const size_t size      = inoutBytes.size();
-            const size_t operation = random.below( bText ? 10 : 7 );
-            if ( size == 0 && operation != 5 && operation != 9 )
+            const size_t size           = inoutBytes.size();
+            const size_t operation      = random.below( bText ? 10 : 7 );
+            const bool   bNeedsSeedByte = size == 0 && operation != 5 && operation != 9;
+            if ( bNeedsSeedByte )
             {
                 inoutBytes.push_back( static_cast<uint8>( random.next() ) );
                 continue;
@@ -193,7 +194,8 @@ namespace
         size_t writeIndex = 0;
         for ( size_t readIndex = 0; readIndex < inoutBytes.size(); ++readIndex )
         {
-            if ( inoutBytes[readIndex] == '\r' && readIndex + 1 < inoutBytes.size() && inoutBytes[readIndex + 1] == '\n' )
+            const bool bCrLfPair = inoutBytes[readIndex] == '\r' && readIndex + 1 < inoutBytes.size() && inoutBytes[readIndex + 1] == '\n';
+            if ( bCrLfPair )
                 continue;
             inoutBytes[writeIndex++] = inoutBytes[readIndex];
         }
@@ -223,7 +225,8 @@ SW_TEST_CASE( LoaderFuzzTest, EveryLoaderSurvivesMutatedInput )
 
     for ( const test::LoaderFuzzTarget& target : test::getLoaderFuzzTargets() )
     {
-        if ( pOnlyTarget != nullptr && pOnlyTarget[0] != '\0' && string_view( pOnlyTarget ) != target._pName )
+        const bool bSkipTarget = pOnlyTarget != nullptr && pOnlyTarget[0] != '\0' && string_view( pOnlyTarget ) != target._pName;
+        if ( bSkipTarget )
             continue;
         ++targetCount;
 

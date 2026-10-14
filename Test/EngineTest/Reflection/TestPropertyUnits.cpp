@@ -103,7 +103,8 @@ SW_TEST_CASE( PropertyUnitsTest, UnitsMatchHowValuesAreStored )
                 if ( bMax && maxAt > 1.0f )
                     offenders += where + "a ratio is 0..1 but Max is above 1\n";
             }
-            if ( units == "rad" && bMax && maxAt > kMaxRadian )
+            const bool bRadianMaxTooLarge = units == "rad" && bMax && maxAt > kMaxRadian;
+            if ( bRadianMaxTooLarge )
                 offenders += where + "Max is above 2*pi — the range looks like degrees\n";
             for ( const ConflictingUnitWord& conflict : kArrConflictingUnitWord )
             {

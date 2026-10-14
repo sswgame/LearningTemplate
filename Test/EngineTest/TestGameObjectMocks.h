@@ -170,7 +170,8 @@ namespace sw
                 _bTickSubTickRemoveVisibleInTick = ( findSubTick( _pTickSubTickTarget, 2 ) == nullptr );
                 _bTickSubTickMaskOffInTick       = ( _pTickSubTickTarget->isSubTickActive( 1 ) == false && _pTickSubTickTarget->isSubTickActive( 2 ) == false );
             }
-            if ( _pTickPrefabs != nullptr && _pTickSpawnManager != nullptr && _pTickSpawned == nullptr )
+            const bool bShouldSpawnTickPrefab = _pTickPrefabs != nullptr && _pTickSpawnManager != nullptr && _pTickSpawned == nullptr;
+            if ( bShouldSpawnTickPrefab )
                 _pTickSpawned = _pTickPrefabs->spawn( _pTickSpawnManager, _tickSpawnPath, "TickSpawned" );
             if ( _pTickTagComponent != nullptr )
             {
@@ -699,7 +700,8 @@ namespace sw
                 setLocalPosition( base + _offset );
             if ( _pAttachChild != nullptr && _pAttachParent != nullptr )
                 (void)_pAttachChild->attachToComponent( _pAttachParent, AttachRule::KeepWorld ); // 틱 중이면 미뤄져 true — 결과는 테스트가 틱 뒤 계층으로 본다
-            if ( _pDestroyObject != nullptr && getOwner() != nullptr && getOwner()->getManager() != nullptr )
+            const bool bShouldDestroyObject = _pDestroyObject != nullptr && getOwner() != nullptr && getOwner()->getManager() != nullptr;
+            if ( bShouldDestroyObject )
             {
                 getOwner()->getManager()->destroyObject( _pDestroyObject );
                 _pDestroyObject = nullptr;
@@ -846,7 +848,8 @@ namespace sw
         void onPostLoad() override
         {
             Component::onPostLoad();
-            if ( s_pPrefabs == nullptr || getOwner() == nullptr || getOwner()->getManager() == nullptr || s_spawnAttemptCount >= kMaxNestedSpawn )
+            const bool bCannotSpawnNested = s_pPrefabs == nullptr || getOwner() == nullptr || getOwner()->getManager() == nullptr || s_spawnAttemptCount >= kMaxNestedSpawn;
+            if ( bCannotSpawnNested )
                 return;
             ++s_spawnAttemptCount;
             if ( s_pPrefabs->spawn( getOwner()->getManager(), s_spawnPath, "Nested" ) != nullptr )

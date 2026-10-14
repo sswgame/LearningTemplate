@@ -210,7 +210,7 @@ namespace
         }
         const size_t start = inoutOffset;
         outValue           = 0;
-        while ( inoutOffset < fileBytes.size() && '0' <= fileBytes[inoutOffset] && fileBytes[inoutOffset] <= '9' )
+        while ( inoutOffset < fileBytes.size() && StringUtil::isDigitChar( static_cast<utf8>( fileBytes[inoutOffset] ) ) )
         {
             outValue = outValue * 10 + static_cast<uint32>( fileBytes[inoutOffset] - '0' );
             ++inoutOffset;
@@ -221,12 +221,14 @@ namespace
     /** @brief `-gv_screenshot` 이 쓰는 PPM(P6, 최댓값 255)을 읽습니다. 모양이 다르면 false. */
     [[nodiscard]] bool parsePpm( const vector<uint8>& fileBytes, PpmImage& outImage )
     {
-        if ( fileBytes.size() < 2 || fileBytes[0] != 'P' || fileBytes[1] != '6' )
+        const bool bNotPpm = fileBytes.size() < 2 || fileBytes[0] != 'P' || fileBytes[1] != '6';
+        if ( bNotPpm )
             return false;
-        size_t offset   = 2;
-        uint32 maxValue = 0;
-        if ( readPpmNumber( fileBytes, offset, outImage._width ) == false || readPpmNumber( fileBytes, offset, outImage._height ) == false ||
-             readPpmNumber( fileBytes, offset, maxValue ) == false || maxValue != 255 )
+        size_t     offset            = 2;
+        uint32     maxValue          = 0;
+        const bool bInvalidPpmHeader = readPpmNumber( fileBytes, offset, outImage._width ) == false || readPpmNumber( fileBytes, offset, outImage._height ) == false ||
+                                       readPpmNumber( fileBytes, offset, maxValue ) == false || maxValue != 255;
+        if ( bInvalidPpmHeader )
             return false;
         ++offset; // 최댓값 뒤의 공백 한 글자
         const size_t pixelByteCount = static_cast<size_t>( outImage._width ) * outImage._height * 3;
@@ -285,7 +287,8 @@ namespace
     GoldenDifference compareImage( const PpmImage& expected, const PpmImage& actual, uint32 channelTolerance )
     {
         GoldenDifference difference{};
-        if ( expected._width != actual._width || expected._height != actual._height || expected._rgbBytes.size() != actual._rgbBytes.size() )
+        const bool       bSizeMismatch = expected._width != actual._width || expected._height != actual._height || expected._rgbBytes.size() != actual._rgbBytes.size();
+        if ( bSizeMismatch )
         {
             difference._pixelOverTolerance   = expected._width * expected._height;
             difference._maxChannelDifference = 255;
@@ -327,7 +330,8 @@ namespace
                 GetWindowThreadProcessId( hWnd, &ownerID );
                 utf16 className[64]{};
                 GetClassNameW( hWnd, className, 64 );
-                if ( ownerID == pSearch->_processID && IsWindowVisible( hWnd ) != FALSE && wcscmp( className, L"SWEngineWindowClass_OWNDC" ) == 0 )
+                const bool bMatchingWindow = ownerID == pSearch->_processID && IsWindowVisible( hWnd ) != FALSE && wcscmp( className, L"SWEngineWindowClass_OWNDC" ) == 0;
+                if ( bMatchingWindow )
                 {
                     pSearch->_hWnd = hWnd;
                     return FALSE;

@@ -485,8 +485,9 @@ SW_TEST_CASE( CoopScavengerTest, BodyRecoveryFinesAndWipeLoss )
         SW_EXPECT_EQUAL( 3, static_cast<int32>( expedition.getShipScrap().size() ) );
 
         // 이튿날 — 둘 다 죽는다: 자동 이륙, 고철 절반(올림)을 잃고 벌금 20 % × 2.
-        if ( expedition.land() != ScavengerActionResult::Ok || expedition.movePlayer( 0, "outside" ) != ScavengerActionResult::Ok ||
-             expedition.movePlayer( 1, "outside" ) != ScavengerActionResult::Ok )
+        const bool bSetupFailed = expedition.land() != ScavengerActionResult::Ok || expedition.movePlayer( 0, "outside" ) != ScavengerActionResult::Ok ||
+                                  expedition.movePlayer( 1, "outside" ) != ScavengerActionResult::Ok;
+        if ( bSetupFailed )
             return false;
         expedition.killPlayer( 0 );
         SW_EXPECT_TRUE( expedition.getPhase() == ScavengerPhase::Landed );

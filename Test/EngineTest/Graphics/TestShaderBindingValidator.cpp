@@ -333,7 +333,8 @@ SW_TEST_CASE( ShaderBindingValidatorTest, AllCookedShadersMatchContract )
                 const sw::ShaderReflectionData reflection = sw::ShaderReflection::reflect( bytecode, target._format );
                 // 리플렉션 불가(예: 이 플랫폼에 컴파일러 DLL 없음) — 검사 대상이 아니다. 정점 입력만 있는 VS(fullscreentriangle 처럼
                 // 상수버퍼가 PS 에만 있는 것)까지 여기서 빼면 location 어긋남이 통과한다 — 세 목록이 다 비어야 건너뛴다.
-                if ( reflection._listConstantBuffer.empty() && reflection._listResource.empty() && reflection._listVertexInput.empty() )
+                const bool bNoReflection = reflection._listConstantBuffer.empty() && reflection._listResource.empty() && reflection._listVertexInput.empty();
+                if ( bNoReflection )
                     continue;
                 sw::vector<sw::ShaderBindingValidatorIssue> listIssue;
                 const uint32                                issueCount = sw::ShaderBindingValidator::validate( reflection, target._format, path, &listIssue );
@@ -406,8 +407,9 @@ SW_TEST_CASE( ShaderBindingValidatorTest, ReflectionNamesAreUniformAcrossBackend
             // DXBC/DXIL 리플렉션은 Windows 전용(FXC/DXC)이라 리눅스에서는 dx11·dx12 바이너리가 통째로 빈
             // 결과를 낸다. 그걸 "찾았다" 로 세면 g_SwMaterials 가 없다며 리눅스에서만 진다 — 셰이더가
             // 아니라 도구가 없어서 나는 실패다. AllCookedShadersMatchContract 가 이미 같은 규칙을 쓴다.
-            if ( reflection._listConstantBuffer.empty() && reflection._listResource.empty() &&
-                 reflection._listStructuredElement.empty() )
+            const bool bNoReflectedResources = reflection._listConstantBuffer.empty() && reflection._listResource.empty() &&
+                                               reflection._listStructuredElement.empty();
+            if ( bNoReflectedResources )
                 continue;
             sw::vector<PerFormat>& listPer = mapShader[stem];
             if ( listPer.size() != kFormatCount )
@@ -1065,15 +1067,17 @@ SW_TEST_CASE( ShaderBindingValidatorTest, RootConstantLimitIsTheShaderContract )
             size_t lineEnd = text.find( '\n', lineStart );
             lineEnd        = lineEnd == sw::string::npos ? text.size() : lineEnd;
             const sw::string_view line( text.data() + lineStart, lineEnd - lineStart );
-            const size_t          equal = line.find( '=' );
-            if ( line.find( "constexpr" ) != sw::string_view::npos && line.find( "RootConstant" ) != sw::string_view::npos && equal != sw::string_view::npos )
+            const size_t          equal             = line.find( '=' );
+            const bool            bRootConstantLine = line.find( "constexpr" ) != sw::string_view::npos && line.find( "RootConstant" ) != sw::string_view::npos && equal != sw::string_view::npos;
+            if ( bRootConstantLine )
             {
                 size_t valueStart = equal + 1;
                 while ( valueStart < line.size() && line[valueStart] == ' ' )
                 {
                     ++valueStart;
                 }
-                if ( valueStart < line.size() && line[valueStart] >= '0' && line[valueStart] <= '9' )
+                const bool bLiteralRootConstant = valueStart < line.size() && line[valueStart] >= '0' && line[valueStart] <= '9';
+                if ( bLiteralRootConstant )
                     listOffender += sw::FileUtil::getFileNamePart( path ) + " ";
             }
             lineStart = lineEnd + 1;

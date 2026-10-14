@@ -42,7 +42,8 @@ namespace
         size_t              count = 0;
         manager.forEachGameObject( [&count, wanted]( GameObject* pObj )
         {
-            if ( pObj != nullptr && pObj->isPendingDestroy() == false && pObj->getName() == wanted )
+            const bool bNameMatches = pObj != nullptr && pObj->isPendingDestroy() == false && pObj->getName() == wanted;
+            if ( bNameMatches )
                 ++count;
         } );
         return count;
@@ -340,7 +341,8 @@ SW_TEST_CASE( EditorTransactionTest, UndoOfDestroyBringsBackTheWholeSubtree )
         SW_EXPECT_TRUE_MSG( pRestoredParent != nullptr, pStep );
         SW_EXPECT_TRUE_MSG( pRestoredChild != nullptr, pStep );
         SW_EXPECT_TRUE_MSG( pRestoredGrandChild != nullptr, pStep );
-        if ( pRestoredParent == nullptr || pRestoredChild == nullptr || pRestoredGrandChild == nullptr )
+        const bool bRestoreMissing = pRestoredParent == nullptr || pRestoredChild == nullptr || pRestoredGrandChild == nullptr;
+        if ( bRestoreMissing )
             return;
         SW_EXPECT_TRUE_MSG( pRestoredChild->getParent() == pRestoredParent, pStep );
         SW_EXPECT_TRUE_MSG( pRestoredGrandChild->getParent() == pRestoredChild, pStep );

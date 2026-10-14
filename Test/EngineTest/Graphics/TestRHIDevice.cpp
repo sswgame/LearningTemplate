@@ -92,12 +92,15 @@ namespace
             const uint8* pRow = bytes.data() + static_cast<size_t>( row ) * layout._rowBytes;
             for ( uint32 col = 0; col < layout._width; ++col )
             {
-                const uint8* pPixel = pRow + static_cast<size_t>( col ) * 4;
-                if ( pPixel[0] > 200 && pPixel[1] < 80 && pPixel[2] < 80 )
+                const uint8* pPixel      = pRow + static_cast<size_t>( col ) * 4;
+                const bool   bGreenPixel = pPixel[1] > 200 && pPixel[0] < 80 && pPixel[2] < 80;
+                const bool   bBluePixel  = pPixel[2] > 200 && pPixel[0] < 80 && pPixel[1] < 80;
+                const bool   bRedPixel   = pPixel[0] > 200 && pPixel[1] < 80 && pPixel[2] < 80;
+                if ( bRedPixel )
                     ++count._red;
-                else if ( pPixel[1] > 200 && pPixel[0] < 80 && pPixel[2] < 80 )
+                else if ( bGreenPixel )
                     ++count._green;
-                else if ( pPixel[2] > 200 && pPixel[0] < 80 && pPixel[1] < 80 )
+                else if ( bBluePixel )
                     ++count._blue;
             }
         }
@@ -122,7 +125,8 @@ namespace
                                         const void*            pRecordData = nullptr,
                                         uint32                 recordSize  = 0 )
     {
-        if ( pso == 0 || width == 0 || height == 0 )
+        const bool bInvalidDrawArguments = pso == 0 || width == 0 || height == 0;
+        if ( bInvalidDrawArguments )
             return false;
         sw::IRHIResourceFactory* pResource = device.getResourceFactory();
         if ( pResource == nullptr )
@@ -170,7 +174,8 @@ namespace
         }
 
         // 읽기는 파괴 **전**에. 여기서 실패하면 그린 것 자체를 검증할 수 없으므로 smoke 도 실패로 본다.
-        if ( bOk && pOutPixels != nullptr && pOutLayout != nullptr )
+        const bool bShouldReadback = bOk && pOutPixels != nullptr && pOutLayout != nullptr;
+        if ( bShouldReadback )
         {
             if ( pResource->readbackTexture2D( rt, 0, 0, *pOutPixels, *pOutLayout ) == false )
             {
@@ -1281,7 +1286,8 @@ SW_TEST_CASE( RHIDeviceTest, DestroyedVertexBufferSkipsTheDrawAndReportsIt )
         if ( staleVb != 0 )
             pResource->destroyBuffer( staleVb );
 
-        if ( pso != 0 && staleVb != 0 && slotStream != 0 )
+        const bool bResourcesReady = pso != 0 && staleVb != 0 && slotStream != 0;
+        if ( bResourcesReady )
         {
             const sw::RHITextureDesc   desc = makeOffscreenTargetDesc( 64, 64 );
             const sw::RHITextureHandle rt   = pResource->createTexture2D( desc );
@@ -1528,7 +1534,8 @@ SW_TEST_CASE( RHIDeviceTest, ComputeTextureUavWriteIsReadable )
         const sw::RHIPipelineStateHandle pso = pResource->createComputePipelineState( "common/shaders/computetexturewrite.hlsl" );
         SW_EXPECT_TRUE_MSG( pso != 0, pName );
 
-        if ( texture != 0 && uav != sw::kInvalidDescriptorIndex && pso != 0 )
+        const bool bResourcesReady = texture != 0 && uav != sw::kInvalidDescriptorIndex && pso != 0;
+        if ( bResourcesReady )
         {
             sw::unique_ptr<sw::IRHICommandList> cmdList = device->createCommandList();
             SW_EXPECT_TRUE_MSG( cmdList != nullptr, pName );
@@ -1551,7 +1558,8 @@ SW_TEST_CASE( RHIDeviceTest, ComputeTextureUavWriteIsReadable )
             sw::RHITextureMipSpan layout{};
             const bool            bRead = pResource->readbackTexture2D( texture, 0, 0, bytes, layout );
             SW_EXPECT_TRUE_MSG( bRead, pName );
-            if ( bRead && layout._rowBytes >= kSize * 4 && bytes.size() >= static_cast<size_t>( layout._rowBytes ) * kSize )
+            const bool bReadbackValid = bRead && layout._rowBytes >= kSize * 4 && bytes.size() >= static_cast<size_t>( layout._rowBytes ) * kSize;
+            if ( bReadbackValid )
             {
                 uint32 mismatchCount{ 0 };
                 for ( uint32 y = 0; y < kSize; ++y )
@@ -1611,7 +1619,8 @@ SW_TEST_CASE( RHIDeviceTest, ComputeEntryPointOtherThanCSMainRuns )
         const sw::RHIPipelineStateHandle pso = pResource->createComputePipelineState( "common/shaders/computetexturewrite.hlsl", "csWriteSwapped" );
         SW_EXPECT_TRUE_MSG( pso != 0, pName );
 
-        if ( texture != 0 && uav != sw::kInvalidDescriptorIndex && pso != 0 )
+        const bool bResourcesReady = texture != 0 && uav != sw::kInvalidDescriptorIndex && pso != 0;
+        if ( bResourcesReady )
         {
             sw::unique_ptr<sw::IRHICommandList> cmdList = device->createCommandList();
             SW_EXPECT_TRUE_MSG( cmdList != nullptr, pName );
@@ -1633,7 +1642,8 @@ SW_TEST_CASE( RHIDeviceTest, ComputeEntryPointOtherThanCSMainRuns )
             sw::RHITextureMipSpan layout{};
             const bool            bRead = pResource->readbackTexture2D( texture, 0, 0, bytes, layout );
             SW_EXPECT_TRUE_MSG( bRead, pName );
-            if ( bRead && layout._rowBytes >= kSize * 4 && bytes.size() >= static_cast<size_t>( layout._rowBytes ) * kSize )
+            const bool bReadbackValid = bRead && layout._rowBytes >= kSize * 4 && bytes.size() >= static_cast<size_t>( layout._rowBytes ) * kSize;
+            if ( bReadbackValid )
             {
                 uint32 mismatchCount{ 0 };
                 for ( uint32 y = 0; y < kSize; ++y )
@@ -1898,8 +1908,9 @@ SW_TEST_CASE( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBackPerSlice )
                                     ( shapeLabel + "bindless 등록을 받았다" ).c_str() );
             }
 
-            sw::unique_ptr<sw::IRHICommandList> cmd = device->createCommandList();
-            if ( color != 0 && depth != 0 && pso != 0 && vb != 0 && cmd != nullptr )
+            sw::unique_ptr<sw::IRHICommandList> cmd             = device->createCommandList();
+            const bool                          bResourcesReady = color != 0 && depth != 0 && pso != 0 && vb != 0 && cmd != nullptr;
+            if ( bResourcesReady )
             {
                 sw::RHIViewport viewport{};
                 viewport._width  = static_cast<float32>( kSize );
@@ -2198,7 +2209,8 @@ SW_TEST_CASE( RHIDeviceTest, DriverMemoryBudgetIsKnownOnlyWhereTheDriverAnswers 
             SW_EXPECT_TRUE_MSG( budget._budgetBytes > 0, ( label + ": 예산이 0 이다" ).c_str() );
 
         const bool bTracksAllocation = backend == sw::RHIBackend::DirectX12 || backend == sw::RHIBackend::Vulkan;
-        if ( bTracksAllocation && budget._bUsageKnown == SW_TRUE && budget._scope == sw::RHIMemoryScope::Process )
+        const bool bBudgetTrackable  = bTracksAllocation && budget._bUsageKnown == SW_TRUE && budget._scope == sw::RHIMemoryScope::Process;
+        if ( bBudgetTrackable )
         {
             sw::RHITextureDesc largeDesc{};
             largeDesc._width                  = 4096;

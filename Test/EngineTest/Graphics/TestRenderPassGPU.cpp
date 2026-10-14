@@ -390,11 +390,12 @@ namespace
             sw::GameObject* pLightObject = _scene.getObjectManager()->createGameObject( sw::hashed_string( "KeyLight" ) );
             if ( pLightObject == nullptr || pLightObject->addComponent<sw::DirectionalLightComponent>() == nullptr )
                 return false;
-            _materialRed  = makeMaterial( "1.0 0.02 0.02 1.0" );
-            _materialBlue = makeMaterial( "0.02 0.02 1.0 1.0" );
-            _meshRed      = sw::MeshUtil::createUnitCube();
-            _meshBlue     = sw::MeshUtil::createUnitCube();
-            if ( _materialRed == nullptr || _materialBlue == nullptr || _meshRed == nullptr || _meshBlue == nullptr )
+            _materialRed            = makeMaterial( "1.0 0.02 0.02 1.0" );
+            _materialBlue           = makeMaterial( "0.02 0.02 1.0 1.0" );
+            _meshRed                = sw::MeshUtil::createUnitCube();
+            _meshBlue               = sw::MeshUtil::createUnitCube();
+            const bool bSetupFailed = _materialRed == nullptr || _materialBlue == nullptr || _meshRed == nullptr || _meshBlue == nullptr;
+            if ( bSetupFailed )
                 return false;
             _pCubeRed = addCube( "CubeRed", _meshRed, _materialRed.get(), sw::float3{ -kCubeDistance, 0.0f, 0.0f } );
             return _pCubeRed != nullptr && addCube( "CubeBlue", _meshBlue, _materialBlue.get(), sw::float3{ kCubeDistance, 0.0f, 0.0f } ) != nullptr;
@@ -3178,7 +3179,8 @@ SW_TEST_CASE( RenderPassGPUTest, MorphPoolIdentityMatchesRest )
                 const test::Rgba8 pixelB = b._image.getPixel( x, y );
                 const auto        isFar  = []( uint8 lhs, uint8 rhs )
                 { return lhs > rhs + 8 || rhs > lhs + 8; };
-                if ( isFar( pixelA._r, pixelB._r ) || isFar( pixelA._g, pixelB._g ) || isFar( pixelA._b, pixelB._b ) )
+                const bool bPixelDiffers = isFar( pixelA._r, pixelB._r ) || isFar( pixelA._g, pixelB._g ) || isFar( pixelA._b, pixelB._b );
+                if ( bPixelDiffers )
                     ++count;
             }
         }
@@ -3349,7 +3351,8 @@ SW_TEST_CASE( RenderPassGPUTest, SkinnedMeshFollowsPaletteLikeCPUSkinning )
                 const test::Rgba8 pixelB = b._image.getPixel( x, y );
                 const auto        isFar  = []( uint8 lhs, uint8 rhs )
                 { return lhs > rhs + 12 || rhs > lhs + 12; };
-                if ( isFar( pixelA._r, pixelB._r ) || isFar( pixelA._g, pixelB._g ) || isFar( pixelA._b, pixelB._b ) )
+                const bool bPixelDiffers = isFar( pixelA._r, pixelB._r ) || isFar( pixelA._g, pixelB._g ) || isFar( pixelA._b, pixelB._b );
+                if ( bPixelDiffers )
                     ++count;
             }
         }
@@ -3538,7 +3541,8 @@ SW_TEST_CASE( RenderPassGPUTest, MorphWeightsDeformBeforeSkinningLikeCPU )
                 const test::Rgba8 pixelB = b._image.getPixel( x, y );
                 const auto        isFar  = []( uint8 lhs, uint8 rhs )
                 { return lhs > rhs + 12 || rhs > lhs + 12; };
-                if ( isFar( pixelA._r, pixelB._r ) || isFar( pixelA._g, pixelB._g ) || isFar( pixelA._b, pixelB._b ) )
+                const bool bPixelDiffers = isFar( pixelA._r, pixelB._r ) || isFar( pixelA._g, pixelB._g ) || isFar( pixelA._b, pixelB._b );
+                if ( bPixelDiffers )
                     ++count;
             }
         }
@@ -4169,9 +4173,10 @@ SW_TEST_CASE( RenderPassGPUTest, DeferredPresentCopiesTheTonemapResult )
             renderer.shutdown();
         }
 
-        const utf8* pName = device->getBackendName();
-        if ( bOk == false || layoutPresent._width != layoutTonemap._width || layoutPresent._height != layoutTonemap._height ||
-             tonemapFormat != sw::RHIFormat::R8G8B8A8_UNORM )
+        const utf8* pName            = device->getBackendName();
+        const bool  bCaptureUnusable = bOk == false || layoutPresent._width != layoutTonemap._width || layoutPresent._height != layoutTonemap._height ||
+                                      tonemapFormat != sw::RHIFormat::R8G8B8A8_UNORM;
+        if ( bCaptureUnusable )
         {
             SW_LOG_WARNING( "DeferredPresentCopiesTheTonemapResult: %# 에서 비교할 두 장을 얻지 못했습니다.", pName );
             continue;
@@ -4320,7 +4325,8 @@ SW_TEST_CASE( RenderPassGPUTest, FusedPostChainMatchesStaged )
         if ( bOk )
             bOk = renderThrough( "engine/pipeline/forwardpipelinestaged.xml", listStaged, layoutStaged );
 
-        if ( bOk && layoutFused._width == layoutStaged._width && layoutFused._height == layoutStaged._height )
+        const bool bComparable = bOk && layoutFused._width == layoutStaged._width && layoutFused._height == layoutStaged._height;
+        if ( bComparable )
         {
             ++comparedCount;
             const size_t compareCount = ( listFused.size() < listStaged.size() ) ? listFused.size() : listStaged.size();
@@ -4409,7 +4415,8 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedAttachmentsRenderTheSameImage )
         if ( bOk )
             bOk = renderPresentCaptureOf( device.get(), cube._scene, renamedPath.c_str(), listRenamed, layoutRenamed );
 
-        if ( bOk && layoutReference._width == layoutRenamed._width && layoutReference._height == layoutRenamed._height )
+        const bool bComparable = bOk && layoutReference._width == layoutRenamed._width && layoutReference._height == layoutRenamed._height;
+        if ( bComparable )
         {
             ++comparedCount;
             const CaptureDifference difference = compareCaptures( listReference, listRenamed );
@@ -4504,7 +4511,8 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedGBufferAttachmentsRenderTheSameImage )
         if ( bOk )
             bOk = renderPresentCaptureOf( device.get(), cube._scene, renamedPath.c_str(), listRenamed, layoutRenamed );
 
-        if ( bOk && layoutReference._width == layoutRenamed._width && layoutReference._height == layoutRenamed._height )
+        const bool bComparable = bOk && layoutReference._width == layoutRenamed._width && layoutReference._height == layoutRenamed._height;
+        if ( bComparable )
         {
             ++comparedCount;
             const CaptureDifference difference = compareCaptures( listReference, listRenamed );
@@ -4759,7 +4767,8 @@ SW_TEST_CASE( RenderPassGPUTest, DepthPrepassRendersTheSameImage )
         if ( bOk )
             bOk = renderPresentCaptureOf( device.get(), cube._scene, renamedPath.c_str(), listRenamed, layoutRenamed );
 
-        if ( bOk && layoutReference._width == layoutPrepass._width && layoutReference._width == layoutRenamed._width )
+        const bool bComparable = bOk && layoutReference._width == layoutPrepass._width && layoutReference._width == layoutRenamed._width;
+        if ( bComparable )
         {
             ++comparedCount;
             const CaptureDifference prepassDifference = compareCaptures( listReference, listPrepass );
@@ -5129,7 +5138,8 @@ SW_TEST_CASE( RenderPassGPUTest, MirroredMeshShowsItsOuterFaces )
                 bOk = renderPresentCaptureOf( device.get(), cube._scene, pPipeline, listMirrored, layoutMirrored );
             SW_EXPECT_TRUE_MSG( bOk, ( label + "그리지 못했다" ).c_str() );
 
-            if ( bOk && layoutPlain._width == layoutMirrored._width && layoutPlain._height == layoutMirrored._height )
+            const bool bComparable = bOk && layoutPlain._width == layoutMirrored._width && layoutPlain._height == layoutMirrored._height;
+            if ( bComparable )
             {
                 ++comparedCount;
                 const CaptureDifference difference = compareCaptures( listPlain, listMirrored );
@@ -5919,8 +5929,9 @@ SW_TEST_CASE( RenderPassGPUTest, DeferredBloomBrightIsHalfResolution )
         {
             for ( uint32 x = 0; x < bloomBright.getWidth(); ++x )
             {
-                const test::Rgba8 pixel = bloomBright.getPixel( x, y );
-                if ( pixel._r > 8 || pixel._g > 8 || pixel._b > 8 )
+                const test::Rgba8 pixel        = bloomBright.getPixel( x, y );
+                const bool        bPixelBright = pixel._r > 8 || pixel._g > 8 || pixel._b > 8;
+                if ( bPixelBright )
                     ++brightCount;
             }
         }
@@ -6726,13 +6737,14 @@ SW_TEST_CASE( RenderPassGPUTest, ExtraViewSortsTransparencyFromItsOwnEye )
         {
             if ( scene.ensureDefaultCameras() == false )
                 return false;
-            outMesh  = sw::MeshUtil::createUnitCube();
-            outGlass = sw::Material::create();
-            outTint  = sw::Material::create();
-            if ( outMesh == nullptr || outGlass->loadFromFile( "engine/materials/glassmaterial.material" ) == false ||
-                 outGlass->setParameter( nullptr, sw::hashed_string( "color" ), "0.2 0.9 0.3 0.55" ) == false ||
-                 outTint->loadFromFile( "engine/materials/glassmaterial.material" ) == false ||
-                 outTint->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 0.1 0.1 0.6" ) == false )
+            outMesh                 = sw::MeshUtil::createUnitCube();
+            outGlass                = sw::Material::create();
+            outTint                 = sw::Material::create();
+            const bool bSetupFailed = outMesh == nullptr || outGlass->loadFromFile( "engine/materials/glassmaterial.material" ) == false ||
+                                      outGlass->setParameter( nullptr, sw::hashed_string( "color" ), "0.2 0.9 0.3 0.55" ) == false ||
+                                      outTint->loadFromFile( "engine/materials/glassmaterial.material" ) == false ||
+                                      outTint->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 0.1 0.1 0.6" ) == false;
+            if ( bSetupFailed )
                 return false;
             for ( uint32 cubeIndex = 0; cubeIndex < 7; ++cubeIndex )
             {
@@ -6880,8 +6892,11 @@ SW_TEST_CASE( RenderPassGPUTest, GlContextBindWaitsForAShortHolder )
         bHolderDone.store( true );
     } );
     const sw::Deadline deadline = sw::Deadline::afterMilliseconds( 5000 );
-    while ( bHeld.load() == false && bHolderDone.load() == false && deadline.isExpired() == false )
+    while ( true )
     {
+        const bool bStillWaiting = bHeld.load() == false && bHolderDone.load() == false && deadline.isExpired() == false;
+        if ( bStillWaiting == false )
+            break;
         std::this_thread::yield();
     }
     const bool bHolderTookIt = bHeld.load();
@@ -7080,7 +7095,8 @@ SW_TEST_CASE( RenderPassGPUTest, CrowdSharingAndVertexAnimationMatchPerUnitSkinn
                 const test::Rgba8 pixelB = b._image.getPixel( x, y );
                 const auto        isFar  = []( uint8 lhs, uint8 rhs )
                 { return lhs > rhs + 12 || rhs > lhs + 12; };
-                if ( isFar( pixelA._r, pixelB._r ) || isFar( pixelA._g, pixelB._g ) || isFar( pixelA._b, pixelB._b ) )
+                const bool bPixelDiffers = isFar( pixelA._r, pixelB._r ) || isFar( pixelA._g, pixelB._g ) || isFar( pixelA._b, pixelB._b );
+                if ( bPixelDiffers )
                     ++count;
             }
         }
@@ -7303,7 +7319,8 @@ SW_TEST_CASE( RenderPassGPUTest, WaterWaveShaderMatchesCPU )
         const sw::RHIPipelineStateHandle pso     = pResource->createComputePipelineState( "common/shaders/waterwaveprobe.hlsl" );
         SW_EXPECT_TRUE_MSG( texture != 0 && uav != sw::kInvalidDescriptorIndex && pso != 0, pName );
 
-        if ( texture != 0 && uav != sw::kInvalidDescriptorIndex && pso != 0 )
+        const bool bResourcesReady = texture != 0 && uav != sw::kInvalidDescriptorIndex && pso != 0;
+        if ( bResourcesReady )
         {
             sw::unique_ptr<sw::IRHICommandList> cmdList = device->createCommandList();
             SW_ASSERT_NOT_NULL( cmdList );
@@ -7327,7 +7344,8 @@ SW_TEST_CASE( RenderPassGPUTest, WaterWaveShaderMatchesCPU )
             sw::RHITextureMipSpan layout{};
             const bool            bRead = pResource->readbackTexture2D( texture, 0, 0, bytes, layout );
             SW_EXPECT_TRUE_MSG( bRead && layout._rowBytes >= kTexelPerRow * 4 && bytes.size() >= static_cast<size_t>( layout._rowBytes ) * kSampleCount, pName );
-            if ( bRead && layout._rowBytes >= kTexelPerRow * 4 && bytes.size() >= static_cast<size_t>( layout._rowBytes ) * kSampleCount )
+            const bool bReadbackValid = bRead && layout._rowBytes >= kTexelPerRow * 4 && bytes.size() >= static_cast<size_t>( layout._rowBytes ) * kSampleCount;
+            if ( bReadbackValid )
             {
                 float32 worstError{ 0.0f };
                 for ( uint32 sampleIndex = 0; sampleIndex < kSampleCount; ++sampleIndex )
