@@ -116,6 +116,9 @@ namespace sw
             return _gameScope.get<T>();
         }
 
+        /** @brief 활성 씬의 오브젝트 매니저입니다. 게임 서비스가 묶이지 않았거나 활성 씬이 없으면 nullptr 입니다(개발 명령 · 치트가 대상을 찾는 데도 쓴다). */
+        static GameObjectManager* findActiveObjectManager();
+
     protected:
         /** @brief 파생 클래스가 팩 루트 · 부트스트랩을 설정합니다. */
         virtual void configureBootstrap( BootstrapConfig& outConfig ) { (void)outConfig; }
@@ -190,9 +193,6 @@ namespace sw
             type._pDespawn = &GameInstanceBase::despawnViewsOf<TDirector>;
             _listStatefulType.push_back( type );
         }
-        /** @brief 활성 씬의 오브젝트 매니저입니다. 게임 서비스가 묶이지 않았거나 활성 씬이 없으면 nullptr 입니다. */
-        static GameObjectManager* findActiveObjectManager();
-
         /**
          * @brief 이 인스턴스의 게임 범위에 객체(카탈로그 · 데이터베이스 — 보통 파생의 멤버)를 겁니다. `game::getService<T>()` 가 찾는다.
          * @details 범위는 이 인스턴스가 소유하므로 인스턴스가 내려가면 함께 풀린다 — 짝으로 풀 일이 없다. 같은 타입이 이미 걸려 있으면
