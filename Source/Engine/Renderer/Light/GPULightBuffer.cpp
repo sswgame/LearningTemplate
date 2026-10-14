@@ -42,7 +42,7 @@ namespace sw
             return;
 
         const ComponentRegistry& registry = pScene->getObjectManager()->getComponentRegistry();
-        // 그림자 플래그는 그림자 행렬을 만드는 쪽(EngineLoop · FrameRenderer)과 **같은 빛**에 붙어야 한다. 고르는 규칙은 씬의 한 함수다.
+        // 그림자 플래그는 그림자 행렬을 만드는 쪽(Engine · FrameRenderer)과 **같은 빛**에 붙어야 한다. 고르는 규칙은 씬의 한 함수다.
         const DirectionalLightComponent* pShadowLight = pScene->findShadowCastingDirectionalLight();
 
         // 종류 순서로 돈다. 방향광이 0 이라 앞에 온다(상한을 넘으면 뒤에서부터 잘린다). 원소의 칸은 빛이 스스로 쓴다

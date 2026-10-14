@@ -1492,7 +1492,7 @@ SW_TEST_CASE( GPUSceneTest, CPUSnapshotCarriesShaderPermutations )
     const sw::GPUShaderPermutation* pGtPermutation = gtScene.findShaderPermutation( permutationIndex );
     SW_ASSERT_NOT_NULL( pGtPermutation );
 
-    // 패킷을 거쳐 렌더 스레드 쪽 GPUScene 으로 옮긴다 (EngineLoop 가 매 프레임 하는 그대로).
+    // 패킷을 거쳐 렌더 스레드 쪽 GPUScene 으로 옮긴다 (Engine 가 매 프레임 하는 그대로).
     sw::GPUSceneSnapshot packetScene;
     gtScene.exportCPUSnapshot( packetScene );
     sw::GPUScene rtScene;

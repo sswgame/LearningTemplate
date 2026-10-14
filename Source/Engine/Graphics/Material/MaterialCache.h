@@ -57,7 +57,7 @@ namespace sw
         /**
          * @brief 디바이스 없이 잡은 경로의 머티리얼을 다음 `initializePending` 이 GPU 에 올리게 표시합니다. 이미 올라가 있으면 아무 일도 없습니다.
          * @details 컴포넌트는 디바이스를 모릅니다(층 규칙 — Object 는 Scene 을 include 하지 않는다). 메시가 경로로 머티리얼을 잡을 때 부르고,
-         *          게임 스레드가 렌더 패킷을 내기 전(`EngineLoop`)과 씬 초기화가 디바이스로 올립니다(언리얼 `BeginInitResource` 의 자리).
+         *          게임 스레드가 렌더 패킷을 내기 전(`Engine`)과 씬 초기화가 디바이스로 올립니다(언리얼 `BeginInitResource` 의 자리).
          *          `acquire( path, nullptr )` 만으로는 표시하지 않습니다 — 머티리얼 편집기의 미리보기가 그렇게 잡아 편집 중인 내용을 넣는데,
          *          올리면 파일 내용으로 덮입니다.
          */

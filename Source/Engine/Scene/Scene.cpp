@@ -531,7 +531,7 @@ namespace sw
 
     /**
      * @brief 지금 켜져 있는 방향광 하나를 반환합니다. 없으면 nullptr 입니다.
-     * @details 레지스트리만 본다. 비용이 빛의 수에 비례하고 씬 크기와 무관하다(EngineLoop 이 매 프레임 부르므로 씬을 훑으면 안 된다.
+     * @details 레지스트리만 본다. 비용이 빛의 수에 비례하고 씬 크기와 무관하다(Engine 이 매 프레임 부르므로 씬을 훑으면 안 된다.
      *          `ComponentRegistry` 설명 참고).
      */
     DirectionalLightComponent* Scene::findActiveDirectionalLight() const

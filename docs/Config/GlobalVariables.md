@@ -74,7 +74,7 @@
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
-| `gv_dumpReflection` | `string` | — | 시험 | 첫 프레임에 이 이름들(쉼표로 여럿)의 리플렉션 등록 내용을 로그로 남긴다 — 타입 · enum (비우면 사용 안 함) | [EngineLoop.cpp](../../Source/Engine/EngineLoop.cpp) |
+| `gv_dumpReflection` | `string` | — | 시험 | 첫 프레임에 이 이름들(쉼표로 여럿)의 리플렉션 등록 내용을 로그로 남긴다 — 타입 · enum (비우면 사용 안 함) | [Engine.cpp](../../Source/Engine/Engine.cpp) |
 
 ## `Source/Engine/Destruction`
 

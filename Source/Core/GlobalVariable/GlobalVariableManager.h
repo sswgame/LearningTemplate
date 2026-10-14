@@ -235,7 +235,7 @@ namespace sw
         unordered_map<string, unique_ptr<GlobalVariableInfo>> _mapVariable;
         /**
          * @brief `registerToCommandLine` 이 넘겨준 파서입니다. 나중에 등록되는 변수의 보류값을 여기서 꺼냅니다.
-         * @details 소유하지 않습니다. 둘 다 `EngineLoop` 이 들고 있고, 선언 순서상 이 매니저가 먼저 파괴됩니다. 모듈은
+         * @details 소유하지 않습니다. 둘 다 `Engine` 이 들고 있고, 선언 순서상 이 매니저가 먼저 파괴됩니다. 모듈은
          *          `CommandLineManager` 를 서비스로 받을 수 없으므로(HostOnly) 보류값을 꺼내는 경로는 이 포인터뿐입니다.
          */
         class CommandLineManager* _pCmdLineManager{ nullptr };
@@ -252,7 +252,7 @@ namespace sw
     /**
      * @brief 정적 객체가 전역 리스트(`getHead()`)에 자신을 붙입니다. 어느 이미지(Engine, 모듈, App, 테스트)에서 정의해도 같습니다.
      * @details 리스트를 가져와 등록하는 쪽이 이미지마다 정해져 있어서, 정의하는 쪽은 아무것도 고를 필요가 없다.
-     *          - Engine(과 함께 링크된 App, 테스트, 배포본의 모든 것): 기동할 때 `EngineLoop` 와 테스트 main 이 "Engine" 으로 등록하고 비운다.
+     *          - Engine(과 함께 링크된 App, 테스트, 배포본의 모든 것): 기동할 때 `Engine` 와 테스트 main 이 "Engine" 으로 등록하고 비운다.
      *          - 핫 리로드 모듈(EditorModule, SWGame 등): 로드 직후 `LiveReloadManager` 가 타입 등록자와 함께 가져와 **모듈 이름으로** 등록하고
      *            (`engine::registerModuleTypes`), 언로드하기 전에 그 이름으로 해제한다(`engine::unregisterModuleTypes`). 모듈 코드는 등록과 해제를
      *            부르지 않는다.

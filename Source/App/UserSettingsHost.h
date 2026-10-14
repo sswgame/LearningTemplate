@@ -9,7 +9,7 @@ namespace sw
 {
     struct DisplaySettingsRequest;
 
-    class EngineLoop;
+    class Engine;
     class IWindow;
 
     /**
@@ -25,7 +25,7 @@ namespace sw
         UserSettingsHost();
 
         /** @brief 엔진 루프와 창을 붙입니다. */
-        void initialize( EngineLoop* pEngineLoop, IWindow* pWindow );
+        void initialize( Engine* pEngine, IWindow* pWindow );
         /** @brief 붙인 것을 뗍니다. */
         void shutdown();
 
@@ -37,8 +37,8 @@ namespace sw
         void applyDisplayRequest( const DisplaySettingsRequest& request );
 
     private:
-        EngineLoop* _pEngineLoop;
-        IWindow*    _pWindow;
-        uint32      _frameIndex;
+        Engine*  _pEngine;
+        IWindow* _pWindow;
+        uint32   _frameIndex;
     };
 } // namespace sw

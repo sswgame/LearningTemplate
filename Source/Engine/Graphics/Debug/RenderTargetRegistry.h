@@ -13,7 +13,7 @@
  * 텍스처 핸들 자체는 값이므로 복사해도 안전하고, 죽은 핸들은 RHI 가 generation 으로 거릅니다.
  *
  * [수명]
- * `EngineLoop` 이 소유하고 `engine::getRenderTargetRegistry()` 로 조회합니다. `FrameProfiler` 와 같은
+ * `Engine` 이 소유하고 `engine::getRenderTargetRegistry()` 로 조회합니다. `FrameProfiler` 와 같은
  * 자리입니다. 싱글턴으로 두면 수명이 아무에게도 속하지 않아 종료 순서를 정할 수 없습니다.
  */
 #pragma once

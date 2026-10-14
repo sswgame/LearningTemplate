@@ -115,7 +115,7 @@ namespace sw
         uint32 countPendingUploads() const;
         /**
          * @brief 보고 프로세스로 띄울 실행 파일입니다(`kReporterArgument` 를 알아듣는 것 — App). 비면(기본) 띄우지 않습니다 — 테스트 실행 파일 같은
-         *        다른 호스트가 자기를 보고 프로세스로 다시 띄우지 않게, 띄울 쪽(EngineLoop)이 정합니다.
+         *        다른 호스트가 자기를 보고 프로세스로 다시 띄우지 않게, 띄울 쪽(Engine)이 정합니다.
          */
         void setReporterExecutable( string_view executablePath ) { _reporterExecutable = string( executablePath ); }
         /** @brief 보낼 것이 있고 보고 실행 파일이 정해져 있으면 보고 프로세스(`<실행 파일> -crash-reporter="<묶음 폴더>"`)를 기다리지 않고 띄웁니다. 띄웠으면 true 입니다. */

@@ -2,7 +2,7 @@
  * @file App.h
  * @brief 런타임 클라이언트 앱(얇은 런처)입니다.
  *
- * 소유권: App 은 최상위 창 콜백 · EditorModuleHost · EngineLoop 만 들고, 나머지 엔진 핵심 로직은 모두 EngineLoop 에 맡깁니다.
+ * 소유권: App 은 최상위 창 콜백 · EditorModuleHost · Engine 만 들고, 나머지 엔진 핵심 로직은 모두 Engine 에 맡깁니다.
  *
  * @details App 이 직접 아는 것은 네 가지로 제한합니다. 부팅 순서, 창, 프레임 순서, 그리고 호스트 ↔ 모듈 콜백 연결입니다.
  *          시간 정책은 FixedTimestep, 백엔드 교체는 RHIBackendSwitcher, 모듈 수명은 EditorModuleHost(공통 ModuleHost 위의 App 전용 층),
@@ -16,9 +16,10 @@
 
 #include "Core/Common/Types.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Time/FixedTimestep.h"
 
-#include "Engine/EngineLoop.h"
+#include "Engine/Engine.h"
 #include "Engine/Module/ModuleCatalog.h"
 
 namespace sw
@@ -30,6 +31,7 @@ namespace sw
     class CommandLineManager;
     class EditorModuleHost;
     class IWindow;
+    class ModuleImageHostSubsystem;
 } // namespace sw
 
 namespace sw
@@ -49,12 +51,14 @@ namespace sw
         void run();
         /** @brief `initialize` 가 false 를 돌려준 뒤의 프로세스 종료 코드입니다. 이 기계 · 빌드가 그 RHI 백엔드를 못 돌리면 `kRHIUnusableHereExitCode`, 그 밖은 -1 입니다. */
         int32 getInitFailureExitCode() const;
-        /** @brief 루프가 끝난 뒤 돌려줄 종료 코드입니다(`EngineLoop::requestQuit`. 요청이 없었으면 0). */
+        /** @brief 루프가 끝난 뒤 돌려줄 종료 코드입니다(`Engine::requestQuit`. 요청이 없었으면 0). */
         int32 getExitCode() const;
 
     private:
         // 부팅 단계. initialize() 가 차례로 부른다.
-        /** @brief 플랫폼 창을 확보합니다. EngineLoop 가 이미 만들어 두었으면 그 소유권을 넘겨받습니다. */
+        /** @brief 호스트 범위를 세웁니다 — 모듈 이미지 창구와 자동화 구동기를 걸고 초기화합니다. 엔진을 세우기 전에 부릅니다. */
+        [[nodiscard]] bool initializeHostScope();
+        /** @brief 플랫폼 창을 확보합니다. Engine 가 이미 만들어 두었으면 그 소유권을 넘겨받습니다. */
         bool acquireMainWindow( const EngineConfig& engineConfig, const CommandLineManager& commandLineManager );
         /**
          * @brief 기동 단계 `ModuleTypes` 의 호스트 로더입니다. 타입 공급자 모듈(GameFramework, 키트, SWGame)의 이미지를 로드해 그 타입을 등록합니다.
@@ -70,9 +74,9 @@ namespace sw
          */
         void warnUnknownGlobalOverrides() const;
         /**
-         * @brief `-scenario` 가 있으면 자동화 세션을 만들어 엔진 루프에 프레임 관찰자로 붙이고 렌더 스레드의 시나리오 캡처를 켭니다.
+         * @brief `-scenario` 가 있으면 호스트 범위의 자동화 세션을 시작해 엔진 루프에 프레임 관찰자로 붙이고 렌더 스레드의 시나리오 캡처를 켭니다.
          * @details 시나리오는 늘 고정 프레임 시간이다(세션이 단계마다 `gv_fixedFrameDelta` 를 그 시나리오 값으로 맞춘다). 여럿이면 한 프로세스에서 차례로 돈다.
-         *          돌릴 시나리오가 없으면(목록이 빔) 세션을 남기지 않습니다.
+         *          돌릴 시나리오가 없으면(목록이 빔) 세션을 시작하지 않고 관찰자로도 붙이지 않습니다.
          */
         void startAutomationSession( const CommandLineManager& commandLineManager );
 
@@ -93,8 +97,18 @@ namespace sw
         void onEditorPostPresent( IRHIDevice& renderDevice, const RenderFramePacket& framePacket );
 
     private:
-        EngineLoop _engineLoop;
-        /** @brief 모듈 핫 리로드입니다(EngineLoop 가 아니라 런처의 일). Shipping 에서는 아무것도 하지 않습니다. */
+        /**
+         * @brief 호스트 범위입니다 — 엔진 범위의 부모이고, 엔진보다 먼저 서서 나중에 사라집니다(그래서 `_engine` 보다 앞에 선언한다).
+         * @details 모듈 이미지 창구(`ModuleImageHostSubsystem` — 엔진의 `ModuleTypes` · `ModuleImages` 단계가 찾아 부른다)와 자동화 구동기(`AutomationSession`)를 듭니다.
+         *          구동기는 엔진 서비스를 빌려 쓰므로 `shutdown` 이 엔진 종료 앞에서 먼저 내립니다. 개발 도구는 이 범위에 호스트가 직접 넣습니다(호스트 종류 비트를 두지 않는다).
+         */
+        SubsystemScope _host;
+        /** @brief 호스트 범위의 모듈 이미지 창구입니다(`_host` 소유 — 빌려 쓴다). */
+        ModuleImageHostSubsystem* _pModuleImageHost;
+        /** @brief 호스트 범위의 자동화 구동기입니다(`_host` 소유 — 빌려 쓴다). `-scenario` 가 있을 때만 `begin` 으로 시작합니다. */
+        AutomationSession* _pAutomationSession;
+        Engine             _engine;
+        /** @brief 모듈 핫 리로드입니다(Engine 가 아니라 런처의 일). Shipping 에서는 아무것도 하지 않습니다. */
         ModuleReloadDriver _moduleReload;
         /** @brief 게임 창의 개발 콘솔(`~`)과 표준 입력 명령 채널입니다. Shipping 에서는 아무것도 하지 않습니다. */
         DevConsoleHost               _devConsole;
@@ -103,18 +117,13 @@ namespace sw
         ModuleCatalog       _moduleCatalog;
         ModuleResolution    _moduleResolution;
         unique_ptr<IWindow> _window;
-        /**
-         * @brief `-scenario=<파일>[,<파일>…]` 의 자동화 구동기입니다(`startAutomationSession`). 엔진 루프에 프레임 관찰자로 붙고, 끝나면 루프가 그 종료 코드로 끝납니다.
-         * @details 엔진 루프는 이것을 모릅니다. 엔진 종료 전에 떼고 없앱니다(실행기가 로그 리스너 · 입력을 빌려 쓴다).
-         */
-        unique_ptr<AutomationSession> _automationSession;
 
         FixedTimestep      _fixedTimestep;
         RHIBackendSwitcher _backendSwap;
         UserSettingsHost   _userSettingsHost;
 
         // 프레임마다 다시 만들 이유가 없는 델리게이트다. bindHostCallbacks 에서 한 번 묶는다.
-        /** @brief 에디터 모드에서만 연결됩니다. 비어 있으면 EngineLoop 가 씬 카메라를 씁니다. */
+        /** @brief 에디터 모드에서만 연결됩니다. 비어 있으면 Engine 가 씬 카메라를 씁니다. */
         ViewCameraProviderDelegate _sceneViewCameraProvider;
         /// @brief `initialize` 가 시작된 시각(마이크로초, steady_clock)입니다. 메인 루프에 들어갈 때 로그에 시작 시간을 찍습니다.
         int64 _initializeStartMicro;

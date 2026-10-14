@@ -35,7 +35,7 @@ namespace sw
     {
         /**
          * @brief 커맨드라인이 백엔드를 **명시했는지**, 명시했다면 무엇인지 반환합니다.
-         * @details 이 질문은 두 곳에서 필요합니다. `EngineLoop` 은 "명시했는가"(안 했으면 설정
+         * @details 이 질문은 두 곳에서 필요합니다. `Engine` 은 "명시했는가"(안 했으면 설정
          *          기본값으로 덮는다), `RHI::initialize` 는 "무엇인가"(와, 쓸 수 없을 때 조용히
          *          폴백해도 되는가)를 묻습니다. 두 곳이 이 함수 하나로 답해야 `-vk` 와 `-gv_rhiBackend` 가
          *          같은 백엔드를 고를 때 같은 결과(쓸 수 없으면 에러)가 납니다.
@@ -128,7 +128,7 @@ namespace sw
 
         /** @brief 활성 IRHIDevice 를 반환합니다. */
         IRHIDevice& getDevice() const { return *_device; }
-        /** @brief 마지막 `initialize` 의 결과입니다. App 이 "이 기계에서 그 백엔드를 못 돌린다" 를 종료 코드로 알릴 때 읽습니다(`EngineLoop::getRHIInitResult`). */
+        /** @brief 마지막 `initialize` 의 결과입니다. App 이 "이 기계에서 그 백엔드를 못 돌린다" 를 종료 코드로 알릴 때 읽습니다(`Engine::getRHIInitResult`). */
         RHIInitResult getInitResult() const { return _initResult; }
 
     private:

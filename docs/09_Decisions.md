@@ -55,7 +55,7 @@
 - **Engine 에 남겨 두는 폴더**(2026-10-10 사용 현황 조사, 엔진 분할 0-3). 에디터는 `GameFramework` 를 include 할 수 없으므로(`CheckEngineLayers` 의 Editor 금지 목록) 에디터가 쓰는 폴더
   (`Dialogue` · `Sequencer` · `Destruction` · `Environment` · `Automation` · `UI` · `Animation` · `Scene` 등)는 Engine 말고 둘 곳이 없습니다.
   서버 실행 파일도 `GameFramework` 를 모르므로 서버가 `MetricRegistry` · `OpsHTTPEndpoint` 를 쓰는 `Observability` 도 남습니다.
-  `Character` 는 에디터가 쓰는 `Destruction` 이 쓰고, `Spatial` 은 `Character/Fit` 이 씁니다. `Telemetry` 는 `EngineLoop` · App · 게임이 쓰고, `Compression` 은 Core 인터페이스의 코덱 공급자라 Core 가 서드파티를 몰라야 하는 규칙 때문에 남습니다.
+  `Character` 는 에디터가 쓰는 `Destruction` 이 쓰고, `Spatial` 은 `Character/Fit` 이 씁니다. `Telemetry` 는 `Engine` · App · 게임이 쓰고, `Compression` 은 Core 인터페이스의 코덱 공급자라 Core 가 서드파티를 몰라야 하는 규칙 때문에 남습니다.
 - **SOLID 리팩토링에서 핫 경로라 손대지 않는 것**(2026-10-12 감사). `IRHICommandList` · `IRHIResourceFactory` 의 가상 호출 구조, `GPUSceneBuilder` 내부 병렬 루프, `PhysicsOverlapWorld` 셀 해시,
   Box2D · Jolt 어댑터의 switch(외부 라이브러리 경계), RHI 백엔드 `CommandContext` 큰 파일(백엔드 하나의 기록이라 한 이유로 바뀐다), `AbilitySystemComponent` 의 modifier switch(닫힌 열거 + `-Wswitch`)입니다.
   의도된 예외는 `App.cpp` 의 `kArrHeadlessTask` 표, `EditorPanelManager::syncWithRegistry`, 에디터 `getService<T>()`(모듈 경계 주입), 엔진 루프의 서브시스템 등록부입니다.
@@ -80,7 +80,7 @@
   - 분해에서 남긴 것: 모달 · 결과 창 플래그와 이름 입력 버퍼(S19, ImGui 팝업 시점), `verifyModuleBindings` · `isBoundTo`(S20, 모든 컨텍스트 핸들을 함께 보는 검사), `ModuleShadowCopy` 인스턴스화(S20, 번호가 프로세스 전역이어야 섀도 폴더 이름이 겹치지 않음),
     `UserSettingsManager` 의 키 바인딩 겹침 · 품질 번들 맞추기(`setPendingAt` 상태 기계와 안 떨어짐), `SceneNavigation` 의 에이전트 루프 · 런타임 찾기 · 설정 로드, `App` 의 `updateShellActions` · 모듈 카탈로그 해석,
     `IRHIDevice` 의 `supportsNativeBindlessSampling` · `applyVSyncInternal`, `FractureComponentBase` 의 그룹 재구성 · 물리 어댑터(S15, 반쪽 이전), `FrameRenderer` 의 트랜지언트 계획(S16),
-    `EngineLoop::tick` 의 백엔드 교체 · `pollShaderReloadHotkey` · `MaterialCache::initializePending` · 관찰자 루프(S13, 수명 계약 · 순서가 뜻).
+    `Engine::tick` 의 백엔드 교체 · `pollShaderReloadHotkey` · `MaterialCache::initializePending` · 관찰자 루프(S13, 수명 계약 · 순서가 뜻).
   - S16 의 **동작 변화**: 엔진 서비스가 묶이지 않은 실행은 GPU 계측이 꺼집니다(전에는 단언).
 - **폴더 · 파일 구조는 기계적으로 합치지 않습니다**(2026-10-12 감사, R8). 25 줄 이하 파일이 97 / 2,932 개이고 큰 클래스를 나눈 가족 대부분이 파일마다 120 줄을 넘으며, 작은 조각(`EditorAssetTypeFocus.cpp` 36 줄)은 의존을 분리한 것입니다.
   합치면 층 규칙(`CheckEngineLayers`)과 그래픽스 구조 재편의 파일 분할 기준을 해칩니다. 한다면 `Scripts/lint/report/` 에 같은 접두 `.cpp` 가족과 줄 수를 보고하는 스크립트를 두고,
@@ -217,6 +217,7 @@
 | `TurnOrder::Actor`(private) | `TurnOrder::Combatant` |
 | `Engine/Object/Animation/`(AnimationSystem · Crowd · LOD · Rewind · 워핑 컴포넌트 · 정점 애니메이션 베이커) | `Engine/Object/SceneAnimation/`(2026-10-13 — 애니메이션 데이터 폴더 `Engine/Animation/` 과 구분) |
 | `Object/GameObject/{ScenePhysics,SceneOverlapWorld2D,SceneAudio,MeshInstanceBatch,SpriteInstanceBatch}` · `GameObjectManager::getScenePhysics` · `getSceneAudio` · `getOverlapWorld2D` | `Object/Component/{Physics,Audio,3D,2D}/` · `getSceneService<ScenePhysics>()` · `getSceneService<SceneAudio>()` · `getSceneService<ScenePhysics>().getOverlapWorld2D()`(2026-10-13) |
+| `EngineLoop` · `Engine/EngineLoop.h` · `_engineLoop`(2026-10-15) | `Engine` · `Engine/Engine.h` · `_engine` (네임스페이스 `engine` 은 그대로 — 5-3) |
 | `PhysicsTypes.h` 의 `PhysicsHandle` · `PhysicsBodyHandle` 등 핸들 | `Engine/Common/PhysicsHandle.h`(2026-10-13 — 컴포넌트 모델 코어가 Physics 를 include 하지 않게) |
 
 일부러 둔 용어: stamp · kit · cook · orphan · chord · pin.
@@ -390,7 +391,7 @@
   (`FrameRenderer::resolvePresentSource` 가 사본 대신 뷰를 돌려줍니다). `fixed_string` 은 상한이 코드 상수이고, 힙이 금지된 경로(크래시 · 로그 · 시그널)나
   고정 버퍼가 필요한 곳(ImGui 입력)에만 씁니다. 언리얼도 `FString` 을 기본으로 두고, 인라인 버퍼(`TStringBuilder<N>`, 넘치면 힙으로 늘어남)는 임시 조립에만 씁니다.
 - **Engine 폴더 사이의 작은 고리는 "위층이 아래층 등록표에 등록" 과 "둘을 다 아는 층으로 옮기기" 로 풉니다**(2026-10-11, 엔진 분할 1 단계). 자동화 실행기는 UI 를 모르고 UI 가 단계 · 로딩 화면 시작 차단 조건(`SW_AUTOMATION_START_BLOCKER`)을 올립니다 — 언리얼 Automation 도 모듈이 테스트 · 래치 명령을 등록하고 실행기는 그 모듈을 모릅니다.
-  정점 애니메이션 굽기(`MeshVertexAnimationBaker`)는 `Object/SceneAnimation` 으로, 물리 디버그 선 어댑터는 조립점 `EngineLoop.cpp` 로 옮겨 `Graphics` 가 `Animation` · `Physics` 를 include 하지 않습니다 — 언리얼 AnimToTexture 도 애니메이션과 렌더를 함께 드는 별도 플러그인입니다.
+  정점 애니메이션 굽기(`MeshVertexAnimationBaker`)는 `Object/SceneAnimation` 으로, 물리 디버그 선 어댑터는 조립점 `Engine.cpp` 로 옮겨 `Graphics` 가 `Animation` · `Physics` 를 include 하지 않습니다 — 언리얼 AnimToTexture 도 애니메이션과 렌더를 함께 드는 별도 플러그인입니다.
 - **엔진 내장 에셋 캐시는 기능 폴더가 등록하고 `AssetManager` 는 등록표만 봅니다**(2026-10-11, 엔진 분할). 캐시 클래스의 .cpp 에 `SW_BUILT_IN_ASSET_CACHE( MaterialCache )` 한 줄을 두고(`Resource/Cache/BuiltInAssetCache.h`),
   매니저는 생성자에서 표를 훑어 소유 캐시를 만들고 종류 이름 순으로 올립니다. 타입으로 찾는 창구는 `getAssetCache<T>()` 입니다(`getMaterialCache` 넷은 지웠습니다).
   언리얼 서브시스템(모듈이 타입을 올리고 엔진이 인스턴스를 만들며 `GetSubsystem<T>()` 로 찾는다) · 고도 `register_types` 의 `add_resource_format_loader` 와 같은 방향입니다 — 유니티 `ScriptedImporter` 도 특성으로 등록되고 `AssetDatabase` 는 구현 타입을 모릅니다.
@@ -439,6 +440,25 @@
   `take` 가 비었다고 `isPending` 을 따로 읽으면 그 사이 끝난 결과를 새 요청이 버린다(E-9 Quick Open 에서 나온 결함). 요청 여부는 `take` 의
   반환값으로 정하고, `isPending` 은 화면 표시용이다. 풀을 가리키는 핸들(`TaskHandle` · `TaskStageHandle`)의 수명 순서는 세대가 아니라
   참조 계수로 닫혀 있다 — 매니저가 사라질 때 남은 핸들이 풀을 이어받고(`TaskNodePool::detachOwner`) 마지막 핸들이 풀을 소멸시킨다.
+- **엔진 루프 클래스는 `Engine` 이고 서비스 네임스페이스 `engine` 은 그대로 둔다**(2026-10-15, 정리 ⑥). 둘은 대소문자만 다르지만 C++ 에서 클래스(`sw::Engine`)와
+  네임스페이스(`sw::engine`)는 다른 이름이고, 이 저장소의 규칙(타입은 PascalCase · 네임스페이스는 소문자, 예 `editor`)이 그대로 구분한다. 네임스페이스를 바꾸지 않는 까닭: `engine::getXxx` 호출이 929 줄이고
+  C-28 이 그것을 주입으로 줄이는 중이라 이름만 바꾸는 큰 변경은 얻을 것이 적다. 클래스를 `EngineLoop` 로 두지 않는 까닭: 이 객체는 루프만이 아니라 부트스트랩 · 서비스 · 엔진 세 범위와 프레임 관찰자 ·
+  종료 코드를 소유하는 엔진 호스트의 본체다. 언리얼의 `UEngine`(`GEngine`)도 틱 루프와 서브시스템 범위를 함께 가진 한 객체로 알고 있다(기억에 의존). 로컬 변수 `engine` 은 네임스페이스를 가리지 않는다 —
+  한정 이름 조회(`engine::`)는 타입과 네임스페이스만 본다. 별칭 · 옛 이름은 두지 않는다(파일 `EngineLoop.h` · `.cpp` → `Engine.h` · `.cpp`, 멤버 `_engineLoop` → `_engine`).
+- **호스트 범위가 엔진 범위의 부모다 — 엔진 앞에 서서 뒤에 사라지고, 호스트가 엔진에 내주는 것을 든다**(2026-10-15, 정리 ⑥). App · ServerApp 이 `SubsystemScope _host` 를 `_engine` 보다 앞에 두고
+  (`Engine::initialize` 의 마지막 인자로 넘겨 부트스트랩 범위의 부모로 잇는다. 사슬은 엔진 → 서비스 → 부트스트랩 → 호스트). 거기에 거는 것은 둘이다.
+  ① **모듈 이미지 창구**(`ModuleImageHostSubsystem`, `IModuleImageHost` 로 드러낸다): 엔진의 `ModuleTypes` 단계가 `loadTypeProviders` 를, `ModuleImages` 의 종료가 `onScenesReleased` 를
+  자기 범위에서 부모로 올라가며 찾아 부른다. 옛 `Engine::setModuleTypeLoader` · `setOnScenesReleased` 와 델리게이트 멤버 둘은 지웠다 — 엔진이 호스트의 델리게이트를 들던 고리가
+  "부모 범위의 호스트에 의존" 이 됐고, 호스트 범위가 없는 하네스는 자리만 둔다. DLL 언로드는 그대로 씬 뒤 · 서비스 앞(엔진 범위 종료의 `ModuleImages` 자리)에서 일어난다 —
+  엔진 범위 종료는 모든 서브시스템에 `stopSubsystem` 을 먼저 돌린 뒤 `shutdownSubsystem` 을 도는 두 패스이고, 훅은 `ModuleImages` 의 종료 패스에서 `getSubsystemDependents`(입력 · 오디오 · 씬 · 비동기 IO) 뒤에 불린다.
+  ② **자동화 구동기**(`AutomationSession`, App 만): 서브시스템이 됐다. 초기화는 하는 일이 없고 `-scenario` 를 읽은 App 이 엔진이 선 뒤 `begin` 으로 시작한다. 구동기는 엔진 서비스(로그 리스너 · 입력)를 빌려 쓰므로
+  엔진 종료 앞에서 내려야 하는데 호스트 범위는 엔진 종료 안에서도 창구 때문에 살아 있어야 한다 — 그래서 창구가 `getSubsystemDependents` 로 구동기를 뒤에 서는 것으로 적고
+  App 이 `shutdownDependentsOf( 창구 )` 로 구동기만 먼저 내린다(그 API 는 원래 백엔드 교체용이다). `Dev` 호스트 비트는 두지 않았다: 자동화는 Shipping 구성에서도 쓴다
+  (`AppScenarioTest` 가 Shipping 에서 백엔드 스위치 없이 시나리오를 돌린다)라 `#if !defined( SW_SHIPPING )` 로 감쌀 개발 도구가 아니다. 개발 도구가 이 범위에 오면 호스트가 그 한 자리에서 `#if` 로 넣는다.
+  언리얼은 엔진 서브시스템(`UEngineSubsystem`)과 게임 인스턴스 서브시스템의 부모 · 자식으로 수명을 가르고, `FEngineLoop` 이 모듈 로드 순서를 쥐는 것으로 알고 있다(기억에 의존).
+  `OnlineServerRuntime` 의 `_bHostStarted` · `_bSchedulerStarted` 는 지웠다 — 호스트(`OnlineServiceHost::shutdown`)는 자기 초기화 비트를 보고 스케줄러는 목록을 비울 뿐이라 시작 여부를 밖에서 적을 필요가 없었다.
+  테스트 하네스(`TestHostRuntime`)는 호스트 범위를 두지 않는다 — 모듈 DLL 을 올리고 내리지 않고 타입은 리플렉션 단계가 이미 모았다(`EngineInitSequenceTest.ModuleImageStepsReachTheHostScopeThroughTheParentChain` 이
+  범위 사슬 찾기를, 호스트 범위가 없을 때의 무동작을 지킨다).
 
 ### 5-4. 데이터, 직렬화, 설정
 
@@ -534,14 +554,18 @@
 - **글리프는 단일 채널 SDF(FreeType 내장)로 그립니다**(2026-10-06). 유니티 TextMeshPro, 언리얼 SDF 글꼴과 같습니다. MSDF 는 [백로그](06_Backlog.md) `G-10` 입니다. FreeType 은 `vcpkg.json` 의 엔진 직접 의존입니다.
 - **백엔드 선택과 소유 객체의 서브시스템 판정**(2026-10-15, C-27 ⑤ 마감 — 코드를 다시 읽고 확정, 코드 변경 없음). 상용 엔진 비교는 모두 "~로 알고 있다" 로 기억에 의존한다.
   - **오디오는 이미 역할별 팩토리가 서브시스템 하나를 고른다.** `IAudioService::create()` 가 `SW_PLATFORM_WINDOWS` 와 `SW_WITH_CLIENT_CODE` 이면 `XAudio2AudioBackend`, 아니면 `NullAudioBackend` 를 돌려주고,
-    `EngineLoop` 는 전용 서버(`bDedicatedServer`)면 `createNull()` 을 골라 기동 단계에 `addSubsystem` 한다. 소비자는 구현 종류를 모르고 `IAudioService` 만 본다. 언리얼 오디오 믹서가 플랫폼별 `IAudioMixerPlatformInterface` 를 고르는 모양으로 알고 있다.
+    `Engine` 는 전용 서버(`bDedicatedServer`)면 `createNull()` 을 골라 기동 단계에 `addSubsystem` 한다. 소비자는 구현 종류를 모르고 `IAudioService` 만 본다. 언리얼 오디오 믹서가 플랫폼별 `IAudioMixerPlatformInterface` 를 고르는 모양으로 알고 있다.
   - **물리는 갈아 끼우는 쌍이 아니라 함께 쓰는 둘이다.** `PhysicsSystem`(서브시스템 `Physics`) 하나가 Jolt(3D, `createScene3D`)와 Box2D(2D, `createScene2D`)를 같은 때에 쓴다. 한 역할에 구현이 둘이 아니라 역할이 둘이라 호스트 종류로 고를 것이 없다.
     그래서 팩토리나 서브시스템을 더 나누지 않는다. 언리얼은 PhysX · Chaos 처럼 한 역할의 구현을 모듈로 고르지만, 3D · 2D 를 함께 켜는 것은 Paper2D 가 Box2D 를 3D 물리와 따로 쓰는 것과 비슷하게 알고 있다.
   - **`ResourcePakManager` 는 서브시스템이 아니다.** `AssetManager`(서브시스템)가 `_pPackManager` 로 소유하고 `ResourceIO::getPackManager()` 로만 닿는다. 종료 때 `AssetManager::shutdown` 이 `unmountAll` 로 비우고(마운트를 부르는 곳은 엔진 코드에 없고 호스트 · 도구 · 테스트가 건다),
     자기만의 의존 순서나 별도 수명 범위가 없다. 서브시스템으로 올리면 `AssetManager` 와 둘 사이에 의존 칸만 늘 뿐이다. 판정 기준의 "소유한 서브시스템 안의 객체" 이고, RHI 부품과 같은 이유로 타입 있는 멤버로 둔다.
   - **`ServerServiceManager` 는 엔진 범위 서브시스템이 아니다.** 소유자가 엔진 루프가 아니라 `ServerApp`(호스트)이고, 수명이 엔진 기동 · 종료가 아니라 모듈 리로드 직전의 `stopAll` 과 리로드 뒤 `startAll` 로 되풀이된다.
     서버 서비스의 코드는 모듈(DLL)에 있어 모듈 언로드 전에 멈춰야 하므로, 엔진 범위 종료 순서가 아니라 호스트의 모듈 리로드 순서를 따른다. 전용 서버 호스트에만 있고 의존 서브시스템 선언으로 순서를 정할 것도 없다.
-    호스트 범위(`NEXT.md` 3절 3번)가 생길 때 그 범위의 서브시스템으로 옮길지는 모듈 리로드의 stop → start 가 범위 종료 · 재기동 계약과 맞는지 보고 그때 정한다 — 지금 엔진 범위로는 올리지 않는다.
+    **호스트 범위 서브시스템으로도 옮기지 않는다**(2026-10-15, 호스트 범위를 세우며 확인). 서브시스템의 한 쌍(`initializeSubsystem` · `shutdownSubsystem`)은 범위 수명에 한 번이고,
+    되풀이하는 재기동은 `shutdownDependentsOf` → `restartStopped` 가 맡는데 이것은 "다른 서브시스템을 갈아 끼울 때 그에 기대는 것만" 내리고 다시 세우는 모양이다(RHI 백엔드 교체).
+    서버 서비스는 반대로 **자기 자신**이 모듈 리로드마다 멈췄다 시작해야 하고(`onBeforeModuleReload` 의 `stopAll` → 다음 틱 `startAll`), 시작이 게임 인스턴스 · 서버 설정 · 지표 레지스트리가 선 뒤여야 한다.
+    그것들은 호스트 범위가 초기화되는 시점(엔진 앞)보다 늦게 서므로 범위의 위상 순서로는 표현할 수 없다. 멈추는 자리도 범위 종료가 아니라 모듈 언로드 직전의 콜백이다.
+    그래서 호스트가 `unique_ptr` 로 들고 모듈 리로드 · 종료 순서에서 직접 부르는 지금 모양이 맞다. 언리얼의 `FTickableGameObject` 서비스가 모듈 `ShutdownModule` 에서 수동으로 내려가는 것과 같은 자리로 알고 있다.
 - **체력 바와 데미지 숫자는 화면 마커 위젯입니다**(2026-10-06). 값은 컴포넌트 코드가 직접 넣습니다. 마커는 오브젝트마다 하나라 뷰모델과 문서를 두면 마커 수만큼 생기기 때문이고, 언리얼의 위젯 컴포넌트 체력 바도 보통 그렇게 합니다.
 - **데이터 바인딩은 뷰모델과 필드 통지입니다**(2026-10-06). 언리얼 5 MVVM 과 같은 구조이고, 알림은 필드마다의 단조 번호로 한 프레임에 한 번 반영합니다. 폴링 바인딩은 개발 편의용입니다.
 - **UI 문서와 스타일은 모두 엔진 XML 입니다**(2026-10-06). 파서가 하나여서 학습하기 쉽습니다. 스타일이 정한 필드만 위젯 필드를 이기고, 정하지 않은 필드는 위젯의 기본 모습을 씁니다.

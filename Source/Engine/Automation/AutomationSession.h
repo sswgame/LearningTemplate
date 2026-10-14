@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Utility/EngineFrameObserver.h"
 
@@ -18,19 +19,30 @@ namespace sw
     /**
      * @class AutomationSession
      * @brief 엔진 루프에 프레임 관찰자(`IEngineFrameObserver`)로 붙는 시나리오 구동기입니다. 루프는 관찰자 목록만 알고, 세션 · 실행기 · 체인 · 단계 전환은 모릅니다.
-     * @details 세션은 런처(App)가 `-scenario` 를 읽어 만들고 `EngineLoop::addFrameObserver` 로 붙입니다(전용 서버는 시나리오를 쓰지 않는다). 한 단계가 끝나면(통과해야 다음으로 간다 — `AutomationScenarioChain`) 같은 프로세스에서 다음 시나리오의 실행기를 새로 만든다. 그 단계가 시작할 때
+     * @details 호스트 범위의 서브시스템입니다(App 이 엔진을 세우기 전에 걸고, 전용 서버는 시나리오를 쓰지 않아 걸지 않는다). 서브시스템으로서의 초기화는 하는 일이 없고,
+     *          `-scenario` 를 읽은 런처가 엔진이 선 뒤에 `begin` 으로 시작해 `Engine::addFrameObserver` 로 붙입니다. 실행기는 엔진 서비스(로그 리스너 · 입력)를 빌려 쓰므로
+     *          엔진이 내려가기 전에 `shutdownSubsystem` 이 비웁니다 — 호스트 범위는 엔진보다 오래 살기 때문에 런처가 엔진 종료 앞에서 이 서브시스템만 먼저 내립니다
+     *          (모듈 이미지 창구의 뒤에 서는 서브시스템이라 `shutdownDependentsOf` 로 닿는다). 한 단계가 끝나면(통과해야 다음으로 간다 — `AutomationScenarioChain`) 같은 프로세스에서 다음 시나리오의 실행기를 새로 만든다. 그 단계가 시작할 때
      *          - 프로세스의 **작업 폴더**가 처음과 같은지 보고(파일 대화상자 같은 것이 옮긴다) 다르면 경고하고 되돌린다,
      *          - `gv_fixedFrameDelta` 를 그 시나리오의 `fixedDelta` 로 맞추고,
      *          - 렌더 스레드가 지금까지 쓴 시나리오 스크린샷 수를 기준선으로 잡는다(실행기는 자기 단계가 요청한 것만 기다린다 — 렌더 스레드의 수는 프로세스 전체로 누적된다).
      *          게임 스레드에서만 쓴다.
      */
-    class SW_API AutomationSession : public IEngineFrameObserver
+    class SW_API AutomationSession : public IEngineFrameObserver, public ISubsystem
     {
     public:
+        /** @brief 서브시스템 이름입니다(같은 범위의 다른 서브시스템이 의존 칸에 적는다). */
+        static constexpr const utf8* kSubsystemName = "Automation";
+
         AutomationSession();
         ~AutomationSession() override;
         AutomationSession( const AutomationSession& )            = delete;
         AutomationSession& operator=( const AutomationSession& ) = delete;
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        /** @brief 지금 단계의 실행기와 체인을 비웁니다(엔진 서비스를 빌려 쓰는 것이 엔진보다 먼저 사라지게). 시작하지 않았으면 아무것도 하지 않습니다. */
+        void        shutdownSubsystem() override;
+        const utf8* getSubsystemName() const override { return kSubsystemName; }
 
         /**
          * @brief 시나리오 목록(`a,b,c` 또는 하나)으로 시작하고 첫 단계를 엽니다.
@@ -38,7 +50,7 @@ namespace sw
          * @param reportPath `-scenario-report=` 값(비면 보고 파일을 쓰지 않는다. 단계가 여럿이면 단계마다 번호가 붙는다)
          * @param bKeepGoing `-scenario-keep-going` — 실패한 단계 뒤에도 이어 돌린다
          * @param completedScreenshotCount 지금까지 렌더 스레드가 쓴 시나리오 스크린샷 수
-         * @return 돌릴 시나리오가 하나라도 있으면 true 입니다(없으면 아무것도 하지 않는다).
+         * @return 돌릴 시나리오가 하나라도 있으면 true 입니다(없으면 아무것도 하지 않고 체인도 남기지 않는다).
          */
         [[nodiscard]] bool begin( string_view scenarioArgument, string_view reportPath, bool bKeepGoing, uint32 completedScreenshotCount );
 

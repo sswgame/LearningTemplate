@@ -6,7 +6,7 @@
 ## 1. 지금 상태 (2026-10-14)
 
 main 은 이 문서의 커밋이고, 그 앞이 C-27 ③ · ⑥ 커밋(외부 프로파일러 · 메모리 예산 · 리소스 루트 서브시스템, OnlineLoadBot 의 부트스트랩 서브시스템)이다.
-push 와 CI 확인은 조정자의 일이고, 이 문서를 쓸 때의 CI 결과는 적지 않았다. 서브시스템 정리의 ① ~ ⑤ 와 C-27 ① ② ③(남은 것 하나) ④ ⑥ · C-26 이 main 에 있습니다.
+push 와 CI 확인은 조정자의 일이고, 이 문서를 쓸 때의 CI 결과는 적지 않았다. 서브시스템 정리는 `wt/host` 의 호스트 범위까지 끝났다(그 전의 ① ~ ⑤ 와 C-27 · C-26 은 main 에 있습니다).
 원격 브랜치 `origin/wt/rest`(빌드 전 WIP `7e7c1c0fd`)는 이제 쓸모없다 — 조정자가 `git push origin --delete wt/rest` 로 지운다.
 
 **에디터 보강 브랜치 `wt/editor`(2026-10-14, 사용자 지시로 main 에 병합하지 않고 별도 브랜치로 push).** main 의 이 문서 커밋에서 갈라 에디터 보강 묶음을 넣었다 — 버그 리포트 창 · 인스펙터 보기 옵션 ·
@@ -41,21 +41,14 @@ Conform 의 `SurfaceBvh`)을 풀었다. 최종 검증: Debug `all AllTests` **�
 - **에이전트는 push 하지 않는다.** 조정자가 push 하고 `gh` 로 CI 를 본다. `gh` 는 `C:\Program Files\GitHub CLI` 를 PATH 에 더해야 잡힌다.
 - **에이전트를 띄울 때 모델을 밝힌다**(보고 · 커밋의 `Co-Authored-By` 줄과 같게).
 
-## 3. 서브시스템 정리 — 남은 단계
+## 3. 서브시스템 정리 — 끝난 모양과 지킬 요구
 
-진행 방식: 단계마다 커밋하고, 그 단계의 검증(2절)을 통과한 뒤 main 에 ff 병합합니다. 단계 안에서 빠뜨린 것은 다음 단계로 미루지 않고 고칩니다.
-지금 모양: 호스트(엔진 루프 · 테스트 하네스)가 부트스트랩 → 서비스 → 엔진 세 `SubsystemScope` 를 부모로 잇고, 씬은 `GameObjectManager` 의 씬 범위,
-게임 · 에디터는 각자 범위를 듭니다. 서비스 표(`engine::getXxx`)는 바인딩 때 한 번 찾아 둔 캐시이고, 모듈은 호스트가 넘긴 서비스 범위에서 타입으로 찾습니다.
-
-1. **C-27 ③ 의 남은 것** — 부트스트랩 순서는 진단 → 이름 풀 → 로거 → 명령줄 → 크래시 핸들러 → 리소스 루트 → 메모리 예산 → 정적 저장소다
-   (`EngineInitSequenceTest.BootstrapScopeRunsFromDiagnosticsToStaticStorage` 가 지킨다). 메모리 예산 표는 첫 프레임 끝에 읽는다(타입 등록부가 엔진 범위라서).
-   남은 ③: 자동화 구동기(`AutomationSession`)는 App 호스트 범위로(3번과 함께). `Dev` 호스트 비트는 두지 않는다 — 개발 도구는 호스트가 `#if !defined( SW_SHIPPING )`
-   한 자리에서 넣는다. `DevCommandRegistry` · `AutomationStepRegistry` · `AutomationProbes` 는 정적 등록 표라 제외.
-2. **`EngineLoop` → `Engine` 개명**(조정자가 시점을 알린다). `sw::Engine`(클래스)과 `sw::engine`(네임스페이스)의 철자 충돌을 먼저 정리한다. 약 95 파일과
-   AGENTS.md · 결정 기록까지 고친다.
-3. **호스트 범위**(App · ServerApp · ModuleHost 의 컬렉션, 개명 뒤). 엔진 범위의 부모로 두고, 엔진의 ModuleImages · ModuleTypes 단계가 ModuleHost 델리게이트를 부르는
-   고리를 "부모 범위의 모듈 호스트에 의존" 으로 바꿀 수 있는지 본다. DLL 언로드는 씬 뒤 · 서비스 앞이라 엔진 범위 종료의 두 패스(stop → shutdown) 사이에 있어야 한다.
-   `_bHostStarted` · `_bSchedulerStarted` 같은 플랫폼 플래그도 이때 지운다. `ServerServiceManager`(ServerApp 소유, 모듈 리로드마다 stop → start)를 이 범위의 서브시스템으로 옮길지도 이때 본다(결정 기록 5-3).
+서브시스템 정리의 단계는 모두 끝났다(근거는 결정 기록 5-3). 지금 모양: 호스트(App · ServerApp)가 호스트 범위(모듈 이미지 창구 · 자동화 구동기)를 들고 그 아래로
+부트스트랩 → 서비스 → 엔진 세 `SubsystemScope` 를 부모로 잇는다(테스트 하네스는 호스트 범위 없이 세 범위). 씬은 `GameObjectManager` 의 씬 범위, 게임 · 에디터는 각자 범위를 든다.
+서비스 표(`engine::getXxx`)는 바인딩 때 한 번 찾아 둔 캐시이고, 모듈은 호스트가 넘긴 서비스 범위에서 타입으로 찾는다. 부트스트랩 순서는 진단 → 이름 풀 → 로거 → 명령줄 →
+크래시 핸들러 → 리소스 루트 → 메모리 예산 → 정적 저장소다(`EngineInitSequenceTest.BootstrapScopeRunsFromDiagnosticsToStaticStorage` 가 지킨다). 메모리 예산 표는 첫 프레임 끝에
+읽는다(타입 등록부가 엔진 범위라서). `ServerServiceManager` 는 호스트 소유 객체로 남긴다(모듈 리로드마다 자기 stop → start 라 범위 종료 · 재기동 계약과 맞지 않는다 — 5-3).
+`DevCommandRegistry` · `AutomationStepRegistry` · `AutomationProbes` 는 정적 등록 표라 서브시스템이 아니다.
 
 지킬 요구: 엔진 루프 · 부트스트랩 · 헤드리스 헤더는 호스트만 include 한다(`CheckEngineLayers` 가 Games · GameFramework · Editor 에서 막는다). 모듈 조회 창구는
 읽기 전용 `ISubsystemLocator`(Core)이고 타입 해시로 DLL 경계를 넘는다. 컴포넌트는 `SceneEngineServices` 주입을 쓴다.
@@ -118,7 +111,7 @@ Conform 의 `SurfaceBvh`)을 풀었다. 최종 검증: Debug `all AllTests` **�
 
 ## 7. 새 세션 시작 절차
 
-1. 이 문서 → [작업 방식](../11_Workflow.md) → [백로그](../06_Backlog.md) C 절(`C-24` · `C-27` · `C-28`) → [결정 기록](../09_Decisions.md) 서브시스템 절 순서로 읽는다.
+1. 이 문서 → [작업 방식](../11_Workflow.md) → [백로그](../06_Backlog.md) C 절(`C-24` · `C-28`) → [결정 기록](../09_Decisions.md) 서브시스템 절 순서로 읽는다.
    C++ 을 쓰기 전에 [AGENTS.md](../../AGENTS.md).
 2. 4절의 남은 검증(Release 빌드 + 스크린샷 sha 대조 · hostgpu 재확인 · 스모크 둘)을 먼저 한다.
-3. 그다음 3절 2번부터 이어간다(1번 C-27 ③ · ⑥ 병합은 끝났다).
+3. 그다음 5절(그 밖의 남은 일)을 위에서부터 이어간다(서브시스템 정리는 끝났다).

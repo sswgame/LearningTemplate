@@ -34,7 +34,7 @@ SW_TEST_REQUIRES_HOST( AppSmokeTest, "launches the real App.exe, which needs a G
 // 1) AppSmokeTest — "실기동 게이트" 를 자동화한 것
 //
 // 이 저장소의 실질적인 최종 검증은 **App 을 띄워 보는 것**이다(네 백엔드 × 에디터 유무, 종료 코드 0,
-// 로그에 `[Error]` 0건). `EngineLoop` 은 어떤 단위 테스트도 돌리지 않으므로, 이 절차를 테스트로 두지
+// 로그에 `[Error]` 0건). `Engine` 은 어떤 단위 테스트도 돌리지 않으므로, 이 절차를 테스트로 두지
 // 않으면 **엔진 기동 전체가 자동 그물 밖**에 있다.
 //
 // 무엇을 보는가:
@@ -45,7 +45,7 @@ SW_TEST_REQUIRES_HOST( AppSmokeTest, "launches the real App.exe, which needs a G
 // 무엇을 안 보는가: 화면의 그림. 그건 `-gv_screenshot` 픽셀 비교의 일이고 여기 섞으면 이 게이트가
 // 느려져 아무도 안 돌린다.
 //
-// **로거가 서기 전의 실패는 이 게이트가 못 본다.** `Logger` 는 `EngineLoop::initialize` 안에서
+// **로거가 서기 전의 실패는 이 게이트가 못 본다.** `Logger` 는 `Engine::initialize` 안에서
 // 만들어지므로 그 앞에서 부른 `SW_LOG_ERROR` 는 아무 데도 남지 않는다. 그 구간의 실패는 **종료 코드로만** 드러난다.
 // ------------------------------------------------------------------------------
 

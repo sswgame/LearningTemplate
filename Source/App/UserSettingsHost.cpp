@@ -6,7 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/EngineLoop.h"
+#include "Engine/Engine.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Renderer/RenderThread.h"
@@ -22,28 +22,28 @@ namespace sw
     SW_LOG_CALLER( "UserSettingsHost" );
 
     UserSettingsHost::UserSettingsHost()
-        : _pEngineLoop{ nullptr }
+        : _pEngine{ nullptr }
         , _pWindow{ nullptr }
         , _frameIndex{ 0 }
     {
     }
 
-    void UserSettingsHost::initialize( EngineLoop* pEngineLoop, IWindow* pWindow )
+    void UserSettingsHost::initialize( Engine* pEngine, IWindow* pWindow )
     {
-        _pEngineLoop = pEngineLoop;
-        _pWindow     = pWindow;
-        _frameIndex  = 0;
+        _pEngine    = pEngine;
+        _pWindow    = pWindow;
+        _frameIndex = 0;
     }
 
     void UserSettingsHost::shutdown()
     {
-        _pEngineLoop = nullptr;
-        _pWindow     = nullptr;
+        _pEngine = nullptr;
+        _pWindow = nullptr;
     }
 
     void UserSettingsHost::tick( float32 deltaSeconds )
     {
-        if ( _pEngineLoop == nullptr || engine::areEngineServicesBound() == false )
+        if ( _pEngine == nullptr || engine::areEngineServicesBound() == false )
             return;
         ++_frameIndex;
         if ( gv_userSettingsApply.empty() == false && _frameIndex == static_cast<uint32>( gv_userSettingsApplyFrame ) )
@@ -88,12 +88,12 @@ namespace sw
 
     void UserSettingsHost::applyDisplayRequest( const DisplaySettingsRequest& request )
     {
-        RHI* pRHI = _pEngineLoop->getRHI();
+        RHI* pRHI = _pEngine->getRHI();
         if ( pRHI == nullptr || pRHI->hasDevice() == false )
             return;
 
         // 렌더 스레드가 지난 프레임을 그리는 중일 수 있다 — 스왑체인 · present 값을 바꾸기 전에 비운다(App::onResize 와 같은 규칙).
-        RenderThread* pRenderThread = _pEngineLoop->getRenderThread();
+        RenderThread* pRenderThread = _pEngine->getRenderThread();
         if ( pRenderThread != nullptr )
             pRenderThread->waitIdle();
 

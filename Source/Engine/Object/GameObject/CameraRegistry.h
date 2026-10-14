@@ -62,7 +62,7 @@ namespace sw
         /** @brief 카메라 컷이 고른 카메라입니다. 없으면 nullptr 입니다. */
         CameraComponent* getCutCamera() const;
 
-        /** @brief 이 씬의 게임 카메라가 그리는 뷰포트의 픽셀 크기를 적습니다(`EngineLoop` 가 틱 전에). 모르면 0 입니다. */
+        /** @brief 이 씬의 게임 카메라가 그리는 뷰포트의 픽셀 크기를 적습니다(`Engine` 가 틱 전에). 모르면 0 입니다. */
         void setViewportSize( uint32 width, uint32 height )
         {
             _viewportWidth  = width;

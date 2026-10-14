@@ -8,7 +8,7 @@
 |---|---|
 | 파일 | `Resource/engine/data/enginedefaultassets.xml` |
 | 층 | 엔진 기본값 |
-| 읽는 곳 | `EngineDefaultAssets::loadFromResource` (`EngineLoop` 엔진 셸 단계) |
+| 읽는 곳 | `EngineDefaultAssets::loadFromResource` (`Engine` 엔진 셸 단계) |
 | 언제 | 기동 |
 | 배포본 | 엔진 팩에 실림 |
 | 커밋 | 한다 |

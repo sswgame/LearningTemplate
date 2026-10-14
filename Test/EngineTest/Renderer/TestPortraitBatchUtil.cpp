@@ -5,7 +5,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// EngineLoop 에서 떼어 낸 순수 로직 — 초상화 파일 이름 줄기 · 셸 액션 맵이 아직 없을 때(디바이스 · 입력 매니저 없이).
+// Engine 에서 떼어 낸 순수 로직 — 초상화 파일 이름 줄기 · 셸 액션 맵이 아직 없을 때(디바이스 · 입력 매니저 없이).
 
 /**
  * @brief [PortraitBatchUtilTest] 파일 이름 줄기는 경로의 마지막 조각에서 첫 점 앞까지다

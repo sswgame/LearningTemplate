@@ -285,7 +285,7 @@ SW_TEST_CASE( CompressionCodecTest, CodecComparisonMeasurement )
  */
 SW_TEST_CASE( CompressionCodecTest, RegisteredExternalCodecsAreReachableFromStream )
 {
-    // **테스트 호스트는 EngineLoop 을 돌리지 않는다** — 앱에서는 거기서 등록하지만 여기서는 없다.
+    // **테스트 호스트는 Engine 을 돌리지 않는다** — 앱에서는 거기서 등록하지만 여기서는 없다.
     // 스킵하면 아무것도 증명하지 못하므로 직접 등록해서 "등록하면 스트림이 집어 쓴다" 를 확인한다.
     sw::CompressionCodecRegistry& registry = *sw::CompressionCodecRegistry::getActive();
 

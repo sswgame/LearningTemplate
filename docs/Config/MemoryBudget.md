@@ -8,7 +8,7 @@
 |---|---|
 | 파일 | `Config/Engine/MemoryBudget.json` |
 | 층 | 엔진 기본값 |
-| 읽는 곳 | `MemoryBudgetMonitor::loadBudgetFile` (`EngineLoop` Config 단계) |
+| 읽는 곳 | `MemoryBudgetMonitor::loadBudgetFile` (`Engine` Config 단계) |
 | 언제 | 기동 |
 | 배포본 | 읽지 않음(배포본에는 메모리 프로파일러가 없다) |
 | 커밋 | 한다 |

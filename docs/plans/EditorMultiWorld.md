@@ -7,7 +7,7 @@
 
 ### 1.1 프레임 경로 — 활성 씬 하나
 
-- `Source/Engine/EngineLoop.h/.cpp` 의 `EngineLoop::tick( deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate&, bool bTickScene )` 가 한 프레임을 돕니다.
+- `Source/Engine/Engine.h/.cpp` 의 `Engine::tick( deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate&, bool bTickScene )` 가 한 프레임을 돕니다.
   씬을 고르는 곳은 모두 `_pSceneManager->getActiveScene()` 입니다(`makeFrameContext`, "Scene update" 블록, `SceneDebugDraw::update`, 패킷 단계).
 - 씬 틱은 `SceneManager::tick( deltaTime )` 하나입니다. `bTickScene` 이 false 면(에디터 정지) 건너뛰고 `_sceneDeltaSeconds` 는 0 입니다.
 - 패킷은 `RenderPacketBuilder::beginPacket` → `populateScene( packet, views, sceneViewCameraProvider, pActiveScene, … )` → `populateCanvas` → 렌더 스레드 제출 순서입니다.
@@ -99,7 +99,7 @@ Undo 를 창마다 두는 것은 두 엔진과 다릅니다. 두 엔진 모두 �
 각 단계는 끝나면 `cmake --build --preset Ninja-Debug --target all AllTests` 가 경고 0 으로 빌드되고 기존 테스트가 통과하는 크기입니다.
 
 ### 단계 1 — 씬 틱 정책과 미리보기 씬 목록 (엔진, 렌더 변경 없음)
-- 파일: `Engine/Scene/SceneManager.h/.cpp`(미리보기 목록 · `createPreviewScene` · `destroyPreviewScene` · 틱), `Engine/Scene/Scene.h`(틱 정책 필드), `Engine/EngineLoop.cpp`("Scene update" 블록).
+- 파일: `Engine/Scene/SceneManager.h/.cpp`(미리보기 목록 · `createPreviewScene` · `destroyPreviewScene` · 틱), `Engine/Scene/Scene.h`(틱 정책 필드), `Engine/Engine.cpp`("Scene update" 블록).
 - 위험: 씬 서비스(`ScenePhysics` · `SceneAudio` · `SceneNavigation`)가 전역 단일 씬을 가정한 곳. 오디오는 미리보기 씬에서 끕니다.
 - 확인: 새 단위 테스트 — 미리보기 씬이 정책대로 틱 · 물리 스텝을 하고 활성 씬 전환에 영향받지 않음. 씬 전환 테스트 기존 결과 유지.
 - **구현됨(2026-10-15)**: `SceneManager` 의 미리보기 씬 목록(`createPreviewScene` · `destroyPreviewScene` · 키 `getPreviewSceneKey` · `findPreviewScene` · `tickPreviewScenes`),
@@ -114,7 +114,7 @@ Undo 를 창마다 두는 것은 두 엔진과 다릅니다. 두 엔진 모두 �
 - 확인: RenderPass GPU 테스트 · 이미지 비교 테스트가 그대로(주 씬만 있을 때 동일 이미지), 새 테스트 — 두 씬을 두 타깃에 그려 서로 섞이지 않음. `Scripts/dev/BackendSmoke.py` 로 네 백엔드. Shipping 도 확인.
 
 ### 단계 3 — 호스트 뷰 목록과 `EditorRenderViews` 일반화
-- 파일: `RenderView.h`(`HostSceneView` 목록), `EngineLoop.h/.cpp`(`tick` 인자), `Editor/Common/Workspace/EditorRenderViews.h/.cpp`(id 키 타깃), 에디터 메인 루프의 `tick` 호출부.
+- 파일: `RenderView.h`(`HostSceneView` 목록), `Engine.h/.cpp`(`tick` 인자), `Editor/Common/Workspace/EditorRenderViews.h/.cpp`(id 키 타깃), 에디터 메인 루프의 `tick` 호출부.
 - 위험: 에디터 없는 실행(백버퍼 경로)과 서버. 두 슬롯 경로를 그대로 두어 줄입니다.
 - 확인: 에디터 스모크(`-gv_editorPanelDump -gv_profileFrames=60`), 게임 단독 실행 이미지 동일.
 

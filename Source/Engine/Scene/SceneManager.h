@@ -74,7 +74,7 @@ namespace sw
         SceneManager& operator=( const SceneManager& ) = delete;
 
         /**
-         * @brief 엔진 서비스 묶음 @p services 를 받아 매니저를 초기화합니다. 호스트(`EngineLoop` · 테스트 하네스)가 표를 묶은 뒤 부릅니다.
+         * @brief 엔진 서비스 묶음 @p services 를 받아 매니저를 초기화합니다. 호스트(`Engine` · 테스트 하네스)가 표를 묶은 뒤 부릅니다.
          * @details 이 매니저와 이 매니저가 만드는 씬(동기 · 비동기 로드)은 이 묶음만 씁니다. 빈 칸의 일(로드 띄우기 · 에셋 정리 · 되돌리기 비우기)은 건너뛰고,
          *          타입 표가 없으면 씬 로드를 거절합니다.
          */

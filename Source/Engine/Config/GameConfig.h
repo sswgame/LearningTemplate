@@ -66,7 +66,7 @@ namespace sw
         PROPERTY()
         map<string, string> _mapUserSettingDefault{};
 
-        /** @brief App/EngineLoop 가 읽은 활성 값을 GameInstance 부트스트랩에 전달합니다. */
+        /** @brief App/Engine 가 읽은 활성 값을 GameInstance 부트스트랩에 전달합니다. */
         static void              setActive( const GameConfig& config );
         static const GameConfig& getActive();
     };

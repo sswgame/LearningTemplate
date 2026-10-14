@@ -65,7 +65,7 @@ SW_TEST_CASE( EditorVisualizerGeometryTest, ColliderOutlineIsThePhysicsBox )
 
 /**
  * @brief [EditorVisualizerGeometryTest] 디버그 큐의 선은 그대로, 구는 대원 세 개의 선분으로 나온다
- * @details `DebugDrawQueue` 는 게임 코드가 채우고 `EngineLoop` 가 비운다. 뷰포트 시각화(`debug_draw`)가 이 선분을 투영해 그린다.
+ * @details `DebugDrawQueue` 는 게임 코드가 채우고 `Engine` 가 비운다. 뷰포트 시각화(`debug_draw`)가 이 선분을 투영해 그린다.
  */
 SW_TEST_CASE( EditorVisualizerGeometryTest, DebugDrawQueueBecomesWorldSegments )
 {

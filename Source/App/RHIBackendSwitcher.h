@@ -14,7 +14,7 @@ namespace sw
     struct GlobalVariableInfo;
 
     class EditorModuleHost;
-    class EngineLoop;
+    class Engine;
 
     /**
      * @class RHIBackendSwitcher
@@ -36,14 +36,14 @@ namespace sw
 
         /**
          * @brief 협력 객체를 연결하고 gv_rhiBackend 변경 훅을 설치합니다.
-         * @param pEngineLoop RHI 와 LiveReloadManager 를 소유한 루프
+         * @param pEngine RHI 와 LiveReloadManager 를 소유한 루프
          * @param pModuleHost 교체 전후로 내리고 다시 세울 모듈 호스트
          * @param bEnableEditor 에디터 모드면, 에디터를 지원하지 않는 백엔드 요청을 되돌립니다.
          */
-        void initialize( EngineLoop* pEngineLoop, EditorModuleHost* pModuleHost, bool bEnableEditor );
+        void initialize( Engine* pEngine, EditorModuleHost* pModuleHost, bool bEnableEditor );
         /**
          * @brief 변경 훅을 떼어 냅니다.
-         * @details GlobalVariableManager 는 EngineLoop 가 소유합니다. 그 종료보다 먼저 불러야 이미 사라진 this 를 가리키는 훅이
+         * @details GlobalVariableManager 는 Engine 가 소유합니다. 그 종료보다 먼저 불러야 이미 사라진 this 를 가리키는 훅이
          *          남지 않습니다.
          */
         void shutdown();
@@ -80,7 +80,7 @@ namespace sw
         [[nodiscard]] bool applyPendingChange();
 
     private:
-        EngineLoop*       _pEngineLoop; // 소유하지 않는다
+        Engine*           _pEngine;     // 소유하지 않는다
         EditorModuleHost* _pModuleHost; // 소유하지 않는다
 
         uint32 _failedSwapCount;

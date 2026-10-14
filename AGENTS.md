@@ -17,7 +17,7 @@ project conventions unless the user explicitly requests otherwise.
   C-ABI contract between App and Editor/Game modules. Do not put implementations
   in it.
 - `Source/App` is a thin executable launcher. In Dev it links only Engine and
-  RuntimeAPI; in Shipping it also statically links `SWGame`. It uses `EngineLoop`
+  RuntimeAPI; in Shipping it also statically links `SWGame`. It uses `Engine`
   for the main loop and `ModuleHost` to manage hot-reload state serialization
   and async-task fencing.
 - `Source/Editor` is Dev-only. `Source/GameFramework` contains genre-common
