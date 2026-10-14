@@ -119,6 +119,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorViewTargetUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorVisualizerGeometry.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorVisualizerToggles.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/TerrainBrush.cpp"
 	LIBS
 		Engine
 		Microsoft::DirectXTex
