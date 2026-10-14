@@ -46,14 +46,21 @@ namespace sw::editor
         DisplaceRenderTargetModifier()
             : MeshModifier()
             , _textureParam{ addParam( MeshModifierParamDef{ "Texture", MeshModifierParamKind::AssetPath, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f }, 1,
-                                                             "Static texture used in place of the runtime render target" } ) }
-            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _midLevelParam{ addParam( MeshModifierParamDef{ "Mid Level", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
+                                                             "Static texture used in place of the runtime render target" }
+                                                             .withLayout( "Texture", "Static texture that replaces the realtime render target for editor baking" ) ) }
+            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Displace", "Distance moved along the normal per unit height", "m" ) ) }
+            , _midLevelParam{ addParam( MeshModifierParamDef{ "Mid Level", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Displace", "Texture value that causes no displacement" ) ) }
             , _channelParam{ addParam( MeshModifierParamDef{ "Channel", MeshModifierParamKind::Int, 0.0f, 4.0f, float3{ 4.0f, 0.0f, 0.0f }, 1,
-                                                             "0 R 1 G 2 B 3 A 4 luminance" } ) }
-            , _tilingParam{ addParam( MeshModifierParamDef{ "Tiling", MeshModifierParamKind::Vector3, -100.0f, 100.0f, float3{ 1.0f, 1.0f, 0.0f }, 1, "u v (z unused)" } ) }
-            , _offsetParam{ addParam( MeshModifierParamDef{ "Offset", MeshModifierParamKind::Vector3, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "u v (z unused)" } ) }
+                                                             "0 R 1 G 2 B 3 A 4 luminance" }
+                                                             .withLayout( "Displace", "Texture channel used as height (0 R, 1 G, 2 B, 3 A, 4 luminance)" ) ) }
+            , _tilingParam{ addParam( MeshModifierParamDef{ "Tiling", MeshModifierParamKind::Vector3, -100.0f, 100.0f, float3{ 1.0f, 1.0f, 0.0f }, 1, "u v (z unused)" }.withLayout( "Mapping", "UV repeat count (z unused)" ) ) }
+            , _offsetParam{ addParam( MeshModifierParamDef{ "Offset", MeshModifierParamKind::Vector3, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "u v (z unused)" }.withLayout( "Mapping", "UV offset (z unused)" ) ) }
         {
+        }
+
+        const utf8* getDescription() const override
+        {
+            return "Displaces vertices along the normal by a texture channel. The realtime render target is replaced by a static texture for editor baking.";
         }
 
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override

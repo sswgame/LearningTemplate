@@ -46,13 +46,20 @@ namespace sw::editor
         DisplaceWebCamModifier()
             : MeshModifier()
             , _frameParam{ addParam( MeshModifierParamDef{ "Frame", MeshModifierParamKind::AssetPath, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f }, 1,
-                                                           "Static frame texture - webcam is runtime only, so a still frame stands in" } ) }
-            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _midLevelParam{ addParam( MeshModifierParamDef{ "Mid Level", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
+                                                           "Static frame texture - webcam is runtime only, so a still frame stands in" }
+                                                           .withLayout( "Frame", "Webcam input is runtime only, so a static frame texture stands in" ) ) }
+            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Displace", "Distance moved along the normal per unit height", "m" ) ) }
+            , _midLevelParam{ addParam( MeshModifierParamDef{ "Mid Level", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Displace", "Frame value that causes no displacement" ) ) }
             , _channelParam{ addParam( MeshModifierParamDef{ "Channel", MeshModifierParamKind::Int, 0.0f, 4.0f, float3{ 4.0f, 0.0f, 0.0f }, 1,
-                                                             "0 R 1 G 2 B 3 A 4 luminance" } ) }
-            , _mirrorParam{ addParam( MeshModifierParamDef{ "Mirror U", MeshModifierParamKind::Bool, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
+                                                             "0 R 1 G 2 B 3 A 4 luminance" }
+                                                             .withLayout( "Displace", "Frame channel used as height (0 R, 1 G, 2 B, 3 A, 4 luminance)" ) ) }
+            , _mirrorParam{ addParam( MeshModifierParamDef{ "Mirror U", MeshModifierParamKind::Bool, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Mapping", "Flip the frame horizontally, as webcam images usually are" ) ) }
         {
+        }
+
+        const utf8* getDescription() const override
+        {
+            return "Displaces vertices along the normal by a frame channel. Webcam input is runtime only, so a static frame texture stands in.";
         }
 
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override
