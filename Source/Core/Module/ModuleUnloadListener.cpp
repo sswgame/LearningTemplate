@@ -19,7 +19,7 @@ namespace sw
         struct ModuleUnloadListenerList
         {
             mutex                                   _mutex;
-            RegistrationList<IModuleUnloadListener> _registeredListener;
+            RegistrationList<IModuleUnloadListener> _registeredListener{ "ModuleUnloadListener" };
             std::thread::id                         _walkingThread; ///< `removeAllWithin` 이 잠금을 쥐고 도는 스레드(돌지 않으면 빈 id)
         };
 

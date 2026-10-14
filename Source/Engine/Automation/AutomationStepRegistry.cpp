@@ -16,14 +16,14 @@ namespace sw
             /** @brief 등록된 단계 종류(등록 순서). Engine 이미지의 함수 정적이라 모듈이 바뀌어도 남는다. */
             static RegistrationList<const AutomationStepRegistration>& getRegistrations()
             {
-                static RegistrationList<const AutomationStepRegistration> s_registration{ RegistrationOrder::Insertion, true };
+                static RegistrationList<const AutomationStepRegistration> s_registration{ "AutomationStepRegistry", RegistrationOrder::Insertion, true };
                 return s_registration;
             }
 
             /** @brief 등록된 시작 차단 조건(등록 순서)입니다. */
             static RegistrationList<const AutomationStartBlocker>& getStartBlockers()
             {
-                static RegistrationList<const AutomationStartBlocker> s_blocker{ RegistrationOrder::Insertion, true };
+                static RegistrationList<const AutomationStartBlocker> s_blocker{ "AutomationStartBlocker", RegistrationOrder::Insertion, true };
                 return s_blocker;
             }
         };

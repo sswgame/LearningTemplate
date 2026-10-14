@@ -59,7 +59,7 @@ namespace sw
         , _listSurface{}
         , _listObstacle{}
         , _listLink{}
-        , _listGeometrySource{}
+        , _listGeometrySource{ "SceneNavigation.GeometrySource" }
         , _listFailedAgentType{}
         , _tileRebaker{}
         , _debugView{}

@@ -16,7 +16,7 @@ namespace sw
             /** @brief 등록된 탐침(등록 순서 · 이름은 대소문자를 가린다). Engine 이미지의 함수 정적이라 게임 모듈이 바뀌어도 남는다. 핫 리로드가 올리는 교체 이미지의 같은 이름은 대체한다(`RegistrationReloadScope`). */
             static RegistrationList<const AutomationProbeRegistration>& getRegistrations()
             {
-                static RegistrationList<const AutomationProbeRegistration> s_registration{ RegistrationOrder::Insertion, true };
+                static RegistrationList<const AutomationProbeRegistration> s_registration{ "AutomationProbeRegistry", RegistrationOrder::Insertion, true };
                 return s_registration;
             }
         };
