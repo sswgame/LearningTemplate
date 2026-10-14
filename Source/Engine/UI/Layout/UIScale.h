@@ -21,10 +21,11 @@ namespace sw
     ENUM()
     enum class UIScaleRule : uint8
     {
-        ShortestSide, ///< 짧은 변 / 기준 짧은 변입니다(가로와 세로 화면 모두 같은 크기이며 기본값입니다).
-        Width,        ///< 너비 / 기준 너비입니다.
-        Height,       ///< 높이 / 기준 높이입니다.
-        Fixed         ///< 항상 1 입니다(픽셀 그대로).
+        ShortestSide,      ///< 짧은 변 / 기준 짧은 변입니다(가로와 세로 화면 모두 같은 크기이며 기본값입니다).
+        Width,             ///< 너비 / 기준 너비입니다.
+        Height,            ///< 높이 / 기준 높이입니다.
+        Fixed,             ///< 항상 1 입니다(픽셀 그대로).
+        MatchWidthOrHeight ///< 너비 배율과 높이 배율을 `_matchWidthOrHeight` 로 섞습니다(0 이면 너비, 1 이면 높이, 그 사이는 로그 공간 보간).
     };
 } // namespace sw
 
@@ -47,6 +48,9 @@ namespace sw
         float32 _referenceWidth{ 1920.0f };
         PROPERTY( DisplayName = "Reference Height", Min = 1.0 )
         float32 _referenceHeight{ 1080.0f };
+        PROPERTY( DisplayName = "Match Width Or Height", Min = 0.0, Max = 1.0,
+                  Tooltip = "Used by the MatchWidthOrHeight rule. 0 follows the width, 1 follows the height" )
+        float32 _matchWidthOrHeight{ 0.5f };
         PROPERTY( DisplayName = "Min Scale", Min = 0.01 )
         float32 _minScale{ 0.5f };
         PROPERTY( DisplayName = "Max Scale", Min = 0.01 )

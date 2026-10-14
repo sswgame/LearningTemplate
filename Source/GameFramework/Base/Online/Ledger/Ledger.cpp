@@ -17,10 +17,9 @@ namespace sw
     {
         struct LedgerInternal
         {
-            static constexpr uint64 kJournalFormat     = 1;
-            static constexpr int32  kMaxStoredTextSize = 512;
-            static constexpr int32  kListPageSize      = 64;
-            static constexpr int32  kTimeHexWidth      = 16;
+            static constexpr uint64 kJournalFormat = 1;
+            static constexpr int32  kListPageSize  = 64;
+            static constexpr int32  kTimeHexWidth  = 16;
 
             /** @brief 한 (보유자, 자산)의 순변화입니다. */
             struct Delta
@@ -109,7 +108,7 @@ namespace sw
                 outEntry._actorKind = static_cast<LedgerActorKind>( actorKind );
                 if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxReasonSize, outEntry._reason ) == false )
                     return false;
-                if ( ServiceKeyUtil::readString( reader, kMaxStoredTextSize, outEntry._memo ) == false )
+                if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxStoredTextSize, outEntry._memo ) == false )
                     return false;
                 const uint64 postingCount = reader.readVarUint();
                 if ( postingCount > static_cast<uint64>( LedgerConstant::kMaxPostingCount ) )

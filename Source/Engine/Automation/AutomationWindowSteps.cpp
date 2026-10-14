@@ -94,6 +94,28 @@ namespace sw
                 return pWindow != nullptr ? static_cast<HWND>( pWindow->getNativeHandle() ) : nullptr;
             }
 
+            /**
+             * @brief 창을 전경으로 가져옵니다. 전경 스레드의 입력 큐에 잠깐 붙어 `SetForegroundWindow` 의 전경 잠금을 넘습니다(키 입력을 흉내 내지 않는다).
+             * @return 이 호출 뒤 창이 전경이면 true
+             * @details 다른 프로세스가 전경이면 `SetForegroundWindow` 만으로는 거절되고 작업 표시줄만 깜박인다(다른 작업자의 App 창이 떠 있는 기계).
+             */
+            static bool bringToForeground( HWND hwnd )
+            {
+                if ( GetForegroundWindow() == hwnd )
+                    return true;
+                if ( IsIconic( hwnd ) != FALSE )
+                    ShowWindow( hwnd, SW_RESTORE );
+                const HWND  foreground       = GetForegroundWindow();
+                const DWORD foregroundThread = foreground != nullptr ? GetWindowThreadProcessId( foreground, nullptr ) : 0;
+                const DWORD thisThread       = GetCurrentThreadId();
+                const bool  bAttach          = foregroundThread != 0 && foregroundThread != thisThread && AttachThreadInput( thisThread, foregroundThread, TRUE ) != FALSE;
+                BringWindowToTop( hwnd );
+                SetForegroundWindow( hwnd );
+                if ( bAttach )
+                    AttachThreadInput( thisThread, foregroundThread, FALSE );
+                return GetForegroundWindow() == hwnd;
+            }
+
             static bool runMessage( AutomationRunner& runner, const AutomationStep& step )
             {
                 const HWND hwnd = findWindowHandle();
@@ -146,6 +168,14 @@ namespace sw
                 const bool bWantLocked  = *step.findAttribute( "state" ) == "locked";
                 if ( bWantLocked ? bInsideClient : bWholeScreen )
                     return true;
+                // 커서는 전경 창만 가둔다(`InputManager::applyMouseLockMode`). 도는 사이 다른 창이 전경을 가져갔으면 잠금은 볼 수 없는 것이지 틀린 것이 아니다 —
+                // `RequireForeground` 가 전경을 못 얻을 때와 같이 건너뜀(13)으로 끝낸다.
+                const bool bLostForeground = bWantLocked && GetForegroundWindow() != hwnd;
+                if ( bLostForeground )
+                {
+                    runner.finish( AutomationResult::Skipped, step.describe() + ": the window lost the foreground while the scenario ran, so the cursor lock cannot be observed" );
+                    return true;
+                }
                 runner.recordFailure( step, string( "cursor clip is not " ) + ( bWantLocked ? "inside the client area" : "the whole screen" ) + " (clip " +
                                                 to_string( static_cast<int32>( clip.left ) ) + "," + to_string( static_cast<int32>( clip.top ) ) + "," +
                                                 to_string( static_cast<int32>( clip.right ) ) + "," + to_string( static_cast<int32>( clip.bottom ) ) + ")" );
@@ -155,8 +185,8 @@ namespace sw
             static bool runForeground( AutomationRunner& runner, const AutomationStep& /*step*/ )
             {
                 const HWND hwnd = findWindowHandle();
-                if ( hwnd != nullptr && GetForegroundWindow() != hwnd )
-                    SetForegroundWindow( hwnd );
+                if ( hwnd != nullptr )
+                    bringToForeground( hwnd );
                 if ( hwnd == nullptr || GetForegroundWindow() != hwnd )
                     runner.finish( AutomationResult::Skipped, "the window could not become the foreground window in this session" );
                 return true;

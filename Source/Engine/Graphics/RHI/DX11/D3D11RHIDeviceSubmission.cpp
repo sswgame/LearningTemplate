@@ -74,7 +74,7 @@ namespace sw
                 return false;
             std::this_thread::yield();
         }
-        outGPUNanos = RHITimestamp::convertTickToNanos( tick, 1.0e9 / static_cast<float64>( _lastTimestampFrequency ) );
+        outGPUNanos = RHITimestamp::convertTickToNanos( tick, constant::kNanosecondsPerSecond / static_cast<float64>( _lastTimestampFrequency ) );
         return true;
     }
 
@@ -153,7 +153,7 @@ namespace sw
             readyMask |= ( 1u << slotIndex );
         }
         _lastTimestampFrequency = disjointData.Frequency;
-        RHITimestamp::resolve( arrTick, readyMask, 1.0e9 / static_cast<float64>( disjointData.Frequency ), _timestampFrame );
+        RHITimestamp::resolve( arrTick, readyMask, constant::kNanosecondsPerSecond / static_cast<float64>( disjointData.Frequency ), _timestampFrame );
     }
 
     void D3D11RHIDevice::beginFrame( const float4& clearColor )

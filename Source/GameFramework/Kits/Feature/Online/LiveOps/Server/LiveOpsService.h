@@ -62,7 +62,7 @@ namespace sw
      * @class LiveOpsService
      * @brief 라이브 운영 로직입니다. 서비스 스레드 하나에서 씁니다.
      */
-    class SW_KIT_API LiveOpsService
+    class SW_KIT_SERVER_API LiveOpsService
     {
     public:
         LiveOpsService();

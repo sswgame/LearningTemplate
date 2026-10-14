@@ -106,7 +106,7 @@ namespace sw
 namespace sw
 {
     /** @brief 자산마다 계정 잔액 상한을 알려 주는 인터페이스입니다. 화폐 카탈로그가 구현합니다. */
-    class SW_GF_API ILedgerPolicy
+    class ILedgerPolicy
     {
     public:
         ILedgerPolicy()          = default;
@@ -129,6 +129,7 @@ namespace sw
         static constexpr int64 kMaxAmount         = 1000000000000000ll; ///< 다리 하나 · 잔액 하나(10^15 — 다리 16 개 합이 int64 안)
         static constexpr int64 kMaxBalance        = kMaxAmount;
         static constexpr int32 kMaxAssetIDSize    = 48;
+        static constexpr int32 kMaxStoredTextSize = 512; ///< 저장 레코드 안 글(메모 · 에스크로 표식) 하나의 최대 길이
         static constexpr int32 kMaxReasonSize     = 32;
         static constexpr int32 kMaxMemoSize       = 256;
         static constexpr int32 kMaxJournalKeySize = 200;

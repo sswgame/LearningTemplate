@@ -154,6 +154,46 @@ SW_TEST_CASE( EditorPlaySessionTest, StopWithoutSceneChangeRestoresInPlace )
 }
 
 /**
+ * @brief [EditorPlaySessionTest] Play · Stop 은 활성 씬만 찍고 되돌린다 — 툴 창의 미리보기 씬(그 오브젝트 · 플레이 중의 편집)은 건드리지 않는다
+ * @details 미리보기 씬은 활성 씬과 따로 사는 월드다(`SceneManager::createPreviewScene`). 스냅샷 복원이 미리보기 씬의 오브젝트를 지우거나
+ *          되살리면 창의 미리보기 대상(머티리얼 구 · 프리팹)이 Stop 마다 사라진다.
+ */
+SW_TEST_CASE( EditorPlaySessionTest, StopLeavesPreviewScenesAlone )
+{
+    SceneManager sceneManager;
+    Scene*       pEdited  = sceneManager.createEmptyActiveScene( "EditedLevel" );
+    Scene*       pPreview = sceneManager.createPreviewScene( "MaterialWindow" );
+    SW_ASSERT_NOT_NULL( pEdited );
+    SW_ASSERT_NOT_NULL( pPreview );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+
+    GameObjectManager* pPreviewObjects = pPreview->getObjectManager();
+    GameObject*        pSubject        = pPreviewObjects->createGameObject( hashed_string( "PreviewSubject" ) );
+    SW_ASSERT_NOT_NULL( pSubject );
+    pPreviewObjects->mergePendingAdds();
+    const uint64 subjectID = pSubject->getObjectID();
+    // 초점이 미리보기 창에 있어도 Play 의 대상은 활성 씬이다.
+    SW_ASSERT_TRUE( sceneManager.focusScene( pPreview ) );
+
+    PlaySessionData data;
+    EditorPlaySession::captureSnapshot( data );
+
+    // 플레이 중에 창에서 오브젝트를 하나 더 놓는다.
+    SW_ASSERT_NOT_NULL( pPreviewObjects->createGameObject( hashed_string( "PlacedDuringPlay" ) ) );
+    pPreviewObjects->mergePendingAdds();
+
+    EditorPlaySession::restoreSnapshot( data );
+    pPreviewObjects->processDeferredDestruction();
+    pPreviewObjects->mergePendingAdds();
+
+    SW_EXPECT_TRUE( sceneManager.getActiveScene() == pEdited );
+    SW_EXPECT_TRUE( sceneManager.findPreviewScene( sceneManager.getPreviewSceneKey( pPreview ) ) == pPreview );
+    SW_EXPECT_NOT_NULL( pPreviewObjects->findGameObjectByID( subjectID ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), countLivePlayObjectsNamed( *pPreviewObjects, "PlacedDuringPlay" ) );
+    SW_EXPECT_EQUAL( size_t( 0 ), countLivePlayObjectsNamed( *pEdited->getObjectManager(), "PreviewSubject" ) );
+}
+
+/**
  * @brief [EditorPlaySessionTest] 플레이 중에 부모와 자식이 모두 지워져도 Stop 이 계층째 복원한다 — 자식이 부모보다 먼저 되살아나도
  * @details 복원하기는 스냅샷 순서(만든 순서)대로 오브젝트를 읽는다. 읽을 때 부모를 붙이면 자식을 먼저 만든 경우 자식을 읽는 순간 부모가 아직
  *          없어 루트로 남는다. 그래서 씬 로드(`Scene::instantiate`)와 같이, 모두 읽은 뒤 계층을 다시 잇는다.

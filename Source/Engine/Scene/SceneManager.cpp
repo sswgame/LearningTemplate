@@ -551,6 +551,9 @@ namespace sw
         entry._scene  = sw::make_unique<Scene>( name, _services );
         entry._policy = policy;
         Scene* pScene = entry._scene.get();
+        // 로드된 씬과 같이 기본 머티리얼 · 기본 카메라 · 메시 기본값을 건다(디바이스가 없는 테스트는 건너뛴다). 머티리얼 없는 메시가 그려지려면 필요하다.
+        if ( _pRHIDevice != nullptr && pScene->initialize( _pRHIDevice ) == false )
+            SW_LOG_WARNING( "Preview scene '%#' could not acquire its default material", string( name ).c_str() );
         applyPreviewPolicy( *pScene, policy );
         _listPreviewScene.push_back( std::move( entry ) );
         syncPreviewPlay( *pScene, policy._bPlay );
@@ -584,6 +587,18 @@ namespace sw
         for ( const PreviewSceneEntry& entry : _listPreviewScene )
         {
             if ( entry._scene.get() == pScene )
+                return entry._key;
+        }
+        return kInvalidSceneKey;
+    }
+
+    uint32 SceneManager::getPreviewSceneKeyOf( const GameObjectManager* pManager ) const
+    {
+        if ( pManager == nullptr )
+            return kInvalidSceneKey;
+        for ( const PreviewSceneEntry& entry : _listPreviewScene )
+        {
+            if ( entry._scene->getObjectManager() == pManager )
                 return entry._key;
         }
         return kInvalidSceneKey;

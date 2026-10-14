@@ -13,6 +13,7 @@
 
 namespace sw
 {
+    class CommandStack;
     class Component;
     class GameObject;
     class GameObjectManager;
@@ -98,4 +99,15 @@ namespace sw::editor
     SW_EDITOR_API GameObject* findGameObject( GameObjectHandle handle );
     /** @brief 지금 편집 중인 씬에서 핸들이 가리키는 컴포넌트를 찾습니다. 씬이 없거나 대상이 사라졌으면 nullptr 입니다. */
     SW_EDITOR_API Component* findComponent( ComponentHandle handle );
+
+    // ------------------------------------------------------------------------------
+    // 포커스 창의 범위 — 미리보기 씬을 가진 툴 창(`EditorPreviewPanel`)이 포커스를 얻으면 자기 씬 · 자기 Undo 스택을 겁니다.
+    // 걸린 것이 없으면 활성 씬 · 엔진의 `CommandStack` 입니다(언리얼 애셋 에디터 툴킷이 자기 트랜잭션 맥락을 갖는 자리).
+    // ------------------------------------------------------------------------------
+    /** @brief 툴이 겨누는 씬입니다(`SceneManager::getFocusedScene` — 포커스된 미리보기 창의 씬, 없으면 활성 씬). */
+    SW_EDITOR_API Scene* getFocusedScene();
+    /** @brief Ctrl+Z · Ctrl+Y 가 되돌릴 스택입니다. 포커스된 툴 창이 건 스택, 없으면 엔진의 전역 `CommandStack` 입니다. 없으면 nullptr 입니다. */
+    SW_EDITOR_API CommandStack* getFocusedCommandStack();
+    /** @brief 포커스된 툴 창의 Undo 스택을 겁니다(nullptr 이면 풉니다). 스택을 가진 창이 내려가기 전에 반드시 풉니다. */
+    SW_EDITOR_API void setFocusedCommandStack( CommandStack* pStack );
 } // namespace sw::editor

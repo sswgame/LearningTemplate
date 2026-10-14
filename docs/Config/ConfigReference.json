@@ -2426,6 +2426,22 @@
    "source": "Source/Engine/Resource/AssetLoadProfiler.cpp"
   },
   {
+   "name": "gv_authorityGhostPort",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "서버 디버그 채널 포트 - 서버 포즈를 고스트로 겹침 (0=끄기)",
+   "source": "Source/Engine/Scene/AuthorityGhost.cpp"
+  },
+  {
+   "name": "gv_authorityGhostToken",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "서버 디버그 채널 토큰",
+   "source": "Source/Engine/Scene/AuthorityGhost.cpp"
+  },
+  {
    "name": "gv_benchAnimate",
    "type": "int32",
    "default": "1",
@@ -2762,6 +2778,22 @@
    "source": "Source/Engine/Renderer/RHISubsystem.cpp"
   },
   {
+   "name": "gv_debugChannelPort",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "디버그 채널 포트 (0=끄기, 루프백 전용, 토큰 필요)",
+   "source": "Source/Server/ServerApp.cpp"
+  },
+  {
+   "name": "gv_debugChannelToken",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "디버그 채널 접속 토큰",
+   "source": "Source/Server/ServerApp.cpp"
+  },
+  {
    "name": "gv_debugHUD",
    "type": "bool",
    "default": "false",
@@ -2888,6 +2920,14 @@
    "kind": "시험",
    "description": "N 프레임 동안 에디터 패널마다 그리기 시간을 모아 한 번 로그로 찍는다 (0=끄기)",
    "source": "Source/Editor/Common/GUI/EditorPanelManager.cpp"
+  },
+  {
+   "name": "gv_editorPreviewScreenshot",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "미리보기 씬 뷰포트의 렌더 타깃을 이 경로에 한 번 찍는다 (시나리오 눈 확인용, 비우면 안 함)",
+   "source": "Source/Editor/Common/GUI/EditorPreviewViewport.cpp"
   },
   {
    "name": "gv_editorProbeAsset",
@@ -3442,6 +3482,14 @@
    "source": "Source/App/DevConsoleHost.cpp"
   },
   {
+   "name": "gv_stateHashHistory",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "틱별 씬 상태 해시 이력 길이 (0=끄기)",
+   "source": "Source/Server/ServerApp.cpp"
+  },
+  {
    "name": "gv_subtitleBackgroundOpacity",
    "type": "float32",
    "default": "0.5",
@@ -3670,7 +3718,7 @@
    "type": "int32",
    "default": "0",
    "kind": "일반",
-   "description": "주 출력 보기 모드 (0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw)",
+   "description": "주 출력 보기 모드 (0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw / 6 LightingOnly)",
    "source": "Source/Engine/Renderer/Frame/FrameRenderer.cpp"
   },
   {

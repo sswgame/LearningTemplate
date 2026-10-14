@@ -48,8 +48,9 @@ namespace sw
             return StaticType();
         }
 
-        string _meshName = "CubeMesh";
-        int32  _tickCount{ 0 };
+        string  _meshName = "CubeMesh";
+        int32   _tickCount{ 0 };
+        float32 _lastDeltaTime{ 0.0f }; ///< 마지막 틱이 받은 델타(시간 배율이 곱해졌는지 본다)
 
         GameObjectManager* _pTickDestroyManager{ nullptr };
         GameObject*        _pTickDestroyObject{ nullptr };
@@ -129,6 +130,7 @@ namespace sw
         {
             Component::onTick( deltaTime );
             _tickCount++;
+            _lastDeltaTime = deltaTime;
             if ( _pTickMoveComp != nullptr )
                 _pTickMoveComp->setLocalPosition( _tickMovePos );
             if ( _pTickDestroyManager != nullptr && _pTickDestroyObject != nullptr )

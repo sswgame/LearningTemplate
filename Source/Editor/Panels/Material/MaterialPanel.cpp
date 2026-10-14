@@ -25,7 +25,11 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Scene/Scene.h"
 
 #include <imgui.h>
 
@@ -36,6 +40,12 @@ namespace sw::editor
         struct MaterialPanelInternal
         {
             static constexpr Color kPreviewBg{ Color::fromBytes( 38, 38, 44, 255 ) };
+            /// @brief 미리보기 한 변(96 DPI 기준 픽셀)입니다. CPU 구와 미리보기 씬 뷰포트의 높이가 같다.
+            static constexpr float32 kPreviewSide = 160.0f;
+            /// @brief 미리보기 씬 뷰포트의 가로 / 세로 비율입니다.
+            static constexpr float32 kPreviewSceneAspect = 1.5f;
+            /// @brief 미리보기 씬에 스폰하는 구 오브젝트 이름입니다.
+            static constexpr const utf8* kPreviewSubjectName = "PreviewSubject";
 
             static void writeFloats( string& out, const float32* pVal, uint32 count )
             {
@@ -229,6 +239,15 @@ namespace sw::editor
                 outValue = pPanel->isWaitingForSwitchAnswer() ? 1.0 : 0.0;
                 return true;
             }
+
+            [[nodiscard]] static bool readPreviewSceneFrames( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const MaterialPanel* pPanel = findOpenPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getPreviewViewport().getSubmittedFrameCount() );
+                return true;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -246,13 +265,17 @@ namespace sw::editor
     SW_AUTOMATION_PROBE( editorMaterialSwitchPending, "Editor.MaterialSwitchPending",
                          "1 while the Material panel waits for the 'unsaved changes, switch anyway?' answer - the new document is not opened until then",
                          &MaterialPanelInternal::readSwitchPending );
+    SW_AUTOMATION_PROBE( editorMaterialPreviewSceneFrames, "Editor.MaterialPreviewSceneFrames",
+                         "Frames the Material panel asked the renderer to draw its preview scene (0 until the panel shows a document)",
+                         &MaterialPanelInternal::readPreviewSceneFrames );
 
     MaterialPanel::MaterialPanel()
-        : EditorDocumentPanel{ EditorAssetType::Material, false }
+        : EditorPreviewPanel{ EditorAssetType::Material, false }
         , _material{ Material::create() }
         , _name{}
         , _shaderPath{}
         , _status{}
+        , _previewMaterialPath{}
         , _previewRedMinusBlue{ 0.0f }
         , _bPreviewDrawn{ false }
     {
@@ -262,6 +285,7 @@ namespace sw::editor
     {
         updateFocusedDocument();
         ensureDocumentLoaded();
+        beginPreviewFrame();
         drawDocumentOpenBar( "material" );
         _bPreviewDrawn = false;
 
@@ -284,6 +308,12 @@ namespace sw::editor
             applyLivePreview();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "ApplyToSelectionTip" ) );
         drawPreview();
+        // 렌더러가 그리는 미리보기 씬의 구 — 메인 뷰포트의 선택 오브젝트를 빌리지 않는다.
+        syncPreviewSubjectMaterial();
+        ImGui::SameLine();
+        const float32 previewSide = MaterialPanelInternal::kPreviewSide * EditorThemeUtil::getDpiScale();
+        drawPreviewViewport( float2{ previewSide * MaterialPanelInternal::kPreviewSceneAspect, previewSide } );
+        EditorSelfTestMarks::note( "material.previewScene" );
 
         ImGui::InputText( "Name", _name.data(), _name.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
@@ -337,7 +367,7 @@ namespace sw::editor
         constexpr int32 kSegmentCount = 48;
 
         const MaterialPreviewInputs inputs = MaterialPreviewShading::readInputs( _material->getProperties() );
-        const float32               side   = 160.0f * EditorThemeUtil::getDpiScale();
+        const float32               side   = MaterialPanelInternal::kPreviewSide * EditorThemeUtil::getDpiScale();
         const ImVec2                minPos = ImGui::GetCursorScreenPos();
         ImGui::Dummy( ImVec2( side, side ) );
         EditorSelfTestMarks::note( "material.preview" );
@@ -405,6 +435,38 @@ namespace sw::editor
             return false;
         outValue = _previewRedMinusBlue;
         return true;
+    }
+
+    void MaterialPanel::populatePreviewScene( Scene& scene )
+    {
+        GameObjectManager* pManager = scene.getObjectManager();
+        GameObject*        pSubject = pManager != nullptr ? pManager->createGameObject( hashed_string( MaterialPanelInternal::kPreviewSubjectName ) ) : nullptr;
+        MeshComponent*     pMesh    = pSubject != nullptr ? pSubject->addComponent<MeshComponent>() : nullptr;
+        if ( pMesh != nullptr )
+            pMesh->setMeshID( "Sphere" );
+        getPreviewViewport().frameSphere( float3{ 0.0f, 0.0f, 0.0f }, 0.75f );
+        _previewMaterialPath.clear(); // 새 씬의 구에는 아직 머티리얼이 없다
+    }
+
+    MeshComponent* MaterialPanel::findPreviewSubject() const
+    {
+        Scene*             pScene   = getPreviewScene();
+        GameObjectManager* pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
+        GameObject*        pSubject = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( MaterialPanelInternal::kPreviewSubjectName ) ) : nullptr;
+        return pSubject != nullptr ? pSubject->getComponent<MeshComponent>() : nullptr;
+    }
+
+    void MaterialPanel::syncPreviewSubjectMaterial()
+    {
+        const bool bDocumentReady = getLoadedAssetPath().empty() == false && isDocumentLoadFailed() == false;
+        if ( bDocumentReady == false || _previewMaterialPath == getLoadedAssetPath() )
+            return;
+        MeshComponent* pMesh = findPreviewSubject();
+        if ( pMesh == nullptr )
+            return;
+        // 캐시의 머티리얼을 건다 — 편집은 `applyLivePreview` 가 캐시 사본에 옮기므로 구도 따라온다.
+        pMesh->setMaterialPath( getLoadedAssetPath() );
+        _previewMaterialPath = getLoadedAssetPath();
     }
 
     void MaterialPanel::applyLivePreview()

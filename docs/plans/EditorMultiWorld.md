@@ -1,6 +1,6 @@
 # 다중 월드 · 에디터 툴 창 구현 계획 (D3-7)
 
-백로그 `D3-7` 의 설계 근거입니다. 다른 PC 에서 병합할 때 판단 기준으로 씁니다. 단계 1 의 엔진 쪽만 코드로 들어갔습니다(2026-10-15, 아래 단계 1 절 참고).
+백로그 `D3-7` 의 설계 근거입니다. 다른 PC 에서 병합할 때 판단 기준으로 씁니다. 단계 1~4 와 단계 5 의 머티리얼 창이 코드로 들어갔습니다(2026-10-15, 각 단계의 "구현됨" 참고).
 파일 · 함수 이름은 2026-10-14 `wt/editor` 기준으로 읽은 것입니다.
 
 ## 1. 현재 구조
@@ -106,27 +106,41 @@ Undo 를 창마다 두는 것은 두 엔진과 다릅니다. 두 엔진 모두 �
   정책 `ScenePreviewPolicy { _bTick · _timeScale · _bPhysics · _bAudio · _bPlay }`, 툴이 겨누는 초점 씬(`focusScene` · `getFocusedScene`, 내려지면 활성 씬으로 복귀).
   정책의 물리는 `GameObjectManager::setPhysicsStepEnabled`, 오디오는 `Scene::setAudioUpdateEnabled` 로 닿는다. `EngineLoop` 는 `bTickScene` 과 무관하게 `tickPreviewScenes` 를 부른다.
   월드별 서브시스템 범위는 씬마다 `GameObjectManager` 가 갖는 `SubsystemScope` 라 따로 만들 것이 없고, 씬을 내리면 함께 내려간다(테스트 `PreviewScenesLiveApartFromLoadedScenes`).
-  `fixedStepOverride` 는 `FixedStepAccumulator` 가 전역 설정을 읽어 넣지 않았다. 조명 환경 프리셋은 렌더 확인이 필요해 남겼다.
+  `fixedStepOverride` 는 `FixedStepAccumulator` 가 전역 설정을 읽어 넣지 않았다. 조명 환경 프리셋은 `EditorPreviewEnvironment`(방향광 · 바닥, 단계 4)로 들어갔고 스카이는 엔진에 스카이 컴포넌트가 없어 빠졌다.
+  미리보기 씬은 디바이스가 있으면 만들 때 `Scene::initialize( pRHIDevice )` 를 부른다.
 
 ### 단계 2 — 씬별 GPUScene (렌더러)
 - 파일: `Renderer/Frame/RenderFramePacket.h`, `RenderPacketBuilder.h/.cpp`(빌더를 씬 키 맵으로), `FrameRenderer.h` · `FrameRendererViews.cpp` · `FrameRendererDraw.cpp`(`_gpuScene` → 씬 키 맵), `Renderer/Scene/GPUScene.*`(공유 풀을 외부 참조로), `Renderer/Frame/RenderView.h`(`_sceneID`).
 - 위험: 가장 큽니다. `CheckRenderOwnership.py` 의 소유 규칙, 컬링 슬롯 수를 업로드 전에 정해야 하는 제약(`FrameRenderer` 463행 주석), bindless 인덱스 해제 지연. 네 백엔드 모두 영향.
 - 확인: RenderPass GPU 테스트 · 이미지 비교 테스트가 그대로(주 씬만 있을 때 동일 이미지), 새 테스트 — 두 씬을 두 타깃에 그려 서로 섞이지 않음. `Scripts/dev/BackendSmoke.py` 로 네 백엔드. Shipping 도 확인.
+- **구현됨(2026-10-15, 모양을 바꿈)**: `FrameRenderer` 안의 `_gpuScene` 을 씬 키 맵으로 바꾸지 않고, **미리보기 씬마다 `FrameRenderer` 인스턴스 하나**를 주 렌더러가 소유한다
+  (`FrameRenderer::executeScenePreviewPacket` · `retireScenePreviews`, `FrameRendererScenePreview.cpp`). GT 는 씬마다 `GPUSceneBuilder` 하나(`RenderPacketBuilder::populateScenePreviews`),
+  패킷은 `RenderFramePacket::_listScenePreview`(미리보기 패킷 목록, 저장소 재사용). 렌더 스레드는 주 패킷 뒤에 미리보기 타깃을 열고 → 그 씬의 렌더러로 그리고 → 셰이더 읽기로 돌린다(`RenderThread::executeFrameBody`).
+  까닭: 주 렌더러의 핫 패스(컬링 슬롯 · 패스 상수 · 트랜지언트 · `_pActiveView`)를 건드리지 않아 주 씬 이미지가 바뀔 여지가 없다. 대가로 머티리얼 · 정점 풀 · PSO 캐시가 렌더러마다 따로다(메모리 · 첫 프레임 PSO 생성 비용 — 결정 2 와 어긋남, 결정 기록 5-11).
+  미리보기 렌더러는 프로파일러 · 타임스탬프 · 렌더 타깃 공개를 하지 않는다(`_bScenePreview`).
 
 ### 단계 3 — 호스트 뷰 목록과 `EditorRenderViews` 일반화
 - 파일: `RenderView.h`(`HostSceneView` 목록), `Engine.h/.cpp`(`tick` 인자), `Editor/Common/Workspace/EditorRenderViews.h/.cpp`(id 키 타깃), 에디터 메인 루프의 `tick` 호출부.
 - 위험: 에디터 없는 실행(백버퍼 경로)과 서버. 두 슬롯 경로를 그대로 두어 줄입니다.
 - 확인: 에디터 스모크(`-gv_editorPanelDump -gv_profileFrames=60`), 게임 단독 실행 이미지 동일.
+- **구현됨(2026-10-15)**: `HostViewTargets` 에 고정 배열 `_arrSceneView[kMaxHostSceneView]` · `_sceneViewCount`(호스트가 프레임마다 새로 채우므로 힙을 피했다), 값 타입 `HostSceneView`(씬 키 · 뷰-투영 · 눈 · 설정 · 타깃).
+  C ABI 는 `EditorAPI::getSceneViews`(모듈 ABI v6). `EditorRenderViews` 는 두 고정 슬롯을 두고 그 옆에 id 키 미리보기 타깃 목록(`allocatePreviewTarget` · `ensurePreviewTargetSize` · `submitPreviewView` · `collectSceneViews`)을 더했다.
 
 ### 단계 4 — `EditorPreviewPanel` 틀과 창별 선택 · Undo
 - 파일: `Editor/Common/GUI/EditorPreviewPanel.h/.cpp`(새), `EditorSelection.*` · `EditorTransaction.*`(전역 인스턴스 → 포커스 창의 인스턴스를 고르는 함수), `EditorCamera`, `Viewport/EditorViewportGizmo`(대상 씬을 인자로).
 - 위험: 전역 선택을 직접 부르는 패널이 많습니다. 먼저 "현재 문서의 선택" 접근자 하나로 모은 뒤 바꿉니다.
 - 확인: 에디터 시나리오 테스트(선택 · Undo 기존 시나리오), 새 시나리오 — 미리보기 창에서 Undo 해도 메인 씬 기록이 그대로.
+- **구현됨(2026-10-15, 일부)**: `EditorPreviewViewport`(미리보기 씬 · 조명 환경 · 오빗 카메라 · 타깃)와 `EditorPreviewPanel`(문서 패널 + 뷰포트 + 창의 `CommandStack` · 선택 목록).
+  창이 포커스를 얻으면 `SceneManager::focusScene` 과 `editor::setFocusedCommandStack` 을 걸고, Ctrl+Z · Ctrl+Y 는 `editor::getFocusedCommandStack` 을 되돌린다.
+  `ObjectUndoUtil` 의 명령은 기록할 때의 씬 키를 기억해(`SceneManager::getPreviewSceneKeyOf`) 그 씬에서 되돌린다(테스트 `SceneTest.PreviewObjectUndoStaysInItsScene`).
+  전역 `EditorSelection` · 인스펙터 · 기즈모를 창의 것으로 바꾸는 일은 남았다(백로그 `D3-7`).
 
 ### 단계 5 — 첫 창 두 개: 머티리얼 · 프리팹
 - 파일: `Panels/Material/MaterialPanel.*`(구 미리보기를 미리보기 씬으로, `MaterialPreviewShading` 은 썸네일 폴백으로 남김), `EditorPrefabIsolationCommands.*`(활성 씬 대신 미리보기 씬에 프리팹을 스폰, 더티 막기 제거).
 - 위험: 프리팹 저장 경로가 바뀝니다 — 중첩 격리 스택(`PrefabIsolationFrame`)의 의미를 유지해야 합니다.
 - 확인: 프리팹 격리 기존 테스트, 머티리얼 미리보기 이미지 비교(끈 판과 달라야 함도 확인).
+- **구현됨(2026-10-15, 머티리얼만)**: `MaterialPanel` 이 `EditorPreviewPanel` 을 상속해 미리보기 씬에 구(`PreviewSubject`)를 놓고 문서의 머티리얼(캐시 사본)을 건다. CPU 구(`MaterialPreviewShading`)는 탐침 · 폴백으로 옆에 남겼다.
+  시나리오 `editor/previewscene.scenario.xml` + `-gv_editorPreviewScreenshot`. 프리팹 창은 남았다(백로그 `D3-7`).
 
 ### 단계 6 이후 — 나머지 창
 메시/모델(LOD 비교) · 애니메이션 · 카메라 프리셋 · 래그돌 · 이펙트 · 장르 도구 · 캐릭터 편집 창([EditorCharacterEditor.md](EditorCharacterEditor.md)). 창마다 단위 하나.

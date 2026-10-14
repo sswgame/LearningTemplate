@@ -42,7 +42,8 @@ namespace sw
      * @brief 오브젝트 편집을 `CommandStack` 의 데이터 명령으로 만듭니다(UE `FTransaction` 의 오브젝트 레코드 자리).
      * @details 명령이 드는 것은 값뿐입니다 — 대상 오브젝트 id(핸들의 id · 원래 id 로 복원하므로 재생성 뒤에도 같다), 직렬화한 상태, 이름 · 프리팹 경로.
      *          undo · redo 의 코드는 이 파일(Engine)에 있으므로 명령을 만든 모듈이 내려가도 스택에 남아 같은 결과를 냅니다.
-     *          대상은 실행할 때마다 @p sceneManager 의 **활성 씬**에서 id 로 찾고, 없으면 기록할 때의 이름으로 찾습니다.
+     *          대상은 실행할 때마다 **기록할 때 그 오브젝트가 살던 씬**(활성 씬, 또는 미리보기 씬의 키 — `SceneManager::getPreviewSceneKeyOf`)에서 id 로 찾고,
+     *          없으면 기록할 때의 이름으로 찾습니다. 그 미리보기 씬이 내려졌으면 명령은 아무것도 하지 않습니다.
      *          적용한 뒤에는 `CommandStack::notifyObjectEdit` 로 알려, 에디터가 선택 · 씬 dirty 를 맞춥니다.
      * @warning @p stack · @p sceneManager 는 명령보다 오래 살아야 합니다(엔진 소유 서비스 · 같은 스코프의 테스트 객체).
      * @warning 이름 조회는 한 프레임 안에서 없애고 복원한 경우를 위한 것입니다. 옛 오브젝트가 지연 파괴를 기다리는 동안에는 그 id 가 아직 등록돼 있어

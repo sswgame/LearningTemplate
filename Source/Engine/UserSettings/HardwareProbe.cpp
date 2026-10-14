@@ -50,7 +50,7 @@ namespace sw
                     return;
                 result._gpuName = StringUtil::utf16ToUtf8( desc.Description );
                 if ( ( desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE ) == 0 )
-                    result._gpuMemoryMb = static_cast<uint32>( desc.DedicatedVideoMemory / ( 1024ull * 1024ull ) );
+                    result._gpuMemoryMb = static_cast<uint32>( desc.DedicatedVideoMemory / constant::kBytesPerMegabyte );
             }
 #elif defined( SW_PLATFORM_LINUX )
             /** @brief amdgpu 드라이버가 sysfs 에 내는 전용 비디오 메모리(바이트)를 읽습니다. 다른 드라이버는 아직 읽지 않는다(0). */
@@ -66,7 +66,7 @@ namespace sw
                     int64 bytes{ 0 };
                     if ( StringUtil::parseInt64( StringUtil::trim( text ), bytes ) && bytes > 0 )
                     {
-                        result._gpuMemoryMb = static_cast<uint32>( bytes / ( 1024ll * 1024ll ) );
+                        result._gpuMemoryMb = static_cast<uint32>( bytes / static_cast<int64>( constant::kBytesPerMegabyte ) );
                         return;
                     }
                 }
@@ -88,7 +88,7 @@ namespace sw
         MEMORYSTATUSEX memoryStatus{};
         memoryStatus.dwLength = sizeof( memoryStatus );
         if ( GlobalMemoryStatusEx( &memoryStatus ) != FALSE )
-            result._systemMemoryMb = static_cast<uint32>( memoryStatus.ullTotalPhys / ( 1024ull * 1024ull ) );
+            result._systemMemoryMb = static_cast<uint32>( memoryStatus.ullTotalPhys / constant::kBytesPerMegabyte );
 #elif defined( SW_PLATFORM_LINUX )
         const int64 pageCount = static_cast<int64>( sysconf( _SC_PHYS_PAGES ) );
         const int64 pageSize  = static_cast<int64>( sysconf( _SC_PAGE_SIZE ) );

@@ -84,7 +84,7 @@ namespace sw
 namespace sw
 {
     /** @brief 플레이어가 그 아이템을 쓸 수 있는지(잠금 여부)를 묻는 인터페이스입니다. 없으면 모두 잠금 해제된 것으로 취급합니다. */
-    class SW_GF_API IAppearanceUnlockQuery
+    class IAppearanceUnlockQuery
     {
     public:
         IAppearanceUnlockQuery()                                               = default;

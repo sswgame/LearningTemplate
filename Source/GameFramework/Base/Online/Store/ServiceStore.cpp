@@ -2,6 +2,8 @@
 
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 
+#include "GameFramework/Base/Online/Service/OnlineLimit.h"
+
 namespace sw
 {
     ServiceTransaction::ServiceTransaction()
@@ -60,7 +62,7 @@ namespace sw
 
     bool ServiceTransaction::isValidKey( string_view key )
     {
-        if ( key.empty() || key.size() > static_cast<size_t>( IServiceStoreConnection::kMaxKeySize ) )
+        if ( key.empty() || key.size() > static_cast<size_t>( OnlineLimit::kMaxKeySize ) )
             return false;
         for ( const utf8 ch : key )
         {

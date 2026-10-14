@@ -35,7 +35,15 @@
 
 재현됐거나 코드로 확인된 열린 결함. 다른 어떤 일보다 먼저 본다.
 
-_열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
+- `A-1` **`editor.uipreview` 가 속성 편집 단계(프레임 375)에서 모든 백엔드 결정적으로 진다**(2026-10-15, main `42f6b251c`, DX12 · Vulkan · GL, 단독 · 전체 체인 10 회 이상).
+  `Editor.UIPreviewSelectedOpacity` 가 0.5 대신 1, `UIPreviewDirty` 0, `UndoCount` 0 — `inspector.property.BorderPanel._opacity` Ctrl+클릭 → `Ctrl+A` → `0.5` → `Enter` 가 값을 안 바꾼다.
+  언어 버튼 단계(`uipreview.language*`)는 전부 통과한다. 포커스 탓이 아니다(전경을 얻어도 · 에디터 포커스 필터를 빼도 같다). 검증 창(NEXT 4절)의 통과 이후 170 커밋 안의 회귀로 보이며
+  첫 의심은 인스펙터 즐겨찾기 `f46dc5fde` · 뷰포트 마우스 양보 `62bd5b3f7` · `999eef7d1`. 이분 탐색으로 첫 나쁜 커밋을 찾는다.
+- `A-2` **TDR 뒤 행의 원인 미상**(재현 못 함). 코드로는 DX12 `waitForFenceValue` · `waitForRingSlot` · `waitForPreviousFrame` 이 장치 제거를 보고 빠져나온다. 다음 가설: 종료 경로(`waitIdle` ·
+  해제 큐 비우기)나 업로드 큐 워커, Vulkan `VK_ERROR_DEVICE_LOST` 뒤의 대기가 제거를 안 본다. 실제 TDR 은 반복하면 어댑터가 망가지므로 `ID3D12Device5::RemoveDevice` 를 부르는 개발 명령으로
+  장치 제거를 흉내 내 종료까지 가는지 본다(RHI 백엔드는 별도 DLL 이라 가상 창구가 필요하다).
+- `A-3` **`editor.uipreview` Vulkan 1 회 "언어 버튼 이름표 없음"은 재현 못 했다**: Vulkan 단독 5 회 · 전체 체인 3 회 모두 언어 단계는 통과한다(`A-1` 만 진다). 이름표는 직전 프레임에 그려져야 하므로
+  패널이 그려지지 못한 프레임 틈(로딩 · 리사이즈)이 의심된다. 다시 보이면 E 에 로그를 붙인다.
 
 
 ---
@@ -116,9 +124,6 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
 - `C-1` **엔진 분할 — 계획은 [docs/plans/EnginePartition.md](plans/EnginePartition.md).** `Engine.dll` 을 티어 경계로 나누기 전에 의존 방향의 약한 고리를 푼다. 단위를 끝내면 계획 문서에서 지운다.
 
 - `C-2` **빌드 속도 — 계획은 [docs/plans/BuildSpeed.md](plans/BuildSpeed.md).** 남은 것은 5 단계(유니티 범위 — 한 쌍만 잼, 재측정 필요)와 6 단계(`Engine.cpp`)다. 범위 결정은 [결정 기록](09_Decisions.md) 5-2.
-
-- `C-3` **서버 키트가 공유 키트 클래스를 다시 내보낸다**(Base 중복은 끝남 — 결정 기록 5-8). `GF_Server_Account.dll` 200개 중 8개가 `GF_Account.dll` 과 겹친다.
-  고치려면 키트마다 `<KIT>_API` 를 두고 키트 헤더를 기계적으로 바꾼다. 이득이 작아 우선순위는 낮다.
 
 - `C-4` **GameFramework 구조 정리(2026-10-04 리뷰, 사용자 승인).** 남은 것 —
   - 중간: Overworld `TileMap` 의 칸 손셈(`indexOf` · `isInBounds` — 크기는 파일 스키마 `TileMapXMLData` 가 든다) · `Habitat`(CreatureLife) · NetConnection 메시지 버퍼 재사용 ·
@@ -285,10 +290,15 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   래그돌/물리 에셋(관절 한계) · 이펙트 · 장르 도구(코스터 트랙 · 리듬 차트). 언리얼 FPreviewScene · 애셋 에디터 툴킷, 유니티 PreviewRenderUtility · Prefab Stage.
   (2026-10-14 사용자 결정: 규모가 XL 이라 에디터 보강 묶음에서 뺐다 — 설계부터 따로 짠다.)
   계획: docs/plans/EditorMultiWorld.md
-  **2026-10-15 단계 1 의 엔진 쪽이 들어갔다**(`SceneManager::createPreviewScene` · 정책 · 키 · 초점 씬, 테스트 `SceneTest.Preview*`). 남은 것 — 단계 1: 조명 환경 프리셋(방향광 · 스카이 · 바닥을
-  씬 안 오브젝트로 스폰, 렌더로 눈 확인 필요) · 시간 배율이 델타에 곱해지는 값을 보는 테스트(목에 델타 기록이 없다) · 미리보기 씬의 `initialize( pRHIDevice )`(기본 머티리얼) ·
-  플레이 세션(`EditorPlaySession`)이 미리보기 씬을 건드리지 않는지 확인(스냅샷 복원은 활성 씬만 본다고 읽었을 뿐 EditorTest 로 못 박지 않았다). 단계 2~5(씬별 GPUScene · 호스트 뷰 목록 · `EditorPreviewPanel` ·
-  창별 선택 / Undo `focusScene` 위에) 는 GPU 와 눈 확인이 필요해 손대지 않았다. 에디터의 "초점 씬" 소비자(`EditorContext`)는 아직 없다.
+  **2026-10-15 단계 1~4 와 머티리얼 창이 들어갔다**(계획 문서의 각 "구현됨"). 남은 것:
+  (1) **프리팹 창** — `EditorPrefabIsolationCommands` 가 활성 씬 대신 `EditorPreviewPanel` 의 씬에 프리팹을 스폰(더티 막기 제거, 중첩 격리 스택 `PrefabIsolationFrame` 의 의미 유지, 저장 경로 테스트).
+  (2) **창 범위 선택 · 인스펙터 · 기즈모** — `EditorPreviewPanel::getPreviewSelection` 은 목록만 있다. 전역 `EditorSelection` 을 직접 부르는 패널을 "포커스 창의 선택" 접근자 하나로 모은 뒤 바꾸고,
+  `Viewport/EditorViewportGizmo` 가 대상 씬을 인자로 받게 한다. 미리보기 뷰포트는 지금 오빗 카메라만 있고 피킹 · 기즈모가 없다.
+  (3) **스카이** — 엔진에 스카이 컴포넌트가 없어 조명 환경 프리셋(`EditorPreviewEnvironment`)은 방향광 · 바닥뿐이다.
+  (4) **풀 공유** — 미리보기 렌더러가 씬마다 머티리얼 · 정점 풀 · PSO 캐시를 따로 든다(결정 기록 5-11). 창 여럿을 띄운 메모리 · 첫 프레임 히치를 재고 필요하면 계획의 결정 2 대로 공유한다.
+  (5) **미리보기 렌더러 내리기의 GPU 안전** — 창을 닫으면 렌더 스레드가 `FrameRenderer::shutdown` 으로 그 렌더러를 바로 내린다. 디바이스 해제 큐가 GPU 완료 뒤로 미루는 것에 기대며,
+  네 백엔드에서 창을 연 채 여닫기를 반복하는 시나리오로 확인하지 않았다(DX12 · Vulkan 검증 레이어로 볼 것).
+  (6) `fixedStepOverride`(정책의 고정 스텝) · 미리보기 씬의 백엔드 교체(`-gv_rhiSwapAtFrame`) 확인 · 캐릭터 편집 창이 `EditorPreviewPanel` 을 이어받기(헤더 계약을 따른다).
 
 - `D3-8` **에디터 보강 묶음(2026-10-14)에서 남긴 것.**
   - **시나리오 녹화**(`ScenarioRecorder` · `scenario.record` · `automation.toggleScenarioRecord`): 마우스 휠은 `Wheel` 단계로, 더블클릭은 두 번째 `Press` 로 기록한다. 조합 중 글자 · 포커스 · 포인터 출입 ·
@@ -301,15 +311,15 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   - **UI 디자이너**(`D3-3`)의 상자 · 격자 손잡이는 들어갔다. 상자 순서 계산은 "가운데 좌표가 커지면 자식 번호도 커진다" 고 가정해 RTL · 음수 간격에서 거꾸로 나온다. 격자 줄은 자식 사각형으로 추정해
     걸친 칸(span)이 섞이고 빈 행 · 열로는 끌어 놓을 수 없다.
 
-- `D3-9` **에디터 보강 묶음(2026-10-14, 브랜치 `wt/editor`) — 실행으로 확인할 것.** 빌드(Debug `all AllTests` 경고 0)와 `ctest` nogpu 48/49(실패 하나는 이 PC 에서 파이썬이 git 출력을 못 받는 환경 문제)는 통과했다.
-  아직 사람이 눈으로 · 실제 실행으로 본 적 없는 것: 버그 리포트 창(`BugItPanel`, Window 메뉴에 실리는지) · 인스펙터 보기 옵션(펼치기 · 접기가 컴포넌트 카드에 먹는지, 검색란 폭) · 하이어라키 · 콘텐츠 브라우저 ·
-  뷰포트 우클릭 메뉴 확장(`SW_EDITOR_CONTEXT_MENU_ENTRY`, 비행 모드의 끌기 판정, ThemePark "Nearest Park Ride") · UI 디자이너 슬롯 편집 · 앵커 프리셋 · 시나리오 녹화 · 포토 모드 ·
-  `LightingOnly` 보기 모드의 4 백엔드 그림과 Shipping 베이크(`D2-10`) · 입력 맵 패널의 시간 · Negate · `taps` 칸 · `D3-5` 시나리오 둘 · 어빌리티 디버거(`ability_debugger`) · NPC 일정 창(`npc_schedule`) ·
-  오디오 이벤트 창(`audioevents`) · 리그 디버그 창(`rig_debug`)과 시퀀서 `RigSlot` 트랙 · 모듈 창 상세와 확인 창 · 인스펙터 즐겨찾기(저장 · 복원) · UI 디자이너 끌기 손잡이 · 지형 브러시 원 시각화 ·
-  치트 명령(`cheat.*`) · 포토 모드. 2차 묶음의 `nogpu` 테스트도 48/49 로 통과했다(실패 하나는 위 환경 문제). 두 번째 묶음에서 실제 빌드가 잡은 것: 확장 모듈이 쓰는 `EditorPlaySession::isStopped` 의 내보내기 누락,
-  `EditorTest` 의 직접 컴파일 목록 누락, GameFramework 패널 키가 editor 표에 들어갔던 일 — 에이전트가 이 PC 에서 빌드 없이 쓴 코드는 이런 종류의 누락이 있을 수 있다.
-  **이 PC 의 환경 문제**: 파이썬이 git 을 띄워 출력을 파이프로 받으면 항상 빈 문자열이다(`worktree-make` · pre-commit 훅 · `PythonTest_TestAcronymSpelling` 이 죽는다). 이 묶음의 커밋은 모두 `--no-verify` 라
-  정상 환경에서 훅(`PreCommitLint`)을 한 번 돌려 린트 위반이 없는지 봐야 한다.
+- `D3-9` **에디터 보강 묶음 — 캡처로 확인하고 남은 것(2026-10-15, 브랜치 `wt/visual`).** 시나리오 + `CaptureWindow` 로 DX12 에서 눈으로 확인한 것(결함 4건은 고침): 버그 리포트 창 ·
+  인스펙터 보기 옵션(펼치기 · 접기 · 즐겨찾기 복원) · 하이어라키(행 메뉴 · 만들기 메뉴 · 걸러 보기) · 콘텐츠 브라우저 · 뷰포트 우클릭 메뉴(ThemePark 확장 항목) · UI 디자이너 슬롯 손잡이 · 입력 맵 패널(시간 · Negate · taps 칸,
+  `inputmaptaps` 시나리오로 남김) · 모듈 창 상세 · 확인 창 · `LightingOnly` 4 백엔드(DX12 · DX11 · Vulkan · GL 이 Lit · LightingOnly 모두 바이트 동일) · 포토 모드 · 치트 명령(로그 응답) · E-11 리로드 로그.
+  **남은 것**: (1) 지형 브러시 원 시각화 — 시각화 단추는 켜지지만 `envshowcase` 씬의 에디터 카메라에서 원이 안 보였다(마우스 레이가 지형에 안 닿는지 카메라가 지형 밑인지 가르지 못함, 카메라를 지형 위로 옮겨 다시 볼 것).
+  (2) 시나리오 녹화 — 자동화가 주입한 입력은 녹화기가 기록하지 않아(`0 steps`) 실제 입력으로만 확인된다. (3) 어빌리티 디버거 · NPC 일정 · 오디오 이벤트 · 리그 디버그 · 시퀀서 `RigSlot` 트랙 · UI 디자이너 앵커 프리셋 — 빈 상태(안내 글)까지만 봤다.
+  저장소에 이 기능들을 쓰는 데이터(일정 시스템 · 리그 · 오디오 이벤트 라이브러리)가 없다. (4) 시작 크래시 1회: `-game=AbilityArena -EnableEditor` 첫 실행이 모듈 로드 중 `DataRaceDetector` 로 죽었다
+  (`TypeRegistry::registerClass` → `clearInheritedProperties`, 읽는 스레드가 같은 `TypeInfo` 를 읽는 중; 이후 재실행은 통과해 간헐 — 재현율을 재고 읽는 쪽을 찾을 것). (5) 포토 모드는 게임 HUD 를 그대로 둔다(의도인지 확인).
+  (6) 뷰포트 옵션 팝업은 패널이 화면 오른쪽 끝이면 메인 창 밖으로 나가 클라이언트 캡처에 안 잡힌다. (7) 이 PC 의 파이썬이 git 출력을 못 받는 문제는 이 묶음 때 있었으나 이번 커밋 훅은 통과했다.
+  캡처: `D:\wisual\captures\`.
 
 - `D3-10` **메시 모디파이어 스택 플러그인(`GF_EditorPlugIn_MeshModifiers`, 2026-10-14)의 남은 것.** 구조 · 추가 방법 · 알려진 근사는 [모듈 README](../Source/GameFramework/PlugIn/Editor/MeshModifiers/README.md).
   MegaFiers 류 변형 모음의 기능 이름 목록을 기준으로 56 id 를 등록했다(Debug 전체 빌드 경고 0, 모디파이어 단위 테스트 81 개 통과). 눈으로 · 실제 에디터로 본 확인은 없다.
@@ -393,12 +403,13 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   `AppearanceDatabase` 다시 읽기, 시퀀서 트랙 · 스폰 · 프리팹이 프리셋을 이름으로 가리키기 · 프리로드 세트가 프리셋 참조를 따라 모으기, 편집 창의
   "지금 모습을 프리셋으로 저장" · 썸네일 렌더 · 규칙 설명(`_listTrace`) 표시. 칸 점유(양손 무기)는 아직 외형만 본다 — 게임플레이에서 보조 손을 막을지는
   게임이 정한다 ⑥ 캐릭터 편집 창 — 첫 단계는 들어갔다(`GameFramework/PlugIn/Editor/CharacterEditor`, README): 소켓 파일 · 외형 선택 편집 모델(되돌리기 · 검증 · 좌우 대칭 · 저장)과
-  미리보기 없는 패널 뼈대. 남은 것 — (a) 미리보기 씬 위로 옮기기(`EditorMultiWorld` 단계 1~4 뒤: `EditorPreviewPanel` 상속 · 캐릭터 스폰 · `EditorAssetType` 에 소켓 종류를 더해
-  `EditorDocumentPanel` 계약으로 더티 · 저장 · 되돌리기 이관) (b) 스켈레톤을 읽어 본 목록을 `SocketEditModel::setBoneNames` 에 넣기 · 본 트리 + 기즈모 포즈 편집
-  (`ReferencePoseOverride` 쓰기 함수가 없다) · 뷰포트 소켓 축 표시 · 저장 직후 핫 리로드 감시 무시 한 번 (c) 체형 · 얼굴 슬라이더(`CustomizationSchema` 로 슬라이더를 만든다, GPU 모프 풀 통합 뒤)
-  (d) 장비 입히기(슬롯 표 · 세트 목록으로 걸러 넘기기) · 규칙 설명(`_listTrace`) 표시 (e) 피팅 확인 표시(보기 전용: 관통 점 · 잘린 면 · 조임 강도, 슬라이더를 놓을 때 한 번 계산)
-  (f) 대칭 이름 규칙 표를 데이터 파일로(지금은 `MirrorNameRules::makeDefault` + `addPair`) · 제약 리그 미리보기 · 애니메이션 재생 (g) 외형 선택을 파일로 저장(`UserAppearancePresetStore` 는
-  메모리 목록까지만 넣는다 — 세이브 쓰기는 `AppearanceDatabase` 가 필요) · 썸네일 렌더. 패널의 화면 세부(배치 · 입력 흐름)는 아직 눈으로 확인하지 않았다.
+  패널(소켓 · 스켈레톤 · 외형 탭)과 모델이 들어갔다 — 스켈레톤 본 트리 · 레퍼런스 포즈 숫자 편집(`BonePoseEditModel`, `*.refpose.xml`) · 본 목록 → 소켓 부모 검증 · 좌우 이름 표 데이터 파일 ·
+  장비 칸 콤보 · 세트 입히기 · 규칙 설명(`_listTrace`) · 프리셋 파일 저장 · 피팅 요약 표시(`FitCheckSummary`) · 자기 저장 뒤 핫 리로드 무시(`SaveReloadGuard`). 남은 것 —
+  (a) 미리보기 씬 위로 옮기기: **`EditorMultiWorld` 단계 1~4 의 `EditorPreviewPanel` 이 main 에 들어온 뒤**(`multiworld2` 작업)에 `EditorPreviewPanel` 상속 · 캐릭터 스폰 · `EditorAssetType` 에 소켓 종류를 더해
+  `EditorDocumentPanel` 계약으로 더티 · 저장 · 되돌리기 이관. 그때 같이 할 것: 뷰포트 기즈모 포즈 편집 · 뷰포트 소켓 축 표시 · 제약 리그 미리보기 · 애니메이션 재생 · 썸네일 렌더
+  (`UserAppearancePresetStore::setThumbnailPath` 에 경로만 넣으면 된다) · 피팅 계산 연결(`CharacterEditorPanel::setFitResult` 로 푼 결과를 넘긴다 — 슬라이더를 놓을 때 한 번 풀고, 몸 메시 →
+  `AppearanceGeometry` 변환은 통합 항목) · 핫 리로드 결과를 모델에 다시 반영(지금은 외부 변경 알림만). (c) 체형 · 얼굴 슬라이더 UI(`CustomizationSchema` 로 슬라이더를 만든다)는 GPU 모프 풀 통합 뒤 —
+  꾸미기 값 모델 · 직렬화는 있다. 이 패널의 기본 경로는 shooter3d 데이터다(경로 칸에서 바꾼다).
   계획: docs/plans/EditorCharacterEditor.md
 
 - `D4-9` **남은 대기열 — 빠른 순(2026-10-04 사용자 지시).** 진행 방식은 [작업 방식](11_Workflow.md) — 결함 먼저 · 겹치는 파일 없게 나누고, 병합은 준비되는 대로, 전체 검증은 큰 묶음 뒤 한 번.
@@ -489,7 +500,7 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   ④ 서버 빌드에서 렌더러 코드를 아예 빼기(지금은 컴파일만 되고 돌지 않는다 — 크기 · 링크 시간을 재고). ⑤ 리눅스 서버(`WSL-*-Server`) 빌드 · `readelf -d` 로
   libX11 없음 확인 · `ServerTest` — Windows 만 확인했다. 서버용 크래시 보고 전송 동의(운영 설정)는 `H-3`.
 
-- `D7-3` **서버 디버깅 — 계획은 [docs/plans/ServerDebug.md](plans/ServerDebug.md).** 다음 단위는 S3(서버 검사기)다. 방향 결정은 [결정 기록](09_Decisions.md) 5-10. 단위를 끝내면 계획 문서에서 지운다. 운영 단위 O1 ~ O7 은 `H-3` 참고.
+- `D7-3` **서버 디버깅 — 계획은 [docs/plans/ServerDebug.md](plans/ServerDebug.md).** S3 · S6 · S7 의 프로세스 쪽은 들어갔고 다음은 에디터 쪽(Inspector · Sync 탭)이다. 방향 결정은 [결정 기록](09_Decisions.md) 5-10. 단위를 끝내면 계획 문서에서 지운다. 운영 단위 O1 ~ O7 은 `H-3` 참고.
   S1 에서 남은 것: ① 사용자 프리셋 저장("서버 + 클라이언트 2" 를 이름 붙여 에디터 상태에 — 지금은 마지막 구성만 세션이 들고 있고 에디터를 다시 띄우면 Standalone) ② 리슨 호스트(App)의 줄에 틱 번호(전용 서버 줄에는 `[tick=N]` 이 붙는다 — 리슨 호스트는 고정 틱 루프가 없어 프레임 번호로 정해야 한다) ③ Stop 뒤 합친 트레이스를 Profiler 창 Timeline 탭에 저절로 열기(지금은 경로를 로그 · Session 탭에 남기고 Load Trace 로 연다) ④ 게임 모듈 핫 리로드를 넘어 세션 유지 — 게임 인스턴스가 다시 서면 `GameNetSession` 도 닫고 다시 열어 클라이언트가 끊긴다(리로드가 새 인스턴스를 먼저 만들면 포트가 아직 잡혀 있어 다시 열지 못한다; 세션을 엔진 쪽 수명으로 옮긴다 — 언리얼 넷 드라이버는 월드 소유) ⑤ 운영 서버가 `ServerConfig::_gamePort` 를 저절로 여는 길(지금은 `-gv_netListenPort` 를 줄 때만 연다 — 결정 기록 5-10) ⑥ 클라이언트 창 배치(여러 App 창이 겹쳐 뜬다 — 언리얼은 창 위치를 나란히 둔다).
 
 - `D7-5` **네트워크 서비스 계층(로그인 · 채팅 · 거래 키트)의 남은 것.** 구성과 원칙(공통 기반 · 드라이버 키트 · 기능 키트, DB 와 캐시)은 [결정 기록](09_Decisions.md) 5-9, 들어간 기반 · 키트 · 서버 조립
@@ -674,7 +685,7 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
 | 1-3 | 그래픽스 · RHI · 셰이더 | `D2-1`, `D2-2`, `D2-5`, `D2-6`, `D2-7`, `D2-9` |
 | 1-4 | 에디터 | `B-3`, `B-4`, `D3-1`, `D3-3`, `D3-4`, `D3-5` |
 | 1-5 | 핫 리로드 · 모듈 | `D8-1`, `G-1` |
-| 1-6 | 게임프레임워크 · 킷 · 게임 | `C-3`, `C-4`, `C-5`, `D1-4`, `D3-7`, `D4-2`, `D4-3`, `D4-4`, `D4-5`, `D4-6`, `D4-7`, `D4-8`, `D4-9`, `D4-10`, `D4-11`, `D4-12`, `D4-13`, `D5-1`, `D5-2`, `D5-3`, `D6-1`, `D6-2`, `D6-3`, `D6-4`, `D6-5`, `D6-6`, `G-2`, `H-1` |
+| 1-6 | 게임프레임워크 · 킷 · 게임 | `C-4`, `C-5`, `D1-4`, `D3-7`, `D4-2`, `D4-3`, `D4-4`, `D4-5`, `D4-6`, `D4-7`, `D4-8`, `D4-9`, `D4-10`, `D4-11`, `D4-12`, `D4-13`, `D5-1`, `D5-2`, `D5-3`, `D6-1`, `D6-2`, `D6-3`, `D6-4`, `D6-5`, `D6-6`, `G-2`, `H-1` |
 | 1-7 | Core · 태스크 · 네트워크 | `B-9`, `B-10`, `D7-1`, `D7-2`, `D7-3`, `D7-5`, `D7-6` |
 | 1-8 | 성능 | `C-7`, `C-8`, `C-9` |
 | 1-9 | 빌드 · 린트 · CI · 테스트 | `B-5`, `C-11`, `C-12`, `C-13`, `C-14`, `C-15`, `C-16`, `C-17`, `E-2` |

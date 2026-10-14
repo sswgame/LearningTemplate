@@ -6,6 +6,7 @@
 #include "Core/Common/BuildInfo.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Concurrency/ThreadName.h"
+#include "Core/Console/DevCommandsEnabled.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
@@ -97,6 +98,10 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneDebugDraw.h"
+
+#if SW_DEV_COMMANDS_ENABLED
+    #include "Engine/Scene/AuthorityGhost.h"
+#endif
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneNavigationCooker.h"
 #include "Engine/Telemetry/CrashReportService.h"
@@ -430,6 +435,9 @@ namespace sw
         // 프레임 관찰자는 붙인 쪽이 서비스보다 먼저 내린다(로그 리스너 · 입력을 빌려 쓴다). 남은 것은 더 부르지 않는다.
         // 목록의 용량은 기동 뒤에 잡았으므로 누수 보고 전에 해제한다.
         vector<IEngineFrameObserver*>{}.swap( _listFrameObserver );
+#if SW_DEV_COMMANDS_ENABLED
+        AuthorityGhost::get().shutdown(); // 작업 스레드는 이 이미지의 코드다 - 이미지가 내려가기 전에 합류한다
+#endif
         AssetLoadProfiler::get().reportIfRequested( "session" );
         // 초기화한 단계만 역순으로 내린다: UI → 텔레메트리 → 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI → 씬 → 입력 · 오디오 → 모듈 이미지 → 태스크 → 셰이더 캐시.
         _startup.getCollection().shutdownAll();
@@ -646,6 +654,11 @@ namespace sw
         // 물리 · 내비 디버그 선 — 씬 틱이 이번 프레임의 바디 · 경로를 정한 **뒤**, 관찰자 · UI · 패킷 **앞**이다(이번 프레임에 넣은 선이 endFrame 에서 확정된다).
         if ( _pSceneManager != nullptr )
             SceneDebugDraw::update( _pSceneManager->getActiveScene(), engine::getDebugDrawQueue() );
+#if SW_DEV_COMMANDS_ENABLED
+        // 서버가 가진 위치를 고스트로 겹친다(`-gv_authorityGhostPort` 가 0 이면 아무 일도 없다, 서버 디버깅 S6).
+        if ( _pSceneManager != nullptr )
+            AuthorityGhost::get().update( _pSceneManager->getActiveScene(), engine::getDebugDrawQueue() );
+#endif
 
         // 관찰자 훅 `onAfterSceneTick` — 이 프레임의 게임 상태가 정해진 뒤(씬 틱 · 디버그 그리기 뒤), 런타임 UI · 렌더 패킷 앞이라는 순서가 뜻이 있다(텔레메트리의 장면별 프레임 시간).
         if ( _listFrameObserver.empty() == false )
@@ -718,6 +731,9 @@ namespace sw
             }
 
             _pPacketBuilder->populateScene( packet, views, sceneViewCameraProvider, pActiveScene, deltaTime, *_pRHI, _pFrameRenderer );
+            // 미리보기 씬(에디터 툴 창)은 씬마다 자기 스냅샷 · 렌더 타깃으로 — 활성 씬과 섞이지 않는다.
+            if ( _pSceneManager != nullptr )
+                _pPacketBuilder->populateScenePreviews( packet, views, *_pSceneManager );
             RenderPacketBuilder::populateCanvas( packet, bSceneMain, _pUISystem, _pFontService, _pRHI );
 
             if ( _pRenderThread != nullptr )

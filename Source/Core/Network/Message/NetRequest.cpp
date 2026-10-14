@@ -126,7 +126,7 @@ namespace sw
         pending._onResponse          = std::move( onResponse );
         pending._handle              = handle;
         pending._method              = method;
-        pending._deadlineNanoseconds = MonotonicClock::nowNanoseconds() + static_cast<int64>( options._timeoutSeconds * 1.0e9 );
+        pending._deadlineNanoseconds = MonotonicClock::nowNanoseconds() + static_cast<int64>( options._timeoutSeconds * constant::kNanosecondsPerSecond );
         NetRequestStatus failure     = NetRequestStatus::Ok;
         uint64           requestID   = 0;
         {
@@ -141,7 +141,7 @@ namespace sw
                 _writer.clear();
                 _writer.writeVarUint( requestID );
                 _writer.writeBits( method, 16 );
-                _writer.writeVarUint( static_cast<uint64>( options._timeoutSeconds * 1000.0 ) );
+                _writer.writeVarUint( static_cast<uint64>( options._timeoutSeconds * constant::kMillisecondsPerSecond ) );
                 _writer.writeBool( options._idempotencyKey.isValid() );
                 if ( options._idempotencyKey.isValid() )
                 {
@@ -522,7 +522,7 @@ namespace sw
                 entry._body.assign( pBody, pBody + bodySize );
                 entry._bInProgress       = SW_FALSE;
                 entry._bDone             = SW_TRUE;
-                entry._expireNanoseconds = MonotonicClock::nowNanoseconds() + static_cast<int64>( _settings._idempotencyTtlSeconds * 1.0e9 );
+                entry._expireNanoseconds = MonotonicClock::nowNanoseconds() + static_cast<int64>( _settings._idempotencyTtlSeconds * constant::kNanosecondsPerSecond );
                 listWaiter.swap( entry._listWaiter );
                 _listExpiry.emplace_back( inFlight._scope, entry._expireNanoseconds );
                 purgeIdempotencyLocked( MonotonicClock::nowNanoseconds() );

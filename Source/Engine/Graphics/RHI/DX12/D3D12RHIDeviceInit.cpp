@@ -63,7 +63,7 @@ namespace sw
                     const string name = StringUtil::utf16ToUtf8( adapterDesc.Description );
                     formatstring( arrName, constant::kMaxBuffer256, "%# (vendor %#, device %#, VRAM %# MB)", name.c_str(),
                                   adapterDesc.VendorId, adapterDesc.DeviceId,
-                                  static_cast<uint32>( adapterDesc.DedicatedVideoMemory / ( 1024ull * 1024ull ) ) );
+                                  static_cast<uint32>( adapterDesc.DedicatedVideoMemory / constant::kBytesPerMegabyte ) );
                     CrashHandler::setContextValue( "GPU", arrName );
                 }
             }

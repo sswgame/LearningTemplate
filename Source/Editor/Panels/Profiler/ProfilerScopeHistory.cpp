@@ -102,7 +102,7 @@ namespace sw::editor
             const uint64 count = profiler.getLastFrameCount( slot );
             float32      value = ProfilerScopeHistoryInternal::kNoSample;
             if ( count > 0 )
-                value = bCounter ? static_cast<float32>( count ) : static_cast<float32>( static_cast<float64>( profiler.getLastFrameNanos( slot ) ) / 1000.0 );
+                value = bCounter ? static_cast<float32>( count ) : static_cast<float32>( static_cast<float64>( profiler.getLastFrameNanos( slot ) ) / constant::kNanosecondsPerMicrosecond );
             track._listValue[_writeIndex] = value;
         }
         // 이번 프레임에 레지스트리에 없던 트랙(아직 이름이 안 실린 칸)도 한 칸 비워 둔다 — 고리의 칸 번호가 모든 트랙에서 같아야 한다.

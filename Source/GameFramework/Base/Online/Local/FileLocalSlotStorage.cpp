@@ -83,7 +83,7 @@ namespace sw
             slotInfo._byteCount     = static_cast<int64>( FileUtil::getFileSize( entry._path ) );
             int64 ticks             = 0;
             if ( FileUtil::getFileWriteTime( entry._path, ticks ) )
-                slotInfo._writtenAtMs = ticks / ( FileUtil::kFileTimeTicksPerSecond / 1000 );
+                slotInfo._writtenAtMs = ticks / ( FileUtil::kFileTimeTicksPerSecond / constant::kMillisecondsPerSecond );
             return true;
         } );
         if ( bListed == false )

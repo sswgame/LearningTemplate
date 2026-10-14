@@ -16,7 +16,7 @@ namespace sw
      * @class NetSecurityLoginCrypto
      * @brief 제공자를 빌려 쓰는 로그인 암호 구현입니다.
      */
-    class SW_KIT_API NetSecurityLoginCrypto final : public ILoginCrypto
+    class SW_KIT_SERVER_API NetSecurityLoginCrypto final : public ILoginCrypto
     {
     public:
         /** @brief @p pProvider 는 빌려 씁니다. 이 객체보다 오래 살아야 하며 `NetSecurity::getProvider()` 로 얻습니다. */

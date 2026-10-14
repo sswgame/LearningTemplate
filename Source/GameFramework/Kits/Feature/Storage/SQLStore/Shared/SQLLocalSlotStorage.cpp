@@ -20,7 +20,7 @@ namespace sw
             /** @brief 로컬 슬롯이 쓰는 드라이버의 등록 이름입니다. 제품 이름은 드라이버 폴더만 알며, 레지스트리(`SQLDriverRegistry`)가 드라이버를 고릅니다. */
             static constexpr string_view kLocalSlotDriverName = "sqlite";
 
-            static int64 makeNowMs() { return FileUtil::getCurrentFileWriteTime() / ( FileUtil::kFileTimeTicksPerSecond / 1000 ); }
+            static int64 makeNowMs() { return FileUtil::getCurrentFileWriteTime() / ( FileUtil::kFileTimeTicksPerSecond / constant::kMillisecondsPerSecond ); }
         };
     } // namespace
 } // namespace sw

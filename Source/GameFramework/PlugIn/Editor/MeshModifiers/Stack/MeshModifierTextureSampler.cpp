@@ -55,7 +55,7 @@ namespace sw::editor
                 return s_cache;
             }
 
-            static int64 getNowMilliseconds() { return MonotonicClock::nowMicroseconds() / 1000; }
+            static int64 getNowMilliseconds() { return MonotonicClock::nowMicroseconds() / constant::kMicrosecondsPerMillisecond; }
 
             /** @brief 절대 경로 · 작업 폴더 상대 경로가 있으면 그대로, 아니면 리소스 id 로 해석합니다. 못 찾으면 빈 문자열입니다. */
             static string resolvePath( string_view assetPath )

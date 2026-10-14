@@ -4,6 +4,7 @@
  * @details 길이 칸의 상한 검사는 **몸을 받기 전에** 한다 — 4 바이트만 와도 4 GB 를 잡지 않는다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -33,8 +34,8 @@ namespace sw
 {
     struct StreamFrameConstant
     {
-        static constexpr int32 kHeaderSize          = 6;           ///< 길이 4 + 종류 1 + 깃발 1
-        static constexpr int32 kDefaultMaxFrameSize = 1024 * 1024; ///< 몸 상한
+        static constexpr int32 kHeaderSize          = 6;                                                 ///< 길이 4 + 종류 1 + 깃발 1
+        static constexpr int32 kDefaultMaxFrameSize = static_cast<int32>( constant::kBytesPerMegabyte ); ///< 몸 상한
     };
 } // namespace sw
 

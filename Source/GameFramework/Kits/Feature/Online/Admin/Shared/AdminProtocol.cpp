@@ -4,6 +4,7 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "GameFramework/Base/Online/Service/OnlineLimit.h"
 #include "GameFramework/Base/Online/Service/OnlineReplyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 
@@ -13,7 +14,6 @@ namespace sw
     {
         struct AdminProtocolInternal
         {
-            static constexpr int32 kMaxBalanceCount   = 1024;
             static constexpr int32 kSanctionKindCount = static_cast<int32>( ServiceSanctionKind::Count );
 
             static void writeBalances( BitWriter& outWriter, const vector<LedgerBalance>& listBalance )
@@ -29,7 +29,7 @@ namespace sw
             [[nodiscard]] static bool readBalances( BitReader& reader, vector<LedgerBalance>& outListBalance )
             {
                 const uint64 count = reader.readVarUint();
-                if ( count > static_cast<uint64>( kMaxBalanceCount ) )
+                if ( count > static_cast<uint64>( OnlineLimit::kMaxBalanceCount ) )
                     return false;
                 outListBalance.resize( static_cast<size_t>( count ) );
                 for ( LedgerBalance& balance : outListBalance )

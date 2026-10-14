@@ -47,6 +47,19 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "if command -v py >/dev/null 2>&1; then py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/GuardCommands.py\"; else python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/GuardCommands.py\"; fi",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }

@@ -36,11 +36,10 @@ namespace sw
      * @struct CacheStoreFactory
      * @brief 캐시 팩토리입니다.
      */
-    struct SW_KIT_API CacheStoreFactory
+    struct SW_KIT_SERVER_API CacheStoreFactory
     {
-        static constexpr const utf8* kMemoryDriverName = "memory";
-        static constexpr const utf8* kRespDriverName   = "resp";
-        static constexpr uint16      kDefaultRespPort  = 6379;
+        static constexpr const utf8* kRespDriverName  = "resp";
+        static constexpr uint16      kDefaultRespPort = 6379;
 
         /**
          * @brief 저장소를 만들고 초기화합니다. 실패하면 nullptr 과 실패 이유를 반환합니다.

@@ -69,6 +69,8 @@ namespace sw
 
         /** @brief 본 덮어쓰기를 추가합니다(같은 본이면 적은 필드를 합칩니다). */
         void setOverride( const BoneOverride& boneOverride );
+        /** @brief 본의 덮어쓰기를 지웁니다(임포트 값으로 돌아갑니다). 없으면 false 입니다. 대칭 쌍은 그대로 둡니다. */
+        [[nodiscard]] bool removeOverride( const hashed_string& bone );
         /** @brief 본의 덮어쓰기입니다. 없으면 nullptr 입니다. */
         const BoneOverride* findOverride( const hashed_string& bone ) const;
         /** @brief 대칭 짝을 더합니다. */

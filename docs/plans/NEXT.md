@@ -1,117 +1,110 @@
 # 다음 세션 인계
 
-새 세션은 이 문서를 먼저 읽습니다. 끝난 일은 여기 적지 않습니다 — 한 일은 `git log`, 결정과 근거는 [결정 기록](../09_Decisions.md), 검증 방법과 기준값은
-[검증과 측정](../08_Verification.md), 남은 일 전체는 [백로그](../06_Backlog.md)(분류 A~H)에 있습니다. 작업 방식은 [작업 방식](../11_Workflow.md)입니다.
+새 세션은 이 문서를 먼저 읽습니다. 끝난 일은 여기 적지 않습니다. 한 일은 `git log`, 결정과 근거는 [결정 기록](../09_Decisions.md), 검증 방법과 기준값은
+[검증과 측정](../08_Verification.md), 남은 일 전체는 [백로그](../06_Backlog.md)(분류 A~H)에 있습니다. 작업 방식은 [작업 방식](../11_Workflow.md)이고,
+병렬 작업자에게 주는 공통 규칙은 [작업자 규칙](WorkerRules.md)입니다.
 
-## 1. 지금 상태 (2026-10-14)
+## 1. 지금 상태 (2026-10-15)
 
-main 은 이 문서의 커밋이고, 그 앞이 C-27 ③ · ⑥ 커밋(외부 프로파일러 · 메모리 예산 · 리소스 루트 서브시스템, OnlineLoadBot 의 부트스트랩 서브시스템)이다.
-push 와 CI 확인은 조정자의 일이고, 이 문서를 쓸 때의 CI 결과는 적지 않았다. 서브시스템 정리는 `wt/host` 의 호스트 범위까지 끝났다(그 전의 ① ~ ⑤ 와 C-27 · C-26 은 main 에 있습니다).
-원격 브랜치 `origin/wt/rest`(빌드 전 WIP `7e7c1c0fd`)는 이제 쓸모없다 — 조정자가 `git push origin --delete wt/rest` 로 지운다.
+main 은 `origin/main` 보다 184 커밋 앞서 있고 push 하지 않았습니다. 원격 브랜치는 `main` 하나입니다. 이번 세션에 병합한 것은 다음과 같습니다.
 
-**에디터 보강 브랜치 `wt/editor`(2026-10-14, 사용자 지시로 main 에 병합하지 않고 별도 브랜치로 push).** main 의 이 문서 커밋에서 갈라 에디터 보강 묶음을 넣었다 — 버그 리포트 창 · 인스펙터 보기 옵션 ·
-컨텍스트 메뉴 확장 지점(하이어라키 · 콘텐츠 브라우저 · 뷰포트) · UI 디자이너 슬롯 편집 + 앵커 프리셋 · 대화 · 애니메이션 그래프 저장 시나리오(`asset.open`) · `cheat.*` 치트 명령 · 시나리오 녹화 · 포토 모드 ·
-`LightingOnly` 보기 모드 + 셰이더 재쿠킹 산출물 · 입력 바인딩별 시간 · Negate · MultiTap · 패드 가상 커서. 2차 묶음(같은 날): 어빌리티 디버거 · NPC 일정 창 · 오디오 이벤트 창 · 리그 디버그 창 + 시퀀서 `RigSlot` 트랙 · 모듈 창 상세 ·
-인스펙터 즐겨찾기 · UI 디자이너 끌기 손잡이 · 지형 브러시 기초 · 시나리오 녹화 휠 기록. 설계 문서 둘: [다중 월드](EditorMultiWorld.md) · [캐릭터 편집 창](EditorCharacterEditor.md) (코드 없음, 다른 PC 에서 병합할 때 근거).
-`D3-1` ⑦ 은 구현하지 않고 까닭과 단계적 대안을 결정 기록 5-11 에 적었다. 3차(같은 날): **메시 모디파이어 스택 플러그인** `GF_EditorPlugIn_MeshModifiers`(56 id, [README](../../Source/GameFramework/PlugIn/Editor/MeshModifiers/README.md),
-백로그 `D3-10`) — 컴퓨트 셰이더 미리보기는 조사만 하고 시작하지 않았다(GPU 검증이 필요). 검증: Debug `all AllTests` 경고 0, `ctest --preset Ninja-Debug-nogpu` 48/49
-(실패 하나 `PythonTest_TestAcronymSpelling` 은 이 PC 에서 파이썬이 git 출력을 파이프로 받지 못하는 환경 문제). **검증하지 않은 것**: Shipping 빌드 · 테스트, GPU 테스트, 에디터 시나리오 실행, 눈으로 본 확인,
-그리고 커밋 전 훅(모든 커밋이 `--no-verify`). 병합 전에 [백로그](../06_Backlog.md) `D3-9` 의 확인 목록을 먼저 본다. 덤프(에디터 패널 덤프 · 크래시 덤프)와 서버 타깃은 하지 않았다(사용자 지시).
+- 서브시스템 정리의 마지막 단계: `EngineLoop` 를 `Engine` 으로 개명, 호스트 범위(모듈 이미지 창구, 자동화 구동기), C-27 판정 마감.
+- 스레드: `sw::thread` 래퍼와 `CheckStdThread` 린트, 에디터 백그라운드 작업의 결과 · 대기 판정 통합(C-24).
+- 내보내기: 키트 DLL 이 `GameFramework.dll` 과 겹쳐 내보내던 심볼 제거(`SW_KIT_API` · `SW_KIT_SERVER_API`), `CheckExportMacros` 린트(C-3).
+- 상수: 시간 · 바이트 단위 공용 상수와 치환 106 개 파일, `OnlineLimit.h`, `CheckWellKnownConstants` 확장. 조건 세 부분 이상은 이름을 붙이라는 `CheckConditionParts` 린트(새 줄만 검사).
+- 이름: 사용자 설정의 `Applier` 를 `Handler` 로 바꿨고 한국어 "적용기" 를 없앴습니다. 정적 등록 표를 `RegistrationList` 로 모았습니다(`EditorAssetTypeActions` 포함).
+- 에디터: 서버 디버그 채널 · 상태 해시 · 권한 고스트(S3 · S6 · S7), 다중 월드 단계 2~5(미리보기 씬마다 렌더러, `EditorPreviewPanel`, 모듈 ABI v6), 지형 쓰기 API(CPU), 캐릭터 편집 창(스켈레톤 · 장비 · 피팅 표시 · 프리셋 파일), 메시 모디파이어 보강, UI 혼합 배율 `MatchWidthOrHeight`.
+- 결함: E-11(리로드 중복 등록), GL 체인 포커스 상실 입력 처리, 커서 클립 건너뜀 처리, 에디터 창 5 건(`visual`).
+- 도구: 가드 훅 `GuardCommands.py`, graphify MCP(`.mcp.json`), `gpu-verifier` · `code-reviewer` 에이전트.
 
-**모디파이어 플러그인 편집 UX(4차, 같은 날).** 패널(곡선 그래프 · 열 이름 있는 목록 표 · 참조 콤보 · 에셋 슬롯 · 구역 · 툴팁 · 단위 · 설명)과 뷰포트(기즈모 · 범위 표시 · 격자 제어점 끌기 · Stage 미리보기)를 넣었고,
-한계 중 풀 수 있는 것(마우스 양보 창구 `EditorViewportMouseClaim` · 여러 확장자 필터 · 파생 컴포넌트 걸러 보기 · 회전 고리 오일러 · 입력 메시 상자 · CPU 텍스처 표본기 · 변위량 클램프 · 회전 최소화 프레임 · 노이즈 공용화 ·
-Conform 의 `SurfaceBvh`)을 풀었다. 최종 검증: Debug `all AllTests` **오류 0 · 경고 0**, 모디파이어 단위 테스트 113 · 기즈모 14 · 표본기 3 · 노이즈 9 통과, `nogpu` 48/49.
+**아직 합치지 않은 작업 둘.** 작업자가 일하던 워크트리가 디스크에 있습니다. 세션이 바뀌면 에이전트는 멈추므로, 새 세션이 워크트리 상태를 보고 이어받습니다.
 
-**새 세션이 이어받을 때(우선순위 순).**
-1. 다른 PC(정상 환경)에서 `wt/editor` 를 받아 pre-commit 훅 · clang-format 20.1.8 · Shipping 빌드와 테스트 · GPU 테스트를 돌린다 — 이 PC 에서 못 한 것 전부.
-2. 에디터를 띄워 [백로그](../06_Backlog.md) `D3-9` · `D3-10` 의 눈으로 볼 목록을 확인한다(모디파이어 패널 · 뷰포트 핸들 · 마우스 양보의 첫 클릭 누수).
-3. 컴퓨트 셰이더 미리보기(`D3-10`, 조사는 끝남 — uber 셰이더 + 모프 풀 출력 경로, 4 백엔드 GPU 검증이 필요).
-4. 남은 에디터 큰 덩어리: 다중 월드(`D3-7`, [계획](EditorMultiWorld.md)) · 캐릭터 편집 창([계획](EditorCharacterEditor.md)). 지형 쓰기는 Release 측정 등 잔여만(`D2-5` (7)).
-**에이전트 주의:** 이 세션에서 에이전트는 `model` 을 지정하지 않아 정의 파일 값(`worker` = opus)으로 돌았다. 다음에는 일의 크기에 맞춰 `model` 을 명시한다(`docs/11_Workflow.md` 9절).
+- `D:\w\terrain2`(`wt/terrain2`): **끝났고 병합만 남았습니다.** 커밋 셋입니다. `996645dc1`(스플랫 GPU 갱신, 청크별 충돌 바디, 메시 재생성 나눔, 식생 · 내비 연결), `68198f173`(에디터 `TerrainBrushTool` 드래그 · 되돌리기 · 저장, `camera.set`, 시나리오 `editor.terrainbrush`), `de03ac3eb`(문서).
+  RHI 영역 업로드(`uploadTexture2DRegion`)는 이미 네 백엔드에 있었고 백로그의 "부분 업로드가 없다" 는 낡은 내용이었습니다. 지형에서 GPU 로 가는 길만 새로 만들었습니다.
+  작업자 보고: App · EditorModule · EngineTest 경고 0, 지형 테스트 27/27, 네 백엔드에서 `editor.terrainbrush` 시나리오 PASS, DX12 · Vulkan 캡처를 직접 확인(되돌리기 뒤 칠하기 전과 같음). Debug 측정으로 5×5 쓰기 뒤 물리 틱 1416 ms → 17 ms, 257² 쓰기 프레임 288 ms → 25 ms 입니다.
+  `EditorTest` 와 `hostgpu` 는 돌리지 않았습니다. 병합 충돌 예상: `TerrainComponent.*` · `TerrainColliderComponent.*`(`getBodyHandle` 을 `getBodyCount` 로 바꿈) · `FrameRenderer.cpp` · `TextureCache.*` · `docs/06_Backlog.md` · 이 문서(그 브랜치도 NEXT.md 를 고쳤으니 이 문서 쪽을 취하고 지형 항목만 지웁니다).
+  남은 것(백로그 D2-5 (7)): Release 측정, 에디터 편집 모드에서 틱이 남은 청크를 처리하는지, 디바이스를 다시 만들면 칠한 스플랫이 사라지는 문제, 같은 텍스처를 쓰는 다른 지형도 함께 칠해지는 문제, 식생을 바뀐 셀만 다시 뿌리기, 존재하지 않는 `Environment/README.md`.
+- `D:\w\modgpu`(`wt/modgpu`): **세션을 닫으면서 작업자를 중단하고 체크포인트로 커밋했습니다.** 커밋 둘입니다. `a2c7130f9`(`DeformJob` 의 워커 `sw::vector` 인덱싱 레이스를 생 포인터로 고침, 이 일은 끝난 것으로 보임)와 `496a974a8`(컴퓨트 미리보기 체크포인트, 검증 전).
+  체크포인트에는 `meshmorph.hlsl` 의 모디파이어 uber 경로(`meshmodifier.hlsli`), 4 백엔드로 다시 구운 셰이더, `GPUMeshMorphPool` · `Mesh` · `FrameRendererCompute` 연결, `MeshModifierGPUProgram`(종류 id + 매개변수 구조 버퍼), 단위 테스트 둘(`TestMeshModifierGPU` · `TestMeshModifierGPUProgram`), 패널 · 비주얼라이저 변경, 시나리오 `meshmodifiers` 가 들어 있습니다.
+  커밋 훅이 잡은 규칙 위반 15 건(조건 세 부분 이상, 익명 네임스페이스 중복, 실패 `bool` 의 `[[nodiscard]]`, 셰이더 π 리터럴, 컨테이너 매개변수 이름)은 고쳤고, 셰이더는 DX12 · Vulkan · DX11 컴파일 검증을 통과했습니다. 그 정리 뒤 플러그인과 `EngineTest` 증분 빌드는 컴파일 5 건 · 링크 69 건에 경고 0 · 오류 0 입니다.
+  **확인하지 못한 것**: 컴퓨트 미리보기가 네 백엔드에서 실제로 그려지는지, CPU 결과와 일치하는지(GPU 테스트 결과), 하위 스택 UI 의 진행도, 이 체크포인트를 가진 `ctest`. 작업자의 최종 보고도 받지 못했습니다.
+  이어서 할 일: 빌드 → `TestMeshModifierGPU` 계열을 4 백엔드로 직렬 실행(`shared-lock gpu`) → `meshmodifiers` 시나리오 캡처 확인 → 하위 스택 UI → 통합 빌드로 확인하고 병합. 쿠킹 산출물은 이번 일 때문에 바뀐 것만 남습니다.
+- `terrain2` 도 미커밋 변경이 없는지 확인하고, 통합 브랜치에 모아 전체 빌드로 확인한 뒤 병합합니다.
+- `D:\w\visual`: 병합은 끝났습니다. 에디터 기능 캡처(`captures/`)와 미추적 시나리오(`Resource/engine/automation/vis/`)가 남아 있으니 필요한 것만 챙기고 `py -3 -m Scripts worktree-remove visual --force` 로 지웁니다.
+- `D:\w\perfbase` · `perfbase2` 는 성능 기준선이라 남깁니다.
 
-## 2. 이번 세션에서 확정된 방침
+## 2. 새 세션의 첫 일: 검증
 
-- **상용 엔진과 비교해 고른다.** 언리얼 · 유니티 · 고도의 방식과 견주어 더 낫거나 같으면 그대로 따르고, 우리가 더 나은 점은 확장으로 남긴다. 근거는 결정 기록에
-  "~로 알고 있다" 로 적는다(기억에 의존한 비교임을 밝힌다).
-- **구조는 규모가 커도 장기 이득이면 과감히 바꾼다.** 래퍼 · 별칭 · 옛 이름 호환은 두지 않는다(데이터도 다시 쓴다).
-- **서브시스템 판정 기준**: 수명 범위 · 초기화/종료 순서 · 의존이 있는 서비스는 서브시스템이다. 프레임마다 도는 핫 데이터 · 게임플레이 객체 · 값 객체 ·
-  정적 초기화의 등록 표는 아니다(예: 에셋 캐시는 값 저장소라 제외 — 결정 기록 리소스 절).
-- **검증에 Shipping 빌드 + Shipping `nogpu` 를 넣는다.** Debug 는 할당 헤더 모양이 달라 정렬 할당 객체의 잘못된 해제 같은 힙 손상을 못 본다.
-  단계 검증: Debug `all AllTests` 경고 0 → `ctest -L "lint|nogpu"` → Ninja-Shipping `all AllTests` 경고 0 → Shipping `ctest -L nogpu` → (해당하면) 앱 실행 · 모듈 리로드.
-- **에이전트는 push 하지 않는다.** 조정자가 push 하고 `gh` 로 CI 를 본다. `gh` 는 `C:\Program Files\GitHub CLI` 를 PATH 에 더해야 잡힌다.
-- **에이전트를 띄울 때 모델을 밝힌다**(보고 · 커밋의 `Co-Authored-By` 줄과 같게).
+오늘 병합마다 Debug 전체 빌드는 경고 0 · 오류 0 으로 확인했지만, 병합된 전체의 테스트는 한 번도 돌리지 않았습니다. 순서는 다음과 같습니다.
 
-## 3. 서브시스템 정리 — 끝난 모양과 지킬 요구
+1. `ctest --preset Ninja-Debug-nogpu` 와 `-lint`.
+2. Ninja-Shipping `all AllTests` 경고 0, Shipping `ctest -L nogpu`. Shipping 은 키트가 STATIC 이라 내보내기 매크로가 빈다는 것을 코드로만 확인했습니다.
+3. `ctest -L hostgpu` 직렬. Release 빌드와 네 백엔드 스크린샷 sha 대조(기준 `D:\w\perfbase`).
+4. 알려진 실패: `editor.uipreview` 가 속성 편집 단계(프레임 375)에서 DX12 · Vulkan · GL 모두 결정적으로 집니다. 포커스와 무관합니다. 의심 커밋은 `f46dc5fde` · `62bd5b3f7` · `999eef7d1` 이고 이분 탐색은 하지 않았습니다. `AppTest` 의 에디터 케이스가 이것 때문에 빨갛습니다. 백로그 A-1.
+5. Linux 전용 파일은 Windows 에서 컴파일되지 않아 기계적 치환만 하고 짓지 못했습니다(`PosixCrashHandler.cpp` · `EpollStreamTransport.cpp` · `FileUtil.cpp` 의 `st_mtim` 분기 · `HardwareProbe.cpp`). 사용자가 요청할 때만 WSL 로 확인합니다.
 
-서브시스템 정리의 단계는 모두 끝났다(근거는 결정 기록 5-3). 지금 모양: 호스트(App · ServerApp)가 호스트 범위(모듈 이미지 창구 · 자동화 구동기)를 들고 그 아래로
-부트스트랩 → 서비스 → 엔진 세 `SubsystemScope` 를 부모로 잇는다(테스트 하네스는 호스트 범위 없이 세 범위). 씬은 `GameObjectManager` 의 씬 범위, 게임 · 에디터는 각자 범위를 든다.
-서비스 표(`engine::getXxx`)는 바인딩 때 한 번 찾아 둔 캐시이고, 모듈은 호스트가 넘긴 서비스 범위에서 타입으로 찾는다. 부트스트랩 순서는 진단 → 이름 풀 → 로거 → 명령줄 →
-크래시 핸들러 → 리소스 루트 → 메모리 예산 → 정적 저장소다(`EngineInitSequenceTest.BootstrapScopeRunsFromDiagnosticsToStaticStorage` 가 지킨다). 메모리 예산 표는 첫 프레임 끝에
-읽는다(타입 등록부가 엔진 범위라서). `ServerServiceManager` 는 호스트 소유 객체로 남긴다(모듈 리로드마다 자기 stop → start 라 범위 종료 · 재기동 계약과 맞지 않는다 — 5-3).
-`DevCommandRegistry` · `AutomationStepRegistry` · `AutomationProbes` 는 정적 등록 표라 서브시스템이 아니다.
+## 3. 계획한 큰 일 (순서대로)
 
-지킬 요구: 엔진 루프 · 부트스트랩 · 헤드리스 헤더는 호스트만 include 한다(`CheckEngineLayers` 가 Games · GameFramework · Editor 에서 막는다). 모듈 조회 창구는
-읽기 전용 `ISubsystemLocator`(Core)이고 타입 해시로 DLL 경계를 넘는다. 컴포넌트는 `SceneEngineServices` 주입을 쓴다.
+1. **정리 3 종과 폴더 쪼개기.** 조건 세 부분 이상 기존 위반 1,773 건(754 파일)은 영역별로 한 작업자가 맡습니다. 영역은 `Source` 하위, `Tools/ReflectionParser`, `Test`, `Tools/OnlineLoadBot` 입니다(사용자가 정한 범주). 이어서 C-28(`engine::getXxx` 약 826 줄) 과 폴더 쪼개기(`Editor/Common/Commands` 61 · `Engine/Object/GameObject` 45 · `Engine/Renderer/Frame` 43)를 합니다. 셋은 파일이 크게 겹치므로 한 번에 하나씩 합니다.
+2. **구조 리팩토링과 데이터 주도 적용.** 조사 결과는 아래 4 절입니다. 사용자 결정이 필요한 것은 3 가지입니다.
+3. **서브틱 활용 조사.** `PostUpdate` 로 옮긴 컴포넌트 41 개를 전수 분류합니다(5 절).
+4. **그 밖.** 지형 후속(식생 · 내비 재계산, 콜라이더 부분 갱신 측정), 다중 월드 잔여(프리팹 창, 창별 선택과 전역 선택 연결, 스카이), 캐릭터 편집 (a) 미리보기 씬 이관과 (c) 슬라이더, 서버 디버그 잔여(클라이언트 해시, 어긋난 오브젝트 짚기), `nogpu` 샤드 결정, `TaskNode` · PCH · 에디터 기동 시간 측정, 열린 결함 A-2(TDR 뒤 행).
 
-## 4. 검증 창 결과
+## 4. 구조 리팩토링과 데이터 주도 조사 결과
 
-통합 담당 1 이 main `2e36f8f11` 에서 돌렸다(`D:\w\scope`).
+범주는 `Source`, `Tools/ReflectionParser`, `Test`, `Tools/OnlineLoadBot` 입니다. 숫자는 정규식 집계이고 판단이 들어간 곳은 추정입니다.
 
-- Debug `all AllTests` 경고 0 통과. **Release 빌드 · 스크린샷 sha 대조는 실행하지 않았다.**
-- `ctest -L hostgpu` 직렬 1차(1373 초): 7 개 중 4 통과, AppTest_HostOnly_Shard1 ~ 3 실패(EngineTest 와 나머지는 통과).
-  원인: 네 백엔드에서 `editor.extensionpanel` · `editor.chainreloadkitext`(두 번) · `editor.hidelock` · `editorstartup`(패널 수 35 기대, 실제 34)과
-  `AppSmokeTest.EditorSelfTestsPassInsideTheEditor` 가 졌다 — C-25 커밋 `1edc65fac`(게임이 쓰지 않는 키트를 올리지 않는다)로 기본 게임 Empty 에서 ThemePark 키트와
-  그 에디터 확장이 올라오지 않는데 테스트가 그것을 기대했다. `editor.hidelock` 은 단독 3/3 통과(체인 앞 단계 실패의 여파로 본다).
-  Vulkan 만 `editor.uipreview` 가 한 번 더 졌다(언어 버튼 이름표 없음, 1 회, 미확정).
-- 수정(시나리오 XML 넷 + `TestAppSmoke.cpp` 를 Empty 기준으로 — 패널 수 34, extensionpanel · reloadkitext 를 GF_Admin 으로, netplay 서버 접속 줄 확인을 종료 뒤로,
-  `KitExtensionSelfTestsPassInTheirGame` 추가)은 `1f7c3657b` 로 들어갔다. 그 뒤 `EditorScenariosPassOn*` DX12 · DX11 · Vulkan · OpenGL 모두 통과
-  (체인 실패 0, 에디터 모듈 로드 로그 확인).
-- 재실행에서 진 둘: ① Shard1 `EditorScenariosPassOnDirectX12` — `editor.netplay` 22 프레임에서 서버 접속 줄 `ExpectLog` 0 건(`netplay.wait` 는 클라이언트 줄만
-  기다리고 서버 줄은 서버 출력 파이프로 늦게 온다). 단독 5 회 중 1 회 실패 — 테스트 경합이고 확인을 종료 뒤로 옮겨 6/6
-  (로그 `D:\w\scope\build\Ninja-Debug\Bin\Saved\Automation\netplay_dx12.log`). ② Shard2 `EveryGamePackScenarioPassesOnEveryBackend` —
-  `game/shooter3d/automation/closewindow.scenario.xml -dx11` 종료 코드 10, `ExpectCursorClip: cursor clip is not inside the client area (clip 0,0,2560,1440)`.
-  단독 3/3 통과, 창이 앞으로 오지 못한 포커스 문제로 의심(미확정), 서브시스템 변경과는 무관해 보인다(로그 `...\Bin\Saved\Automation\closewindow_dx11.log`).
-- 미확인: 마지막 AppTest(필터 `*EditorScenariosPassOn*` + `EditorSelfTestsPassInsideTheEditor` + `KitExtensionSelfTestsPassInTheirGame`)의 스모크 둘은
-  셸 종료 코드 127 이라 결과를 보지 못했다(로그는 조정자 scratchpad 의 `v_ed.log`).
+- 규모: 타입 7,727 개(`struct` 4,962 · `class` 2,004 · `enum` 760), 헤더 1,801 개. 한 곳에서만 쓰이는 최상위 타입이 2,443 개(참조 1 곳 996 개)입니다. 그중 제품 코드 참조 0 인 공개 타입이 654 개입니다.
+- 가장 큰 문제 넷: 서비스 접근 창구가 여섯 갈래(`engine::getX` 693 · `getSubsystem<>` 432 · `getSceneService<>` 125 · `game::getService<>` 124 · `editor::getService<>` 110 · `getInstance()` 65), 온라인 키트 골격 복제(서비스 11 개에 타입 약 473 개), 얇은 위임 클래스(`*Catalog` 53 개, 호출처 0~2 곳인 `Util` 65 개), 이름 불일치(add / register / append, update / tick / step / advance, `xCount` 2,659 대 `countX` 163, `Settings` 중 31 개는 `Config`, 27 개는 `Def`).
+- 큰 단위: 1,000 줄 넘는 파일 64 개, 메서드 50 개 넘는 클래스 38 개(`FrameRenderer` 129 · `InputMap` 126 · `AbilitySystemComponent` 109 · `UISystem` 100 · `InputManager` 97 · `GameObjectManager` 66).
+- 데이터 주도 후보 순위 상위: 게임 · 키트 튜닝 상수를 `PROPERTY` 나 팩 설정으로, 작물 · 유닛 색을 `Def` 속성으로, `LoadBot` 동작 표 통합, 이벤트 필드 목록을 필드 표의 Emit 열에서 만들기, 컴포넌트 아이콘을 `REFLECT(Meta=Icon)` 으로, 확장자 → 종류 정본 하나로, `UIStyleField` 서술자 표, usage define 을 `ENUM` 이름에서 만들기.
+- 순서가 필요한 사슬: 확장자 정본 → 계약 테스트를 DataKind 표로. `SaveGame` · `Def` 리플렉션 경로 → 테스트 하네스.
+- **사용자 결정이 필요한 것.** ① 결정 기록 476 행(enum 이름 표 45 곳 유지)을 바꿀지, ② 테스트만 쓰는 공개 타입 654 개를 지울지(기존 결정 "사용처 0 공개 API 유지"와 충돌), ③ 서비스 접근 창구를 어떤 모양으로 통합할지(제안: 언리얼 `GetSubsystem<T>()` 관례).
+- 영향 순위 20 개의 전체 표는 이 세션의 조사 보고에만 있었습니다. 새로 조사하려면 `scout` 에게 같은 항목을 시킵니다.
 
-**새 세션의 첫 일(남은 검증)**: Release 빌드 + 네 백엔드 스크린샷 sha 대조(기준 `D:\w\perfbase` 는 Ninja-Release 만 있다), 수정이 들어간 뒤 `hostgpu` 재확인
-(1차와 같은 조건 — 직렬), 위 스모크 둘 확인. 그다음 3절.
+## 5. 서브틱 활용 조사
 
-## 5. 그 밖의 남은 일 (우선순위 순)
+서브틱(`registerSubTick`)은 `GameDirectorComponent.cpp` 한 곳에서만 쓰이고, `TickPhase` 의 `Early` · `Late` · `Finalize` 는 정의 밖 사용이 0 입니다. 반면 `setTickGroup` 은 48 개 파일, `PostUpdate` 는 41 개 파일입니다.
+주석을 읽은 14 개는 "디렉터(`PrePhysics`)가 이 프레임의 ○○ 를 끝낸 뒤에 읽는다" 였고(HarvestValley · NileCity · StarSkirmish 의 컴포넌트, 카메라 계열), 선행 조건(`getTickHandle()` 로 다른 오브젝트 컴포넌트에도 건다)이 이 의도를 정확히 표현합니다.
 
-1. **C-28 전역 서비스 접근자 호출 줄이기**(서브시스템 정리의 남은 단계 뒤) — `engine::getXxx` 호출 약 826 줄 · 209 파일을 주입으로 줄인다.
-   컴포넌트 · 씬은 `SceneEngineServices`, 서비스 클래스는 만들 때 · 초기화 때 의존 서브시스템 포인터를 멤버로 받는다. `getTypeRegistry`(273)는 쓰임새를 보고
-   `TypeLookupCache` 같은 기존 구조로 풀지 판단한다. 호출 분류 → 많은 접근자부터 주입 → 0 이 된 행의 getter 삭제, 접근자 단위 커밋 · 성능 측정(백로그 `C-28`).
-2. **폴더 쪼개기** — 평평한 `Editor/Common/Commands`(61) · `Engine/Object/GameObject`(45) · `Engine/Renderer/Frame`(43). `EditorNetPlaySession.h` → `Workspace/`.
-3. **`nogpu` 샤드 결정** — 합 540초(AppTest HostOnly 샤드 86~136초, EngineTest NoGPU 39~66초). 샤드를 더 쪼갤지 · 기동 중복을 줄일지 사용자 결정 대기.
-4. **`TaskNode` 소유 포인터 변경 전후 성능** — 기준선 워크트리 `D:\w\perfbase`(`2772e1a7a`) · `D:\w\perfbase2`(`6a86561ef`)와 비교. 중립이면 유지.
-5. **PCH 측정** — 모든 구성에서 PCH 를 켠 뒤의 빌드 시간.
-6. **에디터 기동 시간** — 7초 안팎(이전 4~6초). 조용한 기계에서 병합 전(`22b94b2e4`) · 후(`52bf2b4b7`) · 최신을 번갈아 5회씩.
-7. **E 절 관찰** — 백로그 E 절의 관찰 항목.
-8. **A 열린 결함** — GL 체인 1회 `editor.bugit` · `editor.viewportgrid` 기대 미달(창이 앞에 오지 못함), TDR 뒤 행의 원인 미상.
-   그 밖: 반복 패턴 정리(`ScopedRegistration<TRegistry,TEntry>` · `caseState<T>()` · `IServiceStoreWork` 람다 · 온라인 메서드 X-macro), 서버 디버그 `S3 · S6 · S7`,
-   다중 월드 `D3-7`, 에디터 보강 `D3-1`.
+- 할 일: `PostUpdate` 41 개를 (렌더 직전이 필요한 것 / 특정 컴포넌트 뒤에 읽는 것 / 이유를 모르는 것) 로 분류합니다. 후보 몇 개를 실제로 바꿔 프레임 시간과 동작을 비교합니다. 이득이 없으면 서브틱 · `TickPhase` 를 삭제 후보로 구조 리팩토링 지도에 올립니다.
+- 선행 조건이 있는 서브틱은 별도 스테이지로 가므로 지금 방식보다 느릴 수도 있습니다. 측정하지 않았습니다.
 
-## 6. 알려진 함정
+## 6. 확정된 방침
 
-- **정렬 할당 객체를 기반 포인터로 지우면 배포본 힙이 깨진다**(Debug 는 조용). `sw::default_delete` 가 그 변환을 컴파일 오류로 막는다 — 제 타입으로 들거나
-  넘긴 타입으로 지우는 소유자(`SubsystemCollection` · `SubsystemScope`)에 넘긴다.
-- **엔진 정리를 정적 소멸에 맡기지 않는다.** `std::exit` 앞에서는 하네스 · 범위를 명시적으로 내린다(정적 소멸 순서는 범위의 역순을 지키지 않는다).
-  이름 풀 표는 정적 저장소에 세워 종료 정적 소멸에서 빠졌다.
-- **낡은 빌드 폴더는 sccache 런처를 캐시해 둔다** — sccache 를 지운 뒤 예전 빌드 폴더를 그대로 쓰면 구성이 없는 런처를 부른다. 빌드 폴더를 새로 구성한다.
-  `Tools/Sccache` 폴더는 삭제 대기다.
-- **워크트리 정리**: 정션(`Tools/*`, `build/vcpkg_*`)을 `cmd //c rmdir` 로 **먼저** 끊고 폴더를 지운다 — 안 그러면 공유 도구가 지워진다.
-  남은 워크트리: `D:\w\c19` · `c20` · `c21` · `c22` · `c23`(병합 끝 — 정리 대상) · `scope`(통합 담당 1 의 수정이 main 에 들어갔으니 정리 대상) ·
-  `rest`(C-27 ③ · ⑥ 은 병합 끝 — C-24 stash "c24wip" 만 남아 있어 그것을 옮기기 전에는 지우지 않는다) · `perfbase` · `perfbase2`(성능 기준선 — 남긴다). 워크트리가 아닌 폴더 `c25p` · `rfP1` 도 남아 있다.
-- **모듈 안 정적 객체의 소멸자에서 스레드를 join 하지 말 것** — DLL 을 내릴 때 정적 소멸자는 로더 락을 쥔 채 돈다.
-- **무효 bindless 인덱스(0xFFFFFFFF)** 는 DX12 페이지 폴트 · Vulkan DEVICE_LOST. 셰이더를 바꾼 뒤에는 `App.exe --cook-shaders` 로 다시 굽는다.
-- **`castTo<Component>( Component*, 타입 )` 은 항상 성공한다** — 종류 거르기는 `getTypeInfo()->isDerivedFrom( 타입 )`.
-- **커밋 훅은 우회하지 않는다.** 스크립트로 파일을 고칠 때는 heredoc 대신 Write 도구로 scratchpad 파일을 만들고 CRLF 를 보존한다(`sed -i` 는 CRLF 를 지운다).
-  bash 큰따옴표 안의 백틱은 명령으로 실행된다 — 주석 글을 셸 인자로 넘기지 않는다.
+- 상용 엔진과 비교해 고릅니다. 근거는 결정 기록에 "~로 알고 있다" 로 적어 기억 기반임을 밝힙니다.
+- 구조는 규모가 커도 장기 이득이면 과감히 바꿉니다. 래퍼 · 별칭 · 옛 이름 호환은 두지 않고 데이터도 다시 씁니다.
+- ponytail 과 graphify 를 항상 켭니다(Headroom 은 삭제). 구조 개편을 시킬 때는 요청에 그 뜻을 분명히 적습니다. ponytail 의 "기존 구조 유지" 와 부딪히기 때문입니다.
+- graphify 그래프는 작업 묶음을 띄우기 직전에 갱신합니다(`graphify update Source`, 약 4분, 증분 아님). 산출물을 저장소 루트 `graphify-out/` 으로 옮깁니다.
+- 에이전트는 push 하지 않습니다. 에이전트를 띄울 때 종류와 모델을 답변에 적습니다.
+- 검증 단계: Debug `all AllTests` 경고 0, `ctest -L "lint|nogpu"`, Shipping `all AllTests` 경고 0, Shipping `nogpu`, 해당하면 앱 실행과 모듈 리로드.
+- 동시 빌드는 최대 둘입니다. 워크트리는 `py -3 -m Scripts worktree-make <이름> --base main` 으로 만들고, 병합이 맞는지 확인한 뒤 `py -3 -m Scripts worktree-remove <이름>` 으로 지웁니다.
 
-## 7. 새 세션 시작 절차
+## 7. 도구와 환경
 
-1. 이 문서 → [작업 방식](../11_Workflow.md) → [백로그](../06_Backlog.md) C 절(`C-24` · `C-28`) → [결정 기록](../09_Decisions.md) 서브시스템 절 순서로 읽는다.
-   C++ 을 쓰기 전에 [AGENTS.md](../../AGENTS.md).
-2. 4절의 남은 검증(Release 빌드 + 스크린샷 sha 대조 · hostgpu 재확인 · 스모크 둘)을 먼저 한다.
-3. 그다음 5절(그 밖의 남은 일)을 위에서부터 이어간다(서브시스템 정리는 끝났다).
+- 병렬 작업자 규칙은 [WorkerRules.md](WorkerRules.md) 에 있습니다. 병합할 때 문서 충돌은 양쪽을 남기는 방식으로 풀었고, 생성 문서(`docs/Config/*`)는 `GenerateConfigReference.py` 로 다시 만듭니다.
+- 가드 훅 `.claude/hooks/GuardCommands.py` 가 `git commit --no-verify` 와 링크가 든 폴더의 재귀 삭제를 막습니다. 새 에이전트부터 확실히 적용됩니다.
+- `.mcp.json` 이 graphify MCP 서버를 띄웁니다(`graphifyy[mcp]` 필요, `graphify-out/` 이 있는 main 체크아웃에서). 승인 대기 상태일 수 있습니다. context7 은 사용자 전역 설정에 등록했고 Node 는 설치했습니다(새 터미널에서 PATH 에 잡힙니다).
+- graphify 와 ponytail 스킬은 `.claude/skills/` 에 있고 추적하지 않습니다. 새 워크트리에는 복사해야 합니다.
+- 이 PC 의 사용자 Scripts 폴더(`C:\Users\ssw\AppData\Roaming\Python\Python314\Scripts`)는 PATH 에 없습니다. `graphify` 를 부르려면 더합니다.
+- WSL VM(Ubuntu-26.04)이 `wsl --shutdown` 후에도 1 초 안에 다시 뜹니다. VS Code 의 WSL 연결이나 다른 도구가 깨우는 것으로 보이며, 원인을 특정하지 못했습니다.
+
+## 8. 알려진 함정
+
+- **빌드 로그를 bash `grep` 으로 세지 않습니다.** PowerShell `Start-Process` 의 `*>` 리다이렉션은 로그를 UTF-16 으로 써서 `grep` 이 항상 0 을 돌려줍니다. 이 세션에서 그 방식으로 "경고 0" 이라 잘못 보고한 일이 있습니다. 로그를 `Out-File -Encoding utf8` 로 쓰고 `Select-String | Measure-Object` 로 셉니다.
+- **`worktree-remove` 는 브랜치도 지웁니다.** 병합이 실패했는데 먼저 지우면 브랜치를 잃습니다(커밋 객체는 남으니 `git branch <이름> <해시>` 로 복구). 병합 뒤 `git merge-base --is-ancestor` 로 확인하고 지웁니다.
+- **워크트리 지우기**: 링크(정션)를 링크로서만 먼저 끊습니다. 변수가 든 `rmdir` 는 안전장치가 막으니 `worktree-remove` 를 씁니다.
+- **앱 창을 전경으로 올려 캡처하는 스크립트를 쓰지 않습니다.** `SetForegroundWindow` 와 `CopyFromScreen` 방식은 사용자 화면에 창이 튀어나오고 작업표시줄 미리보기가 섞입니다. 메모장을 띄워 포커스를 흉내 내는 일도 같습니다. 캡처는 `-gv_screenshot` 을 쓰되, 이것은 게임 뷰만 저장하고 에디터 UI 는 담지 못합니다. 에디터 UI 를 전경 없이 캡처하는 방법(예: 창 그래픽 캡처)이 필요합니다.
+- Edit 도구와 `sed -i` 가 CRLF 파일을 LF 로 바꾼 적이 있습니다. 수정 뒤 `git diff --stat` 로 파일 전체가 바뀌지 않았는지 봅니다.
+- 정렬 할당 객체를 기반 포인터로 지우면 배포본 힙이 깨집니다(Debug 는 조용). 엔진 정리를 정적 소멸에 맡기지 않습니다. 모듈 안 정적 객체의 소멸자에서 스레드를 join 하지 않습니다.
+- 무효 bindless 인덱스(`0xFFFFFFFF`)는 DX12 페이지 폴트, Vulkan DEVICE_LOST 입니다. 셰이더를 바꾼 뒤에는 `App.exe --cook-shaders` 로 다시 굽습니다.
+- `castTo<Component>( Component*, 타입 )` 은 항상 성공합니다. 종류 거르기는 `getTypeInfo()->isDerivedFrom( 타입 )` 입니다.
+- 커밋 훅은 우회하지 않습니다. 스크립트로 파일을 고칠 때는 heredoc 대신 Write 도구로 scratchpad 파일을 만듭니다.
+- 비결정적 실패는 한 번의 재현으로 확정하지 않고 3~5 회 다시 돌려 재현율을 적습니다.
+
+## 9. 새 세션 시작 절차
+
+1. 이 문서, [작업 방식](../11_Workflow.md), [작업자 규칙](WorkerRules.md), [백로그](../06_Backlog.md) 순서로 읽습니다. C++ 을 쓰기 전에 [AGENTS.md](../../AGENTS.md).
+2. `git worktree list` 로 남은 워크트리를 확인하고 1 절의 `terrain2` · `modgpu` 상태를 봅니다.
+3. 2 절의 검증을 먼저 합니다.
+4. 3 절의 큰 일을 사용자와 순서를 확인한 뒤 시작합니다. 시작 전에 graphify 그래프를 갱신합니다.

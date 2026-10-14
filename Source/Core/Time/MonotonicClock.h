@@ -35,7 +35,7 @@ namespace sw
             return ( counts / countsPerSecond ) * constant::kNanosecondsPerSecond + ( counts % countsPerSecond ) * constant::kNanosecondsPerSecond / countsPerSecond;
         }
         /** @brief 지금 시각(마이크로초)입니다. */
-        static int64 nowMicroseconds() noexcept { return nowNanoseconds() / 1000; }
+        static int64 nowMicroseconds() noexcept { return nowNanoseconds() / constant::kNanosecondsPerMicrosecond; }
         /**
          * @brief `nowNanoseconds()` 기준 @p deadlineNanoseconds 까지 이 스레드를 재웁니다(이미 지났으면 바로 돌아온다). 고정 틱 루프의 잠자기입니다.
          * @details Windows 는 고해상도 대기 타이머(`CREATE_WAITABLE_TIMER_HIGH_RESOLUTION` — 없으면 `Sleep` 밀리초)로 1 ms 해상도 한계를 피하고,
@@ -66,9 +66,9 @@ namespace sw
         /** @brief 지난 시간(나노초)입니다. */
         int64 getElapsedNanoseconds() const noexcept { return MonotonicClock::nowNanoseconds() - _startNanoseconds; }
         /** @brief 지난 시간(마이크로초)입니다. */
-        int64 getElapsedMicroseconds() const noexcept { return getElapsedNanoseconds() / 1000; }
+        int64 getElapsedMicroseconds() const noexcept { return getElapsedNanoseconds() / constant::kNanosecondsPerMicrosecond; }
         /** @brief 지난 시간(밀리초)입니다. */
-        int64 getElapsedMilliseconds() const noexcept { return getElapsedNanoseconds() / 1000000; }
+        int64 getElapsedMilliseconds() const noexcept { return getElapsedNanoseconds() / constant::kNanosecondsPerMillisecond; }
 
     private:
         int64 _startNanoseconds;
@@ -85,7 +85,7 @@ namespace sw
     {
     public:
         /** @brief 지금부터 @p milliseconds 뒤가 기한입니다. */
-        static Deadline afterMilliseconds( int64 milliseconds ) noexcept { return Deadline{ MonotonicClock::nowNanoseconds() + milliseconds * 1000000 }; }
+        static Deadline afterMilliseconds( int64 milliseconds ) noexcept { return Deadline{ MonotonicClock::nowNanoseconds() + milliseconds * constant::kNanosecondsPerMillisecond }; }
 
         /** @brief 기한이 지났으면 true 입니다. */
         bool isExpired() const noexcept { return MonotonicClock::nowNanoseconds() >= _deadlineNanoseconds; }
@@ -93,7 +93,7 @@ namespace sw
         int64 getRemainingMilliseconds() const noexcept
         {
             const int64 remaining = _deadlineNanoseconds - MonotonicClock::nowNanoseconds();
-            return remaining > 0 ? remaining / 1000000 : 0;
+            return remaining > 0 ? remaining / constant::kNanosecondsPerMillisecond : 0;
         }
 
     private:

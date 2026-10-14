@@ -2,7 +2,12 @@
 
 #include "GameFramework/PlugIn/Editor/CharacterEditor/Model/AppearanceEditModel.h"
 
+#include "Core/File/FileUtil.h"
+
+#include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
+#include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
 #include "GameFramework/Base/Gameplay/Appearance/UserAppearancePresetStore.h"
+#include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 
 namespace sw::editor
 {
@@ -66,6 +71,7 @@ namespace sw::editor
         : _selection{}
         , _saved{}
         , _history{}
+        , _revision{ 0 }
     {
     }
 
@@ -74,6 +80,7 @@ namespace sw::editor
         _selection = selection;
         _saved     = selection;
         _history.clear();
+        ++_revision;
     }
 
     bool AppearanceEditModel::isDirty() const
@@ -210,11 +217,13 @@ namespace sw::editor
 
     bool AppearanceEditModel::undo()
     {
+        ++_revision;
         return _history.undo( _selection );
     }
 
     bool AppearanceEditModel::redo()
     {
+        ++_revision;
         return _history.redo( _selection );
     }
 
@@ -229,9 +238,104 @@ namespace sw::editor
         return true;
     }
 
+    bool AppearanceEditModel::saveToPresetFile( UserAppearancePresetStore& store, string_view name, string_view absolutePath )
+    {
+        if ( name.empty() )
+            return false;
+        const AppearanceSelection   previousSaved = _saved;
+        const UserAppearancePreset* pExisting     = store.findPresetByName( name );
+        const bool                  bHadPreset    = pExisting != nullptr;
+        const UserAppearancePreset  previous      = bHadPreset ? *pExisting : UserAppearancePreset{};
+        if ( saveToPresetStore( store, name ) == false )
+            return false;
+        if ( FileUtil::writeTextFile( absolutePath, store.saveToText() ) )
+            return true;
+        // 파일을 못 썼으면 메모리 저장소와 "저장된 상태" 를 되돌려 둔다 — 저장된 줄 알고 넘어가지 않게.
+        if ( bHadPreset )
+            (void)store.savePreset( name, previous._selection ); // 되돌림 경로 - 방금 있던 이름이라 실패하지 않는다
+        else
+            (void)store.removePreset( name ); // 방금 넣은 이름이라 있다
+        _saved = previousSaved;
+        SW_LOG_ERROR( "Appearance preset file could not be written: %#", string( absolutePath ).c_str() );
+        return false;
+    }
+
+    bool AppearanceEditModel::loadPresetFile( UserAppearancePresetStore& store, string_view absolutePath )
+    {
+        string text;
+        if ( FileUtil::readTextFile( absolutePath, text ) == false )
+            return false;
+        return store.loadFromText( text );
+    }
+
+    bool AppearanceEditModel::loadFromPreset( const UserAppearancePresetStore& store, string_view name )
+    {
+        const UserAppearancePreset* pPreset = store.findPresetByName( name );
+        if ( pPreset == nullptr )
+            return false;
+        setSelection( pPreset->_selection );
+        return true;
+    }
+
+    void AppearanceEditModel::collectSlotItems( const AppearanceDatabase& database, const hashed_string& slot, vector<hashed_string>& outListItem )
+    {
+        outListItem.clear();
+        const ItemCatalog* pCatalog = database.getItemCatalog();
+        if ( pCatalog == nullptr )
+            return;
+        hashed_string accepted = slot;
+        for ( const AppearanceSlotDef& def : database.getSlotTable().getSlots() )
+        {
+            if ( def._name == slot && def._accept.empty() == false )
+                accepted = def._accept;
+        }
+        for ( const ItemDef& item : pCatalog->getItems() )
+        {
+            if ( item.isEquipment() && item._equipSlot == accepted )
+                outListItem.push_back( item._id );
+        }
+    }
+
+    bool AppearanceEditModel::equipSet( const AppearanceDatabase& database, const hashed_string& setID )
+    {
+        const EquipSetDef* pSet = database.getSets().findSet( setID );
+        if ( pSet == nullptr )
+            return false;
+        vector<EquipSetPieceDef> listPiece;
+        database.getSets().computePieces( *pSet, _selection._bodyType, listPiece );
+
+        const AppearanceSelection before = _selection;
+        for ( const EquipSetPieceDef& piece : listPiece )
+        {
+            if ( piece._listItem.empty() )
+                continue;
+            AppearanceSlotRequest* pExisting = AppearanceEditModelInternal::findSlot( _selection, piece._slot );
+            if ( pExisting != nullptr )
+                pExisting->_itemID = piece._listItem.front();
+            else
+            {
+                AppearanceSlotRequest request;
+                request._slot   = piece._slot;
+                request._itemID = piece._listItem.front();
+                _selection._listSlot.push_back( request );
+            }
+        }
+        if ( AppearanceEditModelInternal::isSameSelection( before, _selection ) )
+            return false;
+        _history.record( before );
+        ++_revision;
+        return true;
+    }
+
+    void AppearanceEditModel::previewResolved( const AppearanceDatabase& database, ResolvedAppearance& outResolved, AppearanceSelectionReport& outReport ) const
+    {
+        AppearanceSelectionUtil::previewSelection( database, _selection, CharacterAppearanceSpec{}, nullptr, outResolved, outReport );
+    }
+
     void AppearanceEditModel::recordUndo( string_view coalesceKey )
     {
         _history.record( _selection, coalesceKey );
+        ++_revision;
     }
 
     string AppearanceEditModel::makeKey( string_view kind, const hashed_string& target )

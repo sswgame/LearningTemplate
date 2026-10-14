@@ -171,6 +171,19 @@ namespace sw
         _listOverride.push_back( boneOverride );
     }
 
+    bool ReferencePoseOverride::removeOverride( const hashed_string& bone )
+    {
+        for ( size_t index = 0; index < _listOverride.size(); ++index )
+        {
+            if ( _listOverride[index]._bone == bone )
+            {
+                _listOverride.erase( _listOverride.begin() + static_cast<ptrdiff_t>( index ) );
+                return true;
+            }
+        }
+        return false;
+    }
+
     const BoneOverride* ReferencePoseOverride::findOverride( const hashed_string& bone ) const
     {
         for ( const BoneOverride& boneOverride : _listOverride )

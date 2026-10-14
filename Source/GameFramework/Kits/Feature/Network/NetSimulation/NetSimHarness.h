@@ -172,7 +172,7 @@ namespace sw
      * @class INetSimGame
      * @brief 하니스가 월드를 만들 때마다 호출하는 게임입니다. 월드의 내용(오브젝트와 씬 문서)을 만들고 그 월드의 세션을 반환합니다.
      */
-    class SW_KIT_API INetSimGame
+    class INetSimGame
     {
     public:
         INetSimGame()          = default;

@@ -29,7 +29,7 @@ namespace sw
             // 보고(`report`)만 쓰는 도우미다. 보고는 Info 로그로만 나가므로 그것이 빠지는 구성(Shipping)에는 두지 않는다.
 
             /** @brief 바이트를 MB 의 10 배로 바꿉니다(소수 한 자리를 정수로 찍기 위해). */
-            static constexpr uint64 toMegabytesX10( uint64 bytes ) { return ( bytes * 10 ) / ( 1024ull * 1024ull ); }
+            static constexpr uint64 toMegabytesX10( uint64 bytes ) { return ( bytes * 10 ) / constant::kBytesPerMegabyte; }
 
             /** @brief 아는 값은 "12.3 MB", 모르는 값은 "모름" 으로 적습니다. */
             static void formatMegabytes( uint64 bytes, bool bKnown, utf8* pOut, uint32 capacity )

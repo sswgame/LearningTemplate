@@ -16,7 +16,7 @@ namespace sw
      * @struct LiveEventRules
      * @brief 열림 판정을 담은 순수 함수 모음입니다.
      */
-    struct SW_KIT_API LiveEventRules
+    struct SW_KIT_SERVER_API LiveEventRules
     {
         /** @brief 계정과 무관한 열림(기간과 회차)을 판정합니다. 열렸으면 이번 창의 끝을 @p outWindowEndMs 에 채웁니다. */
         static bool isWindowOpen( const LiveEventDefinition& definition, int64 nowMs, int64& outWindowEndMs );

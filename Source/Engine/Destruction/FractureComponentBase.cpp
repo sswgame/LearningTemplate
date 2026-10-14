@@ -129,11 +129,10 @@ namespace sw
 
         struct FractureComponentBaseInternal
         {
-            static constexpr uint32  kBakeAfterStillFrames      = 30;
-            static constexpr float32 kMoveEpsilon               = 1.0e-4f;
-            static constexpr uint32  kMaxPolygonPoint2D         = 8;
-            static constexpr float32 kSpawnGraceTime            = 0.3f; ///< 갓 생성된 조각끼리의 충돌을 피해로 보지 않는 시간(초)이다.
-            static constexpr int64   kNanosecondsPerMicrosecond = constant::kNanosecondsPerSecond / 1'000'000;
+            static constexpr uint32  kBakeAfterStillFrames = 30;
+            static constexpr float32 kMoveEpsilon          = 1.0e-4f;
+            static constexpr uint32  kMaxPolygonPoint2D    = 8;
+            static constexpr float32 kSpawnGraceTime       = 0.3f; ///< 갓 생성된 조각끼리의 충돌을 피해로 보지 않는 시간(초)이다.
             /// 미리 짓기 예산을 다시 채우는 창이다. 한 프레임(60 Hz 16.7 ms · 240 Hz 4.2 ms)보다 짧아 보통 프레임마다 채워지고, 아주 빠른 프레임에서는 몇 프레임에 한 번이 된다.
             static constexpr int64 kLeafWarmWindowNanoseconds = constant::kNanosecondsPerSecond / 250;
 
@@ -152,7 +151,7 @@ namespace sw
                     s_leafWarmBudget._windowStartNanoseconds = now;
                     s_leafWarmBudget._spentNanoseconds       = 0;
                 }
-                const int64 remaining = static_cast<int64>( gv_fractureShapeWarmMicroseconds ) * kNanosecondsPerMicrosecond - s_leafWarmBudget._spentNanoseconds;
+                const int64 remaining = static_cast<int64>( gv_fractureShapeWarmMicroseconds ) * constant::kNanosecondsPerMicrosecond - s_leafWarmBudget._spentNanoseconds;
                 if ( remaining <= 0 )
                     return;
                 SW_PROFILE_SCOPE( "GT.Scene.tick.physics.fractureWarm" );

@@ -39,7 +39,7 @@ namespace sw
      * @class IScheduleActivityLocator
      * @brief 활동 자리를 예약 · 반납합니다. 같은 요청 순서에 늘 같은 답이어야 합니다(결정적 — 화면 밖 시뮬레이션 · 저장 · 재생).
      */
-    class SW_GF_API IScheduleActivityLocator
+    class IScheduleActivityLocator
     {
     public:
         IScheduleActivityLocator()                                                 = default;

@@ -23,7 +23,7 @@ namespace sw
      * @class ICameraCollisionProbe
      * @brief 구 하나를 @p from 에서 @p to 로 쓸어 처음 닿는 거리를 구합니다.
      */
-    class SW_GF_API ICameraCollisionProbe
+    class ICameraCollisionProbe
     {
     public:
         ICameraCollisionProbe()                                          = default;

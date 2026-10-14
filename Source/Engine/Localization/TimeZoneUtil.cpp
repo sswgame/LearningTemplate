@@ -8,9 +8,6 @@ namespace sw
     {
         struct TimeZoneUtilInternal
         {
-            static constexpr int64 kSecondsPerMinute     = 60;
-            static constexpr int64 kSecondsPerHour       = 3600;
-            static constexpr int64 kSecondsPerDay        = 86400;
             static constexpr int32 kDaylightShiftMinutes = 60;
 
             static constexpr TimeZoneInfo kArrZone[] = {
@@ -96,23 +93,23 @@ namespace sw
             {
                 if ( zone._daylightRule == DaylightRule::None )
                     return false;
-                const int64 standardSeconds = static_cast<int64>( zone._standardOffsetMinutes ) * kSecondsPerMinute;
+                const int64 standardSeconds = static_cast<int64>( zone._standardOffsetMinutes ) * constant::kSecondsPerMinute;
                 int32       year{ 0 };
                 int32       month{ 0 };
                 int32       day{ 0 };
-                computeCivilFromDays( floorDivide( unixSeconds + standardSeconds, kSecondsPerDay ), year, month, day );
+                computeCivilFromDays( floorDivide( unixSeconds + standardSeconds, constant::kSecondsPerDay ), year, month, day );
                 int64 startSeconds{ 0 };
                 int64 endSeconds{ 0 };
                 if ( zone._daylightRule == DaylightRule::UnitedStates )
                 {
-                    const int64 daylightSeconds = standardSeconds + kDaylightShiftMinutes * kSecondsPerMinute;
-                    startSeconds                = findNthSunday( year, 3, 2 ) * kSecondsPerDay + 2 * kSecondsPerHour - standardSeconds;
-                    endSeconds                  = findNthSunday( year, 11, 1 ) * kSecondsPerDay + 2 * kSecondsPerHour - daylightSeconds;
+                    const int64 daylightSeconds = standardSeconds + kDaylightShiftMinutes * constant::kSecondsPerMinute;
+                    startSeconds                = findNthSunday( year, 3, 2 ) * constant::kSecondsPerDay + 2 * constant::kSecondsPerHour - standardSeconds;
+                    endSeconds                  = findNthSunday( year, 11, 1 ) * constant::kSecondsPerDay + 2 * constant::kSecondsPerHour - daylightSeconds;
                 }
                 else
                 {
-                    startSeconds = findLastSunday( year, 3 ) * kSecondsPerDay + kSecondsPerHour;
-                    endSeconds   = findLastSunday( year, 10 ) * kSecondsPerDay + kSecondsPerHour;
+                    startSeconds = findLastSunday( year, 3 ) * constant::kSecondsPerDay + constant::kSecondsPerHour;
+                    endSeconds   = findLastSunday( year, 10 ) * constant::kSecondsPerDay + constant::kSecondsPerHour;
                 }
                 return startSeconds <= unixSeconds && unixSeconds < endSeconds;
             }
@@ -149,11 +146,11 @@ namespace sw
 
     TextDateTime TimeZoneUtil::convertUnixMilliseconds( int64 unixMilliseconds, const TimeZoneInfo& zone )
     {
-        const int64 unixSeconds   = TimeZoneUtilInternal::floorDivide( unixMilliseconds, 1000 );
+        const int64 unixSeconds   = TimeZoneUtilInternal::floorDivide( unixMilliseconds, constant::kMillisecondsPerSecond );
         const int32 offsetMinutes = computeOffsetMinutes( unixSeconds, zone );
-        const int64 localSeconds  = unixSeconds + static_cast<int64>( offsetMinutes ) * TimeZoneUtilInternal::kSecondsPerMinute;
-        const int64 days          = TimeZoneUtilInternal::floorDivide( localSeconds, TimeZoneUtilInternal::kSecondsPerDay );
-        const int64 secondOfDay   = localSeconds - days * TimeZoneUtilInternal::kSecondsPerDay;
+        const int64 localSeconds  = unixSeconds + static_cast<int64>( offsetMinutes ) * constant::kSecondsPerMinute;
+        const int64 days          = TimeZoneUtilInternal::floorDivide( localSeconds, constant::kSecondsPerDay );
+        const int64 secondOfDay   = localSeconds - days * constant::kSecondsPerDay;
 
         int32 year{ 0 };
         int32 month{ 0 };
@@ -164,9 +161,9 @@ namespace sw
         value._year             = year;
         value._month            = static_cast<uint8>( month );
         value._day              = static_cast<uint8>( day );
-        value._hour             = static_cast<uint8>( secondOfDay / TimeZoneUtilInternal::kSecondsPerHour );
-        value._minute           = static_cast<uint8>( secondOfDay % TimeZoneUtilInternal::kSecondsPerHour / TimeZoneUtilInternal::kSecondsPerMinute );
-        value._second           = static_cast<uint8>( secondOfDay % TimeZoneUtilInternal::kSecondsPerMinute );
+        value._hour             = static_cast<uint8>( secondOfDay / constant::kSecondsPerHour );
+        value._minute           = static_cast<uint8>( secondOfDay % constant::kSecondsPerHour / constant::kSecondsPerMinute );
+        value._second           = static_cast<uint8>( secondOfDay % constant::kSecondsPerMinute );
         value._utcOffsetMinutes = static_cast<int16>( offsetMinutes );
         value._bZoned           = true;
         return value;
@@ -175,8 +172,8 @@ namespace sw
     int64 TimeZoneUtil::computeUnixSeconds( const TextDateTime& value )
     {
         const int64 days = TimeZoneUtilInternal::computeDaysFromCivil( value._year, value._month, value._day );
-        return days * TimeZoneUtilInternal::kSecondsPerDay + value._hour * TimeZoneUtilInternal::kSecondsPerHour +
-               value._minute * TimeZoneUtilInternal::kSecondsPerMinute + value._second;
+        return days * constant::kSecondsPerDay + value._hour * constant::kSecondsPerHour +
+               value._minute * constant::kSecondsPerMinute + value._second;
     }
 
     string TimeZoneUtil::formatOffset( int32 offsetMinutes, bool bPadded )

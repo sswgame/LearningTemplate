@@ -338,7 +338,7 @@ namespace sw::editor
             if ( child._exited.load() == 0 && child._process.writeInput( "quit\n" ) == false )
                 SW_LOG_WARNING( "Could not send quit to %# - it is terminated after the timeout", child._label );
         }
-        updateUntil( static_cast<int64>( _settings._stopTimeoutSeconds * 1000.0f ), [this]()
+        updateUntil( static_cast<int64>( _settings._stopTimeoutSeconds * constant::kMillisecondsPerSecond ), [this]()
         {
             for ( const unique_ptr<ChildProcess>& pChild : _listProcess )
             {

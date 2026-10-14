@@ -15,7 +15,7 @@ namespace sw
     {
         struct ServiceSchedulerInternal
         {
-            static constexpr int64  kMinuteMs       = 60 * 1000;
+            static constexpr int64  kMinuteMs       = constant::kSecondsPerMinute * constant::kMillisecondsPerSecond;
             static constexpr int64  kDayMs          = 24 * 60 * kMinuteMs;
             static constexpr int64  kDaysPerWeek    = 7;
             static constexpr int64  kEpochWeekday   = 3; ///< 1970-01-01 은 목요일(ISO 월요일 = 0)

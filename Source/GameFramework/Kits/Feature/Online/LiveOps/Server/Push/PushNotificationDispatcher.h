@@ -61,7 +61,7 @@ namespace sw
      * @class PushNotificationDispatcher
      * @brief 푸시 발송기입니다.
      */
-    class SW_KIT_API PushNotificationDispatcher
+    class SW_KIT_SERVER_API PushNotificationDispatcher
     {
     public:
         PushNotificationDispatcher();

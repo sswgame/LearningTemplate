@@ -2,6 +2,8 @@
 
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"
 
+#include "GameFramework/Base/Online/Service/OnlineLimit.h"
+
 namespace sw
 {
     namespace
@@ -18,7 +20,7 @@ namespace sw
 
             static bool isScoreInRange( int64 score ) { return -IEphemeralStore::kMaxAbsScore <= score && score <= IEphemeralStore::kMaxAbsScore; }
 
-            static bool isValidMember( const string& member ) { return member.empty() == false && member.size() <= static_cast<size_t>( IEphemeralStore::kMaxKeySize ); }
+            static bool isValidMember( const string& member ) { return member.empty() == false && member.size() <= static_cast<size_t>( OnlineLimit::kMaxKeySize ); }
         };
     } // namespace
 } // namespace sw
@@ -154,7 +156,7 @@ namespace sw
 
     bool EphemeralRequest::isValidKey( string_view key )
     {
-        if ( key.empty() || key.size() > static_cast<size_t>( IEphemeralStore::kMaxKeySize ) )
+        if ( key.empty() || key.size() > static_cast<size_t>( OnlineLimit::kMaxKeySize ) )
             return false;
         for ( const utf8 ch : key )
         {
