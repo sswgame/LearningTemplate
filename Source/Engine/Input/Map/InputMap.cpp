@@ -803,6 +803,68 @@ namespace sw
         return true;
     }
 
+    bool InputMap::setBindingTriggerTime( const hashed_string& action, uint32 bindIndex, float32 seconds )
+    {
+        ActionEntry* pEntry = findAction( action );
+        if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
+            return false;
+        const float32 triggerTime                    = ( seconds > 0.0f ) ? seconds : 0.0f;
+        pEntry->_listBinding[bindIndex]._triggerTime = triggerTime;
+        if ( bindIndex < pEntry->_listDefaultBinding.size() )
+            pEntry->_listDefaultBinding[bindIndex]._triggerTime = triggerTime;
+        return true;
+    }
+
+    bool InputMap::setBindingNegate( const hashed_string& action, uint32 bindIndex, bool bNegate )
+    {
+        ActionEntry* pEntry = findAction( action );
+        if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
+            return false;
+        pEntry->_listBinding[bindIndex]._bNegate = bNegate;
+        if ( bindIndex < pEntry->_listDefaultBinding.size() )
+            pEntry->_listDefaultBinding[bindIndex]._bNegate = bNegate;
+        return true;
+    }
+
+    float32 InputMap::getEffectiveTriggerTime( const ActionBinding& binding ) const
+    {
+        float32 mapTime{ 0.0f };
+        switch ( binding._trigger )
+        {
+            case ActionTrigger::HoldThreshold:
+            case ActionTrigger::HoldAndRelease:
+            {
+                mapTime = _holdThreshold;
+                break;
+            }
+            case ActionTrigger::Tap:
+            {
+                mapTime = InputMapDefaults::kTapMaxTime;
+                break;
+            }
+            case ActionTrigger::Pulse:
+            {
+                mapTime = InputMapDefaults::kPulseInterval;
+                break;
+            }
+            case ActionTrigger::DoubleClicked:
+            case ActionTrigger::DoubleTap:
+            {
+                mapTime = _doubleClickTime;
+                break;
+            }
+            case ActionTrigger::Pressed:
+            case ActionTrigger::Released:
+            case ActionTrigger::Down:
+            case ActionTrigger::Repeat: // 지연 · 간격 두 값이라 맵 값(`setNavRepeatTiming`)만 쓴다
+            case ActionTrigger::Count:
+            {
+                return 0.0f;
+            }
+        }
+        return ( binding._triggerTime > 0.0f ) ? binding._triggerTime : mapTime;
+    }
+
     uint32 InputMap::getBindingCount( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );

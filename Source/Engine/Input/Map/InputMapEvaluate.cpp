@@ -74,6 +74,16 @@ namespace sw
                 const bool bLayerActive = isBindingLayerActive( binding );
                 float2     bindingValue{ 0.0f, 0.0f };
                 const bool bRawDown = bLayerActive && evaluateBindingDown( binding, bindingValue );
+                if ( binding._bNegate )
+                {
+                    bindingValue._x = -bindingValue._x;
+                    bindingValue._y = -bindingValue._y;
+                }
+                // 바인딩마다 시간(`_triggerTime`)이 있으면 홀드 판정과 더블 판정 창도 그 시간을 쓴다. 다른 트리거는 맵 값 그대로다.
+                const bool    bHoldTrigger   = binding._trigger == ActionTrigger::HoldThreshold || binding._trigger == ActionTrigger::HoldAndRelease;
+                const bool    bDoubleTrigger = binding._trigger == ActionTrigger::DoubleClicked || binding._trigger == ActionTrigger::DoubleTap;
+                const float32 holdTime       = bHoldTrigger ? getEffectiveTriggerTime( binding ) : _holdThreshold;
+                const float32 doubleWindow   = bDoubleTrigger ? getEffectiveTriggerTime( binding ) : _doubleClickTime;
 
                 state._bWasDown = state._bDown;
                 state._bDown    = bRawDown ? SW_TRUE : SW_FALSE;
@@ -89,7 +99,7 @@ namespace sw
                 if ( state._bDown == SW_TRUE )
                 {
                     state._holdDuration += deltaSeconds;
-                    if ( state._holdDuration >= _holdThreshold )
+                    if ( state._holdDuration >= holdTime )
                         state._bHoldThreshold = SW_TRUE;
                     state._pulseTimer += deltaSeconds;
                 }
@@ -99,7 +109,7 @@ namespace sw
                     const bool bIsMouseBinding = ( binding._arrSlot[0]._deviceKind == InputDeviceKind::Mouse );
                     bool       bDoubleDetected = false;
 
-                    if ( state._timeSinceLastPress <= _doubleClickTime )
+                    if ( state._timeSinceLastPress <= doubleWindow )
                     {
                         if ( bIsMouseBinding )
                         {
@@ -126,7 +136,7 @@ namespace sw
                     state._lastPress = curMousePos;
                 }
 
-                const bool bTriggerFired = evaluateTrigger( binding._trigger, state, deltaSeconds );
+                const bool bTriggerFired = evaluateTrigger( binding, state, deltaSeconds );
                 state._bTriggered        = bTriggerFired ? SW_TRUE : SW_FALSE;
 
                 if ( state._bDown == SW_TRUE )
@@ -530,9 +540,9 @@ namespace sw
         }
     }
 
-    bool InputMap::evaluateTrigger( ActionTrigger trigger, const ActionBindingState& state, float32 deltaSeconds ) const
+    bool InputMap::evaluateTrigger( const ActionBinding& binding, const ActionBindingState& state, float32 deltaSeconds ) const
     {
-        switch ( trigger )
+        switch ( binding._trigger )
         {
             case ActionTrigger::Pressed:
             {
@@ -557,11 +567,11 @@ namespace sw
             }
             case ActionTrigger::HoldAndRelease:
             {
-                return state._bReleased == SW_TRUE && state._holdDuration >= _holdThreshold;
+                return state._bReleased == SW_TRUE && state._holdDuration >= getEffectiveTriggerTime( binding );
             }
             case ActionTrigger::Tap:
             {
-                return state._bReleased == SW_TRUE && state._holdDuration < InputMapDefaults::kTapMaxTime;
+                return state._bReleased == SW_TRUE && state._holdDuration < getEffectiveTriggerTime( binding );
             }
             case ActionTrigger::Pulse:
             {
@@ -570,8 +580,9 @@ namespace sw
                 // 한 프레임이 간격보다 길어도 한 번만 발화한다.
                 if ( state._bDown == SW_FALSE )
                     return false;
-                const int32 stepNow  = static_cast<int32>( state._pulseTimer / InputMapDefaults::kPulseInterval );
-                const int32 stepPrev = static_cast<int32>( MathUtil::max( state._pulseTimer - deltaSeconds, 0.0f ) / InputMapDefaults::kPulseInterval );
+                const float32 pulseInterval = getEffectiveTriggerTime( binding );
+                const int32   stepNow       = static_cast<int32>( state._pulseTimer / pulseInterval );
+                const int32   stepPrev      = static_cast<int32>( MathUtil::max( state._pulseTimer - deltaSeconds, 0.0f ) / pulseInterval );
                 return stepNow > stepPrev;
             }
             case ActionTrigger::Repeat:
