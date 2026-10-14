@@ -13,9 +13,9 @@ namespace
 {
     struct TestScenarioRecorderInternal
     {
-        static sw::uint32 countKind( const sw::AutomationScenario& scenario, sw::string_view kind )
+        static uint32 countKind( const sw::AutomationScenario& scenario, sw::string_view kind )
         {
-            sw::uint32 count = 0;
+            uint32 count = 0;
             for ( const sw::AutomationStep& step : scenario.getSteps() )
             {
                 if ( sw::string_view{ step._kind } == kind )
@@ -54,7 +54,7 @@ SW_TEST_CASE( ScenarioRecorderTest, FramesBecomeParsableInputSteps )
     // 마우스 버튼 이름은 엔진 서비스(타입 레지스트리)가 있어야 다시 읽힌다. 없으면 건너뛴 입력으로 센다.
     sw::InputSlot     parsed{};
     const bool        bSlotNames = sw::InputSlotUtil::tryParse( sw::InputSlotUtil::toText( sw::InputSlot::fromMouseButton( sw::MouseButton::Left ) ), parsed );
-    const sw::uint32  slotSteps  = bSlotNames ? 2u : 0u;
+    const uint32      slotSteps  =bSlotNames ? 2u : 0u;
     SW_EXPECT_EQUAL( slotSteps / 2, TestScenarioRecorderInternal::countKind( scenario, "Press" ) );
     SW_EXPECT_EQUAL( slotSteps / 2, TestScenarioRecorderInternal::countKind( scenario, "Release" ) );
     SW_EXPECT_EQUAL( 1u, TestScenarioRecorderInternal::countKind( scenario, "MousePosition" ) );
