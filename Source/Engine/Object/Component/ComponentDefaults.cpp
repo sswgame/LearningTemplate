@@ -65,7 +65,7 @@ namespace sw
                     if ( parentName.empty() )
                         break;
 
-                    const TypeInfo* pParent = engine::getTypeRegistry().findType( parentName );
+                    const TypeInfo* pParent = engine::getSubsystem<TypeRegistry>().findType( parentName );
                     if ( pParent == nullptr || pParent == pCursor )
                         break;
 
@@ -264,7 +264,7 @@ namespace sw
 
     void ComponentDefaults::resolveNodeToPatches( const TypeInfo& typeInfo, const XMLNode& compNode, vector<DefaultPatch>& inoutListPatch )
     {
-        const TypeRegistry& registry = engine::getTypeRegistry();
+        const TypeRegistry& registry = engine::getSubsystem<TypeRegistry>();
         typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
         {
             const utf8* pPropName = prop._name.c_str();
@@ -352,25 +352,25 @@ namespace sw
     void ComponentDefaults::applyDefaults( Component* pComp, const TypeInfo& typeInfo )
     {
         if ( engine::areEngineServicesBound() )
-            engine::getComponentDefaults().apply( pComp, typeInfo );
+            engine::getSubsystem<ComponentDefaults>().apply( pComp, typeInfo );
     }
 
     void ComponentDefaults::setDefaultsPath( string_view path )
     {
         if ( engine::areEngineServicesBound() )
-            engine::getComponentDefaults().setPath( path );
+            engine::getSubsystem<ComponentDefaults>().setPath( path );
     }
 
     string ComponentDefaults::getDefaultsPath()
     {
         if ( engine::areEngineServicesBound() )
-            return engine::getComponentDefaults().getPath();
+            return engine::getSubsystem<ComponentDefaults>().getPath();
         return {};
     }
 
     void ComponentDefaults::reloadDefaults()
     {
         if ( engine::areEngineServicesBound() )
-            engine::getComponentDefaults().reload();
+            engine::getSubsystem<ComponentDefaults>().reload();
     }
 } // namespace sw

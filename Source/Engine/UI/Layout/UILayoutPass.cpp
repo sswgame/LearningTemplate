@@ -225,7 +225,7 @@ namespace sw
 
     bool UILayoutPass::isCultureRightToLeft( const LocalizationManager* pLocalization )
     {
-        const LocalizationManager* pCulture = pLocalization != nullptr ? pLocalization : engine::getBoundEngineServices()._pLocalizationManager;
+        const LocalizationManager* pCulture = pLocalization != nullptr ? pLocalization : engine::findSubsystem<LocalizationManager>();
         return pCulture != nullptr && pCulture->isRightToLeft();
     }
 

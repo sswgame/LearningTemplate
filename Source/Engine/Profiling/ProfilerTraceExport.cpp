@@ -819,7 +819,7 @@ namespace sw
                 if ( listArgument[0] == "on" || listArgument[0] == "off" )
                 {
                     // 링 버퍼 기록을 켜고 끈다(에디터 Timeline 탭의 Record 와 같다) — bugit 이 최근 프레임을 trace.trace.json 으로 같이 담는다.
-                    FrameProfiler& profiler = engine::getFrameProfiler();
+                    FrameProfiler& profiler = engine::getSubsystem<FrameProfiler>();
                     const bool     bOn      = listArgument[0] == "on";
                     if ( bOn )
                     {
@@ -853,7 +853,7 @@ namespace sw
                         outReply = "usage: profile.trace record <seconds> [<path>] [<eventBudgetPerThread>]";
                         return false;
                     }
-                    return ProfilerTraceExport::startRecording( engine::getFrameProfiler(), seconds, recordPath, "Game", budget, outReply );
+                    return ProfilerTraceExport::startRecording( engine::getSubsystem<FrameProfiler>(), seconds, recordPath, "Game", budget, outReply );
                 }
                 string path;
                 uint32 frameCount = ProfilerTimeline::kFrameCapacity - 1;
@@ -866,7 +866,7 @@ namespace sw
                         path = argument;
                 }
                 string savedPath;
-                return ProfilerTraceExport::saveRecentFrames( engine::getFrameProfiler(), frameCount, path, "Game", savedPath, outReply );
+                return ProfilerTraceExport::saveRecentFrames( engine::getSubsystem<FrameProfiler>(), frameCount, path, "Game", savedPath, outReply );
             }
         };
     } // namespace

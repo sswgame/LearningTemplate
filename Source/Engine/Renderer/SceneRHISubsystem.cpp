@@ -18,13 +18,13 @@ namespace sw
 
     SubsystemInitResult SceneRHISubsystem::initializeSubsystem()
     {
-        engine::getSceneManager().setRHIDevice( &_rhiSubsystem.findRHI()->getDevice() );
+        engine::getSubsystem<SceneManager>().setRHIDevice( &_rhiSubsystem.findRHI()->getDevice() );
         return SubsystemInitResult::Succeeded;
     }
 
     void SceneRHISubsystem::shutdownSubsystem()
     {
-        engine::getSceneManager().setRHIDevice( nullptr );
+        engine::getSubsystem<SceneManager>().setRHIDevice( nullptr );
     }
 
     span<const utf8* const> SceneRHISubsystem::getSubsystemDependencies() const

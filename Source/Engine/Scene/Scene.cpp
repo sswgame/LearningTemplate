@@ -142,7 +142,7 @@ namespace sw
             {
                 outUniqueRespawned.clear();
                 outMapDetachedPrefab.clear();
-                const PrefabInstanceRegistry& registry = objects.getSceneService<PrefabInstanceRegistry>();
+                const PrefabInstanceRegistry& registry = objects.getSubsystem<PrefabInstanceRegistry>();
                 if ( registry.getNestedPartCount() == 0 )
                     return;
                 vector<GameObject*> listObject;
@@ -223,7 +223,7 @@ namespace sw
         if ( _objectManager == nullptr )
             return false;
         // 내비게이션이 쿠킹한 내비메시(`<씬>.navmesh`)를 찾는 이름이다.
-        _objectManager->getSceneService<SceneNavigation>().setSourcePath( doc._sourcePath.empty() ? string_view{ _sourcePath } : string_view{ doc._sourcePath } );
+        _objectManager->getSubsystem<SceneNavigation>().setSourcePath( doc._sourcePath.empty() ? string_view{ _sourcePath } : string_view{ doc._sourcePath } );
 
         // 오브젝트 **사이의** 부착은 모든 엔티티가 생긴 뒤라야 해석할 수 있다. 엔티티를 모두 하나의 배치로 읽고 끝에서 연결한다. 부착은 부모를
         // 그 엔티티의 **파일 id** 로 가리킨다(파일 안에서만 의미가 있는 값이라 배치 안에서만 해석한다). 이름으로 찾으면 이름이 겹친
@@ -490,7 +490,7 @@ namespace sw
         if ( _bAudioUpdateEnabled == false )
             return;
         // 틱이 옮긴 위치로 리스너(리스너 컴포넌트, 없으면 게임 카메라), 에미터, 가림, 리버브 존을 오디오 엔진에 넣는다.
-        _objectManager->getSceneService<sw::SceneAudio>().update( deltaTime, getActiveGameCamera(), _objectManager->getSceneService<sw::ScenePhysics>().findScene3D(), _objectManager->getSceneService<sw::ScenePhysics>().findScene2D() );
+        _objectManager->getSubsystem<sw::SceneAudio>().update( deltaTime, getActiveGameCamera(), _objectManager->getSubsystem<sw::ScenePhysics>().findScene3D(), _objectManager->getSubsystem<sw::ScenePhysics>().findScene2D() );
     }
 
     /**

@@ -67,7 +67,7 @@ namespace sw
         if ( _pRunner->isActive() )
         {
             const string fixedDelta = to_string( _pRunner->getScenario().getFixedDelta() );
-            if ( engine::getGlobalVariableManager().setValueFromString( "gv_fixedFrameDelta", fixedDelta ) == false )
+            if ( engine::getSubsystem<GlobalVariableManager>().setValueFromString( "gv_fixedFrameDelta", fixedDelta ) == false )
                 SW_LOG_WARNING( "[Scenario] this host has no gv_fixedFrameDelta - the scenario runs on the wall clock" );
         }
     }

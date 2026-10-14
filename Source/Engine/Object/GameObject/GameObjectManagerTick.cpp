@@ -33,7 +33,7 @@ namespace sw
     void GameObjectManager::runFrameStepMainThreadTasks( float32 /*deltaTime*/ )
     {
         if ( engine::areEngineServicesBound() )
-            engine::getTaskManager().dispatchMainThreadTasks();
+            engine::getSubsystem<TaskManager>().dispatchMainThreadTasks();
     }
 
     void GameObjectManager::runFrameStepDestroy( float32 /*deltaTime*/ )

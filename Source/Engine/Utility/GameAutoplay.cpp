@@ -73,7 +73,7 @@ namespace sw
         if ( pActive == nullptr )
             return false;
         // 표를 거쳐 써야 변경 콜백이 불리고 전역 변수 패널이 같은 값을 본다(C++ 대입은 콜백을 부르지 않는다).
-        GlobalVariableInfo* pInfo = engine::areEngineServicesBound() ? engine::getGlobalVariableManager().findVariable( pActive->_pVariableName ) : nullptr;
+        GlobalVariableInfo* pInfo = engine::areEngineServicesBound() ? engine::getSubsystem<GlobalVariableManager>().findVariable( pActive->_pVariableName ) : nullptr;
         if ( pInfo != nullptr && pInfo->_pData == pActive->_pValue )
             (void)pInfo->setValueAsInt( bOn ? 1 : 0 ); // 타입이 int32 라 실패하지 않는다
         else

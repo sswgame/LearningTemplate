@@ -214,7 +214,7 @@ namespace sw
     bool AssetFormatRegistry::upgradeXMLWithActiveRegistry( AssetKind kind, XMLDocument& doc, XMLNode& root, AssetFormatVersion currentVersion )
     {
         if ( engine::areEngineServicesBound() )
-            return engine::getAssetManager().getAssetFormatRegistry().upgradeXML( kind, doc, root, currentVersion );
+            return engine::getSubsystem<AssetManager>().getAssetFormatRegistry().upgradeXML( kind, doc, root, currentVersion );
 
         // 호출마다 새로 만든다 — 공유하는 정적 레지스트리는 여러 로더 스레드의 `ensureBuiltins` 가 겹쳐 쓴다.
         AssetFormatRegistry builtinRegistry;

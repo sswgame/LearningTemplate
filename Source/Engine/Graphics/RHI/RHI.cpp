@@ -257,7 +257,7 @@ namespace sw
         // 커맨드라인이 고른 것은 **폴백하지 않는다.** 쓸 수 없으면 아래에서 에러로 선다.
         // 조용히 다른 백엔드로 뜨면 "네 백엔드를 확인했다" 가 거짓이 된다.
         RHIBackend commandLineBackend{};
-        const bool bCommandLineOverride = RHIBackendUtil::findCommandLineBackend( engine::getCommandLineManager(), commandLineBackend );
+        const bool bCommandLineOverride = RHIBackendUtil::findCommandLineBackend( engine::getSubsystem<CommandLineManager>(), commandLineBackend );
         if ( bCommandLineOverride )
             currentBackend = commandLineBackend;
         else if ( RHIAvailability::isAvailable( currentBackend ) == false )
@@ -306,7 +306,7 @@ namespace sw
             _device.reset();
         }
         // 디바이스가 모두 사라진 뒤에 MODULE DLL 을 내린다. 그래야 FreeLibrary 가 안전하다.
-        engine::getRHIBackendRegistry().unloadModules();
+        engine::getSubsystem<RHIBackendRegistry>().unloadModules();
     }
 
     bool RHI::recreateSurfaceForSwap( IRenderSurface* pSurface, const RHIBackend previousBackend, const RHIBackend nextBackend )
@@ -387,7 +387,7 @@ namespace sw
 
     unique_ptr<IRHIDevice> RHI::createDevice( RHIBackend backend )
     {
-        return engine::getRHIBackendRegistry().createDevice( backend );
+        return engine::getSubsystem<RHIBackendRegistry>().createDevice( backend );
     }
 
     const utf8* RHI::getBackendTypeName( RHIBackend backend )

@@ -155,7 +155,7 @@ namespace sw
         SW_MEMORY_SCOPE( EngineMisc );
         if ( engine::areEngineServicesBound() == false )
             return;
-        FrameProfiler& frameProfiler = engine::getFrameProfiler();
+        FrameProfiler& frameProfiler = engine::getSubsystem<FrameProfiler>();
         if ( frameProfiler.isEnabled() == false )
             return;
 

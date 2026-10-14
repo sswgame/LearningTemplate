@@ -10,7 +10,7 @@
  *            매니저가 소멸하면 역순으로 내리고 지운다.
  *          - **갱신**: 매니저가 등록 줄의 단계(`SceneFrameStepList.xxx` 의 한 줄)에서 `update` 를 부릅니다(게임 스레드).
  *          - **비우기**: `GameObjectManager::clear` 가 `onSceneCleared` 를 부릅니다. 서비스는 남고 다음 씬에서 다시 씁니다.
- *          - **얻기**: `manager.getSceneService<T>()` 입니다(씬 범위에서 타입으로 찾는다).
+ *          - **얻기**: `manager.getSubsystem<T>()` 입니다(씬 범위에서 타입으로 찾는다).
  *
  * @note 표는 Engine 이미지 안에서만 채웁니다. 표의 항목은 내리지 않으므로, 핫 리로드 되는 모듈(게임 · 키트)이 쓰면 언로드 뒤 죽은 함수를 가리킵니다.
  */

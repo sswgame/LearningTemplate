@@ -1,6 +1,6 @@
 /**
  * @file LocalizationManager.h
- * @brief 다국어(로컬라이제이션) 관리자를 정의합니다. 싱글톤이 아니라 엔진 서비스 `engine::getLocalizationManager()` 로 얻습니다.
+ * @brief 다국어(로컬라이제이션) 관리자를 정의합니다. 싱글톤이 아니라 엔진 서비스 `engine::getSubsystem<LocalizationManager>()` 로 얻습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

@@ -358,7 +358,7 @@ namespace sw
         const string crashFolder = getCrashReportFolder();
         if ( crashFolder.empty() || engine::areEngineServicesBound() == false )
             return;
-        CrashReportService& crashReports  = engine::getCrashReportService();
+        CrashReportService& crashReports  = engine::getSubsystem<CrashReportService>();
         const string        reportsFolder = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( crashFolder ) ), CrashReportService::kReportsFolderName );
         crashReports.initialize( crashFolder, reportsFolder, CrashHandler::getSessionID() );
         _bCrashReportsStarted = SW_TRUE;
@@ -446,7 +446,7 @@ namespace sw
             _pTickHistogram->observe( static_cast<float64>( tickTime ) * 1.0e-9 );
 #if SW_PROFILER_TRACE_ENABLED
             // 느린 틱 자동 캡처(`-gv_traceSlowTickMs`)는 꺼져 있으면 정수 비교 하나다. Shipping 서버에는 없다(지표 `server_tick_seconds` 만 있다).
-            ProfilerTraceExport::tickSlowFrameCapture( engine::getFrameProfiler(), static_cast<uint64>( tickStart ),
+            ProfilerTraceExport::tickSlowFrameCapture( engine::getSubsystem<FrameProfiler>(), static_cast<uint64>( tickStart ),
                                                        static_cast<uint64>( tickStart + tickTime ), "Server" );
 #endif
             _healthRegistry->markTick( ServerAppInternal::nowMonotonicMs() );
@@ -458,7 +458,7 @@ namespace sw
 #if !defined( SW_SHIPPING )
             if ( StateHashHistory::get().isRecording() && engine::areEngineServicesBound() )
             {
-                Scene* pScene = engine::getSceneManager().getActiveScene();
+                Scene* pScene = engine::getSubsystem<SceneManager>().getActiveScene();
                 if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
                     StateHashHistory::get().record( _tickCount, SceneStateHash::compute( *pScene->getObjectManager() ) );
             }
@@ -672,7 +672,7 @@ namespace sw
         }
         ServerServiceRegistry::bindHostContext( nullptr ); // 게임과 모듈이 내려간 뒤 — 레지스트리를 지우기 전
         if ( _bCrashReportsStarted == SW_TRUE && engine::areEngineServicesBound() )
-            engine::getCrashReportService().shutdown();
+            engine::getSubsystem<CrashReportService>().shutdown();
         _bCrashReportsStarted = SW_FALSE;
         // 운영 엔드포인트는 게임을 종료하는 동안에도 비우는 중(/readyz 503)임을 알리다가 마지막에 닫는다. 로그를 남기므로 엔진(로거)보다 먼저 닫는다.
         shutdownObservability();

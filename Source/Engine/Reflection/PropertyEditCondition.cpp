@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -103,7 +104,7 @@ namespace sw
             return false;
         }
 
-        outExpr._pEnum = engine::getTypeRegistry().findEnum( outExpr._pSubject->_typeName );
+        outExpr._pEnum = engine::getSubsystem<TypeRegistry>().findEnum( outExpr._pSubject->_typeName );
         if ( outExpr._bCompare )
         {
             const bool bParsed = ( outExpr._pEnum != nullptr ) ? outExpr._pEnum->tryParseText( valueText, outExpr._compareValue )

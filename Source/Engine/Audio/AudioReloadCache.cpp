@@ -10,18 +10,18 @@ namespace sw
 {
     bool AudioReloadCache::isCached( string_view relativePath ) const
     {
-        return engine::areEngineServicesBound() && engine::getAudioService().isDataFile( relativePath );
+        return engine::areEngineServicesBound() && engine::getSubsystem<IAudioService>().isDataFile( relativePath );
     }
 
     void AudioReloadCache::reload( string_view relativePath, IRHIDevice* /*pDevice*/ )
     {
         if ( engine::areEngineServicesBound() )
-            (void)engine::getAudioService().reloadDataFile( relativePath ); // 실패는 서비스가 오류로 남기고 지금 것을 유지한다
+            (void)engine::getSubsystem<IAudioService>().reloadDataFile( relativePath ); // 실패는 서비스가 오류로 남기고 지금 것을 유지한다
     }
 
     size_t AudioReloadCache::getCachedCount() const
     {
-        return engine::areEngineServicesBound() && engine::getAudioService().getMixerPath().empty() == false ? 1u : 0u;
+        return engine::areEngineServicesBound() && engine::getSubsystem<IAudioService>().getMixerPath().empty() == false ? 1u : 0u;
     }
 } // namespace sw
 

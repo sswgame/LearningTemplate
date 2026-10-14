@@ -279,7 +279,7 @@ namespace sw
         // **키가 아닐 수도 있는 텍스트로 조회한다.** `hashed_string` 을 만들어 조회하면 그 대사 원문이
         // intern 아레나에 영구히 남아, 대화가 늘수록 메모리가 누수된다. 테이블은 해시로만
         // 조회되므로 intern 없이 조회할 수 있다.
-        const utf8* pResolved = engine::getLocalizationManager().getStringByText( textOrKey, nullptr );
+        const utf8* pResolved = engine::getSubsystem<LocalizationManager>().getStringByText( textOrKey, nullptr );
         if ( StringUtil::isNullOrEmpty( pResolved ) )
             return string{ textOrKey };
         return string{ pResolved };

@@ -3,7 +3,7 @@
  * @brief 사용자 설정이 값을 넣는 전역 변수(`target="gv:…"`)입니다. 소비자(렌더러, 카메라, UI, 자막)는 이 변수를 읽습니다.
  * @details 값은 `UserSettingsManager` 가 넣는다. 에디터의 전역 변수 패널이나 `-gv_*` 로 바꿔 볼 수도 있지만 그 값은 사용자 파일에 남지 않는다.
  *          "읽는 곳" 이 아직 없는 변수는 각 줄의 설명에 적었다. 그 기능을 만드는 쪽이 이 변수를 읽으면 메뉴가 바로 반영된다.
- * @note 이 `extern` 은 Engine.dll 안의 코드만 링크됩니다. 게임 · 키트 모듈은 `engine::getGlobalVariableManager().findVariable( "gv_…" )` 로 읽습니다.
+ * @note 이 `extern` 은 Engine.dll 안의 코드만 링크됩니다. 게임 · 키트 모듈은 `game::getSubsystem<GlobalVariableManager>().findVariable( "gv_…" )` 로 읽습니다.
  */
 #pragma once
 #include "Core/GlobalVariable/GlobalVariableManager.h"

@@ -29,7 +29,7 @@ namespace sw
                                          resolved.isPredefinedType( PredefinedNameType::NameType_TagID ) );
                 const bool          bIsBool   = ( resolved.isPredefinedType( PredefinedNameType::NameType_bool ) ||
                                        resolved.isPredefinedType( PredefinedNameType::NameType_atomic_bool ) );
-                const bool          bIsEnum   = ( engine::getTypeRegistry().findEnum( typeName ) != nullptr );
+                const bool          bIsEnum   = ( engine::getSubsystem<TypeRegistry>().findEnum( typeName ) != nullptr );
 
                 if ( bIsString || bIsEnum )
                 {
@@ -62,7 +62,7 @@ namespace sw
                     return;
                 }
 
-                const TypeInfo* pStructInfo = engine::getTypeRegistry().findType( typeName );
+                const TypeInfo* pStructInfo = engine::getSubsystem<TypeRegistry>().findType( typeName );
                 if ( pStructInfo != nullptr )
                 {
                     if ( pStructInfo->isPrimitive() == false )
@@ -241,7 +241,7 @@ namespace sw
                     if ( listKey.size() != 1 )
                         return rejectElement( element );
                     const hashed_string typeName = hashed_string::findInterned( listKey[0] );
-                    const TypeInfo*     pType    = typeName.empty() ? nullptr : engine::getTypeRegistry().findType( typeName );
+                    const TypeInfo*     pType    = typeName.empty() ? nullptr : engine::getSubsystem<TypeRegistry>().findType( typeName );
                     void*               pObject  = ( pType != nullptr ) ? _context.createOwnedPointer( typeName ) : nullptr;
                     if ( pObject == nullptr )
                     {
@@ -315,7 +315,7 @@ namespace sw
                     return ( *pTextReader )( pValPtr, src.dump() );
                 }
 
-                const EnumInfo* pEnumInfo = engine::getTypeRegistry().findEnum( typeName );
+                const EnumInfo* pEnumInfo = engine::getSubsystem<TypeRegistry>().findEnum( typeName );
                 if ( pEnumInfo != nullptr )
                 {
                     // 모르는 이름 · 값이면 쓰지 않고 실패한다(XML 과 같다 — `EnumInfo::tryParseText`).
@@ -330,7 +330,7 @@ namespace sw
                     return false;
                 }
 
-                const TypeInfo* pStructInfo = engine::getTypeRegistry().findType( typeName );
+                const TypeInfo* pStructInfo = engine::getSubsystem<TypeRegistry>().findType( typeName );
                 if ( pStructInfo != nullptr )
                 {
                     if ( pStructInfo->isPrimitive() == false )

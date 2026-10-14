@@ -34,7 +34,7 @@ namespace sw
             {
                 if ( engine::areEngineServicesBound() == false )
                     return nullptr;
-                return engine::getGlobalVariableManager().findVariable( "gv_rhiBackend" );
+                return engine::getSubsystem<GlobalVariableManager>().findVariable( "gv_rhiBackend" );
             }
 
             /** @brief `initialize` 한 교체기입니다(프로세스에 하나). 자동화 단계와 탐침이 찾는다. */
@@ -146,7 +146,7 @@ namespace sw
     {
         // 테스트용 스위치라 Shipping 에는 없다(그 빌드에서 gv_rhiSwapAtFrame 은 등록되지 않아 늘 0 이다).
 #if !defined( SW_SHIPPING )
-        if ( gv_rhiSwapAtFrame <= 0 || engine::getFrameProfiler().getFrameCount() != static_cast<uint64>( gv_rhiSwapAtFrame ) )
+        if ( gv_rhiSwapAtFrame <= 0 || engine::getSubsystem<FrameProfiler>().getFrameCount() != static_cast<uint64>( gv_rhiSwapAtFrame ) )
             return;
         // 프레임 수는 루프의 `tick` 이 프로파일러 프레임을 열기 전이라 그 프레임의 `tick` 첫머리와 같은 값이다.
         GlobalVariableInfo* pBackendVariable = RHIBackendSwitcherInternal::findBackendVariable();

@@ -40,7 +40,7 @@ namespace sw
          */
         [[nodiscard]] bool parseGlobalVariableEnumText( string_view enumType, string_view text, int32& outValue )
         {
-            const EnumInfo* pEnum = engine::getTypeRegistry().findEnum( hashed_string( enumType.data(), static_cast<uint32>( enumType.size() ) ) );
+            const EnumInfo* pEnum = engine::getSubsystem<TypeRegistry>().findEnum( hashed_string( enumType.data(), static_cast<uint32>( enumType.size() ) ) );
             int64           value{ 0 };
             if ( pEnum == nullptr || pEnum->tryParseText( text, value ) == false )
                 return false;
@@ -77,7 +77,7 @@ namespace sw
             SW_MEMORY_SCOPE( Reflection );
             // 전역 변수는 새로 뗀 것만 올린다(아래 캐시에 넣지 않는다). 모듈이 자기 변수를 읽기 전에 커맨드라인 보류값이 여기서 적용된다.
             if ( pVariableHead != nullptr )
-                getGlobalVariableManager().registerPendingVariables( moduleName, pVariableHead );
+                getSubsystem<GlobalVariableManager>().registerPendingVariables( moduleName, pVariableHead );
 
             // 캐시와 인자를 합치는 **유일한 자리**다. 새로 받은 머리가 있으면 캐시를 갱신하고,
             // 없으면 캐시에 남아 있던 것을 쓴다(리로드로 같은 모듈이 다시 올 때의 경로다).
@@ -102,9 +102,9 @@ namespace sw
             }
 
             // 컴포넌트 생성 함수는 타입과 함께 오른다(`TypeInfo::_addComponent`) — 씬마다 팩토리 표를 다시 채울 일이 없다.
-            getTypeRegistry().registerPendingTypes( moduleName, pTypeHead, pEnumHead );
+            getSubsystem<TypeRegistry>().registerPendingTypes( moduleName, pTypeHead, pEnumHead );
 
-            for ( const auto& scene : getSceneManager().getLoadedScenes() )
+            for ( const auto& scene : getSubsystem<SceneManager>().getLoadedScenes() )
             {
                 if ( scene && scene->getObjectManager() )
                 {
@@ -119,7 +119,7 @@ namespace sw
         bool bindGlobalVariableEnumNames()
         {
             GlobalVariableManager::setEnumTextParser( SW_DELEGATE_FUNCTION( GlobalVariableEnumTextParser, parseGlobalVariableEnumText ) );
-            return getGlobalVariableManager().applyPendingEnumText();
+            return getSubsystem<GlobalVariableManager>().applyPendingEnumText();
         }
 
         void unbindGlobalVariableEnumNames()
@@ -133,13 +133,13 @@ namespace sw
             getModuleHeadCache().erase( string{ moduleName } );
             // 씬은 엔진이 소유해 모듈보다 오래 산다. 이 모듈 타입의 인스턴스가 남아 있으면 vtable 이 사라진 객체가 된다.
             // 타입(생성 함수 포함)을 걷기 **전에** 인스턴스부터 지운다(소멸자가 아직 있는 동안).
-            for ( const auto& scene : getSceneManager().getLoadedScenes() )
+            for ( const auto& scene : getSubsystem<SceneManager>().getLoadedScenes() )
             {
                 if ( scene && scene->getObjectManager() )
                     scene->getObjectManager()->destroyComponentsOfModule( moduleName );
             }
-            getTypeRegistry().unregisterTypesByModule( moduleName );
-            getGlobalVariableManager().unregisterVariablesByModule( moduleName );
+            getSubsystem<TypeRegistry>().unregisterTypesByModule( moduleName );
+            getSubsystem<GlobalVariableManager>().unregisterVariablesByModule( moduleName );
         }
 #endif
     } // namespace engine

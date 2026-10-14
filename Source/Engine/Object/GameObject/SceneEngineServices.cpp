@@ -6,22 +6,16 @@
 
 namespace sw
 {
-    SceneEngineServices SceneEngineServices::makeFromEngineServices( const EngineServices& services )
-    {
-        SceneEngineServices sceneServices{};
-        sceneServices._pAssetManager  = services._pAssetManager;
-        sceneServices._pPhysicsSystem = services._pPhysicsSystem;
-        sceneServices._pAudioService  = services._pAudioService;
-        sceneServices._pDefaultAssets = services._pEngineDefaultAssets;
-        sceneServices._pTaskManager   = services._pTaskManager;
-        sceneServices._pTypeRegistry  = services._pTypeRegistry;
-        return sceneServices;
-    }
-
     SceneEngineServices SceneEngineServices::makeFromBoundEngine()
     {
-        SceneEngineServices sceneServices = makeFromEngineServices( engine::getBoundEngineServices() );
-        sceneServices._pEngineSubsystems  = engine::getEngineSubsystems();
+        SceneEngineServices sceneServices{};
+        sceneServices._pAssetManager     = engine::findSubsystem<AssetManager>();
+        sceneServices._pPhysicsSystem    = engine::findSubsystem<PhysicsSystem>();
+        sceneServices._pAudioService     = engine::findSubsystem<IAudioService>();
+        sceneServices._pDefaultAssets    = engine::findSubsystem<EngineDefaultAssets>();
+        sceneServices._pTaskManager      = engine::findSubsystem<TaskManager>();
+        sceneServices._pTypeRegistry     = engine::findSubsystem<TypeRegistry>();
+        sceneServices._pEngineSubsystems = engine::getEngineSubsystems();
         return sceneServices;
     }
 } // namespace sw

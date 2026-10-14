@@ -218,7 +218,7 @@ namespace sw
                 // 워커가 없으면(테스트 · 도구) 지금 베이크한다 — 끼우기는 그래도 다음 갱신이다.
                 if ( engine::areEngineServicesBound() )
                 {
-                    TaskManager& taskManager = engine::getTaskManager();
+                    TaskManager& taskManager = engine::getSubsystem<TaskManager>();
                     pRaw->_task              = taskManager.emplaceTask( "NavTileBake", SW_DELEGATE_METHOD( TaskDelegate, &NavTileBakeJob::run, pRaw ) );
                     pRaw->_stage             = taskManager.createStage();
                     pRaw->_stage.addTask( pRaw->_task );

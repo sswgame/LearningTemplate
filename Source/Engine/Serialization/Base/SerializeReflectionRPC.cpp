@@ -34,7 +34,7 @@ namespace sw
             {
                 if ( serializeContext.findBinaryWriter( typeHash ) != nullptr )
                     return typeHash;
-                const TypeInfo* pInfo = engine::getTypeRegistry().findType( typeHash );
+                const TypeInfo* pInfo = engine::getSubsystem<TypeRegistry>().findType( typeHash );
                 if ( pInfo != nullptr )
                 {
                     if ( pInfo->_name.empty() == false && serializeContext.findBinaryWriter( pInfo->_name ) != nullptr )
@@ -58,7 +58,7 @@ namespace sw
                         ( *pWriter )( pPtr, listPayload );
                         return true;
                     }
-                    const TypeInfo* pInfo = engine::getTypeRegistry().findType( typeHash );
+                    const TypeInfo* pInfo = engine::getSubsystem<TypeRegistry>().findType( typeHash );
                     if ( pInfo != nullptr )
                     {
                         BinarySerializer::serialize( pPtr, *pInfo, listPayload, serializeContext );
@@ -70,12 +70,12 @@ namespace sw
                 bool bOk{ false };
                 bool bMatched{ false };
 
-#define TRY_PACK( NameStr, CppType )                                                  \
-    if ( bMatched == false && engine::getTypeRegistry().isType( typeHash, NameStr ) ) \
-    {                                                                                 \
-        bMatched                 = true;                                              \
-        const CppType typedValue = value.getValue<CppType>();                         \
-        bOk                      = writePayload( &typedValue );                       \
+#define TRY_PACK( NameStr, CppType )                                                             \
+    if ( bMatched == false && engine::getSubsystem<TypeRegistry>().isType( typeHash, NameStr ) ) \
+    {                                                                                            \
+        bMatched                 = true;                                                         \
+        const CppType typedValue = value.getValue<CppType>();                                    \
+        bOk                      = writePayload( &typedValue );                                  \
     }
 
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) TRY_PACK( #Canon, CppType )
@@ -126,8 +126,8 @@ namespace sw
                 // `1069547520` 이 되는 식이다. 별칭 때문에 표기가 다를 수 있으므로 레지스트리의
                 // 정규 이름으로 비교하고, 레지스트리가 그 해시를 모르면 판단하지 않는다(그때는
                 // 아래 타입 분기가 어차피 걸러 낸다).
-                const hashed_string wireTypeName = engine::getTypeRegistry().canonicalTypeNameByHash( typeNameHash );
-                if ( wireTypeName.empty() == false && engine::getTypeRegistry().isType( typeHash, wireTypeName ) == false )
+                const hashed_string wireTypeName = engine::getSubsystem<TypeRegistry>().canonicalTypeNameByHash( typeNameHash );
+                if ( wireTypeName.empty() == false && engine::getSubsystem<TypeRegistry>().isType( typeHash, wireTypeName ) == false )
                 {
                     SW_LOG_WARNING( "RPC arg type mismatch: wire '%#', expected '%#'", wireTypeName.c_str(), typeName );
                     return false;
@@ -145,14 +145,14 @@ namespace sw
                     return false;
                 };
 
-#define TRY_UNPACK( NameStr, CppType )                                                \
-    if ( bMatched == false && engine::getTypeRegistry().isType( typeHash, NameStr ) ) \
-    {                                                                                 \
-        bMatched = true;                                                              \
-        CppType typedValue{};                                                         \
-        if ( readInto( &typedValue ) == false )                                       \
-            return false;                                                             \
-        args.add( typedValue );                                                       \
+#define TRY_UNPACK( NameStr, CppType )                                                           \
+    if ( bMatched == false && engine::getSubsystem<TypeRegistry>().isType( typeHash, NameStr ) ) \
+    {                                                                                            \
+        bMatched = true;                                                                         \
+        CppType typedValue{};                                                                    \
+        if ( readInto( &typedValue ) == false )                                                  \
+            return false;                                                                        \
+        args.add( typedValue );                                                                  \
     }
 
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) TRY_UNPACK( #Canon, CppType )
@@ -184,7 +184,7 @@ namespace sw
                                   const TaskArgs& args )
     {
         outEnvelope               = RPCEnvelope{};
-        const TypeInfo* pTypeInfo = engine::getTypeRegistry().findType( typeFqn );
+        const TypeInfo* pTypeInfo = engine::getSubsystem<TypeRegistry>().findType( typeFqn );
         if ( pTypeInfo == nullptr )
             return false;
         const FunctionInfo* pFunc = pTypeInfo->findMethod( methodName );
@@ -227,7 +227,7 @@ namespace sw
         // 봉투의 이름은 찾기만 한다(`findInterned`) — 받은 문자열로 전역 이름 표를 채우지 않는다.
         const hashed_string typeFqn    = hashed_string::findInterned( envelope._typeFqn );
         const hashed_string methodName = hashed_string::findInterned( envelope._methodName );
-        const TypeInfo*     pTypeInfo  = typeFqn.empty() ? nullptr : engine::getTypeRegistry().findType( typeFqn );
+        const TypeInfo*     pTypeInfo  = typeFqn.empty() ? nullptr : engine::getSubsystem<TypeRegistry>().findType( typeFqn );
         if ( pTypeInfo == nullptr || methodName.empty() )
             return {};
         // 인스턴스가 봉투의 타입(이나 그 자식)이어야 한다. 다른 타입을 적은 봉투는 그 메서드를 엉뚱한 객체 위에서 부른다.
@@ -265,6 +265,6 @@ namespace sw
                 return {};
         }
 
-        return engine::getTypeRegistry().invokeMethod( pInstance, typeFqn, methodName, unpacked );
+        return engine::getSubsystem<TypeRegistry>().invokeMethod( pInstance, typeFqn, methodName, unpacked );
     }
 } // namespace sw

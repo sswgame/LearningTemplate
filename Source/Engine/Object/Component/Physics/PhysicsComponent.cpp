@@ -21,7 +21,7 @@ namespace sw
     void PhysicsComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
-        _pScenePhysics = &manager.getSceneService<sw::ScenePhysics>();
+        _pScenePhysics = &manager.getSubsystem<sw::ScenePhysics>();
         _pScenePhysics->registerComponent( this );
     }
 

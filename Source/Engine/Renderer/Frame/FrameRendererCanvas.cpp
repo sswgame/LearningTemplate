@@ -40,7 +40,7 @@ namespace sw
                 continue;
             const uint32  width    = static_cast<uint32>( target._list._targetSize._x );
             const uint32  height   = static_cast<uint32>( target._list._targetSize._y );
-            TextureCache& textures = engine::getAssetManager().getAssetCache<TextureCache>();
+            TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
             if ( pState->_pTexture != nullptr )
             {
                 // 위젯이 그리기 크기를 바꿨으면 텍스처를 그 크기로 다시 만든다(같은 객체, 새 GPU 자원). 다시 만든 텍스처는 비어 있으므로 다시 그린다.
@@ -62,7 +62,7 @@ namespace sw
             if ( state._bSeen == SW_TRUE )
                 continue;
             if ( state._pTexture != nullptr && bServices )
-                engine::getAssetManager().getAssetCache<TextureCache>().release( state._path.view(), _pDevice );
+                engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().release( state._path.view(), _pDevice );
             _listCanvasTarget.erase( _listCanvasTarget.begin() + static_cast<ptrdiff_t>( index - 1 ) );
         }
     }
@@ -122,7 +122,7 @@ namespace sw
             for ( const CanvasTargetState& state : _listCanvasTarget )
             {
                 if ( state._pTexture != nullptr )
-                    engine::getAssetManager().getAssetCache<TextureCache>().release( state._path.view(), _pDevice );
+                    engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().release( state._path.view(), _pDevice );
             }
         }
         _listCanvasTarget.clear();

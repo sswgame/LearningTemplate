@@ -76,7 +76,7 @@ namespace sw
     bool CharacterHitUtil::raycast3D( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, uint32 layerMask,
                                       uint64 ignoreObjectID, CharacterRayHit& outHit )
     {
-        const IPhysicsQueryScene3D* pScene            = manager.getSceneService<sw::ScenePhysics>().findScene3D();
+        const IPhysicsQueryScene3D* pScene            = manager.getSubsystem<sw::ScenePhysics>().findScene3D();
         const bool                  bInvalidRaycast3D = pScene == nullptr || maxDistance <= 0.0f || direction.getLengthSquared() <= 1.0e-12f;
         if ( bInvalidRaycast3D )
             return false;
@@ -90,7 +90,7 @@ namespace sw
     bool CharacterHitUtil::raycast2D( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, uint32 layerMask,
                                       uint64 ignoreObjectID, CharacterRayHit& outHit )
     {
-        const IPhysicsQueryScene2D* pScene = manager.getSceneService<sw::ScenePhysics>().findScene2D();
+        const IPhysicsQueryScene2D* pScene = manager.getSubsystem<sw::ScenePhysics>().findScene2D();
         float2                      planar{};
         const bool                  bInvalidRaycast2D = pScene == nullptr || maxDistance <= 0.0f || CharacterHitInternal::makePlanarDirection( direction, planar ) == false;
         if ( bInvalidRaycast2D )
@@ -107,7 +107,7 @@ namespace sw
     {
         if ( radius <= 0.0f )
             return raycast3D( manager, origin, direction, maxDistance, layerMask, ignoreObjectID, outHit );
-        const IPhysicsQueryScene3D* pScene              = manager.getSceneService<sw::ScenePhysics>().findScene3D();
+        const IPhysicsQueryScene3D* pScene              = manager.getSubsystem<sw::ScenePhysics>().findScene3D();
         const bool                  bInvalidSphereSweep = pScene == nullptr || maxDistance <= 0.0f || direction.getLengthSquared() <= 1.0e-12f;
         if ( bInvalidSphereSweep )
             return false;
@@ -127,7 +127,7 @@ namespace sw
     {
         if ( radius <= 0.0f )
             return raycast2D( manager, origin, direction, maxDistance, layerMask, ignoreObjectID, outHit );
-        const IPhysicsQueryScene2D* pScene = manager.getSceneService<sw::ScenePhysics>().findScene2D();
+        const IPhysicsQueryScene2D* pScene = manager.getSubsystem<sw::ScenePhysics>().findScene2D();
         float2                      planar{};
         const bool                  bInvalidCircleSweep = pScene == nullptr || maxDistance <= 0.0f || CharacterHitInternal::makePlanarDirection( direction, planar ) == false;
         if ( bInvalidCircleSweep )

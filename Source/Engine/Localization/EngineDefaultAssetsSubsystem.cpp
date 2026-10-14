@@ -26,13 +26,13 @@ namespace sw
         EngineDefaultAssets& defaultAssets = *_defaultAssets;
         if ( defaultAssets.loadFromResource( path::kEngineDefaultAssets ) == false )
             SW_LOG_WARNING( "Engine data could not be read - using built-in defaults" );
-        LocalizationManager& localization = engine::getLocalizationManager();
+        LocalizationManager& localization = engine::getSubsystem<LocalizationManager>();
         if ( defaultAssets._cultureTable.empty() == false )
             (void)localization.loadCultureTable( defaultAssets._cultureTable ); // 실패는 loadCultureTable 이 오류로 남긴다
         if ( defaultAssets._localizationProject.empty() == false && localization.mountProject( defaultAssets._localizationProject, LocalizationScope::Engine ) == false )
             SW_LOG_ERROR( "Engine localization project '%#' is not (fully) loaded", defaultAssets._localizationProject.c_str() );
         string commandLineLanguage;
-        if ( engine::getCommandLineManager().getArgument( CommandLineArgument::LANGUAGE, commandLineLanguage ) && localization.hasLanguage( commandLineLanguage ) )
+        if ( engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::LANGUAGE, commandLineLanguage ) && localization.hasLanguage( commandLineLanguage ) )
             localization.setCurrentLanguage( commandLineLanguage );
         return SubsystemInitResult::Succeeded;
     }

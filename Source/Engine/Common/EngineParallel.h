@@ -27,7 +27,7 @@ namespace sw
         {
             if ( areEngineServicesBound() )
             {
-                getTaskManager().runParallel( count, serialThreshold, body );
+                getSubsystem<TaskManager>().runParallel( count, serialThreshold, body );
                 return;
             }
             if ( count > 0 && body.isBound() )
@@ -43,7 +43,7 @@ namespace sw
          */
         inline uint32 getParallelScratchSlotCount()
         {
-            return areEngineServicesBound() ? getTaskManager().getScratchSlotCount() : 1;
+            return areEngineServicesBound() ? getSubsystem<TaskManager>().getScratchSlotCount() : 1;
         }
 
         /** @brief 지금 스레드의 스크래치 슬롯입니다. 워커면 그 번호, 아니면 그 스레드가 처음 물을 때 받은 고유한 도우미 칸입니다. */
@@ -51,7 +51,7 @@ namespace sw
         {
             if ( areEngineServicesBound() == false )
                 return 0;
-            return getTaskManager().getCurrentThreadScratchSlot();
+            return getSubsystem<TaskManager>().getCurrentThreadScratchSlot();
         }
     } // namespace engine
 } // namespace sw

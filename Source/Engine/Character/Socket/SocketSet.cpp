@@ -6,6 +6,7 @@
 
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -219,7 +220,7 @@ namespace sw
         if ( CharacterDataReader::hasAttribute( node, "anchor" ) )
         {
             const string_view anchorText = StringUtil::trim( node.getAttributeText( "anchor" ) );
-            if ( engine::getTypeRegistry().enumFromString( anchorText, socket._anchor ) == false )
+            if ( engine::getSubsystem<TypeRegistry>().enumFromString( anchorText, socket._anchor ) == false )
                 reader.addError( node, string( "has unknown anchor '" ) + string( anchorText ) + "' (Bone, Surface)" );
             socket._fieldMask |= SocketFieldBit::kAnchor;
         }
@@ -277,7 +278,7 @@ namespace sw
             if ( ( mask & SocketFieldBit::kFallback ) != 0 && socket._listFallback.empty() == false )
                 node.appendAttribute( "fallback", CharacterDataReader::formatNameList( socket._listFallback ).c_str() );
             if ( ( mask & SocketFieldBit::kAnchor ) != 0 )
-                node.appendAttribute( "anchor", engine::getTypeRegistry().enumToString( socket._anchor ) );
+                node.appendAttribute( "anchor", engine::getSubsystem<TypeRegistry>().enumToString( socket._anchor ) );
         }
         return document.saveToString();
     }

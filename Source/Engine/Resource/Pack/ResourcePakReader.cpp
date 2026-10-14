@@ -138,8 +138,8 @@ namespace sw
         {
             const auto  compression      = static_cast<PackCompressionType>( _header._compressionType );
             const auto  encryption       = static_cast<PackEncryptionType>( _header._encryptionType );
-            const utf8* pCompressionName = engine::getTypeRegistry().enumToString( compression );
-            const utf8* pEncryptionName  = engine::getTypeRegistry().enumToString( encryption );
+            const utf8* pCompressionName = engine::getSubsystem<TypeRegistry>().enumToString( compression );
+            const utf8* pEncryptionName  = engine::getSubsystem<TypeRegistry>().enumToString( encryption );
 
             SW_LOG_INFO( "Opened pack %# (Files: %# | Compression: %# | Encryption: %#)",
                          packFilePath,
@@ -344,7 +344,7 @@ namespace sw
 
         // 스트링 풀을 읽는다(들어 있으면)
         const bool bHasStringPool = engine::areEngineServicesBound()
-                                      ? engine::getTypeRegistry().hasFlag( static_cast<PackFlag>( _header._flags ), PackFlag::HasStringPool )
+                                      ? engine::getSubsystem<TypeRegistry>().hasFlag( static_cast<PackFlag>( _header._flags ), PackFlag::HasStringPool )
                                       : ( ( _header._flags & static_cast<uint16>( PackFlag::HasStringPool ) ) != 0 );
 
         if ( bHasStringPool && _header._stringPoolSize > 0 )

@@ -184,7 +184,7 @@ namespace sw
 {
     /**
      * @class AsyncFileIO
-     * @brief 비동기 파일 읽기 매니저입니다. 엔진은 하나를 서비스로 들고(`engine::getAsyncFileIO()`), 테스트는 따로 만들어 씁니다.
+     * @brief 비동기 파일 읽기 매니저입니다. 엔진은 하나를 서비스로 들고(`engine::getSubsystem<AsyncFileIO>()`), 테스트는 따로 만들어 씁니다.
      */
     class SW_API AsyncFileIO : public ISubsystem
     {

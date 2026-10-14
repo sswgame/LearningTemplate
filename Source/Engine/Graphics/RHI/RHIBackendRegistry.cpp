@@ -56,7 +56,7 @@ namespace sw
 #else
             [[nodiscard]] static bool tryLoadBackendModule( RHIBackend backend, const utf8* pModuleBaseName )
             {
-                RHIBackendRegistry& reg        = engine::getRHIBackendRegistry();
+                RHIBackendRegistry& reg        = engine::getSubsystem<RHIBackendRegistry>();
                 const string        dllName    = ModuleImageUtil::formatSharedLibraryName( pModuleBaseName );
                 const string        modulePath = ModuleImageUtil::findModuleLibraryPath( pModuleBaseName ); // Bin/Modules
 
@@ -68,7 +68,7 @@ namespace sw
             /** @brief 요청한 RHI MODULE 을 필요할 때 하나씩 로드합니다(한꺼번에 올리지 않습니다). */
             static bool ensureBackendModuleLoaded( RHIBackend backend )
             {
-                RHIBackendRegistry&    reg    = engine::getRHIBackendRegistry();
+                RHIBackendRegistry&    reg    = engine::getSubsystem<RHIBackendRegistry>();
                 const RHIBackendEntry* pEntry = reg.findBackend( backend );
                 if ( pEntry != nullptr && pEntry->_factory.isBound() )
                     return true;

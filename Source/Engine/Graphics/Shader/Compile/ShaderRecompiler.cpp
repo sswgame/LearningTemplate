@@ -62,7 +62,7 @@ namespace sw
         // 등록표를 따로 두지 않는다. **이 실행에서 실제로 컴파일된 셰이더**가 곧 리로드 대상이다
         // (따로 채우는 표는 채우는 쪽을 빠뜨리면 단축키가 빈 표를 돈다).
         vector<ShaderCompileDesc> listDesc;
-        engine::getShaderCache().collectCompiledDescs( listDesc );
+        engine::getSubsystem<ShaderCache>().collectCompiledDescs( listDesc );
 
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         _listPendingReload = std::move( listDesc );
@@ -128,7 +128,7 @@ namespace sw
         {
             // 인메모리 캐시는 마지막에 한 번만 비운다. 셰이더마다 비우면 같은 패스의 남은 재컴파일이
             // 방금 지운 항목을 다시 채워 넣는다.
-            engine::getShaderCache().clearCache();
+            engine::getSubsystem<ShaderCache>().clearCache();
             // 리플렉션도 비운다 — 셰이더가 머티리얼 구조(SW_MATERIAL_BEGIN/END)를 바꿨을 수 있고, 머티리얼은 이 캐시 세대를 보고 레이아웃을
             // 다시 맞춘다(Material::isShaderLayoutSynced). 비우지 않으면 맞춘 레이아웃이 옛 셰이더 것 그대로 남는다.
             ShaderReflectionLibrary::clearCache();

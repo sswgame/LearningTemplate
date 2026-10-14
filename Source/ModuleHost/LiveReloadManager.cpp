@@ -803,7 +803,7 @@ namespace sw
         // onBeforeReload 는 모듈에서 시작된 작업을 멈춰야 한다. 실행 중인 태스크를 비워 콜백이 옛 이미지에 들어가지 못하게 한다.
         // clear() 는 부르지 않는다. 그러면 관계없는 GPUScene · 씬 로드 작업까지 버리고 onTaskFinished 정리를 건너뛴다.
         if ( engine::areEngineServicesBound() )
-            engine::getSceneManager().cancelPendingAsyncLoads();
+            engine::getSubsystem<SceneManager>().cancelPendingAsyncLoads();
 
         // 렌더 스레드는 TaskManager 밖에서 돈다. Present 훅이 모듈 코드를 실행 중일 수 있으므로 먼저 비운다.
         if ( _drainWorkers.isBound() )
@@ -814,7 +814,7 @@ namespace sw
             return true;
         }
 
-        if ( engine::areEngineServicesBound() && engine::getTaskManager().waitAll( kDrainTimeoutMs ) == false )
+        if ( engine::areEngineServicesBound() && engine::getSubsystem<TaskManager>().waitAll( kDrainTimeoutMs ) == false )
         {
             markGraphBroken( "task drain timeout before unload" );
             return false;

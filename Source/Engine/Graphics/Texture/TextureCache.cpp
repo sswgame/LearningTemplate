@@ -33,7 +33,7 @@ namespace sw
             {
                 if ( engine::areEngineServicesBound() == false )
                     return;
-                engine::getAssetManager().getAssetCache<TextureCache>().declareRenderTarget( relativePath, width, height );
+                engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().declareRenderTarget( relativePath, width, height );
             }
         };
     } // namespace

@@ -43,7 +43,7 @@ namespace sw
 
     SubsystemInitResult RHISubsystem::initializeSubsystem()
     {
-        CommandLineManager& commandLine = engine::getCommandLineManager();
+        CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
         RenderDocCapture::initialize( commandLine.isArgumentProvided( CommandLineArgument::RENDERDOC ) );
 
         RHIBackend          commandLineBackend{};
@@ -51,7 +51,7 @@ namespace sw
         if ( RHIBackendUtil::findCommandLineBackend( commandLine, commandLineBackend ) == false )
             gv_rhiBackend = engineConfig._window._defaultRHI;
 
-        const DisplaySettingsRequest& display = engine::getUserSettingsManager().getDisplayRequest();
+        const DisplaySettingsRequest& display = engine::getSubsystem<UserSettingsManager>().getDisplayRequest();
         if ( IWindow::getActiveWindow() == nullptr )
         {
             uint32 windowWidth  = display._bHasResolution ? display._width : engineConfig._window._width;

@@ -52,7 +52,7 @@ namespace sw
      * @details 병렬 패스 기록이 여러 스레드에서 동시에 같은 구간을 누적하므로 relaxed 원자 덧셈을
      *          씁니다. 구간은 이름당 슬롯 하나로 고정되고, 슬롯 번호는 매크로가 static 으로 캐시합니다.
      *
-     *          소유는 `Engine` 이고 조회는 `engine::getFrameProfiler()` 입니다(함수 지역 static 싱글턴은 수명이 아무에게도
+     *          소유는 `Engine` 이고 조회는 `engine::getSubsystem<FrameProfiler>()` 입니다(함수 지역 static 싱글턴은 수명이 아무에게도
      *          속하지 않아 종료 순서를 정할 수 없습니다).
      */
     class SW_API FrameProfiler : public ISubsystem
@@ -239,20 +239,20 @@ namespace sw
  * @brief 이 스코프의 CPU 시간을 name 구간에 누적하고, 외부 프로파일러(Tracy)가 켜져 있으면 같은 이름의 구간을 남깁니다.
  * @details 슬롯 번호 · 외부 지점은 함수 지역 static 으로 한 번만 받습니다(C++11 이후 스레드 안전 초기화).
  */
-#define SW_PROFILE_SCOPE( name )                                                                                         \
-    static const ::sw::ProfileScopeID SW_PROFILE_CONCAT( swProfileSlot_, __LINE__ ) =                                    \
-        ::sw::engine::getFrameProfiler().registerScopeSite( name, __func__, __FILE__, static_cast<uint32>( __LINE__ ) ); \
-    ::sw::ScopedFrameProfile SW_PROFILE_CONCAT( swProfileScope_, __LINE__ )                                              \
-    {                                                                                                                    \
-        SW_PROFILE_CONCAT( swProfileSlot_, __LINE__ )                                                                    \
+#define SW_PROFILE_SCOPE( name )                                                                                                          \
+    static const ::sw::ProfileScopeID SW_PROFILE_CONCAT( swProfileSlot_, __LINE__ ) =                                                     \
+        ::sw::engine::getSubsystem<::sw::FrameProfiler>().registerScopeSite( name, __func__, __FILE__, static_cast<uint32>( __LINE__ ) ); \
+    ::sw::ScopedFrameProfile SW_PROFILE_CONCAT( swProfileScope_, __LINE__ )                                                               \
+    {                                                                                                                                     \
+        SW_PROFILE_CONCAT( swProfileSlot_, __LINE__ )                                                                                     \
     }
 
 /** @brief name 카운터에 value 를 더합니다(드로우 수 등). 시간이 아닙니다. */
-#define SW_PROFILE_COUNT( name, value )                                                            \
-    do                                                                                             \
-    {                                                                                              \
-        static const uint32 SW_PROFILE_CONCAT( swProfileCount_, __LINE__ ) =                       \
-            ::sw::engine::getFrameProfiler().registerScope( name );                                \
-        ::sw::engine::getFrameProfiler().addCount( SW_PROFILE_CONCAT( swProfileCount_, __LINE__ ), \
-                                                   static_cast<uint64>( value ) );                 \
+#define SW_PROFILE_COUNT( name, value )                                                                             \
+    do                                                                                                              \
+    {                                                                                                               \
+        static const uint32 SW_PROFILE_CONCAT( swProfileCount_, __LINE__ ) =                                        \
+            ::sw::engine::getSubsystem<::sw::FrameProfiler>().registerScope( name );                                \
+        ::sw::engine::getSubsystem<::sw::FrameProfiler>().addCount( SW_PROFILE_CONCAT( swProfileCount_, __LINE__ ), \
+                                                                    static_cast<uint64>( value ) );                 \
     } while ( false )

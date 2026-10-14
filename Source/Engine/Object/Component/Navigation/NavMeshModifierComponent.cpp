@@ -21,6 +21,6 @@ namespace sw
         AABB        box{};
         const bool  bHasWorldBox = pOwner != nullptr && pOwner->getManager() != nullptr && pOwner->getWorldBox( box );
         if ( bHasWorldBox )
-            pOwner->getManager()->getSceneService<SceneNavigation>().invalidateArea( box, true );
+            pOwner->getManager()->getSubsystem<SceneNavigation>().invalidateArea( box, true );
     }
 } // namespace sw

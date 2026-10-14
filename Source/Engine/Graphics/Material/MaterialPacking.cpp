@@ -74,7 +74,7 @@ namespace sw
                 if ( prop._enumType.empty() )
                     return nullptr;
                 const hashed_string typeName = hashed_string::findInterned( prop._enumType );
-                return typeName.empty() ? nullptr : engine::getTypeRegistry().findEnum( typeName );
+                return typeName.empty() ? nullptr : engine::getSubsystem<TypeRegistry>().findEnum( typeName );
             }
 
             /**

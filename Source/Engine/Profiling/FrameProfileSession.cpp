@@ -60,7 +60,7 @@ namespace sw
         _frameTarget   = gv_profileFrames > 0 ? static_cast<uint64>( gv_profileFrames ) : 0;
         _secondsTarget = gv_profileSeconds > 0 ? static_cast<int64>( gv_profileSeconds ) : 0;
         _bActive       = SW_TRUE;
-        engine::getFrameProfiler().setEnabled( true );
+        engine::getSubsystem<FrameProfiler>().setEnabled( true );
         SW_LOG_INFO( "[Profile] 계측 활성화 — 워밍업 %# + 측정 %# 프레임 / %# 초 (0 = 그 기준 없음)", kWarmupFrames, _frameTarget, _secondsTarget );
     }
 
@@ -69,7 +69,7 @@ namespace sw
         if ( _bActive == SW_FALSE || _bReported == SW_TRUE )
             return;
 
-        FrameProfiler& profiler = engine::getFrameProfiler();
+        FrameProfiler& profiler = engine::getSubsystem<FrameProfiler>();
         const uint64   frames   = profiler.getFrameCount();
 
         // 워밍업(셰이더 컴파일·PSO 생성·트랜지언트 할당)이 첫 프레임들을 크게 부풀린다.

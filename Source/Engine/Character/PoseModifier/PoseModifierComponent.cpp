@@ -47,7 +47,7 @@ namespace sw
                 bool raycastGround( const float3& origin, const float3& direction, float32 maxDistance, RigGroundHit& outHit ) const override
                 {
                     PhysicsQueryFilter  filter{};
-                    const ScenePhysics& physics = _manager.getSceneService<sw::ScenePhysics>();
+                    const ScenePhysics& physics = _manager.getSubsystem<sw::ScenePhysics>();
                     if ( _bPlanar )
                     {
                         const IPhysicsQueryScene2D* pScene = physics.findScene2D();
