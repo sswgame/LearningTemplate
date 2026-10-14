@@ -663,7 +663,7 @@ SW_TEST_CASE( AppSmokeTest, EditorRegistriesKeepTheirOrder )
         "EditorExtensionRegistry|menu|MainMenu/File|scene.new,scene.open,asset.save,scene.saveScene,-,editor.quickOpen,editor.commandPalette,-,"
         "editor.exit",
         "EditorExtensionRegistry|menu|MainMenu/Edit|edit.undo,edit.redo,-,editor.themeSettings,editor.preferences,editor.projectSettings,-,"
-        "scene.moveSiblingUp,scene.moveSiblingDown,scene.createFolder,-,help.reportBug",
+        "scene.moveSiblingUp,scene.moveSiblingDown,scene.createFolder,-,help.reportBug,automation.toggleScenarioRecord",
         "EditorExtensionRegistry|menu|MainMenu/Build|build.compileGame,build.compileEditor,build.compileAll,-,build.cancel,-,navigation.bake",
     };
 

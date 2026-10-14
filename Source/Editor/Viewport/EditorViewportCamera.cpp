@@ -232,6 +232,15 @@ namespace sw::editor
         _position      = _orbitTarget - EditorViewportCameraInternal::computeForward( _rotation ) * _orbitDistance;
     }
 
+    void EditorViewportCamera::resetToDefault()
+    {
+        const uint64 lastAppliedCameraID = _lastAppliedCameraID;
+        const float3 lastAppliedPosition = _lastAppliedPosition;
+        *this                            = EditorViewportCamera{};
+        _lastAppliedCameraID             = lastAppliedCameraID;
+        _lastAppliedPosition             = lastAppliedPosition;
+    }
+
     void EditorViewportCamera::setPose( const float3& position, const float3& rotation )
     {
         _position    = position;

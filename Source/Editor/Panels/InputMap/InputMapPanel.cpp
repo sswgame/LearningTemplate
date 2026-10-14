@@ -240,6 +240,7 @@ namespace sw::editor
         , _bLoaded{ SW_FALSE }
         , _bCapturingKey{ SW_FALSE }
         , _bPlotPaused{ SW_FALSE }
+        , _bSelectFirstTab{ SW_TRUE }
         , _reserved{ 0 }
     {
     }
@@ -305,7 +306,9 @@ namespace sw::editor
         // 탭은 셋이다. 편집(Mappings), 들여다보기(Debug), 녹화와 주입(Replay & Inject)이다. 언리얼의 Enhanced Input 은 액션, 매핑, 트리거를 한 화면에서 편집한다.
         if ( ImGui::BeginTabBar( "InputEditorTabs" ) )
         {
-            if ( ImGui::BeginTabItem( "Mappings" ) )
+            const ImGuiTabItemFlags mappingsFlags = _bSelectFirstTab ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None;
+            _bSelectFirstTab                      = SW_FALSE;
+            if ( ImGui::BeginTabItem( "Mappings", nullptr, mappingsFlags ) )
             {
                 drawMappingsTab();
                 ImGui::EndTabItem();
