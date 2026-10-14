@@ -293,6 +293,10 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   래그돌/물리 에셋(관절 한계) · 이펙트 · 장르 도구(코스터 트랙 · 리듬 차트). 언리얼 FPreviewScene · 애셋 에디터 툴킷, 유니티 PreviewRenderUtility · Prefab Stage.
   (2026-10-14 사용자 결정: 규모가 XL 이라 에디터 보강 묶음에서 뺐다 — 설계부터 따로 짠다.)
   계획: docs/plans/EditorMultiWorld.md
+  **2026-10-15 단계 1 의 엔진 쪽이 들어갔다**(`SceneManager::createPreviewScene` · 정책 · 키 · 초점 씬, 테스트 `SceneTest.Preview*`). 남은 것 — 단계 1: 조명 환경 프리셋(방향광 · 스카이 · 바닥을
+  씬 안 오브젝트로 스폰, 렌더로 눈 확인 필요) · 시간 배율이 델타에 곱해지는 값을 보는 테스트(목에 델타 기록이 없다) · 미리보기 씬의 `initialize( pRHIDevice )`(기본 머티리얼) ·
+  플레이 세션(`EditorPlaySession`)이 미리보기 씬을 건드리지 않는지 확인(스냅샷 복원은 활성 씬만 본다고 읽었을 뿐 EditorTest 로 못 박지 않았다). 단계 2~5(씬별 GPUScene · 호스트 뷰 목록 · `EditorPreviewPanel` ·
+  창별 선택 / Undo `focusScene` 위에) 는 GPU 와 눈 확인이 필요해 손대지 않았다. 에디터의 "초점 씬" 소비자(`EditorContext`)는 아직 없다.
 
 - `D3-8` **에디터 보강 묶음(2026-10-14)에서 남긴 것.**
   - **시나리오 녹화**(`ScenarioRecorder` · `scenario.record` · `automation.toggleScenarioRecord`): 마우스 휠은 `Wheel` 단계로, 더블클릭은 두 번째 `Press` 로 기록한다. 조합 중 글자 · 포커스 · 포인터 출입 ·

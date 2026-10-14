@@ -635,6 +635,9 @@ namespace sw
                 pTickScene->getObjectManager()->getCameraRegistry().setViewportSize( vpWidth, vpHeight );
             if ( _pSceneManager != nullptr && bTickScene )
                 _pSceneManager->tick( deltaTime );
+            // 미리보기 씬은 활성 씬의 정지 · 재생과 무관하게 자기 정책으로 돈다(에디터가 멈춘 중에도 애니메이션 창은 돈다).
+            if ( _pSceneManager != nullptr )
+                _pSceneManager->tickPreviewScenes( deltaTime );
         }
 
         // 물리 · 내비 디버그 선 — 씬 틱이 이번 프레임의 바디 · 경로를 정한 **뒤**, 관찰자 · UI · 패킷 **앞**이다(이번 프레임에 넣은 선이 endFrame 에서 확정된다).

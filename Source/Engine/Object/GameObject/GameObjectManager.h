@@ -157,6 +157,12 @@ namespace sw
 
         /** @brief 플레이 중(`beginPlay` 뒤, `endPlay` 전)이면 true 입니다. 이때 붙는 컴포넌트는 다음 틱 단계에서 onBeginPlay 를 받습니다. */
         bool hasBegunPlay() const { return _store.hasBegunPlay(); }
+        /**
+         * @brief `Physics` 단계를 켜거나 끕니다(기본 켬). 끄면 물리 서비스가 진행하지 않습니다 — 틱만 도는 미리보기 씬이 씁니다(`ScenePreviewPolicy::_bPhysics`).
+         */
+        void setPhysicsStepEnabled( bool bEnabled ) { _bPhysicsStepEnabled = bEnabled; }
+        /** @brief `Physics` 단계가 켜져 있으면 true 입니다. */
+        bool isPhysicsStepEnabled() const { return _bPhysicsStepEnabled; }
 
         /**
          * @brief 씬 한 프레임을 진행합니다 — 표(`SceneFrameStepList.xxx`)의 단계를 줄 순서대로 돕니다.
@@ -501,5 +507,7 @@ namespace sw
         SceneEngineServices _services;
         /** @brief `FrameSystems` 단계가 도는 중이면 true 입니다. */
         bool _bRunningFrameSystems;
+        /** @brief false 면 `Physics` 단계를 건너뜁니다(`setPhysicsStepEnabled`). */
+        bool _bPhysicsStepEnabled;
     };
 } // namespace sw
