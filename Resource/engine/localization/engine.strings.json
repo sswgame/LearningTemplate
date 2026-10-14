@@ -234,12 +234,6 @@
                 "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
             ]
         },
-        "EdMeshModifiers.GPUPreview": {
-            "source": "GPU Preview",
-            "origins": [
-                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
-            ]
-        },
         "EdMeshModifiers.GPUPreviewBlockedBy": {
             "source": "CPU only:",
             "origins": [
@@ -248,12 +242,6 @@
         },
         "EdMeshModifiers.GPUPreviewBlockedByStack": {
             "source": "CPU only (Recompute Normals)",
-            "origins": [
-                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
-            ]
-        },
-        "EdMeshModifiers.GPUPreviewTooltip": {
-            "source": "Shade the target mesh with the stack evaluated by a compute shader. Falls back to the wire preview when a modifier runs on the CPU only.",
             "origins": [
                 "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
             ]
@@ -404,6 +392,18 @@
         },
         "EdMeshModifiers.SaveStack": {
             "source": "Save Stack",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.ShadedPreview": {
+            "source": "Shaded Preview",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.ShadedPreviewTooltip": {
+            "source": "Shade the target mesh with the stack result. Runs on a compute shader when every enabled modifier supports it, otherwise the CPU result is uploaded as vertices. Off leaves the original mesh and the wire preview.",
             "origins": [
                 "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
             ]

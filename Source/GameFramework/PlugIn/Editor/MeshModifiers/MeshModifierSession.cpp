@@ -47,6 +47,33 @@ namespace sw::editor
                 const SceneComponent* pScene = object.getComponent<SceneComponent>();
                 return pScene != nullptr ? pScene->getWorldMatrix() : float4x4{};
             }
+
+            /** @brief 원본 정점 @p listSource 에 스택 결과 @p mesh 의 위치 · 법선 · UV · 색을 덮은 정점을 만듭니다(굽기와 CPU 미리보기가 같이 쓴다). */
+            static vector<RHIVertex> makeVertices( const vector<RHIVertex>& listSource, const MeshModifierMesh& mesh )
+            {
+                vector<RHIVertex> listVertex = listSource;
+                for ( size_t index = 0; index < listVertex.size(); ++index )
+                {
+                    RHIVertex&    vertex   = listVertex[index];
+                    const float3& position = mesh._listPosition[index];
+                    const float3& normal   = mesh._listNormal[index];
+                    const float2& uv       = mesh._listUV[index];
+                    const float4& color    = mesh._listColor[index];
+                    vertex._arrPosition[0] = position._x;
+                    vertex._arrPosition[1] = position._y;
+                    vertex._arrPosition[2] = position._z;
+                    vertex._arrNormal[0]   = normal._x;
+                    vertex._arrNormal[1]   = normal._y;
+                    vertex._arrNormal[2]   = normal._z;
+                    vertex._arrUv[0]       = uv._x;
+                    vertex._arrUv[1]       = uv._y;
+                    vertex._arrColor[0]    = color._x;
+                    vertex._arrColor[1]    = color._y;
+                    vertex._arrColor[2]    = color._z;
+                    vertex._arrColor[3]    = color._w;
+                }
+                return listVertex;
+            }
         };
 
         /** @brief 시나리오(`meshmodifiers.scenario.xml`)가 읽는 탐침입니다. 세션이 없거나 대상이 없으면 값을 내지 않습니다. */
@@ -169,10 +196,11 @@ namespace sw::editor
     MeshModifierSession::MeshModifierSession()
         : _stack{}
         , _gpuPreviewMesh{}
+        , _cpuPreviewMesh{}
         , _originalMesh{}
         , _listGPUProgram{}
         , _gpuBlockingIndex{ -1 }
-        , _bGPUPreview{ true }
+        , _bShadedPreview{ true }
         , _previewMesh{}
         , _stagePreviewMesh{}
         , _sourceData{}
@@ -308,42 +336,58 @@ namespace sw::editor
         evaluation._time             = _previewTime;
         evaluation._pListInputBounds = &listInputBounds; // GPU 프로그램이 싣는 입력 상자 - 이 적용에서 공짜로 모은다
         _stack.apply( _previewMesh, evaluation );
-        updateGPUPreview( evaluation, listInputBounds );
+        updateShadedPreview( evaluation, listInputBounds );
     }
 
-    void MeshModifierSession::setGPUPreviewEnabled( bool bEnabled )
+    void MeshModifierSession::setShadedPreviewEnabled( bool bEnabled )
     {
-        if ( _bGPUPreview == bEnabled )
+        if ( _bShadedPreview == bEnabled )
             return;
-        _bGPUPreview   = bEnabled;
-        _bPreviewDirty = true; // 다음 refreshPreview 가 끼우거나 되돌린다
+        _bShadedPreview = bEnabled;
+        _bPreviewDirty  = true; // 다음 refreshPreview 가 끼우거나 되돌린다
         if ( bEnabled == false )
             restoreOriginalMesh();
     }
 
-    void MeshModifierSession::updateGPUPreview( const MeshModifierEvaluation& evaluation, const vector<MeshModifierBounds>& listInputBounds )
+    void MeshModifierSession::updateShadedPreview( const MeshModifierEvaluation& evaluation, const vector<MeshModifierBounds>& listInputBounds )
     {
         (void)MeshModifierGPUProgram::canMake( _stack, &_gpuBlockingIndex );
         GameObject*    pObject   = findTarget();
         MeshComponent* pMeshComp = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
-        const bool     bBuilt    = _bGPUPreview && pMeshComp != nullptr && MeshModifierGPUProgram::make( _stack, evaluation, listInputBounds, false, _listGPUProgram );
-        if ( bBuilt == false )
+        if ( _bShadedPreview == false || pMeshComp == nullptr )
         {
             restoreOriginalMesh();
             return;
         }
-        if ( _gpuPreviewMesh == nullptr )
+        if ( MeshModifierGPUProgram::make( _stack, evaluation, listInputBounds, false, _listGPUProgram ) )
         {
-            _gpuPreviewMesh = Mesh::create();
-            _gpuPreviewMesh->setVertices( _sourceData._listVertex );
-            _gpuPreviewMesh->setGPUMorphEnabled( true );
+            if ( _gpuPreviewMesh == nullptr )
+            {
+                _gpuPreviewMesh = Mesh::create();
+                _gpuPreviewMesh->setVertices( _sourceData._listVertex );
+                _gpuPreviewMesh->setGPUMorphEnabled( true );
+            }
+            _gpuPreviewMesh->setGPUDeformProgram( _listGPUProgram );
+            mountPreviewMesh( *pMeshComp, _gpuPreviewMesh );
+            _cpuPreviewMesh = nullptr;
+            return;
         }
-        _gpuPreviewMesh->setGPUDeformProgram( _listGPUProgram );
-        if ( pMeshComp->getMesh() != _gpuPreviewMesh )
-        {
-            _originalMesh = pMeshComp->getMesh();
-            pMeshComp->setMesh( _gpuPreviewMesh );
-        }
+        // GPU 표에 없는 모디파이어가 있다 - 방금 건 CPU 결과를 정점으로 올린다. 그리는 중인 메시를 고치지 않고 새 메시로 바꿔 끼운다
+        shared_ptr<Mesh> cpuMesh = Mesh::create();
+        cpuMesh->setVertices( MeshModifierSessionInternal::makeVertices( _sourceData._listVertex, _previewMesh ) );
+        mountPreviewMesh( *pMeshComp, cpuMesh );
+        _cpuPreviewMesh = std::move( cpuMesh );
+    }
+
+    void MeshModifierSession::mountPreviewMesh( MeshComponent& meshComponent, const shared_ptr<Mesh>& mesh )
+    {
+        const shared_ptr<Mesh>& current      = meshComponent.getMesh();
+        const bool              bOursMounted = current != nullptr && ( current == _gpuPreviewMesh || current == _cpuPreviewMesh );
+        if ( current == mesh )
+            return;
+        if ( bOursMounted == false )
+            _originalMesh = current; // 처음 끼우거나, 그사이 누가 다른 메시를 걸었다
+        meshComponent.setMesh( mesh );
     }
 
     void MeshModifierSession::restoreOriginalMesh()
@@ -353,9 +397,11 @@ namespace sw::editor
         GameObject*    pObject   = findTarget();
         MeshComponent* pMeshComp = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
         // 그사이 누가 다른 메시를 걸었으면(메시 id 변경 · 되돌리기) 그쪽을 존중한다
-        if ( pMeshComp != nullptr && pMeshComp->getMesh() == _gpuPreviewMesh )
+        const bool bOursMounted = pMeshComp != nullptr && ( pMeshComp->getMesh() == _gpuPreviewMesh || pMeshComp->getMesh() == _cpuPreviewMesh );
+        if ( bOursMounted )
             pMeshComp->setMesh( _originalMesh );
-        _originalMesh = nullptr;
+        _originalMesh   = nullptr;
+        _cpuPreviewMesh = nullptr;
     }
 
     void MeshModifierSession::makePreviewSegments( vector<float3>& outListSegmentPoint ) const
@@ -503,31 +549,11 @@ namespace sw::editor
         _stack.apply( mesh, evaluation );
 
         MeshAssetData baked{};
-        baked._listVertex     = _sourceData._listVertex;
+        baked._listVertex     = MeshModifierSessionInternal::makeVertices( _sourceData._listVertex, mesh );
         baked._listSkinVertex = _sourceData._listSkinVertex;
         baked._skinBoneCount  = _sourceData._skinBoneCount;
         if ( _sourceData._listMorphTarget.empty() == false )
             SW_LOG_WARNING( "Mesh '%#' has %# morph targets - they are dropped from the baked mesh", _meshPath.c_str(), _sourceData._listMorphTarget.size() );
-        for ( size_t index = 0; index < baked._listVertex.size(); ++index )
-        {
-            RHIVertex&    vertex   = baked._listVertex[index];
-            const float3& position = mesh._listPosition[index];
-            const float3& normal   = mesh._listNormal[index];
-            const float2& uv       = mesh._listUV[index];
-            const float4& color    = mesh._listColor[index];
-            vertex._arrPosition[0] = position._x;
-            vertex._arrPosition[1] = position._y;
-            vertex._arrPosition[2] = position._z;
-            vertex._arrNormal[0]   = normal._x;
-            vertex._arrNormal[1]   = normal._y;
-            vertex._arrNormal[2]   = normal._z;
-            vertex._arrUv[0]       = uv._x;
-            vertex._arrUv[1]       = uv._y;
-            vertex._arrColor[0]    = color._x;
-            vertex._arrColor[1]    = color._y;
-            vertex._arrColor[2]    = color._z;
-            vertex._arrColor[3]    = color._w;
-        }
 
         const string resourceID = MeshModifierStack::makeBakedMeshPath( _meshPath );
         const string path       = ResourcePaths::getWritePath( resourceID );

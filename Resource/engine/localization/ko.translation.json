@@ -117,10 +117,6 @@
             "text": "경계 상자에 맞추기",
             "sourceHash": "402ad59bb6ed0112"
         },
-        "EdMeshModifiers.GPUPreview": {
-            "text": "GPU 미리보기",
-            "sourceHash": "09e71a4a251e47f9"
-        },
         "EdMeshModifiers.GPUPreviewBlockedBy": {
             "text": "CPU 전용:",
             "sourceHash": "cc44e27c6bf4732d"
@@ -128,10 +124,6 @@
         "EdMeshModifiers.GPUPreviewBlockedByStack": {
             "text": "CPU 전용(법선 다시 계산)",
             "sourceHash": "e6d737e3073915e4"
-        },
-        "EdMeshModifiers.GPUPreviewTooltip": {
-            "text": "대상 메시를 컴퓨트 셰이더로 건 스택 결과로 셰이딩해 보입니다. CPU 전용 모디파이어가 있으면 와이어 미리보기만 남습니다.",
-            "sourceHash": "184554c21a016795"
         },
         "EdMeshModifiers.HintPickTarget": {
             "text": ".mesh 에셋을 쓰는 메시 컴포넌트가 있는 오브젝트를 고른 뒤 선택 사용을 누르세요.",
@@ -232,6 +224,14 @@
         "EdMeshModifiers.SaveStack": {
             "text": "스택 저장",
             "sourceHash": "03376e0fb812a6d0"
+        },
+        "EdMeshModifiers.ShadedPreview": {
+            "text": "셰이딩 미리보기",
+            "sourceHash": "3a001a59df5db872"
+        },
+        "EdMeshModifiers.ShadedPreviewTooltip": {
+            "text": "대상 메시를 스택 결과로 셰이딩해 보입니다. 켜진 모디파이어가 모두 지원하면 컴퓨트 셰이더로, 아니면 CPU 결과를 정점으로 올립니다. 끄면 원래 메시와 와이어 미리보기만 남습니다.",
+            "sourceHash": "7d5df56f33074e8f"
         },
         "EdMeshModifiers.SpaceReference": {
             "text": "기준 오브젝트",

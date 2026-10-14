@@ -4,7 +4,7 @@
   모디파이어를 쌓는다. ① 휘기(Bend)를 더하고 각을 넣으면 GPU 미리보기(모프 풀 + 변형 프로그램)가 대상 메시에 걸리고 씬 뷰 그림이 레스트와 달라진다.
   ② 뷰포트의 이동 화살표(시각화 meshmodifiers.preview)를 끌면 기즈모 중심이 움직이고 **선택은 그대로다** — 손잡이를 집는 첫 클릭이 뷰포트 클릭 선택으로 새지 않는다.
   ③ 곡선 목록(Curve Sculpt Layered "Layer Curves") 항목 추가 · 항목마다 곡선 편집기 팝업에서 키 추가, ④ 참조 목록(Conform Multi "Targets") 항목 추가 · 선택 사용,
-  ⑤ 묶음(Deformable) 하위 스택에 모디파이어 추가. CPU 전용 모디파이어가 들어오면 GPU 미리보기는 내려간다.
+  ⑤ 묶음(Deformable) 하위 스택에 모디파이어 추가. CPU 전용 모디파이어가 들어오면 GPU 미리보기는 내려가고 CPU 결과 정점으로 셰이딩한다(그림은 GPU 결과와 같다).
   스크린샷은 렌더 출력(씬 뷰)만 담는다 — 패널 · 기즈모는 ImGui 오버레이라 그림에 없고, 그 둘은 이름표 클릭과 탐침으로 본다.
   실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/meshmodifiers.scenario.xml -dx12
 -->
@@ -76,6 +76,12 @@
 	<At frame="475"><EditorClick mark="curve.menu.addKey"/></At>
 	<At frame="495"><Expect probe="MeshModifiers.CurveListKeyCount" equals="5"/></At>
 	<At frame="500"><EditorKey key="Escape"/></At>
+	<!-- CPU 로 내려가도 셰이딩 미리보기는 남는다: 빈 곡선 층은 항등이라 그림이 GPU 휘기(옮긴 뒤)와 같고 레스트와 다르다 -->
+	<At frame="508"><Screenshot file="cpubend.ppm"/></At>
+	<At frame="510">
+		<ExpectImage file="cpubend.ppm" metric="differentFrom" reference="rest.ppm" atLeast="0.002"/>
+		<ExpectImage file="cpubend.ppm" metric="differentFrom" reference="gpubendmoved.ppm" atMost="0.0005"/>
+	</At>
 
 	<!-- ④ 참조 목록: 항목 하나 → 선택 사용(상자 자신) -->
 	<At frame="515"><EditorClick mark="meshmodifiers.add"/></At>

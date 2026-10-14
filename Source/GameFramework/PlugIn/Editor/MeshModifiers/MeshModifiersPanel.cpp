@@ -1073,13 +1073,13 @@ namespace sw::editor
             stack.setRecomputingNormals( bRecompute );
             session.markDirty();
         }
-        // GPU 미리보기 - 켜진 모디파이어가 모두 GPU 표에 있으면 대상 메시를 GPU 모프로 셰이딩해 보인다. 막히면 무엇이 막는지 알린다
-        bool bGPUPreview = session.isGPUPreviewEnabled();
-        if ( ImGui::Checkbox( SW_LOCKEY( "EdMeshModifiers", "GPUPreview" ), &bGPUPreview ) )
-            session.setGPUPreviewEnabled( bGPUPreview );
-        EditorSelfTestMarks::note( "meshmodifiers.gpuPreview" );
-        MeshModifiersPanelInternal::drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "GPUPreviewTooltip" ) );
-        const bool bGPUPreviewBlocked = session.isGPUPreviewEnabled() && session.isGPUPreviewActive() == false && stack.getModifierCount() > 0;
+        // 셰이딩 미리보기 - 켜진 모디파이어가 모두 GPU 표에 있으면 GPU 모프로, 아니면 CPU 결과 정점으로 셰이딩해 보인다. CPU 로 내려가면 무엇 때문인지 알린다
+        bool bShadedPreview = session.isShadedPreviewEnabled();
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdMeshModifiers", "ShadedPreview" ), &bShadedPreview ) )
+            session.setShadedPreviewEnabled( bShadedPreview );
+        EditorSelfTestMarks::note( "meshmodifiers.shadedPreview" );
+        MeshModifiersPanelInternal::drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "ShadedPreviewTooltip" ) );
+        const bool bGPUPreviewBlocked = session.isShadedPreviewEnabled() && session.isGPUPreviewActive() == false && stack.getModifierCount() > 0;
         if ( bGPUPreviewBlocked )
         {
             ImGui::SameLine();

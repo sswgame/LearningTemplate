@@ -75,16 +75,16 @@
   격자 · ffd2d 제어점 클릭 고르기와 끌기(대칭은 세션 설정). 회전 고리는 기준 축 둘레 증분 회전을 곱한 뒤 Rz·Ry·Rx 오일러로 다시 푼다(`applyRotationDelta`, 짐벌 근처는 X 를 0 으로 두고 Z 에 몰아 유한하게 만든다). 손잡이를 집는 순간
   `EditorViewportMouseClaim::acquire` 로 뷰포트의 클릭 선택 · 변환 기즈모를 양보시키고 끄는 동안 매 프레임 다시 잡으며 놓을 때 `release` 한다(호버만으로는 잡지 않는다). 뷰포트는 시각화를 그린 뒤에 클릭 선택을 처리하므로 첫 클릭이 새지 않고,
   끄는 중에 시각화 토글을 꺼도 다음 프레임 시작(`beginFrame`)에 양보가 거둬진다. 범위 표시와 ffd2d 격자 상자는 선택한 모디파이어의 **입력 메시 상자**(앞 모디파이어까지 건 결과)를 쓴다.
-  툴바 "Stage" 는 고른 모디파이어까지만 건 결과를 다른 색으로 겹친다. CPU 미리보기는 와이어(최대 2 만 삼각형)이고, 셰이딩된 결과는 아래 GPU 미리보기다.
-  자동화 시나리오 `Resource/engine/automation/editor/meshmodifiers.scenario.xml` 이 패널 · 기즈모 끌기(선택이 그대로인지 = 첫 클릭 누수 없음) · 곡선 목록 · 참조 목록 · 하위 스택 · GPU 미리보기 그림을 본다
+  툴바 "Stage" 는 고른 모디파이어까지만 건 결과를 다른 색으로 겹친다. 와이어(최대 2 만 삼각형)는 늘 CPU 결과이고, 셰이딩된 결과는 아래 셰이딩 미리보기다.
+  자동화 시나리오 `Resource/engine/automation/editor/meshmodifiers.scenario.xml` 이 패널 · 기즈모 끌기(선택이 그대로인지 = 첫 클릭 누수 없음) · 곡선 목록 · 참조 목록 · 하위 스택 · GPU · CPU 셰이딩 그림을 본다
   (패널이 씬 뷰 위에 떠 있으면 손잡이를 가려서 끌기 전에 패널을 닫는다).
 - 굽기는 스킨 가중치를 옮기고 모프 타깃은 위치가 맞지 않아 버리며 경고한다. 결과 메시는 씬이 쓰기 전까지 아무도 참조하지 않아 `orphans` 규칙이 경고(오류 아님)를 낸다 - 쓰이지 않는 에셋이라는 사실 그대로의 알림이라 고칠 결함이 아니고, 메시 컴포넌트가 가리키면 사라진다
   (규칙 표에 예외를 달면 "어떤 파일에도 안 맞는 예외" 검사가 오래된 예외로 잡는다).
 - 월드 공간 워프(별도 씬 오브젝트로 여러 메시에 적용)는 모디파이어의 `setWorldSpace` + 기준 오브젝트 id 까지만 있다.
 
-## GPU 미리보기 (컴퓨트)
+## 셰이딩 미리보기 (GPU 컴퓨트 · CPU 정점)
 
-패널의 "GPU Preview"(기본 켬)는 대상 메시 컴포넌트에 미리보기 메시(레스트 정점 + GPU 모프)를 런타임 지정(`setMesh`, 저장되지 않음)으로 끼우고,
+패널의 "Shaded Preview"(기본 켬)는 대상 메시 컴포넌트에 미리보기 메시를 런타임 지정(`setMesh`, 저장되지 않음)으로 끼운다. 스택을 GPU 로 옮길 수 있으면 레스트 정점 + GPU 모프 메시를 끼우고,
 스택을 **변형 프로그램**(float4 목록)으로 바꿔 `Mesh::setGPUDeformProgram` 에 건다. 모프 풀(`GPUMeshMorphPool`)이 칸 표 + 프로그램을 t1 로 싣고,
 엔진 셰이더 `meshmorph.hlsl` 이 프로그램이 있는 메시에는 기본 물결 대신 uber 실행기 `meshmodifier.hlsli` 를 건다. 정점 셰이더는 원래대로 모프 풀 결과를 읽는다.
 
@@ -92,7 +92,8 @@
   입력 상자 · 야코비안 걸음 · 매개변수(`packGPUParams` 기본 배치). 입력 상자는 앞 모디파이어까지 건 결과라 GPU 가 다시 셀 수 없어서, 미리보기가 이미 도는 CPU 적용에서
   `MeshModifierEvaluation::_pListInputBounds` 로 공짜로 모은다. 그래서 매개변수가 바뀌면 CPU 가 한 번 돌고, 정점 버퍼는 다시 만들지 않고 프로그램만 바뀐다(렌더 스레드는 잠금으로 사본을 잡는다).
 - **옮기는 조건**: 켜진 모디파이어가 모두 `supportsGPU()` 이고 표에 있으며(33 종, `MeshModifierGPUProgramTest.KindTableMatchesSupportsGPU` 가 둘이 같은지 본다),
-  "Recompute Normals" 를 끄고, 선택 가중치 채널이 없을 때. 하나라도 어기면 원래 메시로 되돌리고 와이어만 남는다(패널에 막는 모디파이어 이름이 보인다).
+  "Recompute Normals" 를 끄고, 선택 가중치 채널이 없을 때. 하나라도 어기면 CPU 결과 정점을 올린 새 메시를 바뀔 때마다 끼운다(패널에 CPU 로 내린 모디파이어 이름이 보인다).
+  그리는 중인 메시의 정점을 고치지 않고 메시째 바꾸는 것은 렌더 스레드가 든 사본과 겹치지 않게 하려는 것이다. 상용 도구(언리얼 모델링 · 3ds Max 스택)처럼 어느 경로든 셰이딩 결과를 보인다.
 - **새 점 단위 모디파이어를 GPU 로**: 셰이더에 번호 · 함수 · switch 한 줄, `MeshModifierGPUProgram.cpp` 표에 id 한 줄, `TestMeshModifierGPU.cpp` 사례 한 줄. 셰이더를 고치면
   `App.exe --cook-shaders` 로 다시 굽고 `Resource/engine/shaders/bin` 산출물을 커밋한다.
 - **검증**: `MeshModifierGPUTest.ProgramMatchesCPU`(hostgpu) — 종류마다 · 기즈모 회전 · 연쇄 35 사례를 네 백엔드에서 CPU 변형 메시와 그림으로 견준다(달라진 픽셀 2 % 이하,
