@@ -224,6 +224,48 @@ namespace sw::editor
         return -1;
     }
 
+    float3 ModifierGizmoLogic::applyRotationDelta( const float3& eulerDegree, uint32 axisIndex, float32 deltaDegree )
+    {
+        // 지금 회전 행렬의 열(모디파이어 단위 축의 기준 공간 방향)을 기즈모 정의 그대로 구한다
+        MeshModifierGizmo gizmo{};
+        gizmo._rotationDegree = eulerDegree;
+        float3 arrColumn[3]   = { gizmo.toBaseDirection( float3{ 1.0f, 0.0f, 0.0f } ), gizmo.toBaseDirection( float3{ 0.0f, 1.0f, 0.0f } ),
+                                  gizmo.toBaseDirection( float3{ 0.0f, 0.0f, 1.0f } ) };
+        // 기준 축 둘레 회전(로드리게스)을 각 열에 건다: 새 회전 = 축 회전 · 지금 회전
+        float3 axis{ 0.0f, 0.0f, 0.0f };
+        MeshModifierUtil::setComponent( axis, MathUtil::min( axisIndex, 2u ), 1.0f );
+        const float32 radian   = MathUtil::toRadian( deltaDegree );
+        const float32 cosValue = ::cosf( radian );
+        const float32 sinValue = ::sinf( radian );
+        for ( float3& column : arrColumn )
+        {
+            column = column * cosValue + axis.cross( column ) * sinValue + axis * ( axis.dot( column ) * ( 1.0f - cosValue ) );
+        }
+        // R = Rz · Ry · Rx 풀기: 원소 r(행, 열) = arrColumn[열] 의 행 성분
+        const float32 r00    = arrColumn[0]._x;
+        const float32 r10    = arrColumn[0]._y;
+        const float32 r20    = arrColumn[0]._z;
+        const float32 r01    = arrColumn[1]._x;
+        const float32 r11    = arrColumn[1]._y;
+        const float32 r21    = arrColumn[1]._z;
+        const float32 r22    = arrColumn[2]._z;
+        const float32 cosY   = ::sqrtf( r00 * r00 + r10 * r10 );
+        const float32 angleY = ::atan2f( -r20, cosY );
+        float32       angleX = 0.0f;
+        float32       angleZ = 0.0f;
+        if ( cosY > 1e-4f )
+        {
+            angleX = ::atan2f( r21, r22 );
+            angleZ = ::atan2f( r10, r00 );
+        }
+        else
+        {
+            // 짐벌: X 와 Z 가 한 축을 돈다. X = 0 으로 두면 R = Rz · Ry 라 r01 = -sin z, r11 = cos z
+            angleZ = ::atan2f( -r01, r11 );
+        }
+        return float3{ MathUtil::toDegree( angleX ), MathUtil::toDegree( angleY ), MathUtil::toDegree( angleZ ) };
+    }
+
     ModifierRangeKind ModifierGizmoLogic::computeRangeKind( const MeshModifierParamDef& def )
     {
         using Internal = ModifierGizmoLogicInternal;

@@ -17,6 +17,7 @@
 
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Viewport/EditorViewportMouseClaim.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportRayPick.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
@@ -91,7 +92,7 @@ namespace sw::editor
                 MeshModifier*      _pModifier{ nullptr };
                 float4x4           _modifierToWorld{};
                 float4x4           _worldToModifier{};
-                MeshModifierBounds _modifierBox{}; ///< 원본 상자 모서리를 모디파이어 공간으로 옮긴 근사 상자
+                MeshModifierBounds _modifierBox{}; ///< 입력 메시 상자 모서리를 모디파이어 공간으로 옮긴 근사 상자
                 float3             _centerWorld{ 0.0f, 0.0f, 0.0f };
                 float32            _worldSize{ 1.0f }; ///< 원본 상자 대각선의 월드 길이
                 uint32             _axisIndex{ 1 };
@@ -116,6 +117,21 @@ namespace sw::editor
             {
                 static DragState s_state;
                 return s_state;
+            }
+
+            /** @brief 뷰포트 마우스 양보의 주인 식별자입니다(주소만 쓴다). */
+            static const void* getMouseClaimOwner()
+            {
+                static const uint8 s_owner = 0;
+                return &s_owner;
+            }
+
+            /** @brief 끌기를 끝냅니다. 핸들을 집고 있었으면 뷰포트 마우스 양보도 돌려준다(놓기 · 취소 모두). */
+            static void endDrag( DragState& state )
+            {
+                if ( state._bDragging )
+                    EditorViewportMouseClaim::release( getMouseClaimOwner() );
+                state = DragState{};
             }
 
             static void drawSegment( const EditorViewportVisualizerArgs& args, const float3& from, const float3& to, ImU32 color, float32 thickness )
@@ -206,13 +222,15 @@ namespace sw::editor
                 const MeshModifierBounds& source = session.getSourceBounds();
                 if ( source.isValid() == false )
                     return false;
-                // 상자는 입력 정점의 모디파이어 공간 상자를 원본 로컬 상자 모서리로 근사한다(앞 모디파이어의 변형은 반영하지 않는다)
-                vector<float3> listCorner;
+                // 상자는 입력 메시(앞선 켜진 모디파이어까지 건 결과)의 로컬 상자 모서리를 모디파이어 공간으로 옮겨 근사한다.
+                // 손잡이 크기(_worldSize)는 끌기 중 흔들리지 않도록 원본 상자로 둔다
+                const MeshModifierBounds& input = session.getSelectedModifierInputBounds();
+                vector<float3>            listCorner;
                 listCorner.reserve( 8 );
                 for ( uint32 corner = 0; corner < 8; ++corner )
                 {
-                    const float3 local{ ( corner & 1u ) != 0 ? source._max._x : source._min._x, ( corner & 2u ) != 0 ? source._max._y : source._min._y,
-                                        ( corner & 4u ) != 0 ? source._max._z : source._min._z };
+                    const float3 local{ ( corner & 1u ) != 0 ? input._max._x : input._min._x, ( corner & 2u ) != 0 ? input._max._y : input._min._y,
+                                        ( corner & 4u ) != 0 ? input._max._z : input._min._z };
                     listCorner.push_back( float3::transform( local, localToModifier ) );
                 }
                 outFrame._modifierBox = MeshModifierBounds::makeFromPoints( listCorner );
@@ -529,8 +547,8 @@ namespace sw::editor
                         if ( ModifierGizmoLogic::tryIntersectRayPlane( ray._origin, ray._direction, handle._origin, handle._direction, hit ) == false )
                             return;
                         const float32 angle    = ModifierGizmoLogic::computeSignedAngleDegree( state._startVector, hit - handle._origin, handle._direction );
-                        float3        rotation = state._startRotation;
-                        MeshModifierUtil::setComponent( rotation, handle._axis, MeshModifierUtil::getComponent( rotation, handle._axis ) + angle );
+                        // 고리는 기준 공간 축을 그리므로 시작 회전에 그 축 둘레 증분 회전을 곱해 오일러로 다시 푼다(다른 성분이 0 이 아니어도 맞다)
+                        const float3  rotation = ModifierGizmoLogic::applyRotationDelta( state._startRotation, handle._axis, angle );
                         if ( ( rotation - gizmo._rotationDegree ).getLengthSquared() <= MathUtil::kEpsilonSquared )
                             return;
                         ensureUndo( session, state );
@@ -571,7 +589,9 @@ namespace sw::editor
 
             static void beginDrag( DragState& state, const Handle& handle, const Frame& frame, int32 modifierIndex, int32 pointIndex, const EditorPickRay& ray )
             {
-                state                = DragState{};
+                endDrag( state );
+                // 핸들을 집는 순간부터 놓을 때까지 뷰포트 선택 · 카메라가 마우스를 가져가지 않게 한다(호버만으로는 잡지 않는다)
+                EditorViewportMouseClaim::acquire( getMouseClaimOwner() );
                 state._bDragging     = true;
                 state._handle        = handle;
                 state._startRay      = ray;
@@ -602,7 +622,7 @@ namespace sw::editor
                 DragState&  state         = getDragState();
                 const int32 modifierIndex = session.getSelectedIndex();
                 if ( state._bDragging && state._modifierIndex != modifierIndex )
-                    state = DragState{}; // 끄는 중에 다른 모디파이어로 바뀌었다
+                    endDrag( state ); // 끄는 중에 다른 모디파이어로 바뀌었다
 
                 int32 selectedPoint = session.getSelectedControlPoint();
                 if ( set.isValid() && selectedPoint >= static_cast<int32>( set._listWorld.size() ) )
@@ -626,7 +646,7 @@ namespace sw::editor
                 if ( state._bDragging )
                 {
                     if ( ImGui::IsMouseDown( ImGuiMouseButton_Left ) == false )
-                        state = DragState{}; // 놓았다. 되돌리기는 첫 변경 때 이미 남겼다
+                        endDrag( state ); // 놓았다. 되돌리기는 첫 변경 때 이미 남겼다
                     else if ( bHasRay )
                         updateDrag( session, state, frame, set, ray );
                 }
@@ -684,7 +704,7 @@ namespace sw::editor
                 MeshModifierSession* pSession = getService<MeshModifierSession>();
                 if ( pSession == nullptr || pSession->hasTarget() == false || pSession->findTarget() == nullptr )
                 {
-                    getDragState() = DragState{};
+                    endDrag( getDragState() );
                     return;
                 }
                 MeshModifierSession& session = *pSession;
@@ -698,7 +718,7 @@ namespace sw::editor
                 Frame         frame{};
                 if ( pModifier == nullptr || makeFrame( session, *pModifier, frame ) == false )
                 {
-                    getDragState() = DragState{};
+                    endDrag( getDragState() );
                     return;
                 }
 
