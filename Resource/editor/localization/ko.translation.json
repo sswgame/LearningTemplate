@@ -675,7 +675,7 @@
         },
         "EditorBugIt.NoReports": {
             "text": "아직 버그 리포트가 없습니다. Collect Now 가 Saved/BugIt 아래에 하나 모읍니다.",
-            "sourceHash": "900da9a3e9e8b26"
+            "sourceHash": "0900da9a3e9e8b26"
         },
         "EditorBugIt.NoteHint": {
             "text": "붙일 메모(무엇을 했고 무엇이 잘못됐는지)",

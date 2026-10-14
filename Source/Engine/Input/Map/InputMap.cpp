@@ -284,7 +284,7 @@ namespace sw
             if ( isBindingLayerActive( binding ) == false || evaluateBindingDown( binding, bVal ) == false )
                 continue;
             float32& accumulator = BindingKinds::isRelative( binding ) ? relative : bounded;
-            accumulator += bVal._x;
+            accumulator += binding._bNegate ? -bVal._x : bVal._x; // 프레임 평가(InputMapEvaluate)와 같은 부호 뒤집기
         }
         if ( _bInvertX == SW_TRUE )
             bounded = -bounded;
@@ -336,8 +336,8 @@ namespace sw
             if ( isBindingLayerActive( binding ) && evaluateBindingDown( binding, bindingValue ) )
             {
                 float2& accumulator = BindingKinds::isRelative( binding ) ? relative : bounded;
-                accumulator._x += bindingValue._x;
-                accumulator._y += bindingValue._y;
+                accumulator._x += binding._bNegate ? -bindingValue._x : bindingValue._x; // 프레임 평가(InputMapEvaluate)와 같은 부호 뒤집기
+                accumulator._y += binding._bNegate ? -bindingValue._y : bindingValue._y;
             }
         }
         return composeActionValue( bounded, relative );
