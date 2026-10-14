@@ -53,6 +53,11 @@ namespace sw
         NileDirectorComponent();
         virtual ~NileDirectorComponent() override;
 
+        /** @brief 판을 열고 패드 가상 커서를 켭니다(오른쪽 스틱 = 커서, A/B = 마우스 왼쪽/오른쪽). 패드만으로 놓기 · 헐기를 씁니다. */
+        void onBeginPlay() override;
+        /** @brief 가상 커서를 끄고 판을 닫습니다. */
+        void onEndPlay() override;
+
         /** @brief 도시 상태(시뮬레이션, 자동 계획 진행, 월 수, 속도, 선택한 도구)를 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
         void writeState( Archive& outArchive ) const override;
 

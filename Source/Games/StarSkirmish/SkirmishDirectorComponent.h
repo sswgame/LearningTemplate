@@ -50,6 +50,11 @@ namespace sw
         SkirmishDirectorComponent();
         virtual ~SkirmishDirectorComponent() override;
 
+        /** @brief 판을 열고 패드 가상 커서를 켭니다(오른쪽 스틱 = 커서, A/B = 마우스 왼쪽/오른쪽). 패드만으로 고르기 · 명령을 씁니다. */
+        void onBeginPlay() override;
+        /** @brief 가상 커서를 끄고 판을 닫습니다. */
+        void onEndPlay() override;
+
         /** @brief 판(월드, AI 진행, 선택, 속도, 일시정지)을 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
         void writeState( Archive& outArchive ) const override;
 

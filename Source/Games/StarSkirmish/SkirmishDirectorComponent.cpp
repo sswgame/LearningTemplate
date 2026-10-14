@@ -162,6 +162,21 @@ namespace sw
 
     SkirmishDirectorComponent::~SkirmishDirectorComponent() = default;
 
+    void SkirmishDirectorComponent::onBeginPlay()
+    {
+        GameDirectorComponent::onBeginPlay();
+        // 맵의 패드 A/B 바인딩은 그대로 둔다.
+        if ( InputManager* pInput = game::getService<InputManager>(); pInput != nullptr )
+            pInput->getVirtualCursor().setEnabled( true );
+    }
+
+    void SkirmishDirectorComponent::onEndPlay()
+    {
+        if ( InputManager* pInput = game::getService<InputManager>(); pInput != nullptr )
+            pInput->getVirtualCursor().setEnabled( false );
+        GameDirectorComponent::onEndPlay();
+    }
+
     void SkirmishDirectorComponent::onGameStarted()
     {
         // 사람 쪽은 글자 키가 명령이라 카메라는 방향키만 쓴다. 둘 다 AI 면 맵 전체가 보이게 물러서고 WASD 도 카메라를 움직인다.

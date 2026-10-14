@@ -214,6 +214,21 @@ namespace sw
 
     NileDirectorComponent::~NileDirectorComponent() = default;
 
+    void NileDirectorComponent::onBeginPlay()
+    {
+        GameDirectorComponent::onBeginPlay();
+        // 맵의 패드 A/B 바인딩은 그대로 둔다.
+        if ( InputManager* pInput = game::getService<InputManager>(); pInput != nullptr )
+            pInput->getVirtualCursor().setEnabled( true );
+    }
+
+    void NileDirectorComponent::onEndPlay()
+    {
+        if ( InputManager* pInput = game::getService<InputManager>(); pInput != nullptr )
+            pInput->getVirtualCursor().setEnabled( false );
+        GameDirectorComponent::onEndPlay();
+    }
+
     void NileDirectorComponent::onGameStarted()
     {
         SW_LOG_INFO( "[Nile] the city is founded on the Nile - WASD pan, wheel zoom, Q/E pick building, R road, left click build, right click demolish, "
