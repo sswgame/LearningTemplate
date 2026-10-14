@@ -18,6 +18,7 @@
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Dialogue/DialogueCursor.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
@@ -132,12 +133,16 @@ namespace sw::editor
                     addNode( info._type );
                     notifyDocumentEdited( "Add Dialogue Node" );
                 }
+                fixed_string<constant::kMaxBuffer64> markKey;
+                formatstring( markKey.data(), markKey.capacity(), "dialogueGraph.add.%#", info._pName );
+                EditorSelfTestMarks::note( markKey.c_str() );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "AddNodeTip" ) );
                 ImGui::SameLine();
             }
             EditorWidgets::drawToolbarSeparator();
             if ( ImGui::Button( "Save" ) )
                 (void)saveGraphData(); // 실패는 저장 커맨드가 알린다
+            EditorSelfTestMarks::note( "dialogueGraph.save" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "SaveTip" ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Reload" ) )
