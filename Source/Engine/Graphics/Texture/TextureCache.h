@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -84,6 +85,19 @@ namespace sw
          *          바뀌면 다시 받습니다(`Material::refreshTextureBindings` — `GPUSceneBuilder` 가 부릅니다).
          */
         uint32 getReloadGeneration() const;
+        /**
+         * @brief 이미 든 텍스처의 사각형 구간을 새 픽셀로 바꿔 달라고 맡깁니다(게임 스레드 — 지형 스플랫 칠하기). 실제 업로드는 렌더 스레드의 `flushRegionUpdates` 가 합니다.
+         * @details @p rgbaBytes 는 RGBA8 순서의 빈틈없는 행(`width × 4` 바이트) × @p height 입니다. 텍스처가 BGRA8 이면 렌더 스레드가 채널을 바꿔 올리고,
+         *          다른 포맷이거나 그때 캐시에 없으면 버립니다(경고). 밉 0 만 올리므로 밉이 없는 텍스처(`Terrain_Weights` 규칙)용입니다.
+         *          업로드는 호출당 비용이라 부르는 쪽이 한 프레임의 변경을 사각형 하나로 모아 한 번 부릅니다. 디스크의 DDS 는 바꾸지 않으므로
+         *          디바이스를 다시 만들거나(`initRHI`) `reload` 하면 디스크 내용으로 돌아갑니다.
+         */
+        void requestRegionUpdate( string_view relativePath, uint32 x, uint32 y, uint32 width, uint32 height, vector<uint8> rgbaBytes );
+        /**
+         * @brief 맡겨 둔 구간 업로드를 모두 올립니다(렌더 스레드 — 프레임 기록 전, `FrameRenderer::executePacket`).
+         * @return 실제로 올린 구간 수입니다.
+         */
+        uint32 flushRegionUpdates( IRHIDevice* pDevice );
         /** @brief 참조를 하나 놓습니다. 0 이 되면 GPU 자원까지 해제합니다. */
         void release( string_view relativePath, IRHIDevice* pDevice );
         /** @brief 그 경로를 지금 캐시가 들고 있는지 반환합니다(`MaterialCache::isCached` 와 같은 뜻). */

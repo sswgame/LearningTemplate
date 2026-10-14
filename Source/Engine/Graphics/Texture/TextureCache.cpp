@@ -4,6 +4,7 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
@@ -12,6 +13,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Common/RenderTargetDeclaration.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/Cache/BuiltInAssetCache.h"
@@ -50,7 +52,20 @@ namespace sw
             uint32 _width{ TextureCache::kDefaultRenderTargetSize };
             uint32 _height{ TextureCache::kDefaultRenderTargetSize };
         };
+        /** @brief `requestRegionUpdate` 가 맡긴 구간 하나입니다(RGBA8 바이트를 소유합니다). */
+        struct RegionUpdate
+        {
+            string        _key;
+            uint32        _x{ 0 };
+            uint32        _y{ 0 };
+            uint32        _width{ 0 };
+            uint32        _height{ 0 };
+            vector<uint8> _rgbaBytes;
+        };
         unordered_map<string, Entry>            _mapEntry;
+        vector<RegionUpdate>                    _listPendingRegion;  ///< 게임 스레드가 쌓고 렌더 스레드가 비운다(`_regionMutex`)
+        vector<RegionUpdate>                    _listFlushingRegion; ///< 렌더 스레드만 쓰는 맞바꾸기 자리(저장소를 재사용한다)
+        mutex                                   _regionMutex;
         unordered_map<string, RenderTargetSize> _mapRenderTargetSize; ///< `declareRenderTarget` 이 알린 크기
         std::shared_mutex                       _mutex;
         std::condition_variable_any             _cvLoaded;              ///< 항목의 `_bLoading` 이 내려갈 때 깨운다
@@ -281,6 +296,72 @@ namespace sw
     uint32 TextureCache::getReloadGeneration() const
     {
         return _impl != nullptr ? _impl->_reloadGeneration.load( std::memory_order_acquire ) : 0u;
+    }
+
+    void TextureCache::requestRegionUpdate( string_view relativePath, uint32 x, uint32 y, uint32 width, uint32 height, vector<uint8> rgbaBytes )
+    {
+        const bool bEmpty = relativePath.empty() || width == 0 || height == 0;
+        if ( _impl == nullptr || bEmpty )
+            return;
+        Impl::RegionUpdate update;
+        update._key       = FileUtil::normalizePath( relativePath );
+        update._x         = x;
+        update._y         = y;
+        update._width     = width;
+        update._height    = height;
+        update._rgbaBytes = std::move( rgbaBytes );
+        std::scoped_lock<mutex> lock{ _impl->_regionMutex };
+        _impl->_listPendingRegion.push_back( std::move( update ) );
+    }
+
+    uint32 TextureCache::flushRegionUpdates( IRHIDevice* pDevice )
+    {
+        if ( _impl == nullptr || pDevice == nullptr )
+            return 0;
+        {
+            std::scoped_lock<mutex> lock{ _impl->_regionMutex };
+            if ( _impl->_listPendingRegion.empty() )
+                return 0;
+            _impl->_listFlushingRegion.swap( _impl->_listPendingRegion );
+        }
+        uint32 uploadedCount{ 0 };
+        for ( Impl::RegionUpdate& update : _impl->_listFlushingRegion )
+        {
+            // 올리는 동안 같은 텍스처를 놓거나 다시 올리지 못하게 읽기 잠금을 쥔다(release · reload 는 쓰기 잠금을 잡는다).
+            std::shared_lock<std::shared_mutex> lock{ _impl->_mutex };
+            const auto                          it        = _impl->_mapEntry.find( update._key );
+            const bool                          bResident = it != _impl->_mapEntry.end() && it->second._bPublished && it->second._bLoading == false &&
+                                   it->second._texture != nullptr && it->second._texture->isRHIValid();
+            if ( bResident == false )
+            {
+                SW_LOG_WARNING( "Region update for texture %# dropped - the texture is not resident", update._key.c_str() );
+                continue;
+            }
+            const Texture2D& texture = *it->second._texture;
+            if ( texture.getFormat() == RHIFormat::B8G8R8A8_UNORM )
+            {
+                for ( size_t offset = 0; offset + 3 < update._rgbaBytes.size(); offset += 4 )
+                {
+                    std::swap( update._rgbaBytes[offset], update._rgbaBytes[offset + 2] );
+                }
+            }
+            else if ( texture.getFormat() != RHIFormat::R8G8B8A8_UNORM )
+            {
+                SW_LOG_WARNING( "Region update for texture %# dropped - only RGBA8 and BGRA8 textures take RGBA8 bytes", update._key.c_str() );
+                continue;
+            }
+            RHITextureRegionUploadDesc desc{};
+            desc._pData     = update._rgbaBytes.data();
+            desc._sizeBytes = static_cast<uint32>( update._rgbaBytes.size() );
+            desc._x         = update._x;
+            desc._y         = update._y;
+            desc._width     = update._width;
+            desc._height    = update._height;
+            if ( pDevice->getResourceFactory()->uploadTexture2DRegion( texture.getHandle(), desc ) )
+                ++uploadedCount;
+        }
+        _impl->_listFlushingRegion.clear();
+        return uploadedCount;
     }
     void TextureCache::release( string_view relativePath, IRHIDevice* pDevice )
     {

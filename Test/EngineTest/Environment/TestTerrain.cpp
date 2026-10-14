@@ -463,7 +463,47 @@ SW_TEST_CASE( TerrainTest, WriteHeightsUpdatesQueriesAndSaves )
 }
 
 /**
- * @brief [TerrainTest] 레이어 가중치 쓰기 — 스플랫이 없으면 거절 · 사각형 안만 양자화해 쓰고 읽으면 보이며 · 크기가 틀리면 거절
+ * @brief [TerrainTest] 큰 사각형 높이 쓰기 — 청크 메시는 쓰기 한 번에 넷까지만 다시 만들고 나머지는 틱(`rebuildStaleChunkMeshes`)이 나눠 만든다
+ */
+SW_TEST_CASE( TerrainTest, LargeHeightWriteSpreadsChunkRebuilds )
+{
+    const string    path = test::makeTempPath( "edit_large.heightfield" );
+    HeightfieldData data = TerrainTestUtil::makeData( 65, &TerrainTestUtil::wave );
+    SW_ASSERT_TRUE( data.saveToFile( path ) );
+
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "Terrain" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    TerrainComponent* pTerrain = pObject->addComponent<TerrainComponent>();
+    SW_ASSERT_NOT_NULL( pTerrain );
+    pTerrain->setHeightfieldPath( path );
+    pTerrain->setSize( float2{ 64.0f, 64.0f } );
+    pTerrain->setHeightRange( TerrainTestUtil::kHeightMin, TerrainTestUtil::kHeightMax );
+    pTerrain->setChunkCells( 16 );
+    pTerrain->setMaterialPath( "" );
+    SW_ASSERT_TRUE( pTerrain->reloadTerrain() );
+
+    vector<float32>   listHeight = pTerrain->getHeightfield().getHeightSamples();
+    TerrainSampleRect rect;
+    rect.include( 0, 0 );
+    rect.include( 64, 64 ); // 청크 16 개 전부
+    SW_ASSERT_TRUE( pTerrain->writeHeights( listHeight, rect ) );
+    SW_EXPECT_EQUAL( 12u, pTerrain->getStaleChunkCount() );
+    SW_EXPECT_EQUAL( 4u, pTerrain->rebuildStaleChunkMeshes( 4 ) );
+    SW_EXPECT_EQUAL( 8u, pTerrain->getStaleChunkCount() );
+    SW_EXPECT_EQUAL( 8u, pTerrain->rebuildStaleChunkMeshes( 100 ) );
+    SW_EXPECT_EQUAL( 0u, pTerrain->getStaleChunkCount() );
+
+    // 브러시 한 번(청크 하나 안)은 바로 끝난다.
+    TerrainSampleRect brush;
+    brush.include( 5, 5 );
+    brush.include( 7, 7 );
+    SW_ASSERT_TRUE( pTerrain->writeHeights( listHeight, brush ) );
+    SW_EXPECT_EQUAL( 0u, pTerrain->getStaleChunkCount() );
+}
+
+/**
+ * @brief [TerrainTest] 레이어 가중치 쓰기 —스플랫이 없으면 거절 · 사각형 안만 양자화해 쓰고 읽으면 보이며 · 크기가 틀리면 거절
  */
 SW_TEST_CASE( TerrainTest, WriteLayerWeightsUpdatesSplat )
 {

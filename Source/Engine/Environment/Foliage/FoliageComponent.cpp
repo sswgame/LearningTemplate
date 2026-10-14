@@ -65,7 +65,12 @@ namespace sw
         , _listLayerMaterial{}
         , _pPrimitiveRegistry{ nullptr }
         , _time{ 0.0f }
+        , _terrainSettleTime{ 0.0f }
         , _instanceCount{ 0 }
+        , _builtTerrainGeneration{ 0 }
+        , _builtSplatRevision{ 0 }
+        , _seenTerrainGeneration{ 0 }
+        , _seenSplatRevision{ 0 }
         , _bBuiltOnTerrain{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -148,6 +153,34 @@ namespace sw
         float3             viewPosition{};
         if ( pManager != nullptr && _listCell.empty() == false && EnvironmentUtil::findViewPosition( *pManager, viewPosition ) )
             updateView( viewPosition );
+        if ( pManager != nullptr && _bBuiltOnTerrain == SW_TRUE )
+            followTerrainEdits( *pManager, deltaTime );
+    }
+
+    void FoliageComponent::followTerrainEdits( GameObjectManager& manager, float32 deltaTime )
+    {
+        const float3            origin   = getWorldPosition();
+        const TerrainComponent* pTerrain = TerrainComponent::findTerrainAt( manager, origin._x, origin._z );
+        if ( pTerrain == nullptr )
+            return;
+        const uint32 generation = pTerrain->getHeightfieldGeneration();
+        const uint32 revision   = pTerrain->getSplatRevision();
+        if ( generation != _seenTerrainGeneration || revision != _seenSplatRevision )
+        {
+            _seenTerrainGeneration = generation;
+            _seenSplatRevision     = revision;
+            _terrainSettleTime     = 0.0f;
+            return;
+        }
+        const bool bStale = generation != _builtTerrainGeneration || revision != _builtSplatRevision;
+        _terrainSettleTime += deltaTime;
+        if ( bStale == false || _terrainSettleTime < kTerrainSettleSeconds )
+            return;
+        // 같은 세대로 다시 미루지 않게 지금 표시해 둔다. 다시 만들기는 레지스트리를 바꾸므로 틱 뒤에 한다.
+        _builtTerrainGeneration = generation;
+        _builtSplatRevision     = revision;
+        manager.executeOrDeferPostTickOnComponent<FoliageComponent>( getHandle(), []( FoliageComponent& foliage )
+        { foliage.rebuildFoliage(); } );
     }
 
     PlacementRegion FoliageComponent::computeRegion() const
@@ -220,7 +253,12 @@ namespace sw
         const float3                     origin   = getWorldPosition();
         GameObject*                      pOwner   = getOwner();
         const GameObjectManager*         pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        _bBuiltOnTerrain                          = ( pManager != nullptr && TerrainComponent::findTerrainAt( *pManager, origin._x, origin._z ) != nullptr ) ? SW_TRUE : SW_FALSE;
+        const TerrainComponent*          pTerrain = pManager != nullptr ? TerrainComponent::findTerrainAt( *pManager, origin._x, origin._z ) : nullptr;
+        _bBuiltOnTerrain                          = pTerrain != nullptr ? SW_TRUE : SW_FALSE;
+        _builtTerrainGeneration                   = pTerrain != nullptr ? pTerrain->getHeightfieldGeneration() : 0u;
+        _builtSplatRevision                       = pTerrain != nullptr ? pTerrain->getSplatRevision() : 0u;
+        _seenTerrainGeneration                    = _builtTerrainGeneration;
+        _seenSplatRevision                        = _builtSplatRevision;
 
         // 레이어 머티리얼은 레이어마다 자기 인스턴스를 가진다(바람 반응과 페이드가 레이어 값이다).
         _listLayerMaterial.clear();

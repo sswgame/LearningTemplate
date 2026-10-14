@@ -14,6 +14,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -21,6 +22,7 @@
 #include "Engine/Renderer/Frame/RenderFramePacket.h"
 #include "Engine/Renderer/Frame/RenderViewCollector.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAssetCache.h"
+#include "Engine/Resource/AssetManager.h"
 
 namespace sw
 {
@@ -568,6 +570,13 @@ namespace sw
     {
         if ( isReady() == false || pDevice == nullptr || packet._bValid == SW_FALSE )
             return false;
+
+        // 게임 스레드가 맡긴 텍스처 구간(지형 스플랫 칠하기)을 기록 전에 올린다. 업로드는 뒤이은 드로우보다 먼저 실행된다(IRHIResourceFactory 계약).
+        if ( engine::areEngineServicesBound() )
+        {
+            SW_PROFILE_SCOPE( "RT.TextureRegionUpdates" );
+            (void)engine::getAssetManager().getAssetCache<TextureCache>().flushRegionUpdates( pDevice );
+        }
 
         _pDevice            = pDevice;
         _pScene             = nullptr;

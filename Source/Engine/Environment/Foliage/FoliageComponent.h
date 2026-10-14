@@ -80,6 +80,8 @@ namespace sw
      *          GPU 컬링이 인스턴스마다 절두체로 거른다. 페이드 구간에서는 정점 셰이더가 인스턴스를 뿌리 쪽으로 줄여 사라지게 한다.
      *          바람(`WindComponent`), 카메라 위치, 휘게 하는 구(`FoliageInfluencerComponent`), 시간은 틱마다 레이어 머티리얼 인스턴스에 싣는다.
      *          인스턴스마다 위상은 셰이더가 위치 해시로 정하고, 밝기 흔들기는 인스턴스 색 필드(`GPUSpriteInstanceData` 의 tint)로 받는다.
+     *          지형을 고치면(`writeHeights` · `writeLayerWeights` · `reloadTerrain`) 높이장 · 스플랫 세대가 오른다. 틱이 그 변화를 보고, 세대가
+     *          `kTerrainSettleSeconds` 동안 그대로이면(브러시 드래그가 끝나면) 틱 뒤에 배치를 다시 계산한다 — 칠하는 프레임마다 숲 전체를 다시 뿌리지 않는다.
      *          스레드: 배치 다시 만들기(`rebuildFoliage`)는 틱 밖에서만 호출한다. 틱은 자기 배치와 자기 머티리얼 인스턴스만 쓴다.
      */
     REFLECT( Category = "Environment", DisplayName = "Foliage", Tooltip = "Rule-placed GPU-instanced grass and trees with wind" )
@@ -87,6 +89,9 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+
+        /** @brief 지형 세대가 이만큼(s) 그대로여야 배치를 다시 계산합니다. */
+        static constexpr float32 kTerrainSettleSeconds = 0.3f;
 
         FoliageComponent();
         virtual ~FoliageComponent() override;
@@ -136,6 +141,8 @@ namespace sw
         PlacementRegion computeRegion() const;
         /** @brief 셀 배치 모두를 더티로 표시합니다. 활성 상태가 바뀌었을 때 호출합니다. */
         void markCellsDirty();
+        /** @brief 아래 지형의 세대 변화를 따라가다 `kTerrainSettleSeconds` 동안 그대로이면 틱 뒤에 배치를 다시 계산하게 합니다(틱이 부른다). */
+        void followTerrainEdits( GameObjectManager& manager, float32 deltaTime );
         /** @brief 셀 배치를 모두 레지스트리에서 빼고 놓습니다. */
         void releaseCells();
 
@@ -153,8 +160,13 @@ namespace sw
         vector<unique_ptr<EnvironmentMaterial>> _listLayerMaterial;  ///< 레이어마다 하나다(바람 값을 레이어마다 싣는다).
         PrimitiveRegistry*                      _pPrimitiveRegistry; ///< 등록된 매니저의 레지스트리다(구조 링크라 생포인터를 쓴다).
         float32                                 _time;
+        float32                                 _terrainSettleTime; ///< 지형 세대가 마지막으로 바뀐 뒤 흐른 시간(s) — 칠하는 동안은 다시 만들지 않는다
         uint32                                  _instanceCount;
-        uint8                                   _bBuiltOnTerrain : 1; ///< 마지막 계산이 지형 위였다(아니면 시작 때 지형을 다시 찾는다)
+        uint32                                  _builtTerrainGeneration; ///< 배치를 계산할 때 지형의 높이장 세대(`TerrainComponent::getHeightfieldGeneration`)
+        uint32                                  _builtSplatRevision;     ///< 배치를 계산할 때 지형의 스플랫 세대(`TerrainComponent::getSplatRevision`)
+        uint32                                  _seenTerrainGeneration;  ///< 지난 틱에 본 높이장 세대
+        uint32                                  _seenSplatRevision;      ///< 지난 틱에 본 스플랫 세대
+        uint8                                   _bBuiltOnTerrain : 1;    ///< 마지막 계산이 지형 위였다(아니면 시작 때 지형을 다시 찾는다)
         [[maybe_unused]] uint8                  _reserved        : 7;
     };
 } // namespace sw

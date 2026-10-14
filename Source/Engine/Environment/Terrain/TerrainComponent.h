@@ -87,6 +87,13 @@ namespace sw
          * @return 메시를 다시 만든 청크 수입니다.
          */
         uint32 updateLODs( const float3& viewPosition );
+        /**
+         * @brief 높이 쓰기로 낡은 청크 메시를 앞에서부터 최대 @p maxCount 개 다시 만듭니다. 틱이 프레임마다 부르고(쓰기도 한 번 부른다) 테스트가 직접 부릅니다.
+         * @return 다시 만든 청크 수입니다. 남은 것은 `getStaleChunkCount` 입니다.
+         */
+        uint32 rebuildStaleChunkMeshes( uint32 maxCount );
+        /** @brief 높이를 썼지만 메시를 아직 다시 만들지 않은 청크 수입니다. */
+        uint32 getStaleChunkCount() const { return static_cast<uint32>( _listStaleChunk.size() ); }
 
         /** @brief 월드 (x, z) 의 지형 높이를 구합니다. 지형 밖이거나 구멍이면 false 를 반환합니다. */
         [[nodiscard]] bool findHeightAt( float32 worldX, float32 worldZ, float32& outHeight ) const { return _heightfield.findHeightAt( worldX, worldZ, outHeight ); }
@@ -101,9 +108,14 @@ namespace sw
         /** @brief 높이장을 다시 읽거나 높이를 쓸 때마다(`reloadTerrain`, `writeHeights`) 오르는 세대입니다. 높이장에서 만든 것(물리 바디)이 낡았는지 견줍니다. */
         uint32 getHeightfieldGeneration() const { return _heightfieldGeneration; }
         /**
+         * @brief 청크마다(`getChunkLayout` 순서, z 가 바깥) 그 청크의 높이를 마지막으로 바꾼 세대(`getHeightfieldGeneration` 의 그때 값)입니다.
+         * @details `writeHeights` 는 바뀐 샘플을 쓰는 청크만 올리고 `reloadTerrain` 은 모두 올린다. 물리 바디처럼 청크 단위로 만든 것이 낡은 청크만 다시 만든다.
+         */
+        const vector<uint32>& getChunkGenerations() const { return _listChunkGeneration; }
+        /**
          * @brief 높이 샘플 전부(`getHeightfield().getHeightSamples()` 를 복사해 고친 사본)에서 @p rect 의 샘플을 반영합니다(월드 높이, m).
-         * @details 바뀐 샘플이 닿는 청크(노멀이 이웃 샘플을 읽으므로 한 샘플 바깥까지)의 메시와 바운드를 지금 다시 만들고, `getHeightfieldGeneration` 을 올려
-         *          물리 바디가 다시 만들어지게 한다. 되돌리기는 편집 전에 복사해 둔 사본과 같은 @p rect 로 이 함수를 다시 부르면 된다.
+         * @details 바뀐 샘플이 닿는 청크(노멀이 이웃 샘플을 읽으므로 한 샘플 바깥까지)의 바운드를 고치고 메시는 앞의 넷까지 지금, 나머지는 다음 틱들에 나눠 다시 만들고, `getHeightfieldGeneration` 과 바뀐 샘플을 쓰는
+         *          청크의 `getChunkGenerations` 를 올려 그 청크의 물리 바디만 다시 만들어지게 한다. 되돌리기는 편집 전에 복사해 둔 사본과 같은 @p rect 로 이 함수를 다시 부르면 된다.
          *          틱 밖에서만 부른다(`reloadTerrain` 과 같다 — 락이 없다). 메시를 다시 만드는 것이라 스트로크마다가 아니라 프레임에 한 번 부른다.
          *          이 지형을 읽어 만든 배치 결과(식생 등)는 다시 계산하지 않는다. 쓴 값은 저장(`saveHeightfield`)하기 전에 `reloadTerrain`(속성 변경 · 오너 이동)이 돌면 에셋 값으로 돌아간다.
          * @return 반영했으면 true 입니다(지형이 없거나 크기 · 범위가 틀리면 false 이고 아무것도 바꾸지 않습니다).
@@ -111,11 +123,12 @@ namespace sw
         [[nodiscard]] bool writeHeights( const vector<float32>& listHeight, const TerrainSampleRect& rect );
         /**
          * @brief 레이어 가중치 전부(`getHeightfield().readSplatWeights` 로 읽어 고친 사본)에서 @p rect(스플랫 텍셀 좌표)를 CPU 스플랫에 반영하고 `getSplatRevision` 을 올립니다.
-         * @details GPU 스플랫 텍스처는 갱신하지 않는다(RHI 에 텍스처 부분 업로드가 없다) — 그릴 때는 낡은 스플랫이 보인다. 업로드 쪽이 `getSplatRevision` 을 견줘 다시 올린다.
-         *          틱 밖에서만 부른다.
+         * @details GPU 스플랫 텍스처는 @p rect 만 한 번에 올리도록 맡긴다(`TextureCache::requestRegionUpdate` — 렌더 스레드가 다음 프레임 기록 전에 올린다).
+         *          텍스처는 경로로 캐시가 나눠 쓰므로 같은 스플랫을 쓰는 다른 지형의 그림도 바뀐다(CPU 가중치는 이 지형만). 디스크 DDS 는 `saveSplat` 전까지 그대로라
+         *          디바이스를 다시 만들면(백엔드 교체) GPU 는 디스크 값으로 돌아간다. 틱 밖에서만 부른다.
          */
         [[nodiscard]] bool writeLayerWeights( const vector<float4>& listWeight, const TerrainSampleRect& rect );
-        /** @brief `writeLayerWeights` 마다 오르는 세대입니다(`reloadTerrain` 은 0 으로 돌립니다). GPU 스플랫이 낡았는지 견줍니다. */
+        /** @brief `writeLayerWeights` 마다 오르는 세대입니다(`reloadTerrain` 은 0 으로 돌립니다). 가중치로 만든 것(레이어 필터 배치)이 낡았는지 견줍니다. */
         uint32 getSplatRevision() const { return _splatRevision; }
         /** @brief 지금 높이를 `.heightfield` 형식으로 절대 경로에 씁니다(높이는 `_heightMin`..`_heightMax` 로 양자화). 높이장이 없으면 false 입니다. */
         [[nodiscard]] bool saveHeightfield( string_view filePath ) const;
@@ -135,15 +148,17 @@ namespace sw
          */
         static TerrainComponent* findTerrainAt( const GameObjectManager& manager, float32 worldX, float32 worldZ );
 
-        void setHeightfieldPath( string_view path ) { _heightfieldPath = path; }
-        void setSplatTexturePath( string_view path ) { _splatTexturePath = path; }
-        void setDetailTexturePath( string_view path ) { _detailTexturePath = path; }
-        void setMaterialPath( string_view path ) { _materialPath = path; }
-        void setSize( const float2& size ) { _size = size; }
-        void setHeightRange( float32 heightMin, float32 heightMax );
-        void setChunkCells( uint32 chunkCells ) { _chunkCells = chunkCells; }
-        void setLODDistance( float32 lodDistance ) { _lodDistance = lodDistance; }
-        void setLayers( const vector<TerrainLayer>& listLayer ) { _listLayer = listLayer; }
+        const string& getHeightfieldPath() const { return _heightfieldPath; }
+        const string& getSplatTexturePath() const { return _splatTexturePath; }
+        void          setHeightfieldPath( string_view path ) { _heightfieldPath = path; }
+        void          setSplatTexturePath( string_view path ) { _splatTexturePath = path; }
+        void          setDetailTexturePath( string_view path ) { _detailTexturePath = path; }
+        void          setMaterialPath( string_view path ) { _materialPath = path; }
+        void          setSize( const float2& size ) { _size = size; }
+        void          setHeightRange( float32 heightMin, float32 heightMax );
+        void          setChunkCells( uint32 chunkCells ) { _chunkCells = chunkCells; }
+        void          setLODDistance( float32 lodDistance ) { _lodDistance = lodDistance; }
+        void          setLayers( const vector<TerrainLayer>& listLayer ) { _listLayer = listLayer; }
 
     private:
         /** @brief 청크 하나입니다. 배치 하나와 현재 메시의 LOD, 이웃 LOD 를 담습니다. */
@@ -153,6 +168,7 @@ namespace sw
             uint32                        _lod{ 0 };
             uint32                        _arrNeighborLOD[static_cast<uint32>( TerrainChunkSide::Count )]{};
             uint32                        _vertexCount{ 0 };
+            bool                          _bMeshStale{ false }; ///< 높이를 썼고 메시는 아직이다(`_listStaleChunk` 에 있다)
         };
 
         /** @brief 청크 배치 모두를 더티로 표시합니다. 활성 상태가 바뀌었을 때 호출합니다. */
@@ -201,7 +217,9 @@ namespace sw
         TerrainHeightfield  _heightfield;
         TerrainChunkLayout  _layout;
         vector<Chunk>       _listChunk;
-        vector<uint32>      _listWantedLOD; ///< updateLODs 의 스크래치(청크마다 고른 LOD)
+        vector<uint32>      _listWantedLOD;       ///< updateLODs 의 스크래치(청크마다 고른 LOD)
+        vector<uint32>      _listChunkGeneration; ///< 청크마다 높이를 마지막으로 바꾼 세대(`getChunkGenerations`)
+        vector<uint32>      _listStaleChunk;      ///< 메시를 다시 만들 청크(쓴 순서, `rebuildStaleChunkMeshes`)
         EnvironmentMaterial _material;
         PrimitiveRegistry*  _pPrimitiveRegistry;    ///< 등록된 매니저의 레지스트리(구조 링크라 생포인터)
         uint32              _heightfieldGeneration; ///< `reloadTerrain` 과 `writeHeights` 마다 오른다(`getHeightfieldGeneration`)

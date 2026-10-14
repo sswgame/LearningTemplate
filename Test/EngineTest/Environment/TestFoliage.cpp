@@ -111,6 +111,44 @@ SW_TEST_CASE( FoliageTest, PlacementOnTerrainIsDeterministicAndFiltered )
 }
 
 /**
+ * @brief [FoliageTest] 지형 높이를 쓰면 세대가 그대로인 0.3 초 뒤에 배치를 다시 계산한다 — 비탈(x ≥ 32)을 평지로 만들면 인스턴스가 는다
+ */
+SW_TEST_CASE( FoliageTest, TerrainEditsRebuildPlacementAfterSettling )
+{
+    constexpr float32 kFrame = 1.0f / 60.0f;
+    GameObjectManager manager;
+    TerrainComponent* pTerrain = FoliageTestUtil::createTerrain( manager );
+    SW_ASSERT_NOT_NULL( pTerrain );
+    GameObject* pObject = manager.createGameObject( hashed_string( "Foliage" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    FoliageComponent* pFoliage = pObject->addComponent<FoliageComponent>();
+    SW_ASSERT_NOT_NULL( pFoliage );
+    pFoliage->setLocalPosition( float3{ 32.0f, 0.0f, 32.0f } );
+    pFoliage->setLayers( { FoliageTestUtil::makeGrassLayer() } );
+    pFoliage->rebuildFoliage();
+    // 첫 틱들의 트랜스폼 전파로 지형 · 식생이 다시 읽힐 수 있다 — 가라앉은 뒤를 기준으로 본다.
+    for ( uint32 frame = 0; frame < 40; ++frame )
+    {
+        manager.tick( kFrame );
+    }
+    const uint32 flatHalfCount = pFoliage->getInstanceCount();
+    SW_ASSERT_TRUE( flatHalfCount > 200 );
+
+    vector<float32>   listHeight( 65 * 65, 0.0f );
+    TerrainSampleRect rect;
+    rect.include( 0, 0 );
+    rect.include( 64, 64 );
+    SW_ASSERT_TRUE( pTerrain->writeHeights( listHeight, rect ) );
+    manager.tick( kFrame );
+    SW_EXPECT_EQUAL( flatHalfCount, pFoliage->getInstanceCount() ); // 아직 가라앉지 않았다
+    for ( uint32 frame = 0; frame < 40; ++frame )
+    {
+        manager.tick( kFrame );
+    }
+    SW_EXPECT_TRUE( pFoliage->getInstanceCount() > flatHalfCount + flatHalfCount / 2 );
+}
+
+/**
  * @brief [FoliageTest] 페이드 끝보다 먼 셀은 배치를 숨기고, 카메라가 오면 다시 보인다
  */
 SW_TEST_CASE( FoliageTest, FarCellsAreCulled )
