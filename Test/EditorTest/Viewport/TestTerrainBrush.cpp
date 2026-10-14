@@ -64,9 +64,12 @@ SW_TEST_CASE( TerrainBrushTest, CollectClipsToGrid )
  */
 SW_TEST_CASE( TerrainBrushTest, RaiseLowerAndFlatten )
 {
-    const uint32    resolution = 3;
-    vector<float32> listHeight( resolution * resolution, 0.0f );
-    vector<TerrainBrushSample> listSample{ TerrainBrushSample{ 1, 1, 1.0f }, TerrainBrushSample{ 0, 1, 0.5f } };
+    const uint32               resolution = 3;
+    vector<float32>            listHeight( resolution * resolution, 0.0f );
+    vector<TerrainBrushSample> listSample{
+        TerrainBrushSample{1, 1, 1.0f},
+        TerrainBrushSample{0, 1, 0.5f}
+    };
 
     TerrainBrushSettings settings;
     settings._strength = 2.0f;
@@ -93,9 +96,11 @@ SW_TEST_CASE( TerrainBrushTest, RaiseLowerAndFlatten )
  */
 SW_TEST_CASE( TerrainBrushTest, PaintLayerKeepsSumOne )
 {
-    const uint32   resolution = 2;
-    vector<float4> listWeight( resolution * resolution, float4{ 1.0f, 0.0f, 0.0f, 0.0f } );
-    vector<TerrainBrushSample> listSample{ TerrainBrushSample{ 0, 0, 1.0f } };
+    const uint32               resolution = 2;
+    vector<float4>             listWeight( resolution * resolution, float4{ 1.0f, 0.0f, 0.0f, 0.0f } );
+    vector<TerrainBrushSample> listSample{
+        TerrainBrushSample{ 0, 0, 1.0f }
+    };
 
     TerrainBrushSettings settings;
     settings._mode       = TerrainBrushMode::PaintLayer;

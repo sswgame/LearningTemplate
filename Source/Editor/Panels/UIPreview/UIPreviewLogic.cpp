@@ -58,18 +58,18 @@ namespace sw::editor
                 float32     _maxY;
             };
             static constexpr AnchorPresetRow kArrAnchorPreset[] = {
-                {"topleft",           0.0f, 0.0f, 0.0f, 0.0f},
-                {"topcenter",         0.5f, 0.0f, 0.5f, 0.0f},
-                {"topright",          1.0f, 0.0f, 1.0f, 0.0f},
-                {"centerleft",        0.0f, 0.5f, 0.0f, 0.5f},
-                {"center",            0.5f, 0.5f, 0.5f, 0.5f},
-                {"centerright",       1.0f, 0.5f, 1.0f, 0.5f},
-                {"bottomleft",        0.0f, 1.0f, 0.0f, 1.0f},
-                {"bottomcenter",      0.5f, 1.0f, 0.5f, 1.0f},
-                {"bottomright",       1.0f, 1.0f, 1.0f, 1.0f},
+                {          "topleft", 0.0f, 0.0f, 0.0f, 0.0f},
+                {        "topcenter", 0.5f, 0.0f, 0.5f, 0.0f},
+                {         "topright", 1.0f, 0.0f, 1.0f, 0.0f},
+                {       "centerleft", 0.0f, 0.5f, 0.0f, 0.5f},
+                {           "center", 0.5f, 0.5f, 0.5f, 0.5f},
+                {      "centerright", 1.0f, 0.5f, 1.0f, 0.5f},
+                {       "bottomleft", 0.0f, 1.0f, 0.0f, 1.0f},
+                {     "bottomcenter", 0.5f, 1.0f, 0.5f, 1.0f},
+                {      "bottomright", 1.0f, 1.0f, 1.0f, 1.0f},
                 {"stretchhorizontal", 0.0f, 0.5f, 1.0f, 0.5f},
-                {"stretchvertical",   0.5f, 0.0f, 0.5f, 1.0f},
-                {"stretchall",        0.0f, 0.0f, 1.0f, 1.0f},
+                {  "stretchvertical", 0.5f, 0.0f, 0.5f, 1.0f},
+                {       "stretchall", 0.0f, 0.0f, 1.0f, 1.0f},
             };
             static_assert( sizeof( kArrAnchorPreset ) / sizeof( kArrAnchorPreset[0] ) == static_cast<size_t>( UIPreviewAnchorPreset::Count ), "anchor preset table size" );
 
@@ -406,10 +406,8 @@ namespace sw::editor
         next._offsetMin._y                 = localRect._top - values._anchorMin._y * parentSize._y;
         next._offsetMax._x                 = localRect._right - values._anchorMax._x * parentSize._x;
         next._offsetMax._y                 = localRect._bottom - values._anchorMax._y * parentSize._y;
-        const bool bChanged = next._anchorMin._x != inoutSlot._anchorMin._x || next._anchorMin._y != inoutSlot._anchorMin._y || next._anchorMax._x != inoutSlot._anchorMax._x
-                              || next._anchorMax._y != inoutSlot._anchorMax._y || next._offsetMin._x != inoutSlot._offsetMin._x || next._offsetMin._y != inoutSlot._offsetMin._y
-                              || next._offsetMax._x != inoutSlot._offsetMax._x || next._offsetMax._y != inoutSlot._offsetMax._y;
-        inoutSlot = next;
+        const bool bChanged                = next._anchorMin._x != inoutSlot._anchorMin._x || next._anchorMin._y != inoutSlot._anchorMin._y || next._anchorMax._x != inoutSlot._anchorMax._x || next._anchorMax._y != inoutSlot._anchorMax._y || next._offsetMin._x != inoutSlot._offsetMin._x || next._offsetMin._y != inoutSlot._offsetMin._y || next._offsetMax._x != inoutSlot._offsetMax._x || next._offsetMax._y != inoutSlot._offsetMax._y;
+        inoutSlot                          = next;
         return bChanged;
     }
 
@@ -437,10 +435,10 @@ namespace sw::editor
         if ( point >= trackEnd )
             return count;
         uint32 track{ 0 };
-        for ( uint32 i = 0; i < count; ++i )
+        for ( uint32 trackIndex = 0; trackIndex < count; ++trackIndex )
         {
-            if ( listTrackStart[i] <= point )
-                track = i;
+            if ( listTrackStart[trackIndex] <= point )
+                track = trackIndex;
         }
         return track;
     }
@@ -450,9 +448,9 @@ namespace sw::editor
         outListTrackStart.clear();
         outTrackEnd = 0.0f;
         vector<uint8> listSeen;
-        for ( uint32 i = 0; i < grid.getChildCount(); ++i )
+        for ( uint32 childIndex = 0; childIndex < grid.getChildCount(); ++childIndex )
         {
-            const Widget*           pChild = grid.getChild( i );
+            const Widget*           pChild = grid.getChild( childIndex );
             const WidgetLayoutSlot& slot   = pChild->getLayoutSlot();
             const UIRect            bounds = pChild->getGeometry().computeScreenBounds();
             const uint32            track  = bRows ? slot._row : slot._column;
@@ -466,14 +464,14 @@ namespace sw::editor
             if ( listSeen[track] == 0 || start < outListTrackStart[track] )
                 outListTrackStart[track] = start;
             listSeen[track] = 1;
-            if ( i == 0 || end > outTrackEnd )
+            if ( childIndex == 0 || end > outTrackEnd )
                 outTrackEnd = end;
         }
         // 자식이 없는 줄은 폭이 0 인 줄로 둔다(뒤 줄의 시작을 잇는다) — 그 칸으로는 끌어 놓을 수 없지만 번호는 밀리지 않는다. 마지막 줄에는 늘 자식이 있다.
-        for ( uint32 i = static_cast<uint32>( outListTrackStart.size() ); i-- > 0; )
+        for ( uint32 trackIndex = static_cast<uint32>( outListTrackStart.size() ); trackIndex-- > 0; )
         {
-            if ( listSeen[i] == 0 )
-                outListTrackStart[i] = i + 1 < static_cast<uint32>( outListTrackStart.size() ) ? outListTrackStart[i + 1] : outTrackEnd;
+            if ( listSeen[trackIndex] == 0 )
+                outListTrackStart[trackIndex] = trackIndex + 1 < static_cast<uint32>( outListTrackStart.size() ) ? outListTrackStart[trackIndex + 1] : outTrackEnd;
         }
     }
 

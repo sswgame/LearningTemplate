@@ -52,12 +52,12 @@ namespace sw
      */
     enum class RenderViewMode : uint8
     {
-        Lit = 0,   ///< 조명과 그림자를 모두 계산한 기본 화면
-        Unlit,     ///< 알베도만 보인다. 조명 항이 셰이더에서 컴파일 아웃된다.
-        Wireframe, ///< 삼각형 외곽선만 보인다(RHIFillMode::Wireframe).
-        Normals,   ///< 월드 노멀을 색으로 보인다(0.5 + 0.5 n).
-        Depth,     ///< 카메라에서의 거리(뷰 공간 깊이)를 보이며 `kViewModeDepthRange` 에서 흰색이 된다.
-        Overdraw,  ///< 겹쳐 그린 횟수를 보인다. 단색을 깊이 쓰기 없이 더한다(유니티 Overdraw).
+        Lit = 0,      ///< 조명과 그림자를 모두 계산한 기본 화면
+        Unlit,        ///< 알베도만 보인다. 조명 항이 셰이더에서 컴파일 아웃된다.
+        Wireframe,    ///< 삼각형 외곽선만 보인다(RHIFillMode::Wireframe).
+        Normals,      ///< 월드 노멀을 색으로 보인다(0.5 + 0.5 n).
+        Depth,        ///< 카메라에서의 거리(뷰 공간 깊이)를 보이며 `kViewModeDepthRange` 에서 흰색이 된다.
+        Overdraw,     ///< 겹쳐 그린 횟수를 보인다. 단색을 깊이 쓰기 없이 더한다(유니티 Overdraw).
         LightingOnly, ///< 알베도를 회색 하나로 바꾸고 조명만 보인다(언리얼 Lighting Only). 빛 · 그림자 배치를 텍스처 없이 본다.
 
         Count
@@ -75,12 +75,12 @@ namespace sw
 
     /** @brief 보기 모드 테이블입니다. 쿠커, PSO 변형, 툴바, 로그가 모두 이것을 읽습니다. 항목 순서가 열거값입니다. */
     inline constexpr RenderViewModeInfo kArrRenderViewModeInfo[] = {
-        {      "Lit",                  nullptr, false, false, false},
-        {    "Unlit",    "SW_VIEWMODE_UNLIT=1", false, false, false},
-        {"Wireframe",                  nullptr,  true, false, false},
-        {  "Normals",  "SW_VIEWMODE_NORMALS=1", false, false,  true},
-        {    "Depth",    "SW_VIEWMODE_DEPTH=1", false, false,  true},
-        { "Overdraw", "SW_VIEWMODE_OVERDRAW=1", false,  true,  true},
+        {         "Lit",                      nullptr, false, false, false},
+        {       "Unlit",        "SW_VIEWMODE_UNLIT=1", false, false, false},
+        {   "Wireframe",                      nullptr,  true, false, false},
+        {     "Normals",      "SW_VIEWMODE_NORMALS=1", false, false,  true},
+        {       "Depth",        "SW_VIEWMODE_DEPTH=1", false, false,  true},
+        {    "Overdraw",     "SW_VIEWMODE_OVERDRAW=1", false,  true,  true},
         {"LightingOnly", "SW_VIEWMODE_LIGHTINGONLY=1", false, false, false},
     };
     static_assert( sizeof( kArrRenderViewModeInfo ) / sizeof( kArrRenderViewModeInfo[0] ) == static_cast<size_t>( RenderViewMode::Count ),

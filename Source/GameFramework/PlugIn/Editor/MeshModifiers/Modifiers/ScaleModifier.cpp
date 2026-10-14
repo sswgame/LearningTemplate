@@ -18,8 +18,11 @@ namespace sw::editor
     public:
         ScaleModifier()
             : MeshModifier()
-            , _uniformParam{ addParam( MeshModifierParamDef{ "Uniform", MeshModifierParamKind::Float, -10.0f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Scale applied to all axes (1 = no change)" ) ) }
-            , _axisScaleParam{ addParam( MeshModifierParamDef{ "Axis Scale", MeshModifierParamKind::Vector3, -10.0f, 10.0f, float3{ 1.0f, 1.0f, 1.0f } }.withLayout( nullptr, "Extra scale per modifier-space axis (1 1 1 = no change)" ) ) }
+            , _uniformParam{
+                  addParam( MeshModifierParamDef{ "Uniform", MeshModifierParamKind::Float, -10.0f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } }
+                                .withLayout( nullptr, "Scale applied to all axes (1 = no change)" ) )
+        },
+            _axisScaleParam{ addParam( MeshModifierParamDef{ "Axis Scale", MeshModifierParamKind::Vector3, -10.0f, 10.0f, float3{ 1.0f, 1.0f, 1.0f } }.withLayout( nullptr, "Extra scale per modifier-space axis (1 1 1 = no change)" ) ) }
         {
         }
 

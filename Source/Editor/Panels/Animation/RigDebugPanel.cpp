@@ -35,7 +35,7 @@ namespace sw::editor
     {
         struct RigDebugPanelInternal
         {
-            static constexpr float4 kMarkerColor{ 1.0f, 0.45f, 0.2f, 1.0f };
+            static constexpr float4  kMarkerColor{ 1.0f, 0.45f, 0.2f, 1.0f };
             static constexpr float32 kMarkerRadius = 0.03f;
             /** @brief 디버그 드로우 카테고리입니다(`debugdraw.category RigDebug off` 로 끈다). */
             static constexpr const utf8* kDrawCategory = "RigDebug";
@@ -71,16 +71,20 @@ namespace sw::editor
 
             static void recordWeight( uint64 objectID, uint32 nodeIndex, float32 before, float32 after )
             {
-                EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [objectID, nodeIndex, before]() { applyWeight( objectID, nodeIndex, before ); } ),
-                                         SW_DELEGATE_LAMBDA( Delegate<void()>, [objectID, nodeIndex, after]() { applyWeight( objectID, nodeIndex, after ); } ),
+                EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [objectID, nodeIndex, before]()
+                { applyWeight( objectID, nodeIndex, before ); } ),
+                                         SW_DELEGATE_LAMBDA( Delegate<void()>, [objectID, nodeIndex, after]()
+                { applyWeight( objectID, nodeIndex, after ); } ),
                                          "Edit Rig Node Weight" );
             }
 
             static void recordEnabled( uint64 objectID, uint32 nodeIndex, bool bAfter )
             {
                 const bool bBefore = bAfter == false;
-                EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [objectID, nodeIndex, bBefore]() { applyEnabled( objectID, nodeIndex, bBefore ); } ),
-                                         SW_DELEGATE_LAMBDA( Delegate<void()>, [objectID, nodeIndex, bAfter]() { applyEnabled( objectID, nodeIndex, bAfter ); } ),
+                EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [objectID, nodeIndex, bBefore]()
+                { applyEnabled( objectID, nodeIndex, bBefore ); } ),
+                                         SW_DELEGATE_LAMBDA( Delegate<void()>, [objectID, nodeIndex, bAfter]()
+                { applyEnabled( objectID, nodeIndex, bAfter ); } ),
                                          "Toggle Rig Node" );
             }
 
@@ -151,12 +155,12 @@ namespace sw::editor
             _bDrawMarkers = bDrawMarkers ? SW_TRUE : SW_FALSE;
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRigDebug", "BoneMarkersTip" ) );
 
-        GameObject*                  pObject  = pModifier->getOwner();
-        const SkeletalMeshComponent* pUnit    = pObject != nullptr ? pObject->getComponent<SkeletalMeshComponent>() : nullptr;
-        const uint32                 count    = instance.getNodeCount();
+        GameObject*                  pObject = pModifier->getOwner();
+        const SkeletalMeshComponent* pUnit   = pObject != nullptr ? pObject->getComponent<SkeletalMeshComponent>() : nullptr;
+        const uint32                 count   = instance.getNodeCount();
         vector<uint32>               listBone;
         vector<uint32>               listSelectedBone;
-        const ImGuiTableFlags        flags    = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp;
+        const ImGuiTableFlags        flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp;
         if ( ImGui::BeginTable( "##rig_nodes", 6, flags ) )
         {
             ImGui::TableSetupColumn( "Node" );
@@ -201,7 +205,7 @@ namespace sw::editor
                 ImGui::TableNextColumn();
                 // 커브 · 슬롯 · LOD 를 모두 곱한 이번 프레임 값 — 시퀀서 리그 슬롯 트랙이 움직이는 것이 여기 보인다.
                 const float32 effective = instance.isNodeLODOff( nodeIndex ) ? 0.0f : instance.computeNodeWeight( nodeIndex );
-                ImGui::Text( "%.2f", effective );
+                ImGui::Text( "%.2f", static_cast<float64>( effective ) );
                 if ( node.getWeightSlot().empty() == false )
                 {
                     ImGui::SameLine();

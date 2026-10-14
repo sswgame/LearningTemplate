@@ -108,8 +108,8 @@ namespace sw::editor
         int32 getSelectedControlPoint() const { return _selectedControlPoint; }
         void  setSelectedControlPoint( int32 index ) { _selectedControlPoint = index; }
         /** @brief 제어점을 옮길 때 대칭 짝도 함께 옮기는지입니다(패널의 Mirror 체크와 뷰포트 끌기가 같이 씁니다). */
-        bool   isMirrorEditing() const { return _bMirrorEditing; }
-        void   setMirrorEditing( bool bMirrorEditing ) { _bMirrorEditing = bMirrorEditing; }
+        bool isMirrorEditing() const { return _bMirrorEditing; }
+        void setMirrorEditing( bool bMirrorEditing ) { _bMirrorEditing = bMirrorEditing; }
         /** @brief 대칭 축 성분 번호(0 = X, 1 = Y, 2 = Z)입니다. */
         uint32 getMirrorAxis() const { return _mirrorAxis; }
         void   setMirrorAxis( uint32 axisIndex ) { _mirrorAxis = axisIndex <= 2u ? axisIndex : 0u; }
@@ -125,25 +125,25 @@ namespace sw::editor
         void makeSourceMesh( MeshModifierMesh& outMesh ) const;
         void makeSegments( const MeshModifierMesh& mesh, vector<float3>& outListSegmentPoint ) const;
 
-        MeshModifierStack     _stack;
-        MeshModifierMesh      _previewMesh;
-        MeshModifierMesh      _stagePreviewMesh; ///< 고른 모디파이어까지만 건 결과(`makeStagePreviewSegments`)
-        MeshAssetData         _sourceData;
-        vector<string>        _listUndo;
-        vector<string>        _listRedo;
-        string                _meshPath;
-        MeshModifierBounds    _sourceBounds;
-        GameObjectHandle      _target;
-        float32               _previewTime;
-        int32                 _selectedIndex;
-        MeshModifierBounds    _inputBounds;       ///< 고른 모디파이어의 입력 상자 캐시(`getSelectedModifierInputBounds`)
-        int32                 _stagePreviewIndex; ///< `_stagePreviewMesh` 를 만든 고른 번호(-1 이면 없음)
-        int32                 _inputBoundsIndex;  ///< `_inputBounds` 를 만든 고른 번호(-1 이면 없음)
-        int32                 _selectedControlPoint;
-        uint32                _mirrorAxis;
-        bool                  _bPreviewDirty;
-        bool                  _bStagePreviewDirty;
-        bool                  _bInputBoundsDirty;
-        bool                  _bMirrorEditing;
+        MeshModifierStack  _stack;
+        MeshModifierMesh   _previewMesh;
+        MeshModifierMesh   _stagePreviewMesh; ///< 고른 모디파이어까지만 건 결과(`makeStagePreviewSegments`)
+        MeshAssetData      _sourceData;
+        vector<string>     _listUndo;
+        vector<string>     _listRedo;
+        string             _meshPath;
+        MeshModifierBounds _sourceBounds;
+        GameObjectHandle   _target;
+        float32            _previewTime;
+        int32              _selectedIndex;
+        MeshModifierBounds _inputBounds;       ///< 고른 모디파이어의 입력 상자 캐시(`getSelectedModifierInputBounds`)
+        int32              _stagePreviewIndex; ///< `_stagePreviewMesh` 를 만든 고른 번호(-1 이면 없음)
+        int32              _inputBoundsIndex;  ///< `_inputBounds` 를 만든 고른 번호(-1 이면 없음)
+        int32              _selectedControlPoint;
+        uint32             _mirrorAxis;
+        bool               _bPreviewDirty;
+        bool               _bStagePreviewDirty;
+        bool               _bInputBoundsDirty;
+        bool               _bMirrorEditing;
     };
 } // namespace sw::editor

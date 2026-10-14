@@ -191,13 +191,13 @@ namespace sw::editor
 
     private:
         vector<UIPreviewWidgetRow>      _listRow;
-        vector<string>                  _listLanguage;     ///< 언어 콤보의 코드(첫 줄 = 게임 언어)
-        vector<BaselineValue>           _listBaseline;     ///< 고른 위젯의 프로퍼티 기준 값
-        vector<const TypeInfo*>         _listPaletteType;  ///< 팔레트의 위젯 타입(이름순)
-        string                          _paletteFilter;    ///< 팔레트 검색어
-        string                          _slotDragBaseline; ///< 슬롯 손잡이를 끌기 시작할 때의 `_slot` 텍스트
+        vector<string>                  _listLanguage;      ///< 언어 콤보의 코드(첫 줄 = 게임 언어)
+        vector<BaselineValue>           _listBaseline;      ///< 고른 위젯의 프로퍼티 기준 값
+        vector<const TypeInfo*>         _listPaletteType;   ///< 팔레트의 위젯 타입(이름순)
+        string                          _paletteFilter;     ///< 팔레트 검색어
+        string                          _slotDragBaseline;  ///< 슬롯 손잡이를 끌기 시작할 때의 `_slot` 텍스트
         string                          _slotFieldBaseline; ///< Slot 칸 컨트롤을 끌기 시작할 때의 `_slot` 텍스트
-        hashed_string                   _paletteType;      ///< 팔레트에서 고른 타입(Add 가 붙인다)
+        hashed_string                   _paletteType;       ///< 팔레트에서 고른 타입(Add 가 붙인다)
         string                          _documentPath;
         string                          _openedDocument; ///< 지금 미리보기 화면의 문서
         string                          _targetPath;     ///< 지금 렌더 텍스처 경로

@@ -18,10 +18,17 @@ namespace sw::editor
     {
         struct AudioEventBrowserUtilInternal
         {
-            static string formatText( const utf8* pFormat, float64 first, float64 second )
+            static string formatDistanceRange( float64 minDistance, float64 maxDistance )
             {
                 utf8 arrText[96]{};
-                (void)std::snprintf( arrText, sizeof( arrText ), pFormat, first, second );
+                (void)std::snprintf( arrText, sizeof( arrText ), "%.2f .. %.2f m", minDistance, maxDistance );
+                return string{ arrText };
+            }
+
+            static string formatFade( float64 fadeInSeconds, float64 fadeOutSeconds )
+            {
+                utf8 arrText[96]{};
+                (void)std::snprintf( arrText, sizeof( arrText ), "in %.2f s / out %.2f s", fadeInSeconds, fadeOutSeconds );
                 return string{ arrText };
             }
 
@@ -100,7 +107,7 @@ namespace sw::editor
         std::sort( outListName.begin(), outListName.end(), HashedStringLexicalLess{} );
     }
 
-    void AudioEventBrowserUtil::buildEventFieldRows( const AudioEventDesc& eventDesc, const AudioAttenuationDesc& attenuation, vector<AudioEventFieldRow>& outListRow )
+    void AudioEventBrowserUtil::makeEventFieldRows( const AudioEventDesc& eventDesc, const AudioAttenuationDesc& attenuation, vector<AudioEventFieldRow>& outListRow )
     {
         using Internal = AudioEventBrowserUtilInternal;
         outListRow.clear();
@@ -113,7 +120,7 @@ namespace sw::editor
         }
         else
         {
-            string radius = Internal::formatText( "%.2f .. %.2f m", static_cast<float64>( attenuation._minDistance ), static_cast<float64>( attenuation._maxDistance ) );
+            string radius = Internal::formatDistanceRange( static_cast<float64>( attenuation._minDistance ), static_cast<float64>( attenuation._maxDistance ) );
             radius += " (";
             radius += eventDesc._attenuation.c_str();
             radius += ")";
@@ -128,12 +135,12 @@ namespace sw::editor
         outListRow.push_back( AudioEventFieldRow{ SW_LOCKEY( "EditorAudioEvents", "FieldVirtual" ), string{ Internal::getVirtualName( eventDesc._virtual ) } } );
         outListRow.push_back( AudioEventFieldRow{ SW_LOCKEY( "EditorAudioEvents", "FieldCooldown" ), Internal::formatRange( eventDesc._cooldownSeconds, eventDesc._cooldownSeconds, "s" ) } );
         outListRow.push_back( AudioEventFieldRow{ SW_LOCKEY( "EditorAudioEvents", "FieldFade" ),
-                                                  Internal::formatText( "in %.2f s / out %.2f s", static_cast<float64>( eventDesc._fadeInSeconds ), static_cast<float64>( eventDesc._fadeOutSeconds ) ) } );
+                                                  Internal::formatFade( static_cast<float64>( eventDesc._fadeInSeconds ), static_cast<float64>( eventDesc._fadeOutSeconds ) ) } );
         outListRow.push_back( AudioEventFieldRow{ SW_LOCKEY( "EditorAudioEvents", "FieldLoop" ), string{ eventDesc._bLoop ? "true" : "false" } } );
         outListRow.push_back( AudioEventFieldRow{ SW_LOCKEY( "EditorAudioEvents", "FieldParameterCount" ), to_string( static_cast<uint32>( eventDesc._listParameterMap.size() ) ) } );
     }
 
-    void AudioEventBrowserUtil::buildInstanceRows( const vector<AudioInstanceStatus>& listStatus, const hashed_string& eventFilter, vector<AudioInstanceStatus>& outListRow )
+    void AudioEventBrowserUtil::makeInstanceRows( const vector<AudioInstanceStatus>& listStatus, const hashed_string& eventFilter, vector<AudioInstanceStatus>& outListRow )
     {
         outListRow.clear();
         for ( const AudioInstanceStatus& status : listStatus )
@@ -153,7 +160,7 @@ namespace sw::editor
         } );
     }
 
-    AudioVoiceProfile AudioEventBrowserUtil::buildVoiceProfile( const AudioEngineStats& stats )
+    AudioVoiceProfile AudioEventBrowserUtil::makeVoiceProfile( const AudioEngineStats& stats )
     {
         using Internal = AudioEventBrowserUtilInternal;
         AudioVoiceProfile profile;

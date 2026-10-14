@@ -19,11 +19,14 @@ namespace sw::editor
     public:
         ZStretchNoiseModifier()
             : MeshModifier()
-            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -0.99f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Shape", "Stretch along the axis; 0 keeps the original length" ) ) }
-            , _noiseParam{ addParam( MeshModifierParamDef{ "Noise", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Noise", "Noise strength added to the stretch; 0 disables noise" ) ) }
-            , _frequencyParam{ addParam( MeshModifierParamDef{ "Frequency", MeshModifierParamKind::Float, 0.001f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Noise", "Noise features per meter" ) ) }
-            , _seedParam{ addParam( MeshModifierParamDef{ "Seed", MeshModifierParamKind::Int, 0.0f, 65535.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Noise", "Random seed for the noise pattern" ) ) }
-            , _stretchAxisParam{ addParam( MeshModifierParamDef{ "Stretch Axis", MeshModifierParamKind::Axis, 0.0f, 2.0f, float3{ 2.0f, 0.0f, 0.0f } }.withLayout( "Shape", "Axis the mesh is stretched along" ) ) }
+            , _amountParam{
+                  addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -0.99f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }
+                                .withLayout( "Shape", "Stretch along the axis; 0 keeps the original length" ) )
+        },
+            _noiseParam{ addParam( MeshModifierParamDef{ "Noise", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Noise", "Noise strength added to the stretch; 0 disables noise" ) ) },
+            _frequencyParam{ addParam( MeshModifierParamDef{ "Frequency", MeshModifierParamKind::Float, 0.001f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Noise", "Noise features per meter" ) ) },
+            _seedParam{ addParam( MeshModifierParamDef{ "Seed", MeshModifierParamKind::Int, 0.0f, 65535.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Noise", "Random seed for the noise pattern" ) ) },
+            _stretchAxisParam{ addParam( MeshModifierParamDef{ "Stretch Axis", MeshModifierParamKind::Axis, 0.0f, 2.0f, float3{ 2.0f, 0.0f, 0.0f } }.withLayout( "Shape", "Axis the mesh is stretched along" ) ) }
         {
         }
 

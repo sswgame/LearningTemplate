@@ -19,10 +19,13 @@ namespace sw::editor
     public:
         RolledModifier()
             : MeshModifier()
-            , _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Roll", "Radius of the roll cylinder (0 = no change)", "m" ) ) }
-            , _startParam{ addParam( MeshModifierParamDef{ "Start", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Roll", "Where rolling begins along the main axis (0 = bottom, 1 = top)" ) ) }
-            , _turnsParam{ addParam( MeshModifierParamDef{ "Turns", MeshModifierParamKind::Float, 0.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Roll", "Number of full turns rolled up (0 = no change)" ) ) }
-            , _directionParam{ addParam( MeshModifierParamDef{ "Direction", MeshModifierParamKind::Float, -180.0f, 180.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Roll", "Side the mesh rolls toward, around the main axis", "deg" ) ) }
+            , _radiusParam{
+                  addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }
+                                .withLayout( "Roll", "Radius of the roll cylinder (0 = no change)", "m" ) )
+        },
+            _startParam{ addParam( MeshModifierParamDef{ "Start", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Roll", "Where rolling begins along the main axis (0 = bottom, 1 = top)" ) ) },
+            _turnsParam{ addParam( MeshModifierParamDef{ "Turns", MeshModifierParamKind::Float, 0.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Roll", "Number of full turns rolled up (0 = no change)" ) ) },
+            _directionParam{ addParam( MeshModifierParamDef{ "Direction", MeshModifierParamKind::Float, -180.0f, 180.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Roll", "Side the mesh rolls toward, around the main axis", "deg" ) ) }
         {
         }
 
@@ -52,14 +55,14 @@ namespace sw::editor
             const float32 rollX     = coordU * cosDir + coordV * sinDir; // 말리는 방향 성분
             const float32 sideY     = -coordU * sinDir + coordV * cosDir;
 
-            const float32 arc     = height - start;
-            const float32 rolled  = MathUtil::min( arc, turns * MathUtil::kTwoPi * radius );
-            const float32 extra   = arc - rolled; // 다 말린 뒤는 끝 접선을 따라 곧게
-            const float32 phi     = rolled / radius;
-            const float32 cosPhi  = MathUtil::cos( phi );
-            const float32 sinPhi  = MathUtil::sin( phi );
-            const float32 newX    = radius - ( radius - rollX ) * cosPhi + extra * sinPhi;
-            const float32 newH    = start + ( radius - rollX ) * sinPhi + extra * cosPhi;
+            const float32 arc    = height - start;
+            const float32 rolled = MathUtil::min( arc, turns * MathUtil::kTwoPi * radius );
+            const float32 extra  = arc - rolled; // 다 말린 뒤는 끝 접선을 따라 곧게
+            const float32 phi    = rolled / radius;
+            const float32 cosPhi = MathUtil::cos( phi );
+            const float32 sinPhi = MathUtil::sin( phi );
+            const float32 newX   = radius - ( radius - rollX ) * cosPhi + extra * sinPhi;
+            const float32 newH   = start + ( radius - rollX ) * sinPhi + extra * cosPhi;
 
             float3 result = point._position;
             MeshModifierUtil::setComponent( result, axis, newH );

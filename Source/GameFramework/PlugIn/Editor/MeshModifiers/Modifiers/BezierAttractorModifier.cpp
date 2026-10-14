@@ -19,13 +19,16 @@ namespace sw::editor
     public:
         BezierAttractorModifier()
             : MeshModifier()
-            , _point0Param{ addParam( MeshModifierParamDef{ "Point 0", MeshModifierParamKind::Vector3, -1000.0f, 1000.0f, float3{ 0.0f, -1.0f, 0.0f } }.withLayout( "Curve", "Start point of the Bezier curve" ) ) }
-            , _point1Param{ addParam( MeshModifierParamDef{ "Point 1", MeshModifierParamKind::Vector3, -1000.0f, 1000.0f, float3{ 1.0f, -0.33f, 0.0f } }.withLayout( "Curve", "First control point of the Bezier curve" ) ) }
-            , _point2Param{ addParam( MeshModifierParamDef{ "Point 2", MeshModifierParamKind::Vector3, -1000.0f, 1000.0f, float3{ -1.0f, 0.33f, 0.0f } }.withLayout( "Curve", "Second control point of the Bezier curve" ) ) }
-            , _point3Param{ addParam( MeshModifierParamDef{ "Point 3", MeshModifierParamKind::Vector3, -1000.0f, 1000.0f, float3{ 0.0f, 1.0f, 0.0f } }.withLayout( "Curve", "End point of the Bezier curve" ) ) }
-            , _strengthParam{ addParam( MeshModifierParamDef{ "Strength", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Attraction", "How far points are pulled toward the curve (1 = onto it)" ) ) }
-            , _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.001f, 1000.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Attraction", "Distance from the curve within which points are attracted", "m" ) ) }
-            , _falloffParam{ addParam( MeshModifierParamDef{ "Falloff", MeshModifierParamKind::Float, 0.01f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Attraction", "Exponent shaping how the pull fades with distance" ) ) }
+            , _point0Param{
+                  addParam( MeshModifierParamDef{ "Point 0", MeshModifierParamKind::Vector3, -1000.0f, 1000.0f, float3{ 0.0f, -1.0f, 0.0f } }
+                                .withLayout( "Curve", "Start point of the Bezier curve" ) )
+        },
+            _point1Param{ addParam( MeshModifierParamDef{ "Point 1", MeshModifierParamKind::Vector3, -1000.0f, 1000.0f, float3{ 1.0f, -0.33f, 0.0f } }.withLayout( "Curve", "First control point of the Bezier curve" ) ) },
+            _point2Param{ addParam( MeshModifierParamDef{ "Point 2", MeshModifierParamKind::Vector3, -1000.0f, 1000.0f, float3{ -1.0f, 0.33f, 0.0f } }.withLayout( "Curve", "Second control point of the Bezier curve" ) ) },
+            _point3Param{ addParam( MeshModifierParamDef{ "Point 3", MeshModifierParamKind::Vector3, -1000.0f, 1000.0f, float3{ 0.0f, 1.0f, 0.0f } }.withLayout( "Curve", "End point of the Bezier curve" ) ) },
+            _strengthParam{ addParam( MeshModifierParamDef{ "Strength", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Attraction", "How far points are pulled toward the curve (1 = onto it)" ) ) },
+            _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.001f, 1000.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Attraction", "Distance from the curve within which points are attracted", "m" ) ) },
+            _falloffParam{ addParam( MeshModifierParamDef{ "Falloff", MeshModifierParamKind::Float, 0.01f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Attraction", "Exponent shaping how the pull fades with distance" ) ) }
         {
         }
 
@@ -36,8 +39,8 @@ namespace sw::editor
             const float32 strength = getFloat( _strengthParam );
             if ( strength <= MathUtil::kEpsilon )
                 return point._position;
-            const float3 closest  = findClosestOnCurve( point._position );
-            const float3 delta    = closest - point._position;
+            const float3  closest  = findClosestOnCurve( point._position );
+            const float3  delta    = closest - point._position;
             const float32 distance = delta.getLength();
             const float32 radius   = getFloat( _radiusParam );
             if ( distance >= radius )
@@ -52,8 +55,7 @@ namespace sw::editor
         float3 evaluateBezier( float32 t ) const
         {
             const float32 inverse = 1.0f - t;
-            return getVector3( _point0Param ) * ( inverse * inverse * inverse ) + getVector3( _point1Param ) * ( 3.0f * inverse * inverse * t )
-                   + getVector3( _point2Param ) * ( 3.0f * inverse * t * t ) + getVector3( _point3Param ) * ( t * t * t );
+            return getVector3( _point0Param ) * ( inverse * inverse * inverse ) + getVector3( _point1Param ) * ( 3.0f * inverse * inverse * t ) + getVector3( _point2Param ) * ( 3.0f * inverse * t * t ) + getVector3( _point3Param ) * ( t * t * t );
         }
 
         float3 findClosestOnCurve( const float3& point ) const

@@ -51,6 +51,9 @@
     [Shooter3D](../Source/Games/Shooter3D/README.md), [StarSkirmish](../Source/Games/StarSkirmish/README.md),
     [ThemeParkTycoon](../Source/Games/ThemeParkTycoon/README.md), [VoxelCraft](../Source/Games/VoxelCraft/README.md)
 
+### 에디터 확장
+- [MeshModifiers](../Source/GameFramework/PlugIn/Editor/MeshModifiers/README.md) — 메시 모디파이어 스택 플러그인(`GF_EditorPlugIn_MeshModifiers`), 모디파이어 목록 · 편집 UX
+
 ### 빌드, 도구, 데이터, 테스트
 - [cmake](../cmake/README.md) — CMake 계층과 헬퍼 함수(`CheckCmakeReadme` 가 검사)
 - [Scripts](../Scripts/README.md) — 파이썬 도구, 린트 폴더(gate, fixer, report, selftest), 커밋 훅

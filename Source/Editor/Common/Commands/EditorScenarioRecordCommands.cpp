@@ -56,10 +56,10 @@ namespace sw::editor
                     return false;
                 }
                 ScenarioRecordSettings settings;
-                settings._name           = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( s_outputPath ) ) ); // a.scenario.xml → a
-                const IWindow* pWindow   = IWindow::getActiveWindow();
-                settings._clientWidth    = pWindow != nullptr ? pWindow->getWidth() : 0;
-                settings._clientHeight   = pWindow != nullptr ? pWindow->getHeight() : 0;
+                settings._name                    = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( s_outputPath ) ) ); // a.scenario.xml → a
+                const IWindow* pWindow            = IWindow::getActiveWindow();
+                settings._clientWidth             = pWindow != nullptr ? pWindow->getWidth() : 0;
+                settings._clientHeight            = pWindow != nullptr ? pWindow->getHeight() : 0;
                 const ScenarioRecordOutput output = s_recorder.stop( settings );
                 if ( FileUtil::ensureParentDirectoryExists( s_outputPath ) == false || FileUtil::writeTextFile( s_outputPath, output._xmlText ) == false )
                 {

@@ -18,10 +18,13 @@ namespace sw::editor
     public:
         BendModifier()
             : MeshModifier()
-            , _angleParam{ addParam( MeshModifierParamDef{ "Angle", MeshModifierParamKind::Float, -1080.0f, 1080.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Bend", "Total bend angle along the main axis", "deg" ) ) }
-            , _directionParam{ addParam( MeshModifierParamDef{ "Direction", MeshModifierParamKind::Float, -180.0f, 180.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Bend", "Direction the bend leans toward, around the main axis", "deg" ) ) }
-            , _lowerParam{ addParam( MeshModifierParamDef{ "Lower Limit", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Limits", "Start of the bent range along the main axis (0 = bottom)" ) ) }
-            , _upperParam{ addParam( MeshModifierParamDef{ "Upper Limit", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Limits", "End of the bent range along the main axis (1 = top)" ) ) }
+            , _angleParam{
+                  addParam( MeshModifierParamDef{ "Angle", MeshModifierParamKind::Float, -1080.0f, 1080.0f, float3{ 0.0f, 0.0f, 0.0f } }
+                                .withLayout( "Bend", "Total bend angle along the main axis", "deg" ) )
+        },
+            _directionParam{ addParam( MeshModifierParamDef{ "Direction", MeshModifierParamKind::Float, -180.0f, 180.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Bend", "Direction the bend leans toward, around the main axis", "deg" ) ) },
+            _lowerParam{ addParam( MeshModifierParamDef{ "Lower Limit", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Limits", "Start of the bent range along the main axis (0 = bottom)" ) ) },
+            _upperParam{ addParam( MeshModifierParamDef{ "Upper Limit", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Limits", "End of the bent range along the main axis (1 = top)" ) ) }
         {
         }
 

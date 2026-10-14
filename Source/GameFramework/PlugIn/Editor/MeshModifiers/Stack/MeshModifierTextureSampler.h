@@ -7,7 +7,6 @@
  *          메모리 상한은 두지 않았습니다 — 텍셀당 16 바이트이므로 4096² 한 장이 256 MB 입니다. 큰 이미지를 자주 쓰게 되면 8 비트 보관이나 상한을 더합니다.
  */
 #pragma once
-
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Math/VectorMath.h"
@@ -29,7 +28,7 @@ namespace sw::editor
          * @return 경로가 비었거나 파일을 못 찾거나 디코드에 실패하면 false 이고 outRGBA 는 건드리지 않습니다.
          * @note 파일 수정 시각은 경로마다 일정 간격으로만 다시 봅니다. 바뀌었으면 다시 디코드합니다.
          */
-        static bool trySample( string_view assetPath, float2 uv, float4& outRGBA );
+        [[nodiscard]] static bool trySample( string_view assetPath, float2 uv, float4& outRGBA );
 
         /** @brief 캐시를 모두 비웁니다(다음 표본에서 다시 디코드합니다). */
         static void clearCache();

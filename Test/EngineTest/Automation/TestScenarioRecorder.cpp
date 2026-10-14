@@ -29,7 +29,7 @@ namespace
         static float32 readFloat( const sw::AutomationStep& step, sw::string_view name )
         {
             float32           value      = 0.0f;
-            const sw::string*      pAttribute = step.findAttribute( name );
+            const sw::string* pAttribute = step.findAttribute( name );
             if ( pAttribute != nullptr )
                 (void)sw::StringUtil::parseFloat( *pAttribute, value ); // 읽지 못하면 0 으로 남아 기대값과 어긋난다
             return value;
@@ -51,11 +51,11 @@ SW_TEST_CASE( ScenarioRecorderTest, FramesBecomeParsableInputSteps )
     listFrame[3]._listRawEvent.push_back( sw::RawInputEvent::makeMouseRawDelta( 2.0f, -3.0f ) );
 
     sw::ScenarioRecordSettings settings;
-    settings._name         = "recorded.test";
-    settings._clientWidth  = 100;
-    settings._clientHeight = 50;
-    settings._firstFrame   = 10;
-    const sw::ScenarioRecordOutput output = sw::ScenarioRecorder::toScenarioXml( listFrame, settings );
+    settings._name                        = "recorded.test";
+    settings._clientWidth                 = 100;
+    settings._clientHeight                = 50;
+    settings._firstFrame                  = 10;
+    const sw::ScenarioRecordOutput output = sw::ScenarioRecorder::toScenarioXML( listFrame, settings );
 
     sw::AutomationScenario scenario;
     sw::string             error;
@@ -63,9 +63,9 @@ SW_TEST_CASE( ScenarioRecorderTest, FramesBecomeParsableInputSteps )
     SW_EXPECT_STREQ( "recorded.test", scenario.getName().c_str() );
 
     // 마우스 버튼 이름은 엔진 서비스(타입 레지스트리)가 있어야 다시 읽힌다. 없으면 건너뛴 입력으로 센다.
-    sw::InputSlot     parsed{};
-    const bool        bSlotNames = sw::InputSlotUtil::tryParse( sw::InputSlotUtil::toText( sw::InputSlot::fromMouseButton( sw::MouseButton::Left ) ), parsed );
-    const uint32      slotSteps  =bSlotNames ? 2u : 0u;
+    sw::InputSlot parsed{};
+    const bool    bSlotNames = sw::InputSlotUtil::tryParse( sw::InputSlotUtil::toText( sw::InputSlot::fromMouseButton( sw::MouseButton::Left ) ), parsed );
+    const uint32  slotSteps  = bSlotNames ? 2u : 0u;
     SW_EXPECT_EQUAL( slotSteps / 2, TestScenarioRecorderInternal::countKind( scenario, "Press" ) );
     SW_EXPECT_EQUAL( slotSteps / 2, TestScenarioRecorderInternal::countKind( scenario, "Release" ) );
     SW_EXPECT_EQUAL( 1u, TestScenarioRecorderInternal::countKind( scenario, "MousePosition" ) );
@@ -114,8 +114,8 @@ SW_TEST_CASE( ScenarioRecorderTest, WheelRoundTripsAndWindowStateIsSkipped )
     listFrame[1]._listRawEvent.push_back( pointer );
 
     sw::ScenarioRecordSettings settings;
-    settings._name = "recorded.wheel";
-    const sw::ScenarioRecordOutput output = sw::ScenarioRecorder::toScenarioXml( listFrame, settings );
+    settings._name                        = "recorded.wheel";
+    const sw::ScenarioRecordOutput output = sw::ScenarioRecorder::toScenarioXML( listFrame, settings );
     SW_EXPECT_EQUAL( 2u, output._writtenStepCount );
     SW_EXPECT_EQUAL( 2u, output._skippedEventCount );
 
@@ -163,8 +163,8 @@ SW_TEST_CASE( ScenarioRecorderTest, DoubleClickBecomesSecondPress )
     listFrame[3]._listRawEvent.push_back( sw::RawInputEvent::makeMouseButtonUp( sw::MouseButton::Left ) );
 
     sw::ScenarioRecordSettings settings;
-    settings._name = "recorded.double";
-    const sw::ScenarioRecordOutput output = sw::ScenarioRecorder::toScenarioXml( listFrame, settings );
+    settings._name                        = "recorded.double";
+    const sw::ScenarioRecordOutput output = sw::ScenarioRecorder::toScenarioXML( listFrame, settings );
     SW_EXPECT_EQUAL( 0u, output._skippedEventCount );
 
     sw::AutomationScenario scenario;

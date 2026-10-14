@@ -125,7 +125,7 @@ namespace sw::editor
         EditorSelfTestMarks::note( "audioevents.openDataFile" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "OpenDataFileTip" ) );
 
-        AudioEventBrowserUtil::buildEventFieldRows( eventDesc, attenuation, _listFieldRow );
+        AudioEventBrowserUtil::makeEventFieldRows( eventDesc, attenuation, _listFieldRow );
         if ( ImGui::BeginTable( "##AudioEventFields", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV ) )
         {
             ImGui::TableSetupColumn( SW_LOCKEY( "EditorAudioEvents", "ColumnField" ), ImGuiTableColumnFlags_WidthFixed, 140.0f * EditorThemeUtil::getDpiScale() );
@@ -154,7 +154,7 @@ namespace sw::editor
     {
         (void)ImGui::Checkbox( SW_LOCKEY( "EditorAudioEvents", "OnlySelected" ), &_bOnlySelectedEvent );
         const hashed_string eventFilter = _bOnlySelectedEvent ? _selectedEvent : hashed_string{};
-        AudioEventBrowserUtil::buildInstanceRows( _listInstanceStatus, eventFilter, _listInstanceRow );
+        AudioEventBrowserUtil::makeInstanceRows( _listInstanceStatus, eventFilter, _listInstanceRow );
         if ( _listInstanceRow.empty() )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAudioEvents", "NothingPlaying" ) );
@@ -194,14 +194,14 @@ namespace sw::editor
     void AudioEventBrowserPanel::drawVoiceProfiler( const AudioEngineStats& stats )
     {
         using Internal                  = AudioEventBrowserPanelInternal;
-        const AudioVoiceProfile profile = AudioEventBrowserUtil::buildVoiceProfile( stats );
+        const AudioVoiceProfile profile = AudioEventBrowserUtil::makeVoiceProfile( stats );
         Internal::drawUsageBar( SW_LOCKEY( "EditorAudioEvents", "RealVoices" ), profile._realVoiceCount, profile._maxRealVoiceCount, profile._realUsage, profile._bRealLimitReached );
         Internal::drawUsageBar( SW_LOCKEY( "EditorAudioEvents", "AllVoices" ), profile._voiceCount, profile._maxVoiceCount, profile._voiceUsage, profile._bVoiceLimitReached );
         ImGui::Text( "%s: %u", SW_LOCKEY( "EditorAudioEvents", "VirtualVoices" ), profile._virtualVoiceCount );
         ImGui::Text( "%s: %u", SW_LOCKEY( "EditorAudioEvents", "PeakRealVoices" ), profile._peakRealVoiceCount );
         ImGui::Text( "%s: %u", SW_LOCKEY( "EditorAudioEvents", "Instances" ), profile._instanceCount );
-        ImGui::Text( "%s: %llu / %llu", SW_LOCKEY( "EditorAudioEvents", "PlayedDropped" ), static_cast<unsigned long long>( profile._playedEventCount ),
-                     static_cast<unsigned long long>( profile._droppedEventCount ) );
+        ImGui::Text( "%s: %llu / %llu", SW_LOCKEY( "EditorAudioEvents", "PlayedDropped" ), static_cast<uint64>( profile._playedEventCount ),
+                     static_cast<uint64>( profile._droppedEventCount ) );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "PlayedDroppedTip" ) );
     }
 

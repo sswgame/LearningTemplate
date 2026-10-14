@@ -18,9 +18,12 @@ namespace sw::editor
     public:
         BubbleModifier()
             : MeshModifier()
-            , _strengthParam{ addParam( MeshModifierParamDef{ "Strength", MeshModifierParamKind::Float, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Bubble", "Push along the normal; negative pulls in", "m" ) ) }
-            , _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Bubble", "Radius of the affected sphere", "m" ) ) }
-            , _centerParam{ addParam( MeshModifierParamDef{ "Center", MeshModifierParamKind::Vector3, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Bubble", "Center of the bubble in modifier space", "m" ) ) }
+            , _strengthParam{
+                  addParam( MeshModifierParamDef{ "Strength", MeshModifierParamKind::Float, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }
+                                .withLayout( "Bubble", "Push along the normal; negative pulls in", "m" ) )
+        },
+            _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Bubble", "Radius of the affected sphere", "m" ) ) },
+            _centerParam{ addParam( MeshModifierParamDef{ "Center", MeshModifierParamKind::Vector3, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Bubble", "Center of the bubble in modifier space", "m" ) ) }
         {
         }
 

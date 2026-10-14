@@ -65,7 +65,10 @@ namespace sw::editor
         float2 _anchorMin{};
         float2 _anchorMax{};
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @brief 고른 위젯의 부모 패널이 읽는 슬롯 필드 묶음입니다(디자이너의 Slot 칸이 이것만 보여 준다 — UMG 디자이너가 부모 패널의 슬롯 타입만 보여 주는 것과 같다).
      * @details 슬롯은 모든 패널의 필드를 한 구조체(`WidgetLayoutSlot`)에 모았으므로, 패널 종류마다 슬롯 타입을 두지 않고 "어느 묶음을 보이는지" 만 고른다.

@@ -41,10 +41,13 @@ namespace sw::editor
         GameObjectManager*    _pManager{ nullptr };
         const utf8*           _pAssetPath{ nullptr }; ///< 절대 경로
         bool                  _bIsDirectory{ false };
-        float3                _worldPosition{};             ///< Viewport: 우클릭 레이가 바닥 평면(3D 는 Y = 0, 2D 는 Z = 0)과 만난 점
+        float3                _worldPosition{};            ///< Viewport: 우클릭 레이가 바닥 평면(3D 는 Y = 0, 2D 는 Z = 0)과 만난 점
         bool                  _bHasWorldPosition{ false }; ///< Viewport: `_worldPosition` 이 채워졌으면 true
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @struct EditorContextMenuEntryRegistration
      * @brief 우클릭 메뉴 항목 하나입니다. 패널 고유 항목 아래 구분선 뒤에 `_order` 순서로 붙습니다.
@@ -96,7 +99,7 @@ namespace sw::editor
         template <typename TVisit>
         static auto visitEntries( EditorContextMenuKind menuKind, TVisit&& visit ) -> void ( * )( const EditorContextMenuTarget& )
         {
-            using Registry = EditorExtensionRegistry<EditorContextMenuEntryRegistration>;
+            using Registry                                        = EditorExtensionRegistry<EditorContextMenuEntryRegistration>;
             void ( *pfnChosen )( const EditorContextMenuTarget& ) = nullptr;
             for ( uint32 index = 0; index < Registry::getCount(); ++index )
             {
@@ -115,6 +118,6 @@ namespace sw::editor
  * @code SW_EDITOR_CONTEXT_MENU_ENTRY( ParkRideInfo, "themepark.rideInfo", 9100, ::sw::editor::EditorContextMenuKind::GameObject, "Ride Info",
  *                                     &showRideInfo, &isRide ); @endcode
  */
-#define SW_EDITOR_CONTEXT_MENU_ENTRY( name, pID, order, menuKind, pLabel, pfnAction, pfnEnabled )                                       \
+#define SW_EDITOR_CONTEXT_MENU_ENTRY( name, pID, order, menuKind, pLabel, pfnAction, pfnEnabled )                                    \
     SW_EDITOR_REGISTER( ::sw::editor::EditorContextMenuEntryRegistration, ContextMenuEntry_##name, { pID, order }, menuKind, pLabel, \
                         pfnAction, pfnEnabled )

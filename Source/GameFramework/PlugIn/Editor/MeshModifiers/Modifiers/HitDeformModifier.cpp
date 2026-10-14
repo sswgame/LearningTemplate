@@ -22,20 +22,22 @@ namespace sw::editor
 
         /** @brief Hits 표의 열 — 위치 xyz · 방향 xyz · 반경 · 세기 · 감쇠(stride 9). */
         static constexpr MeshModifierListColumn kArrColumn[] = {
-            { "Position", MeshModifierListColumnKind::Vector3 },
-            { "Direction", MeshModifierListColumnKind::Vector3 },
-            { "Radius", MeshModifierListColumnKind::Float },
-            { "Strength", MeshModifierListColumnKind::Float },
-            { "Falloff", MeshModifierListColumnKind::Float },
+            { "Position", MeshModifierListColumnKind::Vector3},
+            {"Direction", MeshModifierListColumnKind::Vector3},
+            {   "Radius",   MeshModifierListColumnKind::Float},
+            { "Strength",   MeshModifierListColumnKind::Float},
+            {  "Falloff",   MeshModifierListColumnKind::Float},
         };
 
         HitDeformModifier()
             : MeshModifier()
-            , _hitsParam{ addParam( MeshModifierParamDef{ "Hits", MeshModifierParamKind::NumberList, -1000.0f, 1000.0f, float3{ 0.0f, 0.0f, 0.0f }, kStride,
-                                                          "x y z dirX dirY dirZ radius strength falloff" }
-                                                          .withColumns( kArrColumn )
-                                                          .withLayout( "Hits", "Static hit points in modifier space that dent nearby vertices" ) ) }
-            , _scaleParam{ addParam( MeshModifierParamDef{ "Scale", MeshModifierParamKind::Float, 0.0f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Response", "Multiplier applied to every hit strength" ) ) }
+            , _hitsParam{
+                  addParam( MeshModifierParamDef{ "Hits", MeshModifierParamKind::NumberList, -1000.0f, 1000.0f, float3{ 0.0f, 0.0f, 0.0f }, kStride,
+                                                 "x y z dirX dirY dirZ radius strength falloff" }
+                                .withColumns( kArrColumn )
+                                .withLayout( "Hits", "Static hit points in modifier space that dent nearby vertices" ) )
+        },
+            _scaleParam{ addParam( MeshModifierParamDef{ "Scale", MeshModifierParamKind::Float, 0.0f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Response", "Multiplier applied to every hit strength" ) ) }
         {
         }
 
@@ -50,7 +52,7 @@ namespace sw::editor
             float3                 offset{ 0.0f, 0.0f, 0.0f };
             for ( size_t index = 0; index < count; ++index )
             {
-                const float32* pItem  = listNumber.data() + index * kStride;
+                const float32* pItem = listNumber.data() + index * kStride;
                 const float3   center{ pItem[0], pItem[1], pItem[2] };
                 const float3   direction = MeshModifierUtil::normalizeOr( float3{ pItem[3], pItem[4], pItem[5] }, float3{ 0.0f, -1.0f, 0.0f } );
                 const float32  radius    = MathUtil::abs( pItem[6] );

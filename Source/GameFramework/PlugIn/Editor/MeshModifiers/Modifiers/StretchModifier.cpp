@@ -18,8 +18,11 @@ namespace sw::editor
     public:
         StretchModifier()
             : MeshModifier()
-            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -0.95f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Stretch", "Length change along the main axis (0 = none)" ) ) }
-            , _volumeParam{ addParam( MeshModifierParamDef{ "Volume Preservation", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Stretch", "How much the cross section shrinks to keep volume" ) ) }
+            , _amountParam{
+                  addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -0.95f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }
+                                .withLayout( "Stretch", "Length change along the main axis (0 = none)" ) )
+        },
+            _volumeParam{ addParam( MeshModifierParamDef{ "Volume Preservation", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Stretch", "How much the cross section shrinks to keep volume" ) ) }
         {
         }
 

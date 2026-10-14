@@ -15,7 +15,10 @@ namespace sw::editor
     public:
         PushModifier()
             : MeshModifier()
-            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Distance along the normal (0 = no change, negative shrinks)", "m" ) ) }
+            , _amountParam{
+                  addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }
+                                .withLayout( nullptr, "Distance along the normal (0 = no change, negative shrinks)", "m" ) )
+        }
         {
         }
 

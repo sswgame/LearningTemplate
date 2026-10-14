@@ -22,14 +22,24 @@ namespace sw::editor
 
         ConformMultiModifier()
             : MeshModifier()
-            , _arrTargetParam{ addParam( MeshModifierParamDef{ "Target 1", MeshModifierParamKind::Reference, 0.0f, 0.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "Mesh object" }.withLayout( "Targets", "Mesh object to conform onto; empty slots are skipped" ).withRequiredComponent( "MeshComponent" ) ),
-                               addParam( MeshModifierParamDef{ "Target 2", MeshModifierParamKind::Reference, 0.0f, 0.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "Mesh object" }.withLayout( "Targets", "Mesh object to conform onto; empty slots are skipped" ).withRequiredComponent( "MeshComponent" ) ),
-                               addParam( MeshModifierParamDef{ "Target 3", MeshModifierParamKind::Reference, 0.0f, 0.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "Mesh object" }.withLayout( "Targets", "Mesh object to conform onto; empty slots are skipped" ).withRequiredComponent( "MeshComponent" ) ),
-                               addParam( MeshModifierParamDef{ "Target 4", MeshModifierParamKind::Reference, 0.0f, 0.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "Mesh object" }.withLayout( "Targets", "Mesh object to conform onto; empty slots are skipped" ).withRequiredComponent( "MeshComponent" ) ) }
-            , _modeParam{ addParam( MeshModifierParamDef{ "Mode", MeshModifierParamKind::Int, 0.0f, 2.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "0 closest, 1 axis, 2 normal" }.withLayout( "Projection", "Projection mode: 0 closest point, 1 along the negative main axis, 2 along the negative normal" ) ) }
-            , _offsetParam{ addParam( MeshModifierParamDef{ "Offset", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Projection", "Distance kept above the target surface", "m" ) ) }
-            , _maxDistanceParam{ addParam( MeshModifierParamDef{ "Max Distance", MeshModifierParamKind::Float, 0.0f, 100000.0f, float3{ 1000.0f, 0.0f, 0.0f } }.withLayout( "Projection", "Points farther than this from the target are left in place", "m" ) ) }
-            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Projection", "Blend between the original shape (0) and the conformed shape (1)" ) ) }
+            , _arrTargetParam{
+                  addParam( MeshModifierParamDef{"Target 1", MeshModifierParamKind::Reference, 0.0f, 0.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "Mesh object"}
+                                .withLayout( "Targets", "Mesh object to conform onto; empty slots are skipped" )
+                                .withRequiredComponent( "MeshComponent" ) ),
+                  addParam( MeshModifierParamDef{"Target 2", MeshModifierParamKind::Reference, 0.0f, 0.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "Mesh object"}
+                                .withLayout( "Targets", "Mesh object to conform onto; empty slots are skipped" )
+                                .withRequiredComponent( "MeshComponent" ) ),
+                  addParam( MeshModifierParamDef{"Target 3", MeshModifierParamKind::Reference, 0.0f, 0.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "Mesh object"}
+                                .withLayout( "Targets", "Mesh object to conform onto; empty slots are skipped" )
+                                .withRequiredComponent( "MeshComponent" ) ),
+                  addParam( MeshModifierParamDef{"Target 4", MeshModifierParamKind::Reference, 0.0f, 0.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "Mesh object"}
+                                .withLayout( "Targets", "Mesh object to conform onto; empty slots are skipped" )
+                                .withRequiredComponent( "MeshComponent" ) )
+        },
+            _modeParam{ addParam( MeshModifierParamDef{ "Mode", MeshModifierParamKind::Int, 0.0f, 2.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "0 closest, 1 axis, 2 normal" }.withLayout( "Projection", "Projection mode: 0 closest point, 1 along the negative main axis, 2 along the negative normal" ) ) },
+            _offsetParam{ addParam( MeshModifierParamDef{ "Offset", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Projection", "Distance kept above the target surface", "m" ) ) },
+            _maxDistanceParam{ addParam( MeshModifierParamDef{ "Max Distance", MeshModifierParamKind::Float, 0.0f, 100000.0f, float3{ 1000.0f, 0.0f, 0.0f } }.withLayout( "Projection", "Points farther than this from the target are left in place", "m" ) ) },
+            _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Projection", "Blend between the original shape (0) and the conformed shape (1)" ) ) }
         {
         }
 

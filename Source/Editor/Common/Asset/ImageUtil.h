@@ -2,6 +2,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/VectorMath.h"
 
 namespace sw::editor
 {
@@ -52,5 +53,10 @@ namespace sw::editor
          * @param outListSample 행 우선 너비 × 높이 개입니다.
          */
         [[nodiscard]] static bool loadGray16FromMemory( const uint8* pBuffer, size_t bufferSize, vector<uint16>& outListSample, int32& outWidth, int32& outHeight );
+
+        /**
+         * @brief 메모리 버퍼의 이미지를 float4 텍셀(행 우선)로 디코딩합니다. HDR 원본은 값을 그대로, 나머지는 8 비트를 255 로 나눠 0..1 로 채웁니다.
+         */
+        [[nodiscard]] static bool loadFloat4FromMemory( const uint8* pBuffer, size_t bufferSize, vector<float4>& outListTexel, int32& outWidth, int32& outHeight );
     };
 } // namespace sw::editor

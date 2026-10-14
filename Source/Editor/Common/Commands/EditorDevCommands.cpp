@@ -227,7 +227,7 @@ namespace sw::editor
                     return false;
                 }
                 getLastTempAssetPath() = absolutePath;
-                outReply = "opening " + absolutePath;
+                outReply               = "opening " + absolutePath;
                 return true;
             }
 

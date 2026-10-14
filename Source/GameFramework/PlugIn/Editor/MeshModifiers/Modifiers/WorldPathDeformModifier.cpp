@@ -20,12 +20,16 @@ namespace sw::editor
     public:
         WorldPathDeformModifier()
             : MeshModifier()
-            , _pathParam{ addParam( MeshModifierParamDef{ "Path", MeshModifierParamKind::Reference, 0.0f, 0.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "Spline object" }.withLayout( "Path", "Spline object the mesh follows, read in world space" ).withRequiredComponent( "SplineComponent" ) ) }
-            , _stretchParam{ addParam( MeshModifierParamDef{ "Stretch", MeshModifierParamKind::Float, 0.01f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Path", "Scale of the mesh length along the path" ) ) }
-            , _distanceParam{ addParam( MeshModifierParamDef{ "Distance", MeshModifierParamKind::Float, -10000.0f, 10000.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Path", "Slide the mesh along the path by a distance", "m" ) ) }
-            , _rotateParam{ addParam( MeshModifierParamDef{ "Rotate", MeshModifierParamKind::Float, -360.0f, 360.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Orientation", "Roll of the mesh around the path", "deg" ) ) }
-            , _twistParam{ addParam( MeshModifierParamDef{ "Twist", MeshModifierParamKind::Float, -3600.0f, 3600.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Orientation", "Extra roll added along the path", "deg" ) ) }
-            , _loopParam{ addParam( MeshModifierParamDef{ "Loop", MeshModifierParamKind::Bool, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Path", "Wrap around when the mesh runs past the path ends" ) ) }
+            , _pathParam{
+                  addParam( MeshModifierParamDef{ "Path", MeshModifierParamKind::Reference, 0.0f, 0.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "Spline object" }
+                                .withLayout( "Path", "Spline object the mesh follows, read in world space" )
+                                .withRequiredComponent( "SplineComponent" ) )
+        },
+            _stretchParam{ addParam( MeshModifierParamDef{ "Stretch", MeshModifierParamKind::Float, 0.01f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Path", "Scale of the mesh length along the path" ) ) },
+            _distanceParam{ addParam( MeshModifierParamDef{ "Distance", MeshModifierParamKind::Float, -10000.0f, 10000.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Path", "Slide the mesh along the path by a distance", "m" ) ) },
+            _rotateParam{ addParam( MeshModifierParamDef{ "Rotate", MeshModifierParamKind::Float, -360.0f, 360.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Orientation", "Roll of the mesh around the path", "deg" ) ) },
+            _twistParam{ addParam( MeshModifierParamDef{ "Twist", MeshModifierParamKind::Float, -3600.0f, 3600.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Orientation", "Extra roll added along the path", "deg" ) ) },
+            _loopParam{ addParam( MeshModifierParamDef{ "Loop", MeshModifierParamKind::Bool, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Path", "Wrap around when the mesh runs past the path ends" ) ) }
         {
         }
 
@@ -34,7 +38,7 @@ namespace sw::editor
         /** @brief 경로의 회전 최소화 프레임 표를 한 번 만들고(단일 스레드) 기본 정점 루프를 돈다 — 정점 루프는 표를 읽기만 한다. */
         void applyToMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context ) const override
         {
-            _frameCache.build( context, getText( _pathParam ), PathModifierUtil::PathSpace::World );
+            _frameCache.populate( context, getText( _pathParam ), PathModifierUtil::PathSpace::World );
             MeshModifier::applyToMesh( inoutMesh, context );
             _frameCache.clear();
         }
@@ -53,20 +57,19 @@ namespace sw::editor
             PathModifierUtil::rotate2D( MathUtil::toRadian( getFloat( _rotateParam ) + getFloat( _twistParam ) * fraction ), coordU, coordV );
             float3 result{ 0.0f, 0.0f, 0.0f };
             if ( PathModifierUtil::tryPlaceOnPath( context, getText( _pathParam ), PathModifierUtil::PathSpace::World, length, distance, getBool( _loopParam ), coordU,
-                                                   coordV, result, &_frameCache )
-                 == false )
+                                                   coordV, result, &_frameCache ) == false )
                 result = point._position; // 경로를 못 얻으면 변형 없이 통과한다
             return result;
         }
 
     private:
         mutable PathModifierUtil::PathFrameCache _frameCache; ///< `applyToMesh` 동안만 채워지는 경로 프레임 표
-        uint32 _pathParam;
-        uint32 _stretchParam;
-        uint32 _distanceParam;
-        uint32 _rotateParam;
-        uint32 _twistParam;
-        uint32 _loopParam;
+        uint32                                   _pathParam;
+        uint32                                   _stretchParam;
+        uint32                                   _distanceParam;
+        uint32                                   _rotateParam;
+        uint32                                   _twistParam;
+        uint32                                   _loopParam;
     };
 
     SW_MESH_MODIFIER( WorldPathDeformModifier, "worldpathdeform", "World Path Deform", "Path" );

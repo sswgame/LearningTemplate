@@ -38,7 +38,7 @@ SW_TEST_CASE( ScheduleTimelineRowsTest, BuildsRowsAndMarksPreviewSegment )
     SW_EXPECT_EQUAL( ScheduleTimelineRows::findSegmentAt( listSegment, 720 ), -1 );
 
     vector<ScheduleTimelineRow> listRow;
-    ScheduleTimelineRows::build( listSegment, 500, listRow );
+    ScheduleTimelineRows::populate( listSegment, 500, listRow );
     SW_EXPECT_EQUAL( listRow.size(), size_t( 2 ) );
     SW_EXPECT_EQUAL( listRow[0]._time, string( "00:00-08:00" ) );
     SW_EXPECT_TRUE( listRow[0]._travel.empty() );

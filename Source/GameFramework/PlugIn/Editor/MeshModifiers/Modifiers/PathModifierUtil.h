@@ -62,7 +62,7 @@ namespace sw::editor
         /**
          * @brief 접선에 수직인 두 축을 만듭니다. 접선이 주축이면 결과는 (주축 다음 축, 그다음 축)이라 곧은 경로에서 항등 프레임이 됩니다.
          */
-        static void buildFrame( const float3& tangent, uint32 axisIndex, float3& outAxisU, float3& outAxisV )
+        static void makeFrame( const float3& tangent, uint32 axisIndex, float3& outAxisU, float3& outAxisV )
         {
             float3 reference{ 0.0f, 0.0f, 0.0f };
             MeshModifierUtil::setComponent( reference, ( axisIndex + 2 ) % 3, 1.0f );
@@ -107,18 +107,18 @@ namespace sw::editor
         }
 
         /**
-         * @brief 표본 (위치, 단위 접선) 목록을 따라 회전 최소화 프레임을 전파합니다(순수 함수). 첫 프레임은 `buildFrame` 입니다.
+         * @brief 표본 (위치, 단위 접선) 목록을 따라 회전 최소화 프레임을 전파합니다(순수 함수). 첫 프레임은 `makeFrame` 입니다.
          * @details 결과 목록 크기는 입력과 같다. 위치 · 접선 목록 크기가 다르면 짧은 쪽까지만 쓴다.
          */
-        static void buildRotationMinimizingFrames( const vector<float3>& listPosition, const vector<float3>& listTangent, uint32 axisIndex, vector<float3>& outListAxisU,
-                                                   vector<float3>& outListAxisV )
+        static void computeRotationMinimizingFrames( const vector<float3>& listPosition, const vector<float3>& listTangent, uint32 axisIndex, vector<float3>& outListAxisU,
+                                                     vector<float3>& outListAxisV )
         {
             const size_t count = MathUtil::min( listPosition.size(), listTangent.size() );
             outListAxisU.assign( count, float3{ 1.0f, 0.0f, 0.0f } );
             outListAxisV.assign( count, float3{ 0.0f, 0.0f, 1.0f } );
             if ( count == 0 )
                 return;
-            buildFrame( listTangent[0], axisIndex, outListAxisU[0], outListAxisV[0] );
+            makeFrame( listTangent[0], axisIndex, outListAxisU[0], outListAxisV[0] );
             for ( size_t index = 1; index < count; ++index )
             {
                 transportFrame( listPosition[index - 1], listTangent[index - 1], outListAxisV[index - 1], listPosition[index], listTangent[index], outListAxisU[index],
@@ -147,15 +147,15 @@ namespace sw::editor
             }
 
             /** @brief 경로를 표본해 표를 만듭니다. 표본에 하나라도 실패하면 표를 비웁니다(고정 기준 축 프레임으로 돌아간다). */
-            void build( const MeshModifierContext& context, const string& reference, PathSpace space )
+            void populate( const MeshModifierContext& context, const string& reference, PathSpace space )
             {
                 clear();
                 _listPosition.reserve( kSegmentCount + 1 );
                 _listTangent.reserve( kSegmentCount + 1 );
                 for ( uint32 index = 0; index <= kSegmentCount; ++index )
                 {
-                    float3 position{ 0.0f, 0.0f, 0.0f };
-                    float3 tangent{ 0.0f, 1.0f, 0.0f };
+                    float3        position{ 0.0f, 0.0f, 0.0f };
+                    float3        tangent{ 0.0f, 1.0f, 0.0f };
                     const float32 fraction = static_cast<float32>( index ) / static_cast<float32>( kSegmentCount );
                     if ( trySamplePath( context, reference, space, fraction, position, tangent ) == false )
                     {
@@ -165,7 +165,7 @@ namespace sw::editor
                     _listPosition.push_back( position );
                     _listTangent.push_back( tangent );
                 }
-                buildRotationMinimizingFrames( _listPosition, _listTangent, context._axisIndex, _listAxisU, _listAxisV );
+                computeRotationMinimizingFrames( _listPosition, _listTangent, context._axisIndex, _listAxisU, _listAxisV );
             }
 
             /** @brief 비율 @p fraction 의 (위치, 접선) 에 맞는 프레임을 바로 앞 표본에서 한 걸음 옮겨 냅니다. */
@@ -179,7 +179,7 @@ namespace sw::editor
 
         /**
          * @brief 경로 위 호 길이 @p distance 자리에 단면 좌표 (u, v) 를 놓습니다. 경로 밖은 끝 접선을 따라 곧게 잇습니다.
-         * @param pFrameCache 회전 최소화 프레임 표. 없거나 비었으면 고정 기준 축 프레임(`buildFrame`)을 쓴다.
+         * @param pFrameCache 회전 최소화 프레임 표. 없거나 비었으면 고정 기준 축 프레임(`makeFrame`)을 쓴다.
          * @return 표본에 실패하면 false(호출자는 원래 점을 둔다).
          */
         [[nodiscard]] static bool tryPlaceOnPath( const MeshModifierContext& context, const string& reference, PathSpace space, float32 length, float32 distance,
@@ -187,9 +187,7 @@ namespace sw::editor
         {
             float32 along = distance;
             if ( bLoop )
-            {
                 along = along - MathUtil::floor( along / length ) * length;
-            }
             const float32 clamped = MathUtil::clamp( along, 0.0f, length );
             float3        position{ 0.0f, 0.0f, 0.0f };
             float3        tangent{ 0.0f, 1.0f, 0.0f };
@@ -200,7 +198,7 @@ namespace sw::editor
             if ( pFrameCache != nullptr && pFrameCache->isEmpty() == false )
                 pFrameCache->findFrame( clamped / length, position, tangent, axisU, axisV );
             else
-                buildFrame( tangent, context._axisIndex, axisU, axisV );
+                makeFrame( tangent, context._axisIndex, axisU, axisV );
             outPosition = position + tangent * ( along - clamped ) + axisU * coordU + axisV * coordV;
             return true;
         }
@@ -388,7 +386,9 @@ namespace sw::editor
             vector<uint32> listIndex;
             listIndex.reserve( listTriangle.size() );
             for ( uint32 index = 0; index < static_cast<uint32>( listTriangle.size() ); ++index )
+            {
                 listIndex.push_back( index );
+            }
             SurfaceBvh bvh;
             bvh.addSurface( 0, listTriangle, listIndex );
             bvh.build();
@@ -401,20 +401,16 @@ namespace sw::editor
                 const float3& point     = inoutMesh._listPosition[index];
                 float3        direction = axisDirection;
                 if ( mode == ConformMode::Normal )
-                {
                     direction = inoutMesh.hasNormal() ? MeshModifierUtil::normalizeOr( inoutMesh._listNormal[index] * -1.0f, axisDirection ) : axisDirection;
-                }
                 float3 target{ 0.0f, 0.0f, 0.0f };
                 if ( tryConformPointBvh( bvh, point, direction, mode, offset, maxDistance, target ) == false )
                     continue;
-                const float32 blend               = MathUtil::saturate( amount * inoutMesh.getWeight( index ) );
+                const float32 blend            = MathUtil::saturate( amount * inoutMesh.getWeight( index ) );
                 inoutMesh._listPosition[index] = float3::lerp( point, target, blend );
                 bMoved                         = true;
             }
             if ( bMoved && inoutMesh.hasNormal() )
-            {
                 MeshModifierUtil::recomputeFaceNormals( inoutMesh._listPosition, inoutMesh._listNormal );
-            }
         }
     };
 } // namespace sw::editor

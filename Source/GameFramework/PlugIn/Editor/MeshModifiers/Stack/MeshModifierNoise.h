@@ -8,8 +8,9 @@
  *          해시가 서로 달라 이름을 나눠 둔다.
  */
 #pragma once
-
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/VectorMath.h"
 
 namespace sw::editor::MeshModifierNoise
 {
@@ -86,8 +87,8 @@ namespace sw::editor::MeshModifierNoise
         const float32 cell     = MathUtil::floor( safeTime );
         const float32 ratio    = safeTime - cell;
         const int32   index    = static_cast<int32>( cell );
-        const float32 valueA   = hashToUnit( seed * 0x9e3779b9u + static_cast<uint32>( index ) );
-        const float32 valueB   = hashToUnit( seed * 0x9e3779b9u + static_cast<uint32>( index + 1 ) );
+        const float32 valueA   = hashToUnit( seed * HashUtil::kGoldenRatio32 + static_cast<uint32>( index ) );
+        const float32 valueB   = hashToUnit( seed * HashUtil::kGoldenRatio32 + static_cast<uint32>( index + 1 ) );
         const float32 weight   = ratio * ratio * ( 3.0f - 2.0f * ratio );
         return ( valueA + ( valueB - valueA ) * weight ) * 2.0f - 1.0f;
     }

@@ -20,17 +20,19 @@ namespace sw::editor
     public:
         /** @brief Layers 표의 열 — u · v · 반경 · 높이(stride 4). */
         static constexpr MeshModifierListColumn kArrColumn[] = {
-            { "U", MeshModifierListColumnKind::Float },
-            { "V", MeshModifierListColumnKind::Float },
-            { "Radius", MeshModifierListColumnKind::Float },
-            { "Height", MeshModifierListColumnKind::Float },
+            {     "U", MeshModifierListColumnKind::Float},
+            {     "V", MeshModifierListColumnKind::Float},
+            {"Radius", MeshModifierListColumnKind::Float},
+            {"Height", MeshModifierListColumnKind::Float},
         };
 
         CurveSculptLayeredModifier()
             : MeshModifier()
-            , _shapeParam{ addParam( MeshModifierParamDef{ "Shape", MeshModifierParamKind::Curve, -10.0f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Sculpt", "Falloff profile shared by every layer" ) ) }
-            , _layersParam{ addParam(
-                  MeshModifierParamDef{ "Layers", MeshModifierParamKind::NumberList, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f }, 4, "u v radius height" }.withLayout( "Layers", "One row per layer: center (U, V), radius and height, in bounds fractions" ).withColumns( kArrColumn ) ) }
+            , _shapeParam{
+                  addParam( MeshModifierParamDef{ "Shape", MeshModifierParamKind::Curve, -10.0f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } }
+                                .withLayout( "Sculpt", "Falloff profile shared by every layer" ) )
+        },
+            _layersParam{ addParam( MeshModifierParamDef{ "Layers", MeshModifierParamKind::NumberList, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f }, 4, "u v radius height" }.withLayout( "Layers", "One row per layer: center (U, V), radius and height, in bounds fractions" ).withColumns( kArrColumn ) ) }
         {
         }
 
@@ -41,12 +43,12 @@ namespace sw::editor
             const vector<float32>& listLayer = getNumberList( _layersParam );
             if ( listLayer.size() < 4 )
                 return point._position;
-            const uint32  axis  = context._axisIndex;
-            const uint32  axisU = ( axis + 1 ) % 3;
-            const uint32  axisV = ( axis + 2 ) % 3;
-            const float3  size  = context._bounds.getSize();
-            const float32 sizeU = MathUtil::max( MeshModifierUtil::getComponent( size, axisU ), MathUtil::kEpsilon );
-            const float32 sizeV = MathUtil::max( MeshModifierUtil::getComponent( size, axisV ), MathUtil::kEpsilon );
+            const uint32  axis   = context._axisIndex;
+            const uint32  axisU  = ( axis + 1 ) % 3;
+            const uint32  axisV  = ( axis + 2 ) % 3;
+            const float3  size   = context._bounds.getSize();
+            const float32 sizeU  = MathUtil::max( MeshModifierUtil::getComponent( size, axisU ), MathUtil::kEpsilon );
+            const float32 sizeV  = MathUtil::max( MeshModifierUtil::getComponent( size, axisV ), MathUtil::kEpsilon );
             const float32 ratioU = ( MeshModifierUtil::getComponent( point._position, axisU ) - MeshModifierUtil::getComponent( context._bounds._min, axisU ) ) / sizeU;
             const float32 ratioV = ( MeshModifierUtil::getComponent( point._position, axisV ) - MeshModifierUtil::getComponent( context._bounds._min, axisV ) ) / sizeV;
 

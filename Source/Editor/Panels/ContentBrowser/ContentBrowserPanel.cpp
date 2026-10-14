@@ -375,7 +375,8 @@ namespace sw::editor
             if ( EditorContextMenuExtensionUtil::countEntries( EditorContextMenuKind::Asset ) != 0 )
             {
                 ImGui::Separator();
-                pfnExtensionAction = EditorContextMenuExtensionUtil::visitEntries( EditorContextMenuKind::Asset, [&]( const EditorContextMenuEntryRegistration& extension ) {
+                pfnExtensionAction = EditorContextMenuExtensionUtil::visitEntries( EditorContextMenuKind::Asset, [&]( const EditorContextMenuEntryRegistration& extension )
+                {
                     return ImGui::MenuItem( extension._pLabel, nullptr, false, EditorContextMenuExtensionUtil::isEnabled( extension, extensionTarget ) );
                 } );
             }

@@ -52,7 +52,9 @@ SW_TEST_CASE( ShapeModifiersBTest, SqueezePreservesBoxVolume )
 SW_TEST_CASE( ShapeModifiersBTest, ScaleMultipliesUniformAndPerAxis )
 {
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 1.0f, 1.0f, 1.0f } };
+    mesh._listPosition = {
+        float3{ 1.0f, 1.0f, 1.0f }
+    };
     unique_ptr<MeshModifier> scale = MeshModifierRegistry::create( "scale" );
     SW_ASSERT_NOT_NULL( scale.get() );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *scale, "Uniform", 2.0f ) );
@@ -67,7 +69,12 @@ SW_TEST_CASE( ShapeModifiersBTest, ScaleMultipliesUniformAndPerAxis )
 SW_TEST_CASE( ShapeModifiersBTest, SinusCurveFollowsOneSinePeriod )
 {
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 0.0f, -2.0f, 0.0f }, float3{ 0.0f, -1.0f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 2.0f, 0.0f } };
+    mesh._listPosition = {
+        float3{0.0f, -2.0f, 0.0f},
+        float3{0.0f, -1.0f, 0.0f},
+        float3{0.0f,  0.0f, 0.0f},
+        float3{0.0f,  2.0f, 0.0f}
+    };
     unique_ptr<MeshModifier> sinus = MeshModifierRegistry::create( "sinuscurve" );
     SW_ASSERT_NOT_NULL( sinus.get() );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *sinus, "Amplitude", 1.0f ) );
@@ -83,7 +90,11 @@ SW_TEST_CASE( ShapeModifiersBTest, RolledQuarterTurnWrapsThenContinuesStraight )
     // 반경 1, 0.25 바퀴 → 말리는 길이 π/2. 높이 π/2 인 점은 (z 1, y 1) 로 눕고, 1 더 위의 점은 끝 접선(+Z)을 따라 곧게
     const float32    quarter = MathUtil::kHalfPi;
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, quarter, 0.0f }, float3{ 0.0f, quarter + 1.0f, 0.0f } };
+    mesh._listPosition = {
+        float3{0.0f,           0.0f, 0.0f},
+        float3{0.0f,        quarter, 0.0f},
+        float3{0.0f, quarter + 1.0f, 0.0f}
+    };
     unique_ptr<MeshModifier> rolled = MeshModifierRegistry::create( "rolled" );
     SW_ASSERT_NOT_NULL( rolled.get() );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *rolled, "Turns", 0.25f ) );
@@ -96,7 +107,10 @@ SW_TEST_CASE( ShapeModifiersBTest, RolledQuarterTurnWrapsThenContinuesStraight )
 SW_TEST_CASE( ShapeModifiersBTest, RubberStretchesTheTopAndThinsIt )
 {
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 1.0f, 0.0f, 0.0f }, float3{ 1.0f, 4.0f, 0.0f } };
+    mesh._listPosition = {
+        float3{1.0f, 0.0f, 0.0f},
+        float3{1.0f, 4.0f, 0.0f}
+    };
     unique_ptr<MeshModifier> rubber = MeshModifierRegistry::create( "rubber" );
     SW_ASSERT_NOT_NULL( rubber.get() );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *rubber, "Amount", 1.0f ) );
@@ -109,7 +123,9 @@ SW_TEST_CASE( ShapeModifiersBTest, RubberStretchesTheTopAndThinsIt )
 SW_TEST_CASE( ShapeModifiersBTest, SimpleModAppliesPerAxisPolynomial )
 {
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 2.0f, 3.0f, 4.0f } };
+    mesh._listPosition = {
+        float3{ 2.0f, 3.0f, 4.0f }
+    };
     unique_ptr<MeshModifier> simpleMod = MeshModifierRegistry::create( "simplemod" );
     SW_ASSERT_NOT_NULL( simpleMod.get() );
     uint32 offsetIndex    = 0;

@@ -20,11 +20,15 @@ namespace sw::editor
     public:
         RopeDeformModifier()
             : MeshModifier()
-            , _pathParam{ addParam( MeshModifierParamDef{ "Path", MeshModifierParamKind::Reference, 0.0f, 0.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "Spline object" }.withLayout( "Path", "Spline object the rope follows" ).withRequiredComponent( "SplineComponent" ) ) }
-            , _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Shape", "Cross-section scale of the rope" ) ) }
-            , _radiusCurveParam{ addParam( MeshModifierParamDef{ "Radius Curve", MeshModifierParamKind::Curve, 0.0f, 10.0f, float3{ 1.0f, 1.0f, 0.0f } }.withLayout( "Shape", "Radius multiplier along the rope (0 = start, 1 = end)" ) ) }
-            , _startParam{ addParam( MeshModifierParamDef{ "Start", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Range", "Start of the rope along the path (0 = path start)" ) ) }
-            , _endParam{ addParam( MeshModifierParamDef{ "End", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Range", "End of the rope along the path (1 = path end)" ) ) }
+            , _pathParam{
+                  addParam( MeshModifierParamDef{ "Path", MeshModifierParamKind::Reference, 0.0f, 0.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "Spline object" }
+                                .withLayout( "Path", "Spline object the rope follows" )
+                                .withRequiredComponent( "SplineComponent" ) )
+        },
+            _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Shape", "Cross-section scale of the rope" ) ) },
+            _radiusCurveParam{ addParam( MeshModifierParamDef{ "Radius Curve", MeshModifierParamKind::Curve, 0.0f, 10.0f, float3{ 1.0f, 1.0f, 0.0f } }.withLayout( "Shape", "Radius multiplier along the rope (0 = start, 1 = end)" ) ) },
+            _startParam{ addParam( MeshModifierParamDef{ "Start", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Range", "Start of the rope along the path (0 = path start)" ) ) },
+            _endParam{ addParam( MeshModifierParamDef{ "End", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Range", "End of the rope along the path (1 = path end)" ) ) }
         {
         }
 
@@ -33,7 +37,7 @@ namespace sw::editor
         /** @brief 경로의 회전 최소화 프레임 표를 한 번 만들고(단일 스레드) 기본 정점 루프를 돈다 — 정점 루프는 표를 읽기만 한다. */
         void applyToMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context ) const override
         {
-            _frameCache.build( context, getText( _pathParam ), PathModifierUtil::PathSpace::World );
+            _frameCache.populate( context, getText( _pathParam ), PathModifierUtil::PathSpace::World );
             MeshModifier::applyToMesh( inoutMesh, context );
             _frameCache.clear();
         }
@@ -52,19 +56,18 @@ namespace sw::editor
             const float32 coordU   = MeshModifierUtil::getComponent( point._position, ( axis + 1 ) % 3 ) * scale;
             const float32 coordV   = MeshModifierUtil::getComponent( point._position, ( axis + 2 ) % 3 ) * scale;
             float3        result{ 0.0f, 0.0f, 0.0f };
-            if ( PathModifierUtil::tryPlaceOnPath( context, getText( _pathParam ), PathModifierUtil::PathSpace::World, length, along, false, coordU, coordV, result, &_frameCache )
-                 == false )
+            if ( PathModifierUtil::tryPlaceOnPath( context, getText( _pathParam ), PathModifierUtil::PathSpace::World, length, along, false, coordU, coordV, result, &_frameCache ) == false )
                 result = point._position; // 경로를 못 얻으면 변형 없이 통과한다
             return result;
         }
 
     private:
         mutable PathModifierUtil::PathFrameCache _frameCache; ///< `applyToMesh` 동안만 채워지는 경로 프레임 표
-        uint32 _pathParam;
-        uint32 _radiusParam;
-        uint32 _radiusCurveParam;
-        uint32 _startParam;
-        uint32 _endParam;
+        uint32                                   _pathParam;
+        uint32                                   _radiusParam;
+        uint32                                   _radiusCurveParam;
+        uint32                                   _startParam;
+        uint32                                   _endParam;
     };
 
     SW_MESH_MODIFIER( RopeDeformModifier, "ropedeform", "Rope Deform", "Path" );

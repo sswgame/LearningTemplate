@@ -34,7 +34,7 @@ namespace sw::editor
             /** @brief 축 정렬 상자 밖으로, 가장 가까운 면 쪽으로 밉니다. */
             static float3 pushOutOfBox( const float3& point, const float3& center, const float3& halfSize )
             {
-                const float3 local = point - center;
+                const float3 local     = point - center;
                 float32      bestDepth = MathUtil::kMaxFloat;
                 uint32       bestAxis  = 0;
                 for ( uint32 axis = 0; axis < 3; ++axis )
@@ -80,13 +80,15 @@ namespace sw::editor
 
         CollisionDeformModifier()
             : MeshModifier()
-            , _collidersParam{ addParam( MeshModifierParamDef{ "Colliders", MeshModifierParamKind::NumberList, -1000.0f, 1000.0f, float3{ 0.0f, 0.0f, 0.0f },
-                                                               CollisionDeformModifierInternal::kStride,
-                                                               "type(0 sphere 1 box 2 plane) cx cy cz sx sy sz" }
-                                                               .withColumns( kArrColumn )
-                                                               .withLayout( "Colliders", "Static collider shapes in modifier space (sphere uses size x as radius)" ) ) }
-            , _marginParam{ addParam( MeshModifierParamDef{ "Margin", MeshModifierParamKind::Float, 0.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Response", "Extra distance kept outside each collider surface", "m" ) ) }
-            , _softnessParam{ addParam( MeshModifierParamDef{ "Softness", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Response", "Reduces the push-out (0 = to the surface, 1 = almost none)" ) ) }
+            , _collidersParam{
+                  addParam( MeshModifierParamDef{ "Colliders", MeshModifierParamKind::NumberList, -1000.0f, 1000.0f, float3{ 0.0f, 0.0f, 0.0f },
+                                                 CollisionDeformModifierInternal::kStride,
+                                                 "type(0 sphere 1 box 2 plane) cx cy cz sx sy sz" }
+                                .withColumns( kArrColumn )
+                                .withLayout( "Colliders", "Static collider shapes in modifier space (sphere uses size x as radius)" ) )
+        },
+            _marginParam{ addParam( MeshModifierParamDef{ "Margin", MeshModifierParamKind::Float, 0.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Response", "Extra distance kept outside each collider surface", "m" ) ) },
+            _softnessParam{ addParam( MeshModifierParamDef{ "Softness", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Response", "Reduces the push-out (0 = to the surface, 1 = almost none)" ) ) }
         {
         }
 

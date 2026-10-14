@@ -22,11 +22,14 @@ namespace sw::editor
     public:
         DisplaceLimitsModifier()
             : MeshModifier()
-            , _modeParam{ addParam( MeshModifierParamDef{ "Mode", MeshModifierParamKind::Int, 0.0f, 2.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Range", "0 = off, 1 = clamp to box Min/Max, 2 = clamp to sphere Radius" ) ) }
-            , _minParam{ addParam( MeshModifierParamDef{ "Min", MeshModifierParamKind::Vector3, -100000.0f, 100000.0f, float3{ -1.0f, -1.0f, -1.0f } }.withLayout( "Range", "Lower corner of the clamp box (Mode 1)", "m" ) ) }
-            , _maxParam{ addParam( MeshModifierParamDef{ "Max", MeshModifierParamKind::Vector3, -100000.0f, 100000.0f, float3{ 1.0f, 1.0f, 1.0f } }.withLayout( "Range", "Upper corner of the clamp box (Mode 1)", "m" ) ) }
-            , _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.0f, 100000.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Range", "Clamp sphere radius around the origin (Mode 2)", "m" ) ) }
-            , _clampDisplacementParam{ addParam( MeshModifierParamDef{ "Clamp Displacement", MeshModifierParamKind::Bool, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Range", "Clamp the offset from the original (stack input) position instead of the resulting position" ) ) }
+            , _modeParam{
+                  addParam( MeshModifierParamDef{ "Mode", MeshModifierParamKind::Int, 0.0f, 2.0f, float3{ 0.0f, 0.0f, 0.0f } }
+                                .withLayout( "Range", "0 = off, 1 = clamp to box Min/Max, 2 = clamp to sphere Radius" ) )
+        },
+            _minParam{ addParam( MeshModifierParamDef{ "Min", MeshModifierParamKind::Vector3, -100000.0f, 100000.0f, float3{ -1.0f, -1.0f, -1.0f } }.withLayout( "Range", "Lower corner of the clamp box (Mode 1)", "m" ) ) },
+            _maxParam{ addParam( MeshModifierParamDef{ "Max", MeshModifierParamKind::Vector3, -100000.0f, 100000.0f, float3{ 1.0f, 1.0f, 1.0f } }.withLayout( "Range", "Upper corner of the clamp box (Mode 1)", "m" ) ) },
+            _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.0f, 100000.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Range", "Clamp sphere radius around the origin (Mode 2)", "m" ) ) },
+            _clampDisplacementParam{ addParam( MeshModifierParamDef{ "Clamp Displacement", MeshModifierParamKind::Bool, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Range", "Clamp the offset from the original (stack input) position instead of the resulting position" ) ) }
         {
         }
 

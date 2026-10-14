@@ -83,8 +83,14 @@ namespace
                 if ( reference != string_view( _listPlaneName[index] ) )
                     continue;
                 const float32 height = _listPlaneHeight[index];
-                outListPosition      = { float3{ -100.0f, height, -100.0f }, float3{ 100.0f, height, -100.0f }, float3{ 100.0f, height, 100.0f },
-                                         float3{ -100.0f, height, -100.0f }, float3{ 100.0f, height, 100.0f },  float3{ -100.0f, height, 100.0f } };
+                outListPosition      = {
+                    float3{-100.0f, height, -100.0f},
+                    float3{ 100.0f, height, -100.0f},
+                    float3{ 100.0f, height,  100.0f},
+                    float3{-100.0f, height, -100.0f},
+                    float3{ 100.0f, height,  100.0f},
+                    float3{-100.0f, height,  100.0f}
+                };
                 return true;
             }
             return false;
@@ -283,7 +289,10 @@ SW_TEST_CASE( PathModifiersTest, CurveDeformConstantDisplacementTranslates )
     const vector<float3>     before = mesh._listPosition;
     unique_ptr<MeshModifier> curve  = MeshModifierRegistry::create( "curvedeform" );
     SW_ASSERT_NOT_NULL( curve.get() );
-    SW_ASSERT_TRUE( PathModifiersTestInternal::setCurve( *curve, "Displace Curve", { float2{ 0.0f, 1.0f }, float2{ 1.0f, 1.0f } } ) );
+    SW_ASSERT_TRUE( PathModifiersTestInternal::setCurve( *curve, "Displace Curve", {
+                                                                                       float2{0.0f, 1.0f},
+                                                                                       float2{1.0f, 1.0f}
+    } ) );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *curve, "Amount", 2.0f ) );
     test::MeshModifierTestUtil::applyOne( *curve, mesh );
     // 주축 Y 의 다음 축(Z)으로 2 만큼 민다
@@ -299,7 +308,10 @@ SW_TEST_CASE( PathModifiersTest, CurveSculptConstantCurvePushesAlongNormal )
     const MeshModifierMesh   before = mesh;
     unique_ptr<MeshModifier> sculpt = MeshModifierRegistry::create( "curvesculpt" );
     SW_ASSERT_NOT_NULL( sculpt.get() );
-    SW_ASSERT_TRUE( PathModifiersTestInternal::setCurve( *sculpt, "Curve", { float2{ 0.0f, 1.0f }, float2{ 1.0f, 1.0f } } ) );
+    SW_ASSERT_TRUE( PathModifiersTestInternal::setCurve( *sculpt, "Curve", {
+                                                                               float2{0.0f, 1.0f},
+                                                                               float2{1.0f, 1.0f}
+    } ) );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *sculpt, "Strength", 0.5f ) );
     test::MeshModifierTestUtil::applyOne( *sculpt, mesh );
     for ( size_t index = 0; index < before.getVertexCount(); ++index )
@@ -311,14 +323,21 @@ SW_TEST_CASE( PathModifiersTest, CurveSculptConstantCurvePushesAlongNormal )
 SW_TEST_CASE( PathModifiersTest, CurveSculptLayeredMovesOnlyInsideLayer )
 {
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ -1.0f, 0.0f, -1.0f }, float3{ 1.0f, 0.0f, 1.0f }, float3{ 0.0f, 0.0f, 0.0f } };
-    mesh._listNormal   = { float3::UnitY, float3::UnitY, float3::UnitY };
+    mesh._listPosition = {
+        float3{-1.0f, 0.0f, -1.0f},
+        float3{ 1.0f, 0.0f,  1.0f},
+        float3{ 0.0f, 0.0f,  0.0f}
+    };
+    mesh._listNormal                 = { float3::UnitY, float3::UnitY, float3::UnitY };
     unique_ptr<MeshModifier> layered = MeshModifierRegistry::create( "curvesculptlayered" );
     SW_ASSERT_NOT_NULL( layered.get() );
     uint32 layersIndex = 0;
     SW_ASSERT_TRUE( layered->tryGetParamIndex( "Layers", layersIndex ) );
     layered->setNumberList( layersIndex, { 0.5f, 0.5f, 0.1f, 1.0f } );
-    SW_ASSERT_TRUE( PathModifiersTestInternal::setCurve( *layered, "Shape", { float2{ 0.0f, 1.0f }, float2{ 1.0f, 1.0f } } ) );
+    SW_ASSERT_TRUE( PathModifiersTestInternal::setCurve( *layered, "Shape", {
+                                                                                float2{0.0f, 1.0f},
+                                                                                float2{1.0f, 1.0f}
+    } ) );
     test::MeshModifierTestUtil::applyOne( *layered, mesh );
     SW_EXPECT_NEAR_EQUAL( 0.0f, mesh._listPosition[0]._y, 1e-5f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, mesh._listPosition[1]._y, 1e-5f );
@@ -328,7 +347,10 @@ SW_TEST_CASE( PathModifiersTest, CurveSculptLayeredMovesOnlyInsideLayer )
 SW_TEST_CASE( PathModifiersTest, BezierAttractorPullsHalfwayAtHalfRadius )
 {
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 0.0f, 0.5f, 0.0f }, float3{ 0.0f, 5.0f, 0.0f } };
+    mesh._listPosition = {
+        float3{0.0f, 0.5f, 0.0f},
+        float3{0.0f, 5.0f, 0.0f}
+    };
     unique_ptr<MeshModifier> bezier = MeshModifierRegistry::create( "bezierattractor" );
     SW_ASSERT_NOT_NULL( bezier.get() );
     // X 축 위 곧은 베지어(-2 → 2)

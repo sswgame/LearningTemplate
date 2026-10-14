@@ -431,7 +431,8 @@ namespace sw::editor
                 if ( EditorContextMenuExtensionUtil::countEntries( EditorContextMenuKind::GameObject ) != 0 )
                 {
                     ImGui::Separator();
-                    pfnExtensionAction = EditorContextMenuExtensionUtil::visitEntries( EditorContextMenuKind::GameObject, [&]( const EditorContextMenuEntryRegistration& entry ) {
+                    pfnExtensionAction = EditorContextMenuExtensionUtil::visitEntries( EditorContextMenuKind::GameObject, [&]( const EditorContextMenuEntryRegistration& entry )
+                    {
                         return ImGui::MenuItem( entry._pLabel, nullptr, false, EditorContextMenuExtensionUtil::isEnabled( entry, extensionTarget ) );
                     } );
                 }

@@ -49,7 +49,7 @@ SW_TEST_CASE( PhotoModeCameraTest, MovesFromTheBasePoseAndRestoresOnEnd )
 SW_TEST_CASE( PhotoModeCameraTest, LensValuesStayInRange )
 {
     CameraPose base;
-    base._fieldOfViewY                     = 0.8f;
+    base._fieldOfViewY                      = 0.8f;
     base._postProcess._exposureCompensation = 0.5f;
 
     PhotoModeCamera photoMode;

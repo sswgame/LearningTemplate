@@ -28,12 +28,12 @@ namespace
 
 SW_TEST_CASE( MeshModifierPropertiesTest, RegistryHasTheFirstTwelve )
 {
-    const utf8* arrID[] = { "bend",          "twist",       "taper",       "stretch",      "wave",         "ripple",        "noise",       "melt",        "push",
-                            "poke",          "displace",    "lattice",     "ffd2",         "ffd3",         "ffd4",          "bubble",      "bulge",       "cylindrify",
-                            "globe",         "hump",        "radialskew",  "skew",         "spherify",     "squeeze",       "scale",       "sinuscurve",  "rolled",
-                            "rubber",        "simplemod",   "crumple",     "dynamicripple", "pageflip",    "treebend",      "vertnoise",   "zstretchnoise", "waving",
-                            "pivotadjust",   "displacelimits", "paint",    "curvedeform",  "curvesculpt",  "curvesculptlayered", "pathdeform", "worldpathdeform", "bezierattractor",
-                            "ropedeform",    "conform",     "conformmulti", "collisiondeform", "hitdeform", "pointcache",    "vertexanim",  "deformable",  "displacerendertarget",
+    const utf8* arrID[] = { "bend", "twist", "taper", "stretch", "wave", "ripple", "noise", "melt", "push",
+                            "poke", "displace", "lattice", "ffd2", "ffd3", "ffd4", "bubble", "bulge", "cylindrify",
+                            "globe", "hump", "radialskew", "skew", "spherify", "squeeze", "scale", "sinuscurve", "rolled",
+                            "rubber", "simplemod", "crumple", "dynamicripple", "pageflip", "treebend", "vertnoise", "zstretchnoise", "waving",
+                            "pivotadjust", "displacelimits", "paint", "curvedeform", "curvesculpt", "curvesculptlayered", "pathdeform", "worldpathdeform", "bezierattractor",
+                            "ropedeform", "conform", "conformmulti", "collisiondeform", "hitdeform", "pointcache", "vertexanim", "deformable", "displacerendertarget",
                             "displacewebcam", "ffd2d" };
     for ( const utf8* pID : arrID )
     {
@@ -72,9 +72,9 @@ SW_TEST_CASE( MeshModifierPropertiesTest, FilledParamsStayFiniteAndDeterministic
             modifier->fitToBounds( MeshModifierBounds::makeFromPoints( source._listPosition ) );
             test::MeshModifierTestUtil::fillParams( *modifier, salt );
 
-            MeshModifierMesh                 first  = source;
-            MeshModifierMesh                 second = source;
-            MeshModifierEvaluation           evaluation{};
+            MeshModifierMesh       first  = source;
+            MeshModifierMesh       second = source;
+            MeshModifierEvaluation evaluation{};
             evaluation._time = 0.75f;
             modifier->apply( first, evaluation );
             modifier->apply( second, evaluation );
@@ -95,7 +95,7 @@ SW_TEST_CASE( MeshModifierPropertiesTest, StackDocumentRoundTripsEveryModifier )
     {
         const int32 index = stack.addModifier( pRegistration->_pID );
         SW_ASSERT_TRUE( index >= 0 );
-        MeshModifier* pModifier = stack.findModifier( index );
+        MeshModifier* pModifier               = stack.findModifier( index );
         pModifier->getGizmo()._center         = float3{ 0.1f, -0.2f, 0.05f };
         pModifier->getGizmo()._rotationDegree = float3{ 5.0f, 10.0f, -15.0f };
         pModifier->getGizmo()._axisIndex      = salt % 3u;
@@ -105,7 +105,7 @@ SW_TEST_CASE( MeshModifierPropertiesTest, StackDocumentRoundTripsEveryModifier )
     }
     stack.setRecomputingNormals( true );
 
-    const string text = stack.makeJSONText( 2 );
+    const string      text = stack.makeJSONText( 2 );
     MeshModifierStack reread;
     SW_ASSERT_TRUE( reread.readJSONText( text ) );
     SW_EXPECT_EQUAL( stack.getModifierCount(), reread.getModifierCount() );
@@ -121,7 +121,7 @@ SW_TEST_CASE( MeshModifierPropertiesTest, StackDocumentRoundTripsEveryModifier )
 
 SW_TEST_CASE( MeshModifierPropertiesTest, UnknownTypeIsSkippedOnRead )
 {
-    const string text = R"({"version":1,"recomputeNormals":false,"modifiers":[{"type":"no_such_modifier"},{"type":"bend","params":{"Angle":45,"Unknown":3}}]})";
+    const string      text = R"({"version":1,"recomputeNormals":false,"modifiers":[{"type":"no_such_modifier"},{"type":"bend","params":{"Angle":45,"Unknown":3}}]})";
     MeshModifierStack stack;
     SW_ASSERT_TRUE( stack.readJSONText( text ) );
     SW_ASSERT_EQUAL( 1, stack.getModifierCount() );

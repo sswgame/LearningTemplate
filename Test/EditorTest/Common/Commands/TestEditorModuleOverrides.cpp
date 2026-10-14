@@ -103,7 +103,7 @@ SW_TEST_CASE( EditorModuleOverridesTest, BuildDetailCollectsDependentsAndOverrid
     SW_ASSERT_TRUE( catalog.addManifest( makeManifest( "GF_Farm", ModuleKind::Kit, { "GameFramework" } ), error ) );
 
     EditorModuleDetail detail;
-    SW_ASSERT_TRUE( EditorModuleOverrideUtil::buildDetail( catalog, "SWGame", "GameFramework", detail ) );
+    SW_ASSERT_TRUE( EditorModuleOverrideUtil::makeDetail( catalog, "SWGame", "GameFramework", detail ) );
     SW_EXPECT_TRUE( detail._listDependency.empty() );
     SW_ASSERT_EQUAL( size_t{ 3 }, detail._listDependent.size() );
     SW_EXPECT_TRUE( detail._listDependent[0] == "GF_Farm" );
@@ -111,7 +111,7 @@ SW_TEST_CASE( EditorModuleOverridesTest, BuildDetailCollectsDependentsAndOverrid
     SW_EXPECT_TRUE( detail._listDependent[2] == "SWGame" );
     SW_EXPECT_FALSE( detail._bHasOverride );
 
-    SW_ASSERT_TRUE( EditorModuleOverrideUtil::buildDetail( catalog, "SWGame", "GF_Farm", detail ) );
+    SW_ASSERT_TRUE( EditorModuleOverrideUtil::makeDetail( catalog, "SWGame", "GF_Farm", detail ) );
     SW_ASSERT_EQUAL( size_t{ 1 }, detail._listDependency.size() );
     SW_EXPECT_TRUE( detail._listDependency[0] == "GameFramework" );
     SW_EXPECT_TRUE( detail._listDependent.empty() );
@@ -119,5 +119,5 @@ SW_TEST_CASE( EditorModuleOverridesTest, BuildDetailCollectsDependentsAndOverrid
     SW_EXPECT_FALSE( detail._bOverrideEnabled );
     SW_EXPECT_TRUE( detail._version == "1.0.0" );
 
-    SW_EXPECT_FALSE( EditorModuleOverrideUtil::buildDetail( catalog, "SWGame", "Missing", detail ) );
+    SW_EXPECT_FALSE( EditorModuleOverrideUtil::makeDetail( catalog, "SWGame", "Missing", detail ) );
 }

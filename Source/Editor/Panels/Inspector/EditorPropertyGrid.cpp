@@ -291,11 +291,11 @@ namespace sw::editor
             {
                 auto& props = group._listProperty;
                 props.erase( std::remove_if( props.begin(), props.end(), [pInstance, pDefaultInstance]( const PropertyInfo* pProp )
-                                             { return EditorDefaultObjects::isDefaultValue( *pProp, pInstance, pDefaultInstance ); } ),
+                { return EditorDefaultObjects::isDefaultValue( *pProp, pInstance, pDefaultInstance ); } ),
                              props.end() );
             }
             listGroup.erase( std::remove_if( listGroup.begin(), listGroup.end(), []( const InspectorPropertyGroup& group )
-                                             { return group._listProperty.empty(); } ),
+            { return group._listProperty.empty(); } ),
                              listGroup.end() );
             if ( listGroup.empty() )
                 return;

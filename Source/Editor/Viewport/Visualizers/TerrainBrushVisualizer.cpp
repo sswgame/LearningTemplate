@@ -7,6 +7,7 @@
  */
 #include "pch.h"
 
+#include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
@@ -28,7 +29,7 @@ namespace sw::editor
     {
         struct TerrainBrushVisualizerInternal
         {
-            static constexpr float32 kMarchStep     = 0.5f;  ///< 레이 전진 간격(m)
+            static constexpr float32 kMarchStep     = 0.5f; ///< 레이 전진 간격(m)
             static constexpr float32 kMarchDistance = 2000.0f;
             static constexpr uint32  kRefineSteps   = 10;
             static constexpr uint32  kCircleSegment = 48;
@@ -90,7 +91,7 @@ namespace sw::editor
                 float3 previous{};
                 for ( uint32 segment = 0; segment <= kCircleSegment; ++segment )
                 {
-                    const float32 angle = 6.2831853f * static_cast<float32>( segment ) / static_cast<float32>( kCircleSegment );
+                    const float32 angle = MathUtil::kTwoPi * static_cast<float32>( segment ) / static_cast<float32>( kCircleSegment );
                     float3        point{ center._x + std::cos( angle ) * radius, center._y, center._z + std::sin( angle ) * radius };
                     if ( const TerrainComponent* pTerrain = TerrainComponent::findTerrainAt( manager, point._x, point._z ) )
                     {

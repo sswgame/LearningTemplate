@@ -17,10 +17,14 @@ namespace sw::editor
             {
                 switch ( index )
                 {
-                    case 0: return value._x;
-                    case 1: return value._y;
-                    case 2: return value._z;
-                    default: return value._w;
+                    case 0:
+                        return value._x;
+                    case 1:
+                        return value._y;
+                    case 2:
+                        return value._z;
+                    default:
+                        return value._w;
                 }
             }
         };
@@ -76,10 +80,25 @@ namespace sw::editor
             const float32 before = height;
             switch ( settings._mode )
             {
-                case TerrainBrushMode::Raise: height += amount; break;
-                case TerrainBrushMode::Lower: height -= amount; break;
-                case TerrainBrushMode::Flatten: height += ( flattenHeight - height ) * MathUtil::saturate( amount ); break;
-                case TerrainBrushMode::PaintLayer: break;
+                case TerrainBrushMode::Raise:
+                {
+                    height += amount;
+                    break;
+                }
+                case TerrainBrushMode::Lower:
+                {
+                    height -= amount;
+                    break;
+                }
+                case TerrainBrushMode::Flatten:
+                {
+                    height += ( flattenHeight - height ) * MathUtil::saturate( amount );
+                    break;
+                }
+                case TerrainBrushMode::PaintLayer:
+                {
+                    break;
+                }
             }
             bChanged = bChanged || height != before;
         }

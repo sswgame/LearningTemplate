@@ -15,11 +15,12 @@
 
 namespace sw::editor
 {
+    struct MeshModifierParamDef;
+    struct MeshModifierRegistration;
+
     class LatticeModifier;
     class MeshModifier;
     class MeshModifierSession;
-    struct MeshModifierParamDef;
-    struct MeshModifierRegistration;
 
     /**
      * @class MeshModifiersPanel
@@ -58,11 +59,11 @@ namespace sw::editor
         /** @brief 입력칸을 그린 뒤 부릅니다. 끌기가 끝났으면 다음 편집이 새 기록을 남기게 합니다. */
         void finishItem();
 
-        EditorCurveEditorState _curveState;        ///< 열린 곡선 편집기 팝업 하나의 상태
-        const MeshModifier*    _pCurveModifier;    ///< 곡선 팝업을 연 모디파이어(그 프레임 안에서 비교만 한다 — 역참조하지 않는다)
-        uint32                 _curveParamIndex;   ///< 곡선 팝업을 연 매개변수 번호
-        string                 _descriptionID;     ///< 설명을 만들어 둔 등록 id
-        string                 _description;       ///< `_descriptionID` 모디파이어의 설명
+        EditorCurveEditorState _curveState;      ///< 열린 곡선 편집기 팝업 하나의 상태
+        const MeshModifier*    _pCurveModifier;  ///< 곡선 팝업을 연 모디파이어(그 프레임 안에서 비교만 한다 — 역참조하지 않는다)
+        uint32                 _curveParamIndex; ///< 곡선 팝업을 연 매개변수 번호
+        string                 _descriptionID;   ///< 설명을 만들어 둔 등록 id
+        string                 _description;     ///< `_descriptionID` 모디파이어의 설명
         bool                   _bEditing;
     };
 } // namespace sw::editor

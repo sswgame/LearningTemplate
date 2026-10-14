@@ -10,14 +10,14 @@
  */
 #include "pch.h"
 
-#include <cstring>
-
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifier.h"
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifierRegistry.h"
+
+#include <cstring>
 
 namespace sw::editor
 {
@@ -39,25 +39,25 @@ namespace sw::editor
             static constexpr size_t kHeaderSize = 12;
 
             // 파일 확장자는 .mfpc(mesh-modifier point cache)다. 이 모디파이어가 정한 형식이며, 에셋 슬롯 필터도 이 확장자만 받는다.
-            static bool load( string_view path, PointCacheData& outData )
+            [[nodiscard]] static bool load( string_view path, PointCacheData& outData )
             {
-                outData                   = PointCacheData{};
-                outData._path             = string( path );
-                vector<uint8> listByte;
-                if ( FileUtil::readFile( path, listByte ) == false || listByte.size() < kHeaderSize )
+                outData       = PointCacheData{};
+                outData._path = string( path );
+                vector<uint8> bytes;
+                if ( FileUtil::readFile( path, bytes ) == false || bytes.size() < kHeaderSize )
                     return false;
                 uint32  vertexCount = 0;
                 uint32  frameCount  = 0;
                 float32 fps         = 0.0f;
-                std::memcpy( &vertexCount, listByte.data(), 4 );
-                std::memcpy( &frameCount, listByte.data() + 4, 4 );
-                std::memcpy( &fps, listByte.data() + 8, 4 );
+                std::memcpy( &vertexCount, bytes.data(), 4 );
+                std::memcpy( &frameCount, bytes.data() + 4, 4 );
+                std::memcpy( &fps, bytes.data() + 8, 4 );
                 const uint64 floatCount = static_cast<uint64>( vertexCount ) * frameCount * 3;
                 if ( vertexCount == 0 || frameCount == 0 || MathUtil::isFinite( fps ) == false || fps <= 0.0f ||
-                     listByte.size() != kHeaderSize + floatCount * sizeof( float32 ) )
+                     bytes.size() != kHeaderSize + floatCount * sizeof( float32 ) )
                     return false;
                 outData._listFramePosition.resize( static_cast<size_t>( vertexCount ) * frameCount );
-                std::memcpy( outData._listFramePosition.data(), listByte.data() + kHeaderSize, static_cast<size_t>( floatCount * sizeof( float32 ) ) );
+                std::memcpy( outData._listFramePosition.data(), bytes.data() + kHeaderSize, static_cast<size_t>( floatCount * sizeof( float32 ) ) );
                 for ( const float3& value : outData._listFramePosition )
                 {
                     if ( MathUtil::isFinite( value._x ) == false || MathUtil::isFinite( value._y ) == false || MathUtil::isFinite( value._z ) == false )
@@ -78,16 +78,15 @@ namespace sw::editor
     public:
         PointCacheModifier()
             : MeshModifier()
-            , _cache{}
+            , _cache{
+        }
             , _bCacheTried{ false }
-            , _fileParam{ addParam( MeshModifierParamDef{ "Cache File", MeshModifierParamKind::AssetPath, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f }, 1,
-                                                          "Point cache file (u32 vertices, u32 frames, f32 fps, float3 frames)" }
-                                                          .withLayout( "Cache", "Binary point cache file with per-frame vertex positions in mesh space" )
-                                                          // 캐시 파일 확장자는 이 모디파이어가 정한 .mfpc(mesh-modifier point cache)다 — load() 위 주석과 같다.
-                                                          .withAssetFilter( ".mfpc" ) ) }
-            , _speedParam{ addParam( MeshModifierParamDef{ "Speed", MeshModifierParamKind::Float, -10.0f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Playback", "Playback speed multiplier (negative plays backward)", "x" ) ) }
-            , _timeOffsetParam{ addParam( MeshModifierParamDef{ "Time Offset", MeshModifierParamKind::Float, -1000.0f, 1000.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Playback", "Time added before converting to a cache frame", "s" ) ) }
-            , _loopParam{ addParam( MeshModifierParamDef{ "Loop", MeshModifierParamKind::Bool, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Playback", "Wrap around at the end instead of holding the last frame" ) ) }
+            , _fileParam{ addParam( MeshModifierParamDef{ "Cache File", MeshModifierParamKind::AssetPath, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "Point cache file (u32 vertices, u32 frames, f32 fps, float3 frames)" }.withLayout( "Cache", "Binary point cache file with per-frame vertex positions in mesh space" )
+                                        // 캐시 파일 확장자는 이 모디파이어가 정한 .mfpc(mesh-modifier point cache)다 — load() 위 주석과 같다.
+                                        .withAssetFilter( ".mfpc" ) ) },
+            _speedParam{ addParam( MeshModifierParamDef{ "Speed", MeshModifierParamKind::Float, -10.0f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Playback", "Playback speed multiplier (negative plays backward)", "x" ) ) },
+            _timeOffsetParam{ addParam( MeshModifierParamDef{ "Time Offset", MeshModifierParamKind::Float, -1000.0f, 1000.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Playback", "Time added before converting to a cache frame", "s" ) ) },
+            _loopParam{ addParam( MeshModifierParamDef{ "Loop", MeshModifierParamKind::Bool, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Playback", "Wrap around at the end instead of holding the last frame" ) ) }
         {
         }
 
@@ -129,10 +128,10 @@ namespace sw::editor
             const float32 ratio  = pCache->_frameCount > 1 ? MathUtil::saturate( frame - static_cast<float32>( frameA ) ) : 0.0f;
 
             // 캐시는 메시 로컬 — 로컬 → 월드 → 모디파이어 공간(행 벡터 규약)
-            const float4x4  localToModifier = context._pEvaluation->_meshToWorld * context._worldToModifier;
-            const size_t    vertexCount     = inoutMesh.getVertexCount();
-            const float3*   pFrameA         = pCache->_listFramePosition.data() + static_cast<size_t>( frameA ) * vertexCount;
-            const float3*   pFrameB         = pCache->_listFramePosition.data() + static_cast<size_t>( frameB ) * vertexCount;
+            const float4x4 localToModifier = context._pEvaluation->_meshToWorld * context._worldToModifier;
+            const size_t   vertexCount     = inoutMesh.getVertexCount();
+            const float3*  pFrameA         = pCache->_listFramePosition.data() + static_cast<size_t>( frameA ) * vertexCount;
+            const float3*  pFrameB         = pCache->_listFramePosition.data() + static_cast<size_t>( frameB ) * vertexCount;
             for ( size_t index = 0; index < vertexCount; ++index )
             {
                 const float32 weight = MathUtil::saturate( inoutMesh.getWeight( index ) );

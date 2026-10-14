@@ -53,15 +53,15 @@
 
 - **Displace Limits** 는 기본으로 결과 위치를 상자 · 구 안으로 자르고, `Clamp Displacement` 를 켜면 스택 입력(변형 전) 위치 대비 **변위량**을 자른다. 원본 위치는 `needsOriginalPosition()` 이 true 인 모디파이어가
   있을 때만 스택이 복사해 `MeshModifierContext::_pListOriginalPosition` / `MeshModifierPoint::_originalPosition` 으로 넘긴다. 켠 동안은 CPU 전용이다.
-- **경로 계열**(Path Deform · World Path Deform · Rope Deform)은 회전 최소화 프레임(이중 반사법)으로 단면을 경로에 따라 전파한다(`PathModifierUtil::buildRotationMinimizingFrames`, 적용마다 128 구간 표를 한 번 만든다).
+- **경로 계열**(Path Deform · World Path Deform · Rope Deform)은 회전 최소화 프레임(이중 반사법)으로 단면을 경로에 따라 전파한다(`PathModifierUtil::computeRotationMinimizingFrames`, 적용마다 128 구간 표를 한 번 만든다).
   직선 경로와 기준 축이 평면 법선인 평면 경로에서는 예전 결과와 같다. 기준 축이 경로 평면 안에 있는 평면 경로에서는 예전 고정 축 프레임이 중간에서 뒤집혔고 지금은 뒤집히지 않는다. 같은 모디파이어 인스턴스를 두 스레드에서 동시에 적용하면 캐시가 경합한다.
 - **Conform / Conform Multi** 는 엔진에 이미 있는 `SurfaceBvh`(`Engine/Character/Fit/SurfaceBvh.h`, 최근접점 · 광선 질의)로 대상 삼각형을 한 번 BVH 로 만들어 정점마다 묻는다(`PathModifierUtil::conformMesh`).
   `SurfaceBvh` 의 질의는 멤버 스크래치를 써서 한 인스턴스를 한 스레드에서만 묻는다 — 정점 병렬화를 하려면 스레드마다 BVH 를 두거나 질의를 상태 없는 형태로 바꿔야 한다. 적용마다 BVH 를 새로 만든다(대상이 안 바뀌면 캐시할 수 있다).
 - **Curve Sculpt Layered** 는 층마다 곡선이 없고 Shape 곡선 하나를 공유한다(매개변수에 곡선 목록 종류가 없다). **Conform Multi** 는 참조 목록 대신 칸 4개다(참조 목록 종류가 없다).
 - **Deformable** 은 하위 스택을 품지만 패널에서 편집하는 UI 가 없다. 하위 스택은 `extra.stack` 한 줄 JSON 으로 저장된다.
 - **Point Cache** 는 경로를 파일 경로로 그대로 읽는다(리소스 id 를 절대 경로로 푸는 일은 엔진 서비스가 필요하다).
-- **Displace 계열** 은 세션의 `trySampleTexture` 가 CPU 텍스처 표본기(`Stack/MeshModifierTextureSampler`)를 부른다. 이미지를 float4 텍셀로 디코드해 캐시하고(`stb_image` 를 표본기 .cpp 안에 정적으로 넣었다 —
-  확장 모듈이 쓸 수 있는 엔진 디코드 함수가 없어서), 이중선형 · Repeat 로 표본한다. 파일이 바뀌면 최대 1 초 뒤 다시 읽는다. 4096² 한 장이 256 MB 이고 메모리 상한은 없다. 웹캠은 정적 프레임으로 대체한다.
+- **Displace 계열** 은 세션의 `trySampleTexture` 가 CPU 텍스처 표본기(`Stack/MeshModifierTextureSampler`)를 부른다. 이미지를 float4 텍셀로 디코드해 캐시하고(디코드는 Editor 의 `ImageUtil::loadFloat4FromMemory`),
+  이중선형 · Repeat 로 표본한다. 파일이 바뀌면 최대 1 초 뒤 다시 읽는다. 4096² 한 장이 256 MB 이고 메모리 상한은 없다. 웹캠은 정적 프레임으로 대체한다.
 - **Rolled** 는 한 바퀴를 넘으면 겹이 같은 반경에 겹친다. 값 노이즈 해시는 `Stack/MeshModifierNoise.h` 한 곳이다(VertexAnim 만 해시 식이 달라 `hashToUnit` · `valueNoise1D` 로 따로 둔다).
 - **뷰포트 편집**(`MeshModifiersVisualizer` + 순수 계산 `Stack/ModifierGizmoLogic`): 기즈모 이동 화살표 · 회전 고리, 범위 표시(반경 · 한계 · 중심 · 방향 — 힌트 다음 이름 규칙),
   격자 · ffd2d 제어점 클릭 고르기와 끌기(대칭은 세션 설정). 회전 고리는 기준 축 둘레 증분 회전을 곱한 뒤 Rz·Ry·Rx 오일러로 다시 푼다(`applyRotationDelta`, 짐벌 근처는 X 를 0 으로 두고 Z 에 몰아 유한하게 만든다). 손잡이를 집는 순간

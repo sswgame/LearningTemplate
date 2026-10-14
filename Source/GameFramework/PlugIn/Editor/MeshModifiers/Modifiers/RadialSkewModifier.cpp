@@ -18,7 +18,10 @@ namespace sw::editor
     public:
         RadialSkewModifier()
             : MeshModifier()
-            , _angleParam{ addParam( MeshModifierParamDef{ "Angle", MeshModifierParamKind::Float, -85.0f, 85.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Outward lean of the sides (0 = no change, negative narrows toward the top)", "deg" ) ) }
+            , _angleParam{
+                  addParam( MeshModifierParamDef{ "Angle", MeshModifierParamKind::Float, -85.0f, 85.0f, float3{ 0.0f, 0.0f, 0.0f } }
+                                .withLayout( nullptr, "Outward lean of the sides (0 = no change, negative narrows toward the top)", "deg" ) )
+        }
         {
         }
 

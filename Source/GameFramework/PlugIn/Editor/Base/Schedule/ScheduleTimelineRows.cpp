@@ -32,7 +32,7 @@ namespace sw::editor
         return -1;
     }
 
-    void ScheduleTimelineRows::build( const vector<ScheduleSegment>& listSegment, int32 previewMinute, vector<ScheduleTimelineRow>& outListRow )
+    void ScheduleTimelineRows::populate( const vector<ScheduleSegment>& listSegment, int32 previewMinute, vector<ScheduleTimelineRow>& outListRow )
     {
         outListRow.clear();
         outListRow.reserve( listSegment.size() );

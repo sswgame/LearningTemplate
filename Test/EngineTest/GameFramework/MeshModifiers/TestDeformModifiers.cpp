@@ -24,7 +24,11 @@ SW_TEST_CASE( DeformModifiersTest, BendQuarterTurnLaysTheTopSideways )
 {
     // 주축 Y 길이 4, 90 도 휘기 → 반지름 r = 4 / (π/2). 원점에서 위로 2 인 점은 π/4 만큼 감겨 (휨 방향 = 다음 축 Z) r(1 - cos π/4) 로 눕는다
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 0.0f, -2.0f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 2.0f, 0.0f } };
+    mesh._listPosition = {
+        float3{0.0f, -2.0f, 0.0f},
+        float3{0.0f,  0.0f, 0.0f},
+        float3{0.0f,  2.0f, 0.0f}
+    };
     unique_ptr<MeshModifier> bend = MeshModifierRegistry::create( "bend" );
     SW_ASSERT_NOT_NULL( bend.get() );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *bend, "Angle", 90.0f ) );
@@ -41,7 +45,11 @@ SW_TEST_CASE( DeformModifiersTest, BendQuarterTurnLaysTheTopSideways )
 SW_TEST_CASE( DeformModifiersTest, TwistKeepsPointsOnTheAxis )
 {
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 0.0f, -2.0f, 0.0f }, float3{ 0.0f, 2.0f, 0.0f }, float3{ 1.0f, 2.0f, 0.0f } };
+    mesh._listPosition = {
+        float3{0.0f, -2.0f, 0.0f},
+        float3{0.0f,  2.0f, 0.0f},
+        float3{1.0f,  2.0f, 0.0f}
+    };
     unique_ptr<MeshModifier> twist = MeshModifierRegistry::create( "twist" );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *twist, "Angle", 180.0f ) );
     test::MeshModifierTestUtil::applyOne( *twist, mesh );
@@ -90,9 +98,15 @@ SW_TEST_CASE( DeformModifiersTest, NoiseIsSeedDeterministicAndSeedSensitive )
 SW_TEST_CASE( DeformModifiersTest, PushMovesAlongNormalAndWeightScalesIt )
 {
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 0.0f, 0.0f } };
-    mesh._listNormal   = { float3{ 0.0f, 1.0f, 0.0f }, float3{ 0.0f, 1.0f, 0.0f } };
-    mesh._listWeight   = { 1.0f, 0.5f };
+    mesh._listPosition = {
+        float3{0.0f, 0.0f, 0.0f},
+        float3{1.0f, 0.0f, 0.0f}
+    };
+    mesh._listNormal = {
+        float3{0.0f, 1.0f, 0.0f},
+        float3{0.0f, 1.0f, 0.0f}
+    };
+    mesh._listWeight              = { 1.0f, 0.5f };
     unique_ptr<MeshModifier> push = MeshModifierRegistry::create( "push" );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *push, "Amount", 2.0f ) );
     test::MeshModifierTestUtil::applyOne( *push, mesh );

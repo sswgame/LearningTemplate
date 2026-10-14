@@ -238,28 +238,28 @@ namespace sw
         /** @brief `_cachedLayerIndex` 가 아직 정해지지 않았음을 나타내는 무효값입니다. */
         static constexpr uint32 kInvalidLayerIndex = invalid_index::kUint32;
 
-        hashed_string  _layer{};
-        BindingKind    _kind{ BindingKind::SingleSlot };
-        ActionTrigger  _trigger{ ActionTrigger::Pressed };
-        uint8          _deviceIndex{ 0 };
-        uint8          _modifierMask{ 0 }; /**< ModifierKey::Ctrl | Shift | Alt | Super */
-        InputSlot      _arrSlot[4]{};      /**< SingleSlot[0], Axis1D[0=Neg,1=Pos], Vector2D[0=Up,1=Down,2=Left,3=Right], Chord[0=Mod,1=Trig] */
-        GamepadStick   _stick{ GamepadStick::Left };
-        float32        _deadzone{ 0.0f };
-        float32        _outerDeadzone{ 1.0f };
-        float32        _responseExponent{ 1.0f };
-        float32        _scale{ 1.0f };                          /**< MouseDelta2D · MouseWheel1D: 감도 배율. VirtualJoystick2D: 드래그 반경(px). */
-        float2         _axisScale{ 1.0f, 1.0f };                /**< GamepadStick2D: 축마다 배율(언리얼 Enhanced Input 의 Scale). 마우스 Y 는 아래가 +라 스틱을 Look 에 묶으려면 Y 를 음수로 둔다. */
-        bool           _bScaleByDelta{ false };                 /**< GamepadStick2D: 프레임 시간을 곱한다(Scale By Delta Time). 배율을 초당 값(픽셀/초)으로 적을 수 있다. */
+        hashed_string _layer{};
+        BindingKind   _kind{ BindingKind::SingleSlot };
+        ActionTrigger _trigger{ ActionTrigger::Pressed };
+        uint8         _deviceIndex{ 0 };
+        uint8         _modifierMask{ 0 }; /**< ModifierKey::Ctrl | Shift | Alt | Super */
+        InputSlot     _arrSlot[4]{};      /**< SingleSlot[0], Axis1D[0=Neg,1=Pos], Vector2D[0=Up,1=Down,2=Left,3=Right], Chord[0=Mod,1=Trig] */
+        GamepadStick  _stick{ GamepadStick::Left };
+        float32       _deadzone{ 0.0f };
+        float32       _outerDeadzone{ 1.0f };
+        float32       _responseExponent{ 1.0f };
+        float32       _scale{ 1.0f };           /**< MouseDelta2D · MouseWheel1D: 감도 배율. VirtualJoystick2D: 드래그 반경(px). */
+        float2        _axisScale{ 1.0f, 1.0f }; /**< GamepadStick2D: 축마다 배율(언리얼 Enhanced Input 의 Scale). 마우스 Y 는 아래가 +라 스틱을 Look 에 묶으려면 Y 를 음수로 둔다. */
+        bool          _bScaleByDelta{ false };  /**< GamepadStick2D: 프레임 시간을 곱한다(Scale By Delta Time). 배율을 초당 값(픽셀/초)으로 적을 수 있다. */
         /**
          * @brief 이 바인딩의 발화 시간(초)입니다. 0 이면 맵 전체 값을 씁니다(`InputMap::getEffectiveTriggerTime`).
          * @details Hold · HoldAndRelease 는 누를 시간, Tap 은 떼야 할 최대 시간, Pulse 는 반복 간격, DoubleTap · DoubleClicked 는 두 누름 사이 최대 간격이다.
          *          언리얼 Enhanced Input 의 트리거마다 시간(Hold Time Threshold · Tap Release Time Threshold · Pulse Interval),
          *          유니티 Input System 의 Interaction 마다 duration 에 해당한다. 같은 맵에서 짧은 차지와 긴 차지를 함께 쓸 수 있다.
          */
-        float32        _triggerTime{ 0.0f };
+        float32 _triggerTime{ 0.0f };
         /** @brief 바인딩 값의 부호를 뒤집습니다(언리얼 Negate 모디파이어, 유니티 Invert 프로세서). 눌림과 발화는 그대로이고 값만 바뀐다. */
-        bool           _bNegate{ false };
+        bool _bNegate{ false };
         /** @brief MultiTap 이 발화하는 누름 횟수입니다(2 이상). 다른 트리거는 쓰지 않는다. XML 의 `taps` 속성이며 기본값 2 는 적지 않는다. */
         uint8          _tapCount{ 2 };
         mutable uint32 _cachedLayerIndex{ kInvalidLayerIndex }; /**< `_listLayerEntry` 의 안정된 인덱스입니다. 포인터가 아니라 인덱스라서 재할당되어도 안전합니다. */
@@ -517,7 +517,7 @@ namespace sw
         const vector<hashed_string>& getActionNames() const { return _listActionName; }
         ActionTrigger                getBindingTrigger( const hashed_string& action, uint32 bindIndex ) const;
         /** @brief 바인딩 @p bindIndex 의 발화 규칙을 바꿉니다(에디터용). 액션이나 바인딩이 없으면 false 입니다. */
-        [[nodiscard]] bool   setBindingTrigger( const hashed_string& action, uint32 bindIndex, ActionTrigger trigger );
+        [[nodiscard]] bool setBindingTrigger( const hashed_string& action, uint32 bindIndex, ActionTrigger trigger );
         /**
          * @brief 바인딩 @p bindIndex 의 발화 시간(`ActionBinding::_triggerTime`)을 바꿉니다. 0 이하면 맵 전체 값으로 돌아갑니다.
          * @details 맵 정의의 일부라서 기본 바인딩(`resetActionToDefault` 가 되돌리는 대상)에도 같이 적는다. 액션이나 바인딩이 없으면 false 입니다.
@@ -530,7 +530,7 @@ namespace sw
         /** @brief 바인딩이 발화하는 데 필요한 누름 횟수입니다. MultiTap 은 `_tapCount`, DoubleTap · DoubleClicked 는 2, 나머지는 0 입니다. */
         static uint32 getRequiredTapCount( const ActionBinding& binding );
         /** @brief 바인딩의 트리거가 실제로 쓰는 시간(초)입니다. 바인딩 값이 0 이면 트리거별 맵 값입니다. 시간을 쓰지 않는 트리거는 0 입니다. */
-        float32 getEffectiveTriggerTime( const ActionBinding& binding ) const;
+        float32              getEffectiveTriggerTime( const ActionBinding& binding ) const;
         uint32               getBindingCount( const hashed_string& action ) const;
         const ActionBinding* getBinding( const hashed_string& action, uint32 bindIndex ) const;
 

@@ -74,7 +74,7 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorModuleOverrideUtil::buildDetail( const ModuleCatalog& catalog, string_view projectModule, string_view moduleName, EditorModuleDetail& outDetail )
+    bool EditorModuleOverrideUtil::makeDetail( const ModuleCatalog& catalog, string_view projectModule, string_view moduleName, EditorModuleDetail& outDetail )
     {
         outDetail                       = EditorModuleDetail{};
         const ModuleManifest* pManifest = catalog.findManifest( moduleName );

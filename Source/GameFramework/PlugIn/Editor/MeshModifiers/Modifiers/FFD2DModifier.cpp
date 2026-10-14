@@ -49,18 +49,18 @@ namespace sw::editor
     public:
         /** @brief Offsets 표의 열 — 제어점 하나의 dx · dy(stride 2, 상자 크기 비율). */
         static constexpr MeshModifierListColumn kArrColumn[] = {
-            { "dX", MeshModifierListColumnKind::Float },
-            { "dY", MeshModifierListColumnKind::Float },
+            {"dX", MeshModifierListColumnKind::Float},
+            {"dY", MeshModifierListColumnKind::Float},
         };
 
         FFD2DModifier()
             : MeshModifier()
-            , _resolutionXParam{ addParam( MeshModifierParamDef{ "Resolution X", MeshModifierParamKind::Int, 2.0f, 8.0f, float3{ 3.0f, 0.0f, 0.0f } }.withLayout( "Lattice", "Control point count along X" ) ) }
-            , _resolutionYParam{ addParam( MeshModifierParamDef{ "Resolution Y", MeshModifierParamKind::Int, 2.0f, 8.0f, float3{ 3.0f, 0.0f, 0.0f } }.withLayout( "Lattice", "Control point count along Y" ) ) }
-            , _offsetsParam{ addParam( MeshModifierParamDef{ "Offsets", MeshModifierParamKind::NumberList, -2.0f, 2.0f, float3{ 0.0f, 0.0f, 0.0f }, 2,
-                                                             "dx dy per control point (i + resX * j), box-size ratio" }
-                                                             .withColumns( kArrColumn )
-                                                             .withLayout( "Control Points", "Control point offsets as a ratio of the box size" ) ) }
+            , _resolutionXParam{
+                  addParam( MeshModifierParamDef{ "Resolution X", MeshModifierParamKind::Int, 2.0f, 8.0f, float3{ 3.0f, 0.0f, 0.0f } }
+                                .withLayout( "Lattice", "Control point count along X" ) )
+        },
+            _resolutionYParam{ addParam( MeshModifierParamDef{ "Resolution Y", MeshModifierParamKind::Int, 2.0f, 8.0f, float3{ 3.0f, 0.0f, 0.0f } }.withLayout( "Lattice", "Control point count along Y" ) ) },
+            _offsetsParam{ addParam( MeshModifierParamDef{ "Offsets", MeshModifierParamKind::NumberList, -2.0f, 2.0f, float3{ 0.0f, 0.0f, 0.0f }, 2, "dx dy per control point (i + resX * j), box-size ratio" }.withColumns( kArrColumn ).withLayout( "Control Points", "Control point offsets as a ratio of the box size" ) ) }
         {
         }
 
@@ -71,9 +71,9 @@ namespace sw::editor
             const vector<float32>& listOffset = getNumberList( _offsetsParam );
             if ( listOffset.empty() )
                 return point._position;
-            const float3  size = context._bounds.getSize();
-            const bool    bUseX = context._bounds.isValid() && size._x > MathUtil::kEpsilon;
-            const bool    bUseY = context._bounds.isValid() && size._y > MathUtil::kEpsilon;
+            const float3 size  = context._bounds.getSize();
+            const bool   bUseX = context._bounds.isValid() && size._x > MathUtil::kEpsilon;
+            const bool   bUseY = context._bounds.isValid() && size._y > MathUtil::kEpsilon;
             if ( bUseX == false && bUseY == false )
                 return point._position;
             const int32   countX = MathUtil::clamp( getInt( _resolutionXParam ), FFD2DModifierInternal::kMinResolution, FFD2DModifierInternal::kMaxResolution );

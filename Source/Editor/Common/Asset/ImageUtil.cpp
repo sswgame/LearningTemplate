@@ -131,4 +131,59 @@ namespace sw::editor
         stbi_image_free( pDecoded );
         return true;
     }
+
+    bool ImageUtil::loadFloat4FromMemory( const uint8* pBuffer, size_t bufferSize, vector<float4>& outListTexel, int32& outWidth, int32& outHeight )
+    {
+        outListTexel.clear();
+        outWidth  = 0;
+        outHeight = 0;
+        if ( pBuffer == nullptr || bufferSize == 0 || bufferSize > static_cast<size_t>( MathUtil::kMaxInt32 ) )
+        {
+            SW_LOG_ERROR( "Image buffer is empty or larger than stb_image can address (%# bytes).", bufferSize );
+            return false;
+        }
+        const int32 byteCount = static_cast<int32>( bufferSize );
+        int32       width     = 0;
+        int32       height    = 0;
+        int32       channels  = 0;
+        if ( stbi_is_hdr_from_memory( pBuffer, byteCount ) != 0 )
+        {
+            float32* pDecoded = stbi_loadf_from_memory( pBuffer, byteCount, &width, &height, &channels, 4 );
+            if ( pDecoded == nullptr )
+            {
+                SW_LOG_ERROR( "stbi_loadf_from_memory failed: %#", stbi_failure_reason() );
+                return false;
+            }
+            const size_t texelCount = static_cast<size_t>( width ) * static_cast<size_t>( height );
+            outListTexel.resize( texelCount );
+            for ( size_t texelIndex = 0; texelIndex < texelCount; ++texelIndex )
+            {
+                outListTexel[texelIndex] = float4{ pDecoded[texelIndex * 4 + 0], pDecoded[texelIndex * 4 + 1], pDecoded[texelIndex * 4 + 2], pDecoded[texelIndex * 4 + 3] };
+            }
+            stbi_image_free( pDecoded );
+        }
+        else
+        {
+            uint8* pDecoded = stbi_load_from_memory( pBuffer, byteCount, &width, &height, &channels, 4 );
+            if ( pDecoded == nullptr )
+            {
+                SW_LOG_ERROR( "stbi_load_from_memory failed: %#", stbi_failure_reason() );
+                return false;
+            }
+            constexpr float32 kByteToUnit = 1.0f / 255.0f;
+            const size_t      texelCount  = static_cast<size_t>( width ) * static_cast<size_t>( height );
+            outListTexel.resize( texelCount );
+            for ( size_t texelIndex = 0; texelIndex < texelCount; ++texelIndex )
+            {
+                outListTexel[texelIndex] = float4{ static_cast<float32>( pDecoded[texelIndex * 4 + 0] ) * kByteToUnit,
+                                                   static_cast<float32>( pDecoded[texelIndex * 4 + 1] ) * kByteToUnit,
+                                                   static_cast<float32>( pDecoded[texelIndex * 4 + 2] ) * kByteToUnit,
+                                                   static_cast<float32>( pDecoded[texelIndex * 4 + 3] ) * kByteToUnit };
+            }
+            stbi_image_free( pDecoded );
+        }
+        outWidth  = width;
+        outHeight = height;
+        return true;
+    }
 } // namespace sw::editor

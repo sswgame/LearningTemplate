@@ -4,6 +4,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "EngineTest/GameFramework/MeshModifiers/MeshModifierTestUtil.h"
+
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Modifiers/DeformableModifier.h"
 
 #include "TestFramework/TestFramework.h"
@@ -76,7 +77,11 @@ SW_TEST_CASE( DataModifiersTest, CollisionDeformPushesPointsOutOfSphereAndKeepsO
     SW_ASSERT_TRUE( modifier != nullptr );
     // 반지름 1 구(원점)
     SW_EXPECT_TRUE( DataModifiersTestInternal::setNumberList( *modifier, "Colliders", vector<float32>{ 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f } ) );
-    MeshModifierMesh mesh = DataModifiersTestInternal::makePointMesh( vector<float3>{ float3{ 0.5f, 0.0f, 0.0f }, float3{ 0.0f, -0.25f, 0.0f }, float3{ 2.0f, 0.0f, 0.0f } } );
+    MeshModifierMesh mesh = DataModifiersTestInternal::makePointMesh( vector<float3>{
+        float3{0.5f,   0.0f, 0.0f},
+        float3{0.0f, -0.25f, 0.0f},
+        float3{2.0f,   0.0f, 0.0f}
+    } );
     test::MeshModifierTestUtil::applyOne( *modifier, mesh );
     SW_EXPECT_TRUE( DataModifiersTestInternal::isNear( mesh._listPosition[0], float3{ 1.0f, 0.0f, 0.0f } ) );
     SW_EXPECT_TRUE( DataModifiersTestInternal::isNear( mesh._listPosition[1], float3{ 0.0f, -1.0f, 0.0f } ) );
@@ -89,7 +94,11 @@ SW_TEST_CASE( DataModifiersTest, HitDeformDentsInsideRadiusOnly )
     SW_ASSERT_TRUE( modifier != nullptr );
     // 원점 충돌, 아래 방향, 반경 1, 세기 0.5, 감쇠 0(선형)
     SW_EXPECT_TRUE( DataModifiersTestInternal::setNumberList( *modifier, "Hits", vector<float32>{ 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.5f, 0.0f } ) );
-    MeshModifierMesh mesh = DataModifiersTestInternal::makePointMesh( vector<float3>{ float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.5f, 0.0f, 0.0f }, float3{ 3.0f, 0.0f, 0.0f } } );
+    MeshModifierMesh mesh = DataModifiersTestInternal::makePointMesh( vector<float3>{
+        float3{0.0f, 0.0f, 0.0f},
+        float3{0.5f, 0.0f, 0.0f},
+        float3{3.0f, 0.0f, 0.0f}
+    } );
     test::MeshModifierTestUtil::applyOne( *modifier, mesh );
     SW_EXPECT_TRUE( DataModifiersTestInternal::isNear( mesh._listPosition[0], float3{ 0.0f, -0.5f, 0.0f } ) );
     SW_EXPECT_TRUE( DataModifiersTestInternal::isNear( mesh._listPosition[1], float3{ 0.5f, -0.25f, 0.0f } ) );
@@ -99,12 +108,16 @@ SW_TEST_CASE( DataModifiersTest, HitDeformDentsInsideRadiusOnly )
 SW_TEST_CASE( DataModifiersTest, PointCacheInterpolatesFramesAndSkipsMismatchedMesh )
 {
     // 정점 2 · 프레임 2 · fps 1. 프레임 1 은 프레임 0 을 x 로 2 만큼 옮긴 것
-    const vector<float3> listFrame0{ float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f } };
-    vector<uint8>        listByte;
-    const uint32         vertexCount = 2;
-    const uint32         frameCount  = 2;
-    const float32        fps         = 1.0f;
-    const auto           appendBytes = [&listByte]( const void* pData, size_t size ) {
+    const vector<float3> listFrame0{
+        float3{0.0f, 0.0f, 0.0f},
+        float3{1.0f, 1.0f, 1.0f}
+    };
+    vector<uint8> listByte;
+    const uint32  vertexCount = 2;
+    const uint32  frameCount  = 2;
+    const float32 fps         = 1.0f;
+    const auto    appendBytes = [&listByte]( const void* pData, size_t size )
+    {
         const uint8* pByte = static_cast<const uint8*>( pData );
         listByte.insert( listByte.end(), pByte, pByte + size );
     };
@@ -129,13 +142,18 @@ SW_TEST_CASE( DataModifiersTest, PointCacheInterpolatesFramesAndSkipsMismatchedM
 
     MeshModifierEvaluation evaluation{};
     evaluation._time      = 0.25f;
-    MeshModifierMesh mesh = DataModifiersTestInternal::makePointMesh( vector<float3>{ float3{ 5.0f, 5.0f, 5.0f }, float3{ -5.0f, 0.0f, 0.0f } } );
+    MeshModifierMesh mesh = DataModifiersTestInternal::makePointMesh( vector<float3>{
+        float3{ 5.0f, 5.0f, 5.0f},
+        float3{-5.0f, 0.0f, 0.0f}
+    } );
     modifier->apply( mesh, evaluation );
     SW_EXPECT_TRUE( DataModifiersTestInternal::isNear( mesh._listPosition[0], float3{ 0.5f, 0.0f, 0.0f } ) );
     SW_EXPECT_TRUE( DataModifiersTestInternal::isNear( mesh._listPosition[1], float3{ 1.5f, 1.0f, 1.0f } ) );
 
     // 정점 수가 다르면 항등
-    MeshModifierMesh other = DataModifiersTestInternal::makePointMesh( vector<float3>{ float3{ 5.0f, 5.0f, 5.0f } } );
+    MeshModifierMesh other = DataModifiersTestInternal::makePointMesh( vector<float3>{
+        float3{ 5.0f, 5.0f, 5.0f }
+    } );
     modifier->apply( other, evaluation );
     SW_EXPECT_TRUE( other._listPosition[0] == ( float3{ 5.0f, 5.0f, 5.0f } ) );
 }
@@ -151,9 +169,9 @@ SW_TEST_CASE( DataModifiersTest, VertexAnimIsDeterministicAndMovesOverTime )
 
     const MeshModifierMesh source = test::MeshModifierTestUtil::makeBoxMesh( 2 );
     MeshModifierEvaluation evaluation{};
-    evaluation._time         = 0.3f;
-    MeshModifierMesh first   = source;
-    MeshModifierMesh second  = source;
+    evaluation._time        = 0.3f;
+    MeshModifierMesh first  = source;
+    MeshModifierMesh second = source;
     modifier->apply( first, evaluation );
     modifier->apply( second, evaluation );
     SW_EXPECT_TRUE( test::MeshModifierTestUtil::isBitwiseEqual( first._listPosition, second._listPosition ) );
@@ -210,7 +228,7 @@ SW_TEST_CASE( DataModifiersTest, TextureDisplaceMovesAlongNormalWithInputs )
         modifier->setText( pathIndex, "Texture/Height.png" );
         SW_EXPECT_TRUE( test::MeshModifierTestUtil::setScalar( *modifier, "Amount", 0.5f ) );
 
-        const MeshModifierMesh source = test::MeshModifierTestUtil::makeBoxMesh( 1 );
+        const MeshModifierMesh source  = test::MeshModifierTestUtil::makeBoxMesh( 1 );
         MeshModifierMesh       noInput = source;
         test::MeshModifierTestUtil::applyOne( *modifier, noInput ); // 입력이 없으면 항등
         SW_EXPECT_TRUE( test::MeshModifierTestUtil::isBitwiseEqual( noInput._listPosition, source._listPosition ) );

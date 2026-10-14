@@ -19,9 +19,12 @@ namespace sw::editor
     public:
         DisplaceModifier()
             : MeshModifier()
-            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Displacement strength along the normal (0 = no change)", "m" ) ) }
-            , _frequencyParam{ addParam( MeshModifierParamDef{ "Frequency", MeshModifierParamKind::Float, 0.001f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Pattern repeats per unit length" ) ) }
-            , _phaseParam{ addParam( MeshModifierParamDef{ "Phase", MeshModifierParamKind::Float, -360.0f, 360.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Offset of the pattern", "deg" ) ) }
+            , _amountParam{
+                  addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }
+                                .withLayout( nullptr, "Displacement strength along the normal (0 = no change)", "m" ) )
+        },
+            _frequencyParam{ addParam( MeshModifierParamDef{ "Frequency", MeshModifierParamKind::Float, 0.001f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Pattern repeats per unit length" ) ) },
+            _phaseParam{ addParam( MeshModifierParamDef{ "Phase", MeshModifierParamKind::Float, -360.0f, 360.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Offset of the pattern", "deg" ) ) }
         {
         }
 

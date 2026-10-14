@@ -4,6 +4,7 @@
 #include "Engine/Utility/FloatCurve.h"
 
 #include "EngineTest/GameFramework/MeshModifiers/MeshModifierTestUtil.h"
+
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifierParamEdit.h"
 
 #include "TestFramework/TestFramework.h"
@@ -62,7 +63,10 @@ SW_TEST_CASE( MeshModifierPanelLogicTest, ColumnLayoutMustMatchStride )
     static constexpr MeshModifierListColumn kBadCombo[] = {
         { "Kind", MeshModifierListColumnKind::Combo },
     };
-    MeshModifierParamDef def{ "List", MeshModifierParamKind::NumberList, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f }, 5 };
+    MeshModifierParamDef def{
+        "List", MeshModifierParamKind::NumberList, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f },
+        5
+    };
     SW_EXPECT_FALSE( MeshModifierParamEdit::isColumnLayoutValid( def ) ); // 열 선언이 없으면 일반 표
     SW_EXPECT_TRUE( MeshModifierParamEdit::isColumnLayoutValid( def.withColumns( kColumn ) ) );
     def._stride = 4;
@@ -97,8 +101,12 @@ SW_TEST_CASE( MeshModifierPanelLogicTest, EveryRegisteredColumnLayoutIsValid )
 
 SW_TEST_CASE( MeshModifierPanelLogicTest, CurveRoundTripIsLinearAndSorted )
 {
-    const vector<float2> listKey{ float2{ 0.0f, 1.0f }, float2{ 0.5f, -2.0f }, float2{ 1.0f, 3.0f } };
-    FloatCurve           curve{};
+    const vector<float2> listKey{
+        float2{0.0f,  1.0f},
+        float2{0.5f, -2.0f},
+        float2{1.0f,  3.0f}
+    };
+    FloatCurve curve{};
     MeshModifierParamEdit::makeFloatCurve( listKey, curve );
     SW_ASSERT_EQUAL( size_t{ 3 }, curve._listKey.size() );
     for ( const FloatCurveKey& key : curve._listKey )

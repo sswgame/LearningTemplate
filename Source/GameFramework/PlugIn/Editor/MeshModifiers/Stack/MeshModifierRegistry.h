@@ -72,8 +72,8 @@ namespace sw::editor
  * @param pDisplayName 패널 표시 이름
  * @param pCategory 패널 추가 메뉴 묶음
  */
-#define SW_MESH_MODIFIER( TModifier, pID, pDisplayName, pCategory )                                                          \
-    static const ::sw::editor::MeshModifierRegistration sw_meshModifierRegistration_##TModifier                          \
-    {                                                                                                                    \
-        pID, pDisplayName, pCategory, &::sw::editor::createMeshModifier<TModifier>                                       \
+#define SW_MESH_MODIFIER( TModifier, pID, pDisplayName, pCategory )                             \
+    static const ::sw::editor::MeshModifierRegistration sw_meshModifierRegistration_##TModifier \
+    {                                                                                           \
+        pID, pDisplayName, pCategory, &::sw::editor::createMeshModifier<TModifier>              \
     }

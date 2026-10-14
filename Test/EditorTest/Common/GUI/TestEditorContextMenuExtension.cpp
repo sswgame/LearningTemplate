@@ -33,7 +33,8 @@ namespace
     string joinEntryIDs( EditorContextMenuKind menuKind )
     {
         string text;
-        (void)EditorContextMenuExtensionUtil::visitEntries( menuKind, [&]( const EditorContextMenuEntryRegistration& entry ) {
+        (void)EditorContextMenuExtensionUtil::visitEntries( menuKind, [&]( const EditorContextMenuEntryRegistration& entry )
+        {
             if ( text.empty() == false )
                 text += ',';
             text += entry._pID;
@@ -58,7 +59,13 @@ SW_TEST_CASE( EditorContextMenuExtensionTest, EntriesFilterByMenuKindAndFollowOr
             EditorContextMenuEntryRegistration{ { "test.asset", 9000 }, EditorContextMenuKind::Asset, "Asset", &runFirstAction, nullptr }
         };
         unique_ptr<ContextMenuRegistrar> pEarly = make_unique<ContextMenuRegistrar>(
-            EditorContextMenuEntryRegistration{ { "test.early", 9100 }, EditorContextMenuKind::GameObject, "Early", &runSecondAction, nullptr } );
+            EditorContextMenuEntryRegistration{
+                { "test.early", 9100 },
+                EditorContextMenuKind::GameObject,
+                "Early",
+                &runSecondAction,
+                nullptr
+        } );
 
         SW_EXPECT_STREQ( "test.early,test.late", joinEntryIDs( EditorContextMenuKind::GameObject ).c_str() );
         SW_EXPECT_STREQ( "test.asset", joinEntryIDs( EditorContextMenuKind::Asset ).c_str() );
@@ -85,16 +92,17 @@ SW_TEST_CASE( EditorContextMenuExtensionTest, VisitReturnsChosenActionAndEnabled
         EditorContextMenuEntryRegistration{ { "test.noAction", 9300 }, EditorContextMenuKind::Asset, "No Action", nullptr, nullptr }
     };
 
-    auto pfnChosen = EditorContextMenuExtensionUtil::visitEntries( EditorContextMenuKind::Asset, []( const EditorContextMenuEntryRegistration& entry ) {
+    auto pfnChosen = EditorContextMenuExtensionUtil::visitEntries( EditorContextMenuKind::Asset, []( const EditorContextMenuEntryRegistration& entry )
+    {
         return string_view{ entry._pID } == "test.second";
     } );
     SW_EXPECT_TRUE( pfnChosen == &runSecondAction );
 
     EditorContextMenuTarget fileTarget{};
-    fileTarget._kind       = EditorContextMenuKind::Asset;
-    fileTarget._pAssetPath = "C:/Project/Content/a.mat";
+    fileTarget._kind                     = EditorContextMenuKind::Asset;
+    fileTarget._pAssetPath               = "C:/Project/Content/a.mat";
     EditorContextMenuTarget folderTarget = fileTarget;
-    folderTarget._bIsDirectory          = true;
+    folderTarget._bIsDirectory           = true;
 
     SW_EXPECT_FALSE( EditorContextMenuExtensionUtil::isEnabled( first.getRegistration(), fileTarget ) );
     SW_EXPECT_TRUE( EditorContextMenuExtensionUtil::isEnabled( first.getRegistration(), folderTarget ) );
@@ -121,10 +129,10 @@ SW_TEST_CASE( EditorContextMenuExtensionTest, ViewportEntriesStayInViewportMenuA
     SW_EXPECT_EQUAL( 1u, EditorContextMenuExtensionUtil::countEntries( EditorContextMenuKind::Viewport ) );
 
     EditorContextMenuTarget missTarget{};
-    missTarget._kind               = EditorContextMenuKind::Viewport;
+    missTarget._kind                  = EditorContextMenuKind::Viewport;
     EditorContextMenuTarget hitTarget = missTarget;
-    hitTarget._worldPosition       = float3{ 1.0f, 0.0f, 2.0f };
-    hitTarget._bHasWorldPosition   = true;
+    hitTarget._worldPosition          = float3{ 1.0f, 0.0f, 2.0f };
+    hitTarget._bHasWorldPosition      = true;
 
     SW_EXPECT_FALSE( EditorContextMenuExtensionUtil::isEnabled( viewport.getRegistration(), missTarget ) );
     SW_EXPECT_TRUE( EditorContextMenuExtensionUtil::isEnabled( viewport.getRegistration(), hitTarget ) );

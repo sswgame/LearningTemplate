@@ -35,21 +35,21 @@ namespace sw::editor
     {
         struct MeshModifiersVisualizerInternal
         {
-            static constexpr ImU32 kPreviewColor        = IM_COL32( 120, 220, 255, 110 );
-            static constexpr ImU32 kStageColor          = IM_COL32( 255, 120, 200, 130 );
-            static constexpr ImU32 kAxisColor           = IM_COL32( 255, 200, 60, 255 );
-            static constexpr ImU32 kHoverColor          = IM_COL32( 255, 255, 255, 255 );
-            static constexpr ImU32 kRangeColor          = IM_COL32( 120, 255, 160, 200 );
-            static constexpr ImU32 kLatticeLineColor    = IM_COL32( 255, 140, 40, 200 );
-            static constexpr ImU32 kLatticePointColor   = IM_COL32( 255, 240, 120, 255 );
-            static constexpr ImU32 kSelectedPointColor  = IM_COL32( 255, 60, 60, 255 );
-            static constexpr ImU32 kArrAxisColor[3]     = { IM_COL32( 235, 70, 70, 255 ), IM_COL32( 90, 220, 90, 255 ), IM_COL32( 80, 140, 255, 255 ) };
-            static constexpr uint32  kRingSegmentCount  = 48;
-            static constexpr float32 kPickWidthRatio    = 0.06f; ///< 손잡이 길이 대비 집는 두께
-            static constexpr float32 kPointPickRatio    = 0.04f; ///< 원본 상자 대각선(월드) 대비 제어점 구 반경
-            static constexpr float32 kGizmoSizeRatio    = 0.35f; ///< 원본 상자 대각선(월드) 대비 기즈모 손잡이 길이
-            static constexpr float32 kPointHandleRatio  = 0.15f; ///< 원본 상자 대각선(월드) 대비 제어점 축 손잡이 길이
-            static constexpr const utf8* kFFD2DTypeID   = "ffd2d";
+            static constexpr ImU32       kPreviewColor       = IM_COL32( 120, 220, 255, 110 );
+            static constexpr ImU32       kStageColor         = IM_COL32( 255, 120, 200, 130 );
+            static constexpr ImU32       kAxisColor          = IM_COL32( 255, 200, 60, 255 );
+            static constexpr ImU32       kHoverColor         = IM_COL32( 255, 255, 255, 255 );
+            static constexpr ImU32       kRangeColor         = IM_COL32( 120, 255, 160, 200 );
+            static constexpr ImU32       kLatticeLineColor   = IM_COL32( 255, 140, 40, 200 );
+            static constexpr ImU32       kLatticePointColor  = IM_COL32( 255, 240, 120, 255 );
+            static constexpr ImU32       kSelectedPointColor = IM_COL32( 255, 60, 60, 255 );
+            static constexpr ImU32       kArrAxisColor[3]    = { IM_COL32( 235, 70, 70, 255 ), IM_COL32( 90, 220, 90, 255 ), IM_COL32( 80, 140, 255, 255 ) };
+            static constexpr uint32      kRingSegmentCount   = 48;
+            static constexpr float32     kPickWidthRatio     = 0.06f; ///< 손잡이 길이 대비 집는 두께
+            static constexpr float32     kPointPickRatio     = 0.04f; ///< 원본 상자 대각선(월드) 대비 제어점 구 반경
+            static constexpr float32     kGizmoSizeRatio     = 0.35f; ///< 원본 상자 대각선(월드) 대비 기즈모 손잡이 길이
+            static constexpr float32     kPointHandleRatio   = 0.15f; ///< 원본 상자 대각선(월드) 대비 제어점 축 손잡이 길이
+            static constexpr const utf8* kFFD2DTypeID        = "ffd2d";
 
             enum class DragKind : uint8
             {
@@ -273,8 +273,8 @@ namespace sw::editor
                             // 모디파이어 공간에서 세 평면의 원을 만들어 월드로 옮긴다(비균등 스케일이면 타원이 된다)
                             for ( uint32 plane = 0; plane < 3; ++plane )
                             {
-                                const float3 axisU = makeUnit( ( plane + 1 ) % 3 );
-                                const float3 axisV = makeUnit( ( plane + 2 ) % 3 );
+                                const float3 axisU    = makeUnit( ( plane + 1 ) % 3 );
+                                const float3 axisV    = makeUnit( ( plane + 2 ) % 3 );
                                 float3       previous = toWorld( frame, center + axisU * radius );
                                 for ( uint32 segment = 1; segment <= kRingSegmentCount; ++segment )
                                 {
@@ -298,22 +298,26 @@ namespace sw::editor
                             break;
                         }
                         case ModifierRangeKind::Center:
+                        {
                             drawMarker( args, toWorld( frame, modifier.getVector3( index ) ), kRangeColor );
                             break;
+                        }
                         case ModifierRangeKind::Direction:
                         {
                             const float3 modifierDirection = def._kind == MeshModifierParamKind::Vector3
                                                                ? MeshModifierUtil::normalizeOr( modifier.getVector3( index ), float3{ 0.0f, 0.0f, 0.0f } )
                                                                : ModifierGizmoLogic::computeDirectionVector( frame._axisIndex, modifier.getFloat( index ) );
-                            const float3 worldFrom = toWorld( frame, center );
-                            const float3 worldStep = float3::transformVector( modifierDirection, frame._modifierToWorld );
+                            const float3 worldFrom         = toWorld( frame, center );
+                            const float3 worldStep         = float3::transformVector( modifierDirection, frame._modifierToWorld );
                             if ( worldStep.getLengthSquared() <= MathUtil::kEpsilonSquared )
                                 break;
                             drawArrow( args, worldFrom, worldFrom + worldStep.normalize() * arrowLength, kRangeColor, 2.0f );
                             break;
                         }
                         case ModifierRangeKind::None:
+                        {
                             break;
+                        }
                     }
                 }
             }
@@ -349,11 +353,11 @@ namespace sw::editor
                 if ( modifier.tryGetParamIndex( "Resolution X", resolutionXParam ) == false || modifier.tryGetParamIndex( "Resolution Y", resolutionYParam ) == false ||
                      modifier.tryGetParamIndex( "Offsets", outSet._offsetsParam ) == false || frame._modifierBox.isValid() == false )
                     return false;
-                outSet._pFFD2D            = &modifier;
-                outSet._box               = frame._modifierBox; // ffd2d 는 입력 정점 상자의 XY 를 격자로 쓴다
-                outSet._countX            = MathUtil::clamp( modifier.getInt( resolutionXParam ), 2, 8 );
-                outSet._countY            = MathUtil::clamp( modifier.getInt( resolutionYParam ), 2, 8 );
-                outSet._countZ            = 1;
+                outSet._pFFD2D                    = &modifier;
+                outSet._box                       = frame._modifierBox; // ffd2d 는 입력 정점 상자의 XY 를 격자로 쓴다
+                outSet._countX                    = MathUtil::clamp( modifier.getInt( resolutionXParam ), 2, 8 );
+                outSet._countY                    = MathUtil::clamp( modifier.getInt( resolutionYParam ), 2, 8 );
+                outSet._countZ                    = 1;
                 const float3           size       = outSet._box.getSize();
                 const float32          middleZ    = outSet._box.getCenter()._z;
                 const vector<float32>& listOffset = modifier.getNumberList( outSet._offsetsParam );
@@ -546,9 +550,9 @@ namespace sw::editor
                         float3 hit{ 0.0f, 0.0f, 0.0f };
                         if ( ModifierGizmoLogic::tryIntersectRayPlane( ray._origin, ray._direction, handle._origin, handle._direction, hit ) == false )
                             return;
-                        const float32 angle    = ModifierGizmoLogic::computeSignedAngleDegree( state._startVector, hit - handle._origin, handle._direction );
+                        const float32 angle = ModifierGizmoLogic::computeSignedAngleDegree( state._startVector, hit - handle._origin, handle._direction );
                         // 고리는 기준 공간 축을 그리므로 시작 회전에 그 축 둘레 증분 회전을 곱해 오일러로 다시 푼다(다른 성분이 0 이 아니어도 맞다)
-                        const float3  rotation = ModifierGizmoLogic::applyRotationDelta( state._startRotation, handle._axis, angle );
+                        const float3 rotation = ModifierGizmoLogic::applyRotationDelta( state._startRotation, handle._axis, angle );
                         if ( ( rotation - gizmo._rotationDegree ).getLengthSquared() <= MathUtil::kEpsilonSquared )
                             return;
                         ensureUndo( session, state );
@@ -582,7 +586,9 @@ namespace sw::editor
                         break;
                     }
                     case DragKind::None:
+                    {
                         return;
+                    }
                 }
                 session.markDirty();
             }
@@ -637,8 +643,8 @@ namespace sw::editor
                     collectPointHandles( frame, set, selectedPoint, s_listHandle );
                 collectGizmoHandles( frame, s_listHandle );
 
-                const ImVec2  mouse        = ImGui::GetMousePos();
-                const bool    bMouseInside = mouse.x >= args._canvasPos._x && mouse.y >= args._canvasPos._y && mouse.x <= args._canvasPos._x + args._canvasSize._x &&
+                const ImVec2 mouse        = ImGui::GetMousePos();
+                const bool   bMouseInside = mouse.x >= args._canvasPos._x && mouse.y >= args._canvasPos._y && mouse.x <= args._canvasPos._x + args._canvasSize._x &&
                                           mouse.y <= args._canvasPos._y + args._canvasSize._y && ImGui::IsWindowHovered();
                 EditorPickRay ray{};
                 const bool    bHasRay = EditorViewportProjectionUtil::makeMouseRay( args._pViewProj->invert(), args._canvasPos, args._canvasSize, ray );
@@ -680,7 +686,10 @@ namespace sw::editor
                             // 점을 누르면 고르고, 그대로 끌면 카메라를 마주 보는 평면에서 옮긴다
                             session.setSelectedControlPoint( hoveredPoint );
                             selectedPoint = hoveredPoint;
-                            const Handle freeHandle{ DragKind::PointFree, 0, set._listWorld[static_cast<size_t>( hoveredPoint )], float3{ 0.0f, 0.0f, 0.0f }, 0.0f };
+                            const Handle freeHandle{
+                                DragKind::PointFree, 0, set._listWorld[static_cast<size_t>( hoveredPoint )], float3{ 0.0f, 0.0f, 0.0f },
+                                0.0f
+                            };
                             beginDrag( state, freeHandle, frame, modifierIndex, hoveredPoint, ray );
                         }
                     }
@@ -690,7 +699,7 @@ namespace sw::editor
                     drawPointSet( args, set, selectedPoint, hoveredPoint );
                 for ( size_t index = 0; index < s_listHandle.size(); ++index )
                 {
-                    const Handle& handle = s_listHandle[index];
+                    const Handle& handle  = s_listHandle[index];
                     const bool    bActive = state._bDragging && state._handle._kind == handle._kind && state._handle._axis == handle._axis;
                     drawHandle( args, handle, bActive || static_cast<int32>( index ) == hoveredHandle );
                 }

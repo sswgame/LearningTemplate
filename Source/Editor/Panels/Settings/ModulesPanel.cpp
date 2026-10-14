@@ -143,7 +143,7 @@ namespace sw::editor
         const EditorListFilter filter{ _filter.c_str() };
 
         // 표와 상세를 위아래로 나눈다 — 상세가 있으면 표는 남은 높이의 60% 를 쓴다
-        const float listHeight = _selectedModule.empty() ? 0.0f : ImGui::GetContentRegionAvail().y * 0.6f;
+        const float32 listHeight = _selectedModule.empty() ? 0.0f : ImGui::GetContentRegionAvail().y * 0.6f;
         ImGui::BeginChild( "##ModuleList", ImVec2( 0.0f, listHeight ) );
         for ( const ModuleKind kind : ModulesPanelInternal::kArrKindOrder )
         {
@@ -251,7 +251,7 @@ namespace sw::editor
 
     void ModulesPanel::drawFilters()
     {
-        const float comboWidth = 140.0f * EditorThemeUtil::getDpiScale();
+        const float32 comboWidth = 140.0f * EditorThemeUtil::getDpiScale();
         ImGui::SetNextItemWidth( comboWidth );
         const utf8* pKindPreview = _kindFilter < 0 ? SW_LOCKEY( "EditorSettings", "ModuleKindAll" ) : ModulesPanelInternal::getKindName( static_cast<ModuleKind>( _kindFilter ) );
         if ( ImGui::BeginCombo( "##ModuleKindFilter", pKindPreview ) )
@@ -287,7 +287,7 @@ namespace sw::editor
         if ( _selectedModule.empty() )
             return;
         EditorModuleDetail detail;
-        if ( EditorModuleOverrideUtil::buildDetail( _catalog, string_view{ config::kTargetGameModule }, _selectedModule, detail ) == false )
+        if ( EditorModuleOverrideUtil::makeDetail( _catalog, string_view{ config::kTargetGameModule }, _selectedModule, detail ) == false )
         {
             _selectedModule.clear(); // 새로 고침으로 사라진 모듈
             return;

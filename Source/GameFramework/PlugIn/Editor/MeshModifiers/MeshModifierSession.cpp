@@ -105,9 +105,9 @@ namespace sw::editor
     void MeshModifierSession::clearTarget()
     {
         _stack.clear();
-        _previewMesh          = MeshModifierMesh{};
-        _stagePreviewMesh     = MeshModifierMesh{};
-        _sourceData           = MeshAssetData{};
+        _previewMesh      = MeshModifierMesh{};
+        _stagePreviewMesh = MeshModifierMesh{};
+        _sourceData       = MeshAssetData{};
         _meshPath.clear();
         _sourceBounds         = MeshModifierBounds{};
         _target               = GameObjectHandle{};
@@ -118,9 +118,9 @@ namespace sw::editor
         _selectedControlPoint = -1;
         _listUndo.clear();
         _listRedo.clear();
-        _bPreviewDirty        = true;
-        _bStagePreviewDirty   = true;
-        _bInputBoundsDirty    = true;
+        _bPreviewDirty      = true;
+        _bStagePreviewDirty = true;
+        _bInputBoundsDirty  = true;
     }
 
     GameObject* MeshModifierSession::findTarget() const
@@ -217,8 +217,8 @@ namespace sw::editor
             return _sourceBounds; // 첫 모디파이어의 입력은 원본 그대로다
         if ( _bInputBoundsDirty || _inputBoundsIndex != selectedIndex )
         {
-            _bInputBoundsDirty = false;
-            _inputBoundsIndex  = selectedIndex;
+            _bInputBoundsDirty    = false;
+            _inputBoundsIndex     = selectedIndex;
             const int32 lastIndex = selectedIndex - 1;
             if ( _bStagePreviewDirty == false && _stagePreviewIndex == lastIndex && _stagePreviewMesh._listPosition.empty() == false )
             {
@@ -380,7 +380,7 @@ namespace sw::editor
 
     bool MeshModifierSession::tryGetCurveLength( string_view reference, float32& outLength ) const
     {
-        const GameObject* pObject = MeshModifierSessionInternal::findObjectByName( reference );
+        const GameObject*      pObject = MeshModifierSessionInternal::findObjectByName( reference );
         const SplineComponent* pSpline = pObject != nullptr ? pObject->getComponent<SplineComponent>() : nullptr;
         if ( pSpline == nullptr || pSpline->getLocalPath().isValid() == false )
             return false;
@@ -390,7 +390,7 @@ namespace sw::editor
 
     bool MeshModifierSession::trySampleCurve( string_view reference, float32 fraction, float3& outPosition, float3& outTangent ) const
     {
-        const GameObject* pObject = MeshModifierSessionInternal::findObjectByName( reference );
+        const GameObject*      pObject = MeshModifierSessionInternal::findObjectByName( reference );
         const SplineComponent* pSpline = pObject != nullptr ? pObject->getComponent<SplineComponent>() : nullptr;
         if ( pSpline == nullptr || pSpline->getLocalPath().isValid() == false )
             return false;
@@ -405,8 +405,8 @@ namespace sw::editor
     bool MeshModifierSession::tryGetMeshTriangles( string_view reference, vector<float3>& outListPosition ) const
     {
         outListPosition.clear();
-        const GameObject* pObject = MeshModifierSessionInternal::findObjectByName( reference );
-        const MeshComponent* pMesh = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
+        const GameObject*    pObject = MeshModifierSessionInternal::findObjectByName( reference );
+        const MeshComponent* pMesh   = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
         if ( pMesh == nullptr || MeshAssetFormat::isMeshAssetPath( pMesh->getMeshID() ) == false )
             return false;
         vector<RHIVertex> listVertex;

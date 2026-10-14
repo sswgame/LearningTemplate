@@ -34,7 +34,8 @@ namespace sw
                     outReply = "cheat: no active scene";
                     return false;
                 }
-                pManager->forEachComponentOfType<ShooterPlayerComponent>( [&outListPlayer]( ShooterPlayerComponent* pPlayer ) { outListPlayer.push_back( pPlayer ); } );
+                pManager->forEachComponentOfType<ShooterPlayerComponent>( [&outListPlayer]( ShooterPlayerComponent* pPlayer )
+                { outListPlayer.push_back( pPlayer ); } );
                 if ( outListPlayer.empty() )
                 {
                     outReply = "cheat: no ShooterPlayerComponent in the active scene";
@@ -52,7 +53,9 @@ namespace sw
                 if ( collectPlayers( listPlayer, outReply ) == false )
                     return true;
                 for ( ShooterPlayerComponent* pPlayer : listPlayer )
+                {
                     pPlayer->addWaveAmmo();
+                }
                 outReply = "cheat.ammo refilled " + to_string( listPlayer.size() ) + " player(s)";
                 return true;
             }

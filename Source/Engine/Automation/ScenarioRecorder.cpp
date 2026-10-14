@@ -16,10 +16,10 @@ namespace sw
     {
         struct ScenarioRecorderInternal
         {
-            static constexpr string_view kOutputFolder    = "Saved/Automation/";
-            static constexpr string_view kScenarioSuffix  = ".scenario.xml";
-            static constexpr uint32      kTailFrameCount  = 10; ///< 마지막 입력 뒤 `Pass` 까지의 프레임입니다.
-            static constexpr uint32      kTimeoutMargin   = 60;
+            static constexpr string_view kOutputFolder   = "Saved/Automation/";
+            static constexpr string_view kScenarioSuffix = ".scenario.xml";
+            static constexpr uint32      kTailFrameCount = 10; ///< 마지막 입력 뒤 `Pass` 까지의 프레임입니다.
+            static constexpr uint32      kTimeoutMargin  = 60;
 
             /** @brief XML 속성 값으로 쓸 수 있게 특수 문자를 바꿉니다. 제어 문자는 버립니다. */
             static void appendEscaped( string& outText, string_view text )
@@ -28,14 +28,32 @@ namespace sw
                 {
                     switch ( character )
                     {
-                        case '&': outText += "&amp;"; break;
-                        case '<': outText += "&lt;"; break;
-                        case '>': outText += "&gt;"; break;
-                        case '"': outText += "&quot;"; break;
+                        case '&':
+                        {
+                            outText += "&amp;";
+                            break;
+                        }
+                        case '<':
+                        {
+                            outText += "&lt;";
+                            break;
+                        }
+                        case '>':
+                        {
+                            outText += "&gt;";
+                            break;
+                        }
+                        case '"':
+                        {
+                            outText += "&quot;";
+                            break;
+                        }
                         default:
+                        {
                             if ( static_cast<uint8>( character ) >= 0x20 )
                                 outText.push_back( character );
                             break;
+                        }
                     }
                 }
             }
@@ -99,29 +117,42 @@ namespace sw
                     switch ( event._type )
                     {
                         case RawInputEventType::KeyDown:
+                        {
                             if ( event._bRepeat == SW_FALSE )
                                 appendSlot( "Press", InputSlot::fromKey( event._payload._keyData._key ) );
                             break;
+                        }
                         case RawInputEventType::KeyUp:
+                        {
                             appendSlot( "Release", InputSlot::fromKey( event._payload._keyData._key ) );
                             break;
+                        }
                         case RawInputEventType::MouseButtonDown:
                         case RawInputEventType::MouseDoubleClick:
+                        {
                             // Win32 는 두 번째 누름을 Down 대신 DoubleClick 으로 보낸다(Down · Up · DoubleClick · Up).
                             // 입력 관리자도 이를 버튼 눌림으로 다루므로 Press 로 쓴다. 건너뛰면 두 번째 누름이 사라진다.
                             // 재생은 원시 Down 둘을 내므로 DoubleClick 이벤트 자체에 기대는 코드는 재현되지 않는다.
                             appendSlot( "Press", InputSlot::fromMouseButton( event._payload._mouseData._button ) );
                             break;
+                        }
                         case RawInputEventType::MouseButtonUp:
+                        {
                             appendSlot( "Release", InputSlot::fromMouseButton( event._payload._mouseData._button ) );
                             break;
+                        }
                         case RawInputEventType::GamepadButtonDown:
+                        {
                             appendSlot( "Press", InputSlot::fromGamepadButton( event._payload._gamepadData._button, event._deviceIndex ) );
                             break;
+                        }
                         case RawInputEventType::GamepadButtonUp:
+                        {
                             appendSlot( "Release", InputSlot::fromGamepadButton( event._payload._gamepadData._button, event._deviceIndex ) );
                             break;
+                        }
                         case RawInputEventType::MouseMove:
+                        {
                             if ( settings._clientWidth == 0 || settings._clientHeight == 0 )
                             {
                                 ++outResult._skippedEventCount;
@@ -131,20 +162,28 @@ namespace sw
                             positionX    = event._payload._mouseData._x;
                             positionY    = event._payload._mouseData._y;
                             break;
+                        }
                         case RawInputEventType::MouseRawDelta:
+                        {
                             bHasDelta = true;
                             deltaX += event._payload._mouseData._rawDelta._x;
                             deltaY += event._payload._mouseData._rawDelta._y;
                             break;
+                        }
                         case RawInputEventType::MouseWheel:
+                        {
                             bHasWheel = true;
                             wheelY += event._payload._mouseData._wheelDelta;
                             break;
+                        }
                         case RawInputEventType::MouseWheelHorizontal:
+                        {
                             bHasWheel = true;
                             wheelX += event._payload._mouseData._wheelDelta;
                             break;
+                        }
                         case RawInputEventType::GamepadAxis:
+                        {
                             outBody += "<GamepadAxis axis=\"" + to_string( static_cast<uint32>( event._payload._gamepadData._axisIndex ) ) + "\" value=\"";
                             appendFloat( outBody, event._payload._gamepadData._axisValue );
                             outBody += "\"";
@@ -153,12 +192,15 @@ namespace sw
                             outBody += "/>";
                             ++outResult._writtenStepCount;
                             break;
+                        }
                         case RawInputEventType::TextInput:
                         {
                             const utf8* pText  = event._payload._textData._arrUtf8;
                             size_t      length = 0;
                             while ( length < constant::kMaxBuffer32 && pText[length] != '\0' )
+                            {
                                 ++length;
+                            }
                             outBody += "<Text value=\"";
                             appendEscaped( outBody, string_view{ pText, length } );
                             outBody += "\"/>";
@@ -172,10 +214,12 @@ namespace sw
                         case RawInputEventType::FocusLost:
                         case RawInputEventType::PointerEntered:
                         case RawInputEventType::PointerLeft:
+                        {
                             // 조합 중 글자는 확정 뒤 TextInput 으로 다시 오고, 포커스 · 포인터 출입 · 패드 연결은 창과 장치의 상태라
                             // 시나리오 단계로 낼 뜻이 없다(실행기는 창을 가진 채 입력만 넣는다).
                             ++outResult._skippedEventCount;
                             break;
+                        }
                     }
                 }
 
@@ -238,14 +282,14 @@ namespace sw
         if ( _replay.isRecording() == false )
             return {};
         _replay.stopRecording();
-        ScenarioRecordOutput result = toScenarioXml( _replay.getFrames(), settings );
+        ScenarioRecordOutput result = toScenarioXML( _replay.getFrames(), settings );
         _replay.clear();
         if ( result._skippedEventCount != 0 )
             SW_LOG_INFO( "[ScenarioRecorder] skipped %# input events that have no scenario step", result._skippedEventCount );
         return result;
     }
 
-    ScenarioRecordOutput ScenarioRecorder::toScenarioXml( const vector<InputReplayFrame>& listFrame, const ScenarioRecordSettings& settings )
+    ScenarioRecordOutput ScenarioRecorder::toScenarioXML( const vector<InputReplayFrame>& listFrame, const ScenarioRecordSettings& settings )
     {
         using Internal = ScenarioRecorderInternal;
 

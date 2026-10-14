@@ -32,11 +32,14 @@ namespace sw::editor
     public:
         NoiseModifier()
             : MeshModifier()
-            , _amplitudeParam{ addParam( MeshModifierParamDef{ "Amplitude", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Noise", "Largest displacement", "m" ) ) }
-            , _frequencyParam{ addParam( MeshModifierParamDef{ "Frequency", MeshModifierParamKind::Float, 0.001f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Noise", "Noise cells per unit length; larger is finer" ) ) }
-            , _seedParam{ addParam( MeshModifierParamDef{ "Seed", MeshModifierParamKind::Int, 0.0f, 65535.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Noise", "Random seed; change it for a different pattern" ) ) }
-            , _strengthParam{ addParam( MeshModifierParamDef{ "Axis Strength", MeshModifierParamKind::Vector3, 0.0f, 10.0f, float3{ 1.0f, 1.0f, 1.0f } }.withLayout( "Noise", "Displacement scale per axis" ) ) }
-            , _speedParam{ addParam( MeshModifierParamDef{ "Speed", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Animation", "How fast the noise moves with preview time" ) ) }
+            , _amplitudeParam{
+                  addParam( MeshModifierParamDef{ "Amplitude", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }
+                                .withLayout( "Noise", "Largest displacement", "m" ) )
+        },
+            _frequencyParam{ addParam( MeshModifierParamDef{ "Frequency", MeshModifierParamKind::Float, 0.001f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Noise", "Noise cells per unit length; larger is finer" ) ) },
+            _seedParam{ addParam( MeshModifierParamDef{ "Seed", MeshModifierParamKind::Int, 0.0f, 65535.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Noise", "Random seed; change it for a different pattern" ) ) },
+            _strengthParam{ addParam( MeshModifierParamDef{ "Axis Strength", MeshModifierParamKind::Vector3, 0.0f, 10.0f, float3{ 1.0f, 1.0f, 1.0f } }.withLayout( "Noise", "Displacement scale per axis" ) ) },
+            _speedParam{ addParam( MeshModifierParamDef{ "Speed", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Animation", "How fast the noise moves with preview time" ) ) }
         {
         }
 
@@ -52,8 +55,8 @@ namespace sw::editor
             const float3  sample   = point._position * getFloat( _frequencyParam ) + float3{ drift, drift, drift };
             const float3& strength = getVector3( _strengthParam );
             const float3  offset{ MeshModifierNoise::valueNoise3D( sample, seed ) * strength._x,
-                                  MeshModifierNoise::valueNoise3D( sample + float3{ NoiseModifierInternal::kAxisOffsetY, 0.0f, 0.0f }, seed ) * strength._y,
-                                  MeshModifierNoise::valueNoise3D( sample + float3{ 0.0f, 0.0f, NoiseModifierInternal::kAxisOffsetZ }, seed ) * strength._z };
+                                 MeshModifierNoise::valueNoise3D( sample + float3{ NoiseModifierInternal::kAxisOffsetY, 0.0f, 0.0f }, seed ) * strength._y,
+                                 MeshModifierNoise::valueNoise3D( sample + float3{ 0.0f, 0.0f, NoiseModifierInternal::kAxisOffsetZ }, seed ) * strength._z };
             return point._position + offset * amplitude;
         }
 

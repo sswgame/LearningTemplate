@@ -44,13 +44,13 @@ namespace sw::editor
         void drawVoiceProfiler( const AudioEngineStats& stats );
 
     private:
-        vector<hashed_string>                 _listEventName;      ///< 엔진이 준 이벤트 이름(순서 없음)
-        vector<hashed_string>                 _listVisibleEvent;   ///< 필터를 거친 사전순 이름
+        vector<hashed_string>                 _listEventName;    ///< 엔진이 준 이벤트 이름(순서 없음)
+        vector<hashed_string>                 _listVisibleEvent; ///< 필터를 거친 사전순 이름
         vector<AudioEventFieldRow>            _listFieldRow;
         vector<AudioInstanceStatus>           _listInstanceStatus;
         vector<AudioInstanceStatus>           _listInstanceRow;
         hashed_string                         _selectedEvent;
-        hashed_string                         _selectedLibrary;    ///< 고른 이벤트가 들어 있는 라이브러리(리소스 경로)
+        hashed_string                         _selectedLibrary; ///< 고른 이벤트가 들어 있는 라이브러리(리소스 경로)
         fixed_string<constant::kMaxBuffer128> _filter;
         bool                                  _bOnlySelectedEvent; ///< 재생 중 목록을 고른 이벤트로 거른다.
     };

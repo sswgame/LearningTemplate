@@ -40,8 +40,8 @@ namespace sw::editor
 
             static bool drawTextInput( const utf8* pLabel, const string& value, string& outValue )
             {
-                utf8 arrBuffer[constant::kMaxPathSize] = {};
-                const size_t copyCount = MathUtil::min( value.size(), static_cast<size_t>( constant::kMaxPathSize - 1 ) );
+                utf8         arrBuffer[constant::kMaxPathSize] = {};
+                const size_t copyCount                         = MathUtil::min( value.size(), static_cast<size_t>( constant::kMaxPathSize - 1 ) );
                 for ( size_t index = 0; index < copyCount; ++index )
                 {
                     arrBuffer[index] = value[index];
@@ -92,7 +92,8 @@ namespace sw::editor
                 if ( pHintType == nullptr )
                     return object.findComponentByTypeName( hintName ) != nullptr;
                 bool bFound{ false };
-                object.forEachComponent( [&]( Component* pComponent ) {
+                object.forEachComponent( [&]( Component* pComponent )
+                {
                     const TypeInfo* pTypeInfo = pComponent->getTypeInfo();
                     if ( pTypeInfo != nullptr && pTypeInfo->isDerivedFrom( pHintType ) )
                         bFound = true;
@@ -440,11 +441,15 @@ namespace sw::editor
                 break;
             }
             case MeshModifierParamKind::Curve:
+            {
                 drawCurveParam( session, modifier, paramIndex );
                 break;
+            }
             case MeshModifierParamKind::Reference:
+            {
                 drawReferenceParam( session, modifier, paramIndex );
                 break;
+            }
             case MeshModifierParamKind::AssetPath:
             {
                 // 콘텐츠 브라우저 끌어놓기 · 지우기 · 찾아보기는 에디터 공용 슬롯이 맡는다. 바뀌는 순간이 한 번이라 바로 기록한다
@@ -460,8 +465,10 @@ namespace sw::editor
                 break;
             }
             case MeshModifierParamKind::NumberList:
+            {
                 drawNumberListParam( session, modifier, paramIndex );
                 break;
+            }
         }
         ImGui::PopID();
     }
@@ -522,17 +529,17 @@ namespace sw::editor
             ImGui::TextDisabled( "(%s)", def._pHint );
         }
 
-        vector<float32> listNumber   = modifier.getNumberList( paramIndex );
-        const uint32    stride       = MathUtil::max<uint32>( def._stride, 1 );
-        const bool      bHasColumns  = MeshModifierParamEdit::isColumnLayoutValid( def );
-        const uint32    columnCount  = bHasColumns ? def._columnCount : stride;
-        const size_t    rowCount     = MeshModifierParamEdit::getRowCount( listNumber, stride );
-        bool            bChanged     = false;
-        int32           upRow        = -1;
-        int32           downRow      = -1;
-        int32           duplicateAt  = -1;
-        int32           removeAt     = -1;
-        const ImGuiTableFlags tableFlags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp;
+        vector<float32>       listNumber  = modifier.getNumberList( paramIndex );
+        const uint32          stride      = MathUtil::max<uint32>( def._stride, 1 );
+        const bool            bHasColumns = MeshModifierParamEdit::isColumnLayoutValid( def );
+        const uint32          columnCount = bHasColumns ? def._columnCount : stride;
+        const size_t          rowCount    = MeshModifierParamEdit::getRowCount( listNumber, stride );
+        bool                  bChanged    = false;
+        int32                 upRow       = -1;
+        int32                 downRow     = -1;
+        int32                 duplicateAt = -1;
+        int32                 removeAt    = -1;
+        const ImGuiTableFlags tableFlags  = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp;
         if ( rowCount > 0 && ImGui::BeginTable( "##Rows", static_cast<int32>( columnCount ) + 2, tableFlags ) )
         {
             ImGui::TableSetupColumn( "#", ImGuiTableColumnFlags_WidthFixed );
@@ -557,8 +564,8 @@ namespace sw::editor
                     ImGui::TableNextColumn();
                     ImGui::PushID( static_cast<int32>( column ) );
                     ImGui::SetNextItemWidth( -1.0f );
-                    float32* pValue = &listNumber[element];
-                    const MeshModifierListColumnKind kind = bHasColumns ? def._pColumn[column]._kind : MeshModifierListColumnKind::Float;
+                    float32*                         pValue = &listNumber[element];
+                    const MeshModifierListColumnKind kind   = bHasColumns ? def._pColumn[column]._kind : MeshModifierListColumnKind::Float;
                     switch ( kind )
                     {
                         case MeshModifierListColumnKind::Float:
@@ -660,11 +667,11 @@ namespace sw::editor
 
     void MeshModifiersPanel::drawReferenceParam( MeshModifierSession& session, MeshModifier& modifier, uint32 paramIndex )
     {
-        const MeshModifierParamDef& def     = modifier.getParamDefs()[paramIndex];
-        const string&               current = modifier.getText( paramIndex );
-        string                      picked  = current;
-        bool                        bPicked = false;
-        const utf8* pPreview = current.empty() ? SW_LOCKEY( "EdMeshModifiers", "ReferenceNone" ) : current.c_str();
+        const MeshModifierParamDef& def      = modifier.getParamDefs()[paramIndex];
+        const string&               current  = modifier.getText( paramIndex );
+        string                      picked   = current;
+        bool                        bPicked  = false;
+        const utf8*                 pPreview = current.empty() ? SW_LOCKEY( "EdMeshModifiers", "ReferenceNone" ) : current.c_str();
         if ( ImGui::BeginCombo( def._pName, pPreview ) )
         {
             if ( ImGui::Selectable( SW_LOCKEY( "EdMeshModifiers", "ReferenceNone" ), current.empty() ) )
@@ -745,9 +752,9 @@ namespace sw::editor
         if ( string_view( _descriptionID ) != string_view( registration._pID ) )
         {
             // 설명은 인스턴스의 가상 함수라 하나 만들어 묻는다 — 마우스가 새 항목에 올 때 한 번뿐이다
-            _descriptionID = string( registration._pID );
+            _descriptionID                           = string( registration._pID );
             const unique_ptr<MeshModifier> pModifier = registration._pCreateFn();
-            _description = pModifier != nullptr ? string( pModifier->getDescription() ) : string();
+            _description                             = pModifier != nullptr ? string( pModifier->getDescription() ) : string();
         }
         if ( _description.empty() == false )
             ImGui::SetTooltip( "%s", _description.c_str() );
@@ -801,8 +808,8 @@ namespace sw::editor
 
     void MeshModifiersPanel::drawFooter( MeshModifierSession& session )
     {
-        MeshModifierStack& stack       = session.getStack();
-        bool               bRecompute  = stack.isRecomputingNormals();
+        MeshModifierStack& stack      = session.getStack();
+        bool               bRecompute = stack.isRecomputingNormals();
         if ( ImGui::Checkbox( SW_LOCKEY( "EdMeshModifiers", "RecomputeNormals" ), &bRecompute ) )
         {
             session.recordUndo();

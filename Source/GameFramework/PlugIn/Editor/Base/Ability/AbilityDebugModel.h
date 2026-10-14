@@ -23,7 +23,10 @@ namespace sw::editor
         float32 _baseValue{ 0.0f };
         float32 _currentValue{ 0.0f };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 걸린 이펙트 한 줄입니다. */
     struct AbilityDebugEffectRow
     {
@@ -32,14 +35,20 @@ namespace sw::editor
         int32   _stackCount{ 1 };
         bool    _bInfinite{ false };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 소유 태그 한 줄입니다. */
     struct AbilityDebugTagRow
     {
         string _tag{};
         int32  _count{ 0 };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 부여된 어빌리티 한 줄입니다. */
     struct AbilityDebugAbilityRow
     {
@@ -47,7 +56,10 @@ namespace sw::editor
         float32 _cooldownRemaining{ 0.0f }; ///< 쿨다운이 없으면 0
         bool    _bActive{ false };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 컴포넌트 하나의 한 순간 상태입니다. */
     struct AbilityDebugSnapshot
     {
@@ -59,7 +71,10 @@ namespace sw::editor
 
         void clear();
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class AbilityDebugModel
      * @brief 컴포넌트 상태 → 표 행 변환입니다.

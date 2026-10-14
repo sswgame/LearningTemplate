@@ -20,11 +20,14 @@ namespace sw::editor
     public:
         DynamicRippleModifier()
             : MeshModifier()
-            , _amplitudeParam{ addParam( MeshModifierParamDef{ "Amplitude", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Shape", "Ripple height; 0 leaves the mesh unchanged", "m" ) ) }
-            , _wavelengthParam{ addParam( MeshModifierParamDef{ "Wavelength", MeshModifierParamKind::Float, 0.001f, 1000.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Shape", "Distance between rings", "m" ) ) }
-            , _speedParam{ addParam( MeshModifierParamDef{ "Speed", MeshModifierParamKind::Float, 0.0f, 1000.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Animation", "How fast rings travel outward; 0 freezes them", "m/s" ) ) }
-            , _dampingParam{ addParam( MeshModifierParamDef{ "Damping", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Range", "How fast rings fade with distance; 0 means no fading" ) ) }
-            , _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.0f, 100000.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Range", "Maximum reach of the ripple; 0 means unlimited", "m" ) ) }
+            , _amplitudeParam{
+                  addParam( MeshModifierParamDef{ "Amplitude", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }
+                                .withLayout( "Shape", "Ripple height; 0 leaves the mesh unchanged", "m" ) )
+        },
+            _wavelengthParam{ addParam( MeshModifierParamDef{ "Wavelength", MeshModifierParamKind::Float, 0.001f, 1000.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Shape", "Distance between rings", "m" ) ) },
+            _speedParam{ addParam( MeshModifierParamDef{ "Speed", MeshModifierParamKind::Float, 0.0f, 1000.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Animation", "How fast rings travel outward; 0 freezes them", "m/s" ) ) },
+            _dampingParam{ addParam( MeshModifierParamDef{ "Damping", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Range", "How fast rings fade with distance; 0 means no fading" ) ) },
+            _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.0f, 100000.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Range", "Maximum reach of the ripple; 0 means unlimited", "m" ) ) }
         {
         }
 

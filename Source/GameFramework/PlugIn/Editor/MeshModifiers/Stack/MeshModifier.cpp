@@ -57,7 +57,7 @@ namespace sw::editor
             /** @brief 행 벡터 규약(v · M) 행렬을 기저 세 개와 평행 이동으로 만듭니다. 행 i 가 기저 i 의 상입니다. */
             static float4x4 makeMatrixFromBasis( const float3& axisX, const float3& axisY, const float3& axisZ, const float3& translation )
             {
-                return float4x4{ axisX._x,       axisX._y,       axisX._z,       0.0f, axisY._x, axisY._y, axisY._z, 0.0f, axisZ._x, axisZ._y, axisZ._z, 0.0f,
+                return float4x4{ axisX._x, axisX._y, axisX._z, 0.0f, axisY._x, axisY._y, axisY._z, 0.0f, axisZ._x, axisZ._y, axisZ._z, 0.0f,
                                  translation._x, translation._y, translation._z, 1.0f };
             }
 
@@ -105,7 +105,7 @@ namespace sw::editor
                     const size_t      first      = static_cast<size_t>( startChunk ) * kChunkVertexCount;
                     const size_t      last       = MathUtil::min( static_cast<size_t>( endChunk ) * kChunkVertexCount, mesh.getVertexCount() );
                     const bool        bHasNormal = mesh.hasNormal();
-                    const bool        bHasUV     = mesh.hasUV();
+                    const bool        bHasUV     = mesh.hasUv();
                     const bool        bHasColor  = mesh.hasColor();
                     for ( size_t index = first; index < last; ++index )
                     {
@@ -124,7 +124,7 @@ namespace sw::editor
                             point._bHasOriginalPosition = true;
                         }
 
-                        const float3 moved = blend( point._position, _pModifier->deformPoint( point, *_pContext ), weight );
+                        const float3 moved        = blend( point._position, _pModifier->deformPoint( point, *_pContext ), weight );
                         mesh._listPosition[index] = moved;
                         if ( bHasNormal == false )
                             continue;
@@ -268,7 +268,9 @@ namespace sw::editor
                 pListSource = &inoutMesh._listPosition;
             listOriginalPosition.reserve( pListSource->size() );
             for ( const float3& position : *pListSource )
+            {
                 listOriginalPosition.push_back( float3::transform( position, localToModifier ) );
+            }
             context._pListOriginalPosition = &listOriginalPosition;
         }
 
@@ -286,7 +288,7 @@ namespace sw::editor
 
     void MeshModifier::applyToMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context ) const
     {
-        const float32 diagonal = context._bounds.getSize().getLength();
+        const float32                   diagonal = context._bounds.getSize().getLength();
         MeshModifierInternal::DeformJob job{};
         job._pModifier = this;
         job._pContext  = &context;
@@ -337,7 +339,9 @@ namespace sw::editor
         return true;
     }
 
-    void MeshModifier::onParamsChanged() {}
+    void MeshModifier::onParamsChanged()
+    {
+    }
 
     bool MeshModifier::packGPUParams( vector<float4>& outListValue ) const
     {
@@ -365,12 +369,12 @@ namespace sw::editor
         // 기준 공간 → 모디파이어 공간은 기즈모 행렬(기준 = 모디파이어 · G)의 역이다
         const float4x4 gizmoMatrix = MeshModifierInternal::makeMatrixFromBasis( _gizmo.toBaseDirection( float3::UnitX ), _gizmo.toBaseDirection( float3::UnitY ),
                                                                                 _gizmo.toBaseDirection( float3::UnitZ ), _gizmo._center );
-        float4x4       result         = gizmoMatrix.invert();
+        float4x4       result      = gizmoMatrix.invert();
         if ( _bWorldSpace == false )
             return result;
 
-        float4x4 localToBase = evaluation._meshToWorld;
-        float4x4 referenceWorld{};
+        float4x4   localToBase = evaluation._meshToWorld;
+        float4x4   referenceWorld{};
         const bool bHasReference = _spaceReference.empty() == false && evaluation._pInputs != nullptr &&
                                    evaluation._pInputs->tryGetWorldMatrix( _spaceReference, referenceWorld );
         if ( bHasReference )
@@ -481,15 +485,15 @@ namespace sw::editor
         const MeshModifierParamDef& def = _listParamDef[paramIndex];
         if ( def._kind != MeshModifierParamKind::NumberList )
             return;
-        const size_t     stride  = MathUtil::max<size_t>( def._stride, 1 );
-        const size_t     count   = ( listNumber.size() / stride ) * stride;
-        vector<float32>& listOut = _listParamValue[paramIndex]._listNumber;
-        listOut.clear();
-        listOut.reserve( count );
+        const size_t     stride        = MathUtil::max<size_t>( def._stride, 1 );
+        const size_t     count         = ( listNumber.size() / stride ) * stride;
+        vector<float32>& outListNumber = _listParamValue[paramIndex]._listNumber;
+        outListNumber.clear();
+        outListNumber.reserve( count );
         for ( size_t index = 0; index < count; ++index )
         {
             const float32 value = listNumber[index];
-            listOut.push_back( MathUtil::isFinite( value ) ? MathUtil::clamp( value, def._min, def._max ) : 0.0f );
+            outListNumber.push_back( MathUtil::isFinite( value ) ? MathUtil::clamp( value, def._min, def._max ) : 0.0f );
         }
     }
 
@@ -566,7 +570,7 @@ namespace sw::editor
             const float32 length = cross.getLength();
             if ( length <= MathUtil::kEpsilon )
                 continue;
-            const float3 normal = cross / length;
+            const float3 normal        = cross / length;
             inoutListNormal[first]     = normal;
             inoutListNormal[first + 1] = normal;
             inoutListNormal[first + 2] = normal;

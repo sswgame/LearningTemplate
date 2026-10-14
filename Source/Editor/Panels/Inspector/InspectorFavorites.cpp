@@ -23,7 +23,7 @@ namespace sw::editor
     bool InspectorFavorites::contains( string_view key ) const
     {
         return std::binary_search( _listKey.begin(), _listKey.end(), key, []( const auto& lhs, const auto& rhs )
-                                   { return string_view{ lhs } < string_view{ rhs }; } );
+        { return string_view{ lhs } < string_view{ rhs }; } );
     }
 
     bool InspectorFavorites::add( string_view key )
@@ -31,7 +31,7 @@ namespace sw::editor
         if ( key.empty() )
             return false;
         auto it = std::lower_bound( _listKey.begin(), _listKey.end(), key, []( const string& lhs, string_view rhs )
-                                    { return string_view{ lhs } < rhs; } );
+        { return string_view{ lhs } < rhs; } );
         if ( it != _listKey.end() && string_view{ *it } == key )
             return false;
         _listKey.insert( it, string{ key } );
@@ -41,7 +41,7 @@ namespace sw::editor
     bool InspectorFavorites::remove( string_view key )
     {
         auto it = std::lower_bound( _listKey.begin(), _listKey.end(), key, []( const string& lhs, string_view rhs )
-                                    { return string_view{ lhs } < rhs; } );
+        { return string_view{ lhs } < rhs; } );
         if ( it == _listKey.end() || string_view{ *it } != key )
             return false;
         _listKey.erase( it );
@@ -59,7 +59,7 @@ namespace sw::editor
     {
         const string prefix = makeKey( typeName, {} );
         auto         it     = std::lower_bound( _listKey.begin(), _listKey.end(), string_view{ prefix }, []( const string& lhs, string_view rhs )
-                                                { return string_view{ lhs } < rhs; } );
+                    { return string_view{ lhs } < rhs; } );
         return it != _listKey.end() && string_view{ *it }.substr( 0, prefix.size() ) == string_view{ prefix };
     }
 
@@ -85,9 +85,13 @@ namespace sw::editor
                 end = text.size();
             string_view line = text.substr( begin, end - begin );
             while ( line.empty() == false && ( line.front() == ' ' || line.front() == '\t' ) )
+            {
                 line.remove_prefix( 1 );
+            }
             while ( line.empty() == false && ( line.back() == ' ' || line.back() == '\t' || line.back() == '\r' ) )
+            {
                 line.remove_suffix( 1 );
+            }
             (void)add( line ); // 빈 줄과 중복은 add 가 거른다
             begin = end + 1;
         }

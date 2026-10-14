@@ -81,11 +81,11 @@ namespace sw
     {
         if ( _bActive == false )
             return base;
-        CameraPose pose                        = base;
-        pose._position                         = _position;
-        pose._rotation                         = _rotation;
-        pose._fieldOfViewY                     = _fieldOfViewY;
-        pose._orthoHeight                      = _orthoHeight;
+        CameraPose pose    = base;
+        pose._position     = _position;
+        pose._rotation     = _rotation;
+        pose._fieldOfViewY = _fieldOfViewY;
+        pose._orthoHeight  = _orthoHeight;
         pose._postProcess._exposureCompensation += _exposureOffset;
         return pose;
     }

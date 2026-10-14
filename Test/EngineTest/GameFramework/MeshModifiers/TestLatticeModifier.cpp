@@ -4,6 +4,7 @@
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "EngineTest/GameFramework/MeshModifiers/MeshModifierTestUtil.h"
+
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Modifiers/LatticeModifier.h"
 
 #include "TestFramework/TestFramework.h"
@@ -17,8 +18,13 @@ namespace
     {
         static const float3* getSamples( size_t& outCount )
         {
-            static const float3 s_arrSample[] = { float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f }, float3{ 0.25f, 0.5f, 0.75f },
-                                                  float3{ 0.9f, 0.1f, 0.4f },  float3{ -0.3f, 1.2f, 0.5f } };
+            static const float3 s_arrSample[] = {
+                float3{ 0.0f, 0.0f,  0.0f},
+                float3{ 1.0f, 1.0f,  1.0f},
+                float3{0.25f, 0.5f, 0.75f},
+                float3{ 0.9f, 0.1f,  0.4f},
+                float3{-0.3f, 1.2f,  0.5f}
+            };
             outCount = sizeof( s_arrSample ) / sizeof( s_arrSample[0] );
             return s_arrSample;
         }
@@ -148,8 +154,8 @@ SW_TEST_CASE( LatticeModifierTest, ExtraStateRoundTrips )
 
 SW_TEST_CASE( LatticeModifierTest, AppliedToMeshUsesTheFittedBox )
 {
-    MeshModifierMesh   mesh = test::MeshModifierTestUtil::makeBoxMesh( 2 );
-    LatticeModifier    lattice( 2 );
+    MeshModifierMesh         mesh = test::MeshModifierTestUtil::makeBoxMesh( 2 );
+    LatticeModifier          lattice( 2 );
     const MeshModifierBounds bounds = MeshModifierBounds::makeFromPoints( mesh._listPosition );
     lattice.fitToBounds( bounds );
     // 위(Y = 1) 네 제어점을 정규 좌표 +0.25 만큼 올리면 상자 높이(4)의 1/4 = 1 만큼 위 면이 올라간다

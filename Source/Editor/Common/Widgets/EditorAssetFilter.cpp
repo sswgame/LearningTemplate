@@ -21,10 +21,14 @@ namespace sw::editor
             while ( index < filter.size() )
             {
                 while ( index < filter.size() && isFilterSeparator( filter[index] ) )
+                {
                     ++index;
+                }
                 const size_t start = index;
                 while ( index < filter.size() && isFilterSeparator( filter[index] ) == false )
+                {
                     ++index;
+                }
                 if ( index > start && func( filter.substr( start, index - start ) ) )
                     return true;
             }
@@ -35,7 +39,8 @@ namespace sw::editor
     vector<string_view> EditorAssetFilter::splitExtensions( string_view filter )
     {
         vector<string_view> listExtension;
-        forEachExtension( filter, [&]( string_view extension ) {
+        forEachExtension( filter, [&]( string_view extension )
+        {
             listExtension.push_back( extension );
             return false;
         } );
@@ -44,8 +49,9 @@ namespace sw::editor
 
     bool EditorAssetFilter::matches( string_view path, string_view filter )
     {
-        bool bAnyExtension{ false };
-        const bool bMatched = forEachExtension( filter, [&]( string_view extension ) {
+        bool       bAnyExtension{ false };
+        const bool bMatched = forEachExtension( filter, [&]( string_view extension )
+        {
             bAnyExtension = true;
             return FileUtil::hasExtension( path, extension );
         } );

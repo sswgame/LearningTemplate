@@ -18,7 +18,10 @@ namespace sw::editor
     public:
         SpherifyModifier()
             : MeshModifier()
-            , _percentParam{ addParam( MeshModifierParamDef{ "Percent", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Blend toward the sphere surface (0 = no change, 1 = fully spherical)" ) ) }
+            , _percentParam{
+                  addParam( MeshModifierParamDef{ "Percent", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }
+                                .withLayout( nullptr, "Blend toward the sphere surface (0 = no change, 1 = fully spherical)" ) )
+        }
         {
         }
 

@@ -66,9 +66,9 @@ SW_TEST_CASE( MeshModifierStackTest, SidecarAndBakedPaths )
 SW_TEST_CASE( MeshModifierStackTest, WorldSpaceUsesTheReferenceObject )
 {
     // 메시는 월드에서 X 로 +10 에 있고, 기준 오브젝트도 +10 에 있다 → 기준 공간에서 보면 메시가 원점에 있어 로컬 공간과 같은 결과다
-    const MeshModifierMesh source = test::MeshModifierTestUtil::makeBoxMesh( 2 );
-    unique_ptr<MeshModifier> local = MeshModifierRegistry::create( "twist" );
-    unique_ptr<MeshModifier> world = MeshModifierRegistry::create( "twist" );
+    const MeshModifierMesh   source = test::MeshModifierTestUtil::makeBoxMesh( 2 );
+    unique_ptr<MeshModifier> local  = MeshModifierRegistry::create( "twist" );
+    unique_ptr<MeshModifier> world  = MeshModifierRegistry::create( "twist" );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *local, "Angle", 45.0f ) );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *world, "Angle", 45.0f ) );
     world->setWorldSpace( true );
@@ -101,7 +101,7 @@ SW_TEST_CASE( MeshModifierStackTest, TimeDrivesAnimatedWave )
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *wave, "Speed", 90.0f ) );
     MeshModifierEvaluation atZero{};
     MeshModifierEvaluation atOne{};
-    atOne._time = 1.0f;
+    atOne._time             = 1.0f;
     MeshModifierMesh first  = source;
     MeshModifierMesh second = source;
     wave->apply( first, atZero );

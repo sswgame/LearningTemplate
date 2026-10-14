@@ -52,7 +52,7 @@ namespace sw::editor
 
         size_t getVertexCount() const { return _listPosition.size(); }
         bool   hasNormal() const { return _listNormal.size() == _listPosition.size(); }
-        bool   hasUV() const { return _listUV.size() == _listPosition.size(); }
+        bool   hasUv() const { return _listUV.size() == _listPosition.size(); }
         bool   hasColor() const { return _listColor.size() == _listPosition.size(); }
         bool   hasWeight() const { return _listWeight.size() == _listPosition.size(); }
         /** @brief 정점의 선택 가중치입니다. 가중치 채널이 없으면 1 입니다. */
@@ -104,12 +104,12 @@ namespace sw::editor
         Float,
         Int,
         Bool,
-        Axis,        ///< 0 = X, 1 = Y, 2 = Z
-        Vector3,     ///< 세 성분 모두 [`_min`, `_max`]
-        Curve,       ///< [0,1] → 값 곡선. 키는 (x, y) 이고 x 오름차순, 사이는 선형 보간
-        Reference,   ///< 씬 오브젝트 참조(오브젝트 이름 — 스플라인 · 대상 메시 · 콜라이더 · 워프 기준). 글로 둡니다
-        AssetPath,   ///< 에셋 경로(텍스처 · 포인트 캐시 · 정점 애니메이션 · 메시). 리소스 id 글로 둡니다
-        NumberList,  ///< 수 목록. `_stride` 개씩 한 항목(예: 충돌점 = x y z 반경 세기 → stride 5)
+        Axis,       ///< 0 = X, 1 = Y, 2 = Z
+        Vector3,    ///< 세 성분 모두 [`_min`, `_max`]
+        Curve,      ///< [0,1] → 값 곡선. 키는 (x, y) 이고 x 오름차순, 사이는 선형 보간
+        Reference,  ///< 씬 오브젝트 참조(오브젝트 이름 — 스플라인 · 대상 메시 · 콜라이더 · 워프 기준). 글로 둡니다
+        AssetPath,  ///< 에셋 경로(텍스처 · 포인트 캐시 · 정점 애니메이션 · 메시). 리소스 id 글로 둡니다
+        NumberList, ///< 수 목록. `_stride` 개씩 한 항목(예: 충돌점 = x y z 반경 세기 → stride 5)
     };
 } // namespace sw::editor
 
@@ -131,7 +131,7 @@ namespace sw::editor
      */
     struct MeshModifierListColumn
     {
-        const utf8*                _pName{ nullptr };                          ///< 열 머리 이름(영문)
+        const utf8*                _pName{ nullptr }; ///< 열 머리 이름(영문)
         MeshModifierListColumnKind _kind{ MeshModifierListColumnKind::Float };
         const utf8*                _pComboItems{ nullptr }; ///< Combo 의 이름 목록. ImGui 처럼 '\0' 으로 나누고 빈 이름으로 끝냅니다(예: "Sphere\0Box\0Plane\0")
     };
@@ -146,20 +146,20 @@ namespace sw::editor
      */
     struct MeshModifierParamDef
     {
-        const utf8*           _pName{ nullptr }; ///< 저장 문서의 키이자 패널 표시 이름(영문, 모디파이어 안에서 유일)
-        MeshModifierParamKind _kind{ MeshModifierParamKind::Float };
-        float32               _min{ 0.0f };                ///< 수 종류의 하한(NumberList 는 원소마다)
-        float32               _max{ 1.0f };                ///< 수 종류의 상한
-        float3                _default{ 0.0f, 0.0f, 0.0f }; ///< 스칼라 종류는 `_x` 만 씁니다. 곡선은 (0, `_x`) → (1, `_y`) 직선입니다
-        uint32                _stride{ 1 };                ///< NumberList 의 항목 하나 원소 수
-        const utf8*           _pHint{ nullptr };           ///< 참조 · 경로 · 목록의 뜻(영문, 패널 도움말 — 예: "Spline object", "x y z radius strength")
-        const utf8*           _pGroup{ nullptr };          ///< 패널의 접히는 구역 이름(영문). 없으면 구역 없이 맨 위에 둡니다
-        const utf8*           _pTooltip{ nullptr };        ///< 입력칸 툴팁(영문 한 줄)
-        const utf8*           _pUnit{ nullptr };           ///< 값 뒤에 붙여 보일 단위(예: "deg", "m")
-        const MeshModifierListColumn* _pColumn{ nullptr }; ///< NumberList 의 열 선언(정적 배열). 없으면 일반 숫자 표입니다
-        uint32                _columnCount{ 0 };           ///< `_pColumn` 원소 수
-        const utf8*           _pRequiredComponentHint{ nullptr }; ///< Reference 고르기에서 걸러 볼 컴포넌트 타입 이름(예: "SplineComponent")
-        const utf8*           _pAssetFilterHint{ nullptr };       ///< AssetPath 슬롯이 받을 확장자(예: ".pc2"). 없으면 모두 받습니다
+        const utf8*                   _pName{ nullptr }; ///< 저장 문서의 키이자 패널 표시 이름(영문, 모디파이어 안에서 유일)
+        MeshModifierParamKind         _kind{ MeshModifierParamKind::Float };
+        float32                       _min{ 0.0f };                       ///< 수 종류의 하한(NumberList 는 원소마다)
+        float32                       _max{ 1.0f };                       ///< 수 종류의 상한
+        float3                        _default{ 0.0f, 0.0f, 0.0f };       ///< 스칼라 종류는 `_x` 만 씁니다. 곡선은 (0, `_x`) → (1, `_y`) 직선입니다
+        uint32                        _stride{ 1 };                       ///< NumberList 의 항목 하나 원소 수
+        const utf8*                   _pHint{ nullptr };                  ///< 참조 · 경로 · 목록의 뜻(영문, 패널 도움말 — 예: "Spline object", "x y z radius strength")
+        const utf8*                   _pGroup{ nullptr };                 ///< 패널의 접히는 구역 이름(영문). 없으면 구역 없이 맨 위에 둡니다
+        const utf8*                   _pTooltip{ nullptr };               ///< 입력칸 툴팁(영문 한 줄)
+        const utf8*                   _pUnit{ nullptr };                  ///< 값 뒤에 붙여 보일 단위(예: "deg", "m")
+        const MeshModifierListColumn* _pColumn{ nullptr };                ///< NumberList 의 열 선언(정적 배열). 없으면 일반 숫자 표입니다
+        uint32                        _columnCount{ 0 };                  ///< `_pColumn` 원소 수
+        const utf8*                   _pRequiredComponentHint{ nullptr }; ///< Reference 고르기에서 걸러 볼 컴포넌트 타입 이름(예: "SplineComponent")
+        const utf8*                   _pAssetFilterHint{ nullptr };       ///< AssetPath 슬롯이 받을 확장자(예: ".pc2"). 없으면 모두 받습니다
 
         /** @brief 구역 · 툴팁 · 단위를 넣은 사본을 냅니다. */
         MeshModifierParamDef withLayout( const utf8* pGroup, const utf8* pTooltip, const utf8* pUnit = nullptr ) const
@@ -238,11 +238,11 @@ namespace sw::editor
     /** @brief 스택 한 번 거는 동안 모든 모디파이어가 함께 보는 값입니다. */
     struct MeshModifierEvaluation
     {
-        float4x4                   _meshToWorld{};          ///< 메시 로컬 → 월드(월드 공간 모디파이어 · 외부 입력의 좌표 변환)
-        const IMeshModifierInputs* _pInputs{ nullptr };     ///< 없으면 외부 입력을 쓰는 모디파이어는 항등입니다
-        float32                    _time{ 0.0f };           ///< 초. 애니메이션 모디파이어(Waving · Dynamic Ripple · Vertex Anim)가 씁니다
+        float4x4                   _meshToWorld{};      ///< 메시 로컬 → 월드(월드 공간 모디파이어 · 외부 입력의 좌표 변환)
+        const IMeshModifierInputs* _pInputs{ nullptr }; ///< 없으면 외부 입력을 쓰는 모디파이어는 항등입니다
+        float32                    _time{ 0.0f };       ///< 초. 애니메이션 모디파이어(Waving · Dynamic Ripple · Vertex Anim)가 씁니다
         /** @brief 스택에 들어온 변형 전 정점 위치(메시 로컬)입니다. 스택이 채우고, 없거나 정점 수가 다르면 각 모디파이어의 입력 위치를 대신 씁니다. */
-        const vector<float3>*      _pListStackInputPosition{ nullptr };
+        const vector<float3>* _pListStackInputPosition{ nullptr };
     };
 } // namespace sw::editor
 
@@ -271,7 +271,7 @@ namespace sw::editor
         float4x4                      _modifierToWorld{}; ///< 모디파이어 공간 → 월드
         float4x4                      _worldToModifier{}; ///< 월드 → 모디파이어 공간
         const MeshModifierEvaluation* _pEvaluation{ nullptr };
-        uint32                        _axisIndex{ 1 }; ///< 주축 성분 번호(0 = X, 1 = Y, 2 = Z)
+        uint32                        _axisIndex{ 1 };                   ///< 주축 성분 번호(0 = X, 1 = Y, 2 = Z)
         const vector<float3>*         _pListOriginalPosition{ nullptr }; ///< 변형 전 원본 위치(모디파이어 공간). `needsOriginalPosition` 일 때만 채운다
 
         float32                    getTime() const { return _pEvaluation != nullptr ? _pEvaluation->_time : 0.0f; }
@@ -336,7 +336,7 @@ namespace sw::editor
         const vector<MeshModifierParamDef>& getParamDefs() const { return _listParamDef; }
         uint32                              getParamCount() const { return static_cast<uint32>( _listParamDef.size() ); }
         /** @brief 이름의 매개변수 번호를 찾습니다. 없으면 false 입니다. */
-        [[nodiscard]] bool tryGetParamIndex( string_view name, uint32& outIndex ) const;
+        [[nodiscard]] bool            tryGetParamIndex( string_view name, uint32& outIndex ) const;
         const MeshModifierParamValue& getParamValue( uint32 paramIndex ) const { return _listParamValue[paramIndex]; }
 
         float32                getFloat( uint32 paramIndex ) const { return _listParamValue[paramIndex]._value._x; }

@@ -25,13 +25,13 @@ namespace test
         {
             using sw::float3;
             sw::editor::MeshModifierMesh mesh{};
-            const float3 halfSize{ 1.0f, 2.0f, 1.0f };
+            const float3                 halfSize{ 1.0f, 2.0f, 1.0f };
             for ( uint32 face = 0; face < 6; ++face )
             {
-                const uint32  axis   = face / 2;
-                const float32 sign   = ( face % 2 ) == 0 ? 1.0f : -1.0f;
-                const uint32  axisU  = ( axis + 1 ) % 3;
-                const uint32  axisV  = ( axis + 2 ) % 3;
+                const uint32  axis  = face / 2;
+                const float32 sign  = ( face % 2 ) == 0 ? 1.0f : -1.0f;
+                const uint32  axisU = ( axis + 1 ) % 3;
+                const uint32  axisV = ( axis + 2 ) % 3;
                 float3        normal{ 0.0f, 0.0f, 0.0f };
                 sw::editor::MeshModifierUtil::setComponent( normal, axis, sign );
                 for ( uint32 cellU = 0; cellU < subdivision; ++cellU )
@@ -131,7 +131,11 @@ namespace test
                     }
                     case MeshModifierParamKind::Curve:
                     {
-                        const sw::vector<sw::float2> listKey{ sw::float2{ 0.0f, 0.0f }, sw::float2{ 0.5f, ratio }, sw::float2{ 1.0f, 1.0f } };
+                        const sw::vector<sw::float2> listKey{
+                            sw::float2{0.0f,  0.0f},
+                            sw::float2{0.5f, ratio},
+                            sw::float2{1.0f,  1.0f}
+                        };
                         modifier.setCurveKeys( paramIndex, listKey );
                         break;
                     }
@@ -143,7 +147,9 @@ namespace test
                     }
                     case MeshModifierParamKind::Reference:
                     case MeshModifierParamKind::AssetPath:
+                    {
                         break;
+                    }
                 }
             }
             modifier.onParamsChanged();

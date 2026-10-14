@@ -18,8 +18,11 @@ namespace sw::editor
     public:
         MeltModifier()
             : MeshModifier()
-            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Melt", "How far the mesh has melted (0 = solid, 1 = flat)" ) ) }
-            , _spreadParam{ addParam( MeshModifierParamDef{ "Spread", MeshModifierParamKind::Float, 0.0f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Melt", "How far melted vertices spread outward" ) ) }
+            , _amountParam{
+                  addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }
+                                .withLayout( "Melt", "How far the mesh has melted (0 = solid, 1 = flat)" ) )
+        },
+            _spreadParam{ addParam( MeshModifierParamDef{ "Spread", MeshModifierParamKind::Float, 0.0f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Melt", "How far melted vertices spread outward" ) ) }
         {
         }
 
@@ -30,12 +33,12 @@ namespace sw::editor
             const float32 amount = getFloat( _amountParam );
             if ( amount < MathUtil::kEpsilon )
                 return point._position;
-            const uint32  axis     = context._axisIndex;
+            const uint32  axis        = context._axisIndex;
             const float32 floorHeight = MeshModifierUtil::getComponent( context._bounds._min, axis );
-            const float32 height   = MeshModifierUtil::getComponent( point._position, axis );
-            const float32 fraction = MathUtil::saturate( MeshModifierUtil::getAxisFraction( point._position, context ) );
-            const float32 spread   = 1.0f + getFloat( _spreadParam ) * amount * ( 1.0f - fraction );
-            float3        result   = point._position * spread;
+            const float32 height      = MeshModifierUtil::getComponent( point._position, axis );
+            const float32 fraction    = MathUtil::saturate( MeshModifierUtil::getAxisFraction( point._position, context ) );
+            const float32 spread      = 1.0f + getFloat( _spreadParam ) * amount * ( 1.0f - fraction );
+            float3        result      = point._position * spread;
             MeshModifierUtil::setComponent( result, axis, floorHeight + ( height - floorHeight ) * ( 1.0f - amount ) );
             return result;
         }

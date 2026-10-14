@@ -19,7 +19,10 @@ namespace sw::editor
     public:
         PivotAdjustModifier()
             : MeshModifier()
-            , _offsetParam{ addParam( MeshModifierParamDef{ "Pivot Offset", MeshModifierParamKind::Vector3, -10000.0f, 10000.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Offset applied to every vertex; 0 leaves the mesh unchanged", "m" ) ) }
+            , _offsetParam{
+                  addParam( MeshModifierParamDef{ "Pivot Offset", MeshModifierParamKind::Vector3, -10000.0f, 10000.0f, float3{ 0.0f, 0.0f, 0.0f } }
+                                .withLayout( nullptr, "Offset applied to every vertex; 0 leaves the mesh unchanged", "m" ) )
+        }
         {
         }
 

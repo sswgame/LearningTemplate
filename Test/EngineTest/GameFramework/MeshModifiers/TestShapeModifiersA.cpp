@@ -19,7 +19,10 @@ namespace
 SW_TEST_CASE( ShapeModifiersATest, BubblePushesInsideRadiusOnly )
 {
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 0.5f, 0.0f, 0.0f }, float3{ 2.0f, 0.0f, 0.0f } };
+    mesh._listPosition = {
+        float3{0.5f, 0.0f, 0.0f},
+        float3{2.0f, 0.0f, 0.0f}
+    };
     unique_ptr<MeshModifier> bubble = MeshModifierRegistry::create( "bubble" );
     SW_ASSERT_NOT_NULL( bubble.get() );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *bubble, "Strength", 1.0f ) );
@@ -32,7 +35,11 @@ SW_TEST_CASE( ShapeModifiersATest, BubblePushesInsideRadiusOnly )
 SW_TEST_CASE( ShapeModifiersATest, BulgeWidensTheMiddleAndKeepsTheEnds )
 {
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 1.0f, -2.0f, 0.0f }, float3{ 1.0f, 0.0f, 0.0f }, float3{ 1.0f, 2.0f, 0.0f } };
+    mesh._listPosition = {
+        float3{1.0f, -2.0f, 0.0f},
+        float3{1.0f,  0.0f, 0.0f},
+        float3{1.0f,  2.0f, 0.0f}
+    };
     unique_ptr<MeshModifier> bulge = MeshModifierRegistry::create( "bulge" );
     SW_ASSERT_NOT_NULL( bulge.get() );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *bulge, "Amount", 1.0f ) );
@@ -45,7 +52,10 @@ SW_TEST_CASE( ShapeModifiersATest, BulgeWidensTheMiddleAndKeepsTheEnds )
 SW_TEST_CASE( ShapeModifiersATest, CylindrifyFullPercentLandsOnTheCylinder )
 {
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 1.0f, 5.0f, 0.0f }, float3{ 0.0f, 1.0f, 3.0f } };
+    mesh._listPosition = {
+        float3{1.0f, 5.0f, 0.0f},
+        float3{0.0f, 1.0f, 3.0f}
+    };
     unique_ptr<MeshModifier> cylindrify = MeshModifierRegistry::create( "cylindrify" );
     SW_ASSERT_NOT_NULL( cylindrify.get() );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *cylindrify, "Percent", 1.0f ) );
@@ -58,7 +68,10 @@ SW_TEST_CASE( ShapeModifiersATest, CylindrifyFullPercentLandsOnTheCylinder )
 SW_TEST_CASE( ShapeModifiersATest, GlobeInterpolatesTowardTheFixedRadius )
 {
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 2.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f } };
+    mesh._listPosition = {
+        float3{2.0f, 0.0f, 0.0f},
+        float3{1.0f, 1.0f, 1.0f}
+    };
     unique_ptr<MeshModifier> globe = MeshModifierRegistry::create( "globe" );
     SW_ASSERT_NOT_NULL( globe.get() );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *globe, "Percent", 0.5f ) );
@@ -71,7 +84,10 @@ SW_TEST_CASE( ShapeModifiersATest, GlobeInterpolatesTowardTheFixedRadius )
 SW_TEST_CASE( ShapeModifiersATest, HumpIsGaussianAlongTheAxis )
 {
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 0.0f, 0.0f } };
+    mesh._listPosition = {
+        float3{0.0f, 0.0f, 0.0f},
+        float3{1.0f, 0.0f, 0.0f}
+    };
     unique_ptr<MeshModifier> hump = MeshModifierRegistry::create( "hump" );
     SW_ASSERT_NOT_NULL( hump.get() );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *hump, "Height", 2.0f ) );
@@ -84,7 +100,10 @@ SW_TEST_CASE( ShapeModifiersATest, HumpIsGaussianAlongTheAxis )
 SW_TEST_CASE( ShapeModifiersATest, RadialSkewOpensWithHeight )
 {
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 1.0f, 0.0f, 0.0f }, float3{ 1.0f, 2.0f, 0.0f } };
+    mesh._listPosition = {
+        float3{1.0f, 0.0f, 0.0f},
+        float3{1.0f, 2.0f, 0.0f}
+    };
     unique_ptr<MeshModifier> radialSkew = MeshModifierRegistry::create( "radialskew" );
     SW_ASSERT_NOT_NULL( radialSkew.get() );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *radialSkew, "Angle", 45.0f ) );
@@ -97,7 +116,11 @@ SW_TEST_CASE( ShapeModifiersATest, RadialSkewOpensWithHeight )
 SW_TEST_CASE( ShapeModifiersATest, SkewShearsLinearlyAlongTheAxis )
 {
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 0.0f, -2.0f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 2.0f, 0.0f } };
+    mesh._listPosition = {
+        float3{0.0f, -2.0f, 0.0f},
+        float3{0.0f,  0.0f, 0.0f},
+        float3{0.0f,  2.0f, 0.0f}
+    };
     unique_ptr<MeshModifier> skew = MeshModifierRegistry::create( "skew" );
     SW_ASSERT_NOT_NULL( skew.get() );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *skew, "Amount", 2.0f ) );

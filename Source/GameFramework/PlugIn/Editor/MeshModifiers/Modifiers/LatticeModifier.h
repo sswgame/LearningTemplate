@@ -31,10 +31,10 @@ namespace sw::editor
         /** @brief 격자 모디파이어(레지스트리 id `lattice` · `ffd2` · `ffd3` · `ffd4`)면 그 포인터, 아니면 nullptr 입니다. RTTI 없이 id 로 가린다. */
         static LatticeModifier* findFrom( MeshModifier& modifier );
 
-        float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override;
-        void   writeExtraJSON( const JSONValue& object ) const override;
+        float3             deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override;
+        void               writeExtraJSON( const JSONValue& object ) const override;
         [[nodiscard]] bool readExtraJSON( const JSONValue& object ) override;
-        void   onParamsChanged() override;
+        void               onParamsChanged() override;
 
         /**
          * @brief 해상도를 바꿉니다. 모든 축이 같거나 커지면 차수 올리기로 변형을 정확히 보존하고, 하나라도 줄면 옛 변형을 새 격자점에서 다시 표본합니다.
@@ -63,7 +63,7 @@ namespace sw::editor
         /** @brief 항등 격자에서 이 제어점이 있을 정규 좌표입니다. */
         float3 getIdentityControlPoint( int32 index ) const;
         /** @brief 쓰는 격자 상자입니다. 저장된 상자가 무효면 @p fallback 입니다. */
-        MeshModifierBounds getEffectiveBox( const MeshModifierBounds& fallback ) const;
+        MeshModifierBounds        getEffectiveBox( const MeshModifierBounds& fallback ) const;
         const MeshModifierBounds& getBox() const { return _box; }
         void                      setBox( const MeshModifierBounds& box ) { _box = box; }
 
@@ -74,7 +74,7 @@ namespace sw::editor
         void elevateAxis( uint32 axisIndex );
         void syncResolutionParams();
 
-        MeshModifierBounds _box; ///< 모디파이어 공간의 격자 상자. 무효면 입력 정점의 상자
+        MeshModifierBounds _box;              ///< 모디파이어 공간의 격자 상자. 무효면 입력 정점의 상자
         vector<float3>     _listControlPoint; ///< X 가 가장 빨리 도는 순서(index = x + Nx · (y + Ny · z))
         uint32             _resolutionXParam;
         uint32             _resolutionYParam;

@@ -18,11 +18,14 @@ namespace sw::editor
     public:
         WaveModifier()
             : MeshModifier()
-            , _amplitudeParam{ addParam( MeshModifierParamDef{ "Amplitude", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Wave", "Wave height", "m" ) ) }
-            , _wavelengthParam{ addParam( MeshModifierParamDef{ "Wavelength", MeshModifierParamKind::Float, 0.001f, 1000.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Wave", "Distance between crests", "m" ) ) }
-            , _phaseParam{ addParam( MeshModifierParamDef{ "Phase", MeshModifierParamKind::Float, -360.0f, 360.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Wave", "Wave offset", "deg" ) ) }
-            , _decayParam{ addParam( MeshModifierParamDef{ "Decay", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Falloff", "How fast the wave fades with distance" ) ) }
-            , _speedParam{ addParam( MeshModifierParamDef{ "Speed", MeshModifierParamKind::Float, -3600.0f, 3600.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Animation", "Phase change per second of preview time", "deg/s" ) ) }
+            , _amplitudeParam{
+                  addParam( MeshModifierParamDef{ "Amplitude", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }
+                                .withLayout( "Wave", "Wave height", "m" ) )
+        },
+            _wavelengthParam{ addParam( MeshModifierParamDef{ "Wavelength", MeshModifierParamKind::Float, 0.001f, 1000.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Wave", "Distance between crests", "m" ) ) },
+            _phaseParam{ addParam( MeshModifierParamDef{ "Phase", MeshModifierParamKind::Float, -360.0f, 360.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Wave", "Wave offset", "deg" ) ) },
+            _decayParam{ addParam( MeshModifierParamDef{ "Decay", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Falloff", "How fast the wave fades with distance" ) ) },
+            _speedParam{ addParam( MeshModifierParamDef{ "Speed", MeshModifierParamKind::Float, -3600.0f, 3600.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Animation", "Phase change per second of preview time", "deg/s" ) ) }
         {
         }
 
@@ -33,12 +36,12 @@ namespace sw::editor
             const float32 amplitude = getFloat( _amplitudeParam );
             if ( MathUtil::abs( amplitude ) < MathUtil::kEpsilon )
                 return point._position;
-            const uint32  axis     = context._axisIndex;
-            const float32 coordU   = MeshModifierUtil::getComponent( point._position, ( axis + 1 ) % 3 );
-            const float32 phase    = MathUtil::toRadian( getFloat( _phaseParam ) + getFloat( _speedParam ) * context.getTime() );
-            const float32 angle    = MathUtil::kTwoPi * coordU / getFloat( _wavelengthParam ) + phase;
-            const float32 offset   = amplitude * MathUtil::sin( angle ) * MathUtil::exp( -getFloat( _decayParam ) * MathUtil::abs( coordU ) );
-            float3        result   = point._position;
+            const uint32  axis   = context._axisIndex;
+            const float32 coordU = MeshModifierUtil::getComponent( point._position, ( axis + 1 ) % 3 );
+            const float32 phase  = MathUtil::toRadian( getFloat( _phaseParam ) + getFloat( _speedParam ) * context.getTime() );
+            const float32 angle  = MathUtil::kTwoPi * coordU / getFloat( _wavelengthParam ) + phase;
+            const float32 offset = amplitude * MathUtil::sin( angle ) * MathUtil::exp( -getFloat( _decayParam ) * MathUtil::abs( coordU ) );
+            float3        result = point._position;
             MeshModifierUtil::setComponent( result, axis, MeshModifierUtil::getComponent( result, axis ) + offset );
             return result;
         }

@@ -34,7 +34,7 @@ namespace sw
                     return false;
                 }
                 pManager->forEachComponentOfType<AbilitySystemComponent>( [&outListComponent]( AbilitySystemComponent* pComponent )
-                                                                          { outListComponent.push_back( pComponent ); } );
+                { outListComponent.push_back( pComponent ); } );
                 if ( outListComponent.empty() )
                 {
                     outReply = "cheat: no AbilitySystemComponent in the active scene";
@@ -111,7 +111,9 @@ namespace sw
                         if ( pAbility == nullptr || pAbility->getConfig()._pCooldownEffect == nullptr )
                             continue;
                         for ( const TagID tag : pAbility->getConfig()._pCooldownEffect->_grantedTags.getTags() )
+                        {
                             cooldownTags.addTag( tag );
+                        }
                     }
                     if ( cooldownTags.getTagCount() > 0 )
                         removedCount += pComponent->removeActiveEffectsWithTags( cooldownTags );

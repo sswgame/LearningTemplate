@@ -74,7 +74,10 @@ SW_TEST_CASE( ProceduralModifiersTest, CrumpleIsDeterministicAndMovesTheBox )
 SW_TEST_CASE( ProceduralModifiersTest, DynamicRippleStartsFlatAndSpreadsOverTime )
 {
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 0.25f, 0.0f, 0.0f }, float3{ 3.0f, 0.0f, 0.0f } };
+    mesh._listPosition = {
+        float3{0.25f, 0.0f, 0.0f},
+        float3{ 3.0f, 0.0f, 0.0f}
+    };
     unique_ptr<MeshModifier> ripple = MeshModifierRegistry::create( "dynamicripple" );
     SW_ASSERT_NOT_NULL( ripple.get() );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *ripple, "Amplitude", 1.0f ) );
@@ -118,7 +121,11 @@ SW_TEST_CASE( ProceduralModifiersTest, PageFlipFullProgressMirrorsThePage )
 SW_TEST_CASE( ProceduralModifiersTest, TreeBendKeepsTheRootAndBendsTheTop )
 {
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 0.0f, -2.0f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 2.0f, 0.0f } };
+    mesh._listPosition = {
+        float3{0.0f, -2.0f, 0.0f},
+        float3{0.0f,  0.0f, 0.0f},
+        float3{0.0f,  2.0f, 0.0f}
+    };
     unique_ptr<MeshModifier> tree = MeshModifierRegistry::create( "treebend" );
     SW_ASSERT_NOT_NULL( tree.get() );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *tree, "Strength", 1.0f ) );
@@ -132,7 +139,10 @@ SW_TEST_CASE( ProceduralModifiersTest, TreeBendKeepsTheRootAndBendsTheTop )
 SW_TEST_CASE( ProceduralModifiersTest, TreeBendSwaysWithTime )
 {
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 0.0f, -2.0f, 0.0f }, float3{ 0.0f, 2.0f, 0.0f } };
+    mesh._listPosition = {
+        float3{0.0f, -2.0f, 0.0f},
+        float3{0.0f,  2.0f, 0.0f}
+    };
     unique_ptr<MeshModifier> tree = MeshModifierRegistry::create( "treebend" );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *tree, "Strength", 1.0f ) );
     MeshModifierMesh early = mesh;
@@ -163,7 +173,10 @@ SW_TEST_CASE( ProceduralModifiersTest, VertNoiseMovesOnlyAlongTheNormal )
 SW_TEST_CASE( ProceduralModifiersTest, ZStretchNoiseScalesTheChosenAxis )
 {
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 1.0f, 2.0f, 3.0f }, float3{ -1.0f, 0.5f, -2.0f } };
+    mesh._listPosition = {
+        float3{ 1.0f, 2.0f,  3.0f},
+        float3{-1.0f, 0.5f, -2.0f}
+    };
     unique_ptr<MeshModifier> stretch = MeshModifierRegistry::create( "zstretchnoise" );
     SW_ASSERT_NOT_NULL( stretch.get() );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *stretch, "Amount", 1.0f ) );
@@ -197,7 +210,10 @@ SW_TEST_CASE( ProceduralModifiersTest, WavingKeepsTheFixedEdgeAndChangesOverTime
 SW_TEST_CASE( ProceduralModifiersTest, PivotAdjustShiftsEveryVertexOpposite )
 {
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 2.0f, 3.0f } };
+    mesh._listPosition = {
+        float3{0.0f, 0.0f, 0.0f},
+        float3{1.0f, 2.0f, 3.0f}
+    };
     unique_ptr<MeshModifier> pivot = MeshModifierRegistry::create( "pivotadjust" );
     SW_ASSERT_NOT_NULL( pivot.get() );
     SW_ASSERT_TRUE( ProceduralModifiersTestInternal::setVector3( *pivot, "Pivot Offset", float3{ 1.0f, -1.0f, 0.5f } ) );
@@ -209,7 +225,10 @@ SW_TEST_CASE( ProceduralModifiersTest, PivotAdjustShiftsEveryVertexOpposite )
 SW_TEST_CASE( ProceduralModifiersTest, DisplaceLimitsClampsToBoxAndSphere )
 {
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 3.0f, 0.0f, 0.0f }, float3{ 0.5f, -0.25f, 0.0f } };
+    mesh._listPosition = {
+        float3{3.0f,   0.0f, 0.0f},
+        float3{0.5f, -0.25f, 0.0f}
+    };
     unique_ptr<MeshModifier> limits = MeshModifierRegistry::create( "displacelimits" );
     SW_ASSERT_NOT_NULL( limits.get() );
 
@@ -230,7 +249,10 @@ SW_TEST_CASE( ProceduralModifiersTest, DisplaceLimitsClampsToBoxAndSphere )
 SW_TEST_CASE( ProceduralModifiersTest, PaintColorsInsideTheBrushOnly )
 {
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 0.0f, 0.0f, 0.0f }, float3{ 5.0f, 0.0f, 0.0f } };
+    mesh._listPosition = {
+        float3{0.0f, 0.0f, 0.0f},
+        float3{5.0f, 0.0f, 0.0f}
+    };
     unique_ptr<MeshModifier> paint = MeshModifierRegistry::create( "paint" );
     SW_ASSERT_NOT_NULL( paint.get() );
     // 브러시: 원점 · 반경 1 · 세기 1 · 감쇠 0 → 안쪽은 Color(기본 빨강)로 완전히 덮인다
@@ -247,7 +269,11 @@ SW_TEST_CASE( ProceduralModifiersTest, PaintColorsInsideTheBrushOnly )
 SW_TEST_CASE( ProceduralModifiersTest, PaintWeightSelectsOnlyPaintedVertices )
 {
     MeshModifierMesh mesh{};
-    mesh._listPosition = { float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.5f, 0.0f, 0.0f }, float3{ 5.0f, 0.0f, 0.0f } };
+    mesh._listPosition = {
+        float3{0.0f, 0.0f, 0.0f},
+        float3{0.5f, 0.0f, 0.0f},
+        float3{5.0f, 0.0f, 0.0f}
+    };
     unique_ptr<MeshModifier> paint = MeshModifierRegistry::create( "paint" );
     SW_ASSERT_TRUE( test::MeshModifierTestUtil::setScalar( *paint, "Target", 1.0f ) );
     // 감쇠 1 → smoothstep(1 - d / r): 중심 1, d = 0.5 에서 0.5

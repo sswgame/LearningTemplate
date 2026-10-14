@@ -2,6 +2,7 @@
 #include "pch.h"
 
 #include "EngineTest/GameFramework/MeshModifiers/MeshModifierTestUtil.h"
+
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Modifiers/PathModifierUtil.h"
 
 #include "TestFramework/TestFramework.h"
@@ -15,8 +16,16 @@ namespace
     MeshModifierMesh makePointMesh()
     {
         MeshModifierMesh mesh{};
-        mesh._listPosition = { float3{ 0.0f, 0.0f, 0.0f }, float3{ 3.0f, 0.0f, 0.0f }, float3{ -1.0f, 1.0f, 2.0f } };
-        mesh._listNormal   = { float3{ 0.0f, 1.0f, 0.0f }, float3{ 0.0f, 1.0f, 0.0f }, float3{ 0.0f, 1.0f, 0.0f } };
+        mesh._listPosition = {
+            float3{ 0.0f, 0.0f, 0.0f},
+            float3{ 3.0f, 0.0f, 0.0f},
+            float3{-1.0f, 1.0f, 2.0f}
+        };
+        mesh._listNormal = {
+            float3{0.0f, 1.0f, 0.0f},
+            float3{0.0f, 1.0f, 0.0f},
+            float3{0.0f, 1.0f, 0.0f}
+        };
         return mesh;
     }
 
@@ -91,7 +100,7 @@ SW_TEST_CASE( MeshModifierSemanticsTest, RotationMinimizingFrameOnHelixIsOrthono
     }
     vector<float3> listAxisU;
     vector<float3> listAxisV;
-    PathModifierUtil::buildRotationMinimizingFrames( listPosition, listTangent, 1, listAxisU, listAxisV );
+    PathModifierUtil::computeRotationMinimizingFrames( listPosition, listTangent, 1, listAxisU, listAxisV );
     SW_ASSERT_EQUAL( listPosition.size(), listAxisV.size() );
 
     for ( size_t index = 0; index < listAxisV.size(); ++index )
@@ -127,12 +136,12 @@ SW_TEST_CASE( MeshModifierSemanticsTest, RotationMinimizingFrameOnPlanarArcMatch
     }
     vector<float3> listAxisU;
     vector<float3> listAxisV;
-    PathModifierUtil::buildRotationMinimizingFrames( listPosition, listTangent, 1, listAxisU, listAxisV );
+    PathModifierUtil::computeRotationMinimizingFrames( listPosition, listTangent, 1, listAxisU, listAxisV );
     for ( size_t index = 0; index < listAxisV.size(); ++index )
     {
         float3 fixedU{ 1.0f, 0.0f, 0.0f };
         float3 fixedV{ 0.0f, 0.0f, 1.0f };
-        PathModifierUtil::buildFrame( listTangent[index], 1, fixedU, fixedV );
+        PathModifierUtil::makeFrame( listTangent[index], 1, fixedU, fixedV );
         SW_EXPECT_TRUE( ( listAxisU[index] - fixedU ).getLength() < 1e-4f );
         SW_EXPECT_TRUE( ( listAxisV[index] - fixedV ).getLength() < 1e-4f );
     }

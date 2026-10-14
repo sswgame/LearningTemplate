@@ -25,7 +25,7 @@ namespace sw::editor
             {
                 for ( size_t element = 0; element < stride; ++element )
                 {
-                    const float32 value                       = inoutListNumber[rowA * stride + element];
+                    const float32 value                      = inoutListNumber[rowA * stride + element];
                     inoutListNumber[rowA * stride + element] = inoutListNumber[rowB * stride + element];
                     inoutListNumber[rowB * stride + element] = value;
                 }

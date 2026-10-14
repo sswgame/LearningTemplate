@@ -27,7 +27,10 @@ namespace sw::editor
         bool   _bActive{ false }; ///< 미리 보는 시각을 덮는 칸
         bool   _bPast{ false };   ///< 계획을 세운 시각보다 앞에 끝난 칸
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @struct ScheduleTimelineRows
      * @brief 계획 → 표 행 변환입니다.
@@ -39,6 +42,6 @@ namespace sw::editor
         /** @brief @p minuteOfDay 를 덮는 칸의 번호입니다(시작 포함, 끝 제외). 없으면 -1 입니다. */
         static int32 findSegmentAt( const vector<ScheduleSegment>& listSegment, int32 minuteOfDay );
         /** @brief @p listSegment 를 행으로 바꿉니다. @p previewMinute 를 덮는 칸이 `_bActive` 입니다. */
-        static void build( const vector<ScheduleSegment>& listSegment, int32 previewMinute, vector<ScheduleTimelineRow>& outListRow );
+        static void populate( const vector<ScheduleSegment>& listSegment, int32 previewMinute, vector<ScheduleTimelineRow>& outListRow );
     };
 } // namespace sw::editor

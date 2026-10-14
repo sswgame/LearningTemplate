@@ -18,9 +18,12 @@ namespace sw::editor
     public:
         PokeModifier()
             : MeshModifier()
-            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Height of the bump at the center (0 = no change, negative dents)", "m" ) ) }
-            , _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.001f, 10000.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Radius of the affected area", "m" ) ) }
-            , _falloffParam{ addParam( MeshModifierParamDef{ "Falloff", MeshModifierParamKind::Float, 0.1f, 8.0f, float3{ 2.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Sharpness of the bump edge (higher = narrower peak)" ) ) }
+            , _amountParam{
+                  addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }
+                                .withLayout( nullptr, "Height of the bump at the center (0 = no change, negative dents)", "m" ) )
+        },
+            _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.001f, 10000.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Radius of the affected area", "m" ) ) },
+            _falloffParam{ addParam( MeshModifierParamDef{ "Falloff", MeshModifierParamKind::Float, 0.1f, 8.0f, float3{ 2.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Sharpness of the bump edge (higher = narrower peak)" ) ) }
         {
         }
 

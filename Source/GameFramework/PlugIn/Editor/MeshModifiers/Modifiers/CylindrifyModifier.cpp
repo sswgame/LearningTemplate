@@ -18,8 +18,11 @@ namespace sw::editor
     public:
         CylindrifyModifier()
             : MeshModifier()
-            , _percentParam{ addParam( MeshModifierParamDef{ "Percent", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Blend toward the cylinder surface (0 = no change, 1 = fully on the cylinder)" ) ) }
-            , _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Radius of the target cylinder", "m" ) ) }
+            , _percentParam{
+                  addParam( MeshModifierParamDef{ "Percent", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }
+                                .withLayout( nullptr, "Blend toward the cylinder surface (0 = no change, 1 = fully on the cylinder)" ) )
+        },
+            _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Radius of the target cylinder", "m" ) ) }
         {
         }
 
@@ -32,8 +35,8 @@ namespace sw::editor
             const float32 percent = getFloat( _percentParam );
             if ( percent < MathUtil::kEpsilon )
                 return point._position;
-            const uint32  axis     = context._axisIndex;
-            float3        radial   = point._position;
+            const uint32 axis   = context._axisIndex;
+            float3       radial = point._position;
             MeshModifierUtil::setComponent( radial, axis, 0.0f );
             const float32 distance = radial.getLength();
             if ( distance < MathUtil::kEpsilon )

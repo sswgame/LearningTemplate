@@ -19,10 +19,13 @@ namespace sw::editor
     public:
         CurveDeformModifier()
             : MeshModifier()
-            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Deform", "Overall strength of the curve displacement" ) ) }
-            , _directionParam{ addParam( MeshModifierParamDef{ "Direction", MeshModifierParamKind::Float, -180.0f, 180.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Deform", "Direction of the displacement, around the main axis", "deg" ) ) }
-            , _displaceCurveParam{ addParam( MeshModifierParamDef{ "Displace Curve", MeshModifierParamKind::Curve, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Curves", "Sideways displacement along the main axis (0 = bottom, 1 = top)" ) ) }
-            , _scaleCurveParam{ addParam( MeshModifierParamDef{ "Scale Curve", MeshModifierParamKind::Curve, 0.0f, 10.0f, float3{ 1.0f, 1.0f, 0.0f } }.withLayout( "Curves", "Cross-section scale along the main axis (0 = bottom, 1 = top)" ) ) }
+            , _amountParam{
+                  addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }
+                                .withLayout( "Deform", "Overall strength of the curve displacement" ) )
+        },
+            _directionParam{ addParam( MeshModifierParamDef{ "Direction", MeshModifierParamKind::Float, -180.0f, 180.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Deform", "Direction of the displacement, around the main axis", "deg" ) ) },
+            _displaceCurveParam{ addParam( MeshModifierParamDef{ "Displace Curve", MeshModifierParamKind::Curve, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Curves", "Sideways displacement along the main axis (0 = bottom, 1 = top)" ) ) },
+            _scaleCurveParam{ addParam( MeshModifierParamDef{ "Scale Curve", MeshModifierParamKind::Curve, 0.0f, 10.0f, float3{ 1.0f, 1.0f, 0.0f } }.withLayout( "Curves", "Cross-section scale along the main axis (0 = bottom, 1 = top)" ) ) }
         {
         }
 

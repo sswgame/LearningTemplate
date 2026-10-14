@@ -99,7 +99,7 @@ namespace sw::editor
             _bFollowClock = false;
         ImGui::TextDisabled( "%s %s (day %d)", SW_LOCKEY( "EdSchedule", "GameTime" ), ScheduleTimelineRows::formatClock( nowMinute ).c_str(), system.getDay() );
 
-        ScheduleTimelineRows::build( system.getPlan( npcIndex ), _previewMinute, _listRow );
+        ScheduleTimelineRows::populate( system.getPlan( npcIndex ), _previewMinute, _listRow );
         const ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable;
         if ( ImGui::BeginTable( "##ScheduleTimeline", 5, flags, ImVec2{ 0.0f, 260.0f } ) )
         {

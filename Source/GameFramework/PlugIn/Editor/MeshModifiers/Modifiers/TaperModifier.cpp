@@ -17,8 +17,11 @@ namespace sw::editor
     public:
         TaperModifier()
             : MeshModifier()
-            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -1.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Taper", "Scale change at the top of the main axis (0 = none)" ) ) }
-            , _curveParam{ addParam( MeshModifierParamDef{ "Curve", MeshModifierParamKind::Float, 0.1f, 8.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Taper", "Profile exponent; 1 is linear, larger bends the taper" ) ) }
+            , _amountParam{
+                  addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -1.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }
+                                .withLayout( "Taper", "Scale change at the top of the main axis (0 = none)" ) )
+        },
+            _curveParam{ addParam( MeshModifierParamDef{ "Curve", MeshModifierParamKind::Float, 0.1f, 8.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Taper", "Profile exponent; 1 is linear, larger bends the taper" ) ) }
         {
         }
 

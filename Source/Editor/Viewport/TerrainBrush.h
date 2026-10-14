@@ -30,7 +30,10 @@ namespace sw::editor
         float32          _falloff{ 0.5f };  ///< 0 = 가장자리까지 가득, 1 = 중심에서부터 줄어든다
         uint32           _layerIndex{ 0 };  ///< `PaintLayer` 가 올리는 레이어(0..3)
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 브러시가 닿는 샘플 하나입니다. */
     struct TerrainBrushSample
     {
@@ -38,7 +41,10 @@ namespace sw::editor
         uint32  _sampleZ{ 0 };
         float32 _weight{ 0.0f }; ///< (0, 1]
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 지형 격자의 배치입니다. 샘플 (0, 0) 이 `_origin` 이다. */
     struct TerrainBrushGrid
     {
@@ -46,7 +52,10 @@ namespace sw::editor
         float2 _cellSize{}; ///< 셀 한 변(x, z)
         uint32 _resolution{ 0 };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @struct TerrainBrush
      * @brief 브러시 감쇠, 닿는 샘플 고르기, 높이 · 가중치 적용입니다.
@@ -67,14 +76,14 @@ namespace sw::editor
          * @brief 높이 배열에 한 프레임을 적용합니다. 평탄화는 @p flattenHeight 로 당깁니다(한 프레임에 목표를 넘지 않습니다).
          * @return 바뀐 샘플이 있으면 true 입니다.
          */
-        static bool applyHeight( vector<float32>& inOutListHeight, uint32 resolution, const vector<TerrainBrushSample>& listSample,
-                                 const TerrainBrushSettings& settings, float32 flattenHeight, float32 deltaTime );
+        [[nodiscard]] static bool applyHeight( vector<float32>& inOutListHeight, uint32 resolution, const vector<TerrainBrushSample>& listSample,
+                                               const TerrainBrushSettings& settings, float32 flattenHeight, float32 deltaTime );
 
         /**
          * @brief 샘플별 레이어 가중치(합 1) 배열에 `PaintLayer` 한 프레임을 적용합니다. 칠한 샘플은 합이 1 로 다시 맞춰집니다.
          * @return 바뀐 샘플이 있으면 true 입니다.
          */
-        static bool applyLayerWeight( vector<float4>& inOutListWeight, uint32 resolution, const vector<TerrainBrushSample>& listSample,
-                                      const TerrainBrushSettings& settings, float32 deltaTime );
+        [[nodiscard]] static bool applyLayerWeight( vector<float4>& inOutListWeight, uint32 resolution, const vector<TerrainBrushSample>& listSample,
+                                                    const TerrainBrushSettings& settings, float32 deltaTime );
     };
 } // namespace sw::editor

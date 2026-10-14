@@ -19,8 +19,11 @@ namespace sw::editor
     public:
         RubberModifier()
             : MeshModifier()
-            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Stretch distance at full weight (0 = no change, negative pulls down)", "m" ) ) }
-            , _falloffParam{ addParam( MeshModifierParamDef{ "Falloff", MeshModifierParamKind::Curve, 0.0f, 1.0f, float3{ 0.0f, 1.0f, 0.0f } }.withLayout( nullptr, "Weight curve from bottom (0) to top (1) of the mesh" ) ) }
+            , _amountParam{
+                  addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }
+                                .withLayout( nullptr, "Stretch distance at full weight (0 = no change, negative pulls down)", "m" ) )
+        },
+            _falloffParam{ addParam( MeshModifierParamDef{ "Falloff", MeshModifierParamKind::Curve, 0.0f, 1.0f, float3{ 0.0f, 1.0f, 0.0f } }.withLayout( nullptr, "Weight curve from bottom (0) to top (1) of the mesh" ) ) }
         {
         }
 

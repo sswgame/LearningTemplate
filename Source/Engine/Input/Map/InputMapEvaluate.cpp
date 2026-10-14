@@ -108,7 +108,7 @@ namespace sw
 
                 if ( state._bPressed == SW_TRUE )
                 {
-                    const bool bIsMouseBinding = ( binding._arrSlot[0]._deviceKind == InputDeviceKind::Mouse );
+                    const bool bIsMouseBinding  = ( binding._arrSlot[0]._deviceKind == InputDeviceKind::Mouse );
                     bool       bContinuesStreak = false;
 
                     if ( state._timeSinceLastPress <= doubleWindow )

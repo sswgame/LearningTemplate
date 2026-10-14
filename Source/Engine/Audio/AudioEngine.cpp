@@ -1177,7 +1177,7 @@ namespace sw
                 status._playingID      = instance._playingID;
                 status._elapsedSeconds = _renderedFrameCount > instance._startFrame ? static_cast<float32>( _renderedFrameCount - instance._startFrame ) / sampleRate : 0.0f;
                 status._bStopping      = instance._bStopping;
-                bool bUnknownEnd       = false;
+                bool    bUnknownEnd    = false;
                 float32 remaining      = 0.0f;
                 for ( const VoiceSlot& slot : _listVoice )
                 {

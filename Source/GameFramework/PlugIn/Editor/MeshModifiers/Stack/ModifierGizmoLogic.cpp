@@ -53,11 +53,11 @@ namespace sw::editor
 
             // "lower limit" · "upper limit" 이 "limit" 보다, "center" 가 짧은 낱말보다 먼저 맞도록 긴 것부터 둔다
             static constexpr RangeWord kArrRangeWord[] = {
-                { "lower limit", ModifierRangeKind::LowerLimit },
-                { "upper limit", ModifierRangeKind::UpperLimit },
-                { "direction", ModifierRangeKind::Direction },
-                { "radius", ModifierRangeKind::Radius },
-                { "center", ModifierRangeKind::Center },
+                {"lower limit", ModifierRangeKind::LowerLimit},
+                {"upper limit", ModifierRangeKind::UpperLimit},
+                {  "direction",  ModifierRangeKind::Direction},
+                {     "radius",     ModifierRangeKind::Radius},
+                {     "center",     ModifierRangeKind::Center},
             };
 
             /** @brief 종류가 이 그리기에 맞는지 봅니다. */

@@ -18,9 +18,12 @@ namespace sw::editor
     public:
         HumpModifier()
             : MeshModifier()
-            , _heightParam{ addParam( MeshModifierParamDef{ "Height", MeshModifierParamKind::Float, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Hump", "Hump height; negative makes a dent", "m" ) ) }
-            , _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Hump", "Radius of the hump", "m" ) ) }
-            , _centerParam{ addParam( MeshModifierParamDef{ "Center", MeshModifierParamKind::Vector3, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Hump", "Center of the hump in modifier space", "m" ) ) }
+            , _heightParam{
+                  addParam( MeshModifierParamDef{ "Height", MeshModifierParamKind::Float, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }
+                                .withLayout( "Hump", "Hump height; negative makes a dent", "m" ) )
+        },
+            _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Hump", "Radius of the hump", "m" ) ) },
+            _centerParam{ addParam( MeshModifierParamDef{ "Center", MeshModifierParamKind::Vector3, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Hump", "Center of the hump in modifier space", "m" ) ) }
         {
         }
 

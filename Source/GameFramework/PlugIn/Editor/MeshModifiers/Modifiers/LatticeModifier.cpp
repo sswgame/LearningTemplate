@@ -26,7 +26,7 @@ namespace sw::editor
             static void computeBernstein( int32 degree, float32 t, float32* pOutWeight )
             {
                 // 드 카스텔조 방식으로 쌓는다(이항 계수를 따로 구하지 않는다)
-                pOutWeight[0] = 1.0f;
+                pOutWeight[0]           = 1.0f;
                 const float32 oneMinusT = 1.0f - t;
                 for ( int32 order = 1; order <= degree; ++order )
                 {
@@ -64,15 +64,24 @@ namespace sw::editor
     {
         const int32   clamped = MathUtil::clamp( resolution, kMinResolution, kMaxResolution );
         const float32 value   = static_cast<float32>( clamped );
-        _resolutionXParam = addParam( MeshModifierParamDef{ "Resolution X", MeshModifierParamKind::Int, static_cast<float32>( kMinResolution ),
-                                                            static_cast<float32>( kMaxResolution ), float3{ value, 0.0f, 0.0f } }.withLayout( "Lattice", "Control points along X" ) );
-        _resolutionYParam = addParam( MeshModifierParamDef{ "Resolution Y", MeshModifierParamKind::Int, static_cast<float32>( kMinResolution ),
-                                                            static_cast<float32>( kMaxResolution ), float3{ value, 0.0f, 0.0f } }.withLayout( "Lattice", "Control points along Y" ) );
-        _resolutionZParam = addParam( MeshModifierParamDef{ "Resolution Z", MeshModifierParamKind::Int, static_cast<float32>( kMinResolution ),
-                                                            static_cast<float32>( kMaxResolution ), float3{ value, 0.0f, 0.0f } }.withLayout( "Lattice", "Control points along Z" ) );
-        _countX = clamped;
-        _countY = clamped;
-        _countZ = clamped;
+        _resolutionXParam     = addParam( MeshModifierParamDef{
+            "Resolution X", MeshModifierParamKind::Int, static_cast<float32>( kMinResolution ),
+            static_cast<float32>( kMaxResolution ), float3{ value, 0.0f, 0.0f }
+        }
+                                              .withLayout( "Lattice", "Control points along X" ) );
+        _resolutionYParam     = addParam( MeshModifierParamDef{
+            "Resolution Y", MeshModifierParamKind::Int, static_cast<float32>( kMinResolution ),
+            static_cast<float32>( kMaxResolution ), float3{ value, 0.0f, 0.0f }
+        }
+                                              .withLayout( "Lattice", "Control points along Y" ) );
+        _resolutionZParam     = addParam( MeshModifierParamDef{
+            "Resolution Z", MeshModifierParamKind::Int, static_cast<float32>( kMinResolution ),
+            static_cast<float32>( kMaxResolution ), float3{ value, 0.0f, 0.0f }
+        }
+                                              .withLayout( "Lattice", "Control points along Z" ) );
+        _countX               = clamped;
+        _countY               = clamped;
+        _countZ               = clamped;
         resetToIdentity();
     }
 
@@ -95,7 +104,7 @@ namespace sw::editor
         const float3             normalized{ size._x > MathUtil::kEpsilon ? ( point._position._x - box._min._x ) / size._x : 0.0f,
                                  size._y > MathUtil::kEpsilon ? ( point._position._y - box._min._y ) / size._y : 0.0f,
                                  size._z > MathUtil::kEpsilon ? ( point._position._z - box._min._z ) / size._z : 0.0f };
-        const float3             moved = deformNormalized( normalized );
+        const float3 moved = deformNormalized( normalized );
         return float3{ LatticeModifierInternal::multiplyOrKeep( moved._x, box._min._x, size._x, point._position._x ),
                        LatticeModifierInternal::multiplyOrKeep( moved._y, box._min._y, size._y, point._position._y ),
                        LatticeModifierInternal::multiplyOrKeep( moved._z, box._min._z, size._z, point._position._z ) };
@@ -195,7 +204,7 @@ namespace sw::editor
         {
             const float3 value{ static_cast<float32>( points.at( index * 3 ).asFloat() ), static_cast<float32>( points.at( index * 3 + 1 ).asFloat() ),
                                 static_cast<float32>( points.at( index * 3 + 2 ).asFloat() ) };
-            const bool   bFinite = MathUtil::isFinite( value._x ) && MathUtil::isFinite( value._y ) && MathUtil::isFinite( value._z );
+            const bool   bFinite     = MathUtil::isFinite( value._x ) && MathUtil::isFinite( value._y ) && MathUtil::isFinite( value._z );
             _listControlPoint[index] = bFinite ? value : getIdentityControlPoint( static_cast<int32>( index ) );
         }
         syncResolutionParams();
@@ -290,9 +299,9 @@ namespace sw::editor
         {
             if ( index < 0 || getControlPointCount() <= index )
                 continue;
-            int32       indexX = index % _countX;
-            int32       indexY = ( index / _countX ) % _countY;
-            int32       indexZ = index / ( _countX * _countY );
+            int32 indexX = index % _countX;
+            int32 indexY = ( index / _countX ) % _countY;
+            int32 indexZ = index / ( _countX * _countY );
             if ( mirrorAxisIndex == 0 )
                 indexX = _countX - 1 - indexX;
             else if ( mirrorAxisIndex == 1 )

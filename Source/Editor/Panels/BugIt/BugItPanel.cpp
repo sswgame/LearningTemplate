@@ -61,8 +61,8 @@ namespace sw::editor
     bool BugItPanel::captureNow()
     {
         string     directory;
-        const bool bCaptured = BugItReport::capture( BugItReport::makeInputs( _note ), directory );
-        _bRowsDirty          = true;
+        const bool bCaptured    = BugItReport::capture( BugItReport::makeInputs( _note ), directory );
+        _bRowsDirty             = true;
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
             return bCaptured;
@@ -81,7 +81,8 @@ namespace sw::editor
         if ( FileUtil::collectFolders( BugItPanelInternal::makeRoot(), listFolder, false ) == false )
             return; // 아직 한 번도 모으지 않았으면 루트가 없다
         // 이름이 yyyyMMdd-HHmmss(-n) 이라 이름 역순이 최근 순이다(BugItReport::findLatestDirectory 와 같은 규칙).
-        std::sort( listFolder.begin(), listFolder.end(), []( const string& lhs, const string& rhs ) { return rhs < lhs; } );
+        std::sort( listFolder.begin(), listFolder.end(), []( const string& lhs, const string& rhs )
+        { return rhs < lhs; } );
         _listRow.reserve( listFolder.size() );
         for ( const string& folder : listFolder )
         {

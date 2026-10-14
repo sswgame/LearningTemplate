@@ -21,11 +21,14 @@ namespace sw::editor
     public:
         VertexAnimModifier()
             : MeshModifier()
-            , _amplitudeParam{ addParam( MeshModifierParamDef{ "Amplitude", MeshModifierParamKind::Vector3, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Motion", "Per-axis offset amplitude", "m" ) ) }
-            , _speedParam{ addParam( MeshModifierParamDef{ "Speed", MeshModifierParamKind::Float, 0.0f, 50.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Motion", "Oscillation speed over time" ) ) }
-            , _phaseVariationParam{ addParam( MeshModifierParamDef{ "Phase Variation", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Variation", "How much each vertex phase differs (0 = all move together)" ) ) }
-            , _noiseParam{ addParam( MeshModifierParamDef{ "Noise", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Variation", "Blend from sine (0) to smooth value noise (1)" ) ) }
-            , _seedParam{ addParam( MeshModifierParamDef{ "Seed", MeshModifierParamKind::Int, 0.0f, 10000.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Variation", "Random seed for per-vertex phase and noise" ) ) }
+            , _amplitudeParam{
+                  addParam( MeshModifierParamDef{ "Amplitude", MeshModifierParamKind::Vector3, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }
+                                .withLayout( "Motion", "Per-axis offset amplitude", "m" ) )
+        },
+            _speedParam{ addParam( MeshModifierParamDef{ "Speed", MeshModifierParamKind::Float, 0.0f, 50.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Motion", "Oscillation speed over time" ) ) },
+            _phaseVariationParam{ addParam( MeshModifierParamDef{ "Phase Variation", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Variation", "How much each vertex phase differs (0 = all move together)" ) ) },
+            _noiseParam{ addParam( MeshModifierParamDef{ "Noise", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Variation", "Blend from sine (0) to smooth value noise (1)" ) ) },
+            _seedParam{ addParam( MeshModifierParamDef{ "Seed", MeshModifierParamKind::Int, 0.0f, 10000.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Variation", "Random seed for per-vertex phase and noise" ) ) }
         {
         }
 
@@ -36,10 +39,10 @@ namespace sw::editor
             const float3& amplitude = getVector3( _amplitudeParam );
             if ( amplitude.getLengthSquared() < MathUtil::kEpsilon * MathUtil::kEpsilon )
                 return point._position;
-            const uint32  seed      = static_cast<uint32>( getInt( _seedParam ) ) * 7919u + point._vertexIndex;
-            const float32 phase     = MeshModifierNoise::hashToUnit( seed ) * getFloat( _phaseVariationParam );
-            const float32 cycle     = context.getTime() * getFloat( _speedParam ) + phase;
-            const float32 noiseMix  = getFloat( _noiseParam );
+            const uint32  seed     = static_cast<uint32>( getInt( _seedParam ) ) * 7919u + point._vertexIndex;
+            const float32 phase    = MeshModifierNoise::hashToUnit( seed ) * getFloat( _phaseVariationParam );
+            const float32 cycle    = context.getTime() * getFloat( _speedParam ) + phase;
+            const float32 noiseMix = getFloat( _noiseParam );
             float3        offset{ 0.0f, 0.0f, 0.0f };
             for ( uint32 axis = 0; axis < 3; ++axis )
             {

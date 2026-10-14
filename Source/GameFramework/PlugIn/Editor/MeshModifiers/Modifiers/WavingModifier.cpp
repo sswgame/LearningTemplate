@@ -20,11 +20,14 @@ namespace sw::editor
     public:
         WavingModifier()
             : MeshModifier()
-            , _amplitudeParam{ addParam( MeshModifierParamDef{ "Amplitude", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Shape", "Wave height; 0 leaves the mesh unchanged", "m" ) ) }
-            , _wavelengthParam{ addParam( MeshModifierParamDef{ "Wavelength", MeshModifierParamKind::Float, 0.001f, 1000.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Shape", "Distance between wave crests", "m" ) ) }
-            , _speedParam{ addParam( MeshModifierParamDef{ "Speed", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Animation", "How fast waves travel; 0 freezes them" ) ) }
-            , _fixedAxisParam{ addParam( MeshModifierParamDef{ "Fixed Axis", MeshModifierParamKind::Axis, 0.0f, 2.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Range", "Axis along which the fixed edge is measured" ) ) }
-            , _fixedPositionParam{ addParam( MeshModifierParamDef{ "Fixed Position", MeshModifierParamKind::Float, 0.0f, 10000.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Range", "Distance from the bounds start that stays still", "m" ) ) }
+            , _amplitudeParam{
+                  addParam( MeshModifierParamDef{ "Amplitude", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }
+                                .withLayout( "Shape", "Wave height; 0 leaves the mesh unchanged", "m" ) )
+        },
+            _wavelengthParam{ addParam( MeshModifierParamDef{ "Wavelength", MeshModifierParamKind::Float, 0.001f, 1000.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Shape", "Distance between wave crests", "m" ) ) },
+            _speedParam{ addParam( MeshModifierParamDef{ "Speed", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Animation", "How fast waves travel; 0 freezes them" ) ) },
+            _fixedAxisParam{ addParam( MeshModifierParamDef{ "Fixed Axis", MeshModifierParamKind::Axis, 0.0f, 2.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Range", "Axis along which the fixed edge is measured" ) ) },
+            _fixedPositionParam{ addParam( MeshModifierParamDef{ "Fixed Position", MeshModifierParamKind::Float, 0.0f, 10000.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Range", "Distance from the bounds start that stays still", "m" ) ) }
         {
         }
 

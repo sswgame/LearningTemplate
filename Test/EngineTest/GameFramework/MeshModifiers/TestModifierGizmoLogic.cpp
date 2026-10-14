@@ -39,9 +39,13 @@ namespace
         {
             MeshModifierGizmo gizmoA{};
             MeshModifierGizmo gizmoB{};
-            gizmoA._rotationDegree   = eulerA;
-            gizmoB._rotationDegree   = eulerB;
-            const float3 arrUnit[3]  = { float3{ 1.0f, 0.0f, 0.0f }, float3{ 0.0f, 1.0f, 0.0f }, float3{ 0.0f, 0.0f, 1.0f } };
+            gizmoA._rotationDegree  = eulerA;
+            gizmoB._rotationDegree  = eulerB;
+            const float3 arrUnit[3] = {
+                float3{1.0f, 0.0f, 0.0f},
+                float3{0.0f, 1.0f, 0.0f},
+                float3{0.0f, 0.0f, 1.0f}
+            };
             for ( const float3& unit : arrUnit )
             {
                 if ( ( gizmoA.toBaseDirection( unit ) - gizmoB.toBaseDirection( unit ) ).getLength() > tolerance )
@@ -107,7 +111,12 @@ SW_TEST_CASE( ModifierGizmoLogicTest, PlaneDragDeltaFollowsRay )
 
 SW_TEST_CASE( ModifierGizmoLogicTest, FindPointOnRayPicksNearestAlongRay )
 {
-    const vector<float3> listPoint{ float3{ 0.0f, 0.0f, 5.0f }, float3{ 0.05f, 0.0f, 2.0f }, float3{ 3.0f, 0.0f, 1.0f }, float3{ 0.0f, 0.0f, -1.0f } };
+    const vector<float3> listPoint{
+        float3{ 0.0f, 0.0f,  5.0f},
+        float3{0.05f, 0.0f,  2.0f},
+        float3{ 3.0f, 0.0f,  1.0f},
+        float3{ 0.0f, 0.0f, -1.0f}
+    };
     // 레이 원점 (0,0,0) +Z: 0 번(거리 0, 5 앞)과 1 번(거리 0.05, 2 앞)이 반경 안 — 더 앞인 1 번. 3 번은 뒤
     SW_EXPECT_EQUAL( 1, ModifierGizmoLogic::findPointOnRay( float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 1.0f }, listPoint, 0.1f ) );
     SW_EXPECT_EQUAL( -1, ModifierGizmoLogic::findPointOnRay( float3{ 0.0f, 10.0f, 0.0f }, float3{ 0.0f, 0.0f, 1.0f }, listPoint, 0.1f ) );
@@ -197,7 +206,11 @@ SW_TEST_CASE( ModifierGizmoLogicTest, RotationDeltaMatchesBaseAxisRotation )
         MeshModifierGizmo resultGizmo{};
         startGizmo._rotationDegree  = start;
         resultGizmo._rotationDegree = result;
-        const float3 arrUnit[3]     = { float3{ 1.0f, 0.0f, 0.0f }, float3{ 0.0f, 1.0f, 0.0f }, float3{ 0.0f, 0.0f, 1.0f } };
+        const float3 arrUnit[3]     = {
+            float3{1.0f, 0.0f, 0.0f},
+            float3{0.0f, 1.0f, 0.0f},
+            float3{0.0f, 0.0f, 1.0f}
+        };
         for ( const float3& unit : arrUnit )
         {
             const float3 expected = Internal::rotateAboutBaseAxis( startGizmo.toBaseDirection( unit ), axis, 25.0f );
@@ -220,7 +233,11 @@ SW_TEST_CASE( ModifierGizmoLogicTest, RotationDeltaRoundTripRestoresRotation )
 SW_TEST_CASE( ModifierGizmoLogicTest, RotationDeltaStaysFiniteAtGimbal )
 {
     // Y 를 정확히 90 도로 보내는 증분과 그 근처에서도 값이 유한하고 회전이 맞아야 한다
-    const float3 arrStart[] = { float3{ 20.0f, 60.0f, 10.0f }, float3{ 20.0f, 89.999f, 10.0f }, float3{ 0.0f, -90.0f, 30.0f } };
+    const float3 arrStart[] = {
+        float3{20.0f,   60.0f, 10.0f},
+        float3{20.0f, 89.999f, 10.0f},
+        float3{ 0.0f,  -90.0f, 30.0f}
+    };
     for ( const float3& start : arrStart )
     {
         for ( uint32 axis = 0; axis < 3; ++axis )

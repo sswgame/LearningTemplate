@@ -32,10 +32,13 @@ namespace sw::editor
     public:
         CrumpleModifier()
             : MeshModifier()
-            , _amplitudeParam{ addParam( MeshModifierParamDef{ "Amplitude", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Shape", "Crumple depth; 0 leaves the mesh unchanged", "m" ) ) }
-            , _frequencyParam{ addParam( MeshModifierParamDef{ "Frequency", MeshModifierParamKind::Float, 0.001f, 100.0f, float3{ 2.0f, 0.0f, 0.0f } }.withLayout( "Noise", "Number of wrinkles per meter" ) ) }
-            , _seedParam{ addParam( MeshModifierParamDef{ "Seed", MeshModifierParamKind::Int, 0.0f, 65535.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Noise", "Random seed for the wrinkle pattern" ) ) }
-            , _normalBlendParam{ addParam( MeshModifierParamDef{ "Normal Blend", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.5f, 0.0f, 0.0f } }.withLayout( "Shape", "0 pushes along noise directions, 1 pushes along vertex normals" ) ) }
+            , _amplitudeParam{
+                  addParam( MeshModifierParamDef{ "Amplitude", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }
+                                .withLayout( "Shape", "Crumple depth; 0 leaves the mesh unchanged", "m" ) )
+        },
+            _frequencyParam{ addParam( MeshModifierParamDef{ "Frequency", MeshModifierParamKind::Float, 0.001f, 100.0f, float3{ 2.0f, 0.0f, 0.0f } }.withLayout( "Noise", "Number of wrinkles per meter" ) ) },
+            _seedParam{ addParam( MeshModifierParamDef{ "Seed", MeshModifierParamKind::Int, 0.0f, 65535.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Noise", "Random seed for the wrinkle pattern" ) ) },
+            _normalBlendParam{ addParam( MeshModifierParamDef{ "Normal Blend", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.5f, 0.0f, 0.0f } }.withLayout( "Shape", "0 pushes along noise directions, 1 pushes along vertex normals" ) ) }
         {
         }
 
@@ -52,8 +55,8 @@ namespace sw::editor
             const uint32  seed   = static_cast<uint32>( getInt( _seedParam ) );
             const float3  sample = point._position * getFloat( _frequencyParam );
             const float3  noiseVector{ MeshModifierNoise::valueNoise3D( sample, seed ),
-                                MeshModifierNoise::valueNoise3D( sample + float3{ CrumpleModifierInternal::kAxisOffsetY, 0.0f, 0.0f }, seed ),
-                                MeshModifierNoise::valueNoise3D( sample + float3{ 0.0f, 0.0f, CrumpleModifierInternal::kAxisOffsetZ }, seed ) };
+                                      MeshModifierNoise::valueNoise3D( sample + float3{ CrumpleModifierInternal::kAxisOffsetY, 0.0f, 0.0f }, seed ),
+                                      MeshModifierNoise::valueNoise3D( sample + float3{ 0.0f, 0.0f, CrumpleModifierInternal::kAxisOffsetZ }, seed ) };
             const float3  along  = point._normal * noiseVector._x;
             const float32 blend  = MathUtil::saturate( getFloat( _normalBlendParam ) );
             const float3  offset = noiseVector * ( 1.0f - blend ) + along * blend;

@@ -41,7 +41,7 @@ namespace sw::editor
         [[nodiscard]] bool moveUp( int32 index );
         /** @brief 한 칸 아래로 옮깁니다. 맨 아래거나 범위 밖이면 false 입니다. */
         [[nodiscard]] bool moveDown( int32 index );
-        void clear();
+        void               clear();
 
         /**
          * @brief 켜진 모디파이어를 차례로 겁니다. 법선 재계산을 고르면 끝에 면 법선으로 다시 만듭니다.

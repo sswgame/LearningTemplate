@@ -16,9 +16,9 @@ namespace sw
     /** @brief 포토 모드 한 프레임의 입력입니다. 단위는 입력 맵 값 그대로입니다. */
     struct PhotoModeInput
     {
-        float2  _move{};          ///< (x 오른쪽, y 앞) — 화면 기준 수평 이동
-        float32 _rise{ 0.0f };    ///< 위(+) · 아래(−) 이동. 직교 시점은 무시한다
-        float2  _look{};          ///< 둘러보기 이동량(마우스 델타). 직교 시점은 무시한다
+        float2  _move{};                ///< (x 오른쪽, y 앞) — 화면 기준 수평 이동
+        float32 _rise{ 0.0f };          ///< 위(+) · 아래(−) 이동. 직교 시점은 무시한다
+        float2  _look{};                ///< 둘러보기 이동량(마우스 델타). 직교 시점은 무시한다
         float32 _zoomNotches{ 0.0f };   ///< 휠 칸(위로 굴리면 +, 가까이)
         float32 _exposureSteps{ 0.0f }; ///< 노출 보정 칸(+ 밝게)
     };
@@ -31,15 +31,15 @@ namespace sw
     {
         float32 _moveSpeed{ 5.0f };                ///< 원근 시점의 이동 속도(m/s)
         float32 _orthoPanScreensPerSecond{ 0.5f }; ///< 직교 시점의 이동 속도(초당 화면 높이의 몇 배)
-        float32 _lookSensitivity{ 0.0025f };  ///< 둘러보기 감도(rad / 입력 단위)
-        float32 _zoomStep{ 0.9f };            ///< 휠 한 칸의 배율(시야각 · 화면 높이에 곱한다, 1 보다 작으면 확대)
-        float32 _minFieldOfViewY{ 0.17f };    ///< 최소 수직 시야각(rad, 약 10°)
-        float32 _maxFieldOfViewY{ 1.75f };    ///< 최대 수직 시야각(rad, 약 100°)
-        float32 _minOrthoHeight{ 1.0f };      ///< 최소 화면 높이(m)
-        float32 _maxOrthoHeight{ 500.0f };    ///< 최대 화면 높이(m)
-        float32 _exposureStep{ 0.25f };       ///< 노출 한 칸(EV)
-        float32 _maxExposureOffset{ 4.0f };   ///< 노출 보정 한계(±EV)
-        float32 _pitchLimit{ 1.55f };         ///< 피치 한계(±rad) — 정수직을 넘어 뒤집히지 않게
+        float32 _lookSensitivity{ 0.0025f };       ///< 둘러보기 감도(rad / 입력 단위)
+        float32 _zoomStep{ 0.9f };                 ///< 휠 한 칸의 배율(시야각 · 화면 높이에 곱한다, 1 보다 작으면 확대)
+        float32 _minFieldOfViewY{ 0.17f };         ///< 최소 수직 시야각(rad, 약 10°)
+        float32 _maxFieldOfViewY{ 1.75f };         ///< 최대 수직 시야각(rad, 약 100°)
+        float32 _minOrthoHeight{ 1.0f };           ///< 최소 화면 높이(m)
+        float32 _maxOrthoHeight{ 500.0f };         ///< 최대 화면 높이(m)
+        float32 _exposureStep{ 0.25f };            ///< 노출 한 칸(EV)
+        float32 _maxExposureOffset{ 4.0f };        ///< 노출 보정 한계(±EV)
+        float32 _pitchLimit{ 1.55f };              ///< 피치 한계(±rad) — 정수직을 넘어 뒤집히지 않게
     };
 } // namespace sw
 

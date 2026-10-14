@@ -67,10 +67,10 @@ namespace sw::editor
             if ( pAbility == nullptr )
                 continue;
             AbilityDebugAbilityRow row;
-            const hashed_string& id = pAbility->getConfig()._id;
-            row._name               = id.size() > 0 ? id.c_str() : "(unnamed)";
-            row._bActive            = pAbility->isActive();
-            row._cooldownRemaining  = pAbility->getCooldownRemaining();
+            const hashed_string&   id = pAbility->getConfig()._id;
+            row._name                 = id.size() > 0 ? id.c_str() : "(unnamed)";
+            row._bActive              = pAbility->isActive();
+            row._cooldownRemaining    = pAbility->getCooldownRemaining();
             outSnapshot._listAbility.push_back( std::move( row ) );
         }
     }
