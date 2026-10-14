@@ -759,7 +759,8 @@ namespace sw
         _profileSession.onFrameEnd();
         // CPU 메모리 태그 표 옆에 GPU 메모리 표를 둔다. 보고 세션은 Utility 층이라 Graphics 의 장부를 볼 수 없어 여기서 잇는다.
         const bool bReportedNow = bReportedBefore == false && _profileSession.hasReported();
-        if ( bReportedNow && _pRHI != nullptr && _pRHI->hasDevice() )
+        const bool bHasDevice   = _pRHI != nullptr && _pRHI->hasDevice();
+        if ( bReportedNow && bHasDevice )
             _pRHI->getDevice().getMemoryLedger().report( _pRHI->getDevice().getBackendName() );
 
         if ( _pMemoryBudget != nullptr )

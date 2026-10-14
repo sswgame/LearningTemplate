@@ -38,7 +38,8 @@ namespace sw::editor
         bool assign( const vector<float3>& listTriangle )
         {
             const size_t byteCount = listTriangle.size() * sizeof( float3 );
-            if ( _buildCount > 0 && listTriangle.size() == _listTriangle.size() && std::memcmp( listTriangle.data(), _listTriangle.data(), byteCount ) == 0 )
+            const bool   bSameSize = _buildCount > 0 && listTriangle.size() == _listTriangle.size();
+            if ( bSameSize && std::memcmp( listTriangle.data(), _listTriangle.data(), byteCount ) == 0 )
                 return false;
             _listTriangle = listTriangle;
             _tree.clear();

@@ -286,6 +286,7 @@ namespace sw
         , _weightSlot{}
         , _weight{ 1.0f }
         , _minScreenSize{ 0.0f }
+        , _bEnabled{ SW_TRUE }
     {
     }
 

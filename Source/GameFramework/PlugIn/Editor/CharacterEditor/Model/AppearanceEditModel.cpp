@@ -20,7 +20,8 @@ namespace sw::editor
                 const bool bSameName = lhs._slot == rhs._slot && lhs._itemID == rhs._itemID && lhs._visibleVisual == rhs._visibleVisual && lhs._state == rhs._state;
                 if ( bSameName == false )
                     return false;
-                if ( lhs._damage != rhs._damage || lhs._bSuppressed != rhs._bSuppressed || lhs._customization.isEquivalent( rhs._customization ) == false )
+                const bool bSameState = lhs._damage == rhs._damage && lhs._bSuppressed == rhs._bSuppressed;
+                if ( bSameState == false || lhs._customization.isEquivalent( rhs._customization ) == false )
                     return false;
                 return isSameNameList( lhs._listDetachedPart, rhs._listDetachedPart );
             }
@@ -41,8 +42,9 @@ namespace sw::editor
             {
                 const bool bSameHeader = lhs._basePresetID == rhs._basePresetID && lhs._schema == rhs._schema && lhs._bodyType == rhs._bodyType &&
                                          lhs._bodyShape == rhs._bodyShape && lhs._face == rhs._face && lhs._seed == rhs._seed;
-                if ( bSameHeader == false || lhs._customization.isEquivalent( rhs._customization ) == false || isSameNameList( lhs._listCategory, rhs._listCategory ) == false ||
-                     lhs._listSlot.size() != rhs._listSlot.size() )
+                const bool bSameBody  = bSameHeader && lhs._customization.isEquivalent( rhs._customization );
+                const bool bSameLists = isSameNameList( lhs._listCategory, rhs._listCategory ) && lhs._listSlot.size() == rhs._listSlot.size();
+                if ( bSameBody == false || bSameLists == false )
                     return false;
                 for ( size_t index = 0; index < lhs._listSlot.size(); ++index )
                 {

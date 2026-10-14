@@ -547,6 +547,8 @@
   에디터 · Dev 는 원본을 경로로 가리켜 원본을 고치면 모든 상위에 퍼지고(유니티 Nested Prefab), 순환은 로드 오류입니다.
 - **내비 기하에 들어갈 컴포넌트 종류는 종류별 레지스트리(`SW_NAV_GEOMETRY_CONTRIBUTOR`)로 등록합니다**(2026-10-13). Navigation(Object 층)은 Environment(위층)를 include 할 수 없고,
   인스턴스가 플레이 중에 등록하는 `INavGeometrySource` 는 플레이 전에 도는 쿠킹에 들지 않기 때문입니다. 언리얼 `INavRelevantInterface` 처럼 종류 단위 규칙이라 쿠킹과 런타임이 같습니다.
+- **패드 가상 커서는 명령 조종자(디렉터)가 플레이 동안만 켭니다**(2026-10-15). 게임 모듈의 `onInitialize` 가 켜면 에디터에서 편집 중에도 켜져 있고 조종 경계(`CheckControlBoundary`)도 넘습니다.
+  언리얼에서 커서 표시 · 입력 모드를 `PlayerController` 가 정하는 것과 같은 자리입니다.
 
 ### 5-7. 런타임 UI 와 글자
 

@@ -102,9 +102,11 @@ namespace sw::editor
         const bool   bCheckBone       = _listBoneName.empty() == false;
         for ( const SocketDef& socket : _sockets.getSockets() )
         {
-            if ( bCheckKind && socket._kind.empty() == false && _kinds.hasKind( socket._kind ) == false )
+            const bool bKindToCheck = bCheckKind && socket._kind.empty() == false;
+            if ( bKindToCheck && _kinds.hasKind( socket._kind ) == false )
                 outListIssue.push_back( string( "Socket '" ) + socket._name.c_str() + "' has unknown kind '" + socket._kind.c_str() + "'" );
-            if ( bCheckBone && socket._parent.empty() == false && isParentAllowed( socket._parent ) == false )
+            const bool bParentToCheck = bCheckBone && socket._parent.empty() == false;
+            if ( bParentToCheck && isParentAllowed( socket._parent ) == false )
                 outListIssue.push_back( string( "Socket '" ) + socket._name.c_str() + "' has unknown parent '" + socket._parent.c_str() + "'" );
             for ( const hashed_string& fallback : socket._listFallback )
             {
