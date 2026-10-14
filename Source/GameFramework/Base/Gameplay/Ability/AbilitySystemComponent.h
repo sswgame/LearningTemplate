@@ -209,6 +209,8 @@ namespace sw
         bool isActiveEffect( ActiveEffectHandle handle ) const { return findActiveEffect( handle ) != nullptr; }
         /** @brief 걸려 있는 이펙트 수입니다. */
         uint32 getActiveEffectCount() const;
+        /** @brief 걸린 이펙트 목록입니다(건 순서). 지우는 중인 항목(`_bPendingRemove`)도 들어 있으므로 읽는 쪽이 거릅니다. 디버그 창이 씁니다. */
+        const vector<unique_ptr<ActiveGameplayEffect>>& getActiveEffects() const { return _listActiveEffect; }
         /** @brief 걸린 이펙트의 남은 시간입니다. 무한 이펙트이거나 이펙트가 없으면 0 입니다. */
         float32 getActiveEffectRemainingTime( ActiveEffectHandle handle ) const;
         /** @brief 걸린 이펙트의 스택 수입니다. 없으면 0 입니다. */
