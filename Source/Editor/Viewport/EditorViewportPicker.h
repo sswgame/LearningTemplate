@@ -40,8 +40,7 @@ namespace sw::editor
         /** @brief 마우스 아래의 오브젝트 id 입니다. 호버 강조에 쓰며, 없거나 막혀 있으면 0 입니다. */
         uint64 getHoveredObjectID() const { return _hoveredObjectID; }
 
-    private:
-        /** @brief 마우스 아래 오브젝트를 찾습니다. 빌보드를 먼저 보고 레이 피킹을 하며, 잠그거나 숨긴 오브젝트는 빈 곳으로 처리합니다. 클릭 선택과 호버가 함께 씁니다. */
+        /** @brief 마우스 아래 오브젝트를 찾습니다. 빌보드를 먼저 보고 레이 피킹을 하며, 잠그거나 숨긴 오브젝트는 빈 곳으로 처리합니다. 클릭 선택 · 호버 · 우클릭 메뉴가 함께 씁니다. */
         bool findObjectUnderMouse( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, const ViewportToolbarSettings& settings,
                                    GameObject*& pOutObject, Component*& pOutComponent ) const;
 

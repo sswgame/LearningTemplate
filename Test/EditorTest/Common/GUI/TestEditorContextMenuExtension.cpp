@@ -24,6 +24,10 @@ namespace
     {
         return target._bIsDirectory;
     }
+    bool hasWorldPositionTarget( const EditorContextMenuTarget& target )
+    {
+        return target._bHasWorldPosition;
+    }
 
     /** @brief @p menuKind 메뉴의 항목 id 를 그릴 순서대로 쉼표로 이은 글입니다. */
     string joinEntryIDs( EditorContextMenuKind menuKind )
@@ -96,4 +100,33 @@ SW_TEST_CASE( EditorContextMenuExtensionTest, VisitReturnsChosenActionAndEnabled
     SW_EXPECT_TRUE( EditorContextMenuExtensionUtil::isEnabled( first.getRegistration(), folderTarget ) );
     SW_EXPECT_TRUE( EditorContextMenuExtensionUtil::isEnabled( second.getRegistration(), fileTarget ) );
     SW_EXPECT_FALSE( EditorContextMenuExtensionUtil::isEnabled( noAction.getRegistration(), fileTarget ) );
+}
+
+/**
+ * @brief [EditorContextMenuExtensionTest] 뷰포트 항목은 뷰포트 메뉴에만 붙고, 켜짐 판정이 바닥 교점 유무를 읽는다
+ * @details 뷰포트는 패널 고유 항목이 없어 항목이 0 이면 메뉴를 열지 않는다. 빈 곳을 우클릭해 바닥과 만나지 못하면 위치를 쓰는 항목은 꺼진다.
+ */
+SW_TEST_CASE( EditorContextMenuExtensionTest, ViewportEntriesStayInViewportMenuAndReadWorldPosition )
+{
+    SW_ASSERT_EQUAL( 0u, EditorContextMenuExtensionUtil::countEntries( EditorContextMenuKind::Viewport ) );
+    const ContextMenuRegistrar viewport{
+        EditorContextMenuEntryRegistration{ { "test.viewport", 9100 }, EditorContextMenuKind::Viewport, "Here", &runFirstAction, &hasWorldPositionTarget }
+    };
+    const ContextMenuRegistrar object{
+        EditorContextMenuEntryRegistration{ { "test.object", 9000 }, EditorContextMenuKind::GameObject, "Object", &runSecondAction, nullptr }
+    };
+
+    SW_EXPECT_STREQ( "test.viewport", joinEntryIDs( EditorContextMenuKind::Viewport ).c_str() );
+    SW_EXPECT_STREQ( "test.object", joinEntryIDs( EditorContextMenuKind::GameObject ).c_str() );
+    SW_EXPECT_EQUAL( 1u, EditorContextMenuExtensionUtil::countEntries( EditorContextMenuKind::Viewport ) );
+
+    EditorContextMenuTarget missTarget{};
+    missTarget._kind               = EditorContextMenuKind::Viewport;
+    EditorContextMenuTarget hitTarget = missTarget;
+    hitTarget._worldPosition       = float3{ 1.0f, 0.0f, 2.0f };
+    hitTarget._bHasWorldPosition   = true;
+
+    SW_EXPECT_FALSE( EditorContextMenuExtensionUtil::isEnabled( viewport.getRegistration(), missTarget ) );
+    SW_EXPECT_TRUE( EditorContextMenuExtensionUtil::isEnabled( viewport.getRegistration(), hitTarget ) );
+    SW_EXPECT_TRUE( missTarget._pGameObject == nullptr && missTarget._pAssetPath == nullptr );
 }

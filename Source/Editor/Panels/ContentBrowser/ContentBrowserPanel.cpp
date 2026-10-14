@@ -368,7 +368,10 @@ namespace sw::editor
             }
 
             // 확장 항목(`SW_EDITOR_CONTEXT_MENU_ENTRY`). 고른 동작은 메뉴를 닫은 뒤 부른다 — 동작이 모듈을 내려 목록이 바뀌어도 순회 중인 배열을 읽지 않는다.
-            const EditorContextMenuTarget extensionTarget{ EditorContextMenuKind::Asset, nullptr, nullptr, entry._absolutePath.c_str(), entry._bIsDirectory };
+            EditorContextMenuTarget extensionTarget{};
+            extensionTarget._kind         = EditorContextMenuKind::Asset;
+            extensionTarget._pAssetPath   = entry._absolutePath.c_str();
+            extensionTarget._bIsDirectory = entry._bIsDirectory;
             if ( EditorContextMenuExtensionUtil::countEntries( EditorContextMenuKind::Asset ) != 0 )
             {
                 ImGui::Separator();

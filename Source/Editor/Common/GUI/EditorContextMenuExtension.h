@@ -1,11 +1,13 @@
 /**
  * @file EditorContextMenuExtension.h
- * @brief 하이어라키의 게임 오브젝트 · 콘텐츠 브라우저의 에셋 우클릭 메뉴에 항목 하나를 더하는 등록 줄(`SW_EDITOR_CONTEXT_MENU_ENTRY`)입니다.
+ * @brief 하이어라키의 게임 오브젝트 · 콘텐츠 브라우저의 에셋 · 씬 뷰포트 우클릭 메뉴에 항목 하나를 더하는 등록 줄(`SW_EDITOR_CONTEXT_MENU_ENTRY`)입니다.
  * @details 언리얼의 `UToolMenus` 확장(`LevelEditor.ActorContextMenu` · `ContentBrowser.AssetContextMenu`)과 유니티의 `[MenuItem("GameObject/...")]` ·
  *          `[MenuItem("Assets/...")]` 자리다. 메뉴를 그리는 패널은 항목을 모르고, 자기 종류의 항목을 순서대로 그리기만 한다.
  *          이 헤더는 ImGui 를 쓰지 않는다(EditorTest 가 목록 규칙을 테스트한다).
  */
 #pragma once
+#include "Core/Math/VectorMath.h"
+
 #include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
 namespace sw
@@ -24,6 +26,7 @@ namespace sw::editor
     {
         GameObject, ///< 하이어라키에서 게임 오브젝트 하나를 우클릭한 메뉴. `_pGameObject` · `_pManager` 가 채워진다
         Asset,      ///< 콘텐츠 브라우저에서 파일이나 폴더 하나를 우클릭한 메뉴. `_pAssetPath` · `_bIsDirectory` 가 채워진다
+        Viewport,   ///< 씬 뷰포트를 우클릭한(끌지 않고 놓은) 메뉴. 언리얼 `LevelEditor.LevelViewportContextMenu` 자리. `_pManager` 는 늘, 맞은 오브젝트가 있으면 `_pGameObject` 도, 바닥 평면과 만나면 `_worldPosition` 도 채워진다
     };
 
     /**
@@ -38,6 +41,8 @@ namespace sw::editor
         GameObjectManager*    _pManager{ nullptr };
         const utf8*           _pAssetPath{ nullptr }; ///< 절대 경로
         bool                  _bIsDirectory{ false };
+        float3                _worldPosition{};             ///< Viewport: 우클릭 레이가 바닥 평면(3D 는 Y = 0, 2D 는 Z = 0)과 만난 점
+        bool                  _bHasWorldPosition{ false }; ///< Viewport: `_worldPosition` 이 채워졌으면 true
     };
 
     /**
