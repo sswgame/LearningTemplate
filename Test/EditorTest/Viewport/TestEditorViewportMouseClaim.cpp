@@ -47,6 +47,55 @@ SW_TEST_CASE( EditorViewportMouseClaimTest, NewOwnerReplacesOld )
 }
 
 /**
+ * @brief [EditorViewportMouseClaimTest] 매 프레임 다시 잡는 소유자는 유지되고, 한 프레임 건너뛰면(그리기 함수가 안 돈 경우) 다음 프레임 시작에 거둬진다
+ */
+SW_TEST_CASE( EditorViewportMouseClaimTest, UnrenewedClaimExpiresAtNextFrame )
+{
+    int32 owner = 0;
+    EditorViewportMouseClaim::beginFrame( 100 );
+    EditorViewportMouseClaim::acquire( &owner ); // 프레임 100 의 그리기에서 잡았다
+    SW_EXPECT_TRUE( EditorViewportMouseClaim::isClaimedBy( &owner ) );
+
+    EditorViewportMouseClaim::beginFrame( 101 ); // 지난 프레임에 잡았으니 이번 프레임의 그리기가 오기 전까지는 유지된다
+    SW_EXPECT_TRUE( EditorViewportMouseClaim::isClaimedBy( &owner ) );
+    EditorViewportMouseClaim::acquire( &owner ); // 끄는 중이라 다시 잡는다
+
+    EditorViewportMouseClaim::beginFrame( 102 );
+    SW_EXPECT_TRUE( EditorViewportMouseClaim::isClaimedBy( &owner ) );
+    // 프레임 102 에 시각화 토글을 껐다 - acquire 도 release 도 오지 않는다
+    EditorViewportMouseClaim::beginFrame( 103 );
+    SW_EXPECT_FALSE( EditorViewportMouseClaim::isClaimed() );
+}
+
+/**
+ * @brief [EditorViewportMouseClaimTest] 같은 프레임 번호로 여러 뷰포트가 beginFrame 을 불러도 한 번만 센다
+ */
+SW_TEST_CASE( EditorViewportMouseClaimTest, SameFrameNumberCountsOnce )
+{
+    int32 owner = 0;
+    EditorViewportMouseClaim::beginFrame( 200 );
+    EditorViewportMouseClaim::acquire( &owner );
+    EditorViewportMouseClaim::beginFrame( 201 ); // 첫 번째 뷰포트
+    EditorViewportMouseClaim::acquire( &owner );
+    EditorViewportMouseClaim::beginFrame( 201 ); // 두 번째 뷰포트 - 같은 프레임이라 무시된다
+    SW_EXPECT_TRUE( EditorViewportMouseClaim::isClaimedBy( &owner ) );
+    EditorViewportMouseClaim::beginFrame( 202 );
+    SW_EXPECT_TRUE( EditorViewportMouseClaim::isClaimedBy( &owner ) ); // 201 에 잡았다
+    EditorViewportMouseClaim::release( &owner );
+    SW_EXPECT_FALSE( EditorViewportMouseClaim::isClaimed() );
+}
+
+/**
+ * @brief [EditorAssetFilterTest] 두 단계 접미사 필터(.modifiers.json)도 맞춘다
+ */
+SW_TEST_CASE( EditorAssetFilterTest, MatchesCompoundSuffix )
+{
+    SW_EXPECT_TRUE( EditorAssetFilter::matches( "game/models/hull.modifiers.json", ".modifiers.json" ) );
+    SW_EXPECT_TRUE( EditorAssetFilter::matches( "game/models/hull.modifiers.json", ".png, .modifiers.json" ) );
+    SW_EXPECT_FALSE( EditorAssetFilter::matches( "game/models/hull.json", ".modifiers.json" ) );
+}
+
+/**
  * @brief [EditorAssetFilterTest] 쉼표 · 공백으로 나누고 빈 조각은 버린다
  */
 SW_TEST_CASE( EditorAssetFilterTest, SplitsOnCommaAndSpace )

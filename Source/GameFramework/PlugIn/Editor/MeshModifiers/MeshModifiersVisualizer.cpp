@@ -9,7 +9,8 @@
  *          - 제어점: 격자(lattice · ffd2 · ffd3 · ffd4)와 ffd2d 의 점을 클릭으로 고르고(세션의 `setSelectedControlPoint`), 점을 끌면 카메라를 마주 보는 평면에서,
  *            축 화살표를 끌면 그 축으로 옮긴다. 세션의 대칭 설정이 켜져 있으면 짝 점도 함께 옮긴다.
  *          meshmodifiers.stage(툴바 "Stage")는 고른 모디파이어까지만 건 결과를 다른 색으로 겹쳐 그린다(변형 영향 미리보기).
- *          알려진 한계: 뷰포트의 클릭 선택과 변환 기즈모는 이 손잡이를 모른다(양보 창구가 콜라이더 손잡이 전용이다). 대상 메시를 고른 채로 끄면 된다.
+ *          마우스 양보(`EditorViewportMouseClaim`): 손잡이를 집는 순간 잡고 끄는 동안 매 프레임 다시 잡는다. 뷰포트는 시각화를 그린 뒤에 클릭 선택을 처리하므로 첫 클릭도 새지 않고,
+ *          끄는 중에 시각화 토글을 꺼도 다음 프레임 시작에 양보가 거둬진다(`EditorViewportMouseClaim` 헤더의 프레임 순서 계약).
  */
 #include "pch.h"
 
@@ -653,8 +654,13 @@ namespace sw::editor
                 {
                     if ( ImGui::IsMouseDown( ImGuiMouseButton_Left ) == false )
                         endDrag( state ); // 놓았다. 되돌리기는 첫 변경 때 이미 남겼다
-                    else if ( bHasRay )
-                        updateDrag( session, state, frame, set, ray );
+                    else
+                    {
+                        // 양보는 매 프레임 다시 잡아야 유지된다 — 끄는 중에 시각화 토글을 끄면 이 함수가 안 불려 다음 프레임 시작에 뷰포트가 거둔다
+                        EditorViewportMouseClaim::acquire( getMouseClaimOwner() );
+                        if ( bHasRay )
+                            updateDrag( session, state, frame, set, ray );
+                    }
                 }
 
                 int32 hoveredHandle = -1;
