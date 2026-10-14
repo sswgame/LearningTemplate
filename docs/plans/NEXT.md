@@ -5,11 +5,9 @@
 
 ## 1. 지금 상태 (2026-10-14)
 
-main 은 이 문서의 커밋이고, 그 앞이 통합 담당 1 의 C-25 테스트 수정 `1f7c3657b`(Empty 기준 시나리오 · 스모크)다. push 와 CI 확인은 조정자의 일이고,
-이 문서를 쓸 때의 CI 결과는 적지 않았다. 서브시스템 정리의 ① ~ ⑤ 와 C-27 ① ② · C-26 · C-27 ④ 가
-main 에 있습니다. 워크트리 `D:\w\rest` 에 **빌드하지 않은 코드**가 남아 있습니다 — C-27 ③(`ProfilerBackendSubsystem` · `MemoryBudgetSubsystem`)과
-⑥(`CrashHandlerSubsystem` 에서 리소스 루트 · 게임 선택을 `ContentRootSubsystem` 으로 떼고 `OnlineLoadBot` 이 부트스트랩 서브시스템을 쓴다). **원격 브랜치 `origin/wt/rest` 에 빌드 전 WIP 커밋(`7e7c1c0fd`)으로 있습니다**(main 에는 병합하지 않았다 — 로컬은 `D:\w\rest` 의 `wt/rest`).
-새 세션은 4절의 남은 검증 다음에 이것을 빌드 · 검증해 커밋합니다(3절).
+main 은 이 문서의 커밋이고, 그 앞이 C-27 ③ · ⑥ 커밋(외부 프로파일러 · 메모리 예산 · 리소스 루트 서브시스템, OnlineLoadBot 의 부트스트랩 서브시스템)이다.
+push 와 CI 확인은 조정자의 일이고, 이 문서를 쓸 때의 CI 결과는 적지 않았다. 서브시스템 정리의 ① ~ ⑤ 와 C-27 ① ② ③(남은 것 하나) ④ ⑥ · C-26 이 main 에 있습니다.
+원격 브랜치 `origin/wt/rest`(빌드 전 WIP `7e7c1c0fd`)는 이제 쓸모없다 — 조정자가 `git push origin --delete wt/rest` 로 지운다.
 
 ## 2. 이번 세션에서 확정된 방침
 
@@ -29,8 +27,8 @@ main 에 있습니다. 워크트리 `D:\w\rest` 에 **빌드하지 않은 코드
 지금 모양: 호스트(엔진 루프 · 테스트 하네스)가 부트스트랩 → 서비스 → 엔진 세 `SubsystemScope` 를 부모로 잇고, 씬은 `GameObjectManager` 의 씬 범위,
 게임 · 에디터는 각자 범위를 듭니다. 서비스 표(`engine::getXxx`)는 바인딩 때 한 번 찾아 둔 캐시이고, 모듈은 호스트가 넘긴 서비스 범위에서 타입으로 찾습니다.
 
-1. **C-27 ③ · ⑥ 빌드와 병합** — `origin/wt/rest` 의 WIP 를 main 위로 rebase → 빌드 → Shipping 포함 검증 → main 에 병합한다. 부트스트랩 순서는 진단 → 이름 풀 → 로거 → 명령줄 → 크래시 핸들러 → 리소스 루트 → 메모리 예산 →
-   정적 저장소가 된다(`EngineInitSequenceTest.BootstrapScopeRunsFromDiagnosticsToStaticStorage` 의 기대 글도 고쳐 두었다).
+1. **C-27 ③ 의 남은 것** — 부트스트랩 순서는 진단 → 이름 풀 → 로거 → 명령줄 → 크래시 핸들러 → 리소스 루트 → 메모리 예산 → 정적 저장소다
+   (`EngineInitSequenceTest.BootstrapScopeRunsFromDiagnosticsToStaticStorage` 가 지킨다). 메모리 예산 표는 첫 프레임 끝에 읽는다(타입 등록부가 엔진 범위라서).
    남은 ③: 자동화 구동기(`AutomationSession`)는 App 호스트 범위로(4번과 함께). `Dev` 호스트 비트는 두지 않는다 — 개발 도구는 호스트가 `#if !defined( SW_SHIPPING )`
    한 자리에서 넣는다. `DevCommandRegistry` · `AutomationStepRegistry` · `AutomationProbes` 는 정적 등록 표라 제외.
 2. **C-27 ⑤ 판정을 결정 기록에 적는다.** 오디오는 이미 역할별 팩토리가 `Audio` 서브시스템 하나를 고르고(언리얼 오디오 믹서 플랫폼과 같은 모양), 물리는
@@ -99,7 +97,7 @@ main 에 있습니다. 워크트리 `D:\w\rest` 에 **빌드하지 않은 코드
   `Tools/Sccache` 폴더는 삭제 대기다.
 - **워크트리 정리**: 정션(`Tools/*`, `build/vcpkg_*`)을 `cmd //c rmdir` 로 **먼저** 끊고 폴더를 지운다 — 안 그러면 공유 도구가 지워진다.
   남은 워크트리: `D:\w\c19` · `c20` · `c21` · `c22` · `c23`(병합 끝 — 정리 대상) · `scope`(통합 담당 1 의 수정이 main 에 들어갔으니 정리 대상) ·
-  `rest`(빌드 안 한 C-27 ③ · ⑥ 코드와 C-24 stash) · `perfbase` · `perfbase2`(성능 기준선 — 남긴다). 워크트리가 아닌 폴더 `c25p` · `rfP1` 도 남아 있다.
+  `rest`(C-27 ③ · ⑥ 은 병합 끝 — C-24 stash "c24wip" 만 남아 있어 그것을 옮기기 전에는 지우지 않는다) · `perfbase` · `perfbase2`(성능 기준선 — 남긴다). 워크트리가 아닌 폴더 `c25p` · `rfP1` 도 남아 있다.
 - **모듈 안 정적 객체의 소멸자에서 스레드를 join 하지 말 것** — DLL 을 내릴 때 정적 소멸자는 로더 락을 쥔 채 돈다.
 - **무효 bindless 인덱스(0xFFFFFFFF)** 는 DX12 페이지 폴트 · Vulkan DEVICE_LOST. 셰이더를 바꾼 뒤에는 `App.exe --cook-shaders` 로 다시 굽는다.
 - **`castTo<Component>( Component*, 타입 )` 은 항상 성공한다** — 종류 거르기는 `getTypeInfo()->isDerivedFrom( 타입 )`.
@@ -111,7 +109,4 @@ main 에 있습니다. 워크트리 `D:\w\rest` 에 **빌드하지 않은 코드
 1. 이 문서 → [작업 방식](../11_Workflow.md) → [백로그](../06_Backlog.md) C 절(`C-24` · `C-27` · `C-28`) → [결정 기록](../09_Decisions.md) 서브시스템 절 순서로 읽는다.
    C++ 을 쓰기 전에 [AGENTS.md](../../AGENTS.md).
 2. 4절의 남은 검증(Release 빌드 + 스크린샷 sha 대조 · hostgpu 재확인 · 스모크 둘)을 먼저 한다.
-3. 그다음 원격 브랜치 `origin/wt/rest` 의 빌드 전 WIP(C-27 ③ · ⑥)를 main 위로 rebase 하고(`git fetch` → `git rebase origin/main`),
-   `cmake --build --preset Ninja-Debug --target all AllTests` → `ctest --test-dir build/Ninja-Debug -L "lint|nogpu" -j 6` →
-   `cmake --build --preset Ninja-Shipping --target all AllTests` → `ctest --test-dir build/Ninja-Shipping -L nogpu -j 6` 를 통과시킨 뒤 커밋 제목의 'WIP, 빌드 전' 을 떼고
-   main 에 ff 병합 → 3절 2번부터 이어간다. 병합한 뒤 원격 브랜치 `wt/rest` 는 지운다.
+3. 그다음 3절 2번부터 이어간다(1번 C-27 ③ · ⑥ 병합은 끝났다).
