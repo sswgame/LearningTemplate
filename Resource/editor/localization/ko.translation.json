@@ -2321,6 +2321,54 @@
             "text": "게임 안 디버그 HUD 의 이 구역을 보이거나 숨깁니다. 회색 글자는 구역의 등록 이름입니다.",
             "sourceHash": "81f99e6afb284cdd"
         },
+        "EditorUIPreview.AnchorBottomCenter": {
+            "text": "아래 가운데",
+            "sourceHash": "9b4cbeab5759a593"
+        },
+        "EditorUIPreview.AnchorBottomLeft": {
+            "text": "왼쪽 아래",
+            "sourceHash": "19b1de33204dbe6b"
+        },
+        "EditorUIPreview.AnchorBottomRight": {
+            "text": "오른쪽 아래",
+            "sourceHash": "8c2558591090d874"
+        },
+        "EditorUIPreview.AnchorCenter": {
+            "text": "가운데",
+            "sourceHash": "b38d497d992ab4a4"
+        },
+        "EditorUIPreview.AnchorCenterLeft": {
+            "text": "왼쪽 가운데",
+            "sourceHash": "c00cd9806b96609d"
+        },
+        "EditorUIPreview.AnchorCenterRight": {
+            "text": "오른쪽 가운데",
+            "sourceHash": "f6b2c78a8e4e07d6"
+        },
+        "EditorUIPreview.AnchorStretchAll": {
+            "text": "전체 늘이기",
+            "sourceHash": "9f306f17c38e71cd"
+        },
+        "EditorUIPreview.AnchorStretchHorizontal": {
+            "text": "가로 늘이기",
+            "sourceHash": "fc5461ad5f8f5042"
+        },
+        "EditorUIPreview.AnchorStretchVertical": {
+            "text": "세로 늘이기",
+            "sourceHash": "75e8ae87980ee604"
+        },
+        "EditorUIPreview.AnchorTopCenter": {
+            "text": "위 가운데",
+            "sourceHash": "4646f311d175921d"
+        },
+        "EditorUIPreview.AnchorTopLeft": {
+            "text": "왼쪽 위",
+            "sourceHash": "a2f53b413b3b8cf5"
+        },
+        "EditorUIPreview.AnchorTopRight": {
+            "text": "오른쪽 위",
+            "sourceHash": "7067cb1466b6784e"
+        },
         "EditorUIPreview.BuildFailed": {
             "text": "문서를 만들지 못했습니다(로그를 확인합니다).",
             "sourceHash": "d17190e882579c0a"
@@ -2353,6 +2401,118 @@
             "text": "{width} x {height} UI 단위, 배율 {scale} - 이미지나 트리를 클릭해 위젯을 선택합니다",
             "sourceHash": "017252c4efa4d4e4"
         },
+        "EditorUIPreview.SlotAnchorMax": {
+            "text": "앵커 최대",
+            "sourceHash": "79f50b5cd5fdb51a"
+        },
+        "EditorUIPreview.SlotAnchorMin": {
+            "text": "앵커 최소",
+            "sourceHash": "7a10155cd6148dd0"
+        },
+        "EditorUIPreview.SlotAnchorPreset": {
+            "text": "앵커",
+            "sourceHash": "4f17fb8dc1f317e5"
+        },
+        "EditorUIPreview.SlotAnchorPresetTip": {
+            "text": "앵커를 바꾸고 위젯이 제자리에 머물도록 오프셋을 다시 계산합니다.",
+            "sourceHash": "3a8a3b8987da7ee5"
+        },
+        "EditorUIPreview.SlotAutoSize": {
+            "text": "자동 크기",
+            "sourceHash": "a28ff264a54f0fab"
+        },
+        "EditorUIPreview.SlotColumn": {
+            "text": "열",
+            "sourceHash": "9e40e59654c8ad67"
+        },
+        "EditorUIPreview.SlotColumnSpan": {
+            "text": "열 넓이",
+            "sourceHash": "b0addc1272229941"
+        },
+        "EditorUIPreview.SlotFillWeight": {
+            "text": "채우기 비율",
+            "sourceHash": "df545941909dd7b8"
+        },
+        "EditorUIPreview.SlotGrowHorizontal": {
+            "text": "가로로 커지는 쪽",
+            "sourceHash": "36360c1d41dff112"
+        },
+        "EditorUIPreview.SlotGrowVertical": {
+            "text": "세로로 커지는 쪽",
+            "sourceHash": "a142e01e55caec94"
+        },
+        "EditorUIPreview.SlotHeader": {
+            "text": "슬롯",
+            "sourceHash": "919e1724f589c9b1"
+        },
+        "EditorUIPreview.SlotHeightOverride": {
+            "text": "높이 덮어쓰기",
+            "sourceHash": "02dc5140f073e286"
+        },
+        "EditorUIPreview.SlotHorizontalAlignment": {
+            "text": "가로 정렬",
+            "sourceHash": "852ec4b5b442ea24"
+        },
+        "EditorUIPreview.SlotMaxSize": {
+            "text": "최대 크기",
+            "sourceHash": "7bb7eac21281955a"
+        },
+        "EditorUIPreview.SlotMaxSizeTip": {
+            "text": "0 은 제한 없음",
+            "sourceHash": "5c0720f210548791"
+        },
+        "EditorUIPreview.SlotMinSize": {
+            "text": "최소 크기",
+            "sourceHash": "a7ad5554c561bbac"
+        },
+        "EditorUIPreview.SlotOffsetMax": {
+            "text": "오프셋 최대",
+            "sourceHash": "2f66f628c879d6e0"
+        },
+        "EditorUIPreview.SlotOffsetMin": {
+            "text": "오프셋 최소",
+            "sourceHash": "2f4bec28c862fe2a"
+        },
+        "EditorUIPreview.SlotOverrideTip": {
+            "text": "0 은 덮어쓰지 않음",
+            "sourceHash": "fc274abd752e8bc9"
+        },
+        "EditorUIPreview.SlotPadding": {
+            "text": "여백",
+            "sourceHash": "7d8103f6f06f83d6"
+        },
+        "EditorUIPreview.SlotPaddingTip": {
+            "text": "왼쪽, 위, 오른쪽, 아래(UI 단위)",
+            "sourceHash": "8469fd10f046ce74"
+        },
+        "EditorUIPreview.SlotRow": {
+            "text": "행",
+            "sourceHash": "a013e119fec906fb"
+        },
+        "EditorUIPreview.SlotRowSpan": {
+            "text": "행 넓이",
+            "sourceHash": "6de10c8065976345"
+        },
+        "EditorUIPreview.SlotSizeRule": {
+            "text": "크기 규칙",
+            "sourceHash": "fc84dd7c8c814dca"
+        },
+        "EditorUIPreview.SlotSizeRuleTip": {
+            "text": "Auto 는 주축에서 원하는 크기를 쓰고, Fill 은 남은 자리를 채우기 비율로 나눕니다.",
+            "sourceHash": "ccca83e83a4900a9"
+        },
+        "EditorUIPreview.SlotVerticalAlignment": {
+            "text": "세로 정렬",
+            "sourceHash": "eb94f87a491f3eca"
+        },
+        "EditorUIPreview.SlotWidthOverride": {
+            "text": "너비 덮어쓰기",
+            "sourceHash": "dd0cb43ef66a8e85"
+        },
+        "EditorUIPreview.SlotZOrder": {
+            "text": "Z 순서",
+            "sourceHash": "d64a86534fb6cd09"
+        },
         "EditorUIPreview.TextScaleTip": {
             "text": "흉내 낼 플레이어 글자 크기 설정(0.75~2)입니다. 넘치는 라벨을 찾을 때 씁니다.",
             "sourceHash": "29361a98ead5b178"
@@ -2372,166 +2532,6 @@
         "EditorUIPreview.WaitingForTexture": {
             "text": "렌더 스레드가 미리보기 텍스처를 만들기를 기다리는 중...",
             "sourceHash": "98fcdf13e55ddd57"
-        },
-        "EditorUIPreview.SlotHeader": {
-            "text": "슬롯",
-            "sourceHash": "919e1724f589c9b1"
-        },
-        "EditorUIPreview.SlotPadding": {
-            "text": "여백",
-            "sourceHash": "7d8103f6f06f83d6"
-        },
-        "EditorUIPreview.SlotPaddingTip": {
-            "text": "왼쪽, 위, 오른쪽, 아래(UI 단위)",
-            "sourceHash": "8469fd10f046ce74"
-        },
-        "EditorUIPreview.SlotHorizontalAlignment": {
-            "text": "가로 정렬",
-            "sourceHash": "852ec4b5b442ea24"
-        },
-        "EditorUIPreview.SlotVerticalAlignment": {
-            "text": "세로 정렬",
-            "sourceHash": "eb94f87a491f3eca"
-        },
-        "EditorUIPreview.SlotSizeRule": {
-            "text": "크기 규칙",
-            "sourceHash": "fc84dd7c8c814dca"
-        },
-        "EditorUIPreview.SlotSizeRuleTip": {
-            "text": "Auto 는 주축에서 원하는 크기를 쓰고, Fill 은 남은 자리를 채우기 비율로 나눕니다.",
-            "sourceHash": "ccca83e83a4900a9"
-        },
-        "EditorUIPreview.SlotFillWeight": {
-            "text": "채우기 비율",
-            "sourceHash": "df545941909dd7b8"
-        },
-        "EditorUIPreview.SlotRow": {
-            "text": "행",
-            "sourceHash": "a013e119fec906fb"
-        },
-        "EditorUIPreview.SlotColumn": {
-            "text": "열",
-            "sourceHash": "9e40e59654c8ad67"
-        },
-        "EditorUIPreview.SlotRowSpan": {
-            "text": "행 넓이",
-            "sourceHash": "6de10c8065976345"
-        },
-        "EditorUIPreview.SlotColumnSpan": {
-            "text": "열 넓이",
-            "sourceHash": "b0addc1272229941"
-        },
-        "EditorUIPreview.SlotAnchorPreset": {
-            "text": "앵커",
-            "sourceHash": "4f17fb8dc1f317e5"
-        },
-        "EditorUIPreview.SlotAnchorPresetTip": {
-            "text": "앵커를 바꾸고 위젯이 제자리에 머물도록 오프셋을 다시 계산합니다.",
-            "sourceHash": "3a8a3b8987da7ee5"
-        },
-        "EditorUIPreview.SlotAnchorMin": {
-            "text": "앵커 최소",
-            "sourceHash": "7a10155cd6148dd0"
-        },
-        "EditorUIPreview.SlotAnchorMax": {
-            "text": "앵커 최대",
-            "sourceHash": "79f50b5cd5fdb51a"
-        },
-        "EditorUIPreview.SlotOffsetMin": {
-            "text": "오프셋 최소",
-            "sourceHash": "2f4bec28c862fe2a"
-        },
-        "EditorUIPreview.SlotOffsetMax": {
-            "text": "오프셋 최대",
-            "sourceHash": "2f66f628c879d6e0"
-        },
-        "EditorUIPreview.SlotAutoSize": {
-            "text": "자동 크기",
-            "sourceHash": "a28ff264a54f0fab"
-        },
-        "EditorUIPreview.SlotGrowHorizontal": {
-            "text": "가로로 커지는 쪽",
-            "sourceHash": "36360c1d41dff112"
-        },
-        "EditorUIPreview.SlotGrowVertical": {
-            "text": "세로로 커지는 쪽",
-            "sourceHash": "a142e01e55caec94"
-        },
-        "EditorUIPreview.SlotZOrder": {
-            "text": "Z 순서",
-            "sourceHash": "d64a86534fb6cd09"
-        },
-        "EditorUIPreview.SlotWidthOverride": {
-            "text": "너비 덮어쓰기",
-            "sourceHash": "dd0cb43ef66a8e85"
-        },
-        "EditorUIPreview.SlotHeightOverride": {
-            "text": "높이 덮어쓰기",
-            "sourceHash": "02dc5140f073e286"
-        },
-        "EditorUIPreview.SlotOverrideTip": {
-            "text": "0 은 덮어쓰지 않음",
-            "sourceHash": "fc274abd752e8bc9"
-        },
-        "EditorUIPreview.SlotMinSize": {
-            "text": "최소 크기",
-            "sourceHash": "a7ad5554c561bbac"
-        },
-        "EditorUIPreview.SlotMaxSize": {
-            "text": "최대 크기",
-            "sourceHash": "7bb7eac21281955a"
-        },
-        "EditorUIPreview.SlotMaxSizeTip": {
-            "text": "0 은 제한 없음",
-            "sourceHash": "5c0720f210548791"
-        },
-        "EditorUIPreview.AnchorTopLeft": {
-            "text": "왼쪽 위",
-            "sourceHash": "a2f53b413b3b8cf5"
-        },
-        "EditorUIPreview.AnchorTopCenter": {
-            "text": "위 가운데",
-            "sourceHash": "4646f311d175921d"
-        },
-        "EditorUIPreview.AnchorTopRight": {
-            "text": "오른쪽 위",
-            "sourceHash": "7067cb1466b6784e"
-        },
-        "EditorUIPreview.AnchorCenterLeft": {
-            "text": "왼쪽 가운데",
-            "sourceHash": "c00cd9806b96609d"
-        },
-        "EditorUIPreview.AnchorCenter": {
-            "text": "가운데",
-            "sourceHash": "b38d497d992ab4a4"
-        },
-        "EditorUIPreview.AnchorCenterRight": {
-            "text": "오른쪽 가운데",
-            "sourceHash": "f6b2c78a8e4e07d6"
-        },
-        "EditorUIPreview.AnchorBottomLeft": {
-            "text": "왼쪽 아래",
-            "sourceHash": "19b1de33204dbe6b"
-        },
-        "EditorUIPreview.AnchorBottomCenter": {
-            "text": "아래 가운데",
-            "sourceHash": "9b4cbeab5759a593"
-        },
-        "EditorUIPreview.AnchorBottomRight": {
-            "text": "오른쪽 아래",
-            "sourceHash": "8c2558591090d874"
-        },
-        "EditorUIPreview.AnchorStretchHorizontal": {
-            "text": "가로 늘이기",
-            "sourceHash": "fc5461ad5f8f5042"
-        },
-        "EditorUIPreview.AnchorStretchVertical": {
-            "text": "세로 늘이기",
-            "sourceHash": "75e8ae87980ee604"
-        },
-        "EditorUIPreview.AnchorStretchAll": {
-            "text": "전체 늘이기",
-            "sourceHash": "9f306f17c38e71cd"
         }
     }
 }

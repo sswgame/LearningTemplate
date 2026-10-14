@@ -30,6 +30,14 @@
             "text": "* 저장하지 않은 변경"
         },
         {
+            "source": "0 means none",
+            "text": "0 은 덮어쓰지 않음"
+        },
+        {
+            "source": "0 means unbounded",
+            "text": "0 은 제한 없음"
+        },
+        {
             "source": "236P = down, down-right, right + punch (the map's command history, 0.8 s window)",
             "text": "236P = 아래, 오른쪽 아래, 오른쪽 + 펀치(맵의 커맨드 기록, 0.8초 창)"
         },
@@ -122,6 +130,18 @@
             "text": "모든 로그 수준이 숨겨져 있습니다. 툴바에서 하나를 다시 켜세요."
         },
         {
+            "source": "Anchor Max",
+            "text": "앵커 최대"
+        },
+        {
+            "source": "Anchor Min",
+            "text": "앵커 최소"
+        },
+        {
+            "source": "Anchors",
+            "text": "앵커"
+        },
+        {
             "source": "Apply the next recorded frame.",
             "text": "다음 기록 프레임을 적용합니다."
         },
@@ -134,12 +154,32 @@
             "text": "칠할 아틀라스 칸 인덱스(0~255)입니다."
         },
         {
+            "source": "Auto Size",
+            "text": "자동 크기"
+        },
+        {
+            "source": "Auto takes the desired size on the main axis; Fill shares the rest by fill weight.",
+            "text": "Auto 는 주축에서 원하는 크기를 쓰고, Fill 은 남은 자리를 채우기 비율로 나눕니다."
+        },
+        {
             "source": "Backend that Shipping links statically (client only). The server does not render",
             "text": "Shipping 이 정적으로 링크할 백엔드입니다(클라이언트만). 서버는 그리지 않는다"
         },
         {
             "source": "Background opacity of the Debug HUD panels.",
             "text": "디버그 HUD 패널의 배경 불투명도입니다."
+        },
+        {
+            "source": "Bottom Center",
+            "text": "아래 가운데"
+        },
+        {
+            "source": "Bottom Left",
+            "text": "왼쪽 아래"
+        },
+        {
+            "source": "Bottom Right",
+            "text": "오른쪽 아래"
         },
         {
             "source": "Break the link to the prefab and turn this into a standalone object",
@@ -180,6 +220,18 @@
         {
             "source": "Cell row the player arrives at in the target map.",
             "text": "대상 맵에서 플레이어가 도착할 칸의 행입니다."
+        },
+        {
+            "source": "Center",
+            "text": "가운데"
+        },
+        {
+            "source": "Center Left",
+            "text": "왼쪽 가운데"
+        },
+        {
+            "source": "Center Right",
+            "text": "오른쪽 가운데"
         },
         {
             "source": "Choose the theme preset for the whole editor (Modern Dark, Deep Charcoal, Midnight Blue and more).",
@@ -242,8 +294,20 @@
             "text": "접기"
         },
         {
+            "source": "Collect a screenshot, log, scene copy, camera position and repro command into Saved/BugIt/<time>/ with the note above",
+            "text": "스크린샷 · 로그 · 씬 사본 · 카메라 자리 · 재현 명령을 위 메모와 함께 Saved/BugIt/<시각>/ 에 모읍니다"
+        },
+        {
             "source": "Color to paint into the cells' tint.",
             "text": "칸의 틴트로 칠할 색입니다."
+        },
+        {
+            "source": "Column",
+            "text": "열"
+        },
+        {
+            "source": "Column Span",
+            "text": "열 넓이"
         },
         {
             "source": "Command the game runs when the conversation passes this node, written as name:argument:argument.",
@@ -280,6 +344,10 @@
         {
             "source": "Copy every filtered console log to the clipboard",
             "text": "필터링된 모든 콘솔 로그를 클립보드에 복사합니다"
+        },
+        {
+            "source": "Copy the absolute folder path",
+            "text": "폴더의 절대 경로를 복사합니다"
         },
         {
             "source": "Corner rounding of buttons, input fields and control frames, in pixels (0 to 8).",
@@ -482,6 +550,10 @@
             "text": "테스트할 격투 게임 커맨드로, 숫자 패드 방향(2 아래, 6 오른쪽, 3 오른쪽 아래 ...) 뒤에 버튼 글자를 붙입니다. 게임패드나 키보드로 입력해 일치하는지 봅니다."
         },
         {
+            "source": "Fill Weight",
+            "text": "채우기 비율"
+        },
+        {
             "source": "Filter (tag / message / file)",
             "text": "필터 (태그 / 메시지 / 파일)"
         },
@@ -622,8 +694,20 @@
             "text": "변수를 정의한 모듈별로 묶습니다"
         },
         {
+            "source": "Grow Horizontal",
+            "text": "가로로 커지는 쪽"
+        },
+        {
+            "source": "Grow Vertical",
+            "text": "세로로 커지는 쪽"
+        },
+        {
             "source": "HLSL shader this material renders with. Drop a .hlsl file here or pick one from the Content Browser.",
             "text": "이 머티리얼이 렌더링에 쓰는 HLSL 셰이더입니다. .hlsl 파일을 여기에 놓거나 콘텐츠 브라우저에서 고릅니다."
+        },
+        {
+            "source": "Height Override",
+            "text": "높이 덮어쓰기"
         },
         {
             "source": "Height level to paint, 0 to 255.",
@@ -636,6 +720,10 @@
         {
             "source": "Hold gamepad 0's left stick at the tilt set above until you reset it.",
             "text": "게임패드 0의 왼쪽 스틱을 되돌릴 때까지 위에서 정한 기울기로 유지합니다."
+        },
+        {
+            "source": "Horizontal Alignment",
+            "text": "가로 정렬"
         },
         {
             "source": "Horizontal tilt to inject on gamepad 0's left stick, -1 (left) to 1 (right).",
@@ -720,6 +808,10 @@
         {
             "source": "Left edge of the frame in the atlas, as a fraction of its width (0-1).",
             "text": "아틀라스에서 프레임의 왼쪽 끝 위치로, 너비에 대한 비율(0~1)입니다."
+        },
+        {
+            "source": "Left, top, right, bottom (UI units)",
+            "text": "왼쪽, 위, 오른쪽, 아래(UI 단위)"
         },
         {
             "source": "Line speed in KB/s (0 = unlimited)",
@@ -810,12 +902,20 @@
             "text": "맵 너비(칸)입니다. Apply Size 를 눌러야 적용됩니다."
         },
         {
+            "source": "Max Size",
+            "text": "최대 크기"
+        },
+        {
             "source": "Maximize On Play - keep only the game view while playing and restore the layout on Stop",
             "text": "Maximize On Play - 플레이하는 동안 게임 뷰만 남기고, Stop 하면 배치를 되돌립니다"
         },
         {
             "source": "MemoryProfiler is not active.",
             "text": "MemoryProfiler 가 동작하지 않습니다."
+        },
+        {
+            "source": "Min Size",
+            "text": "최소 크기"
         },
         {
             "source": "Module set changed - build to apply, then restart the editor.",
@@ -908,6 +1008,10 @@
         {
             "source": "No bindings",
             "text": "바인딩 없음"
+        },
+        {
+            "source": "No bug reports yet. Collect Now saves one under Saved/BugIt.",
+            "text": "아직 버그 리포트가 없습니다. Collect Now 가 Saved/BugIt 아래에 하나 모읍니다."
         },
         {
             "source": "No components in the active scene.",
@@ -1014,6 +1118,10 @@
             "text": "검증 문제가 없습니다. Check Map 은 활성 씬의 모든 오브젝트를 검증합니다."
         },
         {
+            "source": "Note to attach (what you did and what went wrong)",
+            "text": "붙일 메모(무엇을 했고 무엇이 잘못됐는지)"
+        },
+        {
             "source": "Nothing recorded yet. Turn recording on and play (PIE) - or 'anim.rewind on' in the console.",
             "text": "아직 기록이 없습니다. 기록을 켜고 플레이(PIE)하거나 콘솔에서 'anim.rewind on' 을 입력합니다."
         },
@@ -1054,6 +1162,14 @@
             "text": "끄면 활성 게임 팩만, 켜면 game/ 의 모든 팩을 보입니다(기본값은 환경설정 Content Browser)"
         },
         {
+            "source": "Offset Max",
+            "text": "오프셋 최대"
+        },
+        {
+            "source": "Offset Min",
+            "text": "오프셋 최소"
+        },
+        {
             "source": "Only the world is ticking: no game module update and no game input.",
             "text": "월드만 도는 중 — 게임 모듈 업데이트 · 게임 입력 없음"
         },
@@ -1064,6 +1180,10 @@
         {
             "source": "Open a material (Open..., Quick Open or a Content Browser double-click) to edit.",
             "text": "편집할 머티리얼을 엽니다(Open..., Quick Open 또는 콘텐츠 브라우저에서 더블클릭)."
+        },
+        {
+            "source": "Open that scene and move the camera to the saved position (bugitgo)",
+            "text": "그 씬을 열고 카메라를 저장한 자리로 옮깁니다(bugitgo)"
         },
         {
             "source": "Open the RenderDoc replay UI to inspect captures",
@@ -1080,6 +1200,10 @@
         {
             "source": "Open this channel in the curve editor to shape the interpolation between keys.",
             "text": "이 채널을 커브 편집기에서 열어 키 사이의 보간을 다듬습니다."
+        },
+        {
+            "source": "Open this folder in the file explorer",
+            "text": "이 폴더를 파일 탐색기에서 엽니다"
         },
         {
             "source": "Open this nested prefab in isolation mode",
@@ -1116,6 +1240,10 @@
         {
             "source": "Packets this process sends (client to server for a client)",
             "text": "이 프로세스가 보내는 패킷입니다(클라이언트면 클라이언트 → 서버)"
+        },
+        {
+            "source": "Padding",
+            "text": "여백"
         },
         {
             "source": "Paint every cell you press and drag over (B)",
@@ -1502,6 +1630,14 @@
             "text": "RTT (가장 큰 연결, ms)"
         },
         {
+            "source": "Row",
+            "text": "행"
+        },
+        {
+            "source": "Row Span",
+            "text": "행 넓이"
+        },
+        {
             "source": "Run the conversation from the Start node and show each line in the viewport. Lines advance on their own; choices and conditions wait for the buttons that appear.",
             "text": "Start 노드부터 대화를 진행하며 대사를 뷰포트에 보여 줍니다. 대사는 저절로 넘어가고, 선택지와 조건은 나타나는 버튼을 기다립니다."
         },
@@ -1734,6 +1870,10 @@
             "text": "고른 프로세스의 두 방향을 회선 프리셋으로 둡니다"
         },
         {
+            "source": "Sets the anchors and recomputes the offsets so the widget stays where it is.",
+            "text": "앵커를 바꾸고 위젯이 제자리에 머물도록 오프셋을 다시 계산합니다."
+        },
+        {
             "source": "Shares a key with another action on the same layer - see the details",
             "text": "같은 레이어의 다른 액션과 키가 겹칩니다. 자세한 내용을 확인합니다."
         },
@@ -1806,6 +1946,10 @@
             "text": "모든 프로세스를 정상 종료시키고, 트레이스를 켰으면 한 파일로 합칩니다"
         },
         {
+            "source": "Size Rule",
+            "text": "크기 규칙"
+        },
+        {
             "source": "Size is out of range.",
             "text": "크기가 범위를 벗어났습니다."
         },
@@ -1816,6 +1960,10 @@
         {
             "source": "Skip cooking the resource packs (a build cooks them itself)",
             "text": "리소스 팩 쿠킹을 건너뜁니다(빌드를 하면 빌드가 쿠킹한다)"
+        },
+        {
+            "source": "Slot",
+            "text": "슬롯"
         },
         {
             "source": "Start Play at the editor camera position (moves the object tagged 'Player', or else the object holding the game camera).",
@@ -1888,6 +2036,18 @@
         {
             "source": "Strength of the right (high-frequency) motor for the test pulse, 0 to 1.",
             "text": "테스트 진동에 쓸 오른쪽(고주파) 모터 세기(0~1)입니다."
+        },
+        {
+            "source": "Stretch All",
+            "text": "전체 늘이기"
+        },
+        {
+            "source": "Stretch Horizontal",
+            "text": "가로 늘이기"
+        },
+        {
+            "source": "Stretch Vertical",
+            "text": "세로 늘이기"
         },
         {
             "source": "Stretch the depth values present in the image to the full black-to-white range.",
@@ -2038,6 +2198,18 @@
             "text": "게임오브젝트의 활성화 상태를 토글합니다"
         },
         {
+            "source": "Top Center",
+            "text": "위 가운데"
+        },
+        {
+            "source": "Top Left",
+            "text": "왼쪽 위"
+        },
+        {
+            "source": "Top Right",
+            "text": "오른쪽 위"
+        },
+        {
             "source": "Top edge of the frame in the atlas, as a fraction of its height (0-1).",
             "text": "아틀라스에서 프레임의 위쪽 끝 위치로, 높이에 대한 비율(0~1)입니다."
         },
@@ -2118,6 +2290,10 @@
             "text": "액션이 보고하는 값입니다. 버튼은 Boolean, 트리거나 축 하나는 Axis 1D, 스틱이나 WASD 는 Vector 2D 입니다."
         },
         {
+            "source": "Vertical Alignment",
+            "text": "세로 정렬"
+        },
+        {
             "source": "Vertical field of view in degrees. Larger values show more of the scene and stretch the edges.",
             "text": "세로 시야각(도)입니다. 값이 클수록 장면이 넓게 보이고 가장자리가 늘어나 보입니다."
         },
@@ -2128,6 +2304,10 @@
         {
             "source": "Vibrate gamepad 0 for 0.3 seconds with the motor strengths on the left.",
             "text": "왼쪽의 모터 세기로 게임패드 0을 0.3초 진동시킵니다."
+        },
+        {
+            "source": "View options: show only modified properties, expand or collapse all sections",
+            "text": "보기 옵션: 바뀐 프로퍼티만 보기, 모든 영역 펼치기 또는 접기"
         },
         {
             "source": "Viewport corner the overlay is drawn in.",
@@ -2172,6 +2352,10 @@
         {
             "source": "Which screen corner the Debug HUD is anchored to.",
             "text": "디버그 HUD 를 붙여 둘 화면 모서리입니다."
+        },
+        {
+            "source": "Width Override",
+            "text": "너비 덮어쓰기"
         },
         {
             "source": "World space: the gizmo follows the world axes. Click to switch to local space.",
@@ -2224,6 +2408,10 @@
         {
             "source": "Write the source table and every translation table of this project.",
             "text": "이 프로젝트의 원문 테이블과 모든 번역 테이블을 씁니다."
+        },
+        {
+            "source": "Z Order",
+            "text": "Z 순서"
         },
         {
             "source": "Zoom and pan the canvas so every node is visible.",

@@ -328,19 +328,22 @@
         "EdCommon.NotifyBugReportFailed": {
             "source": "The bug report could not be saved (see the log)",
             "origins": [
-                "Source/Editor/Common/Commands/EditorBugItCommands.cpp"
+                "Source/Editor/Common/Commands/EditorBugItCommands.cpp",
+                "Source/Editor/Panels/BugIt/BugItPanel.cpp"
             ]
         },
         "EdCommon.NotifyBugReportSaved": {
             "source": "Bug report saved",
             "origins": [
-                "Source/Editor/Common/Commands/EditorBugItCommands.cpp"
+                "Source/Editor/Common/Commands/EditorBugItCommands.cpp",
+                "Source/Editor/Panels/BugIt/BugItPanel.cpp"
             ]
         },
         "EdCommon.NotifyBugReportTitle": {
             "source": "Bug report",
             "origins": [
-                "Source/Editor/Common/Commands/EditorBugItCommands.cpp"
+                "Source/Editor/Common/Commands/EditorBugItCommands.cpp",
+                "Source/Editor/Panels/BugIt/BugItPanel.cpp"
             ]
         },
         "EdCommon.NotifyClipboardEmpty": {
@@ -3483,6 +3486,78 @@
                 "Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp"
             ]
         },
+        "EditorUIPreview.AnchorBottomCenter": {
+            "source": "Bottom Center",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.AnchorBottomLeft": {
+            "source": "Bottom Left",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.AnchorBottomRight": {
+            "source": "Bottom Right",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.AnchorCenter": {
+            "source": "Center",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.AnchorCenterLeft": {
+            "source": "Center Left",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.AnchorCenterRight": {
+            "source": "Center Right",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.AnchorStretchAll": {
+            "source": "Stretch All",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.AnchorStretchHorizontal": {
+            "source": "Stretch Horizontal",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.AnchorStretchVertical": {
+            "source": "Stretch Vertical",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.AnchorTopCenter": {
+            "source": "Top Center",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.AnchorTopLeft": {
+            "source": "Top Left",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.AnchorTopRight": {
+            "source": "Top Right",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
         "EditorUIPreview.BuildFailed": {
             "source": "Could not build the document (see the log).",
             "origins": [
@@ -3531,6 +3606,174 @@
                 "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
             ]
         },
+        "EditorUIPreview.SlotAnchorMax": {
+            "source": "Anchor Max",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotAnchorMin": {
+            "source": "Anchor Min",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotAnchorPreset": {
+            "source": "Anchors",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotAnchorPresetTip": {
+            "source": "Sets the anchors and recomputes the offsets so the widget stays where it is.",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotAutoSize": {
+            "source": "Auto Size",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotColumn": {
+            "source": "Column",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotColumnSpan": {
+            "source": "Column Span",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotFillWeight": {
+            "source": "Fill Weight",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotGrowHorizontal": {
+            "source": "Grow Horizontal",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotGrowVertical": {
+            "source": "Grow Vertical",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotHeader": {
+            "source": "Slot",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotHeightOverride": {
+            "source": "Height Override",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotHorizontalAlignment": {
+            "source": "Horizontal Alignment",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotMaxSize": {
+            "source": "Max Size",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotMaxSizeTip": {
+            "source": "0 means unbounded",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotMinSize": {
+            "source": "Min Size",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotOffsetMax": {
+            "source": "Offset Max",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotOffsetMin": {
+            "source": "Offset Min",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotOverrideTip": {
+            "source": "0 means none",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotPadding": {
+            "source": "Padding",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotPaddingTip": {
+            "source": "Left, top, right, bottom (UI units)",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotRow": {
+            "source": "Row",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotRowSpan": {
+            "source": "Row Span",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotSizeRule": {
+            "source": "Size Rule",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotSizeRuleTip": {
+            "source": "Auto takes the desired size on the main axis; Fill shares the rest by fill weight.",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotVerticalAlignment": {
+            "source": "Vertical Alignment",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotWidthOverride": {
+            "source": "Width Override",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SlotZOrder": {
+            "source": "Z Order",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
         "EditorUIPreview.TextScaleTip": {
             "source": "Player text size setting to simulate, 0.75 to 2. Use it to find labels that overflow.",
             "origins": [
@@ -3557,246 +3800,6 @@
         },
         "EditorUIPreview.WaitingForTexture": {
             "source": "Waiting for the render thread to create the preview texture...",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotHeader": {
-            "source": "Slot",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotPadding": {
-            "source": "Padding",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotPaddingTip": {
-            "source": "Left, top, right, bottom (UI units)",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotHorizontalAlignment": {
-            "source": "Horizontal Alignment",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotVerticalAlignment": {
-            "source": "Vertical Alignment",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotSizeRule": {
-            "source": "Size Rule",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotSizeRuleTip": {
-            "source": "Auto takes the desired size on the main axis; Fill shares the rest by fill weight.",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotFillWeight": {
-            "source": "Fill Weight",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotRow": {
-            "source": "Row",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotColumn": {
-            "source": "Column",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotRowSpan": {
-            "source": "Row Span",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotColumnSpan": {
-            "source": "Column Span",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotAnchorPreset": {
-            "source": "Anchors",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotAnchorPresetTip": {
-            "source": "Sets the anchors and recomputes the offsets so the widget stays where it is.",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotAnchorMin": {
-            "source": "Anchor Min",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotAnchorMax": {
-            "source": "Anchor Max",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotOffsetMin": {
-            "source": "Offset Min",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotOffsetMax": {
-            "source": "Offset Max",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotAutoSize": {
-            "source": "Auto Size",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotGrowHorizontal": {
-            "source": "Grow Horizontal",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotGrowVertical": {
-            "source": "Grow Vertical",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotZOrder": {
-            "source": "Z Order",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotWidthOverride": {
-            "source": "Width Override",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotHeightOverride": {
-            "source": "Height Override",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotOverrideTip": {
-            "source": "0 means none",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotMinSize": {
-            "source": "Min Size",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotMaxSize": {
-            "source": "Max Size",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.SlotMaxSizeTip": {
-            "source": "0 means unbounded",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.AnchorTopLeft": {
-            "source": "Top Left",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.AnchorTopCenter": {
-            "source": "Top Center",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.AnchorTopRight": {
-            "source": "Top Right",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.AnchorCenterLeft": {
-            "source": "Center Left",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.AnchorCenter": {
-            "source": "Center",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.AnchorCenterRight": {
-            "source": "Center Right",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.AnchorBottomLeft": {
-            "source": "Bottom Left",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.AnchorBottomCenter": {
-            "source": "Bottom Center",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.AnchorBottomRight": {
-            "source": "Bottom Right",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.AnchorStretchHorizontal": {
-            "source": "Stretch Horizontal",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.AnchorStretchVertical": {
-            "source": "Stretch Vertical",
-            "origins": [
-                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
-            ]
-        },
-        "EditorUIPreview.AnchorStretchAll": {
-            "source": "Stretch All",
             "origins": [
                 "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
             ]
