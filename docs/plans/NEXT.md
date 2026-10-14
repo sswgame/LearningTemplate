@@ -24,8 +24,12 @@ main 은 `origin/main` 보다 184 커밋 앞서 있고 push 하지 않았습니�
   작업자 보고: App · EditorModule · EngineTest 경고 0, 지형 테스트 27/27, 네 백엔드에서 `editor.terrainbrush` 시나리오 PASS, DX12 · Vulkan 캡처를 직접 확인(되돌리기 뒤 칠하기 전과 같음). Debug 측정으로 5×5 쓰기 뒤 물리 틱 1416 ms → 17 ms, 257² 쓰기 프레임 288 ms → 25 ms 입니다.
   `EditorTest` 와 `hostgpu` 는 돌리지 않았습니다. 병합 충돌 예상: `TerrainComponent.*` · `TerrainColliderComponent.*`(`getBodyHandle` 을 `getBodyCount` 로 바꿈) · `FrameRenderer.cpp` · `TextureCache.*` · `docs/06_Backlog.md` · 이 문서(그 브랜치도 NEXT.md 를 고쳤으니 이 문서 쪽을 취하고 지형 항목만 지웁니다).
   남은 것(백로그 D2-5 (7)): Release 측정, 에디터 편집 모드에서 틱이 남은 청크를 처리하는지, 디바이스를 다시 만들면 칠한 스플랫이 사라지는 문제, 같은 텍스처를 쓰는 다른 지형도 함께 칠해지는 문제, 식생을 바뀐 셀만 다시 뿌리기, 존재하지 않는 `Environment/README.md`.
-- `D:\w\modgpu`(`wt/modgpu`): 메시 모디파이어의 컴퓨트 셰이더 미리보기, `DeformJob` 의 워커 `sw::vector` 인덱싱 레이스 수정, 하위 스택 UI. 커밋 1 개와 미커밋 36 개(셰이더 쿠킹 산출물 `cook.stamp` 포함)가 있습니다.
-- 두 곳 모두 미커밋 변경을 먼저 살펴 일을 어디까지 했는지 확인하고, 커밋 훅을 통과시킨 뒤 통합 브랜치에 모아 전체 빌드로 확인하고 병합합니다.
+- `D:\w\modgpu`(`wt/modgpu`): **세션을 닫으면서 작업자를 중단하고 체크포인트로 커밋했습니다.** 커밋 둘입니다. `a2c7130f9`(`DeformJob` 의 워커 `sw::vector` 인덱싱 레이스를 생 포인터로 고침, 이 일은 끝난 것으로 보임)와 `496a974a8`(컴퓨트 미리보기 체크포인트, 검증 전).
+  체크포인트에는 `meshmorph.hlsl` 의 모디파이어 uber 경로(`meshmodifier.hlsli`), 4 백엔드로 다시 구운 셰이더, `GPUMeshMorphPool` · `Mesh` · `FrameRendererCompute` 연결, `MeshModifierGPUProgram`(종류 id + 매개변수 구조 버퍼), 단위 테스트 둘(`TestMeshModifierGPU` · `TestMeshModifierGPUProgram`), 패널 · 비주얼라이저 변경, 시나리오 `meshmodifiers` 가 들어 있습니다.
+  커밋 훅이 잡은 규칙 위반 15 건(조건 세 부분 이상, 익명 네임스페이스 중복, 실패 `bool` 의 `[[nodiscard]]`, 셰이더 π 리터럴, 컨테이너 매개변수 이름)은 고쳤고, 셰이더는 DX12 · Vulkan · DX11 컴파일 검증을 통과했습니다. 그 정리 뒤 플러그인과 `EngineTest` 증분 빌드는 컴파일 5 건 · 링크 69 건에 경고 0 · 오류 0 입니다.
+  **확인하지 못한 것**: 컴퓨트 미리보기가 네 백엔드에서 실제로 그려지는지, CPU 결과와 일치하는지(GPU 테스트 결과), 하위 스택 UI 의 진행도, 이 체크포인트를 가진 `ctest`. 작업자의 최종 보고도 받지 못했습니다.
+  이어서 할 일: 빌드 → `TestMeshModifierGPU` 계열을 4 백엔드로 직렬 실행(`shared-lock gpu`) → `meshmodifiers` 시나리오 캡처 확인 → 하위 스택 UI → 통합 빌드로 확인하고 병합. 쿠킹 산출물은 이번 일 때문에 바뀐 것만 남습니다.
+- `terrain2` 도 미커밋 변경이 없는지 확인하고, 통합 브랜치에 모아 전체 빌드로 확인한 뒤 병합합니다.
 - `D:\w\visual`: 병합은 끝났습니다. 에디터 기능 캡처(`captures/`)와 미추적 시나리오(`Resource/engine/automation/vis/`)가 남아 있으니 필요한 것만 챙기고 `py -3 -m Scripts worktree-remove visual --force` 로 지웁니다.
 - `D:\w\perfbase` · `perfbase2` 는 성능 기준선이라 남깁니다.
 
