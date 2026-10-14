@@ -46,6 +46,7 @@
 | `gv_editorOpenPanel` | `string` | — | 시험 | 시작할 때 이 id 의 패널 하나만 연다, all 이면 전부 연다 (비우면 사용 안 함) | [EditorDockLayout.cpp](../../Source/Editor/Common/GUI/EditorDockLayout.cpp) |
 | `gv_editorPanelDump` | `int32` | `0` | 시험 | N 번째 프레임에 에디터 ImGui 창별 드로우 통계를 덤프 (0=사용 안 함) | [EditorPanelDump.cpp](../../Source/Editor/Common/GUI/EditorPanelDump.cpp) |
 | `gv_editorPanelTimes` | `int32` | `0` | 시험 | N 프레임 동안 에디터 패널마다 그리기 시간을 모아 한 번 로그로 찍는다 (0=끄기) | [EditorPanelManager.cpp](../../Source/Editor/Common/GUI/EditorPanelManager.cpp) |
+| `gv_editorPreviewScreenshot` | `string` | — | 시험 | 미리보기 씬 뷰포트의 렌더 타깃을 이 경로에 한 번 찍는다 (시나리오 눈 확인용, 비우면 안 함) | [EditorPreviewViewport.cpp](../../Source/Editor/Common/GUI/EditorPreviewViewport.cpp) |
 | `gv_editorStateDir` | `string` | — | 시험 | 에디터 상태 폴더(Saved/Editor 대신, 프로젝트 루트 기준 상대 또는 절대 경로) — 자동화가 빈 폴더로 시작할 때 쓴다 (비우면 Saved/Editor) | [EditorPaths.cpp](../../Source/Editor/Common/EditorPaths.cpp) |
 | `gv_tracyViewerPath` | `string` | — | 일반 | Tracy 뷰어(tracy-profiler 0.14.1) 경로 — 파일이나 폴더 (비우면 Tools/Tracy) | [EditorTracyLauncher.cpp](../../Source/Editor/Common/Commands/EditorTracyLauncher.cpp) |
 
@@ -158,6 +159,8 @@
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
+| `gv_authorityGhostPort` | `int32` | `0` | 시험 | 서버 디버그 채널 포트 - 서버 포즈를 고스트로 겹침 (0=끄기) | [AuthorityGhost.cpp](../../Source/Engine/Scene/AuthorityGhost.cpp) |
+| `gv_authorityGhostToken` | `string` | — | 시험 | 서버 디버그 채널 토큰 | [AuthorityGhost.cpp](../../Source/Engine/Scene/AuthorityGhost.cpp) |
 | `gv_defaultMaterial` | `string` | — | 일반 | 씬 기본 머티리얼 경로 덮어쓰기 (비면 EngineDefaultAssets) | [Scene.cpp](../../Source/Engine/Scene/Scene.cpp) |
 | `gv_navDebugDraw` | `int32` | `0` | 일반 | 내비메시 디버그 — 선(편집기 뷰포트): 1 폴리곤 테두리 · 2 에이전트 경로 · 4 에이전트 속도 · 8 장애물, 16 걷는 면 · 경로를 게임 화면의 메시로 (31 = 모두, 0 = 끔) | [SceneDebugDraw.cpp](../../Source/Engine/Scene/SceneDebugDraw.cpp) |
 | `gv_physicsDebugDraw` | `bool` | `false` | 일반 | 강체 물리 바디 · 캐릭터를 디버그 선으로 그린다 | [SceneDebugDraw.cpp](../../Source/Engine/Scene/SceneDebugDraw.cpp) |
@@ -319,4 +322,7 @@
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
+| `gv_debugChannelPort` | `int32` | `0` | 시험 | 디버그 채널 포트 (0=끄기, 루프백 전용, 토큰 필요) | [ServerApp.cpp](../../Source/Server/ServerApp.cpp) |
+| `gv_debugChannelToken` | `string` | — | 시험 | 디버그 채널 접속 토큰 | [ServerApp.cpp](../../Source/Server/ServerApp.cpp) |
 | `gv_serverExitAfterTicks` | `int32` | `0` | 시험 · 배포본에도 | 이 틱 수를 돈 뒤 정상 종료 (0=끄기) | [ServerApp.cpp](../../Source/Server/ServerApp.cpp) |
+| `gv_stateHashHistory` | `int32` | `0` | 시험 | 틱별 씬 상태 해시 이력 길이 (0=끄기) | [ServerApp.cpp](../../Source/Server/ServerApp.cpp) |

@@ -282,10 +282,15 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   래그돌/물리 에셋(관절 한계) · 이펙트 · 장르 도구(코스터 트랙 · 리듬 차트). 언리얼 FPreviewScene · 애셋 에디터 툴킷, 유니티 PreviewRenderUtility · Prefab Stage.
   (2026-10-14 사용자 결정: 규모가 XL 이라 에디터 보강 묶음에서 뺐다 — 설계부터 따로 짠다.)
   계획: docs/plans/EditorMultiWorld.md
-  **2026-10-15 단계 1 의 엔진 쪽이 들어갔다**(`SceneManager::createPreviewScene` · 정책 · 키 · 초점 씬, 테스트 `SceneTest.Preview*`). 남은 것 — 단계 1: 조명 환경 프리셋(방향광 · 스카이 · 바닥을
-  씬 안 오브젝트로 스폰, 렌더로 눈 확인 필요) · 시간 배율이 델타에 곱해지는 값을 보는 테스트(목에 델타 기록이 없다) · 미리보기 씬의 `initialize( pRHIDevice )`(기본 머티리얼) ·
-  플레이 세션(`EditorPlaySession`)이 미리보기 씬을 건드리지 않는지 확인(스냅샷 복원은 활성 씬만 본다고 읽었을 뿐 EditorTest 로 못 박지 않았다). 단계 2~5(씬별 GPUScene · 호스트 뷰 목록 · `EditorPreviewPanel` ·
-  창별 선택 / Undo `focusScene` 위에) 는 GPU 와 눈 확인이 필요해 손대지 않았다. 에디터의 "초점 씬" 소비자(`EditorContext`)는 아직 없다.
+  **2026-10-15 단계 1~4 와 머티리얼 창이 들어갔다**(계획 문서의 각 "구현됨"). 남은 것:
+  (1) **프리팹 창** — `EditorPrefabIsolationCommands` 가 활성 씬 대신 `EditorPreviewPanel` 의 씬에 프리팹을 스폰(더티 막기 제거, 중첩 격리 스택 `PrefabIsolationFrame` 의 의미 유지, 저장 경로 테스트).
+  (2) **창 범위 선택 · 인스펙터 · 기즈모** — `EditorPreviewPanel::getPreviewSelection` 은 목록만 있다. 전역 `EditorSelection` 을 직접 부르는 패널을 "포커스 창의 선택" 접근자 하나로 모은 뒤 바꾸고,
+  `Viewport/EditorViewportGizmo` 가 대상 씬을 인자로 받게 한다. 미리보기 뷰포트는 지금 오빗 카메라만 있고 피킹 · 기즈모가 없다.
+  (3) **스카이** — 엔진에 스카이 컴포넌트가 없어 조명 환경 프리셋(`EditorPreviewEnvironment`)은 방향광 · 바닥뿐이다.
+  (4) **풀 공유** — 미리보기 렌더러가 씬마다 머티리얼 · 정점 풀 · PSO 캐시를 따로 든다(결정 기록 5-11). 창 여럿을 띄운 메모리 · 첫 프레임 히치를 재고 필요하면 계획의 결정 2 대로 공유한다.
+  (5) **미리보기 렌더러 내리기의 GPU 안전** — 창을 닫으면 렌더 스레드가 `FrameRenderer::shutdown` 으로 그 렌더러를 바로 내린다. 디바이스 해제 큐가 GPU 완료 뒤로 미루는 것에 기대며,
+  네 백엔드에서 창을 연 채 여닫기를 반복하는 시나리오로 확인하지 않았다(DX12 · Vulkan 검증 레이어로 볼 것).
+  (6) `fixedStepOverride`(정책의 고정 스텝) · 미리보기 씬의 백엔드 교체(`-gv_rhiSwapAtFrame`) 확인 · 캐릭터 편집 창이 `EditorPreviewPanel` 을 이어받기(헤더 계약을 따른다).
 
 - `D3-8` **에디터 보강 묶음(2026-10-14)에서 남긴 것.**
   - **시나리오 녹화**(`ScenarioRecorder` · `scenario.record` · `automation.toggleScenarioRecord`): 마우스 휠은 `Wheel` 단계로, 더블클릭은 두 번째 `Press` 로 기록한다. 조합 중 글자 · 포커스 · 포인터 출입 ·
@@ -486,7 +491,7 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   ④ 서버 빌드에서 렌더러 코드를 아예 빼기(지금은 컴파일만 되고 돌지 않는다 — 크기 · 링크 시간을 재고). ⑤ 리눅스 서버(`WSL-*-Server`) 빌드 · `readelf -d` 로
   libX11 없음 확인 · `ServerTest` — Windows 만 확인했다. 서버용 크래시 보고 전송 동의(운영 설정)는 `H-3`.
 
-- `D7-3` **서버 디버깅 — 계획은 [docs/plans/ServerDebug.md](plans/ServerDebug.md).** 다음 단위는 S3(서버 검사기)다. 방향 결정은 [결정 기록](09_Decisions.md) 5-10. 단위를 끝내면 계획 문서에서 지운다. 운영 단위 O1 ~ O7 은 `H-3` 참고.
+- `D7-3` **서버 디버깅 — 계획은 [docs/plans/ServerDebug.md](plans/ServerDebug.md).** S3 · S6 · S7 의 프로세스 쪽은 들어갔고 다음은 에디터 쪽(Inspector · Sync 탭)이다. 방향 결정은 [결정 기록](09_Decisions.md) 5-10. 단위를 끝내면 계획 문서에서 지운다. 운영 단위 O1 ~ O7 은 `H-3` 참고.
   S1 에서 남은 것: ① 사용자 프리셋 저장("서버 + 클라이언트 2" 를 이름 붙여 에디터 상태에 — 지금은 마지막 구성만 세션이 들고 있고 에디터를 다시 띄우면 Standalone) ② 리슨 호스트(App)의 줄에 틱 번호(전용 서버 줄에는 `[tick=N]` 이 붙는다 — 리슨 호스트는 고정 틱 루프가 없어 프레임 번호로 정해야 한다) ③ Stop 뒤 합친 트레이스를 Profiler 창 Timeline 탭에 저절로 열기(지금은 경로를 로그 · Session 탭에 남기고 Load Trace 로 연다) ④ 게임 모듈 핫 리로드를 넘어 세션 유지 — 게임 인스턴스가 다시 서면 `GameNetSession` 도 닫고 다시 열어 클라이언트가 끊긴다(리로드가 새 인스턴스를 먼저 만들면 포트가 아직 잡혀 있어 다시 열지 못한다; 세션을 엔진 쪽 수명으로 옮긴다 — 언리얼 넷 드라이버는 월드 소유) ⑤ 운영 서버가 `ServerConfig::_gamePort` 를 저절로 여는 길(지금은 `-gv_netListenPort` 를 줄 때만 연다 — 결정 기록 5-10) ⑥ 클라이언트 창 배치(여러 App 창이 겹쳐 뜬다 — 언리얼은 창 위치를 나란히 둔다).
 
 - `D7-5` **네트워크 서비스 계층(로그인 · 채팅 · 거래 키트)의 남은 것.** 구성과 원칙(공통 기반 · 드라이버 키트 · 기능 키트, DB 와 캐시)은 [결정 기록](09_Decisions.md) 5-9, 들어간 기반 · 키트 · 서버 조립

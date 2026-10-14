@@ -125,11 +125,13 @@ function(sw_addModuleLibrary TARGET_NAME)
 	elseif(bShareGamePch)
 		# 자동 정의 `<타깃>_EXPORTS`(`SWGame_<게임>_EXPORTS`)는 게임마다 달라 PCH 를 나눌 수 없고 아무도 쓰지 않는다.
 		set_target_properties(${TARGET_NAME} PROPERTIES DEFINE_SYMBOL "")
-		target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" ${ARG_DEFINITIONS})
+		# 키트를 링크하는 게임 모듈은 키트 타깃의 PUBLIC `SW_KIT_IMPORTS` 를 물려받는다. 게임 PCH 와 게임 TU 의 명령줄 정의가 같아야
+		# 하므로 모든 게임이 이 정의를 직접 가지고 PCH 소유자도 같게 가진다(키트가 없는 게임에도 해롭지 않다. 키트 헤더만 읽는다).
+		target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" SW_KIT_IMPORTS ${ARG_DEFINITIONS})
 		sw_configureDllExports(${TARGET_NAME} ${libType} ${ARG_EXPORTS})
 		sw_addSharedPchOwner(sw_game_pch "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h"
 			LINK Engine RuntimeAPI GameFramework sw_global_options
-			DEFINITIONS "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" SW_MODULE_EXPORTS ${ARG_DEFINITIONS})
+			DEFINITIONS "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" SW_MODULE_EXPORTS SW_KIT_IMPORTS ${ARG_DEFINITIONS})
 	else()
 		target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" ${ARG_DEFINITIONS})
 		sw_configurePch(${TARGET_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")

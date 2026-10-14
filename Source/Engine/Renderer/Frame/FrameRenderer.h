@@ -105,6 +105,18 @@ namespace sw
         bool execute( IRHIDevice* pDevice, Scene* pScene = nullptr );
         /** @brief 렌더 스레드 경로입니다. 미리 만들어 둔 packet 의 GPUScene 을 쓰며 Scene 에는 접근하지 않습니다. */
         bool executePacket( IRHIDevice* pDevice, RenderFramePacket& packet );
+        /**
+         * @brief 미리보기 씬 패킷(`RenderFramePacket::_listScenePreview` 의 하나)을 그 씬 키의 렌더러로 그립니다. 렌더 스레드에서 주 패킷 뒤에 부릅니다.
+         * @details **씬마다 렌더러 하나**를 둔다 — GPUScene(인스턴스 · 배치 · 컬링 산출물) · 트랜지언트 · 패스 상수가 씬별이라 메인 씬과 섞이지 않는다.
+         *          언리얼이 미리보기 월드마다 `FScene` 을, 유니티 `PreviewRenderUtility` 가 숨은 씬을 따로 그리는 것과 같은 자리다.
+         *          미리보기 렌더러는 프로파일러 · 렌더 타깃 목록 공개 · Present 캡처를 하지 않는다(주 렌더러의 것을 덮지 않게).
+         *          출력은 패킷의 `_outputRenderTarget` 이고, 그 타깃의 상태 전환(렌더 타깃 → 셰이더 읽기)은 부르는 쪽(`RenderThread`)이 한다.
+         */
+        bool executeScenePreviewPacket( IRHIDevice* pDevice, RenderFramePacket& packet );
+        /** @brief @p mainPacket 의 미리보기 목록에 없는 씬의 렌더러를 내립니다(창을 닫았거나 가렸다). 미리보기 패킷을 다 그린 뒤 부릅니다. */
+        void retireScenePreviews( const RenderFramePacket& mainPacket );
+        /** @brief 지금 살아 있는 미리보기 씬 렌더러 수입니다(진단과 테스트용). */
+        uint32 getScenePreviewRendererCount() const { return static_cast<uint32>( _listScenePreviewRenderer.size() ); }
 
         // ------------------------------------------------------------------------------
         // 3) 조회
@@ -896,9 +908,17 @@ namespace sw
          * @details 화면 사각형 뷰(PiP · 분할 화면)는 주 시점 뒤에 같은 출력에 겹쳐 그리므로, 주 시점의 Canvas 패스가 UI 를 그리면 그 뷰가 UI 를 덮는다.
          *          언리얼이 모든 장면 뷰 뒤에 Slate 를 한 번 그리는 것과 같은 순서로, 마지막 뷰의 Canvas 패스만 UI 를 그린다. `submitGraph` 가 기록 전에 정한다.
          */
-        const ViewTarget*           _pMainOutputCanvasView;
-        string                      _statusMessage;
-        RenderGraphExecutionContext _graphContext;
+        const ViewTarget* _pMainOutputCanvasView;
+        /** @brief 미리보기 씬 하나를 그리는 렌더러입니다(`executeScenePreviewPacket`). 씬 키로 찾습니다. */
+        struct ScenePreviewRenderer
+        {
+            unique_ptr<FrameRenderer> _renderer;
+            uint32                    _sceneKey{ 0 };
+        };
+        /// @brief 미리보기 씬마다의 렌더러입니다. 주 렌더러가 소유하고 `shutdown` 이 함께 내립니다(디바이스가 살아 있을 때).
+        vector<ScenePreviewRenderer> _listScenePreviewRenderer;
+        string                       _statusMessage;
+        RenderGraphExecutionContext  _graphContext;
 
         // 아래는 8바이트보다 작은 필드다. 사이에 끼면 패딩이 생기므로 큰 것부터 두고 작은 것을 끝에 모은다.
         FrameLightState _frameLight; ///< float4 둘(32바이트)이다.
@@ -919,7 +939,8 @@ namespace sw
         FrameRendererStatus    _status;
         uint8                  _bCallbacksBound     : 1;
         uint8                  _bPassResourcesReady : 1;
-        [[maybe_unused]] uint8 _reservedFlags       : 5;
+        uint8                  _bScenePreview       : 1; ///< 미리보기 씬 렌더러다 — 프로파일러 보고 · 렌더 타깃 공개를 하지 않는다
+        [[maybe_unused]] uint8 _reservedFlags       : 4;
         /**
          * @brief 주 출력의 보기 모드(`RenderViewMode`)입니다.
          * @details 게임 스레드(패킷)와 직접 경로가 프레임 시작에 읽어 뷰 설정에 싣고, 드로우는 뷰 설정만 본다. 쓰는 쪽이 다른 스레드이므로 atomic 이다.

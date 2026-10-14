@@ -37,6 +37,11 @@ namespace sw
         if ( result._bSuccess == false || _pDevice == nullptr )
             return;
 
+        // 미리보기 씬 렌더러도 같은 셰이더로 PSO 를 만들었다.
+        for ( ScenePreviewRenderer& preview : _listScenePreviewRenderer )
+        {
+            preview._renderer->onShaderRecompiled( shaderPath, result );
+        }
         _psoCache.invalidateLayoutsByShaderPath( shaderPath );
 
         // **PSO 를 실제로 다시 만든다.** 주의: 바인딩 레이아웃만 새로 만들면 PSO 는 바이트코드를 박아 넣은

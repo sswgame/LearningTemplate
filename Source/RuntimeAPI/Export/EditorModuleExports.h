@@ -79,6 +79,8 @@ namespace sw
         { return sw::ModuleForwardUtil::callOr<EditorClass, bool>( editorHandle, false, &EditorClass::isPaused ); };                                                                                               \
         pOutAPI->stopSimulation = []( sw::EditorHandle editorHandle ) { sw::ModuleForwardUtil::callVoid<EditorClass>( editorHandle, &EditorClass::stopSimulation ); };                                             \
         pOutAPI->endFrame       = []( sw::EditorHandle editorHandle ) { sw::ModuleForwardUtil::callVoid<EditorClass>( editorHandle, &EditorClass::onHostFrameEnd ); };                                             \
+        pOutAPI->getSceneViews  = []( sw::EditorHandle editorHandle, sw::HostSceneView* pOutView, uint32 capacity ) -> uint32                                                                                      \
+        { return sw::ModuleForwardUtil::callOr<EditorClass, uint32>( editorHandle, 0u, &EditorClass::getSceneViews, pOutView, capacity ); };                                                                       \
         return true;                                                                                                                                                                                               \
     }
 // NOLINTEND(bugprone-macro-parentheses)

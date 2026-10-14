@@ -14,6 +14,7 @@
  *          프로세스 지표(`process_resident_memory_bytes`, `server_service_connections`)는 초에 한 번 갱신한다.
  *          게임 인스턴스를 만든 뒤 모듈이 올린 서버 서비스(`ServerServiceRegistry`, 예: 온라인 서비스 호스트)를 시작하고 서버 루프마다 돌린다. 서비스는 지표와 상태
  *          레지스트리를 `ServerServiceContext` 로 받는다. 서비스 코드는 모듈에 있으므로 모듈을 언로드하기 전(리로드, 종료)에 멈춘다.
+ *          Dev 빌드에서는 `-gv_debugChannelPort` · `-gv_debugChannelToken` 으로 디버그 채널(루프백 · 토큰, 개발 명령 원격 실행)을 열고, `-gv_stateHashHistory` 로 틱별 상태 해시를 남긴다(S3 · S7).
  *          Dev 빌드에서는 콘솔 명령 `pause`, `resume`, `step [N]` 으로 게임 틱을 멈추고 한 틱씩 돌릴 수 있다. 디버거 없이 중단점처럼 쓰는 기능이며, 네트워크 스레드는 계속 돌아 연결이 유지된다.
  */
 #pragma once
@@ -32,6 +33,7 @@ namespace sw
 {
     struct ServerConfig;
 
+    class DebugChannel;
     class DevConsole;
     class IStreamTransport;
     class LiveReloadManager;
@@ -97,6 +99,10 @@ namespace sw
         /** @brief Dev 의 일시정지 명령(`pause` · `resume` · `step [N]`)이면 처리하고 true 입니다. Shipping 은 늘 false 입니다. */
         bool executePauseCommand( string_view command );
         void logStatus() const;
+#if !defined( SW_SHIPPING )
+        /** @brief 디버그 채널을 열고 상태 해시 이력을 켭니다(실행 인자가 없으면 아무 일도 하지 않습니다). 열려고 했는데 못 열면 false 입니다(기동 실패). */
+        [[nodiscard]] bool startDebugTools();
+#endif
 
     private:
         /**
@@ -111,7 +117,9 @@ namespace sw
         unique_ptr<ModuleHost>    _moduleHost;
 #if !defined( SW_SHIPPING )
         unique_ptr<LiveReloadManager> _liveReloadManager;
-        unique_ptr<DevConsole>        _devConsole; ///< Dev 서버는 개발 콘솔과 같은 명령(개발 명령 · gv_*)을 표준 입력으로 받는다
+        unique_ptr<DevConsole>        _devConsole;     ///< Dev 서버는 개발 콘솔과 같은 명령(개발 명령 · gv_*)을 표준 입력으로 받는다
+        unique_ptr<IStreamTransport>  _debugTransport; ///< 디버그 채널의 스트림 전송(채널을 종료한 뒤 지운다)
+        unique_ptr<DebugChannel>      _debugChannel;   ///< 읽기 중심의 원격 개발 명령 채널( 가 0 이 아닐 때만, 루프백 · 토큰, 서버 디버깅 S3)
 #endif
         ModuleCatalog                     _moduleCatalog;
         ModuleResolution                  _moduleResolution;

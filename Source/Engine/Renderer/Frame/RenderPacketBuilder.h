@@ -28,6 +28,7 @@ namespace sw
     class RenderViewScheduler;
     class RHI;
     class Scene;
+    class SceneManager;
     class TaskManager;
     class UISystem;
 
@@ -83,8 +84,25 @@ namespace sw
          * @param bSceneMain 씬 뷰가 주 출력인 프레임이면 화면 UI 를 싣지 않습니다 — UI 는 게임 화면(게임 뷰 · 백버퍼)에만 있습니다.
          */
         static void populateCanvas( RenderFramePacket& packet, bool bSceneMain, UISystem* pUISystem, FontService* pFontService, const RHI* pRHI );
+        /**
+         * @brief 호스트가 요청한 미리보기 씬 뷰(`HostViewTargets::_arrSceneView`)마다 미리보기 패킷을 하나씩 채워 @p packet 에 붙입니다.
+         * @details 씬마다 스냅샷 빌더를 따로 둔다(빌더의 재구축 판단 캐시가 씬별이기 때문이다). 요청이 끊긴 씬의 빌더는 이 프레임에 내린다.
+         *          미리보기 패킷에는 주광 · 라이트 · 그림자 · 카메라 · 씬 스냅샷만 싣는다 — 추가 뷰 · 캔버스 · 스크린샷은 주 패킷에만 있다.
+         * @param sceneManager 씬 키를 씬으로 푸는 곳입니다(`SceneManager::findPreviewScene`). 없는 키는 건너뜁니다.
+         */
+        void populateScenePreviews( RenderFramePacket& packet, const HostViewTargets& views, const SceneManager& sceneManager );
 
     private:
+        /** @brief 미리보기 씬 하나의 GT 쪽 스냅샷 빌더입니다. 씬 키로 찾습니다. */
+        struct ScenePreviewBuilder
+        {
+            unique_ptr<GPUSceneBuilder> _builder;
+            uint32                      _sceneKey{ 0 };
+            uint8                       _bSeen{ SW_FALSE }; ///< 이번 프레임에 요청이 있었다
+        };
+        /** @brief 씬 키의 빌더 항목을 찾고, 없으면 만듭니다. */
+        ScenePreviewBuilder& getOrCreateScenePreviewBuilder( uint32 sceneKey );
+
         /** @brief GT 쪽 씬 스냅샷 빌더입니다. populateFromScene 의 재구축 판단 캐시가 프레임을 넘어 유지되도록 여기서 소유합니다.
          *         프레임마다 CPU 스냅샷만 exportCPUSnapshot 으로 뽑아 패킷에 담아 RT 로 넘깁니다. */
         unique_ptr<GPUSceneBuilder> _gpuSceneBuilder;
@@ -103,5 +121,11 @@ namespace sw
         vector<AnimationLODView> _listAnimationLODView;
         /** @brief 그림자를 켠 점광 · 스폿의 라이트 원소 번호입니다(`collectSceneLights` → `ShadowSetupUtil::populateFrame`). 프레임마다 재사용합니다. */
         vector<uint32> _listShadowLightIndex;
+        /** @brief 미리보기 씬마다의 스냅샷 빌더입니다(`populateScenePreviews`). 요청이 끊긴 씬의 것은 내립니다. */
+        vector<ScenePreviewBuilder> _listScenePreviewBuilder;
+        /** @brief 미리보기 씬 하나의 애니메이션 LOD 뷰입니다. 프레임마다 재사용합니다. */
+        vector<AnimationLODView> _listPreviewLODView;
+        /** @brief 디바이스가 텍스처를 인덱스로 고를 수 있어 머티리얼이 달라도 배치를 합치는지입니다(`initialize` 가 정한다). 미리보기 빌더에도 같은 값을 준다. */
+        bool _bMergeBatchesAcrossMaterials;
     };
 } // namespace sw
