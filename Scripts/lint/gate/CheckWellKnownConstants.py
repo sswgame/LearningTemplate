@@ -11,7 +11,7 @@
     황금비 · splitmix64 · FNV-1a              Source/Core/Common/HashUtil.h        (HashUtil::kGoldenRatio64 · mix64 · combine · kFnv*)
     시간 · 바이트 단위(1e9 · 1024*1024)       Source/Core/Common/Defines.h         (constant::kNanosecondsPerSecond · kBytesPerMegabyte …)
 
-리터럴을 파일마다 다시 적으면 자릿수가 갈린다 — 실제로 `3.1415926535f` · `3.14159265358979f` · `6.2831853f` · `6.28318530718f` 가 섞여 있었고,
+리터럴을 파일마다 다시 적으면 자릿수가 갈린다. 실제로 `3.1415926535f` · `3.14159265358979f` · `6.2831853f` · `6.28318530718f` 가 섞여 있었고,
 FNV 기저값 하나는 끝 자리가 빠진 채(`1469598103934665603`) 세 파일에 복사돼 있었다. float 로는 같은 값이어도 다음 사람은 어느 것이
 원본인지 모른다.
 

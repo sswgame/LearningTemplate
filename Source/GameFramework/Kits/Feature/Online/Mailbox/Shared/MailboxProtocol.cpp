@@ -56,6 +56,7 @@ namespace sw
 
             [[nodiscard]] static bool readMail( BitReader& reader, MailView& outMail )
             {
+                // 메일 키 길이 상한은 `OnlineLimit::kMaxKeySize` 를 따른다.
                 const bool bTextOk = ServiceKeyUtil::readString( reader, OnlineLimit::kMaxKeySize, outMail._mailKey ) &&
                                      ServiceKeyUtil::readString( reader, ServiceMailConstant::kMaxTitleSize, outMail._titleKey ) &&
                                      ServiceKeyUtil::readString( reader, ServiceMailConstant::kMaxBodySize, outMail._body ) &&
@@ -96,6 +97,7 @@ namespace sw
 
     bool MailboxProtocol::readRequest( BitReader& reader, MailboxRequest& outRequest )
     {
+        // 메일 키와 커서 길이 상한은 `OnlineLimit::kMaxKeySize` 를 따른다.
         const bool  bTextOk  = ServiceKeyUtil::readString( reader, OnlineLimit::kMaxKeySize, outRequest._mailKey ) && ServiceKeyUtil::readString( reader, OnlineLimit::kMaxKeySize, outRequest._cursor );
         const int64 maxCount = reader.readVarInt();
         outRequest._maxCount = static_cast<int32>( maxCount );
@@ -126,6 +128,7 @@ namespace sw
         if ( OnlineReplyUtil::readEnum( reader, MailboxResult::Count, outReply._result ) == false )
             return false;
         outReply._claimedCount = static_cast<int32>( reader.readVarInt() );
+        // 커서 길이 상한은 `OnlineLimit::kMaxKeySize` 를 따른다.
         if ( ServiceKeyUtil::readString( reader, OnlineLimit::kMaxKeySize, outReply._nextCursor ) == false )
             return false;
         const uint64 balanceCount = reader.readVarUint();
