@@ -141,6 +141,7 @@ namespace sw::editor
                 addNamedNode( "Idle" );
                 notifyDocumentEdited( "Add Animation Graph Node" );
             }
+            EditorSelfTestMarks::note( "animationGraph.add.Idle" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "AddIdleTip" ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Add Walk" ) )
@@ -148,6 +149,7 @@ namespace sw::editor
                 addNamedNode( "Walk" );
                 notifyDocumentEdited( "Add Animation Graph Node" );
             }
+            EditorSelfTestMarks::note( "animationGraph.add.Walk" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "AddWalkTip" ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Add Attack" ) )
@@ -155,6 +157,7 @@ namespace sw::editor
                 addNamedNode( "Attack" );
                 notifyDocumentEdited( "Add Animation Graph Node" );
             }
+            EditorSelfTestMarks::note( "animationGraph.add.Attack" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "AddAttackTip" ) );
             ImGui::SameLine();
             // 고른 노드 둘(고른 순서)을 잇는다 — 캔버스에서 노드를 누르고 Ctrl 로 둘째를 고른다.
