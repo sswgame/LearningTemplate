@@ -258,7 +258,7 @@ namespace sw::editor
         uint32 _vertexIndex{ 0 };
         /** @brief 스택 입력(변형 전 원본) 위치를 모디파이어 공간으로 옮긴 값입니다. `_bHasOriginalPosition` 이 false 면 쓰지 않습니다. */
         float3 _originalPosition{ 0.0f, 0.0f, 0.0f };
-        bool   _bHasOriginalPosition{ false }; ///< `needsOriginalPosition` 이 true 인 모디파이어에만 적용기가 채운다
+        bool   _bHasOriginalPosition{ false }; ///< `needsOriginalPosition` 이 true 인 모디파이어에만 모디파이어 스택이 채운다
     };
 } // namespace sw::editor
 
@@ -327,7 +327,7 @@ namespace sw::editor
         /**
          * @brief GPU 구조 버퍼에 넣을 평탄한 매개변수를 @p outListValue 뒤에 붙입니다. `supportsGPU` 가 false 면 아무것도 붙이지 않고 false 입니다.
          * @details 기본 배치: 스칼라(Float · Int · Bool · Axis)는 선언 순서대로 float4 의 x 에 하나씩, Vector3 는 xyz, 그 밖의 종류는 건너뛴다.
-         *          파생이 다른 배치가 필요하면 재정의한다. 공간 행렬 · 주축 · 상자는 적용기가 따로 넣는다.
+         *          파생이 다른 배치가 필요하면 재정의한다. 공간 행렬 · 주축 · 상자는 모디파이어 스택이 따로 넣는다.
          */
         virtual bool packGPUParams( vector<float4>& outListValue ) const;
         /** @brief 패널 추가 메뉴의 툴팁으로 보일 설명 한 줄(영문)입니다. 기본은 빈 글입니다. */

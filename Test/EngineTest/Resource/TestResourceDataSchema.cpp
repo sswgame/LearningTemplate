@@ -217,7 +217,7 @@ namespace
         }
 
         /**
-         * @brief 사용자 설정 스키마 — 엔진 적용기 이름 · 전역 변수 대상까지 검사한다. 게임 스키마는 엔진 스키마 위에 덧붙인다(기동과 같은 순서).
+         * @brief 사용자 설정 스키마 — 엔진 적용 함수 이름 · 전역 변수 대상까지 검사한다. 게임 스키마는 엔진 스키마 위에 덧붙인다(기동과 같은 순서).
          */
         [[nodiscard]] static bool loadUserSettingsSchema( const sw::string& resourceID )
         {

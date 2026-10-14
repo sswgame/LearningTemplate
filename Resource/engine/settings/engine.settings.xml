@@ -8,8 +8,8 @@
     type        bool · int · float · enum · keyBinding · string
     default     기본값. 품질 묶음에 묶인 설정은 묶음 기본 프리셋의 값이 기본값이다.
     apply       immediate(보류 즉시 미리 적용) · confirm(적용 버튼, 기본) · restart(다음 실행)
-    target      gv:<전역 변수> · applier:<적용기 이름> · 없음(게임 코드가 값을 읽는다)
-    param       적용기 인자(버스 이름 · 액션 이름)
+    target      gv:<전역 변수> · applier:<적용 함수 이름> · 없음(게임 코드가 값을 읽는다)
+    param       적용 함수 인자(버스 이름 · 액션 이름)
     min max step  숫자 범위와 눈금(벗어난 값은 맞춰 넣는다)
     enabledWhen   다른 설정 조건 `id=value` · `id!=value`, 여럿은 `;`
     platforms     windows · linux (없으면 전부)

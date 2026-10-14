@@ -2,7 +2,7 @@
  * @file UserSettingsManager.h
  * @brief 사용자 설정(플레이어 옵션 메뉴)의 값, 보류, 적용, 되돌리기, 저장과 메뉴 UI 가 부르는 바인딩 API 를 정의합니다.
  *
- * 흐름: 메뉴가 `setPendingValue` 로 보류 값을 넣으면 `applyPending` 이 대상(전역 변수, 적용기)에 넣고 사용자 파일에 저장합니다.
+ * 흐름: 메뉴가 `setPendingValue` 로 보류 값을 넣으면 `applyPending` 이 대상(전역 변수, 적용 함수)에 넣고 사용자 파일에 저장합니다.
  * 화면 방식처럼 `confirmSeconds` 가 있는 설정은 `confirmChanges` 를 그 시간 안에 부르지 않으면 `update` 가 되돌립니다.
  * 설정은 세이브 게임과 별개인 사용자 파일(사용자 폴더의 `usersettings.json`)에 저장합니다.
  */
@@ -76,7 +76,7 @@ namespace sw
     struct UserSettingsApplyResult
     {
         uint32 _appliedCount{ 0 };         ///< 대상에 넣은 개수입니다.
-        uint32 _failedCount{ 0 };          ///< 적용기가 거절한 개수입니다.
+        uint32 _failedCount{ 0 };          ///< 적용 함수가 거절한 개수입니다.
         bool   _bNeedsRestart{ false };    ///< 다음 실행에 반영되는 값이 있는지 나타냅니다.
         bool   _bAwaitingConfirm{ false }; ///< 확인 대기(카운트다운)가 시작됐는지 나타냅니다.
         bool   _bSaved{ false };           ///< 사용자 파일에 썼는지 나타냅니다.
@@ -97,9 +97,9 @@ namespace sw
 {
     /**
      * @class UserSettingsManager
-     * @brief 엔진 서비스(`engine::getUserSettingsManager`, 게임에서도 보입니다)입니다. 스키마, 값, 사용자 파일, 적용기 레지스트리를 가집니다.
+     * @brief 엔진 서비스(`engine::getUserSettingsManager`, 게임에서도 보입니다)입니다. 스키마, 값, 사용자 파일, 적용 등록부를 가집니다.
      * @details **게임 스레드 전용**이다. 대상 적용은 게임 스레드에서 일어나고, 창과 스왑체인 변경은 화면 요청으로 미뤄 호스트가 프레임 맨 앞에서
-     *          처리한다(`consumeDisplayRequest`). 모듈이 등록한 통보와 적용기는 모듈을 언로드하기 전에 제거한다(IModuleUnloadListener).
+     *          처리한다(`consumeDisplayRequest`). 모듈이 등록한 통보와 적용 함수는 모듈을 언로드하기 전에 제거한다(IModuleUnloadListener).
      */
     class SW_API UserSettingsManager : public IModuleUnloadListener, public ISubsystem
     {
@@ -112,9 +112,9 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 1) 수명과 스키마
         // ------------------------------------------------------------------------------
-        /** @brief 대상을 정하고 엔진 적용기를 올립니다. 스키마는 비어 있습니다. */
+        /** @brief 대상을 정하고 엔진 적용 함수를 올립니다. 스키마는 비어 있습니다. */
         void initialize( const UserSettingsTargets& targets );
-        /** @brief 값, 스키마, 통보, 적용기를 모두 비웁니다. */
+        /** @brief 값, 스키마, 통보, 적용 함수를 모두 비웁니다. */
         void shutdown();
 
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */

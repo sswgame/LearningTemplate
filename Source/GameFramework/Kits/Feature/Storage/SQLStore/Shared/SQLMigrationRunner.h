@@ -1,6 +1,6 @@
 /**
  * @file SQLMigrationRunner.h
- * @brief 마이그레이션 적용기입니다. 번호가 붙은 SQL 을 차례로 적용하고 `sw_schema_migration` 에 기록합니다.
+ * @brief 마이그레이션 실행기입니다. 번호가 붙은 SQL 을 차례로 적용하고 `sw_schema_migration` 에 기록합니다.
  * @details 스키마는 SQL 에만 있으므로 이 키트에 둔다. 메모리 구현과 캐시에는 스키마가 없다.
  *          파일 이름은 `NNNN_이름.sql`(공통) 또는 `NNNN_이름.<드라이버>.sql`(방언 분기)이다. 방언 분기 파일은 같은 번호의 공통 파일 대신 쓴다. 번호는 1부터 빈틈없이 매긴다.
  *          토큰 `{{blob}}`, `{{keytext}}`, `{{autoid}}` 를 방언에 맞게 치환한다.

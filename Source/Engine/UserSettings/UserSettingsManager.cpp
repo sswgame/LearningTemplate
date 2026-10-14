@@ -307,7 +307,7 @@ namespace sw
             const bool bKeepStartupValue = _bStartupApplied && listSetting[settingIndex]._applyTiming == UserSettingApplyTiming::NeedsRestart;
             if ( bKeepStartupValue == false )
                 state._startupValue = state._committedValue;
-            (void)applyToTarget( settingIndex, state._startupValue, true ); // 대상이 없는 설정(이 실행에 없는 변수나 적용기)은 건너뛴다. 값은 저장된 그대로다
+            (void)applyToTarget( settingIndex, state._startupValue, true ); // 대상이 없는 설정(이 실행에 없는 변수나 적용 함수)은 건너뛴다. 값은 저장된 그대로다
         }
         _bStartupApplied = true;
     }
@@ -538,7 +538,7 @@ namespace sw
                 result._bNeedsRestart = result._bNeedsRestart || state._committedValue != state._startupValue;
                 continue;
             }
-            // `Immediate` 는 보류 때 이미 넣었다. 다시 넣어도 같은 값이라 나머지와 한 길로 둔다(적용기는 같은 값을 다시 받아도 된다).
+            // `Immediate` 는 보류 때 이미 넣었다. 다시 넣어도 같은 값이라 나머지와 한 길로 둔다(적용 함수는 같은 값을 다시 받아도 된다).
             if ( applyToTarget( settingIndex, state._committedValue, false ) )
                 ++result._appliedCount;
             else
