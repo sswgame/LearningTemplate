@@ -9,6 +9,9 @@
 #include "Core/Process/Process.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Observability/DebugChannel.h"
+#include "Engine/Scene/SceneStateHash.h"
+
 #include "TestFramework/TestFramework.h"
 
 #include <chrono>
@@ -376,5 +379,216 @@ SW_TEST_CASE( ServerBootTest, MissingServerConfigStopsOnlyTheShippingServer )
 #else
     expectCleanExit( run, "TickLimit" );
     SW_EXPECT_TRUE( run._output.find( "using built-in defaults" ) != string::npos );
+#endif
+}
+
+#if !defined( SW_SHIPPING )
+namespace
+{
+    constexpr const utf8* kDebugToken = "test-token-4711";
+
+    /** @brief 디버그 채널을 연 서버를 띄우는 실행 인자입니다(루프백 · 토큰 · 상태 해시 이력). */
+    string makeDebugServerArguments( uint16 port )
+    {
+        return "-gv_serverExitAfterTicks=100000 -gv_stateHashHistory=2000 -gv_debugChannelPort=" + to_string( port ) + " -gv_debugChannelToken=" + string( kDebugToken );
+    }
+
+    /** @brief 서버가 시작 씬을 올릴 때까지(`ready` 는 씬 교체보다 먼저다) @p command 를 되풀이해 성공하면 true. */
+    bool requestUntilOk( DebugChannelClient& client, string_view command, string& outBody )
+    {
+        const int64 deadline = MonotonicClock::nowNanoseconds() + 10000LL * 1000000LL;
+        while ( MonotonicClock::nowNanoseconds() < deadline )
+        {
+            if ( client.request( command, 5000, outBody ) )
+                return true;
+            std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+        }
+        return false;
+    }
+
+    /** @brief 서버의 `scene.poses` 답에서 첫 줄의 오브젝트 이름입니다(없으면 빈 글). */
+    string findFirstPoseName( DebugChannelClient& client )
+    {
+        string body;
+        if ( requestUntilOk( client, "scene.poses", body ) == false )
+            return {};
+        return body.substr( 0, body.find( ' ' ) );
+    }
+
+    /** @brief 서버가 @p tick 틱까지 돌아 해시를 남길 때까지 기다립니다. 시한 안에 못 하면 false. */
+    bool waitForTick( DebugChannelClient& client, uint64 tick, int32 timeoutMilli )
+    {
+        const int64 deadline = MonotonicClock::nowNanoseconds() + static_cast<int64>( timeoutMilli ) * 1000000LL;
+        string      body;
+        while ( MonotonicClock::nowNanoseconds() < deadline )
+        {
+            if ( client.request( "state.hashes " + to_string( tick ) + " 1", 5000, body ) && body.empty() == false )
+                return true;
+            std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
+        }
+        return false;
+    }
+
+    /** @brief `paused tick N` 답의 N 입니다(못 읽으면 0). */
+    uint64 parsePausedTick( const string& reply )
+    {
+        const size_t pos  = reply.rfind( ' ' );
+        uint64       tick = 0;
+        if ( pos == string::npos || StringUtil::parseUint64( reply.substr( pos + 1 ), tick ) == false )
+            return 0;
+        return tick;
+    }
+} // namespace
+#endif
+
+/**
+ * @brief [ServerBootTest] 디버그 채널로 붙어 서버의 오브젝트 트리 · 컴포넌트 값을 읽고, 서버에서 바꾼 값이 검사기에 보이고, 잘못된 토큰은 거절된다(서버 디버깅 S3)
+ * @details 확인 시나리오: 서버를 띄움 -> 채널에 연결 -> `scene.tree` · `object.dump` 로 읽음 -> 멈춘(`pause`) 서버에서 `teleport` 로 값을 바꿈 -> `scene.poses` · `object.dump` 에 새 값이 보임.
+ *          채널의 `pause` 는 서버 루프의 일시정지 명령이라 멈춘 동안에도 요청을 받는다(중단점에서 값을 보는 쓰임).
+ */
+SW_TEST_CASE( ServerBootTest, DebugChannelReadsObjectValuesAndRejectsAWrongToken )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "the debug channel is a development-build feature" );
+#else
+    if ( findServerPath().empty() )
+        SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
+    const uint16 port = findFreeStreamPort();
+    SW_ASSERT_TRUE( port != 0 );
+    ProcessOptions options;
+    options._bPipeStandardInput = true;
+    string          treeBody;
+    string          dumpBefore;
+    string          dumpAfter;
+    string          posesAfter;
+    string          wrongTokenBody;
+    string          unknownBody;
+    bool            bWrongTokenRejected = false;
+    bool            bUnknownFailed      = false;
+    bool            bConnected          = false;
+    bool            bTeleported         = false;
+    string          objectName;
+    const ServerRun run = runServer( makeDebugServerArguments( port ), options, [&]( Process& process )
+    {
+        DebugChannelClient client;
+        bConnected = client.connect( NetAddress::makeLoopback( port ), kDebugToken, 10000 );
+        if ( bConnected )
+        {
+            string reply;
+            (void)requestUntilOk( client, "scene.tree", treeBody );
+            objectName = findFirstPoseName( client );
+            (void)client.request( "object.dump " + objectName, 5000, dumpBefore );
+            bool bPaused = client.request( "pause", 5000, reply ) && reply.find( "paused tick" ) == 0;
+            bTeleported  = bPaused && client.request( "teleport " + objectName + " 11 22 33", 5000, reply );
+            (void)client.request( "scene.poses", 5000, posesAfter );
+            (void)client.request( "object.dump " + objectName, 5000, dumpAfter );
+            bUnknownFailed = client.request( "no.such.command", 5000, unknownBody ) == false;
+        }
+        DebugChannelClient intruder;
+        if ( intruder.connect( NetAddress::makeLoopback( port ), "wrong-token", 10000 ) )
+            bWrongTokenRejected = intruder.request( "scene.tree", 5000, wrongTokenBody ) == false && wrongTokenBody == "unauthorized";
+        (void)process.writeInput( "quit\n" ); // 못 쓰면 서버가 끝나지 않아 아래 expectCleanExit 가 실패한다
+    } );
+    expectCleanExit( run, "ConsoleCommand" );
+    SW_ASSERT_TRUE_MSG( bConnected, "the debug channel did not accept the client" );
+    SW_EXPECT_TRUE_MSG( run._output.find( "Debug channel listening on 127.0.0.1:" + to_string( port ) ) != string::npos, "the server did not log the debug channel" );
+    SW_EXPECT_TRUE_MSG( treeBody.find( "objects 8" ) == 0 && treeBody.find( "components=" ) != string::npos, treeBody.c_str() );
+    SW_ASSERT_TRUE_MSG( objectName.empty() == false, "scene.poses named no object" );
+    SW_EXPECT_TRUE_MSG( dumpBefore.find( "[" ) != string::npos && dumpBefore.find( "object " + objectName ) == 0, dumpBefore.c_str() );
+    SW_EXPECT_TRUE_MSG( bTeleported, "pause or teleport through the channel failed" );
+    SW_EXPECT_TRUE_MSG( posesAfter.find( objectName + " 11 22 33" ) != string::npos, posesAfter.c_str() );
+    SW_EXPECT_TRUE_MSG( dumpAfter != dumpBefore && dumpAfter.find( "11" ) != string::npos, "the inspector did not show the changed position" );
+    SW_EXPECT_TRUE_MSG( bUnknownFailed, unknownBody.c_str() );
+    SW_EXPECT_TRUE_MSG( bWrongTokenRejected, wrongTokenBody.c_str() );
+    SW_EXPECT_TRUE( run._output.find( "Debug channel rejected a connection" ) != string::npos );
+#endif
+}
+
+/**
+ * @brief [ServerBootTest] 디버그 채널은 토큰 없이는 열리지 않는다 - 서버는 기동에 실패한다
+ */
+SW_TEST_CASE( ServerBootTest, DebugChannelRefusesToStartWithoutAToken )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "the debug channel is a development-build feature" );
+#else
+    if ( findServerPath().empty() )
+        SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
+    const uint16 port = findFreeStreamPort();
+    SW_ASSERT_TRUE( port != 0 );
+    const ServerRun run = runServer( "-gv_serverExitAfterTicks=100000 -gv_debugChannelPort=" + to_string( port ), ProcessOptions{}, []( Process& ) {} );
+    SW_EXPECT_TRUE( run._bLaunched );
+    SW_EXPECT_FALSE( run._bTimedOut );
+    SW_EXPECT_TRUE( run._exitCode != 0 );
+    SW_EXPECT_FALSE( run._bReadySeen );
+    SW_EXPECT_TRUE_MSG( run._output.find( "needs a token" ) != string::npos, "the server did not say why the channel was refused" );
+#endif
+}
+
+/**
+ * @brief [ServerBootTest] 두 서버의 틱별 상태 해시를 비교해 처음 어긋난 틱을 맞게 짚는다(서버 디버깅 S7)
+ * @details 서버 A 는 그대로 두고, 서버 B 는 멈춘 틱 T 에서 4 틱 진행한 뒤 오브젝트를 옮기고 6 틱을 더 돈다. 어긋난 첫 틱은 T + 5 여야 하고, 그 앞 틱들은 두 서버가 같아야 한다
+ *          (씬은 결정적이다). 채널의 `pause` · `step` 으로 틱을 정확히 세므로 시간에 기대지 않는다.
+ */
+SW_TEST_CASE( ServerBootTest, StateHashHistoryFindsTheFirstDivergentTick )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "the debug channel is a development-build feature" );
+#else
+    if ( findServerPath().empty() )
+        SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
+    ProcessOptions options;
+    options._bPipeStandardInput = true;
+    struct Result
+    {
+        string _hashes;
+        uint64 _pausedTick{ 0 };
+        bool   _bOk{ false };
+    };
+    // 한 서버를 돌려 멈춘 틱과 이력을 얻는다. @p bPerturb 이면 4 틱 뒤 오브젝트를 옮긴다.
+    auto runOne = [&options]( bool bPerturb, uint32 totalSteps ) -> Result
+    {
+        Result          result;
+        const uint16    port = findFreeStreamPort();
+        const ServerRun run  = runServer( makeDebugServerArguments( port ), options, [&]( Process& process )
+         {
+            DebugChannelClient client;
+            if ( client.connect( NetAddress::makeLoopback( port ), kDebugToken, 10000 ) )
+            {
+                string reply;
+                // 씬이 선 뒤에 멈춘다 - 그 전의 틱은 해시를 남기지 않는다
+                if ( requestUntilOk( client, "scene.tree", reply ) && client.request( "pause", 5000, reply ) )
+                {
+                    result._pausedTick      = parsePausedTick( reply );
+                    const uint32 firstSteps = bPerturb ? 4 : totalSteps;
+                    bool         bGood      = client.request( "step " + to_string( firstSteps ), 5000, reply ) && waitForTick( client, result._pausedTick + firstSteps, 10000 );
+                    if ( bGood && bPerturb )
+                    {
+                        const string name = findFirstPoseName( client );
+                        bGood             = client.request( "teleport " + name + " 50 0 0", 5000, reply ) && client.request( "step " + to_string( totalSteps - firstSteps ), 5000, reply ) &&
+                                waitForTick( client, result._pausedTick + totalSteps, 10000 );
+                    }
+                    result._bOk = bGood && client.request( "state.hashes 0 100000", 5000, result._hashes );
+                }
+            }
+            (void)process.writeInput( "quit\n" ); // 못 쓰면 서버가 끝나지 않아 아래 expectCleanExit 가 실패한다
+        } );
+        expectCleanExit( run, "ConsoleCommand" );
+        return result;
+    };
+    const Result serverA = runOne( false, 40 );
+    const Result serverB = runOne( true, 12 );
+    SW_ASSERT_TRUE_MSG( serverA._bOk && serverB._bOk, "a server run could not be driven through the debug channel" );
+    SW_ASSERT_TRUE( serverA._pausedTick > 0 && serverB._pausedTick > 0 );
+    vector<StateHashSample> listA;
+    vector<StateHashSample> listB;
+    StateHashHistory::parseReport( serverA._hashes, listA );
+    StateHashHistory::parseReport( serverB._hashes, listB );
+    SW_ASSERT_TRUE_MSG( listA.size() >= 40 && listB.size() >= 12, "a server recorded fewer tick hashes than it was stepped" );
+    uint64 firstDivergentTick = 0;
+    SW_ASSERT_TRUE_MSG( StateHashHistory::findFirstDivergence( listA, listB, firstDivergentTick ), "the two servers never diverged" );
+    // 옮긴 뒤 처음 도는 틱이 첫 어긋난 틱이다. 두 서버가 멈춘 틱은 다를 수 있으므로 서버 B 기준 T_B + 5 이다.
+    SW_EXPECT_EQUAL( serverB._pausedTick + 5, firstDivergentTick );
+    SW_EXPECT_TRUE_MSG( serverB._pausedTick + 5 <= serverA._pausedTick + 40, "server A did not run far enough to compare" );
 #endif
 }

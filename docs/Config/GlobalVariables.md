@@ -319,4 +319,7 @@
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
+| `gv_debugChannelPort` | `int32` | `0` | 시험 | 디버그 채널 포트 (0=끄기, 루프백 전용, 토큰 필요) | [ServerApp.cpp](../../Source/Server/ServerApp.cpp) |
+| `gv_debugChannelToken` | `string` | — | 시험 | 디버그 채널 접속 토큰 | [ServerApp.cpp](../../Source/Server/ServerApp.cpp) |
 | `gv_serverExitAfterTicks` | `int32` | `0` | 시험 · 배포본에도 | 이 틱 수를 돈 뒤 정상 종료 (0=끄기) | [ServerApp.cpp](../../Source/Server/ServerApp.cpp) |
+| `gv_stateHashHistory` | `int32` | `0` | 시험 | 틱별 씬 상태 해시 이력 길이 (0=끄기) | [ServerApp.cpp](../../Source/Server/ServerApp.cpp) |
