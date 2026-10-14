@@ -21,9 +21,9 @@
 #include "Engine/Object/Component/Navigation/NavMeshAgentComponent.h"
 #include "Engine/Object/Component/Physics/CharacterControllerComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
 

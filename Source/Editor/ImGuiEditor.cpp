@@ -13,8 +13,8 @@
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Backend/ImGuiOsInputFilter.h"
-#include "Editor/Common/Commands/EditorPlayCommands.h"
-#include "Editor/Common/Commands/EditorSceneFileCommands.h"
+#include "Editor/Common/Commands/Play/EditorPlayCommands.h"
+#include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
@@ -76,7 +76,7 @@ namespace sw::editor
             /** @brief 무인 자동화가 사람의 장치 입력을 막는 중이면 true 입니다. 이때 플랫폼 백엔드가 ImGui 에 넣는 실제 커서와 키를 지웁니다. */
             static bool isOsDeviceInputBlocked()
             {
-                const InputManager* pInput = editor::getService<InputManager>();
+                const InputManager* pInput = editor::findSubsystem<InputManager>();
                 return pInput != nullptr && pInput->isOsDeviceInputBlocked();
             }
 
@@ -101,9 +101,9 @@ namespace sw::editor
                 shared_ptr<RenderPassAsset> pPass = args.get<shared_ptr<RenderPassAsset>>( 0 );
                 if ( pPass == nullptr )
                     return;
-                // `getService<T>()` 는 nullptr 을 반환할 수 있다. 이 둘은 워커 스레드에서 도는 스플래시 로드라, 서비스 연결이 아직
+                // `findSubsystem<T>()` 는 nullptr 을 반환할 수 있다. 이 둘은 워커 스레드에서 도는 스플래시 로드라, 서비스 연결이 아직
                 // 없거나 이미 끊긴 시점에 걸리면 조용히 크래시한다.
-                const EngineDefaultAssets* pEngineDefaultAssets = editor::getService<const EngineDefaultAssets>();
+                const EngineDefaultAssets* pEngineDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
                 if ( pEngineDefaultAssets == nullptr )
                     return;
                 SW_LOG_TRACE( "Splash: reading DefaultRenderPass.xml" );
@@ -116,7 +116,7 @@ namespace sw::editor
                 shared_ptr<RenderPipelineAsset> pPipeline = args.get<shared_ptr<RenderPipelineAsset>>( 0 );
                 if ( pPipeline == nullptr )
                     return;
-                const EngineDefaultAssets* pEngineDefaultAssets = editor::getService<const EngineDefaultAssets>();
+                const EngineDefaultAssets* pEngineDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
                 if ( pEngineDefaultAssets == nullptr )
                     return;
                 SW_LOG_TRACE( "Splash: reading ForwardPipeline.xml" );
@@ -131,7 +131,7 @@ namespace sw::editor
              */
             static void releaseModuleUndoCommands()
             {
-                CommandStack* pCommandStack = editor::getService<CommandStack>();
+                CommandStack* pCommandStack = editor::findSubsystem<CommandStack>();
                 const void*   pBegin{ nullptr };
                 const void*   pEnd{ nullptr };
                 if ( pCommandStack == nullptr ||
@@ -510,7 +510,7 @@ namespace sw::editor
         const shared_ptr<RenderPassAsset>     defaultPass     = sw::make_shared<RenderPassAsset>();
         const shared_ptr<RenderPipelineAsset> forwardPipeline = sw::make_shared<RenderPipelineAsset>();
 
-        TaskManager* pTaskManager = editor::getService<TaskManager>();
+        TaskManager* pTaskManager = editor::findSubsystem<TaskManager>();
         if ( pTaskManager == nullptr )
         {
             SW_LOG_ERROR( "TaskManager service is not bound — cannot load splash resources" );
@@ -554,7 +554,7 @@ namespace sw::editor
             SW_LOG_TRACE( "No shortcut overrides yet - default shortcuts" );
         EditorCommandGUI::registerDefaults();
         // 리로드 전에 기록한 오브젝트 편집을 되돌려도 이 모듈이 선택과 씬 dirty 상태를 맞춘다.
-        CommandStack* pCommandStack = editor::getService<CommandStack>();
+        CommandStack* pCommandStack = editor::findSubsystem<CommandStack>();
         if ( pCommandStack != nullptr )
             EditorTransaction::bindObjectEditListener( *pCommandStack );
         EditorExtensionRegistryDump::dumpIfRequested();

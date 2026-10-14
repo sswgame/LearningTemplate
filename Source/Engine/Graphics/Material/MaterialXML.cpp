@@ -174,7 +174,7 @@ namespace sw
 
     MaterialQualityLevel MaterialUtil::parseQuality( string_view qualityName )
     {
-        const EnumInfo* pInfo = engine::getTypeRegistry().findEnum( hashed_string( "sw::MaterialQualityLevel" ) );
+        const EnumInfo* pInfo = engine::getSubsystem<TypeRegistry>().findEnum( hashed_string( "sw::MaterialQualityLevel" ) );
         int64           value{ 0 };
         if ( pInfo != nullptr && pInfo->tryParse( qualityName, value ) )
             return static_cast<MaterialQualityLevel>( value );
@@ -184,7 +184,7 @@ namespace sw
 
     const utf8* MaterialUtil::qualityToString( MaterialQualityLevel quality )
     {
-        const EnumInfo* pInfo = engine::getTypeRegistry().findEnum( hashed_string( "sw::MaterialQualityLevel" ) );
+        const EnumInfo* pInfo = engine::getSubsystem<TypeRegistry>().findEnum( hashed_string( "sw::MaterialQualityLevel" ) );
         const utf8*     pStr  = pInfo != nullptr ? pInfo->valueToCString( static_cast<int64>( quality ) ) : nullptr;
         if ( pStr != nullptr )
             return pStr;
@@ -214,7 +214,7 @@ namespace sw
         const string usage = MaterialUtil::fieldText( permutationsNode, "usage" );
         if ( usage.empty() == false )
         {
-            const EnumInfo* pUsageEnum = engine::getTypeRegistry().findEnum( hashed_string( "sw::MaterialUsageFlags" ) );
+            const EnumInfo* pUsageEnum = engine::getSubsystem<TypeRegistry>().findEnum( hashed_string( "sw::MaterialUsageFlags" ) );
             int64           usageValue{ 0 };
             // 모르는 토큰이 하나라도 있으면 아는 토큰만 남기지 않고 기본값을 둔다(`EnumInfo::tryParseText`).
             if ( pUsageEnum != nullptr && pUsageEnum->tryParseText( usage, usageValue ) )
@@ -266,7 +266,7 @@ namespace sw
         MaterialUtil::appendAttribute( node, "quality", MaterialUtil::qualityToString( permutationsNode._quality ) );
         node.appendAttribute( "shaderLOD", permutationsNode._shaderLOD );
         {
-            const EnumInfo* pUsageEnum = engine::getTypeRegistry().findEnum( hashed_string( "sw::MaterialUsageFlags" ) );
+            const EnumInfo* pUsageEnum = engine::getSubsystem<TypeRegistry>().findEnum( hashed_string( "sw::MaterialUsageFlags" ) );
             const utf8*     pUsageStr  = pUsageEnum != nullptr ? pUsageEnum->valueToCString( static_cast<int64>( permutationsNode._usage ) ) : nullptr;
             MaterialUtil::appendAttribute( node, "usage", pUsageStr != nullptr ? pUsageStr : "None" );
         }
@@ -310,7 +310,7 @@ namespace sw
 
     TaskHandle Material::loadFromFileAsync( string_view assetRelativePath )
     {
-        TaskHandle handle = engine::getTaskManager().emplaceTask(
+        TaskHandle handle = engine::getSubsystem<TaskManager>().emplaceTask(
             "LoadMaterialAsync",
             SW_DELEGATE_FUNCTION( TaskArgsDelegate, Material::loadFromFileAsyncJob ),
             MakeTaskArgs( _asyncLoadState, string( assetRelativePath ) ) );

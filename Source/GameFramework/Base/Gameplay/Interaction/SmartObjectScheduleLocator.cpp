@@ -5,9 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSaveState.h"
 #include "GameFramework/Base/Gameplay/Interaction/SmartObjectComponent.h"

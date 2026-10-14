@@ -19,7 +19,7 @@ namespace sw::editor
     /**
      * @class AdminToolSession
      * @brief GM 도구 패널 하나가 쓰는 명령 보내기와 결과 보관입니다.
-     * @details 이 확장이 기여하는 에디터 서브시스템이다(`SW_EDITOR_SUBSYSTEM`) — 에디터 범위가 소유하고 패널은 `editor::getService<AdminToolSession>()` 로 찾는다.
+     * @details 이 확장이 기여하는 에디터 서브시스템이다(`SW_EDITOR_SUBSYSTEM`) — 에디터 범위가 소유하고 패널은 `editor::findSubsystem<AdminToolSession>()` 로 찾는다.
      */
     class AdminToolSession final : public EditorSubsystem
     {

@@ -95,7 +95,7 @@ namespace sw
                     if ( bSkipProperty )
                         continue;
                     const string    path    = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
-                    const TypeInfo* pNested = engine::getTypeRegistry().findType( prop._typeName );
+                    const TypeInfo* pNested = engine::getSubsystem<TypeRegistry>().findType( prop._typeName );
                     if ( pNested != nullptr && pNested->isPrimitive() == false )
                     {
                         collectRangeErrors( *pNested, prop.getRawPtr( pInstance ), path, outListError );

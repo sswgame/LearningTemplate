@@ -173,7 +173,7 @@ namespace sw
     void FrameRenderer::releaseTransientResources()
     {
         // 목록을 먼저 비운다. 놓는 도중에 UI 가 죽은 핸들을 집어 가면 안 된다.
-        if ( RenderTargetRegistry* pRegistry = engine::getRenderTargetRegistry(); pRegistry != nullptr )
+        if ( RenderTargetRegistry* pRegistry = engine::findSubsystem<RenderTargetRegistry>(); pRegistry != nullptr )
             pRegistry->clear();
 
         releaseViewTransients( _mainView );
@@ -265,7 +265,7 @@ namespace sw
 
     void FrameRenderer::publishRenderTargets() const
     {
-        RenderTargetRegistry* pRegistry = engine::getRenderTargetRegistry();
+        RenderTargetRegistry* pRegistry = engine::findSubsystem<RenderTargetRegistry>();
         // 목록은 주 렌더러의 것이다 — 미리보기 씬 렌더러가 공개하면 렌더 타깃 패널이 미리보기 첨부를 보인다.
         if ( pRegistry == nullptr || _bScenePreview == SW_TRUE )
             return;

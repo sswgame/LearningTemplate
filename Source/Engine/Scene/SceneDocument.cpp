@@ -51,7 +51,7 @@ namespace sw
                     return;
 
                 string resolved;
-                if ( engine::getAssetManager().getAssetDatabase().tryGetPath( guid, resolved ) && resolved.empty() == false )
+                if ( engine::getSubsystem<AssetManager>().getAssetDatabase().tryGetPath( guid, resolved ) && resolved.empty() == false )
                     node._prefab = std::move( resolved );
             }
         };
@@ -186,7 +186,7 @@ namespace sw
             else if ( entity._prefab.empty() == false && engine::areEngineServicesBound() )
             {
                 UUID prefabGuid{};
-                if ( engine::getAssetManager().getAssetDatabase().tryGetGuid( entity._prefab, prefabGuid ) && prefabGuid.isNull() == false )
+                if ( engine::getSubsystem<AssetManager>().getAssetDatabase().tryGetGuid( entity._prefab, prefabGuid ) && prefabGuid.isNull() == false )
                     sceneObjectNode.appendAttribute( "prefabGuid", prefabGuid.toString() );
             }
             if ( entity._prefabOverrideXML.empty() == false )
@@ -334,7 +334,7 @@ namespace sw
             if ( bResolvePrefabGuid )
             {
                 UUID resolvedGuid{};
-                if ( engine::getAssetManager().getAssetDatabase().tryGetGuid( entity._prefab, resolvedGuid ) && resolvedGuid.isNull() == false )
+                if ( engine::getSubsystem<AssetManager>().getAssetDatabase().tryGetGuid( entity._prefab, resolvedGuid ) && resolvedGuid.isNull() == false )
                     prefabGuid = resolvedGuid.toString();
             }
 

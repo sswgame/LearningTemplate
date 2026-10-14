@@ -34,10 +34,10 @@ namespace sw
          * @brief 게임 서비스를 찾습니다. **없으면 nullptr 입니다.** 받는 쪽이 확인해야 합니다.
          * @details 지금 게임 범위(그 상위 범위까지)에서 먼저 찾고, 없으면 호스트 서비스 표를 본다. 서비스가 없어도 `SW_ASSERT` 로 멈추지 않는다 —
          *          `SW_ASSERT` 는 Debug 의 디버거 브레이크라, 여기 두면 "없으면 nullptr" 계약이 Debug 에서만 프로세스를 멈추는 계약이 된다.
-         *          `CheckNullableServiceUse` 린트가 받는 쪽의 널 검사를 강제한다. 짝인 `editor::getService<T>()` 와 같은 계약이다.
+         *          `CheckNullableServiceUse` 린트가 받는 쪽의 널 검사를 강제한다. 짝인 `editor::findSubsystem<T>()` · `engine::findSubsystem<T>()` 와 같은 계약이다.
          */
         template <typename T>
-        T* getService()
+        T* findSubsystem()
         {
             T* pScoped = locateSubsystem<T>( findGameScope() );
             if ( pScoped != nullptr )
@@ -45,11 +45,16 @@ namespace sw
             return locateSubsystem<T>( internal::findHostServices() );
         }
 
-        /** @brief 서비스 @p T 가 지금 묶여 있는지 묻습니다. `getService<T>()` 와 같은 순서(게임 범위 → 호스트)로 본다. */
+        /**
+         * @brief 반드시 있어야 하는 게임 서비스 @p T 입니다(`findSubsystem<T>()` 와 같은 순서로 찾는다). 없으면 부른 쪽의 잘못이라 `SW_ASSERT` 로 멈춥니다.
+         * @details 서비스가 묶인 뒤에만 도는 경로(카탈로그 읽기 · 타입 조회)가 쓴다. 없을 수 있는 자리는 `findSubsystem<T>()` 를 쓴다.
+         */
         template <typename T>
-        bool isServiceBound()
+        T& getSubsystem()
         {
-            return getService<T>() != nullptr;
+            T* pFound = findSubsystem<T>();
+            SW_ASSERT( pFound != nullptr );
+            return *pFound;
         }
 
         /**

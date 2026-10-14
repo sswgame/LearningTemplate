@@ -21,8 +21,8 @@
 #include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ObjectStateSerializer.h"
-#include "Engine/Object/GameObject/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
+#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Light/GPULightBuffer.h"
@@ -459,7 +459,7 @@ SW_TEST_CASE( SceneTest, PrefabGuidRoundtripAndResolve )
     SW_ASSERT_TRUE( doc.saveXML( tempSceneXML ) );
 
     if ( sw::engine::areEngineServicesBound() )
-        sw::engine::getAssetManager().getAssetDatabase().registerMapping( "prefabs/new_hero.prefab.xml", heroGuid );
+        sw::engine::getSubsystem<sw::AssetManager>().getAssetDatabase().registerMapping( "prefabs/new_hero.prefab.xml", heroGuid );
 
     sw::SceneDocument loadedDoc{};
     SW_ASSERT_TRUE( loadedDoc.loadXML( tempSceneXML ) );
@@ -1035,7 +1035,7 @@ SW_TEST_CASE( SceneTest, SceneIsNotReadBeforeEveryModuleRegisteredItsTypes )
     const sw::string cookedPath = sw::FileUtil::joinPath( cooked, "game/demo/maps/gate.scene.bin" );
 
     // 하네스는 앱과 같은 기동 표를 지났다 — `ModuleTypes` 단계가 적어 두었다.
-    SW_ASSERT_TRUE( sw::engine::getTypeRegistry().areAllModuleTypesRegistered() );
+    SW_ASSERT_TRUE( sw::engine::getSubsystem<sw::TypeRegistry>().areAllModuleTypesRegistered() );
 
     bool   bRequestAccepted{ true };
     uint32 earlyCookedCount{ 0 };
@@ -1046,7 +1046,7 @@ SW_TEST_CASE( SceneTest, SceneIsNotReadBeforeEveryModuleRegisteredItsTypes )
         const sw::ReflectionSubsystem&    earlyReflection = early.add( sw::make_unique<sw::ReflectionSubsystem>( sw::make_unique<sw::TypeRegistry>() ) );
         SW_ASSERT_TRUE( early.bindObject( &earlyReflection.getTypeRegistry() ) );
         SW_ASSERT_TRUE( early.bind() == nullptr );
-        SW_ASSERT_FALSE( sw::engine::getTypeRegistry().areAllModuleTypesRegistered() );
+        SW_ASSERT_FALSE( sw::engine::getSubsystem<sw::TypeRegistry>().areAllModuleTypesRegistered() );
         test::ScopedDefensiveTestLog expected( "a scene read before the ModuleTypes startup step" );
         bRequestAccepted = manager.requestLoadFuture( scenePath ).isValid();
         earlyCookedCount = sw::SceneCooker::cookAllScenes( root, cooked, earlyFailedCount );
@@ -1084,7 +1084,7 @@ SW_TEST_CASE( SceneTest, SceneManagerHandsItsInjectedServicesDownToScenes )
     SW_EXPECT_TRUE( pScene->getEngineServices()._pAssetManager == services._pAssetManager );
     SW_EXPECT_TRUE( pScene->getEngineServices()._pDefaultAssets == services._pDefaultAssets );
     SW_EXPECT_TRUE( pObjects->findAssetManager() == services._pAssetManager );
-    SW_EXPECT_TRUE( pObjects->getSceneService<sw::SceneAudio>().findAudioService() == services._pAudioService );
+    SW_EXPECT_TRUE( pObjects->getSubsystem<sw::SceneAudio>().findAudioService() == services._pAudioService );
     manager.shutdown();
 
     sw::SceneManager isolated;
@@ -1094,10 +1094,10 @@ SW_TEST_CASE( SceneTest, SceneManagerHandsItsInjectedServicesDownToScenes )
     sw::GameObjectManager* pIsolatedObjects = pIsolated->getObjectManager();
     SW_ASSERT_NOT_NULL( pIsolatedObjects );
     SW_EXPECT_NULL( pIsolatedObjects->findAssetManager() );
-    SW_EXPECT_NULL( pIsolatedObjects->getSceneService<sw::SceneAudio>().findAudioService() );
-    SW_EXPECT_NULL( pIsolatedObjects->getSceneService<sw::SceneAudio>().findAudioEngine() );
-    SW_EXPECT_NULL( pIsolatedObjects->getSceneService<sw::ScenePhysics>().getScene3D() );
-    SW_EXPECT_NULL( pIsolatedObjects->getSceneService<sw::ScenePhysics>().findSettings() );
+    SW_EXPECT_NULL( pIsolatedObjects->getSubsystem<sw::SceneAudio>().findAudioService() );
+    SW_EXPECT_NULL( pIsolatedObjects->getSubsystem<sw::SceneAudio>().findAudioEngine() );
+    SW_EXPECT_NULL( pIsolatedObjects->getSubsystem<sw::ScenePhysics>().getScene3D() );
+    SW_EXPECT_NULL( pIsolatedObjects->getSubsystem<sw::ScenePhysics>().findSettings() );
     {
         test::ScopedDefensiveTestLog expected( "a scene manager without a type registry" );
         SW_EXPECT_FALSE( isolated.requestLoadFuture( "game/demo/maps/none.scene.xml" ).isValid() );
@@ -1973,7 +1973,7 @@ SW_TEST_CASE( SceneTest, PreviewScenesLiveApartFromLoadedScenes )
     // 월드마다 오브젝트 매니저 · 씬 범위 · 물리 서비스가 따로다.
     SW_EXPECT_TRUE( pSecond->getObjectManager() != pMain->getObjectManager() );
     SW_EXPECT_TRUE( &pSecond->getObjectManager()->getSceneScope() != &pMain->getObjectManager()->getSceneScope() );
-    SW_EXPECT_TRUE( &pSecond->getObjectManager()->getSceneService<sw::ScenePhysics>() != &pMain->getObjectManager()->getSceneService<sw::ScenePhysics>() );
+    SW_EXPECT_TRUE( &pSecond->getObjectManager()->getSubsystem<sw::ScenePhysics>() != &pMain->getObjectManager()->getSubsystem<sw::ScenePhysics>() );
 
     manager.shutdown();
     SW_EXPECT_EQUAL( size_t( 0 ), manager.getPreviewScenes().size() );

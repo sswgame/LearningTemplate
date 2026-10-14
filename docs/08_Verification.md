@@ -87,7 +87,7 @@ cd build/Ninja-Debug/Bin
 ## 2. 측정 · 프로파일
 
 - **물리 벤치: `PhysicsBenchTest`**(Release) — 먼 이동 바디가 있는 step p50 1124~2468 → 319~330 us(없는 step 은 319~328 us 그대로).
-- **에디터 모듈의 계측은 `SW_EDITOR_PROFILE_SCOPE`**(`Editor/Common/EditorProfile.h`) — 엔진 `SW_PROFILE_SCOPE` 는 엔진 서비스 표(`engine::getFrameProfiler`)를
+- **에디터 모듈의 계측은 `SW_EDITOR_PROFILE_SCOPE`**(`Editor/Common/EditorProfile.h`) — 엔진 `SW_PROFILE_SCOPE` 는 엔진 창구(`engine::getSubsystem<FrameProfiler>()`)를
   불러 에디터 모듈에서 쓸 수 없다. 같은 표에 쌓이고 이름은 엔진이 복사해 든다(모듈을 다시 올려도 매달리지 않는다). `GT.Editor.updateUI` 의 하위 구간은
   `GT.Editor.waitDrawSnapshot · newFrame · frameSteps · endFrame(render · platformWindows · captureDrawSnapshot)` 이고, `frameSteps` 는 단계마다 `GT.Editor.step.<id>`(commands · assetReload · panels · selfTest · windowTitle · screenshot)로 나뉜다. 패널별 시간은 `-gv_editorPanelTimes=N`.
 - **Hierarchy 는 화면 밖의 접힌 루트를 빈자리로 둔다**(이어진 것은 빈자리 하나) — 큐브 8000 Release `GT.Editor.updateUI` p50 4.2~4.7 → 1.3~1.4 ms, Hierarchy 패널

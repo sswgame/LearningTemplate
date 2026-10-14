@@ -17,9 +17,11 @@ namespace sw
 
     namespace
     {
-        /** @brief 찾아 둔 서비스 포인터 묶음입니다. */
-        EngineServices s_services{};
-        /** @brief 바인딩한 범위입니다(목록 밖의 이름 조회 창구). */
+        constexpr uint32 kServiceCount = static_cast<uint32>( EngineServiceIndex::Count );
+
+        /** @brief 찾아 둔 서비스 칸입니다(`EngineServiceIndex` 순서). */
+        void* s_arrService[kServiceCount]{};
+        /** @brief 바인딩한 범위입니다(목록 밖의 타입 조회 창구). */
         const ISubsystemLocator* s_pSubsystems{ nullptr };
         /**
          * @brief `areEngineServicesBound()` 의 답입니다. bind/unbind 때만 바뀝니다.
@@ -29,31 +31,30 @@ namespace sw
 
         struct EngineServicesInternal
         {
-            /** @brief @p subsystems 에서 목록의 행을 모두 찾습니다. 없는 행은 nullptr 입니다. */
-            static EngineServices resolve( const ISubsystemLocator& subsystems )
+            /** @brief @p subsystems 에서 목록의 행을 모두 찾아 @p outArrService 에 둡니다. 없는 행은 nullptr 입니다. */
+            static void resolve( const ISubsystemLocator& subsystems, void* ( &outArrService )[kServiceCount] )
             {
-                EngineServices services{};
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility )       services.member = locateSubsystem<Type>( &subsystems );
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility ) services.member = locateSubsystem<Type>( &subsystems );
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility )                services.member = locateSubsystem<Type>( &subsystems );
+#define SW_ENGINE_SERVICE( Tag, Type, requirement, visibility ) \
+    outArrService[EngineServiceSlot<Type>::kIndex] = locateSubsystem<Type>( &subsystems );
+#define SW_ENGINE_SERVICE_CONST( Tag, Type, requirement, visibility ) SW_ENGINE_SERVICE( Tag, Type, requirement, visibility )
+#define SW_ENGINE_SERVICE_OPT( Tag, Type, visibility )                SW_ENGINE_SERVICE( Tag, Type, Optional, visibility )
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
-                return services;
             }
 
-            /** @brief @p services 에서 비어 있는 첫 필수 행의 타입 이름입니다. 행 순서가 곧 보고 순서다. */
-            static const utf8* findMissing( const EngineServices& services )
+            /** @brief @p arrService 에서 비어 있는 첫 필수 행의 타입 이름입니다. 행 순서가 곧 보고 순서다. */
+            static const utf8* findMissing( void* const ( &arrService )[kServiceCount] )
             {
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility ) \
-    if constexpr ( SW_SERVICE_IS_REQUIRED( requirement ) != 0 )                 \
-    {                                                                           \
-        if ( services.member == nullptr )                                       \
-            return #Type;                                                       \
+#define SW_ENGINE_SERVICE( Tag, Type, requirement, visibility )       \
+    if constexpr ( SW_SERVICE_IS_REQUIRED( requirement ) != 0 )       \
+    {                                                                 \
+        if ( arrService[EngineServiceSlot<Type>::kIndex] == nullptr ) \
+            return #Type;                                             \
     }
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility ) SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility )
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility )
+#define SW_ENGINE_SERVICE_CONST( Tag, Type, requirement, visibility ) SW_ENGINE_SERVICE( Tag, Type, requirement, visibility )
+#define SW_ENGINE_SERVICE_OPT( Tag, Type, visibility )
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
@@ -67,33 +68,33 @@ namespace sw
     {
         const utf8* bindEngineServices( const ISubsystemLocator& subsystems )
         {
-            s_services           = EngineServicesInternal::resolve( subsystems );
+            EngineServicesInternal::resolve( subsystems, s_arrService );
             s_pSubsystems        = &subsystems;
-            const utf8* pMissing = EngineServicesInternal::findMissing( s_services );
+            const utf8* pMissing = EngineServicesInternal::findMissing( s_arrService );
             s_bServicesBound.store( pMissing == nullptr, std::memory_order_release );
             return pMissing;
         }
 
         void unbindEngineServices()
         {
-            s_services    = {};
+            for ( void*& pService : s_arrService )
+            {
+                pService = nullptr;
+            }
             s_pSubsystems = nullptr;
             s_bServicesBound.store( false, std::memory_order_release );
         }
 
         const utf8* findUnboundRequiredServiceName( const ISubsystemLocator& subsystems )
         {
-            return EngineServicesInternal::findMissing( EngineServicesInternal::resolve( subsystems ) );
+            void* arrService[kServiceCount]{};
+            EngineServicesInternal::resolve( subsystems, arrService );
+            return EngineServicesInternal::findMissing( arrService );
         }
 
         const utf8* findUnboundRequiredServiceName()
         {
-            return EngineServicesInternal::findMissing( s_services );
-        }
-
-        const EngineServices& getBoundEngineServices()
-        {
-            return s_services;
+            return EngineServicesInternal::findMissing( s_arrService );
         }
 
         const ISubsystemLocator* getEngineSubsystems()
@@ -108,39 +109,31 @@ namespace sw
 
         void bindModuleServices( SubsystemScope& outScope, bool bGameModuleOnly )
         {
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility )                                              \
-    if ( s_services.member != nullptr && ( bGameModuleOnly == false || ( SW_SERVICE_IS_GAME_VISIBLE( visibility ) == 1 ) ) ) \
-    {                                                                                                                        \
-        (void)outScope.bind( s_services.member ); /* 행마다 타입이 달라 겹치지 않는다 — 부른 쪽이 새 범위를 넘긴다 */        \
+#define SW_ENGINE_SERVICE( Tag, Type, requirement, visibility )                                                         \
+    {                                                                                                                   \
+        Type* const pService = static_cast<Type*>( s_arrService[EngineServiceSlot<Type>::kIndex] );                     \
+        if ( pService != nullptr && ( bGameModuleOnly == false || ( SW_SERVICE_IS_GAME_VISIBLE( visibility ) == 1 ) ) ) \
+            (void)outScope.bind( pService ); /* 행마다 타입이 달라 겹치지 않는다 — 부른 쪽이 새 범위를 넘긴다 */        \
     }
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility ) SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility )
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility )                SW_ENGINE_SERVICE( member, Tag, Type, getter, Optional, visibility )
+#define SW_ENGINE_SERVICE_CONST( Tag, Type, requirement, visibility ) SW_ENGINE_SERVICE( Tag, Type, requirement, visibility )
+#define SW_ENGINE_SERVICE_OPT( Tag, Type, visibility )                SW_ENGINE_SERVICE( Tag, Type, Optional, visibility )
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
         }
 
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility ) \
-    Type& getter()                                                              \
-    {                                                                           \
-        SW_LOG_ASSERT( s_services.member != nullptr, #Type " is not bound" );   \
-        return *s_services.member;                                              \
-    }
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility ) \
-    const Type& getter()                                                              \
-    {                                                                                 \
-        SW_LOG_ASSERT( s_services.member != nullptr, #Type " is not bound" );         \
-        return *s_services.member;                                                    \
-    }
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility ) \
-    Type* getter()                                                     \
-    {                                                                  \
-        return s_services.member;                                      \
-    }
-#include "Engine/Common/EngineServiceList.xxx"
-#undef SW_ENGINE_SERVICE
-#undef SW_ENGINE_SERVICE_CONST
-#undef SW_ENGINE_SERVICE_OPT
+        namespace internal
+        {
+            void* const* getServiceSlots()
+            {
+                return s_arrService;
+            }
+
+            void reportUnboundService( const utf8* pTypeName )
+            {
+                SW_LOG_ASSERT( false, "%# is not bound", pTypeName );
+            }
+        } // namespace internal
     } // namespace engine
 } // namespace sw

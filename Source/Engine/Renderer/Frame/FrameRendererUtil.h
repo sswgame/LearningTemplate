@@ -13,7 +13,7 @@
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Renderer/Frame/RenderView.h"
+#include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 
@@ -211,20 +211,10 @@ namespace sw
          *          알렸고, 여기는 PSO 와 트랜지언트를 만들 때마다 불리는 곳이라 다시 알리지 않는다. 이름을 따로 두면 검증은 통과하는데 여기서는
          *          모르는 포맷이 생긴다.
          */
-        static RHIFormat parseAttachmentFormat( string_view formatName )
-        {
-            RHIFormat format{ RHIFormat::R8G8B8A8_UNORM };
-            if ( engine::getTypeRegistry().enumFromString( formatName, format ) == false )
-                return RHIFormat::R8G8B8A8_UNORM;
-            return format;
-        }
+        SW_API static RHIFormat parseAttachmentFormat( string_view formatName );
 
         /** @brief `parseAttachmentFormat` 의 역함수입니다. 포맷을 파이프라인 XML 이 쓰는 이름(리플렉션된 열거자 이름)으로 반환합니다. */
-        static const utf8* attachmentFormatName( RHIFormat format )
-        {
-            const utf8* pName = engine::getTypeRegistry().enumToString( format );
-            return pName != nullptr ? pName : "(unknown)";
-        }
+        SW_API static const utf8* attachmentFormatName( RHIFormat format );
 
         /** @brief 뎁스만 쓰는 패스 타입인지 반환합니다. 출력 선언이 없을 때 컬러 RT 수를 정하는 기본값(0)의 근거입니다. */
         static bool isDepthOnlyPassType( RenderPassType passType )

@@ -2,7 +2,7 @@
 
 #include "Editor/Viewport/EditorViewportGizmo.h"
 
-#include "Editor/Common/Commands/EditorSceneCommands.h"
+#include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"

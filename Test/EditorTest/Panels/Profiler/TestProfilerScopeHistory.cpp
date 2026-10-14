@@ -3,7 +3,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
 
-#include "Editor/Common/Commands/EditorTracyLauncher.h"
+#include "Editor/Common/Commands/Dev/EditorTracyLauncher.h"
 #include "Editor/Panels/Profiler/ProfilerScopeHistory.h"
 
 #include "Engine/Profiling/FrameProfiler.h"

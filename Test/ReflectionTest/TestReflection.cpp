@@ -3,7 +3,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -79,11 +79,11 @@ SW_TEST_CASE( ReflectionFunctionMacroTest, AnnotatedMethodInvoke )
     info._size               = sizeof( FunctionAnnotatedActor );
     info._listMethod.push_back( funcInfo );
 
-    sw::engine::getTypeRegistry().registerClass( info );
+    sw::engine::getSubsystem<sw::TypeRegistry>().registerClass( info );
 
     sw::TaskArgs args;
     args.add( int32{ 35 } );
-    sw::engine::getTypeRegistry().invokeMethod( &actor, sw::hashed_string( "sw::FunctionAnnotatedActor" ), sw::hashed_string( "takeDamage" ), args );
+    sw::engine::getSubsystem<sw::TypeRegistry>().invokeMethod( &actor, sw::hashed_string( "sw::FunctionAnnotatedActor" ), sw::hashed_string( "takeDamage" ), args );
 
     SW_EXPECT_EQUAL( 65, actor._health );
 }
@@ -95,9 +95,9 @@ SW_TEST_CASE( ReflectionFunctionMacroTest, CodegenMethodInvoke )
 {
     // SampleTestActor::takeDamage / getHp 는 ReflectionParser 코드젠이 출력한다.
     sw::SampleTestActor actor;
-    SW_ASSERT_NOT_NULL( sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::SampleTestActor" ) ) );
+    SW_ASSERT_NOT_NULL( sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::SampleTestActor" ) ) );
 
-    const sw::TypeInfo* typeInfo = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::SampleTestActor" ) );
+    const sw::TypeInfo* typeInfo = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::SampleTestActor" ) );
     SW_ASSERT_NOT_NULL( typeInfo );
     const sw::PropertyInfo* nameProp = typeInfo->findProperty( sw::hashed_string( "_name" ) );
     SW_ASSERT_NOT_NULL( nameProp );
@@ -111,12 +111,12 @@ SW_TEST_CASE( ReflectionFunctionMacroTest, CodegenMethodInvoke )
 
     sw::TaskArgs damageArgs;
     damageArgs.add( int32{ 40 } );
-    sw::engine::getTypeRegistry().invokeMethod( &actor, sw::hashed_string( "sw::SampleTestActor" ),
-                                                sw::hashed_string( "takeDamage" ), damageArgs );
+    sw::engine::getSubsystem<sw::TypeRegistry>().invokeMethod( &actor, sw::hashed_string( "sw::SampleTestActor" ),
+                                                               sw::hashed_string( "takeDamage" ), damageArgs );
     SW_EXPECT_EQUAL( 60, actor._hp );
 
-    sw::TaskValue hp = sw::engine::getTypeRegistry().invokeMethod( &actor, sw::hashed_string( "sw::SampleTestActor" ),
-                                                                   sw::hashed_string( "getHp" ) );
+    sw::TaskValue hp = sw::engine::getSubsystem<sw::TypeRegistry>().invokeMethod( &actor, sw::hashed_string( "sw::SampleTestActor" ),
+                                                                                  sw::hashed_string( "getHp" ) );
     SW_EXPECT_TRUE( hp.hasValue() );
     SW_EXPECT_EQUAL( 60, hp.getValue<int32>() );
 }
@@ -220,7 +220,7 @@ SW_TEST_CASE( ReflectionComponentTest, ComponentInheritanceMultiLevel )
  */
 SW_TEST_CASE( ReflectionComponentTest, ComponentPropertySerialization )
 {
-    const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::TestScriptComponent" ) );
+    const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::TestScriptComponent" ) );
     SW_ASSERT_NOT_NULL( pType );
 
     const sw::PropertyInfo* pSpeedProp = pType->findProperty( sw::hashed_string( "_scriptSpeed" ) );
@@ -379,7 +379,7 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchRemapsHandlesInsideContainers )
  */
 SW_TEST_CASE( ReflectionGenericQueryTest, FindTypeAndIsA )
 {
-    const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::TestDerivedScriptComponent>();
+    const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::TestDerivedScriptComponent>();
     SW_ASSERT_NOT_NULL( pType );
     SW_EXPECT_TRUE( pType->_name == sw::hashed_string( "TestDerivedScriptComponent" ) );
 
@@ -405,7 +405,7 @@ SW_TEST_CASE( ReflectionGenericQueryTest, FindTypeAndIsA )
  */
 SW_TEST_CASE( ReflectionGenericQueryTest, MultiInheritanceSafeOrderParentAndProperties )
 {
-    const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::MultiBaseOrderTestActor>();
+    const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::MultiBaseOrderTestActor>();
     SW_ASSERT_NOT_NULL( pType );
 
     // 부모는 IPlainMixinTestActor(REFLECT() 없음)가 아니라 첫 번째로 선언된 REFLECT() 베이스여야 합니다.
@@ -427,14 +427,14 @@ SW_TEST_CASE( ReflectionGenericQueryTest, MultiInheritanceSafeOrderParentAndProp
 SW_TEST_CASE( ReflectionGenericQueryTest, ForEachTypeAndDerivedTypes )
 {
     uint32 typeCount{ 0 };
-    sw::engine::getTypeRegistry().forEachType(
+    sw::engine::getSubsystem<sw::TypeRegistry>().forEachType(
         [&typeCount]( const sw::TypeInfo& )
     {
         ++typeCount;
     } );
     SW_EXPECT_TRUE( typeCount > 0 );
 
-    const auto derivedComponents = sw::engine::getTypeRegistry().getDerivedTypes<sw::TestScriptComponent>();
+    const auto derivedComponents = sw::engine::getSubsystem<sw::TypeRegistry>().getDerivedTypes<sw::TestScriptComponent>();
     SW_EXPECT_TRUE( derivedComponents.size() >= 2 ); // TestDerivedScriptComponent, TestGrandChildScriptComponent
 }
 
@@ -443,7 +443,7 @@ SW_TEST_CASE( ReflectionGenericQueryTest, ForEachTypeAndDerivedTypes )
  */
 SW_TEST_CASE( ReflectionGenericQueryTest, HierarchyPropertyLookupAndRawPtr )
 {
-    const sw::TypeInfo* pGrandChildType = sw::engine::getTypeRegistry().findType<sw::TestGrandChildScriptComponent>();
+    const sw::TypeInfo* pGrandChildType = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::TestGrandChildScriptComponent>();
     SW_ASSERT_NOT_NULL( pGrandChildType );
 
     // 직계 프로퍼티
@@ -520,7 +520,7 @@ SW_TEST_CASE( ReflectAnyTest, ReflectAnyDirectMakeAndExtract )
     SW_EXPECT_TRUE( emptyAny.empty() );
 
     // 2) PolyPayloadA TypeInfo 기반 ReflectAny 생성
-    const sw::TypeInfo* pTypeInfo = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::PolyPayloadA" ) );
+    const sw::TypeInfo* pTypeInfo = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::PolyPayloadA" ) );
     SW_ASSERT_NOT_NULL( pTypeInfo );
 
     sw::PolyPayloadA source;
@@ -536,7 +536,7 @@ SW_TEST_CASE( ReflectAnyTest, ReflectAnyDirectMakeAndExtract )
     SW_EXPECT_EQUAL( 12345, extracted._a );
 
     // 4) 다른 타입으로 추출 시 실패 검증
-    const sw::TypeInfo* pWrongType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::SampleTestActor" ) );
+    const sw::TypeInfo* pWrongType = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::SampleTestActor" ) );
     SW_ASSERT_NOT_NULL( pWrongType );
     sw::SampleTestActor wrongTarget;
     SW_EXPECT_FALSE( anyValue.tryGetFrom( *pWrongType, &wrongTarget ) );
@@ -565,7 +565,7 @@ SW_TEST_CASE( ReflectionTest, ComponentLoadsByItsOldName )
  */
 SW_TEST_CASE( ReflectionTest, AliasedContainerPropertyIsAContainer )
 {
-    const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::AliasContainerActor" ) );
+    const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::AliasContainerActor" ) );
     SW_ASSERT_NOT_NULL( pType );
     const sw::PropertyInfo* pScores = pType->findProperty( sw::hashed_string( "_aliasScores" ) );
     const sw::PropertyInfo* pCount  = pType->findProperty( sw::hashed_string( "_aliasCount" ) );

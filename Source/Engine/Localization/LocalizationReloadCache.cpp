@@ -10,18 +10,18 @@ namespace sw
 {
     bool LocalizationReloadCache::isCached( string_view relativePath ) const
     {
-        return engine::areEngineServicesBound() && engine::getLocalizationManager().isProjectFile( relativePath );
+        return engine::areEngineServicesBound() && engine::getSubsystem<LocalizationManager>().isProjectFile( relativePath );
     }
 
     void LocalizationReloadCache::reload( string_view relativePath, IRHIDevice* /*pDevice*/ )
     {
         if ( engine::areEngineServicesBound() )
-            (void)engine::getLocalizationManager().reloadChangedFile( relativePath );
+            (void)engine::getSubsystem<LocalizationManager>().reloadChangedFile( relativePath );
     }
 
     size_t LocalizationReloadCache::getCachedCount() const
     {
-        return engine::areEngineServicesBound() ? engine::getLocalizationManager().getMountedProjectNames().size() : 0u;
+        return engine::areEngineServicesBound() ? engine::getSubsystem<LocalizationManager>().getMountedProjectNames().size() : 0u;
     }
 } // namespace sw
 

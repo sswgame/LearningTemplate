@@ -224,7 +224,7 @@ namespace sw
 
         // 카운터 그래프 · GPU 타임스탬프는 엔진 프로파일러 경로를 탄다. 켜 두지 않으면 Tracy 에 GPU 줄이 없다.
         if ( engine::areEngineServicesBound() )
-            engine::getFrameProfiler().setEnabled( true );
+            engine::getSubsystem<FrameProfiler>().setEnabled( true );
 
         SW_LOG_INFO( "Tracy profiler started (data port %#, memory %#) — connect with tracy-profiler -a 127.0.0.1", getTracyPort(),
                      gv_tracyMemory ? "on" : "off" );

@@ -139,7 +139,7 @@ namespace sw
 
     AsyncReadHandle ResourceIO::readBinaryResourceAsync( string_view relativePath, AsyncIOPriority priority, const ResourceReadCompleteDelegate& onComplete )
     {
-        AsyncFileIO&    io = engine::getAsyncFileIO();
+        AsyncFileIO&    io = engine::getSubsystem<AsyncFileIO>();
         AsyncReadHandle handle;
         // 찾는 순서는 동기 읽기와 같은 함수 하나다 — 두 벌이면 한쪽만 고쳐 동기와 비동기가 다른 파일을 읽는다.
         (void)readResourceCommon(
@@ -191,6 +191,6 @@ namespace sw
 
     ResourcePakManager& ResourceIO::getPackManager()
     {
-        return engine::getAssetManager().getPackManager();
+        return engine::getSubsystem<AssetManager>().getPackManager();
     }
 } // namespace sw

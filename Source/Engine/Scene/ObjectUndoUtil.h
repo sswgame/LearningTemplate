@@ -7,7 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 
-#include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Utility/CommandStack.h"
 
 namespace sw

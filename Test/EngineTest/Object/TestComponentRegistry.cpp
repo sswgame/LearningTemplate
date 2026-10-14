@@ -19,10 +19,10 @@
 #include "Engine/Object/Component/3D/PointLightComponent.h"
 #include "Engine/Object/Component/3D/SpotLightComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 
 #include "GameFramework/Base/Actor/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Base/Gameplay/Gimmick/Genre/PlatformerGimmicks.h"

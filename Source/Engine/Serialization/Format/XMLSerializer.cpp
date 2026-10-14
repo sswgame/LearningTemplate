@@ -181,7 +181,7 @@ namespace sw
                 {
                     // 태그 이름이 런타임 타입이다. 파일의 이름을 전역 이름 표에 넣지 않는다(`findInterned`).
                     const hashed_string typeName = hashed_string::findInterned( _currentTagName );
-                    const TypeInfo*     pType    = typeName.empty() ? nullptr : engine::getTypeRegistry().findType( typeName );
+                    const TypeInfo*     pType    = typeName.empty() ? nullptr : engine::getSubsystem<TypeRegistry>().findType( typeName );
                     void*               pObject  = ( pType != nullptr ) ? _context.createOwnedPointer( typeName ) : nullptr;
                     if ( pObject == nullptr )
                     {

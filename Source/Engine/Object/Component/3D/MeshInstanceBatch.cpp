@@ -5,7 +5,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Object/GameObject/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 
 namespace sw
 {

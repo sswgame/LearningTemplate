@@ -57,7 +57,7 @@ namespace sw
     {
         if ( _bBound == false )
         {
-            _mapDebugAction = createInputMap( engine::getEngineDefaultAssets()._shellInputMap );
+            _mapDebugAction = createInputMap( engine::getSubsystem<EngineDefaultAssets>()._shellInputMap );
             _bBound         = true;
             // 플레이어가 셸 키(콘솔 여는 키 …)를 바꿨으면 리소스의 기본 위에 입힌다. 읽지 못한 파일은 로그가 알리고 기본 키로 돈다.
             if ( _userBindingsPath.empty() == false )

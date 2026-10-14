@@ -7,10 +7,10 @@
 #include "Core/String/TagID.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
-#include "Editor/Common/Commands/EditorSceneCommands.h"
-#include "Editor/Common/Commands/EditorSiblingOrder.h"
+#include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
+#include "Editor/Common/Commands/Scene/EditorSiblingOrder.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"

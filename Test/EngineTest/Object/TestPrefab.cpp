@@ -5,7 +5,7 @@
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Resource/AssetFormat.h"
@@ -818,10 +818,10 @@ SW_TEST_CASE( PrefabTest, NestedInstancesSpawnAttachedWithTheirOverrides )
     SW_EXPECT_TRUE( pRight->getPrimarySceneComponent()->getLocalPosition() == sw::float3( 0.0f, 0.0f, 0.0f ) );
     SW_EXPECT_TRUE( pLeft->getPrimarySceneComponent()->getLocalScale() == sw::float3( 2.0f, 2.0f, 2.0f ) );
 
-    const sw::PrefabNestedPart* pPart = objects.getSceneService<sw::PrefabInstanceRegistry>().findNestedPart( pLeft->getObjectID() );
+    const sw::PrefabNestedPart* pPart = objects.getSubsystem<sw::PrefabInstanceRegistry>().findNestedPart( pLeft->getObjectID() );
     SW_ASSERT_NOT_NULL( pPart );
     SW_EXPECT_EQUAL( pCart->getObjectID(), pPart->_ownerObjectID );
-    SW_EXPECT_TRUE( objects.getSceneService<sw::PrefabInstanceRegistry>().isAttachedNestedPart( pLeft ) );
+    SW_EXPECT_TRUE( objects.getSubsystem<sw::PrefabInstanceRegistry>().isAttachedNestedPart( pLeft ) );
 
     // 원본(바퀴)만 고친다 — 수레 파일은 그대로다.
     SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeWheelPrefab( 3.0f ), wheelPath ) );

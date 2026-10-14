@@ -279,7 +279,7 @@ namespace sw
             {
                 if ( engine::areEngineServicesBound() == false )
                     return false;
-                DebugDrawQueue& queue = engine::getDebugDrawQueue();
+                DebugDrawQueue& queue = engine::getSubsystem<DebugDrawQueue>();
                 if ( listArgument.empty() )
                 {
                     vector<hashed_string> listCategory;

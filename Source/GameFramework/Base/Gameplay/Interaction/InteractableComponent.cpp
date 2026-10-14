@@ -6,9 +6,9 @@
 
 #include "Engine/Character/Socket/SocketSetComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
@@ -168,7 +168,7 @@ namespace sw
         event._request._interactor        = interactor.getHandle();
         event._request._interactable      = pOwner->getHandle();
         event._request._interaction       = pDef->_id;
-        IInteractionAuthority* pAuthority = game::getService<IInteractionAuthority>();
+        IInteractionAuthority* pAuthority = game::findSubsystem<IInteractionAuthority>();
         if ( pAuthority != nullptr )
             pAuthority->notifyInteractionCompleted( event._request );
         GameEventUtil::send( event );

@@ -3,9 +3,9 @@
 #include "Core/Console/DevCommandRegistry.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
-#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -27,9 +27,9 @@ namespace sw
             /** @brief 활성 씬의 오브젝트 매니저입니다. 없으면 nullptr 입니다. */
             static GameObjectManager* findActiveManager()
             {
-                if ( game::isServiceBound<SceneManager>() == false )
+                if ( game::findSubsystem<SceneManager>() == nullptr )
                     return nullptr;
-                SceneManager* pSceneManager = game::getService<SceneManager>();
+                SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
                 if ( pSceneManager == nullptr )
                     return nullptr;
                 Scene* pScene = pSceneManager->getActiveScene();

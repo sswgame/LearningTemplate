@@ -153,7 +153,7 @@ namespace sw
             return;
 
         _simulation.update( deltaTime );
-        const InputManager* pInput = game::getService<InputManager>();
+        const InputManager* pInput = game::findSubsystem<InputManager>();
         if ( pInput != nullptr )
             updateInput( *pInput );
         if ( isAutoPlayOn() )
@@ -595,7 +595,7 @@ namespace sw
     void ParkDirectorComponent::updateInput( const InputManager& input )
     {
         // 키는 입력 맵(`data/park.input.xml`)이 정한다. 일시정지 메뉴 같은 UI 가 먹은 입력은 보이지 않는다.
-        const UIInputMapView inputMap( input.getInputMap(), game::getService<UISystem>() );
+        const UIInputMapView inputMap( input.getInputMap(), game::findSubsystem<UISystem>() );
         if ( inputMap.wasActionTriggered( hashed_string( "Park.NextRide" ) ) && _listPlacement.empty() == false )
         {
             _selectedPlacement = ( _selectedPlacement + 1 ) % static_cast<int32>( _listPlacement.size() );

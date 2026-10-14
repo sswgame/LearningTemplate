@@ -3,6 +3,7 @@
 #include "Core/Event/EventDispatcher.h"
 #include "Core/Module/ModuleUnloadListener.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -909,7 +910,7 @@ SW_TEST_CASE( AbilitySystemTest, ModuleCodeReleaseRetiresOnlyAbilitiesFromThatMo
  */
 SW_TEST_CASE( AbilitySystemTest, EnumNamesRoundTrip )
 {
-    const TypeRegistry&  registry   = engine::getTypeRegistry();
+    const TypeRegistry&  registry   = engine::getSubsystem<TypeRegistry>();
     const AttributeModOp arrModOp[] = { AttributeModOp::Add, AttributeModOp::Multiply, AttributeModOp::Divide, AttributeModOp::Override };
     for ( const AttributeModOp value : arrModOp )
     {

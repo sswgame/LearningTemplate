@@ -104,7 +104,7 @@ namespace sw
 {
     /**
      * @class TelemetryService
-     * @brief 엔진 서비스입니다(`engine::getTelemetryService`, 게임은 `game::getService<TelemetryService>()`). `record` 는 아무 스레드에서나 부릅니다(잠금 하나).
+     * @brief 엔진 서비스입니다(`engine::getTelemetryService`, 게임은 `game::findSubsystem<TelemetryService>()`). `record` 는 아무 스레드에서나 부릅니다(잠금 하나).
      * @details **흐름**: `record` → 스키마 대조(모르는 사건 · 필드 · 타입 → 거절) → 빵부스러기 → 동의 → 세션 표본 → 사건 표본 → 묶음. 묶음이 `batchEvents` 에
      *          닿거나 `flushSeconds` 가 지나면(`update`) 스풀 파일 `telemetry_<세션>_<번호>.jsonl` 에 덧붙입니다. 파일이 `maxFileBytes` 를 넘으면 닫고 다음
      *          번호로 회전하며, 닫힌 파일은 업로더에 넘겨 `Sent` 면 지웁니다. 스풀 전체가 `maxFiles` · `maxTotalBytes` 를 넘으면 가장 오래된 닫힌 파일을

@@ -415,7 +415,7 @@ namespace sw::editor
 
     void UIPreviewPanel::closePreview()
     {
-        UISystem* pUI = editor::getService<UISystem>();
+        UISystem* pUI = editor::findSubsystem<UISystem>();
         if ( pUI != nullptr && _screen != kInvalidUIScreenHandle )
         {
             UIScreen* pScreen = pUI->findOffscreenScreen( _screen );
@@ -520,7 +520,7 @@ namespace sw::editor
 
     void UIPreviewPanel::syncLanguage( UISystem& ui )
     {
-        LocalizationManager* pGame = editor::getService<LocalizationManager>();
+        LocalizationManager* pGame = editor::findSubsystem<LocalizationManager>();
         if ( _listLanguage.empty() )
         {
             UIPreviewLogic::makeLanguageChoices( pGame != nullptr ? pGame->getAvailableLanguages() : vector<string>{}, _listLanguage );
@@ -565,7 +565,7 @@ namespace sw::editor
 
     void UIPreviewPanel::syncTexture()
     {
-        AssetManager*    pAssets  = editor::getService<AssetManager>();
+        AssetManager*    pAssets  = editor::findSubsystem<AssetManager>();
         const Texture2D* pTexture = pAssets != nullptr && _targetPath.empty() == false ? pAssets->getAssetCache<TextureCache>().find( _targetPath ) : nullptr;
         const uint64     texture  = pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getHandle() : 0;
         if ( texture == _texture && _pTextureID != nullptr )
@@ -586,7 +586,7 @@ namespace sw::editor
 
     bool UIPreviewPanel::saveDocument()
     {
-        UISystem*       pUI     = editor::getService<UISystem>();
+        UISystem*       pUI     = editor::findSubsystem<UISystem>();
         const UIScreen* pScreen = pUI != nullptr ? pUI->findOffscreenScreen( _screen ) : nullptr;
         if ( pScreen == nullptr )
             return false;
@@ -640,7 +640,7 @@ namespace sw::editor
 
     void UIPreviewPanel::onPropertyEdited( const PropertyInfo& prop )
     {
-        UISystem* pUI     = editor::getService<UISystem>();
+        UISystem* pUI     = editor::findSubsystem<UISystem>();
         UIScreen* pScreen = pUI != nullptr ? pUI->findOffscreenScreen( _screen ) : nullptr;
         Widget*   pWidget = pScreen != nullptr ? pScreen->getTree().findWidgetByID( _selected ) : nullptr;
         if ( pWidget == nullptr )
@@ -686,7 +686,7 @@ namespace sw::editor
 
     UIScreen* UIPreviewPanel::findPreviewScreen() const
     {
-        UISystem* pUI = editor::getService<UISystem>();
+        UISystem* pUI = editor::findSubsystem<UISystem>();
         return pUI != nullptr ? pUI->findOffscreenScreen( _screen ) : nullptr;
     }
 
@@ -704,7 +704,7 @@ namespace sw::editor
 
     bool UIPreviewPanel::addWidget( UIScreen& screen, const hashed_string& typeName, Widget* pTarget )
     {
-        TypeRegistry*   pRegistry = editor::getService<TypeRegistry>();
+        TypeRegistry*   pRegistry = editor::findSubsystem<TypeRegistry>();
         const TypeInfo* pType     = pRegistry != nullptr ? pRegistry->findType( typeName ) : nullptr;
         WidgetTree&     tree      = screen.getTree();
         uint32          index{ 0 };
@@ -768,7 +768,7 @@ namespace sw::editor
     void UIPreviewPanel::applyInsert( uint32 generation, const hashed_string& typeName, uint32 parentOrdinal, uint32 index )
     {
         UIScreen*       pScreen   = generation == _generation ? findPreviewScreen() : nullptr;
-        TypeRegistry*   pRegistry = editor::getService<TypeRegistry>();
+        TypeRegistry*   pRegistry = editor::findSubsystem<TypeRegistry>();
         const TypeInfo* pType     = pRegistry != nullptr ? pRegistry->findType( typeName ) : nullptr;
         if ( pScreen == nullptr || pType == nullptr )
             return;
@@ -806,7 +806,7 @@ namespace sw::editor
     {
         if ( generation != _generation )
             return; // 그 뒤에 트리를 다시 지었다 — 옛 항목이 새 트리에 값을 쓰지 않는다
-        UISystem* pUI     = editor::getService<UISystem>();
+        UISystem* pUI     = editor::findSubsystem<UISystem>();
         UIScreen* pScreen = pUI != nullptr ? pUI->findOffscreenScreen( _screen ) : nullptr;
         if ( pScreen == nullptr )
             return;
@@ -931,7 +931,7 @@ namespace sw::editor
 
     bool UIPreviewPanel::navigateFocus( UIScreen& screen, uint32 direction )
     {
-        UISystem* pUI = editor::getService<UISystem>();
+        UISystem* pUI = editor::findSubsystem<UISystem>();
         if ( pUI != nullptr )
         {
             _bNavigationMode = true;
@@ -972,7 +972,7 @@ namespace sw::editor
 
     void UIPreviewPanel::drawInteractionBar( UIScreen& screen )
     {
-        UISystem* pUI = editor::getService<UISystem>();
+        UISystem* pUI = editor::findSubsystem<UISystem>();
         if ( ImGui::Checkbox( "Interact", &_bInteract ) && pUI != nullptr )
         {
             _bNavigationMode = false;
@@ -1111,7 +1111,7 @@ namespace sw::editor
     void UIPreviewPanel::drawPalette( UIScreen& screen )
     {
         using Internal          = UIPreviewPanelInternal;
-        TypeRegistry* pRegistry = editor::getService<TypeRegistry>();
+        TypeRegistry* pRegistry = editor::findSubsystem<TypeRegistry>();
         const uint32  frame     = static_cast<uint32>( ImGui::GetFrameCount() );
         if ( pRegistry != nullptr && ( _listPaletteType.empty() || frame - _paletteFrame > Internal::kPaletteRefreshFrames ) )
         {
@@ -1600,7 +1600,7 @@ namespace sw::editor
             {
                 if ( _bNavigationMode )
                 {
-                    UISystem* pUI    = editor::getService<UISystem>();
+                    UISystem* pUI    = editor::findSubsystem<UISystem>();
                     _bNavigationMode = false;
                     if ( pUI != nullptr )
                         pUI->setOffscreenNavigationMode( _screen, false ); // 마우스를 움직이면 포인터 방식으로 돌아간다(포커스 테두리를 숨긴다)
@@ -1818,7 +1818,7 @@ namespace sw::editor
     void UIPreviewPanel::drawContent()
     {
         using Internal = UIPreviewPanelInternal;
-        UISystem* pUI  = editor::getService<UISystem>();
+        UISystem* pUI  = editor::findSubsystem<UISystem>();
         if ( pUI == nullptr || pUI->isInitialized() == false )
         {
             _probe = UIPreviewProbe{};

@@ -65,7 +65,7 @@ namespace sw
             const bool bBorrowRenderTexture = bRenderTexture && ( view._outputPath == request._renderTexture ) == false && engine::areEngineServicesBound();
             if ( bBorrowRenderTexture )
             {
-                TextureCache& textures = engine::getAssetManager().getAssetCache<TextureCache>();
+                TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
                 if ( view._pOutputTexture != nullptr )
                     textures.release( view._outputPath.view(), _pDevice );
                 textures.declareRenderTarget( request._renderTexture.view(), request._outputWidth, request._outputHeight );
@@ -140,7 +140,7 @@ namespace sw
         releaseViewTransparentOrder( view );
         view._commandList.reset();
         if ( view._pOutputTexture != nullptr && engine::areEngineServicesBound() )
-            engine::getAssetManager().getAssetCache<TextureCache>().release( view._outputPath.view(), _pDevice );
+            engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().release( view._outputPath.view(), _pDevice );
         view._pOutputTexture = nullptr;
         view._outputPath     = hashed_string{};
     }

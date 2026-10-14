@@ -48,14 +48,14 @@ namespace sw::editor
             /** @brief 현재 적용된 테마를 반환합니다. 에디터 서브시스템 `EditorTheme` 이 들며, 에디터 범위가 없으면 기본값을 봅니다. */
             static const EditorThemeConfig& activeTheme()
             {
-                const EditorTheme* pTheme = getService<EditorTheme>();
+                const EditorTheme* pTheme = findSubsystem<EditorTheme>();
                 return pTheme != nullptr ? pTheme->getConfig() : fallbackTheme();
             }
 
             /** @brief 테마를 교체합니다. 에디터 범위가 없으면 적용할 UI 가 없으므로 조용히 무시합니다. */
             static void setActiveTheme( const EditorThemeConfig& config )
             {
-                if ( EditorTheme* pTheme = getService<EditorTheme>() )
+                if ( EditorTheme* pTheme = findSubsystem<EditorTheme>() )
                     pTheme->getConfig() = config;
             }
 

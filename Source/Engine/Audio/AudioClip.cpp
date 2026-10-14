@@ -141,7 +141,7 @@ namespace sw
         constexpr uint32 kWaitSliceMs = 10;
         while ( _pendingDecodeCount.load( std::memory_order_acquire ) > 0 )
         {
-            (void)engine::getTaskManager().waitAll( kWaitSliceMs ); // 기다리는 동안 그 태스크를 이 스레드가 돕기도 한다
+            (void)engine::getSubsystem<TaskManager>().waitAll( kWaitSliceMs ); // 기다리는 동안 그 태스크를 이 스레드가 돕기도 한다
         }
     }
 
@@ -198,7 +198,7 @@ namespace sw
             return;
         }
         _pendingDecodeCount.fetch_add( 1, std::memory_order_acq_rel );
-        engine::getTaskManager()
+        engine::getSubsystem<TaskManager>()
             .emplaceTask( "AudioClipDecode", SW_DELEGATE_METHOD( TaskArgsDelegate, &AudioClipCache::decodeClipTask, this ),
                           MakeTaskArgs( string( path.view() ) ) )
             .submit();

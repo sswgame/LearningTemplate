@@ -4,7 +4,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/String/TagID.h"
 
-#include "Editor/Common/Commands/EditorViewportPreview.h"
+#include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -22,7 +22,7 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/Window/IWindow.h"
@@ -454,7 +454,7 @@ namespace sw::editor
                 constexpr const utf8* kFirstPath  = "engine/materials/benchtextured.material";
                 constexpr const utf8* kSecondPath = "engine/materials/sprite2d.material";
 
-                AssetManager* pResources = editor::getService<AssetManager>();
+                AssetManager* pResources = editor::findSubsystem<AssetManager>();
                 if ( context.expect( pResources != nullptr, "no resource manager" ) == false )
                     return EditorSelfTestStep::Done;
                 const MaterialCache& cache = pResources->getAssetCache<MaterialCache>();
@@ -886,7 +886,7 @@ namespace sw::editor
             {
                 constexpr const utf8* kPanelID  = "user_settings";
                 EditorContext*        pContext  = EditorContext::get();
-                UserSettingsManager*  pSettings = editor::getService<UserSettingsManager>();
+                UserSettingsManager*  pSettings = editor::findSubsystem<UserSettingsManager>();
                 const bool            bReady    = pContext != nullptr && pSettings != nullptr && pSettings->getCategories().empty() == false;
                 if ( context.expect( bReady, "no editor context or no user settings categories" ) == false )
                     return EditorSelfTestStep::Done;

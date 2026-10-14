@@ -9,6 +9,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifier.h"
@@ -128,8 +129,10 @@ namespace sw::editor
     {
         if ( pComponentHint == nullptr || pComponentHint[0] == '\0' )
             return true;
-        const hashed_string hintName( pComponentHint );
-        const TypeInfo*     pHintType = engine::getTypeRegistry().findType( hintName );
+        const hashed_string      hintName( pComponentHint );
+        const GameObjectManager* pManager  = object.getManager();
+        const TypeRegistry*      pRegistry = pManager != nullptr ? pManager->getSceneEngineServices()._pTypeRegistry : nullptr;
+        const TypeInfo*          pHintType = pRegistry != nullptr ? pRegistry->findType( hintName ) : nullptr;
         if ( pHintType == nullptr )
             return object.findComponentByTypeName( hintName ) != nullptr;
         bool bFound{ false };

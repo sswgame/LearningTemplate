@@ -22,7 +22,7 @@ namespace sw::editor
             /** @brief Undo 스택입니다. 서비스가 풀린 뒤(종료 · 테스트)에는 nullptr 이라 부르는 쪽이 확인합니다. */
             static CommandStack* getCommandStack()
             {
-                return editor::getService<CommandStack>();
+                return editor::findSubsystem<CommandStack>();
             }
 
             /**
@@ -32,7 +32,7 @@ namespace sw::editor
             static void markActiveSceneDirty()
             {
                 EditorContext*   pContext   = EditorContext::get();
-                EditorWorkspace* pWorkspace = ( pContext != nullptr ) ? &pContext->getSubsystem<EditorWorkspace>() : editor::getService<EditorWorkspace>();
+                EditorWorkspace* pWorkspace = ( pContext != nullptr ) ? &pContext->getSubsystem<EditorWorkspace>() : editor::findSubsystem<EditorWorkspace>();
                 if ( pWorkspace != nullptr )
                     pWorkspace->markSceneDirty();
             }
@@ -116,7 +116,7 @@ namespace sw::editor
             return;
 
         CommandStack* pStack        = EditorTransactionInternal::getCommandStack();
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
+        SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
         if ( pStack == nullptr || pSceneManager == nullptr )
         {
             EditorTransactionInternal::markActiveSceneDirty();
@@ -131,7 +131,7 @@ namespace sw::editor
             return;
 
         CommandStack* pStack        = EditorTransactionInternal::getCommandStack();
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
+        SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
         if ( pStack == nullptr || pSceneManager == nullptr )
         {
             EditorTransactionInternal::markActiveSceneDirty();
@@ -153,7 +153,7 @@ namespace sw::editor
     void EditorTransaction::push( Delegate<void()> undo, Delegate<void()> redo, string_view label,
                                   string_view coalesceKey )
     {
-        CommandStack* pStack = editor::getService<CommandStack>();
+        CommandStack* pStack = editor::findSubsystem<CommandStack>();
         if ( pStack == nullptr )
             return;
 

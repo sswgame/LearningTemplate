@@ -811,7 +811,7 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSceneLoadEvents )
     // 로드가 끝날 때까지 워커를 기다리며 씬 교체를 돌린다(App 메인 루프의 tickTransitions 자리).
     const auto drainLoads = [&sceneManager]()
     {
-        TaskManager& tasks = engine::getTaskManager();
+        TaskManager& tasks = engine::getSubsystem<TaskManager>();
         for ( int32 stepIndex = 0; stepIndex < 200 && sceneManager.isTransitioning(); ++stepIndex )
         {
             tasks.waitAll();
@@ -1199,7 +1199,7 @@ SW_TEST_CASE( GameFrameworkTest, RecreatedGameInstanceKeepsTheLiveScene )
         SW_ASSERT_TRUE( first.initialize( nullptr, nullptr ) );
         SW_EXPECT_TRUE( first._bRequested );
         SW_EXPECT_EQUAL( 1, requestedCount );
-        engine::getTaskManager().waitAll();
+        engine::getSubsystem<TaskManager>().waitAll();
         first.shutdown();
     }
     sceneManager.shutdown();
@@ -1598,7 +1598,7 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterCatalogAndStats )
     SW_EXPECT_FALSE( stats.isDead() );
 
     // 피해 전 무적 시간은 0 이어야 한다. 지면 메시지에 무적 시간(값과 비트) · 객체 주소 · 소유자 · 사망 표시를 남긴다(첫 피해만 막히는 실패를 가린다).
-    const TypeInfo*     pStatsTypeInfo   = engine::getTypeRegistry().findType( hashed_string( "sw::UnitStatsComponent" ) );
+    const TypeInfo*     pStatsTypeInfo   = engine::getSubsystem<TypeRegistry>().findType( hashed_string( "sw::UnitStatsComponent" ) );
     const PropertyInfo* pInvincibleTimer = ( pStatsTypeInfo != nullptr ) ? pStatsTypeInfo->findProperty( hashed_string( "_invincibilityTime" ) ) : nullptr;
     SW_ASSERT_NOT_NULL( pInvincibleTimer );
     const float32 invincibilityBeforeHit = pInvincibleTimer->getValue<float32>( &stats );
@@ -1650,7 +1650,7 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterStatsAreInMetersAndReach
     }
 
     // 카탈로그의 상한은 유닛 스탯 Move Speed 의 상한과 같다.
-    const TypeInfo* pStatsType = engine::getTypeRegistry().findType( hashed_string( "sw::UnitStatsComponent" ) );
+    const TypeInfo* pStatsType = engine::getSubsystem<TypeRegistry>().findType( hashed_string( "sw::UnitStatsComponent" ) );
     SW_ASSERT_NOT_NULL( pStatsType );
     const PropertyInfo* pMoveSpeed = pStatsType->findProperty( hashed_string( "_moveSpeed" ) );
     SW_ASSERT_NOT_NULL( pMoveSpeed );
@@ -1697,7 +1697,7 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterArchetypeNamesAndUnknown
     string       xml             = "<MonsterCatalog>\n";
     for ( uint32 value = 0; value < kArchetypeCount; ++value )
     {
-        const utf8* pName = engine::getTypeRegistry().enumToString( static_cast<MonsterArchetype>( value ) );
+        const utf8* pName = engine::getSubsystem<TypeRegistry>().enumToString( static_cast<MonsterArchetype>( value ) );
         SW_ASSERT_NOT_NULL( pName );
         xml += string( "  <Monster id=\"m" ) + to_string( value ) + "\" archetype=\"" + pName + "\"/>\n";
     }
@@ -2650,15 +2650,15 @@ SW_TEST_CASE( GameFrameworkTest, GroundedObjectFallsAgainAfterBeingLifted )
 
 /**
  * @brief [GameFrameworkTest] 붙지 않은 게임 서비스는 nullptr 로 돌아온다 — 죽지 않는다
- * @details `game::getService<T>()` 의 실패 자리에 `SW_ASSERT( false )` 를 두면, `SW_ASSERT` 는 Debug 에서 디버거 브레이크이고
+ * @details `game::findSubsystem<T>()` 의 실패 자리에 `SW_ASSERT( false )` 를 두면, `SW_ASSERT` 는 Debug 에서 디버거 브레이크이고
  *          Debug 밖에서는 사라지므로 "없으면 nullptr" 이라는 계약이 **Debug 에서만 프로세스를 죽이는** 계약이 된다 — 호출하는 자리의
- *          `== nullptr` 가드가 Debug 에서 도달할 수 없다. 짝인 `editor::getService<T>()` 도 조용히 nullptr 을 돌려준다.
+ *          `== nullptr` 가드가 Debug 에서 도달할 수 없다. 짝인 `editor::findSubsystem<T>()` 도 조용히 nullptr 을 돌려준다.
  * @note 이 테스트가 죽으면(단언 실패가 아니라 **프로세스가 사라지면**) 그 단언이 돌아온 것이다.
  */
 SW_TEST_CASE( GameFrameworkTest, UnboundGameServiceReturnsNullInsteadOfBreaking )
 {
     // EngineTest 프로세스에는 게임이 붙어 있지 않다.
-    SW_EXPECT_TRUE_MSG( game::getService<GameSettings>() == nullptr, "테스트 프로세스에 GameSettings 가 붙어 있습니다" );
+    SW_EXPECT_TRUE_MSG( game::findSubsystem<GameSettings>() == nullptr, "테스트 프로세스에 GameSettings 가 붙어 있습니다" );
 
     // 게임 범위에 걸면 그것이 돌아오고, 범위가 사라지면 다시 nullptr 이다.
     GameSettings gameSettings;
@@ -2666,9 +2666,9 @@ SW_TEST_CASE( GameFrameworkTest, UnboundGameServiceReturnsNullInsteadOfBreaking 
         SubsystemScope        scope;
         game::ScopedGameScope activeScope( scope );
         SW_EXPECT_TRUE( scope.bind( &gameSettings ) );
-        SW_EXPECT_EQUAL( &gameSettings, game::getService<GameSettings>() );
+        SW_EXPECT_EQUAL( &gameSettings, game::findSubsystem<GameSettings>() );
     }
-    SW_EXPECT_TRUE( game::getService<GameSettings>() == nullptr );
+    SW_EXPECT_TRUE( game::findSubsystem<GameSettings>() == nullptr );
 }
 
 /**
@@ -2757,9 +2757,9 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
 
         ScopedRunState()
         {
-            (void)_input.initialize();                                     // 장치 등록뿐이다 — 아래 단언이 통합 맵을 본다
-            (void)_hostServices.bind( &_input );                           // 새 범위 — 겹치지 않는다
-            (void)_hostServices.bind( &engine::getLocalizationManager() ); // 타입이 달라 겹치지 않는다
+            (void)_input.initialize();                                                // 장치 등록뿐이다 — 아래 단언이 통합 맵을 본다
+            (void)_hostServices.bind( &_input );                                      // 새 범위 — 겹치지 않는다
+            (void)_hostServices.bind( &engine::getSubsystem<LocalizationManager>() ); // 타입이 달라 겹치지 않는다
             game::bindGameService( _hostServices );
         }
         ~ScopedRunState()
@@ -2816,7 +2816,7 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
     SW_ASSERT_TRUE( instance.initialize( nullptr, nullptr ) );
 
     // 1) 서비스 — 커스텀 칸이 데이터의 값으로 읽힌다
-    const GameSettings* pBoundSettings = game::getService<GameSettings>();
+    const GameSettings* pBoundSettings = game::findSubsystem<GameSettings>();
     SW_ASSERT_NOT_NULL( pBoundSettings );
     SW_EXPECT_EQUAL( 3, pBoundSettings->getCustomPropertyInt( "maxPartySize", 6 ) );
 
@@ -2837,7 +2837,7 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
     SW_EXPECT_TRUE( instance.loadStateFromFile() );
 
     instance.shutdown();
-    SW_EXPECT_NULL( game::getService<GameSettings>() );
+    SW_EXPECT_NULL( game::findSubsystem<GameSettings>() );
 }
 
 /**

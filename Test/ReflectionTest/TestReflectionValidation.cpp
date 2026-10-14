@@ -2,8 +2,8 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ObjectStateSerializer.h"
-#include "Engine/Object/GameObject/ObjectValidation.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
+#include "Engine/Object/GameObject/Serialization/ObjectValidation.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 

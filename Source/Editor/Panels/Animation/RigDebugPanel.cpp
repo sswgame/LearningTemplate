@@ -224,7 +224,7 @@ namespace sw::editor
             ImGui::EndTable();
         }
 
-        DebugDrawQueue* pQueue              = getService<DebugDrawQueue>();
+        DebugDrawQueue* pQueue              = findSubsystem<DebugDrawQueue>();
         const bool      bCanDrawBoneMarkers = _bDrawMarkers == SW_TRUE && pQueue != nullptr && pUnit != nullptr && listSelectedBone.empty() == false;
         if ( bCanDrawBoneMarkers )
             RigDebugPanelInternal::drawBoneMarkers( *pQueue, *pUnit, listSelectedBone );

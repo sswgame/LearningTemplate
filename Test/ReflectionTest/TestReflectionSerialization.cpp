@@ -137,7 +137,7 @@ namespace
             if ( enumerator._bAlias == false )
                 info._mapValueToName[enumerator._value] = name;
         }
-        sw::engine::getTypeRegistry().registerEnum( info );
+        sw::engine::getSubsystem<sw::TypeRegistry>().registerEnum( info );
     }
 
     /** @brief 저장하는 빌드의 열거자 순서로 두 enum 을 올립니다 — 코드의 값과 같습니다. 순서를 바꾼 테스트는 끝에 이것으로 되돌립니다. */
@@ -271,7 +271,7 @@ namespace
  */
 SW_TEST_CASE( ReflectionSerializationTest, ObjectDiffSerializationDelta )
 {
-    const sw::TypeInfo* info = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+    const sw::TypeInfo* info = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::DummyActor" ) );
     SW_EXPECT_TRUE( info != nullptr );
     if ( info != nullptr )
     {
@@ -338,7 +338,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ContextTypeRegistryIsolatesLookup )
     const sw::hashed_string typeName( "sw::ComplexData" );
 
     const sw::SerializeContext globalContext = sw::SerializeContext::deriveFromDefault();
-    SW_EXPECT_TRUE( &globalContext.getTypeRegistry() == &sw::engine::getTypeRegistry() );
+    SW_EXPECT_TRUE( &globalContext.getTypeRegistry() == &sw::engine::getSubsystem<sw::TypeRegistry>() );
     SW_EXPECT_TRUE( sw::SerializerUtil::findNestedObjectType( typeName, globalContext ) != nullptr );
 
     const sw::TypeRegistry emptyRegistry;
@@ -354,7 +354,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ContextTypeRegistryIsolatesLookup )
 SW_TEST_CASE( ReflectionSerializationTest, BinaryRoundtrip )
 {
     const sw::TypeInfo* typeInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::ComplexData" ) );
     SW_EXPECT_TRUE( typeInfo != nullptr );
     if ( typeInfo == nullptr )
         return;
@@ -390,7 +390,7 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryRoundtrip )
 SW_TEST_CASE( ReflectionSerializationTest, CompressedBinaryRoundtrip )
 {
     const sw::TypeInfo* typeInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::ComplexData" ) );
     SW_EXPECT_TRUE( typeInfo != nullptr );
     if ( typeInfo == nullptr )
         return;
@@ -428,7 +428,7 @@ SW_TEST_CASE( ReflectionSerializationTest, CompressedBinaryRoundtrip )
 SW_TEST_CASE( ReflectionSerializationTest, JSONRoundtrip )
 {
     const sw::TypeInfo* typeInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::ComplexData" ) );
     SW_EXPECT_TRUE( typeInfo != nullptr );
     if ( typeInfo == nullptr )
         return;
@@ -456,7 +456,7 @@ SW_TEST_CASE( ReflectionSerializationTest, JSONRoundtrip )
 SW_TEST_CASE( ReflectionSerializationTest, XMLRapidXMLRoundtrip )
 {
     const sw::TypeInfo* typeInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::ComplexData" ) );
     SW_EXPECT_TRUE( typeInfo != nullptr );
     if ( typeInfo == nullptr )
         return;
@@ -655,7 +655,7 @@ SW_TEST_CASE( ReflectionSerializationTest, XMLAttributeRoundtrip )
 SW_TEST_CASE( ReflectionSerializationTest, XMLAndJSONKeysIgnoreCaseValuesPreserveCase )
 {
     const sw::TypeInfo* typeInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::ComplexData" ) );
     SW_EXPECT_TRUE( typeInfo != nullptr );
     if ( typeInfo == nullptr )
         return;
@@ -711,12 +711,12 @@ SW_TEST_CASE( ReflectionSerializationTest, XMLAndJSONKeysIgnoreCaseValuesPreserv
 SW_TEST_CASE( ReflectionSerializationTest, NarrowEnumDeserializeKeepsAdjacentBytes )
 {
     const sw::EnumInfo* pEnumInfo =
-        sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "sw::NarrowEnum" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findEnum( sw::hashed_string( "sw::NarrowEnum" ) );
     SW_ASSERT_TRUE( pEnumInfo != nullptr );
     SW_EXPECT_EQUAL( static_cast<uint32>( sizeof( sw::NarrowEnum ) ), static_cast<uint32>( pEnumInfo->_size ) );
 
     const sw::TypeInfo* typeInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::NarrowEnumHost" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::NarrowEnumHost" ) );
     SW_ASSERT_TRUE( typeInfo != nullptr );
 
     sw::NarrowEnumHost host;
@@ -1027,7 +1027,7 @@ SW_TEST_CASE( ReflectionSerializationTest, FieldOfADeletedEnumTypeIsNotReadAsANu
 #if defined( SW_SHIPPING )
     SW_TEST_SKIP( "unregisterTypesByModule is not compiled into Shipping" );
 #else
-    sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
     sw::EnumInfo      goneEnum;
     goneEnum._name               = sw::hashed_string( "GoneColor" );
     goneEnum._fullyQualifiedName = sw::hashed_string( "swtest::GoneColor" );
@@ -1105,7 +1105,7 @@ SW_TEST_CASE( ReflectionSerializationTest, FieldOfADeletedEnumTypeIsNotReadAsANu
 SW_TEST_CASE( ReflectionSerializationTest, JSONMapUsesPlainObject )
 {
     const sw::TypeInfo* typeInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::ComplexData" ) );
     SW_ASSERT_TRUE( typeInfo != nullptr );
 
     // 읽기: {"key":value,...}
@@ -1135,7 +1135,7 @@ SW_TEST_CASE( ReflectionSerializationTest, JSONMapUsesPlainObject )
 SW_TEST_CASE( ReflectionSerializationTest, NestedContainerRoundtripAllFormats )
 {
     const sw::TypeInfo* typeInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
     SW_ASSERT_TRUE( typeInfo != nullptr );
 
     sw::NestedContainerActor src;
@@ -1198,7 +1198,7 @@ SW_TEST_CASE( ReflectionSerializationTest, NestedContainerRoundtripAllFormats )
 SW_TEST_CASE( ReflectionSerializationTest, JSONSequenceAcceptsPlainArray )
 {
     const sw::TypeInfo* typeInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::ComplexData" ) );
     SW_ASSERT_TRUE( typeInfo != nullptr );
 
     // 자연스러운 형식: "_listScore": [10, 20, 30]
@@ -1226,7 +1226,7 @@ SW_TEST_CASE( ReflectionSerializationTest, JSONSequenceAcceptsPlainArray )
  */
 SW_TEST_CASE( ReflectionSerializationTest, JSONValueStructElementIsReadOnlyAsItsBody )
 {
-    const sw::TypeInfo* typeInfo = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
+    const sw::TypeInfo* typeInfo = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
     SW_ASSERT_TRUE( typeInfo != nullptr );
 
     sw::NestedContainerActor plain;
@@ -1251,7 +1251,7 @@ SW_TEST_CASE( ReflectionSerializationTest, JSONValueStructElementIsReadOnlyAsIts
 SW_TEST_CASE( ReflectionSerializationTest, StrictDeserializeFailsOnBadFieldInsideContainerElement )
 {
     SW_TEST_DEFENSIVE_SCOPE( "Testing strict deserialization failure on a bad field inside a container element" );
-    const sw::TypeInfo* typeInfo = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
+    const sw::TypeInfo* typeInfo = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
     SW_ASSERT_TRUE( typeInfo != nullptr );
 
     sw::NestedContainerActor jsonList;
@@ -1289,7 +1289,7 @@ SW_TEST_CASE( ReflectionSerializationTest, StrictDeserializeFailsOnBadContainerA
 {
     SW_TEST_DEFENSIVE_SCOPE( "Testing strict deserialization failure on bad containers and fields" );
     const sw::TypeInfo* typeInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::ComplexData" ) );
     SW_ASSERT_TRUE( typeInfo != nullptr );
 
     sw::ComplexData jsonContainer;
@@ -1361,7 +1361,7 @@ SW_TEST_CASE( ReflectionSerializationTest, StrictDeserializeFailsOnBadContainerA
 SW_TEST_CASE( ReflectionSerializationTest, CustomXMLBackend )
 {
     const sw::TypeInfo* typeInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::ComplexData" ) );
     SW_EXPECT_TRUE( typeInfo != nullptr );
     if ( typeInfo == nullptr )
         return;
@@ -1403,7 +1403,7 @@ SW_TEST_CASE( ReflectionSerializationTest, CustomSerializeContext )
     } );
 
     const sw::TypeInfo* typeInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::ComplexData" ) );
     SW_EXPECT_TRUE( typeInfo != nullptr );
     if ( typeInfo == nullptr )
         return;
@@ -1500,7 +1500,7 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyAliasAndReorderingTest )
 
     // 복수 Alias (codegen AliasAndReorderTestActor: hp + HitPoints)
     const sw::TypeInfo* multiAliasInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::AliasAndReorderTestActor" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::AliasAndReorderTestActor" ) );
     SW_ASSERT_NOT_NULL( multiAliasInfo );
     sw::AliasAndReorderTestActor multi{};
     SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &multi, *multiAliasInfo, R"({"HitPoints":33,"_score":1})" ) );
@@ -1552,7 +1552,7 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyAliasAndReorderingTest )
 SW_TEST_CASE( ReflectionSerializationTest, TypeAliasXMLLoad )
 {
     const sw::TypeInfo* typeInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::LegacyRenameActor" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::LegacyRenameActor" ) );
     SW_ASSERT_NOT_NULL( typeInfo );
 
     sw::RenameCompatActor actor;
@@ -2206,7 +2206,7 @@ SW_TEST_CASE( ReflectionSerializationTest, StructuralMoveAndPropertyAlias )
     nestedStatsInfo._listProperty       = {
         { sw::hashed_string( "_hp" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( NestedStats, _hp ) }
     };
-    sw::engine::getTypeRegistry().registerClass( nestedStatsInfo );
+    sw::engine::getSubsystem<sw::TypeRegistry>().registerClass( nestedStatsInfo );
 
     sw::TypeInfo nestedActorInfo;
     nestedActorInfo._name               = sw::hashed_string( "NestedActor" );
@@ -2303,7 +2303,7 @@ SW_TEST_CASE( ReflectionCloningTest, ObjectDeepCopyClone )
 SW_TEST_CASE( ReflectionSerializationTest, NestedStructAndContainersRoundtrip )
 {
     const sw::TypeInfo* typeInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
     SW_ASSERT_TRUE( typeInfo != nullptr );
 
     sw::NestedContainerActor src;
@@ -2341,7 +2341,7 @@ SW_TEST_CASE( ReflectionSerializationTest, NestedStructAndContainersRoundtrip )
 SW_TEST_CASE( ReflectionSerializationTest, GoldenOutputFormatsStable )
 {
     const sw::TypeInfo* typeInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
     SW_ASSERT_TRUE( typeInfo != nullptr );
     if ( typeInfo == nullptr )
         return;
@@ -2476,7 +2476,7 @@ SW_TEST_CASE( ReflectionSerializationTest, GoldenOutputFormatsStable )
  */
 SW_TEST_CASE( ReflectionSerializationTest, GoldenOutputFormatsWide )
 {
-    sw::TypeRegistry& reg = sw::engine::getTypeRegistry();
+    sw::TypeRegistry& reg = sw::engine::getSubsystem<sw::TypeRegistry>();
 
     const sw::TypeInfo* pScalar = reg.findType( sw::hashed_string( "sw::SampleTestActor" ) );
     const sw::TypeInfo* pBits   = reg.findType( sw::hashed_string( "sw::BitfieldTestActor" ) );
@@ -2528,7 +2528,7 @@ SW_TEST_CASE( ReflectionSerializationTest, GoldenOutputFormatsWide )
 SW_TEST_CASE( ReflectionSerializationTest, ReflectionRPCPackInvoke )
 {
     const sw::TypeInfo* typeInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::RPCDemoActor" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::RPCDemoActor" ) );
     SW_ASSERT_TRUE( typeInfo != nullptr );
     const sw::FunctionInfo* fn = typeInfo->findMethod( sw::hashed_string( "applyDamage" ) );
     SW_ASSERT_TRUE( fn != nullptr );
@@ -2549,7 +2549,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectionRPCPackInvoke )
     sw::RPCEnvelope envelope;
     SW_ASSERT_TRUE( sw::ReflectionRPC::packCall( envelope, sw::hashed_string( "sw::RPCDemoActor" ),
                                                  sw::hashed_string( "applyDamage" ), args ) );
-    sw::ReflectionRPC::unpackAndInvoke( &actor, *sw::engine::getTypeRegistry().findType<sw::RPCDemoActor>(), envelope );
+    sw::ReflectionRPC::unpackAndInvoke( &actor, *sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::RPCDemoActor>(), envelope );
     SW_EXPECT_EQUAL( 75, actor._hp );
 }
 
@@ -2579,7 +2579,7 @@ SW_TEST_CASE( ReflectionSerializationTest, RPCRejectsAnArgumentTypeThatDoesNotMa
 
     {
         test::ScopedLogSuppressor suppressor;
-        sw::ReflectionRPC::unpackAndInvoke( &actor, *sw::engine::getTypeRegistry().findType<sw::RPCDemoActor>(), envelope );
+        sw::ReflectionRPC::unpackAndInvoke( &actor, *sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::RPCDemoActor>(), envelope );
     }
     SW_EXPECT_TRUE_MSG( actor._hp == 100, "전선이 말한 타입과 다른데도 인자를 그대로 읽어 호출했습니다" );
 }
@@ -2590,14 +2590,14 @@ SW_TEST_CASE( ReflectionSerializationTest, RPCRejectsAnArgumentTypeThatDoesNotMa
 SW_TEST_CASE( ReflectionSerializationTest, ReflectAbstractAndStatic )
 {
     const sw::TypeInfo* abstractInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::AbstractDemoBase" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::AbstractDemoBase" ) );
     SW_ASSERT_TRUE( abstractInfo != nullptr );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( abstractInfo->_bAbstract ) );
     SW_EXPECT_TRUE( abstractInfo->canConstruct() == false );
     SW_EXPECT_TRUE( abstractInfo->findMethod( sw::hashed_string( "$ctor" ) ) == nullptr );
 
     const sw::TypeInfo* staticInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::StaticDemoLibrary" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::StaticDemoLibrary" ) );
     SW_ASSERT_TRUE( staticInfo != nullptr );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( staticInfo->_bStatic ) );
     SW_EXPECT_TRUE( staticInfo->canConstruct() == false );
@@ -2623,7 +2623,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectAbstractAndStatic )
 SW_TEST_CASE( ReflectionSerializationTest, ReflectAnyPolymorphic )
 {
     const sw::TypeInfo* payloadType =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::PolyPayloadA" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::PolyPayloadA" ) );
     SW_ASSERT_TRUE( payloadType != nullptr );
     sw::PolyPayloadA payload;
     payload._a         = 9;
@@ -2635,7 +2635,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectAnyPolymorphic )
     SW_EXPECT_EQUAL( 9, out._a );
 
     const sw::TypeInfo* typeInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::AssetPathActor" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::AssetPathActor" ) );
     if ( typeInfo == nullptr )
         SW_TEST_SKIP( "AssetPathActor type not registered" );
     const sw::PropertyInfo* albedo = typeInfo->findProperty( sw::hashed_string( "_albedo" ) );
@@ -2716,7 +2716,7 @@ sw::float3 sw::ExternalStorageTestActor::s_arrExternalPosition[4]{};
  */
 SW_TEST_CASE( ReflectionSerializationTest, AccessorPropertyReadsAndWritesOutsideTheObject )
 {
-    const sw::TypeInfo* pInfo = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ExternalStorageTestActor" ) );
+    const sw::TypeInfo* pInfo = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::ExternalStorageTestActor" ) );
     SW_ASSERT_NOT_NULL( pInfo );
     const sw::TypeInfo& info = *pInfo;
 
@@ -2798,7 +2798,7 @@ SW_TEST_CASE( ReflectionSerializationTest, RPCRejectsAnEnvelopeForAnotherType )
     other._hp = 100;
     {
         test::ScopedLogSuppressor suppressor;
-        sw::ReflectionRPC::unpackAndInvoke( &other, *sw::engine::getTypeRegistry().findType<sw::SampleTestActor>(), envelope );
+        sw::ReflectionRPC::unpackAndInvoke( &other, *sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::SampleTestActor>(), envelope );
     }
     SW_EXPECT_TRUE_MSG( other._hp == 100, "봉투가 적은 타입이 아닌 인스턴스에 RPC 를 불렀습니다" );
 }
@@ -2818,7 +2818,7 @@ SW_TEST_CASE( ReflectionSerializationTest, RPCRejectsAMethodThatIsNotAnRPC )
     actor._hp = 100;
     {
         test::ScopedLogSuppressor suppressor;
-        sw::ReflectionRPC::unpackAndInvoke( &actor, *sw::engine::getTypeRegistry().findType<sw::SampleTestActor>(), envelope );
+        sw::ReflectionRPC::unpackAndInvoke( &actor, *sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::SampleTestActor>(), envelope );
     }
     SW_EXPECT_TRUE_MSG( actor._hp == 100, "RPC 가 아닌(Local) 메서드를 봉투로 불렀습니다" );
 }
@@ -2830,8 +2830,8 @@ SW_TEST_CASE( ReflectionSerializationTest, RPCRejectsAMethodThatIsNotAnRPC )
  */
 SW_TEST_CASE( ReflectionSerializationTest, ReflectAnyRoundTripsInEveryFormat )
 {
-    const sw::TypeInfo* pActorType   = sw::engine::getTypeRegistry().findType<sw::AssetPathActor>();
-    const sw::TypeInfo* pPayloadType = sw::engine::getTypeRegistry().findType<sw::PolyPayloadA>();
+    const sw::TypeInfo* pActorType   = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::AssetPathActor>();
+    const sw::TypeInfo* pPayloadType = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::PolyPayloadA>();
     SW_ASSERT_NOT_NULL( pActorType );
     SW_ASSERT_NOT_NULL( pPayloadType );
 
@@ -2884,8 +2884,8 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectAnyRoundTripsInEveryFormat )
  */
 SW_TEST_CASE( ReflectionSerializationTest, UnknownTypeNamesInAFileAreNotInterned )
 {
-    const sw::TypeInfo* pActorType   = sw::engine::getTypeRegistry().findType<sw::AssetPathActor>();
-    const sw::TypeInfo* pPayloadType = sw::engine::getTypeRegistry().findType<sw::PolyPayloadA>();
+    const sw::TypeInfo* pActorType   = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::AssetPathActor>();
+    const sw::TypeInfo* pPayloadType = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::PolyPayloadA>();
     SW_ASSERT_NOT_NULL( pActorType );
     SW_ASSERT_NOT_NULL( pPayloadType );
 
@@ -2945,7 +2945,7 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryBoolReadNormalizesTheByte )
  */
 SW_TEST_CASE( ReflectionSerializationTest, CompactStreamDoesNotWriteTransientProperties )
 {
-    const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::MetaTestActor>();
+    const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::MetaTestActor>();
     SW_ASSERT_NOT_NULL( pType );
     const sw::vector<sw::PropertyInfo>& listProp = pType->getPropertiesWithBase();
     uint8                               healthIndex{ 0xFF };
@@ -2990,7 +2990,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ArchiveOffsetCannotPassTheEnd )
  */
 SW_TEST_CASE( ReflectionSerializationTest, AssetTextDoesNotGrowTheNameTable )
 {
-    const sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    const sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
     const sw::EnumInfo*     pRole    = registry.findEnum( sw::hashed_string( "CameraRole" ) );
     const sw::EnumInfo*     pFlag    = registry.findEnum( sw::hashed_string( "TestFlag" ) );
     const sw::TypeInfo*     pType    = registry.findType( sw::hashed_string( "sw::ComplexData" ) );
@@ -3074,7 +3074,7 @@ SW_TEST_CASE( ReflectionSerializationTest, OutOfRangeIntegerTextIsRejectedNotWra
 SW_TEST_CASE( ReflectionSerializationTest, PropertyValueHelpersTouchOnlyTheirOwnBit )
 {
     const sw::SerializeContext& context = sw::SerializeContext::getDefault();
-    const sw::TypeInfo*         pBits   = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::BitfieldTestActor" ) );
+    const sw::TypeInfo*         pBits   = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::BitfieldTestActor" ) );
     SW_ASSERT_NOT_NULL( pBits );
     const sw::PropertyInfo* pActive  = pBits->findPropertyInHierarchy( sw::hashed_string( "_bActive" ) );
     const sw::PropertyInfo* pInvuln  = pBits->findPropertyInHierarchy( sw::hashed_string( "_bInvulnerable" ) );
@@ -3110,7 +3110,7 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyValueHelpersTouchOnlyTheirOwn
     SW_EXPECT_STREQ( "false", sw::SerializerUtil::formatPropertyText( *pInvuln, &target, context ).c_str() );
 
     // 컨테이너는 원소째 옮기고 견준다.
-    const sw::TypeInfo* pNested = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
+    const sw::TypeInfo* pNested = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
     SW_ASSERT_NOT_NULL( pNested );
     const sw::PropertyInfo* pGrid = pNested->findPropertyInHierarchy( sw::hashed_string( "_grid" ) );
     SW_ASSERT_NOT_NULL( pGrid );
@@ -3135,7 +3135,7 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyValueHelpersTouchOnlyTheirOwn
  */
 SW_TEST_CASE( ReflectionSerializationTest, BitfieldTextThatIsNotABooleanFailsTheRead )
 {
-    const sw::TypeInfo* pBits = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::BitfieldTestActor" ) );
+    const sw::TypeInfo* pBits = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::BitfieldTestActor" ) );
     SW_ASSERT_NOT_NULL( pBits );
 
     sw::BitfieldTestActor fromXML;
@@ -3269,7 +3269,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ContainerShapesRoundTripInEveryFormat
  */
 SW_TEST_CASE( ReflectionSerializationTest, FixedArrayPropertyRoundTripsInEveryFormat )
 {
-    const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::FixedArrayActor" ) );
+    const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::FixedArrayActor" ) );
     SW_ASSERT_NOT_NULL( pType );
     sw::FixedArrayActor source;
     source._arrSlot = { 7, 8, 9 };

@@ -2,7 +2,7 @@
 
 #include "Editor/Panels/Settings/ShortcutsPanel.h"
 
-#include "Editor/Common/Commands/EditorShortcutOverrides.h"
+#include "Editor/Common/Commands/Dev/EditorShortcutOverrides.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"

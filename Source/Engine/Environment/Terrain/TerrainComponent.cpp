@@ -12,9 +12,9 @@
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Object/Component/3D/MeshInstanceBatch.h"
 #include "Engine/Object/Component/Navigation/SceneNavigation.h"
-#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/Image/DDSLoader.h"
 #include "Engine/Resource/Image/ImageFileWriter.h"
@@ -312,7 +312,7 @@ namespace sw
                 float3{ low._x, _heightfield.getOrigin()._y + _heightMin,  low._z},
                 float3{high._x, _heightfield.getOrigin()._y + _heightMax, high._z}
             };
-            pManager->getSceneService<SceneNavigation>().invalidateArea( box, true );
+            pManager->getSubsystem<SceneNavigation>().invalidateArea( box, true );
         }
         return true;
     }
@@ -325,7 +325,7 @@ namespace sw
         // 엔진 서비스가 없으면(CPU 테스트) CPU 값만 바뀐다.
         if ( engine::areEngineServicesBound() == false )
             return true;
-        TextureCache&        textures   = engine::getAssetManager().getAssetCache<TextureCache>();
+        TextureCache&        textures   = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
         const uint32         splatWidth = _heightfield.getSplatWidth();
         const vector<uint8>& listByte   = _heightfield.getSplatBytes();
         // 처음 칠하면 이 지형만의 스플랫 텍스처를 지금 가중치 전부로 만들고 머티리얼을 그쪽으로 바꾼다(헤더 — 디스크 DDS 는 다른 지형과 나눠 쓴다).
@@ -359,7 +359,7 @@ namespace sw
         if ( _cpuSplatPath.empty() )
             return;
         if ( engine::areEngineServicesBound() )
-            engine::getAssetManager().getAssetCache<TextureCache>().releaseCPUTexture( _cpuSplatPath );
+            engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().releaseCPUTexture( _cpuSplatPath );
         _cpuSplatPath.clear();
     }
 

@@ -5,7 +5,7 @@
 #include "Core/Common/Defines.h"
 #include "Core/File/FileUtil.h"
 
-#include "Editor/Common/Commands/EditorAssetFileCommands.h"
+#include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -108,7 +108,7 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::SmallButton( editoricon::kCamera ) )
         {
-            SceneManager* pSceneManager = editor::getService<SceneManager>();
+            SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
             string        reply;
             if ( pSceneManager == nullptr || BugItReport::goTo( *pSceneManager, row._directory, reply ) == false )
                 SW_LOG_WARNING( "BugIt go to failed: %#", reply.c_str() );

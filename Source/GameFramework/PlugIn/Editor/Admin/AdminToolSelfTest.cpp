@@ -38,7 +38,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Done;
                 if ( context.getStepIndex() == 0 )
                 {
-                    context.expect( getService<AdminToolSession>() != nullptr, "the extension subsystem AdminToolSession is not bound in the editor scope" );
+                    context.expect( findSubsystem<AdminToolSession>() != nullptr, "the extension subsystem AdminToolSession is not bound in the editor scope" );
                     context.expect( pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "admin.tool", true ), "GM tool panel is not registered" );
                     return EditorSelfTestStep::Continue;
                 }

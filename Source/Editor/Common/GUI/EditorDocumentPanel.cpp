@@ -5,7 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Editor/Common/Commands/EditorResourceIndex.h"
+#include "Editor/Common/Commands/Asset/EditorResourceIndex.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"

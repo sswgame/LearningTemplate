@@ -4,9 +4,9 @@
 
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/SceneAnimation/MotionWarpingComponent.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
@@ -237,7 +237,7 @@ namespace sw
             if ( bPressed && pTarget != nullptr )
             {
                 const InteractionDef*  pDef       = pTarget->getDefinition();
-                IInteractionAuthority* pAuthority = pDef->_authority == InteractionAuthority::Server ? game::getService<IInteractionAuthority>() : nullptr;
+                IInteractionAuthority* pAuthority = pDef->_authority == InteractionAuthority::Server ? game::findSubsystem<IInteractionAuthority>() : nullptr;
                 InteractionRequest     request;
                 request._interactor   = pOwner->getHandle();
                 request._interactable = _focus;

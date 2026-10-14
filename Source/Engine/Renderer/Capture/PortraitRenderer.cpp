@@ -86,7 +86,7 @@ namespace sw
         _pDevice  = pDevice;
         _renderer = make_unique<FrameRenderer>();
         // 포워드 파이프라인 — TAA 가 없어(시간 누적 없음) 한 장으로 끝나는 그림이다.
-        if ( _renderer->initialize( pDevice, engine::getEngineDefaultAssets()._defaultForwardPipeline ) == false )
+        if ( _renderer->initialize( pDevice, engine::getSubsystem<EngineDefaultAssets>()._defaultForwardPipeline ) == false )
         {
             _renderer.reset();
             return false;
@@ -113,14 +113,14 @@ namespace sw
         // 스튜디오 — 씬 매니저에 등록하지 않는 씬이라 틱하지 않고 게임 화면에 나오지 않는다.
         Scene              studio( "PortraitStudio" );
         GameObjectManager* pManager = studio.getObjectManager();
-        GameObject*        pSubject = engine::getAssetManager().getAssetCache<PrefabCache>().spawn( pManager, request._prefabPath, "PortraitSubject" );
+        GameObject*        pSubject = engine::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().spawn( pManager, request._prefabPath, "PortraitSubject" );
         if ( pSubject == nullptr )
         {
             SW_LOG_ERROR( "Portrait: prefab '%#' could not be spawned", request._prefabPath.c_str() );
             return false;
         }
         // 스폰이 경로로 잡은 머티리얼을 GPU 에 올린다 — 게임 루프에서는 틱마다 하는 일(`MaterialCache::initializePending`)인데 스튜디오는 틱하지 않는다.
-        engine::getAssetManager().getAssetCache<MaterialCache>().initializePending( _pDevice );
+        engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().initializePending( _pDevice );
         float3  center{};
         float32 radius = 1.0f;
         if ( PortraitRendererInternal::computeSubjectSphere( *pManager, center, radius ) == false )

@@ -13,7 +13,7 @@
 #include "Engine/Object/Component/2D/SpriteRenderUtil.h"
 #include "Engine/Object/Component/3D/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Resource/AssetManager.h"
 
 namespace sw

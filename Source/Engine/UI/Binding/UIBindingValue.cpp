@@ -6,6 +6,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectValue.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -379,7 +380,7 @@ namespace sw
             outPath._listProperty.push_back( pProperty );
             if ( bIsLast == false )
             {
-                pType = engine::getTypeRegistry().findType( pProperty->_typeName );
+                pType = engine::getSubsystem<TypeRegistry>().findType( pProperty->_typeName );
                 begin = dot + 1;
             }
         }

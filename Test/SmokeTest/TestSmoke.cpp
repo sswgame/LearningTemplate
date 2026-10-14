@@ -461,7 +461,7 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadRegistrarContentLifecycle )
     if ( sw::FileUtil::exists( gfPath ) == false )
         SW_TEST_SKIP( "GameFramework MODULE not built in this config" );
 
-    sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
 
     const auto collectFqn = [&registry]()
     {
@@ -605,12 +605,12 @@ SW_TEST_CASE( ArchitectureTest, ReleaseModuleCodeSweepsEveryRegistryTheEditorUse
     // 이벤트 버스
     using ResizeDelegate          = sw::Delegate<void( const sw::WindowResizeEvent& )>;
     const ResizeDelegate onResize = SW_DELEGATE_FUNCTION( ResizeDelegate, sw::onSweepProbeResize );
-    sw::engine::getEventDispatcher().subscribe<sw::WindowResizeEvent>( onResize );
+    sw::engine::getSubsystem<sw::EventDispatcher>().subscribe<sw::WindowResizeEvent>( onResize );
     SW_EXPECT_EQUAL( 1u, sw::releaseStubOf( onResize ) );
     sw::WindowResizeEvent resize;
     resize._width  = 1;
     resize._height = 1;
-    sw::engine::getEventDispatcher().publish( resize );
+    sw::engine::getSubsystem<sw::EventDispatcher>().publish( resize );
 
     // 전역 로그 리스너
     const sw::LogWrittenDelegate onLog = SW_DELEGATE_FUNCTION( sw::LogWrittenDelegate, sw::onSweepProbeLog );
@@ -619,7 +619,7 @@ SW_TEST_CASE( ArchitectureTest, ReleaseModuleCodeSweepsEveryRegistryTheEditorUse
     SW_EXPECT_EQUAL( 0u, sw::releaseStubOf( onLog ) );
 
     // Undo 스택
-    sw::CommandStack* pCommandStack = sw::engine::getBoundEngineServices()._pCommandStack;
+    sw::CommandStack* pCommandStack = sw::engine::findSubsystem<sw::CommandStack>();
     SW_ASSERT_TRUE( pCommandStack != nullptr );
     pCommandStack->clear();
     sw::CommandStack::Command command;
@@ -700,7 +700,7 @@ SW_TEST_CASE( ArchitectureTest, ModuleGlobalVariablesFollowTheModuleLifetime )
     if ( sw::engine::areEngineServicesBound() == false )
         SW_TEST_SKIP( "engine services not bound" );
 
-    sw::GlobalVariableManager& variableManager = sw::engine::getGlobalVariableManager();
+    sw::GlobalVariableManager& variableManager = sw::engine::getSubsystem<sw::GlobalVariableManager>();
     SW_ASSERT_TRUE( variableManager.findVariable( "gv_editorPanelDump" ) == nullptr );
 
     sw::LiveReloadManager manager;
@@ -1518,7 +1518,7 @@ SW_TEST_CASE( ArchitectureTest, MaterialCacheAcquireReleaseNoGPU )
     // 디스크에 없는 경로를 잡는다 — 디바이스 없이는 파일을 읽지 않는다. 리소스 루트 밖의 임시 경로라 에셋 데이터베이스가
     // `.meta` 사이드카를 쓰지 않는다(루트 안의 없는 경로를 잡으면 테스트를 돌릴 때마다 Resource 에 `.meta` 가 생긴다).
     const sw::string   materialPath = test::makeTempPath( "does_not_need_gpu.material" );
-    sw::MaterialCache& cache        = sw::engine::getAssetManager().getAssetCache<sw::MaterialCache>();
+    sw::MaterialCache& cache        = sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::MaterialCache>();
     cache.clear();
 
     sw::Material* mat = cache.acquire( materialPath, nullptr );
@@ -1710,7 +1710,7 @@ SW_TEST_CASE( ModuleAPITest, FullGameSceneAndComponentLifecycle )
     }
 
     // 2) Create and tick a dynamic test scene
-    sw::Scene* pTestScene = sw::engine::getSceneManager().createScene( "TestMainScene" );
+    sw::Scene* pTestScene = sw::engine::getSubsystem<sw::SceneManager>().createScene( "TestMainScene" );
     SW_ASSERT_NOT_NULL( pTestScene );
     sw::GameObject* pObj = pTestScene->getObjectManager()->createGameObject( sw::hashed_string( "TestActor" ) );
     SW_ASSERT_NOT_NULL( pObj );
@@ -1719,15 +1719,15 @@ SW_TEST_CASE( ModuleAPITest, FullGameSceneAndComponentLifecycle )
     for ( int32 frameIndex = 0; frameIndex < 5; ++frameIndex )
     {
         api.update( game, 0.016f );
-        sw::Scene* pActive = sw::engine::getSceneManager().getActiveScene();
+        sw::Scene* pActive = sw::engine::getSubsystem<sw::SceneManager>().getActiveScene();
         if ( pActive != nullptr )
             pActive->tick( 0.016f );
     }
 
     SW_LOG_INFO( "[SmokeTest] Step 11: Shutting down..." );
 
-    sw::engine::getTaskManager().waitAll();
-    sw::engine::getSceneManager().tickTransitions();
+    sw::engine::getSubsystem<sw::TaskManager>().waitAll();
+    sw::engine::getSubsystem<sw::SceneManager>().tickTransitions();
 
     api.shutdown( game );
     api.destroy( game );
@@ -1735,8 +1735,8 @@ SW_TEST_CASE( ModuleAPITest, FullGameSceneAndComponentLifecycle )
     if ( api.bindService )
         api.bindService( nullptr );
 
-    sw::engine::getSceneManager().shutdown();
-    sw::engine::getSceneManager().initialize();
+    sw::engine::getSubsystem<sw::SceneManager>().shutdown();
+    sw::engine::getSubsystem<sw::SceneManager>().initialize();
 
     sw::engine::unregisterModuleTypes( "SWGame" );
     SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( "SWGame", handle ) );
@@ -1820,7 +1820,7 @@ SW_TEST_CASE( ModuleAPITest, SharedModuleChildKeepsItsRegistrations )
     }
     sw::engine::registerModuleTypes( "SWGame" );
 
-    const sw::TypeInfo* pGravity = sw::engine::getTypeRegistry().findType( sw::hashed_string( "GravityComponent" ) );
+    const sw::TypeInfo* pGravity = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "GravityComponent" ) );
     SW_ASSERT_NOT_NULL( pGravity );
     SW_EXPECT_TRUE_MSG( pGravity->_moduleName == sw::hashed_string( "GameFramework" ),
                         "GameFramework 의 타입이 다른 모듈 이름으로 등록됐습니다 — 그 모듈을 내리면 함께 지워집니다" );
@@ -1874,7 +1874,7 @@ SW_TEST_CASE( ModuleAPITest, ModulePropertyChildChecksEveryType )
     SW_ASSERT_TRUE( manager.registerModule( "EditorModule" ) );
 
     sw::unordered_map<sw::hashed_string, uint32> mapModuleTypeCount;
-    sw::engine::getTypeRegistry().forEachType( [&mapModuleTypeCount]( const sw::TypeInfo& info )
+    sw::engine::getSubsystem<sw::TypeRegistry>().forEachType( [&mapModuleTypeCount]( const sw::TypeInfo& info )
     { ++mapModuleTypeCount[info._moduleName]; } );
     // GF_Overworld 는 리플렉션 타입이 없는 키트다(올리기만 본다) — 타입 수는 타입을 내는 모듈만 본다.
     for ( const utf8* pModule : { "GameFramework", "GF_ActionCombat", "SWGame", "EditorModule" } )
@@ -1950,11 +1950,11 @@ SW_TEST_CASE( ModuleAPITest, GameModuleRepeatedReloadCycle )
         for ( int32 frame = 0; frame < 20; ++frame )
         {
             std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-            sw::engine::getSceneManager().tickTransitions();
+            sw::engine::getSubsystem<sw::SceneManager>().tickTransitions();
             api.update( game, 0.016f );
         }
-        sw::engine::getTaskManager().waitAll();
-        sw::engine::getSceneManager().tickTransitions();
+        sw::engine::getSubsystem<sw::TaskManager>().waitAll();
+        sw::engine::getSubsystem<sw::SceneManager>().tickTransitions();
 
         api.shutdown( game );
         api.destroy( game );
@@ -1962,8 +1962,8 @@ SW_TEST_CASE( ModuleAPITest, GameModuleRepeatedReloadCycle )
         if ( api.bindService )
             api.bindService( nullptr );
 
-        sw::engine::getSceneManager().shutdown();
-        sw::engine::getSceneManager().initialize();
+        sw::engine::getSubsystem<sw::SceneManager>().shutdown();
+        sw::engine::getSubsystem<sw::SceneManager>().initialize();
 
         sw::engine::unregisterModuleTypes( "SWGame" );
         SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( "SWGame", handle ) );
@@ -2097,19 +2097,19 @@ SW_TEST_CASE( ModuleAPITest, UnloadChildReleasesTheChannelsItsImageCreated )
     for ( int32 frameIndex = 0; frameIndex < 20; ++frameIndex )
     {
         std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-        sw::engine::getSceneManager().tickTransitions();
+        sw::engine::getSubsystem<sw::SceneManager>().tickTransitions();
         api.update( game, 0.016f );
     }
-    sw::engine::getTaskManager().waitAll();
-    sw::engine::getSceneManager().tickTransitions();
+    sw::engine::getSubsystem<sw::TaskManager>().waitAll();
+    sw::engine::getSubsystem<sw::SceneManager>().tickTransitions();
     api.shutdown( game );
     api.destroy( game );
     if ( api.bindService != nullptr )
         api.bindService( nullptr );
-    sw::engine::getSceneManager().shutdown();
-    sw::engine::getSceneManager().initialize();
+    sw::engine::getSubsystem<sw::SceneManager>().shutdown();
+    sw::engine::getSubsystem<sw::SceneManager>().initialize();
 
-    sw::EventDispatcher& dispatcher = sw::engine::getEventDispatcher();
+    sw::EventDispatcher& dispatcher = sw::engine::getSubsystem<sw::EventDispatcher>();
     SW_ASSERT_TRUE_MSG( dispatcher.countChannelsCreatedWithin( pFrameworkBegin, pFrameworkEnd ) > 0,
                         "GameFramework created no event channel - the case no longer exercises what it checks" );
 

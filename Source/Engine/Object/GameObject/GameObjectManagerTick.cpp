@@ -26,14 +26,14 @@ namespace sw
     if ( _frameStepObserver.isBound() )             \
         _frameStepObserver( SceneFrameStep::Name ); \
     runFrameStep##Name( deltaTime );
-#include "Engine/Object/GameObject/SceneFrameStepList.xxx"
+#include "Engine/Object/GameObject/Tick/SceneFrameStepList.xxx"
 #undef SW_SCENE_FRAME_STEP
     }
 
     void GameObjectManager::runFrameStepMainThreadTasks( float32 /*deltaTime*/ )
     {
         if ( engine::areEngineServicesBound() )
-            engine::getTaskManager().dispatchMainThreadTasks();
+            engine::getSubsystem<TaskManager>().dispatchMainThreadTasks();
     }
 
     void GameObjectManager::runFrameStepDestroy( float32 /*deltaTime*/ )
@@ -165,7 +165,7 @@ namespace sw
     {
         static constexpr const utf8* kArrName[] = {
 #define SW_SCENE_FRAME_STEP( Name ) #Name,
-#include "Engine/Object/GameObject/SceneFrameStepList.xxx"
+#include "Engine/Object/GameObject/Tick/SceneFrameStepList.xxx"
 #undef SW_SCENE_FRAME_STEP
         };
         const uint32 index = static_cast<uint32>( step );

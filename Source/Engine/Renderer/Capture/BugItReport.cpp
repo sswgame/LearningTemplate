@@ -16,8 +16,8 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Object/Component/CameraComponent.h"
-#include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/RenderThread.h"
@@ -139,7 +139,7 @@ namespace sw
                     outReply = "bugitgo: engine services are not bound";
                     return false;
                 }
-                return BugItReport::goTo( engine::getSceneManager(), listArgument.empty() ? string_view{} : string_view( listArgument[0] ), outReply );
+                return BugItReport::goTo( engine::getSubsystem<SceneManager>(), listArgument.empty() ? string_view{} : string_view( listArgument[0] ), outReply );
             }
         };
 #endif
@@ -274,10 +274,10 @@ namespace sw
 
         if ( engine::areEngineServicesBound() == false )
             return inputs;
-        const FrameRenderer* pRenderer = engine::getFrameRenderer();
+        const FrameRenderer* pRenderer = engine::findSubsystem<FrameRenderer>();
         if ( pRenderer != nullptr && pRenderer->getDevice() != nullptr )
             inputs._report._rhiBackend = pRenderer->getDevice()->getBackendName();
-        SceneManager& sceneManager = engine::getSceneManager();
+        SceneManager& sceneManager = engine::getSubsystem<SceneManager>();
         if ( Scene* pScene = sceneManager.getActiveScene(); pScene != nullptr )
         {
             inputs._pSceneManager          = &sceneManager;
@@ -289,8 +289,8 @@ namespace sw
                 inputs._report._cameraRotationDegrees = computeRotationDegrees( pCamera->getCameraForward() );
             }
         }
-        inputs._pFrameProfiler = &engine::getFrameProfiler();
-        (void)engine::getCommandLineManager().getArgument( CommandLineArgument::ENABLE_EDITOR, inputs._bEditor ); // 없으면 false 그대로
+        inputs._pFrameProfiler = &engine::getSubsystem<FrameProfiler>();
+        (void)engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::ENABLE_EDITOR, inputs._bEditor ); // 없으면 false 그대로
         return inputs;
     }
 

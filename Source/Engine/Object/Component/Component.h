@@ -26,7 +26,7 @@ namespace sw
      * @enum TickGroup
      * @brief 한 프레임 안에서 컴포넌트 틱이 도는 순서 슬롯입니다.
      * @details 이름대로 물리 파이프라인 단계(언리얼의 ETickingGroup)를 뜻한다. 물리는 **DuringPhysics 와 PostPhysics 사이**에 한 번 step 한다.
-     *          프레임 안에서 어느 단계가 무엇을 보는지는 프레임 단계 목록 `Engine/Object/GameObject/SceneFrameStepList.xxx` 한 곳에 있다.
+     *          프레임 안에서 어느 단계가 무엇을 보는지는 프레임 단계 목록 `Engine/Object/GameObject/Tick/SceneFrameStepList.xxx` 한 곳에 있다.
      */
     enum class TickGroup : uint8
     {

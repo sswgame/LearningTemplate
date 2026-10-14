@@ -19,7 +19,7 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Renderer/Frame/ShaderParameterBinder.h"
+#include "Engine/Renderer/Frame/Resource/ShaderParameterBinder.h"
 
 namespace sw
 {

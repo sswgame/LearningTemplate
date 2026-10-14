@@ -7,9 +7,9 @@
 #include "Engine/Character/AnimationNotify/AnimationNotifyHandlers.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
-#include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/UI/Input/UIInputMapView.h"
 #include "Engine/UI/UISystem.h"
 
@@ -70,8 +70,8 @@ namespace sw
     void CameraManagerComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        const InputManager* pInput = _cycleAction.empty() == false ? game::getService<InputManager>() : nullptr;
-        if ( pInput != nullptr && UIInputMapView( pInput->getInputMap(), game::getService<UISystem>() ).wasActionTriggered( _cycleAction ) )
+        const InputManager* pInput = _cycleAction.empty() == false ? game::findSubsystem<InputManager>() : nullptr;
+        if ( pInput != nullptr && UIInputMapView( pInput->getInputMap(), game::findSubsystem<UISystem>() ).wasActionTriggered( _cycleAction ) )
             (void)cycleViewTarget( _cycleRole );
         updateCamera( deltaTime );
     }

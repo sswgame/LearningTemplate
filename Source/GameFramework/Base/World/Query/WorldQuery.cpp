@@ -109,12 +109,12 @@ namespace sw
 
     bool WorldQuery::raycast( const GameObjectManager& manager, const float3& from, const float3& to, uint64 ignoreObjectID, WorldRayHit& outHit )
     {
-        const IWorldQuery* pService = game::getService<IWorldQuery>();
+        const IWorldQuery* pService = game::findSubsystem<IWorldQuery>();
         if ( pService != nullptr )
             return pService->raycast( from, to, ignoreObjectID, outHit );
         // 강체 물리와 겹침 월드(BoxCollider2D) 중 가까운 것 — 두 세계가 한 씬에 섞여 있을 수 있다.
         const ScenePhysicsWorldQuery   rigid{ manager };
-        const PhysicsOverlapWorldQuery fallback{ manager.getSceneService<sw::ScenePhysics>().getOverlapWorld2D().getPhysicsOverlapWorld() };
+        const PhysicsOverlapWorldQuery fallback{ manager.getSubsystem<sw::ScenePhysics>().getOverlapWorld2D().getPhysicsOverlapWorld() };
         WorldRayHit                    rigidHit;
         WorldRayHit                    fallbackHit;
         const bool                     bRigid    = rigid.raycast( from, to, ignoreObjectID, rigidHit );

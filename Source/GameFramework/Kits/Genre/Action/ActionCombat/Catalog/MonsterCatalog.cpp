@@ -7,6 +7,8 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "MonsterCatalog" );
@@ -175,7 +177,7 @@ namespace sw
 
         // 이름은 리플렉션된 열거자 하나로 찾는다(대소문자는 무시한다). 열거자를 늘려도 여기는 고치지 않는다.
         MonsterArchetype archetype{ MonsterArchetype::MeleePatrol };
-        if ( engine::getTypeRegistry().enumFromString( pStr, archetype ) )
+        if ( game::getSubsystem<TypeRegistry>().enumFromString( pStr, archetype ) )
             return archetype;
 
         SW_LOG_WARNING( "Monster '%#': unknown archetype '%#' — using MeleePatrol", pMonsterID, pStr );

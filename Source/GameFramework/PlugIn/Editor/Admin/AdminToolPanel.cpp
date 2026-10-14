@@ -104,7 +104,7 @@ namespace sw::editor
         drawSanctionSection();
         drawAuditSection();
 
-        const AdminToolSession* pSession = getService<AdminToolSession>();
+        const AdminToolSession* pSession = findSubsystem<AdminToolSession>();
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         const AdminToolSession& session = *pSession;
@@ -114,7 +114,7 @@ namespace sw::editor
 
     void AdminToolPanel::drawProviderBar()
     {
-        AdminToolSession* pSession = getService<AdminToolSession>();
+        AdminToolSession* pSession = findSubsystem<AdminToolSession>();
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
@@ -142,7 +142,7 @@ namespace sw::editor
 
     void AdminToolPanel::drawAccountSection()
     {
-        AdminToolSession* pSession = getService<AdminToolSession>();
+        AdminToolSession* pSession = findSubsystem<AdminToolSession>();
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
@@ -199,7 +199,7 @@ namespace sw::editor
 
     void AdminToolPanel::drawAdjustSection()
     {
-        AdminToolSession* pSession = getService<AdminToolSession>();
+        AdminToolSession* pSession = findSubsystem<AdminToolSession>();
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
@@ -228,7 +228,7 @@ namespace sw::editor
 
     void AdminToolPanel::drawSanctionSection()
     {
-        AdminToolSession* pSession = getService<AdminToolSession>();
+        AdminToolSession* pSession = findSubsystem<AdminToolSession>();
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;
@@ -264,7 +264,7 @@ namespace sw::editor
 
     void AdminToolPanel::drawAuditSection()
     {
-        AdminToolSession* pSession = getService<AdminToolSession>();
+        AdminToolSession* pSession = findSubsystem<AdminToolSession>();
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         AdminToolSession& session = *pSession;

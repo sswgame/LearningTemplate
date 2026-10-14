@@ -173,7 +173,7 @@ namespace sw::editor
                 noteMark( pMarkKey, "useSelection" );
                 if ( bUseSelection )
                 {
-                    EditorSelection* pSelection = getService<EditorSelection>();
+                    EditorSelection* pSelection = findSubsystem<EditorSelection>();
                     GameObject*      pObject    = pSelection != nullptr ? pSelection->getPrimaryObject() : nullptr;
                     if ( pObject == nullptr )
                         SW_LOG_WARNING( "Select an object in the scene first" );
@@ -215,7 +215,7 @@ namespace sw::editor
 
     void MeshModifiersPanel::drawContent()
     {
-        MeshModifierSession* pSession = getService<MeshModifierSession>();
+        MeshModifierSession* pSession = findSubsystem<MeshModifierSession>();
         if ( pSession == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         MeshModifierSession& session = *pSession;
@@ -245,7 +245,7 @@ namespace sw::editor
         EditorSelfTestMarks::note( "meshmodifiers.useSelection" );
         if ( bUseSelection )
         {
-            EditorSelection* pSelection = getService<EditorSelection>();
+            EditorSelection* pSelection = findSubsystem<EditorSelection>();
             GameObject*      pObject    = pSelection != nullptr ? pSelection->getPrimaryObject() : nullptr;
             if ( session.setTarget( pObject ) == false )
                 SW_LOG_WARNING( "Mesh modifiers need an object whose mesh component uses a .mesh asset" );

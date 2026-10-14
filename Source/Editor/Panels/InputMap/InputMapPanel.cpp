@@ -253,7 +253,7 @@ namespace sw::editor
             _bLoaded = SW_TRUE;
         }
 
-        InputManager* pInput = getService<InputManager>();
+        InputManager* pInput = findSubsystem<InputManager>();
         if ( pInput != nullptr && _inputMap.getInputManager() != pInput )
             _inputMap.setInputManager( pInput );
 
@@ -754,7 +754,7 @@ namespace sw::editor
 
     void InputMapPanel::drawDeviceMonitorTab()
     {
-        InputManager* pInput = getService<InputManager>();
+        InputManager* pInput = findSubsystem<InputManager>();
         if ( pInput == nullptr )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorInputMap", "NoInputManager" ) );
@@ -780,7 +780,7 @@ namespace sw::editor
 
     void InputMapPanel::drawKeyboardMonitor()
     {
-        InputManager* pInput = getService<InputManager>();
+        InputManager* pInput = findSubsystem<InputManager>();
         if ( pInput == nullptr )
             return;
 
@@ -813,7 +813,7 @@ namespace sw::editor
 
     void InputMapPanel::drawMouseMonitor()
     {
-        InputManager* pInput = getService<InputManager>();
+        InputManager* pInput = findSubsystem<InputManager>();
         if ( pInput == nullptr )
             return;
 
@@ -853,7 +853,7 @@ namespace sw::editor
 
     void InputMapPanel::drawGamepadMonitor()
     {
-        InputManager* pInput = getService<InputManager>();
+        InputManager* pInput = findSubsystem<InputManager>();
         if ( pInput == nullptr )
             return;
 
@@ -960,7 +960,7 @@ namespace sw::editor
 
     void InputMapPanel::drawInputSimulatorTab()
     {
-        InputManager* pInput = getService<InputManager>();
+        InputManager* pInput = findSubsystem<InputManager>();
         if ( pInput == nullptr )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorInputMap", "NoInputManager" ) );
@@ -1026,7 +1026,7 @@ namespace sw::editor
 
     void InputMapPanel::drawInputReplayTab()
     {
-        InputManager* pInput = getService<InputManager>();
+        InputManager* pInput = findSubsystem<InputManager>();
 
         ImGui::Text( "Input Replay Recorder & Deterministic QA Playback" );
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorInputMap", "ReplayHint" ) );

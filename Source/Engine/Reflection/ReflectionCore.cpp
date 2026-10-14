@@ -524,7 +524,7 @@ namespace sw
         if ( _bIsPODCalculated == SW_TRUE )
             return _bIsPODFastPath == SW_TRUE;
 
-        TypeRegistry& registry = engine::getTypeRegistry();
+        TypeRegistry& registry = engine::getSubsystem<TypeRegistry>();
 
         static const hashed_string kArrDynamicTypes[] = {
             hashed_string{ PredefinedNameType::NameType_string },
@@ -1123,7 +1123,7 @@ namespace sw
             return nullptr;
         // 세대는 찾기 **전에** 읽는다. 찾는 사이 등록이 끼면 옛 세대가 남아 다음 호출이 다시 찾는다(그 반대는 없다).
         const uint32    generation = s_typeTableGeneration.load( std::memory_order_acquire );
-        const TypeInfo* pType      = engine::getTypeRegistry().findType( fqn );
+        const TypeInfo* pType      = engine::getSubsystem<TypeRegistry>().findType( fqn );
         _pType.store( pType, std::memory_order_release );
         _generation.store( generation, std::memory_order_release );
         return pType;
@@ -1249,7 +1249,7 @@ namespace sw
         if ( _parentMissGeneration.load( std::memory_order_acquire ) == generation )
             return nullptr;
 
-        pParent = engine::getTypeRegistry().findType( _parentFQN );
+        pParent = engine::getSubsystem<TypeRegistry>().findType( _parentFQN );
         if ( pParent == this )
             pParent = nullptr;
         if ( pParent != nullptr )

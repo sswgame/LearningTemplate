@@ -2,7 +2,7 @@
 
 #include "Editor/Panels/AudioEvents/AudioEventBrowserPanel.h"
 
-#include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/EditorColor.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
@@ -207,7 +207,7 @@ namespace sw::editor
 
     void AudioEventBrowserPanel::drawContent()
     {
-        IAudioService* pAudio = editor::getService<IAudioService>();
+        IAudioService* pAudio = editor::findSubsystem<IAudioService>();
         if ( pAudio == nullptr || pAudio->isInitialized() == false )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAudioEvents", "NoService" ) );

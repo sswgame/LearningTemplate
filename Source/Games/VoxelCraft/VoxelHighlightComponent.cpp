@@ -84,7 +84,7 @@ namespace sw
         // 디버그 선 큐는 게임 스레드의 것이다 — 에디터 게임 뷰에만 보인다.
         pManager->executeOrDeferPostTick( [center]()
         {
-            DebugDrawQueue* pDebugDraw = game::getService<DebugDrawQueue>();
+            DebugDrawQueue* pDebugDraw = game::findSubsystem<DebugDrawQueue>();
             if ( pDebugDraw == nullptr )
                 return;
             const float3 minCorner = center - float3{ 0.505f };

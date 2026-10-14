@@ -29,7 +29,7 @@ namespace sw
                     return true;
                 for ( const utf8* pName : kArrAutomationVariable )
                 {
-                    const GlobalVariableInfo* pVariable = engine::getGlobalVariableManager().findVariable( pName );
+                    const GlobalVariableInfo* pVariable = engine::getSubsystem<GlobalVariableManager>().findVariable( pName );
                     if ( pVariable == nullptr )
                         continue;
                     const bool bSet = pVariable->_type == GlobalVariableType::String ? pVariable->getValueAsString().empty() == false

@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Commands/EditorSceneFileCommands.h"
+#include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorDockLayout.h"
@@ -157,7 +157,7 @@ namespace sw::editor
 
     void EditorMenuBar::drawStatusArea()
     {
-        IModuleCompiler* pCompiler = getService<IModuleCompiler>();
+        IModuleCompiler* pCompiler = findSubsystem<IModuleCompiler>();
         if ( pCompiler != nullptr )
             notifyLiveCodingResult( *pCompiler );
 

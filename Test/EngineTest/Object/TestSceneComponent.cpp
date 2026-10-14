@@ -626,7 +626,7 @@ namespace
             {
                 bAllQueued = queueTickWrite( hierarchy, keyed ) && bAllQueued;
             }
-            sw::engine::getTaskManager().releaseCurrentThreadHelperSlot();
+            sw::engine::getSubsystem<sw::TaskManager>().releaseCurrentThreadHelperSlot();
         } );
         other.join();
         return bAllQueued;

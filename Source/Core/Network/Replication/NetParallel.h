@@ -4,7 +4,7 @@
  * @details 권위 서버의 스냅샷 만들기 · MMO 관심 영역 계산은 연결 수에 비례하고 연결끼리 서로 건드리지 않습니다. 그 몸을 `TaskManager::runParallel`
  *          로 나누면 코어 수만큼 빨라집니다. 보내기는 `NetHost` 가 잠금으로 지키므로 여러 스레드가 동시에 `sendMessage` 해도 된다.
  *          `TaskManager` 를 주지 않으면(테스트 · 도구 · 작은 서버) 지금 스레드가 한 번에 돈다 — 결과는 같다(연결마다 독립이라 순서가 바뀌어도 같다).
- *          게임은 `setTaskManager( &engine::getTaskManager() )` 를 넘깁니다.
+ *          게임은 `setTaskManager( &engine::getSubsystem<TaskManager>() )` 를 넘깁니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

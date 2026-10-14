@@ -670,7 +670,7 @@ SW_TEST_CASE( TerrainTest, PaintedSplatIsPerTerrainAndKeptOnCPU )
     }
     TerrainComponent& painted  = *arrTerrain[0];
     TerrainComponent& other    = *arrTerrain[1];
-    TextureCache&     textures = engine::getAssetManager().getAssetCache<TextureCache>();
+    TextureCache&     textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
     (void)textures.flushRegionUpdates( nullptr ); // 앞선 테스트가 남긴 구간을 비운다
 
     vector<float4> listWeight;

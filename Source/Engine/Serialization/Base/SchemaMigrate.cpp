@@ -76,7 +76,7 @@ namespace sw
             {
                 if ( wireTypeName.empty() )
                     return nullptr;
-                const TypeRegistry& registry  = engine::getTypeRegistry();
+                const TypeRegistry& registry  = engine::getSubsystem<TypeRegistry>();
                 const EnumInfo*     pWireEnum = registry.findEnum( wireTypeName );
                 if ( pWireEnum == nullptr || registry.findEnum( targetTypeName ) == pWireEnum )
                     return nullptr;
@@ -103,7 +103,7 @@ namespace sw
 
             static bool isNumericTypeName( hashed_string typeName )
             {
-                const TypeInfo* pInfo = engine::getTypeRegistry().findType( typeName );
+                const TypeInfo* pInfo = engine::getSubsystem<TypeRegistry>().findType( typeName );
                 if ( pInfo == nullptr || pInfo->isPrimitive() == false )
                     return false;
                 return typeName.isPredefinedType( PredefinedNameType::NameType_string ) == false &&
@@ -356,7 +356,7 @@ namespace sw
                 sw_placement_new( pPropPtr ) TagID();
             else
             {
-                const TypeInfo* pNested = engine::getTypeRegistry().findType( prop._typeName );
+                const TypeInfo* pNested = engine::getSubsystem<TypeRegistry>().findType( prop._typeName );
                 if ( pNested != nullptr )
                     SchemaMigrateInternal::constructWithDefaultCtor( pPropPtr, *pNested );
             }
@@ -390,7 +390,7 @@ namespace sw
                 std::destroy_at( static_cast<TagID*>( pPropPtr ) );
             else
             {
-                const TypeInfo* pNested = engine::getTypeRegistry().findType( prop._typeName );
+                const TypeInfo* pNested = engine::getSubsystem<TypeRegistry>().findType( prop._typeName );
                 if ( pNested != nullptr )
                     SchemaMigrateInternal::destroyIfDefaultConstructed( pPropPtr, *pNested );
             }
@@ -523,7 +523,7 @@ namespace sw
 
     hashed_string findWireTypeName( uint32 wireTypeHash )
     {
-        const TypeRegistry& registry = engine::getTypeRegistry();
+        const TypeRegistry& registry = engine::getSubsystem<TypeRegistry>();
         hashed_string       typeName = registry.canonicalTypeNameByHash( wireTypeHash );
         if ( typeName.empty() == false )
             return typeName;
@@ -622,7 +622,7 @@ namespace sw
         // 숫자로 기록된 값 → 문자열. 대상이 문자열 타입이면 텍스트를 그대로 담는다.
         if ( SchemaMigrateInternal::isStringType( typeName ) )
         {
-            if ( engine::getTypeRegistry().isType( typeName, "hashed_string" ) )
+            if ( engine::getSubsystem<TypeRegistry>().isType( typeName, "hashed_string" ) )
             {
                 *static_cast<hashed_string*>( pValPtr ) =
                     hashed_string( stripped.data(), static_cast<uint32>( stripped.size() ) );
@@ -666,7 +666,7 @@ namespace sw
                 return true;
             }
 
-            const TypeInfo* pNested = engine::getTypeRegistry().findType( pProp->_typeName );
+            const TypeInfo* pNested = engine::getSubsystem<TypeRegistry>().findType( pProp->_typeName );
             if ( pNested == nullptr )
                 return false;
             pCur      = pPropPtr;

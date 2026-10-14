@@ -19,7 +19,7 @@
 #include "Engine/Module/ReflectionSubsystem.h"
 #include "Engine/Object/Component/3D/MeshInstanceBatch.h"
 #include "Engine/Object/Component/SceneTransformStorage.h"
-#include "Engine/Object/GameObject/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/SceneManager.h"
@@ -114,12 +114,12 @@ SW_TEST_CASE( MemoryTagTest, AsyncSceneLoadOnWorkerIsTaggedScene )
     const uint64               sceneBefore = getTotalBytes( *pProfiler, sw::MemoryTag::Scene );
     sw::TaskFuture<sw::Scene*> future      = manager.requestLoadFuture( xmlPath );
     SW_ASSERT_TRUE( future.isValid() );
-    SW_EXPECT_TRUE( sw::engine::getTaskManager().waitAll( 5000 ) );
+    SW_EXPECT_TRUE( sw::engine::getSubsystem<sw::TaskManager>().waitAll( 5000 ) );
     const uint64 sceneAfterWorker = getTotalBytes( *pProfiler, sw::MemoryTag::Scene );
 
     for ( int32 stepIndex = 0; stepIndex < 200 && manager.isTransitioning(); ++stepIndex )
     {
-        sw::engine::getTaskManager().waitAll();
+        sw::engine::getSubsystem<sw::TaskManager>().waitAll();
         manager.tickTransitions();
     }
     SW_EXPECT_TRUE( future.isReady() );

@@ -58,7 +58,7 @@
   `Character` 는 에디터가 쓰는 `Destruction` 이 쓰고, `Spatial` 은 `Character/Fit` 이 씁니다. `Telemetry` 는 `Engine` · App · 게임이 쓰고, `Compression` 은 Core 인터페이스의 코덱 공급자라 Core 가 서드파티를 몰라야 하는 규칙 때문에 남습니다.
 - **SOLID 리팩토링에서 핫 경로라 손대지 않는 것**(2026-10-12 감사). `IRHICommandList` · `IRHIResourceFactory` 의 가상 호출 구조, `GPUSceneBuilder` 내부 병렬 루프, `PhysicsOverlapWorld` 셀 해시,
   Box2D · Jolt 어댑터의 switch(외부 라이브러리 경계), RHI 백엔드 `CommandContext` 큰 파일(백엔드 하나의 기록이라 한 이유로 바뀐다), `AbilitySystemComponent` 의 modifier switch(닫힌 열거 + `-Wswitch`)입니다.
-  의도된 예외는 `App.cpp` 의 `kArrHeadlessTask` 표, `EditorPanelManager::syncWithRegistry`, 에디터 `getService<T>()`(모듈 경계 주입), 엔진 루프의 서브시스템 등록부입니다.
+  의도된 예외는 `App.cpp` 의 `kArrHeadlessTask` 표, `EditorPanelManager::syncWithRegistry`, 에디터 `findSubsystem<T>()`(모듈 경계 주입), 엔진 루프의 서브시스템 등록부입니다.
 - **구조 리팩토링 후보를 옮길지 가르는 기준**(2026-10-12). 줄 수가 줄어서가 아니라 앞으로 고칠 곳이 줄어서 옮깁니다. 하나라도 걸리면 옮기지 않고 이유를 남깁니다.
   - **반쪽 이전 금지**: 한 클래스 안에 옛 방식과 새 방식이 섞이면 더 헷갈립니다(예: UserSettings 공급자만 옮기고 핸들러는 남기는 것). 통째로 옮기거나 통째로 둡니다.
   - **훅 · 인터페이스는 쓰는 곳이 둘 이상일 때**: 쓰는 곳이 하나뿐인 일반화는 호출 시점 순서를 숨기고 읽는 비용만 늘립니다. 순서에 뜻이 있으면 호출 자리에 두고 이유를 주석으로 적습니다.
@@ -85,6 +85,11 @@
 - **폴더 · 파일 구조는 기계적으로 합치지 않습니다**(2026-10-12 감사, R8). 25 줄 이하 파일이 97 / 2,932 개이고 큰 클래스를 나눈 가족 대부분이 파일마다 120 줄을 넘으며, 작은 조각(`EditorAssetTypeFocus.cpp` 36 줄)은 의존을 분리한 것입니다.
   합치면 층 규칙(`CheckEngineLayers`)과 그래픽스 구조 재편의 파일 분할 기준을 해칩니다. 한다면 `Scripts/lint/report/` 에 같은 접두 `.cpp` 가족과 줄 수를 보고하는 스크립트를 두고,
   120 줄 이하 조각이 의존 분리가 아닌 가족만 사람이 봅니다(지금 후보는 `RenderView.cpp` 13 줄 정도).
+- **파일이 40 개를 넘는 평면 폴더는 기능 묶음 하위 폴더로 나누고, 한 클래스를 나눈 파일 가족은 가르지 않습니다**(2026-10-15). 언리얼 모듈의 `Private/` 하위 폴더,
+  유니티 `Runtime/` 하위, Godot `scene/`(`2d` · `3d` · `main` · `resources` · `gui`)가 기능 묶음으로 나누는 것과 같은 단위로 알고 있습니다.
+  `Editor/Common/Commands` 는 `Asset` · `Scene` · `Play` · `Dev`(등록부 · 백그라운드 입출력은 루트), `Engine/Object/GameObject` 는 `Registry` · `Tick` · `Service` · `Serialization`
+  (`GameObject` · `GameObjectManager` · `GameObjectStore` 는 루트), `Engine/Renderer/Frame` 은 `View` · `Packet` · `Resource` · `Capture` · `Timeline`(`FrameRenderer*` 가족은 루트)입니다.
+  층 규칙은 그대로 따라갑니다. 에디터 층은 `Common/<폴더>` 단위로 읽고, 오브젝트 모델 코어 규칙은 `GameObject` 트리 전체(`CheckEngineLayers.toml` 의 `coreTree`)입니다.
 
 ## 3. 기각한 것 — 측정값과 함께 (다시 제안하지 말 것)
 
@@ -216,7 +221,7 @@
 | `GameInstanceBase::requestSceneLoad` · `EditorWidgets::drawPropertyRowBegin` · `IEditorPanel::getOpenPtr` | `requestLoadScene` · `drawPropertyRowLabel` · `getOpenFlagAddress` |
 | `TurnOrder::Actor`(private) | `TurnOrder::Combatant` |
 | `Engine/Object/Animation/`(AnimationSystem · Crowd · LOD · Rewind · 워핑 컴포넌트 · 정점 애니메이션 베이커) | `Engine/Object/SceneAnimation/`(2026-10-13 — 애니메이션 데이터 폴더 `Engine/Animation/` 과 구분) |
-| `Object/GameObject/{ScenePhysics,SceneOverlapWorld2D,SceneAudio,MeshInstanceBatch,SpriteInstanceBatch}` · `GameObjectManager::getScenePhysics` · `getSceneAudio` · `getOverlapWorld2D` | `Object/Component/{Physics,Audio,3D,2D}/` · `getSceneService<ScenePhysics>()` · `getSceneService<SceneAudio>()` · `getSceneService<ScenePhysics>().getOverlapWorld2D()`(2026-10-13) |
+| `Object/GameObject/{ScenePhysics,SceneOverlapWorld2D,SceneAudio,MeshInstanceBatch,SpriteInstanceBatch}` · `GameObjectManager::getScenePhysics` · `getSceneAudio` · `getOverlapWorld2D` | `Object/Component/{Physics,Audio,3D,2D}/` · `getSubsystem<ScenePhysics>()` · `getSubsystem<SceneAudio>()` · `getSubsystem<ScenePhysics>().getOverlapWorld2D()`(2026-10-13) |
 | `EngineLoop` · `Engine/EngineLoop.h` · `_engineLoop`(2026-10-15) | `Engine` · `Engine/Engine.h` · `_engine` (네임스페이스 `engine` 은 그대로 — 5-3) |
 | `PhysicsTypes.h` 의 `PhysicsHandle` · `PhysicsBodyHandle` 등 핸들 | `Engine/Common/PhysicsHandle.h`(2026-10-13 — 컴포넌트 모델 코어가 Physics 를 include 하지 않게) |
 
@@ -404,7 +409,7 @@
   있는 서비스" 에 들지 않는 값 저장소다. 수명은 이미 `AssetManager`(소유 캐시) · 소유한 시스템(UI 문서 · 게임 데이터 캐시의 등록/해제)이 정한다. 언리얼도
   자산 캐시(`FStreamableManager` · 셰이더 맵 캐시)를 서브시스템으로 두지 않는 것으로 알고 있다.
   그래서 `Source/Engine/Resource/AssetManager.cpp` 의 배선 예외가 없어졌습니다. 모듈(게임 · 키트)의 캐시는 이 표가 아니라 `registerAssetCache` 로 올리고 내립니다(표 항목은 내리지 않으므로).
-- **씬마다 하나인 기능 서비스는 기능 폴더가 등록하고 `GameObjectManager` 는 레지스트리만 봅니다**(2026-10-12, 엔진 분할 2 단계). 서비스 .cpp 에 `SW_SCENE_SERVICE( SceneNavigation, Navigation )` 한 줄을 두면 매니저가 생성자에서 만들고, 그 줄의 프레임 단계에서 `update` 를, `clear` 에서 `onSceneCleared` 를 부르며, 찾는 창구는 `getSceneService<T>()` 입니다(`Object/GameObject/ISceneService.h`).
+- **씬마다 하나인 기능 서비스는 기능 폴더가 등록하고 `GameObjectManager` 는 레지스트리만 봅니다**(2026-10-12, 엔진 분할 2 단계). 서비스 .cpp 에 `SW_SCENE_SERVICE( SceneNavigation, Navigation )` 한 줄을 두면 매니저가 생성자에서 만들고, 그 줄의 프레임 단계에서 `update` 를, `clear` 에서 `onSceneCleared` 를 부르며, 찾는 창구는 `getSubsystem<T>()` 입니다(`Object/GameObject/Service/ISceneService.h`).
   씬 서비스는 서브시스템이고 매니저의 씬 범위(`SubsystemScope`, 부모는 엔진 범위)가 소유한다(2026-10-14, C-27 ①) — 선언한 의존으로 세우고 같은 단계의 갱신도 그 순서다.
   언리얼 `UWorldSubsystem` · `UTickableWorldSubsystem` 과 같은 자리로 알고 있다. 프레임 단계 갱신(`update`)은 서브시스템 계약 밖의 씬 서비스 몫으로 둔다 —
   초기화 · 종료는 수명이고 갱신은 프레임 단계 표(`SceneFrameStepList.xxx`)의 자리라서.
@@ -428,7 +433,7 @@
   위 범위가 다 사라진 뒤 아래 범위가 내려간다. 서비스 범위는 "엔진 범위의 누가 소멸자에서 부르든 살아 있는" 옛 수명(저장소가 기동 앞에 만들고 뒤에 놓던 것)을
   구조로 지킨다 — 엔진 범위로 내리려면 쓰는 쪽마다 의존을 적어야 하는데, 소멸자 · 종료 경로의 쓰임을 모두 찾을 수 없어 택하지 않았다.
   세 범위는 게임 · 에디터와 같은 `SubsystemScope`(5-8)이고 타입 해시로 찾는다. 언리얼은 범위마다(엔진 · 월드 · 게임 인스턴스) 컬렉션이 있고
-  `GetSubsystem<T>()` 가 부를 때마다 맵을 찾는 것으로 알고 있다. 여기서 전역 서비스 표(`engine::getXxx()`)는
+  `GetSubsystem<T>()` 가 부를 때마다 맵을 찾는 것으로 알고 있다. 여기서 엔진 창구(`engine::getSubsystem<T>()` 의 칸)는
   소유 · 채우기 없이 **바인딩 때 한 번 찾아 둔 조회 캐시**로 남는다 — 캐스트마다 타입 레지스트리를 묻는 자리가 이름 조회를 하지 않게. 필수 행이 비면 호스트가
   서지 않는다(옛 `CheckEngineServiceBinding` 게이트를 대신한다). 서브시스템이 아닌 행(값 묶음 · 소유한 서브시스템 안의 객체)은 호스트가 그 객체를
   범위에 `bind` 한다. 테스트는 하네스 범위를 부모로 둔 범위에 같은 타입을 넣어 서비스를 갈아 끼운다(`test::ScopedEngineServiceOverride`).
@@ -437,6 +442,14 @@
   (`engine::bindModuleServices` — 게임 모듈에는 `GameVisible` 행만, 에디터에는 모듈 컴파일러까지), 모듈은 자기 범위 다음에 그 범위에서 찾는다.
   서비스 id 열거형 · id 배열 표(`ModuleServiceTable`) · 호스트 서비스 목록은 지웠다 — 찾는 열쇠는 범위와 같은 타입 해시 하나다. 엔진 루프 ·
   부트스트랩 · 헤드리스 헤더는 호스트만 include 한다(`CheckEngineLayers` 가 Games · GameFramework · Editor 에서 막는다).
+- **서비스 접근은 소유 수명마다 한 창구, 한 어휘다 — `getSubsystem<T>()`(반드시 있음, `T&`) · `findSubsystem<T>()`(없을 수 있음, `T*`)**(2026-10-15, C-28 마감).
+  엔진은 `engine::`, 씬은 `GameObjectManager::`, 게임은 `game::`(게임 범위 → 호스트), 에디터는 `editor::`(에디터 범위 → 호스트)이고 소유 객체(`EditorContext` · `GameInstanceBase`)의 멤버도 같은 두 이름이다.
+  이름 붙은 엔진 접근자 서른 개(`engine::getTypeRegistry()` …) · `getBoundEngineServices` · `getService<T>` · `getSceneService<T>` · `isServiceBound<T>` 는 지웠다(별칭 없음).
+  언리얼이 범위 객체마다 `GetSubsystem<T>()` 를 두는 것과 같은 모양으로 알고 있고, 유니티 서비스 로케이터 · Godot `Engine::get_singleton( "이름" )` 의 이름 조회는 철자 오류가 실행 때에야 드러나 택하지 않았다.
+  우리 쪽 확장 셋: ① 엔진 칸은 바인딩 때 한 번 찾고 템플릿이 칸 색인을 컴파일 때 고른다 — 목록 밖 타입이나 빌 수 있는 행(`SW_ENGINE_SERVICE_OPT`)에 `getSubsystem` 을 쓰면 `static_assert` 다.
+  ② `CheckServiceAccess` 가 옛 창구와 새 `static getInstance()` 를 막는다(상태 없는 코덱 · 드라이버 · 링크 때 등록 표만 예외 표에 이유와 함께). ③ 목은 범위로 넣는다
+  (`test::ScopedEngineServiceOverride` · `game::ScopedGameScope` · `editor::ScopedEditorScope`). 호스트가 게임 서비스를 묶지 않은 실행(쿠커 · 테스트 하네스)에서 게임 창구는 엔진 범위를 본다
+  (`Engine/Common/EngineScope.h` — 게임 모듈을 돌리지 않으니 가릴 것이 없다). GameFramework 의 표 읽기가 타입 레지스트리를 이 창구로 찾는다.
 - **스레드는 `sw::thread`, 백그라운드 잡의 상태는 한 번에 읽는다**(C-24). `Source/` 에서 `std::thread` 를 직접 만들면 `CheckStdThread` 가 막는다
   (예외: 래퍼 자신 · 크래시 재현 테스트). `sw::thread` 는 합류 대기를 잠금 관찰자에 알려 `join` 순환을 교착 검출기가 보게 하고, 로더 락 안의
   `join`(`DllMain` · 모듈 정적 소멸자)은 멈추는 대신 단언한다. `Test/` 의 쓰고 버리는 스레드는 대상이 아니다. 에디터 백그라운드 잡의
@@ -445,8 +458,8 @@
   반환값으로 정하고, `isPending` 은 화면 표시용이다. 풀을 가리키는 핸들(`TaskHandle` · `TaskStageHandle`)의 수명 순서는 세대가 아니라
   참조 계수로 닫혀 있다 — 매니저가 사라질 때 남은 핸들이 풀을 이어받고(`TaskNodePool::detachOwner`) 마지막 핸들이 풀을 소멸시킨다.
 - **엔진 루프 클래스는 `Engine` 이고 서비스 네임스페이스 `engine` 은 그대로 둔다**(2026-10-15, 정리 ⑥). 둘은 대소문자만 다르지만 C++ 에서 클래스(`sw::Engine`)와
-  네임스페이스(`sw::engine`)는 다른 이름이고, 이 저장소의 규칙(타입은 PascalCase · 네임스페이스는 소문자, 예 `editor`)이 그대로 구분한다. 네임스페이스를 바꾸지 않는 까닭: `engine::getXxx` 호출이 929 줄이고
-  C-28 이 그것을 주입으로 줄이는 중이라 이름만 바꾸는 큰 변경은 얻을 것이 적다. 클래스를 `EngineLoop` 로 두지 않는 까닭: 이 객체는 루프만이 아니라 부트스트랩 · 서비스 · 엔진 세 범위와 프레임 관찰자 ·
+  네임스페이스(`sw::engine`)는 다른 이름이고, 이 저장소의 규칙(타입은 PascalCase · 네임스페이스는 소문자, 예 `editor`)이 그대로 구분한다. 네임스페이스를 바꾸지 않는 까닭: `engine::` 가 엔진 범위 창구(`engine::getSubsystem<T>()`)의
+  수명 이름이라(`game::` · `editor::` 와 짝) 이름만 바꾸는 큰 변경은 얻을 것이 적다. 클래스를 `EngineLoop` 로 두지 않는 까닭: 이 객체는 루프만이 아니라 부트스트랩 · 서비스 · 엔진 세 범위와 프레임 관찰자 ·
   종료 코드를 소유하는 엔진 호스트의 본체다. 언리얼의 `UEngine`(`GEngine`)도 틱 루프와 서브시스템 범위를 함께 가진 한 객체로 알고 있다(기억에 의존). 로컬 변수 `engine` 은 네임스페이스를 가리지 않는다 —
   한정 이름 조회(`engine::`)는 타입과 네임스페이스만 본다. 별칭 · 옛 이름은 두지 않는다(파일 `EngineLoop.h` · `.cpp` → `Engine.h` · `.cpp`, 멤버 `_engineLoop` → `_engine`).
 - **호스트 범위가 엔진 범위의 부모다 — 엔진 앞에 서서 뒤에 사라지고, 호스트가 엔진에 내주는 것을 든다**(2026-10-15, 정리 ⑥). App · ServerApp 이 `SubsystemScope _host` 를 `_engine` 보다 앞에 두고
@@ -722,7 +735,7 @@
 
 - **확장 모듈(에디터 플러그인)은 등록 줄 `SW_EDITOR_SUBSYSTEM` 으로 에디터 서브시스템을 기여한다 — 함수 정적 싱글턴을 두지 않는다**(2026-10-14, `EditorExtensionSubsystems`).
   언리얼에서 플러그인의 `UEditorSubsystem` 파생을 에디터가 찾아 만드는 것과 같은 자리다. 확장은 에디터가 뜬 뒤에도 로드 · 언로드되므로 내장 서브시스템과 따로 두고,
-  패널과 같은 장치(등록 목록 세대 · 모듈 언로드 직전 `releaseSubsystemsWithin`)로 만들고 내린다. 찾는 쪽은 `editor::getService<T>()`(`AdminToolSession` · `ParkLayoutPreview`).
+  패널과 같은 장치(등록 목록 세대 · 모듈 언로드 직전 `releaseSubsystemsWithin`)로 만들고 내린다. 찾는 쪽은 `editor::findSubsystem<T>()`(`AdminToolSession` · `ParkLayoutPreview`).
   등록 줄은 UI 쪽 .cpp 에 둘 수 있다 — 세션 .cpp 를 에디터 없이 컴파일하는 테스트(EngineTest)가 있다.
 - **렌더러 안(FrameRenderer 의 PSO 캐시 · 트랜지언트 풀 · 리드백 · 캔버스)도 서브시스템으로 만들지 않는다**(2026-10-14) — RHI 안(5-5)과 같은 이유다: 핫 패스의 타입 있는 멤버이고
   언리얼 렌더러도 명시 소유다. 모듈이 렌더 패스를 등록하는 창구(`G-1`)는 쓰는 모듈이 생길 때 만든다 — 지금 쓰는 모듈이 없고, 내보낼 것이 `FramePassContext` ·
@@ -742,7 +755,7 @@
   상용 엔진도 에디터 하위 시스템을 전역 창구로 줍니다(언리얼 `GEditor->GetEditorSubsystem<T>()`, 유니티 `Selection.activeObject` · `EditorWindow.GetWindow<T>()`).
   EditorTest 는 UI 매니저 때문에 `EditorContext` 를 만들 수 없으므로 컨텍스트를 인자로 바꿔도 테스트가 늘지 않습니다. 테스트할 판단이 생기면 그 함수만 필요한 서비스 하나(작업 공간, 선택)를 인자로 받습니다.
   `get()` 은 지금 에디터 범위의 주인을 돌려줍니다(범위의 첫 칸 — 프레임당 57 회 호출에 비교 한 번).
-  `editor::getService<T>()` 는 에디터 범위(컨텍스트의 하위 객체)를 먼저 보고 없으면 호스트(엔진) 표를 봅니다. 언리얼이 `GEditor` 서브시스템과 `GEngine` 서브시스템을 범위로 가르는 것과 같은 순서입니다.
+  `editor::findSubsystem<T>()` 는 에디터 범위(컨텍스트의 하위 객체)를 먼저 보고 없으면 호스트(엔진) 표를 봅니다. 언리얼이 `GEditor` 서브시스템과 `GEngine` 서브시스템을 범위로 가르는 것과 같은 순서입니다.
 - **임포터(`Editor/Common/Asset`)를 라이브러리로 떼지 않습니다**(2026-10-11). 명령 줄 임포트(`App --import-*` · `--check-*`)는 App 이 에디터 모듈을 인스턴스 없이 로드해 C-ABI 진입점 `importEditorAssets` 를 부르고,
   쿠킹은 임포트 산출물만 읽으며, 전용 서버와 Shipping 은 임포트하지 않습니다. 상용 엔진도 에디터 바이너리를 머리 없이 돌립니다(언리얼 커맨드릿, 유니티 `-batchmode`, Godot `--headless --import`).
   `Common/Asset` 은 이미 ImGui 를 모르는 층 1 이라, 에디터 없는 빌드 팜이나 쿠킹 서버에서 임포트할 일이 생기면 그때 정적 라이브러리로 묶는 비용이 작습니다.

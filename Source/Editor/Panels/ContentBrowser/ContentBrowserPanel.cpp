@@ -10,9 +10,9 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Editor/Common/Commands/EditorAssetCommands.h"
-#include "Editor/Common/Commands/EditorAssetFileCommands.h"
-#include "Editor/Common/Commands/EditorFolderListing.h"
+#include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
+#include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
+#include "Editor/Common/Commands/Asset/EditorFolderListing.h"
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"

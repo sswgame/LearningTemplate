@@ -185,22 +185,13 @@
     먼저 판정한다 — 적지 않은 값의 의미가 필요한가(부모 상속, "없음" 과 "0" 구분)? 그렇다면 옮기지 않는다(기준은 [결정 기록](09_Decisions.md) 5-4). 옮긴다면 구조체에 `REFLECT` · `PROPERTY`,
     `ConfigManager::readConfigJSON` 으로 읽기(모르는 키 · 읽지 못한 값 · 범위는 거기서 오류), 의미 검사만 직접. 데이터 파일은 키를 `_이름` 규약으로 다시 쓰고(옛 이름 별칭 없음) 설정 카탈로그를 `typeName` 방식으로 바꿔 문서를 생성한다.
     검증: 그 로더의 기존 테스트, `ResourceDataSchemaTest`, 설정 · 리소스 스키마 게이트.
-  - **`getBoundEngineServices()` 직접 읽기**: `SceneEngineServices` 주입(S10)과 같은 패턴이 범위 밖에 남았다 — `WidgetComponent`(`UISystem` 조회만 남음) · `UISystem` · `FontService`,
-    `SceneCooker` · `SceneNavigationCooker` · `PortraitRenderer` 의 인자 없는 `Scene` 생성.
+  - **씬 · UI 쪽의 엔진 창구 직접 읽기**: `SceneEngineServices` 주입(S10)과 같은 패턴이 범위 밖에 남았다 — `WidgetComponent`(`engine::findSubsystem<UISystem>()`) · `UISystem` · `FontService`,
+    `SceneCooker` · `SceneNavigationCooker` · `PortraitRenderer` 의 인자 없는 `Scene` 생성. 서비스 클래스가 초기화 때 의존 서브시스템 포인터를 멤버로 받는 것(언리얼 `InitializeDependency`)은 고칠 때 함께 한다.
 
 - `C-22` **작은 정리 후보(2026-10-13 병합 검토에서 모음).** `IPhysicsScene3D/2D` 전방 선언용 `*Fwd.h`, Core → Log 예외 다섯 파일(티어마다 필요한 것이 달라 함수 포인터 하나로 풀리지 않는다), 프렐류드 예외 제거(184 파일).
 
 - `C-25` **게임 여럿을 빌드 한 번에 짓고, 실행할 때 고르고, 키트는 필요한 것만**(2026-10-13, 사용자 확정). 결정은 [결정 기록](09_Decisions.md) 5-2, 쓰는 법은 `Source/Games/README.md`.
   남은 것: 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸다(DX12 직접 실행으로 10 시나리오 통과만 확인).
-- `C-28` **전역 서비스 접근자(`engine::getXxx`) 호출 줄이기**(2026-10-14, 사용자 승인 — 서브시스템 정리의 남은 단계 뒤). 지금: 소유는 범위(`SubsystemScope`)이고,
-  `EngineServices` 는 바인딩 때 `locateSubsystem` 으로 한 번 찾아 둔 비소유 조회 캐시다. 서비스를 더하려면 서브시스템으로 만들어 범위에 넣고 `EngineServiceList.xxx` 에
-  한 줄을 더한다(이 결정은 유지 — 언리얼 `GEngine->GetEngineSubsystem<T>()` 은 부를 때마다 맵을 찾는 것으로 알고 있고, 우리는 바인딩 때 한 번 찾는다).
-  남은 문제: `engine::getXxx` 호출이 약 826 줄 · 209 파일(`getTypeRegistry` 273 · `getTaskManager` 77 · `getAssetManager` 67 · `getGlobalVariableManager` 42 ·
-  `getSceneManager` 37 · `getFrameProfiler` 35 …)이라 엔진 깊은 곳이 전역 접근자에 기댄다. 방향: 컴포넌트 · 씬 쪽은 `SceneEngineServices` 주입을 유지 · 확대하고,
-  서비스 클래스는 만들 때나 초기화 때 의존 서브시스템 포인터를 멤버로 받는다(언리얼 서브시스템이 `InitializeDependency` 로 얻은 포인터를 멤버로 들고 쓰는 것에 대응).
-  가장 많은 `getTypeRegistry` 는 쓰임새(캐스트 · `TypeInfo` 조회)를 보고 `TypeLookupCache` 같은 기존 구조로 풀지 판단한다.
-  단계: ① 호출 분류(핫 패스 · 초기화 경로 · 테스트) ② 가장 많은 접근자부터 주입으로 ③ 호출이 0 이 된 행은 목록에서 getter 를 지운다. 성능 영향은 측정한다
-  (주입은 간접 단계가 같거나 적다). 규모가 커 한 번에 하지 않고 접근자 단위로 커밋한다.
 
 ## D. 기능 로드맵
 

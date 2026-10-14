@@ -280,7 +280,7 @@ namespace sw
         if ( _kind == ActionRoomKind::None )
             return;
 
-        DebugDrawQueue* pDbg = game::getService<DebugDrawQueue>();
+        DebugDrawQueue* pDbg = game::findSubsystem<DebugDrawQueue>();
         if ( pDbg == nullptr )
             return;
 
@@ -335,7 +335,7 @@ namespace sw
 
         // 게임이 등록한 카탈로그가 먼저다. 등록된 카탈로그에 없는 id 는 경고한다. 데이터 오타가 내장 수치로 조용히 바뀌면 "고쳤는데 그대로"라는 증상의 원인을 찾을 수 없다.
         MonsterDef            def;
-        const MonsterCatalog* pCatalog = game::getService<MonsterCatalog>();
+        const MonsterCatalog* pCatalog = game::findSubsystem<MonsterCatalog>();
         const MonsterDef*     pFound   = ( pCatalog != nullptr ) ? pCatalog->findMonster( monsterID ) : nullptr;
         if ( pFound != nullptr )
         {

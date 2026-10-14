@@ -8,8 +8,8 @@
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ObjectStateSerializer.h"
-#include "Engine/Object/GameObject/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectionCast.h"
 
 namespace sw

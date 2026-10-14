@@ -12,9 +12,9 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Base/WidgetTree.h"
@@ -42,7 +42,7 @@ namespace sw
             /** @brief 지금 UI 시스템입니다(서버처럼 없거나 시작 전이면 nullptr). */
             static UISystem* findUISystem()
             {
-                UISystem* pUI = engine::getBoundEngineServices()._pUISystem;
+                UISystem* pUI = engine::findSubsystem<UISystem>();
                 return pUI != nullptr && pUI->isInitialized() ? pUI : nullptr;
             }
         };

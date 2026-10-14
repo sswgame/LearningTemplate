@@ -8,7 +8,7 @@
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
-#include "Engine/Renderer/Frame/RenderView.h"
+#include "Engine/Renderer/Frame/View/RenderView.h"
 
 namespace sw::editor
 {

@@ -18,7 +18,7 @@ namespace sw
     {
         _jobs.Init( maxJobCount, maxJobCount );
         if ( engine::areEngineServicesBound() )
-            _maxConcurrency = engine::getTaskManager().getWorkerCount() + 1;
+            _maxConcurrency = engine::getSubsystem<TaskManager>().getWorkerCount() + 1;
     }
 
     JoltJobSystem::~JoltJobSystem()
@@ -74,7 +74,7 @@ namespace sw
             return;
         }
         _pendingTaskCount.fetch_add( 1, std::memory_order_acq_rel );
-        TaskManager& taskManager = engine::getTaskManager();
+        TaskManager& taskManager = engine::getSubsystem<TaskManager>();
         TaskHandle   handle      = taskManager.emplaceTask( "JoltJob", SW_DELEGATE_METHOD( TaskDelegate, &JoltJobSystem::runQueuedJob, this ) );
         if ( handle.isValid() == false )
         {

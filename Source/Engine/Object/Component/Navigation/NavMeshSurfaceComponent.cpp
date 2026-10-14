@@ -18,12 +18,12 @@ namespace sw
     void NavMeshSurfaceComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        manager.getSceneService<SceneNavigation>().registerSurface( this );
+        manager.getSubsystem<SceneNavigation>().registerSurface( this );
     }
 
     void NavMeshSurfaceComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getSceneService<SceneNavigation>().unregisterSurface( this );
+        manager.getSubsystem<SceneNavigation>().unregisterSurface( this );
         Component::onUnregister( manager );
     }
 

@@ -149,7 +149,7 @@ namespace sw
         // (SM5.0 은 리소스 배열 동적 인덱싱이 없고, GL 은 SPIR-V 라 ARB_bindless_texture 를 못 쓴다) 엔진이
         // 머티리얼 텍스처를 t5..t8 고정 슬롯에 바인딩하고 CB 에는 **서수**를 넣는다.
         const bool    bNativeBindless = pRHI->supportsNativeBindlessSampling();
-        TextureCache& textures        = engine::getAssetManager().getAssetCache<TextureCache>();
+        TextureCache& textures        = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
         _textureReloadGeneration      = textures.getReloadGeneration();
         for ( const MaterialProperty& prop : _data._listProperty )
         {
@@ -169,7 +169,7 @@ namespace sw
             Texture2D* pTexture     = textures.acquire( borrowedPath, pRHI );
             if ( pTexture == nullptr )
             {
-                borrowedPath = engine::getEngineDefaultAssets()._missingTexture;
+                borrowedPath = engine::getSubsystem<EngineDefaultAssets>()._missingTexture;
                 pTexture     = borrowedPath.empty() ? nullptr : textures.acquire( borrowedPath, pRHI );
                 if ( pTexture == nullptr )
                 {
@@ -203,7 +203,7 @@ namespace sw
         const bool bTextureRefreshUnavailable = _listAcquiredTexturePath.empty() || _pRHIDevice == nullptr || engine::areEngineServicesBound() == false;
         if ( bTextureRefreshUnavailable )
             return false;
-        TextureCache& textures   = engine::getAssetManager().getAssetCache<TextureCache>();
+        TextureCache& textures   = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
         const uint32  generation = textures.getReloadGeneration();
         if ( generation == _textureReloadGeneration )
             return false;
@@ -251,7 +251,7 @@ namespace sw
             return;
         if ( engine::areEngineServicesBound() )
         {
-            TextureCache& textures = engine::getAssetManager().getAssetCache<TextureCache>();
+            TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
             for ( const string& path : _listBorrowedTexturePath )
             {
                 textures.release( path, pRHI );

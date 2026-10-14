@@ -48,7 +48,7 @@ namespace sw
             static IAudioService* findAudioService( const AnimationNotifyContext& context )
             {
                 GameObjectManager* pManager = context._owner.getManager();
-                return pManager != nullptr ? pManager->getSceneService<sw::SceneAudio>().findAudioService() : nullptr;
+                return pManager != nullptr ? pManager->getSubsystem<sw::SceneAudio>().findAudioService() : nullptr;
             }
 
             /** @class PlaySoundHandler @brief 소켓 위치에서 소리를 냅니다(현재 오디오는 위치를 받지 않으므로, 위치는 기록에만 남깁니다). */

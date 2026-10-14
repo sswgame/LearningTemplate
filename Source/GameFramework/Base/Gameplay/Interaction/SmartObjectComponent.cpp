@@ -5,9 +5,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
 namespace sw
 {

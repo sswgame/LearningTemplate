@@ -143,12 +143,12 @@ namespace sw
 
     void OrthoCameraRigComponent::applyInput( float32 deltaTime )
     {
-        const InputManager* pInput = game::getService<InputManager>();
+        const InputManager* pInput = game::findSubsystem<InputManager>();
         if ( pInput == nullptr )
             return;
         // 장치는 입력 맵이 정한다(게임의 `Camera.Pan` · `Camera.Rotate` · `Camera.Zoom` — 맵에 없으면 움직이지 않는다).
         // 메뉴가 먹은 입력(왼쪽 스틱으로 메뉴를 옮기는 동안)과 모달 아래의 입력은 리그가 보지 않는다.
-        const UIInputMapView inputMap( pInput->getInputMap(), game::getService<UISystem>() );
+        const UIInputMapView inputMap( pInput->getInputMap(), game::findSubsystem<UISystem>() );
         const float2         panInput     = inputMap.getVector2D( _panAction );
         const float32        forwardInput = panInput._y;
         const float32        rightInput   = panInput._x;

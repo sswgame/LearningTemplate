@@ -10,10 +10,10 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Editor/Common/Commands/EditorDataTableCommands.h"
-#include "Editor/Common/Commands/EditorFolderListing.h"
-#include "Editor/Common/Commands/EditorReferenceIndex.h"
-#include "Editor/Common/Commands/EditorResourceIndex.h"
+#include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
+#include "Editor/Common/Commands/Asset/EditorFolderListing.h"
+#include "Editor/Common/Commands/Asset/EditorReferenceIndex.h"
+#include "Editor/Common/Commands/Asset/EditorResourceIndex.h"
 #include "Editor/Common/EditorBackgroundTask.h"
 
 namespace sw

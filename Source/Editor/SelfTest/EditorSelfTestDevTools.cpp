@@ -10,7 +10,7 @@
 #include "Core/String/TagID.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
-#include "Editor/Common/Commands/EditorSceneCommands.h"
+#include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/GUI/EditorDockLayout.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
@@ -116,7 +116,7 @@ namespace sw::editor
             {
                 if ( openSceneView( context ) == nullptr )
                     return EditorSelfTestStep::Done;
-                DebugDrawQueue* pQueue = getService<DebugDrawQueue>();
+                DebugDrawQueue* pQueue = findSubsystem<DebugDrawQueue>();
                 if ( context.expect( pQueue != nullptr, "no DebugDrawQueue service" ) == false )
                     return EditorSelfTestStep::Done;
 

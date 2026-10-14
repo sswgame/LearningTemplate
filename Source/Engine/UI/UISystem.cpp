@@ -179,7 +179,7 @@ namespace sw
     SubsystemInitResult UISystem::initializeSubsystem()
     {
         // UI 배율 규칙 — 게임 프리셋이 팩 상대 경로로 덮어쓰면 그것, 아니면 엔진 기본(engine/ui/uiscale.xml). 모르는 키는 기동 오류다.
-        const EngineDefaultAssets& defaultAssets = engine::getEngineDefaultAssets();
+        const EngineDefaultAssets& defaultAssets = engine::getSubsystem<EngineDefaultAssets>();
         const GameConfig&          gameConfig    = GameConfig::getActive();
         const string               packRoot      = FileUtil::trimTrailingSlashes( gameConfig._packRoot );
         const string               scalePath     = gameConfig._uiScaleSettings.empty() ? string( defaultAssets._uiScaleSettings ) : FileUtil::joinPath( packRoot, gameConfig._uiScaleSettings );
@@ -188,10 +188,10 @@ namespace sw
             return SubsystemInitResult::Failed;
         setScaleSettings( scaleSettings );
         // UI 행동 맵(탐색 · 확인 · 뒤로)을 못 읽으면 메뉴를 패드로 다룰 수 없다 — 데이터 오류라 기동 실패다.
-        if ( initialize( engine::getInputManager(), &engine::getFontService(), defaultAssets._uiInputMap ) == false )
+        if ( initialize( engine::getSubsystem<InputManager>(), &engine::getSubsystem<FontService>(), defaultAssets._uiInputMap ) == false )
             return SubsystemInitResult::Failed;
         // UI 문서 · 스타일 시트 캐시를 에셋 캐시 레지스트리에 올린다 — 핫 리로드 · 종료 · 진단이 다른 에셋과 같은 길로 간다.
-        AssetManager& assetManager = engine::getAssetManager();
+        AssetManager& assetManager = engine::getSubsystem<AssetManager>();
         assetManager.registerAssetCache( &_documentCache );
         assetManager.registerAssetCache( &_styleSheetCache );
         // 테마 목록 — 게임 프리셋이 덮어쓰면 그것, 아니면 엔진 기본. 모르는 키는 기동 오류다(배율 규칙과 같다).
@@ -206,7 +206,7 @@ namespace sw
             setPauseMenuDocument( gameConfig._uiPauseMenu.empty() ? string( defaultAssets._uiPauseMenu ) : FileUtil::joinPath( packRoot, gameConfig._uiPauseMenu ) );
 #if SW_DEV_COMMANDS_ENABLED
         _debugHUD = make_unique<DebugHUD>();
-        _debugHUD->initialize( *this, &engine::getUserSettingsManager() );
+        _debugHUD->initialize( *this, &engine::getSubsystem<UserSettingsManager>() );
 #endif
         return SubsystemInitResult::Succeeded;
     }
@@ -218,7 +218,7 @@ namespace sw
             _debugHUD->shutdown();
         _debugHUD.reset();
 #endif
-        AssetManager& assetManager = engine::getAssetManager();
+        AssetManager& assetManager = engine::getSubsystem<AssetManager>();
         assetManager.unregisterAssetCache( &_styleSheetCache );
         assetManager.unregisterAssetCache( &_documentCache );
         shutdown();
@@ -809,7 +809,7 @@ namespace sw
 
     const LocalizationManager* UISystem::findLocalization() const
     {
-        return _pLocalization != nullptr ? _pLocalization : engine::getBoundEngineServices()._pLocalizationManager;
+        return _pLocalization != nullptr ? _pLocalization : engine::findSubsystem<LocalizationManager>();
     }
 
     void UISystem::refreshInputGlyphs()
@@ -940,7 +940,7 @@ namespace sw
         context._pTextLayout   = _textLayout.get();
         context._uiScale       = _viewport._uiScale > 0.0f ? _viewport._uiScale : 1.0f;
         context._textScale     = gv_uiTextScale > 0.0f ? static_cast<float32>( gv_uiTextScale ) : 1.0f;
-        context._frameIndex    = engine::getFrameProfiler().getFrameCount();
+        context._frameIndex    = engine::getSubsystem<FrameProfiler>().getFrameCount();
         context._pLocalization = findLocalization();
         context._textRevision  = context._pLocalization != nullptr ? context._pLocalization->getTextRevision() : 0;
         context._pActionGlyphs = &_actionGlyphs;
@@ -1060,7 +1060,7 @@ namespace sw
 
     UserSettingsManager* UISystem::findUserSettings() const
     {
-        return _pUserSettings != nullptr ? _pUserSettings : engine::getBoundEngineServices()._pUserSettingsManager;
+        return _pUserSettings != nullptr ? _pUserSettings : engine::findSubsystem<UserSettingsManager>();
     }
 
     void UISystem::paintScreens()

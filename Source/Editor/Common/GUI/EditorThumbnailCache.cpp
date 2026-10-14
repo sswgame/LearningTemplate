@@ -22,7 +22,7 @@ namespace sw::editor
         {
             static TextureCache* findTextureCache()
             {
-                AssetManager* pAssets = editor::getService<AssetManager>();
+                AssetManager* pAssets = editor::findSubsystem<AssetManager>();
                 return pAssets != nullptr ? &pAssets->getAssetCache<TextureCache>() : nullptr;
             }
 

@@ -548,7 +548,7 @@ namespace sw
         // Present 의 300 us 가 어디로 가는지 측정하려고 닫기 · 제출 / DXGI Present / 펜스 신호 · 다음 이미지로 나눠 측정한다.
         {
             SW_PROFILE_SCOPE( "RT.Present.submit" );
-            static const uint32 s_slotSubmitListCount = engine::getFrameProfiler().registerScope( "RT.Present.submit.listCount" );
+            static const uint32 s_slotSubmitListCount = engine::getSubsystem<FrameProfiler>().registerScope( "RT.Present.submit.listCount" );
             if ( _frameStreamState._bRecording != SW_FALSE && _pActiveFrameList != nullptr )
             {
                 SW_PROFILE_SCOPE( "RT.Present.submit.close" );
@@ -581,7 +581,7 @@ namespace sw
                 if ( _listPendingSubmit.empty() == false && _commandQueue != nullptr )
                 {
                     SW_PROFILE_SCOPE( "RT.Present.submit.execute" );
-                    engine::getFrameProfiler().addCount( s_slotSubmitListCount, _listPendingSubmit.size() );
+                    engine::getSubsystem<FrameProfiler>().addCount( s_slotSubmitListCount, _listPendingSubmit.size() );
                     _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ),
                                                         _listPendingSubmit.data() );
                 }

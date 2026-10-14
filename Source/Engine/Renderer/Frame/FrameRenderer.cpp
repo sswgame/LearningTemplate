@@ -19,8 +19,8 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Renderer/Frame/RenderFramePacket.h"
-#include "Engine/Renderer/Frame/RenderViewCollector.h"
+#include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
+#include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAssetCache.h"
 #include "Engine/Resource/AssetManager.h"
 
@@ -154,11 +154,11 @@ namespace sw
         if ( pTaskManager != nullptr )
             bindServices( pTaskManager );
         else if ( engine::areEngineServicesBound() )
-            bindServices( &engine::getTaskManager() );
+            bindServices( &engine::getSubsystem<TaskManager>() );
         // 패스별 GPU 시간을 보고할 프로파일러다. 서비스가 없는 실행(서비스 없이 렌더러만 쓰는 도구)은 계측하지 않는다.
         // 미리보기 씬 렌더러는 계측하지 않는다(타임스탬프 슬롯 · `GPU.<패스>` 구간이 주 렌더러의 것이다).
         const bool bProfile = engine::areEngineServicesBound() && _bScenePreview == SW_FALSE;
-        _gpuPassTimeline.bindProfiler( bProfile ? &engine::getFrameProfiler() : nullptr );
+        _gpuPassTimeline.bindProfiler( bProfile ? &engine::getSubsystem<FrameProfiler>() : nullptr );
 
         _renderPipelineAssetCache = make_unique<RenderPipelineAssetCache>();
         if ( _renderPipelineAssetCache->initialize() == false )
@@ -177,7 +177,7 @@ namespace sw
         // 동기 경로(execute)는 렌더러 자신의 빌더가 배치를 만든다. 패킷 경로의 빌더(Engine)에는 Engine 가 같은 값을 준다.
         _sceneBuilder.setMergeBatchesAcrossMaterials( pDevice->supportsNativeBindlessSampling() );
 
-        const EngineDefaultAssets& engineDefaultAssets = engine::getEngineDefaultAssets();
+        const EngineDefaultAssets& engineDefaultAssets = engine::getSubsystem<EngineDefaultAssets>();
         RenderPipelineAssetCache&  rpm                 = *_renderPipelineAssetCache;
         if ( rpm.findRenderPass( hashed_string( FrameRendererUtil::kDefaultMainPassName ) ) == nullptr )
             rpm.loadRenderPass( engineDefaultAssets._defaultRenderPass );
@@ -587,7 +587,7 @@ namespace sw
         if ( engine::areEngineServicesBound() )
         {
             SW_PROFILE_SCOPE( "RT.TextureRegionUpdates" );
-            (void)engine::getAssetManager().getAssetCache<TextureCache>().flushRegionUpdates( pDevice );
+            (void)engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().flushRegionUpdates( pDevice );
         }
 
         _pDevice            = pDevice;

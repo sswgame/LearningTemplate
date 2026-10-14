@@ -19,9 +19,9 @@ SW_TEST_CASE( ReflectionDocWriterTest, WritesModulePagesAndIndexDeterministicall
 {
     const sw::string firstDir  = test::makeTempPath( "docs_first" );
     const sw::string secondDir = test::makeTempPath( "docs_second" );
-    const uint32     fileCount = sw::ReflectionDocWriter::writeMarkdown( sw::engine::getTypeRegistry(), firstDir );
+    const uint32     fileCount = sw::ReflectionDocWriter::writeMarkdown( sw::engine::getSubsystem<sw::TypeRegistry>(), firstDir );
     SW_ASSERT_TRUE( fileCount >= 2 );
-    SW_EXPECT_EQUAL( fileCount, sw::ReflectionDocWriter::writeMarkdown( sw::engine::getTypeRegistry(), secondDir ) );
+    SW_EXPECT_EQUAL( fileCount, sw::ReflectionDocWriter::writeMarkdown( sw::engine::getSubsystem<sw::TypeRegistry>(), secondDir ) );
 
     sw::string index;
     SW_ASSERT_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( firstDir, "index.md" ), index ) );

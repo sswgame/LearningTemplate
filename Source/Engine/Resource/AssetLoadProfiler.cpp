@@ -114,7 +114,7 @@ namespace sw
                     if ( bFrameProfiler )
                     {
                         const string name             = string( "Asset." ) + record._kind.c_str() + "." + AssetLoadProfilerInternal::kArrPhaseName[phase];
-                        entry._arrProfilerSlot[phase] = engine::getFrameProfiler().registerScope( name.c_str() );
+                        entry._arrProfilerSlot[phase] = engine::getSubsystem<FrameProfiler>().registerScope( name.c_str() );
                     }
                 }
                 _listKind.push_back( entry );
@@ -147,7 +147,7 @@ namespace sw
         }
         if ( bFrameProfiler == false )
             return;
-        FrameProfiler& profiler = engine::getFrameProfiler();
+        FrameProfiler& profiler = engine::getSubsystem<FrameProfiler>();
         for ( uint32 phase = 0; phase < static_cast<uint32>( AssetLoadPhase::Count ); ++phase )
         {
             if ( record._arrPhaseNanos[phase] != 0 && arrSlot[phase] != FrameProfiler::kInvalidSlot )
@@ -249,7 +249,7 @@ namespace sw
             return;
         _record._kind       = hashed_string( pKind );
         _record._path       = string( path );
-        const bool bWorker  = engine::areEngineServicesBound() && engine::getTaskManager().isMainThread() == false;
+        const bool bWorker  = engine::areEngineServicesBound() && engine::getSubsystem<TaskManager>().isMainThread() == false;
         _record._bAsync     = ( bAsync || bWorker ) ? SW_TRUE : SW_FALSE;
         _record._bSucceeded = SW_FALSE;
         _phaseStartNanos    = MonotonicClock::nowNanoseconds();

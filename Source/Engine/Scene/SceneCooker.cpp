@@ -11,7 +11,7 @@
 #include "Engine/Object/Component/MissingComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Scene/Scene.h"
@@ -94,7 +94,7 @@ namespace sw
              */
             static bool usesUnregisteredComponentTypes( const SceneDocument& doc )
             {
-                const TypeRegistry& registry = engine::getTypeRegistry();
+                const TypeRegistry& registry = engine::getSubsystem<TypeRegistry>();
                 for ( const SceneDocument::SceneObjectNode& entity : doc._listSceneObjectNode )
                 {
                     XMLDocument xml;
@@ -227,7 +227,7 @@ namespace sw
         }
 
         // 쿠킹하는 것은 씬을 짓는 일이다 — 모든 타입 공급자가 등록을 끝낸 뒤(기동 단계 `ModuleTypes`)라야 컴포넌트가 제 타입으로 지어진다.
-        if ( engine::getTypeRegistry().areAllModuleTypesRegistered() == false )
+        if ( engine::getSubsystem<TypeRegistry>().areAllModuleTypesRegistered() == false )
         {
             SW_LOG_ERROR( "Scene cook ran before every module registered its types - nothing is cooked (cook after the ModuleTypes startup step)" );
             ++outFailedCount;

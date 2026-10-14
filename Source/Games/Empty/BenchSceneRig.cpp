@@ -133,7 +133,7 @@ namespace sw
 
     void BenchScene::spawnRigCharacters( uint32 characterCount )
     {
-        SceneManager* pSceneManager = game::getService<SceneManager>();
+        SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
         Scene*        pScene        = ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
         if ( pScene == nullptr && pSceneManager != nullptr )
             pScene = pSceneManager->createEmptyActiveScene( "BenchScene" );
@@ -301,7 +301,7 @@ namespace sw
         (void)deltaTime;
         if ( _listRigBody.empty() )
             return;
-        SceneManager*      pSceneManager = game::getService<SceneManager>();
+        SceneManager*      pSceneManager = game::findSubsystem<SceneManager>();
         Scene*             pScene        = ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
         GameObjectManager* pObjects      = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
         if ( pObjects == nullptr )

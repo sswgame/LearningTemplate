@@ -80,7 +80,7 @@ SW_TEST_CASE( NavMeshTerrainTest, TerrainComponentIsCollectedWithoutMeshes )
     SW_ASSERT_TRUE( data.saveToFile( path ) );
 
     sw::GameObjectManager manager;
-    sw::SceneNavigation&  navigation = manager.getSceneService<sw::SceneNavigation>();
+    sw::SceneNavigation&  navigation = manager.getSubsystem<sw::SceneNavigation>();
     navigation.setSettings( navtest::makeSettings() );
     sw::GameObject*       pObject  = manager.createGameObject( sw::hashed_string( "Terrain" ) );
     sw::TerrainComponent* pTerrain = pObject->addComponent<sw::TerrainComponent>();

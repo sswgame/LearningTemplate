@@ -12,9 +12,9 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
-#include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceIO.h"
 
@@ -71,7 +71,7 @@ namespace sw
             return;
         _requestedMaterialPath = path;
 
-        MaterialCache& cache     = engine::getAssetManager().getAssetCache<MaterialCache>();
+        MaterialCache& cache     = engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
         Material*      pMaterial = nullptr;
         hashed_string  borrowedPath{};
         if ( path.empty() == false )
@@ -82,7 +82,7 @@ namespace sw
             if ( pMaterial == nullptr )
             {
                 // 못 읽은 머티리얼은 마젠타 체커로 보인다 — 씬 기본(흰색)이면 화면에서 빠진 것을 알 수 없다.
-                const string& missingPath = engine::getEngineDefaultAssets()._missingMaterial;
+                const string& missingPath = engine::getSubsystem<EngineDefaultAssets>()._missingMaterial;
                 SW_LOG_WARNING( "Material '%#' could not be acquired - the mesh uses the missing-material checker '%#'", path.c_str(), missingPath.c_str() );
                 borrowedPath = missingPath.empty() ? hashed_string{} : hashed_string( missingPath.c_str() );
                 pMaterial    = borrowedPath.empty() ? nullptr : cache.acquire( borrowedPath.c_str(), nullptr );
@@ -128,7 +128,7 @@ namespace sw
         {
             _pMaterial = nullptr;
             if ( engine::areEngineServicesBound() )
-                engine::getAssetManager().getAssetCache<MaterialCache>().release( _acquiredMaterialPath.c_str() );
+                engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().release( _acquiredMaterialPath.c_str() );
             _acquiredMaterialPath = hashed_string{};
         }
         _requestedMaterialPath = hashed_string{};

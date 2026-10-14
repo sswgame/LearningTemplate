@@ -201,7 +201,7 @@ namespace sw::editor
             return false;
 
         // 에디터는 `EngineServices.h` 를 볼 수 없다(모듈 경계). 호스트가 넘겨준 서비스를 쓴다.
-        AssetManager* pResources = getService<AssetManager>();
+        AssetManager* pResources = findSubsystem<AssetManager>();
         if ( pResources == nullptr )
             return false;
         // 디바이스는 **지금 것을** 넘긴다 — 캐시가 마지막으로 본 디바이스는 백엔드 교체 뒤 사라졌을 수 있다.

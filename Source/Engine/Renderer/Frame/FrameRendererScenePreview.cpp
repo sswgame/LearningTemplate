@@ -5,7 +5,7 @@
 #include "pch.h"
 
 #include "Engine/Renderer/Frame/FrameRenderer.h"
-#include "Engine/Renderer/Frame/RenderFramePacket.h"
+#include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 
 namespace sw
 {

@@ -71,7 +71,7 @@ namespace sw
             requestReload( config::kTargetGameModule );
             SW_LOG_INFO( "%#: force SWGame reload", InputMapDefaults::kReloadGameAction );
         }
-        if ( gv_reloadGameAtFrame > 0 && engine::getFrameProfiler().getFrameCount() == static_cast<uint64>( gv_reloadGameAtFrame ) )
+        if ( gv_reloadGameAtFrame > 0 && engine::getSubsystem<FrameProfiler>().getFrameCount() == static_cast<uint64>( gv_reloadGameAtFrame ) )
         {
             SW_LOG_INFO( "[ReloadProbe] frame %# - forcing SWGame reload", gv_reloadGameAtFrame );
             gv_reloadGameAtFrame = 0; // 한 번만 실행한다. 프로파일러가 프레임 수를 되돌리면(워밍업 뒤) 같은 번호가 다시 온다.

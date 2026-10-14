@@ -199,7 +199,7 @@ namespace sw
                 const string* pName = requireAttribute( step, "name", outError );
                 if ( pName == nullptr || requireAttribute( step, "value", outError ) == nullptr )
                     return false;
-                if ( engine::areEngineServicesBound() == false || engine::getGlobalVariableManager().findVariable( *pName ) == nullptr )
+                if ( engine::areEngineServicesBound() == false || engine::getSubsystem<GlobalVariableManager>().findVariable( *pName ) == nullptr )
                 {
                     outError = step.describe() + ": unknown global variable '" + *pName + "'";
                     return false;
@@ -343,7 +343,7 @@ namespace sw
                 (void)pManager;
                 if ( engine::areEngineServicesBound() == false )
                     return false;
-                outValue = engine::getInputManager().isOsDeviceInputBlocked() ? 1.0 : 0.0;
+                outValue = engine::getSubsystem<InputManager>().isOsDeviceInputBlocked() ? 1.0 : 0.0;
                 return true;
             }
 
@@ -392,7 +392,7 @@ namespace sw
             {
                 if ( engine::areEngineServicesBound() == false )
                     return false;
-                outValue = engine::getSceneManager().isTransitioning() ? 1.0 : 0.0;
+                outValue = engine::getSubsystem<SceneManager>().isTransitioning() ? 1.0 : 0.0;
                 return true;
             }
 
@@ -533,7 +533,7 @@ namespace sw
         static bool runVariable( AutomationRunner& runner, const AutomationStep& step )
         {
             const string& name = *step.findAttribute( "name" );
-            if ( engine::getGlobalVariableManager().setValueFromString( name, *step.findAttribute( "value" ) ) == false )
+            if ( engine::getSubsystem<GlobalVariableManager>().setValueFromString( name, *step.findAttribute( "value" ) ) == false )
                 runner.recordFailure( step, "could not set " + name + " to '" + *step.findAttribute( "value" ) + "'" );
             return true;
         }
@@ -752,7 +752,7 @@ namespace sw
             return _pObjectManagerOverride;
         if ( engine::areEngineServicesBound() == false )
             return nullptr;
-        Scene* pScene = engine::getSceneManager().getActiveScene();
+        Scene* pScene = engine::getSubsystem<SceneManager>().getActiveScene();
         return pScene != nullptr ? pScene->getObjectManager() : nullptr;
     }
 

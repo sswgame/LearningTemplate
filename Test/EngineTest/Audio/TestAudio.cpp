@@ -146,7 +146,7 @@ SW_TEST_CASE( AudioServiceTest, PlaybackHandling )
     pAudioService->stopMusic();
 
     if ( sw::engine::areEngineServicesBound() )
-        sw::engine::getTaskManager().waitAll();
+        sw::engine::getSubsystem<sw::TaskManager>().waitAll();
 
     pAudioService->shutdown();
 }
@@ -183,7 +183,7 @@ SW_TEST_CASE( AudioServiceTest, WavParsingAndMalformedData )
     SW_EXPECT_TRUE( pAudioService->play( truncatedPath ) );
 
     if ( sw::engine::areEngineServicesBound() )
-        sw::engine::getTaskManager().waitAll();
+        sw::engine::getSubsystem<sw::TaskManager>().waitAll();
 
     // 정리
     SW_EXPECT_TRUE( sw::FileUtil::removeFile( validWavPath ) );
@@ -294,7 +294,7 @@ SW_TEST_CASE( AudioServiceTest, MusicPathTracksRequests )
     SW_EXPECT_TRUE( pAudioService->getMusicPath().empty() );
 
     if ( sw::engine::areEngineServicesBound() )
-        sw::engine::getTaskManager().waitAll();
+        sw::engine::getSubsystem<sw::TaskManager>().waitAll();
 
     SW_EXPECT_TRUE( sw::FileUtil::removeFile( musicPath ) );
     pAudioService->shutdown();
@@ -338,7 +338,7 @@ SW_TEST_CASE( AudioServiceTest, MultithreadedAudioDecodeAndPlayback )
     pAudioService->update( 0.016f );
 
     if ( sw::engine::areEngineServicesBound() )
-        sw::engine::getTaskManager().waitAll();
+        sw::engine::getSubsystem<sw::TaskManager>().waitAll();
 
     SW_EXPECT_TRUE( sw::FileUtil::removeFile( wavA ) );
     SW_EXPECT_TRUE( sw::FileUtil::removeFile( wavB ) );
@@ -397,7 +397,7 @@ SW_TEST_CASE( AudioServiceTest, ShutdownWhileDecodeTasksAreStillInFlight )
 
         // 객체를 부수기 전에는 흘려보낸다 — 태스크가 `this` 를 들고 있기 때문이다.
         if ( sw::engine::areEngineServicesBound() )
-            sw::engine::getTaskManager().waitAll();
+            sw::engine::getSubsystem<sw::TaskManager>().waitAll();
 
         SW_EXPECT_FALSE( pAudioService->isInitialized() );
     }

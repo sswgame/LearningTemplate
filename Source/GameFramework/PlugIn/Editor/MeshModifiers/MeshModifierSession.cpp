@@ -81,7 +81,7 @@ namespace sw::editor
         {
             static editor::MeshModifierSession* findSession()
             {
-                editor::MeshModifierSession* pSession = editor::getService<editor::MeshModifierSession>();
+                editor::MeshModifierSession* pSession = editor::findSubsystem<editor::MeshModifierSession>();
                 return pSession != nullptr && pSession->hasTarget() ? pSession : nullptr;
             }
 
@@ -225,7 +225,7 @@ namespace sw::editor
 
     bool MeshModifierSession::setTarget( GameObject* pObject )
     {
-        setMeshModifierTaskManager( editor::getService<TaskManager>() ); // 변형 적용(미리보기 · 굽기)을 병렬로 돌린다
+        setMeshModifierTaskManager( editor::findSubsystem<TaskManager>() ); // 변형 적용(미리보기 · 굽기)을 병렬로 돌린다
         clearTarget();
         if ( pObject == nullptr )
             return false;

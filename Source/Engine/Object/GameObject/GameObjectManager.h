@@ -17,17 +17,17 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
-#include "Engine/Object/GameObject/CameraRegistry.h"
-#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectStore.h"
-#include "Engine/Object/GameObject/ISceneFrameSystem.h"
-#include "Engine/Object/GameObject/ISceneService.h"
-#include "Engine/Object/GameObject/PrimitiveRegistry.h"
-#include "Engine/Object/GameObject/SceneEngineServices.h"
-#include "Engine/Object/GameObject/SceneFrameStep.h"
-#include "Engine/Object/GameObject/SceneTickScheduler.h"
-#include "Engine/Object/GameObject/StructuralChangeBuffer.h"
+#include "Engine/Object/GameObject/Registry/CameraRegistry.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/Service/ISceneService.h"
+#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
+#include "Engine/Object/GameObject/Tick/SceneFrameStep.h"
+#include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
+#include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
 #include "Engine/Object/SceneAnimation/AnimationSystem.h"
 
 namespace sw
@@ -344,7 +344,7 @@ namespace sw
         const SceneEngineServices& getSceneEngineServices() const { return _services; }
         /**
          * @brief 생성자로 받은 에셋 매니저입니다(빌림). 없으면 nullptr 입니다.
-         * @details 씬 안의 엔진 코드(스프라이트 배치 · 애니메이션 알림)가 전역 조회 대신 씁니다. 게임 모듈은 `game::getService<AssetManager>()` 를 씁니다.
+         * @details 씬 안의 엔진 코드(스프라이트 배치 · 애니메이션 알림)가 전역 조회 대신 씁니다. 게임 모듈은 `game::findSubsystem<AssetManager>()` 를 씁니다.
          */
         AssetManager* findAssetManager() const { return _services._pAssetManager; }
         /**
@@ -355,16 +355,16 @@ namespace sw
         /**
          * @brief 이 씬의 서비스 @p TService 입니다(`ISceneService.h`). 레지스트리의 서비스는 매니저마다 하나씩 늘 있습니다.
          * @details 언리얼 `UWorld::GetSubsystem<T>()` 와 같은 자리입니다. 코어는 서비스 타입을 모르고, 부르는 쪽이 그 타입의 헤더를 듭니다
-         *          (`manager.getSceneService<sw::ScenePhysics>()` · `getSceneService<sw::SceneAudio>()` · `getSceneService<SceneNavigation>()`).
+         *          (`manager.getSubsystem<sw::ScenePhysics>()` · `getSubsystem<sw::SceneAudio>()` · `getSubsystem<SceneNavigation>()`).
          */
         template <typename TService>
-        TService& getSceneService()
+        TService& getSubsystem()
         {
             return _sceneScope.get<TService>();
         }
         /** @brief 이 씬의 서비스 @p TService 입니다. */
         template <typename TService>
-        const TService& getSceneService() const
+        const TService& getSubsystem() const
         {
             return _sceneScope.get<TService>();
         }
@@ -471,7 +471,7 @@ namespace sw
 
         // 프레임 단계 본문 — 표(`SceneFrameStepList.xxx`)의 줄마다 하나. `tick` 이 줄 순서대로 부른다.
 #define SW_SCENE_FRAME_STEP( Name ) void runFrameStep##Name( float32 deltaTime );
-#include "Engine/Object/GameObject/SceneFrameStepList.xxx"
+#include "Engine/Object/GameObject/Tick/SceneFrameStepList.xxx"
 #undef SW_SCENE_FRAME_STEP
 
         // 단위들은 소유만 한다. 선언 순서가 생성 순서다 — 뒤 단위가 앞 단위를 참조로 받는다(틱 디스패치 → 계층 · 레지스트리 · 틱 중 규칙,

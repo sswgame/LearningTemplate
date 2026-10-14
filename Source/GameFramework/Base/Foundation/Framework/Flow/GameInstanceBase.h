@@ -42,7 +42,7 @@ namespace sw
         /**
          * @brief configureBootstrap 으로 부트스트랩을 채우고 gamesettings 를 읽은 뒤 onInitialize 를 부릅니다.
          * @details 게임 프리셋 `Config/Game/<게임>.json` 에 팩 루트가 있으면 그것이 우선한다.
-         *          읽은 `GameSettings` 는 게임 서비스(`game::getService<GameSettings>()`)로 등록하고, 다국어(`_localizationProject`)와
+         *          읽은 `GameSettings` 는 게임 서비스(`game::findSubsystem<GameSettings>()`)로 등록하고, 다국어(`_localizationProject`)와
          *          게임플레이 입력 맵(`_inputMap`)도 여기서 적용한다.
          *          커스텀 칸을 읽는 킷 코드는 이 서비스로 읽는다. 서비스로 등록하지 않으면 제품에서 늘 기본값을 쓴다.
          */
@@ -106,7 +106,7 @@ namespace sw
         // --------------------------------------------------------------------------
         /**
          * @brief 이 인스턴스가 소유한 서브시스템 @p T 입니다(`ScreenTransitionManager` · `LoadingScreenController` · `GameNetSession`). 생성 뒤에는 늘 있다.
-         * @details 언리얼 `UGameInstance::GetSubsystem<T>()` 자리다. 게임 범위에 있으므로 키트는 인스턴스 없이 `game::getService<T>()` 로도 찾는다.
+         * @details 언리얼 `UGameInstance::GetSubsystem<T>()` 자리다. 게임 범위에 있으므로 키트는 인스턴스 없이 `game::findSubsystem<T>()` 로도 찾는다.
          *          화면 전환은 FadeOut → 실행 → FadeIn 을, 로딩 화면은 씬 로드 동안 gamesettings 의 `_loadingScreen` 문서를, 네트워크 세션은 실행 인자가 정한
          *          역할(서버 · 클라이언트 · 없음)을 맡는다 — 키트와 게임은 `getSubsystem<GameNetSession>().getRouter()` 에 메시지 처리기를 단다.
          */
@@ -194,7 +194,7 @@ namespace sw
             _listStatefulType.push_back( type );
         }
         /**
-         * @brief 이 인스턴스의 게임 범위에 객체(카탈로그 · 데이터베이스 — 보통 파생의 멤버)를 겁니다. `game::getService<T>()` 가 찾는다.
+         * @brief 이 인스턴스의 게임 범위에 객체(카탈로그 · 데이터베이스 — 보통 파생의 멤버)를 겁니다. `game::findSubsystem<T>()` 가 찾는다.
          * @details 범위는 이 인스턴스가 소유하므로 인스턴스가 내려가면 함께 풀린다 — 짝으로 풀 일이 없다. 같은 타입이 이미 걸려 있으면
          *          알리고 걸지 않는다(키트 둘이 같은 카탈로그 타입을 서비스로 쓰는 조립 — 나중 것이 앞 것을 소리 없이 덮지 않는다).
          */
@@ -290,7 +290,7 @@ namespace sw
         vector<PendingSceneLoad>        _listPendingSceneLoad; ///< 맡겼지만 아직 끝을 알리지 않은 씬 로드
         vector<StatefulComponentType>   _listStatefulType;     ///< 상태 스냅샷에 오른 컴포넌트 타입(등록 순서대로 싣고 걷고 돌려준다)
         unique_ptr<ComponentStateStore> _pComponentStateStore; ///< 스냅샷 봉투의 컴포넌트 상태 섹션
-        SubsystemScope                  _gameScope;            ///< 게임 범위 — 인스턴스 서브시스템(화면 전환 · 로딩 화면 · 네트워크 세션)을 소유하고, 기동부터 종료까지 `game::getService<T>()` 의 지금 범위다
+        SubsystemScope                  _gameScope;            ///< 게임 범위 — 인스턴스 서브시스템(화면 전환 · 로딩 화면 · 네트워크 세션)을 소유하고, 기동부터 종료까지 `game::findSubsystem<T>()` 의 지금 범위다
         uint8                           _bResumingWorld;       ///< `initialize` 때 이미 활성 씬이 있었다(다시 선 인스턴스) — 첫 씬을 요청하지 않는다
     };
 } // namespace sw

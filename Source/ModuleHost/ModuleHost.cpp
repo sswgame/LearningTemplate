@@ -139,8 +139,8 @@ namespace sw
 
         // 프레임 경로가 매 프레임 전역 조회를 하지 않도록 여기서 한 번 읽는다. 서비스 테이블이 비어 있으면 그 일을 건너뛴다.
         const bool bServicesBound = engine::areEngineServicesBound();
-        _pSceneManager            = bServicesBound ? engine::getBoundEngineServices()._pSceneManager : nullptr;
-        _pUISystem                = bServicesBound ? engine::getBoundEngineServices()._pUISystem : nullptr;
+        _pSceneManager            = bServicesBound ? engine::findSubsystem<SceneManager>() : nullptr;
+        _pUISystem                = bServicesBound ? engine::findSubsystem<UISystem>() : nullptr;
 
 #if !defined( SW_SHIPPING )
         _moduleCompiler = make_unique<ModuleCompiler>( _pLiveReloadManager );
@@ -290,7 +290,7 @@ namespace sw
     {
         if ( engine::areEngineServicesBound() == false )
             return;
-        for ( const unique_ptr<Scene>& scene : engine::getSceneManager().getLoadedScenes() )
+        for ( const unique_ptr<Scene>& scene : engine::getSubsystem<SceneManager>().getLoadedScenes() )
         {
             if ( scene != nullptr )
                 scene->getObjectManager()->markTickStagesDirty(); // 기본값은 다시 저장하지 않는다(ModuleTypeRegistry 의 같은 위치 참고).
@@ -346,7 +346,7 @@ namespace sw
         // 모듈을 언로드하기 전에 비동기 태스크가 모두 끝나기를 기다린다. 제한 시간은 LiveReloadManager 의 폴백과 공유한다.
         if ( engine::areEngineServicesBound() )
         {
-            if ( engine::getTaskManager().waitAll( LiveReloadManager::kModuleDrainTimeoutMs ) == false )
+            if ( engine::getSubsystem<TaskManager>().waitAll( LiveReloadManager::kModuleDrainTimeoutMs ) == false )
             {
                 SW_LOG_ERROR( "Task fencing timeout (%# ms) before module reload — marking the LiveReload graph broken.", LiveReloadManager::kModuleDrainTimeoutMs );
                 markReloadGraphBroken( "task fencing timeout before unload" );
@@ -425,8 +425,8 @@ namespace sw
         {
             suspendHostModule( bReleaseAPITable );
             // 일시정지 함수가 없던 호스트 모듈이라도 월드가 플레이 중으로 남지 않게 한다. 호스트 모듈 없이 다시 돌면 beginFrame 이 다시 켠다.
-            if ( engine::areEngineServicesBound() && engine::getSceneManager().isWorldPlaying() )
-                engine::getSceneManager().setWorldPlaying( false );
+            if ( engine::areEngineServicesBound() && engine::getSubsystem<SceneManager>().isWorldPlaying() )
+                engine::getSubsystem<SceneManager>().setWorldPlaying( false );
         }
         if ( bSuspendGame )
             destroyGameInstance( bReleaseAPITable );
@@ -479,7 +479,7 @@ namespace sw
         if ( _gameAPI.deserializeState == nullptr || _listGameSavedState.empty() )
         {
             if ( engine::areEngineServicesBound() )
-                engine::getSceneManager().setSaveBlockReason( {} );
+                engine::getSubsystem<SceneManager>().setSaveBlockReason( {} );
             return;
         }
 
@@ -488,7 +488,7 @@ namespace sw
             SW_LOG_INFO( "Scene object state restored from %zu bytes.", _listGameSavedState.size() );
             _listGameSavedState.clear();
             if ( engine::areEngineServicesBound() )
-                engine::getSceneManager().setSaveBlockReason( {} );
+                engine::getSubsystem<SceneManager>().setSaveBlockReason( {} );
         }
         else
         {
@@ -548,7 +548,7 @@ namespace sw
         // 게임 컴포넌트를 모든 씬에서 제거했다. 복원할 때까지(`restoreGameState`) 씬을 저장하면 그것들이 빠진 채 저장된다. 리로드가 실패하거나
         // 중단되면 복원하는 쪽이 오지 않으므로 여기서 막는다.
         if ( bReleaseAPITable && engine::areEngineServicesBound() )
-            engine::getSceneManager().setSaveBlockReason( "the game module's components were removed for a reload and have not been restored yet" );
+            engine::getSubsystem<SceneManager>().setSaveBlockReason( "the game module's components were removed for a reload and have not been restored yet" );
 #endif
     }
 

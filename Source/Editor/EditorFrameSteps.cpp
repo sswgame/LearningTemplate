@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Editor/Common/Asset/EditorAssetValidation.h"
-#include "Editor/Common/Commands/EditorScreenshotCommands.h"
+#include "Editor/Common/Commands/Play/EditorScreenshotCommands.h"
 #include "Editor/Common/EditorProfile.h"
 #include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorDockLayout.h"

@@ -4,8 +4,8 @@
 
 #include "Core/Log/Logger.h"
 
-#include "Editor/Common/Commands/EditorPrefabIsolationCommands.h"
-#include "Editor/Common/Commands/EditorToolAssetCommands.h"
+#include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
+#include "Editor/Common/Commands/Scene/EditorPrefabIsolationCommands.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"

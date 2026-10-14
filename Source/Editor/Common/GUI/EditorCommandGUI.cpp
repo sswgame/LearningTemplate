@@ -9,13 +9,13 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
+#include "Editor/Common/Commands/Dev/EditorGlobalVariableCommands.h"
+#include "Editor/Common/Commands/Dev/EditorShortcutOverrides.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
-#include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
-#include "Editor/Common/Commands/EditorSceneFileCommands.h"
-#include "Editor/Common/Commands/EditorScreenshotCommands.h"
-#include "Editor/Common/Commands/EditorShortcutOverrides.h"
-#include "Editor/Common/Commands/EditorToolAssetCommands.h"
-#include "Editor/Common/Commands/EditorTransformCommands.h"
+#include "Editor/Common/Commands/Play/EditorScreenshotCommands.h"
+#include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
+#include "Editor/Common/Commands/Scene/EditorTransformCommands.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -71,7 +71,7 @@ namespace sw::editor
             // 하나다.
             //   - 반환형을 맞춘다: `commandNewScene` (대상은 `bool` 을 반환하는데 테이블은 `void()` 를 요구한다)
             //   - 인자를 고정한다: `commandAlign<TAxis>` (대상이 축과 정렬 두 인자를 받는다)
-            //   - 대상을 찾아온다: `commandUndo` (`getService<CommandStack>()`)
+            //   - 대상을 찾아온다: `commandUndo` (`findSubsystem<CommandStack>()`)
             //
             // 인자를 고정하는 경우에도 값마다 함수를 하나씩 만들지 않는다. 축처럼 값만 다른 것은 템플릿 인자로 받는다.
             // ------------------------------------------------------------------------------
@@ -131,28 +131,28 @@ namespace sw::editor
 
             static void commandCompileGame()
             {
-                IModuleCompiler* pCompiler = getService<IModuleCompiler>();
+                IModuleCompiler* pCompiler = findSubsystem<IModuleCompiler>();
                 if ( pCompiler != nullptr )
                     pCompiler->compileModule( "SWGame" );
             }
 
             static void commandCompileEditor()
             {
-                IModuleCompiler* pCompiler = getService<IModuleCompiler>();
+                IModuleCompiler* pCompiler = findSubsystem<IModuleCompiler>();
                 if ( pCompiler != nullptr )
                     pCompiler->compileModule( "EditorAll" ); // EditorModule 과 확장 모듈을 함께 컴파일한다(sw_addEditorExtension 이 의존성을 추가한다)
             }
 
             static void commandCompileAll()
             {
-                IModuleCompiler* pCompiler = getService<IModuleCompiler>();
+                IModuleCompiler* pCompiler = findSubsystem<IModuleCompiler>();
                 if ( pCompiler != nullptr )
                     pCompiler->compileAll();
             }
 
             static void commandCancelBuild()
             {
-                IModuleCompiler* pCompiler = getService<IModuleCompiler>();
+                IModuleCompiler* pCompiler = findSubsystem<IModuleCompiler>();
                 if ( pCompiler != nullptr )
                     pCompiler->cancel();
             }
@@ -345,13 +345,13 @@ namespace sw::editor
 
             static bool isCompilerIdle()
             {
-                IModuleCompiler* pCompiler = getService<IModuleCompiler>();
+                IModuleCompiler* pCompiler = findSubsystem<IModuleCompiler>();
                 return pCompiler != nullptr && pCompiler->isCompiling() == false;
             }
 
             static bool isCompilerBusy()
             {
-                IModuleCompiler* pCompiler = getService<IModuleCompiler>();
+                IModuleCompiler* pCompiler = findSubsystem<IModuleCompiler>();
                 return pCompiler != nullptr && pCompiler->isCompiling();
             }
 

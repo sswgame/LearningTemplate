@@ -10,7 +10,7 @@
 #include "Core/Task/TaskFuture.h"
 #include "Core/Task/TaskTypes.h"
 
-#include "Engine/Object/GameObject/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 
 namespace sw
 {

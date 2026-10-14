@@ -21,10 +21,10 @@
     #include "Engine/Input/Devices/MouseDevice.h"
     #include "Engine/Input/InputManager.h"
     #include "Engine/Object/Component/CameraComponent.h"
-    #include "Engine/Object/GameObject/CameraRegistry.h"
+    #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
     #include "Engine/Object/GameObject/GameObject.h"
     #include "Engine/Object/GameObject/GameObjectManager.h"
-    #include "Engine/Object/GameObject/PrimitiveRegistry.h"
+    #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
     #include "Engine/Object/Component/Physics/ScenePhysics.h"
     #include "Engine/Physics/IPhysicsScene.h"
     #include "Engine/Profiling/FrameProfiler.h"
@@ -46,14 +46,14 @@ namespace sw
             /** @brief 활성 씬의 오브젝트 매니저입니다(씬이 없으면 nullptr). */
             static GameObjectManager* findActiveObjectManager()
             {
-                const Scene* pScene = engine::getSceneManager().getActiveScene();
+                const Scene* pScene = engine::getSubsystem<SceneManager>().getActiveScene();
                 return pScene != nullptr ? pScene->getObjectManager() : nullptr;
             }
 
             /** @brief 프로파일러 구간 @p slot 의 마지막으로 접힌 프레임 시간(밀리초)입니다. */
             static float64 readLastFrameMilliseconds( uint32 slot )
             {
-                return static_cast<float64>( engine::getFrameProfiler().getLastFrameNanos( slot ) ) / constant::kNanosecondsPerMillisecond;
+                return static_cast<float64>( engine::getSubsystem<FrameProfiler>().getLastFrameNanos( slot ) ) / constant::kNanosecondsPerMillisecond;
             }
 
             static const utf8* getGlyphStyleName( InputGlyphStyle style )
@@ -111,7 +111,7 @@ namespace sw
 
             static void writeTiming( DebugHUDSectionWriter& writer )
             {
-                FrameProfiler&      profiler  = engine::getFrameProfiler();
+                FrameProfiler&      profiler  = engine::getSubsystem<FrameProfiler>();
                 static const uint32 s_gtSlot  = profiler.registerScope( "GT.Frame" );
                 static const uint32 s_rtSlot  = profiler.registerScope( "RT.Frame" );
                 static const uint32 s_gpuSlot = profiler.registerScope( "GPU.Frame" );
@@ -122,7 +122,7 @@ namespace sw
 
             static void writeDraw( DebugHUDSectionWriter& writer )
             {
-                FrameProfiler&      profiler    = engine::getFrameProfiler();
+                FrameProfiler&      profiler    = engine::getSubsystem<FrameProfiler>();
                 static const uint32 s_drawSlot  = profiler.registerScope( "RT.Draw.indirectCalls" );
                 static const uint32 s_batchSlot = profiler.registerScope( "RT.Draw.gpuBatchCount" );
                 static const uint32 s_quadSlot  = profiler.registerScope( "UI.CanvasQuads" );
@@ -182,7 +182,7 @@ namespace sw
                     writer.addLine( "scene", "none" );
                     return;
                 }
-                const ScenePhysics& physics = pManager->getSceneService<sw::ScenePhysics>();
+                const ScenePhysics& physics = pManager->getSubsystem<sw::ScenePhysics>();
                 if ( const IPhysicsBodyScene3D* pScene3D = physics.findScene3D() )
                     writer.addLineFormat( "bodies 3D", "%#", pScene3D->getBodyCount() );
                 if ( const IPhysicsBodyScene2D* pScene2D = physics.findScene2D() )
@@ -194,7 +194,7 @@ namespace sw
 
             static void writeAudio( DebugHUDSectionWriter& writer )
             {
-                const AudioEngineStats stats = engine::getAudioService().getEngine().getStats();
+                const AudioEngineStats stats = engine::getSubsystem<IAudioService>().getEngine().getStats();
                 writer.addLineFormat( "voices", "%# (%# real, %# virtual)", stats._voiceCount, stats._realVoiceCount, stats._virtualVoiceCount );
                 writer.addLineFormat( "instances", "%#", stats._instanceCount );
                 writer.addLineFormat( "dropped", "%#", stats._droppedEventCount );
@@ -202,7 +202,7 @@ namespace sw
 
             static void writeInput( DebugHUDSectionWriter& writer )
             {
-                const InputManager& input = engine::getInputManager();
+                const InputManager& input = engine::getSubsystem<InputManager>();
                 writer.addLine( "device", getGlyphStyleName( input.getActiveGlyphStyle() ) );
                 writer.addLine( "keyboard", getKeyboardFocusName( input.getKeyboardFocus() ) );
                 if ( const MouseDevice* pMouse = input.getMouse() )
@@ -237,7 +237,7 @@ namespace sw
             {
                 // 게임이 쓴 디버그 값(`DebugOverlayState`)이다. 에디터 게임 뷰의 줄과 같은 것이다.
                 vector<DebugOverlayRow> listRow;
-                engine::getDebugOverlayState().collectRows( listRow );
+                engine::getSubsystem<DebugOverlayState>().collectRows( listRow );
                 if ( listRow.empty() )
                     writer.addLine( "values", "none" );
                 for ( const DebugOverlayRow& row : listRow )

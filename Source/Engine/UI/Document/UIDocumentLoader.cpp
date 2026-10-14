@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Task/TaskTypes.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -79,7 +80,7 @@ namespace sw
                 const hashed_string name = hashed_string::findInterned( string_view( pName ) );
                 if ( name.empty() )
                     return nullptr;
-                const TypeInfo* pType          = engine::getTypeRegistry().findType( name );
+                const TypeInfo* pType          = engine::getSubsystem<TypeRegistry>().findType( name );
                 const bool      bNotWidgetType = pType == nullptr || pType->isAlive() == false || pType->isDerivedFrom( Widget::StaticType() ) == false;
                 if ( bNotWidgetType )
                     return nullptr;
@@ -270,7 +271,7 @@ namespace sw
             {
                 unique_ptr<Widget>    widget;
                 const UIDocumentNode& node               = document._listNode[nodeIndex];
-                const TypeInfo*       pType              = engine::getTypeRegistry().findType( node._typeName );
+                const TypeInfo*       pType              = engine::getSubsystem<TypeRegistry>().findType( node._typeName );
                 const bool            bNotWidgetTypeName = pType == nullptr || pType->isAlive() == false || pType->isDerivedFrom( Widget::StaticType() ) == false;
                 if ( bNotWidgetTypeName )
                 {

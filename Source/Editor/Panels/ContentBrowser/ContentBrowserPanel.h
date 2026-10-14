@@ -8,9 +8,9 @@
 #include "Core/Container/vector.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Commands/EditorAssetFileCommands.h"
+#include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
+#include "Editor/Common/Commands/Asset/EditorReferenceIndex.h"
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
-#include "Editor/Common/Commands/EditorReferenceIndex.h"
 #include "Editor/Common/GUI/EditorThumbnailCache.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Panels/ContentBrowser/ContentBrowserFileActions.h"

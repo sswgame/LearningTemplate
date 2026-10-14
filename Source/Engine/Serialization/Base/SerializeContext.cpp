@@ -236,7 +236,7 @@ namespace sw
 
     const TypeRegistry& SerializeContext::getTypeRegistry() const
     {
-        return ( _pTypeRegistry != nullptr ) ? *_pTypeRegistry : engine::getTypeRegistry();
+        return ( _pTypeRegistry != nullptr ) ? *_pTypeRegistry : engine::getSubsystem<TypeRegistry>();
     }
 
     SerializeContext SerializeContext::deriveFromDefault()

@@ -66,7 +66,7 @@ namespace sw
         void waitDone() const
         {
             if ( _task.isCompleted() == false )
-                engine::getTaskManager().waitStage( _stage );
+                engine::getSubsystem<TaskManager>().waitStage( _stage );
         }
     };
 } // namespace sw

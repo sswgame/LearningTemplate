@@ -37,7 +37,7 @@ namespace
 
     sw::unique_ptr<sw::IPhysicsScene2D> makeScene()
     {
-        return sw::engine::getPhysicsSystem().createScene2D( makeSettings() );
+        return sw::engine::getSubsystem<sw::PhysicsSystem>().createScene2D( makeSettings() );
     }
 
     sw::PhysicsShapeDesc2D makeBox( const sw::float2& halfExtents )
@@ -425,7 +425,7 @@ SW_TEST_CASE( PhysicsScene2DTest, StepIsDeterministicAcrossWorkerCounts )
     {
         sw::PhysicsSettings settings               = makeSettings();
         settings._workerCount2D                    = arrWorkerCount[runIndex];
-        sw::unique_ptr<sw::IPhysicsScene2D> pScene = sw::engine::getPhysicsSystem().createScene2D( settings );
+        sw::unique_ptr<sw::IPhysicsScene2D> pScene = sw::engine::getSubsystem<sw::PhysicsSystem>().createScene2D( settings );
         SW_ASSERT_NOT_NULL( pScene.get() );
         addFloor( *pScene );
         sw::vector<sw::PhysicsBodyHandle> listBody;

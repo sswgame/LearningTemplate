@@ -51,14 +51,14 @@ namespace sw
     void NavMeshLinkComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        manager.getSceneService<SceneNavigation>().registerLink( this );
+        manager.getSubsystem<SceneNavigation>().registerLink( this );
         // 플레이 중에 생긴 링크는 그 위치의 타일을 다시 베이크해야 포함된다(내비메시가 아직 없으면 알림은 버려진다).
         invalidateLinkArea();
     }
 
     void NavMeshLinkComponent::onUnregister( GameObjectManager& manager )
     {
-        SceneNavigation& navigation = manager.getSceneService<SceneNavigation>();
+        SceneNavigation& navigation = manager.getSubsystem<SceneNavigation>();
         if ( _reportedBounds.isValid() )
             navigation.invalidateArea( _reportedBounds, true );
         navigation.unregisterLink( this );
@@ -78,7 +78,7 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return;
-        SceneNavigation& navigation = pManager->getSceneService<SceneNavigation>();
+        SceneNavigation& navigation = pManager->getSubsystem<SceneNavigation>();
         if ( _reportedBounds.isValid() )
             navigation.invalidateArea( _reportedBounds, true );
         float3 start{};

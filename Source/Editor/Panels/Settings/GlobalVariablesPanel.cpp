@@ -9,7 +9,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
+#include "Editor/Common/Commands/Dev/EditorGlobalVariableCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
@@ -105,7 +105,7 @@ namespace sw::editor
             static bool drawEnumWidget( GlobalVariableInfo& info )
             {
                 const int32     currentVal = info.getValueAsInt();
-                TypeRegistry*   pRegistry  = editor::getService<TypeRegistry>();
+                TypeRegistry*   pRegistry  = editor::findSubsystem<TypeRegistry>();
                 const EnumInfo* pEnumInfo =
                     ( pRegistry != nullptr && info._enumType.empty() == false )
                         ? pRegistry->findEnum( hashed_string( info._enumType.c_str() ) )
@@ -215,7 +215,7 @@ namespace sw::editor
 
     void GlobalVariablesPanel::revertDocument()
     {
-        GlobalVariableManager* pGvm = editor::getService<GlobalVariableManager>();
+        GlobalVariableManager* pGvm = editor::findSubsystem<GlobalVariableManager>();
         if ( pGvm != nullptr )
             pGvm->resetAllToDefault();
     }
@@ -227,7 +227,7 @@ namespace sw::editor
 
     void GlobalVariablesPanel::drawContent()
     {
-        GlobalVariableManager* pGvm = editor::getService<GlobalVariableManager>();
+        GlobalVariableManager* pGvm = editor::findSubsystem<GlobalVariableManager>();
         if ( pGvm == nullptr )
             return;
 

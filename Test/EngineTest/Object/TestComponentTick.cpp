@@ -4,13 +4,14 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/TickBatchRegistry.h"
+#include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -969,7 +970,7 @@ SW_TEST_CASE( ComponentDefaultsTest, ResolvedDefaultsStayPutWhileOtherTypesResol
     const sw::string previousPath{ sw::Component::getDefaultGameSettingsPath() };
     sw::Component::setDefaultGameSettingsPath( defaultsPath );
 
-    sw::ComponentDefaults& defaults  = sw::engine::getComponentDefaults();
+    sw::ComponentDefaults& defaults  = sw::engine::getSubsystem<sw::ComponentDefaults>();
     const sw::TypeInfo*    pMeshType = sw::MeshComponent::StaticType();
     SW_ASSERT_NOT_NULL( pMeshType );
     sw::vector<uint8> meshScratch( pMeshType->_size, 0 );
@@ -979,7 +980,7 @@ SW_TEST_CASE( ComponentDefaultsTest, ResolvedDefaultsStayPutWhileOtherTypesResol
 
     // 레지스트리 잠금을 쥔 채 풀지 않는다(해석이 레지스트리를 다시 찾는다) — 목록을 먼저 받는다.
     sw::vector<const sw::TypeInfo*> listType;
-    sw::engine::getTypeRegistry().forEachType( [&listType]( const sw::TypeInfo& typeInfo )
+    sw::engine::getSubsystem<sw::TypeRegistry>().forEachType( [&listType]( const sw::TypeInfo& typeInfo )
     { listType.push_back( &typeInfo ); } );
     SW_ASSERT_TRUE( listType.size() >= 32 );
     for ( const sw::TypeInfo* pType : listType )
@@ -1010,9 +1011,9 @@ SW_TEST_CASE( ComponentDefaultsTest, ModuleRegistrationKeepsLiveValues )
     sw::Component::setDefaultGameSettingsPath( defaultsPath );
 
     // 모듈 등록은 엔진 씬 매니저의 씬들을 돈다 — 그 씬에 둔다.
-    sw::Scene* pScene = sw::engine::getSceneManager().getActiveScene();
+    sw::Scene* pScene = sw::engine::getSubsystem<sw::SceneManager>().getActiveScene();
     if ( pScene == nullptr )
-        pScene = sw::engine::getSceneManager().createScene( "DefaultsRestampScene" );
+        pScene = sw::engine::getSubsystem<sw::SceneManager>().createScene( "DefaultsRestampScene" );
     SW_ASSERT_NOT_NULL( pScene );
     sw::GameObjectManager* pObjects = pScene->getObjectManager();
     sw::GameObject*        pObject  = pObjects->createGameObject( sw::hashed_string( "DefaultsRestampProbe" ) );
@@ -1047,7 +1048,7 @@ SW_TEST_CASE( ComponentDefaultsTest, MissingDefaultsFileIsOpenedOnlyOnce )
         SW_TEST_SKIP( "ComponentDefaults service is not bound in this process." );
         return;
     }
-    sw::ComponentDefaults& defaults = sw::engine::getComponentDefaults();
+    sw::ComponentDefaults& defaults = sw::engine::getSubsystem<sw::ComponentDefaults>();
 
     const sw::string previousPath{ sw::Component::getDefaultGameSettingsPath() };
 

@@ -14,8 +14,8 @@ namespace test
         if ( sw::engine::areEngineServicesBound() == false )
             return;
 
-        sw::engine::getSceneManager().cancelPendingAsyncLoads();
-        sw::engine::getTaskManager().waitAll();
-        sw::engine::getTaskManager().clear();
+        sw::engine::getSubsystem<sw::SceneManager>().cancelPendingAsyncLoads();
+        sw::engine::getSubsystem<sw::TaskManager>().waitAll();
+        sw::engine::getSubsystem<sw::TaskManager>().clear();
     }
 } // namespace test

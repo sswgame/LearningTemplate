@@ -1,0 +1,86 @@
+#include "pch.h"
+
+#include "Core/File/FileUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+
+#include "Editor/Common/Commands/Dev/EditorGlobalVariableCommands.h"
+
+#include "EditorTest/EditorTestServices.h"
+
+#include "Engine/Serialization/XML/XMLDocument.h"
+
+#include "TestFramework/TestFramework.h"
+
+using namespace sw;
+using namespace sw::editor;
+
+// 전역 변수 프리셋 — **테스트용 변수는 저장하지도 적용하지도 않는다.**
+//
+// 테스트용(`SW_TEST_GLOBAL_VARIABLE`)은 벤치 · 자동화 스위치다. 프리셋에 `gv_profileFrames` 가 들어가면 불러온 에디터가
+// N 프레임 뒤 스스로 꺼지고, `gv_crashTest` 가 들어가면 일부러 죽는다. 실행 한 번에만 줄 값이다.
+
+/**
+ * @brief [EditorGlobalVariableCommandsTest] 저장한 프리셋에 테스트용 변수가 들어가지 않는다
+ */
+SW_TEST_CASE( EditorGlobalVariableCommandsTest, SavedPresetSkipsTestOnlyVariables )
+{
+    GlobalVariableManager manager;
+    int32                 runtimeValue{ 3 };
+    int32                 testOnlyValue{ 5 };
+    SW_ASSERT_TRUE( manager.registerVariable( "gv_presetRuntime", GlobalVariableType::Int32, &runtimeValue, int32{ 3 }, "" ) );
+    SW_ASSERT_TRUE( manager.registerVariable( "gv_presetTestOnly", GlobalVariableType::Int32, &testOnlyValue, int32{ 5 }, "", "", "", 4, true ) );
+    const ScopedGlobalVariableManagerService service{ manager };
+
+    const string presetPath = FileUtil::joinPath( FileUtil::getTempDirectory(), "sw_editor_gv_saved.gvpreset.xml" );
+    SW_ASSERT_TRUE( EditorGlobalVariableCommands::savePreset( presetPath, "probe" ) );
+
+    sw::XMLDocument doc;
+    SW_ASSERT_TRUE( doc.loadFile( presetPath ) );
+    bool bHasRuntime{ false };
+    bool bHasTestOnly{ false };
+    for ( XMLNode varNode = doc.getRoot().findChild( "Var" ); varNode.isValid(); varNode = varNode.findNextSibling( "Var" ) )
+    {
+        const utf8* pName = varNode.findAttribute( "name" );
+        if ( pName == nullptr )
+            continue;
+        bHasRuntime  = bHasRuntime || string_view{ pName } == "gv_presetRuntime";
+        bHasTestOnly = bHasTestOnly || string_view{ pName } == "gv_presetTestOnly";
+    }
+    SW_EXPECT_TRUE( FileUtil::removeFile( presetPath ) );
+
+    SW_EXPECT_TRUE( bHasRuntime );
+    SW_EXPECT_FALSE( bHasTestOnly );
+}
+
+/**
+ * @brief [EditorGlobalVariableCommandsTest] 테스트용 값을 담은 프리셋을 불러와도 그 값은 적용하지 않는다
+ * @details 저장 쪽 필터만으로는 모자란다 — 손으로 쓰거나 저장 필터를 거치지 않은 프리셋 파일(세션 프리셋 포함)은 테스트용 변수를 담을 수 있다.
+ */
+SW_TEST_CASE( EditorGlobalVariableCommandsTest, LoadedPresetSkipsTestOnlyVariables )
+{
+    GlobalVariableManager manager;
+    int32                 runtimeValue{ 3 };
+    int32                 testOnlyValue{ 5 };
+    SW_ASSERT_TRUE( manager.registerVariable( "gv_presetRuntime", GlobalVariableType::Int32, &runtimeValue, int32{ 3 }, "" ) );
+    SW_ASSERT_TRUE( manager.registerVariable( "gv_presetTestOnly", GlobalVariableType::Int32, &testOnlyValue, int32{ 5 }, "", "", "", 4, true ) );
+    const ScopedGlobalVariableManagerService service{ manager };
+
+    sw::XMLDocument doc;
+    XMLNode         root = doc.appendRoot( "GlobalVariablesPreset" );
+    root.appendAttribute( "name", "old" );
+    for ( const utf8* pName : { "gv_presetRuntime", "gv_presetTestOnly" } )
+    {
+        XMLNode varNode = root.appendChild( "Var" );
+        varNode.appendAttribute( "name", pName );
+        varNode.appendAttribute( "type", "Int32" );
+        varNode.appendAttribute( "value", "99" );
+    }
+    const string presetPath = FileUtil::joinPath( FileUtil::getTempDirectory(), "sw_editor_gv_old.gvpreset.xml" );
+    SW_ASSERT_TRUE( doc.saveFile( presetPath ) );
+
+    SW_ASSERT_TRUE( EditorGlobalVariableCommands::loadPreset( presetPath ) );
+    SW_EXPECT_TRUE( FileUtil::removeFile( presetPath ) );
+
+    SW_EXPECT_EQUAL( 99, runtimeValue );
+    SW_EXPECT_EQUAL( 5, testOnlyValue );
+}

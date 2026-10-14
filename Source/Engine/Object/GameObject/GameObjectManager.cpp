@@ -10,7 +10,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -27,7 +27,7 @@ namespace sw
              */
             static const TypeInfo* findComponentType( hashed_string typeName )
             {
-                const TypeRegistry& registry = engine::getTypeRegistry();
+                const TypeRegistry& registry = engine::getSubsystem<TypeRegistry>();
                 const TypeInfo*     pType    = registry.findType( typeName );
                 if ( pType != nullptr )
                     return pType;
@@ -69,7 +69,7 @@ namespace sw
             static const TypeInfo* findComponentTypeCached( hashed_string typeName )
             {
                 ComponentTypeCache& cache      = s_typeCache;
-                const uint32        generation = engine::getTypeRegistry().getGeneration();
+                const uint32        generation = engine::getSubsystem<TypeRegistry>().getGeneration();
                 if ( cache._generation != generation )
                 {
                     for ( ComponentTypeCache::Slot& slot : cache._arrSlot )
@@ -236,7 +236,7 @@ namespace sw
         vector<hashed_string> listName;
         if ( engine::areEngineServicesBound() == false )
             return listName;
-        engine::getTypeRegistry().forEachType( [&listName]( const TypeInfo& info )
+        engine::getSubsystem<TypeRegistry>().forEachType( [&listName]( const TypeInfo& info )
         {
             if ( info._addComponent != nullptr )
                 listName.push_back( info._name );

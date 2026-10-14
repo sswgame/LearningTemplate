@@ -6,8 +6,8 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Object/GameObject/ObjectStateSerializer.h"
-#include "Engine/Object/GameObject/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
+#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Scene/SceneDocument.h"
 
 namespace sw

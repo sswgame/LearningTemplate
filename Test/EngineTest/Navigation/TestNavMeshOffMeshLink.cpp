@@ -154,7 +154,7 @@ SW_TEST_CASE( NavMeshLinkTest, CrowdAgentTraversesTheLinkAndReportsIt )
 SW_TEST_CASE( NavMeshLinkTest, LinkComponentBakesSignalsAndBlocks )
 {
     sw::GameObjectManager manager;
-    sw::SceneNavigation&  navigation = manager.getSceneService<sw::SceneNavigation>();
+    sw::SceneNavigation&  navigation = manager.getSubsystem<sw::SceneNavigation>();
     navigation.setSettings( navtest::makeSettings() );
     navtest::spawnStaticBody( manager, "FloorWest", sw::float3{ 3.0f, -0.5f, 2.0f }, sw::float3{ 3.0f, 0.5f, 2.0f } );
     navtest::spawnStaticBody( manager, "FloorEast", sw::float3{ 12.0f, -0.5f, 2.0f }, sw::float3{ 3.0f, 0.5f, 2.0f } );

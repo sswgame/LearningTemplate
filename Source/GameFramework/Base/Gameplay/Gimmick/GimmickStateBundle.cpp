@@ -5,9 +5,9 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/LittleEndianUtil.h"
 
-#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickCircuitComponent.h"
 

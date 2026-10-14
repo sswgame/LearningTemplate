@@ -35,21 +35,20 @@ main 은 `origin/main` 보다 184 커밋 앞서 있고 push 하지 않았습니�
 
 ## 3. 계획한 큰 일 (순서대로)
 
-1. **C-28 과 폴더 쪼개기.** C-28(`engine::getXxx` 약 826 줄) 과 폴더 쪼개기(`Editor/Common/Commands` 61 · `Engine/Object/GameObject` 45 · `Engine/Renderer/Frame` 43)를 합니다. 둘은 파일이 크게 겹치므로 한 번에 하나씩 합니다. 영역은 `Source` 하위, `Tools/ReflectionParser`, `Test`, `Tools/OnlineLoadBot` 입니다(사용자가 정한 범주).
-2. **구조 리팩토링과 데이터 주도 적용.** 조사 결과는 아래 4 절입니다. 사용자 결정이 필요한 것은 3 가지입니다.
-3. **서브틱 활용 조사.** `PostUpdate` 로 옮긴 컴포넌트 41 개를 전수 분류합니다(5 절).
-4. **그 밖.** 지형 후속(식생 · 내비 재계산, 콜라이더 부분 갱신 측정), 다중 월드 잔여(프리팹 창, 창별 선택과 전역 선택 연결, 스카이), 캐릭터 편집 (a) 미리보기 씬 이관과 (c) 슬라이더, 서버 디버그 잔여(클라이언트 해시, 어긋난 오브젝트 짚기), `nogpu` 샤드 결정, `TaskNode` · PCH · 에디터 기동 시간 측정, 열린 결함 A-2(TDR 뒤 행).
+1. **구조 리팩토링과 데이터 주도 적용.** 조사 결과는 아래 4 절입니다. 사용자 결정이 필요한 것은 2 가지입니다.
+2. **서브틱 활용 조사.** `PostUpdate` 로 옮긴 컴포넌트 41 개를 전수 분류합니다(5 절).
+3. **그 밖.** 지형 후속(식생 · 내비 재계산, 콜라이더 부분 갱신 측정), 다중 월드 잔여(프리팹 창, 창별 선택과 전역 선택 연결, 스카이), 캐릭터 편집 (a) 미리보기 씬 이관과 (c) 슬라이더, 서버 디버그 잔여(클라이언트 해시, 어긋난 오브젝트 짚기), `nogpu` 샤드 결정, `TaskNode` · PCH · 에디터 기동 시간 측정, 열린 결함 A-2(TDR 뒤 행).
 
 ## 4. 구조 리팩토링과 데이터 주도 조사 결과
 
 범주는 `Source`, `Tools/ReflectionParser`, `Test`, `Tools/OnlineLoadBot` 입니다. 숫자는 정규식 집계이고 판단이 들어간 곳은 추정입니다.
 
 - 규모: 타입 7,727 개(`struct` 4,962 · `class` 2,004 · `enum` 760), 헤더 1,801 개. 한 곳에서만 쓰이는 최상위 타입이 2,443 개(참조 1 곳 996 개)입니다. 그중 제품 코드 참조 0 인 공개 타입이 654 개입니다.
-- 가장 큰 문제 넷: 서비스 접근 창구가 여섯 갈래(`engine::getX` 693 · `getSubsystem<>` 432 · `getSceneService<>` 125 · `game::getService<>` 124 · `editor::getService<>` 110 · `getInstance()` 65), 온라인 키트 골격 복제(서비스 11 개에 타입 약 473 개), 얇은 위임 클래스(`*Catalog` 53 개, 호출처 0~2 곳인 `Util` 65 개), 이름 불일치(add / register / append, update / tick / step / advance, `xCount` 2,659 대 `countX` 163, `Settings` 중 31 개는 `Config`, 27 개는 `Def`).
+- 가장 큰 문제 셋: 온라인 키트 골격 복제(서비스 11 개에 타입 약 473 개), 얇은 위임 클래스(`*Catalog` 53 개, 호출처 0~2 곳인 `Util` 65 개), 이름 불일치(add / register / append, update / tick / step / advance, `xCount` 2,659 대 `countX` 163, `Settings` 중 31 개는 `Config`, 27 개는 `Def`).
 - 큰 단위: 1,000 줄 넘는 파일 64 개, 메서드 50 개 넘는 클래스 38 개(`FrameRenderer` 129 · `InputMap` 126 · `AbilitySystemComponent` 109 · `UISystem` 100 · `InputManager` 97 · `GameObjectManager` 66).
 - 데이터 주도 후보 순위 상위: 게임 · 키트 튜닝 상수를 `PROPERTY` 나 팩 설정으로, 작물 · 유닛 색을 `Def` 속성으로, `LoadBot` 동작 표 통합, 이벤트 필드 목록을 필드 표의 Emit 열에서 만들기, 컴포넌트 아이콘을 `REFLECT(Meta=Icon)` 으로, 확장자 → 종류 정본 하나로, `UIStyleField` 서술자 표, usage define 을 `ENUM` 이름에서 만들기.
 - 순서가 필요한 사슬: 확장자 정본 → 계약 테스트를 DataKind 표로. `SaveGame` · `Def` 리플렉션 경로 → 테스트 하네스.
-- **사용자 결정이 필요한 것.** ① 결정 기록 476 행(enum 이름 표 45 곳 유지)을 바꿀지, ② 테스트만 쓰는 공개 타입 654 개를 지울지(기존 결정 "사용처 0 공개 API 유지"와 충돌), ③ 서비스 접근 창구를 어떤 모양으로 통합할지(제안: 언리얼 `GetSubsystem<T>()` 관례).
+- **사용자 결정이 필요한 것.** ① 결정 기록 476 행(enum 이름 표 45 곳 유지)을 바꿀지, ② 테스트만 쓰는 공개 타입 654 개를 지울지(기존 결정 "사용처 0 공개 API 유지"와 충돌).
 - 영향 순위 20 개의 전체 표는 이 세션의 조사 보고에만 있었습니다. 새로 조사하려면 `scout` 에게 같은 항목을 시킵니다.
 
 ## 5. 서브틱 활용 조사

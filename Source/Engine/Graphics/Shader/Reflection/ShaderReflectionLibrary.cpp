@@ -380,7 +380,7 @@ namespace sw
         // 2순위(개발 빌드 전용): 바이트코드를 얻어 그 자리에서 리플렉션한다. 셰이더를 막 고쳐 아직
         // 쿠킹하지 않았거나, 매니페스트가 지금 소스와 맞지 않는 상태를 위한 폴백이다.
         const ShaderCompileResult result = engine::areEngineServicesBound()
-                                             ? engine::getShaderCache().getOrCompile( desc )
+                                             ? engine::getSubsystem<ShaderCache>().getOrCompile( desc )
                                              : ShaderCompiler::compileHlsl( desc );
         if ( result._bSuccess == false || result._bytecode.empty() )
         {

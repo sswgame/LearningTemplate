@@ -163,7 +163,7 @@ namespace sw
 
     void AssetManager::garbageCollectUnusedAssets()
     {
-        engine::getAssetStreamingQueue().clearCompletionRecord();
+        engine::getSubsystem<AssetStreamingQueue>().clearCompletionRecord();
         // 캐시 자체는 참조가 0 이 되는 자리에서 스스로 지운다(`MaterialCache::release`).
         // 여기서는 아직 할 일이 없다. 있게 되면 레지스트리를 훑는다.
     }
@@ -280,7 +280,7 @@ namespace sw
             return SubsystemInitResult::Failed;
         bool bCookScenes = false;
         if ( engine::areEngineServicesBound() )
-            (void)engine::getCommandLineManager().getArgument( CommandLineArgument::COOK_SCENES, bCookScenes );                                 // 없으면 false 그대로
+            (void)engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::COOK_SCENES, bCookScenes );                      // 없으면 false 그대로
         (void)mountContent( EngineConfig::getActive()._listResourcePriority, bCookScenes ? ContentSource::SourceTree : ContentSource::Cooked ); // 느슨한 트리만 있어도 기동한다
         return SubsystemInitResult::Succeeded;
     }

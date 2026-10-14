@@ -37,10 +37,10 @@ namespace sw::editor
         /**
          * @brief 활성 에디터 컨텍스트입니다. 셸이 `initialize` 에서 활성으로 하고 `shutdown` 에서 푼다. 없으면 nullptr 입니다.
          * @details 따로 든 정적 포인터가 아니라 지금 에디터 범위(`findEditorScope`)의 주인이다 — 컨텍스트가 자기 범위에 자신을 건다.
-         *          하위 객체는 `getSubsystem<T>()`, 에디터 · 호스트 서비스는 `EditorService.h` 의 `getService<T>()` 로 찾는다.
+         *          하위 객체는 `getSubsystem<T>()`, 에디터 · 호스트 서비스는 `EditorService.h` 의 `findSubsystem<T>()` 로 찾는다.
          */
         static EditorContext* get();
-        /** @brief 활성 에디터 컨텍스트를 설정합니다. 그 컨텍스트의 범위가 지금 에디터 범위가 된다(`editor::getService<T>()` 가 거기서 찾는다). */
+        /** @brief 활성 에디터 컨텍스트를 설정합니다. 그 컨텍스트의 범위가 지금 에디터 범위가 된다(`editor::findSubsystem<T>()` 가 거기서 찾는다). */
         static void setActive( EditorContext* pContext );
 
         /**

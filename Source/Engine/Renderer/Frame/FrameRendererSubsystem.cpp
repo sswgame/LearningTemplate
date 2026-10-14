@@ -9,7 +9,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
-#include "Engine/Renderer/Frame/RenderPacketBuilder.h"
+#include "Engine/Renderer/Frame/Packet/RenderPacketBuilder.h"
 #include "Engine/Renderer/RHISubsystem.h"
 
 namespace sw
@@ -35,8 +35,8 @@ namespace sw
     SubsystemInitResult FrameRendererSubsystem::initializeSubsystem()
     {
         IRHIDevice& device = _rhiSubsystem.findRHI()->getDevice();
-        _packetBuilder->initialize( device, &engine::getTaskManager() );
-        if ( _frameRenderer->initialize( &device, &engine::getTaskManager() ) == false )
+        _packetBuilder->initialize( device, &engine::getSubsystem<TaskManager>() );
+        if ( _frameRenderer->initialize( &device, &engine::getSubsystem<TaskManager>() ) == false )
         {
             SW_LOG_ERROR( "Failed to initialize FrameRenderer!" );
             return SubsystemInitResult::Failed;

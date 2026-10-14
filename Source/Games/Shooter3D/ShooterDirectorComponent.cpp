@@ -14,9 +14,9 @@
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
 #include "Engine/Telemetry/TelemetryService.h"
@@ -418,7 +418,7 @@ namespace sw
                 case AIDirectorEventKind::PhaseChanged:
                 {
                     // 쌓기로 돌아왔다 = 새 웨이브. 진행 사건(동의가 없으면 텔레메트리가 버린다).
-                    TelemetryService* pTelemetry = game::getService<TelemetryService>();
+                    TelemetryService* pTelemetry = game::findSubsystem<TelemetryService>();
                     const bool        bNewWave   = event._source.empty() == false && event._id == _profile.getPhases()[static_cast<size_t>( _profile.getStartPhaseIndex() )]._id;
                     if ( pTelemetry != nullptr && bNewWave )
                     {

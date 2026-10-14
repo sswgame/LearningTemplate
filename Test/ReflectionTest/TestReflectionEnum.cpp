@@ -20,7 +20,7 @@
 SW_TEST_CASE( ReflectionEnumBitFlagTest, BitFlagDetectionAndToString )
 {
     const sw::EnumInfo* info =
-        sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "sw::DummyBitFlag" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findEnum( sw::hashed_string( "sw::DummyBitFlag" ) );
 
     SW_EXPECT_TRUE( info != nullptr );
     if ( info == nullptr )
@@ -40,7 +40,7 @@ SW_TEST_CASE( ReflectionEnumBitFlagTest, BitFlagDetectionAndToString )
 SW_TEST_CASE( ReflectionEnumBitFlagTest, StringFlagsToValue )
 {
     const sw::EnumInfo* info =
-        sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "sw::DummyBitFlag" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findEnum( sw::hashed_string( "sw::DummyBitFlag" ) );
 
     SW_EXPECT_TRUE( info != nullptr );
     if ( info == nullptr )
@@ -59,7 +59,7 @@ SW_TEST_CASE( ReflectionEnumBitFlagTest, StringFlagsToValue )
 SW_TEST_CASE( ReflectionEnumInfoTest, FindRegisteredEnum )
 {
     const sw::EnumInfo* info =
-        sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "sw::DummyType" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findEnum( sw::hashed_string( "sw::DummyType" ) );
 
     SW_EXPECT_TRUE( info != nullptr );
     if ( info == nullptr )
@@ -74,7 +74,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, FindRegisteredEnum )
 SW_TEST_CASE( ReflectionEnumInfoTest, ValueToString )
 {
     const sw::EnumInfo* info =
-        sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "sw::DummyType" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findEnum( sw::hashed_string( "sw::DummyType" ) );
     SW_EXPECT_TRUE( info != nullptr );
     if ( info == nullptr )
         return;
@@ -90,7 +90,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, ValueToString )
 SW_TEST_CASE( ReflectionEnumInfoTest, InvalidValueReturnsDefault )
 {
     const sw::EnumInfo* info =
-        sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "sw::DummyType" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findEnum( sw::hashed_string( "sw::DummyType" ) );
     SW_EXPECT_TRUE( info != nullptr );
     if ( info == nullptr )
         return;
@@ -134,12 +134,12 @@ SW_TEST_CASE( ReflectionEnumInfoTest, EnumInfoFlagsStringConversion )
 SW_TEST_CASE( ReflectionEnumFlagTest, EnumFlagOperators )
 {
     TestFlag flag = TestFlag::Read | TestFlag::Write;
-    SW_EXPECT_TRUE( sw::engine::getTypeRegistry().hasFlag( flag, TestFlag::Read ) );
-    SW_EXPECT_TRUE( sw::engine::getTypeRegistry().hasFlag( flag, TestFlag::Write ) );
-    SW_EXPECT_FALSE( sw::engine::getTypeRegistry().hasFlag( flag, TestFlag::Execute ) );
+    SW_EXPECT_TRUE( sw::engine::getSubsystem<sw::TypeRegistry>().hasFlag( flag, TestFlag::Read ) );
+    SW_EXPECT_TRUE( sw::engine::getSubsystem<sw::TypeRegistry>().hasFlag( flag, TestFlag::Write ) );
+    SW_EXPECT_FALSE( sw::engine::getSubsystem<sw::TypeRegistry>().hasFlag( flag, TestFlag::Execute ) );
 
     flag |= TestFlag::Execute;
-    SW_EXPECT_TRUE( sw::engine::getTypeRegistry().hasFlag( flag, TestFlag::Execute ) );
+    SW_EXPECT_TRUE( sw::engine::getSubsystem<sw::TypeRegistry>().hasFlag( flag, TestFlag::Execute ) );
 }
 
 /**
@@ -215,14 +215,14 @@ SW_TEST_CASE( ReflectionEnumBitFlagTest, PlainSequentialEnumIsNotABitFlag )
     const utf8* arrPlainEnum[] = { "sw::CameraRole", "sw::PackEncryptionType", "sw::PackCompressionType", "sw::SampleStatus" };
     for ( const utf8* pName : arrPlainEnum )
     {
-        const sw::EnumInfo* info = sw::engine::getTypeRegistry().findEnum( sw::hashed_string( pName ) );
+        const sw::EnumInfo* info = sw::engine::getSubsystem<sw::TypeRegistry>().findEnum( sw::hashed_string( pName ) );
         SW_ASSERT_NOT_NULL( info );
         SW_EXPECT_TRUE_MSG( info->_bIsBitFlag == SW_FALSE,
                             "연속 열거형이 비트플래그로 등록됐습니다 — 인스펙터와 문자열 변환이 달라집니다" );
     }
 
     // 명시한 쪽은 그대로여야 한다.
-    const sw::EnumInfo* pFlagInfo = sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "sw::PackFlag" ) );
+    const sw::EnumInfo* pFlagInfo = sw::engine::getSubsystem<sw::TypeRegistry>().findEnum( sw::hashed_string( "sw::PackFlag" ) );
     SW_ASSERT_NOT_NULL( pFlagInfo );
     SW_EXPECT_TRUE( pFlagInfo->_bIsBitFlag != SW_FALSE );
 }
@@ -235,7 +235,7 @@ SW_TEST_CASE( ReflectionEnumBitFlagTest, PlainSequentialEnumIsNotABitFlag )
  */
 SW_TEST_CASE( ReflectionEnumInfoTest, NarrowEnumValuesMatchTheirNamesInMemory )
 {
-    const sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    const sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
 
     const auto expectRoundTrip = [&registry]( const utf8* pEnumName, auto value, const utf8* pExpectedName )
     {
@@ -273,7 +273,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, NarrowEnumValuesMatchTheirNamesInMemory )
  */
 SW_TEST_CASE( ReflectionEnumInfoTest, TextParseRejectsUnknownNamesInsteadOfZero )
 {
-    const sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    const sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
     const sw::EnumInfo*     pRole    = registry.findEnum( sw::hashed_string( "CameraRole" ) );
     const sw::EnumInfo*     pFlag    = registry.findEnum( sw::hashed_string( "TestFlag" ) );
     SW_ASSERT_NOT_NULL( pRole );
@@ -350,7 +350,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, TextParseRejectsUnknownNamesInsteadOfZero 
  */
 SW_TEST_CASE( ReflectionEnumInfoTest, EnumInfoAddressIsStableAndShared )
 {
-    sw::TypeRegistry&   registry = sw::engine::getTypeRegistry();
+    sw::TypeRegistry&   registry = sw::engine::getSubsystem<sw::TypeRegistry>();
     const sw::EnumInfo* pRole    = registry.findEnum( sw::hashed_string( "sw::CameraRole" ) );
     SW_ASSERT_NOT_NULL( pRole );
     SW_EXPECT_TRUE( registry.findEnum( sw::hashed_string( "CameraRole" ) ) == pRole );
@@ -407,7 +407,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, EnumInfoAddressIsStableAndShared )
  */
 SW_TEST_CASE( ReflectionEnumInfoTest, EnumeratorsWhoseNameHashesClashAreReported )
 {
-    sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
     const auto        makeEnum = []( const utf8* pFqn, std::initializer_list<std::pair<const utf8*, int64>> listEnumerator )
     {
         sw::EnumInfo info;

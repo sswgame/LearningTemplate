@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Editor/Common/Commands/EditorScreenshotCommands.h"
+#include "Editor/Common/Commands/Play/EditorScreenshotCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
@@ -88,7 +88,7 @@ namespace sw::editor
     {
         if ( ImGui::BeginPopup( "##DebugDrawCategories" ) == false )
             return;
-        DebugDrawQueue* pQueue = getService<DebugDrawQueue>();
+        DebugDrawQueue* pQueue = findSubsystem<DebugDrawQueue>();
         _listDebugCategory.clear();
         if ( pQueue != nullptr )
             pQueue->collectCategories( _listDebugCategory );

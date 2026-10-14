@@ -30,7 +30,7 @@ namespace sw
             /** @brief 활성 씬의 오브젝트 매니저입니다(없으면 nullptr). */
             static GameObjectManager* findActiveObjectManager()
             {
-                Scene* pScene = engine::areEngineServicesBound() ? engine::getSceneManager().getActiveScene() : nullptr;
+                Scene* pScene = engine::areEngineServicesBound() ? engine::getSubsystem<SceneManager>().getActiveScene() : nullptr;
                 return pScene != nullptr ? pScene->getObjectManager() : nullptr;
             }
 

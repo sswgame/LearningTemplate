@@ -12,7 +12,7 @@ namespace sw
     {
         if ( engine::areEngineServicesBound() == false )
             return pSourceText;
-        const LocalizationManager& localization = engine::getLocalizationManager();
+        const LocalizationManager& localization = engine::getSubsystem<LocalizationManager>();
         const utf8*                pFound       = localization.getStringByText( fullKey, nullptr );
         if ( pFound != nullptr )
             return pFound;
@@ -29,6 +29,6 @@ namespace sw
             (void)TextFormatter::format( pPattern != nullptr ? string_view( pPattern ) : string_view{}, arguments, CultureInfo{}, text );
             return text;
         }
-        return engine::getLocalizationManager().formatText( pPattern != nullptr ? string_view( pPattern ) : string_view{}, arguments );
+        return engine::getSubsystem<LocalizationManager>().formatText( pPattern != nullptr ? string_view( pPattern ) : string_view{}, arguments );
     }
 } // namespace sw

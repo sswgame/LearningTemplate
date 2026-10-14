@@ -104,7 +104,7 @@ namespace sw
     float3 PhysicsSystem::getConfiguredGravity()
     {
         if ( engine::areEngineServicesBound() )
-            return engine::getPhysicsSystem().getSettings()._gravity;
+            return engine::getSubsystem<PhysicsSystem>().getSettings()._gravity;
         return PhysicsSettings{}._gravity;
     }
 

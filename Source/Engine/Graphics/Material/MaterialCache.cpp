@@ -55,7 +55,7 @@ namespace sw
             return nullptr;
 
         const string key = FileUtil::normalizePath( relativePath );
-        engine::getAssetManager().getAssetDatabase().ensureMeta( key );
+        engine::getSubsystem<AssetManager>().getAssetDatabase().ensureMeta( key );
 
         std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
         Impl::Entry&                        entry = _impl->_mapEntry[key];

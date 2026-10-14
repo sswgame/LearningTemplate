@@ -31,7 +31,7 @@
   - **enum 레이블 나열**: 같은 열거형을 `switch` 하는 두 함수는 `case` 줄이 통째로 같아 보인다.
     **본체가 다르면 중복이 아니다**
     (`MaterialPacking` 의 두 switch 가 매번 올라온다).
-  - **서비스 로케이터 둘**: `sw::editor::getService` 와 `sw::game::getService` 는 열두 줄이 닮았지만
+  - **서비스 로케이터 둘**: `sw::editor::findSubsystem` 와 `sw::game::findSubsystem` 는 열두 줄이 닮았지만
     **서로 다른 DLL 의 서로 다른 레지스트리**다(`SW_GAMESERVICE_API` 가 그 경계다). 합치려면 내부
     함수를 주입해야 하고 그러면 경계가 흐려진다. 미발견 처리도 의도적으로 다르다 — 에디터는
     문서대로 `nullptr` 을 돌려주고(그래서 `CheckNullableServiceUse` 가 있다), 게임 쪽은 Debug 에서

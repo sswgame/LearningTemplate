@@ -24,7 +24,7 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/UI/Widgets/TextWidget.h"
@@ -325,7 +325,7 @@ namespace sw
 
     void BenchScene::despawn()
     {
-        SceneManager*      pSceneManager = game::getService<SceneManager>();
+        SceneManager*      pSceneManager = game::findSubsystem<SceneManager>();
         Scene*             pScene        = ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
         GameObjectManager* pObjects      = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
         // `[[maybe_unused]]` 인 이유: 이 수는 아래 `SW_LOG_INFO` 에만 쓰이는데 그 매크로는
@@ -378,7 +378,7 @@ namespace sw
 
     void BenchScene::spawn( uint32 meshCount )
     {
-        SceneManager* pSceneManager = game::getService<SceneManager>();
+        SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
         if ( pSceneManager == nullptr )
             return;
 
@@ -562,7 +562,7 @@ namespace sw
 
     void BenchScene::spawnCharacters( uint32 characterCount )
     {
-        SceneManager* pSceneManager = game::getService<SceneManager>();
+        SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
         if ( pSceneManager == nullptr )
             return;
         Scene* pScene = pSceneManager->getActiveScene();
@@ -621,7 +621,7 @@ namespace sw
 
     void BenchScene::spawnCombat()
     {
-        SceneManager* pSceneManager = game::getService<SceneManager>();
+        SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
         if ( pSceneManager == nullptr )
             return;
         Scene* pScene = pSceneManager->getActiveScene();
@@ -647,7 +647,7 @@ namespace sw
 
     void BenchScene::spawnFaces( uint32 faceCount )
     {
-        SceneManager* pSceneManager = game::getService<SceneManager>();
+        SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
         if ( pSceneManager == nullptr )
             return;
         Scene* pScene = pSceneManager->getActiveScene();
@@ -1075,7 +1075,7 @@ namespace sw
         if ( _bRefreshedCameras == SW_FALSE && _benchElapsed > 0.5f )
         {
             _bRefreshedCameras = SW_TRUE;
-            if ( SceneManager* pSceneManager = game::getService<SceneManager>() )
+            if ( SceneManager* pSceneManager = game::findSubsystem<SceneManager>() )
             {
                 if ( Scene* pScene = pSceneManager->getActiveScene() )
                 {
@@ -1093,7 +1093,7 @@ namespace sw
 
         // 큐브는 씬이 소유한다. 여기 있는 것은 핸들뿐이라 씬이 통째로 바뀌어도(상태 복원) 죽은 주소를
         // 건드릴 수 없다 — 해석이 nullptr 이면 그 큐브는 이미 없는 것이다.
-        SceneManager*      pSceneManager = game::getService<SceneManager>();
+        SceneManager*      pSceneManager = game::findSubsystem<SceneManager>();
         Scene*             pScene        = ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
         GameObjectManager* pObjects      = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
         if ( pObjects == nullptr )

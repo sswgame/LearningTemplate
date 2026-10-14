@@ -37,7 +37,7 @@
 #include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/SceneAnimation/AnimationCrowd.h"
 #include "Engine/Object/SceneAnimation/AnimationLOD.h"
@@ -223,9 +223,9 @@ namespace
         {
             sw::UserSettingsManager settings;
             sw::UserSettingsTargets targets;
-            targets._pGlobalVariableManager = &sw::engine::getGlobalVariableManager();
+            targets._pGlobalVariableManager = &sw::engine::getSubsystem<sw::GlobalVariableManager>();
             settings.initialize( targets );
-            const sw::string& engineSchema = sw::engine::getEngineDefaultAssets()._userSettingsSchema;
+            const sw::string& engineSchema = sw::engine::getSubsystem<sw::EngineDefaultAssets>()._userSettingsSchema;
             if ( resourceID != engineSchema && settings.loadSchema( engineSchema ) == false )
                 return false;
             return settings.loadSchema( resourceID );

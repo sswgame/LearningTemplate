@@ -221,7 +221,7 @@ namespace sw
     {
         if ( _bPostSubtitles )
         {
-            UISystem*  pUISystem     = _pUISystemOverride != nullptr ? _pUISystemOverride : game::getService<UISystem>();
+            UISystem*  pUISystem     = _pUISystemOverride != nullptr ? _pUISystemOverride : game::findSubsystem<UISystem>();
             const bool bPostSubtitle = pUISystem != nullptr && pUISystem->isInitialized() && _currentText.empty() == false;
             if ( bPostSubtitle )
                 (void)pUISystem->getSubtitles().post( _currentSpeaker, _currentText );

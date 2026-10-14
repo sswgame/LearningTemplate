@@ -344,7 +344,7 @@ namespace sw
             _zoneToken = pBackend->beginZone( *scopeID._pSite );
         }
 #endif
-        if ( _slot < FrameProfiler::kMaxScope && engine::getFrameProfiler().isEnabled() )
+        if ( _slot < FrameProfiler::kMaxScope && engine::getSubsystem<FrameProfiler>().isEnabled() )
         {
             _depth      = t_profileScopeDepth++;
             _startNanos = nowNanos();
@@ -360,7 +360,7 @@ namespace sw
         if ( _slot < FrameProfiler::kMaxScope )
         {
             const uint64   endNanos = nowNanos();
-            FrameProfiler& profiler = engine::getFrameProfiler();
+            FrameProfiler& profiler = engine::getSubsystem<FrameProfiler>();
             profiler.addSample( _slot, endNanos - _startNanos );
             --t_profileScopeDepth;
             // 타임라인은 켤 때만 남긴다 — 꺼져 있으면 bool 하나 읽기다.

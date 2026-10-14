@@ -39,7 +39,7 @@ namespace sw
             return false;
         if ( _activatorTag.isValid() && pActivator->hasTag( _activatorTag ) == false )
             return false;
-        AutosaveManager* pAutosave = game::getService<AutosaveManager>();
+        AutosaveManager* pAutosave = game::findSubsystem<AutosaveManager>();
         if ( pAutosave == nullptr )
             return false;
         switch ( _trigger )

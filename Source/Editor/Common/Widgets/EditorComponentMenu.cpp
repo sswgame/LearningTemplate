@@ -6,7 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Editor/Common/Commands/EditorSceneCommands.h"
+#include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -44,7 +44,7 @@ namespace sw::editor
         const EditorListFilter compFilter{ search.c_str() };
         const bool             bHasFilter = compFilter.isActive();
 
-        auto*         pRegistry = editor::getService<TypeRegistry>();
+        auto*         pRegistry = editor::findSubsystem<TypeRegistry>();
         bool          bAdded{ false };
         hashed_string firstMatch{};
         auto          addType = [&]( const hashed_string& typeName )

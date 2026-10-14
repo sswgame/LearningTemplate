@@ -15,7 +15,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/CommandStack.h"
@@ -32,7 +32,7 @@ namespace sw::editor
              */
             static void setWorldPlaying( bool bPlaying )
             {
-                SceneManager* pSceneManager = editor::getService<SceneManager>();
+                SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
                 if ( pSceneManager != nullptr )
                     pSceneManager->setWorldPlaying( bPlaying );
             }
@@ -47,7 +47,7 @@ namespace sw::editor
                     return;
 
                 // Stop 할 때 활성 씬이 이 씬인지 알아보려고 세대를 기록하고, 아니면 다시 만들려고 이름과 소스 경로를 기록한다.
-                SceneManager* pSceneManager = editor::getService<SceneManager>();
+                SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
                 data._sceneGeneration       = pSceneManager != nullptr ? pSceneManager->getSceneGeneration() : 0;
                 data._sceneName             = pScene->getName();
                 data._sceneSourcePath       = pScene->getSourcePath();
@@ -85,7 +85,7 @@ namespace sw::editor
                 // 그대로 되돌리면 두 씬의 오브젝트가 섞이고, 활성 씬이 플레이 중에 연 씬의 소스 경로를 가진 채라 저장하면 그 씬 파일을
                 // 덮어쓴다. 편집하던 씬을 빈 씬으로 다시 만들고(이름과 소스 경로 복원) 거기에 되돌린다. 로드가 아직 진행 중이면 끝나면서 씬을 다시
                 // 바꾸므로 먼저 취소한다. 오브젝트는 원래 id 로 복원되므로 프리팹 연결도 id 로 다시 연결한다(아래 2).
-                SceneManager* pSceneManager = editor::getService<SceneManager>();
+                SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
                 if ( pSceneManager != nullptr && pSceneManager->getSceneGeneration() != data._sceneGeneration )
                 {
                     pSceneManager->cancelPendingAsyncLoads();
@@ -237,7 +237,7 @@ namespace sw::editor
              */
             static PlaySessionData* data()
             {
-                EditorPlaySessionState* pState = getService<EditorPlaySessionState>();
+                EditorPlaySessionState* pState = findSubsystem<EditorPlaySessionState>();
                 return pState != nullptr ? &pState->getData() : nullptr;
             }
         };
@@ -430,7 +430,7 @@ namespace sw::editor
         }
         if ( data._bStartQueued == SW_FALSE )
             return;
-        const SceneManager* pSceneManager = editor::getService<SceneManager>();
+        const SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
         if ( pSceneManager != nullptr && pSceneManager->isTransitioning() )
             return;
         data._bStartQueued = SW_FALSE;
@@ -449,7 +449,7 @@ namespace sw::editor
         // 스냅샷은 곧 언로드될 씬을 찍고, 플레이 중에 로드가 끝나 씬이 바뀐다. 그러면 Stop 이 되돌릴 씬이 사용자가 막 연 씬이 아니게 된다.
         if ( data._state == PlaySessionState::Stopped )
         {
-            const SceneManager* pSceneManager = editor::getService<SceneManager>();
+            const SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
             if ( pSceneManager != nullptr && pSceneManager->isTransitioning() )
             {
                 if ( data._bStartQueued == SW_FALSE )
@@ -468,7 +468,7 @@ namespace sw::editor
 
         // 편집 내역은 Play 동안 맡겨 두고 Stop 뒤에 되찾는다(아래 분기). 플레이 중의 편집은 Stop 이 스냅샷으로 되돌리므로 그동안의 기록은 버린다.
         // 플레이와 일시정지 사이에서는 비우기만 한다.
-        CommandStack* pCommandStack            = editor::getService<CommandStack>();
+        CommandStack* pCommandStack            = editor::findSubsystem<CommandStack>();
         const bool    bShouldClearCommandStack = pCommandStack != nullptr && previous != PlaySessionState::Stopped && state != PlaySessionState::Stopped;
         if ( bShouldClearCommandStack )
             pCommandStack->clear();

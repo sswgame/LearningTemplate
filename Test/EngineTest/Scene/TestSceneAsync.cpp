@@ -39,7 +39,7 @@ namespace sw
         /** @brief 비동기 씬 전환이 끝날 때까지 태스크를 비웁니다. */
         void drainSceneTransitions( sw::SceneManager& manager )
         {
-            sw::TaskManager& tasks = sw::engine::getTaskManager();
+            sw::TaskManager& tasks = sw::engine::getSubsystem<sw::TaskManager>();
             for ( int32 stepIndex = 0; stepIndex < 200 && manager.isTransitioning(); ++stepIndex )
             {
                 tasks.waitAll();
@@ -614,8 +614,8 @@ SW_TEST_CASE( SceneAsyncTest, TypesRegisteredDuringLoadAreNotLost )
     SW_ASSERT_TRUE( manager.initialize() );
     SW_ASSERT_TRUE( manager.requestLoadAsync( xmlPath ) );
     // 워커가 씬을 다 지은 뒤에(그 타입 없이) 모듈이 올라온다.
-    sw::engine::getTaskManager().waitAll();
-    sw::engine::getTypeRegistry().registerPendingTypes( "LateModule", s_pLateHead, nullptr );
+    sw::engine::getSubsystem<sw::TaskManager>().waitAll();
+    sw::engine::getSubsystem<sw::TypeRegistry>().registerPendingTypes( "LateModule", s_pLateHead, nullptr );
 
     sw::drainSceneTransitions( manager );
     SW_ASSERT_NOT_NULL( manager.getActiveScene() );
@@ -626,7 +626,7 @@ SW_TEST_CASE( SceneAsyncTest, TypesRegisteredDuringLoadAreNotLost )
 
     manager.shutdown();
 #if !defined( SW_SHIPPING )
-    sw::engine::getTypeRegistry().unregisterTypesByModule( "LateModule" );
+    sw::engine::getSubsystem<sw::TypeRegistry>().unregisterTypesByModule( "LateModule" );
 #endif
 }
 
@@ -651,8 +651,8 @@ SW_TEST_CASE( SceneAsyncTest, TypesRegisteredDuringLoadAreNotLostWithSamePathQue
     SW_ASSERT_TRUE( first.isValid() );
     SW_ASSERT_TRUE( second.isValid() );
     // 워커가 씬을 다 지은 뒤에(그 타입 없이) 모듈이 올라온다.
-    sw::engine::getTaskManager().waitAll();
-    sw::engine::getTypeRegistry().registerPendingTypes( "LateModuleQueued", s_pLateHead, nullptr );
+    sw::engine::getSubsystem<sw::TaskManager>().waitAll();
+    sw::engine::getSubsystem<sw::TypeRegistry>().registerPendingTypes( "LateModuleQueued", s_pLateHead, nullptr );
 
     sw::drainSceneTransitions( manager );
     SW_ASSERT_NOT_NULL( manager.getActiveScene() );
@@ -667,7 +667,7 @@ SW_TEST_CASE( SceneAsyncTest, TypesRegisteredDuringLoadAreNotLostWithSamePathQue
 
     manager.shutdown();
 #if !defined( SW_SHIPPING )
-    sw::engine::getTypeRegistry().unregisterTypesByModule( "LateModuleQueued" );
+    sw::engine::getSubsystem<sw::TypeRegistry>().unregisterTypesByModule( "LateModuleQueued" );
 #endif
 }
 

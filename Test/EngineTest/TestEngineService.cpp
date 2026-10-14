@@ -41,9 +41,9 @@ SW_TEST_CASE( EngineServiceTest, GameModuleScopeHidesHostOnlyServices )
             SW_EXPECT_EQUAL( editorScope.find<Type>(), gameScope.find<Type>() ); \
     }
 
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility )       SW_CHECK_SERVICE_VISIBILITY( Type, visibility )
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility ) SW_CHECK_SERVICE_VISIBILITY( Type, visibility )
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility )                SW_CHECK_SERVICE_VISIBILITY( Type, visibility )
+#define SW_ENGINE_SERVICE( Tag, Type, requirement, visibility )       SW_CHECK_SERVICE_VISIBILITY( Type, visibility )
+#define SW_ENGINE_SERVICE_CONST( Tag, Type, requirement, visibility ) SW_CHECK_SERVICE_VISIBILITY( Type, visibility )
+#define SW_ENGINE_SERVICE_OPT( Tag, Type, visibility )                SW_CHECK_SERVICE_VISIBILITY( Type, visibility )
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
@@ -113,16 +113,16 @@ SW_TEST_CASE( EngineServiceTest, MissingRequiredServiceIsReportedByName )
  */
 SW_TEST_CASE( EngineServiceTest, OverrideScopeShadowsTheParentService )
 {
-    TaskManager* pHarnessTaskManager = &engine::getTaskManager();
+    TaskManager* pHarnessTaskManager = &engine::getSubsystem<TaskManager>();
     TaskManager* pOverride           = nullptr;
     {
         test::ScopedEngineServiceOverride scope;
         pOverride = &scope.add( sw::make_unique<TaskManager>() );
         SW_ASSERT_TRUE( scope.bind() == nullptr );
-        SW_EXPECT_TRUE( &engine::getTaskManager() == pOverride );
-        SW_EXPECT_TRUE( &engine::getAssetManager() == engine::getBoundEngineServices()._pAssetManager ); // 나머지는 부모의 것
+        SW_EXPECT_TRUE( &engine::getSubsystem<TaskManager>() == pOverride );
+        SW_EXPECT_TRUE( &engine::getSubsystem<AssetManager>() == engine::findSubsystem<AssetManager>() ); // 나머지는 부모의 것
     }
-    SW_EXPECT_TRUE( &engine::getTaskManager() == pHarnessTaskManager );
+    SW_EXPECT_TRUE( &engine::getSubsystem<TaskManager>() == pHarnessTaskManager );
 }
 
 /**

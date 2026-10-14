@@ -75,7 +75,7 @@ namespace sw::editor
     {
         if ( _pScene != nullptr )
             return true;
-        SceneManager* pSceneManager = getService<SceneManager>();
+        SceneManager* pSceneManager = findSubsystem<SceneManager>();
         if ( pSceneManager == nullptr )
             return false;
         _pScene = pSceneManager->createPreviewScene( sceneName, policy );
@@ -97,7 +97,7 @@ namespace sw::editor
             pContext->getSubsystem<EditorRenderViews>().freePreviewTarget( _targetID );
         _targetID = 0;
 
-        SceneManager* pSceneManager = getService<SceneManager>();
+        SceneManager* pSceneManager = findSubsystem<SceneManager>();
         if ( _pScene != nullptr && pSceneManager != nullptr )
             (void)pSceneManager->destroyPreviewScene( _pScene ); // 매니저가 먼저 내려갔으면 그 shutdown 이 이미 내렸다
         _pScene              = nullptr;

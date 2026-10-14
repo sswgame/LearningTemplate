@@ -204,8 +204,8 @@ SW_TEST_CASE( MaterialTest, AsyncMaterialLoadTest )
     sw::TaskHandle               handle = mat->loadFromFileAsync( "engine/materials/defaultmaterial.material" );
     SW_EXPECT_TRUE( handle.isValid() );
 
-    sw::engine::getTaskManager().waitAll();
-    sw::engine::getTaskManager().clear();
+    sw::engine::getSubsystem<sw::TaskManager>().waitAll();
+    sw::engine::getSubsystem<sw::TaskManager>().clear();
 }
 
 /**
