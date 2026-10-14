@@ -24,6 +24,35 @@ namespace sw
      */
     using SceneObjectsInvalidatedDelegate = MulticastDelegate<void()>;
 
+    /** @brief 미리보기 씬이 아닌 씬(또는 없는 키)을 가리키는 키입니다. */
+    inline constexpr uint32 kInvalidSceneKey = 0;
+
+    /**
+     * @brief 미리보기 씬의 틱 정책입니다(`SceneManager::createPreviewScene`). 프리팹 창은 틱 · 물리 없음, 애니메이션 창은 틱만, 래그돌 창은 물리까지입니다.
+     */
+    struct ScenePreviewPolicy
+    {
+        bool    _bTick{ true };     ///< false 면 `tickPreviewScenes` 가 이 씬을 건너뛴다
+        float32 _timeScale{ 1.0f }; ///< 이 씬의 시간 배율(틱 델타에 곱한다). 0 이면 틱은 돌되 시간은 멈춘다
+        bool    _bPhysics{ false }; ///< 물리 단계를 돌릴지
+        bool    _bAudio{ false };   ///< 오디오 엔진에 리스너 · 에미터를 넣을지(보통 끈다)
+        bool    _bPlay{ false };    ///< 만들 때 `beginPlay`, 내릴 때 `endPlay` 를 부를지(컴포넌트의 `onBeginPlay` 에 기대는 창)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 미리보기 씬 하나와 그 키 · 정책입니다. */
+    struct PreviewSceneEntry
+    {
+        uint32             _key{ kInvalidSceneKey };
+        unique_ptr<Scene>  _scene{};
+        ScenePreviewPolicy _policy{};
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class SceneManager
      * @brief 로드된 씬들을 관리하고 활성 씬을 추적합니다.
@@ -104,6 +133,45 @@ namespace sw
         /** @brief 활성 씬만 틱합니다. App 메인 루프가 부릅니다(게임 모듈에서 또 부르지 마십시오). */
         void tick( float32 deltaTime );
 
+        /**
+         * @brief 미리보기 씬(툴 창의 숨은 월드)을 만듭니다. 활성 씬 · 로드된 씬 목록과 따로 삽니다 — 저장 · 전환 · 영속 오브젝트에 끼지 않습니다.
+         * @details 언리얼 `FPreviewScene` · 유니티 `PreviewRenderUtility` 자리입니다(`docs/plans/EditorMultiWorld.md` 2.1). 씬마다 오브젝트 매니저와 씬 범위
+         *          (`GameObjectManager::getSceneScope`)가 따로라 서비스(물리 · 오디오 · 내비)도 월드마다 하나씩입니다.
+         *          틱은 `tickPreviewScenes` 가 정책대로 하고, 월드 플레이 상태(`setWorldPlaying`)는 따르지 않습니다(`ScenePreviewPolicy::_bPlay` 가 따로 정한다).
+         *          `initialize( pRHIDevice )` 는 부르지 않습니다(`createScene` 과 같다) — 기본 머티리얼이 필요한 쪽이 부릅니다.
+         * @return 만든 씬. 매니저가 소유하며 `destroyPreviewScene` 이나 `shutdown` 이 내립니다.
+         */
+        Scene* createPreviewScene( string_view name, const ScenePreviewPolicy& policy = {} );
+        /** @brief 미리보기 씬 @p pScene 을 내립니다(플레이 중이면 끝낸 뒤). 초점이던 씬이면 초점을 활성 씬으로 되돌립니다. 미리보기 씬이 아니면 false 입니다. */
+        bool destroyPreviewScene( Scene* pScene );
+        /** @brief @p pScene 이 이 매니저의 미리보기 씬이면 true 입니다. */
+        bool isPreviewScene( const Scene* pScene ) const;
+        /** @brief 미리보기 씬의 키(만든 순서대로 1 부터, 다시 쓰지 않음)입니다. 미리보기 씬이 아니면 `kInvalidSceneKey`. 렌더 뷰가 "어느 씬" 을 고르는 열쇠가 됩니다. */
+        uint32 getPreviewSceneKey( const Scene* pScene ) const;
+        /** @brief 키로 미리보기 씬을 찾습니다. 없으면 nullptr 입니다. */
+        Scene* findPreviewScene( uint32 key ) const;
+        /** @brief 미리보기 씬의 정책을 바꿉니다. 미리보기 씬이 아니면 false 입니다. 오디오 · 물리 · 플레이 설정은 바로 적용됩니다. */
+        bool setPreviewPolicy( Scene* pScene, const ScenePreviewPolicy& policy );
+        /** @brief 미리보기 씬의 정책입니다. 미리보기 씬이 아니면 nullptr 입니다. */
+        const ScenePreviewPolicy* findPreviewPolicy( const Scene* pScene ) const;
+        /** @brief 미리보기 씬 목록입니다(만든 순서). */
+        const vector<PreviewSceneEntry>& getPreviewScenes() const { return _listPreviewScene; }
+        /**
+         * @brief 정책이 틱을 켠 미리보기 씬을 `deltaTime * 시간 배율` 로 틱합니다. 전역 `GameTimeScale` 은 곱하지 않습니다(게임 월드 전용).
+         * @details 활성 씬 틱과 별개로 프레임마다 한 번 부릅니다(`EngineLoop`). 틱 중에 미리보기 씬을 만들거나 내리지 마십시오.
+         */
+        void tickPreviewScenes( float32 deltaTime );
+
+        /**
+         * @brief 툴(인스펙터 · 선택 · 기즈모)이 겨누는 씬을 고릅니다. 로드된 씬이나 미리보기 씬이어야 하고, 아니면 false 입니다(바뀌지 않음).
+         * @details 활성 씬(게임이 돌리는 월드)과 다릅니다 — 프리팹 창에 초점을 두어도 게임 월드는 그대로입니다. 창마다 선택 · Undo 범위는 이 위에 얹습니다(단계 4).
+         */
+        bool focusScene( Scene* pScene );
+        /** @brief 초점 씬을 활성 씬으로 되돌립니다. */
+        void clearSceneFocus() { _pFocusedScene = nullptr; }
+        /** @brief 툴이 겨누는 씬입니다. 고른 적이 없거나 그 씬이 내려졌으면 활성 씬입니다. */
+        Scene* getFocusedScene() const { return _pFocusedScene != nullptr ? _pFocusedScene : _pActiveScene; }
+
         /** @brief 비동기 로드로 만든 씬 초기화에 쓸 디바이스를 설정합니다. */
         void setRHIDevice( IRHIDevice* pRHIDevice ) { _pRHIDevice = pRHIDevice; }
         /** @brief 현재 활성 씬을 반환합니다. */
@@ -179,7 +247,10 @@ namespace sw
         vector<unique_ptr<Scene>> _listLoadedScene;
         vector<uint64>            _listPersistentObjectID; ///< `markPersistent` 로 표시한 루트의 오브젝트 id(옮겨 심어도 같다)
         Scene*                    _pActiveScene;
-        bool                      _bWorldPlaying; ///< `setWorldPlaying`
+        vector<PreviewSceneEntry> _listPreviewScene; ///< `createPreviewScene` 로 만든 미리보기 씬(로드된 씬 목록과 따로)
+        Scene*                    _pFocusedScene;    ///< `focusScene` 으로 고른 씬(nullptr 이면 활성 씬)
+        uint32                    _nextPreviewKey;   ///< 다음 미리보기 씬 키(1 부터, 줄이지 않는다)
+        bool                      _bWorldPlaying;    ///< `setWorldPlaying`
         uint64                    _sceneGeneration;
         IRHIDevice*               _pRHIDevice;
         SceneEngineServices       _services; ///< 생성자가 읽거나 `initialize` 가 받은 엔진 서비스 묶음(빌림)
