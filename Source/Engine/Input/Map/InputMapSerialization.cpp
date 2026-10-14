@@ -80,6 +80,7 @@ namespace sw
                 {         "Pulse",          ActionTrigger::Pulse},
                 {     "DoubleTap",      ActionTrigger::DoubleTap},
                 {        "Repeat",         ActionTrigger::Repeat},
+                {      "MultiTap",       ActionTrigger::MultiTap},
                 {     "NavRepeat",         ActionTrigger::Repeat},
             };
 
@@ -306,6 +307,8 @@ namespace sw
                     node.appendAttribute( "time", binding._triggerTime );
                 if ( binding._bNegate )
                     node.appendAttribute( "negate", true );
+                if ( binding._trigger == ActionTrigger::MultiTap && binding._tapCount != 2 )
+                    node.appendAttribute( "taps", static_cast<int32>( binding._tapCount ) );
             }
 
             /**
@@ -321,6 +324,13 @@ namespace sw
                     (void)inputMap.setBindingTriggerTime( action, countBefore, triggerTime ); // 바로 위에서 바인딩이 있음을 확인했다
                 if ( node.getAttributeBool( "negate", false ) )
                     (void)inputMap.setBindingNegate( action, countBefore, true ); // 바로 위에서 바인딩이 있음을 확인했다
+                // MultiTap 횟수. 없으면 2 이고, 2~255 밖이면 잘라 넣는다(옛 파일에는 이 속성이 없다).
+                const int32 tapCount = node.getAttributeInt( "taps", 2 );
+                if ( tapCount != 2 )
+                {
+                    const int32 clampedCount = ( tapCount < 2 ) ? 2 : ( ( tapCount > 255 ) ? 255 : tapCount );
+                    (void)inputMap.setBindingTapCount( action, countBefore, static_cast<uint8>( clampedCount ) ); // 바로 위에서 바인딩이 있음을 확인했다
+                }
             }
 
             /**

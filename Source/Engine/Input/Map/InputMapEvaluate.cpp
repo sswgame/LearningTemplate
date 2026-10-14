@@ -63,6 +63,7 @@ namespace sw
             bool    anyReleased{ false };
             bool    anyTriggered{ false };
             float32 maxHold{ 0.0f };
+            bool    anyHoldReached{ false }; ///< 어떤 바인딩이든 자기 홀드 시간을 채웠는지입니다.
             float2  totalAccumValue{ 0.0f, 0.0f };
             float2  relativeValue{ 0.0f, 0.0f }; ///< 마우스 이동량입니다. 묶지 않습니다.
 
@@ -81,7 +82,8 @@ namespace sw
                 }
                 // 바인딩마다 시간(`_triggerTime`)이 있으면 홀드 판정과 더블 판정 창도 그 시간을 쓴다. 다른 트리거는 맵 값 그대로다.
                 const bool    bHoldTrigger   = binding._trigger == ActionTrigger::HoldThreshold || binding._trigger == ActionTrigger::HoldAndRelease;
-                const bool    bDoubleTrigger = binding._trigger == ActionTrigger::DoubleClicked || binding._trigger == ActionTrigger::DoubleTap;
+                const uint32  requiredTaps   = getRequiredTapCount( binding );
+                const bool    bDoubleTrigger = requiredTaps > 0;
                 const float32 holdTime       = bHoldTrigger ? getEffectiveTriggerTime( binding ) : _holdThreshold;
                 const float32 doubleWindow   = bDoubleTrigger ? getEffectiveTriggerTime( binding ) : _doubleClickTime;
 
@@ -107,7 +109,7 @@ namespace sw
                 if ( state._bPressed == SW_TRUE )
                 {
                     const bool bIsMouseBinding = ( binding._arrSlot[0]._deviceKind == InputDeviceKind::Mouse );
-                    bool       bDoubleDetected = false;
+                    bool       bContinuesStreak = false;
 
                     if ( state._timeSinceLastPress <= doubleWindow )
                     {
@@ -116,18 +118,23 @@ namespace sw
                             const int2    pressDelta = curMousePos - state._lastPress;
                             const float32 distSq     = static_cast<float32>( pressDelta._x * pressDelta._x + pressDelta._y * pressDelta._y );
                             if ( distSq <= ( _doubleClickMaxDistance * _doubleClickMaxDistance ) )
-                                bDoubleDetected = true;
+                                bContinuesStreak = true;
                         }
                         else
                         {
-                            bDoubleDetected = true;
+                            bContinuesStreak = true;
                         }
                     }
 
-                    if ( bDoubleDetected )
+                    // 간격 안에 이어진 누름을 센다. 필요한 수(DoubleTap · DoubleClicked 는 2, MultiTap 은 `_tapCount`)에 닿으면
+                    // 발화하고 처음부터 다시 센다. 2 일 때는 옛 더블 판정과 같다. 다른 트리거도 `_bDoubleClicked` 는 2 연타로 둔다.
+                    const uint32 streakGoal = ( requiredTaps > 0 ) ? requiredTaps : 2u;
+                    state._tapStreak        = bContinuesStreak ? static_cast<uint8>( state._tapStreak + 1 ) : static_cast<uint8>( 1 );
+                    if ( state._tapStreak >= streakGoal )
                     {
                         state._bDoubleClicked     = SW_TRUE;
                         state._timeSinceLastPress = InputMapDefaults::kNeverPressedSentinel;
+                        state._tapStreak          = 0;
                     }
                     else
                     {
@@ -149,6 +156,9 @@ namespace sw
                     anyTriggered = true;
                 if ( state._holdDuration > maxHold )
                     maxHold = state._holdDuration;
+                // 뗀 순간 Completed/Canceled 판정은 바인딩마다 시간(`getEffectiveTriggerTime`)으로 본다. 맵 값과 견주면 짧은 차지가 Canceled 로 나온다.
+                if ( state._holdDuration >= holdTime )
+                    anyHoldReached = true;
 
                 if ( state._bDown == SW_FALSE )
                 {
@@ -191,7 +201,7 @@ namespace sw
             }
             else if ( actionEntry._bReleased == SW_TRUE )
             {
-                actionEntry._currentPhase = ( actionEntry._currentPhase == ActionPhase::Triggered || actionEntry._currentPhase == ActionPhase::Ongoing || maxHold >= _holdThreshold )
+                actionEntry._currentPhase = ( actionEntry._currentPhase == ActionPhase::Triggered || actionEntry._currentPhase == ActionPhase::Ongoing || anyHoldReached )
                                               ? ActionPhase::Completed
                                               : ActionPhase::Canceled;
             }
@@ -558,6 +568,7 @@ namespace sw
             }
             case ActionTrigger::DoubleClicked:
             case ActionTrigger::DoubleTap:
+            case ActionTrigger::MultiTap:
             {
                 return state._bDoubleClicked == SW_TRUE;
             }

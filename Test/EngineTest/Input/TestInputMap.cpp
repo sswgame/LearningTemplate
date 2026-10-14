@@ -1558,3 +1558,125 @@ SW_TEST_CASE( InputMapTest, TriggerTimeAndNegateRoundTripThroughXml )
     SW_EXPECT_NEAR_EQUAL( 0.3f, reloaded.getBinding( "Dodge", 0 )->_triggerTime, 1.0e-6f );
     input.shutdown();
 }
+
+/**
+ * @brief [InputMapTest] 뗀 순간 Completed/Canceled 는 바인딩마다 홀드 시간으로 판정한다 — 맵 값(0.4 초)을 넘겼어도 자기 시간(0.8 초)을 못 채우면 Canceled 다
+ */
+SW_TEST_CASE( InputMapTest, HoldReleasePhaseUsesThePerBindingTime )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::InputMap& inputMap = input.getInputMap();
+    inputMap.bind( "LongCharge", sw::Key::K, sw::ActionTrigger::HoldThreshold );
+    SW_ASSERT_TRUE( inputMap.setBindingTriggerTime( "LongCharge", 0, 0.8f ) );
+
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::K ) );
+    input.beginFrame( 0.5f ); // 맵 홀드 시간(0.4 초)은 넘고 바인딩 시간(0.8 초)은 못 채운다
+    SW_EXPECT_FALSE( inputMap.wasActionTriggered( "LongCharge" ) );
+    SW_EXPECT_TRUE( inputMap.getActionPhase( "LongCharge" ) == sw::ActionPhase::Started );
+    input.endFrame();
+
+    input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::K ) );
+    input.beginFrame( 0.01f );
+    SW_EXPECT_TRUE( inputMap.getActionPhase( "LongCharge" ) == sw::ActionPhase::Canceled );
+    input.endFrame();
+    input.shutdown();
+}
+
+namespace
+{
+    /** @brief 키를 한 번 눌렀다 뗀다(두 프레임, 각 @p frameSecond 초). 누른 프레임에 발화했는지 돌려준다. */
+    bool tapKeyOnce( sw::InputManager& input, const sw::hashed_string& action, sw::Key key, float32 frameSecond )
+    {
+        input.postRawEvent( sw::RawInputEvent::makeKeyDown( key ) );
+        input.beginFrame( frameSecond );
+        const bool bFired = input.getInputMap().wasActionTriggered( action );
+        input.endFrame();
+        input.postRawEvent( sw::RawInputEvent::makeKeyUp( key ) );
+        input.beginFrame( frameSecond );
+        input.endFrame();
+        return bFired;
+    }
+} // namespace
+
+/**
+ * @brief [InputMapTest] MultiTap 은 간격 안에 N 번 누르면 발화하고, 간격을 넘기면 처음부터 다시 센다 — DoubleTap 은 그대로 두 번째에 발화한다
+ */
+SW_TEST_CASE( InputMapTest, MultiTapFiresOnTheNthPressWithinTheWindow )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::InputMap& inputMap = input.getInputMap();
+    inputMap.bind( "Roll", sw::Key::R, sw::ActionTrigger::MultiTap );
+    SW_ASSERT_TRUE( inputMap.setBindingTapCount( "Roll", 0, 3 ) );
+    SW_ASSERT_TRUE( inputMap.setBindingTriggerTime( "Roll", 0, 0.3f ) );
+    inputMap.bind( "Dash", sw::Key::D, sw::ActionTrigger::DoubleTap );
+    SW_ASSERT_TRUE( inputMap.setBindingTriggerTime( "Dash", 0, 0.3f ) );
+
+    // 3 연타 성립: 누름 사이 0.1 초.
+    const sw::hashed_string roll( "Roll" );
+    SW_EXPECT_FALSE( tapKeyOnce( input, roll, sw::Key::R, 0.05f ) );
+    SW_EXPECT_FALSE( tapKeyOnce( input, roll, sw::Key::R, 0.05f ) );
+    SW_EXPECT_TRUE( tapKeyOnce( input, roll, sw::Key::R, 0.05f ) );
+
+    // 시간 초과: 두 번째와 세 번째 사이가 간격(0.3 초)을 넘으면 세 번째 누름은 새 첫 누름이다.
+    for ( uint32 frameIndex = 0; frameIndex < 10; ++frameIndex ) // 앞 성립의 여운을 지운다
+    {
+        input.beginFrame( 0.1f );
+        input.endFrame();
+    }
+    SW_EXPECT_FALSE( tapKeyOnce( input, roll, sw::Key::R, 0.05f ) );
+    SW_EXPECT_FALSE( tapKeyOnce( input, roll, sw::Key::R, 0.05f ) );
+    input.beginFrame( 0.5f );
+    input.endFrame();
+    SW_EXPECT_FALSE( tapKeyOnce( input, roll, sw::Key::R, 0.05f ) );
+
+    // DoubleTap 은 두 번째 누름에서 발화한다.
+    const sw::hashed_string dash( "Dash" );
+    SW_EXPECT_FALSE( tapKeyOnce( input, dash, sw::Key::D, 0.05f ) );
+    SW_EXPECT_TRUE( tapKeyOnce( input, dash, sw::Key::D, 0.05f ) );
+    input.shutdown();
+}
+
+/**
+ * @brief [InputMapTest] `MultiTap` · `taps` 는 맵 정의를 저장했다 다시 읽어도 남는다 — 기본값 2 는 적지 않고, DoubleTap 은 옛 이름 그대로다
+ */
+SW_TEST_CASE( InputMapTest, MultiTapRoundTripsThroughXml )
+{
+    const sw::string definitionPath = test::makeTempPath( "multi_tap.input.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( definitionPath, "<InputMap defaultLayer=\"Gameplay\">\n"
+                                                                 "\t<layers><layer name=\"Gameplay\" enabled=\"1\"/></layers>\n"
+                                                                 "\t<action name=\"Roll\" layer=\"Gameplay\">\n"
+                                                                 "\t\t<bind source=\"key\" code=\"R\" trigger=\"MultiTap\" taps=\"3\"/>\n"
+                                                                 "\t\t<bind source=\"key\" code=\"T\" trigger=\"MultiTap\"/>\n"
+                                                                 "\t</action>\n"
+                                                                 "\t<action name=\"Dash\" layer=\"Gameplay\">\n"
+                                                                 "\t\t<bind source=\"key\" code=\"D\" trigger=\"DoubleTap\"/>\n"
+                                                                 "\t</action>\n"
+                                                                 "</InputMap>\n" ) );
+
+    sw::InputMap inputMap;
+    SW_ASSERT_TRUE( inputMap.loadFromResource( definitionPath ) );
+    SW_ASSERT_EQUAL( 2u, inputMap.getBindingCount( "Roll" ) );
+    SW_EXPECT_TRUE( inputMap.getBinding( "Roll", 0 )->_trigger == sw::ActionTrigger::MultiTap );
+    SW_EXPECT_EQUAL( 3u, static_cast<uint32>( inputMap.getBinding( "Roll", 0 )->_tapCount ) );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( inputMap.getBinding( "Roll", 1 )->_tapCount ) );
+    SW_ASSERT_NOT_NULL( inputMap.getBinding( "Dash", 0 ) );
+    SW_EXPECT_TRUE( inputMap.getBinding( "Dash", 0 )->_trigger == sw::ActionTrigger::DoubleTap );
+
+    const sw::string savedPath = test::makeTempPath( "multi_tap_saved.input.xml" );
+    SW_ASSERT_TRUE( inputMap.saveToResource( savedPath ) );
+    sw::string savedText;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( savedPath, savedText ) );
+    SW_EXPECT_TRUE( savedText.find( "taps=\"3\"" ) != sw::string::npos );
+    SW_EXPECT_TRUE( savedText.find( "taps=\"2\"" ) == sw::string::npos );
+    SW_EXPECT_TRUE( savedText.find( "\"DoubleTap\"" ) != sw::string::npos );
+
+    sw::InputMap reloaded;
+    SW_ASSERT_TRUE( reloaded.loadFromResource( savedPath ) );
+    SW_ASSERT_EQUAL( 2u, reloaded.getBindingCount( "Roll" ) );
+    SW_EXPECT_TRUE( reloaded.getBinding( "Roll", 0 )->_trigger == sw::ActionTrigger::MultiTap );
+    SW_EXPECT_EQUAL( 3u, static_cast<uint32>( reloaded.getBinding( "Roll", 0 )->_tapCount ) );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( reloaded.getBinding( "Roll", 1 )->_tapCount ) );
+    SW_EXPECT_TRUE( reloaded.getBinding( "Dash", 0 )->_trigger == sw::ActionTrigger::DoubleTap );
+}

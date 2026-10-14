@@ -129,6 +129,7 @@ namespace sw
         Pulse,          ///< 누르고 있는 동안 주기적으로 반복 발화한다(연사).
         DoubleTap,      ///< 같은 키를 짧은 시간 안에 두 번 탭하면 발화한다.
         Repeat,         ///< 처음 누를 때 한 번 발화하고, navRepeatDelay 뒤부터 navRepeatRate 간격으로 반복 발화한다(UI 내비게이션).
+        MultiTap,       ///< 같은 키를 누름 사이 간격 안에 N 번(`ActionBinding::_tapCount`) 누르면 발화한다(유니티 MultiTap). DoubleTap 은 N = 2 인 경우다.
         Count
     };
 
@@ -259,6 +260,8 @@ namespace sw
         float32        _triggerTime{ 0.0f };
         /** @brief 바인딩 값의 부호를 뒤집습니다(언리얼 Negate 모디파이어, 유니티 Invert 프로세서). 눌림과 발화는 그대로이고 값만 바뀐다. */
         bool           _bNegate{ false };
+        /** @brief MultiTap 이 발화하는 누름 횟수입니다(2 이상). 다른 트리거는 쓰지 않는다. XML 의 `taps` 속성이며 기본값 2 는 적지 않는다. */
+        uint8          _tapCount{ 2 };
         mutable uint32 _cachedLayerIndex{ kInvalidLayerIndex }; /**< `_listLayerEntry` 의 안정된 인덱스입니다. 포인터가 아니라 인덱스라서 재할당되어도 안전합니다. */
         mutable float2 _joystickAnchor{ 0.0f, 0.0f };           /**< VirtualJoystick2D 전용입니다. 드래그를 시작한 순간의 마우스 위치(플로팅 앵커)입니다. */
         mutable bool   _bJoystickAnchored{ false };             /**< VirtualJoystick2D 전용입니다. 드래그 중이라 앵커가 잡혀 있는지 나타냅니다. */
@@ -522,6 +525,10 @@ namespace sw
         [[nodiscard]] bool setBindingTriggerTime( const hashed_string& action, uint32 bindIndex, float32 seconds );
         /** @brief 바인딩 @p bindIndex 의 값 부호 뒤집기(`ActionBinding::_bNegate`)를 바꿉니다. 기본 바인딩에도 같이 적습니다. */
         [[nodiscard]] bool setBindingNegate( const hashed_string& action, uint32 bindIndex, bool bNegate );
+        /** @brief 바인딩 @p bindIndex 의 MultiTap 횟수(`ActionBinding::_tapCount`)를 바꿉니다. 2 미만은 2 로 올린다. 기본 바인딩에도 같이 적습니다. */
+        [[nodiscard]] bool setBindingTapCount( const hashed_string& action, uint32 bindIndex, uint8 tapCount );
+        /** @brief 바인딩이 발화하는 데 필요한 누름 횟수입니다. MultiTap 은 `_tapCount`, DoubleTap · DoubleClicked 는 2, 나머지는 0 입니다. */
+        static uint32 getRequiredTapCount( const ActionBinding& binding );
         /** @brief 바인딩의 트리거가 실제로 쓰는 시간(초)입니다. 바인딩 값이 0 이면 트리거별 맵 값입니다. 시간을 쓰지 않는 트리거는 0 입니다. */
         float32 getEffectiveTriggerTime( const ActionBinding& binding ) const;
         uint32               getBindingCount( const hashed_string& action ) const;
@@ -557,6 +564,7 @@ namespace sw
             float32                _timeSinceLastPress;
             float32                _pulseTimer;
             int2                   _lastPress; ///< 더블클릭 판정에 쓰는 직전 누름 위치입니다.
+            uint8                  _tapStreak; ///< 간격 안에 이어진 누름 수입니다(DoubleTap · MultiTap 판정).
             uint8                  _bDown          : 1;
             uint8                  _bPressed       : 1;
             uint8                  _bReleased      : 1;
@@ -571,6 +579,7 @@ namespace sw
                 , _timeSinceLastPress{ InputMapDefaults::kNeverPressedSentinel }
                 , _pulseTimer{ 0.0f }
                 , _lastPress{}
+                , _tapStreak{ 0 }
                 , _bDown{ SW_FALSE }
                 , _bPressed{ SW_FALSE }
                 , _bReleased{ SW_FALSE }
