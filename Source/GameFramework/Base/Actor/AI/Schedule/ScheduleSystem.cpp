@@ -90,6 +90,19 @@ namespace sw
                 return activeIndex >= 0 ? activeIndex : firstIndex;
             }
         };
+
+        /** @brief 살아 있는 일정 시스템 목록입니다. 에디터 디버그 창(`collectLiveSystems`)만 읽습니다. */
+        struct ScheduleSystemRegistry
+        {
+            std::mutex                    _mutex;
+            vector<const ScheduleSystem*> _listSystem;
+
+            static ScheduleSystemRegistry& get()
+            {
+                static ScheduleSystemRegistry registry;
+                return registry;
+            }
+        };
     } // namespace
 } // namespace sw
 
@@ -162,22 +175,6 @@ namespace sw
         }
         return "Unknown";
     }
-
-    namespace
-    {
-        /** @brief 살아 있는 일정 시스템 목록입니다. 에디터 디버그 창(`collectLiveSystems`)만 읽습니다. */
-        struct ScheduleSystemRegistry
-        {
-            std::mutex                    _mutex;
-            vector<const ScheduleSystem*> _listSystem;
-
-            static ScheduleSystemRegistry& get()
-            {
-                static ScheduleSystemRegistry registry;
-                return registry;
-            }
-        };
-    } // namespace
 
     void ScheduleSystem::collectLiveSystems( vector<const ScheduleSystem*>& outListSystem )
     {

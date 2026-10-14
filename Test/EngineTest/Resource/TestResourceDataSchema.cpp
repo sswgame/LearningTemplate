@@ -69,6 +69,8 @@
 
 #include "EngineTest/HostTargetTestUtil.h"
 
+#include "GameFramework/PlugIn/Editor/CharacterEditor/Model/CharacterMirrorUtil.h"
+
 #include "TestFramework/TestFramework.h"
 
 // Resource/ 아래 데이터가 지금 코드의 이름만 쓰는지 — 모르는 키 · 타입 · 열거자가 하나도 없는지.
@@ -356,6 +358,13 @@ namespace
             sw::SocketSet       sockets;
             return kinds.loadFromResource( kDefaultSocketKinds ) && sockets.loadFromResource( resourceID, kinds );
         }
+        /** @brief 캐릭터 편집 창의 좌우 이름 규칙 표(`MirrorNameRules`, 모르는 원소 · 속성은 오류)입니다. */
+        static bool               isMirrorNames( sw::string_view resourceID ) { return endsWith( resourceID, ".mirrornames.xml" ); }
+        [[nodiscard]] static bool loadMirrorNames( const sw::string& resourceID )
+        {
+            sw::editor::MirrorNameRules rules;
+            return rules.loadFromResource( resourceID );
+        }
         [[nodiscard]] static bool loadFitTables( const sw::string& resourceID )
         {
             const sw::FitSolver solver;
@@ -469,6 +478,7 @@ namespace
             {          "bodyshape",           &isBodyShape,                     &loadCatalog<sw::BodyShapeSet>},
             {          "fittables",           &isFitTables,                                     &loadFitTables},
             {            "partfit",             &isPartFit,                                       &loadPartFit},
+            {        "mirrornames",         &isMirrorNames,                                   &loadMirrorNames},
             {    "surfacechannels",     &isSurfaceChannels,              &loadCatalog<sw::SurfaceChannelTable>},
             {        "destruction",  &isDestructionProfile,               &loadCatalog<sw::DestructionProfile>},
             {           "skeleton",            &isSkeleton,                                      &loadSkeleton},

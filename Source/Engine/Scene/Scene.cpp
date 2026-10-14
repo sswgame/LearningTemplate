@@ -181,6 +181,7 @@ namespace sw
         , _pMaterial{ nullptr }
         , _activeGameCamera{}
         , _gameCameraOverride{}
+        , _bAudioUpdateEnabled{ true }
     {
     }
 

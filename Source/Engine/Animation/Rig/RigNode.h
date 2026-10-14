@@ -265,6 +265,6 @@ namespace sw
         hashed_string _weightSlot;
         float32       _weight;
         float32       _minScreenSize;
-        uint8         _bEnabled{ SW_TRUE };
+        uint8         _bEnabled;
     };
 } // namespace sw

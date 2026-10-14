@@ -76,7 +76,9 @@ namespace sw
 
     bool TerrainHeightfield::writeHeightSamples( const vector<float32>& listHeight, const TerrainSampleRect& rect )
     {
-        if ( isValid() == false || listHeight.size() != _listHeight.size() || rect.isEmpty() || rect._maxX >= _resolution || rect._maxZ >= _resolution )
+        const bool bRectInside  = rect.isEmpty() == false && rect._maxX < _resolution && rect._maxZ < _resolution;
+        const bool bSizeMatches = isValid() && listHeight.size() == _listHeight.size();
+        if ( bSizeMatches == false || bRectInside == false )
             return false;
         for ( uint32 sampleZ = rect._minZ; sampleZ <= rect._maxZ; ++sampleZ )
         {
@@ -105,8 +107,11 @@ namespace sw
 
     bool TerrainHeightfield::writeSplatWeights( const vector<float4>& listWeight, const TerrainSampleRect& rect )
     {
-        if ( _splatWidth == 0 || _splatHeight == 0 || listWeight.size() != static_cast<size_t>( _splatWidth ) * _splatHeight || rect.isEmpty() || rect._maxX >= _splatWidth ||
-             rect._maxZ >= _splatHeight )
+        const bool bHasSplat    = _splatWidth > 0 && _splatHeight > 0;
+        const bool bSizeMatches = listWeight.size() == static_cast<size_t>( _splatWidth ) * _splatHeight;
+        const bool bRectInside  = rect.isEmpty() == false && rect._maxX < _splatWidth && rect._maxZ < _splatHeight;
+        const bool bValidWrite  = bHasSplat && bSizeMatches && bRectInside;
+        if ( bValidWrite == false )
             return false;
         for ( uint32 texelZ = rect._minZ; texelZ <= rect._maxZ; ++texelZ )
         {

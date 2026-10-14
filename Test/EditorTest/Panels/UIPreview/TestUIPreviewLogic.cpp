@@ -333,7 +333,7 @@ SW_TEST_CASE( UIPreviewLogicTest, AnchorPresetKeepsTheWidgetInPlace )
     for ( uint32 index = 0; index < static_cast<uint32>( UIPreviewAnchorPreset::Count ); ++index )
     {
         const auto preset = static_cast<UIPreviewAnchorPreset>( index );
-        (void)UIPreviewLogic::applyAnchorPreset( slot, preset, rect, parentSize );
+        (void)UIPreviewLogic::applyAnchorPreset( slot, preset, rect, parentSize ); // 바뀌었는지는 보지 않는다 — 아래 단언이 결과 슬롯을 본다
         SW_EXPECT_NEAR_EQUAL( rect._left, slot._anchorMin._x * parentSize._x + slot._offsetMin._x, 1e-3f );
         SW_EXPECT_NEAR_EQUAL( rect._bottom, slot._anchorMax._y * parentSize._y + slot._offsetMax._y, 1e-3f );
         SW_EXPECT_TRUE( UIPreviewLogic::getAnchorPresetMark( preset )[0] != '\0' );

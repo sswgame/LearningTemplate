@@ -88,7 +88,8 @@ namespace sw::editor
             }
         }
 
-        if ( _bDisabled == SW_TRUE || _listPendingPath.empty() || poll == EditorTaskPoll::Running )
+        const bool bNothingToStart = _bDisabled == SW_TRUE || _listPendingPath.empty();
+        if ( bNothingToStart || poll == EditorTaskPoll::Running )
             return;
         if ( _projectRoot.empty() ||
              FileUtil::exists( FileUtil::joinPath( _projectRoot, EditorAssetValidationInternal::kScriptRelativePath ) ) == false )

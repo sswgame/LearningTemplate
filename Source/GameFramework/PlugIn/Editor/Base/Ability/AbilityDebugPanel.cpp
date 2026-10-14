@@ -69,7 +69,7 @@ namespace sw::editor
             GameObject* pObject = pObjects->resolveGameObject( handle );
             if ( pObject == nullptr )
                 continue;
-            ImGui::PushID( static_cast<int>( pObject->getObjectID() ) );
+            ImGui::PushID( static_cast<int32>( pObject->getObjectID() ) );
             if ( ImGui::Selectable( pObject->getName().c_str(), pObject == pCurrentOwner ) )
                 _pickedHandle = handle;
             ImGui::PopID();
@@ -94,7 +94,7 @@ namespace sw::editor
         }
 
         AbilityDebugModel::collect( *pTarget, _snapshot );
-        ImGui::TextDisabled( "t = %.2f", static_cast<double>( _snapshot._time ) );
+        ImGui::TextDisabled( "t = %.2f", static_cast<float64>( _snapshot._time ) );
         drawSnapshot();
     }
 
@@ -116,9 +116,9 @@ namespace sw::editor
                     ImGui::TableNextColumn();
                     ImGui::TextUnformatted( row._name.c_str() );
                     ImGui::TableNextColumn();
-                    ImGui::Text( "%.2f", static_cast<double>( row._baseValue ) );
+                    ImGui::Text( "%.2f", static_cast<float64>( row._baseValue ) );
                     ImGui::TableNextColumn();
-                    ImGui::Text( "%.2f", static_cast<double>( row._currentValue ) );
+                    ImGui::Text( "%.2f", static_cast<float64>( row._currentValue ) );
                 }
                 ImGui::EndTable();
             }
@@ -141,7 +141,7 @@ namespace sw::editor
                     if ( row._bInfinite )
                         ImGui::TextUnformatted( SW_LOCKEY( "EdAbilityDebug", "Infinite" ) );
                     else
-                        ImGui::Text( "%.2f", static_cast<double>( row._remainingTime ) );
+                        ImGui::Text( "%.2f", static_cast<float64>( row._remainingTime ) );
                     ImGui::TableNextColumn();
                     ImGui::Text( "%d", row._stackCount );
                 }
@@ -185,7 +185,7 @@ namespace sw::editor
                     ImGui::TextUnformatted( row._bActive ? "*" : "" );
                     ImGui::TableNextColumn();
                     if ( row._cooldownRemaining > 0.0f )
-                        ImGui::Text( "%.2f", static_cast<double>( row._cooldownRemaining ) );
+                        ImGui::Text( "%.2f", static_cast<float64>( row._cooldownRemaining ) );
                     else
                         ImGui::TextDisabled( "-" );
                 }
