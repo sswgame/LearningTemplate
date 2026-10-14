@@ -14,6 +14,7 @@
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -1355,8 +1356,9 @@ namespace sw::editor
         const PropertyInfo* pSlotProp = UIPreviewLogic::findWidgetProperty( widget, "_slot" );
         if ( pSlotProp == nullptr )
             return;
-        const TypeInfo* pParentType = widget.getParent()->getTypeInfo();
-        const string    header      = string{ SW_LOCKEY( "EditorUIPreview", "SlotHeader" ) } + " (" + ( pParentType != nullptr ? pParentType->_name.c_str() : "Panel" ) + ")###uipreviewslot";
+        const EditorListFilter filter{ _grid.getFilterText() };
+        const TypeInfo*        pParentType = widget.getParent()->getTypeInfo();
+        const string           header      = string{ SW_LOCKEY( "EditorUIPreview", "SlotHeader" ) } + " (" + ( pParentType != nullptr ? pParentType->_name.c_str() : "Panel" ) + ")###uipreviewslot";
         if ( ImGui::CollapsingHeader( header.c_str(), ImGuiTreeNodeFlags_DefaultOpen ) == false )
             return;
 
@@ -1368,16 +1370,26 @@ namespace sw::editor
         const uint16             kOneSpan        = 1;
 
         // 컨트롤 하나 = 슬롯 사본을 draw 가 고치고(고쳤으면 true), 바뀌면 바로 위젯에 넣고(레이아웃이 따라 움직인다), 편집을 맺는다.
-        WidgetLayoutSlot slot  = widget.getLayoutSlot();
-        auto             field = [&]( const utf8* pMark, bool bImmediate, auto&& draw )
+        WidgetLayoutSlot slot   = widget.getLayoutSlot();
+        bool             bDrawn = false; ///< 바로 앞 field 를 그렸다 — 그리지 않았으면 뒤의 툴팁이 남의 위젯에 붙지 않게 건너뛴다
+        auto             field  = [&]( const utf8* pMark, const utf8* pLabel, bool bImmediate, auto&& draw )
         {
+            // 인스펙터 검색어가 이름표에 없으면 그리지 않는다(언리얼 Details 의 검색이 슬롯 범주의 행도 거르는 것과 같다).
+            bDrawn = filter.matches( pLabel );
+            if ( bDrawn == false )
+                return;
             const string beforeText = UIPreviewLogic::formatWidgetProperty( widget, *pSlotProp );
             slot                    = widget.getLayoutSlot();
-            const bool bChanged     = draw( slot );
+            const bool bChanged     = draw( slot, pLabel );
             if ( bChanged )
                 widget.setLayoutSlot( slot );
             Internal::noteMark( "uipreview.slot", pMark );
             finishSlotField( widget, *pSlotProp, beforeText, bChanged, bImmediate );
+        };
+        auto fieldTooltip = [&bDrawn]( const utf8* pTooltip )
+        {
+            if ( bDrawn )
+                EditorWidgets::drawTooltip( pTooltip );
         };
         auto combo = [&]( const utf8* pLabel, int32 current, const utf8* const* ppArrName, int32 count, int32& outIndex )
         {
@@ -1387,21 +1399,21 @@ namespace sw::editor
 
         if ( fields._bPaddingAlignment )
         {
-            field( "padding", false, [&]( WidgetLayoutSlot& s )
-            { return ImGui::DragFloat4( SW_LOCKEY( "EditorUIPreview", "SlotPadding" ), &s._padding._x, kDragSpeed ); } );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "SlotPaddingTip" ) );
-            field( "halign", true, [&]( WidgetLayoutSlot& s )
+            field( "padding", SW_LOCKEY( "EditorUIPreview", "SlotPadding" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
+            { return ImGui::DragFloat4( pLabel, &s._padding._x, kDragSpeed ); } );
+            fieldTooltip( SW_LOCKEY( "EditorUIPreview", "SlotPaddingTip" ) );
+            field( "halign", SW_LOCKEY( "EditorUIPreview", "SlotHorizontalAlignment" ), true, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
             {
                 int32 index = 0;
-                if ( combo( SW_LOCKEY( "EditorUIPreview", "SlotHorizontalAlignment" ), static_cast<int32>( s._horizontalAlignment ), kArrAlignment, 4, index ) == false )
+                if ( combo( pLabel, static_cast<int32>( s._horizontalAlignment ), kArrAlignment, 4, index ) == false )
                     return false;
                 s._horizontalAlignment = static_cast<UIAlignment>( index );
                 return true;
             } );
-            field( "valign", true, [&]( WidgetLayoutSlot& s )
+            field( "valign", SW_LOCKEY( "EditorUIPreview", "SlotVerticalAlignment" ), true, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
             {
                 int32 index = 0;
-                if ( combo( SW_LOCKEY( "EditorUIPreview", "SlotVerticalAlignment" ), static_cast<int32>( s._verticalAlignment ), kArrAlignment, 4, index ) == false )
+                if ( combo( pLabel, static_cast<int32>( s._verticalAlignment ), kArrAlignment, 4, index ) == false )
                     return false;
                 s._verticalAlignment = static_cast<UIAlignment>( index );
                 return true;
@@ -1409,35 +1421,35 @@ namespace sw::editor
         }
         if ( fields._bBoxSize )
         {
-            field( "sizerule", true, [&]( WidgetLayoutSlot& s )
+            field( "sizerule", SW_LOCKEY( "EditorUIPreview", "SlotSizeRule" ), true, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
             {
                 int32 index = 0;
-                if ( combo( SW_LOCKEY( "EditorUIPreview", "SlotSizeRule" ), static_cast<int32>( s._sizeRule ), kArrSizeRule, 2, index ) == false )
+                if ( combo( pLabel, static_cast<int32>( s._sizeRule ), kArrSizeRule, 2, index ) == false )
                     return false;
                 s._sizeRule = static_cast<UISizeRule>( index );
                 return true;
             } );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "SlotSizeRuleTip" ) );
+            fieldTooltip( SW_LOCKEY( "EditorUIPreview", "SlotSizeRuleTip" ) );
             ImGui::BeginDisabled( slot._sizeRule != UISizeRule::Fill );
-            field( "fillweight", false, [&]( WidgetLayoutSlot& s )
-            { return ImGui::DragFloat( SW_LOCKEY( "EditorUIPreview", "SlotFillWeight" ), &s._fillWeight, 0.01f, 0.0f, 1000.0f ); } );
+            field( "fillweight", SW_LOCKEY( "EditorUIPreview", "SlotFillWeight" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
+            { return ImGui::DragFloat( pLabel, &s._fillWeight, 0.01f, 0.0f, 1000.0f ); } );
             ImGui::EndDisabled();
         }
         if ( fields._bGrid )
         {
-            field( "row", false, [&]( WidgetLayoutSlot& s )
-            { return ImGui::DragScalar( SW_LOCKEY( "EditorUIPreview", "SlotRow" ), ImGuiDataType_U16, &s._row, 0.1f ); } );
-            field( "column", false, [&]( WidgetLayoutSlot& s )
-            { return ImGui::DragScalar( SW_LOCKEY( "EditorUIPreview", "SlotColumn" ), ImGuiDataType_U16, &s._column, 0.1f ); } );
-            field( "rowspan", false, [&]( WidgetLayoutSlot& s )
-            { return ImGui::DragScalar( SW_LOCKEY( "EditorUIPreview", "SlotRowSpan" ), ImGuiDataType_U16, &s._rowSpan, 0.1f, &kOneSpan ); } );
-            field( "columnspan", false, [&]( WidgetLayoutSlot& s )
-            { return ImGui::DragScalar( SW_LOCKEY( "EditorUIPreview", "SlotColumnSpan" ), ImGuiDataType_U16, &s._columnSpan, 0.1f, &kOneSpan ); } );
+            field( "row", SW_LOCKEY( "EditorUIPreview", "SlotRow" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
+            { return ImGui::DragScalar( pLabel, ImGuiDataType_U16, &s._row, 0.1f ); } );
+            field( "column", SW_LOCKEY( "EditorUIPreview", "SlotColumn" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
+            { return ImGui::DragScalar( pLabel, ImGuiDataType_U16, &s._column, 0.1f ); } );
+            field( "rowspan", SW_LOCKEY( "EditorUIPreview", "SlotRowSpan" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
+            { return ImGui::DragScalar( pLabel, ImGuiDataType_U16, &s._rowSpan, 0.1f, &kOneSpan ); } );
+            field( "columnspan", SW_LOCKEY( "EditorUIPreview", "SlotColumnSpan" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
+            { return ImGui::DragScalar( pLabel, ImGuiDataType_U16, &s._columnSpan, 0.1f, &kOneSpan ); } );
         }
         if ( fields._bCanvas )
         {
             // 앵커 프리셋(UMG 의 앵커 드롭다운) — 앵커만 바꾸고 위젯은 제자리에 둔다. 지금 앵커와 맞는 프리셋이 없으면 빈 칸이다.
-            field( "anchorpreset", true, [&]( WidgetLayoutSlot& s )
+            field( "anchorpreset", SW_LOCKEY( "EditorUIPreview", "SlotAnchorPreset" ), true, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
             {
                 const utf8* const arrPresetName[] = {
                     SW_LOCKEY( "EditorUIPreview", "AnchorTopLeft" ),
@@ -1465,7 +1477,7 @@ namespace sw::editor
                         break;
                     }
                 }
-                if ( ImGui::Combo( SW_LOCKEY( "EditorUIPreview", "SlotAnchorPreset" ), &picked, arrPresetName, kPresetCount ) == false || picked < 0 )
+                if ( ImGui::Combo( pLabel, &picked, arrPresetName, kPresetCount ) == false || picked < 0 )
                     return false;
                 const WidgetGeometry& geometry       = widget.getGeometry();
                 const WidgetGeometry& parentGeometry = widget.getParent()->getGeometry();
@@ -1474,47 +1486,47 @@ namespace sw::editor
                 const UIRect          localRect      = UIRect::makeFromPositionSize( left, top, geometry._size._x, geometry._size._y );
                 return UIPreviewLogic::applyAnchorPreset( s, static_cast<UIPreviewAnchorPreset>( picked ), localRect, parentGeometry._size );
             } );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "SlotAnchorPresetTip" ) );
-            field( "anchormin", false, [&]( WidgetLayoutSlot& s )
-            { return ImGui::DragFloat2( SW_LOCKEY( "EditorUIPreview", "SlotAnchorMin" ), &s._anchorMin._x, kAnchorSpeed, 0.0f, 1.0f ); } );
-            field( "anchormax", false, [&]( WidgetLayoutSlot& s )
-            { return ImGui::DragFloat2( SW_LOCKEY( "EditorUIPreview", "SlotAnchorMax" ), &s._anchorMax._x, kAnchorSpeed, 0.0f, 1.0f ); } );
-            field( "offsetmin", false, [&]( WidgetLayoutSlot& s )
-            { return ImGui::DragFloat2( SW_LOCKEY( "EditorUIPreview", "SlotOffsetMin" ), &s._offsetMin._x, kDragSpeed ); } );
-            field( "offsetmax", false, [&]( WidgetLayoutSlot& s )
-            { return ImGui::DragFloat2( SW_LOCKEY( "EditorUIPreview", "SlotOffsetMax" ), &s._offsetMax._x, kDragSpeed ); } );
-            field( "autosize", true, [&]( WidgetLayoutSlot& s )
-            { return ImGui::Checkbox( SW_LOCKEY( "EditorUIPreview", "SlotAutoSize" ), &s._bAutoSize ); } );
-            field( "growh", true, [&]( WidgetLayoutSlot& s )
+            fieldTooltip( SW_LOCKEY( "EditorUIPreview", "SlotAnchorPresetTip" ) );
+            field( "anchormin", SW_LOCKEY( "EditorUIPreview", "SlotAnchorMin" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
+            { return ImGui::DragFloat2( pLabel, &s._anchorMin._x, kAnchorSpeed, 0.0f, 1.0f ); } );
+            field( "anchormax", SW_LOCKEY( "EditorUIPreview", "SlotAnchorMax" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
+            { return ImGui::DragFloat2( pLabel, &s._anchorMax._x, kAnchorSpeed, 0.0f, 1.0f ); } );
+            field( "offsetmin", SW_LOCKEY( "EditorUIPreview", "SlotOffsetMin" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
+            { return ImGui::DragFloat2( pLabel, &s._offsetMin._x, kDragSpeed ); } );
+            field( "offsetmax", SW_LOCKEY( "EditorUIPreview", "SlotOffsetMax" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
+            { return ImGui::DragFloat2( pLabel, &s._offsetMax._x, kDragSpeed ); } );
+            field( "autosize", SW_LOCKEY( "EditorUIPreview", "SlotAutoSize" ), true, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
+            { return ImGui::Checkbox( pLabel, &s._bAutoSize ); } );
+            field( "growh", SW_LOCKEY( "EditorUIPreview", "SlotGrowHorizontal" ), true, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
             {
                 int32 index = 0;
-                if ( combo( SW_LOCKEY( "EditorUIPreview", "SlotGrowHorizontal" ), static_cast<int32>( s._growHorizontal ), kArrGrow, 3, index ) == false )
+                if ( combo( pLabel, static_cast<int32>( s._growHorizontal ), kArrGrow, 3, index ) == false )
                     return false;
                 s._growHorizontal = static_cast<UIGrowDirection>( index );
                 return true;
             } );
-            field( "growv", true, [&]( WidgetLayoutSlot& s )
+            field( "growv", SW_LOCKEY( "EditorUIPreview", "SlotGrowVertical" ), true, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
             {
                 int32 index = 0;
-                if ( combo( SW_LOCKEY( "EditorUIPreview", "SlotGrowVertical" ), static_cast<int32>( s._growVertical ), kArrGrow, 3, index ) == false )
+                if ( combo( pLabel, static_cast<int32>( s._growVertical ), kArrGrow, 3, index ) == false )
                     return false;
                 s._growVertical = static_cast<UIGrowDirection>( index );
                 return true;
             } );
-            field( "zorder", false, [&]( WidgetLayoutSlot& s )
-            { return ImGui::DragScalar( SW_LOCKEY( "EditorUIPreview", "SlotZOrder" ), ImGuiDataType_S16, &s._zOrder, 0.1f ); } );
+            field( "zorder", SW_LOCKEY( "EditorUIPreview", "SlotZOrder" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
+            { return ImGui::DragScalar( pLabel, ImGuiDataType_S16, &s._zOrder, 0.1f ); } );
         }
         // 크기 덮어쓰기 · 최소 · 최대는 모든 패널이 읽는다(UMG 의 SizeBox 를 슬롯 필드로 옮긴 것).
-        field( "width", false, [&]( WidgetLayoutSlot& s )
-        { return ImGui::DragFloat( SW_LOCKEY( "EditorUIPreview", "SlotWidthOverride" ), &s._widthOverride, kDragSpeed, 0.0f, 100000.0f ); } );
-        field( "height", false, [&]( WidgetLayoutSlot& s )
-        { return ImGui::DragFloat( SW_LOCKEY( "EditorUIPreview", "SlotHeightOverride" ), &s._heightOverride, kDragSpeed, 0.0f, 100000.0f ); } );
-        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "SlotOverrideTip" ) );
-        field( "minsize", false, [&]( WidgetLayoutSlot& s )
-        { return ImGui::DragFloat2( SW_LOCKEY( "EditorUIPreview", "SlotMinSize" ), &s._minSize._x, kDragSpeed, 0.0f, 100000.0f ); } );
-        field( "maxsize", false, [&]( WidgetLayoutSlot& s )
-        { return ImGui::DragFloat2( SW_LOCKEY( "EditorUIPreview", "SlotMaxSize" ), &s._maxSize._x, kDragSpeed, 0.0f, 100000.0f ); } );
-        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "SlotMaxSizeTip" ) );
+        field( "width", SW_LOCKEY( "EditorUIPreview", "SlotWidthOverride" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
+        { return ImGui::DragFloat( pLabel, &s._widthOverride, kDragSpeed, 0.0f, 100000.0f ); } );
+        field( "height", SW_LOCKEY( "EditorUIPreview", "SlotHeightOverride" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
+        { return ImGui::DragFloat( pLabel, &s._heightOverride, kDragSpeed, 0.0f, 100000.0f ); } );
+        fieldTooltip( SW_LOCKEY( "EditorUIPreview", "SlotOverrideTip" ) );
+        field( "minsize", SW_LOCKEY( "EditorUIPreview", "SlotMinSize" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
+        { return ImGui::DragFloat2( pLabel, &s._minSize._x, kDragSpeed, 0.0f, 100000.0f ); } );
+        field( "maxsize", SW_LOCKEY( "EditorUIPreview", "SlotMaxSize" ), false, [&]( WidgetLayoutSlot& s, const utf8* pLabel )
+        { return ImGui::DragFloat2( pLabel, &s._maxSize._x, kDragSpeed, 0.0f, 100000.0f ); } );
+        fieldTooltip( SW_LOCKEY( "EditorUIPreview", "SlotMaxSizeTip" ) );
         ImGui::Separator();
     }
 
@@ -1557,8 +1569,9 @@ namespace sw::editor
         }
         if ( _baselineWidget != _selected )
             captureBaseline( *pWidget );
-        drawSlotSection( *pWidget );
+        // 검색창이 맨 위다(언리얼 Details 처럼) — 슬롯 구역도 이 검색어로 거른다.
         _grid.drawSearchBar( "uipreview.inspector.search" );
+        drawSlotSection( *pWidget );
         EditorPropertyGridTarget target{};
         target._pInstance = pWidget;
         target._pType     = pWidget->getTypeInfo();
