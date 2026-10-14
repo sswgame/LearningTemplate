@@ -28,7 +28,8 @@ cmake --build --preset Ninja-Debug --target all AllTests  # +테스트
 - **graphify** — 코드 지식 그래프. `py -3 -m pip install --user graphifyy` 후 `graphify install --project`
   (사용자 Scripts 폴더를 PATH 에 둔다). 그래프는 `graphify update Source` 로 만들고(약 4분) 산출물 `Source/graphify-out/` 을 저장소 루트 `graphify-out/` 으로 옮긴다(추적 안 함 — 린트가 `Source` 아래 `.md` 를 훑는다).
   질문은 저장소 루트에서 `graphify query "<질문>"` · `graphify path "<A>" "<B>"` · `graphify explain "<개념>"` 로 먼저 좁히고, 코드를 고친 뒤에도 같은 명령으로 갱신한다.
-  `graphify install` 이 쓰는 PreToolUse 훅과 `graphify hook install`(git 훅)은 넣지 않는다 — PATH 에 없으면 모든 도구 호출이 걸리고, 커밋 훅(`PreCommitLint`)과 부딪힌다.
+  `graphify install` 이 쓰는 PreToolUse 훅은 공유 `settings.json` 에 넣지 않는다 — 이 PC 밖에서는 `graphify` 가 PATH 에 없어 모든 도구 호출이 걸린다(개인 `settings.local.json` 에 절대 경로로 둘 수 있다).
+  `graphify hook install`(git `post-commit` · `post-checkout` · `post-merge`)도 넣지 않는다 — `update` 가 증분이 아니라 `Source` 전체를 다시 읽어 3~4분 걸려서(측정), 워크트리 여럿에서 커밋할 때마다 돈다. `pre-commit` 과는 부딪히지 않는다.
 - **ponytail** — "가장 작은 변경" 지침 스킬. `.claude/skills/ponytail/SKILL.md` 를 두고 `/ponytail` 로 부를 때만 쓴다(`disable-model-invocation`).
   구조를 과감히 바꾸는 이 저장소의 방침과 충돌할 수 있어 자동으로 켜지 않는다.
 - **Headroom** — 입력 압축 프록시. `py -3 -m pip install --user headroom-ai` 로 설치만 하고 `headroom wrap` 은 쓰지 않는다(사용자 전역 `~/.claude.json` 을 바꾼다).
