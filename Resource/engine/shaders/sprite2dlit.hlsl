@@ -76,7 +76,12 @@ float4 PSMain(PSInput input) : SV_TARGET
 	// 보기 모드(Unlit · Normals · Depth · Overdraw) — 2D 빛 없이 보기 모드의 색. 스프라이트 평면은 Z 0 이다.
 	return swComputeViewModeColor(albedo, albedo, normal, float3(input.worldPosition, 0.0f));
 #else
+#if defined(SW_VIEWMODE_LIGHTINGONLY)
+	// 보기 모드 LightingOnly — 2D 빛은 그대로, 표면 색만 회색(swShadeLights2d 는 swShadeLights 를 거치지 않는다). 알파는 텍스처 것 그대로.
+	const float3 lit = swShadeLights2d(SW_VIEWMODE_LIGHTINGONLY_ALBEDO, input.worldPosition, normal, bHasNormal);
+#else
 	const float3 lit = swShadeLights2d(albedo.rgb, input.worldPosition, normal, bHasNormal);
+#endif
 	return float4(lit, albedo.a);
 #endif
 }
