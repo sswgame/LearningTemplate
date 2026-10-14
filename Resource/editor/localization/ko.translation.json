@@ -661,6 +661,30 @@
             "text": "보관할 기록 길이(초, 1~60)입니다. 오래된 프레임은 버려지고, 길게 잡을수록 메모리를 더 씁니다.",
             "sourceHash": "8c10e302ec9ca046"
         },
+        "EditorBugIt.Capture": {
+            "text": "스크린샷 · 로그 · 씬 사본 · 카메라 자리 · 재현 명령을 위 메모와 함께 Saved/BugIt/<시각>/ 에 모읍니다",
+            "sourceHash": "758cc67a58f4e4d7"
+        },
+        "EditorBugIt.CopyPath": {
+            "text": "폴더의 절대 경로를 복사합니다",
+            "sourceHash": "75494fc09911e89f"
+        },
+        "EditorBugIt.GoTo": {
+            "text": "그 씬을 열고 카메라를 저장한 자리로 옮깁니다(bugitgo)",
+            "sourceHash": "f3a7270f36dcb6b2"
+        },
+        "EditorBugIt.NoReports": {
+            "text": "아직 버그 리포트가 없습니다. Collect Now 가 Saved/BugIt 아래에 하나 모읍니다.",
+            "sourceHash": "900da9a3e9e8b26"
+        },
+        "EditorBugIt.NoteHint": {
+            "text": "붙일 메모(무엇을 했고 무엇이 잘못됐는지)",
+            "sourceHash": "3915bb5df4e885fe"
+        },
+        "EditorBugIt.ShowInExplorer": {
+            "text": "이 폴더를 파일 탐색기에서 엽니다",
+            "sourceHash": "e0320233b736df32"
+        },
         "EditorConsole.AllLevelsHidden": {
             "text": "모든 로그 수준이 숨겨져 있습니다. 툴바에서 하나를 다시 켜세요.",
             "sourceHash": "370f9580d5db61a5"
