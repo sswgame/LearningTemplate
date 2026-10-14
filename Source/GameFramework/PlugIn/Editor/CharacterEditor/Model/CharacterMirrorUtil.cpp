@@ -118,7 +118,8 @@ namespace sw::editor
 
     bool MirrorNameRules::addPair( string_view first, string_view second )
     {
-        if ( first.empty() || second.empty() || first == second )
+        const bool bEitherEmpty = first.empty() || second.empty();
+        if ( bEitherEmpty || first == second )
             return false;
         _listPair.push_back( MirrorTokenPair{ string( first ), string( second ) } );
         return true;

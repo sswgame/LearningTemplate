@@ -711,7 +711,8 @@ namespace sw::editor
         ImGui::SetNextWindowSize( ImVec2{ 560.0f * scale, 320.0f * scale }, ImGuiCond_Appearing );
         if ( ImGui::BeginPopup( "##CurveEditor", ImGuiWindowFlags_NoScrollbar ) == false )
             return;
-        if ( _pCurveModifier == &modifier && _curveParamIndex == paramIndex && _curveItemIndex == itemIndex )
+        const bool bSameParam = _pCurveModifier == &modifier && _curveParamIndex == paramIndex;
+        if ( bSameParam && _curveItemIndex == itemIndex )
         {
             ImGui::TextUnformatted( def._pName );
             // 끄는 중 · 칸 입력 중이 아니면 값에서 다시 뜬다(되돌리기 · 다른 곳의 편집이 편집기에 보인다)
