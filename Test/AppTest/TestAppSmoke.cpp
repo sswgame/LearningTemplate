@@ -741,8 +741,8 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|hierarchy.selectAllWith",
         "EditorSelfTest|PASS|layout.namedRoundTrip",
         "EditorSelfTest|PASS|inspector.propertyDrawerRegistered",
-        "EditorSelfTest|PASS|themepark.extensionPanelDraws",
-        "EditorSelfTest|PASS|themepark.layoutPreviewLoads",
+        "EditorSelfTest|PASS|admin.panelDraws", // 기본 게임(Empty)이 쓰는 키트의 확장 — ThemePark 확장은 그 게임에서만 오른다(아래 사례)
+        "EditorSelfTest|PASS|admin.fakeRoundTrip",
         "EditorSelfTest|PASS|sceneView.gizmoMovesTheSelection",
         "EditorSelfTest|PASS|sceneView.gridAndGizmoDraw",
         "EditorSelfTest|PASS|gameView.hidesEditorOverlays",
@@ -799,6 +799,32 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
     vector<uint8> listIniAfter;
     const bool    bIniExistsAfter = readOptionalFile( imguiIniPath, listIniAfter );
     SW_EXPECT_TRUE_MSG( bIniExistsAfter == bIniExistedBefore && listIniAfter == listIniBefore, "the self test run rewrote the user's imgui.ini" );
+}
+
+/**
+ * @brief [AppSmokeTest] 게임이 쓰는 키트의 에디터 확장만 오르고, 그 확장의 자체 테스트가 그 게임의 에디터 안에서 통과한다(ThemeParkTycoon → GF_EditorPlugIn_ThemePark)
+ * @details 고른 게임이 쓰지 않는 키트와 그 확장은 올리지 않는다 — 기본 게임(Empty)의 자체 테스트 실행에는 ThemePark 확장이 없으므로 여기서 따로 본다.
+ *          확장이 기여한 서브시스템(`ParkLayoutPreview`)이 에디터 범위에 걸렸는지도 확장의 자체 테스트가 본다.
+ */
+SW_TEST_CASE( AppSmokeTest, KitExtensionSelfTestsPassInTheirGame )
+{
+    const AppRunResult result = runApp( "-gv_profileFrames=1200 -EnableEditor -dx12 -game=ThemeParkTycoon -gv_editorSelfTest=themepark.*", "EditorSelfTest|" );
+    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
+    if ( result._bBackendUnusableHere )
+        SW_TEST_SKIP( "DX12 is not usable on this machine" );
+    SW_EXPECT_TRUE_MSG( result._exitCode == 0, "App 이 0 이 아닌 코드로 끝났습니다" );
+    SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.empty() ? "로그에 [Error] 가 있습니다" : result._firstErrorLine.c_str() );
+    constexpr const utf8* kArrExpectedPass[] = { "EditorSelfTest|PASS|themepark.extensionPanelDraws", "EditorSelfTest|PASS|themepark.layoutPreviewLoads",
+                                                 "EditorSelfTest|DONE|2|0" };
+    for ( const utf8* pExpected : kArrExpectedPass )
+    {
+        bool bFound{ false };
+        for ( const string& line : result._listMarkedLine )
+        {
+            bFound = bFound || line == pExpected;
+        }
+        SW_EXPECT_TRUE_MSG( bFound, pExpected );
+    }
 }
 
 /**

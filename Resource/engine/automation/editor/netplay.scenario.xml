@@ -17,13 +17,14 @@
 	</At>
 	<At frame="22">
 		<Expect probe="Editor.NetPlayConnectedClients" equals="1"/>
-		<ExpectLog contains="] - Net session client 0 connected from 127.0.0.1" atLeast="1"/>
 	</At>
 	<At frame="30"><DevCommand line="netplay.stop"/></At>
 	<At frame="31">
 		<Expect probe="Editor.NetPlayProcessCount" equals="0"/>
 		<ExpectLog contains="Multiplayer session stopped - merged trace" count="1"/>
 		<ExpectLog contains="exited with code 0" count="2"/>
+		<!-- 서버 쪽 접속 줄은 서버 프로세스의 출력 파이프로 늦게 올 수 있다(netplay.wait 는 클라이언트 줄만 기다린다) — 서버가 끝나 파이프를 다 비운 뒤에 본다 -->
+		<ExpectLog contains="] - Net session client 0 connected from 127.0.0.1" atLeast="1"/>
 		<Pass/>
 	</At>
 </Scenario>
