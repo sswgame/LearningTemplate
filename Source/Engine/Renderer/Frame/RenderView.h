@@ -58,6 +58,7 @@ namespace sw
         Normals,   ///< 월드 노멀을 색으로 보인다(0.5 + 0.5 n).
         Depth,     ///< 카메라에서의 거리(뷰 공간 깊이)를 보이며 `kViewModeDepthRange` 에서 흰색이 된다.
         Overdraw,  ///< 겹쳐 그린 횟수를 보인다. 단색을 깊이 쓰기 없이 더한다(유니티 Overdraw).
+        LightingOnly, ///< 알베도를 회색 하나로 바꾸고 조명만 보인다(언리얼 Lighting Only). 빛 · 그림자 배치를 텍스처 없이 본다.
 
         Count
     };
@@ -80,6 +81,7 @@ namespace sw
         {  "Normals",  "SW_VIEWMODE_NORMALS=1", false, false,  true},
         {    "Depth",    "SW_VIEWMODE_DEPTH=1", false, false,  true},
         { "Overdraw", "SW_VIEWMODE_OVERDRAW=1", false,  true,  true},
+        {"LightingOnly", "SW_VIEWMODE_LIGHTINGONLY=1", false, false, false},
     };
     static_assert( sizeof( kArrRenderViewModeInfo ) / sizeof( kArrRenderViewModeInfo[0] ) == static_cast<size_t>( RenderViewMode::Count ),
                    "보기 모드 표와 열거형의 개수가 다릅니다" );

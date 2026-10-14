@@ -850,6 +850,10 @@ struct SwSurfaceOutput
 #define SW_VIEWMODE_SKIPS_LIGHTING 0
 #endif
 
+// 보기 모드 LightingOnly — 조명은 그대로 계산하고 표면 색만 이 회색으로 바꾼다(언리얼 Lighting Only). 포워드는 swShadeLights 가,
+// 디퍼드는 G버퍼 알베도 칸(swStoreSurface)이 바꾼다 — 디퍼드 조명 패스는 보기 모드 변형이 없으므로 G버퍼에서 바꿔야 한다.
+#define SW_VIEWMODE_LIGHTINGONLY_ALBEDO float3( 0.5f, 0.5f, 0.5f )
+
 static const float kViewModeDepthRange   = 100.0f; // Depth 보기: 이 뷰 공간 깊이(m)에서 흰색
 static const float kViewModeOverdrawStep = 0.08f;  // Overdraw 보기: 한 번 그릴 때 더하는 밝기(12 겹이면 흰색)
 
@@ -895,6 +899,8 @@ SW_SURFACE_OUTPUT swStoreSurface( float4 litColor, float4 albedo, float3 worldNo
 #if SW_VIEWMODE_SKIPS_LIGHTING
 	litColor = swComputeViewModeColor( litColor, albedo, worldNormal, worldPosition );
 	albedo   = float4( litColor.rgb, albedo.a );
+#elif defined( SW_VIEWMODE_LIGHTINGONLY )
+	albedo = float4( SW_VIEWMODE_LIGHTINGONLY_ALBEDO, albedo.a );
 #endif
 #if defined( SW_PASS_GBUFFER )
 	SwSurfaceOutput output;
