@@ -8,7 +8,7 @@
   - 매핑 층(InputMap)을 읽는 것은 **플레이어 조종자** · 플레이어 뷰 카메라 · 명령형 게임의 디렉터(명령 조종자)뿐이다.
   - 폰(몸 · 이동 · 탈것)은 `ControlIntent` 만 읽는다 — 플레이어 · AI · 네트워크 · 리플레이가 같은 의도로 몬다.
 
-그래서 `Engine/Input/InputManager.h` · `Engine/Input/Map/InputMap.h` 를 include 하거나 `getService<InputManager>` · `getInputMap()` 을 부르는
+그래서 `Engine/Input/InputManager.h` · `Engine/Input/Map/InputMap.h` 를 include 하거나 `findSubsystem<InputManager>` · `getInputMap()` 을 부르는
 파일은 아래 허용 표에 이유와 함께 있어야 한다. 폰 쪽 파일(`Base/Control` · `Base/Vehicle` 의 `*MovementComponent*` · `*VehicleComponent*` ·
 `Pawn*`)은 허용 표에 넣을 수도 없다 — 경계의 핵심이다.
 
@@ -42,7 +42,7 @@ _kListScanRoot = ("Source/GameFramework", "Source/Games")
 # 입력을 읽는 모양 — include 둘과 조회 둘.
 _kInputReadRe = re.compile(
     r'#\s*include\s*"Engine/Input/(?:InputManager|InputMap)\.h"'
-    r"|\bgetService\s*<\s*InputManager\s*>"
+    r"|\b(?:get|find)Subsystem\s*<\s*(?:sw::)?InputManager\s*>"
     r"|\bgetInputMap\s*\(\s*\)"
 )
 

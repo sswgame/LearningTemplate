@@ -420,7 +420,7 @@ class CheckTestSuitesGate(LintGate):
                 **_kCleanFixture,
                 "Test/CoreTest/TestProbe.cpp": (
                     "// ModuleImageUtil::releaseModuleCode 가 부르는 길\n"
-                    "SW_TEST_CASE( ProbeTest, One )\n{\n    sw::engine::getGlobalVariableManager();\n}\n"
+                    "SW_TEST_CASE( ProbeTest, One )\n{\n    sw::engine::getSubsystem<GlobalVariableManager>();\n}\n"
                 ),
             },
         },
