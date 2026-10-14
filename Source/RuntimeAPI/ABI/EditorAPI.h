@@ -12,6 +12,7 @@ namespace sw
 {
     // 핸들은 ABI/RuntimeHandles.h 가 모아 들고 있다. EditorHandle 포함.
 
+    struct HostSceneView;
     struct NativeWindowEvent;
 
     class ISubsystemLocator;
@@ -41,6 +42,8 @@ namespace sw
         bool ( *isPaused )( EditorHandle editor ){ nullptr };                                                                 /**< @brief 에디터 시뮬레이션이 일시정지인지 반환합니다. */
         void ( *stopSimulation )( EditorHandle editor ){ nullptr };                                                           /**< @brief 에디터 시뮬레이션(PIE)을 정지합니다(핫 리로드 등). */
         void ( *endFrame )( EditorHandle editor ){ nullptr };                                                                 /**< @brief 월드 틱 이후 Step 소비 등 프레임 마감을 합니다. */
+        /** @brief 이번 프레임에 보인 미리보기 씬 뷰(툴 창)를 @p pOutView 에 최대 @p capacity 개 씁니다. 쓴 개수를 반환합니다(`HostSceneView`, Engine 의 값 타입). */
+        uint32 ( *getSceneViews )( EditorHandle editor, HostSceneView* pOutView, uint32 capacity ){ nullptr };
     };
 
     /** @brief EditorModule 이 export 하는 API 테이블 함수의 형입니다(심볼 이름: exportEditorAPI). */

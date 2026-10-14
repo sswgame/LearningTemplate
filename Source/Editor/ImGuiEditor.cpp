@@ -848,6 +848,13 @@ namespace sw::editor
         ImGuiEditorInternal::writeViewport( bRequest ? &_editorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene ) : nullptr, pRenderTarget, pWidth, pHeight );
     }
 
+    uint32 ImGuiEditor::getSceneViews( HostSceneView* pOutView, uint32 capacity ) const
+    {
+        if ( _editorContext == nullptr || pOutView == nullptr )
+            return 0;
+        return _editorContext->getSubsystem<EditorRenderViews>().collectSceneViews( pOutView, capacity );
+    }
+
     CameraComponent* ImGuiEditor::getSceneViewCamera() const
     {
         // 씬 뷰는 Play 와 Simulate 중에도 에디터 카메라를 쓴다. 게임 카메라 출력은 게임 뷰가 그린다.

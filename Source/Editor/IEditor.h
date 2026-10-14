@@ -7,6 +7,7 @@
 
 namespace sw
 {
+    struct HostSceneView;
     struct NativeWindowEvent;
 
     class CameraComponent;
@@ -61,6 +62,8 @@ namespace sw
         virtual void getSceneViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const = 0;
         /** @brief 이번 프레임 씬 뷰를 그리는 카메라(에디터 카메라)를 반환합니다. */
         virtual CameraComponent* getSceneViewCamera() const = 0;
+        /** @brief 이번 프레임에 보인 미리보기 씬 뷰(툴 창)를 @p pOutView 에 최대 @p capacity 개 씁니다. 쓴 개수를 반환합니다. */
+        virtual uint32 getSceneViews( HostSceneView* pOutView, uint32 capacity ) const = 0;
         /**
          * @brief 플레이어가 조종하는 세션(PIE Play)이 실행 중이면 true 입니다. Step 대기 중일 때도 true 입니다.
          * @details 호스트는 이 값으로 게임 모듈 업데이트와 게임 입력을 켠다. Simulate(월드만)는 false 이고, 씬 틱은 `isPaused` 가 정한다.
