@@ -66,9 +66,10 @@ namespace sw::editor
         IImGuiRendererBackend* pBackend = EditorThumbnailCacheInternal::findRendererBackend();
         if ( entry._pTextureID != nullptr && pBackend != nullptr )
             pBackend->unregisterTexture( entry._pTextureID );
-        entry._pTextureID       = nullptr;
-        TextureCache* pTextures = EditorThumbnailCacheInternal::findTextureCache();
-        if ( entry._textureHandle != 0 && pTextures != nullptr && pDevice != nullptr )
+        entry._pTextureID                = nullptr;
+        TextureCache* pTextures          = EditorThumbnailCacheInternal::findTextureCache();
+        const bool    bReleasableTexture = entry._textureHandle != 0 && pTextures != nullptr && pDevice != nullptr;
+        if ( bReleasableTexture )
             pTextures->release( entry._resourceID, pDevice );
         entry._textureHandle = 0;
     }
@@ -132,10 +133,11 @@ namespace sw::editor
         const string resourceID = _listPendingID.front();
         _listPendingID.erase( _listPendingID.begin() );
 
-        TextureCache*          pTextures = EditorThumbnailCacheInternal::findTextureCache();
-        IImGuiRendererBackend* pBackend  = EditorThumbnailCacheInternal::findRendererBackend();
-        Texture2D*             pTexture  = pTextures != nullptr ? pTextures->acquire( resourceID, pDevice ) : nullptr;
-        if ( pTexture == nullptr || pTexture->isRHIValid() == false || pBackend == nullptr )
+        TextureCache*          pTextures          = EditorThumbnailCacheInternal::findTextureCache();
+        IImGuiRendererBackend* pBackend           = EditorThumbnailCacheInternal::findRendererBackend();
+        Texture2D*             pTexture           = pTextures != nullptr ? pTextures->acquire( resourceID, pDevice ) : nullptr;
+        const bool             bThumbnailUnusable = pTexture == nullptr || pTexture->isRHIValid() == false || pBackend == nullptr;
+        if ( bThumbnailUnusable )
         {
             if ( pTexture != nullptr && pTextures != nullptr )
                 pTextures->release( resourceID, pDevice );

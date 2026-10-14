@@ -29,8 +29,11 @@ namespace sw
                         ++cursor;
                     }
                     const size_t start = cursor;
-                    while ( cursor < text.size() && text[cursor] != ' ' && text[cursor] != ',' && text[cursor] != '\t' )
+                    while ( true )
                     {
+                        const bool bInsideToken = cursor < text.size() && text[cursor] != ' ' && text[cursor] != ',' && text[cursor] != '\t';
+                        if ( bInsideToken == false )
+                            break;
                         ++cursor;
                     }
                     if ( cursor == start )
@@ -50,7 +53,8 @@ namespace sw
                 uint32           count = 0;
                 for ( const utf8 character : text )
                 {
-                    if ( character == ' ' || character == '\t' || character == '\n' || character == '\r' )
+                    const bool bWhitespaceCharacter = character == ' ' || character == '\t' || character == '\n' || character == '\r';
+                    if ( bWhitespaceCharacter )
                         continue;
                     if ( count >= 9 )
                         return false;
@@ -170,12 +174,13 @@ namespace sw
             return false;
 
         TileSetAsset loaded;
-        loaded._atlasPath       = string( root.getAttributeText( "atlas" ) );
-        loaded._normalAtlasPath = string( root.getAttributeText( "normalAtlas" ) );
-        loaded._columnCount     = root.getAttributeInt( "columns", 1 );
-        loaded._rowCount        = root.getAttributeInt( "rows", 1 );
-        loaded._tileSize        = root.getAttributeFloat( "tileSize", 1.0f );
-        if ( loaded._columnCount <= 0 || loaded._rowCount <= 0 || loaded._tileSize <= 0.0f )
+        loaded._atlasPath              = string( root.getAttributeText( "atlas" ) );
+        loaded._normalAtlasPath        = string( root.getAttributeText( "normalAtlas" ) );
+        loaded._columnCount            = root.getAttributeInt( "columns", 1 );
+        loaded._rowCount               = root.getAttributeInt( "rows", 1 );
+        loaded._tileSize               = root.getAttributeFloat( "tileSize", 1.0f );
+        const bool bInvalidTileSetSize = loaded._columnCount <= 0 || loaded._rowCount <= 0 || loaded._tileSize <= 0.0f;
+        if ( bInvalidTileSetSize )
         {
             SW_LOG_ERROR( "%#: columns, rows and tileSize must be positive", sourceName );
             return false;
@@ -208,11 +213,12 @@ namespace sw
             }
             if ( loaded.parseVisual( node, sourceName, true, brush._defaultVisual ) == false )
                 return false;
-            brush._bSolid             = node.getAttributeBool( "solid", false ) ? SW_TRUE : SW_FALSE;
-            const int32 navCost       = node.getAttributeInt( "navCost", 10 );
-            brush._navCost            = static_cast<uint8>( MathUtil::clamp( navCost, 1, 255 ) );
-            const string_view outside = node.getAttributeText( "outside" );
-            if ( outside.empty() == false && StringUtil::equals( outside, "same", true ) == false && StringUtil::equals( outside, "empty", true ) == false )
+            brush._bSolid                         = node.getAttributeBool( "solid", false ) ? SW_TRUE : SW_FALSE;
+            const int32 navCost                   = node.getAttributeInt( "navCost", 10 );
+            brush._navCost                        = static_cast<uint8>( MathUtil::clamp( navCost, 1, 255 ) );
+            const string_view outside             = node.getAttributeText( "outside" );
+            const bool        bInvalidOutsideMode = outside.empty() == false && StringUtil::equals( outside, "same", true ) == false && StringUtil::equals( outside, "empty", true ) == false;
+            if ( bInvalidOutsideMode )
             {
                 SW_LOG_ERROR( "%#: outside=\"%#\" must be 'same' or 'empty'", sourceName, outside );
                 return false;
@@ -271,7 +277,8 @@ namespace sw
 
     const TileVisual* TileSetAsset::resolveVisual( const vector<uint16>& listBrushIndex, int32 width, int32 height, int32 x, int32 y ) const
     {
-        if ( x < 0 || y < 0 || x >= width || y >= height )
+        const bool bOutsideVisualGrid = x < 0 || y < 0 || x >= width || y >= height;
+        if ( bOutsideVisualGrid )
             return nullptr;
         const size_t cellCount = static_cast<size_t>( width ) * static_cast<size_t>( height );
         if ( listBrushIndex.size() < cellCount )
@@ -287,9 +294,10 @@ namespace sw
         bool arrSame[8]{};
         for ( uint32 neighbor = 0; neighbor < 8; ++neighbor )
         {
-            const int32 neighborX = x + kNeighborOffset[neighbor][0];
-            const int32 neighborY = y + kNeighborOffset[neighbor][1];
-            if ( neighborX < 0 || neighborY < 0 || neighborX >= width || neighborY >= height )
+            const int32 neighborX        = x + kNeighborOffset[neighbor][0];
+            const int32 neighborY        = y + kNeighborOffset[neighbor][1];
+            const bool  bNeighborOutside = neighborX < 0 || neighborY < 0 || neighborX >= width || neighborY >= height;
+            if ( bNeighborOutside )
             {
                 arrSame[neighbor] = brush._bOutsideIsSame != SW_FALSE;
                 continue;

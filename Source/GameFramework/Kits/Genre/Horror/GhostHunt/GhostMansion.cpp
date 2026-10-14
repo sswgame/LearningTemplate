@@ -98,8 +98,9 @@ namespace sw
         // 가구 없이 방에 숨은 부는 들어서면 나온다.
         for ( size_t booIndex = 0; booIndex < _listBoo.size(); ++booIndex )
         {
-            const GhostBooRuntime& boo = _listBoo[booIndex];
-            if ( boo._state == GhostBooState::Hiding && boo._room == roomID && boo._furniture.empty() )
+            const GhostBooRuntime& boo              = _listBoo[booIndex];
+            const bool             bBooHiddenInRoom = boo._state == GhostBooState::Hiding && boo._room == roomID && boo._furniture.empty();
+            if ( bBooHiddenInRoom )
                 revealBoo( booIndex );
         }
         if ( pRoom == nullptr || isRoomLit( roomID ) )
@@ -388,7 +389,8 @@ namespace sw
             archive >> boo._hp;
             const bool bTimerRead = StateArchiveUtil::readCountdown( archive, boo._timer );
             archive >> state;
-            if ( bTimerRead == false || archive.isError() || state > static_cast<uint8>( GhostBooState::Caught ) )
+            const bool bInvalidBooState = bTimerRead == false || archive.isError() || state > static_cast<uint8>( GhostBooState::Caught );
+            if ( bInvalidBooState )
                 return false;
             boo._state = static_cast<GhostBooState>( state );
         }

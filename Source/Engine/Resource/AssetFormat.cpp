@@ -64,7 +64,8 @@ namespace sw
     {
         for ( const AssetFormatInternal::CookSuffix& suffix : AssetFormatInternal::kArrCookSuffix )
         {
-            if ( suffix._bSource && suffix._kind == kind && StringUtil::endsWith( path, suffix._source, true ) )
+            const bool bSourceSuffixMatch = suffix._bSource && suffix._kind == kind && StringUtil::endsWith( path, suffix._source, true );
+            if ( bSourceSuffixMatch )
                 return true;
         }
         return false;
@@ -100,7 +101,8 @@ namespace sw
         // 같은 종류의 쿠킹하지 않는 이름(쿠킹본 · 확장자 없는 이름)은 그 접미사를 원본으로 바꾼다.
         for ( const AssetFormatInternal::CookSuffix& suffix : AssetFormatInternal::kArrCookSuffix )
         {
-            if ( suffix._bSource == false && suffix._kind == kind && StringUtil::endsWith( path, suffix._source, true ) )
+            const bool bCookedSuffixMatch = suffix._bSource == false && suffix._kind == kind && StringUtil::endsWith( path, suffix._source, true );
+            if ( bCookedSuffixMatch )
                 return string( path.substr( 0, path.size() - suffix._source.size() ) ) + string( canonical );
         }
 

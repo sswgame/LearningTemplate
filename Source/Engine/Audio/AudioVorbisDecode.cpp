@@ -118,8 +118,9 @@ namespace sw
                 vector<uint8> packetBytes;
                 if ( collectPacket( pBytes, byteCount, 1, packetBytes ) == false )
                     return false;
-                const size_t size = packetBytes.size();
-                if ( size < 7 + 4 + 4 || packetBytes[0] != 3 || Memory::compare( packetBytes.data() + 1, "vorbis", 6 ) != 0 )
+                const size_t size                  = packetBytes.size();
+                const bool   bInvalidCommentHeader = size < 7 + 4 + 4 || packetBytes[0] != 3 || Memory::compare( packetBytes.data() + 1, "vorbis", 6 ) != 0;
+                if ( bInvalidCommentHeader )
                     return false;
                 size_t       offset       = 7;
                 const uint32 vendorLength = LittleEndianUtil::readUint32( packetBytes.data() + offset );
@@ -159,7 +160,8 @@ namespace sw
 
             static stb_vorbis* openWithArena( const uint8* pBytes, size_t byteCount, vector<uint8>& inoutListArena )
             {
-                if ( pBytes == nullptr || byteCount < 4 || byteCount > static_cast<size_t>( INT32_MAX ) || Memory::compare( pBytes, "OggS", 4 ) != 0 )
+                const bool bInvalidOggBytes = pBytes == nullptr || byteCount < 4 || byteCount > static_cast<size_t>( INT32_MAX ) || Memory::compare( pBytes, "OggS", 4 ) != 0;
+                if ( bInvalidOggBytes )
                     return nullptr;
                 if ( OggCommentHeaderGuard::isCommentHeaderSane( pBytes, byteCount ) == false )
                     return nullptr;
@@ -224,9 +226,10 @@ namespace sw
         stb_vorbis*   pVorbis = OggOpenUtil::openWithArena( pBytes, byteCount, listArena );
         if ( pVorbis == nullptr )
             return nullptr;
-        const stb_vorbis_info info       = stb_vorbis_get_info( pVorbis );
-        const uint32          frameCount = stb_vorbis_stream_length_in_samples( pVorbis );
-        if ( info.channels < 1 || 2 < info.channels || info.sample_rate == 0 || frameCount == 0 )
+        const stb_vorbis_info info                     = stb_vorbis_get_info( pVorbis );
+        const uint32          frameCount               = stb_vorbis_stream_length_in_samples( pVorbis );
+        const bool            bUnsupportedVorbisStream = info.channels < 1 || 2 < info.channels || info.sample_rate == 0 || frameCount == 0;
+        if ( bUnsupportedVorbisStream )
         {
             stb_vorbis_close( pVorbis );
             return nullptr;

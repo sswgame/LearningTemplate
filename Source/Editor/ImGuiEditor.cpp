@@ -828,7 +828,8 @@ namespace sw::editor
 
         if ( event.isKeyboardInput() )
         {
-            if ( event.isInputRelease() == false && io.WantCaptureKeyboard && bGameViewFocused == false )
+            const bool bKeyboardCapturedByEditor = event.isInputRelease() == false && io.WantCaptureKeyboard && bGameViewFocused == false;
+            if ( bKeyboardCapturedByEditor )
                 return true;
         }
 

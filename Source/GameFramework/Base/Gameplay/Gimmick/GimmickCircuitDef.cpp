@@ -139,9 +139,10 @@ namespace sw
 
     bool GimmickCircuitDef::splitPortReference( string_view text, hashed_string& outNode, hashed_string& outPort )
     {
-        const string_view trimmed = StringUtil::trim( text );
-        const size_t      dot     = trimmed.rfind( '.' );
-        if ( dot == string_view::npos || dot == 0 || dot + 1 >= trimmed.size() )
+        const string_view trimmed            = StringUtil::trim( text );
+        const size_t      dot                = trimmed.rfind( '.' );
+        const bool        bMalformedPortPath = dot == string_view::npos || dot == 0 || dot + 1 >= trimmed.size();
+        if ( bMalformedPortPath )
             return false;
         outNode = hashed_string( string( trimmed.substr( 0, dot ) ) );
         outPort = hashed_string( string( trimmed.substr( dot + 1 ) ) );

@@ -113,7 +113,8 @@ namespace sw
         int32 height   = 0;
         archive >> width;
         archive >> height;
-        if ( archive.isError() || width != _grid.getWidth() || height != _grid.getHeight() || _pCatalog == nullptr )
+        const bool bInvalidWorldHeader = archive.isError() || width != _grid.getWidth() || height != _grid.getHeight() || _pCatalog == nullptr;
+        if ( bInvalidWorldHeader )
             return false;
         vector<uint8> listTerrainBlocked;
         archive >> listTerrainBlocked;
@@ -201,9 +202,10 @@ namespace sw
             archive >> unit._bAlive;
             archive >> unit._bHasRally;
             archive >> unit._bSupplyBlocked;
-            const bool bEnumValid  = cargoType <= static_cast<uint8>( RTSResourceType::None ) && gatherPhase <= static_cast<uint8>( RTSGatherPhase::Returning );
-            const bool bAliveValid = unit._bAlive == SW_FALSE || unit._pDef != nullptr;
-            if ( archive.isError() || bEnumValid == false || bAliveValid == false )
+            const bool bEnumValid       = cargoType <= static_cast<uint8>( RTSResourceType::None ) && gatherPhase <= static_cast<uint8>( RTSGatherPhase::Returning );
+            const bool bAliveValid      = unit._bAlive == SW_FALSE || unit._pDef != nullptr;
+            const bool bInvalidUnitData = archive.isError() || bEnumValid == false || bAliveValid == false;
+            if ( bInvalidUnitData )
                 return false;
             unit._id             = RTSUnitID::fromPacked( id );
             unit._attackTarget   = RTSUnitID::fromPacked( attackTarget );
@@ -230,7 +232,8 @@ namespace sw
         }
         uint32 playerCount = 0;
         // 지갑은 플레이어를 추가한 쪽이 빌려 준 것이라 싣지 않는다. 같은 수의 플레이어를 먼저 추가한 월드에만 읽어야 한다.
-        if ( archive.isError() || StateArchiveUtil::readCount( archive, Internal::kMinPlayerStateBytes, playerCount ) == false || playerCount != _listPlayer.size() )
+        const bool bInvalidPlayerData = archive.isError() || StateArchiveUtil::readCount( archive, Internal::kMinPlayerStateBytes, playerCount ) == false || playerCount != _listPlayer.size();
+        if ( bInvalidPlayerData )
             return false;
         vector<RTSPlayer> listPlayer( playerCount );
         for ( uint32 playerIndex = 0; playerIndex < playerCount; ++playerIndex )
@@ -300,7 +303,8 @@ namespace sw
         size_t flowFieldOrderIndex = 0;
         for ( RTSUnit& unit : _listUnit )
         {
-            if ( unit._bAlive != SW_FALSE && unit.isMobile() == false && unit._pDef->_bExtractor == SW_FALSE )
+            const bool bStaticBlocker = unit._bAlive != SW_FALSE && unit.isMobile() == false && unit._pDef->_bExtractor == SW_FALSE;
+            if ( bStaticBlocker )
                 placeFootprint( unit, true );
             if ( unit._bAlive != SW_FALSE && unit.isMobile() )
             {

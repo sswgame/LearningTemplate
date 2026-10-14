@@ -693,8 +693,9 @@ namespace sw
                 }
             }
 
-            int64 flagsValue{ 0 };
-            if ( _bIsBitFlag == SW_FALSE || tryParseFlags( name, flagsValue ) == false || isValidValue( flagsValue ) == false )
+            int64      flagsValue{ 0 };
+            const bool bInvalidFlagsText = _bIsBitFlag == SW_FALSE || tryParseFlags( name, flagsValue ) == false || isValidValue( flagsValue ) == false;
+            if ( bInvalidFlagsText )
                 return false;
             outValue = flagsValue;
             return true;

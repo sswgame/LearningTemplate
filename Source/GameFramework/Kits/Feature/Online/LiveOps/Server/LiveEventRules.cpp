@@ -65,8 +65,9 @@ namespace sw
         const bool bRolloutOk = 0 <= definition._rolloutBasisPoints && definition._rolloutBasisPoints <= RemoteConfigValue::kFullRolloutPoints;
         const bool bCountOk   = static_cast<int32>( definition._listParameter.size() ) <= LiveOpsLimit::kMaxParameterCount &&
                               static_cast<int32>( definition._listRegion.size() ) <= LiveOpsLimit::kMaxRegionCount;
-        if ( bIDOk == false || bTimeOk == false || bRepeatOk == false || bRolloutOk == false || bCountOk == false ||
-             definition._recurrence >= LiveEventRecurrence::Count )
+        const bool bInvalidEvent = bIDOk == false || bTimeOk == false || bRepeatOk == false || bRolloutOk == false || bCountOk == false ||
+                                   definition._recurrence >= LiveEventRecurrence::Count;
+        if ( bInvalidEvent )
             return false;
         for ( const LiveEventParameter& parameter : definition._listParameter )
         {

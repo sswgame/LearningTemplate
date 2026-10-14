@@ -54,8 +54,9 @@ namespace sw::editor
                                                   vector<int2>& outListCell )
     {
         outListCell.clear();
-        const size_t cellCount = static_cast<size_t>( MathUtil::max( 0, width ) ) * static_cast<size_t>( MathUtil::max( 0, height ) );
-        if ( start._x < 0 || start._y < 0 || start._x >= width || start._y >= height || listCellValue.size() != cellCount )
+        const size_t cellCount           = static_cast<size_t>( MathUtil::max( 0, width ) ) * static_cast<size_t>( MathUtil::max( 0, height ) );
+        const bool   bInvalidFillRequest = start._x < 0 || start._y < 0 || start._x >= width || start._y >= height || listCellValue.size() != cellCount;
+        if ( bInvalidFillRequest )
             return;
 
         auto indexOf = [width]( int32 x, int32 y )
@@ -77,7 +78,8 @@ namespace sw::editor
             };
             for ( const int2& neighbor : arrNeighbor )
             {
-                if ( neighbor._x < 0 || neighbor._y < 0 || neighbor._x >= width || neighbor._y >= height )
+                const bool bNeighborOutOfBounds = neighbor._x < 0 || neighbor._y < 0 || neighbor._x >= width || neighbor._y >= height;
+                if ( bNeighborOutOfBounds )
                     continue;
                 const size_t neighborIndex = indexOf( neighbor._x, neighbor._y );
                 if ( listVisited[neighborIndex] != 0 || listCellValue[neighborIndex] != target )
@@ -111,7 +113,8 @@ namespace sw::editor
 
     int32 AtlasGridUtil::findCellAtUv( float32 u, float32 v, int32 columnCount, int32 rowCount )
     {
-        if ( u < 0.0f || v < 0.0f || u >= 1.0f || v >= 1.0f )
+        const bool bUvOutsideAtlas = u < 0.0f || v < 0.0f || u >= 1.0f || v >= 1.0f;
+        if ( bUvOutsideAtlas )
             return -1;
         const int32 columns = MathUtil::max( 1, columnCount );
         const int32 rows    = MathUtil::max( 1, rowCount );

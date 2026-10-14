@@ -326,8 +326,9 @@ namespace
 
         void onHostEvent( NetSimWorld& world, const NetHostEvent& event ) override
         {
-            NetHost& host = world.getHost();
-            if ( world.isServer() == false || _bStarted || event._kind != NetHostEvent::Kind::Connected || host.getConnectedCount() < _playerCount - 1 )
+            NetHost&   host           = world.getHost();
+            const bool bNotStartEvent = world.isServer() == false || _bStarted || event._kind != NetHostEvent::Kind::Connected || host.getConnectedCount() < _playerCount - 1;
+            if ( bNotStartEvent )
                 return;
             start();
             const uint8 startKind = kLockstepStartKind;

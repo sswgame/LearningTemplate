@@ -143,7 +143,8 @@ namespace sw
         // 번호를 붙여 받은 이름(`Bullet_3`)을 그 밑 이름(`Bullet`)으로 되돌리는데 밑 이름을 다른 오브젝트가 쓰고 있으면, 다시 유일화해도
         // 번호만 바뀐다. 그대로 둔다. 프리팹 스폰이 그 경우다. 만들 때 `Bullet_3`, 상태를 읽으며 저장된 이름 `Bullet` 으로 한 번,
         // 인스턴스 이름을 다시 설정하며 또 한 번 바뀐다. 그때마다 유일화하면 스폰 하나가 번호 셋(intern 셋)을 쓴다.
-        if ( bOwnsOldEntry && oldIt->second._suffix != 0 && oldIt->second._baseName == newName && isNameTakenUnlocked( newName ) )
+        const bool bKeepRenumberedName = bOwnsOldEntry && oldIt->second._suffix != 0 && oldIt->second._baseName == newName && isNameTakenUnlocked( newName );
+        if ( bKeepRenumberedName )
         {
             pObj->_name = oldName;
             return;
@@ -262,12 +263,14 @@ namespace sw
         std::shared_lock<std::shared_mutex> lock{ _mutex };
         for ( GameObject* pObj : _listGameObject )
         {
-            if ( pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( tag ) )
+            const bool bLiveTaggedObject = pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( tag );
+            if ( bLiveTaggedObject )
                 return pObj;
         }
         for ( GameObject* pObj : _listPendingAdd )
         {
-            if ( pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( tag ) )
+            const bool bLiveTaggedPendingObject = pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( tag );
+            if ( bLiveTaggedPendingObject )
                 return pObj;
         }
         return nullptr;
@@ -279,12 +282,14 @@ namespace sw
         std::shared_lock<std::shared_mutex> lock{ _mutex };
         for ( GameObject* pObj : _listGameObject )
         {
-            if ( pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( tag ) )
+            const bool bCollectTaggedObject = pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( tag );
+            if ( bCollectTaggedObject )
                 outListGameObject.push_back( pObj );
         }
         for ( GameObject* pObj : _listPendingAdd )
         {
-            if ( pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( tag ) )
+            const bool bCollectTaggedPendingObject = pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( tag );
+            if ( bCollectTaggedPendingObject )
                 outListGameObject.push_back( pObj );
         }
     }

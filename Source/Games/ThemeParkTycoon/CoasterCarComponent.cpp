@@ -38,10 +38,11 @@ namespace sw
     void CoasterCarComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
-        if ( pManager == nullptr || pMesh == nullptr || _carIndex < 0 )
+        GameObject*        pOwner             = getOwner();
+        GameObjectManager* pManager           = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        MeshComponent*     pMesh              = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
+        const bool         bMissingCarContext = pManager == nullptr || pMesh == nullptr || _carIndex < 0;
+        if ( bMissingCarContext )
             return;
         const ParkDirectorComponent* pDirector = GameDirectorComponent::resolve<ParkDirectorComponent>( *pManager, _director );
         const CoasterTrain*          pTrain    = pDirector != nullptr ? pDirector->findCoasterTrain( _coasterIndex ) : nullptr;

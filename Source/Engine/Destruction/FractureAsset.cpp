@@ -152,7 +152,8 @@ namespace sw
         uint32 expectedVertex = 0;
         for ( const FracturePiece& piece : _listPiece )
         {
-            if ( piece._firstVertex != expectedVertex || piece._vertexCount % 3 != 0 || piece._vertexCount == 0 )
+            const bool bInvalidPieceVertexRange = piece._firstVertex != expectedVertex || piece._vertexCount % 3 != 0 || piece._vertexCount == 0;
+            if ( bInvalidPieceVertexRange )
                 return fail( "piece vertex ranges must be contiguous triangle lists" );
             expectedVertex += piece._vertexCount;
             if ( static_cast<size_t>( piece._firstHullPoint ) + piece._hullPointCount > _listHullPoint.size() || piece._hullPointCount < 3 )
@@ -261,7 +262,8 @@ namespace sw
     bool FractureAsset::readFromBytes( const uint8* pData, size_t size )
     {
         clear();
-        if ( pData == nullptr || size < 8 || Memory::compare( pData, FractureAssetInternal::kArrMagic, 4 ) != 0 )
+        const bool bMissingFractureMagic = pData == nullptr || size < 8 || Memory::compare( pData, FractureAssetInternal::kArrMagic, 4 ) != 0;
+        if ( bMissingFractureMagic )
         {
             SW_LOG_ERROR( "Not a fracture asset (bad magic)" );
             return false;
@@ -357,8 +359,9 @@ namespace sw
             point = reader.readFloat3();
         }
 
-        string error;
-        if ( reader._bFailed || reader._offset != size || isValid( &error ) == false )
+        string     error;
+        const bool bMalformedFractureAsset = reader._bFailed || reader._offset != size || isValid( &error ) == false;
+        if ( bMalformedFractureAsset )
         {
             SW_LOG_ERROR( "Fracture asset is malformed: %#", reader._bFailed || reader._offset != size ? "length mismatch" : error.c_str() );
             clear();

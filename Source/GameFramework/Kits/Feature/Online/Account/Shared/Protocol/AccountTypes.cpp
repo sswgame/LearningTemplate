@@ -18,8 +18,9 @@ namespace sw
                 size_t cursor   = inoutCursor;
                 while ( cursor < text.size() && text[cursor] != '.' )
                 {
-                    const utf8 ch = text[cursor];
-                    if ( bNumeric && '0' <= ch && ch <= '9' && value < 100000000ull )
+                    const utf8 ch           = text[cursor];
+                    const bool bAppendDigit = bNumeric && '0' <= ch && ch <= '9' && value < 100000000ull;
+                    if ( bAppendDigit )
                         value = value * 10 + static_cast<uint64>( ch - '0' );
                     else
                         bNumeric = false;
@@ -125,9 +126,10 @@ namespace sw
             return false;
         for ( const utf8 ch : text )
         {
-            const bool bLower = 'a' <= ch && ch <= 'z';
-            const bool bDigit = '0' <= ch && ch <= '9';
-            if ( bLower == false && bDigit == false && ch != '_' )
+            const bool bLower            = 'a' <= ch && ch <= 'z';
+            const bool bDigit            = '0' <= ch && ch <= '9';
+            const bool bInvalidCharacter = bLower == false && bDigit == false && ch != '_';
+            if ( bInvalidCharacter )
                 return false;
         }
         return true;

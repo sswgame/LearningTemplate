@@ -30,10 +30,11 @@ namespace sw
     void MountInteractionComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        GameObject*          pOwner   = getOwner();
-        const PawnComponent* pPawn    = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        GameObjectManager*   pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pPawn == nullptr || pManager == nullptr || pPawn->wasButtonTriggered( _interactIndex ) == false )
+        GameObject*          pOwner        = getOwner();
+        const PawnComponent* pPawn         = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+        GameObjectManager*   pManager      = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const bool           bNoMountInput = pPawn == nullptr || pManager == nullptr || pPawn->wasButtonTriggered( _interactIndex ) == false;
+        if ( bNoMountInput )
             return;
         pManager->executeOrDeferPostTickOnComponent<MountInteractionComponent>( getHandle(), []( MountInteractionComponent& component )
         { component.toggleMount(); } );

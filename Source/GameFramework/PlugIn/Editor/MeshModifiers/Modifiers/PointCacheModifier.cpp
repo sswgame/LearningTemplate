@@ -52,15 +52,17 @@ namespace sw::editor
                 std::memcpy( &vertexCount, bytes.data(), 4 );
                 std::memcpy( &frameCount, bytes.data() + 4, 4 );
                 std::memcpy( &fps, bytes.data() + 8, 4 );
-                const uint64 floatCount = static_cast<uint64>( vertexCount ) * frameCount * 3;
-                if ( vertexCount == 0 || frameCount == 0 || MathUtil::isFinite( fps ) == false || fps <= 0.0f ||
-                     bytes.size() != kHeaderSize + floatCount * sizeof( float32 ) )
+                const uint64 floatCount          = static_cast<uint64>( vertexCount ) * frameCount * 3;
+                const bool   bInvalidCacheHeader = vertexCount == 0 || frameCount == 0 || MathUtil::isFinite( fps ) == false || fps <= 0.0f ||
+                                                 bytes.size() != kHeaderSize + floatCount * sizeof( float32 );
+                if ( bInvalidCacheHeader )
                     return false;
                 outData._listFramePosition.resize( static_cast<size_t>( vertexCount ) * frameCount );
                 std::memcpy( outData._listFramePosition.data(), bytes.data() + kHeaderSize, static_cast<size_t>( floatCount * sizeof( float32 ) ) );
                 for ( const float3& value : outData._listFramePosition )
                 {
-                    if ( MathUtil::isFinite( value._x ) == false || MathUtil::isFinite( value._y ) == false || MathUtil::isFinite( value._z ) == false )
+                    const bool bNonFinitePosition = MathUtil::isFinite( value._x ) == false || MathUtil::isFinite( value._y ) == false || MathUtil::isFinite( value._z ) == false;
+                    if ( bNonFinitePosition )
                         return false;
                 }
                 outData._vertexCount = vertexCount;

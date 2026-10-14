@@ -605,7 +605,8 @@ namespace sw
     {
         if ( styleName.empty() || styleName == "short" )
             return _timeShort;
-        if ( styleName == "medium" || styleName == "long" || styleName == "full" )
+        const bool bLongTimeStyle = styleName == "medium" || styleName == "long" || styleName == "full";
+        if ( bLongTimeStyle )
             return _timeMedium;
         return {};
     }

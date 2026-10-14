@@ -467,12 +467,13 @@ namespace sw::editor
 
             static EditorSelfTestStep runGridAndGizmoDraw( EditorSelfTestContext& context )
             {
-                GameObjectManager*    pManager = editor::getActiveObjectManager();
-                const SceneViewPanel* pPanel   = openSceneView( context );
-                CameraComponent*      pCamera  = EditorCamera::find( editor::getActiveScene() );
-                EditorContext*        pContext = EditorContext::get();
-                if ( pPanel == nullptr || pContext == nullptr ||
-                     context.expect( pManager != nullptr && pCamera != nullptr, "no active scene or editor camera" ) == false )
+                GameObjectManager*    pManager             = editor::getActiveObjectManager();
+                const SceneViewPanel* pPanel               = openSceneView( context );
+                CameraComponent*      pCamera              = EditorCamera::find( editor::getActiveScene() );
+                EditorContext*        pContext             = EditorContext::get();
+                const bool            bMissingSceneContext = pPanel == nullptr || pContext == nullptr ||
+                                                  context.expect( pManager != nullptr && pCamera != nullptr, "no active scene or editor camera" ) == false;
+                if ( bMissingSceneContext )
                     return EditorSelfTestStep::Done;
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
@@ -503,8 +504,9 @@ namespace sw::editor
             /** @brief 이번 프레임 "Game" 창의 그리기 목록에서 게임 뷰 이미지 뒤에 그린 정점 수를 셉니다. 이미지를 찾지 못하면 false 입니다. */
             static bool countVerticesAfterGameImage( ImTextureID textureID, int32& outVertexCount )
             {
-                const ImGuiWindow* pWindow = ImGui::FindWindowByName( "Game" );
-                if ( pWindow == nullptr || pWindow->DrawList == nullptr || pWindow->LastFrameActive != ImGui::GetFrameCount() )
+                const ImGuiWindow* pWindow             = ImGui::FindWindowByName( "Game" );
+                const bool         bGameWindowNotDrawn = pWindow == nullptr || pWindow->DrawList == nullptr || pWindow->LastFrameActive != ImGui::GetFrameCount();
+                if ( bGameWindowNotDrawn )
                     return false;
                 const ImDrawList* pDrawList = pWindow->DrawList;
                 int32             imageIndex{ -1 };
@@ -525,13 +527,14 @@ namespace sw::editor
 
             static EditorSelfTestStep runGameViewHidesEditorOverlays( EditorSelfTestContext& context )
             {
-                constexpr uint32     kSettleFrameCount = 3; // 탭이 앞으로 오고 선택한 오브젝트가 한 번 그려지는 데 걸리는 프레임 수
-                GameObjectManager*   pManager          = editor::getActiveObjectManager();
-                const GameViewPanel* pPanel            = openGameView( context );
-                CameraComponent*     pCamera           = EditorCamera::find( editor::getActiveScene() );
-                EditorContext*       pContext          = EditorContext::get();
-                if ( pPanel == nullptr || pContext == nullptr ||
-                     context.expect( pManager != nullptr && pCamera != nullptr, "no active scene or editor camera" ) == false )
+                constexpr uint32     kSettleFrameCount    = 3; // 탭이 앞으로 오고 선택한 오브젝트가 한 번 그려지는 데 걸리는 프레임 수
+                GameObjectManager*   pManager             = editor::getActiveObjectManager();
+                const GameViewPanel* pPanel               = openGameView( context );
+                CameraComponent*     pCamera              = EditorCamera::find( editor::getActiveScene() );
+                EditorContext*       pContext             = EditorContext::get();
+                const bool           bMissingSceneContext = pPanel == nullptr || pContext == nullptr ||
+                                                  context.expect( pManager != nullptr && pCamera != nullptr, "no active scene or editor camera" ) == false;
+                if ( bMissingSceneContext )
                     return EditorSelfTestStep::Done;
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )

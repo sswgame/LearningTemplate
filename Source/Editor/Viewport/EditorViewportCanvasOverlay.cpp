@@ -147,7 +147,8 @@ namespace sw::editor
     void EditorViewportCanvasOverlay::drawAdaptiveGrid( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize, const float32* pView,
                                                         const float32* pProj, const float3& cameraPosition, bool b2DMode )
     {
-        if ( pDrawList == nullptr || pView == nullptr || pProj == nullptr )
+        const bool bInvalidOverlayInputs = pDrawList == nullptr || pView == nullptr || pProj == nullptr;
+        if ( bInvalidOverlayInputs )
             return;
 
         float4x4 viewProj{};
@@ -258,7 +259,8 @@ namespace sw::editor
     void EditorViewportCanvasOverlay::processRulerTool( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize, const float32* pView,
                                                         const float32* pProj, bool bShowRuler )
     {
-        if ( pDrawList == nullptr || pView == nullptr || pProj == nullptr )
+        const bool bInvalidRulerInputs = pDrawList == nullptr || pView == nullptr || pProj == nullptr;
+        if ( bInvalidRulerInputs )
             return;
 
         if ( ImGui::IsKeyDown( ImGuiKey_M ) == false && bShowRuler == false )

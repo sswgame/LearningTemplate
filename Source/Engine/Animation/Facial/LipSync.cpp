@@ -169,9 +169,10 @@ namespace sw
         const JSONValue root = document.getRoot();
         if ( AnimationJSONUtil::hasOnlyKnownKeys( root, { "frame_rate", "visemes", "frames" }, sourceLabel ) == false )
             return false;
-        const JSONValue visemes = root.get( "visemes" );
-        const JSONValue frames  = root.get( "frames" );
-        if ( root.get( "frame_rate" ).isNumber() == false || visemes.isArray() == false || visemes.size() == 0 || frames.isArray() == false )
+        const JSONValue visemes              = root.get( "visemes" );
+        const JSONValue frames               = root.get( "frames" );
+        const bool      bMissingVisemeFields = root.get( "frame_rate" ).isNumber() == false || visemes.isArray() == false || visemes.size() == 0 || frames.isArray() == false;
+        if ( bMissingVisemeFields )
         {
             SW_LOG_ERROR( "Viseme track '%#' needs frame_rate, visemes and frames", sourceLabel );
             return false;
@@ -257,7 +258,8 @@ namespace sw
 
     float32 LipSyncAnalyzer::computeRms( const vector<float32>& listSample, uint32 sampleRate, float32 time, float32 windowSeconds )
     {
-        if ( listSample.empty() || sampleRate == 0 || time < 0.0f )
+        const bool bNoRmsWindow = listSample.empty() || sampleRate == 0 || time < 0.0f;
+        if ( bNoRmsWindow )
             return 0.0f;
         const size_t center = static_cast<size_t>( time * static_cast<float32>( sampleRate ) );
         const size_t half   = MathUtil::max<size_t>( static_cast<size_t>( windowSeconds * 0.5f * static_cast<float32>( sampleRate ) ), 1u );
@@ -281,8 +283,9 @@ namespace sw
         {
             outTrack._listViseme.push_back( viseme._name );
         }
-        const uint32 visemeCount = static_cast<uint32>( settings._listViseme.size() );
-        if ( sampleRate == 0 || visemeCount < 2 || listSample.empty() )
+        const uint32 visemeCount       = static_cast<uint32>( settings._listViseme.size() );
+        const bool   bNothingToAnalyze = sampleRate == 0 || visemeCount < 2 || listSample.empty();
+        if ( bNothingToAnalyze )
             return;
 
         const float2              arrBandHz[3]{ settings._lowBandHz, settings._midBandHz, settings._highBandHz };

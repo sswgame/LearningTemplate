@@ -190,7 +190,8 @@ namespace sw
         PendingLogin*     pFound = nullptr;
         for ( PendingLogin& pending : _listPending )
         {
-            if ( pState != nullptr && pending._tokenRequestID == 0 && pending._state == pState->_value )
+            const bool bMatchingPending = pState != nullptr && pending._tokenRequestID == 0 && pending._state == pState->_value;
+            if ( bMatchingPending )
                 pFound = &pending;
         }
         if ( pFound == nullptr )
@@ -200,10 +201,11 @@ namespace sw
             return;
         }
         Internal::setPage( outResponse, HTTPConstant::kStatusOk );
-        const HTTPHeader*                pError    = request.findQuery( "error" );
-        const HTTPHeader*                pCode     = request.findQuery( "code" );
-        const PkceLoginProviderSettings* pSettings = findSettings( pFound->_provider );
-        if ( pError != nullptr || pCode == nullptr || pCode->_value.empty() || pSettings == nullptr )
+        const HTTPHeader*                pError       = request.findQuery( "error" );
+        const HTTPHeader*                pCode        = request.findQuery( "code" );
+        const PkceLoginProviderSettings* pSettings    = findSettings( pFound->_provider );
+        const bool                       bLoginDenied = pError != nullptr || pCode == nullptr || pCode->_value.empty() || pSettings == nullptr;
+        if ( bLoginDenied )
         {
             const bool   bDenied = pError != nullptr && pError->_value == "access_denied";
             const string reason  = pError != nullptr ? "provider returned " + pError->_value : string( "redirect carried no code" );

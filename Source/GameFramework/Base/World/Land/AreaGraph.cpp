@@ -98,13 +98,14 @@ namespace sw
     {
         outbInvalidCondition = false;
         AreaLink link;
-        link._from      = from;
-        link._to        = to;
-        link._kind      = kind;
-        link._fromIndex = _catalog.findIndex( from );
-        link._toIndex   = _catalog.findIndex( to );
-        link._bOneWay   = bOneWay ? SW_TRUE : SW_FALSE;
-        if ( link._fromIndex < 0 || link._toIndex < 0 || link._fromIndex == link._toIndex )
+        link._from              = from;
+        link._to                = to;
+        link._kind              = kind;
+        link._fromIndex         = _catalog.findIndex( from );
+        link._toIndex           = _catalog.findIndex( to );
+        link._bOneWay           = bOneWay ? SW_TRUE : SW_FALSE;
+        const bool bInvalidLink = link._fromIndex < 0 || link._toIndex < 0 || link._fromIndex == link._toIndex;
+        if ( bInvalidLink )
             return false;
         link._requires = string( condition.data(), condition.size() );
         bool bIgnored  = false;

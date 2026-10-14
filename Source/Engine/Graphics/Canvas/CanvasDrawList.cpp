@@ -126,10 +126,11 @@ namespace sw
             return false;
         for ( size_t index = 0; index < _listBatch.size(); ++index )
         {
-            const CanvasBatch& lhs = _listBatch[index];
-            const CanvasBatch& rhs = other._listBatch[index];
-            if ( lhs._firstQuad != rhs._firstQuad || lhs._quadCount != rhs._quadCount || lhs._textureCount != rhs._textureCount ||
-                 CanvasDrawListInternal::isSameScissor( lhs, rhs ) == false )
+            const CanvasBatch& lhs            = _listBatch[index];
+            const CanvasBatch& rhs            = other._listBatch[index];
+            const bool         bBatchMismatch = lhs._firstQuad != rhs._firstQuad || lhs._quadCount != rhs._quadCount || lhs._textureCount != rhs._textureCount ||
+                                        CanvasDrawListInternal::isSameScissor( lhs, rhs ) == false;
+            if ( bBatchMismatch )
                 return false;
             for ( uint32 slot = 0; slot < lhs._textureCount; ++slot )
             {

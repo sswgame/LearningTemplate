@@ -33,7 +33,8 @@ namespace sw
                 return;
             for ( Component* pComp : pObject->getComponents() )
             {
-                if ( pComp != nullptr && pComp->isSceneComponent() && pComp->getComponentID() != keepID )
+                const bool bToggleSceneComponent = pComp != nullptr && pComp->isSceneComponent() && pComp->getComponentID() != keepID;
+                if ( bToggleSceneComponent )
                     pComp->setActive( bActive );
             }
         } );

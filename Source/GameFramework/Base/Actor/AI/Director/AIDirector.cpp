@@ -180,7 +180,8 @@ namespace sw
 
     void AIDirector::update( float32 deltaTime )
     {
-        if ( _pProfile == nullptr || _phaseIndex < 0 || deltaTime < 0.0f )
+        const bool bCannotUpdate = _pProfile == nullptr || _phaseIndex < 0 || deltaTime < 0.0f;
+        if ( bCannotUpdate )
             return;
         IAIDirectorIntensityModel& model = getModel();
         model.update( deltaTime );
@@ -207,13 +208,14 @@ namespace sw
         const vector<AIDirectorExitDef>& listExit    = phase._listExit;
         for ( size_t exitIndex = 0; exitIndex < listExit.size(); ++exitIndex )
         {
-            const AIDirectorExitDef& exit    = listExit[exitIndex];
-            const bool               bTime   = exit._minTime <= _phaseTime;
-            const bool               bAbove  = exit._intensityAbove < 0.0f || _intensity >= exit._intensityAbove;
-            const bool               bBelow  = exit._intensityBelow < 0.0f || _intensity <= exit._intensityBelow;
-            const bool               bCalm   = exit._calmFor <= calmSeconds;
-            const bool               bTarget = exit._toIndex >= 0;
-            if ( bTime && bAbove && bBelow && bCalm && bTarget )
+            const AIDirectorExitDef& exit               = listExit[exitIndex];
+            const bool               bTime              = exit._minTime <= _phaseTime;
+            const bool               bAbove             = exit._intensityAbove < 0.0f || _intensity >= exit._intensityAbove;
+            const bool               bBelow             = exit._intensityBelow < 0.0f || _intensity <= exit._intensityBelow;
+            const bool               bCalm              = exit._calmFor <= calmSeconds;
+            const bool               bTarget            = exit._toIndex >= 0;
+            const bool               bExitConditionsMet = bTime && bAbove && bBelow && bCalm && bTarget;
+            if ( bExitConditionsMet )
                 return static_cast<int32>( exitIndex );
         }
         return -1;
@@ -253,8 +255,9 @@ namespace sw
         const vector<AIDirectorPoolDef>& listPool = _pProfile->getPools();
         for ( size_t poolIndex = 0; poolIndex < listPool.size(); ++poolIndex )
         {
-            const AIDirectorPoolDef& pool = listPool[poolIndex];
-            if ( pool._trigger != AIDirectorPoolTrigger::PhaseEnter || pool._phaseIndex != phaseIndex || isPoolActive( pool ) == false )
+            const AIDirectorPoolDef& pool               = listPool[poolIndex];
+            const bool               bNotPhaseEnterPool = pool._trigger != AIDirectorPoolTrigger::PhaseEnter || pool._phaseIndex != phaseIndex || isPoolActive( pool ) == false;
+            if ( bNotPhaseEnterPool )
                 continue;
             for ( int32 pick = 0; pick < pool._picks; ++pick )
             {
@@ -384,7 +387,8 @@ namespace sw
 
     uint32 AIDirector::computeBlockMask( int32 poolIndex, int32 encounterIndex ) const
     {
-        if ( _pProfile == nullptr || poolIndex < 0 || poolIndex >= static_cast<int32>( _listPoolState.size() ) )
+        const bool bInvalidPoolIndex = _pProfile == nullptr || poolIndex < 0 || poolIndex >= static_cast<int32>( _listPoolState.size() );
+        if ( bInvalidPoolIndex )
             return AIDirectorBlock::kWeight;
         const AIDirectorPoolDef& pool = _pProfile->getPools()[static_cast<size_t>( poolIndex )];
         if ( encounterIndex < 0 || encounterIndex >= static_cast<int32>( pool._listEncounter.size() ) )

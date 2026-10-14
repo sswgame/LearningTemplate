@@ -35,7 +35,8 @@ namespace sw::editor
                 {
                     for ( Component* pComponent : pObject->getComponents() )
                     {
-                        if ( pMatch == nullptr && pComponent != nullptr && pComponent->getTypeInfo() == pType )
+                        const bool bFirstMatchingComponent = pMatch == nullptr && pComponent != nullptr && pComponent->getTypeInfo() == pType;
+                        if ( bFirstMatchingComponent )
                             pMatch = pComponent;
                     }
                 }

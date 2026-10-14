@@ -37,10 +37,11 @@ namespace sw
         const size_t      cross = shape.find( 'x' );
         if ( cross == string_view::npos )
             return false;
-        int32      teamCount = 0;
-        int32      teamSize  = 0;
-        const bool bNumbers  = StringUtil::parseInt( shape.substr( 0, cross ), teamCount ) && StringUtil::parseInt( shape.substr( cross + 1 ), teamSize );
-        if ( bNumbers == false || teamCount <= 0 || teamSize <= 0 )
+        int32      teamCount     = 0;
+        int32      teamSize      = 0;
+        const bool bNumbers      = StringUtil::parseInt( shape.substr( 0, cross ), teamCount ) && StringUtil::parseInt( shape.substr( cross + 1 ), teamSize );
+        const bool bInvalidShape = bNumbers == false || teamCount <= 0 || teamSize <= 0;
+        if ( bInvalidShape )
             return false;
         outMode._modeID    = string( text.substr( 0, colon ) );
         outMode._teamCount = teamCount;
@@ -69,7 +70,8 @@ namespace sw
                 mode._serverKind = string( serverKind );
             const bool bTimesOk = MatchModeCatalogInternal::readInt64( node, "regionRelaxMs", mode._regionRelaxMs ) &&
                                   MatchModeCatalogInternal::readInt64( node, "maxWaitMs", mode._maxWaitMs );
-            if ( bTimesOk == false || mode._teamCount <= 0 || mode._teamSize <= 0 )
+            const bool bInvalidModeValues = bTimesOk == false || mode._teamCount <= 0 || mode._teamSize <= 0;
+            if ( bInvalidModeValues )
             {
                 SW_LOG_WARNING( "%#: mode '%#' needs positive team counts and integer times - skipped", sourceName, pID );
                 continue;

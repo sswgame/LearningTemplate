@@ -188,7 +188,8 @@ namespace sw
             UISystem* pUI = getUISystem();
             for ( const RowEntry& row : _listRow )
             {
-                if ( row._value == source.getID() && pUI != nullptr && _pSettings != nullptr && isPromptOpen() == false )
+                const bool bOpenRebindPrompt = row._value == source.getID() && pUI != nullptr && _pSettings != nullptr && isPromptOpen() == false;
+                if ( bOpenRebindPrompt )
                     _promptScreen = KeyRebindScreen::open( *pUI, *_pSettings, row._settingID, kRebindDocument );
             }
             return true;
@@ -247,8 +248,9 @@ namespace sw
         }
         populateRows();
         // 탐색 방식이면 첫 행으로 간다. 탭을 바꾼 패드 사용자가 바로 행을 고를 수 있다.
-        UISystem* pUI = getUISystem();
-        if ( pUI == nullptr || pUI->getInputMode() != UIInputMode::Navigation || _listRow.empty() || pUI->getActiveScreen() != this )
+        UISystem*  pUI                = getUISystem();
+        const bool bNoNavigationFocus = pUI == nullptr || pUI->getInputMode() != UIInputMode::Navigation || _listRow.empty() || pUI->getActiveScreen() != this;
+        if ( bNoNavigationFocus )
             return;
         (void)pUI->getFocusManager().setFocus( tree, _listRow.front()._value );
     }
@@ -267,9 +269,10 @@ namespace sw
     {
         if ( _pSettings == nullptr )
             return;
-        const UserSettingsApplyResult result = _pSettings->applyPending();
-        UISystem*                     pUI    = getUISystem();
-        if ( result._bAwaitingConfirm && pUI != nullptr && isPromptOpen() == false )
+        const UserSettingsApplyResult result             = _pSettings->applyPending();
+        UISystem*                     pUI                = getUISystem();
+        const bool                    bOpenConfirmPrompt = result._bAwaitingConfirm && pUI != nullptr && isPromptOpen() == false;
+        if ( bOpenConfirmPrompt )
             _promptScreen = SettingsConfirmScreen::open( *pUI, *_pSettings, kConfirmDocument );
         if ( result._bNeedsRestart && pUI != nullptr )
         {

@@ -86,9 +86,10 @@ SW_TEST_CASE( EditorResourceIndexTest, CatalogCountsEveryKindOfTheTable )
     {
         SW_EXPECT_NOT_NULL( row._pLabel );
         total += row._count;
-        size_t expected{ 0 };
-        if ( row._kind == EditorAssetType::Scene || row._kind == EditorAssetType::Shader || row._kind == EditorAssetType::Data ||
-             row._kind == EditorAssetType::AnimationGraph )
+        size_t     expected{ 0 };
+        const bool bExpectsOne = row._kind == EditorAssetType::Scene || row._kind == EditorAssetType::Shader || row._kind == EditorAssetType::Data ||
+                                 row._kind == EditorAssetType::AnimationGraph;
+        if ( bExpectsOne )
             expected = 1;
         else if ( row._kind == EditorAssetType::Prefab || row._kind == EditorAssetType::Texture )
             expected = 2;

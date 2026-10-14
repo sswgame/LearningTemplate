@@ -110,8 +110,9 @@ namespace sw
         // 지난 순회 뒤 트리에 무효화가 하나도 없고 배율과 아틀라스도 그대로면 순회하지 않고 지난 목록을 낸다(멈춘 HUD 나 메뉴는 위젯 수와 무관하게 이어 붙이기 한 번으로 끝난다).
         if ( tree._paintOutput == nullptr )
             tree._paintOutput = make_unique<CanvasDrawList>();
-        CanvasDrawList& output = *tree._paintOutput;
-        if ( tree._bPaintOutputStale == SW_FALSE && bScaleChanged == false && bAtlasChanged == false && output._targetSize == outCanvas._targetSize )
+        CanvasDrawList& output            = *tree._paintOutput;
+        const bool      bReusePaintOutput = tree._bPaintOutputStale == SW_FALSE && bScaleChanged == false && bAtlasChanged == false && output._targetSize == outCanvas._targetSize;
+        if ( bReusePaintOutput )
         {
             outCanvas.appendDrawList( output );
             return 0;

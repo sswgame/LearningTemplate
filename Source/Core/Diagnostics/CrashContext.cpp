@@ -146,7 +146,8 @@ namespace sw
          */
         void writeWholeFile( const utf8* pPath, const utf8* pText, uint32 length )
         {
-            if ( pPath == nullptr || pText == nullptr || length == 0 )
+            const bool bNothingToWrite = pPath == nullptr || pText == nullptr || length == 0;
+            if ( bNothingToWrite )
                 return;
 #if defined( SW_PLATFORM_WINDOWS )
             // 경로는 UTF-8 이다 — 힙 없이 스택에서 UTF-16 으로 바꿔 W 판에 넘긴다(StringUtil::utf8ToUtf16 은 할당한다).

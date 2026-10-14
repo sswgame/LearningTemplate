@@ -15,10 +15,11 @@ namespace sw
     float32 LocomotionSpeedUtil::computeFootSpeed( const AnimationClip& clip, const Skeleton& skeleton, const hashed_string& leftFoot, const hashed_string& rightFoot,
                                                    uint32 sampleCount )
     {
-        const int32   leftBone  = skeleton.findBoneIndex( leftFoot );
-        const int32   rightBone = skeleton.findBoneIndex( rightFoot );
-        const float32 duration  = clip.getDuration();
-        if ( leftBone < 0 || rightBone < 0 || sampleCount < 2 || duration <= 0.0f )
+        const int32   leftBone             = skeleton.findBoneIndex( leftFoot );
+        const int32   rightBone            = skeleton.findBoneIndex( rightFoot );
+        const float32 duration             = clip.getDuration();
+        const bool    bInvalidFootSampling = leftBone < 0 || rightBone < 0 || sampleCount < 2 || duration <= 0.0f;
+        if ( bInvalidFootSampling )
             return 0.0f;
 
         vector<int32> listTrackToBone;

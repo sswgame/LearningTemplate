@@ -270,7 +270,8 @@ namespace sw::editor
     uint32 EditorPreferencesStore::countSavedKeys( string_view filePath )
     {
         JSONDocument document;
-        if ( FileUtil::isRegularFile( filePath ) == false || document.loadFile( filePath ) == false || document.getRoot().isObject() == false )
+        const bool   bUnreadableSettingsFile = FileUtil::isRegularFile( filePath ) == false || document.loadFile( filePath ) == false || document.getRoot().isObject() == false;
+        if ( bUnreadableSettingsFile )
             return 0;
         uint32 keyCount{ 0 };
         for ( const string& sectionID : document.getRoot().getMemberNames() )

@@ -248,10 +248,11 @@ namespace sw
 
     void MechArenaWorld::activateSkill( int32 pilotIndex, int32 skillIndex )
     {
-        MechPilot&          pilot  = _listPilot[static_cast<size_t>( pilotIndex )];
-        const size_t        index  = static_cast<size_t>( skillIndex );
-        const MechSkillDef* pSkill = pilot._listSkill[index];
-        if ( pilot._listSkillRemaining[index].isActive() || pilot._listSkillCooldown[index].isActive() || pSkill->_duration <= 0.0f )
+        MechPilot&          pilot             = _listPilot[static_cast<size_t>( pilotIndex )];
+        const size_t        index             = static_cast<size_t>( skillIndex );
+        const MechSkillDef* pSkill            = pilot._listSkill[index];
+        const bool          bSkillUnavailable = pilot._listSkillRemaining[index].isActive() || pilot._listSkillCooldown[index].isActive() || pSkill->_duration <= 0.0f;
+        if ( bSkillUnavailable )
             return;
         pilot._listSkillRemaining[index].start( pSkill->_duration );
         pilot._listSkillCooldown[index].start( pSkill->_cooldown );

@@ -33,7 +33,8 @@ namespace sw
 
     void SceneOverlapWorld2D::unregisterCollider( BoxCollider2DComponent* pCollider )
     {
-        if ( pCollider == nullptr || pCollider->_colliderIndex >= _listCollider.size() || _listCollider[pCollider->_colliderIndex] != pCollider )
+        const bool bNotRegisteredCollider = pCollider == nullptr || pCollider->_colliderIndex >= _listCollider.size() || _listCollider[pCollider->_colliderIndex] != pCollider;
+        if ( bNotRegisteredCollider )
             return;
         BoxCollider2DComponent* pMoved           = _listCollider.back();
         _listCollider[pCollider->_colliderIndex] = pMoved;
@@ -74,7 +75,8 @@ namespace sw
             _listTarget.assign( pSelf->getComponents().begin(), pSelf->getComponents().end() );
             for ( Component* pComp : _listTarget )
             {
-                if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->isSelfActive() == false )
+                const bool bInactiveTarget = pComp == nullptr || pComp->isPendingDestroy() || pComp->isSelfActive() == false;
+                if ( bInactiveTarget )
                     continue;
                 if ( event._bBegin == SW_TRUE )
                     pComp->onOverlapBegin( overlap );

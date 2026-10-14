@@ -39,9 +39,10 @@ namespace sw::editor
 
             static bool runLayoutSave( const vector<string>& listArgument, string& outReply )
             {
-                EditorContext*    pContext = EditorContext::get();
-                EditorDockLayout* pDock    = pContext != nullptr ? pContext->findSubsystem<EditorDockLayout>() : nullptr;
-                if ( listArgument.size() != 1 || pDock == nullptr || pDock->saveNamedLayout( listArgument[0] ) == false )
+                EditorContext*    pContext          = EditorContext::get();
+                EditorDockLayout* pDock             = pContext != nullptr ? pContext->findSubsystem<EditorDockLayout>() : nullptr;
+                const bool        bSaveLayoutFailed = listArgument.size() != 1 || pDock == nullptr || pDock->saveNamedLayout( listArgument[0] ) == false;
+                if ( bSaveLayoutFailed )
                     return false;
                 outReply = "saved layout " + listArgument[0];
                 return true;
@@ -49,9 +50,10 @@ namespace sw::editor
 
             static bool runLayoutLoad( const vector<string>& listArgument, string& outReply )
             {
-                EditorContext*    pContext = EditorContext::get();
-                EditorDockLayout* pDock    = pContext != nullptr ? pContext->findSubsystem<EditorDockLayout>() : nullptr;
-                if ( listArgument.size() != 1 || pDock == nullptr || pDock->requestLoadNamedLayout( listArgument[0] ) == false )
+                EditorContext*    pContext          = EditorContext::get();
+                EditorDockLayout* pDock             = pContext != nullptr ? pContext->findSubsystem<EditorDockLayout>() : nullptr;
+                const bool        bLoadLayoutFailed = listArgument.size() != 1 || pDock == nullptr || pDock->requestLoadNamedLayout( listArgument[0] ) == false;
+                if ( bLoadLayoutFailed )
                     return false;
                 outReply = "loading layout " + listArgument[0];
                 return true;
@@ -71,8 +73,9 @@ namespace sw::editor
 
             static bool runPanelClose( const vector<string>& listArgument, string& outReply )
             {
-                EditorContext* pContext = EditorContext::get();
-                if ( listArgument.size() != 1 || pContext == nullptr || pContext->getSubsystem<EditorPanelManager>().setPanelOpen( listArgument[0], false ) == false )
+                EditorContext* pContext          = EditorContext::get();
+                const bool     bClosePanelFailed = listArgument.size() != 1 || pContext == nullptr || pContext->getSubsystem<EditorPanelManager>().setPanelOpen( listArgument[0], false ) == false;
+                if ( bClosePanelFailed )
                     return false;
                 outReply = "closed " + listArgument[0];
                 return true;

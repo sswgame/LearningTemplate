@@ -77,8 +77,9 @@ namespace sw
 
     TaskHandle& TaskHandle::runBefore( const TaskHandle& targetTask )
     {
-        TaskNode* pTargetNode = targetTask.getNode();
-        if ( _pNode != nullptr && pTargetNode != nullptr && _pNode != pTargetNode )
+        TaskNode*  pTargetNode       = targetTask.getNode();
+        const bool bCanAddDependency = _pNode != nullptr && pTargetNode != nullptr && _pNode != pTargetNode;
+        if ( bCanAddDependency )
         {
             // 의존 수를 **먼저** 올린다. 목록에 붙인 뒤에 올리면, 그 사이에 이 태스크가 끝나 수를 내려 대상이 너무 일찍 돌 수 있다.
             pTargetNode->retain();

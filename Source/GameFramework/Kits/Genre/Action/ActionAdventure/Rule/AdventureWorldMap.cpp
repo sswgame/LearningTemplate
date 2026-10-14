@@ -78,8 +78,9 @@ namespace sw
 
     int32 AdventureWorldMap::activateTower( const hashed_string& towerID, AreaGraph& areaGraph )
     {
-        const int32 index = _catalog.findIndex( towerID );
-        if ( index < 0 || _catalog.getAt( static_cast<size_t>( index ) )._kind != AdventureLandmarkKind::Tower || _listActivated[static_cast<size_t>( index )] == SW_TRUE )
+        const int32 index                = _catalog.findIndex( towerID );
+        const bool  bTowerNotActivatable = index < 0 || _catalog.getAt( static_cast<size_t>( index ) )._kind != AdventureLandmarkKind::Tower || _listActivated[static_cast<size_t>( index )] == SW_TRUE;
+        if ( bTowerNotActivatable )
             return -1;
         _listActivated[static_cast<size_t>( index )] = SW_TRUE;
         return areaGraph.discoverRegion( _catalog.getAt( static_cast<size_t>( index ) )._region );
@@ -87,8 +88,9 @@ namespace sw
 
     bool AdventureWorldMap::discoverShrine( const hashed_string& shrineID )
     {
-        const int32 index = _catalog.findIndex( shrineID );
-        if ( index < 0 || _catalog.getAt( static_cast<size_t>( index ) )._kind != AdventureLandmarkKind::Shrine || _listActivated[static_cast<size_t>( index )] == SW_TRUE )
+        const int32 index                 = _catalog.findIndex( shrineID );
+        const bool  bShrineNotActivatable = index < 0 || _catalog.getAt( static_cast<size_t>( index ) )._kind != AdventureLandmarkKind::Shrine || _listActivated[static_cast<size_t>( index )] == SW_TRUE;
+        if ( bShrineNotActivatable )
             return false;
         _listActivated[static_cast<size_t>( index )] = SW_TRUE;
         return true;
@@ -96,8 +98,9 @@ namespace sw
 
     bool AdventureWorldMap::completeShrine( const hashed_string& shrineID )
     {
-        const int32 index = _catalog.findIndex( shrineID );
-        if ( index < 0 || _catalog.getAt( static_cast<size_t>( index ) )._kind != AdventureLandmarkKind::Shrine || _listCompleted[static_cast<size_t>( index )] == SW_TRUE )
+        const int32 index                 = _catalog.findIndex( shrineID );
+        const bool  bShrineNotCompletable = index < 0 || _catalog.getAt( static_cast<size_t>( index ) )._kind != AdventureLandmarkKind::Shrine || _listCompleted[static_cast<size_t>( index )] == SW_TRUE;
+        if ( bShrineNotCompletable )
             return false;
         _listActivated[static_cast<size_t>( index )] = SW_TRUE;
         _listCompleted[static_cast<size_t>( index )] = SW_TRUE;

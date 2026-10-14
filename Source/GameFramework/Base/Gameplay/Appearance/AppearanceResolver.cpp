@@ -272,7 +272,8 @@ namespace sw
                         for ( const Entry& entry : listEntry )
                         {
                             const bool bOwnerMatches = condition._kind == AppearanceRuleConditionKind::AnyTag || entry._owner == condition._target;
-                            if ( entry._bHidden == SW_FALSE && bOwnerMatches && entry._pVisual->_tags.hasTag( condition._tag ) )
+                            const bool bTagVisible   = entry._bHidden == SW_FALSE && bOwnerMatches && entry._pVisual->_tags.hasTag( condition._tag );
+                            if ( bTagVisible )
                                 bMet = true;
                         }
                         break;
@@ -648,8 +649,9 @@ namespace sw
         // 3) 슬롯 점유: 테이블 순서대로 보며, 먼저 보이는 장비의 점유가 이긴다.
         for ( size_t index = 0; index < listEntry.size(); ++index )
         {
-            const Entry& occupier = listEntry[index];
-            if ( occupier._pRequest == nullptr || occupier._bHidden == SW_TRUE || occupier._pVisual->_occupancy.empty() )
+            const Entry& occupier      = listEntry[index];
+            const bool   bSkipOccupier = occupier._pRequest == nullptr || occupier._bHidden == SW_TRUE || occupier._pVisual->_occupancy.empty();
+            if ( bSkipOccupier )
                 continue;
             const SlotOccupancyDef* pOccupancy = database.getSlotTable().findOccupancy( occupier._pVisual->_occupancy );
             if ( pOccupancy == nullptr )
@@ -728,8 +730,9 @@ namespace sw
                     continue;
                 for ( Entry& entry : listEntry )
                 {
-                    const bool bMatches = action._kind == AppearanceRuleActionKind::HideTarget ? entry._owner == action._target : entry._pVisual->_tags.hasTag( action._tag );
-                    if ( bMatches && entry._bHidden == SW_FALSE && entry._owner.empty() == false )
+                    const bool bMatches   = action._kind == AppearanceRuleActionKind::HideTarget ? entry._owner == action._target : entry._pVisual->_tags.hasTag( action._tag );
+                    const bool bHideEntry = bMatches && entry._bHidden == SW_FALSE && entry._owner.empty() == false;
+                    if ( bHideEntry )
                     {
                         entry._bHidden = SW_TRUE;
                         Internal::addTrace( outResolved, AppearanceTraceStep::Rule, pRule->_id, "'%#' hidden", entry._owner.c_str() );

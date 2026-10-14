@@ -125,7 +125,8 @@ namespace sw
 
     bool NetConnection::sendMessage( NetChannelType channel, const uint8* pData, int32 size )
     {
-        if ( size < 0 || ( size > 0 && pData == nullptr ) || channel == NetChannelType::Count )
+        const bool bInvalidMessage = size < 0 || ( size > 0 && pData == nullptr ) || channel == NetChannelType::Count;
+        if ( bInvalidMessage )
             return false;
         if ( size > getMaxMessageSize( channel ) )
         {
@@ -200,8 +201,9 @@ namespace sw
 
     bool NetConnection::receiveMessage( NetChannelType channel, vector<uint8>& outBuffer )
     {
-        const int32 channelIndex = static_cast<int32>( channel );
-        if ( channelIndex < 0 || channelIndex >= static_cast<int32>( NetChannelType::Count ) || _arrIncoming[channelIndex].empty() )
+        const int32 channelIndex       = static_cast<int32>( channel );
+        const bool  bNoIncomingMessage = channelIndex < 0 || channelIndex >= static_cast<int32>( NetChannelType::Count ) || _arrIncoming[channelIndex].empty();
+        if ( bNoIncomingMessage )
             return false;
         outBuffer = std::move( _arrIncoming[channelIndex].front() );
         _arrIncoming[channelIndex].pop_front();
@@ -210,8 +212,9 @@ namespace sw
 
     bool NetConnection::receiveMessageAppend( NetChannelType channel, vector<uint8>& inoutBytes )
     {
-        const int32 channelIndex = static_cast<int32>( channel );
-        if ( channelIndex < 0 || channelIndex >= static_cast<int32>( NetChannelType::Count ) || _arrIncoming[channelIndex].empty() )
+        const int32 channelIndex       = static_cast<int32>( channel );
+        const bool  bNoIncomingMessage = channelIndex < 0 || channelIndex >= static_cast<int32>( NetChannelType::Count ) || _arrIncoming[channelIndex].empty();
+        if ( bNoIncomingMessage )
             return false;
         const vector<uint8>& message = _arrIncoming[channelIndex].front();
         inoutBytes.insert( inoutBytes.end(), message.begin(), message.end() );
@@ -231,7 +234,8 @@ namespace sw
 
     bool NetConnection::hasDataToSend( float64 time ) const
     {
-        if ( _bAckPending || _listOutgoingSequenced.empty() == false || _listOutgoingUnreliable.empty() == false )
+        const bool bHasImmediateSendData = _bAckPending || _listOutgoingSequenced.empty() == false || _listOutgoingUnreliable.empty() == false;
+        if ( bHasImmediateSendData )
             return true;
         const float64 resendDelay = computeResendDelay();
         for ( uint16 messageID = _oldestUnackedReliableID; messageID != _nextReliableSendID; ++messageID )
@@ -261,8 +265,11 @@ namespace sw
         {
             queuedIt->_queuedTime = time; // 새 메시지는 뒤에 붙으므로 뒤에서부터 아직 적지 않은 것만 본다
         }
-        while ( maxUnreliableAgeSeconds > 0.0 && _listOutgoingUnreliable.empty() == false && time - _listOutgoingUnreliable.front()._queuedTime > maxUnreliableAgeSeconds )
+        while ( true )
         {
+            const bool bOldestUnreliableExpired = maxUnreliableAgeSeconds > 0.0 && _listOutgoingUnreliable.empty() == false && time - _listOutgoingUnreliable.front()._queuedTime > maxUnreliableAgeSeconds;
+            if ( bOldestUnreliableExpired == false )
+                break;
             _listOutgoingUnreliable.pop_front();
             ++_stats._expiredUnreliableCount;
         }
@@ -422,8 +429,9 @@ namespace sw
                 case NetChannelType::ReliableOrdered:
                 {
                     // 이미 넘긴 것과 창 밖의 것은 버리고, 나머지는 슬롯에 두었다가 순서대로 넘긴다.
-                    const int32 ahead = NetSequence::computeDifference( message._id, _nextReliableReceiveID );
-                    if ( ahead < 0 || ahead >= kReliableWindow || _incomingReliable.exists( message._id ) )
+                    const int32 ahead                           = NetSequence::computeDifference( message._id, _nextReliableReceiveID );
+                    const bool  bReliableOutOfWindowOrDuplicate = ahead < 0 || ahead >= kReliableWindow || _incomingReliable.exists( message._id );
+                    if ( bReliableOutOfWindowOrDuplicate )
                         break;
                     IncomingReliable* pIncoming = _incomingReliable.insert( message._id );
                     if ( pIncoming != nullptr )
@@ -436,8 +444,9 @@ namespace sw
                 case NetChannelType::ReliableUnordered:
                 {
                     // 받는 대로 넘긴다. 앞의 신뢰 메시지를 기다리지 않는다. 슬롯에는 "넘겼다" 표시만 남겨 순서 커서가 지나가게 하고, 늦게 온 중복을 거른다.
-                    const int32 ahead = NetSequence::computeDifference( message._id, _nextReliableReceiveID );
-                    if ( ahead < 0 || ahead >= kReliableWindow || _incomingReliable.exists( message._id ) )
+                    const int32 ahead                           = NetSequence::computeDifference( message._id, _nextReliableReceiveID );
+                    const bool  bReliableOutOfWindowOrDuplicate = ahead < 0 || ahead >= kReliableWindow || _incomingReliable.exists( message._id );
+                    if ( bReliableOutOfWindowOrDuplicate )
                         break;
                     IncomingReliable* pIncoming = _incomingReliable.insert( message._id );
                     if ( pIncoming == nullptr )
@@ -505,7 +514,8 @@ namespace sw
         deque<vector<uint8>>& listIncoming = _arrIncoming[static_cast<int32>( NetChannelType::ReliableOrdered )];
         const bool            bLast        = incoming._bMore == SW_FALSE;
         // 조각이 하나뿐인 경우(대부분)는 모으지 않고 그대로 넘긴다.
-        if ( bLast && _listReliableAssembly.empty() && _bDiscardingAssembly == SW_FALSE )
+        const bool bDeliverSingleFragment = bLast && _listReliableAssembly.empty() && _bDiscardingAssembly == SW_FALSE;
+        if ( bDeliverSingleFragment )
         {
             listIncoming.push_back( std::move( incoming._buffer ) );
             return;
@@ -572,8 +582,9 @@ namespace sw
             return;
         for ( int32 offset = kFastResendGap; offset <= 33; ++offset )
         {
-            SentPacket* pSent = _sentPackets.find( static_cast<uint16>( ack - offset ) );
-            if ( pSent == nullptr || pSent->_bAcked != SW_FALSE || pSent->_bLossDetected != SW_FALSE )
+            SentPacket* pSent           = _sentPackets.find( static_cast<uint16>( ack - offset ) );
+            const bool  bSkipSentPacket = pSent == nullptr || pSent->_bAcked != SW_FALSE || pSent->_bLossDetected != SW_FALSE;
+            if ( bSkipSentPacket )
                 continue;
             pSent->_bLossDetected = SW_TRUE;
             for ( int32 index = 0; index < pSent->_reliableCount; ++index )
@@ -596,8 +607,9 @@ namespace sw
         int32         sentCount = 0;
         for ( int32 offset = 1; offset <= 64; ++offset )
         {
-            const SentPacket* pSent = _sentPackets.find( static_cast<uint16>( _nextPacketSequence - offset ) );
-            if ( pSent != nullptr && pSent->_bAckRequested && time - pSent->_time >= lostAge )
+            const SentPacket* pSent                         = _sentPackets.find( static_cast<uint16>( _nextPacketSequence - offset ) );
+            const bool        bPacketCountedAsLostCandidate = pSent != nullptr && pSent->_bAckRequested && time - pSent->_time >= lostAge;
+            if ( bPacketCountedAsLostCandidate )
             {
                 ++sentCount;
                 lostCount += pSent->_bAcked ? 0 : 1;

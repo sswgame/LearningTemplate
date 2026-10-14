@@ -78,7 +78,8 @@ namespace sw
     // ------------------------------------------------------------------------------
     const FighterMove* FighterRuntime::findCurrentMove() const
     {
-        if ( _pDef == nullptr || _moveIndex < 0 || _moveIndex >= static_cast<int32>( _pDef->_listMove.size() ) )
+        const bool bMoveIndexInvalid = _pDef == nullptr || _moveIndex < 0 || _moveIndex >= static_cast<int32>( _pDef->_listMove.size() );
+        if ( bMoveIndexInvalid )
             return nullptr;
         return &_pDef->_listMove[static_cast<size_t>( _moveIndex )];
     }
@@ -270,8 +271,9 @@ namespace sw
                 }
                 else
                 {
-                    const FighterMove* pMove = fighter.findCurrentMove();
-                    if ( bAdvanced && pMove != nullptr && pMove->_bTracking == SW_TRUE )
+                    const FighterMove* pMove                = fighter.findCurrentMove();
+                    const bool         bShouldAimAtOpponent = bAdvanced && pMove != nullptr && pMove->_bTracking == SW_TRUE;
+                    if ( bShouldAimAtOpponent )
                         aimAtOpponent( player );
                 }
                 break;
@@ -702,8 +704,9 @@ namespace sw
         for ( int32 player = 0; player < kPlayerCount; ++player )
         {
             clampToStage( player );
-            const FighterState state = _arrFighter[player]._state;
-            if ( state != FighterState::Attacking && state != FighterState::Juggle && state != FighterState::Throwing )
+            const FighterState state              = _arrFighter[player]._state;
+            const bool         bCanTurnToOpponent = state != FighterState::Attacking && state != FighterState::Juggle && state != FighterState::Throwing;
+            if ( bCanTurnToOpponent )
                 aimAtOpponent( player );
         }
     }
@@ -748,10 +751,11 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool FightingMatch::testHit( int32 attacker )
     {
-        const FighterRuntime& fighter = _arrFighter[attacker];
-        const FighterRuntime& other   = _arrFighter[1 - attacker];
-        if ( fighter._state != FighterState::Attacking || fighter._timeline.isInHitstop() || fighter._timeline.hasContact() ||
-             fighter._timeline.getPhase() != MovePhase::Active )
+        const FighterRuntime& fighter    = _arrFighter[attacker];
+        const FighterRuntime& other      = _arrFighter[1 - attacker];
+        const bool            bCannotHit = fighter._state != FighterState::Attacking || fighter._timeline.isInHitstop() || fighter._timeline.hasContact() ||
+                                fighter._timeline.getPhase() != MovePhase::Active;
+        if ( bCannotHit )
             return false;
         const FighterMove* pMove = fighter.findCurrentMove();
         if ( pMove == nullptr )
@@ -800,15 +804,16 @@ namespace sw
         (void)fighter._timeline.collectActiveHitboxes( _listHitboxScratch );
         for ( const MoveHitbox& hitbox : _listHitboxScratch )
         {
-            const float32 halfWidth   = hitbox._width * 0.5f;
-            const float32 halfHeight  = hitbox._height * 0.5f;
-            const float32 thickness   = hitbox._shape == HitboxShape::Capsule ? MathUtil::min( hitbox._width, hitbox._height ) * 0.5f : 0.0f;
-            const float32 boxBottom   = fighter._y + hitbox._y - halfHeight;
-            const float32 boxTop      = fighter._y + hitbox._y + halfHeight;
-            const bool    bReach      = hitbox._x - halfWidth <= forward + radius && forward - radius <= hitbox._x + halfWidth;
-            const bool    bSide       = lateral <= radius + thickness;
-            const bool    bHeightBand = boxBottom <= bodyTop && bodyBottom <= boxTop;
-            if ( bReach && bSide && bHeightBand )
+            const float32 halfWidth       = hitbox._width * 0.5f;
+            const float32 halfHeight      = hitbox._height * 0.5f;
+            const float32 thickness       = hitbox._shape == HitboxShape::Capsule ? MathUtil::min( hitbox._width, hitbox._height ) * 0.5f : 0.0f;
+            const float32 boxBottom       = fighter._y + hitbox._y - halfHeight;
+            const float32 boxTop          = fighter._y + hitbox._y + halfHeight;
+            const bool    bReach          = hitbox._x - halfWidth <= forward + radius && forward - radius <= hitbox._x + halfWidth;
+            const bool    bSide           = lateral <= radius + thickness;
+            const bool    bHeightBand     = boxBottom <= bodyTop && bodyBottom <= boxTop;
+            const bool    bHitboxOverlaps = bReach && bSide && bHeightBand;
+            if ( bHitboxOverlaps )
                 return true;
         }
         return false;
@@ -910,6 +915,7 @@ namespace sw
         other._bufferedMove = -1;
         ++other._comboHits;
 
+        const bool bWallSplat = frameData._bWallSplat == SW_TRUE && isNearWall( defender ) && other._bWallSplatUsed == SW_FALSE;
         if ( other._state == FighterState::Juggle )
         {
             if ( move._bScrew == SW_TRUE && other._bScrewUsed == SW_FALSE )
@@ -953,7 +959,7 @@ namespace sw
             other._carryZ    = fighter._dirZ * _settings._juggleCarrySpeed;
             other._airHits   = 1;
         }
-        else if ( frameData._bWallSplat == SW_TRUE && isNearWall( defender ) && other._bWallSplatUsed == SW_FALSE )
+        else if ( bWallSplat )
         {
             other._bWallSplatUsed = SW_TRUE;
             enterState( defender, FighterState::WallSplat, _settings._wallSplatFrames );
@@ -1005,9 +1011,10 @@ namespace sw
 
         for ( int32 player = 0; player < kPlayerCount; ++player )
         {
-            FighterRuntime& fighter = _arrFighter[player];
-            const float32   ratio   = static_cast<float32>( fighter._health ) / static_cast<float32>( MathUtil::max( 1, fighter._pDef->_health ) );
-            if ( fighter._bRage == SW_FALSE && fighter._bRageUsed == SW_FALSE && ratio <= _settings._rageThreshold )
+            FighterRuntime& fighter          = _arrFighter[player];
+            const float32   ratio            = static_cast<float32>( fighter._health ) / static_cast<float32>( MathUtil::max( 1, fighter._pDef->_health ) );
+            const bool      bShouldEnterRage = fighter._bRage == SW_FALSE && fighter._bRageUsed == SW_FALSE && ratio <= _settings._rageThreshold;
+            if ( bShouldEnterRage )
             {
                 fighter._bRage = SW_TRUE;
                 pushEvent( FightingEvent::Kind::RageEntered, player, fighter._health );

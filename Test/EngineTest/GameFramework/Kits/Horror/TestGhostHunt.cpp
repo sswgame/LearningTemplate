@@ -108,8 +108,9 @@ namespace
 
         bool initialize( uint32 seed )
         {
-            if ( _catalog.loadFromXMLText( kGhostHuntXML, "GhostHuntTest" ) == false || _loot.loadFromXMLText( kGhostLootXML, "GhostHuntTest" ) == false ||
-                 _areaGraph.loadFromXMLText( kGhostAreaXML, "GhostHuntTest" ) == false )
+            const bool bCatalogLoadFailed = _catalog.loadFromXMLText( kGhostHuntXML, "GhostHuntTest" ) == false || _loot.loadFromXMLText( kGhostLootXML, "GhostHuntTest" ) == false ||
+                                            _areaGraph.loadFromXMLText( kGhostAreaXML, "GhostHuntTest" ) == false;
+            if ( bCatalogLoadFailed )
                 return false;
             _bag.initialize( nullptr, 8 );
             SessionStateRefs refs;

@@ -282,7 +282,8 @@ namespace sw
                     if ( isSamePoint( exitPoint, entryPoint ) == false )
                         listSegment.push_back( Segment{ exitPoint, entryPoint } );
                 }
-                if ( listSegment.empty() || outListOutput.empty() || bCap == false )
+                const bool bNoCapNeeded = listSegment.empty() || outListOutput.empty() || bCap == false;
+                if ( bNoCapNeeded )
                     return 0;
 
                 // 자른 곳에 아주 가까운 두 점이 생겼는지 확인한다. 셀 꼭짓점(세 평면이 만나는 점)은 서로 다른 모서리에서 따로 구해져 1e-7 m 쯤 어긋난
@@ -1133,11 +1134,12 @@ namespace sw
         {
             for ( uint32 corner = 0; corner < 3; ++corner )
             {
-                const uint64 from     = listKey[index + corner];
-                const uint64 to       = listKey[index + ( corner + 1 ) % 3];
-                const auto   forward  = mapEdgeCount.find( MeshFractureInternal::makeEdgeKey( from, to ) );
-                const auto   backward = mapEdgeCount.find( MeshFractureInternal::makeEdgeKey( to, from ) );
-                if ( forward->second != 1 || backward == mapEdgeCount.end() || backward->second != 1 )
+                const uint64 from          = listKey[index + corner];
+                const uint64 to            = listKey[index + ( corner + 1 ) % 3];
+                const auto   forward       = mapEdgeCount.find( MeshFractureInternal::makeEdgeKey( from, to ) );
+                const auto   backward      = mapEdgeCount.find( MeshFractureInternal::makeEdgeKey( to, from ) );
+                const bool   bOpenMeshEdge = forward->second != 1 || backward == mapEdgeCount.end() || backward->second != 1;
+                if ( bOpenMeshEdge )
                     return false;
             }
         }

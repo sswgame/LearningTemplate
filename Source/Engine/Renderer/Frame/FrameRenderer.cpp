@@ -215,7 +215,8 @@ namespace sw
 
     void FrameRenderer::shutdown()
     {
-        if ( _status == FrameRendererStatus::Uninitialized && _pDevice == nullptr && _pipelinePath.empty() )
+        const bool bAlreadyShutDown = _status == FrameRendererStatus::Uninitialized && _pDevice == nullptr && _pipelinePath.empty();
+        if ( bAlreadyShutDown )
             return;
 
         // 스냅샷이 가진 머티리얼과 인스턴스의 소유권을 **디바이스가 살아 있을 때** 해제한다. 스냅샷은 소유권을 함께
@@ -578,7 +579,8 @@ namespace sw
 
     bool FrameRenderer::executePacket( IRHIDevice* pDevice, RenderFramePacket& packet )
     {
-        if ( isReady() == false || pDevice == nullptr || packet._bValid == SW_FALSE )
+        const bool bNotExecutable = isReady() == false || pDevice == nullptr || packet._bValid == SW_FALSE;
+        if ( bNotExecutable )
             return false;
 
         // 게임 스레드가 맡긴 텍스처 구간(지형 스플랫 칠하기)을 기록 전에 올린다. 업로드는 뒤이은 드로우보다 먼저 실행된다(IRHIResourceFactory 계약).

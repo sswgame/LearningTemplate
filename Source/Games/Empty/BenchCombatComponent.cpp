@@ -134,7 +134,8 @@ namespace sw
         SocketBindingComponent* pBinding = sword.getComponent<SocketBindingComponent>();
         SkeletalMeshComponent*  pUnit    = enemy.getComponent<SkeletalMeshComponent>();
         float4x4                hand;
-        if ( pBinding == nullptr || pUnit == nullptr || pUnit->findBoneModelTransform( hashed_string( BenchCombatComponentInternal::kHandSocket ), hand ) == false )
+        const bool              bHandUnavailable = pBinding == nullptr || pUnit == nullptr || pUnit->findBoneModelTransform( hashed_string( BenchCombatComponentInternal::kHandSocket ), hand ) == false;
+        if ( bHandUnavailable )
             return;
         // 유닛은 적의 루트다 — 모델 공간이 곧 루트 기준이다. 붙기 전이면 붙이고, 붙어 있으면 바뀐 손 자리만 넘긴다.
         if ( pBinding->getState() == SocketBindingState::Bound && pBinding->getHolder() == enemy.getHandle() )
@@ -227,8 +228,9 @@ namespace sw
             }
             else if ( pCombat->_stage == 3 && pCombat->_frame >= 900 )
             {
-                RagdollComponent* pRagdoll = pEnemyObject->getComponent<RagdollComponent>();
-                if ( pRagdoll != nullptr && pRagdoll->isSettled() && pRagdoll->getUp() )
+                RagdollComponent* pRagdoll        = pEnemyObject->getComponent<RagdollComponent>();
+                const bool        bRagdollSettled = pRagdoll != nullptr && pRagdoll->isSettled() && pRagdoll->getUp();
+                if ( bRagdollSettled )
                     SW_LOG_INFO( "[BenchCombat] t=%# ragdoll settled -> get up", pCombat->_elapsed );
                 pCombat->_stage = 4;
             }

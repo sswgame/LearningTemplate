@@ -655,8 +655,9 @@ namespace sw
         _cultureTable.collectCultureCodes( listCultureCode );
         for ( const string& code : listCultureCode )
         {
-            const CultureInfo* pCulture = _cultureTable.findCulture( code );
-            if ( pCulture == nullptr || pCulture->isPseudo() == false || _listProject.empty() )
+            const CultureInfo* pCulture              = _cultureTable.findCulture( code );
+            const bool         bSkipNonPseudoCulture = pCulture == nullptr || pCulture->isPseudo() == false || _listProject.empty();
+            if ( bSkipNonPseudoCulture )
                 continue;
             StringTable& pseudoTable = getOrCreateTableLocked( code );
             for ( const MountedProject& project : _listProject )
@@ -931,7 +932,8 @@ namespace sw
         string language;
         {
             std::shared_lock<std::shared_mutex> lock( _mutex );
-            if ( _listProject.empty() && _mapLooseTable.empty() && _mapBinaryTable.empty() )
+            const bool                          bNoTextLoaded = _listProject.empty() && _mapLooseTable.empty() && _mapBinaryTable.empty();
+            if ( bNoTextLoaded )
                 return; // 텍스트를 하나도 로드하지 않은 실행(로컬라이제이션 없는 게임, 테스트)은 모든 키가 빠지므로 알릴 필요가 없다
             language = _currentLanguage;
         }

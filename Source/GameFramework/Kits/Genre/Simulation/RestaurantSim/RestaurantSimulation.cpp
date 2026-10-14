@@ -163,7 +163,8 @@ namespace sw
 
     bool RestaurantSimulation::fireStaff( int32 staffIndex )
     {
-        if ( staffIndex < 0 || staffIndex >= static_cast<int32>( _listStaff.size() ) || _listStaff[static_cast<size_t>( staffIndex )]._bHired == SW_FALSE )
+        const bool bInvalidStaffIndex = staffIndex < 0 || staffIndex >= static_cast<int32>( _listStaff.size() ) || _listStaff[static_cast<size_t>( staffIndex )]._bHired == SW_FALSE;
+        if ( bInvalidStaffIndex )
             return false;
         StaffMember& staff = _listStaff[static_cast<size_t>( staffIndex )];
         for ( KitchenOrder& order : _listOrder )
@@ -432,7 +433,8 @@ namespace sw
             archive >> staff._taskCustomer;
             archive >> role;
             archive >> staff._bHired;
-            if ( archive.isError() || role > static_cast<uint8>( StaffRole::Cashier ) || staff._bHired > SW_TRUE )
+            const bool bInvalidStaffData = archive.isError() || role > static_cast<uint8>( StaffRole::Cashier ) || staff._bHired > SW_TRUE;
+            if ( bInvalidStaffData )
                 return false;
             staff._role = static_cast<StaffRole>( role );
         }
@@ -536,7 +538,8 @@ namespace sw
         archive >> restored._pendingSpoilageCost;
         archive >> restored._nextCustomerID;
         archive >> restored._bOpen;
-        if ( bTailRead == false || bArrivalRead == false || archive.isError() || restored._bOpen > SW_TRUE )
+        const bool bInvalidRestaurantState = bTailRead == false || bArrivalRead == false || archive.isError() || restored._bOpen > SW_TRUE;
+        if ( bInvalidRestaurantState )
             return false;
 
         // 직원이 맡은 손님과 주문의 손님은 있는 손님이어야 한다.
@@ -558,9 +561,10 @@ namespace sw
 
     bool RestaurantSimulation::canServe( const hashed_string& dishID ) const
     {
-        const MenuEntry* pEntry = findMenuEntry( dishID );
-        const DishDef*   pDish  = _pCatalog != nullptr ? _pCatalog->findDish( dishID ) : nullptr;
-        if ( pEntry == nullptr || pEntry->_bOnMenu == SW_FALSE || pDish == nullptr )
+        const MenuEntry* pEntry           = findMenuEntry( dishID );
+        const DishDef*   pDish            = _pCatalog != nullptr ? _pCatalog->findDish( dishID ) : nullptr;
+        const bool       bDishUnavailable = pEntry == nullptr || pEntry->_bOnMenu == SW_FALSE || pDish == nullptr;
+        if ( bDishUnavailable )
             return false;
         const RecipeDef* pRecipe = findRecipe( *pDish );
         if ( pRecipe == nullptr )
@@ -682,7 +686,8 @@ namespace sw
         // 서빙과 계산.
         for ( StaffMember& staff : _listStaff )
         {
-            if ( staff._bHired == SW_FALSE || staff._role == StaffRole::Cook || staff._taskCustomer < 0 )
+            const bool bNoPendingStaffTask = staff._bHired == SW_FALSE || staff._role == StaffRole::Cook || staff._taskCustomer < 0;
+            if ( bNoPendingStaffTask )
                 continue;
             staff._busyMinutes -= kStepMinutes;
             if ( staff._busyMinutes > 0.0f )
@@ -984,8 +989,9 @@ namespace sw
     {
         for ( int32 staffIndex = 0; staffIndex < static_cast<int32>( _listStaff.size() ); ++staffIndex )
         {
-            const StaffMember& staff = _listStaff[static_cast<size_t>( staffIndex )];
-            if ( staff._bHired != SW_FALSE && staff._role == role && staff._taskCustomer < 0 )
+            const StaffMember& staff           = _listStaff[static_cast<size_t>( staffIndex )];
+            const bool         bStaffAvailable = staff._bHired != SW_FALSE && staff._role == role && staff._taskCustomer < 0;
+            if ( bStaffAvailable )
                 return staffIndex;
         }
         return -1;
@@ -1017,7 +1023,8 @@ namespace sw
         int32 count = 0;
         for ( const KitchenOrder& order : _listOrder )
         {
-            if ( order._cook >= 0 && order._bReady == SW_FALSE && order._station == station )
+            const bool bOrderCooking = order._cook >= 0 && order._bReady == SW_FALSE && order._station == station;
+            if ( bOrderCooking )
                 ++count;
         }
         return count;

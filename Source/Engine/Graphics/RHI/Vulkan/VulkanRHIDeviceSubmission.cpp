@@ -167,9 +167,10 @@ namespace sw
 
     bool VulkanRHIDevice::readGPUClockNanos( int64& outGPUNanos )
     {
-        outGPUNanos = 0;
-        if ( _device == VK_NULL_HANDLE || _physicalDevice == VK_NULL_HANDLE || _graphicsQueue == VK_NULL_HANDLE ||
-             _oneShotCommandPool == VK_NULL_HANDLE )
+        outGPUNanos                            = 0;
+        const bool bTimestampDeviceUnavailable = _device == VK_NULL_HANDLE || _physicalDevice == VK_NULL_HANDLE || _graphicsQueue == VK_NULL_HANDLE ||
+                                                 _oneShotCommandPool == VK_NULL_HANDLE;
+        if ( bTimestampDeviceUnavailable )
             return false;
 
         VkPhysicalDeviceProperties properties{};
@@ -209,8 +210,9 @@ namespace sw
 
     void VulkanRHIDevice::ensureTimestampPool()
     {
-        if ( _bTimestampEnabled == SW_FALSE || _timestampPool != VK_NULL_HANDLE || _device == VK_NULL_HANDLE ||
-             _physicalDevice == VK_NULL_HANDLE )
+        const bool bTimestampPoolNotNeeded = _bTimestampEnabled == SW_FALSE || _timestampPool != VK_NULL_HANDLE || _device == VK_NULL_HANDLE ||
+                                             _physicalDevice == VK_NULL_HANDLE;
+        if ( bTimestampPoolNotNeeded )
             return;
 
         VkPhysicalDeviceProperties properties{};
@@ -234,8 +236,9 @@ namespace sw
     void VulkanRHIDevice::collectTimestampsForSlot()
     {
         _timestampFrame._listMicro.clear();
-        if ( _bTimestampEnabled == SW_FALSE || _timestampPool == VK_NULL_HANDLE || _timestampPeriod <= 0.0f ||
-             _arrTimestampSubmitted[_currentFrame] == SW_FALSE )
+        const bool bNoTimestampsToRead = _bTimestampEnabled == SW_FALSE || _timestampPool == VK_NULL_HANDLE || _timestampPeriod <= 0.0f ||
+                                         _arrTimestampSubmitted[_currentFrame] == SW_FALSE;
+        if ( bNoTimestampsToRead )
             return;
 
         // 칸마다 [값][가용 여부] 두 개가 온다. **가용 비트가 반드시 필요하다.** 이번 프레임에 안 쓰인
@@ -649,8 +652,9 @@ namespace sw
 
     void VulkanRHIDevice::executeCommandList( IRHICommandList* pCmdList )
     {
-        VulkanRHICommandList* pList = static_cast<VulkanRHICommandList*>( pCmdList );
-        if ( pList == nullptr || _bFrameStarted == SW_FALSE || _activeFrameBuffer == VK_NULL_HANDLE )
+        VulkanRHICommandList* pList                    = static_cast<VulkanRHICommandList*>( pCmdList );
+        const bool            bCannotSubmitCommandList = pList == nullptr || _bFrameStarted == SW_FALSE || _activeFrameBuffer == VK_NULL_HANDLE;
+        if ( bCannotSubmitCommandList )
             return;
 
         const VkCommandBuffer listBuffer = pList->nativeCommandBuffer();

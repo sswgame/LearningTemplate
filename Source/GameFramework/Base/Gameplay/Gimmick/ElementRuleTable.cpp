@@ -174,7 +174,8 @@ namespace sw
 
     bool ElementRuleTable::hasFlag( int32 material, int32 flag ) const
     {
-        if ( material < 0 || material >= static_cast<int32>( _listMaterial.size() ) || flag < 0 )
+        const bool bInvalidFlagRequest = material < 0 || material >= static_cast<int32>( _listMaterial.size() ) || flag < 0;
+        if ( bInvalidFlagRequest )
             return false;
         return ( _listMaterial[static_cast<size_t>( material )]._flags & ( 1u << static_cast<uint32>( flag ) ) ) != 0;
     }

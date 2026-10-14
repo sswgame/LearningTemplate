@@ -134,7 +134,8 @@ namespace sw
     bool D3D12RHICommandContext::writeSlotTable( const D3D12_CPU_DESCRIPTOR_HANDLE* pSlots, uint32 count, D3D12_CPU_DESCRIPTOR_HANDLE nullView,
                                                  D3D12_GPU_DESCRIPTOR_HANDLE& outTable )
     {
-        if ( count == 0 || count > D3D12RHIDevice::kMaxSlotTableSize || nullView.ptr == 0 )
+        const bool bInvalidSlotTableRequest = count == 0 || count > D3D12RHIDevice::kMaxSlotTableSize || nullView.ptr == 0;
+        if ( bInvalidSlotTableRequest )
             return false;
         uint32 base{ 0 };
         if ( allocateOnlineDescriptors( count, base ) == false )
@@ -353,11 +354,12 @@ namespace sw
         // (예: R16G16B16A16_FLOAT 트랜지언트 → R8G8B8A8 백버퍼, 1280 → 320)이 정의되지 않은 동작이 된다.
         // 검증 레이어는 오류를 내고 드라이버는 DXGI_ERROR_DRIVER_INTERNAL_ERROR 로 디바이스를 날린다.
         {
-            const D3D12_RESOURCE_DESC srcDesc = pSrcResource->GetDesc();
-            const D3D12_RESOURCE_DESC dstDesc = pDstResource->GetDesc();
-            if ( srcDesc.Format != dstDesc.Format || srcDesc.Width != dstDesc.Width ||
-                 srcDesc.Height != dstDesc.Height || srcDesc.DepthOrArraySize != dstDesc.DepthOrArraySize ||
-                 srcDesc.MipLevels != dstDesc.MipLevels )
+            const D3D12_RESOURCE_DESC srcDesc             = pSrcResource->GetDesc();
+            const D3D12_RESOURCE_DESC dstDesc             = pDstResource->GetDesc();
+            const bool                bBlitFormatMismatch = srcDesc.Format != dstDesc.Format || srcDesc.Width != dstDesc.Width ||
+                                             srcDesc.Height != dstDesc.Height || srcDesc.DepthOrArraySize != dstDesc.DepthOrArraySize ||
+                                             srcDesc.MipLevels != dstDesc.MipLevels;
+            if ( bBlitFormatMismatch )
             {
                 if ( _pDevice->_bBlitMismatchLogged == SW_FALSE )
                 {
@@ -407,7 +409,8 @@ namespace sw
     {
         // 그래픽스 t# → 슬롯 테이블 상태에 오프라인 뷰를 적는다. 테이블은 드로우 직전 flushSlotTables 가 굳힌다.
         // 뷰라서 버퍼든 텍스처든 같은 경로다(루트 SRV 는 raw/구조 버퍼만 받는다).
-        if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kSrvSlotCount )
+        const bool bCannotBindShaderResource = _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kSrvSlotCount;
+        if ( bCannotBindShaderResource )
             return;
         const D3D12_CPU_DESCRIPTOR_HANDLE view = resolveOfflineView( index, false );
         if ( view.ptr == 0 )
@@ -473,7 +476,8 @@ namespace sw
     void D3D12RHICommandContext::bindComputeUav( RHIDescriptorIndex index, uint32 slot )
     {
         // 컴퓨트 u# → 컴퓨트 슬롯 테이블 상태. 인덱스는 UAV 레지스트리(registerBindlessBufferUav)의 것. 디스패치 직전 굳힌다.
-        if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kComputeUavSlotCount )
+        const bool bCannotBindUnorderedAccess = _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kComputeUavSlotCount;
+        if ( bCannotBindUnorderedAccess )
             return;
         const D3D12_CPU_DESCRIPTOR_HANDLE view = resolveOfflineView( index, true );
         if ( view.ptr == 0 )
@@ -487,7 +491,8 @@ namespace sw
 
     void D3D12RHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
     {
-        if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kConstantBufferSlotCount )
+        const bool bCannotBindComputeConstantBuffer = _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kConstantBufferSlotCount;
+        if ( bCannotBindComputeConstantBuffer )
             return;
         const D3D12_GPU_VIRTUAL_ADDRESS address = resolveBufferAddress( constantBufferIndex, false, true );
         if ( address == 0 )
@@ -497,7 +502,8 @@ namespace sw
 
     void D3D12RHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
-        if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kSrvSlotCount )
+        const bool bCannotBindComputeShaderResource = _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kSrvSlotCount;
+        if ( bCannotBindComputeShaderResource )
             return;
         const D3D12_CPU_DESCRIPTOR_HANDLE view = resolveOfflineView( index, false );
         if ( view.ptr == 0 )
@@ -539,7 +545,8 @@ namespace sw
 
     void D3D12RHICommandContext::draw( uint32 vertexCount, uint32 startVertex )
     {
-        if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || vertexCount == 0 )
+        const bool bNothingToDraw = _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || vertexCount == 0;
+        if ( bNothingToDraw )
             return;
 
         if ( bindActiveGraphicsPSO() == false )
@@ -555,7 +562,8 @@ namespace sw
 
     void D3D12RHICommandContext::drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance )
     {
-        if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || vertexCount == 0 || instanceCount == 0 )
+        const bool bNothingToDrawInstanced = _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || vertexCount == 0 || instanceCount == 0;
+        if ( bNothingToDrawInstanced )
             return;
 
         if ( bindActiveGraphicsPSO() == false )
@@ -639,7 +647,8 @@ namespace sw
     void D3D12RHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount,
                                                RHIBufferHandle countBuffer, uint32 countBufferOffset )
     {
-        if ( _pCmdList == nullptr || _pDevice->_drawCommandSignature == nullptr || argumentBuffer == 0 || drawCount == 0 )
+        const bool bNothingToDrawIndirect = _pCmdList == nullptr || _pDevice->_drawCommandSignature == nullptr || argumentBuffer == 0 || drawCount == 0;
+        if ( bNothingToDrawIndirect )
             return;
 
         ID3D12Resource* pArgs = _pDevice->resolveBuffer( argumentBuffer );
@@ -666,7 +675,8 @@ namespace sw
                                                           uint32 destOffsetIn32BitValues )
     {
         (void)rootParameterIndex;
-        if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || pData == nullptr || num32BitValues == 0 )
+        const bool bInvalidRootConstants = _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || pData == nullptr || num32BitValues == 0;
+        if ( bInvalidRootConstants )
             return;
         if ( destOffsetIn32BitValues >= shaderslot::kRootConstantDwords )
             return;
@@ -680,7 +690,8 @@ namespace sw
                                                            uint32 destOffsetIn32BitValues )
     {
         (void)rootParameterIndex; // 루트 인자 번호는 루트 시그니처가 정한다 (kRootConstantsParam).
-        if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || pData == nullptr || num32BitValues == 0 )
+        const bool bInvalidComputeRootConstants = _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || pData == nullptr || num32BitValues == 0;
+        if ( bInvalidComputeRootConstants )
             return;
         if ( destOffsetIn32BitValues >= shaderslot::kRootConstantDwords )
             return;
@@ -692,7 +703,8 @@ namespace sw
 
     void D3D12RHICommandContext::drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
     {
-        if ( _pCmdList == nullptr || _pDevice->_drawIndexedCommandSignature == nullptr || argumentBuffer == 0 )
+        const bool bCannotDrawIndexedIndirect = _pCmdList == nullptr || _pDevice->_drawIndexedCommandSignature == nullptr || argumentBuffer == 0;
+        if ( bCannotDrawIndexedIndirect )
             return;
         if ( _pState->_boundIndexBuffer == 0 )
             return;
@@ -714,7 +726,8 @@ namespace sw
 
     void D3D12RHICommandContext::dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
     {
-        if ( _pCmdList == nullptr || _pDevice->_dispatchCommandSignature == nullptr || argumentBuffer == 0 )
+        const bool bCannotDispatchIndirect = _pCmdList == nullptr || _pDevice->_dispatchCommandSignature == nullptr || argumentBuffer == 0;
+        if ( bCannotDispatchIndirect )
             return;
 
         ID3D12Resource* pArgs = _pDevice->resolveBuffer( argumentBuffer );
@@ -849,8 +862,9 @@ namespace sw
         if ( bHasDepth )
         {
             D3D12RHIDevice::OffscreenTargetView depthView{};
-            const bool                          bDepthFound = _pDevice->findOffscreenTargetView( beginInfo._depthTarget, beginInfo._depthTargetSlice, depthView );
-            if ( bDepthFound && depthView._bHasDsv != SW_FALSE && depthView._bSliceInRange != SW_FALSE )
+            const bool                          bDepthFound          = _pDevice->findOffscreenTargetView( beginInfo._depthTarget, beginInfo._depthTargetSlice, depthView );
+            const bool                          bDepthTargetWritable = bDepthFound && depthView._bHasDsv != SW_FALSE && depthView._bSliceInRange != SW_FALSE;
+            if ( bDepthTargetWritable )
             {
                 _pDevice->reportBarrierDuringRecording( "beginRenderPass(depth)" );
                 transitionTexture( beginInfo._depthTarget, D3D12_RESOURCE_STATE_DEPTH_WRITE );

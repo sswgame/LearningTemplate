@@ -282,8 +282,9 @@ namespace sw
         string cycleNodes;
         for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
         {
-            const NodeRuntime& node = _listNode[nodeIndex];
-            if ( node._pKind == nullptr || node._pKind->breaksCycle() || listPlaced[nodeIndex] == SW_TRUE )
+            const NodeRuntime& node      = _listNode[nodeIndex];
+            const bool         bSkipNode = node._pKind == nullptr || node._pKind->breaksCycle() || listPlaced[nodeIndex] == SW_TRUE;
+            if ( bSkipNode )
                 continue;
             if ( cycleNodes.empty() == false )
                 cycleNodes += ", ";
@@ -498,7 +499,8 @@ namespace sw
         const bool bHeader = bytes.size() == expectedSize && Internal::readValue( bytes, offset, magic ) && Internal::readValue( bytes, offset, version ) &&
                              Internal::readValue( bytes, offset, layoutHash ) && Internal::readValue( bytes, offset, stepIndex ) &&
                              Internal::readValue( bytes, offset, accumulator );
-        if ( bHeader == false || magic != Internal::kStateTag || version != Internal::kStateVersion || layoutHash != _layoutHash )
+        const bool bInvalidState = bHeader == false || magic != Internal::kStateTag || version != Internal::kStateVersion || layoutHash != _layoutHash;
+        if ( bInvalidState )
             return false;
         _stepIndex          = stepIndex;
         _timer._accumulator = accumulator;

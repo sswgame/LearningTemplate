@@ -173,7 +173,8 @@ namespace sw
 
     void ScavengerExpedition::update( float32 deltaTime )
     {
-        if ( _phase != ScavengerPhase::Landed || deltaTime <= 0.0f || _data._pCatalog == nullptr )
+        const bool bNotUpdatable = _phase != ScavengerPhase::Landed || deltaTime <= 0.0f || _data._pCatalog == nullptr;
+        if ( bNotUpdatable )
             return;
         const ScavengerDaySettings& day = _data._pCatalog->getDaySettings();
         _hoursOnMoon += deltaTime * 24.0f / day._secondsPerDay;
@@ -216,7 +217,8 @@ namespace sw
 
     ScavengerPickupResult ScavengerExpedition::pickUp( int32 player, int32 uid )
     {
-        if ( _phase != ScavengerPhase::Landed || isValidPlayer( player ) == false || _listCrew[static_cast<size_t>( player )].isDead() )
+        const bool bPickupUnavailable = _phase != ScavengerPhase::Landed || isValidPlayer( player ) == false || _listCrew[static_cast<size_t>( player )].isDead();
+        if ( bPickupUnavailable )
             return ScavengerPickupResult::Unavailable;
         ScavengerCrewMember&        member = _listCrew[static_cast<size_t>( player )];
         const ScavengerPickupResult result = member._carry.evaluatePickup();
@@ -287,7 +289,8 @@ namespace sw
 
     void ScavengerExpedition::killPlayer( int32 player )
     {
-        if ( _phase != ScavengerPhase::Landed || isValidPlayer( player ) == false || _listCrew[static_cast<size_t>( player )].isDead() )
+        const bool bCannotKill = _phase != ScavengerPhase::Landed || isValidPlayer( player ) == false || _listCrew[static_cast<size_t>( player )].isDead();
+        if ( bCannotKill )
             return;
         _listCrew[static_cast<size_t>( player )]._vitality.kill();
         handleDeath( player, false );
@@ -429,7 +432,8 @@ namespace sw
             (void)_facility.placeScrap( body, member._areaID );
         }
         pushEvent( ScavengerEvent::Kind::PlayerDied, player, bLeftBehind ? 1 : 0 );
-        if ( bLeftBehind == false && countAlive() == 0 && _phase == ScavengerPhase::Landed )
+        const bool bAutoDepartNeeded = bLeftBehind == false && countAlive() == 0 && _phase == ScavengerPhase::Landed;
+        if ( bAutoDepartNeeded )
             departShip( true ); // 모두 죽었으므로 자동으로 이륙한다
     }
 
@@ -473,8 +477,9 @@ namespace sw
         }
         if ( countAlive() == 0 )
             loseScrapOnWipe();
-        const int64 fine = static_cast<int64>( static_cast<float32>( getCredits() ) * MathUtil::saturate( fineRatio ) );
-        if ( fine > 0 && _pWallet != nullptr && _pWallet->trySpend( _data._pCatalog->getCurrency(), fine ) )
+        const int64 fine        = static_cast<int64>( static_cast<float32>( getCredits() ) * MathUtil::saturate( fineRatio ) );
+        const bool  bCanPayFine = fine > 0 && _pWallet != nullptr && _pWallet->trySpend( _data._pCatalog->getCurrency(), fine );
+        if ( bCanPayFine )
             pushEvent( ScavengerEvent::Kind::FinePaid, -1, static_cast<int32>( fine ) );
 
         int32                         overtimeBonus = 0;

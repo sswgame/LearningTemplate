@@ -333,7 +333,8 @@ namespace sw
 
     bool DestructionState::breakLink( uint32 link, DestructionChange& outChange )
     {
-        if ( _pGraph == nullptr || link >= _pGraph->_listLink.size() || _listLinkBroken[link] != SW_FALSE )
+        const bool bCannotBreakLink = _pGraph == nullptr || link >= _pGraph->_listLink.size() || _listLinkBroken[link] != SW_FALSE;
+        if ( bCannotBreakLink )
             return false;
         const FractureLink& data = _pGraph->_listLink[link];
         if ( _listLeafActive[data._leafA] == _listLeafActive[data._leafB] )
@@ -664,17 +665,19 @@ namespace sw
 
     bool DestructionState::readSnapshot( const uint8* pData, size_t size )
     {
-        using Internal = DestructionStateInternal;
-        if ( _pGraph == nullptr || pData == nullptr || size == 0 || size > static_cast<size_t>( MathUtil::kMaxInt32 ) )
+        using Internal                = DestructionStateInternal;
+        const bool bInvalidStateBytes = _pGraph == nullptr || pData == nullptr || size == 0 || size > static_cast<size_t>( MathUtil::kMaxInt32 );
+        if ( bInvalidStateBytes )
             return false;
         const FractureGraph& graph = *_pGraph;
         BitReader            reader( pData, static_cast<int32>( size ) );
         if ( reader.readUint32() != Internal::kMagic || reader.readVarUint() != Internal::kVersion )
             return false;
-        const uint64 nodeCount = reader.readVarUint();
-        const uint64 linkCount = reader.readVarUint();
-        const uint64 leafCount = reader.readVarUint();
-        if ( nodeCount != graph._listNode.size() || linkCount != graph._listLink.size() || leafCount != graph._leafCount )
+        const uint64 nodeCount           = reader.readVarUint();
+        const uint64 linkCount           = reader.readVarUint();
+        const uint64 leafCount           = reader.readVarUint();
+        const bool   bGraphShapeMismatch = nodeCount != graph._listNode.size() || linkCount != graph._listLink.size() || leafCount != graph._leafCount;
+        if ( bGraphShapeMismatch )
             return false;
         const uint32 eventCount  = static_cast<uint32>( reader.readVarUint() );
         const uint32 nextGroupID = static_cast<uint32>( reader.readVarUint() );

@@ -419,7 +419,8 @@ namespace sw::editor
             const AnimationGraphNode* pTo   = _previewGraph.findNodeByName( current );
             for ( const GraphLink& link : _listLink )
             {
-                if ( pFrom != nullptr && pTo != nullptr && link._fromNode == pFrom->_id && link._toNode == pTo->_id )
+                const bool bLinkBetweenNodes = pFrom != nullptr && pTo != nullptr && link._fromNode == pFrom->_id && link._toNode == pTo->_id;
+                if ( bLinkBetweenNodes )
                     _flowLinkID = link._id;
             }
         }
@@ -573,7 +574,8 @@ namespace sw::editor
             EditorWidgets::drawTextField( "##stateName", _nameEditBuffer );
             EditorSelfTestMarks::note( "animationGraph.state.name" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "StateClipTip" ) );
-            if ( ImGui::IsItemDeactivatedAfterEdit() && _nameEditBuffer.empty() == false && _nameEditBuffer != pNode->_name )
+            const bool bStateNameCommitted = ImGui::IsItemDeactivatedAfterEdit() && _nameEditBuffer.empty() == false && _nameEditBuffer != pNode->_name;
+            if ( bStateNameCommitted )
             {
                 pNode->_name = _nameEditBuffer;
                 notifyDocumentEdited( "Rename Animation State" );

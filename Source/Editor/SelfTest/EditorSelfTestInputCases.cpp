@@ -217,7 +217,8 @@ namespace sw::editor
                     return false;
                 for ( const ImGuiWindow* pWindow : pImGui->Windows )
                 {
-                    if ( pWindow != nullptr && ( pWindow->Flags & ImGuiWindowFlags_Tooltip ) != 0 && pWindow->Active )
+                    const bool bActiveTooltipWindow = pWindow != nullptr && ( pWindow->Flags & ImGuiWindowFlags_Tooltip ) != 0 && pWindow->Active;
+                    if ( bActiveTooltipWindow )
                         return true;
                 }
                 return false;
@@ -231,7 +232,8 @@ namespace sw::editor
                     return nullptr;
                 for ( ImGuiWindow* pWindow : pImGui->Windows )
                 {
-                    if ( pWindow != nullptr && pWindow->Name != nullptr && StringUtil::contains( pWindow->Name, pTitlePart ) )
+                    const bool bTitleMatchesWindow = pWindow != nullptr && pWindow->Name != nullptr && StringUtil::contains( pWindow->Name, pTitlePart );
+                    if ( bTitleMatchesWindow )
                         return pWindow;
                 }
                 return nullptr;

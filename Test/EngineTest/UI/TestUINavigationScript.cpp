@@ -115,8 +115,9 @@ namespace
             bool                   bPass     = false;
             for ( const sw::AutomationStep& step : scenario.getSteps() )
             {
-                lastFrame = step._frameIndex > lastFrame ? step._frameIndex : lastFrame;
-                if ( step._kind == "Tap" || step._kind == "Press" || step._kind == "Release" )
+                lastFrame             = step._frameIndex > lastFrame ? step._frameIndex : lastFrame;
+                const bool bInputStep = step._kind == "Tap" || step._kind == "Press" || step._kind == "Release";
+                if ( bInputStep )
                 {
                     sw::InputSlot slot{};
                     SW_ASSERT_TRUE_MSG( sw::InputSlotUtil::tryParse( *step.findAttribute( "slot" ), slot ), step.describe().c_str() );

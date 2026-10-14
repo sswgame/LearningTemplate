@@ -178,8 +178,9 @@ namespace sw
         const float32                viewAngle  = _viewAngle;
         pManager->forEachGameObject( [&listCandidate, &targetTags, range, viewAngle]( GameObject* pObject )
         {
-            const SceneComponent* pOther = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
-            if ( pOther == nullptr || pObject->isActiveInHierarchy() == false || targetTags.getTagCount() == 0 || pObject->getTags().hasAllTags( targetTags ) == false )
+            const SceneComponent* pOther      = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
+            const bool            bSkipTarget = pOther == nullptr || pObject->isActiveInHierarchy() == false || targetTags.getTagCount() == 0 || pObject->getTags().hasAllTags( targetTags ) == false;
+            if ( bSkipTarget )
                 return;
             InteractionCandidate candidate;
             candidate._position    = pOther->getWorldPosition();

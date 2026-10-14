@@ -363,7 +363,8 @@ namespace sw
         for ( const string& gameFolder : listGameFolder )
         {
             vector<string> listFile;
-            if ( gameFolder.empty() || FileUtil::isDirectory( gameFolder ) == false || FileUtil::collectFiles( gameFolder, ".json", listFile, false ) == false )
+            const bool     bSkipGameFolder = gameFolder.empty() || FileUtil::isDirectory( gameFolder ) == false || FileUtil::collectFiles( gameFolder, ".json", listFile, false ) == false;
+            if ( bSkipGameFolder )
                 continue;
             for ( const string& filePath : listFile )
             {

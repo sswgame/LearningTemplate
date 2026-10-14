@@ -45,7 +45,8 @@ namespace sw::editor
                                        vector<TerrainBrushSample>& outListSample )
     {
         outListSample.clear();
-        if ( grid._resolution < 2 || grid._cellSize._x <= 0.0f || grid._cellSize._y <= 0.0f || settings._radius <= 0.0f )
+        const bool bInvalidBrushInputs = grid._resolution < 2 || grid._cellSize._x <= 0.0f || grid._cellSize._y <= 0.0f || settings._radius <= 0.0f;
+        if ( bInvalidBrushInputs )
             return;
         const float32 maxIndex = static_cast<float32>( grid._resolution - 1 );
         const float32 minX     = MathUtil::clamp( std::floor( ( center._x - settings._radius - grid._origin._x ) / grid._cellSize._x ), 0.0f, maxIndex );
@@ -108,8 +109,9 @@ namespace sw::editor
     bool TerrainBrush::applyLayerWeight( vector<float4>& inOutListWeight, uint32 resolution, const vector<TerrainBrushSample>& listSample,
                                          const TerrainBrushSettings& settings, float32 deltaTime )
     {
-        if ( settings._mode != TerrainBrushMode::PaintLayer || settings._layerIndex > 3 ||
-             inOutListWeight.size() != static_cast<size_t>( resolution ) * resolution )
+        const bool bCannotPaintLayer = settings._mode != TerrainBrushMode::PaintLayer || settings._layerIndex > 3 ||
+                                       inOutListWeight.size() != static_cast<size_t>( resolution ) * resolution;
+        if ( bCannotPaintLayer )
             return false;
         bool bChanged = false;
         for ( const TerrainBrushSample& sample : listSample )

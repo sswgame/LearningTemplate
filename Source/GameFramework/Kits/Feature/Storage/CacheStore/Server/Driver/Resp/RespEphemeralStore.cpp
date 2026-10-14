@@ -164,7 +164,8 @@ namespace sw
 
     void RespEphemeralStore::subscribe( string_view channel )
     {
-        if ( _bInitialized == SW_FALSE || _bShutdown == SW_TRUE || EphemeralRequest::isValidKey( channel ) == false )
+        const bool bCannotSubscribe = _bInitialized == SW_FALSE || _bShutdown == SW_TRUE || EphemeralRequest::isValidKey( channel ) == false;
+        if ( bCannotSubscribe )
             return;
         if ( std::find( _listChannel.begin(), _listChannel.end(), channel ) != _listChannel.end() )
             return;

@@ -17,9 +17,10 @@ namespace sw
 
     bool ServerRegistration::initialize( EphemeralStoreRouter* pRouter, const ServerDescriptor& descriptor )
     {
-        const bool bNamesOk   = ServerRecord::isValidName( descriptor._kind ) && ServerRecord::isValidName( descriptor._region );
-        const bool bAddressOk = descriptor._address.size() <= static_cast<size_t>( ServerRecord::kMaxAddressSize );
-        if ( pRouter == nullptr || descriptor._serverID == 0 || bNamesOk == false || bAddressOk == false )
+        const bool bNamesOk           = ServerRecord::isValidName( descriptor._kind ) && ServerRecord::isValidName( descriptor._region );
+        const bool bAddressOk         = descriptor._address.size() <= static_cast<size_t>( ServerRecord::kMaxAddressSize );
+        const bool bInvalidDescriptor = pRouter == nullptr || descriptor._serverID == 0 || bNamesOk == false || bAddressOk == false;
+        if ( bInvalidDescriptor )
         {
             SW_LOG_ERROR( "ServerRegistration: invalid descriptor (kind '%#', region '%#', id %#)", descriptor._kind.c_str(), descriptor._region.c_str(),
                           descriptor._serverID );

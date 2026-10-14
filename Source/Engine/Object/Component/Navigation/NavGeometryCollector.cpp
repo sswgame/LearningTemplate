@@ -136,8 +136,9 @@ namespace sw
                         continue;
                     object.forEachComponent( [&]( Component* pComponent )
                     {
-                        const TypeInfo* pComponentType = pComponent->getTypeInfo();
-                        if ( pComponent->isActive() && pComponentType != nullptr && pComponentType->isDerivedFrom( pKindType ) )
+                        const TypeInfo* pComponentType       = pComponent->getTypeInfo();
+                        const bool      bMatchingContributor = pComponent->isActive() && pComponentType != nullptr && pComponentType->isDerivedFrom( pKindType );
+                        if ( bMatchingContributor )
                             pContribution->_pContribute( *pComponent, area, outGeometry );
                     } );
                 }
@@ -207,9 +208,10 @@ namespace sw
             AABB       objectBox{};
             const bool bOutsideSurface = bSurfaceBox && ( pObject->getWorldBox( objectBox ) == false || objectBox.intersects( surfaceBox ) == false );
             // 등록된 종류(지형)도 그릴 상자가 없을 수 있다 — 베이크 경계가 표면 상자로 자르므로 상자 밖이어도 넣는다.
-            const bool bHasLink         = pObject->getComponent<NavMeshLinkComponent>() != nullptr;
-            const bool bHasContribution = Internal::hasContribution( *pObject );
-            if ( bOutsideSurface && bHasLink == false && bHasContribution == false )
+            const bool bHasLink          = pObject->getComponent<NavMeshLinkComponent>() != nullptr;
+            const bool bHasContribution  = Internal::hasContribution( *pObject );
+            const bool bIrrelevantObject = bOutsideSurface && bHasLink == false && bHasContribution == false;
+            if ( bIrrelevantObject )
                 return;
             const Internal::ObjectVerdict verdict = Internal::evaluateObject( *pObject, pSurface, settings );
             if ( verdict._bIncluded == false )
@@ -232,8 +234,9 @@ namespace sw
             {
                 pObject->forEachComponentOfType<MeshComponent>( pMeshType, [&]( MeshComponent* pMeshComponent )
                 {
-                    if ( pMeshComponent->isActive() == false || pMeshComponent->isVisible() == false ||
-                         castTo<SkeletalMeshComponent>( pMeshComponent, pSkinnedType ) != nullptr )
+                    const bool bSkipMeshComponent = pMeshComponent->isActive() == false || pMeshComponent->isVisible() == false ||
+                                                    castTo<SkeletalMeshComponent>( pMeshComponent, pSkinnedType ) != nullptr;
+                    if ( bSkipMeshComponent )
                         return;
                     shared_ptr<Mesh> mesh = pMeshComponent->getMesh();
                     if ( mesh == nullptr && pMeshComponent->getMeshID().empty() == false )

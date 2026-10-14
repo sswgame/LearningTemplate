@@ -117,8 +117,9 @@ SW_TEST_CASE( BuildTargetImageTest, ServerImageHasTheMarkerAndNoGraphicsLibrary 
     vector<string> listImage{ serverImage };
     // Engine 이 정적 링크(Shipping)면 그 이미지는 이 테스트 실행 파일이다 — 테스트 실행 파일은 GPU 테스트를 위해 그래픽 라이브러리를 링크하므로 보지 않는다.
     // 그때 Engine 코드는 Server 이미지 안에 있다.
-    const string engineImage = findEngineImage();
-    if ( engineImage.empty() == false && engineImage != serverImage && FileUtil::pathsEqualNormalized( engineImage, FileUtil::getExecutablePath() ) == false )
+    const string engineImage          = findEngineImage();
+    const bool   bSeparateEngineImage = engineImage.empty() == false && engineImage != serverImage && FileUtil::pathsEqualNormalized( engineImage, FileUtil::getExecutablePath() ) == false;
+    if ( bSeparateEngineImage )
         listImage.push_back( engineImage );
     for ( const string& imagePath : listImage )
     {

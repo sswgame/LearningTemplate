@@ -20,8 +20,9 @@ namespace sw::editor
             /** @brief 케이스 이름 꼴(`이름.이름` — 영문자 · 숫자 · 밑줄, 점 하나)인지입니다. */
             static bool isCaseName( string_view text )
             {
-                const size_t dot = text.find( '.' );
-                if ( dot == string_view::npos || dot == 0 || dot + 1 >= text.size() || text.find( '.', dot + 1 ) != string_view::npos )
+                const size_t dot                  = text.find( '.' );
+                const bool   bMalformedDottedName = dot == string_view::npos || dot == 0 || dot + 1 >= text.size() || text.find( '.', dot + 1 ) != string_view::npos;
+                if ( bMalformedDottedName )
                     return false;
                 for ( const utf8 character : text )
                 {

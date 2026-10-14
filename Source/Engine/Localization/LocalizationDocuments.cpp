@@ -104,8 +104,9 @@ namespace sw
             [[nodiscard]] static bool writeTextFile( string_view absolutePath, const string& text )
             {
                 // 내용이 같으면 쓰지 않는다. 파일 시간이 바뀌면 핫 리로드와 빌드 스탬프가 헛돈다.
-                string existing;
-                if ( FileUtil::exists( absolutePath ) && FileUtil::readTextFile( absolutePath, existing ) && existing == text )
+                string     existing;
+                const bool bContentUnchanged = FileUtil::exists( absolutePath ) && FileUtil::readTextFile( absolutePath, existing ) && existing == text;
+                if ( bContentUnchanged )
                     return true;
                 return FileUtil::ensureParentDirectoryExists( absolutePath ) && FileUtil::writeTextFile( absolutePath, text );
             }
@@ -415,13 +416,14 @@ namespace sw
                 LocalizationAssetRule rule;
                 const bool            bShape = ruleValue.isObject() && LocalizationDocumentsInternal::hasOnlyKnownFields( ruleValue, kArrRuleField, unknown ) &&
                                     LocalizationDocumentsInternal::readStringList( ruleValue.get( "elements", false ), rule._listElement );
-                rule._fileSuffix      = ruleValue.get( "files", false ).asString();
-                rule._attribute       = ruleValue.get( "attribute", false ).asString();
-                rule._context         = ruleValue.get( "context", false ).asString();
-                const string kind     = ruleValue.get( "kind", false ).asString();
-                rule._bKeyReference   = kind == "key";
-                const bool bKnownKind = kind == "key" || kind == "text";
-                if ( bShape == false || bKnownKind == false || rule._fileSuffix.empty() || rule._attribute.empty() || rule._listElement.empty() )
+                rule._fileSuffix             = ruleValue.get( "files", false ).asString();
+                rule._attribute              = ruleValue.get( "attribute", false ).asString();
+                rule._context                = ruleValue.get( "context", false ).asString();
+                const string kind            = ruleValue.get( "kind", false ).asString();
+                rule._bKeyReference          = kind == "key";
+                const bool bKnownKind        = kind == "key" || kind == "text";
+                const bool bInvalidAssetRule = bShape == false || bKnownKind == false || rule._fileSuffix.empty() || rule._attribute.empty() || rule._listElement.empty();
+                if ( bInvalidAssetRule )
                 {
                     error = string( sourceName ) + ": assetRules[" + to_string( static_cast<uint64>( ruleIndex ) ) + "] needs files, elements, attribute and kind (text | key)" +
                             ( unknown.empty() ? string{} : " - unknown field '" + unknown + "'" );

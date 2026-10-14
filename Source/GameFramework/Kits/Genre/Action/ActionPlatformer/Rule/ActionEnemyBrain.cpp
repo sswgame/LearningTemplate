@@ -44,7 +44,8 @@ namespace sw
             int32 targetIndex = -1;
             if ( pState->_onNear.empty() == false && playerDistance <= pState->_nearRange )
                 targetIndex = _pPattern->findStateIndex( pState->_onNear );
-            if ( targetIndex < 0 && pState->_next.empty() == false && _stateFrame >= pState->_frames )
+            const bool bShouldAdvanceToNextState = targetIndex < 0 && pState->_next.empty() == false && _stateFrame >= pState->_frames;
+            if ( bShouldAdvanceToNextState )
                 targetIndex = _pPattern->findStateIndex( pState->_next );
             if ( targetIndex >= 0 && targetIndex != _stateIndex )
                 enterState( targetIndex );
@@ -94,7 +95,8 @@ namespace sw
 
     const ActionPatternStateDef* ActionEnemyBrain::getState() const
     {
-        if ( _pPattern == nullptr || _stateIndex < 0 || _stateIndex >= static_cast<int32>( _pPattern->_listState.size() ) )
+        const bool bStateIndexInvalid = _pPattern == nullptr || _stateIndex < 0 || _stateIndex >= static_cast<int32>( _pPattern->_listState.size() );
+        if ( bStateIndexInvalid )
             return nullptr;
         return &_pPattern->_listState[static_cast<size_t>( _stateIndex )];
     }

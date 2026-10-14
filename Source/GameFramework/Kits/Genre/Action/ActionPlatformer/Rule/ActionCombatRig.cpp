@@ -137,8 +137,9 @@ namespace sw
         }
 
         // 근접 공격이다. 쉬고 있으면 첫 기술을 내고, 기술 중이면 다음 기술의 캔슬 창이 열렸을 때 이어서 낸다.
-        bool bStarted = false;
-        if ( _attackBufferFrames > 0 && _pCombo != nullptr && _pMoves != nullptr )
+        bool       bStarted        = false;
+        const bool bCanStartAttack = _attackBufferFrames > 0 && _pCombo != nullptr && _pMoves != nullptr;
+        if ( bCanStartAttack )
         {
             const int32 nextIndex = _comboIndex + 1;
             if ( _timeline.isPlaying() == false )

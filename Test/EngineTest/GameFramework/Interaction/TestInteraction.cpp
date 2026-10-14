@@ -611,8 +611,9 @@ SW_TEST_CASE( InteractionTest, RegistryCandidatesMatchFullSceneScan )
         vector<InteractionCandidate> listCandidate;
         manager.forEachComponentOfType<InteractableComponent>( [&]( InteractableComponent* pInteractable )
         {
-            const GameObject* pObject = pInteractable->getOwner();
-            if ( pObject == pPlayer || pInteractable->isActive() == false || pInteractable->isAvailableFor( *pPlayer ) == false )
+            const GameObject* pObject          = pInteractable->getOwner();
+            const bool        bNotInteractable = pObject == pPlayer || pInteractable->isActive() == false || pInteractable->isAvailableFor( *pPlayer ) == false;
+            if ( bNotInteractable )
                 return;
             InteractionCandidate candidate;
             candidate._position    = pObject->getPrimarySceneComponent()->getWorldPosition();

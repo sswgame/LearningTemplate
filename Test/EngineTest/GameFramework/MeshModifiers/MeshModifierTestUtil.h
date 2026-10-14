@@ -81,7 +81,8 @@ namespace test
         {
             for ( const sw::float3& point : listPoint )
             {
-                if ( sw::MathUtil::isFinite( point._x ) == false || sw::MathUtil::isFinite( point._y ) == false || sw::MathUtil::isFinite( point._z ) == false )
+                const bool bNonFinitePoint = sw::MathUtil::isFinite( point._x ) == false || sw::MathUtil::isFinite( point._y ) == false || sw::MathUtil::isFinite( point._z ) == false;
+                if ( bNonFinitePoint )
                     return false;
             }
             return true;

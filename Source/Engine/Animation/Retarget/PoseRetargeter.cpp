@@ -107,7 +107,8 @@ namespace sw
                 bOk         = bOk && PoseRetargeterInternal::findBone( targetSkeleton, name, "target", bone );
                 listChainTarget.push_back( bone );
             }
-            if ( bOk == false || listChainSource.empty() || listChainTarget.empty() )
+            const bool bInvalidBoneChains = bOk == false || listChainSource.empty() || listChainTarget.empty();
+            if ( bInvalidBoneChains )
                 return false;
             // 본 수가 다르면 사슬 길이 비율로 가장 가까운 원본 본을 고른다.
             const size_t sourceCount = listChainSource.size();
@@ -306,9 +307,10 @@ namespace sw
             outClip.addCurve( curve );
         }
         // 루트 모션 트랙은 원본 뿌리를 가리켰으면 대상 뿌리로 옮긴다.
-        const int32 sourceRootMotion = sourceClip.getRootMotionTrack();
-        if ( 0 <= sourceRootMotion && static_cast<size_t>( sourceRootMotion ) < listTrackToBone.size() &&
-             listTrackToBone[static_cast<size_t>( sourceRootMotion )] == static_cast<int32>( retargeter.getSourceRootBone() ) )
+        const int32 sourceRootMotion        = sourceClip.getRootMotionTrack();
+        const bool  bRootMotionOnSourceRoot = 0 <= sourceRootMotion && static_cast<size_t>( sourceRootMotion ) < listTrackToBone.size() &&
+                                             listTrackToBone[static_cast<size_t>( sourceRootMotion )] == static_cast<int32>( retargeter.getSourceRootBone() );
+        if ( bRootMotionOnSourceRoot )
             outClip.setRootMotionTrack( static_cast<int32>( retargeter.getTargetRootBone() ) );
         return true;
     }

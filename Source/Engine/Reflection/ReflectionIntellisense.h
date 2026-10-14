@@ -42,8 +42,11 @@ namespace sw::reflect::attr
         {
             const utf8* pText = pBegin;
             const utf8* pKey  = *ppKey;
-            while ( pText != pEnd && *pKey != '\0' && *pText == *pKey )
+            while ( true )
             {
+                const bool bKeyMatches = pText != pEnd && *pKey != '\0' && *pText == *pKey;
+                if ( bKeyMatches == false )
+                    break;
                 ++pText;
                 ++pKey;
             }
@@ -65,8 +68,11 @@ namespace sw::reflect::attr
             if ( *pText == '\0' )
                 break;
             const utf8* pBegin = pText;
-            while ( *pText != '\0' && isAnnotationSpace( *pText ) == false && *pText != '=' && *pText != ',' )
+            while ( true )
             {
+                const bool bInsideName = *pText != '\0' && isAnnotationSpace( *pText ) == false && *pText != '=' && *pText != ',';
+                if ( bInsideName == false )
+                    break;
                 ++pText;
             }
             if ( hasAnnotationKey( pBegin, pText, ppKey ) == false )
@@ -75,7 +81,8 @@ namespace sw::reflect::attr
             bool  bQuoted = false;
             while ( *pText != '\0' && ( bQuoted || depth != 0 || *pText != ',' ) )
             {
-                if ( bQuoted && *pText == '\\' && pText[1] != '\0' )
+                const bool bEscapeInsideQuote = bQuoted && *pText == '\\' && pText[1] != '\0';
+                if ( bEscapeInsideQuote )
                     ++pText;
                 else if ( *pText == '"' )
                     bQuoted = !bQuoted;

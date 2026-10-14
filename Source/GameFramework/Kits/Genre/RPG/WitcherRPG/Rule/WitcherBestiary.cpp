@@ -85,8 +85,9 @@ namespace sw
 
     float32 WitcherBestiary::computeMultiplier( const hashed_string& monsterID, const hashed_string& attackElement ) const
     {
-        const WitcherMonsterDef* pMonster = _pCatalog != nullptr ? _pCatalog->findMonster( monsterID ) : nullptr;
-        if ( pMonster == nullptr || _pChart == nullptr || attackElement.empty() )
+        const WitcherMonsterDef* pMonster             = _pCatalog != nullptr ? _pCatalog->findMonster( monsterID ) : nullptr;
+        const bool               bNoElementMultiplier = pMonster == nullptr || _pChart == nullptr || attackElement.empty();
+        if ( bNoElementMultiplier )
             return 1.0f;
         return _pChart->computeMultiplier( attackElement, pMonster->_listElement );
     }

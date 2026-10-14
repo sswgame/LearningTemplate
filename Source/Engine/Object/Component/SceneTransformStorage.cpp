@@ -142,8 +142,9 @@ namespace sw
 
         // DirectX 행-벡터 규격: Scale * Rotation * Translation. 행렬 셋을 곱하지 않고 결과를 바로 적는다(`float4x4::makeTrs` 주석).
         // 회전이 없으면 회전 행렬은 단위 행렬이라 대각선에 스케일만 놓는다(격자 배치 · 파티클 · 떠다니는 소품이 흔하다).
-        float4x4 localTrs;
-        if ( rotation._x == 0.0f && rotation._y == 0.0f && rotation._z == 0.0f )
+        float4x4   localTrs;
+        const bool bNoRotation = rotation._x == 0.0f && rotation._y == 0.0f && rotation._z == 0.0f;
+        if ( bNoRotation )
         {
             localTrs = float4x4{ scale._x, 0.0f, 0.0f, 0.0f, 0.0f, scale._y, 0.0f, 0.0f, 0.0f, 0.0f, scale._z, 0.0f, position._x, position._y, position._z, 1.0f };
         }
@@ -151,9 +152,10 @@ namespace sw
         {
             // 회전 변환 캐시(언리얼 `FRotationConversionCache` 의 자리). 오일러 → 쿼터니언은 삼각 함수 여섯 번이다. 회전은 그대로이고
             // 위치 · 스케일만 바뀌거나 부모만 움직인 합성이 대부분이라, 쿼터니언을 만든 오일러를 들고 있다가 같으면 건너뛴다.
-            float3&     source = page._arrRotationSource[pageIndex];
-            quaternion& quat   = page._arrRotationQuat[pageIndex];
-            if ( source._x != rotation._x || source._y != rotation._y || source._z != rotation._z )
+            float3&     source           = page._arrRotationSource[pageIndex];
+            quaternion& quat             = page._arrRotationQuat[pageIndex];
+            const bool  bRotationChanged = source._x != rotation._x || source._y != rotation._y || source._z != rotation._z;
+            if ( bRotationChanged )
             {
                 quat   = quaternion::makeFromYawPitchRoll( rotation._y, rotation._x, rotation._z );
                 source = rotation;

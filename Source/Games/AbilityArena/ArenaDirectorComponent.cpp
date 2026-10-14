@@ -292,7 +292,8 @@ namespace sw
             const ArenaUnitView& candidate = pView[viewIndex];
             const bool           bHostile  = ( pFrom->_bPlayerTeam == SW_TRUE && candidate._bEnemyTeam == SW_TRUE ) ||
                                   ( pFrom->_bEnemyTeam == SW_TRUE && candidate._bPlayerTeam == SW_TRUE );
-            if ( candidate._object == from || candidate._bAlive == SW_FALSE || bHostile == false )
+            const bool bNotHostileTarget = candidate._object == from || candidate._bAlive == SW_FALSE || bHostile == false;
+            if ( bNotHostileTarget )
                 continue;
             const float32 distance = float3::getDistance( pFrom->_position, candidate._position );
             if ( distance <= nearestDistance )
@@ -436,15 +437,16 @@ namespace sw
 
     bool ArenaDirectorComponent::spawnUnit( GameObjectManager& manager, const SpawnRequest& request )
     {
-        const bool              bPlayer        = request._kind == ArenaUnitKind::Player;
-        const string&           prefabPath     = bPlayer ? _playerPrefab : ( request._kind == ArenaUnitKind::Caster ? _casterPrefab : _gruntPrefab );
-        const utf8*             pName          = bPlayer ? "ArenaPlayer" : ( request._kind == ArenaUnitKind::Caster ? "ArenaCaster" : "ArenaGrunt" );
-        GameObject*             pObject        = spawnPrefab( manager, prefabPath, pName );
-        MeshComponent*          pMesh          = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
-        AbilitySystemComponent* pAbilitySystem = pObject != nullptr ? pObject->getComponent<AbilitySystemComponent>() : nullptr;
-        ArenaUnitComponent*     pUnitComponent = pObject != nullptr ? pObject->getComponent<ArenaUnitComponent>() : nullptr;
-        PawnComponent*          pPawn          = pObject != nullptr ? pObject->getComponent<PawnComponent>() : nullptr;
-        if ( pMesh == nullptr || pAbilitySystem == nullptr || pUnitComponent == nullptr || pPawn == nullptr )
+        const bool              bPlayer             = request._kind == ArenaUnitKind::Player;
+        const string&           prefabPath          = bPlayer ? _playerPrefab : ( request._kind == ArenaUnitKind::Caster ? _casterPrefab : _gruntPrefab );
+        const utf8*             pName               = bPlayer ? "ArenaPlayer" : ( request._kind == ArenaUnitKind::Caster ? "ArenaCaster" : "ArenaGrunt" );
+        GameObject*             pObject             = spawnPrefab( manager, prefabPath, pName );
+        MeshComponent*          pMesh               = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
+        AbilitySystemComponent* pAbilitySystem      = pObject != nullptr ? pObject->getComponent<AbilitySystemComponent>() : nullptr;
+        ArenaUnitComponent*     pUnitComponent      = pObject != nullptr ? pObject->getComponent<ArenaUnitComponent>() : nullptr;
+        PawnComponent*          pPawn               = pObject != nullptr ? pObject->getComponent<PawnComponent>() : nullptr;
+        const bool              bMissingPrefabParts = pMesh == nullptr || pAbilitySystem == nullptr || pUnitComponent == nullptr || pPawn == nullptr;
+        if ( bMissingPrefabParts )
         {
             SW_LOG_WARNING( "[Arena] prefab '%#' needs a mesh, an ability system, a pawn and an arena unit", prefabPath.c_str() );
             if ( pObject != nullptr )

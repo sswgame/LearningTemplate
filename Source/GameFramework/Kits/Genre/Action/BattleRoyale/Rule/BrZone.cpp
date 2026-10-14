@@ -219,8 +219,9 @@ namespace sw
     bool BrZone::isCenterAllowed( const float2& center, float32 radius ) const
     {
         // 원이 맵 밖으로 나가지 않게 한다. 원이 맵보다 크면 중심이 맵 안에 있기만 하면 된다.
-        const float32 margin = MathUtil::min( radius, _mapSize * 0.5f );
-        if ( center._x < margin || center._y < margin || center._x > _mapSize - margin || center._y > _mapSize - margin )
+        const float32 margin            = MathUtil::min( radius, _mapSize * 0.5f );
+        const bool    bCenterOutsideMap = center._x < margin || center._y < margin || center._x > _mapSize - margin || center._y > _mapSize - margin;
+        if ( bCenterOutsideMap )
             return false;
         return _pTerrain == nullptr || _pTerrain->isZoneCenterAllowed( center );
     }

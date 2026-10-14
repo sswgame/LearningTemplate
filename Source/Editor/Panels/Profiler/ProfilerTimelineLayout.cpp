@@ -80,7 +80,8 @@ namespace sw::editor
 
     void ProfilerTimelineLayout::zoom( uint64& inoutBegin, uint64& inoutEnd, float32 pivotX, float32 width, float32 factor, uint64 limitBegin, uint64 limitEnd )
     {
-        if ( inoutEnd <= inoutBegin || width <= 0.0f || factor <= 0.0f )
+        const bool bInvalidZoomInputs = inoutEnd <= inoutBegin || width <= 0.0f || factor <= 0.0f;
+        if ( bInvalidZoomInputs )
             return;
         const float64 span      = static_cast<float64>( inoutEnd - inoutBegin );
         const float64 pivotT    = MathUtil::clamp( static_cast<float64>( pivotX ) / static_cast<float64>( width ), 0.0, 1.0 );

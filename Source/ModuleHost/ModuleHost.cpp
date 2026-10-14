@@ -226,14 +226,16 @@ namespace sw
     void ModuleHost::updateGame( float32 deltaTime )
     {
         SW_MEMORY_SCOPE( Game );
-        if ( _game != nullptr && _gameAPI.update != nullptr && _frameState._bGameplayActive == SW_TRUE )
+        const bool bCanUpdate = _game != nullptr && _gameAPI.update != nullptr && _frameState._bGameplayActive == SW_TRUE;
+        if ( bCanUpdate )
             _gameAPI.update( _game, deltaTime );
     }
 
     void ModuleHost::fixedUpdateGame( float32 fixedDeltaTime )
     {
         SW_MEMORY_SCOPE( Game );
-        if ( _game != nullptr && _gameAPI.fixedUpdate != nullptr && _frameState._bGameplayActive == SW_TRUE )
+        const bool bCanFixedUpdate = _game != nullptr && _gameAPI.fixedUpdate != nullptr && _frameState._bGameplayActive == SW_TRUE;
+        if ( bCanFixedUpdate )
             _gameAPI.fixedUpdate( _game, fixedDeltaTime );
     }
 
@@ -416,7 +418,8 @@ namespace sw
         onBeforeSuspendModules();
 
         // 무엇이든 언로드하기 전에 저장한다. 저장하지 못했으면(리로드 직전일 때만) 여기서 멈춘다. 아직 아무것도 언로드하지 않았다.
-        if ( bSuspendGame && captureGameState() == false && bKeepGameOnCaptureFailure )
+        const bool bAbortOnCaptureFailure = bSuspendGame && captureGameState() == false && bKeepGameOnCaptureFailure;
+        if ( bAbortOnCaptureFailure )
             return false;
         if ( bSuspendHostModule )
         {

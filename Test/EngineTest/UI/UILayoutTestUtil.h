@@ -85,10 +85,11 @@ namespace sw::test
     protected:
         float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const override
         {
-            const float32 charWidth  = 10.0f * context._textScale;
-            const float32 lineHeight = 20.0f * context._textScale;
-            const float32 fullWidth  = charWidth * static_cast<float32>( _charCount );
-            if ( UILayoutPass::isUnbounded( availableSize._x ) || availableSize._x <= 0.0f || fullWidth <= availableSize._x )
+            const float32 charWidth      = 10.0f * context._textScale;
+            const float32 lineHeight     = 20.0f * context._textScale;
+            const float32 fullWidth      = charWidth * static_cast<float32>( _charCount );
+            const bool    bFitsOnOneLine = UILayoutPass::isUnbounded( availableSize._x ) || availableSize._x <= 0.0f || fullWidth <= availableSize._x;
+            if ( bFitsOnOneLine )
                 return float2{ fullWidth, lineHeight };
             const float32 lineCount = MathUtil::ceil( fullWidth / availableSize._x );
             return float2{ availableSize._x, lineCount * lineHeight };

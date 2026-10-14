@@ -78,7 +78,8 @@ namespace sw
         float32 width  = static_cast<float32>( outputWidth ) * settings._screenRect._z;
         float32 height = static_cast<float32>( outputHeight ) * settings._screenRect._w;
         // 정수 업스케일이면 실제로 그리는 크기(사각형 / 배율의 내림)의 비율이다 — 키운 뒤에도 픽셀이 정사각이다.
-        if ( settings._upscaleZoom > 0 && width > 0.0f && height > 0.0f )
+        const bool bIntegerUpscale = settings._upscaleZoom > 0 && width > 0.0f && height > 0.0f;
+        if ( bIntegerUpscale )
         {
             width  = static_cast<float32>( FrameRendererUtil::computeViewPoolExtent( width, 1.0f, settings._upscaleZoom ) );
             height = static_cast<float32>( FrameRendererUtil::computeViewPoolExtent( height, 1.0f, settings._upscaleZoom ) );
@@ -103,7 +104,8 @@ namespace sw
         {
             if ( candidateCount >= kMaxExtraRenderView )
                 break;
-            if ( pCamera == pMainCamera || CameraRegistry::isUsableCamera( pCamera ) == false || pCamera->getRole() == CameraRole::Viewport )
+            const bool bNotExtraViewCamera = pCamera == pMainCamera || CameraRegistry::isUsableCamera( pCamera ) == false || pCamera->getRole() == CameraRole::Viewport;
+            if ( bNotExtraViewCamera )
                 continue;
             const CameraRenderOutput& output = pCamera->getRenderOutput();
             if ( output._target == CameraOutputTarget::MainView )

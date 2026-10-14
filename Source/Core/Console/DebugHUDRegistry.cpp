@@ -132,7 +132,8 @@ namespace sw
 
     bool DebugHUDRegistry::registerSection( const DebugHUDSectionRegistration* pRegistration )
     {
-        if ( pRegistration == nullptr || StringUtil::isNullOrEmpty( pRegistration->_pName ) || pRegistration->_pFunc == nullptr )
+        const bool bInvalidRegistration = pRegistration == nullptr || StringUtil::isNullOrEmpty( pRegistration->_pName ) || pRegistration->_pFunc == nullptr;
+        if ( bInvalidRegistration )
             return false;
         const string_view name          = pRegistration->_pName;
         bool              bHasSeparator = name[0] == '-';

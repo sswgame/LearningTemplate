@@ -255,14 +255,16 @@ namespace sw
         {
             if ( pHeader->_pixelFormat._rgbBitCount == 32 )
             {
-                if ( pHeader->_pixelFormat._rBitMask == 0x00FF0000 && pHeader->_pixelFormat._gBitMask == 0x0000FF00 &&
-                     pHeader->_pixelFormat._bBitMask == 0x000000FF )
+                const bool bRgbaMask = pHeader->_pixelFormat._rBitMask == 0x000000FF && pHeader->_pixelFormat._gBitMask == 0x0000FF00 &&
+                                       pHeader->_pixelFormat._bBitMask == 0x00FF0000;
+                const bool bBgraMasks = pHeader->_pixelFormat._rBitMask == 0x00FF0000 && pHeader->_pixelFormat._gBitMask == 0x0000FF00 &&
+                                        pHeader->_pixelFormat._bBitMask == 0x000000FF;
+                if ( bBgraMasks )
                 {
                     image._dxgiFormat = ( pHeader->_pixelFormat._aBitMask != 0 ) ? kDxgiFormatB8G8R8A8Unorm : kDxgiFormatB8G8R8X8Unorm;
                     image._bIsBgra    = SW_TRUE;
                 }
-                else if ( pHeader->_pixelFormat._rBitMask == 0x000000FF && pHeader->_pixelFormat._gBitMask == 0x0000FF00 &&
-                          pHeader->_pixelFormat._bBitMask == 0x00FF0000 )
+                else if ( bRgbaMask )
                 {
                     image._dxgiFormat = kDxgiFormatR8G8B8A8Unorm;
                     image._bIsBgra    = SW_FALSE;
@@ -274,8 +276,9 @@ namespace sw
         const bool bIsBc6Or7 = ( 94 <= image._dxgiFormat && image._dxgiFormat <= 99 );
         image._bCompressed   = ( bIsBc1To5 || bIsBc6Or7 ) ? SW_TRUE : SW_FALSE;
 
-        if ( image._dxgiFormat == kDxgiFormatB8G8R8A8Unorm || image._dxgiFormat == kDxgiFormatB8G8R8X8Unorm ||
-             image._dxgiFormat == kDxgiFormatB8G8R8A8UnormSrgb )
+        const bool bBgraFormat = image._dxgiFormat == kDxgiFormatB8G8R8A8Unorm || image._dxgiFormat == kDxgiFormatB8G8R8X8Unorm ||
+                                 image._dxgiFormat == kDxgiFormatB8G8R8A8UnormSrgb;
+        if ( bBgraFormat )
             image._bIsBgra = SW_TRUE;
 
         // **못 알아본 포맷은 실패다.** `_dxgiFormat == 0` 인 채로 true 를 돌려주면 알아보지 못한 이미지가

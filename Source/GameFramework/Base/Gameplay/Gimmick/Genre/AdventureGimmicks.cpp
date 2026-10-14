@@ -35,10 +35,11 @@ namespace sw
 
     bool PushBlockComponent::push( const float3& direction )
     {
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        SceneComponent*    pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
-        if ( pManager == nullptr || pScene == nullptr || isMoving() )
+        GameObject*        pOwner      = getOwner();
+        GameObjectManager* pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        SceneComponent*    pScene      = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        const bool         bCannotMove = pManager == nullptr || pScene == nullptr || isMoving();
+        if ( bCannotMove )
             return false;
         // 가장 가까운 축 하나로 맞춘다. 3D 는 X/Z, 2D 는 X/Y 축을 쓴다.
         const float32 along  = direction._x;

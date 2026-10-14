@@ -191,8 +191,9 @@ namespace sw
         const bool bWild = UnoGameInternal::isWildValue( card._rank );
         if ( bWild && UnoColor::Wild <= chosenColor )
             return false;
-        const bool bDrawFour = card._rank == static_cast<uint8>( UnoValue::WildDrawFour );
-        if ( bDrawFour && _pendingDraw == 0 && _settings._bStrictWildDrawFour == SW_TRUE && hasColor( player, _color, card._id ) )
+        const bool bDrawFour            = card._rank == static_cast<uint8>( UnoValue::WildDrawFour );
+        const bool bIllegalWildDrawFour = bDrawFour && _pendingDraw == 0 && _settings._bStrictWildDrawFour == SW_TRUE && hasColor( player, _color, card._id );
+        if ( bIllegalWildDrawFour )
             return false; // 지금 색이 있으면 +4 를 낼 수 없다
 
         _unoTarget = -1;              // 앞사람을 잡을 기회는 다음 행동에서 닫힌다
@@ -275,7 +276,8 @@ namespace sw
 
     bool UnoGame::callUno( int32 caller )
     {
-        if ( _winner >= 0 || _unoTarget < 0 || caller < 0 || getPlayerCount() <= caller )
+        const bool bCannotCallUno = _winner >= 0 || _unoTarget < 0 || caller < 0 || getPlayerCount() <= caller;
+        if ( bCannotCallUno )
             return false;
         const int32 target = _unoTarget;
         _unoTarget         = -1;
@@ -360,12 +362,13 @@ namespace sw
         archive >> game._unoTarget;
         archive >> game._winner;
         archive >> color;
-        const int32 count           = static_cast<int32>( handCount );
-        const bool  bPlayerValid    = 0 <= game._currentPlayer && game._currentPlayer < count;
-        const bool  bDirectionValid = game._direction == 1 || game._direction == -1;
-        const bool  bTargetValid    = -1 <= game._unoTarget && game._unoTarget < count && -1 <= game._winner && game._winner < count;
-        const bool  bColorValid     = color <= static_cast<uint8>( UnoColor::Wild );
-        if ( archive.isError() || bPlayerValid == false || bDirectionValid == false || bTargetValid == false || bColorValid == false || game._pendingDraw < 0 )
+        const int32 count            = static_cast<int32>( handCount );
+        const bool  bPlayerValid     = 0 <= game._currentPlayer && game._currentPlayer < count;
+        const bool  bDirectionValid  = game._direction == 1 || game._direction == -1;
+        const bool  bTargetValid     = -1 <= game._unoTarget && game._unoTarget < count && -1 <= game._winner && game._winner < count;
+        const bool  bColorValid      = color <= static_cast<uint8>( UnoColor::Wild );
+        const bool  bInvalidUnoState = archive.isError() || bPlayerValid == false || bDirectionValid == false || bTargetValid == false || bColorValid == false || game._pendingDraw < 0;
+        if ( bInvalidUnoState )
             return false;
         game._color = static_cast<UnoColor>( color );
         game._eventBuffer.clear();

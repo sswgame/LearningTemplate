@@ -79,10 +79,11 @@ namespace sw
         dtNavMesh* pNavMesh = navMesh.getDetourNavMesh();
         if ( pNavMesh == nullptr || maxAgentCount == 0 )
             return false;
-        _pCrowd = dtAllocCrowd();
-        _pQuery = dtAllocNavMeshQuery();
-        if ( _pCrowd == nullptr || _pQuery == nullptr || _pCrowd->init( static_cast<int32>( maxAgentCount ), maxAgentRadius, pNavMesh ) == false ||
-             dtStatusFailed( _pQuery->init( pNavMesh, Internal::kQueryNodeCount ) ) )
+        _pCrowd                     = dtAllocCrowd();
+        _pQuery                     = dtAllocNavMeshQuery();
+        const bool bCrowdInitFailed = _pCrowd == nullptr || _pQuery == nullptr || _pCrowd->init( static_cast<int32>( maxAgentCount ), maxAgentRadius, pNavMesh ) == false ||
+                                      dtStatusFailed( _pQuery->init( pNavMesh, Internal::kQueryNodeCount ) );
+        if ( bCrowdInitFailed )
         {
             shutdown();
             return false;
@@ -119,7 +120,8 @@ namespace sw
 
     bool DetourNavCrowd::isActiveAgent( NavCrowdAgentID agentID ) const
     {
-        if ( _pCrowd == nullptr || agentID < 0 || static_cast<uint32>( agentID ) >= _maxAgentCount )
+        const bool bInvalidAgentID = _pCrowd == nullptr || agentID < 0 || static_cast<uint32>( agentID ) >= _maxAgentCount;
+        if ( bInvalidAgentID )
             return false;
         const dtCrowdAgent* pAgent = _pCrowd->getAgent( agentID );
         return pAgent != nullptr && pAgent->active;

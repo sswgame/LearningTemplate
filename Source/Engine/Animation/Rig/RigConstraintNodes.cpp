@@ -186,7 +186,8 @@ namespace sw
 
             bool setControl( const hashed_string& control, float32 value ) override
             {
-                if ( control != hashed_string( "parent" ) || value < 0.0f || static_cast<uint32>( value ) >= _listParent.size() )
+                const bool bInvalidParentControl = control != hashed_string( "parent" ) || value < 0.0f || static_cast<uint32>( value ) >= _listParent.size();
+                if ( bInvalidParentControl )
                     return false;
                 const uint32 parent = static_cast<uint32>( value );
                 if ( parent != _activeParent )

@@ -59,7 +59,8 @@ namespace sw
                     line += ':';
                     for ( const Component* pComp : pObject->getComponents() )
                     {
-                        if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->getTypeInfo() == MissingComponent::StaticType() )
+                        const bool bSkipComponent = pComp == nullptr || pComp->isPendingDestroy() || pComp->getTypeInfo() == MissingComponent::StaticType();
+                        if ( bSkipComponent )
                             continue;
                         line += ' ';
                         line += pComp->getComponentName().c_str();
@@ -93,7 +94,8 @@ namespace sw
                         continue;
                     for ( Component* pComp : pObject->getComponents() )
                     {
-                        if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->getTypeInfo() == MissingComponent::StaticType() )
+                        const bool bSkipHiddenComponent = pComp == nullptr || pComp->isPendingDestroy() || pComp->getTypeInfo() == MissingComponent::StaticType();
+                        if ( bSkipHiddenComponent )
                             continue;
                         if ( pComp->getComponentName() != pComp->getTypeName() )
                             ++nonDefaultCount;

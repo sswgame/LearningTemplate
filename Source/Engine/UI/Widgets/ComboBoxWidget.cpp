@@ -24,7 +24,8 @@ namespace sw
         public:
             UIReply onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase ) override
             {
-                if ( phase != UIRoutePhase::Bubble || event._kind != UIPointerEventKind::Down || getTree() == nullptr || getTree()->getScreen() == nullptr )
+                const bool bIgnorePointerEvent = phase != UIRoutePhase::Bubble || event._kind != UIPointerEventKind::Down || getTree() == nullptr || getTree()->getScreen() == nullptr;
+                if ( bIgnorePointerEvent )
                     return UIReply::makeUnhandled();
                 getTree()->getScreen()->close();
                 return UIReply::makeHandled();

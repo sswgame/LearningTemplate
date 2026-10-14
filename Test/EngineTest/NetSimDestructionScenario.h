@@ -386,7 +386,8 @@ namespace test
                 ShowcaseClientSession& session = getClientSession( *pClient );
                 const bool             bMatch  = matchesServer( harness, *pClient );
                 bAllMatch                      = bAllMatch && bMatch;
-                if ( pClient->getWorldIndex() == lateClient && bMatch && result._lateJoinMatchTicks < 0 && result._lastServerChangeTick >= 0 )
+                const bool bLateJoinMatched    = pClient->getWorldIndex() == lateClient && bMatch && result._lateJoinMatchTicks < 0 && result._lastServerChangeTick >= 0;
+                if ( bLateJoinMatched )
                     result._lateJoinMatchTicks = static_cast<int32>( tick ) - lateJoinTick;
                 for ( size_t entry = 0; entry < listCountTick.size(); ++entry )
                 {
@@ -403,8 +404,9 @@ namespace test
                     session._objects._listFracture[object]->collectGroupPoses( listPose );
                     for ( const FractureGroupPose& pose : listPose )
                     {
-                        float3 serverPosition{};
-                        if ( pose._bDriven == SW_FALSE || pose._bResting == SW_TRUE || renderTick < 0.0f )
+                        float3     serverPosition{};
+                        const bool bSkipPose = pose._bDriven == SW_FALSE || pose._bResting == SW_TRUE || renderTick < 0.0f;
+                        if ( bSkipPose )
                             continue;
                         if ( history.sample( object, pose._groupID, renderTick, serverPosition ) )
                             result._listChunkError.push_back( ( pose._center - serverPosition ).getLength() );
@@ -430,7 +432,8 @@ namespace test
                     listCountIndex.erase( listCountIndex.begin() + static_cast<std::ptrdiff_t>( entry - 1 ) );
                 }
             }
-            if ( bAllMatch && result._convergedTick < 0 && result._lastServerChangeTick >= 0 )
+            const bool bFirstConvergence = bAllMatch && result._convergedTick < 0 && result._lastServerChangeTick >= 0;
+            if ( bFirstConvergence )
                 result._convergedTick = static_cast<int32>( tick );
             else if ( bAllMatch == false )
                 result._convergedTick = -1;
@@ -441,7 +444,8 @@ namespace test
                 const DestructionReplicationStats& stats  = getClientSession( *listClient[static_cast<size_t>( options._skipEventClient )] )._replication.getStats();
                 if ( desyncTick < 0 && stats._skippedEventCount > 0 )
                     desyncTick = static_cast<int32>( tick );
-                if ( desyncTick >= 0 && result._desyncRecoverTicks < 0 && bMatch && stats._snapshotAppliedCount > 0 )
+                const bool bDesyncRecovered = desyncTick >= 0 && result._desyncRecoverTicks < 0 && bMatch && stats._snapshotAppliedCount > 0;
+                if ( bDesyncRecovered )
                     result._desyncRecoverTicks = static_cast<int32>( tick ) - desyncTick;
             }
         }

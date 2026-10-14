@@ -311,7 +311,8 @@ namespace sw::editor
             listTarget.push_back( EditorPropertyGridTarget{ pObj, pObjectType, nullptr, pObj, {}, {} } );
         for ( Component* pComp : pObj->getComponents() )
         {
-            if ( pComp == nullptr || pComp->getTypeInfo() == nullptr || _favorites.hasAnyForType( pComp->getTypeInfo()->_name.c_str() ) == false )
+            const bool bNotFavoriteComponent = pComp == nullptr || pComp->getTypeInfo() == nullptr || _favorites.hasAnyForType( pComp->getTypeInfo()->_name.c_str() ) == false;
+            if ( bNotFavoriteComponent )
                 continue;
             listTarget.push_back( EditorPropertyGridTarget{ pComp, pComp->getTypeInfo(), pComp, pComp->getOwner(), {}, {} } );
         }

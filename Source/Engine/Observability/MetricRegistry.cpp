@@ -243,8 +243,9 @@ namespace sw
         string labelText;
         for ( const MetricLabel& label : listLabel )
         {
-            const bool bReserved = label._name.size() >= 2 && label._name[0] == '_' && label._name[1] == '_';
-            if ( MetricRegistryInternal::isValidName( label._name, false ) == false || bReserved || label._name == "le" )
+            const bool bReserved         = label._name.size() >= 2 && label._name[0] == '_' && label._name[1] == '_';
+            const bool bInvalidLabelName = MetricRegistryInternal::isValidName( label._name, false ) == false || bReserved || label._name == "le";
+            if ( bInvalidLabelName )
             {
                 SW_LOG_ERROR( "Metric '%#' has an invalid label name '%#'", name, label._name.c_str() );
                 return nullptr;

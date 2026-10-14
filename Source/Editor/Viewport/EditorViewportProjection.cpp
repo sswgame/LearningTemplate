@@ -58,10 +58,11 @@ namespace sw::editor
         if ( canvasSize._x <= 1.0f || canvasSize._y <= 1.0f )
             return false;
 
-        const ImVec2  mouse = ImGui::GetMousePos();
-        const float32 u     = ( mouse.x - canvasPos._x ) / canvasSize._x;
-        const float32 v     = ( mouse.y - canvasPos._y ) / canvasSize._y;
-        if ( u < 0.0f || 1.0f < u || v < 0.0f || 1.0f < v )
+        const ImVec2  mouse               = ImGui::GetMousePos();
+        const float32 u                   = ( mouse.x - canvasPos._x ) / canvasSize._x;
+        const float32 v                   = ( mouse.y - canvasPos._y ) / canvasSize._y;
+        const bool    bMouseOutsideCanvas = u < 0.0f || 1.0f < u || v < 0.0f || 1.0f < v;
+        if ( bMouseOutsideCanvas )
             return false;
         return EditorViewportRayPick::makeRay( invViewProj, u, v, outRay );
     }

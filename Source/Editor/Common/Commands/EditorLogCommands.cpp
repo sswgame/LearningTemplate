@@ -33,8 +33,11 @@ namespace sw::editor
             {
                 uint64 value = 0;
                 size_t index = position;
-                while ( index < text.size() && isDigit( text[index] ) && index - position < 9 )
+                while ( true )
                 {
+                    const bool bReadingDigit = index < text.size() && isDigit( text[index] ) && index - position < 9;
+                    if ( bReadingDigit == false )
+                        break;
                     value = value * 10 + static_cast<uint64>( text[index] - '0' );
                     ++index;
                 }

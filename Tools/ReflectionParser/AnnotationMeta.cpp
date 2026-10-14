@@ -75,11 +75,13 @@ namespace sw
         for ( const string_view rawLine : lines.getSplitList() )
         {
             // `trim` 의 `string_view` 오버로드를 쓴다. 줄마다 임시 `string` 을 만들지 않는다.
-            const string_view line = StringUtil::trim( rawLine );
-            if ( line.empty() || line.front() == '#' || line.front() == ';' )
+            const string_view line         = StringUtil::trim( rawLine );
+            const bool        bSkippedLine = line.empty() || line.front() == '#' || line.front() == ';';
+            if ( bSkippedLine )
                 continue;
 
-            if ( line.front() == '[' && line.back() == ']' && line.size() >= 3 )
+            const bool bSectionHeader = line.front() == '[' && line.back() == ']' && line.size() >= 3;
+            if ( bSectionHeader )
             {
                 currentScope = StringUtil::trim( line.substr( 1, line.size() - 2 ) );
                 continue;
@@ -91,10 +93,11 @@ namespace sw
             if ( equalPos == string_view::npos )
                 continue;
 
-            const string_view left  = StringUtil::trim( line.substr( 0, equalPos ) );
-            const string_view right = StringUtil::trim( line.substr( equalPos + 1 ) );
-            const size_t      dot   = left.find( '.' );
-            if ( dot == string::npos || dot == 0 || dot + 1 >= left.size() )
+            const string_view left                = StringUtil::trim( line.substr( 0, equalPos ) );
+            const string_view right               = StringUtil::trim( line.substr( equalPos + 1 ) );
+            const size_t      dot                 = left.find( '.' );
+            const bool        bMalformedAliasLine = dot == string::npos || dot == 0 || dot + 1 >= left.size();
+            if ( bMalformedAliasLine )
             {
                 SW_LOG_WARNING( "Expected kind.Field = aliases: %#", line );
                 continue;

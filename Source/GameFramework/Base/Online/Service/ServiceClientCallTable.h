@@ -71,7 +71,8 @@ namespace sw
                 _mapRequestToDelegate.erase( delegateIt );
                 return true;
             }
-            if ( _sendingRequestID != 0 && requestID == _sendingRequestID && _bSendingTaken == SW_FALSE )
+            const bool bTakeSendingDelegate = _sendingRequestID != 0 && requestID == _sendingRequestID && _bSendingTaken == SW_FALSE;
+            if ( bTakeSendingDelegate )
             {
                 outDelegate    = _sendingDelegate;
                 _bSendingTaken = SW_TRUE;

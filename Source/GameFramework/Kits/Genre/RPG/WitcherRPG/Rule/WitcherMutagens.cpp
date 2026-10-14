@@ -61,8 +61,9 @@ namespace sw
             const vector<hashed_string>& listSkill = _listGroup[static_cast<size_t>( groupIndex )]._listSkill;
             for ( int32 slotIndex = 0; slotIndex < static_cast<int32>( listSkill.size() ); ++slotIndex )
             {
-                const bool bSameSlot = groupIndex == group && slotIndex == slot;
-                if ( bSameSlot == false && skillID.empty() == false && listSkill[static_cast<size_t>( slotIndex )] == skillID )
+                const bool bSameSlot          = groupIndex == group && slotIndex == slot;
+                const bool bDuplicateEquipped = bSameSlot == false && skillID.empty() == false && listSkill[static_cast<size_t>( slotIndex )] == skillID;
+                if ( bDuplicateEquipped )
                     return WitcherSlotResult::AlreadyEquipped;
             }
         }
@@ -90,7 +91,8 @@ namespace sw
 
     bool WitcherMutagens::isGroupOpen( int32 group ) const
     {
-        if ( _pCatalog == nullptr || group < 0 || group >= static_cast<int32>( _pCatalog->getSlotGroups().size() ) )
+        const bool bGroupOutOfRange = _pCatalog == nullptr || group < 0 || group >= static_cast<int32>( _pCatalog->getSlotGroups().size() );
+        if ( bGroupOutOfRange )
             return false;
         return _characterLevel >= _pCatalog->getSlotGroups()[static_cast<size_t>( group )]._requiredLevel;
     }
@@ -125,9 +127,10 @@ namespace sw
             return;
         for ( int32 group = 0; group < getGroupCount(); ++group )
         {
-            const hashed_string      mutagenID = getMutagen( group );
-            const WitcherMutagenDef* pMutagen  = mutagenID.empty() ? nullptr : _pCatalog->findMutagen( mutagenID );
-            if ( pMutagen == nullptr || pMutagen->_stat.empty() || isGroupOpen( group ) == false )
+            const hashed_string      mutagenID    = getMutagen( group );
+            const WitcherMutagenDef* pMutagen     = mutagenID.empty() ? nullptr : _pCatalog->findMutagen( mutagenID );
+            const bool               bSkipMutagen = pMutagen == nullptr || pMutagen->_stat.empty() || isGroupOpen( group ) == false;
+            if ( bSkipMutagen )
                 continue;
             outStats.addValue( pMutagen->_stat, pMutagen->_value + static_cast<float32>( countMatches( group ) ) * pMutagen->_matchValue );
         }
@@ -174,7 +177,8 @@ namespace sw
         uint32 count          = 0;
         archive >> characterLevel;
         // 그룹마다 슬롯 수(4) + 변이원(4) 바이트 이상
-        if ( _pCatalog == nullptr || archive.isError() || StateArchiveUtil::readCount( archive, 8, count ) == false || count != _listGroup.size() )
+        const bool bInvalidMutagenData = _pCatalog == nullptr || archive.isError() || StateArchiveUtil::readCount( archive, 8, count ) == false || count != _listGroup.size();
+        if ( bInvalidMutagenData )
             return false;
         vector<Group> listGroup = _listGroup;
         for ( Group& group : listGroup )

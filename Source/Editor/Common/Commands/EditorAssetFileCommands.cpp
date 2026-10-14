@@ -115,11 +115,12 @@ namespace sw::editor
         while ( offset + oldID.size() <= inoutText.size() )
         {
             const string_view window{ inoutText.data() + offset, oldID.size() };
-            const bool        bMatched = StringUtil::startsWith( window, oldID, true );
-            const bool        bBefore  = offset == 0 || EditorAssetFileCommandsInternal::isPathChar( inoutText[offset - 1] ) == false;
-            const size_t      endIndex = offset + oldID.size();
-            const bool        bAfter   = endIndex == inoutText.size() || EditorAssetFileCommandsInternal::isPathChar( inoutText[endIndex] ) == false;
-            if ( bMatched && bBefore && bAfter )
+            const bool        bMatched          = StringUtil::startsWith( window, oldID, true );
+            const bool        bBefore           = offset == 0 || EditorAssetFileCommandsInternal::isPathChar( inoutText[offset - 1] ) == false;
+            const size_t      endIndex          = offset + oldID.size();
+            const bool        bAfter            = endIndex == inoutText.size() || EditorAssetFileCommandsInternal::isPathChar( inoutText[endIndex] ) == false;
+            const bool        bReplaceReference = bMatched && bBefore && bAfter;
+            if ( bReplaceReference )
             {
                 inoutText.replace( offset, oldID.size(), newID.data(), newID.size() );
                 offset += newID.size();
@@ -185,12 +186,13 @@ namespace sw::editor
 
     bool EditorAssetFileCommands::moveAsset( string_view sourceAbs, string_view destinationAbs, EditorReferenceIndex& inoutIndex, uint32& outFixedFileCount )
     {
-        outFixedFileCount        = 0;
-        const string source      = FileUtil::normalizeSeparators( sourceAbs );
-        const string destination = FileUtil::normalizeSeparators( destinationAbs );
-        const string oldID       = ResourcePaths::toResourceID( source );
-        const string newID       = ResourcePaths::toResourceID( destination );
-        if ( oldID.empty() || newID.empty() || oldID == newID )
+        outFixedFileCount                = 0;
+        const string source              = FileUtil::normalizeSeparators( sourceAbs );
+        const string destination         = FileUtil::normalizeSeparators( destinationAbs );
+        const string oldID               = ResourcePaths::toResourceID( source );
+        const string newID               = ResourcePaths::toResourceID( destination );
+        const bool   bInvalidResourceIDs = oldID.empty() || newID.empty() || oldID == newID;
+        if ( bInvalidResourceIDs )
             return false;
         if ( isValidAssetName( FileUtil::getFileNamePart( destination ) ) == false )
         {

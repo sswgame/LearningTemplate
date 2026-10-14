@@ -98,7 +98,8 @@ namespace sw
 
     void RollbackSession::receiveInput( int32 player, int32 frame, uint8 input )
     {
-        if ( player < 0 || player >= _playerCount || frame < 0 )
+        const bool bInvalidInputFrame = player < 0 || player >= _playerCount || frame < 0;
+        if ( bInvalidInputFrame )
             return;
         // 창 [지금 − 창, 지금 + 창) 밖의 입력과 이미 있는 입력(다시 보낸 것)은 버퍼가 버린다.
         if ( _listReceive[static_cast<size_t>( player )].store( static_cast<uint32>( frame ), &input, 1 ) )
@@ -240,10 +241,12 @@ namespace sw
         const int32 remoteFrame = static_cast<int32>( body.readVarUint() );
         if ( body.hasOverflowed() )
             return NetHandleResult::Malformed;
-        if ( player < 0 || player >= _playerCount || player == _localPlayer )
+        const bool bIgnoreInput = player < 0 || player >= _playerCount || player == _localPlayer;
+        if ( bIgnoreInput )
             return NetHandleResult::Handled; // 시작 전이거나 다른 판의 메시지이다
         // 서버는 클라이언트가 자기 번호로만 보내게 한다. 다른 플레이어의 입력을 위조하지 못하게 하려는 것이다.
-        if ( _pHost != nullptr && _pHost->isServer() && player != context._connectionID + 1 )
+        const bool bForgedPlayerNumber = _pHost != nullptr && _pHost->isServer() && player != context._connectionID + 1;
+        if ( bForgedPlayerNumber )
             return NetHandleResult::Handled;
         int32 ackedLocalFrame = -1;
         int32 advantage       = 0;

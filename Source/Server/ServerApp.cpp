@@ -463,7 +463,8 @@ namespace sw
                     StateHashHistory::get().record( _tickCount, SceneStateHash::compute( *pScene->getObjectManager() ) );
             }
 #endif
-            if ( _bPaused == SW_TRUE && _pendingStepCount > 0 && --_pendingStepCount == 0 )
+            const bool bPausedStepCompleted = _bPaused == SW_TRUE && _pendingStepCount > 0 && --_pendingStepCount == 0;
+            if ( bPausedStepCompleted )
                 SW_LOG_INFO( "Server stepped to tick %# (paused)", _tickCount );
             if ( gv_serverExitAfterTicks > 0 && _tickCount >= static_cast<uint64>( gv_serverExitAfterTicks ) )
                 ShutdownSignal::request( ShutdownCause::TickLimit );

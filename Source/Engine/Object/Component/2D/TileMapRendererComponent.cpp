@@ -66,7 +66,8 @@ namespace sw
     {
         Component::onBeginPlay();
         setTickGroup( TickGroup::PrePhysics );
-        if ( _bLoaded == SW_FALSE && _tileMapPath.empty() == false && loadTileMap() == false )
+        const bool bLoadFailed = _bLoaded == SW_FALSE && _tileMapPath.empty() == false && loadTileMap() == false;
+        if ( bLoadFailed )
             return;
         if ( _bLoaded == SW_TRUE )
             (void)rebuild(); // 관리자가 없으면(소유자 없음) 그릴 곳이 없다 — 알릴 것도 없다
@@ -274,7 +275,8 @@ namespace sw
 
     bool TileMapRendererComponent::setTileBrush( int32 x, int32 y, string_view brushName )
     {
-        if ( _bLoaded == SW_FALSE || x < 0 || y < 0 || x >= _map._width || y >= _map._height )
+        const bool bInvalidTileCoordinate = _bLoaded == SW_FALSE || x < 0 || y < 0 || x >= _map._width || y >= _map._height;
+        if ( bInvalidTileCoordinate )
             return false;
         uint16 value = 0;
         if ( brushName.empty() == false )
@@ -296,9 +298,10 @@ namespace sw
             {
                 for ( int32 offsetX = -1; offsetX <= 1; ++offsetX )
                 {
-                    const int32 cellX = x + offsetX;
-                    const int32 cellY = y + offsetY;
-                    if ( 0 <= cellX && cellX < _map._width && 0 <= cellY && cellY < _map._height )
+                    const int32 cellX          = x + offsetX;
+                    const int32 cellY          = y + offsetY;
+                    const bool  bCellInsideMap = 0 <= cellX && cellX < _map._width && 0 <= cellY && cellY < _map._height;
+                    if ( bCellInsideMap )
                         refreshCellEntry( cellX, cellY );
                 }
             }

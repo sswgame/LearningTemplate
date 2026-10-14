@@ -135,10 +135,11 @@ namespace sw
                     }
 
                     // overlong 인코딩, UTF-16 서로게이트, 유니코드 최댓값 초과를 검사한다
-                    const bool bIsOverlong   = codepoint < lead._minCodepoint;
-                    const bool bIsSurrogate  = ( codepoint >= kSurrogateBegin ) && ( codepoint <= kSurrogateEnd );
-                    const bool bIsOutOfRange = codepoint > kMaxUnicodeCodepoint;
-                    if ( bIsOverlong || bIsSurrogate || bIsOutOfRange )
+                    const bool bIsOverlong       = codepoint < lead._minCodepoint;
+                    const bool bIsSurrogate      = ( codepoint >= kSurrogateBegin ) && ( codepoint <= kSurrogateEnd );
+                    const bool bIsOutOfRange     = codepoint > kMaxUnicodeCodepoint;
+                    const bool bInvalidCodepoint = bIsOverlong || bIsSurrogate || bIsOutOfRange;
+                    if ( bInvalidCodepoint )
                         return false;
 
                     pos += lead._sequenceLength;
@@ -179,10 +180,11 @@ namespace sw
                     codepoint = ( codepoint << 6 ) | ( static_cast<uint8>( pData[byteIndex] ) & 0x3F );
                 }
 
-                const bool bIsOverlong   = codepoint < lead._minCodepoint;
-                const bool bIsSurrogate  = ( kSurrogateBegin <= codepoint ) && ( codepoint <= kSurrogateEnd );
-                const bool bIsOutOfRange = codepoint > kMaxUnicodeCodepoint;
-                if ( bIsOverlong || bIsSurrogate || bIsOutOfRange )
+                const bool bIsOverlong       = codepoint < lead._minCodepoint;
+                const bool bIsSurrogate      = ( kSurrogateBegin <= codepoint ) && ( codepoint <= kSurrogateEnd );
+                const bool bIsOutOfRange     = codepoint > kMaxUnicodeCodepoint;
+                const bool bInvalidCodepoint = bIsOverlong || bIsSurrogate || bIsOutOfRange;
+                if ( bInvalidCodepoint )
                     return { kReplacementCodepoint, lead._sequenceLength, false };
 
                 return { codepoint, lead._sequenceLength, true };
@@ -301,13 +303,15 @@ namespace sw
                 if ( trimmed.front() == '+' )
                 {
                     trimmed.remove_prefix( 1 );
-                    if ( trimmed.empty() || trimmed.front() == '-' || trimmed.front() == '+' )
+                    const bool bMalformedSignedNumber = trimmed.empty() || trimmed.front() == '-' || trimmed.front() == '+';
+                    if ( bMalformedSignedNumber )
                         return false;
                 }
 
                 TFloat value{ 0 };
-                const auto [ptr, ec] = std::from_chars( trimmed.data(), trimmed.data() + trimmed.size(), value );
-                if ( ec != std::errc{} || ptr != trimmed.data() + trimmed.size() || std::isfinite( value ) == false )
+                const auto [ptr, ec]         = std::from_chars( trimmed.data(), trimmed.data() + trimmed.size(), value );
+                const bool bFloatParseFailed = ec != std::errc{} || ptr != trimmed.data() + trimmed.size() || std::isfinite( value ) == false;
+                if ( bFloatParseFailed )
                     return false;
                 outValue = value;
                 return true;
@@ -345,7 +349,8 @@ namespace sw
                 if ( inoutBase == 16 && bHexPrefix )
                     trimmed.remove_prefix( 2 );
 
-                if ( inoutBase < 2 || inoutBase > 36 || trimmed.empty() )
+                const bool bInvalidBaseOrDigits = inoutBase < 2 || inoutBase > 36 || trimmed.empty();
+                if ( bInvalidBaseOrDigits )
                     return false;
                 outDigits = trimmed;
                 return true;
@@ -948,13 +953,15 @@ namespace sw
 
     bool StringUtil::tryParseBool( string_view token, bool& outValue )
     {
-        const string_view trimmed = trim( token );
-        if ( trimmed == "1" || equals( trimmed, "true", true ) || equals( trimmed, "yes", true ) || equals( trimmed, "on", true ) )
+        const string_view trimmed    = trim( token );
+        const bool        bTrueToken = trimmed == "1" || equals( trimmed, "true", true ) || equals( trimmed, "yes", true ) || equals( trimmed, "on", true );
+        if ( bTrueToken )
         {
             outValue = true;
             return true;
         }
-        if ( trimmed == "0" || equals( trimmed, "false", true ) || equals( trimmed, "no", true ) || equals( trimmed, "off", true ) )
+        const bool bFalseToken = trimmed == "0" || equals( trimmed, "false", true ) || equals( trimmed, "no", true ) || equals( trimmed, "off", true );
+        if ( bFalseToken )
         {
             outValue = false;
             return true;
@@ -1087,9 +1094,12 @@ namespace sw
         }
 
         size_t suffix = 0;
-        while ( suffix < ( beforeSize - prefix ) && suffix < ( afterSize - prefix ) &&
-                before[beforeSize - 1 - suffix] == after[afterSize - 1 - suffix] )
+        while ( true )
         {
+            const bool bSuffixMatches = suffix < ( beforeSize - prefix ) && suffix < ( afterSize - prefix ) &&
+                                        before[beforeSize - 1 - suffix] == after[afterSize - 1 - suffix];
+            if ( bSuffixMatches == false )
+                break;
             ++suffix;
         }
 

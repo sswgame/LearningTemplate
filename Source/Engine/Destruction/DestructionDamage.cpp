@@ -153,8 +153,9 @@ namespace sw
     {
         using Internal = DestructionDamageInternal;
         _listEvent.clear();
-        _seed = 0;
-        if ( pData == nullptr || size < 20 || Memory::compare( pData, Internal::kArrMagic, 4 ) != 0 || LittleEndianUtil::readUint32( pData + 4 ) != kVersion )
+        _seed                       = 0;
+        const bool bInvalidEventLog = pData == nullptr || size < 20 || Memory::compare( pData, Internal::kArrMagic, 4 ) != 0 || LittleEndianUtil::readUint32( pData + 4 ) != kVersion;
+        if ( bInvalidEventLog )
         {
             SW_LOG_ERROR( "Not a destruction event log (bad magic or version)" );
             return false;

@@ -86,7 +86,8 @@ namespace sw::editor
             if ( matchCount == 0 )
                 EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "NoMatchingComponents" ) );
             // Enter 는 맨 위 줄을 고른다(유니티 Add Component 검색 창과 같다).
-            if ( bEnter && matchCount > 0 && bAdded == false )
+            const bool bPickFirstMatch = bEnter && matchCount > 0 && bAdded == false;
+            if ( bPickFirstMatch )
                 addType( firstMatch );
             return bAdded;
         }

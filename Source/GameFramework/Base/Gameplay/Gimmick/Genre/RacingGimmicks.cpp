@@ -71,8 +71,9 @@ namespace sw
 
     hashed_string ItemBoxComponent::open( GameObject& target )
     {
-        GameObject* pOwner = getOwner();
-        if ( pOwner == nullptr || isAvailable() == false || _listChoice.empty() )
+        GameObject* pOwner      = getOwner();
+        const bool  bCannotOpen = pOwner == nullptr || isAvailable() == false || _listChoice.empty();
+        if ( bCannotOpen )
             return hashed_string{};
         // 시드와 연 횟수로 뽑는다. 같은 순서로 열면 같은 것이 나온다.
         GameRandom  random( GameHash::hashCoord( _openCount, 0, _seed ) );

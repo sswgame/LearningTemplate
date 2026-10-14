@@ -71,9 +71,10 @@ namespace sw
 {
     bool UIBindingExpression::parse( string_view text, UIBindingExpression& outExpression, string& outError )
     {
-        outExpression           = UIBindingExpression{};
-        const string_view whole = StringUtil::trim( text );
-        if ( whole.size() < 2 || whole.front() != '{' || whole.back() != '}' )
+        outExpression                  = UIBindingExpression{};
+        const string_view whole        = StringUtil::trim( text );
+        const bool        bNotEnclosed = whole.size() < 2 || whole.front() != '{' || whole.back() != '}';
+        if ( bNotEnclosed )
         {
             outError = "binding expression must be enclosed in { }";
             return false;

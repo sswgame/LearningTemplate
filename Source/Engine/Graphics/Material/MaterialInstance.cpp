@@ -122,7 +122,8 @@ namespace sw
         if ( pRHI == nullptr || _pTextureDevice == pRHI )
             releaseTextureOverrides( pRHI );
         // 디바이스가 죽기 **전에** 오는 통보다. 제대로 돌려준다. 남의 디바이스 것이면 내 것이 아니다.
-        if ( pRHI != nullptr && _constant._buffer != 0 && _constant._pDevice != pRHI )
+        const bool bBufferOnOtherDevice = pRHI != nullptr && _constant._buffer != 0 && _constant._pDevice != pRHI;
+        if ( bBufferOnOtherDevice )
             return;
 
         if ( pRHI != nullptr )
@@ -224,7 +225,8 @@ namespace sw
         if ( syncTextureOverrides( pRHI ) )
             _bGPUDirty = SW_TRUE;
 
-        if ( _bGPUDirty == SW_FALSE && _constant._buffer != 0 && _descriptorIndex != kInvalidDescriptorIndex )
+        const bool bGPUBufferUpToDate = _bGPUDirty == SW_FALSE && _constant._buffer != 0 && _descriptorIndex != kInvalidDescriptorIndex;
+        if ( bGPUBufferUpToDate )
             return true;
 
         _bytes                  = _pParentMaterial->getBuffer();

@@ -170,11 +170,12 @@ namespace sw
 
     bool MountUtil::dismount( PawnComponent& riderPawn, bool bForced )
     {
-        using Internal                 = MountUtilInternal;
-        VehicleSeatComponent* pSeat    = findSeatOf( riderPawn );
-        GameObject*           pRider   = riderPawn.getOwner();
-        GameObjectManager*    pManager = Internal::findManager( riderPawn );
-        if ( pSeat == nullptr || pRider == nullptr || pManager == nullptr )
+        using Internal                           = MountUtilInternal;
+        VehicleSeatComponent* pSeat              = findSeatOf( riderPawn );
+        GameObject*           pRider             = riderPawn.getOwner();
+        GameObjectManager*    pManager           = Internal::findManager( riderPawn );
+        const bool            bMissingMountParts = pSeat == nullptr || pRider == nullptr || pManager == nullptr;
+        if ( bMissingMountParts )
             return false;
         GameObject*     pVehicle     = pSeat->getOwner();
         SceneComponent* pVehicleRoot = pVehicle != nullptr ? pVehicle->getPrimarySceneComponent() : nullptr;
@@ -186,7 +187,8 @@ namespace sw
         const bool              bReleasedToPhysics = bForced && pBinding != nullptr && pBinding->release( SocketReleaseMode::Physics );
         if ( pBinding != nullptr && bReleasedToPhysics == false )
             (void)pBinding->release( SocketReleaseMode::Animated );
-        if ( bForced == false && pVehicleRoot != nullptr && pRiderRoot != nullptr )
+        const bool bPlaceRiderAtExit = bForced == false && pVehicleRoot != nullptr && pRiderRoot != nullptr;
+        if ( bPlaceRiderAtExit )
         {
             const float3 exitSpot = Internal::findExitSpot( *pManager, *pRider, *pSeat, *pVehicleRoot );
             pRiderRoot->teleportTo( exitSpot );
@@ -211,8 +213,9 @@ namespace sw
         pSeat->_previousVehicleController               = ComponentHandle{};
         if ( pController != nullptr )
             pController->possess( riderPawn );
-        PawnComponent* pVehiclePawn = pVehicle != nullptr ? pVehicle->getComponent<PawnComponent>() : nullptr;
-        if ( pPreviousVehicleController != nullptr && pVehiclePawn != nullptr && pVehiclePawn->isPossessed() == false )
+        PawnComponent* pVehiclePawn            = pVehicle != nullptr ? pVehicle->getComponent<PawnComponent>() : nullptr;
+        const bool     bReturnControlToVehicle = pPreviousVehicleController != nullptr && pVehiclePawn != nullptr && pVehiclePawn->isPossessed() == false;
+        if ( bReturnControlToVehicle )
             pPreviousVehicleController->possess( *pVehiclePawn );
         return true;
     }
@@ -245,9 +248,10 @@ namespace sw
         bool                  bBestIsDriver = false;
         for ( VehicleSeatComponent* pSeat : pManager->getComponentRegistry().getAll<VehicleSeatComponent>() )
         {
-            const GameObject*     pVehicle     = pSeat != nullptr ? pSeat->getOwner() : nullptr;
-            const SceneComponent* pVehicleRoot = pVehicle != nullptr && pVehicle != pRider ? pVehicle->getPrimarySceneComponent() : nullptr;
-            if ( pVehicleRoot == nullptr || pSeat->isFree() == false || pSeat->isActive() == false )
+            const GameObject*     pVehicle         = pSeat != nullptr ? pSeat->getOwner() : nullptr;
+            const SceneComponent* pVehicleRoot     = pVehicle != nullptr && pVehicle != pRider ? pVehicle->getPrimarySceneComponent() : nullptr;
+            const bool            bSeatUnavailable = pVehicleRoot == nullptr || pSeat->isFree() == false || pSeat->isActive() == false;
+            if ( bSeatUnavailable )
                 continue;
             const float3  vehiclePosition = pVehicleRoot->getWorldPosition();
             const float32 deltaX          = riderPosition._x - vehiclePosition._x;

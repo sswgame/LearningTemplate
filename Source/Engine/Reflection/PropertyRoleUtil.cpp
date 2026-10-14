@@ -125,8 +125,9 @@ namespace sw
 
     bool PropertyRoleUtil::applyInterpolated( const PropertyInfo& prop, void* pInstance, const void* pFrom, const void* pTo, const float32 alpha )
     {
-        const PropertyRoleUtilInternal::BlendFn pBlend = PropertyRoleUtilInternal::findBlend( prop );
-        if ( pBlend == nullptr || pInstance == nullptr || pFrom == nullptr || pTo == nullptr )
+        const PropertyRoleUtilInternal::BlendFn pBlend            = PropertyRoleUtilInternal::findBlend( prop );
+        const bool                              bBlendUnavailable = pBlend == nullptr || pInstance == nullptr || pFrom == nullptr || pTo == nullptr;
+        if ( bBlendUnavailable )
             return false;
         return pBlend( pFrom, pTo, alpha, prop.getRawPtr( pInstance ) );
     }

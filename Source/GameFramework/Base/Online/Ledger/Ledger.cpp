@@ -140,21 +140,23 @@ namespace sw
 
             static LedgerResult validate( const LedgerTransferRequest& request, int32& outFailedPostingIndex )
             {
-                outFailedPostingIndex    = -1;
-                const int32 postingCount = static_cast<int32>( request._listPosting.size() );
-                const bool  bCountOk     = 1 <= postingCount && postingCount <= LedgerConstant::kMaxPostingCount;
-                const bool  bKeyOk       = LedgerUtil::isValidJournalKey( request._journalKey );
-                const bool  bReasonOk    = LedgerUtil::isValidReasonCode( request._reason );
-                const bool  bMemoOk      = request._memo.size() <= static_cast<size_t>( LedgerConstant::kMaxMemoSize );
-                if ( bCountOk == false || bKeyOk == false || bReasonOk == false || bMemoOk == false )
+                outFailedPostingIndex        = -1;
+                const int32 postingCount     = static_cast<int32>( request._listPosting.size() );
+                const bool  bCountOk         = 1 <= postingCount && postingCount <= LedgerConstant::kMaxPostingCount;
+                const bool  bKeyOk           = LedgerUtil::isValidJournalKey( request._journalKey );
+                const bool  bReasonOk        = LedgerUtil::isValidReasonCode( request._reason );
+                const bool  bMemoOk          = request._memo.size() <= static_cast<size_t>( LedgerConstant::kMaxMemoSize );
+                const bool  bInvalidTransfer = bCountOk == false || bKeyOk == false || bReasonOk == false || bMemoOk == false;
+                if ( bInvalidTransfer )
                     return LedgerResult::Invalid;
                 for ( int32 postingIndex = 0; postingIndex < postingCount; ++postingIndex )
                 {
-                    const LedgerPosting& posting     = request._listPosting[static_cast<size_t>( postingIndex )];
-                    const bool           bHolderOk   = posting._from.isValid() && posting._to.isValid() && posting._from != posting._to;
-                    const bool           bSystemOnly = posting._from.isSystem() && posting._to.isSystem();
-                    const bool           bAmountOk   = 1 <= posting._amount && posting._amount <= LedgerConstant::kMaxAmount;
-                    if ( bHolderOk == false || bSystemOnly || bAmountOk == false || LedgerUtil::isValidAssetID( posting._assetID ) == false )
+                    const LedgerPosting& posting         = request._listPosting[static_cast<size_t>( postingIndex )];
+                    const bool           bHolderOk       = posting._from.isValid() && posting._to.isValid() && posting._from != posting._to;
+                    const bool           bSystemOnly     = posting._from.isSystem() && posting._to.isSystem();
+                    const bool           bAmountOk       = 1 <= posting._amount && posting._amount <= LedgerConstant::kMaxAmount;
+                    const bool           bInvalidPosting = bHolderOk == false || bSystemOnly || bAmountOk == false || LedgerUtil::isValidAssetID( posting._assetID ) == false;
+                    if ( bInvalidPosting )
                     {
                         outFailedPostingIndex = postingIndex;
                         return LedgerResult::Invalid;
@@ -444,9 +446,10 @@ namespace sw
 
     ServiceStoreResult Ledger::readBalance( IServiceStoreConnection& connection, const LedgerHolder& holder, string_view assetID, LedgerBalance& outBalance )
     {
-        outBalance          = LedgerBalance{};
-        outBalance._assetID = string( assetID );
-        if ( holder.isValid() == false || holder.isSystem() || LedgerUtil::isValidAssetID( assetID ) == false )
+        outBalance                      = LedgerBalance{};
+        outBalance._assetID             = string( assetID );
+        const bool bInvalidBalanceQuery = holder.isValid() == false || holder.isSystem() || LedgerUtil::isValidAssetID( assetID ) == false;
+        if ( bInvalidBalanceQuery )
             return ServiceStoreResult::Invalid;
         ServiceRecord            record;
         const ServiceStoreResult read = connection.readRecord( getBalanceTable(), LedgerInternal::makeBalanceKey( holder.makeKey(), assetID ), record );
@@ -462,7 +465,8 @@ namespace sw
                                             vector<LedgerJournalEntry>& outListEntry, string& outNextCursor )
     {
         outNextCursor.clear();
-        if ( holder.isValid() == false || holder.isSystem() || maxCount <= 0 )
+        const bool bInvalidHistoryQuery = holder.isValid() == false || holder.isSystem() || maxCount <= 0;
+        if ( bInvalidHistoryQuery )
             return ServiceStoreResult::Invalid;
         string prefix = holder.makeKey();
         prefix.push_back( '/' );

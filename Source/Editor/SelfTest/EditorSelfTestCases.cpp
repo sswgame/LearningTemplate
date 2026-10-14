@@ -217,7 +217,8 @@ namespace sw::editor
                 uint32 checkedCount{ 0 };
                 for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
                 {
-                    if ( entry._category != EditorPanelCategory::Core || entry._pInstance == nullptr || entry._pInstance->isOpen() == false )
+                    const bool bSkipPanel = entry._category != EditorPanelCategory::Core || entry._pInstance == nullptr || entry._pInstance->isOpen() == false;
+                    if ( bSkipPanel )
                         continue;
                     const ImGuiWindow* pWindow = ImGui::FindWindowByName( entry._title.c_str() );
                     string             what{ "core panel is not docked by the default layout: " };
@@ -329,10 +330,11 @@ namespace sw::editor
 
             static void expectTransformBarStaysInSceneView( EditorSelfTestContext& context )
             {
-                constexpr float32  kPixelTolerance = 1.0f;
-                const ImGuiWindow* pSceneView      = ImGui::FindWindowByName( "Scene" );
-                const ImGuiWindow* pBar            = ImGui::FindWindowByName( "##EditorTransformBar" );
-                if ( pSceneView == nullptr || pBar == nullptr || pBar->Active == false )
+                constexpr float32  kPixelTolerance       = 1.0f;
+                const ImGuiWindow* pSceneView            = ImGui::FindWindowByName( "Scene" );
+                const ImGuiWindow* pBar                  = ImGui::FindWindowByName( "##EditorTransformBar" );
+                const bool         bTransformBarNotDrawn = pSceneView == nullptr || pBar == nullptr || pBar->Active == false;
+                if ( bTransformBarNotDrawn )
                     return; // 이번 프레임에 바를 그리지 않았다. 씬 뷰가 가려졌기 때문이다
                 (void)context.expect( pBar->Viewport == pSceneView->Viewport, "the transform bar left the scene view's viewport (it became its own OS window)" );
                 (void)context.expect( pBar->Pos.x >= pSceneView->Pos.x - kPixelTolerance &&
@@ -561,7 +563,8 @@ namespace sw::editor
                     return nullptr;
                 for ( ImGuiWindow* pWindow : pImGui->Windows )
                 {
-                    if ( pWindow != nullptr && pWindow->Name != nullptr && StringUtil::contains( pWindow->Name, "HierarchyTree" ) )
+                    const bool bHierarchyTreeWindow = pWindow != nullptr && pWindow->Name != nullptr && StringUtil::contains( pWindow->Name, "HierarchyTree" );
+                    if ( bHierarchyTreeWindow )
                         return pWindow;
                 }
                 return nullptr;
@@ -707,8 +710,9 @@ namespace sw::editor
                 ImGuiContext& imguiContext = *ImGui::GetCurrentContext();
                 for ( int32 tableIndex = 0; tableIndex < imguiContext.Tables.GetMapSize(); ++tableIndex )
                 {
-                    ImGuiTable* pTable = imguiContext.Tables.TryGetMapData( tableIndex );
-                    if ( pTable == nullptr || pTable->LastFrameActive != imguiContext.FrameCount || pTable->ColumnsCount != columnCount )
+                    ImGuiTable* pTable            = imguiContext.Tables.TryGetMapData( tableIndex );
+                    const bool  bNotMatchingTable = pTable == nullptr || pTable->LastFrameActive != imguiContext.FrameCount || pTable->ColumnsCount != columnCount;
+                    if ( bNotMatchingTable )
                         continue;
                     const string_view firstName{ ImGui::TableGetColumnName( pTable, 0 ) };
                     const string_view lastName{ ImGui::TableGetColumnName( pTable, columnCount - 1 ) };
@@ -852,8 +856,9 @@ namespace sw::editor
 #if defined( SW_PLATFORM_WINDOWS )
                     HWND           hWnd = static_cast<HWND>( ImGui::GetMainViewport()->PlatformHandleRaw );
                     RECT           client{};
-                    EditorContext* pContext = EditorContext::get();
-                    if ( hWnd != nullptr && GetClientRect( hWnd, &client ) && pContext != nullptr && pContext->getSubsystem<EditorRenderViews>().getRHIDevice() != nullptr )
+                    EditorContext* pContext              = EditorContext::get();
+                    const bool     bCanProbeWindowGrowth = hWnd != nullptr && GetClientRect( hWnd, &client ) && pContext != nullptr && pContext->getSubsystem<EditorRenderViews>().getRHIDevice() != nullptr;
+                    if ( bCanProbeWindowGrowth )
                     {
                         const IRHIDevice* pDevice    = pContext->getSubsystem<EditorRenderViews>().getRHIDevice();
                         const bool        bGrew      = ( probe._suggestedRect.right - probe._suggestedRect.left ) > ( probe._originalRect.right - probe._originalRect.left );

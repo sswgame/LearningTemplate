@@ -56,7 +56,8 @@ namespace sw
             {
                 if ( investigator._bDefeated == SW_TRUE )
                     continue;
-                if ( pTarget == nullptr || investigator._health < pTarget->_health || ( investigator._health == pTarget->_health && investigator._actorID < pTarget->_actorID ) )
+                const bool bBetterTarget = pTarget == nullptr || investigator._health < pTarget->_health || ( investigator._health == pTarget->_health && investigator._actorID < pTarget->_actorID );
+                if ( bBetterTarget )
                     pTarget = &investigator;
             }
             if ( pTarget != nullptr )

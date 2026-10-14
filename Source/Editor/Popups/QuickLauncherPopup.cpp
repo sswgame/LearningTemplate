@@ -200,9 +200,10 @@ namespace sw::editor
                 continue;
             }
 
-            if ( StringUtil::stristr( item._title.c_str(), _searchBuffer.c_str() ) != nullptr ||
-                 StringUtil::stristr( item._detail.c_str(), _searchBuffer.c_str() ) != nullptr ||
-                 StringUtil::stristr( item._category.c_str(), _searchBuffer.c_str() ) != nullptr )
+            const bool bMatchesSearchText = StringUtil::stristr( item._title.c_str(), _searchBuffer.c_str() ) != nullptr ||
+                                            StringUtil::stristr( item._detail.c_str(), _searchBuffer.c_str() ) != nullptr ||
+                                            StringUtil::stristr( item._category.c_str(), _searchBuffer.c_str() ) != nullptr;
+            if ( bMatchesSearchText )
                 listFiltered.push_back( &item );
         }
 
@@ -293,8 +294,9 @@ namespace sw::editor
 
         // 이름을 치고 바로 Enter 를 누르면 파일 목록(일 스레드)이 아직 안 왔을 수 있다 — 그때는 목록이 오는 대로 연다.
         // 목록이 비면 `updateListSelection` 이 Enter 를 보지 않으므로 키를 직접 본다.
-        const bool bEnterPressed = ImGui::IsKeyPressed( ImGuiKey_Enter, false ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter, false );
-        if ( bEnterPressed && filteredCount == 0 && bIndexOutstanding )
+        const bool bEnterPressed         = ImGui::IsKeyPressed( ImGuiKey_Enter, false ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter, false );
+        const bool bExecuteAfterIndexing = bEnterPressed && filteredCount == 0 && bIndexOutstanding;
+        if ( bExecuteAfterIndexing )
             _bExecuteWhenIndexed = true;
         if ( _bExecuteWhenIndexed && filteredCount > 0 )
         {
@@ -303,7 +305,8 @@ namespace sw::editor
         }
         if ( _bExecuteWhenIndexed && bIndexOutstanding == false )
             _bExecuteWhenIndexed = false; // 목록이 왔는데도 맞는 것이 없다
-        if ( bExecute && filteredCount > 0 && 0 <= _selectedIndex && _selectedIndex < filteredCount )
+        const bool bExecuteSelectedItem = bExecute && filteredCount > 0 && 0 <= _selectedIndex && _selectedIndex < filteredCount;
+        if ( bExecuteSelectedItem )
         {
             const QuickLauncherItem* pTarget = listFiltered[static_cast<size_t>( _selectedIndex )];
             if ( pTarget != nullptr )

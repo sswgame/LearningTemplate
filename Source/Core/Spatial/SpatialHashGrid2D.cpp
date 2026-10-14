@@ -316,8 +316,9 @@ namespace sw
             }
 
             // 셀 번호가 int32 끝에 닿았으면 더 나아갈 수 없다. 증감 자체가 넘침이다.
-            if ( ( stepX > 0 && cellX == MathUtil::kMaxInt32 ) || ( stepX < 0 && cellX == MathUtil::kMinInt32 ) ||
-                 ( stepY > 0 && cellY == MathUtil::kMaxInt32 ) || ( stepY < 0 && cellY == MathUtil::kMinInt32 ) )
+            const bool bCellIndexOverflow = ( stepX > 0 && cellX == MathUtil::kMaxInt32 ) || ( stepX < 0 && cellX == MathUtil::kMinInt32 ) ||
+                                            ( stepY > 0 && cellY == MathUtil::kMaxInt32 ) || ( stepY < 0 && cellY == MathUtil::kMinInt32 );
+            if ( bCellIndexOverflow )
                 break;
 
             if ( tMaxX < tMaxY )

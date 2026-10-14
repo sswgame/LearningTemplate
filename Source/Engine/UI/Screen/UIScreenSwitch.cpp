@@ -27,7 +27,8 @@ namespace sw
 {
     bool UIScreenSwitches::registerSwitch( const UIScreenSwitchRegistration* pRegistration )
     {
-        if ( pRegistration == nullptr || pRegistration->_pName == nullptr || pRegistration->_pFunction == nullptr )
+        const bool bInvalidRegistration = pRegistration == nullptr || pRegistration->_pName == nullptr || pRegistration->_pFunction == nullptr;
+        if ( bInvalidRegistration )
             return false;
         if ( UIScreenSwitchInternal::getRegistrations().add( pRegistration, pRegistration->_pName, pRegistration->_order ) != RegistrationResult::Added )
         {

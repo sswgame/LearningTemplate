@@ -31,10 +31,11 @@ namespace sw
     void VehicleExitComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        GameObject*          pOwner   = getOwner();
-        const PawnComponent* pPawn    = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        GameObjectManager*   pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pPawn == nullptr || pManager == nullptr || pPawn->wasButtonTriggered( _exitIndex ) == false )
+        GameObject*          pOwner       = getOwner();
+        const PawnComponent* pPawn        = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+        GameObjectManager*   pManager     = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const bool           bNoExitInput = pPawn == nullptr || pManager == nullptr || pPawn->wasButtonTriggered( _exitIndex ) == false;
+        if ( bNoExitInput )
             return;
         pManager->executeOrDeferPostTickOnComponent<VehicleExitComponent>( getHandle(), []( VehicleExitComponent& component )
         { component.exitDriver(); } );
@@ -49,7 +50,8 @@ namespace sw
         // 이 탈것의 운전석을 좌석 레지스트리에서 찾는다. 씬 전체를 순회하지 않는다.
         for ( VehicleSeatComponent* pSeat : pManager->getComponentRegistry().getAll<VehicleSeatComponent>() )
         {
-            if ( pSeat == nullptr || pSeat->getOwner() != pOwner || pSeat->isDriverSeat() == false || pSeat->isFree() )
+            const bool bSkipSeat = pSeat == nullptr || pSeat->getOwner() != pOwner || pSeat->isDriverSeat() == false || pSeat->isFree();
+            if ( bSkipSeat )
                 continue;
             GameObject*    pRider     = pManager->resolveGameObject( pSeat->getOccupant() );
             PawnComponent* pRiderPawn = pRider != nullptr ? pRider->getComponent<PawnComponent>() : nullptr;

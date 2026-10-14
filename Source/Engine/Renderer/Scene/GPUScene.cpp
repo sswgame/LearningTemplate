@@ -124,7 +124,8 @@ namespace sw
     {
         SW_PROFILE_SCOPE( "RT.GPUScene.upload" );
 
-        if ( pDevice == nullptr || _snapshot.getInstances().empty() || _snapshot._listAllBatch.empty() )
+        const bool bNothingToUploadScene = pDevice == nullptr || _snapshot.getInstances().empty() || _snapshot._listAllBatch.empty();
+        if ( bNothingToUploadScene )
             return false;
 
         // RT 에서만 하는 두 가지: 머티리얼 인스턴스의 오버라이드를 CB 에 반영하고(updateRHI), 메시를 GPU 에 올린다(initRHI).
@@ -221,7 +222,8 @@ namespace sw
                     const GPUInstance* pSource    = _snapshot.getInstances().data();
                     const bool         bRecreated = ( _instances._buffer != bufferBefore );
 
-                    if ( bRecreated || _snapshot._bAllInstancesDirty != SW_FALSE || _snapshot._listDirtyInstanceRun.empty() )
+                    const bool bFullInstanceUpload = bRecreated || _snapshot._bAllInstancesDirty != SW_FALSE || _snapshot._listDirtyInstanceRun.empty();
+                    if ( bFullInstanceUpload )
                     {
                         _instances.upload( pDevice, pSource, instanceCount * kStride );
                     }
@@ -376,8 +378,9 @@ namespace sw
 
     void GPUScene::refreshIndirectCounts( IRHIDevice* pDevice )
     {
-        const uint32 argsCount = static_cast<uint32>( _snapshot._listAllBatch.size() );
-        if ( pDevice == nullptr || argsCount == 0 || _listScratchIndirectCmd.size() < argsCount )
+        const uint32 argsCount      = static_cast<uint32>( _snapshot._listAllBatch.size() );
+        const bool   bNothingToFill = pDevice == nullptr || argsCount == 0 || _listScratchIndirectCmd.size() < argsCount;
+        if ( bNothingToFill )
             return;
 
         for ( uint32 argIndex = 0; argIndex < argsCount; ++argIndex )
@@ -439,7 +442,8 @@ namespace sw
         _instances.release( pDevice );
         _batchInfo.release( pDevice );
         _vertexPool.release( pDevice );
-        if ( _instanceSlotStream != 0 && pDevice != nullptr && pDevice->getResourceFactory() != nullptr )
+        const bool bReleasableSlotStream = _instanceSlotStream != 0 && pDevice != nullptr && pDevice->getResourceFactory() != nullptr;
+        if ( bReleasableSlotStream )
             pDevice->getResourceFactory()->destroyBuffer( _instanceSlotStream );
         _instanceSlotStream         = 0;
         _instanceSlotStreamCapacity = 0;

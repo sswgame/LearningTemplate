@@ -40,7 +40,8 @@ namespace sw
                 string anchor;
                 for ( const utf8 character : fqn )
                 {
-                    if ( ( 'a' <= character && character <= 'z' ) || ( '0' <= character && character <= '9' ) || character == '_' )
+                    const bool bAnchorCharacter = ( 'a' <= character && character <= 'z' ) || ( '0' <= character && character <= '9' ) || character == '_';
+                    if ( bAnchorCharacter )
                         anchor += character;
                     else if ( 'A' <= character && character <= 'Z' )
                         anchor += static_cast<utf8>( character - 'A' + 'a' );

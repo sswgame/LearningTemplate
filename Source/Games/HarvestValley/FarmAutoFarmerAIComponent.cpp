@@ -126,7 +126,8 @@ namespace sw
         // 가게 앞에서 사는 중이면 다 살 때까지 선다(한 번에 하나씩 산다 — 틱마다 한 번 누른다). 지난 누름이 못 샀으면(돈 · 가방) 그만 산다.
         const int32 selectedSeedCount = listSeed.empty() ? 0 : bag.getItemCount( listSeed[static_cast<size_t>( director.getSelectedSeedIndex() )] );
         const bool  bLastBuyFailed    = _buyRemaining < _buyBatch && selectedSeedCount <= _seedCountAtBuy;
-        if ( _buyRemaining > 0 && bLastBuyFailed == false && director.isNearShop() )
+        const bool  bShouldBuySeeds   = _buyRemaining > 0 && bLastBuyFailed == false && director.isNearShop();
+        if ( bShouldBuySeeds )
         {
             stopMoving();
             pressButton( hashed_string( FarmDirectorComponent::getButtonName( FarmButton::Buy ) ) );
@@ -182,9 +183,11 @@ namespace sw
             {
                 for ( int32 x = 0; x < FarmDirectorComponent::kFieldWidth; ++x )
                 {
-                    const FarmTile* pTile    = field.findTile( x, y );
-                    int32           priority = 0;
-                    FarmTool        tool     = FarmTool::Hand;
+                    const FarmTile* pTile         = field.findTile( x, y );
+                    int32           priority      = 0;
+                    FarmTool        tool          = FarmTool::Hand;
+                    const bool      bCanSow       = pTile->_bTilled != SW_FALSE && pTile->hasCrop() == false && bHasSeed;
+                    const bool      bCanCultivate = pTile->_bTilled == SW_FALSE && cultivatedCount < _cultivateLimit && seasonalSeed >= 0;
                     if ( pTile->_bReady != SW_FALSE || pTile->_bWithered != SW_FALSE )
                     {
                         priority = 5;
@@ -195,12 +198,12 @@ namespace sw
                         priority = 4;
                         tool     = FarmTool::WateringCan;
                     }
-                    else if ( pTile->_bTilled != SW_FALSE && pTile->hasCrop() == false && bHasSeed )
+                    else if ( bCanSow )
                     {
                         priority = 3;
                         tool     = FarmTool::Seeds;
                     }
-                    else if ( pTile->_bTilled == SW_FALSE && cultivatedCount < _cultivateLimit && seasonalSeed >= 0 )
+                    else if ( bCanCultivate )
                     {
                         priority = 2;
                         tool     = FarmTool::Hoe;
@@ -215,7 +218,8 @@ namespace sw
                 }
             }
             // 심을 칸이 있는데 씨앗이 없으면 산다.
-            if ( bestPriority < 3 && bHasSeed == false && seasonalSeed >= 0 )
+            const bool bNeedsSeedPurchase = bestPriority < 3 && bHasSeed == false && seasonalSeed >= 0;
+            if ( bNeedsSeedPurchase )
             {
                 const CropDef* pCrop = catalog.findCropBySeed( listSeed[static_cast<size_t>( seasonalSeed )] );
                 if ( pCrop != nullptr && pState->getWallet().canAfford( director.getCurrency(), pCrop->_seedPrice ) )

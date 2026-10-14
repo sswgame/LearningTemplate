@@ -298,8 +298,9 @@ namespace sw
 
     JSONValue JSONValue::at( size_t index ) const
     {
-        JSONImpl* pValue = JSONDocumentInternal::asJSON( _pValue );
-        if ( pValue == nullptr || pValue->is_array() == false || index >= pValue->size() )
+        JSONImpl*  pValue             = JSONDocumentInternal::asJSON( _pValue );
+        const bool bInvalidArrayIndex = pValue == nullptr || pValue->is_array() == false || index >= pValue->size();
+        if ( bInvalidArrayIndex )
             return {};
         return JSONValue{ &( *pValue )[index] };
     }
@@ -557,9 +558,10 @@ namespace sw
 
     string JSONDocument::escapeString( string_view value )
     {
-        const JSONImpl quoted = JSONDocumentInternal::toJSONString( value );
-        string         dumped = JSONDocumentInternal::fromJSONString( quoted.dump() );
-        if ( dumped.size() >= 2 && dumped.front() == '"' && dumped.back() == '"' )
+        const JSONImpl quoted      = JSONDocumentInternal::toJSONString( value );
+        string         dumped      = JSONDocumentInternal::fromJSONString( quoted.dump() );
+        const bool     bQuotedDump = dumped.size() >= 2 && dumped.front() == '"' && dumped.back() == '"';
+        if ( bQuotedDump )
             dumped = dumped.substr( 1, dumped.size() - 2 );
         return dumped;
     }

@@ -43,8 +43,9 @@ namespace sw
                 const UIRect bounds = widget.getGeometry().computeScreenBounds();
                 for ( const PanelWidget* pParent = widget.getParent(); pParent != nullptr; pParent = pParent->getParent() )
                 {
-                    if ( pParent->clipsChildren() && pParent->canScrollIntoView() == false &&
-                         bounds.intersects( pParent->getGeometry().computeScreenBounds() ) == false )
+                    const bool bClippedByParent = pParent->clipsChildren() && pParent->canScrollIntoView() == false &&
+                                                  bounds.intersects( pParent->getGeometry().computeScreenBounds() ) == false;
+                    if ( bClippedByParent )
                         return true;
                 }
                 return false;
@@ -259,8 +260,9 @@ namespace sw
             const WidgetNavigationEntry& entry = pWidget->getNavigation().getEntry( direction );
             if ( entry._rule == UINavigationRule::Explicit )
             {
-                const Widget* pTarget = tree.findWidgetByName( entry._target );
-                if ( pTarget != nullptr && pTarget != pFrom && canReceiveFocus( *pTarget ) )
+                const Widget* pTarget          = tree.findWidgetByName( entry._target );
+                const bool    bFocusableTarget = pTarget != nullptr && pTarget != pFrom && canReceiveFocus( *pTarget );
+                if ( bFocusableTarget )
                     return pTarget->getID();
                 continue;
             }

@@ -283,9 +283,10 @@ namespace sw
 
     bool BitReader::readBlobSize( int32 maxSize, int32& outSize )
     {
-        outSize           = 0;
-        const uint64 size = readVarUint();
-        if ( hasOverflowed() || size > static_cast<uint64>( MathUtil::max( 0, maxSize ) ) || hasBytes( static_cast<int32>( size ) ) == false )
+        outSize                        = 0;
+        const uint64 size              = readVarUint();
+        const bool   bInvalidByteBlock = hasOverflowed() || size > static_cast<uint64>( MathUtil::max( 0, maxSize ) ) || hasBytes( static_cast<int32>( size ) ) == false;
+        if ( bInvalidByteBlock )
         {
             _bOverflow = SW_TRUE;
             return false;

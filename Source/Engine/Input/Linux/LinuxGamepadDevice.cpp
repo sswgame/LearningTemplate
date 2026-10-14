@@ -167,8 +167,9 @@ namespace sw
         uint8 buttonCount = 0;
         if ( ioctl( fd, JSIOCGBUTTONS, &buttonCount ) < 0 )
             buttonCount = 0;
-        uint16 arrButtonCode[KEY_MAX - BTN_MISC + 1]{};
-        if ( buttonCount == 0 || ioctl( fd, JSIOCGBTNMAP, arrButtonCode ) < 0 || isGamepadButtonMap( arrButtonCode, buttonCount ) == false ) // 버튼 수(uint8) < 맵 크기
+        uint16     arrButtonCode[KEY_MAX - BTN_MISC + 1]{};
+        const bool bInvalidButtonMap = buttonCount == 0 || ioctl( fd, JSIOCGBTNMAP, arrButtonCode ) < 0 || isGamepadButtonMap( arrButtonCode, buttonCount ) == false;
+        if ( bInvalidButtonMap ) // 버튼 수(uint8) < 맵 크기
         {
             close( fd );
             _bConnected = SW_FALSE;
@@ -380,7 +381,8 @@ namespace sw
         // 같은 세기를 다시 요청하면 할 일이 없다. 게임이 매 프레임 같은 값으로 부르는 경우가 흔한데,
         // 아래 경로는 호출마다 ioctl 두 번과 write 한 번을 쓰므로 그대로 두면 프레임마다 그 비용을 낸다.
         // (XInput 의 XInputSetState 는 값싼 호출이라 Windows 에는 없던 문제다.)
-        if ( _bHasForceFeedback == SW_TRUE && strongMagnitude == _ffStrongMagnitude && weakMagnitude == _ffWeakMagnitude )
+        const bool bForceFeedbackUnchanged = _bHasForceFeedback == SW_TRUE && strongMagnitude == _ffStrongMagnitude && weakMagnitude == _ffWeakMagnitude;
+        if ( bForceFeedbackUnchanged )
             return true;
 
         // evdev FF 이펙트는 세기를 직접 갱신하는 API 가 없어, 지우고 다시 만든다.

@@ -302,7 +302,8 @@ namespace sw
 
     bool NetEmulationTransport::send( const NetAddress& to, const uint8* pData, int32 size )
     {
-        if ( _pInner == nullptr || pData == nullptr || size <= 0 )
+        const bool bCannotSend = _pInner == nullptr || pData == nullptr || size <= 0;
+        if ( bCannotSend )
             return false;
         std::scoped_lock<mutex> lock{ _mutex };
         if ( _time < _outageUntil )

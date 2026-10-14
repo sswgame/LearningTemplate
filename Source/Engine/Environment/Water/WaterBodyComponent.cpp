@@ -450,8 +450,9 @@ namespace sw
     {
         for ( const WaterBodyComponent* pWater : manager.getComponentRegistry().getAll<WaterBodyComponent>() )
         {
-            float32 depth{ 0.0f };
-            if ( pWater->isPendingDestroy() || pWater->_bUnderwaterFog == false || pWater->isUnderwater( viewPosition, depth ) == false )
+            float32    depth{ 0.0f };
+            const bool bNoUnderwaterFog = pWater->isPendingDestroy() || pWater->_bUnderwaterFog == false || pWater->isUnderwater( viewPosition, depth ) == false;
+            if ( bNoUnderwaterFog )
                 continue;
             outFog._color   = pWater->_fogColor;
             outFog._density = pWater->_fogDensity;

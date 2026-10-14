@@ -150,8 +150,9 @@ namespace sw
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::UnknownOffer );
         if ( pOffer->isRealMoney() )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::NotPurchasable );
-        const bool bCountOk = 1 <= input._count && input._count <= pOffer->_maxCountPerPurchase;
-        if ( bCountOk == false || input._accountID == 0 || LedgerUtil::isValidJournalKey( input._journalKey ) == false )
+        const bool bCountOk         = 1 <= input._count && input._count <= pOffer->_maxCountPerPurchase;
+        const bool bInvalidPurchase = bCountOk == false || input._accountID == 0 || LedgerUtil::isValidJournalKey( input._journalKey ) == false;
+        if ( bInvalidPurchase )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::InvalidRequest );
         if ( pOffer->isOnSale( input._nowMs ) == false )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::NotOnSale );

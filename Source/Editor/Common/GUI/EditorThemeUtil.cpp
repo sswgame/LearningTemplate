@@ -429,8 +429,9 @@ namespace sw::editor
 
         if ( preset != EditorThemePreset::ClassicDark )
         {
-            EditorThemeConfig themeConfig = EditorThemeInternal::activeTheme();
-            if ( editorConfig._themeAccentR > 0.0f || editorConfig._themeAccentG > 0.0f || editorConfig._themeAccentB > 0.0f )
+            EditorThemeConfig themeConfig        = EditorThemeInternal::activeTheme();
+            const bool        bHasAccentOverride = editorConfig._themeAccentR > 0.0f || editorConfig._themeAccentG > 0.0f || editorConfig._themeAccentB > 0.0f;
+            if ( bHasAccentOverride )
                 themeConfig._accentColor = Color{ editorConfig._themeAccentR, editorConfig._themeAccentG, editorConfig._themeAccentB, 1.0f };
 
             if ( editorConfig._themeWindowRounding >= 0.0f )
@@ -756,7 +757,8 @@ namespace sw::editor
 
     void EditorThemeUtil::drawCenteredGlyph( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos, const utf8* pGlyph, const Color& color, float32 sizeRatio )
     {
-        if ( pDrawList == nullptr || pGlyph == nullptr || pGlyph[0] == '\0' )
+        const bool bNothingToDraw = pDrawList == nullptr || pGlyph == nullptr || pGlyph[0] == '\0';
+        if ( bNothingToDraw )
             return;
         ImFont*       pFont    = ImGui::GetFont();
         const float32 boxSize  = MathUtil::min( maxPos._x - minPos._x, maxPos._y - minPos._y );

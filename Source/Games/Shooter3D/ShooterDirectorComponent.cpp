@@ -648,7 +648,8 @@ namespace sw
             const bool bGone = pEnemy == nullptr || pEnemy->isRemovable();
             if ( bGone )
             {
-                if ( pEnemy == nullptr && _bPacingReady == SW_TRUE && record._spawnID != 0 && record._bCounted == SW_FALSE )
+                const bool bShouldNotifyDespawn = pEnemy == nullptr && _bPacingReady == SW_TRUE && record._spawnID != 0 && record._bCounted == SW_FALSE;
+                if ( bShouldNotifyDespawn )
                     (void)_director.notifyDespawned( record._spawnID );
                 if ( pObject != nullptr )
                     pManager->destroyObject( pObject );

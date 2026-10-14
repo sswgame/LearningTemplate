@@ -30,8 +30,9 @@ namespace sw
             /** @brief 시퀀스 원소가 반사 구조체면 그 타입입니다(맵 · 중첩 컨테이너는 내려가지 않는다). */
             static const TypeInfo* findSequenceElementType( const PropertyInfo& prop )
             {
-                const bool bNestedContainer = prop._nestedContainer != nullptr && prop._nestedContainer->_elementNested != nullptr;
-                if ( prop._bIsContainer == SW_FALSE || prop._containerWrapper == nullptr || prop._containerWrapper->asSequence() == nullptr || bNestedContainer )
+                const bool bNestedContainer   = prop._nestedContainer != nullptr && prop._nestedContainer->_elementNested != nullptr;
+                const bool bNoSequenceElement = prop._bIsContainer == SW_FALSE || prop._containerWrapper == nullptr || prop._containerWrapper->asSequence() == nullptr || bNestedContainer;
+                if ( bNoSequenceElement )
                     return nullptr;
                 return findNestedType( prop._elementTypeName );
             }
@@ -55,8 +56,9 @@ namespace sw
                 {
                     if ( prop._pValidate != nullptr )
                         return true;
-                    const TypeInfo* pNested = prop._bIsContainer == SW_TRUE ? findSequenceElementType( prop ) : findNestedType( prop._typeName );
-                    if ( pNested != nullptr && pNested != &type && computeHasValidator( *pNested, depth + 1 ) )
+                    const TypeInfo* pNested          = prop._bIsContainer == SW_TRUE ? findSequenceElementType( prop ) : findNestedType( prop._typeName );
+                    const bool      bNestedValidator = pNested != nullptr && pNested != &type && computeHasValidator( *pNested, depth + 1 );
+                    if ( bNestedValidator )
                         return true;
                 }
                 return false;
@@ -64,7 +66,8 @@ namespace sw
 
             static uint32 validate( const TypeInfo& type, const void* pInstance, ValidationContext& context, const uint32 depth )
             {
-                if ( pInstance == nullptr || depth > constant::reflection::kMaxParentChainDepth || ReflectionValidation::hasValidator( type ) == false )
+                const bool bNothingToValidate = pInstance == nullptr || depth > constant::reflection::kMaxParentChainDepth || ReflectionValidation::hasValidator( type ) == false;
+                if ( bNothingToValidate )
                     return 0;
                 const size_t issueCountBefore = context.getIssues().size();
 

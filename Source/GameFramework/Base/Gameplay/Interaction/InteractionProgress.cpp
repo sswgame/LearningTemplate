@@ -91,8 +91,9 @@ namespace sw
 
     bool InteractionProgress::join( uint32 actorID )
     {
-        const bool bFull = static_cast<int32>( _listParticipant.size() ) >= _config._maxParticipants;
-        if ( _bCompleted == SW_TRUE || bFull || hasParticipant( actorID ) )
+        const bool bFull       = static_cast<int32>( _listParticipant.size() ) >= _config._maxParticipants;
+        const bool bCannotJoin = _bCompleted == SW_TRUE || bFull || hasParticipant( actorID );
+        if ( bCannotJoin )
             return false;
         _listParticipant.push_back( actorID );
         _bRegressing = SW_FALSE;
@@ -159,7 +160,8 @@ namespace sw
         }
 
         // 응답 없이 창이 닫힌 체크는 실패로 처리한다.
-        if ( _bSkillCheckPending == SW_TRUE && _pJudge != nullptr && _pJudge->hasExpired( _skillCheckTarget, _time ) )
+        const bool bSkillCheckExpired = _bSkillCheckPending == SW_TRUE && _pJudge != nullptr && _pJudge->hasExpired( _skillCheckTarget, _time );
+        if ( bSkillCheckExpired )
             resolveSkillCheck( false, hashed_string{} );
 
         const int32 participantCount = static_cast<int32>( _listParticipant.size() );
@@ -184,7 +186,8 @@ namespace sw
 
     bool InteractionProgress::respondSkillCheck( uint32 actorID, float32 pressTime )
     {
-        if ( _bSkillCheckPending == SW_FALSE || _skillCheckActor != actorID || _pJudge == nullptr )
+        const bool bNoPendingSkillCheck = _bSkillCheckPending == SW_FALSE || _skillCheckActor != actorID || _pJudge == nullptr;
+        if ( bNoPendingSkillCheck )
             return false;
         const TimingResult result = _pJudge->judge( _skillCheckTarget, pressTime );
         resolveSkillCheck( result.isHit(), result.isHit() ? result._pWindow->_grade : hashed_string{} );

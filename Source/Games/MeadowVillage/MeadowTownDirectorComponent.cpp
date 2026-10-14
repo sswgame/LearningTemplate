@@ -87,7 +87,8 @@ namespace sw
         Archive                body;
         const bool             bFrameRead = pState != nullptr && StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) &&
                                 StateArchiveUtil::readSection( archive, tag, version, body );
-        if ( bFrameRead == false || tag != CreatureTown::kStateTag || version != CreatureTown::kStateVersion )
+        const bool bTownFrameMismatch = bFrameRead == false || tag != CreatureTown::kStateTag || version != CreatureTown::kStateVersion;
+        if ( bTownFrameMismatch )
             return false;
         CreatureTown town;
         if ( initializeTown( town, *pState ) == false )

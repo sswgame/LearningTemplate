@@ -48,7 +48,8 @@ namespace sw
 
     NetHandleResult INetMessageHandler::handleMessage( int32 connectionID, const uint8* pData, int32 size, NetChannelType channel )
     {
-        if ( pData == nullptr || size <= 0 || isMessageKindHandled( pData[0] ) == false )
+        const bool bMessageNotHandled = pData == nullptr || size <= 0 || isMessageKindHandled( pData[0] ) == false;
+        if ( bMessageNotHandled )
             return NetHandleResult::NotMine;
         BitReader body( pData + 1, size - 1 );
         return handleNetMessage( NetMessageContext{ pData, size, connectionID, channel, pData[0] }, body );
@@ -177,7 +178,8 @@ namespace sw
 
     int32 NetMessageRouter::relayToOtherPeers( NetHost& host, const NetMessageContext& context )
     {
-        if ( host.isServer() == false || context._pMessage == nullptr || context._messageSize <= 0 )
+        const bool bCannotRelay = host.isServer() == false || context._pMessage == nullptr || context._messageSize <= 0;
+        if ( bCannotRelay )
             return 0;
         return host.broadcast( context._channel, context._pMessage, context._messageSize, context._connectionID );
     }

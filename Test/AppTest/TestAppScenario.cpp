@@ -190,7 +190,8 @@ namespace
             uint32                 reloadIndex = 0;
             for ( size_t index = 0; index < listScenario.size(); ++index )
             {
-                if ( index > 0 && reloadEvery > 0 && index % reloadEvery == 0 )
+                const bool bInsertReload = index > 0 && reloadEvery > 0 && index % reloadEvery == 0;
+                if ( bInsertReload )
                 {
                     listChain.push_back( kArrReload[reloadIndex % SW_COUNT_OF( kArrReload )] );
                     ++reloadIndex;

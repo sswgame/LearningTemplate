@@ -174,8 +174,9 @@ namespace sw
                                  RoundSeriesInternal::isStateValue( intermissionTicks, 0 ) == false;
         const bool bBadWinner = RoundSeriesInternal::isStateValue( winner, kNoWinner ) == false || winner >= static_cast<int64>( _listTotal.size() );
         // 같은 참가자 수로 시작한 시리즈에만 복원한다.
-        const bool bOtherSeries = participantCount != static_cast<uint64>( _listTotal.size() );
-        if ( bBadPhase || bBadCounter || bBadWinner || bOtherSeries || reader.hasOverflowed() )
+        const bool bOtherSeries        = participantCount != static_cast<uint64>( _listTotal.size() );
+        const bool bInvalidSeriesState = bBadPhase || bBadCounter || bBadWinner || bOtherSeries || reader.hasOverflowed();
+        if ( bInvalidSeriesState )
             return false;
         vector<int32> listTotal( _listTotal.size(), 0 );
         for ( int32& total : listTotal )

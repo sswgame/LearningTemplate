@@ -421,7 +421,8 @@ SW_TEST_CASE( SurvivalHorrorTest, TurnBasedEncounterIsDeterministicAndEndsInVict
         SW_EXPECT_EQUAL( a._combatSuccesses, b._combatSuccesses );
         SW_EXPECT_EQUAL( a._horrorSuccesses, b._horrorSuccesses );
         SW_EXPECT_EQUAL( a._targetID, b._targetID );
-        if ( a._actorID == HorrorEncounter::kMonsterActorID && a._targetID >= 0 && turn == 0 )
+        const bool bFirstAttack = a._actorID == HorrorEncounter::kMonsterActorID && a._targetID >= 0 && turn == 0;
+        if ( bFirstAttack )
             SW_EXPECT_EQUAL( 2, a._targetID ); // 첫 공격은 체력이 낮은 조사자에게
     }
     SW_EXPECT_TRUE( turn < 200 );

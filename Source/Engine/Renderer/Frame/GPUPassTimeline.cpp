@@ -103,9 +103,10 @@ namespace sw
         {
             if ( endSlot >= listGPUTimestampMicro.size() )
                 return -1.0f;
-            const float32 beginMicro = listGPUTimestampMicro[beginSlot];
-            const float32 endMicro   = listGPUTimestampMicro[endSlot];
-            if ( beginMicro < 0.0f || endMicro < 0.0f || endMicro < beginMicro )
+            const float32 beginMicro         = listGPUTimestampMicro[beginSlot];
+            const float32 endMicro           = listGPUTimestampMicro[endSlot];
+            const bool    bInvalidTimestamps = beginMicro < 0.0f || endMicro < 0.0f || endMicro < beginMicro;
+            if ( bInvalidTimestamps )
                 return -1.0f;
             const float32 micro = endMicro - beginMicro;
             profiler.addSample( profilerSlot, static_cast<uint64>( micro * constant::kNanosecondsPerMicrosecond ) );

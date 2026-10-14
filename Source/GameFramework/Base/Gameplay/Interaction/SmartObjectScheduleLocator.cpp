@@ -76,8 +76,9 @@ namespace sw
         // 씬을 훑지 않는다 — 스마트 오브젝트는 붙을 때 컴포넌트 레지스트리에 등록된다.
         for ( SmartObjectComponent* pSmart : _pManager->getComponentRegistry().getAll<SmartObjectComponent>() )
         {
-            const GameObject* pOwner = pSmart->getOwner();
-            if ( pOwner == nullptr || pSmart->isPendingDestroy() || pSmart->getDefinitionID() != kind )
+            const GameObject* pOwner           = pSmart->getOwner();
+            const bool        bSkipSmartObject = pOwner == nullptr || pSmart->isPendingDestroy() || pSmart->getDefinitionID() != kind;
+            if ( bSkipSmartObject )
                 continue;
             const int32 slotCount = pSmart->getSlotCount();
             for ( int32 slot = 0; slot < slotCount; ++slot )
@@ -113,8 +114,9 @@ namespace sw
         int32 count = 0;
         for ( const Reservation& reservation : _listReservation )
         {
-            const bool bOverlaps = reservation._startMinute < endMinute && startMinute < reservation._endMinute;
-            if ( reservation._objectID == objectID && reservation._slot == slot && reservation._day == day && bOverlaps )
+            const bool bOverlaps        = reservation._startMinute < endMinute && startMinute < reservation._endMinute;
+            const bool bSameSlotOverlap = reservation._objectID == objectID && reservation._slot == slot && reservation._day == day && bOverlaps;
+            if ( bSameSlotOverlap )
                 ++count;
         }
         return count;

@@ -82,7 +82,8 @@ namespace sw
         const bool bFundingOk   = message._fundingHolder.isValid() && message._fundingHolder._kind != LedgerHolderKind::Sink;
         const bool bReturnOk    = message._expiryAction != ServiceMailExpiryAction::ReturnToSender || message._fundingHolder._kind == LedgerHolderKind::Account;
         const bool bRecipientOk = message._recipientAccountID != 0 && message._fundingHolder != LedgerHolder::makeAccount( message._recipientAccountID );
-        if ( bTextOk == false || bExpiryOk == false || bFundingOk == false || bReturnOk == false || bRecipientOk == false )
+        const bool bInvalidMail = bTextOk == false || bExpiryOk == false || bFundingOk == false || bReturnOk == false || bRecipientOk == false;
+        if ( bInvalidMail )
             return false;
         if ( attachmentCount > ServiceMailConstant::kMaxAttachmentCount || LedgerUtil::isValidEscrowToken( message._idempotencyKey ) == false )
             return false;

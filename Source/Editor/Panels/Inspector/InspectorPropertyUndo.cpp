@@ -92,7 +92,8 @@ namespace sw::editor
     void InspectorPropertyUndo::trackPod( void* pData, size_t size, const PropertyInfo& prop )
     {
         // pData 는 유효성 가드로만 쓴다. 스냅샷은 값이 아니라 오브젝트 XML 로 뜬다.
-        if ( pData == nullptr || size == 0 || size > 512 )
+        const bool bUntrackableEdit = pData == nullptr || size == 0 || size > 512;
+        if ( bUntrackableEdit )
             return;
         trackActiveItemEdit( InspectorPropertyLayout::getPropertyLabel( prop ) );
     }

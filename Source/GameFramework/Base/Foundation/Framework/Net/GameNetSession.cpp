@@ -87,8 +87,9 @@ namespace sw
                 }
                 if ( verb == "spike" )
                 {
-                    float32 seconds = 0.0f;
-                    if ( listArgument.size() != 2 || StringUtil::parseFloat( listArgument[1], seconds ) == false || seconds < 0.0f )
+                    float32    seconds                = 0.0f;
+                    const bool bInvalidSpikeArguments = listArgument.size() != 2 || StringUtil::parseFloat( listArgument[1], seconds ) == false || seconds < 0.0f;
+                    if ( bInvalidSpikeArguments )
                         return false;
                     pEmulation->startOutage( static_cast<float64>( seconds ) );
                     outReply = "net emulation spike " + listArgument[1] + " s";
@@ -439,7 +440,8 @@ namespace sw
 
     bool GameNetSession::reconnect()
     {
-        if ( _role != GameNetRole::Client || _connectFuture.isValid() || _host.getConnectedCount() > 0 )
+        const bool bCannotReconnect = _role != GameNetRole::Client || _connectFuture.isValid() || _host.getConnectedCount() > 0;
+        if ( bCannotReconnect )
             return false;
         _bConnectFailureReported = SW_FALSE;
         _connectFuture           = _host.connectAsync( _serverAddress );

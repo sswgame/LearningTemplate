@@ -46,7 +46,8 @@ namespace sw
         if ( _bParallel == SW_FALSE )
             return;
         // 이미 이 디바이스에 올라가 있으면 할 일이 없다. 상주 판단은 Mesh 가 세대로 한다.
-        if ( mesh == nullptr || _pDevice == nullptr || mesh->isRHIValid() )
+        const bool bNothingToUpload = mesh == nullptr || _pDevice == nullptr || mesh->isRHIValid();
+        if ( bNothingToUpload )
             return;
         if ( mesh->getVertexCount() == 0 )
             return;
@@ -63,7 +64,8 @@ namespace sw
 
     uint32 GPUUploadQueue::flush()
     {
-        if ( _listPendingMesh.empty() || _pDevice == nullptr || gv_gpuUploadQueue == 0 )
+        const bool bNothingToFlush = _listPendingMesh.empty() || _pDevice == nullptr || gv_gpuUploadQueue == 0;
+        if ( bNothingToFlush )
         {
             _listPendingMesh.clear();
             return 0;
@@ -83,7 +85,8 @@ namespace sw
                 (void)mesh->initRHI( pDevice );
         };
 
-        if ( _bParallel == SW_TRUE && count > 1 && _pTaskManager != nullptr )
+        const bool bParallelUploadPossible = _bParallel == SW_TRUE && count > 1 && _pTaskManager != nullptr;
+        if ( bParallelUploadPossible )
         {
             // 워커가 나눠 만들고 여기서 기다린다. 기다리는 것이 목적이 아니라 **RT 가 만들지 않는 것**이 목적이다.
             TaskStageHandle stage  = _pTaskManager->createStage( "GpuUploadMesh" );

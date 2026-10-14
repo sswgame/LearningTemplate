@@ -69,7 +69,8 @@ namespace sw::editor
         }
         const utf8* GetItemLabel( int32 itemIndex ) const override
         {
-            if ( 0 <= itemIndex && itemIndex < static_cast<int32>( _listItem.size() ) && _listItem[static_cast<size_t>( itemIndex )]._name.empty() == false )
+            const bool bHasItemName = 0 <= itemIndex && itemIndex < static_cast<int32>( _listItem.size() ) && _listItem[static_cast<size_t>( itemIndex )]._name.empty() == false;
+            if ( bHasItemName )
                 return _listItem[static_cast<size_t>( itemIndex )]._name.c_str();
             _labelScratch = "Item ";
             _labelScratch += to_string( itemIndex );
@@ -296,7 +297,8 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddRigSlotTrackTip" ) );
         ImGui::SameLine();
         ImGui::BeginDisabled( _selectedTrack < 0 );
-        if ( ImGui::Button( "Delete Track" ) && 0 <= _selectedTrack && _selectedTrack < static_cast<int32>( _listTrack.size() ) )
+        const bool bDeleteTrackRequested = ImGui::Button( "Delete Track" ) && 0 <= _selectedTrack && _selectedTrack < static_cast<int32>( _listTrack.size() );
+        if ( bDeleteTrackRequested )
         {
             _listTrack.erase( _listTrack.begin() + _selectedTrack );
             _selectedTrack = -1;

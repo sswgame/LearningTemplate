@@ -62,7 +62,8 @@ namespace sw
 
     void VulkanRHIResourceFactory::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
-        if ( buffer == 0 || pData == nullptr || size == 0 )
+        const bool bNothingToUpdate = buffer == 0 || pData == nullptr || size == 0;
+        if ( bNothingToUpdate )
             return;
 
         // 이번 프레임 칸에 쓰고, 나머지 칸은 링이 그 칸으로 돌아올 때 채운다(`RHIConstantBufferMirror` — 값이 바뀔 때만 쓰는 머티리얼 버퍼가
@@ -73,8 +74,9 @@ namespace sw
         {
             VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( buffer );
             void*                                pMapped{ nullptr };
-            if ( pRecord != nullptr && pRecord->_memory != VK_NULL_HANDLE &&
-                 vkMapMemory( _pDevice->_device, pRecord->_memory, 0, size, 0, &pMapped ) == VK_SUCCESS )
+            const bool                           bCanMapBufferMemory = pRecord != nullptr && pRecord->_memory != VK_NULL_HANDLE &&
+                                             vkMapMemory( _pDevice->_device, pRecord->_memory, 0, size, 0, &pMapped ) == VK_SUCCESS;
+            if ( bCanMapBufferMemory )
             {
                 Memory::copy( pMapped, pData, size );
                 vkUnmapMemory( _pDevice->_device, pRecord->_memory );
@@ -166,12 +168,13 @@ namespace sw
             }
 
             VkMemoryAllocateInfo allocInfo{};
-            allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-            allocInfo.allocationSize  = memoryRequirements.size;
-            allocInfo.memoryTypeIndex = memoryTypeIndex;
-            if ( vkAllocateMemory( _pDevice->_device, &allocInfo, nullptr, &slot._memory ) != VK_SUCCESS ||
-                 vkBindBufferMemory( _pDevice->_device, slot._buffer, slot._memory, 0 ) != VK_SUCCESS ||
-                 vkMapMemory( _pDevice->_device, slot._memory, 0, VK_WHOLE_SIZE, 0, &slot._pMapped ) != VK_SUCCESS )
+            allocInfo.sType                   = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            allocInfo.allocationSize          = memoryRequirements.size;
+            allocInfo.memoryTypeIndex         = memoryTypeIndex;
+            const bool bSlotMemorySetupFailed = vkAllocateMemory( _pDevice->_device, &allocInfo, nullptr, &slot._memory ) != VK_SUCCESS ||
+                                                vkBindBufferMemory( _pDevice->_device, slot._buffer, slot._memory, 0 ) != VK_SUCCESS ||
+                                                vkMapMemory( _pDevice->_device, slot._memory, 0, VK_WHOLE_SIZE, 0, &slot._pMapped ) != VK_SUCCESS;
+            if ( bSlotMemorySetupFailed )
             {
                 if ( slot._memory != VK_NULL_HANDLE )
                     vkFreeMemory( _pDevice->_device, slot._memory, nullptr );
@@ -197,9 +200,10 @@ namespace sw
         // 스테이징 슬롯에 쓰고 복사를 프레임 커맨드버퍼에 기록한다. 목적 버퍼를 직접 vkMapMemory 해서 쓰면
         // "GPU 가 직전 프레임을 아직 읽는 중인 메모리를 CPU 가 덮어쓰는" 해저드가 생긴다. 큐 순서가 곧 해저드 해결이고,
         // "바뀐 게 없으면 업로드 생략" 같은 상위 로직도 단일 목적 버퍼 그대로 유효하다.
-        VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( buffer );
-        if ( pRecord == nullptr || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 ||
-             pRecord->_buffer == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE || _pDevice->_graphicsQueue == VK_NULL_HANDLE )
+        VulkanRHIDevice::VulkanBufferRecord* pRecord                    = _pDevice->resolveAllocatedBuffer( buffer );
+        const bool                           bInvalidBufferRegionUpload = pRecord == nullptr || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 ||
+                                                pRecord->_buffer == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE || _pDevice->_graphicsQueue == VK_NULL_HANDLE;
+        if ( bInvalidBufferRegionUpload )
             return;
 
         // **조각을 모두 한 스테이징에 모아 배리어 한 쌍 · 복사 한 번으로 끝낸다.** 조각마다 부르면
@@ -377,7 +381,8 @@ namespace sw
 
     RHITextureHandle VulkanRHIResourceFactory::createTexture2D( const RHITextureDesc& desc )
     {
-        if ( _pDevice->_device == nullptr || desc._width == 0 || desc._height == 0 )
+        const bool bInvalidTextureRequest = _pDevice->_device == nullptr || desc._width == 0 || desc._height == 0;
+        if ( bInvalidTextureRequest )
             return 0;
         if ( isRHITextureShapeValid( desc ) == false )
         {
@@ -536,9 +541,10 @@ namespace sw
 
     bool VulkanRHIResourceFactory::uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
-        VulkanRHIDevice::VulkanTextureRecord* pRecord = _pDevice->resolveTexture( texture );
-        if ( pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
-             _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_oneShotCommandPool == VK_NULL_HANDLE )
+        VulkanRHIDevice::VulkanTextureRecord* pRecord                   = _pDevice->resolveTexture( texture );
+        const bool                            bTextureUploadUnavailable = pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
+                                               _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_oneShotCommandPool == VK_NULL_HANDLE;
+        if ( bTextureUploadUnavailable )
             return false;
         if ( pRecord->_bDepthStencil != SW_FALSE )
             return false;
@@ -626,9 +632,10 @@ namespace sw
 
     bool VulkanRHIResourceFactory::uploadTexture2DRegion( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
     {
-        VulkanRHIDevice::VulkanTextureRecord* pRecord = _pDevice->resolveTexture( texture );
-        if ( pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
-             _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_oneShotCommandPool == VK_NULL_HANDLE || pRecord->_bDepthStencil != SW_FALSE )
+        VulkanRHIDevice::VulkanTextureRecord* pRecord                         = _pDevice->resolveTexture( texture );
+        const bool                            bTextureRegionUploadUnavailable = pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
+                                                     _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_oneShotCommandPool == VK_NULL_HANDLE || pRecord->_bDepthStencil != SW_FALSE;
+        if ( bTextureRegionUploadUnavailable )
             return false;
         uint32 rowBytes{ 0 };
         if ( validateTextureRegionUpload( static_cast<RHIFormat>( pRecord->_rhiFormat ), pRecord->_width, pRecord->_height, pRecord->_mipLevels,
@@ -705,9 +712,10 @@ namespace sw
     {
         // **여기의 실패는 모두 소리를 낸다**(형제인 uploadTexture2D 와 같다). 리드백은 오프스크린 렌더 문제가
         // 드러나는 경로라 "false 인데 이유가 없다" 가 곧 긴 추적이 된다.
-        VulkanRHIDevice::VulkanTextureRecord* pRecord = _pDevice->resolveTexture( texture );
-        if ( pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
-             _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_oneShotCommandPool == VK_NULL_HANDLE )
+        VulkanRHIDevice::VulkanTextureRecord* pRecord                     = _pDevice->resolveTexture( texture );
+        const bool                            bTextureReadbackUnavailable = pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
+                                                 _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_oneShotCommandPool == VK_NULL_HANDLE;
+        if ( bTextureReadbackUnavailable )
         {
             SW_LOG_ERROR( "readbackTexture2D: texture %# or the device is not usable", texture );
             return false;

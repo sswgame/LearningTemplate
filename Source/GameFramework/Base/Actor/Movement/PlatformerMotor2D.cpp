@@ -88,7 +88,8 @@ namespace sw
     {
         if ( y < 0 )
             return PlatformTile::Empty; // 구덩이
-        if ( x < 0 || x >= _topology._width || y >= _topology._height )
+        const bool bOutsideWorld = x < 0 || x >= _topology._width || y >= _topology._height;
+        if ( bOutsideWorld )
             return PlatformTile::Solid;
         return _listTile[static_cast<size_t>( _topology.toIndex( x, y ) )];
     }
@@ -174,7 +175,8 @@ namespace sw
                 if ( tile == PlatformTile::Solid )
                     return true;
                 // 한쪽 발판 — 내려오며, 지난 틱 발이 발판 윗면보다 위였고, 내려가기 중이 아닐 때만.
-                if ( tile == PlatformTile::OneWay && bFromAbove && _dropThrough.isActive() == false && previousBottom >= map.getTileBottom( y + 1 ) - 1.0e-3f )
+                const bool bLandOnOneWay = tile == PlatformTile::OneWay && bFromAbove && _dropThrough.isActive() == false && previousBottom >= map.getTileBottom( y + 1 ) - 1.0e-3f;
+                if ( bLandOnOneWay )
                     return true;
             }
         }
@@ -319,7 +321,8 @@ namespace sw
             _bClimbing = SW_TRUE;
 
         // 발판 아래로 — 아래 + 점프.
-        if ( bWasGrounded && moveY < -0.5f && input._bJumpPressed )
+        const bool bDropThrough = bWasGrounded && moveY < -0.5f && input._bJumpPressed;
+        if ( bDropThrough )
         {
             _dropThrough.start( _settings._dropThroughTime );
             _jumpBuffer.clear();
@@ -382,7 +385,8 @@ namespace sw
             }
 
             // 짧은 점프 — 오르는 중에 떼면.
-            if ( _bRising && input._bJumpHeld == SW_FALSE && _velocity._y > 0.0f )
+            const bool bCutJump = _bRising && input._bJumpHeld == SW_FALSE && _velocity._y > 0.0f;
+            if ( bCutJump )
             {
                 _velocity._y *= _settings._jumpCutRatio;
                 _bRising = SW_FALSE;
@@ -400,8 +404,9 @@ namespace sw
         moveAxis( map, _velocity._x * deltaTime, false );
         moveAxis( map, _velocity._y * deltaTime, true );
         // 서 있는가 — 발밑을 한 번 더 본다(위로 움직이지 않는 틱).
-        if ( _bGrounded == SW_FALSE && _velocity._y <= 0.0f && _bClimbing == SW_FALSE &&
-             isBlocked( map, float2{ _position._x, _position._y - 0.02f }, true, _position._y - _settings._halfExtents._y ) )
+        const bool bSnapToGround = _bGrounded == SW_FALSE && _velocity._y <= 0.0f && _bClimbing == SW_FALSE &&
+                                   isBlocked( map, float2{ _position._x, _position._y - 0.02f }, true, _position._y - _settings._halfExtents._y );
+        if ( bSnapToGround )
             _bGrounded = SW_TRUE;
         if ( _bGrounded && bWasGrounded == false )
             _events |= PlatformerEvent::kLanded;

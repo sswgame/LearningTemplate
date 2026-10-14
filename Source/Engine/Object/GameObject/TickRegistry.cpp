@@ -68,13 +68,15 @@ namespace sw
              */
             static uint8 findExternalGroup( GameObjectManager& manager, const SubTickHandle& handle )
             {
-                GameObject* pObj = manager.findGameObjectByID( handle._objectID );
-                if ( pObj == nullptr || pObj->isPendingDestroy() || pObj->isActiveInHierarchy() == false )
+                GameObject* pObj            = manager.findGameObjectByID( handle._objectID );
+                const bool  bInactiveObject = pObj == nullptr || pObj->isPendingDestroy() || pObj->isActiveInHierarchy() == false;
+                if ( bInactiveObject )
                     return kNoExternalGroup;
                 for ( const TickItem& item : pObj->getTickItems() )
                 {
-                    if ( item._pComponent != nullptr && item._pComponent->getComponentID() == handle._componentID && item._subTickID == handle._subTickID &&
-                         item._pComponent->isPendingDestroy() == false )
+                    const bool bMatchingTickItem = item._pComponent != nullptr && item._pComponent->getComponentID() == handle._componentID && item._subTickID == handle._subTickID &&
+                                                   item._pComponent->isPendingDestroy() == false;
+                    if ( bMatchingTickItem )
                         return item._group;
                 }
                 return kNoExternalGroup;
@@ -393,8 +395,11 @@ namespace sw
         for ( uint32 group = 0; group < kGroupCount; ++group )
         {
             const uint32 begin = cursor;
-            while ( cursor < listItem.size() && listItem[cursor]._group == group && listItem[cursor]._bHasPrerequisite == SW_FALSE )
+            while ( true )
             {
+                const bool bSameGroupWithoutPrerequisite = cursor < listItem.size() && listItem[cursor]._group == group && listItem[cursor]._bHasPrerequisite == SW_FALSE;
+                if ( bSameGroupWithoutPrerequisite == false )
+                    break;
                 ++cursor;
             }
             const uint32 end = cursor;
@@ -428,7 +433,8 @@ namespace sw
     TickBatchFunction TickRegistry::findBatchFunction( const TickItem* pItem, uint32 itemCount )
     {
         // 그 그룹의 항목이 주 틱 하나뿐일 때만 — 둘 이상이면 오브젝트 안의 순서를 지키려고 오브젝트 칸으로 간다.
-        if ( gv_tickBatch == false || itemCount != 1 || pItem->_subTickID != 0 || pItem->_pComponent == nullptr )
+        const bool bNotBatchable = gv_tickBatch == false || itemCount != 1 || pItem->_subTickID != 0 || pItem->_pComponent == nullptr;
+        if ( bNotBatchable )
             return nullptr;
         return TickBatchRegistry::findFunction( pItem->_pComponent->findCachedTypeInfo() );
     }
@@ -588,12 +594,14 @@ namespace sw
         uint32                                       originalIndex = 0;
         for ( const uint64 objectID : listDependentID )
         {
-            GameObject* pObj = manager.findGameObjectByID( objectID );
-            if ( pObj == nullptr || pObj->isPendingDestroy() || pObj->isActiveInHierarchy() == false )
+            GameObject* pObj               = manager.findGameObjectByID( objectID );
+            const bool  bObjectNotTickable = pObj == nullptr || pObj->isPendingDestroy() || pObj->isActiveInHierarchy() == false;
+            if ( bObjectNotTickable )
                 continue;
             for ( const TickItem& item : pObj->_listTickItem )
             {
-                if ( item._bHasPrerequisite == SW_FALSE || item._pComponent == nullptr || item._pComponent->isPendingDestroy() )
+                const bool bSkipItem = item._bHasPrerequisite == SW_FALSE || item._pComponent == nullptr || item._pComponent->isPendingDestroy();
+                if ( bSkipItem )
                     continue;
                 const vector<SubTickHandle>* pListPrerequisite = TickRegistryInternal::findPrerequisiteList( item );
                 if ( pListPrerequisite == nullptr )

@@ -375,7 +375,8 @@ namespace sw
             const bool bSkillRead = StateArchiveUtil::readCountdown( archive, outPilot._listSkillRemaining[index] ) &&
                                     StateArchiveUtil::readCountdown( archive, outPilot._listSkillCooldown[index] );
             archive >> outPilot._listSkillSpent[index];
-            if ( bSkillRead == false || archive.isError() || outPilot._listSkillSpent[index] > SW_TRUE )
+            const bool bPilotSkillInvalid = bSkillRead == false || archive.isError() || outPilot._listSkillSpent[index] > SW_TRUE;
+            if ( bPilotSkillInvalid )
                 return false;
         }
         const bool bBodyRead = MechArenaWorldStateInternal::readInput( archive, outPilot._input ) && MechArenaWorldStateInternal::readInput( archive, outPilot._previousInput ) &&
@@ -386,8 +387,9 @@ namespace sw
 
         uint32 weaponCount = 0;
         archive >> weaponCount;
-        if ( archive.isError() || weaponCount != static_cast<uint32>( outPilot._listWeaponState.size() ) || outPilot._meleeSlot >= static_cast<int32>( weaponCount ) ||
-             outPilot._meleeSlot < -1 )
+        const bool bWeaponStateInvalid = archive.isError() || weaponCount != static_cast<uint32>( outPilot._listWeaponState.size() ) || outPilot._meleeSlot >= static_cast<int32>( weaponCount ) ||
+                                         outPilot._meleeSlot < -1;
+        if ( bWeaponStateInvalid )
             return false;
         for ( uint32 index = 0; index < weaponCount; ++index )
         {

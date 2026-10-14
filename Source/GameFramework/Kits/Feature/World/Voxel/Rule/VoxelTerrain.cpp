@@ -112,8 +112,9 @@ namespace sw
             {
                 for ( int32 x = 2; x < world.getSizeX() - 2; ++x )
                 {
-                    const int32 groundY = world.findTopSolidY( x, z );
-                    if ( groundY < 0 || world.getBlock( x, groundY, z ) != grassBlock || groundY + 8 >= kVoxelChunkHeight )
+                    const int32 groundY     = world.findTopSolidY( x, z );
+                    const bool  bNoTreeSite = groundY < 0 || world.getBlock( x, groundY, z ) != grassBlock || groundY + 8 >= kVoxelChunkHeight;
+                    if ( bNoTreeSite )
                         continue;
                     const uint32  treeHash = GameHash::hashCoord( x, z, settings._seed ^ 0x5bd1e995u );
                     const float32 roll     = static_cast<float32>( treeHash & 0xffffu ) / 65535.0f;

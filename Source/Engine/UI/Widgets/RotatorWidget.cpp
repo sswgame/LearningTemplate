@@ -101,7 +101,8 @@ namespace sw
 
     UIReply RotatorWidget::onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase )
     {
-        if ( phase == UIRoutePhase::Bubble && event._kind == UIPointerEventKind::Up && event._button == MouseButton::Left )
+        const bool bLeftButtonRelease = phase == UIRoutePhase::Bubble && event._kind == UIPointerEventKind::Up && event._button == MouseButton::Left;
+        if ( bLeftButtonRelease )
         {
             float2 local{};
             if ( getGeometry().inverseTransformPoint( event._position, local ) )

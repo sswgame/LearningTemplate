@@ -145,7 +145,8 @@ SW_TEST_CASE( AssetStreamingTest, AssetStreamingQueueInFlightMulticastCallbacks 
     for ( int32 attempt = 0; attempt < maxAttempts; ++attempt )
     {
         queue.update();
-        if ( callback1Count > 0 && callback2Count > 0 && callback3Count > 0 )
+        const bool bAllCallbacksDone = callback1Count > 0 && callback2Count > 0 && callback3Count > 0;
+        if ( bAllCallbacksDone )
             break;
         std::this_thread::sleep_for( std::chrono::milliseconds( 2 ) );
     }
@@ -462,7 +463,8 @@ SW_TEST_CASE( AssetStreamingTest, ManyCallbacksOnOnePathAreAllDelivered )
                                                 SW_DELEGATE_LAMBDA( sw::OnStreamingDataCompleteDelegate, [&]( sw::string_view, bool bSuccess, const sw::vector<uint8>& bytes )
         {
             callbackCount.fetch_add( 1 );
-            if ( bSuccess && bytes.size() == 1024 && bytes[0] == 0x5A )
+            const bool bReadSucceeded = bSuccess && bytes.size() == 1024 && bytes[0] == 0x5A;
+            if ( bReadSucceeded )
                 okCount.fetch_add( 1 );
         } ) ) );
     }

@@ -291,8 +291,9 @@ namespace test
                     const string  binPath = makeScratchPath( "seed.scene.bin" );
                     SceneDocument document;
                     vector<uint8> bytes;
-                    if ( FileUtil::writeFile( xmlPath, xml.data(), xml.size() ) && document.loadXML( xmlPath ) && document.saveBinary( binPath ) &&
-                         FileUtil::readFile( binPath, bytes ) )
+                    const bool    bSeedBuilt = FileUtil::writeFile( xmlPath, xml.data(), xml.size() ) && document.loadXML( xmlPath ) && document.saveBinary( binPath ) &&
+                                            FileUtil::readFile( binPath, bytes );
+                    if ( bSeedBuilt )
                         outListSeed.push_back( std::move( bytes ) );
                 }
             }

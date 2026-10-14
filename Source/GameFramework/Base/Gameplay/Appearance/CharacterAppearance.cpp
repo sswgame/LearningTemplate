@@ -49,13 +49,14 @@ namespace sw
                 AppearanceXMLUtil::readNameList( node, "options", value._listOption );
                 readColors( node.getAttributeText( "color" ), value._listColor );
                 readColors( node.getAttributeText( "colors" ), value._listColor );
-                const bool bFixed      = node.findAttribute( "value" ) != nullptr;
-                const bool bRange      = node.findAttribute( "min" ) != nullptr && node.findAttribute( "max" ) != nullptr;
-                value._bHasNumber      = bFixed || bRange ? SW_TRUE : SW_FALSE;
-                value._min             = bFixed ? node.getAttributeFloat( "value", 0.0f ) : node.getAttributeFloat( "min", 0.0f );
-                value._max             = bFixed ? value._min : node.getAttributeFloat( "max", 0.0f );
-                const int32 shapeCount = ( value._bHasNumber == SW_TRUE ? 1 : 0 ) + ( value._listOption.empty() ? 0 : 1 ) + ( value._listColor.empty() ? 0 : 1 );
-                if ( value._parameter.empty() || shapeCount != 1 || value._max < value._min )
+                const bool bFixed              = node.findAttribute( "value" ) != nullptr;
+                const bool bRange              = node.findAttribute( "min" ) != nullptr && node.findAttribute( "max" ) != nullptr;
+                value._bHasNumber              = bFixed || bRange ? SW_TRUE : SW_FALSE;
+                value._min                     = bFixed ? node.getAttributeFloat( "value", 0.0f ) : node.getAttributeFloat( "min", 0.0f );
+                value._max                     = bFixed ? value._min : node.getAttributeFloat( "max", 0.0f );
+                const int32 shapeCount         = ( value._bHasNumber == SW_TRUE ? 1 : 0 ) + ( value._listOption.empty() ? 0 : 1 ) + ( value._listColor.empty() ? 0 : 1 );
+                const bool  bInvalidValueShape = value._parameter.empty() || shapeCount != 1 || value._max < value._min;
+                if ( bInvalidValueShape )
                 {
                     report.addError( "%#: preset '%#' <Value name='%#'> needs exactly one of value / min+max / option(s) / color(s)", sourceName, inoutDef._id.c_str(), value._parameter.c_str() );
                     return;

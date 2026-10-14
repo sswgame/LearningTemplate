@@ -213,7 +213,8 @@ namespace sw::editor
 
     int32 ModifierGizmoLogic::findMirrorIndex2D( int32 index, int32 countX, int32 countY, uint32 axisIndex )
     {
-        if ( countX <= 0 || countY <= 0 || index < 0 || index >= countX * countY )
+        const bool bInvalidMirrorIndex = countX <= 0 || countY <= 0 || index < 0 || index >= countX * countY;
+        if ( bInvalidMirrorIndex )
             return -1;
         const int32 indexX = index % countX;
         const int32 indexY = index / countX;

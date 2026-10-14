@@ -19,9 +19,10 @@ namespace sw
         std::scoped_lock<mutex> lock{ _mutex };
         // 슬롯이 정말 이 레지스트리에서 자기를 가리키고 있을 때만 "이미 등록됨"이다. 인덱스는 컴포넌트가 들고 있어서, 목록이 다른 것을
         // 가리키는데 그대로 믿으면 조용히 미등록으로 남는다(컴포넌트 이동은 막혀 있지만 인덱스를 그대로 믿지 않는다).
-        const uint32 existing = pComp->getPrimitiveIndex();
-        if ( existing != MeshComponent::kInvalidPrimitiveIndex && existing < _listPrimitive.size() &&
-             _listPrimitive[existing] == pComp )
+        const uint32 existing           = pComp->getPrimitiveIndex();
+        const bool   bAlreadyRegistered = existing != MeshComponent::kInvalidPrimitiveIndex && existing < _listPrimitive.size() &&
+                                        _listPrimitive[existing] == pComp;
+        if ( bAlreadyRegistered )
             return;
 
         const uint32 slot = static_cast<uint32>( _listPrimitive.size() );
@@ -69,8 +70,9 @@ namespace sw
         const uint32            slot = pComp->getPrimitiveIndex();
         // 슬롯이 정말 이 레지스트리의 것인지 확인한다. 인덱스는 컴포넌트가 들고 있어서, 다른 레지스트리가
         // 실수로 불리면 남의 목록을 그럴듯한 인덱스로 훼손할 수 있다.
-        if ( slot == MeshComponent::kInvalidPrimitiveIndex || slot >= _listPrimitive.size() ||
-             _listPrimitive[slot] != pComp )
+        const bool bSlotNotOwned = slot == MeshComponent::kInvalidPrimitiveIndex || slot >= _listPrimitive.size() ||
+                                   _listPrimitive[slot] != pComp;
+        if ( bSlotNotOwned )
             return;
 
         // swap-and-pop. 마지막 원소가 이 자리로 오므로 그쪽 인덱스와 **깃발**을 같이 옮긴다(지울 때마다 깃발 전부를 훑지 않는다).
@@ -101,9 +103,10 @@ namespace sw
     {
         if ( pComp == nullptr )
             return;
-        const vector<MeshComponent*>& listPrimitive = std::as_const( _listPrimitive );
-        const uint32                  slot          = pComp->getPrimitiveIndex();
-        if ( slot == MeshComponent::kInvalidPrimitiveIndex || slot >= listPrimitive.size() || listPrimitive[slot] != pComp )
+        const vector<MeshComponent*>& listPrimitive     = std::as_const( _listPrimitive );
+        const uint32                  slot              = pComp->getPrimitiveIndex();
+        const bool                    bInvalidDirtySlot = slot == MeshComponent::kInvalidPrimitiveIndex || slot >= listPrimitive.size() || listPrimitive[slot] != pComp;
+        if ( bInvalidDirtySlot )
             return;
         markSlotDirty( slot );
     }
@@ -212,7 +215,8 @@ namespace sw
 
     void PrimitiveRegistry::markInstanceDirty( MeshInstanceBatch* pBatch, uint32 index )
     {
-        if ( pBatch == nullptr || pBatch->_pRegistry != this || index >= pBatch->getCount() )
+        const bool bInvalidInstanceDirty = pBatch == nullptr || pBatch->_pRegistry != this || index >= pBatch->getCount();
+        if ( bInvalidInstanceDirty )
             return;
         // 잠금 없이 메시 컴포넌트 수를 읽는다. 그 수가 그 사이 바뀌면 번호가 어긋나지만, 그 변경은 집합 세대를 올려
         // 다음 빌드가 전체 수집으로 가므로 깃발 하나가 엉뚱한 자리에 서도 답은 틀리지 않는다.

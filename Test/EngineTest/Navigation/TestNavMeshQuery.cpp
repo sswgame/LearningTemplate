@@ -31,8 +31,9 @@ namespace
                 const sw::float3& to   = path._listPoint[pointIndex];
                 for ( uint32 sample = 0; sample <= 32; ++sample )
                 {
-                    const sw::float3 point = from + ( to - from ) * ( static_cast<float32>( sample ) / 32.0f );
-                    if ( 9.0f <= point._x && point._x <= 10.0f && point._z <= 15.0f )
+                    const sw::float3 point           = from + ( to - from ) * ( static_cast<float32>( sample ) / 32.0f );
+                    const bool       bInsideObstacle = 9.0f <= point._x && point._x <= 10.0f && point._z <= 15.0f;
+                    if ( bInsideObstacle )
                         return false;
                 }
             }

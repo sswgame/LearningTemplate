@@ -530,7 +530,8 @@ namespace sw
         //  - **endFrame 뒤여야 한다.** 그 전에는 커맨드 리스트가 기록만 되었고 아직 큐에 나가지 않아,
         //    읽어 보면 클리어 색만 나온다.
         //  - **몇 프레임 기다려야 한다.** 첫 프레임에는 GPUScene 업로드가 아직이라 그릴 게 없다.
-        if ( gv_screenshot.empty() == false && _bScreenshotTaken == SW_FALSE && _pFrameRenderer != nullptr )
+        const bool bScreenshotPending = gv_screenshot.empty() == false && _bScreenshotTaken == SW_FALSE && _pFrameRenderer != nullptr;
+        if ( bScreenshotPending )
         {
             // 최소 몇 프레임은 기다려야 한다. 첫 프레임에는 GPUScene 업로드가 아직이라 그릴 것이 없다.
             // 그 위로는 -gv_screenshotFrame 이 정한다(시간에 따라 움직이는 장면을 비교할 때 필요하다).
@@ -661,8 +662,9 @@ namespace sw
 
     void RenderThread::readRequestedRenderTarget()
     {
-        RenderTargetRegistry* pRegistry = engine::getRenderTargetRegistry();
-        if ( pRegistry == nullptr || _pDevice == nullptr || _pDevice->getResourceFactory() == nullptr )
+        RenderTargetRegistry* pRegistry             = engine::getRenderTargetRegistry();
+        const bool            bNoRenderTargetSource = pRegistry == nullptr || _pDevice == nullptr || _pDevice->getResourceFactory() == nullptr;
+        if ( bNoRenderTargetSource )
             return;
         RHITextureHandle texture = 0;
         uint32           serial  = 0;

@@ -128,9 +128,10 @@ namespace sw
 
     bool MeshVertexAnimation::readFromBytes( const uint8* pData, size_t byteCount, string_view sourceLabel )
     {
-        *this = MeshVertexAnimation{};
-        if ( pData == nullptr || byteCount < MeshVertexAnimationInternal::kHeaderSize ||
-             Memory::compare( pData, MeshVertexAnimationInternal::kArrMagic, sizeof( MeshVertexAnimationInternal::kArrMagic ) ) != 0 )
+        *this                              = MeshVertexAnimation{};
+        const bool bNotVertexAnimationFile = pData == nullptr || byteCount < MeshVertexAnimationInternal::kHeaderSize ||
+                                             Memory::compare( pData, MeshVertexAnimationInternal::kArrMagic, sizeof( MeshVertexAnimationInternal::kArrMagic ) ) != 0;
+        if ( bNotVertexAnimationFile )
         {
             SW_LOG_ERROR( "Vertex animation '%#' is not a SWVA file", sourceLabel );
             return false;
@@ -141,13 +142,14 @@ namespace sw
             SW_LOG_ERROR( "Vertex animation '%#' is version %#, not the current %# - cook again", sourceLabel, version, kVersion );
             return false;
         }
-        const uint32  frameCount   = MeshVertexAnimationInternal::readValue<uint32>( pData, 8 );
-        const uint32  vertexCount  = MeshVertexAnimationInternal::readValue<uint32>( pData, 12 );
-        const float32 frameRate    = MeshVertexAnimationInternal::readValue<float32>( pData, 16 );
-        const float32 duration     = MeshVertexAnimationInternal::readValue<float32>( pData, 20 );
-        const uint32  flags        = MeshVertexAnimationInternal::readValue<uint32>( pData, 24 );
-        const size_t  elementCount = static_cast<size_t>( frameCount ) * vertexCount;
-        if ( frameCount == 0 || vertexCount == 0 || frameRate <= 0.0f || byteCount != MeshVertexAnimationInternal::kHeaderSize + elementCount * sizeof( float4 ) )
+        const uint32  frameCount                = MeshVertexAnimationInternal::readValue<uint32>( pData, 8 );
+        const uint32  vertexCount               = MeshVertexAnimationInternal::readValue<uint32>( pData, 12 );
+        const float32 frameRate                 = MeshVertexAnimationInternal::readValue<float32>( pData, 16 );
+        const float32 duration                  = MeshVertexAnimationInternal::readValue<float32>( pData, 20 );
+        const uint32  flags                     = MeshVertexAnimationInternal::readValue<uint32>( pData, 24 );
+        const size_t  elementCount              = static_cast<size_t>( frameCount ) * vertexCount;
+        const bool    bMalformedVertexAnimation = frameCount == 0 || vertexCount == 0 || frameRate <= 0.0f || byteCount != MeshVertexAnimationInternal::kHeaderSize + elementCount * sizeof( float4 );
+        if ( bMalformedVertexAnimation )
         {
             SW_LOG_ERROR( "Vertex animation '%#' is malformed (%# frames x %# vertices, %# bytes)", sourceLabel, frameCount, vertexCount, byteCount );
             return false;

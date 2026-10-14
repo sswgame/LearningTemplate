@@ -138,13 +138,14 @@ namespace sw
     {
         using Internal = ShooterAvatarComponentInternal;
         Component::onTick( deltaTime );
-        GameObject*                   pOwner    = getOwner();
-        GameObjectManager*            pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const GameObject*             pObject   = pManager != nullptr ? pManager->resolveGameObject( _player ) : nullptr;
-        const ShooterPlayerComponent* pPlayer   = pObject != nullptr ? pObject->getComponent<ShooterPlayerComponent>() : nullptr;
-        SkeletalAnimatorComponent*    pAnimator = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
-        SceneComponent*               pScene    = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
-        if ( pPlayer == nullptr || pScene == nullptr || deltaTime <= 0.0f )
+        GameObject*                   pOwner              = getOwner();
+        GameObjectManager*            pManager            = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const GameObject*             pObject             = pManager != nullptr ? pManager->resolveGameObject( _player ) : nullptr;
+        const ShooterPlayerComponent* pPlayer             = pObject != nullptr ? pObject->getComponent<ShooterPlayerComponent>() : nullptr;
+        SkeletalAnimatorComponent*    pAnimator           = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
+        SceneComponent*               pScene              = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        const bool                    bMissingAvatarParts = pPlayer == nullptr || pScene == nullptr || deltaTime <= 0.0f;
+        if ( bMissingAvatarParts )
             return;
         const float32 step = MathUtil::min( deltaTime, 0.1f );
 

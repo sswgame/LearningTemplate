@@ -178,17 +178,19 @@ namespace sw
                 case UIBindingSource::Poll:
                 {
                     ++_polledCount;
-                    const string text      = UIBindingValueUtil::readValue( binding._source, _pViewModel ).toText();
-                    const bool   bReformat = context._bTextRevisionChanged && binding._expression._format.empty() == false;
-                    if ( binding._bPollKnown && binding._lastPollText == text && bReformat == false )
+                    const string text           = UIBindingValueUtil::readValue( binding._source, _pViewModel ).toText();
+                    const bool   bReformat      = context._bTextRevisionChanged && binding._expression._format.empty() == false;
+                    const bool   bPollUnchanged = binding._bPollKnown && binding._lastPollText == text && bReformat == false;
+                    if ( bPollUnchanged )
                         break;
                     (void)apply( binding, context ); // 필드가 바뀌었는지는 쓴 횟수(`_writeCount`)로 센다
                     break;
                 }
                 case UIBindingSource::Setting:
                 {
-                    const bool bReformat = context._bTextRevisionChanged && binding._expression._format.empty() == false;
-                    if ( _bSettingsChanged || binding._bDirty || bReformat )
+                    const bool bReformat   = context._bTextRevisionChanged && binding._expression._format.empty() == false;
+                    const bool bNeedsApply = _bSettingsChanged || binding._bDirty || bReformat;
+                    if ( bNeedsApply )
                         (void)apply( binding, context ); // 필드가 바뀌었는지는 쓴 횟수(`_writeCount`)로 센다
                     break;
                 }

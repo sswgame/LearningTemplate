@@ -131,7 +131,8 @@ namespace sw
 
     RHIBufferHandle OpenGLRHIResourceFactory::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
     {
-        if ( _pDevice->_bInitialized == SW_FALSE || elementSize == 0 || elementCount == 0 )
+        const bool bInvalidStructuredBufferRequest = _pDevice->_bInitialized == SW_FALSE || elementSize == 0 || elementCount == 0;
+        if ( bInvalidStructuredBufferRequest )
             return 0;
 
         // 32비트 API 다. 담기지 않으면 만들지 않는다(RHIBufferSize 가 세 백엔드의 규칙 하나).
@@ -150,7 +151,8 @@ namespace sw
     void OpenGLRHIResourceFactory::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
                                                                   const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        if ( _pDevice->_bInitialized == SW_FALSE || buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 )
+        const bool bInvalidBufferRegionUpdate = _pDevice->_bInitialized == SW_FALSE || buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0;
+        if ( bInvalidBufferRegionUpdate )
             return;
 
         GLuint ssbo = _pDevice->resolveGlBuffer( buffer );
@@ -179,7 +181,8 @@ namespace sw
 
         ScopedOpenGLContext contextScope( _pDevice );
 
-        if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Vertex ) && desc._pInitialData != nullptr && desc._sizeBytes > 0 )
+        const bool bHasVertexInitialData = EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Vertex ) && desc._pInitialData != nullptr && desc._sizeBytes > 0;
+        if ( bHasVertexInitialData )
             return createVertexBuffer( desc._pInitialData, desc._sizeBytes );
         if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Constant ) )
             return createConstantBuffer( desc._sizeBytes > 0 ? desc._sizeBytes : 256u );
@@ -234,7 +237,8 @@ namespace sw
 
     RHIBufferHandle OpenGLRHIResourceFactory::createVertexBuffer( const void* pData, uint32 sizeBytes )
     {
-        if ( _pDevice->_bInitialized == SW_FALSE || pData == nullptr || sizeBytes == 0 )
+        const bool bInvalidVertexBufferRequest = _pDevice->_bInitialized == SW_FALSE || pData == nullptr || sizeBytes == 0;
+        if ( bInvalidVertexBufferRequest )
             return 0;
 
         ScopedOpenGLContext contextScope( _pDevice );
@@ -288,8 +292,9 @@ namespace sw
 
     bool OpenGLRHIResourceFactory::uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
-        OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
-        if ( pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE )
+        OpenGLRHIDevice::OpenGLTextureRecord* pRecord               = _pDevice->resolveTexture( texture );
+        const bool                            bTextureNotUploadable = pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE;
+        if ( bTextureNotUploadable )
             return false;
         if ( pRecord->_bDepthStencil != SW_FALSE )
             return false;
@@ -361,8 +366,9 @@ namespace sw
 
     bool OpenGLRHIResourceFactory::uploadTexture2DRegion( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
     {
-        OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
-        if ( pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE || pRecord->_bDepthStencil != SW_FALSE )
+        OpenGLRHIDevice::OpenGLTextureRecord* pRecord                     = _pDevice->resolveTexture( texture );
+        const bool                            bTextureRegionNotUploadable = pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE || pRecord->_bDepthStencil != SW_FALSE;
+        if ( bTextureRegionNotUploadable )
             return false;
         uint32 rowBytes{ 0 };
         if ( validateTextureRegionUpload( pRecord->_format, pRecord->_width, pRecord->_height, pRecord->_mipLevels, pRecord->_arraySize, desc, rowBytes ) == false )
@@ -399,8 +405,9 @@ namespace sw
 
     bool OpenGLRHIResourceFactory::readbackTexture2D( RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
     {
-        OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
-        if ( pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE )
+        OpenGLRHIDevice::OpenGLTextureRecord* pRecord             = _pDevice->resolveTexture( texture );
+        const bool                            bTextureNotReadable = pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE;
+        if ( bTextureNotReadable )
             return false;
         if ( mip >= pRecord->_mipLevels || arraySlice >= pRecord->_arraySize )
             return false;
@@ -446,7 +453,8 @@ namespace sw
 
     RHITextureHandle OpenGLRHIResourceFactory::createTexture2D( const RHITextureDesc& desc )
     {
-        if ( _pDevice->_bInitialized == SW_FALSE || desc._width == 0 || desc._height == 0 )
+        const bool bInvalidTextureRequest = _pDevice->_bInitialized == SW_FALSE || desc._width == 0 || desc._height == 0;
+        if ( bInvalidTextureRequest )
             return 0;
         if ( isRHITextureShapeValid( desc ) == false )
         {

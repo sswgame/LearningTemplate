@@ -65,10 +65,11 @@ namespace sw::editor
             EditorCommandShortcut pressed{};
             if ( EditorCommandGUI::findPressedShortcut( pressed ) )
             {
-                const EditorCommandDesc* pTarget = registry.find( _captureCommandID );
+                const EditorCommandDesc* pTarget               = registry.find( _captureCommandID );
+                const bool               bClearShortcutPressed = pTarget != nullptr && pressed._key == EditorCommandKey::Backspace && pressed._modifier == commandmodifier::kNone;
                 if ( pressed._key == EditorCommandKey::Escape && pressed._modifier == commandmodifier::kNone )
                     finishCapture();
-                else if ( pTarget != nullptr && pressed._key == EditorCommandKey::Backspace && pressed._modifier == commandmodifier::kNone )
+                else if ( bClearShortcutPressed )
                 {
                     applyShortcut( *pTarget, EditorCommandShortcut{} );
                     finishCapture();

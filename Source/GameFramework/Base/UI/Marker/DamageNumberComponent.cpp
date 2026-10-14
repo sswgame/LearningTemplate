@@ -37,7 +37,8 @@ namespace sw
         _alpha       = computeAlpha();
 
         // 글 위젯을 화면 마커에 넣는다. 끝날 때는 마커가 위젯을 지운다 — 다시 시작하면 다시 짓는다.
-        WidgetComponent* pWidget = findWidgetComponent();
+        WidgetComponent* pWidget            = findWidgetComponent();
+        const bool       bWarnMissingWidget = pWidget == nullptr && getOwner() != nullptr && _bWarnedNoWidgetComponent == false;
         if ( pWidget != nullptr && pWidget->getContent() == nullptr )
         {
             unique_ptr<TextWidget> text = sw::make_unique<TextWidget>();
@@ -45,7 +46,7 @@ namespace sw
             text->setVisibility( WidgetVisibility::HitTestInvisible );
             pWidget->setContent( std::move( text ) );
         }
-        else if ( pWidget == nullptr && getOwner() != nullptr && _bWarnedNoWidgetComponent == false )
+        else if ( bWarnMissingWidget )
         {
             _bWarnedNoWidgetComponent = true;
             SW_LOG_WARNING( "Damage number on '%#' has no WidgetComponent on its object - the number is not drawn", getOwner()->getName().c_str() );

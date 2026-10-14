@@ -147,10 +147,11 @@ namespace sw
         if ( pDirector == nullptr )
             return;
         // 같은 그룹의 다른 건물과 함께 읽는다 — 첨자 대신 포인터로(쓰기로 잡히지 않게).
-        const vector<CityBuilding>& listBuilding = pDirector->getCity().getBuildings();
-        const bool                  bInRange     = 0 <= _buildingIndex && _buildingIndex < static_cast<int32>( listBuilding.size() );
-        const CityBuilding*         pBuilding    = bInRange ? listBuilding.data() + _buildingIndex : nullptr;
-        if ( pBuilding == nullptr || pBuilding->_bAlive == SW_FALSE || pBuilding->_pDef == nullptr )
+        const vector<CityBuilding>& listBuilding         = pDirector->getCity().getBuildings();
+        const bool                  bInRange             = 0 <= _buildingIndex && _buildingIndex < static_cast<int32>( listBuilding.size() );
+        const CityBuilding*         pBuilding            = bInRange ? listBuilding.data() + _buildingIndex : nullptr;
+        const bool                  bBuildingUnavailable = pBuilding == nullptr || pBuilding->_bAlive == SW_FALSE || pBuilding->_pDef == nullptr;
+        if ( bBuildingUnavailable )
             return;
         const bool  bInhabited = pBuilding->_population > 0;
         const int32 key        = pBuilding->_level * 2 + ( bInhabited ? 1 : 0 );

@@ -281,8 +281,9 @@ namespace sw
         vector<PendingReport> listPending( pendingCount );
         for ( PendingReport& report : listPending )
         {
-            const bool bNamesRead = StateArchiveUtil::readName( archive, report._crimeID ) && StateArchiveUtil::readName( archive, report._regionID );
-            if ( bNamesRead == false || _pCatalog->findCrime( report._crimeID ) == nullptr || _pCatalog->findRegion( report._regionID ) == nullptr )
+            const bool bNamesRead         = StateArchiveUtil::readName( archive, report._crimeID ) && StateArchiveUtil::readName( archive, report._regionID );
+            const bool bInvalidReportData = bNamesRead == false || _pCatalog->findCrime( report._crimeID ) == nullptr || _pCatalog->findRegion( report._regionID ) == nullptr;
+            if ( bInvalidReportData )
                 return false;
             archive >> report._witnessID;
             archive >> report._incidentID;
@@ -297,7 +298,8 @@ namespace sw
         uint8  bDisguised     = SW_FALSE;
         archive >> nextIncidentID;
         archive >> bDisguised;
-        if ( archive.isError() || nextIncidentID == 0 || bDisguised > SW_TRUE )
+        const bool bInvalidLawState = archive.isError() || nextIncidentID == 0 || bDisguised > SW_TRUE;
+        if ( bInvalidLawState )
             return false;
         _listRecord     = std::move( listRecord );
         _listPending    = std::move( listPending );

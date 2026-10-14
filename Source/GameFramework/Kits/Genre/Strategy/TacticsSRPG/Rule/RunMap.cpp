@@ -45,7 +45,8 @@ namespace sw
             const utf8* pKind = node.findAttribute( "kind" );
             if ( index < 0 )
                 index += outSettings._floorCount; // −1 은 마지막 층이다
-            if ( pKind != nullptr && index >= 0 && index < outSettings._floorCount )
+            const bool bValidForcedFloor = pKind != nullptr && index >= 0 && index < outSettings._floorCount;
+            if ( bValidForcedFloor )
                 outSettings._listForcedFloor[static_cast<size_t>( index )] = hashed_string( pKind );
         }
         return outSettings._listRule.empty() == false;
@@ -119,8 +120,9 @@ namespace sw
         int32       firstStart = -1;
         for ( int32 pathIndex = 0; pathIndex < MathUtil::max( 1, settings._pathCount ); ++pathIndex )
         {
-            int32 column = random.nextInt( 0, _columnCount - 1 );
-            if ( pathIndex == 1 && column == firstStart && _columnCount > 1 )
+            int32      column               = random.nextInt( 0, _columnCount - 1 );
+            const bool bAvoidDuplicateStart = pathIndex == 1 && column == firstStart && _columnCount > 1;
+            if ( bAvoidDuplicateStart )
                 column = ( column + 1 ) % _columnCount;
             if ( pathIndex == 0 )
                 firstStart = column;

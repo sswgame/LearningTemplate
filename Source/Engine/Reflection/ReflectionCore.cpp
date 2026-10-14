@@ -536,7 +536,8 @@ namespace sw
         for ( const PropertyInfo& prop : getPropertiesWithBase() )
         {
             // 값이 객체 밖에 있는 프로퍼티는 객체를 통째로 복사해도 따라오지 않는다(그 위치를 찾는 슬롯 번호가 복사돼 두 객체가 한 위치를 나눠 쓴다).
-            if ( prop._bIsContainer == SW_TRUE || prop._containerKind != ContainerKind::None || prop.hasValueAccessor() )
+            const bool bNotPodProperty = prop._bIsContainer == SW_TRUE || prop._containerKind != ContainerKind::None || prop.hasValueAccessor();
+            if ( bNotPodProperty )
             {
                 _bIsPODFastPath = SW_FALSE;
                 break;

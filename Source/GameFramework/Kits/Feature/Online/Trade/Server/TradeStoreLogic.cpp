@@ -117,8 +117,9 @@ namespace sw
 
     TradeResult TradeStoreLogic::invite( AccountID fromID, AccountID toID, uint64 seed, int64 nowMs, TradeSnapshot& outSnapshot )
     {
-        using Internal = TradeStoreLogicInternal;
-        if ( fromID == kInvalidAccountID || toID == kInvalidAccountID || fromID == toID )
+        using Internal                       = TradeStoreLogicInternal;
+        const bool bInvalidTradeParticipants = fromID == kInvalidAccountID || toID == kInvalidAccountID || fromID == toID;
+        if ( bInvalidTradeParticipants )
             return TradeResult::Invalid;
         uint64 candidate = seed;
         for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
@@ -144,9 +145,10 @@ namespace sw
                 const bool        bExpired  = staleRead == TradeResult::Ok && ( stale._snapshot.isClosed() || isIdleExpired( stale._snapshot, _settings, nowMs ) );
                 if ( bOrphan == false && bExpired == false )
                     return staleRead == TradeResult::Ok ? ( sideIndex == 0 ? TradeResult::AlreadyTrading : TradeResult::PeerBusy ) : TradeResult::Unavailable;
-                arrLinkVersion[sideIndex]     = linkRaw._version;
-                const bool bAlreadyClosedHere = closedTradeID != 0 && closedTradeID == stale._snapshot._tradeID; // 두 사람의 이전 거래가 같은 것이다
-                if ( bExpired && stale._snapshot.isClosed() == false && bAlreadyClosedHere == false )
+                arrLinkVersion[sideIndex]         = linkRaw._version;
+                const bool bAlreadyClosedHere     = closedTradeID != 0 && closedTradeID == stale._snapshot._tradeID; // 두 사람의 이전 거래가 같은 것이다
+                const bool bShouldCloseStaleTrade = bExpired && stale._snapshot.isClosed() == false && bAlreadyClosedHere == false;
+                if ( bShouldCloseStaleTrade )
                 {
                     closedTradeID        = stale._snapshot._tradeID;
                     TradeSnapshot closed = stale._snapshot;

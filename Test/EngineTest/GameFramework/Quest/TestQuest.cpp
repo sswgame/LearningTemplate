@@ -66,7 +66,8 @@ SW_TEST_CASE( QuestTest, QuestsAdvanceThroughObjectivesBranchesAndRewards )
     int32              doneCount = 0;
     for ( const QuestEvent& event : listEvent )
     {
-        if ( event._questID == wolves && event._kind == QuestEvent::Kind::StageEntered && event._pReward != nullptr )
+        const bool bRewardStage = event._questID == wolves && event._kind == QuestEvent::Kind::StageEntered && event._pReward != nullptr;
+        if ( bRewardStage )
             pReward = event._pReward;
         doneCount += event._kind == QuestEvent::Kind::ObjectiveDone ? 1 : 0;
     }

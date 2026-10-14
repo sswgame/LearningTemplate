@@ -34,7 +34,8 @@ namespace sw
 {
     bool AutomationStepRegistry::registerStep( const AutomationStepRegistration* pRegistration )
     {
-        if ( pRegistration == nullptr || pRegistration->_pKind == nullptr || ( pRegistration->_pRun == nullptr && pRegistration->_pPrepare == nullptr ) )
+        const bool bInvalidStepRegistration = pRegistration == nullptr || pRegistration->_pKind == nullptr || ( pRegistration->_pRun == nullptr && pRegistration->_pPrepare == nullptr );
+        if ( bInvalidStepRegistration )
             return false;
         if ( AutomationStepRegistryInternal::getRegistrations().add( pRegistration, pRegistration->_pKind ) != RegistrationResult::Added )
         {
@@ -62,7 +63,8 @@ namespace sw
 
     bool AutomationStepRegistry::registerStartBlocker( const AutomationStartBlocker* pBlocker )
     {
-        if ( pBlocker == nullptr || pBlocker->_pName == nullptr || pBlocker->_pIsBlocking == nullptr )
+        const bool bInvalidBlockerRegistration = pBlocker == nullptr || pBlocker->_pName == nullptr || pBlocker->_pIsBlocking == nullptr;
+        if ( bInvalidBlockerRegistration )
             return false;
         if ( AutomationStepRegistryInternal::getStartBlockers().add( pBlocker, pBlocker->_pName ) != RegistrationResult::Added )
         {

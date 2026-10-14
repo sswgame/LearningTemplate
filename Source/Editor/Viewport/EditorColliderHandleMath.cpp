@@ -68,8 +68,9 @@ namespace sw::editor
     void EditorColliderHandleMath::collectHandles( const PhysicsShapeDesc3D& shape, uint32 shapeIndex, const float3& bodyPosition, const quaternion& bodyRotation,
                                                    const float3& bodyScale, vector<ColliderHandle>& outListHandle )
     {
-        using Internal = EditorColliderHandleMathInternal;
-        if ( shape._type != PhysicsShapeType3D::Box && shape._type != PhysicsShapeType3D::Sphere && shape._type != PhysicsShapeType3D::Capsule )
+        using Internal                   = EditorColliderHandleMathInternal;
+        const bool bUnsupportedShapeType = shape._type != PhysicsShapeType3D::Box && shape._type != PhysicsShapeType3D::Sphere && shape._type != PhysicsShapeType3D::Capsule;
+        if ( bUnsupportedShapeType )
             return;
         const PhysicsShapeDesc3D scaled        = PhysicsComponentUtil::makeScaledShape( shape, bodyScale );
         const quaternion         frameRotation = bodyRotation * quaternion::makeFromYawPitchRoll( scaled._localRotation );

@@ -45,8 +45,9 @@ namespace sw
             /** @brief `cheat.give <itemID> [count]` — 판 상태의 가방에 아이템을 넣습니다(슬롯 · 무게가 모자라면 일부만). */
             static bool runGive( const vector<string>& listArgument, string& outReply )
             {
-                int32 count = 1;
-                if ( listArgument.empty() || listArgument.size() > 2 || ( listArgument.size() == 2 && StringUtil::parseInt( listArgument[1], count ) == false ) || count < 1 )
+                int32      count                  = 1;
+                const bool bInvalidCountArguments = listArgument.empty() || listArgument.size() > 2 || ( listArgument.size() == 2 && StringUtil::parseInt( listArgument[1], count ) == false ) || count < 1;
+                if ( bInvalidCountArguments )
                     return false;
                 SessionStateComponent* pState = findSessionState( outReply );
                 if ( pState == nullptr )
@@ -65,8 +66,9 @@ namespace sw
             /** @brief `cheat.money <amount> [currency]` — 지갑에 돈을 더합니다(양수만). 통화를 적지 않으면 기본 통화입니다. */
             static bool runMoney( const vector<string>& listArgument, string& outReply )
             {
-                int64 amount = 0;
-                if ( listArgument.empty() || listArgument.size() > 2 || StringUtil::parseInt64( listArgument[0], amount ) == false || amount <= 0 )
+                int64      amount                  = 0;
+                const bool bInvalidAmountArguments = listArgument.empty() || listArgument.size() > 2 || StringUtil::parseInt64( listArgument[0], amount ) == false || amount <= 0;
+                if ( bInvalidAmountArguments )
                     return false;
                 SessionStateComponent* pState = findSessionState( outReply );
                 if ( pState == nullptr )

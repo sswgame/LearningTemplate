@@ -260,7 +260,8 @@ namespace sw
         int32                   bodyIndex = hit._bodyIndex;
         if ( bodyIndex < 0 && pRagdoll != nullptr )
             (void)pRagdoll->findHitZone( hit._body, bodyIndex );
-        if ( pAsset == nullptr || bodyIndex < 0 || static_cast<size_t>( bodyIndex ) >= pAsset->_listBody.size() )
+        const bool bInvalidBodyRegion = pAsset == nullptr || bodyIndex < 0 || static_cast<size_t>( bodyIndex ) >= pAsset->_listBody.size();
+        if ( bInvalidBodyRegion )
             return;
         const hashed_string region = findRegionOfBone( pAsset->_listBody[static_cast<size_t>( bodyIndex )]._bone );
         if ( region.empty() || std::find( _listSeverableRegion.begin(), _listSeverableRegion.end(), region ) == _listSeverableRegion.end() )
@@ -270,11 +271,12 @@ namespace sw
 
     bool DismembermentComponent::severRegion( const hashed_string& region, const float3& impulse )
     {
-        GameObject*            pOwner      = getOwner();
-        GameObjectManager*     pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        SkeletalMeshComponent* pUnit       = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
-        const int32            regionIndex = findRegionIndex( region );
-        if ( pManager == nullptr || pUnit == nullptr || pUnit->getMesh() == nullptr || pUnit->getMesh()->hasSkin() == false || regionIndex < 0 )
+        GameObject*            pOwner       = getOwner();
+        GameObjectManager*     pManager     = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        SkeletalMeshComponent* pUnit        = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
+        const int32            regionIndex  = findRegionIndex( region );
+        const bool             bCannotSever = pManager == nullptr || pUnit == nullptr || pUnit->getMesh() == nullptr || pUnit->getMesh()->hasSkin() == false || regionIndex < 0;
+        if ( bCannotSever )
             return false;
         if ( std::find( _listSeveredRegion.begin(), _listSeveredRegion.end(), region ) != _listSeveredRegion.end() )
             return false;

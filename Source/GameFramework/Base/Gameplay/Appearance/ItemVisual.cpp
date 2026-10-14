@@ -101,9 +101,10 @@ namespace sw
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrMaterialVariantAttribute, report, sourceName );
                     AppearancePartVariantDef variant;
-                    variant._name     = AppearanceXMLUtil::readName( child, "name" );
-                    variant._material = AppearanceXMLUtil::readName( child, "material" );
-                    if ( variant._name.empty() || variant._material.empty() || inoutPart.findMaterialVariant( variant._name ) != nullptr )
+                    variant._name              = AppearanceXMLUtil::readName( child, "name" );
+                    variant._material          = AppearanceXMLUtil::readName( child, "material" );
+                    const bool bInvalidVariant = variant._name.empty() || variant._material.empty() || inoutPart.findMaterialVariant( variant._name ) != nullptr;
+                    if ( bInvalidVariant )
                         report.addError( "%#: visual '%#' part '%#' has a bad or duplicate material variant '%#'", sourceName, visualID.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
                     else
                         inoutPart._listMaterialVariant.push_back( variant );
@@ -212,11 +213,12 @@ namespace sw
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrStageAttribute, report, sourceName );
                 AppearanceDamageStageDef stage;
-                stage._name            = AppearanceXMLUtil::readName( node, "name" );
-                stage._threshold       = node.getAttributeFloat( "threshold", -1.0f );
-                const float32 previous = inoutVisual._listDamageStage.empty() ? 0.0f : inoutVisual._listDamageStage.back()._threshold;
-                const bool    bOrdered = previous < stage._threshold && stage._threshold <= 1.0f;
-                if ( stage._name.empty() || inoutVisual.findDamageStage( stage._name ) != nullptr || bOrdered == false )
+                stage._name                       = AppearanceXMLUtil::readName( node, "name" );
+                stage._threshold                  = node.getAttributeFloat( "threshold", -1.0f );
+                const float32 previous            = inoutVisual._listDamageStage.empty() ? 0.0f : inoutVisual._listDamageStage.back()._threshold;
+                const bool    bOrdered            = previous < stage._threshold && stage._threshold <= 1.0f;
+                const bool    bInvalidDamageStage = stage._name.empty() || inoutVisual.findDamageStage( stage._name ) != nullptr || bOrdered == false;
+                if ( bInvalidDamageStage )
                 {
                     report.addError( "%#: visual '%#' damage stage '%#' needs a unique name and a threshold in (previous, 1]", sourceName, inoutVisual._id.c_str(), stage._name.c_str() );
                     return;

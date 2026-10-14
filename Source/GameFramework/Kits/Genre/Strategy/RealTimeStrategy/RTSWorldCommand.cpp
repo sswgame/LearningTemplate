@@ -150,8 +150,9 @@ namespace sw
         RTSUnit* pWorker = findUnitMutable( workerID );
         if ( pWorker == nullptr )
             return RTSCommandResult::InvalidUnit;
-        const RTSUnitDef* pDef = _pCatalog->findUnit( buildingID );
-        if ( pDef == nullptr || pDef->_kind != RTSUnitKind::Building || pWorker->_pDef->_bWorker == SW_FALSE || pDef->_producedBy != pWorker->_pDef->_id )
+        const RTSUnitDef* pDef         = _pCatalog->findUnit( buildingID );
+        const bool        bCannotBuild = pDef == nullptr || pDef->_kind != RTSUnitKind::Building || pWorker->_pDef->_bWorker == SW_FALSE || pDef->_producedBy != pWorker->_pDef->_id;
+        if ( bCannotBuild )
             return RTSCommandResult::CannotDo;
         const RTSCommandResult costResult = evaluateCost( pWorker->_owner, *pDef );
         if ( costResult != RTSCommandResult::Ok )
@@ -207,7 +208,8 @@ namespace sw
             {
                 if ( issueGather( unitID, targetID, bQueue ) == RTSCommandResult::Ok )
                     return RTSCommandResult::Ok;
-                if ( pTarget->isBuilding() && pTarget->_owner == pUnit->_owner && pTarget->isConstructed() == false )
+                const bool bShouldAssistBuild = pTarget->isBuilding() && pTarget->_owner == pUnit->_owner && pTarget->isConstructed() == false;
+                if ( bShouldAssistBuild )
                 {
                     RTSOrder order;
                     order._type       = RTSOrderType::Build;
@@ -227,8 +229,9 @@ namespace sw
         int32 groundCount = 0;
         for ( const RTSUnitID unitID : listUnit )
         {
-            const RTSUnit* pUnit = findUnit( unitID );
-            if ( pUnit != nullptr && pUnit->isMobile() && RTSWorldCommandInternal::isGround( *pUnit ) )
+            const RTSUnit* pUnit         = findUnit( unitID );
+            const bool     bGroundMobile = pUnit != nullptr && pUnit->isMobile() && RTSWorldCommandInternal::isGround( *pUnit );
+            if ( bGroundMobile )
                 ++groundCount;
         }
         const float32 arriveRadius = 0.5f + 0.5f * MathUtil::sqrt( static_cast<float32>( listUnit.size() ) );
@@ -257,9 +260,10 @@ namespace sw
         RTSUnit* pBuilding = findUnitMutable( buildingID );
         if ( pBuilding == nullptr )
             return RTSCommandResult::InvalidUnit;
-        const RTSUnitDef* pDef = _pCatalog->findUnit( unitID );
-        if ( pDef == nullptr || pDef->isMobile() == false || pBuilding->isBuilding() == false || pBuilding->isConstructed() == false ||
-             pDef->_producedBy != pBuilding->_pDef->_id )
+        const RTSUnitDef* pDef         = _pCatalog->findUnit( unitID );
+        const bool        bCannotTrain = pDef == nullptr || pDef->isMobile() == false || pBuilding->isBuilding() == false || pBuilding->isConstructed() == false ||
+                                  pDef->_producedBy != pBuilding->_pDef->_id;
+        if ( bCannotTrain )
             return RTSCommandResult::CannotDo;
         if ( static_cast<int32>( pBuilding->_listProduction.size() ) >= _settings._productionQueueMax )
             return RTSCommandResult::QueueFull;

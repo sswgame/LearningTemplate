@@ -26,7 +26,8 @@ namespace sw
             /** @brief 양끝의 큰따옴표 한 쌍을 벗깁니다. 공백은 건드리지 않습니다(글 칸은 끝 공백도 값이라 왕복이 고정점이어야 한다). */
             static string_view stripQuotes( string_view strView )
             {
-                if ( strView.size() >= 2 && strView.front() == '"' && strView.back() == '"' )
+                const bool bQuotedText = strView.size() >= 2 && strView.front() == '"' && strView.back() == '"';
+                if ( bQuotedText )
                 {
                     strView.remove_prefix( 1 );
                     strView.remove_suffix( 1 );
@@ -43,8 +44,9 @@ namespace sw
             template <typename T>
             static void regBuiltinBin( SerializeContext& context, const utf8* pName )
             {
-                if constexpr ( std::is_same_v<T, string> || std::is_same_v<T, hashed_string> ||
-                               std::is_same_v<T, atomic<bool>> || std::is_same_v<T, TagID> )
+                constexpr bool bSkippedBuiltInType = std::is_same_v<T, string> || std::is_same_v<T, hashed_string> ||
+                                                     std::is_same_v<T, atomic<bool>> || std::is_same_v<T, TagID>;
+                if constexpr ( bSkippedBuiltInType )
                     return;
                 auto writeFn = []( const void* pPtr, vector<uint8>& listBuf )
                 {

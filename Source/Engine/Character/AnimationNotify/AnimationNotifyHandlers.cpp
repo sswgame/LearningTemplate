@@ -309,7 +309,8 @@ namespace sw
                     const vector<Component*> listTarget( context._owner.getComponents().begin(), context._owner.getComponents().end() );
                     for ( Component* pComponent : listTarget )
                     {
-                        if ( pComponent != nullptr && pComponent->isPendingDestroy() == false && pComponent->isSelfActive() )
+                        const bool bComponentCanReceiveNotify = pComponent != nullptr && pComponent->isPendingDestroy() == false && pComponent->isSelfActive();
+                        if ( bComponentCanReceiveNotify )
                             pComponent->onAnimationNotify( info );
                     }
                 }

@@ -295,9 +295,10 @@ namespace sw
                 {
                     for ( XMLNode entry = _overrideRoot.findChild( kOverride, false ); entry.isValid(); entry = entry.findNextSibling( kOverride, false ) )
                     {
-                        const utf8*   pKey    = entry.findAttribute( kKey, false );
-                        const XMLNode partial = findFirstElement( entry );
-                        if ( pKey != nullptr && component._key == pKey && partial.isValid() && isSameText( partial.getName(), component._node.getName() ) )
+                        const utf8*   pKey                    = entry.findAttribute( kKey, false );
+                        const XMLNode partial                 = findFirstElement( entry );
+                        const bool    bMatchingComponentEntry = pKey != nullptr && component._key == pKey && partial.isValid() && isSameText( partial.getName(), component._node.getName() );
+                        if ( bMatchingComponentEntry )
                             return partial;
                     }
                     return {};

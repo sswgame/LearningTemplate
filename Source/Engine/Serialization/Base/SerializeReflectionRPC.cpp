@@ -220,7 +220,8 @@ namespace sw
 
     TaskValue ReflectionRPC::unpackAndInvoke( void* pInstance, const TypeInfo& instanceType, const RPCEnvelope& envelope )
     {
-        if ( pInstance == nullptr || envelope._typeFqn.empty() || envelope._methodName.empty() )
+        const bool bInvalidEnvelope = pInstance == nullptr || envelope._typeFqn.empty() || envelope._methodName.empty();
+        if ( bInvalidEnvelope )
             return {};
 
         // 봉투의 이름은 찾기만 한다(`findInterned`) — 받은 문자열로 전역 이름 표를 채우지 않는다.

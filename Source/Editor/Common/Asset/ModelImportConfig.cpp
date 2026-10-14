@@ -326,9 +326,10 @@ namespace sw::editor
         }
         if ( fractureValue.has( "slices" ) )
         {
-            float32    arrSlice[3] = { 0.0f, 0.0f, 0.0f };
-            const bool bRead       = AnimationJSONUtil::readFloats( fractureValue.get( "slices" ), arrSlice, 3 );
-            if ( bRead == false || arrSlice[0] < 1.0f || arrSlice[1] < 1.0f || arrSlice[2] < 1.0f )
+            float32    arrSlice[3]            = { 0.0f, 0.0f, 0.0f };
+            const bool bRead                  = AnimationJSONUtil::readFloats( fractureValue.get( "slices" ), arrSlice, 3 );
+            const bool bInvalidFractureSlices = bRead == false || arrSlice[0] < 1.0f || arrSlice[1] < 1.0f || arrSlice[2] < 1.0f;
+            if ( bInvalidFractureSlices )
             {
                 SW_LOG_ERROR( "%#: slices must be three positive integers.", context.c_str() );
                 return false;

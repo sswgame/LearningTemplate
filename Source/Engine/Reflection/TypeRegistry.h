@@ -43,7 +43,8 @@ namespace sw
             constexpr string_view kMarker       = constant::reflection::kTypeFqnPrefix;
             const size_t          markerPos     = sig.find( kMarker );
             const size_t          closeAnglePos = sig.rfind( '>' );
-            if ( markerPos != string_view::npos && closeAnglePos != string_view::npos && closeAnglePos > markerPos + kMarker.size() )
+            const bool            bMarkerFound  = markerPos != string_view::npos && closeAnglePos != string_view::npos && closeAnglePos > markerPos + kMarker.size();
+            if ( bMarkerFound )
                 inner = sig.substr( markerPos + kMarker.size(), closeAnglePos - markerPos - kMarker.size() );
         }
 
@@ -287,7 +288,8 @@ namespace sw
             for ( const auto& [fqn, pTypeInfo] : _mapFqnToClassType )
             {
                 (void)fqn;
-                if ( pTypeInfo->isAlive() && pTypeInfo.get() != pBaseType && pTypeInfo->isDerivedFrom( baseFqn ) )
+                const bool bDerivedAliveType = pTypeInfo->isAlive() && pTypeInfo.get() != pBaseType && pTypeInfo->isDerivedFrom( baseFqn );
+                if ( bDerivedAliveType )
                     listResult.push_back( pTypeInfo.get() );
             }
             return listResult;

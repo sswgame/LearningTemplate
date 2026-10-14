@@ -76,8 +76,9 @@ namespace sw
                     return nullptr;
                 for ( const utf8* pCursor = pFile; *pCursor != '\0'; ++pCursor )
                 {
-                    const bool bSeparator = ( pCursor == pFile ) || pCursor[-1] == '/' || pCursor[-1] == '\\';
-                    if ( bSeparator && std::strncmp( pCursor, "Source", 6 ) == 0 && ( pCursor[6] == '/' || pCursor[6] == '\\' ) )
+                    const bool bSeparator         = ( pCursor == pFile ) || pCursor[-1] == '/' || pCursor[-1] == '\\';
+                    const bool bSourceFolderMatch = bSeparator && std::strncmp( pCursor, "Source", 6 ) == 0 && ( pCursor[6] == '/' || pCursor[6] == '\\' );
+                    if ( bSourceFolderMatch )
                         return pCursor;
                 }
                 return pFile;

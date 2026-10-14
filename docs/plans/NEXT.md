@@ -35,7 +35,7 @@ main 은 `origin/main` 보다 184 커밋 앞서 있고 push 하지 않았습니�
 
 ## 3. 계획한 큰 일 (순서대로)
 
-1. **정리 3 종과 폴더 쪼개기.** 조건 세 부분 이상 기존 위반 1,773 건(754 파일)은 영역별로 한 작업자가 맡습니다. 영역은 `Source` 하위, `Tools/ReflectionParser`, `Test`, `Tools/OnlineLoadBot` 입니다(사용자가 정한 범주). 이어서 C-28(`engine::getXxx` 약 826 줄) 과 폴더 쪼개기(`Editor/Common/Commands` 61 · `Engine/Object/GameObject` 45 · `Engine/Renderer/Frame` 43)를 합니다. 셋은 파일이 크게 겹치므로 한 번에 하나씩 합니다.
+1. **C-28 과 폴더 쪼개기.** C-28(`engine::getXxx` 약 826 줄) 과 폴더 쪼개기(`Editor/Common/Commands` 61 · `Engine/Object/GameObject` 45 · `Engine/Renderer/Frame` 43)를 합니다. 둘은 파일이 크게 겹치므로 한 번에 하나씩 합니다. 영역은 `Source` 하위, `Tools/ReflectionParser`, `Test`, `Tools/OnlineLoadBot` 입니다(사용자가 정한 범주).
 2. **구조 리팩토링과 데이터 주도 적용.** 조사 결과는 아래 4 절입니다. 사용자 결정이 필요한 것은 3 가지입니다.
 3. **서브틱 활용 조사.** `PostUpdate` 로 옮긴 컴포넌트 41 개를 전수 분류합니다(5 절).
 4. **그 밖.** 지형 후속(식생 · 내비 재계산, 콜라이더 부분 갱신 측정), 다중 월드 잔여(프리팹 창, 창별 선택과 전역 선택 연결, 스카이), 캐릭터 편집 (a) 미리보기 씬 이관과 (c) 슬라이더, 서버 디버그 잔여(클라이언트 해시, 어긋난 오브젝트 짚기), `nogpu` 샤드 결정, `TaskNode` · PCH · 에디터 기동 시간 측정, 열린 결함 A-2(TDR 뒤 행).

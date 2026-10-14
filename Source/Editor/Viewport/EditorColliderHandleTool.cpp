@@ -57,7 +57,8 @@ namespace sw::editor
             /** @brief 끌기를 정리합니다. 셰이프가 바뀌었고 오브젝트가 아직 있으면 끌기 전 상태로 되돌리기를 남깁니다. */
             static void endDrag( State& state, bool bCommit )
             {
-                if ( bCommit && state._bChanged && EditorPlaySession::areSceneEditsAllowed() )
+                const bool bCommitDrag = bCommit && state._bChanged && EditorPlaySession::areSceneEditsAllowed();
+                if ( bCommitDrag )
                 {
                     GameObject* pObject = editor::findGameObject( state._object );
                     if ( pObject != nullptr && state._undoBefore._xml.empty() == false )
@@ -94,10 +95,11 @@ namespace sw::editor
                     return false;
                 const float32 distance = EditorColliderHandleMath::computeClosestAxisParameter( ray._origin, ray._direction, state._active._center, state._active._direction );
                 // 축은 중심에서 손잡이 쪽을 향하므로 레이가 가리키는 점의 거리가 곧 새 가장자리까지의 거리다.
-                const PhysicsShapeDesc3D& current = listShape[state._active._shapeIndex];
-                PhysicsShapeDesc3D        resized = EditorColliderHandleMath::applyDrag( current, state._active, distance, bodyScale );
-                if ( resized._halfExtents._x == current._halfExtents._x && resized._halfExtents._y == current._halfExtents._y &&
-                     resized._halfExtents._z == current._halfExtents._z && resized._radius == current._radius && resized._halfHeight == current._halfHeight )
+                const PhysicsShapeDesc3D& current         = listShape[state._active._shapeIndex];
+                PhysicsShapeDesc3D        resized         = EditorColliderHandleMath::applyDrag( current, state._active, distance, bodyScale );
+                const bool                bShapeUnchanged = resized._halfExtents._x == current._halfExtents._x && resized._halfExtents._y == current._halfExtents._y &&
+                                             resized._halfExtents._z == current._halfExtents._z && resized._radius == current._radius && resized._halfHeight == current._halfHeight;
+                if ( bShapeUnchanged )
                     return false;
                 vector<PhysicsShapeDesc3D> listResized = listShape;
                 listResized[state._active._shapeIndex] = resized;
@@ -146,8 +148,9 @@ namespace sw::editor
             pObject = editor::findGameObject( state._object );
         else if ( pContext != nullptr && pContext->getSubsystem<EditorSelection>().getSelectedObjectCount() == 1 )
             pObject = pContext->getSubsystem<EditorSelection>().getPrimaryObject();
-        RigidBodyComponent* pBody = pObject != nullptr ? pObject->getComponent<RigidBodyComponent>() : nullptr;
-        if ( pBody == nullptr || args._pViewProj == nullptr || args._pDrawList == nullptr || EditorPlaySession::areSceneEditsAllowed() == false )
+        RigidBodyComponent* pBody               = pObject != nullptr ? pObject->getComponent<RigidBodyComponent>() : nullptr;
+        const bool          bHandlesUnavailable = pBody == nullptr || args._pViewProj == nullptr || args._pDrawList == nullptr || EditorPlaySession::areSceneEditsAllowed() == false;
+        if ( bHandlesUnavailable )
         {
             if ( state._bDragging )
                 Internal::endDrag( state, false );
@@ -192,10 +195,11 @@ namespace sw::editor
             Internal::noteHandle( handle, screen );
             const bool bActive = state._bDragging && handle._shapeIndex == state._active._shapeIndex && handle._axis == state._active._axis &&
                                  handle._sign == state._active._sign;
-            const float32 dx       = mouse.x - screen.x;
-            const float32 dy       = mouse.y - screen.y;
-            const float32 distance = ::sqrtf( dx * dx + dy * dy );
-            if ( state._bDragging == false && bMouseInside && args._bGizmoDragging == false && distance <= hoveredDistance )
+            const float32 dx                     = mouse.x - screen.x;
+            const float32 dy                     = mouse.y - screen.y;
+            const float32 distance               = ::sqrtf( dx * dx + dy * dy );
+            const bool    bNearestHoverCandidate = state._bDragging == false && bMouseInside && args._bGizmoDragging == false && distance <= hoveredDistance;
+            if ( bNearestHoverCandidate )
             {
                 hoveredDistance = distance;
                 pHovered        = &handle;

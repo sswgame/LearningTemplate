@@ -825,10 +825,11 @@ namespace sw
     {
         if ( isScreenOpen() == false )
             return false;
-        const UIScreen* pScreen = _pUI->findScreen( _screen );
-        const Widget*   pPanel  = pScreen->getTree().findWidget<Widget>( hashed_string( kPanelName ) );
-        const float2&   size    = _pUI->getViewport()._size;
-        if ( pPanel == nullptr || pPanel->getGeometry()._size._x <= 0.0f || size._x <= 0.0f )
+        const UIScreen* pScreen           = _pUI->findScreen( _screen );
+        const Widget*   pPanel            = pScreen->getTree().findWidget<Widget>( hashed_string( kPanelName ) );
+        const float2&   size              = _pUI->getViewport()._size;
+        const bool      bPanelUnavailable = pPanel == nullptr || pPanel->getGeometry()._size._x <= 0.0f || size._x <= 0.0f;
+        if ( bPanelUnavailable )
             return false;
         const WidgetGeometry& geometry = pPanel->getGeometry();
         const float2          center{ geometry._position._x + geometry._size._x * 0.5f, geometry._position._y + geometry._size._y * 0.5f };

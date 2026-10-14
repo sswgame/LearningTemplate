@@ -20,7 +20,8 @@ namespace sw
         _state       = D3D12_RESOURCE_STATE_PRESENT;
 
         // 창이 없으면 네이티브 스왑체인도 없다. 크기만 기억해 두면 오프스크린 경로는 그대로 돈다.
-        if ( _pHWnd == nullptr || _width == 0 || _height == 0 )
+        const bool bNoNativeSwapChain = _pHWnd == nullptr || _width == 0 || _height == 0;
+        if ( bNoNativeSwapChain )
             return true;
 
         if ( pFactory == nullptr || pQueue == nullptr )
@@ -64,7 +65,8 @@ namespace sw
 
     void D3D12RHISwapChain::createBackBuffers( ID3D12Device* pDevice, ID3D12DescriptorHeap* pRtvHeap, uint32 rtvDescriptorSize )
     {
-        if ( _swapChain == nullptr || pDevice == nullptr || pRtvHeap == nullptr )
+        const bool bCannotCreateBackBuffers = _swapChain == nullptr || pDevice == nullptr || pRtvHeap == nullptr;
+        if ( bCannotCreateBackBuffers )
             return;
 
         _listBackBuffer.resize( _bufferCount );

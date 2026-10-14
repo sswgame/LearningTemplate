@@ -211,7 +211,8 @@ namespace sw
             return false;
         // 컴포넌트를 꺼도 빠진다(`isActive` 는 자기 비트와 소유 오브젝트의 계층 활성을 함께 본다).
         // 소유 오브젝트만 보면 빛은 컴포넌트를 끄면 꺼지는데 메시는 그대로 그려진다.
-        if ( pMeshComp->getOwner() == nullptr || pMeshComp->isActive() == false || pMeshComp->getOwner()->isHiddenInEditor() )
+        const bool bExcludedMeshComponent = pMeshComp->getOwner() == nullptr || pMeshComp->isActive() == false || pMeshComp->getOwner()->isHiddenInEditor();
+        if ( bExcludedMeshComponent )
             return false;
         Mesh* pMesh = pMeshComp->getRawMesh();
         if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )
@@ -245,8 +246,9 @@ namespace sw
 
     bool GPUSceneBuilder::fillCandidateFromInstanceEntry( const PrimitiveInstanceEntry& entry, Scene* pScene, DrawCandidate& candidate )
     {
-        const MeshInstanceBatch* pBatch = entry._pBatch;
-        if ( pBatch == nullptr || pBatch->isVisible() == false || entry._index >= pBatch->getCount() )
+        const MeshInstanceBatch* pBatch            = entry._pBatch;
+        const bool               bHiddenBatchEntry = pBatch == nullptr || pBatch->isVisible() == false || entry._index >= pBatch->getCount();
+        if ( bHiddenBatchEntry )
             return false;
         // 항목 하나만 숨길 수 있다(데미지 숫자의 남는 자릿수나 길이 0인 HP 바 구간). 실릴지가 바뀌면 부분 수집이 전체로 넘어간다.
         if ( pBatch->isEntryVisible( entry._index ) == false )
@@ -418,7 +420,8 @@ namespace sw
         // 아무도 "바뀌었다" 고 말하지 않았고 카메라도 그대로면 **수집 자체를 하지 않는다**.
         // 바꾼 쪽이 알려 주므로 정지한 씬의 비용은 0에 수렴한다. 주의: 이 판단을 위해 모든 GameObject 의
         // Component 를 훑어 후보를 만들어 보면, 화면이 정지해 있어도 씬 크기만큼 비용이 든다.
-        if ( bSetSame && bCamSame && bPermutationSame && primitives.hasDirty() == false )
+        const bool bNothingChanged = bSetSame && bCamSame && bPermutationSame && primitives.hasDirty() == false;
+        if ( bNothingChanged )
             return;
 
         // 렌더 상태가 바뀐 것과 월드 행렬만 바뀐 것을 따로 받는다. 뒤쪽은 다시 모으지 않는다(`copyCandidateTransforms`).
@@ -838,9 +841,10 @@ namespace sw
     void GPUSceneBuilder::computeViewTransparentOrders( const vector<RenderViewRequest>& listView )
     {
         _snapshot._listViewTransparentOrder.clear();
-        const vector<GPUInstance>*  pInstance = _instanceRing.getPublished();
-        const vector<GPUMeshBatch>& listBatch = _snapshot._listTransparentBatch;
-        if ( pInstance == nullptr || listBatch.empty() || listView.empty() )
+        const vector<GPUInstance>*  pInstance          = _instanceRing.getPublished();
+        const vector<GPUMeshBatch>& listBatch          = _snapshot._listTransparentBatch;
+        const bool                  bNoTransparentTail = pInstance == nullptr || listBatch.empty() || listView.empty();
+        if ( bNoTransparentTail )
             return;
         const uint32 instanceCount = static_cast<uint32>( pInstance->size() );
         const uint32 tailBase      = MathUtil::min( _opaqueInstanceCount, instanceCount );
@@ -876,7 +880,8 @@ namespace sw
         // 그대로 옮긴다). 결과는 아무도 읽지 않는 링 슬롯에 쓴다. 되복사가 없다(GPUInstanceRing.h).
         const vector<GPUInstance>* pPrevious = _instanceRing.getPublished();
         // 매핑이 인스턴스 수와 맞아야 한다. 한 번이라도 전체 빌드를 하지 않았으면 쓸 수 없다.
-        if ( pPrevious == nullptr || pPrevious->empty() || _listInstanceSrcIndex.size() != pPrevious->size() )
+        const bool bNoPreviousPublish = pPrevious == nullptr || pPrevious->empty() || _listInstanceSrcIndex.size() != pPrevious->size();
+        if ( bNoPreviousPublish )
             return false;
         // 투명은 카메라 거리로 매 프레임 다시 정렬한다. 그 순서가 바뀌면 투명 인스턴스의 위치가 달라지지만
         // **불투명 접두부는 그대로다**. 접두부만 제자리 갱신하고 꼬리는 새 순서로 다시 방출한다.
@@ -1077,7 +1082,8 @@ namespace sw
             GPUSceneBuilderInternal::copyPayload( raw, instance );
             if ( bPartialRefresh )
             {
-                if ( previousSpinSeed != 0 && instance._spinSeed == 0 && _snapshot._spinInstanceCount > 0 )
+                const bool bSpinSeedRemoved = previousSpinSeed != 0 && instance._spinSeed == 0 && _snapshot._spinInstanceCount > 0;
+                if ( bSpinSeedRemoved )
                     --_snapshot._spinInstanceCount;
                 else if ( previousSpinSeed == 0 && instance._spinSeed != 0 )
                     ++_snapshot._spinInstanceCount;

@@ -59,7 +59,8 @@ namespace sw::editor
 
     void ViewportInputOverlay::draw( ImDrawList* pDrawList, const ImVec2& viewportScreenPos, const ImVec2& viewportSize, const InputManager* pInput, const InputMap* pInputMap, const ViewportInputOverlayConfig& config )
     {
-        if ( pDrawList == nullptr || config._bEnabled == SW_FALSE || pInput == nullptr )
+        const bool bOverlayHidden = pDrawList == nullptr || config._bEnabled == SW_FALSE || pInput == nullptr;
+        if ( bOverlayHidden )
             return;
 
         const float32 boxW      = 260.0f * config._scale;

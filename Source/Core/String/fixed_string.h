@@ -389,8 +389,9 @@ namespace sw
             }
             else if constexpr ( sizeof( T ) == 2 )
             {
-                const uint32 unit = static_cast<uint32>( static_cast<uint16>( pSource[cut] ) );
-                if ( cut > 0 && unit >= 0xDC00 && unit <= 0xDFFF )
+                const uint32 unit                    = static_cast<uint32>( static_cast<uint16>( pSource[cut] ) );
+                const bool   bCutInsideSurrogatePair = cut > 0 && unit >= 0xDC00 && unit <= 0xDFFF;
+                if ( bCutInsideSurrogatePair )
                     --cut;
             }
             return cut;

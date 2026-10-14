@@ -57,10 +57,11 @@ namespace sw
     void ScareTriggerComponent::onOverlapBegin( const OverlapInfo& overlap )
     {
         Component::onOverlapBegin( overlap );
-        const bool  bTagged = overlap._pOther != nullptr && ( _requiredTags.getTagCount() == 0 || overlap._pOther->getTags().hasAllTags( _requiredTags ) );
-        const bool  bReady  = ( _bOnce == false || _fireCount == 0 ) && _cooldownLeft <= 0.0f;
-        GameObject* pOwner  = getOwner();
-        if ( bTagged == false || bReady == false || pOwner == nullptr )
+        const bool  bTagged     = overlap._pOther != nullptr && ( _requiredTags.getTagCount() == 0 || overlap._pOther->getTags().hasAllTags( _requiredTags ) );
+        const bool  bReady      = ( _bOnce == false || _fireCount == 0 ) && _cooldownLeft <= 0.0f;
+        GameObject* pOwner      = getOwner();
+        const bool  bCannotFire = bTagged == false || bReady == false || pOwner == nullptr;
+        if ( bCannotFire )
             return;
         ++_fireCount;
         _cooldownLeft = _cooldown;
@@ -116,11 +117,12 @@ namespace sw
     {
         Component::onTick( deltaTime );
         _step += _clock.consume( deltaTime );
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        LightComponent*    pLight   = pOwner != nullptr ? pOwner->getComponent<LightComponent>() : nullptr;
-        const float32      scale    = computeScaleAtStep( _step );
-        if ( pLight == nullptr || pManager == nullptr || scale == _appliedScale )
+        GameObject*        pOwner               = getOwner();
+        GameObjectManager* pManager             = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        LightComponent*    pLight               = pOwner != nullptr ? pOwner->getComponent<LightComponent>() : nullptr;
+        const float32      scale                = computeScaleAtStep( _step );
+        const bool         bNoLightUpdateNeeded = pLight == nullptr || pManager == nullptr || scale == _appliedScale;
+        if ( bNoLightUpdateNeeded )
             return;
         _appliedScale                = scale;
         const ComponentHandle light  = pLight->getHandle();
@@ -167,10 +169,11 @@ namespace sw
     void HidingSpotComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        GameObject*             pOwner   = getOwner();
-        GameObjectManager*      pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        GimmickSensorComponent* pSensor  = pOwner != nullptr ? pOwner->getComponent<GimmickSensorComponent>() : nullptr;
-        if ( pManager == nullptr || pSensor == nullptr || pSensor->consumeUses() <= 0.0f )
+        GameObject*             pOwner           = getOwner();
+        GameObjectManager*      pManager         = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GimmickSensorComponent* pSensor          = pOwner != nullptr ? pOwner->getComponent<GimmickSensorComponent>() : nullptr;
+        const bool              bNoUsesAvailable = pManager == nullptr || pSensor == nullptr || pSensor->consumeUses() <= 0.0f;
+        if ( bNoUsesAvailable )
             return;
         const InteractableComponent* pInteractable = pOwner->getComponent<InteractableComponent>();
         GameObject*                  pWho          = pInteractable != nullptr ? pManager->resolveGameObject( pInteractable->getLastInteractor() ) : nullptr;
@@ -247,8 +250,9 @@ namespace sw
                 if ( bOcclusion == false || Internal::isOccluded( manager, position, toward, ignoreObjectID, pObject->getObjectID() ) == false )
                     exposure += pSun->getIntensity();
             }
-            const PointLightComponent* pPoint = pObject->getComponent<PointLightComponent>();
-            if ( pPoint != nullptr && pPoint->isActive() && pPoint->getRadius() > 0.0f )
+            const PointLightComponent* pPoint            = pObject->getComponent<PointLightComponent>();
+            const bool                 bPointLightActive = pPoint != nullptr && pPoint->isActive() && pPoint->getRadius() > 0.0f;
+            if ( bPointLightActive )
             {
                 const float32 distance = float3::getDistance( position, pPoint->getLightPosition() );
                 const float32 falloff  = MathUtil::max( 0.0f, 1.0f - distance / pPoint->getRadius() );
@@ -256,8 +260,9 @@ namespace sw
                 if ( bBlocked == false )
                     exposure += pPoint->getIntensity() * falloff * falloff;
             }
-            const SpotLightComponent* pSpot = pObject->getComponent<SpotLightComponent>();
-            if ( pSpot != nullptr && pSpot->isActive() && pSpot->getRadius() > 0.0f )
+            const SpotLightComponent* pSpot            = pObject->getComponent<SpotLightComponent>();
+            const bool                bSpotLightActive = pSpot != nullptr && pSpot->isActive() && pSpot->getRadius() > 0.0f;
+            if ( bSpotLightActive )
             {
                 const float3  offset   = position - pSpot->getLightPosition();
                 const float32 distance = offset.getLength();

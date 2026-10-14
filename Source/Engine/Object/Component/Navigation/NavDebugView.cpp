@@ -145,8 +145,9 @@ namespace sw
         const float4 pathColor{ 1.0f, 0.55f, 0.05f, 1.0f };
         for ( const NavMeshAgentComponent* pAgent : listAgent )
         {
-            if ( pAgent->_crowdAgentID == NavigationConstant::kInvalidAgentID || pAgent->_bHasDestination == SW_FALSE ||
-                 pAgent->_moveStatus != NavMoveStatus::Moving )
+            const bool bNotFollowingPath = pAgent->_crowdAgentID == NavigationConstant::kInvalidAgentID || pAgent->_bHasDestination == SW_FALSE ||
+                                           pAgent->_moveStatus != NavMoveStatus::Moving;
+            if ( bNotFollowingPath )
                 continue;
             Internal::appendRibbon( pAgent->_agentPosition, pAgent->_nextCorner, pathColor, listVertex );
             Internal::appendRibbon( pAgent->_nextCorner, pAgent->_destination, pathColor, listVertex );

@@ -72,7 +72,8 @@ namespace sw
 
     void HUDControllerComponent::openScreen()
     {
-        if ( _pUISystem == nullptr || _documentPath.empty() || getScreen() != nullptr )
+        const bool bCannotOpenScreen = _pUISystem == nullptr || _documentPath.empty() || getScreen() != nullptr;
+        if ( bCannotOpenScreen )
             return;
         _screen           = _pUISystem->openScreen( _documentPath );
         UIScreen* pScreen = getScreen();

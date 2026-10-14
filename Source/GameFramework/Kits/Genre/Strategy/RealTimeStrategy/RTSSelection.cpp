@@ -112,15 +112,17 @@ namespace sw
         {
             if ( RTSSelectionInternal::isInRect( unit, minCorner, maxCorner ) == false )
                 return;
+            const bool bFirstVisibleOtherUnit = unit._owner != _player && otherUnit.isValid() == false && world.isVisibleTo( _player, unit._id );
             if ( unit._owner == _player && unit.isMobile() )
                 listMobile.push_back( unit._id );
             else if ( unit._owner == _player && ownBuilding.isValid() == false )
                 ownBuilding = unit._id;
-            else if ( unit._owner != _player && otherUnit.isValid() == false && world.isVisibleTo( _player, unit._id ) )
+            else if ( bFirstVisibleOtherUnit )
                 otherUnit = unit._id;
         } );
         // 추가 선택은 내 움직이는 유닛끼리만 한다. 건물과 남의 유닛은 혼자만 고른다.
-        if ( bAdd && listMobile.empty() == false && isCommandable( world ) )
+        const bool bExtendSelection = bAdd && listMobile.empty() == false && isCommandable( world );
+        if ( bExtendSelection )
         {
             const RTSUnit* pPrimary = world.findUnit( getPrimary() );
             if ( pPrimary == nullptr || pPrimary->isMobile() )
@@ -132,7 +134,8 @@ namespace sw
                 return;
             }
         }
-        if ( listMobile.empty() && ownBuilding.isValid() == false && otherUnit.isValid() == false )
+        const bool bEmptyDrag = listMobile.empty() && ownBuilding.isValid() == false && otherUnit.isValid() == false;
+        if ( bEmptyDrag )
             return; // 빈 땅을 끌면 선택을 그대로 둔다
         _listSelected.clear();
         if ( listMobile.empty() == false )
@@ -153,7 +156,8 @@ namespace sw
         const RTSUnit* pUnit = world.findUnit( unitID );
         if ( pUnit == nullptr )
             return;
-        if ( bToggle && pUnit->_owner == _player && pUnit->isMobile() && isCommandable( world ) )
+        const bool bToggleSelection = bToggle && pUnit->_owner == _player && pUnit->isMobile() && isCommandable( world );
+        if ( bToggleSelection )
         {
             const auto selectedIter = std::find( _listSelected.begin(), _listSelected.end(), unitID );
             if ( selectedIter != _listSelected.end() )
@@ -184,7 +188,8 @@ namespace sw
         addUnit( unitID );
         world.forEachUnit( [&]( const RTSUnit& unit )
         {
-            if ( unit._owner == _player && unit._pDef->_id == defID && RTSSelectionInternal::isInRect( unit, minCorner, maxCorner ) )
+            const bool bSameDefInRect = unit._owner == _player && unit._pDef->_id == defID && RTSSelectionInternal::isInRect( unit, minCorner, maxCorner );
+            if ( bSameDefInRect )
                 addUnit( unit._id );
         } );
     }

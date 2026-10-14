@@ -294,8 +294,9 @@ namespace sw
 
     void ShopState::refuseCategory( const hashed_string& shopID, const hashed_string& category )
     {
-        ShopRuntime* pRuntime = findRuntime( shopID );
-        if ( pRuntime != nullptr && category.empty() == false && VectorUtil::contains( pRuntime->_listExtraRefused, category ) == false )
+        ShopRuntime* pRuntime            = findRuntime( shopID );
+        const bool   bAddRefusedCategory = pRuntime != nullptr && category.empty() == false && VectorUtil::contains( pRuntime->_listExtraRefused, category ) == false;
+        if ( bAddRefusedCategory )
             pRuntime->_listExtraRefused.push_back( category );
     }
 
@@ -306,8 +307,9 @@ namespace sw
         const ShopRuntime* pRuntime = findRuntime( shopID );
         if ( pShop == nullptr || pRuntime == nullptr )
             return ShopResult::UnknownShop;
-        const int32 stockIndex = findStockIndex( *pShop, itemID );
-        if ( stockIndex < 0 || _pItemCatalog == nullptr || _pItemCatalog->findItem( itemID ) == nullptr )
+        const int32 stockIndex       = findStockIndex( *pShop, itemID );
+        const bool  bUnknownShopItem = stockIndex < 0 || _pItemCatalog == nullptr || _pItemCatalog->findItem( itemID ) == nullptr;
+        if ( bUnknownShopItem )
             return ShopResult::UnknownItem;
         if ( count <= 0 )
             return ShopResult::InvalidCount;
@@ -415,9 +417,10 @@ namespace sw
             runtime._daysSinceRestock = 0;
             for ( size_t stockIndex = 0; stockIndex < pShop->_listStock.size() && stockIndex < runtime._listStockCount.size(); ++stockIndex )
             {
-                const ShopStockDef& stock      = pShop->_listStock[stockIndex];
-                int32&              stockCount = runtime._listStockCount[stockIndex];
-                if ( stock._count < 0 || stock._restock <= 0 || stockCount >= stock._count )
+                const ShopStockDef& stock        = pShop->_listStock[stockIndex];
+                int32&              stockCount   = runtime._listStockCount[stockIndex];
+                const bool          bSkipRestock = stock._count < 0 || stock._restock <= 0 || stockCount >= stock._count;
+                if ( bSkipRestock )
                     continue;
                 const int32 newCount = MathUtil::min( stock._count, stockCount + stock._restock );
                 _eventBuffer.push( ShopEvent{ runtime._shopID, stock._itemID, 0, newCount - stockCount, ShopEvent::Kind::Restocked } );
@@ -446,10 +449,11 @@ namespace sw
 
     int64 ShopState::computeSellTotal( const hashed_string& shopID, const hashed_string& itemID, int32 count ) const
     {
-        const ShopDef*     pShop    = _pShopCatalog != nullptr ? _pShopCatalog->findShop( shopID ) : nullptr;
-        const ShopRuntime* pRuntime = findRuntime( shopID );
-        const ItemDef*     pItem    = _pItemCatalog != nullptr ? _pItemCatalog->findItem( itemID ) : nullptr;
-        if ( pShop == nullptr || pRuntime == nullptr || pItem == nullptr || count <= 0 )
+        const ShopDef*     pShop               = _pShopCatalog != nullptr ? _pShopCatalog->findShop( shopID ) : nullptr;
+        const ShopRuntime* pRuntime            = findRuntime( shopID );
+        const ItemDef*     pItem               = _pItemCatalog != nullptr ? _pItemCatalog->findItem( itemID ) : nullptr;
+        const bool         bInvalidSellRequest = pShop == nullptr || pRuntime == nullptr || pItem == nullptr || count <= 0;
+        if ( bInvalidSellRequest )
             return 0;
         const float32 unitValue = static_cast<float32>( pItem->_value ) * pShop->_sellMultiplier * pRuntime->_sellModifier;
         float32       factor    = getSellFactor( shopID, itemID );

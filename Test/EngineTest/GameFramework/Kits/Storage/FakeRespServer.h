@@ -549,7 +549,8 @@ namespace test
                 replyInteger( outBytes, current + delta );
                 return;
             }
-            if ( pEntry != nullptr && pEntry->_bScoreSet == false && name.size() > 0 && name[0] == 'Z' )
+            const bool bWrongTypeSortedSet = pEntry != nullptr && pEntry->_bScoreSet == false && name.size() > 0 && name[0] == 'Z';
+            if ( bWrongTypeSortedSet )
             {
                 replyError( outBytes, "WRONGTYPE Operation against a key holding the wrong kind of value" );
                 return;

@@ -462,11 +462,12 @@ namespace sw
         archive >> game._currentPlayer;
         archive >> game._winner;
         archive >> phase;
-        const int32 count         = static_cast<int32>( playerCount );
-        const bool  bPlayerValid  = 0 <= game._currentPlayer && game._currentPlayer < count;
-        const bool  bWinnerValid  = -1 <= game._winner && game._winner < count;
-        const bool  bPhaseInRange = phase <= static_cast<uint8>( MatgoPhase::Finished );
-        if ( archive.isError() || bPlayerValid == false || bWinnerValid == false || bPhaseInRange == false )
+        const int32 count              = static_cast<int32>( playerCount );
+        const bool  bPlayerValid       = 0 <= game._currentPlayer && game._currentPlayer < count;
+        const bool  bWinnerValid       = -1 <= game._winner && game._winner < count;
+        const bool  bPhaseInRange      = phase <= static_cast<uint8>( MatgoPhase::Finished );
+        const bool  bInvalidMatgoState = archive.isError() || bPlayerValid == false || bWinnerValid == false || bPhaseInRange == false;
+        if ( bInvalidMatgoState )
             return false;
         game._phase = static_cast<MatgoPhase>( phase );
         game._eventBuffer.clear();

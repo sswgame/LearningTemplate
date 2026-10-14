@@ -176,8 +176,9 @@ namespace sw::editor
             /** @brief 노드 번호를 본 이름으로 풉니다. 범위 밖이면 false 와 이유입니다. */
             static bool resolveNode( const VrmGltfNames& names, const JSONValue& value, string_view context, string& outName, string& outError )
             {
-                const int64 node = value.asInt( -1 );
-                if ( value.isNumber() == false || node < 0 || static_cast<uint64>( node ) >= names._listNodeName.size() )
+                const int64 node                  = value.asInt( -1 );
+                const bool  bInvalidNodeReference = value.isNumber() == false || node < 0 || static_cast<uint64>( node ) >= names._listNodeName.size();
+                if ( bInvalidNodeReference )
                 {
                     outError = string( context ) + ": node " + value.dump() + " is not a node of the model";
                     return false;
@@ -206,7 +207,8 @@ namespace sw::editor
 
             static string makeMeshName( const VrmGltfNames& names, int64 mesh )
             {
-                if ( 0 <= mesh && static_cast<uint64>( mesh ) < names._listMeshName.size() && names._listMeshName[static_cast<size_t>( mesh )].empty() == false )
+                const bool bHasMeshName = 0 <= mesh && static_cast<uint64>( mesh ) < names._listMeshName.size() && names._listMeshName[static_cast<size_t>( mesh )].empty() == false;
+                if ( bHasMeshName )
                     return names._listMeshName[static_cast<size_t>( mesh )];
                 return "mesh" + to_string( mesh );
             }
@@ -444,8 +446,9 @@ namespace sw::editor
                     jointValue._hitRadius        = readFloat( group, "hitRadius", 0.02f );
 
                     string          centerBone;
-                    const JSONValue center = group.get( "center", false );
-                    if ( center.isValid() && center.asInt( -1 ) >= 0 && resolveNode( names, center, context + " center", centerBone, outError ) == false )
+                    const JSONValue center                = group.get( "center", false );
+                    const bool      bCenterBoneUnresolved = center.isValid() && center.asInt( -1 ) >= 0 && resolveNode( names, center, context + " center", centerBone, outError ) == false;
+                    if ( bCenterBoneUnresolved )
                         return false;
                     vector<uint32>  listColliderGroupIndex;
                     const JSONValue listGroupRef = group.get( "colliderGroups", false );

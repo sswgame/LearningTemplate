@@ -200,7 +200,8 @@ namespace sw
         const int32 height = rc.bottom - rc.top;
 
         // 1) 배경: 창 크기로 늘린 이미지를 처음 한 번 메모리 DC 에 그려 두고, 무효 영역만 복사한다(HALFTONE 늘리기가 비싸다).
-        if ( _hBackgroundDC == nullptr || _backgroundWidth != width || _backgroundHeight != height )
+        const bool bBackgroundStale = _hBackgroundDC == nullptr || _backgroundWidth != width || _backgroundHeight != height;
+        if ( bBackgroundStale )
         {
             releasePaintCache();
             _hBackgroundDC             = CreateCompatibleDC( hDC );
@@ -291,7 +292,8 @@ namespace sw
     void Win32SplashWindow::dismiss()
     {
         releasePaintCache();
-        if ( _bOpen == SW_FALSE && _hWnd == nullptr && _gdiplusToken == 0 )
+        const bool bAlreadyClosed = _bOpen == SW_FALSE && _hWnd == nullptr && _gdiplusToken == 0;
+        if ( bAlreadyClosed )
             return;
 
         if ( _hWnd != nullptr && IsWindow( _hWnd ) )

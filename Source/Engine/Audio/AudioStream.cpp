@@ -187,10 +187,11 @@ namespace sw
             uint32   dataBytes{ 0 };
             if ( AudioClipDecoder::parseWavLayout( inoutBytes.data(), inoutBytes.size(), format, dataOffset, dataBytes ) == false )
                 return nullptr;
-            const bool bChannelsOk = format._channelCount == 1 || format._channelCount == 2;
-            const bool bPcm16      = format._bFloat == SW_FALSE && format._bitsPerSample == 16;
-            const bool bFloat32    = format._bFloat == SW_TRUE && format._bitsPerSample == 32;
-            if ( bChannelsOk == false || ( bPcm16 == false && bFloat32 == false ) || format._sampleRate == 0 )
+            const bool bChannelsOk              = format._channelCount == 1 || format._channelCount == 2;
+            const bool bPcm16                   = format._bFloat == SW_FALSE && format._bitsPerSample == 16;
+            const bool bFloat32                 = format._bFloat == SW_TRUE && format._bitsPerSample == 32;
+            const bool bUnsupportedStreamFormat = bChannelsOk == false || ( bPcm16 == false && bFloat32 == false ) || format._sampleRate == 0;
+            if ( bUnsupportedStreamFormat )
                 return nullptr;
             pSource->_info._sampleRate   = format._sampleRate;
             pSource->_info._channelCount = format._channelCount;

@@ -41,7 +41,8 @@ namespace sw
         const uint32 fadeFrames = static_cast<uint32>( MathUtil::max( 0.0f, fadeSeconds ) * static_cast<float32>( audio::kSampleRate ) );
         for ( VoiceSlot& slot : _listVoice )
         {
-            if ( slot._bInUse == false || slot._playingID != _music._playingID || _music._playingID == 0 )
+            const bool bNotCurrentMusicVoice = slot._bInUse == false || slot._playingID != _music._playingID || _music._playingID == 0;
+            if ( bNotCurrentMusicVoice )
                 continue;
             if ( slot._bWaitingForClip || fadeFrames == 0 )
                 freeVoice( slot );
@@ -97,7 +98,8 @@ namespace sw
                 return;
             for ( VoiceSlot& slot : _listVoice )
             {
-                if ( slot._bInUse && slot._playingID == _music._playingID && slot._musicSegment == _music._pendingSegment )
+                const bool bPendingSegmentVoice = slot._bInUse && slot._playingID == _music._playingID && slot._musicSegment == _music._pendingSegment;
+                if ( bPendingSegmentVoice )
                     freeVoice( slot );
             }
             _music._pendingSegment = targetSegment;
@@ -115,7 +117,8 @@ namespace sw
         // 옛 구간은 경계에서(샘플 단위) 빠지기 시작한다.
         for ( VoiceSlot& slot : _listVoice )
         {
-            if ( slot._bInUse == false || slot._playingID != _music._playingID || slot._musicSegment != _music._segment )
+            const bool bNotCurrentSegmentVoice = slot._bInUse == false || slot._playingID != _music._playingID || slot._musicSegment != _music._segment;
+            if ( bNotCurrentSegmentVoice )
                 continue;
             if ( slot._bWaitingForClip )
                 freeVoice( slot );
@@ -216,7 +219,8 @@ namespace sw
         const float32 maxStep     = fadeSeconds <= 0.0f ? MathUtil::kMaxFloat : audio::kBlockSeconds / fadeSeconds;
         for ( VoiceSlot& slot : _listVoice )
         {
-            if ( slot._bInUse == false || slot._playingID != _music._playingID || slot._musicSegment < 0 || slot._musicLayer < 0 )
+            const bool bNotLayeredMusicVoice = slot._bInUse == false || slot._playingID != _music._playingID || slot._musicSegment < 0 || slot._musicLayer < 0;
+            if ( bNotLayeredMusicVoice )
                 continue;
             const float32 target = computeMusicLayerGain( slot._musicSegment, slot._musicLayer );
             const float32 delta  = target - slot._musicGain;

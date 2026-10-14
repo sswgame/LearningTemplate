@@ -99,8 +99,9 @@ namespace sw
         uint32     tag     = 0;
         uint32     version = 0;
         Archive    body;
-        const bool bFrameRead = StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) && StateArchiveUtil::readSection( archive, tag, version, body );
-        if ( bFrameRead == false || tag != FarmField::kStateTag || version != FarmField::kStateVersion )
+        const bool bFrameRead          = StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) && StateArchiveUtil::readSection( archive, tag, version, body );
+        const bool bFieldFrameMismatch = bFrameRead == false || tag != FarmField::kStateTag || version != FarmField::kStateVersion;
+        if ( bFieldFrameMismatch )
             return false;
         FarmField field;
         field.initialize( kFieldWidth, kFieldHeight, game::getService<CropCatalog>() );
@@ -153,8 +154,9 @@ namespace sw
                     continue;
                 }
                 hashed_string produce;
-                int32         count = 0;
-                if ( _field.harvest( x, y, produce, count ) == FarmActionResult::Done && 0 < count && pCrops != nullptr )
+                int32         count           = 0;
+                const bool    bHarvestedCrops = _field.harvest( x, y, produce, count ) == FarmActionResult::Done && 0 < count && pCrops != nullptr;
+                if ( bHarvestedCrops )
                 {
                     earned += pCrops->findSellPrice( produce ) * count;
                     (void)state.getFlags().addFlag( hashed_string( MeadowVillageData::kHarvestedFlag ), count );

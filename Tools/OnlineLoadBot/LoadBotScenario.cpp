@@ -188,7 +188,8 @@ namespace sw
             outStep._minMs = value.get( "_timeoutMs", false ).asInt( kDefaultMatchTimeoutMs );
             outStep._maxMs = outStep._minMs;
         }
-        if ( outStep._minMs < 0 || outStep._maxMs < outStep._minMs || outStep._count <= 0 )
+        const bool bInvalidStepTiming = outStep._minMs < 0 || outStep._maxMs < outStep._minMs || outStep._count <= 0;
+        if ( bInvalidStepTiming )
         {
             outError = "action '" + actionName + "' has a negative time, _maxMs below _minMs or a non-positive _count";
             return false;
@@ -250,7 +251,8 @@ namespace sw
         outScenario._seed            = static_cast<uint32>( root.get( "_seed", false ).asUint( defaults._seed ) );
         if ( root.has( "_region", false ) )
             outScenario._region = root.get( "_region", false ).asString();
-        if ( outScenario._botCount <= 0 || outScenario._rampUpSeconds < 0 || outScenario._durationSeconds <= 0 )
+        const bool bInvalidScenarioTiming = outScenario._botCount <= 0 || outScenario._rampUpSeconds < 0 || outScenario._durationSeconds <= 0;
+        if ( bInvalidScenarioTiming )
         {
             outError = "_botCount and _durationSeconds must be positive and _rampUpSeconds not negative";
             return false;

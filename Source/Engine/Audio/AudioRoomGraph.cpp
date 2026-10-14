@@ -26,9 +26,10 @@ namespace sw
 
     uint32 AudioRoomGraph::addPortal( uint32 roomA, uint32 roomB, float32 openness )
     {
-        const bool bValidA = roomA == kOutside || roomA < _listRoom.size();
-        const bool bValidB = roomB == kOutside || roomB < _listRoom.size();
-        if ( bValidA == false || bValidB == false || roomA == roomB )
+        const bool bValidA             = roomA == kOutside || roomA < _listRoom.size();
+        const bool bValidB             = roomB == kOutside || roomB < _listRoom.size();
+        const bool bInvalidPortalRooms = bValidA == false || bValidB == false || roomA == roomB;
+        if ( bInvalidPortalRooms )
             return invalid_index::kUint32;
         Portal portal;
         portal._roomA    = roomA;

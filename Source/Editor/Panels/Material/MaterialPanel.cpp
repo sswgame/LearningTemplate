@@ -202,7 +202,8 @@ namespace sw::editor
                     return false;
                 const MaterialPanel* pPanel = static_cast<const MaterialPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "material" ) );
                 float32              value{ 0.0f };
-                if ( pPanel == nullptr || pPanel->isOpen() == false || pPanel->findPreviewRedMinusBlue( value ) == false )
+                const bool           bPreviewValueUnavailable = pPanel == nullptr || pPanel->isOpen() == false || pPanel->findPreviewRedMinusBlue( value ) == false;
+                if ( bPreviewValueUnavailable )
                     return false;
                 outValue = static_cast<float64>( value );
                 return true;

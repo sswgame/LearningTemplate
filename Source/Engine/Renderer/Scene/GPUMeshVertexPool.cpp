@@ -84,7 +84,8 @@ namespace sw
 
     void GPUMeshVertexPool::release( IRHIDevice* pDevice )
     {
-        if ( _vertexBuffer != 0 && pDevice != nullptr && pDevice->getResourceFactory() != nullptr )
+        const bool bReleasableBuffer = _vertexBuffer != 0 && pDevice != nullptr && pDevice->getResourceFactory() != nullptr;
+        if ( bReleasableBuffer )
             pDevice->getResourceFactory()->destroyBuffer( _vertexBuffer );
         _vertexBuffer = 0;
         _mapBase.clear();

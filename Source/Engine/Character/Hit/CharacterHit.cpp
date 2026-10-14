@@ -76,8 +76,9 @@ namespace sw
     bool CharacterHitUtil::raycast3D( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, uint32 layerMask,
                                       uint64 ignoreObjectID, CharacterRayHit& outHit )
     {
-        const IPhysicsQueryScene3D* pScene = manager.getSceneService<sw::ScenePhysics>().findScene3D();
-        if ( pScene == nullptr || maxDistance <= 0.0f || direction.getLengthSquared() <= 1.0e-12f )
+        const IPhysicsQueryScene3D* pScene            = manager.getSceneService<sw::ScenePhysics>().findScene3D();
+        const bool                  bInvalidRaycast3D = pScene == nullptr || maxDistance <= 0.0f || direction.getLengthSquared() <= 1.0e-12f;
+        if ( bInvalidRaycast3D )
             return false;
         PhysicsCastHit3D hit;
         if ( pScene->raycast( origin, direction.normalize(), maxDistance, CharacterHitInternal::makeFilter( layerMask, ignoreObjectID ), hit ) == false )
@@ -91,7 +92,8 @@ namespace sw
     {
         const IPhysicsQueryScene2D* pScene = manager.getSceneService<sw::ScenePhysics>().findScene2D();
         float2                      planar{};
-        if ( pScene == nullptr || maxDistance <= 0.0f || CharacterHitInternal::makePlanarDirection( direction, planar ) == false )
+        const bool                  bInvalidRaycast2D = pScene == nullptr || maxDistance <= 0.0f || CharacterHitInternal::makePlanarDirection( direction, planar ) == false;
+        if ( bInvalidRaycast2D )
             return false;
         PhysicsCastHit2D hit;
         if ( pScene->raycast( float2{ origin._x, origin._y }, planar, maxDistance, CharacterHitInternal::makeFilter( layerMask, ignoreObjectID ), hit ) == false )
@@ -105,8 +107,9 @@ namespace sw
     {
         if ( radius <= 0.0f )
             return raycast3D( manager, origin, direction, maxDistance, layerMask, ignoreObjectID, outHit );
-        const IPhysicsQueryScene3D* pScene = manager.getSceneService<sw::ScenePhysics>().findScene3D();
-        if ( pScene == nullptr || maxDistance <= 0.0f || direction.getLengthSquared() <= 1.0e-12f )
+        const IPhysicsQueryScene3D* pScene              = manager.getSceneService<sw::ScenePhysics>().findScene3D();
+        const bool                  bInvalidSphereSweep = pScene == nullptr || maxDistance <= 0.0f || direction.getLengthSquared() <= 1.0e-12f;
+        if ( bInvalidSphereSweep )
             return false;
         PhysicsShapeDesc3D sphere;
         sphere._type   = PhysicsShapeType3D::Sphere;
@@ -126,7 +129,8 @@ namespace sw
             return raycast2D( manager, origin, direction, maxDistance, layerMask, ignoreObjectID, outHit );
         const IPhysicsQueryScene2D* pScene = manager.getSceneService<sw::ScenePhysics>().findScene2D();
         float2                      planar{};
-        if ( pScene == nullptr || maxDistance <= 0.0f || CharacterHitInternal::makePlanarDirection( direction, planar ) == false )
+        const bool                  bInvalidCircleSweep = pScene == nullptr || maxDistance <= 0.0f || CharacterHitInternal::makePlanarDirection( direction, planar ) == false;
+        if ( bInvalidCircleSweep )
             return false;
         PhysicsShapeDesc2D circle;
         circle._type   = PhysicsShapeType2D::Circle;
@@ -199,7 +203,8 @@ namespace sw
         const vector<Component*> listTarget( target.getComponents().begin(), target.getComponents().end() );
         for ( Component* pComponent : listTarget )
         {
-            if ( pComponent == nullptr || pComponent->isPendingDestroy() || pComponent->isSelfActive() == false )
+            const bool bSkipHitTarget = pComponent == nullptr || pComponent->isPendingDestroy() || pComponent->isSelfActive() == false;
+            if ( bSkipHitTarget )
                 continue;
             pComponent->onHitReceived( hit );
         }

@@ -245,7 +245,8 @@ namespace sw
         vector<TickWriteKey>&        listKey  = _pWriteKeyScratch[slot];
         // 같은 오브젝트의 틱이 같은 컴포넌트에 잇따라 쓰면 한 건으로 합친다. 마지막 값이 이긴다(세터를 차례로 부른 것과 같다). 쓴 오브젝트가
         // 다르면 합치지 않는다 — 합친 건은 앞 건의 순서 키를 들고 있어, 사이에 다른 스레드가 쓴 건과의 순서가 틀어진다.
-        if ( listSlot.empty() == false && listSlot.back()._handle == write._handle && listKey.back()._writerID == writerID )
+        const bool bMergeableWrite = listSlot.empty() == false && listSlot.back()._handle == write._handle && listKey.back()._writerID == writerID;
+        if ( bMergeableWrite )
         {
             SceneTransformWrite& last      = listSlot.back();
             const uint8          valueMask = write.getValueMask();
@@ -626,9 +627,10 @@ namespace sw
                     {
                         for ( const uint32 writeIndex : std::as_const( _pBucket[bucket] ) )
                         {
-                            const SceneTransformWrite& write  = _pWrite[writeIndex];
-                            SceneComponent*            pScene = SceneTransformHierarchyInternal::resolveSceneComponent( *_pManager, write._handle );
-                            if ( pScene != nullptr && pScene->isPendingDestroy() == false && applyWrite( *pScene, write ) )
+                            const SceneTransformWrite& write         = _pWrite[writeIndex];
+                            SceneComponent*            pScene        = SceneTransformHierarchyInternal::resolveSceneComponent( *_pManager, write._handle );
+                            const bool                 bWriteApplied = pScene != nullptr && pScene->isPendingDestroy() == false && applyWrite( *pScene, write );
+                            if ( bWriteApplied )
                                 ++bucketChanged;
                         }
                     }

@@ -27,7 +27,8 @@ namespace sw
 
     void AnimationPlayer::crossfade( const IAnimationPlayable* pPlayable, float32 fadeSeconds, bool bLoop )
     {
-        if ( pPlayable == nullptr || _arrSlot[0]._pPlayable == nullptr || fadeSeconds <= 0.0f )
+        const bool bPlayWithoutCrossfade = pPlayable == nullptr || _arrSlot[0]._pPlayable == nullptr || fadeSeconds <= 0.0f;
+        if ( bPlayWithoutCrossfade )
         {
             play( pPlayable, bLoop );
             return;

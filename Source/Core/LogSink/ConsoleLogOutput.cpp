@@ -52,7 +52,8 @@ namespace sw
 
         const HANDLE consoleHandle = GetStdHandle( STD_OUTPUT_HANDLE );
         DWORD        dwMode{ 0 };
-        if ( consoleHandle != nullptr && consoleHandle != INVALID_HANDLE_VALUE && GetConsoleMode( consoleHandle, &dwMode ) )
+        const bool   bConsoleModeQueried = consoleHandle != nullptr && consoleHandle != INVALID_HANDLE_VALUE && GetConsoleMode( consoleHandle, &dwMode );
+        if ( bConsoleModeQueried )
         {
             CONSOLE_SCREEN_BUFFER_INFO consoleInfo{};
             GetConsoleScreenBufferInfo( consoleHandle, &consoleInfo );
@@ -124,8 +125,9 @@ namespace sw
             };
         static constexpr const utf8* kAnsiReset = "\033[0m";
 
-        const int32 index = static_cast<int32>( level );
-        if ( _bHasConsole && 0 <= index && index < static_cast<int32>( LogLevel::Count ) )
+        const int32 index              = static_cast<int32>( level );
+        const bool  bCanPrintAnsiColor = _bHasConsole && 0 <= index && index < static_cast<int32>( LogLevel::Count );
+        if ( bCanPrintAnsiColor )
         {
             std::fputs( arrAnsiColor[index], stdout );
             std::fputs( pMessage, stdout );
