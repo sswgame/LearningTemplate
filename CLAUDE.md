@@ -24,11 +24,12 @@ cmake --build --preset Ninja-Debug                    # App·Server·모듈
 cmake --build --preset Ninja-Debug --target all AllTests  # +테스트
 
 ## 보조 도구 (로컬 설치, 선택)
-`.claude/skills/` 는 추적하지 않는다(`.gitignore`). 새 PC 에서는 아래대로 설치한다.
-- **graphify** — 코드 지식 그래프. `py -3 -m pip install --user graphifyy` 후 `graphify install --project`
-  (사용자 Scripts 폴더를 PATH 에 둔다). 그래프는 `graphify update Source` 로 만들고(약 4분) 산출물 `Source/graphify-out/` 을 저장소 루트 `graphify-out/` 으로 옮긴다(추적 안 함 — 린트가 `Source` 아래 `.md` 를 훑는다).
-  항상 활성: 코드 질문은 저장소 루트에서 `graphify query "<질문>"` · `graphify path "<A>" "<B>"` · `graphify explain "<개념>"` 로 먼저 좁히고, 코드를 고친 뒤에도 같은 명령으로 갱신한다.
-  `graphify install` 이 쓰는 PreToolUse 훅은 공유 `settings.json` 에 넣지 않는다 — 이 PC 밖에서는 `graphify` 가 PATH 에 없어 모든 도구 호출이 걸린다(개인 `settings.local.json` 에 절대 경로로 둘 수 있다).
-  `graphify hook install`(git `post-commit` · `post-checkout` · `post-merge`)도 넣지 않는다 — `update` 가 증분이 아니라 `Source` 전체를 다시 읽어 3~4분 걸려서(측정), 워크트리 여럿에서 커밋할 때마다 돈다. `pre-commit` 과는 부딪히지 않는다.
-- **ponytail** — "가장 작은 변경" 지침 스킬. `.claude/skills/ponytail/SKILL.md` 를 두면 코딩 작업마다 자동으로 켜진다(항상 활성, 2026-10-15 사용자 결정). `/ponytail lite|full|ultra` 로 강도를 바꾼다.
-  "기존 구조를 유지한다" 는 지침이 이 저장소의 "구조는 규모가 커도 장기 이득이면 과감히 바꾼다" 와 부딪힐 수 있다 — 구조 개편을 시킬 때는 요청에 그 뜻을 분명히 적는다.
+`.claude/skills/`는 추적하지 않는다(`.gitignore`). 새 PC에서는 아래대로 설치한다.
+
+- **graphify**: 코드 지식 그래프다. `py -3 -m pip install --user graphifyy`로 설치하고 `graphify install --project`로 스킬을 등록한다. 사용자 Scripts 폴더가 PATH에 있어야 한다.
+  - 그래프는 `graphify update Source`로 만든다(약 4분). 산출물 `Source/graphify-out/`은 저장소 루트의 `graphify-out/`으로 옮긴다. 추적하지 않는다. `Source` 안에 두면 린트가 그 아래 `.md`를 읽을 수 있어서 옮긴다.
+  - 항상 켠다. 코드 질문은 저장소 루트에서 `graphify query "<질문>"`, `graphify path "<A>" "<B>"`, `graphify explain "<개념>"`으로 범위를 먼저 좁힌다. 코드를 고친 뒤에는 같은 `update` 명령으로 그래프를 갱신한다.
+  - PreToolUse 훅은 공유 `settings.json`에 넣지 않는다. 이 PC 밖에서는 `graphify`가 PATH에 없어 모든 도구 호출이 막힌다. 필요하면 개인 `settings.local.json`에 절대 경로로 둔다.
+  - git 훅(`graphify hook install`)도 넣지 않는다. `update`는 증분 갱신이 아니라 `Source` 전체를 다시 읽어 3~4분이 걸린다. 설치하면 워크트리 여럿에서 커밋할 때마다 이 시간이 든다. `pre-commit` 훅과는 충돌하지 않는다.
+- **ponytail**: "가장 작은 변경"을 요구하는 지침 스킬이다. `.claude/skills/ponytail/SKILL.md`를 두면 코딩 작업마다 자동으로 켜진다(2026-10-15 사용자 결정). `/ponytail lite|full|ultra`로 강도를 바꾼다.
+  - "기존 구조를 유지한다"는 지침이 이 저장소의 "구조는 규모가 커도 장기 이득이면 과감히 바꾼다"는 방침과 부딪힐 수 있다. 구조 개편을 시킬 때는 요청에 그 뜻을 분명히 적는다.
