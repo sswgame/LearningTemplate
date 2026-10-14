@@ -22,7 +22,7 @@ namespace sw
      * @class ProfileAPILoginProvider
      * @brief 프로필 API 제공자입니다.
      */
-    class SW_KIT_API ProfileAPILoginProvider final : public IPlatformLoginProvider
+    class SW_KIT_SERVER_API ProfileAPILoginProvider final : public IPlatformLoginProvider
     {
     public:
         /** @brief @p pHTTPClient 는 빌려 쓰며 그 응답은 이 객체만 회수합니다. */

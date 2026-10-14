@@ -24,7 +24,7 @@ namespace sw
      * @class IBrZoneTerrain
      * @brief 다음 원 중심이나 보급 상자 위치로 쓸 수 있는 땅인지 게임이 답합니다(물과 산꼭대기는 금지). 맵 경계는 자기장이 따로 확인합니다.
      */
-    class SW_KIT_API IBrZoneTerrain
+    class IBrZoneTerrain
     {
     public:
         IBrZoneTerrain()          = default;

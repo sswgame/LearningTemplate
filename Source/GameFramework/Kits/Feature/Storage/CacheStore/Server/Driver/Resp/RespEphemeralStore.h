@@ -44,7 +44,7 @@ namespace sw
      * @class RespEphemeralStore
      * @brief RESP2 휘발성 저장소입니다. 서비스 스레드 하나가 요청을 맡기고 답을 회수하며, 전송 콜백만 I/O 스레드에서 실행됩니다.
      */
-    class SW_KIT_API RespEphemeralStore final : public IEphemeralStore, private IStreamHandler
+    class SW_KIT_SERVER_API RespEphemeralStore final : public IEphemeralStore, private IStreamHandler
     {
     public:
         RespEphemeralStore();

@@ -34,7 +34,7 @@ namespace sw
 namespace sw
 {
     /** @brief GM 명령 저장 함수 모음입니다. 저장소 스레드에서 부릅니다. */
-    struct SW_KIT_API AdminStoreLogic
+    struct SW_KIT_SERVER_API AdminStoreLogic
     {
         static const hashed_string& getRoleTable(); ///< "admin_role" 이다. 키는 계정 16진 문자열이고 값은 등급 1바이트이다
 

@@ -21,7 +21,7 @@ namespace sw
      * @class MatchServerAgent
      * @brief 게임 서버 쪽에서 배정을 받는 객체입니다. 서버 루프 스레드 하나에서 씁니다.
      */
-    class SW_KIT_API MatchServerAgent
+    class SW_KIT_SERVER_API MatchServerAgent
     {
     public:
         static constexpr int64 kExpectTtlMs = 120000; ///< 2분이다. 오지 않은 사람은 지운다

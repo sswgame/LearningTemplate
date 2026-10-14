@@ -80,7 +80,7 @@ namespace sw
      * @details 모든 함수는 스레드 안전해야 한다. 해시는 저장소 워커에서, 접속 티켓 확인은 네트워크 스레드에서 부르기 때문이다.
      *          실패하면 false 를 반환하며 호출하는 쪽은 `StoreUnavailable` 처럼 다룬다.
      */
-    class SW_KIT_API ILoginCrypto
+    class ILoginCrypto
     {
     public:
         ILoginCrypto()          = default;

@@ -29,7 +29,7 @@ namespace sw
     struct ResolvedAppearance;
 
     /** @brief 소켓 에셋을 경로로 찾는 인터페이스입니다. 테스트는 메모리 테이블을, 게임은 리소스 캐시를 씁니다. */
-    class SW_GF_API IAppearanceSocketSource
+    class IAppearanceSocketSource
     {
     public:
         IAppearanceSocketSource()                                            = default;

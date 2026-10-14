@@ -24,7 +24,7 @@ namespace sw
      * @class LiveOpsServer
      * @brief 라이브 운영 바인딩입니다. 호스트 `tick` 스레드에서 씁니다.
      */
-    class SW_KIT_API LiveOpsServer final : public IOnlineHostService
+    class SW_KIT_SERVER_API LiveOpsServer final : public IOnlineHostService
     {
     public:
         LiveOpsServer();

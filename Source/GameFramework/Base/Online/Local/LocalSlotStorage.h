@@ -19,7 +19,7 @@ namespace sw
      * @class ILocalSlotStorage
      * @brief 슬롯 바닥입니다. 쓰기는 슬롯 하나 단위로 원자적이어야 한다(옛 것 아니면 새 것).
      */
-    class SW_GF_API ILocalSlotStorage
+    class ILocalSlotStorage
     {
     public:
         ILocalSlotStorage()          = default;

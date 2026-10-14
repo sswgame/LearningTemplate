@@ -39,7 +39,7 @@ namespace sw
      * @class TradeStoreLogic
      * @brief 거래 흐름의 저장 부분입니다. 작업 하나가 도는 동안만 사는 객체입니다.
      */
-    class SW_KIT_API TradeStoreLogic
+    class SW_KIT_SERVER_API TradeStoreLogic
     {
     public:
         TradeStoreLogic( IServiceStoreConnection& connection, const ITradePolicy& policy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, const TradeSettings& settings );
@@ -86,7 +86,7 @@ namespace sw
 namespace sw
 {
     /** @brief 거래 레코드 코덱입니다. */
-    struct SW_KIT_API TradeRecordUtil
+    struct SW_KIT_SERVER_API TradeRecordUtil
     {
         static vector<uint8>      encodeSession( const TradeSnapshot& snapshot, uint64 ownerServerID );
         [[nodiscard]] static bool decodeSession( const vector<uint8>& bytes, TradeSnapshot& outSnapshot, uint64& outOwnerServerID );

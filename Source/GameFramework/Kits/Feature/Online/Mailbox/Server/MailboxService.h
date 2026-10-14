@@ -54,7 +54,7 @@ namespace sw
 namespace sw
 {
     /** @class MailboxService @brief 우편함 요청 처리기입니다. 서비스 스레드에서 씁니다. */
-    class SW_KIT_API MailboxService final : public IOnlineHostService
+    class SW_KIT_SERVER_API MailboxService final : public IOnlineHostService
     {
     public:
         using ReplyDelegate = Delegate<void( const MailboxReply& )>;

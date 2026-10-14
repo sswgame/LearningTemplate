@@ -24,7 +24,7 @@ namespace sw
      * @class OidcLoginProvider
      * @brief OIDC ID 토큰 제공자입니다.
      */
-    class SW_KIT_API OidcLoginProvider final : public IPlatformLoginProvider
+    class SW_KIT_SERVER_API OidcLoginProvider final : public IPlatformLoginProvider
     {
     public:
         /** @brief @p pProvider 와 @p pHTTPClient 는 빌려 씁니다. @p pHTTPClient 의 응답은 이 객체만 회수합니다. */

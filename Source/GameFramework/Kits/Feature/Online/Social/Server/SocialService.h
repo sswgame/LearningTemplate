@@ -74,7 +74,7 @@ namespace sw
      * @class SocialService
      * @brief 친구 로직입니다. 서비스 스레드에서 씁니다.
      */
-    class SW_KIT_API SocialService
+    class SW_KIT_SERVER_API SocialService
     {
     public:
         SocialService();

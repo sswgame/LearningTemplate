@@ -38,7 +38,7 @@ namespace sw
      * @class IAccountDirectory
      * @brief 계정 창구 — 이 프로세스에 붙어 있는 계정만(메모리, 저장소를 읽지 않는다). 서비스 스레드에서 부른다.
      */
-    class SW_GF_API IAccountDirectory
+    class IAccountDirectory
     {
     public:
         IAccountDirectory()          = default;

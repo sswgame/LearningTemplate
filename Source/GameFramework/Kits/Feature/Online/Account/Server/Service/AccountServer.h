@@ -43,7 +43,7 @@ namespace sw
      * @class AccountServer
      * @brief 계정 서비스 바인딩입니다. 호스트 `tick` 스레드에서 씁니다.
      */
-    class SW_KIT_API AccountServer final : public IOnlineHostService, public IAccountSessionControl
+    class SW_KIT_SERVER_API AccountServer final : public IOnlineHostService, public IAccountSessionControl
     {
     public:
         AccountServer();

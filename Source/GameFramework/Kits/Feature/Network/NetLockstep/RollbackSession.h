@@ -33,7 +33,7 @@ namespace sw
      * @class IRollbackGame
      * @brief 롤백이 호출하는 게임 쪽 인터페이스입니다. 같은 입력이면 같은 결과가 나와야 합니다.
      */
-    class SW_KIT_API IRollbackGame
+    class IRollbackGame
     {
     public:
         IRollbackGame()          = default;

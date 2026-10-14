@@ -123,7 +123,7 @@ namespace sw
      * @class GuildService
      * @brief 길드 로직입니다. 서비스 스레드에서 씁니다.
      */
-    class SW_KIT_API GuildService
+    class SW_KIT_SERVER_API GuildService
     {
     public:
         GuildService();
