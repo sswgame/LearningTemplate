@@ -9,7 +9,7 @@
 |---|---|
 | `Model/EditSnapshotHistory.h` | 스냅샷 되돌리기 기록. 같은 키의 연속 편집(끌기)을 한 단계로 합친다 |
 | `Model/SocketEditModel.{h,cpp}` | 소켓 에셋(`*.sockets.xml`) 편집. 추가 · 삭제 · 이름 바꾸기(후보 목록이 따라감) · 부모 · 종류 · 변환 · 앵커 · 후보, 좌우 대칭, 검증, 읽기 · 쓰기 |
-| `Model/CharacterMirrorUtil.{h,cpp}` | 좌우 이름 규칙 표(`MirrorNameRules`, 데이터 파일 `engine/character/default.mirrornames.xml`)와 위치 · 회전 뒤집기 |
+| `Model/CharacterMirrorUtil.{h,cpp}` | 좌우 이름 규칙 표(`MirrorNameRules`, 데이터 파일 `editor/character/default.mirrornames.xml`, 종류 등록 `Model/MirrorNameRulesDataKind.cpp`)와 위치 · 회전 뒤집기 |
 | `Model/BonePoseEditModel.{h,cpp}` | 스켈레톤(읽기 전용)의 본 목록 · 트리와 레퍼런스 포즈 덮어쓰기(`*.refpose.xml`) 편집. 위치 · 회전 · 스케일, 지우기, 좌우 대칭, 읽기 · 쓰기, 되돌리기 |
 | `Model/FitCheckSummary.{h,cpp}` | 푼 피팅 결과(`FitResult`)를 부품별 잘린 면 · 조임 강도, 관통 점 수 · 깊이로 요약(보기 전용) |
 | `Model/SaveReloadGuard.h` | 우리가 쓴 파일의 핫 리로드를 외부 변경으로 착각하지 않게 거르는 판정기 |

@@ -5,6 +5,8 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
@@ -130,6 +132,18 @@ namespace sw
         bool isGPUMorphEnabled() const { return _bGPUMorph != SW_FALSE; }
 
         /**
+         * @brief 모프 컴퓨트가 기본 물결 대신 실행할 변형 프로그램(float4 목록)을 넣습니다. 빈 목록이면 프로그램을 뗍니다. 내용 번호는 바뀌지 않습니다.
+         * @details 메시 모디파이어 미리보기(`GF_EditorPlugIn_MeshModifiers`)가 쓴다 — 모양은 `meshmodifier.hlsli` 머리 주석이 정본이다. GPU 모프(`setGPUMorphEnabled`)가 켜진 메시에만 걸린다.
+         *          게임 스레드가 아무 때나 바꾸고 렌더 스레드는 프레임마다 사본을 잡아 읽으므로(잠금) 정점 버퍼를 다시 만들지 않고 매개변수만 바꿀 수 있다.
+         *          목록은 엔진 안에서 복사해 든다 — 넘긴 쪽(확장 모듈)이 내려가도 소멸 코드가 엔진에 남는다.
+         */
+        void setGPUDeformProgram( const vector<float4>& listProgram );
+        /** @brief 변형 프로그램의 사본(공유)입니다. 없으면 nullptr 입니다. 렌더 스레드가 프레임마다 부릅니다. */
+        shared_ptr<const vector<float4>> getGPUDeformProgram() const;
+        /** @brief 변형 프로그램을 바꿀 때마다 오르는 번호입니다(0 은 한 번도 넣지 않음). 모프 풀이 다시 올릴지 이 값으로 정합니다. */
+        uint64 getGPUDeformProgramGeneration() const { return _deformProgramGeneration.load( std::memory_order_acquire ); }
+
+        /**
          * @brief 스킨(정점마다의 본 영향)을 설정합니다. 길이는 정점 수와 같아야 하고, 아니면 스킨을 지웁니다. 내용 번호가 바뀝니다.
          * @details 스킨이 있는 메시는 GPU 스키닝 풀(모프 풀의 스킨 구간)에 들어가 정점 셰이더가 변형된 정점을 읽는다. 팔레트(본 행렬)는
          *          메시가 아니라 그것을 그리는 컴포넌트가 프레임마다 낸다(`SkeletalMeshComponent`). 그래서 포즈가 다른 캐릭터는 메시 객체를 따로 둔다.
@@ -225,6 +239,10 @@ namespace sw
         uint64 _contentID{ allocateContentID() };
         /// @brief setGPUMorphEnabled 를 참고하세요. 이 메시가 모프 풀에 들어갈지 여부입니다.
         uint8 _bGPUMorph{ SW_FALSE };
+        /// @brief setGPUDeformProgram 을 참고하세요. 잠금(`_deformProgramMutex`) 안에서만 읽고 씁니다.
+        shared_ptr<const vector<float4>> _deformProgram;
+        mutable mutex                    _deformProgramMutex;
+        atomic<uint64>                   _deformProgramGeneration{ 0 };
         /** @brief 정점 버퍼입니다. 어느 디바이스의 것인지를 함께 가지고 있습니다(RHIResidentBuffer). */
         RHIResidentBuffer _vertex;
     };

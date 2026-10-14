@@ -19,7 +19,8 @@
   확장 모듈은 Dev 에디터에서만 올라오므로, 씬에 모듈 컴포넌트를 저장하면 게임 · Shipping 에서 모르는 타입이 된다.
 - **공간 처리는 `MeshModifier::apply` 한 곳이다.** 모디파이어 공간(로컬 또는 기준 오브젝트의 월드 변환)으로 옮겨 변형하고 되돌린다. 개별 모디파이어는 공간을 모른다.
 - **외부 입력은 `IMeshModifierInputs` 로 받는다**: 오브젝트 월드 행렬, 곡선 길이와 표본, 다른 메시 삼각형, 텍스처 표본. 세션이 씬에서 구현하고 테스트는 가짜를 넘긴다.
-- **병렬 적용**: 4096 정점 덩어리로 나눠 `TaskManager::runParallel` 에 태운다. 작업 관리자는 `setMeshModifierTaskManager` 로 세션이 걸고, 없으면 현재 스레드가 한 번에 돈다.
+- **병렬 적용**: 4096 정점 덩어리로 나눠 `TaskManager::runParallel` 에 태운다. 덩어리 일은 정점 배열을 생 포인터로만 만진다 — `vector` 비const 인덱싱은 Debug 레이스 검출기가
+  쓰기로 세어 워커 둘이 겹치면 멈춘다(`MeshModifierParallelTest`). 작업 관리자는 `setMeshModifierTaskManager` 로 세션이 걸고, 없으면 현재 스레드가 한 번에 돈다.
   엔진 내부 전용인 `engine::runParallel` 은 확장 모듈이 include 할 수 없다. SIMD · prefetch 는 쓰지 않는다.
 
 ## 모디파이어를 하나 더하는 법
@@ -64,7 +65,8 @@
   BVH 는 모디파이어 인스턴스가 들고, 적용 때 넘어온 삼각형 목록이 지난번과 한 바이트도 다르지 않을 때만 재사용한다(해시가 아니라 값 비교). 같은 인스턴스를 두 스레드에서 동시에 적용하지 않는다.
 - **Curve Sculpt Layered** 의 "Layer Curves"(곡선 목록)는 층 번호가 같은 항목이 있고 키가 하나 이상이면 그 곡선을, 아니면 공유 Shape 곡선을 쓴다. **Conform Multi** 의 "Targets"(참조 목록)는 최대 16 개, 빈 이름 · 못 찾은 이름은 건너뛴다.
 - **곡선 보간**: 곡선 매개변수가 `FloatCurve` 를 그대로 들어 공용 곡선 편집기에서 Cubic · Constant 로 바꿔도 값에 남는다(예전에는 어댑터가 선형으로 되돌렸다). 저장 문서의 키는 선형 `[시간, 값]`(옛 문서와 같다), 상수 · 자동 접선 큐빅 `[시간, 값, 보간]`, 접선을 손으로 둔 큐빅 `[시간, 값, 보간, 들어오는 접선, 나가는 접선]` 이다.
-- **Deformable** 은 하위 스택을 품지만 패널에서 편집하는 UI 가 없다(남은 일). 하위 스택은 `extra.stack` 한 줄 JSON 으로 저장되고 두 단계 중첩도 왕복한다. UI 가 들고 다닐 "고른 모디파이어" 는 번호 목록 경로로 가리키고(`DeformableModifier::findByPath` · `findOwningStack` - 담은 스택에 추가 · 삭제 · 위아래를 건다), `DeformableNestingTest` 가 고정한다.
+- **Deformable** 은 하위 스택을 품는다. 묶음을 고르면 패널 아래에 "Nested Stack" 이 열린다 — 하위 목록(켜짐 · 위아래 · 삭제 · 추가), ">" 로 중첩 묶음에 들어가고 "Up" 으로 나오며,
+  고른 하위 모디파이어의 기즈모 · 매개변수를 같은 입력칸으로 편집한다(되돌리기는 바깥 스택 문서째). 하위 스택은 `extra.stack` 한 줄 JSON 으로 저장되고 두 단계 중첩도 왕복한다. UI 가 들고 다닐 "고른 모디파이어" 는 번호 목록 경로로 가리키고(`DeformableModifier::findByPath` · `findOwningStack` - 담은 스택에 추가 · 삭제 · 위아래를 건다), `DeformableNestingTest` 가 고정한다.
 - **Point Cache** 는 경로를 파일 경로로 그대로 읽는다(리소스 id 를 절대 경로로 푸는 일은 엔진 서비스가 필요하다).
 - **Displace 계열** 은 세션의 `trySampleTexture` 가 CPU 텍스처 표본기(`Stack/MeshModifierTextureSampler`)를 부른다. 이미지를 float4 텍셀로 디코드해 캐시하고(디코드는 Editor 의 `ImageUtil::loadFloat4FromMemory`),
   이중선형 · Repeat 로 표본한다. 파일이 바뀌면 최대 1 초 뒤 다시 읽는다. 4096² 한 장이 256 MB 이고 메모리 상한은 없다. 웹캠은 정적 프레임으로 대체한다.
@@ -73,17 +75,28 @@
   격자 · ffd2d 제어점 클릭 고르기와 끌기(대칭은 세션 설정). 회전 고리는 기준 축 둘레 증분 회전을 곱한 뒤 Rz·Ry·Rx 오일러로 다시 푼다(`applyRotationDelta`, 짐벌 근처는 X 를 0 으로 두고 Z 에 몰아 유한하게 만든다). 손잡이를 집는 순간
   `EditorViewportMouseClaim::acquire` 로 뷰포트의 클릭 선택 · 변환 기즈모를 양보시키고 끄는 동안 매 프레임 다시 잡으며 놓을 때 `release` 한다(호버만으로는 잡지 않는다). 뷰포트는 시각화를 그린 뒤에 클릭 선택을 처리하므로 첫 클릭이 새지 않고,
   끄는 중에 시각화 토글을 꺼도 다음 프레임 시작(`beginFrame`)에 양보가 거둬진다. 범위 표시와 ffd2d 격자 상자는 선택한 모디파이어의 **입력 메시 상자**(앞 모디파이어까지 건 결과)를 쓴다.
-  툴바 "Stage" 는 고른 모디파이어까지만 건 결과를 다른 색으로 겹친다. 미리보기는 정점 버퍼를 건드리지 않고 와이어(최대 2 만 삼각형)로 그린다.
+  툴바 "Stage" 는 고른 모디파이어까지만 건 결과를 다른 색으로 겹친다. 와이어(최대 2 만 삼각형)는 늘 CPU 결과이고, 셰이딩된 결과는 아래 셰이딩 미리보기다.
+  자동화 시나리오 `Resource/engine/automation/editor/meshmodifiers.scenario.xml` 이 패널 · 기즈모 끌기(선택이 그대로인지 = 첫 클릭 누수 없음) · 곡선 목록 · 참조 목록 · 하위 스택 · GPU · CPU 셰이딩 그림을 본다
+  (패널이 씬 뷰 위에 떠 있으면 손잡이를 가려서 끌기 전에 패널을 닫는다).
 - 굽기는 스킨 가중치를 옮기고 모프 타깃은 위치가 맞지 않아 버리며 경고한다. 결과 메시는 씬이 쓰기 전까지 아무도 참조하지 않아 `orphans` 규칙이 경고(오류 아님)를 낸다 - 쓰이지 않는 에셋이라는 사실 그대로의 알림이라 고칠 결함이 아니고, 메시 컴포넌트가 가리키면 사라진다
   (규칙 표에 예외를 달면 "어떤 파일에도 안 맞는 예외" 검사가 오래된 예외로 잡는다).
 - 월드 공간 워프(별도 씬 오브젝트로 여러 메시에 적용)는 모디파이어의 `setWorldSpace` + 기준 오브젝트 id 까지만 있다.
 
-## 컴퓨트 셰이더 (2단계 — 아직 없음)
+## 셰이딩 미리보기 (GPU 컴퓨트 · CPU 정점)
 
-실시간 미리보기를 GPU 로 옮기는 조사는 끝났고 구현은 하지 않았다. 조사 결과(근거 파일은 `docs/06_Backlog.md` `D3-10`):
+패널의 "Shaded Preview"(기본 켬)는 대상 메시 컴포넌트에 미리보기 메시를 런타임 지정(`setMesh`, 저장되지 않음)으로 끼운다. 스택을 GPU 로 옮길 수 있으면 레스트 정점 + GPU 모프 메시를 끼우고,
+스택을 **변형 프로그램**(float4 목록)으로 바꿔 `Mesh::setGPUDeformProgram` 에 건다. 모프 풀(`GPUMeshMorphPool`)이 칸 표 + 프로그램을 t1 로 싣고,
+엔진 셰이더 `meshmorph.hlsl` 이 프로그램이 있는 메시에는 기본 물결 대신 uber 실행기 `meshmodifier.hlsli` 를 건다. 정점 셰이더는 원래대로 모프 풀 결과를 읽는다.
 
-- 네 백엔드 모두 컴퓨트를 지원하고 기존 사례가 있다(`meshmorph.hlsl` · `meshskin.hlsl` · `gpucull.hlsl`).
-- GPU 결과를 CPU 로 되읽는 버퍼 API 가 없어 그리기를 GPU 안에서 끝내야 한다(모프 풀 출력 버퍼를 `swLoadMorphedVertex` 가 읽는 경로).
-- 모디파이어마다 셰이더를 만들지 않고 `종류 id + 매개변수 구조 버퍼` 목록을 순서대로 적용하는 **uber 컴퓨트 셰이더 하나**가 낫다. 점 단위 수학인 모디파이어는 `supportsGPU()` 가 true 이고 `packGPUParams` 를 가진다.
-- 새 셰이더는 `ShaderCookRequest.cpp` 의 엔진 컴퓨트 목록에 등록하고 `App --cook-shaders` 산출물을 커밋해야 한다. 4 백엔드 그림 검증(GPU 테스트)이 필요하다.
-- CPU 정본(굽기 · 단위 테스트)은 그대로 둔다.
+- **CPU 가 정본이다.** 프로그램은 `Stack/MeshModifierGPUProgram` 이 만든다 — 종류 번호(셰이더 `SW_MODIFIER_*` 와 같은 순서의 표) · 공간 행렬(`MeshModifier::apply` 와 같은 것) ·
+  입력 상자 · 야코비안 걸음 · 매개변수(`packGPUParams` 기본 배치). 입력 상자는 앞 모디파이어까지 건 결과라 GPU 가 다시 셀 수 없어서, 미리보기가 이미 도는 CPU 적용에서
+  `MeshModifierEvaluation::_pListInputBounds` 로 공짜로 모은다. 그래서 매개변수가 바뀌면 CPU 가 한 번 돌고, 정점 버퍼는 다시 만들지 않고 프로그램만 바뀐다(렌더 스레드는 잠금으로 사본을 잡는다).
+- **옮기는 조건**: 켜진 모디파이어가 모두 `supportsGPU()` 이고 표에 있으며(33 종, `MeshModifierGPUProgramTest.KindTableMatchesSupportsGPU` 가 둘이 같은지 본다),
+  "Recompute Normals" 를 끄고, 선택 가중치 채널이 없을 때. 하나라도 어기면 CPU 결과 정점을 올린 새 메시를 바뀔 때마다 끼운다(패널에 CPU 로 내린 모디파이어 이름이 보인다).
+  그리는 중인 메시의 정점을 고치지 않고 메시째 바꾸는 것은 렌더 스레드가 든 사본과 겹치지 않게 하려는 것이다. 상용 도구(언리얼 모델링 · 3ds Max 스택)처럼 어느 경로든 셰이딩 결과를 보인다.
+- **새 점 단위 모디파이어를 GPU 로**: 셰이더에 번호 · 함수 · switch 한 줄, `MeshModifierGPUProgram.cpp` 표에 id 한 줄, `TestMeshModifierGPU.cpp` 사례 한 줄. 셰이더를 고치면
+  `App.exe --cook-shaders` 로 다시 굽고 `Resource/engine/shaders/bin` 산출물을 커밋한다.
+- **검증**: `MeshModifierGPUTest.ProgramMatchesCPU`(hostgpu) — 종류마다 · 기즈모 회전 · 연쇄 35 사례를 네 백엔드에서 CPU 변형 메시와 그림으로 견준다(달라진 픽셀 2 % 이하,
+  레스트와는 2 % 넘게 달라야 한다). 첫 매개변수를 15 % 틀리게 싣는 변이에서 80 건이 졌다.
+- **주의**: 셰이더 함수는 한 출구로 쓴다(GL 드라이버가 early-return 모양을 잘못 컴파일한 적이 있다). 점 셋(원래 · 접선 둘)은 루프 하나로 건다 — 펼치면 종류 분기가 세 벌 복사돼
+  셰이더가 세 배(DX11 200 KB)로 커진다. 정수(종류 · 칸 번호)는 float **값**으로 싣는다 — 비트 재해석(asfloat)은 비정규 수라 GPU 가 0 으로 지울 수 있다.

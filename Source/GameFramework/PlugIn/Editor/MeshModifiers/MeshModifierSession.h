@@ -22,6 +22,8 @@
 namespace sw
 {
     class GameObject;
+    class Mesh;
+    class MeshComponent;
 } // namespace sw
 
 namespace sw::editor
@@ -42,6 +44,9 @@ namespace sw::editor
         static constexpr size_t kMaxPreviewTriangleCount = 20000;
 
         MeshModifierSession();
+
+        /** @brief 대상 메시 컴포넌트에 걸어 둔 미리보기 메시를 원래 메시로 되돌립니다(모듈이 내려가도 씬에 미리보기가 남지 않게). */
+        void shutdownSubsystem() override;
 
         /**
          * @brief 대상을 바꿉니다. 메시 컴포넌트의 `.mesh` 를 읽고, 사이드카가 있으면 스택을 읽습니다. 실패하면 false 이고 대상은 비웁니다.
@@ -64,8 +69,21 @@ namespace sw::editor
 
         /** @brief 스택이 바뀌었다고 알립니다. 다음 `refreshPreview` 가 다시 겁니다. */
         void markDirty() { _bPreviewDirty = true; }
-        /** @brief 바뀌었으면 원본 정점에 스택을 다시 겁니다(CPU 정본 경로). */
+        /** @brief 바뀌었으면 원본 정점에 스택을 다시 겁니다(CPU 정본 경로). GPU 미리보기가 켜져 있으면 같은 적용에서 모은 입력 상자로 변형 프로그램도 다시 겁니다. */
         void refreshPreview();
+
+        /**
+         * @brief 셰이딩 미리보기 — 대상 메시 컴포넌트에 스택 결과 메시를 바꿔 끼워 뷰포트가 셰이딩된 결과를 그리게 합니다.
+         * @details 켜진 모디파이어가 모두 GPU 표에 있으면(`MeshModifierGPUProgram::canMake`) 레스트 정점 + GPU 모프 + 변형 프로그램으로 그린다.
+         *          매개변수만 바뀌면 프로그램만 다시 건다(정점 버퍼를 다시 만들지 않는다). 아니면 CPU 결과 정점을 올린 메시를 바뀔 때마다 새로 끼운다.
+         *          메시 컴포넌트의 런타임 지정(`setMesh`)이라 저장되지 않는다. 끄면 원래 메시와 와이어 미리보기만 남는다. 기본은 켬이다.
+         */
+        void setShadedPreviewEnabled( bool bEnabled );
+        bool isShadedPreviewEnabled() const { return _bShadedPreview; }
+        /** @brief GPU 변형 프로그램 미리보기가 지금 대상에 걸려 있으면 true 입니다(CPU 결과 메시가 걸려 있으면 false). */
+        bool isGPUPreviewActive() const { return _originalMesh != nullptr && _gpuPreviewMesh != nullptr && _cpuPreviewMesh == nullptr; }
+        /** @brief GPU 로 못 옮긴 첫 모디파이어 번호입니다(-1 이면 막는 모디파이어가 없거나 스택 설정이 막는다). 패널 안내에 씁니다. */
+        int32 getGPUPreviewBlockingIndex() const { return _gpuBlockingIndex; }
         /** @brief 미리보기 결과의 월드 선분(삼각형 변)을 @p outListSegmentPoint 에 점 둘씩 채웁니다. */
         void makePreviewSegments( vector<float3>& outListSegmentPoint ) const;
         /** @brief 메시 로컬 → 월드 행렬입니다(대상이 없으면 단위 행렬). */
@@ -124,8 +142,20 @@ namespace sw::editor
     private:
         void makeSourceMesh( MeshModifierMesh& outMesh ) const;
         void makeSegments( const MeshModifierMesh& mesh, vector<float3>& outListSegmentPoint ) const;
+        /** @brief 방금 건 CPU 적용의 평가 · 입력 상자로 셰이딩 미리보기를 맞춥니다(GPU 로 못 옮기면 CPU 결과 메시를 끼운다). */
+        void updateShadedPreview( const MeshModifierEvaluation& evaluation, const vector<MeshModifierBounds>& listInputBounds );
+        /** @brief 미리보기 메시 @p mesh 를 대상에 끼웁니다. 대상에 우리 것이 아닌 메시가 걸려 있으면 그것을 원래 메시로 잡아 둡니다. */
+        void mountPreviewMesh( MeshComponent& meshComponent, const shared_ptr<Mesh>& mesh );
+        /** @brief 대상에 끼워 둔 미리보기 메시를 원래 메시로 되돌립니다. 대상이 지워졌으면 잡아 둔 포인터만 놓습니다. */
+        void restoreOriginalMesh();
 
         MeshModifierStack  _stack;
+        shared_ptr<Mesh>   _gpuPreviewMesh; ///< 레스트 정점 + GPU 모프(엔진이 만든 메시라 모듈이 내려가도 소멸 코드는 엔진에 있다)
+        shared_ptr<Mesh>   _cpuPreviewMesh; ///< CPU 결과 정점(GPU 로 못 옮기는 스택일 때만 있다)
+        shared_ptr<Mesh>   _originalMesh;   ///< 미리보기를 끼우기 전 대상 컴포넌트의 메시
+        vector<float4>     _listGPUProgram;
+        int32              _gpuBlockingIndex;
+        bool               _bShadedPreview;
         MeshModifierMesh   _previewMesh;
         MeshModifierMesh   _stagePreviewMesh; ///< 고른 모디파이어까지만 건 결과(`makeStagePreviewSegments`)
         MeshAssetData      _sourceData;

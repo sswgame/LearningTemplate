@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Common/Widgets/EditorCurveEditor.h"
@@ -18,9 +19,11 @@ namespace sw::editor
     struct MeshModifierParamDef;
     struct MeshModifierRegistration;
 
+    class DeformableModifier;
     class LatticeModifier;
     class MeshModifier;
     class MeshModifierSession;
+    class MeshModifierStack;
 
     /**
      * @class MeshModifiersPanel
@@ -33,12 +36,29 @@ namespace sw::editor
 
         const utf8* getPanelTitle() const override { return "Mesh Modifiers"; }
         bool        isToolPanel() const override { return true; }
-        void        drawContent() override;
+        /** @brief 스택 목록 · 기즈모 · 매개변수 · 하위 스택이 세로로 길다 - 기본(640 x 420)이면 매개변수가 첫 화면 밖으로 밀린다. */
+        float2 getInitialPanelSize() const override { return float2{ 560.0f, 900.0f }; }
+        void   drawContent() override;
 
     private:
         void drawTargetRow( MeshModifierSession& session );
         void drawStackList( MeshModifierSession& session );
-        void drawAddMenu( MeshModifierSession& session );
+        /**
+         * @brief 추가 단추와 종류 메뉴를 그리고, 고르면 @p stack 맨 아래에 더합니다. 더한 번호를, 아니면 -1 을 반환합니다.
+         * @param pMarkPrefix 자동화 이름표 접두(`<접두>.add` · `<접두>.category.<카테고리>` · `<접두>.item.<id>`)
+         */
+        int32 drawAddMenu( MeshModifierSession& session, MeshModifierStack& stack, const utf8* pMarkPrefix );
+        /**
+         * @brief 스택의 줄(켜짐 · 이름 · 위/아래 · 삭제)을 그리고 바뀐 고른 번호를 반환합니다. 목록은 다 그린 뒤 고친다.
+         * @param pMarkPrefix    줄 이름 칸의 자동화 이름표 접두(`<접두>.<번호>`)
+         * @param pOutEnterIndex 주면 묶음(Deformable) 줄에 ">" 단추를 두고, 누른 줄 번호를 받습니다.
+         */
+        int32 drawStackRows( MeshModifierSession& session, MeshModifierStack& stack, int32 selectedIndex, const utf8* pMarkPrefix, int32* pOutEnterIndex );
+        /**
+         * @brief 묶음 모디파이어의 하위 스택 편집 — 경로(`_listNestedPath`)로 들어간 단계의 목록 · 추가 · 고른 하위 모디파이어의 기즈모와 매개변수.
+         * @details 번호 경로 모델은 `DeformableModifier::findByPath` 다. 되돌리기는 바깥 스택 문서째(하위 스택은 `extra.stack`) 기록되므로 따로 두지 않는다.
+         */
+        void drawNestedStack( MeshModifierSession& session, DeformableModifier& root );
         void drawSelectedModifier( MeshModifierSession& session );
         void drawGizmo( MeshModifierSession& session, MeshModifier& modifier );
         /** @brief 매개변수를 구역(`_pGroup`)별 접히는 머리로 묶어 그립니다. 구역 없는 매개변수는 맨 위입니다. */
@@ -68,12 +88,15 @@ namespace sw::editor
         /** @brief 입력칸을 그린 뒤 부릅니다. 끌기가 끝났으면 다음 편집이 새 기록을 남기게 합니다. */
         void finishItem();
 
-        EditorCurveEditorState _curveState;      ///< 열린 곡선 편집기 팝업 하나의 상태
-        const MeshModifier*    _pCurveModifier;  ///< 곡선 팝업을 연 모디파이어(그 프레임 안에서 비교만 한다 — 역참조하지 않는다)
-        uint32                 _curveParamIndex; ///< 곡선 팝업을 연 매개변수 번호
-        int32                  _curveItemIndex;  ///< 곡선 팝업을 연 목록 항목 번호(단일 곡선이면 -1)
-        string                 _descriptionID;   ///< 설명을 만들어 둔 등록 id
-        string                 _description;     ///< `_descriptionID` 모디파이어의 설명
+        EditorCurveEditorState _curveState;          ///< 열린 곡선 편집기 팝업 하나의 상태
+        const MeshModifier*    _pCurveModifier;      ///< 곡선 팝업을 연 모디파이어(그 프레임 안에서 비교만 한다 — 역참조하지 않는다)
+        uint32                 _curveParamIndex;     ///< 곡선 팝업을 연 매개변수 번호
+        int32                  _curveItemIndex;      ///< 곡선 팝업을 연 목록 항목 번호(단일 곡선이면 -1)
+        string                 _descriptionID;       ///< 설명을 만들어 둔 등록 id
+        string                 _description;         ///< `_descriptionID` 모디파이어의 설명
+        const MeshModifier*    _pNestedRoot;         ///< 하위 스택 편집을 연 묶음(비교만 한다 — 역참조하지 않는다)
+        vector<int32>          _listNestedPath;      ///< 묶음의 하위 스택에서 들어간 묶음들의 번호 경로(비면 고른 묶음 자신의 하위 스택)
+        int32                  _nestedSelectedIndex; ///< 보이는 하위 스택에서 고른 번호(-1 이면 없음)
         bool                   _bEditing;
     };
 } // namespace sw::editor

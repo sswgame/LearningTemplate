@@ -18,6 +18,7 @@
 
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorViewportMouseClaim.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportRayPick.h"
@@ -515,6 +516,27 @@ namespace sw::editor
                 drawArrow( args, handle._origin, handle._origin + handle._direction, color, bHighlight ? 3.0f : 2.0f );
             }
 
+            /**
+             * @brief 자동화가 켜졌으면 이동 화살표마다 화면 사각형 이름표(`meshmodifiers.handle.move.<축>`)를 남깁니다 — 시나리오가 손잡이를 끌어 양보를 검증한다.
+             * @details 화살표 끝 쪽(길이의 90 %)을 고른다. 가운데 쪽은 다른 축 회전 고리(반경 80 %)와 겹친다.
+             */
+            static void noteHandleMarks( const EditorViewportVisualizerArgs& args, const vector<Handle>& listHandle )
+            {
+                if ( EditorSelfTestMarks::isEnabled() == false )
+                    return;
+                static constexpr float32 kMarkHalfSize = 4.0f;
+                for ( const Handle& handle : listHandle )
+                {
+                    ImVec2 screen;
+                    if ( handle._kind != DragKind::GizmoMove )
+                        continue;
+                    if ( EditorViewportProjectionUtil::projectPoint( *args._pViewProj, handle._origin + handle._direction * 0.9f, args._canvasPos, args._canvasSize, screen ) == false )
+                        continue;
+                    const string key = string( "meshmodifiers.handle.move." ) + to_string( handle._axis );
+                    EditorSelfTestMarks::noteRect( key.c_str(), float2{ screen.x - kMarkHalfSize, screen.y - kMarkHalfSize }, float2{ screen.x + kMarkHalfSize, screen.y + kMarkHalfSize } );
+                }
+            }
+
             static void ensureUndo( MeshModifierSession& session, DragState& state )
             {
                 if ( state._bUndoRecorded )
@@ -709,6 +731,7 @@ namespace sw::editor
                     const bool    bActive = state._bDragging && state._handle._kind == handle._kind && state._handle._axis == handle._axis;
                     drawHandle( args, handle, bActive || static_cast<int32>( index ) == hoveredHandle );
                 }
+                noteHandleMarks( args, s_listHandle );
                 ImVec2 centerScreen;
                 if ( EditorViewportProjectionUtil::projectPoint( *args._pViewProj, frame._centerWorld, args._canvasPos, args._canvasSize, centerScreen ) )
                     args._pDrawList->AddCircle( centerScreen, 6.0f, kAxisColor, 0, 2.0f );

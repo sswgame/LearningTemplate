@@ -16,6 +16,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -23,6 +24,7 @@
 #include "Engine/Utility/FloatCurve.h"
 
 #include "GameFramework/PlugIn/Editor/MeshModifiers/MeshModifierSession.h"
+#include "GameFramework/PlugIn/Editor/MeshModifiers/Modifiers/DeformableModifier.h"
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Modifiers/LatticeModifier.h"
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifierParamEdit.h"
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifierRegistry.h"
@@ -70,6 +72,23 @@ namespace sw::editor
                 return format;
             }
 
+            /** @brief 자동화가 켜졌을 때만 `<접두>.<꼬리>` 키를 만들어 직전 위젯을 기록합니다(키 글 만드는 비용을 평소에는 내지 않는다). */
+            static void noteMark( const utf8* pPrefix, string_view tail )
+            {
+                if ( EditorSelfTestMarks::isEnabled() == false )
+                    return;
+                string key( pPrefix );
+                key += ".";
+                key += tail;
+                EditorSelfTestMarks::note( key.c_str() );
+            }
+
+            static void noteMark( const utf8* pPrefix, size_t index )
+            {
+                if ( EditorSelfTestMarks::isEnabled() )
+                    noteMark( pPrefix, string_view( to_string( static_cast<uint32>( index ) ) ) );
+            }
+
             /** @brief 직전 항목에 마우스가 있으면 툴팁을 보입니다. */
             static void drawItemTooltip( const utf8* pTooltip )
             {
@@ -101,7 +120,7 @@ namespace sw::editor
              * @brief 씬 오브젝트 고르기 콤보와 "선택 사용" 단추를 그립니다(참조 하나 · 참조 목록 항목이 함께 쓴다).
              * @return 이름을 새로 골랐으면 true 이고 @p outPicked 에 이름이 들어 있다(빈 글 = 비우기). 같은 이름을 다시 골라도 true 일 수 있다.
              */
-            static bool drawReferencePicker( const MeshModifierParamDef& def, const utf8* pLabel, const string& current, string& outPicked )
+            static bool drawReferencePicker( const MeshModifierParamDef& def, const utf8* pLabel, const string& current, string& outPicked, const utf8* pMarkKey )
             {
                 bool        bPicked  = false;
                 const utf8* pPreview = current.empty() ? SW_LOCKEY( "EdMeshModifiers", "ReferenceNone" ) : current.c_str();
@@ -149,7 +168,9 @@ namespace sw::editor
                 }
                 drawItemTooltip( def._pTooltip != nullptr ? def._pTooltip : def._pHint );
 
-                if ( ImGui::SmallButton( SW_LOCKEY( "EdMeshModifiers", "UseSelectionForParam" ) ) )
+                const bool bUseSelection = ImGui::SmallButton( SW_LOCKEY( "EdMeshModifiers", "UseSelectionForParam" ) );
+                noteMark( pMarkKey, "useSelection" );
+                if ( bUseSelection )
                 {
                     EditorSelection* pSelection = getService<EditorSelection>();
                     GameObject*      pObject    = pSelection != nullptr ? pSelection->getPrimaryObject() : nullptr;
@@ -184,6 +205,9 @@ namespace sw::editor
         , _curveItemIndex{ -1 }
         , _descriptionID{}
         , _description{}
+        , _pNestedRoot{ nullptr }
+        , _listNestedPath{}
+        , _nestedSelectedIndex{ -1 }
         , _bEditing{ false }
     {
     }
@@ -216,7 +240,9 @@ namespace sw::editor
 
     void MeshModifiersPanel::drawTargetRow( MeshModifierSession& session )
     {
-        if ( ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "UseSelection" ) ) )
+        const bool bUseSelection = ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "UseSelection" ) );
+        EditorSelfTestMarks::note( "meshmodifiers.useSelection" );
+        if ( bUseSelection )
         {
             EditorSelection* pSelection = getService<EditorSelection>();
             GameObject*      pObject    = pSelection != nullptr ? pSelection->getPrimaryObject() : nullptr;
@@ -233,11 +259,20 @@ namespace sw::editor
     void MeshModifiersPanel::drawStackList( MeshModifierSession& session )
     {
         MeshModifierStack& stack = session.getStack();
-        drawAddMenu( session );
+        const int32        added = drawAddMenu( session, stack, "meshmodifiers" );
+        if ( added >= 0 )
+            session.setSelectedIndex( added );
+        session.setSelectedIndex( drawStackRows( session, stack, session.getSelectedIndex(), "meshmodifiers.row", nullptr ) );
+    }
 
+    int32 MeshModifiersPanel::drawStackRows( MeshModifierSession& session, MeshModifierStack& stack, int32 selectedIndex, const utf8* pMarkPrefix, int32* pOutEnterIndex )
+    {
+        int32 selected    = selectedIndex;
         int32 removeIndex = -1;
         int32 upIndex     = -1;
         int32 downIndex   = -1;
+        // 묶음(Deformable) 줄은 ">" 단추로 그 하위 스택에 들어간다 - 단추 칸만큼 이름 칸을 줄인다
+        const float32 buttonWidth = pOutEnterIndex != nullptr ? 115.0f : 90.0f;
         for ( int32 index = 0; index < stack.getModifierCount(); ++index )
         {
             MeshModifier* pModifier = stack.findModifier( index );
@@ -250,9 +285,9 @@ namespace sw::editor
                 session.markDirty();
             }
             ImGui::SameLine();
-            if ( ImGui::Selectable( pModifier->getName().c_str(), session.getSelectedIndex() == index, ImGuiSelectableFlags_None,
-                                    ImVec2{ ImGui::GetContentRegionAvail().x - 90.0f, 0.0f } ) )
-                session.setSelectedIndex( index );
+            if ( ImGui::Selectable( pModifier->getName().c_str(), selected == index, ImGuiSelectableFlags_None, ImVec2{ ImGui::GetContentRegionAvail().x - buttonWidth, 0.0f } ) )
+                selected = index;
+            MeshModifiersPanelInternal::noteMark( pMarkPrefix, static_cast<size_t>( index ) );
             ImGui::SameLine();
             if ( ImGui::SmallButton( "^" ) )
                 upIndex = index;
@@ -262,6 +297,14 @@ namespace sw::editor
             ImGui::SameLine();
             if ( ImGui::SmallButton( "x" ) )
                 removeIndex = index;
+            if ( pOutEnterIndex != nullptr && DeformableModifier::findFrom( *pModifier ) != nullptr )
+            {
+                ImGui::SameLine();
+                if ( ImGui::SmallButton( ">" ) )
+                    *pOutEnterIndex = index;
+                MeshModifiersPanelInternal::noteMark( "meshmodifiers.enter", static_cast<size_t>( index ) );
+                MeshModifiersPanelInternal::drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "EnterNestedStack" ) );
+            }
             ImGui::PopID();
         }
 
@@ -270,31 +313,106 @@ namespace sw::editor
         {
             session.recordUndo();
             if ( stack.moveUp( upIndex ) )
-                session.setSelectedIndex( upIndex - 1 );
+                selected = upIndex - 1;
             session.markDirty();
         }
         if ( downIndex >= 0 )
         {
             session.recordUndo();
             if ( stack.moveDown( downIndex ) )
-                session.setSelectedIndex( downIndex + 1 );
+                selected = downIndex + 1;
             session.markDirty();
         }
         if ( removeIndex >= 0 )
         {
             session.recordUndo();
             (void)stack.removeModifier( removeIndex ); // 방금 그린 번호라 범위 안이다
-            session.setSelectedIndex( MathUtil::min( session.getSelectedIndex(), stack.getModifierCount() - 1 ) );
+            selected = MathUtil::min( selected, stack.getModifierCount() - 1 );
             session.markDirty();
         }
+        return selected;
     }
 
-    void MeshModifiersPanel::drawAddMenu( MeshModifierSession& session )
+    void MeshModifiersPanel::drawNestedStack( MeshModifierSession& session, DeformableModifier& root )
     {
-        if ( ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "AddModifier" ) ) )
+        ImGui::SeparatorText( SW_LOCKEY( "EdMeshModifiers", "NestedStack" ) );
+        if ( _pNestedRoot != &root )
+        {
+            // 다른 묶음을 골랐다 - 하위 스택의 고른 자리를 처음으로 되돌린다(포인터는 비교만 한다)
+            _pNestedRoot = &root;
+            _listNestedPath.clear();
+            _nestedSelectedIndex = -1;
+        }
+        // 보여 줄 스택 = 경로가 가리키는 묶음의 하위 스택(빈 경로면 고른 묶음 자신의 하위 스택). 되돌리기로 경로가 무효가 되면 처음으로
+        MeshModifierStack* pShown = &root.getStack();
+        if ( _listNestedPath.empty() == false )
+        {
+            MeshModifier*       pOwner = DeformableModifier::findByPath( root.getStack(), _listNestedPath );
+            DeformableModifier* pGroup = pOwner != nullptr ? DeformableModifier::findFrom( *pOwner ) : nullptr;
+            if ( pGroup != nullptr )
+                pShown = &pGroup->getStack();
+            else
+            {
+                _listNestedPath.clear();
+                _nestedSelectedIndex = -1;
+            }
+        }
+
+        ImGui::PushID( "##NestedStack" );
+        ImGui::PushID( static_cast<int32>( _listNestedPath.size() ) );
+        if ( _listNestedPath.empty() == false )
+        {
+            const bool bUp = ImGui::SmallButton( SW_LOCKEY( "EdMeshModifiers", "NestedUp" ) );
+            EditorSelfTestMarks::note( "meshmodifiers.nested.up" );
+            if ( bUp )
+            {
+                _nestedSelectedIndex = _listNestedPath.back();
+                _listNestedPath.pop_back();
+            }
+            ImGui::SameLine();
+        }
+        ImGui::TextDisabled( "%s %u", SW_LOCKEY( "EdMeshModifiers", "NestedDepth" ), static_cast<uint32>( _listNestedPath.size() + 1 ) );
+        const int32 added = drawAddMenu( session, *pShown, "meshmodifiers.nested" );
+        if ( added >= 0 )
+            _nestedSelectedIndex = added;
+        int32 enterIndex     = -1;
+        _nestedSelectedIndex = drawStackRows( session, *pShown, _nestedSelectedIndex, "meshmodifiers.nested.row", &enterIndex );
+        if ( pShown->getModifierCount() == 0 )
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdMeshModifiers", "NestedEmpty" ) );
+        if ( enterIndex >= 0 )
+        {
+            _listNestedPath.push_back( enterIndex );
+            _nestedSelectedIndex = -1;
+        }
+        else
+        {
+            MeshModifier* pSelected = pShown->findModifier( _nestedSelectedIndex );
+            if ( pSelected != nullptr )
+            {
+                // 하위 모디파이어의 기즈모 · 매개변수 - 묶음의 기즈모 공간 기준이다. 편집은 바깥 스택 문서(extra.stack)째 되돌리기에 들어간다
+                ImGui::SeparatorText( pSelected->getName().c_str() );
+                ImGui::PushID( pSelected );
+                drawGizmo( session, *pSelected );
+                drawParams( session, *pSelected );
+                LatticeModifier* pLattice = LatticeModifier::findFrom( *pSelected );
+                if ( pLattice != nullptr )
+                    drawLatticePoints( session, *pLattice );
+                ImGui::PopID();
+            }
+        }
+        ImGui::PopID();
+        ImGui::PopID();
+    }
+
+    int32 MeshModifiersPanel::drawAddMenu( MeshModifierSession& session, MeshModifierStack& stack, const utf8* pMarkPrefix )
+    {
+        int32      addedIndex = -1;
+        const bool bOpenMenu  = ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "AddModifier" ) );
+        MeshModifiersPanelInternal::noteMark( pMarkPrefix, "add" );
+        if ( bOpenMenu )
             ImGui::OpenPopup( "##AddModifier" );
         if ( ImGui::BeginPopup( "##AddModifier" ) == false )
-            return;
+            return addedIndex;
         vector<const MeshModifierRegistration*> listRegistration;
         MeshModifierRegistry::getRegistrations( listRegistration );
         size_t index = 0;
@@ -307,21 +425,23 @@ namespace sw::editor
             {
                 ++end;
             }
-            if ( ImGui::BeginMenu( listRegistration[index]->_pCategory ) )
+            const bool bCategoryOpen = ImGui::BeginMenu( listRegistration[index]->_pCategory );
+            MeshModifiersPanelInternal::noteMark( pMarkPrefix, string( "category." ) + string( category ) ); // BeginMenu 는 마지막 항목을 메뉴 머리로 되돌려 둔다
+            if ( bCategoryOpen )
             {
                 for ( size_t item = index; item < end; ++item )
                 {
                     const bool bClicked = ImGui::MenuItem( listRegistration[item]->_pDisplayName );
+                    MeshModifiersPanelInternal::noteMark( pMarkPrefix, string( "item." ) + listRegistration[item]->_pID );
                     drawRegistrationTooltip( *listRegistration[item] );
                     if ( bClicked == false )
                         continue;
                     session.recordUndo();
-                    MeshModifierStack& stack    = session.getStack();
-                    const int32        newIndex = stack.addModifier( listRegistration[item]->_pID );
-                    MeshModifier*      pAdded   = stack.findModifier( newIndex );
+                    const int32   newIndex = stack.addModifier( listRegistration[item]->_pID );
+                    MeshModifier* pAdded   = stack.findModifier( newIndex );
                     if ( pAdded != nullptr )
-                        pAdded->fitToBounds( session.getSourceBounds() );
-                    session.setSelectedIndex( newIndex );
+                        pAdded->fitToBounds( session.getSourceBounds() ); // 하위 스택이면 묶음 공간과 다를 수 있다 - 맞추기 단추로 다시 맞춘다
+                    addedIndex = newIndex;
                     session.markDirty();
                 }
                 ImGui::EndMenu();
@@ -329,6 +449,7 @@ namespace sw::editor
             index = end;
         }
         ImGui::EndPopup();
+        return addedIndex;
     }
 
     void MeshModifiersPanel::drawSelectedModifier( MeshModifierSession& session )
@@ -359,6 +480,9 @@ namespace sw::editor
         LatticeModifier* pLattice = LatticeModifier::findFrom( *pModifier );
         if ( pLattice != nullptr )
             drawLatticePoints( session, *pLattice );
+        DeformableModifier* pDeformable = DeformableModifier::findFrom( *pModifier );
+        if ( pDeformable != nullptr )
+            drawNestedStack( session, *pDeformable );
         ImGui::PopID();
     }
 
@@ -551,6 +675,7 @@ namespace sw::editor
                 break;
             }
         }
+        MeshModifiersPanelInternal::noteMark( "meshmodifiers.param", string_view( def._pName ) ); // 스칼라 · 벡터 칸은 입력칸 자신이다
         ImGui::PopID();
     }
 
@@ -566,7 +691,12 @@ namespace sw::editor
     {
         const MeshModifierParamDef& def = modifier.getParamDefs()[paramIndex];
         // 매개변수의 곡선은 편집기와 같은 FloatCurve(보간 · 접선 포함)라 그대로 넘기고 그대로 받는다
-        if ( EditorCurveEditor::drawPreview( "##CurvePreview", curve, ImGui::GetFrameHeight() * 2.0f ) )
+        const bool bOpen = EditorCurveEditor::drawPreview( "##CurvePreview", curve, ImGui::GetFrameHeight() * 2.0f );
+        if ( itemIndex < 0 )
+            EditorSelfTestMarks::note( "meshmodifiers.curve" );
+        else
+            MeshModifiersPanelInternal::noteMark( "meshmodifiers.curve", static_cast<size_t>( itemIndex ) );
+        if ( bOpen )
         {
             _curveState          = EditorCurveEditorState{};
             _curveState._working = curve;
@@ -631,7 +761,13 @@ namespace sw::editor
             drawCurveField( session, modifier, paramIndex, static_cast<int32>( item ), value._listCurve[item] );
             ImGui::PopID();
         }
-        if ( value._listCurve.size() < limit && ImGui::SmallButton( SW_LOCKEY( "EdMeshModifiers", "AddItem" ) ) )
+        bool bAddItem = false;
+        if ( value._listCurve.size() < limit )
+        {
+            bAddItem = ImGui::SmallButton( SW_LOCKEY( "EdMeshModifiers", "AddItem" ) );
+            EditorSelfTestMarks::note( "meshmodifiers.curveList.add" );
+        }
+        if ( bAddItem )
         {
             // 새 항목은 선형 0 → 1 곡선으로 시작한다(모양 곡선의 기본과 같다)
             FloatCurve curve{};
@@ -806,7 +942,7 @@ namespace sw::editor
         const MeshModifierParamDef& def     = modifier.getParamDefs()[paramIndex];
         const string&               current = modifier.getText( paramIndex );
         string                      picked  = current;
-        if ( MeshModifiersPanelInternal::drawReferencePicker( def, def._pName, current, picked ) && string_view( picked ) != string_view( current ) )
+        if ( MeshModifiersPanelInternal::drawReferencePicker( def, def._pName, current, picked, "meshmodifiers.reference" ) && string_view( picked ) != string_view( current ) )
         {
             session.recordUndo();
             modifier.setText( paramIndex, picked );
@@ -838,14 +974,21 @@ namespace sw::editor
             MeshModifiersPanelInternal::drawItemButtons( item, action );
             const string current = value._listText[item];
             string       picked  = current;
-            if ( MeshModifiersPanelInternal::drawReferencePicker( def, "##Item", current, picked ) && string_view( picked ) != string_view( current ) )
+            const string markKey = string( "meshmodifiers.referenceList." ) + to_string( static_cast<uint32>( item ) );
+            if ( MeshModifiersPanelInternal::drawReferencePicker( def, "##Item", current, picked, markKey.c_str() ) && string_view( picked ) != string_view( current ) )
             {
                 value._listText[item] = picked;
                 bChange               = true;
             }
             ImGui::PopID();
         }
-        if ( value._listText.size() < limit && ImGui::SmallButton( SW_LOCKEY( "EdMeshModifiers", "AddItem" ) ) )
+        bool bAddItem = false;
+        if ( value._listText.size() < limit )
+        {
+            bAddItem = ImGui::SmallButton( SW_LOCKEY( "EdMeshModifiers", "AddItem" ) );
+            EditorSelfTestMarks::note( "meshmodifiers.referenceList.add" );
+        }
+        if ( bAddItem )
         {
             value._listText.push_back( string() ); // 빈 항목 - 고를 때까지 건너뛴다
             action._kind = MeshModifierListActionKind::Added;
@@ -929,6 +1072,22 @@ namespace sw::editor
             session.recordUndo();
             stack.setRecomputingNormals( bRecompute );
             session.markDirty();
+        }
+        // 셰이딩 미리보기 - 켜진 모디파이어가 모두 GPU 표에 있으면 GPU 모프로, 아니면 CPU 결과 정점으로 셰이딩해 보인다. CPU 로 내려가면 무엇 때문인지 알린다
+        bool bShadedPreview = session.isShadedPreviewEnabled();
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdMeshModifiers", "ShadedPreview" ), &bShadedPreview ) )
+            session.setShadedPreviewEnabled( bShadedPreview );
+        EditorSelfTestMarks::note( "meshmodifiers.shadedPreview" );
+        MeshModifiersPanelInternal::drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "ShadedPreviewTooltip" ) );
+        const bool bGPUPreviewBlocked = session.isShadedPreviewEnabled() && session.isGPUPreviewActive() == false && stack.getModifierCount() > 0;
+        if ( bGPUPreviewBlocked )
+        {
+            ImGui::SameLine();
+            const MeshModifier* pBlocking = stack.findModifier( session.getGPUPreviewBlockingIndex() );
+            if ( pBlocking != nullptr )
+                ImGui::TextDisabled( "%s %s", SW_LOCKEY( "EdMeshModifiers", "GPUPreviewBlockedBy" ), pBlocking->getName().c_str() );
+            else
+                ImGui::TextDisabled( "%s", SW_LOCKEY( "EdMeshModifiers", "GPUPreviewBlockedByStack" ) );
         }
         float32 time = session.getPreviewTime();
         if ( ImGui::DragFloat( SW_LOCKEY( "EdMeshModifiers", "PreviewTime" ), &time, 0.01f, 0.0f, 600.0f ) )

@@ -14,6 +14,8 @@
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Automation/AutomationProbe.h"
+#include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -22,6 +24,8 @@
 
 #include "GameFramework/Base/World/Spline/SplineComponent.h"
 #include "GameFramework/Base/World/Spline/SplinePath.h"
+#include "GameFramework/PlugIn/Editor/MeshModifiers/Modifiers/DeformableModifier.h"
+#include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifierGPUProgram.h"
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifierTextureSampler.h"
 
 namespace sw::editor
@@ -43,6 +47,146 @@ namespace sw::editor
                 const SceneComponent* pScene = object.getComponent<SceneComponent>();
                 return pScene != nullptr ? pScene->getWorldMatrix() : float4x4{};
             }
+
+            /** @brief 원본 정점 @p listSource 에 스택 결과 @p mesh 의 위치 · 법선 · UV · 색을 덮은 정점을 만듭니다(굽기와 CPU 미리보기가 같이 쓴다). */
+            static vector<RHIVertex> makeVertices( const vector<RHIVertex>& listSource, const MeshModifierMesh& mesh )
+            {
+                vector<RHIVertex> listVertex = listSource;
+                for ( size_t index = 0; index < listVertex.size(); ++index )
+                {
+                    RHIVertex&    vertex   = listVertex[index];
+                    const float3& position = mesh._listPosition[index];
+                    const float3& normal   = mesh._listNormal[index];
+                    const float2& uv       = mesh._listUV[index];
+                    const float4& color    = mesh._listColor[index];
+                    vertex._arrPosition[0] = position._x;
+                    vertex._arrPosition[1] = position._y;
+                    vertex._arrPosition[2] = position._z;
+                    vertex._arrNormal[0]   = normal._x;
+                    vertex._arrNormal[1]   = normal._y;
+                    vertex._arrNormal[2]   = normal._z;
+                    vertex._arrUv[0]       = uv._x;
+                    vertex._arrUv[1]       = uv._y;
+                    vertex._arrColor[0]    = color._x;
+                    vertex._arrColor[1]    = color._y;
+                    vertex._arrColor[2]    = color._z;
+                    vertex._arrColor[3]    = color._w;
+                }
+                return listVertex;
+            }
+        };
+
+        /** @brief 시나리오(`meshmodifiers.scenario.xml`)가 읽는 탐침입니다. 세션이 없거나 대상이 없으면 값을 내지 않습니다. */
+        struct MeshModifierSessionProbes
+        {
+            static editor::MeshModifierSession* findSession()
+            {
+                editor::MeshModifierSession* pSession = editor::getService<editor::MeshModifierSession>();
+                return pSession != nullptr && pSession->hasTarget() ? pSession : nullptr;
+            }
+
+            static editor::MeshModifier* findSelected()
+            {
+                editor::MeshModifierSession* pSession = findSession();
+                return pSession != nullptr ? pSession->getStack().findModifier( pSession->getSelectedIndex() ) : nullptr;
+            }
+
+            /** @brief 고른 모디파이어의 첫 @p kind 매개변수 값입니다. 없으면 nullptr 입니다. */
+            static const editor::MeshModifierParamValue* findSelectedParam( editor::MeshModifierParamKind kind )
+            {
+                const editor::MeshModifier* pModifier = findSelected();
+                if ( pModifier == nullptr )
+                    return nullptr;
+                for ( uint32 index = 0; index < pModifier->getParamCount(); ++index )
+                {
+                    if ( pModifier->getParamDefs()[index]._kind == kind )
+                        return &pModifier->getParamValue( index );
+                }
+                return nullptr;
+            }
+
+            [[nodiscard]] static bool readModifierCount( const GameObjectManager*, float64& outValue )
+            {
+                const editor::MeshModifierSession* pSession = findSession();
+                outValue                                    = pSession != nullptr ? static_cast<float64>( pSession->getStack().getModifierCount() ) : 0.0;
+                return true;
+            }
+
+            [[nodiscard]] static bool readGPUPreviewActive( const GameObjectManager*, float64& outValue )
+            {
+                const editor::MeshModifierSession* pSession = findSession();
+                outValue                                    = pSession != nullptr && pSession->isGPUPreviewActive() ? 1.0 : 0.0;
+                return true;
+            }
+
+            /** @brief 고른 모디파이어의 기즈모 중심이 원본 상자 가운데(맞추기 직후 자리)에서 떨어진 거리입니다 — 손잡이를 끈 뒤 0 보다 커야 한다. */
+            [[nodiscard]] static bool readSelectedCenterOffset( const GameObjectManager*, float64& outValue )
+            {
+                const editor::MeshModifierSession* pSession  = findSession();
+                const editor::MeshModifier*        pModifier = findSelected();
+                if ( pModifier == nullptr )
+                    return false;
+                outValue = static_cast<float64>( ( pModifier->getGizmo()._center - pSession->getSourceBounds().getCenter() ).getLength() );
+                return true;
+            }
+
+            /** @brief 고른 모디파이어의 첫 매개변수 값(스칼라)입니다. 패널 입력이 값에 닿았는지 본다. */
+            [[nodiscard]] static bool readSelectedFirstParam( const GameObjectManager*, float64& outValue )
+            {
+                const editor::MeshModifier* pModifier = findSelected();
+                if ( pModifier == nullptr || pModifier->getParamCount() == 0 )
+                    return false;
+                outValue = static_cast<float64>( pModifier->getFloat( 0 ) );
+                return true;
+            }
+
+            [[nodiscard]] static bool readNestedCount( const GameObjectManager*, float64& outValue )
+            {
+                editor::MeshModifier*             pModifier   = findSelected();
+                const editor::DeformableModifier* pDeformable = pModifier != nullptr ? editor::DeformableModifier::findFrom( *pModifier ) : nullptr;
+                if ( pDeformable == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pDeformable->getStack().getModifierCount() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readCurveListKeyCount( const GameObjectManager*, float64& outValue )
+            {
+                const editor::MeshModifierParamValue* pValue = findSelectedParam( editor::MeshModifierParamKind::CurveList );
+                if ( pValue == nullptr )
+                    return false;
+                size_t keyCount = 0;
+                for ( const FloatCurve& curve : pValue->_listCurve )
+                {
+                    keyCount += curve._listKey.size();
+                }
+                outValue = static_cast<float64>( keyCount );
+                return true;
+            }
+
+            [[nodiscard]] static bool readCurveListItemCount( const GameObjectManager*, float64& outValue )
+            {
+                const editor::MeshModifierParamValue* pValue = findSelectedParam( editor::MeshModifierParamKind::CurveList );
+                if ( pValue == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pValue->_listCurve.size() );
+                return true;
+            }
+
+            /** @brief 이름이 들어간(비지 않은) 참조 목록 항목 수입니다. */
+            [[nodiscard]] static bool readReferenceListCount( const GameObjectManager*, float64& outValue )
+            {
+                const editor::MeshModifierParamValue* pValue = findSelectedParam( editor::MeshModifierParamKind::ReferenceList );
+                if ( pValue == nullptr )
+                    return false;
+                size_t count = 0;
+                for ( const string& text : pValue->_listText )
+                {
+                    count += text.empty() ? 0u : 1u;
+                }
+                outValue = static_cast<float64>( count );
+                return true;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -51,6 +195,12 @@ namespace sw::editor
 {
     MeshModifierSession::MeshModifierSession()
         : _stack{}
+        , _gpuPreviewMesh{}
+        , _cpuPreviewMesh{}
+        , _originalMesh{}
+        , _listGPUProgram{}
+        , _gpuBlockingIndex{ -1 }
+        , _bShadedPreview{ true }
         , _previewMesh{}
         , _stagePreviewMesh{}
         , _sourceData{}
@@ -102,8 +252,17 @@ namespace sw::editor
         return true;
     }
 
+    void MeshModifierSession::shutdownSubsystem()
+    {
+        restoreOriginalMesh();
+        _gpuPreviewMesh = nullptr;
+    }
+
     void MeshModifierSession::clearTarget()
     {
+        restoreOriginalMesh(); // 옛 대상이 살아 있으면 원래 메시로 - 대상이 바뀌면 미리보기 메시도 새로 만든다
+        _gpuPreviewMesh   = nullptr;
+        _gpuBlockingIndex = -1;
         _stack.clear();
         _previewMesh      = MeshModifierMesh{};
         _stagePreviewMesh = MeshModifierMesh{};
@@ -170,11 +329,79 @@ namespace sw::editor
         _bStagePreviewDirty = true; // 단계 미리보기도 같은 스택 상태를 따라간다
         _bInputBoundsDirty  = true;
         makeSourceMesh( _previewMesh );
-        MeshModifierEvaluation evaluation{};
-        evaluation._meshToWorld = computeMeshToWorld();
-        evaluation._pInputs     = this;
-        evaluation._time        = _previewTime;
+        vector<MeshModifierBounds> listInputBounds;
+        MeshModifierEvaluation     evaluation{};
+        evaluation._meshToWorld      = computeMeshToWorld();
+        evaluation._pInputs          = this;
+        evaluation._time             = _previewTime;
+        evaluation._pListInputBounds = &listInputBounds; // GPU 프로그램이 싣는 입력 상자 - 이 적용에서 공짜로 모은다
         _stack.apply( _previewMesh, evaluation );
+        updateShadedPreview( evaluation, listInputBounds );
+    }
+
+    void MeshModifierSession::setShadedPreviewEnabled( bool bEnabled )
+    {
+        if ( _bShadedPreview == bEnabled )
+            return;
+        _bShadedPreview = bEnabled;
+        _bPreviewDirty  = true; // 다음 refreshPreview 가 끼우거나 되돌린다
+        if ( bEnabled == false )
+            restoreOriginalMesh();
+    }
+
+    void MeshModifierSession::updateShadedPreview( const MeshModifierEvaluation& evaluation, const vector<MeshModifierBounds>& listInputBounds )
+    {
+        (void)MeshModifierGPUProgram::canMake( _stack, &_gpuBlockingIndex );
+        GameObject*    pObject   = findTarget();
+        MeshComponent* pMeshComp = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
+        if ( _bShadedPreview == false || pMeshComp == nullptr )
+        {
+            restoreOriginalMesh();
+            return;
+        }
+        if ( MeshModifierGPUProgram::make( _stack, evaluation, listInputBounds, false, _listGPUProgram ) )
+        {
+            if ( _gpuPreviewMesh == nullptr )
+            {
+                _gpuPreviewMesh = Mesh::create();
+                _gpuPreviewMesh->setVertices( _sourceData._listVertex );
+                _gpuPreviewMesh->setGPUMorphEnabled( true );
+            }
+            _gpuPreviewMesh->setGPUDeformProgram( _listGPUProgram );
+            mountPreviewMesh( *pMeshComp, _gpuPreviewMesh );
+            _cpuPreviewMesh = nullptr;
+            return;
+        }
+        // GPU 표에 없는 모디파이어가 있다 - 방금 건 CPU 결과를 정점으로 올린다. 그리는 중인 메시를 고치지 않고 새 메시로 바꿔 끼운다
+        shared_ptr<Mesh> cpuMesh = Mesh::create();
+        cpuMesh->setVertices( MeshModifierSessionInternal::makeVertices( _sourceData._listVertex, _previewMesh ) );
+        mountPreviewMesh( *pMeshComp, cpuMesh );
+        _cpuPreviewMesh = std::move( cpuMesh );
+    }
+
+    void MeshModifierSession::mountPreviewMesh( MeshComponent& meshComponent, const shared_ptr<Mesh>& mesh )
+    {
+        const shared_ptr<Mesh>& current      = meshComponent.getMesh();
+        const bool              bOursMounted = current != nullptr && ( current == _gpuPreviewMesh || current == _cpuPreviewMesh );
+        if ( current == mesh )
+            return;
+        if ( bOursMounted == false )
+            _originalMesh = current; // 처음 끼우거나, 그사이 누가 다른 메시를 걸었다
+        meshComponent.setMesh( mesh );
+    }
+
+    void MeshModifierSession::restoreOriginalMesh()
+    {
+        if ( _originalMesh == nullptr )
+            return;
+        GameObject*    pObject   = findTarget();
+        MeshComponent* pMeshComp = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
+        // 그사이 누가 다른 메시를 걸었으면(메시 id 변경 · 되돌리기) 그쪽을 존중한다
+        const bool bOursMounted = pMeshComp != nullptr && ( pMeshComp->getMesh() == _gpuPreviewMesh || pMeshComp->getMesh() == _cpuPreviewMesh );
+        if ( bOursMounted )
+            pMeshComp->setMesh( _originalMesh );
+        _originalMesh   = nullptr;
+        _cpuPreviewMesh = nullptr;
     }
 
     void MeshModifierSession::makePreviewSegments( vector<float3>& outListSegmentPoint ) const
@@ -322,31 +549,11 @@ namespace sw::editor
         _stack.apply( mesh, evaluation );
 
         MeshAssetData baked{};
-        baked._listVertex     = _sourceData._listVertex;
+        baked._listVertex     = MeshModifierSessionInternal::makeVertices( _sourceData._listVertex, mesh );
         baked._listSkinVertex = _sourceData._listSkinVertex;
         baked._skinBoneCount  = _sourceData._skinBoneCount;
         if ( _sourceData._listMorphTarget.empty() == false )
             SW_LOG_WARNING( "Mesh '%#' has %# morph targets - they are dropped from the baked mesh", _meshPath.c_str(), _sourceData._listMorphTarget.size() );
-        for ( size_t index = 0; index < baked._listVertex.size(); ++index )
-        {
-            RHIVertex&    vertex   = baked._listVertex[index];
-            const float3& position = mesh._listPosition[index];
-            const float3& normal   = mesh._listNormal[index];
-            const float2& uv       = mesh._listUV[index];
-            const float4& color    = mesh._listColor[index];
-            vertex._arrPosition[0] = position._x;
-            vertex._arrPosition[1] = position._y;
-            vertex._arrPosition[2] = position._z;
-            vertex._arrNormal[0]   = normal._x;
-            vertex._arrNormal[1]   = normal._y;
-            vertex._arrNormal[2]   = normal._z;
-            vertex._arrUv[0]       = uv._x;
-            vertex._arrUv[1]       = uv._y;
-            vertex._arrColor[0]    = color._x;
-            vertex._arrColor[1]    = color._y;
-            vertex._arrColor[2]    = color._z;
-            vertex._arrColor[3]    = color._w;
-        }
 
         const string resourceID = MeshModifierStack::makeBakedMeshPath( _meshPath );
         const string path       = ResourcePaths::getWritePath( resourceID );
@@ -446,4 +653,20 @@ namespace sw::editor
     }
 
     SW_EDITOR_SUBSYSTEM( MeshModifierSession, 9400 );
+
+    SW_AUTOMATION_PROBE( meshModifierCount, "MeshModifiers.ModifierCount", "Modifiers in the mesh modifier stack (0 without a target)",
+                         &MeshModifierSessionProbes::readModifierCount );
+    SW_AUTOMATION_PROBE( meshModifierGPUPreview, "MeshModifiers.GPUPreviewActive", "1 when the target mesh is drawn by the GPU modifier program",
+                         &MeshModifierSessionProbes::readGPUPreviewActive );
+    SW_AUTOMATION_PROBE( meshModifierCenterOffset, "MeshModifiers.SelectedCenterOffset", "Distance of the selected modifier's gizmo center from the source bounds center",
+                         &MeshModifierSessionProbes::readSelectedCenterOffset );
+    SW_AUTOMATION_PROBE( meshModifierFirstParam, "MeshModifiers.SelectedFirstParam", "First (scalar) parameter of the selected modifier",
+                         &MeshModifierSessionProbes::readSelectedFirstParam );
+    SW_AUTOMATION_PROBE( meshModifierNestedCount, "MeshModifiers.NestedCount", "Nested modifiers of the selected Deformable", &MeshModifierSessionProbes::readNestedCount );
+    SW_AUTOMATION_PROBE( meshModifierCurveListItems, "MeshModifiers.CurveListItemCount", "Items of the selected modifier's first curve list",
+                         &MeshModifierSessionProbes::readCurveListItemCount );
+    SW_AUTOMATION_PROBE( meshModifierCurveListKeys, "MeshModifiers.CurveListKeyCount", "Keys over all items of the selected modifier's first curve list",
+                         &MeshModifierSessionProbes::readCurveListKeyCount );
+    SW_AUTOMATION_PROBE( meshModifierReferenceList, "MeshModifiers.ReferenceListCount", "Named items of the selected modifier's first reference list",
+                         &MeshModifierSessionProbes::readReferenceListCount );
 } // namespace sw::editor

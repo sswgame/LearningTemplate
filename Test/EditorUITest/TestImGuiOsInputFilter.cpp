@@ -80,8 +80,9 @@ namespace
 } // namespace
 
 /**
- * @brief [EditorUIOsInputFilterTest] 막는 동안 플랫폼 사건은 포커스까지 모두 버리고, 범위 밖에서 넣은 자동화 커서는 그대로 남는다
+ * @brief [EditorUIOsInputFilterTest] 막는 동안 플랫폼 사건은 포커스까지 모두 지워지고, 범위 밖에서 넣은 자동화 커서는 그대로 남는다
  * @details 시나리오의 뷰포트 비행에서 단추를 떼는 프레임에 실제 커서 자리가 마지막 위치가 되어 시점이 돌던 결함 — 그 프레임의 큐 모양을 그대로 만든다.
+ *          포커스를 남기면 ImGui 가 눌린 키 · 단추를 모두 놓아 누르고 있는 자동화 입력이 끊긴다(`editor.focusloss` 시나리오).
  */
 SW_TEST_CASE( EditorUIOsInputFilterTest, BlockedDropsPlatformDeviceEventsKeepsAutomation )
 {
@@ -100,8 +101,8 @@ SW_TEST_CASE( EditorUIOsInputFilterTest, BlockedDropsPlatformDeviceEventsKeepsAu
     SW_EXPECT_EQUAL( 0, Internal::countEvents( ImGuiInputEventType_MouseButton ) );
     SW_EXPECT_EQUAL( 0, Internal::countEvents( ImGuiInputEventType_MouseWheel ) );
     SW_EXPECT_EQUAL( 0, Internal::countEvents( ImGuiInputEventType_Text ) );
-    SW_EXPECT_EQUAL( 1, Internal::countEvents( ImGuiInputEventType_Key ) );   // 자동화의 D 만
-    SW_EXPECT_EQUAL( 0, Internal::countEvents( ImGuiInputEventType_Focus ) ); // 전경을 뺏겨도 누른 자동화 입력이 끊기지 않는다(`editor.focusloss`)
+    SW_EXPECT_EQUAL( 1, Internal::countEvents( ImGuiInputEventType_Key ) ); // 자동화의 D 만
+    SW_EXPECT_EQUAL( 0, Internal::countEvents( ImGuiInputEventType_Focus ) );
     const ImGuiInputEvent* pLastPos = Internal::findLastMousePos();
     SW_ASSERT_TRUE( pLastPos != nullptr );
     SW_EXPECT_EQUAL( 10.0f, pLastPos->MousePos.PosX );

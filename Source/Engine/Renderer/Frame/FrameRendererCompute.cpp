@@ -149,6 +149,8 @@ namespace sw
         {
             SW_PROFILE_SCOPE( "RT.Deform.rebuildMorphPool" );
             _deform._meshMorphPool.rebuild( _pDevice, _deform._listScratchMorphMesh, _deform._listScratchSkinMesh );
+            // 변형 프로그램(에디터 모디파이어 미리보기)은 레스트와 따로 바뀐다 - 번호가 바뀐 프레임에만 올린다
+            _deform._meshMorphPool.updateDeformPrograms( _pDevice );
         }
         {
             SW_PROFILE_SCOPE( "RT.Deform.uploadSkinPalettes" );
@@ -212,8 +214,10 @@ namespace sw
             return;
         }
 
-        const RHIPipelineStateHandle morphPSO = getEnginePSO( RenderPassType::MeshMorph );
-        if ( morphPSO == 0 || _deform._meshMorphCb.isValid() == false )
+        const RHIPipelineStateHandle morphPSO         = getEnginePSO( RenderPassType::MeshMorph );
+        const RHIDescriptorIndex     programSrv       = _deform._meshMorphPool.getDeformProgramBuffer()._srv;
+        const bool                   bMissingResource = morphPSO == 0 || _deform._meshMorphCb.isValid() == false || programSrv == kInvalidDescriptorIndex;
+        if ( bMissingResource )
             return;
 
         FrameRendererUtil::GPUMorphParams morphParams{};
@@ -230,7 +234,9 @@ namespace sw
         _pCmd->transitionBuffer( _deform._meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::UnorderedAccess );
         _pCmd->setComputePipelineState( morphPSO );
         _pCmd->bindComputeConstantBuffer( _deform._meshMorphCb._index, 0 );
+        // MorphParams(b0) / g_RestVertices(t0) / g_DeformPrograms(t1, 칸 표 + 변형 프로그램) / g_MorphVerticesRW(u0). meshmorph.hlsl 레지스터와 1:1 로 대응한다.
         _pCmd->bindComputeShaderResource( _deform._meshMorphPool.getRestBuffer()._srv, 0 );
+        _pCmd->bindComputeShaderResource( programSrv, 1 );
         _pCmd->bindComputeUav( _deform._meshMorphPool.getMorphBuffer()._uav, 0 );
         const uint32 morphGroups = ( morphParams._vertexCount + 63u ) / 64u;
         if ( morphGroups > 0 )

@@ -23,12 +23,12 @@ namespace
             bytes[14] = 2;    // 세로
             bytes[16] = 32;   // 텍셀당 비트
             bytes[17] = 0x28; // 알파 8 비트 + 위가 원점
-            for ( uint32 texel = 0; texel < 4; ++texel )
+            for ( uint32 texelIndex = 0; texelIndex < 4; ++texelIndex )
             {
-                bytes.push_back( listRgba[texel * 4 + 2] ); // TGA 는 BGRA 순서
-                bytes.push_back( listRgba[texel * 4 + 1] );
-                bytes.push_back( listRgba[texel * 4 + 0] );
-                bytes.push_back( listRgba[texel * 4 + 3] );
+                bytes.push_back( listRgba[texelIndex * 4 + 2] ); // TGA 는 BGRA 순서
+                bytes.push_back( listRgba[texelIndex * 4 + 1] );
+                bytes.push_back( listRgba[texelIndex * 4 + 0] );
+                bytes.push_back( listRgba[texelIndex * 4 + 3] );
             }
             return FileUtil::writeFile( path, bytes.data(), bytes.size() );
         }

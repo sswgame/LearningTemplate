@@ -78,6 +78,14 @@
             "text": "테두리 없음"
         },
         {
+            "source": "CPU only (Recompute Normals)",
+            "text": "CPU 전용(법선 다시 계산)"
+        },
+        {
+            "source": "CPU only:",
+            "text": "CPU 전용:"
+        },
+        {
             "source": "Camera Shake",
             "text": "카메라 흔들림"
         },
@@ -126,6 +134,10 @@
             "text": "사용자 지정"
         },
         {
+            "source": "Depth",
+            "text": "깊이"
+        },
+        {
             "source": "Deuteranopia",
             "text": "녹색약"
         },
@@ -138,12 +150,20 @@
             "text": "행 복제"
         },
         {
+            "source": "Edit this group's nested stack",
+            "text": "이 묶음의 하위 스택 편집"
+        },
+        {
             "source": "Effects Quality",
             "text": "효과 품질"
         },
         {
             "source": "Effects Volume",
             "text": "효과음 음량"
+        },
+        {
+            "source": "Empty - add modifiers to group them.",
+            "text": "비어 있음 - 모디파이어를 더해 묶습니다."
         },
         {
             "source": "Farthest distance the camera draws. Geometry beyond this is clipped.",
@@ -280,6 +300,10 @@
         {
             "source": "Name",
             "text": "이름"
+        },
+        {
+            "source": "Nested Stack",
+            "text": "하위 스택"
         },
         {
             "source": "No AbilitySystemComponent in the active scene",
@@ -426,6 +450,14 @@
             "text": "AbilitySystemComponent 가 있는 오브젝트를 선택하거나 위에서 고르세요."
         },
         {
+            "source": "Shade the target mesh with the stack result. Runs on a compute shader when every enabled modifier supports it, otherwise the CPU result is uploaded as vertices. Off leaves the original mesh and the wire preview.",
+            "text": "대상 메시를 스택 결과로 셰이딩해 보입니다. 켜진 모디파이어가 모두 지원하면 컴퓨트 셰이더로, 아니면 CPU 결과를 정점으로 올립니다. 끄면 원래 메시와 와이어 미리보기만 남습니다."
+        },
+        {
+            "source": "Shaded Preview",
+            "text": "셰이딩 미리보기"
+        },
+        {
             "source": "Shadow Quality",
             "text": "그림자 품질"
         },
@@ -520,6 +552,10 @@
         {
             "source": "Undo",
             "text": "되돌리기"
+        },
+        {
+            "source": "Up",
+            "text": "위로"
         },
         {
             "source": "Upscaler",

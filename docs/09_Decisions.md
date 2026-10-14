@@ -703,6 +703,9 @@
 
 ### 5-11. 에디터와 외부 공개
 
+- **메시 모디파이어 셰이딩 미리보기는 GPU 로 못 옮기는 스택이면 CPU 결과 정점 메시로 내려간다 — 와이어만 남기지 않는다**(2026-10-15, `MeshModifierSession::updateShadedPreview`).
+  언리얼 모델링 도구 · 3ds Max 수정자 스택은 경로와 무관하게 셰이딩된 결과를 보인다(기억에 의존한 비교). CPU 쪽은 바뀔 때마다 새 메시를 끼워 렌더 스레드가 든 사본과 겹치지 않는다.
+
 - **미리보기 씬(툴 창의 월드)은 씬마다 `FrameRenderer` 인스턴스 하나로 그린다 — 주 렌더러 안의 GPUScene 을 씬 키 맵으로 바꾸지 않는다**(2026-10-15, `FrameRendererScenePreview.cpp`).
   유니티 `PreviewRenderUtility` 가 숨은 씬을 따로 렌더하는 것과 같은 모양이다(기억에 의존한 비교). 주 렌더러의 핫 패스(컬링 슬롯 · 패스 상수 · 트랜지언트 · 활성 뷰)를 그대로 두어
   주 씬 그림이 바뀔 여지가 없다. 대가는 머티리얼 · 정점 풀 · PSO 캐시가 렌더러마다 따로인 것(메모리, 창을 처음 열 때의 PSO 생성)이고, 계획(`EditorMultiWorld.md` 결정 2)의
@@ -797,3 +800,5 @@
     (손으로 둔 Engine 이름 배열은 14 개 파일: Telemetry 5 · `Localization/CultureInfo` · `Reflection/ReflectValue` · `UI/Debug/DebugHUD` 등). 사용처 개수는 grep 근사치입니다.
     대안은 영역 하나씩 단계로 옮기는 것입니다: 먼저 `EnumNameTable` 을 Core 로 옮기고 include 만 바꾼 뒤(동작 불변), 로더가 `ResourceDataKindUtil::loadCatalog` 인 줄(예: Audio)부터 `SW_RESOURCE_DATA_KIND` 로 옮기면서
     같은 커밋에서 테스트 표의 해당 줄을 지웁니다. 테스트 전용 로더가 필요한 종류(scene · prefab · uidocument · animgraph …)는 테스트 표에 남깁니다.
+- **에디터 플러그인만 읽는 데이터는 `editor/` 팩에 두고, 종류는 플러그인 .cpp 의 `SW_RESOURCE_DATA_KIND` 로 등록합니다**(2026-10-15, 좌우 이름 표 `editor/character/default.mirrornames.xml`). 언리얼이 에디터 전용 콘텐츠를 `Engine/Content/Editor` 에 따로 두어 쿠킹에서 빼는 것과 같은 자리입니다.
+- **무인(배타) 자동화 동안 ImGui 입력 거르개는 포커스 사건도 지웁니다**(2026-10-15, `907f4d467`). 포커스를 남기면 ImGui 가 눌린 키 · 단추를 모두 놓아 누르고 있는 자동화 입력(뷰포트 비행)이 끊깁니다. 다른 창이 전경을 가져가는 것은 사람의 장치 입력과 같은 바깥 간섭으로 봅니다(`editor.focusloss` 시나리오).
