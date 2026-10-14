@@ -202,6 +202,15 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   RHI 모듈 선택과 같은 모양으로 알고 있다).
   ⑥ 모든 실행 파일의 기동 — App · Server · 테스트 하네스 · Tools/OnlineLoadBot 이 같은 기반 서브시스템(Logger · CommandLine · CrashHandler …)을 써서 흩어진
   시작 · 종료 코드를 없앤다.
+- `C-28` **전역 서비스 접근자(`engine::getXxx`) 호출 줄이기**(2026-10-14, 사용자 승인 — 서브시스템 정리의 남은 단계 뒤). 지금: 소유는 범위(`SubsystemScope`)이고,
+  `EngineServices` 는 바인딩 때 `locateSubsystem` 으로 한 번 찾아 둔 비소유 조회 캐시다. 서비스를 더하려면 서브시스템으로 만들어 범위에 넣고 `EngineServiceList.xxx` 에
+  한 줄을 더한다(이 결정은 유지 — 언리얼 `GEngine->GetEngineSubsystem<T>()` 은 부를 때마다 맵을 찾는 것으로 알고 있고, 우리는 바인딩 때 한 번 찾는다).
+  남은 문제: `engine::getXxx` 호출이 약 826 줄 · 209 파일(`getTypeRegistry` 273 · `getTaskManager` 77 · `getAssetManager` 67 · `getGlobalVariableManager` 42 ·
+  `getSceneManager` 37 · `getFrameProfiler` 35 …)이라 엔진 깊은 곳이 전역 접근자에 기댄다. 방향: 컴포넌트 · 씬 쪽은 `SceneEngineServices` 주입을 유지 · 확대하고,
+  서비스 클래스는 만들 때나 초기화 때 의존 서브시스템 포인터를 멤버로 받는다(언리얼 서브시스템이 `InitializeDependency` 로 얻은 포인터를 멤버로 들고 쓰는 것에 대응).
+  가장 많은 `getTypeRegistry` 는 쓰임새(캐스트 · `TypeInfo` 조회)를 보고 `TypeLookupCache` 같은 기존 구조로 풀지 판단한다.
+  단계: ① 호출 분류(핫 패스 · 초기화 경로 · 테스트) ② 가장 많은 접근자부터 주입으로 ③ 호출이 0 이 된 행은 목록에서 getter 를 지운다. 성능 영향은 측정한다
+  (주입은 간접 단계가 같거나 적다). 규모가 커 한 번에 하지 않고 접근자 단위로 커밋한다.
 
 ## D. 기능 로드맵
 
@@ -498,11 +507,14 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   없어 빠지고 GL 은 하드웨어) — WARP 자체는 컴퓨트 컬링 · 인디렉트를 한다. 러너 쪽(WARP 판 · 창 없는 세션)을 다음 CI 실패의 주석으로 가른다.
 
 - `E-9` **Windows Shipping `CrashBundleTest.RealCrashLeavesABundle` 의 `crash.dmp` 가 0 바이트**(CI 실행 38439985866, `TestCrashBundle.cpp:370`, 그 앞 38421186200 은 통과).
-  로컬 Ninja-Shipping 3 회는 통과해 재현되지 않았다. 의심: 자식 프로세스가 덤프를 쓰기 전에 끝남(덤프 쓰기 시점) · dbghelp 로드. 크래시 핸들러가 서브시스템으로 다시 쓰인 뒤 새 기준에서 다시 본다.
+  로컬 Ninja-Shipping 3 회는 통과해 재현되지 않았다. 2026-10-14 로컬 Shipping `nogpu` 병렬 실행에서 한 번 같은 증상(단독 3 회는 통과). 의심: 자식 프로세스가 덤프를 쓰기 전에 끝남(덤프 쓰기 시점) · dbghelp 로드. 크래시 핸들러가 서브시스템으로 다시 쓰인 뒤 새 기준에서 다시 본다.
 
 - `E-10` **Linux Shipping `EngineTest_NoGPU_Shard5` 가 종료에서 멈춰 180 초 시간 초과**(CI 실행 38439985866). 케이스는 모두 통과하고 요약까지 찍힌 뒤
   `[TestHost] stopping: destroying objects`(`TestHostRuntime::stop` 의 `destroyAll`)에서 끝나지 않았다. 같은 실행의 오디오 디코드 태스크 수명 결함(해제된 `AudioClipCache` 를 워커가 씀 — 고쳤다)이
   워커를 망가뜨려 태스크 매니저 join 이 멈춘 것인지 미확정. 종료 경로가 서브시스템 분해로 다시 쓰인 뒤 새 기준에서 다시 본다.
+
+- `E-11` **키트 리로드 때 `Online server kit 'chat'/'admin' is registered twice` 가 [Error] 로 남는다**(2026-10-14 hostgpu 검증 창, 통합 담당 1 관찰, 미조사).
+  시나리오는 통과한다. 의심: 다시 올라온 이미지의 서버 키트 팩토리(`ServiceFactoryList`)가 옛 이미지의 등록이 풀리기 전에 등록한다.
 
 ---
 
