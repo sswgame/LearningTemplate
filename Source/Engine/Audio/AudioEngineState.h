@@ -28,6 +28,24 @@ namespace sw
         uint32 _peakRealVoiceCount{ 0 }; ///< 지금까지 한 블록에 섞은 보이스 수의 최댓값이다.
         uint64 _playedEventCount{ 0 };   ///< 지금까지 낸 이벤트 수다. 인스턴스를 만든 이벤트만 센다.
         uint64 _droppedEventCount{ 0 };  ///< 쿨다운, 상한(Reject), 슬롯 부족으로 버린 이벤트 수다.
+        uint32 _maxVoiceCount{ 0 };      ///< 믹서 그래프의 보이스 상한(실제 + 가상)이다. 그래프가 없으면 0 이다.
+        uint32 _maxRealVoiceCount{ 0 };  ///< 믹서 그래프의 실제 보이스 상한이다. 넘는 보이스는 가상이 된다.
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 살아 있는 이벤트 인스턴스 하나의 마지막 블록 상태입니다. 에디터의 오디오 이벤트 창이 읽습니다(언리얼 오디오 디버거의 활성 사운드 목록). */
+    struct AudioInstanceStatus
+    {
+        hashed_string  _event{};                  ///< 이벤트 이름이다.
+        hashed_string  _bus{};                    ///< 이벤트가 보내는 버스다.
+        AudioPlayingID _playingID{ 0 };           ///< 재생 id 다.
+        float32        _elapsedSeconds{ 0.0f };   ///< 시작부터 흐른 시간(초)이다.
+        float32        _remainingSeconds{ -1.0f }; ///< 가장 긴 보이스가 끝날 때까지 남은 시간(초)이다. 반복이거나 클립을 아직 모르면 -1 이다.
+        uint32         _voiceCount{ 0 };          ///< 인스턴스의 보이스 수다.
+        uint32         _virtualVoiceCount{ 0 };   ///< 그중 가상 보이스 수다.
+        bool           _bStopping{ false };       ///< 페이드아웃으로 멈추는 중이다.
     };
 } // namespace sw
 
@@ -108,6 +126,14 @@ namespace sw
             _listBusStatus.clear();
             fillBus( _listBusStatus );
         }
+        /** @brief 이벤트 인스턴스의 상태를 게시합니다. @p fillInstance 가 잠금 안에서 목록(비어 있는 재사용 버퍼)을 채웁니다. */
+        template <typename FillFunc>
+        void publishInstances( FillFunc&& fillInstance )
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            _listInstanceStatus.clear();
+            fillInstance( _listInstanceStatus );
+        }
         /** @brief 재생이 살아 있는지 반환합니다. 아직 적용하지 않은 id 면 @p nextPlayingID 보다 작을 때(발급한 id 일 때) true 입니다. */
         bool isPlaying( AudioPlayingID playingID, uint64 nextPlayingID ) const;
         /** @brief 마지막 블록의 상태입니다. */
@@ -116,10 +142,13 @@ namespace sw
         AudioMusicStatus getMusicStatus() const;
         /** @brief 마지막 블록의 버스 상태를 @p outListStatus 에 복사합니다(비우고 채웁니다). 아직 게시한 것이 없으면 비어 있습니다. */
         void getBusStatuses( vector<AudioBusStatus>& outListStatus ) const;
+        /** @brief 마지막 블록의 이벤트 인스턴스 상태를 @p outListStatus 에 복사합니다(비우고 채웁니다). */
+        void getInstanceStatuses( vector<AudioInstanceStatus>& outListStatus ) const;
 
     private:
         vector<AudioPlayingID> _listPlaying{};         /**< 살아 있는 재생 id 입니다. 정렬되어 있습니다. */
         vector<AudioBusStatus> _listBusStatus{};       /**< 버스 상태입니다(믹서 그래프 순서). */
+        vector<AudioInstanceStatus> _listInstanceStatus{}; /**< 살아 있는 이벤트 인스턴스 상태입니다(인스턴스 슬롯 순서). */
         AudioEngineStats       _stats{};               /**< 마지막 블록의 상태입니다. */
         AudioMusicStatus       _music{};               /**< 마지막 블록의 음악 위치입니다. */
         atomic<uint64>         _appliedPlayingID{ 0 }; /**< 게시 시점에 적용된 재생 id 입니다. */

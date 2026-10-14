@@ -182,6 +182,15 @@ namespace sw
         void getBusStatuses( vector<AudioBusStatus>& outListStatus ) const;
         /** @brief 로드한 라이브러리의 이벤트 이름을 @p outListName 에 담습니다(비우고 채웁니다). 라이브러리 로드 순서는 정해져 있지 않습니다. */
         void collectEventNames( vector<hashed_string>& outListName ) const;
+        /**
+         * @brief 로드한 라이브러리에서 이벤트 설명자를 찾아 사본을 @p outDesc 에, 라이브러리 이름(리소스 경로)을 @p outLibraryName 에 담습니다.
+         * @details 에디터의 오디오 이벤트 창이 읽습니다. @p pOutAttenuation 이 있으면 이벤트의 감쇠 프리셋(라이브러리 것을 먼저, 없으면 믹서 그래프 것)을 담고, 감쇠가 없으면 기본값으로 둡니다.
+         * @return 이벤트가 없으면 false 입니다.
+         */
+        [[nodiscard]] bool findEventDesc( const hashed_string& eventName, AudioEventDesc& outDesc, hashed_string& outLibraryName,
+                                          AudioAttenuationDesc* pOutAttenuation = nullptr ) const;
+        /** @brief 살아 있는 이벤트 인스턴스마다 마지막 블록의 상태(이벤트 · 버스 · 남은 시간 · 가상 보이스 수)를 @p outListStatus 에 담습니다(비우고 채웁니다). */
+        void getInstanceStatuses( vector<AudioInstanceStatus>& outListStatus ) const;
 
         // --- 오디오 스레드 --------------------------------------------------------------------------------------------------
 
