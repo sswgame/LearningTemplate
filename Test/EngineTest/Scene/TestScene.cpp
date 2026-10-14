@@ -28,10 +28,12 @@
 #include "Engine/Renderer/Light/GPULightBuffer.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Scene/ObjectUndoUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Utility/CommandStack.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
 
@@ -2085,6 +2087,82 @@ SW_TEST_CASE( SceneTest, FocusedSceneFallsBackToActiveWhenDestroyed )
     SW_EXPECT_TRUE( manager.focusScene( pNext ) );
     sw::Scene* pOther = manager.createEmptyActiveScene( "Other" ); // 이전 활성 씬(Next)이 내려진다
     SW_EXPECT_EQUAL( pOther, manager.getFocusedScene() );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [SceneTest] 미리보기 씬의 틱 델타는 엔진 델타 × 정책의 시간 배율이다(전역 시간 배율은 곱하지 않는다)
+ */
+SW_TEST_CASE( SceneTest, PreviewSceneTickScalesDeltaByPolicy )
+{
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    sw::RegisterMockComponents();
+    manager.createScene( "Main" );
+
+    sw::ScenePreviewPolicy half;
+    half._timeScale = 0.5f;
+    sw::ScenePreviewPolicy frozen;
+    frozen._timeScale  = 0.0f;
+    sw::Scene* pHalf   = manager.createPreviewScene( "Half", half );
+    sw::Scene* pFrozen = manager.createPreviewScene( "Frozen", frozen );
+    SW_ASSERT_NOT_NULL( pHalf );
+    SW_ASSERT_NOT_NULL( pFrozen );
+    auto* pHalfMesh   = pHalf->getObjectManager()->createGameObject( sw::hashed_string( "A" ) )->addComponent<sw::MockMeshComponent>();
+    auto* pFrozenMesh = pFrozen->getObjectManager()->createGameObject( sw::hashed_string( "B" ) )->addComponent<sw::MockMeshComponent>();
+    SW_ASSERT_NOT_NULL( pHalfMesh );
+    SW_ASSERT_NOT_NULL( pFrozenMesh );
+
+    manager.tickPreviewScenes( 0.02f );
+    SW_EXPECT_EQUAL( 1, pHalfMesh->_tickCount );
+    SW_EXPECT_NEAR_EQUAL( 0.01f, pHalfMesh->_lastDeltaTime, 1e-6f );
+    // 배율 0 이면 틱은 돌되 시간은 멈춘다.
+    SW_EXPECT_EQUAL( 1, pFrozenMesh->_tickCount );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pFrozenMesh->_lastDeltaTime, 1e-6f );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [SceneTest] 미리보기 씬 오브젝트의 Undo 는 기록한 씬에서 되돌린다 — 활성 씬에 같은 이름 · 다른 상태의 오브젝트가 있어도 건드리지 않는다
+ * @details 툴 창(`EditorPreviewPanel`)은 자기 스택에 오브젝트 편집을 남긴다. 명령이 활성 씬에서 대상을 찾으면 메인 씬의 동명 오브젝트를 되돌린다.
+ */
+SW_TEST_CASE( SceneTest, PreviewObjectUndoStaysInItsScene )
+{
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    sw::Scene* pMain    = manager.createScene( "Main" );
+    sw::Scene* pPreview = manager.createPreviewScene( "Window" );
+    SW_ASSERT_NOT_NULL( pMain );
+    SW_ASSERT_NOT_NULL( pPreview );
+    sw::GameObject* pMainObject    = pMain->getObjectManager()->createGameObject( sw::hashed_string( "Subject" ) );
+    sw::GameObject* pPreviewObject = pPreview->getObjectManager()->createGameObject( sw::hashed_string( "Subject" ) );
+    SW_ASSERT_NOT_NULL( pMainObject );
+    SW_ASSERT_NOT_NULL( pPreviewObject );
+    pMain->getObjectManager()->mergePendingAdds();
+    pPreview->getObjectManager()->mergePendingAdds();
+    SW_EXPECT_EQUAL( manager.getPreviewSceneKey( pPreview ), manager.getPreviewSceneKeyOf( pPreview->getObjectManager() ) );
+    SW_EXPECT_EQUAL( sw::kInvalidSceneKey, manager.getPreviewSceneKeyOf( pMain->getObjectManager() ) );
+
+    sw::CommandStack         windowStack;
+    const sw::ObjectSnapshot before = sw::ObjectUndoUtil::captureSnapshot( pPreviewObject );
+    pPreviewObject->setActive( false );
+    const sw::ObjectSnapshot after = sw::ObjectUndoUtil::captureSnapshot( pPreviewObject );
+    SW_ASSERT_TRUE( before._xml != after._xml );
+    windowStack.push( sw::ObjectUndoUtil::makeModify( windowStack, manager, *pPreviewObject, before, after, "Deactivate" ) );
+    pMainObject->setActive( false ); // 메인 씬의 동명 오브젝트도 꺼 둔다 — Undo 가 이쪽을 켜면 잘못 찾은 것이다
+
+    windowStack.undo();
+    SW_EXPECT_TRUE( pPreviewObject->isActive() );
+    SW_EXPECT_FALSE( pMainObject->isActive() );
+    windowStack.redo();
+    SW_EXPECT_FALSE( pPreviewObject->isActive() );
+
+    // 창을 닫아 씬이 내려가면 남은 명령은 아무것도 하지 않는다(메인 씬으로 새지 않는다).
+    SW_EXPECT_TRUE( manager.destroyPreviewScene( pPreview ) );
+    windowStack.undo();
+    SW_EXPECT_FALSE( pMainObject->isActive() );
 
     manager.shutdown();
 }

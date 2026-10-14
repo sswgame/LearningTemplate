@@ -24,6 +24,7 @@
 #include "Engine/Renderer/Light/ShadowSetup.h"
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/Text/GlyphCache.h"
 #include "Engine/UI/UISystem.h"
@@ -48,6 +49,9 @@ namespace sw
         , _renderViewClock{ 0.0 }
         , _listAnimationLODView{}
         , _listShadowLightIndex{}
+        , _listScenePreviewBuilder{}
+        , _listPreviewLODView{}
+        , _bMergeBatchesAcrossMaterials{ false }
     {
     }
 
@@ -65,18 +69,26 @@ namespace sw
             _renderViewScheduler = make_unique<RenderViewScheduler>();
         // GT 쪽 GPUScene 이 배치를 만든다. 텍스처를 인덱스로 고를 수 있는 백엔드면 머티리얼이 달라도
         // 셰이더 타입 단위로 합친다(언리얼 GPUScene).
-        _gpuSceneBuilder->setMergeBatchesAcrossMaterials( device.supportsNativeBindlessSampling() );
+        _bMergeBatchesAcrossMaterials = device.supportsNativeBindlessSampling();
+        _gpuSceneBuilder->setMergeBatchesAcrossMaterials( _bMergeBatchesAcrossMaterials );
+        for ( ScenePreviewBuilder& preview : _listScenePreviewBuilder )
+        {
+            preview._builder->setMergeBatchesAcrossMaterials( _bMergeBatchesAcrossMaterials );
+        }
         _gpuUploadQueue->bindDevice( &device, pTaskManager );
     }
 
     void RenderPacketBuilder::shutdown()
     {
         _gpuSceneBuilder->clear();
+        // 미리보기 빌더도 머티리얼 · 인스턴스를 든다 — 디바이스가 살아 있을 때 놓는다.
+        _listScenePreviewBuilder.clear();
     }
 
     void RenderPacketBuilder::destroy()
     {
         // 만든 순서(initialize)의 역순이다.
+        _listScenePreviewBuilder.clear();
         _renderViewScheduler.reset();
         _gpuUploadQueue.reset();
         _packetScratch.reset();
@@ -207,6 +219,100 @@ namespace sw
         {
             SW_PROFILE_SCOPE( "GT.Packet.export" );
             _gpuSceneBuilder->exportCPUSnapshot( packet._gpuScene );
+        }
+    }
+
+    RenderPacketBuilder::ScenePreviewBuilder& RenderPacketBuilder::getOrCreateScenePreviewBuilder( uint32 sceneKey )
+    {
+        for ( ScenePreviewBuilder& preview : _listScenePreviewBuilder )
+        {
+            if ( preview._sceneKey == sceneKey )
+                return preview;
+        }
+        ScenePreviewBuilder created;
+        created._builder  = make_unique<GPUSceneBuilder>();
+        created._sceneKey = sceneKey;
+        created._builder->setMergeBatchesAcrossMaterials( _bMergeBatchesAcrossMaterials );
+        _listScenePreviewBuilder.push_back( std::move( created ) );
+        return _listScenePreviewBuilder.back();
+    }
+
+    void RenderPacketBuilder::populateScenePreviews( RenderFramePacket& packet, const HostViewTargets& views, const SceneManager& sceneManager )
+    {
+        packet._scenePreviewCount = 0;
+        for ( ScenePreviewBuilder& preview : _listScenePreviewBuilder )
+        {
+            preview._bSeen = SW_FALSE;
+        }
+
+        const uint32 requestCount = MathUtil::min( views._sceneViewCount, kMaxHostSceneView );
+        for ( uint32 requestIndex = 0; requestIndex < requestCount; ++requestIndex )
+        {
+            const HostSceneView& request = views._arrSceneView[requestIndex];
+            Scene* const         pScene  = sceneManager.findPreviewScene( request._sceneKey );
+            if ( pScene == nullptr || request._target.isValid() == false )
+                continue;
+
+            // 저장소를 다시 쓴다 — 미리보기 패킷의 스냅샷 · 라이트 목록이 프레임마다 새로 할당되지 않게 한다.
+            if ( packet._listScenePreview.size() <= packet._scenePreviewCount )
+                packet._listScenePreview.push_back( make_unique<RenderFramePacket>() );
+            RenderFramePacket& preview = *packet._listScenePreview[packet._scenePreviewCount];
+            ++packet._scenePreviewCount;
+            preview.resetForFrame();
+            preview._bValid             = SW_TRUE;
+            preview._sceneKey           = request._sceneKey;
+            preview._frameIndex         = packet._frameIndex;
+            preview._outputRenderTarget = request._target._renderTarget;
+            preview._viewportWidth      = request._target._width;
+            preview._viewportHeight     = request._target._height;
+            preview._mainView           = request._settings;
+            preview._cameraPos          = request._cameraPos;
+            preview._viewProj           = request._viewProj;
+            preview._bHasViewProj       = SW_TRUE;
+
+            // 주 패킷과 같은 규칙으로 이 씬의 빛을 싣는다 — 렌더 스레드는 미리보기 씬도 볼 수 없다.
+            DirectionalLightComponent* pLight       = pScene->findActiveDirectionalLight();
+            DirectionalLightComponent* pShadowLight = pScene->findShadowCastingDirectionalLight();
+            if ( pLight != nullptr )
+            {
+                const float3 dir           = pLight->getLightDirection();
+                const float3 color         = pLight->getColor();
+                preview._lightDirIntensity = float4{ dir._x, dir._y, dir._z, pLight->getIntensity() };
+                preview._lightColorAmbient = float4{ color._x, color._y, color._z, pLight->getAmbient() };
+                preview._bHasLight         = SW_TRUE;
+            }
+            collectSceneLights( pScene, preview._listLight, &_listShadowLightIndex );
+            ShadowSetupUtil::populateFrame( pLight != nullptr ? pShadowLight : nullptr, &preview._viewProj, pLight != nullptr, FrameRenderer::getShadowMapResolution(),
+                                            _listShadowLightIndex, preview._listLight, preview._shadow );
+
+            // 미리보기 씬의 애니메이션 LOD 는 이 눈 하나로 본다(뷰가 없으면 화면 밖으로 보고 포즈를 거른다).
+            if ( pScene->getObjectManager() != nullptr )
+            {
+                _listPreviewLODView.clear();
+                _listPreviewLODView.push_back( AnimationLODView::make( preview._viewProj, preview._cameraPos ) );
+                pScene->getObjectManager()->getAnimationSystem().setLODViews( _listPreviewLODView );
+            }
+
+            ScenePreviewBuilder& entry = getOrCreateScenePreviewBuilder( request._sceneKey );
+            entry._bSeen               = SW_TRUE;
+            GPUSceneBuilder& builder   = *entry._builder;
+            builder.populateFromScene( pScene, preview._cameraPos );
+            if ( _gpuUploadQueue != nullptr )
+            {
+                builder.requestGPUUploads( *_gpuUploadQueue );
+                _gpuUploadQueue->flush();
+            }
+            builder.exportCPUSnapshot( preview._gpuScene );
+        }
+
+        // 요청이 끊긴 씬(창을 닫았거나 가렸다)의 빌더를 내린다 — 머티리얼 · 인스턴스 소유를 놓는다.
+        for ( size_t index = _listScenePreviewBuilder.size(); index > 0; --index )
+        {
+            ScenePreviewBuilder& entry = _listScenePreviewBuilder[index - 1];
+            if ( entry._bSeen == SW_TRUE )
+                continue;
+            entry._builder->clear();
+            _listScenePreviewBuilder.erase( _listScenePreviewBuilder.begin() + static_cast<ptrdiff_t>( index - 1 ) );
         }
     }
 

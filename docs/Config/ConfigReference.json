@@ -2890,6 +2890,14 @@
    "source": "Source/Editor/Common/GUI/EditorPanelManager.cpp"
   },
   {
+   "name": "gv_editorPreviewScreenshot",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "미리보기 씬 뷰포트의 렌더 타깃을 이 경로에 한 번 찍는다 (시나리오 눈 확인용, 비우면 안 함)",
+   "source": "Source/Editor/Common/GUI/EditorPreviewViewport.cpp"
+  },
+  {
    "name": "gv_editorProbeAsset",
    "type": "string",
    "default": "",

@@ -15,6 +15,7 @@
 namespace sw
 {
     class GameObject;
+    class GameObjectManager;
     class IRHIDevice;
     class Scene;
 
@@ -138,7 +139,8 @@ namespace sw
          * @details 언리얼 `FPreviewScene` · 유니티 `PreviewRenderUtility` 자리입니다(`docs/plans/EditorMultiWorld.md` 2.1). 씬마다 오브젝트 매니저와 씬 범위
          *          (`GameObjectManager::getSceneScope`)가 따로라 서비스(물리 · 오디오 · 내비)도 월드마다 하나씩입니다.
          *          틱은 `tickPreviewScenes` 가 정책대로 하고, 월드 플레이 상태(`setWorldPlaying`)는 따르지 않습니다(`ScenePreviewPolicy::_bPlay` 가 따로 정한다).
-         *          `initialize( pRHIDevice )` 는 부르지 않습니다(`createScene` 과 같다) — 기본 머티리얼이 필요한 쪽이 부릅니다.
+         *          디바이스가 걸려 있으면(`setRHIDevice`) 만들 때 `Scene::initialize( pRHIDevice )` 로 기본 머티리얼 · 카메라를 겁니다 — 미리보기 창은 곧바로 그리기 때문입니다.
+         *          그림은 호스트가 이 씬의 키로 뷰를 요청할 때만 나옵니다(`HostSceneView` · `RenderPacketBuilder::populateScenePreviews`).
          * @return 만든 씬. 매니저가 소유하며 `destroyPreviewScene` 이나 `shutdown` 이 내립니다.
          */
         Scene* createPreviewScene( string_view name, const ScenePreviewPolicy& policy = {} );
@@ -148,6 +150,8 @@ namespace sw
         bool isPreviewScene( const Scene* pScene ) const;
         /** @brief 미리보기 씬의 키(만든 순서대로 1 부터, 다시 쓰지 않음)입니다. 미리보기 씬이 아니면 `kInvalidSceneKey`. 렌더 뷰가 "어느 씬" 을 고르는 열쇠가 됩니다. */
         uint32 getPreviewSceneKey( const Scene* pScene ) const;
+        /** @brief 오브젝트 매니저 @p pManager 를 가진 미리보기 씬의 키입니다. 미리보기 씬의 것이 아니면(활성 · 로드된 씬) `kInvalidSceneKey` 입니다. Undo 명령이 대상 씬을 기억할 때 씁니다. */
+        uint32 getPreviewSceneKeyOf( const GameObjectManager* pManager ) const;
         /** @brief 키로 미리보기 씬을 찾습니다. 없으면 nullptr 입니다. */
         Scene* findPreviewScene( uint32 key ) const;
         /** @brief 미리보기 씬의 정책을 바꿉니다. 미리보기 씬이 아니면 false 입니다. 오디오 · 물리 · 플레이 설정은 바로 적용됩니다. */
@@ -164,7 +168,7 @@ namespace sw
 
         /**
          * @brief 툴(인스펙터 · 선택 · 기즈모)이 겨누는 씬을 고릅니다. 로드된 씬이나 미리보기 씬이어야 하고, 아니면 false 입니다(바뀌지 않음).
-         * @details 활성 씬(게임이 돌리는 월드)과 다릅니다 — 프리팹 창에 초점을 두어도 게임 월드는 그대로입니다. 창마다 선택 · Undo 범위는 이 위에 얹습니다(단계 4).
+         * @details 활성 씬(게임이 돌리는 월드)과 다릅니다 — 프리팹 창에 초점을 두어도 게임 월드는 그대로입니다. 미리보기 창(`editor::EditorPreviewPanel`)이 포커스를 얻을 때 겨누고 잃을 때 놓습니다.
          */
         bool focusScene( Scene* pScene );
         /** @brief 초점 씬을 활성 씬으로 되돌립니다. */

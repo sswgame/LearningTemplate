@@ -47,7 +47,16 @@ namespace sw
         /** @brief 주 시점의 출력 사각형 · 해상도 배율 · 끌 기능 · 컷 표시입니다. */
         RenderViewSettings _mainView;
         /** @brief 비지 않으면 이 패킷을 그린 뒤 화면에 나간 그림을 이 경로에 PPM 으로 씁니다(자동화 시나리오의 `<Screenshot>`). */
-        string           _screenshotPath;
+        string _screenshotPath;
+        /**
+         * @brief 이번 프레임에 그릴 미리보기 씬 패킷입니다(앞 `_scenePreviewCount` 개만 유효). 패킷마다 씬 하나 · 스냅샷 하나 · 출력 타깃 하나입니다.
+         * @details 저장소는 남긴다 — 링을 돌며 다시 채우므로 미리보기 패킷의 스냅샷 · 라이트 목록이 프레임마다 새로 할당되지 않는다.
+         *          렌더 스레드는 씬 키(`_sceneKey`)마다 따로 둔 렌더러로 그린다(`FrameRenderer::executeScenePreviewPacket`). 미리보기 패킷 안의 이 목록은 늘 비어 있다.
+         */
+        vector<unique_ptr<RenderFramePacket>> _listScenePreview;
+        uint32                                _scenePreviewCount;
+        /** @brief 이 패킷이 그리는 씬의 키입니다. 0(`kInvalidSceneKey`)이면 활성 씬(주 패킷), 아니면 미리보기 씬입니다. */
+        uint32           _sceneKey;
         RHITextureHandle _outputRenderTarget; ///< 주 출력의 오프스크린 RT(에디터 게임 뷰 · 씬 뷰만 보일 때는 씬 뷰). 0 = 백버퍼 경로
         uint32           _viewportWidth;
         uint32           _viewportHeight;
@@ -70,6 +79,9 @@ namespace sw
             , _canvas{}
             , _mainView{}
             , _screenshotPath{}
+            , _listScenePreview{}
+            , _scenePreviewCount{ 0 }
+            , _sceneKey{ 0 }
             , _outputRenderTarget{ 0 }
             , _viewportWidth{ 0 }
             , _viewportHeight{ 0 }
@@ -100,6 +112,8 @@ namespace sw
             _canvas.clear();
             _mainView = RenderViewSettings{};
             _screenshotPath.clear();
+            _scenePreviewCount  = 0;
+            _sceneKey           = 0;
             _outputRenderTarget = 0;
             _viewportWidth      = 0;
             _viewportHeight     = 0;
