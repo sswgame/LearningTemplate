@@ -22,3 +22,14 @@ Claude Code 안내. 이 저장소의 에이전트 규칙.
 cmake --preset Ninja-Debug
 cmake --build --preset Ninja-Debug                    # App·Server·모듈
 cmake --build --preset Ninja-Debug --target all AllTests  # +테스트
+
+## 보조 도구 (로컬 설치, 선택)
+`.claude/skills/` 는 추적하지 않는다(`.gitignore`). 새 PC 에서는 아래대로 설치한다.
+- **graphify** — 코드 지식 그래프. `py -3 -m pip install --user graphifyy` 후 `graphify install --project`
+  (사용자 Scripts 폴더를 PATH 에 둔다). 그래프는 `graphify update Source` 로 만들고(약 4분) 산출물 `Source/graphify-out/` 을 저장소 루트 `graphify-out/` 으로 옮긴다(추적 안 함 — 린트가 `Source` 아래 `.md` 를 훑는다).
+  질문은 저장소 루트에서 `graphify query "<질문>"` · `graphify path "<A>" "<B>"` · `graphify explain "<개념>"` 로 먼저 좁히고, 코드를 고친 뒤에도 같은 명령으로 갱신한다.
+  `graphify install` 이 쓰는 PreToolUse 훅과 `graphify hook install`(git 훅)은 넣지 않는다 — PATH 에 없으면 모든 도구 호출이 걸리고, 커밋 훅(`PreCommitLint`)과 부딪힌다.
+- **ponytail** — "가장 작은 변경" 지침 스킬. `.claude/skills/ponytail/SKILL.md` 를 두고 `/ponytail` 로 부를 때만 쓴다(`disable-model-invocation`).
+  구조를 과감히 바꾸는 이 저장소의 방침과 충돌할 수 있어 자동으로 켜지 않는다.
+- **Headroom** — 입력 압축 프록시. `py -3 -m pip install --user headroom-ai` 로 설치만 하고 `headroom wrap` 은 쓰지 않는다(사용자 전역 `~/.claude.json` 을 바꾼다).
+  쓸 때는 `HEADROOM_BEACON=off` 로 익명 통계를 끄고 직접 프록시(`headroom proxy`)를 띄운다.
