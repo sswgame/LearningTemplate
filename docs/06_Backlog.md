@@ -326,18 +326,19 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
     모디파이어(약 40 개)만 옮기고 나머지는 CPU. GL 은 `swComputeMorphElement` 드라이버 버그 주의(`RHIBackendInfo.h`). 검증은 `RenderPassGPUTest.MorphPoolIdentityMatchesRest` 류 GPU 테스트가 필요해 이 PC 에서 못 한다.
   - **Conform / Conform Multi**: 엔진의 `SurfaceBvh`(`Engine/Character/Fit/SurfaceBvh.h`)로 질의한다(정점 × 삼각형 전수 탐색을 걷어냄). 남은 것: `SurfaceBvh` 질의가 멤버 스크래치를 써서 한 스레드에서만 묻는다 →
     정점 병렬화는 스레드별 BVH 또는 상태 없는 질의가 필요하고, 적용마다 BVH 를 새로 만드는 것을 대상 메시 변경 감지로 캐시할 수 있다.
-  - **입력 창구(`IMeshModifierInputs`)를 넓히기**: 경로 프레임(법선 · 비법선), 정적 텍스처 CPU 표본(`trySampleTexture` 가 지금 false → Displace 계열이 항등), 변형 전 위치(Displace Limits 가 변위량을 자르려면).
+  - **입력 창구 확장(2026-10-14, 들어감)**: 변형 전 위치(Displace Limits 의 `Clamp Displacement`), 회전 최소화 프레임(경로 계열), CPU 텍스처 표본기(Displace 계열 — `stb_image` 를 표본기 .cpp 에 정적으로 넣었다.
+    남은 것: 확장 모듈이 쓸 수 있는 엔진의 공개 이미지 디코드 함수가 없어 중복 디코더를 품는다 → 엔진에 공개 디코드를 내보내면 합칠 수 있다. float4 텍셀이라 4096² 한 장이 256 MB, 메모리 상한 없음. 파일 변경 감지는 1 초 지연).
   - **매개변수 종류 추가**: 곡선 목록(Curve Sculpt Layered 층별 곡선) · 참조 목록(Conform Multi 대상 N 개).
   - **패널 · 뷰포트(편집, 2026-10-14)**: 곡선 그래프 편집기(공용 `EditorCurveEditor` 어댑터) · 열 이름 있는 목록 표 · 참조 콤보 + 에셋 슬롯 · 구역 · 툴팁 · 단위 · 모디파이어 설명은 들어갔다. 뷰포트에서는 중심 이동 ·
     회전 기즈모, 반경 · 하한/상한 · 방향 자동 표시, 격자 제어점 클릭 · 끌기(대칭), 고른 모디파이어까지의 영향 미리보기("Stage" 토글)가 들어갔다. 남은 것:
     - Deformable 하위 스택 편집 UI. 정점 버퍼를 건드리는 실제 미리보기(지금은 와이어).
-    - **마우스 양보 창구**: `EditorViewportClient` 가 마우스 양보를 `EditorColliderHandleTool::isCapturingMouse` 하나만 본다 — 모디파이어 핸들을 클릭하면 뷰포트 선택과 변환 기즈모도 반응할 수 있다. 확장 모듈도 쓰는 공용 양보 창구가 필요하다.
-    - **에셋 확장자 필터**: `EditorWidgets::drawAssetSlot` 이 `FileUtil::hasExtension` 하나로만 견줘서 확장자가 여럿인 필터(텍스처 `.png .jpg .tga .dds …`)를 넣으면 놓기가 모두 거절된다 — 위젯이 여러 확장자를 받게 한 뒤
-      Point Cache(캐시 확장자 미정) · Displace Render Target · Displace Web Cam 의 `withAssetFilter` 를 채운다.
-    - 걸러 보기는 컴포넌트 타입 이름이 정확히 같을 때만 맞는다(`SkeletalMeshComponent` 만 가진 오브젝트는 `MeshComponent` 필터에서 빠진다) — 파생 판정이 가능한 조회가 있으면 바꾼다.
-    - 회전 고리 X · Y 는 다른 오일러 성분이 0 일 때만 정확하고, 범위 상자 · ffd2d 격자 상자는 원본 메시 상자로 근사한다(앞 모디파이어의 변형은 반영하지 않는다).
+    - **들어감(2026-10-14)**: 공용 마우스 양보 창구 `EditorViewportMouseClaim`(뷰포트의 양보 판정 두 곳에 반영), 에셋 슬롯의 여러 확장자 필터(`EditorAssetFilter`, 쉼표 · 공백 · 탭 · 세미콜론)와 Point Cache(`.mfpc`) ·
+      두 Displace 의 필터 채우기, 참조 걸러 보기의 파생 컴포넌트 판정(`TypeInfo::isDerivedFrom`), 회전 고리의 오일러 정확도(`applyRotationDelta`), 범위 · ffd2d 상자가 앞 모디파이어 결과를 반영.
+    - **남은 한계**: 마우스 양보를 시각화 그리기 안에서 잡아 뷰포트가 같은 프레임에 클릭을 먼저 처리하면 첫 클릭이 선택으로 샐 수 있고, 끄는 중에 시각화 토글을 끄면 해제가 빠질 수 있다(처리 순서 확인).
+      기즈모를 끄는 매 프레임 앞 모디파이어를 다시 걸어 비용이 든다. `FileUtil::hasExtension` 은 마지막 점 뒤만 견주는 것으로 보여 `.modifiers.json` 같은 두 단계 접미사 필터는 맞지 않을 수 있다.
+      참조 걸러 보기의 단위 테스트는 없다(GameObject · TypeRegistry 가 필요).
     - 곡선 편집기의 보간을 Cubic 으로 바꿔도 어댑터가 Linear 로 되돌린다(매개변수가 선형). clang-format 20.1.8 로 줄 길이를 맞출 것(이 PC 는 21.1.1).
-  - **정리**: 값 노이즈 해시 중복(Noise · Crumple · VertNoise · ZStretchNoise) → 공용 함수, 굽기 결과 메시의 `orphans` 경고, 월드 공간 워프를 별도 씬 오브젝트로(지금은 모디파이어의 기준 오브젝트 id).
+  - **정리**: 굽기 결과 메시의 `orphans` 경고, 월드 공간 워프를 별도 씬 오브젝트로(지금은 모디파이어의 기준 오브젝트 id). 값 노이즈는 `Stack/MeshModifierNoise.h` 한 곳으로 모았다(들어감).
 
 ### D4. 게임플레이 · 캐릭터 · 카메라 · 애니메이션
 
