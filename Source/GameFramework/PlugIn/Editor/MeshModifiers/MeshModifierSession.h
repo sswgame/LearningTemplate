@@ -92,6 +92,22 @@ namespace sw::editor
         float32                  getPreviewTime() const { return _previewTime; }
         void                     setPreviewTime( float32 time );
 
+        /**
+         * @brief 고른 모디파이어까지만 건 결과의 월드 선분을 @p outListSegmentPoint 에 점 둘씩 채웁니다(변형 영향 미리보기).
+         * @details 고른 모디파이어가 없거나 마지막이면 비웁니다 — 전체 결과(`makePreviewSegments`)와 같기 때문이다. 결과는 스택이 바뀌거나 고른 번호가 바뀔 때만 다시 건다.
+         */
+        void makeStagePreviewSegments( vector<float3>& outListSegmentPoint );
+
+        /** @brief 뷰포트와 패널이 함께 보는 격자 제어점 번호입니다. 고른 점이 없으면 -1 입니다(패널은 읽기만 하고 범위는 그리는 쪽이 자릅니다). */
+        int32 getSelectedControlPoint() const { return _selectedControlPoint; }
+        void  setSelectedControlPoint( int32 index ) { _selectedControlPoint = index; }
+        /** @brief 제어점을 옮길 때 대칭 짝도 함께 옮기는지입니다(패널의 Mirror 체크와 뷰포트 끌기가 같이 씁니다). */
+        bool   isMirrorEditing() const { return _bMirrorEditing; }
+        void   setMirrorEditing( bool bMirrorEditing ) { _bMirrorEditing = bMirrorEditing; }
+        /** @brief 대칭 축 성분 번호(0 = X, 1 = Y, 2 = Z)입니다. */
+        uint32 getMirrorAxis() const { return _mirrorAxis; }
+        void   setMirrorAxis( uint32 axisIndex ) { _mirrorAxis = axisIndex <= 2u ? axisIndex : 0u; }
+
         // IMeshModifierInputs
         [[nodiscard]] bool tryGetWorldMatrix( string_view reference, float4x4& outMatrix ) const override;
         [[nodiscard]] bool tryGetCurveLength( string_view reference, float32& outLength ) const override;
@@ -101,9 +117,11 @@ namespace sw::editor
 
     private:
         void makeSourceMesh( MeshModifierMesh& outMesh ) const;
+        void makeSegments( const MeshModifierMesh& mesh, vector<float3>& outListSegmentPoint ) const;
 
         MeshModifierStack     _stack;
         MeshModifierMesh      _previewMesh;
+        MeshModifierMesh      _stagePreviewMesh; ///< 고른 모디파이어까지만 건 결과(`makeStagePreviewSegments`)
         MeshAssetData         _sourceData;
         vector<string>        _listUndo;
         vector<string>        _listRedo;
@@ -112,6 +130,11 @@ namespace sw::editor
         GameObjectHandle      _target;
         float32               _previewTime;
         int32                 _selectedIndex;
+        int32                 _stagePreviewIndex; ///< `_stagePreviewMesh` 를 만든 고른 번호(-1 이면 없음)
+        int32                 _selectedControlPoint;
+        uint32                _mirrorAxis;
         bool                  _bPreviewDirty;
+        bool                  _bStagePreviewDirty;
+        bool                  _bMirrorEditing;
     };
 } // namespace sw::editor

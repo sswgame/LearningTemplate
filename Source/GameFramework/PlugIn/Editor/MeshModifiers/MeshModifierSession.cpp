@@ -51,6 +51,7 @@ namespace sw::editor
     MeshModifierSession::MeshModifierSession()
         : _stack{}
         , _previewMesh{}
+        , _stagePreviewMesh{}
         , _sourceData{}
         , _listUndo{}
         , _listRedo{}
@@ -59,7 +60,12 @@ namespace sw::editor
         , _target{}
         , _previewTime{ 0.0f }
         , _selectedIndex{ -1 }
+        , _stagePreviewIndex{ -1 }
+        , _selectedControlPoint{ -1 }
+        , _mirrorAxis{ 0 }
         , _bPreviewDirty{ true }
+        , _bStagePreviewDirty{ true }
+        , _bMirrorEditing{ false }
     {
     }
 
@@ -95,15 +101,19 @@ namespace sw::editor
     void MeshModifierSession::clearTarget()
     {
         _stack.clear();
-        _previewMesh   = MeshModifierMesh{};
-        _sourceData    = MeshAssetData{};
+        _previewMesh          = MeshModifierMesh{};
+        _stagePreviewMesh     = MeshModifierMesh{};
+        _sourceData           = MeshAssetData{};
         _meshPath.clear();
-        _sourceBounds  = MeshModifierBounds{};
-        _target        = GameObjectHandle{};
-        _selectedIndex = -1;
+        _sourceBounds         = MeshModifierBounds{};
+        _target               = GameObjectHandle{};
+        _selectedIndex        = -1;
+        _stagePreviewIndex    = -1;
+        _selectedControlPoint = -1;
         _listUndo.clear();
         _listRedo.clear();
-        _bPreviewDirty = true;
+        _bPreviewDirty        = true;
+        _bStagePreviewDirty   = true;
     }
 
     GameObject* MeshModifierSession::findTarget() const
@@ -149,7 +159,8 @@ namespace sw::editor
     {
         if ( _bPreviewDirty == false || hasTarget() == false )
             return;
-        _bPreviewDirty = false;
+        _bPreviewDirty      = false;
+        _bStagePreviewDirty = true; // 단계 미리보기도 같은 스택 상태를 따라간다
         makeSourceMesh( _previewMesh );
         MeshModifierEvaluation evaluation{};
         evaluation._meshToWorld = computeMeshToWorld();
@@ -160,8 +171,40 @@ namespace sw::editor
 
     void MeshModifierSession::makePreviewSegments( vector<float3>& outListSegmentPoint ) const
     {
+        makeSegments( _previewMesh, outListSegmentPoint );
+    }
+
+    void MeshModifierSession::makeStagePreviewSegments( vector<float3>& outListSegmentPoint )
+    {
         outListSegmentPoint.clear();
-        const size_t triangleCount = _previewMesh._listPosition.size() / 3;
+        refreshPreview();
+        const int32 lastIndex = _selectedIndex;
+        if ( hasTarget() == false || lastIndex < 0 || lastIndex + 1 >= _stack.getModifierCount() )
+            return;
+        if ( _bStagePreviewDirty || _stagePreviewIndex != lastIndex )
+        {
+            _bStagePreviewDirty = false;
+            _stagePreviewIndex  = lastIndex;
+            makeSourceMesh( _stagePreviewMesh );
+            MeshModifierEvaluation evaluation{};
+            evaluation._meshToWorld = computeMeshToWorld();
+            evaluation._pInputs     = this;
+            evaluation._time        = _previewTime;
+            // 스택의 apply 와 같은 순서로 고른 모디파이어까지만 건다. 법선 재계산은 위치에 영향이 없어 건너뛴다(선만 그린다)
+            for ( int32 index = 0; index <= lastIndex; ++index )
+            {
+                const MeshModifier* pModifier = _stack.findModifier( index );
+                if ( pModifier != nullptr )
+                    pModifier->apply( _stagePreviewMesh, evaluation );
+            }
+        }
+        makeSegments( _stagePreviewMesh, outListSegmentPoint );
+    }
+
+    void MeshModifierSession::makeSegments( const MeshModifierMesh& mesh, vector<float3>& outListSegmentPoint ) const
+    {
+        outListSegmentPoint.clear();
+        const size_t triangleCount = mesh._listPosition.size() / 3;
         if ( triangleCount == 0 )
             return;
         const size_t   stride      = ( triangleCount + kMaxPreviewTriangleCount - 1 ) / kMaxPreviewTriangleCount;
@@ -169,9 +212,9 @@ namespace sw::editor
         outListSegmentPoint.reserve( ( triangleCount / stride + 1 ) * 6 );
         for ( size_t triangle = 0; triangle < triangleCount; triangle += stride )
         {
-            const float3 pointA = float3::transform( _previewMesh._listPosition[triangle * 3], meshToWorld );
-            const float3 pointB = float3::transform( _previewMesh._listPosition[triangle * 3 + 1], meshToWorld );
-            const float3 pointC = float3::transform( _previewMesh._listPosition[triangle * 3 + 2], meshToWorld );
+            const float3 pointA = float3::transform( mesh._listPosition[triangle * 3], meshToWorld );
+            const float3 pointB = float3::transform( mesh._listPosition[triangle * 3 + 1], meshToWorld );
+            const float3 pointC = float3::transform( mesh._listPosition[triangle * 3 + 2], meshToWorld );
             outListSegmentPoint.push_back( pointA );
             outListSegmentPoint.push_back( pointB );
             outListSegmentPoint.push_back( pointB );
