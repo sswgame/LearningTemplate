@@ -247,6 +247,11 @@ namespace sw
 
         const hashed_string& getName() const { return _name; }
         float32              getWeight() const { return _weight; }
+        /** @brief 기본 가중치를 바꿉니다(인스턴스의 복제본에만, 에디터 리그 패널과 런타임 조절이 씁니다). */
+        void setWeight( float32 weight ) { _weight = weight; }
+        /** @brief 노드를 켜 두는지입니다. 끄면 가중치가 0 인 것처럼 실행하지 않습니다(유니티 Animation Rigging 제약의 켜짐). */
+        bool isEnabled() const { return _bEnabled == SW_TRUE; }
+        void setEnabled( bool bEnabled ) { _bEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
         const hashed_string& getWeightCurve() const { return _weightCurve; }
         const hashed_string& getWeightSlot() const { return _weightSlot; }
         /** @brief 노드를 켜 두는 가장 작은 화면 크기입니다. 0 이면 항상 켭니다. */
@@ -260,5 +265,6 @@ namespace sw
         hashed_string _weightSlot;
         float32       _weight;
         float32       _minScreenSize;
+        uint8         _bEnabled{ SW_TRUE };
     };
 } // namespace sw

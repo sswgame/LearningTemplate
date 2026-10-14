@@ -291,6 +291,10 @@ namespace sw::editor
         EditorSelfTestMarks::note( "sequencer.addPropertyTrack" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddPropertyTrackTip" ) );
         ImGui::SameLine();
+        if ( ImGui::Button( "+ Rig Slot Track" ) )
+            addKeyTrack( SequenceTrackKind::RigSlot );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddRigSlotTrackTip" ) );
+        ImGui::SameLine();
         ImGui::BeginDisabled( _selectedTrack < 0 );
         if ( ImGui::Button( "Delete Track" ) && 0 <= _selectedTrack && _selectedTrack < static_cast<int32>( _listTrack.size() ) )
         {
@@ -382,6 +386,16 @@ namespace sw::editor
                 previewCurrentFrame();
             }
         }
+        else if ( track._kind == SequenceTrackKind::RigSlot )
+        {
+            EditorWidgets::drawTextField( "Rig Slot", track._propertyPath );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "RigSlotTip" ) );
+            if ( ImGui::IsItemDeactivatedAfterEdit() )
+            {
+                notifyDocumentEdited( "Edit Sequence Track", "sequence-track" );
+                previewCurrentFrame();
+            }
+        }
 
         GameObjectManager* pManager = editor::getActiveObjectManager();
         const float32      frame    = static_cast<float32>( _currentFrame );
@@ -441,6 +455,8 @@ namespace sw::editor
             const utf8* pMissing = SW_LOCKEY( "EditorSequencer", "TargetNotFound" );
             if ( track._kind == SequenceTrackKind::Property )
                 pMissing = SW_LOCKEY( "EditorSequencer", "PropertyTargetNotFound" );
+            else if ( track._kind == SequenceTrackKind::RigSlot )
+                pMissing = SW_LOCKEY( "EditorSequencer", "RigSlotTargetNotFound" );
             ImGui::TextDisabled( "%s", pMissing );
         }
 
@@ -521,7 +537,12 @@ namespace sw::editor
         SequenceKeyTrack track{};
         track._kind         = kind;
         track._targetObject = SequencerPanelInternal::findSelectedObjectName();
-        track._name         = string{ kind == SequenceTrackKind::Transform ? "Transform " : "Property " } + to_string( _listTrack.size() );
+        const utf8* pPrefix = "Property ";
+        if ( kind == SequenceTrackKind::Transform )
+            pPrefix = "Transform ";
+        else if ( kind == SequenceTrackKind::RigSlot )
+            pPrefix = "Rig Slot ";
+        track._name = string{ pPrefix } + to_string( _listTrack.size() );
         track.fitChannelsToKind();
         _listTrack.push_back( std::move( track ) );
         _selectedTrack = static_cast<int32>( _listTrack.size() ) - 1;

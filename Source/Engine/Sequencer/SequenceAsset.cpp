@@ -316,6 +316,7 @@ namespace sw
                 return kSequenceTransformChannelCount;
             }
             case SequenceTrackKind::Property:
+            case SequenceTrackKind::RigSlot:
             {
                 return 1;
             }
