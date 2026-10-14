@@ -347,6 +347,16 @@ namespace sw
                 return true;
             }
 
+            /** @brief 탐침 `Input.VirtualCursorEnabled` 입니다. 패드 가상 커서가 켜져 있으면 1 입니다(명령형 디렉터가 플레이 동안 켠다). */
+            [[nodiscard]] static bool readVirtualCursorEnabled( const GameObjectManager* pManager, float64& outValue )
+            {
+                (void)pManager;
+                if ( engine::areEngineServicesBound() == false )
+                    return false;
+                outValue = engine::getInputManager().getVirtualCursor().isEnabled() ? 1.0 : 0.0;
+                return true;
+            }
+
             /** @brief 탐침 `Terrain.WrittenEditCount` 입니다. 디스크에서 다시 읽은 뒤 높이나 스플랫을 쓴 지형 수입니다(저장하지 않은 편집이 교체 · 리로드를 넘었는지 본다). */
             [[nodiscard]] static bool readTerrainWrittenEditCount( const GameObjectManager* pManager, float64& outValue )
             {
@@ -403,6 +413,8 @@ namespace sw
 {
     SW_AUTOMATION_PROBE( inputOsDeviceInputBlocked, "Input.OsDeviceInputBlocked", "1 while unattended automation drops the person's mouse and keyboard window events",
                          &AutomationRunnerInternal::readOsDeviceInputBlocked );
+    SW_AUTOMATION_PROBE( inputVirtualCursorEnabled, "Input.VirtualCursorEnabled", "1 while the gamepad virtual cursor is on (command directors turn it on for play)",
+                         &AutomationRunnerInternal::readVirtualCursorEnabled );
     SW_AUTOMATION_PROBE( sceneObjectCount, "Scene.ObjectCount", "Objects in the active scene", &AutomationRunnerInternal::readSceneObjectCount );
     SW_AUTOMATION_PROBE( terrainWrittenEditCount, "Terrain.WrittenEditCount", "Terrains whose heights or splat were written since they were last read from disk",
                          &AutomationRunnerInternal::readTerrainWrittenEditCount );
