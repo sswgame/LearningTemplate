@@ -17,7 +17,11 @@ namespace sw
     // 1) DeadlockDetector — 락마다 대기(intended) → 획득(acquired) → 해제(released)를 기록한다
     //    대기 그래프에 사이클이 생기면 dumpDeadlock
     // ------------------------------------------------------------------------------
-    /** @brief 스레드별로 기다리는 락과 잡고 있는 락을 추적해 데드락 사이클을 찾습니다. `mutex` 에는 잠금 관찰자로 걸립니다. */
+    /**
+     * @brief 스레드별로 기다리는 락과 잡고 있는 락을 추적해 데드락 사이클을 찾습니다. `mutex` · `thread` 에 잠금 관찰자로 걸립니다.
+     * @details `thread::join` 은 끝날 스레드의 합류 키를 기다리는 잠금으로 보이므로 "락을 쥔 채 join, 그 스레드는 그 락을 기다림" 도 사이클이다.
+     *          사이클을 찾으면 양쪽 스택을 로그에 남기고 단언한다(테스트는 `ScopedAssertCapture` 로 센다).
+     */
     class SW_API DeadlockDetector final : public ILockObserver
     {
     public:

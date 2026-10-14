@@ -11,12 +11,12 @@ namespace sw
 {
     // ------------------------------------------------------------------------------
     // 1) ILockObserver — 잠금 시도 · 획득 · 해제를 듣는 쪽(교착 검출기 `DeadlockDetector`)
-    //    mutex 는 이 인터페이스만 안다. 검출기는 컨테이너 · 호출 스택을 쓰므로 위층(Diagnostics)에 있다
+    //    mutex · thread 는 이 인터페이스만 안다. 검출기는 컨테이너 · 호출 스택을 쓰므로 위층(Diagnostics)에 있다
     // ------------------------------------------------------------------------------
     /**
-     * @brief `mutex` 의 잠금 사건을 받는 인터페이스입니다. `mutex::registerLockObserver` 로 겁니다.
-     * @details `SW_ENABLE_DEADLOCK_DETECTION` 빌드에서만 불립니다. 부르는 쪽은 재진입 가드(`MutexReentryGuard`) 안이라,
-     *          구현이 자기 `mutex` 를 잡아도 다시 불리지 않습니다.
+     * @brief 대기 사건을 받는 인터페이스입니다 — `mutex` 의 잠금과 `thread` 의 합류(스레드가 자기 합류 키를 잡고 있다가 끝날 때 놓는다). `mutex::registerLockObserver` 로 겁니다.
+     * @details `mutex` 는 `SW_ENABLE_DEADLOCK_DETECTION` 빌드에서만 부르고, `thread` 는 늘 부른다(시작 · 끝 · 합류는 드물다). 탐지 빌드에서는
+     *          재진입 가드(`MutexReentryGuard`) 안에서 불리므로 구현이 자기 `mutex` 를 잡아도 다시 불리지 않습니다. 키 `pLock` 은 주소로만 쓴다.
      */
     class SW_API ILockObserver
     {
