@@ -398,7 +398,7 @@ namespace sw::editor
     void TestRunnerPanel::pollExternalRun()
     {
         EditorExternalToolResult result;
-        if ( _pJob->take( result ) == false )
+        if ( _pJob->take( result ) != EditorTaskPoll::Ready )
             return;
         _listExternalLine   = std::move( result._listLine );
         _externalExitCode   = result._exitCode;

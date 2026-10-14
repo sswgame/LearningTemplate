@@ -28,6 +28,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
@@ -77,7 +78,7 @@ namespace sw
         [[nodiscard]] bool tryRunOne( uint32 workerIndex );
         void               runWorker( uint32 workerIndex );
 
-        vector<std::thread>      _listThread;
+        vector<sw::thread>       _listThread;
         vector<unique_ptr<Task>> _listTask;     ///< 만든 태스크 전부(소유). 스텝 스레드만 만진다.
         vector<Task*>            _listFreeTask; ///< 다시 쓸 태스크. 스텝 스레드만 만진다.
         vector<Range>            _listRange;    ///< 대기열. `_mutex` 를 쥐고 만진다.

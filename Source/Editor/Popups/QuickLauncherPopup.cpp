@@ -130,7 +130,7 @@ namespace sw::editor
     void QuickLauncherPopup::pollFileIndex()
     {
         vector<EditorResourceIndexEntry> listFileEntry;
-        if ( _fileIndexJob.take( listFileEntry ) == false )
+        if ( _fileIndexJob.take( listFileEntry ) != EditorTaskPoll::Ready )
             return;
 
         for ( const EditorResourceIndexEntry& entry : listFileEntry )

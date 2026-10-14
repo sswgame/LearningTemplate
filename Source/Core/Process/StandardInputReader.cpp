@@ -3,6 +3,7 @@
 #include "Core/Process/StandardInputReader.h"
 
 #include "Core/Concurrency/ThreadName.h"
+#include "Core/Concurrency/thread.h"
 
 namespace sw
 {
@@ -26,7 +27,7 @@ namespace sw
         if ( _thread.joinable() )
             return;
         _stopRequested.store( 0 );
-        _thread = std::thread( [this]()
+        _thread = sw::thread( [this]()
         { readLoop(); } );
     }
 

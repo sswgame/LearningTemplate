@@ -22,6 +22,14 @@ namespace sw::editor
     struct EditorBackgroundNoInput
     {
     };
+
+    /** @brief `EditorBackgroundTask::take` 가 한 번에 돌려주는 잡 상태입니다. */
+    enum class EditorTaskPoll : uint8
+    {
+        Idle,    ///< 요청이 없거나 결과를 이미 가져갔습니다.
+        Running, ///< 워커가 아직 실행 중입니다.
+        Ready,   ///< 결과를 꺼냈습니다.
+    };
 } // namespace sw::editor
 
 namespace sw::editor
@@ -45,26 +53,33 @@ namespace sw::editor
         }
 
         /**
-         * @brief 완료된 결과를 가져옵니다. 새 결과가 있으면 true 입니다.
-         * @details 한 번 가져가면 완료 표시가 내려간다. 같은 결과를 두 번 주지 않는다.
+         * @brief 완료된 결과를 가져오고, 그 순간의 잡 상태를 돌려줍니다.
+         * @details 결과 유무와 대기 여부를 **같은 락 안에서 한 번에** 읽는다. 따로 읽으면(`take` 가 false 인 뒤 `isPending` 을 부르면)
+         *          그 사이 워커가 끝나 "대기 아님 · 결과는 아직 안 꺼냄" 이 보이고, 그 틈에 새 요청을 올리면 끝난 결과를 읽지도 못하고 버린다.
+         *          그래서 "비었으면 요청" 같은 판단은 이 반환값 하나로 한다.
+         *          `Ready` 이면 @p outResult 에 결과가 들어 있고 완료 표시가 내려간다(같은 결과를 두 번 주지 않는다).
+         *          `Running` 이면 워커가 아직 실행 중이고, `Idle` 이면 요청이 없거나 결과를 이미 가져갔다. 이 둘이면 @p outResult 는 그대로다.
          */
-        bool take( TResult& outResult )
+        EditorTaskPoll take( TResult& outResult )
         {
             if ( _pState == nullptr )
-                return false;
+                return EditorTaskPoll::Idle;
 
             std::scoped_lock<mutex> lock{ _pState->_mutex };
             if ( _pState->_bReady == SW_FALSE )
-                return false;
+                return _pState->_bPending == SW_TRUE ? EditorTaskPoll::Running : EditorTaskPoll::Idle;
 
             outResult          = std::move( _pState->_result );
             _pState->_result   = TResult{};
             _pState->_bReady   = SW_FALSE;
             _pState->_bPending = SW_FALSE;
-            return true;
+            return EditorTaskPoll::Ready;
         }
 
-        /** @brief 워커가 아직 실행 중이면 true 입니다. */
+        /**
+         * @brief 워커가 아직 실행 중이면 true 입니다. 화면 표시용입니다.
+         * @details 이 값으로 요청 여부를 정하지 않는다 — 결과를 꺼내는 `take` 와 따로 읽으면 어긋난다. 판단에는 `take` 의 반환값을 쓴다.
+         */
         bool isPending() const
         {
             if ( _pState == nullptr )

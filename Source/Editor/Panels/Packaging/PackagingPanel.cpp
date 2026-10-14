@@ -163,7 +163,7 @@ namespace sw::editor
     void PackagingPanel::collectResult()
     {
         EditorExternalToolResult result{};
-        if ( _pJob->take( result ) == false )
+        if ( _pJob->take( result ) != EditorTaskPoll::Ready )
             return;
         _listLine             = std::move( result._listLine );
         _progress             = PackagingProgressParser::parseOutput( _listLine, result._bLaunched ? result._exitCode : -1 );

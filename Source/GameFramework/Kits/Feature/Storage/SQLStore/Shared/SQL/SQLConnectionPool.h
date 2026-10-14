@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -80,7 +81,7 @@ namespace sw
     private:
         void runWorker( int32 workerIndex );
 
-        vector<std::thread>         _listWorker;
+        vector<sw::thread>          _listWorker;
         deque<unique_ptr<ISQLJob>>  _listQueuedJob;
         vector<unique_ptr<ISQLJob>> _listCompleted;
         SQLConnectionPoolSettings   _settings;

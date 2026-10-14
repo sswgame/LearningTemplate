@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/Futex.h"
 #include "Core/Concurrency/ThreadName.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Time/MonotonicClock.h"
 
 namespace sw
@@ -38,7 +39,7 @@ namespace sw
         _listThread.reserve( _workerCount - 1 );
         for ( uint32 workerIndex = 1; workerIndex < _workerCount; ++workerIndex )
         {
-            _listThread.push_back( std::thread( &Box2DWorkerPool::runWorker, this, workerIndex ) );
+            _listThread.push_back( sw::thread( &Box2DWorkerPool::runWorker, this, workerIndex ) );
         }
     }
 
@@ -47,7 +48,7 @@ namespace sw
         _bStopping.store( true, std::memory_order_release );
         _wakeWord.fetch_add( 1, std::memory_order_release );
         Futex::wakeAll( _wakeWord );
-        for ( std::thread& thread : _listThread )
+        for ( sw::thread& thread : _listThread )
         {
             thread.join();
         }

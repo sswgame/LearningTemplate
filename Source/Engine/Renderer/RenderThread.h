@@ -8,6 +8,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/thread.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -126,7 +127,7 @@ namespace sw
         FrameRenderer*      _pFrameRenderer;
         PresentHookDelegate _presentHook;
         PresentHookDelegate _postPresentHook;
-        std::thread         _thread;
+        sw::thread          _thread;
         atomic<bool>        _bRunning;
         atomic<bool>        _bStop;
         atomic<bool>        _bContextBound; ///< 지금 실행 스레드에서 bindGraphicsContext 가 성공했는지 나타낸다.

@@ -2,6 +2,7 @@
 
 #include "ModuleHost/ModuleCompiler.h"
 
+#include "Core/Concurrency/thread.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -70,7 +71,7 @@ namespace sw
             _pLiveReloadManager->notifyBuildStarted();
 #endif
 
-        _workerThread = std::thread( &ModuleCompiler::runBuildThread, this, string( targetName ), Memory::getCurrentMemoryTag() );
+        _workerThread = sw::thread( &ModuleCompiler::runBuildThread, this, string( targetName ), Memory::getCurrentMemoryTag() );
         return true;
     }
 

@@ -64,7 +64,8 @@ namespace sw::editor
     void EditorAssetValidation::update()
     {
         EditorExternalToolResult result;
-        if ( _pJob->take( result ) )
+        const EditorTaskPoll     poll = _pJob->take( result );
+        if ( poll == EditorTaskPoll::Ready )
         {
             AssetValidationFinding finding;
             for ( const string& line : result._listLine )
@@ -87,7 +88,7 @@ namespace sw::editor
             }
         }
 
-        if ( _bDisabled == SW_TRUE || _listPendingPath.empty() || _pJob->isPending() )
+        if ( _bDisabled == SW_TRUE || _listPendingPath.empty() || poll == EditorTaskPoll::Running )
             return;
         if ( _projectRoot.empty() ||
              FileUtil::exists( FileUtil::joinPath( _projectRoot, EditorAssetValidationInternal::kScriptRelativePath ) ) == false )

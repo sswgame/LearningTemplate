@@ -511,10 +511,10 @@ namespace sw::editor
 
     void ContentBrowserPanel::syncReferenceIndex()
     {
-        _referenceSearch.takeFinishedScan();
-        EditorContext* pContext = EditorContext::get();
+        const EditorTaskPoll poll     = _referenceSearch.takeFinishedScan();
+        EditorContext*       pContext = EditorContext::get();
         if ( pContext != nullptr )
-            _referenceSearch.requestScanIfStale( pContext->getSubsystem<AssetHotReload>().getContentChangeSerial() );
+            _referenceSearch.requestScanIfStale( pContext->getSubsystem<AssetHotReload>().getContentChangeSerial(), poll );
     }
 
     void ContentBrowserPanel::selectAfterFileChange( string_view absolutePath )
@@ -771,7 +771,7 @@ namespace sw::editor
         if ( _bFolderDirty == SW_TRUE )
             refreshCurrentFolder();
         vector<EditorFolderListingEntry> listNewEntry;
-        if ( _folderJob.take( listNewEntry ) )
+        if ( _folderJob.take( listNewEntry ) == EditorTaskPoll::Ready )
             applyFolderListing( listNewEntry );
 
         drawToolbar();

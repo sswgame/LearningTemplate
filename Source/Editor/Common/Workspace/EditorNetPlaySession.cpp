@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
@@ -21,7 +22,7 @@ namespace sw::editor
     struct EditorNetPlaySession::ChildProcess
     {
         Process            _process{};
-        std::thread        _reader{};
+        sw::thread         _reader{};
         mutex              _mutex{};
         vector<string>     _listPendingLine{}; ///< 읽기 스레드가 넣는다(_mutex)
         string             _label{};
@@ -168,7 +169,7 @@ namespace sw::editor
         }
         pChild->_processID = pChild->_process.getProcessID();
         SW_LOG_INFO( "Launched %# (pid %#): %#", label, pChild->_processID, command );
-        pChild->_reader = std::thread( &EditorNetPlaySession::readChildOutput, pChild.get() );
+        pChild->_reader = sw::thread( &EditorNetPlaySession::readChildOutput, pChild.get() );
         _listProcess.push_back( std::move( pChild ) );
         return true;
     }

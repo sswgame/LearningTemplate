@@ -843,15 +843,15 @@ namespace sw::editor
 
         if ( ImGui::CollapsingHeader( "Resource Catalog Summary", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
-            if ( _bCatalogDirty == SW_TRUE && _catalogJob.isPending() == false )
+            EditorResourceCatalogCounts counts{};
+            const EditorTaskPoll        catalogPoll = _catalogJob.take( counts );
+            if ( catalogPoll == EditorTaskPoll::Ready )
+                _catalogCounts = counts;
+            if ( _bCatalogDirty == SW_TRUE && catalogPoll != EditorTaskPoll::Running )
             {
                 _catalogJob.request();
                 _bCatalogDirty = SW_FALSE;
             }
-
-            EditorResourceCatalogCounts counts{};
-            if ( _catalogJob.take( counts ) )
-                _catalogCounts = counts;
 
             if ( ImGui::Button( "Scan Resources" ) )
                 _bCatalogDirty = SW_TRUE;

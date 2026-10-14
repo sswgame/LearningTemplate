@@ -2,6 +2,7 @@
 
 #include "Core/Common/Defines.h"
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/File/AsyncFileIOBackend.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -70,7 +71,7 @@ namespace sw
                 SW_LOG_ERROR( "CreateIoCompletionPort failed (error %#)", static_cast<uint32>( GetLastError() ) );
                 return false;
             }
-            _thread = std::thread( &IocpAsyncFileIOBackend::run, this, Memory::getCurrentMemoryTag() );
+            _thread = sw::thread( &IocpAsyncFileIOBackend::run, this, Memory::getCurrentMemoryTag() );
             return true;
         }
 
@@ -234,7 +235,7 @@ namespace sw
             return pExpected == _hPort;
         }
 
-        std::thread       _thread;
+        sw::thread        _thread;
         AsyncFileIOQueue* _pQueue;
         HANDLE            _hPort;
     };

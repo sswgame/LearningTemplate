@@ -140,12 +140,13 @@ namespace sw::editor
     void CatalogPanel::pollIndexJob()
     {
         vector<EditorResourceIndexEntry> listEntry;
-        if ( _indexJob.take( listEntry ) )
+        const EditorTaskPoll             poll = _indexJob.take( listEntry );
+        if ( poll == EditorTaskPoll::Ready )
         {
             rebuildFileList( listEntry );
             _bIndexLoaded = true;
         }
-        else if ( _bIndexLoaded == false && _indexJob.isPending() == false )
+        else if ( _bIndexLoaded == false && poll == EditorTaskPoll::Idle )
         {
             _indexJob.request();
         }

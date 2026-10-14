@@ -5,6 +5,7 @@
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/vector.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 #include "Core/Network/Transport/StreamSendQueue.h"
@@ -148,7 +149,7 @@ namespace sw
         vector<unique_ptr<IocpConnection>> _listConnection;
         vector<uint32>                     _listFreeIndex;
         unique_ptr<IocpAcceptSlot[]>       _arrAcceptSlot;
-        vector<std::thread>                _listThread;
+        vector<sw::thread>                 _listThread;
         StreamTransportSettings            _settings{};
         IStreamHandler*                    _pHandler{ nullptr };
         HANDLE                             _completionPort{ nullptr };
@@ -725,7 +726,7 @@ namespace sw
         {
             (void)PostQueuedCompletionStatus( state._completionPort, 0, IocpStreamTransportInternal::kStopKey, nullptr );
         }
-        for ( std::thread& thread : state._listThread )
+        for ( sw::thread& thread : state._listThread )
         {
             thread.join();
         }

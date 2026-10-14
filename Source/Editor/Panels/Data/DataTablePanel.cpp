@@ -119,8 +119,9 @@ namespace sw::editor
 
     void DataTablePanel::pollBackgroundJobs()
     {
-        LocalizationSheet loadedSheet;
-        if ( _localizationJob.take( loadedSheet ) )
+        LocalizationSheet    loadedSheet;
+        const EditorTaskPoll localizationPoll = _localizationJob.take( loadedSheet );
+        if ( localizationPoll == EditorTaskPoll::Ready )
         {
             if ( _bLocalizationDirty == SW_FALSE )
             {
@@ -128,7 +129,7 @@ namespace sw::editor
                 _bLocalizationLoaded = SW_TRUE;
             }
         }
-        else if ( _bLocalizationLoaded == SW_FALSE && _localizationJob.isPending() == false )
+        else if ( _bLocalizationLoaded == SW_FALSE && localizationPoll == EditorTaskPoll::Idle )
         {
             EditorDataTableCommands::collectLocalizationProjects( _listLocalizationProject );
             if ( _listLocalizationProject.empty() )
@@ -142,12 +143,13 @@ namespace sw::editor
         }
 
         vector<GameDataFileEntry> listGameData;
-        if ( _gameDataJob.take( listGameData ) )
+        const EditorTaskPoll      gameDataPoll = _gameDataJob.take( listGameData );
+        if ( gameDataPoll == EditorTaskPoll::Ready )
         {
             _listGameDataFile = std::move( listGameData );
             _bGameDataLoaded  = SW_TRUE;
         }
-        else if ( _bGameDataLoaded == SW_FALSE && _gameDataJob.isPending() == false )
+        else if ( _bGameDataLoaded == SW_FALSE && gameDataPoll == EditorTaskPoll::Idle )
             _gameDataJob.request();
     }
 
