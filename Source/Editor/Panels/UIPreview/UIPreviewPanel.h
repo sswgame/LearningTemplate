@@ -56,6 +56,7 @@ namespace sw::editor
         bool    _bSlotEditable{ false };     ///< 고른 위젯의 슬롯을 손잡이로 고칠 수 있는지(부모가 캔버스 패널)
         float32 _selectedOffsetMinX{ 0.0f }; ///< 고른 위젯의 슬롯 `_offsetMin._x`(손잡이로 옮기면 바뀐다)
         uint32  _paletteCount{ 0 };          ///< 팔레트가 보이는 위젯 타입 수
+        uint32  _slotEditCount{ 0 };         ///< 적용된 슬롯 편집 수(캔버스 손잡이 · Slot 칸 · 상자 순서 · 격자 칸 손잡이, 되돌리기 항목 하나가 하나)
     };
 } // namespace sw::editor
 
@@ -163,6 +164,13 @@ namespace sw::editor
         /** @brief 선택한 위젯의 슬롯 손잡이를 그림 위에 그리고 끄는 대로 슬롯을 고칩니다(부모가 캔버스 패널일 때). */
         void drawSlotHandles( UIScreen& screen, const float2& drawSize, const float2& origin );
         /**
+         * @brief 부모가 상자 · 격자 패널인 선택 위젯에 옮기기 손잡이 하나를 그립니다. 끌어 놓은 점으로 상자는 자식 순서를, 격자는 행 · 열을 바꿉니다.
+         * @details 끄는 동안은 놓일 자리만 표시하고 트리를 바꾸지 않는다 — 놓을 때 한 번 바꾸고 되돌리기 항목 하나를 남긴다(상자는 `applyMove`, 격자는 `pushPropertyEdit`).
+         */
+        void drawLayoutHandle( UIScreen& screen, const float2& drawSize, const float2& origin );
+        /** @brief 되돌리기 항목이 부르는 순서 바꾸기입니다 — 문서 순서 번호 @p parentOrdinal 인 패널의 @p fromIndex 번째 자식을 @p toIndex 번째로 옮깁니다. 다른 세대의 항목이면 버립니다. */
+        void applyMove( uint32 generation, uint32 parentOrdinal, uint32 fromIndex, uint32 toIndex );
+        /**
          * @brief 인스펙터 위에 고른 위젯의 Slot 칸을 그립니다 — 부모 패널이 읽는 필드만(`UIPreviewLogic::findSlotFields`) 보입니다(상자 · 겹침 · 격자 · 흐름 · 캔버스 …).
          * @details 되돌리기는 슬롯 손잡이와 같다 — 끄는 동안은 슬롯을 바로 고치고, 손을 떼면 `_slot` 텍스트 전후 한 쌍을 `pushPropertyEdit` 로 남긴다.
          */
@@ -217,6 +225,7 @@ namespace sw::editor
         uint32                          _languageIndex;
         uint32                          _slotDragOrdinal; ///< 슬롯 손잡이를 끄는 위젯의 문서 순서 번호
         uint32                          _paletteFrame;    ///< 팔레트를 마지막으로 모은 ImGui 프레임
+        uint32                          _slotEditCount;   ///< 적용된 슬롯 편집 수(탐침)
         uint32                          _resolutionIndex;
         float32                         _uiScale;
         float32                         _textScale;
@@ -235,5 +244,6 @@ namespace sw::editor
         bool                            _bAwaitReload;       ///< 저장했고 핫 리로드가 트리를 다시 짓기를 기다리는지
         bool                            _bReloadedAfterSave; ///< 그 뒤 트리가 새로 지어졌는지(탐침)
         bool                            _bSlotDragging;      ///< 슬롯 손잡이를 끄는 중인지
+        bool                            _bLayoutDragging;    ///< 상자 · 격자 옮기기 손잡이를 끄는 중인지
     };
 } // namespace sw::editor

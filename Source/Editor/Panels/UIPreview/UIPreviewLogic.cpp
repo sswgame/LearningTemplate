@@ -413,6 +413,70 @@ namespace sw::editor
         return bChanged;
     }
 
+    uint32 UIPreviewLogic::findBoxInsertIndex( const vector<float32>& listChildCenter, float32 point )
+    {
+        uint32 index{ 0 };
+        for ( const float32 center : listChildCenter )
+        {
+            if ( center < point )
+                ++index;
+        }
+        return index;
+    }
+
+    uint32 UIPreviewLogic::findReorderIndex( uint32 fromIndex, uint32 insertIndex )
+    {
+        return insertIndex > fromIndex ? insertIndex - 1 : insertIndex;
+    }
+
+    uint32 UIPreviewLogic::findGridTrack( const vector<float32>& listTrackStart, float32 trackEnd, float32 point )
+    {
+        const uint32 count = static_cast<uint32>( listTrackStart.size() );
+        if ( count == 0 )
+            return 0;
+        if ( point >= trackEnd )
+            return count;
+        uint32 track{ 0 };
+        for ( uint32 i = 0; i < count; ++i )
+        {
+            if ( listTrackStart[i] <= point )
+                track = i;
+        }
+        return track;
+    }
+
+    void UIPreviewLogic::collectGridTracks( const PanelWidget& grid, bool bRows, vector<float32>& outListTrackStart, float32& outTrackEnd )
+    {
+        outListTrackStart.clear();
+        outTrackEnd = 0.0f;
+        vector<uint8> listSeen;
+        for ( uint32 i = 0; i < grid.getChildCount(); ++i )
+        {
+            const Widget*           pChild = grid.getChild( i );
+            const WidgetLayoutSlot& slot   = pChild->getLayoutSlot();
+            const UIRect            bounds = pChild->getGeometry().computeScreenBounds();
+            const uint32            track  = bRows ? slot._row : slot._column;
+            const float32           start  = bRows ? bounds._top : bounds._left;
+            const float32           end    = bRows ? bounds._bottom : bounds._right;
+            while ( outListTrackStart.size() <= track )
+            {
+                outListTrackStart.push_back( 0.0f );
+                listSeen.push_back( 0 );
+            }
+            if ( listSeen[track] == 0 || start < outListTrackStart[track] )
+                outListTrackStart[track] = start;
+            listSeen[track] = 1;
+            if ( i == 0 || end > outTrackEnd )
+                outTrackEnd = end;
+        }
+        // 자식이 없는 줄은 폭이 0 인 줄로 둔다(뒤 줄의 시작을 잇는다) — 그 칸으로는 끌어 놓을 수 없지만 번호는 밀리지 않는다. 마지막 줄에는 늘 자식이 있다.
+        for ( uint32 i = static_cast<uint32>( outListTrackStart.size() ); i-- > 0; )
+        {
+            if ( listSeen[i] == 0 )
+                outListTrackStart[i] = i + 1 < static_cast<uint32>( outListTrackStart.size() ) ? outListTrackStart[i + 1] : outTrackEnd;
+        }
+    }
+
     string UIPreviewLogic::makeTimeLabel( float32 time, float32 duration )
     {
         fixed_string<constant::kMaxBuffer64> label;

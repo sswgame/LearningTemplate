@@ -203,6 +203,25 @@ namespace sw::editor
          * @return 슬롯이 바뀌었으면 true 입니다.
          */
         [[nodiscard]] static bool applyAnchorPreset( WidgetLayoutSlot& inoutSlot, UIPreviewAnchorPreset preset, const UIRect& localRect, const float2& parentSize );
+
+        // --- 디자이너: 상자 순서 · 격자 칸 손잡이 ---------------------------------------------------------------
+        /**
+         * @brief 상자 패널에서 끄는 점 @p point 가 들어갈 자리입니다 — 자식 가운데(@p listChildCenter, 상자 축 좌표, 자식 순서)가 @p point 보다 작은 자식 수입니다.
+         * @details 끄는 자식 자신도 목록에 있다. 떼어 낸 뒤의 번호는 `findReorderIndex` 가 고친다.
+         */
+        static uint32 findBoxInsertIndex( const vector<float32>& listChildCenter, float32 point );
+        /** @brief 자식 @p fromIndex 를 떼고 끼울 번호입니다 — 사이 자리 @p insertIndex(떼기 전 번호)가 자신 뒤면 하나 당깁니다. */
+        static uint32 findReorderIndex( uint32 fromIndex, uint32 insertIndex );
+        /**
+         * @brief 격자에서 점 @p point 가 속한 줄(행이나 열) 번호입니다. @p listTrackStart 는 줄마다 시작 좌표(오름차순), @p trackEnd 는 마지막 줄의 끝입니다.
+         * @details 첫 줄 앞이면 0, @p trackEnd 를 넘으면 줄 수(새 줄)입니다. 줄이 없으면 0 입니다.
+         */
+        static uint32 findGridTrack( const vector<float32>& listTrackStart, float32 trackEnd, float32 point );
+        /**
+         * @brief 격자 패널 @p grid 의 줄 시작 좌표를 자식 사각형으로 모읍니다(@p bRows 면 행 · 위 변, 아니면 열 · 왼쪽 변, UI 단위). 자식이 없는 줄은 앞 줄의 시작을 이어 씁니다.
+         * @param outTrackEnd 자식 사각형의 가장 먼 끝(아래 변이나 오른쪽 변)입니다.
+         */
+        static void collectGridTracks( const PanelWidget& grid, bool bRows, vector<float32>& outListTrackStart, float32& outTrackEnd );
         /** @brief 시간 막대 줄입니다 — "0.25 / 1.00 s". */
         static string makeTimeLabel( float32 time, float32 duration );
     };

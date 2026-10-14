@@ -342,3 +342,43 @@ SW_TEST_CASE( UIPreviewLogicTest, AnchorPresetKeepsTheWidgetInPlace )
     SW_EXPECT_NEAR_EQUAL( 0.0f, outOfRange._anchorMax._x, 1e-6f );
     SW_EXPECT_STREQ( "topleft", UIPreviewLogic::getAnchorPresetMark( UIPreviewAnchorPreset::Count ) );
 }
+
+/**
+ * @brief [UIPreviewLogicTest] 상자 순서 손잡이 — 놓은 점보다 가운데가 앞인 자식 수가 사이 자리이고, 자기 뒤로 옮기면 떼어 낸 만큼 번호를 하나 당긴다
+ */
+SW_TEST_CASE( UIPreviewLogicTest, BoxReorderIndexFromDropPoint )
+{
+    using sw::editor::UIPreviewLogic;
+    const sw::vector<float32> listCenter{ 10.0f, 30.0f, 50.0f, 70.0f };
+    SW_EXPECT_EQUAL( 0u, UIPreviewLogic::findBoxInsertIndex( listCenter, 0.0f ) );
+    SW_EXPECT_EQUAL( 2u, UIPreviewLogic::findBoxInsertIndex( listCenter, 40.0f ) );
+    SW_EXPECT_EQUAL( 4u, UIPreviewLogic::findBoxInsertIndex( listCenter, 100.0f ) );
+    SW_EXPECT_EQUAL( 0u, UIPreviewLogic::findBoxInsertIndex( sw::vector<float32>{}, 5.0f ) );
+
+    // 1 번 자식을 끌어 — 맨 앞 · 제자리(자기 앞뒤 틈) · 맨 뒤
+    SW_EXPECT_EQUAL( 0u, UIPreviewLogic::findReorderIndex( 1, UIPreviewLogic::findBoxInsertIndex( listCenter, 0.0f ) ) );
+    SW_EXPECT_EQUAL( 1u, UIPreviewLogic::findReorderIndex( 1, UIPreviewLogic::findBoxInsertIndex( listCenter, 20.0f ) ) );
+    SW_EXPECT_EQUAL( 1u, UIPreviewLogic::findReorderIndex( 1, UIPreviewLogic::findBoxInsertIndex( listCenter, 40.0f ) ) );
+    SW_EXPECT_EQUAL( 2u, UIPreviewLogic::findReorderIndex( 1, UIPreviewLogic::findBoxInsertIndex( listCenter, 60.0f ) ) );
+    SW_EXPECT_EQUAL( 3u, UIPreviewLogic::findReorderIndex( 1, UIPreviewLogic::findBoxInsertIndex( listCenter, 100.0f ) ) );
+}
+
+/**
+ * @brief [UIPreviewLogicTest] 격자 칸 손잡이 — 점이 속한 줄은 시작이 점 이하인 마지막 줄, 첫 줄 앞은 0, 끝을 넘으면 새 줄(줄 수), 폭 0 인 빈 줄은 건너뛴다
+ */
+SW_TEST_CASE( UIPreviewLogicTest, GridTrackFromDropPoint )
+{
+    using sw::editor::UIPreviewLogic;
+    const sw::vector<float32> listStart{ 0.0f, 100.0f, 200.0f };
+    SW_EXPECT_EQUAL( 0u, UIPreviewLogic::findGridTrack( listStart, 300.0f, -10.0f ) );
+    SW_EXPECT_EQUAL( 0u, UIPreviewLogic::findGridTrack( listStart, 300.0f, 50.0f ) );
+    SW_EXPECT_EQUAL( 1u, UIPreviewLogic::findGridTrack( listStart, 300.0f, 100.0f ) );
+    SW_EXPECT_EQUAL( 2u, UIPreviewLogic::findGridTrack( listStart, 300.0f, 250.0f ) );
+    SW_EXPECT_EQUAL( 3u, UIPreviewLogic::findGridTrack( listStart, 300.0f, 300.0f ) );
+    SW_EXPECT_EQUAL( 0u, UIPreviewLogic::findGridTrack( sw::vector<float32>{}, 0.0f, 50.0f ) );
+
+    // 1 번 줄이 비어 2 번 줄의 시작을 이었다(collectGridTracks) — 100~200 은 2 번 줄이다
+    const sw::vector<float32> listGap{ 0.0f, 100.0f, 100.0f };
+    SW_EXPECT_EQUAL( 2u, UIPreviewLogic::findGridTrack( listGap, 200.0f, 150.0f ) );
+    SW_EXPECT_EQUAL( 0u, UIPreviewLogic::findGridTrack( listGap, 200.0f, 50.0f ) );
+}
