@@ -12,7 +12,7 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 
 namespace sw
 {

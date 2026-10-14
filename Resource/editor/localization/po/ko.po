@@ -278,17 +278,17 @@ msgctxt "EdCommon.NoSavedLayouts"
 msgid "No saved layouts."
 msgstr "저장된 레이아웃이 없습니다."
 
-#: Source/Editor/Common/Commands/EditorBugItCommands.cpp
+#: Source/Editor/Common/Commands/Dev/EditorBugItCommands.cpp
 msgctxt "EdCommon.NotifyBugReportFailed"
 msgid "The bug report could not be saved (see the log)"
 msgstr "버그 리포트를 저장하지 못했습니다(로그를 확인하십시오)"
 
-#: Source/Editor/Common/Commands/EditorBugItCommands.cpp
+#: Source/Editor/Common/Commands/Dev/EditorBugItCommands.cpp
 msgctxt "EdCommon.NotifyBugReportSaved"
 msgid "Bug report saved"
 msgstr "버그 리포트를 저장했습니다"
 
-#: Source/Editor/Common/Commands/EditorBugItCommands.cpp
+#: Source/Editor/Common/Commands/Dev/EditorBugItCommands.cpp
 msgctxt "EdCommon.NotifyBugReportTitle"
 msgid "Bug report"
 msgstr "버그 리포트"
@@ -298,27 +298,27 @@ msgctxt "EdCommon.NotifyClipboardEmpty"
 msgid "Clipboard is empty"
 msgstr "클립보드가 비어 있습니다"
 
-#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
 msgctxt "EdCommon.NotifyDocumentSaveFailed"
 msgid "Document save failed"
 msgstr "문서를 저장하지 못했습니다"
 
-#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
 msgctxt "EdCommon.NotifyEditorTitle"
 msgid "Editor"
 msgstr "에디터"
 
-#: Source/Editor/Common/Commands/EditorPlayCommands.cpp
+#: Source/Editor/Common/Commands/Play/EditorPlayCommands.cpp
 msgctxt "EdCommon.NotifyKeepSimulation"
 msgid "The selected objects keep their state after Stop"
 msgstr "선택한 오브젝트는 Stop 뒤에도 상태를 유지합니다"
 
-#: Source/Editor/Common/Commands/EditorPlayCommands.cpp
+#: Source/Editor/Common/Commands/Play/EditorPlayCommands.cpp
 msgctxt "EdCommon.NotifyKeepSimulationTitle"
 msgid "Keep Simulation Changes"
 msgstr "시뮬레이션 변경 유지"
 
-#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
 msgctxt "EdCommon.NotifyNewScene"
 msgid "New scene"
 msgstr "새 씬"
@@ -328,17 +328,17 @@ msgctxt "EdCommon.NotifyPasteTitle"
 msgid "Paste"
 msgstr "붙여넣기"
 
-#: Source/Editor/Common/Commands/EditorPlayCommands.cpp
+#: Source/Editor/Common/Commands/Play/EditorPlayCommands.cpp
 msgctxt "EdCommon.NotifyPlayNewWindowSaveFirst"
 msgid "Save the scene first. The new window opens the saved file."
 msgstr "먼저 씬을 저장하십시오. 새 창은 저장된 파일을 엽니다."
 
-#: Source/Editor/Common/Commands/EditorPlayCommands.cpp
+#: Source/Editor/Common/Commands/Play/EditorPlayCommands.cpp
 msgctxt "EdCommon.NotifyPlayNewWindowTitle"
 msgid "Play in New Window"
 msgstr "새 창에서 플레이"
 
-#: Source/Editor/Common/Commands/EditorPlayCommands.cpp
+#: Source/Editor/Common/Commands/Play/EditorPlayCommands.cpp
 msgctxt "EdCommon.NotifyPlayNewWindowUnsaved"
 msgid "Unsaved scene edits are not in the new window"
 msgstr "저장하지 않은 씬 편집은 새 창에 없습니다"
@@ -353,22 +353,22 @@ msgctxt "EdCommon.NotifyPlayUnsaved"
 msgid "The scene has unsaved changes. Use Play on the toolbar to confirm."
 msgstr "씬에 저장하지 않은 변경이 있습니다. 툴바의 Play 로 확인하십시오."
 
-#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
 msgctxt "EdCommon.NotifyPrefabIsolated"
 msgid "Isolated the prefab in the current scene"
 msgstr "현재 씬에서 프리팹을 격리했습니다"
 
-#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
 msgctxt "EdCommon.NotifyPrefabIsolationExited"
 msgid "Exited prefab isolation"
 msgstr "프리팹 격리를 마쳤습니다"
 
-#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
 msgctxt "EdCommon.NotifyPrefabSaveFirst"
 msgid "Save the scene before opening prefab isolation"
 msgstr "프리팹 격리를 열기 전에 씬을 저장하십시오"
 
-#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
 msgctxt "EdCommon.NotifyPrefabTitle"
 msgid "Prefab"
 msgstr "프리팹"
@@ -388,52 +388,52 @@ msgctxt "EdCommon.NotifyPresetWriteFailed"
 msgid "Failed to write the preset file"
 msgstr "프리셋 파일을 쓰지 못했습니다"
 
-#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
 msgctxt "EdCommon.NotifySaveFailed"
 msgid "Save failed"
 msgstr "저장하지 못했습니다"
 
-#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
 msgctxt "EdCommon.NotifySaveTitle"
 msgid "Save"
 msgstr "저장"
 
-#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
 msgctxt "EdCommon.NotifySaved"
 msgid "Saved"
 msgstr "저장했습니다"
 
-#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
 msgctxt "EdCommon.NotifySceneOpenFailed"
 msgid "Failed to open the scene"
 msgstr "씬을 열지 못했습니다"
 
-#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
 msgctxt "EdCommon.NotifySceneReadOnly"
 msgid "The scene file is read-only. Check it out (lock it) in the Content Browser first."
 msgstr "씬 파일이 읽기 전용입니다. 먼저 콘텐츠 브라우저에서 Check Out(잠금)하십시오."
 
-#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
 msgctxt "EdCommon.NotifySceneTitle"
 msgid "Scene"
 msgstr "씬"
 
-#: Source/Editor/Common/Commands/EditorScreenshotCommands.cpp
+#: Source/Editor/Common/Commands/Play/EditorScreenshotCommands.cpp
 msgctxt "EdCommon.NotifyScreenshotFailed"
 msgid "The screenshot was not written (see the log)"
 msgstr "스크린샷을 쓰지 못했습니다(로그를 확인하십시오)"
 
-#: Source/Editor/Common/Commands/EditorScreenshotCommands.cpp
+#: Source/Editor/Common/Commands/Play/EditorScreenshotCommands.cpp
 msgctxt "EdCommon.NotifyScreenshotNoSceneView"
 msgid "The scene view is not drawn. Open the Scene tab first."
 msgstr "씬 뷰가 그려지지 않았습니다. 먼저 Scene 탭을 여십시오."
 
-#: Source/Editor/Common/Commands/EditorScreenshotCommands.cpp
+#: Source/Editor/Common/Commands/Play/EditorScreenshotCommands.cpp
 msgctxt "EdCommon.NotifyScreenshotSaved"
 msgid "Screenshot saved"
 msgstr "스크린샷을 저장했습니다"
 
-#: Source/Editor/Common/Commands/EditorScreenshotCommands.cpp
+#: Source/Editor/Common/Commands/Play/EditorScreenshotCommands.cpp
 msgctxt "EdCommon.NotifyScreenshotTitle"
 msgid "Screenshot"
 msgstr "스크린샷"
@@ -448,7 +448,7 @@ msgctxt "EdCommon.NotifySelectObject"
 msgid "Select an object first"
 msgstr "먼저 오브젝트를 고르십시오"
 
-#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+#: Source/Editor/Common/Commands/Asset/EditorAssetCommands.cpp
 msgctxt "EdCommon.NotifyStopPlayFirst"
 msgid "Stop play before opening or creating a scene"
 msgstr "씬을 열거나 만들기 전에 플레이를 멈추십시오"

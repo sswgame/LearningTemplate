@@ -12,7 +12,7 @@
 #include "Core/Module/ModuleUnloadListener.h"
 #include "Core/String/TagID.h"
 
-#include "Editor/Common/Commands/EditorResourceIndex.h"
+#include "Editor/Common/Commands/Asset/EditorResourceIndex.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"

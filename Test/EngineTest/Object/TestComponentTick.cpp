@@ -11,7 +11,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/TickBatchRegistry.h"
+#include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"

@@ -20,9 +20,9 @@
 #include "Engine/Object/Component/SceneTransformStorage.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Renderer/Frame/RenderView.h"
+#include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/Scene.h"
 

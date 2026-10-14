@@ -37,7 +37,7 @@
 #include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/SceneAnimation/AnimationCrowd.h"
 #include "Engine/Object/SceneAnimation/AnimationLOD.h"

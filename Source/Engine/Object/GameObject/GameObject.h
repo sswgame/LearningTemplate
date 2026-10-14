@@ -16,7 +16,7 @@
 #include "Core/String/TagID.h"
 
 #include "Engine/Object/Component/Component.h"
-#include "Engine/Object/GameObject/TickRegistry.h"
+#include "Engine/Object/GameObject/Tick/TickRegistry.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

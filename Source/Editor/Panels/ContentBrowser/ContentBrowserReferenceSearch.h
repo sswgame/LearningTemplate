@@ -7,8 +7,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Editor/Common/Commands/Asset/EditorReferenceIndex.h"
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
-#include "Editor/Common/Commands/EditorReferenceIndex.h"
 
 namespace sw::editor
 {

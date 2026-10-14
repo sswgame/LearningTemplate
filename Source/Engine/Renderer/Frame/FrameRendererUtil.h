@@ -13,7 +13,7 @@
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Renderer/Frame/RenderView.h"
+#include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 

@@ -13,7 +13,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
-#include "Editor/Common/Commands/EditorMultiEdit.h"
+#include "Editor/Common/Commands/Scene/EditorMultiEdit.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/Inspector/InspectorFavorites.h"

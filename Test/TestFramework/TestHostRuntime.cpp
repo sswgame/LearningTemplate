@@ -40,7 +40,7 @@
 #include "Engine/Module/ModuleTypesSubsystem.h"
 #include "Engine/Module/ReflectionSubsystem.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
-#include "Engine/Object/GameObject/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionCore.h"

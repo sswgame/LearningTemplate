@@ -9,7 +9,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
+#include "Editor/Common/Commands/Dev/EditorGlobalVariableCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"

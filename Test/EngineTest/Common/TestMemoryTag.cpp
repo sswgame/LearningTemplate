@@ -19,7 +19,7 @@
 #include "Engine/Module/ReflectionSubsystem.h"
 #include "Engine/Object/Component/3D/MeshInstanceBatch.h"
 #include "Engine/Object/Component/SceneTransformStorage.h"
-#include "Engine/Object/GameObject/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/SceneManager.h"

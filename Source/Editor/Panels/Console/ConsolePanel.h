@@ -10,7 +10,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Commands/EditorLogCommands.h"
+#include "Editor/Common/Commands/Dev/EditorLogCommands.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Panels/Console/ConsoleLogRows.h"
 

@@ -17,17 +17,17 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
-#include "Engine/Object/GameObject/CameraRegistry.h"
-#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectStore.h"
-#include "Engine/Object/GameObject/ISceneFrameSystem.h"
-#include "Engine/Object/GameObject/ISceneService.h"
-#include "Engine/Object/GameObject/PrimitiveRegistry.h"
-#include "Engine/Object/GameObject/SceneEngineServices.h"
-#include "Engine/Object/GameObject/SceneFrameStep.h"
-#include "Engine/Object/GameObject/SceneTickScheduler.h"
-#include "Engine/Object/GameObject/StructuralChangeBuffer.h"
+#include "Engine/Object/GameObject/Registry/CameraRegistry.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/Service/ISceneService.h"
+#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
+#include "Engine/Object/GameObject/Tick/SceneFrameStep.h"
+#include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
+#include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
 #include "Engine/Object/SceneAnimation/AnimationSystem.h"
 
 namespace sw
@@ -471,7 +471,7 @@ namespace sw
 
         // 프레임 단계 본문 — 표(`SceneFrameStepList.xxx`)의 줄마다 하나. `tick` 이 줄 순서대로 부른다.
 #define SW_SCENE_FRAME_STEP( Name ) void runFrameStep##Name( float32 deltaTime );
-#include "Engine/Object/GameObject/SceneFrameStepList.xxx"
+#include "Engine/Object/GameObject/Tick/SceneFrameStepList.xxx"
 #undef SW_SCENE_FRAME_STEP
 
         // 단위들은 소유만 한다. 선언 순서가 생성 순서다 — 뒤 단위가 앞 단위를 참조로 받는다(틱 디스패치 → 계층 · 레지스트리 · 틱 중 규칙,

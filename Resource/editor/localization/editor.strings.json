@@ -328,21 +328,21 @@
         "EdCommon.NotifyBugReportFailed": {
             "source": "The bug report could not be saved (see the log)",
             "origins": [
-                "Source/Editor/Common/Commands/EditorBugItCommands.cpp",
+                "Source/Editor/Common/Commands/Dev/EditorBugItCommands.cpp",
                 "Source/Editor/Panels/BugIt/BugItPanel.cpp"
             ]
         },
         "EdCommon.NotifyBugReportSaved": {
             "source": "Bug report saved",
             "origins": [
-                "Source/Editor/Common/Commands/EditorBugItCommands.cpp",
+                "Source/Editor/Common/Commands/Dev/EditorBugItCommands.cpp",
                 "Source/Editor/Panels/BugIt/BugItPanel.cpp"
             ]
         },
         "EdCommon.NotifyBugReportTitle": {
             "source": "Bug report",
             "origins": [
-                "Source/Editor/Common/Commands/EditorBugItCommands.cpp",
+                "Source/Editor/Common/Commands/Dev/EditorBugItCommands.cpp",
                 "Source/Editor/Panels/BugIt/BugItPanel.cpp"
             ]
         },
@@ -355,31 +355,31 @@
         "EdCommon.NotifyDocumentSaveFailed": {
             "source": "Document save failed",
             "origins": [
-                "Source/Editor/Common/Commands/EditorSceneFileCommands.cpp"
+                "Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp"
             ]
         },
         "EdCommon.NotifyEditorTitle": {
             "source": "Editor",
             "origins": [
-                "Source/Editor/Common/Commands/EditorSceneFileCommands.cpp"
+                "Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp"
             ]
         },
         "EdCommon.NotifyKeepSimulation": {
             "source": "The selected objects keep their state after Stop",
             "origins": [
-                "Source/Editor/Common/Commands/EditorPlayCommands.cpp"
+                "Source/Editor/Common/Commands/Play/EditorPlayCommands.cpp"
             ]
         },
         "EdCommon.NotifyKeepSimulationTitle": {
             "source": "Keep Simulation Changes",
             "origins": [
-                "Source/Editor/Common/Commands/EditorPlayCommands.cpp"
+                "Source/Editor/Common/Commands/Play/EditorPlayCommands.cpp"
             ]
         },
         "EdCommon.NotifyNewScene": {
             "source": "New scene",
             "origins": [
-                "Source/Editor/Common/Commands/EditorSceneFileCommands.cpp"
+                "Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp"
             ]
         },
         "EdCommon.NotifyPasteTitle": {
@@ -391,19 +391,19 @@
         "EdCommon.NotifyPlayNewWindowSaveFirst": {
             "source": "Save the scene first. The new window opens the saved file.",
             "origins": [
-                "Source/Editor/Common/Commands/EditorPlayCommands.cpp"
+                "Source/Editor/Common/Commands/Play/EditorPlayCommands.cpp"
             ]
         },
         "EdCommon.NotifyPlayNewWindowTitle": {
             "source": "Play in New Window",
             "origins": [
-                "Source/Editor/Common/Commands/EditorPlayCommands.cpp"
+                "Source/Editor/Common/Commands/Play/EditorPlayCommands.cpp"
             ]
         },
         "EdCommon.NotifyPlayNewWindowUnsaved": {
             "source": "Unsaved scene edits are not in the new window",
             "origins": [
-                "Source/Editor/Common/Commands/EditorPlayCommands.cpp"
+                "Source/Editor/Common/Commands/Play/EditorPlayCommands.cpp"
             ]
         },
         "EdCommon.NotifyPlayTitle": {
@@ -421,25 +421,25 @@
         "EdCommon.NotifyPrefabIsolated": {
             "source": "Isolated the prefab in the current scene",
             "origins": [
-                "Source/Editor/Common/Commands/EditorPrefabIsolationCommands.cpp"
+                "Source/Editor/Common/Commands/Scene/EditorPrefabIsolationCommands.cpp"
             ]
         },
         "EdCommon.NotifyPrefabIsolationExited": {
             "source": "Exited prefab isolation",
             "origins": [
-                "Source/Editor/Common/Commands/EditorPrefabIsolationCommands.cpp"
+                "Source/Editor/Common/Commands/Scene/EditorPrefabIsolationCommands.cpp"
             ]
         },
         "EdCommon.NotifyPrefabSaveFirst": {
             "source": "Save the scene before opening prefab isolation",
             "origins": [
-                "Source/Editor/Common/Commands/EditorPrefabIsolationCommands.cpp"
+                "Source/Editor/Common/Commands/Scene/EditorPrefabIsolationCommands.cpp"
             ]
         },
         "EdCommon.NotifyPrefabTitle": {
             "source": "Prefab",
             "origins": [
-                "Source/Editor/Common/Commands/EditorPrefabIsolationCommands.cpp"
+                "Source/Editor/Common/Commands/Scene/EditorPrefabIsolationCommands.cpp"
             ]
         },
         "EdCommon.NotifyPresetApplyFailed": {
@@ -463,61 +463,61 @@
         "EdCommon.NotifySaveFailed": {
             "source": "Save failed",
             "origins": [
-                "Source/Editor/Common/Commands/EditorSceneFileCommands.cpp"
+                "Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp"
             ]
         },
         "EdCommon.NotifySaveTitle": {
             "source": "Save",
             "origins": [
-                "Source/Editor/Common/Commands/EditorSceneFileCommands.cpp"
+                "Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp"
             ]
         },
         "EdCommon.NotifySaved": {
             "source": "Saved",
             "origins": [
-                "Source/Editor/Common/Commands/EditorSceneFileCommands.cpp"
+                "Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp"
             ]
         },
         "EdCommon.NotifySceneOpenFailed": {
             "source": "Failed to open the scene",
             "origins": [
-                "Source/Editor/Common/Commands/EditorSceneFileCommands.cpp"
+                "Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp"
             ]
         },
         "EdCommon.NotifySceneReadOnly": {
             "source": "The scene file is read-only. Check it out (lock it) in the Content Browser first.",
             "origins": [
-                "Source/Editor/Common/Commands/EditorSceneFileCommands.cpp"
+                "Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp"
             ]
         },
         "EdCommon.NotifySceneTitle": {
             "source": "Scene",
             "origins": [
-                "Source/Editor/Common/Commands/EditorSceneFileCommands.cpp"
+                "Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp"
             ]
         },
         "EdCommon.NotifyScreenshotFailed": {
             "source": "The screenshot was not written (see the log)",
             "origins": [
-                "Source/Editor/Common/Commands/EditorScreenshotCommands.cpp"
+                "Source/Editor/Common/Commands/Play/EditorScreenshotCommands.cpp"
             ]
         },
         "EdCommon.NotifyScreenshotNoSceneView": {
             "source": "The scene view is not drawn. Open the Scene tab first.",
             "origins": [
-                "Source/Editor/Common/Commands/EditorScreenshotCommands.cpp"
+                "Source/Editor/Common/Commands/Play/EditorScreenshotCommands.cpp"
             ]
         },
         "EdCommon.NotifyScreenshotSaved": {
             "source": "Screenshot saved",
             "origins": [
-                "Source/Editor/Common/Commands/EditorScreenshotCommands.cpp"
+                "Source/Editor/Common/Commands/Play/EditorScreenshotCommands.cpp"
             ]
         },
         "EdCommon.NotifyScreenshotTitle": {
             "source": "Screenshot",
             "origins": [
-                "Source/Editor/Common/Commands/EditorScreenshotCommands.cpp"
+                "Source/Editor/Common/Commands/Play/EditorScreenshotCommands.cpp"
             ]
         },
         "EdCommon.NotifySelectComponent": {
@@ -535,7 +535,7 @@
         "EdCommon.NotifyStopPlayFirst": {
             "source": "Stop play before opening or creating a scene",
             "origins": [
-                "Source/Editor/Common/Commands/EditorSceneFileCommands.cpp"
+                "Source/Editor/Common/Commands/Scene/EditorSceneFileCommands.cpp"
             ]
         },
         "EdCommon.OverlayCollapse": {

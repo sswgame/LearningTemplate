@@ -10,7 +10,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Commands/EditorViewportPreview.h"
+#include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"

@@ -44,7 +44,7 @@ from LintGate import GateResult, LintGate  # noqa: E402
 # 옮겨지는 것이 선언되는 헤더. 여기 있는 구조체는 **전부** 검사 대상이다.
 _kTransportedHeaders: list[str] = [
     "Source/Engine/Renderer/Scene/GPUSceneSnapshot.h",
-    "Source/Engine/Renderer/Frame/RenderFramePacket.h",
+    "Source/Engine/Renderer/Frame/Packet/RenderFramePacket.h",
 ]
 
 _kRawPointerMember = re.compile(r"^\s*(?:const\s+)?[A-Za-z_][\w:<>]*\s*\*\s+(?P<name>_\w+)\s*(?:\{|;|=)")
@@ -160,7 +160,7 @@ class CheckRenderOwnershipGate(LintGate):
                     "    Material* _pMaterial{ nullptr };\n"
                     "};\n"
                 ),
-                "Source/Engine/Renderer/Frame/RenderFramePacket.h": (
+                "Source/Engine/Renderer/Frame/Packet/RenderFramePacket.h": (
                     "#pragma once\n\nstruct RenderFramePacketProbe\n{\n    int32 _value{ 0 };\n};\n"
                 ),
             },
@@ -177,7 +177,7 @@ class CheckRenderOwnershipGate(LintGate):
                     "    Mesh* _pB{ nullptr };\n"
                     "};\n"
                 ),
-                "Source/Engine/Renderer/Frame/RenderFramePacket.h": (
+                "Source/Engine/Renderer/Frame/Packet/RenderFramePacket.h": (
                     "#pragma once\n\nstruct RenderFramePacketProbe\n{\n    int32 _value{ 0 };\n};\n"
                 ),
             },

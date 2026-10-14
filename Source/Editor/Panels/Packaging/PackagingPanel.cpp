@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Editor/Common/Commands/EditorAssetFileCommands.h"
+#include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/EditorExternalToolJob.h"
 #include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/EditorUtil.h"

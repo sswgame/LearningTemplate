@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Transport/NetEmulation.h"
 
-#include "Editor/Common/Commands/EditorNetConditions.h"
+#include "Editor/Common/Commands/Play/EditorNetConditions.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNetPlaySession.h"

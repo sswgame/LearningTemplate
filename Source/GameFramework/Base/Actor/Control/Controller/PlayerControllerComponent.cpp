@@ -6,9 +6,9 @@
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
-#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Base/Actor/Camera/CameraManagerComponent.h"

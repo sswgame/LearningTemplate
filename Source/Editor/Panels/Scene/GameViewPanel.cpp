@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Editor/Common/Commands/EditorScreenshotCommands.h"
+#include "Editor/Common/Commands/Play/EditorScreenshotCommands.h"
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -23,7 +23,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Object/GameObject/CameraRegistry.h"
+#include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Scene/Scene.h"
 
 #include <imgui.h>

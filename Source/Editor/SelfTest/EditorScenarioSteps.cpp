@@ -10,8 +10,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
-#include "Editor/Common/Commands/EditorSceneCommands.h"
-#include "Editor/Common/Commands/EditorShortcutOverrides.h"
+#include "Editor/Common/Commands/Dev/EditorShortcutOverrides.h"
+#include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorComponentIcon.h"

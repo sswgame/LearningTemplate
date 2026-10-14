@@ -9,7 +9,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
-#include "Engine/Renderer/Frame/RenderPacketBuilder.h"
+#include "Engine/Renderer/Frame/Packet/RenderPacketBuilder.h"
 #include "Engine/Renderer/RHISubsystem.h"
 
 namespace sw

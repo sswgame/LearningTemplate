@@ -2,8 +2,8 @@
 
 #include "Engine/Environment/Foliage/FoliageInfluencerComponent.h"
 
-#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
 namespace sw
 {

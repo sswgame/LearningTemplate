@@ -2759,7 +2759,7 @@
    "default": "false",
    "kind": "시험",
    "description": "주 출력에 캔버스(화면 2D) 시험 그림을 그린다 — 사각형 · 자르기 · 그림자 · 글자",
-   "source": "Source/Engine/Renderer/Frame/RenderPacketBuilder.cpp"
+   "source": "Source/Engine/Renderer/Frame/Packet/RenderPacketBuilder.cpp"
   },
   {
    "name": "gv_colorVisionMode",
@@ -3335,7 +3335,7 @@
    "default": "4",
    "kind": "일반",
    "description": "한 프레임에 그리는 추가 뷰(CCTV · 백미러 · PiP)의 최대 수 (0 = 제한 없음)",
-   "source": "Source/Engine/Renderer/Frame/RenderViewCollector.cpp"
+   "source": "Source/Engine/Renderer/Frame/View/RenderViewCollector.cpp"
   },
   {
    "name": "gv_rhiBackBufferFormat",
@@ -3535,7 +3535,7 @@
    "default": "true",
    "kind": "시험",
    "description": "타입별 일괄 틱 경로를 쓴다(0 이면 모든 오브젝트를 칸 목록으로 — 전/후 비교용)",
-   "source": "Source/Engine/Object/GameObject/TickRegistry.cpp"
+   "source": "Source/Engine/Object/GameObject/Tick/TickRegistry.cpp"
   },
   {
    "name": "gv_timeScale",
@@ -3583,7 +3583,7 @@
    "default": "",
    "kind": "일반",
    "description": "Tracy 뷰어(tracy-profiler 0.14.1) 경로 — 파일이나 폴더 (비우면 Tools/Tracy)",
-   "source": "Source/Editor/Common/Commands/EditorTracyLauncher.cpp"
+   "source": "Source/Editor/Common/Commands/Dev/EditorTracyLauncher.cpp"
   },
   {
    "name": "gv_uiDebugSafeZone",

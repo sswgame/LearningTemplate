@@ -19,7 +19,7 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Resource/Image/DDSLoader.h"
 #include "Engine/Resource/Pack/ResourcePakReader.h"
 #include "Engine/Resource/Pack/ResourcePakTypes.h"

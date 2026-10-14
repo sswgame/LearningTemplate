@@ -4,7 +4,7 @@
 
 #include "Core/Container/GameObjectHandle.h"
 
-#include "Editor/Common/Commands/EditorSceneCommands.h"
+#include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/EditorColor.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"

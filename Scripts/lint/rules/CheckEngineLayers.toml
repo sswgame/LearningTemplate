@@ -1,11 +1,12 @@
 # CheckEngineLayers 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckEngineLayers.py.
 
 # ------------------------------------------------------------------------------
-# 컴포넌트 모델 코어 — 이 폴더들 **바로 아래** 파일은 coreBannedLayer 의 폴더를 include 하지 않는다(Engine/ 기준 경로).
+# 컴포넌트 모델 코어 — coreFolder 는 **바로 아래** 파일, coreTree 는 하위 폴더까지 전부가 coreBannedLayer 의 폴더를 include 하지 않는다(Engine/ 기준 경로).
 # 하위 폴더(Component/2D · 3D · Audio · Navigation · Physics)는 기능 컴포넌트라 코어가 아니다.
 # Object 가 티어로는 이 기능 폴더들 위라 [tier] 검사가 못 잡는 방향이다. 예외 키는 `core:<파일>|<include 경로>` 이고, 지금 0 줄이다 — 새로 더하지 않는다.
 # ------------------------------------------------------------------------------
-coreFolder = ["Object/GameObject", "Object/Prefab", "Object/Component"]
+coreFolder = ["Object/Prefab", "Object/Component"]
+coreTree = ["Object/GameObject"]
 coreBannedLayer = ["Graphics", "Physics", "Navigation", "Audio", "Animation", "TileMap"]
 
 # ------------------------------------------------------------------------------

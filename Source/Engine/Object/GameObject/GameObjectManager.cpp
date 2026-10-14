@@ -10,7 +10,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/TypeRegistry.h"
 

@@ -4,7 +4,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/String/TagID.h"
 
-#include "Editor/Common/Commands/EditorViewportPreview.h"
+#include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -22,7 +22,7 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/Window/IWindow.h"
