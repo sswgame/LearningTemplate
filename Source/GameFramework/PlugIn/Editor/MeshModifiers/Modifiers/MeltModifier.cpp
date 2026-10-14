@@ -18,8 +18,8 @@ namespace sw::editor
     public:
         MeltModifier()
             : MeshModifier()
-            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _spreadParam{ addParam( MeshModifierParamDef{ "Spread", MeshModifierParamKind::Float, 0.0f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
+            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Melt", "How far the mesh has melted (0 = solid, 1 = flat)" ) ) }
+            , _spreadParam{ addParam( MeshModifierParamDef{ "Spread", MeshModifierParamKind::Float, 0.0f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Melt", "How far melted vertices spread outward" ) ) }
         {
         }
 

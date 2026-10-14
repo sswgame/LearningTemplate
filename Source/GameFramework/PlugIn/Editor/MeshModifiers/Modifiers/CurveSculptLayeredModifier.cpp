@@ -18,11 +18,19 @@ namespace sw::editor
     class CurveSculptLayeredModifier final : public MeshModifier
     {
     public:
+        /** @brief Layers 표의 열 — u · v · 반경 · 높이(stride 4). */
+        static constexpr MeshModifierListColumn kArrColumn[] = {
+            { "U", MeshModifierListColumnKind::Float },
+            { "V", MeshModifierListColumnKind::Float },
+            { "Radius", MeshModifierListColumnKind::Float },
+            { "Height", MeshModifierListColumnKind::Float },
+        };
+
         CurveSculptLayeredModifier()
             : MeshModifier()
             , _shapeParam{ addParam( MeshModifierParamDef{ "Shape", MeshModifierParamKind::Curve, -10.0f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
             , _layersParam{ addParam(
-                  MeshModifierParamDef{ "Layers", MeshModifierParamKind::NumberList, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f }, 4, "u v radius height" } ) }
+                  MeshModifierParamDef{ "Layers", MeshModifierParamKind::NumberList, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f }, 4, "u v radius height" }.withColumns( kArrColumn ) ) }
         {
         }
 

@@ -20,10 +20,19 @@ namespace sw::editor
     public:
         static constexpr uint32 kStride = 9;
 
+        /** @brief Hits 표의 열 — 위치 xyz · 방향 xyz · 반경 · 세기 · 감쇠(stride 9). */
+        static constexpr MeshModifierListColumn kArrColumn[] = {
+            { "Position", MeshModifierListColumnKind::Vector3 },
+            { "Direction", MeshModifierListColumnKind::Vector3 },
+            { "Radius", MeshModifierListColumnKind::Float },
+            { "Strength", MeshModifierListColumnKind::Float },
+            { "Falloff", MeshModifierListColumnKind::Float },
+        };
+
         HitDeformModifier()
             : MeshModifier()
             , _hitsParam{ addParam( MeshModifierParamDef{ "Hits", MeshModifierParamKind::NumberList, -1000.0f, 1000.0f, float3{ 0.0f, 0.0f, 0.0f }, kStride,
-                                                          "x y z dirX dirY dirZ radius strength falloff" } ) }
+                                                          "x y z dirX dirY dirZ radius strength falloff" }.withColumns( kArrColumn ) ) }
             , _scaleParam{ addParam( MeshModifierParamDef{ "Scale", MeshModifierParamKind::Float, 0.0f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
         {
         }

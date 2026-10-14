@@ -18,11 +18,11 @@ namespace sw::editor
     public:
         RippleModifier()
             : MeshModifier()
-            , _amplitudeParam{ addParam( MeshModifierParamDef{ "Amplitude", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _wavelengthParam{ addParam( MeshModifierParamDef{ "Wavelength", MeshModifierParamKind::Float, 0.001f, 1000.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
-            , _phaseParam{ addParam( MeshModifierParamDef{ "Phase", MeshModifierParamKind::Float, -360.0f, 360.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _decayParam{ addParam( MeshModifierParamDef{ "Decay", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _speedParam{ addParam( MeshModifierParamDef{ "Speed", MeshModifierParamKind::Float, -3600.0f, 3600.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
+            , _amplitudeParam{ addParam( MeshModifierParamDef{ "Amplitude", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Ripple", "Ripple height", "m" ) ) }
+            , _wavelengthParam{ addParam( MeshModifierParamDef{ "Wavelength", MeshModifierParamKind::Float, 0.001f, 1000.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Ripple", "Distance between rings", "m" ) ) }
+            , _phaseParam{ addParam( MeshModifierParamDef{ "Phase", MeshModifierParamKind::Float, -360.0f, 360.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Ripple", "Ring offset", "deg" ) ) }
+            , _decayParam{ addParam( MeshModifierParamDef{ "Decay", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Falloff", "How fast the rings fade away from the center" ) ) }
+            , _speedParam{ addParam( MeshModifierParamDef{ "Speed", MeshModifierParamKind::Float, -3600.0f, 3600.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Animation", "Phase change per second of preview time", "deg/s" ) ) }
         {
         }
 

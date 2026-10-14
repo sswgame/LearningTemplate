@@ -47,12 +47,18 @@ namespace sw::editor
     class FFD2DModifier final : public MeshModifier
     {
     public:
+        /** @brief Offsets 표의 열 — 제어점 하나의 dx · dy(stride 2, 상자 크기 비율). */
+        static constexpr MeshModifierListColumn kArrColumn[] = {
+            { "dX", MeshModifierListColumnKind::Float },
+            { "dY", MeshModifierListColumnKind::Float },
+        };
+
         FFD2DModifier()
             : MeshModifier()
             , _resolutionXParam{ addParam( MeshModifierParamDef{ "Resolution X", MeshModifierParamKind::Int, 2.0f, 8.0f, float3{ 3.0f, 0.0f, 0.0f } } ) }
             , _resolutionYParam{ addParam( MeshModifierParamDef{ "Resolution Y", MeshModifierParamKind::Int, 2.0f, 8.0f, float3{ 3.0f, 0.0f, 0.0f } } ) }
             , _offsetsParam{ addParam( MeshModifierParamDef{ "Offsets", MeshModifierParamKind::NumberList, -2.0f, 2.0f, float3{ 0.0f, 0.0f, 0.0f }, 2,
-                                                             "dx dy per control point (i + resX * j), box-size ratio" } ) }
+                                                             "dx dy per control point (i + resX * j), box-size ratio" }.withColumns( kArrColumn ) ) }
         {
         }
 
