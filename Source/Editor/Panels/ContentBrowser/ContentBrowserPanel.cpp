@@ -17,6 +17,7 @@
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
+#include "Editor/Common/GUI/EditorContextMenuExtension.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -328,6 +329,7 @@ namespace sw::editor
     {
         if ( ImGui::BeginPopupContextItem( "AssetCtx" ) )
         {
+            void ( *pfnExtensionAction )( const EditorContextMenuTarget& ) = nullptr;
             if ( ImGui::MenuItem( "Show in Explorer" ) )
                 EditorAssetFileCommands::showInFileExplorer( entry._absolutePath );
 
@@ -365,6 +367,16 @@ namespace sw::editor
                     sourceControl.requestRefresh();
             }
 
+            // 확장 항목(`SW_EDITOR_CONTEXT_MENU_ENTRY`). 고른 동작은 메뉴를 닫은 뒤 부른다 — 동작이 모듈을 내려 목록이 바뀌어도 순회 중인 배열을 읽지 않는다.
+            const EditorContextMenuTarget extensionTarget{ EditorContextMenuKind::Asset, nullptr, nullptr, entry._absolutePath.c_str(), entry._bIsDirectory };
+            if ( EditorContextMenuExtensionUtil::countEntries( EditorContextMenuKind::Asset ) != 0 )
+            {
+                ImGui::Separator();
+                pfnExtensionAction = EditorContextMenuExtensionUtil::visitEntries( EditorContextMenuKind::Asset, [&]( const EditorContextMenuEntryRegistration& extension ) {
+                    return ImGui::MenuItem( extension._pLabel, nullptr, false, EditorContextMenuExtensionUtil::isEnabled( extension, extensionTarget ) );
+                } );
+            }
+
             ImGui::Separator();
             if ( ImGui::MenuItem( "Rename", "F2", false, entry._bIsDirectory == false ) )
                 beginRename( entry._absolutePath );
@@ -376,6 +388,9 @@ namespace sw::editor
             if ( ImGui::MenuItem( "Delete...", "Del", false, entry._bIsDirectory == false ) )
                 requestDeleteAsset( entry._absolutePath );
             ImGui::EndPopup();
+
+            if ( pfnExtensionAction != nullptr )
+                pfnExtensionAction( extensionTarget );
         }
     }
 
