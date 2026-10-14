@@ -21,6 +21,7 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Module/ModuleImageHost.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/RenderFramePacket.h"
@@ -31,6 +32,7 @@
 #include "Engine/Window/SplashWindow.h"
 
 #include "ModuleHost/ModuleCatalogLoader.h"
+#include "ModuleHost/ModuleImageHostSubsystem.h"
 
 namespace sw
 {
@@ -71,12 +73,14 @@ namespace sw
     SW_LOG_CALLER( "App" );
 
     App::App()
-        : _engine{}
+        : _host{}
+        , _pModuleImageHost{ nullptr }
+        , _pAutomationSession{ nullptr }
+        , _engine{}
         , _moduleReload{}
         , _devConsole{}
         , _moduleHost{ nullptr }
         , _window{ nullptr }
-        , _automationSession{ nullptr }
         , _fixedTimestep{ AppTimeInternal::makeFixedTimestepParams( EngineConfig{} ) }
         , _backendSwap{}
         , _userSettingsHost{}
@@ -96,9 +100,13 @@ namespace sw
         // 리소스 루트 탐색은 Engine 가 로거를 시작한 **뒤에** 한다. 여기서 먼저 부르면 실패했을 때 로거가 없어 진단 메시지가
         // 사라지고, 반환값도 여기서는 쓸 곳이 없다.
 
-        // 1. 코어 매니저는 모두 Engine 가 초기화한다(헤드리스 작업 처리 포함). 타입 공급자 모듈은 그 기동 단계(`ModuleTypes`)에서 이 App 이 로드한다.
-        _engine.setModuleTypeLoader( SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &App::loadModuleImages, this ) );
-        if ( _engine.initialize( argc, pArgv ) == false )
+        // 0. 호스트 범위를 먼저 세운다 — 엔진 범위의 부모다. 엔진의 `ModuleTypes` 기동 단계가 여기서 모듈 이미지 창구를 찾아 타입 공급자 모듈을 올리고
+        //    (이 App 의 `loadModuleImages`), `ModuleImages` 종료 단계가 같은 창구로 모듈 DLL 을 내린다.
+        if ( initializeHostScope() == false )
+            return false;
+
+        // 1. 코어 매니저는 모두 Engine 가 초기화한다(헤드리스 작업 처리 포함).
+        if ( _engine.initialize( argc, pArgv, EngineHostRole::Client, &_host ) == false )
         {
             SW_LOG_ERROR( "Engine initialization failed." );
             return false;
@@ -187,6 +195,23 @@ namespace sw
         return true;
     }
 
+    bool App::initializeHostScope()
+    {
+        SW_MEMORY_SCOPE( EngineMisc );
+        // 이 범위의 서브시스템은 초기화할 일이 없다(창구는 델리게이트만 들고, 자동화 구동기는 엔진이 선 뒤 `begin` 으로 시작한다) — 로거 앞이라 로그를 남기지 않는다.
+        _pModuleImageHost   = &_host.addSubsystem( make_unique<ModuleImageHostSubsystem>( SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &App::loadModuleImages, this ) ) );
+        const bool bExposed = _host.expose<IModuleImageHost>( *_pModuleImageHost );
+        SW_ASSERT( bExposed );
+        (void)bExposed;
+        _pAutomationSession = &_host.addSubsystem( make_unique<AutomationSession>() );
+        if ( _host.getCollection().initializeAll( SubsystemHostMask::All ) == false )
+        {
+            std::fprintf( stderr, "[App] host scope failed: %s\n", _host.getCollection().getError().c_str() );
+            return false;
+        }
+        return true;
+    }
+
     bool App::acquireMainWindow( const EngineConfig& engineConfig, const CommandLineManager& commandLineManager )
     {
         uint32 width  = engineConfig._window._width;
@@ -230,7 +255,7 @@ namespace sw
             return false;
 
         // 모듈 감시자는 모듈을 로드하는 ModuleHost 보다 먼저 있어야 한다. ModuleHost 가 이 포인터로 모듈을 로드하고 리로드 콜백을 등록한다.
-        _moduleReload.initialize( _engine );
+        _moduleReload.initialize( *_pModuleImageHost );
 #endif
 
         _moduleHost = make_unique<EditorModuleHost>();
@@ -279,16 +304,12 @@ namespace sw
         string reportPath;
         (void)commandLineManager.getArgument( CommandLineArgument::SCENARIO_REPORT, reportPath ); // 없으면 보고 파일을 쓰지 않는다
         RenderThread* pRenderThread = _engine.getRenderThread();
-        _automationSession          = make_unique<AutomationSession>();
-        const bool bKeepGoing       = commandLineManager.isArgumentProvided( CommandLineArgument::SCENARIO_KEEP_GOING );
-        if ( _automationSession->begin( scenarioPath, reportPath, bKeepGoing, pRenderThread != nullptr ? pRenderThread->getCompletedScenarioScreenshotCount() : 0u ) == false )
-        {
-            _automationSession.reset();
+        const bool    bKeepGoing    = commandLineManager.isArgumentProvided( CommandLineArgument::SCENARIO_KEEP_GOING );
+        if ( _pAutomationSession->begin( scenarioPath, reportPath, bKeepGoing, pRenderThread != nullptr ? pRenderThread->getCompletedScenarioScreenshotCount() : 0u ) == false )
             return;
-        }
         if ( pRenderThread != nullptr )
             pRenderThread->setScenarioCaptureEnabled( true );
-        _engine.addFrameObserver( _automationSession.get() );
+        _engine.addFrameObserver( _pAutomationSession );
     }
 
     void App::bindHostCallbacks()
@@ -341,13 +362,17 @@ namespace sw
         // 창은 엔진(RHI) 뒤에 파괴한다. 기동 뒤에 바꾼 제목(에디터)의 사본은 엔진 종료의 누수 보고 전에 해제한다.
         if ( _window != nullptr )
             _window->releaseTitleStorage();
-        // 시나리오 실행기는 로그 리스너 · 입력을 빌려 쓴다 — 엔진 서비스보다 먼저 떼고 내린다.
-        if ( _automationSession != nullptr )
-        {
-            _engine.removeFrameObserver( _automationSession.get() );
-            _automationSession.reset();
-        }
+        // 시나리오 실행기는 로그 리스너 · 입력을 빌려 쓴다 — 엔진 서비스보다 먼저 떼고 내린다. 호스트 범위는 엔진보다 오래 살아야 하므로(모듈 이미지 창구가
+        // 엔진 종료 안에서 불린다) 범위째가 아니라 창구 뒤에 서는 구동기만 내린다.
+        if ( _pAutomationSession != nullptr )
+            _engine.removeFrameObserver( _pAutomationSession );
+        if ( _pModuleImageHost != nullptr )
+            _host.getCollection().shutdownDependentsOf( *_pModuleImageHost );
         _engine.shutdown();
+        // 엔진 범위가 사라졌다 — 이제 호스트 범위를 내린다(창구 · 구동기 소멸).
+        _host.destroyAll();
+        _pModuleImageHost   = nullptr;
+        _pAutomationSession = nullptr;
 
         if ( _window != nullptr )
         {

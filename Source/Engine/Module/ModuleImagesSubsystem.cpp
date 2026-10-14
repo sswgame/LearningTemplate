@@ -8,21 +8,23 @@
 
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Module/ModuleImageHost.h"
 #include "Engine/Module/ReflectionSubsystem.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/SceneManager.h"
 
 namespace sw
 {
-    ModuleImagesSubsystem::ModuleImagesSubsystem( const Delegate<void()>* pOnScenesReleased )
-        : _pOnScenesReleased{ pOnScenesReleased }
+    ModuleImagesSubsystem::ModuleImagesSubsystem( const ISubsystemLocator* pScope )
+        : _pScope{ pScope }
     {
     }
 
     void ModuleImagesSubsystem::shutdownSubsystem()
     {
-        if ( _pOnScenesReleased != nullptr && _pOnScenesReleased->isBound() )
-            ( *_pOnScenesReleased )();
+        IModuleImageHost* pHost = locateSubsystem<IModuleImageHost>( _pScope );
+        if ( pHost != nullptr )
+            pHost->onScenesReleased();
     }
 
     span<const utf8* const> ModuleImagesSubsystem::getSubsystemDependencies() const

@@ -170,11 +170,13 @@ namespace sw
         return _pCommandLineSubsystem != nullptr ? _pCommandLineSubsystem->findCommandLine() : nullptr;
     }
 
-    bool Engine::initialize( int32 argc, utf8* pArgv[], EngineHostRole role )
+    bool Engine::initialize( int32 argc, utf8* pArgv[], EngineHostRole role, const ISubsystemLocator* pHostScope )
     {
-        // 범위는 셋이다. 부트스트랩(진단 도구 · 이름 풀 · 로거 · 명령줄 · 크래시 핸들러 · 정적 저장소) → 서비스(엔진 범위의 모든 것보다 오래 사는
+        // 범위는 호스트 아래 셋이다. 호스트(엔진을 띄운 쪽이 들고, 엔진보다 먼저 서서 나중에 사라진다 — 모듈 이미지 창구 · 자동화 구동기) 아래로
+        // 부트스트랩(진단 도구 · 이름 풀 · 로거 · 명령줄 · 크래시 핸들러 · 정적 저장소) → 서비스(엔진 범위의 모든 것보다 오래 사는
         // 공용 서비스) → 엔진(기동 단계). 아래 범위가 모두 선 뒤에 위 범위를 세우고, 위 범위가 모두 사라진 뒤에 아래 범위를 내린다 — 범위 사이의
-        // 순서는 의존으로 적지 않는다. 서비스 범위의 객체는 이름 풀 · 로거가 선 뒤에 만든다(생성자가 이름 · 블록을 잡는다). 테스트 하네스도 같은 세 범위다.
+        // 순서는 의존으로 적지 않는다. 서비스 범위의 객체는 이름 풀 · 로거가 선 뒤에 만든다(생성자가 이름 · 블록을 잡는다). 테스트 하네스도 같은 세 범위다(호스트 범위는 없다).
+        _bootstrap.setParentScope( pHostScope );
 #if defined( SW_DEBUG )
         constexpr bool kDiagnostics = true;
 #else
@@ -288,8 +290,9 @@ namespace sw
                     _startup.addSubsystem( sw::make_unique<AsyncFileIO>() ).setSubsystemSettings( fileIOSettings );
                 }
             }
-            _startup.addSubsystem( sw::make_unique<ModuleImagesSubsystem>( &_onScenesReleased ) );
-            _startup.addSubsystem( sw::make_unique<ModuleTypesSubsystem>( &_moduleTypeLoader ) );
+            // 모듈 이미지 창구는 호스트 범위에 있다 — 두 단계가 자기 범위에서 부모로 올라가며 찾는다(호스트 범위가 없으면 올리고 내릴 모듈이 없다).
+            _startup.addSubsystem( sw::make_unique<ModuleImagesSubsystem>( &_startup ) );
+            _startup.addSubsystem( sw::make_unique<ModuleTypesSubsystem>( &_startup ) );
             // 창 · 디바이스 · 렌더러 · 렌더 스레드 · 라이브 셰이더 · 씬의 디바이스 — 클라이언트 호스트의 것이다(전용 서버는 거른다).
             // 객체를 서로 참조로 넘긴다(같은 목록 — 의존이 먼저 서고 나중에 소멸한다).
             RHISubsystem& rhiSubsystem = _startup.addSubsystem( sw::make_unique<RHISubsystem>() );
@@ -836,16 +839,6 @@ namespace sw
 #else
         return _pShaderRecompiler;
 #endif
-    }
-
-    void Engine::setOnScenesReleased( Delegate<void()> onScenesReleased )
-    {
-        _onScenesReleased = std::move( onScenesReleased );
-    }
-
-    void Engine::setModuleTypeLoader( ModuleTypeLoaderDelegate moduleTypeLoader )
-    {
-        _moduleTypeLoader = std::move( moduleTypeLoader );
     }
 
     void Engine::setPresentHook( PresentHookDelegate presentHook )

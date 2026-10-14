@@ -12,6 +12,8 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
+#include "ModuleHost/ModuleImageHostSubsystem.h"
+
 #include "sw/config/ConfigConstants.h"
 
 #if !defined( SW_SHIPPING )
@@ -45,13 +47,13 @@ namespace sw
 
     ModuleReloadDriver::~ModuleReloadDriver() = default;
 
-    void ModuleReloadDriver::initialize( [[maybe_unused]] Engine& engine )
+    void ModuleReloadDriver::initialize( [[maybe_unused]] ModuleImageHostSubsystem& moduleImageHost )
     {
 #if !defined( SW_SHIPPING )
         _liveReloadManager = make_unique<LiveReloadManager>();
         AppAutomation::bindLiveReloadManager( _liveReloadManager.get() ); // 개발 명령 `module.reload` · 탐침 `Module.*` 가 읽는다
-        // 모듈 DLL 을 언로드할 수 있는 곳은 "씬은 사라졌고 서비스는 아직 있는" 좁은 구간뿐이다. 엔진이 제공하는 훅에 등록한다.
-        engine.setOnScenesReleased( SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
+        // 모듈 DLL 을 언로드할 수 있는 곳은 "씬은 사라졌고 서비스는 아직 있는" 좁은 구간뿐이다. 호스트 범위의 모듈 이미지 창구가 엔진 종료 안에서 그 자리를 부른다.
+        moduleImageHost.setScenesReleasedHook( SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
         {
             AppAutomation::bindLiveReloadManager( nullptr );
             if ( _liveReloadManager != nullptr )

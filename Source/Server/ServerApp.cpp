@@ -4,6 +4,7 @@
 
 #include "ModuleHost/ModuleCatalogLoader.h"
 #include "ModuleHost/ModuleHost.h"
+#include "ModuleHost/ModuleImageHostSubsystem.h"
 
 #if !defined( SW_SHIPPING )
     #include "ModuleHost/LiveReloadManager.h"
@@ -29,6 +30,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Config/Server/ServerConfig.h"
+#include "Engine/Module/ModuleImageHost.h"
 #include "Engine/Observability/MetricRegistry.h"
 #include "Engine/Observability/OpsHTTPEndpoint.h"
 #include "Engine/Observability/ProcessMetrics.h"
@@ -85,7 +87,9 @@ namespace sw
     } // namespace
 
     ServerApp::ServerApp()
-        : _engine{}
+        : _host{}
+        , _pModuleImageHost{ nullptr }
+        , _engine{}
         , _moduleHost{ nullptr }
 #if !defined( SW_SHIPPING )
         , _liveReloadManager{ nullptr }
@@ -142,8 +146,20 @@ namespace sw
     bool ServerApp::initialize( int32 argc, utf8* pArgv[] )
     {
         _startNanoseconds = MonotonicClock::nowNanoseconds();
-        _engine.setModuleTypeLoader( SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleImages, this ) );
-        if ( _engine.initialize( argc, pArgv, EngineHostRole::DedicatedServer ) == false )
+        // 호스트 범위를 먼저 세운다 — 엔진 범위의 부모다. 엔진의 `ModuleTypes` 단계가 여기서 모듈 이미지 창구를 찾아 서버 대상 모듈을 올린다(`loadModuleImages`).
+        {
+            SW_MEMORY_SCOPE( EngineMisc );
+            _pModuleImageHost   = &_host.addSubsystem( make_unique<ModuleImageHostSubsystem>( SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleImages, this ) ) );
+            const bool bExposed = _host.expose<IModuleImageHost>( *_pModuleImageHost );
+            SW_ASSERT( bExposed );
+            (void)bExposed;
+            if ( _host.getCollection().initializeAll( SubsystemHostMask::All ) == false ) // 로거 앞이라 로그를 남기지 않는다
+            {
+                std::fprintf( stderr, "[ServerApp] host scope failed: %s\n", _host.getCollection().getError().c_str() );
+                return false;
+            }
+        }
+        if ( _engine.initialize( argc, pArgv, EngineHostRole::DedicatedServer, &_host ) == false )
         {
             SW_LOG_ERROR( "Engine initialization failed (dedicated server)" );
             return false;
@@ -203,7 +219,7 @@ namespace sw
             return false;
         _liveReloadManager = make_unique<LiveReloadManager>();
         // 모듈 DLL 을 언로드할 수 있는 곳은 "씬은 사라졌고 서비스는 아직 있는" 구간뿐이다(App 과 같은 훅).
-        _engine.setOnScenesReleased( SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
+        _pModuleImageHost->setScenesReleasedHook( SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
         {
             if ( _liveReloadManager != nullptr )
                 _liveReloadManager->shutdown();
@@ -592,6 +608,9 @@ namespace sw
         // 로거는 엔진 종료와 함께 종료된다. 마지막 줄은 그 앞에 남긴다(테스트와 운영 도구가 이 줄로 정상 종료를 확인한다).
         SW_LOG_INFO( "Dedicated server shutdown complete" );
         _engine.shutdown();
+        // 엔진 범위가 사라졌다 — 이제 호스트 범위를 내린다(모듈 이미지 창구 소멸).
+        _host.destroyAll();
+        _pModuleImageHost = nullptr;
         Logger::clearTickNumber();
         if ( _bSignalHandlerInstalled == SW_TRUE )
             ShutdownSignal::uninstall();

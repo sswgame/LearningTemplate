@@ -194,10 +194,6 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   (c) 풀을 가리키는 핸들에 세대 · 생존 확인을 둔다. 탐지기가 과거에 몇 건을 잡았는지 이력은 확인하지 않았다. 설계: 새 전용 함수를 늘리지 말고 기존 관찰자 · API 모양을 고친다.
 - `C-25` **게임 여럿을 빌드 한 번에 짓고, 실행할 때 고르고, 키트는 필요한 것만**(2026-10-13, 사용자 확정). 결정은 [결정 기록](09_Decisions.md) 5-2, 쓰는 법은 `Source/Games/README.md`.
   남은 것: 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸다(DX12 직접 실행으로 10 시나리오 통과만 확인).
-- `C-27` **서브시스템 패턴을 넓힐 곳**(2026-10-14, 서브시스템 정리 다음 · 효과 큰 순). 판정 기준: 수명 범위 · 초기화/종료 순서 · 의존이 있는 서비스는 서브시스템이고,
-  프레임마다 도는 핫 데이터 · 게임플레이 객체 · 값 객체는 서브시스템이 아니다.
-  ③ 개발 도구 — 남은 것: 자동화 구동기(`AutomationSession`)를 App 호스트 범위로(호스트 범위 단계와 함께). `Dev` 호스트 비트는 두지 않는다 — 개발 도구는 호스트가
-  `#if !defined( SW_SHIPPING )` 한 자리에서 넣는다. `DevCommandRegistry` · `AutomationStepRegistry` · `AutomationProbes` 는 정적 등록 표라 제외.
 - `C-28` **전역 서비스 접근자(`engine::getXxx`) 호출 줄이기**(2026-10-14, 사용자 승인 — 서브시스템 정리의 남은 단계 뒤). 지금: 소유는 범위(`SubsystemScope`)이고,
   `EngineServices` 는 바인딩 때 `locateSubsystem` 으로 한 번 찾아 둔 비소유 조회 캐시다. 서비스를 더하려면 서브시스템으로 만들어 범위에 넣고 `EngineServiceList.xxx` 에
   한 줄을 더한다(이 결정은 유지 — 언리얼 `GEngine->GetEngineSubsystem<T>()` 은 부를 때마다 맵을 찾는 것으로 알고 있고, 우리는 바인딩 때 한 번 찾는다).

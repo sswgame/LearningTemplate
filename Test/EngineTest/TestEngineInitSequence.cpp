@@ -29,6 +29,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Localization/EngineDefaultAssetsSubsystem.h"
 #include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Module/ModuleImageHost.h"
 #include "Engine/Module/ModuleImagesSubsystem.h"
 #include "Engine/Module/ModuleTypesSubsystem.h"
 #include "Engine/Module/ReflectionSubsystem.h"
@@ -347,6 +348,25 @@ namespace
 
     /** @brief 클라이언트에서만 도는 엔진 단계입니다(창 · RHI · 렌더러 · 플레이어 설정 · 글꼴 · 텔레메트리 · UI). */
     constexpr const utf8* kArrClientOnlyName[] = { "UserSettings", "RHI", "FrameRenderer", "RenderThread", "LiveShader", "SceneRHI", "Fonts", "Telemetry", "UI" };
+    /** @brief 호스트 범위에 걸리는 모듈 이미지 창구의 대역입니다 — 불린 횟수만 센다. */
+    class FakeModuleImageHost final : public ISubsystem, public IModuleImageHost
+    {
+    public:
+        [[nodiscard]] bool loadTypeProviders() override
+        {
+            ++_loadCount;
+            return _bLoadResult;
+        }
+        void onScenesReleased() override { ++_releasedCount; }
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return "FakeModuleImageHost"; }
+
+        uint32 _loadCount{ 0 };
+        uint32 _releasedCount{ 0 };
+        bool   _bLoadResult{ true };
+    };
 } // namespace
 
 /**
@@ -753,4 +773,28 @@ SW_TEST_CASE( EngineInitSequenceTest, EveryRequiredServiceIsInTheHostScopes )
     SW_ASSERT_TRUE_MSG( engineScope.getCollection().sort(), engineScope.getCollection().getError().c_str() );
     const utf8* pMissing = engine::findUnboundRequiredServiceName( engineScope );
     SW_EXPECT_TRUE_MSG( pMissing == nullptr, pMissing != nullptr ? pMissing : "" );
+}
+
+/**
+ * @brief [EngineInitSequenceTest] 엔진 범위의 모듈 이미지 단계는 부모인 호스트 범위의 창구를 찾아 부른다
+ * @details 호스트(App · Server)는 엔진을 세우기 전에 호스트 범위에 `IModuleImageHost` 를 건다. 타입 공급자 로드는 `ModuleTypes` 가, 씬 뒤 훅은 `ModuleImages` 의 종료가
+ *          범위 사슬(엔진 → 서비스 → 부트스트랩 → 호스트)을 올라가며 찾아 부른다. 호스트 범위가 없으면(테스트 하네스) 아무 일도 하지 않는다.
+ */
+SW_TEST_CASE( EngineInitSequenceTest, ModuleImageStepsReachTheHostScopeThroughTheParentChain )
+{
+    SubsystemScope       host;
+    FakeModuleImageHost& fake = host.addSubsystem( sw::make_unique<FakeModuleImageHost>() );
+    SW_ASSERT_TRUE( host.expose<IModuleImageHost>( fake ) );
+    SubsystemScope bootstrap{ &host };
+    SubsystemScope services{ &bootstrap };
+    SubsystemScope engineScope{ &services };
+
+    ModuleImagesSubsystem images{ &engineScope };
+    images.shutdownSubsystem();
+    SW_EXPECT_EQUAL( 1u, fake._releasedCount );
+    SW_EXPECT_EQUAL( 0u, fake._loadCount );
+
+    ModuleImagesSubsystem withoutHost;
+    withoutHost.shutdownSubsystem(); // 호스트 범위가 없으면 아무 일도 하지 않는다
+    SW_EXPECT_EQUAL( 1u, fake._releasedCount );
 }

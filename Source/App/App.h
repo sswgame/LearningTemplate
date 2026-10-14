@@ -16,6 +16,7 @@
 
 #include "Core/Common/Types.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Time/FixedTimestep.h"
 
 #include "Engine/Engine.h"
@@ -30,6 +31,7 @@ namespace sw
     class CommandLineManager;
     class EditorModuleHost;
     class IWindow;
+    class ModuleImageHostSubsystem;
 } // namespace sw
 
 namespace sw
@@ -54,6 +56,8 @@ namespace sw
 
     private:
         // 부팅 단계. initialize() 가 차례로 부른다.
+        /** @brief 호스트 범위를 세웁니다 — 모듈 이미지 창구와 자동화 구동기를 걸고 초기화합니다. 엔진을 세우기 전에 부릅니다. */
+        [[nodiscard]] bool initializeHostScope();
         /** @brief 플랫폼 창을 확보합니다. Engine 가 이미 만들어 두었으면 그 소유권을 넘겨받습니다. */
         bool acquireMainWindow( const EngineConfig& engineConfig, const CommandLineManager& commandLineManager );
         /**
@@ -70,9 +74,9 @@ namespace sw
          */
         void warnUnknownGlobalOverrides() const;
         /**
-         * @brief `-scenario` 가 있으면 자동화 세션을 만들어 엔진 루프에 프레임 관찰자로 붙이고 렌더 스레드의 시나리오 캡처를 켭니다.
+         * @brief `-scenario` 가 있으면 호스트 범위의 자동화 세션을 시작해 엔진 루프에 프레임 관찰자로 붙이고 렌더 스레드의 시나리오 캡처를 켭니다.
          * @details 시나리오는 늘 고정 프레임 시간이다(세션이 단계마다 `gv_fixedFrameDelta` 를 그 시나리오 값으로 맞춘다). 여럿이면 한 프로세스에서 차례로 돈다.
-         *          돌릴 시나리오가 없으면(목록이 빔) 세션을 남기지 않습니다.
+         *          돌릴 시나리오가 없으면(목록이 빔) 세션을 시작하지 않고 관찰자로도 붙이지 않습니다.
          */
         void startAutomationSession( const CommandLineManager& commandLineManager );
 
@@ -93,7 +97,17 @@ namespace sw
         void onEditorPostPresent( IRHIDevice& renderDevice, const RenderFramePacket& framePacket );
 
     private:
-        Engine _engine;
+        /**
+         * @brief 호스트 범위입니다 — 엔진 범위의 부모이고, 엔진보다 먼저 서서 나중에 사라집니다(그래서 `_engine` 보다 앞에 선언한다).
+         * @details 모듈 이미지 창구(`ModuleImageHostSubsystem` — 엔진의 `ModuleTypes` · `ModuleImages` 단계가 찾아 부른다)와 자동화 구동기(`AutomationSession`)를 듭니다.
+         *          구동기는 엔진 서비스를 빌려 쓰므로 `shutdown` 이 엔진 종료 앞에서 먼저 내립니다. 개발 도구는 이 범위에 호스트가 직접 넣습니다(호스트 종류 비트를 두지 않는다).
+         */
+        SubsystemScope _host;
+        /** @brief 호스트 범위의 모듈 이미지 창구입니다(`_host` 소유 — 빌려 쓴다). */
+        ModuleImageHostSubsystem* _pModuleImageHost;
+        /** @brief 호스트 범위의 자동화 구동기입니다(`_host` 소유 — 빌려 쓴다). `-scenario` 가 있을 때만 `begin` 으로 시작합니다. */
+        AutomationSession* _pAutomationSession;
+        Engine             _engine;
         /** @brief 모듈 핫 리로드입니다(Engine 가 아니라 런처의 일). Shipping 에서는 아무것도 하지 않습니다. */
         ModuleReloadDriver _moduleReload;
         /** @brief 게임 창의 개발 콘솔(`~`)과 표준 입력 명령 채널입니다. Shipping 에서는 아무것도 하지 않습니다. */
@@ -103,11 +117,6 @@ namespace sw
         ModuleCatalog       _moduleCatalog;
         ModuleResolution    _moduleResolution;
         unique_ptr<IWindow> _window;
-        /**
-         * @brief `-scenario=<파일>[,<파일>…]` 의 자동화 구동기입니다(`startAutomationSession`). 엔진 루프에 프레임 관찰자로 붙고, 끝나면 루프가 그 종료 코드로 끝납니다.
-         * @details 엔진 루프는 이것을 모릅니다. 엔진 종료 전에 떼고 없앱니다(실행기가 로그 리스너 · 입력을 빌려 쓴다).
-         */
-        unique_ptr<AutomationSession> _automationSession;
 
         FixedTimestep      _fixedTimestep;
         RHIBackendSwitcher _backendSwap;

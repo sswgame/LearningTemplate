@@ -22,6 +22,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Process/StandardInputReader.h"
+#include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Engine.h"
 #include "Engine/Module/ModuleCatalog.h"
@@ -39,6 +40,7 @@ namespace sw
     class MetricHistogram;
     class MetricRegistry;
     class ModuleHost;
+    class ModuleImageHostSubsystem;
     class OpsHTTPEndpoint;
     class ProcessMetrics;
     class ServerServiceManager;
@@ -97,8 +99,16 @@ namespace sw
         void logStatus() const;
 
     private:
-        Engine                 _engine;
-        unique_ptr<ModuleHost> _moduleHost;
+        /**
+         * @brief 호스트 범위입니다 — 엔진 범위의 부모이고, 엔진보다 먼저 서서 나중에 사라집니다(그래서 `_engine` 보다 앞에 선언한다).
+         * @details 모듈 이미지 창구(`ModuleImageHostSubsystem`)만 듭니다 — 엔진의 `ModuleTypes` · `ModuleImages` 단계가 찾아 부릅니다.
+         *          서버 서비스 관리자(`_serverServices`)는 이 범위에 넣지 않습니다. 모듈 리로드마다 멈췄다 다시 시작하는 수명이라 범위의 초기화 · 종료 한 쌍과 맞지 않기 때문입니다(결정 기록 5-3).
+         */
+        SubsystemScope _host;
+        /** @brief 호스트 범위의 모듈 이미지 창구입니다(`_host` 소유 — 빌려 쓴다). */
+        ModuleImageHostSubsystem* _pModuleImageHost;
+        Engine                    _engine;
+        unique_ptr<ModuleHost>    _moduleHost;
 #if !defined( SW_SHIPPING )
         unique_ptr<LiveReloadManager> _liveReloadManager;
         unique_ptr<DevConsole>        _devConsole; ///< Dev 서버는 개발 콘솔과 같은 명령(개발 명령 · gv_*)을 표준 입력으로 받는다
