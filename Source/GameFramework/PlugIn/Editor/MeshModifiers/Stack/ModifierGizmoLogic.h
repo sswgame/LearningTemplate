@@ -71,5 +71,11 @@ namespace sw::editor
          *          (Radius · 한계는 Float, Center 는 Vector3, Direction 은 Float 또는 Vector3).
          */
         static ModifierRangeKind computeRangeKind( const MeshModifierParamDef& def );
+        /**
+         * @brief 기즈모 오일러 각(@p eulerDegree, 기준 = Rz · Ry · Rx · 모디파이어)에 기준 공간 축 @p axisIndex 둘레 증분 회전 @p deltaDegree 를 건 결과의 오일러 각입니다.
+         * @details 새 회전 = 축 회전(delta) · 지금 회전이다(회전 고리는 기준 공간 축을 그린다). 결과 행렬을 같은 순서의 오일러 각으로 다시 푼다.
+         *          Y 가 ±90 도 근처(짐벌)면 X 를 0 으로 두고 Z 에 몰아 유한한 값을 낸다. 성분 하나만 바꾸던 옛 방식은 다른 성분이 0 일 때만 맞았다.
+         */
+        static float3 applyRotationDelta( const float3& eulerDegree, uint32 axisIndex, float32 deltaDegree );
     };
 } // namespace sw::editor

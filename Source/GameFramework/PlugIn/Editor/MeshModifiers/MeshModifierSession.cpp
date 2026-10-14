@@ -22,6 +22,7 @@
 
 #include "GameFramework/Base/World/Spline/SplineComponent.h"
 #include "GameFramework/Base/World/Spline/SplinePath.h"
+#include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifierTextureSampler.h"
 
 namespace sw::editor
 {
@@ -60,11 +61,14 @@ namespace sw::editor
         , _target{}
         , _previewTime{ 0.0f }
         , _selectedIndex{ -1 }
+        , _inputBounds{}
         , _stagePreviewIndex{ -1 }
+        , _inputBoundsIndex{ -1 }
         , _selectedControlPoint{ -1 }
         , _mirrorAxis{ 0 }
         , _bPreviewDirty{ true }
         , _bStagePreviewDirty{ true }
+        , _bInputBoundsDirty{ true }
         , _bMirrorEditing{ false }
     {
     }
@@ -109,11 +113,14 @@ namespace sw::editor
         _target               = GameObjectHandle{};
         _selectedIndex        = -1;
         _stagePreviewIndex    = -1;
+        _inputBounds          = MeshModifierBounds{};
+        _inputBoundsIndex     = -1;
         _selectedControlPoint = -1;
         _listUndo.clear();
         _listRedo.clear();
         _bPreviewDirty        = true;
         _bStagePreviewDirty   = true;
+        _bInputBoundsDirty    = true;
     }
 
     GameObject* MeshModifierSession::findTarget() const
@@ -161,6 +168,7 @@ namespace sw::editor
             return;
         _bPreviewDirty      = false;
         _bStagePreviewDirty = true; // 단계 미리보기도 같은 스택 상태를 따라간다
+        _bInputBoundsDirty  = true;
         makeSourceMesh( _previewMesh );
         MeshModifierEvaluation evaluation{};
         evaluation._meshToWorld = computeMeshToWorld();
@@ -199,6 +207,43 @@ namespace sw::editor
             }
         }
         makeSegments( _stagePreviewMesh, outListSegmentPoint );
+    }
+
+    const MeshModifierBounds& MeshModifierSession::getSelectedModifierInputBounds()
+    {
+        refreshPreview();
+        const int32 selectedIndex = _selectedIndex;
+        if ( hasTarget() == false || selectedIndex <= 0 || selectedIndex >= _stack.getModifierCount() )
+            return _sourceBounds; // 첫 모디파이어의 입력은 원본 그대로다
+        if ( _bInputBoundsDirty || _inputBoundsIndex != selectedIndex )
+        {
+            _bInputBoundsDirty = false;
+            _inputBoundsIndex  = selectedIndex;
+            const int32 lastIndex = selectedIndex - 1;
+            if ( _bStagePreviewDirty == false && _stagePreviewIndex == lastIndex && _stagePreviewMesh._listPosition.empty() == false )
+            {
+                // 단계 미리보기 캐시가 바로 앞 모디파이어까지 건 결과면 그대로 쓴다
+                _inputBounds = MeshModifierBounds::makeFromPoints( _stagePreviewMesh._listPosition );
+            }
+            else
+            {
+                // 스택의 apply 와 같은 순서로 앞 모디파이어까지만 건다(꺼진 것은 apply 가 건너뛴다)
+                MeshModifierMesh mesh;
+                makeSourceMesh( mesh );
+                MeshModifierEvaluation evaluation{};
+                evaluation._meshToWorld = computeMeshToWorld();
+                evaluation._pInputs     = this;
+                evaluation._time        = _previewTime;
+                for ( int32 index = 0; index <= lastIndex; ++index )
+                {
+                    const MeshModifier* pModifier = _stack.findModifier( index );
+                    if ( pModifier != nullptr )
+                        pModifier->apply( mesh, evaluation );
+                }
+                _inputBounds = MeshModifierBounds::makeFromPoints( mesh._listPosition );
+            }
+        }
+        return _inputBounds.isValid() ? _inputBounds : _sourceBounds;
     }
 
     void MeshModifierSession::makeSegments( const MeshModifierMesh& mesh, vector<float3>& outListSegmentPoint ) const
@@ -378,11 +423,8 @@ namespace sw::editor
 
     bool MeshModifierSession::trySampleTexture( string_view assetPath, const float2& uv, float4& outColor ) const
     {
-        // 정적 텍스처 표본은 2 단계(텍스처 CPU 읽기 경로를 정한 뒤)에 붙인다. 지금은 못 찾은 것으로 두어 모디파이어가 항등이 된다
-        (void)assetPath;
-        (void)uv;
-        (void)outColor;
-        return false;
+        // CPU 표본기가 이미지를 읽어 캐시한다(파일 시간으로 갱신하므로 여기서 캐시를 비우지 않는다). 못 읽으면 false 라 모디파이어가 항등이 된다
+        return MeshModifierTextureSampler::trySample( assetPath, uv, outColor );
     }
 
     void MeshModifierSession::makeSourceMesh( MeshModifierMesh& outMesh ) const

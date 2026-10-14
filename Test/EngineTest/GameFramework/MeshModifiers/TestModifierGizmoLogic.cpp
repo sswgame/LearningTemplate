@@ -7,6 +7,8 @@
 
 #include "TestFramework/TestFramework.h"
 
+#include <cmath>
+
 using namespace sw;
 using namespace sw::editor;
 
@@ -17,6 +19,35 @@ namespace
         static bool isNear( const float3& value, const float3& expected )
         {
             return ( value - expected ).getLength() < 1e-4f;
+        }
+
+        /** @brief 기준 축 @p axisIndex 둘레로 @p degree 만큼 오른손 방향으로 돌립니다(기대값을 따로 만드는 용도). */
+        static float3 rotateAboutBaseAxis( const float3& value, uint32 axisIndex, float32 degree )
+        {
+            const float32 radian = MathUtil::toRadian( degree );
+            const float32 c      = MathUtil::cos( radian );
+            const float32 s      = MathUtil::sin( radian );
+            if ( axisIndex == 0 )
+                return float3{ value._x, value._y * c - value._z * s, value._y * s + value._z * c };
+            if ( axisIndex == 1 )
+                return float3{ value._x * c + value._z * s, value._y, -value._x * s + value._z * c };
+            return float3{ value._x * c - value._y * s, value._x * s + value._y * c, value._z };
+        }
+
+        /** @brief 두 오일러 각이 같은 회전 행렬을 만드는지 세 단위 축의 기준 방향으로 견줍니다. */
+        static bool isSameRotation( const float3& eulerA, const float3& eulerB, float32 tolerance )
+        {
+            MeshModifierGizmo gizmoA{};
+            MeshModifierGizmo gizmoB{};
+            gizmoA._rotationDegree   = eulerA;
+            gizmoB._rotationDegree   = eulerB;
+            const float3 arrUnit[3]  = { float3{ 1.0f, 0.0f, 0.0f }, float3{ 0.0f, 1.0f, 0.0f }, float3{ 0.0f, 0.0f, 1.0f } };
+            for ( const float3& unit : arrUnit )
+            {
+                if ( ( gizmoA.toBaseDirection( unit ) - gizmoB.toBaseDirection( unit ) ).getLength() > tolerance )
+                    return false;
+            }
+            return true;
         }
     };
 } // namespace
@@ -152,4 +183,52 @@ SW_TEST_CASE( ModifierGizmoLogicTest, RangeKindPrefersHintThenName )
     SW_EXPECT_TRUE( ModifierGizmoLogic::computeRangeKind( def ) == ModifierRangeKind::Center );
     def._pName = "Direction";
     SW_EXPECT_TRUE( ModifierGizmoLogic::computeRangeKind( def ) == ModifierRangeKind::Direction );
+}
+
+SW_TEST_CASE( ModifierGizmoLogicTest, RotationDeltaMatchesBaseAxisRotation )
+{
+    using Internal = ModifierGizmoLogicTestInternal;
+    // 모든 성분이 0 이 아닐 때도 결과 회전 = 기준 축 회전 · 시작 회전 이어야 한다(옛 방식은 성분 하나만 더해 틀렸다)
+    const float3 start{ 30.0f, -20.0f, 45.0f };
+    for ( uint32 axis = 0; axis < 3; ++axis )
+    {
+        const float3      result = ModifierGizmoLogic::applyRotationDelta( start, axis, 25.0f );
+        MeshModifierGizmo startGizmo{};
+        MeshModifierGizmo resultGizmo{};
+        startGizmo._rotationDegree  = start;
+        resultGizmo._rotationDegree = result;
+        const float3 arrUnit[3]     = { float3{ 1.0f, 0.0f, 0.0f }, float3{ 0.0f, 1.0f, 0.0f }, float3{ 0.0f, 0.0f, 1.0f } };
+        for ( const float3& unit : arrUnit )
+        {
+            const float3 expected = Internal::rotateAboutBaseAxis( startGizmo.toBaseDirection( unit ), axis, 25.0f );
+            SW_EXPECT_TRUE( ( resultGizmo.toBaseDirection( unit ) - expected ).getLength() < 1e-4f );
+        }
+    }
+}
+
+SW_TEST_CASE( ModifierGizmoLogicTest, RotationDeltaRoundTripRestoresRotation )
+{
+    const float3 start{ -50.0f, 35.0f, 120.0f };
+    for ( uint32 axis = 0; axis < 3; ++axis )
+    {
+        const float3 forward = ModifierGizmoLogic::applyRotationDelta( start, axis, 40.0f );
+        const float3 back    = ModifierGizmoLogic::applyRotationDelta( forward, axis, -40.0f );
+        SW_EXPECT_TRUE( ModifierGizmoLogicTestInternal::isSameRotation( back, start, 1e-4f ) );
+    }
+}
+
+SW_TEST_CASE( ModifierGizmoLogicTest, RotationDeltaStaysFiniteAtGimbal )
+{
+    // Y 를 정확히 90 도로 보내는 증분과 그 근처에서도 값이 유한하고 회전이 맞아야 한다
+    const float3 arrStart[] = { float3{ 20.0f, 60.0f, 10.0f }, float3{ 20.0f, 89.999f, 10.0f }, float3{ 0.0f, -90.0f, 30.0f } };
+    for ( const float3& start : arrStart )
+    {
+        for ( uint32 axis = 0; axis < 3; ++axis )
+        {
+            const float3 result = ModifierGizmoLogic::applyRotationDelta( start, axis, 30.0f );
+            SW_EXPECT_TRUE( std::isfinite( result._x ) && std::isfinite( result._y ) && std::isfinite( result._z ) );
+            const float3 back = ModifierGizmoLogic::applyRotationDelta( result, axis, -30.0f );
+            SW_EXPECT_TRUE( ModifierGizmoLogicTestInternal::isSameRotation( back, start, 1e-3f ) );
+        }
+    }
 }

@@ -97,6 +97,12 @@ namespace sw::editor
          * @details 고른 모디파이어가 없거나 마지막이면 비웁니다 — 전체 결과(`makePreviewSegments`)와 같기 때문이다. 결과는 스택이 바뀌거나 고른 번호가 바뀔 때만 다시 건다.
          */
         void makeStagePreviewSegments( vector<float3>& outListSegmentPoint );
+        /**
+         * @brief 고른 모디파이어의 입력 메시(앞선 켜진 모디파이어까지 건 결과)의 로컬 경계 상자입니다. 범위 · 격자 상자를 그릴 때 씁니다.
+         * @details 고른 것이 없거나 첫 모디파이어면, 또는 결과가 무효면 원본 상자입니다. 스택이나 고른 번호가 바뀔 때만 다시 계산하고,
+         *          단계 미리보기 캐시가 바로 앞까지의 결과면 그것을 재사용한다.
+         */
+        const MeshModifierBounds& getSelectedModifierInputBounds();
 
         /** @brief 뷰포트와 패널이 함께 보는 격자 제어점 번호입니다. 고른 점이 없으면 -1 입니다(패널은 읽기만 하고 범위는 그리는 쪽이 자릅니다). */
         int32 getSelectedControlPoint() const { return _selectedControlPoint; }
@@ -130,11 +136,14 @@ namespace sw::editor
         GameObjectHandle      _target;
         float32               _previewTime;
         int32                 _selectedIndex;
+        MeshModifierBounds    _inputBounds;       ///< 고른 모디파이어의 입력 상자 캐시(`getSelectedModifierInputBounds`)
         int32                 _stagePreviewIndex; ///< `_stagePreviewMesh` 를 만든 고른 번호(-1 이면 없음)
+        int32                 _inputBoundsIndex;  ///< `_inputBounds` 를 만든 고른 번호(-1 이면 없음)
         int32                 _selectedControlPoint;
         uint32                _mirrorAxis;
         bool                  _bPreviewDirty;
         bool                  _bStagePreviewDirty;
+        bool                  _bInputBoundsDirty;
         bool                  _bMirrorEditing;
     };
 } // namespace sw::editor
