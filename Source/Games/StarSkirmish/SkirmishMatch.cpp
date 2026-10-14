@@ -139,7 +139,8 @@ namespace sw
     {
         uint8 bHumanPlayer = SW_FALSE;
         archive >> bHumanPlayer;
-        if ( archive.isError() || bHumanPlayer != _bHumanPlayer || _world.readState( archive ) == false )
+        const bool bInvalidMatchHeader = archive.isError() || bHumanPlayer != _bHumanPlayer || _world.readState( archive ) == false;
+        if ( bInvalidMatchHeader )
             return false;
         for ( Wallet& wallet : _arrWallet )
         {
@@ -184,7 +185,8 @@ namespace sw
 
     bool SkirmishMatch::isCliff( int32 x, int32 y ) const
     {
-        if ( x < 0 || y < 0 || x >= kMapSize || y >= kMapSize )
+        const bool bCellOutOfRange = x < 0 || y < 0 || x >= kMapSize || y >= kMapSize;
+        if ( bCellOutOfRange )
             return false;
         return _listCliff[static_cast<size_t>( GridTopology( kMapSize, kMapSize ).toIndex( x, y ) )] != SW_FALSE;
     }
@@ -309,7 +311,8 @@ namespace sw
         float3            groupPosition{};
         _world.forEachUnit( [&]( const RTSUnit& unit )
         {
-            if ( unit._owner != player || SkirmishMatchInternal::isArmy( unit ) == false || unit.isIdle() == false || unit._attackTarget.isValid() )
+            const bool bNotIdleArmyUnit = unit._owner != player || SkirmishMatchInternal::isArmy( unit ) == false || unit.isIdle() == false || unit._attackTarget.isValid();
+            if ( bNotIdleArmyUnit )
                 return;
             if ( float3::getHorizontalDistance( unit._position, pEnemy->_startPosition ) > SkirmishMatchInternal::kArrivedRadius )
                 return;

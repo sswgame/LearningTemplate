@@ -306,7 +306,8 @@ namespace sw
         // 커맨드라인은 게임에 열려 있지 않지만(CommandLineManager HostOnly), 이 스위치는
         // **이 모듈이 선언한다**(이 파일 위쪽). 그래서 이름으로 조회하지 않고 그대로 읽는다.
         // 주의: 문자열 조회는 이름을 잘못 쓰면 조용히 0 으로 읽힌다.
-        if ( gv_benchMeshes <= 0 && gv_benchCharacters <= 0 && gv_benchFaces <= 0 && getRigCharacterCount() == 0 && gv_benchCombat <= 0 )
+        const bool bNoBenchmarkRequested = gv_benchMeshes <= 0 && gv_benchCharacters <= 0 && gv_benchFaces <= 0 && getRigCharacterCount() == 0 && gv_benchCombat <= 0;
+        if ( bNoBenchmarkRequested )
             return false;
 
         if ( gv_benchMeshes > 0 )
@@ -790,8 +791,9 @@ namespace sw
             pMesh->setGPUSpinSeed( index + 1u );
         pMesh->setVisible( true );
 
-        const bool bNameplate = attachNameplate( *pObject, index );
-        if ( bNameplate == false && gv_benchUiMarkers > 0 && index < static_cast<uint32>( gv_benchUiMarkers ) )
+        const bool bNameplate     = attachNameplate( *pObject, index );
+        const bool bNeedsUIMarker = bNameplate == false && gv_benchUiMarkers > 0 && index < static_cast<uint32>( gv_benchUiMarkers );
+        if ( bNeedsUIMarker )
         {
             WidgetComponent* pMarker = pObject->addComponent<WidgetComponent>();
             if ( pMarker != nullptr )
@@ -821,9 +823,10 @@ namespace sw
 
     void BenchScene::updateSpawnChurn( GameObjectManager* pObjects, Scene* pScene )
     {
-        const uint32 churnCount = ( gv_benchSpawnChurn > 0 ) ? static_cast<uint32>( gv_benchSpawnChurn ) : 0u;
-        const uint32 cubeCount  = static_cast<uint32>( _listBenchMesh.size() );
-        if ( churnCount == 0 || cubeCount == 0 || pObjects == nullptr || pScene == nullptr )
+        const uint32 churnCount      = ( gv_benchSpawnChurn > 0 ) ? static_cast<uint32>( gv_benchSpawnChurn ) : 0u;
+        const uint32 cubeCount       = static_cast<uint32>( _listBenchMesh.size() );
+        const bool   bNothingToChurn = churnCount == 0 || cubeCount == 0 || pObjects == nullptr || pScene == nullptr;
+        if ( bNothingToChurn )
             return;
 
         const uint32  side   = MathUtil::max( _benchGridSide, 1u );
@@ -1267,7 +1270,8 @@ namespace sw
         }
 
         // 3) 퍼뮤테이션을 흔든다 — 셰이더가 다시 컴파일되므로 주기를 길게 준다.
-        if ( keywordEvery > 0 && ( _churnFrame % keywordEvery ) == 0 && _listChurnInstance.empty() == false )
+        const bool bShouldChurnKeywords = keywordEvery > 0 && ( _churnFrame % keywordEvery ) == 0 && _listChurnInstance.empty() == false;
+        if ( bShouldChurnKeywords )
         {
             MaterialInstance* pInstance = _listChurnInstance[nextChurnRandom() % _listChurnInstance.size()].get();
             if ( pInstance != nullptr )

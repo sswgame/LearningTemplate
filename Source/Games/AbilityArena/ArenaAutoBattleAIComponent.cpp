@@ -30,7 +30,8 @@ namespace sw
         const AbilitySystemComponent* pAbilitySystem = pOwner != nullptr ? pOwner->getComponent<AbilitySystemComponent>() : nullptr;
         const ArenaDirectorComponent* pDirector      = ArenaDirectorComponent::findForPawn( pawn );
         float3                        selfPosition{};
-        if ( pAbilitySystem == nullptr || pDirector == nullptr || pDirector->findUnitPosition( pOwner->getHandle(), selfPosition ) == false )
+        const bool                    bMissingBattleContext = pAbilitySystem == nullptr || pDirector == nullptr || pDirector->findUnitPosition( pOwner->getHandle(), selfPosition ) == false;
+        if ( bMissingBattleContext )
         {
             stopMoving();
             return;

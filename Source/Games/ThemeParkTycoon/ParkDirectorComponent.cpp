@@ -393,8 +393,9 @@ namespace sw
         archive >> statusTimer;
         archive >> autoBuildTimer;
         archive >> selectedPlacement;
-        Wallet wallet;
-        if ( archive.isError() || wallet.readState( archive ) == false || archive.getRemainingBytes() != 0 )
+        Wallet     wallet;
+        const bool bInvalidParkState = archive.isError() || wallet.readState( archive ) == false || archive.getRemainingBytes() != 0;
+        if ( bInvalidParkState )
             return false;
 
         _simulation = std::move( simulation );

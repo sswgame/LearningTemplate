@@ -48,7 +48,8 @@ namespace sw
         const VoxelPlayerComponent*   pPlayer  = pOwner != nullptr ? pOwner->getComponent<VoxelPlayerComponent>() : nullptr;
         const VoxelDirectorComponent* pDirector =
             pManager != nullptr && pPlayer != nullptr ? GameDirectorComponent::resolve<VoxelDirectorComponent>( *pManager, pPlayer->getDirector() ) : nullptr;
-        if ( pDirector == nullptr || pDirector->isStarted() == false || context._deltaTime <= 0.0f )
+        const bool bNotPlaying = pDirector == nullptr || pDirector->isStarted() == false || context._deltaTime <= 0.0f;
+        if ( bNotPlaying )
             return;
         const float32 deltaTime     = MathUtil::min( context._deltaTime, 0.1f );
         const float32 previousCycle = MathUtil::fmod( _timer, Internal::kCycleSeconds );

@@ -278,12 +278,13 @@ namespace sw
     void ShooterPlayerComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        _bRoundJustRestarted                      = SW_FALSE;
-        GameObject*                     pOwner    = getOwner();
-        GameObjectManager*              pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        FirstPersonCameraComponent*     pCamera   = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
-        const ShooterDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<ShooterDirectorComponent>( *pManager, _director ) : nullptr;
-        if ( pCamera == nullptr || pDirector == nullptr || deltaTime <= 0.0f )
+        _bRoundJustRestarted                                  = SW_FALSE;
+        GameObject*                     pOwner                = getOwner();
+        GameObjectManager*              pManager              = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        FirstPersonCameraComponent*     pCamera               = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
+        const ShooterDirectorComponent* pDirector             = pManager != nullptr ? GameDirectorComponent::resolve<ShooterDirectorComponent>( *pManager, _director ) : nullptr;
+        const bool                      bMissingCameraContext = pCamera == nullptr || pDirector == nullptr || deltaTime <= 0.0f;
+        if ( bMissingCameraContext )
             return;
         const float32 step = MathUtil::min( deltaTime, 0.1f );
 
@@ -435,8 +436,9 @@ namespace sw
         const WeaponCatalog* pCatalog = game::getService<WeaponCatalog>();
         for ( int32 weaponIndex = 0; weaponIndex < kWeaponCount; ++weaponIndex )
         {
-            const WeaponDef* pDef = pCatalog != nullptr ? pCatalog->findWeapon( hashed_string( ShooterPlayerComponentInternal::kArrWeaponID[weaponIndex] ) ) : nullptr;
-            if ( pDef == nullptr && pCatalog != nullptr && pCatalog->getWeapons().empty() == false )
+            const WeaponDef* pDef                  = pCatalog != nullptr ? pCatalog->findWeapon( hashed_string( ShooterPlayerComponentInternal::kArrWeaponID[weaponIndex] ) ) : nullptr;
+            const bool       bShouldFallbackWeapon = pDef == nullptr && pCatalog != nullptr && pCatalog->getWeapons().empty() == false;
+            if ( bShouldFallbackWeapon )
                 pDef = &pCatalog->getWeapons().front();
             if ( pDef != nullptr )
                 _arrWeapon[weaponIndex].equip( *pDef, pDef->_maxReserveAmmo / 2, 0x51ed270bu + static_cast<uint32>( weaponIndex ) );
@@ -454,8 +456,9 @@ namespace sw
         }
         // SwitchWeapon 은 축(Q는 -1, E는 +1)이라 버튼으로는 "발동"만 온다. 방향은 같은 이름의 아날로그 부호가 정한다.
         const hashed_string switchName( Internal::kSwitchWeaponButton );
-        const int32         analogIndex = pawn.findAnalog( switchName );
-        if ( pawn.wasButtonTriggered( pawn.findButton( switchName ) ) && 0 <= analogIndex && analogIndex < ControlIntent::kAnalogCount )
+        const int32         analogIndex            = pawn.findAnalog( switchName );
+        const bool          bWeaponSwitchRequested = pawn.wasButtonTriggered( pawn.findButton( switchName ) ) && 0 <= analogIndex && analogIndex < ControlIntent::kAnalogCount;
+        if ( bWeaponSwitchRequested )
         {
             const float32 direction = pawn.getIntent()._arrAnalog[analogIndex];
             if ( direction > 0.0f )
@@ -603,7 +606,8 @@ namespace sw
 
     void ShooterPlayerComponent::switchWeapon( int32 weaponIndex )
     {
-        if ( weaponIndex == _weaponIndex || weaponIndex < 0 || weaponIndex >= kWeaponCount )
+        const bool bInvalidWeaponSwitch = weaponIndex == _weaponIndex || weaponIndex < 0 || weaponIndex >= kWeaponCount;
+        if ( bInvalidWeaponSwitch )
             return;
         _weaponIndex       = weaponIndex;
         _bWeaponModelDirty = SW_TRUE;
@@ -752,11 +756,12 @@ namespace sw
 
     void ShooterPlayerComponent::spawnBody()
     {
-        _bBodyRequested             = SW_FALSE;
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        AssetManager*      pAssets  = game::getService<AssetManager>();
-        if ( pManager == nullptr || pAssets == nullptr || _bodyPrefab.empty() || pManager->resolveGameObject( _body ) != nullptr )
+        _bBodyRequested                     = SW_FALSE;
+        GameObject*        pOwner           = getOwner();
+        GameObjectManager* pManager         = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        AssetManager*      pAssets          = game::getService<AssetManager>();
+        const bool         bCannotSpawnBody = pManager == nullptr || pAssets == nullptr || _bodyPrefab.empty() || pManager->resolveGameObject( _body ) != nullptr;
+        if ( bCannotSpawnBody )
             return;
         GameObject*             pBody   = pAssets->getAssetCache<PrefabCache>().spawn( pManager, _bodyPrefab, "PlayerBody" );
         ShooterAvatarComponent* pAvatar = pBody != nullptr ? pBody->getComponent<ShooterAvatarComponent>() : nullptr;

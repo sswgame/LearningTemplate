@@ -235,7 +235,8 @@ namespace sw
         archive >> placedCount;
         archive >> bBodyPlaced;
         _pendingStateBytes.clear();
-        if ( bRead == false || archive.isError() || archive.getRemainingBytes() != 0 )
+        const bool bStateMismatch = bRead == false || archive.isError() || archive.getRemainingBytes() != 0;
+        if ( bStateMismatch )
         {
             SW_LOG_WARNING( "[Voxel] the saved player state does not match this build - starting at the spawn" );
             return;
@@ -254,13 +255,14 @@ namespace sw
     void VoxelPlayerComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        GameObject*                   pOwner    = getOwner();
-        GameObjectManager*            pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        FirstPersonCameraComponent*   pCamera   = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
-        const PawnComponent*          pPawn     = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        const VoxelDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<VoxelDirectorComponent>( *pManager, _director ) : nullptr;
-        const VoxelBlockCatalog*      pCatalog  = game::getService<VoxelBlockCatalog>();
-        if ( pCamera == nullptr || pPawn == nullptr || pDirector == nullptr || pCatalog == nullptr || pDirector->isStarted() == false || deltaTime <= 0.0f )
+        GameObject*                   pOwner          = getOwner();
+        GameObjectManager*            pManager        = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        FirstPersonCameraComponent*   pCamera         = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
+        const PawnComponent*          pPawn           = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+        const VoxelDirectorComponent* pDirector       = pManager != nullptr ? GameDirectorComponent::resolve<VoxelDirectorComponent>( *pManager, _director ) : nullptr;
+        const VoxelBlockCatalog*      pCatalog        = game::getService<VoxelBlockCatalog>();
+        const bool                    bNotReadyToTick = pCamera == nullptr || pPawn == nullptr || pDirector == nullptr || pCatalog == nullptr || pDirector->isStarted() == false || deltaTime <= 0.0f;
+        if ( bNotReadyToTick )
             return;
         if ( _bBodyPlaced == SW_FALSE )
             initializeBody( *pDirector );
@@ -360,8 +362,9 @@ namespace sw
     void VoxelPlayerComponent::updateTarget( const VoxelDirectorComponent& director, const FirstPersonCameraComponent& camera )
     {
         VoxelRayHit hit;
-        const bool  bHit = VoxelRaycast::raycast( director.getWorld(), _body.getEyePosition(), camera.getLook().getForward(), _reachDistance, hit );
-        if ( bHit == false || hit._block != _target._block || _bHasTarget == SW_FALSE )
+        const bool  bHit             = VoxelRaycast::raycast( director.getWorld(), _body.getEyePosition(), camera.getLook().getForward(), _reachDistance, hit );
+        const bool  bBreakTargetLost = bHit == false || hit._block != _target._block || _bHasTarget == SW_FALSE;
+        if ( bBreakTargetLost )
             _breakProgress = 0.0f; // 다른 블록을 보면 처음부터
         _bHasTarget = bHit ? SW_TRUE : SW_FALSE;
         if ( bHit )

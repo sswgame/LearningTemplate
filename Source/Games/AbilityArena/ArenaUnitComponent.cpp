@@ -58,12 +58,13 @@ namespace sw
     void ArenaUnitComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        GameObject*             pOwner         = getOwner();
-        GameObjectManager*      pManager       = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        MeshComponent*          pMesh          = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
-        AbilitySystemComponent* pAbilitySystem = pOwner != nullptr ? pOwner->getComponent<AbilitySystemComponent>() : nullptr;
-        const PawnComponent*    pPawn          = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        if ( pManager == nullptr || pMesh == nullptr || pAbilitySystem == nullptr || pPawn == nullptr || deltaTime <= 0.0f )
+        GameObject*             pOwner             = getOwner();
+        GameObjectManager*      pManager           = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        MeshComponent*          pMesh              = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
+        AbilitySystemComponent* pAbilitySystem     = pOwner != nullptr ? pOwner->getComponent<AbilitySystemComponent>() : nullptr;
+        const PawnComponent*    pPawn              = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+        const bool              bMissingComponents = pManager == nullptr || pMesh == nullptr || pAbilitySystem == nullptr || pPawn == nullptr || deltaTime <= 0.0f;
+        if ( bMissingComponents )
             return;
         if ( _deathTimer >= 0.0f || pAbilitySystem->hasMatchingTag( CombatAttributeSet::getDeadTag() ) )
         {

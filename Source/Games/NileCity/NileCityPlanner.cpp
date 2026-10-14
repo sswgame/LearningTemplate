@@ -63,8 +63,9 @@ namespace sw
         int32 skippedCount = 0;
         archive >> nextStep;
         archive >> skippedCount;
-        const bool bStepValid = 0 <= nextStep && nextStep <= static_cast<int32>( _listStep.size() );
-        if ( archive.isError() || bStepValid == false || skippedCount < 0 )
+        const bool bStepValid           = 0 <= nextStep && nextStep <= static_cast<int32>( _listStep.size() );
+        const bool bInvalidPlannerState = archive.isError() || bStepValid == false || skippedCount < 0;
+        if ( bInvalidPlannerState )
             return false;
         _nextStep     = nextStep;
         _skippedCount = skippedCount;

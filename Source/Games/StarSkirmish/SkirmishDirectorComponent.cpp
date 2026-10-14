@@ -265,7 +265,8 @@ namespace sw
         uint8   bPaused   = SW_FALSE;
         archive >> timeScale;
         archive >> bPaused;
-        if ( archive.isError() || archive.getRemainingBytes() != 0 || timeScale <= 0.0f )
+        const bool bInvalidDirectorState = archive.isError() || archive.getRemainingBytes() != 0 || timeScale <= 0.0f;
+        if ( bInvalidDirectorState )
             return false;
         _timeScale = timeScale;
         _bPaused   = bPaused != SW_FALSE ? SW_TRUE : SW_FALSE;
@@ -402,7 +403,8 @@ namespace sw
         const bool      bHuman = _bHuman == SW_TRUE;
         world.forEachUnit( [this, &world, bHuman]( const RTSUnit& unit )
         {
-            if ( bHuman && unit._owner != 0 && unit._owner != RTSWorld::kNoOwner && world.isVisibleTo( 0, unit._id ) == false )
+            const bool bHiddenFromHuman = bHuman && unit._owner != 0 && unit._owner != RTSWorld::kNoOwner && world.isVisibleTo( 0, unit._id ) == false;
+            if ( bHiddenFromHuman )
                 return;
             if ( SkirmishUnitComponent::findUnitModel( unit._pDef->_id ) == nullptr )
                 return;
@@ -613,8 +615,9 @@ namespace sw
         RTSUnitID workerID{};
         for ( const RTSUnitID unitID : _selection.getSelected() )
         {
-            const RTSUnit* pUnit = world.findUnit( unitID );
-            if ( workerID.isValid() == false && pUnit != nullptr && pUnit->_pDef->_bWorker != SW_FALSE )
+            const RTSUnit* pUnit        = world.findUnit( unitID );
+            const bool     bFirstWorker = workerID.isValid() == false && pUnit != nullptr && pUnit->_pDef->_bWorker != SW_FALSE;
+            if ( bFirstWorker )
                 workerID = unitID;
         }
         if ( workerID.isValid() == false )
