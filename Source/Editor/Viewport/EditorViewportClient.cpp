@@ -17,6 +17,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorColliderHandleTool.h"
 #include "Editor/Viewport/EditorViewportAssetDrop.h"
+#include "Editor/Viewport/EditorViewportMouseClaim.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportRayPick.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
@@ -230,7 +231,7 @@ namespace sw::editor
             pCanvasDrawList->PopClipRect();
 
             // 피킹과 호버는 기즈모보다 먼저 본다. ImGuizmo::IsOver · IsUsing 은 지난 프레임에 그린 기즈모의 상태다.
-            _picker.processClick( canvasPos, canvasSize, pCamera, bCanvasClicked && EditorColliderHandleTool::isCapturingMouse() == false, _toolbarSettings );
+            _picker.processClick( canvasPos, canvasSize, pCamera, bCanvasClicked && ( EditorColliderHandleTool::isCapturingMouse() || EditorViewportMouseClaim::isClaimed() ) == false, _toolbarSettings );
             _picker.processHover( canvasPos, canvasSize, pCamera, bCanvasHovered, _gizmo.isDragging(), _toolbarSettings );
             EditorSelectionBounds::setHoveredObjectID( _picker.getHoveredObjectID() );
             processContextMenu( canvasPos, canvasSize, pCamera, bCanvasHovered );
@@ -239,8 +240,8 @@ namespace sw::editor
                 GameObjectManager* pObjectManager = editor::getActiveObjectManager();
                 if ( pObjectManager != nullptr )
                     pObjectManager->flushSceneTransforms();
-                // 콜라이더 손잡이 위에서는 기즈모가 마우스를 양보한다 — 손잡이는 기즈모 축 위에 놓인다.
-                if ( EditorColliderHandleTool::isCapturingMouse() == false )
+                // 콜라이더 손잡이나 확장 도구(EditorViewportMouseClaim) 위에서는 기즈모가 마우스를 양보한다 — 손잡이는 기즈모 축 위에 놓인다.
+                if ( ( EditorColliderHandleTool::isCapturingMouse() || EditorViewportMouseClaim::isClaimed() ) == false )
                     _gizmo.draw( arrView, arrProj, canvasPos, canvasSize, _toolbarSettings );
             }
 

@@ -47,7 +47,9 @@ namespace sw::editor
             : MeshModifier()
             , _textureParam{ addParam( MeshModifierParamDef{ "Texture", MeshModifierParamKind::AssetPath, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f }, 1,
                                                              "Static texture used in place of the runtime render target" }
-                                                             .withLayout( "Texture", "Static texture that replaces the realtime render target for editor baking" ) ) }
+                                                             .withLayout( "Texture", "Static texture that replaces the realtime render target for editor baking" )
+                                                             // 확장자 목록은 Editor/Common/Workspace/EditorAssetType.cpp 의 kArrTextureExt 와 같다.
+                                                             .withAssetFilter( ".png,.jpg,.jpeg,.tga,.dds,.hdr,.bmp" ) ) }
             , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Displace", "Distance moved along the normal per unit height", "m" ) ) }
             , _midLevelParam{ addParam( MeshModifierParamDef{ "Mid Level", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Displace", "Texture value that causes no displacement" ) ) }
             , _channelParam{ addParam( MeshModifierParamDef{ "Channel", MeshModifierParamKind::Int, 0.0f, 4.0f, float3{ 4.0f, 0.0f, 0.0f }, 1,

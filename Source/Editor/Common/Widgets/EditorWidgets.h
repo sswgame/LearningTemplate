@@ -150,6 +150,7 @@ namespace sw::editor
 
         /**
          * @brief 애셋 경로 표시, 드래그앤드롭 수신(Payload), 클리어/찾아보기 버튼을 지원하는 애셋 슬롯을 그립니다.
+         * @param pExpectedExt 받을 확장자 목록입니다. 쉼표 또는 공백으로 나눕니다(`".png,.jpg,.tga"`). nullptr 이나 빈 문자열이면 모두 받습니다(`EditorAssetFilter`).
          */
         static bool drawAssetSlot( const utf8* pLabel, string& assetPath, const utf8* pExpectedExt = nullptr,
                                    float32 labelWidth = 120.0f );

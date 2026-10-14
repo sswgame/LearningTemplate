@@ -20,6 +20,7 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Utility/FloatCurve.h"
 
 #include "GameFramework/PlugIn/Editor/MeshModifiers/MeshModifierSession.h"
@@ -77,12 +78,26 @@ namespace sw::editor
                     ImGui::SetTooltip( "%s", pTooltip );
             }
 
-            /** @brief 오브젝트가 Reference 걸러 보기(컴포넌트 타입 이름)를 통과하면 true 입니다. 걸러 보기가 없으면 늘 true 입니다. */
+            /**
+             * @brief 오브젝트가 Reference 걸러 보기(컴포넌트 타입 이름)를 통과하면 true 입니다. 걸러 보기가 없으면 늘 true 입니다.
+             * @details 등록된 타입이면 파생까지 맞춘다(`TypeInfo::isDerivedFrom`) — `MeshComponent` 걸러 보기가 `SkeletalMeshComponent` 도 잡는다.
+             *          타입을 못 찾으면 예전처럼 이름 그대로(`findComponentByTypeName`) 본다.
+             */
             static bool matchesComponentHint( const GameObject& object, const utf8* pComponentHint )
             {
                 if ( pComponentHint == nullptr || pComponentHint[0] == '\0' )
                     return true;
-                return object.findComponentByTypeName( hashed_string( pComponentHint ) ) != nullptr;
+                const hashed_string hintName( pComponentHint );
+                const TypeInfo*     pHintType = engine::getTypeRegistry().findType( hintName );
+                if ( pHintType == nullptr )
+                    return object.findComponentByTypeName( hintName ) != nullptr;
+                bool bFound{ false };
+                object.forEachComponent( [&]( Component* pComponent ) {
+                    const TypeInfo* pTypeInfo = pComponent->getTypeInfo();
+                    if ( pTypeInfo != nullptr && pTypeInfo->isDerivedFrom( pHintType ) )
+                        bFound = true;
+                } );
+                return bFound;
             }
         };
     } // namespace

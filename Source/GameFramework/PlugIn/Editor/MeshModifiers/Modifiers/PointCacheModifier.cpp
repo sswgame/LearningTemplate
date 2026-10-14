@@ -38,6 +38,7 @@ namespace sw::editor
         {
             static constexpr size_t kHeaderSize = 12;
 
+            // 파일 확장자는 .mfpc(mesh-modifier point cache)다. 이 모디파이어가 정한 형식이며, 에셋 슬롯 필터도 이 확장자만 받는다.
             static bool load( string_view path, PointCacheData& outData )
             {
                 outData                   = PointCacheData{};
@@ -81,7 +82,9 @@ namespace sw::editor
             , _bCacheTried{ false }
             , _fileParam{ addParam( MeshModifierParamDef{ "Cache File", MeshModifierParamKind::AssetPath, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f }, 1,
                                                           "Point cache file (u32 vertices, u32 frames, f32 fps, float3 frames)" }
-                                                          .withLayout( "Cache", "Binary point cache file with per-frame vertex positions in mesh space" ) ) }
+                                                          .withLayout( "Cache", "Binary point cache file with per-frame vertex positions in mesh space" )
+                                                          // 캐시 파일 확장자는 이 모디파이어가 정한 .mfpc(mesh-modifier point cache)다 — load() 위 주석과 같다.
+                                                          .withAssetFilter( ".mfpc" ) ) }
             , _speedParam{ addParam( MeshModifierParamDef{ "Speed", MeshModifierParamKind::Float, -10.0f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Playback", "Playback speed multiplier (negative plays backward)", "x" ) ) }
             , _timeOffsetParam{ addParam( MeshModifierParamDef{ "Time Offset", MeshModifierParamKind::Float, -1000.0f, 1000.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Playback", "Time added before converting to a cache frame", "s" ) ) }
             , _loopParam{ addParam( MeshModifierParamDef{ "Loop", MeshModifierParamKind::Bool, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Playback", "Wrap around at the end instead of holding the last frame" ) ) }

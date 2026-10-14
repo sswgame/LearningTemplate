@@ -10,6 +10,7 @@
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Widgets/EditorAssetFilter.h"
 #include "Editor/Common/Widgets/EditorLabelLayout.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -459,7 +460,8 @@ namespace sw::editor
         string droppedPath;
         if ( acceptAssetDrop( droppedPath ) )
         {
-            const bool bAccept = StringUtil::isNullOrEmpty( pExpectedExt ) || FileUtil::hasExtension( droppedPath, pExpectedExt );
+            // 필터는 쉼표 · 공백으로 나눈 여러 확장자다(".png,.jpg"). 한 개짜리도 같은 규칙이다.
+            const bool bAccept = StringUtil::isNullOrEmpty( pExpectedExt ) || EditorAssetFilter::matches( droppedPath, pExpectedExt );
             if ( bAccept )
             {
                 assetPath = droppedPath;

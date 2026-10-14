@@ -22,6 +22,8 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/EditorDrawReleaseQueue.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorAssetFileCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorColliderHandleMath.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorViewportMouseClaim.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorAssetFilter.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorCommandRegistry.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorDataTableCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/EditorExternalToolJob.cpp"
