@@ -84,11 +84,11 @@ namespace sw::editor
     public:
         NoiseModifier()
             : MeshModifier()
-            , _amplitudeParam{ addParam( MeshModifierParamDef{ "Amplitude", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _frequencyParam{ addParam( MeshModifierParamDef{ "Frequency", MeshModifierParamKind::Float, 0.001f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
-            , _seedParam{ addParam( MeshModifierParamDef{ "Seed", MeshModifierParamKind::Int, 0.0f, 65535.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _strengthParam{ addParam( MeshModifierParamDef{ "Axis Strength", MeshModifierParamKind::Vector3, 0.0f, 10.0f, float3{ 1.0f, 1.0f, 1.0f } } ) }
-            , _speedParam{ addParam( MeshModifierParamDef{ "Speed", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
+            , _amplitudeParam{ addParam( MeshModifierParamDef{ "Amplitude", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Noise", "Largest displacement", "m" ) ) }
+            , _frequencyParam{ addParam( MeshModifierParamDef{ "Frequency", MeshModifierParamKind::Float, 0.001f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Noise", "Noise cells per unit length; larger is finer" ) ) }
+            , _seedParam{ addParam( MeshModifierParamDef{ "Seed", MeshModifierParamKind::Int, 0.0f, 65535.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Noise", "Random seed; change it for a different pattern" ) ) }
+            , _strengthParam{ addParam( MeshModifierParamDef{ "Axis Strength", MeshModifierParamKind::Vector3, 0.0f, 10.0f, float3{ 1.0f, 1.0f, 1.0f } }.withLayout( "Noise", "Displacement scale per axis" ) ) }
+            , _speedParam{ addParam( MeshModifierParamDef{ "Speed", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Animation", "How fast the noise moves with preview time" ) ) }
         {
         }
 

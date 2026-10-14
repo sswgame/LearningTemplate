@@ -17,9 +17,9 @@ namespace sw::editor
     public:
         TwistModifier()
             : MeshModifier()
-            , _angleParam{ addParam( MeshModifierParamDef{ "Angle", MeshModifierParamKind::Float, -3600.0f, 3600.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _lowerParam{ addParam( MeshModifierParamDef{ "Lower Limit", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _upperParam{ addParam( MeshModifierParamDef{ "Upper Limit", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
+            , _angleParam{ addParam( MeshModifierParamDef{ "Angle", MeshModifierParamKind::Float, -3600.0f, 3600.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Twist", "Total twist angle from bottom to top", "deg" ) ) }
+            , _lowerParam{ addParam( MeshModifierParamDef{ "Lower Limit", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Limits", "Start of the twisted range along the main axis (0 = bottom)" ) ) }
+            , _upperParam{ addParam( MeshModifierParamDef{ "Upper Limit", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Limits", "End of the twisted range along the main axis (1 = top)" ) ) }
         {
         }
 

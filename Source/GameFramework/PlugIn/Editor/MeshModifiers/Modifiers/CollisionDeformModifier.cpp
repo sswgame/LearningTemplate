@@ -71,11 +71,18 @@ namespace sw::editor
     class CollisionDeformModifier final : public MeshModifier
     {
     public:
+        /** @brief Colliders 표의 열 — 종류 · 중심 xyz · 크기 xyz(stride 7). */
+        static constexpr MeshModifierListColumn kArrColumn[] = {
+            { "Type", MeshModifierListColumnKind::Combo, "Sphere\0Box\0Plane\0" },
+            { "Center", MeshModifierListColumnKind::Vector3 },
+            { "Size", MeshModifierListColumnKind::Vector3 },
+        };
+
         CollisionDeformModifier()
             : MeshModifier()
             , _collidersParam{ addParam( MeshModifierParamDef{ "Colliders", MeshModifierParamKind::NumberList, -1000.0f, 1000.0f, float3{ 0.0f, 0.0f, 0.0f },
                                                                CollisionDeformModifierInternal::kStride,
-                                                               "type(0 sphere 1 box 2 plane) cx cy cz sx sy sz" } ) }
+                                                               "type(0 sphere 1 box 2 plane) cx cy cz sx sy sz" }.withColumns( kArrColumn ) ) }
             , _marginParam{ addParam( MeshModifierParamDef{ "Margin", MeshModifierParamKind::Float, 0.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
             , _softnessParam{ addParam( MeshModifierParamDef{ "Softness", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
         {

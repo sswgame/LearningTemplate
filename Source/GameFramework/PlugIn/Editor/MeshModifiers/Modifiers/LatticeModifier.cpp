@@ -65,11 +65,11 @@ namespace sw::editor
         const int32   clamped = MathUtil::clamp( resolution, kMinResolution, kMaxResolution );
         const float32 value   = static_cast<float32>( clamped );
         _resolutionXParam = addParam( MeshModifierParamDef{ "Resolution X", MeshModifierParamKind::Int, static_cast<float32>( kMinResolution ),
-                                                            static_cast<float32>( kMaxResolution ), float3{ value, 0.0f, 0.0f } } );
+                                                            static_cast<float32>( kMaxResolution ), float3{ value, 0.0f, 0.0f } }.withLayout( "Lattice", "Control points along X" ) );
         _resolutionYParam = addParam( MeshModifierParamDef{ "Resolution Y", MeshModifierParamKind::Int, static_cast<float32>( kMinResolution ),
-                                                            static_cast<float32>( kMaxResolution ), float3{ value, 0.0f, 0.0f } } );
+                                                            static_cast<float32>( kMaxResolution ), float3{ value, 0.0f, 0.0f } }.withLayout( "Lattice", "Control points along Y" ) );
         _resolutionZParam = addParam( MeshModifierParamDef{ "Resolution Z", MeshModifierParamKind::Int, static_cast<float32>( kMinResolution ),
-                                                            static_cast<float32>( kMaxResolution ), float3{ value, 0.0f, 0.0f } } );
+                                                            static_cast<float32>( kMaxResolution ), float3{ value, 0.0f, 0.0f } }.withLayout( "Lattice", "Control points along Z" ) );
         _countX = clamped;
         _countY = clamped;
         _countZ = clamped;

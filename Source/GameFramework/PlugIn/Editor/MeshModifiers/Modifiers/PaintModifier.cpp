@@ -48,12 +48,20 @@ namespace sw::editor
     class PaintModifier final : public MeshModifier
     {
     public:
+        /** @brief Brushes 표의 열 — 위치 xyz · 반경 · 세기 · 감쇠(stride 6). */
+        static constexpr MeshModifierListColumn kArrColumn[] = {
+            { "Position", MeshModifierListColumnKind::Vector3 },
+            { "Radius", MeshModifierListColumnKind::Float },
+            { "Strength", MeshModifierListColumnKind::Float },
+            { "Falloff", MeshModifierListColumnKind::Float },
+        };
+
         PaintModifier()
             : MeshModifier()
             , _targetParam{ addParam( MeshModifierParamDef{ "Target", MeshModifierParamKind::Int, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
             , _colorParam{ addParam( MeshModifierParamDef{ "Color", MeshModifierParamKind::Vector3, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
             , _brushesParam{ addParam( MeshModifierParamDef{ "Brushes", MeshModifierParamKind::NumberList, -100000.0f, 100000.0f, float3{ 0.0f, 0.0f, 0.0f },
-                                                             PaintModifierInternal::kBrushStride, "x y z radius strength falloff" } ) }
+                                                             PaintModifierInternal::kBrushStride, "x y z radius strength falloff" }.withColumns( kArrColumn ) ) }
         {
         }
 

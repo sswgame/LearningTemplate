@@ -115,7 +115,35 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 매개변수 하나의 선언입니다. 모디파이어 생성자가 `addParam` 으로 냅니다. */
+    /** @brief NumberList 표의 열 하나가 차지하는 원소와 입력칸 모양입니다. */
+    enum class MeshModifierListColumnKind : uint8
+    {
+        Float,   ///< 원소 하나, 실수 입력
+        Int,     ///< 원소 하나, 정수 입력(반올림)
+        Combo,   ///< 원소 하나, 이름 목록의 번호(0 부터)
+        Vector3, ///< 원소 셋을 한 칸에 묶은 xyz 입력
+    };
+
+    /**
+     * @struct MeshModifierListColumn
+     * @brief NumberList 표의 열 선언입니다. 모디파이어 파일의 정적 배열로 두고 `MeshModifierParamDef::withColumns` 로 붙입니다.
+     * @details 열 너비(원소 수) 합이 `_stride` 와 같아야 한다. 다르면 패널은 열 선언을 무시하고 일반 숫자 표로 그린다.
+     */
+    struct MeshModifierListColumn
+    {
+        const utf8*                _pName{ nullptr };                          ///< 열 머리 이름(영문)
+        MeshModifierListColumnKind _kind{ MeshModifierListColumnKind::Float };
+        const utf8*                _pComboItems{ nullptr }; ///< Combo 의 이름 목록. ImGui 처럼 '\0' 으로 나누고 빈 이름으로 끝냅니다(예: "Sphere\0Box\0Plane\0")
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @brief 매개변수 하나의 선언입니다. 모디파이어 생성자가 `addParam` 으로 냅니다.
+     * @details `_pHint` 뒤의 칸은 모두 패널 표시용 선택 칸이다(기본값이 있어 기존 선언은 고치지 않는다). 저장 문서 · 값 구조에는 영향이 없다.
+     *          긴 위치 초기화 대신 `with*` 함수로 이어 붙인다 — `MeshModifierParamDef{ … }.withLayout( "Shape", "Bend angle", "deg" )`.
+     */
     struct MeshModifierParamDef
     {
         const utf8*           _pName{ nullptr }; ///< 저장 문서의 키이자 패널 표시 이름(영문, 모디파이어 안에서 유일)
@@ -125,6 +153,46 @@ namespace sw::editor
         float3                _default{ 0.0f, 0.0f, 0.0f }; ///< 스칼라 종류는 `_x` 만 씁니다. 곡선은 (0, `_x`) → (1, `_y`) 직선입니다
         uint32                _stride{ 1 };                ///< NumberList 의 항목 하나 원소 수
         const utf8*           _pHint{ nullptr };           ///< 참조 · 경로 · 목록의 뜻(영문, 패널 도움말 — 예: "Spline object", "x y z radius strength")
+        const utf8*           _pGroup{ nullptr };          ///< 패널의 접히는 구역 이름(영문). 없으면 구역 없이 맨 위에 둡니다
+        const utf8*           _pTooltip{ nullptr };        ///< 입력칸 툴팁(영문 한 줄)
+        const utf8*           _pUnit{ nullptr };           ///< 값 뒤에 붙여 보일 단위(예: "deg", "m")
+        const MeshModifierListColumn* _pColumn{ nullptr }; ///< NumberList 의 열 선언(정적 배열). 없으면 일반 숫자 표입니다
+        uint32                _columnCount{ 0 };           ///< `_pColumn` 원소 수
+        const utf8*           _pRequiredComponentHint{ nullptr }; ///< Reference 고르기에서 걸러 볼 컴포넌트 타입 이름(예: "SplineComponent")
+        const utf8*           _pAssetFilterHint{ nullptr };       ///< AssetPath 슬롯이 받을 확장자(예: ".pc2"). 없으면 모두 받습니다
+
+        /** @brief 구역 · 툴팁 · 단위를 넣은 사본을 냅니다. */
+        MeshModifierParamDef withLayout( const utf8* pGroup, const utf8* pTooltip, const utf8* pUnit = nullptr ) const
+        {
+            MeshModifierParamDef def = *this;
+            def._pGroup              = pGroup;
+            def._pTooltip            = pTooltip;
+            def._pUnit               = pUnit;
+            return def;
+        }
+        /** @brief NumberList 열 선언을 넣은 사본을 냅니다. */
+        template <size_t TCount>
+        MeshModifierParamDef withColumns( const MeshModifierListColumn ( &arrColumn )[TCount] ) const
+        {
+            MeshModifierParamDef def = *this;
+            def._pColumn             = arrColumn;
+            def._columnCount         = static_cast<uint32>( TCount );
+            return def;
+        }
+        /** @brief Reference 고르기의 컴포넌트 걸러 보기를 넣은 사본을 냅니다. */
+        MeshModifierParamDef withRequiredComponent( const utf8* pComponentTypeName ) const
+        {
+            MeshModifierParamDef def    = *this;
+            def._pRequiredComponentHint = pComponentTypeName;
+            return def;
+        }
+        /** @brief AssetPath 슬롯의 확장자 걸러 받기를 넣은 사본을 냅니다. */
+        MeshModifierParamDef withAssetFilter( const utf8* pExtension ) const
+        {
+            MeshModifierParamDef def = *this;
+            def._pAssetFilterHint    = pExtension;
+            return def;
+        }
     };
 } // namespace sw::editor
 
@@ -254,6 +322,8 @@ namespace sw::editor
          *          파생이 다른 배치가 필요하면 재정의한다. 공간 행렬 · 주축 · 상자는 적용기가 따로 넣는다.
          */
         virtual bool packGPUParams( vector<float4>& outListValue ) const;
+        /** @brief 패널 추가 메뉴의 툴팁으로 보일 설명 한 줄(영문)입니다. 기본은 빈 글입니다. */
+        virtual const utf8* getDescription() const { return ""; }
 
         const vector<MeshModifierParamDef>& getParamDefs() const { return _listParamDef; }
         uint32                              getParamCount() const { return static_cast<uint32>( _listParamDef.size() ); }
