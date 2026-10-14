@@ -132,14 +132,14 @@ namespace sw::editor
         box.set( "valid" ).setBool( _box.isValid() );
         const JSONValue boxMin = box.set( "min" );
         boxMin.setArray();
-        boxMin.pushBack().setFloat( _box._min._x );
-        boxMin.pushBack().setFloat( _box._min._y );
-        boxMin.pushBack().setFloat( _box._min._z );
+        boxMin.pushBack().setFloat( static_cast<float64>( _box._min._x ) );
+        boxMin.pushBack().setFloat( static_cast<float64>( _box._min._y ) );
+        boxMin.pushBack().setFloat( static_cast<float64>( _box._min._z ) );
         const JSONValue boxMax = box.set( "max" );
         boxMax.setArray();
-        boxMax.pushBack().setFloat( _box._max._x );
-        boxMax.pushBack().setFloat( _box._max._y );
-        boxMax.pushBack().setFloat( _box._max._z );
+        boxMax.pushBack().setFloat( static_cast<float64>( _box._max._x ) );
+        boxMax.pushBack().setFloat( static_cast<float64>( _box._max._y ) );
+        boxMax.pushBack().setFloat( static_cast<float64>( _box._max._z ) );
 
         const JSONValue resolution = object.set( "resolution" );
         resolution.setArray();
@@ -150,9 +150,9 @@ namespace sw::editor
         points.setArray();
         for ( const float3& point : _listControlPoint )
         {
-            points.pushBack().setFloat( point._x );
-            points.pushBack().setFloat( point._y );
-            points.pushBack().setFloat( point._z );
+            points.pushBack().setFloat( static_cast<float64>( point._x ) );
+            points.pushBack().setFloat( static_cast<float64>( point._y ) );
+            points.pushBack().setFloat( static_cast<float64>( point._z ) );
         }
     }
 

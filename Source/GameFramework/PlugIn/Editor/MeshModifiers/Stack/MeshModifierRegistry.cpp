@@ -75,13 +75,14 @@ namespace sw::editor
     unique_ptr<MeshModifier> MeshModifierRegistry::create( string_view id )
     {
         const MeshModifierRegistration* pRegistration = findRegistration( id );
-        if ( pRegistration == nullptr || pRegistration->_pCreateFn == nullptr )
-            return nullptr;
-        unique_ptr<MeshModifier> modifier = pRegistration->_pCreateFn();
-        if ( modifier == nullptr )
-            return nullptr;
-        modifier->setTypeID( pRegistration->_pID );
-        modifier->setName( pRegistration->_pDisplayName );
+        unique_ptr<MeshModifier>        modifier;
+        if ( pRegistration != nullptr && pRegistration->_pCreateFn != nullptr )
+            modifier = pRegistration->_pCreateFn();
+        if ( modifier != nullptr )
+        {
+            modifier->setTypeID( pRegistration->_pID );
+            modifier->setName( pRegistration->_pDisplayName );
+        }
         return modifier;
     }
 

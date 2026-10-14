@@ -25,9 +25,9 @@ namespace sw::editor
             {
                 const JSONValue array = parent.set( key );
                 array.setArray();
-                array.pushBack().setFloat( value._x );
-                array.pushBack().setFloat( value._y );
-                array.pushBack().setFloat( value._z );
+                array.pushBack().setFloat( static_cast<float64>( value._x ) );
+                array.pushBack().setFloat( static_cast<float64>( value._y ) );
+                array.pushBack().setFloat( static_cast<float64>( value._z ) );
             }
 
             static float3 readVector3( const JSONValue& parent, string_view key, const float3& fallback )
@@ -35,8 +35,10 @@ namespace sw::editor
                 const JSONValue array = parent.get( key );
                 if ( array.isArray() == false || array.size() != 3 )
                     return fallback;
-                return float3{ static_cast<float32>( array.at( 0 ).asFloat( fallback._x ) ), static_cast<float32>( array.at( 1 ).asFloat( fallback._y ) ),
-                               static_cast<float32>( array.at( 2 ).asFloat( fallback._z ) ) };
+                const float64 x = array.at( 0 ).asFloat( static_cast<float64>( fallback._x ) );
+                const float64 y = array.at( 1 ).asFloat( static_cast<float64>( fallback._y ) );
+                const float64 z = array.at( 2 ).asFloat( static_cast<float64>( fallback._z ) );
+                return float3{ static_cast<float32>( x ), static_cast<float32>( y ), static_cast<float32>( z ) };
             }
 
             static void writeParam( const MeshModifier& modifier, uint32 paramIndex, const JSONValue& params )
@@ -50,7 +52,7 @@ namespace sw::editor
                     case MeshModifierParamKind::Bool:
                     case MeshModifierParamKind::Axis:
                     {
-                        params.set( def._pName ).setFloat( value._value._x );
+                        params.set( def._pName ).setFloat( static_cast<float64>( value._value._x ) );
                         break;
                     }
                     case MeshModifierParamKind::Vector3:
@@ -66,8 +68,8 @@ namespace sw::editor
                         {
                             const JSONValue pair = array.pushBack();
                             pair.setArray();
-                            pair.pushBack().setFloat( key._x );
-                            pair.pushBack().setFloat( key._y );
+                            pair.pushBack().setFloat( static_cast<float64>( key._x ) );
+                            pair.pushBack().setFloat( static_cast<float64>( key._y ) );
                         }
                         break;
                     }
@@ -77,7 +79,7 @@ namespace sw::editor
                         array.setArray();
                         for ( const float32 number : value._listNumber )
                         {
-                            array.pushBack().setFloat( number );
+                            array.pushBack().setFloat( static_cast<float64>( number ) );
                         }
                         break;
                     }
@@ -178,7 +180,7 @@ namespace sw::editor
                 if ( modifier == nullptr )
                 {
                     SW_LOG_WARNING( "Unknown mesh modifier type '%#' is skipped", typeID.c_str() );
-                    return nullptr;
+                    return modifier;
                 }
                 if ( object.has( "name" ) )
                     modifier->setName( object.get( "name" ).asString() );

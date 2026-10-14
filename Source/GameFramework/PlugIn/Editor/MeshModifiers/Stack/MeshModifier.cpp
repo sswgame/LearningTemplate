@@ -347,9 +347,9 @@ namespace sw::editor
         // 기준 공간 → 모디파이어 공간은 기즈모 행렬(기준 = 모디파이어 · G)의 역이다
         const float4x4 gizmoMatrix = MeshModifierInternal::makeMatrixFromBasis( _gizmo.toBaseDirection( float3::UnitX ), _gizmo.toBaseDirection( float3::UnitY ),
                                                                                 _gizmo.toBaseDirection( float3::UnitZ ), _gizmo._center );
-        const float4x4 baseToModifier = gizmoMatrix.invert();
+        float4x4       result         = gizmoMatrix.invert();
         if ( _bWorldSpace == false )
-            return baseToModifier;
+            return result;
 
         float4x4 localToBase = evaluation._meshToWorld;
         float4x4 referenceWorld{};
@@ -357,7 +357,8 @@ namespace sw::editor
                                    evaluation._pInputs->tryGetWorldMatrix( _spaceReference, referenceWorld );
         if ( bHasReference )
             localToBase = localToBase * referenceWorld.invert();
-        return localToBase * baseToModifier;
+        result = localToBase * result;
+        return result;
     }
 
     bool MeshModifier::tryGetParamIndex( string_view name, uint32& outIndex ) const
