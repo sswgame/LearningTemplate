@@ -128,8 +128,9 @@ namespace sw::editor
             }
         }
 
-        ID3D12GraphicsCommandList* pCmdList = static_cast<ID3D12GraphicsCommandList*>( pRHIDevice->getNativeContext() );
-        if ( pCmdList != nullptr && pDrawData != nullptr && _d3d12SrvHeap != nullptr )
+        ID3D12GraphicsCommandList* pCmdList           = static_cast<ID3D12GraphicsCommandList*>( pRHIDevice->getNativeContext() );
+        const bool                 bCanRecordDrawData = pCmdList != nullptr && pDrawData != nullptr && _d3d12SrvHeap != nullptr;
+        if ( bCanRecordDrawData )
         {
             ID3D12DescriptorHeap* heaps[] = { _d3d12SrvHeap.Get() };
             pCmdList->SetDescriptorHeaps( 1, heaps );
@@ -139,7 +140,8 @@ namespace sw::editor
 
     void* ImGuiDX12RendererBackend::registerTexture( RHITextureHandle texture )
     {
-        if ( texture == 0 || _d3d12SrvHeap == nullptr || _pRHIDevice == nullptr )
+        const bool bCannotRegisterTexture = texture == 0 || _d3d12SrvHeap == nullptr || _pRHIDevice == nullptr;
+        if ( bCannotRegisterTexture )
             return nullptr;
 
         ID3D12Resource* pResource = static_cast<ID3D12Resource*>( _pRHIDevice->getNativeTexturePointer( texture ) );
@@ -171,7 +173,8 @@ namespace sw::editor
 
     void ImGuiDX12RendererBackend::unregisterTexture( void* pTextureID )
     {
-        if ( pTextureID == nullptr || _d3d12SrvHeap == nullptr || _descriptorSize == 0 )
+        const bool bCannotUnregisterTexture = pTextureID == nullptr || _d3d12SrvHeap == nullptr || _descriptorSize == 0;
+        if ( bCannotUnregisterTexture )
             return;
 
         const SIZE_T gpuStart = _d3d12SrvHeap->GetGPUDescriptorHandleForHeapStart().ptr;
@@ -196,7 +199,8 @@ namespace sw::editor
 
     bool ImGuiDX12RendererBackend::allocateSrvDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE* pOutCPU, D3D12_GPU_DESCRIPTOR_HANDLE* pOutGPU )
     {
-        if ( _d3d12SrvHeap == nullptr || pOutCPU == nullptr || pOutGPU == nullptr )
+        const bool bCannotAllocateDescriptor = _d3d12SrvHeap == nullptr || pOutCPU == nullptr || pOutGPU == nullptr;
+        if ( bCannotAllocateDescriptor )
             return false;
 
         std::scoped_lock<mutex> lock{ _descriptorMutex };

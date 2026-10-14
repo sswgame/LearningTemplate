@@ -148,9 +148,10 @@ namespace sw::editor
                 case KeyPress:
                 case KeyRelease:
                 {
-                    const bool   bIsDown = ( pEvent->type == KeyPress );
-                    const KeySym sym     = XLookupKeysym( &pEvent->xkey, 0 );
-                    if ( bIsDown && 0x20 <= sym && sym <= 0x7E )
+                    const bool   bIsDown           = ( pEvent->type == KeyPress );
+                    const KeySym sym               = XLookupKeysym( &pEvent->xkey, 0 );
+                    const bool   bPrintableKeyDown = bIsDown && 0x20 <= sym && sym <= 0x7E;
+                    if ( bPrintableKeyDown )
                         io.AddInputCharacter( static_cast<uint32>( sym ) );
                     return io.WantCaptureKeyboard;
                 }
@@ -321,7 +322,8 @@ namespace sw::editor
             ViewportData* pData = static_cast<ViewportData*>( pViewport->PlatformUserData );
             if ( pData != nullptr )
             {
-                if ( pData->_bOwned && pData->_windowHandle != 0 && _pDisplay != nullptr )
+                const bool bShouldDestroyWindow = pData->_bOwned && pData->_windowHandle != 0 && _pDisplay != nullptr;
+                if ( bShouldDestroyWindow )
                 {
                     XDestroyWindow( _pDisplay, pData->_windowHandle );
                     XFlush( _pDisplay );
@@ -335,22 +337,25 @@ namespace sw::editor
 
         void showWindow( ImGuiViewport* pViewport )
         {
-            ViewportData* pData = static_cast<ViewportData*>( pViewport->PlatformUserData );
-            if ( pData != nullptr && _pDisplay != nullptr && pData->_windowHandle != 0 )
+            ViewportData* pData            = static_cast<ViewportData*>( pViewport->PlatformUserData );
+            const bool    bWindowAvailable = pData != nullptr && _pDisplay != nullptr && pData->_windowHandle != 0;
+            if ( bWindowAvailable )
                 XMapRaised( _pDisplay, pData->_windowHandle );
         }
 
         void setWindowPos( ImGuiViewport* pViewport, ImVec2 pos )
         {
-            ViewportData* pData = static_cast<ViewportData*>( pViewport->PlatformUserData );
-            if ( pData != nullptr && _pDisplay != nullptr && pData->_windowHandle != 0 )
+            ViewportData* pData            = static_cast<ViewportData*>( pViewport->PlatformUserData );
+            const bool    bWindowAvailable = pData != nullptr && _pDisplay != nullptr && pData->_windowHandle != 0;
+            if ( bWindowAvailable )
                 XMoveWindow( _pDisplay, pData->_windowHandle, static_cast<int32>( pos.x ), static_cast<int32>( pos.y ) );
         }
 
         ImVec2 getWindowPos( ImGuiViewport* pViewport )
         {
-            ViewportData* pData = static_cast<ViewportData*>( pViewport->PlatformUserData );
-            if ( pData == nullptr || _pDisplay == nullptr || pData->_windowHandle == 0 )
+            ViewportData* pData              = static_cast<ViewportData*>( pViewport->PlatformUserData );
+            const bool    bWindowUnavailable = pData == nullptr || _pDisplay == nullptr || pData->_windowHandle == 0;
+            if ( bWindowUnavailable )
                 return ImVec2( 0, 0 );
 
             Window child{ 0 };
@@ -362,8 +367,9 @@ namespace sw::editor
 
         void setWindowSize( ImGuiViewport* pViewport, ImVec2 size )
         {
-            ViewportData* pData = static_cast<ViewportData*>( pViewport->PlatformUserData );
-            if ( pData != nullptr && _pDisplay != nullptr && pData->_windowHandle != 0 )
+            ViewportData* pData            = static_cast<ViewportData*>( pViewport->PlatformUserData );
+            const bool    bWindowAvailable = pData != nullptr && _pDisplay != nullptr && pData->_windowHandle != 0;
+            if ( bWindowAvailable )
             {
                 XResizeWindow( _pDisplay, pData->_windowHandle,
                                static_cast<uint32>( size.x > 1 ? size.x : 1 ),
@@ -373,8 +379,9 @@ namespace sw::editor
 
         ImVec2 getWindowSize( ImGuiViewport* pViewport )
         {
-            ViewportData* pData = static_cast<ViewportData*>( pViewport->PlatformUserData );
-            if ( pData == nullptr || _pDisplay == nullptr || pData->_windowHandle == 0 )
+            ViewportData* pData              = static_cast<ViewportData*>( pViewport->PlatformUserData );
+            const bool    bWindowUnavailable = pData == nullptr || _pDisplay == nullptr || pData->_windowHandle == 0;
+            if ( bWindowUnavailable )
                 return ImVec2( 0, 0 );
 
             XWindowAttributes attrs{};
@@ -384,22 +391,25 @@ namespace sw::editor
 
         void setWindowTitle( ImGuiViewport* pViewport, const utf8* pTitle )
         {
-            ViewportData* pData = static_cast<ViewportData*>( pViewport->PlatformUserData );
-            if ( pData != nullptr && _pDisplay != nullptr && pData->_windowHandle != 0 && pTitle != nullptr )
+            ViewportData* pData        = static_cast<ViewportData*>( pViewport->PlatformUserData );
+            const bool    bCanSetTitle = pData != nullptr && _pDisplay != nullptr && pData->_windowHandle != 0 && pTitle != nullptr;
+            if ( bCanSetTitle )
                 XStoreName( _pDisplay, pData->_windowHandle, pTitle );
         }
 
         void setWindowFocus( ImGuiViewport* pViewport )
         {
-            ViewportData* pData = static_cast<ViewportData*>( pViewport->PlatformUserData );
-            if ( pData != nullptr && _pDisplay != nullptr && pData->_windowHandle != 0 )
+            ViewportData* pData            = static_cast<ViewportData*>( pViewport->PlatformUserData );
+            const bool    bWindowAvailable = pData != nullptr && _pDisplay != nullptr && pData->_windowHandle != 0;
+            if ( bWindowAvailable )
                 XSetInputFocus( _pDisplay, pData->_windowHandle, RevertToParent, CurrentTime );
         }
 
         bool getWindowFocus( ImGuiViewport* pViewport )
         {
-            ViewportData* pData = static_cast<ViewportData*>( pViewport->PlatformUserData );
-            if ( pData == nullptr || _pDisplay == nullptr || pData->_windowHandle == 0 )
+            ViewportData* pData              = static_cast<ViewportData*>( pViewport->PlatformUserData );
+            const bool    bWindowUnavailable = pData == nullptr || _pDisplay == nullptr || pData->_windowHandle == 0;
+            if ( bWindowUnavailable )
                 return false;
 
             Window focused{ 0 };

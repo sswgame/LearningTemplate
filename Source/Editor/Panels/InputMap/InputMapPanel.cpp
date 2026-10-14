@@ -291,13 +291,15 @@ namespace sw::editor
         }
 
         // 입력 녹화는 입력 프레임마다 한 번, 그 프레임에 장치에 적용된 이벤트를 기록한다.
-        if ( _replay.isRecording() && pInput != nullptr && pInput->getBeginFrameCount() != _recordedBeginFrameCount )
+        const bool bNewRecordingFrame = _replay.isRecording() && pInput != nullptr && pInput->getBeginFrameCount() != _recordedBeginFrameCount;
+        if ( bNewRecordingFrame )
         {
             _recordedBeginFrameCount = pInput->getBeginFrameCount();
             _replay.recordFrame( ImGui::GetIO().DeltaTime, pInput->getLastFrameEvents() );
         }
         // 재생(가상 입력으로 붙인 리플레이)이 끝나면 해제한다.
-        if ( pInput != nullptr && pInput->getVirtualInput() == &_replay && _replay.isFinished( pInput->getVirtualFrameIndex() ) )
+        const bool bReplayFinished = pInput != nullptr && pInput->getVirtualInput() == &_replay && _replay.isFinished( pInput->getVirtualFrameIndex() );
+        if ( bReplayFinished )
             pInput->detachVirtualInput();
 
         // 탭은 셋이다. 편집(Mappings), 들여다보기(Debug), 녹화와 주입(Replay & Inject)이다. 언리얼의 Enhanced Input 은 액션, 매핑, 트리거를 한 화면에서 편집한다.

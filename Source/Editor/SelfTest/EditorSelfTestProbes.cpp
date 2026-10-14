@@ -35,10 +35,11 @@ namespace sw::editor
              */
             [[nodiscard]] static bool readSelectedEnumValue( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext  = EditorContext::get();
-                TypeRegistry*  pRegistry = editor::getService<TypeRegistry>();
-                const size_t   dot       = gv_editorProbeProperty.find( '.' );
-                if ( pContext == nullptr || pRegistry == nullptr || dot == string::npos )
+                EditorContext* pContext           = EditorContext::get();
+                TypeRegistry*  pRegistry          = editor::getService<TypeRegistry>();
+                const size_t   dot                = gv_editorProbeProperty.find( '.' );
+                const bool     bInvalidProbeSetup = pContext == nullptr || pRegistry == nullptr || dot == string::npos;
+                if ( bInvalidProbeSetup )
                     return false;
                 GameObject* pObject = pContext->getSubsystem<EditorSelection>().getPrimaryObject();
                 if ( pObject == nullptr )

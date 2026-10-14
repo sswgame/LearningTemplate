@@ -96,17 +96,19 @@ namespace sw::editor
             {
                 _camera.processBookmarkKeys();
 
-                if ( ImGui::IsKeyPressed( ImGuiKey_F, false ) && io.KeyCtrl == false && io.KeyAlt == false )
+                const bool bFrameSelectedPressed = ImGui::IsKeyPressed( ImGuiKey_F, false ) && io.KeyCtrl == false && io.KeyAlt == false;
+                if ( bFrameSelectedPressed )
                     _camera.frameSelected();
                 if ( io.MouseDown[1] == false )
                     processShortcutKeys();
             }
 
+            const bool bOrthographicZoom = _camera.isOrthographicView() && bWindowHovered && MathUtil::abs( io.MouseWheel ) > 0.01f;
             if ( io.KeyAlt )
                 _camera.processOrbitInput();
             else if ( io.MouseDown[1] )
                 _camera.processFlyInput( deltaTime, _toolbarSettings._cameraSpeed );
-            else if ( _camera.isOrthographicView() && bWindowHovered && MathUtil::abs( io.MouseWheel ) > 0.01f )
+            else if ( bOrthographicZoom )
                 _camera.zoomOrthographic( io.MouseWheel );
         }
 

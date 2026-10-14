@@ -94,9 +94,10 @@ namespace sw::editor
 
     void EditorPlayCommands::toggleEject()
     {
-        EditorContext*   pContext = EditorContext::get();
-        PlaySessionData* pData    = EditorPlaySession::findData();
-        if ( pContext == nullptr || pData == nullptr || pData->_state == PlaySessionState::Stopped )
+        EditorContext*   pContext             = EditorContext::get();
+        PlaySessionData* pData                = EditorPlaySession::findData();
+        const bool       bNoActivePlaySession = pContext == nullptr || pData == nullptr || pData->_state == PlaySessionState::Stopped;
+        if ( bNoActivePlaySession )
             return;
         if ( EditorPlaySession::isPlayerActive( *pData ) )
         {
@@ -121,9 +122,10 @@ namespace sw::editor
 
     uint32 EditorPlayCommands::keepSelectedChanges()
     {
-        EditorContext*   pContext = EditorContext::get();
-        PlaySessionData* pData    = EditorPlaySession::findData();
-        if ( pContext == nullptr || pData == nullptr || pData->_state == PlaySessionState::Stopped )
+        EditorContext*   pContext             = EditorContext::get();
+        PlaySessionData* pData                = EditorPlaySession::findData();
+        const bool       bNoActivePlaySession = pContext == nullptr || pData == nullptr || pData->_state == PlaySessionState::Stopped;
+        if ( bNoActivePlaySession )
             return 0;
         vector<GameObject*> listSelected;
         pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSelected );
@@ -137,9 +139,10 @@ namespace sw::editor
 
     bool EditorPlayCommands::launchStandalone()
     {
-        EditorContext* pContext = EditorContext::get();
-        const Scene*   pScene   = editor::getActiveScene();
-        if ( pContext == nullptr || pScene == nullptr || pScene->getSourcePath().empty() )
+        EditorContext* pContext       = EditorContext::get();
+        const Scene*   pScene         = editor::getActiveScene();
+        const bool     bSceneNotSaved = pContext == nullptr || pScene == nullptr || pScene->getSourcePath().empty();
+        if ( bSceneNotSaved )
         {
             if ( pContext != nullptr )
                 pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowTitle" ), SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowSaveFirst" ), NotificationType::Warning );

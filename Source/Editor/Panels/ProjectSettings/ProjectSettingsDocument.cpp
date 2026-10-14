@@ -101,8 +101,9 @@ namespace sw::editor
 
     void* ProjectSettingsDocument::createInstance( const TypeInfo& type )
     {
-        const FunctionInfo* pConstructor = type.findMethod( hashed_string( "$ctor" ) );
-        if ( pConstructor == nullptr || pConstructor->_invoker.isBound() == false || type._destroyInstance == nullptr )
+        const FunctionInfo* pConstructor      = type.findMethod( hashed_string( "$ctor" ) );
+        const bool          bNotConstructible = pConstructor == nullptr || pConstructor->_invoker.isBound() == false || type._destroyInstance == nullptr;
+        if ( bNotConstructible )
             return nullptr;
         void* pInstance = Memory::allocateAligned( type._size, alignof( std::max_align_t ) );
         pConstructor->_invoker( pInstance, TaskArgs{} );

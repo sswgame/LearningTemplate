@@ -102,7 +102,8 @@ namespace sw::editor
 
     float2 UIPreviewLogic::fitImage( const float2& imageSize, const float2& available )
     {
-        if ( imageSize._x <= 0.0f || imageSize._y <= 0.0f || available._x <= 0.0f || available._y <= 0.0f )
+        const bool bEmptyFitInputs = imageSize._x <= 0.0f || imageSize._y <= 0.0f || available._x <= 0.0f || available._y <= 0.0f;
+        if ( bEmptyFitInputs )
             return float2{};
         const float32 scale = MathUtil::min( 1.0f, MathUtil::min( available._x / imageSize._x, available._y / imageSize._y ) );
         return float2{ imageSize._x * scale, imageSize._y * scale };
@@ -159,8 +160,9 @@ namespace sw::editor
             }
             if ( bVisible == false )
                 continue;
-            const UIRect bounds = pWidget->getGeometry().computeScreenBounds();
-            if ( bounds._left <= point._x && point._x < bounds._right && bounds._top <= point._y && point._y < bounds._bottom )
+            const UIRect bounds             = pWidget->getGeometry().computeScreenBounds();
+            const bool   bPointInsideBounds = bounds._left <= point._x && point._x < bounds._right && bounds._top <= point._y && point._y < bounds._bottom;
+            if ( bPointInsideBounds )
                 return pWidget->getID();
         }
         return kInvalidWidgetID;

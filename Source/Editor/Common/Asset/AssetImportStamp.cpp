@@ -153,8 +153,9 @@ namespace sw::editor
                 map<string, StampEntry> mapCurrent;
                 for ( const string& file : listFile )
                 {
-                    const string sourcePath = FileUtil::normalizeSeparators( file );
-                    if ( importer.isSourceFile( sourcePath ) == false || sourcePath.size() <= rawFolder.size() + 1 || sourcePath.size() <= rootDir.size() + 1 )
+                    const string sourcePath      = FileUtil::normalizeSeparators( file );
+                    const bool   bSkipSourceFile = importer.isSourceFile( sourcePath ) == false || sourcePath.size() <= rawFolder.size() + 1 || sourcePath.size() <= rootDir.size() + 1;
+                    if ( bSkipSourceFile )
                         continue;
 
                     const string relativePath = sourcePath.substr( rawFolder.size() + 1 );
@@ -262,7 +263,8 @@ namespace sw::editor
     uint64 AssetImportStampUtil::computeFileHash( string_view path )
     {
         vector<uint8> bytes;
-        if ( FileUtil::exists( path ) == false || FileUtil::readFile( path, bytes ) == false || bytes.empty() )
+        const bool    bUnreadableFile = FileUtil::exists( path ) == false || FileUtil::readFile( path, bytes ) == false || bytes.empty();
+        if ( bUnreadableFile )
             return 0;
         return StringUtil::computeHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
     }

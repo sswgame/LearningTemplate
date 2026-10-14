@@ -226,8 +226,9 @@ namespace sw::editor
             return false;
         _pendingKind = PendingKind::None;
 
-        string groupName;
-        if ( kind == PendingKind::SetCell || kind == PendingKind::UnsetCell || kind == PendingKind::RemoveRow )
+        string     groupName;
+        const bool bRowScopedEdit = kind == PendingKind::SetCell || kind == PendingKind::UnsetCell || kind == PendingKind::RemoveRow;
+        if ( bRowScopedEdit )
         {
             if ( _pendingElement >= 0 && static_cast<size_t>( _pendingElement ) < inoutDocument.getParsed().getElements().size() )
                 groupName = inoutDocument.getParsed().getElement( _pendingElement )._name;

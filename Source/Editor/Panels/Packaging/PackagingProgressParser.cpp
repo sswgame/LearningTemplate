@@ -21,7 +21,7 @@ namespace sw::editor
             {
                 size_t digitCount = 0;
                 outValue          = 0;
-                while ( digitCount < text.size() && '0' <= text[digitCount] && text[digitCount] <= '9' )
+                while ( digitCount < text.size() && StringUtil::isDigitChar( text[digitCount] ) )
                 {
                     outValue = outValue * 10 + static_cast<uint64>( text[digitCount] - '0' );
                     ++digitCount;
@@ -36,9 +36,11 @@ namespace sw::editor
                 uint64      stepIndex = 0;
                 uint64      stepCount = 0;
                 string_view rest;
-                if ( readUnsigned( body, stepIndex, rest ) == false || rest.empty() || rest.front() != '/' )
+                const bool  bMalformedStepIndex = readUnsigned( body, stepIndex, rest ) == false || rest.empty() || rest.front() != '/';
+                if ( bMalformedStepIndex )
                     return false;
-                if ( readUnsigned( rest.substr( 1 ), stepCount, rest ) == false || stepIndex == 0 || stepCount < stepIndex )
+                const bool bMalformedStepCount = readUnsigned( rest.substr( 1 ), stepCount, rest ) == false || stepIndex == 0 || stepCount < stepIndex;
+                if ( bMalformedStepCount )
                     return false;
                 inoutProgress._stepIndex = static_cast<uint32>( stepIndex );
                 inoutProgress._stepCount = static_cast<uint32>( stepCount );

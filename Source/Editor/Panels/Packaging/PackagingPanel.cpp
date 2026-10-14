@@ -118,8 +118,9 @@ namespace sw::editor
         {
             if ( StringUtil::endsWith( filePath, ".json", true ) == false )
                 continue;
-            string text;
-            if ( FileUtil::readTextFile( filePath, text ) && packRoot.empty() == false && StringUtil::contains( text, "\"" + packRoot + "\"", true ) )
+            string     text;
+            const bool bGameUsesPackRoot = FileUtil::readTextFile( filePath, text ) && packRoot.empty() == false && StringUtil::contains( text, "\"" + packRoot + "\"", true );
+            if ( bGameUsesPackRoot )
                 _gameIndex = static_cast<uint32>( _listGame.size() );
             _listGame.push_back( FileUtil::removeExtension( FileUtil::getFileNamePart( filePath ) ) );
         }

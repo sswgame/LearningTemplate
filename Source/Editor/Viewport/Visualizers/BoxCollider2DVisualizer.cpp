@@ -34,8 +34,9 @@ namespace sw::editor
 
                 for ( const BoxCollider2DComponent* pBox : *args._pListCollider )
                 {
-                    const GameObject* pOwner = ( pBox != nullptr ) ? pBox->getOwner() : nullptr;
-                    if ( pOwner == nullptr || pOwner->isActive() == false || pBox->isActive() == false )
+                    const GameObject* pOwner       = ( pBox != nullptr ) ? pBox->getOwner() : nullptr;
+                    const bool        bInactiveBox = pOwner == nullptr || pOwner->isActive() == false || pBox->isActive() == false;
+                    if ( bInactiveBox )
                         continue;
 
                     float3 arrCorner[4];

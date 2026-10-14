@@ -34,9 +34,10 @@ namespace sw::editor
 
             [[nodiscard]] static bool readRaw16( const vector<uint8>& bytes, string_view sourcePath, HeightfieldData& outData )
             {
-                const size_t sampleCount = bytes.size() / 2;
-                const uint32 side        = static_cast<uint32>( MathUtil::round( MathUtil::sqrt( static_cast<float64>( sampleCount ) ) ) );
-                if ( bytes.size() % 2 != 0 || static_cast<size_t>( side ) * side != sampleCount || side < 2 )
+                const size_t sampleCount          = bytes.size() / 2;
+                const uint32 side                 = static_cast<uint32>( MathUtil::round( MathUtil::sqrt( static_cast<float64>( sampleCount ) ) ) );
+                const bool   bInvalidSampleLayout = bytes.size() % 2 != 0 || static_cast<size_t>( side ) * side != sampleCount || side < 2;
+                if ( bInvalidSampleLayout )
                 {
                     SW_LOG_ERROR( "Heightfield '%#' (.r16) is %# bytes - expected a square of 16-bit samples", sourcePath, static_cast<uint64>( bytes.size() ) );
                     return false;

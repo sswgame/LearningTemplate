@@ -30,8 +30,9 @@ namespace sw::editor
                 {
                     for ( uint32 index = 0; index < static_cast<uint32>( outListNode.size() ); ++index )
                     {
-                        const ProfilerCallNode& node = outListNode[index];
-                        if ( node._parent == kNoParent && node._threadIndex == threadIndex && node._slot == event._slot )
+                        const ProfilerCallNode& node              = outListNode[index];
+                        const bool              bMatchingRootNode = node._parent == kNoParent && node._threadIndex == threadIndex && node._slot == event._slot;
+                        if ( bMatchingRootNode )
                             nodeIndex = index;
                     }
                 }

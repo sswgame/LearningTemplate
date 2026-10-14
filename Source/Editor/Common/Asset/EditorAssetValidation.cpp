@@ -120,11 +120,12 @@ namespace sw::editor
 
     bool EditorAssetValidation::parseFindingLine( string_view line, AssetValidationFinding& outFinding )
     {
-        const string_view trimmed = StringUtil::trim( line );
-        const size_t      wordEnd = trimmed.find( ' ' );
-        const size_t      pathEnd = trimmed.find( ": [" );
-        const size_t      ruleEnd = pathEnd == string_view::npos ? string_view::npos : trimmed.find( "] ", pathEnd );
-        if ( wordEnd == string_view::npos || pathEnd == string_view::npos || ruleEnd == string_view::npos || pathEnd < wordEnd )
+        const string_view trimmed               = StringUtil::trim( line );
+        const size_t      wordEnd               = trimmed.find( ' ' );
+        const size_t      pathEnd               = trimmed.find( ": [" );
+        const size_t      ruleEnd               = pathEnd == string_view::npos ? string_view::npos : trimmed.find( "] ", pathEnd );
+        const bool        bMalformedFindingLine = wordEnd == string_view::npos || pathEnd == string_view::npos || ruleEnd == string_view::npos || pathEnd < wordEnd;
+        if ( bMalformedFindingLine )
             return false;
         if ( EditorAssetValidationInternal::parseSeverity( trimmed.substr( 0, wordEnd ), outFinding._severity ) == false )
             return false;

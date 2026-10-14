@@ -111,8 +111,9 @@ namespace sw::editor
             {
                 if ( listArgument.size() < 3 )
                     return false;
-                int32 count{ 0 };
-                if ( StringUtil::parseInt( listArgument[0], count ) == false || count <= 0 || count > 1000 )
+                int32      count{ 0 };
+                const bool bInvalidLogCount = StringUtil::parseInt( listArgument[0], count ) == false || count <= 0 || count > 1000;
+                if ( bInvalidLogCount )
                     return false;
                 const bool bWarning = listArgument[1] == "warning";
                 if ( bWarning == false && listArgument[1] != "info" )
@@ -273,7 +274,8 @@ namespace sw::editor
 
         const bool bFilterChanged = ( filterStr != _cachedFilter ) || _cachedTagRevision != _tagFilter.getRevision();
 
-        if ( bNewLogs || bFilterChanged || bLevelChanged || bCollapseChanged )
+        const bool bRefreshFilteredEntries = bNewLogs || bFilterChanged || bLevelChanged || bCollapseChanged;
+        if ( bRefreshFilteredEntries )
             updateFilteredEntries( filterStr );
 
         drawLogList( bNewLogs );
@@ -535,7 +537,8 @@ namespace sw::editor
             }
         }
 
-        if ( _selection.hasSelection() && ImGui::IsWindowFocused() && ImGui::IsKeyChordPressed( ImGuiMod_Ctrl | ImGuiKey_C ) )
+        const bool bCopyShortcutPressed = _selection.hasSelection() && ImGui::IsWindowFocused() && ImGui::IsKeyChordPressed( ImGuiMod_Ctrl | ImGuiKey_C );
+        if ( bCopyShortcutPressed )
             copySelectedRows();
 
         const bool bScrollRequested = _bScrollToEnd == SW_TRUE;
@@ -642,8 +645,9 @@ namespace sw::editor
 
     void ConsolePanel::updatePlayReactions()
     {
-        const bool bStopped = EditorPlaySession::isStopped();
-        if ( _bClearOnPlay == SW_TRUE && _bWasStopped == SW_TRUE && bStopped == false )
+        const bool bStopped          = EditorPlaySession::isStopped();
+        const bool bClearOnPlayStart = _bClearOnPlay == SW_TRUE && _bWasStopped == SW_TRUE && bStopped == false;
+        if ( bClearOnPlayStart )
             clearEntries();
         _bWasStopped = bStopped ? SW_TRUE : SW_FALSE;
 
@@ -653,7 +657,8 @@ namespace sw::editor
             errorSerial = _errorSerial;
         }
         // 오류는 로그를 쓴 다음 그리기에서 본다 — 그 프레임이 끝나기 전에 멈추는 유니티 Error Pause 보다 한 프레임 늦다.
-        if ( _bErrorPause == SW_TRUE && errorSerial != _seenErrorSerial && EditorPlaySession::isPlaying() && EditorPlaySession::isPaused() == false )
+        const bool bPauseOnNewError = _bErrorPause == SW_TRUE && errorSerial != _seenErrorSerial && EditorPlaySession::isPlaying() && EditorPlaySession::isPaused() == false;
+        if ( bPauseOnNewError )
             EditorPlaySession::pause();
         _seenErrorSerial = errorSerial;
     }

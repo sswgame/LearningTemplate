@@ -97,8 +97,9 @@ namespace sw::editor
         Component*  pComponent = nullptr;
         _hoveredObjectID       = findObjectUnderMouse( canvasPos, canvasSize, pCamera, settings, pObject, pComponent ) ? pObject->getObjectID() : 0;
         // 이미 선택한 오브젝트는 호버로 취급하지 않는다. 선택 상자와 기즈모가 이미 있다. 그 위의 기즈모 핸들과 겹치는 판정도 여기서 없어진다.
-        EditorContext* pContext = EditorContext::get();
-        if ( pObject != nullptr && pContext != nullptr && pContext->getSubsystem<EditorSelection>().hasObject( pObject ) )
+        EditorContext* pContext              = EditorContext::get();
+        const bool     bHoverAlreadySelected = pObject != nullptr && pContext != nullptr && pContext->getSubsystem<EditorSelection>().hasObject( pObject );
+        if ( bHoverAlreadySelected )
             _hoveredObjectID = 0;
         _lastHoverPickSeconds = static_cast<float64>( MonotonicClock::nowNanoseconds() - startNanos ) * 1e-9;
         _lastHoverPickTime    = now;
@@ -107,11 +108,12 @@ namespace sw::editor
     bool EditorViewportPicker::findObjectUnderMouse( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, const ViewportToolbarSettings& settings,
                                                      GameObject*& pOutObject, Component*& pOutComponent ) const
     {
-        pOutObject              = nullptr;
-        pOutComponent           = nullptr;
-        EditorContext* pContext = EditorContext::get();
-        Scene*         pScene   = editor::getActiveScene();
-        if ( pContext == nullptr || pCamera == nullptr || pScene == nullptr || pScene->getObjectManager() == nullptr )
+        pOutObject                         = nullptr;
+        pOutComponent                      = nullptr;
+        EditorContext* pContext            = EditorContext::get();
+        Scene*         pScene              = editor::getActiveScene();
+        const bool     bPickContextMissing = pContext == nullptr || pCamera == nullptr || pScene == nullptr || pScene->getObjectManager() == nullptr;
+        if ( bPickContextMissing )
             return false;
         const float32  aspect      = canvasSize._x / ( canvasSize._y > 0.0f ? canvasSize._y : 1.0f );
         const float4x4 viewProj    = pCamera->getViewProjectionMatrix( aspect );
@@ -143,8 +145,9 @@ namespace sw::editor
 
         // 어떤 컴포넌트 종류를 집을 수 있는지는 EditorViewportRayPick 의 테이블이 정한다. ImGui 없이 테스트한다.
         EditorPickResult pickResult{};
-        if ( EditorViewportRayPick::pick( pManager, pickRay, settings._bIs2DMode, pickResult ) == false || pickResult._pObject == nullptr ||
-             pContext->getSubsystem<EditorWorkspace>().isObjectLocked( pickResult._pObject->getObjectID() ) || pickResult._pObject->isHiddenInEditor() )
+        const bool       bNothingPicked = EditorViewportRayPick::pick( pManager, pickRay, settings._bIs2DMode, pickResult ) == false || pickResult._pObject == nullptr ||
+                                    pContext->getSubsystem<EditorWorkspace>().isObjectLocked( pickResult._pObject->getObjectID() ) || pickResult._pObject->isHiddenInEditor();
+        if ( bNothingPicked )
             return false;
         pOutObject    = pickResult._pObject;
         pOutComponent = pickResult._pComponent;

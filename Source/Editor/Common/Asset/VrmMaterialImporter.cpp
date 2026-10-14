@@ -158,8 +158,9 @@ namespace sw::editor
             /** @brief 색(원소 3개 또는 4개)을 읽습니다. 3개이면 알파는 1 입니다. */
             [[nodiscard]] static bool readColor( const JSONValue& value, float4& outColor )
             {
-                float32 arrValue[4]{ 0.0f, 0.0f, 0.0f, 1.0f };
-                if ( value.isArray() == false || ( value.size() != 3 && value.size() != 4 ) || readNumbers( value, arrValue, static_cast<uint32>( value.size() ) ) == false )
+                float32    arrValue[4]{ 0.0f, 0.0f, 0.0f, 1.0f };
+                const bool bInvalidColorArray = value.isArray() == false || ( value.size() != 3 && value.size() != 4 ) || readNumbers( value, arrValue, static_cast<uint32>( value.size() ) ) == false;
+                if ( bInvalidColorArray )
                     return false;
                 outColor = float4{ arrValue[0], arrValue[1], arrValue[2], arrValue[3] };
                 return true;
@@ -540,10 +541,11 @@ namespace sw::editor
             outColor = fallback;
             return mtoon.has( key, false ) == false || Internal::readColor( mtoon.get( key, false ), outColor );
         };
-        if ( readFactor( "shadeColorFactor", float4{ 0.0f, 0.0f, 0.0f, 1.0f }, outDesc._shadeColor ) == false ||
-             readFactor( "matcapFactor", float4{ 1.0f, 1.0f, 1.0f, 1.0f }, outDesc._matcapColor ) == false ||
-             readFactor( "parametricRimColorFactor", float4{ 0.0f, 0.0f, 0.0f, 1.0f }, outDesc._rimColor ) == false ||
-             readFactor( "outlineColorFactor", float4{ 0.0f, 0.0f, 0.0f, 1.0f }, outDesc._outlineColor ) == false )
+        const bool bInvalidColorFactor = readFactor( "shadeColorFactor", float4{ 0.0f, 0.0f, 0.0f, 1.0f }, outDesc._shadeColor ) == false ||
+                                         readFactor( "matcapFactor", float4{ 1.0f, 1.0f, 1.0f, 1.0f }, outDesc._matcapColor ) == false ||
+                                         readFactor( "parametricRimColorFactor", float4{ 0.0f, 0.0f, 0.0f, 1.0f }, outDesc._rimColor ) == false ||
+                                         readFactor( "outlineColorFactor", float4{ 0.0f, 0.0f, 0.0f, 1.0f }, outDesc._outlineColor ) == false;
+        if ( bInvalidColorFactor )
         {
             outError = context + ": a color factor is not three or four numbers";
             return false;
@@ -598,9 +600,10 @@ namespace sw::editor
         };
         auto setTexture = [&]( string_view name, int32 textureIndex )
         {
-            const XMLNode item     = Internal::findProperty( properties, name );
-            const bool    bInRange = 0 <= textureIndex && static_cast<size_t>( textureIndex ) < listTexturePath.size();
-            if ( item.isValid() && bInRange && listTexturePath[static_cast<size_t>( textureIndex )].empty() == false )
+            const XMLNode item              = Internal::findProperty( properties, name );
+            const bool    bInRange          = 0 <= textureIndex && static_cast<size_t>( textureIndex ) < listTexturePath.size();
+            const bool    bCanAssignTexture = item.isValid() && bInRange && listTexturePath[static_cast<size_t>( textureIndex )].empty() == false;
+            if ( bCanAssignTexture )
                 item.setAttribute( "assetPath", string_view( listTexturePath[static_cast<size_t>( textureIndex )] ) );
         };
         setValue( "baseColor", Internal::formatColor( desc._baseColor ) );

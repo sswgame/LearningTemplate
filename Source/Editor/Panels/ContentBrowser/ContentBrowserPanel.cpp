@@ -642,8 +642,9 @@ namespace sw::editor
     void ContentBrowserPanel::handleAssetShortcuts()
     {
         // 다른 패널과 같은 규칙이다. 이 창에 포커스가 있고 텍스트를 입력 중이 아닐 때만 처리한다. Hierarchy 의 F2, Ctrl+D, Delete 와 같다.
-        const bool bFocused = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
-        if ( bFocused == false || ImGui::GetIO().WantTextInput || _fileActions.getRenamingPath().empty() == false || _selectedAssetAbs.empty() )
+        const bool bFocused          = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
+        const bool bShortcutsBlocked = bFocused == false || ImGui::GetIO().WantTextInput || _fileActions.getRenamingPath().empty() == false || _selectedAssetAbs.empty();
+        if ( bShortcutsBlocked )
             return;
         if ( FileUtil::isDirectory( _selectedAssetAbs ) )
             return;

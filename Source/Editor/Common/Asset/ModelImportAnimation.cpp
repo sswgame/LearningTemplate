@@ -247,9 +247,10 @@ namespace sw::editor
         float32 duration = 0.0f;
         for ( cgltf_size channelIndex = 0; channelIndex < animation.channels_count; ++channelIndex )
         {
-            const cgltf_animation_channel& channel = animation.channels[channelIndex];
-            if ( channel.target_path != cgltf_animation_path_type_weights || channel.sampler == nullptr || channel.target_node == nullptr ||
-                 channel.target_node->mesh == nullptr || channel.sampler->input == nullptr || channel.sampler->output == nullptr )
+            const cgltf_animation_channel& channel                = animation.channels[channelIndex];
+            const bool                     bNotMorphWeightChannel = channel.target_path != cgltf_animation_path_type_weights || channel.sampler == nullptr || channel.target_node == nullptr ||
+                                                channel.target_node->mesh == nullptr || channel.sampler->input == nullptr || channel.sampler->output == nullptr;
+            if ( bNotMorphWeightChannel )
                 continue;
             const cgltf_mesh& mesh        = *channel.target_node->mesh;
             const cgltf_size  targetCount = mesh.primitives_count > 0 ? mesh.primitives[0].targets_count : 0;
@@ -329,9 +330,10 @@ namespace sw::editor
             const JSONValue notifies = clipValue.get( "notifies" );
             for ( size_t notifyIndex = 0; notifies.isArray() && notifyIndex < notifies.size(); ++notifyIndex )
             {
-                const JSONValue notify = notifies.at( notifyIndex );
-                if ( AnimationJSONUtil::hasOnlyKnownKeys( notify, { "name", "time", "duration" }, clipDataPath ) == false || notify.get( "name" ).isString() == false ||
-                     notify.get( "time" ).isNumber() == false )
+                const JSONValue notify         = notifies.at( notifyIndex );
+                const bool      bInvalidNotify = AnimationJSONUtil::hasOnlyKnownKeys( notify, { "name", "time", "duration" }, clipDataPath ) == false || notify.get( "name" ).isString() == false ||
+                                            notify.get( "time" ).isNumber() == false;
+                if ( bInvalidNotify )
                 {
                     SW_LOG_ERROR( "Clip data '%#': notify %# of '%#' needs a name and a time", clipDataPath.c_str(), notifyIndex, clipName.c_str() );
                     return false;

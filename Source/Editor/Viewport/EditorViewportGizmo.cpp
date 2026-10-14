@@ -104,7 +104,8 @@ namespace sw::editor
         float32 arrMatrix[16];
         EditorViewportProjectionUtil::storeGizmoMatrix( arrMatrix, pSceneComp->getWorldMatrix() );
 
-        if ( _bTracking == SW_FALSE && ImGuizmo::IsOver() && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
+        const bool bGizmoDragStarted = _bTracking == SW_FALSE && ImGuizmo::IsOver() && ImGui::IsMouseClicked( ImGuiMouseButton_Left );
+        if ( bGizmoDragStarted )
         {
             _undoBefore = EditorTransaction::captureSnapshot( pRaw );
             _object     = pRaw->getHandle();

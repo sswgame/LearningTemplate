@@ -226,8 +226,9 @@ namespace sw::editor
                 const size_t comma = pAnchor->find( ',' );
                 float64      x{ 0.0 };
                 float64      y{ 0.0 };
-                if ( comma == string::npos || StringUtil::parseDouble( string_view{ *pAnchor }.substr( 0, comma ), x ) == false ||
-                     StringUtil::parseDouble( string_view{ *pAnchor }.substr( comma + 1 ), y ) == false || x < 0.0 || x > 1.0 || y < 0.0 || y > 1.0 )
+                const bool   bInvalidAnchor = comma == string::npos || StringUtil::parseDouble( string_view{ *pAnchor }.substr( 0, comma ), x ) == false ||
+                                            StringUtil::parseDouble( string_view{ *pAnchor }.substr( comma + 1 ), y ) == false || x < 0.0 || x > 1.0 || y < 0.0 || y > 1.0;
+                if ( bInvalidAnchor )
                     return false;
                 outAnchor = float2{ static_cast<float32>( x ), static_cast<float32>( y ) };
                 return true;
@@ -488,8 +489,9 @@ namespace sw::editor
             {
                 if ( validate( step, { "name", "count", "component", "selected" }, "name", outError ) == false )
                     return false;
-                uint32 value = 0;
-                if ( readCount( step, "count", 1, value ) == false || readCount( step, "selected", 0, value ) == false || value > 1 )
+                uint32     value                  = 0;
+                const bool bInvalidCountArguments = readCount( step, "count", 1, value ) == false || readCount( step, "selected", 0, value ) == false || value > 1;
+                if ( bInvalidCountArguments )
                 {
                     outError = step.describe() + ": count must be a whole number and selected 0 or 1";
                     return false;
@@ -531,7 +533,8 @@ namespace sw::editor
                 uint32         pickCount  = 0;
                 for ( const GameObject* pObj : listObject )
                 {
-                    if ( pObj == nullptr || pObj->isPendingDestroy() || pObj->getName().isEqual( name, NameCase::CaseSensitive ) == false )
+                    const bool bNameMismatch = pObj == nullptr || pObj->isPendingDestroy() || pObj->getName().isEqual( name, NameCase::CaseSensitive ) == false;
+                    if ( bNameMismatch )
                         continue;
                     ++foundCount;
                     if ( pContext != nullptr && pContext->getSubsystem<EditorSelection>().hasObject( pObj ) )
@@ -616,8 +619,9 @@ namespace sw::editor
                 if ( bSameAsWindow == false )
                     runner.recordFailure( step, "the main viewport does not match the window client size" );
 
-                const ImGuiDockNode* pRoot = findMainDockspace();
-                if ( pRoot == nullptr || pRoot->Size.x <= 0.0f || pRoot->Size.y <= 0.0f )
+                const ImGuiDockNode* pRoot            = findMainDockspace();
+                const bool           bNoDockspaceArea = pRoot == nullptr || pRoot->Size.x <= 0.0f || pRoot->Size.y <= 0.0f;
+                if ( bNoDockspaceArea )
                 {
                     runner.recordFailure( step, "no main dockspace" );
                     return true;
@@ -1482,7 +1486,8 @@ namespace sw::editor
                     return false;
                 const SequencerPanel* pPanel = static_cast<const SequencerPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "sequencer" ) );
                 uint32                count{ 0 };
-                if ( pPanel == nullptr || pPanel->isOpen() == false || pPanel->findSelectedTrackKeyFrameCount( count ) == false )
+                const bool            bKeyFrameCountUnavailable = pPanel == nullptr || pPanel->isOpen() == false || pPanel->findSelectedTrackKeyFrameCount( count ) == false;
+                if ( bKeyFrameCountUnavailable )
                     return false;
                 outValue = static_cast<float64>( count );
                 return true;

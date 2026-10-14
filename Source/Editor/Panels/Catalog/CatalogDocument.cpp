@@ -55,7 +55,8 @@ namespace sw::editor
 
     const string* CatalogDocument::findCellValue( int32 elementIndex, string_view column ) const
     {
-        if ( _parsed.isParsed() == false || elementIndex < 0 || static_cast<size_t>( elementIndex ) >= _parsed.getElements().size() )
+        const bool bInvalidElementIndex = _parsed.isParsed() == false || elementIndex < 0 || static_cast<size_t>( elementIndex ) >= _parsed.getElements().size();
+        if ( bInvalidElementIndex )
             return nullptr;
         const CatalogXMLElement& element        = _parsed.getElement( elementIndex );
         const int32              attributeIndex = element.findAttribute( column );
@@ -125,7 +126,8 @@ namespace sw::editor
 
     bool CatalogDocument::setCell( int32 elementIndex, string_view column, string_view value )
     {
-        if ( _parsed.isParsed() == false || elementIndex < 0 || static_cast<size_t>( elementIndex ) >= _parsed.getElements().size() )
+        const bool bInvalidElementIndex = _parsed.isParsed() == false || elementIndex < 0 || static_cast<size_t>( elementIndex ) >= _parsed.getElements().size();
+        if ( bInvalidElementIndex )
         {
             _error = "the document is not parsed";
             return false;
@@ -142,7 +144,8 @@ namespace sw::editor
 
     bool CatalogDocument::unsetCell( int32 elementIndex, string_view column )
     {
-        if ( _parsed.isParsed() == false || elementIndex < 0 || static_cast<size_t>( elementIndex ) >= _parsed.getElements().size() )
+        const bool bInvalidElementIndex = _parsed.isParsed() == false || elementIndex < 0 || static_cast<size_t>( elementIndex ) >= _parsed.getElements().size();
+        if ( bInvalidElementIndex )
         {
             _error = "the document is not parsed";
             return false;
@@ -197,7 +200,8 @@ namespace sw::editor
 
     bool CatalogDocument::removeRow( int32 elementIndex )
     {
-        if ( _parsed.isParsed() == false || elementIndex < 0 || static_cast<size_t>( elementIndex ) >= _parsed.getElements().size() )
+        const bool bInvalidElementIndex = _parsed.isParsed() == false || elementIndex < 0 || static_cast<size_t>( elementIndex ) >= _parsed.getElements().size();
+        if ( bInvalidElementIndex )
         {
             _error = "the document is not parsed";
             return false;

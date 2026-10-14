@@ -173,7 +173,8 @@ namespace sw::editor
     {
         if ( EditorSceneCommandsInternal::canMutateScene() == false )
             return false;
-        if ( pChild == nullptr || pNewParent == nullptr || pChild == pNewParent )
+        const bool bInvalidReparentTarget = pChild == nullptr || pNewParent == nullptr || pChild == pNewParent;
+        if ( bInvalidReparentTarget )
             return false;
         if ( wouldCreateParentCycle( pChild, pNewParent ) )
             return false;
@@ -244,7 +245,8 @@ namespace sw::editor
         outListRoot.clear();
         manager.forEachGameObject( [&outListRoot]( GameObject* pObj )
         {
-            if ( pObj != nullptr && pObj->getParent() == nullptr && pObj->isPendingDestroy() == false )
+            const bool bRootObject = pObj != nullptr && pObj->getParent() == nullptr && pObj->isPendingDestroy() == false;
+            if ( bRootObject )
                 outListRoot.push_back( pObj );
         } );
         EditorSiblingOrder::sortSiblings( outListRoot );
@@ -253,7 +255,8 @@ namespace sw::editor
     void EditorSceneCommands::duplicateObjects( GameObjectManager* pManager, const vector<GameObject*>& listObject, vector<GameObject*>& outListCreated )
     {
         outListCreated.clear();
-        if ( EditorSceneCommandsInternal::canMutateScene() == false || pManager == nullptr || listObject.empty() )
+        const bool bNothingToDuplicate = EditorSceneCommandsInternal::canMutateScene() == false || pManager == nullptr || listObject.empty();
+        if ( bNothingToDuplicate )
             return;
         EditorTransaction::beginTransaction( listObject.size() == 1 ? string( "Duplicate GameObject" ) : "Duplicate " + to_string( listObject.size() ) + " GameObjects" );
         for ( GameObject* pSource : listObject )
@@ -331,7 +334,8 @@ namespace sw::editor
     {
         if ( EditorSceneCommandsInternal::canMutateScene() == false )
             return nullptr;
-        if ( pObj == nullptr || pObj->getManager() == nullptr || typeName.empty() )
+        const bool bInvalidComponentTarget = pObj == nullptr || pObj->getManager() == nullptr || typeName.empty();
+        if ( bInvalidComponentTarget )
             return nullptr;
 
         const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
@@ -347,7 +351,8 @@ namespace sw::editor
     {
         if ( EditorSceneCommandsInternal::canMutateScene() == false )
             return false;
-        if ( pManager == nullptr || pObj == nullptr || pComp == nullptr )
+        const bool bInvalidRemoveArguments = pManager == nullptr || pObj == nullptr || pComp == nullptr;
+        if ( bInvalidRemoveArguments )
             return false;
 
         EditorContext* pContext = EditorContext::get();
@@ -410,7 +415,8 @@ namespace sw::editor
             return;
         manager.forEachGameObject( [tag, &outListObject]( GameObject* pObj )
         {
-            if ( pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( tag ) )
+            const bool bMatchingLiveObject = pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( tag );
+            if ( bMatchingLiveObject )
                 outListObject.push_back( pObj );
         } );
     }
@@ -525,9 +531,10 @@ namespace sw::editor
             AABB otherBox{};
             if ( pOther->isActiveInHierarchy() && pOther->getWorldBox( otherBox ) )
             {
-                const float32 topY = otherBox._max._y;
-                if ( topY <= translation._y + 10.0f && ( topY > hitY || bHit == false ) && otherBox._min._x <= translation._x &&
-                     translation._x <= otherBox._max._x && otherBox._min._z <= translation._z && translation._z <= otherBox._max._z )
+                const float32 topY                    = otherBox._max._y;
+                const bool    bSupportsPlacementOnTop = topY <= translation._y + 10.0f && ( topY > hitY || bHit == false ) && otherBox._min._x <= translation._x &&
+                                                     translation._x <= otherBox._max._x && otherBox._min._z <= translation._z && translation._z <= otherBox._max._z;
+                if ( bSupportsPlacementOnTop )
                 {
                     hitY = topY;
                     bHit = true;
@@ -658,8 +665,9 @@ namespace sw::editor
     void EditorSceneCommands::pasteObjects( GameObjectManager* pManager, vector<GameObject*>& outListCreated )
     {
         outListCreated.clear();
-        const vector<ObjectCopyEntry>& listCopied = ObjectCopyBuffer::getEntries();
-        if ( EditorSceneCommandsInternal::canMutateScene() == false || pManager == nullptr || listCopied.empty() )
+        const vector<ObjectCopyEntry>& listCopied      = ObjectCopyBuffer::getEntries();
+        const bool                     bNothingToPaste = EditorSceneCommandsInternal::canMutateScene() == false || pManager == nullptr || listCopied.empty();
+        if ( bNothingToPaste )
             return;
         // 복제와 같은 길이다 — 묶음이 **복사한 때의 id** 로 사본끼리 잇는다. 루트는 씬의 루트로 둔다(다른 씬이면 원래 부모가 없다).
         ObjectStateBatch    batch( ObjectIDSpace::Live );

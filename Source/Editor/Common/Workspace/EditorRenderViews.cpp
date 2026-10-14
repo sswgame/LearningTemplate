@@ -169,7 +169,8 @@ namespace sw::editor
             view._pTextureID = nullptr;
         }
 
-        if ( view._renderTarget != 0 && _pRHIDevice != nullptr && _pRHIDevice->getResourceFactory() != nullptr )
+        const bool bCanReleaseRenderTarget = view._renderTarget != 0 && _pRHIDevice != nullptr && _pRHIDevice->getResourceFactory() != nullptr;
+        if ( bCanReleaseRenderTarget )
         {
             // 줄 서 있는 패킷이 이 렌더 타깃에 그리고, 이미 낸 draw 스냅샷이 그것을 샘플링한다. ImGui 텍스처와 같은 큐에 맡겨 그 프레임들의
             // GPU 완료 뒤에 부순다. 렌더러 백엔드가 없으면(그릴 쪽이 없다) 곧바로 부순다.
@@ -195,7 +196,8 @@ namespace sw::editor
     {
         if ( width == 0 || height == 0 )
             return;
-        if ( width == view._width && height == view._height && view._renderTarget != 0 )
+        const bool bRenderTargetUpToDate = width == view._width && height == view._height && view._renderTarget != 0;
+        if ( bRenderTargetUpToDate )
             return;
         if ( _pRHIDevice == nullptr || _pRHIDevice->getResourceFactory() == nullptr )
             return;

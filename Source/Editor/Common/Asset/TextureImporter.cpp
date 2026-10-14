@@ -121,8 +121,9 @@ namespace sw::editor
             /** @brief @p mipChain(2D 한 장의 밉들)을 @p format 으로 압축해 @p outImage 에 담습니다. 결과는 `DirectX::Compress` 를 통째로 호출한 것과 같은 바이트입니다. */
             [[nodiscard]] static HRESULT compress( const DirectX::ScratchImage& mipChain, DXGI_FORMAT format, DirectX::ScratchImage& outImage )
             {
-                const DirectX::TexMetadata& metadata = mipChain.GetMetadata();
-                if ( metadata.dimension != DirectX::TEX_DIMENSION_TEXTURE2D || metadata.arraySize != 1 || metadata.depth != 1 )
+                const DirectX::TexMetadata& metadata           = mipChain.GetMetadata();
+                const bool                  bNotPlainTexture2D = metadata.dimension != DirectX::TEX_DIMENSION_TEXTURE2D || metadata.arraySize != 1 || metadata.depth != 1;
+                if ( bNotPlainTexture2D )
                 {
                     return DirectX::Compress( mipChain.GetImages(), mipChain.GetImageCount(), metadata, format, DirectX::TEX_COMPRESS_DEFAULT,
                                               DirectX::TEX_THRESHOLD_DEFAULT, outImage );

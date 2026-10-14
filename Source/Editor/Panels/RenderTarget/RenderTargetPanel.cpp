@@ -97,7 +97,8 @@ namespace sw::editor
             pBackend->unregisterTexture( _pSnapshotTextureID );
         _pSnapshotTextureID = nullptr;
 
-        if ( _snapshotTexture != 0 && pDevice != nullptr && pDevice->getResourceFactory() != nullptr )
+        const bool bCanReleaseSnapshot = _snapshotTexture != 0 && pDevice != nullptr && pDevice->getResourceFactory() != nullptr;
+        if ( bCanReleaseSnapshot )
         {
             // 이미 낸 draw 스냅샷이 이 텍스처를 그릴 수 있다. ImGui 텍스처와 같은 큐에 맡겨 그 프레임들의 GPU 완료 뒤에 부순다.
             IRHIResourceFactory*   pResource = pDevice->getResourceFactory();
@@ -172,9 +173,10 @@ namespace sw::editor
 
     void RenderTargetPanel::syncSnapshot()
     {
-        RenderTargetRegistry*   pRegistry = editor::getService<RenderTargetRegistry>();
-        const RenderTargetInfo* pSelected = findByName( _listTarget, _selectedName );
-        if ( pRegistry == nullptr || pSelected == nullptr || RenderTargetViewUtil::isDecodableFormat( pSelected->_format, pSelected->_bDepth != SW_FALSE ) == false )
+        RenderTargetRegistry*   pRegistry          = editor::getService<RenderTargetRegistry>();
+        const RenderTargetInfo* pSelected          = findByName( _listTarget, _selectedName );
+        const bool              bTargetNotReadable = pRegistry == nullptr || pSelected == nullptr || RenderTargetViewUtil::isDecodableFormat( pSelected->_format, pSelected->_bDepth != SW_FALSE ) == false;
+        if ( bTargetNotReadable )
             return;
 
         // 도착한 결과를 받는다. 다른 타깃의 결과(고르기를 바꾼 사이 도착)는 버리고 다시 읽는다.
@@ -225,9 +227,10 @@ namespace sw::editor
             return;
         _snapshotDepthRange = float2{ image._depthLow, image._depthHigh };
 
-        EditorContext* pContext = EditorContext::get();
-        IRHIDevice*    pDevice  = pContext != nullptr ? pContext->getSubsystem<EditorRenderViews>().getRHIDevice() : nullptr;
-        if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr || pContext->getSubsystem<EditorRenderViews>().getRendererBackend() == nullptr )
+        EditorContext* pContext              = EditorContext::get();
+        IRHIDevice*    pDevice               = pContext != nullptr ? pContext->getSubsystem<EditorRenderViews>().getRHIDevice() : nullptr;
+        const bool     bCannotUploadSnapshot = pDevice == nullptr || pDevice->getResourceFactory() == nullptr || pContext->getSubsystem<EditorRenderViews>().getRendererBackend() == nullptr;
+        if ( bCannotUploadSnapshot )
             return;
 
         // 스냅샷마다 새 텍스처를 만든다. 쓰던 것에 다시 올리면 아직 그것을 그리는 프레임과 겹친다(옛 것은 해제 큐가 그 뒤에 부순다).

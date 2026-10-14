@@ -67,8 +67,9 @@ namespace sw::editor
                     {
                         const ActionBinding* pBindingB = inputMap.getBinding( actionB, bindB );
                         InputSlot            slot{};
-                        if ( pBindingB == nullptr || inputMap.findBindingLayer( actionB, bindB ) != layerA ||
-                             InputMapConflictsInternal::overlaps( *pBindingA, *pBindingB, &slot ) == false )
+                        const bool           bNoBindingOverlap = pBindingB == nullptr || inputMap.findBindingLayer( actionB, bindB ) != layerA ||
+                                                       InputMapConflictsInternal::overlaps( *pBindingA, *pBindingB, &slot ) == false;
+                        if ( bNoBindingOverlap )
                             continue;
                         InputMapConflict conflict;
                         conflict._actionA    = actionA;

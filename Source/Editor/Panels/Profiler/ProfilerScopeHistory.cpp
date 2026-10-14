@@ -131,7 +131,8 @@ namespace sw::editor
         const EditorListFilter filter{ string_view( query._filterText ) };
         for ( const ScopeTrack& track : _listTrack )
         {
-            if ( track._listValue.empty() || track._kind != query._kind || filter.matches( track._name ) == false )
+            const bool bSkipTrack = track._listValue.empty() || track._kind != query._kind || filter.matches( track._name ) == false;
+            if ( bSkipTrack )
                 continue;
             ProfilerScopeRow row{};
             fillRow( track, query._frameOffset, row );
@@ -228,10 +229,11 @@ namespace sw::editor
             return false;
         uint64            windowFrame{ 0 };
         uint64            capturedFrame{ 0 };
-        const string_view windowLine   = StringUtil::trim( listLine[1] );
-        const string_view capturedLine = StringUtil::trim( listLine[2] );
-        if ( windowLine.substr( 0, 7 ) != "window " || capturedLine.substr( 0, 9 ) != "captured " || StringUtil::parseUint64( windowLine.substr( 7 ), windowFrame ) == false ||
-             StringUtil::parseUint64( capturedLine.substr( 9 ), capturedFrame ) == false || windowFrame == 0 || windowFrame > ProfilerScopeHistoryInternal::kMaxLoadedWindow )
+        const string_view windowLine       = StringUtil::trim( listLine[1] );
+        const string_view capturedLine     = StringUtil::trim( listLine[2] );
+        const bool        bMalformedHeader = windowLine.substr( 0, 7 ) != "window " || capturedLine.substr( 0, 9 ) != "captured " || StringUtil::parseUint64( windowLine.substr( 7 ), windowFrame ) == false ||
+                                      StringUtil::parseUint64( capturedLine.substr( 9 ), capturedFrame ) == false || windowFrame == 0 || windowFrame > ProfilerScopeHistoryInternal::kMaxLoadedWindow;
+        if ( bMalformedHeader )
             return false;
 
         vector<ScopeTrack> listTrack;
@@ -242,7 +244,8 @@ namespace sw::editor
                 continue;
             const string_splitter listColumn( line, '\t' );
             uint64                kind{ 0 };
-            if ( listColumn.getCount() != 3 || StringUtil::parseUint64( listColumn[0], kind ) == false || kind > static_cast<uint64>( ProfilerScopeKind::Counter ) )
+            const bool            bMalformedTrackLine = listColumn.getCount() != 3 || StringUtil::parseUint64( listColumn[0], kind ) == false || kind > static_cast<uint64>( ProfilerScopeKind::Counter );
+            if ( bMalformedTrackLine )
                 return false;
             ScopeTrack track;
             track._name = string{ listColumn[1] };

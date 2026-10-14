@@ -191,10 +191,11 @@ namespace sw::editor
     {
         if ( pComp == nullptr )
             return {};
-        const string fileName = FileUtil::getFileNamePart( presetFilePath );
-        const string prefix   = string( pComp->getTypeName().c_str() ) + "_";
-        if ( StringUtil::startsWith( fileName, prefix ) == false || StringUtil::endsWith( fileName, EditorTransformCommandsInternal::kPresetSuffix, true ) == false ||
-             fileName.size() <= prefix.size() + EditorTransformCommandsInternal::kPresetSuffix.size() )
+        const string fileName           = FileUtil::getFileNamePart( presetFilePath );
+        const string prefix             = string( pComp->getTypeName().c_str() ) + "_";
+        const bool   bNotPresetFileName = StringUtil::startsWith( fileName, prefix ) == false || StringUtil::endsWith( fileName, EditorTransformCommandsInternal::kPresetSuffix, true ) == false ||
+                                        fileName.size() <= prefix.size() + EditorTransformCommandsInternal::kPresetSuffix.size();
+        if ( bNotPresetFileName )
             return {};
         return fileName.substr( prefix.size(), fileName.size() - prefix.size() - EditorTransformCommandsInternal::kPresetSuffix.size() );
     }
@@ -213,7 +214,8 @@ namespace sw::editor
 
     bool EditorTransformCommands::saveComponentPresetTo( const Component* pComp, string_view filePath )
     {
-        if ( pComp == nullptr || pComp->getTypeInfo() == nullptr || filePath.empty() )
+        const bool bInvalidPresetSaveArguments = pComp == nullptr || pComp->getTypeInfo() == nullptr || filePath.empty();
+        if ( bInvalidPresetSaveArguments )
             return false;
 
         string fullPath( filePath );
@@ -227,7 +229,8 @@ namespace sw::editor
 
     bool EditorTransformCommands::loadComponentPreset( Component* pComp, string_view presetFilePath )
     {
-        if ( pComp == nullptr || pComp->getTypeInfo() == nullptr || presetFilePath.empty() )
+        const bool bInvalidPresetLoadArguments = pComp == nullptr || pComp->getTypeInfo() == nullptr || presetFilePath.empty();
+        if ( bInvalidPresetLoadArguments )
             return false;
 
         string xmlData;

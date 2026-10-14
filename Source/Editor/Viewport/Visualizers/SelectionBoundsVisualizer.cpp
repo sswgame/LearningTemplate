@@ -87,7 +87,8 @@ namespace sw::editor
                 {
                     const SceneComponent* pScene = pComponent != nullptr && isA<SceneComponent>( pComponent ) ? static_cast<const SceneComponent*>( pComponent ) : nullptr;
                     AABB                  box{};
-                    if ( pScene == nullptr || pScene->getWorldBox( box ) == false || box.isValid() == false )
+                    const bool            bNoWorldBox = pScene == nullptr || pScene->getWorldBox( box ) == false || box.isValid() == false;
+                    if ( bNoWorldBox )
                         continue;
                     if ( bAny == false )
                     {
@@ -114,8 +115,9 @@ namespace sw::editor
                 const ImU32 color = EditorColorUtil::toImU32( style::kSelectionOutline );
                 for ( const GameObject* pObject : listSelected )
                 {
-                    AABB box{};
-                    if ( pObject == nullptr || pObject->isHiddenInEditor() || computeObjectBox( *pObject, box ) == false )
+                    AABB       box{};
+                    const bool bNoObjectBox = pObject == nullptr || pObject->isHiddenInEditor() || computeObjectBox( *pObject, box ) == false;
+                    if ( bNoObjectBox )
                         continue;
                     drawBox( args, box, color, 2.0f );
                     ++drawnCount;

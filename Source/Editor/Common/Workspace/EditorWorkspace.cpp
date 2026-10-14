@@ -106,7 +106,8 @@ namespace sw::editor
             _selectedComponentID = 0;
 
         // 씬 파일의 부착 대상과 같은 키(`ComponentStableKey`)다. 소유자가 다른 컴포넌트는 되찾을 수 없으니 비운다.
-        if ( pObj != nullptr && pComp != nullptr && pComp->getOwner() == pObj )
+        const bool bComponentBelongsToObject = pObj != nullptr && pComp != nullptr && pComp->getOwner() == pObj;
+        if ( bComponentBelongsToObject )
             _selectedComponentKey = ComponentStableKey::makeKey( pComp );
         else
             _selectedComponentKey.clear();

@@ -144,7 +144,8 @@ namespace sw::editor
 
     float32 EditorCurveView::computeGridStep( float32 span, float32 pixels, float32 minPixels )
     {
-        if ( span <= 0.0f || pixels <= 0.0f || minPixels <= 0.0f )
+        const bool bInvalidGridInputs = span <= 0.0f || pixels <= 0.0f || minPixels <= 0.0f;
+        if ( bInvalidGridInputs )
             return 1.0f;
         const float32 rawStep = span * minPixels / pixels;
         const float32 power   = std::pow( 10.0f, std::floor( std::log10( rawStep ) ) );

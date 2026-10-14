@@ -107,7 +107,8 @@ namespace
 {
     void Hook_Renderer_CreateWindow_GLX( ImGuiViewport* pViewport )
     {
-        if ( s_MainDisplay == nullptr || s_MainContext == nullptr || pViewport == nullptr )
+        const bool bCannotCreateViewportWindow = s_MainDisplay == nullptr || s_MainContext == nullptr || pViewport == nullptr;
+        if ( bCannotCreateViewportWindow )
             return;
         GLX_WindowData* pData = sw_new GLX_WindowData();
         pData->_pDisplay      = s_MainDisplay;
@@ -115,7 +116,8 @@ namespace
 
         XWindowAttributes attrs{};
         XVisualInfo*      pVi{ nullptr };
-        if ( pData->_win != 0 && XGetWindowAttributes( pData->_pDisplay, pData->_win, &attrs ) != 0 && attrs.visual != nullptr )
+        const bool        bHasWindowVisual = pData->_win != 0 && XGetWindowAttributes( pData->_pDisplay, pData->_win, &attrs ) != 0 && attrs.visual != nullptr;
+        if ( bHasWindowVisual )
         {
             XVisualInfo templateInfo{};
             templateInfo.visualid = XVisualIDFromVisual( attrs.visual );

@@ -124,7 +124,8 @@ namespace sw::editor
     bool RenderTargetViewUtil::readPixel( const vector<uint8>& byte, const RHITextureMipSpan& layout, RHIFormat format, bool bDepth, uint32 x, uint32 y,
                                           float4& outValue )
     {
-        if ( isDecodableFormat( format, bDepth ) == false || x >= layout._width || y >= layout._height )
+        const bool bTexelUnreadable = isDecodableFormat( format, bDepth ) == false || x >= layout._width || y >= layout._height;
+        if ( bTexelUnreadable )
             return false;
         const RHIFormat sourceFormat  = bDepth ? kRHIDepthReadbackFormat : format;
         const uint32    bytesPerPixel = getRHIFormatBytesPerPixel( sourceFormat );
@@ -208,9 +209,10 @@ namespace sw::editor
                                                  const RenderTargetViewSettings& settings, RenderTargetPreviewImage& outImage )
     {
         outImage._byte.clear();
-        outImage._width  = 0;
-        outImage._height = 0;
-        if ( isDecodableFormat( format, bDepth ) == false || layout._width == 0 || layout._height == 0 )
+        outImage._width              = 0;
+        outImage._height             = 0;
+        const bool bImageUndecodable = isDecodableFormat( format, bDepth ) == false || layout._width == 0 || layout._height == 0;
+        if ( bImageUndecodable )
             return false;
         if ( static_cast<size_t>( layout._rowBytes ) * layout._height > byte.size() )
             return false;
@@ -284,9 +286,11 @@ namespace sw::editor
 
     bool RenderTargetViewUtil::mapPreviewToTexel( const float2& localPos, const float2& drawSize, uint32 width, uint32 height, int2& outTexel )
     {
-        if ( width == 0 || height == 0 || drawSize._x <= 0.0f || drawSize._y <= 0.0f )
+        const bool bInvalidPreviewSize = width == 0 || height == 0 || drawSize._x <= 0.0f || drawSize._y <= 0.0f;
+        if ( bInvalidPreviewSize )
             return false;
-        if ( localPos._x < 0.0f || localPos._y < 0.0f || localPos._x >= drawSize._x || localPos._y >= drawSize._y )
+        const bool bOutsidePreview = localPos._x < 0.0f || localPos._y < 0.0f || localPos._x >= drawSize._x || localPos._y >= drawSize._y;
+        if ( bOutsidePreview )
             return false;
         const int32 texelX = static_cast<int32>( localPos._x / drawSize._x * static_cast<float32>( width ) );
         const int32 texelY = static_cast<int32>( localPos._y / drawSize._y * static_cast<float32>( height ) );

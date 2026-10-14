@@ -123,9 +123,10 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
             return false;
-        EditorWorkspace& ws = pContext->getSubsystem<EditorWorkspace>();
-        if ( ws.isPrefabIsolationActive() == false && ws.isSceneDirty() &&
-             EditorSessionPolicy::requiresCleanSceneForPrefabIsolation() )
+        EditorWorkspace& ws                   = pContext->getSubsystem<EditorWorkspace>();
+        const bool       bSceneNeedsSaveFirst = ws.isPrefabIsolationActive() == false && ws.isSceneDirty() &&
+                                          EditorSessionPolicy::requiresCleanSceneForPrefabIsolation();
+        if ( bSceneNeedsSaveFirst )
         {
             pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPrefabTitle" ), SW_LOCKEY( "EdCommon", "NotifyPrefabSaveFirst" ),
                                                                       NotificationType::Warning );
@@ -188,7 +189,8 @@ namespace sw::editor
             pRoot = pManager->findGameObjectByID( frame._rootObjectID );
 
         // 저장하지 못하면 격리를 끝내지 않는다. 끝내면 편집한 프리팹 내용이 저장 없이 사라진다.
-        if ( bSaveToPrefab && pRoot != nullptr && EditorInspectorCommands::applyToPrefab( pRoot, frame._prefabPath ) == false )
+        const bool bPrefabSaveFailed = bSaveToPrefab && pRoot != nullptr && EditorInspectorCommands::applyToPrefab( pRoot, frame._prefabPath ) == false;
+        if ( bPrefabSaveFailed )
         {
             SW_LOG_ERROR( "Prefab isolation could not save '%#' - still editing it", frame._prefabPath.c_str() );
             return false;
@@ -196,8 +198,9 @@ namespace sw::editor
 
         EditorPrefabIsolationCommandsInternal::restoreIsolationHidden( pManager, frame._listHidden );
 
-        const bool bFullyExit = ws.popPrefabIsolation();
-        if ( frame._bSpawnedRoot == SW_TRUE && bSaveToPrefab == false && pManager != nullptr && pRoot != nullptr )
+        const bool bFullyExit          = ws.popPrefabIsolation();
+        const bool bDiscardSpawnedRoot = frame._bSpawnedRoot == SW_TRUE && bSaveToPrefab == false && pManager != nullptr && pRoot != nullptr;
+        if ( bDiscardSpawnedRoot )
         {
             if ( pContext->getSubsystem<EditorSelection>().hasObject( pRoot ) )
                 pContext->getSubsystem<EditorSelection>().selectObject( pRoot, SelectionMode::Remove );

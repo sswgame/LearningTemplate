@@ -33,7 +33,8 @@ namespace sw::editor
                                             vector<string_view>& outListLine )
     {
         outListLine.clear();
-        if ( text.empty() || maxLineCount == 0 || pfnMeasure == nullptr )
+        const bool bCannotWrapLabel = text.empty() || maxLineCount == 0 || pfnMeasure == nullptr;
+        if ( bCannotWrapLabel )
         {
             outListLine.push_back( text );
             return;

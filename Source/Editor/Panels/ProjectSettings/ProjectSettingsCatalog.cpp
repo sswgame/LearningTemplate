@@ -25,10 +25,11 @@ namespace sw::editor
         forEachObjectInArray( document.getRoot(), "files", [&outListEntry]( const JSONValue& file, size_t /*index*/ )
         {
             ProjectSettingsEntry entry{};
-            entry._page         = file.get( "page" ).asString();
-            entry._relativePath = file.get( "path" ).asString();
-            entry._typeName     = file.get( "type" ).asString();
-            if ( entry._page.empty() || entry._typeName.empty() || isEditableLocation( entry._relativePath ) == false )
+            entry._page                  = file.get( "page" ).asString();
+            entry._relativePath          = file.get( "path" ).asString();
+            entry._typeName              = file.get( "type" ).asString();
+            const bool bNotEditableEntry = entry._page.empty() || entry._typeName.empty() || isEditableLocation( entry._relativePath ) == false;
+            if ( bNotEditableEntry )
                 return;
             outListEntry.push_back( std::move( entry ) );
         } );

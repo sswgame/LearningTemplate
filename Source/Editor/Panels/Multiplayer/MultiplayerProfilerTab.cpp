@@ -114,8 +114,9 @@ namespace sw::editor
              */
             static bool runProfile( const vector<string>& listArgument, string& outReply )
             {
-                int32 seconds = kDefaultProfileSeconds;
-                if ( listArgument.size() > 1 || ( listArgument.size() == 1 && StringUtil::parseInt( listArgument[0], seconds ) == false ) || seconds < 0 )
+                int32      seconds                  = kDefaultProfileSeconds;
+                const bool bInvalidProfileArguments = listArgument.size() > 1 || ( listArgument.size() == 1 && StringUtil::parseInt( listArgument[0], seconds ) == false ) || seconds < 0;
+                if ( bInvalidProfileArguments )
                     return false;
                 EditorNetPlaySession* pSession = findSession();
                 if ( pSession == nullptr || pSession->isRunning() == false )
@@ -249,8 +250,9 @@ namespace sw::editor
         EditorNetPlaySession&     session = *context._pSession;
         EditorNetProfilerHistory& history = MultiplayerProfilerTabInternal::getHistory();
         history.update( session, MultiplayerProfilerTabInternal::nowSeconds() );
-        const EditorNetProfilerTrack* pTrack = history.findTrack( context._targetProcessIndex );
-        if ( context._targetProcessIndex < 0 || pTrack == nullptr || pTrack->_series.getCount() == 0 )
+        const EditorNetProfilerTrack* pTrack          = history.findTrack( context._targetProcessIndex );
+        const bool                    bNoProfilerData = context._targetProcessIndex < 0 || pTrack == nullptr || pTrack->_series.getCount() == 0;
+        if ( bNoProfilerData )
         {
             if ( session.isRunning() )
                 ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorMultiplayer", "ProfilerWaiting" ) );
