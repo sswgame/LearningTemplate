@@ -18,6 +18,7 @@
 #include "GameFramework/Base/Actor/Camera/CameraDirector.h"
 #include "GameFramework/Base/Actor/Camera/CameraPose.h"
 #include "GameFramework/Base/Actor/Camera/CameraPreset.h"
+#include "GameFramework/Base/Actor/Camera/PhotoModeCamera.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -75,6 +76,19 @@ namespace sw
         /** @brief 덮어쓴 시점을 풀고, 덮어쓰기 전에 켜 있던 프리셋으로 `_overrideBlend` 를 따라 돌아갑니다. */
         void clearViewOverride();
         bool isViewOverridden() const { return _bViewOverride; }
+        /**
+         * @brief 포토 모드를 켭니다. 게임 시간을 멈추고(`GameTimeScale::addPauseRequest`), 지금 포즈에서 시작하는 자유 카메라를 디렉터 포즈 위에 덮습니다.
+         * @details 디렉터 상태(프리셋, 블렌드, 덮어쓴 시점)는 건드리지 않고 마지막 쓰기만 바꾼다. 그래서 끌 때 되돌릴 것은 정지 요청 하나뿐이다.
+         *          `setViewOverride` 는 탑승 카메라가 매 프레임 부르는 원근 전용 창구라서 쓰지 않는다 — 겹치면 끌 때 탑승 시점을 지운다.
+         *          아직 포즈가 없거나(프리셋 없음) 이미 켜 있으면 false 입니다.
+         */
+        [[nodiscard]] bool enterPhotoMode();
+        /** @brief 포토 모드를 끕니다. 정지 요청을 풀고 디렉터 포즈로 컷합니다. 꺼 있으면 아무 일도 하지 않습니다. */
+        void exitPhotoMode();
+        bool isInPhotoMode() const { return _photoMode.isActive(); }
+        /** @brief 포토 모드 자유 카메라입니다. 조절 값을 바꾸거나 테스트가 읽습니다. */
+        PhotoModeCamera&       getPhotoMode() { return _photoMode; }
+        const PhotoModeCamera& getPhotoMode() const { return _photoMode; }
         /** @brief 덮어쓰기에 들어가고 나오는 블렌드입니다. */
         void setOverrideBlend( const BlendCurveDef& blend ) { _overrideBlend = blend; }
         /**
@@ -120,6 +134,8 @@ namespace sw
         CameraTarget computeTarget() const;
         /** @brief 이번 프레임 입력을 `InputManager` 에서 모읍니다. 켠 프리셋이 받는 것만 쓰입니다. */
         void gatherInput( float32 deltaTime );
+        /** @brief 포토 모드 입력을 모아 자유 카메라에 넣습니다. 이동(`_panAction`), 둘러보기(`_lookAction`), 줌(`_zoomAction`)은 게임 카메라와 같은 액션을 씁니다. */
+        void gatherPhotoModeInput( float32 unscaledDeltaTime );
         /** @brief 미뤄 둔 포즈 계산과 쓰기를 합니다. 틱 뒤 게임 스레드에서 돕니다. */
         void resolveCamera();
         /** @brief 시작 프리셋을 고릅니다. `-gv_cameraPreset` 이 카탈로그에 있으면(게임 시점 카메라만) 그것을 쓰고, 아니면 `_initialPreset`, 그것도 아니면 첫 프리셋을 씁니다. */
@@ -148,6 +164,10 @@ namespace sw
         hashed_string _lookHoldAction;
         PROPERTY( Category = "Camera", DisplayName = "Zoom Action", Tooltip = "InputMap action (1D axis, wheel notches; up is closer) that zooms presets with a zoom step" )
         hashed_string _zoomAction;
+        PROPERTY( Category = "Photo Mode", DisplayName = "Rise Action", Tooltip = "InputMap action (1D axis) that moves the photo mode camera up and down; missing from the map: no rise" )
+        hashed_string _photoRiseAction;
+        PROPERTY( Category = "Photo Mode", DisplayName = "Exposure Action", Tooltip = "InputMap action (1D axis, Pressed) whose sign steps the photo mode exposure; missing from the map: no exposure" )
+        hashed_string _photoExposureAction;
         PROPERTY( Category = "Camera", DisplayName = "Read Input", Tooltip = "Feed the look, zoom, pan and rotate actions to presets with an <Input> section" )
         bool _bReadInput;
         PROPERTY( Category = "Camera", DisplayName = "Override Blend", Tooltip = "Blend into and out of a view override (ride camera)" )
@@ -164,6 +184,9 @@ namespace sw
         CameraPresetDef _overrideDef;          ///< 덮어쓴 시점의 고정 프리셋
         hashed_string   _presetBeforeOverride; ///< 덮어쓰기를 풀 때 돌아갈 프리셋
         bool            _bViewOverride;
+
+        PhotoModeCamera _photoMode;
+        bool            _bPhotoModeCut; ///< 포토 모드를 켜거나 끈 뒤 첫 쓰기에 컷 표시를 넣는다(TAA 기록을 버린다)
 
         CameraPresetCatalog          _catalog;
         CameraDirector               _director;

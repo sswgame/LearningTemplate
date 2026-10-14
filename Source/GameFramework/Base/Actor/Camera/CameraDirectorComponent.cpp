@@ -15,6 +15,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/UI/Input/UIInputMapView.h"
 #include "Engine/UI/UISystem.h"
+#include "Engine/Utility/GameTimeScale.h"
 
 #include "GameFramework/Base/Actor/Camera/CameraCollisionProbe.h"
 #include "GameFramework/Base/Actor/Camera/CameraPoseUtil.h"
@@ -75,6 +76,8 @@ namespace sw
         , _lookAction{ "Camera.Look" }
         , _lookHoldAction{ "Camera.LookHold" }
         , _zoomAction{ "Camera.Zoom" }
+        , _photoRiseAction{ "Camera.PhotoRise" }
+        , _photoExposureAction{ "Camera.PhotoExposure" }
         , _bReadInput{ true }
         , _overrideBlend{}
         , _fieldOfViewOverride{ 0.0f }
@@ -83,6 +86,8 @@ namespace sw
         , _overrideDef{}
         , _presetBeforeOverride{}
         , _bViewOverride{ false }
+        , _photoMode{}
+        , _bPhotoModeCut{ false }
         , _catalog{}
         , _director{}
         , _pendingStateBytes{}
@@ -100,6 +105,12 @@ namespace sw
 
     void CameraDirectorComponent::onUnregister( GameObjectManager& manager )
     {
+        // 켠 채 사라지면 정지 요청이 남아 게임이 영영 멈춘다. 내려가는 중이라 카메라에는 쓰지 않고 요청만 푼다.
+        if ( _photoMode.isActive() )
+        {
+            _photoMode.end();
+            GameTimeScale::removePauseRequest();
+        }
         manager.getComponentRegistry().remove<CameraDirectorComponent>( this );
         Component::onUnregister( manager );
     }
@@ -157,6 +168,27 @@ namespace sw
         _bViewOverride = false;
         if ( _director.activatePreset( _catalog, _presetBeforeOverride, _overrideBlend ) == false )
             SW_LOG_WARNING( "Camera preset '%#' to return to after the view override is gone", _presetBeforeOverride.c_str() );
+    }
+
+    bool CameraDirectorComponent::enterPhotoMode()
+    {
+        if ( _photoMode.isActive() || _director.hasPose() == false )
+            return false;
+        _photoMode.begin( _director.getPose() );
+        GameTimeScale::addPauseRequest();
+        _bPhotoModeCut = true;
+        updateCamera( 0.0f );
+        return true;
+    }
+
+    void CameraDirectorComponent::exitPhotoMode()
+    {
+        if ( _photoMode.isActive() == false )
+            return;
+        _photoMode.end();
+        GameTimeScale::removePauseRequest();
+        _bPhotoModeCut = true;
+        updateCamera( 0.0f );
     }
 
     bool CameraDirectorComponent::findGroundPoint( const float2& mouseNormalized, float32 groundHeight, float3& outPoint ) const
@@ -252,7 +284,11 @@ namespace sw
     {
         if ( _director.hasActivePreset() == false )
             return;
-        gatherInput( deltaTime );
+        // 포토 모드는 게임이 멈춰도 움직이므로 실제 경과로 돌고, 게임 카메라에는 입력을 주지 않는다.
+        if ( _photoMode.isActive() )
+            gatherPhotoModeInput( GameTimeScale::getUnscaledDeltaTime( deltaTime ) );
+        else
+            gatherInput( deltaTime );
         // 틱 중이면 틱 뒤로 미룬다 — 대상의 이번 프레임 자리는 틱이 끝나야 적용된다. 여러 번 불려도 시간은 모아 한 번 쓴다.
         _pendingDeltaTime += MathUtil::max( 0.0f, deltaTime );
         GameObject*        pOwner   = getOwner();
@@ -301,6 +337,26 @@ namespace sw
         _director.applyInput( input, deltaTime );
     }
 
+    void CameraDirectorComponent::gatherPhotoModeInput( float32 unscaledDeltaTime )
+    {
+        const InputManager* pInput = _bReadInput ? game::getService<InputManager>() : nullptr;
+        if ( pInput == nullptr )
+            return;
+        const UIInputMapView inputMap( pInput->getInputMap(), game::getService<UISystem>() );
+        PhotoModeInput       input;
+        input._move = inputMap.getVector2D( _panAction );
+        input._rise = inputMap.getAxis1D( _photoRiseAction );
+        input._look = inputMap.getVector2D( _lookAction );
+        if ( inputMap.wasActionTriggered( _zoomAction ) )
+            input._zoomNotches = inputMap.getAxis1D( _zoomAction );
+        if ( inputMap.wasActionTriggered( _photoExposureAction ) )
+        {
+            const float32 exposureInput = inputMap.getAxis1D( _photoExposureAction );
+            input._exposureSteps        = exposureInput > 0.0f ? 1.0f : ( exposureInput < 0.0f ? -1.0f : 0.0f );
+        }
+        _photoMode.applyInput( input, unscaledDeltaTime );
+    }
+
     void CameraDirectorComponent::resolveCamera()
     {
         const float32 deltaTime     = _pendingDeltaTime;
@@ -332,11 +388,15 @@ namespace sw
         if ( _focusDistanceOverride > 0.0f )
             pose._focusDistance = _focusDistanceOverride;
         pose._postProcess._exposureCompensation += _exposureOffset;
+        // 포토 모드는 마지막에 덮는다 — 디렉터 상태는 그대로라서 끄면 이 줄만 빠진다.
+        pose = _photoMode.makePose( pose );
         if ( pCamera == nullptr )
             return;
         CameraPoseUtil::applyToCamera( *pCamera, pose );
-        if ( _director.consumeCut() )
+        const bool bDirectorCut = _director.consumeCut();
+        if ( bDirectorCut || _bPhotoModeCut )
             pCamera->markCut();
+        _bPhotoModeCut = false;
     }
 
     CameraTarget CameraDirectorComponent::computeTarget() const
