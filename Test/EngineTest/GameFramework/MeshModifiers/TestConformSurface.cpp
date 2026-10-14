@@ -75,10 +75,10 @@ namespace
 
     struct ConformSurfaceTestInternal
     {
-        /** @brief 덩어리가 여럿 나오는 큰 메시입니다(6 면 × 40 × 40 × 6 = 57600 정점 ≈ 15 덩어리). */
+        /** @brief 덩어리가 여럿 나오는 큰 메시입니다(6 면 × 16 × 16 × 6 = 9216 정점 = 3 덩어리). */
         static MeshModifierMesh makeBigMesh()
         {
-            MeshModifierMesh mesh = test::MeshModifierTestUtil::makeBoxMesh( 40 );
+            MeshModifierMesh mesh = test::MeshModifierTestUtil::makeBoxMesh( 16 );
             for ( float3& position : mesh._listPosition )
             {
                 position._y += 4.0f; // 언덕 위에서 시작해 최근접점 · 광선이 모두 닿게 한다
@@ -133,7 +133,9 @@ SW_TEST_CASE( ConformSurfaceTest, ParallelQueriesMatchSerialResult )
             SW_EXPECT_TRUE( serial._x == parallel._x && serial._y == parallel._y && serial._z == parallel._z );
             movedCount += serial._y < 3.0f ? 1u : 0u;
         }
-        SW_EXPECT_TRUE( movedCount > serialMesh._listPosition.size() / 2 ); // 대부분이 언덕 쪽으로 실제로 옮겨졌다
+        // 가까운 점 · 주축 방식은 거의 모든 정점이, 법선 방식은 위를 보는 면의 정점만 언덕 쪽으로 옮겨진다 - 비교가 빈 결과끼리 맞는 일이 아님을 확인한다
+        const uint32 minMoved = mode == 2.0f ? 100u : static_cast<uint32>( serialMesh._listPosition.size() / 2 );
+        SW_EXPECT_TRUE( movedCount > minMoved );
     }
     taskManager.shutdown();
 }

@@ -372,37 +372,42 @@ namespace sw::editor
             return true;
         }
 
-        /** @brief `conformMesh` 의 병렬 일입니다. 정점끼리 서로 읽지 않고 덩어리가 자기 정점만 쓰므로 직렬과 결과가 같다. 후보 버퍼는 덩어리 안에서 가진다. */
+        /**
+         * @brief `conformMesh` 의 병렬 일입니다. 정점끼리 서로 읽지 않고 덩어리가 자기 정점만 쓰므로 직렬과 결과가 같다.
+         * @details 워커가 건드리는 쓰기 대상(위치 · 덩어리 표시)은 `sw::vector::operator[]` 가 아니라 생 포인터로 가진다 - Debug 데이터 레이스 검출기는
+         *          벡터 안의 서로 다른 칸 쓰기도 한 벡터의 동시 쓰기로 본다(`TransformJob` 과 같은 이유). 후보 버퍼는 덩어리 안에서 가진다.
+         */
         struct ConformJob
         {
-            const ConformSurface*      _pSurface{ nullptr };
-            const MeshModifierContext* _pContext{ nullptr };
-            MeshModifierMesh*          _pMesh{ nullptr };
-            ConformMode                _mode{ ConformMode::Closest };
-            float3                     _axisDirection{ 0.0f, 0.0f, 0.0f };
-            float32                    _offset{ 0.0f };
-            float32                    _maxDistance{ 0.0f };
-            float32                    _amount{ 0.0f };
-            vector<uint8>              _listChunkMoved; ///< 덩어리마다 하나라도 옮겼는지(워커가 공유 플래그를 쓰지 않게 덩어리 칸에 쓴다)
+            const ConformSurface* _pSurface{ nullptr };
+            float3*               _pPosition{ nullptr };   ///< 제자리에서 옮긴다
+            const float3*         _pNormal{ nullptr };     ///< 없으면 nullptr(법선 방식은 주축 방향으로 대신한다)
+            const float32*        _pWeight{ nullptr };     ///< 선택 가중치. 없으면 nullptr(모두 1)
+            uint8*                _pChunkMoved{ nullptr }; ///< 덩어리마다 하나라도 옮겼는지(워커가 공유 플래그를 쓰지 않게 덩어리 칸에 쓴다)
+            size_t                _vertexCount{ 0 };
+            ConformMode           _mode{ ConformMode::Closest };
+            float3                _axisDirection{ 0.0f, 0.0f, 0.0f };
+            float32               _offset{ 0.0f };
+            float32               _maxDistance{ 0.0f };
+            float32               _amount{ 0.0f };
 
             void run( uint32 startChunk, uint32 endChunk )
             {
-                MeshModifierMesh&  mesh  = *_pMesh;
                 const size_t       first = static_cast<size_t>( startChunk ) * MeshModifierUtil::kChunkVertexCount;
-                const size_t       last  = MathUtil::min( static_cast<size_t>( endChunk ) * MeshModifierUtil::kChunkVertexCount, mesh.getVertexCount() );
+                const size_t       last  = MathUtil::min( static_cast<size_t>( endChunk ) * MeshModifierUtil::kChunkVertexCount, _vertexCount );
                 vector<SlotHandle> listScratch;
                 for ( size_t index = first; index < last; ++index )
                 {
-                    const float3& point     = mesh._listPosition[index];
-                    float3        direction = _axisDirection;
-                    if ( _mode == ConformMode::Normal )
-                        direction = mesh.hasNormal() ? MeshModifierUtil::normalizeOr( mesh._listNormal[index] * -1.0f, _axisDirection ) : _axisDirection;
+                    const float3 point     = _pPosition[index];
+                    float3       direction = _axisDirection;
+                    if ( _mode == ConformMode::Normal && _pNormal != nullptr )
+                        direction = MeshModifierUtil::normalizeOr( _pNormal[index] * -1.0f, _axisDirection );
                     float3 target{ 0.0f, 0.0f, 0.0f };
                     if ( tryConformPointBvh( *_pSurface, point, direction, _mode, _offset, _maxDistance, listScratch, target ) == false )
                         continue;
-                    const float32 blend                                          = MathUtil::saturate( _amount * mesh.getWeight( index ) );
-                    mesh._listPosition[index]                                    = float3::lerp( point, target, blend );
-                    _listChunkMoved[index / MeshModifierUtil::kChunkVertexCount] = 1;
+                    const float32 weight                                      = _pWeight != nullptr ? _pWeight[index] : 1.0f;
+                    _pPosition[index]                                         = float3::lerp( point, target, MathUtil::saturate( _amount * weight ) );
+                    _pChunkMoved[index / MeshModifierUtil::kChunkVertexCount] = 1;
                 }
             }
         };
@@ -420,21 +425,24 @@ namespace sw::editor
                 return false;
             const bool bRebuilt = inoutSurface.assign( listTriangle );
 
-            ConformJob job{};
-            job._pSurface = &inoutSurface;
-            job._pContext = &context;
-            job._pMesh    = &inoutMesh;
-            job._mode     = mode;
+            const uint32  chunkCount = MeshModifierUtil::computeChunkCount( inoutMesh.getVertexCount() );
+            vector<uint8> listChunkMoved( chunkCount, 0 );
+            ConformJob    job{};
+            job._pSurface    = &inoutSurface;
+            job._pPosition   = inoutMesh._listPosition.data();
+            job._pNormal     = inoutMesh.hasNormal() ? inoutMesh._listNormal.data() : nullptr;
+            job._pWeight     = inoutMesh.hasWeight() ? inoutMesh._listWeight.data() : nullptr;
+            job._pChunkMoved = listChunkMoved.data();
+            job._vertexCount = inoutMesh.getVertexCount();
+            job._mode        = mode;
             MeshModifierUtil::setComponent( job._axisDirection, context._axisIndex, -1.0f );
-            job._offset             = offset;
-            job._maxDistance        = maxDistance;
-            job._amount             = amount;
-            const uint32 chunkCount = MeshModifierUtil::computeChunkCount( inoutMesh.getVertexCount() );
-            job._listChunkMoved.assign( chunkCount, 0 );
+            job._offset      = offset;
+            job._maxDistance = maxDistance;
+            job._amount      = amount;
             MeshModifierUtil::runBlocks( chunkCount, 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &ConformJob::run, &job ) );
 
             bool bMoved = false;
-            for ( const uint8 chunkMoved : job._listChunkMoved )
+            for ( const uint8 chunkMoved : listChunkMoved )
             {
                 bMoved = bMoved || chunkMoved != 0;
             }
