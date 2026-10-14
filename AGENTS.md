@@ -505,7 +505,8 @@ namespace sw
   `FormatBranchBraces.py`; clang-format's `InsertBraces` cannot express this (it never
   looks at case labels).
 - Do not use `if` initializers. For unclear conditions or conditions with three
-  or more parts, name the condition in a local variable first.
+  or more parts, name the condition in a local variable first. `CheckConditionParts.py`
+  checks the lines a commit adds (the whole tree is held to a baseline count).
 - Use `auto` only for iterators, structured bindings, or similarly complex
   types.
 - Avoid lambdas unless they offer a performance benefit.
