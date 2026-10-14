@@ -24,6 +24,18 @@ namespace
     struct CharacterEditorModelTestInternal
     {
         static constexpr const utf8* kKindsXML = "<SocketKinds><Kind name='Attach'/><Kind name='GroundPoint'/></SocketKinds>";
+        static constexpr const utf8* kMirrorXML =
+            "<MirrorNames><Pair first='_L' second='_R'/><Pair first='.L' second='.R'/><Pair first='_l' second='_r'/><Pair first='.l' second='.r'/>"
+            "<Pair first='Left' second='Right'/><Pair first='left' second='right'/><Pair first='L_' second='R_'/><Pair first='l_' second='r_'/></MirrorNames>";
+
+        static MirrorNameRules makeRules()
+        {
+            MirrorNameRules rules;
+            const bool      bLoaded = rules.loadFromXMLText( kMirrorXML, "test.mirrornames.xml" );
+            SW_ASSERT( bLoaded );
+            (void)bLoaded;
+            return rules;
+        }
 
         static SocketKindTable makeKinds()
         {
@@ -36,6 +48,7 @@ namespace
         {
             SocketEditModel model;
             model.setKindTable( makeKinds() );
+            model.setMirrorRules( makeRules() );
             if ( pXMLText != nullptr )
             {
                 const bool bLoaded = model.loadFromXMLText( pXMLText, "test.sockets.xml" );
@@ -62,7 +75,7 @@ SW_TEST_CASE( MirrorNameRulesTest, FindsCounterpartOnlyAtTokenBoundaries )
 {
     using Internal = CharacterEditorModelTestInternal;
 
-    const MirrorNameRules rules = MirrorNameRules::makeDefault();
+    const MirrorNameRules rules = Internal::makeRules();
     SW_EXPECT_STREQ( "hand_R", Internal::mirrorOf( rules, "hand_L" ).c_str() );
     SW_EXPECT_STREQ( "hand_L", Internal::mirrorOf( rules, "hand_R" ).c_str() );
     SW_EXPECT_STREQ( "upperarm.r", Internal::mirrorOf( rules, "upperarm.l" ).c_str() );
@@ -83,6 +96,28 @@ SW_TEST_CASE( MirrorNameRulesTest, FindsCounterpartOnlyAtTokenBoundaries )
     SW_EXPECT_FALSE( custom.addPair( "_L", "_L" ) );
     SW_ASSERT_TRUE( custom.addPair( "_Lt", "_Rt" ) );
     SW_EXPECT_STREQ( "eye_Rt", Internal::mirrorOf( custom, "eye_Lt" ).c_str() );
+}
+
+/**
+ * @brief [MirrorNameRulesTest] 이름 표는 XML 로 왕복하고, 잘못된 쌍은 표를 바꾸지 않은 채 실패한다
+ */
+SW_TEST_CASE( MirrorNameRulesTest, RoundTripsThroughXMLAndRejectsBadPairs )
+{
+    using Internal = CharacterEditorModelTestInternal;
+
+    MirrorNameRules rules = Internal::makeRules();
+    SW_EXPECT_EQUAL( 8u, static_cast<uint32>( rules.getPairs().size() ) );
+
+    MirrorNameRules reloaded;
+    SW_ASSERT_TRUE( reloaded.loadFromXMLText( rules.saveToXMLText(), "roundtrip.mirrornames.xml" ) );
+    SW_EXPECT_EQUAL( 8u, static_cast<uint32>( reloaded.getPairs().size() ) );
+    SW_EXPECT_STREQ( "hand_R", Internal::mirrorOf( reloaded, "hand_L" ).c_str() );
+
+    // 같은 두 토큰 · 모르는 원소 · 모르는 속성은 오류이고, 이전 표는 그대로다.
+    SW_EXPECT_FALSE( rules.loadFromXMLText( "<MirrorNames><Pair first='_L' second='_L'/></MirrorNames>", "bad1.mirrornames.xml" ) );
+    SW_EXPECT_FALSE( rules.loadFromXMLText( "<MirrorNames><Twin first='_L' second='_R'/></MirrorNames>", "bad2.mirrornames.xml" ) );
+    SW_EXPECT_FALSE( rules.loadFromXMLText( "<MirrorNames><Pair first='_L' second='_R' weight='1'/></MirrorNames>", "bad3.mirrornames.xml" ) );
+    SW_EXPECT_EQUAL( 8u, static_cast<uint32>( rules.getPairs().size() ) );
 }
 
 /**

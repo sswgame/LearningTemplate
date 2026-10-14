@@ -17,6 +17,9 @@
 
 namespace sw
 {
+    struct ResolvedAppearance;
+
+    class AppearanceDatabase;
     class UserAppearancePresetStore;
 } // namespace sw
 
@@ -77,6 +80,30 @@ namespace sw::editor
          * @details 저장소를 파일에 쓰는 일(세이브)은 호출하는 쪽의 일이다. 이름은 저장소가 정리한다(`UserAppearancePresetStore`).
          */
         [[nodiscard]] bool saveToPresetStore( UserAppearancePresetStore& store, string_view name );
+
+        /**
+         * @brief 지금 선택을 프리셋 저장소에 넣고 저장소 전체를 @p absolutePath 에 씁니다(`UserAppearancePresetStore::saveToText`). 쓰기에 실패하면 false 이고 저장 상태는 그대로입니다.
+         * @details 저장소는 프리셋 내용을 공유 코드로 싣기 때문에 `setDatabase` 로 외형 데이터를 먼저 정해 둬야 한다(없으면 코드가 비어 다시 읽을 수 없다).
+         */
+        [[nodiscard]] bool saveToPresetFile( UserAppearancePresetStore& store, string_view name, string_view absolutePath );
+        /** @brief 파일에서 저장소를 읽습니다. 파일이 없거나 형식이 틀리면 false 이고 저장소는 그대로입니다. */
+        [[nodiscard]] static bool loadPresetFile( UserAppearancePresetStore& store, string_view absolutePath );
+        /** @brief 저장소의 프리셋 하나를 열어 선택을 바꿉니다(기록을 지우고 "저장된 상태" 로 맞춥니다). 이름이 없으면 false 입니다. */
+        [[nodiscard]] bool loadFromPreset( const UserAppearancePresetStore& store, string_view name );
+
+        // --- 콘텐츠 데이터베이스를 보는 도우미 -----------------------------------------------------------------------
+
+        /**
+         * @brief 슬롯에 입힐 수 있는 아이템 id 를 모읍니다 — 아이템 카탈로그의 장비 중 슬롯이 받는 종류(`accept`, 비면 슬롯 이름)와 같은 것. 카탈로그가 없으면 비어 있습니다.
+         */
+        static void collectSlotItems( const AppearanceDatabase& database, const hashed_string& slot, vector<hashed_string>& outListItem );
+        /** @brief 세트의 조각을 지금 몸 종류(`_bodyType`)에 맞춰 슬롯에 입힙니다(조각의 첫 아이템). 되돌리기 한 단계입니다. 세트가 없거나 바뀌는 것이 없으면 false 입니다. */
+        bool equipSet( const AppearanceDatabase& database, const hashed_string& setID );
+        /**
+         * @brief 지금 선택을 콘텐츠에 맞춰 펼쳐 봅니다(입혀 보기). 규칙 설명은 @p outResolved 의 `_listTrace`, 버려지거나 기본으로 돌아간 것은 @p outReport 에 있습니다.
+         * @details 아무것도 바꾸지 않습니다. 몸 종류 · 규칙 판정에 쓰는 현재 외형(`current`)은 비어 있다고 본다 — 전체 선택은 기준 프리셋이 시드이다.
+         */
+        void previewResolved( const AppearanceDatabase& database, ResolvedAppearance& outResolved, AppearanceSelectionReport& outReport ) const;
 
     private:
         void          recordUndo( string_view coalesceKey );

@@ -5,8 +5,14 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Automation/AutomationProbe.h"
+#include "Engine/Character/CharacterDataCache.h"
+#include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Resource/ResourcePaths.h"
+
+#include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
 
 #include <imgui.h>
 
@@ -16,9 +22,19 @@ namespace sw::editor
     {
         struct CharacterEditorPanelInternal
         {
-            static constexpr const utf8* kDefaultSocketPath = "models/character.sockets.xml";
-            static constexpr float32     kDragSpeed         = 0.005f;
-            static constexpr float32     kRotationDragSpeed = 0.5f;
+            static constexpr const utf8* kDefaultSocketPath     = "game/shooter3d/data/sockets/kaykit_humanoid.sockets.xml";
+            static constexpr const utf8* kDefaultSkeletonPath   = "game/shooter3d/models/kaykit/knight/knight.skeleton.json";
+            static constexpr const utf8* kDefaultRefPosePath    = "game/shooter3d/models/kaykit/knight/knight.refpose.xml";
+            static constexpr const utf8* kDefaultItemsPath      = "game/shooter3d/data/items.xml";
+            static constexpr const utf8* kDefaultAppearancePath = "game/shooter3d/data/appearance";
+            static constexpr const utf8* kDefaultPresetPath     = "editor/characterpresets.txt";
+            static constexpr float32     kDragSpeed             = 0.005f;
+            static constexpr float32     kRotationDragSpeed     = 0.5f;
+            static constexpr float32     kPathButtonsWidth      = 240.0f;
+            static constexpr float32     kSocketListHeight      = 140.0f;
+            static constexpr float32     kBoneTreeHeight        = 200.0f;
+            static constexpr float32     kPresetListHeight      = 90.0f;
+            static constexpr float32     kExplanationListHeight = 130.0f;
 
             /** @brief 입력칸의 글을 이름으로 바꿉니다. 비어 있으면 빈 이름입니다. */
             static hashed_string makeName( const utf8* pText )
@@ -27,7 +43,8 @@ namespace sw::editor
             }
 
             /** @brief 이름 고르기 콤보입니다. 바뀌었으면 true 이고 @p outName 에 고른 이름이 담깁니다. 첫 항목은 빈 이름입니다. */
-            static bool drawNameCombo( const utf8* pLabel, const hashed_string& current, const vector<hashed_string>& listName, hashed_string& outName )
+            static bool drawNameCombo( const utf8* pLabel, const hashed_string& current, const vector<hashed_string>& listName, hashed_string& outName,
+                                       const utf8* pFirstNameMark = nullptr )
             {
                 bool bChanged = false;
                 if ( ImGui::BeginCombo( pLabel, current.empty() ? "(none)" : current.c_str() ) )
@@ -37,6 +54,7 @@ namespace sw::editor
                         outName  = hashed_string{};
                         bChanged = true;
                     }
+                    bool bFirstName = true;
                     for ( const hashed_string& name : listName )
                     {
                         const bool bSelected = name == current;
@@ -45,15 +63,67 @@ namespace sw::editor
                             outName  = name;
                             bChanged = true;
                         }
+                        if ( bFirstName && pFirstNameMark != nullptr )
+                            EditorSelfTestMarks::note( pFirstNameMark ); // 자동화가 첫 이름을 누를 자리
+                        bFirstName = false;
                     }
                     ImGui::EndCombo();
                 }
                 return bChanged;
             }
+
+            /** @brief 자동화 탐침이 읽는 값입니다. 패널이 그릴 때마다 게시합니다(게임 스레드). */
+            struct Published
+            {
+                uint32 _boneCount{ 0 };
+                uint32 _socketCount{ 0 };
+                uint32 _equippedSlotCount{ 0 };
+                uint32 _traceCount{ 0 };
+                uint32 _presetCount{ 0 };
+            };
+            static Published& getPublished()
+            {
+                static Published s_published;
+                return s_published;
+            }
+
+            [[nodiscard]] static bool readBoneCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( getPublished()._boneCount );
+                return true;
+            }
+            [[nodiscard]] static bool readSocketCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( getPublished()._socketCount );
+                return true;
+            }
+            [[nodiscard]] static bool readEquippedSlotCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( getPublished()._equippedSlotCount );
+                return true;
+            }
+            [[nodiscard]] static bool readTraceCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( getPublished()._traceCount );
+                return true;
+            }
+            [[nodiscard]] static bool readPresetCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( getPublished()._presetCount );
+                return true;
+            }
         };
     } // namespace
 
     SW_EDITOR_PANEL( CharacterEditorPanel, "charactereditor.main", EditorPanelCategory::Custom, 9020 );
+
+    SW_AUTOMATION_PROBE( editorCharacterEditorBoneCount, "Editor.CharacterEditorBoneCount", "Bones of the skeleton the Character Editor has loaded", &CharacterEditorPanelInternal::readBoneCount );
+    SW_AUTOMATION_PROBE( editorCharacterEditorSocketCount, "Editor.CharacterEditorSocketCount", "Sockets in the socket file the Character Editor has loaded", &CharacterEditorPanelInternal::readSocketCount );
+    SW_AUTOMATION_PROBE( editorCharacterEditorEquippedSlotCount, "Editor.CharacterEditorEquippedSlotCount", "Slots that hold an item in the appearance selection",
+                         &CharacterEditorPanelInternal::readEquippedSlotCount );
+    SW_AUTOMATION_PROBE( editorCharacterEditorTraceCount, "Editor.CharacterEditorTraceCount", "Rule explanation lines for the current appearance selection",
+                         &CharacterEditorPanelInternal::readTraceCount );
+    SW_AUTOMATION_PROBE( editorCharacterEditorPresetCount, "Editor.CharacterEditorPresetCount", "Presets in the Character Editor's preset store", &CharacterEditorPanelInternal::readPresetCount );
 } // namespace sw::editor
 
 namespace sw::editor
@@ -61,32 +131,77 @@ namespace sw::editor
     CharacterEditorPanel::CharacterEditorPanel()
         : IEditorPanel( false )
         , _sockets{}
+        , _pose{}
         , _appearance{}
+        , _reloadGuard{}
+        , _fit{}
+        , _pItems{}
+        , _database{}
+        , _presetStore{}
         , _path{ CharacterEditorPanelInternal::kDefaultSocketPath }
+        , _skeletonPath{ CharacterEditorPanelInternal::kDefaultSkeletonPath }
+        , _refPosePath{ CharacterEditorPanelInternal::kDefaultRefPosePath }
+        , _itemsPath{ CharacterEditorPanelInternal::kDefaultItemsPath }
+        , _appearanceFolder{ CharacterEditorPanelInternal::kDefaultAppearancePath }
+        , _presetPath{ CharacterEditorPanelInternal::kDefaultPresetPath }
+        , _presetName{ "MyLook" }
         , _newName{}
         , _renameBuffer{}
         , _status{}
         , _selectedSocket{}
+        , _selectedBone{}
         , _bKindTableReady{ false }
+        , _bDatabaseLoaded{ false }
+        , _bHasFit{ false }
+        , _bExternalChange{ false }
     {
+        _presetStore.setDatabase( &_database );
     }
 
     void CharacterEditorPanel::drawContent()
     {
         ensureKindTable();
+        if ( _reloadGuard.pollExternalChange( SocketSetCache::getReloadCount(), ImGui::GetTime() ) )
+            _bExternalChange = true;
         drawFileRow();
         drawHistoryRow();
         if ( _status.empty() == false )
             ImGui::TextColored( ImVec4( 1.0f, 0.55f, 0.35f, 1.0f ), "%s", _status.c_str() );
+        if ( _bExternalChange )
+            ImGui::TextColored( ImVec4( 1.0f, 0.75f, 0.3f, 1.0f ), "A socket file was reloaded from disk by someone else. Press Load to refresh this window." );
         ImGui::Separator();
+
+        CharacterEditorPanelInternal::Published& published = CharacterEditorPanelInternal::getPublished();
+        published._boneCount                               = _pose.getSkeleton().getBoneCount();
+        published._socketCount                             = static_cast<uint32>( _sockets.getSockets().getSockets().size() );
+        published._presetCount                             = static_cast<uint32>( _presetStore.getPresets().size() );
+        uint32 equipped                                    = 0;
+        for ( const AppearanceSlotRequest& request : _appearance.getSelection()._listSlot )
+        {
+            if ( request._itemID.empty() == false )
+                ++equipped;
+        }
+        published._equippedSlotCount = equipped;
+
         if ( ImGui::BeginTabBar( "##CharacterEditorTabs" ) )
         {
-            if ( ImGui::BeginTabItem( "Sockets" ) )
+            const bool bSocketTab = ImGui::BeginTabItem( "Sockets" );
+            EditorSelfTestMarks::note( "charactereditor.tab.sockets" );
+            if ( bSocketTab )
             {
                 drawSocketTab();
                 ImGui::EndTabItem();
             }
-            if ( ImGui::BeginTabItem( "Appearance" ) )
+            const bool bSkeletonTab = ImGui::BeginTabItem( "Skeleton" );
+            EditorSelfTestMarks::note( "charactereditor.tab.skeleton" );
+            if ( bSkeletonTab )
+            {
+                drawSkeletonTab();
+                ImGui::EndTabItem();
+            }
+            const bool bAppearanceTab = ImGui::BeginTabItem( "Appearance" );
+            EditorSelfTestMarks::note( "charactereditor.tab.appearance" );
+            if ( bAppearanceTab )
             {
                 drawAppearanceTab();
                 ImGui::EndTabItem();
@@ -97,20 +212,46 @@ namespace sw::editor
 
     bool CharacterEditorPanel::saveDocument()
     {
-        const string writePath = ResourcePaths::getWritePath( string_view( _path.c_str() ) );
-        if ( writePath.empty() || _sockets.saveToFile( writePath ) == false )
+        bool bSaved = true;
+        if ( _sockets.isDirty() )
         {
-            _status = "Socket file could not be saved";
-            return false;
+            const string writePath = ResourcePaths::getWritePath( string_view( _path.c_str() ) );
+            if ( writePath.empty() || _sockets.saveToFile( writePath ) == false )
+            {
+                _status = "Socket file could not be saved";
+                bSaved  = false;
+            }
+            else
+            {
+                _reloadGuard.onSaved( SocketSetCache::getReloadCount(), ImGui::GetTime() ); // 파일 감시가 곧 같은 파일을 다시 읽는다 — 그건 외부 변경이 아니다
+                SW_LOG_INFO( "Socket file saved to %#", writePath.c_str() );
+            }
         }
-        _status.clear();
-        SW_LOG_INFO( "Socket file saved to %#", writePath.c_str() );
-        return true;
+        if ( _pose.isDirty() )
+        {
+            const string writePath = ResourcePaths::getWritePath( string_view( _refPosePath.c_str() ) );
+            if ( writePath.empty() || _pose.saveToFile( writePath ) == false )
+            {
+                _status = "Reference pose file could not be saved";
+                bSaved  = false;
+            }
+            else
+                SW_LOG_INFO( "Reference pose file saved to %#", writePath.c_str() );
+        }
+        if ( bSaved )
+            _status.clear();
+        return bSaved;
+    }
+
+    void CharacterEditorPanel::setFitResult( const FitResult& result )
+    {
+        _fit     = FitCheckSummary::fromResult( result );
+        _bHasFit = true;
     }
 
     void CharacterEditorPanel::drawFileRow()
     {
-        ImGui::SetNextItemWidth( -240.0f );
+        ImGui::SetNextItemWidth( -CharacterEditorPanelInternal::kPathButtonsWidth );
         ImGui::InputText( "##SocketPath", _path.data(), _path.max_size() );
         ImGui::SameLine();
         if ( ImGui::Button( "Load" ) )
@@ -121,11 +262,14 @@ namespace sw::editor
             else
             {
                 _status.clear();
-                _selectedSocket = hashed_string{};
+                _selectedSocket  = hashed_string{};
+                _bExternalChange = false;
+                _reloadGuard.reset( SocketSetCache::getReloadCount() );
             }
         }
+        EditorSelfTestMarks::note( "charactereditor.loadSockets" );
         ImGui::SameLine();
-        ImGui::BeginDisabled( _sockets.isDirty() == false );
+        ImGui::BeginDisabled( canSaveDocument() == false );
         if ( ImGui::Button( "Save" ) )
             (void)saveDocument(); // 실패 이유는 상태 줄에 남는다
         ImGui::EndDisabled();
@@ -136,7 +280,7 @@ namespace sw::editor
             _selectedSocket = hashed_string{};
             _status.clear();
         }
-        if ( _sockets.isDirty() )
+        if ( canSaveDocument() )
         {
             ImGui::SameLine();
             ImGui::TextDisabled( "(modified)" );
@@ -191,8 +335,9 @@ namespace sw::editor
                 _selectedSocket = name;
         }
 
-        if ( ImGui::BeginChild( "##SocketList", ImVec2( 0.0f, 140.0f ), ImGuiChildFlags_Borders ) )
+        if ( ImGui::BeginChild( "##SocketList", ImVec2( 0.0f, CharacterEditorPanelInternal::kSocketListHeight ), ImGuiChildFlags_Borders ) )
         {
+            bool bFirst = true;
             for ( const SocketDef& socket : _sockets.getSockets().getSockets() )
             {
                 const bool bSelected = socket._name == _selectedSocket;
@@ -200,6 +345,11 @@ namespace sw::editor
                 {
                     _selectedSocket = socket._name;
                     std::snprintf( _renameBuffer.data(), _renameBuffer.max_size(), "%s", socket._name.c_str() );
+                }
+                if ( bFirst )
+                {
+                    EditorSelfTestMarks::note( "charactereditor.socket.first" );
+                    bFirst = false;
                 }
             }
         }
@@ -275,11 +425,188 @@ namespace sw::editor
             reportEdit( _sockets.setPreviewMesh( name, arrPreviewBuffer, _status ) );
     }
 
+    void CharacterEditorPanel::drawSkeletonTab()
+    {
+        ImGui::SetNextItemWidth( -CharacterEditorPanelInternal::kPathButtonsWidth );
+        ImGui::InputText( "##SkeletonPath", _skeletonPath.data(), _skeletonPath.max_size() );
+        ImGui::SameLine();
+        if ( ImGui::Button( "Load skeleton" ) )
+            loadSkeleton();
+        EditorSelfTestMarks::note( "charactereditor.loadSkeleton" );
+
+        ImGui::SetNextItemWidth( -CharacterEditorPanelInternal::kPathButtonsWidth );
+        ImGui::InputText( "##RefPosePath", _refPosePath.data(), _refPosePath.max_size() );
+        ImGui::SameLine();
+        if ( ImGui::Button( "Load pose" ) )
+        {
+            const string readPath = ResourcePaths::getResourcePath( string_view( _refPosePath.c_str() ) );
+            if ( readPath.empty() )
+                _status = "Reference pose file was not found - edit bones and Save to create it";
+            else if ( _pose.loadFromFile( readPath ) == false )
+                _status = "Reference pose file could not be loaded (see log)";
+            else
+                _status.clear();
+        }
+        ImGui::SameLine();
+        ImGui::BeginDisabled( _pose.isDirty() == false );
+        if ( ImGui::Button( "Save pose" ) )
+            (void)saveDocument(); // 실패 이유는 상태 줄에 남는다
+        ImGui::EndDisabled();
+
+        ImGui::BeginDisabled( _pose.canUndo() == false );
+        if ( ImGui::Button( "Undo pose" ) )
+            (void)_pose.undo(); // 기록이 있을 때만 켜져 있다
+        ImGui::EndDisabled();
+        ImGui::SameLine();
+        ImGui::BeginDisabled( _pose.canRedo() == false );
+        if ( ImGui::Button( "Redo pose" ) )
+            (void)_pose.redo(); // 기록이 있을 때만 켜져 있다
+        ImGui::EndDisabled();
+        ImGui::SameLine();
+        ImGui::TextDisabled( "%u bones, %u overridden%s", _pose.getSkeleton().getBoneCount(), static_cast<uint32>( _pose.getOverride().getOverrides().size() ),
+                             _pose.isDirty() ? " (modified)" : "" );
+
+        ImGui::Separator();
+        if ( _pose.getSkeleton().getBoneCount() == 0 )
+        {
+            ImGui::TextDisabled( "Load a skeleton to see its bones. The skeleton is read-only; edits go to the reference pose file." );
+            return;
+        }
+        if ( ImGui::BeginChild( "##BoneTree", ImVec2( 0.0f, CharacterEditorPanelInternal::kBoneTreeHeight ), ImGuiChildFlags_Borders ) )
+        {
+            vector<uint32> listRoot;
+            _pose.collectChildren( -1, listRoot );
+            for ( const uint32 rootIndex : listRoot )
+            {
+                drawBoneNode( rootIndex );
+            }
+        }
+        ImGui::EndChild();
+        drawBoneDetail();
+        ImGui::TextDisabled( "Viewport gizmo editing needs the preview scene (EditorMultiWorld)." );
+    }
+
+    void CharacterEditorPanel::drawBoneNode( uint32 boneIndex )
+    {
+        const hashed_string bone = _pose.getSkeleton().getBone( boneIndex )._name;
+        vector<uint32>      listChild;
+        _pose.collectChildren( static_cast<int32>( boneIndex ), listChild );
+
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth;
+        if ( listChild.empty() )
+            flags |= ImGuiTreeNodeFlags_Leaf;
+        if ( bone == _selectedBone )
+            flags |= ImGuiTreeNodeFlags_Selected;
+        const bool bOverridden = _pose.hasOverride( bone );
+        ImGui::PushID( static_cast<int32>( boneIndex ) );
+        const bool bOpen = ImGui::TreeNodeEx( bone.c_str(), flags, "%s%s", bone.c_str(), bOverridden ? " *" : "" );
+        if ( ImGui::IsItemClicked() )
+            _selectedBone = bone;
+        if ( boneIndex == 0 )
+            EditorSelfTestMarks::note( "charactereditor.bone.root" );
+        if ( bOpen )
+        {
+            for ( const uint32 childIndex : listChild )
+            {
+                drawBoneNode( childIndex );
+            }
+            ImGui::TreePop();
+        }
+        ImGui::PopID();
+    }
+
+    void CharacterEditorPanel::drawBoneDetail()
+    {
+        BoneTransform current;
+        if ( _selectedBone.empty() || _pose.getEffectiveTransform( _selectedBone, current ) == false )
+        {
+            ImGui::TextDisabled( "Select a bone to edit its reference pose." );
+            return;
+        }
+        ImGui::TextUnformatted( _selectedBone.c_str() );
+        string error;
+
+        float3 translation = current._translation;
+        if ( ImGui::DragFloat3( "Bone translation", &translation._x, CharacterEditorPanelInternal::kDragSpeed ) )
+            reportEdit( _pose.setTranslation( _selectedBone, translation, true, error ) || error.empty() );
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
+            _pose.endContinuousEdit();
+        EditorSelfTestMarks::note( "charactereditor.bone.translation" );
+
+        float3 degrees = current._rotation.getEulerAngles() * MathUtil::kRadianToDegree;
+        if ( ImGui::DragFloat3( "Bone rotation", &degrees._x, CharacterEditorPanelInternal::kRotationDragSpeed ) )
+            reportEdit( _pose.setRotationDegrees( _selectedBone, degrees, true, error ) || error.empty() );
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
+            _pose.endContinuousEdit();
+
+        float3 scale = current._scale;
+        if ( ImGui::DragFloat3( "Bone scale", &scale._x, CharacterEditorPanelInternal::kDragSpeed ) )
+            reportEdit( _pose.setScale( _selectedBone, scale, true, error ) || error.empty() );
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
+            _pose.endContinuousEdit();
+
+        ImGui::BeginDisabled( _pose.hasOverride( _selectedBone ) == false );
+        if ( ImGui::Button( "Reset bone" ) )
+            reportEdit( _pose.clearBone( _selectedBone, error ) );
+        ImGui::SameLine();
+        if ( ImGui::Button( "Mirror bone" ) )
+        {
+            hashed_string mirrored;
+            if ( _pose.mirrorBone( _selectedBone, _sockets.getMirrorRules(), mirrored, error ) )
+                _selectedBone = mirrored;
+        }
+        ImGui::EndDisabled();
+        if ( error.empty() == false )
+            _status = error;
+    }
+
     void CharacterEditorPanel::drawAppearanceTab()
     {
+        drawAppearanceDataRow();
+        ImGui::Separator();
         ImGui::TextDisabled( "Selection (base preset, body, slots, customization values)" );
         const AppearanceSelection selection = _appearance.getSelection();
+        drawSelectionHeader( selection );
+        ImGui::Separator();
+        drawSlotRows( selection );
+        ImGui::Separator();
+        drawCustomizationRows( selection );
 
+        ImGui::BeginDisabled( _appearance.canUndo() == false );
+        if ( ImGui::Button( "Undo appearance" ) )
+            (void)_appearance.undo(); // 기록이 있을 때만 켜져 있다
+        ImGui::EndDisabled();
+        ImGui::SameLine();
+        ImGui::BeginDisabled( _appearance.canRedo() == false );
+        if ( ImGui::Button( "Redo appearance" ) )
+            (void)_appearance.redo(); // 기록이 있을 때만 켜져 있다
+        ImGui::EndDisabled();
+
+        ImGui::Separator();
+        drawExplanation();
+        drawFitCheck();
+        drawPresetRow();
+    }
+
+    void CharacterEditorPanel::drawAppearanceDataRow()
+    {
+        ImGui::SetNextItemWidth( -CharacterEditorPanelInternal::kPathButtonsWidth );
+        ImGui::InputText( "##ItemsPath", _itemsPath.data(), _itemsPath.max_size() );
+        ImGui::SetNextItemWidth( -CharacterEditorPanelInternal::kPathButtonsWidth );
+        ImGui::InputText( "##AppearanceFolder", _appearanceFolder.data(), _appearanceFolder.max_size() );
+        ImGui::SameLine();
+        if ( ImGui::Button( "Load data" ) )
+            loadAppearanceData();
+        EditorSelfTestMarks::note( "charactereditor.loadData" );
+        if ( _bDatabaseLoaded )
+            ImGui::TextDisabled( "%u slots, %u sets, %u presets", static_cast<uint32>( _database.getSlotTable().getSlots().size() ), static_cast<uint32>( _database.getSets().getSets().size() ),
+                                 static_cast<uint32>( _database.getPresets().getPresets().size() ) );
+        else
+            ImGui::TextDisabled( "Load the items file and the appearance folder to pick items and see rule explanations." );
+    }
+
+    void CharacterEditorPanel::drawSelectionHeader( const AppearanceSelection& selection )
+    {
         utf8 arrTextBuffer[constant::kMaxBuffer128];
         std::snprintf( arrTextBuffer, sizeof( arrTextBuffer ), "%s", selection._basePresetID.c_str() );
         if ( ImGui::InputText( "Base preset", arrTextBuffer, sizeof( arrTextBuffer ), ImGuiInputTextFlags_EnterReturnsTrue ) )
@@ -293,23 +620,61 @@ namespace sw::editor
         std::snprintf( arrTextBuffer, sizeof( arrTextBuffer ), "%s", selection._face.c_str() );
         if ( ImGui::InputText( "Face", arrTextBuffer, sizeof( arrTextBuffer ), ImGuiInputTextFlags_EnterReturnsTrue ) )
             (void)_appearance.setFace( CharacterEditorPanelInternal::makeName( arrTextBuffer ) ); // 같은 값이면 false 이고 그대로 둔다
+    }
 
-        ImGui::Separator();
+    void CharacterEditorPanel::drawSlotRows( const AppearanceSelection& selection )
+    {
         ImGui::TextUnformatted( "Slots" );
-        for ( const AppearanceSlotRequest& request : selection._listSlot )
+        if ( _bDatabaseLoaded == false )
         {
-            ImGui::PushID( request._slot.c_str() );
-            std::snprintf( arrTextBuffer, sizeof( arrTextBuffer ), "%s", request._itemID.c_str() );
-            if ( ImGui::InputText( request._slot.c_str(), arrTextBuffer, sizeof( arrTextBuffer ), ImGuiInputTextFlags_EnterReturnsTrue ) )
-                (void)_appearance.setSlotItem( request._slot, CharacterEditorPanelInternal::makeName( arrTextBuffer ) ); // 같은 값이면 false 이고 그대로 둔다
+            utf8 arrTextBuffer[constant::kMaxBuffer128];
+            for ( const AppearanceSlotRequest& request : selection._listSlot )
+            {
+                ImGui::PushID( request._slot.c_str() );
+                std::snprintf( arrTextBuffer, sizeof( arrTextBuffer ), "%s", request._itemID.c_str() );
+                if ( ImGui::InputText( request._slot.c_str(), arrTextBuffer, sizeof( arrTextBuffer ), ImGuiInputTextFlags_EnterReturnsTrue ) )
+                    (void)_appearance.setSlotItem( request._slot, CharacterEditorPanelInternal::makeName( arrTextBuffer ) ); // 같은 값이면 false 이고 그대로 둔다
+                ImGui::PopID();
+            }
+            ImGui::InputText( "##NewSlot", _newName.data(), _newName.max_size() );
+            ImGui::SameLine();
+            if ( ImGui::Button( "Add slot" ) )
+                (void)_appearance.setSlotItem( CharacterEditorPanelInternal::makeName( _newName.c_str() ), hashed_string{} ); // 이미 있으면 false 이고 그대로 둔다
+            return;
+        }
+
+        // 데이터가 있으면 슬롯 표의 칸마다 그 칸에 낄 수 있는 아이템만 고르게 한다.
+        vector<hashed_string> listItem;
+        bool                  bFirstSlot = true;
+        for ( const AppearanceSlotDef& def : _database.getSlotTable().getSlots() )
+        {
+            AppearanceEditModel::collectSlotItems( _database, def._name, listItem );
+            hashed_string picked;
+            ImGui::PushID( def._name.c_str() );
+            if ( CharacterEditorPanelInternal::drawNameCombo( def._name.c_str(), _appearance.findSlotItem( def._name ), listItem, picked ) )
+                (void)_appearance.setSlotItem( def._name, picked );
+            if ( bFirstSlot )
+            {
+                EditorSelfTestMarks::note( "charactereditor.slot.first" );
+                bFirstSlot = false;
+            }
             ImGui::PopID();
         }
-        ImGui::InputText( "##NewSlot", _newName.data(), _newName.max_size() );
-        ImGui::SameLine();
-        if ( ImGui::Button( "Add slot" ) )
-            (void)_appearance.setSlotItem( CharacterEditorPanelInternal::makeName( _newName.c_str() ), hashed_string{} ); // 이미 있으면 false 이고 그대로 둔다
 
-        ImGui::Separator();
+        vector<hashed_string> listSet;
+        for ( const EquipSetDef& set : _database.getSets().getSets() )
+        {
+            listSet.push_back( set._id );
+        }
+        hashed_string pickedSet;
+        const bool    bSetPicked = CharacterEditorPanelInternal::drawNameCombo( "Equip set", hashed_string{}, listSet, pickedSet, "charactereditor.equipSet.first" );
+        EditorSelfTestMarks::note( "charactereditor.equipSet" );
+        if ( bSetPicked && pickedSet.empty() == false )
+            (void)_appearance.equipSet( _database, pickedSet ); // 이미 입고 있으면 false 이고 그대로 둔다
+    }
+
+    void CharacterEditorPanel::drawCustomizationRows( const AppearanceSelection& selection )
+    {
         ImGui::TextUnformatted( "Customization values" );
         for ( const CustomizationValue& value : selection._customization.getValues() )
         {
@@ -319,16 +684,156 @@ namespace sw::editor
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 _appearance.endContinuousEdit();
         }
+        ImGui::TextDisabled( "Body and face sliders need the GPU morph pool (D4-8 integration)." );
+    }
 
-        ImGui::BeginDisabled( _appearance.canUndo() == false );
-        if ( ImGui::Button( "Undo appearance" ) )
-            (void)_appearance.undo(); // 기록이 있을 때만 켜져 있다
-        ImGui::EndDisabled();
+    void CharacterEditorPanel::drawExplanation()
+    {
+        CharacterEditorPanelInternal::Published& published = CharacterEditorPanelInternal::getPublished();
+        published._traceCount                              = 0;
+        if ( ImGui::CollapsingHeader( "Why does it look like this? (rules)", ImGuiTreeNodeFlags_DefaultOpen ) == false )
+            return;
+        if ( _bDatabaseLoaded == false )
+        {
+            ImGui::TextDisabled( "Load appearance data to see which rules hid or changed what." );
+            return;
+        }
+        ResolvedAppearance        resolved;
+        AppearanceSelectionReport report;
+        _appearance.previewResolved( _database, resolved, report );
+        published._traceCount = static_cast<uint32>( resolved._listTrace.size() );
+
+        if ( report._bUnknownBasePreset == SW_TRUE )
+            ImGui::TextColored( ImVec4( 1.0f, 0.75f, 0.3f, 1.0f ), "Base preset is not in the data" );
+        for ( const hashed_string& dropped : report._listDroppedParameter )
+        {
+            ImGui::TextColored( ImVec4( 1.0f, 0.75f, 0.3f, 1.0f ), "Dropped: %s", dropped.c_str() );
+        }
+        for ( const AppearanceSelectionReport::SlotFallback& fallback : report._listSlotFallback )
+        {
+            ImGui::TextColored( ImVec4( 1.0f, 0.75f, 0.3f, 1.0f ), "Slot %s: %s -> %s (%s)", fallback._slot.c_str(), fallback._requestedItem.c_str(), fallback._fallbackItem.c_str(),
+                                toString( fallback._reason ) );
+        }
+        if ( ImGui::BeginChild( "##RuleTrace", ImVec2( 0.0f, CharacterEditorPanelInternal::kExplanationListHeight ), ImGuiChildFlags_Borders ) )
+        {
+            if ( resolved._listTrace.empty() )
+                ImGui::TextDisabled( "No rule fired." );
+            for ( const AppearanceTraceEntry& entry : resolved._listTrace )
+            {
+                ImGui::TextWrapped( "[%s] %s: %s", toString( entry._step ), entry._source.c_str(), entry._message.c_str() );
+            }
+        }
+        ImGui::EndChild();
+    }
+
+    void CharacterEditorPanel::drawFitCheck()
+    {
+        if ( ImGui::CollapsingHeader( "Fit check (view only)" ) == false )
+            return;
+        if ( _bHasFit == false )
+        {
+            ImGui::TextDisabled( "No fit result yet. The preview scene solves the fit when a slider is released." );
+            return;
+        }
+        for ( const FitPartSummary& part : _fit._listPart )
+        {
+            ImGui::Text( "%s: cut %u/%u (%.0f%%), %u verts moved, max push %.3f", part._name.c_str(), part._cutTriangleCount, part._triangleCount, part._cutRatio * 100.0f,
+                         part._movedVertexCount, part._maxDelta );
+        }
+        if ( _fit.hasPenetration() == false )
+            ImGui::TextDisabled( "No penetration." );
+        for ( const FitPenetrationSummary& penetration : _fit._listPenetration )
+        {
+            ImGui::TextColored( ImVec4( 1.0f, 0.55f, 0.35f, 1.0f ), "Penetration %s / %s: %u points, depth %.3f", penetration._partA.c_str(), penetration._partB.c_str(),
+                                penetration._vertexCount, penetration._maxDepth );
+        }
+        for ( const string& message : _fit._listMessage )
+        {
+            ImGui::TextWrapped( "%s", message.c_str() );
+        }
+    }
+
+    void CharacterEditorPanel::drawPresetRow()
+    {
+        if ( ImGui::CollapsingHeader( "Presets (file)", ImGuiTreeNodeFlags_DefaultOpen ) == false )
+            return;
+        ImGui::SetNextItemWidth( -CharacterEditorPanelInternal::kPathButtonsWidth );
+        ImGui::InputText( "##PresetPath", _presetPath.data(), _presetPath.max_size() );
         ImGui::SameLine();
-        ImGui::BeginDisabled( _appearance.canRedo() == false );
-        if ( ImGui::Button( "Redo appearance" ) )
-            (void)_appearance.redo(); // 기록이 있을 때만 켜져 있다
+        if ( ImGui::Button( "Load presets" ) )
+        {
+            const string readPath = ResourcePaths::getResourcePath( string_view( _presetPath.c_str() ) );
+            if ( readPath.empty() || AppearanceEditModel::loadPresetFile( _presetStore, readPath ) == false )
+                _status = "Preset file could not be loaded (needs appearance data; see log)";
+            else
+                _status.clear();
+        }
+        ImGui::SetNextItemWidth( 180.0f );
+        ImGui::InputText( "##PresetName", _presetName.data(), _presetName.max_size() );
+        ImGui::SameLine();
+        ImGui::BeginDisabled( _bDatabaseLoaded == false );
+        if ( ImGui::Button( "Save as preset" ) )
+        {
+            const string writePath = ResourcePaths::getWritePath( string_view( _presetPath.c_str() ) );
+            if ( writePath.empty() || _appearance.saveToPresetFile( _presetStore, string_view( _presetName.c_str() ), writePath ) == false )
+                _status = "Preset could not be saved (needs a name and appearance data)";
+            else
+                _status.clear();
+        }
+        EditorSelfTestMarks::note( "charactereditor.savePreset" );
         ImGui::EndDisabled();
+        if ( _appearance.isDirty() )
+        {
+            ImGui::SameLine();
+            ImGui::TextDisabled( "(unsaved)" );
+        }
+        ImGui::TextDisabled( "Thumbnail render needs the preview scene." );
+
+        if ( ImGui::BeginChild( "##PresetList", ImVec2( 0.0f, CharacterEditorPanelInternal::kPresetListHeight ), ImGuiChildFlags_Borders ) )
+        {
+            for ( const UserAppearancePreset& preset : _presetStore.getPresets() )
+            {
+                if ( ImGui::Selectable( preset._name.c_str() ) )
+                {
+                    (void)_appearance.loadFromPreset( _presetStore, string_view( preset._name ) ); // 목록의 이름이라 항상 있다
+                    std::snprintf( _presetName.data(), _presetName.max_size(), "%s", preset._name.c_str() );
+                }
+            }
+        }
+        ImGui::EndChild();
+    }
+
+    void CharacterEditorPanel::loadSkeleton()
+    {
+        if ( _pose.loadSkeleton( string_view( _skeletonPath.c_str() ) ) == false )
+        {
+            _status = "Skeleton could not be loaded (see log)";
+            return;
+        }
+        _status.clear();
+        _selectedBone = hashed_string{};
+        vector<hashed_string> listBoneName;
+        _pose.collectBoneNames( listBoneName );
+        _sockets.setBoneNames( listBoneName ); // 이제 소켓 부모 본 이름을 검증한다
+    }
+
+    void CharacterEditorPanel::loadAppearanceData()
+    {
+        _bDatabaseLoaded = false;
+        _database.clear();
+        _pItems = make_unique<ItemCatalog>();
+        if ( _pItems->loadFromResource( string_view( _itemsPath.c_str() ) ) == false )
+        {
+            _status = "Items file could not be loaded (see log)";
+            return;
+        }
+        if ( _database.loadFromFolder( string_view( _appearanceFolder.c_str() ), _pItems.get() ) == false )
+        {
+            _status = "Appearance data has errors - " + _database.getReport().joined();
+            return;
+        }
+        _status.clear();
+        _bDatabaseLoaded = true;
     }
 
     void CharacterEditorPanel::ensureKindTable()
@@ -336,13 +841,18 @@ namespace sw::editor
         if ( _bKindTableReady )
             return;
         _bKindTableReady = true;
+        _reloadGuard.reset( SocketSetCache::getReloadCount() );
         SocketKindTable kinds;
         if ( kinds.loadFromResource( SocketKindTable::kDefaultPath ) == false )
-        {
             SW_LOG_WARNING( "Default socket kind table could not be loaded - kinds are not validated" );
-            return;
-        }
-        _sockets.setKindTable( kinds );
+        else
+            _sockets.setKindTable( kinds );
+
+        MirrorNameRules rules;
+        if ( rules.loadFromResource( MirrorNameRules::kDefaultPath ) == false )
+            SW_LOG_WARNING( "Default mirror name table could not be loaded - left/right pairs are not found" );
+        else
+            _sockets.setMirrorRules( rules );
     }
 
     void CharacterEditorPanel::reportEdit( bool bSucceeded )

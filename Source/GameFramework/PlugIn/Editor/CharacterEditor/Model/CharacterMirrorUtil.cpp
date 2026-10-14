@@ -2,6 +2,11 @@
 
 #include "GameFramework/PlugIn/Editor/CharacterEditor/Model/CharacterMirrorUtil.h"
 
+#include "Core/Container/StringUtil.h"
+
+#include "Engine/Character/CharacterDataReader.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+
 namespace sw::editor
 {
     namespace
@@ -13,7 +18,7 @@ namespace sw::editor
             static bool isLower( utf8 character ) { return 'a' <= character && character <= 'z'; }
             static bool isDigit( utf8 character ) { return '0' <= character && character <= '9'; }
 
-            /** @brief 토큰이 이름 안에서 단어 경계에 놓였는지 봅니다(분리 문자 또는 CamelCase 경계). */
+            /** @brief ?좏겙???대쫫 ?덉뿉???⑥뼱 寃쎄퀎???볦??붿? 遊낅땲??遺꾨━ 臾몄옄 ?먮뒗 CamelCase 寃쎄퀎). */
             static bool isTokenBoundary( string_view name, size_t position, string_view token )
             {
                 const size_t end = position + token.size();
@@ -24,7 +29,7 @@ namespace sw::editor
                 return bLeftOK && bRightOK;
             }
 
-            /** @brief @p token 이 경계에 맞게 놓인 첫 자리를 @p token 의 짝으로 바꿔 @p outMirrorName 에 담습니다. */
+            /** @brief @p token ??寃쎄퀎??留욊쾶 ?볦씤 泥??먮━瑜?@p token ??吏앹쑝濡?諛붽퓭 @p outMirrorName ???댁뒿?덈떎. */
             static bool replaceToken( string_view name, string_view token, string_view replacement, string& outMirrorName )
             {
                 size_t position = name.find( token );
@@ -43,33 +48,72 @@ namespace sw::editor
                 }
                 return false;
             }
+
+            static constexpr const utf8* kArrPairAttribute[] = { "first", "second" };
+
+            /** @brief `<Pair>` ?먯냼留덈떎 ?띿쓣 ?쎌뼱 @p inoutRules ???뷀빀?덈떎. ?섎せ???띿? ?ㅻ쪟濡??④퉩?덈떎. */
+            static void readRoot( const XMLNode& root, CharacterDataReader& reader, MirrorNameRules& inoutRules )
+            {
+                reader.reportUnexpectedAttributes( root );
+                for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
+                {
+                    if ( StringUtil::equals( child.getName(), "Pair", true ) == false )
+                    {
+                        reader.reportUnknownElement( child );
+                        continue;
+                    }
+                    reader.reportUnknownAttributes( child, kArrPairAttribute );
+                    const string_view first  = child.getAttributeText( "first" );
+                    const string_view second = child.getAttributeText( "second" );
+                    if ( inoutRules.addPair( first, second ) == false )
+                        reader.addError( child, "needs two different non-empty attributes 'first' and 'second'" );
+                }
+            }
         };
     } // namespace
 } // namespace sw::editor
 
 namespace sw::editor
 {
-    MirrorNameRules MirrorNameRules::makeDefault()
+    bool MirrorNameRules::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
-        static constexpr const utf8* kArrDefaultPair[][2] = {
-            {  "_L",    "_R"},
-            {  ".L",    ".R"},
-            {  "_l",    "_r"},
-            {  ".l",    ".r"},
-            {"Left", "Right"},
-            {"left", "right"},
-            {  "L_",    "R_"},
-            {  "l_",    "r_"},
-        };
+        CharacterDataReader reader( sourceName );
+        XMLDocument         document;
+        XMLNode             root;
+        MirrorNameRules     loaded;
+        if ( reader.parseRoot( document, xmlText, "MirrorNames", root ) )
+            CharacterMirrorUtilInternal::readRoot( root, reader, loaded );
+        if ( reader.finish() == false )
+            return false;
+        *this = std::move( loaded );
+        return true;
+    }
 
-        MirrorNameRules rules;
-        for ( const auto& arrPair : kArrDefaultPair )
+    bool MirrorNameRules::loadFromResource( string_view path )
+    {
+        CharacterDataReader reader( path );
+        XMLDocument         document;
+        XMLNode             root;
+        MirrorNameRules     loaded;
+        if ( reader.loadRoot( document, path, "MirrorNames", root ) )
+            CharacterMirrorUtilInternal::readRoot( root, reader, loaded );
+        if ( reader.finish() == false )
+            return false;
+        *this = std::move( loaded );
+        return true;
+    }
+
+    string MirrorNameRules::saveToXMLText() const
+    {
+        XMLDocument document;
+        XMLNode     root = document.appendRoot( "MirrorNames" );
+        for ( const MirrorTokenPair& pair : _listPair )
         {
-            const bool bAdded = rules.addPair( arrPair[0], arrPair[1] );
-            SW_ASSERT( bAdded );
-            (void)bAdded;
+            XMLNode node = root.appendChild( "Pair" );
+            node.appendAttribute( "first", string_view( pair._first ) );
+            node.appendAttribute( "second", string_view( pair._second ) );
         }
-        return rules;
+        return document.saveToString();
     }
 
     bool MirrorNameRules::addPair( string_view first, string_view second )
