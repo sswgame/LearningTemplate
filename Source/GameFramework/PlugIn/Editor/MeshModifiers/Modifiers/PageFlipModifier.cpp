@@ -21,11 +21,13 @@ namespace sw::editor
     public:
         PageFlipModifier()
             : MeshModifier()
-            , _progressParam{ addParam( MeshModifierParamDef{ "Progress", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _radiusParam{ addParam( MeshModifierParamDef{ "Curl Radius", MeshModifierParamKind::Float, 0.001f, 1000.0f, float3{ 0.25f, 0.0f, 0.0f } } ) }
-            , _flipAxisParam{ addParam( MeshModifierParamDef{ "Flip Axis", MeshModifierParamKind::Axis, 0.0f, 2.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
+            , _progressParam{ addParam( MeshModifierParamDef{ "Progress", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( nullptr, "How far the page is turned; 0 is flat, 1 is fully turned" ) ) }
+            , _radiusParam{ addParam( MeshModifierParamDef{ "Curl Radius", MeshModifierParamKind::Float, 0.001f, 1000.0f, float3{ 0.25f, 0.0f, 0.0f } }.withLayout( nullptr, "Radius of the curl roll", "m" ) ) }
+            , _flipAxisParam{ addParam( MeshModifierParamDef{ "Flip Axis", MeshModifierParamKind::Axis, 0.0f, 2.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Axis the page turns across" ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "Curls the mesh like a page being turned."; }
 
         bool supportsGPU() const override { return true; }
 

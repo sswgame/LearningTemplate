@@ -20,13 +20,15 @@ namespace sw::editor
     public:
         TreeBendModifier()
             : MeshModifier()
-            , _strengthParam{ addParam( MeshModifierParamDef{ "Strength", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _windParam{ addParam( MeshModifierParamDef{ "Wind Direction", MeshModifierParamKind::Vector3, -1.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
-            , _swayParam{ addParam( MeshModifierParamDef{ "Sway", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.5f, 0.0f, 0.0f } } ) }
-            , _frequencyParam{ addParam( MeshModifierParamDef{ "Frequency", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
-            , _rootHeightParam{ addParam( MeshModifierParamDef{ "Root Height", MeshModifierParamKind::Float, 0.0f, 10000.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
+            , _strengthParam{ addParam( MeshModifierParamDef{ "Strength", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Shape", "Bend amount; 0 leaves the mesh unchanged" ) ) }
+            , _windParam{ addParam( MeshModifierParamDef{ "Wind Direction", MeshModifierParamKind::Vector3, -1.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Shape", "Direction the mesh bends toward" ) ) }
+            , _swayParam{ addParam( MeshModifierParamDef{ "Sway", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.5f, 0.0f, 0.0f } }.withLayout( "Animation", "Portion of the bend that oscillates over time; 0 is static" ) ) }
+            , _frequencyParam{ addParam( MeshModifierParamDef{ "Frequency", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Animation", "Sway oscillations per second; 0 stops swaying", "Hz" ) ) }
+            , _rootHeightParam{ addParam( MeshModifierParamDef{ "Root Height", MeshModifierParamKind::Float, 0.0f, 10000.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Shape", "Height above the bounds bottom below which nothing bends", "m" ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "Bends a tree-like mesh in the wind, more toward the top."; }
 
         bool supportsGPU() const override { return true; }
 

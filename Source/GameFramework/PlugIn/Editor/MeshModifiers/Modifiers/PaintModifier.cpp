@@ -58,12 +58,14 @@ namespace sw::editor
 
         PaintModifier()
             : MeshModifier()
-            , _targetParam{ addParam( MeshModifierParamDef{ "Target", MeshModifierParamKind::Int, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _colorParam{ addParam( MeshModifierParamDef{ "Color", MeshModifierParamKind::Vector3, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
+            , _targetParam{ addParam( MeshModifierParamDef{ "Target", MeshModifierParamKind::Int, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( nullptr, "0 = paint vertex color, 1 = paint vertex weight" ) ) }
+            , _colorParam{ addParam( MeshModifierParamDef{ "Color", MeshModifierParamKind::Vector3, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Color painted by the brushes (Target 0)" ) ) }
             , _brushesParam{ addParam( MeshModifierParamDef{ "Brushes", MeshModifierParamKind::NumberList, -100000.0f, 100000.0f, float3{ 0.0f, 0.0f, 0.0f },
                                                              PaintModifierInternal::kBrushStride, "x y z radius strength falloff" }.withColumns( kArrColumn ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "Paints vertex color or weight with spherical brushes."; }
 
         void applyToMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context ) const override
         {
