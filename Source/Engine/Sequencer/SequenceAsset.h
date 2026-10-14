@@ -62,6 +62,7 @@ namespace sw
     {
         Transform = 0, /**< 대상의 로컬 이동, 회전(라디안), 크기 아홉 채널입니다(언리얼의 3D Transform 트랙). */
         Property  = 1, /**< 대상 컴포넌트의 숫자 프로퍼티 하나입니다(`float32` 또는 `int32`). */
+        RigSlot   = 2, /**< 대상 `PoseModifierComponent` 의 리그 슬롯 가중치 하나입니다(`_propertyPath` 가 슬롯 이름, 값은 0..1 로 자른다). */
         Count          /**< 개수를 세는 용도입니다. 종류가 아닙니다. */
     };
 

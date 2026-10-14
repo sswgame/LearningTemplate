@@ -234,8 +234,10 @@ namespace sw
 
     float32 RigInstance::computeNodeWeight( uint32 nodeIndex ) const
     {
-        const RigNode& node   = *_listNode[nodeIndex];
-        float32        weight = node.getWeight();
+        const RigNode& node = *_listNode[nodeIndex];
+        if ( node.isEnabled() == false )
+            return 0.0f;
+        float32 weight = node.getWeight();
         if ( node.getWeightCurve().empty() == false )
             weight *= ( _pCurveSource != nullptr ) ? _pCurveSource->getCurveValue( node.getWeightCurve() ) : 0.0f;
         if ( node.getWeightSlot().empty() == false )

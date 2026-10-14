@@ -82,6 +82,11 @@ namespace sw
          * @return 대상, 컴포넌트, 숫자 프로퍼티를 찾지 못하면 false 를 반환합니다. 에디터의 키 찍기(현재 상태를 키로)가 씁니다.
          */
         [[nodiscard]] static bool readTrackValues( GameObjectManager* pManager, const SequenceKeyTrack& track, float32* pOutArrValue, uint32 valueCapacity );
+        /**
+         * @brief 리그 슬롯 트랙의 @p frame 가중치입니다(0..1 로 자른다). 키가 없으면 1(슬롯을 정하지 않은 것과 같다)입니다.
+         * @details 언리얼 Control Rig 트랙의 가중치 커브, 유니티 Animation Rigging 의 Rig Weight 키에 해당한다.
+         */
+        static float32 sampleRigSlotWeight( const SequenceKeyTrack& track, float32 frame );
         /** @brief 시퀀스에 카메라 컷이 있으면 컷을 풉니다(게임 카메라가 원래 규칙으로 돌아간다). 재생을 멈출 때 부릅니다. */
         static void releaseCameraCut( GameObjectManager* pManager, const SequenceAsset& asset );
         /**

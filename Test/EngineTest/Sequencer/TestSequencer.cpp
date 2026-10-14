@@ -950,3 +950,21 @@ SW_TEST_CASE( SequencerTest, CameraFieldsRoundTripThroughJSON )
     SW_EXPECT_TRUE( plain.find( "camera" ) == sw::string::npos );
     SW_EXPECT_TRUE( plain.find( "preset" ) == sw::string::npos );
 }
+
+/** 리그 슬롯 트랙 — 키가 없으면 1(슬롯 미설정), 키 값은 0..1 로 자른다. */
+SW_TEST_CASE( SequencerTest, RigSlotTrackSamplesClampedWeight )
+{
+    sw::SequenceKeyTrack track{};
+    track._kind         = sw::SequenceTrackKind::RigSlot;
+    track._propertyPath = "Aim";
+    track.fitChannelsToKind();
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( track._listChannel.size() ) );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, sw::SequenceTimelineUtil::sampleRigSlotWeight( track, 5.0f ), 0.0001f );
+
+    (void)track.setChannelKey( 0, 0.0f, 0.25f );
+    (void)track.setChannelKey( 0, 10.0f, 3.0f );
+    (void)track.setChannelKey( 0, 20.0f, -1.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.25f, sw::SequenceTimelineUtil::sampleRigSlotWeight( track, 0.0f ), 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, sw::SequenceTimelineUtil::sampleRigSlotWeight( track, 10.0f ), 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, sw::SequenceTimelineUtil::sampleRigSlotWeight( track, 20.0f ), 0.0001f );
+}

@@ -7,6 +7,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -126,6 +127,17 @@ namespace sw
                 *pValue       = static_cast<int32>( MathUtil::round( track._listChannel[0].evaluate( frame, static_cast<float32>( *pValue ) ) ) );
             }
 
+            /** @brief 리그 슬롯 트랙의 가중치를 대상의 `PoseModifierComponent` 에 씁니다. 키나 슬롯 이름이 없으면 건드리지 않습니다. */
+            static void applyRigSlotTrack( GameObject* pTarget, const SequenceKeyTrack& track, float32 frame )
+            {
+                if ( track._propertyPath.empty() || track._listChannel.empty() || track._listChannel[0]._listKey.empty() )
+                    return;
+                PoseModifierComponent* pModifier = pTarget->getComponent<PoseModifierComponent>();
+                if ( pModifier == nullptr )
+                    return;
+                pModifier->setSlotWeight( hashed_string( track._propertyPath.c_str() ), SequenceTimelineUtil::sampleRigSlotWeight( track, frame ) );
+            }
+
             /** @brief 그 프레임을 덮는 카메라 컷 가운데 가장 늦게 시작한 것(`SequenceAsset::findCameraCut`)의 카메라를 게임 카메라로 고릅니다. 덮는 컷이 없으면 풉니다. */
             static void applyCameraCut( GameObjectManager* pManager, const SequenceAsset& asset, int32 frame )
             {
@@ -180,6 +192,8 @@ namespace sw
                 SequenceTimelineUtilInternal::applyTransformTrack( pTarget, track, keyFrame );
             else if ( track._kind == SequenceTrackKind::Property )
                 SequenceTimelineUtilInternal::applyPropertyTrack( pTarget, track, keyFrame );
+            else if ( track._kind == SequenceTrackKind::RigSlot )
+                SequenceTimelineUtilInternal::applyRigSlotTrack( pTarget, track, keyFrame );
         }
 
         if ( previousFrame == kNoPreviousFrame )
@@ -236,6 +250,14 @@ namespace sw
             }
             return true;
         }
+        if ( track._kind == SequenceTrackKind::RigSlot )
+        {
+            // 슬롯 가중치는 인스턴스 밖으로 읽어 오지 않는다 — 대상이 있으면 "정하지 않음" 값 1 을 키 기본값으로 준다.
+            if ( pTarget->getComponent<PoseModifierComponent>() == nullptr )
+                return false;
+            pOutArrValue[0] = 1.0f;
+            return true;
+        }
         if ( track._kind != SequenceTrackKind::Property )
             return false;
         Component*          pComponent{ nullptr };
@@ -247,6 +269,11 @@ namespace sw
         else
             pOutArrValue[0] = static_cast<float32>( *pProperty->getValuePtr<int32>( pComponent ) );
         return true;
+    }
+
+    float32 SequenceTimelineUtil::sampleRigSlotWeight( const SequenceKeyTrack& track, float32 frame )
+    {
+        return MathUtil::saturate( track.evaluateChannel( 0, frame, 1.0f ) );
     }
 
     void SequenceTimelineUtil::releaseCameraCut( GameObjectManager* pManager, const SequenceAsset& asset )
