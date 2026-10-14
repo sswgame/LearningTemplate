@@ -14,6 +14,8 @@
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/World/Query/GameFlags.h"
 
+#include <mutex>
+
 namespace sw
 {
     SW_LOG_CALLER( "ScheduleSystem" );
@@ -161,6 +163,29 @@ namespace sw
         return "Unknown";
     }
 
+    namespace
+    {
+        /** @brief 살아 있는 일정 시스템 목록입니다. 에디터 디버그 창(`collectLiveSystems`)만 읽습니다. */
+        struct ScheduleSystemRegistry
+        {
+            std::mutex                    _mutex;
+            vector<const ScheduleSystem*> _listSystem;
+
+            static ScheduleSystemRegistry& get()
+            {
+                static ScheduleSystemRegistry registry;
+                return registry;
+            }
+        };
+    } // namespace
+
+    void ScheduleSystem::collectLiveSystems( vector<const ScheduleSystem*>& outListSystem )
+    {
+        ScheduleSystemRegistry&     registry = ScheduleSystemRegistry::get();
+        std::lock_guard<std::mutex> lock( registry._mutex );
+        outListSystem = registry._listSystem;
+    }
+
     ScheduleSystem::ScheduleSystem()
         : _pCatalog{ nullptr }
         , _pPlanning{ nullptr }
@@ -185,11 +210,23 @@ namespace sw
         , _bConditionsDirty{ SW_FALSE }
         , _bSuppressEvents{ SW_FALSE }
     {
+        ScheduleSystemRegistry&     registry = ScheduleSystemRegistry::get();
+        std::lock_guard<std::mutex> lock( registry._mutex );
+        registry._listSystem.push_back( this );
     }
 
     ScheduleSystem::~ScheduleSystem()
     {
         shutdown();
+        ScheduleSystemRegistry&     registry = ScheduleSystemRegistry::get();
+        std::lock_guard<std::mutex> lock( registry._mutex );
+        for ( size_t systemIndex = 0; systemIndex < registry._listSystem.size(); ++systemIndex )
+        {
+            if ( registry._listSystem[systemIndex] != this )
+                continue;
+            registry._listSystem.erase( registry._listSystem.begin() + static_cast<ptrdiff_t>( systemIndex ) );
+            break;
+        }
     }
 
     void ScheduleSystem::initialize( const ScheduleCatalog* pCatalog, const ScheduleSystemSettings& settings, int32 absoluteMinute )

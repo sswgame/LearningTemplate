@@ -34,6 +34,8 @@ endif()
 # 기믹 회로 그래프 편집 모델(GF_EditorPlugIn_Base)도 같다 - 화면 없는 모델과 컴포넌트 다리만 직접 컴파일한다.
 set(swGimmickGraphDirectory "${CMAKE_SOURCE_DIR}/Source/GameFramework/PlugIn/Editor/Base/Gimmick")
 list(APPEND swEngineTestExtensionSource "${swGimmickGraphDirectory}/GimmickGraphModel.cpp" "${swGimmickGraphDirectory}/GimmickGraphBridge.cpp")
+# NPC 일정 디버그 창의 표 행 변환(GF_EditorPlugIn_Base)도 화면 없는 부분만 직접 컴파일한다.
+list(APPEND swEngineTestExtensionSource "${CMAKE_SOURCE_DIR}/Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleTimelineRows.cpp")
 
 sw_addTestExecutable(EngineTest
 	HOST_SPLIT
