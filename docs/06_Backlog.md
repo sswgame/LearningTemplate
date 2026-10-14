@@ -254,6 +254,10 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
 - `D2-9` **반해상도 블룸의 Release 측정** — `deferredpipeline.xml` 블룸의 밝은 부분을 반해상도 패스(`BloomDownsample`)로 나눴다. p50 · p99 를 `GPU.PostBloom`(전) 대
   `GPU.BloomDownsample` + `GPU.PostBloom`(후)로 잰다. 지면 되돌린다.
 
+- `D2-10` **뷰포트 보기 모드의 남은 것**(2026-10-14, `RenderViewMode` — 언리얼 View Mode · 유니티 Draw Mode 와 견준 것은 기억에 의존한 비교다). `LightingOnly` 는 들어갔다 —
+  `toon` · `sprite2dlit` 포워드 경로까지 회색으로 바꾸지만 4 백엔드 그림(`RenderPassGPUTest.ViewModesProduceDistinctPictures`)과 Shipping 베이크는 아직 돌려 보지 않았다.
+  안 한 것: Roughness / Metallic 버퍼 보기(G버퍼에 그 칸이 없다 — 칸을 늘리거나 패스를 새로 만들어야 한다), Shaded Wireframe(패스가 둘 필요), Light Complexity · Mipmaps(그리는 경로가 새로 필요).
+
 ### D3. 에디터
 
 - `D3-1` **에디터 로드맵 — 미룬 영역 패널을 그 영역 옆에.** 엔진 영역 패널은 EditorModule, 기반 GameFramework 영역은 `GF_EditorPlugIn_Base`(`Source/GameFramework/PlugIn/Editor/Base/`),
@@ -268,6 +272,9 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
 
 - `D3-4` **콘솔 · 치트의 남은 것** — 게임 · 키트의 치트 명령(무적 · 아이템 주기 · 돈 …)을 각 게임 · 킷에 `SW_DEV_COMMAND` 로 단다(지금 게임 · 키트 쪽 명령은 `GameNetSession` 하나뿐 — 레지스트리 · 콘솔 ·
   엔진 명령은 `Source/Engine/` "개발 콘솔"). 리눅스 오버레이(`X11DevConsoleWindow`)는 실기로 띄워 보지 않았고, X11 그리기는 `XDrawString`(Latin-1)이라 한글이 깨진다.
+  어빌리티 · 판 상태 · Shooter3D 의 `cheat.*` 는 들어갔다(`AbilityDevCommands` · `SessionStateDevCommands` · `ShooterDevCommands`). **무적(`cheat.god`)은 못 달았다** — 어빌리티 시스템에
+  무적 API 가 없고, Shooter3D 의 `Vitality::setInvulnerable` 은 private 멤버 `_vitality` 뒤에 있다. API 를 열면 단다. `cheat.heal` · `cheat.attribute` 는 적을 포함한 모든 어빌리티 시스템에 적용된다
+  (플레이어만 가리는 길이 필요하면 태그나 팀을 본다). `Vitality` 를 직접 쓰는 다른 키트의 치트는 아직 없다.
 
 - `D3-5` **입력 흉내 창구(`EditorSelfTestInput` · `EditorSelfTestMarks::note`)로 아직 안 덮은 것** — 그래프 패널 ↔ 저장 커맨드 배선. 대화 · 애니메이션 그래프 문서 에셋이 저장소에 없어
   시나리오가 저장하면 저장소 리소스가 바뀐다 — 임시 에셋으로 저장하는 길이 필요하다(지금은 저장하지 않은 문서 수 탐침 `Editor.DirtyDocumentCount` 뿐).
@@ -279,6 +286,15 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   기즈모, 창마다 선택 · Undo 범위 — 지금은 에디터 전체에 하나, 문서 계약은 있는 것, 키트 · 게임이 등록하도록 1-4 의 C 확장 지점 위에) ④ 위에 올릴 창:
   프리팹(격리 월드) · 머티리얼(미리보기 구체) · 메시/모델(LOD 비교) · 애니메이션(스켈레톤 · 타임라인 · 압축 오차) · 카메라 프리셋(블렌드 미리보기) ·
   래그돌/물리 에셋(관절 한계) · 이펙트 · 장르 도구(코스터 트랙 · 리듬 차트). 언리얼 FPreviewScene · 애셋 에디터 툴킷, 유니티 PreviewRenderUtility · Prefab Stage.
+  (2026-10-14 사용자 결정: 규모가 XL 이라 에디터 보강 묶음에서 뺐다 — 설계부터 따로 짠다.)
+
+- `D3-8` **에디터 보강 묶음(2026-10-14)에서 남긴 것.**
+  - **시나리오 녹화**(`ScenarioRecorder` · `scenario.record` · `automation.toggleScenarioRecord`): 휠 · 더블클릭 · 조합 중 글자 · 포커스 · 포인터 출입 · 패드 연결은 기록하지 않고 건너뛴 수만 센다
+    (시나리오 실행기에 받는 단계가 없다). 녹화 파일을 재생해 보는 확인도 안 했다.
+  - **인스펙터**(`Panels/Inspector/`): 즐겨찾기(언리얼 Favorites — 저장소가 필요하다)와 디버그 모드(유니티 Debug 인스펙터 — 숨은 필드는 리플렉션 범위 밖)는 하지 않았다.
+    "바뀐 것만 보기" 는 다중 선택에서 주 선택 오브젝트의 값만 기준으로 거른다.
+  - **모듈 패키지 관리**(모듈 설치 · 제거 · 의존 해결 UI): 없다 — 설계 판단이 커서 이번 묶음에서 뺐다. 지금은 `ModulesPanel` 의 켜고 끄기 + 빌드 · 재시작뿐이다.
+  - **UI 디자이너**(`D3-3`)의 상자 · 격자에서 끌어 순서 · 칸을 바꾸는 손잡이.
 
 ### D4. 게임플레이 · 캐릭터 · 카메라 · 애니메이션
 
@@ -374,6 +390,10 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
 - `D4-13` **의도 기록 · 원격 조종자의 남은 연결.** `NetClientServer` 의 입력 바이트(`ReplicationClient::sendInput` 이 게임이 준 바이트를 싣는 자리)를
   `ControlIntent::write` 로, 서버 폰은 `RemoteControllerComponent` 로 — 폰을 쓰는 넷 테스트 게임이 생기면(지금 0). 재생 진입점(`IntentPlayback::start` · `startFromFile`)은 있다.
   의도 기록을 켜고 `.swintent` 를 쓰는 명령줄 · 에디터 단추와 재생 UI · 킬캠 카메라 · 되감기는 아직 없다(호출하는 쪽의 일).
+
+- `D4-14` **포토 모드의 남은 것**(2026-10-14, `Source/GameFramework/Base/Actor/Camera/PhotoModeCamera` · `CameraDirectorComponent`). Shooter3D 입력 맵(`Resource/game/shooter3d/data/shooter.input.xml`)에
+  `Camera.Pan` 이 없어 포토 모드의 이동 입력이 0 이다 — 맵에 액션을 더하고(오르내림 `Camera.PhotoRise` · 노출 `Camera.PhotoExposure` 는 들어갔다) 다른 게임 맵에도 같은 액션을 단다.
+  Simulate 중 Pause 는 씬 틱이 멈춰 포토 모드가 갱신되지 않는다(게임 카메라가 없는 상황이라 고치지 않았다). 롤이 있던 시점은 둘러보기를 시작하면 롤이 사라진다.
 
 ### D5. 오디오 · 현지화 · AI
 
