@@ -6,3 +6,4 @@
 add_subdirectory(Base)
 add_subdirectory(Admin)
 add_subdirectory(ThemePark)
+add_subdirectory(MeshModifiers)

@@ -38,6 +38,12 @@ list(APPEND swEngineTestExtensionSource "${swGimmickGraphDirectory}/GimmickGraph
 list(APPEND swEngineTestExtensionSource "${CMAKE_SOURCE_DIR}/Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugModel.cpp")
 # NPC 일정 디버그 창의 표 행 변환(GF_EditorPlugIn_Base)도 화면 없는 부분만 직접 컴파일한다.
 list(APPEND swEngineTestExtensionSource "${CMAKE_SOURCE_DIR}/Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleTimelineRows.cpp")
+# 메시 모디파이어(GF_EditorPlugIn_MeshModifiers)의 순수 로직 — 스택 틀(Stack/)과 모디파이어(Modifiers/)를 폴더째 모은다.
+# 모디파이어를 더해도 이 줄을 고치지 않는다(병렬로 더하는 작업이 이 목록에서 부딪히지 않게). 등록은 각 .cpp 의 SW_MESH_MODIFIER 가 한다.
+file(GLOB swMeshModifierSource CONFIGURE_DEPENDS
+	"${CMAKE_SOURCE_DIR}/Source/GameFramework/PlugIn/Editor/MeshModifiers/Stack/*.cpp"
+	"${CMAKE_SOURCE_DIR}/Source/GameFramework/PlugIn/Editor/MeshModifiers/Modifiers/*.cpp")
+list(APPEND swEngineTestExtensionSource ${swMeshModifierSource})
 
 sw_addTestExecutable(EngineTest
 	HOST_SPLIT
