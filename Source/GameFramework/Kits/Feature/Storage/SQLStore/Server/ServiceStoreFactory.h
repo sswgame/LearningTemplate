@@ -22,7 +22,6 @@ namespace sw
      */
     struct SW_KIT_API ServiceStoreFactory
     {
-        static constexpr const utf8* kMemoryDriverName = "memory";
 
         /**
          * @brief 저장소를 만들고 초기화합니다. 실패하면 nullptr 과 실패 이유를 반환합니다.

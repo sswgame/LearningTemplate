@@ -33,7 +33,7 @@ namespace sw
             static constexpr JPH::uint kMaxBodyCount          = 65536;
             static constexpr JPH::uint kMaxBodyPairCount      = 65536;
             static constexpr JPH::uint kMaxContactCount       = 32768;
-            static constexpr JPH::uint kTempAllocatorByteSize = 16u * 1024u * 1024u;
+            static constexpr JPH::uint kTempAllocatorByteSize = static_cast<JPH::uint>( 16 * constant::kBytesPerMegabyte );
             /** @brief 삼각 메시 바디에 주는 질량 상자의 가장 얇은 변(m)입니다 — 평평한 메시의 질량이 0 이 되지 않게 한다. */
             static constexpr float32 kMinMeshMassBoxSize = 0.1f;
 

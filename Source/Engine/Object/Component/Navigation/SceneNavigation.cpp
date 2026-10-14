@@ -324,7 +324,7 @@ namespace sw
         runtime._bounds                     = pEntry->_bounds;
         runtime._bFromCooked                = true;
         runtime._bakeStats                  = NavMeshBakeStats{};
-        runtime._bakeStats._milliseconds    = static_cast<float64>( stopwatch.getElapsedMicroseconds() ) / 1000.0;
+        runtime._bakeStats._milliseconds    = static_cast<float64>( stopwatch.getElapsedMicroseconds() ) / constant::kMicrosecondsPerMillisecond;
         runtime._bakeStats._tileCount       = static_cast<uint32>( runtime._pNavMesh->getTileGrid().getTileCount() );
         runtime._bakeStats._filledTileCount = runtime._pNavMesh->getLoadedTileCount();
         runtime._bakeStats._polygonCount    = runtime._pNavMesh->getPolygonCount();

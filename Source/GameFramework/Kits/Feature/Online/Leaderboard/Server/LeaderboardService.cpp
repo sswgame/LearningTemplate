@@ -11,6 +11,7 @@
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Base/Online/Mail/ServiceMail.h"
 #include "GameFramework/Base/Online/Schedule/ServiceScheduler.h"
+#include "GameFramework/Base/Online/Service/OnlineLimit.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 
@@ -23,7 +24,6 @@ namespace sw
         struct LeaderboardServiceInternal
         {
             static constexpr uint8       kFormatVersion        = 1;
-            static constexpr int32       kMaxConflictRetry     = 4;
             static constexpr int32       kRebuildBatch         = 256;
             static constexpr int32       kPlayersPerCommit     = 15;  ///< 사람마다 쓰기가 넷이다. 결과, 우편, 보낸 기록, 만료 인덱스이며 트랜잭션 상한 64 안에 든다
             static constexpr int32       kPlayersPerPage       = 600; ///< 정산 저장소 일 하나가 쓰는 사람 수(커밋 40 번). 페이지 사이에 다른 요청이 저장소 워커를 쓴다
@@ -210,7 +210,7 @@ namespace sw
             void run( IServiceStoreConnection& connection ) override
             {
                 using Internal = LeaderboardServiceInternal;
-                for ( int32 attempt = 0; attempt < Internal::kMaxConflictRetry; ++attempt )
+                for ( int32 attempt = 0; attempt < OnlineLimit::kMaxConflictRetry; ++attempt )
                 {
                     ServiceRecord            record;
                     const ServiceStoreResult readResult = connection.readRecord( _table, _key, record );

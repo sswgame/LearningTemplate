@@ -20,10 +20,9 @@ namespace sw
     {
         struct AssetLoadProfilerInternal
         {
-            static constexpr const utf8* kArrPhaseName[]      = { "IO", "Decode", "Upload" };
-            static constexpr float64     kNanosPerMillisecond = 1.0e6;
+            static constexpr const utf8* kArrPhaseName[] = { "IO", "Decode", "Upload" };
 
-            [[maybe_unused]] static float64 toMilliseconds( uint64 nanos ) { return static_cast<float64>( nanos ) / kNanosPerMillisecond; }
+            [[maybe_unused]] static float64 toMilliseconds( uint64 nanos ) { return static_cast<float64>( nanos ) / constant::kNanosecondsPerMillisecond; }
 
             static uint64 computeSummaryTotal( const AssetLoadKindSummary& summary )
             {

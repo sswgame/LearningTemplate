@@ -11,7 +11,6 @@ namespace sw
     {
         struct ServerRegistrationInternal
         {
-            static constexpr int64 kMillisecondsPerSecond = 1000; ///< 색인 점수는 하트비트 초
         };
     } // namespace
 } // namespace sw
@@ -87,7 +86,7 @@ namespace sw
         (void)_pRouter->submit( EphemeralRequest::makeSet( ServerRecord::makeRecordKey( descriptor._serverID ), ServerRecord::encode( _status ), kRecordTtlMs ),
                                 EphemeralStoreRouter::ReplyDelegate{} );
         (void)_pRouter->submit( EphemeralRequest::makeScoreSet( ServerRecord::makeIndexKey( descriptor._kind ), ServerRecord::makeMember( descriptor._serverID ),
-                                                                nowMs / ServerRegistrationInternal::kMillisecondsPerSecond ),
+                                                                nowMs / constant::kMillisecondsPerSecond ),
                                 EphemeralStoreRouter::ReplyDelegate{} );
         _lastWrittenMs = nowMs;
         _bDirty        = SW_FALSE;

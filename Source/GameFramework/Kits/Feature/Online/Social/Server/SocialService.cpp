@@ -8,6 +8,7 @@
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
 #include "GameFramework/Base/Online/Identity/AccountNameIndex.h"
+#include "GameFramework/Base/Online/Service/OnlineLimit.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialLinkRules.h"
@@ -22,7 +23,6 @@ namespace sw
         struct SocialServiceInternal
         {
             static constexpr uint8 kFormatVersion     = 1;
-            static constexpr int32 kMaxConflictRetry  = 4;
             static constexpr int64 kPresenceTtlMs     = 90000;
             static constexpr int64 kPresenceRefreshMs = 30000;
 
@@ -157,7 +157,7 @@ namespace sw
             {
                 if ( _displayName.empty() == false && resolveName( connection ) == false )
                     return;
-                for ( int32 attempt = 0; attempt < SocialServiceInternal::kMaxConflictRetry; ++attempt )
+                for ( int32 attempt = 0; attempt < OnlineLimit::kMaxConflictRetry; ++attempt )
                 {
                     const ServiceStoreResult commitResult = runOnce( connection );
                     if ( commitResult == ServiceStoreResult::Ok )

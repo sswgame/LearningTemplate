@@ -12,6 +12,7 @@
  *          국내 MMO 우편함과 같은 모양이다. 보낸 순간 보낸 쪽에서 빠지고(맡김), 운영 우편은 재원 없는 발행이라 수령 때 움직인다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
@@ -61,8 +62,8 @@ namespace sw
         static constexpr int32 kMaxTitleSize          = 128;
         static constexpr int32 kMaxBodySize           = 2048;
         static constexpr int32 kMaxSenderNameSize     = 64;
-        static constexpr int32 kMaxIdempotencyKeySize = 64;                         ///< `[0-9a-z_.-]`
-        static constexpr int64 kDefaultRetentionMs    = 30ll * 24 * 60 * 60 * 1000; ///< 기본 보관 30 일
+        static constexpr int32 kMaxIdempotencyKeySize = 64;                                                     ///< `[0-9a-z_.-]`
+        static constexpr int64 kDefaultRetentionMs    = 30ll * 24 * 60 * 60 * constant::kMillisecondsPerSecond; ///< 기본 보관 30 일
     };
 } // namespace sw
 

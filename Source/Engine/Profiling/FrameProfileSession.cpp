@@ -48,7 +48,7 @@ namespace sw
     bool FrameProfileSession::isMeasureWindowDone( uint64 frames, uint64 frameTarget, int64 elapsedMicro, int64 secondsTarget )
     {
         const bool bFramesDone  = frameTarget > 0 && frames >= frameTarget;
-        const bool bSecondsDone = secondsTarget > 0 && elapsedMicro >= secondsTarget * 1000000;
+        const bool bSecondsDone = secondsTarget > 0 && elapsedMicro >= secondsTarget * constant::kMicrosecondsPerSecond;
         return bFramesDone || bSecondsDone;
     }
 
@@ -115,7 +115,7 @@ namespace sw
         // 측정 구간의 벽시계 시간이다. 프레임이 실제로 몇 us 마다 나왔는지(처리량)를 본다. 구간 표만으로는 병목이 어디서 기다리는지 알 수 없다.
         [[maybe_unused]] const int64 nowMicro     = MonotonicClock::nowMicroseconds();
         [[maybe_unused]] const int64 elapsedMicro = nowMicro - _measureStartMicro;
-        SW_LOG_INFO( "[Profile] wall  %# frames in %# ms  = %# us/frame", frames, elapsedMicro / 1000, elapsedMicro / static_cast<int64>( frames == 0 ? 1 : frames ) );
+        SW_LOG_INFO( "[Profile] wall  %# frames in %# ms  = %# us/frame", frames, elapsedMicro / constant::kMicrosecondsPerMillisecond, elapsedMicro / static_cast<int64>( frames == 0 ? 1 : frames ) );
         reportAllocations( frames );
 #if SW_PROFILER_TRACE_ENABLED
         if ( gv_profileTracePath.empty() == false )

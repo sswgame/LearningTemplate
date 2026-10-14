@@ -3,6 +3,7 @@
  * @brief 계정 키트(서버)의 공통 타입입니다. 설정, 자격, 발급 결과, 이벤트와 암호 인터페이스(`ILoginCrypto`)를 정의합니다. 와이어 타입(결과, 토큰, 티켓)은 공유 모듈 `GF_Account` 의 `AccountTypes.h` 에 있습니다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
@@ -27,16 +28,16 @@ namespace sw
     /** @brief 로그인 서비스 설정입니다. 시간은 밀리초입니다. */
     struct LoginSettings
     {
-        NetPasswordHashParams _passwordHashParams{};                    ///< Argon2id 해시 파라미터이다. 기본값은 OWASP 권장(19 MiB, 2회, 1레인)이며, 바꾸면 다음 로그인에서 다시 해시한다
-        int64                 _sessionLifetimeMs{ 12ll * 3600 * 1000 }; ///< 세션의 절대 수명이다. 지나면 비밀번호로 다시 로그인해야 한다
-        int64                 _reconnectGraceMs{ 120 * 1000 };          ///< 연결이 끊긴 뒤 토큰으로 돌아올 수 있는 시간이다
-        int64                 _tombstoneLifetimeMs{ 600 * 1000 };       ///< 밀려난 세션이 `Revoked` 로 응답하는 시간이다
-        int64                 _ticketLifetimeMs{ 60 * 1000 };           ///< 게임 접속 티켓의 시한이다. 새 UDP 연결만 막는다
-        int64                 _lockoutMs{ 300 * 1000 };
-        int64                 _attemptRefillMs{ 2000 };                    ///< 연결(주소)마다 시도 횟수 하나가 채워지는 간격이다
-        int64                 _deletionGraceMs{ 30ll * 24 * 3600 * 1000 }; ///< 탈퇴를 요청한 뒤 계정을 지울 때까지의 유예 시간이다. 그 안에 취소할 수 있다
-        int32                 _maxFailedCount{ 5 };                        ///< 이만큼 틀리면 계정을 잠근다
-        int32                 _attemptBurst{ 10 };                         ///< 연결(주소)마다 한꺼번에 할 수 있는 시도 횟수이다
+        NetPasswordHashParams _passwordHashParams{};                                                ///< Argon2id 해시 파라미터이다. 기본값은 OWASP 권장(19 MiB, 2회, 1레인)이며, 바꾸면 다음 로그인에서 다시 해시한다
+        int64                 _sessionLifetimeMs{ 12ll * 3600 * constant::kMillisecondsPerSecond }; ///< 세션의 절대 수명이다. 지나면 비밀번호로 다시 로그인해야 한다
+        int64                 _reconnectGraceMs{ 120 * constant::kMillisecondsPerSecond };          ///< 연결이 끊긴 뒤 토큰으로 돌아올 수 있는 시간이다
+        int64                 _tombstoneLifetimeMs{ 600 * constant::kMillisecondsPerSecond };       ///< 밀려난 세션이 `Revoked` 로 응답하는 시간이다
+        int64                 _ticketLifetimeMs{ 60 * constant::kMillisecondsPerSecond };           ///< 게임 접속 티켓의 시한이다. 새 UDP 연결만 막는다
+        int64                 _lockoutMs{ 300 * constant::kMillisecondsPerSecond };
+        int64                 _attemptRefillMs{ 2000 };                                                ///< 연결(주소)마다 시도 횟수 하나가 채워지는 간격이다
+        int64                 _deletionGraceMs{ 30ll * 24 * 3600 * constant::kMillisecondsPerSecond }; ///< 탈퇴를 요청한 뒤 계정을 지울 때까지의 유예 시간이다. 그 안에 취소할 수 있다
+        int32                 _maxFailedCount{ 5 };                                                    ///< 이만큼 틀리면 계정을 잠근다
+        int32                 _attemptBurst{ 10 };                                                     ///< 연결(주소)마다 한꺼번에 할 수 있는 시도 횟수이다
         LoginDuplicatePolicy  _duplicatePolicy{ LoginDuplicatePolicy::KickExisting };
         uint8                 _bKeepGuestDeviceAfterLink{ SW_TRUE }; ///< 연동한 뒤에도 같은 장치가 게스트 비밀로 들어올 수 있게 한다
     };

@@ -12,6 +12,7 @@
  *          - 호스트는 IPv4 글자나 `localhost` 만 쓸 수 있다. Core 주소에 이름 해석이 없기 때문이며, 실제 제공자 호스트 이름은 백로그에 있다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
@@ -46,7 +47,7 @@ namespace sw
     struct HTTPConstant
     {
         static constexpr int32 kMaxHeaderBytes      = 16 * 1024;
-        static constexpr int32 kDefaultMaxBodyBytes = 1024 * 1024;
+        static constexpr int32 kDefaultMaxBodyBytes = static_cast<int32>( constant::kBytesPerMegabyte );
         static constexpr int64 kDefaultTimeoutMs    = 10000;
         static constexpr int32 kStatusOk            = 200;
         static constexpr int32 kStatusUnauthorized  = 401;

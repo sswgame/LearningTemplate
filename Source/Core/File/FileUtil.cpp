@@ -625,7 +625,7 @@ namespace sw
         if ( ::stat( filePath.c_str(), &fileStat ) != 0 || S_ISREG( fileStat.st_mode ) == 0 )
             return false;
         outStamp._sizeBytes = static_cast<uint64>( fileStat.st_size );
-        outStamp._writeTime = static_cast<uint64>( fileStat.st_mtim.tv_sec ) * 1'000'000'000ull + static_cast<uint64>( fileStat.st_mtim.tv_nsec );
+        outStamp._writeTime = static_cast<uint64>( fileStat.st_mtim.tv_sec ) * static_cast<uint64>( constant::kNanosecondsPerSecond ) + static_cast<uint64>( fileStat.st_mtim.tv_nsec );
         return true;
 #endif
     }
