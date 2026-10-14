@@ -263,7 +263,9 @@ namespace sw::editor
     {
         static constexpr const char* kPopupID = "##ViewportContextMenu";
         // 패널 고유 항목이 없으므로 등록된 항목이 없으면 메뉴도 없다. 오른쪽 단추를 끌었으면 비행 · 궤도 줌이었다.
-        const bool bOpen = bCanvasHovered && ImGui::IsMouseReleased( ImGuiMouseButton_Right ) && ImGui::IsMouseDragPastThreshold( ImGuiMouseButton_Right ) == false &&
+        // GetMouseDragDelta 는 끌기 문턱을 넘지 않았으면 0 이고, 놓은 프레임에도 값이 남는다(IsMouseDragging 은 놓은 프레임에 거짓이다).
+        const ImVec2 dragDelta = ImGui::GetMouseDragDelta( ImGuiMouseButton_Right );
+        const bool   bOpen     = bCanvasHovered && ImGui::IsMouseReleased( ImGuiMouseButton_Right ) && dragDelta.x == 0.0f && dragDelta.y == 0.0f &&
                            ImGui::GetIO().KeyAlt == false && EditorContextMenuExtensionUtil::countEntries( EditorContextMenuKind::Viewport ) != 0;
         if ( bOpen )
         {
