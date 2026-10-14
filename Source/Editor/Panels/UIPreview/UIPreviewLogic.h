@@ -39,6 +39,34 @@ namespace sw::editor
     };
 
     /**
+     * @brief 캔버스 슬롯의 앵커 프리셋입니다(UMG 디자이너의 앵커 드롭다운). 아홉 점 앵커와 가로 · 세로 · 전체 늘이기입니다.
+     * @details 가로 늘이기는 세로 가운데, 세로 늘이기는 가로 가운데에 앵커를 둔다.
+     */
+    enum class UIPreviewAnchorPreset : uint8
+    {
+        TopLeft = 0,
+        TopCenter,
+        TopRight,
+        CenterLeft,
+        Center,
+        CenterRight,
+        BottomLeft,
+        BottomCenter,
+        BottomRight,
+        StretchHorizontal,
+        StretchVertical,
+        StretchAll,
+        Count
+    };
+
+    /** @brief 앵커 프리셋 하나의 앵커 값입니다(부모 크기 비율, 0~1). */
+    struct UIPreviewAnchorValues
+    {
+        float2 _anchorMin{};
+        float2 _anchorMax{};
+    };
+
+    /**
      * @brief 고른 위젯의 부모 패널이 읽는 슬롯 필드 묶음입니다(디자이너의 Slot 칸이 이것만 보여 준다 — UMG 디자이너가 부모 패널의 슬롯 타입만 보여 주는 것과 같다).
      * @details 슬롯은 모든 패널의 필드를 한 구조체(`WidgetLayoutSlot`)에 모았으므로, 패널 종류마다 슬롯 타입을 두지 않고 "어느 묶음을 보이는지" 만 고른다.
      */
@@ -164,6 +192,17 @@ namespace sw::editor
          * @return 슬롯이 바뀌었으면 true 입니다.
          */
         [[nodiscard]] static bool applySlotDrag( WidgetLayoutSlot& inoutSlot, UIPreviewSlotHandle handle, const float2& deltaUI );
+        /** @brief 앵커 프리셋 @p preset 의 앵커 값입니다. 범위 밖이면 좌상(0, 0)입니다. */
+        static UIPreviewAnchorValues getAnchorPreset( UIPreviewAnchorPreset preset );
+        /** @brief 앵커 프리셋 @p preset 의 자동화 표식 이름입니다("topleft" 등). */
+        static const utf8* getAnchorPresetMark( UIPreviewAnchorPreset preset );
+        /**
+         * @brief 앵커를 프리셋 @p preset 으로 바꾸고, 위젯이 화면에서 제자리에 머물도록 오프셋을 다시 채웁니다(UMG 의 기본 동작 — 앵커만 옮기고 자리는 지킨다).
+         * @param localRect 위젯의 지금 사각형(부모 왼쪽 위 원점, UI 단위)입니다. 자동 크기도 실제 크기가 들어오므로 오른쪽 · 아래 오프셋까지 맞게 채워진다.
+         * @param parentSize 부모 캔버스의 크기(UI 단위)입니다.
+         * @return 슬롯이 바뀌었으면 true 입니다.
+         */
+        [[nodiscard]] static bool applyAnchorPreset( WidgetLayoutSlot& inoutSlot, UIPreviewAnchorPreset preset, const UIRect& localRect, const float2& parentSize );
         /** @brief 시간 막대 줄입니다 — "0.25 / 1.00 s". */
         static string makeTimeLabel( float32 time, float32 duration );
     };

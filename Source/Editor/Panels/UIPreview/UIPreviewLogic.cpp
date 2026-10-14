@@ -47,6 +47,38 @@ namespace sw::editor
             /// 의사 문화권 코드(정규 표기)입니다. 엔진 문화권 표(`LocalizationManager::normalizeLanguageCode`)가 쓰는 이름과 같다.
             static constexpr string_view kPseudoAccented = "qps_ploc";
             static constexpr string_view kPseudoMirrored = "qps_plocm";
+
+            /// 앵커 프리셋 표 한 줄입니다(`UIPreviewAnchorPreset` 순서).
+            struct AnchorPresetRow
+            {
+                const utf8* _pMark;
+                float32     _minX;
+                float32     _minY;
+                float32     _maxX;
+                float32     _maxY;
+            };
+            static constexpr AnchorPresetRow kArrAnchorPreset[] = {
+                {"topleft",           0.0f, 0.0f, 0.0f, 0.0f},
+                {"topcenter",         0.5f, 0.0f, 0.5f, 0.0f},
+                {"topright",          1.0f, 0.0f, 1.0f, 0.0f},
+                {"centerleft",        0.0f, 0.5f, 0.0f, 0.5f},
+                {"center",            0.5f, 0.5f, 0.5f, 0.5f},
+                {"centerright",       1.0f, 0.5f, 1.0f, 0.5f},
+                {"bottomleft",        0.0f, 1.0f, 0.0f, 1.0f},
+                {"bottomcenter",      0.5f, 1.0f, 0.5f, 1.0f},
+                {"bottomright",       1.0f, 1.0f, 1.0f, 1.0f},
+                {"stretchhorizontal", 0.0f, 0.5f, 1.0f, 0.5f},
+                {"stretchvertical",   0.5f, 0.0f, 0.5f, 1.0f},
+                {"stretchall",        0.0f, 0.0f, 1.0f, 1.0f},
+            };
+            static_assert( sizeof( kArrAnchorPreset ) / sizeof( kArrAnchorPreset[0] ) == static_cast<size_t>( UIPreviewAnchorPreset::Count ), "anchor preset table size" );
+
+            /** @brief 프리셋 @p preset 의 표 줄입니다. 범위 밖이면 첫 줄(좌상)입니다. */
+            static const AnchorPresetRow& findAnchorPresetRow( UIPreviewAnchorPreset preset )
+            {
+                const uint32 index = static_cast<uint32>( preset );
+                return kArrAnchorPreset[index < static_cast<uint32>( UIPreviewAnchorPreset::Count ) ? index : 0];
+            }
         };
     } // namespace
 
@@ -347,6 +379,38 @@ namespace sw::editor
             return false;
         outText = UIDocumentWriter::write( screen.getDesc(), document->_listStyleSheet, *pRoot, screen.getBindings(), screen.getAnimationPlayer().getAnimations() );
         return true;
+    }
+
+    UIPreviewAnchorValues UIPreviewLogic::getAnchorPreset( UIPreviewAnchorPreset preset )
+    {
+        const auto&           row = UIPreviewLogicInternal::findAnchorPresetRow( preset );
+        UIPreviewAnchorValues values{};
+        values._anchorMin = float2{ row._minX, row._minY };
+        values._anchorMax = float2{ row._maxX, row._maxY };
+        return values;
+    }
+
+    const utf8* UIPreviewLogic::getAnchorPresetMark( UIPreviewAnchorPreset preset )
+    {
+        return UIPreviewLogicInternal::findAnchorPresetRow( preset )._pMark;
+    }
+
+    bool UIPreviewLogic::applyAnchorPreset( WidgetLayoutSlot& inoutSlot, UIPreviewAnchorPreset preset, const UIRect& localRect, const float2& parentSize )
+    {
+        // 사각형 = 앵커 × 부모 크기 + 오프셋(CanvasPanel::arrangeChildren) 이므로, 새 앵커에서 같은 사각형이 나오도록 오프셋을 거꾸로 구한다.
+        const UIPreviewAnchorValues values = getAnchorPreset( preset );
+        WidgetLayoutSlot            next   = inoutSlot;
+        next._anchorMin                    = values._anchorMin;
+        next._anchorMax                    = values._anchorMax;
+        next._offsetMin._x                 = localRect._left - values._anchorMin._x * parentSize._x;
+        next._offsetMin._y                 = localRect._top - values._anchorMin._y * parentSize._y;
+        next._offsetMax._x                 = localRect._right - values._anchorMax._x * parentSize._x;
+        next._offsetMax._y                 = localRect._bottom - values._anchorMax._y * parentSize._y;
+        const bool bChanged = next._anchorMin._x != inoutSlot._anchorMin._x || next._anchorMin._y != inoutSlot._anchorMin._y || next._anchorMax._x != inoutSlot._anchorMax._x
+                              || next._anchorMax._y != inoutSlot._anchorMax._y || next._offsetMin._x != inoutSlot._offsetMin._x || next._offsetMin._y != inoutSlot._offsetMin._y
+                              || next._offsetMax._x != inoutSlot._offsetMax._x || next._offsetMax._y != inoutSlot._offsetMax._y;
+        inoutSlot = next;
+        return bChanged;
     }
 
     string UIPreviewLogic::makeTimeLabel( float32 time, float32 duration )
