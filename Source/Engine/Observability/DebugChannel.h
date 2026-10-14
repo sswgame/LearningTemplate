@@ -123,7 +123,7 @@ namespace sw
         string                       _token;
         string                       _received;
         mutable mutex                _mutex;
-        StreamConnectionHandle       _handle{};
+        StreamConnectionHandle       _handle;
         uint8                        _bOpen    : 1;
         uint8                        _bClosed  : 1;
         [[maybe_unused]] uint8       _reserved : 6;
