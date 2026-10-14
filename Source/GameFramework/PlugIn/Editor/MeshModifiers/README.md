@@ -31,6 +31,11 @@
 4. 파일 끝에 `SW_MESH_MODIFIER( 클래스, "id", "표시 이름", "카테고리" );` 한 줄. id 는 소문자 영숫자이고 겹치면 안 된다.
 5. 점 단위 수학이면 `supportsGPU()` 를 true 로 두고 `packGPUParams` 를 기본 구현으로 쓴다(외부 입력 · 곡선 · 파일이 필요하면 false).
 
+6. **패널 표시용 칸(선택, 직렬화에 영향 없음)**: 매개변수 선언에 `with*` 도우미를 이어 붙인다 — 도우미는 복사본을 돌려주므로 순서는 자유다.
+   `withLayout( 구역, 툴팁, 단위 )`(구역 이름이 같은 매개변수는 접히는 머리 하나로 묶인다, 3 개 이하면 `nullptr`), `withColumns( 열 배열 )`(`NumberList` 를 열 이름이 있는 표로 — 열 종류 `Float · Int · Combo · Vector3`),
+   `withRequiredComponent( "컴포넌트 타입 이름" )`(`Reference` 를 그 컴포넌트를 가진 오브젝트로 걸러 보인다 — **정확한 타입 이름만** 맞고 파생 컴포넌트는 빠진다), `withAssetFilter( 확장자 )`(`AssetPath` 슬롯).
+   `getDescription()` 을 재정의하면 추가 메뉴 항목의 툴팁이 된다(영어 한 문장). 열 선언과 stride 가 맞는지는 `TestPanelLogic` 이 등록된 모든 모디파이어에 대해 검사한다.
+
 패널의 추가 메뉴 · 직렬화 · 공용 속성 테스트는 등록 표를 훑으므로 **공용 파일을 고칠 필요가 없다.** 테스트 소스는 `Test/EngineTest/CMakeLists.txt` 가
 `Stack/*.cpp` · `Modifiers/*.cpp` 를 GLOB 로 모으므로 CMake 도 고치지 않는다.
 
