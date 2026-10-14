@@ -109,9 +109,29 @@
             "text": "행 복제",
             "sourceHash": "1eb11810b6d41e8e"
         },
+        "EdMeshModifiers.EnterNestedStack": {
+            "text": "이 묶음의 하위 스택 편집",
+            "sourceHash": "a8e48d4c6a6a8255"
+        },
         "EdMeshModifiers.FitBounds": {
             "text": "경계 상자에 맞추기",
             "sourceHash": "402ad59bb6ed0112"
+        },
+        "EdMeshModifiers.GPUPreview": {
+            "text": "GPU 미리보기",
+            "sourceHash": "09e71a4a251e47f9"
+        },
+        "EdMeshModifiers.GPUPreviewBlockedBy": {
+            "text": "CPU 전용:",
+            "sourceHash": "cc44e27c6bf4732d"
+        },
+        "EdMeshModifiers.GPUPreviewBlockedByStack": {
+            "text": "CPU 전용(법선 다시 계산)",
+            "sourceHash": "e6d737e3073915e4"
+        },
+        "EdMeshModifiers.GPUPreviewTooltip": {
+            "text": "대상 메시를 컴퓨트 셰이더로 건 스택 결과로 셰이딩해 보입니다. CPU 전용 모디파이어가 있으면 와이어 미리보기만 남습니다.",
+            "sourceHash": "184554c21a016795"
         },
         "EdMeshModifiers.HintPickTarget": {
             "text": ".mesh 에셋을 쓰는 메시 컴포넌트가 있는 오브젝트를 고른 뒤 선택 사용을 누르세요.",
@@ -140,6 +160,22 @@
         "EdMeshModifiers.Name": {
             "text": "이름",
             "sourceHash": "ef49aec68fd1dc66"
+        },
+        "EdMeshModifiers.NestedDepth": {
+            "text": "깊이",
+            "sourceHash": "3231d0dc6fe30d4a"
+        },
+        "EdMeshModifiers.NestedEmpty": {
+            "text": "비어 있음 - 모디파이어를 더해 묶습니다.",
+            "sourceHash": "7af7ec639534480a"
+        },
+        "EdMeshModifiers.NestedStack": {
+            "text": "하위 스택",
+            "sourceHash": "0d6be80e0ced25ae"
+        },
+        "EdMeshModifiers.NestedUp": {
+            "text": "위로",
+            "sourceHash": "09313a07b5c3ab60"
         },
         "EdMeshModifiers.NoTarget": {
             "text": "대상 없음",

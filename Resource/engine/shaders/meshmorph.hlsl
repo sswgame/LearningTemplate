@@ -28,7 +28,12 @@ SW_DECLARE_CBUFFER( MorphParams, SW_SLOT_COMPUTE_CB )
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_RestVertices, 0 );
+// [모프 메시 칸마다 float4 하나(x = 그 메시 변형 프로그램의 시작 원소, 없으면 -1)][프로그램들] — GPUMeshMorphPool::updateDeformPrograms.
+// 레스트 노멀의 w 가 칸 번호 + 1 이다. 프로그램이 있는 메시는 아래 물결 대신 프로그램(meshmodifier.hlsli)을 건다.
+SW_DECLARE_STRUCTURED_BUFFER( float4, g_DeformPrograms, 1 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( float4, g_MorphVerticesRW, 0 );
+
+#include "meshmodifier.hlsli"
 
 [numthreads(64, 1, 1)]
 void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
@@ -60,6 +65,19 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 	const float3 gradient      = float3(gradientScale, gradientScale, gradientScale);
 	const float3 tangentialGradient = gradient - restNormal * dot(gradient, restNormal);
 
-	g_MorphVerticesRW[element]      = float4(restPosition + restNormal * (wave * g_Amplitude), 1.0f);
-	g_MorphVerticesRW[element + 1u] = float4(normalize(restNormal - tangentialGradient), 0.0f);
+	float3 position = restPosition + restNormal * (wave * g_Amplitude);
+	float3 normal   = normalize(restNormal - tangentialGradient);
+
+	// 변형 프로그램이 있는 메시 — 물결 대신 프로그램 결과를 쓴다(한 출구, early return 없음)
+	const uint  slot         = (uint)max(restNormalElement.w - 1.0f, 0.0f);
+	const float programStart = restNormalElement.w > 0.5f ? g_DeformPrograms[slot].x : -1.0f;
+	if (programStart >= 0.0f)
+	{
+		position = restPosition;
+		normal   = restNormalElement.xyz;
+		swApplyDeformProgram((uint)programStart, position, normal);
+	}
+
+	g_MorphVerticesRW[element]      = float4(position, 1.0f);
+	g_MorphVerticesRW[element + 1u] = float4(normal, 0.0f);
 }

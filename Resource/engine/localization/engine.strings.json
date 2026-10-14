@@ -222,8 +222,38 @@
                 "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
             ]
         },
+        "EdMeshModifiers.EnterNestedStack": {
+            "source": "Edit this group's nested stack",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
         "EdMeshModifiers.FitBounds": {
             "source": "Fit to Bounds",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.GPUPreview": {
+            "source": "GPU Preview",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.GPUPreviewBlockedBy": {
+            "source": "CPU only:",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.GPUPreviewBlockedByStack": {
+            "source": "CPU only (Recompute Normals)",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.GPUPreviewTooltip": {
+            "source": "Shade the target mesh with the stack evaluated by a compute shader. Falls back to the wire preview when a modifier runs on the CPU only.",
             "origins": [
                 "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
             ]
@@ -266,6 +296,30 @@
         },
         "EdMeshModifiers.Name": {
             "source": "Name",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.NestedDepth": {
+            "source": "Depth",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.NestedEmpty": {
+            "source": "Empty - add modifiers to group them.",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.NestedStack": {
+            "source": "Nested Stack",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
+            ]
+        },
+        "EdMeshModifiers.NestedUp": {
+            "source": "Up",
             "origins": [
                 "Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp"
             ]

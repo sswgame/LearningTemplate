@@ -121,6 +121,12 @@ namespace sw
          */
         void rebuild( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh, const vector<Mesh*>& listSkinMesh );
         /**
+         * @brief 모프 메시의 변형 프로그램(`Mesh::setGPUDeformProgram`)을 프로그램 버퍼에 맞춥니다. 어느 메시의 프로그램 번호도 그대로면 아무것도 하지 않습니다.
+         * @details 버퍼 = [모프 메시 칸마다 float4 하나(x = 그 메시 프로그램의 시작 원소, 없으면 -1)][프로그램들]. 레스트 노멀의 w 가 칸 번호 + 1 이라
+         *          레스트를 다시 올리지 않고 프로그램만 바꿀 수 있다. `rebuild` 뒤 프레임마다 부릅니다.
+         */
+        void updateDeformPrograms( IRHIDevice* pDevice );
+        /**
          * @brief 이번 프레임 팔레트를 풀의 스킨 인스턴스 순서로 올립니다. 팔레트가 없는 메시는 단위 행렬(바인드 포즈)을 씁니다.
          * @param pListRow 스냅샷의 팔레트 행(본 하나가 float4 셋)입니다. nullptr 이면 모두 단위 행렬입니다.
          */
@@ -134,6 +140,8 @@ namespace sw
         const RHIStructuredBufferSlot& getMorphBuffer() const { return _morph; }
         /** @brief 모프 메시의 레스트 버퍼입니다. 모프 컴퓨트가 SRV 로 읽습니다(진단 2와 3은 정점 셰이더에 그대로 바인딩합니다). */
         const RHIStructuredBufferSlot& getRestBuffer() const { return _rest; }
+        /** @brief 변형 프로그램 버퍼입니다(`updateDeformPrograms`). 모프 컴퓨트가 t1 로 읽습니다. 모프 메시가 없으면 비어 있습니다. */
+        const RHIStructuredBufferSlot& getDeformProgramBuffer() const { return _deformProgram; }
         /** @brief 풀에 든 결과 정점 수(모프와 스킨 인스턴스)입니다. 정점 셰이더의 범위 검사 값입니다. */
         uint32 getVertexCount() const { return _vertexCount; }
         /** @brief 모프 구간(앞)의 정점 수입니다. 모프 컴퓨트가 이만큼 돕니다. */
@@ -183,6 +191,13 @@ namespace sw
         RHIStructuredBufferSlot _skinWeight;
         RHIStructuredBufferSlot _skinInstance;
         RHIStructuredBufferSlot _skinPalette;
+        RHIStructuredBufferSlot _deformProgram;
+        /// @brief 풀에 든 모프 메시(칸 순서)입니다. 레스트 노멀의 w 가 이 번호 + 1 입니다.
+        vector<const Mesh*> _listPoolMorph;
+        /// @brief 지난 `updateDeformPrograms` 가 본 칸마다의 프로그램 번호입니다.
+        vector<uint64> _listDeformProgramGeneration;
+        /// @brief 프로그램 버퍼를 모으는 버퍼입니다(바뀐 프레임에만 쓴다).
+        vector<float4> _listScratchDeformProgram;
         /// @brief 메시에서 결과 시작 오프셋(정점 단위)을 찾는 맵입니다.
         unordered_map<const Mesh*, uint32> _mapBase;
         /// @brief 지난 rebuild 의 모프 메시 목록과 내용 번호입니다. 포인터가 같아도 내용 번호가 다르면 다른 메시입니다.

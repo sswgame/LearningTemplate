@@ -312,18 +312,15 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   정상 환경에서 훅(`PreCommitLint`)을 한 번 돌려 린트 위반이 없는지 봐야 한다.
 
 - `D3-10` **메시 모디파이어 스택 플러그인(`GF_EditorPlugIn_MeshModifiers`, 2026-10-14)의 남은 것.** 구조 · 추가 방법 · 알려진 근사는 [모듈 README](../Source/GameFramework/PlugIn/Editor/MeshModifiers/README.md).
-  MegaFiers 류 변형 모음의 기능 이름 목록을 기준으로 56 id 를 등록했다(Debug 전체 빌드 경고 0, 모디파이어 단위 테스트 81 개 통과). 눈으로 · 실제 에디터로 본 확인은 없다.
-  - **컴퓨트 셰이더 미리보기(2단계, 시작 안 함).** 조사 결과: 네 백엔드 모두 컴퓨트 지원(`IRHICommandList.h` `dispatchCompute` · `bindComputeUav`, `RHIBackendInfo.h` `_bCompute`), 기존 사례 `meshmorph.hlsl` ·
-    `meshskin.hlsl` · `gpucull.hlsl`(호출은 `FrameRendererCompute.cpp`), 쿠킹 등록은 `ShaderCookRequest.cpp` 의 엔진 컴퓨트 목록 + `App --cook-shaders` 산출물 커밋. **막힌 곳**: GPU 버퍼를 CPU 로 되읽는 API 가
-    없고(`readbackTexture2D` 는 텍스처 전용) 디버그 그리기는 CPU 큐라 그리기를 GPU 안에서 끝내야 한다 — 모프 풀 출력 버퍼를 `swLoadMorphedVertex` 가 읽는 경로를 쓴다. 권고 첫 단계: 변형 로직은 CPU 스택 그대로 두고
-    미리보기 전용 메시가 모프 풀 결과 경로로 그려지게 하는 한 디스패치. 모디파이어마다 셰이더를 만들지 않고 `종류 id + 매개변수 구조 버퍼` 를 순서대로 적용하는 uber 셰이더 하나. `supportsGPU()` 가 true 인 점 단위
-    모디파이어(약 40 개)만 옮기고 나머지는 CPU. GL 은 `swComputeMorphElement` 드라이버 버그 주의(`RHIBackendInfo.h`). 검증은 `RenderPassGPUTest.MorphPoolIdentityMatchesRest` 류 GPU 테스트가 필요해 이 PC 에서 못 한다.
+  MegaFiers 류 변형 모음의 기능 이름 목록을 기준으로 56 id 를 등록했다. 2026-10-15: GPU 미리보기(33 종, 네 백엔드 그림 비교 테스트) · 기본 정점 일의 레이스 수정 · Deformable 하위 스택 패널 ·
+  자동화 시나리오 `engine/automation/editor/meshmodifiers.scenario.xml`(DX12 · Vulkan 통과 — 곡선 목록 · 참조 목록 · 하위 스택 · 기즈모 끌기에서 선택이 그대로인지)가 들어갔다.
+  - **GPU 미리보기의 남은 것**(구조는 모듈 README "GPU 미리보기"): 매개변수가 바뀔 때마다 CPU 스택이 한 번 돈다(입력 상자를 GPU 가 못 세서) — 큰 메시에서 끌기 중 비용을 재지 않았다.
+    시간만 바뀌는 애니메이션도 미리보기 시간 칸을 움직일 때만 갱신된다. 법선 재계산 · 가중치 채널 · 곡선 매개변수 모디파이어는 CPU 전용(와이어만). DX11 · GL 에서 시나리오(에디터)는 돌리지 않았다(GPU 테스트는 네 백엔드).
   - **입력 창구 확장(2026-10-14, 들어감)**: 변형 전 위치(Displace Limits 의 `Clamp Displacement`), 회전 최소화 프레임(경로 계열), CPU 텍스처 표본기(Displace 계열 — `stb_image` 를 표본기 .cpp 에 정적으로 넣었다.
     남은 것: 확장 모듈이 쓸 수 있는 엔진의 공개 이미지 디코드 함수가 없어 중복 디코더를 품는다 → 엔진에 공개 디코드를 내보내면 합칠 수 있다. float4 텍셀이라 4096² 한 장이 256 MB, 메모리 상한 없음. 파일 변경 감지는 1 초 지연).
   - **패널 · 뷰포트(편집, 2026-10-14)**: 곡선 그래프 편집기(공용 `EditorCurveEditor` 어댑터) · 열 이름 있는 목록 표 · 참조 콤보 + 에셋 슬롯 · 구역 · 툴팁 · 단위 · 모디파이어 설명은 들어갔다. 뷰포트에서는 중심 이동 ·
     회전 기즈모, 반경 · 하한/상한 · 방향 자동 표시, 격자 제어점 클릭 · 끌기(대칭), 고른 모디파이어까지의 영향 미리보기("Stage" 토글)가 들어갔다. 남은 것:
-    - Deformable 하위 스택 편집 UI(패널 쪽만 남음 - 번호 경로로 고른 모디파이어를 찾고 담은 스택을 고치는 모델은 `DeformableModifier::findByPath` · `findOwningStack` 로 들어갔고 두 단계 중첩 저장 · 적용은 테스트로 고정). 정점 버퍼를 건드리는 실제 미리보기(지금은 와이어).
-    - 곡선 목록 · 참조 목록 칸의 패널 UI(`drawCurveListParam` · `drawReferenceListParam`)는 눈으로 확인하지 못했다 - 모델 · 직렬화 · 테스트까지만 검증했다. 실제 에디터에서 항목 추가 · 위아래 · 복제 · 삭제와 곡선 팝업이 항목마다 열리는지 볼 것.
+    - 패널 화면을 이미지로 남기는 길이 없다(스크린샷은 렌더 출력만 담는다). 패널 · 기즈모는 시나리오의 이름표 클릭과 탐침으로만 확인했다.
     - **들어감(2026-10-14)**: 공용 마우스 양보 창구 `EditorViewportMouseClaim`(뷰포트의 양보 판정 두 곳에 반영), 에셋 슬롯의 여러 확장자 필터(`EditorAssetFilter`, 쉼표 · 공백 · 탭 · 세미콜론)와 Point Cache(`.mfpc`) ·
       두 Displace 의 필터 채우기, 참조 걸러 보기의 파생 컴포넌트 판정(`TypeInfo::isDerivedFrom`), 회전 고리의 오일러 정확도(`applyRotationDelta`), 범위 · ffd2d 상자가 앞 모디파이어 결과를 반영.
     - **남은 한계**: 기즈모를 끄는 매 프레임 앞 모디파이어를 다시 걸어 비용이 든다. clang-format 20.1.8 로 줄 길이를 맞출 것(이 PC 는 21.1.1).
