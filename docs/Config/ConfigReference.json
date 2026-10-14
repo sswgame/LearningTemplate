@@ -2426,6 +2426,22 @@
    "source": "Source/Engine/Resource/AssetLoadProfiler.cpp"
   },
   {
+   "name": "gv_authorityGhostPort",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "서버 디버그 채널 포트 - 서버 포즈를 고스트로 겹침 (0=끄기)",
+   "source": "Source/Engine/Scene/AuthorityGhost.cpp"
+  },
+  {
+   "name": "gv_authorityGhostToken",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "서버 디버그 채널 토큰",
+   "source": "Source/Engine/Scene/AuthorityGhost.cpp"
+  },
+  {
    "name": "gv_benchAnimate",
    "type": "int32",
    "default": "1",
@@ -2760,6 +2776,22 @@
    "kind": "시험 · 배포본에도",
    "description": "일부러 크래시를 내 리포트 경로를 검증합니다 (1=널 쓰기 2=스택 오버플로 3=작업 스레드 스택 오버플로 4=abort 5=순수 가상 호출)",
    "source": "Source/Engine/Renderer/RHISubsystem.cpp"
+  },
+  {
+   "name": "gv_debugChannelPort",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "디버그 채널 포트 (0=끄기, 루프백 전용, 토큰 필요)",
+   "source": "Source/Server/ServerApp.cpp"
+  },
+  {
+   "name": "gv_debugChannelToken",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "디버그 채널 접속 토큰",
+   "source": "Source/Server/ServerApp.cpp"
   },
   {
    "name": "gv_debugHUD",
@@ -3440,6 +3472,14 @@
    "kind": "시험",
    "description": "표준 입력의 줄을 명령으로 받는다 (quit=종료, 1=켜기)",
    "source": "Source/App/DevConsoleHost.cpp"
+  },
+  {
+   "name": "gv_stateHashHistory",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "틱별 씬 상태 해시 이력 길이 (0=끄기)",
+   "source": "Source/Server/ServerApp.cpp"
   },
   {
    "name": "gv_subtitleBackgroundOpacity",
