@@ -209,15 +209,15 @@ namespace sw::editor
 
             static float4 lerp4( const float4& a, const float4& b, float32 t )
             {
-                return float4{ a.x + ( b.x - a.x ) * t, a.y + ( b.y - a.y ) * t, a.z + ( b.z - a.z ) * t, a.w + ( b.w - a.w ) * t };
+                return float4{ a._x + ( b._x - a._x ) * t, a._y + ( b._y - a._y ) * t, a._z + ( b._z - a._z ) * t, a._w + ( b._w - a._w ) * t };
             }
 
             static float4 sampleBilinear( const DecodedTexture& texture, const float2& uv )
             {
                 int32   x0 = 0, x1 = 0, y0 = 0, y1 = 0;
                 float32 fx = 0.0f, fy = 0.0f;
-                splitCoordinate( uv.x, texture._width, x0, x1, fx );
-                splitCoordinate( uv.y, texture._height, y0, y1, fy );
+                splitCoordinate( uv._x, texture._width, x0, x1, fx );
+                splitCoordinate( uv._y, texture._height, y0, y1, fy );
                 const auto texelAt = [&texture]( int32 x, int32 y ) -> const float4& {
                     return texture._listTexel[static_cast<size_t>( y ) * static_cast<size_t>( texture._width ) + static_cast<size_t>( x )];
                 };

@@ -35,10 +35,10 @@ namespace
 
         static void expectColor( const float4& expected, const float4& actual )
         {
-            SW_EXPECT_NEAR_EQUAL( expected.x, actual.x, 0.01f );
-            SW_EXPECT_NEAR_EQUAL( expected.y, actual.y, 0.01f );
-            SW_EXPECT_NEAR_EQUAL( expected.z, actual.z, 0.01f );
-            SW_EXPECT_NEAR_EQUAL( expected.w, actual.w, 0.01f );
+            SW_EXPECT_NEAR_EQUAL( expected._x, actual._x, 0.01f );
+            SW_EXPECT_NEAR_EQUAL( expected._y, actual._y, 0.01f );
+            SW_EXPECT_NEAR_EQUAL( expected._z, actual._z, 0.01f );
+            SW_EXPECT_NEAR_EQUAL( expected._w, actual._w, 0.01f );
         }
 
         /** @brief 빨강 · 초록(윗줄), 파랑 · 흰색(아랫줄)입니다. */
