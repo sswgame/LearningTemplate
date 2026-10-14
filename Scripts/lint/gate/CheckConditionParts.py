@@ -9,8 +9,8 @@ Scripts/lint/gate/CheckConditionParts.py
   좋음:  const bool bCanFire = bArmed && bHasAmmo && bNotReloading;
          if ( bCanFire )
 
-**기존 위반이 수천 건이라 파일 단위로 막지 않는다** — 그 파일을 고치는 모든 커밋이 멈춘다. 모드가 둘이다.
-  - 커밋 훅(`--files`): 이번 커밋이 **추가한 줄**(`git diff --cached -U0` 의 + 줄)이 속한 조건만 본다. 건드리지 않은 옛 조건은 못 본 척한다.
+기준선은 0 이다(기존 위반을 모두 고쳤다). 모드가 둘이다.
+  - 커밋 훅(`--files`): 이번 커밋이 **추가한 줄**(`git diff --cached -U0` 의 + 줄)이 속한 조건만 본다.
     병합 커밋(`MERGE_HEAD` 가 있다)은 건너뛴다 — 상대 쪽 줄은 그 브랜치 커밋 때 이미 검사됐다.
     `--whole-files` 를 더하면 추가한 줄이 아니라 파일 전체를 본다(고치는 중 확인용).
   - 전체 훑기(`--files` 없음, `ctest -L lint`): 건수를 세어 `rules/CheckConditionParts.toml` 의 `[baseline] total` 을 **넘으면** 실패한다(늘면 실패).
