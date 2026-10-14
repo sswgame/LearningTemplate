@@ -2,6 +2,8 @@
 
 #include "Engine/Observability/ServiceFactoryList.h"
 
+#include "Core/String/RegistrationList.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "ServiceFactoryList" );
@@ -26,6 +28,7 @@ namespace sw
         : _mutex{}
         , _pHead{ nullptr }
         , _count{ 0 }
+        , _pShadowHead{ nullptr }
     {
     }
 
@@ -34,15 +37,27 @@ namespace sw
         if ( pNode == nullptr || pNode->_pName == nullptr )
             return false;
         std::scoped_lock<mutex> lock{ _mutex };
-        for ( const ServiceFactoryNode* pExisting = _pHead; pExisting != nullptr; pExisting = pExisting->_pNext )
+        ServiceFactoryNode**    ppLink = &_pHead;
+        while ( *ppLink != nullptr )
         {
+            ServiceFactoryNode* pExisting = *ppLink;
             if ( pExisting == pNode )
                 return true;
             if ( string_view( pExisting->_pName ) == string_view( pNode->_pName ) )
             {
-                SW_LOG_ERROR( "%# '%#' is registered twice - the second registration is ignored", pListName, pNode->_pName );
-                return false;
+                if ( RegistrationReloadScope::isActive() == false )
+                {
+                    SW_LOG_ERROR( "%# '%#' is registered twice - the second registration is ignored", pListName, pNode->_pName );
+                    return false;
+                }
+                // 교체 이미지의 등록이다. 옛 노드는 목록에서 빼 그림자 사슬로 옮긴다(옛 이미지가 내려가며 빼거나, 이 노드가 취소되면 되살린다).
+                *ppLink           = pExisting->_pNext;
+                pExisting->_pNext = _pShadowHead;
+                _pShadowHead      = pExisting;
+                --_count;
+                continue;
             }
+            ppLink = &pExisting->_pNext;
         }
         pNode->_pNext = _pHead;
         _pHead        = pNode;
@@ -63,9 +78,41 @@ namespace sw
                 *ppLink       = pNode->_pNext;
                 pNode->_pNext = nullptr;
                 --_count;
+                restoreShadowOf( pNode->_pName );
                 return;
             }
             ppLink = &( *ppLink )->_pNext;
+        }
+
+        // 올라 있지 않으면 대체당한 옛 노드일 수 있다 — 옛 이미지가 내려가는 것이므로 그림자만 버린다.
+        ppLink = &_pShadowHead;
+        while ( *ppLink != nullptr )
+        {
+            if ( *ppLink == pNode )
+            {
+                *ppLink       = pNode->_pNext;
+                pNode->_pNext = nullptr;
+                return;
+            }
+            ppLink = &( *ppLink )->_pNext;
+        }
+    }
+
+    void ServiceFactoryList::restoreShadowOf( const utf8* pName )
+    {
+        ServiceFactoryNode** ppLink = &_pShadowHead;
+        while ( *ppLink != nullptr )
+        {
+            ServiceFactoryNode* pShadow = *ppLink;
+            if ( string_view( pShadow->_pName ) == string_view( pName ) )
+            {
+                *ppLink         = pShadow->_pNext;
+                pShadow->_pNext = _pHead;
+                _pHead          = pShadow;
+                ++_count;
+                return;
+            }
+            ppLink = &pShadow->_pNext;
         }
     }
 

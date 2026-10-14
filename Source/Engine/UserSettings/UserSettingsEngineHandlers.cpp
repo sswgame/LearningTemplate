@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/UserSettings/UserSettingsEngineAppliers.h"
+#include "Engine/UserSettings/UserSettingsEngineHandlers.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
@@ -18,7 +18,7 @@ namespace sw
 
     namespace
     {
-        struct UserSettingsEngineAppliersInternal
+        struct UserSettingsEngineHandlersInternal
         {
             static constexpr utf8 kHold[]       = "hold";
             static constexpr utf8 kToggle[]     = "toggle";
@@ -41,7 +41,7 @@ namespace sw
 
 namespace sw
 {
-    UserSettingsEngineAppliers::UserSettingsEngineAppliers()
+    UserSettingsEngineHandlers::UserSettingsEngineHandlers()
         : _targets{}
         , _displayRequest{}
         , _listDisplayResolution{}
@@ -50,38 +50,38 @@ namespace sw
     {
     }
 
-    void UserSettingsEngineAppliers::initialize( const UserSettingsTargets& targets, UserSettingApplierRegistry& registry )
+    void UserSettingsEngineHandlers::initialize( const UserSettingsTargets& targets, UserSettingsHandlerRegistry& registry )
     {
         _targets = targets;
-        registry.registerApplier( "audio.busVolume", SW_DELEGATE_METHOD( UserSettingApplierDelegate, &UserSettingsEngineAppliers::applyBusVolume, this ) );
-        registry.registerApplier( "audio.mute", SW_DELEGATE_METHOD( UserSettingApplierDelegate, &UserSettingsEngineAppliers::applyMute, this ) );
-        registry.registerApplier( "input.mouseSensitivity", SW_DELEGATE_METHOD( UserSettingApplierDelegate, &UserSettingsEngineAppliers::applyMouseSensitivity, this ) );
-        registry.registerApplier( "input.gamepadSensitivity", SW_DELEGATE_METHOD( UserSettingApplierDelegate, &UserSettingsEngineAppliers::applyGamepadSensitivity, this ) );
-        registry.registerApplier( "input.invertX", SW_DELEGATE_METHOD( UserSettingApplierDelegate, &UserSettingsEngineAppliers::applyInvertX, this ) );
-        registry.registerApplier( "input.invertY", SW_DELEGATE_METHOD( UserSettingApplierDelegate, &UserSettingsEngineAppliers::applyInvertY, this ) );
-        registry.registerApplier( "input.stickDeadzone", SW_DELEGATE_METHOD( UserSettingApplierDelegate, &UserSettingsEngineAppliers::applyStickDeadzone, this ) );
-        registry.registerApplier( "input.toggleMode", SW_DELEGATE_METHOD( UserSettingApplierDelegate, &UserSettingsEngineAppliers::applyToggleMode, this ),
-                                  SW_DELEGATE_FUNCTION( UserSettingValueFilterDelegate, &UserSettingsEngineAppliers::isToggleModeName ) );
-        registry.registerApplier( "input.keyBinding", SW_DELEGATE_METHOD( UserSettingApplierDelegate, &UserSettingsEngineAppliers::applyKeyBinding, this ) );
-        registry.registerApplier( "localization.language", SW_DELEGATE_METHOD( UserSettingApplierDelegate, &UserSettingsEngineAppliers::applyLanguage, this ) );
-        registry.registerApplier( "display.windowMode", SW_DELEGATE_METHOD( UserSettingApplierDelegate, &UserSettingsEngineAppliers::applyWindowMode, this ),
-                                  SW_DELEGATE_FUNCTION( UserSettingValueFilterDelegate, &UserSettingsEngineAppliers::isWindowModeName ) );
-        registry.registerApplier( "display.resolution", SW_DELEGATE_METHOD( UserSettingApplierDelegate, &UserSettingsEngineAppliers::applyResolution, this ),
-                                  SW_DELEGATE_FUNCTION( UserSettingValueFilterDelegate, &UserSettingsEngineAppliers::isResolutionText ) );
-        registry.registerApplier( "display.vsync", SW_DELEGATE_METHOD( UserSettingApplierDelegate, &UserSettingsEngineAppliers::applyVSync, this ) );
+        registry.registerHandler( "audio.busVolume", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyBusVolume, this ) );
+        registry.registerHandler( "audio.mute", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyMute, this ) );
+        registry.registerHandler( "input.mouseSensitivity", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyMouseSensitivity, this ) );
+        registry.registerHandler( "input.gamepadSensitivity", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyGamepadSensitivity, this ) );
+        registry.registerHandler( "input.invertX", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyInvertX, this ) );
+        registry.registerHandler( "input.invertY", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyInvertY, this ) );
+        registry.registerHandler( "input.stickDeadzone", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyStickDeadzone, this ) );
+        registry.registerHandler( "input.toggleMode", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyToggleMode, this ),
+                                  SW_DELEGATE_FUNCTION( UserSettingValueFilterDelegate, &UserSettingsEngineHandlers::isToggleModeName ) );
+        registry.registerHandler( "input.keyBinding", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyKeyBinding, this ) );
+        registry.registerHandler( "localization.language", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyLanguage, this ) );
+        registry.registerHandler( "display.windowMode", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyWindowMode, this ),
+                                  SW_DELEGATE_FUNCTION( UserSettingValueFilterDelegate, &UserSettingsEngineHandlers::isWindowModeName ) );
+        registry.registerHandler( "display.resolution", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyResolution, this ),
+                                  SW_DELEGATE_FUNCTION( UserSettingValueFilterDelegate, &UserSettingsEngineHandlers::isResolutionText ) );
+        registry.registerHandler( "display.vsync", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyVSync, this ) );
         registry.registerOptionProvider( "display.resolutions",
-                                         SW_DELEGATE_METHOD( UserSettingOptionProviderDelegate, &UserSettingsEngineAppliers::collectResolutions, this ) );
+                                         SW_DELEGATE_METHOD( UserSettingOptionProviderDelegate, &UserSettingsEngineHandlers::collectResolutions, this ) );
         registry.registerOptionProvider( "localization.languages",
-                                         SW_DELEGATE_METHOD( UserSettingOptionProviderDelegate, &UserSettingsEngineAppliers::collectLanguages, this ) );
+                                         SW_DELEGATE_METHOD( UserSettingOptionProviderDelegate, &UserSettingsEngineHandlers::collectLanguages, this ) );
     }
 
-    void UserSettingsEngineAppliers::shutdown()
+    void UserSettingsEngineHandlers::shutdown()
     {
         _targets       = UserSettingsTargets{};
         _bDisplayDirty = false;
     }
 
-    bool UserSettingsEngineAppliers::consumeDisplayRequest( DisplaySettingsRequest& outRequest )
+    bool UserSettingsEngineHandlers::consumeDisplayRequest( DisplaySettingsRequest& outRequest )
     {
         if ( _bDisplayDirty == false )
             return false;
@@ -90,9 +90,9 @@ namespace sw
         return true;
     }
 
-    bool UserSettingsEngineAppliers::tryParseResolution( string_view text, uint32& outWidth, uint32& outHeight )
+    bool UserSettingsEngineHandlers::tryParseResolution( string_view text, uint32& outWidth, uint32& outHeight )
     {
-        using Internal    = UserSettingsEngineAppliersInternal;
+        using Internal    = UserSettingsEngineHandlersInternal;
         const size_t xPos = text.find_first_of( "xX" );
         if ( xPos == string_view::npos )
             return false;
@@ -109,14 +109,14 @@ namespace sw
         return true;
     }
 
-    bool UserSettingsEngineAppliers::tryParseWindowMode( string_view text, WindowDisplayMode& outMode )
+    bool UserSettingsEngineHandlers::tryParseWindowMode( string_view text, WindowDisplayMode& outMode )
     {
-        if ( StringUtil::equals( text, UserSettingsEngineAppliersInternal::kWindowed, true ) )
+        if ( StringUtil::equals( text, UserSettingsEngineHandlersInternal::kWindowed, true ) )
         {
             outMode = WindowDisplayMode::Windowed;
             return true;
         }
-        if ( StringUtil::equals( text, UserSettingsEngineAppliersInternal::kBorderless, true ) )
+        if ( StringUtil::equals( text, UserSettingsEngineHandlersInternal::kBorderless, true ) )
         {
             outMode = WindowDisplayMode::BorderlessFullscreen;
             return true;
@@ -124,69 +124,69 @@ namespace sw
         return false;
     }
 
-    bool UserSettingsEngineAppliers::applyBusVolume( const UserSettingApplyParams& context )
+    bool UserSettingsEngineHandlers::applyBusVolume( const UserSettingApplyParams& context )
     {
         if ( _targets._pAudioService == nullptr )
             return true;
-        _targets._pAudioService->setBusVolume( hashed_string( context._param ), UserSettingsEngineAppliersInternal::toFloat( context._value, 1.0f ) );
+        _targets._pAudioService->setBusVolume( hashed_string( context._param ), UserSettingsEngineHandlersInternal::toFloat( context._value, 1.0f ) );
         return true;
     }
 
-    bool UserSettingsEngineAppliers::applyMute( const UserSettingApplyParams& context )
+    bool UserSettingsEngineHandlers::applyMute( const UserSettingApplyParams& context )
     {
         if ( _targets._pAudioService != nullptr )
-            _targets._pAudioService->setMute( UserSettingsEngineAppliersInternal::toBool( context._value ) );
+            _targets._pAudioService->setMute( UserSettingsEngineHandlersInternal::toBool( context._value ) );
         return true;
     }
 
-    bool UserSettingsEngineAppliers::applyMouseSensitivity( const UserSettingApplyParams& context )
+    bool UserSettingsEngineHandlers::applyMouseSensitivity( const UserSettingApplyParams& context )
     {
-        const float32 sensitivity = UserSettingsEngineAppliersInternal::toFloat( context._value, 1.0f );
+        const float32 sensitivity = UserSettingsEngineHandlersInternal::toFloat( context._value, 1.0f );
         if ( _targets._pInputMap != nullptr )
             _targets._pInputMap->setMouseSensitivity( float2{ sensitivity, sensitivity } );
         return true;
     }
 
-    bool UserSettingsEngineAppliers::applyGamepadSensitivity( const UserSettingApplyParams& context )
+    bool UserSettingsEngineHandlers::applyGamepadSensitivity( const UserSettingApplyParams& context )
     {
-        const float32 sensitivity = UserSettingsEngineAppliersInternal::toFloat( context._value, 1.0f );
+        const float32 sensitivity = UserSettingsEngineHandlersInternal::toFloat( context._value, 1.0f );
         if ( _targets._pInputMap != nullptr )
             _targets._pInputMap->setGamepadSensitivity( float2{ sensitivity, sensitivity } );
         return true;
     }
 
-    bool UserSettingsEngineAppliers::applyInvertX( const UserSettingApplyParams& context )
+    bool UserSettingsEngineHandlers::applyInvertX( const UserSettingApplyParams& context )
     {
         if ( _targets._pInputMap != nullptr )
-            _targets._pInputMap->setInvertX( UserSettingsEngineAppliersInternal::toBool( context._value ) );
+            _targets._pInputMap->setInvertX( UserSettingsEngineHandlersInternal::toBool( context._value ) );
         return true;
     }
 
-    bool UserSettingsEngineAppliers::applyInvertY( const UserSettingApplyParams& context )
+    bool UserSettingsEngineHandlers::applyInvertY( const UserSettingApplyParams& context )
     {
         if ( _targets._pInputMap != nullptr )
-            _targets._pInputMap->setInvertY( UserSettingsEngineAppliersInternal::toBool( context._value ) );
+            _targets._pInputMap->setInvertY( UserSettingsEngineHandlersInternal::toBool( context._value ) );
         return true;
     }
 
-    bool UserSettingsEngineAppliers::applyStickDeadzone( const UserSettingApplyParams& context )
+    bool UserSettingsEngineHandlers::applyStickDeadzone( const UserSettingApplyParams& context )
     {
         if ( _targets._pInputMap != nullptr )
-            _targets._pInputMap->setStickDeadzoneOverride( UserSettingsEngineAppliersInternal::toFloat( context._value, -1.0f ) );
+            _targets._pInputMap->setStickDeadzoneOverride( UserSettingsEngineHandlersInternal::toFloat( context._value, -1.0f ) );
         return true;
     }
 
-    bool UserSettingsEngineAppliers::applyToggleMode( const UserSettingApplyParams& context )
+    bool UserSettingsEngineHandlers::applyToggleMode( const UserSettingApplyParams& context )
     {
         const hashed_string action( context._param );
         // 액션은 게임이 입력 맵을 만든 뒤에야 있다. 없으면 건너뛰고, 게임이 맵을 만든 뒤의 다시 적용(`reapplyAll`)에서 적용된다.
         if ( _targets._pInputMap == nullptr || _targets._pInputMap->hasAction( action ) == false )
             return true;
-        _targets._pInputMap->setToggleMode( action, StringUtil::equals( context._value, UserSettingsEngineAppliersInternal::kToggle, true ) );
+        _targets._pInputMap->setToggleMode( action, StringUtil::equals( context._value, UserSettingsEngineHandlersInternal::kToggle, true ) );
         return true;
     }
 
-    bool UserSettingsEngineAppliers::applyKeyBinding( const UserSettingApplyParams& context )
+    bool UserSettingsEngineHandlers::applyKeyBinding( const UserSettingApplyParams& context )
     {
         if ( _targets._pInputMap == nullptr || context._pDef == nullptr )
             return true;
@@ -206,7 +206,7 @@ namespace sw
         return _targets._pInputMap->rebindSlot( def._action, slot, def._bindIndex );
     }
 
-    bool UserSettingsEngineAppliers::applyLanguage( const UserSettingApplyParams& context )
+    bool UserSettingsEngineHandlers::applyLanguage( const UserSettingApplyParams& context )
     {
         if ( _targets._pLocalizationManager == nullptr || context._value.empty() )
             return true;
@@ -221,7 +221,7 @@ namespace sw
         return localization.setCurrentLanguage( context._value );
     }
 
-    bool UserSettingsEngineAppliers::applyWindowMode( const UserSettingApplyParams& context )
+    bool UserSettingsEngineHandlers::applyWindowMode( const UserSettingApplyParams& context )
     {
         WindowDisplayMode mode{ WindowDisplayMode::Windowed };
         if ( tryParseWindowMode( context._value, mode ) == false )
@@ -232,7 +232,7 @@ namespace sw
         return true;
     }
 
-    bool UserSettingsEngineAppliers::applyResolution( const UserSettingApplyParams& context )
+    bool UserSettingsEngineHandlers::applyResolution( const UserSettingApplyParams& context )
     {
         uint32 width{ 0 };
         uint32 height{ 0 };
@@ -245,15 +245,15 @@ namespace sw
         return true;
     }
 
-    bool UserSettingsEngineAppliers::applyVSync( const UserSettingApplyParams& context )
+    bool UserSettingsEngineHandlers::applyVSync( const UserSettingApplyParams& context )
     {
-        _displayRequest._bVSync    = UserSettingsEngineAppliersInternal::toBool( context._value );
+        _displayRequest._bVSync    = UserSettingsEngineHandlersInternal::toBool( context._value );
         _displayRequest._bHasVSync = _displayRequest._bHasVSync || context._bDefault == false;
         _bDisplayDirty             = _bDisplayDirty || context._bStartup == false;
         return true;
     }
 
-    void UserSettingsEngineAppliers::collectLanguages( vector<UserSettingOption>& outListOption )
+    void UserSettingsEngineHandlers::collectLanguages( vector<UserSettingOption>& outListOption )
     {
         outListOption.clear();
         if ( _targets._pLocalizationManager == nullptr )
@@ -266,7 +266,7 @@ namespace sw
         }
     }
 
-    void UserSettingsEngineAppliers::collectResolutions( vector<UserSettingOption>& outListOption )
+    void UserSettingsEngineHandlers::collectResolutions( vector<UserSettingOption>& outListOption )
     {
         outListOption.clear();
         // 모니터 모드 열거는 수백 줄을 훑는다 — 메뉴가 그릴 때마다 부르므로 처음 한 번만 읽는다.
@@ -283,26 +283,26 @@ namespace sw
         }
     }
 
-    string UserSettingsEngineAppliers::formatResolution( int32 width, int32 height )
+    string UserSettingsEngineHandlers::formatResolution( int32 width, int32 height )
     {
         utf8 arrText[constant::kMaxBuffer32]{};
         formatstring( arrText, constant::kMaxBuffer32, "%#x%#", width, height );
         return string( arrText );
     }
 
-    bool UserSettingsEngineAppliers::isToggleModeName( string_view value )
+    bool UserSettingsEngineHandlers::isToggleModeName( string_view value )
     {
-        return StringUtil::equals( value, UserSettingsEngineAppliersInternal::kHold, true ) ||
-               StringUtil::equals( value, UserSettingsEngineAppliersInternal::kToggle, true );
+        return StringUtil::equals( value, UserSettingsEngineHandlersInternal::kHold, true ) ||
+               StringUtil::equals( value, UserSettingsEngineHandlersInternal::kToggle, true );
     }
 
-    bool UserSettingsEngineAppliers::isWindowModeName( string_view value )
+    bool UserSettingsEngineHandlers::isWindowModeName( string_view value )
     {
         WindowDisplayMode mode{ WindowDisplayMode::Windowed };
         return tryParseWindowMode( value, mode );
     }
 
-    bool UserSettingsEngineAppliers::isResolutionText( string_view value )
+    bool UserSettingsEngineHandlers::isResolutionText( string_view value )
     {
         uint32 width{ 0 };
         uint32 height{ 0 };

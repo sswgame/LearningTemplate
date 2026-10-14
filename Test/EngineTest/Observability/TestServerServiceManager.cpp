@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/String/RegistrationList.h"
 
 #include "Engine/Observability/MetricRegistry.h"
 #include "Engine/Observability/ProcessMetrics.h"
@@ -122,6 +123,50 @@ SW_TEST_CASE( ServerServiceManagerTest, RegistryKeepsOneFactoryPerNameAndForgets
         SW_EXPECT_EQUAL( ServerServiceRegistry::getFactoryCount(), baseCount + 1 );
     }
     // 등록기가 사라지면(모듈 언로드) 팩토리도 빠진다.
+    SW_EXPECT_EQUAL( ServerServiceRegistry::getFactoryCount(), baseCount );
+}
+
+/**
+ * @brief [ServerServiceManagerTest] 리로드 표지 안의 같은 이름 등록은 거절되지 않고 대체한다. 옛 이미지가 내려가도 새 팩토리가 남고, 새 이미지가 취소되면 옛 팩토리가 돌아온다
+ * @details 새 이미지의 정적 등록자는 옛 이미지가 도는 동안 돈다. 거절하면 오류 로그가 남고 옛 이미지가 내려간 뒤 그 이름이 비었다(온라인 서버 키트 chat · admin).
+ */
+SW_TEST_CASE( ServerServiceManagerTest, ReloadScopeReplacesTheFactoryAndTheOldImageRemovalKeepsTheNewOne )
+{
+    // 이 테스트가 올린 이름의 팩토리가 가진 시작 순서를 돌려줍니다(없으면 -1). 옛 것(9000)인지 새 것(9001)인지 가린다.
+    const auto getOnlyFactoryOrder = []()
+    {
+        vector<ServerServiceFactory*> listFactory;
+        ServerServiceRegistry::collectFactories( listFactory );
+        for ( const ServerServiceFactory* pFactory : listFactory )
+        {
+            if ( string_view( pFactory->_pName ) == string_view( FirstTestService::kName ) )
+                return pFactory->_order;
+        }
+        return -1;
+    };
+    const int32 baseCount = ServerServiceRegistry::getFactoryCount();
+    {
+        auto pOldImage = make_unique<ServerServiceRegistrar<FirstTestService>>( FirstTestService::kName, 9000 );
+        {
+            RegistrationReloadScope                         scope;
+            const ServerServiceRegistrar<SecondTestService> newImage{ FirstTestService::kName, 9001 };
+            SW_EXPECT_EQUAL( ServerServiceRegistry::getFactoryCount(), baseCount + 1 );
+            pOldImage.reset(); // 옛 이미지가 내려간다 — 새 팩토리는 남아야 한다
+            SW_EXPECT_EQUAL( getOnlyFactoryOrder(), 9001 );
+            SW_EXPECT_EQUAL( ServerServiceRegistry::getFactoryCount(), baseCount + 1 );
+        }
+        SW_EXPECT_EQUAL( ServerServiceRegistry::getFactoryCount(), baseCount );
+    }
+    {
+        // 새 이미지가 취소되면(로드 실패 · 거절) 옛 팩토리가 이름을 되찾는다.
+        const ServerServiceRegistrar<FirstTestService> oldImage{ FirstTestService::kName, 9000 };
+        {
+            RegistrationReloadScope                         scope;
+            const ServerServiceRegistrar<SecondTestService> cancelled{ FirstTestService::kName, 9001 };
+        }
+        SW_EXPECT_EQUAL( ServerServiceRegistry::getFactoryCount(), baseCount + 1 );
+        SW_EXPECT_EQUAL( getOnlyFactoryOrder(), 9000 );
+    }
     SW_EXPECT_EQUAL( ServerServiceRegistry::getFactoryCount(), baseCount );
 }
 

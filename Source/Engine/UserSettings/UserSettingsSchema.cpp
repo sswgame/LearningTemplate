@@ -9,7 +9,7 @@
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
-#include "Engine/UserSettings/UserSettingApplierRegistry.h"
+#include "Engine/UserSettings/UserSettingsHandlerRegistry.h"
 
 namespace sw
 {
@@ -19,8 +19,8 @@ namespace sw
     {
         struct UserSettingsSchemaInternal
         {
-            /** @brief 키 바인딩 설정이 대상을 적지 않았을 때 쓰는 적용 함수입니다(입력 맵 리바인딩). */
-            static constexpr utf8 kKeyBindingApplier[] = "input.keyBinding";
+            /** @brief 키 바인딩 설정이 대상을 적지 않았을 때 쓰는 핸들러입니다(입력 맵 리바인딩). */
+            static constexpr utf8 kKeyBindingHandler[] = "input.keyBinding";
 
             /** @brief 이름 → 열거자 표의 한 줄입니다. */
             template <typename TEnum>
@@ -100,7 +100,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief `gv:name` 과 `applier:name` 을 읽습니다. 비어 있으면 대상 없음입니다. */
+            /** @brief `gv:name` 과 `handler:name` 을 읽습니다. 비어 있으면 대상 없음입니다. */
             [[nodiscard]] static bool parseTarget( string_view text, UserSettingDef& inoutDef, string_view sourceName )
             {
                 if ( text.empty() )
@@ -119,14 +119,14 @@ namespace sw
                         inoutDef._targetName = hashed_string( name );
                         return true;
                     }
-                    if ( StringUtil::equals( kind, "applier", true ) )
+                    if ( StringUtil::equals( kind, "handler", true ) )
                     {
-                        inoutDef._targetKind = UserSettingTargetKind::Applier;
+                        inoutDef._targetKind = UserSettingTargetKind::Handler;
                         inoutDef._targetName = hashed_string( name );
                         return true;
                     }
                 }
-                SW_LOG_ERROR( "%#: setting '%#' has a target '%#' that is neither 'gv:<name>' nor 'applier:<name>'", sourceName, inoutDef._id.c_str(), text );
+                SW_LOG_ERROR( "%#: setting '%#' has a target '%#' that is neither 'gv:<name>' nor 'handler:<name>'", sourceName, inoutDef._id.c_str(), text );
                 return false;
             }
 
@@ -379,8 +379,8 @@ namespace sw
                 bOk = Internal::parseTarget( child.getAttributeText( "target" ), def, sourceName ) && bOk;
                 if ( def._type == UserSettingType::KeyBinding && def._targetKind == UserSettingTargetKind::None )
                 {
-                    def._targetKind = UserSettingTargetKind::Applier;
-                    def._targetName = hashed_string( Internal::kKeyBindingApplier );
+                    def._targetKind = UserSettingTargetKind::Handler;
+                    def._targetName = hashed_string( Internal::kKeyBindingHandler );
                 }
                 bOk = Internal::parseConditions( child.getAttributeText( "enabledWhen" ), def, sourceName ) && bOk;
                 bOk = Internal::parsePlatforms( child.getAttributeText( "platforms" ), def._platformMask, sourceName, def._id ) && bOk;
@@ -661,7 +661,7 @@ namespace sw
         return UserSettingValueResult::Rejected;
     }
 
-    bool UserSettingsSchema::validate( const UserSettingApplierRegistry& registry, GlobalVariableManager* pGlobalVariableManager ) const
+    bool UserSettingsSchema::validate( const UserSettingsHandlerRegistry& registry, GlobalVariableManager* pGlobalVariableManager ) const
     {
         bool bOk = true;
 
@@ -743,25 +743,25 @@ namespace sw
                     }
                     break;
                 }
-                case UserSettingTargetKind::Applier:
+                case UserSettingTargetKind::Handler:
                 {
-                    if ( registry.hasApplier( def._targetName ) == false )
+                    if ( registry.hasHandler( def._targetName ) == false )
                     {
-                        SW_LOG_ERROR( "setting '%#' targets an unknown applier '%#'", pID, def._targetName.c_str() );
+                        SW_LOG_ERROR( "setting '%#' targets an unknown handler '%#'", pID, def._targetName.c_str() );
                         bOk = false;
                         break;
                     }
-                    // 적용 함수가 받는 값을 아는 경우(창 방식 이름, 해상도 형식)에는 기본값과 선택지를 지금 대조한다. 실행 중에 처음 알면 늦다.
+                    // 핸들러가 받는 값을 아는 경우(창 방식 이름, 해상도 형식)에는 기본값과 선택지를 지금 대조한다. 실행 중에 처음 알면 늦다.
                     if ( registry.acceptsValue( def._targetName, def._defaultValue ) == false )
                     {
-                        SW_LOG_ERROR( "setting '%#': applier '%#' does not accept the default '%#'", pID, def._targetName.c_str(), def._defaultValue );
+                        SW_LOG_ERROR( "setting '%#': handler '%#' does not accept the default '%#'", pID, def._targetName.c_str(), def._defaultValue );
                         bOk = false;
                     }
                     for ( const UserSettingOption& option : def._listOption )
                     {
                         if ( registry.acceptsValue( def._targetName, option._value ) == false )
                         {
-                            SW_LOG_ERROR( "setting '%#': applier '%#' does not accept option '%#'", pID, def._targetName.c_str(), option._value );
+                            SW_LOG_ERROR( "setting '%#': handler '%#' does not accept option '%#'", pID, def._targetName.c_str(), option._value );
                             bOk = false;
                         }
                     }
