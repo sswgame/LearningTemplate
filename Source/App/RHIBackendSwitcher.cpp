@@ -8,6 +8,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Engine.h"
+#include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
@@ -66,6 +67,12 @@ namespace sw
             return false;
         outBackend = pRHI->getCommittedBackend();
         return true;
+    }
+
+    bool RHIBackendSwitcher::removeDeviceForTest()
+    {
+        RHI* pRHI = _pEngine != nullptr ? _pEngine->getRHI() : nullptr;
+        return pRHI != nullptr && pRHI->getDevice().debugRemoveDevice();
     }
 
     bool RHIBackendSwitcher::isSwapPending() const

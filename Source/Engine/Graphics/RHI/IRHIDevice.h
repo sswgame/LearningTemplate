@@ -154,6 +154,11 @@ namespace sw
         virtual void enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) = 0;
         /** @brief 백엔드 해제 큐에서 아직 불리지 않은 해제 수입니다. `waitIdle` 과 `shutdown` 뒤에는 0 이어야 합니다(`shutdown` 이 단언한다). */
         virtual uint32 getPendingReleaseCount() const = 0;
+        /**
+         * @brief 장치 제거(TDR)를 흉내 냅니다(개발 명령 `rhi.removeDevice`). 할 수 있는 백엔드만 true 를 반환합니다(DX12 — `ID3D12Device5::RemoveDevice`).
+         * @details 실제 TDR 은 되풀이하면 어댑터가 망가지므로, 제거 뒤의 대기 · 종료 경로가 멈추지 않는지는 이것으로 확인한다. 어느 스레드에서 불러도 된다.
+         */
+        virtual bool debugRemoveDevice() { return false; }
 
         /** @brief 렌더 스레드가 받은 작업을 모두 끝낼 때까지 기다리는 함수의 타입입니다. 호출하는 쪽은 렌더 스레드가 아닙니다. */
         using RenderThreadDrainFunction = void ( * )( void* pContext );
