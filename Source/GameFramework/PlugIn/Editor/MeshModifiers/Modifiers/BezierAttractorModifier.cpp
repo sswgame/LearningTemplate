@@ -19,15 +19,17 @@ namespace sw::editor
     public:
         BezierAttractorModifier()
             : MeshModifier()
-            , _point0Param{ addParam( MeshModifierParamDef{ "Point 0", MeshModifierParamKind::Vector3, -1000.0f, 1000.0f, float3{ 0.0f, -1.0f, 0.0f } } ) }
-            , _point1Param{ addParam( MeshModifierParamDef{ "Point 1", MeshModifierParamKind::Vector3, -1000.0f, 1000.0f, float3{ 1.0f, -0.33f, 0.0f } } ) }
-            , _point2Param{ addParam( MeshModifierParamDef{ "Point 2", MeshModifierParamKind::Vector3, -1000.0f, 1000.0f, float3{ -1.0f, 0.33f, 0.0f } } ) }
-            , _point3Param{ addParam( MeshModifierParamDef{ "Point 3", MeshModifierParamKind::Vector3, -1000.0f, 1000.0f, float3{ 0.0f, 1.0f, 0.0f } } ) }
-            , _strengthParam{ addParam( MeshModifierParamDef{ "Strength", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.001f, 1000.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
-            , _falloffParam{ addParam( MeshModifierParamDef{ "Falloff", MeshModifierParamKind::Float, 0.01f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
+            , _point0Param{ addParam( MeshModifierParamDef{ "Point 0", MeshModifierParamKind::Vector3, -1000.0f, 1000.0f, float3{ 0.0f, -1.0f, 0.0f } }.withLayout( "Curve", "Start point of the Bezier curve" ) ) }
+            , _point1Param{ addParam( MeshModifierParamDef{ "Point 1", MeshModifierParamKind::Vector3, -1000.0f, 1000.0f, float3{ 1.0f, -0.33f, 0.0f } }.withLayout( "Curve", "First control point of the Bezier curve" ) ) }
+            , _point2Param{ addParam( MeshModifierParamDef{ "Point 2", MeshModifierParamKind::Vector3, -1000.0f, 1000.0f, float3{ -1.0f, 0.33f, 0.0f } }.withLayout( "Curve", "Second control point of the Bezier curve" ) ) }
+            , _point3Param{ addParam( MeshModifierParamDef{ "Point 3", MeshModifierParamKind::Vector3, -1000.0f, 1000.0f, float3{ 0.0f, 1.0f, 0.0f } }.withLayout( "Curve", "End point of the Bezier curve" ) ) }
+            , _strengthParam{ addParam( MeshModifierParamDef{ "Strength", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Attraction", "How far points are pulled toward the curve (1 = onto it)" ) ) }
+            , _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.001f, 1000.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Attraction", "Distance from the curve within which points are attracted", "m" ) ) }
+            , _falloffParam{ addParam( MeshModifierParamDef{ "Falloff", MeshModifierParamKind::Float, 0.01f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Attraction", "Exponent shaping how the pull fades with distance" ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "Pulls points within a radius toward a cubic Bezier curve."; }
 
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& ) const override
         {

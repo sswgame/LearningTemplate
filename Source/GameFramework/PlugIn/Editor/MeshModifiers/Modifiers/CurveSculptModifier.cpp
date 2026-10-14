@@ -18,10 +18,12 @@ namespace sw::editor
     public:
         CurveSculptModifier()
             : MeshModifier()
-            , _curveParam{ addParam( MeshModifierParamDef{ "Curve", MeshModifierParamKind::Curve, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _strengthParam{ addParam( MeshModifierParamDef{ "Strength", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
+            , _curveParam{ addParam( MeshModifierParamDef{ "Curve", MeshModifierParamKind::Curve, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Sculpt", "Push height by distance from the main axis (0 = axis, 1 = bounds edge)" ) ) }
+            , _strengthParam{ addParam( MeshModifierParamDef{ "Strength", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Sculpt", "Multiplier applied to the curve height" ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "Pushes points along their normals by a curve of their distance from the main axis."; }
 
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override
         {
