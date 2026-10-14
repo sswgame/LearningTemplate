@@ -18,10 +18,12 @@ namespace sw::editor
     public:
         GlobeModifier()
             : MeshModifier()
-            , _percentParam{ addParam( MeshModifierParamDef{ "Percent", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
+            , _percentParam{ addParam( MeshModifierParamDef{ "Percent", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Blend toward the sphere surface (0 = no change, 1 = fully on the sphere)" ) ) }
+            , _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Radius of the target sphere", "m" ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "Pulls vertices toward a sphere of fixed radius around the gizmo center."; }
 
         bool supportsGPU() const override { return true; }
 

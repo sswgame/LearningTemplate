@@ -19,10 +19,12 @@ namespace sw::editor
     public:
         RubberModifier()
             : MeshModifier()
-            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _falloffParam{ addParam( MeshModifierParamDef{ "Falloff", MeshModifierParamKind::Curve, 0.0f, 1.0f, float3{ 0.0f, 1.0f, 0.0f } } ) }
+            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Stretch distance at full weight (0 = no change, negative pulls down)", "m" ) ) }
+            , _falloffParam{ addParam( MeshModifierParamDef{ "Falloff", MeshModifierParamKind::Curve, 0.0f, 1.0f, float3{ 0.0f, 1.0f, 0.0f } }.withLayout( nullptr, "Weight curve from bottom (0) to top (1) of the mesh" ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "Stretches the mesh along the main axis like rubber, thinning the stretched part."; }
 
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override
         {

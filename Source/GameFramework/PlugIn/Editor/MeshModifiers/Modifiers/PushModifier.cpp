@@ -15,9 +15,11 @@ namespace sw::editor
     public:
         PushModifier()
             : MeshModifier()
-            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
+            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Distance along the normal (0 = no change, negative shrinks)", "m" ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "Pushes vertices along their normals to inflate or shrink the mesh."; }
 
         bool supportsGPU() const override { return true; }
 

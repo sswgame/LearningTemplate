@@ -18,11 +18,13 @@ namespace sw::editor
     public:
         SimpleModModifier()
             : MeshModifier()
-            , _offsetParam{ addParam( MeshModifierParamDef{ "Offset", MeshModifierParamKind::Vector3, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _linearParam{ addParam( MeshModifierParamDef{ "Linear", MeshModifierParamKind::Vector3, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _quadraticParam{ addParam( MeshModifierParamDef{ "Quadratic", MeshModifierParamKind::Vector3, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
+            , _offsetParam{ addParam( MeshModifierParamDef{ "Offset", MeshModifierParamKind::Vector3, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Constant term per axis (0 = no change)", "m" ) ) }
+            , _linearParam{ addParam( MeshModifierParamDef{ "Linear", MeshModifierParamKind::Vector3, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Linear term per axis, multiplies the coordinate (0 = no change)" ) ) }
+            , _quadraticParam{ addParam( MeshModifierParamDef{ "Quadratic", MeshModifierParamKind::Vector3, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Quadratic term per axis, multiplies the squared coordinate (0 = no change)" ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "Offsets each axis with a simple quadratic of its own coordinate."; }
 
         bool supportsGPU() const override { return true; }
 

@@ -18,9 +18,11 @@ namespace sw::editor
     public:
         SpherifyModifier()
             : MeshModifier()
-            , _percentParam{ addParam( MeshModifierParamDef{ "Percent", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
+            , _percentParam{ addParam( MeshModifierParamDef{ "Percent", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Blend toward the sphere surface (0 = no change, 1 = fully spherical)" ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "Pulls vertices toward a sphere sized from the mesh bounds."; }
 
         bool supportsGPU() const override { return true; }
 

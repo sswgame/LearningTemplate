@@ -19,12 +19,14 @@ namespace sw::editor
     public:
         RolledModifier()
             : MeshModifier()
-            , _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
-            , _startParam{ addParam( MeshModifierParamDef{ "Start", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _turnsParam{ addParam( MeshModifierParamDef{ "Turns", MeshModifierParamKind::Float, 0.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _directionParam{ addParam( MeshModifierParamDef{ "Direction", MeshModifierParamKind::Float, -180.0f, 180.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
+            , _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Roll", "Radius of the roll cylinder (0 = no change)", "m" ) ) }
+            , _startParam{ addParam( MeshModifierParamDef{ "Start", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Roll", "Where rolling begins along the main axis (0 = bottom, 1 = top)" ) ) }
+            , _turnsParam{ addParam( MeshModifierParamDef{ "Turns", MeshModifierParamKind::Float, 0.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Roll", "Number of full turns rolled up (0 = no change)" ) ) }
+            , _directionParam{ addParam( MeshModifierParamDef{ "Direction", MeshModifierParamKind::Float, -180.0f, 180.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Roll", "Side the mesh rolls toward, around the main axis", "deg" ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "Rolls the mesh up around a cylinder like a scroll, starting at a point along the main axis."; }
 
         bool supportsGPU() const override { return true; }
 
