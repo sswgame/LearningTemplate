@@ -208,7 +208,7 @@ namespace sw
         }
 
         SW_LOG_ERROR( "%#", builder.c_str() );
-        SW_DEBUG_BREAK();
+        SW_ASSERT( false && "deadlock detected - see the log above" ); // 테스트는 단언 가로채기로 센다
     }
 
 } // namespace sw
