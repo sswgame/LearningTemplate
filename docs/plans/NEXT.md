@@ -36,10 +36,7 @@ main 은 `origin/main` 보다 184 커밋 앞서 있고 push 하지 않았습니�
 2. Ninja-Shipping `all AllTests` 경고 0, Shipping `ctest -L nogpu`. Shipping 은 키트가 STATIC 이라 내보내기 매크로가 빈다는 것을 코드로만 확인했습니다.
 3. `ctest -L hostgpu` 직렬. Release 빌드와 네 백엔드 스크린샷 sha 대조(기준 `D:\w\perfbase`).
 4. 알려진 실패: `editor.uipreview` 가 속성 편집 단계(프레임 375)에서 DX12 · Vulkan · GL 모두 결정적으로 집니다. 포커스와 무관합니다. 의심 커밋은 `f46dc5fde` · `62bd5b3f7` · `999eef7d1` 이고 이분 탐색은 하지 않았습니다. `AppTest` 의 에디터 케이스가 이것 때문에 빨갛습니다. 백로그 A-1.
-5. `nogpu` 의 알려진 실패 둘(2026-10-15 modgpu 병합 때 확인, 둘 다 main 에서 온 것): `ResourceDataSchemaTest.EveryResourceDataFileLoadsWithoutUnknownNames` 가
-   `engine/character/default.mirrornames.xml` 을 종류 표에 없는 데이터로 잡습니다(캐릭터 편집 창 `MirrorNameRules`, 표에 줄 하나가 빠짐).
-   `EditorUIOsInputFilterTest.BlockedDropsPlatformDeviceEventsKeepsAutomation` 은 막는 동안 포커스 사건이 1 개 남기를 기대하는데 0 개입니다(`603653abc` 의 입력 필터와 테스트 중 어느 쪽이 맞는지 판정 필요).
-6. Linux 전용 파일은 Windows 에서 컴파일되지 않아 기계적 치환만 하고 짓지 못했습니다(`PosixCrashHandler.cpp` · `EpollStreamTransport.cpp` · `FileUtil.cpp` 의 `st_mtim` 분기 · `HardwareProbe.cpp`). 사용자가 요청할 때만 WSL 로 확인합니다.
+5. Linux 전용 파일은 Windows 에서 컴파일되지 않아 기계적 치환만 하고 짓지 못했습니다(`PosixCrashHandler.cpp` · `EpollStreamTransport.cpp` · `FileUtil.cpp` 의 `st_mtim` 분기 · `HardwareProbe.cpp`). 사용자가 요청할 때만 WSL 로 확인합니다.
 
 ## 3. 계획한 큰 일 (순서대로)
 
