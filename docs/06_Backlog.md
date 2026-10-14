@@ -581,9 +581,6 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   `[TestHost] stopping: destroying objects`(`TestHostRuntime::stop` 의 `destroyAll`)에서 끝나지 않았다. 같은 실행의 오디오 디코드 태스크 수명 결함(해제된 `AudioClipCache` 를 워커가 씀 — 고쳤다)이
   워커를 망가뜨려 태스크 매니저 join 이 멈춘 것인지 미확정. 종료 경로가 서브시스템 분해로 다시 쓰인 뒤 새 기준에서 다시 본다.
 
-- `E-11` **키트 리로드 때 `Online server kit 'chat'/'admin' is registered twice` 가 [Error] 로 남는다**(2026-10-14 hostgpu 검증 창, 통합 담당 1 관찰, 미조사).
-  시나리오는 통과한다. 의심: 다시 올라온 이미지의 서버 키트 팩토리(`ServiceFactoryList`)가 옛 이미지의 등록이 풀리기 전에 등록한다.
-
 ---
 
 ## F. 결정 대기
