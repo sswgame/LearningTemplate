@@ -15,7 +15,8 @@
 namespace sw::editor
 {
     ScheduleDebugPanel::ScheduleDebugPanel()
-        : _listRow{}
+        : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
+        , _listRow{}
         , _text{}
         , _selectedNpc{}
         , _systemIndex{ 0 }

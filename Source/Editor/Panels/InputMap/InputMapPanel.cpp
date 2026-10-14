@@ -418,11 +418,13 @@ namespace sw::editor
                 EditorSelfTestMarks::note( ( string{ "inputMap.action." } + actionName.c_str() ).c_str() );
             if ( bConflict )
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "ActionConflictTip" ) );
-            ImGui::SameLine( ImGui::GetContentRegionAvail().x - ImGui::GetFontSize() * 4.0f );
+            // 키 글리프는 오른쪽 끝에 맞춘다 — 고정 폭으로 비워 두면 "[ LeftControl+... ]" 같은 긴 글리프가 잘린다.
+            const string glyphText = bDown ? string{ "DOWN" } : _inputMap.getGlyphForAction( actionName );
+            ImGui::SameLine( MathUtil::max( ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize( glyphText.c_str() ).x - ImGui::GetStyle().ItemSpacing.x, 0.0f ) );
             if ( bDown )
-                EditorThemeUtil::textSuccess( "DOWN" );
+                EditorThemeUtil::textSuccess( glyphText.c_str() );
             else
-                ImGui::TextDisabled( "%s", _inputMap.getGlyphForAction( actionName ).c_str() );
+                ImGui::TextDisabled( "%s", glyphText.c_str() );
             ImGui::PopID();
         }
     }
@@ -453,14 +455,16 @@ namespace sw::editor
             if ( pBinding == nullptr )
                 continue;
             ImGui::PushID( static_cast<int32>( bindIndex ) );
-            InputSlot    slot{};
-            const bool   bRebindable = _inputMap.findRebindSlot( action, bindIndex, slot );
-            const string slotGlyph   = bRebindable ? InputMap::getGlyphForSlot( slot, InputGlyphStyle::KeyboardMouse ) : string{ BindingKinds::toName( pBinding->_kind ) };
+            const float32 rightEdgeX = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x; // 이 줄이 그릴 수 있는 오른쪽 끝(화면 좌표)
+            InputSlot     slot{};
+            const bool    bRebindable = _inputMap.findRebindSlot( action, bindIndex, slot );
+            const string  slotGlyph   = bRebindable ? InputMap::getGlyphForSlot( slot, InputGlyphStyle::KeyboardMouse ) : string{ BindingKinds::toName( pBinding->_kind ) };
             ImGui::Text( "%u  %s", bindIndex, slotGlyph.c_str() );
             ImGui::SameLine( ImGui::GetFontSize() * 9.0f );
             ImGui::TextDisabled( "%s", _inputMap.findBindingLayer( action, bindIndex ).c_str() );
             ImGui::SameLine( ImGui::GetFontSize() * 15.0f );
-            ImGui::SetNextItemWidth( ImGui::GetFontSize() * 8.0f );
+            // 가장 긴 트리거 이름(HoldThreshold · HoldAndRelease)이 잘리지 않을 만큼 — 고정 8 em 이면 "HoldThresho" 로 끊긴다.
+            ImGui::SetNextItemWidth( ImGui::CalcTextSize( "HoldAndRelease" ).x + ImGui::GetFrameHeight() + ImGui::GetStyle().FramePadding.x * 2.0f );
             const ActionTrigger trigger  = _inputMap.getBindingTrigger( action, bindIndex );
             const utf8*         pCurrent = InputMap::actionTriggerToName( trigger );
             const bool          bOpen    = ImGui::BeginCombo( "##trigger", pCurrent != nullptr ? pCurrent : "?" );
@@ -493,25 +497,42 @@ namespace sw::editor
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RebindTip" ) );
             // 바인딩마다 발화 시간(초)과 값 부호 뒤집기. 시간을 쓰지 않는 트리거(Pressed 등)면 시간 칸은 숨긴다.
             const float32 effectiveTime = _inputMap.getEffectiveTriggerTime( *pBinding );
-            if ( effectiveTime > 0.0f )
+            const bool    bUsesTime     = effectiveTime > 0.0f;
+            const bool    bUsesTaps     = pBinding->_trigger == ActionTrigger::MultiTap;
+            // 시간 · 횟수 칸이 들거나 Negate 가 남은 폭에 안 들어가면 패널 오른쪽 밖으로 잘린다 — 콤보와 같은 칸에서 시작하는 다음 줄로 내린다.
+            const float32 negateWidth       = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize( "Negate" ).x;
+            const bool    bNegateFits       = ImGui::GetItemRectMax().x + ImGui::GetStyle().ItemSpacing.x + negateWidth <= rightEdgeX;
+            bool          bLineStart        = false;
+            const bool    bWrapToSecondLine = bUsesTime || bUsesTaps || bNegateFits == false;
+            if ( bWrapToSecondLine )
+            {
+                ImGui::SetCursorPosX( ImGui::GetFontSize() * 15.0f );
+                bLineStart = true;
+            }
+            if ( bUsesTime )
             {
                 float32 editTime = effectiveTime;
-                ImGui::SameLine();
+                if ( bLineStart == false )
+                    ImGui::SameLine();
+                bLineStart = false;
                 ImGui::SetNextItemWidth( ImGui::GetFontSize() * 4.0f );
                 if ( ImGui::DragFloat( "s##time", &editTime, 0.01f, 0.01f, 10.0f, "%.2f" ) && _inputMap.setBindingTriggerTime( action, bindIndex, editTime ) )
                     markDocumentDirty();
             }
             // MultiTap 만 누름 횟수를 고른다(2 이상).
-            if ( pBinding->_trigger == ActionTrigger::MultiTap )
+            if ( bUsesTaps )
             {
                 int32 editTaps = static_cast<int32>( pBinding->_tapCount );
-                ImGui::SameLine();
+                if ( bLineStart == false )
+                    ImGui::SameLine();
+                bLineStart = false;
                 ImGui::SetNextItemWidth( ImGui::GetFontSize() * 3.0f );
                 if ( ImGui::DragInt( "taps##taps", &editTaps, 0.1f, 2, 9 ) && _inputMap.setBindingTapCount( action, bindIndex, static_cast<uint8>( MathUtil::clamp( editTaps, 2, 9 ) ) ) )
                     markDocumentDirty();
             }
             bool bNegate = pBinding->_bNegate;
-            ImGui::SameLine();
+            if ( bLineStart == false )
+                ImGui::SameLine();
             if ( ImGui::Checkbox( "Negate", &bNegate ) && _inputMap.setBindingNegate( action, bindIndex, bNegate ) )
                 markDocumentDirty();
             ImGui::PopID();
@@ -558,7 +579,7 @@ namespace sw::editor
         for ( size_t index = 0; index < 4; ++index )
         {
             ImGui::TextDisabled( "%s", kArrStyleName[index] );
-            ImGui::SameLine( ImGui::GetFontSize() * 9.0f );
+            ImGui::SameLine( ImGui::CalcTextSize( kArrStyleName[0] ).x + ImGui::GetStyle().ItemSpacing.x * 2.0f ); // 가장 긴 이름 뒤에 맞춘다(고정 폭이면 글꼴에 따라 겹친다)
             ImGui::TextUnformatted( _inputMap.getGlyphForAction( action, kArrStyle[index] ).c_str() );
         }
     }
