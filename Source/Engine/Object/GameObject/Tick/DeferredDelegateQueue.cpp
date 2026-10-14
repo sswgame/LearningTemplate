@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Engine/Object/GameObject/DeferredDelegateQueue.h"
+#include "Engine/Object/GameObject/Tick/DeferredDelegateQueue.h"
 
 namespace sw
 {

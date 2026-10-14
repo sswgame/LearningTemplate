@@ -9,7 +9,7 @@
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Object/GameObject/ISceneFrameSystem.h"
+#include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
 
 #include "GameFramework/Base/Actor/Control/Intent/ControlIntentHistory.h"
 #include "GameFramework/GameFrameworkExports.h"

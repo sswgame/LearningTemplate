@@ -65,7 +65,7 @@ LocalizedTextArena* const pArena = s_localizedTextArena.getOrCreate();
 | `ModuleDependencyGraph::clear` 의 표 용량 | `ModuleHost/ModuleDependencyGraph.cpp` | ③ | `ModuleDependencyGraph` | 모듈 호스트 종료 | `ded0a6fd6` 에서 고침 — 위와 같이 본다 |
 | `GimmickNodeRegistry::getDefault` | `GameFramework/Base/Gameplay/Gimmick/GimmickNodeRegistry.cpp` | ③ | 엔진 수명 범위(`ScopeOwned` 면 기동 단계 등록이 필요 없다) | `ded0a6fd6` 가 기동 단계로 당김 | 다음 단위 — 병합 뒤 `ScopeOwned` 로 대체할 수 있는지 본다 |
 | `EditorSiblingOrder::isFolder` | `Editor/Common/Commands/Scene/EditorSiblingOrder.cpp` | ④ | — | — | `ded0a6fd6` 에서 고침(조회가 태그를 등록하던 결함) |
-| `ObjectCopyBuffer` 의 함수 안 정적 목록 | `Engine/Object/GameObject/ObjectCopyBuffer.cpp` | ① | 엔진 수명 범위 | 없음 | 옮김 — `ScopeOwned` |
+| `ObjectCopyBuffer` 의 함수 안 정적 목록 | `Engine/Object/GameObject/Serialization/ObjectCopyBuffer.cpp` | ① | 엔진 수명 범위 | 없음 | 옮김 — `ScopeOwned` |
 | `RenderThread` 스크린샷 우편함 | `Engine/Renderer/RenderThread.cpp` | ① | 엔진 수명 범위 | 없음 | 옮김 — `ScopeOwned` |
 | `TagID` 등록표 | `Core/String/TagID.cpp` | ① | 엔진 수명 범위(이름 풀보다 먼저 닫힌다) | 없음 | 옮김 — `ScopeOwned` |
 | `ValidationIssueLog::get` | `Engine/Reflection/ReflectionValidation.cpp` | ① | 엔진 수명 범위 | 없음 | 옮김 — `ScopeOwned` |

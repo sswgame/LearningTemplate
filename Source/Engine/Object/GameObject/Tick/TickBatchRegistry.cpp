@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Engine/Object/GameObject/TickBatchRegistry.h"
+#include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"

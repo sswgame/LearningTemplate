@@ -8,7 +8,7 @@
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/SceneFrameStep.h"
+#include "Engine/Object/GameObject/Tick/SceneFrameStep.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
 

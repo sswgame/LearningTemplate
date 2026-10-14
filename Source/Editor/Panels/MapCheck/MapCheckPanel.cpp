@@ -25,7 +25,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ObjectValidation.h"
+#include "Engine/Object/GameObject/Serialization/ObjectValidation.h"
 #include "Engine/Scene/SceneManager.h"
 
 #include <imgui.h>

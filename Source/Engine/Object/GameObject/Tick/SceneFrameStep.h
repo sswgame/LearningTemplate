@@ -12,7 +12,7 @@ namespace sw
     enum class SceneFrameStep : uint8
     {
 #define SW_SCENE_FRAME_STEP( Name ) Name,
-#include "Engine/Object/GameObject/SceneFrameStepList.xxx"
+#include "Engine/Object/GameObject/Tick/SceneFrameStepList.xxx"
 #undef SW_SCENE_FRAME_STEP
         Count
     };

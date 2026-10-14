@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Engine/Object/GameObject/TickRegistry.h"
+#include "Engine/Object/GameObject/Tick/TickRegistry.h"
 
 #include "Core/Container/unordered_map.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -12,7 +12,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/TickBatchRegistry.h"
+#include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
 
 namespace sw
 {

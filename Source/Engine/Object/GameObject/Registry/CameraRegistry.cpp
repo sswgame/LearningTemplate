@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Engine/Object/GameObject/CameraRegistry.h"
+#include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Math/MathUtil.h"

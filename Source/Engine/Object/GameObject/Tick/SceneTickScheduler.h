@@ -15,7 +15,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 
-#include "Engine/Object/GameObject/TickRegistry.h"
+#include "Engine/Object/GameObject/Tick/TickRegistry.h"
 
 namespace sw
 {

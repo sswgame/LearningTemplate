@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/GameObject/ISceneService.h"
+#include "Engine/Object/GameObject/Service/ISceneService.h"
 
 namespace sw
 {

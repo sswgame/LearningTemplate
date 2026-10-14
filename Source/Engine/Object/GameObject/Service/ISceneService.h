@@ -22,7 +22,7 @@
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "Engine/Object/GameObject/SceneFrameStep.h"
+#include "Engine/Object/GameObject/Tick/SceneFrameStep.h"
 
 namespace sw
 {

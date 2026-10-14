@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Engine/Object/GameObject/SceneTickScheduler.h"
+#include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -13,8 +13,8 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/PrimitiveRegistry.h"
-#include "Engine/Object/GameObject/StructuralChangeBuffer.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw

@@ -19,7 +19,7 @@
 #include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Object/GameObject/ISceneService.h"
+#include "Engine/Object/GameObject/Service/ISceneService.h"
 #include "Engine/Physics/IPhysicsQueryScene.h"
 
 namespace sw

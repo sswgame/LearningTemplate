@@ -22,8 +22,8 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
-#include "Engine/Object/GameObject/StructuralChangeBuffer.h"
-#include "Engine/Object/GameObject/TickRegistry.h"
+#include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
+#include "Engine/Object/GameObject/Tick/TickRegistry.h"
 
 namespace sw
 {

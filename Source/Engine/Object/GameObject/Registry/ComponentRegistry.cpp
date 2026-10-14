@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Engine/Object/GameObject/ComponentRegistry.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionTypes.h"

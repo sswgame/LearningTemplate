@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Engine/Object/GameObject/StructuralChangeBuffer.h"
+#include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

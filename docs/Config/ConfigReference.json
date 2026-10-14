@@ -3535,7 +3535,7 @@
    "default": "true",
    "kind": "시험",
    "description": "타입별 일괄 틱 경로를 쓴다(0 이면 모든 오브젝트를 칸 목록으로 — 전/후 비교용)",
-   "source": "Source/Engine/Object/GameObject/TickRegistry.cpp"
+   "source": "Source/Engine/Object/GameObject/Tick/TickRegistry.cpp"
   },
   {
    "name": "gv_timeScale",

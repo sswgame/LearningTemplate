@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/GameObject/ObjectValidation.h"
+#include "Engine/Object/GameObject/Serialization/ObjectValidation.h"
 
 #include "Core/Log/Logger.h"
 

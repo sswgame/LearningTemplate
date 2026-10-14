@@ -13,9 +13,9 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/SceneTickScheduler.h"
-#include "Engine/Object/GameObject/StructuralChangeBuffer.h"
-#include "Engine/Object/GameObject/TickRegistry.h"
+#include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
+#include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
+#include "Engine/Object/GameObject/Tick/TickRegistry.h"
 #include "Engine/Reflection/ReflectionCore.h"
 
 namespace sw

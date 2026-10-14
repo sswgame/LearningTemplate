@@ -14,9 +14,9 @@
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectStore.h"
-#include "Engine/Object/GameObject/PrimitiveRegistry.h"
-#include "Engine/Object/GameObject/SceneTickScheduler.h"
-#include "Engine/Object/GameObject/StructuralChangeBuffer.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
+#include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include "EngineTest/TestGameObjectMocks.h"

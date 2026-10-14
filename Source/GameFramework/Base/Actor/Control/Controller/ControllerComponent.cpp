@@ -2,9 +2,9 @@
 
 #include "GameFramework/Base/Actor/Control/Controller/ControllerComponent.h"
 
-#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
 #include "GameFramework/Base/Actor/Control/ControlSystem.h"
 #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"

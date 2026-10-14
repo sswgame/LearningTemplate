@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/GameObject/ObjectCopyBuffer.h"
+#include "Engine/Object/GameObject/Serialization/ObjectCopyBuffer.h"
 
 #include "Core/Memory/LifetimeScope.h"
 

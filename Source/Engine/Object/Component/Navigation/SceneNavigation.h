@@ -34,7 +34,7 @@
 #include "Engine/Navigation/NavigationTypes.h"
 #include "Engine/Object/Component/Navigation/NavDebugView.h"
 #include "Engine/Object/Component/Navigation/NavTileRebaker.h"
-#include "Engine/Object/GameObject/ISceneService.h"
+#include "Engine/Object/GameObject/Service/ISceneService.h"
 
 namespace sw
 {
