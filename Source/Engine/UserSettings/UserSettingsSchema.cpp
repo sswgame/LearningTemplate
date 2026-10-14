@@ -19,7 +19,7 @@ namespace sw
     {
         struct UserSettingsSchemaInternal
         {
-            /** @brief 키 바인딩 설정이 대상을 적지 않았을 때 쓰는 적용기입니다(입력 맵 리바인딩). */
+            /** @brief 키 바인딩 설정이 대상을 적지 않았을 때 쓰는 적용 함수입니다(입력 맵 리바인딩). */
             static constexpr utf8 kKeyBindingApplier[] = "input.keyBinding";
 
             /** @brief 이름 → 열거자 표의 한 줄입니다. */
@@ -751,7 +751,7 @@ namespace sw
                         bOk = false;
                         break;
                     }
-                    // 적용기가 받는 값을 아는 경우(창 방식 이름, 해상도 형식)에는 기본값과 선택지를 지금 대조한다. 실행 중에 처음 알면 늦다.
+                    // 적용 함수가 받는 값을 아는 경우(창 방식 이름, 해상도 형식)에는 기본값과 선택지를 지금 대조한다. 실행 중에 처음 알면 늦다.
                     if ( registry.acceptsValue( def._targetName, def._defaultValue ) == false )
                     {
                         SW_LOG_ERROR( "setting '%#': applier '%#' does not accept the default '%#'", pID, def._targetName.c_str(), def._defaultValue );

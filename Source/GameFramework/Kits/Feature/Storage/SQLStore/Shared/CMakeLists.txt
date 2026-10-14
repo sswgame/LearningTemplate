@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file Source/GameFramework/Kits/Feature/Storage/SQLStore/Shared/CMakeLists.txt
-# @brief SQL 저장 키트(공유) — SQL 드라이버 계약 · 연결 풀 · 드라이버 레지스트리 · 마이그레이션 적용기 · SQLite 드라이버
+# @brief SQL 저장 키트(공유) — SQL 드라이버 계약 · 연결 풀 · 드라이버 레지스트리 · 마이그레이션 실행기 · SQLite 드라이버
 # ==============================================================================
 
 sw_addGameFrameworkKit(GF_SQLStore)

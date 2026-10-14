@@ -16,7 +16,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 사용자 설정(옵션 메뉴 백엔드) — 스키마 검사 · 적용기 레지스트리 · 품질 프리셋 · 사용자 파일 · 적용/되돌리기 · 확인 카운트다운 · 키 바인딩 · 언어 · 접근성.
+// 사용자 설정(옵션 메뉴 백엔드) — 스키마 검사 · 적용 등록부 · 품질 프리셋 · 사용자 파일 · 적용/되돌리기 · 확인 카운트다운 · 키 바인딩 · 언어 · 접근성.
 
 // 설정 대상은 등록된 전역 변수여야 한다 — Shipping 테스트에서도 표에 있도록 남긴다(빠진 테스트 변수는 등록되지 않는다).
 SW_TEST_GLOBAL_VARIABLE_SHIPPED( float32, gv_userSettingsTestFloat, 1.0f, "UserSettingsTest 전용 실수 대상" );
@@ -48,7 +48,7 @@ namespace
             }
         }
 
-        /** @brief 테스트 스키마 — 카테고리 둘, 전역 변수 대상 셋, 적용기 대상 하나, 품질 묶음 하나, 확인 카운트다운 하나. */
+        /** @brief 테스트 스키마 — 카테고리 둘, 전역 변수 대상 셋, 적용 함수 대상 하나, 품질 묶음 하나, 확인 카운트다운 하나. */
         static constexpr const utf8* kSchemaXML = R"(
 <UserSettingsSchema version="1">
     <Category id="video" text="t.video"/>
@@ -239,7 +239,7 @@ SW_TEST_CASE( UserSettingsTest, SchemaRejectsUnknownNamesAndInvalidValues )
 }
 
 /**
- * @brief [UserSettingsTest] 적용기는 데이터가 이름으로 고른다 — 게임이 올린 적용기가 값 · 인자를 받고, 내리면 그 이름을 쓰는 스키마는 로드 오류다
+ * @brief [UserSettingsTest] 적용 함수는 데이터가 이름으로 고른다 — 게임이 올린 적용 함수가 값 · 인자를 받고, 내리면 그 이름을 쓰는 스키마는 로드 오류다
  */
 SW_TEST_CASE( UserSettingsTest, ApplierRegistryDispatchesByName )
 {
@@ -270,7 +270,7 @@ SW_TEST_CASE( UserSettingsTest, ApplierRegistryDispatchesByName )
     SW_EXPECT_STREQ( "3", recorder._value );
     SW_EXPECT_STREQ( "slot2", recorder._param );
 
-    // 범위 밖은 맞춰 넣고(Clamped), 적용 때 적용기가 받는다.
+    // 범위 밖은 맞춰 넣고(Clamped), 적용 때 적용 함수가 받는다.
     SW_EXPECT_TRUE( settings.setPendingIntValue( "g.level", 42 ) == sw::UserSettingSetResult::Clamped );
     SW_EXPECT_EQUAL( 1u, recorder._callCount );
     (void)settings.applyPending(); // 적용 결과는 아래 단언이 대상 값으로 확인한다
@@ -685,7 +685,7 @@ SW_TEST_CASE( UserSettingsTest, OptionProviderOverridesFixedOptionsAndFallsBack 
 
 /**
  * @brief [UserSettingsTest] 게임 스키마의 키 바인딩 설정은 그 게임 입력 맵에 있는 액션의 다시 잡을 수 있는 바인딩을 가리킨다
- * @details 액션 이름을 틀리거나 입력 맵에서 액션을 지우면 설정은 적용기에서 조용히 건너뛰어져 메뉴의 줄이 아무 일도 하지 않는다. 여기서 드러낸다.
+ * @details 액션 이름을 틀리거나 입력 맵에서 액션을 지우면 설정은 적용 함수에서 조용히 건너뛰어져 메뉴의 줄이 아무 일도 하지 않는다. 여기서 드러낸다.
  */
 SW_TEST_CASE( UserSettingsTest, ShippedGameKeyBindingsNameRealInputMapActions )
 {

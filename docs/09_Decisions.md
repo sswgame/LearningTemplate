@@ -60,7 +60,7 @@
   Box2D · Jolt 어댑터의 switch(외부 라이브러리 경계), RHI 백엔드 `CommandContext` 큰 파일(백엔드 하나의 기록이라 한 이유로 바뀐다), `AbilitySystemComponent` 의 modifier switch(닫힌 열거 + `-Wswitch`)입니다.
   의도된 예외는 `App.cpp` 의 `kArrHeadlessTask` 표, `EditorPanelManager::syncWithRegistry`, 에디터 `getService<T>()`(모듈 경계 주입), 엔진 루프의 서브시스템 등록부입니다.
 - **구조 리팩토링 후보를 옮길지 가르는 기준**(2026-10-12). 줄 수가 줄어서가 아니라 앞으로 고칠 곳이 줄어서 옮깁니다. 하나라도 걸리면 옮기지 않고 이유를 남깁니다.
-  - **반쪽 이전 금지**: 한 클래스 안에 옛 방식과 새 방식이 섞이면 더 헷갈립니다(예: UserSettings 공급자만 옮기고 적용기는 남기는 것). 통째로 옮기거나 통째로 둡니다.
+  - **반쪽 이전 금지**: 한 클래스 안에 옛 방식과 새 방식이 섞이면 더 헷갈립니다(예: UserSettings 공급자만 옮기고 적용 함수는 남기는 것). 통째로 옮기거나 통째로 둡니다.
   - **훅 · 인터페이스는 쓰는 곳이 둘 이상일 때**: 쓰는 곳이 하나뿐인 일반화는 호출 시점 순서를 숨기고 읽는 비용만 늘립니다. 순서에 뜻이 있으면 호출 자리에 두고 이유를 주석으로 적습니다.
     다만 SOLID 와 부딪히면 SOLID 가 이깁니다(구체 의존을 남기는 쪽이 더 큰 부채).
   - **동작이 같으면 코드를 늘리지 않습니다**: 한도 없는 대기에 시한 · 경고를 붙이는 식으로 상수와 분기만 느는 변경은 하지 않습니다.
@@ -567,7 +567,7 @@
   Redis 7.4 이상은 RSAL/SSPL 이라 "오픈소스이고 무료" 조건 밖이고, Redis 8 의 AGPLv3 선택도 그 의무 때문에 택하지 않았습니다. 전용 서버는 윈도우와 리눅스 둘 다 1 급입니다. 남은 일은 [백로그](06_Backlog.md) `D7-5` "네트워크 서비스 계층" 에 있습니다.
 - **네트워크 서비스 계층**(2026-10-06, 사용자 결정): 로그인, 채팅, 거래처럼 MMO 가 아니어도 쓰는 서비스는 상태 복제(UDP)와 따로, 순서 있는 신뢰 스트림 · 긴 연결 · 요청-응답 위의 키트로 만듭니다.
   공통 기반은 GameFramework 기반 `Online/` 입니다. 서비스 틀(등록, 라우팅, 인증 문맥, 오류 코드, 버전 협상), 요청 보호(도배 제한, 멱등 키, 크기 상한), 신원 원형(`AccountID`, 세션 토큰 검증),
-  저장 계약(`IServiceStore` 영속, `IEphemeralStore` 캐시, `ILocalStore` 로컬), 마이그레이션 적용기, 감사 로그, 서버 간 버스, 예약 작업, 원격 설정과 기능 플래그, 관측(지표, 구조화 로그, 추적 id)이 여기에 있습니다.
+  저장 계약(`IServiceStore` 영속, `IEphemeralStore` 캐시, `ILocalStore` 로컬), 마이그레이션 실행기, 감사 로그, 서버 간 버스, 예약 작업, 원격 설정과 기능 플래그, 관측(지표, 구조화 로그, 추적 id)이 여기에 있습니다.
   로컬 저장의 파일 백엔드는 바이너리 · JSON · XML 형식, 원자적 쓰기, 체크섬, 선택적 압축과 암호화를 지원합니다.
   DB 드라이버는 키트입니다. `GF_SQLStore`(SQLite), `GF_Server_SQLStore`(PostgreSQL), `GF_Server_CacheStore`(RESP, 메모리 구현은 기반 `Online/Cache`)가 있습니다.
   기능도 키트입니다. `GF_Account`, `GF_ServerDirectory`, `GF_Economy`(원장, 지갑, 상점, 영수증 검증), `GF_Trade`(원장 위), `GF_Mailbox`, `GF_Chat`, `GF_Social`, `GF_Leaderboard`, `GF_Matchmaking`, `GF_LiveOps`, `GF_Admin`(GM 도구, 제재)입니다.

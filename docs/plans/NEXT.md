@@ -96,14 +96,13 @@ Conform 의 `SurfaceBvh`)을 풀었다. 최종 검증: Debug `all AllTests` **�
    컴포넌트 · 씬은 `SceneEngineServices`, 서비스 클래스는 만들 때 · 초기화 때 의존 서브시스템 포인터를 멤버로 받는다. `getTypeRegistry`(273)는 쓰임새를 보고
    `TypeLookupCache` 같은 기존 구조로 풀지 판단한다. 호출 분류 → 많은 접근자부터 주입 → 0 이 된 행의 getter 삭제, 접근자 단위 커밋 · 성능 측정(백로그 `C-28`).
 3. **폴더 쪼개기** — 평평한 `Editor/Common/Commands`(61) · `Engine/Object/GameObject`(45) · `Engine/Renderer/Frame`(43). `EditorNetPlaySession.h` → `Workspace/`.
-4. **C-17 이름 점검** — "적용기"(Applier 번역어, 상용 엔진 용어 아님) 후보를 더한다.
-5. **C-3** — 백로그 항목대로.
-6. **`nogpu` 샤드 결정** — 합 540초(AppTest HostOnly 샤드 86~136초, EngineTest NoGPU 39~66초). 샤드를 더 쪼갤지 · 기동 중복을 줄일지 사용자 결정 대기.
-7. **`TaskNode` 소유 포인터 변경 전후 성능** — 기준선 워크트리 `D:\w\perfbase`(`2772e1a7a`) · `D:\w\perfbase2`(`6a86561ef`)와 비교. 중립이면 유지.
-8. **PCH 측정** — 모든 구성에서 PCH 를 켠 뒤의 빌드 시간.
-9. **에디터 기동 시간** — 7초 안팎(이전 4~6초). 조용한 기계에서 병합 전(`22b94b2e4`) · 후(`52bf2b4b7`) · 최신을 번갈아 5회씩.
-10. **E 절 관찰** — 백로그 E 절의 관찰 항목.
-11. **A 열린 결함** — GL 체인 1회 `editor.bugit` · `editor.viewportgrid` 기대 미달(창이 앞에 오지 못함), TDR 뒤 행의 원인 미상.
+4. **C-3** — 백로그 항목대로.
+5. **`nogpu` 샤드 결정** — 합 540초(AppTest HostOnly 샤드 86~136초, EngineTest NoGPU 39~66초). 샤드를 더 쪼갤지 · 기동 중복을 줄일지 사용자 결정 대기.
+6. **`TaskNode` 소유 포인터 변경 전후 성능** — 기준선 워크트리 `D:\w\perfbase`(`2772e1a7a`) · `D:\w\perfbase2`(`6a86561ef`)와 비교. 중립이면 유지.
+7. **PCH 측정** — 모든 구성에서 PCH 를 켠 뒤의 빌드 시간.
+8. **에디터 기동 시간** — 7초 안팎(이전 4~6초). 조용한 기계에서 병합 전(`22b94b2e4`) · 후(`52bf2b4b7`) · 최신을 번갈아 5회씩.
+9. **E 절 관찰** — 백로그 E 절의 관찰 항목.
+10. **A 열린 결함** — GL 체인 1회 `editor.bugit` · `editor.viewportgrid` 기대 미달(창이 앞에 오지 못함), TDR 뒤 행의 원인 미상.
    그 밖: 반복 패턴 정리(`ScopedRegistration<TRegistry,TEntry>` · `caseState<T>()` · `IServiceStoreWork` 람다 · 온라인 메서드 X-macro), 서버 디버그 `S3 · S6 · S7`,
    다중 월드 `D3-7`, 에디터 보강 `D3-1`.
 
