@@ -262,8 +262,9 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
 
 - `D3-1` **에디터 로드맵 — 미룬 영역 패널을 그 영역 옆에.** 엔진 영역 패널은 EditorModule, 기반 GameFramework 영역은 `GF_EditorPlugIn_Base`(`Source/GameFramework/PlugIn/Editor/Base/`),
   키트 영역은 `GF_EditorPlugIn_<이름>` 확장 모듈에 둔다. 남은 것 —
-  ⑦ 카탈로그 편집기 뒤: 엔진 데이터 종류(장면 · 머티리얼 · 파이프라인 …)는 층 규칙(Resource 가 티어 5)상 `ResourceDataKindRegistry` 에 올리지 못해 아직 `ResourceDataSchemaTest` 의 표에 있고,
-  카탈로그 밖(Engine 쪽) 열거자 이름 표는 `EnumNameTable` 로 모으지 않았다. ⑧ 지형 칠하기 도구 모드(`D2-5` 환경).
+  ⑦ 카탈로그 편집기 뒤: 엔진 데이터 종류(장면 · 머티리얼 · 파이프라인 …)는 아직 `ResourceDataSchemaTest` 의 표에 있고, 카탈로그 밖(Engine 쪽) 열거자 이름 표는 `EnumNameTable` 로 모으지 않았다.
+  층 규칙은 걸림돌이 아니다(레지스트리는 티어 5 라 위 티어가 채울 수 있다) — 실제 걸림돌 셋과 단계적 대안은 [결정 기록](09_Decisions.md) 5-11 "엔진 데이터 종류의 레지스트리 이전" 이다
+  (첫 단계: `EnumNameTable` 을 Core 로 옮기고 GameFramework include 만 고친다, 동작 불변). ⑧ 지형 칠하기 도구 모드(`D2-5` 환경).
   다중 월드 툴 창과 그 위의 미리보기 창은 `D3-7`, UI 문서 디자이너는 `D3-3` 이다.
   에디터에 이미 있는 것(전역 변수 표, 커맨드 팔레트, 핫 리로드, Undo, Play 와 Step, InputReplay, 기즈모, RenderTargetPanel, 프로파일러와 Tracy)은 다시 만들지 않는다.
 
