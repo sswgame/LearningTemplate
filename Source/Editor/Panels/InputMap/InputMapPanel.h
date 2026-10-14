@@ -28,6 +28,7 @@ namespace sw::editor
         const utf8* getPanelTitle() const override { return "Input Map Editor"; }
         void        drawContent() override;
         bool        isToolPanel() const override { return true; }
+        float2      getInitialPanelSize() const override { return float2{ 960.0f, 640.0f }; }
 
         /**
          * @brief InputMap XML 을 씁니다.

@@ -3670,7 +3670,7 @@
    "type": "int32",
    "default": "0",
    "kind": "일반",
-   "description": "주 출력 보기 모드 (0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw)",
+   "description": "주 출력 보기 모드 (0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw / 6 LightingOnly)",
    "source": "Source/Engine/Renderer/Frame/FrameRenderer.cpp"
   },
   {
