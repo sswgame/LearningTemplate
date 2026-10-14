@@ -8,13 +8,15 @@ SWCOOK 4
 4877783fcd0ecf62 tonemap.hlsl
 50e78d8a12f071af shadowdepth.hlsl
 5cf5e0caed4fbcb8 foliage.hlsl
+60d5e5117f503c1f toon.hlsl
 63d2e93ed89908c3 gbuffer.hlsl
 69949ff778c35fbc gpucull.hlsl
 7644e2dfc592ed60 deferredlighting.hlsl
 8687732d87cba8ec fullscreenblit.hlsl
 8e21d601cc7aff7d bindingslots.hlsli
 980c18c4c174d3fb postoutline.hlsli
-9cb83e9d0eaa8f66 binding.hlsli
+9a10f5ccb89bc4e0 binding.hlsli
+9bc16406b15ca6cf sprite2dlit.hlsl
 9d98e045b0f2f92f meshskin.hlsl
 9ee00d8a59ae021e common.hlsli
 a16db7b2113a3424 colorvision.hlsli
@@ -22,9 +24,8 @@ b36e262f0b0e2701 instancesort.hlsl
 b536aa3df9bce513 @toolchain
 b565a5e10f5ab708 instancedata.hlsli
 be6b517dd765ba39 terrain.hlsl
+be6e7e5a2ceca729 lighting.hlsli
 bfc1abf7672a9a07 ssao.hlsl
-c3624bf660a037a8 lighting.hlsli
-c89df4040ce009e9 sprite2dlit.hlsl
 cd950cde23768c4b instanceanimation.hlsl
 d4c27f6d50f42c87 postchain.hlsl
 d7245240951d50cb water.hlsl
@@ -33,4 +34,3 @@ e660f73ee8cb6e01 meshmorph.hlsl
 e68b240c33655d39 sprite2d.hlsl
 f653f249d0845efc lighting2d.hlsli
 fc648c70dae86db2 canvas.hlsl
-fd2425958c3d9f52 toon.hlsl

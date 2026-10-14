@@ -8,10 +8,10 @@ SWCOOK 4
 65613229fe8a27cd waterwaveprobe.hlsl
 8e21d601cc7aff7d engine:bindingslots.hlsli
 980c18c4c174d3fb engine:postoutline.hlsli
-9cb83e9d0eaa8f66 engine:binding.hlsli
+9a10f5ccb89bc4e0 engine:binding.hlsli
 9ee00d8a59ae021e engine:common.hlsli
 a16db7b2113a3424 engine:colorvision.hlsli
 b536aa3df9bce513 @toolchain
 b565a5e10f5ab708 engine:instancedata.hlsli
-c3624bf660a037a8 engine:lighting.hlsli
+be6e7e5a2ceca729 engine:lighting.hlsli
 f653f249d0845efc engine:lighting2d.hlsli
