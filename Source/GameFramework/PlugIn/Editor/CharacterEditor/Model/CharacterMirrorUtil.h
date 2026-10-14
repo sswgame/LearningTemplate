@@ -41,8 +41,8 @@ namespace sw::editor
     class MirrorNameRules
     {
     public:
-        /** @brief 기본 표 파일입니다(`_L`/`_R`, `.L`/`.R`, `Left`/`Right` 등 흔한 철자). 철자를 더하는 일이 줄 하나다. */
-        static constexpr string_view kDefaultPath = "engine/character/default.mirrornames.xml";
+        /** @brief 기본 표 파일입니다(`_L`/`_R`, `.L`/`.R`, `Left`/`Right` 등 흔한 철자). 철자를 더하는 일이 줄 하나다. 에디터만 읽으므로 에디터 팩에 둔다. */
+        static constexpr string_view kDefaultPath = "editor/character/default.mirrornames.xml";
 
         /**
          * @brief `<MirrorNames><Pair first="_L" second="_R"/></MirrorNames>` 형식을 읽어 현재 표를 바꿉니다. 모르는 원소 · 속성, 빈 토큰, 같은 두 토큰은 오류입니다.
