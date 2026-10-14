@@ -61,10 +61,10 @@ namespace sw::editor
 
                 else if ( bytes < constant::kBytesPerMegabyte )
                     formatstring( out.data(), out.capacity(), "%# KB", Fmt( static_cast<float64>( bytes ) / constant::kBytesPerKilobyte, Format().precision( 2 ) ) );
-                else if ( bytes < 1024 * constant::kBytesPerMegabyte )
+                else if ( bytes < constant::kBytesPerGigabyte )
                     formatstring( out.data(), out.capacity(), "%# MB", Fmt( static_cast<float64>( bytes ) / constant::kBytesPerMegabyte, Format().precision( 2 ) ) );
                 else
-                    formatstring( out.data(), out.capacity(), "%# GB", Fmt( static_cast<float64>( bytes ) / ( 1024 * constant::kBytesPerMegabyte ), Format().precision( 2 ) ) );
+                    formatstring( out.data(), out.capacity(), "%# GB", Fmt( static_cast<float64>( bytes ) / ( constant::kBytesPerGigabyte ), Format().precision( 2 ) ) );
             }
 
             /** @brief 아는 값은 `formatBytes` 로, 드라이버가 응답하지 않은 값은 "Unknown" 으로 표시합니다. */

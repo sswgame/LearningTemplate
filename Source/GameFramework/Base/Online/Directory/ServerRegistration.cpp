@@ -7,16 +7,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct ServerRegistrationInternal
-        {
-        };
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     ServerRegistration::ServerRegistration()
         : _status{}
         , _pRouter{ nullptr }

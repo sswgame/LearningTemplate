@@ -68,8 +68,7 @@ namespace sw
             static constexpr int32   kOpsMaxConnections     = 64;
             static constexpr float64 kOpsIdleTimeoutSeconds = 10.0;
             /** @brief 프로세스 지표를 다시 읽는 간격입니다. 운영체제에 묻는 비용이 있고 스크레이퍼도 보통 15 초마다 읽으므로 초에 한 번이면 된다. */
-            static constexpr int64  kProcessSampleIntervalMs = 1000;
-            static constexpr uint64 kBytesPerMebibyte        = uint64{ 1024 } * 1024;
+            static constexpr int64 kProcessSampleIntervalMs = 1000;
 
             static int64 nowMonotonicMs() { return MonotonicClock::nowNanoseconds() / constant::kNanosecondsPerMillisecond; }
         };
@@ -577,7 +576,7 @@ namespace sw
         SW_LOG_INFO( "Dedicated server status - uptime %# s, tick %#%#, tick time avg %# us / max %# us (budget %# us), dropped ticks %#, services %# (connections %#), "
                      "resident %# MiB",
                      uptimeSeconds, _tickCount, _bPaused == SW_TRUE ? " (paused)" : "", averageMicro, _statusTickMaxNanoseconds / constant::kNanosecondsPerMicrosecond, _tickNanoseconds / constant::kNanosecondsPerMicrosecond,
-                     _droppedTickCount, serviceCount, connectionCount, residentBytes / ServerAppInternal::kBytesPerMebibyte );
+                     _droppedTickCount, serviceCount, connectionCount, residentBytes / static_cast<uint64>( constant::kBytesPerMegabyte ) );
     }
 
     void ServerApp::shutdown()

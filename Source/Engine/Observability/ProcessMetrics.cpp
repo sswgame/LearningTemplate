@@ -17,16 +17,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct ProcessMetricsInternal
-        {
-        };
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     ProcessMetrics::ProcessMetrics()
         : _pResidentGauge{ nullptr }
         , _pPeakResidentGauge{ nullptr }

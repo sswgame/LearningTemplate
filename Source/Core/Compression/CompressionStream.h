@@ -64,7 +64,7 @@ namespace sw
          *          그래서 이 컨테이너가 다루는 가장 큰 데이터(씬 · 세이브 · 리소스 팩 조각)보다 넉넉히 크면서, 기계를 멈춰 세우지는
          *          않을 만큼 작은 값으로 고정합니다. 여기에 걸린다면 스트림이 잘못된 것이 아니라 그 데이터가 이 컨테이너에 맞지 않는 것입니다.
          */
-        static constexpr uint64 kMaxUncompressedSize = 1024 * constant::kBytesPerMegabyte;
+        static constexpr uint64 kMaxUncompressedSize = constant::kBytesPerGigabyte;
 
         /**
          * @brief 메모리 버퍼를 압축해 헤더가 붙은 압축 스트림을 만듭니다.

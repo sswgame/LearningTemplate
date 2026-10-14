@@ -65,6 +65,8 @@ namespace sw
         inline constexpr size_t kBytesPerKilobyte = size_t{ 1024 };
         /** @brief 1 MiB 의 바이트 수입니다. */
         inline constexpr size_t kBytesPerMegabyte = size_t{ 1024 } * 1024;
+        /** @brief 1 GiB 의 바이트 수입니다. */
+        inline constexpr size_t kBytesPerGigabyte = kBytesPerMegabyte * 1024;
 
         /** @brief 선형 할당기 기본 초기 용량 (64KB)입니다. */
         inline constexpr size_t kDefaultLinearCapacity = size_t{ 64 } * 1024;

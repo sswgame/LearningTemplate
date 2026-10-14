@@ -146,7 +146,7 @@ namespace sw
 
     TextDateTime TimeZoneUtil::convertUnixMilliseconds( int64 unixMilliseconds, const TimeZoneInfo& zone )
     {
-        const int64 unixSeconds   = TimeZoneUtilInternal::floorDivide( unixMilliseconds, 1000 );
+        const int64 unixSeconds   = TimeZoneUtilInternal::floorDivide( unixMilliseconds, constant::kMillisecondsPerSecond );
         const int32 offsetMinutes = computeOffsetMinutes( unixSeconds, zone );
         const int64 localSeconds  = unixSeconds + static_cast<int64>( offsetMinutes ) * constant::kSecondsPerMinute;
         const int64 days          = TimeZoneUtilInternal::floorDivide( localSeconds, constant::kSecondsPerDay );

@@ -67,7 +67,7 @@ namespace sw
         string           _bannedWordsPath{}; ///< 비면 거르지 않는다. 서버 조립 단계는 `Config/Server/chat_banned_words.txt` 를 쓴다
         ChatFilterMode   _filterMode{ ChatFilterMode::Mask };
         int64            _sanctionCacheMs{ 60 * constant::kMillisecondsPerSecond };
-        int64            _historyRetentionMs{ 30ll * 24 * 60 * 60 * constant::kMillisecondsPerSecond };
+        int64            _historyRetentionMs{ 30 * constant::kSecondsPerDay * constant::kMillisecondsPerSecond };
         int32            _historyFlushMax{ 60 };           ///< 트랜잭션 하나에 쓰는 기록 수이다. 상한 64 안이다
         int32            _historyTrimEvery{ 64 };          ///< 순번이 이 수의 배수인 메시지의 채널을 정리한다
         int32            _maxQueuedHistory{ 4096 };        ///< 저장소가 늦을 때 쌓아 둘 기록 수이다. 넘으면 오래된 것부터 버린다

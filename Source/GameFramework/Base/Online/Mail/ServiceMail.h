@@ -62,8 +62,8 @@ namespace sw
         static constexpr int32 kMaxTitleSize          = 128;
         static constexpr int32 kMaxBodySize           = 2048;
         static constexpr int32 kMaxSenderNameSize     = 64;
-        static constexpr int32 kMaxIdempotencyKeySize = 64;                                                     ///< `[0-9a-z_.-]`
-        static constexpr int64 kDefaultRetentionMs    = 30ll * 24 * 60 * 60 * constant::kMillisecondsPerSecond; ///< 기본 보관 30 일
+        static constexpr int32 kMaxIdempotencyKeySize = 64;                                                               ///< `[0-9a-z_.-]`
+        static constexpr int64 kDefaultRetentionMs    = 30 * constant::kSecondsPerDay * constant::kMillisecondsPerSecond; ///< 기본 보관 30 일
     };
 } // namespace sw
 

@@ -37,7 +37,7 @@ namespace sw
         string       _jobID{}; ///< `[0-9a-z_.]`
         int64        _windowStartMs{ 0 };
         int64        _windowEndMs{ 0 };
-        int64        _leaseMs{ 10 * 60 * constant::kMillisecondsPerSecond };
+        int64        _leaseMs{ 10 * constant::kSecondsPerMinute * constant::kMillisecondsPerSecond };
         int32        _minuteOfDay{ 0 }; ///< UTC 0..1439
         int32        _dayOfWeek{ 0 };   ///< Weekly — 0 = 월요일(ISO)
         ScheduleKind _kind{ ScheduleKind::Daily };

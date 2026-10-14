@@ -28,16 +28,16 @@ namespace sw
     /** @brief 로그인 서비스 설정입니다. 시간은 밀리초입니다. */
     struct LoginSettings
     {
-        NetPasswordHashParams _passwordHashParams{};                                                ///< Argon2id 해시 파라미터이다. 기본값은 OWASP 권장(19 MiB, 2회, 1레인)이며, 바꾸면 다음 로그인에서 다시 해시한다
-        int64                 _sessionLifetimeMs{ 12ll * 3600 * constant::kMillisecondsPerSecond }; ///< 세션의 절대 수명이다. 지나면 비밀번호로 다시 로그인해야 한다
-        int64                 _reconnectGraceMs{ 120 * constant::kMillisecondsPerSecond };          ///< 연결이 끊긴 뒤 토큰으로 돌아올 수 있는 시간이다
-        int64                 _tombstoneLifetimeMs{ 600 * constant::kMillisecondsPerSecond };       ///< 밀려난 세션이 `Revoked` 로 응답하는 시간이다
-        int64                 _ticketLifetimeMs{ 60 * constant::kMillisecondsPerSecond };           ///< 게임 접속 티켓의 시한이다. 새 UDP 연결만 막는다
-        int64                 _lockoutMs{ 300 * constant::kMillisecondsPerSecond };
-        int64                 _attemptRefillMs{ 2000 };                                                ///< 연결(주소)마다 시도 횟수 하나가 채워지는 간격이다
-        int64                 _deletionGraceMs{ 30ll * 24 * 3600 * constant::kMillisecondsPerSecond }; ///< 탈퇴를 요청한 뒤 계정을 지울 때까지의 유예 시간이다. 그 안에 취소할 수 있다
-        int32                 _maxFailedCount{ 5 };                                                    ///< 이만큼 틀리면 계정을 잠근다
-        int32                 _attemptBurst{ 10 };                                                     ///< 연결(주소)마다 한꺼번에 할 수 있는 시도 횟수이다
+        NetPasswordHashParams _passwordHashParams{};                                                                       ///< Argon2id 해시 파라미터이다. 기본값은 OWASP 권장(19 MiB, 2회, 1레인)이며, 바꾸면 다음 로그인에서 다시 해시한다
+        int64                 _sessionLifetimeMs{ 12 * constant::kSecondsPerHour * constant::kMillisecondsPerSecond };     ///< 세션의 절대 수명이다. 지나면 비밀번호로 다시 로그인해야 한다
+        int64                 _reconnectGraceMs{ 2 * constant::kSecondsPerMinute * constant::kMillisecondsPerSecond };     ///< 연결이 끊긴 뒤 토큰으로 돌아올 수 있는 시간이다
+        int64                 _tombstoneLifetimeMs{ 10 * constant::kSecondsPerMinute * constant::kMillisecondsPerSecond }; ///< 밀려난 세션이 `Revoked` 로 응답하는 시간이다
+        int64                 _ticketLifetimeMs{ constant::kSecondsPerMinute * constant::kMillisecondsPerSecond };         ///< 게임 접속 티켓의 시한이다. 새 UDP 연결만 막는다
+        int64                 _lockoutMs{ 5 * constant::kSecondsPerMinute * constant::kMillisecondsPerSecond };
+        int64                 _attemptRefillMs{ 2000 };                                                             ///< 연결(주소)마다 시도 횟수 하나가 채워지는 간격이다
+        int64                 _deletionGraceMs{ 30 * constant::kSecondsPerDay * constant::kMillisecondsPerSecond }; ///< 탈퇴를 요청한 뒤 계정을 지울 때까지의 유예 시간이다. 그 안에 취소할 수 있다
+        int32                 _maxFailedCount{ 5 };                                                                 ///< 이만큼 틀리면 계정을 잠근다
+        int32                 _attemptBurst{ 10 };                                                                  ///< 연결(주소)마다 한꺼번에 할 수 있는 시도 횟수이다
         LoginDuplicatePolicy  _duplicatePolicy{ LoginDuplicatePolicy::KickExisting };
         uint8                 _bKeepGuestDeviceAfterLink{ SW_TRUE }; ///< 연동한 뒤에도 같은 장치가 게스트 비밀로 들어올 수 있게 한다
     };
