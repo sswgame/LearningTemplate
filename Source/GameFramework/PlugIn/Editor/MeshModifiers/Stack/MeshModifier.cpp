@@ -61,14 +61,6 @@ namespace sw::editor
                                  translation._x, translation._y, translation._z, 1.0f };
             }
 
-            /** @brief 병렬 덩어리 하나의 정점 수입니다. 디스패치 비용(수십 us)보다 덩어리 일이 충분히 크게 잡는다. */
-            static constexpr uint32 kChunkVertexCount = 4096;
-
-            static uint32 computeChunkCount( size_t vertexCount )
-            {
-                return static_cast<uint32>( ( vertexCount + kChunkVertexCount - 1 ) / kChunkVertexCount );
-            }
-
             /** @brief 위치(와 법선)를 행렬로 옮기는 병렬 일입니다. 덩어리 번호 구간을 받습니다. */
             struct TransformJob
             {
@@ -80,8 +72,8 @@ namespace sw::editor
 
                 void run( uint32 startChunk, uint32 endChunk )
                 {
-                    const size_t first = static_cast<size_t>( startChunk ) * kChunkVertexCount;
-                    const size_t last  = MathUtil::min( static_cast<size_t>( endChunk ) * kChunkVertexCount, _vertexCount );
+                    const size_t first = static_cast<size_t>( startChunk ) * MeshModifierUtil::kChunkVertexCount;
+                    const size_t last  = MathUtil::min( static_cast<size_t>( endChunk ) * MeshModifierUtil::kChunkVertexCount, _vertexCount );
                     for ( size_t index = first; index < last; ++index )
                     {
                         _pPosition[index] = float3::transform( _pPosition[index], _pointMatrix );
@@ -102,8 +94,8 @@ namespace sw::editor
                 void run( uint32 startChunk, uint32 endChunk )
                 {
                     MeshModifierMesh& mesh       = *_pMesh;
-                    const size_t      first      = static_cast<size_t>( startChunk ) * kChunkVertexCount;
-                    const size_t      last       = MathUtil::min( static_cast<size_t>( endChunk ) * kChunkVertexCount, mesh.getVertexCount() );
+                    const size_t      first      = static_cast<size_t>( startChunk ) * MeshModifierUtil::kChunkVertexCount;
+                    const size_t      last       = MathUtil::min( static_cast<size_t>( endChunk ) * MeshModifierUtil::kChunkVertexCount, mesh.getVertexCount() );
                     const bool        bHasNormal = mesh.hasNormal();
                     const bool        bHasUV     = mesh.hasUv();
                     const bool        bHasColor  = mesh.hasColor();
@@ -157,7 +149,7 @@ namespace sw::editor
                 job._pointMatrix  = pointMatrix;
                 job._normalMatrix = normalMatrix;
                 job._vertexCount  = inoutMesh.getVertexCount();
-                runBlocks( computeChunkCount( job._vertexCount ), 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &TransformJob::run, &job ) );
+                runBlocks( MeshModifierUtil::computeChunkCount( job._vertexCount ), 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &TransformJob::run, &job ) );
             }
 
             static bool isScalarKind( MeshModifierParamKind kind )
@@ -294,7 +286,7 @@ namespace sw::editor
         job._pContext  = &context;
         job._pMesh     = &inoutMesh;
         job._step      = MathUtil::max( diagonal * MeshModifierInternal::kJacobianStepRatio, MeshModifierInternal::kMinJacobianStep );
-        MeshModifierInternal::runBlocks( MeshModifierInternal::computeChunkCount( inoutMesh.getVertexCount() ), 2,
+        MeshModifierInternal::runBlocks( MeshModifierUtil::computeChunkCount( inoutMesh.getVertexCount() ), 2,
                                          SW_DELEGATE_METHOD( ParallelBlockDelegate, &MeshModifierInternal::DeformJob::run, &job ) );
     }
 
@@ -517,6 +509,16 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    uint32 MeshModifierUtil::computeChunkCount( size_t vertexCount )
+    {
+        return static_cast<uint32>( ( vertexCount + kChunkVertexCount - 1 ) / kChunkVertexCount );
+    }
+
+    void MeshModifierUtil::runBlocks( uint32 count, uint32 serialThreshold, const ParallelBlockDelegate& body )
+    {
+        MeshModifierInternal::runBlocks( count, serialThreshold, body );
+    }
+
     float32 MeshModifierUtil::getComponent( const float3& value, uint32 axisIndex )
     {
         if ( axisIndex == 0 )

@@ -54,15 +54,16 @@ namespace sw::editor
                 static_cast<void>( PathModifierUtil::tryAppendTriangles( context, getText( targetParam ), listTriangle ) );
             }
             PathModifierUtil::conformMesh( inoutMesh, context, listTriangle, static_cast<PathModifierUtil::ConformMode>( getInt( _modeParam ) ),
-                                           getFloat( _offsetParam ), getFloat( _maxDistanceParam ), getFloat( _amountParam ) );
+                                           getFloat( _offsetParam ), getFloat( _maxDistanceParam ), getFloat( _amountParam ), _surface );
         }
 
     private:
-        uint32 _arrTargetParam[kTargetCount];
-        uint32 _modeParam;
-        uint32 _offsetParam;
-        uint32 _maxDistanceParam;
-        uint32 _amountParam;
+        uint32                 _arrTargetParam[kTargetCount];
+        uint32                 _modeParam;
+        uint32                 _offsetParam;
+        uint32                 _maxDistanceParam;
+        uint32                 _amountParam;
+        mutable ConformSurface _surface; ///< 대상 삼각형이 안 바뀌면 BVH 를 다시 만들지 않는다(같은 인스턴스를 두 스레드에서 동시에 적용하지 않는다)
     };
 
     SW_MESH_MODIFIER( ConformMultiModifier, "conformmulti", "Conform Multi", "Surface" );

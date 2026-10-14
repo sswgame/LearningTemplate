@@ -21,6 +21,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Task/TaskTypes.h"
 
 namespace sw
 {
@@ -398,6 +399,16 @@ namespace sw::editor
     /** @brief 모디파이어가 함께 쓰는 수학 도우미입니다. */
     struct MeshModifierUtil
     {
+        /** @brief 병렬 덩어리 하나의 정점 수입니다. 디스패치 비용(수십 us)보다 덩어리 일이 충분히 크게 잡는다. */
+        static constexpr uint32 kChunkVertexCount = 4096;
+
+        /** @brief 정점 수를 `kChunkVertexCount` 로 나눈 덩어리 수입니다. */
+        static uint32 computeChunkCount( size_t vertexCount );
+        /**
+         * @brief [0, count) 덩어리 번호를 작업 관리자(`setMeshModifierTaskManager`)로 나눠 돌립니다. 관리자가 없으면 현재 스레드가 한 번에 돕니다.
+         * @details 본문은 자기 덩어리의 정점만 쓰고, 스크래치는 본문 안에서 가져야 한다(덩어리마다 다른 스레드일 수 있다).
+         */
+        static void runBlocks( uint32 count, uint32 serialThreshold, const ParallelBlockDelegate& body );
         /** @brief 성분 번호(0 · 1 · 2)로 값을 읽습니다. */
         static float32 getComponent( const float3& value, uint32 axisIndex );
         /** @brief 성분 번호로 값을 씁니다. */

@@ -55,8 +55,10 @@
   있을 때만 스택이 복사해 `MeshModifierContext::_pListOriginalPosition` / `MeshModifierPoint::_originalPosition` 으로 넘긴다. 켠 동안은 CPU 전용이다.
 - **경로 계열**(Path Deform · World Path Deform · Rope Deform)은 회전 최소화 프레임(이중 반사법)으로 단면을 경로에 따라 전파한다(`PathModifierUtil::computeRotationMinimizingFrames`, 적용마다 128 구간 표를 한 번 만든다).
   직선 경로와 기준 축이 평면 법선인 평면 경로에서는 예전 결과와 같다. 기준 축이 경로 평면 안에 있는 평면 경로에서는 예전 고정 축 프레임이 중간에서 뒤집혔고 지금은 뒤집히지 않는다. 같은 모디파이어 인스턴스를 두 스레드에서 동시에 적용하면 캐시가 경합한다.
-- **Conform / Conform Multi** 는 엔진에 이미 있는 `SurfaceBvh`(`Engine/Character/Fit/SurfaceBvh.h`, 최근접점 · 광선 질의)로 대상 삼각형을 한 번 BVH 로 만들어 정점마다 묻는다(`PathModifierUtil::conformMesh`).
-  `SurfaceBvh` 의 질의는 멤버 스크래치를 써서 한 인스턴스를 한 스레드에서만 묻는다 — 정점 병렬화를 하려면 스레드마다 BVH 를 두거나 질의를 상태 없는 형태로 바꿔야 한다. 적용마다 BVH 를 새로 만든다(대상이 안 바뀌면 캐시할 수 있다).
+- **Conform / Conform Multi** 는 대상 삼각형을 BVH(`Modifiers/ConformSurface.h`, 엔진 `BVHTree3D` 위)로 만들어 정점마다 묻는다(`PathModifierUtil::conformMesh`).
+  엔진의 `SurfaceBvh` 는 질의 후보를 멤버 스크래치에 받아 한 스레드만 물을 수 있어서, 같은 규칙(상자 여유 · 양면 교차 · 최근접점)을 후보 버퍼를 부르는 쪽이 넘기는 const 질의로 다시 썼다.
+  정점은 `MeshModifierUtil::runBlocks` 의 4096 정점 덩어리로 나뉘어 덩어리마다 자기 후보 버퍼로 병렬 질의한다(직렬과 비트 단위로 같다 — `ConformSurfaceTest`).
+  BVH 는 모디파이어 인스턴스가 들고, 적용 때 넘어온 삼각형 목록이 지난번과 한 바이트도 다르지 않을 때만 재사용한다(해시가 아니라 값 비교). 같은 인스턴스를 두 스레드에서 동시에 적용하지 않는다.
 - **Curve Sculpt Layered** 는 층마다 곡선이 없고 Shape 곡선 하나를 공유한다(매개변수에 곡선 목록 종류가 없다). **Conform Multi** 는 참조 목록 대신 칸 4개다(참조 목록 종류가 없다).
 - **Deformable** 은 하위 스택을 품지만 패널에서 편집하는 UI 가 없다. 하위 스택은 `extra.stack` 한 줄 JSON 으로 저장된다.
 - **Point Cache** 는 경로를 파일 경로로 그대로 읽는다(리소스 id 를 절대 경로로 푸는 일은 엔진 서비스가 필요하다).
