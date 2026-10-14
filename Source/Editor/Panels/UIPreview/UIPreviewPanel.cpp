@@ -42,6 +42,8 @@
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Document/UIDocumentWriter.h"
+#include "Engine/UI/Layout/BoxPanel.h"
+#include "Engine/UI/Layout/GridPanel.h"
 #include "Engine/UI/Layout/WidgetLayoutSlot.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/TextWidget.h"
@@ -80,6 +82,12 @@ namespace sw::editor
         {
             if ( _pPanel != nullptr )
                 _pPanel->applyReattach( generation, parentOrdinal, index, pHolder );
+        }
+
+        void move( uint32 generation, uint32 parentOrdinal, uint32 fromIndex, uint32 toIndex ) const
+        {
+            if ( _pPanel != nullptr )
+                _pPanel->applyMove( generation, parentOrdinal, fromIndex, toIndex );
         }
     };
 
@@ -260,6 +268,15 @@ namespace sw::editor
                 return true;
             }
 
+            [[nodiscard]] static bool readSlotEditCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const UIPreviewProbe* pProbe = findProbe();
+                if ( pProbe == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pProbe->_slotEditCount );
+                return true;
+            }
+
             [[nodiscard]] static bool readLanguageIndex( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const UIPreviewProbe* pProbe = findProbe();
@@ -304,6 +321,9 @@ namespace sw::editor
                          &UIPreviewPanelInternal::readSelectedOffsetMinX );
     SW_AUTOMATION_PROBE( editorUIPreviewPaletteCount, "Editor.UIPreviewPaletteCount", "Widget types the UI Preview palette lists (every constructible Widget subclass)",
                          &UIPreviewPanelInternal::readPaletteCount );
+    SW_AUTOMATION_PROBE( editorUIPreviewSlotEditCount, "Editor.UIPreviewSlotEditCount",
+                         "Slot edits applied in the UI Preview (canvas handles, Slot fields, box order and grid cell handles; one undo entry each)",
+                         &UIPreviewPanelInternal::readSlotEditCount );
     SW_AUTOMATION_PROBE( editorUIPreviewLanguageIndex, "Editor.UIPreviewLanguageIndex", "Row of the UI Preview language combo (0 = the game language)",
                          &UIPreviewPanelInternal::readLanguageIndex );
 
@@ -343,6 +363,7 @@ namespace sw::editor
         , _languageIndex{ 0 }
         , _slotDragOrdinal{ UIPreviewLogic::kNoOrdinal }
         , _paletteFrame{ 0 }
+        , _slotEditCount{ 0 }
         , _resolutionIndex{ 1 }
         , _uiScale{ 1.0f }
         , _textScale{ 1.0f }
@@ -361,6 +382,7 @@ namespace sw::editor
         , _bAwaitReload{ false }
         , _bReloadedAfterSave{ false }
         , _bSlotDragging{ false }
+        , _bLayoutDragging{ false }
     {
         _pSession->_pPanel = this;
     }
@@ -643,6 +665,8 @@ namespace sw::editor
 
     void UIPreviewPanel::pushPropertyEdit( uint32 ordinal, const string& propertyName, const string& oldText, const string& newText, const string& coalesceKey )
     {
+        if ( propertyName == "_slot" )
+            ++_slotEditCount;
         const uint32                  generation = _generation;
         const shared_ptr<EditSession> pSession   = _pSession;
         EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, ordinal, propertyName, oldText]()
@@ -1199,6 +1223,113 @@ namespace sw::editor
         }
     }
 
+    void UIPreviewPanel::drawLayoutHandle( UIScreen& screen, const float2& drawSize, const float2& origin )
+    {
+        using Internal      = UIPreviewPanelInternal;
+        WidgetTree& tree    = screen.getTree();
+        Widget*     pWidget = tree.findWidgetByID( _selected );
+        if ( pWidget == nullptr || drawSize._x <= 0.0f || drawSize._y <= 0.0f )
+            return;
+        PanelWidget*    pParent = pWidget->getParent();
+        const BoxPanel* pBox    = castTo<const BoxPanel>( pParent );
+        const bool      bGrid   = castTo<const GridPanel>( pParent ) != nullptr;
+        if ( pParent == nullptr || ( pBox == nullptr && bGrid == false ) )
+            return;
+        const UIRect  box  = UIPreviewLogic::mapUIToImage( pWidget->getGeometry().computeScreenBounds(), drawSize, _viewport );
+        const float32 half = Internal::kHandleSize * EditorThemeUtil::getDpiScale() * 0.5f;
+        const ImVec2  center{ origin._x + ( box._left + box._right ) * 0.5f, origin._y + ( box._top + box._bottom ) * 0.5f };
+        const ImU32   color = EditorColorUtil::toImU32( style::kHighlight );
+        ImGui::SetCursorScreenPos( ImVec2{ center.x - half, center.y - half } );
+        ImGui::PushID( "layouthandle" );
+        ImGui::InvisibleButton( "##reorder", ImVec2{ half * 2.0f, half * 2.0f } );
+        Internal::noteMark( "uipreview.handle", "reorder" );
+        ImGui::GetWindowDrawList()->AddCircleFilled( center, half, color );
+        if ( ImGui::IsItemActivated() )
+            _bLayoutDragging = true;
+        if ( ImGui::IsItemActive() && _bLayoutDragging )
+            ImGui::GetWindowDrawList()->AddLine( center, ImGui::GetMousePos(), color, 2.0f ); // 놓일 자리 — 놓을 때까지 트리는 그대로다
+        const bool bDropped = ImGui::IsItemDeactivated() && _bLayoutDragging;
+        ImGui::PopID();
+        if ( bDropped == false )
+            return;
+        _bLayoutDragging   = false;
+        const ImVec2 mouse = ImGui::GetMousePos();
+        const float2 point = UIPreviewLogic::mapImageToUI( float2{ mouse.x - origin._x, mouse.y - origin._y }, drawSize, _viewport );
+        if ( pBox != nullptr )
+        {
+            // 상자: 자식 가운데(상자 축)와 놓은 점을 견줘 사이 자리를 고르고, 떼어 다시 끼운다 — 구조 편집이라 부모 번호와 자식 번호로 되돌린다.
+            const bool      bVertical = pBox->getOrientation() == UIOrientation::Vertical;
+            vector<float32> listCenter;
+            for ( uint32 i = 0; i < pParent->getChildCount(); ++i )
+            {
+                const float2 childCenter = pParent->getChild( i )->getGeometry().computeScreenBounds().getCenter();
+                listCenter.push_back( bVertical ? childCenter._y : childCenter._x );
+            }
+            const uint32 fromIndex = pParent->findChildIndex( pWidget );
+            if ( fromIndex == invalid_index::kUint32 )
+                return;
+            const uint32 toIndex = UIPreviewLogic::findReorderIndex( fromIndex, UIPreviewLogic::findBoxInsertIndex( listCenter, bVertical ? point._y : point._x ) );
+            if ( toIndex == fromIndex )
+                return;
+            const uint32 parentOrdinal = UIPreviewLogic::findWidgetOrdinal( tree, pParent->getID() );
+            applyMove( _generation, parentOrdinal, fromIndex, toIndex );
+            ++_slotEditCount;
+            const uint32                  generation = _generation;
+            const shared_ptr<EditSession> pSession   = _pSession;
+            EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, fromIndex, toIndex]()
+            {
+                pSession->move( generation, parentOrdinal, toIndex, fromIndex );
+            } ),
+                                     SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, fromIndex, toIndex]()
+            {
+                pSession->move( generation, parentOrdinal, fromIndex, toIndex );
+            } ),
+                                     "Reorder UI Widget" );
+            return;
+        }
+        // 격자: 놓은 점이 속한 행 · 열(자식 사각형으로 모은 줄)을 슬롯에 쓴다 — 슬롯 편집이라 캔버스 손잡이와 같이 `_slot` 텍스트 전후를 남긴다.
+        const PropertyInfo* pSlotProp = UIPreviewLogic::findWidgetProperty( *pWidget, "_slot" );
+        if ( pSlotProp == nullptr )
+            return;
+        vector<float32> listRowStart;
+        vector<float32> listColumnStart;
+        float32         rowEnd{ 0.0f };
+        float32         columnEnd{ 0.0f };
+        UIPreviewLogic::collectGridTracks( *pParent, true, listRowStart, rowEnd );
+        UIPreviewLogic::collectGridTracks( *pParent, false, listColumnStart, columnEnd );
+        const uint32     row    = MathUtil::min( UIPreviewLogic::findGridTrack( listRowStart, rowEnd, point._y ), 0xFFFFu );
+        const uint32     column = MathUtil::min( UIPreviewLogic::findGridTrack( listColumnStart, columnEnd, point._x ), 0xFFFFu );
+        WidgetLayoutSlot slot   = pWidget->getLayoutSlot();
+        if ( slot._row == row && slot._column == column )
+            return;
+        const string oldText = UIPreviewLogic::formatWidgetProperty( *pWidget, *pSlotProp );
+        slot._row            = static_cast<uint16>( row );
+        slot._column         = static_cast<uint16>( column );
+        pWidget->setLayoutSlot( slot );
+        const string newText = UIPreviewLogic::formatWidgetProperty( *pWidget, *pSlotProp );
+        if ( newText == oldText )
+            return;
+        pushPropertyEdit( _selectedOrdinal, "_slot", oldText, newText, string{} );
+        markDocumentDirty();
+        _baselineWidget = kInvalidWidgetID; // 인스펙터의 기준 값을 다시 잡는다
+    }
+
+    void UIPreviewPanel::applyMove( uint32 generation, uint32 parentOrdinal, uint32 fromIndex, uint32 toIndex )
+    {
+        UIScreen* pScreen = generation == _generation ? findPreviewScreen() : nullptr;
+        if ( pScreen == nullptr || fromIndex == toIndex )
+            return;
+        // 자식을 떼고 끼워도 부모의 문서 순서 번호는 그대로다(부모가 자식보다 앞에 온다).
+        WidgetTree& tree = pScreen->getTree();
+        _pointer.clearHover();
+        unique_ptr<Widget> moved = UIPreviewLogic::detachWidget( tree, parentOrdinal, fromIndex );
+        if ( moved == nullptr )
+            return;
+        Widget* pAttached = UIPreviewLogic::attachWidget( tree, std::move( moved ), parentOrdinal, toIndex );
+        if ( pAttached != nullptr )
+            afterStructureEdit( *pScreen, UIPreviewLogic::findWidgetOrdinal( tree, pAttached->getID() ) );
+    }
+
     void UIPreviewPanel::finishSlotField( Widget& widget, const PropertyInfo& slotProp, const string& frameText, bool bChanged, bool bImmediate )
     {
         if ( ImGui::IsItemActivated() )
@@ -1559,8 +1690,11 @@ namespace sw::editor
         }
         // 캔버스 자식의 슬롯 손잡이(옮기기 · 네 변) — 끌면 슬롯의 오프셋이 바뀌고 놓으면 되돌리기 항목 하나가 쌓인다. 입력 흉내 중에는 숨긴다(포인터를 가로채지 않게).
         if ( _bInteract == false )
+        {
             drawSlotHandles( screen, drawSize, origin );
-        if ( bImageClicked && _bSlotDragging == false )
+            drawLayoutHandle( screen, drawSize, origin );
+        }
+        if ( bImageClicked && _bSlotDragging == false && _bLayoutDragging == false )
         {
             const ImVec2 mouse = ImGui::GetMousePos();
             const float2 point = UIPreviewLogic::mapImageToUI( float2{ mouse.x - origin._x, mouse.y - origin._y }, drawSize, _viewport );
@@ -1618,7 +1752,8 @@ namespace sw::editor
             _probe._bSlotEditable      = UIPreviewLogic::canEditSlotByHandle( *pSelected );
             _probe._selectedOffsetMinX = pSelected->getLayoutSlot()._offsetMin._x;
         }
-        _probe._paletteCount = static_cast<uint32>( _listPaletteType.size() );
+        _probe._paletteCount  = static_cast<uint32>( _listPaletteType.size() );
+        _probe._slotEditCount = _slotEditCount;
         float32 time{ 0.0f };
         float32 duration{ 0.0f };
         if ( pScreen->getAnimationPlayer().getPlaybackTime( _animation, time, duration ) )
