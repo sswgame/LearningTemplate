@@ -20,8 +20,8 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/RawInputEvent.h"
-#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -353,7 +353,7 @@ namespace sw
                 (void)pManager;
                 if ( engine::areEngineServicesBound() == false )
                     return false;
-                outValue = engine::getInputManager().getVirtualCursor().isEnabled() ? 1.0 : 0.0;
+                outValue = engine::getSubsystem<InputManager>().getVirtualCursor().isEnabled() ? 1.0 : 0.0;
                 return true;
             }
 
