@@ -237,10 +237,7 @@
   통째로 다시 만든다(`RT.GPUScene.vertexPool`, 벤치에는 없다 — App 표로). LOD 메시를 미리 만들어 두거나 청크 정점을 풀에서 부분 갱신한다. 지오모프(LOD 튐) · 레이어 다섯 이상(두 번째 스플랫 — 머티리얼 텍스처 칸이 넷이다)이 없다.
   (7) 지형 쓰기(결정은 [결정 기록](09_Decisions.md) 5-5 — GPU 스플랫 구간 업로드 · 청크별 충돌 바디 · 메시 재생성 나눔 · 식생 · 내비 연결 · 에디터 `TerrainBrushTool` 과 시나리오
   `editor.terrainbrush` 까지 들어갔다)의 남은 것 — ⓐ 측정이 Debug 뿐이다: `TerrainBenchTest.ColliderRebuildAfterBrushWrite` · `WriteHeightsRectSizes` 를 Release 로 다시 재고
-  `TerrainComponent` 의 청크 재생성 예산(쓰기 · 틱마다 넷)을 GT 2 ms 에 맞춘다. ⓑ 저장하지 않은 지형 편집(높이 · 스플랫)은 백엔드 교체에서 사라진다 —
-  교체는 게임 모듈을 내렸다 올리며 씬을 속성 직렬화로 되살리고(`ModuleHost::restoreGameState` → `onPostLoad` → `reloadTerrain`) 속성에는 디스크 경로만 있다.
-  지형마다의 CPU 스플랫 텍스처(`TextureCache::createCPUTexture`)는 모듈 리로드 없는 디바이스 재생성만 지킨다(nogpu 테스트로 확인, 그 경로를 시나리오로 일으키는 법이 없다).
-  편집한 높이장 · 스플랫을 상태 직렬화에 싣거나, 저장 안 한 편집이 있으면 교체 전에 묻는다(`setSaveBlockReason` 처럼). ⓒ 식생은 드래그가 끝나면 숲 전체를 다시
+  `TerrainComponent` 의 청크 재생성 예산(쓰기 · 틱마다 넷)을 GT 2 ms 에 맞춘다. ⓒ 식생은 드래그가 끝나면 숲 전체를 다시
   뿌린다(쇼케이스 Debug 약 0.86 s) — 바뀐 셀만 다시 계산한다. 내비는 런타임 내비메시 타일만 다시 굽는다(에디터가 구운 내비 에셋은 다시 굽기 명령으로). ⓓ 에디터 편집 모드에서도 틱이 남은 청크를
   만드는지 확인하지 않았다(브러시 한 번은 쓰기에서 끝난다). ⓔ 브러시 선택은 레이 전진이 걸음마다 `findTerrainAt` 으로 지형을 훑는다(측정 안 함).
 
