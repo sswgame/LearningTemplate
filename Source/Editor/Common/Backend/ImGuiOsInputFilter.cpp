@@ -20,14 +20,10 @@ namespace sw::editor
         ImGuiContext* pContext = ImGui::GetCurrentContext();
         if ( _firstIndex < 0 || pContext == nullptr )
             return;
-        ImVector<ImGuiInputEvent>& queue      = pContext->InputEventsQueue;
-        int32                      writeIndex = _firstIndex;
-        for ( int32 readIndex = _firstIndex; readIndex < queue.Size; ++readIndex )
-        {
-            if ( queue[readIndex].Type == ImGuiInputEventType_Focus )
-                queue[writeIndex++] = queue[readIndex];
-        }
-        if ( writeIndex < queue.Size )
-            queue.resize( writeIndex );
+        // 포커스 사건도 지운다. 다른 창이 전경을 가져가는 것(사람 · 다른 프로세스)은 장치 입력과 같은 바깥 간섭이다. 남기면 ImGui 가
+        // 눌린 키 · 단추를 모두 놓은 것으로 처리해 누르고 있는 자동화 입력(뷰포트 비행)이 끊긴다.
+        ImVector<ImGuiInputEvent>& queue = pContext->InputEventsQueue;
+        if ( _firstIndex < queue.Size )
+            queue.resize( _firstIndex );
     }
 } // namespace sw::editor
