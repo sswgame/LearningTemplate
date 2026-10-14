@@ -44,7 +44,7 @@ namespace sw::editor
             float3        result{ 0.0f, 0.0f, 0.0f };
             if ( PathModifierUtil::tryPlaceOnPath( context, getText( _pathParam ), PathModifierUtil::PathSpace::World, length, along, false, coordU, coordV, result )
                  == false )
-                return point._position;
+                result = point._position; // 경로를 못 얻으면 변형 없이 통과한다
             return result;
         }
 

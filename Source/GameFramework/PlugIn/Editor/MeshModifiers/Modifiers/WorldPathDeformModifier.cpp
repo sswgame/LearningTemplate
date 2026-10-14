@@ -45,7 +45,7 @@ namespace sw::editor
             if ( PathModifierUtil::tryPlaceOnPath( context, getText( _pathParam ), PathModifierUtil::PathSpace::World, length, distance, getBool( _loopParam ), coordU,
                                                    coordV, result )
                  == false )
-                return point._position;
+                result = point._position; // 경로를 못 얻으면 변형 없이 통과한다
             return result;
         }
 
