@@ -13,6 +13,7 @@
 
 namespace sw
 {
+    class CameraComponent;
     class GameObject;
 } // namespace sw
 
@@ -78,6 +79,11 @@ namespace sw::editor
         void processShortcutKeys();
         /** @brief 씬 뷰 최대화를 켜고 끕니다. 다른 패널을 닫았다가 직전 배치를 복원하며, 유니티의 Shift+Space 에 해당합니다. */
         void toggleMaximize();
+        /**
+         * @brief 우클릭 메뉴를 엽니다. 캔버스를 오른쪽 단추로 누르고 끌지 않고 놓았을 때, 등록된 Viewport 항목이 있을 때만 엽니다.
+         * @details 오른쪽 단추를 끌면 비행 · 궤도 줌이므로 메뉴를 열지 않는다(언리얼 뷰포트와 같다). 연 순간의 맞은 오브젝트와 바닥 교점을 담아 둔다.
+         */
+        void processContextMenu( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, bool bCanvasHovered );
 
     private:
         ViewportToolbarSettings     _toolbarSettings;
@@ -93,6 +99,9 @@ namespace sw::editor
          *          디버그 시각화가 각자 호출하지 않고 이 스냅샷을 함께 읽는다.
          */
         vector<GameObject*>    _listSceneObject;
+        uint64                 _contextMenuObjectID;      ///< 우클릭 메뉴를 연 순간 맞은 오브젝트 id. 0 이면 빈 곳. 메뉴가 열린 동안 프레임마다 다시 찾는다
+        float3                 _contextMenuWorldPosition; ///< 우클릭 메뉴를 연 순간의 바닥 평면 교점
+        bool                   _bContextMenuHasWorldPosition;
         uint8                  _bMaximized : 1;
         [[maybe_unused]] uint8 _reserved   : 7;
     };

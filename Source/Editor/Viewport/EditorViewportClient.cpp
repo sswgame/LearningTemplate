@@ -7,6 +7,7 @@
 
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/GUI/EditorContextMenuExtension.h"
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -17,6 +18,7 @@
 #include "Editor/Viewport/EditorColliderHandleTool.h"
 #include "Editor/Viewport/EditorViewportAssetDrop.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
+#include "Editor/Viewport/EditorViewportRayPick.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/EditorVisualizerGeometry.h"
 
@@ -58,6 +60,9 @@ namespace sw::editor
         , _overlays{}
         , _hudView{}
         , _listSceneObject{}
+        , _contextMenuObjectID{ 0 }
+        , _contextMenuWorldPosition{}
+        , _bContextMenuHasWorldPosition{ false }
         , _bMaximized{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -228,6 +233,7 @@ namespace sw::editor
             _picker.processClick( canvasPos, canvasSize, pCamera, bCanvasClicked && EditorColliderHandleTool::isCapturingMouse() == false, _toolbarSettings );
             _picker.processHover( canvasPos, canvasSize, pCamera, bCanvasHovered, _gizmo.isDragging(), _toolbarSettings );
             EditorSelectionBounds::setHoveredObjectID( _picker.getHoveredObjectID() );
+            processContextMenu( canvasPos, canvasSize, pCamera, bCanvasHovered );
 
             {
                 GameObjectManager* pObjectManager = editor::getActiveObjectManager();
@@ -251,5 +257,48 @@ namespace sw::editor
 
             EditorViewportAssetDrop::processDrop( canvasPos, canvasSize, arrView, arrProj, _toolbarSettings._bIs2DMode );
         }
+    }
+
+    void EditorViewportClient::processContextMenu( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, bool bCanvasHovered )
+    {
+        static constexpr const char* kPopupID = "##ViewportContextMenu";
+        // 패널 고유 항목이 없으므로 등록된 항목이 없으면 메뉴도 없다. 오른쪽 단추를 끌었으면 비행 · 궤도 줌이었다.
+        const bool bOpen = bCanvasHovered && ImGui::IsMouseReleased( ImGuiMouseButton_Right ) && ImGui::IsMouseDragPastThreshold( ImGuiMouseButton_Right ) == false &&
+                           ImGui::GetIO().KeyAlt == false && EditorContextMenuExtensionUtil::countEntries( EditorContextMenuKind::Viewport ) != 0;
+        if ( bOpen )
+        {
+            GameObject* pObject    = nullptr;
+            Component*  pComponent = nullptr;
+            _contextMenuObjectID   = _picker.findObjectUnderMouse( canvasPos, canvasSize, pCamera, _toolbarSettings, pObject, pComponent ) ? pObject->getObjectID() : 0;
+
+            const float32  aspect = canvasSize._x / ( canvasSize._y > 0.0f ? canvasSize._y : 1.0f );
+            EditorPickRay  mouseRay{};
+            const uint32   planeAxis      = _toolbarSettings._bIs2DMode ? 2u : 1u; // 애셋 드롭과 같은 바닥: 2D 는 Z = 0, 3D 는 Y = 0
+            _bContextMenuHasWorldPosition = EditorViewportProjectionUtil::makeMouseRay( pCamera->getViewProjectionMatrix( aspect ).invert(), canvasPos, canvasSize, mouseRay ) &&
+                                            EditorViewportRayPick::rayHitsAxisPlane( mouseRay, planeAxis, _contextMenuWorldPosition );
+            ImGui::OpenPopup( kPopupID );
+        }
+
+        if ( ImGui::BeginPopup( kPopupID ) == false )
+            return;
+
+        // 메뉴가 열린 동안 오브젝트가 지워질 수 있으므로 포인터를 들고 있지 않고 id 로 다시 찾는다.
+        GameObjectManager*      pManager = editor::getActiveObjectManager();
+        EditorContextMenuTarget target{};
+        target._kind              = EditorContextMenuKind::Viewport;
+        target._pManager          = pManager;
+        target._pGameObject       = ( pManager != nullptr && _contextMenuObjectID != 0 ) ? pManager->findGameObjectByID( _contextMenuObjectID ) : nullptr;
+        target._worldPosition     = _contextMenuWorldPosition;
+        target._bHasWorldPosition = _bContextMenuHasWorldPosition;
+
+        void ( *pfnAction )( const EditorContextMenuTarget& ) =
+            EditorContextMenuExtensionUtil::visitEntries( EditorContextMenuKind::Viewport, [&]( const EditorContextMenuEntryRegistration& entry ) {
+                return ImGui::MenuItem( entry._pLabel, nullptr, false, EditorContextMenuExtensionUtil::isEnabled( entry, target ) );
+            } );
+        ImGui::EndPopup();
+
+        // 동작은 순회가 끝난 뒤 부른다. 동작이 모듈을 내려 목록이 바뀌어도 순회 중인 배열을 읽지 않는다.
+        if ( pfnAction != nullptr )
+            pfnAction( target );
     }
 } // namespace sw::editor

@@ -424,7 +424,10 @@ namespace sw::editor
 
                 // 확장 항목(`SW_EDITOR_CONTEXT_MENU_ENTRY`). 고른 동작은 메뉴를 닫은 뒤 부른다 — 동작이 모듈을 내려 목록이 바뀌어도 순회 중인 배열을 읽지 않는다.
                 void ( *pfnExtensionAction )( const EditorContextMenuTarget& ) = nullptr;
-                const EditorContextMenuTarget extensionTarget{ EditorContextMenuKind::GameObject, pObj, pManager, nullptr, false };
+                EditorContextMenuTarget extensionTarget{};
+                extensionTarget._kind        = EditorContextMenuKind::GameObject;
+                extensionTarget._pGameObject = pObj;
+                extensionTarget._pManager    = pManager;
                 if ( EditorContextMenuExtensionUtil::countEntries( EditorContextMenuKind::GameObject ) != 0 )
                 {
                     ImGui::Separator();
