@@ -42,8 +42,6 @@ namespace sw::editor
 #undef SW_PACKAGING_BACKEND_NAME
             /** @brief 산출 폴더의 기본값입니다(저장소 루트 기준, git 무시). */
             static constexpr const utf8* kDefaultOutputFolder = "Saved/Packages";
-            /** @brief 크기를 MB 로 보일 때의 나눗수입니다. */
-            static constexpr uint64 kBytesPerMegabyte = 1024ull * 1024ull;
             /** @brief 로그가 보이는 최대 줄 수입니다. */
             static constexpr size_t kVisibleLineCount = 400;
 
@@ -271,7 +269,7 @@ namespace sw::editor
             }
             case PackagingState::Succeeded:
             {
-                formatstring( overlay.data(), overlay.capacity(), "Done - %# MB", _progress._byteCount / Internal::kBytesPerMegabyte );
+                formatstring( overlay.data(), overlay.capacity(), "Done - %# MB", _progress._byteCount / constant::kBytesPerMegabyte );
                 break;
             }
             case PackagingState::Failed:

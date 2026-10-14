@@ -11,7 +11,6 @@ namespace sw::editor
     {
         struct AdminToolSessionInternal
         {
-            static constexpr int64 kMillisecondsPerSecond = 1000;
 
             static const utf8* getMethodName( uint16 method )
             {
@@ -84,7 +83,7 @@ namespace sw::editor
         request._sanctionKind = kind;
         request._reasonCode   = string( reasonCode );
         request._memo         = string( memo );
-        request._untilMs      = durationSeconds > 0 ? WallClock::nowUnixMilliseconds() + durationSeconds * AdminToolSessionInternal::kMillisecondsPerSecond : 0;
+        request._untilMs      = durationSeconds > 0 ? WallClock::nowUnixMilliseconds() + durationSeconds * constant::kMillisecondsPerSecond : 0;
         send( AdminMethod::kSetSanction, request, NetIdempotencyKey::makeRandom() );
     }
 

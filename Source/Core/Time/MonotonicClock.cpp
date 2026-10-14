@@ -67,7 +67,7 @@ namespace sw
                     continue;
                 }
             }
-            Sleep( static_cast<DWORD>( ( remaining + 999999 ) / 1000000 ) );
+            Sleep( static_cast<DWORD>( ( remaining + 999999 ) / constant::kNanosecondsPerMillisecond ) );
 #else
             timespec request{};
             request.tv_sec  = static_cast<time_t>( remaining / constant::kNanosecondsPerSecond );

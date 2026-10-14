@@ -4,6 +4,8 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
+
 namespace sw
 {
     void TradeReplyWire::writeReply( BitWriter& outWriter, TradeResult result, const TradeSnapshot& snapshot, const vector<TradeBalance>& listBalance )
@@ -33,7 +35,7 @@ namespace sw
         for ( uint64 index = 0; index < balanceCount; ++index )
         {
             vector<uint8> assetBytes;
-            if ( reader.readBlob( assetBytes, TradeConstant::kMaxAssetIDSize ) == false )
+            if ( reader.readBlob( assetBytes, LedgerConstant::kMaxAssetIDSize ) == false )
                 return false;
             TradeBalance& balance = outListBalance.emplace_back();
             balance._assetID.assign( reinterpret_cast<const utf8*>( assetBytes.data() ), assetBytes.size() );

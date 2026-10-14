@@ -21,7 +21,7 @@ namespace sw
                 const float32 micro = frame._listMicro[slot];
                 if ( micro < 0.0f )
                     return false;
-                outNanos = frame._originNanos + static_cast<int64>( static_cast<float64>( micro ) * 1000.0 + 0.5 );
+                outNanos = frame._originNanos + static_cast<int64>( static_cast<float64>( micro ) * constant::kNanosecondsPerMicrosecond + 0.5 );
                 return true;
             }
         };

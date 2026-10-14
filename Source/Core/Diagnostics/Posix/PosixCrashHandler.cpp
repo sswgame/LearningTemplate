@@ -67,7 +67,7 @@ namespace sw
                 if ( expectedID == selfThreadID )
                     return;
                 // 다른 스레드가 보고 중이다. 그 스레드가 끝낼 때까지 기다린다(nanosleep 은 시그널 안에서 불러도 된다). 상한을 둔다.
-                const timespec waitStep{ 0, 10 * 1000 * 1000 };
+                const timespec waitStep{ 0, 10 * constant::kNanosecondsPerMillisecond };
                 for ( uint32 waitIndex = 0; waitIndex < 3000 && s_reportingThreadID.load() != 0; ++waitIndex )
                 {
                     ::nanosleep( &waitStep, nullptr );

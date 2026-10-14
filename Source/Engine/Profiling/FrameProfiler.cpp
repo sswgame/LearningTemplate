@@ -63,7 +63,7 @@ namespace sw
          */
         uint64 toMicros( uint64 nanos )
         {
-            return nanos / 1000;
+            return nanos / constant::kNanosecondsPerMicrosecond;
         }
 
         /** @brief 표가 어긋나지 않게 이름을 고정 폭으로 맞춥니다. */

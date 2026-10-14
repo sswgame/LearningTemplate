@@ -15,7 +15,6 @@ namespace sw
             static constexpr int32 kMaxEscrowDomainSize = 16;
             static constexpr int32 kMaxEscrowTokenSize  = 64;
             static constexpr int32 kMaxScopeSize        = 32;
-            static constexpr int32 kMaxStoredTextSize   = 512;
             static constexpr utf8  kHexDigit[]          = "0123456789abcdef";
 
             static bool isLowerOrDigit( utf8 ch ) { return ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ); }
@@ -271,9 +270,9 @@ namespace sw
         }
         else if ( outHolder._kind == LedgerHolderKind::Escrow )
         {
-            if ( ServiceKeyUtil::readString( reader, LedgerTypesInternal::kMaxStoredTextSize, outHolder._escrowDomain ) == false )
+            if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxStoredTextSize, outHolder._escrowDomain ) == false )
                 return false;
-            if ( ServiceKeyUtil::readString( reader, LedgerTypesInternal::kMaxStoredTextSize, outHolder._escrowToken ) == false )
+            if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxStoredTextSize, outHolder._escrowToken ) == false )
                 return false;
         }
         return reader.hasOverflowed() == false && outHolder.isValid();

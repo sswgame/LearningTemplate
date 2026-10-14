@@ -52,12 +52,12 @@ namespace sw
     SW_GLOBAL_VARIABLE( int32, gv_vertexPool, 1, "씬 메시 정점 풀 (0=메시마다 정점 버퍼, 진단용)" );
 
     /**
-     * @brief `-gv_viewMode=<n>` 은 주 출력(게임 창)의 보기 모드입니다(0 Lit, 1 Unlit, 2 Wireframe, 3 Normals, 4 Depth, 5 Overdraw).
+     * @brief `-gv_viewMode=<n>` 은 주 출력(게임 창)의 보기 모드입니다(0 Lit, 1 Unlit, 2 Wireframe, 3 Normals, 4 Depth, 5 Overdraw, 6 LightingOnly).
      * @details 에디터 씬 뷰 툴바와 같은 값을 가리킨다(`RenderViewMode`). 여기 있는 이유는 **검증**이다.
      *          뷰 모드가 정말로 픽셀을 바꾸는지 `-gv_screenshot` 으로 확인하려면 에디터를 띄우지 않고
      *          모드를 고를 수 있어야 한다. 없으면 이 기능은 사람 눈으로만 확인되는 기능이 된다.
      */
-    SW_GLOBAL_VARIABLE( int32, gv_viewMode, 0, "주 출력 보기 모드 (0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw)" );
+    SW_GLOBAL_VARIABLE( int32, gv_viewMode, 0, "주 출력 보기 모드 (0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw / 6 LightingOnly)" );
 
     FrameRenderer::FrameRenderer()
         : _pDevice{ nullptr }
@@ -100,6 +100,7 @@ namespace sw
         , _lastDrawnCanvasTargetCount{ 0 }
         , _pLastSwapchainWriter{ nullptr }
         , _pMainOutputCanvasView{ nullptr }
+        , _listScenePreviewRenderer{}
         , _statusMessage{}
         , _graphContext{}
         , _frameLight{}
@@ -112,6 +113,7 @@ namespace sw
         , _status{ FrameRendererStatus::Uninitialized }
         , _bCallbacksBound{ SW_FALSE }
         , _bPassResourcesReady{ SW_FALSE }
+        , _bScenePreview{ SW_FALSE }
         , _reservedFlags{ 0 }
         , _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
         , _sceneViewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
@@ -152,7 +154,9 @@ namespace sw
         else if ( engine::areEngineServicesBound() )
             bindServices( &engine::getTaskManager() );
         // 패스별 GPU 시간을 보고할 프로파일러다. 서비스가 없는 실행(서비스 없이 렌더러만 쓰는 도구)은 계측하지 않는다.
-        _gpuPassTimeline.bindProfiler( engine::areEngineServicesBound() ? &engine::getFrameProfiler() : nullptr );
+        // 미리보기 씬 렌더러는 계측하지 않는다(타임스탬프 슬롯 · `GPU.<패스>` 구간이 주 렌더러의 것이다).
+        const bool bProfile = engine::areEngineServicesBound() && _bScenePreview == SW_FALSE;
+        _gpuPassTimeline.bindProfiler( bProfile ? &engine::getFrameProfiler() : nullptr );
 
         _renderPipelineAssetCache = make_unique<RenderPipelineAssetCache>();
         if ( _renderPipelineAssetCache->initialize() == false )
@@ -215,6 +219,12 @@ namespace sw
         // 스냅샷이 가진 머티리얼과 인스턴스의 소유권을 **디바이스가 살아 있을 때** 해제한다. 스냅샷은 소유권을 함께
         // 싣고 있으므로(GPUScene.h) 여기서 비우지 않으면 렌더러가 소멸할 때까지 그것들이 살아 있어, 디바이스가 먼저
         // 사라진 뒤 소멸자가 사라진 디바이스에 GPU 자원을 반환하려 한다(해제 후 사용).
+        // 미리보기 씬 렌더러도 같은 디바이스의 자원을 든다 — 디바이스가 살아 있을 때 먼저 내린다.
+        for ( ScenePreviewRenderer& preview : _listScenePreviewRenderer )
+        {
+            preview._renderer->shutdown();
+        }
+        _listScenePreviewRenderer.clear();
         _graph.releaseCommandLists();
         if ( _pDevice != nullptr )
             _gpuScene.releaseGPU( _pDevice );
@@ -656,7 +666,9 @@ namespace sw
 
         const bool bOk             = submitGraph( pDevice );
         _lastIndirectDrawCallCount = _indirectDrawCallCount.load( std::memory_order_relaxed );
-        _gpuPassTimeline.readAndReport( pDevice, _pipelineResource.getGraphPass() );
+        // 타임스탬프 슬롯은 디바이스에 하나다 — 미리보기 렌더러가 읽고 켜고 끄면 주 렌더러의 GPU 시간이 흔들린다.
+        if ( _bScenePreview == SW_FALSE )
+            _gpuPassTimeline.readAndReport( pDevice, _pipelineResource.getGraphPass() );
         return bOk;
     }
 } // namespace sw

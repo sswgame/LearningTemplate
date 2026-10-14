@@ -230,7 +230,7 @@ namespace sw
             SW_LOG_ERROR( "Navmesh '%#': %# of %# tiles failed to bake", navMesh.getAgentType()._name.c_str(), failedCount, tileCount );
         if ( pOutStats != nullptr )
         {
-            pOutStats->_milliseconds    = static_cast<float64>( stopwatch.getElapsedMicroseconds() ) / 1000.0;
+            pOutStats->_milliseconds    = static_cast<float64>( stopwatch.getElapsedMicroseconds() ) / constant::kMicrosecondsPerMillisecond;
             pOutStats->_tileCount       = tileCount;
             pOutStats->_filledTileCount = filledCount;
             pOutStats->_failedTileCount = failedCount;

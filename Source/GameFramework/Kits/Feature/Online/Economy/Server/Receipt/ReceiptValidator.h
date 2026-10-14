@@ -58,7 +58,7 @@ namespace sw
 namespace sw
 {
     /** @class IReceiptValidator @brief 스토어 하나의 검증 제공자입니다. 서비스 스레드가 `submitValidation` 과 `pollCompletions` 를 부릅니다. */
-    class SW_KIT_API IReceiptValidator
+    class SW_KIT_SERVER_API IReceiptValidator
     {
     public:
         IReceiptValidator()          = default;
@@ -82,7 +82,7 @@ namespace sw
 namespace sw
 {
     /** @class ReceiptValidatorRegistry @brief 스토어 이름으로 제공자를 찾는 레지스트리입니다. 제공자는 빌려 쓰며 서비스 하나가 레지스트리 하나를 가집니다. */
-    class SW_KIT_API ReceiptValidatorRegistry
+    class SW_KIT_SERVER_API ReceiptValidatorRegistry
     {
     public:
         ReceiptValidatorRegistry();

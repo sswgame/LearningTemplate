@@ -124,7 +124,7 @@ namespace sw::editor
                     return true;
                 }
                 EditorNetProfilerHistory& history = getHistory();
-                pSession->updateUntil( static_cast<int64>( seconds ) * 1000, [&]()
+                pSession->updateUntil( static_cast<int64>( seconds ) * constant::kMillisecondsPerSecond, [&]()
                 {
                     history.update( *pSession, nowSeconds() );
                     return false; // 시한까지 모은다

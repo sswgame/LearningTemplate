@@ -23,11 +23,8 @@ namespace sw::editor
     {
         struct AdminToolPanelInternal
         {
-            static constexpr int64 kSecondsPerDay          = 86400;
             static constexpr int64 kDefaultAmount          = 100;
             static constexpr int64 kDefaultSanctionSeconds = 3600;
-            static constexpr int32 kSecondsPerMinute       = 60;
-            static constexpr int32 kSecondsPerHour         = 3600;
 
             /** @brief 편집 칸의 16 진 문자열을 계정 id 로 바꿉니다. 비었거나 16 진이 아니면 false 입니다. */
             [[nodiscard]] static bool parseAccountID( const string& text, AccountID& outAccountID )
@@ -56,10 +53,10 @@ namespace sw::editor
 
             static string formatClock( int64 unixMs )
             {
-                const int64                           secondOfDay = ( unixMs / 1000 ) % kSecondsPerDay;
+                const int64                           secondOfDay = ( unixMs / constant::kMillisecondsPerSecond ) % constant::kSecondsPerDay;
                 StringBuilder<constant::kMaxBuffer32> text;
-                text.appendFormat( "%#:%#:%#", static_cast<int32>( secondOfDay / kSecondsPerHour ),
-                                   static_cast<int32>( ( secondOfDay % kSecondsPerHour ) / kSecondsPerMinute ), static_cast<int32>( secondOfDay % kSecondsPerMinute ) );
+                text.appendFormat( "%#:%#:%#", static_cast<int32>( secondOfDay / constant::kSecondsPerHour ),
+                                   static_cast<int32>( ( secondOfDay % constant::kSecondsPerHour ) / constant::kSecondsPerMinute ), static_cast<int32>( secondOfDay % constant::kSecondsPerMinute ) );
                 return string( text.view() );
             }
 
@@ -69,7 +66,7 @@ namespace sw::editor
                     return "none";
                 if ( untilMs == ServiceSanctionState::kPermanentMs )
                     return "permanent";
-                const int64 remainingSeconds = ( untilMs - WallClock::nowUnixMilliseconds() ) / 1000;
+                const int64 remainingSeconds = ( untilMs - WallClock::nowUnixMilliseconds() ) / constant::kMillisecondsPerSecond;
                 if ( remainingSeconds <= 0 )
                     return "expired";
                 StringBuilder<constant::kMaxBuffer64> text;

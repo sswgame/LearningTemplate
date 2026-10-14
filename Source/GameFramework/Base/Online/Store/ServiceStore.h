@@ -123,7 +123,6 @@ namespace sw
     class SW_GF_API IServiceStoreConnection
     {
     public:
-        static constexpr int32 kMaxKeySize    = 256;
         static constexpr int32 kMaxRecordSize = 64 * 1024;
 
         IServiceStoreConnection()          = default;
@@ -188,7 +187,7 @@ namespace sw
      * @details 서버 프로세스 하나에 앞 하나가 있다. 프로세스 둘이 같은 DB 를 쓰면 앞이 둘이다.
      *          구현으로 `MemoryServiceStore`(테스트와 개발)와 SQL 구현(GF_Server_SQLStore)이 있다.
      */
-    class SW_GF_API IServiceStore
+    class IServiceStore
     {
     public:
         IServiceStore()          = default;

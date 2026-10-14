@@ -19,6 +19,7 @@
  *          Nakama 의 채널 메시지(DB 기록과 노드 간 클러스터 버스)와 같은 구조이다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/string.h"
@@ -43,7 +44,7 @@ namespace sw
      * @class IChatPolicy
      * @brief 서버 조립이 연결해 주는 정책입니다. 차단 테이블은 친구 키트(GF_Social)의 것이며, 채팅 키트 조립(`ChatOnlineServerKit`)이 기반의 `IAccountBlockList` 로 받습니다.
      */
-    class SW_KIT_API IChatPolicy
+    class IChatPolicy
     {
     public:
         IChatPolicy()          = default;
@@ -65,8 +66,8 @@ namespace sw
         ChatSpamSettings _spam{};
         string           _bannedWordsPath{}; ///< 비면 거르지 않는다. 서버 조립 단계는 `Config/Server/chat_banned_words.txt` 를 쓴다
         ChatFilterMode   _filterMode{ ChatFilterMode::Mask };
-        int64            _sanctionCacheMs{ 60 * 1000 };
-        int64            _historyRetentionMs{ 30ll * 24 * 60 * 60 * 1000 };
+        int64            _sanctionCacheMs{ 60 * constant::kMillisecondsPerSecond };
+        int64            _historyRetentionMs{ 30 * constant::kSecondsPerDay * constant::kMillisecondsPerSecond };
         int32            _historyFlushMax{ 60 };           ///< 트랜잭션 하나에 쓰는 기록 수이다. 상한 64 안이다
         int32            _historyTrimEvery{ 64 };          ///< 순번이 이 수의 배수인 메시지의 채널을 정리한다
         int32            _maxQueuedHistory{ 4096 };        ///< 저장소가 늦을 때 쌓아 둘 기록 수이다. 넘으면 오래된 것부터 버린다
@@ -126,7 +127,7 @@ namespace sw
      * @class ChatService
      * @brief 채팅 로직 서비스입니다.
      */
-    class SW_KIT_API ChatService
+    class SW_KIT_SERVER_API ChatService
     {
     public:
         ChatService();

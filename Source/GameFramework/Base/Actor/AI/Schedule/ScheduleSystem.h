@@ -162,7 +162,7 @@ namespace sw
      *          애니메이션 시스템(스켈레탈 애니메이터)이 생기면 그 컴포넌트를 찾아 클립과 그래프 상태를 고르는 구현을 끼운다.
      *          구현이 없으면 아무것도 재생하지 않고 이벤트(`ActivityStarted` 의 `_animation`)만 남는다.
      */
-    class SW_GF_API IScheduleActivityAnimator
+    class IScheduleActivityAnimator
     {
     public:
         IScheduleActivityAnimator()                                                  = default;

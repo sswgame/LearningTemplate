@@ -40,7 +40,7 @@ namespace sw
      * @class IWesternWitnessSight
      * @brief 목격자가 범죄 위치를 보았는지 게임이 답하는 인터페이스입니다(시야각, 가림, 밤, 안개).
      */
-    class SW_KIT_API IWesternWitnessSight
+    class IWesternWitnessSight
     {
     public:
         IWesternWitnessSight()          = default;

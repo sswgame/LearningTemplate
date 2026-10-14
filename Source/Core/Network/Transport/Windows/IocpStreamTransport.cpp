@@ -60,10 +60,10 @@ namespace sw
             static constexpr int32     kMaxSendBytes             = 256 * 1024;
             static constexpr int32     kCompletionBatch          = 64;
             static constexpr int32     kLoopWaitMilli            = 100;
-            static constexpr int64     kSweepIntervalNanoseconds = 100 * 1000 * 1000;
+            static constexpr int64     kSweepIntervalNanoseconds = 100 * constant::kNanosecondsPerMillisecond;
             static constexpr DWORD     kAcceptAddressBytes       = sizeof( sockaddr_in ) + 16;
 
-            static int64 toNanoseconds( float64 seconds ) { return static_cast<int64>( seconds * 1.0e9 ); }
+            static int64 toNanoseconds( float64 seconds ) { return static_cast<int64>( seconds * constant::kNanosecondsPerSecond ); }
 
             static NetAddress makeNetAddress( const sockaddr_in& native ) { return NetAddress{ ntohl( native.sin_addr.s_addr ), ntohs( native.sin_port ) }; }
 

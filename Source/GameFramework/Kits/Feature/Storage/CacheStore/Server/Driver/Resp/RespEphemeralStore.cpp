@@ -13,8 +13,7 @@ namespace sw
     {
         struct RespEphemeralStoreInternal
         {
-            static constexpr int64 kNanosecondsPerMillisecond = 1000000;
-            static constexpr int64 kFirstBackoffMs            = 100;
+            static constexpr int64 kFirstBackoffMs = 100;
 
             // 단계 번호다. 한 요청의 몇 번째 명령인지를 나타내며, 답 순서는 연결이 지킨다.
             static constexpr uint32 kStepFirst          = 0;
@@ -35,7 +34,7 @@ namespace sw
                 return std::min( backoffMs * 2, maxBackoffMs );
             }
 
-            static void sleepOneMillisecond() { MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + kNanosecondsPerMillisecond ); }
+            static void sleepOneMillisecond() { MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + constant::kNanosecondsPerMillisecond ); }
         };
     } // namespace
 } // namespace sw
@@ -284,14 +283,14 @@ namespace sw
         const int64             nowNanoseconds = MonotonicClock::nowNanoseconds();
         if ( _commandConnection.handleClosed( handle, reason ) )
         {
-            _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoffMs * RespEphemeralStoreInternal::kNanosecondsPerMillisecond;
+            _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoffMs * constant::kNanosecondsPerMillisecond;
             _commandBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _commandBackoffMs, _settings._maxBackoffMs );
             return;
         }
         if ( _subscribeConnection.handleClosed( handle, reason ) )
         {
             _subscriptionAckCount            = _subscriptionSentCount; // 오지 않을 확인은 기다리지 않는다
-            _nextSubscribeConnectNanoseconds = nowNanoseconds + _subscribeBackoffMs * RespEphemeralStoreInternal::kNanosecondsPerMillisecond;
+            _nextSubscribeConnectNanoseconds = nowNanoseconds + _subscribeBackoffMs * constant::kNanosecondsPerMillisecond;
             _subscribeBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _subscribeBackoffMs, _settings._maxBackoffMs );
         }
     }
@@ -657,7 +656,7 @@ namespace sw
         const bool        bAuth       = _settings._password.empty() == false;
         if ( _commandConnection.beginConnect( *_transport, _settings._address, _tlsContext.get(), bAuth ? &authCommand : nullptr ) )
             return true;
-        _nextCommandConnectNanoseconds = MonotonicClock::nowNanoseconds() + _commandBackoffMs * RespEphemeralStoreInternal::kNanosecondsPerMillisecond;
+        _nextCommandConnectNanoseconds = MonotonicClock::nowNanoseconds() + _commandBackoffMs * constant::kNanosecondsPerMillisecond;
         _commandBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _commandBackoffMs, _settings._maxBackoffMs );
         return false;
     }
@@ -672,7 +671,7 @@ namespace sw
         const bool        bAuth       = _settings._password.empty() == false;
         if ( _subscribeConnection.beginConnect( *_transport, _settings._address, _tlsContext.get(), bAuth ? &authCommand : nullptr ) == false )
         {
-            _nextSubscribeConnectNanoseconds = MonotonicClock::nowNanoseconds() + _subscribeBackoffMs * RespEphemeralStoreInternal::kNanosecondsPerMillisecond;
+            _nextSubscribeConnectNanoseconds = MonotonicClock::nowNanoseconds() + _subscribeBackoffMs * constant::kNanosecondsPerMillisecond;
             _subscribeBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _subscribeBackoffMs, _settings._maxBackoffMs );
             return false;
         }
@@ -689,7 +688,7 @@ namespace sw
 
     void RespEphemeralStore::abortTimedOutRequests()
     {
-        const int64 timeoutNanoseconds = _settings._timeoutMs * RespEphemeralStoreInternal::kNanosecondsPerMillisecond;
+        const int64 timeoutNanoseconds = _settings._timeoutMs * constant::kNanosecondsPerMillisecond;
         const int64 nowNanoseconds     = MonotonicClock::nowNanoseconds();
         bool        bExpired           = false;
         for ( const Operation& operation : _listOperation )
@@ -707,7 +706,7 @@ namespace sw
             _commandConnection.abort( *_transport, "request timed out" );
             _commandConnection.takeReplyRecords( listRecord );
             // 시한 초과는 서버 쪽 문제이므로 바로 다시 연결하지 않는다.
-            _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoffMs * RespEphemeralStoreInternal::kNanosecondsPerMillisecond;
+            _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoffMs * constant::kNanosecondsPerMillisecond;
             _commandBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _commandBackoffMs, _settings._maxBackoffMs );
         }
         for ( const RespReplyRecord& record : listRecord )

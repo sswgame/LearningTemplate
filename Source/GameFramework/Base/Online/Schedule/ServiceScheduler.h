@@ -8,6 +8,7 @@
  *          - 차지 일의 `complete` 가 이 객체를 부르므로, 저장소의 완료를 모두 거두거나 저장소를 먼저 내린 뒤에 이 객체를 지운다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -36,7 +37,7 @@ namespace sw
         string       _jobID{}; ///< `[0-9a-z_.]`
         int64        _windowStartMs{ 0 };
         int64        _windowEndMs{ 0 };
-        int64        _leaseMs{ 10 * 60 * 1000 };
+        int64        _leaseMs{ 10 * constant::kSecondsPerMinute * constant::kMillisecondsPerSecond };
         int32        _minuteOfDay{ 0 }; ///< UTC 0..1439
         int32        _dayOfWeek{ 0 };   ///< Weekly — 0 = 월요일(ISO)
         ScheduleKind _kind{ ScheduleKind::Daily };
@@ -57,7 +58,7 @@ namespace sw
 namespace sw
 {
     /** @brief 회차를 차지했을 때 불리는 처리기입니다. */
-    class SW_GF_API IScheduledJobHandler
+    class IScheduledJobHandler
     {
     public:
         IScheduledJobHandler()          = default;

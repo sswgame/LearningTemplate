@@ -504,7 +504,7 @@ namespace sw
         root.set( "type" ).setString( "event" );
         root.set( "event" ).setString( def._id.c_str() );
         root.set( "seq" ).setUint( _sequence + static_cast<uint64>( _listPendingLine.size() ) );
-        root.set( "t" ).setFloat( MathUtil::round( _sessionSeconds * 1000.0 ) / 1000.0 );
+        root.set( "t" ).setFloat( MathUtil::round( _sessionSeconds * constant::kMillisecondsPerSecond ) / constant::kMillisecondsPerSecond );
         root.set( "sample" ).setFloat( static_cast<float64>( def._sampleRate ) );
         const JSONValue fields = root.set( "fields" );
         fields.setObject();
@@ -622,7 +622,7 @@ namespace sw
             emitSceneSummaryLocked();
             _currentScene.assign( sceneID.data(), sceneID.size() );
         }
-        _frames.add( deltaSeconds * 1000.0f );
+        _frames.add( deltaSeconds * constant::kMillisecondsPerSecond );
     }
 
     void TelemetryService::onFrameBegin( [[maybe_unused]] const EngineFrameContext& context )
@@ -657,7 +657,7 @@ namespace sw
             TelemetryEvent summary{ hashed_string( kSceneSummaryEvent ) };
             summary.setString( "scene", _currentScene.empty() ? string_view( "(none)" ) : string_view( _currentScene ) );
             summary.setInt( "frames", _frames.getCount() );
-            summary.setFloat( "seconds", _frames.getTotalMs() / 1000.0 );
+            summary.setFloat( "seconds", _frames.getTotalMs() / constant::kMillisecondsPerSecond );
             summary.setFloat( "avgMs", _frames.getTotalMs() / static_cast<float64>( _frames.getCount() ) );
             summary.setFloat( "p50Ms", static_cast<float64>( _frames.computePercentileMs( 0.5f ) ) );
             summary.setFloat( "p99Ms", static_cast<float64>( _frames.computePercentileMs( 0.99f ) ) );

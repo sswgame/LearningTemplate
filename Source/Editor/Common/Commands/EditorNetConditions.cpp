@@ -12,12 +12,8 @@ namespace sw::editor
     {
         struct EditorNetConditionsInternal
         {
-            /** @brief 초 ↔ 밀리초입니다. */
-            static constexpr float64 kMillisecondsPerSecond = 1000.0;
             /** @brief 비율(0~1) ↔ 백분율입니다. */
             static constexpr float32 kPercent = 100.0f;
-            /** @brief KB/s ↔ 바이트/초입니다(`gv_netEmuBandwidthKilobytesPerSecond` 와 같은 단위). */
-            static constexpr int32 kKilobyte = 1024;
             /** @brief 클라이언트 대상 글의 머리입니다(`client2`). */
             static constexpr string_view kClientPrefix = "client";
         };
@@ -30,10 +26,10 @@ namespace sw::editor
     {
         using Internal = EditorNetConditionsInternal;
         EditorNetLinkSettings settings;
-        settings._latencyMilliseconds         = static_cast<float32>( conditions._latency * Internal::kMillisecondsPerSecond );
-        settings._jitterMilliseconds          = static_cast<float32>( conditions._jitter * Internal::kMillisecondsPerSecond );
+        settings._latencyMilliseconds         = static_cast<float32>( conditions._latency * constant::kMillisecondsPerSecond );
+        settings._jitterMilliseconds          = static_cast<float32>( conditions._jitter * constant::kMillisecondsPerSecond );
         settings._lossPercent                 = conditions._lossRate * Internal::kPercent;
-        settings._bandwidthKilobytesPerSecond = conditions._bandwidthBytesPerSecond / Internal::kKilobyte;
+        settings._bandwidthKilobytesPerSecond = conditions._bandwidthBytesPerSecond / static_cast<int32>( constant::kBytesPerKilobyte );
         return settings;
     }
 
@@ -41,10 +37,10 @@ namespace sw::editor
     {
         using Internal = EditorNetConditionsInternal;
         NetEmulationConditions conditions;
-        conditions._latency                 = static_cast<float64>( MathUtil::max( 0.0f, settings._latencyMilliseconds ) ) / Internal::kMillisecondsPerSecond;
-        conditions._jitter                  = static_cast<float64>( MathUtil::max( 0.0f, settings._jitterMilliseconds ) ) / Internal::kMillisecondsPerSecond;
+        conditions._latency                 = static_cast<float64>( MathUtil::max( 0.0f, settings._latencyMilliseconds ) ) / constant::kMillisecondsPerSecond;
+        conditions._jitter                  = static_cast<float64>( MathUtil::max( 0.0f, settings._jitterMilliseconds ) ) / constant::kMillisecondsPerSecond;
         conditions._lossRate                = MathUtil::clamp( settings._lossPercent, 0.0f, Internal::kPercent ) / Internal::kPercent;
-        conditions._bandwidthBytesPerSecond = MathUtil::max( 0, settings._bandwidthKilobytesPerSecond ) * Internal::kKilobyte;
+        conditions._bandwidthBytesPerSecond = MathUtil::max( 0, settings._bandwidthKilobytesPerSecond ) * static_cast<int32>( constant::kBytesPerKilobyte );
         return conditions;
     }
 

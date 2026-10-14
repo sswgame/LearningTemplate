@@ -382,7 +382,7 @@ namespace sw
 
             context._debounceTimer.updateTimer();
             const float32 elapsedSec = context._debounceTimer.getTotalTime();
-            if ( elapsedSec < static_cast<float32>( kMtimeDebounceMs ) / 1000.0f )
+            if ( elapsedSec < static_cast<float32>( kMtimeDebounceMs ) / constant::kMillisecondsPerSecond )
                 continue;
 
             const uint64 sourceMtime = FileUtil::getFileTimestamp( context._originalModulePath );

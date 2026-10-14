@@ -28,6 +28,7 @@ project conventions unless the user explicitly requests otherwise.
   - `SW_MODULE_API`: A generic C-ABI entry point macro used across **all dynamically loaded plugin modules** (EditorModule.dll, SWGame.dll, RHI backends, etc.). Responds to `SW_MODULE_EXPORTS`.
   - `SW_GF_API`: Used to export/import **GameFramework.dll** (Base) class symbols. Responds to `SW_GF_EXPORTS`.
   - `SW_KIT_API`: Used by headers under `GameFramework/Kits` to export/import **kit DLL** class symbols. Responds to `SW_KIT_EXPORTS` (kit TUs) / `SW_KIT_IMPORTS`. Never use `SW_GF_API` in a kit header: kit TUs do not define `SW_GF_EXPORTS`, so a Base class would be imported, not re-exported.
+  - `SW_KIT_SERVER_API`: Used by headers of **server kits** (`GF_Server_<X>`, folder `Server/`). Responds to `SW_KIT_SERVER_EXPORTS`; server TUs do not define `SW_KIT_EXPORTS`, so a shared-kit header they include stays imported. Pure interfaces (pure virtuals / `= default` only) carry no export macro. Enforced by `CheckExportMacros.py`.
   - `SW_EDITOR_API`: Used to export/import **EditorModule.dll** symbols (registries, widgets, selection, undo) for editor extension modules. Responds to `SW_EDITOR_EXPORTS`.
   - `SW_GAMESERVICE_API`: Used by the GameService locator (`bindGameService` / `getRawService`) in RuntimeAPI. This is not the GameFramework class-export macro.
 
@@ -361,6 +362,10 @@ One meaning, one definition. A second copy of a value compiles, passes tests, an
   settings table; `constant::kDefaultGravity` is only its default, shaders get it through a material or root constant); golden-ratio,
   splitmix64 and FNV-1a → `HashUtil`; four-character tags → `FourCcUtil::make( "SWHF" )` (file byte order). `CheckWellKnownConstants.py`
   blocks the literals elsewhere.
+- **Time and byte units** → `constant::` in `Core/Common/Defines.h` (`kNanosecondsPerSecond` · `kNanosecondsPerMillisecond` · `kNanosecondsPerMicrosecond` ·
+  `kMicrosecondsPerSecond` · `kMicrosecondsPerMillisecond` · `kMillisecondsPerSecond` · `kSecondsPerMinute` · `kSecondsPerHour` · `kSecondsPerDay` ·
+  `kBytesPerKilobyte` · `kBytesPerMegabyte`). Never write `1e9`, `1'000'000'000`, `1024 * 1024` or a local `kKilobyte`; `CheckWellKnownConstants.py`
+  blocks those next to a time or byte name and notes `* 1000` / `/ 1000` there. Limits several online modules must agree on live in `OnlineLimit.h`.
 - **Sentinels** keep a domain name but take their value from `invalid_index` (`static constexpr uint32 kNotRegistered = invalid_index::kUint32;`).
   An all-bits mask (`kAllLayers`) is not a sentinel and keeps its literal.
 - **No aliases.** `static constexpr uint32 kFrameCount = constant::kMaxFrameCountInFlight;` is a second name for one concept — use the original.

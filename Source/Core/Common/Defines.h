@@ -47,12 +47,26 @@ namespace sw
 
         /** @brief 1초당 밀리초 수입니다. */
         inline constexpr int64 kMillisecondsPerSecond = 1'000LL;
+        /** @brief 1초당 마이크로초 수입니다. */
+        inline constexpr int64 kMicrosecondsPerSecond = 1'000'000LL;
+        /** @brief 1마이크로초당 나노초 수입니다. */
+        inline constexpr int64 kNanosecondsPerMicrosecond = 1'000LL;
+        /** @brief 1밀리초당 마이크로초 수입니다. */
+        inline constexpr int64 kMicrosecondsPerMillisecond = 1'000LL;
+        /** @brief 1밀리초당 나노초 수입니다. */
+        inline constexpr int64 kNanosecondsPerMillisecond = 1'000'000LL;
         /** @brief 1분당 초 수입니다. */
         inline constexpr int64 kSecondsPerMinute = 60LL;
+        /** @brief 1시간당 초 수입니다. */
+        inline constexpr int64 kSecondsPerHour = 3600LL;
+        /** @brief 1일당 초 수입니다. */
+        inline constexpr int64 kSecondsPerDay = 86400LL;
         /** @brief 1 KiB 의 바이트 수입니다. */
         inline constexpr size_t kBytesPerKilobyte = size_t{ 1024 };
         /** @brief 1 MiB 의 바이트 수입니다. */
         inline constexpr size_t kBytesPerMegabyte = size_t{ 1024 } * 1024;
+        /** @brief 1 GiB 의 바이트 수입니다. */
+        inline constexpr size_t kBytesPerGigabyte = kBytesPerMegabyte * 1024;
 
         /** @brief 선형 할당기 기본 초기 용량 (64KB)입니다. */
         inline constexpr size_t kDefaultLinearCapacity = size_t{ 64 } * 1024;

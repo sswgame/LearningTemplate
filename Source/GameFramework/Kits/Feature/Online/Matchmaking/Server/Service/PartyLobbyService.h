@@ -89,7 +89,7 @@ namespace sw
      * @class PartyLobbyService
      * @brief 파티와 로비 로직입니다.
      */
-    class SW_KIT_API PartyLobbyService
+    class SW_KIT_SERVER_API PartyLobbyService
     {
     public:
         using PartyFoundDelegate = Delegate<void( uint64, MatchmakingResult, const PartySnapshot& )>; ///< 인자는 (요청 태그, 결과, 파티)이다

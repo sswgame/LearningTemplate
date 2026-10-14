@@ -12,7 +12,7 @@ namespace sw
         {
             static constexpr utf8  kHexDigit[]     = "0123456789ABCDEF";
             static constexpr int32 kMaxChunkLine   = 64;
-            static constexpr int64 kMaxChunkSize   = 64ll * 1024 * 1024;
+            static constexpr int64 kMaxChunkSize   = static_cast<int64>( 64 * constant::kBytesPerMegabyte );
             static constexpr int32 kMaxTargetBytes = 8192;
 
             static bool isUnreserved( utf8 ch )

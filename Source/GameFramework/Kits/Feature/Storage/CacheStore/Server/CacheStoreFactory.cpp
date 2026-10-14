@@ -8,6 +8,7 @@
 
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
+#include "GameFramework/Base/Online/Server/OnlineStoreDriverTable.h"
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/Resp/RespEphemeralStore.h"
 
 namespace sw
@@ -69,7 +70,7 @@ namespace sw
 {
     unique_ptr<IEphemeralStore> CacheStoreFactory::createEphemeralStore( string_view driverName, string_view endpoint, string_view secret, string& outError )
     {
-        if ( driverName == kMemoryDriverName )
+        if ( driverName == OnlineStoreDriverTable::kMemoryDriverName )
             return make_unique<MemoryEphemeralStore>( &CacheStoreFactoryInternal::getMemoryDatabase() );
         if ( driverName != kRespDriverName )
         {

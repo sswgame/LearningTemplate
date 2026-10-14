@@ -110,7 +110,6 @@ namespace sw
     {
         static constexpr uint32      kVersion        = 1;
         static constexpr int32       kMaxListCount   = 50;
-        static constexpr int32       kMaxKeySize     = 256;
         static constexpr const utf8* kCampaignPrefix = "campaign/";
 
         static void               writeRequest( BitWriter& outWriter, const MailboxRequest& request );

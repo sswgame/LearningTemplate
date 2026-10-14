@@ -108,7 +108,7 @@ namespace sw
             if ( beginMicro < 0.0f || endMicro < 0.0f || endMicro < beginMicro )
                 return -1.0f;
             const float32 micro = endMicro - beginMicro;
-            profiler.addSample( profilerSlot, static_cast<uint64>( micro * 1000.0f ) );
+            profiler.addSample( profilerSlot, static_cast<uint64>( micro * constant::kNanosecondsPerMicrosecond ) );
             return endMicro;
         };
 
@@ -135,7 +135,7 @@ namespace sw
         {
             const float32 frameBegin = listGPUTimestampMicro[FrameRendererUtil::kGPUTimestampSlotFrameBegin];
             if ( frameBegin >= 0.0f && lastEndMicro >= frameBegin )
-                profiler.addSample( _frameScopeSlot, static_cast<uint64>( ( lastEndMicro - frameBegin ) * 1000.0f ) );
+                profiler.addSample( _frameScopeSlot, static_cast<uint64>( ( lastEndMicro - frameBegin ) * constant::kNanosecondsPerMicrosecond ) );
         }
     }
 

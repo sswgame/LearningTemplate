@@ -41,8 +41,18 @@ namespace sw::editor
     class MirrorNameRules
     {
     public:
-        /** @brief 흔한 철자의 기본 표입니다(`_L`/`_R`, `.L`/`.R`, `_l`/`_r`, `Left`/`Right`, `left`/`right`, `L_`/`R_`, `l_`/`r_`). */
-        static MirrorNameRules makeDefault();
+        /** @brief 기본 표 파일입니다(`_L`/`_R`, `.L`/`.R`, `Left`/`Right` 등 흔한 철자). 철자를 더하는 일이 줄 하나다. */
+        static constexpr string_view kDefaultPath = "engine/character/default.mirrornames.xml";
+
+        /**
+         * @brief `<MirrorNames><Pair first="_L" second="_R"/></MirrorNames>` 형식을 읽어 현재 표를 바꿉니다. 모르는 원소 · 속성, 빈 토큰, 같은 두 토큰은 오류입니다.
+         * @details 실패하면 현재 표를 그대로 둡니다. 쌍의 순서가 맞춰 보는 순서입니다.
+         */
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
+        /** @brief 리소스 경로(또는 절대 경로)의 파일을 읽습니다. */
+        [[nodiscard]] bool loadFromResource( string_view path );
+        /** @brief 현재 표를 XML 텍스트로 씁니다. */
+        string saveToXMLText() const;
 
         /** @brief 쌍을 끝에 더합니다. 어느 쪽이든 비어 있거나 두 토큰이 같으면 무시하고 false 입니다. */
         [[nodiscard]] bool addPair( string_view first, string_view second );

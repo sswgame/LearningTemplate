@@ -32,6 +32,11 @@
 #include "Engine/Config/Server/ServerConfig.h"
 #include "Engine/Module/ModuleImageHost.h"
 #include "Engine/Observability/MetricRegistry.h"
+#include "Engine/Observability/DebugChannel.h"
+#include "Engine/Scene/SceneStateHash.h"
+#include "Engine/Scene/SceneManager.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Observability/OpsHTTPEndpoint.h"
 #include "Engine/Observability/ProcessMetrics.h"
 #include "Engine/Observability/ServerServiceManager.h"
@@ -50,6 +55,11 @@ namespace sw
 {
     /** @brief `-gv_serverExitAfterTicks=N`: N 틱을 돈 뒤 스스로 정상 종료합니다(기동과 종료 테스트용). Shipping 에도 등록하며, 배포 서버 산출물을 같은 테스트가 실행합니다. */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_serverExitAfterTicks, 0, "이 틱 수를 돈 뒤 정상 종료 (0=끄기)" );
+    /** @brief `-gv_debugChannelPort=N`: 디버그 채널(개발 명령 원격 실행, 루프백 TCP)을 이 포트에 엽니다(0=끄기). 토큰(`gv_debugChannelToken`)이 있어야 열립니다. Shipping 에는 없습니다. */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_debugChannelPort, 0, "디버그 채널 포트 (0=끄기, 루프백 전용, 토큰 필요)" );
+    SW_TEST_GLOBAL_VARIABLE( string, gv_debugChannelToken, "", "디버그 채널 접속 토큰" );
+    /** @brief `-gv_stateHashHistory=N`: 서버가 틱마다 씬 상태 해시를 남기고 최근 N 틱을 보관합니다(0=끄기). 개발 명령 `state.hashes` 로 읽습니다. */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_stateHashHistory, 0, "틱별 씬 상태 해시 이력 길이 (0=끄기)" );
 } // namespace sw
 
 namespace sw
@@ -68,10 +78,9 @@ namespace sw
             static constexpr int32   kOpsMaxConnections     = 64;
             static constexpr float64 kOpsIdleTimeoutSeconds = 10.0;
             /** @brief 프로세스 지표를 다시 읽는 간격입니다. 운영체제에 묻는 비용이 있고 스크레이퍼도 보통 15 초마다 읽으므로 초에 한 번이면 된다. */
-            static constexpr int64  kProcessSampleIntervalMs = 1000;
-            static constexpr uint64 kBytesPerMebibyte        = uint64{ 1024 } * 1024;
+            static constexpr int64 kProcessSampleIntervalMs = 1000;
 
-            static int64 nowMonotonicMs() { return MonotonicClock::nowNanoseconds() / 1000000; }
+            static int64 nowMonotonicMs() { return MonotonicClock::nowNanoseconds() / constant::kNanosecondsPerMillisecond; }
         };
 
         /** @brief 링커가 표식 문자열을 버리지 못하게 정적 초기화에서 한 번 읽습니다(서버 전용 모듈의 생성 표식과 같은 방식입니다). */
@@ -202,11 +211,15 @@ namespace sw
         _devConsole = make_unique<DevConsole>();
 #endif
 
+#if !defined( SW_SHIPPING )
+        if ( startDebugTools() == false )
+            return false;
+#endif
         _bReady = SW_TRUE;
         // 여기부터 모든 줄에 `[tick=N]`이 붙는다. N 은 끝낸 틱 수이며, 지금 도는 틱의 0 기준 번호다. 멀티 프로세스 재생의 Output Log 가 서버 줄을 틱 기준으로 맞춰 본다.
         Logger::setTickNumber( _tickCount );
         SW_LOG_INFO( "Dedicated server ready - target %#, %# Hz, game port %#, service port %#, startup %# ms", build::kTargetName, _pServerConfig->_tickRateHz,
-                     _pServerConfig->_gamePort, _pServerConfig->_servicePort, ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / 1000000 );
+                     _pServerConfig->_gamePort, _pServerConfig->_servicePort, ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::kNanosecondsPerMillisecond );
         return true;
     }
 
@@ -289,7 +302,7 @@ namespace sw
         _pServiceConnectionGauge =
             _metricRegistry->registerGauge( "server_service_connections", "Connections held by the server services (online service host and others)" );
         _processMetrics = make_unique<ProcessMetrics>();
-        _processMetrics->initialize( _metricRegistry.get(), WallClock::nowUnixMilliseconds() - ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / 1000000 );
+        _processMetrics->initialize( _metricRegistry.get(), WallClock::nowUnixMilliseconds() - ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::kNanosecondsPerMillisecond );
         if ( _pServerConfig->_opsPort == 0 )
             return true;
         OpsHTTPEndpointSettings opsSettings;
@@ -400,6 +413,10 @@ namespace sw
                 executeCommand( line );
             }
             _listPendingCommand.clear();
+#if !defined( SW_SHIPPING )
+            if ( _debugChannel != nullptr )
+                (void)_debugChannel->pump(); // 일시정지 중에도 돈다 - 멈춘 상태의 값을 읽는 것이 쓰임이다
+#endif
 
             const ShutdownCause cause = ShutdownSignal::getRequestedCause();
             if ( cause != ShutdownCause::None || _engine.isQuitRequested() )
@@ -438,6 +455,14 @@ namespace sw
             ++_statusTickSampleCount;
             ++_tickCount;
             Logger::setTickNumber( _tickCount );
+#if !defined( SW_SHIPPING )
+            if ( StateHashHistory::get().isRecording() && engine::areEngineServicesBound() )
+            {
+                Scene* pScene = engine::getSceneManager().getActiveScene();
+                if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
+                    StateHashHistory::get().record( _tickCount, SceneStateHash::compute( *pScene->getObjectManager() ) );
+            }
+#endif
             if ( _bPaused == SW_TRUE && _pendingStepCount > 0 && --_pendingStepCount == 0 )
                 SW_LOG_INFO( "Server stepped to tick %# (paused)", _tickCount );
             if ( gv_serverExitAfterTicks > 0 && _tickCount >= static_cast<uint64>( gv_serverExitAfterTicks ) )
@@ -451,7 +476,7 @@ namespace sw
                 const uint32 dropped = static_cast<uint32>( ( now - deadline ) / _tickNanoseconds );
                 if ( _droppedTickCount == 0 ||
                      _droppedTickCount / ServerAppInternal::kDroppedTickWarningInterval != ( _droppedTickCount + dropped ) / ServerAppInternal::kDroppedTickWarningInterval )
-                    SW_LOG_WARNING( "Server is behind: dropped %# ticks (total %#), last tick %# us", dropped, _droppedTickCount + dropped, tickTime / 1000 );
+                    SW_LOG_WARNING( "Server is behind: dropped %# ticks (total %#), last tick %# us", dropped, _droppedTickCount + dropped, tickTime / constant::kNanosecondsPerMicrosecond );
                 _droppedTickCount += dropped;
                 _pDroppedTickCounter->add( dropped );
                 deadline = now;
@@ -568,7 +593,7 @@ namespace sw
     void ServerApp::logStatus() const
     {
         const int64 uptimeSeconds   = ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::kNanosecondsPerSecond;
-        const int64 averageMicro    = _statusTickSampleCount > 0 ? _statusTickSumNanoseconds / _statusTickSampleCount / 1000 : 0;
+        const int64 averageMicro    = _statusTickSampleCount > 0 ? _statusTickSumNanoseconds / _statusTickSampleCount / constant::kNanosecondsPerMicrosecond : 0;
         const int32 serviceCount    = _serverServices != nullptr ? _serverServices->getRunningCount() : 0;
         const int32 connectionCount = _serverServices != nullptr ? _serverServices->getConnectionCount() : 0;
         uint64      residentBytes   = 0;
@@ -576,13 +601,58 @@ namespace sw
         (void)ProcessMetrics::tryGetResidentBytes( residentBytes, peakBytes ); // 답하지 못하면 0 을 적는다
         SW_LOG_INFO( "Dedicated server status - uptime %# s, tick %#%#, tick time avg %# us / max %# us (budget %# us), dropped ticks %#, services %# (connections %#), "
                      "resident %# MiB",
-                     uptimeSeconds, _tickCount, _bPaused == SW_TRUE ? " (paused)" : "", averageMicro, _statusTickMaxNanoseconds / 1000, _tickNanoseconds / 1000,
-                     _droppedTickCount, serviceCount, connectionCount, residentBytes / ServerAppInternal::kBytesPerMebibyte );
+                     uptimeSeconds, _tickCount, _bPaused == SW_TRUE ? " (paused)" : "", averageMicro, _statusTickMaxNanoseconds / constant::kNanosecondsPerMicrosecond, _tickNanoseconds / constant::kNanosecondsPerMicrosecond,
+                     _droppedTickCount, serviceCount, connectionCount, residentBytes / static_cast<uint64>( constant::kBytesPerMegabyte ) );
     }
+
+#if !defined( SW_SHIPPING )
+    bool ServerApp::startDebugTools()
+    {
+        if ( gv_stateHashHistory > 0 )
+            StateHashHistory::get().setCapacity( static_cast<uint32>( gv_stateHashHistory ) );
+        if ( gv_debugChannelPort <= 0 )
+            return true;
+        const uint16 port = static_cast<uint16>( gv_debugChannelPort );
+        _debugTransport   = StreamTransportFactory::createPlatformTransport();
+        _debugChannel     = make_unique<DebugChannel>();
+        DebugChannelSettings settings;
+        settings._bindAddress = NetAddress::makeLoopback( port );
+        settings._token       = gv_debugChannelToken;
+        StreamTransportSettings transportSettings;
+        transportSettings._idleTimeoutSeconds = 0.0; // 에디터는 서버가 멈춰 있는 동안에도 붙어 있다
+        const bool bStarted                   = _devConsole != nullptr &&
+                              _debugChannel->initialize( _debugTransport.get(), transportSettings, settings,
+                                                         SW_DELEGATE_LAMBDA( DebugChannelExecuteDelegate, [this]( string_view line, string& outReply )
+        {
+            // 일시정지 · 한 틱 진행은 개발 명령이 아니라 서버 루프의 명령이다 - 같은 길로 받는다. 답은 서버가 지금 어디인지다.
+            if ( executePauseCommand( line ) )
+            {
+                outReply = ( _bPaused == SW_TRUE ? "paused tick " : "running tick " ) + to_string( _tickCount );
+                return true;
+            }
+            return _devConsole->execute( line, outReply ) == DevConsoleResult::Ok;
+        } ) );
+        if ( bStarted == false )
+        {
+            SW_LOG_ERROR( "The debug channel was requested (-gv_debugChannelPort=%#) but could not start", gv_debugChannelPort );
+            _debugChannel.reset();
+            _debugTransport.reset();
+            return false;
+        }
+        return true;
+    }
+#endif
 
     void ServerApp::shutdown()
     {
         _console.stop();
+#if !defined( SW_SHIPPING )
+        if ( _debugChannel != nullptr )
+            _debugChannel->shutdown();
+        _debugChannel.reset();
+        _debugTransport.reset();
+        StateHashHistory::get().setCapacity( 0 );
+#endif
         vector<string>{}.swap( _listPendingCommand ); // 엔진 종료의 누수 보고 전에 해제한다(기동 뒤에 잡은 용량).
 #if SW_DEV_COMMANDS_ENABLED
         _devConsole.reset();

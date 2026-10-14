@@ -37,7 +37,7 @@ namespace sw
         /** @brief 나노초를 마이크로초 문자열(소수 셋째 자리까지)로 덧붙입니다. */
         void appendMicroseconds( string& out, uint64 nanos )
         {
-            out += to_string( nanos / 1000 );
+            out += to_string( nanos / constant::kNanosecondsPerMicrosecond );
             out += '.';
             const uint64 fraction = nanos % 1000;
             if ( fraction < 100 )
@@ -243,8 +243,8 @@ namespace sw
                 const float64         begin    = event.get( "ts" ).asFloat();
                 const float64         duration = event.get( "dur" ).asFloat();
                 ProfilerTimelineEvent loaded;
-                loaded._beginNanos = static_cast<uint64>( begin * 1000.0 + 0.5 );
-                loaded._endNanos   = loaded._beginNanos + static_cast<uint64>( duration * 1000.0 + 0.5 );
+                loaded._beginNanos = static_cast<uint64>( begin * constant::kNanosecondsPerMicrosecond + 0.5 );
+                loaded._endNanos   = loaded._beginNanos + static_cast<uint64>( duration * constant::kNanosecondsPerMicrosecond + 0.5 );
                 loaded._slot       = findSlot( event.get( "name" ).asString() );
                 outTrace._listThread[findThread( pid, tid )]._listEvent.push_back( loaded );
                 ++eventCount;
@@ -259,7 +259,7 @@ namespace sw
             }
             else if ( phase == "i" && event.get( "name" ).asString() == "Frame" )
             {
-                outTrace._listFrameBegin.push_back( static_cast<uint64>( event.get( "ts" ).asFloat() * 1000.0 + 0.5 ) );
+                outTrace._listFrameBegin.push_back( static_cast<uint64>( event.get( "ts" ).asFloat() * constant::kNanosecondsPerMicrosecond + 0.5 ) );
             }
         }
         if ( eventCount == 0 )
@@ -427,7 +427,7 @@ namespace sw
         }
         profiler.setEnabled( true ); // 스코프가 시계를 읽어야 사건이 쌓인다
         profiler.getTimeline().beginLongCapture( budget == 0 ? kDefaultEventBudgetPerThread : budget );
-        g_longRecording._endNanos    = seconds > 0.0 ? MonotonicClock::nowNanoseconds() + static_cast<int64>( seconds * 1.0e9 ) : 0;
+        g_longRecording._endNanos    = seconds > 0.0 ? MonotonicClock::nowNanoseconds() + static_cast<int64>( seconds * constant::kNanosecondsPerSecond ) : 0;
         g_longRecording._path        = string( path );
         g_longRecording._processName = string( processName );
         g_longRecording._bActive.store( true, std::memory_order_release );
@@ -509,9 +509,9 @@ namespace sw
             if ( --capture._framesUntilSave > 0 )
                 return;
             ProfilerTraceMeta meta      = makeCurrentMeta( processName );
-            const uint64      tickMicro = ( capture._slowEndNanos - capture._slowBeginNanos ) / 1000;
+            const uint64      tickMicro = ( capture._slowEndNanos - capture._slowBeginNanos ) / constant::kNanosecondsPerMicrosecond;
             meta._listMarker.push_back(
-                { "Slow tick " + to_string( tickMicro / 1000 ) + "." + to_string( ( tickMicro % 1000 ) / 100 ) + " ms", capture._slowBeginNanos } );
+                { "Slow tick " + to_string( tickMicro / constant::kMicrosecondsPerMillisecond ) + "." + to_string( ( tickMicro % constant::kMicrosecondsPerMillisecond ) / 100 ) + " ms", capture._slowBeginNanos } );
             const string path = makeDefaultTracePath( "slowtick", meta._wallUnixMilliseconds );
             string       reply;
             if ( saveRecentFramesWithMeta( profiler, ProfilerTimeline::kFrameCapacity - 1, path, meta, reply ) )
@@ -524,7 +524,7 @@ namespace sw
                 SW_LOG_WARNING( "Slow tick %# us - trace not saved: %#", tickMicro, reply );
             }
             // 저장 자체가 이 틱을 늦췄다 — 쿨다운은 저장이 끝난 뒤부터 센다.
-            capture._cooldownEndNanos = MonotonicClock::nowNanoseconds() + static_cast<int64>( kSlowFrameCooldownSeconds * 1.0e9 );
+            capture._cooldownEndNanos = MonotonicClock::nowNanoseconds() + static_cast<int64>( kSlowFrameCooldownSeconds * constant::kNanosecondsPerSecond );
             return;
         }
 
@@ -588,7 +588,7 @@ namespace sw
         /** @brief 마이크로초(실수) 시각에 나노초 이동을 더해 나노초 정수로 돌려줍니다(음수는 0). */
         uint64 shiftMicroseconds( float64 micro, int64 shiftNanos )
         {
-            const float64 nanos = micro * 1000.0 + static_cast<float64>( shiftNanos );
+            const float64 nanos = micro * constant::kNanosecondsPerMicrosecond + static_cast<float64>( shiftNanos );
             return nanos <= 0.0 ? 0 : static_cast<uint64>( nanos + 0.5 );
         }
     } // namespace
@@ -660,7 +660,7 @@ namespace sw
             }
             else
             {
-                pSource->_shiftNanos = ( pSource->_wallUnixMilliseconds - reference._wallUnixMilliseconds ) * 1000000 -
+                pSource->_shiftNanos = ( pSource->_wallUnixMilliseconds - reference._wallUnixMilliseconds ) * constant::kNanosecondsPerMillisecond -
                                        ( pSource->_monotonicNanoseconds - reference._monotonicNanoseconds );
                 pSource->_alignment = "wall clock (off by the clock difference between hosts)";
             }

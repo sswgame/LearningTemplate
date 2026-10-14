@@ -41,8 +41,7 @@ namespace sw
             /** @brief 그래프 막대 높이의 상한(밀리초)입니다. 30 FPS 의 두 배이며, 넘는 프레임은 상한에 붙입니다. */
             static constexpr float32 kGraphMaxMilliseconds = 66.7f;
             /** @brief 메모리 섹션이 보이는 태그 수입니다(살아 있는 바이트가 큰 순). */
-            static constexpr uint32  kMemoryTagLineCount = 4;
-            static constexpr float64 kBytesPerMegabyte   = 1024.0 * 1024.0;
+            static constexpr uint32 kMemoryTagLineCount = 4;
 
             /** @brief 활성 씬의 오브젝트 매니저입니다(씬이 없으면 nullptr). */
             static GameObjectManager* findActiveObjectManager()
@@ -54,7 +53,7 @@ namespace sw
             /** @brief 프로파일러 구간 @p slot 의 마지막으로 접힌 프레임 시간(밀리초)입니다. */
             static float64 readLastFrameMilliseconds( uint32 slot )
             {
-                return static_cast<float64>( engine::getFrameProfiler().getLastFrameNanos( slot ) ) / 1.0e6;
+                return static_cast<float64>( engine::getFrameProfiler().getLastFrameNanos( slot ) ) / constant::kNanosecondsPerMillisecond;
             }
 
             static const utf8* getGlyphStyleName( InputGlyphStyle style )
@@ -102,11 +101,11 @@ namespace sw
                 {
                     total += pSeconds[index];
                     worst                 = MathUtil::max( worst, pSeconds[index] );
-                    arrMillisecond[index] = pSeconds[index] * 1000.0f;
+                    arrMillisecond[index] = pSeconds[index] * constant::kMillisecondsPerSecond;
                 }
                 const float32 average = total / static_cast<float32>( count );
                 writer.addLineFormat( "FPS", "%.1f", average > 0.0f ? 1.0f / average : 0.0f );
-                writer.addLineFormat( "frame", "%.2f ms (worst %.2f)", average * 1000.0f, worst * 1000.0f );
+                writer.addLineFormat( "frame", "%.2f ms (worst %.2f)", average * constant::kMillisecondsPerSecond, worst * constant::kMillisecondsPerSecond );
                 writer.addGraph( arrMillisecond, count, kGraphMaxMilliseconds );
             }
 
@@ -140,17 +139,17 @@ namespace sw
                 if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
                 {
                     // 태그 집계(Debug 의 MemoryProfiler)가 없는 구성이다. 운영체제 힙만 본다.
-                    writer.addLineFormat( "heap", "%.1f MB", static_cast<float64>( MemoryProfiler::getPlatformHeapBytes() ) / kBytesPerMegabyte );
+                    writer.addLineFormat( "heap", "%.1f MB", static_cast<float64>( MemoryProfiler::getPlatformHeapBytes() ) / constant::kBytesPerMegabyte );
                     return;
                 }
-                writer.addLineFormat( "live", "%.1f MB", static_cast<float64>( pProfiler->getLiveAllocatedBytes() ) / kBytesPerMegabyte );
+                writer.addLineFormat( "live", "%.1f MB", static_cast<float64>( pProfiler->getLiveAllocatedBytes() ) / constant::kBytesPerMegabyte );
                 const array<MemoryTag, kMemoryTagCount> arrTag = pProfiler->makeTagOrderByLiveBytes();
                 for ( uint32 index = 0; index < kMemoryTagLineCount && index < kMemoryTagCount; ++index )
                 {
                     const uint64 bytes = pProfiler->getStats( arrTag[index] )._currentAllocatedBytes.load( std::memory_order_relaxed );
                     if ( bytes == 0 )
                         break;
-                    writer.addLineFormat( MemoryProfiler::getMemoryTagName( arrTag[index] ), "%.1f MB", static_cast<float64>( bytes ) / kBytesPerMegabyte );
+                    writer.addLineFormat( MemoryProfiler::getMemoryTagName( arrTag[index] ), "%.1f MB", static_cast<float64>( bytes ) / constant::kBytesPerMegabyte );
                 }
             }
 

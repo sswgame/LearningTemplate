@@ -12,7 +12,7 @@
 namespace sw
 {
     /** @class FakeReceiptValidator @brief 가짜 영수증 검증 제공자입니다. */
-    class SW_KIT_API FakeReceiptValidator final : public IReceiptValidator
+    class SW_KIT_SERVER_API FakeReceiptValidator final : public IReceiptValidator
     {
     public:
         FakeReceiptValidator();

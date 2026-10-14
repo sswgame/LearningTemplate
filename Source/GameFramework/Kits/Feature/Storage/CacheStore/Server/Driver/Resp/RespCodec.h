@@ -6,6 +6,7 @@
  *          - 상한은 벌크 1 MiB, 줄 64 KiB, 배열 원소 2^20, 중첩 8이다. 넘으면 `Error` 를 반환하고 연결을 닫는다. 계약의 값 상한 64 KiB 보다 충분히 크다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -29,7 +30,7 @@ namespace sw
 namespace sw
 {
     /** @brief RESP2 값 하나입니다. */
-    struct SW_KIT_API RespValue
+    struct SW_KIT_SERVER_API RespValue
     {
         vector<uint8>     _bytes{};       ///< SimpleString, Error, BulkString 의 내용이다
         vector<RespValue> _listElement{}; ///< Array
@@ -53,7 +54,7 @@ namespace sw
      * @class RespCommand
      * @brief 명령 하나(벌크 문자열 배열)를 만듭니다. 인자를 추가한 뒤 `appendTo` 로 전송 바이트를 붙입니다.
      */
-    class SW_KIT_API RespCommand
+    class SW_KIT_SERVER_API RespCommand
     {
     public:
         explicit RespCommand( string_view name );
@@ -91,10 +92,10 @@ namespace sw
      * @class RespParser
      * @brief 증분 파서입니다. 받은 바이트를 `append` 하고 `next` 가 `NeedMore` 를 반환할 때까지 부릅니다. 한 스레드에서만 씁니다.
      */
-    class SW_KIT_API RespParser
+    class SW_KIT_SERVER_API RespParser
     {
     public:
-        static constexpr int64 kMaxBulkSize    = 1024ll * 1024;
+        static constexpr int64 kMaxBulkSize    = static_cast<int64>( constant::kBytesPerMegabyte );
         static constexpr int64 kMaxLineSize    = 64ll * 1024;
         static constexpr int64 kMaxArrayCount  = 1 << 20;
         static constexpr int32 kMaxNestedDepth = 8;

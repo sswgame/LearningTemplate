@@ -114,16 +114,17 @@ namespace sw::editor
                 FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onOpenSceneDialogResult ) );
             }
 
+            // 포커스된 툴 창(미리보기 씬)이 자기 스택을 걸었으면 그것을 — 미리보기 창의 Undo 가 메인 씬 기록을 건드리지 않는다.
             static void commandUndo()
             {
-                CommandStack* pStack = getService<CommandStack>();
+                CommandStack* pStack = getFocusedCommandStack();
                 if ( pStack != nullptr )
                     pStack->undo();
             }
 
             static void commandRedo()
             {
-                CommandStack* pStack = getService<CommandStack>();
+                CommandStack* pStack = getFocusedCommandStack();
                 if ( pStack != nullptr )
                     pStack->redo();
             }

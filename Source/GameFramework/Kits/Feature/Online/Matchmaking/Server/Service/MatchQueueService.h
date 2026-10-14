@@ -109,7 +109,7 @@ namespace sw
      * @class MatchQueueService
      * @brief 매칭 대기열 서비스입니다.
      */
-    class SW_KIT_API MatchQueueService
+    class SW_KIT_SERVER_API MatchQueueService
     {
     public:
         MatchQueueService();

@@ -174,6 +174,9 @@ namespace sw
         HostViewTarget& scene = frameState._views._scene;
         if ( _editorAPI.getSceneViewport != nullptr )
             _editorAPI.getSceneViewport( _editor, &scene._renderTarget, &scene._width, &scene._height );
+        // 툴 창의 미리보기 씬 — 보이는 창만 온다(`Engine::tick` 이 씬마다 따로 그린다).
+        if ( _editorAPI.getSceneViews != nullptr )
+            frameState._views._sceneViewCount = _editorAPI.getSceneViews( _editor, frameState._views._arrSceneView, kMaxHostSceneView );
     }
 
     void EditorModuleHost::updateEditorUI( float32 /*deltaTime*/ )

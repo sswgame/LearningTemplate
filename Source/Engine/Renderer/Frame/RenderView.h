@@ -165,16 +165,41 @@ namespace sw
 
 namespace sw
 {
+    /// @brief 호스트가 한 프레임에 요청할 수 있는 미리보기 씬 뷰의 최대 수입니다(`HostViewTargets::_arrSceneView`).
+    inline constexpr uint32 kMaxHostSceneView = 8;
+
+    /**
+     * @struct HostSceneView
+     * @brief 호스트(에디터 툴 창)가 이번 프레임에 그려 달라고 요청한 **미리보기 씬** 뷰 하나입니다. 값 타입이며 C ABI 를 넘어갑니다(`EditorAPI::getSceneViews`).
+     * @details 어느 씬(`_sceneKey` — `SceneManager::getPreviewSceneKey`), 어느 눈(`_viewProj` · `_cameraPos`), 어느 렌더 타깃(`_target`)인지를 고른다.
+     *          씬마다 GT 의 스냅샷 빌더 하나 · RT 의 렌더러 하나가 따로 돌므로 메인 씬과 섞이지 않는다(`RenderPacketBuilder::populateScenePreviews`).
+     *          안 보이는 창은 요청하지 않는다 — 요청이 없는 씬은 그리지 않는다.
+     */
+    struct HostSceneView
+    {
+        float4x4           _viewProj{};
+        float3             _cameraPos{};
+        RenderViewSettings _settings{};
+        HostViewTarget     _target{};
+        uint32             _sceneKey{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct HostViewTargets
-     * @brief 호스트가 이번 프레임에 그려 달라고 요청한 뷰 둘입니다(`Engine::tick`).
+     * @brief 호스트가 이번 프레임에 그려 달라고 요청한 뷰들입니다(`Engine::tick`) — 활성 씬의 두 슬롯과 미리보기 씬 목록입니다.
      * @details 게임 뷰는 게임 카메라, 화면 UI, 화면 사각형 뷰를 담는 주 출력이고, 씬 뷰는 호스트 카메라의 추가 뷰(`RenderViewOutputKind::HostTarget`)다.
      *          게임 뷰가 없고 씬 뷰만 있으면 씬 뷰가 주 출력이 된다(화면 UI와 화면 사각형 뷰 없이). 둘 다 없으면 백버퍼에 게임 카메라로 그린다(에디터 없는 실행).
+     *          미리보기 씬 뷰(`_arrSceneView`)는 활성 씬이 아닌 씬을 자기 타깃에 그린다. 고정 배열인 까닭은 호스트가 프레임마다 이 값을 새로 채우기 때문이다(힙을 건드리지 않는다).
      */
     struct HostViewTargets
     {
         HostViewTarget _game;
         HostViewTarget _scene;
+        HostSceneView  _arrSceneView[kMaxHostSceneView]{};
+        uint32         _sceneViewCount{ 0 };
 
         /** @brief 씬 뷰가 주 출력인지 나타냅니다(게임 뷰가 없는 경우입니다). */
         bool isSceneViewMain() const { return _game.isValid() == false && _scene.isValid(); }

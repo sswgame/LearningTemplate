@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Server/ServiceStoreFactory.h"
 
+#include "GameFramework/Base/Online/Server/OnlineStoreDriverTable.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Server/Driver/Postgres/PostgresDriver.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Server/SQLServiceStore.h"
@@ -28,7 +29,7 @@ namespace sw
     unique_ptr<IServiceStore> ServiceStoreFactory::createServiceStore( string_view driverName, string_view connection, string_view secret, int32 workerCount, int64 nowMs,
                                                                        string& outError )
     {
-        if ( driverName == kMemoryDriverName )
+        if ( driverName == OnlineStoreDriverTable::kMemoryDriverName )
             return make_unique<MemoryServiceStore>( &ServiceStoreFactoryInternal::getMemoryDatabase() );
         // 이 모듈의 드라이버(PostgreSQL)를 처음 쓸 때 등록한다. 같은 객체를 두 번 등록하면 레지스트리가 조용히 무시한다.
         SQLDriverRegistry::registerDriver( &PostgresDriver::getInstance() );

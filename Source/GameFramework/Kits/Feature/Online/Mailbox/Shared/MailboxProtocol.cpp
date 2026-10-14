@@ -4,6 +4,7 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "GameFramework/Base/Online/Service/OnlineLimit.h"
 #include "GameFramework/Base/Online/Service/OnlineReplyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 
@@ -13,7 +14,6 @@ namespace sw
     {
         struct MailboxProtocolInternal
         {
-            static constexpr int32 kMaxBalanceCount = 1024;
 
             static void writeAttachments( BitWriter& outWriter, const vector<ServiceMailAttachment>& listAttachment )
             {
@@ -56,7 +56,8 @@ namespace sw
 
             [[nodiscard]] static bool readMail( BitReader& reader, MailView& outMail )
             {
-                const bool bTextOk = ServiceKeyUtil::readString( reader, MailboxProtocol::kMaxKeySize, outMail._mailKey ) &&
+                // 메일 키 길이 상한은 `OnlineLimit::kMaxKeySize` 를 따른다.
+                const bool bTextOk = ServiceKeyUtil::readString( reader, OnlineLimit::kMaxKeySize, outMail._mailKey ) &&
                                      ServiceKeyUtil::readString( reader, ServiceMailConstant::kMaxTitleSize, outMail._titleKey ) &&
                                      ServiceKeyUtil::readString( reader, ServiceMailConstant::kMaxBodySize, outMail._body ) &&
                                      ServiceKeyUtil::readString( reader, ServiceMailConstant::kMaxSenderNameSize, outMail._senderName );
@@ -96,7 +97,8 @@ namespace sw
 
     bool MailboxProtocol::readRequest( BitReader& reader, MailboxRequest& outRequest )
     {
-        const bool  bTextOk  = ServiceKeyUtil::readString( reader, kMaxKeySize, outRequest._mailKey ) && ServiceKeyUtil::readString( reader, kMaxKeySize, outRequest._cursor );
+        // 메일 키와 커서 길이 상한은 `OnlineLimit::kMaxKeySize` 를 따른다.
+        const bool  bTextOk  = ServiceKeyUtil::readString( reader, OnlineLimit::kMaxKeySize, outRequest._mailKey ) && ServiceKeyUtil::readString( reader, OnlineLimit::kMaxKeySize, outRequest._cursor );
         const int64 maxCount = reader.readVarInt();
         outRequest._maxCount = static_cast<int32>( maxCount );
         const bool bCountOk  = 1 <= maxCount && maxCount <= kMaxListCount;
@@ -126,10 +128,11 @@ namespace sw
         if ( OnlineReplyUtil::readEnum( reader, MailboxResult::Count, outReply._result ) == false )
             return false;
         outReply._claimedCount = static_cast<int32>( reader.readVarInt() );
-        if ( ServiceKeyUtil::readString( reader, kMaxKeySize, outReply._nextCursor ) == false )
+        // 커서 길이 상한은 `OnlineLimit::kMaxKeySize` 를 따른다.
+        if ( ServiceKeyUtil::readString( reader, OnlineLimit::kMaxKeySize, outReply._nextCursor ) == false )
             return false;
         const uint64 balanceCount = reader.readVarUint();
-        if ( balanceCount > static_cast<uint64>( MailboxProtocolInternal::kMaxBalanceCount ) )
+        if ( balanceCount > static_cast<uint64>( OnlineLimit::kMaxBalanceCount ) )
             return false;
         outReply._listBalance.resize( static_cast<size_t>( balanceCount ) );
         for ( LedgerBalance& balance : outReply._listBalance )

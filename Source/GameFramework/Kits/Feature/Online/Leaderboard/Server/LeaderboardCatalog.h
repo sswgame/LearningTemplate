@@ -31,7 +31,7 @@ namespace sw
      * @class LeaderboardCatalog
      * @brief 보드와 업적 정의 모음입니다. 읽은 뒤에는 바꾸지 않습니다.
      */
-    class SW_KIT_API LeaderboardCatalog : public XMLCatalog<LeaderboardCatalog>
+    class SW_KIT_SERVER_API LeaderboardCatalog : public XMLCatalog<LeaderboardCatalog>
     {
         friend class XMLCatalog<LeaderboardCatalog>;
 

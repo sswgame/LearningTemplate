@@ -20,7 +20,7 @@ namespace sw
                 origin = pTick[slotIndex];
         }
 
-        const float64 microPerTick = nanosPerTick / 1000.0;
+        const float64 microPerTick = nanosPerTick / constant::kNanosecondsPerMicrosecond;
         outFrame._originNanos      = convertTickToNanos( origin, nanosPerTick );
         outFrame._listMicro.resize( constant::kMaxGPUTimestampSlot );
         for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGPUTimestampSlot; ++slotIndex )
