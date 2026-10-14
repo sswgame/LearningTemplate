@@ -27,7 +27,7 @@ namespace sw::editor
 {
     EditorExtensionRegistrationList::EditorExtensionRegistrationList( const utf8* pKindName )
         : _pKindName{ pKindName }
-        , _registered{ RegistrationOrder::ByOrderThenName, true }
+        , _registered{ pKindName, RegistrationOrder::ByOrderThenName, true }
         , _generation{ 0 }
     {
     }

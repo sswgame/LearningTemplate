@@ -82,7 +82,7 @@ namespace sw
          * @brief 이 프로세스를 띄운 호스트의 빌드 타깃(`"Client"`, `"Server"`)을 정합니다. 그 타깃이 패키지에서 빼는 에셋 종류
          *        (`Config/Engine/CookContract.json` 의 `target_excluded_asset_kinds`. 서버는 텍스처, 셰이더 바이너리, 오디오)는 이 호출 뒤부터
          *        **없는 것**으로 취급합니다. 읽기는 조용히 false 를 반환하고 `hasResource` 도 false 입니다("파일 없음" 경고와 오류를 남기지 않습니다).
-         * @details 쿠커(`CookAssets.py --build-target`)가 같은 테이블로 그 파일을 팩에서 뺀다. 엔진 기동 첫머리(`EngineLoop::initialize`)에서
+         * @details 쿠커(`CookAssets.py --build-target`)가 같은 테이블로 그 파일을 팩에서 뺀다. 엔진 기동 첫머리(`Engine::initialize`)에서
          *          한 번 부르고, 그 뒤로는 읽기만 한다. 비우면(`""`) 아무것도 빼지 않는다(테스트 하네스).
          */
         static void setHostTarget( string_view buildTargetName );

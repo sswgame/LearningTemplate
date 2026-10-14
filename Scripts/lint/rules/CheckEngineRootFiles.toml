@@ -7,8 +7,8 @@ root_file = [
     "pch.h",
     "pch.cpp",
     "EngineMinimal.h",
-    "EngineLoop.h",
-    "EngineLoop.cpp",
+    "Engine.h",
+    "Engine.cpp",
     "HeadlessSubsystem.h",
     "HeadlessSubsystem.cpp",
 ]

@@ -72,18 +72,18 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
     # --- 엔진 기본값 ---------------------------------------------------------------------------------------------------------
     ConfigFileEntry(
         page="EngineConfig", pathPattern="Config/Engine/EngineConfig.json", layer=kLayerEngineDefault, fileFormat="json",
-        reader="`ConfigManager::ensureConfig<EngineConfig>` (`EngineLoop` Config 단계)",
+        reader="`ConfigManager::ensureConfig<EngineConfig>` (`Engine` Config 단계)",
         readWhen="기동 · 에디터 핫 리로드(창 크기 · 백엔드처럼 기동 때만 쓰는 값은 다음 실행부터)",
         shipping="configure 때 exe 에 구워 넣음(`ShippingHostDefaults.h`) — 디스크의 파일은 읽지 않는다", bCommitted=True,
         typeName="EngineConfig", header="Source/Engine/Config/EngineConfig.h", keyStyle=kKeyStyleJsonMember),
     ConfigFileEntry(
         page="MemoryBudget", pathPattern="Config/Engine/MemoryBudget.json", layer=kLayerEngineDefault, fileFormat="json",
-        reader="`MemoryBudgetMonitor::loadBudgetFile` (`EngineLoop` Config 단계)", readWhen="기동",
+        reader="`MemoryBudgetMonitor::loadBudgetFile` (`Engine` Config 단계)", readWhen="기동",
         shipping="읽지 않음(배포본에는 메모리 프로파일러가 없다)", bCommitted=True,
         typeName="MemoryBudgetFile", header="Source/Engine/Profiling/MemoryBudgetMonitor.h", keyStyle=kKeyStyleJsonMember),
     ConfigFileEntry(
         page="EngineDefaultAssets", pathPattern="Resource/engine/data/enginedefaultassets.xml", layer=kLayerEngineDefault, fileFormat="xml",
-        reader="`EngineDefaultAssets::loadFromResource` (`EngineLoop` 엔진 셸 단계)", readWhen="기동",
+        reader="`EngineDefaultAssets::loadFromResource` (`Engine` 엔진 셸 단계)", readWhen="기동",
         shipping="엔진 팩에 실림", bCommitted=True,
         typeName="EngineDefaultAssets", header="Source/Engine/Config/EngineDefaultAssets.h", keyStyle=kKeyStyleXmlMember),
     ConfigFileEntry(
@@ -117,18 +117,18 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         shipping="엔진 팩에 실림", bCommitted=True),
     ConfigFileEntry(
         page="UserSettings", pathPattern="Resource/engine/settings/engine.settings.xml", layer=kLayerEngineDefault, fileFormat="xml",
-        reader="`UserSettingsManager::loadSchema` (`EngineLoop` UserSettings 단계)", readWhen="기동",
+        reader="`UserSettingsManager::loadSchema` (`Engine` UserSettings 단계)", readWhen="기동",
         shipping="엔진 팩에 실림", bCommitted=True,
         note="플레이어 옵션 메뉴의 스키마 — 설정 표는 생성 페이지 `UserSettings.md`"),
     ConfigFileEntry(
         page="UserSettings", pathPattern="Resource/engine/settings/debughud.settings.xml", layer=kLayerEngineDefault, fileFormat="xml",
-        reader="`UserSettingsManager::loadSchema` (`EngineLoop` UserSettings 단계 — Dev 만)", readWhen="기동",
+        reader="`UserSettingsManager::loadSchema` (`Engine` UserSettings 단계 — Dev 만)", readWhen="기동",
         shipping="엔진 팩에 실리지만 Shipping 은 읽지 않음(디버그 HUD 가 없다)", bCommitted=True,
         note="디버그 HUD 상태(`debug.*`) — 엔진 스키마에 덧붙는다"),
     # --- 게임 프리셋 --------------------------------------------------------------------------------------------------------
     ConfigFileEntry(
         page="GameConfig", pathPattern="Config/Game/*.json", layer=kLayerGamePreset, fileFormat="json",
-        reader="`ConfigManager::ensureConfig<GameConfig>` (`EngineLoop` Config 단계)",
+        reader="`ConfigManager::ensureConfig<GameConfig>` (`Engine` Config 단계)",
         readWhen="기동 · 에디터 핫 리로드 — Dev 는 `-game=<이름>`(없으면 빌드의 활성 게임 `SW_ACTIVE_GAME`)이 파일 하나를 고른다(`GameSelection`)",
         shipping="configure 때 exe 에 구워 넣음(`ShippingGameDefaults.h`)", bCommitted=True,
         typeName="GameConfig", header="Source/Engine/Config/GameConfig.h", keyStyle=kKeyStyleJsonMember,

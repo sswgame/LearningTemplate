@@ -214,7 +214,7 @@ namespace sw
         void   registerWidgetComponent( WidgetComponent& component );
         void   unregisterWidgetComponent( WidgetComponent& component );
         uint32 getWidgetComponentCount() const { return static_cast<uint32>( _listWidgetComponent.size() ); }
-        /** @brief World 위젯 컴포넌트의 렌더 텍스처 목록을 덧붙입니다. `EngineLoop` 가 렌더 패킷 캔버스의 대상 목록에 넣으며, 렌더러가 장면 앞에서 그립니다. */
+        /** @brief World 위젯 컴포넌트의 렌더 텍스처 목록을 덧붙입니다. `Engine` 가 렌더 패킷 캔버스의 대상 목록에 넣으며, 렌더러가 장면 앞에서 그립니다. */
         void collectWorldCanvases( vector<CanvasTargetDrawList>& inoutListTarget ) const;
 
         // --- 오프스크린 화면(에디터 UI 미리보기) -----------------------------------------------
@@ -324,7 +324,7 @@ namespace sw
         /** @brief 지금 글리프 캐시, 텍스트 레이아웃, 배율, 프레임 번호로 그리기 컨텍스트를 만듭니다(그리기 순회에 넘깁니다). */
         UIPaintContext makePaintContext() const;
         /**
-         * @brief 이번 프레임의 UI 그리기 목록입니다(물리 픽셀, 대상 크기는 뷰포트의 물리 크기). `EngineLoop` 가 렌더 패킷의 주 출력 캔버스에 싣습니다.
+         * @brief 이번 프레임의 UI 그리기 목록입니다(물리 픽셀, 대상 크기는 뷰포트의 물리 크기). `Engine` 가 렌더 패킷의 주 출력 캔버스에 싣습니다.
          * @details 화면을 그리기 순서(레이어, 쌓인 순서)로 이어 붙이면서 화면마다 위젯 그리기 캐시를 연결하고, 탐색 입력 방식이면 포커스 테두리를 그 화면 위에 덧그린다.
          */
         const CanvasDrawList& getCanvas() const { return _canvas; }

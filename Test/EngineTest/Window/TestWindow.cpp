@@ -82,7 +82,7 @@ SW_TEST_CASE( WindowTest, ResizeCallbackAndCustomMessageHandler )
  * @details `IWindow::getActiveWindow()` 는 전역 하나를 돌려준다. 그 창이 파괴돼도 전역이
  *          그대로 남으면, 뒤에 부르는 쪽(RHI 초기화 · 에디터 명령 · 프레임 트랜지언트)이
  *          **죽은 포인터**를 받는다. 파괴 전에 손으로 끊는 것은 한 경로의 규율일 뿐이다 —
- *          `EngineLoop` 은 App 이 없는 임베드 시나리오에서 창을 전역에 놓아둔 채 소유를
+ *          `Engine` 은 App 이 없는 임베드 시나리오에서 창을 전역에 놓아둔 채 소유를
  *          호출자에게 넘기고, 테스트도 App 을 거치지 않는다. 소멸자에서 끊으면 어느 경로로 죽어도 참이 된다.
  */
 SW_TEST_CASE( WindowTest, DestroyedActiveWindowClearsGlobal )

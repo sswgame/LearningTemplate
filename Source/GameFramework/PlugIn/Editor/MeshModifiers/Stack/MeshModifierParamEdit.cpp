@@ -1,6 +1,6 @@
 /**
  * @file MeshModifierParamEdit.cpp
- * @brief 패널 매개변수 편집의 순수 로직을 구현합니다 — NumberList 행 연산, 열 선언 검사, 곡선 키 ↔ `FloatCurve` 변환, 구역 순서.
+ * @brief 패널 매개변수 편집의 순수 로직을 구현합니다 — NumberList 행 연산, 열 선언 검사, 구역 순서(목록 항목 연산은 헤더의 템플릿).
  */
 #include "pch.h"
 
@@ -8,7 +8,8 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Utility/FloatCurve.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Reflection/TypeRegistry.h"
 
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifier.h"
 
@@ -123,37 +124,22 @@ namespace sw::editor
         return true;
     }
 
-    void MeshModifierParamEdit::makeFloatCurve( const vector<float2>& listKey, FloatCurve& outCurve )
+    bool MeshModifierParamEdit::matchesComponentHint( const GameObject& object, const utf8* pComponentHint )
     {
-        outCurve._listKey.clear();
-        outCurve._listKey.reserve( listKey.size() );
-        for ( const float2& key : listKey )
+        if ( pComponentHint == nullptr || pComponentHint[0] == '\0' )
+            return true;
+        const hashed_string hintName( pComponentHint );
+        const TypeInfo*     pHintType = engine::getTypeRegistry().findType( hintName );
+        if ( pHintType == nullptr )
+            return object.findComponentByTypeName( hintName ) != nullptr;
+        bool bFound{ false };
+        object.forEachComponent( [&]( Component* pComponent )
         {
-            FloatCurveKey curveKey{};
-            curveKey._time          = key._x;
-            curveKey._value         = key._y;
-            curveKey._interpolation = CurveInterpolation::Linear;
-            curveKey._bAutoTangent  = false;
-            outCurve._listKey.push_back( curveKey );
-        }
-    }
-
-    void MeshModifierParamEdit::makeCurveKeys( const FloatCurve& curve, vector<float2>& outListKey )
-    {
-        outListKey.clear();
-        outListKey.reserve( curve._listKey.size() );
-        for ( const FloatCurveKey& curveKey : curve._listKey )
-        {
-            if ( MathUtil::isFinite( curveKey._time ) == false || MathUtil::isFinite( curveKey._value ) == false )
-                continue;
-            const float2 key{ MathUtil::saturate( curveKey._time ), curveKey._value };
-            size_t       insertIndex = outListKey.size();
-            while ( insertIndex > 0 && outListKey[insertIndex - 1]._x > key._x )
-            {
-                --insertIndex;
-            }
-            outListKey.insert( outListKey.begin() + static_cast<ptrdiff_t>( insertIndex ), key );
-        }
+            const TypeInfo* pTypeInfo = pComponent->getTypeInfo();
+            if ( pTypeInfo != nullptr && pTypeInfo->isDerivedFrom( pHintType ) )
+                bFound = true;
+        } );
+        return bFound;
     }
 
     void MeshModifierParamEdit::makeGroupOrder( const vector<MeshModifierParamDef>& listDef, vector<string>& outListGroup )

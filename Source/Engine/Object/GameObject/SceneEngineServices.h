@@ -2,7 +2,7 @@
  * @file SceneEngineServices.h
  * @brief 씬 매니저 · 씬 · 오브젝트 매니저가 쓰는 엔진 서비스 묶음입니다. 만드는 쪽이 생성자나 `initialize` 로 넘기고, 받는 쪽은 한 번 들고 씁니다.
  * @details 이 묶음을 받는 클래스(`SceneManager` · `Scene` · `GameObjectManager` · `ScenePhysics` · `SceneAudio`)는 전역 조회(`engine::get*()`)를 하지 않습니다.
- *          호스트(`EngineLoop` · 테스트 하네스)가 서비스 표를 묶은 뒤 `SceneManager::initialize` 로 넘기고, 씬 매니저가 만드는 씬과 그 오브젝트 매니저로
+ *          호스트(`Engine` · 테스트 하네스)가 서비스 표를 묶은 뒤 `SceneManager::initialize` 로 넘기고, 씬 매니저가 만드는 씬과 그 오브젝트 매니저로
  *          그대로 내려갑니다. 인자 없는 생성자는 바인딩된 표에서 **만들 때 한 번** 읽습니다(`makeFromBoundEngine`) — 테스트 · 쿠커가 손으로 만드는 씬을 위한 것입니다.
  *          비어 있는 칸은 "그 서비스가 없다" 는 뜻이고, 받는 쪽은 그 일을 건너뜁니다(전역 표를 다시 찾아가지 않습니다).
  *          `EngineServices.h` 는 엔진 · 앱 · 테스트 전용이라 여기서는 전방 선언만 씁니다 — 게임 모듈도 이 헤더를 지나 `GameObjectManager.h` 를 읽습니다.

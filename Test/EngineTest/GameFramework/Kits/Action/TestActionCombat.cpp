@@ -616,7 +616,7 @@ SW_TEST_CASE( ActionCombatTest, DamageReachesSubscribersInTheSameFrame )
 {
     EventDispatcher                    dispatcher;
     const ScopedEventDispatcherService scopedDispatcher{ dispatcher };
-    dispatcher.processEvents(); // 이 스레드가 버스 스레드가 된다(엔진에서는 `EngineLoop` 의 게임 스레드)
+    dispatcher.processEvents(); // 이 스레드가 버스 스레드가 된다(엔진에서는 `Engine` 의 게임 스레드)
     vector<int32> listChannelHp;
     dispatcher.subscribe<DamageAppliedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const DamageAppliedEvent& )>, [&listChannelHp]( const DamageAppliedEvent& event )
     { listChannelHp.push_back( event._remainingHp ); } ) );

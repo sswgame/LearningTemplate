@@ -7,7 +7,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/EngineLoop.h"
+#include "Engine/Engine.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
@@ -50,7 +50,7 @@ namespace sw
     SW_LOG_CALLER( "App" );
 
     RHIBackendSwitcher::RHIBackendSwitcher()
-        : _pEngineLoop{ nullptr }
+        : _pEngine{ nullptr }
         , _pModuleHost{ nullptr }
         , _failedSwapCount{ 0 }
         , _bEnableEditor{ SW_FALSE }
@@ -61,7 +61,7 @@ namespace sw
 
     bool RHIBackendSwitcher::findCommittedBackend( RHIBackend& outBackend ) const
     {
-        const RHI* pRHI = _pEngineLoop != nullptr ? _pEngineLoop->getRHI() : nullptr;
+        const RHI* pRHI = _pEngine != nullptr ? _pEngine->getRHI() : nullptr;
         if ( pRHI == nullptr )
             return false;
         outBackend = pRHI->getCommittedBackend();
@@ -70,7 +70,7 @@ namespace sw
 
     bool RHIBackendSwitcher::isSwapPending() const
     {
-        const RHI* pRHI = _pEngineLoop != nullptr ? _pEngineLoop->getRHI() : nullptr;
+        const RHI* pRHI = _pEngine != nullptr ? _pEngine->getRHI() : nullptr;
         return pRHI != nullptr && pRHI->hasPendingBackendChange();
     }
 
@@ -84,9 +84,9 @@ namespace sw
         return true;
     }
 
-    void RHIBackendSwitcher::initialize( EngineLoop* pEngineLoop, EditorModuleHost* pModuleHost, bool bEnableEditor )
+    void RHIBackendSwitcher::initialize( Engine* pEngine, EditorModuleHost* pModuleHost, bool bEnableEditor )
     {
-        _pEngineLoop                          = pEngineLoop;
+        _pEngine                              = pEngine;
         _pModuleHost                          = pModuleHost;
         _bEnableEditor                        = bEnableEditor ? SW_TRUE : SW_FALSE;
         RHIBackendSwitcherInternal::s_pActive = this;
@@ -95,13 +95,13 @@ namespace sw
         if ( pBackendVariable != nullptr )
             pBackendVariable->_onValueChanged = SW_DELEGATE_METHOD( GlobalVariableChangedDelegate, &RHIBackendSwitcher::onBackendVariableChanged, this );
         // `-gv_rhiSwapAtFrame` 진단은 프레임 시작에서 본다 — 루프는 관찰자 목록만 안다.
-        if ( _pEngineLoop != nullptr )
-            _pEngineLoop->addFrameObserver( this );
+        if ( _pEngine != nullptr )
+            _pEngine->addFrameObserver( this );
     }
 
     void RHIBackendSwitcher::shutdown()
     {
-        // **훅부터, 조건 없이 뗀다.** 훅은 `_pEngineLoop` 와 상관없이 `initialize` 가 걸어 두므로, 루프를 받지 못한 채 초기화된
+        // **훅부터, 조건 없이 뗀다.** 훅은 `_pEngine` 와 상관없이 `initialize` 가 걸어 두므로, 루프를 받지 못한 채 초기화된
         // 경우(도구 · 부분 초기화)에도 떼지 않으면 사라진 `this` 를 가리키는 콜백이 전역 변수에 남는다.
         GlobalVariableInfo* pBackendVariable = RHIBackendSwitcherInternal::findBackendVariable();
         if ( pBackendVariable != nullptr )
@@ -109,9 +109,9 @@ namespace sw
 
         if ( RHIBackendSwitcherInternal::s_pActive == this )
             RHIBackendSwitcherInternal::s_pActive = nullptr;
-        if ( _pEngineLoop != nullptr )
-            _pEngineLoop->removeFrameObserver( this );
-        _pEngineLoop = nullptr;
+        if ( _pEngine != nullptr )
+            _pEngine->removeFrameObserver( this );
+        _pEngine     = nullptr;
         _pModuleHost = nullptr;
     }
 
@@ -122,10 +122,10 @@ namespace sw
 
     void RHIBackendSwitcher::applyIfPending()
     {
-        if ( _pEngineLoop == nullptr )
+        if ( _pEngine == nullptr )
             return;
 
-        const RHI* pRHI = _pEngineLoop->getRHI();
+        const RHI* pRHI = _pEngine->getRHI();
         if ( pRHI == nullptr || pRHI->hasPendingBackendChange() == false )
             return;
 
@@ -175,7 +175,7 @@ namespace sw
 
     void RHIBackendSwitcher::onBackendVariableChanged( const GlobalVariableInfo* pInfo )
     {
-        RHI* pRHI = _pEngineLoop != nullptr ? _pEngineLoop->getRHI() : nullptr;
+        RHI* pRHI = _pEngine != nullptr ? _pEngine->getRHI() : nullptr;
         if ( pInfo == nullptr || pRHI == nullptr )
             return;
 
@@ -193,7 +193,7 @@ namespace sw
 
     bool RHIBackendSwitcher::applyPendingChange()
     {
-        if ( _pEngineLoop == nullptr || _pModuleHost == nullptr )
+        if ( _pEngine == nullptr || _pModuleHost == nullptr )
             return false;
 
         // 모듈 핸들은 교체 **전에** 받아 둔다. 디바이스를 다시 만드는 동안 LiveReload 가 돌지는 않지만, 재생성 경로가 "테이블이
@@ -209,8 +209,8 @@ namespace sw
         // API 테이블은 놓지 않는다. 모듈을 언로드하지 않고 같은 테이블로 다시 만든다.
         _pModuleHost->suspendModules( ModuleScope::Both, false );
 
-        const bool bSwapOk = _pEngineLoop->applyPendingBackendChange();
-        RHI*       pRHI    = _pEngineLoop->getRHI();
+        const bool bSwapOk = _pEngine->applyPendingBackendChange();
+        RHI*       pRHI    = _pEngine->getRHI();
         if ( pRHI == nullptr || pRHI->hasDevice() == false )
         {
             SW_LOG_ERROR( "applyPendingBackendChange 실패 — RHI 디바이스가 없어 모듈을 재생성하지 않습니다." );

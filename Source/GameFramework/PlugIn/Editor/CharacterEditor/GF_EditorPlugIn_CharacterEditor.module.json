@@ -1,0 +1,25 @@
+{
+    "_name": "GF_EditorPlugIn_CharacterEditor",
+    "_version": "1.0.0",
+    "_kind": "EditorExtension",
+    "_description": "캐릭터 편집 에디터 확장 — 소켓 파일(.sockets.xml)과 외형 선택(슬롯 · 체형 · 꾸미기 값)을 편집하고 되돌리고 저장한다",
+    "_listDependency": [
+        {
+            "_name": "EditorModule"
+        },
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

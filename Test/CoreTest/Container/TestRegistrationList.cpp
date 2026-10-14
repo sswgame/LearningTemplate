@@ -28,7 +28,7 @@ SW_TEST_CASE( RegistrationListTest, RejectsDuplicatesAndKeepsInsertionOrderOnRem
     RegistrationProbe second{ 2 };
     RegistrationProbe third{ 3 };
 
-    RegistrationList<RegistrationProbe> list;
+    RegistrationList<RegistrationProbe> list{ "TestList" };
     SW_EXPECT_TRUE( list.add( &first ) == RegistrationResult::Added );
     SW_EXPECT_TRUE( list.add( &second ) == RegistrationResult::Added );
     SW_EXPECT_TRUE( list.add( &third ) == RegistrationResult::Added );
@@ -55,7 +55,7 @@ SW_TEST_CASE( RegistrationListTest, CopiesNamesAndRejectsADuplicateName )
     RegistrationProbe impostor{};
     RegistrationProbe nameless{};
 
-    RegistrationList<RegistrationProbe> list;
+    RegistrationList<RegistrationProbe> list{ "TestList" };
     {
         string transientName = "Material";
         SW_EXPECT_TRUE( list.add( &material, transientName ) == RegistrationResult::Added );
@@ -87,7 +87,7 @@ SW_TEST_CASE( RegistrationListTest, OrdersByOrderThenNameAndRequiresNames )
     RegistrationProbe earlyA{};
     RegistrationProbe unnamed{};
 
-    RegistrationList<RegistrationProbe> list{ RegistrationOrder::ByOrderThenName, true };
+    RegistrationList<RegistrationProbe> list{ "TestList", RegistrationOrder::ByOrderThenName, true };
     SW_EXPECT_TRUE( list.add( &late, "Late", 10 ) == RegistrationResult::Added );
     SW_EXPECT_TRUE( list.add( &earlyB, "B", 0 ) == RegistrationResult::Added );
     SW_EXPECT_TRUE( list.add( &earlyA, "A", 0 ) == RegistrationResult::Added );
@@ -113,7 +113,7 @@ SW_TEST_CASE( RegistrationListTest, ReloadScopeReplacesTheNameAndTheOldImageRemo
     RegistrationProbe newImage{ 2 };
     RegistrationProbe stranger{ 3 };
 
-    RegistrationList<RegistrationProbe> list;
+    RegistrationList<RegistrationProbe> list{ "TestList" };
     SW_EXPECT_TRUE( list.add( &oldImage, "play" ) == RegistrationResult::Added );
     SW_EXPECT_TRUE( list.add( &stranger, "play" ) == RegistrationResult::DuplicateName ); // 리로드가 아니면 거절한다
     {
@@ -138,7 +138,7 @@ SW_TEST_CASE( RegistrationListTest, CancelledReplacementRestoresTheOldRegistrati
     RegistrationProbe firstNew{ 2 };
     RegistrationProbe secondNew{ 3 };
 
-    RegistrationList<RegistrationProbe> list( RegistrationOrder::ByOrderThenName, true );
+    RegistrationList<RegistrationProbe> list( "TestList", RegistrationOrder::ByOrderThenName, true );
     SW_EXPECT_TRUE( list.add( &oldImage, "probe", 5 ) == RegistrationResult::Added );
     {
         RegistrationReloadScope scope;
@@ -159,4 +159,51 @@ SW_TEST_CASE( RegistrationListTest, CancelledReplacementRestoresTheOldRegistrati
     SW_EXPECT_TRUE( list.remove( &firstNew ) );
     SW_ASSERT_EQUAL( 1u, list.getCount() );
     SW_EXPECT_EQUAL( &secondNew, list.findByName( "probe" ) );
+}
+
+/**
+ * @brief [RegistrationListTest] 목록은 살아 있는 동안만 전역 열거(`RegistrationListBase::collect`)에 이름 · 항목 수와 함께 나오고, 사라지면 빠진다
+ * @details 열거는 모듈 로드 · 언로드 뒤 항목이 빠졌는지, 같은 이름이 둘 올랐는지를 한곳에서 보는 길이다(SmokeTest 의 모듈 언로드 검사가 쓴다).
+ */
+SW_TEST_CASE( RegistrationListTest, ListAppearsInTheGlobalEnumerationWhileAlive )
+{
+    const uint32 listCountBefore = RegistrationListBase::getListCount();
+    {
+        RegistrationProbe                   first{ 1 };
+        RegistrationProbe                   second{ 2 };
+        RegistrationList<RegistrationProbe> list{ "EnumerationProbeList" };
+        SW_EXPECT_TRUE( list.add( &first, "first" ) == RegistrationResult::Added );
+        SW_EXPECT_TRUE( list.add( &second, "second" ) == RegistrationResult::Added );
+        SW_EXPECT_EQUAL( listCountBefore + 1u, RegistrationListBase::getListCount() );
+
+        vector<const RegistrationListBase*> listRegistration;
+        RegistrationListBase::collect( listRegistration );
+        SW_ASSERT_EQUAL( static_cast<size_t>( listCountBefore + 1u ), listRegistration.size() );
+
+        const RegistrationListBase* pFound = nullptr;
+        for ( const RegistrationListBase* pList : listRegistration )
+        {
+            if ( string_view{ pList->getListName() } == "EnumerationProbeList" )
+                pFound = pList;
+        }
+        SW_ASSERT_NOT_NULL( pFound );
+        SW_EXPECT_EQUAL( 2u, pFound->getCount() );
+        SW_EXPECT_TRUE( string_view{ pFound->getNameAt( 0 ) } == "first" );
+        SW_EXPECT_TRUE( string_view{ pFound->getNameAt( 1 ) } == "second" );
+
+        // 살아 있는 모든 목록에서 같은 이름이 둘 오르지 않았다(리로드 표지 밖의 중복은 목록이 거절한다).
+        for ( const RegistrationListBase* pList : listRegistration )
+        {
+            for ( uint32 index = 0; index < pList->getCount(); ++index )
+            {
+                if ( pList->getNameAt( index ).empty() )
+                    continue;
+                for ( uint32 other = index + 1; other < pList->getCount(); ++other )
+                {
+                    SW_EXPECT_FALSE_MSG( pList->getNameAt( index ) == pList->getNameAt( other ), pList->getListName() );
+                }
+            }
+        }
+    }
+    SW_EXPECT_EQUAL( listCountBefore, RegistrationListBase::getListCount() );
 }

@@ -3,7 +3,7 @@
 """
 엔진 루트(`Source/Engine/` 바로 아래)에 둘 수 있는 파일을 허용 목록으로 막는다.
 
-루트는 기동 · 종료를 엮는 자리(`EngineLoop` · 헤드리스 단계)와
+루트는 기동 · 종료를 엮는 자리(`Engine` · 헤드리스 단계)와
 prelude · PCH · 빌드 파일뿐이다. 기능은 자기 폴더에 둔다 — 루트 파일은 층 검사(`CheckEngineLayers`)에서 맨 위 티어라
 무엇이든 include 할 수 있어서, 기능 파일이 루트에 앉으면 그 기능이 어느 층을 올려다보는지가 감춰진다.
 새 기능 파일의 자리는 `Scripts/lint/rules/CheckEngineLayers.toml` 의 티어 표에서 그 파일이 include 하는 폴더보다 높거나 같은 폴더다.
@@ -60,7 +60,7 @@ class CheckEngineRootFilesGate(LintGate):
         {
             "name": "엔진 루트의 기능 파일",
             "files": {
-                "Source/Engine/EngineLoop.cpp": "int engineLoopProbe() { return 0; }\n",
+                "Source/Engine/Engine.cpp": "int engineProbe() { return 0; }\n",
                 "Source/Engine/FeatureTools.cpp": "int featureProbe() { return 0; }\n",
             },
         },

@@ -109,7 +109,7 @@ cd build/Ninja-Debug/Bin
   p50 · p99 · 최악 프레임을 본다. 백분위는 옥타브 × 8 칸 히스토그램의 아래 끝(±9 %)이다. 구간 표는 스레드마다 **일한 시간**이고, 프레임이 빨라졌는지는
   `[Profile] wall N frames … us/frame` 와 `startup N ms` 로 본다. 중첩 합이 바깥보다 크면 표부터 의심한다.
 - **`RT.Frame` = `RT.BeginFrame`(펜스 대기 = GPU 백프레셔) + `RT.ExecutePacket` + `RT.Present`.** `GT.Packet.submit` 이 크면 GT 가 RT 를 기다린다. `GT.Frame` 은
-  `EngineLoop::tick` 만 재고 게임 모듈은 `App::run` 의 `GT.Game.update` · `GT.Game.fixedUpdate` · `GT.Editor.updateUI` 다. 2026-09-13 이전 RT 수치는 실제보다 작다.
+  `Engine::tick` 만 재고 게임 모듈은 `App::run` 의 `GT.Game.update` · `GT.Game.fixedUpdate` · `GT.Editor.updateUI` 다. 2026-09-13 이전 RT 수치는 실제보다 작다.
 - **병목은 씬 크기에 따라 뒤집힌다.** 큐브 2000 은 GPU 대기, 8000 은 게임 스레드다. 어느 쪽을 깎을지는 재고 나서 정한다. GT 가 병목이면 RT 구간이 늘어 보여도 경합일 뿐이다.
 - **타임라인은 Tracy 로 본다**(`-gv_tracy=1` + 같은 판 0.14.1 뷰어). 표(`-gv_profileFrames`)는 구간마다 접은 숫자라
   "어느 스레드가 무엇을 기다렸나" 는 Tracy 의 스레드 타임라인으로 본다. 계측은 `SW_PROFILE_SCOPE` 하나가 둘 다에 남긴다. GPU 줄도 쿼리는 한 벌이다
@@ -186,7 +186,7 @@ cd build/Ninja-Debug/Bin
   표는 같은 PC 의 전후만 견준다. 측정하는 동안은 `LT-wt/.slot1` ~ `.slot3` 를 모두 잡아 다른 에이전트의 빌드를 막는다. 남은 단계는 [빌드 속도 계획](plans/BuildSpeed.md)에 있다.
 - **CPU 시간 나눔**(빌드 속도 계획을 세울 때의 Debug `.ninja_log`, 명령 하나당 한 번 센 값이라 시점이 섞였을 수 있다): 일반 컴파일 2,435 s(2,413 TU, 약 85 %), PCH 생성 370 s(86 개, 13 %),
   링크 23 s(85 개, 1 % 미만), 리플렉션 코드젠 40 s(28 개, 1 %)였다. 모듈별 컴파일은 Engine 688 TU 805 s, GameFramework 833 TU 671 s, Editor 143 TU 123 s, Core 84 TU 72 s, 테스트 614 TU 732 s(26 %)였다.
-  16 스레드 기준 풀 빌드의 이론 하한은 약 170 ~ 180 초였다. 가장 느린 TU 는 `EngineLoop.cpp` 6.5 초이고, `Physics/Jolt/*` 래퍼가 5.3 ~ 6.7 초로 보인 것은 다른 빌드와 겹쳐 잰 값이었다(조용할 때 각 1.9 ~ 2.5 초).
+  16 스레드 기준 풀 빌드의 이론 하한은 약 170 ~ 180 초였다. 가장 느린 TU 는 `Engine.cpp` 6.5 초이고, `Physics/Jolt/*` 래퍼가 5.3 ~ 6.7 초로 보인 것은 다른 빌드와 겹쳐 잰 값이었다(조용할 때 각 1.9 ~ 2.5 초).
   `GameObjectManager.cpp` 를 PCH 없이 `-ftime-trace` 로 재면 전체 2.16 초 중 헤더 파싱(`Total Source`)이 1.22 초(57 %)였다.
 - **기준선**(2026-10-10, PC `SW` · AMD Ryzen 7 6800H 논리 코어 16, 커밋 `0d054352a`(= main `8653de727` + 스크립트 수정), `Ninja-Debug`, 타깃 `all`, 테스트 제외):
 
@@ -260,7 +260,7 @@ cd build/Ninja-Debug/Bin
 이 절은 변경을 확인하고 결함을 좁힐 때의 함정만 다룹니다.
 
 - **`-gv_fixedFrameDelta=<초>` 는 프레임마다 그 시간만 흘린다**(벽시계 무시) — 시나리오 · 픽셀 비교 · 벤치 재현이 기계와 상관없이 같은 게임 시간을 본다.
-  App 의 종료 코드는 `EngineLoop::requestQuit( code )` 가 정한다(0 성공, 시나리오 10 실패 · 11 읽기 오류 · 12 시간 초과 · 13 건너뜀).
+  App 의 종료 코드는 `Engine::requestQuit( code )` 가 정한다(0 성공, 시나리오 10 실패 · 11 읽기 오류 · 12 시간 초과 · 13 건너뜀).
 - **실기동 확인은 시나리오로 남긴다** — `Resource/<영역>/automation/*.scenario.xml` 을 두면 그 게임 프리셋의 `ctest -L hostgpu`(`AppScenarioTest`)가 백엔드마다 돈다
   손 확인 목록을 백로그에 적지 말고 시나리오를 쓴다 — 못 쓰는 것만 이유와 함께 손 확인으로. 값을 보려면 `Expect probe`(게임 .cpp 의
   `SW_AUTOMATION_PROBE` 한 줄), 그림은 `Screenshot` + `ExpectImage`(지표 값은 보고 JSON 에 늘 적힌다).

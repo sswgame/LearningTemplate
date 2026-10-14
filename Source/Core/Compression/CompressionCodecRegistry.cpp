@@ -18,7 +18,7 @@ namespace sw
     namespace
     {
         /**
-         * @brief 활성 레지스트리 슬롯입니다. 인스턴스가 아니라 포인터이며, 소유자는 EngineLoop 또는 테스트 호스트입니다.
+         * @brief 활성 레지스트리 슬롯입니다. 인스턴스가 아니라 포인터이며, 소유자는 Engine 또는 테스트 호스트입니다.
          * @details 렌더 스레드와 잡 스레드가 압축 경로를 동시에 지나가므로 원자적으로 읽고 씁니다.
          */
         atomic<CompressionCodecRegistry*> s_pActiveRegistry{ nullptr };

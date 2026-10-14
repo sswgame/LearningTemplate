@@ -23,6 +23,28 @@ namespace sw::editor
         return modifier.getTypeID() == "deformable" ? static_cast<DeformableModifier*>( &modifier ) : nullptr;
     }
 
+    MeshModifier* DeformableModifier::findByPath( MeshModifierStack& inoutRoot, const vector<int32>& listPath )
+    {
+        MeshModifierStack* pOwning = findOwningStack( inoutRoot, listPath );
+        return pOwning != nullptr ? pOwning->findModifier( listPath.back() ) : nullptr;
+    }
+
+    MeshModifierStack* DeformableModifier::findOwningStack( MeshModifierStack& inoutRoot, const vector<int32>& listPath )
+    {
+        if ( listPath.empty() )
+            return nullptr;
+        MeshModifierStack* pStack = &inoutRoot;
+        for ( size_t depth = 0; depth + 1 < listPath.size(); ++depth )
+        {
+            MeshModifier*       pModifier   = pStack->findModifier( listPath[depth] );
+            DeformableModifier* pDeformable = pModifier != nullptr ? findFrom( *pModifier ) : nullptr;
+            if ( pDeformable == nullptr )
+                return nullptr;
+            pStack = &pDeformable->getStack();
+        }
+        return pStack->findModifier( listPath.back() ) != nullptr ? pStack : nullptr;
+    }
+
     void DeformableModifier::applyToMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context ) const
     {
         if ( _stack.getModifierCount() == 0 )

@@ -9,6 +9,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Module/ModuleImageUtil.h"
 #include "Core/Process/Process.h"
+#include "Core/String/RegistrationList.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
@@ -1970,6 +1971,89 @@ SW_TEST_CASE( ModuleAPITest, GameModuleRepeatedReloadCycle )
             SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( "GF_Overworld", hOverworld ) );
         }
     }
+}
+
+/**
+ * @brief [ArchitectureTest] 에디터 모듈을 올리고 다시 올리고 내려도 모든 `RegistrationList` 에 같은 항목이 둘 오르지 않고, 내리면 항목 수가 올리기 전으로 돌아온다
+ * @details 정적 등록자가 모듈 로드 때 항목을 올리고 언로드 때 뺀다. 리로드 중에는 새 이미지의 등록이 같은 이름을 대체한다(`RegistrationReloadScope`). 리로드 뒤에는 옛 이미지의 목록이 함께 살아 있어 합을 견주지 않고 중복만 본다.
+ *          목록은 `RegistrationListBase::collect` 로 이름 · 항목 수를 한곳에서 열거한다 — 같은 이름의 목록이 여럿
+ *          (씬마다 하나)이면 항목 수를 합쳐 견준다.
+ */
+SW_TEST_CASE( ArchitectureTest, RegistrationListsFollowTheEditorModuleLoadReloadAndUnload )
+{
+    if ( sw::isModuleBuilt( "EditorModule" ) == false )
+        SW_TEST_SKIP( "EditorModule not built in this config" );
+
+    const auto snapshot = []( std::map<std::string, uint32>& outMapCount )
+    {
+        outMapCount.clear();
+        sw::vector<const sw::RegistrationListBase*> listRegistration;
+        sw::RegistrationListBase::collect( listRegistration );
+        for ( const sw::RegistrationListBase* pList : listRegistration )
+        {
+            outMapCount[pList->getListName()] += pList->getCount();
+            for ( uint32 index = 0; index < pList->getCount(); ++index )
+            {
+                if ( pList->getNameAt( index ).empty() )
+                    continue;
+                for ( uint32 other = index + 1; other < pList->getCount(); ++other )
+                {
+                    SW_EXPECT_FALSE_MSG( pList->getNameAt( index ) == pList->getNameAt( other ), ( std::string{ "duplicate name in list " } + pList->getListName() ).c_str() );
+                }
+            }
+        }
+    };
+    const auto expectSame = [&snapshot]( const std::map<std::string, uint32>& mapExpected, const utf8* pWhen )
+    {
+        std::map<std::string, uint32> actual;
+        snapshot( actual );
+        for ( const auto& [name, count] : actual )
+        {
+            const auto iter = mapExpected.find( name );
+            SW_EXPECT_TRUE_MSG( count == ( iter != mapExpected.end() ? iter->second : 0u ), ( std::string{ "entry count differs " } + pWhen + " in list " + name ).c_str() );
+        }
+        for ( const auto& [name, count] : mapExpected )
+        {
+            if ( count != 0 )
+                SW_EXPECT_TRUE_MSG( actual.find( name ) != actual.end(), ( std::string{ "list vanished " } + pWhen + ": " + name ).c_str() );
+        }
+    };
+
+    std::map<std::string, uint32> before;
+    snapshot( before );
+    std::map<std::string, uint32> loaded;
+    {
+        sw::LiveReloadManager manager;
+        SW_ASSERT_TRUE_MSG( manager.registerModule( "EditorModule" ), "EditorModule is built but did not register - see the log above" );
+        snapshot( loaded );
+
+        uint32 enteredCount = 0;
+        for ( const auto& [name, count] : loaded )
+        {
+            enteredCount += count - ( before.count( name ) != 0 ? before[name] : 0u );
+        }
+        SW_EXPECT_TRUE_MSG( enteredCount > 0, "the editor module registered nothing - the checks below prove nothing" );
+
+        bool bReloaded{ false };
+        manager.setOnAfterReload( "EditorModule", SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&bReloaded]( void* )
+        {
+            bReloaded = true;
+        } ) );
+        manager.triggerReload( "EditorModule" );
+        for ( int32 stepIndex = 0; stepIndex < 80 && bReloaded == false; ++stepIndex )
+        {
+            std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
+            manager.update();
+        }
+        SW_ASSERT_TRUE( bReloaded );
+        // 리로드 중에는 옛 이미지의 목록(모듈 안 정적)과 새 이미지의 목록이 같은 이름으로 함께 살아 합이 맞지 않는다 — 여기서는 어느 목록에도 같은 이름이 둘 없는지만 본다.
+        std::map<std::string, uint32> reloaded;
+        snapshot( reloaded );
+        SW_EXPECT_TRUE( reloaded.size() >= loaded.size() );
+
+        manager.shutdown();
+    }
+    expectSame( before, "after the unload" );
 }
 
 /**

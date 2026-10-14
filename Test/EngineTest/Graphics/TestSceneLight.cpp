@@ -18,7 +18,7 @@
 
 // SceneLightTest — 라이트 레지스트리와 그것을 읽어 GPU 원소를 만드는 CPU 절반. 디바이스 없음(nogpu).
 //
-// 이 경로는 매 프레임 두 곳(`EngineLoop` · `FrameRenderer`)이 부른다.
+// 이 경로는 매 프레임 두 곳(`Engine` · `FrameRenderer`)이 부른다.
 // 여기가 틀리면 증상은 "빛이 하나 사라졌다 / 그림자가 엉뚱한 빛에 붙었다" 라서 셰이더를 먼저
 // 의심하게 된다 — 그 전에 걸러 낸다.
 
@@ -232,7 +232,7 @@ SW_TEST_CASE( SceneLightTest, CollectSkipsInactiveComponentsAndInactiveOwners )
  * @brief [SceneLightTest] 그림자 슬롯은 그림자를 드리우는 **첫 방향광** 하나만 가져가고, 그림자 행렬도 그 빛에서 나온다
  * @details 그림자 맵이 하나라서 생긴 규칙이다. 둘 다 플래그를 받으면 렌더러는 마지막 것의
  *          행렬로 첫 것을 그린다 — 화면에는 "그림자가 엉뚱한 방향으로 진다" 로 보인다.
- *          행렬(`EngineLoop` · `FrameRenderer`)과 플래그(`collectSceneLights`)가 **같은 선택자**를 쓰는지도 본다. 행렬을
+ *          행렬(`Engine` · `FrameRenderer`)과 플래그(`collectSceneLights`)가 **같은 선택자**를 쓰는지도 본다. 행렬을
  *          "켜진 첫 방향광"(그림자 여부를 안 봄)에서 고르면 첫 빛이 그림자를 끌 때 행렬은 비고 플래그는 뒤의 빛에 붙는다.
  */
 SW_TEST_CASE( SceneLightTest, OnlyTheFirstShadowCastingDirectionalTakesTheShadowSlot )
@@ -407,7 +407,7 @@ SW_TEST_CASE( SceneLightTest, SpotConeAnglesStayOrdered )
 
 /**
  * @brief [SceneLightTest] 주광 조회는 켜진 빛만 돌려주고, 없으면 nullptr 이다
- * @details `EngineLoop` 이 매 프레임 부르는 자리다. 씬 전체를 훑지 않고 레지스트리만 본다 — 그래도 답은 같아야 한다.
+ * @details `Engine` 이 매 프레임 부르는 자리다. 씬 전체를 훑지 않고 레지스트리만 본다 — 그래도 답은 같아야 한다.
  */
 SW_TEST_CASE( SceneLightTest, FindActiveDirectionalLightSkipsInactiveOnes )
 {

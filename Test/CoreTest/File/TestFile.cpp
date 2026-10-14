@@ -56,6 +56,25 @@ SW_TEST_CASE( FileTest, FileUtilPathOperations )
 }
 
 /**
+ * @brief [FileTest] hasExtension 은 한 단계 확장자와 두 단계 접미사를 모두 맞춘다
+ */
+SW_TEST_CASE( FileTest, HasExtensionMatchesCompoundSuffix )
+{
+    SW_EXPECT_TRUE( sw::FileUtil::hasExtension( "a/b/Hull.mesh", ".mesh" ) );
+    SW_EXPECT_TRUE( sw::FileUtil::hasExtension( "a/b/Hull.MESH", "mesh" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::hasExtension( "a/b.dir/Hull", ".mesh" ) );
+    // 두 단계 접미사 — 마지막 점 뒤만 보면 영영 맞지 않던 경우
+    SW_EXPECT_TRUE( sw::FileUtil::hasExtension( "a/b/Hull.modifiers.json", ".modifiers.json" ) );
+    SW_EXPECT_TRUE( sw::FileUtil::hasExtension( "a\\b\\Hull.Modifiers.JSON", "modifiers.json" ) );
+    SW_EXPECT_TRUE( sw::FileUtil::hasExtension( "Hull.v2.modifiers.json", ".modifiers.json" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::hasExtension( "a/b/Hull.json", ".modifiers.json" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::hasExtension( "a/b/Hullmodifiers.json", ".modifiers.json" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::hasExtension( "a.modifiers/Hull.json", ".modifiers.json" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::hasExtension( "modifiers.json", ".modifiers.json" ) ); // 이름이 접미사 자체뿐이면 확장자가 아니다
+    SW_EXPECT_TRUE( sw::FileUtil::hasAnyExtension( "x.prefab.xml", { ".png", ".prefab.xml" } ) );
+}
+
+/**
  * @brief [FileTest] 읽기/쓰기가 경로 대소문자 유지
  */
 SW_TEST_CASE( FileTest, ReadWritePreservesPathCase )

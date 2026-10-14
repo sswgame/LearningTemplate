@@ -76,7 +76,7 @@ namespace sw
         void populateFromScene( Scene* pScene, const float3& cameraPos );
         /**
          * @brief 투명 정렬의 깊이를 측정할 축입니다. 영벡터(기본)면 카메라까지의 거리를 쓰고, 아니면 카메라에서 그 축 방향으로 측정한 깊이를 씁니다.
-         * @details 직교 2D 카메라에서 거리로 측정하면 같은 Z 의 두 스프라이트가 카메라의 XY 위치에 따라 앞뒤가 바뀐다. `EngineLoop` 가
+         * @details 직교 2D 카메라에서 거리로 측정하면 같은 Z 의 두 스프라이트가 카메라의 XY 위치에 따라 앞뒤가 바뀐다. `Engine` 가
          *          `Render2DSettings::computeTransparentSortAxis` 로 값을 정해 넘긴다(유니티 Transparency Sort Mode). 값이 바뀌면 다음 빌드가 다시 정렬한다.
          */
         void setTransparentSortAxis( const float3& axis );
@@ -105,7 +105,7 @@ namespace sw
          * @brief 불투명 배치를 머티리얼이 아니라 **셰이더 퍼뮤테이션**(셰이더 경로 + 정적 define)으로 묶을지 정합니다(언리얼 GPUScene 방식).
          * @details 머티리얼 파라미터는 인스턴스의 materialIndex 로 버퍼에서 읽는다. 그래서 텍스처를 인덱스로 고를 수 있는 백엔드
          *          (DX12, Vulkan 의 네이티브 bindless)에서는 같은 메시와 같은 퍼뮤테이션이면 머티리얼이 달라도 드로우 하나로 그린다.
-         *          DX11 과 GL 은 머티리얼 텍스처를 t5..t8 슬롯에 바인딩해야 해서 배치가 머티리얼 단위로 남는다. FrameRenderer 와 EngineLoop 가
+         *          DX11 과 GL 은 머티리얼 텍스처를 t5..t8 슬롯에 바인딩해야 해서 배치가 머티리얼 단위로 남는다. FrameRenderer 와 Engine 가
          *          디바이스 caps(supportsNativeBindlessSampling)로 값을 정한다. 값이 바뀌면 다음 populateFromScene 이 다시 묶는다.
          */
         void setMergeBatchesAcrossMaterials( bool bMerge );

@@ -96,7 +96,7 @@ endfunction()
 #     App 에서야 `undefined reference to uncompress` 로 터진다. 그래서 임포트 타깃을 쓰고, 임포트 타깃 **하나에만** 기대지 않는다:
 #     리눅스 CI 에서 링크 줄에 zlib 이 아예 붙지 않은 일이 세 번 있었다(임포트 타깃이 왜 비었는지는 재현하지 못했다). find_package 가 채우는
 #     ZLIB_LIBRARIES(`optimized;<경로>;debug;<경로>` — 확정된 경로 목록)를 같이 건다(중복 지정은 링커가 무시한다).
-#   - LZ4 · Zstd: CompressionCodecRegistry 에 EngineLoop 이 등록하는 코덱. zstd 는 vcpkg 구성(정적/공유)에 따라 타깃 이름이 달라
+#   - LZ4 · Zstd: CompressionCodecRegistry 에 Engine 이 등록하는 코덱. zstd 는 vcpkg 구성(정적/공유)에 따라 타깃 이름이 달라
 #     하나만 적으면 다른 구성에서 configure 가 조용히 지나가고 링크에서 터진다 — 셋 중 있는 것을 고른다.
 # ------------------------------------------------------------------------------
 function(sw_findEngineCompressionLibraries OUT_VAR)

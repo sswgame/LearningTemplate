@@ -45,7 +45,7 @@ namespace
 
 /**
  * @brief [MemoryTagTest] 하네스 기동 뒤 주요 태그(태스크 · 리플렉션 · 씬 · 에셋 · 셰이더)에 살아 있는 바이트가 있다
- * @details 하네스는 `EngineLoop` 와 같은 부트스트랩 · 서비스 생성 · 기동 단계를 지난다. 서비스 생성(`kServiceMemoryTag`)과 단계 초기화
+ * @details 하네스는 `Engine` 와 같은 부트스트랩 · 서비스 생성 · 기동 단계를 지난다. 서비스 생성(`kServiceMemoryTag`)과 단계 초기화
  *          (서브시스템 선언의 태그)가 태그를 걸지 않으면 이 줄들이 0 이다.
  */
 SW_TEST_CASE( MemoryTagTest, HarnessStartupIsAttributed )
@@ -66,7 +66,7 @@ SW_TEST_CASE( MemoryTagTest, HarnessStartupIsAttributed )
 
 /**
  * @brief [MemoryTagTest] 진단 구성의 부트스트랩이 플랫폼 누수 추적을 켜 둔다
- * @details 진단 구성의 `DiagnosticsSubsystem( true )` 은 `EngineLoop`(Debug) 와 이 하네스가 함께 세운다. 그래서 이 프로세스의 CRT 상태가
+ * @details 진단 구성의 `DiagnosticsSubsystem( true )` 은 `Engine`(Debug) 와 이 하네스가 함께 세운다. 그래서 이 프로세스의 CRT 상태가
  *          곧 Debug App 의 상태다. 할당 추적 플래그가 켜져 있고, 누수 덤프(`_CRT_WARN`) · CRT 오류(`_CRT_ERROR`)가 디버거 출력과 함께 stderr 로도
  *          나가야 `MemoryProfiler::reportMemoryLeaks` 의 결과가 콘솔 · CI 로그에 남는다.
  */

@@ -49,7 +49,7 @@ namespace sw
 
     /**
      * @class MemoryBudgetMonitor
-     * @brief 예산 표를 프로파일러에 걸고, 프레임 끝마다 넘은 태그를 경고하고, 요청이 오면 태그 표를 남깁니다. `EngineLoop` 가 하나를 듭니다.
+     * @brief 예산 표를 프로파일러에 걸고, 프레임 끝마다 넘은 태그를 경고하고, 요청이 오면 태그 표를 남깁니다. `Engine` 가 하나를 듭니다.
      */
     class SW_API MemoryBudgetMonitor
     {
@@ -71,7 +71,7 @@ namespace sw
         [[nodiscard]] bool loadBudgetFile( string_view absolutePath );
 
         /**
-         * @brief `-gv_memoryTracking` 을 프로파일러에 겁니다. 명령줄을 읽은 바로 뒤(`EngineLoop::initialize`)에 불러야 기동의 할당부터 셉니다 — 첫 프레임까지
+         * @brief `-gv_memoryTracking` 을 프로파일러에 겁니다. 명령줄을 읽은 바로 뒤(`Engine::initialize`)에 불러야 기동의 할당부터 셉니다 — 첫 프레임까지
          *        기다리면 기동 중에 잡은 블록이 태그 줄에 없다. 프레임 끝(`onFrameEnd`)도 값이 바뀌었으면 다시 겁니다.
          */
         void applyTrackingSetting();

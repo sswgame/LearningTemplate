@@ -102,8 +102,20 @@ namespace test
         }
 
         /**
+         * @brief 보간이 섞인 곡선입니다: (0, 0) 선형 → (0.5, @p middle) 큐빅(자동 접선) → (1, 1) 상수. 저장 문서가 보간 · 접선을 보존하는지 보는 데 쓴다.
+         */
+        static sw::FloatCurve makeMixedCurve( float32 middle )
+        {
+            sw::FloatCurve curve{};
+            (void)curve.addKey( 0.0f, 0.0f, sw::CurveInterpolation::Linear );
+            (void)curve.addKey( 0.5f, middle, sw::CurveInterpolation::Cubic );
+            (void)curve.addKey( 1.0f, 1.0f, sw::CurveInterpolation::Constant );
+            return curve;
+        }
+
+        /**
          * @brief 모든 매개변수를 @p salt 로 정해지는 범위 안 값으로 채웁니다(같은 salt → 같은 값). 끝값을 피하려고 범위의 20~80 % 안에서 고릅니다.
-         * @details 참조 · 경로는 비워 둔다(외부 입력 없이 항등). 수 목록은 항목 하나를 넣는다.
+         * @details 참조 · 경로는 비워 둔다(외부 입력 없이 항등). 수 목록은 항목 하나를 넣고, 곡선 목록은 보간이 섞인 곡선 둘을 넣는다.
          */
         static void fillParams( sw::editor::MeshModifier& modifier, uint32 salt )
         {
@@ -131,12 +143,21 @@ namespace test
                     }
                     case MeshModifierParamKind::Curve:
                     {
-                        const sw::vector<sw::float2> listKey{
-                            sw::float2{0.0f,  0.0f},
-                            sw::float2{0.5f, ratio},
-                            sw::float2{1.0f,  1.0f}
-                        };
-                        modifier.setCurveKeys( paramIndex, listKey );
+                        sw::editor::MeshModifierParamValue curveValue{};
+                        curveValue._curve = makeMixedCurve( ratio );
+                        modifier.setParamValue( paramIndex, curveValue );
+                        break;
+                    }
+                    case MeshModifierParamKind::CurveList:
+                    {
+                        sw::editor::MeshModifierParamValue listValue{};
+                        listValue._listCurve.push_back( makeMixedCurve( ratio ) );
+                        listValue._listCurve.push_back( makeMixedCurve( 1.0f - ratio ) );
+                        modifier.setParamValue( paramIndex, listValue );
+                        break;
+                    }
+                    case MeshModifierParamKind::ReferenceList:
+                    {
                         break;
                     }
                     case MeshModifierParamKind::NumberList:

@@ -103,7 +103,7 @@ namespace sw
 
         /**
          * @brief 파일에서 읽은 설정 중 경로가 @p changedPath 인 것을 **제자리에서** 다시 읽고 `onConfigReloaded` 를 알립니다.
-         * @details 설정 객체는 바꾸지 않고 값만 덮어쓴다. 기동 때 받아 둔 포인터(`EngineLoop::_pEngineConfig`)가 그대로 유효하다. JSON 이
+         * @details 설정 객체는 바꾸지 않고 값만 덮어쓴다. 기동 때 받아 둔 포인터(`Engine::_pEngineConfig`)가 그대로 유효하다. JSON 이
          *          깨졌으면 경고를 남기고 이전 값을 그대로 둔다. 경로는 `FileUtil::pathsEqualNormalized` 로 비교한다.
          * @return 아는 설정이고 다시 읽었으면 true. 모르는 경로나 깨진 파일이면 false
          */
@@ -115,7 +115,7 @@ namespace sw
 
         /**
          * @brief 호스트가 기동 때 만든 테이블입니다(에디터가 설정 파일 감시에 씁니다). 없으면 nullptr 입니다.
-         * @details 테이블은 `EngineLoop` 가 보관하고, 만든 직후 `setPrimary` 로 알리고 해제하기 전에 회수한다. 서비스 목록에 올리지 않은 것은 게임 모듈이 볼
+         * @details 테이블은 `Engine` 가 보관하고, 만든 직후 `setPrimary` 로 알리고 해제하기 전에 회수한다. 서비스 목록에 올리지 않은 것은 게임 모듈이 볼
          *          이유가 없기 때문이다.
          */
         static ConfigManager* findPrimary();

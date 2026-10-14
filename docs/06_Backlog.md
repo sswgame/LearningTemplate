@@ -85,7 +85,7 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
     정적: `dumpbin /exports` 로 `GameFramework.dll` 이 `SW_GF_API` 심볼과 `bindGameService` · `unbindGameService`(C 링크)를 내보내고 `SWGame.dll` 이 가져오는지. 같은 이름의 반사 헤더 둘이면 구성이 `FATAL`, 구성 뒤 기존 헤더에 반사 매크로를 넣으면 빌드가 서는지
     (`cmake/Engine/CheckReflectionCandidates.cmake`, `--target <타깃>` 만 지으면 검사가 안 돈다). `StringBuilder::append( string )` 과 `VulkanRHIRequiredVersion` include 빌드.
     CI(push 뒤 첫 전체 CI) 리눅스: GLX 컨텍스트, 다중 상속 경고, `SceneNavigation` 의 `NavDebugView` 값 멤버(내보내지 않은 타입), `OpenGLRHICommandList.cpp`.
-    Release 측정: 텍스처 로드 중 다른 스레드의 `find` · `acquire` 대기, `EngineLoop.tick` 의 틱 뒤 실행 경로 · `AudioEngine` 게시 · `GT.GPUScene.build`, `GameObject.h` 가 `TagSystem.h` 를 끌어오지 않는지(`-ftime-trace` 전후).
+    Release 측정: 텍스처 로드 중 다른 스레드의 `find` · `acquire` 대기, `Engine.tick` 의 틱 뒤 실행 경로 · `AudioEngine` 게시 · `GT.GPUScene.build`, `GameObject.h` 가 `TagSystem.h` 를 끌어오지 않는지(`-ftime-trace` 전후).
   - **시작 전에 알아야 할 함정**: 옛 빌드 폴더는 `cmake --preset` 을 먼저 다시 돌린다(파일을 옮겨 코드젠 목록이 낡으면 `missing and no known rule`).
     처음 돌린 테스트는 기대값부터 의심한다 — `ReflectionEnumInfoTest`(`CameraRole::Editor` → `Viewport`), `GameObjectManagerTest.PostTickOnComponentSkipsPendingDestroy`, `GameObjectManagerPoolTest.ModuleUnloadDrains{Deferred,Requeued}PostTickWork`,
     `ServiceClientCallTableTest.ForeignResponseDuringSendDoesNotTakeTheSendingDelegate`, 온라인 클라이언트 취소 테스트 둘 · `KitDestroyedWhileFailingQueuedCallsGetsNoMoreCalls` ·
@@ -115,7 +115,7 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
 
 - `C-1` **엔진 분할 — 계획은 [docs/plans/EnginePartition.md](plans/EnginePartition.md).** `Engine.dll` 을 티어 경계로 나누기 전에 의존 방향의 약한 고리를 푼다. 단위를 끝내면 계획 문서에서 지운다.
 
-- `C-2` **빌드 속도 — 계획은 [docs/plans/BuildSpeed.md](plans/BuildSpeed.md).** 남은 것은 5 단계(유니티 범위 — 한 쌍만 잼, 재측정 필요)와 6 단계(`EngineLoop.cpp`)다. 범위 결정은 [결정 기록](09_Decisions.md) 5-2.
+- `C-2` **빌드 속도 — 계획은 [docs/plans/BuildSpeed.md](plans/BuildSpeed.md).** 남은 것은 5 단계(유니티 범위 — 한 쌍만 잼, 재측정 필요)와 6 단계(`Engine.cpp`)다. 범위 결정은 [결정 기록](09_Decisions.md) 5-2.
 
 - `C-3` **서버 키트가 공유 키트 클래스를 다시 내보낸다**(Base 중복은 끝남 — 결정 기록 5-8). `GF_Server_Account.dll` 200개 중 8개가 `GF_Account.dll` 과 겹친다.
   고치려면 키트마다 `<KIT>_API` 를 두고 키트 헤더를 기계적으로 바꾼다. 이득이 작아 우선순위는 낮다.
@@ -125,7 +125,7 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
     게임 손셈(HarvestValley `FarmCropComponent` · `FarmSoilComponent`, NileCity `NileDirectorComponent` 의 `index % getWidth()`)은 키트가 `getTopology()` 를 열면 같이.
 
 - `C-5` **GameFramework 구조 리뷰에서 남은 것(2026-10-05 — 공통 모듈 · 디렉터 베이스 · 층 게이트는 끝남).**
-  ⑤ `EngineLoop.cpp` 의 절반이 기동 단계 구조체(낮음).
+  ⑤ `Engine.cpp` 의 절반이 기동 단계 구조체(낮음).
 
 - `C-7` **조건부 후보 묶음.** 병렬 틱 임계값의 교차점 · GameObject 레이아웃 · 적응형 틱 임계값 · 스폰 비용(~1.1 us, 잠금 여섯) · 시퀀서 성능 수치. TickItem 인라인
   재시도는 오브젝트의 틱 부기 49 B 를 먼저 줄여야 한다. 측정해서 이기면 한다. 무버 일괄 틱의 다음 단계는 무버 데이터를 타입 배열(SoA)로 옮겨 일괄 함수가 컴포넌트를 읽지 않게 하는 것(대상 씬 컴포넌트의 칸 번호를 원소에) — 일괄 틱은 `GT.Frame` p99 0.75 배로 들어갔고 더 줄일 필요가 보이면 한다. 파괴 잎 셰이프는 쿠킹 때 Jolt 셰이프를 `.fracture` 에 싣는 안(Chaos 가 지오메트리 컬렉션에 충돌을 같이 굽는 자리)을 Physics 에 셰이프 직렬화 함수가 생기면 다시 본다.
@@ -188,10 +188,6 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
 
 - `C-25` **게임 여럿을 빌드 한 번에 짓고, 실행할 때 고르고, 키트는 필요한 것만**(2026-10-13, 사용자 확정). 결정은 [결정 기록](09_Decisions.md) 5-2, 쓰는 법은 `Source/Games/README.md`.
   남은 것: 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸다(DX12 직접 실행으로 10 시나리오 통과만 확인).
-- `C-27` **서브시스템 패턴을 넓힐 곳**(2026-10-14, 서브시스템 정리 다음 · 효과 큰 순). 판정 기준: 수명 범위 · 초기화/종료 순서 · 의존이 있는 서비스는 서브시스템이고,
-  프레임마다 도는 핫 데이터 · 게임플레이 객체 · 값 객체는 서브시스템이 아니다.
-  ③ 개발 도구 — 남은 것: 자동화 구동기(`AutomationSession`)를 App 호스트 범위로(호스트 범위 단계와 함께). `Dev` 호스트 비트는 두지 않는다 — 개발 도구는 호스트가
-  `#if !defined( SW_SHIPPING )` 한 자리에서 넣는다. `DevCommandRegistry` · `AutomationStepRegistry` · `AutomationProbes` 는 정적 등록 표라 제외.
 - `C-28` **전역 서비스 접근자(`engine::getXxx`) 호출 줄이기**(2026-10-14, 사용자 승인 — 서브시스템 정리의 남은 단계 뒤). 지금: 소유는 범위(`SubsystemScope`)이고,
   `EngineServices` 는 바인딩 때 `locateSubsystem` 으로 한 번 찾아 둔 비소유 조회 캐시다. 서비스를 더하려면 서브시스템으로 만들어 범위에 넣고 `EngineServiceList.xxx` 에
   한 줄을 더한다(이 결정은 유지 — 언리얼 `GEngine->GetEngineSubsystem<T>()` 은 부를 때마다 맵을 찾는 것으로 알고 있고, 우리는 바인딩 때 한 번 찾는다).
@@ -280,7 +276,7 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   시나리오 둘(`dialoguegraphsave` · `animgraphsave`)은 들어갔다. 실행은 아직 안 했다 — 확인할 것: 연 직후 `Editor.DirtyDocumentCount` 가 0, `panel.focus` 뒤 `editor asset.save` 가 패널 문서를 저장,
   스크립트가 보내는 `editor asset.save` 가 패널 포커스를 빼앗지 않음, 툴바 노드 추가 단추를 클릭할 수 있음(툴바 폭이 좁으면 잘린다), 대화 그래프 패널이 함께 열렸을 때 `Editor.GraphNodeCount` 가 읽는 패널.
 
-- `D3-7` **다중 월드 · 에디터 툴 창(로드맵, 카메라 4 단계와 한 덩어리).** 지금 `EngineLoop` 는 활성 씬 하나만 틱하고 그리며, GPUScene 빌더 · 스냅샷도 하나다 —
+- `D3-7` **다중 월드 · 에디터 툴 창(로드맵, 카메라 4 단계와 한 덩어리).** 지금 `Engine` 는 활성 씬 하나만 틱하고 그리며, GPUScene 빌더 · 스냅샷도 하나다 —
   그래서 프리팹 격리는 활성 씬을 빌리고(씬이 더러우면 막는다) 머티리얼 미리보기는 메인 뷰포트의 선택 오브젝트에 입혀 보인다. ① 다중 월드(미리보기 월드를
   따로 살림, 월드마다 시간 · 틱 정책 · 조명 환경 · 물리 월드) ② 월드별 렌더(씬마다 GPUScene, 뷰 목록의 뷰가 "어느 월드 · 카메라 · 렌더 타깃" 을 고름,
   안 보이는 창은 안 그림 — 카메라 4 단계의 다중 뷰를 다중 월드 × 다중 뷰로) ③ 툴 창 틀(미리보기 월드를 가진 도킹 창, 자기 렌더 타깃 · 에디터 카메라 ·
@@ -322,21 +318,16 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
     없고(`readbackTexture2D` 는 텍스처 전용) 디버그 그리기는 CPU 큐라 그리기를 GPU 안에서 끝내야 한다 — 모프 풀 출력 버퍼를 `swLoadMorphedVertex` 가 읽는 경로를 쓴다. 권고 첫 단계: 변형 로직은 CPU 스택 그대로 두고
     미리보기 전용 메시가 모프 풀 결과 경로로 그려지게 하는 한 디스패치. 모디파이어마다 셰이더를 만들지 않고 `종류 id + 매개변수 구조 버퍼` 를 순서대로 적용하는 uber 셰이더 하나. `supportsGPU()` 가 true 인 점 단위
     모디파이어(약 40 개)만 옮기고 나머지는 CPU. GL 은 `swComputeMorphElement` 드라이버 버그 주의(`RHIBackendInfo.h`). 검증은 `RenderPassGPUTest.MorphPoolIdentityMatchesRest` 류 GPU 테스트가 필요해 이 PC 에서 못 한다.
-  - **Conform / Conform Multi**: 엔진의 `SurfaceBvh`(`Engine/Character/Fit/SurfaceBvh.h`)로 질의한다(정점 × 삼각형 전수 탐색을 걷어냄). 남은 것: `SurfaceBvh` 질의가 멤버 스크래치를 써서 한 스레드에서만 묻는다 →
-    정점 병렬화는 스레드별 BVH 또는 상태 없는 질의가 필요하고, 적용마다 BVH 를 새로 만드는 것을 대상 메시 변경 감지로 캐시할 수 있다.
   - **입력 창구 확장(2026-10-14, 들어감)**: 변형 전 위치(Displace Limits 의 `Clamp Displacement`), 회전 최소화 프레임(경로 계열), CPU 텍스처 표본기(Displace 계열 — `stb_image` 를 표본기 .cpp 에 정적으로 넣었다.
     남은 것: 확장 모듈이 쓸 수 있는 엔진의 공개 이미지 디코드 함수가 없어 중복 디코더를 품는다 → 엔진에 공개 디코드를 내보내면 합칠 수 있다. float4 텍셀이라 4096² 한 장이 256 MB, 메모리 상한 없음. 파일 변경 감지는 1 초 지연).
-  - **매개변수 종류 추가**: 곡선 목록(Curve Sculpt Layered 층별 곡선) · 참조 목록(Conform Multi 대상 N 개).
   - **패널 · 뷰포트(편집, 2026-10-14)**: 곡선 그래프 편집기(공용 `EditorCurveEditor` 어댑터) · 열 이름 있는 목록 표 · 참조 콤보 + 에셋 슬롯 · 구역 · 툴팁 · 단위 · 모디파이어 설명은 들어갔다. 뷰포트에서는 중심 이동 ·
     회전 기즈모, 반경 · 하한/상한 · 방향 자동 표시, 격자 제어점 클릭 · 끌기(대칭), 고른 모디파이어까지의 영향 미리보기("Stage" 토글)가 들어갔다. 남은 것:
-    - Deformable 하위 스택 편집 UI. 정점 버퍼를 건드리는 실제 미리보기(지금은 와이어).
+    - Deformable 하위 스택 편집 UI(패널 쪽만 남음 - 번호 경로로 고른 모디파이어를 찾고 담은 스택을 고치는 모델은 `DeformableModifier::findByPath` · `findOwningStack` 로 들어갔고 두 단계 중첩 저장 · 적용은 테스트로 고정). 정점 버퍼를 건드리는 실제 미리보기(지금은 와이어).
+    - 곡선 목록 · 참조 목록 칸의 패널 UI(`drawCurveListParam` · `drawReferenceListParam`)는 눈으로 확인하지 못했다 - 모델 · 직렬화 · 테스트까지만 검증했다. 실제 에디터에서 항목 추가 · 위아래 · 복제 · 삭제와 곡선 팝업이 항목마다 열리는지 볼 것.
     - **들어감(2026-10-14)**: 공용 마우스 양보 창구 `EditorViewportMouseClaim`(뷰포트의 양보 판정 두 곳에 반영), 에셋 슬롯의 여러 확장자 필터(`EditorAssetFilter`, 쉼표 · 공백 · 탭 · 세미콜론)와 Point Cache(`.mfpc`) ·
       두 Displace 의 필터 채우기, 참조 걸러 보기의 파생 컴포넌트 판정(`TypeInfo::isDerivedFrom`), 회전 고리의 오일러 정확도(`applyRotationDelta`), 범위 · ffd2d 상자가 앞 모디파이어 결과를 반영.
-    - **남은 한계**: 마우스 양보를 시각화 그리기 안에서 잡아 뷰포트가 같은 프레임에 클릭을 먼저 처리하면 첫 클릭이 선택으로 샐 수 있고, 끄는 중에 시각화 토글을 끄면 해제가 빠질 수 있다(처리 순서 확인).
-      기즈모를 끄는 매 프레임 앞 모디파이어를 다시 걸어 비용이 든다. `FileUtil::hasExtension` 은 마지막 점 뒤만 견주는 것으로 보여 `.modifiers.json` 같은 두 단계 접미사 필터는 맞지 않을 수 있다.
-      참조 걸러 보기의 단위 테스트는 없다(GameObject · TypeRegistry 가 필요).
-    - 곡선 편집기의 보간을 Cubic 으로 바꿔도 어댑터가 Linear 로 되돌린다(매개변수가 선형). clang-format 20.1.8 로 줄 길이를 맞출 것(이 PC 는 21.1.1).
-  - **정리**: 굽기 결과 메시의 `orphans` 경고, 월드 공간 워프를 별도 씬 오브젝트로(지금은 모디파이어의 기준 오브젝트 id). 값 노이즈는 `Stack/MeshModifierNoise.h` 한 곳으로 모았다(들어감).
+    - **남은 한계**: 기즈모를 끄는 매 프레임 앞 모디파이어를 다시 걸어 비용이 든다. clang-format 20.1.8 로 줄 길이를 맞출 것(이 PC 는 21.1.1).
+  - **정리**: 월드 공간 워프를 별도 씬 오브젝트로(지금은 모디파이어의 기준 오브젝트 id). 값 노이즈는 `Stack/MeshModifierNoise.h` 한 곳으로 모았다(들어감).
 
 ### D4. 게임플레이 · 캐릭터 · 카메라 · 애니메이션
 
@@ -401,9 +392,13 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   결과 해시로 병합 결과를 캐시해 같은 차림의 NPC 가 나눠 쓰고 다시 조립하는 동안 이전 외형 유지(비동기), `finishLoad` 에 몸 영역 표 이름 넘기기, 데이터 파일 감시 →
   `AppearanceDatabase` 다시 읽기, 시퀀서 트랙 · 스폰 · 프리팹이 프리셋을 이름으로 가리키기 · 프리로드 세트가 프리셋 참조를 따라 모으기, 편집 창의
   "지금 모습을 프리셋으로 저장" · 썸네일 렌더 · 규칙 설명(`_listTrace`) 표시. 칸 점유(양손 무기)는 아직 외형만 본다 — 게임플레이에서 보조 손을 막을지는
-  게임이 정한다 ⑥ 캐릭터 편집 창(다중 월드 툴 창 위) — 본 트리 + 기즈모 포즈 편집 · 소켓 추가/이동 ·
-  체형 · 얼굴 슬라이더 · 장비 입히기와 체형을 바꿔 가며 피팅 확인(관통 표시 · 잘린 면 · 조임 강도 · 보정 조각 · 숨김 영역) · 장비 조합 미리보기(어느 규칙이 무엇을 숨기고 바꿨는지 설명 · 세트 입히기 · 규칙 충돌 표시) · 제약 리그 미리보기 · 애니메이션
-  재생 · 좌우 대칭 편집.
+  게임이 정한다 ⑥ 캐릭터 편집 창 — 첫 단계는 들어갔다(`GameFramework/PlugIn/Editor/CharacterEditor`, README): 소켓 파일 · 외형 선택 편집 모델(되돌리기 · 검증 · 좌우 대칭 · 저장)과
+  미리보기 없는 패널 뼈대. 남은 것 — (a) 미리보기 씬 위로 옮기기(`EditorMultiWorld` 단계 1~4 뒤: `EditorPreviewPanel` 상속 · 캐릭터 스폰 · `EditorAssetType` 에 소켓 종류를 더해
+  `EditorDocumentPanel` 계약으로 더티 · 저장 · 되돌리기 이관) (b) 스켈레톤을 읽어 본 목록을 `SocketEditModel::setBoneNames` 에 넣기 · 본 트리 + 기즈모 포즈 편집
+  (`ReferencePoseOverride` 쓰기 함수가 없다) · 뷰포트 소켓 축 표시 · 저장 직후 핫 리로드 감시 무시 한 번 (c) 체형 · 얼굴 슬라이더(`CustomizationSchema` 로 슬라이더를 만든다, GPU 모프 풀 통합 뒤)
+  (d) 장비 입히기(슬롯 표 · 세트 목록으로 걸러 넘기기) · 규칙 설명(`_listTrace`) 표시 (e) 피팅 확인 표시(보기 전용: 관통 점 · 잘린 면 · 조임 강도, 슬라이더를 놓을 때 한 번 계산)
+  (f) 대칭 이름 규칙 표를 데이터 파일로(지금은 `MirrorNameRules::makeDefault` + `addPair`) · 제약 리그 미리보기 · 애니메이션 재생 (g) 외형 선택을 파일로 저장(`UserAppearancePresetStore` 는
+  메모리 목록까지만 넣는다 — 세이브 쓰기는 `AppearanceDatabase` 가 필요) · 썸네일 렌더. 패널의 화면 세부(배치 · 입력 흐름)는 아직 눈으로 확인하지 않았다.
   계획: docs/plans/EditorCharacterEditor.md
 
 - `D4-9` **남은 대기열 — 빠른 순(2026-10-04 사용자 지시).** 진행 방식은 [작업 방식](11_Workflow.md) — 결함 먼저 · 겹치는 파일 없게 나누고, 병합은 준비되는 대로, 전체 검증은 큰 묶음 뒤 한 번.
@@ -470,7 +465,7 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   `UISubtitleService::post` 로(오디오 키트의 모양을 보고 정한다 — 지금은 대화 러너만 보낸다).
 
 - `D6-4` **옵션 · 일시정지 메뉴의 남은 것**(`Engine/UI/README.md`). (1) 일시정지 메뉴의 타이틀로 · 끝내기 단추는 전역 명령 표(`UISystem::getGlobalCommands`)에 같은 이름의 명령이 있을 때만 보인다 —
-  등록하는 쪽(`EngineLoop` 의 `QuitGame`, 게임 흐름 `GameInstanceBase` 의 `ReturnToTitle`)이 아직 없다. (5) 해상도 바꾸고 15 초 되돌림 ·
+  등록하는 쪽(`Engine` 의 `QuitGame`, 게임 흐름 `GameInstanceBase` 의 `ReturnToTitle`)이 아직 없다. (5) 해상도 바꾸고 15 초 되돌림 ·
   키 바인딩 재시작 뒤 유지의 실기동 확인(Shooter3D · 패드)은 게임별 빌드 때.
 
 - `D6-5` **알림 · 힌트 · 목표 마커의 남은 것**(`Engine/UI/README.md`). (2) 목표 마커를 퀘스트 키트의 목표 오브젝트에 붙이는 한두 줄 — 키트 쪽 목표 오브젝트 모양을 보고. (3) 코드가 올리는 알림 글

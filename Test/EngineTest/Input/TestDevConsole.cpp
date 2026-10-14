@@ -7,7 +7,7 @@
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Console/DevConsole.h"
-#include "Engine/EngineLoop.h"
+#include "Engine/Engine.h"
 #include "Engine/Input/DevConsoleController.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -67,9 +67,9 @@ namespace
         {
             if ( _input.initialize() == false || ResourcePaths::initialize() == false )
                 return false;
-            _pShellMap = EngineLoop::createShellInputMap( EngineDefaultAssets{}._shellInputMap );
+            _pShellMap = Engine::createShellInputMap( EngineDefaultAssets{}._shellInputMap );
             _pShellMap->setInputManager( &_input );
-            _pShellMap->setLayerEnabled( InputMapDefaults::kTitleLayerName, false ); // `EngineLoop::updateShellActions` 와 같다
+            _pShellMap->setLayerEnabled( InputMapDefaults::kTitleLayerName, false ); // `Engine::updateShellActions` 와 같다
             (void)_controller.initialize( &_input, nullptr );
             return _pShellMap->hasAction( InputMapDefaults::kDevConsoleToggleAction );
         }
@@ -555,7 +555,7 @@ SW_TEST_CASE( DevConsoleControllerTest, ShellRebindingsPersistPerPlayer )
     SW_EXPECT_TRUE( FileUtil::exists( path ) );
 
     // 새 맵은 기본 키로 시작하고, 파일을 읽으면 그 플레이어의 키가 된다.
-    unique_ptr<InputMap> fresh = EngineLoop::createShellInputMap( EngineDefaultAssets{}._shellInputMap );
+    unique_ptr<InputMap> fresh = Engine::createShellInputMap( EngineDefaultAssets{}._shellInputMap );
     InputSlot            slot{};
     SW_ASSERT_TRUE( fresh->findRebindSlot( toggle, 0, slot ) );
     SW_EXPECT_TRUE( slot == defaultSlot );

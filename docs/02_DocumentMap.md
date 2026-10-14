@@ -53,6 +53,7 @@
 
 ### 에디터 확장
 - [MeshModifiers](../Source/GameFramework/PlugIn/Editor/MeshModifiers/README.md) — 메시 모디파이어 스택 플러그인(`GF_EditorPlugIn_MeshModifiers`), 모디파이어 목록 · 편집 UX
+- [CharacterEditor](../Source/GameFramework/PlugIn/Editor/CharacterEditor/README.md) — 캐릭터 편집 플러그인(`GF_EditorPlugIn_CharacterEditor`), 소켓 · 외형 선택 편집 모델과 패널 뼈대
 
 ### 빌드, 도구, 데이터, 테스트
 - [cmake](../cmake/README.md) — CMake 계층과 헬퍼 함수(`CheckCmakeReadme` 가 검사)

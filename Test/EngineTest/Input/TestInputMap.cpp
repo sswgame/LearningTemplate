@@ -3,7 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/EngineLoop.h"
+#include "Engine/Engine.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -587,6 +587,19 @@ namespace
             return triggeredCount;
         }
     };
+
+    /** @brief 키를 한 번 눌렀다 뗀다(두 프레임, 각 @p frameSecond 초). 누른 프레임에 발화했는지 돌려준다. */
+    bool tapKeyOnce( sw::InputManager& input, const sw::hashed_string& action, sw::Key key, float32 frameSecond )
+    {
+        input.postRawEvent( sw::RawInputEvent::makeKeyDown( key ) );
+        input.beginFrame( frameSecond );
+        const bool bFired = input.getInputMap().wasActionTriggered( action );
+        input.endFrame();
+        input.postRawEvent( sw::RawInputEvent::makeKeyUp( key ) );
+        input.beginFrame( frameSecond );
+        input.endFrame();
+        return bFired;
+    }
 } // namespace
 
 /**
@@ -1391,7 +1404,7 @@ SW_TEST_CASE( InputMapTest, IntegratedMapIsUpdatedByTheInputFrame )
  */
 SW_TEST_CASE( InputMapTest, ShellInputMapComesFromTheEngineInputMap )
 {
-    const sw::unique_ptr<sw::InputMap> pMap = sw::EngineLoop::createShellInputMap( "engine/input/default.input.xml" );
+    const sw::unique_ptr<sw::InputMap> pMap = sw::Engine::createShellInputMap( "engine/input/default.input.xml" );
     SW_ASSERT_NOT_NULL( pMap.get() );
     SW_EXPECT_TRUE( pMap->hasAction( "ReloadEditor" ) );
     SW_EXPECT_TRUE( pMap->hasAction( "ReloadGame" ) );
@@ -1410,8 +1423,8 @@ SW_TEST_CASE( InputMapTest, MissingShellInputMapLeavesNoBindings )
     sw::unique_ptr<sw::InputMap> pEmptyPath;
     {
         SW_TEST_DEFENSIVE_SCOPE( "shell input map that does not exist" );
-        pMissing   = sw::EngineLoop::createShellInputMap( "engine/input/does_not_exist.input.xml" );
-        pEmptyPath = sw::EngineLoop::createShellInputMap( "" );
+        pMissing   = sw::Engine::createShellInputMap( "engine/input/does_not_exist.input.xml" );
+        pEmptyPath = sw::Engine::createShellInputMap( "" );
     }
     SW_ASSERT_NOT_NULL( pMissing.get() );
     SW_ASSERT_NOT_NULL( pEmptyPath.get() );
@@ -1513,7 +1526,7 @@ SW_TEST_CASE( InputMapTest, NegateFlipsOnlyTheBindingValue )
 /**
  * @brief [InputMapTest] `time` · `negate` 속성은 맵 정의와 유저 바인딩 둘 다 읽고 쓴다 — 없는 옛 파일은 기본값(0, false)으로 그대로 읽힌다
  */
-SW_TEST_CASE( InputMapTest, TriggerTimeAndNegateRoundTripThroughXml )
+SW_TEST_CASE( InputMapTest, TriggerTimeAndNegateRoundTripThroughXML )
 {
     const sw::string definitionPath = test::makeTempPath( "binding_modifier.input.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( definitionPath, "<InputMap defaultLayer=\"Gameplay\">\n"
@@ -1583,22 +1596,6 @@ SW_TEST_CASE( InputMapTest, HoldReleasePhaseUsesThePerBindingTime )
     input.shutdown();
 }
 
-namespace
-{
-    /** @brief 키를 한 번 눌렀다 뗀다(두 프레임, 각 @p frameSecond 초). 누른 프레임에 발화했는지 돌려준다. */
-    bool tapKeyOnce( sw::InputManager& input, const sw::hashed_string& action, sw::Key key, float32 frameSecond )
-    {
-        input.postRawEvent( sw::RawInputEvent::makeKeyDown( key ) );
-        input.beginFrame( frameSecond );
-        const bool bFired = input.getInputMap().wasActionTriggered( action );
-        input.endFrame();
-        input.postRawEvent( sw::RawInputEvent::makeKeyUp( key ) );
-        input.beginFrame( frameSecond );
-        input.endFrame();
-        return bFired;
-    }
-} // namespace
-
 /**
  * @brief [InputMapTest] MultiTap 은 간격 안에 N 번 누르면 발화하고, 간격을 넘기면 처음부터 다시 센다 — DoubleTap 은 그대로 두 번째에 발화한다
  */
@@ -1641,7 +1638,7 @@ SW_TEST_CASE( InputMapTest, MultiTapFiresOnTheNthPressWithinTheWindow )
 /**
  * @brief [InputMapTest] `MultiTap` · `taps` 는 맵 정의를 저장했다 다시 읽어도 남는다 — 기본값 2 는 적지 않고, DoubleTap 은 옛 이름 그대로다
  */
-SW_TEST_CASE( InputMapTest, MultiTapRoundTripsThroughXml )
+SW_TEST_CASE( InputMapTest, MultiTapRoundTripsThroughXML )
 {
     const sw::string definitionPath = test::makeTempPath( "multi_tap.input.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( definitionPath, "<InputMap defaultLayer=\"Gameplay\">\n"

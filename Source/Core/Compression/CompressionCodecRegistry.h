@@ -18,7 +18,7 @@ namespace sw
      * @brief 압축 코덱을 등록하고 찾는 레지스트리입니다.
      * @details 런타임에 압축 알고리즘을 등록 · 조회 · 교체할 수 있습니다.
      *
-     *          소유자는 `EngineLoop`(테스트에서는 테스트 호스트)이고, Core 에는 이를 가리키는 포인터 슬롯만 둡니다.
+     *          소유자는 `Engine`(테스트에서는 테스트 호스트)이고, Core 에는 이를 가리키는 포인터 슬롯만 둡니다.
      *          `CompressionStream` 은 Core 에 있어서 엔진 서비스 테이블에 닿을 수 없기 때문입니다(Core → Engine 은 레이어
      *          역방향입니다). `Logger` 가 `setGlobalSink` 로 같은 문제를 푸는 방식과 같습니다.
      *
@@ -42,7 +42,7 @@ namespace sw
 
         /**
          * @brief 이 프로세스에서 쓸 레지스트리를 슬롯에 연결합니다. 소유는 호출하는 쪽에 있습니다.
-         * @details 연결하는 곳은 `EngineLoop::initialize` 와 `TestFramework/main.cpp` 둘뿐입니다. 두 경로가 같은 인스턴스를 보도록
+         * @details 연결하는 곳은 `Engine::initialize` 와 `TestFramework/main.cpp` 둘뿐입니다. 두 경로가 같은 인스턴스를 보도록
          *          같은 포인터를 엔진 서비스에도 등록해야 합니다. 해제할 때는 `nullptr` 로 되돌립니다. 소유자가 사라진 뒤에도
          *          슬롯이 그 주소를 가리키면 안 됩니다.
          */

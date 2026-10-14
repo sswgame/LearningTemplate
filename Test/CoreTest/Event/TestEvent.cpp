@@ -323,7 +323,7 @@ SW_TEST_CASE( EventTest, DestructorDestroysQueuedEvents )
  * @brief [EventTest] 다른 스레드에서 `push` 한 이벤트가 퍼내는 스레드에 도착한다
  * @details 이것이 이 클래스가 실제로 쓰이는 방식이자, **교차 스레드로 지원되는 유일한 입구**다.
  *          워커가 큐에 밀어 넣고(`_queueSpinLock` + 프레임 아레나가 지킨다), 버스를 퍼내는
- *          스레드가 프레임마다 `processEvents` 로 빼서 방송한다(`EngineLoop::tick`).
+ *          스레드가 프레임마다 `processEvents` 로 빼서 방송한다(`Engine::tick`).
  *          버스 쪽(subscribe/publish)은 퍼내는 스레드 전용이며 Debug 에서 확인한다.
  */
 SW_TEST_CASE( EventTest, PushFromWorkerThreadsReachesPumpingThread )

@@ -55,9 +55,9 @@ namespace sw
     SW_SCENE_SERVICE( SceneAudio, FlushEnd )
 
     SceneAudio::SceneAudio( GameObjectManager& manager )
-        : _listener{}
-        , _emitter{}
-        , _zone{}
+        : _listener{ "SceneAudio.Listener" }
+        , _emitter{ "SceneAudio.Emitter" }
+        , _zone{ "SceneAudio.ReverbZone" }
         , _listEmitterSnapshot{}
         , _listZoneValue{}
         , _listZoneCurrent{}

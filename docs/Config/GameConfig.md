@@ -8,7 +8,7 @@
 |---|---|
 | 파일 | `Config/Game/*.json` |
 | 층 | 게임 프리셋 |
-| 읽는 곳 | `ConfigManager::ensureConfig<GameConfig>` (`EngineLoop` Config 단계) |
+| 읽는 곳 | `ConfigManager::ensureConfig<GameConfig>` (`Engine` Config 단계) |
 | 언제 | 기동 · 에디터 핫 리로드 — Dev 는 `-game=<이름>`(없으면 빌드의 활성 게임 `SW_ACTIVE_GAME`)이 파일 하나를 고른다(`GameSelection`) |
 | 배포본 | configure 때 exe 에 구워 넣음(`ShippingGameDefaults.h`) |
 | 커밋 | 한다 |

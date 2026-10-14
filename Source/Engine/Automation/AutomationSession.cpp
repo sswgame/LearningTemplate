@@ -25,6 +25,13 @@ namespace sw
 
     AutomationSession::~AutomationSession() = default;
 
+    void AutomationSession::shutdownSubsystem()
+    {
+        // 실행기가 로그 리스너 · 입력을 빌려 쓴다 — 엔진 서비스가 사라지기 전에 비운다.
+        _pRunner.reset();
+        _pChain.reset();
+    }
+
     bool AutomationSession::begin( string_view scenarioArgument, string_view reportPath, bool bKeepGoing, uint32 completedScreenshotCount )
     {
         _reportPath    = string( reportPath );
@@ -32,7 +39,10 @@ namespace sw
         _pChain        = make_unique<AutomationScenarioChain>();
         _pChain->begin( AutomationScenarioChain::splitList( scenarioArgument ), bKeepGoing );
         if ( _pChain->isActive() == false )
+        {
+            _pChain.reset();
             return false;
+        }
         startStage( completedScreenshotCount );
         return true;
     }

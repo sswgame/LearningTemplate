@@ -1,5 +1,5 @@
 /**
- * @file EngineLoop.h
+ * @file Engine.h
  * @brief 엔진 코어의 메인 루프와 서브시스템 소유권을 관리합니다.
  */
 #pragma once
@@ -14,7 +14,6 @@
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/HeadlessSubsystem.h"
 #include "Engine/Input/ShellInputActions.h"
-#include "Engine/Module/ModuleTypesSubsystem.h"
 #include "Engine/Profiling/FrameProfileSession.h"
 #include "Engine/Renderer/Frame/PresentHookDelegate.h"
 #include "Engine/Renderer/Frame/RenderPacketBuilder.h"
@@ -67,24 +66,26 @@ namespace sw
     };
 
     /**
-     * @class EngineLoop
+     * @class Engine
      * @brief 코어 매니저들을 소유하고 메인 루프(tick)를 돌립니다.
      */
-    class SW_API EngineLoop
+    class SW_API Engine
     {
     public:
-        EngineLoop();
-        ~EngineLoop();
+        Engine();
+        ~Engine();
 
-        EngineLoop( const EngineLoop& )            = delete;
-        EngineLoop& operator=( const EngineLoop& ) = delete;
+        Engine( const Engine& )            = delete;
+        Engine& operator=( const Engine& ) = delete;
 
         /**
          * @brief 서브시스템(창, RHI 포함)을 초기화합니다.
          * @details @p role 이 `DedicatedServer` 면 기동 표의 `Client` 단계(창 · RHI · 렌더러 · 플레이어 설정)를 돌리지 않고 장치 없는 오디오를 씁니다.
          *          이 빌드에 없는 역할이면(Client 빌드의 전용 서버, Server 빌드의 클라이언트) 실패합니다.
+         * @param pHostScope 호스트 범위입니다 — 부트스트랩 범위의 부모이고, 엔진의 `ModuleTypes` · `ModuleImages` 단계가 여기서 `IModuleImageHost` 를 찾습니다.
+         *                   호스트가 엔진보다 오래 살아야 합니다(`shutdown` 이 끝난 뒤에 내립니다). nullptr 이면 호스트가 내준 것이 없습니다(테스트 하네스).
          */
-        bool initialize( int32 argc, utf8* pArgv[], EngineHostRole role = EngineHostRole::Client );
+        bool initialize( int32 argc, utf8* pArgv[], EngineHostRole role = EngineHostRole::Client, const ISubsystemLocator* pHostScope = nullptr );
         /** @brief 매니저들을 종료하고 정리합니다. */
         void shutdown();
 
@@ -111,20 +112,6 @@ namespace sw
         // ----------------------------------------------------------------------
         // 도우미
         // ----------------------------------------------------------------------
-        /**
-         * @brief 씬이 모두 정리됐고 엔진 서비스는 **아직 살아 있는** 지점에 불릴 훅을 겁니다.
-         * @details 종료 시퀀스에는 "씬은 사라졌지만 서비스(SceneManager · TaskManager · 로거)는 아직 있다" 는 좁은
-         *          구간이 있습니다. 모듈 DLL 을 내리는 일은 정확히 거기서 일어나야 합니다. 더 일찍이면 씬이 든 컴포넌트
-         *          팩토리 델리게이트가 사라진 코드를 가리키고, 더 늦으면 언로드가 쓰는 서비스와 로거가 이미 없습니다.
-         *          Engine 은 그것이 무엇인지 모릅니다. 자리만 내주고, 무엇을 할지는 훅을 건 쪽이 정합니다.
-         */
-        void setOnScenesReleased( Delegate<void()> onScenesReleased );
-        /**
-         * @brief 기동 단계 `ModuleTypes` 가 부를 타입 공급자 로더를 겁니다. `initialize` **전에** 겁니다.
-         * @details 걸지 않으면 호스트에 따로 올릴 타입 공급자가 없다는 뜻입니다(정적 링크 — 리플렉션 단계가 이미 다 모았다). 어느 쪽이든 단계가 끝나면
-         *          모든 타입이 등록된 것으로 적고, 씬을 읽는 일(헤드리스 쿠킹 · 게임 · 에디터의 씬 로드)은 그 뒤에만 됩니다.
-         */
-        void setModuleTypeLoader( ModuleTypeLoaderDelegate moduleTypeLoader );
         /**
          * @brief 프레임 관찰자(`IEngineFrameObserver`)를 붙입니다. 붙인 순서대로 부르고, 같은 관찰자를 두 번 붙이지 않습니다.
          * @details 루프는 관찰자가 무엇인지 모릅니다(자동화 시나리오 · 시퀀서 · AI 구동기). 수명은 붙인 쪽이 쥐고, 없애기 전에 `removeFrameObserver` 로 뗍니다.
@@ -218,9 +205,6 @@ namespace sw
         ConfigManager* _pConfigManager;
         /** @brief 셸 디버그 액션 맵입니다(`updateShellActions` 가 처음 부를 때 만든다). `shutdown` 이 단계 종료 뒤 · 해제 전에(입력 매니저가 소멸하기 전에) 놓는다. */
         ShellInputActions _shellActions;
-        Delegate<void()>  _onScenesReleased;
-        /** @brief 기동 단계 `ModuleTypes` 가 부르는 호스트의 타입 공급자 로더입니다(`setModuleTypeLoader`). */
-        ModuleTypeLoaderDelegate _moduleTypeLoader;
         /**
          * @brief 프레임 관찰자 목록입니다(소유하지 않는다). 프레임 앞(입력 전) · 씬 틱 뒤(UI 앞) · 패킷 채우기 · 프레임 뒤(렌더 제출 뒤) · 창 닫힘에서 붙인 순서대로 부르고,
          *        종료 코드를 내면 `requestQuit` 입니다. 텔레메트리(기동 단계 `Telemetry` 가 붙인다)와 App 의 진단 · 자동화도 여기로 붙습니다.
@@ -273,7 +257,7 @@ namespace sw
         /**
          * @brief 셰이더 라이브 리로드입니다(서브시스템 `LiveShader` 소유 — 빌려 쓴다). **Shipping 에는 없고** Debug 클라이언트에서만 실제로 만들어진다.
          * @details 셰이더 파일을 지켜보다 다시 컴파일하는 **개발 도구**입니다. RHI 는 디바이스 추상화이지 파일 감시자가 있을 곳이
-         *          아니므로 돌리는 쪽(EngineLoop)이 갖습니다.
+         *          아니므로 돌리는 쪽(Engine)이 갖습니다.
          */
 #if !defined( SW_SHIPPING )
         ShaderRecompiler* _pShaderRecompiler;

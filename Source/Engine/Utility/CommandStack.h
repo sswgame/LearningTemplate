@@ -24,7 +24,7 @@ namespace sw
 
     /**
      * @class CommandStack
-     * @brief 변경에 대한 Push, Undo, Redo 스택입니다. 엔진(`EngineLoop`)이 소유해 모듈 핫 리로드를 넘어 삽니다.
+     * @brief 변경에 대한 Push, Undo, Redo 스택입니다. 엔진(`Engine`)이 소유해 모듈 핫 리로드를 넘어 삽니다.
      * @details 명령은 둘로 나뉜다.
      *          - **데이터 명령**: 코드는 엔진에 있고 나머지는 값(오브젝트 id, 직렬화한 상태)인 명령이다(`ObjectUndoUtil`). 모듈이 언로드되어도 남는다.
      *          - **모듈 명령**: undo 와 redo 가 모듈 이미지의 코드(람다, 패널 메서드)인 명령이다. 그 모듈이 언로드되기 전에 `removeCodeWithin` 이 분리한다.

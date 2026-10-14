@@ -18,7 +18,7 @@ namespace sw::editor
             /** @brief 등록 목록입니다. 함수 안 정적 객체라 처음 등록할 때 만들어지고, 모든 등록 객체보다 늦게 소멸합니다. */
             static RegistrationList<MeshModifierRegistration>& getList()
             {
-                static RegistrationList<MeshModifierRegistration> s_list{ RegistrationOrder::ByOrderThenName, true };
+                static RegistrationList<MeshModifierRegistration> s_list{ "MeshModifierRegistry", RegistrationOrder::ByOrderThenName, true };
                 return s_list;
             }
 
@@ -90,7 +90,7 @@ namespace sw::editor
     {
         const RegistrationResult result = MeshModifierRegistryInternal::getList().add( pRegistration, pRegistration->_pID );
         if ( result == RegistrationResult::DuplicateName )
-            SW_LOG_WARNING( "Mesh modifier id '%#' is registered twice - the first registration is kept", pRegistration->_pID );
+            SW_LOG_ERROR( "Mesh modifier id '%#' is registered twice - the first registration is kept", pRegistration->_pID );
     }
 
     void MeshModifierRegistry::remove( const MeshModifierRegistration* pRegistration )

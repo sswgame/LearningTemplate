@@ -44,7 +44,7 @@ namespace sw
      *          - 꺼져 있으면 프레임 비용은 셸 맵 액션 하나를 읽는 것뿐이다(할당 없음).
      *          - `kUsesFrameProfiler` 섹션이 보이는 동안 `FrameProfiler` 를 켜고, HUD 가 켠 것이면 감출 때 끈다.
      *
-     *          게임 스레드에서만 쓴다. `EngineLoop` 가 UI 기동 단계에서 만들고 `UISystem::update` 앞에서 `update` 를 부른다.
+     *          게임 스레드에서만 쓴다. `Engine` 가 UI 기동 단계에서 만들고 `UISystem::update` 앞에서 `update` 를 부른다.
      */
     class SW_API DebugHUD
     {

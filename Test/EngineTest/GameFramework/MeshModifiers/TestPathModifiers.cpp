@@ -136,6 +136,17 @@ namespace
             return true;
         }
 
+        /** @brief 종류별 setter 가 없는 값(곡선 목록 · 참조 목록 · 보간이 있는 곡선)을 이름으로 넣습니다. */
+        static bool setValue( MeshModifier& modifier, string_view name, const MeshModifierParamValue& value )
+        {
+            uint32 paramIndex = 0;
+            if ( modifier.tryGetParamIndex( name, paramIndex ) == false )
+                return false;
+            modifier.setParamValue( paramIndex, value );
+            modifier.onParamsChanged();
+            return true;
+        }
+
         static bool setVector3( MeshModifier& modifier, string_view name, const float3& value )
         {
             uint32 paramIndex = 0;
@@ -271,8 +282,9 @@ SW_TEST_CASE( PathModifiersTest, ConformMultiPicksNearestTarget )
     MeshModifierMesh         mesh   = test::MeshModifierTestUtil::makeBoxMesh( 2 );
     const vector<float3>     before = mesh._listPosition;
     unique_ptr<MeshModifier> multi  = MeshModifierRegistry::create( "conformmulti" );
-    SW_ASSERT_TRUE( PathModifiersTestInternal::setText( *multi, "Target 1", "floor" ) );
-    SW_ASSERT_TRUE( PathModifiersTestInternal::setText( *multi, "Target 2", "ceiling" ) );
+    MeshModifierParamValue   targets{};
+    targets._listText = { "floor", "", "missing", "ceiling" }; // 빈 이름 · 못 찾은 이름은 건너뛴다
+    SW_ASSERT_TRUE( PathModifiersTestInternal::setValue( *multi, "Targets", targets ) );
     PathModifiersTestInternal::apply( *multi, mesh, inputs );
     for ( size_t index = 0; index < before.size(); ++index )
     {
@@ -281,6 +293,17 @@ SW_TEST_CASE( PathModifiersTest, ConformMultiPicksNearestTarget )
         if ( before[index]._y < -0.5f )
             SW_EXPECT_NEAR_EQUAL( -5.0f, mesh._listPosition[index]._y, 1e-4f );
     }
+}
+
+SW_TEST_CASE( PathModifiersTest, ConformMultiWithEmptyTargetListIsIdentity )
+{
+    PathFakeInputs inputs{};
+    inputs.addPlane( "floor", -5.0f );
+    MeshModifierMesh         mesh   = test::MeshModifierTestUtil::makeBoxMesh( 2 );
+    const vector<float3>     before = mesh._listPosition;
+    unique_ptr<MeshModifier> multi  = MeshModifierRegistry::create( "conformmulti" );
+    PathModifiersTestInternal::apply( *multi, mesh, inputs );
+    SW_EXPECT_TRUE( test::MeshModifierTestUtil::computeMaxDistance( before, mesh._listPosition ) == 0.0f );
 }
 
 SW_TEST_CASE( PathModifiersTest, CurveDeformConstantDisplacementTranslates )
@@ -342,6 +365,36 @@ SW_TEST_CASE( PathModifiersTest, CurveSculptLayeredMovesOnlyInsideLayer )
     SW_EXPECT_NEAR_EQUAL( 0.0f, mesh._listPosition[0]._y, 1e-5f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, mesh._listPosition[1]._y, 1e-5f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, mesh._listPosition[2]._y, 1e-5f );
+}
+
+SW_TEST_CASE( PathModifiersTest, CurveSculptLayeredUsesOwnCurveWhenGiven )
+{
+    // 층 둘이 같은 자리(중심 · 반경 · 높이)에 있고 Shape 곡선은 상수 1, 층 0 만 자기 곡선(상수 3)을 가진다
+    MeshModifierMesh mesh{};
+    mesh._listPosition = {
+        float3{-1.0f, 0.0f, -1.0f},
+        float3{ 1.0f, 0.0f,  1.0f},
+        float3{ 0.0f, 0.0f,  0.0f}
+    };
+    mesh._listNormal                 = { float3::UnitY, float3::UnitY, float3::UnitY };
+    unique_ptr<MeshModifier> layered = MeshModifierRegistry::create( "curvesculptlayered" );
+    SW_ASSERT_NOT_NULL( layered.get() );
+    uint32 layersIndex = 0;
+    SW_ASSERT_TRUE( layered->tryGetParamIndex( "Layers", layersIndex ) );
+    layered->setNumberList( layersIndex, { 0.5f, 0.5f, 0.1f, 1.0f, 0.5f, 0.5f, 0.1f, 1.0f } );
+    SW_ASSERT_TRUE( PathModifiersTestInternal::setCurve( *layered, "Shape", {
+                                                                                float2{0.0f, 1.0f},
+                                                                                float2{1.0f, 1.0f}
+    } ) );
+    MeshModifierParamValue layerCurves{};
+    FloatCurve             own{};
+    (void)own.addKey( 0.0f, 3.0f, CurveInterpolation::Linear );
+    (void)own.addKey( 1.0f, 3.0f, CurveInterpolation::Linear );
+    layerCurves._listCurve = { own, FloatCurve{} }; // 층 1 의 곡선은 키가 없어 Shape 로 돌아간다
+    SW_ASSERT_TRUE( PathModifiersTestInternal::setValue( *layered, "Layer Curves", layerCurves ) );
+    test::MeshModifierTestUtil::applyOne( *layered, mesh );
+    SW_EXPECT_NEAR_EQUAL( 4.0f, mesh._listPosition[2]._y, 1e-5f ); // 3 (층 0 자기 곡선) + 1 (층 1 Shape)
+    SW_EXPECT_NEAR_EQUAL( 0.0f, mesh._listPosition[0]._y, 1e-5f );
 }
 
 SW_TEST_CASE( PathModifiersTest, BezierAttractorPullsHalfwayAtHalfRadius )

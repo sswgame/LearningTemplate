@@ -21,6 +21,9 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Task/TaskTypes.h"
+
+#include "Engine/Utility/FloatCurve.h"
 
 namespace sw
 {
@@ -104,12 +107,14 @@ namespace sw::editor
         Float,
         Int,
         Bool,
-        Axis,       ///< 0 = X, 1 = Y, 2 = Z
-        Vector3,    ///< 세 성분 모두 [`_min`, `_max`]
-        Curve,      ///< [0,1] → 값 곡선. 키는 (x, y) 이고 x 오름차순, 사이는 선형 보간
-        Reference,  ///< 씬 오브젝트 참조(오브젝트 이름 — 스플라인 · 대상 메시 · 콜라이더 · 워프 기준). 글로 둡니다
-        AssetPath,  ///< 에셋 경로(텍스처 · 포인트 캐시 · 정점 애니메이션 · 메시). 리소스 id 글로 둡니다
-        NumberList, ///< 수 목록. `_stride` 개씩 한 항목(예: 충돌점 = x y z 반경 세기 → stride 5)
+        Axis,          ///< 0 = X, 1 = Y, 2 = Z
+        Vector3,       ///< 세 성분 모두 [`_min`, `_max`]
+        Curve,         ///< [0,1] → 값 곡선(`FloatCurve`). 키는 시간 오름차순이고 키마다 보간(Constant · Linear · Cubic)과 접선을 든다
+        Reference,     ///< 씬 오브젝트 참조(오브젝트 이름 — 스플라인 · 대상 메시 · 콜라이더 · 워프 기준). 글로 둡니다
+        AssetPath,     ///< 에셋 경로(텍스처 · 포인트 캐시 · 정점 애니메이션 · 메시). 리소스 id 글로 둡니다
+        NumberList,    ///< 수 목록. `_stride` 개씩 한 항목(예: 충돌점 = x y z 반경 세기 → stride 5)
+        CurveList,     ///< 곡선 목록(예: 층마다 곡선). 항목은 `Curve` 와 같은 모양이고 `_max` 가 항목 수 상한이다. 기본은 빈 목록
+        ReferenceList, ///< 참조 목록(예: 대상 N 개). 항목은 `Reference` 와 같은 모양이고 `_max` 가 항목 수 상한이다. 기본은 빈 목록
     };
 } // namespace sw::editor
 
@@ -146,6 +151,8 @@ namespace sw::editor
      */
     struct MeshModifierParamDef
     {
+        static constexpr size_t kDefaultListLimit = 64; ///< 목록 종류의 `_max` 를 안 정했을 때의 항목 수 상한
+
         const utf8*                   _pName{ nullptr }; ///< 저장 문서의 키이자 패널 표시 이름(영문, 모디파이어 안에서 유일)
         MeshModifierParamKind         _kind{ MeshModifierParamKind::Float };
         float32                       _min{ 0.0f };                       ///< 수 종류의 하한(NumberList 는 원소마다)
@@ -160,6 +167,9 @@ namespace sw::editor
         uint32                        _columnCount{ 0 };                  ///< `_pColumn` 원소 수
         const utf8*                   _pRequiredComponentHint{ nullptr }; ///< Reference 고르기에서 걸러 볼 컴포넌트 타입 이름(예: "SplineComponent")
         const utf8*                   _pAssetFilterHint{ nullptr };       ///< AssetPath 슬롯이 받을 확장자(예: ".pc2"). 없으면 모두 받습니다
+
+        /** @brief 목록 종류(`CurveList` · `ReferenceList`)가 받는 항목 수 상한입니다. `_max` 가 1 이상이면 그 값, 아니면 안전한 기본값입니다. */
+        size_t getListLimit() const { return _max >= 1.0f ? static_cast<size_t>( _max ) : kDefaultListLimit; }
 
         /** @brief 구역 · 툴팁 · 단위를 넣은 사본을 냅니다. */
         MeshModifierParamDef withLayout( const utf8* pGroup, const utf8* pTooltip, const utf8* pUnit = nullptr ) const
@@ -201,10 +211,12 @@ namespace sw::editor
     /** @brief 매개변수 하나의 현재 값입니다. 종류마다 쓰는 칸이 다릅니다. */
     struct MeshModifierParamValue
     {
-        float3          _value{ 0.0f, 0.0f, 0.0f }; ///< 스칼라 종류는 `_x`, Vector3 는 셋
-        vector<float2>  _listCurveKey;              ///< Curve
-        vector<float32> _listNumber;                ///< NumberList
-        string          _text;                      ///< Reference · AssetPath
+        float3             _value{ 0.0f, 0.0f, 0.0f }; ///< 스칼라 종류는 `_x`, Vector3 는 셋
+        FloatCurve         _curve;                     ///< Curve
+        vector<FloatCurve> _listCurve;                 ///< CurveList
+        vector<float32>    _listNumber;                ///< NumberList
+        string             _text;                      ///< Reference · AssetPath
+        vector<string>     _listText;                  ///< ReferenceList
     };
 } // namespace sw::editor
 
@@ -344,7 +356,6 @@ namespace sw::editor
         bool                   getBool( uint32 paramIndex ) const { return _listParamValue[paramIndex]._value._x != 0.0f; }
         uint32                 getAxisIndex( uint32 paramIndex ) const;
         const float3&          getVector3( uint32 paramIndex ) const { return _listParamValue[paramIndex]._value; }
-        const vector<float2>&  getCurveKeys( uint32 paramIndex ) const { return _listParamValue[paramIndex]._listCurveKey; }
         const vector<float32>& getNumberList( uint32 paramIndex ) const { return _listParamValue[paramIndex]._listNumber; }
         const string&          getText( uint32 paramIndex ) const { return _listParamValue[paramIndex]._text; }
         /** @brief 곡선 값을 구합니다. 키가 없으면 0, 하나면 그 값입니다. 범위 밖은 끝 키 값입니다. */
@@ -353,12 +364,18 @@ namespace sw::editor
         void setScalar( uint32 paramIndex, float32 value );
         /** @brief 벡터 값을 선언 범위로 잘라 넣습니다. */
         void setVector3( uint32 paramIndex, const float3& value );
-        /** @brief 곡선 키를 넣습니다. x 는 [0,1] 로 자르고 x 순서로 정렬합니다. */
+        /** @brief 선형 곡선 키를 넣습니다. x 는 [0,1] 로 자르고 x 순서로 정렬합니다(보간 · 접선을 정하려면 `setParamValue`). */
         void setCurveKeys( uint32 paramIndex, const vector<float2>& listKey );
         /** @brief 수 목록을 넣습니다. 원소는 선언 범위로 자르고, 길이는 `_stride` 의 배수로 자릅니다. */
         void setNumberList( uint32 paramIndex, const vector<float32>& listNumber );
         /** @brief 참조 · 경로 글을 넣습니다. */
         void setText( uint32 paramIndex, string_view text );
+        /**
+         * @brief 매개변수 값 전체를 종류에 맞는 칸만 읽어 선언 규칙(범위 · 정렬 · 항목 수 상한)으로 다듬어 넣습니다.
+         * @details 종류별 setter 로 못 하는 값 — 보간 · 접선이 있는 곡선, 곡선 목록, 참조 목록 — 을 넣는 유일한 길이다(저장 문서 읽기 · 패널 편집이 쓴다).
+         *          곡선은 키의 시간을 [0,1] 로 자르고 정렬하며 자동 접선을 다시 센다. 목록은 `_max` 개까지만 받는다. 값이 같은 종류의 칸만 본다.
+         */
+        void setParamValue( uint32 paramIndex, const MeshModifierParamValue& value );
 
         /** @brief 레지스트리 id 입니다(`SW_MESH_MODIFIER` 의 둘째 인자 — 레지스트리가 만들 때 채웁니다). */
         const string&            getTypeID() const { return _typeID; }
@@ -398,6 +415,16 @@ namespace sw::editor
     /** @brief 모디파이어가 함께 쓰는 수학 도우미입니다. */
     struct MeshModifierUtil
     {
+        /** @brief 병렬 덩어리 하나의 정점 수입니다. 디스패치 비용(수십 us)보다 덩어리 일이 충분히 크게 잡는다. */
+        static constexpr uint32 kChunkVertexCount = 4096;
+
+        /** @brief 정점 수를 `kChunkVertexCount` 로 나눈 덩어리 수입니다. */
+        static uint32 computeChunkCount( size_t vertexCount );
+        /**
+         * @brief [0, count) 덩어리 번호를 작업 관리자(`setMeshModifierTaskManager`)로 나눠 돌립니다. 관리자가 없으면 현재 스레드가 한 번에 돕니다.
+         * @details 본문은 자기 덩어리의 정점만 쓰고, 스크래치는 본문 안에서 가져야 한다(덩어리마다 다른 스레드일 수 있다).
+         */
+        static void runBlocks( uint32 count, uint32 serialThreshold, const ParallelBlockDelegate& body );
         /** @brief 성분 번호(0 · 1 · 2)로 값을 읽습니다. */
         static float32 getComponent( const float3& value, uint32 axisIndex );
         /** @brief 성분 번호로 값을 씁니다. */

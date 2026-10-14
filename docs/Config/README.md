@@ -16,23 +16,23 @@
 
 | 파일 | 읽는 곳과 시점 | 배포본 | 커밋 | 문서 |
 |---|---|---|---|---|
-| `Config/Engine/EngineConfig.json` | `ConfigManager::ensureConfig<EngineConfig>` (`EngineLoop` Config 단계) — 기동 · 에디터 핫 리로드(창 크기 · 백엔드처럼 기동 때만 쓰는 값은 다음 실행부터) | configure 때 exe 에 구워 넣음(`ShippingHostDefaults.h`) — 디스크의 파일은 읽지 않는다 | 한다 | [EngineConfig](EngineConfig.md) |
-| `Config/Engine/MemoryBudget.json` | `MemoryBudgetMonitor::loadBudgetFile` (`EngineLoop` Config 단계) — 기동 | 읽지 않음(배포본에는 메모리 프로파일러가 없다) | 한다 | [MemoryBudget](MemoryBudget.md) |
-| `Resource/engine/data/enginedefaultassets.xml` | `EngineDefaultAssets::loadFromResource` (`EngineLoop` 엔진 셸 단계) — 기동 | 엔진 팩에 실림 | 한다 | [EngineDefaultAssets](EngineDefaultAssets.md) |
+| `Config/Engine/EngineConfig.json` | `ConfigManager::ensureConfig<EngineConfig>` (`Engine` Config 단계) — 기동 · 에디터 핫 리로드(창 크기 · 백엔드처럼 기동 때만 쓰는 값은 다음 실행부터) | configure 때 exe 에 구워 넣음(`ShippingHostDefaults.h`) — 디스크의 파일은 읽지 않는다 | 한다 | [EngineConfig](EngineConfig.md) |
+| `Config/Engine/MemoryBudget.json` | `MemoryBudgetMonitor::loadBudgetFile` (`Engine` Config 단계) — 기동 | 읽지 않음(배포본에는 메모리 프로파일러가 없다) | 한다 | [MemoryBudget](MemoryBudget.md) |
+| `Resource/engine/data/enginedefaultassets.xml` | `EngineDefaultAssets::loadFromResource` (`Engine` 엔진 셸 단계) — 기동 | 엔진 팩에 실림 | 한다 | [EngineDefaultAssets](EngineDefaultAssets.md) |
 | `Resource/engine/physics/physicssettings.xml` | `PhysicsSettings::loadFromResource` (`PhysicsSystem`) — 기동(씬 물리를 처음 세울 때) | 엔진 팩에 실림 | 한다 | [PhysicsSettings](PhysicsSettings.md) |
 | `Resource/engine/navigation/navmeshsettings.xml` | `NavMeshSettings` (`ResourceCatalog`) — 처음 쓸 때 · 내비메시 쿠킹 | 엔진 팩에 실림 | 한다 | [NavMeshSettings](NavMeshSettings.md) |
 | `Resource/engine/animation/lipsync.json` | `LipSyncSettings::loadFromResource` (`FacialAnimationComponent::speak` · `App --import-lipsync`) — 처음 말할 때 · 립싱크 임포트. 비즘 이름은 얼굴 리그(`*.facial.json`)의 `_listViseme` 와 맞춘다 | 엔진 팩에 실림 | 한다 | [LipSyncSettings](LipSyncSettings.md) |
 | `Resource/engine/data/render2d.xml` | `Render2DSettings::getActive` (손으로 읽음 — 모르는 요소 · 속성은 오류) — 처음 쓸 때 · `reloadActive`. 활성 게임 팩의 `data/render2d.xml` 이 있으면 통째로 대신한다 | 엔진 팩에 실림 | 한다 | [형식 설명](../../Source/Engine/Graphics/2D/Render2DSettings.h) |
 | `Resource/engine/input/default.input.xml` | `InputMap::loadFromResource` (셸 입력 맵 — `EngineDefaultAssets::_shellInputMap`) — 기동 · 에셋 핫 리로드 | 엔진 팩에 실림 | 한다 |  |
 | `Resource/engine/input/ui.input.xml` | `InputMap::loadFromResource` (런타임 UI 행동 맵 — `EngineDefaultAssets::_uiInputMap`, `UISystem::initialize`) — 기동(UI 단계) | 엔진 팩에 실림 | 한다 |  |
-| `Resource/engine/settings/engine.settings.xml` | `UserSettingsManager::loadSchema` (`EngineLoop` UserSettings 단계) — 기동. 플레이어 옵션 메뉴의 스키마 — 설정 표는 생성 페이지 `UserSettings.md` | 엔진 팩에 실림 | 한다 | [UserSettings](UserSettings.md) |
-| `Resource/engine/settings/debughud.settings.xml` | `UserSettingsManager::loadSchema` (`EngineLoop` UserSettings 단계 — Dev 만) — 기동. 디버그 HUD 상태(`debug.*`) — 엔진 스키마에 덧붙는다 | 엔진 팩에 실리지만 Shipping 은 읽지 않음(디버그 HUD 가 없다) | 한다 | [UserSettings](UserSettings.md) |
+| `Resource/engine/settings/engine.settings.xml` | `UserSettingsManager::loadSchema` (`Engine` UserSettings 단계) — 기동. 플레이어 옵션 메뉴의 스키마 — 설정 표는 생성 페이지 `UserSettings.md` | 엔진 팩에 실림 | 한다 | [UserSettings](UserSettings.md) |
+| `Resource/engine/settings/debughud.settings.xml` | `UserSettingsManager::loadSchema` (`Engine` UserSettings 단계 — Dev 만) — 기동. 디버그 HUD 상태(`debug.*`) — 엔진 스키마에 덧붙는다 | 엔진 팩에 실리지만 Shipping 은 읽지 않음(디버그 HUD 가 없다) | 한다 | [UserSettings](UserSettings.md) |
 
 ## 게임 프리셋
 
 | 파일 | 읽는 곳과 시점 | 배포본 | 커밋 | 문서 |
 |---|---|---|---|---|
-| `Config/Game/*.json` | `ConfigManager::ensureConfig<GameConfig>` (`EngineLoop` Config 단계) — 기동 · 에디터 핫 리로드 — Dev 는 `-game=<이름>`(없으면 빌드의 활성 게임 `SW_ACTIVE_GAME`)이 파일 하나를 고른다(`GameSelection`). 게임마다 하나 — `CheckGamePresets` 가 팩 · CMake 프리셋과 대조한다 | configure 때 exe 에 구워 넣음(`ShippingGameDefaults.h`) | 한다 | [GameConfig](GameConfig.md) |
+| `Config/Game/*.json` | `ConfigManager::ensureConfig<GameConfig>` (`Engine` Config 단계) — 기동 · 에디터 핫 리로드 — Dev 는 `-game=<이름>`(없으면 빌드의 활성 게임 `SW_ACTIVE_GAME`)이 파일 하나를 고른다(`GameSelection`). 게임마다 하나 — `CheckGamePresets` 가 팩 · CMake 프리셋과 대조한다 | configure 때 exe 에 구워 넣음(`ShippingGameDefaults.h`) | 한다 | [GameConfig](GameConfig.md) |
 
 ## 팩 데이터
 

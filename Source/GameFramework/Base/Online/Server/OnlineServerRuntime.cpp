@@ -75,8 +75,6 @@ namespace sw
         int32                          _healthCheckIndex{ -1 };
         uint8                          _bMemoryCache{ SW_FALSE };
         uint8                          _bManualCacheTime{ SW_FALSE };
-        uint8                          _bSchedulerStarted{ SW_FALSE };
-        uint8                          _bHostStarted{ SW_FALSE };
         uint8                          _bRegistered{ SW_FALSE };
     };
 } // namespace sw
@@ -185,7 +183,6 @@ namespace sw
         const uint64 serverID = static_cast<uint64>( parts._config._serverID );
         parts._bus            = make_unique<EphemeralServerBus>( nullptr, serverID ); // 라우터는 호스트가 연 뒤에 묶는다
         parts._scheduler.initialize( parts._store.get(), serverID );
-        parts._bSchedulerStarted = SW_TRUE;
         parts._remoteConfig.requestReload( *parts._store );
         parts._nextRemoteConfigReloadMs = nowMs + Internal::kRemoteConfigReloadMs;
 
@@ -305,7 +302,6 @@ namespace sw
         }
         if ( parts._host.initialize( pTransport, hostSettings, outError ) == false )
             return false;
-        parts._bHostStarted                      = SW_TRUE;
         parts._context._pRouter                  = parts._host.getEphemeralRouter();
         [[maybe_unused]] const bool bRouterBound = parts._bus->bindRouter( parts._context._pRouter );
         SW_ASSERT( bRouterBound ); // 호스트를 띄우기 전에는 아무도 버스를 구독하지 않았다
@@ -349,10 +345,9 @@ namespace sw
             if ( instance._kit != nullptr )
                 instance._kit->stop();
         }
-        if ( parts._bHostStarted == SW_TRUE )
-            parts._host.shutdown();
-        if ( parts._bSchedulerStarted == SW_TRUE )
-            parts._scheduler.shutdown();
+        // 둘 다 시작하지 않았어도 내려도 된다 — 호스트는 자기 초기화 비트를 보고, 스케줄러는 목록과 저장소 포인터를 비울 뿐이다.
+        parts._host.shutdown();
+        parts._scheduler.shutdown();
         if ( parts._store != nullptr )
         {
             parts._store->shutdown();

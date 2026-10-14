@@ -66,7 +66,7 @@ namespace
 /**
  * @brief [EditorTransactionTest] 커맨드 스택 서비스가 없어도 트랜잭션이 터지지 않는다
  * @details `editor::getService<T>()` 는 **문서대로 nullptr 을 돌려줄 수 있다.** 커맨드 스택은
- *          `EngineLoop` 소유라 EditorModule 보다 오래 살고 **종료할 때 서비스 결합이 먼저 풀리므로**,
+ *          `Engine` 소유라 EditorModule 보다 오래 살고 **종료할 때 서비스 결합이 먼저 풀리므로**,
  *          그 창에서 트랜잭션이 확인 없이 `->` 로 따라가면 널 역참조다.
  *          이 테스트 환경이 바로 그 상태다 — 확인이 빠지면 이 케이스가 **프로세스를 죽인다**.
  */

@@ -348,7 +348,7 @@ SW_TEST_CASE( AudioServiceTest, MultithreadedAudioDecodeAndPlayback )
 
 /**
  * @brief [AudioServiceTest] 디코드 태스크가 아직 도는 중에 내려도 무너지지 않는다
- * @details **실제 엔진의 순서가 이렇다.** `EngineLoop::shutdown` 은 오디오를 TaskManager 보다
+ * @details **실제 엔진의 순서가 이렇다.** `Engine::shutdown` 은 오디오를 TaskManager 보다
  *          **먼저** 내리므로, `XAudio2AudioBackend::shutdown()` 이 도는 동안 워커가 아직
  *          `playDecodedClipTask` 안에 있을 수 있다.
  *

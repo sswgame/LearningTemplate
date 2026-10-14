@@ -43,7 +43,7 @@ namespace sw
         , _listOwnedAssetCache{}
         , _pPackManager{ make_unique<ResourcePakManager>() }
         , _listBuiltInAssetCache{}
-        , _registeredAssetCache{}
+        , _registeredAssetCache{ "AssetManager.AssetCache" }
         , _contentSource{ ContentSource::Cooked }
     {
         // 내장 캐시는 기능 폴더가 등록표에 올린 것이다 — Resource 는 그 타입을 모른다. 소유 캐시는 여기서 만들고, 공유 캐시(Engine.dll 의
@@ -104,7 +104,7 @@ namespace sw
         if ( _pPackManager == nullptr )
             return false;
 
-        // 팩 폴더는 **실행 파일 기준**으로 찾는다. 작업 디렉터리 기준 상대 경로("Bin/Packs")면 EngineLoop 을 거치지 않고
+        // 팩 폴더는 **실행 파일 기준**으로 찾는다. 작업 디렉터리 기준 상대 경로("Bin/Packs")면 Engine 을 거치지 않고
         // AssetManager 만 직접 세우는 쪽(테스트 · 툴)이 아무것도 마운트하지 못하고, Shipping 은 느슨한 Resource/ 가
         // 없으니 그대로 모든 리소스 로드 실패가 된다.
         const string exeDir         = FileUtil::getBinaryDirectory();
@@ -177,7 +177,7 @@ namespace sw
         const string_view        kindName  = ( pKindName != nullptr ) ? string_view{ pKindName } : string_view{};
         const RegistrationResult result    = _registeredAssetCache.add( pCache, kindName );
         if ( result == RegistrationResult::DuplicateName )
-            SW_LOG_WARNING( "Asset cache kind '%#' is already registered by another cache - keeping the first", kindName );
+            SW_LOG_ERROR( "Asset cache kind '%#' is already registered by another cache - keeping the first", kindName );
     }
 
     bool AssetManager::isBuiltInAssetCache( const IAssetCache* pCache ) const

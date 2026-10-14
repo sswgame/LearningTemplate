@@ -115,7 +115,7 @@ namespace sw
 
     DebugHUDRegistry::DebugHUDRegistry()
         : _mutex{}
-        , _registration{ RegistrationOrder::ByOrderThenName, true, NameCase::IgnoreCase }
+        , _registration{ "DebugHUDRegistry", RegistrationOrder::ByOrderThenName, true, NameCase::IgnoreCase }
         , _revision{ 0 }
     {
     }

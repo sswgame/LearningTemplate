@@ -23,6 +23,17 @@ namespace sw::editor
         /** @brief 묶음 모디파이어(레지스트리 id `deformable`)면 그 포인터, 아니면 nullptr 입니다. RTTI 없이 id 로 가린다. */
         static DeformableModifier* findFrom( MeshModifier& modifier );
 
+        /**
+         * @brief 중첩 경로로 모디파이어를 찾습니다. 경로의 첫 번호는 @p inoutRoot 의 번호이고, 그 모디파이어가 묶음이면 다음 번호는 그 하위 스택의 번호입니다.
+         * @return 빈 경로 · 범위 밖 번호 · 중간이 묶음이 아닌 경로면 nullptr 입니다. 하위 스택 편집 UI 가 "고른 모디파이어" 를 번호 목록으로 들고 다닐 때 쓴다.
+         */
+        static MeshModifier* findByPath( MeshModifierStack& inoutRoot, const vector<int32>& listPath );
+        /**
+         * @brief 경로가 가리키는 모디파이어를 **담은** 스택입니다(추가 · 삭제 · 위아래 · 켜고 끄기를 거는 스택). 길이 1 이면 @p inoutRoot 입니다.
+         * @return `findByPath` 가 nullptr 을 줄 경로면 nullptr 입니다.
+         */
+        static MeshModifierStack* findOwningStack( MeshModifierStack& inoutRoot, const vector<int32>& listPath );
+
         const utf8*        getDescription() const override { return "Groups a nested modifier stack and applies it as one unit in this modifier's gizmo space."; }
         void               applyToMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context ) const override;
         void               writeExtraJSON( const JSONValue& object ) const override;

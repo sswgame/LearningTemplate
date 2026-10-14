@@ -1,4 +1,4 @@
-// 메시 모디파이어 패널의 순수 로직 — NumberList 행 연산(추가 · 삭제 · 복제 · 위아래), 열 선언 검사, 곡선 키 ↔ FloatCurve 변환, 구역 순서, 등록된 열 선언의 너비.
+// 메시 모디파이어 패널의 순수 로직 - NumberList 행 연산(추가 · 삭제 · 복제 · 위아래), 열 선언 검사, 목록 항목 연산, 구역 순서, 등록된 열 선언의 너비, 참조 걸러 보기.
 #include "pch.h"
 
 #include "Engine/Utility/FloatCurve.h"
@@ -97,38 +97,6 @@ SW_TEST_CASE( MeshModifierPanelLogicTest, EveryRegisteredColumnLayoutIsValid )
         }
     }
     SW_EXPECT_TRUE( columnParamCount >= 5u );
-}
-
-SW_TEST_CASE( MeshModifierPanelLogicTest, CurveRoundTripIsLinearAndSorted )
-{
-    const vector<float2> listKey{
-        float2{0.0f,  1.0f},
-        float2{0.5f, -2.0f},
-        float2{1.0f,  3.0f}
-    };
-    FloatCurve curve{};
-    MeshModifierParamEdit::makeFloatCurve( listKey, curve );
-    SW_ASSERT_EQUAL( size_t{ 3 }, curve._listKey.size() );
-    for ( const FloatCurveKey& key : curve._listKey )
-    {
-        SW_EXPECT_TRUE( key._interpolation == CurveInterpolation::Linear );
-        SW_EXPECT_FALSE( key._bAutoTangent );
-    }
-    SW_EXPECT_NEAR_EQUAL( -0.5f, curve.evaluate( 0.25f ), 1e-5f ); // 선형 보간: 1 과 -2 의 가운데
-
-    vector<float2> listBack;
-    MeshModifierParamEdit::makeCurveKeys( curve, listBack );
-    SW_EXPECT_TRUE( listBack == listKey );
-
-    // 편집기가 범위 밖 · 순서가 뒤집힌 키를 내도 매개변수 규칙(x ∈ [0,1], 오름차순)으로 돌아온다
-    curve._listKey[0]._time = 1.5f;
-    curve._listKey[2]._time = -1.0f;
-    MeshModifierParamEdit::makeCurveKeys( curve, listBack );
-    SW_ASSERT_EQUAL( size_t{ 3 }, listBack.size() );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, listBack[0]._x, 1e-6f );
-    SW_EXPECT_NEAR_EQUAL( 3.0f, listBack[0]._y, 1e-6f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, listBack[2]._x, 1e-6f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, listBack[2]._y, 1e-6f );
 }
 
 SW_TEST_CASE( MeshModifierPanelLogicTest, GroupOrderFollowsFirstAppearance )

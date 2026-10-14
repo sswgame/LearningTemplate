@@ -4,6 +4,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Module/ModuleImageHost.h"
 #include "Engine/Module/ModuleImagesSubsystem.h"
 #include "Engine/Module/ReflectionSubsystem.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -12,14 +13,15 @@ namespace sw
 {
     SW_LOG_CALLER( "ModuleTypes" );
 
-    ModuleTypesSubsystem::ModuleTypesSubsystem( const ModuleTypeLoaderDelegate* pModuleTypeLoader )
-        : _pModuleTypeLoader{ pModuleTypeLoader }
+    ModuleTypesSubsystem::ModuleTypesSubsystem( const ISubsystemLocator* pScope )
+        : _pScope{ pScope }
     {
     }
 
     SubsystemInitResult ModuleTypesSubsystem::initializeSubsystem()
     {
-        if ( _pModuleTypeLoader != nullptr && _pModuleTypeLoader->isBound() && ( *_pModuleTypeLoader )() == false )
+        IModuleImageHost* pHost = locateSubsystem<IModuleImageHost>( _pScope );
+        if ( pHost != nullptr && pHost->loadTypeProviders() == false )
         {
             SW_LOG_ERROR( "The host could not load its type-providing modules - scenes are not read" );
             return SubsystemInitResult::Failed;

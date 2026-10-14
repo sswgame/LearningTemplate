@@ -1,6 +1,6 @@
 /**
  * @file AssetManager.h
- * @brief 팩 에셋(GUID, 스키마, Material, Texture, Prefab, Mesh)을 한곳에서 관리하는 파사드입니다. `EngineLoop` 가 `EngineServiceCollection` 으로 소유합니다.
+ * @brief 팩 에셋(GUID, 스키마, Material, Texture, Prefab, Mesh)을 한곳에서 관리하는 파사드입니다. `Engine` 가 `EngineServiceCollection` 으로 소유합니다.
  * @note
  *   포함: AssetDatabase, AssetFormatRegistry, ResourcePakManager, 에셋 캐시 레지스트리.
  *   기능 캐시(Material, Texture, Prefab, Mesh, Skeleton, Fracture 등)는 **각 기능 폴더가 등록합니다**(`SW_BUILT_IN_ASSET_CACHE`, `Cache/BuiltInAssetCache.h`).

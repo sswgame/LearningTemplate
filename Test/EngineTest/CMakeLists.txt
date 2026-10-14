@@ -44,6 +44,9 @@ file(GLOB swMeshModifierSource CONFIGURE_DEPENDS
 	"${CMAKE_SOURCE_DIR}/Source/GameFramework/PlugIn/Editor/MeshModifiers/Stack/*.cpp"
 	"${CMAKE_SOURCE_DIR}/Source/GameFramework/PlugIn/Editor/MeshModifiers/Modifiers/*.cpp")
 list(APPEND swEngineTestExtensionSource ${swMeshModifierSource})
+# 캐릭터 편집(GF_EditorPlugIn_CharacterEditor)의 화면 없는 편집 모델(Model/)도 폴더째 모은다.
+file(GLOB swCharacterEditorModelSource CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Source/GameFramework/PlugIn/Editor/CharacterEditor/Model/*.cpp")
+list(APPEND swEngineTestExtensionSource ${swCharacterEditorModelSource})
 # 텍스처 표본기가 이미지 디코드를 맡기는 Editor 의 ImageUtil(stb_image 를 감싼다)도 직접 컴파일한다 - EditorModule 은 링크하지 않는다.
 list(APPEND swEngineTestExtensionSource "${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ImageUtil.cpp")
 

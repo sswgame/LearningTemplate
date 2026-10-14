@@ -25,7 +25,7 @@ namespace sw
              */
             static RegistrationList<const GameAutoplayRegistration>& getRegistrations()
             {
-                static RegistrationList<const GameAutoplayRegistration> s_registration{ RegistrationOrder::Insertion, true };
+                static RegistrationList<const GameAutoplayRegistration> s_registration{ "GameAutoplayRegistry", RegistrationOrder::Insertion, true };
                 return s_registration;
             }
         };

@@ -8,9 +8,11 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/EngineLoop.h"
+#include "Engine/Engine.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Profiling/FrameProfiler.h"
+
+#include "ModuleHost/ModuleImageHostSubsystem.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -45,13 +47,13 @@ namespace sw
 
     ModuleReloadDriver::~ModuleReloadDriver() = default;
 
-    void ModuleReloadDriver::initialize( [[maybe_unused]] EngineLoop& engineLoop )
+    void ModuleReloadDriver::initialize( [[maybe_unused]] ModuleImageHostSubsystem& moduleImageHost )
     {
 #if !defined( SW_SHIPPING )
         _liveReloadManager = make_unique<LiveReloadManager>();
         AppAutomation::bindLiveReloadManager( _liveReloadManager.get() ); // 개발 명령 `module.reload` · 탐침 `Module.*` 가 읽는다
-        // 모듈 DLL 을 언로드할 수 있는 곳은 "씬은 사라졌고 서비스는 아직 있는" 좁은 구간뿐이다. 엔진이 제공하는 훅에 등록한다.
-        engineLoop.setOnScenesReleased( SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
+        // 모듈 DLL 을 언로드할 수 있는 곳은 "씬은 사라졌고 서비스는 아직 있는" 좁은 구간뿐이다. 호스트 범위의 모듈 이미지 창구가 엔진 종료 안에서 그 자리를 부른다.
+        moduleImageHost.setScenesReleasedHook( SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
         {
             AppAutomation::bindLiveReloadManager( nullptr );
             if ( _liveReloadManager != nullptr )
@@ -60,11 +62,11 @@ namespace sw
 #endif
     }
 
-    void ModuleReloadDriver::pollReloadTriggers( [[maybe_unused]] const EngineLoop& engineLoop, [[maybe_unused]] bool bEnableEditor )
+    void ModuleReloadDriver::pollReloadTriggers( [[maybe_unused]] const Engine& engine, [[maybe_unused]] bool bEnableEditor )
     {
 #if !defined( SW_SHIPPING )
         // 모듈을 다시 로드하는 장치는 여기(App)에 있다. Engine 에는 "이 액션이 눌렸나"만 묻는다.
-        if ( engineLoop.wasDebugActionTriggered( InputMapDefaults::kReloadGameAction ) )
+        if ( engine.wasDebugActionTriggered( InputMapDefaults::kReloadGameAction ) )
         {
             requestReload( config::kTargetGameModule );
             SW_LOG_INFO( "%#: force SWGame reload", InputMapDefaults::kReloadGameAction );
@@ -75,7 +77,7 @@ namespace sw
             gv_reloadGameAtFrame = 0; // 한 번만 실행한다. 프로파일러가 프레임 수를 되돌리면(워밍업 뒤) 같은 번호가 다시 온다.
             requestReload( config::kTargetGameModule );
         }
-        if ( bEnableEditor && engineLoop.wasDebugActionTriggered( kReloadEditorAction ) )
+        if ( bEnableEditor && engine.wasDebugActionTriggered( kReloadEditorAction ) )
         {
             requestReload( config::kTargetEditorModule );
             SW_LOG_INFO( "%#: force EditorModule reload", kReloadEditorAction );
