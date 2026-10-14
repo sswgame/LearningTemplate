@@ -66,6 +66,16 @@ namespace sw::editor
          * @param pMarkKey 값을 주면 지우기 버튼 없이 그리고 입력란에 이 이름을 남깁니다. 시나리오가 이 입력란을 누를 때 씁니다.
          */
         void drawSearchBar( const utf8* pMarkKey = nullptr );
+        /**
+         * @brief 검색 입력란과 그 오른쪽의 보기 옵션 버튼을 한 줄로 그립니다. 옵션은 바뀐 프로퍼티만 보기, 모두 펼치기, 모두 접기입니다.
+         * @details 언리얼 Details 의 View Options(Show Only Modified Properties · Expand All · Collapse All)에 해당한다.
+         *          펼치기 · 접기 요청은 이번 프레임에 그리는 모든 카테고리 머리에 적용하고 `endFrame` 이 지운다.
+         */
+        void drawSearchBarWithOptions( const utf8* pFieldTooltip = nullptr );
+        /** @brief 이번 프레임의 펼치기(1) · 접기(-1) 요청을 반환합니다. 0 이면 요청이 없습니다. 컴포넌트 카드처럼 그리드 밖 머리에도 적용할 때 씁니다. */
+        int32 getOpenAllRequest() const { return _openAllRequest; }
+        /** @brief 프레임 끝에 부릅니다. 펼치기 · 접기 요청을 지웁니다. */
+        void endFrame() { _openAllRequest = 0; }
         /** @brief 현재 검색어를 반환합니다. 비어 있으면 빈 문자열입니다. 환경설정 창이 섹션을 거를 때 씁니다. */
         const utf8* getFilterText() const { return _propertyFilter.c_str(); }
         /**
@@ -134,5 +144,7 @@ namespace sw::editor
         Component*                                                   _pEditTargetComponent; ///< 현재 프로퍼티를 그리는 컴포넌트. 편집 알림을 받는다
         GameObject*                                                  _pEditTargetObject;    ///< 현재 프로퍼티를 그리는 GameObject. 컴포넌트가 없을 때만 쓴다
         uint32                                                       _propertyDrawDepth;    ///< 중첩과 컨테이너의 재귀 깊이. 알림은 가장 바깥에서 한 번만 보낸다
+        int32                                                        _openAllRequest;       ///< 이번 프레임의 모두 펼치기(1) · 접기(-1) 요청. 0 이면 없다
+        bool                                                         _bShowModifiedOnly;    ///< 기본값과 다른 프로퍼티만 그린다(언리얼 Show Only Modified Properties)
     };
 } // namespace sw::editor

@@ -110,6 +110,7 @@ namespace sw::editor
     {
         EditorWidgets::pushInspectorStyle();
         drawSelectionSection();
+        _propertyGrid.endFrame(); // 모두 펼치기 · 접기 요청은 이번 프레임의 머리에만 적용한다
         InspectorPropertyUndo::commitFinishedEdits();
 
         // Undo 와 Redo 단축키는 여기서 처리하지 않는다. edit.undo 와 edit.redo 커맨드가 유일한 처리자다.
@@ -186,8 +187,7 @@ namespace sw::editor
         if ( pfbPath.empty() == false )
             drawPrefabLinkSection( pObj, pfbPath );
 
-        _propertyGrid.drawSearchBar();
-        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "SearchTooltip" ) );
+        _propertyGrid.drawSearchBarWithOptions( SW_LOCKEY( "EditorInspector", "SearchTooltip" ) );
         ImGui::Spacing();
 
         const TypeInfo* pTypeInfo = pObj->getTypeInfo();
@@ -235,13 +235,15 @@ namespace sw::editor
             EditorTransaction::endTransaction();
         }
 
-        _propertyGrid.drawSearchBar();
+        _propertyGrid.drawSearchBarWithOptions( SW_LOCKEY( "EditorInspector", "SearchTooltip" ) );
         ImGui::SeparatorText( "Components" );
         EditorMultiEditUtil::collectCommonComponents( listObject, _listMultiEditComponent );
         for ( EditorMultiEditComponent& common : _listMultiEditComponent )
         {
             Component* pComponent = common._listComponent[0];
             ImGui::PushID( pComponent->getTypeInfo()->_name.c_str() );
+            if ( _propertyGrid.getOpenAllRequest() != 0 )
+                ImGui::SetNextItemOpen( _propertyGrid.getOpenAllRequest() > 0 );
             if ( ImGui::CollapsingHeader( pComponent->getTypeInfo()->getDisplayName(), ImGuiTreeNodeFlags_DefaultOpen ) )
             {
                 _pMultiEditCurrent = &common;
@@ -341,6 +343,10 @@ namespace sw::editor
             {
                 ImGui::SetNextItemOpen( true );
                 workspace.setScrollToComponentID( 0 );
+            }
+            else if ( _propertyGrid.getOpenAllRequest() != 0 )
+            {
+                ImGui::SetNextItemOpen( _propertyGrid.getOpenAllRequest() > 0 ); // 보기 옵션의 모두 펼치기 · 접기는 컴포넌트 카드에도 적용한다
             }
 
             if ( EditorWidgets::beginComponentCard( pName, pComp->getComponentID(), &bActive, &bRemove, bAccent ) )

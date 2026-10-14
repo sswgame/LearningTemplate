@@ -1333,6 +1333,10 @@
             "text": "부모 오브젝트와의 연결을 해제하고 씬 루트로 이동합니다",
             "sourceHash": "1e93c3d459c806de"
         },
+        "EditorInspector.ViewOptions": {
+            "text": "보기 옵션: 바뀐 프로퍼티만 보기, 모든 영역 펼치기 또는 접기",
+            "sourceHash": "890de6ef869bfc26"
+        },
         "EditorMapCheck.CheckMap": {
             "text": "활성 씬의 모든 오브젝트를 다시 검증합니다",
             "sourceHash": "513adef7c162ddc7"
