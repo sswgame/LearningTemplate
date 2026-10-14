@@ -61,7 +61,7 @@ namespace sw
         Count
     };
 
-    SW_GF_API const utf8* toString( AdminRole role );
+    SW_KIT_API const utf8* toString( AdminRole role );
 } // namespace sw
 
 namespace sw
@@ -81,7 +81,7 @@ namespace sw
         Count
     };
 
-    SW_GF_API const utf8* toString( AdminResult result );
+    SW_KIT_API const utf8* toString( AdminResult result );
 } // namespace sw
 
 namespace sw
@@ -149,7 +149,7 @@ namespace sw
 namespace sw
 {
     /** @brief 형식을 읽고 쓰며 등급 테이블을 제공합니다. 읽을 때 상한을 넘거나 모자라면 false 를 반환합니다. */
-    struct SW_GF_API AdminProtocol
+    struct SW_KIT_API AdminProtocol
     {
         static constexpr uint32 kVersion        = 1;
         static constexpr int32  kMaxBulkCount   = 16;

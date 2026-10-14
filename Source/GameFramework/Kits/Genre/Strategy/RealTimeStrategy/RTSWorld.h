@@ -93,7 +93,7 @@ namespace sw
         InvalidPlacement
     };
 
-    SW_GF_API const utf8* toString( RTSCommandResult result );
+    SW_KIT_API const utf8* toString( RTSCommandResult result );
 
     /** @brief 일꾼의 채취 단계입니다. */
     enum class RTSGatherPhase : uint8
@@ -215,7 +215,7 @@ namespace sw
      *
      *          카탈로그는 빌려 쓴다. 월드보다 오래 살아야 하고 바뀌지 않아야 한다.
      */
-    class SW_GF_API RTSWorld
+    class SW_KIT_API RTSWorld
     {
     public:
         static constexpr int32 kNoOwner = -1;

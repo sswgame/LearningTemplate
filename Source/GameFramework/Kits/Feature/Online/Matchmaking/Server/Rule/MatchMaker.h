@@ -23,7 +23,7 @@ namespace sw
      * @class MatchMaker
      * @brief 모드 하나의 대기열입니다.
      */
-    class SW_GF_API MatchMaker
+    class SW_KIT_API MatchMaker
     {
     public:
         MatchMaker();

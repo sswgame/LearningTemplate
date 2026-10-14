@@ -20,7 +20,7 @@ namespace sw
      * @class ServerDirectoryServer
      * @brief 서버 디렉터리 바인딩입니다. 호스트 `tick` 스레드에서 씁니다.
      */
-    class SW_GF_API ServerDirectoryServer final : public IOnlineHostService
+    class SW_KIT_API ServerDirectoryServer final : public IOnlineHostService
     {
     public:
         ServerDirectoryServer();

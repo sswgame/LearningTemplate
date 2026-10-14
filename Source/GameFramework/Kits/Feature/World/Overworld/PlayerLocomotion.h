@@ -29,7 +29,7 @@ namespace sw
     //    실제 타일 좌표는 OverworldTileMover 가 가진다
     // ------------------------------------------------------------------------------
     /** @brief 타일 스텝 이동 FSM 입니다. */
-    class SW_GF_API PlayerLocomotion
+    class SW_KIT_API PlayerLocomotion
     {
     public:
         /**

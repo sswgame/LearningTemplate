@@ -134,7 +134,7 @@ namespace sw
 namespace sw
 {
     /** @brief 조종사 하나의 상태입니다. 월드가 가지고 있고, 읽기 전용으로 내줍니다. */
-    struct SW_GF_API MechPilot
+    struct SW_KIT_API MechPilot
     {
         Vitality                    _vitality{};
         ResourceGauge               _boost{};
@@ -213,7 +213,7 @@ namespace sw
      *     world.writeState( writer ); // 넷 키트의 스냅샷에 싣는다
      * @endcode
      */
-    class SW_GF_API MechArenaWorld
+    class SW_KIT_API MechArenaWorld
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "MCHA" );

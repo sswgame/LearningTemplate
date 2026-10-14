@@ -74,7 +74,7 @@ namespace sw
      * @class ServerDirectoryService
      * @brief 서버 디렉터리 로직 서비스입니다.
      */
-    class SW_GF_API ServerDirectoryService
+    class SW_KIT_API ServerDirectoryService
     {
     public:
         ServerDirectoryService();

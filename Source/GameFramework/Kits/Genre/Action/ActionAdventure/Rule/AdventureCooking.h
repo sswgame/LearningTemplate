@@ -74,7 +74,7 @@ namespace sw
         NoRoom
     };
 
-    SW_GF_API const utf8* toString( AdventureCookResult result );
+    SW_KIT_API const utf8* toString( AdventureCookResult result );
 
     /**
      * @class AdventureCooking
@@ -82,7 +82,7 @@ namespace sw
      *        dubious="dubiousFood" dubiousHearts="4"><Effect id="Chilly" tier2="4" tier3="7" maxDuration="1800"/>
      *        <Ingredient id="hydromelon" effect="Chilly" potency="1" duration="150" hearts="2"/></AdventureCooking>`
      */
-    class SW_GF_API AdventureCooking : public XMLCatalog<AdventureCooking>
+    class SW_KIT_API AdventureCooking : public XMLCatalog<AdventureCooking>
     {
         friend class XMLCatalog<AdventureCooking>;
 

@@ -13,7 +13,7 @@ namespace sw
      * @class AccountNameIndex
      * @brief 계정 이름 인덱스입니다.
      */
-    class SW_GF_API AccountNameIndex final : public IAccountNameIndex
+    class SW_KIT_API AccountNameIndex final : public IAccountNameIndex
     {
     public:
         ServiceStoreResult readIdentityByDisplayName( IServiceStoreConnection& connection, string_view displayName, AccountIdentity& outIdentity ) const override;

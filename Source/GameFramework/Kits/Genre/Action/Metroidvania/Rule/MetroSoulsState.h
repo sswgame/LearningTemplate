@@ -80,7 +80,7 @@ namespace sw
      * @class MetroSoulsState
      * @brief 통화, 시체, 물약, 처치 기록, 되살아날 위치를 관리합니다. 체력은 기반 `Vitality` 를 빌려 받습니다.
      */
-    class SW_GF_API MetroSoulsState
+    class SW_KIT_API MetroSoulsState
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "MSOL" );

@@ -132,7 +132,7 @@ namespace sw
 namespace sw
 {
     /** @brief 파일럿 하나입니다. 레벨 L 의 능력치는 `기본 + 성장 x (L - 1)` 입니다. */
-    struct SW_GF_API SRPGPilotDef
+    struct SW_KIT_API SRPGPilotDef
     {
         hashed_string _id{};
         string        _name{};
@@ -152,7 +152,7 @@ namespace sw
      *          `weapons="vulcan,rifle"`, `developsTo="gundam:5 gmcustom:3"`, 무기는 `map="Self" pattern="1,0 2,0 3,0"`, 파일럿은 `shooting="20" growShooting="2"` 이다.
      *          경험치 곡선은 기반 클래스 `ExperienceCurve` 의 속성을 그대로 쓴다.
      */
-    class SW_GF_API SRPGCatalog : public XMLCatalog<SRPGCatalog>
+    class SW_KIT_API SRPGCatalog : public XMLCatalog<SRPGCatalog>
     {
         friend class XMLCatalog<SRPGCatalog>;
 

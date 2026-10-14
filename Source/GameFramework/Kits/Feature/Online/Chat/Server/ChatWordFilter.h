@@ -38,7 +38,7 @@ namespace sw
      * @class ChatWordFilter
      * @brief 금칙어 필터입니다.
      */
-    class SW_GF_API ChatWordFilter
+    class SW_KIT_API ChatWordFilter
     {
     public:
         ChatWordFilter();

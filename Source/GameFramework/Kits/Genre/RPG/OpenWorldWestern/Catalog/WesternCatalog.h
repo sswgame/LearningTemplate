@@ -253,7 +253,7 @@ namespace sw
      *     </WesternCatalog>
      * @endcode
      */
-    class SW_GF_API WesternCatalog : public XMLCatalog<WesternCatalog>
+    class SW_KIT_API WesternCatalog : public XMLCatalog<WesternCatalog>
     {
         friend class XMLCatalog<WesternCatalog>;
 

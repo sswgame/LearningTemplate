@@ -50,7 +50,7 @@ namespace sw
      * @class TradeClient
      * @brief 거래 클라이언트입니다.
      */
-    class SW_GF_API TradeClient final : public IOnlineClientService
+    class SW_KIT_API TradeClient final : public IOnlineClientService
     {
     public:
         TradeClient();

@@ -27,7 +27,7 @@ namespace sw
      * @class LeaderboardServer
      * @brief 순위표 바인딩입니다. 호스트 `tick` 스레드에서 씁니다.
      */
-    class SW_GF_API LeaderboardServer final : public IOnlineHostService
+    class SW_KIT_API LeaderboardServer final : public IOnlineHostService
     {
     public:
         LeaderboardServer();

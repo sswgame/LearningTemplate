@@ -171,7 +171,7 @@ namespace sw
      * @class MatgoGame
      * @brief 맞고와 고스톱 한 판을 진행합니다. 같은 시드와 같은 행동이면 같은 판이 나오는 결정적 구현입니다.
      */
-    class SW_GF_API MatgoGame
+    class SW_KIT_API MatgoGame
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "CMTG" );

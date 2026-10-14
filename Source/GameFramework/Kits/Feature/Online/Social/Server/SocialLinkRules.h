@@ -60,7 +60,7 @@ namespace sw
 namespace sw
 {
     /** @brief 관계 바꾸기 규칙을 담은 순수 함수 모음입니다. */
-    struct SW_GF_API SocialLinkRules
+    struct SW_KIT_API SocialLinkRules
     {
         static SocialLinkDecision decide( SocialLinkOperation operation, SocialLinkState selfState, SocialLinkState otherState, const SocialCounts& selfCounts,
                                           const SocialCounts& otherCounts );

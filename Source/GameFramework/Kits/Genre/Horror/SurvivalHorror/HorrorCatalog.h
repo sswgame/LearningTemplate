@@ -41,8 +41,8 @@ namespace sw
         InkRibbon ///< 세이브마다 `SaveItem` 하나를 쓴다
     };
 
-    [[nodiscard]] SW_GF_API bool parseHorrorItemKind( string_view text, HorrorItemKind& outKind );
-    SW_GF_API const utf8*        toString( HorrorItemKind kind );
+    [[nodiscard]] SW_KIT_API bool parseHorrorItemKind( string_view text, HorrorItemKind& outKind );
+    SW_KIT_API const utf8*        toString( HorrorItemKind kind );
 
     /** @brief 아이템 하나입니다. 격자에서 `_width` x `_height` 셀을 차지하며, 돌리면 바뀝니다. */
     struct HorrorItemDef
@@ -181,7 +181,7 @@ namespace sw
      *        <Sequence id="bells" steps="low,high,mid" flag="bellsDone" mistakeSanity="5"/><Document id="diary" title="Diary" clues="knife,gloves"/>
      *        <Deduction id="culprit" answer="butler" links="knife-gloves,gloves-pantry" flag="caseSolved" wrongSanity="15"/></HorrorCatalog>` 를 읽습니다.
      */
-    class SW_GF_API HorrorCatalog : public XMLCatalog<HorrorCatalog>
+    class SW_KIT_API HorrorCatalog : public XMLCatalog<HorrorCatalog>
     {
         friend class XMLCatalog<HorrorCatalog>;
 

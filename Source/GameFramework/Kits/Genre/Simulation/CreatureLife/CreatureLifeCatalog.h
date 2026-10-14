@@ -34,7 +34,7 @@ namespace sw
      * @brief 서식지 레시피 하나입니다. 격자 위 오브젝트의 조합이며, 90° 회전한 모양도 같은 서식지입니다.
      * @details 패턴은 `_width` x `_height` 크기의 행 우선 배열이다. 서식지는 "무엇이든 되는 셀" 이 아닌 셀을 차지한다(한 셀은 한 서식지에만 속한다).
      */
-    struct SW_GF_API HabitatDef
+    struct SW_KIT_API HabitatDef
     {
         hashed_string       _id{};
         string              _name{};
@@ -64,7 +64,7 @@ namespace sw
 namespace sw
 {
     /** @brief 생물 능력 하나입니다(나무 심기, 물 만들기, 바위 부수기). 규칙은 위에서부터 처음 맞는 것을 씁니다. */
-    struct SW_GF_API CreatureAbilityDef
+    struct SW_KIT_API CreatureAbilityDef
     {
         hashed_string            _id{};
         vector<CreatureTileRule> _listRule{};
@@ -77,7 +77,7 @@ namespace sw
 namespace sw
 {
     /** @brief 생물 한 종입니다. 마을에는 종마다 한 마리가 삽니다. */
-    struct SW_GF_API CreatureSpeciesDef
+    struct SW_KIT_API CreatureSpeciesDef
     {
         hashed_string         _id{};
         string                _name{};
@@ -140,7 +140,7 @@ namespace sw
      * @endcode
      * @details `.` 은 무엇이든 되는 셀이고, `empty` 오브젝트는 빈 셀이다. 행 길이가 다르거나 모르는 기호가 있는 서식지는 경고하고 뺀다.
      */
-    class SW_GF_API CreatureLifeCatalog : public XMLCatalog<CreatureLifeCatalog>
+    class SW_KIT_API CreatureLifeCatalog : public XMLCatalog<CreatureLifeCatalog>
     {
         friend class XMLCatalog<CreatureLifeCatalog>;
 

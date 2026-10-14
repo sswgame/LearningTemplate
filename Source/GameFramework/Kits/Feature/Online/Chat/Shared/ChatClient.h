@@ -38,7 +38,7 @@ namespace sw
      * @class ChatClient
      * @brief 연결 하나의 채팅 클라이언트입니다.
      */
-    class SW_GF_API ChatClient final : public IOnlineClientService
+    class SW_KIT_API ChatClient final : public IOnlineClientService
     {
     public:
         using ReplyDelegate = Delegate<void( const ChatClientReply& )>;

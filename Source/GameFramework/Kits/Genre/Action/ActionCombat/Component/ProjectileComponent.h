@@ -24,7 +24,7 @@ namespace sw
      *          스탯이 없는 것(벽)도 레이어가 부딪히게 설정되어 있으면 투사체를 멈춘다. 무엇에 막힐지는 레이어 행렬(`CollisionLayers`)이 정한다.
      */
     REFLECT()
-    class SW_GF_API ProjectileComponent : public Component
+    class SW_KIT_API ProjectileComponent : public Component
     {
     public:
         REFLECT_BODY();

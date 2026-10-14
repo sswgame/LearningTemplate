@@ -56,7 +56,7 @@ namespace sw
         UnknownBuilding
     };
 
-    SW_GF_API const utf8* toString( CityPlaceResult result );
+    SW_KIT_API const utf8* toString( CityPlaceResult result );
 
     /** @brief 일꾼의 종류입니다. */
     enum class CityWalkerKind : uint8
@@ -162,7 +162,7 @@ namespace sw
      *          해가 바뀌면 범람이 범람원의 비옥함을 정한다.
      *          카탈로그는 빌려 쓴다. 시뮬레이션보다 오래 살아야 하고 바뀌지 않아야 한다.
      */
-    class SW_GF_API CitySimulation
+    class SW_KIT_API CitySimulation
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "CITY" );

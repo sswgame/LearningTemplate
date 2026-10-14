@@ -47,7 +47,7 @@ namespace sw
         NoFreeWorkers
     };
 
-    SW_GF_API const utf8* toString( ConquestResult result );
+    SW_KIT_API const utf8* toString( ConquestResult result );
 
     /** @brief 거점의 현재 상태입니다. */
     struct ConquestSite
@@ -148,7 +148,7 @@ namespace sw
      *          사기: 지휘관이 살아 있고 `_moraleRadius` 안이면 플레이어 병사의 피해가 늘어난다.
      *          성벽이 서 있는 거점의 점령 구역 안 수비대는 `_wallProtection` 만큼 피해를 덜 받는다. 충차는 성문(부서지면 성벽)만 공격하고, 사다리는 싸우지 않는다.
      */
-    class SW_GF_API ConquestWorld
+    class SW_KIT_API ConquestWorld
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "CNQW" );

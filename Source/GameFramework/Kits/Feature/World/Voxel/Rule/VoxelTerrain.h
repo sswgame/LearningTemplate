@@ -53,7 +53,7 @@ namespace sw
      * @brief 월드를 지형으로 채웁니다. 기둥마다 아래에서 위로 기반암, 돌, 흙을 채우고, 맨 위는 물가 2블록 안이면 모래, 아니면 풀로 덮습니다. 물 높이까지는 물로 채웁니다.
      * @details 풀 위에는 시드 해시로 나무(줄기 4~6블록과 잎 덩어리)를 세운다. 나무는 청크 경계를 넘어도 되지만 월드 밖으로는 잘라 낸다.
      */
-    struct SW_GF_API VoxelTerrainGenerator
+    struct SW_KIT_API VoxelTerrainGenerator
     {
         /** @brief 기둥의 지면 높이(맨 위 블록의 y)입니다. 월드를 쓰지 않으므로 미리보기와 스폰 위치에도 씁니다. */
         static int32              computeSurfaceHeight( int32 x, int32 z, const VoxelTerrainSettings& settings );

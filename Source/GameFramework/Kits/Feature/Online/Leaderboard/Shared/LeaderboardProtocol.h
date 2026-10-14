@@ -65,7 +65,7 @@ namespace sw
 namespace sw
 {
     /** @brief 형식을 읽고 씁니다. 읽을 때 상한을 넘거나 모자라면 false 를 반환합니다. */
-    struct SW_GF_API LeaderboardProtocol
+    struct SW_KIT_API LeaderboardProtocol
     {
         static constexpr uint32 kVersion = 1;
 

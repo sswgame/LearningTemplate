@@ -77,7 +77,7 @@ namespace sw
 namespace sw
 {
     /** @brief 팟 계산과 분배를 담당합니다. 테이블 없이도 쓸 수 있습니다. */
-    struct SW_GF_API PokerPotUtil
+    struct SW_KIT_API PokerPotUtil
     {
         /**
          * @brief 자리별로 낸 금액에서 메인 팟과 사이드 팟을 만듭니다. 폴드한 자리의 칩은 팟에 들어가지만 가져갈 수 없습니다.
@@ -123,7 +123,7 @@ namespace sw
      *          최소 레이즈는 "직전 레이즈 크기만큼 더"(처음에는 빅 블라인드)이다. 그보다 작은 올인은 받아 주되 최소 증액을 바꾸지 않는다
      *          (단순화: 이미 행동한 사람도 다시 레이즈할 수 있다). 카드를 태우지(burn) 않는다.
      */
-    class SW_GF_API PokerTable
+    class SW_KIT_API PokerTable
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "CPKR" );

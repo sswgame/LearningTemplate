@@ -85,10 +85,10 @@ namespace sw
         HouseFull
     };
 
-    SW_GF_API const utf8* toString( CreatureInteractResult result );
-    SW_GF_API const utf8* toString( CreatureRequestResult result );
-    SW_GF_API const utf8* toString( CreatureAbilityResult result );
-    SW_GF_API const utf8* toString( CreatureHouseResult result );
+    SW_KIT_API const utf8* toString( CreatureInteractResult result );
+    SW_KIT_API const utf8* toString( CreatureRequestResult result );
+    SW_KIT_API const utf8* toString( CreatureAbilityResult result );
+    SW_KIT_API const utf8* toString( CreatureHouseResult result );
 
     /** @brief 격자 위에 생긴 서식지 하나입니다. */
     struct HabitatInstance
@@ -164,7 +164,7 @@ namespace sw
      *          부탁 목표는 `Deliver`(아이템)와 `Habitat`(그 서식지 수)이고, 퀘스트 레벨 조건은 호감도 단계 번호로 판단한다.
      *          카탈로그는 빌려 쓰므로 마을보다 오래 살아야 한다.
      */
-    class SW_GF_API CreatureTown
+    class SW_KIT_API CreatureTown
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "CTWN" );

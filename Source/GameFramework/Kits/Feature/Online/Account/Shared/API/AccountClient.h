@@ -74,7 +74,7 @@ namespace sw
      * @class AccountClient
      * @brief 계정 클라이언트입니다.
      */
-    class SW_GF_API AccountClient final : public IOnlineClientService
+    class SW_KIT_API AccountClient final : public IOnlineClientService
     {
     public:
         AccountClient();

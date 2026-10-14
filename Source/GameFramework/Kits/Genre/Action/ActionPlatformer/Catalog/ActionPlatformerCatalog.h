@@ -117,7 +117,7 @@ namespace sw
 namespace sw
 {
     /** @brief 적 패턴 하나입니다. 상태 목록과 시작 상태를 가집니다. */
-    struct SW_GF_API ActionPatternDef
+    struct SW_KIT_API ActionPatternDef
     {
         hashed_string                 _id{};
         hashed_string                 _start{};
@@ -139,7 +139,7 @@ namespace sw
      *        <Pattern id="gunner" start="patrol"><State id="patrol" frames="90" next="aim" onNear="aim" near="5" moveX="1"/>
      *        <State id="aim" frames="20" next="shoot"/><State id="shoot" frames="1" next="patrol" fire="true" fireSpeed="9"/></Pattern></ActionPlatformer>`
      */
-    class SW_GF_API ActionPlatformerCatalog : public XMLCatalog<ActionPlatformerCatalog>
+    class SW_KIT_API ActionPlatformerCatalog : public XMLCatalog<ActionPlatformerCatalog>
     {
         friend class XMLCatalog<ActionPlatformerCatalog>;
 

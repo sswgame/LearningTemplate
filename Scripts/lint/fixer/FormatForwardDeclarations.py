@@ -28,7 +28,7 @@ from LintFixer import FixPass, LintFixer  # noqa: E402
 _kSingleFwdRe = re.compile(
     r"^(\s*)(?:template\s*<[^;{}>]+>\s*)?"
     r"(enum(?:\s+class|\s+struct)?|struct|class)\s+"
-    r"(?:(?:SW_\w+_API|SW_API|SW_GF_API|SW_MODULE_API)\s+)?"
+    r"(?:(?:SW_\w+_API|SW_API|SW_GF_API|SW_KIT_API|SW_MODULE_API)\s+)?"
     r"([A-Za-z0-9_]+)"
     r"(?:\s*:\s*[A-Za-z0-9_:]+)?"
     r"\s*;(?:\s*//.*)?$"
@@ -38,7 +38,7 @@ _kTemplateHeaderRe = re.compile(r"^\s*template\s*<[^;{}>]+>\s*$")
 _kSecondFwdRe = re.compile(
     r"^(\s*)"
     r"(enum(?:\s+class|\s+struct)?|struct|class)\s+"
-    r"(?:(?:SW_\w+_API|SW_API|SW_GF_API|SW_MODULE_API)\s+)?"
+    r"(?:(?:SW_\w+_API|SW_API|SW_GF_API|SW_KIT_API|SW_MODULE_API)\s+)?"
     r"([A-Za-z0-9_]+)"
     r"(?:\s*:\s*[A-Za-z0-9_:]+)?"
     r"\s*;(?:\s*//.*)?$"

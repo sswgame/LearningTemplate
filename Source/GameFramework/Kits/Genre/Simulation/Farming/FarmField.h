@@ -36,7 +36,7 @@ namespace sw
     };
 
     /** @brief 결과 이름을 반환합니다(로그와 UI 용). */
-    SW_GF_API const utf8* toString( FarmActionResult result );
+    SW_KIT_API const utf8* toString( FarmActionResult result );
 
     /** @brief 밭 타일 하나입니다. */
     struct FarmTile
@@ -63,7 +63,7 @@ namespace sw
      *          3. 물은 매일 마른다. 비 오는 날은 갈아 둔 타일이 모두 물을 받은 채로 시작한다.
      *          카탈로그는 빌려 쓰므로 밭보다 오래 살아야 한다.
      */
-    class SW_GF_API FarmField
+    class SW_KIT_API FarmField
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "FFLD" );

@@ -40,7 +40,7 @@ namespace sw
      * @class IWesternWitnessSight
      * @brief 목격자가 범죄 위치를 보았는지 게임이 답하는 인터페이스입니다(시야각, 가림, 밤, 안개).
      */
-    class SW_GF_API IWesternWitnessSight
+    class SW_KIT_API IWesternWitnessSight
     {
     public:
         IWesternWitnessSight()          = default;
@@ -59,7 +59,7 @@ namespace sw
      * @class WesternPerceptionSight
      * @brief 기반 `AIPerception` 의 시야(거리, 시야각, 격자 가림)로 답하는 기본 시야입니다.
      */
-    class SW_GF_API WesternPerceptionSight : public IWesternWitnessSight
+    class SW_KIT_API WesternPerceptionSight : public IWesternWitnessSight
     {
     public:
         WesternPerceptionSight( const AIPerceptionSettings& settings, const NavGrid* pGrid );
@@ -84,7 +84,7 @@ namespace sw
         NotEnoughMoney
     };
 
-    SW_GF_API const utf8* toString( WesternPayResult result );
+    SW_KIT_API const utf8* toString( WesternPayResult result );
 
     /** @brief 법 쪽에서 생긴 일입니다. */
     struct WesternLawEvent
@@ -119,7 +119,7 @@ namespace sw
      *          사건의 목격자가 모두 사라지면 그 범죄는 없던 일이 된다. 수배 단계는 법에 보이지 않는 동안(`setSeenByLaw( false )`) 지역의 식는 시간마다
      *          하나씩 내려가고, 변장하면 그만큼 빨리 식는다.
      */
-    class SW_GF_API WesternLawState
+    class SW_KIT_API WesternLawState
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "WLAW" );

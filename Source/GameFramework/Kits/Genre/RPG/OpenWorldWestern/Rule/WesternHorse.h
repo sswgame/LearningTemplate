@@ -54,7 +54,7 @@ namespace sw
      * @brief 코어는 0..100 입니다. 게이지 회복 속도는 코어에 비례합니다(코어가 0이면 생존 설정의 `_minRegenScale` 배). 코어는 게임 시간으로 줄고
      *        먹이로 찹니다. 겁은 쌓였다가 식고, 임계값(1)을 넘으면 시드 난수로 뒷발 서기와 낙마를 정합니다. 용기와 유대가 높을수록 덜 쌓이고 덜 떨어뜨립니다.
      */
-    class SW_GF_API WesternHorse
+    class SW_KIT_API WesternHorse
     {
     public:
         static constexpr uint32  kStateTag      = FourCcUtil::make( "WHRS" );

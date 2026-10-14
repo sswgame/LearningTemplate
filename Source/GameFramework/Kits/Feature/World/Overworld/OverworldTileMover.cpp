@@ -12,7 +12,7 @@ namespace sw
 {
     SW_LOG_CALLER( "OverworldTileMover" );
 
-    SW_GF_API bool shouldEncounterOnStep( float32 encounterRate, uint32 stepCount )
+    SW_KIT_API bool shouldEncounterOnStep( float32 encounterRate, uint32 stepCount )
     {
         // 0이면 **조우가 나지 않는다**. 야생 조우를 끄려고 `setEncounterRate( 0 )` 을 부르는 경우가 이에 해당한다.
         if ( encounterRate <= 0.0f )

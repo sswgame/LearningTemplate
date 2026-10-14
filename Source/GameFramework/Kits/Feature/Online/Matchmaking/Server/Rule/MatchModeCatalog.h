@@ -27,7 +27,7 @@ namespace sw
      * @class MatchModeCatalog
      * @brief 매칭 모드 정의 모음입니다. 읽은 뒤에는 바꾸지 않습니다.
      */
-    class SW_GF_API MatchModeCatalog : public XMLCatalog<MatchModeCatalog>
+    class SW_KIT_API MatchModeCatalog : public XMLCatalog<MatchModeCatalog>
     {
         friend class XMLCatalog<MatchModeCatalog>;
 

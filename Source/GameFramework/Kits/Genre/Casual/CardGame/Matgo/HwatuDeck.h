@@ -49,7 +49,7 @@ namespace sw
 namespace sw
 {
     /** @brief 화투 덱입니다. 상태가 없습니다. */
-    struct SW_GF_API HwatuDeck
+    struct SW_KIT_API HwatuDeck
     {
         static constexpr int32 kCardCount  = 48;
         static constexpr int32 kMonthCount = 12;

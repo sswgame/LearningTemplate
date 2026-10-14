@@ -41,7 +41,7 @@ namespace sw
      *          한 걸음이 `_maxStep` 보다 길면 잘게 나눕니다. 그러면 몸이 한 걸음에 반 블록 넘게 움직이지 않으므로 얇은 블록을 뚫지 않습니다.
      *          물(단단하지 않은 블록 중 `water`)에서는 중력이 약해지고 점프가 헤엄이 됩니다.
      */
-    class SW_GF_API VoxelBody
+    class SW_KIT_API VoxelBody
     {
     public:
         VoxelBody();

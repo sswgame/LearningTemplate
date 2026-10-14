@@ -53,7 +53,7 @@ namespace sw
      * @struct SRPGMission
      * @brief 승패를 판정합니다. 패배를 먼저 봅니다. 아군 전멸, 아군 지휘관 격파, 턴 제한 초과는 같은 순간의 승리보다 앞섭니다.
      */
-    struct SW_GF_API SRPGMission
+    struct SW_KIT_API SRPGMission
     {
         static SRPGOutcome evaluate( const SRPGBattlefield& field, const SRPGMissionRule& rule );
     };
@@ -79,7 +79,7 @@ namespace sw
      * @brief 메탈슬러그 택틱스식 로그라이트 캠페인입니다. 기반 `RunMap` 의 작전 지도에서 노드를 고르고, 명단을 전장에 내보내고, 결과를 받아 다음 노드로 갑니다.
      * @details 작전 시드는 판 시드와 노드 번호의 해시이다. 같은 판의 같은 노드이면 같은 전장이 나온다. 패배하면 판이 끝난다.
      */
-    class SW_GF_API SRPGCampaign
+    class SW_KIT_API SRPGCampaign
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "SRCP" );

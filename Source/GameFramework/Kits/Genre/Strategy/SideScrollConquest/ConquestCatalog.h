@@ -43,8 +43,8 @@ namespace sw
         Ladder ///< 성벽에 걸치면 성문을 부수지 않고 넘어간다. 싸우지 않는다
     };
 
-    [[nodiscard]] SW_GF_API bool parseConquestTeam( string_view text, ConquestTeam& outTeam );
-    SW_GF_API const utf8*        toString( ConquestTeam team );
+    [[nodiscard]] SW_KIT_API bool parseConquestTeam( string_view text, ConquestTeam& outTeam );
+    SW_KIT_API const utf8*        toString( ConquestTeam team );
 
     /** @brief 건물 하나입니다. */
     struct ConquestBuildingDef
@@ -150,7 +150,7 @@ namespace sw
      *        <Site id="home" x="0" kind="Village" owner="Player" workers="4" slots="3" housing="5"><Income gold="2"/></Site>
      *        <Site id="keep" x="60" kind="Fortress" owner="Enemy" gate="200" wall="300" garrison="spearman:3"/></ConquestCatalog>` 를 읽습니다.
      */
-    class SW_GF_API ConquestCatalog : public XMLCatalog<ConquestCatalog>
+    class SW_KIT_API ConquestCatalog : public XMLCatalog<ConquestCatalog>
     {
         friend class XMLCatalog<ConquestCatalog>;
 

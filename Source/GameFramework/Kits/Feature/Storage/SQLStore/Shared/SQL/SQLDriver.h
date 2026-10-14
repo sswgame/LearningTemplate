@@ -42,7 +42,7 @@ namespace sw
 namespace sw
 {
     /** @brief 매개변수나 열의 값 하나입니다. 문자열과 바이트는 `_bytes` 에 담깁니다. */
-    struct SW_GF_API SQLValue
+    struct SW_KIT_API SQLValue
     {
         vector<uint8> _bytes{};
         int64         _integer{ 0 };
@@ -92,7 +92,7 @@ namespace sw
      * @class ISQLConnection
      * @brief 연결 하나입니다. 연 스레드 하나만 씁니다.
      */
-    class SW_GF_API ISQLConnection
+    class SW_KIT_API ISQLConnection
     {
     public:
         ISQLConnection()          = default;
@@ -119,7 +119,7 @@ namespace sw
      * @class ISQLDriver
      * @brief 이름 하나에 해당하는 드라이버입니다. 상태 없는 팩토리이므로 스레드 안전하며, 여러 워커가 `openConnection` 을 부를 수 있습니다.
      */
-    class SW_GF_API ISQLDriver
+    class SW_KIT_API ISQLDriver
     {
     public:
         ISQLDriver()          = default;

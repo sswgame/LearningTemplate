@@ -26,7 +26,7 @@ namespace sw
      * @class ActionTerrainGrid
      * @brief 키트의 칸 정보입니다. 흙(드릴로 파는 칸)과 갈고리 지점을 가집니다. 칸 크기와 원점은 기반 칸 지형과 같습니다.
      */
-    class SW_GF_API ActionTerrainGrid
+    class SW_KIT_API ActionTerrainGrid
     {
     public:
         ActionTerrainGrid();
@@ -103,7 +103,7 @@ namespace sw
      * @class ActionPlatformerBody
      * @brief 기반 몸 하나와 그 위의 이동 모드입니다.
      */
-    class SW_GF_API ActionPlatformerBody
+    class SW_KIT_API ActionPlatformerBody
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "APBD" );

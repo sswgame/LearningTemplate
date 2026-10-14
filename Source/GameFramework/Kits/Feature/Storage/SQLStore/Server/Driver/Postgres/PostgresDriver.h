@@ -18,7 +18,7 @@ namespace sw
      * @class PostgresDriver
      * @brief PostgreSQL 드라이버입니다. 상태가 없어 하나를 모든 워커가 같이 씁니다.
      */
-    class SW_GF_API PostgresDriver final : public ISQLDriver
+    class SW_KIT_API PostgresDriver final : public ISQLDriver
     {
     public:
         static PostgresDriver& getInstance();

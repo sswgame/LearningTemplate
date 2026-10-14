@@ -60,7 +60,7 @@ namespace sw
      *          속도를 고친다. 속도가 음수가 될 수 있다(언덕을 못 넘으면 뒤로 굴러 내려오며, 실제 코스터의 롤백과 같다). G 는 속도 벡터의 차분과 중력으로 구한다.
      *          트랙은 빌려 쓰므로 열차보다 오래 살아야 한다.
      */
-    class SW_GF_API CoasterTrain
+    class SW_KIT_API CoasterTrain
     {
     public:
         CoasterTrain();
@@ -141,7 +141,7 @@ namespace sw
      * @details 실시간 열차와 같은 물리를 쓴다. 시작점은 거리 0 이고 속도 0 에서 출발한다(스테이션과 체인이 끌어 준다). @p maxTime 안에
      *          한 바퀴를 못 돌거나 3초 넘게 거의 멈춰 있으면(체인, 스테이션, 부스터 밖) 멈춤으로 보고 끝낸다.
      */
-    struct SW_GF_API CoasterRideAnalyzer
+    struct SW_KIT_API CoasterRideAnalyzer
     {
         static CoasterRideStats analyze( const CoasterTrack& track, const CoasterPhysicsParams& params, float32 maxTime = 600.0f );
         /** @brief 측정값으로 세 평가를 채웁니다. `analyze` 가 호출하며, 측정을 따로 모은 쪽도 쓸 수 있게 공개합니다. */

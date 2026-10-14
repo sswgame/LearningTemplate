@@ -42,7 +42,7 @@ namespace sw
      * @class OnlinePresence
      * @brief 접속 상태를 관리합니다. 호스트 틱 스레드에서 씁니다.
      */
-    class SW_GF_API OnlinePresence final : public IAccountPresence
+    class SW_KIT_API OnlinePresence final : public IAccountPresence
     {
     public:
         OnlinePresence();

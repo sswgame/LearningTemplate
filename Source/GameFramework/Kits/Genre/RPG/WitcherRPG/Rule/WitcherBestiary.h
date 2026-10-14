@@ -42,7 +42,7 @@ namespace sw
      * @brief 한 위쳐의 도감입니다. 지식은 내려가지 않습니다. 책은 그 괴물의 읽기 단계까지, 처치는 정한 수마다 한 단계씩(처치 상한까지),
      *        조사는 조사 단계까지 올립니다. 약점의 실제 배율은 지식과 상관없이 항상 적용되고, 지식은 **보여 주는 것**만 정합니다.
      */
-    class SW_GF_API WitcherBestiary
+    class SW_KIT_API WitcherBestiary
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "WBST" );

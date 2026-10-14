@@ -46,7 +46,7 @@ namespace sw
 namespace sw
 {
     /** @brief 한 틱의 엔티티 상태 모음입니다. 엔티티 id 오름차순으로 보관하며, 델타가 두 스냅샷을 나란히 순회합니다. */
-    struct SW_GF_API NetSnapshot
+    struct SW_KIT_API NetSnapshot
     {
         /** @brief 엔티티 하나의 상태 바이트 상한입니다. 넘는 엔티티는 싣지 않으며, 복원한 스냅샷에도 넣지 않으므로 서버와 클라이언트의 기준이 같습니다. */
         static constexpr int32 kMaxEntityBytes = 255;

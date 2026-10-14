@@ -37,7 +37,7 @@ namespace sw
      * @class KartGhost
      * @brief 한 번의 주행 기록입니다. 출발 위치, 방향, 걸음 크기와 걸음마다의 입력을 가집니다.
      */
-    class SW_GF_API KartGhost
+    class SW_KIT_API KartGhost
     {
     public:
         static constexpr uint8 kButtonDrift   = 1u << 0;
@@ -87,7 +87,7 @@ namespace sw
      * @class KartGhostPlayer
      * @brief 고스트를 자기 차로 다시 돌립니다. 트랙(빌려 쓰는 포인터)이 있으면 땅과 부스트 패드를 기록할 때와 같이 씁니다.
      */
-    class SW_GF_API KartGhostPlayer
+    class SW_KIT_API KartGhostPlayer
     {
     public:
         KartGhostPlayer();

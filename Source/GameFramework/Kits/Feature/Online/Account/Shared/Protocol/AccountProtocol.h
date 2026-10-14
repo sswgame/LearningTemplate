@@ -55,7 +55,7 @@ namespace sw
 namespace sw
 {
     /** @brief 계정 와이어 코덱입니다. 읽기는 형식이나 상한이 틀리면 false 를 반환합니다. */
-    struct SW_GF_API AccountWire
+    struct SW_KIT_API AccountWire
     {
         static void               writeClientInfo( BitWriter& outWriter, const AccountClientInfo& clientInfo );
         [[nodiscard]] static bool readClientInfo( BitReader& reader, AccountClientInfo& outClientInfo );

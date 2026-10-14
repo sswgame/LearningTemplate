@@ -49,7 +49,7 @@ namespace sw
 namespace sw
 {
     /** @brief 우편함 저장 함수 모음입니다. 저장소 스레드에서 부릅니다. */
-    struct SW_GF_API MailboxStoreLogic
+    struct SW_KIT_API MailboxStoreLogic
     {
         static constexpr int32 kMaxClaimAllCount = 16;
 

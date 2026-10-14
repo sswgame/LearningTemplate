@@ -20,7 +20,7 @@ namespace sw
      * @details 끌어서 선택은 스타크래프트 규칙을 따른다. 사각형 안에 내 움직이는 유닛이 있으면 그것만 고르고, 없으면 내 건물 하나, 그것도 없으면 보이는 남의 유닛 하나를 고른다.
      *          남의 것을 고르면 명령을 줄 수 없다(`isCommandable`). 죽은 유닛은 `prune` 이 선택에서 뺀다.
      */
-    class SW_GF_API RTSSelection
+    class SW_KIT_API RTSSelection
     {
     public:
         static constexpr int32 kGroupCount = 10;

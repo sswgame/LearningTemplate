@@ -47,7 +47,7 @@ namespace sw
      *          화재 출구가 바깥으로 난다. 고철은 위성의 목록에서 `spawnWeight` 로 고르고, 가치는 정의 범위 x 위성 배율 x 날씨 배율이다.
      *          같은 시드와 같은 위성이면 같은 지도와 같은 고철이 나온다.
      */
-    class SW_GF_API ScavengerFacility
+    class SW_KIT_API ScavengerFacility
     {
     public:
         static constexpr uint32 kStateTag      = FourCcUtil::make( "SCFC" );

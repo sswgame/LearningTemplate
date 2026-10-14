@@ -572,6 +572,10 @@
 - **기반은 `Base/<층>/<폴더>/` 두 단이고, 층은 아래에서 `Online` < `Foundation` < `World` < `Actor` < `UI` < `Gameplay` 입니다**(2026-10-10).
   include 그래프를 재서 정했습니다. 계획의 첫 안(World · UI 가 맨 위)은 AI · 기믹 · 상호작용 → 월드 13 곳, 어빌리티 → 데미지 숫자가 거꾸로라 기각했습니다.
   UI 가 게임플레이 아래인 것은 언리얼에서 UMG 가 게임플레이 모듈 아래에 있는 것과 같습니다. 전투 수치(체력 신호)는 HP 바가 읽으므로 Actor 층에 둡니다.
+- **키트 헤더는 `SW_KIT_API`, Base 헤더는 `SW_GF_API` 를 씁니다 — 키트 TU 는 `SW_GF_EXPORTS` 를 정의하지 않습니다**(2026-10-15, 백로그 C-3).
+  키트 TU 가 `SW_GF_EXPORTS` 를 정의하니 include 한 Base 클래스(`Inventory` · `StatBlock` 등)가 키트 DLL 에서도 dllexport 로 풀려, 키트 DLL 55개가 `GameFramework.dll` 과 같은 심볼 4909개를 한 번 더 내보내고 있었다(`GF_WitcherRPG.dll` 은 326개 중 116개). 키트는 이제 `SW_KIT_EXPORTS`(PRIVATE) · `SW_KIT_IMPORTS`(INTERFACE)만 쓰고, 그 뒤 키트 DLL 에서 `GameFramework.dll` 과 겹치는 심볼은 0 이다. 언리얼이 모듈마다 `<MODULE>_API` 를 클래스에 달고 다른 모듈의 선언은 import 로 두는 것과 같은 모양으로 알고 있다(기억에 의존).
+  함정: 겹침이 가리고 있던 결함이 하나 드러났다. 순수 인터페이스(`IAccountNameIndex` 등)의 `= default` 생성자 · 소멸자는 clang-cl 이 `GameFramework.dll` 에서 내보내지 않는데, 서버 키트가 파생 클래스를 만들며 dllimport 로 찾다 링크가 깨졌다. 순수 인터페이스는 `SW_GF_API` 를 달지 않는다(인라인 멤버를 쓰는 쪽이 만든다). 같은 모양의 Base 인터페이스는 키트가 파생할 때 같은 오류로 드러난다.
+  남은 것: 서버 키트가 같은 기능의 공유 키트 헤더를 include 하면 그 클래스도 서버 키트에서 `SW_KIT_API` 가 dllexport 라 공유 키트 심볼을 다시 내보낸다(`GF_Server_Account` 200개 중 8개가 `GF_Account` 와 겹침). 고치려면 키트마다 `<KIT>_API` 가 필요해 키트 헤더 전체를 다시 바꿔야 하고 이득이 작아 지금은 두었다.
 - **키트는 성격으로 나눕니다: 장르 키트는 `Kits/Genre/<그룹>/`, 장르를 가리지 않는 기능 키트(네트워크 · 온라인 · 저장 · 타일 월드 · 복셀)는 `Kits/Feature/<그룹>/`**(2026-10-10).
   언리얼 플러그인 폴더가 Runtime · Online · Experimental 처럼 성격으로 묶이는 것과 같은 단입니다. 모듈 이름(`GF_<키트>`)은 경로와 상관없이 그대로입니다.
   클라이언트 · 서버로 나뉘는 기능은 기능 폴더 하나 아래 `Shared/` · `Server/` · `Client/` 짝으로 둡니다(Nakama · PlayFab 이 서비스 단위로 클라이언트 SDK 와 서버 모듈을 묶는 것과 같은 단위).

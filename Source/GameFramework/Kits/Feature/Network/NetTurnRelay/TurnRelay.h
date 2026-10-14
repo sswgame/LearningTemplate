@@ -102,7 +102,7 @@ namespace sw
      * @class ITurnPolicy
      * @brief 차례 규칙입니다. 기본 규칙은 현재 차례인 자리만 행동할 수 있고, 다음 차례는 방향대로 한 자리 이동하는 것입니다.
      */
-    class SW_GF_API ITurnPolicy
+    class SW_KIT_API ITurnPolicy
     {
     public:
         ITurnPolicy()          = default;
@@ -154,7 +154,7 @@ namespace sw
 namespace sw
 {
     /** @brief 서버 쪽 중계기입니다. 방은 처음 들어오는 클라이언트가 만듭니다. */
-    class SW_GF_API TurnRelayServer : public INetMessageHandler
+    class SW_KIT_API TurnRelayServer : public INetMessageHandler
     {
     public:
         /** @brief 연결 하나에 큐에 쌓을 수 있는 알림 수입니다. 넘치면 그 연결이 알림을 받지 않는 것으로 보고 끊으며, 토큰으로 돌아오면 다시 받습니다. */
@@ -219,7 +219,7 @@ namespace sw
 namespace sw
 {
     /** @brief 클라이언트 쪽 중계기입니다. 받은 행동을 번호 순서로 보관하고, 다시 들어올 때 놓친 행동을 받습니다. */
-    class SW_GF_API TurnRelayClient : public INetMessageHandler
+    class SW_KIT_API TurnRelayClient : public INetMessageHandler
     {
     public:
         TurnRelayClient();

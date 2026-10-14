@@ -27,14 +27,14 @@ namespace sw
         UnknownMutagen
     };
 
-    SW_GF_API const utf8* toString( WitcherSlotResult result );
+    SW_KIT_API const utf8* toString( WitcherSlotResult result );
 
     /**
      * @class WitcherMutagens
      * @brief 그룹 배치는 카탈로그의 `<SlotGroup>` 순서입니다. 스킬을 배웠는지(랭크)는 게임이 `SkillTreeState` 로 확인하고 끼웁니다. 이 클래스는 슬롯과 색만 봅니다.
      *        레벨이 내려가 그룹이 닫혀도 끼운 것은 남지만 능력치에는 들어가지 않습니다.
      */
-    class SW_GF_API WitcherMutagens
+    class SW_KIT_API WitcherMutagens
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "WMUT" );

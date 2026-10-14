@@ -72,7 +72,7 @@ namespace sw
      * @struct MechArenaSnapshotCodec
      * @brief 스냅샷과 비트를 서로 변환합니다. 같은 스냅샷은 항상 같은 바이트가 됩니다(결정적).
      */
-    struct SW_GF_API MechArenaSnapshotCodec
+    struct SW_KIT_API MechArenaSnapshotCodec
     {
         static void write( const MechArenaSnapshot& snapshot, BitWriter& outWriter );
         /** @brief 스냅샷을 읽습니다. 바이트가 모자라거나 값이 범위를 벗어나면 false 를 반환하며, 이때 @p outSnapshot 은 믿을 수 없습니다. */

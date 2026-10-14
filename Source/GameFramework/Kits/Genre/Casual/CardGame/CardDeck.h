@@ -64,7 +64,7 @@ namespace sw
      * @class CardPile
      * @brief 카드 더미입니다. 덱, 버린 더미, 손패, 바닥이 모두 이 타입입니다. 맨 위(뽑는 쪽)는 목록의 끝입니다.
      */
-    class SW_GF_API CardPile
+    class SW_KIT_API CardPile
     {
     public:
         CardPile();
@@ -114,7 +114,7 @@ namespace sw
 namespace sw
 {
     /** @brief 트럼프 덱 도우미입니다. */
-    struct SW_GF_API CardDeckUtil
+    struct SW_KIT_API CardDeckUtil
     {
         /** @brief 52장(무늬 순, 숫자 순, 번호 0..51)과 조커 @p jokerCount 장(번호 52부터)을 @p outPile 에 채웁니다. 섞지는 않습니다. */
         static void makeStandardDeck( CardPile& outPile, int32 jokerCount = 0 );
@@ -147,7 +147,7 @@ namespace sw
      * @brief `CardAction` 과 바이트 사이를 변환합니다. `TurnRelayClient::submitAction` 에 그대로 실어 보내고, 받은 `TurnAction::_buffer` 를 다시 `CardAction` 으로 되돌립니다.
      * @details 레이아웃은 [태그 0xCA][종류][카드 번호 LE16][대상 LE16][금액 LE32] 로 10바이트이다. 바이트 단위로 적으므로 플랫폼과 무관하다.
      */
-    struct SW_GF_API CardActionUtil
+    struct SW_KIT_API CardActionUtil
     {
         static constexpr uint8 kTag         = 0xCAu;
         static constexpr int32 kEncodedSize = 10;

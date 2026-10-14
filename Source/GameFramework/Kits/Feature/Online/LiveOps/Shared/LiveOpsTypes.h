@@ -24,7 +24,7 @@ namespace sw
         Count
     };
 
-    SW_GF_API const utf8* toString( LiveOpsResult result );
+    SW_KIT_API const utf8* toString( LiveOpsResult result );
 } // namespace sw
 
 namespace sw
@@ -122,7 +122,7 @@ namespace sw
         static constexpr int64 kFirstBackoffMs      = 1000; ///< 1, 2, 4, 8, 16초로 늘어난다
 
         /** @brief 제공자 id 규칙(`[0-9a-z_]`, 1~16바이트)에 맞으면 true 입니다. */
-        SW_GF_API static bool isValidProviderID( string_view providerID );
+        SW_KIT_API static bool isValidProviderID( string_view providerID );
     };
 } // namespace sw
 
@@ -140,6 +140,6 @@ namespace sw
         static constexpr int32 kMaxEventCount     = 256;
 
         /** @brief 이벤트 id 와 매개변수 키 규칙(`[0-9a-z_.]`, 1~@p maxSize 바이트)에 맞으면 true 입니다. */
-        SW_GF_API static bool isValidKey( string_view key, int32 maxSize );
+        SW_KIT_API static bool isValidKey( string_view key, int32 maxSize );
     };
 } // namespace sw

@@ -47,7 +47,7 @@ namespace sw
      * @struct LiveOpsProtocol
      * @brief 본문 코덱입니다. 읽을 때 상한(`LiveOpsLimit`)을 넘으면 false 를 반환합니다.
      */
-    struct SW_GF_API LiveOpsProtocol
+    struct SW_KIT_API LiveOpsProtocol
     {
         static constexpr uint32 kVersion      = 1;
         static constexpr uint8  kRecordFormat = 1;

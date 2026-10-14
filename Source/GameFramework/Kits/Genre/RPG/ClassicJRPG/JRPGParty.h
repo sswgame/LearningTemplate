@@ -37,7 +37,7 @@ namespace sw
 namespace sw
 {
     /** @brief 파티 멤버 하나입니다. */
-    struct SW_GF_API JRPGMember
+    struct SW_KIT_API JRPGMember
     {
         hashed_string              _id{};
         hashed_string              _classID{};
@@ -102,7 +102,7 @@ namespace sw
      * @details 공격력은 힘에 장비 "attack" 을 더한 값이고, 방어력은 체력 / 2 에 장비 "defense" 를 더한 값이다(장비는 기반 `Equipment` 를 쓰며 아이템의 `<Stats attack="12"/>` 로 정한다).
      *          경험치 분배는 DQ 식이다. 살아 있는 멤버 수로 나눈 몫(내림)을 각자 받고, 골드는 지갑에 그대로 들어간다.
      */
-    class SW_GF_API JRPGParty
+    class SW_KIT_API JRPGParty
     {
     public:
         static constexpr uint32 kStateTag            = FourCcUtil::make( "JPTY" );

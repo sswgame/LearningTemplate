@@ -66,7 +66,7 @@ namespace sw
      * @details 단위는 월드 단위다. 거리는 m, 속도는 m/s, 시간은 s 이다. 스탯은 `UnitStatsComponent::setStats( const MonsterDef& )` 가 그대로 옮긴다.
      *          액션 룸(`ActionRoom`)은 HP, 방어, 속도, 반지름, 닿은 피해(`_atk`), 사격(`_attackCoolTime`, `_firstAttackDelay`, `_listShot`)을 읽는다.
      */
-    struct SW_GF_API MonsterDef
+    struct SW_KIT_API MonsterDef
     {
         /** @brief 이동 속도의 상한(m/s)입니다. `UnitStatsComponent` 의 이동 속도 상한과 같고, 이 값을 넘으면 로드할 때 경고합니다(픽셀 단위로 적은 값을 잡아내기 위한 것입니다). */
         static constexpr float32 kMaxSpeed = 50.0f;
@@ -116,7 +116,7 @@ namespace sw
 namespace sw
 {
     /** @brief monsters.xml 몬스터 데이터 카탈로그 서비스입니다. */
-    class SW_GF_API MonsterCatalog : public XMLCatalog<MonsterCatalog>
+    class SW_KIT_API MonsterCatalog : public XMLCatalog<MonsterCatalog>
     {
         friend class XMLCatalog<MonsterCatalog>;
 

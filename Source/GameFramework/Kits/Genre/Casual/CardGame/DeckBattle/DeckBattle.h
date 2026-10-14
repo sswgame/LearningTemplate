@@ -58,7 +58,7 @@ namespace sw
      * @brief `<DeckBattleCatalog><Card id="strike" name="Strike" cost="1" effects="Damage:6"/></DeckBattleCatalog>` 를 읽습니다.
      *        `effects` 는 쉼표로 나눈 `종류:양`(Damage, Block, Draw, Energy)입니다.
      */
-    class SW_GF_API DeckBattleCatalog : public XMLCatalog<DeckBattleCatalog>
+    class SW_KIT_API DeckBattleCatalog : public XMLCatalog<DeckBattleCatalog>
     {
         friend class XMLCatalog<DeckBattleCatalog>;
 
@@ -118,7 +118,7 @@ namespace sw
      * @class DeckBattle
      * @brief 한 전투를 진행합니다. 카드 한 장은 `Card` 이고 번호는 이 전투 안에서의 카드 index 입니다. 정의는 `getCardDef` 로 찾습니다. 시드를 쓰므로 결과가 결정적입니다.
      */
-    class SW_GF_API DeckBattle
+    class SW_KIT_API DeckBattle
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "CDBT" );

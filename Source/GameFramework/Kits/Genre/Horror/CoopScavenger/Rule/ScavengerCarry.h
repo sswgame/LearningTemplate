@@ -30,7 +30,7 @@ namespace sw
      * @class ScavengerCarry
      * @brief 한 사람이 든 것을 관리합니다. 이동 속도 배율은 max(최소, 1 - 무게 x 무게당 감소)입니다.
      */
-    class SW_GF_API ScavengerCarry
+    class SW_KIT_API ScavengerCarry
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "SCCA" );

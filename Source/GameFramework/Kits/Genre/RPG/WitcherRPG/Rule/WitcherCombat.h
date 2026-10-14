@@ -39,7 +39,7 @@ namespace sw
         AlternateLocked ///< 대체 시전 스킬을 배우지 않았다
     };
 
-    SW_GF_API const utf8* toString( WitcherCombatResult result );
+    SW_KIT_API const utf8* toString( WitcherCombatResult result );
 
     /** @brief 표식 한 번의 결과입니다. */
     struct WitcherSignCast
@@ -60,7 +60,7 @@ namespace sw
      * @brief 위쳐 한 명의 전투 자원입니다. 표식과 몸 동작이 같은 스태미나(기력)를 씁니다. 표식 위력 = 기본 위력 × (1 + 위력 능력치 / 100)
      *        (× 대체 시전 배율)입니다. 아드레날린은 실수로 쌓이고 정수 부분이 포인트이며, 포인트 하나마다 피해 배율이 오릅니다. 시드가 같으면 같은 상태이상이 걸립니다.
      */
-    class SW_GF_API WitcherCombat
+    class SW_KIT_API WitcherCombat
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "WCMB" );

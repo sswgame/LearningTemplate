@@ -55,7 +55,7 @@ namespace sw
      * @brief 상태가 없는 계산입니다. 등급 = 원래 품질 − (크기에 맞지 않는 무기면 1) − 부위 벌점 − (더 맞힌 발 × 벌점)이며, 0..품질 범위로 자릅니다.
      *        폭발물은 가죽을 못 쓰게 합니다(0). 사체는 부패 시간의 반이 지나면 한 등급 떨어지고, 다 지나면 썩어서 값이 없습니다.
      */
-    struct SW_GF_API WesternHunting
+    struct SW_KIT_API WesternHunting
     {
         /** @brief 잡은 순간의 가죽 등급(0..3)을 반환합니다. 모르는 동물이면 0 을 반환하고, 모르는 무기와 부위는 벌점이 없는 것으로 봅니다. */
         static int32 computePeltStars( const WesternCatalog& catalog, const WesternKill& kill );
