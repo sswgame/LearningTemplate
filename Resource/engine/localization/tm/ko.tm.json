@@ -2,6 +2,10 @@
     "culture": "ko",
     "entries": [
         {
+            "source": "(CPU only)",
+            "text": "(CPU 전용)"
+        },
+        {
             "source": "A wild {name} appeared!",
             "text": "야생의 {name}(이)가 나타났다!"
         },
@@ -22,6 +26,18 @@
             "text": "행동"
         },
         {
+            "source": "Add Item",
+            "text": "항목 추가"
+        },
+        {
+            "source": "Add Key",
+            "text": "키 추가"
+        },
+        {
+            "source": "Add Modifier",
+            "text": "모디파이어 추가"
+        },
+        {
             "source": "Aim",
             "text": "조준"
         },
@@ -38,8 +54,16 @@
             "text": "오디오"
         },
         {
+            "source": "Axis",
+            "text": "축"
+        },
+        {
             "source": "Background opacity of the Debug HUD panels.",
             "text": "디버그 HUD 패널의 배경 불투명도입니다."
+        },
+        {
+            "source": "Bake",
+            "text": "굽기"
         },
         {
             "source": "Base",
@@ -54,12 +78,20 @@
             "text": "카메라 흔들림"
         },
         {
+            "source": "Center",
+            "text": "중심"
+        },
+        {
             "source": "Closest distance the camera draws. Geometry nearer than this is clipped; keep it as large as the scene allows to avoid depth fighting.",
             "text": "카메라가 그리는 가장 가까운 거리입니다. 이보다 가까운 지오메트리는 잘려 나갑니다. 깊이 충돌(z-fighting)을 피하려면 장면이 허용하는 만큼 크게 두세요."
         },
         {
             "source": "Color Vision Mode",
             "text": "색각 보정"
+        },
+        {
+            "source": "Control Points",
+            "text": "제어점"
         },
         {
             "source": "Controls",
@@ -112,6 +144,10 @@
         {
             "source": "Fight: 1/2 moves, Enter=Move0, Esc=Run",
             "text": "싸운다: 1/2 기술, Enter=기술0, Esc=도망"
+        },
+        {
+            "source": "Fit to Bounds",
+            "text": "경계 상자에 맞추기"
         },
         {
             "source": "Foliage Density",
@@ -198,6 +234,10 @@
             "text": "중간"
         },
         {
+            "source": "Mirror",
+            "text": "대칭"
+        },
+        {
             "source": "Motion Blur",
             "text": "모션 블러"
         },
@@ -234,6 +274,10 @@
             "text": "실행 중인 일정 시스템이 없습니다. 일정을 가진 NPC 가 있는 상태로 플레이를 시작하세요."
         },
         {
+            "source": "No target",
+            "text": "대상 없음"
+        },
+        {
             "source": "Off",
             "text": "끔"
         },
@@ -250,8 +294,20 @@
             "text": "장소"
         },
         {
+            "source": "Point",
+            "text": "점"
+        },
+        {
+            "source": "Position",
+            "text": "위치"
+        },
+        {
             "source": "Post-Processing Quality",
             "text": "후처리 품질"
+        },
+        {
+            "source": "Preview Time",
+            "text": "미리보기 시간"
         },
         {
             "source": "Protanopia",
@@ -262,6 +318,14 @@
             "text": "타임라인 원문"
         },
         {
+            "source": "Recompute Normals",
+            "text": "법선 다시 계산"
+        },
+        {
+            "source": "Redo",
+            "text": "다시 하기"
+        },
+        {
             "source": "Reduce Flashing",
             "text": "번쩍임 줄이기"
         },
@@ -270,28 +334,64 @@
             "text": "움직임 줄이기"
         },
         {
+            "source": "Reference Object",
+            "text": "기준 오브젝트"
+        },
+        {
+            "source": "Reload Stack",
+            "text": "스택 다시 읽기"
+        },
+        {
             "source": "Remaining",
             "text": "남은 시간"
+        },
+        {
+            "source": "Remove Item",
+            "text": "항목 제거"
         },
         {
             "source": "Render Scale",
             "text": "렌더 배율"
         },
         {
+            "source": "Reset Lattice",
+            "text": "격자 초기화"
+        },
+        {
+            "source": "Reset Parameters",
+            "text": "매개변수 초기화"
+        },
+        {
             "source": "Resolution",
             "text": "해상도"
+        },
+        {
+            "source": "Rotation",
+            "text": "회전"
         },
         {
             "source": "Runtime ability state exists only during play. Press Play to inspect it.",
             "text": "어빌리티 런타임 상태는 플레이 중에만 있습니다. 플레이를 눌러 확인하세요."
         },
         {
+            "source": "Save Stack",
+            "text": "스택 저장"
+        },
+        {
             "source": "Schedule system",
             "text": "일정 시스템"
         },
         {
+            "source": "Select a modifier in the stack.",
+            "text": "스택에서 모디파이어를 고르세요."
+        },
+        {
             "source": "Select an NPC on the left",
             "text": "왼쪽에서 NPC 를 고르세요"
+        },
+        {
+            "source": "Select an object whose mesh component uses a .mesh asset, then press Use Selection.",
+            "text": ".mesh 에셋을 쓰는 메시 컴포넌트가 있는 오브젝트를 고른 뒤 선택 사용을 누르세요."
         },
         {
             "source": "Select an object with an AbilitySystemComponent, or pick one above.",
@@ -362,6 +462,10 @@
             "text": "같은 체크리스트를 런타임 UI 창으로 엽니다(플레이 중 게임 뷰에 보입니다)."
         },
         {
+            "source": "The target object no longer exists.",
+            "text": "대상 오브젝트가 더 이상 없습니다."
+        },
+        {
             "source": "Time",
             "text": "시각"
         },
@@ -386,8 +490,16 @@
             "text": "최고"
         },
         {
+            "source": "Undo",
+            "text": "되돌리기"
+        },
+        {
             "source": "Upscaler",
             "text": "업스케일러"
+        },
+        {
+            "source": "Use Selection",
+            "text": "선택 사용"
         },
         {
             "source": "Use a parallel (non-perspective) projection, as for 2D or isometric views. FOV is ignored while on.",
@@ -432,6 +544,10 @@
         {
             "source": "Windowed",
             "text": "창"
+        },
+        {
+            "source": "World Space",
+            "text": "월드 공간"
         },
         {
             "source": "World-space height of the visible area; the width follows the aspect ratio.",
