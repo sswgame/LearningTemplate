@@ -43,7 +43,7 @@ namespace sw
         , _listOwnedAssetCache{}
         , _pPackManager{ make_unique<ResourcePakManager>() }
         , _listBuiltInAssetCache{}
-        , _registeredAssetCache{}
+        , _registeredAssetCache{ "AssetManager.AssetCache" }
         , _contentSource{ ContentSource::Cooked }
     {
         // 내장 캐시는 기능 폴더가 등록표에 올린 것이다 — Resource 는 그 타입을 모른다. 소유 캐시는 여기서 만들고, 공유 캐시(Engine.dll 의
@@ -177,7 +177,7 @@ namespace sw
         const string_view        kindName  = ( pKindName != nullptr ) ? string_view{ pKindName } : string_view{};
         const RegistrationResult result    = _registeredAssetCache.add( pCache, kindName );
         if ( result == RegistrationResult::DuplicateName )
-            SW_LOG_WARNING( "Asset cache kind '%#' is already registered by another cache - keeping the first", kindName );
+            SW_LOG_ERROR( "Asset cache kind '%#' is already registered by another cache - keeping the first", kindName );
     }
 
     bool AssetManager::isBuiltInAssetCache( const IAssetCache* pCache ) const

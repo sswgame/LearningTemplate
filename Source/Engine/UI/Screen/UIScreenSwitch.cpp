@@ -16,7 +16,7 @@ namespace sw
             /** @brief 등록된 스위치((순서, 이름) 순 · 이름은 대소문자를 가린다). Engine 이미지의 함수 정적이라 게임 모듈이 바뀌어도 남는다. */
             static RegistrationList<const UIScreenSwitchRegistration>& getRegistrations()
             {
-                static RegistrationList<const UIScreenSwitchRegistration> s_registration{ RegistrationOrder::ByOrderThenName, true };
+                static RegistrationList<const UIScreenSwitchRegistration> s_registration{ "UIScreenSwitchRegistry", RegistrationOrder::ByOrderThenName, true };
                 return s_registration;
             }
         };

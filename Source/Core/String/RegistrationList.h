@@ -36,6 +36,50 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @class RegistrationListBase
+     * @brief 살아 있는 `RegistrationList` 를 한곳에서 열거하는 연결 고리입니다(진단 · 테스트용 — 소유 관리자가 아닙니다).
+     * @details 목록은 만들어질 때 자기 이름(`getListName`)과 함께 전역 연결 목록에 오르고, 사라질 때 빠집니다. 노드는 목록 자신이라 할당이 없고
+     *          연결 목록의 머리와 잠금이 상수 초기화라, 다른 번역 단위의 정적 초기화 · 모듈 언로드 중에도 안전합니다.
+     *          열거(`collect`)는 잠금 안에서 포인터만 모읍니다. 항목 수와 이름은 각 목록의 소유자 잠금 밖에서 읽으므로, 등록이 멈춘 때(테스트 · 진단)에만 읽습니다.
+     */
+    class SW_API RegistrationListBase
+    {
+    public:
+        RegistrationListBase( const RegistrationListBase& )            = delete;
+        RegistrationListBase& operator=( const RegistrationListBase& ) = delete;
+
+        /** @brief 목록의 이름입니다(만든 곳이 정한 영문 식별자 — 정적 표는 소유 레지스트리 이름, 인스턴스 표는 멤버 역할). */
+        const utf8* getListName() const { return _pListName; }
+
+        /** @brief 올라 있는 항목 수입니다. */
+        virtual uint32 getCount() const = 0;
+        /** @brief 순서대로 index 번째 항목을 올릴 때 복사한 이름입니다(이름 없는 등록은 빈 글). */
+        virtual const string& getNameAt( uint32 index ) const = 0;
+
+        /** @brief 지금 살아 있는 목록을 @p outListRegistration 에 담습니다(비운 뒤 채웁니다). 나중에 만든 것이 먼저입니다. */
+        static void collect( vector<const RegistrationListBase*>& outListRegistration );
+        /** @brief 지금 살아 있는 목록 수입니다. */
+        static uint32 getListCount();
+
+    protected:
+        /** @brief 전역 연결 목록에 오릅니다. */
+        explicit RegistrationListBase( const utf8* pListName );
+        ~RegistrationListBase();
+
+        /** @brief 연결 목록에서 빠집니다. 파생이 소멸자 첫머리에서 부릅니다(파생 부분이 부서진 뒤에 열거가 가상 함수를 부르지 않게). 두 번 불러도 됩니다. */
+        void unlink();
+
+    private:
+        const utf8*           _pListName;
+        RegistrationListBase* _pPrev;
+        RegistrationListBase* _pNext;
+        bool                  _bLinked;
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 목록이 항목을 늘어놓는 순서입니다. */
     enum class RegistrationOrder : uint8
     {
@@ -66,36 +110,45 @@ namespace sw
      *          **저장소는 늘 `EngineMisc` 태그로 셉니다.** 프로세스 정적 레지스트리는 기동 뒤에 오른 모듈(에디터 · 게임)이 등록하며 용량을 키우는데, 넣는 쪽 태그로
      *          세면 그 모듈이 내려간 뒤에도 커진 용량이 그 태그에 남습니다. 종료 끝에서 `shrinkToFit` 으로 남은 항목만큼 다시 잡아 기준선으로 돌려놓습니다.
      *
+     *          **만들어질 때 전역 열거에 오릅니다.** 목록마다 이름을 하나 받고(`RegistrationListBase::getListName`), `RegistrationListBase::collect` 가 살아 있는
+     *          목록의 이름 · 항목 수 · 항목 이름을 한곳에서 보여 줍니다. 복사 · 이동은 막혀 있으니 목록은 멤버나 함수 지역 정적으로 둡니다.
+     *
      *          **잠금은 들지 않습니다.** 여러 스레드가 만지는 레지스트리(카메라 · 빛 · 모듈 언로드 리스너)는 자기 잠금 안에서 부릅니다 — 그 잠금이
      *          "가장 안쪽" 이라는 각자의 규칙을 그대로 지키게 하려는 것입니다. 항목 수가 많고 슬롯 인덱스로 O(1) 빼기를 하는 레지스트리(프리미티브 ·
      *          틱 · 콜라이더)는 이 모양이 아닙니다.
      */
     template <typename T>
-    class RegistrationList
+    class RegistrationList final : public RegistrationListBase
     {
     public:
-        /** @brief 등록 순서 · 이름 선택인 빈 목록입니다. */
-        RegistrationList()
-            : RegistrationList( RegistrationOrder::Insertion, false )
+        /**
+         * @brief 등록 순서 · 이름 선택인 빈 목록입니다.
+         * @param pListName 전역 열거(`RegistrationListBase::collect`)에 나오는 목록 이름입니다. 문자열 리터럴이어야 합니다.
+         */
+        explicit RegistrationList( const utf8* pListName )
+            : RegistrationList( pListName, RegistrationOrder::Insertion, false )
         {
         }
 
         /**
+         * @param pListName 전역 열거에 나오는 목록 이름입니다. 문자열 리터럴이어야 합니다.
          * @param order 늘어놓는 순서입니다.
          * @param bRequireName true 면 이름 없는 등록을 거절합니다(이름이 곧 id 인 목록).
          */
-        RegistrationList( RegistrationOrder order, bool bRequireName )
-            : RegistrationList( order, bRequireName, NameCase::CaseSensitive )
+        RegistrationList( const utf8* pListName, RegistrationOrder order, bool bRequireName )
+            : RegistrationList( pListName, order, bRequireName, NameCase::CaseSensitive )
         {
         }
 
         /**
+         * @param pListName 전역 열거에 나오는 목록 이름입니다. 문자열 리터럴이어야 합니다.
          * @param order 늘어놓는 순서입니다.
          * @param bRequireName true 면 이름 없는 등록을 거절합니다(이름이 곧 id 인 목록).
          * @param nameCase 이름 찾기 · 중복 판정이 대소문자를 보는지입니다(콘솔 명령처럼 사람이 치는 이름은 `IgnoreCase`).
          */
-        RegistrationList( RegistrationOrder order, bool bRequireName, NameCase nameCase )
-            : _listItem{}
+        RegistrationList( const utf8* pListName, RegistrationOrder order, bool bRequireName, NameCase nameCase )
+            : RegistrationListBase( pListName )
+            , _listItem{}
             , _listName{}
             , _listOrder{}
             , _listShadowItem{}
@@ -106,6 +159,8 @@ namespace sw
             , _bRequireName{ bRequireName }
         {
         }
+
+        ~RegistrationList() { unlink(); }
 
         /**
          * @brief 항목을 올립니다. 이름은 지금 복사합니다.
@@ -216,11 +271,11 @@ namespace sw
         }
 
         /** @brief 올라 있는 항목 수입니다. */
-        uint32 getCount() const { return static_cast<uint32>( _listItem.size() ); }
+        uint32 getCount() const override { return static_cast<uint32>( _listItem.size() ); }
         /** @brief 순서대로 index 번째 항목입니다. */
         T* getAt( uint32 index ) const { return _listItem[index]; }
         /** @brief index 번째 항목을 올릴 때 복사한 이름입니다(없으면 빈 글). */
-        const string& getNameAt( uint32 index ) const { return _listName[index]; }
+        const string& getNameAt( uint32 index ) const override { return _listName[index]; }
         /** @brief 항목 전부(순서대로)입니다. 소유하지 않습니다. */
         const vector<T*>& getItems() const { return _listItem; }
 

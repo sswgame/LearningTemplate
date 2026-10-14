@@ -85,7 +85,7 @@ namespace sw
 
     private:
         /** @brief 등록된 카메라입니다(등록 순서). 소유하지 않습니다. */
-        RegistrationList<CameraComponent> _registeredCamera;
+        RegistrationList<CameraComponent> _registeredCamera{ "CameraRegistry.Camera" };
         /** @brief 목록을 지킵니다. 등록/해제는 드물고(비동기 씬 로드는 워커에서 등록합니다), 조회는 게임 스레드입니다. */
         mutable mutex    _mutex;
         CameraComponent* _pCutCamera{ nullptr }; ///< 시퀀서 카메라 컷(`setCutCamera`). 등록 해제가 함께 푼다

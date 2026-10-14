@@ -19,7 +19,7 @@ namespace sw
 
     DevCommandRegistry::DevCommandRegistry()
         : _mutex{}
-        , _registration{ RegistrationOrder::Insertion, true, NameCase::IgnoreCase }
+        , _registration{ "DevCommandRegistry", RegistrationOrder::Insertion, true, NameCase::IgnoreCase }
     {
     }
 

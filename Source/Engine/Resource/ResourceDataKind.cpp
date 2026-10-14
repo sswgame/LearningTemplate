@@ -33,7 +33,7 @@ namespace sw
 
     ResourceDataKindRegistry::ResourceDataKindRegistry()
         : _mutex{}
-        , _registration{ RegistrationOrder::Insertion, true, NameCase::IgnoreCase }
+        , _registration{ "ResourceDataKindRegistry", RegistrationOrder::Insertion, true, NameCase::IgnoreCase }
     {
     }
 
@@ -48,7 +48,7 @@ namespace sw
         }
         if ( result == RegistrationResult::DuplicateName || result == RegistrationResult::AlreadyPresent )
         {
-            SW_LOG_WARNING( "Resource data kind '%#' is already registered - the second registration is ignored", pKind->_pLabel );
+            SW_LOG_ERROR( "Resource data kind '%#' is already registered - the second registration is ignored", pKind->_pLabel );
             return false;
         }
         return result == RegistrationResult::Added;
