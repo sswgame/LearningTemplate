@@ -25,6 +25,7 @@ namespace sw
         std::scoped_lock<mutex> lock{ _mutex };
         _listPlaying.clear();
         _listBusStatus.clear();
+        _listInstanceStatus.clear();
         _stats = AudioEngineStats{};
     }
 
@@ -53,5 +54,11 @@ namespace sw
     {
         std::scoped_lock<mutex> lock{ _mutex };
         outListStatus = _listBusStatus;
+    }
+
+    void AudioPublishedState::getInstanceStatuses( vector<AudioInstanceStatus>& outListStatus ) const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        outListStatus = _listInstanceStatus;
     }
 } // namespace sw

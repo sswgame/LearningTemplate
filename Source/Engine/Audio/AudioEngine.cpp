@@ -226,6 +226,44 @@ namespace sw
         }
     }
 
+    bool AudioEngine::findEventDesc( const hashed_string& eventName, AudioEventDesc& outDesc, hashed_string& outLibraryName,
+                                     AudioAttenuationDesc* pOutAttenuation ) const
+    {
+        std::scoped_lock<mutex> lock{ _libraryMutex };
+        for ( const auto& entry : _mapGameLibrary )
+        {
+            const AudioEventDesc* pEvent = entry.second->findEvent( eventName );
+            if ( pEvent == nullptr )
+                continue;
+            outDesc        = *pEvent;
+            outLibraryName = entry.first;
+            if ( pOutAttenuation != nullptr )
+            {
+                *pOutAttenuation = AudioAttenuationDesc{};
+                if ( pEvent->_attenuation.empty() )
+                    return true;
+                for ( const AudioAttenuationDesc& attenuation : entry.second->_listAttenuation )
+                {
+                    if ( attenuation._name == pEvent->_attenuation )
+                    {
+                        *pOutAttenuation = attenuation;
+                        return true;
+                    }
+                }
+                const AudioAttenuationDesc* pMixerAttenuation = _pGameMixerDesc != nullptr ? _pGameMixerDesc->findAttenuation( pEvent->_attenuation ) : nullptr;
+                if ( pMixerAttenuation != nullptr )
+                    *pOutAttenuation = *pMixerAttenuation;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    void AudioEngine::getInstanceStatuses( vector<AudioInstanceStatus>& outListStatus ) const
+    {
+        _published.getInstanceStatuses( outListStatus );
+    }
+
     bool AudioEngine::hasEventLibrary( const hashed_string& libraryName ) const
     {
         std::scoped_lock<mutex> lock{ _libraryMutex };
@@ -1085,6 +1123,11 @@ namespace sw
         stats._peakRealVoiceCount = _peakRealVoiceCount;
         stats._playedEventCount   = _playedEventCount;
         stats._droppedEventCount  = _droppedEventCount;
+        if ( _pMixer != nullptr )
+        {
+            stats._maxVoiceCount     = _pMixer->getDesc()._maxVoiceCount;
+            stats._maxRealVoiceCount = _pMixer->getDesc()._maxRealVoiceCount;
+        }
         for ( const EventInstance& instance : _listInstance )
         {
             stats._instanceCount += instance._bInUse ? 1u : 0u;
@@ -1118,6 +1161,41 @@ namespace sw
                 status._peak        = _pMixer->getBusPeak( busIndex );
                 status._bMuted      = _pMixer->isBusMuted( busIndex );
                 status._bSolo       = _pMixer->isBusSolo( busIndex );
+                listStatus.push_back( status );
+            }
+        } );
+        _published.publishInstances( [this]( vector<AudioInstanceStatus>& listStatus )
+        {
+            const float32 sampleRate = static_cast<float32>( audio::kSampleRate );
+            for ( const EventInstance& instance : _listInstance )
+            {
+                if ( instance._bInUse == false || instance._pDesc == nullptr )
+                    continue;
+                AudioInstanceStatus status;
+                status._event          = instance._pDesc->_name;
+                status._bus            = instance._pDesc->_bus;
+                status._playingID      = instance._playingID;
+                status._elapsedSeconds = _renderedFrameCount > instance._startFrame ? static_cast<float32>( _renderedFrameCount - instance._startFrame ) / sampleRate : 0.0f;
+                status._bStopping      = instance._bStopping;
+                bool bUnknownEnd       = false;
+                float32 remaining      = 0.0f;
+                for ( const VoiceSlot& slot : _listVoice )
+                {
+                    if ( slot._bInUse == false || slot._playingID != instance._playingID )
+                        continue;
+                    ++status._voiceCount;
+                    status._virtualVoiceCount += slot._bVirtual ? 1u : 0u;
+                    const AudioClipData* pClip = slot._voice.getClip();
+                    if ( slot._bLoop || pClip == nullptr || pClip->_sampleRate == 0 )
+                    {
+                        bUnknownEnd = true;
+                        continue;
+                    }
+                    const float64 leftFrames = MathUtil::max( 0.0, static_cast<float64>( pClip->_frameCount ) - slot._voice.getPosition() );
+                    const float32 pitch      = slot._pitchRatio > 0.0f ? slot._pitchRatio : 1.0f;
+                    remaining                = MathUtil::max( remaining, static_cast<float32>( leftFrames / static_cast<float64>( pClip->_sampleRate ) ) / pitch );
+                }
+                status._remainingSeconds = bUnknownEnd ? -1.0f : remaining;
                 listStatus.push_back( status );
             }
         } );
