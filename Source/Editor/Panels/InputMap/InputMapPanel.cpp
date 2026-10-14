@@ -501,6 +501,15 @@ namespace sw::editor
                 if ( ImGui::DragFloat( "s##time", &editTime, 0.01f, 0.01f, 10.0f, "%.2f" ) && _inputMap.setBindingTriggerTime( action, bindIndex, editTime ) )
                     markDocumentDirty();
             }
+            // MultiTap 만 누름 횟수를 고른다(2 이상).
+            if ( pBinding->_trigger == ActionTrigger::MultiTap )
+            {
+                int32 editTaps = static_cast<int32>( pBinding->_tapCount );
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth( ImGui::GetFontSize() * 3.0f );
+                if ( ImGui::DragInt( "taps##taps", &editTaps, 0.1f, 2, 9 ) && _inputMap.setBindingTapCount( action, bindIndex, static_cast<uint8>( MathUtil::clamp( editTaps, 2, 9 ) ) ) )
+                    markDocumentDirty();
+            }
             bool bNegate = pBinding->_bNegate;
             ImGui::SameLine();
             if ( ImGui::Checkbox( "Negate", &bNegate ) && _inputMap.setBindingNegate( action, bindIndex, bNegate ) )

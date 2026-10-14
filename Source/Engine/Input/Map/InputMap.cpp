@@ -826,6 +826,27 @@ namespace sw
         return true;
     }
 
+    bool InputMap::setBindingTapCount( const hashed_string& action, uint32 bindIndex, uint8 tapCount )
+    {
+        ActionEntry* pEntry = findAction( action );
+        if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
+            return false;
+        const uint8 clampedCount                  = ( tapCount < 2 ) ? static_cast<uint8>( 2 ) : tapCount;
+        pEntry->_listBinding[bindIndex]._tapCount = clampedCount;
+        if ( bindIndex < pEntry->_listDefaultBinding.size() )
+            pEntry->_listDefaultBinding[bindIndex]._tapCount = clampedCount;
+        return true;
+    }
+
+    uint32 InputMap::getRequiredTapCount( const ActionBinding& binding )
+    {
+        if ( binding._trigger == ActionTrigger::MultiTap )
+            return ( binding._tapCount < 2 ) ? 2u : static_cast<uint32>( binding._tapCount );
+        if ( binding._trigger == ActionTrigger::DoubleTap || binding._trigger == ActionTrigger::DoubleClicked )
+            return 2u;
+        return 0u;
+    }
+
     float32 InputMap::getEffectiveTriggerTime( const ActionBinding& binding ) const
     {
         float32 mapTime{ 0.0f };
@@ -849,6 +870,7 @@ namespace sw
             }
             case ActionTrigger::DoubleClicked:
             case ActionTrigger::DoubleTap:
+            case ActionTrigger::MultiTap:
             {
                 mapTime = _doubleClickTime;
                 break;
