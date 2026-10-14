@@ -84,3 +84,40 @@ SW_TEST_CASE( EditorModuleOverridesTest, PreviewReportsCycleError )
     SW_EXPECT_FALSE( EditorModuleOverrideUtil::previewToggle( catalog, ModuleResolveContext{}, "GF_A", true, listNewlyInactive, listNewlyActive, error ) );
     SW_EXPECT_FALSE( error.empty() );
 }
+
+/**
+ * @brief [EditorModuleOverridesTest] 상세는 의존 · 이름 순 역의존 · 프로젝트 덮어쓰기를 모으고, 없는 모듈은 false 다
+ */
+SW_TEST_CASE( EditorModuleOverridesTest, BuildDetailCollectsDependentsAndOverride )
+{
+    ModuleCatalog  catalog;
+    string         error;
+    ModuleManifest project = makeManifest( "SWGame", ModuleKind::Game, { "GameFramework" } );
+    ModuleOverride farmOff{};
+    farmOff._name     = "GF_Farm";
+    farmOff._bEnabled = false;
+    project._listModuleOverride.push_back( farmOff );
+    SW_ASSERT_TRUE( catalog.addManifest( project, error ) );
+    SW_ASSERT_TRUE( catalog.addManifest( makeManifest( "GameFramework", ModuleKind::GameFramework, {} ), error ) );
+    SW_ASSERT_TRUE( catalog.addManifest( makeManifest( "GF_Zoo", ModuleKind::Kit, { "GameFramework" } ), error ) );
+    SW_ASSERT_TRUE( catalog.addManifest( makeManifest( "GF_Farm", ModuleKind::Kit, { "GameFramework" } ), error ) );
+
+    EditorModuleDetail detail;
+    SW_ASSERT_TRUE( EditorModuleOverrideUtil::buildDetail( catalog, "SWGame", "GameFramework", detail ) );
+    SW_EXPECT_TRUE( detail._listDependency.empty() );
+    SW_ASSERT_EQUAL( size_t{ 3 }, detail._listDependent.size() );
+    SW_EXPECT_TRUE( detail._listDependent[0] == "GF_Farm" );
+    SW_EXPECT_TRUE( detail._listDependent[1] == "GF_Zoo" );
+    SW_EXPECT_TRUE( detail._listDependent[2] == "SWGame" );
+    SW_EXPECT_FALSE( detail._bHasOverride );
+
+    SW_ASSERT_TRUE( EditorModuleOverrideUtil::buildDetail( catalog, "SWGame", "GF_Farm", detail ) );
+    SW_ASSERT_EQUAL( size_t{ 1 }, detail._listDependency.size() );
+    SW_EXPECT_TRUE( detail._listDependency[0] == "GameFramework" );
+    SW_EXPECT_TRUE( detail._listDependent.empty() );
+    SW_EXPECT_TRUE( detail._bHasOverride );
+    SW_EXPECT_FALSE( detail._bOverrideEnabled );
+    SW_EXPECT_TRUE( detail._version == "1.0.0" );
+
+    SW_EXPECT_FALSE( EditorModuleOverrideUtil::buildDetail( catalog, "SWGame", "Missing", detail ) );
+}

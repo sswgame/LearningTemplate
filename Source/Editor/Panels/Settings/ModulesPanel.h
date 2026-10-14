@@ -1,6 +1,7 @@
 /**
  * @file ModulesPanel.h
- * @brief 모듈 창(언리얼 Plugins 창) — 모듈을 종류별로 보이고, 켜고 끄면 함께 바뀌는 모듈을 미리 보인 뒤 프로젝트 매니페스트를 고쳐 씁니다.
+ * @brief 모듈 창(언리얼 Plugins 창 · 유니티 Package Manager) — 모듈을 종류별로 보이고(검색 · 종류 · 켜짐 필터), 고른 모듈의 상세(의존 · 역의존 · 덮어쓰기)를 보이며,
+ *        켜고 끄거나 기본값으로 되돌리면 함께 바뀌는 모듈을 미리 보인 뒤 프로젝트 매니페스트를 고쳐 씁니다. 설치 · 제거(파일 복사 · 삭제)는 하지 않습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -34,13 +35,20 @@ namespace sw::editor
 
     private:
         void               reloadCatalog();
+        void               drawFilters();
+        void               drawDetail();
         void               drawPreview();
+        void               requestToggle( const string& moduleName, bool bEnabled );
         [[nodiscard]] bool writeProjectOverride();
 
         ModuleCatalog                        _catalog;
         ModuleResolution                     _resolution;
         string                               _loadError;
-        string                               _pendingModule; ///< 미리보기 중인 모듈(비면 묻지 않는다)
+        string                               _selectedModule; ///< 상세 영역에 보이는 모듈(비면 상세를 그리지 않는다)
+        string                               _pendingModule;  ///< 미리보기 중인 모듈(비면 묻지 않는다)
+        int32                                _kindFilter;     ///< 보일 종류(`ModuleKind` 값, -1 은 전부)
+        int32                                _stateFilter;    ///< 0 전부 · 1 켜진 것만 · 2 꺼진 것만
+        bool                                 _bOpenPreview;   ///< 이번 프레임에 확인 창을 연다(표 밖 ID 로 열려고 미룬다)
         vector<ModuleInactiveEntry>          _listNewlyInactive;
         vector<string>                       _listNewlyActive;
         bool                                 _bPendingEnabled;
