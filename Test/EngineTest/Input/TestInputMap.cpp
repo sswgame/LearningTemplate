@@ -1549,8 +1549,8 @@ SW_TEST_CASE( InputMapTest, TriggerTimeAndNegateRoundTripThroughXml )
     sw::InputMap reloaded;
     SW_ASSERT_TRUE( reloaded.loadUserBindings( userPath ) );
     SW_ASSERT_EQUAL( 2u, reloaded.getBindingCount( "Charge" ) );
-    const sw::float32 chargeTime0 = reloaded.getBinding( "Charge", 0 )->_triggerTime;
-    const sw::float32 chargeTime1 = reloaded.getBinding( "Charge", 1 )->_triggerTime;
+    const float32 chargeTime0 = reloaded.getBinding( "Charge", 0 )->_triggerTime;
+    const float32 chargeTime1 = reloaded.getBinding( "Charge", 1 )->_triggerTime;
     SW_EXPECT_NEAR_EQUAL( 0.75f, chargeTime0 > chargeTime1 ? chargeTime0 : chargeTime1, 1.0e-6f );
     SW_ASSERT_NOT_NULL( reloaded.getBinding( "Steer", 0 ) );
     SW_EXPECT_TRUE( reloaded.getBinding( "Steer", 0 )->_bNegate );
