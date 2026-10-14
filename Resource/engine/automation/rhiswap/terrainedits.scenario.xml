@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  백엔드 교체 시나리오 — 저장하지 않은 지형 편집과 씬 뷰 카메라가 교체를 넘어간다. 에디터로 envshowcase 를 열고 지형 칠하기 도구로 레이어를 칠하고 높이를 올린 뒤(저장 단추는 누르지 않는다)
+  DX11 → DX12 로 건넌다(DX11 로 시작했으면 그 교체는 아무것도 하지 않는다 — 적어도 한 번은 건넌다). 교체는 게임 모듈을 내렸다 올리며 씬을 속성으로 되살리고 지형은 디스크 에셋을 다시 읽으므로,
+  편집은 상태 스냅샷(`TerrainComponent::writeState` · `restoreState`)으로만 넘어간다. 에디터 모듈도 다시 올라오므로 씬 뷰 카메라는 씬에 남은 에디터 카메라에서 포즈를 이어받는다.
+  Terrain.WrittenEditCount 가 교체 뒤에도 1 이고, 그림이 편집 전과 다르며 편집 직후와 거의 같아야 한다.
+  처음에 한 번 건너는 것은 도킹 배치를 안정시키기 위해서다 — imgui.ini 가 노드 크기를 정수로 저장해 첫 리로드에서 씬 뷰 너비가 1 픽셀 바뀔 수 있고, 크기가 다르면 그림을 견줄 수 없다.
+  네 백엔드가 모두 있는 PC 에서만 통과하므로 AppScenarioTest 가 줍지 않는 이 하위 폴더에 둔다.
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/rhiswap/terrainedits.scenario.xml -dx12
+-->
+<Scenario name="rhiswap.terrainedits" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="Immediately" input="exclusive">
+	<At frame="1"><Variable name="gv_environmentAnimate" value="0"/></At>
+	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="25"><DevCommand line="panel.resetOptional"/><DevCommand line="layout.reset"/></At>
+	<At frame="30"><DevCommand line="scene.open game/empty/maps/envshowcase.scene.xml"/></At>
+	<At frame="31"><WaitUntil probe="Scene.Transitioning" equals="0" timeoutFrames="900"/></At>
+	<!-- 배치를 안정시키는 첫 교체 -->
+	<At frame="40"><SwapBackend backend="dx11"/></At>
+	<At frame="42"><WaitUntil probe="RHI.SwapPending" equals="0" timeoutFrames="900"/></At>
+	<At frame="60"><SwapBackend backend="dx12"/></At>
+	<At frame="62"><WaitUntil probe="RHI.SwapPending" equals="0" timeoutFrames="900"/></At>
+	<At frame="80"><DevCommand line="panel.focus scene_view"/></At>
+	<At frame="90"><DevCommand line="camera.reset"/></At>
+	<At frame="95"><DevCommand line="camera.set 0 70 -100 35 0"/></At>
+	<At frame="110"><EditorClick mark="viewport.visualizer.terrainbrush"/></At>
+	<At frame="111"><WaitUntil probe="Editor.TerrainBrushToolActive" equals="1" timeoutFrames="60"/></At>
+	<At frame="150">
+		<Expect probe="Terrain.WrittenEditCount" equals="0"/>
+		<Screenshot file="terrainedits_before.ppm"/>
+	</At>
+
+	<!-- 칠하고 올린다 -->
+	<At frame="160"><DevCommand line="terrain.brush paint 20 60 3"/></At>
+	<At frame="170"><EditorDrag mark="sceneView.canvas" dx="160" dy="0"/></At>
+	<At frame="220"><DevCommand line="terrain.brush raise 15 120"/></At>
+	<At frame="230"><EditorDrag mark="sceneView.canvas" dx="0" dy="60"/></At>
+	<At frame="280">
+		<Expect probe="Editor.TerrainBrushStrokeCount" equals="2"/>
+		<Expect probe="Terrain.WrittenEditCount" equals="1"/>
+		<Screenshot file="terrainedits_edited.ppm"/>
+	</At>
+	<At frame="281"><ExpectImage file="terrainedits_edited.ppm" metric="differentFrom" reference="terrainedits_before.ppm" atLeast="0.003"/></At>
+
+	<!-- 백엔드를 건넌다 -->
+	<At frame="290"><SwapBackend backend="dx11"/></At>
+	<At frame="292"><WaitUntil probe="RHI.SwapPending" equals="0" timeoutFrames="900"/></At>
+	<At frame="320"><SwapBackend backend="dx12"/></At>
+	<At frame="322"><WaitUntil probe="RHI.SwapPending" equals="0" timeoutFrames="900"/></At>
+	<At frame="380">
+		<Expect probe="RHI.Backend" equals="1"/>
+		<Expect probe="RHI.SwapFailedCount" equals="0"/>
+		<Expect probe="Terrain.WrittenEditCount" equals="1"/>
+		<Expect probe="Editor.SceneViewCameraY" near="70" tolerance="0.5"/>
+		<Screenshot file="terrainedits_swapped.ppm"/>
+	</At>
+	<At frame="381">
+		<ExpectImage file="terrainedits_swapped.ppm" metric="differentFrom" reference="terrainedits_before.ppm" atLeast="0.003"/>
+		<ExpectImage file="terrainedits_swapped.ppm" metric="differentFrom" reference="terrainedits_edited.ppm" atMost="0.02"/>
+	</At>
+	<At frame="390"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+</Scenario>

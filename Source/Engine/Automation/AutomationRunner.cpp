@@ -345,7 +345,6 @@ namespace sw
                 return true;
             }
 
-            /** @brief 탐침 `Scene.ObjectCount` 입니다. 활성 씬의 오브젝트 수입니다(핫 리로드 · 백엔드 교체 앞뒤로 씬이 그대로인지 볼 때 씁니다). */
             /** @brief 탐침 `Terrain.WrittenEditCount` 입니다. 디스크에서 다시 읽은 뒤 높이나 스플랫을 쓴 지형 수입니다(저장하지 않은 편집이 교체 · 리로드를 넘었는지 본다). */
             [[nodiscard]] static bool readTerrainWrittenEditCount( const GameObjectManager* pManager, float64& outValue )
             {
@@ -361,6 +360,7 @@ namespace sw
                 return true;
             }
 
+            /** @brief 탐침 `Scene.ObjectCount` 입니다. 활성 씬의 오브젝트 수입니다(핫 리로드 · 백엔드 교체 앞뒤로 씬이 그대로인지 볼 때 씁니다). */
             [[nodiscard]] static bool readSceneObjectCount( const GameObjectManager* pManager, float64& outValue )
             {
                 if ( pManager == nullptr )
