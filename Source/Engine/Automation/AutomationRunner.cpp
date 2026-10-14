@@ -18,6 +18,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
+#include "Engine/Input/RawInputEvent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Scene/Scene.h"
@@ -144,6 +145,13 @@ namespace sw
             }
 
             static bool validateMouseDelta( const AutomationStep& step, string& outError )
+            {
+                float32 value = 0.0f;
+                return checkAttributeNames( step, { "x", "y" }, outError ) && readFloat( step, "x", 0.0f, value, outError ) && readFloat( step, "y", 0.0f, value, outError );
+            }
+
+            /** @brief `Wheel` 입니다. `y` 는 세로 휠, `x` 는 가로 휠 눈금이고 없으면 0 입니다. */
+            static bool validateWheel( const AutomationStep& step, string& outError )
             {
                 float32 value = 0.0f;
                 return checkAttributeNames( step, { "x", "y" }, outError ) && readFloat( step, "x", 0.0f, value, outError ) && readFloat( step, "y", 0.0f, value, outError );
@@ -411,6 +419,19 @@ namespace sw
             return bAdded;
         }
 
+        static bool prepareWheel( AutomationRunner& runner, const AutomationStep& step, string& outError )
+        {
+            float32 valueX = 0.0f;
+            float32 valueY = 0.0f;
+            (void)AutomationRunnerInternal::readFloat( step, "x", 0.0f, valueX, outError ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
+            (void)AutomationRunnerInternal::readFloat( step, "y", 0.0f, valueY, outError ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
+            if ( valueY != 0.0f )
+                runner._inputScript.addEvent( step._frameIndex, RawInputEvent::makeMouseWheel( valueY ) );
+            if ( valueX != 0.0f )
+                runner._inputScript.addEvent( step._frameIndex, RawInputEvent::makeMouseHorizontalWheel( valueX ) );
+            return true;
+        }
+
         static bool prepareMouseDelta( AutomationRunner& runner, const AutomationStep& step, string& outError )
         {
             float32 valueX = 0.0f;
@@ -596,6 +617,7 @@ namespace sw
     SW_AUTOMATION_STEP_WITH_HOOKS( runnerTap, "Tap", nullptr, &AutomationRunnerInternal::validateSlotStep, &AutomationRunnerEngineSteps::prepareSlotStep, nullptr, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( runnerMouseDelta, "MouseDelta", nullptr, &AutomationRunnerInternal::validateMouseDelta, &AutomationRunnerEngineSteps::prepareMouseDelta,
                                    nullptr, false );
+    SW_AUTOMATION_STEP_WITH_HOOKS( runnerWheel, "Wheel", nullptr, &AutomationRunnerInternal::validateWheel, &AutomationRunnerEngineSteps::prepareWheel, nullptr, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( runnerMousePosition, "MousePosition", nullptr, &AutomationRunnerInternal::validateMousePosition,
                                    &AutomationRunnerEngineSteps::prepareMousePosition, nullptr, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( runnerGamepadAxis, "GamepadAxis", nullptr, &AutomationRunnerInternal::validateGamepadAxis, &AutomationRunnerEngineSteps::prepareGamepadAxis,
