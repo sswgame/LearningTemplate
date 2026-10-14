@@ -297,6 +297,8 @@ namespace sw
         void explainNpc( int32 npcIndex, string& outText ) const;
         /** @brief 오늘 계획의 시간표(출발, 도착, 칸, 출처)입니다. 에디터와 콘솔에 그대로 보여 줍니다. */
         void dumpTimeline( int32 npcIndex, string& outText ) const;
+        /** @brief 지금 살아 있는 일정 시스템을 모두 모읍니다(생성자에서 올리고 소멸자에서 내린다). 에디터 일정 디버그 창이 같은 스레드에서 읽기 전용으로 씁니다. */
+        static void collectLiveSystems( vector<const ScheduleSystem*>& outListSystem );
 
     private:
         struct Interruption
