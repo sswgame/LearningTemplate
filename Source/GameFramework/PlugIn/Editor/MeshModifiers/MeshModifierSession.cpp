@@ -9,6 +9,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -64,6 +65,7 @@ namespace sw::editor
 
     bool MeshModifierSession::setTarget( GameObject* pObject )
     {
+        setMeshModifierTaskManager( editor::getService<TaskManager>() ); // 변형 적용(미리보기 · 굽기)을 병렬로 돌린다
         clearTarget();
         if ( pObject == nullptr )
             return false;

@@ -25,10 +25,18 @@
 namespace sw
 {
     class JSONValue;
+    class TaskManager;
 } // namespace sw
 
 namespace sw::editor
 {
+    /**
+     * @brief 모디파이어 적용을 병렬로 돌릴 작업 관리자를 정합니다. nullptr 이면 현재 스레드가 한 번에 돕니다(테스트 · 서비스 연결 전).
+     * @details 엔진 내부 전용 도우미(`engine::runParallel`)는 확장 모듈이 쓸 수 없어서, 세션이 에디터 서비스에서 얻은 관리자를 여기에 건다.
+     *          게임 스레드에서만 부른다. 저장 칸이 이 모듈의 정적 변수라 모듈이 내려가면 함께 사라진다.
+     */
+    void setMeshModifierTaskManager( TaskManager* pTaskManager );
+
     /**
      * @struct MeshModifierMesh
      * @brief 모디파이어가 변형하는 메시 정점입니다(메시 로컬 공간, 인덱스 없는 삼각형 목록 — 정점 3 개가 삼각형 하나).

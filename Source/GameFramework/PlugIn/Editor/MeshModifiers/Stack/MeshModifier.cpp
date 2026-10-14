@@ -7,15 +7,28 @@
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifier.h"
 
 #include "Core/Math/MathUtil.h"
-
-#include "Engine/Common/EngineParallel.h"
+#include "Core/Task/TaskManager.h"
 
 namespace sw::editor
 {
     namespace
     {
+        TaskManager* s_pTaskManager = nullptr;
+
         struct MeshModifierInternal
         {
+            /** @brief [0, count) 를 작업 관리자로 나눠 돌립니다. 관리자가 없으면 현재 스레드가 한 번에 돕니다(`engine::runParallel` 과 같은 규칙). */
+            static void runBlocks( uint32 count, uint32 serialThreshold, const ParallelBlockDelegate& body )
+            {
+                if ( s_pTaskManager != nullptr )
+                {
+                    s_pTaskManager->runParallel( count, serialThreshold, body );
+                    return;
+                }
+                if ( count > 0 && body.isBound() )
+                    body( 0, count );
+            }
+
             /** @brief 야코비안 차분의 걸음을 상자 대각선에 곱하는 비율입니다. */
             static constexpr float32 kJacobianStepRatio = 1e-3f;
             static constexpr float32 kMinJacobianStep   = 1e-5f;
@@ -139,7 +152,7 @@ namespace sw::editor
                 job._pointMatrix  = pointMatrix;
                 job._normalMatrix = normalMatrix;
                 job._vertexCount  = inoutMesh.getVertexCount();
-                engine::runParallel( computeChunkCount( job._vertexCount ), 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &TransformJob::run, &job ) );
+                runBlocks( computeChunkCount( job._vertexCount ), 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &TransformJob::run, &job ) );
             }
 
             static bool isScalarKind( MeshModifierParamKind kind )
@@ -261,8 +274,13 @@ namespace sw::editor
         job._pContext  = &context;
         job._pMesh     = &inoutMesh;
         job._step      = MathUtil::max( diagonal * MeshModifierInternal::kJacobianStepRatio, MeshModifierInternal::kMinJacobianStep );
-        engine::runParallel( MeshModifierInternal::computeChunkCount( inoutMesh.getVertexCount() ), 2,
-                             SW_DELEGATE_METHOD( ParallelBlockDelegate, &MeshModifierInternal::DeformJob::run, &job ) );
+        MeshModifierInternal::runBlocks( MeshModifierInternal::computeChunkCount( inoutMesh.getVertexCount() ), 2,
+                                         SW_DELEGATE_METHOD( ParallelBlockDelegate, &MeshModifierInternal::DeformJob::run, &job ) );
+    }
+
+    void setMeshModifierTaskManager( TaskManager* pTaskManager )
+    {
+        s_pTaskManager = pTaskManager;
     }
 
     void MeshModifier::fitToBounds( const MeshModifierBounds& localBounds )
