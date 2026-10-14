@@ -26,7 +26,7 @@ Conform 의 `SurfaceBvh`)을 풀었다. 최종 검증: Debug `all AllTests` **�
 1. 다른 PC(정상 환경)에서 `wt/editor` 를 받아 pre-commit 훅 · clang-format 20.1.8 · Shipping 빌드와 테스트 · GPU 테스트를 돌린다 — 이 PC 에서 못 한 것 전부.
 2. 에디터를 띄워 [백로그](../06_Backlog.md) `D3-9` · `D3-10` 의 눈으로 볼 목록을 확인한다(모디파이어 패널 · 뷰포트 핸들 · 마우스 양보의 첫 클릭 누수).
 3. 컴퓨트 셰이더 미리보기(`D3-10`, 조사는 끝남 — uber 셰이더 + 모프 풀 출력 경로, 4 백엔드 GPU 검증이 필요).
-4. 남은 에디터 큰 덩어리: 다중 월드(`D3-7`, [계획](EditorMultiWorld.md)) · 캐릭터 편집 창([계획](EditorCharacterEditor.md)) · 지형 쓰기 API(`D2-5` (7)).
+4. 남은 에디터 큰 덩어리: 다중 월드(`D3-7`, [계획](EditorMultiWorld.md)) · 캐릭터 편집 창([계획](EditorCharacterEditor.md)). 지형 쓰기는 Release 측정 등 잔여만(`D2-5` (7)).
 **에이전트 주의:** 이 세션에서 에이전트는 `model` 을 지정하지 않아 정의 파일 값(`worker` = opus)으로 돌았다. 다음에는 일의 크기에 맞춰 `model` 을 명시한다(`docs/11_Workflow.md` 9절).
 
 ## 2. 이번 세션에서 확정된 방침

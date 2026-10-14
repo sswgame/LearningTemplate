@@ -164,6 +164,9 @@ cd build/Ninja-Debug/Bin
 
 - **지형 LOD 교체**(`TerrainBenchTest.LODSweepWorstFrame`, Release, 쇼케이스 지형을 600 프레임 동안 가로지름, 3 회): 교체 프레임 111 개에서 updateLODs(청크 메시) p50 0.1 ms · 최악 4.0 ~ 5.1 ms,
   GPUScene 수집 p50 0.95 ms · 최악 5.0 ~ 5.2 ms 입니다. 기준은 GT 2 ms 입니다.
+- **지형 높이 쓰기**(2026-10-15, **Debug** — Release 는 아직, 257 × 257 · 256 m · 청크 32 칸, 9 · 5 회 p50): 5 × 5 샘플을 쓴 뒤 물리 틱이 지형 전체 한 바디(청크 256 칸)면 1416 ms,
+  청크마다 바디면 17.0 ms 입니다(`TerrainBenchTest.ColliderRebuildAfterBrushWrite`, 쓰지 않은 틱 0.1 ~ 0.16 ms). `writeHeights` 의 쓰기 프레임은 청크 메시를 넷까지만 다시 만들어
+  한 변 9 샘플 2.6 ms · 257 샘플 25 ms 이고, 미룬 청크 전체는 257 샘플에서 262 ms 입니다(`WriteHeightsRectSizes` — 나누기 전에는 257 샘플 쓰기 한 번이 288 ms).
 - **파괴 첫 프레임**(`FractureBenchTest.ShowcaseBeginPlay`, Release, beginPlay + 첫 틱 — 첫 물리 스텝 앞에서 상태와 잎 셰이프를 만든다): 잎 셰이프를 시작 때 모두 지으면(`-gv_fractureShapeWarmMicroseconds=-1`) p50 19.4 ms, 기본(틱마다 약 0.57 ms 예산으로 나눠 지음)은 p50 7.7 ms 입니다(`PerfCompare.py` fractureWarm, 3 회).
   대신 셰이프가 준비된 뒤 벽이 깨지는 프레임이 p50 2.4 → 3.2 ms 로 늘었다(`fractureDefer`, 7 회 재측정 1.33 배 — 첫 프레임 12 ms 절감과 맞바꾼 값으로 유지한다).
   쇼케이스 파괴물 여섯 · 잎 312 개이고, 200 조각 벽 하나의 볼록 껍질이 약 11 ms(잎당 약 55 us)입니다. 깨지는 프레임은 200 조각 벽에서 4 ~ 7 ms(그중 사건 처리 2 ~ 4 ms)입니다.
