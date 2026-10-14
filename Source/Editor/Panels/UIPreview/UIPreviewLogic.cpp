@@ -21,7 +21,9 @@
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Document/UIDocumentLoader.h"
 #include "Engine/UI/Document/UIDocumentWriter.h"
+#include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
+#include "Engine/UI/Layout/GridPanel.h"
 #include "Engine/UI/Layout/UIScale.h"
 #include "Engine/UI/Layout/WidgetLayoutSlot.h"
 #include "Engine/UI/Screen/UIScreen.h"
@@ -270,6 +272,24 @@ namespace sw::editor
     bool UIPreviewLogic::canEditSlotByHandle( const Widget& widget )
     {
         return castTo<const CanvasPanel>( widget.getParent() ) != nullptr;
+    }
+
+    UIPreviewSlotFields UIPreviewLogic::findSlotFields( const Widget& widget )
+    {
+        UIPreviewSlotFields fields{};
+        const auto*         pParent = widget.getParent();
+        if ( pParent == nullptr )
+            return fields;
+        fields._bSizeOverride = true;
+        if ( castTo<const CanvasPanel>( pParent ) != nullptr )
+        {
+            fields._bCanvas = true;
+            return fields;
+        }
+        fields._bPaddingAlignment = true;
+        fields._bBoxSize          = castTo<const BoxPanel>( pParent ) != nullptr;
+        fields._bGrid             = castTo<const GridPanel>( pParent ) != nullptr;
+        return fields;
     }
 
     bool UIPreviewLogic::applySlotDrag( WidgetLayoutSlot& inoutSlot, UIPreviewSlotHandle handle, const float2& deltaUI )

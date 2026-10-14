@@ -162,6 +162,13 @@ namespace sw::editor
         [[nodiscard]] bool deleteSelected( UIScreen& screen );
         /** @brief 선택한 위젯의 슬롯 손잡이를 그림 위에 그리고 끄는 대로 슬롯을 고칩니다(부모가 캔버스 패널일 때). */
         void drawSlotHandles( UIScreen& screen, const float2& drawSize, const float2& origin );
+        /**
+         * @brief 인스펙터 위에 고른 위젯의 Slot 칸을 그립니다 — 부모 패널이 읽는 필드만(`UIPreviewLogic::findSlotFields`) 보입니다(상자 · 겹침 · 격자 · 흐름 · 캔버스 …).
+         * @details 되돌리기는 슬롯 손잡이와 같다 — 끄는 동안은 슬롯을 바로 고치고, 손을 떼면 `_slot` 텍스트 전후 한 쌍을 `pushPropertyEdit` 로 남긴다.
+         */
+        void drawSlotSection( Widget& widget );
+        /** @brief 방금 그린 Slot 칸 컨트롤 하나의 편집을 맺습니다. @p frameText 는 그 컨트롤을 그리기 전 `_slot` 텍스트, @p bImmediate 는 콤보 · 체크처럼 한 번에 끝나는 편집입니다. */
+        void finishSlotField( Widget& widget, const PropertyInfo& slotProp, const string& frameText, bool bChanged, bool bImmediate );
         /** @brief 되돌리기 항목이 부르는 구조 편집입니다 — 문서 순서 번호 @p parentOrdinal 인 패널의 @p index 번째에 @p typeName 위젯을 끼웁니다. 다른 세대의 항목이면 버립니다. */
         void applyInsert( uint32 generation, const hashed_string& typeName, uint32 parentOrdinal, uint32 index );
         /** @brief 그 자리의 위젯을 뗍니다. @p pHolder 가 있으면 떼어 낸 위젯을 맡깁니다(지우기를 다시 하기). 없으면 버립니다(추가를 되돌리기). */
@@ -181,6 +188,7 @@ namespace sw::editor
         vector<const TypeInfo*>         _listPaletteType;  ///< 팔레트의 위젯 타입(이름순)
         string                          _paletteFilter;    ///< 팔레트 검색어
         string                          _slotDragBaseline; ///< 슬롯 손잡이를 끌기 시작할 때의 `_slot` 텍스트
+        string                          _slotFieldBaseline; ///< Slot 칸 컨트롤을 끌기 시작할 때의 `_slot` 텍스트
         hashed_string                   _paletteType;      ///< 팔레트에서 고른 타입(Add 가 붙인다)
         string                          _documentPath;
         string                          _openedDocument; ///< 지금 미리보기 화면의 문서

@@ -1199,6 +1199,132 @@ namespace sw::editor
         }
     }
 
+    void UIPreviewPanel::finishSlotField( Widget& widget, const PropertyInfo& slotProp, const string& frameText, bool bChanged, bool bImmediate )
+    {
+        if ( ImGui::IsItemActivated() )
+            _slotFieldBaseline = frameText;
+        const bool bCommit = bImmediate ? bChanged : ImGui::IsItemDeactivatedAfterEdit();
+        if ( bCommit == false )
+            return;
+        const string& oldText = bImmediate ? frameText : _slotFieldBaseline;
+        const string  newText = UIPreviewLogic::formatWidgetProperty( widget, slotProp );
+        if ( newText == oldText )
+            return;
+        pushPropertyEdit( _selectedOrdinal, "_slot", oldText, newText, string{} );
+        markDocumentDirty();
+        _baselineWidget = kInvalidWidgetID; // 인스펙터의 기준 값을 다시 잡는다
+    }
+
+    void UIPreviewPanel::drawSlotSection( Widget& widget )
+    {
+        using Internal                   = UIPreviewPanelInternal;
+        const UIPreviewSlotFields fields = UIPreviewLogic::findSlotFields( widget );
+        if ( fields._bSizeOverride == false )
+            return; // 루트 — 부모가 없어 슬롯을 읽는 쪽이 없다
+        const PropertyInfo* pSlotProp = UIPreviewLogic::findWidgetProperty( widget, "_slot" );
+        if ( pSlotProp == nullptr )
+            return;
+        const TypeInfo* pParentType = widget.getParent()->getTypeInfo();
+        const string    header      = string{ "Slot (" } + ( pParentType != nullptr ? pParentType->_name.c_str() : "Panel" ) + ")###uipreviewslot";
+        if ( ImGui::CollapsingHeader( header.c_str(), ImGuiTreeNodeFlags_DefaultOpen ) == false )
+            return;
+
+        static const utf8* const kArrAlignment[] = { "Fill", "Start", "Center", "End" };
+        static const utf8* const kArrSizeRule[]  = { "Auto", "Fill" };
+        static const utf8* const kArrGrow[]      = { "End", "Begin", "Both" };
+        constexpr float32        kDragSpeed      = 0.5f;
+        constexpr float32        kAnchorSpeed    = 0.005f;
+        const uint16             kOneSpan        = 1;
+
+        // 컨트롤 하나 = 슬롯 사본을 draw 가 고치고(고쳤으면 true), 바뀌면 바로 위젯에 넣고(레이아웃이 따라 움직인다), 편집을 맺는다.
+        WidgetLayoutSlot slot = widget.getLayoutSlot();
+        auto field = [&]( const utf8* pMark, bool bImmediate, auto&& draw ) {
+            const string beforeText = UIPreviewLogic::formatWidgetProperty( widget, *pSlotProp );
+            slot                    = widget.getLayoutSlot();
+            const bool bChanged     = draw( slot );
+            if ( bChanged )
+                widget.setLayoutSlot( slot );
+            Internal::noteMark( "uipreview.slot", pMark );
+            finishSlotField( widget, *pSlotProp, beforeText, bChanged, bImmediate );
+        };
+        auto combo = [&]( const utf8* pLabel, int32 current, const utf8* const* arrName, int32 count, int32& outIndex ) {
+            outIndex = current;
+            return ImGui::Combo( pLabel, &outIndex, arrName, count );
+        };
+
+        if ( fields._bPaddingAlignment )
+        {
+            field( "padding", false, [&]( WidgetLayoutSlot& s ) { return ImGui::DragFloat4( "Padding", &s._padding._x, kDragSpeed ); } );
+            EditorWidgets::drawTooltip( "Left, top, right, bottom (UI units)" );
+            field( "halign", true, [&]( WidgetLayoutSlot& s ) {
+                int32 index = 0;
+                if ( combo( "Horizontal Alignment", static_cast<int32>( s._horizontalAlignment ), kArrAlignment, 4, index ) == false )
+                    return false;
+                s._horizontalAlignment = static_cast<UIAlignment>( index );
+                return true;
+            } );
+            field( "valign", true, [&]( WidgetLayoutSlot& s ) {
+                int32 index = 0;
+                if ( combo( "Vertical Alignment", static_cast<int32>( s._verticalAlignment ), kArrAlignment, 4, index ) == false )
+                    return false;
+                s._verticalAlignment = static_cast<UIAlignment>( index );
+                return true;
+            } );
+        }
+        if ( fields._bBoxSize )
+        {
+            field( "sizerule", true, [&]( WidgetLayoutSlot& s ) {
+                int32 index = 0;
+                if ( combo( "Size Rule", static_cast<int32>( s._sizeRule ), kArrSizeRule, 2, index ) == false )
+                    return false;
+                s._sizeRule = static_cast<UISizeRule>( index );
+                return true;
+            } );
+            EditorWidgets::drawTooltip( "Auto takes the desired size on the main axis; Fill shares the rest by fill weight." );
+            ImGui::BeginDisabled( slot._sizeRule != UISizeRule::Fill );
+            field( "fillweight", false, [&]( WidgetLayoutSlot& s ) { return ImGui::DragFloat( "Fill Weight", &s._fillWeight, 0.01f, 0.0f, 1000.0f ); } );
+            ImGui::EndDisabled();
+        }
+        if ( fields._bGrid )
+        {
+            field( "row", false, [&]( WidgetLayoutSlot& s ) { return ImGui::DragScalar( "Row", ImGuiDataType_U16, &s._row, 0.1f ); } );
+            field( "column", false, [&]( WidgetLayoutSlot& s ) { return ImGui::DragScalar( "Column", ImGuiDataType_U16, &s._column, 0.1f ); } );
+            field( "rowspan", false, [&]( WidgetLayoutSlot& s ) { return ImGui::DragScalar( "Row Span", ImGuiDataType_U16, &s._rowSpan, 0.1f, &kOneSpan ); } );
+            field( "columnspan", false, [&]( WidgetLayoutSlot& s ) { return ImGui::DragScalar( "Column Span", ImGuiDataType_U16, &s._columnSpan, 0.1f, &kOneSpan ); } );
+        }
+        if ( fields._bCanvas )
+        {
+            field( "anchormin", false, [&]( WidgetLayoutSlot& s ) { return ImGui::DragFloat2( "Anchor Min", &s._anchorMin._x, kAnchorSpeed, 0.0f, 1.0f ); } );
+            field( "anchormax", false, [&]( WidgetLayoutSlot& s ) { return ImGui::DragFloat2( "Anchor Max", &s._anchorMax._x, kAnchorSpeed, 0.0f, 1.0f ); } );
+            field( "offsetmin", false, [&]( WidgetLayoutSlot& s ) { return ImGui::DragFloat2( "Offset Min", &s._offsetMin._x, kDragSpeed ); } );
+            field( "offsetmax", false, [&]( WidgetLayoutSlot& s ) { return ImGui::DragFloat2( "Offset Max", &s._offsetMax._x, kDragSpeed ); } );
+            field( "autosize", true, [&]( WidgetLayoutSlot& s ) { return ImGui::Checkbox( "Auto Size", &s._bAutoSize ); } );
+            field( "growh", true, [&]( WidgetLayoutSlot& s ) {
+                int32 index = 0;
+                if ( combo( "Grow Horizontal", static_cast<int32>( s._growHorizontal ), kArrGrow, 3, index ) == false )
+                    return false;
+                s._growHorizontal = static_cast<UIGrowDirection>( index );
+                return true;
+            } );
+            field( "growv", true, [&]( WidgetLayoutSlot& s ) {
+                int32 index = 0;
+                if ( combo( "Grow Vertical", static_cast<int32>( s._growVertical ), kArrGrow, 3, index ) == false )
+                    return false;
+                s._growVertical = static_cast<UIGrowDirection>( index );
+                return true;
+            } );
+            field( "zorder", false, [&]( WidgetLayoutSlot& s ) { return ImGui::DragScalar( "Z Order", ImGuiDataType_S16, &s._zOrder, 0.1f ); } );
+        }
+        // 크기 덮어쓰기 · 최소 · 최대는 모든 패널이 읽는다(UMG 의 SizeBox 를 슬롯 필드로 옮긴 것).
+        field( "width", false, [&]( WidgetLayoutSlot& s ) { return ImGui::DragFloat( "Width Override", &s._widthOverride, kDragSpeed, 0.0f, 100000.0f ); } );
+        field( "height", false, [&]( WidgetLayoutSlot& s ) { return ImGui::DragFloat( "Height Override", &s._heightOverride, kDragSpeed, 0.0f, 100000.0f ); } );
+        EditorWidgets::drawTooltip( "0 means none" );
+        field( "minsize", false, [&]( WidgetLayoutSlot& s ) { return ImGui::DragFloat2( "Min Size", &s._minSize._x, kDragSpeed, 0.0f, 100000.0f ); } );
+        field( "maxsize", false, [&]( WidgetLayoutSlot& s ) { return ImGui::DragFloat2( "Max Size", &s._maxSize._x, kDragSpeed, 0.0f, 100000.0f ); } );
+        EditorWidgets::drawTooltip( "0 means unbounded" );
+        ImGui::Separator();
+    }
+
     void UIPreviewPanel::drawWidgetList( UIScreen& screen )
     {
         using Internal = UIPreviewPanelInternal;
@@ -1238,6 +1364,7 @@ namespace sw::editor
         }
         if ( _baselineWidget != _selected )
             captureBaseline( *pWidget );
+        drawSlotSection( *pWidget );
         _grid.drawSearchBar( "uipreview.inspector.search" );
         EditorPropertyGridTarget target{};
         target._pInstance = pWidget;
