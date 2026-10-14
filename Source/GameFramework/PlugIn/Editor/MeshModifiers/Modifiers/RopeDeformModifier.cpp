@@ -20,13 +20,15 @@ namespace sw::editor
     public:
         RopeDeformModifier()
             : MeshModifier()
-            , _pathParam{ addParam( MeshModifierParamDef{ "Path", MeshModifierParamKind::Reference, 0.0f, 0.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "Spline object" } ) }
-            , _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
-            , _radiusCurveParam{ addParam( MeshModifierParamDef{ "Radius Curve", MeshModifierParamKind::Curve, 0.0f, 10.0f, float3{ 1.0f, 1.0f, 0.0f } } ) }
-            , _startParam{ addParam( MeshModifierParamDef{ "Start", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _endParam{ addParam( MeshModifierParamDef{ "End", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
+            , _pathParam{ addParam( MeshModifierParamDef{ "Path", MeshModifierParamKind::Reference, 0.0f, 0.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "Spline object" }.withLayout( "Path", "Spline object the rope follows" ).withRequiredComponent( "SplineComponent" ) ) }
+            , _radiusParam{ addParam( MeshModifierParamDef{ "Radius", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Shape", "Cross-section scale of the rope" ) ) }
+            , _radiusCurveParam{ addParam( MeshModifierParamDef{ "Radius Curve", MeshModifierParamKind::Curve, 0.0f, 10.0f, float3{ 1.0f, 1.0f, 0.0f } }.withLayout( "Shape", "Radius multiplier along the rope (0 = start, 1 = end)" ) ) }
+            , _startParam{ addParam( MeshModifierParamDef{ "Start", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Range", "Start of the rope along the path (0 = path start)" ) ) }
+            , _endParam{ addParam( MeshModifierParamDef{ "End", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Range", "End of the rope along the path (1 = path end)" ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "Stretches the mesh over the whole length of a spline as a rope or tube."; }
 
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override
         {

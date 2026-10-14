@@ -28,11 +28,13 @@ namespace sw::editor
 
         CurveSculptLayeredModifier()
             : MeshModifier()
-            , _shapeParam{ addParam( MeshModifierParamDef{ "Shape", MeshModifierParamKind::Curve, -10.0f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
+            , _shapeParam{ addParam( MeshModifierParamDef{ "Shape", MeshModifierParamKind::Curve, -10.0f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Sculpt", "Falloff profile shared by every layer" ) ) }
             , _layersParam{ addParam(
-                  MeshModifierParamDef{ "Layers", MeshModifierParamKind::NumberList, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f }, 4, "u v radius height" }.withColumns( kArrColumn ) ) }
+                  MeshModifierParamDef{ "Layers", MeshModifierParamKind::NumberList, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f }, 4, "u v radius height" }.withLayout( "Layers", "One row per layer: center (U, V), radius and height, in bounds fractions" ).withColumns( kArrColumn ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "Stacks several curve-shaped bumps pushed along the normals."; }
 
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override
         {

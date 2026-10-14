@@ -20,14 +20,16 @@ namespace sw::editor
     public:
         WorldPathDeformModifier()
             : MeshModifier()
-            , _pathParam{ addParam( MeshModifierParamDef{ "Path", MeshModifierParamKind::Reference, 0.0f, 0.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "Spline object" } ) }
-            , _stretchParam{ addParam( MeshModifierParamDef{ "Stretch", MeshModifierParamKind::Float, 0.01f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
-            , _distanceParam{ addParam( MeshModifierParamDef{ "Distance", MeshModifierParamKind::Float, -10000.0f, 10000.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _rotateParam{ addParam( MeshModifierParamDef{ "Rotate", MeshModifierParamKind::Float, -360.0f, 360.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _twistParam{ addParam( MeshModifierParamDef{ "Twist", MeshModifierParamKind::Float, -3600.0f, 3600.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _loopParam{ addParam( MeshModifierParamDef{ "Loop", MeshModifierParamKind::Bool, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
+            , _pathParam{ addParam( MeshModifierParamDef{ "Path", MeshModifierParamKind::Reference, 0.0f, 0.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "Spline object" }.withLayout( "Path", "Spline object the mesh follows, read in world space" ).withRequiredComponent( "SplineComponent" ) ) }
+            , _stretchParam{ addParam( MeshModifierParamDef{ "Stretch", MeshModifierParamKind::Float, 0.01f, 100.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Path", "Scale of the mesh length along the path" ) ) }
+            , _distanceParam{ addParam( MeshModifierParamDef{ "Distance", MeshModifierParamKind::Float, -10000.0f, 10000.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Path", "Slide the mesh along the path by a distance", "m" ) ) }
+            , _rotateParam{ addParam( MeshModifierParamDef{ "Rotate", MeshModifierParamKind::Float, -360.0f, 360.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Orientation", "Roll of the mesh around the path", "deg" ) ) }
+            , _twistParam{ addParam( MeshModifierParamDef{ "Twist", MeshModifierParamKind::Float, -3600.0f, 3600.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Orientation", "Extra roll added along the path", "deg" ) ) }
+            , _loopParam{ addParam( MeshModifierParamDef{ "Loop", MeshModifierParamKind::Bool, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Path", "Wrap around when the mesh runs past the path ends" ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "Moves the mesh onto a spline placed in the world and bends it along it."; }
 
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override
         {
