@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
@@ -64,7 +65,7 @@ namespace sw::editor
     private:
         static void runJob( shared_ptr<State> pState, shared_ptr<Process> pProcess, uint32 generation );
 
-        std::thread         _thread;
+        sw::thread          _thread;
         shared_ptr<Process> _pProcess;
     };
 } // namespace sw::editor

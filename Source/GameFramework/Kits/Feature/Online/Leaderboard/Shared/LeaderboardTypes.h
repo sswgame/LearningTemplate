@@ -29,7 +29,7 @@ namespace sw
         Count
     };
 
-    SW_GF_API const utf8* toString( LeaderboardResult result );
+    SW_KIT_API const utf8* toString( LeaderboardResult result );
 } // namespace sw
 
 namespace sw
@@ -144,7 +144,7 @@ namespace sw
 namespace sw
 {
     /** @brief 보드, 통계, 업적 id 규칙입니다. */
-    struct SW_GF_API LeaderboardNameRule
+    struct SW_KIT_API LeaderboardNameRule
     {
         /** @brief `[0-9a-z_]` 형식이고 1~32바이트이면 true 입니다. 저장소 키, 캐시 키, 예약 작업 id 에 그대로 들어갑니다. */
         static bool isValidID( string_view id );

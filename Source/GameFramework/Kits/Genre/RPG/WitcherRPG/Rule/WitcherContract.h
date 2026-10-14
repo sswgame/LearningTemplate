@@ -33,7 +33,7 @@ namespace sw
         Solved ///< 계약의 조사가 이미 끝났다
     };
 
-    SW_GF_API const utf8* toString( WitcherClueResult result );
+    SW_KIT_API const utf8* toString( WitcherClueResult result );
 
     /** @brief 조사에서 생긴 일입니다. */
     struct WitcherInvestigationEvent
@@ -57,7 +57,7 @@ namespace sw
      * @brief 계약 하나의 조사입니다. 단서를 찾으면 일지에 `notify( "Clue", 단서 id )` 를 보내고, 단계를 끝내면 `notify( "Investigate", 단계 id )` 를 보냅니다.
      *        퀘스트 단계의 목표가 그 알림을 세게 하면 계약 퀘스트가 진행됩니다. 일지는 빌려 쓰며 없어도 됩니다.
      */
-    class SW_GF_API WitcherInvestigation
+    class SW_KIT_API WitcherInvestigation
     {
     public:
         static constexpr uint32      kStateTag       = FourCcUtil::make( "WINV" );
@@ -109,7 +109,7 @@ namespace sw
         Closed        ///< 이미 끝났다
     };
 
-    SW_GF_API const utf8* toString( WitcherHaggleResult result );
+    SW_KIT_API const utf8* toString( WitcherHaggleResult result );
 
     /**
      * @class WitcherHaggle
@@ -117,7 +117,7 @@ namespace sw
      *        분노가 (한 번마다 오르는 몫 + 한도를 넘긴 몫 / 처음 보상 × 분노 배율)만큼 오르고, 최대에 닿으면 결렬되어 처음 보상만 줍니다. 그 외에는 제안을 요구 쪽으로
      *        반만큼 올립니다(한도까지).
      */
-    class SW_GF_API WitcherHaggle
+    class SW_KIT_API WitcherHaggle
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "WHAG" );

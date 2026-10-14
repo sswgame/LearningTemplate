@@ -4,6 +4,7 @@
 
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Process/ThreadCrashStack.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -66,7 +67,7 @@ namespace sw
         _bRecursive    = bRecursive;
         _bIsWatching   = true;
 
-        _workerThread = std::thread( &WindowsFileWatcher::workerThreadMain, this, Memory::getCurrentMemoryTag() );
+        _workerThread = sw::thread( &WindowsFileWatcher::workerThreadMain, this, Memory::getCurrentMemoryTag() );
 
         SW_LOG_INFO( "Started watching directory: %#", directoryPath );
         return true;

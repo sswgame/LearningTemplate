@@ -54,7 +54,7 @@ namespace sw
         NotOnShip      ///< 우주선 안에서만 할 수 있다
     };
 
-    SW_GF_API const utf8* toString( ScavengerActionResult result );
+    SW_KIT_API const utf8* toString( ScavengerActionResult result );
 
     /** @brief 사람 하나입니다. */
     struct ScavengerCrewMember
@@ -122,7 +122,7 @@ namespace sw
      *          - 날마다 이륙하면 할당량의 남은 날이 줄고, 마감 날(남은 날 0)의 이륙에서 판정한다. 못 채우면 게임 오버이다.
      *          시드가 같고 같은 순서로 호출하면 같은 시설, 날씨, 위협, 손실이 나온다.
      */
-    class SW_GF_API ScavengerExpedition
+    class SW_KIT_API ScavengerExpedition
     {
     public:
         static constexpr const utf8* kShipAreaID    = "ship";

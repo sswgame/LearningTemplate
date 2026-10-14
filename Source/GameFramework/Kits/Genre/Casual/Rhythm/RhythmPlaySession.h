@@ -112,7 +112,7 @@ namespace sw
      *          - 콤보는 Miss 와 `_bBreaksCombo` 창에서 끊긴다. 라이프가 0 이 되면 실패하고 더 판정하지 않는다.
      *          채보와 판정기는 빌려 쓰므로 판보다 오래 살아야 하고 바뀌지 않아야 한다. 같은 입력이면 같은 결과가 나온다(난수 없음).
      */
-    class SW_GF_API RhythmPlaySession
+    class SW_KIT_API RhythmPlaySession
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "RHYP" );

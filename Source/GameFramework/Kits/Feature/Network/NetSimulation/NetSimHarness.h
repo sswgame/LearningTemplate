@@ -95,7 +95,7 @@ namespace sw
      * @brief 다른 전송을 감싸 보내고 받은 바이트를 셉니다. 목적지별 송신량도 셉니다.
      * @details 하니스가 호스트와 흉내 사이에 둔다.
      */
-    class SW_GF_API NetSimTrafficCounter final : public INetTransport
+    class SW_KIT_API NetSimTrafficCounter final : public INetTransport
     {
     public:
         explicit NetSimTrafficCounter( INetTransport* pInner );
@@ -130,7 +130,7 @@ namespace sw
      * @details 월드가 소유하며 월드와 함께 종료된다.
      *          핸들러(`INetMessageHandler`)는 `INetSimGame::createSession` 에서 `world.getRouter()` 에 등록한다. 하니스가 틱마다 받은 메시지를 핸들러에 나눠 준다.
      */
-    class SW_GF_API INetSimSession
+    class SW_KIT_API INetSimSession
     {
     public:
         INetSimSession()          = default;
@@ -172,7 +172,7 @@ namespace sw
      * @class INetSimGame
      * @brief 하니스가 월드를 만들 때마다 호출하는 게임입니다. 월드의 내용(오브젝트와 씬 문서)을 만들고 그 월드의 세션을 반환합니다.
      */
-    class SW_GF_API INetSimGame
+    class SW_KIT_API INetSimGame
     {
     public:
         INetSimGame()          = default;
@@ -195,7 +195,7 @@ namespace sw
      * @class NetSimWorld
      * @brief 하니스의 월드 하나입니다. 자기 씬(오브젝트 매니저와 물리), 호스트, 메시지 라우터, 세션을 가지며 하니스가 만들고 소유합니다.
      */
-    class SW_GF_API NetSimWorld
+    class SW_KIT_API NetSimWorld
     {
     public:
         NetSimWorld( NetSimRole role, int32 worldIndex, INetTransport* pTransport, const NetHostSettings& hostSettings );
@@ -261,7 +261,7 @@ namespace sw
      *     harness.removeClient( clientA );
      * @endcode
      */
-    class SW_GF_API NetSimHarness
+    class SW_KIT_API NetSimHarness
     {
     public:
         NetSimHarness();

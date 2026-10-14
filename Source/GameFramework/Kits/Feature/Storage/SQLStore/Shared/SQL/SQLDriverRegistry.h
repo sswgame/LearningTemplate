@@ -19,7 +19,7 @@ namespace sw
      * @struct SQLDriverRegistry
      * @brief 드라이버 레지스트리입니다. 스레드 안전합니다.
      */
-    struct SW_GF_API SQLDriverRegistry
+    struct SW_KIT_API SQLDriverRegistry
     {
         /** @brief 드라이버를 등록합니다. 같은 이름이 이미 있으면 오류 로그를 남기고 무시하며, 같은 객체이면 조용히 무시합니다. */
         static void registerDriver( ISQLDriver* pDriver );

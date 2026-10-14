@@ -20,7 +20,7 @@ namespace sw
     class Wallet;
 
     /** @brief 원장 잔액을 지갑과 인벤토리에 비추는 미러입니다. */
-    struct SW_GF_API EconomyMirror
+    struct SW_KIT_API EconomyMirror
     {
         static constexpr const utf8* kCurrencyPrefix = "cur.";
         static constexpr const utf8* kItemPrefix     = "item.";

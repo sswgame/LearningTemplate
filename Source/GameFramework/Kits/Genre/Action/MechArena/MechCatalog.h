@@ -79,7 +79,7 @@ namespace sw
 namespace sw
 {
     /** @brief 기체 하나입니다. */
-    struct SW_GF_API MechDef
+    struct SW_KIT_API MechDef
     {
         hashed_string       _id{};
         string              _name{};
@@ -140,7 +140,7 @@ namespace sw
      *        <Weapon id="saber" kind="Melee" moves="slash1,slash2,slash3" range="4"/></Mode></Mech><Skill id=".." trigger="HealthBelow" attack="1.2"/></MechCatalog>`
      * @details `<Mode>` 없이 `<Weapon>` 이 `<Mech>` 바로 아래에 있으면 형태 하나("default")로 읽는다. 분류 보정 이름은 "melee", "shot", "down"(받는 다운치 배율)이다.
      */
-    class SW_GF_API MechCatalog : public XMLCatalog<MechCatalog>
+    class SW_KIT_API MechCatalog : public XMLCatalog<MechCatalog>
     {
         friend class XMLCatalog<MechCatalog>;
 

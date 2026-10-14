@@ -33,7 +33,7 @@ namespace sw
      *          조우가 **일어나는 타일**은 `TileFlagLayer::Encounter` 이고, 무엇을 만나는지는 장르 키트의 지역 테이블이 정합니다.
      *          지역은 존 id 와 태그로 구분합니다(`ZoneTracker`).
      */
-    class SW_GF_API TileMap
+    class SW_KIT_API TileMap
     {
     public:
         TileMap();

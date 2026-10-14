@@ -25,7 +25,7 @@ namespace sw
 namespace sw
 {
     /** @brief 한 존의 ID, 경계, 태그, 클리어 게이트입니다. */
-    struct SW_GF_API ZoneDef
+    struct SW_KIT_API ZoneDef
     {
         string                 _id; ///< 안정적인 존 ID 이다. 맵 이름이나 경로를 쓴다
         ZoneBounds             _bounds;
@@ -51,7 +51,7 @@ namespace sw
      * @details 존이 마을, 체육관, 던전 중 무엇인지는 열거형이 아니라 맵이 붙인 태그로 구분한다. UE 의 GameplayTag 컨테이너와 비슷한 구조이다.
      *          장르 코드는 `hasActiveZoneTag( "dungeon" )` 으로 확인한다.
      */
-    class SW_GF_API ZoneTracker
+    class SW_KIT_API ZoneTracker
     {
     public:
         /** @brief 이 태그가 붙은 존은 들어갈 때 클리어 게이트가 잠깁니다. 체육관, 던전, 보스 방이 해당하며 맵 데이터가 태그를 붙입니다. */

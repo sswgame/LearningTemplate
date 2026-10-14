@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/LifetimeScope.h"
@@ -170,7 +171,7 @@ namespace sw
 
         _bStop    = false;
         _bRunning = true;
-        _thread   = std::thread( &RenderThread::threadMain, this );
+        _thread   = sw::thread( &RenderThread::threadMain, this );
         // 다른 스레드가 장치 대기를 부르면 이 스레드가 받은 작업을 먼저 끝내게 한다(`IRHIDevice::waitIdle`).
         if ( pDevice != nullptr )
             pDevice->setRenderThreadDrain( &RenderThread::drainPacketsThunk, this, _thread.get_id() );

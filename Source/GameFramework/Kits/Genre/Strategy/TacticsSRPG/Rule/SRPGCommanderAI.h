@@ -44,7 +44,7 @@ namespace sw
      * @details 점수 = 명중 x min( 피해, 표적 HP ) / 100 + 격파 가능이면 명중 x 격파 보너스 / 100 - 반격 명중 x min( 반격 피해, 내 HP ) / 100 x 위험 / 100 이다.
      *          피해는 크리티컬을 넣지 않은 일반 피해이다.
      */
-    class SW_GF_API SRPGCommanderAI
+    class SW_KIT_API SRPGCommanderAI
     {
     public:
         SRPGCommanderAI();

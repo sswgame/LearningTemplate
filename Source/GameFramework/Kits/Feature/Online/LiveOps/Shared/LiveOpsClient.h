@@ -35,7 +35,7 @@ namespace sw
      * @class LiveOpsClient
      * @brief 연결 하나의 라이브 운영 클라이언트입니다.
      */
-    class SW_GF_API LiveOpsClient final : public IOnlineClientService
+    class SW_KIT_API LiveOpsClient final : public IOnlineClientService
     {
     public:
         using ReplyDelegate = Delegate<void( const LiveOpsClientReply& )>;

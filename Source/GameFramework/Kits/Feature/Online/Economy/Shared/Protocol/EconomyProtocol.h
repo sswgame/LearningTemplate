@@ -62,7 +62,7 @@ namespace sw
         Count
     };
 
-    SW_GF_API const utf8* toString( EconomyResult result );
+    SW_KIT_API const utf8* toString( EconomyResult result );
 } // namespace sw
 
 namespace sw
@@ -124,7 +124,7 @@ namespace sw
 namespace sw
 {
     /** @brief 형식을 읽고 씁니다. 읽을 때 상한을 넘거나 모자라면 false 를 반환합니다. */
-    struct SW_GF_API EconomyProtocol
+    struct SW_KIT_API EconomyProtocol
     {
         static constexpr uint32 kVersion          = 1;
         static constexpr int32  kMaxPayloadSize   = 16 * 1024; ///< 영수증의 상한이다. Apple JWS 는 수 KB 이다

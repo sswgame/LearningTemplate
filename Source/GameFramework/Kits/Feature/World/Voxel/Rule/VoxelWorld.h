@@ -40,7 +40,7 @@ namespace sw
      *          블록이 바뀌면 그 청크를 다시 메싱할 것으로 표시한다. 청크 경계의 블록이면 이웃 청크도 표시하는데, 이웃의 가려져 있던 면이 드러나기 때문이다.
      *          카탈로그는 빌려 쓴다.
      */
-    class SW_GF_API VoxelWorld
+    class SW_KIT_API VoxelWorld
     {
     public:
         VoxelWorld();

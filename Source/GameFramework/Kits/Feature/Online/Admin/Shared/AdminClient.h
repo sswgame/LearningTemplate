@@ -32,7 +32,7 @@ namespace sw
 namespace sw
 {
     /** @class AdminClient @brief GM 명령 클라이언트입니다. */
-    class SW_GF_API AdminClient final : public IOnlineClientService
+    class SW_KIT_API AdminClient final : public IOnlineClientService
     {
     public:
         using ReplyDelegate = Delegate<void( const AdminClientReply& )>;

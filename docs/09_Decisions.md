@@ -432,6 +432,13 @@
   (`engine::bindModuleServices` — 게임 모듈에는 `GameVisible` 행만, 에디터에는 모듈 컴파일러까지), 모듈은 자기 범위 다음에 그 범위에서 찾는다.
   서비스 id 열거형 · id 배열 표(`ModuleServiceTable`) · 호스트 서비스 목록은 지웠다 — 찾는 열쇠는 범위와 같은 타입 해시 하나다. 엔진 루프 ·
   부트스트랩 · 헤드리스 헤더는 호스트만 include 한다(`CheckEngineLayers` 가 Games · GameFramework · Editor 에서 막는다).
+- **스레드는 `sw::thread`, 백그라운드 잡의 상태는 한 번에 읽는다**(C-24). `Source/` 에서 `std::thread` 를 직접 만들면 `CheckStdThread` 가 막는다
+  (예외: 래퍼 자신 · 크래시 재현 테스트). `sw::thread` 는 합류 대기를 잠금 관찰자에 알려 `join` 순환을 교착 검출기가 보게 하고, 로더 락 안의
+  `join`(`DllMain` · 모듈 정적 소멸자)은 멈추는 대신 단언한다. `Test/` 의 쓰고 버리는 스레드는 대상이 아니다. 에디터 백그라운드 잡의
+  `EditorBackgroundTask::take` 는 결과 유무와 대기 여부를 같은 락 안에서 읽어 `EditorTaskPoll`(`Idle` · `Running` · `Ready`) 하나로 돌려준다 —
+  `take` 가 비었다고 `isPending` 을 따로 읽으면 그 사이 끝난 결과를 새 요청이 버린다(E-9 Quick Open 에서 나온 결함). 요청 여부는 `take` 의
+  반환값으로 정하고, `isPending` 은 화면 표시용이다. 풀을 가리키는 핸들(`TaskHandle` · `TaskStageHandle`)의 수명 순서는 세대가 아니라
+  참조 계수로 닫혀 있다 — 매니저가 사라질 때 남은 핸들이 풀을 이어받고(`TaskNodePool::detachOwner`) 마지막 핸들이 풀을 소멸시킨다.
 
 ### 5-4. 데이터, 직렬화, 설정
 
@@ -495,6 +502,14 @@
 - **톤맵을 HDR 씬 컬러로 바꾸는 일은 하지 않았습니다**(2026-10-06). 기본 포워드 파이프라인의 Reinhard 가 흰색을 0.5 로 누르지만, 바꾸면 골든 이미지를 모두 다시 떠야 합니다. 화면이 어두운 게임은 데이터(체력 바 보임 정책 등)로 맞췄습니다.
 - **점광 · 스폿 그림자는 큐브 · 배열 텍스처가 아니라 2D 그림자 아틀라스입니다**(2026-10-13). 유니티 URP · Godot 방식이고, RHI 를 바꾸지 않으며 DX11 · GL 의 엔진 텍스처 슬롯 네 개가 그대로입니다.
   방향광 캐스케이드(최대 4)도 같은 아틀라스 안의 타일이고, 추가 뷰는 자기 볼륨 · 그림자 컬링 슬롯을 씁니다.
+- **지형 쓰기는 "사본을 고쳐 사각형만 넘기는" 한 길입니다**(`D2-5` (7), 2026-10-15, `TerrainComponent::writeHeights` · `writeLayerWeights`). 에디터 브러시(`TerrainBrush::applyHeight` ·
+  `applyLayerWeight`)가 이미 N × N 배열을 제자리에서 고치는 모양이라, 지형은 읽기용 배열을 내주고(`getHeightSamples` · `readSplatWeights`) 고친 배열에서 **바뀐 사각형만** 복사해 받습니다.
+  개별 샘플 세터나 브러시 타입을 Engine 에 두지 않았고(브러시는 Editor 의 것), 되돌리기는 편집 전 사본을 같은 사각형으로 다시 쓰면 되므로 Undo 용 별도 API 가 없습니다.
+  읽는 쪽(병렬 틱 · 배치 계산)과 겹치지 않게 하는 방법은 이중 버퍼나 락이 아니라 **호출 규칙**입니다 — `reloadTerrain` 과 같이 틱 밖(`executeOrDeferPostTickOnComponent`)에서, 프레임에 한 번만 부릅니다.
+  락을 읽기 경로 모두에 넣으면 질의마다 비용이 붙고, 이중 버퍼는 N × N 높이를 통째로 두 벌 들며, 에디터 스트로크는 어차피 프레임에 한 번이라 둘 다 얻는 것이 없습니다.
+  높이를 쓰면 닿는 청크(노멀이 이웃 샘플을 읽으므로 한 샘플 바깥까지, 경계 샘플은 양쪽 청크)의 메시와 바운드를 그 자리에서 다시 만들고 `getHeightfieldGeneration` 을 올려 물리 바디(`TerrainColliderComponent`)가
+  다시 만들어지게 합니다. 가중치는 CPU 스플랫 바이트만 고치고 `getSplatRevision` 을 올립니다 — GPU 텍스처는 RHI 에 부분 업로드가 없어 아직 안 올립니다. 저장은 `saveHeightfield`(16 비트로 다시 양자화)와
+  `saveSplat`(비압축 RGBA8 DDS)입니다. 가중치 사각형은 스플랫 **텍셀** 좌표이고 브러시 격자의 해상도는 스플랫 너비입니다(정사각형 스플랫만 브러시가 다룹니다).
 
 ### 5-6. 오브젝트, 조종, 입력
 
@@ -557,6 +572,10 @@
 - **기반은 `Base/<층>/<폴더>/` 두 단이고, 층은 아래에서 `Online` < `Foundation` < `World` < `Actor` < `UI` < `Gameplay` 입니다**(2026-10-10).
   include 그래프를 재서 정했습니다. 계획의 첫 안(World · UI 가 맨 위)은 AI · 기믹 · 상호작용 → 월드 13 곳, 어빌리티 → 데미지 숫자가 거꾸로라 기각했습니다.
   UI 가 게임플레이 아래인 것은 언리얼에서 UMG 가 게임플레이 모듈 아래에 있는 것과 같습니다. 전투 수치(체력 신호)는 HP 바가 읽으므로 Actor 층에 둡니다.
+- **키트 헤더는 `SW_KIT_API`, Base 헤더는 `SW_GF_API` 를 씁니다 — 키트 TU 는 `SW_GF_EXPORTS` 를 정의하지 않습니다**(2026-10-15, 백로그 C-3).
+  키트 TU 가 `SW_GF_EXPORTS` 를 정의하니 include 한 Base 클래스(`Inventory` · `StatBlock` 등)가 키트 DLL 에서도 dllexport 로 풀려, 키트 DLL 55개가 `GameFramework.dll` 과 같은 심볼 4909개를 한 번 더 내보내고 있었다(`GF_WitcherRPG.dll` 은 326개 중 116개). 키트는 이제 `SW_KIT_EXPORTS`(PRIVATE) · `SW_KIT_IMPORTS`(INTERFACE)만 쓰고, 그 뒤 키트 DLL 에서 `GameFramework.dll` 과 겹치는 심볼은 0 이다. 언리얼이 모듈마다 `<MODULE>_API` 를 클래스에 달고 다른 모듈의 선언은 import 로 두는 것과 같은 모양으로 알고 있다(기억에 의존).
+  함정: 겹침이 가리고 있던 결함이 하나 드러났다. 순수 인터페이스(`IAccountNameIndex` 등)의 `= default` 생성자 · 소멸자는 clang-cl 이 `GameFramework.dll` 에서 내보내지 않는데, 서버 키트가 파생 클래스를 만들며 dllimport 로 찾다 링크가 깨졌다. 순수 인터페이스는 `SW_GF_API` 를 달지 않는다(인라인 멤버를 쓰는 쪽이 만든다). 같은 모양의 Base 인터페이스는 키트가 파생할 때 같은 오류로 드러난다.
+  남은 것: 서버 키트가 같은 기능의 공유 키트 헤더를 include 하면 그 클래스도 서버 키트에서 `SW_KIT_API` 가 dllexport 라 공유 키트 심볼을 다시 내보낸다(`GF_Server_Account` 200개 중 8개가 `GF_Account` 와 겹침). 고치려면 키트마다 `<KIT>_API` 가 필요해 키트 헤더 전체를 다시 바꿔야 하고 이득이 작아 지금은 두었다.
 - **키트는 성격으로 나눕니다: 장르 키트는 `Kits/Genre/<그룹>/`, 장르를 가리지 않는 기능 키트(네트워크 · 온라인 · 저장 · 타일 월드 · 복셀)는 `Kits/Feature/<그룹>/`**(2026-10-10).
   언리얼 플러그인 폴더가 Runtime · Online · Experimental 처럼 성격으로 묶이는 것과 같은 단입니다. 모듈 이름(`GF_<키트>`)은 경로와 상관없이 그대로입니다.
   클라이언트 · 서버로 나뉘는 기능은 기능 폴더 하나 아래 `Shared/` · `Server/` · `Client/` 짝으로 둡니다(Nakama · PlayFab 이 서비스 단위로 클라이언트 SDK 와 서버 모듈을 묶는 것과 같은 단위).

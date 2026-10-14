@@ -43,7 +43,7 @@ namespace sw
      * @class AdventureWeaponWear
      * @brief 규칙만 가지고 상태는 없습니다. 무기는 인벤토리 슬롯 하나입니다.
      */
-    class SW_GF_API AdventureWeaponWear
+    class SW_KIT_API AdventureWeaponWear
     {
     public:
         AdventureWeaponWear();

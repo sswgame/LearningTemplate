@@ -38,8 +38,9 @@ namespace sw
      * @class IAccountPresence
      * @brief 접속 상태 창구입니다(서비스 스레드).
      */
-    class SW_GF_API IAccountPresence
+    class IAccountPresence
     {
+        // 순수 인터페이스라 내보내지 않는다 — 인라인 생성자 · 소멸자를 GameFramework.dll 이 내보내지 않으므로 dllimport 로 풀리면 키트 링크가 깨진다(C-3).
     public:
         IAccountPresence()          = default;
         virtual ~IAccountPresence() = default;

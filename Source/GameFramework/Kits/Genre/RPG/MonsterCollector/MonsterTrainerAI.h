@@ -17,7 +17,7 @@ namespace sw
      * @details "불리"는 내 기술의 최고 상성이 1배 미만이고 상대 타입이 나에게 2배 이상인 경우다(AI 는 상대 기술을 모르고 타입만 본다).
      *          교체 후보는 상대 타입이 2배 미만으로 들어오고 내 최고 상성이 1배 이상인 개체 중 기대 피해가 가장 큰 것이다. 후보가 없으면 버틴다.
      */
-    struct SW_GF_API MonsterTrainerAI
+    struct SW_KIT_API MonsterTrainerAI
     {
         /** @brief 이번 라운드의 행동입니다. */
         static MonsterAction chooseAction( const MonsterBattle& battle, int32 side );

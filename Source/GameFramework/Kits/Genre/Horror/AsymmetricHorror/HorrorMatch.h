@@ -226,7 +226,7 @@ namespace sw
      * @details 무대(발전기, 갈고리, 판자, 창틀, 사물함, 탈출구, 해치 위치)는 `start` 전에 추가해야 한다.
      *          모든 행동 함수는 거리와 상태를 확인해 할 수 없으면 false 를 반환하고, 시간이 드는 일은 `update` 가 진행한다.
      */
-    class SW_GF_API HorrorMatch
+    class SW_KIT_API HorrorMatch
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "HMAT" );

@@ -36,7 +36,7 @@ namespace sw
         Caught
     };
 
-    SW_GF_API const utf8* toString( GhostState state );
+    SW_KIT_API const utf8* toString( GhostState state );
 
     /** @brief 싸움 중인 유령 하나입니다. */
     struct GhostInstance
@@ -94,7 +94,7 @@ namespace sw
      * @class GhostEncounter
      * @brief 한 방의 유령들과 손전등, 청소기를 관리합니다. 흡입은 한 번에 한 유령에게만 합니다.
      */
-    class SW_GF_API GhostEncounter
+    class SW_KIT_API GhostEncounter
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "GHEN" );

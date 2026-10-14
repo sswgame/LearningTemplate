@@ -21,7 +21,7 @@ namespace sw
     using AssetIDFromItem = bool ( * )( const hashed_string& itemID, string& outAssetID );
 
     /** @brief 인벤토리에서 거래 항목을 만드는 보조 함수 모음입니다. */
-    struct SW_GF_API TradeInventoryUtil
+    struct SW_KIT_API TradeInventoryUtil
     {
         /** @brief @p listSlot 슬롯들로 거래 항목을 만듭니다. 빈 슬롯이거나 범위 밖 슬롯이면 Invalid 이고, 인스턴스 상태가 있거나 바꿀 수 없는 아이템이면 NotTradable 입니다. */
         static TradeResult makeLegs( const Inventory& inventory, const vector<int32>& listSlot, AssetIDFromItem pAssetIDFromItem, vector<TradeLeg>& outListLeg );

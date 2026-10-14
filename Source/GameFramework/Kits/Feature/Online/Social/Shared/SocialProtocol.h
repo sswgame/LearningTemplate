@@ -90,7 +90,7 @@ namespace sw
 namespace sw
 {
     /** @brief 형식을 읽고 씁니다. 읽을 때 상한을 넘거나 모자라면 false 를 반환합니다. */
-    struct SW_GF_API SocialProtocol
+    struct SW_KIT_API SocialProtocol
     {
         static constexpr uint32 kVersion        = 2;                          ///< 2: 길드 창고(맡기기 · 꺼내기 · 목록)
         static constexpr int32  kMaxTextSize    = GuildLimit::kMaxNoticeSize; ///< 이름, 활동 문구, 공지 중 가장 긴 것의 상한이다. 필드마다의 상한은 로직이 검사한다

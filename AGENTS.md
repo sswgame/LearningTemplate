@@ -26,7 +26,8 @@ project conventions unless the user explicitly requests otherwise.
 - **DLL Export / Import (API) Macros**:
   - `SW_API`: Used to export/import symbols from **Engine.dll**. Responds to the `SW_EXPORTS` definition.
   - `SW_MODULE_API`: A generic C-ABI entry point macro used across **all dynamically loaded plugin modules** (EditorModule.dll, SWGame.dll, RHI backends, etc.). Responds to `SW_MODULE_EXPORTS`.
-  - `SW_GF_API`: Used to export/import **GameFramework.dll** class symbols. Responds to `SW_GF_EXPORTS`.
+  - `SW_GF_API`: Used to export/import **GameFramework.dll** (Base) class symbols. Responds to `SW_GF_EXPORTS`.
+  - `SW_KIT_API`: Used by headers under `GameFramework/Kits` to export/import **kit DLL** class symbols. Responds to `SW_KIT_EXPORTS` (kit TUs) / `SW_KIT_IMPORTS`. Never use `SW_GF_API` in a kit header: kit TUs do not define `SW_GF_EXPORTS`, so a Base class would be imported, not re-exported.
   - `SW_EDITOR_API`: Used to export/import **EditorModule.dll** symbols (registries, widgets, selection, undo) for editor extension modules. Responds to `SW_EDITOR_EXPORTS`.
   - `SW_GAMESERVICE_API`: Used by the GameService locator (`bindGameService` / `getRawService`) in RuntimeAPI. This is not the GameFramework class-export macro.
 
@@ -317,6 +318,9 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   A UTC timestamp (expiry, record time, event windows) is `WallClock::nowUnixMilliseconds()` (`Core/Time/WallClock.h`); services take it
   as a `nowMs` parameter so tests can pass a fake time.
   Exceptions live in one table with their reason. Enforced by `CheckClockReads.py`.
+- **Start threads with `sw::thread`** (`Core/Concurrency/thread.h`), never `std::thread` in `Source/`: it has the same shape, tells the lock
+  observer what `join` waits for (so a join cycle shows up in the deadlock detector), and asserts instead of hanging when `join` runs under the
+  loader lock (`DllMain`, a module's static destructor). Tests may use `std::thread`. Enforced by `CheckStdThread.py`.
 - Construct into memory you already hold with `sw_placement_new( pMemory ) T( ... )`
   (`Core/Memory/Memory.h`), never a bare `new ( pMemory ) T( ... )`. Enforced by
   `CheckCodeConventions.py` (`Style/PlacementNew`).

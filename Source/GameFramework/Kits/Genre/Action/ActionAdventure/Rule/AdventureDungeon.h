@@ -83,7 +83,7 @@ namespace sw
 namespace sw
 {
     /** @brief 던전 하나입니다. */
-    struct SW_GF_API AdventureDungeonDef
+    struct SW_KIT_API AdventureDungeonDef
     {
         hashed_string                _id{};
         hashed_string                _region{}; ///< `AreaGraph` 의 지역(지도가 한 번에 드러내는 단위)
@@ -105,7 +105,7 @@ namespace sw
      *        <Door id="crack" kind="Condition" requires="bombs>=1"/><Treasure id="c1" area="hall" item="SmallKey"/>
      *        <Device id="eye" kind="Switch"/><Device id="torches" kind="TorchGroup" torches="2" duration="6"/></Dungeon></AdventureDungeons>`
      */
-    class SW_GF_API AdventureDungeonCatalog : public XMLCatalog<AdventureDungeonCatalog>
+    class SW_KIT_API AdventureDungeonCatalog : public XMLCatalog<AdventureDungeonCatalog>
     {
         friend class XMLCatalog<AdventureDungeonCatalog>;
 
@@ -148,7 +148,7 @@ namespace sw
         ConditionNotMet
     };
 
-    SW_GF_API const utf8* toString( AdventureDoorResult result );
+    SW_KIT_API const utf8* toString( AdventureDoorResult result );
 
     /** @brief 던전 알림 종류입니다. */
     enum class AdventureDungeonEventType : uint8
@@ -179,7 +179,7 @@ namespace sw
      *        열쇠 개수 같은 `AdventureDungeonProgress` 만 따로 저장합니다.
      * @details 시간은 `update` 로만 흐른다(결정적). 카탈로그는 빌려 쓴다.
      */
-    class SW_GF_API AdventureDungeonState
+    class SW_KIT_API AdventureDungeonState
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "ADGN" );

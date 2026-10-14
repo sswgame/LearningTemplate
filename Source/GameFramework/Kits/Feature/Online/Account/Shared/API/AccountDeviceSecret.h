@@ -31,7 +31,7 @@ namespace sw
      * @class AccountDeviceSecret
      * @brief 장치 비밀 하나를 관리합니다.
      */
-    class SW_GF_API AccountDeviceSecret
+    class SW_KIT_API AccountDeviceSecret
     {
     public:
         static constexpr const utf8* kSlot = "account/device";

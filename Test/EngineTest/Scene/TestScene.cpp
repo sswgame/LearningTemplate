@@ -1926,3 +1926,165 @@ SW_TEST_CASE( SceneTest, BinarySceneStartsWithMagicInFileOrder )
     SW_ASSERT_TRUE( bytes.size() >= 4 );
     SW_EXPECT_EQUAL( sw::string( "SCN1" ), sw::string( reinterpret_cast<const utf8*>( bytes.data() ), 4 ) );
 }
+
+/**
+ * @brief [SceneTest] 미리보기 씬은 활성 씬 · 로드된 씬 목록과 따로 살고, 키로 찾고, 내리면 사라진다
+ */
+SW_TEST_CASE( SceneTest, PreviewScenesLiveApartFromLoadedScenes )
+{
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    sw::Scene* pMain = manager.createScene( "Main" );
+    SW_ASSERT_NOT_NULL( pMain );
+
+    sw::Scene* pFirst  = manager.createPreviewScene( "PrefabWindow" );
+    sw::Scene* pSecond = manager.createPreviewScene( "MaterialWindow" );
+    SW_ASSERT_NOT_NULL( pFirst );
+    SW_ASSERT_NOT_NULL( pSecond );
+    SW_EXPECT_TRUE( pFirst != pSecond );
+
+    // 활성 씬 · 로드된 씬 목록에 끼지 않는다 — 저장 · 전환 · 영속 오브젝트의 대상이 아니다.
+    SW_EXPECT_EQUAL( pMain, manager.getActiveScene() );
+    SW_EXPECT_EQUAL( size_t( 1 ), manager.getLoadedScenes().size() );
+    SW_EXPECT_EQUAL( size_t( 2 ), manager.getPreviewScenes().size() );
+    SW_EXPECT_TRUE( manager.isPreviewScene( pFirst ) );
+    SW_EXPECT_FALSE( manager.isPreviewScene( pMain ) );
+
+    // 키는 만든 순서대로 1 부터이고, 다시 쓰지 않는다.
+    const uint32 firstKey  = manager.getPreviewSceneKey( pFirst );
+    const uint32 secondKey = manager.getPreviewSceneKey( pSecond );
+    SW_EXPECT_EQUAL( uint32( 1 ), firstKey );
+    SW_EXPECT_EQUAL( uint32( 2 ), secondKey );
+    SW_EXPECT_EQUAL( sw::kInvalidSceneKey, manager.getPreviewSceneKey( pMain ) );
+    SW_EXPECT_EQUAL( pSecond, manager.findPreviewScene( secondKey ) );
+    SW_EXPECT_NULL( manager.findPreviewScene( sw::kInvalidSceneKey ) );
+
+    SW_EXPECT_TRUE( manager.destroyPreviewScene( pFirst ) );
+    SW_EXPECT_FALSE( manager.destroyPreviewScene( pMain ) ); // 로드된 씬은 이 길로 내리지 못한다
+    SW_EXPECT_EQUAL( size_t( 1 ), manager.getLoadedScenes().size() );
+    SW_EXPECT_NULL( manager.findPreviewScene( firstKey ) );
+    sw::Scene* pThird = manager.createPreviewScene( "AnimationWindow" );
+    SW_EXPECT_EQUAL( uint32( 3 ), manager.getPreviewSceneKey( pThird ) );
+
+    // 월드마다 오브젝트 매니저 · 씬 범위 · 물리 서비스가 따로다.
+    SW_EXPECT_TRUE( pSecond->getObjectManager() != pMain->getObjectManager() );
+    SW_EXPECT_TRUE( &pSecond->getObjectManager()->getSceneScope() != &pMain->getObjectManager()->getSceneScope() );
+    SW_EXPECT_TRUE( &pSecond->getObjectManager()->getSceneService<sw::ScenePhysics>() != &pMain->getObjectManager()->getSceneService<sw::ScenePhysics>() );
+
+    manager.shutdown();
+    SW_EXPECT_EQUAL( size_t( 0 ), manager.getPreviewScenes().size() );
+}
+
+/**
+ * @brief [SceneTest] 미리보기 씬은 정책대로 틱하고, 활성 씬 틱과 별개이며, 오디오 · 물리 · 플레이도 정책이 정한다
+ */
+SW_TEST_CASE( SceneTest, PreviewScenesTickByTheirOwnPolicy )
+{
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    sw::RegisterMockComponents();
+    sw::Scene* pMain = manager.createScene( "Main" );
+
+    sw::ScenePreviewPolicy ticking;
+    ticking._bTick = true;
+    sw::ScenePreviewPolicy still;
+    still._bTick = false;
+    sw::ScenePreviewPolicy playing;
+    playing._bPlay = true;
+
+    sw::Scene* pTicking = manager.createPreviewScene( "Ticking", ticking );
+    sw::Scene* pStill   = manager.createPreviewScene( "Still", still );
+    sw::Scene* pPlaying = manager.createPreviewScene( "Playing", playing );
+    SW_ASSERT_NOT_NULL( pTicking );
+    SW_ASSERT_NOT_NULL( pStill );
+    SW_ASSERT_NOT_NULL( pPlaying );
+
+    auto* pMainMesh    = pMain->getObjectManager()->createGameObject( sw::hashed_string( "A" ) )->addComponent<sw::MockMeshComponent>();
+    auto* pTickingMesh = pTicking->getObjectManager()->createGameObject( sw::hashed_string( "B" ) )->addComponent<sw::MockMeshComponent>();
+    auto* pStillMesh   = pStill->getObjectManager()->createGameObject( sw::hashed_string( "C" ) )->addComponent<sw::MockMeshComponent>();
+    SW_ASSERT_NOT_NULL( pMainMesh );
+    SW_ASSERT_NOT_NULL( pTickingMesh );
+    SW_ASSERT_NOT_NULL( pStillMesh );
+
+    // 정책 기본값은 오디오 · 물리 · 플레이 모두 끔이다.
+    SW_EXPECT_FALSE( pTicking->isAudioUpdateEnabled() );
+    SW_EXPECT_FALSE( pTicking->getObjectManager()->isPhysicsStepEnabled() );
+    SW_EXPECT_TRUE( pMain->isAudioUpdateEnabled() );
+    SW_EXPECT_TRUE( pMain->getObjectManager()->isPhysicsStepEnabled() );
+    SW_EXPECT_FALSE( pTicking->getObjectManager()->hasBegunPlay() );
+    SW_EXPECT_TRUE( pPlaying->getObjectManager()->hasBegunPlay() );
+
+    // 미리보기 틱만 부르면 활성 씬은 서 있다(에디터 정지 중에도 창의 월드는 돈다).
+    manager.tickPreviewScenes( 0.016f );
+    manager.tickPreviewScenes( 0.016f );
+    SW_EXPECT_EQUAL( 2, pTickingMesh->_tickCount );
+    SW_EXPECT_EQUAL( 0, pStillMesh->_tickCount );
+    SW_EXPECT_EQUAL( 0, pMainMesh->_tickCount );
+
+    // 활성 씬 틱은 미리보기 씬을 건드리지 않는다.
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( 1, pMainMesh->_tickCount );
+    SW_EXPECT_EQUAL( 2, pTickingMesh->_tickCount );
+
+    // 정책을 바꾸면 바로 적용된다.
+    SW_EXPECT_TRUE( manager.setPreviewPolicy( pStill, ticking ) );
+    manager.tickPreviewScenes( 0.016f );
+    SW_EXPECT_EQUAL( 1, pStillMesh->_tickCount );
+    sw::ScenePreviewPolicy physical = ticking;
+    physical._bPhysics              = true;
+    physical._bAudio                = true;
+    SW_EXPECT_TRUE( manager.setPreviewPolicy( pStill, physical ) );
+    SW_EXPECT_TRUE( pStill->getObjectManager()->isPhysicsStepEnabled() );
+    SW_EXPECT_TRUE( pStill->isAudioUpdateEnabled() );
+    SW_EXPECT_FALSE( manager.setPreviewPolicy( pMain, physical ) ); // 로드된 씬의 정책은 바꾸지 않는다
+    SW_EXPECT_NULL( manager.findPreviewPolicy( pMain ) );
+
+    // 플레이 정책: 켜면 시작, 끄면 끝, 내릴 때도 살아 있는 동안 끝난다.
+    int32 endCount            = 0;
+    auto* pPlayMesh           = pPlaying->getObjectManager()->createGameObject( sw::hashed_string( "D" ) )->addComponent<sw::MockMeshComponent>();
+    pPlayMesh->_pEndPlayCount = &endCount;
+    manager.tickPreviewScenes( 0.016f ); // 플레이 중에 붙은 컴포넌트는 틱 앞에서 시작한다
+    SW_EXPECT_EQUAL( 1, pPlayMesh->_beginPlayCount );
+    SW_EXPECT_TRUE( manager.destroyPreviewScene( pPlaying ) );
+    SW_EXPECT_EQUAL( 1, endCount );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [SceneTest] 초점 씬은 툴이 겨누는 월드다 — 활성 씬과 따로 고르고, 내려지면 활성 씬으로 되돌아간다
+ */
+SW_TEST_CASE( SceneTest, FocusedSceneFallsBackToActiveWhenDestroyed )
+{
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    sw::Scene* pMain    = manager.createScene( "Main" );
+    sw::Scene* pPreview = manager.createPreviewScene( "Window" );
+    SW_ASSERT_NOT_NULL( pPreview );
+
+    SW_EXPECT_EQUAL( pMain, manager.getFocusedScene() ); // 고른 적 없으면 활성 씬이다
+
+    SW_EXPECT_TRUE( manager.focusScene( pPreview ) );
+    SW_EXPECT_EQUAL( pPreview, manager.getFocusedScene() );
+    SW_EXPECT_EQUAL( pMain, manager.getActiveScene() ); // 게임 월드는 그대로다
+
+    sw::Scene foreign( "NotOwned" );
+    SW_EXPECT_FALSE( manager.focusScene( &foreign ) ); // 이 매니저의 씬이 아니면 받지 않는다
+    SW_EXPECT_FALSE( manager.focusScene( nullptr ) );
+    SW_EXPECT_EQUAL( pPreview, manager.getFocusedScene() );
+
+    SW_EXPECT_TRUE( manager.destroyPreviewScene( pPreview ) );
+    SW_EXPECT_EQUAL( pMain, manager.getFocusedScene() );
+
+    SW_EXPECT_TRUE( manager.focusScene( pMain ) );
+    manager.clearSceneFocus();
+    SW_EXPECT_EQUAL( pMain, manager.getFocusedScene() );
+
+    // 로드된 씬이 초점일 때 그 씬을 내려도 매달리지 않는다.
+    sw::Scene* pNext = manager.createEmptyActiveScene( "Next" );
+    SW_EXPECT_TRUE( manager.focusScene( pNext ) );
+    sw::Scene* pOther = manager.createEmptyActiveScene( "Other" ); // 이전 활성 씬(Next)이 내려진다
+    SW_EXPECT_EQUAL( pOther, manager.getFocusedScene() );
+
+    manager.shutdown();
+}

@@ -25,7 +25,7 @@ namespace sw
      * @brief 플레이어 한 명의 명예입니다. 평판은 빌려 씁니다(`SessionStateRefs::_pReputation`). 그 평판의 카탈로그에 `WesternCatalog::getHonorReputation()` 의 세력이 있어야 단계가 정해집니다.
      *        단계가 바뀌면 빌려 온 평판에 `ReputationEvent` 가 쌓입니다. 이벤트를 꺼내는 것은 게임 화면이며, 키트는 꺼내지 않습니다.
      */
-    class SW_GF_API WesternHonor
+    class SW_KIT_API WesternHonor
     {
     public:
         WesternHonor();

@@ -6,6 +6,7 @@
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/vector.h"
 #include "Core/Network/Transport/StreamSendQueue.h"
 #include "Core/Time/MonotonicClock.h"
@@ -102,7 +103,7 @@ namespace sw
             vector<uint32> _listCommandIndex;   ///< 다른 스레드가 맡긴 할 일(닫기, 읽기 재개, 열기).
             vector<uint32> _listWorkIndex;      ///< 루프 스레드 전용. 할 일을 맞바꿔서 꺼낸다.
             vector<uint8>  _listReceiveScratch; ///< 루프 스레드 전용 읽기 버퍼(`_receiveChunkBytes`).
-            std::thread    _thread;
+            sw::thread     _thread;
             int32          _epollFd{ -1 };
             int32          _wakeFd{ -1 };
         };
@@ -651,7 +652,7 @@ namespace sw
         {
             for ( int32 index = 0; index < state._loopCount; ++index )
             {
-                state.getLoop( index )._thread = std::thread( &State::runThread, &state, index );
+                state.getLoop( index )._thread = sw::thread( &State::runThread, &state, index );
             }
         }
         return true;

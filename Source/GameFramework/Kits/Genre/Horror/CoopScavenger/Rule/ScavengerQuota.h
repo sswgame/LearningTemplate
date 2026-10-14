@@ -28,7 +28,7 @@ namespace sw
      * @brief 리썰 컴퍼니의 할당량입니다. 다음 할당량은 지금 값 + 기본 x (1 + 주기^2 / 가파름) x (1 + 무작위 x (r - 0.5))를 반올림한 값입니다
      *        (주기는 채운 할당량 수이며 갈수록 가파르게 오릅니다). 남은 날이 0 인 날이 마감 날이고, 그날이 끝날 때(`endDay`) 판정합니다.
      */
-    class SW_GF_API ScavengerQuota
+    class SW_KIT_API ScavengerQuota
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "SCQT" );

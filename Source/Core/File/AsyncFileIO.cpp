@@ -3,6 +3,7 @@
 #include "Core/File/AsyncFileIO.h"
 
 #include "Core/Concurrency/ThreadName.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/File/AsyncFileIOBackend.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Log/Logger.h"
@@ -510,7 +511,7 @@ namespace sw
 
         void stop() override
         {
-            for ( std::thread& thread : _listThread )
+            for ( sw::thread& thread : _listThread )
             {
                 if ( thread.joinable() )
                     thread.join();
@@ -547,9 +548,9 @@ namespace sw
             }
         }
 
-        vector<std::thread> _listThread;
-        AsyncFileIOQueue*   _pQueue;
-        uint32              _threadCount;
+        vector<sw::thread> _listThread;
+        AsyncFileIOQueue*  _pQueue;
+        uint32             _threadCount;
     };
 } // namespace sw
 

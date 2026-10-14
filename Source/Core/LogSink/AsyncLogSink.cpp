@@ -4,6 +4,7 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/ThreadName.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/LogContext.h"
 #include "Core/LogSink/ConsoleLogOutput.h"
@@ -97,7 +98,7 @@ namespace sw
         }
 
         _bIsRunning.store( true, std::memory_order_release );
-        _workerThread = std::thread( &AsyncLogSink::workerLoop, this );
+        _workerThread = sw::thread( &AsyncLogSink::workerLoop, this );
         _bInitialized = true;
     }
 

@@ -41,7 +41,7 @@ namespace sw
      * @class LoopbackPkceLoginClient
      * @brief PC 루프백과 PKCE 를 쓰는 외부 로그인 클라이언트입니다.
      */
-    class SW_GF_API LoopbackPkceLoginClient final : public IPlatformLoginClient, public IHTTPRequestHandler
+    class SW_KIT_API LoopbackPkceLoginClient final : public IPlatformLoginClient, public IHTTPRequestHandler
     {
     public:
         LoopbackPkceLoginClient();

@@ -20,7 +20,7 @@ namespace sw
      * @class SQLLocalSlotStorage
      * @brief SQLite 백엔드입니다. `ThreadedLocalStore` 의 스레드에서만 호출합니다.
      */
-    class SW_GF_API SQLLocalSlotStorage final : public ILocalSlotStorage
+    class SW_KIT_API SQLLocalSlotStorage final : public ILocalSlotStorage
     {
     public:
         static constexpr const utf8* kBackendName      = "sqlite";

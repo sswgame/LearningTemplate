@@ -89,7 +89,7 @@ namespace sw
     };
 
     /** @brief 생각 이름을 반환합니다(로그와 UI 용). */
-    SW_GF_API const utf8* toString( ParkGuestThought thought );
+    SW_KIT_API const utf8* toString( ParkGuestThought thought );
 
     /** @brief 손님 한 명입니다. */
     struct ParkGuest
@@ -162,7 +162,7 @@ namespace sw
      *          - 떠남: 기력, 행복, 돈 중 하나가 바닥이면 정문으로 걸어가 떠난다.
      *          운영비는 열린 놀이기구마다 분당 `_runningCostPerMinute` 씩 나간다.
      */
-    class SW_GF_API ThemeParkSimulation
+    class SW_KIT_API ThemeParkSimulation
     {
     public:
         ThemeParkSimulation();

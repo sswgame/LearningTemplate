@@ -9,6 +9,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/ConcurrentQueue.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -107,7 +108,7 @@ namespace sw
         vector<unique_ptr<ILogOutput>>   _listOutput;
         FileLogOutput*                   _pFileOutput; ///< _listOutput 이 소유한다. getLogFolderPath 용 비소유 포인터
         ConcurrentQueue<LogRecord, 4096> _queue;
-        std::thread                      _workerThread;
+        sw::thread                       _workerThread;
         std::condition_variable_any      _cv;
         mutex                            _mutex;         ///< 리스너 목록과 출력 목록을 보호한다
         mutex                            _cvMutex;       ///< 조건 변수 대기용 뮤텍스

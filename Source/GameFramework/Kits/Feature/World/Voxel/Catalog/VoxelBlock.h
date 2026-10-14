@@ -54,7 +54,7 @@ namespace sw
 namespace sw
 {
     /** @brief 면이 바라보는 방향(단위 정수 벡터)입니다. */
-    SW_GF_API VoxelCoord getVoxelFaceOffset( VoxelFace face );
+    SW_KIT_API VoxelCoord getVoxelFaceOffset( VoxelFace face );
 
     /**
      * @brief 블록 한 종입니다.
@@ -85,7 +85,7 @@ namespace sw
      *        color="1 1 1 1" solid="true" opaque="true" breakable="true"/></BlockCatalog>`
      * @details 블록 번호는 읽은 순서대로 1부터 붙으며 최대 255입니다. `tile` 은 여섯 면의 기본값이고, `top`, `bottom`, `side` 가 해당 면의 값을 덮어씁니다.
      */
-    class SW_GF_API VoxelBlockCatalog : public XMLCatalog<VoxelBlockCatalog>
+    class SW_KIT_API VoxelBlockCatalog : public XMLCatalog<VoxelBlockCatalog>
     {
         friend class XMLCatalog<VoxelBlockCatalog>;
 

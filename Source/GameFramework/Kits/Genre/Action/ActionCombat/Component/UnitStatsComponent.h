@@ -14,7 +14,7 @@ namespace sw
     struct MonsterDef;
 
     REFLECT( Category = "Gameplay", DisplayName = "Unit Stats Component", Tooltip = "Manages HP, Attack, Defense, Movement Speed, and Invincibility" )
-    class SW_GF_API UnitStatsComponent : public HealthSourceComponent
+    class SW_KIT_API UnitStatsComponent : public HealthSourceComponent
     {
     public:
         REFLECT_BODY();

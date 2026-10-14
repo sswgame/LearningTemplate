@@ -75,7 +75,7 @@ namespace sw
      * @details 예를 들어 파티원은 항상 보이게 하고, 길드전 지역은 반경을 넓힐 수 있다.
      * @warning 복제기에 `setTaskManager` 를 주면 이 함수들이 **여러 스레드에서 동시에** 불린다. 상태를 바꾸지 말고 읽기만 해야 한다.
      */
-    class SW_GF_API IInterestPolicy
+    class SW_KIT_API IInterestPolicy
     {
     public:
         IInterestPolicy()          = default;
@@ -126,7 +126,7 @@ namespace sw
      * @brief 서버 쪽 복제기입니다. 관찰자는 연결과 그 연결이 조종하는 엔티티이며, 그 엔티티의 위치가 관심의 중심입니다.
      * @details 받는 메시지는 갱신 확인(`kUpdateAck`) 하나뿐이다. 라우터에 등록하면 연결이 닫힐 때 그 관찰자를 스스로 지운다(`onConnectionClosed`).
      */
-    class SW_GF_API MMOReplicator : public INetMessageHandler
+    class SW_KIT_API MMOReplicator : public INetMessageHandler
     {
     public:
         MMOReplicator();
@@ -236,7 +236,7 @@ namespace sw
 namespace sw
 {
     /** @brief 클라이언트 쪽에서 보이는 엔티티의 마지막 상태입니다. */
-    class SW_GF_API MMOClientView : public INetMessageHandler
+    class SW_KIT_API MMOClientView : public INetMessageHandler
     {
     public:
         uint8  getMessageRangeBase() const override { return NetKitMessageRange::kMMO; }

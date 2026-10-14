@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQL/SQLConnectionPool.h"
 
 #include "Core/Concurrency/ThreadName.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -107,7 +108,7 @@ namespace sw
             _bStopping = SW_TRUE;
         }
         _jobReady.notify_all();
-        for ( std::thread& worker : _listWorker )
+        for ( sw::thread& worker : _listWorker )
         {
             if ( worker.joinable() )
                 worker.join();

@@ -41,7 +41,7 @@ namespace sw
         Unknown        ///< 그런 정의가 없다
     };
 
-    SW_GF_API const utf8* toString( HorrorPuzzleResult result );
+    SW_KIT_API const utf8* toString( HorrorPuzzleResult result );
 
     /** @brief 세이브 결과입니다. */
     enum class HorrorSaveResult : uint8
@@ -86,7 +86,7 @@ namespace sw
      *          밝은 곳에서는 지연 뒤 천천히 찬다. 비율이 임계값 아래면 환각이고(게임은 가짜 괴물과 소리를 낸다), 조준 흔들림 배율은 1 + (1 - 비율) x 최대값이다.
      *          손전등은 켜 있는 동안 배터리를 쓰고, 다 되면 꺼진다. 그 뒤의 어둠은 다시 정신력을 깎는다.
      */
-    class SW_GF_API HorrorSession
+    class SW_KIT_API HorrorSession
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "HSES" );

@@ -77,7 +77,7 @@ namespace sw
      * @class RTSCatalog
      * @brief `<RTSCatalog supplyMax="200"><Unit id="worker" kind="Unit" hp="45" .../></RTSCatalog>` 를 읽습니다. 키는 `Resource/game/starskirmish/data/units.xml` 입니다.
      */
-    class SW_GF_API RTSCatalog : public XMLCatalog<RTSCatalog>
+    class SW_KIT_API RTSCatalog : public XMLCatalog<RTSCatalog>
     {
         friend class XMLCatalog<RTSCatalog>;
 

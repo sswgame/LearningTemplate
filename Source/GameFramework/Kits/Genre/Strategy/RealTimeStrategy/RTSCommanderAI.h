@@ -50,7 +50,7 @@ namespace sw
      * @endcode
      * @details 월드의 알림을 `notify` 로 넘겨야 "공격받고 있다" 를 알 수 있다. 월드와 설정은 AI 보다 오래 살아야 한다.
      */
-    class SW_GF_API RTSCommanderAI
+    class SW_KIT_API RTSCommanderAI
     {
     public:
         RTSCommanderAI();

@@ -55,12 +55,12 @@ SW_TEST_CASE( EditorBackgroundTaskTest, RequestPublishTakeRoundTrip )
 
     vector<int32> taken;
     SW_EXPECT_FALSE( job.isPending() );
-    SW_EXPECT_FALSE( job.take( taken ) );
+    SW_EXPECT_TRUE( job.take( taken ) == EditorTaskPoll::Idle );
 
     const uint32 generation = job.request( 7 );
     SW_EXPECT_TRUE( job.isPending() );
-    // 아직 워커가 싣지 않았으므로 가져갈 것이 없다.
-    SW_EXPECT_FALSE( job.take( taken ) );
+    // 아직 워커가 싣지 않았으므로 가져갈 것이 없고, 도는 중임이 같은 반환값으로 보인다.
+    SW_EXPECT_TRUE( job.take( taken ) == EditorTaskPoll::Running );
 
     TestJobInput input;
     SW_ASSERT_TRUE( job.workerReadInput( generation, input ) );
@@ -69,13 +69,13 @@ SW_TEST_CASE( EditorBackgroundTaskTest, RequestPublishTakeRoundTrip )
     job.workerPublish( generation, vector<int32>{ input._seed, input._seed * 2 } );
     SW_EXPECT_FALSE( job.isPending() );
 
-    SW_ASSERT_TRUE( job.take( taken ) );
+    SW_ASSERT_TRUE( job.take( taken ) == EditorTaskPoll::Ready );
     SW_ASSERT_EQUAL( size_t( 2 ), taken.size() );
     SW_EXPECT_EQUAL( 7, taken[0] );
     SW_EXPECT_EQUAL( 14, taken[1] );
 
-    // 같은 결과를 두 번 주지 않는다.
-    SW_EXPECT_FALSE( job.take( taken ) );
+    // 같은 결과를 두 번 주지 않는다 — 가져간 뒤에는 쉬는 상태다.
+    SW_EXPECT_TRUE( job.take( taken ) == EditorTaskPoll::Idle );
 }
 
 /**
@@ -98,7 +98,7 @@ SW_TEST_CASE( EditorBackgroundTaskTest, StaleGenerationResultIsDropped )
     // 늦게 도착한 낡은 결과는 버려지고, 요청은 여전히 대기 상태로 남는다.
     job.workerPublish( staleGeneration, vector<int32>{ 111 } );
     vector<int32> taken;
-    SW_EXPECT_FALSE( job.take( taken ) );
+    SW_EXPECT_TRUE( job.take( taken ) == EditorTaskPoll::Running );
     SW_EXPECT_TRUE( job.isPending() );
 
     // 새 세대의 결과만 통과한다.
@@ -107,7 +107,7 @@ SW_TEST_CASE( EditorBackgroundTaskTest, StaleGenerationResultIsDropped )
     SW_EXPECT_EQUAL( 2, freshInput._seed );
 
     job.workerPublish( freshGeneration, vector<int32>{ 222 } );
-    SW_ASSERT_TRUE( job.take( taken ) );
+    SW_ASSERT_TRUE( job.take( taken ) == EditorTaskPoll::Ready );
     SW_ASSERT_EQUAL( size_t( 1 ), taken.size() );
     SW_EXPECT_EQUAL( 222, taken[0] );
 }
@@ -125,11 +125,31 @@ SW_TEST_CASE( EditorBackgroundTaskTest, RequestClearsPreviousResult )
     // 가져가지 않은 채로 다시 요청하면 이전 결과는 사라진다.
     const uint32  secondGeneration = job.request( 2 );
     vector<int32> taken;
-    SW_EXPECT_FALSE( job.take( taken ) );
+    SW_EXPECT_TRUE( job.take( taken ) == EditorTaskPoll::Running );
     SW_EXPECT_TRUE( job.isPending() );
 
     job.workerPublish( secondGeneration, vector<int32>{ 43 } );
-    SW_ASSERT_TRUE( job.take( taken ) );
+    SW_ASSERT_TRUE( job.take( taken ) == EditorTaskPoll::Ready );
     SW_ASSERT_EQUAL( size_t( 1 ), taken.size() );
     SW_EXPECT_EQUAL( 43, taken[0] );
+}
+
+/**
+ * @brief [EditorBackgroundTaskTest] 워커가 끝낸 결과를 꺼내기 전에는 '쉬는 상태' 로 보이지 않는지 검증
+ * @details 결과 유무와 대기 여부를 따로 읽던 시절에는, 워커가 끝난 직후 "대기 아님" 이 보여 새 요청이 끝난 결과를 버렸다.
+ *          `take` 한 번이 둘을 같은 락 안에서 읽으므로, 끝난 결과는 `Idle` 이 아니라 `Ready` 로 나와야 한다.
+ */
+SW_TEST_CASE( EditorBackgroundTaskTest, FinishedResultIsNeverReportedIdle )
+{
+    TestBackgroundJob job;
+
+    const uint32 generation = job.request( 5 );
+    job.workerPublish( generation, vector<int32>{ 9 } );
+
+    // 워커가 끝나 isPending 은 false 지만, 결과가 아직 안 나갔으니 Idle 이 아니다.
+    SW_EXPECT_FALSE( job.isPending() );
+    vector<int32> taken;
+    SW_ASSERT_TRUE( job.take( taken ) == EditorTaskPoll::Ready );
+    SW_EXPECT_EQUAL( 9, taken[0] );
+    SW_EXPECT_TRUE( job.take( taken ) == EditorTaskPoll::Idle );
 }

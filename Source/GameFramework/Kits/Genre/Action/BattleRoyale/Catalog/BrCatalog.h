@@ -134,7 +134,7 @@ namespace sw
      *        <Armor id="helmet1" slot="Helmet" tier="1" reduction="0.3" durability="80"/><Backpack id="bag1" tier="1" capacity="150"/>
      *        <LootSpot id="house" table="house" chance="0.8" rolls="1" rollsMax="3"/><SupplyDrop table="airdrop" times="90,180"/></BattleRoyaleCatalog>`
      */
-    class SW_GF_API BrCatalog : public XMLCatalog<BrCatalog>
+    class SW_KIT_API BrCatalog : public XMLCatalog<BrCatalog>
     {
         friend class XMLCatalog<BrCatalog>;
 

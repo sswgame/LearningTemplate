@@ -61,7 +61,7 @@ namespace sw
      * @class HorrorEncounter
      * @brief 한 번의 초자연 전투를 진행합니다. 끝날 때까지 `playNextTurn` 을 호출합니다.
      */
-    class SW_GF_API HorrorEncounter
+    class SW_KIT_API HorrorEncounter
     {
     public:
         static constexpr int32  kMonsterActorID = 1000000; ///< 괴물의 차례 번호이다(조사자 번호와 겹치지 않게 큰 값을 쓴다)

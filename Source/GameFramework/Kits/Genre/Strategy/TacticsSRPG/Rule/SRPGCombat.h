@@ -89,7 +89,7 @@ namespace sw
      *          - 크리티컬 = 기본 + 무기 크리티컬 + max( 0, 각성 차 ) / 2 이며 0..100 으로 자른다.
      *          실제 전투 순서는 주 공격, 동기 공격, 지원 공격, 반격(방어자가 살아 있을 때)이다. 판정 순서가 항상 같으므로 같은 시드이면 같은 결과가 나온다.
      */
-    struct SW_GF_API SRPGCombat
+    struct SW_KIT_API SRPGCombat
     {
         /** @brief 한 번의 타격을 예측합니다(사거리와 차례는 보지 않습니다). @p damagePercent 는 피해 비율입니다. */
         static SRPGStrikePreview computeStrike( const SRPGBattlefield& field, int32 attackerIndex, const int2& attackerCell, int32 weaponIndex, int32 defenderIndex,

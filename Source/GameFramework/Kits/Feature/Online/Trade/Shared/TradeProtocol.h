@@ -57,7 +57,7 @@ namespace sw
 namespace sw
 {
     /** @brief 거래 응답과 알림 본문의 코덱입니다. */
-    struct SW_GF_API TradeReplyWire
+    struct SW_KIT_API TradeReplyWire
     {
         static void               writeReply( BitWriter& outWriter, TradeResult result, const TradeSnapshot& snapshot, const vector<TradeBalance>& listBalance );
         [[nodiscard]] static bool readReply( BitReader& reader, TradeResult& outResult, TradeSnapshot& outSnapshot, vector<TradeBalance>& outListBalance );

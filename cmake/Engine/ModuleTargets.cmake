@@ -106,8 +106,9 @@ function(sw_addModuleLibrary TARGET_NAME)
 		endif()
 		set(listTargetDefsOption LOG_TAG "${ARG_LOG_TAG}")
 		if(libType STREQUAL "SHARED")
-			list(APPEND listTargetDefsOption GF_EXPORTS)
-			target_compile_definitions(${TARGET_NAME} INTERFACE SW_GF_IMPORTS)
+			# 키트 TU 는 `SW_KIT_EXPORTS` 만 정의한다 — `SW_GF_EXPORTS` 를 주면 include 한 Base 선언까지 dllexport 로 풀린다(C-3).
+			list(APPEND listTargetDefsOption KIT_EXPORTS)
+			target_compile_definitions(${TARGET_NAME} INTERFACE SW_KIT_IMPORTS)
 		endif()
 		sw_setTargetDefsHeader(${TARGET_NAME} ${listTargetDefsOption})
 		sw_addSharedPchOwner(sw_kit_pch "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h"

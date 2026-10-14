@@ -22,8 +22,9 @@ namespace sw
      * @class IAccountNameIndex
      * @brief 계정 이름 색인 창구입니다(저장소 스레드).
      */
-    class SW_GF_API IAccountNameIndex
+    class IAccountNameIndex
     {
+        // 순수 인터페이스라 내보내지 않는다 — 인라인 생성자 · 소멸자를 GameFramework.dll 이 내보내지 않으므로 dllimport 로 풀리면 키트 링크가 깨진다(C-3).
     public:
         IAccountNameIndex()          = default;
         virtual ~IAccountNameIndex() = default;

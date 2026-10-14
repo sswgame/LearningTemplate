@@ -31,7 +31,7 @@ namespace sw
         SideHopRight ///< 오른쪽 옆 뛰기(회피)
     };
 
-    SW_GF_API const utf8* toString( AdventureTargetingState state );
+    SW_KIT_API const utf8* toString( AdventureTargetingState state );
 
     /** @brief 주목 설정입니다. 시간 단위는 초입니다. */
     struct AdventureTargetingSettings
@@ -52,7 +52,7 @@ namespace sw
      * @class AdventureTargeting
      * @brief 플레이어 한 명의 주목 상태입니다. 매 틱 `update` 에 대상 후보, 이동 입력(x는 오른쪽, y는 앞, −1..1), 점프를 넘깁니다.
      */
-    class SW_GF_API AdventureTargeting
+    class SW_KIT_API AdventureTargeting
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "ATGT" );

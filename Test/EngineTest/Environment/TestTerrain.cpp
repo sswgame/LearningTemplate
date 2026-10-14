@@ -394,3 +394,110 @@ SW_TEST_CASE( TerrainTest, ChunksLeaveTheGPUSceneWhenTheComponentOrOwnerIsOff )
     gpuScene.populateFromScene( &scene, camPos );
     SW_EXPECT_EQUAL( chunkCount, static_cast<uint32>( gpuScene.getInstances().size() ) );
 }
+
+/**
+ * @brief [TerrainTest] 높이 쓰기 — 사각형 밖은 그대로 · 질의와 세대가 따라가고 · 크기가 틀리면 거절 · 저장하면 다시 읽어도 같다
+ */
+SW_TEST_CASE( TerrainTest, WriteHeightsUpdatesQueriesAndSaves )
+{
+    const string    path = test::makeTempPath( "edit.heightfield" );
+    HeightfieldData data = TerrainTestUtil::makeData( 65, &TerrainTestUtil::wave );
+    SW_ASSERT_TRUE( data.saveToFile( path ) );
+
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "Terrain" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    TerrainComponent* pTerrain = pObject->addComponent<TerrainComponent>();
+    SW_ASSERT_NOT_NULL( pTerrain );
+    pTerrain->setHeightfieldPath( path );
+    pTerrain->setSize( float2{ 64.0f, 64.0f } );
+    pTerrain->setHeightRange( TerrainTestUtil::kHeightMin, TerrainTestUtil::kHeightMax );
+    pTerrain->setChunkCells( 16 );
+    pTerrain->setMaterialPath( "" );
+    SW_ASSERT_TRUE( pTerrain->reloadTerrain() );
+
+    vector<float32>       listHeight = pTerrain->getHeightfield().getHeightSamples();
+    const vector<float32> listBefore = listHeight;
+    const uint32          generation = pTerrain->getHeightfieldGeneration();
+    TerrainSampleRect     rect;
+    rect.include( 16, 16 ); // 청크 경계 샘플 — 청크 네 개가 걸친다
+    rect.include( 18, 17 );
+    for ( uint32 sampleZ = rect._minZ; sampleZ <= rect._maxZ; ++sampleZ )
+    {
+        for ( uint32 sampleX = rect._minX; sampleX <= rect._maxX; ++sampleX )
+        {
+            listHeight[static_cast<size_t>( sampleZ ) * 65 + sampleX] = 7.0f;
+        }
+    }
+    SW_ASSERT_TRUE( pTerrain->writeHeights( listHeight, rect ) );
+    SW_EXPECT_EQUAL( generation + 1, pTerrain->getHeightfieldGeneration() );
+    float32 height{ 0.0f };
+    SW_ASSERT_TRUE( pTerrain->findHeightAt( 17.0f, 16.5f, height ) );
+    SW_EXPECT_NEAR_EQUAL( 7.0f, height, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( listBefore[10 * 65 + 10], pTerrain->getHeightfield().getSampleHeight( 10, 10 ), 0.0f ); // 사각형 밖은 그대로
+    SW_EXPECT_NEAR_EQUAL( listBefore[17 * 65 + 19], pTerrain->getHeightfield().getSampleHeight( 19, 17 ), 0.0f );
+
+    SW_TEST_DEFENSIVE_SCOPE( "wrong size, empty or out-of-grid rectangles are rejected without changes" );
+    vector<float32> listShort( 10, 0.0f );
+    SW_EXPECT_FALSE( pTerrain->writeHeights( listShort, rect ) );
+    SW_EXPECT_FALSE( pTerrain->writeHeights( listHeight, TerrainSampleRect{} ) );
+    TerrainSampleRect outside;
+    outside.include( 60, 60 );
+    outside.include( 65, 65 );
+    SW_EXPECT_FALSE( pTerrain->writeHeights( listHeight, outside ) );
+    SW_EXPECT_EQUAL( generation + 1, pTerrain->getHeightfieldGeneration() );
+
+    // 되돌리기 — 편집 전 사본을 같은 사각형으로 쓰면 원래 값이다.
+    SW_ASSERT_TRUE( pTerrain->writeHeights( listBefore, rect ) );
+    SW_EXPECT_NEAR_EQUAL( listBefore[16 * 65 + 17], pTerrain->getHeightfield().getSampleHeight( 17, 16 ), 0.0f );
+
+    // 저장하면 다시 읽어도 양자화 오차 안에서 같다.
+    SW_ASSERT_TRUE( pTerrain->writeHeights( listHeight, rect ) );
+    const string savedPath = test::makeTempPath( "edit_saved.heightfield" );
+    SW_ASSERT_TRUE( pTerrain->saveHeightfield( savedPath ) );
+    HeightfieldData loaded;
+    SW_ASSERT_TRUE( loaded.loadFromResource( savedPath ) );
+    SW_EXPECT_EQUAL( 65u, loaded._resolution );
+    const float32 expectedRaw = ( 7.0f - TerrainTestUtil::kHeightMin ) / ( TerrainTestUtil::kHeightMax - TerrainTestUtil::kHeightMin ) * 65535.0f;
+    SW_EXPECT_NEAR_EQUAL( expectedRaw, static_cast<float32>( loaded.getSample( 17, 16 ) ), 1.0f );
+}
+
+/**
+ * @brief [TerrainTest] 레이어 가중치 쓰기 — 스플랫이 없으면 거절 · 사각형 안만 양자화해 쓰고 읽으면 보이며 · 크기가 틀리면 거절
+ */
+SW_TEST_CASE( TerrainTest, WriteLayerWeightsUpdatesSplat )
+{
+    TerrainHeightfield field = TerrainTestUtil::makeWaveField( 5 );
+    vector<float4>     listWeight;
+    SW_EXPECT_FALSE( field.readSplatWeights( listWeight ) );
+    SW_EXPECT_FALSE( field.writeSplatWeights( listWeight, TerrainSampleRect{ 0, 0, 1, 1 } ) );
+
+    vector<uint8> bytes( 4 * 4 * 4, 0u );
+    for ( size_t texel = 0; texel < 16; ++texel )
+    {
+        bytes[texel * 4] = 255u; // 전부 레이어 0
+    }
+    field.setSplat( 4, 4, bytes );
+    SW_ASSERT_TRUE( field.readSplatWeights( listWeight ) );
+    SW_ASSERT_EQUAL( 16u, static_cast<uint32>( listWeight.size() ) );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, listWeight[0]._x, 1.0e-5f );
+
+    listWeight[1 * 4 + 1] = float4{ 0.0f, 0.25f, 0.75f, 0.0f };
+    listWeight[0]         = float4{ 0.0f, 1.0f, 0.0f, 0.0f }; // 사각형 밖 — 쓰이지 않는다
+    TerrainSampleRect rect;
+    rect.include( 1, 1 );
+    SW_ASSERT_TRUE( field.writeSplatWeights( listWeight, rect ) );
+    vector<float4> listRead;
+    SW_ASSERT_TRUE( field.readSplatWeights( listRead ) );
+    SW_EXPECT_NEAR_EQUAL( 0.25f, listRead[1 * 4 + 1]._y, 1.0f / 255.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.75f, listRead[1 * 4 + 1]._z, 1.0f / 255.0f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, listRead[0]._x, 1.0e-5f );
+
+    SW_TEST_DEFENSIVE_SCOPE( "wrong size or out-of-grid rectangles are rejected" );
+    vector<float4> listShort( 3 );
+    SW_EXPECT_FALSE( field.writeSplatWeights( listShort, rect ) );
+    TerrainSampleRect outside;
+    outside.include( 3, 3 );
+    outside.include( 4, 4 );
+    SW_EXPECT_FALSE( field.writeSplatWeights( listWeight, outside ) );
+}

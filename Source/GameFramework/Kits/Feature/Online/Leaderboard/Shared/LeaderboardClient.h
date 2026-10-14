@@ -36,7 +36,7 @@ namespace sw
      * @class LeaderboardClient
      * @brief 연결 하나의 순위표 클라이언트입니다.
      */
-    class SW_GF_API LeaderboardClient final : public IOnlineClientService
+    class SW_KIT_API LeaderboardClient final : public IOnlineClientService
     {
     public:
         LeaderboardClient();

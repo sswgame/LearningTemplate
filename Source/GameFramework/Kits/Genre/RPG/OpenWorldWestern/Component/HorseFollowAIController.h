@@ -21,7 +21,7 @@ namespace sw
      *          탈 때 말을 조종하던 이 조종자가 다시 조종한다(`MountUtil`).
      */
     REFLECT( Category = "Western", DisplayName = "Horse Follow AI", Tooltip = "Horse AI: follows its owner when nobody rides it, comes at a whistle" )
-    class SW_GF_API HorseFollowAIController : public AIControllerComponent
+    class SW_KIT_API HorseFollowAIController : public AIControllerComponent
     {
     public:
         REFLECT_BODY();

@@ -41,7 +41,7 @@ namespace sw
      * @class EconomyClient
      * @brief 경제 클라이언트입니다.
      */
-    class SW_GF_API EconomyClient final : public IOnlineClientService
+    class SW_KIT_API EconomyClient final : public IOnlineClientService
     {
     public:
         using ReplyDelegate = Delegate<void( const EconomyClientReply& )>;

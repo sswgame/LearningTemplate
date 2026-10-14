@@ -74,7 +74,7 @@ namespace sw
      * @class ActionCombatRig
      * @brief 플레이어 하나의 근접, 총, 패리와 화면 위의 투사체입니다.
      */
-    class SW_GF_API ActionCombatRig
+    class SW_KIT_API ActionCombatRig
     {
     public:
         static constexpr uint32  kStateTag     = FourCcUtil::make( "APCR" );

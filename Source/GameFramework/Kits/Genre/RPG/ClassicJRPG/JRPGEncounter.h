@@ -20,7 +20,7 @@ namespace sw
      * @class JRPGEncounterWalker
      * @brief 걸음을 세어 조우를 정합니다. 시드와 걸음이 같으면 같은 걸음에서 같은 무리를 만납니다.
      */
-    class SW_GF_API JRPGEncounterWalker
+    class SW_KIT_API JRPGEncounterWalker
     {
     public:
         static constexpr uint32 kStateTag       = FourCcUtil::make( "JENC" );

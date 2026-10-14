@@ -76,7 +76,7 @@ namespace sw
      * @class AdventureElementGrid
      * @brief 가로 × 세로 셀로 이루어진 격자입니다. 칸 좌표는 (x, y) 이고, 바람도 같은 축의 (−1..1, −1..1) 값입니다.
      */
-    class SW_GF_API AdventureElementGrid
+    class SW_KIT_API AdventureElementGrid
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "AELM" );

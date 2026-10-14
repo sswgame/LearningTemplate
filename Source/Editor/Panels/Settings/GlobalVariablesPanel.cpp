@@ -337,17 +337,22 @@ namespace sw::editor
                 ImGui::Separator();
                 ImGui::TextDisabled( "Saved Presets:" );
 
-                if ( _bPresetListDirty == SW_TRUE && _presetJob.isPending() == false )
-                    _presetJob.request( EditorGlobalVariableCommands::getPresetFolderPath(), ".gvpreset.xml", false );
-
-                vector<string> listNewPresetFile;
-                if ( _presetJob.take( listNewPresetFile ) )
+                vector<string>       listNewPresetFile;
+                const EditorTaskPoll presetPoll = _presetJob.take( listNewPresetFile );
+                if ( presetPoll == EditorTaskPoll::Ready )
                 {
                     _listPresetFile   = std::move( listNewPresetFile );
                     _bPresetListDirty = SW_FALSE;
                 }
 
-                if ( _presetJob.isPending() )
+                bool bPresetScanning = presetPoll == EditorTaskPoll::Running;
+                if ( _bPresetListDirty == SW_TRUE && presetPoll != EditorTaskPoll::Running )
+                {
+                    _presetJob.request( EditorGlobalVariableCommands::getPresetFolderPath(), ".gvpreset.xml", false );
+                    bPresetScanning = true;
+                }
+
+                if ( bPresetScanning )
                 {
                     ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorSettings", "ScanningPresets" ) );
                 }

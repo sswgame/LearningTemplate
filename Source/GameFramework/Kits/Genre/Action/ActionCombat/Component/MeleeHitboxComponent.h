@@ -20,7 +20,7 @@ namespace sw
      *          이쪽 판정 콜라이더는 트리거여도 된다. 언리얼 히트박스가 Overlap 반응인 것과 같고, 그러면 총알도 이 판정에 막히지 않는다.
      */
     REFLECT()
-    class SW_GF_API MeleeHitboxComponent : public Component
+    class SW_KIT_API MeleeHitboxComponent : public Component
     {
     public:
         REFLECT_BODY();

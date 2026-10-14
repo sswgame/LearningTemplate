@@ -16,7 +16,7 @@ namespace sw
      * @struct BrFlightPath
      * @brief 비행기 한 번의 경로입니다. 맵은 [0, mapSize]² 이고, 경로는 한 변에서 들어와 다른 변으로 나갑니다.
      */
-    struct SW_GF_API BrFlightPath
+    struct SW_KIT_API BrFlightPath
     {
         float2  _start{};
         float2  _end{};
@@ -56,7 +56,7 @@ namespace sw
      * @details 자유 낙하는 `_freeFallSpeed` 로 내려가며, 조종 방향(길이 ≤ 1)에 `_freeFallHorizontalSpeed` 를 곱해 옮겨 간다. 땅 위 `_autoOpenHeight` 에 닿으면 낙하산이 저절로 펴진다(그 전에 손으로 펼 수도 있다).
      *          걸음을 경계에서 나눠 적분하므로 같은 조종이면 `predictLanding` 과 같은 위치에 내린다.
      */
-    class SW_GF_API BrSkydiver
+    class SW_KIT_API BrSkydiver
     {
     public:
         BrSkydiver();

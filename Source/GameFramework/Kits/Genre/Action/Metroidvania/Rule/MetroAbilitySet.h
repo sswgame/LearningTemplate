@@ -24,7 +24,7 @@ namespace sw
      * @class MetroAbilitySet
      * @brief 캐릭터 하나가 얻은 능력과, 거기서 나온 몸 설정입니다.
      */
-    class SW_GF_API MetroAbilitySet
+    class SW_KIT_API MetroAbilitySet
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "MABL" );

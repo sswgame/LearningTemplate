@@ -12,6 +12,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/thread.h"
 
 #include <thread>
 
@@ -67,7 +68,7 @@ namespace sw
     private:
         void run();
 
-        std::thread           _thread;
+        sw::thread            _thread;
         NetHost*              _pHost;
         NetHostThreadSettings _settings;
         atomic<uint64>        _updateCount;

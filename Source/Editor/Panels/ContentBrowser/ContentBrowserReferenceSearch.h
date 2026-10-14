@@ -24,10 +24,13 @@ namespace sw::editor
         /** @brief 아직 스캔하지 않은 상태로 만듭니다. */
         ContentBrowserReferenceSearch();
 
-        /** @brief 워커가 끝낸 스캔이 있으면 역색인에 넣습니다. */
-        void takeFinishedScan();
-        /** @brief 처음이거나 @p contentChangeSerial 이 마지막 스캔 때와 다르면 스캔을 요청합니다. 스캔 중이면 끝날 때까지 미룹니다. */
-        void requestScanIfStale( uint64 contentChangeSerial );
+        /** @brief 워커가 끝낸 스캔이 있으면 역색인에 넣고, 그 순간의 스캔 상태를 돌려줍니다. */
+        EditorTaskPoll takeFinishedScan();
+        /**
+         * @brief 처음이거나 @p contentChangeSerial 이 마지막 스캔 때와 다르면 스캔을 요청합니다. 스캔 중이면 끝날 때까지 미룹니다.
+         * @param poll 같은 프레임에 `takeFinishedScan` 이 돌려준 상태입니다. 따로 다시 읽으면 그 사이 끝난 결과를 버린다.
+         */
+        void requestScanIfStale( uint64 contentChangeSerial, EditorTaskPoll poll );
         /** @brief 진행 중인 스캔이 있으면 다시 요청해 그 결과를 버립니다. 이동이 고친 색인을 이전 스캔 결과가 덮어쓰지 않게 합니다. */
         void discardPendingScan();
         /**

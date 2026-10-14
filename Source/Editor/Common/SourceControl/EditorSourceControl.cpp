@@ -81,7 +81,7 @@ namespace sw::editor
     void EditorSourceControl::update()
     {
         EditorExternalToolResult result;
-        if ( _running._operation != SourceControlOperation::None && _pJob->take( result ) )
+        if ( _running._operation != SourceControlOperation::None && _pJob->take( result ) == EditorTaskPoll::Ready )
         {
             const PendingOperation finished = std::move( _running );
             _running                        = PendingOperation{};

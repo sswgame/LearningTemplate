@@ -8,6 +8,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/ConcurrentQueue.h"
 #include "Core/Container/WorkStealingDeque.h"
 #include "Core/Container/span.h"
@@ -371,7 +372,7 @@ namespace sw
         {
             WorkStealingDeque<uintptr_t> _queue{ 4096 }; ///< 항목은 태스크 노드(짝수)이거나 병렬 그룹의 티켓(홀수)이다
             WaiterSlot                   _park;          ///< 유휴 워커가 잠드는 워드이자, 이 워커가 태스크 안에서 기다릴 때 쓰는 대기 워드
-            std::thread                  _thread;        ///< 이 슬롯을 도는 워커 스레드. `shutdown` 이 합류한다
+            sw::thread                   _thread;        ///< 이 슬롯을 도는 워커 스레드. `shutdown` 이 합류한다
         };
 
         /** @brief 유휴 비트마스크가 담을 수 있는 워커 수입니다. `initialize` 가 이 수로 제한합니다. */

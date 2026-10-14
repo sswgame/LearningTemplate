@@ -34,7 +34,7 @@ namespace sw
      *        높으면 스태미나 코어가 벗어난 만큼 더 줄어듭니다. 게이지 회복 속도는 그 코어에 비례합니다. 데드아이는 켜 둔 동안 게이지를 쓰고,
      *        바닥나면 저절로 꺼집니다.
      */
-    class SW_GF_API WesternSurvival
+    class SW_KIT_API WesternSurvival
     {
     public:
         static constexpr uint32  kStateTag     = FourCcUtil::make( "WSRV" );

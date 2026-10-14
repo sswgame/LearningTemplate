@@ -21,7 +21,7 @@ namespace sw
      * @brief 메뉴의 요리 하나입니다. 재료, 조리 시간, 조리 스테이션, 필요한 레벨은 기반 레시피(`RecipeCatalog`)에서 봅니다.
      * @details 품질은 만든 요리사 레벨이 `_listQualityLevel` 의 임계값을 몇 개 넘었는지로 정한다(최소 1이며, "1,3,5" 이면 레벨 1 은 별 1개, 3 은 별 2개, 5 는 별 3개).
      */
-    struct SW_GF_API DishDef
+    struct SW_KIT_API DishDef
     {
         hashed_string _id{};
         hashed_string _recipeID{};
@@ -87,7 +87,7 @@ namespace sw
      * @endcode
      * @details `Arrival` 은 그 시각의 시간당 손님 수이다(적지 않은 시각은 0). `window` 는 별점 이동 평균에 쓰는 손님 수이다.
      */
-    class SW_GF_API RestaurantCatalog : public XMLCatalog<RestaurantCatalog>
+    class SW_KIT_API RestaurantCatalog : public XMLCatalog<RestaurantCatalog>
     {
         friend class XMLCatalog<RestaurantCatalog>;
 

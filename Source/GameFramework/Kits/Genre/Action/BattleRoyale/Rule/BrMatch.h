@@ -100,7 +100,7 @@ namespace sw
      *          - 출혈사, 전멸, 기절 뒤 자기장 사망은 기절시킨 사람의 처치로 센다.
      *          시드가 같고 같은 순서로 호출하면 같은 판이 나온다.
      */
-    class SW_GF_API BrMatch
+    class SW_KIT_API BrMatch
     {
     public:
         static constexpr uint32  kStateTag     = FourCcUtil::make( "BRMT" );

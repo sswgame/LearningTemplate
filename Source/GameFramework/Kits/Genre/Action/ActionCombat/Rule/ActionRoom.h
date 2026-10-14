@@ -104,7 +104,7 @@ namespace sw
      *          싸움을 시작할 때 그 싸움에 나온 종의 정의를 복사해 둔다(싸움 도중 카탈로그가 다시 로드되어도 영향이 없다). 방 배치(어느 종을 어디에 둘지)는 룸 종류마다 코드에 있는 테이블이다.
      *          적은 오브젝트가 아니라서 `UnitStatsComponent` 를 거치지 않고, 방어 공식만 같다(`DamageMath::applyArmor`).
      */
-    class SW_GF_API ActionRoom
+    class SW_KIT_API ActionRoom
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "AROM" );

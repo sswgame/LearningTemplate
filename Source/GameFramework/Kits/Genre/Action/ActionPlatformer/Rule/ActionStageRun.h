@@ -50,7 +50,7 @@ namespace sw
      * @class ActionStageRun
      * @brief 스테이지 하나의 진행 상태입니다. 정의는 카탈로그에서 빌려 씁니다.
      */
-    class SW_GF_API ActionStageRun
+    class SW_KIT_API ActionStageRun
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "APST" );

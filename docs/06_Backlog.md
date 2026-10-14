@@ -117,9 +117,8 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
 
 - `C-2` **빌드 속도 — 계획은 [docs/plans/BuildSpeed.md](plans/BuildSpeed.md).** 남은 것은 5 단계(유니티 범위 — 한 쌍만 잼, 재측정 필요)와 6 단계(`EngineLoop.cpp`)다. 범위 결정은 [결정 기록](09_Decisions.md) 5-2.
 
-- `C-3` **키트 DLL 이 Base 클래스의 암시적 멤버를 내보낸다**(2026-10-12 통합 3 에서 확인, `llvm-readobj --coff-exports GF_WitcherRPG.dll` 에 `Inventory` · `Crafter` · `StatBlock` 의 생성자 · 소멸자).
-  키트 TU 는 강제 포함 헤더로 `SW_GF_EXPORTS` 를 정의하고(`cmake/Engine/ModuleTargets.cmake` 의 `GF_EXPORTS`), Base 헤더와 키트 헤더가 같은 `SW_GF_API` 를 써서 Base 선언도 dllexport 로 풀린다.
-  고치려면 키트 자기 헤더용 매크로를 따로 두고(언리얼의 모듈마다 `<MODULE>_API`) 키트 헤더를 기계적으로 바꾼다. `GameServiceBinding.h` 의 `SW_GAMESERVICE_API` 도 같은 규칙을 따른다.
+- `C-3` **서버 키트가 공유 키트 클래스를 다시 내보낸다**(Base 중복은 끝남 — 결정 기록 5-8). `GF_Server_Account.dll` 200개 중 8개가 `GF_Account.dll` 과 겹친다.
+  고치려면 키트마다 `<KIT>_API` 를 두고 키트 헤더를 기계적으로 바꾼다. 이득이 작아 우선순위는 낮다.
 
 - `C-4` **GameFramework 구조 정리(2026-10-04 리뷰, 사용자 승인).** 남은 것 —
   - 중간: Overworld `TileMap` 의 칸 손셈(`indexOf` · `isInBounds` — 크기는 파일 스키마 `TileMapXMLData` 가 든다) · `Habitat`(CreatureLife) · NetConnection 메시지 버퍼 재사용 ·
@@ -187,11 +186,6 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
 
 - `C-22` **작은 정리 후보(2026-10-13 병합 검토에서 모음).** `IPhysicsScene3D/2D` 전방 선언용 `*Fwd.h`, Core → Log 예외 다섯 파일(티어마다 필요한 것이 달라 함수 포인터 하나로 풀리지 않는다), 프렐류드 예외 제거(184 파일).
 
-- `C-24` **스레드 안전 탐지기가 못 보는 결함 종류를 메운다**(2026-10-13, 사용자가 '나중에' 하기로 함). `DataRaceDetector` 는 `sw::` 컨테이너 래퍼 안의 읽기 · 쓰기 겹침만, `DeadlockDetector` 는 `sw::mutex` 대기 그래프의 사이클만 본다.
-  이번 세션에 나온 스레드 결함은 대부분 그 밖이었다: ① 에디터 종료 교착 — `DllMain` 정적 소멸자(로더 락) 안의 `thread::join`(`sw::mutex` 가 아니라 탐지기가 못 봄), ② E-9 Quick Open — `isPending()` 을 읽은 시점과 결과를 꺼낸 시점이 어긋나는 논리 경합(TOCTOU, 각각은 atomic 이라 데이터 레이스가 아님),
-  ③ 그림자 PassCB 슬롯 재사용 — GPU 가 나중에 읽는 순서 문제, ④ `TaskHandle` · `TaskStageHandle` 이 `TaskManager` 소멸 뒤 해제될 때 노드를 풀로 돌려주는 수명 순서. (컨테이너 레이스 `ConcurrentTextureAcquireCreatesOnce` 만 탐지기가 정확히 잡았다.)
-  후보: (a) `thread::join` · 이벤트 대기도 대기 그래프(잠금 관찰자 인터페이스)에 넣고, 정적 소멸자 · `DllMain` 안의 `join` 을 막는 린트 · 단언을 둔다, (b) `EditorBackgroundTask` 처럼 '대기 여부 + 결과' 를 따로 읽게 하는 API 는 한 번에 돌려주는 형태로 바꿔 틀릴 수 없게 한다,
-  (c) 풀을 가리키는 핸들에 세대 · 생존 확인을 둔다. 탐지기가 과거에 몇 건을 잡았는지 이력은 확인하지 않았다. 설계: 새 전용 함수를 늘리지 말고 기존 관찰자 · API 모양을 고친다.
 - `C-25` **게임 여럿을 빌드 한 번에 짓고, 실행할 때 고르고, 키트는 필요한 것만**(2026-10-13, 사용자 확정). 결정은 [결정 기록](09_Decisions.md) 5-2, 쓰는 법은 `Source/Games/README.md`.
   남은 것: 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸다(DX12 직접 실행으로 10 시나리오 통과만 확인).
 - `C-27` **서브시스템 패턴을 넓힐 곳**(2026-10-14, 서브시스템 정리 다음 · 효과 큰 순). 판정 기준: 수명 범위 · 초기화/종료 순서 · 의존이 있는 서비스는 서브시스템이고,
@@ -240,10 +234,12 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   계약이 있어야 한다(지금은 지형 깊이를 정점에 굽는다). (5) 흔드는 식생의 그림자는 흔들리지 않는다(`shadowdepth.hlsl` 이 머티리얼 정점 변형을 모른다 — 풀은 그림자를 끔).
   (6) 지형 LOD 교체 프레임의 최악 시간이 기준(GT 2 ms)을 넘는다(측정값은 [검증과 측정](08_Verification.md) 2절 "지형 LOD 교체"). 메시 집합이 바뀌어 RT 는 정점 풀을
   통째로 다시 만든다(`RT.GPUScene.vertexPool`, 벤치에는 없다 — App 표로). LOD 메시를 미리 만들어 두거나 청크 정점을 풀에서 부분 갱신한다. 지오모프(LOD 튐) · 레이어 다섯 이상(두 번째 스플랫 — 머티리얼 텍스처 칸이 넷이다)이 없다.
-  (7) **지형 편집 쓰기 API가 없다**(2026-10-14) — `TerrainHeightfield` 는 만든 뒤 읽기만 하는 객체이고(병렬 틱과 배치 계산이 동시에 읽는다) `TerrainComponent` 에는 높이 · 스플랫을 바꾸는 공개 함수 ·
-  청크 더티 표시 · 저장 경로가 없다. 에디터 칠하기 도구(`D3-1` ⑧)의 드래그 적용과 되돌리기가 이것을 기다린다 — 읽는 쪽과 겹치지 않게 쓰는 길(이중 버퍼 또는 렌더 스레드 동기), 변경 청크만 다시 굽는 더티 표시,
-  높이장 · 레이어 가중치 맵 저장을 정한 뒤 `TerrainBrush::applyHeight` · `applyLayerWeight` 를 잇는다. 브러시 선택은 레이 전진이 걸음마다 `findTerrainAt` 으로 지형 전체를 훑어 먼 거리에서 비싸다(측정 안 함).
-  에디터 칠하기 도구는 `D3-1` ⑧.
+  (7) 지형 쓰기 API(`writeHeights` · `writeLayerWeights` · `saveHeightfield` · `saveSplat`, 결정은 [결정 기록](09_Decisions.md) 5-5)는 CPU 쪽까지 들어갔다. 남은 것 — ⓐ **GPU 스플랫 갱신**:
+  `getSplatRevision` 이 오르면 스플랫 텍스처를 다시 올려야 하는데 RHI 에 텍스처 부분 업로드가 없어 그릴 때는 낡은 스플랫이 보인다(RHI 에 업로드 API 를 더한 뒤 4 백엔드 스크린샷으로 검증).
+  ⓑ 높이 쓰기마다 `getHeightfieldGeneration` 이 올라 `TerrainColliderComponent` 가 바디를 통째로 다시 만든다 — 스트로크 중 프레임마다 부르면 비싸니 드래그가 끝날 때만 올리거나 부분 갱신으로 바꾼다(측정 안 함).
+  ⓒ 쓴 높이로 만든 식생 · 배치 결과와 내비 메시는 다시 계산하지 않는다. ⓓ 높이를 쓴 청크는 LOD 와 무관하게 지금 LOD 로 바로 다시 만든다(큰 사각형은 한 프레임에 여러 청크 — 프레임 시간 측정 안 함).
+  ⓔ 에디터 칠하기 도구(`D3-1` ⑧)가 `TerrainBrush` 결과를 이 API 로 잇는 드래그 적용 · Undo(편집 전 사본 복원) · 저장 단추는 아직 없다. 브러시 선택은 레이 전진이 걸음마다 `findTerrainAt` 으로
+  지형 전체를 훑어 먼 거리에서 비싸다(측정 안 함).
 
 - `D2-6` **툰 머티리얼(`toon.hlsl`, MToon 1.0 체계)의 남은 것** — 노멀 맵(정점에 탄젠트가 없다) · UV 스크롤 애니메이션 · 셰이딩 시프트 / 림 곱 / 외곽선 두께 텍스처(머티리얼 텍스처 칸이 넷이라 기본 · 그림자 · 발광 · 맷캡만 받는다) · 디퍼드의 계단 셰이딩(G버퍼는 표면만 적어 램버트로 칠해진다) · 그림자 패스의 알파 컷오프
   (`shadowdepth.hlsl` 은 픽셀 스테이지가 없어 머리카락 카드가 사각형 그림자를 드리운다 — 모든 컷오프 머티리얼이 같다).
@@ -266,7 +262,7 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   ⑦ 카탈로그 편집기 뒤: 엔진 데이터 종류(장면 · 머티리얼 · 파이프라인 …)는 아직 `ResourceDataSchemaTest` 의 표에 있고, 카탈로그 밖(Engine 쪽) 열거자 이름 표는 `EnumNameTable` 로 모으지 않았다.
   층 규칙은 걸림돌이 아니다(레지스트리는 티어 5 라 위 티어가 채울 수 있다) — 실제 걸림돌 셋과 단계적 대안은 [결정 기록](09_Decisions.md) 5-11 "엔진 데이터 종류의 레지스트리 이전" 이다
   (첫 단계: `EnumNameTable` 을 Core 로 옮기고 GameFramework include 만 고친다, 동작 불변). ⑧ 지형 칠하기 도구 모드는 기초만 들어갔다(`TerrainBrush` 순수 로직 · 단위 테스트 · 뷰포트 브러시 원 시각화 `terrainbrush`) —
-  드래그 적용과 되돌리기는 지형 쓰기 API 가 필요하다(`D2-5` (7)).
+  지형 쓰기 API 는 들어갔다(`D2-5` (7)) — 드래그 적용 · 되돌리기 · 저장 연결이 남았다.
   다중 월드 툴 창과 그 위의 미리보기 창은 `D3-7`, UI 문서 디자이너는 `D3-3` 이다.
   에디터에 이미 있는 것(전역 변수 표, 커맨드 팔레트, 핫 리로드, Undo, Play 와 Step, InputReplay, 기즈모, RenderTargetPanel, 프로파일러와 Tracy)은 다시 만들지 않는다.
 
@@ -293,6 +289,10 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   래그돌/물리 에셋(관절 한계) · 이펙트 · 장르 도구(코스터 트랙 · 리듬 차트). 언리얼 FPreviewScene · 애셋 에디터 툴킷, 유니티 PreviewRenderUtility · Prefab Stage.
   (2026-10-14 사용자 결정: 규모가 XL 이라 에디터 보강 묶음에서 뺐다 — 설계부터 따로 짠다.)
   계획: docs/plans/EditorMultiWorld.md
+  **2026-10-15 단계 1 의 엔진 쪽이 들어갔다**(`SceneManager::createPreviewScene` · 정책 · 키 · 초점 씬, 테스트 `SceneTest.Preview*`). 남은 것 — 단계 1: 조명 환경 프리셋(방향광 · 스카이 · 바닥을
+  씬 안 오브젝트로 스폰, 렌더로 눈 확인 필요) · 시간 배율이 델타에 곱해지는 값을 보는 테스트(목에 델타 기록이 없다) · 미리보기 씬의 `initialize( pRHIDevice )`(기본 머티리얼) ·
+  플레이 세션(`EditorPlaySession`)이 미리보기 씬을 건드리지 않는지 확인(스냅샷 복원은 활성 씬만 본다고 읽었을 뿐 EditorTest 로 못 박지 않았다). 단계 2~5(씬별 GPUScene · 호스트 뷰 목록 · `EditorPreviewPanel` ·
+  창별 선택 / Undo `focusScene` 위에) 는 GPU 와 눈 확인이 필요해 손대지 않았다. 에디터의 "초점 씬" 소비자(`EditorContext`)는 아직 없다.
 
 - `D3-8` **에디터 보강 묶음(2026-10-14)에서 남긴 것.**
   - **시나리오 녹화**(`ScenarioRecorder` · `scenario.record` · `automation.toggleScenarioRecord`): 마우스 휠은 `Wheel` 단계로, 더블클릭은 두 번째 `Press` 로 기록한다. 조합 중 글자 · 포커스 · 포인터 출입 ·

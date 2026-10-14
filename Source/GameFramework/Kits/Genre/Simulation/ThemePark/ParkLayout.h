@@ -47,7 +47,7 @@ namespace sw
      * @brief 공원 배치 데이터 한 장입니다. 게임은 읽은 정의로 놀이기구를 만들기만 하며, 형식과 검증은 이 클래스가 한 곳에서 맡습니다.
      * @details 코스터 줄(`<Coaster layout="…">`)은 코스터 레이아웃 카탈로그에서 찾으므로, 그 카탈로그를 먼저 읽어 넘겨야 한다. 없는 레이아웃은 경고하고 건너뛴다.
      */
-    class SW_GF_API ParkLayout
+    class SW_KIT_API ParkLayout
     {
     public:
         ParkLayout();

@@ -36,7 +36,7 @@ namespace sw
      * @class MetroMapState
      * @brief 지도와 수집 상태입니다. 방 그래프(`AreaGraph`)는 빌려 씁니다. 방문과 발견은 그래프가, 산 지도, 연 정거장, 주운 것은 이 클래스가 가집니다.
      */
-    class SW_GF_API MetroMapState
+    class SW_KIT_API MetroMapState
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "MMAP" );

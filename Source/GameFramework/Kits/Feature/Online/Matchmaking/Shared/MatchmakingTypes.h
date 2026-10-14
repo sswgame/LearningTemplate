@@ -38,7 +38,7 @@ namespace sw
         Count
     };
 
-    SW_GF_API const utf8* toString( MatchmakingResult result );
+    SW_KIT_API const utf8* toString( MatchmakingResult result );
 } // namespace sw
 
 namespace sw
@@ -82,7 +82,7 @@ namespace sw
         int64               _enqueuedMs{ 0 };
 
         /** @brief 멤버 실력의 평균입니다. 멤버가 없으면 0입니다. */
-        SW_GF_API int32 computeAverageRating() const;
+        SW_KIT_API int32 computeAverageRating() const;
     };
 } // namespace sw
 
@@ -114,7 +114,7 @@ namespace sw
 namespace sw
 {
     /** @brief 모드 id 규칙(`[0-9a-z_]`, 1~32바이트)에 맞으면 true 입니다. 캐시 키와 버스 주제에 그대로 들어가기 때문입니다. */
-    SW_GF_API bool isValidMatchModeID( string_view modeID );
+    SW_KIT_API bool isValidMatchModeID( string_view modeID );
 } // namespace sw
 
 namespace sw
@@ -127,8 +127,8 @@ namespace sw
         uint64            _queuedTicketID{ 0 }; ///< 줄을 서 있으면 그 티켓이다. 낸 서버 id 를 32비트 왼쪽으로 민 값에 순번을 합친 것이다
         int32             _maxMemberCount{ 4 };
 
-        AccountID      getLeaderID() const { return _listMemberID.empty() ? kInvalidAccountID : _listMemberID.front(); }
-        SW_GF_API bool hasMember( AccountID accountID ) const;
+        AccountID       getLeaderID() const { return _listMemberID.empty() ? kInvalidAccountID : _listMemberID.front(); }
+        SW_KIT_API bool hasMember( AccountID accountID ) const;
     };
 } // namespace sw
 
@@ -178,10 +178,10 @@ namespace sw
         int32                _maxMemberCount{ 8 };
         LobbyState           _state{ LobbyState::Open };
 
-        AccountID      getOwnerID() const { return _listMember.empty() ? kInvalidAccountID : _listMember.front()._accountID; }
-        SW_GF_API bool hasMember( AccountID accountID ) const;
+        AccountID       getOwnerID() const { return _listMember.empty() ? kInvalidAccountID : _listMember.front()._accountID; }
+        SW_KIT_API bool hasMember( AccountID accountID ) const;
         /** @brief 방장을 뺀 모두가 준비했고 인원이 둘 이상이면 true 입니다. */
-        SW_GF_API bool isEveryoneReady() const;
+        SW_KIT_API bool isEveryoneReady() const;
     };
 } // namespace sw
 

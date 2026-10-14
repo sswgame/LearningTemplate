@@ -70,9 +70,9 @@ namespace sw
 namespace sw
 {
     /** @brief 조각 이름을 열거자로 읽습니다. 모르는 이름이면 false 를 반환하고 @p outType 은 그대로입니다. */
-    [[nodiscard]] SW_GF_API bool parseCoasterPieceType( string_view text, CoasterPieceType& outType );
+    [[nodiscard]] SW_KIT_API bool parseCoasterPieceType( string_view text, CoasterPieceType& outType );
     /** @brief 조각 열거자의 이름을 반환합니다. */
-    SW_GF_API const utf8* toString( CoasterPieceType type );
+    SW_KIT_API const utf8* toString( CoasterPieceType type );
 
     // ------------------------------------------------------------------------------
     // 2) 트랙: 샘플 점 목록과 거리 매개변수
@@ -95,7 +95,7 @@ namespace sw
      * @brief 일정 간격(약 0.25 m)으로 샘플한 트랙 곡선입니다. 거리 `s`(m)로 위치와 좌표계를 묻습니다.
      * @details 회로가 닫혀 있으면(`isClosed`) 거리는 한 바퀴 길이로 감긴다(음수도 마찬가지이다). 열려 있으면 양 끝에서 잘린다.
      */
-    class SW_GF_API CoasterTrack
+    class SW_KIT_API CoasterTrack
     {
     public:
         /** @brief 샘플 점 하나입니다. */
@@ -149,7 +149,7 @@ namespace sw
      * @details `appendPiece` 마다 점이 쌓이고, `makeTrack( bCloseCircuit )` 이 트랙을 만들어 준다. 닫으면 끝에서 시작점으로 에르미트 연결 곡선을 더한다
      *          (끝이 이미 시작점과 같으면 더하지 않는다). 만드는 도중에도 `getPosition` 과 `getHeading` 으로 지금 위치를 물을 수 있다(에디터 미리보기).
      */
-    class SW_GF_API CoasterTrackBuilder
+    class SW_KIT_API CoasterTrackBuilder
     {
     public:
         /** @brief 점 사이의 간격(m)입니다. G 를 차분으로 구하므로 너무 넓히지 않습니다. */
@@ -211,7 +211,7 @@ namespace sw
      * @brief `<CoasterCatalog><Layout id="..." name="..." startHeight="1"><Piece type="LiftHill" length="30" height="25"/>...` 를 읽습니다.
      * @details 모르는 조각 이름은 경고하고 그 조각만 건너뛴다. 같은 id 는 뒤의 것이 이긴다.
      */
-    class SW_GF_API CoasterLayoutCatalog : public XMLCatalog<CoasterLayoutCatalog>
+    class SW_KIT_API CoasterLayoutCatalog : public XMLCatalog<CoasterLayoutCatalog>
     {
         friend class XMLCatalog<CoasterLayoutCatalog>;
 

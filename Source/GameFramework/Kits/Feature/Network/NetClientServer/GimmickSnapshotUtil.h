@@ -21,7 +21,7 @@ namespace sw
      * @struct GimmickSnapshotUtil
      * @brief 묶음 ↔ 스냅샷 엔티티 변환입니다. 상태가 없습니다.
      */
-    struct SW_GF_API GimmickSnapshotUtil
+    struct SW_KIT_API GimmickSnapshotUtil
     {
         static constexpr uint32 kMaxChunksPerCircuit = 16;
         static constexpr uint32 kChunkHeaderBytes    = 10; ///< ownerKey(8) + chunkIndex(1) + chunkCount(1)

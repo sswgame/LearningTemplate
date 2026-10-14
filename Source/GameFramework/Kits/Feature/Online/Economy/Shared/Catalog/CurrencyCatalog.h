@@ -39,7 +39,7 @@ namespace sw
      * @class CurrencyCatalog
      * @brief 화폐 정의 모음입니다. 읽은 뒤에는 바꾸지 않습니다. 저장소 스레드가 `getBalanceCap` 을 읽기 때문입니다.
      */
-    class SW_GF_API CurrencyCatalog : public XMLCatalog<CurrencyCatalog>, public ILedgerPolicy
+    class SW_KIT_API CurrencyCatalog : public XMLCatalog<CurrencyCatalog>, public ILedgerPolicy
     {
         friend class XMLCatalog<CurrencyCatalog>;
 

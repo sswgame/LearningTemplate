@@ -24,7 +24,7 @@ namespace sw
      * @brief 출하함입니다. 넣은 것은 하루 끝에 카탈로그 가격으로 팔립니다. 가방과 지갑은 빌려 씁니다(`Inventory&`, `Wallet&`).
      * @details 담긴 것은 "팔릴 목록" 이라서 `ItemStackList`(값 목록)로 보관한다. 슬롯, 무게, 꾸미기는 없다.
      */
-    class SW_GF_API FarmShippingBin
+    class SW_KIT_API FarmShippingBin
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "FSHP" );

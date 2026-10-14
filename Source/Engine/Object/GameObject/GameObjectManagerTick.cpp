@@ -131,7 +131,8 @@ namespace sw
     {
         // 이 프레임에 적용된 월드 자리로 겹침을 측정한다. 이벤트 처리가 지운 것은 마지막 단계가 놓는다.
         SW_PROFILE_SCOPE( "GT.Scene.tick.physics" );
-        stepPhysics( deltaTime );
+        if ( _bPhysicsStepEnabled )
+            stepPhysics( deltaTime );
     }
 
     void GameObjectManager::runFrameStepTickPostPhysics( float32 deltaTime )

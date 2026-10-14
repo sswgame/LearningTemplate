@@ -3,6 +3,7 @@
 #include "Core/Network/Connection/NetHostThread.h"
 
 #include "Core/Concurrency/ThreadName.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -36,7 +37,7 @@ namespace sw
         _settings = settings;
         _bStopRequested.store( false, std::memory_order_release );
         _bRunning.store( true, std::memory_order_release );
-        _thread = std::thread( &NetHostThread::run, this );
+        _thread = sw::thread( &NetHostThread::run, this );
         return true;
     }
 

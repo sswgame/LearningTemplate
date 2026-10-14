@@ -3,7 +3,7 @@
  * @brief 지형 칠하기 도구의 브러시 계산입니다(언리얼 Landscape Mode 의 Sculpt/Paint · 유니티 Terrain Tools 대응). ImGui 와 씬을 모르는 순수 로직입니다.
  * @details 브러시 중심(월드 x, z)과 지형 격자(원점 · 셀 크기 · 해상도)에서 바뀔 샘플과 가중치를 고르고, 높이 배열 또는 레이어 가중치 배열에 적용한다.
  *          높이와 가중치는 샘플 단위 배열(N × N, 행 우선이며 z 가 바깥)로 받는다 — `TerrainHeightfield::getHeightSamples` 와 같은 배치다.
- *          지형 쪽에 런타임 쓰기 API 가 생기면 뷰포트 도구가 이 함수들로 스트로크를 적용한다(지금은 미리보기 원만 그린다).
+ *          적용 결과는 `TerrainComponent::writeHeights` · `writeLayerWeights` 로 지형에 넣는다(틱 밖, 프레임에 한 번). 뷰포트 도구가 이 함수들로 스트로크를 적용하는 연결은 아직 없다(지금은 미리보기 원만 그린다).
  */
 #pragma once
 #include "Core/Common/Types.h"

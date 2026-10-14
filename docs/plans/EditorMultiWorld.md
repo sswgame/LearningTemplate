@@ -1,6 +1,6 @@
 # 다중 월드 · 에디터 툴 창 구현 계획 (D3-7)
 
-백로그 `D3-7` 의 설계 근거입니다. 다른 PC 에서 병합할 때 판단 기준으로 씁니다. 코드는 아직 바꾸지 않았습니다.
+백로그 `D3-7` 의 설계 근거입니다. 다른 PC 에서 병합할 때 판단 기준으로 씁니다. 단계 1 의 엔진 쪽만 코드로 들어갔습니다(2026-10-15, 아래 단계 1 절 참고).
 파일 · 함수 이름은 2026-10-14 `wt/editor` 기준으로 읽은 것입니다.
 
 ## 1. 현재 구조
@@ -102,6 +102,11 @@ Undo 를 창마다 두는 것은 두 엔진과 다릅니다. 두 엔진 모두 �
 - 파일: `Engine/Scene/SceneManager.h/.cpp`(미리보기 목록 · `createPreviewScene` · `destroyPreviewScene` · 틱), `Engine/Scene/Scene.h`(틱 정책 필드), `Engine/EngineLoop.cpp`("Scene update" 블록).
 - 위험: 씬 서비스(`ScenePhysics` · `SceneAudio` · `SceneNavigation`)가 전역 단일 씬을 가정한 곳. 오디오는 미리보기 씬에서 끕니다.
 - 확인: 새 단위 테스트 — 미리보기 씬이 정책대로 틱 · 물리 스텝을 하고 활성 씬 전환에 영향받지 않음. 씬 전환 테스트 기존 결과 유지.
+- **구현됨(2026-10-15)**: `SceneManager` 의 미리보기 씬 목록(`createPreviewScene` · `destroyPreviewScene` · 키 `getPreviewSceneKey` · `findPreviewScene` · `tickPreviewScenes`),
+  정책 `ScenePreviewPolicy { _bTick · _timeScale · _bPhysics · _bAudio · _bPlay }`, 툴이 겨누는 초점 씬(`focusScene` · `getFocusedScene`, 내려지면 활성 씬으로 복귀).
+  정책의 물리는 `GameObjectManager::setPhysicsStepEnabled`, 오디오는 `Scene::setAudioUpdateEnabled` 로 닿는다. `EngineLoop` 는 `bTickScene` 과 무관하게 `tickPreviewScenes` 를 부른다.
+  월드별 서브시스템 범위는 씬마다 `GameObjectManager` 가 갖는 `SubsystemScope` 라 따로 만들 것이 없고, 씬을 내리면 함께 내려간다(테스트 `PreviewScenesLiveApartFromLoadedScenes`).
+  `fixedStepOverride` 는 `FixedStepAccumulator` 가 전역 설정을 읽어 넣지 않았다. 조명 환경 프리셋은 렌더 확인이 필요해 남겼다.
 
 ### 단계 2 — 씬별 GPUScene (렌더러)
 - 파일: `Renderer/Frame/RenderFramePacket.h`, `RenderPacketBuilder.h/.cpp`(빌더를 씬 키 맵으로), `FrameRenderer.h` · `FrameRendererViews.cpp` · `FrameRendererDraw.cpp`(`_gpuScene` → 씬 키 맵), `Renderer/Scene/GPUScene.*`(공유 풀을 외부 참조로), `Renderer/Frame/RenderView.h`(`_sceneID`).

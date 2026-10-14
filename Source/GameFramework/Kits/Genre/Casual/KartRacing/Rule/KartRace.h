@@ -178,7 +178,7 @@ namespace sw
      *     // 매 프레임: race.setInput( 0, input ); race.update( deltaTime ); race.drainEvents( listEvent );
      * @endcode
      */
-    class SW_GF_API KartRace
+    class SW_KIT_API KartRace
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "KRAC" );

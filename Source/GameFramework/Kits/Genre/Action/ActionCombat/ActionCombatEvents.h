@@ -23,7 +23,7 @@ namespace sw
      *          컴포넌트에 직접 구독하려면 `UnitStatsComponent::registerDamageApplied` 를 쓴다(언리얼 `OnTakeAnyDamage` 에 해당).
      *          대상은 핸들이다. 큐로 받았다면 그 사이 대상이 사라졌을 수 있으므로 핸들로 대상을 찾아 확인한다.
      */
-    struct SW_GF_API DamageAppliedEvent final : IEvent
+    struct SW_KIT_API DamageAppliedEvent final : IEvent
     {
         GameObjectHandle       _instigator;   ///< 피해를 낸 쪽(쏘거나 휘두른 오브젝트). 모르면 무효 핸들
         GameObjectHandle       _target;       ///< 피해를 받은 유닛
@@ -48,7 +48,7 @@ namespace sw
 namespace sw
 {
     /** @brief 액션 룸을 클리어했음을 알립니다(`ActionRoom` 에서 마지막 적이 쓰러진 프레임에 냅니다). */
-    struct SW_GF_API RoomClearedEvent final : IEvent
+    struct SW_KIT_API RoomClearedEvent final : IEvent
     {
         string                 _mapPath;           ///< 클리어한 맵
         uint8                  _bBossDefeated : 1; ///< 보스 처치 여부
@@ -66,7 +66,7 @@ namespace sw
 namespace sw
 {
     /** @brief 액션 룸에서 플레이어가 패배했음을 알립니다(`ActionRoom::onPlayerDefeated`). */
-    struct SW_GF_API PlayerDefeatedInRoomEvent final : IEvent
+    struct SW_KIT_API PlayerDefeatedInRoomEvent final : IEvent
     {
         string _returnMapPath; ///< 복귀할 오버월드 맵
         SW_DECLARE_GAMEPLAY_EVENT( PlayerDefeatedInRoomEvent );
@@ -76,7 +76,7 @@ namespace sw
 namespace sw
 {
     /** @brief 클리어 게이트의 잠금이 바뀌었음을 알립니다(`ActionRoom` 에서 전투를 시작할 때 닫히고, 클리어하거나 패배하면 열립니다). */
-    struct SW_GF_API ClearGateStateChangedEvent final : IEvent
+    struct SW_KIT_API ClearGateStateChangedEvent final : IEvent
     {
         string                 _zoneID;         ///< 존 ID
         uint8                  _bLocked    : 1; ///< 잠김 여부

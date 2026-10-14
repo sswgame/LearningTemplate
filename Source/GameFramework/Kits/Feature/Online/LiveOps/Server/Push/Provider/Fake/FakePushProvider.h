@@ -14,7 +14,7 @@ namespace sw
      * @class FakePushProvider
      * @brief id 가 "fake" 인 가짜 제공자입니다.
      */
-    class SW_GF_API FakePushProvider final : public IPushNotificationProvider
+    class SW_KIT_API FakePushProvider final : public IPushNotificationProvider
     {
     public:
         struct SentRecord

@@ -41,7 +41,7 @@ namespace sw
      * @class SocialClient
      * @brief 연결 하나의 친구와 길드 클라이언트입니다.
      */
-    class SW_GF_API SocialClient final : public IOnlineClientService
+    class SW_KIT_API SocialClient final : public IOnlineClientService
     {
     public:
         SocialClient();

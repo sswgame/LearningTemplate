@@ -36,7 +36,7 @@ namespace sw
      * @struct CacheStoreFactory
      * @brief 캐시 팩토리입니다.
      */
-    struct SW_GF_API CacheStoreFactory
+    struct SW_KIT_API CacheStoreFactory
     {
         static constexpr const utf8* kMemoryDriverName = "memory";
         static constexpr const utf8* kRespDriverName   = "resp";

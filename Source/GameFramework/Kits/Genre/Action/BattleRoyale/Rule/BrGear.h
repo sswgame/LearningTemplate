@@ -55,7 +55,7 @@ namespace sw
      * @details 방어구는 맞은 피해(줄이기 전 값)만큼 내구도가 닳고, 0이 되는 한 방까지는 막은 뒤 부서져 사라진다. 가방은 인벤토리 무게 한도를 `기본 + 가방 용량` 으로 바꾼다.
      *          지금 든 무게가 새 한도를 넘으면 가방을 바꾸지 않는다(작은 가방으로 바꿔서 물건이 사라지는 일을 막는다).
      */
-    class SW_GF_API BrLoadout
+    class SW_KIT_API BrLoadout
     {
     public:
         BrLoadout();

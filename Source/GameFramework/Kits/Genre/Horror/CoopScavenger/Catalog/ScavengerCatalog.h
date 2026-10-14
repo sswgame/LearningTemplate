@@ -131,7 +131,7 @@ namespace sw
      *        <Scrap id="bolt" min="20" max="40" weight="5" spawnWeight="5" twoHanded="false"/>
      *        <Moon id="experimentation" risk="1" cost="0" scrap="8" scrapMax="12" valueMin="0.9" valueMax="1.1" scraps="bolt,bell" company="false"/></ScavengerCatalog>` 를 읽습니다.
      */
-    class SW_GF_API ScavengerCatalog : public XMLCatalog<ScavengerCatalog>
+    class SW_KIT_API ScavengerCatalog : public XMLCatalog<ScavengerCatalog>
     {
         friend class XMLCatalog<ScavengerCatalog>;
 

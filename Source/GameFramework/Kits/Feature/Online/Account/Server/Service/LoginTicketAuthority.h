@@ -36,7 +36,7 @@ namespace sw
      * @class LoginTicketAuthority
      * @brief 티켓을 발급하고 확인합니다. `initialize` 뒤에는 읽기만 하므로 암호 인터페이스가 스레드 안전이면 여러 스레드가 동시에 `verifyTicket` 을 불러도 됩니다.
      */
-    class SW_GF_API LoginTicketAuthority
+    class SW_KIT_API LoginTicketAuthority
     {
     public:
         static constexpr int32 kMasterKeySize = 32;

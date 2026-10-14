@@ -87,6 +87,12 @@ namespace sw
         void setActiveGameCamera( CameraComponent* pCamera );
         /** @brief 엔티티가 스폰된 프리팹 에셋 경로를 설정합니다. 비우면 연결을 끊습니다. */
         void setEntityPrefabPath( uint64 objectID, string_view prefabPath );
+        /**
+         * @brief 틱이 오디오 엔진에 리스너 · 에미터를 넣을지 정합니다(기본 켬). 미리보기 씬은 끕니다 — 게임의 소리를 흔들지 않게(`ScenePreviewPolicy::_bAudio`).
+         */
+        void setAudioUpdateEnabled( bool bEnabled ) { _bAudioUpdateEnabled = bEnabled; }
+        /** @brief 틱이 오디오 엔진을 갱신하면 true 입니다. */
+        bool isAudioUpdateEnabled() const { return _bAudioUpdateEnabled; }
 
         /** @brief 씬 이름을 반환합니다. */
         const string& getName() const { return _name; }
@@ -145,8 +151,9 @@ namespace sw
          * @details 저장이 const 라 mutable 입니다 — 새 오브젝트에 id 를 주는 것은 씬의 보이는 상태를 바꾸지 않습니다.
          */
         mutable ObjectSavedIDMap               _mapObjectIDToFileID;
-        vector<SceneDocument::SceneObjectNode> _listUnresolvedEntity; ///< 프리팹을 찾지 못한 엔티티(문서 그대로, 저장 때 다시 써 넣는다)
-        sw::ComponentHandle                    _activeGameCamera;     ///< 마지막 `ensureDefaultCameras` 가 고른 카메라(렌더 쪽이 O(1) 로 읽는다)
-        sw::ComponentHandle                    _gameCameraOverride;   ///< `setActiveGameCamera` 로 직접 고른 카메라
+        vector<SceneDocument::SceneObjectNode> _listUnresolvedEntity;        ///< 프리팹을 찾지 못한 엔티티(문서 그대로, 저장 때 다시 써 넣는다)
+        sw::ComponentHandle                    _activeGameCamera;            ///< 마지막 `ensureDefaultCameras` 가 고른 카메라(렌더 쪽이 O(1) 로 읽는다)
+        sw::ComponentHandle                    _gameCameraOverride;          ///< `setActiveGameCamera` 로 직접 고른 카메라
+        bool                                   _bAudioUpdateEnabled{ true }; ///< `setAudioUpdateEnabled`
     };
 } // namespace sw

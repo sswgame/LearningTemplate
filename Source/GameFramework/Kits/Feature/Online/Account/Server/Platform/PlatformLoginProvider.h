@@ -37,7 +37,7 @@ namespace sw
      * @class IPlatformLoginProvider
      * @brief 외부 로그인 제공자 하나입니다. 이름은 저장 키에 들어가며 `[a-z0-9_]` 형식으로 16자 이하입니다(예: "google", "apple", "kakao", "naver", "fake").
      */
-    class SW_GF_API IPlatformLoginProvider
+    class SW_KIT_API IPlatformLoginProvider
     {
     public:
         IPlatformLoginProvider()          = default;

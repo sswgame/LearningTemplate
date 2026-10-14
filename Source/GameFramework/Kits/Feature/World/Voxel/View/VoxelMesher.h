@@ -53,7 +53,7 @@ namespace sw
      *          정점은 청크 원점(`chunkX × 16, 0, chunkZ × 16`) 기준이다. 삼각형은 바깥에서 볼 때 엔진의 앞면 감김 순서이며, `(b - a) × (c - a)` 가 노멀 쪽을 향한다.
      *          꼭짓점 그늘은 면 앞 평면의 이웃 셋(옆 둘과 모서리)으로 0~3단계를 매긴다. 그늘이 한쪽으로 쏠린 사각형은 대각선을 바꿔 줄무늬를 없앤다.
      */
-    struct SW_GF_API VoxelMesher
+    struct SW_KIT_API VoxelMesher
     {
         static void fillChunkMesh( const VoxelWorld& world, int32 chunkX, int32 chunkZ, VoxelChunkMesh& outMesh );
         /** @brief 면 하나의 밝기입니다. 위쪽은 1, 옆쪽은 0.85와 0.75, 아래쪽은 0.6입니다. 해가 없어도 블록 모서리가 보이게 합니다. */

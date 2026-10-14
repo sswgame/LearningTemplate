@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
@@ -46,7 +47,7 @@ namespace sw
         vector<LocalStoreCompletion>  _listCompletion;
         LocalSealContext              _sealContext;
         unique_ptr<ILocalSlotStorage> _storage;
-        std::thread                   _worker;
+        sw::thread                    _worker;
         mutable mutex                 _mutex;
         std::condition_variable_any   _requestReady;
         uint64                        _nextRequestID;

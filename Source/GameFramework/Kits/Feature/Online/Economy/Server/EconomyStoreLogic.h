@@ -50,7 +50,7 @@ namespace sw
 namespace sw
 {
     /** @brief 경제 저장 함수 모음입니다. 저장소 스레드에서 부릅니다. */
-    struct SW_GF_API EconomyStoreLogic
+    struct SW_KIT_API EconomyStoreLogic
     {
         static const hashed_string& getPurchaseCountTable(); ///< "econ_purchase" — 키 `<계정 16 진>/<상품 id>`
         static EconomyResult        toEconomyResult( LedgerResult result );

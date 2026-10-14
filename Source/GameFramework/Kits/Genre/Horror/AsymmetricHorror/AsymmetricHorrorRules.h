@@ -109,7 +109,7 @@ namespace sw
      *          행동 이름은 "Repair", "SkillCheck", "Heal", "Unhook", "Escape", "PalletStun", "Vault", "Hit", "Hook", "Sacrifice", "Kick",
      *          "BreakPallet", "LockerGrab" 이며, 목록에 없는 행동은 점수가 없다.
      */
-    class SW_GF_API AsymmetricHorrorRulesCatalog : public XMLCatalog<AsymmetricHorrorRulesCatalog>
+    class SW_KIT_API AsymmetricHorrorRulesCatalog : public XMLCatalog<AsymmetricHorrorRulesCatalog>
     {
         friend class XMLCatalog<AsymmetricHorrorRulesCatalog>;
 

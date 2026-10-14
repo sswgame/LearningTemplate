@@ -51,7 +51,7 @@ namespace sw
      * @brief `<CropCatalog><Crop id="turnip" name="Turnip" seed="turnip_seed" produce="turnip" days="4" regrow="0" seasons="Spring,Fall"
      *        seedPrice="20" sellPrice="60" harvest="1"/></CropCatalog>` 를 읽습니다. 씨앗이나 수확물 아이템으로도 찾을 수 있습니다.
      */
-    class SW_GF_API CropCatalog : public XMLCatalog<CropCatalog>
+    class SW_KIT_API CropCatalog : public XMLCatalog<CropCatalog>
     {
         friend class XMLCatalog<CropCatalog>;
 

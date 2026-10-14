@@ -58,7 +58,7 @@ namespace sw
      * @class RunMap
      * @brief 길은 아래층 노드에서 위층의 같은 열이나 옆 열의 노드로 그어지고, 이미 그은 길과 엇갈리면 다른 쪽으로 꺾습니다. 마지막 층은 노드 하나(보스)로 모입니다.
      */
-    class SW_GF_API RunMap
+    class SW_KIT_API RunMap
     {
     public:
         static constexpr int32 kStart = -1; ///< 아직 첫 층을 고르지 않았다

@@ -26,7 +26,7 @@ namespace sw
 
 namespace sw
 {
-    class SW_GF_API LagCompensationHistory
+    class SW_KIT_API LagCompensationHistory
     {
     public:
         explicit LagCompensationHistory( int32 capacity = 32 );

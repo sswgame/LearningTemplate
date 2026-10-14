@@ -152,7 +152,7 @@ namespace sw
      * @brief 엔진 없이 도는 전장 상태입니다. 전투 계산은 `SRPGCombat`, 적 AI 는 `SRPGCommanderAI`, 승패는 `SRPGMission` 이 이 클래스를 사용해 처리합니다.
      * @details 카탈로그는 전장보다 오래 살아야 한다(유닛이 정의 포인터를 보관한다). 결과는 결정적이다. 같은 시드와 같은 명령이면 같은 결과가 나온다.
      */
-    class SW_GF_API SRPGBattlefield
+    class SW_KIT_API SRPGBattlefield
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "SRBF" );

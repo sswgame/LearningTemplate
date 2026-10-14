@@ -34,6 +34,9 @@ namespace sw
     SceneManager::SceneManager()
         : _listLoadedScene{}
         , _pActiveScene{ nullptr }
+        , _listPreviewScene{}
+        , _pFocusedScene{ nullptr }
+        , _nextPreviewKey{ 1 }
         , _bWorldPlaying{ false }
         , _sceneGeneration{ 0 }
         , _pRHIDevice{ nullptr }
@@ -118,6 +121,12 @@ namespace sw
             _asyncLoad->_bReady.store( false, std::memory_order_release );
         }
         _bLoadInFlight = false;
+        // 미리보기 씬이 먼저다 — 로드된 씬과 서비스를 공유하지 않지만, 내리는 순서를 만든 순서의 역으로 둔다.
+        while ( _listPreviewScene.empty() == false )
+        {
+            (void)destroyPreviewScene( _listPreviewScene.back()._scene.get() );
+        }
+        _pFocusedScene = nullptr;
         // 활성을 **씬을 내리기 전에** 비운다 — 플레이 중이면 여기서 활성 씬의 플레이가 끝난다(onEndPlay 가 살아 있는 씬을 본다).
         activateScene( nullptr );
         _bWorldPlaying = false;
@@ -511,6 +520,139 @@ namespace sw
         _pActiveScene->tick( deltaTime );
     }
 
+    namespace
+    {
+        /** @brief 정책을 씬에 적용합니다(오디오 · 물리). 틱 · 시간 배율은 `tickPreviewScenes` 가 읽는다. */
+        void applyPreviewPolicy( Scene& scene, const ScenePreviewPolicy& policy )
+        {
+            scene.setAudioUpdateEnabled( policy._bAudio );
+            if ( scene.getObjectManager() != nullptr )
+                scene.getObjectManager()->setPhysicsStepEnabled( policy._bPhysics );
+        }
+
+        /** @brief 정책의 플레이 설정에 맞춰 씬의 플레이 상태를 맞춥니다. */
+        void syncPreviewPlay( Scene& scene, bool bPlay )
+        {
+            GameObjectManager* pObjects = scene.getObjectManager();
+            if ( pObjects == nullptr || pObjects->hasBegunPlay() == bPlay )
+                return;
+            if ( bPlay )
+                pObjects->beginPlay();
+            else
+                pObjects->endPlay();
+        }
+    } // namespace
+
+    Scene* SceneManager::createPreviewScene( string_view name, const ScenePreviewPolicy& policy )
+    {
+        SW_MEMORY_SCOPE( Scene );
+        PreviewSceneEntry entry;
+        entry._key    = _nextPreviewKey++;
+        entry._scene  = sw::make_unique<Scene>( name, _services );
+        entry._policy = policy;
+        Scene* pScene = entry._scene.get();
+        applyPreviewPolicy( *pScene, policy );
+        _listPreviewScene.push_back( std::move( entry ) );
+        syncPreviewPlay( *pScene, policy._bPlay );
+        return pScene;
+    }
+
+    bool SceneManager::destroyPreviewScene( Scene* pScene )
+    {
+        const auto found = std::find_if( _listPreviewScene.begin(), _listPreviewScene.end(),
+                                         [pScene]( const PreviewSceneEntry& entry )
+        { return entry._scene.get() == pScene; } );
+        if ( pScene == nullptr || found == _listPreviewScene.end() )
+            return false;
+        if ( _pFocusedScene == pScene )
+            _pFocusedScene = nullptr;
+        syncPreviewPlay( *pScene, false ); // 씬이 살아 있는 동안 끝낸다
+        pScene->shutdown();
+        _listPreviewScene.erase( found );
+        return true;
+    }
+
+    bool SceneManager::isPreviewScene( const Scene* pScene ) const
+    {
+        return getPreviewSceneKey( pScene ) != kInvalidSceneKey;
+    }
+
+    uint32 SceneManager::getPreviewSceneKey( const Scene* pScene ) const
+    {
+        if ( pScene == nullptr )
+            return kInvalidSceneKey;
+        for ( const PreviewSceneEntry& entry : _listPreviewScene )
+        {
+            if ( entry._scene.get() == pScene )
+                return entry._key;
+        }
+        return kInvalidSceneKey;
+    }
+
+    Scene* SceneManager::findPreviewScene( uint32 key ) const
+    {
+        if ( key == kInvalidSceneKey )
+            return nullptr;
+        for ( const PreviewSceneEntry& entry : _listPreviewScene )
+        {
+            if ( entry._key == key )
+                return entry._scene.get();
+        }
+        return nullptr;
+    }
+
+    bool SceneManager::setPreviewPolicy( Scene* pScene, const ScenePreviewPolicy& policy )
+    {
+        for ( PreviewSceneEntry& entry : _listPreviewScene )
+        {
+            if ( entry._scene.get() != pScene )
+                continue;
+            entry._policy = policy;
+            applyPreviewPolicy( *pScene, policy );
+            syncPreviewPlay( *pScene, policy._bPlay );
+            return true;
+        }
+        return false;
+    }
+
+    const ScenePreviewPolicy* SceneManager::findPreviewPolicy( const Scene* pScene ) const
+    {
+        for ( const PreviewSceneEntry& entry : _listPreviewScene )
+        {
+            if ( entry._scene.get() == pScene )
+                return &entry._policy;
+        }
+        return nullptr;
+    }
+
+    void SceneManager::tickPreviewScenes( float32 deltaTime )
+    {
+        if ( _listPreviewScene.empty() )
+            return;
+        SW_MEMORY_SCOPE( Scene );
+        for ( PreviewSceneEntry& entry : _listPreviewScene )
+        {
+            if ( entry._policy._bTick == false )
+                continue;
+            entry._scene->tick( deltaTime * entry._policy._timeScale );
+        }
+    }
+
+    bool SceneManager::focusScene( Scene* pScene )
+    {
+        if ( pScene == nullptr )
+            return false;
+        bool bKnown = isPreviewScene( pScene );
+        for ( const unique_ptr<Scene>& loaded : _listLoadedScene )
+        {
+            bKnown = bKnown || loaded.get() == pScene;
+        }
+        if ( bKnown == false )
+            return false;
+        _pFocusedScene = pScene;
+        return true;
+    }
+
     /**
      * @brief 비동기 씬 로드나 전환이 진행 중인지 반환합니다.
      */
@@ -661,6 +803,8 @@ namespace sw
 
         if ( _pActiveScene == pScene )
             activateScene( nullptr );
+        if ( _pFocusedScene == pScene )
+            _pFocusedScene = nullptr;
 
         pScene->shutdown();
 

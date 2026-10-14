@@ -47,7 +47,7 @@ namespace sw
      * @class MetroDuelist
      * @brief 한 전투원의 체력, 스태미나, 패리, 막기입니다. 적 하나도 같은 것을 씁니다(보스의 강인도가 붕괴하면 반격할 수 있습니다).
      */
-    class SW_GF_API MetroDuelist
+    class SW_KIT_API MetroDuelist
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "MDUE" );
