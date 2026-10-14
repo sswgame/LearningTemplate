@@ -22,6 +22,7 @@
     #include "Engine/Object/GameObject/GameObject.h"
     #include "Engine/Object/GameObject/GameObjectManager.h"
     #include "Engine/Reflection/ReflectionTypes.h"
+    #include "Engine/Scene/AuthorityGhost.h"
     #include "Engine/Scene/Scene.h"
     #include "Engine/Scene/SceneManager.h"
     #include "Engine/Scene/SceneStateHash.h"
@@ -155,25 +156,10 @@ namespace sw
                     outReply = "no active scene";
                     return false;
                 }
-                struct Pose
-                {
-                    string _name;
-                    float3 _position{};
-                };
-                vector<Pose> listPose;
-                pManager->forEachGameObject( [&listPose]( GameObject* pObject )
-                {
-                    const SceneComponent* pRoot = pObject->getName().empty() ? nullptr : pObject->getComponent<SceneComponent>();
-                    if ( pRoot == nullptr )
-                        return;
-                    Pose& pose     = listPose.emplace_back();
-                    pose._name     = pObject->getName().c_str();
-                    pose._position = pRoot->getWorldPosition();
-                } );
-                std::sort( listPose.begin(), listPose.end(), []( const Pose& left, const Pose& right )
-                { return left._name < right._name; } );
+                vector<AuthorityPose> listPose;
+                AuthorityGhost::collectPoses( *pManager, listPose );
                 outReply.clear();
-                for ( const Pose& pose : listPose )
+                for ( const AuthorityPose& pose : listPose )
                 {
                     outReply += pose._name;
                     outReply += ' ';

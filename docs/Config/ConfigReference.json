@@ -2426,6 +2426,22 @@
    "source": "Source/Engine/Resource/AssetLoadProfiler.cpp"
   },
   {
+   "name": "gv_authorityGhostPort",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "서버 디버그 채널 포트 - 서버 포즈를 고스트로 겹침 (0=끄기)",
+   "source": "Source/Engine/Scene/AuthorityGhost.cpp"
+  },
+  {
+   "name": "gv_authorityGhostToken",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "서버 디버그 채널 토큰",
+   "source": "Source/Engine/Scene/AuthorityGhost.cpp"
+  },
+  {
    "name": "gv_benchAnimate",
    "type": "int32",
    "default": "1",

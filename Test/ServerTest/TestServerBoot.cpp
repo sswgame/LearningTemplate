@@ -10,11 +10,13 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Observability/DebugChannel.h"
+#include "Engine/Scene/AuthorityGhost.h"
 #include "Engine/Scene/SceneStateHash.h"
 
 #include "TestFramework/TestFramework.h"
 
 #include <chrono>
+#include <cmath>
 #include <thread>
 
 using namespace sw;
@@ -590,5 +592,84 @@ SW_TEST_CASE( ServerBootTest, StateHashHistoryFindsTheFirstDivergentTick )
     // 옮긴 뒤 처음 도는 틱이 첫 어긋난 틱이다. 두 서버가 멈춘 틱은 다를 수 있으므로 서버 B 기준 T_B + 5 이다.
     SW_EXPECT_EQUAL( serverB._pausedTick + 5, firstDivergentTick );
     SW_EXPECT_TRUE_MSG( serverB._pausedTick + 5 <= serverA._pausedTick + 40, "server A did not run far enough to compare" );
+#endif
+}
+
+/**
+ * @brief [AuthorityGhostTest] 서버 포즈 글을 읽고, 이름이 같은 오브젝트끼리 거리 차이를 구한다(서버 디버깅 S6의 순수 부분)
+ */
+SW_TEST_CASE( AuthorityGhostTest, ParsesPosesAndComputesDeltasByName )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "the authority ghost is a development-build feature" );
+#else
+    vector<AuthorityPose> listServer;
+    AuthorityGhost::parsePoses( "Hero Knight 1 2 3\nTree 10 0 0\nbad line\nOnlyServer 5 5 5\n", listServer );
+    SW_ASSERT_EQUAL( 3u, static_cast<uint32>( listServer.size() ) );
+    SW_EXPECT_TRUE( listServer[0]._name == "Hero Knight" ); // 이름은 공백을 품을 수 있다
+    vector<AuthorityPose> listLocal;
+    AuthorityGhost::parsePoses( "Hero Knight 1 2 3\nTree 10 0 4\nOnlyLocal 0 0 0\n", listLocal );
+    vector<AuthorityDelta> listDelta;
+    AuthorityGhost::computeDeltas( listLocal, listServer, listDelta );
+    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( listDelta.size() ) ); // 한쪽에만 있는 것은 건너뛴다
+    SW_EXPECT_TRUE( listDelta[0]._name == "Tree" );                 // 가장 어긋난 것이 먼저
+    SW_EXPECT_TRUE( listDelta[0]._distance > 3.999f && listDelta[0]._distance < 4.001f );
+    SW_EXPECT_TRUE( listDelta[1]._distance == 0.0f );
+#endif
+}
+
+/**
+ * @brief [ServerBootTest] 클라이언트의 로컬 포즈와 서버가 읽어 준 포즈의 차이가 서버에서 옮긴 거리와 같다(서버 디버깅 S6)
+ * @details 확인 시나리오: 서버의 `scene.poses` 를 "내 화면"으로 삼고 -> 서버에서 오브젝트를 옮기고 -> 다시 읽은 서버 포즈와 비교해 차이가 옮긴 거리로 나온다.
+ */
+SW_TEST_CASE( ServerBootTest, AuthorityGhostDeltaMatchesHowFarTheServerMovedAnObject )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "the debug channel is a development-build feature" );
+#else
+    if ( findServerPath().empty() )
+        SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
+    const uint16 port = findFreeStreamPort();
+    SW_ASSERT_TRUE( port != 0 );
+    ProcessOptions options;
+    options._bPipeStandardInput = true;
+    string          beforeText;
+    string          afterText;
+    string          objectName;
+    bool            bMoved = false;
+    const ServerRun run    = runServer( makeDebugServerArguments( port ), options, [&]( Process& process )
+       {
+        DebugChannelClient client;
+        if ( client.connect( NetAddress::makeLoopback( port ), kDebugToken, 10000 ) )
+        {
+            objectName = findFirstPoseName( client );
+            string reply;
+            (void)requestUntilOk( client, "scene.poses", beforeText );
+            bMoved = client.request( "teleport " + objectName + " 3 4 12", 5000, reply );
+            (void)client.request( "scene.poses", 5000, afterText );
+        }
+        (void)process.writeInput( "quit\n" ); // 못 쓰면 서버가 끝나지 않아 아래 expectCleanExit 가 실패한다
+    } );
+    expectCleanExit( run, "ConsoleCommand" );
+    SW_ASSERT_TRUE_MSG( bMoved, "the server could not move the object" );
+    vector<AuthorityPose> listLocal;
+    vector<AuthorityPose> listServer;
+    AuthorityGhost::parsePoses( beforeText, listLocal );
+    AuthorityGhost::parsePoses( afterText, listServer );
+    vector<AuthorityDelta> listDelta;
+    AuthorityGhost::computeDeltas( listLocal, listServer, listDelta );
+    SW_ASSERT_TRUE( listDelta.empty() == false );
+    SW_EXPECT_TRUE( listDelta[0]._name == objectName );
+    const AuthorityPose* pBefore = nullptr;
+    for ( const AuthorityPose& pose : listLocal )
+    {
+        pBefore = pose._name == objectName ? &pose : pBefore;
+    }
+    SW_ASSERT_TRUE( pBefore != nullptr );
+    const float32 dx       = 3.0f - pBefore->_position._x;
+    const float32 dy       = 4.0f - pBefore->_position._y;
+    const float32 dz       = 12.0f - pBefore->_position._z;
+    const float32 expected = std::sqrt( dx * dx + dy * dy + dz * dz );
+    SW_EXPECT_TRUE_MSG( listDelta[0]._distance > expected - 0.001f && listDelta[0]._distance < expected + 0.001f, "the reported difference is not the distance the server moved the object" );
 #endif
 }
