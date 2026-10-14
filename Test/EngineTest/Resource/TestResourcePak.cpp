@@ -55,8 +55,8 @@ namespace sw
                 packManager.unmountAll();
                 packManager.setAllowLooseFiles( true );
                 ResourcePaths::setSearchPriority( _listSearchPriority );
-                engine::getAssetManager().mountStartupPacks();
-                engine::getAssetManager().loadAssetRegistries();
+                engine::getSubsystem<AssetManager>().mountStartupPacks();
+                engine::getSubsystem<AssetManager>().loadAssetRegistries();
             }
 
             GlobalVfsScope( const GlobalVfsScope& )            = delete;
@@ -256,7 +256,7 @@ SW_TEST_CASE( ResourcePakTest, EveryPackCodecRoundTrips )
         { "text/long.txt", sw::string( 4096, 'A' ) },
     };
 
-    const sw::EnumInfo* pPackCompressionEnum = sw::engine::getTypeRegistry().findEnum<sw::PackCompressionType>();
+    const sw::EnumInfo* pPackCompressionEnum = sw::engine::getSubsystem<sw::TypeRegistry>().findEnum<sw::PackCompressionType>();
     SW_ASSERT_NOT_NULL( pPackCompressionEnum );
     uint32 testedCount{ 0 };
     for ( const auto& [value, name] : pPackCompressionEnum->_mapValueToName )
@@ -1126,7 +1126,7 @@ SW_TEST_CASE( ResourcePakTest, AsyncReadMatchesSyncReadAndSurvivesUnmount )
     sw::ResourcePakManager manager;
     SW_ASSERT_TRUE( manager.mountPack( packPath, 5000 ) );
 
-    sw::AsyncFileIO&                io = sw::engine::getAsyncFileIO();
+    sw::AsyncFileIO&                io = sw::engine::getSubsystem<sw::AsyncFileIO>();
     sw::vector<sw::vector<uint8>>   listBytes( kEntryCount );
     sw::vector<uint8>               listOk( kEntryCount, 0 );
     sw::vector<sw::AsyncReadHandle> listHandle;
@@ -1193,7 +1193,7 @@ SW_TEST_CASE( ResourcePakTest, AsyncReadRejectsCrcMismatch )
     sw::vector<uint8> received;
     {
         test::ScopedLogSuppressor suppressor;
-        const sw::AsyncReadHandle handle = reader.readFileAsync( sw::engine::getAsyncFileIO(), sw::StringUtil::computeHash64( sw::string_view{ entryPath } ), sw::AsyncIOPriority::High,
+        const sw::AsyncReadHandle handle = reader.readFileAsync( sw::engine::getSubsystem<sw::AsyncFileIO>(), sw::StringUtil::computeHash64( sw::string_view{ entryPath } ), sw::AsyncIOPriority::High,
                                                                  SW_DELEGATE_LAMBDA( sw::ResourceReadCompleteDelegate, [&]( bool bRead, sw::vector<uint8>& bytes )
         {
             bCalled  = true;

@@ -202,7 +202,7 @@ SW_TEST_CASE( LocalizationManagerTest, HotReloadGoesThroughTheAssetCacheRegistry
 {
     const sw::string         folder           = test::makeTempDirectory( "loc_hot_reload" );
     const sw::string         projectPath      = LocalizationManagerTestInternal::writeSampleProject( folder );
-    sw::LocalizationManager& loc              = sw::engine::getLocalizationManager();
+    sw::LocalizationManager& loc              = sw::engine::getSubsystem<sw::LocalizationManager>();
     const sw::string         previousLanguage = loc.getCurrentLanguage();
     SW_ASSERT_TRUE( loc.mountProject( projectPath, sw::LocalizationScope::Game ) );
     SW_ASSERT_TRUE( loc.setCurrentLanguage( "ko" ) );
@@ -289,13 +289,13 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageChangedCallbackNotification )
 SW_TEST_CASE( LocalizationManagerTest, GameStringsMountsTheGameProject )
 {
     sw::SubsystemScope gameService;
-    SW_ASSERT_TRUE( gameService.bind( &sw::engine::getLocalizationManager() ) );
+    SW_ASSERT_TRUE( gameService.bind( &sw::engine::getSubsystem<sw::LocalizationManager>() ) );
     sw::test::ScopedGameServiceBinding scopedBinding{ gameService };
 
     const sw::string folder           = test::makeTempDirectory( "loc_gamestrings" );
     const sw::string projectPath      = LocalizationManagerTestInternal::writeSampleProject( folder );
-    const sw::string previousLanguage = sw::engine::getLocalizationManager().getCurrentLanguage();
-    const sw::string previousFallback = sw::engine::getLocalizationManager().getFallbackLanguage();
+    const sw::string previousLanguage = sw::engine::getSubsystem<sw::LocalizationManager>().getCurrentLanguage();
+    const sw::string previousFallback = sw::engine::getSubsystem<sw::LocalizationManager>().getFallbackLanguage();
 
     SW_ASSERT_TRUE( sw::GameStrings::initialize( projectPath, "ko_KR", "en_US" ) );
     SW_EXPECT_EQUAL( sw::string( "ko_kr" ), sw::GameStrings::getLanguage() );
@@ -314,10 +314,10 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsMountsTheGameProject )
     sw::GameStrings::unregisterLanguageChangedCallback( callbackID );
 
     sw::GameStrings::clear();
-    SW_EXPECT_FALSE( sw::engine::getLocalizationManager().hasString( sw::hashed_string( "ui.title" ) ) );
-    sw::engine::getLocalizationManager().clearMissingKeys();
-    (void)sw::engine::getLocalizationManager().setCurrentLanguage( previousLanguage );
-    sw::engine::getLocalizationManager().setFallbackLanguage( previousFallback );
+    SW_EXPECT_FALSE( sw::engine::getSubsystem<sw::LocalizationManager>().hasString( sw::hashed_string( "ui.title" ) ) );
+    sw::engine::getSubsystem<sw::LocalizationManager>().clearMissingKeys();
+    (void)sw::engine::getSubsystem<sw::LocalizationManager>().setCurrentLanguage( previousLanguage );
+    sw::engine::getSubsystem<sw::LocalizationManager>().setFallbackLanguage( previousFallback );
 }
 
 /**
@@ -325,7 +325,7 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsMountsTheGameProject )
  */
 SW_TEST_CASE( LocalizationManagerTest, LocTextMacroLooksUpNamespaceDotKey )
 {
-    sw::LocalizationManager& loc = sw::engine::getLocalizationManager();
+    sw::LocalizationManager& loc = sw::engine::getSubsystem<sw::LocalizationManager>();
     loc.setString( "qa", sw::hashed_string( "Menu.Start" ), "Commencer" );
     const sw::string previousLanguage = loc.getCurrentLanguage();
     SW_ASSERT_TRUE( loc.setCurrentLanguage( "qa" ) );

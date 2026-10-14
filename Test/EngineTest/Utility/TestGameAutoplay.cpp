@@ -34,7 +34,7 @@ SW_TEST_CASE( GameAutoplayTest, FakeGameRegistersAndTheSwitchFlipsItsVariable )
     SW_EXPECT_TRUE( GameAutoplay::findActive() == nullptr ); // 엔진 테스트에는 게임이 없다
     SW_EXPECT_FALSE( GameAutoplay::setOn( true ) );
 
-    GlobalVariableManager& variables = engine::getGlobalVariableManager();
+    GlobalVariableManager& variables = engine::getSubsystem<GlobalVariableManager>();
     SW_ASSERT_TRUE( variables.registerVariable( "gv_fakeGameAutoPlay", GlobalVariableType::Int32, &s_fakeGameAutoPlay, int32{ 0 }, "fake game autoplay", "", "GameAutoplayTest" ) );
     GlobalVariableInfo* pInfo = variables.findVariable( "gv_fakeGameAutoPlay" );
     SW_ASSERT_NOT_NULL( pInfo );

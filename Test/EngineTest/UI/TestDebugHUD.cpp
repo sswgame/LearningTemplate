@@ -44,7 +44,7 @@ namespace
             }
         }
 
-        static sw::GlobalVariableInfo* findVariable( const utf8* pName ) { return sw::engine::getGlobalVariableManager().findVariable( pName ); }
+        static sw::GlobalVariableInfo* findVariable( const utf8* pName ) { return sw::engine::getSubsystem<sw::GlobalVariableManager>().findVariable( pName ); }
 
         static sw::string readVariable( const utf8* pName )
         {
@@ -100,7 +100,7 @@ namespace
             , _hud{}
         {
             sw::UserSettingsTargets targets;
-            targets._pGlobalVariableManager = &sw::engine::getGlobalVariableManager();
+            targets._pGlobalVariableManager = &sw::engine::getSubsystem<sw::GlobalVariableManager>();
             _settings.initialize( targets );
             SW_EXPECT_TRUE( _settings.loadSchema( sw::DebugHUD::kSettingsSchemaPath ) );
             _settings.reapplyAll();

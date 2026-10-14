@@ -32,7 +32,7 @@ SW_TEST_CASE( ConfigReferenceTest, FieldsMatchReflection )
         {
             const sw::JSONValue typeEntry = listType.at( typeIndex );
             const sw::string    typeName  = typeEntry.get( "name" ).asString();
-            const sw::TypeInfo* pType     = sw::engine::getTypeRegistry().findType( sw::hashed_string( typeName ) );
+            const sw::TypeInfo* pType     = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( typeName ) );
             if ( pType == nullptr )
                 continue;
 

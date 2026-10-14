@@ -101,7 +101,7 @@ namespace
         sw::PhysicsSettings settings;
         settings.ensureDefaults();
         settings._workerCount2D                    = workerCount;
-        sw::unique_ptr<sw::IPhysicsScene2D> pScene = sw::engine::getPhysicsSystem().createScene2D( settings );
+        sw::unique_ptr<sw::IPhysicsScene2D> pScene = sw::engine::getSubsystem<sw::PhysicsSystem>().createScene2D( settings );
         outListSample.clear();
         if ( pScene == nullptr )
             return;

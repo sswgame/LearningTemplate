@@ -189,7 +189,7 @@ namespace
  */
 SW_TEST_CASE( ReflectionParserTest, FallbackCommentTest )
 {
-    const sw::TypeInfo* info = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::TestScriptComponent" ) );
+    const sw::TypeInfo* info = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::TestScriptComponent" ) );
     SW_ASSERT_NOT_NULL( info );
 
     // _shouldNotBeParsed 프로퍼티는 등록되지 않아야 함 (주석 안에 PROPERTY()가 있으므로 무시되어야 함)
@@ -286,15 +286,15 @@ SW_TEST_CASE( ReflectionParserTest, AnnotationKindParsing )
  */
 SW_TEST_CASE( ReflectionParserTest, AssignedFlagFormMatchesBareToken )
 {
-    const sw::TypeInfo* pAbstract = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::AssignedAbstractBase" ) );
+    const sw::TypeInfo* pAbstract = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::AssignedAbstractBase" ) );
     SW_ASSERT_NOT_NULL( pAbstract );
     SW_EXPECT_TRUE( pAbstract->_bAbstract == SW_TRUE );
 
-    const sw::TypeInfo* pStatic = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::AssignedStaticLibrary" ) );
+    const sw::TypeInfo* pStatic = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::AssignedStaticLibrary" ) );
     SW_ASSERT_NOT_NULL( pStatic );
     SW_EXPECT_TRUE( pStatic->_bStatic == SW_TRUE );
 
-    const sw::TypeInfo* pActor = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::AssignedFlagActor" ) );
+    const sw::TypeInfo* pActor = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::AssignedFlagActor" ) );
     SW_ASSERT_NOT_NULL( pActor );
 
     const sw::PropertyInfo* pAlbedo = pActor->findProperty( sw::hashed_string( "_albedo" ) );
@@ -323,7 +323,7 @@ SW_TEST_CASE( ReflectionParserTest, AssignedFlagFormMatchesBareToken )
 SW_TEST_CASE( ReflectionParserTest, CodegenStaticLibraryAndCtorMetadata )
 {
     // 1) Static 라이브러리 함수 심볼 코드젠 검증 (StaticDemoLibrary::doubleInt)
-    const sw::TypeInfo* pStaticType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::StaticDemoLibrary" ) );
+    const sw::TypeInfo* pStaticType = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::StaticDemoLibrary" ) );
     SW_ASSERT_NOT_NULL( pStaticType );
     SW_EXPECT_TRUE( pStaticType->_bStatic == SW_TRUE );
 
@@ -336,7 +336,7 @@ SW_TEST_CASE( ReflectionParserTest, CodegenStaticLibraryAndCtorMetadata )
 #endif
 
     // 2) 명시적 생성자 코드젠 ($ctor, $ctor(int32)) 검증
-    const sw::TypeInfo* pCtorType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::CtorDemoActor" ) );
+    const sw::TypeInfo* pCtorType = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::CtorDemoActor" ) );
     SW_ASSERT_NOT_NULL( pCtorType );
 
     const sw::FunctionInfo* pDefaultCtor = pCtorType->findMethod( sw::hashed_string( "$ctor" ) );
@@ -348,12 +348,12 @@ SW_TEST_CASE( ReflectionParserTest, CodegenStaticLibraryAndCtorMetadata )
     SW_EXPECT_TRUE( pParamCtor->_metadata._bConstructor == SW_TRUE );
 
     // 3) AbstractDemoBase _bAbstract 검증
-    const sw::TypeInfo* pAbstractType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::AbstractDemoBase" ) );
+    const sw::TypeInfo* pAbstractType = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::AbstractDemoBase" ) );
     SW_ASSERT_NOT_NULL( pAbstractType );
     SW_EXPECT_TRUE( pAbstractType->_bAbstract == SW_TRUE );
 
     // 4) AssetPathActor 메타데이터 검증
-    const sw::TypeInfo* pAssetPathType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::AssetPathActor" ) );
+    const sw::TypeInfo* pAssetPathType = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::AssetPathActor" ) );
     SW_ASSERT_NOT_NULL( pAssetPathType );
     const sw::PropertyInfo* pAlbedoProp = pAssetPathType->findProperty( sw::hashed_string( "_albedo" ) );
     SW_ASSERT_NOT_NULL( pAlbedoProp );
@@ -367,7 +367,7 @@ SW_TEST_CASE( ReflectionParserTest, CodegenStaticLibraryAndCtorMetadata )
 SW_TEST_CASE( ReflectionParserTest, MultiplePropertyAliasesAndRenameCompat )
 {
     // 1) 프로퍼티 다중 별칭 (Alias = "hp, HitPoints")
-    const sw::TypeInfo* pAliasType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::AliasAndReorderTestActor" ) );
+    const sw::TypeInfo* pAliasType = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::AliasAndReorderTestActor" ) );
     SW_ASSERT_NOT_NULL( pAliasType );
 
     const sw::PropertyInfo* pMainProp = pAliasType->findProperty( sw::hashed_string( "_currentHp" ) );
@@ -379,15 +379,15 @@ SW_TEST_CASE( ReflectionParserTest, MultiplePropertyAliasesAndRenameCompat )
     SW_EXPECT_EQUAL( pMainProp, pAlias2 );
 
     // 2) 타입 개명 호환 (Alias = LegacyRenameActor)
-    const sw::TypeInfo* pTypeCurrent = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::RenameCompatActor" ) );
-    const sw::TypeInfo* pTypeLegacy  = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::LegacyRenameActor" ) );
+    const sw::TypeInfo* pTypeCurrent = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::RenameCompatActor" ) );
+    const sw::TypeInfo* pTypeLegacy  = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::LegacyRenameActor" ) );
     SW_ASSERT_NOT_NULL( pTypeCurrent );
     SW_ASSERT_NOT_NULL( pTypeLegacy );
     SW_EXPECT_EQUAL( pTypeCurrent->_typeID, pTypeLegacy->_typeID );
     SW_EXPECT_TRUE( pTypeCurrent->_fullyQualifiedName == pTypeLegacy->_fullyQualifiedName );
 
     // 3) 저작 기본값 (PROPERTY(Default = "75"))
-    const sw::TypeInfo* pDefaultType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DefaultValueTestActor" ) );
+    const sw::TypeInfo* pDefaultType = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::DefaultValueTestActor" ) );
     SW_ASSERT_NOT_NULL( pDefaultType );
     const sw::PropertyInfo* pManaProp  = pDefaultType->findProperty( sw::hashed_string( "_mana" ) );
     const sw::PropertyInfo* pTitleProp = pDefaultType->findProperty( sw::hashed_string( "_title" ) );
@@ -432,7 +432,7 @@ SW_TEST_CASE( ReflectionParserTest, ParserUtilExtremeEdgeCases )
  */
 SW_TEST_CASE( ReflectionParserTest, RPCMethodMetadataAndInvokerExecution )
 {
-    const sw::TypeInfo* pRPCType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::RPCDemoActor" ) );
+    const sw::TypeInfo* pRPCType = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::RPCDemoActor" ) );
     SW_ASSERT_NOT_NULL( pRPCType );
 
     const sw::FunctionInfo* pMethod = pRPCType->findMethod( sw::hashed_string( "applyDamage" ) );

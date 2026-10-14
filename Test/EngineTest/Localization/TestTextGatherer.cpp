@@ -76,7 +76,7 @@ namespace
             tooltip._typeName = sw::hashed_string( "string" );
             s_info._listProperty.push_back( tooltip );
 
-            sw::engine::getTypeRegistry().registerClass( s_info );
+            sw::engine::getSubsystem<sw::TypeRegistry>().registerClass( s_info );
         }
 #endif
     };

@@ -36,7 +36,7 @@ namespace
     {
     public:
         ScopedVariable( const utf8* pName, sw::string_view value )
-            : _pInfo{ sw::engine::getGlobalVariableManager().findVariable( pName ) }
+            : _pInfo{ sw::engine::getSubsystem<sw::GlobalVariableManager>().findVariable( pName ) }
             , _previous{}
         {
             SW_EXPECT_TRUE( _pInfo != nullptr );

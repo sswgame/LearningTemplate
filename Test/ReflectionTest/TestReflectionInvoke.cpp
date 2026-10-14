@@ -242,7 +242,7 @@ SW_TEST_CASE( ReflectionInvokeTest, EventBindsToFunctionByName )
  */
 SW_TEST_CASE( ReflectionInvokeTest, DescribeTypeShowsParametersAndEvents )
 {
-    const sw::string text = sw::engine::getTypeRegistry().describeType( "sw::InvokeDemoActor" );
+    const sw::string text = sw::engine::getSubsystem<sw::TypeRegistry>().describeType( "sw::InvokeDemoActor" );
     SW_EXPECT_TRUE_MSG( text.find( "FUNCTION heal(int32 amount, float32 multiplier = 1.5f) -> int32" ) != sw::string::npos, text.c_str() );
     SW_EXPECT_TRUE_MSG( text.find( "EVENT _onHpChanged(int32 newHp, string reason)" ) != sw::string::npos, text.c_str() );
 }

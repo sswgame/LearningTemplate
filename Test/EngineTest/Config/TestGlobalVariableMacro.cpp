@@ -42,7 +42,7 @@ SW_TEST_GLOBAL_VARIABLE( TestGlobalVariableMode, gv_testOnlyEnum, TestGlobalVari
  */
 SW_TEST_CASE( GlobalVariableMacroTest, DefinedVariablesAreRegisteredAtStartup )
 {
-    sw::GlobalVariableInfo* pBoolInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testBool" );
+    sw::GlobalVariableInfo* pBoolInfo = sw::engine::getSubsystem<sw::GlobalVariableManager>().findVariable( "gv_testBool" );
     SW_EXPECT_TRUE( pBoolInfo != nullptr );
     if ( pBoolInfo != nullptr )
     {
@@ -52,7 +52,7 @@ SW_TEST_CASE( GlobalVariableMacroTest, DefinedVariablesAreRegisteredAtStartup )
         SW_EXPECT_TRUE( pBoolInfo->_pData == &gv_testBool );
     }
 
-    sw::GlobalVariableInfo* pIntInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testInt" );
+    sw::GlobalVariableInfo* pIntInfo = sw::engine::getSubsystem<sw::GlobalVariableManager>().findVariable( "gv_testInt" );
     SW_EXPECT_TRUE( pIntInfo != nullptr );
     if ( pIntInfo != nullptr )
     {
@@ -61,17 +61,17 @@ SW_TEST_CASE( GlobalVariableMacroTest, DefinedVariablesAreRegisteredAtStartup )
         SW_EXPECT_TRUE( pIntInfo->_pData == &gv_testInt );
     }
 
-    sw::GlobalVariableInfo* pFloatInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testFloat" );
+    sw::GlobalVariableInfo* pFloatInfo = sw::engine::getSubsystem<sw::GlobalVariableManager>().findVariable( "gv_testFloat" );
     SW_EXPECT_TRUE( pFloatInfo != nullptr );
     if ( pFloatInfo != nullptr )
         SW_EXPECT_NEAR_EQUAL( 45.0f, pFloatInfo->getValueAsFloat(), 1e-4f );
 
-    sw::GlobalVariableInfo* pStrInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testString" );
+    sw::GlobalVariableInfo* pStrInfo = sw::engine::getSubsystem<sw::GlobalVariableManager>().findVariable( "gv_testString" );
     SW_EXPECT_TRUE( pStrInfo != nullptr );
     if ( pStrInfo != nullptr )
         SW_EXPECT_EQUAL( sw::string( "InitialValue" ), pStrInfo->getValueAsString() );
 
-    const uint32 varCount = sw::engine::getGlobalVariableManager().getVariableCount();
+    const uint32 varCount = sw::engine::getSubsystem<sw::GlobalVariableManager>().getVariableCount();
     SW_EXPECT_TRUE( varCount >= 4u );
 }
 
@@ -82,7 +82,7 @@ SW_TEST_CASE( GlobalVariableMacroTest, DefinedVariablesAreRegisteredAtStartup )
  */
 SW_TEST_CASE( GlobalVariableMacroTest, DefinitionTakesStorageFromTypeAndDefaultFromVariable )
 {
-    sw::GlobalVariableManager& manager = sw::engine::getGlobalVariableManager();
+    sw::GlobalVariableManager& manager = sw::engine::getSubsystem<sw::GlobalVariableManager>();
 
     sw::GlobalVariableInfo* pEnumInfo = manager.findVariable( "gv_testEnum" );
     SW_ASSERT_NOT_NULL( pEnumInfo );
@@ -119,7 +119,7 @@ SW_TEST_CASE( GlobalVariableMacroTest, DefinitionTakesStorageFromTypeAndDefaultF
  */
 SW_TEST_CASE( GlobalVariableMacroTest, TestOnlyVariablesAreMarkedAndDroppedInShipping )
 {
-    sw::GlobalVariableManager& manager = sw::engine::getGlobalVariableManager();
+    sw::GlobalVariableManager& manager = sw::engine::getSubsystem<sw::GlobalVariableManager>();
 
     // 값은 어느 빌드에서나 읽힌다(Shipping 에서는 등록되지 않은 기본값이다).
     SW_EXPECT_TRUE( gv_testOnlyBool );
@@ -162,7 +162,7 @@ SW_TEST_CASE( GlobalVariableMacroTest, TestOnlyVariablesAreMarkedAndDroppedInShi
  */
 SW_TEST_CASE( GlobalVariableMacroTest, EngineEnumVariableTakesEnumeratorNames )
 {
-    sw::GlobalVariableInfo* pInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_rhiBackend" );
+    sw::GlobalVariableInfo* pInfo = sw::engine::getSubsystem<sw::GlobalVariableManager>().findVariable( "gv_rhiBackend" );
     SW_ASSERT_NOT_NULL( pInfo );
     const int32 valueBefore = pInfo->getValueAsInt();
     SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [pInfo, valueBefore]()

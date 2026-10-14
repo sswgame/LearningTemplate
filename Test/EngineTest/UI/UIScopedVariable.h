@@ -16,7 +16,7 @@ class ScopedBoolVariable
 {
 public:
     ScopedBoolVariable( const utf8* pName, bool bValue )
-        : _pInfo{ sw::engine::getGlobalVariableManager().findVariable( pName ) }
+        : _pInfo{ sw::engine::getSubsystem<sw::GlobalVariableManager>().findVariable( pName ) }
         , _bPrevious{ false }
     {
         SW_EXPECT_TRUE( _pInfo != nullptr );

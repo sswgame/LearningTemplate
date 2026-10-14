@@ -207,7 +207,7 @@ SW_TEST_CASE( BoxCollider2DTest, OverlapEventsReachBothObjectsAfterTheTick )
 SW_TEST_CASE( BoxCollider2DTest, ColliderTypeChangedDuringPlayFiltersTheNextStep )
 {
     sw::GameObjectManager manager;
-    manager.getSceneService<sw::ScenePhysics>().getOverlapWorld2D().getPhysicsOverlapWorld().layers().setLayerCollision( 0, 1, false );
+    manager.getSubsystem<sw::ScenePhysics>().getOverlapWorld2D().getPhysicsOverlapWorld().layers().setLayerCollision( 0, 1, false );
     const OverlapProbe a = spawnProbe( manager, "A", 0.0f );
     const OverlapProbe b = spawnProbe( manager, "B", 0.5f );
     SW_ASSERT_NOT_NULL( a._pListener );
@@ -293,7 +293,7 @@ SW_TEST_CASE( BoxCollider2DTest, TriggerCollidersReportOverlapsAndSaySo )
 SW_TEST_CASE( BoxCollider2DTest, GeometricAndLayerOverlapAnswerTheSameBeforeAndAfterBodiesExist )
 {
     sw::GameObjectManager manager;
-    manager.getSceneService<sw::ScenePhysics>().getOverlapWorld2D().getPhysicsOverlapWorld().layers().setLayerCollision( 1, 2, false );
+    manager.getSubsystem<sw::ScenePhysics>().getOverlapWorld2D().getPhysicsOverlapWorld().layers().setLayerCollision( 1, 2, false );
     const OverlapProbe blocked = spawnProbe( manager, "Blocked", 0.0f );
     const OverlapProbe blocker = spawnProbe( manager, "Blocker", 0.5f );
     const OverlapProbe allowed = spawnProbe( manager, "Allowed", -0.5f );

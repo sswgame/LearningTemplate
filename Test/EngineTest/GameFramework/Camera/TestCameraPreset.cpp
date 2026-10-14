@@ -2,6 +2,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -73,7 +74,7 @@ SW_TEST_CASE( CameraPresetTest, EveryCurveRunsFromZeroToOneWithoutGoingBack )
     for ( const BlendCurve curve : arrCurve )
     {
         const BlendCurveDef spec  = curve == BlendCurve::Custom ? CameraPresetTestInternal::makeCustomBlend() : CameraPresetTestInternal::makeBlend( curve );
-        const utf8*         pName = engine::getTypeRegistry().enumToString( curve );
+        const utf8*         pName = engine::getSubsystem<TypeRegistry>().enumToString( curve );
         SW_EXPECT_NEAR_EQUAL( 0.0f, evaluateBlendWeight( spec, 0.0f ), 1.0e-6f );
         SW_EXPECT_NEAR_EQUAL( 1.0f, evaluateBlendWeight( spec, 1.0f ), 1.0e-5f );
         float32 previous = 0.0f;

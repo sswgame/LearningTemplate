@@ -67,7 +67,7 @@ SW_TEST_CASE( EditorNavigationCommandsTest, BakesTheEditedSceneBeforePlay )
 {
     using Internal = EditorNavigationCommandsTestInternal;
     sw::GameObjectManager manager;
-    manager.getSceneService<sw::SceneNavigation>().setSettings( Internal::makeSettings() );
+    manager.getSubsystem<sw::SceneNavigation>().setSettings( Internal::makeSettings() );
     SW_EXPECT_EQUAL( 0u, sw::editor::EditorNavigationCommands::bakeAll( manager ) );
     SW_EXPECT_EQUAL( 0u, sw::editor::EditorNavigationCommands::countBakedMeshes( manager ) );
 
@@ -75,7 +75,7 @@ SW_TEST_CASE( EditorNavigationCommandsTest, BakesTheEditedSceneBeforePlay )
     Internal::spawnSurface( manager );
     SW_EXPECT_EQUAL( 1u, sw::editor::EditorNavigationCommands::bakeAll( manager ) );
     SW_EXPECT_EQUAL( 1u, sw::editor::EditorNavigationCommands::countBakedMeshes( manager ) );
-    const sw::INavMesh* pNavMesh = manager.getSceneService<sw::SceneNavigation>().findNavMesh( sw::hashed_string( "EditorTestHumanoid" ) );
+    const sw::INavMesh* pNavMesh = manager.getSubsystem<sw::SceneNavigation>().findNavMesh( sw::hashed_string( "EditorTestHumanoid" ) );
     SW_ASSERT_NOT_NULL( pNavMesh );
     const uint32 openFloorPolygonCount = pNavMesh->getPolygonCount();
     SW_EXPECT_TRUE( openFloorPolygonCount > 0 );
@@ -83,7 +83,7 @@ SW_TEST_CASE( EditorNavigationCommandsTest, BakesTheEditedSceneBeforePlay )
     // 벽을 세우고 다시 베이크하면 마련해 둔 메시를 버리고 새 기하로 짓는다 — 벽이 바닥을 가르므로 폴리곤이 달라진다.
     Internal::spawnStaticBox( manager, "Wall", sw::float3{ 0.0f, 1.0f, 0.0f }, sw::float3{ 0.5f, 1.0f, 8.0f } );
     SW_EXPECT_EQUAL( 1u, sw::editor::EditorNavigationCommands::bakeAll( manager ) );
-    const sw::INavMesh* pRebaked = manager.getSceneService<sw::SceneNavigation>().findNavMesh( sw::hashed_string( "EditorTestHumanoid" ) );
+    const sw::INavMesh* pRebaked = manager.getSubsystem<sw::SceneNavigation>().findNavMesh( sw::hashed_string( "EditorTestHumanoid" ) );
     SW_ASSERT_NOT_NULL( pRebaked );
     SW_EXPECT_TRUE( pRebaked->getPolygonCount() != openFloorPolygonCount );
 }

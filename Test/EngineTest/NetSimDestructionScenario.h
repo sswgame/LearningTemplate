@@ -452,7 +452,7 @@ namespace test
         result._settleTicks = static_cast<int32>( tick ) - static_cast<int32>( options._tickCount );
 
         // 끝 — 멈춘 덩어리 오차, 파편 레이어, 대역폭.
-        const PhysicsSettings*    pSettings      = harness.getServer().getObjectManager().getSceneService<sw::ScenePhysics>().findSettings();
+        const PhysicsSettings*    pSettings      = harness.getServer().getObjectManager().getSubsystem<sw::ScenePhysics>().findSettings();
         uint8                     characterLayer = 0;
         uint8                     debrisLayer    = 0;
         const bool                bLayers        = pSettings != nullptr && pSettings->findLayerIndex( "Character", characterLayer ) && pSettings->findLayerIndex( "Debris", debrisLayer );

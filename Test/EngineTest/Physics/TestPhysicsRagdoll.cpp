@@ -67,7 +67,7 @@ namespace
     sw::unique_ptr<sw::IPhysicsScene3D> makeSceneWithFloor()
     {
         // 엔진 설정 표(재질 Flesh 등)로 만든다 — 바디는 레이어 0(Default)에 선다.
-        sw::unique_ptr<sw::IPhysicsScene3D> pScene = sw::engine::getPhysicsSystem().createScene3D();
+        sw::unique_ptr<sw::IPhysicsScene3D> pScene = sw::engine::getSubsystem<sw::PhysicsSystem>().createScene3D();
         if ( pScene == nullptr )
             return pScene;
         sw::PhysicsBodyDesc3D  floor;

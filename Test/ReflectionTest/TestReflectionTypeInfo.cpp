@@ -21,7 +21,7 @@
 SW_TEST_CASE( ReflectionTypeRegistryTest, FindRegisteredClass )
 {
     const sw::TypeInfo* info =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::DummyActor" ) );
 
     SW_EXPECT_TRUE( info != nullptr );
     if ( info == nullptr )
@@ -37,7 +37,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, FindRegisteredClass )
 SW_TEST_CASE( ReflectionTypeRegistryTest, FindNonExistentClass )
 {
     const sw::TypeInfo* info =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::NotExist" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::NotExist" ) );
 
     SW_EXPECT_TRUE( info == nullptr );
 }
@@ -47,23 +47,23 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, FindNonExistentClass )
  */
 SW_TEST_CASE( ReflectionTypeRegistryTest, PrimitiveBuiltins )
 {
-    const sw::TypeInfo* i32 = sw::engine::getTypeRegistry().findType( sw::hashed_string( "int32" ) );
+    const sw::TypeInfo* i32 = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "int32" ) );
     SW_ASSERT_NOT_NULL( i32 );
     SW_EXPECT_TRUE( i32->isPrimitive() );
     SW_EXPECT_EQUAL( sizeof( int32 ), i32->_size );
     SW_EXPECT_FALSE( i32->canConstruct() );
 
-    const sw::TypeInfo* f32 = sw::engine::getTypeRegistry().findType( sw::hashed_string( "float32" ) );
+    const sw::TypeInfo* f32 = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "float32" ) );
     SW_ASSERT_NOT_NULL( f32 );
     SW_EXPECT_TRUE( f32->isPrimitive() );
 
-    const sw::TypeInfo* str = sw::engine::getTypeRegistry().findType( sw::hashed_string( "string" ) );
+    const sw::TypeInfo* str = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "string" ) );
     SW_ASSERT_NOT_NULL( str );
     SW_EXPECT_TRUE( str->isPrimitive() );
     SW_EXPECT_EQUAL( sizeof( std::string ), str->_size );
 
     // ReflectBuiltins 별칭 → canonical TypeInfo (직렬화 핸들러 resolve 용).
-    const sw::TypeInfo* viaInt = sw::engine::getTypeRegistry().findType( sw::hashed_string( "int32" ) );
+    const sw::TypeInfo* viaInt = sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "int32" ) );
     SW_ASSERT_NOT_NULL( viaInt );
     SW_EXPECT_EQUAL( i32->_typeID, viaInt->_typeID );
     SW_EXPECT_TRUE( viaInt->_name == sw::hashed_string( "int32" ) );
@@ -75,7 +75,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, PrimitiveBuiltins )
 SW_TEST_CASE( ReflectionTypeInfoTest, PropertyCount )
 {
     const sw::TypeInfo* info =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::DummyActor" ) );
     SW_EXPECT_TRUE( info != nullptr );
     if ( info == nullptr )
         return;
@@ -89,7 +89,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, PropertyCount )
 SW_TEST_CASE( ReflectionTypeInfoTest, FindExistingProperty )
 {
     const sw::TypeInfo* info =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::DummyActor" ) );
     SW_EXPECT_TRUE( info != nullptr );
     if ( info == nullptr )
         return;
@@ -138,7 +138,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, PropertyMetadataSupport )
 SW_TEST_CASE( ReflectionTypeInfoTest, FindNonExistentProperty )
 {
     const sw::TypeInfo* info =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::DummyActor" ) );
     SW_EXPECT_TRUE( info != nullptr );
     if ( info == nullptr )
         return;
@@ -153,7 +153,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, FindNonExistentProperty )
 SW_TEST_CASE( ReflectionTypeInfoTest, IsA_SameType )
 {
     const sw::TypeInfo* info =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::DummyActor" ) );
     SW_EXPECT_TRUE( info != nullptr );
     if ( info == nullptr )
         return;
@@ -167,7 +167,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, IsA_SameType )
 SW_TEST_CASE( ReflectionTypeInfoTest, IsA_ParentType )
 {
     const sw::TypeInfo* info =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::DummyActor" ) );
     SW_EXPECT_TRUE( info != nullptr );
     if ( info == nullptr )
         return;
@@ -181,7 +181,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, IsA_ParentType )
 SW_TEST_CASE( ReflectionTypeInfoTest, IsA_UnrelatedType )
 {
     const sw::TypeInfo* info =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::DummyActor" ) );
     SW_EXPECT_TRUE( info != nullptr );
     if ( info == nullptr )
         return;
@@ -195,7 +195,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, IsA_UnrelatedType )
 SW_TEST_CASE( ReflectionPropertyInfoTest, OffsetCorrectness )
 {
     const sw::TypeInfo* info =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::DummyActor" ) );
     SW_EXPECT_TRUE( info != nullptr );
     if ( info == nullptr )
         return;
@@ -224,7 +224,7 @@ SW_TEST_CASE( ReflectionPropertyInfoTest, OffsetCorrectness )
 SW_TEST_CASE( ReflectionPropertyInfoTest, GetValuePtr )
 {
     const sw::TypeInfo* info =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::DummyActor" ) );
     SW_EXPECT_TRUE( info != nullptr );
     if ( info == nullptr )
         return;
@@ -248,7 +248,7 @@ SW_TEST_CASE( ReflectionPropertyInfoTest, GetValuePtr )
 SW_TEST_CASE( ReflectionPropertyInfoTest, SetValue )
 {
     const sw::TypeInfo* info =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::DummyActor" ) );
     SW_EXPECT_TRUE( info != nullptr );
     if ( info == nullptr )
         return;
@@ -271,7 +271,7 @@ SW_TEST_CASE( ReflectionPropertyInfoTest, SetValue )
 SW_TEST_CASE( ReflectionPropertyInfoTest, SetValue_NoDuplicateWrite )
 {
     const sw::TypeInfo* info =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::DummyActor" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::DummyActor" ) );
     SW_EXPECT_TRUE( info != nullptr );
     if ( info == nullptr )
         return;
@@ -294,20 +294,20 @@ SW_TEST_CASE( ReflectionPropertyInfoTest, SetValue_NoDuplicateWrite )
 SW_TEST_CASE( ReflectionTypeRegistryTest, TypeAndEnumAliasLookup )
 {
     const sw::TypeInfo* canonical =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::RenameCompatActor" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::RenameCompatActor" ) );
     SW_ASSERT_NOT_NULL( canonical );
 
     const sw::TypeInfo* viaAlias =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::LegacyRenameActor" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::LegacyRenameActor" ) );
     SW_ASSERT_NOT_NULL( viaAlias );
     SW_EXPECT_EQUAL( canonical->_typeID, viaAlias->_typeID );
     SW_EXPECT_TRUE( viaAlias->_fullyQualifiedName == sw::hashed_string( "sw::RenameCompatActor" ) );
 
     const sw::EnumInfo* enumCanonical =
-        sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "sw::SampleStatus" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findEnum( sw::hashed_string( "sw::SampleStatus" ) );
     SW_ASSERT_NOT_NULL( enumCanonical );
     const sw::EnumInfo* enumAlias =
-        sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "sw::LegacySampleStatus" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findEnum( sw::hashed_string( "sw::LegacySampleStatus" ) );
     SW_ASSERT_NOT_NULL( enumAlias );
     SW_EXPECT_TRUE( enumAlias->_fullyQualifiedName == sw::hashed_string( "sw::SampleStatus" ) );
 
@@ -364,11 +364,11 @@ SW_TEST_CASE( ReflectionTypeInfoTest, DynamicMethodInvoke )
     info._size               = sizeof( InvokableTestActor );
     info._listMethod.push_back( funcInfo );
 
-    sw::engine::getTypeRegistry().registerClass( info );
+    sw::engine::getSubsystem<sw::TypeRegistry>().registerClass( info );
 
     sw::TaskArgs args;
     args.add( int32{ 50 } );
-    sw::engine::getTypeRegistry().invokeMethod( &actor, sw::hashed_string( "sw::InvokableTestActor" ), sw::hashed_string( "addScore" ), args );
+    sw::engine::getSubsystem<sw::TypeRegistry>().invokeMethod( &actor, sw::hashed_string( "sw::InvokableTestActor" ), sw::hashed_string( "addScore" ), args );
 
     SW_EXPECT_EQUAL( 50, actor._score );
 }
@@ -379,7 +379,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, DynamicMethodInvoke )
 SW_TEST_CASE( ReflectionTypeInfoTest, ReflectCtorPlacementNew )
 {
     const sw::TypeInfo* typeInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::CtorDemoActor" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::CtorDemoActor" ) );
     SW_ASSERT_TRUE( typeInfo != nullptr );
     SW_EXPECT_TRUE( typeInfo->canConstruct() );
 
@@ -411,7 +411,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, ReflectCtorPlacementNew )
 SW_TEST_CASE( ReflectionTypeInfoTest, PropertyAnnotationMetadataCodegen )
 {
     const sw::TypeInfo* typeInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::MetadataDemoActor" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::MetadataDemoActor" ) );
     SW_ASSERT_TRUE( typeInfo != nullptr );
     const sw::PropertyInfo* hp = typeInfo->findProperty( sw::hashed_string( "_hp" ) );
     SW_ASSERT_TRUE( hp != nullptr );
@@ -429,7 +429,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, PropertyAnnotationMetadataCodegen )
 SW_TEST_CASE( ReflectionMetadataTest, TypeMetadataQuery )
 {
 #if !defined( SW_SHIPPING )
-    const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::MetaTestActor>();
+    const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::MetaTestActor>();
     SW_ASSERT_NOT_NULL( pType );
 
     SW_EXPECT_TRUE( pType->getCategory() == "Gameplay" );
@@ -455,7 +455,7 @@ SW_TEST_CASE( ReflectionMetadataTest, TypeMetadataQuery )
 SW_TEST_CASE( ReflectionMetadataTest, PropertyMetadataQuery )
 {
 #if !defined( SW_SHIPPING )
-    const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::MetaTestActor>();
+    const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::MetaTestActor>();
     SW_ASSERT_NOT_NULL( pType );
 
     const sw::PropertyInfo* pHealth = pType->findProperty( sw::hashed_string( "_health" ) );
@@ -490,7 +490,7 @@ SW_TEST_CASE( ReflectionMetadataTest, PropertyMetadataQuery )
 SW_TEST_CASE( ReflectionMetadataTest, FunctionMetadataQuery )
 {
 #if !defined( SW_SHIPPING )
-    const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::MetaTestActor>();
+    const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::MetaTestActor>();
     SW_ASSERT_NOT_NULL( pType );
 
     const sw::FunctionInfo* pMethod = pType->findMethod( sw::hashed_string( "resetHealth" ) );
@@ -516,7 +516,7 @@ SW_TEST_CASE( ReflectionMetadataTest, FunctionMetadataQuery )
 SW_TEST_CASE( ReflectionMetadataTest, EnumMetadataQuery )
 {
 #if !defined( SW_SHIPPING )
-    const sw::EnumInfo* pEnumInfo = sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "TestMetaEnum" ) );
+    const sw::EnumInfo* pEnumInfo = sw::engine::getSubsystem<sw::TypeRegistry>().findEnum( sw::hashed_string( "TestMetaEnum" ) );
     SW_ASSERT_NOT_NULL( pEnumInfo );
 
     const sw::string* pDoc = pEnumInfo->findCustomMeta( sw::hashed_string( "Doc" ) );
@@ -536,7 +536,7 @@ SW_TEST_CASE( ReflectionMetadataTest, EnumMetadataQuery )
  */
 SW_TEST_CASE( ReflectionMetadataTest, TransientPropertySerialization )
 {
-    const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::MetaTestActor>();
+    const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::MetaTestActor>();
     SW_ASSERT_NOT_NULL( pType );
 
     sw::MetaTestActor sourceActor;
@@ -580,7 +580,7 @@ SW_TEST_CASE( ReflectionMetadataTest, TransientPropertySerialization )
  */
 SW_TEST_CASE( ReflectionTypeRegistryTest, LookupCachesAreBuiltAfterRegistrationBatch )
 {
-    const sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    const sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
 
     // 이 테스트 바이너리의 픽스처처럼 배치 밖에서 등록된 타입도 있으므로, 여기서 한 번 돌린다 —
     // 엔진에서는 `registerPendingTypes` 가 배치 끝에서 부르는 바로 그 호출이다.
@@ -611,7 +611,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, ParentChainLoopDoesNotHang )
 {
     SW_TEST_SUPPRESS_LOGS();
 
-    sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
 
     sw::TypeInfo typeA;
     typeA._name               = sw::hashed_string( "LoopA" );
@@ -663,7 +663,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, ParentChainLoopDoesNotHang )
  */
 SW_TEST_CASE( ReflectionTypeRegistryTest, ParentTypePointerIsResolvedAfterBatch )
 {
-    sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
 
     sw::TypeInfo typeRoot;
     typeRoot._name               = sw::hashed_string( "ChainRoot" );
@@ -729,7 +729,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, AncestorDisplayMatchesWalkAndFollowsRe
 {
     SW_TEST_SUPPRESS_LOGS();
 
-    sw::TypeRegistry&       registry = sw::engine::getTypeRegistry();
+    sw::TypeRegistry&       registry = sw::engine::getSubsystem<sw::TypeRegistry>();
     const sw::hashed_string moduleName( "TestAncestorDisplay" );
 
     auto makeType = [&]( const utf8* pName, const utf8* pFqn, const utf8* pParentFqn )
@@ -893,7 +893,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, AncestorDisplayMatchesWalkAndFollowsRe
  */
 SW_TEST_CASE( ReflectionTypeInfoTest, FindPropertyInHierarchyMatchesMergedList )
 {
-    const sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    const sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
     const sw::TypeInfo*     pActor   = registry.findType( sw::hashed_string( "sw::DummyActor" ) );
     const sw::TypeInfo*     pBase    = registry.findType( sw::hashed_string( "sw::DummyBase" ) );
     SW_ASSERT_NOT_NULL( pActor );
@@ -932,7 +932,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, FindPropertyInHierarchyMatchesMergedList )
  */
 SW_TEST_CASE( ReflectionTypeInfoTest, FindPropertyInHierarchyUsesMergedMapWhenLarge )
 {
-    sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
 
     sw::TypeInfo typeRoot;
     typeRoot._name               = sw::hashed_string( "MapRoot" );
@@ -990,7 +990,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, FindPropertyInHierarchyUsesMergedMapWhenLa
  */
 SW_TEST_CASE( ReflectionTypeRegistryTest, TypeLookupCacheFollowsRegistryGeneration )
 {
-    sw::TypeRegistry&       registry = sw::engine::getTypeRegistry();
+    sw::TypeRegistry&       registry = sw::engine::getSubsystem<sw::TypeRegistry>();
     const sw::hashed_string fqn( "swtest::CacheProbe" );
     sw::TypeLookupCache     cache;
 
@@ -1033,7 +1033,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, TypeLookupCacheFollowsRegistryGenerati
  */
 SW_TEST_CASE( ReflectionTypeRegistryTest, TypeInfoAddressIsStableAcrossRegistrations )
 {
-    sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
 
     sw::TypeInfo typeFirst;
     typeFirst._name               = sw::hashed_string( "StableFirst" );
@@ -1086,7 +1086,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, EveryBitFieldLiesBetweenItsNeighbours )
 {
     uint32                 bitFieldCount = 0;
     sw::vector<sw::string> listViolation;
-    sw::engine::getTypeRegistry().forEachType( [&bitFieldCount, &listViolation]( const sw::TypeInfo& typeInfo )
+    sw::engine::getSubsystem<sw::TypeRegistry>().forEachType( [&bitFieldCount, &listViolation]( const sw::TypeInfo& typeInfo )
     {
         const sw::vector<sw::PropertyInfo>& listProperty    = typeInfo._listProperty;
         const auto                          isPlainProperty = []( const sw::PropertyInfo& property )
@@ -1139,7 +1139,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, EveryBitFieldLiesBetweenItsNeighbours )
  */
 SW_TEST_CASE( ReflectionTypeInfoTest, OneSidedRangeOnlyBoundsThatSide )
 {
-    const sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    const sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
 
     const sw::TypeInfo* pLight = registry.findType( sw::hashed_string( "sw::LightComponent" ) );
     SW_ASSERT_NOT_NULL( pLight );
@@ -1164,7 +1164,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, OneSidedRangeOnlyBoundsThatSide )
  */
 SW_TEST_CASE( ReflectionTypeInfoTest, DescribeTypeShowsTheRegisteredLayout )
 {
-    const sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    const sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
 
     const sw::string camera = registry.describeType( sw::hashed_string( "CameraComponent" ) );
     for ( const utf8* pExpected : { "TYPE sw::CameraComponent", "parents:", "sw::SceneComponent", "[sw::CameraComponent]", "PROPERTY _fovY : float32",
@@ -1189,7 +1189,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, DescribeTypeShowsTheRegisteredLayout )
  */
 SW_TEST_CASE( ReflectionTypeInfoTest, EveryReflectedParentIsRegistered )
 {
-    const sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    const sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
     sw::string              report;
     registry.forEachType( [&registry, &report]( const sw::TypeInfo& typeInfo )
     {
@@ -1206,7 +1206,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, EveryReflectedParentIsRegistered )
  */
 SW_TEST_CASE( ReflectionTypeRegistryTest, DerivedPropertyListFollowsItsBase )
 {
-    sw::TypeRegistry& registry     = sw::engine::getTypeRegistry();
+    sw::TypeRegistry& registry     = sw::engine::getSubsystem<sw::TypeRegistry>();
     const auto        makeProperty = []( const utf8* pName, size_t offset )
     {
         return sw::PropertyInfo{ sw::hashed_string( pName ), sw::hashed_string( "int32" ), offset };
@@ -1258,7 +1258,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, ShortNameCollisionIsReported )
     // `--repeat` 로 같은 프로세스에서 다시 돌아도(Shipping 은 해제가 없다) 처음처럼 — 회차마다 다른 이름을 쓴다.
     static int32      s_runIndex = 0;
     const sw::string  suffix     = sw::to_string( ++s_runIndex );
-    sw::TypeRegistry& registry   = sw::engine::getTypeRegistry();
+    sw::TypeRegistry& registry   = sw::engine::getSubsystem<sw::TypeRegistry>();
 
     const auto makeType = [&suffix]( const utf8* pNamespace )
     {

@@ -179,7 +179,7 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, InterpBlendsNumbersVectorsAndRotations
 SW_TEST_CASE( ReflectionPropertyRoleTest, EveryRegisteredRolePropertyIsUsable )
 {
     sw::string failures;
-    sw::engine::getTypeRegistry().forEachType( [&failures]( const sw::TypeInfo& type )
+    sw::engine::getSubsystem<sw::TypeRegistry>().forEachType( [&failures]( const sw::TypeInfo& type )
     {
         for ( const sw::PropertyInfo& prop : type._listProperty )
         {

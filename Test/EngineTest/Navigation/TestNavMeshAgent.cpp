@@ -54,7 +54,7 @@ SW_TEST_CASE( NavMeshAgentTest, AgentWalksAroundCratesToTheDestination )
 {
     using Internal = NavMeshAgentTestInternal;
     sw::GameObjectManager manager;
-    manager.getSceneService<sw::SceneNavigation>().setSettings( navtest::makeSettings() );
+    manager.getSubsystem<sw::SceneNavigation>().setSettings( navtest::makeSettings() );
     Internal::spawnCrateScene( manager );
     navtest::spawnSurface( manager, sw::NavGeometrySource::RenderMeshes );
     sw::GameObject*     pWalker = manager.createGameObject( sw::hashed_string( "Walker" ) );
@@ -65,7 +65,7 @@ SW_TEST_CASE( NavMeshAgentTest, AgentWalksAroundCratesToTheDestination )
 
     manager.beginPlay();
     test::tickFrames( manager, 2 );
-    const sw::INavMesh* pNavMesh = manager.getSceneService<sw::SceneNavigation>().findNavMesh( sw::hashed_string( "TestHumanoid" ) );
+    const sw::INavMesh* pNavMesh = manager.getSubsystem<sw::SceneNavigation>().findNavMesh( sw::hashed_string( "TestHumanoid" ) );
     SW_ASSERT_NOT_NULL( pNavMesh );
     SW_EXPECT_TRUE( pNavMesh->getPolygonCount() > 0 );
     // 에이전트 · 손에 든 것은 베이크에 들지 않는다 — 에이전트 자리의 바닥이 뚫리지 않았다.
@@ -132,7 +132,7 @@ SW_TEST_CASE( NavMeshAgentTest, ModifierIgnoresObjectsAndAssignsAreas )
 {
     using Internal = NavMeshAgentTestInternal;
     sw::GameObjectManager manager;
-    manager.getSceneService<sw::SceneNavigation>().setSettings( navtest::makeSettings() );
+    manager.getSubsystem<sw::SceneNavigation>().setSettings( navtest::makeSettings() );
     Internal::spawnCrateScene( manager );
     sw::GameObject* pCrates = manager.findGameObjectByName( sw::hashed_string( "Crates" ) );
     SW_ASSERT_NOT_NULL( pCrates );
@@ -141,7 +141,7 @@ SW_TEST_CASE( NavMeshAgentTest, ModifierIgnoresObjectsAndAssignsAreas )
     SW_ASSERT_NOT_NULL( pFloor );
     pFloor->addComponent<sw::NavMeshModifierComponent>()->setAreaName( sw::hashed_string( "Mud" ) );
     navtest::spawnSurface( manager, sw::NavGeometrySource::RenderMeshes );
-    sw::SceneNavigation& navigation = manager.getSceneService<sw::SceneNavigation>();
+    sw::SceneNavigation& navigation = manager.getSubsystem<sw::SceneNavigation>();
     SW_ASSERT_NOT_NULL( navigation.ensureNavMesh( sw::hashed_string( "TestHumanoid" ) ) );
 
     sw::NavPath path;

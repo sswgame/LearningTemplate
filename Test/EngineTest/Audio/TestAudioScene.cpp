@@ -89,7 +89,7 @@ SW_TEST_CASE( AudioSceneTest, CameraIsTheDefaultListenerAndOrthoIs2D )
     sw::AudioEngine engine;
     SW_ASSERT_TRUE( AudioSceneTestInternal::initializeEngine( engine ) );
     sw::GameObjectManager manager;
-    manager.getSceneService<sw::SceneAudio>().setAudioEngine( &engine );
+    manager.getSubsystem<sw::SceneAudio>().setAudioEngine( &engine );
 
     sw::GameObject*            pCameraObject = manager.createGameObject( sw::hashed_string( "Camera" ) );
     sw::CameraComponent*       pCamera       = pCameraObject->addComponent<sw::CameraComponent>();
@@ -99,7 +99,7 @@ SW_TEST_CASE( AudioSceneTest, CameraIsTheDefaultListenerAndOrthoIs2D )
     pEmitter->setWorldPosition( sw::float3( 4.0f, 0.0f, 0.0f ) );
     manager.flushSceneTransforms();
 
-    manager.getSceneService<sw::SceneAudio>().update( 1.0f / 60.0f, pCamera, nullptr );
+    manager.getSubsystem<sw::SceneAudio>().update( 1.0f / 60.0f, pCamera, nullptr );
     SW_ASSERT_TRUE( pEmitter->post( sw::hashed_string( "Probe" ) ) != 0 );
     // 원근 카메라(+Z 를 본다): 오른쪽 4 m 는 오른쪽 끝 — 스테레오 밸런스로 왼쪽 0.
     SW_EXPECT_NEAR_EQUAL( 0.0f, AudioSceneTestInternal::renderMean( engine, 0 ), 1e-3f );
@@ -110,7 +110,7 @@ SW_TEST_CASE( AudioSceneTest, CameraIsTheDefaultListenerAndOrthoIs2D )
     pCamera->setOrthoHeight( 9.0f );
     pEmitter->setWorldPosition( sw::float3( 4.0f, 5.0f, 0.0f ) );
     manager.flushSceneTransforms();
-    manager.getSceneService<sw::SceneAudio>().update( 1.0f / 60.0f, pCamera, nullptr );
+    manager.getSubsystem<sw::SceneAudio>().update( 1.0f / 60.0f, pCamera, nullptr );
     SW_EXPECT_NEAR_EQUAL( 0.5f, AudioSceneTestInternal::renderMean( engine, 0 ), 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, AudioSceneTestInternal::renderMean( engine, 1 ), 1e-3f );
 
@@ -120,7 +120,7 @@ SW_TEST_CASE( AudioSceneTest, CameraIsTheDefaultListenerAndOrthoIs2D )
     pListener->setLocalRotation( sw::float3( 0.0f, sw::MathUtil::kHalfPi, 0.0f ) );
     pEmitter->setWorldPosition( sw::float3( 4.0f, 0.0f, 0.0f ) );
     manager.flushSceneTransforms();
-    manager.getSceneService<sw::SceneAudio>().update( 1.0f / 60.0f, pCamera, nullptr );
+    manager.getSubsystem<sw::SceneAudio>().update( 1.0f / 60.0f, pCamera, nullptr );
     SW_EXPECT_NEAR_EQUAL( AudioSceneTestInternal::renderMean( engine, 0 ), AudioSceneTestInternal::renderMean( engine, 1 ), 1e-3f );
 }
 
@@ -132,7 +132,7 @@ SW_TEST_CASE( AudioSceneTest, ReverbZoneDrivesSnapshotIntensity )
     sw::AudioEngine engine;
     SW_ASSERT_TRUE( AudioSceneTestInternal::initializeEngine( engine ) );
     sw::GameObjectManager manager;
-    manager.getSceneService<sw::SceneAudio>().setAudioEngine( &engine );
+    manager.getSubsystem<sw::SceneAudio>().setAudioEngine( &engine );
     sw::GameObject*               pZoneObject = manager.createGameObject( sw::hashed_string( "Cave" ) );
     sw::AudioReverbZoneComponent* pZone       = pZoneObject->addComponent<sw::AudioReverbZoneComponent>();
     pZone->setSnapshot( sw::hashed_string( "Cave" ) );
@@ -146,14 +146,14 @@ SW_TEST_CASE( AudioSceneTest, ReverbZoneDrivesSnapshotIntensity )
     {
         pListener->setWorldPosition( sw::float3( arrX[caseIndex], 0.0f, 0.0f ) );
         manager.flushSceneTransforms();
-        manager.getSceneService<sw::SceneAudio>().update( 1.0f / 60.0f, nullptr, nullptr );
+        manager.getSubsystem<sw::SceneAudio>().update( 1.0f / 60.0f, nullptr, nullptr );
         (void)test::AudioTestUtil::render( engine, sw::audio::kBlockFrameCount );
         SW_EXPECT_NEAR_EQUAL( arrExpected[caseIndex], engine.getSnapshotIntensity( sw::hashed_string( "Cave" ) ), 1e-4f );
     }
     // 존이 사라지면 세기가 빠진다.
     manager.destroyObject( pZoneObject );
     manager.tick( 1.0f / 60.0f );
-    manager.getSceneService<sw::SceneAudio>().update( 1.0f / 60.0f, nullptr, nullptr );
+    manager.getSubsystem<sw::SceneAudio>().update( 1.0f / 60.0f, nullptr, nullptr );
     (void)test::AudioTestUtil::render( engine, sw::audio::kBlockFrameCount );
     SW_EXPECT_NEAR_EQUAL( 0.0f, engine.getSnapshotIntensity( sw::hashed_string( "Cave" ) ), 1e-4f );
 }
@@ -189,7 +189,7 @@ SW_TEST_CASE( AudioSceneTest, PhysicsRaycastOcclusion )
 {
     sw::PhysicsSettings settings;
     settings.ensureDefaults();
-    sw::unique_ptr<sw::IPhysicsScene3D> pScene = sw::engine::getPhysicsSystem().createScene3D( settings );
+    sw::unique_ptr<sw::IPhysicsScene3D> pScene = sw::engine::getSubsystem<sw::PhysicsSystem>().createScene3D( settings );
     SW_ASSERT_TRUE( pScene != nullptr );
     sw::PhysicsBodyDesc<sw::PhysicsDimension3D> wall;
     wall._type = sw::PhysicsBodyType::Static;
@@ -215,7 +215,7 @@ SW_TEST_CASE( AudioSceneTest, PhysicsRaycastOcclusion )
     sw::AudioEngine engine;
     SW_ASSERT_TRUE( AudioSceneTestInternal::initializeEngine( engine ) );
     sw::GameObjectManager manager;
-    manager.getSceneService<sw::SceneAudio>().setAudioEngine( &engine );
+    manager.getSubsystem<sw::SceneAudio>().setAudioEngine( &engine );
     sw::GameObject*             pEars     = manager.createGameObject( sw::hashed_string( "Ears" ) );
     sw::AudioListenerComponent* pListener = pEars->addComponent<sw::AudioListenerComponent>();
     sw::GameObject*             pSource   = manager.createGameObject( sw::hashed_string( "Source" ) );
@@ -223,17 +223,17 @@ SW_TEST_CASE( AudioSceneTest, PhysicsRaycastOcclusion )
     SW_ASSERT_TRUE( pListener != nullptr );
     pEmitter->setWorldPosition( sw::float3( 0.0f, 0.0f, 10.0f ) );
     manager.flushSceneTransforms();
-    manager.getSceneService<sw::SceneAudio>().update( 1.0f / 60.0f, nullptr, pScene.get() );
+    manager.getSubsystem<sw::SceneAudio>().update( 1.0f / 60.0f, nullptr, pScene.get() );
     SW_ASSERT_TRUE( pEmitter->post( sw::hashed_string( "Probe" ) ) != 0 );
     SW_EXPECT_NEAR_EQUAL( -12.0f, sw::AudioMath::linearToDb( AudioSceneTestInternal::renderMean( engine, 0 ) ), 0.05f );
 
     // 가림을 끄면(질의 0) 다시 0 dB.
     AudioSceneTestInternal::ConstantOcclusion open;
     open._value = 0.0f;
-    manager.getSceneService<sw::SceneAudio>().setOcclusionQuery( &open );
-    manager.getSceneService<sw::SceneAudio>().update( 1.0f / 60.0f, nullptr, pScene.get() );
+    manager.getSubsystem<sw::SceneAudio>().setOcclusionQuery( &open );
+    manager.getSubsystem<sw::SceneAudio>().update( 1.0f / 60.0f, nullptr, pScene.get() );
     SW_EXPECT_NEAR_EQUAL( 0.0f, sw::AudioMath::linearToDb( AudioSceneTestInternal::renderMean( engine, 0 ) ), 0.05f );
-    manager.getSceneService<sw::SceneAudio>().setOcclusionQuery( nullptr );
+    manager.getSubsystem<sw::SceneAudio>().setOcclusionQuery( nullptr );
 }
 
 /**
@@ -244,7 +244,7 @@ SW_TEST_CASE( AudioSceneTest, RemovedEmitterKeepsItsLastPlace )
     sw::AudioEngine engine;
     SW_ASSERT_TRUE( AudioSceneTestInternal::initializeEngine( engine ) );
     sw::GameObjectManager manager;
-    manager.getSceneService<sw::SceneAudio>().setAudioEngine( &engine );
+    manager.getSubsystem<sw::SceneAudio>().setAudioEngine( &engine );
     sw::GameObject*             pEars     = manager.createGameObject( sw::hashed_string( "Ears" ) );
     sw::AudioListenerComponent* pListener = pEars->addComponent<sw::AudioListenerComponent>();
     sw::GameObject*             pSource   = manager.createGameObject( sw::hashed_string( "Bullet" ) );
@@ -252,7 +252,7 @@ SW_TEST_CASE( AudioSceneTest, RemovedEmitterKeepsItsLastPlace )
     SW_ASSERT_TRUE( pListener != nullptr );
     pEmitter->setWorldPosition( sw::float3( 0.0f, 0.0f, 9.0f ) );
     manager.flushSceneTransforms();
-    manager.getSceneService<sw::SceneAudio>().update( 1.0f / 60.0f, nullptr, nullptr );
+    manager.getSubsystem<sw::SceneAudio>().update( 1.0f / 60.0f, nullptr, nullptr );
     SW_ASSERT_TRUE( pEmitter->post( sw::hashed_string( "Shot" ) ) != 0 );
     // Linear 1..10 의 9 m = 1/9, 클립 0.5, 스테레오 밸런스 가운데 1 → 0.0556.
     const float32 before = AudioSceneTestInternal::renderMean( engine, 0 );

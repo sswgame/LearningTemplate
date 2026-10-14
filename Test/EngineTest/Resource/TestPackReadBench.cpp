@@ -168,7 +168,7 @@ namespace
 
             s_okCount.store( 0 );
             {
-                sw::AssetStreamingQueue& queue = sw::engine::getAssetStreamingQueue();
+                sw::AssetStreamingQueue& queue = sw::engine::getSubsystem<sw::AssetStreamingQueue>();
                 const sw::Stopwatch      stopwatch;
                 for ( uint32 index = 0; index < PackReadBenchInternal::kEntryCount; ++index )
                 {

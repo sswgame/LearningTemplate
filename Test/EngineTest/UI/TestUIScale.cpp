@@ -21,7 +21,7 @@ namespace
     {
     public:
         ScopedFloatVariable( const utf8* pName, float32 value )
-            : _pInfo{ sw::engine::getGlobalVariableManager().findVariable( pName ) }
+            : _pInfo{ sw::engine::getSubsystem<sw::GlobalVariableManager>().findVariable( pName ) }
             , _previous{ 0.0f }
         {
             SW_EXPECT_TRUE( _pInfo != nullptr );

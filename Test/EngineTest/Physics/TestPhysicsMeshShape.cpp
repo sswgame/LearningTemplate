@@ -97,7 +97,7 @@ namespace
     {
         sw::PhysicsSettings settings;
         settings.ensureDefaults();
-        return sw::engine::getPhysicsSystem().createScene3D( settings );
+        return sw::engine::getSubsystem<sw::PhysicsSystem>().createScene3D( settings );
     }
 
     sw::PhysicsShapeDesc3D makeMeshShape( sw::PhysicsShapeType3D type, const sw::string& meshPath )
@@ -249,7 +249,7 @@ SW_TEST_CASE( PhysicsMeshShapeTest, RigidBodyMeshShapeLoadsThroughEngineMeshCach
 
     // 파일을 두 배 크기로 다시 쓰고 메시 캐시로 다시 읽는다(에디터 핫 리로드가 부르는 길) — 물리 표도 비고 새 정점을 읽는다.
     (void)writeCubeMesh( "engine_cube.mesh", 1.0f );
-    sw::engine::getAssetManager().getAssetCache<sw::MeshCache>().reload( meshPath, nullptr );
+    sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::MeshCache>().reload( meshPath, nullptr );
     SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), sw::PhysicsMeshShapeCache::getCachedCount() );
     const sw::PhysicsShapeGeometry geometry = sw::PhysicsMeshShapeCache::acquireGeometry( makeMeshShape( sw::PhysicsShapeType3D::ConvexHull, meshPath ) );
     SW_EXPECT_NEAR_EQUAL( 1.0f, findMaxPointX( geometry ), 1e-6f );

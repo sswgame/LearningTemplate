@@ -46,7 +46,7 @@ namespace
             info._mapNameToValue[name]              = enumerator.second;
             info._mapValueToName[enumerator.second] = name;
         }
-        sw::engine::getTypeRegistry().registerEnum( info );
+        sw::engine::getSubsystem<sw::TypeRegistry>().registerEnum( info );
     }
 
     /** @brief 저장하는 빌드의 열거자 — 코드의 값과 같습니다. 테스트는 끝에 이것으로 되돌립니다. */
@@ -93,8 +93,8 @@ namespace sw
                 {hashed_string( "_dropped" ), hashed_string( "int32" ), SW_OFFSET_OF( SchemaShiftComponent, _dropped )},
                 {   hashed_string( "_kept" ), hashed_string( "int32" ), SW_OFFSET_OF( SchemaShiftComponent,    _kept )}
             };
-            engine::getTypeRegistry().registerClass( info );
-            return engine::getTypeRegistry().findType( hashed_string( "sw::SchemaShiftComponent" ) );
+            engine::getSubsystem<TypeRegistry>().registerClass( info );
+            return engine::getSubsystem<TypeRegistry>().findType( hashed_string( "sw::SchemaShiftComponent" ) );
         }();
         return s_pType;
     }
@@ -134,8 +134,8 @@ namespace sw
                 {hashed_string( "_color" ), hashed_string( "sw::StateShiftColor" ), SW_OFFSET_OF( EnumShiftComponent, _color )},
                 {hashed_string( "_after" ),               hashed_string( "int32" ), SW_OFFSET_OF( EnumShiftComponent, _after )}
             };
-            engine::getTypeRegistry().registerClass( info );
-            return engine::getTypeRegistry().findType( hashed_string( "sw::EnumShiftComponent" ) );
+            engine::getSubsystem<TypeRegistry>().registerClass( info );
+            return engine::getSubsystem<TypeRegistry>().findType( hashed_string( "sw::EnumShiftComponent" ) );
         }();
         return s_pType;
     }
@@ -243,7 +243,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, MeshMaterialReferenceSurvivesXML )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     constexpr const utf8* kPath = "engine/materials/benchtextured.material";
-    sw::MaterialCache&    cache = sw::engine::getAssetManager().getAssetCache<sw::MaterialCache>();
+    sw::MaterialCache&    cache = sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::MaterialCache>();
     SW_ASSERT_TRUE_MSG( cache.isCached( kPath ) == false, "다른 시험이 이 머티리얼을 잡고 있다 — 참조 검사가 비었다" );
 
     sw::GameObjectManager manager;
@@ -548,9 +548,9 @@ SW_TEST_CASE( ObjectStateXMLSerializerTest, SaveAndLoadXMLString )
  */
 SW_TEST_CASE( ObjectStateXMLSerializerTest, ParentChildHierarchyRoundtrip )
 {
-    Scene* scene = engine::getSceneManager().getActiveScene();
+    Scene* scene = engine::getSubsystem<SceneManager>().getActiveScene();
     if ( scene == nullptr )
-        scene = engine::getSceneManager().createScene( "GOHierarchySerializer" );
+        scene = engine::getSubsystem<SceneManager>().createScene( "GOHierarchySerializer" );
     SW_ASSERT_NOT_NULL( scene );
     SW_ASSERT_NOT_NULL( scene->getObjectManager() );
 
@@ -642,7 +642,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, StateSavedBeforeAPropertyWasRemovedStill
     struct RestoreTypeOnExit
     {
         TypeInfo _original;
-        ~RestoreTypeOnExit() { engine::getTypeRegistry().registerClass( _original ); }
+        ~RestoreTypeOnExit() { engine::getSubsystem<TypeRegistry>().registerClass( _original ); }
     };
     const TypeInfo* pComponentType = SchemaShiftComponent::StaticType();
     const TypeInfo* pObjectType    = GameObject::StaticType();
@@ -663,7 +663,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, StateSavedBeforeAPropertyWasRemovedStill
     // 1) 다음 빌드(핫 리로드)에서 컴포넌트의 `_dropped` 가 사라졌다 — 같은 이름으로 다시 등록한다.
     TypeInfo componentAfter = restoreComponentType._original;
     componentAfter._listProperty.erase( componentAfter._listProperty.begin() );
-    engine::getTypeRegistry().registerClass( componentAfter );
+    engine::getSubsystem<TypeRegistry>().registerClass( componentAfter );
 
     GameObject* pFromBinary = manager.createGameObject( hashed_string( "FromBinary" ) );
     GameObject* pFromXML    = manager.createGameObject( hashed_string( "FromXml" ) );
@@ -693,7 +693,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, StateSavedBeforeAPropertyWasRemovedStill
         }
     }
     SW_ASSERT_EQUAL( restoreObjectType._original._listProperty.size() - 1, objectAfter._listProperty.size() );
-    engine::getTypeRegistry().registerClass( objectAfter );
+    engine::getSubsystem<TypeRegistry>().registerClass( objectAfter );
 
     GameObject* pAfterObjectShift = manager.createGameObject( hashed_string( "AfterObjectShift" ) );
     {

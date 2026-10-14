@@ -22,7 +22,7 @@
 SW_TEST_CASE( MeshComponentTest, MissingMaterialUsesTheChecker )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    const sw::string& missingMaterial = sw::engine::getEngineDefaultAssets()._missingMaterial;
+    const sw::string& missingMaterial = sw::engine::getSubsystem<sw::EngineDefaultAssets>()._missingMaterial;
     SW_ASSERT_FALSE( missingMaterial.empty() );
 
     sw::GameObjectManager manager;
@@ -36,8 +36,8 @@ SW_TEST_CASE( MeshComponentTest, MissingMaterialUsesTheChecker )
         pMesh->setMaterialPath( "engine/materials/doesnotexist.material" );
     }
     SW_ASSERT_NOT_NULL( pMesh->getMaterial() );
-    SW_EXPECT_FALSE( sw::engine::getAssetManager().getAssetCache<sw::MaterialCache>().isCached( "engine/materials/doesnotexist.material" ) );
-    SW_EXPECT_TRUE( sw::engine::getAssetManager().getAssetCache<sw::MaterialCache>().isCached( missingMaterial ) );
+    SW_EXPECT_FALSE( sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::MaterialCache>().isCached( "engine/materials/doesnotexist.material" ) );
+    SW_EXPECT_TRUE( sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::MaterialCache>().isCached( missingMaterial ) );
 
     // 같은 요청을 다시 풀면 그대로다(누락 머티리얼을 다시 빌리지 않는다).
     sw::Material* pFirst = pMesh->getMaterial();
@@ -48,5 +48,5 @@ SW_TEST_CASE( MeshComponentTest, MissingMaterialUsesTheChecker )
     pMesh->setMaterialPath( "engine/materials/defaultmaterial.material" );
     SW_ASSERT_NOT_NULL( pMesh->getMaterial() );
     SW_EXPECT_TRUE( pMesh->getMaterial() != pFirst );
-    SW_EXPECT_TRUE( sw::engine::getAssetManager().getAssetCache<sw::MaterialCache>().isCached( "engine/materials/defaultmaterial.material" ) );
+    SW_EXPECT_TRUE( sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::MaterialCache>().isCached( "engine/materials/defaultmaterial.material" ) );
 }

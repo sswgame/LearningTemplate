@@ -352,7 +352,7 @@ SW_TEST_CASE( RenderPassTest, RenderGraphLinearChainProducesSinglePassLevels )
  */
 SW_TEST_CASE( RenderPassTest, PipelineFormatNamesResolveThroughReflection )
 {
-    const sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    const sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
 
     uint32 registeredEnumCount = 0;
     registry.forEachEnum( [&registeredEnumCount]( const sw::EnumInfo& )
@@ -518,7 +518,7 @@ SW_TEST_CASE( RenderPassTest, GPUTimestampPassCapacityMatchesSlotLayout )
  */
 SW_TEST_CASE( RenderPassTest, TypeInfoTableCoversEveryEnumValue )
 {
-    const sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
+    const sw::TypeRegistry& registry = sw::engine::getSubsystem<sw::TypeRegistry>();
     const sw::EnumInfo*     pByFqn   = registry.findEnum( sw::typeFqn<sw::RenderPassType>() );
     const sw::EnumInfo*     pEnum    = ( pByFqn != nullptr ) ? pByFqn : registry.findEnum( sw::hashed_string( "RenderPassType" ) );
     SW_ASSERT_TRUE( pEnum != nullptr );

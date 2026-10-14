@@ -188,7 +188,7 @@ SW_TEST_CASE( CombatTest, LockOnPicksCentredTargetsCyclesSidewaysAndBreaksWhenLo
  */
 SW_TEST_CASE( CombatTest, BallisticsAndCoasterReadTheConfiguredPhysicsGravity )
 {
-    PhysicsSystem&        system   = engine::getPhysicsSystem();
+    PhysicsSystem&        system   = engine::getSubsystem<PhysicsSystem>();
     const PhysicsSettings original = system.getSettings();
     PhysicsSettings       heavy    = original;
     heavy._gravity                 = float3{ 0.0f, -20.0f, 0.0f };

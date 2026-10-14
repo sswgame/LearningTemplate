@@ -2,6 +2,8 @@
 
 #include "EngineTest/TestGameObjectMocks.h"
 
+#include "Engine/Common/EngineServices.h"
+
 namespace sw
 {
     /** @brief 풀 재사용 검증용 생성·소멸 카운터. 헤더가 아니라 여기 한 번만 정의한다(헤더 주석 참고). */
@@ -36,7 +38,7 @@ namespace sw
         info._addComponent       = addComponent;
         it                       = s_types.emplace( shortName, std::move( info ) ).first;
         if ( engine::areEngineServicesBound() )
-            engine::getTypeRegistry().registerClass( it->second );
+            engine::getSubsystem<TypeRegistry>().registerClass( it->second );
         return &it->second;
     }
 
