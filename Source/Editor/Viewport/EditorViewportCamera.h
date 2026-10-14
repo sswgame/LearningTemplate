@@ -50,6 +50,8 @@ namespace sw::editor
         void zoomOrthographic( float32 mouseWheel );
         /** @brief 궤도 대상을 중심으로 회전을 @p rotation(도)으로 바꾸고 위치를 맞춥니다(방향 큐브 클릭). */
         void orbitTo( const float3& rotation );
+        /** @brief 위치와 회전(도, 피치 · 요 · 롤)을 그대로 놓습니다(개발 명령 `camera.set` — 시나리오가 같은 시점에서 찍는다). 궤도 대상은 시선 앞 궤도 거리입니다. */
+        void setPose( const float3& position, const float3& rotation );
 
         /** @brief 뷰 행렬을 ImGuizmo 배열로 계산합니다. */
         void getViewMatrix( float32* pOutMatrix ) const;

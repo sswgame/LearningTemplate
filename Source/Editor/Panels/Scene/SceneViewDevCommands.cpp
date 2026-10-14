@@ -1,10 +1,11 @@
 /**
  * @file SceneViewDevCommands.cpp
- * @brief 씬 뷰 패널의 개발 명령(오버레이 막대 초기화 · 보이기, 카메라 초기화)입니다. 씬 뷰 패널을 찾으므로 패널 층에서 등록합니다.
+ * @brief 씬 뷰 패널의 개발 명령(오버레이 막대 초기화 · 보이기, 카메라 초기화 · 놓기)입니다. 씬 뷰 패널을 찾으므로 패널 층에서 등록합니다.
  */
 #include "pch.h"
 
 #include "Core/Console/DevCommandRegistry.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -42,6 +43,23 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief `camera.set <x> <y> <z> <pitch> <yaw>` — 씬 뷰 카메라를 그 자리 · 방향(도)에 둡니다(언리얼 `BugItGo x y z pitch yaw` 와 같은 쓰임). */
+            static bool runCameraSet( const vector<string>& listArgument, string& outReply )
+            {
+                SceneViewPanel* pPanel = findSceneViewPanel();
+                if ( listArgument.size() != 5 || pPanel == nullptr )
+                    return false;
+                float32 arrValue[5]{};
+                for ( uint32 index = 0; index < 5; ++index )
+                {
+                    if ( StringUtil::parseFloat( listArgument[index], arrValue[index] ) == false )
+                        return false;
+                }
+                pPanel->getViewportClient().setCameraPose( float3{ arrValue[0], arrValue[1], arrValue[2] }, float3{ arrValue[3], arrValue[4], 0.0f } );
+                outReply = "scene view camera set";
+                return true;
+            }
+
             static bool runOverlayReset( const vector<string>& /*listArgument*/, string& outReply )
             {
                 EditorViewportOverlays* pOverlays = findSceneOverlays();
@@ -67,6 +85,8 @@ namespace sw::editor
                     &SceneViewDevCommandsInternal::runOverlayReset );
     SW_DEV_COMMAND( CameraReset, "camera.reset", "camera.reset", "Put the scene view camera (pose, projection, speed) back where a new editor session starts",
                     &SceneViewDevCommandsInternal::runCameraReset );
+    SW_DEV_COMMAND( CameraSet, "camera.set", "camera.set <x> <y> <z> <pitch> <yaw>", "Put the scene view camera at a position looking along pitch and yaw (degrees)",
+                    &SceneViewDevCommandsInternal::runCameraSet );
     SW_DEV_COMMAND( OverlayShow, "overlay.show", "overlay.show <view|transform|display|tools> <0|1>", "Show or hide a scene view overlay bar",
                     &SceneViewDevCommandsInternal::runOverlayShow );
 } // namespace sw::editor

@@ -228,6 +228,13 @@ namespace sw::editor
         _position      = _orbitTarget - EditorViewportCameraInternal::computeForward( _rotation ) * _orbitDistance;
     }
 
+    void EditorViewportCamera::setPose( const float3& position, const float3& rotation )
+    {
+        _position    = position;
+        _rotation    = rotation;
+        _orbitTarget = _position + EditorViewportCameraInternal::computeForward( _rotation ) * _orbitDistance;
+    }
+
     void EditorViewportCamera::setOrthographicView( float32 pitch, float32 yaw )
     {
         // 지금 보는 점(시선 앞 궤도 거리)을 축 방향에서 다시 바라본다. 화면 가운데는 그대로 유지된다.

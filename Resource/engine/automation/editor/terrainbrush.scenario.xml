@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 지형 칠하기 도구: envshowcase 를 열고(비동기 로드를 Scene.Transitioning 으로 기다린다) 씬 뷰 카메라를 지형 위로 옮긴 뒤 Terrain 토글(viewport.visualizer.terrainbrush)을 켠다.
+  ① 칠하기 전을 찍는다. ② 레이어 3(모래)을 반경 20 m 로 씬 뷰 가운데에서 끌어 칠하면 드래그 하나가 되돌리기 하나로 남고(Editor.TerrainBrushStrokeCount),
+  GPU 스플랫이 바뀐 구간만 올라가 그림이 달라진다. ③ Ctrl+Z 면 같은 사각형이 편집 전 값으로 다시 써져 ①과 거의 같다(브러시 원 · 마우스 위치만 다르다).
+  ④ 높이 올리기로 끌면 청크 메시가 다시 만들어져 그림이 다시 달라진다. 저장 단추는 누르지 않는다 — 에셋 파일은 그대로다.
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/terrainbrush.scenario.xml -dx12
+-->
+<Scenario name="editor.terrainbrush" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="Immediately" input="exclusive">
+	<At frame="1"><Variable name="gv_environmentAnimate" value="0"/></At>
+	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="25"><DevCommand line="panel.resetOptional"/><DevCommand line="layout.reset"/></At>
+	<At frame="30"><DevCommand line="scene.open game/empty/maps/envshowcase.scene.xml"/></At>
+	<At frame="31"><WaitUntil probe="Scene.Transitioning" equals="0" timeoutFrames="900"/></At>
+	<At frame="40"><DevCommand line="panel.focus scene_view"/></At>
+	<At frame="50"><DevCommand line="camera.reset"/></At>
+	<At frame="55"><DevCommand line="camera.set 0 70 -100 35 0"/></At>
+	<At frame="70"><EditorClick mark="viewport.visualizer.terrainbrush"/></At>
+	<At frame="71"><WaitUntil probe="Editor.TerrainBrushToolActive" equals="1" timeoutFrames="60"/></At>
+	<At frame="80"><DevCommand line="terrain.brush paint 20 60 3"/></At>
+
+	<!-- ① 칠하기 전 -->
+	<At frame="110">
+		<Expect probe="Editor.SceneViewDrawn" equals="1"/>
+		<Expect probe="Editor.SceneViewCameraY" near="70" tolerance="0.5"/>
+		<Expect probe="Editor.GameViewRequested" equals="0"/>
+		<Expect probe="Editor.TerrainBrushStrokeCount" equals="0"/>
+		<Screenshot file="terrain_before.ppm"/>
+	</At>
+
+	<!-- ② 레이어 칠하기 -->
+	<At frame="120"><EditorDrag mark="sceneView.canvas" dx="160" dy="0"/></At>
+	<At frame="122"><Expect probe="Editor.TerrainBrushHit" equals="1"/></At>
+	<At frame="170">
+		<Expect probe="Editor.TerrainBrushStrokeCount" equals="1"/>
+		<Expect probe="Editor.UndoCount" atLeast="1"/>
+		<Screenshot file="terrain_painted.ppm"/>
+	</At>
+	<At frame="171"><ExpectImage file="terrain_painted.ppm" metric="differentFrom" reference="terrain_before.ppm" atLeast="0.001"/></At>
+
+	<!-- ③ 되돌리기 -->
+	<At frame="180"><EditorKey key="Ctrl+Z"/></At>
+	<At frame="210"><Screenshot file="terrain_undone.ppm"/></At>
+	<At frame="211"><ExpectImage file="terrain_undone.ppm" metric="differentFrom" reference="terrain_before.ppm" atMost="0.02"/></At>
+
+	<!-- ④ 높이 올리기 -->
+	<At frame="220"><DevCommand line="terrain.brush raise 15 120"/></At>
+	<At frame="230"><EditorDrag mark="sceneView.canvas" dx="0" dy="60"/></At>
+	<At frame="280">
+		<Expect probe="Editor.TerrainBrushStrokeCount" equals="2"/>
+		<Screenshot file="terrain_raised.ppm"/>
+	</At>
+	<At frame="281"><ExpectImage file="terrain_raised.ppm" metric="differentFrom" reference="terrain_undone.ppm" atLeast="0.003"/></At>
+	<At frame="290"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+</Scenario>
