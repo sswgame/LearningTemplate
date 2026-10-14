@@ -376,6 +376,126 @@
         "settings.restartRequired": {
             "text": "설정 {count}개는 다시 시작한 뒤에 적용됩니다.",
             "sourceHash": "6462a7414eb6a4f5"
+        },
+        "EdMeshModifiers.HintPickTarget": {
+            "text": ".mesh 에셋을 쓰는 메시 컴포넌트가 있는 오브젝트를 고른 뒤 선택 사용을 누르세요.",
+            "sourceHash": "150c002cb25c2c9e"
+        },
+        "EdMeshModifiers.HintTargetGone": {
+            "text": "대상 오브젝트가 더 이상 없습니다.",
+            "sourceHash": "1bc0e1e113faeb86"
+        },
+        "EdMeshModifiers.UseSelection": {
+            "text": "선택 사용",
+            "sourceHash": "18163441a7dc78f2"
+        },
+        "EdMeshModifiers.NoTarget": {
+            "text": "대상 없음",
+            "sourceHash": "88b4f03b7af48b9f"
+        },
+        "EdMeshModifiers.AddModifier": {
+            "text": "모디파이어 추가",
+            "sourceHash": "f4d95a66cf236fed"
+        },
+        "EdMeshModifiers.HintSelectModifier": {
+            "text": "스택에서 모디파이어를 고르세요.",
+            "sourceHash": "c17f55d8a9720295"
+        },
+        "EdMeshModifiers.Name": {
+            "text": "이름",
+            "sourceHash": "ef49aec68fd1dc66"
+        },
+        "EdMeshModifiers.CPUOnly": {
+            "text": "(CPU 전용)",
+            "sourceHash": "0c5c8598488eecee"
+        },
+        "EdMeshModifiers.Center": {
+            "text": "중심",
+            "sourceHash": "b38d497d992ab4a4"
+        },
+        "EdMeshModifiers.Rotation": {
+            "text": "회전",
+            "sourceHash": "cde2e53f46beac7f"
+        },
+        "EdMeshModifiers.Axis": {
+            "text": "축",
+            "sourceHash": "b035a78b241ed7d4"
+        },
+        "EdMeshModifiers.WorldSpace": {
+            "text": "월드 공간",
+            "sourceHash": "704e1344b9026739"
+        },
+        "EdMeshModifiers.SpaceReference": {
+            "text": "기준 오브젝트",
+            "sourceHash": "f99ff83cb627c00d"
+        },
+        "EdMeshModifiers.FitBounds": {
+            "text": "경계 상자에 맞추기",
+            "sourceHash": "402ad59bb6ed0112"
+        },
+        "EdMeshModifiers.ResetParams": {
+            "text": "매개변수 초기화",
+            "sourceHash": "aca3bdbe9d0ddaf4"
+        },
+        "EdMeshModifiers.AddKey": {
+            "text": "키 추가",
+            "sourceHash": "7a0e4cc6bfd9c40b"
+        },
+        "EdMeshModifiers.AddItem": {
+            "text": "항목 추가",
+            "sourceHash": "1373a4ab54d88333"
+        },
+        "EdMeshModifiers.RemoveItem": {
+            "text": "항목 제거",
+            "sourceHash": "336c8e1678a8ff80"
+        },
+        "EdMeshModifiers.ControlPoints": {
+            "text": "제어점",
+            "sourceHash": "7551ef17ae7e064d"
+        },
+        "EdMeshModifiers.ResetLattice": {
+            "text": "격자 초기화",
+            "sourceHash": "11fff1797b257282"
+        },
+        "EdMeshModifiers.Mirror": {
+            "text": "대칭",
+            "sourceHash": "1e5ff0f50c741122"
+        },
+        "EdMeshModifiers.PointIndex": {
+            "text": "점",
+            "sourceHash": "8a439296ced9ed11"
+        },
+        "EdMeshModifiers.PointPosition": {
+            "text": "위치",
+            "sourceHash": "c1611c0558728a2a"
+        },
+        "EdMeshModifiers.RecomputeNormals": {
+            "text": "법선 다시 계산",
+            "sourceHash": "2a5bbf4552aa7855"
+        },
+        "EdMeshModifiers.PreviewTime": {
+            "text": "미리보기 시간",
+            "sourceHash": "c6552dd0fb586094"
+        },
+        "EdMeshModifiers.Undo": {
+            "text": "되돌리기",
+            "sourceHash": "8f4be9f086eb530f"
+        },
+        "EdMeshModifiers.Redo": {
+            "text": "다시 하기",
+            "sourceHash": "7417792bbe720149"
+        },
+        "EdMeshModifiers.SaveStack": {
+            "text": "스택 저장",
+            "sourceHash": "03376e0fb812a6d0"
+        },
+        "EdMeshModifiers.ReloadStack": {
+            "text": "스택 다시 읽기",
+            "sourceHash": "372f2d0fa36ebb0c"
+        },
+        "EdMeshModifiers.Bake": {
+            "text": "굽기",
+            "sourceHash": "c152d2a7a89be800"
         }
     }
 }

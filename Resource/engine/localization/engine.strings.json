@@ -949,6 +949,126 @@
             "source": "{count, plural, one {# setting takes} other {# settings take}} effect after a restart.",
             "comment": "Shown after applying settings marked apply=restart",
             "maxLength": 80
+        },
+        "EdMeshModifiers.HintPickTarget": {
+            "source": "Select an object whose mesh component uses a .mesh asset, then press Use Selection.",
+            "origins": []
+        },
+        "EdMeshModifiers.HintTargetGone": {
+            "source": "The target object no longer exists.",
+            "origins": []
+        },
+        "EdMeshModifiers.UseSelection": {
+            "source": "Use Selection",
+            "origins": []
+        },
+        "EdMeshModifiers.NoTarget": {
+            "source": "No target",
+            "origins": []
+        },
+        "EdMeshModifiers.AddModifier": {
+            "source": "Add Modifier",
+            "origins": []
+        },
+        "EdMeshModifiers.HintSelectModifier": {
+            "source": "Select a modifier in the stack.",
+            "origins": []
+        },
+        "EdMeshModifiers.Name": {
+            "source": "Name",
+            "origins": []
+        },
+        "EdMeshModifiers.CPUOnly": {
+            "source": "(CPU only)",
+            "origins": []
+        },
+        "EdMeshModifiers.Center": {
+            "source": "Center",
+            "origins": []
+        },
+        "EdMeshModifiers.Rotation": {
+            "source": "Rotation",
+            "origins": []
+        },
+        "EdMeshModifiers.Axis": {
+            "source": "Axis",
+            "origins": []
+        },
+        "EdMeshModifiers.WorldSpace": {
+            "source": "World Space",
+            "origins": []
+        },
+        "EdMeshModifiers.SpaceReference": {
+            "source": "Reference Object",
+            "origins": []
+        },
+        "EdMeshModifiers.FitBounds": {
+            "source": "Fit to Bounds",
+            "origins": []
+        },
+        "EdMeshModifiers.ResetParams": {
+            "source": "Reset Parameters",
+            "origins": []
+        },
+        "EdMeshModifiers.AddKey": {
+            "source": "Add Key",
+            "origins": []
+        },
+        "EdMeshModifiers.AddItem": {
+            "source": "Add Item",
+            "origins": []
+        },
+        "EdMeshModifiers.RemoveItem": {
+            "source": "Remove Item",
+            "origins": []
+        },
+        "EdMeshModifiers.ControlPoints": {
+            "source": "Control Points",
+            "origins": []
+        },
+        "EdMeshModifiers.ResetLattice": {
+            "source": "Reset Lattice",
+            "origins": []
+        },
+        "EdMeshModifiers.Mirror": {
+            "source": "Mirror",
+            "origins": []
+        },
+        "EdMeshModifiers.PointIndex": {
+            "source": "Point",
+            "origins": []
+        },
+        "EdMeshModifiers.PointPosition": {
+            "source": "Position",
+            "origins": []
+        },
+        "EdMeshModifiers.RecomputeNormals": {
+            "source": "Recompute Normals",
+            "origins": []
+        },
+        "EdMeshModifiers.PreviewTime": {
+            "source": "Preview Time",
+            "origins": []
+        },
+        "EdMeshModifiers.Undo": {
+            "source": "Undo",
+            "origins": []
+        },
+        "EdMeshModifiers.Redo": {
+            "source": "Redo",
+            "origins": []
+        },
+        "EdMeshModifiers.SaveStack": {
+            "source": "Save Stack",
+            "origins": []
+        },
+        "EdMeshModifiers.ReloadStack": {
+            "source": "Reload Stack",
+            "origins": []
+        },
+        "EdMeshModifiers.Bake": {
+            "source": "Bake",
+            "origins": []
         }
     }
 }
