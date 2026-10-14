@@ -29,7 +29,10 @@ namespace sw::editor
     class AbilityDebugPanel final : public IEditorPanel
     {
     public:
-        AbilityDebugPanel() = default;
+        AbilityDebugPanel()
+            : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
+        {
+        }
 
         const utf8* getPanelTitle() const override { return "Ability Debugger"; }
         bool        isToolPanel() const override { return true; }
