@@ -10,8 +10,7 @@
 #pragma once
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Character/Fit/SurfaceBvh.h"
-
+#include "GameFramework/PlugIn/Editor/MeshModifiers/Modifiers/ConformSurface.h"
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifier.h"
 
 namespace sw::editor
@@ -342,18 +341,18 @@ namespace sw::editor
         }
 
         /**
-         * @brief BVH(`SurfaceBvh`)로 한 점을 표면에 맞춥니다 — `tryConformPoint` 의 전수 탐색과 같은 규칙이고 질의가 대상 삼각형 수에 로그로 늘어난다.
-         * @details `SurfaceBvh` 의 질의는 멤버 스크래치를 쓰므로 한 인스턴스를 한 스레드에서만 묻는다(`conformMesh` 는 단일 스레드 루프다).
+         * @brief BVH(`ConformSurface`)로 한 점을 표면에 맞춥니다 — `tryConformPoint` 의 전수 탐색과 같은 규칙이고 질의가 대상 삼각형 수에 로그로 늘어난다.
+         * @details 질의가 상태 없는 const 라서 스레드마다 @p inoutListScratch 만 따로 가지면 여러 스레드가 같은 표면을 물을 수 있다.
          */
-        [[nodiscard]] static bool tryConformPointBvh( const SurfaceBvh& bvh, const float3& point, const float3& rayDirection, ConformMode mode, float32 offset,
-                                                      float32 maxDistance, float3& outPosition )
+        [[nodiscard]] static bool tryConformPointBvh( const ConformSurface& surface, const float3& point, const float3& rayDirection, ConformMode mode, float32 offset,
+                                                      float32 maxDistance, vector<SlotHandle>& inoutListScratch, float3& outPosition )
         {
             float3 bestPoint{ 0.0f, 0.0f, 0.0f };
             float3 bestNormal{ 0.0f, 1.0f, 0.0f };
             if ( mode == ConformMode::Closest )
             {
                 GeometryClosestPoint closest{};
-                if ( bvh.findClosestPoint( point, maxDistance, closest ) == false )
+                if ( surface.findClosestPoint( point, maxDistance, inoutListScratch, closest ) == false )
                     return false;
                 bestPoint  = closest._point;
                 bestNormal = closest._normal;
@@ -361,7 +360,7 @@ namespace sw::editor
             else
             {
                 GeometryRayHit hit{};
-                if ( bvh.findNearestHit( point, rayDirection, maxDistance, hit ) == false )
+                if ( surface.findNearestHit( point, rayDirection, maxDistance, inoutListScratch, hit ) == false )
                     return false;
                 bestPoint  = point + rayDirection * hit._distance;
                 bestNormal = hit._normal;
@@ -374,43 +373,82 @@ namespace sw::editor
         }
 
         /**
-         * @brief 메시 전체를 표면으로 옮깁니다(세기 × 선택 가중치로 섞음). 법선이 있으면 면 법선으로 다시 만듭니다.
-         * @details 대상 삼각형으로 BVH 를 한 번 만들고 정점마다 묻는다(정점 수 × 삼각형 수 전수 탐색이 아니다).
+         * @brief `conformMesh` 의 병렬 일입니다. 정점끼리 서로 읽지 않고 덩어리가 자기 정점만 쓰므로 직렬과 결과가 같다.
+         * @details 워커가 건드리는 쓰기 대상(위치 · 덩어리 표시)은 `sw::vector::operator[]` 가 아니라 생 포인터로 가진다 - Debug 데이터 레이스 검출기는
+         *          벡터 안의 서로 다른 칸 쓰기도 한 벡터의 동시 쓰기로 본다(`TransformJob` 과 같은 이유). 후보 버퍼는 덩어리 안에서 가진다.
          */
-        static void conformMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context, const vector<float3>& listTriangle, ConformMode mode, float32 offset,
-                                 float32 maxDistance, float32 amount )
+        struct ConformJob
+        {
+            const ConformSurface* _pSurface{ nullptr };
+            float3*               _pPosition{ nullptr };   ///< 제자리에서 옮긴다
+            const float3*         _pNormal{ nullptr };     ///< 없으면 nullptr(법선 방식은 주축 방향으로 대신한다)
+            const float32*        _pWeight{ nullptr };     ///< 선택 가중치. 없으면 nullptr(모두 1)
+            uint8*                _pChunkMoved{ nullptr }; ///< 덩어리마다 하나라도 옮겼는지(워커가 공유 플래그를 쓰지 않게 덩어리 칸에 쓴다)
+            size_t                _vertexCount{ 0 };
+            ConformMode           _mode{ ConformMode::Closest };
+            float3                _axisDirection{ 0.0f, 0.0f, 0.0f };
+            float32               _offset{ 0.0f };
+            float32               _maxDistance{ 0.0f };
+            float32               _amount{ 0.0f };
+
+            void run( uint32 startChunk, uint32 endChunk )
+            {
+                const size_t       first = static_cast<size_t>( startChunk ) * MeshModifierUtil::kChunkVertexCount;
+                const size_t       last  = MathUtil::min( static_cast<size_t>( endChunk ) * MeshModifierUtil::kChunkVertexCount, _vertexCount );
+                vector<SlotHandle> listScratch;
+                for ( size_t index = first; index < last; ++index )
+                {
+                    const float3 point     = _pPosition[index];
+                    float3       direction = _axisDirection;
+                    if ( _mode == ConformMode::Normal && _pNormal != nullptr )
+                        direction = MeshModifierUtil::normalizeOr( _pNormal[index] * -1.0f, _axisDirection );
+                    float3 target{ 0.0f, 0.0f, 0.0f };
+                    if ( tryConformPointBvh( *_pSurface, point, direction, _mode, _offset, _maxDistance, listScratch, target ) == false )
+                        continue;
+                    const float32 weight                                      = _pWeight != nullptr ? _pWeight[index] : 1.0f;
+                    _pPosition[index]                                         = float3::lerp( point, target, MathUtil::saturate( _amount * weight ) );
+                    _pChunkMoved[index / MeshModifierUtil::kChunkVertexCount] = 1;
+                }
+            }
+        };
+
+        /**
+         * @brief 메시 전체를 표면으로 옮깁니다(세기 × 선택 가중치로 섞음). 법선이 있으면 면 법선으로 다시 만듭니다.
+         * @details 대상 삼각형은 @p inoutSurface 가 BVH 로 가지고(같은 목록이면 지난번 BVH 를 쓴다), 정점은 덩어리로 나눠 병렬로 묻는다
+         *          (정점 수 × 삼각형 수 전수 탐색이 아니다). 작업 관리자가 없으면 현재 스레드가 한 번에 돈다.
+         * @return BVH 를 새로 만들었으면 true 입니다(캐시 적중 확인용).
+         */
+        static bool conformMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context, const vector<float3>& listTriangle, ConformMode mode, float32 offset,
+                                 float32 maxDistance, float32 amount, ConformSurface& inoutSurface )
         {
             if ( listTriangle.size() < 3 || amount <= 0.0f )
-                return;
-            // 삼각형 목록(정점 3 개씩)을 인덱스 0..n-1 의 표면 하나로 넣는다.
-            vector<uint32> listIndex;
-            listIndex.reserve( listTriangle.size() );
-            for ( uint32 index = 0; index < static_cast<uint32>( listTriangle.size() ); ++index )
-            {
-                listIndex.push_back( index );
-            }
-            SurfaceBvh bvh;
-            bvh.addSurface( 0, listTriangle, listIndex );
-            bvh.build();
+                return false;
+            const bool bRebuilt = inoutSurface.assign( listTriangle );
 
-            float3 axisDirection{ 0.0f, 0.0f, 0.0f };
-            MeshModifierUtil::setComponent( axisDirection, context._axisIndex, -1.0f );
+            const uint32  chunkCount = MeshModifierUtil::computeChunkCount( inoutMesh.getVertexCount() );
+            vector<uint8> listChunkMoved( chunkCount, 0 );
+            ConformJob    job{};
+            job._pSurface    = &inoutSurface;
+            job._pPosition   = inoutMesh._listPosition.data();
+            job._pNormal     = inoutMesh.hasNormal() ? inoutMesh._listNormal.data() : nullptr;
+            job._pWeight     = inoutMesh.hasWeight() ? inoutMesh._listWeight.data() : nullptr;
+            job._pChunkMoved = listChunkMoved.data();
+            job._vertexCount = inoutMesh.getVertexCount();
+            job._mode        = mode;
+            MeshModifierUtil::setComponent( job._axisDirection, context._axisIndex, -1.0f );
+            job._offset      = offset;
+            job._maxDistance = maxDistance;
+            job._amount      = amount;
+            MeshModifierUtil::runBlocks( chunkCount, 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &ConformJob::run, &job ) );
+
             bool bMoved = false;
-            for ( size_t index = 0; index < inoutMesh.getVertexCount(); ++index )
+            for ( const uint8 chunkMoved : listChunkMoved )
             {
-                const float3& point     = inoutMesh._listPosition[index];
-                float3        direction = axisDirection;
-                if ( mode == ConformMode::Normal )
-                    direction = inoutMesh.hasNormal() ? MeshModifierUtil::normalizeOr( inoutMesh._listNormal[index] * -1.0f, axisDirection ) : axisDirection;
-                float3 target{ 0.0f, 0.0f, 0.0f };
-                if ( tryConformPointBvh( bvh, point, direction, mode, offset, maxDistance, target ) == false )
-                    continue;
-                const float32 blend            = MathUtil::saturate( amount * inoutMesh.getWeight( index ) );
-                inoutMesh._listPosition[index] = float3::lerp( point, target, blend );
-                bMoved                         = true;
+                bMoved = bMoved || chunkMoved != 0;
             }
             if ( bMoved && inoutMesh.hasNormal() )
                 MeshModifierUtil::recomputeFaceNormals( inoutMesh._listPosition, inoutMesh._listNormal );
+            return bRebuilt;
         }
     };
 } // namespace sw::editor

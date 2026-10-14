@@ -1,6 +1,6 @@
 /**
  * @file MeshModifiersPanel.cpp
- * @brief Mesh Modifiers 패널을 구현합니다. 매개변수 입력칸은 선언 종류(Float · Int · Bool · Axis · Vector3 · Curve · Reference · AssetPath · NumberList)로 고릅니다.
+ * @brief Mesh Modifiers 패널을 구현합니다. 매개변수 입력칸은 선언 종류(Float · Int · Bool · Axis · Vector3 · Curve · Reference · AssetPath · NumberList · CurveList · ReferenceList)로 고릅니다.
  */
 #include "pch.h"
 
@@ -20,7 +20,6 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Utility/FloatCurve.h"
 
 #include "GameFramework/PlugIn/Editor/MeshModifiers/MeshModifierSession.h"
@@ -78,27 +77,98 @@ namespace sw::editor
                     ImGui::SetTooltip( "%s", pTooltip );
             }
 
-            /**
-             * @brief 오브젝트가 Reference 걸러 보기(컴포넌트 타입 이름)를 통과하면 true 입니다. 걸러 보기가 없으면 늘 true 입니다.
-             * @details 등록된 타입이면 파생까지 맞춘다(`TypeInfo::isDerivedFrom`) — `MeshComponent` 걸러 보기가 `SkeletalMeshComponent` 도 잡는다.
-             *          타입을 못 찾으면 예전처럼 이름 그대로(`findComponentByTypeName`) 본다.
-             */
-            static bool matchesComponentHint( const GameObject& object, const utf8* pComponentHint )
+            /** @brief 목록 항목 한 줄의 위 · 아래 · 복제 · 삭제 단추입니다. 눌린 것은 @p inoutAction 에 담고 목록은 그린 뒤에 고친다(그리는 도중에 바꾸면 항목 번호가 어긋난다). */
+            static void drawItemButtons( size_t item, MeshModifierListAction& inoutAction )
             {
-                if ( pComponentHint == nullptr || pComponentHint[0] == '\0' )
-                    return true;
-                const hashed_string hintName( pComponentHint );
-                const TypeInfo*     pHintType = engine::getTypeRegistry().findType( hintName );
-                if ( pHintType == nullptr )
-                    return object.findComponentByTypeName( hintName ) != nullptr;
-                bool bFound{ false };
-                object.forEachComponent( [&]( Component* pComponent )
+                if ( ImGui::SmallButton( "^" ) )
+                    inoutAction = MeshModifierListAction{ MeshModifierListActionKind::MoveUp, item };
+                drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "MoveRowUp" ) );
+                ImGui::SameLine();
+                if ( ImGui::SmallButton( "v" ) )
+                    inoutAction = MeshModifierListAction{ MeshModifierListActionKind::MoveDown, item };
+                drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "MoveRowDown" ) );
+                ImGui::SameLine();
+                if ( ImGui::SmallButton( "+" ) )
+                    inoutAction = MeshModifierListAction{ MeshModifierListActionKind::Duplicate, item };
+                drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "DuplicateRow" ) );
+                ImGui::SameLine();
+                if ( ImGui::SmallButton( "x" ) )
+                    inoutAction = MeshModifierListAction{ MeshModifierListActionKind::Remove, item };
+                drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "RemoveRow" ) );
+            }
+
+            /**
+             * @brief 씬 오브젝트 고르기 콤보와 "선택 사용" 단추를 그립니다(참조 하나 · 참조 목록 항목이 함께 쓴다).
+             * @return 이름을 새로 골랐으면 true 이고 @p outPicked 에 이름이 들어 있다(빈 글 = 비우기). 같은 이름을 다시 골라도 true 일 수 있다.
+             */
+            static bool drawReferencePicker( const MeshModifierParamDef& def, const utf8* pLabel, const string& current, string& outPicked )
+            {
+                bool        bPicked  = false;
+                const utf8* pPreview = current.empty() ? SW_LOCKEY( "EdMeshModifiers", "ReferenceNone" ) : current.c_str();
+                if ( ImGui::BeginCombo( pLabel, pPreview ) )
                 {
-                    const TypeInfo* pTypeInfo = pComponent->getTypeInfo();
-                    if ( pTypeInfo != nullptr && pTypeInfo->isDerivedFrom( pHintType ) )
-                        bFound = true;
-                } );
-                return bFound;
+                    if ( ImGui::Selectable( SW_LOCKEY( "EdMeshModifiers", "ReferenceNone" ), current.empty() ) )
+                    {
+                        outPicked = string();
+                        bPicked   = true;
+                    }
+                    GameObjectManager*  pManager = getActiveObjectManager();
+                    vector<GameObject*> listObject;
+                    if ( pManager != nullptr )
+                        pManager->getAllGameObjects( listObject );
+                    // 걸러 볼 컴포넌트가 있으면 그것을 가진 오브젝트만, 하나도 없으면 알리고 전체를 보인다
+                    bool bAnyMatch = false;
+                    for ( const GameObject* pObject : listObject )
+                    {
+                        if ( pObject != nullptr && MeshModifierParamEdit::matchesComponentHint( *pObject, def._pRequiredComponentHint ) )
+                        {
+                            bAnyMatch = true;
+                            break;
+                        }
+                    }
+                    if ( bAnyMatch == false && def._pRequiredComponentHint != nullptr )
+                        ImGui::TextDisabled( "%s %s", SW_LOCKEY( "EdMeshModifiers", "ReferenceNoMatch" ), def._pRequiredComponentHint );
+                    for ( const GameObject* pObject : listObject )
+                    {
+                        if ( pObject == nullptr )
+                            continue;
+                        if ( bAnyMatch && MeshModifierParamEdit::matchesComponentHint( *pObject, def._pRequiredComponentHint ) == false )
+                            continue;
+                        const utf8* pName = pObject->getName().c_str();
+                        if ( pName == nullptr || pName[0] == '\0' )
+                            continue; // 참조는 이름으로 찾으므로 이름 없는 오브젝트는 고를 수 없다
+                        ImGui::PushID( pObject );
+                        if ( ImGui::Selectable( pName, string_view( current ) == string_view( pName ) ) )
+                        {
+                            outPicked = string( pName );
+                            bPicked   = true;
+                        }
+                        ImGui::PopID();
+                    }
+                    ImGui::EndCombo();
+                }
+                drawItemTooltip( def._pTooltip != nullptr ? def._pTooltip : def._pHint );
+
+                if ( ImGui::SmallButton( SW_LOCKEY( "EdMeshModifiers", "UseSelectionForParam" ) ) )
+                {
+                    EditorSelection* pSelection = getService<EditorSelection>();
+                    GameObject*      pObject    = pSelection != nullptr ? pSelection->getPrimaryObject() : nullptr;
+                    if ( pObject == nullptr )
+                        SW_LOG_WARNING( "Select an object in the scene first" );
+                    else if ( MeshModifierParamEdit::matchesComponentHint( *pObject, def._pRequiredComponentHint ) == false )
+                        SW_LOG_WARNING( "Object %# has no %# component", pObject->getName().c_str(), def._pRequiredComponentHint );
+                    else
+                    {
+                        outPicked = string( pObject->getName().c_str() );
+                        bPicked   = true;
+                    }
+                }
+                if ( def._pRequiredComponentHint != nullptr )
+                {
+                    ImGui::SameLine();
+                    ImGui::TextDisabled( "(%s)", def._pRequiredComponentHint );
+                }
+                return bPicked;
             }
         };
     } // namespace
@@ -111,6 +181,7 @@ namespace sw::editor
         , _curveState{}
         , _pCurveModifier{ nullptr }
         , _curveParamIndex{ 0 }
+        , _curveItemIndex{ -1 }
         , _descriptionID{}
         , _description{}
         , _bEditing{ false }
@@ -469,6 +540,16 @@ namespace sw::editor
                 drawNumberListParam( session, modifier, paramIndex );
                 break;
             }
+            case MeshModifierParamKind::CurveList:
+            {
+                drawCurveListParam( session, modifier, paramIndex );
+                break;
+            }
+            case MeshModifierParamKind::ReferenceList:
+            {
+                drawReferenceListParam( session, modifier, paramIndex );
+                break;
+            }
         }
         ImGui::PopID();
     }
@@ -478,14 +559,20 @@ namespace sw::editor
         const MeshModifierParamDef& def = modifier.getParamDefs()[paramIndex];
         ImGui::TextUnformatted( def._pName );
         MeshModifiersPanelInternal::drawItemTooltip( def._pTooltip );
-        FloatCurve curve{};
-        MeshModifierParamEdit::makeFloatCurve( modifier.getCurveKeys( paramIndex ), curve );
+        drawCurveField( session, modifier, paramIndex, -1, modifier.getParamValue( paramIndex )._curve );
+    }
+
+    void MeshModifiersPanel::drawCurveField( MeshModifierSession& session, MeshModifier& modifier, uint32 paramIndex, int32 itemIndex, const FloatCurve& curve )
+    {
+        const MeshModifierParamDef& def = modifier.getParamDefs()[paramIndex];
+        // 매개변수의 곡선은 편집기와 같은 FloatCurve(보간 · 접선 포함)라 그대로 넘기고 그대로 받는다
         if ( EditorCurveEditor::drawPreview( "##CurvePreview", curve, ImGui::GetFrameHeight() * 2.0f ) )
         {
             _curveState          = EditorCurveEditorState{};
             _curveState._working = curve;
             _pCurveModifier      = &modifier;
             _curveParamIndex     = paramIndex;
+            _curveItemIndex      = itemIndex;
             ImGui::OpenPopup( "##CurveEditor" );
         }
         MeshModifiersPanelInternal::drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "CurveEditHint" ) );
@@ -494,7 +581,7 @@ namespace sw::editor
         ImGui::SetNextWindowSize( ImVec2{ 560.0f * scale, 320.0f * scale }, ImGuiCond_Appearing );
         if ( ImGui::BeginPopup( "##CurveEditor", ImGuiWindowFlags_NoScrollbar ) == false )
             return;
-        if ( _pCurveModifier == &modifier && _curveParamIndex == paramIndex )
+        if ( _pCurveModifier == &modifier && _curveParamIndex == paramIndex && _curveItemIndex == itemIndex )
         {
             ImGui::TextUnformatted( def._pName );
             // 끄는 중 · 칸 입력 중이 아니면 값에서 다시 뜬다(되돌리기 · 다른 곳의 편집이 편집기에 보인다)
@@ -502,11 +589,14 @@ namespace sw::editor
                 _curveState._working = curve;
             if ( EditorCurveEditor::drawEditor( _curveState ) )
             {
-                // 편집기는 작업 사본만 고친다 — 마칠 때 한 번 기록하고 넣으니 끌기 한 번이 되돌리기 한 줄이다
-                vector<float2> listKey;
-                MeshModifierParamEdit::makeCurveKeys( _curveState._working, listKey );
+                // 편집기는 작업 사본만 고친다 - 마칠 때 한 번 기록하고 넣으니 끌기 한 번이 되돌리기 한 줄이다
+                MeshModifierParamValue value = modifier.getParamValue( paramIndex );
+                if ( itemIndex < 0 )
+                    value._curve = _curveState._working;
+                else if ( static_cast<size_t>( itemIndex ) < value._listCurve.size() )
+                    value._listCurve[static_cast<size_t>( itemIndex )] = _curveState._working;
                 session.recordUndo();
-                modifier.setCurveKeys( paramIndex, listKey );
+                modifier.setParamValue( paramIndex, value );
                 modifier.onParamsChanged();
                 session.markDirty();
             }
@@ -516,6 +606,52 @@ namespace sw::editor
             ImGui::CloseCurrentPopup(); // 다른 모디파이어를 고른 사이 열린 채 남은 팝업
         }
         ImGui::EndPopup();
+    }
+
+    void MeshModifiersPanel::drawCurveListParam( MeshModifierSession& session, MeshModifier& modifier, uint32 paramIndex )
+    {
+        const MeshModifierParamDef& def = modifier.getParamDefs()[paramIndex];
+        ImGui::TextUnformatted( def._pName );
+        MeshModifiersPanelInternal::drawItemTooltip( def._pTooltip );
+        if ( def._pHint != nullptr )
+        {
+            ImGui::SameLine();
+            ImGui::TextDisabled( "(%s)", def._pHint );
+        }
+
+        MeshModifierParamValue value = modifier.getParamValue( paramIndex );
+        const size_t           limit = def.getListLimit();
+        MeshModifierListAction action{};
+        for ( size_t item = 0; item < value._listCurve.size(); ++item )
+        {
+            ImGui::PushID( static_cast<int32>( item ) );
+            ImGui::Text( "#%d", static_cast<int32>( item ) );
+            ImGui::SameLine();
+            MeshModifiersPanelInternal::drawItemButtons( item, action );
+            drawCurveField( session, modifier, paramIndex, static_cast<int32>( item ), value._listCurve[item] );
+            ImGui::PopID();
+        }
+        if ( value._listCurve.size() < limit && ImGui::SmallButton( SW_LOCKEY( "EdMeshModifiers", "AddItem" ) ) )
+        {
+            // 새 항목은 선형 0 → 1 곡선으로 시작한다(모양 곡선의 기본과 같다)
+            FloatCurve curve{};
+            (void)curve.addKey( 0.0f, 0.0f, CurveInterpolation::Linear );
+            (void)curve.addKey( 1.0f, 1.0f, CurveInterpolation::Linear );
+            for ( FloatCurveKey& key : curve._listKey )
+            {
+                key._bAutoTangent = false;
+            }
+            value._listCurve.push_back( curve );
+            action._kind = MeshModifierListActionKind::Added;
+        }
+        if ( MeshModifierParamEdit::applyListAction( action, value._listCurve, limit ) )
+        {
+            _pCurveModifier = nullptr; // 항목 번호가 바뀌었으니 열린 곡선 팝업은 닫는다
+            session.recordUndo();
+            modifier.setParamValue( paramIndex, value );
+            modifier.onParamsChanged();
+            session.markDirty();
+        }
     }
 
     void MeshModifiersPanel::drawNumberListParam( MeshModifierSession& session, MeshModifier& modifier, uint32 paramIndex )
@@ -667,79 +803,57 @@ namespace sw::editor
 
     void MeshModifiersPanel::drawReferenceParam( MeshModifierSession& session, MeshModifier& modifier, uint32 paramIndex )
     {
-        const MeshModifierParamDef& def      = modifier.getParamDefs()[paramIndex];
-        const string&               current  = modifier.getText( paramIndex );
-        string                      picked   = current;
-        bool                        bPicked  = false;
-        const utf8*                 pPreview = current.empty() ? SW_LOCKEY( "EdMeshModifiers", "ReferenceNone" ) : current.c_str();
-        if ( ImGui::BeginCombo( def._pName, pPreview ) )
-        {
-            if ( ImGui::Selectable( SW_LOCKEY( "EdMeshModifiers", "ReferenceNone" ), current.empty() ) )
-            {
-                picked  = string();
-                bPicked = true;
-            }
-            GameObjectManager*  pManager = getActiveObjectManager();
-            vector<GameObject*> listObject;
-            if ( pManager != nullptr )
-                pManager->getAllGameObjects( listObject );
-            // 걸러 볼 컴포넌트가 있으면 그것을 가진 오브젝트만, 하나도 없으면 알리고 전체를 보인다
-            bool bAnyMatch = false;
-            for ( const GameObject* pObject : listObject )
-            {
-                if ( pObject != nullptr && MeshModifiersPanelInternal::matchesComponentHint( *pObject, def._pRequiredComponentHint ) )
-                {
-                    bAnyMatch = true;
-                    break;
-                }
-            }
-            if ( bAnyMatch == false && def._pRequiredComponentHint != nullptr )
-                ImGui::TextDisabled( "%s %s", SW_LOCKEY( "EdMeshModifiers", "ReferenceNoMatch" ), def._pRequiredComponentHint );
-            for ( const GameObject* pObject : listObject )
-            {
-                if ( pObject == nullptr )
-                    continue;
-                if ( bAnyMatch && MeshModifiersPanelInternal::matchesComponentHint( *pObject, def._pRequiredComponentHint ) == false )
-                    continue;
-                const utf8* pName = pObject->getName().c_str();
-                if ( pName == nullptr || pName[0] == '\0' )
-                    continue; // 참조는 이름으로 찾으므로 이름 없는 오브젝트는 고를 수 없다
-                ImGui::PushID( pObject );
-                if ( ImGui::Selectable( pName, string_view( current ) == string_view( pName ) ) )
-                {
-                    picked  = string( pName );
-                    bPicked = true;
-                }
-                ImGui::PopID();
-            }
-            ImGui::EndCombo();
-        }
-        MeshModifiersPanelInternal::drawItemTooltip( def._pTooltip != nullptr ? def._pTooltip : def._pHint );
-
-        if ( ImGui::SmallButton( SW_LOCKEY( "EdMeshModifiers", "UseSelectionForParam" ) ) )
-        {
-            EditorSelection* pSelection = getService<EditorSelection>();
-            GameObject*      pObject    = pSelection != nullptr ? pSelection->getPrimaryObject() : nullptr;
-            if ( pObject == nullptr )
-                SW_LOG_WARNING( "Select an object in the scene first" );
-            else if ( MeshModifiersPanelInternal::matchesComponentHint( *pObject, def._pRequiredComponentHint ) == false )
-                SW_LOG_WARNING( "Object %# has no %# component", pObject->getName().c_str(), def._pRequiredComponentHint );
-            else
-            {
-                picked  = string( pObject->getName().c_str() );
-                bPicked = true;
-            }
-        }
-        if ( def._pRequiredComponentHint != nullptr )
-        {
-            ImGui::SameLine();
-            ImGui::TextDisabled( "(%s)", def._pRequiredComponentHint );
-        }
-
-        if ( bPicked && string_view( picked ) != string_view( current ) )
+        const MeshModifierParamDef& def     = modifier.getParamDefs()[paramIndex];
+        const string&               current = modifier.getText( paramIndex );
+        string                      picked  = current;
+        if ( MeshModifiersPanelInternal::drawReferencePicker( def, def._pName, current, picked ) && string_view( picked ) != string_view( current ) )
         {
             session.recordUndo();
             modifier.setText( paramIndex, picked );
+            modifier.onParamsChanged();
+            session.markDirty();
+        }
+    }
+
+    void MeshModifiersPanel::drawReferenceListParam( MeshModifierSession& session, MeshModifier& modifier, uint32 paramIndex )
+    {
+        const MeshModifierParamDef& def = modifier.getParamDefs()[paramIndex];
+        ImGui::TextUnformatted( def._pName );
+        MeshModifiersPanelInternal::drawItemTooltip( def._pTooltip );
+        if ( def._pHint != nullptr )
+        {
+            ImGui::SameLine();
+            ImGui::TextDisabled( "(%s)", def._pHint );
+        }
+
+        MeshModifierParamValue value   = modifier.getParamValue( paramIndex );
+        const size_t           limit   = def.getListLimit();
+        bool                   bChange = false;
+        MeshModifierListAction action{};
+        for ( size_t item = 0; item < value._listText.size(); ++item )
+        {
+            ImGui::PushID( static_cast<int32>( item ) );
+            ImGui::Text( "#%d", static_cast<int32>( item ) );
+            ImGui::SameLine();
+            MeshModifiersPanelInternal::drawItemButtons( item, action );
+            const string current = value._listText[item];
+            string       picked  = current;
+            if ( MeshModifiersPanelInternal::drawReferencePicker( def, "##Item", current, picked ) && string_view( picked ) != string_view( current ) )
+            {
+                value._listText[item] = picked;
+                bChange               = true;
+            }
+            ImGui::PopID();
+        }
+        if ( value._listText.size() < limit && ImGui::SmallButton( SW_LOCKEY( "EdMeshModifiers", "AddItem" ) ) )
+        {
+            value._listText.push_back( string() ); // 빈 항목 - 고를 때까지 건너뛴다
+            action._kind = MeshModifierListActionKind::Added;
+        }
+        if ( MeshModifierParamEdit::applyListAction( action, value._listText, limit ) || bChange )
+        {
+            session.recordUndo();
+            modifier.setParamValue( paramIndex, value );
             modifier.onParamsChanged();
             session.markDirty();
         }

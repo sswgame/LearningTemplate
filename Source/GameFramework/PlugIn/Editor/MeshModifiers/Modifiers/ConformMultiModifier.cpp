@@ -1,7 +1,7 @@
 /**
  * @file ConformMultiModifier.cpp
- * @brief 여러 대상 메시(최대 kTargetCount 개)의 표면 가운데 정점마다 가장 가까운(또는 반직선이 먼저 닿는) 표면으로 붙이는 모디파이어입니다.
- * @details 참조 목록 매개변수 종류가 없어 참조 칸 넷을 둔다. 빈 칸 · 못 찾은 대상은 건너뛰고, 모두 비면 항등이다.
+ * @brief 여러 대상 메시(참조 목록 "Targets", 최대 kMaxTargetCount 개)의 표면 가운데 정점마다 가장 가까운(또는 반직선이 먼저 닿는) 표면으로 붙이는 모디파이어입니다.
+ * @details 빈 이름 · 못 찾은 대상은 건너뛰고, 목록이 비거나 모두 못 찾으면 항등이다.
  *          투영 규칙(방식 · 오프셋 · 최대 거리 · 세기)은 Conform 과 같다.
  */
 #include "pch.h"
@@ -18,22 +18,13 @@ namespace sw::editor
     class ConformMultiModifier final : public MeshModifier
     {
     public:
-        static constexpr uint32 kTargetCount = 4;
+        static constexpr float32 kMaxTargetCount = 16.0f; ///< "Targets" 목록의 항목 수 상한
 
         ConformMultiModifier()
             : MeshModifier()
-            , _arrTargetParam{
-                  addParam( MeshModifierParamDef{"Target 1", MeshModifierParamKind::Reference, 0.0f, 0.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "Mesh object"}
-                                .withLayout( "Targets", "Mesh object to conform onto; empty slots are skipped" )
-                                .withRequiredComponent( "MeshComponent" ) ),
-                  addParam( MeshModifierParamDef{"Target 2", MeshModifierParamKind::Reference, 0.0f, 0.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "Mesh object"}
-                                .withLayout( "Targets", "Mesh object to conform onto; empty slots are skipped" )
-                                .withRequiredComponent( "MeshComponent" ) ),
-                  addParam( MeshModifierParamDef{"Target 3", MeshModifierParamKind::Reference, 0.0f, 0.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "Mesh object"}
-                                .withLayout( "Targets", "Mesh object to conform onto; empty slots are skipped" )
-                                .withRequiredComponent( "MeshComponent" ) ),
-                  addParam( MeshModifierParamDef{"Target 4", MeshModifierParamKind::Reference, 0.0f, 0.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "Mesh object"}
-                                .withLayout( "Targets", "Mesh object to conform onto; empty slots are skipped" )
+            , _targetsParam{
+                  addParam( MeshModifierParamDef{ "Targets", MeshModifierParamKind::ReferenceList, 0.0f, kMaxTargetCount, float3{ 0.0f, 0.0f, 0.0f }, 1, "Mesh objects" }
+                                .withLayout( "Targets", "Mesh objects to conform onto; the nearest surface among all of them wins, and unresolved names are skipped" )
                                 .withRequiredComponent( "MeshComponent" ) )
         },
             _modeParam{ addParam( MeshModifierParamDef{ "Mode", MeshModifierParamKind::Int, 0.0f, 2.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "0 closest, 1 axis, 2 normal" }.withLayout( "Projection", "Projection mode: 0 closest point, 1 along the negative main axis, 2 along the negative normal" ) ) },
@@ -43,26 +34,27 @@ namespace sw::editor
         {
         }
 
-        const utf8* getDescription() const override { return "Projects points onto the nearest surface among up to four mesh objects."; }
+        const utf8* getDescription() const override { return "Projects points onto the nearest surface among several mesh objects."; }
 
         void applyToMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context ) const override
         {
             vector<float3> listTriangle;
-            for ( const uint32 targetParam : _arrTargetParam )
+            for ( const string& target : getParamValue( _targetsParam )._listText )
             {
                 // 못 찾은 대상은 건너뛴다 — 남은 대상만으로 맞춘다
-                static_cast<void>( PathModifierUtil::tryAppendTriangles( context, getText( targetParam ), listTriangle ) );
+                static_cast<void>( PathModifierUtil::tryAppendTriangles( context, target, listTriangle ) );
             }
             PathModifierUtil::conformMesh( inoutMesh, context, listTriangle, static_cast<PathModifierUtil::ConformMode>( getInt( _modeParam ) ),
-                                           getFloat( _offsetParam ), getFloat( _maxDistanceParam ), getFloat( _amountParam ) );
+                                           getFloat( _offsetParam ), getFloat( _maxDistanceParam ), getFloat( _amountParam ), _surface );
         }
 
     private:
-        uint32 _arrTargetParam[kTargetCount];
-        uint32 _modeParam;
-        uint32 _offsetParam;
-        uint32 _maxDistanceParam;
-        uint32 _amountParam;
+        uint32                 _targetsParam;
+        uint32                 _modeParam;
+        uint32                 _offsetParam;
+        uint32                 _maxDistanceParam;
+        uint32                 _amountParam;
+        mutable ConformSurface _surface; ///< 대상 삼각형이 안 바뀌면 BVH 를 다시 만들지 않는다(같은 인스턴스를 두 스레드에서 동시에 적용하지 않는다)
     };
 
     SW_MESH_MODIFIER( ConformMultiModifier, "conformmulti", "Conform Multi", "Surface" );
