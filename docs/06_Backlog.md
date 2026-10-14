@@ -317,6 +317,19 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   **이 PC 의 환경 문제**: 파이썬이 git 을 띄워 출력을 파이프로 받으면 항상 빈 문자열이다(`worktree-make` · pre-commit 훅 · `PythonTest_TestAcronymSpelling` 이 죽는다). 이 묶음의 커밋은 모두 `--no-verify` 라
   정상 환경에서 훅(`PreCommitLint`)을 한 번 돌려 린트 위반이 없는지 봐야 한다.
 
+- `D3-10` **메시 모디파이어 스택 플러그인(`GF_EditorPlugIn_MeshModifiers`, 2026-10-14)의 남은 것.** 구조 · 추가 방법 · 알려진 근사는 [모듈 README](../Source/GameFramework/PlugIn/Editor/MeshModifiers/README.md).
+  MegaFiers 류 변형 모음의 기능 이름 목록을 기준으로 56 id 를 등록했다(Debug 전체 빌드 경고 0, 모디파이어 단위 테스트 81 개 통과). 눈으로 · 실제 에디터로 본 확인은 없다.
+  - **컴퓨트 셰이더 미리보기(2단계, 시작 안 함).** 조사 결과: 네 백엔드 모두 컴퓨트 지원(`IRHICommandList.h` `dispatchCompute` · `bindComputeUav`, `RHIBackendInfo.h` `_bCompute`), 기존 사례 `meshmorph.hlsl` ·
+    `meshskin.hlsl` · `gpucull.hlsl`(호출은 `FrameRendererCompute.cpp`), 쿠킹 등록은 `ShaderCookRequest.cpp` 의 엔진 컴퓨트 목록 + `App --cook-shaders` 산출물 커밋. **막힌 곳**: GPU 버퍼를 CPU 로 되읽는 API 가
+    없고(`readbackTexture2D` 는 텍스처 전용) 디버그 그리기는 CPU 큐라 그리기를 GPU 안에서 끝내야 한다 — 모프 풀 출력 버퍼를 `swLoadMorphedVertex` 가 읽는 경로를 쓴다. 권고 첫 단계: 변형 로직은 CPU 스택 그대로 두고
+    미리보기 전용 메시가 모프 풀 결과 경로로 그려지게 하는 한 디스패치. 모디파이어마다 셰이더를 만들지 않고 `종류 id + 매개변수 구조 버퍼` 를 순서대로 적용하는 uber 셰이더 하나. `supportsGPU()` 가 true 인 점 단위
+    모디파이어(약 40 개)만 옮기고 나머지는 CPU. GL 은 `swComputeMorphElement` 드라이버 버그 주의(`RHIBackendInfo.h`). 검증은 `RenderPassGPUTest.MorphPoolIdentityMatchesRest` 류 GPU 테스트가 필요해 이 PC 에서 못 한다.
+  - **Conform / Conform Multi 가속**: 정점 × 삼각형 전수 탐색 단일 스레드 → 격자 · BVH 와 정점 병렬화. 큰 대상 메시에서 느리다.
+  - **입력 창구(`IMeshModifierInputs`)를 넓히기**: 경로 프레임(법선 · 비법선), 정적 텍스처 CPU 표본(`trySampleTexture` 가 지금 false → Displace 계열이 항등), 변형 전 위치(Displace Limits 가 변위량을 자르려면).
+  - **매개변수 종류 추가**: 곡선 목록(Curve Sculpt Layered 층별 곡선) · 참조 목록(Conform Multi 대상 N 개).
+  - **패널**: Deformable 하위 스택 편집 UI, 뷰포트에서 제어점 끌기와 고른 점 강조(지금은 패널 입력칸), 정점 버퍼를 건드리는 실제 미리보기(지금은 와이어).
+  - **정리**: 값 노이즈 해시 중복(Noise · Crumple · VertNoise · ZStretchNoise) → 공용 함수, 굽기 결과 메시의 `orphans` 경고, 월드 공간 워프를 별도 씬 오브젝트로(지금은 모디파이어의 기준 오브젝트 id).
+
 ### D4. 게임플레이 · 캐릭터 · 카메라 · 애니메이션
 
 - `D4-2` **사용자 설정(옵션 메뉴 백엔드)의 남은 것** — 백엔드 · 바인딩 API 는 `Source/Engine/UserSettings/`, 메뉴는 `Engine/UI/Screen/OptionsMenuScreen`.

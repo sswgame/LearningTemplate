@@ -13,7 +13,8 @@ push 와 CI 확인은 조정자의 일이고, 이 문서를 쓸 때의 CI 결과
 컨텍스트 메뉴 확장 지점(하이어라키 · 콘텐츠 브라우저 · 뷰포트) · UI 디자이너 슬롯 편집 + 앵커 프리셋 · 대화 · 애니메이션 그래프 저장 시나리오(`asset.open`) · `cheat.*` 치트 명령 · 시나리오 녹화 · 포토 모드 ·
 `LightingOnly` 보기 모드 + 셰이더 재쿠킹 산출물 · 입력 바인딩별 시간 · Negate · MultiTap · 패드 가상 커서. 2차 묶음(같은 날): 어빌리티 디버거 · NPC 일정 창 · 오디오 이벤트 창 · 리그 디버그 창 + 시퀀서 `RigSlot` 트랙 · 모듈 창 상세 ·
 인스펙터 즐겨찾기 · UI 디자이너 끌기 손잡이 · 지형 브러시 기초 · 시나리오 녹화 휠 기록. 설계 문서 둘: [다중 월드](EditorMultiWorld.md) · [캐릭터 편집 창](EditorCharacterEditor.md) (코드 없음, 다른 PC 에서 병합할 때 근거).
-`D3-1` ⑦ 은 구현하지 않고 까닭과 단계적 대안을 결정 기록 5-11 에 적었다. 검증: Debug `all AllTests` 경고 0, `ctest --preset Ninja-Debug-nogpu` 48/49
+`D3-1` ⑦ 은 구현하지 않고 까닭과 단계적 대안을 결정 기록 5-11 에 적었다. 3차(같은 날): **메시 모디파이어 스택 플러그인** `GF_EditorPlugIn_MeshModifiers`(56 id, [README](../../Source/GameFramework/PlugIn/Editor/MeshModifiers/README.md),
+백로그 `D3-10`) — 컴퓨트 셰이더 미리보기는 조사만 하고 시작하지 않았다(GPU 검증이 필요). 검증: Debug `all AllTests` 경고 0, `ctest --preset Ninja-Debug-nogpu` 48/49
 (실패 하나 `PythonTest_TestAcronymSpelling` 은 이 PC 에서 파이썬이 git 출력을 파이프로 받지 못하는 환경 문제). **검증하지 않은 것**: Shipping 빌드 · 테스트, GPU 테스트, 에디터 시나리오 실행, 눈으로 본 확인,
 그리고 커밋 전 훅(모든 커밋이 `--no-verify`). 병합 전에 [백로그](../06_Backlog.md) `D3-9` 의 확인 목록을 먼저 본다. 덤프(에디터 패널 덤프 · 크래시 덤프)와 서버 타깃은 하지 않았다(사용자 지시).
 
