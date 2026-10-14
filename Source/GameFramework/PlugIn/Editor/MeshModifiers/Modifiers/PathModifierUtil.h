@@ -1,8 +1,11 @@
 /**
  * @file PathModifierUtil.h
  * @brief 경로(스플라인) · 대상 메시를 읽는 모디파이어(Path Deform · World Path Deform · Rope Deform · Conform · Conform Multi)가 함께 쓰는 도우미입니다.
- * @details 외부 입력은 월드 좌표라서 모디파이어 공간으로 옮겨 쓴다. 입력 창구가 곡선의 위치와 접선만 주므로 경로 프레임은 접선과 고정 기준 축으로 만든다
- *          (2D 경로 가정 — 접선이 기준 축과 나란해지면 다른 축으로 넘어간다).
+ * @details 외부 입력은 월드 좌표라서 모디파이어 공간으로 옮겨 쓴다. 입력 창구가 곡선의 위치와 접선만 주므로 경로 프레임은 회전 최소화 프레임
+ *          (rotation-minimizing frame, 이중 반사법)으로 만든다 — 시작점 프레임만 접선과 고정 기준 축으로 정하고, 경로를 촘촘히 표본해 법선을 전파한다.
+ *          평면 경로 · 직선 경로에서는 고정 기준 축 프레임과 같은 값이 나오고(평면 곡선의 회전 최소화 프레임은 평면 법선을 그대로 둔다),
+ *          3D 경로에서 단면이 뒤집히지 않는다. 표본 표(`PathFrameCache`)는 모디파이어가 `applyToMesh` 에서 한 번 만들고(단일 스레드)
+ *          정점마다 병렬로 읽기만 한다. 표가 비었으면(직접 `deformPoint` 를 부른 경우) 예전처럼 고정 기준 축 프레임을 쓴다.
  */
 #pragma once
 #include "Core/Math/MathUtil.h"
@@ -78,11 +81,109 @@ namespace sw::editor
         }
 
         /**
+         * @brief 이중 반사법 한 걸음 — (위치, 접선, 축 V) 프레임을 다음 (위치, 접선) 으로 옮깁니다. 축 U 는 V × 접선입니다.
+         * @details Wang 외(2008) "Computation of Rotation Minimizing Frames". 첫 반사는 두 점을 잇는 선분에 수직인 평면, 둘째 반사는 접선을 맞추는 평면이다.
+         *          두 점이 겹치거나 접선이 같으면 그 반사를 건너뛴다. 끝에 V 를 접선에 수직으로 다시 맞춘다(반올림 누적 방지).
+         */
+        static void transportFrame( const float3& fromPosition, const float3& fromTangent, const float3& fromAxisV, const float3& toPosition, const float3& toTangent,
+                                    float3& outAxisU, float3& outAxisV )
+        {
+            constexpr float32 kMinSquared = 1e-12f;
+            float3            axisV       = fromAxisV;
+            float3            tangent     = fromTangent;
+            const float3      chord       = toPosition - fromPosition;
+            const float32     chordSq     = chord.dot( chord );
+            if ( chordSq > kMinSquared )
+            {
+                axisV   = axisV - chord * ( 2.0f * chord.dot( axisV ) / chordSq );
+                tangent = tangent - chord * ( 2.0f * chord.dot( tangent ) / chordSq );
+            }
+            const float3  turn   = toTangent - tangent;
+            const float32 turnSq = turn.dot( turn );
+            if ( turnSq > kMinSquared )
+                axisV = axisV - turn * ( 2.0f * turn.dot( axisV ) / turnSq );
+            outAxisV = MeshModifierUtil::normalizeOr( axisV - toTangent * axisV.dot( toTangent ), fromAxisV );
+            outAxisU = MeshModifierUtil::normalizeOr( outAxisV.cross( toTangent ), float3::UnitX );
+        }
+
+        /**
+         * @brief 표본 (위치, 단위 접선) 목록을 따라 회전 최소화 프레임을 전파합니다(순수 함수). 첫 프레임은 `buildFrame` 입니다.
+         * @details 결과 목록 크기는 입력과 같다. 위치 · 접선 목록 크기가 다르면 짧은 쪽까지만 쓴다.
+         */
+        static void buildRotationMinimizingFrames( const vector<float3>& listPosition, const vector<float3>& listTangent, uint32 axisIndex, vector<float3>& outListAxisU,
+                                                   vector<float3>& outListAxisV )
+        {
+            const size_t count = MathUtil::min( listPosition.size(), listTangent.size() );
+            outListAxisU.assign( count, float3{ 1.0f, 0.0f, 0.0f } );
+            outListAxisV.assign( count, float3{ 0.0f, 0.0f, 1.0f } );
+            if ( count == 0 )
+                return;
+            buildFrame( listTangent[0], axisIndex, outListAxisU[0], outListAxisV[0] );
+            for ( size_t index = 1; index < count; ++index )
+            {
+                transportFrame( listPosition[index - 1], listTangent[index - 1], outListAxisV[index - 1], listPosition[index], listTangent[index], outListAxisU[index],
+                                outListAxisV[index] );
+            }
+        }
+
+        /** @brief 경로를 같은 비율 간격으로 표본한 회전 최소화 프레임 표입니다. 모디파이어가 `applyToMesh` 마다 다시 만듭니다. */
+        struct PathFrameCache
+        {
+            static constexpr uint32 kSegmentCount = 128; ///< 표본 구간 수(표본은 하나 더)
+
+            vector<float3> _listPosition;
+            vector<float3> _listTangent;
+            vector<float3> _listAxisU;
+            vector<float3> _listAxisV;
+
+            bool isEmpty() const { return _listAxisV.empty(); }
+
+            void clear()
+            {
+                _listPosition.clear();
+                _listTangent.clear();
+                _listAxisU.clear();
+                _listAxisV.clear();
+            }
+
+            /** @brief 경로를 표본해 표를 만듭니다. 표본에 하나라도 실패하면 표를 비웁니다(고정 기준 축 프레임으로 돌아간다). */
+            void build( const MeshModifierContext& context, const string& reference, PathSpace space )
+            {
+                clear();
+                _listPosition.reserve( kSegmentCount + 1 );
+                _listTangent.reserve( kSegmentCount + 1 );
+                for ( uint32 index = 0; index <= kSegmentCount; ++index )
+                {
+                    float3 position{ 0.0f, 0.0f, 0.0f };
+                    float3 tangent{ 0.0f, 1.0f, 0.0f };
+                    const float32 fraction = static_cast<float32>( index ) / static_cast<float32>( kSegmentCount );
+                    if ( trySamplePath( context, reference, space, fraction, position, tangent ) == false )
+                    {
+                        clear();
+                        return;
+                    }
+                    _listPosition.push_back( position );
+                    _listTangent.push_back( tangent );
+                }
+                buildRotationMinimizingFrames( _listPosition, _listTangent, context._axisIndex, _listAxisU, _listAxisV );
+            }
+
+            /** @brief 비율 @p fraction 의 (위치, 접선) 에 맞는 프레임을 바로 앞 표본에서 한 걸음 옮겨 냅니다. */
+            void findFrame( float32 fraction, const float3& position, const float3& tangent, float3& outAxisU, float3& outAxisV ) const
+            {
+                const float32 scaled = MathUtil::saturate( fraction ) * static_cast<float32>( kSegmentCount );
+                const size_t  index  = MathUtil::min( static_cast<size_t>( MathUtil::max( MathUtil::floor( scaled ), 0.0f ) ), _listAxisV.size() - 1 );
+                transportFrame( _listPosition[index], _listTangent[index], _listAxisV[index], position, tangent, outAxisU, outAxisV );
+            }
+        };
+
+        /**
          * @brief 경로 위 호 길이 @p distance 자리에 단면 좌표 (u, v) 를 놓습니다. 경로 밖은 끝 접선을 따라 곧게 잇습니다.
+         * @param pFrameCache 회전 최소화 프레임 표. 없거나 비었으면 고정 기준 축 프레임(`buildFrame`)을 쓴다.
          * @return 표본에 실패하면 false(호출자는 원래 점을 둔다).
          */
         [[nodiscard]] static bool tryPlaceOnPath( const MeshModifierContext& context, const string& reference, PathSpace space, float32 length, float32 distance,
-                                                  bool bLoop, float32 coordU, float32 coordV, float3& outPosition )
+                                                  bool bLoop, float32 coordU, float32 coordV, float3& outPosition, const PathFrameCache* pFrameCache = nullptr )
         {
             float32 along = distance;
             if ( bLoop )
@@ -96,7 +197,10 @@ namespace sw::editor
                 return false;
             float3 axisU{ 1.0f, 0.0f, 0.0f };
             float3 axisV{ 0.0f, 0.0f, 1.0f };
-            buildFrame( tangent, context._axisIndex, axisU, axisV );
+            if ( pFrameCache != nullptr && pFrameCache->isEmpty() == false )
+                pFrameCache->findFrame( clamped / length, position, tangent, axisU, axisV );
+            else
+                buildFrame( tangent, context._axisIndex, axisU, axisV );
             outPosition = position + tangent * ( along - clamped ) + axisU * coordU + axisV * coordV;
             return true;
         }

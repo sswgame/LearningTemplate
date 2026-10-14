@@ -241,6 +241,8 @@ namespace sw::editor
         float4x4                   _meshToWorld{};          ///< 메시 로컬 → 월드(월드 공간 모디파이어 · 외부 입력의 좌표 변환)
         const IMeshModifierInputs* _pInputs{ nullptr };     ///< 없으면 외부 입력을 쓰는 모디파이어는 항등입니다
         float32                    _time{ 0.0f };           ///< 초. 애니메이션 모디파이어(Waving · Dynamic Ripple · Vertex Anim)가 씁니다
+        /** @brief 스택에 들어온 변형 전 정점 위치(메시 로컬)입니다. 스택이 채우고, 없거나 정점 수가 다르면 각 모디파이어의 입력 위치를 대신 씁니다. */
+        const vector<float3>*      _pListStackInputPosition{ nullptr };
     };
 } // namespace sw::editor
 
@@ -254,6 +256,9 @@ namespace sw::editor
         float2 _uv{ 0.0f, 0.0f };
         float4 _color{ 1.0f, 1.0f, 1.0f, 1.0f };
         uint32 _vertexIndex{ 0 };
+        /** @brief 스택 입력(변형 전 원본) 위치를 모디파이어 공간으로 옮긴 값입니다. `_bHasOriginalPosition` 이 false 면 쓰지 않습니다. */
+        float3 _originalPosition{ 0.0f, 0.0f, 0.0f };
+        bool   _bHasOriginalPosition{ false }; ///< `needsOriginalPosition` 이 true 인 모디파이어에만 적용기가 채운다
     };
 } // namespace sw::editor
 
@@ -267,6 +272,7 @@ namespace sw::editor
         float4x4                      _worldToModifier{}; ///< 월드 → 모디파이어 공간
         const MeshModifierEvaluation* _pEvaluation{ nullptr };
         uint32                        _axisIndex{ 1 }; ///< 주축 성분 번호(0 = X, 1 = Y, 2 = Z)
+        const vector<float3>*         _pListOriginalPosition{ nullptr }; ///< 변형 전 원본 위치(모디파이어 공간). `needsOriginalPosition` 일 때만 채운다
 
         float32                    getTime() const { return _pEvaluation != nullptr ? _pEvaluation->_time : 0.0f; }
         const IMeshModifierInputs* getInputs() const { return _pEvaluation != nullptr ? _pEvaluation->_pInputs : nullptr; }
@@ -316,6 +322,8 @@ namespace sw::editor
          *          CPU 구현이 정본이다 — 굽기 · 테스트는 늘 CPU 로 돈다.
          */
         virtual bool supportsGPU() const { return false; }
+        /** @brief `MeshModifierPoint::_originalPosition` 이 필요하면 true 입니다. 기본은 false(복사 비용을 내지 않는다)입니다. */
+        virtual bool needsOriginalPosition() const { return false; }
         /**
          * @brief GPU 구조 버퍼에 넣을 평탄한 매개변수를 @p outListValue 뒤에 붙입니다. `supportsGPU` 가 false 면 아무것도 붙이지 않고 false 입니다.
          * @details 기본 배치: 스칼라(Float · Int · Bool · Axis)는 선언 순서대로 float4 의 x 에 하나씩, Vector3 는 xyz, 그 밖의 종류는 건너뛴다.
