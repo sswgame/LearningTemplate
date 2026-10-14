@@ -30,7 +30,7 @@ namespace sw
      * @warning 서버에 `setTaskManager` 를 지정하면 두 함수가 **여러 스레드에서 동시에** 불린다. 상태를 바꾸지 말고 읽기만 해야 한다.
      *          읽는 게임 상태는 스냅샷을 보내는 동안 바뀌지 않아야 하며, 보통 틱 끝에 보내므로 이 조건이 지켜진다.
      */
-    class SW_GF_API IReplicationPolicy
+    class SW_KIT_API IReplicationPolicy
     {
     public:
         IReplicationPolicy()          = default;
@@ -88,7 +88,7 @@ namespace sw
      *     // 시뮬레이션: server.popInput( connectionID, tick, inputBytes ); ... server.setLastProcessedInputTick( connectionID, tick );
      * @endcode
      */
-    class SW_GF_API ReplicationServer : public INetMessageHandler
+    class SW_KIT_API ReplicationServer : public INetMessageHandler
     {
     public:
         ReplicationServer();

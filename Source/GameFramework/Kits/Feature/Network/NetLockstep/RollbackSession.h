@@ -33,7 +33,7 @@ namespace sw
      * @class IRollbackGame
      * @brief 롤백이 호출하는 게임 쪽 인터페이스입니다. 같은 입력이면 같은 결과가 나와야 합니다.
      */
-    class SW_GF_API IRollbackGame
+    class SW_KIT_API IRollbackGame
     {
     public:
         IRollbackGame()          = default;
@@ -68,7 +68,7 @@ namespace sw
      * @details 플레이어 번호는 서버가 0이고, 클라이언트는 연결 id + 1이다.
      *          망은 스타 토폴로지이다. 서버가 클라이언트의 메시지를 다른 클라이언트에 그대로 다시 보내며, 확인과 이점도 함께 전달된다.
      */
-    class SW_GF_API RollbackSession : public INetMessageHandler
+    class SW_KIT_API RollbackSession : public INetMessageHandler
     {
     public:
         static constexpr int32 kHistorySize = 128;

@@ -81,7 +81,7 @@ namespace sw
         Invalid
     };
 
-    SW_GF_API const utf8* toString( TradeResult result );
+    SW_KIT_API const utf8* toString( TradeResult result );
 } // namespace sw
 
 namespace sw
@@ -100,7 +100,7 @@ namespace sw
 namespace sw
 {
     /** @brief 거래 하나의 스냅샷입니다. 두 당사자에게 알리는 값입니다. */
-    struct SW_GF_API TradeSnapshot
+    struct SW_KIT_API TradeSnapshot
     {
         TradeSide        _arrSide[2]{}; ///< 0번이 신청한 쪽이다
         uint64           _tradeID{ 0 };
@@ -119,7 +119,7 @@ namespace sw
 namespace sw
 {
     /** @brief 거래 와이어 코덱입니다. 읽을 때 형식이나 상한이 틀리면 false 를 반환합니다. */
-    struct SW_GF_API TradeWire
+    struct SW_KIT_API TradeWire
     {
         static void               writeLegs( BitWriter& outWriter, const vector<TradeLeg>& listLeg );
         [[nodiscard]] static bool readLegs( BitReader& reader, vector<TradeLeg>& outListLeg );

@@ -15,8 +15,9 @@ namespace sw
      * @class IAccountSessionControl
      * @brief 서비스 스레드에서 부릅니다. 다른 서버 프로세스의 세션은 서버 버스 알림(또는 그쪽의 다음 세션 확인)으로 끊긴다.
      */
-    class SW_GF_API IAccountSessionControl
+    class IAccountSessionControl
     {
+        // 순수 인터페이스라 내보내지 않는다 — 인라인 생성자 · 소멸자를 GameFramework.dll 이 내보내지 않으므로 dllimport 로 풀리면 키트 링크가 깨진다(C-3).
     public:
         IAccountSessionControl()          = default;
         virtual ~IAccountSessionControl() = default;

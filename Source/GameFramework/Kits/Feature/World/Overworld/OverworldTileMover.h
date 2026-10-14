@@ -29,7 +29,7 @@ namespace sw
      * @param stepCount 조우 타일을 밟은 누적 걸음 수(1 부터).
      * @details 테스트가 직접 호출할 수 있게 `tryStep` 밖에 둡니다. 조우를 끄려고 넣은 0 은 실제로 끄는 값이어야 합니다.
      */
-    SW_GF_API bool shouldEncounterOnStep( float32 encounterRate, uint32 stepCount );
+    SW_KIT_API bool shouldEncounterOnStep( float32 encounterRate, uint32 stepCount );
 
     /** @brief 이동 축 데드존과 조우율입니다. 버튼과 이동 액션 이름은 폰의 스키마(`PawnComponent`)가 정합니다. */
     struct OverworldTileMoverSettings
@@ -46,7 +46,7 @@ namespace sw
      * @details 폰 쪽 코드이다. InputMap 이나 InputManager 를 읽지 않고, 그 오브젝트의 폰 의도(`PawnComponent::getIntent`)를 받는다.
      *          플레이어, AI, 기록 재생이 같은 방식으로 걷는다.
      */
-    class SW_GF_API OverworldTileMover
+    class SW_KIT_API OverworldTileMover
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "OPLC" );

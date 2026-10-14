@@ -36,7 +36,7 @@ namespace sw
      * @brief 받은 스냅샷을 틱 순서로 보관하고, `sampleEntity` 로 렌더 시각을 사이에 둔 두 스냅샷의 엔티티와 그 사이 비율을 돌려줍니다.
      * @details 위치와 회전을 섞는 일은 게임이 한다.
      */
-    class SW_GF_API ReplicationClient : public INetMessageHandler
+    class SW_KIT_API ReplicationClient : public INetMessageHandler
     {
     public:
         ReplicationClient();

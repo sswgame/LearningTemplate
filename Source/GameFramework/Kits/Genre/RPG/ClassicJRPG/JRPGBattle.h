@@ -60,7 +60,7 @@ namespace sw
      * @class IJRPGTimingInput
      * @brief 전투가 타이밍 순간마다 "목표 시각에서 얼마나 어긋나게 눌렀는가"를 묻는 인터페이스입니다. 실제 게임은 연출을 멈추고 입력을 기다린 결과를 반환하고, 테스트와 AI 는 정해 둔 값을 반환합니다.
      */
-    class SW_GF_API IJRPGTimingInput
+    class SW_KIT_API IJRPGTimingInput
     {
     public:
         IJRPGTimingInput()          = default;
@@ -170,7 +170,7 @@ namespace sw
      *          시전하는 적은 `castEvery` 번째 차례마다 시전을 시작하고 `castTurns` 차례 뒤에 터뜨린다. 그 사이 잠금과 같은 유형으로 맞히면 하나씩 깨지고,
      *          모두 깨면 시전이 취소된다. 깬 만큼 위력이 (남은 수 + 1) / (전체 + 1) 로 줄어든다.
      */
-    class SW_GF_API JRPGBattle
+    class SW_KIT_API JRPGBattle
     {
     public:
         static constexpr uint32 kStateTag       = FourCcUtil::make( "JBTL" );

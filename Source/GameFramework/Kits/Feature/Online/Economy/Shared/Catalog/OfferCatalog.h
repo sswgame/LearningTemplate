@@ -69,7 +69,7 @@ namespace sw
 namespace sw
 {
     /** @class OfferCatalog @brief 상품 모음입니다. 읽은 뒤에는 바꾸지 않습니다. 저장소 스레드가 읽기 때문입니다. */
-    class SW_GF_API OfferCatalog : public XMLCatalog<OfferCatalog>
+    class SW_KIT_API OfferCatalog : public XMLCatalog<OfferCatalog>
     {
         friend class XMLCatalog<OfferCatalog>;
 

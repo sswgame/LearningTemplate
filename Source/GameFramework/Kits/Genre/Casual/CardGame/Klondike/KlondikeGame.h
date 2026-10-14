@@ -49,7 +49,7 @@ namespace sw
      * @details 테이블에는 색이 번갈아 가며 하나씩 내려가야 하고, 빈 열에는 킹만 놓을 수 있다. 파운데이션은 무늬별로 에이스부터 하나씩 올라간다.
      *          열에서 패를 옮겨 뒤집힌 패가 맨 위가 되면 저절로 뒤집는다(되돌리기도 그것까지 되돌린다).
      */
-    class SW_GF_API KlondikeGame
+    class SW_KIT_API KlondikeGame
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "CKLN" );

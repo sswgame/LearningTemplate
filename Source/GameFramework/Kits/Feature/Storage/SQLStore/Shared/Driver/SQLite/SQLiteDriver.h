@@ -13,7 +13,7 @@ namespace sw
      * @class SQLiteDriver
      * @brief SQLite 드라이버입니다. 상태가 없으므로 모든 워커가 하나를 같이 씁니다.
      */
-    class SW_GF_API SQLiteDriver final : public ISQLDriver
+    class SW_KIT_API SQLiteDriver final : public ISQLDriver
     {
     public:
         static SQLiteDriver& getInstance();

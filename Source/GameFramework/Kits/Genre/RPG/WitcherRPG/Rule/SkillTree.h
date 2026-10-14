@@ -47,7 +47,7 @@ namespace sw
 namespace sw
 {
     /** @brief 트리 하나입니다. */
-    struct SW_GF_API SkillTreeDef
+    struct SW_KIT_API SkillTreeDef
     {
         hashed_string    _id{};
         vector<SkillDef> _listSkill{};
@@ -63,7 +63,7 @@ namespace sw
      * @brief `<SkillTreeCatalog><Tree id="combat"><Skill id="power" maxRank="3" cost="1" level="2" spent="0" requires="basic:1,stance"
      *        group="" ability="PowerStrike"><Stats attack="5"/></Skill></Tree></SkillTreeCatalog>` 를 읽습니다(`<Stats>` 는 랭크 하나에 해당하는 양).
      */
-    class SW_GF_API SkillTreeCatalog : public XMLCatalog<SkillTreeCatalog>
+    class SW_KIT_API SkillTreeCatalog : public XMLCatalog<SkillTreeCatalog>
     {
         friend class XMLCatalog<SkillTreeCatalog>;
 
@@ -95,13 +95,13 @@ namespace sw
         RequiredByOther ///< 내리기에서 쓴다. 다른 스킬이 이 랭크를 요구한다
     };
 
-    SW_GF_API const utf8* toString( SkillResult result );
+    SW_KIT_API const utf8* toString( SkillResult result );
 
     /**
      * @class SkillTreeState
      * @brief 캐릭터 하나가 트리 하나에서 가진 랭크와 남은 점수입니다. 트리 정의는 소유하지 않고 참조만 합니다.
      */
-    class SW_GF_API SkillTreeState
+    class SW_KIT_API SkillTreeState
     {
     public:
         SkillTreeState();

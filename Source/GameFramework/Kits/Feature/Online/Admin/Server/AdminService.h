@@ -40,7 +40,7 @@ namespace sw
 namespace sw
 {
     /** @class AdminService @brief GM 명령 처리기입니다. */
-    class SW_GF_API AdminService final : public IOnlineHostService
+    class SW_KIT_API AdminService final : public IOnlineHostService
     {
     public:
         using ReplyDelegate = Delegate<void( const AdminReply& )>;

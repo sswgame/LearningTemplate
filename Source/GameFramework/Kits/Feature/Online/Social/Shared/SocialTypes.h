@@ -43,7 +43,7 @@ namespace sw
         Count
     };
 
-    SW_GF_API const utf8* toString( SocialResult result );
+    SW_KIT_API const utf8* toString( SocialResult result );
 } // namespace sw
 
 namespace sw

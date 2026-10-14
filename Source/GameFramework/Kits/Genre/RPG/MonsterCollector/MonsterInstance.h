@@ -33,7 +33,7 @@ namespace sw
 namespace sw
 {
     /** @brief 개체 하나(잡은 몬스터, 야생, 트레이너의 몬스터)입니다. 능력치 `_arrStat` 는 `MonsterRules::recomputeStats` 가 채웁니다. */
-    struct SW_GF_API MonsterInstance
+    struct SW_KIT_API MonsterInstance
     {
         static constexpr int32  kMoveSlotCount = 4;
         static constexpr uint32 kStateMinBytes = 157; ///< `writeState` 가 쓰는 개체 하나의 최소 바이트 수(이름 3개 12 + 기술 슬롯 48 + 개체값, 노력치, 능력치 72 + 경험치 8 + 정수 4개 16 + 상태 1)
@@ -92,7 +92,7 @@ namespace sw
      *          HP = ⌊(2B + IV + ⌊EV/4⌋) × L / 100⌋ + L + 10,
      *          그 밖의 능력치 = ⌊(⌊(2B + IV + ⌊EV/4⌋) × L / 100⌋ + 5) × 성격⌋(성격은 110, 100, 90 %).
      */
-    struct SW_GF_API MonsterRules
+    struct SW_KIT_API MonsterRules
     {
         static constexpr int32 kMaxIv              = 31;
         static constexpr int32 kMaxEvPerStat       = 252;
@@ -148,7 +148,7 @@ namespace sw
      * @brief 파티(최대 6마리)와 박스입니다. 잡은 개체는 파티에 자리가 있으면 파티로, 없으면 박스로 갑니다.
      * @details 파티의 마지막 "싸울 수 있는" 개체는 박스에 맡길 수 없다(전투 불능인 개체만 남는 파티를 막기 위해서다).
      */
-    class SW_GF_API MonsterStorage
+    class SW_KIT_API MonsterStorage
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "MCST" );

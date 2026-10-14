@@ -128,7 +128,7 @@ namespace sw
      * @class KartTrack
      * @brief 정의를 샘플 점 목록으로 풀어서 보관하고, 거리, 투영, 문 통과를 계산합니다. 차의 땅(`IVehicleGround`)이기도 합니다.
      */
-    class SW_GF_API KartTrack final : public IVehicleGround
+    class SW_KIT_API KartTrack final : public IVehicleGround
     {
     public:
         /** @brief 샘플 점 하나입니다. */
@@ -208,7 +208,7 @@ namespace sw
      *        <Offroad from="0.6" to="0.65" minOffset="-6" maxOffset="0" scale="0.4"/></Track></KartTrackCatalog>` 를 읽습니다.
      * @details 점이 3개보다 적은 트랙은 경고하고 건너뛴다. 같은 id 가 둘이면 뒤의 것이 이긴다.
      */
-    class SW_GF_API KartTrackCatalog : public XMLCatalog<KartTrackCatalog>
+    class SW_KIT_API KartTrackCatalog : public XMLCatalog<KartTrackCatalog>
     {
         friend class XMLCatalog<KartTrackCatalog>;
 

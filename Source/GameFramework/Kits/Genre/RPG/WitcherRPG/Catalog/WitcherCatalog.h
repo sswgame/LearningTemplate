@@ -217,7 +217,7 @@ namespace sw
      *     </WitcherCatalog>
      * @endcode
      */
-    class SW_GF_API WitcherCatalog : public XMLCatalog<WitcherCatalog>
+    class SW_KIT_API WitcherCatalog : public XMLCatalog<WitcherCatalog>
     {
         friend class XMLCatalog<WitcherCatalog>;
 

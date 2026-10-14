@@ -27,7 +27,7 @@ namespace sw
      * @class ISQLJob
      * @brief 풀의 작업 하나입니다. `run` 은 워커에서, `complete` 는 완료를 회수하는 스레드에서 실행합니다.
      */
-    class SW_GF_API ISQLJob
+    class SW_KIT_API ISQLJob
     {
     public:
         ISQLJob()          = default;
@@ -58,7 +58,7 @@ namespace sw
      * @class SQLConnectionPool
      * @brief 연결 풀입니다. `submit` 은 어느 스레드에서나 부를 수 있고, `pollCompletions` 는 작업을 맡긴 서비스 스레드 하나에서만 부릅니다.
      */
-    class SW_GF_API SQLConnectionPool
+    class SW_KIT_API SQLConnectionPool
     {
     public:
         SQLConnectionPool();

@@ -32,7 +32,7 @@ namespace sw
      * @brief 광선이 지나는 셀을 차례로 걸어 첫 블록에서 멈춥니다. 공기나 물처럼 단단하지 않은 블록은 지나갑니다.
      * @details 셀을 건너뛰지 않으므로 모서리를 스치는 광선도 놓치지 않는다.
      */
-    struct SW_GF_API VoxelRaycast
+    struct SW_KIT_API VoxelRaycast
     {
         /**
          * @param direction 길이가 0이 아니면 됩니다. 함수 안에서 정규화합니다.

@@ -43,7 +43,7 @@ namespace sw
 namespace sw
 {
     /** @brief 족보를 판정합니다. 상태가 없습니다. */
-    struct SW_GF_API PokerHandEvaluator
+    struct SW_KIT_API PokerHandEvaluator
     {
         static constexpr uint8 kAceHigh = 14;
 

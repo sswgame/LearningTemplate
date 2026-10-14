@@ -17,7 +17,7 @@ namespace sw
      * @class FakePlatformLoginProvider
      * @brief 가짜 제공자입니다.
      */
-    class SW_GF_API FakePlatformLoginProvider final : public IPlatformLoginProvider
+    class SW_KIT_API FakePlatformLoginProvider final : public IPlatformLoginProvider
     {
     public:
         explicit FakePlatformLoginProvider( string_view name );

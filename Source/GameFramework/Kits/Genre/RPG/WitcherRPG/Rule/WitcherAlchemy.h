@@ -36,7 +36,7 @@ namespace sw
         AlreadyActive   ///< 같은 변이 혼합물이 이미 돌고 있다
     };
 
-    SW_GF_API const utf8* toString( WitcherUseResult result );
+    SW_KIT_API const utf8* toString( WitcherUseResult result );
 
     /** @brief 지금 돌고 있는 효과 하나입니다. */
     struct WitcherActiveEffect
@@ -54,7 +54,7 @@ namespace sw
      * @brief 위쳐 한 명의 연금술입니다. 물건 하나는 한 번 만들면 인벤토리에 남고(아이템 하나) 사용 횟수만 줄어듭니다. 명상하면 술 하나로 모든 물건이
      *        가득 찹니다. 독성은 묶이지 않은 부분이 초당 일정량 줄고, 변이 혼합물이 가진 부분은 효과가 끝날 때 풀립니다.
      */
-    class SW_GF_API WitcherAlchemy
+    class SW_KIT_API WitcherAlchemy
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "WALC" );

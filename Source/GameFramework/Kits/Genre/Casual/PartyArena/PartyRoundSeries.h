@@ -55,7 +55,7 @@ namespace sw
      * @brief `<PartySeries winScore="5" placementPoints="3,2,1,0"><Round id="trampoline" time="60" scoreLimit="5"/>...</PartySeries>` 를 읽습니다.
      * @details 라운드 목록이 끝나면 처음부터 다시 돈다.
      */
-    class SW_GF_API PartyRoundSeries : public XMLCatalog<PartyRoundSeries>
+    class SW_KIT_API PartyRoundSeries : public XMLCatalog<PartyRoundSeries>
     {
         friend class XMLCatalog<PartyRoundSeries>;
 

@@ -32,7 +32,7 @@ namespace sw
      * @class IPlatformLoginClient
      * @brief 외부 로그인 티켓을 얻는 인터페이스입니다. 모든 호출은 한 스레드(게임 스레드)에서 해야 합니다.
      */
-    class SW_GF_API IPlatformLoginClient
+    class SW_KIT_API IPlatformLoginClient
     {
     public:
         IPlatformLoginClient()          = default;
@@ -54,7 +54,7 @@ namespace sw
      * @class IExternalBrowser
      * @brief 시스템 기본 브라우저로 주소를 엽니다. 사용자가 저장해 둔 로그인, 비밀번호 관리자, 2단계 인증을 그대로 쓸 수 있습니다.
      */
-    class SW_GF_API IExternalBrowser
+    class SW_KIT_API IExternalBrowser
     {
     public:
         IExternalBrowser()          = default;
@@ -73,7 +73,7 @@ namespace sw
      * @class FakePlatformLoginClient
      * @brief 테스트와 개발용 구현입니다. `setTicket` 으로 정한 티켓을 다음 `tick` 에 돌려주며, 정하지 않은 제공자는 실패합니다.
      */
-    class SW_GF_API FakePlatformLoginClient final : public IPlatformLoginClient
+    class SW_KIT_API FakePlatformLoginClient final : public IPlatformLoginClient
     {
     public:
         FakePlatformLoginClient();

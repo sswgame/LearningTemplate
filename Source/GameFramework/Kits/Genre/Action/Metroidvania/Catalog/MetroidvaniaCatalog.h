@@ -132,7 +132,7 @@ namespace sw
      *        <Charm id="strength" cost="3"><Stats damage="0.5"/></Charm><Map region="crossroads" price="30"/><Site id="bench1" area="dirtmouth" rest="true"/>
      *        <Pickup id="mask1" area="hall"/><Enemy id="husk" currency="5" loot="husk"/><Enemy id="hornet" boss="true" currency="300"/></Metroidvania>`
      */
-    class SW_GF_API MetroidvaniaCatalog : public XMLCatalog<MetroidvaniaCatalog>
+    class SW_KIT_API MetroidvaniaCatalog : public XMLCatalog<MetroidvaniaCatalog>
     {
         friend class XMLCatalog<MetroidvaniaCatalog>;
 

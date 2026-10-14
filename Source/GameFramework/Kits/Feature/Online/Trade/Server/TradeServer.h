@@ -26,7 +26,7 @@ namespace sw
      * @class TradeServer
      * @brief 거래 바인딩입니다. 호스트 `tick` 스레드에서 씁니다.
      */
-    class SW_GF_API TradeServer final : public IOnlineHostService
+    class SW_KIT_API TradeServer final : public IOnlineHostService
     {
     public:
         TradeServer();

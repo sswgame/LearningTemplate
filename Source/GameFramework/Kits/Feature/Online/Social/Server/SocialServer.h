@@ -28,7 +28,7 @@ namespace sw
      * @class SocialServer
      * @brief 친구와 길드 바인딩입니다. 호스트 `tick` 스레드에서 씁니다.
      */
-    class SW_GF_API SocialServer final : public IOnlineHostService
+    class SW_KIT_API SocialServer final : public IOnlineHostService
     {
     public:
         SocialServer();

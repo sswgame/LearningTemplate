@@ -105,7 +105,7 @@ namespace sw
      *     server.update( serverTick );                          // 월드 틱 뒤에 부른다
      * @endcode
      */
-    class SW_GF_API DestructionReplicationServer : public INetMessageHandler
+    class SW_KIT_API DestructionReplicationServer : public INetMessageHandler
     {
     public:
         DestructionReplicationServer();
@@ -182,7 +182,7 @@ namespace sw
      *     client.update( deltaTime );                          // 월드 틱 앞에 부른다(받은 메시지를 분배한 뒤)
      * @endcode
      */
-    class SW_GF_API DestructionReplicationClient : public INetMessageHandler
+    class SW_KIT_API DestructionReplicationClient : public INetMessageHandler
     {
     public:
         DestructionReplicationClient();

@@ -24,7 +24,7 @@ namespace sw
      * @class IBrZoneTerrain
      * @brief 다음 원 중심이나 보급 상자 위치로 쓸 수 있는 땅인지 게임이 답합니다(물과 산꼭대기는 금지). 맵 경계는 자기장이 따로 확인합니다.
      */
-    class SW_GF_API IBrZoneTerrain
+    class SW_KIT_API IBrZoneTerrain
     {
     public:
         IBrZoneTerrain()          = default;
@@ -73,7 +73,7 @@ namespace sw
      *          줄어드는 동안 중심과 반지름은 선형 보간한다. 피해는 원 밖에서만 받고, 지금 단계의 초당 피해를 쓴다.
      *          시간은 `update` 로만 흐르고 난수는 시드 하나로 만들므로, 같은 시드면 같은 원이 나온다.
      */
-    class SW_GF_API BrZone
+    class SW_KIT_API BrZone
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "BRZN" );

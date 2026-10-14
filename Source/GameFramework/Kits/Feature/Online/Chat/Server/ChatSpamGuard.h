@@ -38,7 +38,7 @@ namespace sw
      * @class ChatSpamGuard
      * @brief 도배 방지기입니다.
      */
-    class SW_GF_API ChatSpamGuard
+    class SW_KIT_API ChatSpamGuard
     {
     public:
         ChatSpamGuard();

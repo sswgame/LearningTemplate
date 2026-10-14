@@ -45,7 +45,7 @@ namespace sw
      * @details 배치가 없는 아이템(손으로 인벤토리에 넣은 것)은 원가 0 이고 상하지 않는 것으로 본다. 인벤토리 개수가 배치 합보다 적어지면(밖에서 뺀 경우)
      *          `consume` 이 모자람을 알아채 배치를 맞춘다.
      */
-    class SW_GF_API IngredientStock
+    class SW_KIT_API IngredientStock
     {
     public:
         IngredientStock();

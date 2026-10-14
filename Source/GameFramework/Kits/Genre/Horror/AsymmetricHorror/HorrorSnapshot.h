@@ -63,7 +63,7 @@ namespace sw
      * @struct HorrorSnapshotCodec
      * @brief 스냅샷과 비트 사이를 변환합니다. 같은 스냅샷은 항상 같은 바이트가 나옵니다(결정적). 위치는 +-1000 m 안이어야 합니다.
      */
-    struct SW_GF_API HorrorSnapshotCodec
+    struct SW_KIT_API HorrorSnapshotCodec
     {
         static void write( const HorrorSnapshot& snapshot, BitWriter& outWriter );
         /** @brief 스냅샷을 읽습니다. 바이트가 모자라거나 머리가 다르면 false 를 반환하며, 그때 @p outSnapshot 은 믿을 수 없습니다. */

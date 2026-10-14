@@ -36,7 +36,7 @@ namespace sw
      * @class MatchmakingClient
      * @brief 연결 하나의 매칭 클라이언트입니다.
      */
-    class SW_GF_API MatchmakingClient final : public IOnlineClientService
+    class SW_KIT_API MatchmakingClient final : public IOnlineClientService
     {
     public:
         using ReplyDelegate = Delegate<void( const MatchmakingClientReply& )>;

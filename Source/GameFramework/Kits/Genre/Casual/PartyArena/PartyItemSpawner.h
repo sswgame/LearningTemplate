@@ -87,7 +87,7 @@ namespace sw
      * @brief `<PartyItems minInterval="4" maxInterval="8" lifetime="10" radius="6" height="1.5" maxActive="2"><Item id="spring" effect="SuperBounce" weight="3"/>
      *        <Item id="anvil" effect="Heavy" weight="2" duration="8" knockbackTaken="0.5" knockbackDealt="1.5"/></PartyItems>` 를 읽습니다.
      */
-    class SW_GF_API PartyItemSpawner : public XMLCatalog<PartyItemSpawner>
+    class SW_KIT_API PartyItemSpawner : public XMLCatalog<PartyItemSpawner>
     {
         friend class XMLCatalog<PartyItemSpawner>;
 

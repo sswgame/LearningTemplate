@@ -22,7 +22,7 @@ namespace sw
      * @class ServerDirectoryClient
      * @brief 연결 하나의 서버 디렉터리 클라이언트입니다. 가벼우므로 부하 테스트 봇은 봇마다 하나씩 둡니다.
      */
-    class SW_GF_API ServerDirectoryClient final : public IOnlineClientService
+    class SW_KIT_API ServerDirectoryClient final : public IOnlineClientService
     {
     public:
         using StatusDelegate     = Delegate<void( uint16, const ServerDirectoryStatus& )>;

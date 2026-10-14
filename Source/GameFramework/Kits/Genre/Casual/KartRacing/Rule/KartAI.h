@@ -54,7 +54,7 @@ namespace sw
      * @class KartAIDriver
      * @brief 차 하나의 운전수입니다. 상태로는 드리프트 중인 쪽만 가집니다.
      */
-    class SW_GF_API KartAIDriver
+    class SW_KIT_API KartAIDriver
     {
     public:
         KartAIDriver();

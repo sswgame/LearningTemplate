@@ -54,7 +54,7 @@ namespace sw
      * @class TradeService
      * @brief 거래 서비스입니다.
      */
-    class SW_GF_API TradeService
+    class SW_KIT_API TradeService
     {
     public:
         TradeService();

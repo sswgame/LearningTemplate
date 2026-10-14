@@ -37,7 +37,7 @@ namespace sw
      * @class ActionEnemyBrain
      * @brief 적 하나의 패턴 진행 상태입니다. 정의는 빌려 씁니다.
      */
-    class SW_GF_API ActionEnemyBrain
+    class SW_KIT_API ActionEnemyBrain
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "APEB" );

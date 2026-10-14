@@ -29,7 +29,7 @@ namespace sw
      * @class VoxelHotbar
      * @brief 핫바 전체입니다. 블록을 넣으면 같은 블록이 든 슬롯부터 64개까지 채우고, 남으면 앞쪽 빈 슬롯에 넣습니다. 놓을 때는 고른 슬롯에서 하나씩 꺼냅니다.
      */
-    class SW_GF_API VoxelHotbar
+    class SW_KIT_API VoxelHotbar
     {
     public:
         static constexpr int32 kSlotCount = 9;

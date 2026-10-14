@@ -141,7 +141,7 @@ namespace sw
      * @details 한 라운드는 양쪽이 `setAction` 을 호출한 뒤 `resolveRound` 를 호출하는 순서다. 교체, 볼, 도망은 기술보다 먼저 처리하고(우선도 +7), 기술끼리는 우선도, 스피드(능력 변화와 마비 반영), 시드 난수 순으로 정한다.
      *          쓰러진 개체의 남은 행동은 버린다. 라운드 끝에 날씨 피해, 상태이상 피해, 날씨 턴 감소 순서로 처리한다.
      */
-    class SW_GF_API MonsterBattle
+    class SW_KIT_API MonsterBattle
     {
     public:
         static constexpr uint32 kStateTag        = FourCcUtil::make( "MCBT" );

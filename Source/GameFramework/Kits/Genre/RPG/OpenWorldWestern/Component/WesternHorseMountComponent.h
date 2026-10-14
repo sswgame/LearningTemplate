@@ -24,7 +24,7 @@ namespace sw
      *          (결정 9: 탑승 중 쓰러지거나 말이 떨어뜨리면 강제 하차).
      */
     REFLECT( Category = "Western", DisplayName = "Western Horse Mount", Tooltip = "Ties a WesternHorse to mount movement: gallop on stamina, bond abilities, buck the rider off" )
-    class SW_GF_API WesternHorseMountComponent : public Component
+    class SW_KIT_API WesternHorseMountComponent : public Component
     {
     public:
         REFLECT_BODY();

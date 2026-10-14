@@ -105,7 +105,7 @@ namespace sw
      * @class UnoGame
      * @brief 우노 한 판을 진행합니다. 결과가 결정적입니다. 뽑을 더미가 떨어지면 버린 더미를 같은 난수로 섞습니다.
      */
-    class SW_GF_API UnoGame
+    class SW_KIT_API UnoGame
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "CUNO" );

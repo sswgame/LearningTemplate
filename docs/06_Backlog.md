@@ -117,9 +117,8 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
 
 - `C-2` **빌드 속도 — 계획은 [docs/plans/BuildSpeed.md](plans/BuildSpeed.md).** 남은 것은 5 단계(유니티 범위 — 한 쌍만 잼, 재측정 필요)와 6 단계(`EngineLoop.cpp`)다. 범위 결정은 [결정 기록](09_Decisions.md) 5-2.
 
-- `C-3` **키트 DLL 이 Base 클래스의 암시적 멤버를 내보낸다**(2026-10-12 통합 3 에서 확인, `llvm-readobj --coff-exports GF_WitcherRPG.dll` 에 `Inventory` · `Crafter` · `StatBlock` 의 생성자 · 소멸자).
-  키트 TU 는 강제 포함 헤더로 `SW_GF_EXPORTS` 를 정의하고(`cmake/Engine/ModuleTargets.cmake` 의 `GF_EXPORTS`), Base 헤더와 키트 헤더가 같은 `SW_GF_API` 를 써서 Base 선언도 dllexport 로 풀린다.
-  고치려면 키트 자기 헤더용 매크로를 따로 두고(언리얼의 모듈마다 `<MODULE>_API`) 키트 헤더를 기계적으로 바꾼다. `GameServiceBinding.h` 의 `SW_GAMESERVICE_API` 도 같은 규칙을 따른다.
+- `C-3` **서버 키트가 공유 키트 클래스를 다시 내보낸다**(Base 중복은 끝남 — 결정 기록 5-8). `GF_Server_Account.dll` 200개 중 8개가 `GF_Account.dll` 과 겹친다.
+  고치려면 키트마다 `<KIT>_API` 를 두고 키트 헤더를 기계적으로 바꾼다. 이득이 작아 우선순위는 낮다.
 
 - `C-4` **GameFramework 구조 정리(2026-10-04 리뷰, 사용자 승인).** 남은 것 —
   - 중간: Overworld `TileMap` 의 칸 손셈(`indexOf` · `isInBounds` — 크기는 파일 스키마 `TileMapXMLData` 가 든다) · `Habitat`(CreatureLife) · NetConnection 메시지 버퍼 재사용 ·

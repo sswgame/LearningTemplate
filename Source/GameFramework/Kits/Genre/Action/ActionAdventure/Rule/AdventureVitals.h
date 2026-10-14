@@ -60,14 +60,14 @@ namespace sw
         Drown ///< 수영 중 바닥나서 피해를 입고 물가로 돌아간다(게임이 옮긴다)
     };
 
-    SW_GF_API const utf8* toString( AdventureStaminaOutcome outcome );
+    SW_KIT_API const utf8* toString( AdventureStaminaOutcome outcome );
 
     /**
      * @class AdventureVitals
      * @brief 플레이어 한 명의 하트, 마법, 스태미나입니다. 시간은 `updateStamina` 로만 흐릅니다(결정적).
      * @details 하트 그릇이 늘면 하트가 가득 찬다(젤다의 그릇 획득). 그 밖의 회복은 `heal` 로 한다.
      */
-    class SW_GF_API AdventureVitals
+    class SW_KIT_API AdventureVitals
     {
     public:
         static constexpr uint32 kStateTag         = FourCcUtil::make( "AVIT" );

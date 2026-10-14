@@ -182,7 +182,7 @@ namespace sw
      *          `<Enemy id="wyrd" hp="120" str="14" agi="6" vit="8" exp="30" gold="20" attackType="Blunt" weak="Sun" cast="flame" castTurns="2" castEvery="2" locks="Sword,Moon" boss="false"/>`
      *          `<Area id="field" rate="0.0625" grace="4"><Group enemies="slime,slime" weight="3"/></Area>`
      */
-    class SW_GF_API JRPGCatalog : public XMLCatalog<JRPGCatalog>
+    class SW_KIT_API JRPGCatalog : public XMLCatalog<JRPGCatalog>
     {
         friend class XMLCatalog<JRPGCatalog>;
 

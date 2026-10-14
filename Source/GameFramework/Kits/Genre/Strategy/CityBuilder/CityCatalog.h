@@ -57,10 +57,10 @@ namespace sw
         Radius      ///< 반경 안의 집에 항상 전달한다(우물)
     };
 
-    [[nodiscard]] SW_GF_API bool parseCityService( string_view text, CityService& outService );
-    SW_GF_API const utf8*        toString( CityService service );
-    SW_GF_API const utf8*        toString( CityBuildingKind kind );
-    constexpr uint8              makeCityServiceBit( CityService service )
+    [[nodiscard]] SW_KIT_API bool parseCityService( string_view text, CityService& outService );
+    SW_KIT_API const utf8*        toString( CityService service );
+    SW_KIT_API const utf8*        toString( CityBuildingKind kind );
+    constexpr uint8               makeCityServiceBit( CityService service )
     {
         return static_cast<uint8>( 1u << static_cast<uint32>( service ) );
     }
@@ -122,7 +122,7 @@ namespace sw
      * @brief `<CityCatalog roadCost="2"><Good .../><Building .../><HouseLevel .../></CityCatalog>` 를 읽습니다. 키 이름은 `Resource/game/nilecity/data/city.xml` 입니다.
      * @details 집은 `kind="House"` 인 건물 하나(보통 1셀)이고, 단계 정의는 `<HouseLevel>` 을 적은 순서대로 읽는다.
      */
-    class SW_GF_API CityCatalog : public XMLCatalog<CityCatalog>
+    class SW_KIT_API CityCatalog : public XMLCatalog<CityCatalog>
     {
         friend class XMLCatalog<CityCatalog>;
 

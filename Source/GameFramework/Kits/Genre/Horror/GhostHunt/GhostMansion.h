@@ -52,7 +52,7 @@ namespace sw
         UnknownFurniture
     };
 
-    SW_GF_API const utf8* toString( GhostSearchResult result );
+    SW_KIT_API const utf8* toString( GhostSearchResult result );
 
     /** @brief 부의 상태입니다. */
     enum class GhostBooState : uint8
@@ -103,7 +103,7 @@ namespace sw
      * @class GhostMansion
      * @brief 저택 한 채의 진행을 관리합니다. 지금 방의 싸움은 `getEncounter` 로 손전등과 청소기를 씁니다.
      */
-    class SW_GF_API GhostMansion
+    class SW_KIT_API GhostMansion
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "GHMN" );

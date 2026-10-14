@@ -81,7 +81,7 @@ namespace sw
      * @struct MatchmakingProtocol
      * @brief 본문 코덱입니다. 읽을 때 상한(`PartyLobbyLimit`, `MatchmakingLimit`)을 넘으면 false 를 반환합니다.
      */
-    struct SW_GF_API MatchmakingProtocol
+    struct SW_KIT_API MatchmakingProtocol
     {
         static constexpr uint32 kVersion      = 1;
         static constexpr uint8  kRecordFormat = 1;

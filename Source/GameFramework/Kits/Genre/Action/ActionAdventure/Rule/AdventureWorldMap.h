@@ -53,14 +53,14 @@ namespace sw
         AtLimit ///< 하트나 스태미나가 이미 최대라서 교환하지 않았고, 증표는 그대로다
     };
 
-    SW_GF_API const utf8* toString( AdventureExchangeResult result );
+    SW_KIT_API const utf8* toString( AdventureExchangeResult result );
 
     /**
      * @class AdventureWorldMap
      * @brief 다음 형식의 XML 을 읽는 카탈로그입니다. `<AdventureWorld orbsPerExchange="4"><Tower id="plateauTower" region="Plateau"/><Shrine id="oman" region="Plateau"/></AdventureWorld>`
      *        깨운 탑, 찾은 사당, 마친 사당, 증표를 가집니다.
      */
-    class SW_GF_API AdventureWorldMap : public XMLCatalog<AdventureWorldMap>
+    class SW_KIT_API AdventureWorldMap : public XMLCatalog<AdventureWorldMap>
     {
         friend class XMLCatalog<AdventureWorldMap>;
 

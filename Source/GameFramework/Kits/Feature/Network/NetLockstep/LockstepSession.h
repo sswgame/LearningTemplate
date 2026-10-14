@@ -53,7 +53,7 @@ namespace sw
      *     session.reportChecksum( tick, hashOfState );
      * @endcode
      */
-    class SW_GF_API LockstepSession : public INetMessageHandler
+    class SW_KIT_API LockstepSession : public INetMessageHandler
     {
     public:
         static constexpr uint32 kNoLeaveTick   = invalid_index::kUint32;

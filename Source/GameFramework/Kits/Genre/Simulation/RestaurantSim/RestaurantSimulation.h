@@ -66,7 +66,7 @@ namespace sw
         Cashier ///< 없으면 쉬는 서버가 계산한다
     };
 
-    SW_GF_API const utf8* toString( StaffRole role );
+    SW_KIT_API const utf8* toString( StaffRole role );
 
     /** @brief 직원 하나입니다. */
     struct StaffMember
@@ -195,7 +195,7 @@ namespace sw
      *          팁 = 가격 x 성향 팁 비율 x 품질 비율 x (1 - 기다림 비율)이고, 별점 = 1 + 4 x 최근 N 손님 만족도 평균이다(떠난 손님은 0).
      *          카탈로그는 빌려 쓰므로 시뮬레이션보다 오래 살아야 한다.
      */
-    class SW_GF_API RestaurantSimulation
+    class SW_KIT_API RestaurantSimulation
     {
     public:
         static constexpr float32 kStepMinutes  = 1.0f;

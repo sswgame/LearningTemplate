@@ -70,7 +70,7 @@ namespace sw
         Self
     };
 
-    SW_GF_API const utf8* toString( MonsterStatus status );
+    SW_KIT_API const utf8* toString( MonsterStatus status );
 
     /** @brief 레벨에 배우는 기술 하나입니다. */
     struct MonsterLearnEntry
@@ -98,7 +98,7 @@ namespace sw
 namespace sw
 {
     /** @brief 종 하나입니다. */
-    struct SW_GF_API MonsterSpeciesDef
+    struct SW_KIT_API MonsterSpeciesDef
     {
         hashed_string               _id{};
         string                      _name{};
@@ -144,7 +144,7 @@ namespace sw
 namespace sw
 {
     /** @brief 성격 하나입니다. 올리는 능력치는 ×1.1, 내리는 능력치는 ×0.9이고, 같으면 보정이 없습니다. HP 는 받지 않습니다. */
-    struct SW_GF_API MonsterNatureDef
+    struct SW_KIT_API MonsterNatureDef
     {
         hashed_string _id{};
         MonsterStat   _raised{ MonsterStat::Attack };
@@ -207,7 +207,7 @@ namespace sw
      *          `<Learn level="1" move="scratch"/><Evolve to="charmeleon" level="16"/></Species>`
      *          `<Encounter id="route1_night" area="route1" time="Night"><Slot species="hoothoot" min="2" max="4" weight="30"/></Encounter>`
      */
-    class SW_GF_API MonsterCollectorCatalog : public XMLCatalog<MonsterCollectorCatalog>
+    class SW_KIT_API MonsterCollectorCatalog : public XMLCatalog<MonsterCollectorCatalog>
     {
         friend class XMLCatalog<MonsterCollectorCatalog>;
 

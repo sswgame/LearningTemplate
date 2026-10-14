@@ -29,7 +29,7 @@ namespace sw
 namespace sw
 {
     /** @brief RESP2 값 하나입니다. */
-    struct SW_GF_API RespValue
+    struct SW_KIT_API RespValue
     {
         vector<uint8>     _bytes{};       ///< SimpleString, Error, BulkString 의 내용이다
         vector<RespValue> _listElement{}; ///< Array
@@ -53,7 +53,7 @@ namespace sw
      * @class RespCommand
      * @brief 명령 하나(벌크 문자열 배열)를 만듭니다. 인자를 추가한 뒤 `appendTo` 로 전송 바이트를 붙입니다.
      */
-    class SW_GF_API RespCommand
+    class SW_KIT_API RespCommand
     {
     public:
         explicit RespCommand( string_view name );
@@ -91,7 +91,7 @@ namespace sw
      * @class RespParser
      * @brief 증분 파서입니다. 받은 바이트를 `append` 하고 `next` 가 `NeedMore` 를 반환할 때까지 부릅니다. 한 스레드에서만 씁니다.
      */
-    class SW_GF_API RespParser
+    class SW_KIT_API RespParser
     {
     public:
         static constexpr int64 kMaxBulkSize    = 1024ll * 1024;

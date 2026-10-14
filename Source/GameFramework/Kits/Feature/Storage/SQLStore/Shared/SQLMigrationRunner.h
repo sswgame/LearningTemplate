@@ -37,7 +37,7 @@ namespace sw
      * @struct SQLMigrationRunner
      * @brief 마이그레이션을 읽고 적용합니다.
      */
-    struct SW_GF_API SQLMigrationRunner
+    struct SW_KIT_API SQLMigrationRunner
     {
         /** @brief 디스크 폴더 @p folderPath 의 `.sql` 을 읽어 @p driverName 에 맞게 고릅니다. 번호가 겹치거나 빠졌거나 그 드라이버의 파일이 없으면 false 를 반환합니다. */
         [[nodiscard]] static bool loadMigrations( string_view folderPath, string_view driverName, vector<SQLMigration>& outListMigration, string& outError );

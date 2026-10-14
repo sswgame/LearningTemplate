@@ -100,7 +100,7 @@ namespace sw
      * @class LeaderboardService
      * @brief 순위표 로직입니다. 서비스 스레드에서 씁니다.
      */
-    class SW_GF_API LeaderboardService final : public IScheduledJobHandler
+    class SW_KIT_API LeaderboardService final : public IScheduledJobHandler
     {
     public:
         LeaderboardService();

@@ -128,7 +128,7 @@ namespace sw
      *        <Furniture id="dresser" room="foyer" loot="dresserLoot" search="Shake"/><Boo id="booA" room="foyer" furniture="dresser" hp="30" escapeTime="5"/></GhostHunt>`
      *        를 읽습니다.
      */
-    class SW_GF_API GhostCatalog : public XMLCatalog<GhostCatalog>
+    class SW_KIT_API GhostCatalog : public XMLCatalog<GhostCatalog>
     {
         friend class XMLCatalog<GhostCatalog>;
 

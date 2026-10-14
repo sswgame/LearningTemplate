@@ -93,7 +93,6 @@ Conform 의 `SurfaceBvh`)을 풀었다. 최종 검증: Debug `all AllTests` **�
    컴포넌트 · 씬은 `SceneEngineServices`, 서비스 클래스는 만들 때 · 초기화 때 의존 서브시스템 포인터를 멤버로 받는다. `getTypeRegistry`(273)는 쓰임새를 보고
    `TypeLookupCache` 같은 기존 구조로 풀지 판단한다. 호출 분류 → 많은 접근자부터 주입 → 0 이 된 행의 getter 삭제, 접근자 단위 커밋 · 성능 측정(백로그 `C-28`).
 3. **폴더 쪼개기** — 평평한 `Editor/Common/Commands`(61) · `Engine/Object/GameObject`(45) · `Engine/Renderer/Frame`(43). `EditorNetPlaySession.h` → `Workspace/`.
-4. **C-3** — 백로그 항목대로.
 5. **`nogpu` 샤드 결정** — 합 540초(AppTest HostOnly 샤드 86~136초, EngineTest NoGPU 39~66초). 샤드를 더 쪼갤지 · 기동 중복을 줄일지 사용자 결정 대기.
 6. **`TaskNode` 소유 포인터 변경 전후 성능** — 기준선 워크트리 `D:\w\perfbase`(`2772e1a7a`) · `D:\w\perfbase2`(`6a86561ef`)와 비교. 중립이면 유지.
 7. **PCH 측정** — 모든 구성에서 PCH 를 켠 뒤의 빌드 시간.

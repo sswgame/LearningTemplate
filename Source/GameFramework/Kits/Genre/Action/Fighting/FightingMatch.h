@@ -114,7 +114,7 @@ namespace sw
 namespace sw
 {
     /** @brief 캐릭터 하나의 실행 상태입니다. 모든 필드가 상태 저장에 들어가지만, `_pDef` 는 빌려 온 정의라서 저장하지 않습니다. */
-    struct SW_GF_API FighterRuntime
+    struct SW_KIT_API FighterRuntime
     {
         MoveTimeline       _timeline{};
         InputCommandBuffer _inputBuffer{};
@@ -175,7 +175,7 @@ namespace sw
      *          라운드 번호, 선승 조건, 라운드 시간, 라운드 사이 대기는 기반 클래스 `RoundSeries` 가 가진다. 라운드 승은 1위가 1점이고, 무승부 라운드는 둘 다 1승이다.
      *          둘이 함께 선승 조건에 닿으면 대전이 무승부다.
      */
-    class SW_GF_API FightingMatch
+    class SW_KIT_API FightingMatch
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "FGTM" );

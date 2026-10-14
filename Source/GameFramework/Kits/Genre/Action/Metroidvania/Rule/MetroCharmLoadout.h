@@ -35,7 +35,7 @@ namespace sw
      * @class MetroCharmLoadout
      * @brief 캐릭터 하나의 부적입니다. 넘겨 끼기는 규칙 `_bAllowOvercharm` 이 켜져 있고, 끼기 전에 쓴 슬롯이 전체보다 적을 때만 됩니다.
      */
-    class SW_GF_API MetroCharmLoadout
+    class SW_KIT_API MetroCharmLoadout
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "MCHM" );

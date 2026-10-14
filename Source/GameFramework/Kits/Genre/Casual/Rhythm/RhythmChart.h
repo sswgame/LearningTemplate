@@ -88,7 +88,7 @@ namespace sw
      *          박에서 초로, 초에서 박으로의 변환은 그 테이블을 이분 탐색한다. 노트는 시각, 레인 순으로 정렬한다. 같은 레인에서 앞 롱노트가 끝나기 전에 시작하는 노트는
      *          경고하고 버린다. 엔진 없이 쓸 수 있는 보통 클래스이다.
      */
-    class SW_GF_API RhythmChart
+    class SW_KIT_API RhythmChart
     {
     public:
         RhythmChart();

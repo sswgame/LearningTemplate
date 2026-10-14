@@ -32,7 +32,7 @@ namespace sw
         NotSignedIn ///< 로그인하지 않은 연결이다(공통 오류 `kUnauthenticated`)
     };
 
-    SW_GF_API const utf8* toString( ChatResult result );
+    SW_KIT_API const utf8* toString( ChatResult result );
 
     /** @brief 채널 종류입니다. 채널 id 의 접두어가 정합니다. */
     enum class ChatChannelKind : uint8
@@ -78,7 +78,7 @@ namespace sw
 namespace sw
 {
     /** @struct ChatChannelID @brief 채널 id 규칙입니다. */
-    struct SW_GF_API ChatChannelID
+    struct SW_KIT_API ChatChannelID
     {
         /** @brief 규칙에 맞으면 종류를 반환합니다. 귓속말 기록 키도 읽습니다. 접두어만 있고 이름이 빈 id 는 거절합니다. */
         [[nodiscard]] static bool parseKind( string_view channelID, ChatChannelKind& outKind );

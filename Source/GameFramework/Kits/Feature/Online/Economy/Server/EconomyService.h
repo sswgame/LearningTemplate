@@ -60,7 +60,7 @@ namespace sw
 namespace sw
 {
     /** @class EconomyService @brief 경제 요청 처리기입니다. */
-    class SW_GF_API EconomyService final : public IOnlineHostService
+    class SW_KIT_API EconomyService final : public IOnlineHostService
     {
     public:
         using ReplyDelegate = Delegate<void( const EconomyReply& )>;

@@ -64,7 +64,7 @@ namespace sw
         InvalidRequest       ///< 본문이 깨졌거나 상한을 넘었다
     };
 
-    SW_GF_API const utf8* toString( LoginResult result );
+    SW_KIT_API const utf8* toString( LoginResult result );
 
     /** @brief 세션이 끝난 이유입니다. 묘비와 알림에 남으며 와이어 형식입니다. */
     enum class LoginRevokeReason : uint8
@@ -81,7 +81,7 @@ namespace sw
 namespace sw
 {
     /** @brief 세션 토큰입니다. 선택자(세션 id)와 검증자(비밀)로 이루어집니다. 비밀은 클라이언트만 가지고 있고, 저장소에는 비밀의 다이제스트만 남깁니다. */
-    struct SW_GF_API LoginSessionToken
+    struct SW_KIT_API LoginSessionToken
     {
         uint64 _sessionID{ 0 };
         uint8  _arrSecret[LoginConstant::kTokenSecretSize]{};
@@ -158,7 +158,7 @@ namespace sw
 namespace sw
 {
     /** @brief 계정 키트의 보조 함수 모음입니다. */
-    struct SW_GF_API AccountUtil
+    struct SW_KIT_API AccountUtil
     {
         /**
          * @brief 점으로 나눈 정수열 버전을 비교합니다("1.10.0" > "1.9.9"). 빈 항목은 0으로 보고, 숫자가 아닌 글자가 있으면 그 항목부터 0으로 봅니다.

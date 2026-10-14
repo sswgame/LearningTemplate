@@ -48,7 +48,7 @@ _kListFallibleVerb: tuple[str, ...] = LintGate.readRules("CheckFallibleNodiscard
 
 # 실패할 수 있는 동사로(또는 `re` + 그 동사로) 시작하는 이름.
 _kFallibleNamePattern = r"(?P<name>(?:re)?(?:" + "|".join(_kListFallibleVerb) + r")(?:[A-Z0-9]\w*)?)"
-_kSpecifierPattern = r"(?:(?:static|virtual|inline|constexpr|SW_API|SW_GF_API|SW_MODULE_API)\s+)*"
+_kSpecifierPattern = r"(?:(?:static|virtual|inline|constexpr|SW_API|SW_GF_API|SW_KIT_API|SW_MODULE_API)\s+)*"
 
 # 줄 머리의 지정자(static · virtual · 내보내기 매크로) 다음 `bool 이름(` — 이름이 실패할 수 있는 동사로 시작하는 선언.
 _kDeclarationRe = re.compile(r"^\s*" + _kSpecifierPattern + r"bool\s+" + _kFallibleNamePattern + r"\s*\(")
