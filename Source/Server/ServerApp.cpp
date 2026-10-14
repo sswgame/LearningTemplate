@@ -85,7 +85,7 @@ namespace sw
     } // namespace
 
     ServerApp::ServerApp()
-        : _engineLoop{}
+        : _engine{}
         , _moduleHost{ nullptr }
 #if !defined( SW_SHIPPING )
         , _liveReloadManager{ nullptr }
@@ -142,15 +142,15 @@ namespace sw
     bool ServerApp::initialize( int32 argc, utf8* pArgv[] )
     {
         _startNanoseconds = MonotonicClock::nowNanoseconds();
-        _engineLoop.setModuleTypeLoader( SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleImages, this ) );
-        if ( _engineLoop.initialize( argc, pArgv, EngineHostRole::DedicatedServer ) == false )
+        _engine.setModuleTypeLoader( SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleImages, this ) );
+        if ( _engine.initialize( argc, pArgv, EngineHostRole::DedicatedServer ) == false )
         {
-            SW_LOG_ERROR( "EngineLoop initialization failed (dedicated server)" );
+            SW_LOG_ERROR( "Engine initialization failed (dedicated server)" );
             return false;
         }
         // 헤드리스 작업(서버 팩의 씬 쿠킹)은 엔진 기동 안에서 끝났다. 실패는 종료 코드로 알린다. CookAssets.py 가 이 코드를 본다.
-        if ( _engineLoop.isHeadless() )
-            return _engineLoop.didHeadlessTaskFail() == false;
+        if ( _engine.isHeadless() )
+            return _engine.didHeadlessTaskFail() == false;
 
         if ( loadServerConfig() == false )
             return false;
@@ -161,7 +161,7 @@ namespace sw
         // 게임 인스턴스를 만들기 전에 묶는다 — 게임과 키트가 기동하며 서버 지표 · 상태 레지스트리에 자기 것을 올릴 수 있게 한다.
         _serverServiceContext._serverConfigPath = _serverConfigPath;
         _serverServiceContext._pServerConfig    = _pServerConfig;
-        _serverServiceContext._pConfigManager   = _engineLoop.getConfigManager();
+        _serverServiceContext._pConfigManager   = _engine.getConfigManager();
         _serverServiceContext._pMetricRegistry  = _metricRegistry.get();
         _serverServiceContext._pHealthRegistry  = _healthRegistry.get();
         ServerServiceRegistry::bindHostContext( &_serverServiceContext );
@@ -203,7 +203,7 @@ namespace sw
             return false;
         _liveReloadManager = make_unique<LiveReloadManager>();
         // 모듈 DLL 을 언로드할 수 있는 곳은 "씬은 사라졌고 서비스는 아직 있는" 구간뿐이다(App 과 같은 훅).
-        _engineLoop.setOnScenesReleased( SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
+        _engine.setOnScenesReleased( SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
         {
             if ( _liveReloadManager != nullptr )
                 _liveReloadManager->shutdown();
@@ -234,8 +234,8 @@ namespace sw
 
     bool ServerApp::loadServerConfig()
     {
-        ConfigManager*            pConfigManager = _engineLoop.getConfigManager();
-        const CommandLineManager* pCommandLine   = _engineLoop.getCommandLineManager();
+        ConfigManager*            pConfigManager = _engine.getConfigManager();
+        const CommandLineManager* pCommandLine   = _engine.getCommandLineManager();
         string                    path           = GameSelection::getServerConfigPath();
         if ( pCommandLine != nullptr )
         {
@@ -386,7 +386,7 @@ namespace sw
             _listPendingCommand.clear();
 
             const ShutdownCause cause = ShutdownSignal::getRequestedCause();
-            if ( cause != ShutdownCause::None || _engineLoop.isQuitRequested() )
+            if ( cause != ShutdownCause::None || _engine.isQuitRequested() )
             {
                 SW_LOG_INFO( "Dedicated server shutdown requested (%#) after %# ticks", ShutdownSignal::getCauseName( cause ), _tickCount );
                 _healthRegistry->setDraining( true ); // /readyz 는 503 을 반환한다. 부하 분산기가 새 접속을 끊는다(종료하는 동안에도 /healthz 는 살아 있다).
@@ -450,7 +450,7 @@ namespace sw
     void ServerApp::tickOnce( float32 deltaSeconds )
     {
         // App::run 의 한 프레임에서 창, 에디터, 사용자 설정, 백엔드 교체를 뺀 것이다. 한 틱은 고정 스텝 하나다.
-        _engineLoop.beginFrame( deltaSeconds );
+        _engine.beginFrame( deltaSeconds );
         _moduleHost->beginFrame();
         {
             SW_PROFILE_SCOPE( "GT.Game.fixedUpdate" );
@@ -472,8 +472,8 @@ namespace sw
         }
 #endif
         const ModuleFrameState& frameState = _moduleHost->getFrameState();
-        _engineLoop.tick( deltaSeconds, HostViewTargets{}, ViewCameraProviderDelegate{}, frameState._bTickScene == SW_TRUE );
-        _engineLoop.endFrame();
+        _engine.tick( deltaSeconds, HostViewTargets{}, ViewCameraProviderDelegate{}, frameState._bTickScene == SW_TRUE );
+        _engine.endFrame();
     }
 
     void ServerApp::executeCommand( string_view line )
@@ -591,7 +591,7 @@ namespace sw
         shutdownObservability();
         // 로거는 엔진 종료와 함께 종료된다. 마지막 줄은 그 앞에 남긴다(테스트와 운영 도구가 이 줄로 정상 종료를 확인한다).
         SW_LOG_INFO( "Dedicated server shutdown complete" );
-        _engineLoop.shutdown();
+        _engine.shutdown();
         Logger::clearTickNumber();
         if ( _bSignalHandlerInstalled == SW_TRUE )
             ShutdownSignal::uninstall();

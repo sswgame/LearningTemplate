@@ -36,7 +36,7 @@ namespace sw
      *          | 버스 | `subscribe` · `unsubscribe` · `publish` · `processEvents` · `clear` | **소유 스레드만** |
      *
      *          큐 쪽은 `_queueSpinLock` 과 프레임 아레나가 온전히 지킵니다. 워커 스레드가 이벤트를 넣으면, 소유 스레드가
-     *          프레임마다 `processEvents` 로 꺼내 브로드캐스트합니다. 이 클래스는 실제로 이렇게 쓰입니다(`EngineLoop::tick`
+     *          프레임마다 `processEvents` 로 꺼내 브로드캐스트합니다. 이 클래스는 실제로 이렇게 쓰입니다(`Engine::tick`
      *          이 프레임마다 한 번 꺼냅니다).
      *
      *          버스 쪽이 소유 스레드 전용인 이유는 **`broadcast` 가 잠금 밖에서 돌기 때문**입니다. 콜백이 다시 구독 · 해제 ·
@@ -252,7 +252,7 @@ namespace sw
         /**
          * @brief 큐를 비우는(processEvents 하는) 스레드를 현재 스레드로 정합니다. `processEvents` 가 부릅니다.
          * @details 주인을 **생성한 스레드**가 아니라 **큐를 비우는 스레드**로 잡는 이유가 있습니다. 이 객체를 어디서 만들었는지는
-         *          우연이지만, 프레임마다 큐를 꺼내 브로드캐스트하는 쪽은 설계상 하나로 정해져 있습니다(`EngineLoop::tick`).
+         *          우연이지만, 프레임마다 큐를 꺼내 브로드캐스트하는 쪽은 설계상 하나로 정해져 있습니다(`Engine::tick`).
          *          언리얼의 게임 스레드와 같은 역할입니다.
          */
         void bindBusThread();

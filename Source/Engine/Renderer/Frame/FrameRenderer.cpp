@@ -168,7 +168,7 @@ namespace sw
         if ( gv_viewMode > 0 )
             setViewMode( static_cast<RenderViewMode>( gv_viewMode ) );
 
-        // 동기 경로(execute)는 렌더러 자신의 빌더가 배치를 만든다. 패킷 경로의 빌더(EngineLoop)에는 EngineLoop 가 같은 값을 준다.
+        // 동기 경로(execute)는 렌더러 자신의 빌더가 배치를 만든다. 패킷 경로의 빌더(Engine)에는 Engine 가 같은 값을 준다.
         _sceneBuilder.setMergeBatchesAcrossMaterials( pDevice->supportsNativeBindlessSampling() );
 
         const EngineDefaultAssets& engineDefaultAssets = engine::getEngineDefaultAssets();
@@ -492,11 +492,11 @@ namespace sw
             pMainCamera = pScene->getActiveGameCamera();
         }
         _mainView._settings           = RenderViewCollector::makeMainSettings( pMainCamera );
-        _mainView._settings._viewMode = getViewMode(); // 직접 경로(테스트)는 주 출력 모드를 쓴다. 패킷 경로는 EngineLoop 가 싣는다.
+        _mainView._settings._viewMode = getViewMode(); // 직접 경로(테스트)는 주 출력 모드를 쓴다. 패킷 경로는 Engine 가 싣는다.
         // 씬 직접 경로(에디터, 테스트)도 패킷 경로와 **같은 라이트 버퍼**를 쓴다. 경로마다 조명이
         // 다르면 에디터에서 본 이미지와 게임 화면이 달라진다.
         collectSceneLights( pScene, _listScratchLight, &_listScratchShadowLightIndex );
-        // 주 광원(그림자 배치, 앰비언트, 목록이 비었을 때의 폴백)도 패킷 경로(EngineLoop)와 **같은 규칙**으로
+        // 주 광원(그림자 배치, 앰비언트, 목록이 비었을 때의 폴백)도 패킷 경로(Engine)와 **같은 규칙**으로
         // 씬에서 읽는다. 주의: 이 경로가 주 광원을 채우지 않으면 테스트가 씬에 둔 방향광이 이미지에 반영되지 않아,
         // 조명이 필요한 픽셀 검증(블룸이 1을 넘는 위치)이 불가능해진다.
         DirectionalLightComponent* pKeyLight    = ( pScene != nullptr ) ? pScene->findActiveDirectionalLight() : nullptr;
@@ -512,7 +512,7 @@ namespace sw
         {
             _frameLight = FrameLightState{};
         }
-        // 그림자 배치(볼륨 맞춤 · 아틀라스 칸 · 점광 · 스폿 타일)는 패킷 경로(EngineLoop)와 같은 함수로 주 시점 카메라의 뷰-투영에 맞춘다.
+        // 그림자 배치(볼륨 맞춤 · 아틀라스 칸 · 점광 · 스폿 타일)는 패킷 경로(Engine)와 같은 함수로 주 시점 카메라의 뷰-투영에 맞춘다.
         const float4x4 mainCameraViewProj =
             pMainCamera != nullptr ? pMainCamera->getViewProjectionMatrix( RenderViewCollector::computeAspect( _mainView._settings, _directOutputWidth, _directOutputHeight ) )
                                    : float4x4{};
@@ -533,7 +533,7 @@ namespace sw
         if ( pMainCamera != nullptr )
             cameraPos = pMainCamera->getCameraPosition();
         view( RenderViewType::Main )._position = cameraPos; // 정렬 키(카메라까지의 거리)와 컬링이 같은 값을 본다.
-        // 추가 뷰(캡처 카메라, 화면 사각형)는 패킷 경로(EngineLoop)와 같은 수집기와 스케줄러로 고른다. 시각은 렌더러 시계를 쓴다(테스트는 고정할 수 있다).
+        // 추가 뷰(캡처 카메라, 화면 사각형)는 패킷 경로(Engine)와 같은 수집기와 스케줄러로 고른다. 시각은 렌더러 시계를 쓴다(테스트는 고정할 수 있다).
         _listDirectViewScratch.clear();
         if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
         {
@@ -548,7 +548,7 @@ namespace sw
                 request._shadow = ShadowSetupUtil::makeViewShadowFor( pKeyLight != nullptr ? pShadowLight : nullptr, request._viewProj, _frameShadow );
         }
         // 패킷 경로와 **같은 경로**다. 빌더가 스냅샷을 만들고 RT 쪽이 받는다. 렌더 스레드 쪽 GPUScene 에는 씬을 읽는 메서드가 없다.
-        // 주 카메라의 정렬 축도 패킷 경로(EngineLoop)처럼 설정한다. 직교 카메라는 시선 축을, 원근 카메라는 거리를 쓴다.
+        // 주 카메라의 정렬 축도 패킷 경로(Engine)처럼 설정한다. 직교 카메라는 시선 축을, 원근 카메라는 거리를 쓴다.
         if ( pMainCamera != nullptr )
             _sceneBuilder.setTransparentSortAxis( Render2DSettings::getActive().computeTransparentSortAxis( pMainCamera->isOrthographic(), pMainCamera->getCameraForward() ) );
         _sceneBuilder.populateFromScene( pScene, cameraPos );

@@ -109,7 +109,7 @@ namespace sw
         class DirectionalLightComponent* findActiveDirectionalLight() const;
         /**
          * @brief 그림자 맵을 가져가는 방향광입니다 — 켜져 있고 그림자를 드리우는 첫 방향광(등록 순서). 없으면 nullptr 입니다.
-         * @details 그림자 행렬을 만드는 쪽(`EngineLoop` · `FrameRenderer`)과 그림자 플래그를 싣는 쪽(`collectSceneLights`)이
+         * @details 그림자 행렬을 만드는 쪽(`Engine` · `FrameRenderer`)과 그림자 플래그를 싣는 쪽(`collectSceneLights`)이
          *          **둘 다 이것을 부릅니다.** 주의: 둘이 따로 고르면 첫 방향광이 그림자를 끄고 뒤의 빛이 켤 때 행렬은 비고 플래그는 뒤의
          *          빛에 붙어, 그림자를 드리우는 빛에 그림자가 지지 않는다. 방향 · 색 · 앰비언트는 그대로 주광에서 옵니다.
          */

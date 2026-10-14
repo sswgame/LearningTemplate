@@ -8,7 +8,7 @@
 
 namespace sw
 {
-    class EngineLoop;
+    class Engine;
     class LiveReloadManager;
 
     /**
@@ -27,13 +27,13 @@ namespace sw
          * @brief 매니저를 만들고 자동화 창구(`module.reload` · 탐침 `Module.*`)와 엔진의 씬 해제 훅에 겁니다.
          * @details 모듈을 로드하는 ModuleHost 보다 먼저 불러야 합니다. ModuleHost 가 이 매니저로 모듈을 로드하고 리로드 콜백을 등록합니다.
          */
-        void initialize( EngineLoop& engineLoop );
+        void initialize( Engine& engine );
 
         /**
          * @brief 이번 프레임에 리로드를 걸 입력이 있으면 요청합니다(Ctrl+F7 게임, Ctrl+F6 에디터, `-gv_reloadGameAtFrame=N`).
-         * @details 셸 액션(`EngineLoop::updateShellActions`)을 갱신한 뒤에 부릅니다. 실제 교체는 `update` 가 틱 직전에 합니다.
+         * @details 셸 액션(`Engine::updateShellActions`)을 갱신한 뒤에 부릅니다. 실제 교체는 `update` 가 틱 직전에 합니다.
          */
-        void pollReloadTriggers( const EngineLoop& engineLoop, bool bEnableEditor );
+        void pollReloadTriggers( const Engine& engine, bool bEnableEditor );
         /** @brief 요청된 모듈 교체를 실행합니다. **틱 직전**(게임 업데이트 뒤, 씬 틱 앞)에 부릅니다. 여기서 DLL 이 바뀌고 인스턴스가 새로 만들어집니다. */
         void update();
 

@@ -49,11 +49,9 @@ Conform 의 `SurfaceBvh`)을 풀었다. 최종 검증: Debug `all AllTests` **�
 
 1. **C-27 ③ 의 남은 것** — 부트스트랩 순서는 진단 → 이름 풀 → 로거 → 명령줄 → 크래시 핸들러 → 리소스 루트 → 메모리 예산 → 정적 저장소다
    (`EngineInitSequenceTest.BootstrapScopeRunsFromDiagnosticsToStaticStorage` 가 지킨다). 메모리 예산 표는 첫 프레임 끝에 읽는다(타입 등록부가 엔진 범위라서).
-   남은 ③: 자동화 구동기(`AutomationSession`)는 App 호스트 범위로(3번과 함께). `Dev` 호스트 비트는 두지 않는다 — 개발 도구는 호스트가 `#if !defined( SW_SHIPPING )`
+   남은 ③: 자동화 구동기(`AutomationSession`)는 App 호스트 범위로(2번과 함께). `Dev` 호스트 비트는 두지 않는다 — 개발 도구는 호스트가 `#if !defined( SW_SHIPPING )`
    한 자리에서 넣는다. `DevCommandRegistry` · `AutomationStepRegistry` · `AutomationProbes` 는 정적 등록 표라 제외.
-2. **`EngineLoop` → `Engine` 개명**(조정자가 시점을 알린다). `sw::Engine`(클래스)과 `sw::engine`(네임스페이스)의 철자 충돌을 먼저 정리한다. 약 95 파일과
-   AGENTS.md · 결정 기록까지 고친다.
-3. **호스트 범위**(App · ServerApp · ModuleHost 의 컬렉션, 개명 뒤). 엔진 범위의 부모로 두고, 엔진의 ModuleImages · ModuleTypes 단계가 ModuleHost 델리게이트를 부르는
+2. **호스트 범위**(App · ServerApp · ModuleHost 의 컬렉션). 엔진 범위의 부모로 두고, 엔진의 ModuleImages · ModuleTypes 단계가 ModuleHost 델리게이트를 부르는
    고리를 "부모 범위의 모듈 호스트에 의존" 으로 바꿀 수 있는지 본다. DLL 언로드는 씬 뒤 · 서비스 앞이라 엔진 범위 종료의 두 패스(stop → shutdown) 사이에 있어야 한다.
    `_bHostStarted` · `_bSchedulerStarted` 같은 플랫폼 플래그도 이때 지운다. `ServerServiceManager`(ServerApp 소유, 모듈 리로드마다 stop → start)를 이 범위의 서브시스템으로 옮길지도 이때 본다(결정 기록 5-3).
 

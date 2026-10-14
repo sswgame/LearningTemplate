@@ -1,7 +1,7 @@
 /**
  * @file Engine/Scene/SceneDebugDraw.h
  * @brief 활성 씬의 물리 · 내비 디버그 그리기(`gv_physicsDebugDraw` · `gv_navDebugDraw`)를 디버그 드로우 큐로 옮깁니다.
- * @details 물리는 그리는 쪽을, Graphics 는 물리를 모릅니다 — 둘보다 위 티어인 Scene 이 잇습니다(`EngineLoop::tick` 이 씬 틱 뒤에 부른다). 상태가 없어 정적 함수 하나입니다.
+ * @details 물리는 그리는 쪽을, Graphics 는 물리를 모릅니다 — 둘보다 위 티어인 Scene 이 잇습니다(`Engine::tick` 이 씬 틱 뒤에 부른다). 상태가 없어 정적 함수 하나입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

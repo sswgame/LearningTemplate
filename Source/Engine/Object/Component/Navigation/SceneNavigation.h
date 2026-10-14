@@ -197,7 +197,7 @@ namespace sw
         void drawDebug( IPhysicsDebugRenderer& renderer, uint32 flags ) const;
         /**
          * @brief `NavDebugDrawFlag::kSolidView` 가 켜졌으면 걷는 면(영역 색 · 폴리곤마다 명암)과 에이전트 경로 띠를 메시 하나로 지어 씬의 오브젝트
-         *        (`NavMeshDebugView` — 베이크에서 빠진다)에 걸고, 꺼졌으면 그 오브젝트를 지웁니다. 게임 스레드, 씬 틱 밖에서 부릅니다(`EngineLoop`).
+         *        (`NavMeshDebugView` — 베이크에서 빠진다)에 걸고, 꺼졌으면 그 오브젝트를 지웁니다. 게임 스레드, 씬 틱 밖에서 부릅니다(`Engine`).
          */
         void updateDebugView( uint32 flags );
 

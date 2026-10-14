@@ -85,7 +85,7 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
     정적: `dumpbin /exports` 로 `GameFramework.dll` 이 `SW_GF_API` 심볼과 `bindGameService` · `unbindGameService`(C 링크)를 내보내고 `SWGame.dll` 이 가져오는지. 같은 이름의 반사 헤더 둘이면 구성이 `FATAL`, 구성 뒤 기존 헤더에 반사 매크로를 넣으면 빌드가 서는지
     (`cmake/Engine/CheckReflectionCandidates.cmake`, `--target <타깃>` 만 지으면 검사가 안 돈다). `StringBuilder::append( string )` 과 `VulkanRHIRequiredVersion` include 빌드.
     CI(push 뒤 첫 전체 CI) 리눅스: GLX 컨텍스트, 다중 상속 경고, `SceneNavigation` 의 `NavDebugView` 값 멤버(내보내지 않은 타입), `OpenGLRHICommandList.cpp`.
-    Release 측정: 텍스처 로드 중 다른 스레드의 `find` · `acquire` 대기, `EngineLoop.tick` 의 틱 뒤 실행 경로 · `AudioEngine` 게시 · `GT.GPUScene.build`, `GameObject.h` 가 `TagSystem.h` 를 끌어오지 않는지(`-ftime-trace` 전후).
+    Release 측정: 텍스처 로드 중 다른 스레드의 `find` · `acquire` 대기, `Engine.tick` 의 틱 뒤 실행 경로 · `AudioEngine` 게시 · `GT.GPUScene.build`, `GameObject.h` 가 `TagSystem.h` 를 끌어오지 않는지(`-ftime-trace` 전후).
   - **시작 전에 알아야 할 함정**: 옛 빌드 폴더는 `cmake --preset` 을 먼저 다시 돌린다(파일을 옮겨 코드젠 목록이 낡으면 `missing and no known rule`).
     처음 돌린 테스트는 기대값부터 의심한다 — `ReflectionEnumInfoTest`(`CameraRole::Editor` → `Viewport`), `GameObjectManagerTest.PostTickOnComponentSkipsPendingDestroy`, `GameObjectManagerPoolTest.ModuleUnloadDrains{Deferred,Requeued}PostTickWork`,
     `ServiceClientCallTableTest.ForeignResponseDuringSendDoesNotTakeTheSendingDelegate`, 온라인 클라이언트 취소 테스트 둘 · `KitDestroyedWhileFailingQueuedCallsGetsNoMoreCalls` ·
@@ -115,7 +115,7 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
 
 - `C-1` **엔진 분할 — 계획은 [docs/plans/EnginePartition.md](plans/EnginePartition.md).** `Engine.dll` 을 티어 경계로 나누기 전에 의존 방향의 약한 고리를 푼다. 단위를 끝내면 계획 문서에서 지운다.
 
-- `C-2` **빌드 속도 — 계획은 [docs/plans/BuildSpeed.md](plans/BuildSpeed.md).** 남은 것은 5 단계(유니티 범위 — 한 쌍만 잼, 재측정 필요)와 6 단계(`EngineLoop.cpp`)다. 범위 결정은 [결정 기록](09_Decisions.md) 5-2.
+- `C-2` **빌드 속도 — 계획은 [docs/plans/BuildSpeed.md](plans/BuildSpeed.md).** 남은 것은 5 단계(유니티 범위 — 한 쌍만 잼, 재측정 필요)와 6 단계(`Engine.cpp`)다. 범위 결정은 [결정 기록](09_Decisions.md) 5-2.
 
 - `C-3` **키트 DLL 이 Base 클래스의 암시적 멤버를 내보낸다**(2026-10-12 통합 3 에서 확인, `llvm-readobj --coff-exports GF_WitcherRPG.dll` 에 `Inventory` · `Crafter` · `StatBlock` 의 생성자 · 소멸자).
   키트 TU 는 강제 포함 헤더로 `SW_GF_EXPORTS` 를 정의하고(`cmake/Engine/ModuleTargets.cmake` 의 `GF_EXPORTS`), Base 헤더와 키트 헤더가 같은 `SW_GF_API` 를 써서 Base 선언도 dllexport 로 풀린다.
@@ -126,7 +126,7 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
     게임 손셈(HarvestValley `FarmCropComponent` · `FarmSoilComponent`, NileCity `NileDirectorComponent` 의 `index % getWidth()`)은 키트가 `getTopology()` 를 열면 같이.
 
 - `C-5` **GameFramework 구조 리뷰에서 남은 것(2026-10-05 — 공통 모듈 · 디렉터 베이스 · 층 게이트는 끝남).**
-  ⑤ `EngineLoop.cpp` 의 절반이 기동 단계 구조체(낮음).
+  ⑤ `Engine.cpp` 의 절반이 기동 단계 구조체(낮음).
 
 - `C-7` **조건부 후보 묶음.** 병렬 틱 임계값의 교차점 · GameObject 레이아웃 · 적응형 틱 임계값 · 스폰 비용(~1.1 us, 잠금 여섯) · 시퀀서 성능 수치. TickItem 인라인
   재시도는 오브젝트의 틱 부기 49 B 를 먼저 줄여야 한다. 측정해서 이기면 한다. 무버 일괄 틱의 다음 단계는 무버 데이터를 타입 배열(SoA)로 옮겨 일괄 함수가 컴포넌트를 읽지 않게 하는 것(대상 씬 컴포넌트의 칸 번호를 원소에) — 일괄 틱은 `GT.Frame` p99 0.75 배로 들어갔고 더 줄일 필요가 보이면 한다. 파괴 잎 셰이프는 쿠킹 때 Jolt 셰이프를 `.fracture` 에 싣는 안(Chaos 가 지오메트리 컬렉션에 충돌을 같이 굽는 자리)을 Physics 에 셰이프 직렬화 함수가 생기면 다시 본다.
@@ -284,7 +284,7 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   시나리오 둘(`dialoguegraphsave` · `animgraphsave`)은 들어갔다. 실행은 아직 안 했다 — 확인할 것: 연 직후 `Editor.DirtyDocumentCount` 가 0, `panel.focus` 뒤 `editor asset.save` 가 패널 문서를 저장,
   스크립트가 보내는 `editor asset.save` 가 패널 포커스를 빼앗지 않음, 툴바 노드 추가 단추를 클릭할 수 있음(툴바 폭이 좁으면 잘린다), 대화 그래프 패널이 함께 열렸을 때 `Editor.GraphNodeCount` 가 읽는 패널.
 
-- `D3-7` **다중 월드 · 에디터 툴 창(로드맵, 카메라 4 단계와 한 덩어리).** 지금 `EngineLoop` 는 활성 씬 하나만 틱하고 그리며, GPUScene 빌더 · 스냅샷도 하나다 —
+- `D3-7` **다중 월드 · 에디터 툴 창(로드맵, 카메라 4 단계와 한 덩어리).** 지금 `Engine` 는 활성 씬 하나만 틱하고 그리며, GPUScene 빌더 · 스냅샷도 하나다 —
   그래서 프리팹 격리는 활성 씬을 빌리고(씬이 더러우면 막는다) 머티리얼 미리보기는 메인 뷰포트의 선택 오브젝트에 입혀 보인다. ① 다중 월드(미리보기 월드를
   따로 살림, 월드마다 시간 · 틱 정책 · 조명 환경 · 물리 월드) ② 월드별 렌더(씬마다 GPUScene, 뷰 목록의 뷰가 "어느 월드 · 카메라 · 렌더 타깃" 을 고름,
   안 보이는 창은 안 그림 — 카메라 4 단계의 다중 뷰를 다중 월드 × 다중 뷰로) ③ 툴 창 틀(미리보기 월드를 가진 도킹 창, 자기 렌더 타깃 · 에디터 카메라 ·
@@ -470,7 +470,7 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   `UISubtitleService::post` 로(오디오 키트의 모양을 보고 정한다 — 지금은 대화 러너만 보낸다).
 
 - `D6-4` **옵션 · 일시정지 메뉴의 남은 것**(`Engine/UI/README.md`). (1) 일시정지 메뉴의 타이틀로 · 끝내기 단추는 전역 명령 표(`UISystem::getGlobalCommands`)에 같은 이름의 명령이 있을 때만 보인다 —
-  등록하는 쪽(`EngineLoop` 의 `QuitGame`, 게임 흐름 `GameInstanceBase` 의 `ReturnToTitle`)이 아직 없다. (5) 해상도 바꾸고 15 초 되돌림 ·
+  등록하는 쪽(`Engine` 의 `QuitGame`, 게임 흐름 `GameInstanceBase` 의 `ReturnToTitle`)이 아직 없다. (5) 해상도 바꾸고 15 초 되돌림 ·
   키 바인딩 재시작 뒤 유지의 실기동 확인(Shooter3D · 패드)은 게임별 빌드 때.
 
 - `D6-5` **알림 · 힌트 · 목표 마커의 남은 것**(`Engine/UI/README.md`). (2) 목표 마커를 퀘스트 키트의 목표 오브젝트에 붙이는 한두 줄 — 키트 쪽 목표 오브젝트 모양을 보고. (3) 코드가 올리는 알림 글

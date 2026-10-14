@@ -34,7 +34,7 @@ namespace sw
 {
     /**
      * @class AutomationRunner
-     * @brief 시나리오 한 편을 프레임마다 진행합니다. `EngineLoop` 가 `-scenario` 를 받으면 하나를 가지고 프레임 앞뒤에서 부릅니다.
+     * @brief 시나리오 한 편을 프레임마다 진행합니다. `Engine` 가 `-scenario` 를 받으면 하나를 가지고 프레임 앞뒤에서 부릅니다.
      * @details 프레임 0 은 시작 조건이 처음 참인 프레임이다. 그때 단계를 검사하고(레지스트리와 탐침은 모듈이 로드된 뒤라 그때 채워져 있다) 입력 단계를
      *          가상 입력 원천(`VirtualInputScript`)으로 옮겨 `InputManager` 에 붙이므로, 입력 단계의 프레임 번호는 가상 입력 프레임 번호와 같다.
      *          단언과 환경 단계는 그 프레임의 씬 틱 뒤(`onFrameEnd`)에 돈다. 단언 실패는 적어 두고 계속 가며, 끝에서 `Failed` 가 된다.
@@ -69,10 +69,10 @@ namespace sw
         AutomationResult onWindowClosed( InputManager* pInput );
 
         /**
-         * @brief `<Screenshot>` 이 요청한 경로를 하나 꺼냅니다(EngineLoop 가 다음 렌더 패킷에 싣고, 그 패킷이 그린 이미지가 찍힙니다). 없으면 false 입니다.
+         * @brief `<Screenshot>` 이 요청한 경로를 하나 꺼냅니다(Engine 가 다음 렌더 패킷에 싣고, 그 패킷이 그린 이미지가 찍힙니다). 없으면 false 입니다.
          */
         [[nodiscard]] bool takePendingScreenshotPath( string& outPath );
-        /** @brief 렌더 스레드가 지금까지 쓴 시나리오 스크린샷 수입니다(EngineLoop 가 `onFrameEnd` 전에 넘긴다). `<ExpectImage>` 는 이것이 오를 때까지 기다린다. */
+        /** @brief 렌더 스레드가 지금까지 쓴 시나리오 스크린샷 수입니다(Engine 가 `onFrameEnd` 전에 넘긴다). `<ExpectImage>` 는 이것이 오를 때까지 기다린다. */
         void setCompletedScreenshotCount( uint32 completedCount ) { _screenshotCompletedCount = completedCount; }
         /** @brief 지표 값 줄들입니다(`darkFraction(0,0,1,0.12) park.ppm = 0.034`). 보고에 적습니다. */
         const vector<string>& getMetricLines() const { return _reportWriter.getMetricLines(); }

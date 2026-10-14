@@ -71,7 +71,7 @@ namespace sw
     SW_LOG_CALLER( "App" );
 
     App::App()
-        : _engineLoop{}
+        : _engine{}
         , _moduleReload{}
         , _devConsole{}
         , _moduleHost{ nullptr }
@@ -93,26 +93,26 @@ namespace sw
     bool App::initialize( int32 argc, utf8* pArgv[] )
     {
         _initializeStartMicro = MonotonicClock::nowMicroseconds();
-        // 리소스 루트 탐색은 EngineLoop 가 로거를 시작한 **뒤에** 한다. 여기서 먼저 부르면 실패했을 때 로거가 없어 진단 메시지가
+        // 리소스 루트 탐색은 Engine 가 로거를 시작한 **뒤에** 한다. 여기서 먼저 부르면 실패했을 때 로거가 없어 진단 메시지가
         // 사라지고, 반환값도 여기서는 쓸 곳이 없다.
 
-        // 1. 코어 매니저는 모두 EngineLoop 가 초기화한다(헤드리스 작업 처리 포함). 타입 공급자 모듈은 그 기동 단계(`ModuleTypes`)에서 이 App 이 로드한다.
-        _engineLoop.setModuleTypeLoader( SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &App::loadModuleImages, this ) );
-        if ( _engineLoop.initialize( argc, pArgv ) == false )
+        // 1. 코어 매니저는 모두 Engine 가 초기화한다(헤드리스 작업 처리 포함). 타입 공급자 모듈은 그 기동 단계(`ModuleTypes`)에서 이 App 이 로드한다.
+        _engine.setModuleTypeLoader( SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &App::loadModuleImages, this ) );
+        if ( _engine.initialize( argc, pArgv ) == false )
         {
-            SW_LOG_ERROR( "EngineLoop initialization failed." );
+            SW_LOG_ERROR( "Engine initialization failed." );
             return false;
         }
 
         // 헤드리스 모드(예: --cook-shaders, --cook-scenes)면 스플래시와 창 UI 를 건너뛴다.
         // 작업이 실패했으면 **초기화 실패로 반환한다.** 그래야 종료 코드가 0 이 아니고, 이 프로세스를 실행하는 `CookAssets.py` 가
         // "쿠킹하지 못했다"는 사실을 알 수 있다.
-        if ( _engineLoop.isHeadless() )
+        if ( _engine.isHeadless() )
         {
-            if ( _engineLoop.didHeadlessTaskFail() )
+            if ( _engine.didHeadlessTaskFail() )
                 return false;
             // App 이 맡는 헤드리스 작업(크래시 보고, 로컬라이제이션 도구, 원본 임포트)은 `AppHeadlessTasks` 의 표가 정한다.
-            return AppHeadlessTasks::runAll( _engineLoop.getCommandLineManager() );
+            return AppHeadlessTasks::runAll( _engine.getCommandLineManager() );
         }
 
         SplashWindow splash;
@@ -121,8 +121,8 @@ namespace sw
 
         splash.updateStatus( "Loading Configuration & Display...", 0.40f );
 
-        ConfigManager*            pConfigManager      = _engineLoop.getConfigManager();
-        const CommandLineManager* pCommandLineManager = _engineLoop.getCommandLineManager();
+        ConfigManager*            pConfigManager      = _engine.getConfigManager();
+        const CommandLineManager* pCommandLineManager = _engine.getCommandLineManager();
         if ( pConfigManager == nullptr || pCommandLineManager == nullptr )
         {
             splash.dismiss();
@@ -171,7 +171,7 @@ namespace sw
             pCommandLineManager->getArgument( CommandLineArgument::PORTRAIT_DIR, portraitDir );
             splash.dismiss();
             _bQuitAfterInitialize = SW_TRUE;
-            return _engineLoop.renderPortraits( portraitList, portraitDir, static_cast<uint32>( portraitSize > 0 ? portraitSize : 256 ) );
+            return _engine.renderPortraits( portraitList, portraitDir, static_cast<uint32>( portraitSize > 0 ? portraitSize : 256 ) );
         }
 
         // 4. 창 콜백과 이벤트 전달을 설정한다.
@@ -194,7 +194,7 @@ namespace sw
         commandLineManager.getArgument( CommandLineArgument::WIDTH, width );
         commandLineManager.getArgument( CommandLineArgument::HEIGHT, height );
 
-        // EngineLoop::initialize 가 플랫폼 창을 만들어 IWindow::setActiveWindow 로 넘겨 두었으면(그쪽은 release() 로 소유권을
+        // Engine::initialize 가 플랫폼 창을 만들어 IWindow::setActiveWindow 로 넘겨 두었으면(그쪽은 release() 로 소유권을
         // 놓는다) 여기서 App 의 unique_ptr 이 넘겨받는다. 전역 포인터는 그 뒤로 관찰용으로만 남는다.
         _window.reset( IWindow::getActiveWindow() );
         if ( _window == nullptr )
@@ -230,7 +230,7 @@ namespace sw
             return false;
 
         // 모듈 감시자는 모듈을 로드하는 ModuleHost 보다 먼저 있어야 한다. ModuleHost 가 이 포인터로 모듈을 로드하고 리로드 콜백을 등록한다.
-        _moduleReload.initialize( _engineLoop );
+        _moduleReload.initialize( _engine );
 #endif
 
         _moduleHost = make_unique<EditorModuleHost>();
@@ -242,9 +242,9 @@ namespace sw
         if ( _moduleHost == nullptr )
             _moduleHost = make_unique<EditorModuleHost>();
         if ( _moduleHost->initialize( _moduleReload.getLiveReloadManager(),
-                                      _engineLoop.getRHI(),
+                                      _engine.getRHI(),
                                       _window.get(),
-                                      _engineLoop.getRenderThread(),
+                                      _engine.getRenderThread(),
                                       _bEnableEditor == SW_TRUE ) == false )
         {
             SW_LOG_ERROR( "ModuleHost initialization failed." );
@@ -256,7 +256,7 @@ namespace sw
 
     void App::warnUnknownGlobalOverrides() const
     {
-        const CommandLineManager* pCommandLineManager = _engineLoop.getCommandLineManager();
+        const CommandLineManager* pCommandLineManager = _engine.getCommandLineManager();
         if ( pCommandLineManager == nullptr )
             return;
 
@@ -278,7 +278,7 @@ namespace sw
             return;
         string reportPath;
         (void)commandLineManager.getArgument( CommandLineArgument::SCENARIO_REPORT, reportPath ); // 없으면 보고 파일을 쓰지 않는다
-        RenderThread* pRenderThread = _engineLoop.getRenderThread();
+        RenderThread* pRenderThread = _engine.getRenderThread();
         _automationSession          = make_unique<AutomationSession>();
         const bool bKeepGoing       = commandLineManager.isArgumentProvided( CommandLineArgument::SCENARIO_KEEP_GOING );
         if ( _automationSession->begin( scenarioPath, reportPath, bKeepGoing, pRenderThread != nullptr ? pRenderThread->getCompletedScenarioScreenshotCount() : 0u ) == false )
@@ -288,7 +288,7 @@ namespace sw
         }
         if ( pRenderThread != nullptr )
             pRenderThread->setScenarioCaptureEnabled( true );
-        _engineLoop.addFrameObserver( _automationSession.get() );
+        _engine.addFrameObserver( _automationSession.get() );
     }
 
     void App::bindHostCallbacks()
@@ -305,27 +305,27 @@ namespace sw
             // 에디터 창은 패널 배치가 겹치는 크기 아래로 줄이지 않는다(언리얼 메인 프레임과 유니티 에디터 창도 최소 크기를 둔다).
             _window->setMinimumClientSize( AppWindowInternal::kEditorMinClientWidth, AppWindowInternal::kEditorMinClientHeight );
             // 대화형 에디터 실행에서만 단언을 묻는다(Windows Debug). 자동 실행과 테스트는 기존처럼 멈춘다.
-            const CommandLineManager* pCommandLine = _engineLoop.getCommandLineManager();
+            const CommandLineManager* pCommandLine = _engine.getCommandLineManager();
             if ( pCommandLine != nullptr )
                 AppAssertDialog::installForInteractiveRun( *pCommandLine );
         }
 
-        _backendSwap.initialize( &_engineLoop, _moduleHost.get(), _bEnableEditor == SW_TRUE );
-        _userSettingsHost.initialize( &_engineLoop, _window.get() );
+        _backendSwap.initialize( &_engine, _moduleHost.get(), _bEnableEditor == SW_TRUE );
+        _userSettingsHost.initialize( &_engine, _window.get() );
 
-        _engineLoop.setPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorRender, this ) );
-        _engineLoop.setPostPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorPostPresent, this ) );
+        _engine.setPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorRender, this ) );
+        _engine.setPostPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorPostPresent, this ) );
     }
 
     void App::shutdown()
     {
-        // 전역 변수 훅은 그 변수를 소유한 GlobalVariableManager(EngineLoop 소유)가 사라지기 전에 해제한다. 헤드리스 부팅처럼
+        // 전역 변수 훅은 그 변수를 소유한 GlobalVariableManager(Engine 소유)가 사라지기 전에 해제한다. 헤드리스 부팅처럼
         // 연결되지 않은 경우에는 아무것도 하지 않는다.
         _backendSwap.shutdown();
         _userSettingsHost.shutdown();
 
         // 헤드리스 부팅은 창도 ModuleHost 도 만들지 않는다. 아래 경로가 그대로 아무 일도 하지 않으므로 모드 분기를 따로 두지 않는다.
-        // 주의: ModuleHost 를 EngineLoop 보다 먼저 종료해야 한다. 에디터 shutdown 이 씬 뷰와 게임 뷰 RT 를 해제할 때 RenderThread 와
+        // 주의: ModuleHost 를 Engine 보다 먼저 종료해야 한다. 에디터 shutdown 이 씬 뷰와 게임 뷰 RT 를 해제할 때 RenderThread 와
         // RHI 디바이스를 쓰기 때문이다.
         BLOCK( "Game / Editor 인스턴스 정리" )
         {
@@ -344,10 +344,10 @@ namespace sw
         // 시나리오 실행기는 로그 리스너 · 입력을 빌려 쓴다 — 엔진 서비스보다 먼저 떼고 내린다.
         if ( _automationSession != nullptr )
         {
-            _engineLoop.removeFrameObserver( _automationSession.get() );
+            _engine.removeFrameObserver( _automationSession.get() );
             _automationSession.reset();
         }
-        _engineLoop.shutdown();
+        _engine.shutdown();
 
         if ( _window != nullptr )
         {
@@ -378,7 +378,7 @@ namespace sw
         {
             _devConsole.runPendingExec();
             // 프로파일 실행(-gv_profileFrames=N)과 자동화 시나리오(-scenario)는 스스로 끝난다(종료 코드는 `getExitCode`). 부모 프로세스는 표준 입력의 quit 으로 끝낸다.
-            if ( _engineLoop.isQuitRequested() || _devConsole.pollStandardInputCommands() )
+            if ( _engine.isQuitRequested() || _devConsole.pollStandardInputCommands() )
             {
                 _window->requestClose();
                 break;
@@ -390,17 +390,17 @@ namespace sw
             // 사용자 설정의 화면 변경(창 방식, 해상도, VSync)은 OS 리사이즈와 같은 시점인 프레임 시작 전에 처리한다.
             _userSettingsHost.tick( frameTime._deltaTime );
 
-            _engineLoop.beginFrame( frameTime._deltaTime );
+            _engine.beginFrame( frameTime._deltaTime );
             // 에디터 Play/Pause 상태를 여기서 한 번 고정한다. 아래 고정 스텝이 여러 번 돌아도 DLL 경계를 넘어 다시 묻지 않고,
             // 모든 단계가 같은 답을 본다.
             _moduleHost->beginFrame();
 
             // 셸 액션(리로드 단축키 · 개발 콘솔 키)을 이번 프레임 것으로 갱신한 뒤 둘이 읽는다. Shipping 에는 둘 다 없어 셸 InputMap 도 로드하지 않는다.
 #if !defined( SW_SHIPPING )
-            _engineLoop.updateShellActions( frameTime._deltaTime );
+            _engine.updateShellActions( frameTime._deltaTime );
 #endif
-            _moduleReload.pollReloadTriggers( _engineLoop, _bEnableEditor == SW_TRUE );
-            _devConsole.update( _engineLoop.getShellInputMap() );
+            _moduleReload.pollReloadTriggers( _engine, _bEnableEditor == SW_TRUE );
+            _devConsole.update( _engine.getShellInputMap() );
 
             // **게임 모듈의 시간도 테이블에 올린다.** 이 셋이 계측 밖이면 "frame breakdown" 테이블에 게임 코드가 쓰는 시간이 한 줄도 없어
             // `GT.Frame` 만 보고 "프레임의 전부"라고 읽게 된다.
@@ -430,38 +430,38 @@ namespace sw
             _moduleReload.update();
 
             const ModuleFrameState& frameState = _moduleHost->getFrameState();
-            _engineLoop.tick( frameTime._deltaTime, frameState._views, _sceneViewCameraProvider, frameState._bTickScene == SW_TRUE );
+            _engine.tick( frameTime._deltaTime, frameState._views, _sceneViewCameraProvider, frameState._bTickScene == SW_TRUE );
             _moduleHost->endEditorFrame();
 
             _backendSwap.applyIfPending();
 
-            _engineLoop.endFrame();
+            _engine.endFrame();
         }
         // 창이 닫혀 끝났으면 자동화 시나리오가 그 결과를 종료 코드로 정한다(시나리오가 이미 끝냈으면 아무 일도 없다).
-        _engineLoop.onWindowClosed();
+        _engine.onWindowClosed();
     }
 
     int32 App::getInitFailureExitCode() const
     {
         // 환경 탓(백엔드가 이 빌드에 없거나 드라이버가 기능을 주지 않음)은 테스트와 스크립트가 건너뜀으로 읽는 코드로 끝낸다. 그 밖은 결함일 수 있다.
-        return RHIInitResultUtil::isUnusableHere( _engineLoop.getRHIInitResult() ) ? kRHIUnusableHereExitCode : -1;
+        return RHIInitResultUtil::isUnusableHere( _engine.getRHIInitResult() ) ? kRHIUnusableHereExitCode : -1;
     }
 
     int32 App::getExitCode() const
     {
-        return _engineLoop.getExitCode();
+        return _engine.getExitCode();
     }
 
     void App::onResize( const uint32 width, const uint32 height )
     {
-        RHI* pRHI = _engineLoop.getRHI();
+        RHI* pRHI = _engine.getRHI();
         if ( pRHI == nullptr || pRHI->hasDevice() == false )
             return;
 
         // gv_useRenderThread(기본값 true)이면 전용 RenderThread 가 별도 스레드에서 beginFrame/endFrame 으로 스왑체인과 렌더
         // 타깃을 계속 건드리고 있을 수 있다. 이 상태에서 메인(창 메시지) 스레드가 바로 resize() 를 부르면 같은 자원에 대한
         // 실제 스레드 간 레이스가 된다. waitIdle() 로 큐를 비우고 GPU 까지 완전히 쉬게 한 뒤 크기를 바꾼다.
-        RenderThread* pRenderThread = _engineLoop.getRenderThread();
+        RenderThread* pRenderThread = _engine.getRenderThread();
         if ( pRenderThread != nullptr )
             pRenderThread->waitIdle();
 
@@ -472,7 +472,7 @@ namespace sw
     {
         if ( configTypeName != EngineConfig::StaticType()->_fullyQualifiedName )
             return;
-        const ConfigManager* pConfigManager = _engineLoop.getConfigManager();
+        const ConfigManager* pConfigManager = _engine.getConfigManager();
         const EngineConfig*  pEngineConfig  = pConfigManager != nullptr ? pConfigManager->getConfig<EngineConfig>() : nullptr;
         if ( pEngineConfig != nullptr )
             _fixedTimestep.configure( AppTimeInternal::makeFixedTimestepParams( *pEngineConfig ) );

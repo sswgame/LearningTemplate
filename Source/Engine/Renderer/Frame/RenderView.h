@@ -167,7 +167,7 @@ namespace sw
 {
     /**
      * @struct HostViewTargets
-     * @brief 호스트가 이번 프레임에 그려 달라고 요청한 뷰 둘입니다(`EngineLoop::tick`).
+     * @brief 호스트가 이번 프레임에 그려 달라고 요청한 뷰 둘입니다(`Engine::tick`).
      * @details 게임 뷰는 게임 카메라, 화면 UI, 화면 사각형 뷰를 담는 주 출력이고, 씬 뷰는 호스트 카메라의 추가 뷰(`RenderViewOutputKind::HostTarget`)다.
      *          게임 뷰가 없고 씬 뷰만 있으면 씬 뷰가 주 출력이 된다(화면 UI와 화면 사각형 뷰 없이). 둘 다 없으면 백버퍼에 게임 카메라로 그린다(에디터 없는 실행).
      */

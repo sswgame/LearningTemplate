@@ -33,13 +33,13 @@
 
 ## 3. 링크 단위로 승격
 
-- 먼저 `OBJECT` 라이브러리로 나눕니다(DLL 은 하나, 위험 낮음). 층은 Foundation(티어 0 ~ 2), Data(3 ~ 4), Render(5, Renderer, Environment), World(6 ~ 7 코어), Features(기능 컴포넌트), Tools(UI, Telemetry, Automation, Module), 루트(EngineLoop)입니다.
+- 먼저 `OBJECT` 라이브러리로 나눕니다(DLL 은 하나, 위험 낮음). 층은 Foundation(티어 0 ~ 2), Data(3 ~ 4), Render(5, Renderer, Environment), World(6 ~ 7 코어), Features(기능 컴포넌트), Tools(UI, Telemetry, Automation, Module), 루트(Engine)입니다.
 - 0 단계 측정으로 이득이 확인되면 Dev 만 층마다 DLL 로 올립니다. 내보내기 매크로는 층별로 늘리지 않고 `SW_API` 하나를 유지하되, 각 DLL 의 `SW_EXPORTS` 를 층 전체에 겁니다.
 - 리플렉션 등록기를 보존하려고 `sw_linkWholeArchive` 를 층 라이브러리마다 겁니다(Shipping 정적 링크는 지금과 같다). 서버 타깃은 Render 층을 링크하지 않습니다.
 
 ## 4. 월드를 값으로
 
-- `World` 가 씬, 물리 월드, 내비, GPUScene 빌더, 틱 설정을 소유하고 `EngineLoop` 는 월드 목록을 돕니다. 프리팹 격리, 머티리얼 미리보기, 에디터 툴 창, 서버의 방이 이 위에 섭니다(백로그 "다중 월드").
+- `World` 가 씬, 물리 월드, 내비, GPUScene 빌더, 틱 설정을 소유하고 `Engine` 는 월드 목록을 돕니다. 프리팹 격리, 머티리얼 미리보기, 에디터 툴 창, 서버의 방이 이 위에 섭니다(백로그 "다중 월드").
 - 2 단계 뒤에 합니다. 월드가 코어 위의 소유자가 되려면 코어가 기능을 모르는 상태여야 합니다.
 
 ## 5. 모듈 확장 진입점과 상태 규칙

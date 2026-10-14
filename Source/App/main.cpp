@@ -14,7 +14,7 @@ int32 main( int32 argc, utf8* pArgv[] )
     }
 
     app.run();
-    // 종료 코드는 내리기 전에 읽는다(시나리오 결과 — `EngineLoop::requestQuit`).
+    // 종료 코드는 내리기 전에 읽는다(시나리오 결과 — `Engine::requestQuit`).
     const int32 exitCode = app.getExitCode();
     app.shutdown();
     return exitCode;

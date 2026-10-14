@@ -226,7 +226,7 @@ namespace sw
         RenderViewMode getViewMode() const;
         /**
          * @brief 에디터 씬 뷰의 보기 모드를 정합니다(씬 뷰 툴바). 게임 뷰에는 적용되지 않습니다.
-         * @details 씬 뷰가 호스트 타깃을 쓰는 추가 뷰이든, 게임 뷰가 가려져 주 출력이 되었든 이 값은 씬 뷰의 설정에 들어간다(`EngineLoop::tick`).
+         * @details 씬 뷰가 호스트 타깃을 쓰는 추가 뷰이든, 게임 뷰가 가려져 주 출력이 되었든 이 값은 씬 뷰의 설정에 들어간다(`Engine::tick`).
          */
         void setSceneViewMode( RenderViewMode viewMode );
         /** @brief 에디터 씬 뷰의 보기 모드입니다. */
@@ -717,7 +717,7 @@ namespace sw
         Scene*                               _pScene;
         TaskManager*                         _pTaskManager;
         GPUScene                             _gpuScene;
-        /// @brief 씬 직접 경로(`execute( pScene )`, 에디터와 테스트)가 쓰는 빌더입니다. 패킷 경로에서는 EngineLoop 의 빌더를 씁니다.
+        /// @brief 씬 직접 경로(`execute( pScene )`, 에디터와 테스트)가 쓰는 빌더입니다. 패킷 경로에서는 Engine 의 빌더를 씁니다.
         GPUSceneBuilder     _sceneBuilder;
         RenderPipelineAsset _pipelineResource;
         RenderGraph         _graph;
@@ -745,7 +745,7 @@ namespace sw
         GPUSceneSnapshot _sceneSnapshotScratch;
         /// @brief 주 시점의 패스 시드입니다. 추가 뷰는 이것에서 출발해 자기 값(뷰 행렬, 플래그, 컬링 슬롯)만 덮어씁니다. 프레임마다 대입하므로 용량이 남습니다.
         FramePassContext _mainSeedScratch;
-        /// @brief 씬 직접 경로(`execute( pScene )`)가 추가 뷰를 고르는 스케줄러와 요청 목록입니다. 패킷 경로에서는 EngineLoop 의 것을 씁니다.
+        /// @brief 씬 직접 경로(`execute( pScene )`)가 추가 뷰를 고르는 스케줄러와 요청 목록입니다. 패킷 경로에서는 Engine 의 것을 씁니다.
         RenderViewScheduler       _directViewScheduler;
         vector<RenderViewRequest> _listDirectViewScratch;
         /** @brief 이번 프레임 배치가 쓰는 PSO 변형 하나의 조건(퍼뮤테이션, 컬 반전)입니다. 퍼뮤테이션이 없으면 kInvalidShaderPermutation 입니다. */

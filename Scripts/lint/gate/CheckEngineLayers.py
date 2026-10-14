@@ -75,7 +75,7 @@ def includeHitsBanInternal(includePath: str, bannedPattern: str) -> bool:
 
 # 엔진 루프(호스트가 엔진을 세우는 자리)와 부트스트랩 · 헤드리스 단계는 호스트(App · Server · 테스트 하네스)만 안다. 모듈(게임 · 키트 · 에디터)은
 # 호스트가 넘긴 서비스 범위에서 타입으로 찾는다(`game::getService<T>()` · `editor::getService<T>()`) — 엔진을 세우는 쪽의 헤더를 보면 그 경계가 무너진다.
-_kEngineHostOnly: tuple[str, ...] = ("Engine/EngineLoop.h", "Engine/HeadlessSubsystem.h", "Engine/Bootstrap/")
+_kEngineHostOnly: tuple[str, ...] = ("Engine/Engine.h", "Engine/HeadlessSubsystem.h", "Engine/Bootstrap/")
 
 _kForbiddenRules: list[tuple[str, tuple[str, ...]]] = [
     (
@@ -123,7 +123,7 @@ _kForbiddenPrefixRules: tuple[tuple[str, tuple[str, ...]], ...] = (
     (kDirSourceGames, ("App/", "ModuleHost/", "Server/", "Editor/")),
 )
 
-# Engine 최상위 폴더를 담지 않는 파일(EngineLoop.cpp 등)의 가상 티어 이름.
+# Engine 최상위 폴더를 담지 않는 파일(Engine.cpp 등)의 가상 티어 이름.
 _kRootLayerName = "<root>"
 
 # Engine 내부 티어 — 숫자가 큰 쪽이 위다(`rules/CheckEngineLayers.toml` 의 `[tier]`, 계산 · 고쳐 쓰기는 RunEngineLayerGraph --apply).

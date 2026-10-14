@@ -2,7 +2,7 @@
  * @file Engine/Module/ModuleImagesSubsystem.h
  * @brief 기동 순서의 ModuleImages 자리입니다 — 종료 쪽에서 모듈 DLL 을 내리는 호스트 훅을 부릅니다.
  * @details 씬은 방금 사라졌고 서비스는 아직 살아 있는 구간이 모듈 DLL 을 내리기에 알맞은 유일한 자리다(타입 · 코덱 · 캐시를 떼고 태스크를 기다린다).
- *          엔진은 거기서 무슨 일이 일어나는지 모른다 — 훅(`EngineLoop::setOnScenesReleased`)은 호스트가 건다. 테스트 하네스는 훅 없이 자리만 둔다.
+ *          엔진은 거기서 무슨 일이 일어나는지 모른다 — 훅(`Engine::setOnScenesReleased`)은 호스트가 건다. 테스트 하네스는 훅 없이 자리만 둔다.
  *          모듈 코드를 드는 낮은 층(비동기 IO 의 완료 콜백 · 오디오 · 입력 · 씬)은 이 이름을 모르므로, 이것이 그들을 역방향 의존으로 적어 그들이 먼저 내려가게 한다.
  */
 #pragma once

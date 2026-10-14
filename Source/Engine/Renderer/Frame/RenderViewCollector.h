@@ -19,7 +19,7 @@ namespace sw
 
     /**
      * @struct RenderViewCollector
-     * @brief 패킷 경로(EngineLoop)와 씬 직접 경로(`FrameRenderer::execute( pScene )`)가 **같은 규칙**으로 뷰를 고르게 하는 한 자리입니다.
+     * @brief 패킷 경로(Engine)와 씬 직접 경로(`FrameRenderer::execute( pScene )`)가 **같은 규칙**으로 뷰를 고르게 하는 한 자리입니다.
      * @details 추가 뷰 = 레지스트리의 켜진 카메라 중 출력이 화면 사각형 · 렌더 텍스처인 것(주 시점 카메라 · 에디터 카메라 제외, `kMaxExtraRenderView` 까지).
      *          보이는가는 카메라 출력의 `_visibilityObject`(모니터)의 경계 구가 주 시점 절두체와 겹치는가이고, 그릴지는 `RenderViewScheduler`
      *          (갱신 주기 · 예산)가 정합니다. 쉬는 뷰도 목록에 실어 렌더러가 그 뷰의 자원을 지키게 합니다.

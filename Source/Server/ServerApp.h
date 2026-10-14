@@ -23,7 +23,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Process/StandardInputReader.h"
 
-#include "Engine/EngineLoop.h"
+#include "Engine/Engine.h"
 #include "Engine/Module/ModuleCatalog.h"
 #include "Engine/Observability/ServerServiceRegistry.h"
 
@@ -97,7 +97,7 @@ namespace sw
         void logStatus() const;
 
     private:
-        EngineLoop             _engineLoop;
+        Engine                 _engine;
         unique_ptr<ModuleHost> _moduleHost;
 #if !defined( SW_SHIPPING )
         unique_ptr<LiveReloadManager> _liveReloadManager;

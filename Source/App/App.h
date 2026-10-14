@@ -2,7 +2,7 @@
  * @file App.h
  * @brief 런타임 클라이언트 앱(얇은 런처)입니다.
  *
- * 소유권: App 은 최상위 창 콜백 · EditorModuleHost · EngineLoop 만 들고, 나머지 엔진 핵심 로직은 모두 EngineLoop 에 맡깁니다.
+ * 소유권: App 은 최상위 창 콜백 · EditorModuleHost · Engine 만 들고, 나머지 엔진 핵심 로직은 모두 Engine 에 맡깁니다.
  *
  * @details App 이 직접 아는 것은 네 가지로 제한합니다. 부팅 순서, 창, 프레임 순서, 그리고 호스트 ↔ 모듈 콜백 연결입니다.
  *          시간 정책은 FixedTimestep, 백엔드 교체는 RHIBackendSwitcher, 모듈 수명은 EditorModuleHost(공통 ModuleHost 위의 App 전용 층),
@@ -18,7 +18,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Time/FixedTimestep.h"
 
-#include "Engine/EngineLoop.h"
+#include "Engine/Engine.h"
 #include "Engine/Module/ModuleCatalog.h"
 
 namespace sw
@@ -49,12 +49,12 @@ namespace sw
         void run();
         /** @brief `initialize` 가 false 를 돌려준 뒤의 프로세스 종료 코드입니다. 이 기계 · 빌드가 그 RHI 백엔드를 못 돌리면 `kRHIUnusableHereExitCode`, 그 밖은 -1 입니다. */
         int32 getInitFailureExitCode() const;
-        /** @brief 루프가 끝난 뒤 돌려줄 종료 코드입니다(`EngineLoop::requestQuit`. 요청이 없었으면 0). */
+        /** @brief 루프가 끝난 뒤 돌려줄 종료 코드입니다(`Engine::requestQuit`. 요청이 없었으면 0). */
         int32 getExitCode() const;
 
     private:
         // 부팅 단계. initialize() 가 차례로 부른다.
-        /** @brief 플랫폼 창을 확보합니다. EngineLoop 가 이미 만들어 두었으면 그 소유권을 넘겨받습니다. */
+        /** @brief 플랫폼 창을 확보합니다. Engine 가 이미 만들어 두었으면 그 소유권을 넘겨받습니다. */
         bool acquireMainWindow( const EngineConfig& engineConfig, const CommandLineManager& commandLineManager );
         /**
          * @brief 기동 단계 `ModuleTypes` 의 호스트 로더입니다. 타입 공급자 모듈(GameFramework, 키트, SWGame)의 이미지를 로드해 그 타입을 등록합니다.
@@ -93,8 +93,8 @@ namespace sw
         void onEditorPostPresent( IRHIDevice& renderDevice, const RenderFramePacket& framePacket );
 
     private:
-        EngineLoop _engineLoop;
-        /** @brief 모듈 핫 리로드입니다(EngineLoop 가 아니라 런처의 일). Shipping 에서는 아무것도 하지 않습니다. */
+        Engine _engine;
+        /** @brief 모듈 핫 리로드입니다(Engine 가 아니라 런처의 일). Shipping 에서는 아무것도 하지 않습니다. */
         ModuleReloadDriver _moduleReload;
         /** @brief 게임 창의 개발 콘솔(`~`)과 표준 입력 명령 채널입니다. Shipping 에서는 아무것도 하지 않습니다. */
         DevConsoleHost               _devConsole;
@@ -114,7 +114,7 @@ namespace sw
         UserSettingsHost   _userSettingsHost;
 
         // 프레임마다 다시 만들 이유가 없는 델리게이트다. bindHostCallbacks 에서 한 번 묶는다.
-        /** @brief 에디터 모드에서만 연결됩니다. 비어 있으면 EngineLoop 가 씬 카메라를 씁니다. */
+        /** @brief 에디터 모드에서만 연결됩니다. 비어 있으면 Engine 가 씬 카메라를 씁니다. */
         ViewCameraProviderDelegate _sceneViewCameraProvider;
         /// @brief `initialize` 가 시작된 시각(마이크로초, steady_clock)입니다. 메인 루프에 들어갈 때 로그에 시작 시간을 찍습니다.
         int64 _initializeStartMicro;

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/EngineLoop.h"
+#include "Engine/Engine.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Common/BuildInfo.h"
@@ -127,9 +127,9 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "EngineLoop" );
+    SW_LOG_CALLER( "Engine" );
 
-    EngineLoop::EngineLoop()
+    Engine::Engine()
         : _bootstrap{}
         , _services{}
         , _pCommandLineSubsystem{ nullptr }
@@ -163,14 +163,14 @@ namespace sw
     {
     }
 
-    EngineLoop::~EngineLoop() = default;
+    Engine::~Engine() = default;
 
-    CommandLineManager* EngineLoop::getCommandLineManager() const
+    CommandLineManager* Engine::getCommandLineManager() const
     {
         return _pCommandLineSubsystem != nullptr ? _pCommandLineSubsystem->findCommandLine() : nullptr;
     }
 
-    bool EngineLoop::initialize( int32 argc, utf8* pArgv[], EngineHostRole role )
+    bool Engine::initialize( int32 argc, utf8* pArgv[], EngineHostRole role )
     {
         // 범위는 셋이다. 부트스트랩(진단 도구 · 이름 풀 · 로거 · 명령줄 · 크래시 핸들러 · 정적 저장소) → 서비스(엔진 범위의 모든 것보다 오래 사는
         // 공용 서비스) → 엔진(기동 단계). 아래 범위가 모두 선 뒤에 위 범위를 세우고, 위 범위가 모두 사라진 뒤에 아래 범위를 내린다 — 범위 사이의
@@ -198,7 +198,7 @@ namespace sw
         if ( _bootstrap.getCollection().initializeAll( SubsystemHostMask::All ) == false )
         {
             // 정렬 오류(선언 오타 · 순환)는 로거가 서기 전이다 — 표준 오류로도 낸다.
-            std::fprintf( stderr, "[EngineLoop] bootstrap failed: %s\n", _bootstrap.getCollection().getError().c_str() );
+            std::fprintf( stderr, "[Engine] bootstrap failed: %s\n", _bootstrap.getCollection().getError().c_str() );
             SW_LOG_ERROR( "Engine bootstrap failed: %#", _bootstrap.getCollection().getError().c_str() );
             return false;
         }
@@ -315,7 +315,7 @@ namespace sw
                     configManager = make_unique<ConfigManager>();
                 }
                 _pConfigManager = configManager.get();
-                _pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &EngineLoop::onConfigReloaded, this ) );
+                _pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &Engine::onConfigReloaded, this ) );
                 _startup.addSubsystem( std::move( configManager ) );
                 {
                     SW_MEMORY_SCOPE( Asset );
@@ -417,7 +417,7 @@ namespace sw
         return true;
     }
 
-    void EngineLoop::shutdown()
+    void Engine::shutdown()
     {
 #if SW_PROFILER_TRACE_ENABLED
         // 종료 트레이스(`-gv_traceSaveOnExit`)는 서비스 · 프로파일러가 아직 있을 때 쓴다. 기동이 서비스 표 전에 멈췄으면 쓸 것이 없다.
@@ -457,10 +457,10 @@ namespace sw
         _pCommandLineSubsystem = nullptr;
         _pMemoryBudget         = nullptr;
 
-        MemoryProfiler::reportMemoryLeaks( "EngineLoop::shutdown" );
+        MemoryProfiler::reportMemoryLeaks( "Engine::shutdown" );
     }
 
-    void EngineLoop::onConfigReloaded( const hashed_string& configTypeName )
+    void Engine::onConfigReloaded( const hashed_string& configTypeName )
     {
         if ( configTypeName == GameConfig::StaticType()->_fullyQualifiedName )
         {
@@ -478,14 +478,14 @@ namespace sw
             _pRHI->setPreferredVSync( pEngineConfig->_window._bVSync );
     }
 
-    bool EngineLoop::renderPortraits( string_view prefabList, string_view outputDirectory, uint32 size )
+    bool Engine::renderPortraits( string_view prefabList, string_view outputDirectory, uint32 size )
     {
         if ( _pRHI == nullptr || _pRHI->hasDevice() == false )
             return false;
         return PortraitBatchUtil::renderPrefabList( _pRHI->getDevice(), _pRenderThread, prefabList, outputDirectory, size );
     }
 
-    void EngineLoop::requestQuit( int32 exitCode )
+    void Engine::requestQuit( int32 exitCode )
     {
         if ( _bQuitRequested )
             return;
@@ -494,7 +494,7 @@ namespace sw
         SW_LOG_INFO( "Quit requested (exit code %#)", exitCode );
     }
 
-    void EngineLoop::addFrameObserver( IEngineFrameObserver* pObserver )
+    void Engine::addFrameObserver( IEngineFrameObserver* pObserver )
     {
         if ( pObserver == nullptr )
             return;
@@ -506,7 +506,7 @@ namespace sw
         _listFrameObserver.push_back( pObserver );
     }
 
-    void EngineLoop::removeFrameObserver( IEngineFrameObserver* pObserver )
+    void Engine::removeFrameObserver( IEngineFrameObserver* pObserver )
     {
         for ( size_t index = 0; index < _listFrameObserver.size(); ++index )
         {
@@ -517,7 +517,7 @@ namespace sw
         }
     }
 
-    EngineFrameContext EngineLoop::makeFrameContext() const
+    EngineFrameContext Engine::makeFrameContext() const
     {
         EngineFrameContext context;
         context._pInput                   = _pInputManager;
@@ -529,7 +529,7 @@ namespace sw
         return context;
     }
 
-    void EngineLoop::onWindowClosed()
+    void Engine::onWindowClosed()
     {
         if ( _listFrameObserver.empty() )
             return;
@@ -546,7 +546,7 @@ namespace sw
         }
     }
 
-    void EngineLoop::beginFrame( float32 deltaSeconds )
+    void Engine::beginFrame( float32 deltaSeconds )
     {
         _frameDeltaSeconds = deltaSeconds;
         // 관찰자의 프레임 앞 단계(시나리오의 시작 조건 · 가상 입력 붙이기 · 행동 층 단계)는 이 프레임의 입력 재생 전이다.
@@ -582,7 +582,7 @@ namespace sw
         }
     }
 
-    void EngineLoop::tick( float32 deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, bool bTickScene )
+    void Engine::tick( float32 deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, bool bTickScene )
     {
         // 주 출력 — 게임 뷰가 있으면 그것(게임 카메라 · 화면 UI · 화면 사각형 뷰), 씬 뷰만 있으면 씬 뷰, 둘 다 없으면 백버퍼다.
         const HostViewTarget& mainOutput = views.getMainOutput();
@@ -723,7 +723,7 @@ namespace sw
         }
     }
 
-    void EngineLoop::endFrame()
+    void Engine::endFrame()
     {
         engine::getFrameProfiler().endFrame();
 #if SW_PROFILER_TRACE_ENABLED
@@ -760,7 +760,7 @@ namespace sw
         engine::getDebugDrawQueue().endFrame( _sceneDeltaSeconds );
     }
 
-    bool EngineLoop::applyPendingBackendChange()
+    bool Engine::applyPendingBackendChange()
     {
         if ( _pRHI == nullptr )
             return false;
@@ -808,7 +808,7 @@ namespace sw
         return true;
     }
 
-    bool EngineLoop::rebindSceneAfterDeviceRecreate()
+    bool Engine::rebindSceneAfterDeviceRecreate()
     {
         if ( _pRHI == nullptr || _pRHI->hasDevice() == false )
             return false;
@@ -829,7 +829,7 @@ namespace sw
         return bRestarted;
     }
 
-    ShaderRecompiler* EngineLoop::getShaderRecompiler() const
+    ShaderRecompiler* Engine::getShaderRecompiler() const
     {
 #if defined( SW_SHIPPING )
         return nullptr;
@@ -838,41 +838,41 @@ namespace sw
 #endif
     }
 
-    void EngineLoop::setOnScenesReleased( Delegate<void()> onScenesReleased )
+    void Engine::setOnScenesReleased( Delegate<void()> onScenesReleased )
     {
         _onScenesReleased = std::move( onScenesReleased );
     }
 
-    void EngineLoop::setModuleTypeLoader( ModuleTypeLoaderDelegate moduleTypeLoader )
+    void Engine::setModuleTypeLoader( ModuleTypeLoaderDelegate moduleTypeLoader )
     {
         _moduleTypeLoader = std::move( moduleTypeLoader );
     }
 
-    void EngineLoop::setPresentHook( PresentHookDelegate presentHook )
+    void Engine::setPresentHook( PresentHookDelegate presentHook )
     {
         if ( _pRenderThread != nullptr )
             _pRenderThread->setPresentHook( std::move( presentHook ) );
     }
 
-    void EngineLoop::setPostPresentHook( PresentHookDelegate postPresentHook )
+    void Engine::setPostPresentHook( PresentHookDelegate postPresentHook )
     {
         if ( _pRenderThread != nullptr )
             _pRenderThread->setPostPresentHook( std::move( postPresentHook ) );
     }
 
-    void EngineLoop::updateShellActions( float32 deltaTime )
+    void Engine::updateShellActions( float32 deltaTime )
     {
         if ( _pInputManager == nullptr )
             return;
         _shellActions.update( *_pInputManager, deltaTime );
     }
 
-    unique_ptr<InputMap> EngineLoop::createShellInputMap( string_view inputMapPath )
+    unique_ptr<InputMap> Engine::createShellInputMap( string_view inputMapPath )
     {
         return ShellInputActions::createInputMap( inputMapPath );
     }
 
-    void EngineLoop::pollShaderReloadHotkey()
+    void Engine::pollShaderReloadHotkey()
     {
 #if defined( SW_DEBUG )
         // 셰이더 리로드는 **Engine 자신의** 개발 도구다(ShaderRecompiler 를 여기서 소유한다). 그래서
@@ -890,7 +890,7 @@ namespace sw
 #endif
     }
 
-    bool EngineLoop::wasDebugActionTriggered( string_view actionName ) const
+    bool Engine::wasDebugActionTriggered( string_view actionName ) const
     {
         return _shellActions.wasActionTriggered( hashed_string( actionName ) );
     }

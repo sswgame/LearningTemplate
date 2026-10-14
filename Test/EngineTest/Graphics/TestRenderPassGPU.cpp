@@ -1061,7 +1061,7 @@ SW_TEST_CASE( RenderPassGPUTest, GPUSceneBufferReusedAcrossPackets )
     SW_ASSERT_NOT_NULL( mesh );
     mesh->setMesh( cube );
 
-    sw::GPUSceneBuilder gtGPUScene; // EngineLoop::_gpuSceneBuilder 역할 — 여기서는 테스트 로컬로 흉내
+    sw::GPUSceneBuilder gtGPUScene; // Engine::_gpuSceneBuilder 역할 — 여기서는 테스트 로컬로 흉내
     sw::float4          clear{ 0.02f, 0.02f, 0.05f, 1.0f };
     sw::RHIBufferHandle instanceBufferAfterFrame1{ 0 };
 
@@ -4527,7 +4527,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedGBufferAttachmentsRenderTheSameImage )
  *          (2) 텍스처 덮어쓰기를 날 디스크립터 인덱스로 들면 텍스처를 다시 올릴 때 돌려준 자리를 읽고, DX11 · GL 에서는 그 인덱스가 슬롯 서수로 읽혀
  *              엉뚱한 슬롯이 된다.
  *          (3) 언리얼 MIC · 유니티 MaterialPropertyBlock 은 텍스처 **자체**를 덮어쓴다. 여기서도 에셋 경로로 덮어쓰고, 값은 그때마다 지금 텍스처에서 읽는다.
- *          앱(EngineLoop)처럼 합치기를 백엔드에 맞춰 켜고 GPUSceneBuilder → 스냅샷 → GPUScene::upload 를 직접 돌려 인스턴스 바이트 · 배치 슬롯을 본다.
+ *          앱(Engine)처럼 합치기를 백엔드에 맞춰 켜고 GPUSceneBuilder → 스냅샷 → GPUScene::upload 를 직접 돌려 인스턴스 바이트 · 배치 슬롯을 본다.
  */
 SW_TEST_CASE( RenderPassGPUTest, InstanceOverridesReachTheGPUOnEveryBackend )
 {
@@ -4557,7 +4557,7 @@ SW_TEST_CASE( RenderPassGPUTest, InstanceOverridesReachTheGPUOnEveryBackend )
             pMesh->setMaterial( parent.get() );
             pMesh->setMaterialInstance( instance );
 
-            // 앱과 같은 구성: 네이티브 bindless 에서는 배치를 머티리얼끼리 합친다(EngineLoop · FrameRenderer).
+            // 앱과 같은 구성: 네이티브 bindless 에서는 배치를 머티리얼끼리 합친다(Engine · FrameRenderer).
             sw::GPUSceneBuilder builder;
             builder.setMergeBatchesAcrossMaterials( bNativeBindless );
             builder.populateFromScene( &scene, sw::float3{ 0.0f, 0.0f, -5.0f } );

@@ -7,7 +7,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 정의 매크로(`SW_GLOBAL_VARIABLE` · `SW_TEST_GLOBAL_VARIABLE`)는 정적 등록자를 전역 리스트에 매달고, 기동(테스트 main · `EngineLoop`)이
+// 정의 매크로(`SW_GLOBAL_VARIABLE` · `SW_TEST_GLOBAL_VARIABLE`)는 정적 등록자를 전역 리스트에 매달고, 기동(테스트 main · `Engine`)이
 // 그 리스트를 프로세스 매니저(`engine::getGlobalVariableManager`)에 "Engine" 으로 등록한다. 매니저 자체의 동작은 CoreTest 의 `GlobalVariableTest` 가
 // 지역 매니저로 본다.
 

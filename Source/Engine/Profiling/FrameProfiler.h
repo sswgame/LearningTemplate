@@ -52,7 +52,7 @@ namespace sw
      * @details 병렬 패스 기록이 여러 스레드에서 동시에 같은 구간을 누적하므로 relaxed 원자 덧셈을
      *          씁니다. 구간은 이름당 슬롯 하나로 고정되고, 슬롯 번호는 매크로가 static 으로 캐시합니다.
      *
-     *          소유는 `EngineLoop` 이고 조회는 `engine::getFrameProfiler()` 입니다(함수 지역 static 싱글턴은 수명이 아무에게도
+     *          소유는 `Engine` 이고 조회는 `engine::getFrameProfiler()` 입니다(함수 지역 static 싱글턴은 수명이 아무에게도
      *          속하지 않아 종료 순서를 정할 수 없습니다).
      */
     class SW_API FrameProfiler : public ISubsystem

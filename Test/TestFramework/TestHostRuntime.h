@@ -1,7 +1,7 @@
 /**
  * @file TestHostRuntime.h
  * @brief 테스트 하네스의 엔진 기동 · 종료입니다 — 테스트 실행 파일의 `main` 과 퍼저(`Test/FuzzTest/LoaderFuzzer`)가 같은 기동을 쓴다.
- * @details 부트스트랩(이름 풀 · 로거 · 크래시 핸들러 · 명령줄) → 서비스 → `EngineLoop` 과 같은 서브시스템 클래스. 하네스는 창 · RHI ·
+ * @details 부트스트랩(이름 풀 · 로거 · 크래시 핸들러 · 명령줄) → 서비스 → `Engine` 과 같은 서브시스템 클래스. 하네스는 창 · RHI ·
  *          렌더러를 세우지 않는다. `stop` 은 기동이 중간에 졌어도 세운 만큼 역순으로 내린다.
  * @code
  *     test::TestHostRuntime runtime;

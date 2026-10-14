@@ -87,7 +87,7 @@ Destruction = 11
 # 자동화 시나리오(실행기 · 탐침 · 단계 등록표). 입력 · 씬 · 창을 내려다보고, 프레임 관찰자(`Engine/Utility/EngineFrameObserver.h`)로 루프에 붙어 스크린샷 · 종료를 넘긴다.
 # UI 는 이 위다 — UI 단계(`ExpectUI`)와 로딩 화면 시작 차단 조건을 UI 가 이 등록표에 올린다(실행기는 UI 를 include 하지 않는다).
 Automation = 11
-# 텔레메트리 — 동의를 사용자 설정에서 읽는다. 엔진의 다른 곳은 이것을 모른다(EngineLoop 가 프레임 시간을 넘긴다).
+# 텔레메트리 — 동의를 사용자 설정에서 읽는다. 엔진의 다른 곳은 이것을 모른다(Engine 가 프레임 시간을 넘긴다).
 Telemetry = 12
 # 런타임(게임) UI — 위젯 트리 · 레이아웃 · 사건 · 포커스 · 스타일 · 문서 · 바인딩. 입력 · 글자 · 캔버스 그리기 목록(Graphics) · 사용자 설정을 쓴다.
 # 렌더러와는 서로 include 하지 않는다 — 사이의 값은 Graphics/Canvas 의 그리기 목록뿐이다(언리얼 Slate ↔ SlateRHIRenderer 의 선).

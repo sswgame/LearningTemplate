@@ -1,6 +1,6 @@
 /**
  * @file PresentHookDelegate.h
- * @brief 프레젠트 앞뒤에 끼는 훅의 델리게이트 형입니다. 형만 필요한 곳(`EngineLoop.h`)이 패킷 헤더 없이 이것만 포함합니다.
+ * @brief 프레젠트 앞뒤에 끼는 훅의 델리게이트 형입니다. 형만 필요한 곳(`Engine.h`)이 패킷 헤더 없이 이것만 포함합니다.
  */
 #pragma once
 #include "Core/Delegate/Delegate.h"

@@ -330,7 +330,7 @@ namespace sw
      *          **bindless SRV 인덱스**가 그대로 샙니다. 후자는 프리리스트로 영영 안 돌아옵니다.
      *
      *          지금 이 함수로 오는 길은 하나뿐이고 그 순서가 이 계약을 지킵니다:
-     *          `EngineLoop::shutdown` 이 `_rhi->shutdown()` 을 **먼저** 부르고, 그것이
+     *          `Engine::shutdown` 이 `_rhi->shutdown()` 을 **먼저** 부르고, 그것이
      *          `RHIRenderResource` 레지스트리 전체에 `releaseRHI` 를 밀어 둔 뒤에야
      *          `AssetManager::shutdown` → `clearAssetCaches()` 가 여기에 닿습니다.
      *          참조가 0 이 되어 내리는 평소 경로는 `release()` 이고, 그쪽은 제대로 돌려줍니다.

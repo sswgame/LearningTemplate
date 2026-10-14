@@ -141,7 +141,7 @@ SW_TEST_CASE( ConfigManagerTest, MissingFileFallsBackToGeneratedThenCppDefaults 
 /**
  * @brief [ConfigManagerTest] 파일에서 읽은 설정은 경로로 다시 읽히고, 객체는 그대로(포인터 유효) 값만 바뀌며 알림이 간다
  * @details 에디터가 `Config/` 를 감시해 바뀐 파일을 `reloadConfigFile` 로 넘긴다. 새 객체로 바꾸면 기동 때 받아 둔 포인터
- *          (`EngineLoop::_pEngineConfig`)가 댕글링이 된다. 깨진 JSON 은 이전 값을 지키고, 모르는 경로는 아무것도 하지 않는다.
+ *          (`Engine::_pEngineConfig`)가 댕글링이 된다. 깨진 JSON 은 이전 값을 지키고, 모르는 경로는 아무것도 하지 않는다.
  */
 SW_TEST_CASE( ConfigManagerTest, ReloadConfigFileUpdatesInPlaceAndNotifies )
 {

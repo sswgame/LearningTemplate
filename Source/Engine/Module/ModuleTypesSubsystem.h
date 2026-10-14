@@ -13,7 +13,7 @@ namespace sw
 {
     /**
      * @brief 호스트가 동적으로 올리는 타입 공급자(GameFramework · 킷 · 게임 모듈)를 올려 그 타입을 등록합니다. 실패하면 false 입니다.
-     * @details 기동 단계 `ModuleTypes` 가 부릅니다. 엔진 루프가 받고(`EngineLoop::setModuleTypeLoader`) 이 서브시스템이 부른다.
+     * @details 기동 단계 `ModuleTypes` 가 부릅니다. 엔진 루프가 받고(`Engine::setModuleTypeLoader`) 이 서브시스템이 부른다.
      */
     SW_DECLARE_DELEGATE( bool, ModuleTypeLoaderDelegate, void );
 } // namespace sw

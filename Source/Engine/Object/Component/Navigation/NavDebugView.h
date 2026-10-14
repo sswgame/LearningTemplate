@@ -2,7 +2,7 @@
  * @file NavDebugView.h
  * @brief 내비게이션 디버그 그리기 — 폴리곤 테두리 · 경로 · 속도 · 장애물을 선으로 내고, 걷는 면 · 경로 띠를 씬 오브젝트(`NavMeshDebugView`)의 메시로 짓습니다.
  * @details `SceneNavigation` 의 값 멤버입니다. 무엇을 그릴지는 `NavDebugDrawFlag`(`gv_navDebugDraw`)가 정하고, 그리는 모양 · 색이 바뀔 때만 이 파일이 바뀝니다.
- *          게임 스레드, 씬 틱 밖에서 부릅니다(`EngineLoop`).
+ *          게임 스레드, 씬 틱 밖에서 부릅니다(`Engine`).
  */
 #pragma once
 #include "Core/Common/Types.h"

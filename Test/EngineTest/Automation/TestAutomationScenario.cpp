@@ -14,7 +14,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 자동화 시나리오 — 씬 · 창 없이 실행기를 손으로 돌린다(EngineLoop 의 프레임 앞뒤 자리를 테스트가 대신 부른다).
+// 자동화 시나리오 — 씬 · 창 없이 실행기를 손으로 돌린다(Engine 의 프레임 앞뒤 자리를 테스트가 대신 부른다).
 SW_LOG_CALLER( "TestAutomationScenario" );
 
 namespace
@@ -67,7 +67,7 @@ namespace
             return false;
         }
 
-        /** @brief 실행기를 끝날 때까지(최대 @p maxFrames) EngineLoop 와 같은 순서로 돌린다. "Switch" 발동을 센다. */
+        /** @brief 실행기를 끝날 때까지(최대 @p maxFrames) Engine 와 같은 순서로 돌린다. "Switch" 발동을 센다. */
         static sw::AutomationResult run( sw::AutomationRunner& runner, sw::InputManager& input, uint32 maxFrames = 200 )
         {
             s_switchCount               = 0;

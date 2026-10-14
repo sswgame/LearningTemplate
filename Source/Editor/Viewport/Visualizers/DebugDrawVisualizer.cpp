@@ -30,7 +30,7 @@ namespace sw::editor
 
             /**
              * @brief 디버그 큐가 확정한 도형을 그립니다. 구는 대원 셋(2D 뷰는 XY 원 하나), 선분은 근평면에서 잘라 투영합니다.
-             * @details 큐는 `EngineLoop::endFrame` 이 지난 프레임에 넣은 것을 확정합니다 — 게임 업데이트든 씬 틱이든 넣은 것이 모두 보인다.
+             * @details 큐는 `Engine::endFrame` 이 지난 프레임에 넣은 것을 확정합니다 — 게임 업데이트든 씬 틱이든 넣은 것이 모두 보인다.
              *          재사용 버퍼 하나로 충분합니다(에디터 UI 는 게임 스레드 하나에서 돈다).
              */
             static void draw( const EditorViewportVisualizerArgs& args )

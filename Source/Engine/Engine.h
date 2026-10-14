@@ -1,5 +1,5 @@
 /**
- * @file EngineLoop.h
+ * @file Engine.h
  * @brief 엔진 코어의 메인 루프와 서브시스템 소유권을 관리합니다.
  */
 #pragma once
@@ -67,17 +67,17 @@ namespace sw
     };
 
     /**
-     * @class EngineLoop
+     * @class Engine
      * @brief 코어 매니저들을 소유하고 메인 루프(tick)를 돌립니다.
      */
-    class SW_API EngineLoop
+    class SW_API Engine
     {
     public:
-        EngineLoop();
-        ~EngineLoop();
+        Engine();
+        ~Engine();
 
-        EngineLoop( const EngineLoop& )            = delete;
-        EngineLoop& operator=( const EngineLoop& ) = delete;
+        Engine( const Engine& )            = delete;
+        Engine& operator=( const Engine& ) = delete;
 
         /**
          * @brief 서브시스템(창, RHI 포함)을 초기화합니다.
@@ -273,7 +273,7 @@ namespace sw
         /**
          * @brief 셰이더 라이브 리로드입니다(서브시스템 `LiveShader` 소유 — 빌려 쓴다). **Shipping 에는 없고** Debug 클라이언트에서만 실제로 만들어진다.
          * @details 셰이더 파일을 지켜보다 다시 컴파일하는 **개발 도구**입니다. RHI 는 디바이스 추상화이지 파일 감시자가 있을 곳이
-         *          아니므로 돌리는 쪽(EngineLoop)이 갖습니다.
+         *          아니므로 돌리는 쪽(Engine)이 갖습니다.
          */
 #if !defined( SW_SHIPPING )
         ShaderRecompiler* _pShaderRecompiler;

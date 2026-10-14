@@ -55,7 +55,7 @@
 - **Engine 에 남겨 두는 폴더**(2026-10-10 사용 현황 조사, 엔진 분할 0-3). 에디터는 `GameFramework` 를 include 할 수 없으므로(`CheckEngineLayers` 의 Editor 금지 목록) 에디터가 쓰는 폴더
   (`Dialogue` · `Sequencer` · `Destruction` · `Environment` · `Automation` · `UI` · `Animation` · `Scene` 등)는 Engine 말고 둘 곳이 없습니다.
   서버 실행 파일도 `GameFramework` 를 모르므로 서버가 `MetricRegistry` · `OpsHTTPEndpoint` 를 쓰는 `Observability` 도 남습니다.
-  `Character` 는 에디터가 쓰는 `Destruction` 이 쓰고, `Spatial` 은 `Character/Fit` 이 씁니다. `Telemetry` 는 `EngineLoop` · App · 게임이 쓰고, `Compression` 은 Core 인터페이스의 코덱 공급자라 Core 가 서드파티를 몰라야 하는 규칙 때문에 남습니다.
+  `Character` 는 에디터가 쓰는 `Destruction` 이 쓰고, `Spatial` 은 `Character/Fit` 이 씁니다. `Telemetry` 는 `Engine` · App · 게임이 쓰고, `Compression` 은 Core 인터페이스의 코덱 공급자라 Core 가 서드파티를 몰라야 하는 규칙 때문에 남습니다.
 - **SOLID 리팩토링에서 핫 경로라 손대지 않는 것**(2026-10-12 감사). `IRHICommandList` · `IRHIResourceFactory` 의 가상 호출 구조, `GPUSceneBuilder` 내부 병렬 루프, `PhysicsOverlapWorld` 셀 해시,
   Box2D · Jolt 어댑터의 switch(외부 라이브러리 경계), RHI 백엔드 `CommandContext` 큰 파일(백엔드 하나의 기록이라 한 이유로 바뀐다), `AbilitySystemComponent` 의 modifier switch(닫힌 열거 + `-Wswitch`)입니다.
   의도된 예외는 `App.cpp` 의 `kArrHeadlessTask` 표, `EditorPanelManager::syncWithRegistry`, 에디터 `getService<T>()`(모듈 경계 주입), 엔진 루프의 서브시스템 등록부입니다.
@@ -80,7 +80,7 @@
   - 분해에서 남긴 것: 모달 · 결과 창 플래그와 이름 입력 버퍼(S19, ImGui 팝업 시점), `verifyModuleBindings` · `isBoundTo`(S20, 모든 컨텍스트 핸들을 함께 보는 검사), `ModuleShadowCopy` 인스턴스화(S20, 번호가 프로세스 전역이어야 섀도 폴더 이름이 겹치지 않음),
     `UserSettingsManager` 의 키 바인딩 겹침 · 품질 번들 맞추기(`setPendingAt` 상태 기계와 안 떨어짐), `SceneNavigation` 의 에이전트 루프 · 런타임 찾기 · 설정 로드, `App` 의 `updateShellActions` · 모듈 카탈로그 해석,
     `IRHIDevice` 의 `supportsNativeBindlessSampling` · `applyVSyncInternal`, `FractureComponentBase` 의 그룹 재구성 · 물리 어댑터(S15, 반쪽 이전), `FrameRenderer` 의 트랜지언트 계획(S16),
-    `EngineLoop::tick` 의 백엔드 교체 · `pollShaderReloadHotkey` · `MaterialCache::initializePending` · 관찰자 루프(S13, 수명 계약 · 순서가 뜻).
+    `Engine::tick` 의 백엔드 교체 · `pollShaderReloadHotkey` · `MaterialCache::initializePending` · 관찰자 루프(S13, 수명 계약 · 순서가 뜻).
   - S16 의 **동작 변화**: 엔진 서비스가 묶이지 않은 실행은 GPU 계측이 꺼집니다(전에는 단언).
 - **폴더 · 파일 구조는 기계적으로 합치지 않습니다**(2026-10-12 감사, R8). 25 줄 이하 파일이 97 / 2,932 개이고 큰 클래스를 나눈 가족 대부분이 파일마다 120 줄을 넘으며, 작은 조각(`EditorAssetTypeFocus.cpp` 36 줄)은 의존을 분리한 것입니다.
   합치면 층 규칙(`CheckEngineLayers`)과 그래픽스 구조 재편의 파일 분할 기준을 해칩니다. 한다면 `Scripts/lint/report/` 에 같은 접두 `.cpp` 가족과 줄 수를 보고하는 스크립트를 두고,
@@ -217,6 +217,7 @@
 | `TurnOrder::Actor`(private) | `TurnOrder::Combatant` |
 | `Engine/Object/Animation/`(AnimationSystem · Crowd · LOD · Rewind · 워핑 컴포넌트 · 정점 애니메이션 베이커) | `Engine/Object/SceneAnimation/`(2026-10-13 — 애니메이션 데이터 폴더 `Engine/Animation/` 과 구분) |
 | `Object/GameObject/{ScenePhysics,SceneOverlapWorld2D,SceneAudio,MeshInstanceBatch,SpriteInstanceBatch}` · `GameObjectManager::getScenePhysics` · `getSceneAudio` · `getOverlapWorld2D` | `Object/Component/{Physics,Audio,3D,2D}/` · `getSceneService<ScenePhysics>()` · `getSceneService<SceneAudio>()` · `getSceneService<ScenePhysics>().getOverlapWorld2D()`(2026-10-13) |
+| `EngineLoop` · `Engine/EngineLoop.h` · `_engineLoop`(2026-10-15) | `Engine` · `Engine/Engine.h` · `_engine` (네임스페이스 `engine` 은 그대로 — 5-3) |
 | `PhysicsTypes.h` 의 `PhysicsHandle` · `PhysicsBodyHandle` 등 핸들 | `Engine/Common/PhysicsHandle.h`(2026-10-13 — 컴포넌트 모델 코어가 Physics 를 include 하지 않게) |
 
 일부러 둔 용어: stamp · kit · cook · orphan · chord · pin.
@@ -390,7 +391,7 @@
   (`FrameRenderer::resolvePresentSource` 가 사본 대신 뷰를 돌려줍니다). `fixed_string` 은 상한이 코드 상수이고, 힙이 금지된 경로(크래시 · 로그 · 시그널)나
   고정 버퍼가 필요한 곳(ImGui 입력)에만 씁니다. 언리얼도 `FString` 을 기본으로 두고, 인라인 버퍼(`TStringBuilder<N>`, 넘치면 힙으로 늘어남)는 임시 조립에만 씁니다.
 - **Engine 폴더 사이의 작은 고리는 "위층이 아래층 등록표에 등록" 과 "둘을 다 아는 층으로 옮기기" 로 풉니다**(2026-10-11, 엔진 분할 1 단계). 자동화 실행기는 UI 를 모르고 UI 가 단계 · 로딩 화면 시작 차단 조건(`SW_AUTOMATION_START_BLOCKER`)을 올립니다 — 언리얼 Automation 도 모듈이 테스트 · 래치 명령을 등록하고 실행기는 그 모듈을 모릅니다.
-  정점 애니메이션 굽기(`MeshVertexAnimationBaker`)는 `Object/SceneAnimation` 으로, 물리 디버그 선 어댑터는 조립점 `EngineLoop.cpp` 로 옮겨 `Graphics` 가 `Animation` · `Physics` 를 include 하지 않습니다 — 언리얼 AnimToTexture 도 애니메이션과 렌더를 함께 드는 별도 플러그인입니다.
+  정점 애니메이션 굽기(`MeshVertexAnimationBaker`)는 `Object/SceneAnimation` 으로, 물리 디버그 선 어댑터는 조립점 `Engine.cpp` 로 옮겨 `Graphics` 가 `Animation` · `Physics` 를 include 하지 않습니다 — 언리얼 AnimToTexture 도 애니메이션과 렌더를 함께 드는 별도 플러그인입니다.
 - **엔진 내장 에셋 캐시는 기능 폴더가 등록하고 `AssetManager` 는 등록표만 봅니다**(2026-10-11, 엔진 분할). 캐시 클래스의 .cpp 에 `SW_BUILT_IN_ASSET_CACHE( MaterialCache )` 한 줄을 두고(`Resource/Cache/BuiltInAssetCache.h`),
   매니저는 생성자에서 표를 훑어 소유 캐시를 만들고 종류 이름 순으로 올립니다. 타입으로 찾는 창구는 `getAssetCache<T>()` 입니다(`getMaterialCache` 넷은 지웠습니다).
   언리얼 서브시스템(모듈이 타입을 올리고 엔진이 인스턴스를 만들며 `GetSubsystem<T>()` 로 찾는다) · 고도 `register_types` 의 `add_resource_format_loader` 와 같은 방향입니다 — 유니티 `ScriptedImporter` 도 특성으로 등록되고 `AssetDatabase` 는 구현 타입을 모릅니다.
@@ -432,6 +433,11 @@
   (`engine::bindModuleServices` — 게임 모듈에는 `GameVisible` 행만, 에디터에는 모듈 컴파일러까지), 모듈은 자기 범위 다음에 그 범위에서 찾는다.
   서비스 id 열거형 · id 배열 표(`ModuleServiceTable`) · 호스트 서비스 목록은 지웠다 — 찾는 열쇠는 범위와 같은 타입 해시 하나다. 엔진 루프 ·
   부트스트랩 · 헤드리스 헤더는 호스트만 include 한다(`CheckEngineLayers` 가 Games · GameFramework · Editor 에서 막는다).
+- **엔진 루프 클래스는 `Engine` 이고 서비스 네임스페이스 `engine` 은 그대로 둔다**(2026-10-15, 정리 ⑥). 둘은 대소문자만 다르지만 C++ 에서 클래스(`sw::Engine`)와
+  네임스페이스(`sw::engine`)는 다른 이름이고, 이 저장소의 규칙(타입은 PascalCase · 네임스페이스는 소문자, 예 `editor`)이 그대로 구분한다. 네임스페이스를 바꾸지 않는 까닭: `engine::getXxx` 호출이 929 줄이고
+  C-28 이 그것을 주입으로 줄이는 중이라 이름만 바꾸는 큰 변경은 얻을 것이 적다. 클래스를 `EngineLoop` 로 두지 않는 까닭: 이 객체는 루프만이 아니라 부트스트랩 · 서비스 · 엔진 세 범위와 프레임 관찰자 ·
+  종료 코드를 소유하는 엔진 호스트의 본체다. 언리얼의 `UEngine`(`GEngine`)도 틱 루프와 서브시스템 범위를 함께 가진 한 객체로 알고 있다(기억에 의존). 로컬 변수 `engine` 은 네임스페이스를 가리지 않는다 —
+  한정 이름 조회(`engine::`)는 타입과 네임스페이스만 본다. 별칭 · 옛 이름은 두지 않는다(파일 `EngineLoop.h` · `.cpp` → `Engine.h` · `.cpp`, 멤버 `_engineLoop` → `_engine`).
 
 ### 5-4. 데이터, 직렬화, 설정
 
@@ -519,7 +525,7 @@
 - **글리프는 단일 채널 SDF(FreeType 내장)로 그립니다**(2026-10-06). 유니티 TextMeshPro, 언리얼 SDF 글꼴과 같습니다. MSDF 는 [백로그](06_Backlog.md) `G-10` 입니다. FreeType 은 `vcpkg.json` 의 엔진 직접 의존입니다.
 - **백엔드 선택과 소유 객체의 서브시스템 판정**(2026-10-15, C-27 ⑤ 마감 — 코드를 다시 읽고 확정, 코드 변경 없음). 상용 엔진 비교는 모두 "~로 알고 있다" 로 기억에 의존한다.
   - **오디오는 이미 역할별 팩토리가 서브시스템 하나를 고른다.** `IAudioService::create()` 가 `SW_PLATFORM_WINDOWS` 와 `SW_WITH_CLIENT_CODE` 이면 `XAudio2AudioBackend`, 아니면 `NullAudioBackend` 를 돌려주고,
-    `EngineLoop` 는 전용 서버(`bDedicatedServer`)면 `createNull()` 을 골라 기동 단계에 `addSubsystem` 한다. 소비자는 구현 종류를 모르고 `IAudioService` 만 본다. 언리얼 오디오 믹서가 플랫폼별 `IAudioMixerPlatformInterface` 를 고르는 모양으로 알고 있다.
+    `Engine` 는 전용 서버(`bDedicatedServer`)면 `createNull()` 을 골라 기동 단계에 `addSubsystem` 한다. 소비자는 구현 종류를 모르고 `IAudioService` 만 본다. 언리얼 오디오 믹서가 플랫폼별 `IAudioMixerPlatformInterface` 를 고르는 모양으로 알고 있다.
   - **물리는 갈아 끼우는 쌍이 아니라 함께 쓰는 둘이다.** `PhysicsSystem`(서브시스템 `Physics`) 하나가 Jolt(3D, `createScene3D`)와 Box2D(2D, `createScene2D`)를 같은 때에 쓴다. 한 역할에 구현이 둘이 아니라 역할이 둘이라 호스트 종류로 고를 것이 없다.
     그래서 팩토리나 서브시스템을 더 나누지 않는다. 언리얼은 PhysX · Chaos 처럼 한 역할의 구현을 모듈로 고르지만, 3D · 2D 를 함께 켜는 것은 Paper2D 가 Box2D 를 3D 물리와 따로 쓰는 것과 비슷하게 알고 있다.
   - **`ResourcePakManager` 는 서브시스템이 아니다.** `AssetManager`(서브시스템)가 `_pPackManager` 로 소유하고 `ResourceIO::getPackManager()` 로만 닿는다. 종료 때 `AssetManager::shutdown` 이 `unmountAll` 로 비우고(마운트를 부르는 곳은 엔진 코드에 없고 호스트 · 도구 · 테스트가 건다),

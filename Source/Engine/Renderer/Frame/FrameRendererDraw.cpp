@@ -43,7 +43,7 @@ namespace sw
         // 객체라 화면이 시작 때 컴파일된 셰이더 그대로다.
         //
         // 순서는 loadPipeline 과 같다. 여기 도달하기 전에 ShaderRecompiler 가 ShaderCache 를 비웠고(수동 리로드)
-        // (그래야 새 바이트코드를 집는다) EngineLoop 이 렌더 스레드를 재웠으므로(waitIdle) 안전하다.
+        // (그래야 새 바이트코드를 집는다) Engine 이 렌더 스레드를 재웠으므로(waitIdle) 안전하다.
         // 셰이더 편집은 개발 중 가끔 있는 일이라 이때의 스톨은 감수한다.
         releasePassResources();
         ensurePassResources();

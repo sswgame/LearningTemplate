@@ -18,7 +18,7 @@ namespace sw
     /**
      * @class AutomationSession
      * @brief 엔진 루프에 프레임 관찰자(`IEngineFrameObserver`)로 붙는 시나리오 구동기입니다. 루프는 관찰자 목록만 알고, 세션 · 실행기 · 체인 · 단계 전환은 모릅니다.
-     * @details 세션은 런처(App)가 `-scenario` 를 읽어 만들고 `EngineLoop::addFrameObserver` 로 붙입니다(전용 서버는 시나리오를 쓰지 않는다). 한 단계가 끝나면(통과해야 다음으로 간다 — `AutomationScenarioChain`) 같은 프로세스에서 다음 시나리오의 실행기를 새로 만든다. 그 단계가 시작할 때
+     * @details 세션은 런처(App)가 `-scenario` 를 읽어 만들고 `Engine::addFrameObserver` 로 붙입니다(전용 서버는 시나리오를 쓰지 않는다). 한 단계가 끝나면(통과해야 다음으로 간다 — `AutomationScenarioChain`) 같은 프로세스에서 다음 시나리오의 실행기를 새로 만든다. 그 단계가 시작할 때
      *          - 프로세스의 **작업 폴더**가 처음과 같은지 보고(파일 대화상자 같은 것이 옮긴다) 다르면 경고하고 되돌린다,
      *          - `gv_fixedFrameDelta` 를 그 시나리오의 `fixedDelta` 로 맞추고,
      *          - 렌더 스레드가 지금까지 쓴 시나리오 스크린샷 수를 기준선으로 잡는다(실행기는 자기 단계가 요청한 것만 기다린다 — 렌더 스레드의 수는 프로세스 전체로 누적된다).

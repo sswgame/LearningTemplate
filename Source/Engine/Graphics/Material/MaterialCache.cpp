@@ -217,7 +217,7 @@ namespace sw
      *          않으므로 여기서 `releaseRHI` 를 부를 방법이 없습니다.
      *
      *          지금 이 함수로 오는 길은 `AssetManager::shutdown` → `clearAssetCaches()` 하나뿐이고,
-     *          `EngineLoop::shutdown` 이 그보다 **먼저** `_rhi->shutdown()` 을 불러 레지스트리 전체에
+     *          `Engine::shutdown` 이 그보다 **먼저** `_rhi->shutdown()` 을 불러 레지스트리 전체에
      *          `releaseRHI` 를 밀어 둡니다. 평소 경로는 참조가 0 이 되는 `release()` 쪽입니다.
      */
     void MaterialCache::clear()

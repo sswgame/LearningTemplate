@@ -108,7 +108,7 @@ namespace
             input.endFrame();
         }
 
-        /** @brief 입력 → UI 입력(게임 틱 앞) → 씬 → UI 갱신 한 프레임입니다(EngineLoop 와 같은 순서). */
+        /** @brief 입력 → UI 입력(게임 틱 앞) → 씬 → UI 갱신 한 프레임입니다(Engine 와 같은 순서). */
         static void tickWithUI( GameObjectManager& manager, InputManager& input, UISystem& ui )
         {
             input.beginFrame( kDeltaTime );
@@ -176,7 +176,7 @@ namespace
             return buffer.read( reader );
         }
 
-        /** @brief 실행기를 EngineLoop 와 같은 순서로 한 프레임 돌립니다. */
+        /** @brief 실행기를 Engine 와 같은 순서로 한 프레임 돌립니다. */
         static AutomationResult runFrame( AutomationRunner& runner, GameObjectManager& manager, InputManager& input )
         {
             runner.onFrameBegin( input );
