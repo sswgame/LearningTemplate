@@ -37,6 +37,8 @@ namespace sw::editor
         /** @brief 선택을 통째로 바꿉니다. 기록을 지우고 "저장된 상태" 로 맞춥니다(문서를 열 때). */
         void                       setSelection( const AppearanceSelection& selection );
         const AppearanceSelection& getSelection() const { return _selection; }
+        /** @brief 선택이 바뀔 때마다 오르는 번호입니다. 입혀 보기 결과를 다시 계산할지 가릴 때 씁니다(바뀌었을 수 있는 쪽으로 기웁니다). */
+        uint32 getRevision() const { return _revision; }
         /** @brief 지금 상태를 "저장된 상태" 로 맞춥니다. 저장 뒤에 부릅니다. */
         void markSaved() { _saved = _selection; }
         /** @brief 저장된 상태와 다르면 true 입니다. */
@@ -112,5 +114,6 @@ namespace sw::editor
         AppearanceSelection                      _selection;
         AppearanceSelection                      _saved;
         EditSnapshotHistory<AppearanceSelection> _history;
+        uint32                                   _revision;
     };
 } // namespace sw::editor

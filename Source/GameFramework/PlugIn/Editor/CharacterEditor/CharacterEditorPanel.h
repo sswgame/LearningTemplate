@@ -16,6 +16,7 @@
 #include "Editor/Common/GUI/IEditorPanel.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
+#include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
 #include "GameFramework/Base/Gameplay/Appearance/UserAppearancePresetStore.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/PlugIn/Editor/CharacterEditor/Model/AppearanceEditModel.h"
@@ -99,5 +100,9 @@ namespace sw::editor
         bool                                  _bDatabaseLoaded;
         bool                                  _bHasFit;
         bool                                  _bExternalChange;
+        ResolvedAppearance                    _preview;       ///< 입혀 본 결과(규칙 설명). 선택이 바뀔 때만 다시 푼다
+        AppearanceSelectionReport             _previewReport; ///< `_preview` 와 같이 푼 보고
+        uint32                                _previewRevision;
+        bool                                  _bPreviewValid;
     };
 } // namespace sw::editor

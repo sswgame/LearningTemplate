@@ -71,6 +71,7 @@ namespace sw::editor
         : _selection{}
         , _saved{}
         , _history{}
+        , _revision{ 0 }
     {
     }
 
@@ -79,6 +80,7 @@ namespace sw::editor
         _selection = selection;
         _saved     = selection;
         _history.clear();
+        ++_revision;
     }
 
     bool AppearanceEditModel::isDirty() const
@@ -215,11 +217,13 @@ namespace sw::editor
 
     bool AppearanceEditModel::undo()
     {
+        ++_revision;
         return _history.undo( _selection );
     }
 
     bool AppearanceEditModel::redo()
     {
+        ++_revision;
         return _history.redo( _selection );
     }
 
@@ -319,6 +323,7 @@ namespace sw::editor
         if ( AppearanceEditModelInternal::isSameSelection( before, _selection ) )
             return false;
         _history.record( before );
+        ++_revision;
         return true;
     }
 
@@ -330,6 +335,7 @@ namespace sw::editor
     void AppearanceEditModel::recordUndo( string_view coalesceKey )
     {
         _history.record( _selection, coalesceKey );
+        ++_revision;
     }
 
     string AppearanceEditModel::makeKey( string_view kind, const hashed_string& target )

@@ -154,6 +154,10 @@ namespace sw::editor
         , _bDatabaseLoaded{ false }
         , _bHasFit{ false }
         , _bExternalChange{ false }
+        , _preview{}
+        , _previewReport{}
+        , _previewRevision{ 0 }
+        , _bPreviewValid{ false }
     {
         _presetStore.setDatabase( &_database );
     }
@@ -608,9 +612,25 @@ namespace sw::editor
     void CharacterEditorPanel::drawSelectionHeader( const AppearanceSelection& selection )
     {
         utf8 arrTextBuffer[constant::kMaxBuffer128];
-        std::snprintf( arrTextBuffer, sizeof( arrTextBuffer ), "%s", selection._basePresetID.c_str() );
-        if ( ImGui::InputText( "Base preset", arrTextBuffer, sizeof( arrTextBuffer ), ImGuiInputTextFlags_EnterReturnsTrue ) )
-            (void)_appearance.setBasePreset( CharacterEditorPanelInternal::makeName( arrTextBuffer ) ); // 같은 값이면 false 이고 그대로 둔다
+        if ( _bDatabaseLoaded )
+        {
+            vector<hashed_string> listPreset;
+            for ( const CharacterAppearanceDef& preset : _database.getPresets().getPresets() )
+            {
+                listPreset.push_back( preset._id );
+            }
+            hashed_string pickedPreset;
+            const bool    bPresetPicked = CharacterEditorPanelInternal::drawNameCombo( "Base preset", selection._basePresetID, listPreset, pickedPreset, "charactereditor.basePreset.first" );
+            EditorSelfTestMarks::note( "charactereditor.basePreset" );
+            if ( bPresetPicked )
+                (void)_appearance.setBasePreset( pickedPreset ); // 같은 값이면 false 이고 그대로 둔다
+        }
+        else
+        {
+            std::snprintf( arrTextBuffer, sizeof( arrTextBuffer ), "%s", selection._basePresetID.c_str() );
+            if ( ImGui::InputText( "Base preset", arrTextBuffer, sizeof( arrTextBuffer ), ImGuiInputTextFlags_EnterReturnsTrue ) )
+                (void)_appearance.setBasePreset( CharacterEditorPanelInternal::makeName( arrTextBuffer ) ); // 같은 값이면 false 이고 그대로 둔다
+        }
         std::snprintf( arrTextBuffer, sizeof( arrTextBuffer ), "%s", selection._bodyType.c_str() );
         if ( ImGui::InputText( "Body type", arrTextBuffer, sizeof( arrTextBuffer ), ImGuiInputTextFlags_EnterReturnsTrue ) )
             (void)_appearance.setBodyType( CharacterEditorPanelInternal::makeName( arrTextBuffer ) ); // 같은 값이면 false 이고 그대로 둔다
@@ -643,6 +663,18 @@ namespace sw::editor
             return;
         }
 
+        // 세트 고르기는 칸 목록 위에 둔다 — 패널이 낮아도 보이게.
+        vector<hashed_string> listSet;
+        for ( const EquipSetDef& set : _database.getSets().getSets() )
+        {
+            listSet.push_back( set._id );
+        }
+        hashed_string pickedSet;
+        const bool    bSetPicked = CharacterEditorPanelInternal::drawNameCombo( "Equip set", hashed_string{}, listSet, pickedSet, "charactereditor.equipSet.first" );
+        EditorSelfTestMarks::note( "charactereditor.equipSet" );
+        if ( bSetPicked && pickedSet.empty() == false )
+            (void)_appearance.equipSet( _database, pickedSet ); // 이미 입고 있으면 false 이고 그대로 둔다
+
         // 데이터가 있으면 슬롯 표의 칸마다 그 칸에 낄 수 있는 아이템만 고르게 한다.
         vector<hashed_string> listItem;
         bool                  bFirstSlot = true;
@@ -660,17 +692,6 @@ namespace sw::editor
             }
             ImGui::PopID();
         }
-
-        vector<hashed_string> listSet;
-        for ( const EquipSetDef& set : _database.getSets().getSets() )
-        {
-            listSet.push_back( set._id );
-        }
-        hashed_string pickedSet;
-        const bool    bSetPicked = CharacterEditorPanelInternal::drawNameCombo( "Equip set", hashed_string{}, listSet, pickedSet, "charactereditor.equipSet.first" );
-        EditorSelfTestMarks::note( "charactereditor.equipSet" );
-        if ( bSetPicked && pickedSet.empty() == false )
-            (void)_appearance.equipSet( _database, pickedSet ); // 이미 입고 있으면 false 이고 그대로 둔다
     }
 
     void CharacterEditorPanel::drawCustomizationRows( const AppearanceSelection& selection )
@@ -698,10 +719,25 @@ namespace sw::editor
             ImGui::TextDisabled( "Load appearance data to see which rules hid or changed what." );
             return;
         }
-        ResolvedAppearance        resolved;
-        AppearanceSelectionReport report;
-        _appearance.previewResolved( _database, resolved, report );
-        published._traceCount = static_cast<uint32>( resolved._listTrace.size() );
+        // 기준 프리셋이 칸 · 몸 종류의 시드라서, 없으면 펼칠 것이 없고 해석기가 칸마다 경고를 낸다 — 고르게 하고 넘어간다.
+        if ( _database.getPresets().findPreset( _appearance.getSelection()._basePresetID ) == nullptr )
+        {
+            ImGui::TextDisabled( "Pick a base preset to see which rules hid or changed what." );
+            return;
+        }
+        // 해석기는 경고를 로그로 남기므로 프레임마다 돌리지 않고 선택 · 데이터가 바뀔 때만 다시 푼다.
+        const bool bStale = _bPreviewValid == false || _previewRevision != _appearance.getRevision();
+        if ( bStale )
+        {
+            _preview       = ResolvedAppearance{};
+            _previewReport = AppearanceSelectionReport{};
+            _appearance.previewResolved( _database, _preview, _previewReport );
+            _previewRevision = _appearance.getRevision();
+            _bPreviewValid   = true;
+        }
+        const ResolvedAppearance&        resolved = _preview;
+        const AppearanceSelectionReport& report   = _previewReport;
+        published._traceCount                     = static_cast<uint32>( resolved._listTrace.size() );
 
         if ( report._bUnknownBasePreset == SW_TRUE )
             ImGui::TextColored( ImVec4( 1.0f, 0.75f, 0.3f, 1.0f ), "Base preset is not in the data" );
@@ -737,15 +773,15 @@ namespace sw::editor
         }
         for ( const FitPartSummary& part : _fit._listPart )
         {
-            ImGui::Text( "%s: cut %u/%u (%.0f%%), %u verts moved, max push %.3f", part._name.c_str(), part._cutTriangleCount, part._triangleCount, part._cutRatio * 100.0f,
-                         part._movedVertexCount, part._maxDelta );
+            ImGui::Text( "%s: cut %u/%u (%.0f%%), %u verts moved, max push %.3f", part._name.c_str(), part._cutTriangleCount, part._triangleCount, static_cast<float64>( part._cutRatio * 100.0f ),
+                         part._movedVertexCount, static_cast<float64>( part._maxDelta ) );
         }
         if ( _fit.hasPenetration() == false )
             ImGui::TextDisabled( "No penetration." );
         for ( const FitPenetrationSummary& penetration : _fit._listPenetration )
         {
             ImGui::TextColored( ImVec4( 1.0f, 0.55f, 0.35f, 1.0f ), "Penetration %s / %s: %u points, depth %.3f", penetration._partA.c_str(), penetration._partB.c_str(),
-                                penetration._vertexCount, penetration._maxDepth );
+                                penetration._vertexCount, static_cast<float64>( penetration._maxDepth ) );
         }
         for ( const string& message : _fit._listMessage )
         {
@@ -820,6 +856,7 @@ namespace sw::editor
     void CharacterEditorPanel::loadAppearanceData()
     {
         _bDatabaseLoaded = false;
+        _bPreviewValid   = false;
         _database.clear();
         _pItems = make_unique<ItemCatalog>();
         if ( _pItems->loadFromResource( string_view( _itemsPath.c_str() ) ) == false )
