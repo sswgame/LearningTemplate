@@ -29,10 +29,6 @@ namespace sw::editor
                     body( 0, count );
             }
 
-            /** @brief 야코비안 차분의 걸음을 상자 대각선에 곱하는 비율입니다. */
-            static constexpr float32 kJacobianStepRatio = 1e-3f;
-            static constexpr float32 kMinJacobianStep   = 1e-5f;
-
             static float3 rotateX( const float3& value, float32 radian )
             {
                 const float32 cosValue = MathUtil::cos( radian );
@@ -83,42 +79,48 @@ namespace sw::editor
                 }
             };
 
-            /** @brief 정점마다 `deformPoint` 를 걸고 가중치로 섞고 법선을 야코비안으로 옮기는 병렬 일입니다. 정점끼리 서로 읽지 않으므로 제자리에서 쓴다. */
+            /**
+             * @brief 정점마다 `deformPoint` 를 걸고 가중치로 섞고 법선을 야코비안으로 옮기는 병렬 일입니다. 정점끼리 서로 읽지 않으므로 제자리에서 쓴다.
+             * @details 덩어리마다 다른 워커가 돈다 — 정점 배열은 일을 만들 때 받은 생 포인터로만 읽고 쓴다. `vector` 의 비const 인덱싱은 Debug 레이스
+             *          검출기가 쓰기로 세어 두 워커가 같은 배열을 동시에 만지는 순간 멈춘다(`MeshModifierParallelTest`).
+             */
             struct DeformJob
             {
                 const MeshModifier*        _pModifier{ nullptr };
                 const MeshModifierContext* _pContext{ nullptr };
-                MeshModifierMesh*          _pMesh{ nullptr };
+                float3*                    _pPosition{ nullptr };
+                float3*                    _pNormal{ nullptr };           ///< 법선 채널이 없으면 nullptr
+                const float2*              _pUV{ nullptr };               ///< 없으면 nullptr
+                const float4*              _pColor{ nullptr };            ///< 없으면 nullptr
+                const float32*             _pWeight{ nullptr };           ///< 없으면 nullptr(모두 1)
+                const float3*              _pOriginalPosition{ nullptr }; ///< `needsOriginalPosition` 일 때만
+                size_t                     _vertexCount{ 0 };
                 float32                    _step{ 0.0f };
 
                 void run( uint32 startChunk, uint32 endChunk )
                 {
-                    MeshModifierMesh& mesh       = *_pMesh;
-                    const size_t      first      = static_cast<size_t>( startChunk ) * MeshModifierUtil::kChunkVertexCount;
-                    const size_t      last       = MathUtil::min( static_cast<size_t>( endChunk ) * MeshModifierUtil::kChunkVertexCount, mesh.getVertexCount() );
-                    const bool        bHasNormal = mesh.hasNormal();
-                    const bool        bHasUV     = mesh.hasUv();
-                    const bool        bHasColor  = mesh.hasColor();
+                    const size_t first = static_cast<size_t>( startChunk ) * MeshModifierUtil::kChunkVertexCount;
+                    const size_t last  = MathUtil::min( static_cast<size_t>( endChunk ) * MeshModifierUtil::kChunkVertexCount, _vertexCount );
                     for ( size_t index = first; index < last; ++index )
                     {
-                        const float32 weight = MathUtil::saturate( mesh.getWeight( index ) );
+                        const float32 weight = _pWeight != nullptr ? MathUtil::saturate( _pWeight[index] ) : 1.0f;
                         if ( weight <= 0.0f )
                             continue;
                         MeshModifierPoint point{};
-                        point._position    = mesh._listPosition[index];
-                        point._normal      = bHasNormal ? mesh._listNormal[index] : float3::UnitY;
-                        point._uv          = bHasUV ? mesh._listUV[index] : float2{ 0.0f, 0.0f };
-                        point._color       = bHasColor ? mesh._listColor[index] : float4{ 1.0f, 1.0f, 1.0f, 1.0f };
+                        point._position    = _pPosition[index];
+                        point._normal      = _pNormal != nullptr ? _pNormal[index] : float3::UnitY;
+                        point._uv          = _pUV != nullptr ? _pUV[index] : float2{ 0.0f, 0.0f };
+                        point._color       = _pColor != nullptr ? _pColor[index] : float4{ 1.0f, 1.0f, 1.0f, 1.0f };
                         point._vertexIndex = static_cast<uint32>( index );
-                        if ( _pContext->_pListOriginalPosition != nullptr )
+                        if ( _pOriginalPosition != nullptr )
                         {
-                            point._originalPosition     = ( *_pContext->_pListOriginalPosition )[index];
+                            point._originalPosition     = _pOriginalPosition[index];
                             point._bHasOriginalPosition = true;
                         }
 
-                        const float3 moved        = blend( point._position, _pModifier->deformPoint( point, *_pContext ), weight );
-                        mesh._listPosition[index] = moved;
-                        if ( bHasNormal == false )
+                        const float3 moved = blend( point._position, _pModifier->deformPoint( point, *_pContext ), weight );
+                        _pPosition[index]  = moved;
+                        if ( _pNormal == nullptr )
                             continue;
 
                         // 법선에 수직인 접선 둘을 조금 밀어 변형된 접선을 얻고, 그 외적이 새 법선이다(t1 × t2 = n 이 되게 고른다)
@@ -131,7 +133,7 @@ namespace sw::editor
                         const float3 edge1         = blend( shifted._position, _pModifier->deformPoint( shifted, *_pContext ), weight ) - moved;
                         shifted._position          = point._position + tangent2 * _step;
                         const float3 edge2         = blend( shifted._position, _pModifier->deformPoint( shifted, *_pContext ), weight ) - moved;
-                        mesh._listNormal[index]    = MeshModifierUtil::normalizeOr( edge1.cross( edge2 ), normal );
+                        _pNormal[index]            = MeshModifierUtil::normalizeOr( edge1.cross( edge2 ), normal );
                     }
                 }
 
@@ -305,6 +307,8 @@ namespace sw::editor
 
         MeshModifierInternal::transformMesh( inoutMesh, localToModifier, localToModifierNormal );
         context._bounds = MeshModifierBounds::makeFromPoints( inoutMesh._listPosition );
+        if ( evaluation._pListInputBounds != nullptr )
+            evaluation._pListInputBounds->push_back( context._bounds );
         applyToMesh( inoutMesh, context );
         MeshModifierInternal::transformMesh( inoutMesh, modifierToLocal, modifierToLocalNormal );
     }
@@ -317,12 +321,17 @@ namespace sw::editor
 
     void MeshModifier::applyToMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context ) const
     {
-        const float32                   diagonal = context._bounds.getSize().getLength();
         MeshModifierInternal::DeformJob job{};
-        job._pModifier = this;
-        job._pContext  = &context;
-        job._pMesh     = &inoutMesh;
-        job._step      = MathUtil::max( diagonal * MeshModifierInternal::kJacobianStepRatio, MeshModifierInternal::kMinJacobianStep );
+        job._pModifier         = this;
+        job._pContext          = &context;
+        job._pPosition         = inoutMesh._listPosition.data();
+        job._pNormal           = inoutMesh.hasNormal() ? inoutMesh._listNormal.data() : nullptr;
+        job._pUV               = inoutMesh.hasUv() ? inoutMesh._listUV.data() : nullptr;
+        job._pColor            = inoutMesh.hasColor() ? inoutMesh._listColor.data() : nullptr;
+        job._pWeight           = inoutMesh.hasWeight() ? inoutMesh._listWeight.data() : nullptr;
+        job._pOriginalPosition = context._pListOriginalPosition != nullptr ? context._pListOriginalPosition->data() : nullptr;
+        job._vertexCount       = inoutMesh.getVertexCount();
+        job._step              = MeshModifierUtil::computeJacobianStep( context._bounds );
         MeshModifierInternal::runBlocks( MeshModifierUtil::computeChunkCount( inoutMesh.getVertexCount() ), 2,
                                          SW_DELEGATE_METHOD( ParallelBlockDelegate, &MeshModifierInternal::DeformJob::run, &job ) );
     }
@@ -588,6 +597,11 @@ namespace sw::editor
     void MeshModifierUtil::runBlocks( uint32 count, uint32 serialThreshold, const ParallelBlockDelegate& body )
     {
         MeshModifierInternal::runBlocks( count, serialThreshold, body );
+    }
+
+    float32 MeshModifierUtil::computeJacobianStep( const MeshModifierBounds& bounds )
+    {
+        return MathUtil::max( bounds.getSize().getLength() * kJacobianStepRatio, kMinJacobianStep );
     }
 
     float32 MeshModifierUtil::getComponent( const float3& value, uint32 axisIndex )
