@@ -14,6 +14,7 @@
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Audio/NullAudioBackend.h"
 #include "Engine/Bootstrap/CommandLineSubsystem.h"
+#include "Engine/Bootstrap/ContentRootSubsystem.h"
 #include "Engine/Bootstrap/CrashHandlerSubsystem.h"
 #include "Engine/Bootstrap/DiagnosticsSubsystem.h"
 #include "Engine/Bootstrap/LoggerSubsystem.h"
@@ -191,7 +192,8 @@ namespace test
             bootstrap.addSubsystem( sw::make_unique<sw::LoggerSubsystem>() );
             const sw::CommandLineSubsystem& commandLine =
                 bootstrap.addSubsystem( sw::make_unique<sw::CommandLineSubsystem>( static_cast<int32>( listApplicationArg.size() ), listApplicationArg.data() ) );
-            bootstrap.addSubsystem( sw::make_unique<sw::CrashHandlerSubsystem>( commandLine ) );
+            const sw::CrashHandlerSubsystem& crashHandler = bootstrap.addSubsystem( sw::make_unique<sw::CrashHandlerSubsystem>( &commandLine ) );
+            bootstrap.addSubsystem( sw::make_unique<sw::ContentRootSubsystem>( commandLine, crashHandler ) );
             bootstrap.addSubsystem( sw::make_unique<sw::StaticStorageSubsystem>() );
             (void)bootstrap.bind( commandLine.findCommandLine() );     // 새 범위 — 겹치지 않는다
             (void)bootstrap.bind( commandLine.findGlobalVariables() ); // 새 범위 — 겹치지 않는다

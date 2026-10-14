@@ -10,9 +10,11 @@
 
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Bootstrap/CommandLineSubsystem.h"
+#include "Engine/Bootstrap/ContentRootSubsystem.h"
 #include "Engine/Bootstrap/CrashHandlerSubsystem.h"
 #include "Engine/Bootstrap/DiagnosticsSubsystem.h"
 #include "Engine/Bootstrap/LoggerSubsystem.h"
+#include "Engine/Bootstrap/MemoryBudgetSubsystem.h"
 #include "Engine/Bootstrap/NamePoolSubsystem.h"
 #include "Engine/Bootstrap/StaticStorageSubsystem.h"
 #include "Engine/Common/EngineServices.h"
@@ -33,6 +35,7 @@
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Profiling/ProfilerBackendSubsystem.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
@@ -173,9 +176,11 @@ namespace
         bootstrap.addSubsystem( sw::make_unique<DiagnosticsSubsystem>( false ) );
         bootstrap.addSubsystem( sw::make_unique<NamePoolSubsystem>() );
         bootstrap.addSubsystem( sw::make_unique<LoggerSubsystem>() );
-        const CommandLineSubsystem& commandLine = bootstrap.addSubsystem( sw::make_unique<CommandLineSubsystem>( 0, nullptr ) );
-        bootstrap.addSubsystem( sw::make_unique<CrashHandlerSubsystem>( commandLine ) );
+        const CommandLineSubsystem&  commandLine  = bootstrap.addSubsystem( sw::make_unique<CommandLineSubsystem>( 0, nullptr ) );
+        const CrashHandlerSubsystem& crashHandler = bootstrap.addSubsystem( sw::make_unique<CrashHandlerSubsystem>( &commandLine ) );
+        bootstrap.addSubsystem( sw::make_unique<ContentRootSubsystem>( commandLine, crashHandler ) );
         bootstrap.addSubsystem( sw::make_unique<StaticStorageSubsystem>() );
+        bootstrap.addSubsystem( sw::make_unique<MemoryBudgetSubsystem>( crashHandler ) ); // 엔진 루프만 든다(하네스는 진단 구성의 추적을 그대로 둔다)
         // 엔진 루프와 같이 서브시스템 안의 객체를 건다(메모리 프로파일러는 초기화 뒤에 생겨 여기서는 걸지 않는다 — 선택 행이다).
         (void)bootstrap.bind( commandLine.findCommandLine() );     // 새 범위 — 겹치지 않는다
         (void)bootstrap.bind( commandLine.findGlobalVariables() ); // 새 범위 — 겹치지 않는다
@@ -189,7 +194,8 @@ namespace
         services.addSubsystem( sw::make_unique<CommandStack>() );
         services.addSubsystem( sw::make_unique<DebugOverlayState>() );
         services.addSubsystem( sw::make_unique<ComponentDefaults>() );
-        services.addSubsystem( sw::make_unique<FrameProfiler>() );
+        FrameProfiler& frameProfiler = services.addSubsystem( sw::make_unique<FrameProfiler>() );
+        services.addSubsystem( sw::make_unique<ProfilerBackendSubsystem>( frameProfiler ) );
         services.addSubsystem( sw::make_unique<CrashReportService>() );
         services.addSubsystem( sw::make_unique<DebugDrawQueue>() );
         services.addSubsystem( sw::make_unique<RenderTargetRegistry>() );
@@ -727,7 +733,7 @@ SW_TEST_CASE( EngineInitSequenceTest, BootstrapScopeRunsFromDiagnosticsToStaticS
     SubsystemScope bootstrap;
     addBootstrapSubsystems( bootstrap );
     SW_ASSERT_TRUE_MSG( bootstrap.getCollection().sort(), bootstrap.getCollection().getError().c_str() );
-    SW_EXPECT_STREQ( "Diagnostics NamePool Logger CommandLine CrashHandler StaticStorage", joinOrderNames( bootstrap.getCollection() ).c_str() );
+    SW_EXPECT_STREQ( "Diagnostics NamePool Logger CommandLine CrashHandler ContentRoot MemoryBudget StaticStorage", joinOrderNames( bootstrap.getCollection() ).c_str() );
 }
 
 /**

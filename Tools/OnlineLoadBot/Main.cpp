@@ -10,16 +10,20 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/LogSink/AsyncLogSink.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Subsystem/SubsystemCollection.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"
+
+#include "Engine/Bootstrap/CrashHandlerSubsystem.h"
+#include "Engine/Bootstrap/DiagnosticsSubsystem.h"
+#include "Engine/Bootstrap/LoggerSubsystem.h"
+#include "Engine/Bootstrap/NamePoolSubsystem.h"
 
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
 
@@ -33,34 +37,32 @@ namespace sw
     namespace
     {
         /**
-         * @brief 프로세스 바닥 — 이름 풀(hashed_string) · 로거 · 크래시 핸들러를 `EngineBootstrap` 의 앞부분과 같은 순서로 세우고 거꾸로 내립니다.
-         * @details 엔진 서비스(리소스 · 태스크 · 씬)는 세우지 않는다 — 봇과 서버 조립은 네트워크 · 키트만 쓴다. main 의 맨 처음에 두어 hashed_string 을
-         *          든 객체가 모두 사라진 뒤에 이름 풀이 내려가게 한다. 로거는 비동기라 내리지 않으면 마지막 줄을 잃는다.
+         * @brief 프로세스 바닥 — 엔진 호스트와 같은 부트스트랩 서브시스템(진단 도구 · 이름 풀 · 로거 · 크래시 핸들러)을 세우고 역순으로 내립니다.
+         * @details 엔진 서비스(리소스 · 태스크 · 씬)와 명령줄 · 리소스 루트는 세우지 않는다 — 봇과 서버 조립은 네트워크 · 키트만 쓰고 인자는 스스로 읽는다.
+         *          main 의 맨 처음에 두어 hashed_string 을 든 객체가 모두 사라진 뒤에 이름 풀이 내려가게 한다(로거는 비동기라 내리지 않으면 마지막 줄을 잃는다).
          */
         class ToolProcessScope
         {
         public:
             ToolProcessScope()
-                : _logger{ make_unique<AsyncLogSink>() }
+                : _bootstrap{}
             {
-                HashedStringPool::initialize();
-                _logger->initialize();
-                CrashHandler::initialize();
+                _bootstrap.add( make_unique<DiagnosticsSubsystem>( false ) );
+                _bootstrap.add( make_unique<NamePoolSubsystem>() );
+                _bootstrap.add( make_unique<LoggerSubsystem>() );
+                _bootstrap.add( make_unique<CrashHandlerSubsystem>( nullptr ) );
+                // 정렬 오류(선언 오타 · 순환)는 로거가 서기 전이다 — 표준 오류로 낸다.
+                if ( _bootstrap.initializeAll( SubsystemHostMask::All ) == false )
+                    std::fprintf( stderr, "OnlineLoadBot: bootstrap failed: %s\n", _bootstrap.getError().c_str() );
             }
 
-            ~ToolProcessScope()
-            {
-                _logger->shutdown();
-                HashedStringPool::shutdown();
-                CrashHandler::shutdown();
-                _logger.reset();
-            }
+            ~ToolProcessScope() { _bootstrap.destroyAll(); }
 
             ToolProcessScope( const ToolProcessScope& )            = delete;
             ToolProcessScope& operator=( const ToolProcessScope& ) = delete;
 
         private:
-            unique_ptr<AsyncLogSink> _logger;
+            SubsystemCollection _bootstrap;
         };
 
         /** @brief 명령줄 인자입니다. */

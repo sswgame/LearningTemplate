@@ -1,0 +1,43 @@
+#include "pch.h"
+
+#include "Engine/Bootstrap/ContentRootSubsystem.h"
+
+#include "Core/Diagnostics/CrashHandler.h"
+
+#include "Engine/Bootstrap/CommandLineSubsystem.h"
+#include "Engine/Bootstrap/CrashHandlerSubsystem.h"
+#include "Engine/Config/GameSelection.h"
+#include "Engine/Resource/ResourcePaths.h"
+
+namespace sw
+{
+    SW_LOG_CALLER( "ContentRootSubsystem" );
+
+    ContentRootSubsystem::ContentRootSubsystem( const CommandLineSubsystem& commandLine, const CrashHandlerSubsystem& crashHandler )
+        : _commandLine{ commandLine }
+        , _crashHandler{ crashHandler }
+    {
+    }
+
+    SubsystemInitResult ContentRootSubsystem::initializeSubsystem()
+    {
+        if ( _crashHandler.isCrashReporterRun() )
+            return SubsystemInitResult::Succeeded;
+        if ( ResourcePaths::initialize() == false )
+        {
+            SW_LOG_ERROR( "리소스 루트를 찾지 못했습니다 — Resource/ 가 있는 위치에서 실행하십시오." );
+            return SubsystemInitResult::Failed;
+        }
+        // 돌릴 게임을 고른다(Dev `-game=`) — 모듈 카탈로그 · 게임 프리셋을 읽기 전이어야 한다. 이 빌드에 없는 게임이면 서지 않는다.
+        if ( GameSelection::select( *_commandLine.findCommandLine() ) == false )
+            return SubsystemInitResult::Failed;
+        CrashHandler::setContextValue( "Game", GameSelection::getName().c_str() );
+        return SubsystemInitResult::Succeeded;
+    }
+
+    span<const utf8* const> ContentRootSubsystem::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { CrashHandlerSubsystem::kSubsystemName };
+        return kArrDependency;
+    }
+} // namespace sw

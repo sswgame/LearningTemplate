@@ -16,7 +16,6 @@
 #include "Engine/Input/ShellInputActions.h"
 #include "Engine/Module/ModuleTypesSubsystem.h"
 #include "Engine/Profiling/FrameProfileSession.h"
-#include "Engine/Profiling/MemoryBudgetMonitor.h"
 #include "Engine/Renderer/Frame/PresentHookDelegate.h"
 #include "Engine/Renderer/Frame/RenderPacketBuilder.h"
 #include "Engine/Renderer/Frame/RenderView.h"
@@ -46,6 +45,7 @@ namespace sw
     class InputManager;
     class InputMap;
     class IRHIDevice;
+    class MemoryBudgetSubsystem;
     class RenderTargetRegistry;
     class RenderThread;
     class RHI;
@@ -243,8 +243,8 @@ namespace sw
 
         /** @brief `-gv_profileFrames` 계측 한 회분입니다. 판정은 모두 이 안에 있고 루프는 두 줄만 부릅니다. */
         FrameProfileSession _profileSession;
-        /** @brief 메모리 태그 예산 · 보고(배포본에서는 아무 일도 하지 않는다). */
-        MemoryBudgetMonitor _memoryBudgetMonitor;
+        /** @brief 부트스트랩 범위의 메모리 태그 예산 감시입니다(`_bootstrap` 소유 — 프레임 끝마다 부른다. 배포본에서는 아무 일도 하지 않는다). */
+        MemoryBudgetSubsystem* _pMemoryBudget;
         /** @brief 엔진 범위(기동 단계)입니다 — 선언된 의존으로 위상 정렬해 초기화하고 역순으로 종료 · 소멸합니다. 부모는 `_services`. 서브시스템 객체를 소유합니다. */
         SubsystemScope _startup;
         /** @brief 서브시스템 `RHI` 입니다(`_startup` 소유). 백엔드 교체가 이것에 기대는 단계만 내렸다가 다시 세운다. */

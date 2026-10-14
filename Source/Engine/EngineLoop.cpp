@@ -24,9 +24,11 @@
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Audio/LipSyncImport.h"
 #include "Engine/Bootstrap/CommandLineSubsystem.h"
+#include "Engine/Bootstrap/ContentRootSubsystem.h"
 #include "Engine/Bootstrap/CrashHandlerSubsystem.h"
 #include "Engine/Bootstrap/DiagnosticsSubsystem.h"
 #include "Engine/Bootstrap/LoggerSubsystem.h"
+#include "Engine/Bootstrap/MemoryBudgetSubsystem.h"
 #include "Engine/Bootstrap/NamePoolSubsystem.h"
 #include "Engine/Bootstrap/StaticStorageSubsystem.h"
 #include "Engine/Common/EngineServices.h"
@@ -70,6 +72,7 @@
 #include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
+#include "Engine/Profiling/ProfilerBackendSubsystem.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Reflection/ReflectionDocWriter.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -142,6 +145,7 @@ namespace sw
         , _frameDeltaSeconds{ 0.0f }
         , _exitCode{ 0 }
         , _profileSession{}
+        , _pMemoryBudget{ nullptr }
         , _startup{}
         , _pRHISubsystem{ nullptr }
         , _pRHI{ nullptr }
@@ -183,8 +187,10 @@ namespace sw
             _bootstrap.addSubsystem( sw::make_unique<NamePoolSubsystem>() );
             _bootstrap.addSubsystem( sw::make_unique<LoggerSubsystem>() );
             _pCommandLineSubsystem = &_bootstrap.addSubsystem( sw::make_unique<CommandLineSubsystem>( argc, pArgv ) );
-            pCrashHandler          = &_bootstrap.addSubsystem( sw::make_unique<CrashHandlerSubsystem>( *_pCommandLineSubsystem ) );
+            pCrashHandler          = &_bootstrap.addSubsystem( sw::make_unique<CrashHandlerSubsystem>( _pCommandLineSubsystem ) );
+            _bootstrap.addSubsystem( sw::make_unique<ContentRootSubsystem>( *_pCommandLineSubsystem, *pCrashHandler ) );
             _bootstrap.addSubsystem( sw::make_unique<StaticStorageSubsystem>() );
+            _pMemoryBudget = &_bootstrap.addSubsystem( sw::make_unique<MemoryBudgetSubsystem>( *pCrashHandler ) );
             // 서브시스템 안의 객체도 서비스 표의 행이다 — 그 타입으로 건다(새 범위라 겹치지 않는다).
             (void)_bootstrap.bind( _pCommandLineSubsystem->findCommandLine() );     // 새 범위 — 겹치지 않는다
             (void)_bootstrap.bind( _pCommandLineSubsystem->findGlobalVariables() ); // 새 범위 — 겹치지 않는다
@@ -218,8 +224,8 @@ namespace sw
         const SubsystemHostMask hostMask = bDedicatedServer ? EngineSubsystemHost::kServer : EngineSubsystemHost::kClient;
         // 서버 패키지에 없는 에셋 종류(텍스처 · 셰이더 바이너리 · 오디오 — 쿠킹 표의 target_excluded_asset_kinds)는 서버가 읽지 않는다.
         ResourcePaths::setHostTarget( bDedicatedServer ? "Server" : "Client" );
-        // `-gv_memoryTracking=1` 은 기동의 할당부터 센다(Release 는 추적이 꺼진 채 선다).
-        _memoryBudgetMonitor.applyTrackingSetting();
+        // 외부 프로파일러(서비스 범위의 `ProfilerBackend`)의 스레드 이름 — 서비스 범위가 서기 전에 둔다.
+        ThreadName::setCurrentThreadName( "GameThread" );
 
         BLOCK( "서비스 범위" )
         {
@@ -234,7 +240,9 @@ namespace sw
 #endif
             _services.addSubsystem( sw::make_unique<DebugOverlayState>() );
             _services.addSubsystem( sw::make_unique<ComponentDefaults>() );
-            _services.addSubsystem( sw::make_unique<FrameProfiler>() );
+            FrameProfiler& frameProfiler = _services.addSubsystem( sw::make_unique<FrameProfiler>() );
+            // 외부 프로파일러(`-gv_tracy`) — 엔진 범위보다 먼저 켜져 기동 단계부터 타임라인에 남는다.
+            _services.addSubsystem( sw::make_unique<ProfilerBackendSubsystem>( frameProfiler ) );
             _services.addSubsystem( sw::make_unique<CrashReportService>() );
             {
                 SW_MEMORY_SCOPE( RenderCPU );
@@ -356,10 +364,6 @@ namespace sw
         }
         TelemetryService& telemetryService = *pTelemetryService;
 
-        // 외부 프로파일러(`-gv_tracy`)는 서비스 표가 선 직후에 켠다 — 기동 단계부터 타임라인에 남고, 켤 때 엔진 프로파일러도 같이 켠다.
-        ThreadName::setCurrentThreadName( "GameThread" );
-        ProfilerBackend::initialize();
-
         // 초기화의 순서는 손으로 적지 않는다. 서브시스템마다 먼저 서야 하는 것을 적고, 여기서는 위상 순서로 부른다. 종료와 해제는 그 역순이다(`shutdown`).
         const bool bStarted = _startup.getCollection().initializeAll( hostMask );
         // 서지 않은 것(전용 서버 · 헤드리스 · 실패)은 nullptr 다. 실패의 이유는 App 이 종료 코드를 고를 때 읽는다.
@@ -371,9 +375,6 @@ namespace sw
 #else
         (void)pLiveShaderSubsystem; // 배포본은 라이브 리로드가 없다
 #endif
-        // 메모리 태그 예산(데이터)은 설정 루트가 선 뒤에 읽는다.
-        if ( bStarted )
-            (void)_memoryBudgetMonitor.loadBudgetFile( FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), MemoryBudgetMonitor::kBudgetFile ) ); // 틀린 표는 오류를 남기고 예산 없이 간다 — 진단 설정 하나로 기동을 세우지 않는다
         if ( bStarted == false )
         {
             SW_LOG_ERROR( "Engine startup failed: %#", _startup.getCollection().getError().c_str() );
@@ -448,14 +449,13 @@ namespace sw
         _pShaderRecompiler = nullptr;
 #endif
         _pConfigManager = nullptr;
-        // 할당 관찰을 떼고 출력을 비운다. 출력 객체(Tracy)는 프로세스 수명이라 남아 있는 구간을 닫을 수 있다.
-        ProfilerBackend::shutdown();
         // 서비스 범위 → (표 끊기) → 부트스트랩 범위. 테스트 하네스와 같은 끝 정리다.
         _services.destroyAll();
         _pEventDispatcher = nullptr;
         engine::unbindEngineServices();
         _bootstrap.destroyAll();
         _pCommandLineSubsystem = nullptr;
+        _pMemoryBudget         = nullptr;
 
         MemoryProfiler::reportMemoryLeaks( "EngineLoop::shutdown" );
     }
@@ -740,7 +740,8 @@ namespace sw
         if ( bReportedNow && _pRHI != nullptr && _pRHI->hasDevice() )
             _pRHI->getDevice().getMemoryLedger().report( _pRHI->getDevice().getBackendName() );
 
-        _memoryBudgetMonitor.onFrameEnd();
+        if ( _pMemoryBudget != nullptr )
+            _pMemoryBudget->onFrameEnd();
 
         // 관찰자의 프레임 뒤 단계(시나리오의 단언 · 환경 단계)는 씬 틱 · 렌더 제출 뒤, 입력 프레임을 닫기 전이다(그 프레임의 눌림 엣지가 아직 보인다).
         if ( _listFrameObserver.empty() == false )

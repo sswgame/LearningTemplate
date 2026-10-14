@@ -8,7 +8,7 @@
 
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
-#include "Engine/Bootstrap/CrashHandlerSubsystem.h"
+#include "Engine/Bootstrap/ContentRootSubsystem.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Object/Component/SceneTransformStorage.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -38,7 +38,7 @@ namespace sw
 
     span<const utf8* const> StaticStorageSubsystem::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { CrashHandlerSubsystem::kSubsystemName };
+        static constexpr const utf8* kArrDependency[] = { ContentRootSubsystem::kSubsystemName };
         return kArrDependency;
     }
 } // namespace sw
