@@ -14,7 +14,8 @@ namespace
     struct MeshModifierPropertiesTestInternal
     {
         /** @brief 정점이 덩어리 경계(4096)를 넘도록 잘게 나눈 상자입니다(6 면 · 20² 칸 · 6 정점 = 14400 정점). */
-        static constexpr uint32 kSubdivision = 20;
+        // 등록된 모디파이어마다 세 번씩 두 번 적용한다 — 정점 수가 크면 Debug 에서 등록 수에 비례해 느려진다(20 분할 = 1.4 만 정점 → 15 초). 8 분할 = 2304 정점.
+        static constexpr uint32 kSubdivision = 8;
 
         static vector<const MeshModifierRegistration*> getAll()
         {
@@ -27,7 +28,13 @@ namespace
 
 SW_TEST_CASE( MeshModifierPropertiesTest, RegistryHasTheFirstTwelve )
 {
-    const utf8* arrID[] = { "bend", "twist", "taper", "stretch", "wave", "ripple", "noise", "melt", "push", "poke", "displace", "lattice", "ffd2", "ffd3", "ffd4" };
+    const utf8* arrID[] = { "bend",          "twist",       "taper",       "stretch",      "wave",         "ripple",        "noise",       "melt",        "push",
+                            "poke",          "displace",    "lattice",     "ffd2",         "ffd3",         "ffd4",          "bubble",      "bulge",       "cylindrify",
+                            "globe",         "hump",        "radialskew",  "skew",         "spherify",     "squeeze",       "scale",       "sinuscurve",  "rolled",
+                            "rubber",        "simplemod",   "crumple",     "dynamicripple", "pageflip",    "treebend",      "vertnoise",   "zstretchnoise", "waving",
+                            "pivotadjust",   "displacelimits", "paint",    "curvedeform",  "curvesculpt",  "curvesculptlayered", "pathdeform", "worldpathdeform", "bezierattractor",
+                            "ropedeform",    "conform",     "conformmulti", "collisiondeform", "hitdeform", "pointcache",    "vertexanim",  "deformable",  "displacerendertarget",
+                            "displacewebcam", "ffd2d" };
     for ( const utf8* pID : arrID )
     {
         SW_EXPECT_NOT_NULL( MeshModifierRegistry::findRegistration( pID ) );
