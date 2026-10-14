@@ -10,6 +10,20 @@ namespace sw
 {
     SW_LOG_CALLER( "TerrainHeightfield" );
 
+    void TerrainSampleRect::include( uint32 sampleX, uint32 sampleZ )
+    {
+        if ( isEmpty() )
+        {
+            _minX = _maxX = sampleX;
+            _minZ = _maxZ = sampleZ;
+            return;
+        }
+        _minX = MathUtil::min( _minX, sampleX );
+        _minZ = MathUtil::min( _minZ, sampleZ );
+        _maxX = MathUtil::max( _maxX, sampleX );
+        _maxZ = MathUtil::max( _maxZ, sampleZ );
+    }
+
     TerrainHeightfield::TerrainHeightfield()
         : _listHeight{}
         , _listHoleCell{}
@@ -58,6 +72,69 @@ namespace sw
         _splatWidth         = bMatches ? width : 0u;
         _splatHeight        = bMatches ? height : 0u;
         _splatBytes.assign( rgbaBytes.begin(), bMatches ? rgbaBytes.begin() + static_cast<ptrdiff_t>( static_cast<size_t>( width ) * height * 4 ) : rgbaBytes.begin() );
+    }
+
+    bool TerrainHeightfield::writeHeightSamples( const vector<float32>& listHeight, const TerrainSampleRect& rect )
+    {
+        if ( isValid() == false || listHeight.size() != _listHeight.size() || rect.isEmpty() || rect._maxX >= _resolution || rect._maxZ >= _resolution )
+            return false;
+        for ( uint32 sampleZ = rect._minZ; sampleZ <= rect._maxZ; ++sampleZ )
+        {
+            const size_t rowStart = static_cast<size_t>( sampleZ ) * _resolution;
+            std::copy( listHeight.begin() + static_cast<ptrdiff_t>( rowStart + rect._minX ), listHeight.begin() + static_cast<ptrdiff_t>( rowStart + rect._maxX + 1 ),
+                       _listHeight.begin() + static_cast<ptrdiff_t>( rowStart + rect._minX ) );
+        }
+        return true;
+    }
+
+    bool TerrainHeightfield::readSplatWeights( vector<float4>& outListWeight ) const
+    {
+        outListWeight.clear();
+        if ( _splatWidth == 0 || _splatHeight == 0 )
+            return false;
+        const size_t texelCount = static_cast<size_t>( _splatWidth ) * _splatHeight;
+        outListWeight.resize( texelCount );
+        for ( size_t texel = 0; texel < texelCount; ++texel )
+        {
+            const uint8* pTexel  = &_splatBytes[texel * 4];
+            outListWeight[texel] = normalizeWeights( float4{ static_cast<float32>( pTexel[0] ), static_cast<float32>( pTexel[1] ), static_cast<float32>( pTexel[2] ),
+                                                             static_cast<float32>( pTexel[3] ) } );
+        }
+        return true;
+    }
+
+    bool TerrainHeightfield::writeSplatWeights( const vector<float4>& listWeight, const TerrainSampleRect& rect )
+    {
+        if ( _splatWidth == 0 || _splatHeight == 0 || listWeight.size() != static_cast<size_t>( _splatWidth ) * _splatHeight || rect.isEmpty() || rect._maxX >= _splatWidth ||
+             rect._maxZ >= _splatHeight )
+            return false;
+        for ( uint32 texelZ = rect._minZ; texelZ <= rect._maxZ; ++texelZ )
+        {
+            for ( uint32 texelX = rect._minX; texelX <= rect._maxX; ++texelX )
+            {
+                const size_t  texel        = static_cast<size_t>( texelZ ) * _splatWidth + texelX;
+                const float4& weight       = listWeight[texel];
+                const float32 arrWeight[4] = { weight._x, weight._y, weight._z, weight._w };
+                for ( uint32 channel = 0; channel < 4; ++channel )
+                {
+                    _splatBytes[texel * 4 + channel] = static_cast<uint8>( MathUtil::clamp( MathUtil::round( arrWeight[channel] * 255.0f ), 0.0f, 255.0f ) );
+                }
+            }
+        }
+        return true;
+    }
+
+    void TerrainHeightfield::makeHeightfieldData( float32 heightMin, float32 heightMax, HeightfieldData& outData ) const
+    {
+        outData._resolution = _resolution;
+        outData._listHeight.resize( _listHeight.size() );
+        outData._listHoleCell     = _listHoleCell;
+        const float32 heightRange = heightMax - heightMin;
+        for ( size_t sampleIndex = 0; sampleIndex < _listHeight.size(); ++sampleIndex )
+        {
+            const float32 normalized         = heightRange > 0.0f ? ( _listHeight[sampleIndex] - _origin._y - heightMin ) / heightRange : 0.0f;
+            outData._listHeight[sampleIndex] = static_cast<uint16>( MathUtil::clamp( MathUtil::round( normalized * 65535.0f ), 0.0f, 65535.0f ) );
+        }
     }
 
     float32 TerrainHeightfield::getSampleHeight( int32 sampleX, int32 sampleZ ) const

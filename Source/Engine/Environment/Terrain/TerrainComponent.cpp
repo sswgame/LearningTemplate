@@ -13,6 +13,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Resource/Image/DDSLoader.h"
+#include "Engine/Resource/Image/ImageFileWriter.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 namespace sw
@@ -81,6 +82,7 @@ namespace sw
         , _material{}
         , _pPrimitiveRegistry{ nullptr }
         , _heightfieldGeneration{ 0 }
+        , _splatRevision{ 0 }
         , _bOriginDirty{ false }
     {
         setCanEverTick( true );
@@ -182,6 +184,7 @@ namespace sw
         releaseChunks();
         _heightfield.shutdown();
         ++_heightfieldGeneration; // 실패해도 오른다 — 비워진 높이장으로 만든 바디도 낡았다
+        _splatRevision = 0;
         if ( _heightfieldPath.empty() )
             return false;
 
@@ -200,6 +203,58 @@ namespace sw
         acquireMaterial();
         createChunks();
         return true;
+    }
+
+    bool TerrainComponent::writeHeights( const vector<float32>& listHeight, const TerrainSampleRect& rect )
+    {
+        if ( _listChunk.empty() || _heightfield.writeHeightSamples( listHeight, rect ) == false )
+            return false;
+        ++_heightfieldGeneration;
+        // 노멀이 이웃 샘플을 읽으므로 한 샘플 바깥까지 다시 만든다. 청크 경계 샘플은 양쪽 청크가 쓴다.
+        const uint32 resolution = _heightfield.getResolution();
+        const uint32 cells      = _layout._chunkCells;
+        const uint32 minX       = rect._minX > 0 ? rect._minX - 1 : 0;
+        const uint32 minZ       = rect._minZ > 0 ? rect._minZ - 1 : 0;
+        const uint32 maxX       = MathUtil::min( rect._maxX + 1, resolution - 1 );
+        const uint32 maxZ       = MathUtil::min( rect._maxZ + 1, resolution - 1 );
+        const uint32 firstX     = minX > 0 ? ( minX - 1 ) / cells : 0u;
+        const uint32 firstZ     = minZ > 0 ? ( minZ - 1 ) / cells : 0u;
+        const uint32 lastX      = MathUtil::min( maxX / cells, _layout._chunkCountX - 1 );
+        const uint32 lastZ      = MathUtil::min( maxZ / cells, _layout._chunkCountZ - 1 );
+        for ( uint32 chunkZ = firstZ; chunkZ <= lastZ; ++chunkZ )
+        {
+            for ( uint32 chunkX = firstX; chunkX <= lastX; ++chunkX )
+            {
+                const uint32 chunkIndex = chunkZ * _layout._chunkCountX + chunkX;
+                _listChunk[chunkIndex]._batch->setBoundsRadius( 0, TerrainMeshBuilder::computeChunkBoundsRadius( _heightfield, _layout, chunkX, chunkZ ) );
+                rebuildChunkMesh( chunkIndex );
+            }
+        }
+        return true;
+    }
+
+    bool TerrainComponent::writeLayerWeights( const vector<float4>& listWeight, const TerrainSampleRect& rect )
+    {
+        if ( _heightfield.writeSplatWeights( listWeight, rect ) == false )
+            return false;
+        ++_splatRevision;
+        return true;
+    }
+
+    bool TerrainComponent::saveHeightfield( string_view filePath ) const
+    {
+        if ( _heightfield.isValid() == false )
+            return false;
+        HeightfieldData data;
+        _heightfield.makeHeightfieldData( _heightMin, _heightMax, data );
+        return data.saveToFile( filePath );
+    }
+
+    bool TerrainComponent::saveSplat( string_view filePath ) const
+    {
+        if ( _heightfield.getSplatWidth() == 0 )
+            return false;
+        return ImageFileWriter::writeDDSRgba8( filePath, _heightfield.getSplatBytes(), _heightfield.getSplatWidth(), _heightfield.getSplatHeight() );
     }
 
     void TerrainComponent::loadSplatWeights()
