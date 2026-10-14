@@ -6422,7 +6422,7 @@ SW_TEST_CASE( RenderPassGPUTest, PresentedBackBufferMatchesTheCapture )
 }
 
 /**
- * @brief [RenderPassGPUTest] 보기 모드 Unlit · Normals · Depth · Overdraw 는 Lit 과 서로 다른 그림이다 — 포워드 · 디퍼드, 4 백엔드
+ * @brief [RenderPassGPUTest] 보기 모드 Unlit · Normals · Depth · Overdraw · LightingOnly 는 Lit 과 서로 다른 그림이다 — 포워드 · 디퍼드, 4 백엔드
  * @details PSO 변형은 표(`kArrRenderViewModeInfo`)의 define 을 받는다. 그 define 을 읽지 않는 셰이더는 Lit 과 같은 그림을 낸다(조용한 실패).
  *          디퍼드는 조명 패스가 뷰 모드를 모르므로 G버퍼 알베도(셰이딩 모델 Unlit)로 넘긴다.
  *          Normals 는 바닥(+Y)이 초록으로 보이고(톤맵을 건너뛰어 G = 255), Overdraw 는 큐브와 바닥이 겹친 자리가 바닥만 있는 자리보다 밝다.
@@ -6442,7 +6442,7 @@ SW_TEST_CASE( RenderPassGPUTest, ViewModesProduceDistinctPictures )
                 continue;
             }
             constexpr sw::RenderViewMode arrMode[] = { sw::RenderViewMode::Lit, sw::RenderViewMode::Unlit, sw::RenderViewMode::Normals,
-                                                       sw::RenderViewMode::Depth, sw::RenderViewMode::Overdraw };
+                                                       sw::RenderViewMode::Depth, sw::RenderViewMode::Overdraw, sw::RenderViewMode::LightingOnly };
             sw::vector<uint8>            arrCapture[std::size( arrMode )];
             bool                         bOk = true;
             for ( size_t modeIndex = 0; modeIndex < std::size( arrMode ) && bOk; ++modeIndex )
@@ -6450,7 +6450,7 @@ SW_TEST_CASE( RenderPassGPUTest, ViewModesProduceDistinctPictures )
                 sw::RHITextureMipSpan layout{};
                 bOk = renderPresentCaptureOf( device.get(), stage._scene, pPipeline, arrCapture[modeIndex], layout, arrMode[modeIndex] );
             }
-            SW_EXPECT_TRUE_MSG( bOk, ( label + "보기 모드 다섯 장 캡처" ).c_str() );
+            SW_EXPECT_TRUE_MSG( bOk, ( label + "보기 모드 여섯 장 캡처" ).c_str() );
             if ( bOk == false )
                 continue;
 

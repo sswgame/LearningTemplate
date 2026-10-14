@@ -260,7 +260,13 @@ SW_SURFACE_OUTPUT PSMain( PSInput input, bool bFrontFace : SV_IsFrontFace )
 #elif SW_VIEWMODE_SKIPS_LIGHTING
 	return swStoreSurface( float4( litColor.rgb, litColor.a ), litColor, normal, input.worldPosition );
 #else
+#if defined( SW_VIEWMODE_LIGHTINGONLY )
+	// 보기 모드 LightingOnly — 계단 셰이딩은 그대로 두고 기본색 · 그늘색만 회색으로 바꾼다(swShadeLights 를 쓰지 않으므로 여기서).
+	litColor.rgb            = SW_VIEWMODE_LIGHTINGONLY_ALBEDO;
+	const float3 shadeColor = SW_VIEWMODE_LIGHTINGONLY_ALBEDO;
+#else
 	const float3 shadeColor = input.color.rgb * material.shadeColor.rgb * swSampleMaterialTexture( material.shadeMap, input.uv ).rgb;
+#endif
 	const float  shadow     = swSampleShadowAtWorld( input.worldPosition, normal );
 
 	float3 directLighting;
