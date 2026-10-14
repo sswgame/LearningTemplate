@@ -15,6 +15,7 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorComponentIcon.h"
+#include "Editor/Common/GUI/EditorContextMenuExtension.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -421,6 +422,17 @@ namespace sw::editor
                     }
                 }
 
+                // 확장 항목(`SW_EDITOR_CONTEXT_MENU_ENTRY`). 고른 동작은 메뉴를 닫은 뒤 부른다 — 동작이 모듈을 내려 목록이 바뀌어도 순회 중인 배열을 읽지 않는다.
+                void ( *pfnExtensionAction )( const EditorContextMenuTarget& ) = nullptr;
+                const EditorContextMenuTarget extensionTarget{ EditorContextMenuKind::GameObject, pObj, pManager, nullptr, false };
+                if ( EditorContextMenuExtensionUtil::countEntries( EditorContextMenuKind::GameObject ) != 0 )
+                {
+                    ImGui::Separator();
+                    pfnExtensionAction = EditorContextMenuExtensionUtil::visitEntries( EditorContextMenuKind::GameObject, [&]( const EditorContextMenuEntryRegistration& entry ) {
+                        return ImGui::MenuItem( entry._pLabel, nullptr, false, EditorContextMenuExtensionUtil::isEnabled( entry, extensionTarget ) );
+                    } );
+                }
+
                 ImGui::Separator();
                 if ( ImGui::MenuItem( "Destroy GameObject", "Delete" ) )
                     EditorSceneCommands::destroy( pManager, pObj );
@@ -428,6 +440,9 @@ namespace sw::editor
                 if ( bEditsAllowed == false )
                     ImGui::EndDisabled();
                 ImGui::EndPopup();
+
+                if ( pfnExtensionAction != nullptr )
+                    pfnExtensionAction( extensionTarget );
             }
 
             static void drawSceneComponentNode( GameObject* pObj, SceneComponent* pSceneComp, GameObjectManager* pManager )
