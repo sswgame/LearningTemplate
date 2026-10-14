@@ -19,13 +19,13 @@ namespace
 {
     struct SocialRecorder
     {
-        vector<SocialClientReply> _listReply{};
+        vector<SocialClient::Reply> _listReply{};
 
-        void onReply( const SocialClientReply& reply ) { _listReply.push_back( reply ); }
+        void onReply( const SocialClient::Reply& reply ) { _listReply.push_back( reply ); }
 
-        SocialReplyDelegate makeDelegate() { return SocialReplyDelegate::create<&SocialRecorder::onReply>( this ); }
+        SocialClient::ReplyDelegate makeDelegate() { return SocialClient::ReplyDelegate::create<&SocialRecorder::onReply>( this ); }
 
-        const SocialClientReply& getLast() const { return _listReply.back(); }
+        const SocialClient::Reply& getLast() const { return _listReply.back(); }
     };
 
     /** @brief 서버 하나의 친구 · 길드(로직 + 바인딩) — `start` 가 서버에 올려 서버가 내려가기 전에 `stop` 한다. */

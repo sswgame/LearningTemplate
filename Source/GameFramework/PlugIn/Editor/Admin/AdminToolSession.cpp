@@ -101,7 +101,7 @@ namespace sw::editor
         _pActive->sendCommand( method, request, key, AdminClient::ReplyDelegate::create<&AdminToolSession::onReply>( this ) );
     }
 
-    void AdminToolSession::onReply( const AdminClientReply& reply )
+    void AdminToolSession::onReply( const AdminClient::Reply& reply )
     {
         if ( _pendingCount > 0 )
             --_pendingCount;

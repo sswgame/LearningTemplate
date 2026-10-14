@@ -11,24 +11,11 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
-#include "Core/Delegate/Delegate.h"
 
+#include "GameFramework/Base/Online/Service/OnlineKitClient.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
-#include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
-#include "GameFramework/Base/Online/Service/ServiceClientCallTable.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Shared/MatchmakingProtocol.h"
-
-namespace sw
-{
-    /** @brief 매칭 클라이언트 응답 하나입니다. */
-    struct MatchmakingClientReply
-    {
-        MatchmakingReply _reply{};
-        uint64           _requestID{ 0 };
-        uint16           _errorCode{ 0 }; ///< 전송 오류나 공통 오류(`OnlineError`)이다. 0이 아니면 `_reply._result` 는 그 코드에 대응하는 결과이다
-    };
-} // namespace sw
 
 namespace sw
 {
@@ -36,15 +23,10 @@ namespace sw
      * @class MatchmakingClient
      * @brief 연결 하나의 매칭 클라이언트입니다.
      */
-    class SW_KIT_API MatchmakingClient final : public IOnlineClientService
+    class SW_KIT_API MatchmakingClient final : public OnlineKitClient<MatchmakingProtocol, MatchmakingReply>
     {
     public:
-        using ReplyDelegate = Delegate<void( const MatchmakingClientReply& )>;
-
         MatchmakingClient();
-
-        /** @brief @p pClient 는 빌려 씁니다. `registerClientService( this )` 는 호출하는 쪽이 초기화하기 전에 부릅니다. */
-        void initialize( OnlineServiceClient* pClient );
 
         uint64 createParty( const ReplyDelegate& onReply );
         uint64 inviteToParty( AccountID targetID, const ReplyDelegate& onReply );
@@ -75,15 +57,10 @@ namespace sw
         void   onServicePush( uint16 kind, BitReader& body ) override;
 
     private:
-        uint64 send( uint16 method, const BitWriter& body, const ReplyDelegate& onReply );
-        void   onResponse( const OnlineResponse& response );
-
-        ServiceClientCallTable<ReplyDelegate> _callTable;
-        EventBuffer<PartySnapshot>            _partyBuffer;
-        EventBuffer<PartyInvite>              _inviteBuffer;
-        EventBuffer<LobbySnapshot>            _lobbyBuffer;
-        EventBuffer<MatchAssignment>          _matchBuffer;
-        PartySnapshot                         _party;
-        OnlineServiceClient*                  _pClient;
+        EventBuffer<PartySnapshot>   _partyBuffer;
+        EventBuffer<PartyInvite>     _inviteBuffer;
+        EventBuffer<LobbySnapshot>   _lobbyBuffer;
+        EventBuffer<MatchAssignment> _matchBuffer;
+        PartySnapshot                _party;
     };
 } // namespace sw

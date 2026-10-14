@@ -86,9 +86,9 @@ namespace
 
     struct ChatReplyRecorder
     {
-        vector<ChatClientReply> _listReply{};
+        vector<ChatClient::Reply> _listReply{};
 
-        void                      onReply( const ChatClientReply& reply ) { _listReply.push_back( reply ); }
+        void                      onReply( const ChatClient::Reply& reply ) { _listReply.push_back( reply ); }
         ChatClient::ReplyDelegate makeDelegate() { return ChatClient::ReplyDelegate::create<&ChatReplyRecorder::onReply>( this ); }
     };
 } // namespace

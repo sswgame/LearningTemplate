@@ -4,49 +4,40 @@
 
 #include "Core/Network/BitStream.h"
 
-#include "GameFramework/Base/Online/Service/OnlineReplyUtil.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Shared/API/EconomyMirror.h"
 
 namespace sw
 {
     EconomyClient::EconomyClient()
-        : _callTable{}
-        , _listBalance{}
-        , _pClient{ nullptr }
-        , _nextRequestID{ 1 }
+        : _listBalance{}
         , _revision{ 0 }
     {
     }
 
-    void EconomyClient::initialize( OnlineServiceClient* pClient )
+    uint64 EconomyClient::requestWallet( const ReplyDelegate& onReply )
     {
-        _pClient = pClient;
+        return sendCall( EconomyMethod::kGetWallet, BitWriter{}, NetIdempotencyKey{}, onReply );
     }
 
-    uint64 EconomyClient::requestWallet( ReplyDelegate onReply )
-    {
-        return send( EconomyMethod::kGetWallet, BitWriter{}, NetIdempotencyKey{}, onReply );
-    }
-
-    uint64 EconomyClient::requestHistory( const EconomyHistoryRequest& request, ReplyDelegate onReply )
+    uint64 EconomyClient::requestHistory( const EconomyHistoryRequest& request, const ReplyDelegate& onReply )
     {
         BitWriter body;
         EconomyProtocol::writeHistoryRequest( body, request );
-        return send( EconomyMethod::kGetHistory, body, NetIdempotencyKey{}, onReply );
+        return sendCall( EconomyMethod::kGetHistory, body, NetIdempotencyKey{}, onReply );
     }
 
-    uint64 EconomyClient::requestPurchase( const EconomyPurchaseRequest& request, const NetIdempotencyKey& key, ReplyDelegate onReply )
+    uint64 EconomyClient::requestPurchase( const EconomyPurchaseRequest& request, const NetIdempotencyKey& key, const ReplyDelegate& onReply )
     {
         BitWriter body;
         EconomyProtocol::writePurchaseRequest( body, request );
-        return send( EconomyMethod::kPurchase, body, key.isValid() ? key : NetIdempotencyKey::makeRandom(), onReply );
+        return sendCall( EconomyMethod::kPurchase, body, key.isValid() ? key : NetIdempotencyKey::makeRandom(), onReply );
     }
 
-    uint64 EconomyClient::requestRedeem( const EconomyRedeemRequest& request, const NetIdempotencyKey& key, ReplyDelegate onReply )
+    uint64 EconomyClient::requestRedeem( const EconomyRedeemRequest& request, const NetIdempotencyKey& key, const ReplyDelegate& onReply )
     {
         BitWriter body;
         EconomyProtocol::writeRedeemRequest( body, request );
-        return send( EconomyMethod::kRedeemReceipt, body, key.isValid() ? key : NetIdempotencyKey::makeRandom(), onReply );
+        return sendCall( EconomyMethod::kRedeemReceipt, body, key.isValid() ? key : NetIdempotencyKey::makeRandom(), onReply );
     }
 
     void EconomyClient::applyBalances( const vector<LedgerBalance>& listBalance, bool bSnapshot )
@@ -89,51 +80,10 @@ namespace sw
         return 0;
     }
 
-    void EconomyClient::onServicePush( uint16 kind, BitReader& body )
+    void EconomyClient::onCallSucceeded( const Call& call, const EconomyReply& reply )
     {
-        (void)kind; // 경제 서비스는 아직 알림을 보내지 않는다. 잔액은 응답에 실린다
-        (void)body;
-    }
-
-    uint64 EconomyClient::send( uint16 method, const BitWriter& body, const NetIdempotencyKey& key, ReplyDelegate onReply )
-    {
-        const uint64      requestID = _nextRequestID++;
-        const PendingCall pendingCall{ onReply, key, requestID, method };
-        if ( _pClient == nullptr )
-        {
-            EconomyClientReply reply;
-            reply._requestID      = requestID;
-            reply._method         = method;
-            reply._idempotencyKey = key;
-            reply._errorCode      = OnlineError::kUnavailable;
-            reply._reply._result  = EconomyResult::Unavailable;
-            if ( onReply.isBound() )
-                onReply( reply );
-            return requestID;
-        }
-        NetRequestOptions options;
-        options._idempotencyKey = key;
-        (void)_callTable.send( *_pClient, method, body, options, OnlineResponseDelegate::create<&EconomyClient::onResponse>( this ), pendingCall ); // 응답은 pendingCall._requestID 로 알린다
-        return requestID;
-    }
-
-    void EconomyClient::onResponse( const OnlineResponse& response )
-    {
-        PendingCall call;
-        if ( _callTable.take( response._requestID, call ) == false )
-            return;
-        EconomyClientReply reply;
-        reply._requestID      = call._requestID;
-        reply._method         = call._method;
-        reply._idempotencyKey = call._key;
-        reply._errorCode      = response._errorCode;
-        if ( OnlineReplyUtil::readResponse<EconomyProtocol>( response, reply._reply ) && reply._reply._result == EconomyResult::Ok )
-        {
-            const bool bSnapshot = call._method == EconomyMethod::kGetWallet;
-            if ( bSnapshot || reply._reply._listBalance.empty() == false )
-                applyBalances( reply._reply._listBalance, bSnapshot );
-        }
-        if ( call._onReply.isBound() )
-            call._onReply( reply );
+        const bool bSnapshot = call._method == EconomyMethod::kGetWallet;
+        if ( bSnapshot || reply._listBalance.empty() == false )
+            applyBalances( reply._listBalance, bSnapshot );
     }
 } // namespace sw

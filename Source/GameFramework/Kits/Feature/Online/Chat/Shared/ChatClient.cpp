@@ -4,35 +4,27 @@
 
 #include "Core/Network/BitStream.h"
 
-#include "GameFramework/Base/Online/Service/OnlineReplyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
 {
     ChatClient::ChatClient()
-        : _callTable{}
-        , _messageBuffer{}
-        , _pClient{ nullptr }
+        : _messageBuffer{}
     {
-    }
-
-    void ChatClient::initialize( OnlineServiceClient* pClient )
-    {
-        _pClient = pClient;
     }
 
     uint64 ChatClient::join( string_view channelID, const ReplyDelegate& onReply )
     {
         BitWriter body;
         ServiceKeyUtil::writeString( body, channelID );
-        return sendCall( ChatMethod::kJoin, body, onReply );
+        return sendCall( ChatMethod::kJoin, body, NetIdempotencyKey{}, onReply );
     }
 
     uint64 ChatClient::leave( string_view channelID, const ReplyDelegate& onReply )
     {
         BitWriter body;
         ServiceKeyUtil::writeString( body, channelID );
-        return sendCall( ChatMethod::kLeave, body, onReply );
+        return sendCall( ChatMethod::kLeave, body, NetIdempotencyKey{}, onReply );
     }
 
     uint64 ChatClient::send( string_view channelID, string_view text, const ReplyDelegate& onReply )
@@ -40,7 +32,7 @@ namespace sw
         BitWriter body;
         ServiceKeyUtil::writeString( body, channelID );
         ServiceKeyUtil::writeString( body, text );
-        return sendCall( ChatMethod::kSend, body, onReply );
+        return sendCall( ChatMethod::kSend, body, NetIdempotencyKey{}, onReply );
     }
 
     uint64 ChatClient::whisper( AccountID recipientID, string_view text, const ReplyDelegate& onReply )
@@ -48,7 +40,7 @@ namespace sw
         BitWriter body;
         body.writeVarUint( recipientID );
         ServiceKeyUtil::writeString( body, text );
-        return sendCall( ChatMethod::kWhisper, body, onReply );
+        return sendCall( ChatMethod::kWhisper, body, NetIdempotencyKey{}, onReply );
     }
 
     uint64 ChatClient::requestHistory( string_view channelID, string_view cursor, int32 maxCount, const ReplyDelegate& onReply )
@@ -57,7 +49,7 @@ namespace sw
         ServiceKeyUtil::writeString( body, channelID );
         ServiceKeyUtil::writeString( body, cursor );
         body.writeVarUint( static_cast<uint64>( maxCount > 0 ? maxCount : 0 ) );
-        return sendCall( ChatMethod::kHistory, body, onReply );
+        return sendCall( ChatMethod::kHistory, body, NetIdempotencyKey{}, onReply );
     }
 
     void ChatClient::onServicePush( uint16 kind, BitReader& body )
@@ -67,34 +59,5 @@ namespace sw
         ChatMessage message;
         if ( ChatProtocol::readMessage( body, message ) )
             _messageBuffer.push( std::move( message ) );
-    }
-
-    uint64 ChatClient::sendCall( uint16 method, const BitWriter& body, const ReplyDelegate& onReply )
-    {
-        if ( _pClient == nullptr )
-        {
-            ChatClientReply reply;
-            reply._method        = method;
-            reply._errorCode     = OnlineError::kUnavailable;
-            reply._reply._result = ChatResult::Unavailable;
-            if ( onReply.isBound() )
-                onReply( reply );
-            return 0;
-        }
-        return _callTable.send( *_pClient, method, body, NetRequestOptions{}, OnlineResponseDelegate::create<&ChatClient::onResponse>( this ), PendingCall{ onReply, method } );
-    }
-
-    void ChatClient::onResponse( const OnlineResponse& response )
-    {
-        PendingCall call;
-        if ( _callTable.take( response._requestID, call ) == false )
-            return;
-        ChatClientReply reply;
-        reply._requestID = response._requestID;
-        reply._method    = call._method;
-        reply._errorCode = response._errorCode;
-        (void)OnlineReplyUtil::readResponse<ChatProtocol>( response, call._method, reply._reply ); // 실패도 reply._reply._result 에 담겨 콜백으로 간다
-        if ( call._onReply.isBound() )
-            call._onReply( reply );
     }
 } // namespace sw

@@ -18,13 +18,13 @@ namespace
 {
     struct LeaderboardRecorder
     {
-        vector<LeaderboardClientReply> _listReply{};
+        vector<LeaderboardClient::Reply> _listReply{};
 
-        void onReply( const LeaderboardClientReply& reply ) { _listReply.push_back( reply ); }
+        void onReply( const LeaderboardClient::Reply& reply ) { _listReply.push_back( reply ); }
 
-        LeaderboardReplyDelegate makeDelegate() { return LeaderboardReplyDelegate::create<&LeaderboardRecorder::onReply>( this ); }
+        LeaderboardClient::ReplyDelegate makeDelegate() { return LeaderboardClient::ReplyDelegate::create<&LeaderboardRecorder::onReply>( this ); }
 
-        const LeaderboardClientReply& getLast() const { return _listReply.back(); }
+        const LeaderboardClient::Reply& getLast() const { return _listReply.back(); }
     };
 
     /** @brief 서버 하나의 순위표(로직 + 바인딩) — `start` 가 서버에 올려 서버가 내려가기 전에 `stop` 한다. */
