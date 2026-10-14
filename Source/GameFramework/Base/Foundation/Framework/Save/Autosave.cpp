@@ -362,7 +362,7 @@ namespace sw
         _intervalTimer = 0.0f;
         SW_LOG_INFO( "Autosaved (%#%#%#) to %#", toString( trigger ), label.empty() ? "" : " ", label.c_str(), info._path.c_str() );
         // 플레이어에게 알린다(UI 가 없는 서버 · 테스트는 건너뛴다) — 같은 알림이 떠 있으면 센다.
-        if ( UISystem* pUI = game::getService<UISystem>(); pUI != nullptr )
+        if ( UISystem* pUI = game::findSubsystem<UISystem>(); pUI != nullptr )
         {
             UINotificationDesc notice{};
             notice._text            = "Game saved";

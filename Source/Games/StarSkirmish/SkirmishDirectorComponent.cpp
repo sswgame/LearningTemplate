@@ -166,13 +166,13 @@ namespace sw
     {
         GameDirectorComponent::onBeginPlay();
         // 맵의 패드 A/B 바인딩은 그대로 둔다.
-        if ( InputManager* pInput = game::getService<InputManager>(); pInput != nullptr )
+        if ( InputManager* pInput = game::findSubsystem<InputManager>(); pInput != nullptr )
             pInput->getVirtualCursor().setEnabled( true );
     }
 
     void SkirmishDirectorComponent::onEndPlay()
     {
-        if ( InputManager* pInput = game::getService<InputManager>(); pInput != nullptr )
+        if ( InputManager* pInput = game::findSubsystem<InputManager>(); pInput != nullptr )
             pInput->getVirtualCursor().setEnabled( false );
         GameDirectorComponent::onEndPlay();
     }
@@ -206,7 +206,7 @@ namespace sw
         if ( deltaTime <= 0.0f )
             return;
 
-        const InputManager* pInput = game::getService<InputManager>();
+        const InputManager* pInput = game::findSubsystem<InputManager>();
         if ( pInput != nullptr )
             updateInput( *pInput );
         if ( _bPaused == SW_FALSE )
@@ -432,7 +432,7 @@ namespace sw
     {
         // 카메라 이동과 확대는 리그(PostUpdate)가 읽는다. 여기서는 속도, 일시정지, 명령을 처리한다.
         // 키는 입력 맵(`data/skirmish.input.xml`)이 정한다. 일시정지 메뉴 같은 UI 가 먹은 입력은 보이지 않는다.
-        const UIInputMapView inputMap( input.getInputMap(), game::getService<UISystem>() );
+        const UIInputMapView inputMap( input.getInputMap(), game::findSubsystem<UISystem>() );
         const bool           bFaster = inputMap.wasActionTriggered( hashed_string( "Skirmish.Faster" ) );
         if ( bFaster || inputMap.wasActionTriggered( hashed_string( "Skirmish.Slower" ) ) )
         {
@@ -453,7 +453,7 @@ namespace sw
     void SkirmishDirectorComponent::updateHumanCommands( const InputManager& input )
     {
         RTSWorld&            world = _match.getWorld();
-        const UIInputMapView inputMap( input.getInputMap(), game::getService<UISystem>() );
+        const UIInputMapView inputMap( input.getInputMap(), game::findSubsystem<UISystem>() );
         float3               point{};
         const bool           bPointValid = findGroundPoint( input, point );
         const bool           bShift      = inputMap.isActionDown( hashed_string( "Skirmish.AddToSelection" ) );
@@ -537,7 +537,7 @@ namespace sw
     void SkirmishDirectorComponent::updateDrag( const InputManager& input, const float3& point, bool bPointValid )
     {
         RTSWorld&            world = _match.getWorld();
-        const UIInputMapView inputMap( input.getInputMap(), game::getService<UISystem>() );
+        const UIInputMapView inputMap( input.getInputMap(), game::findSubsystem<UISystem>() );
         const hashed_string  selectAction( "Skirmish.Select" );
         const bool           bShift = inputMap.isActionDown( hashed_string( "Skirmish.AddToSelection" ) );
         if ( bPointValid && inputMap.wasActionPressed( selectAction ) )

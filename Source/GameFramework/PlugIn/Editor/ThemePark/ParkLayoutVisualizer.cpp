@@ -21,7 +21,7 @@ namespace sw::editor
         {
             static void draw( const EditorViewportVisualizerArgs& args )
             {
-                ParkLayoutPreview* pPreview = getService<ParkLayoutPreview>();
+                ParkLayoutPreview* pPreview = findSubsystem<ParkLayoutPreview>();
                 if ( pPreview == nullptr )
                     return;
                 ParkLayoutPreview& preview = *pPreview;

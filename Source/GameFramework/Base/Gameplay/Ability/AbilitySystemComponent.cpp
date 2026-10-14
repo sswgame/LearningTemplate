@@ -209,7 +209,7 @@ namespace sw
     {
         if ( _pCatalog != nullptr )
             return _pCatalog;
-        return game::getService<AbilityCatalog>();
+        return game::findSubsystem<AbilityCatalog>();
     }
 
     bool AbilitySystemComponent::grantAbilitySet( const hashed_string& setID )

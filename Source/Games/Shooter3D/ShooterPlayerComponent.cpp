@@ -360,7 +360,7 @@ namespace sw
         if ( pDirector != nullptr )
         {
             SW_LOG_INFO( "[Shooter] you were overrun on wave %# after %# kills - starting over", pDirector->getWave(), pDirector->getKillCount() );
-            TelemetryService* pTelemetry = game::getService<TelemetryService>();
+            TelemetryService* pTelemetry = game::findSubsystem<TelemetryService>();
             if ( pTelemetry != nullptr )
             {
                 TelemetryEvent roundEnded( "progression.roundEnded" );
@@ -433,7 +433,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     void ShooterPlayerComponent::equipWeapons()
     {
-        const WeaponCatalog* pCatalog = game::getService<WeaponCatalog>();
+        const WeaponCatalog* pCatalog = game::findSubsystem<WeaponCatalog>();
         for ( int32 weaponIndex = 0; weaponIndex < kWeaponCount; ++weaponIndex )
         {
             const WeaponDef* pDef                  = pCatalog != nullptr ? pCatalog->findWeapon( hashed_string( ShooterPlayerComponentInternal::kArrWeaponID[weaponIndex] ) ) : nullptr;
@@ -595,7 +595,7 @@ namespace sw
         }
         // 1인칭에서는 손에 든 총(카메라 자식)과 그 무기의 총구 소켓을 쓴다.
         const MeshComponent*      pViewWeapon = pOwner != nullptr ? Internal::findNamed<MeshComponent>( *pOwner, Internal::kViewWeaponName ) : nullptr;
-        const AppearanceDatabase* pDatabase   = game::getService<AppearanceDatabase>();
+        const AppearanceDatabase* pDatabase   = game::findSubsystem<AppearanceDatabase>();
         const hashed_string       socketPath  = pDatabase != nullptr ? Internal::findItemSocketSet( *pDatabase, getWeaponItem( _weaponIndex ) ) : hashed_string{};
         const SocketSet*          pSockets    = socketPath.empty() ? nullptr : _weaponSockets.findSocketSet( socketPath );
         const SocketDef*          pMuzzle     = pSockets != nullptr ? pSockets->findSocket( hashed_string( Internal::kMuzzleSocket ) ) : nullptr;
@@ -759,7 +759,7 @@ namespace sw
         _bBodyRequested                     = SW_FALSE;
         GameObject*        pOwner           = getOwner();
         GameObjectManager* pManager         = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        AssetManager*      pAssets          = game::getService<AssetManager>();
+        AssetManager*      pAssets          = game::findSubsystem<AssetManager>();
         const bool         bCannotSpawnBody = pManager == nullptr || pAssets == nullptr || _bodyPrefab.empty() || pManager->resolveGameObject( _body ) != nullptr;
         if ( bCannotSpawnBody )
             return;

@@ -72,7 +72,7 @@ namespace sw
     bool MeadowFarmDirectorComponent::startGame()
     {
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
-        const CropCatalog*     pCrops = game::getService<CropCatalog>();
+        const CropCatalog*     pCrops = game::findSubsystem<CropCatalog>();
         if ( pState == nullptr || pCrops == nullptr )
         {
             SW_LOG_WARNING( "[Meadow] the farm cannot start - %#", pState == nullptr ? "no SessionStateComponent in front of it on this object" : "the crop catalog is not loaded" );
@@ -104,7 +104,7 @@ namespace sw
         if ( bFieldFrameMismatch )
             return false;
         FarmField field;
-        field.initialize( kFieldWidth, kFieldHeight, game::getService<CropCatalog>() );
+        field.initialize( kFieldWidth, kFieldHeight, game::findSubsystem<CropCatalog>() );
         const bool bRead = field.readState( body ) && body.getRemainingBytes() == 0 && archive.getRemainingBytes() == 0;
         if ( bRead == false )
             return false;
@@ -125,10 +125,10 @@ namespace sw
         if ( pState == nullptr )
             return;
         // 키는 입력 맵(`data/meadow.input.xml`)이 정한다. 시계를 미는 것은 밭 디렉터 하나다(마을은 읽기만).
-        const InputManager* pInput = game::getService<InputManager>();
+        const InputManager* pInput = game::findSubsystem<InputManager>();
         const bool          bFastForward =
             isAutoPlayOn() ||
-            ( pInput != nullptr && UIInputMapView( pInput->getInputMap(), game::getService<UISystem>() ).isActionDown( hashed_string( MeadowVillageData::kFastForwardAction ) ) );
+            ( pInput != nullptr && UIInputMapView( pInput->getInputMap(), game::findSubsystem<UISystem>() ).isActionDown( hashed_string( MeadowVillageData::kFastForwardAction ) ) );
         pState->getClock().setTimeScale( bFastForward ? _fastTimeScale : 1.0f );
         for ( const WorldClockEvent& clockEvent : pState->getClockEvents() )
         {
@@ -141,7 +141,7 @@ namespace sw
     {
         const hashed_string season = state.getClock().getSeasonName(); // 계절은 공유 시계의 데이터
         _field.advanceDay( season, false );
-        const CropCatalog* pCrops = game::getService<CropCatalog>();
+        const CropCatalog* pCrops = game::findSubsystem<CropCatalog>();
         int32              earned = 0;
         for ( int32 y = 0; y < kFieldHeight; ++y )
         {

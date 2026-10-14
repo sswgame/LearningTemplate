@@ -741,7 +741,7 @@ namespace sw::editor
 
             static void draw( const EditorViewportVisualizerArgs& args )
             {
-                MeshModifierSession* pSession      = getService<MeshModifierSession>();
+                MeshModifierSession* pSession      = findSubsystem<MeshModifierSession>();
                 const bool           bNoDragTarget = pSession == nullptr || pSession->hasTarget() == false || pSession->findTarget() == nullptr;
                 if ( bNoDragTarget )
                 {
@@ -778,7 +778,7 @@ namespace sw::editor
 
             static void drawStage( const EditorViewportVisualizerArgs& args )
             {
-                MeshModifierSession* pSession        = getService<MeshModifierSession>();
+                MeshModifierSession* pSession        = findSubsystem<MeshModifierSession>();
                 const bool           bNoActiveTarget = pSession == nullptr || pSession->hasTarget() == false || pSession->findTarget() == nullptr;
                 if ( bNoActiveTarget )
                     return;

@@ -308,10 +308,10 @@ namespace sw
 
     void CameraDirectorComponent::gatherInput( float32 deltaTime )
     {
-        const InputManager* pInput = _bReadInput ? game::getService<InputManager>() : nullptr;
+        const InputManager* pInput = _bReadInput ? game::findSubsystem<InputManager>() : nullptr;
         if ( pInput == nullptr )
             return;
-        const UIInputMapView inputMap( pInput->getInputMap(), game::getService<UISystem>() ); // 메뉴가 먹은 입력과 모달 아래의 입력은 카메라가 보지 않는다
+        const UIInputMapView inputMap( pInput->getInputMap(), game::findSubsystem<UISystem>() ); // 메뉴가 먹은 입력과 모달 아래의 입력은 카메라가 보지 않는다
         if ( _cycleAction.empty() == false && inputMap.wasActionTriggered( _cycleAction ) )
         {
             [[maybe_unused]] const hashed_string nextID = activateNextPreset(); // 로그는 Shipping 에서 빠진다
@@ -343,10 +343,10 @@ namespace sw
 
     void CameraDirectorComponent::gatherPhotoModeInput( float32 unscaledDeltaTime )
     {
-        const InputManager* pInput = _bReadInput ? game::getService<InputManager>() : nullptr;
+        const InputManager* pInput = _bReadInput ? game::findSubsystem<InputManager>() : nullptr;
         if ( pInput == nullptr )
             return;
-        const UIInputMapView inputMap( pInput->getInputMap(), game::getService<UISystem>() );
+        const UIInputMapView inputMap( pInput->getInputMap(), game::findSubsystem<UISystem>() );
         PhotoModeInput       input;
         input._move = inputMap.getVector2D( _panAction );
         input._rise = inputMap.getAxis1D( _photoRiseAction );

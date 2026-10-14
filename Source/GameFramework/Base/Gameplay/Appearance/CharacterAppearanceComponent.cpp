@@ -241,7 +241,7 @@ namespace sw
         GameObject*            pOwner    = getOwner();
         GameObjectManager*     pManager  = findManager();
         SkeletalMeshComponent* pBody     = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
-        AppearanceDatabase*    pDatabase = game::getService<AppearanceDatabase>();
+        AppearanceDatabase*    pDatabase = game::findSubsystem<AppearanceDatabase>();
         if ( pManager == nullptr || pBody == nullptr )
         {
             SW_LOG_WARNING( "'%#' has no skeletal mesh to wear appearance '%#'", pOwner != nullptr ? pOwner->getName().c_str() : "?", _presetID.c_str() );
@@ -343,7 +343,7 @@ namespace sw
         }
         _listSpawnedPart = std::move( listKeep );
 
-        AssetManager*         pAssetManager = game::getService<AssetManager>();
+        AssetManager*         pAssetManager = game::findSubsystem<AssetManager>();
         SceneComponent*       pBodyScene    = body.getOwner() != nullptr ? body.getOwner()->getPrimarySceneComponent() : nullptr;
         const ComponentHandle bodyHandle    = body.getHandle();
         for ( size_t partIndex = 0; partIndex < _resolved._listPart.size(); ++partIndex )

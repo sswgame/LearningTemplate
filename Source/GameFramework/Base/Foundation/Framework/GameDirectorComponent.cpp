@@ -190,7 +190,7 @@ namespace sw
 
     GameObject* GameDirectorComponent::spawnPrefab( GameObjectManager& manager, const string& prefabPath, const utf8* pName )
     {
-        AssetManager* pAssetManager = game::getService<AssetManager>();
+        AssetManager* pAssetManager = game::findSubsystem<AssetManager>();
         if ( pAssetManager == nullptr || prefabPath.empty() )
             return nullptr;
         GameObject* pObject = pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, prefabPath, pName );

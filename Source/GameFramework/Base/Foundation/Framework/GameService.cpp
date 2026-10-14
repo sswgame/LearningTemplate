@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 
+#include "Engine/Common/EngineScope.h"
 #include "Engine/Resource/AssetManager.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataCache.h"
@@ -28,7 +29,7 @@ namespace sw
         {
             s_gameServiceState._pHostServices = &hostServices;
             // 데이터 표 캐시(상호작용 · 원소 규칙)를 호스트의 에셋 캐시 레지스트리에 올린다 — 핫 리로드 · 비우기 · 진단이 그 레지스트리를 훑는다.
-            GameDataCacheRegistry::attach( getService<AssetManager>() );
+            GameDataCacheRegistry::attach( findSubsystem<AssetManager>() );
         }
 
         SW_GAMESERVICE_API void unbindGameService()
@@ -51,6 +52,9 @@ namespace sw
         {
             SW_GAMESERVICE_API const ISubsystemLocator* findHostServices()
             {
+                // 호스트가 게임 서비스를 묶지 않은 실행(쿠커 · 테스트 하네스)은 게임 모듈을 돌리지 않으므로 엔진 범위를 그대로 본다.
+                if ( s_gameServiceState._pHostServices == nullptr )
+                    return engine::getEngineSubsystems();
                 return s_gameServiceState._pHostServices;
             }
         } // namespace internal

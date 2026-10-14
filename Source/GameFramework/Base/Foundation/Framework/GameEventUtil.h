@@ -23,7 +23,7 @@ namespace sw
         template <typename TEvent>
         static void send( const TEvent& event )
         {
-            EventDispatcher* pDispatcher = game::getService<EventDispatcher>();
+            EventDispatcher* pDispatcher = game::findSubsystem<EventDispatcher>();
             if ( pDispatcher == nullptr )
                 return;
             if ( pDispatcher->isBusThread() )

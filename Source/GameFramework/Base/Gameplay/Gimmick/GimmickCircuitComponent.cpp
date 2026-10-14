@@ -487,7 +487,7 @@ namespace sw
                 GameObjectManager* pManager = &manager;
                 manager.executeOrDeferPostTick( [pManager, prefab, position]()
                 {
-                    AssetManager*   pAssetManager = game::getService<AssetManager>();
+                    AssetManager*   pAssetManager = game::findSubsystem<AssetManager>();
                     GameObject*     pSpawned      = pAssetManager != nullptr ? pAssetManager->getAssetCache<PrefabCache>().spawn( pManager, prefab ) : nullptr;
                     SceneComponent* pSpawnedScene = pSpawned != nullptr ? pSpawned->getPrimarySceneComponent() : nullptr;
                     if ( pSpawnedScene != nullptr )

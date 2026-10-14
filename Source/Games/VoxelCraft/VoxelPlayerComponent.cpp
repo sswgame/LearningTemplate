@@ -172,7 +172,7 @@ namespace sw
         _bBodyPlaced = SW_FALSE;
         _hotbar      = VoxelHotbar{};
         // 처음 핫바 — 짓는 블록 몇 가지.
-        const VoxelBlockCatalog* pCatalog = game::getService<VoxelBlockCatalog>();
+        const VoxelBlockCatalog* pCatalog = game::findSubsystem<VoxelBlockCatalog>();
         if ( pCatalog != nullptr )
         {
             _body.setWaterBlock( pCatalog->findBlockIndex( hashed_string( "water" ) ) );
@@ -260,7 +260,7 @@ namespace sw
         FirstPersonCameraComponent*   pCamera         = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
         const PawnComponent*          pPawn           = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         const VoxelDirectorComponent* pDirector       = pManager != nullptr ? GameDirectorComponent::resolve<VoxelDirectorComponent>( *pManager, _director ) : nullptr;
-        const VoxelBlockCatalog*      pCatalog        = game::getService<VoxelBlockCatalog>();
+        const VoxelBlockCatalog*      pCatalog        = game::findSubsystem<VoxelBlockCatalog>();
         const bool                    bNotReadyToTick = pCamera == nullptr || pPawn == nullptr || pDirector == nullptr || pCatalog == nullptr || pDirector->isStarted() == false || deltaTime <= 0.0f;
         if ( bNotReadyToTick )
             return;

@@ -10,6 +10,7 @@
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 
 namespace sw
 {
@@ -72,7 +73,7 @@ namespace sw
                 if ( pText == nullptr )
                     return;
                 TEnum parsed{};
-                if ( engine::getTypeRegistry().enumFromString( string_view( pText ), parsed ) )
+                if ( game::getSubsystem<TypeRegistry>().enumFromString( string_view( pText ), parsed ) )
                     inoutValue = parsed;
                 else
                     SW_LOG_WARNING( "%#: <%#> has unknown %# '%#'", sourceName, node.getName(), pName, pText );

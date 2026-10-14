@@ -22,7 +22,7 @@ namespace sw
             /** @brief 오디오 엔진입니다. 서비스가 없거나 내려가 있으면 nullptr 입니다. */
             static AudioEngine* findEngine()
             {
-                IAudioService* pAudio = game::getService<IAudioService>();
+                IAudioService* pAudio = game::findSubsystem<IAudioService>();
                 return pAudio != nullptr && pAudio->isInitialized() ? &pAudio->getEngine() : nullptr;
             }
 
@@ -35,13 +35,13 @@ namespace sw
 {
     bool GameSound::play( string_view path, const hashed_string& bus )
     {
-        IAudioService* pAudio = game::getService<IAudioService>();
+        IAudioService* pAudio = game::findSubsystem<IAudioService>();
         return pAudio != nullptr && pAudio->play( path, bus );
     }
 
     bool GameSound::playMusic( string_view path )
     {
-        IAudioService* pAudio = game::getService<IAudioService>();
+        IAudioService* pAudio = game::findSubsystem<IAudioService>();
         return pAudio != nullptr && pAudio->playMusic( path );
     }
 

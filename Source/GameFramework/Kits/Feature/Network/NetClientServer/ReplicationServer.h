@@ -104,7 +104,7 @@ namespace sw
          * @details `setTaskManager` 를 지정했으면 클라이언트를 작업 스레드에 나눠 스냅샷을 만든다. 클라이언트마다 독립적이므로 결과는 한 스레드로 돌릴 때와 같다.
          */
         void sendSnapshots();
-        /** @brief 스냅샷 생성을 나눠 처리할 작업 스레드 풀을 지정합니다. 게임은 `&engine::getTaskManager()` 를 넘깁니다. nullptr 이면 호출한 스레드에서 처리합니다. */
+        /** @brief 스냅샷 생성을 나눠 처리할 작업 스레드 풀을 지정합니다. 게임은 `&engine::getSubsystem<TaskManager>()` 를 넘깁니다. nullptr 이면 호출한 스레드에서 처리합니다. */
         void            setTaskManager( TaskManager* pTaskManager, uint32 serialThreshold = NetParallelFor::kDefaultSerialThreshold );
         uint8           getMessageRangeBase() const override { return NetKitMessageRange::kClientServer; }
         uint16          getMessageKindMask() const override;

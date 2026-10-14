@@ -150,7 +150,7 @@ namespace sw
 
         if ( gv_benchSceneLoadPath.empty() == false )
         {
-            SceneManager*               pSceneManager = game::getService<SceneManager>();
+            SceneManager*               pSceneManager = game::findSubsystem<SceneManager>();
             [[maybe_unused]] const bool bRequested    = pSceneManager != nullptr && pSceneManager->requestLoadAsync( gv_benchSceneLoadPath );
             SW_LOG_INFO( "[Bench] probe frame %#: async scene load '%#' %#", _probeFrame, gv_benchSceneLoadPath.c_str(), bRequested ? "requested" : "failed" );
         }
