@@ -1,0 +1,88 @@
+/**
+ * @file ShooterDevCommands.cpp
+ * @brief Shooter3D 의 치트 개발 명령(`cheat.ammo` · `cheat.shooter.heal`)입니다. Shipping 에는 없습니다.
+ * @details 대상은 활성 씬의 모든 `ShooterPlayerComponent` 입니다. 보상과 같은 길(`addWaveAmmo` · `restoreHealth`)을 쓰므로 게임 스레드에서만 부른다.
+ *          체력 명령 이름이 `cheat.heal`(어빌리티 시스템)과 겹치지 않게 `cheat.shooter.heal` 이다 — 슈터 플레이어는 어빌리티 시스템이 아니라 `Vitality` 를 쓴다.
+ */
+#include "pch.h"
+
+#include "Core/Console/DevCommandRegistry.h"
+
+#if SW_DEV_COMMANDS_ENABLED
+    #include "Engine/Object/GameObject/GameObject.h"
+    #include "Engine/Object/GameObject/GameObjectManager.h"
+
+    #include "GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.h"
+
+    #include "Games/Shooter3D/ShooterPlayerComponent.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct ShooterDevCommandsInternal
+        {
+            /** @brief `restoreHealth` 에 넘기는 양입니다. `Vitality::heal` 이 최대 체력에서 자르므로 가득 채운다. */
+            static constexpr float32 kFullHealAmount = 1.0e9f;
+
+            /** @brief 활성 씬의 슈터 플레이어를 모읍니다. 씬이 없거나 하나도 없으면 답을 채우고 false 입니다. */
+            static bool collectPlayers( vector<ShooterPlayerComponent*>& outListPlayer, string& outReply )
+            {
+                GameObjectManager* pManager = GameInstanceBase::findActiveObjectManager();
+                if ( pManager == nullptr )
+                {
+                    outReply = "cheat: no active scene";
+                    return false;
+                }
+                pManager->forEachComponentOfType<ShooterPlayerComponent>( [&outListPlayer]( ShooterPlayerComponent* pPlayer ) { outListPlayer.push_back( pPlayer ); } );
+                if ( outListPlayer.empty() )
+                {
+                    outReply = "cheat: no ShooterPlayerComponent in the active scene";
+                    return false;
+                }
+                return true;
+            }
+
+            /** @brief `cheat.ammo` — 탄 보상과 같이 무기마다 탄창 두 개를 예비 탄에 더합니다. */
+            static bool runAmmo( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                vector<ShooterPlayerComponent*> listPlayer;
+                if ( collectPlayers( listPlayer, outReply ) == false )
+                    return true;
+                for ( ShooterPlayerComponent* pPlayer : listPlayer )
+                    pPlayer->addWaveAmmo();
+                outReply = "cheat.ammo refilled " + to_string( listPlayer.size() ) + " player(s)";
+                return true;
+            }
+
+            /** @brief `cheat.shooter.heal` — 살아 있는 슈터 플레이어의 체력을 가득 채웁니다(쓰러진 플레이어는 `Vitality` 가 회복을 받지 않는다). */
+            static bool runHeal( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                vector<ShooterPlayerComponent*> listPlayer;
+                if ( collectPlayers( listPlayer, outReply ) == false )
+                    return true;
+                int32 healedCount = 0;
+                for ( ShooterPlayerComponent* pPlayer : listPlayer )
+                {
+                    if ( pPlayer->isAlive() == false )
+                        continue;
+                    pPlayer->restoreHealth( kFullHealAmount );
+                    ++healedCount;
+                }
+                outReply = "cheat.shooter.heal healed " + to_string( healedCount ) + " of " + to_string( listPlayer.size() ) + " player(s)";
+                return true;
+            }
+        };
+    } // namespace
+} // namespace sw
+#endif
+
+namespace sw
+{
+    SW_DEV_COMMAND( CheatAmmo, "cheat.ammo", "cheat.ammo", "Add two magazines of reserve ammo to every weapon of every shooter player", &ShooterDevCommandsInternal::runAmmo );
+    SW_DEV_COMMAND( CheatShooterHeal, "cheat.shooter.heal", "cheat.shooter.heal", "Fill the health of every living shooter player", &ShooterDevCommandsInternal::runHeal );
+} // namespace sw
