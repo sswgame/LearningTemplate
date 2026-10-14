@@ -35,7 +35,15 @@
 
 재현됐거나 코드로 확인된 열린 결함. 다른 어떤 일보다 먼저 본다.
 
-_열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
+- `A-1` **`editor.uipreview` 가 속성 편집 단계(프레임 375)에서 모든 백엔드 결정적으로 진다**(2026-10-15, main `42f6b251c`, DX12 · Vulkan · GL, 단독 · 전체 체인 10 회 이상).
+  `Editor.UIPreviewSelectedOpacity` 가 0.5 대신 1, `UIPreviewDirty` 0, `UndoCount` 0 — `inspector.property.BorderPanel._opacity` Ctrl+클릭 → `Ctrl+A` → `0.5` → `Enter` 가 값을 안 바꾼다.
+  언어 버튼 단계(`uipreview.language*`)는 전부 통과한다. 포커스 탓이 아니다(전경을 얻어도 · 에디터 포커스 필터를 빼도 같다). 검증 창(NEXT 4절)의 통과 이후 170 커밋 안의 회귀로 보이며
+  첫 의심은 인스펙터 즐겨찾기 `f46dc5fde` · 뷰포트 마우스 양보 `62bd5b3f7` · `999eef7d1`. 이분 탐색으로 첫 나쁜 커밋을 찾는다.
+- `A-2` **TDR 뒤 행의 원인 미상**(재현 못 함). 코드로는 DX12 `waitForFenceValue` · `waitForRingSlot` · `waitForPreviousFrame` 이 장치 제거를 보고 빠져나온다. 다음 가설: 종료 경로(`waitIdle` ·
+  해제 큐 비우기)나 업로드 큐 워커, Vulkan `VK_ERROR_DEVICE_LOST` 뒤의 대기가 제거를 안 본다. 실제 TDR 은 반복하면 어댑터가 망가지므로 `ID3D12Device5::RemoveDevice` 를 부르는 개발 명령으로
+  장치 제거를 흉내 내 종료까지 가는지 본다(RHI 백엔드는 별도 DLL 이라 가상 창구가 필요하다).
+- `A-3` **`editor.uipreview` Vulkan 1 회 "언어 버튼 이름표 없음"은 재현 못 했다**: Vulkan 단독 5 회 · 전체 체인 3 회 모두 언어 단계는 통과한다(`A-1` 만 진다). 이름표는 직전 프레임에 그려져야 하므로
+  패널이 그려지지 못한 프레임 틈(로딩 · 리사이즈)이 의심된다. 다시 보이면 E 에 로그를 붙인다.
 
 
 ---

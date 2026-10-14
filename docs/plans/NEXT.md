@@ -88,7 +88,7 @@ Conform 의 `SurfaceBvh`)을 풀었다. 최종 검증: Debug `all AllTests` **�
 5. **PCH 측정** — 모든 구성에서 PCH 를 켠 뒤의 빌드 시간.
 6. **에디터 기동 시간** — 7초 안팎(이전 4~6초). 조용한 기계에서 병합 전(`22b94b2e4`) · 후(`52bf2b4b7`) · 최신을 번갈아 5회씩.
 7. **E 절 관찰** — 백로그 E 절의 관찰 항목.
-8. **A 열린 결함** — GL 체인 1회 `editor.bugit` · `editor.viewportgrid` 기대 미달(창이 앞에 오지 못함), TDR 뒤 행의 원인 미상.
+8. **A 열린 결함** — 백로그 A-1 ~ A-3(uipreview 속성 편집 회귀 · TDR 뒤 행 · Vulkan 언어 버튼 1 회).
    그 밖: 반복 패턴 정리(`ScopedRegistration<TRegistry,TEntry>` · `caseState<T>()` · `IServiceStoreWork` 람다 · 온라인 메서드 X-macro), 서버 디버그 `S3 · S6 · S7`,
    다중 월드 `D3-7`, 에디터 보강 `D3-1`.
 
