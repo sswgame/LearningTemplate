@@ -8,6 +8,7 @@
  */
 #include "pch.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"

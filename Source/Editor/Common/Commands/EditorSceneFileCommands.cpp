@@ -99,7 +99,7 @@ namespace sw::editor
         if ( loadPath.empty() )
             loadPath = string{ path };
 
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
+        SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
         if ( pSceneManager == nullptr )
         {
             SW_LOG_ERROR( "Open Scene: SceneManager unavailable" );
@@ -154,7 +154,7 @@ namespace sw::editor
             return true;
         }
 
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
+        SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
         if ( pSceneManager == nullptr )
             return false;
         Scene* pScene = pSceneManager->createEmptyActiveScene( "Untitled" );
@@ -224,12 +224,12 @@ namespace sw::editor
     void EditorSceneFileCommands::syncAfterSceneGenerationChange()
     {
         EditorContext* pContext      = EditorContext::get();
-        SceneManager*  pSceneManager = editor::getService<SceneManager>();
+        SceneManager*  pSceneManager = editor::findSubsystem<SceneManager>();
         if ( pContext == nullptr || pSceneManager == nullptr )
             return;
 
         // 이전 씬을 가리키던 상태(선택, dirty, Undo, 프리팹 격리)를 버린다. 이유는 `EditorSceneGenerationSync::apply` 에 있다.
-        (void)EditorSceneGenerationSync::apply( pContext->getSubsystem<EditorWorkspace>(), pSceneManager->getSceneGeneration(), editor::getService<CommandStack>() );
+        (void)EditorSceneGenerationSync::apply( pContext->getSubsystem<EditorWorkspace>(), pSceneManager->getSceneGeneration(), editor::findSubsystem<CommandStack>() );
     }
 
     bool EditorSceneFileCommands::tryBeginQuit()
@@ -258,7 +258,7 @@ namespace sw::editor
 
     bool EditorSceneFileCommands::saveActiveScene( string_view path )
     {
-        SceneManager* pSceneManager = editor::getService<SceneManager>();
+        SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
         if ( pSceneManager == nullptr )
             return false;
 

@@ -272,7 +272,7 @@ SW_TEST_CASE( RenderGraphTest, ParallelExecutionRecordsEachPassOnceInLevelOrder 
 
     test::FakeRHIDevice             device;
     sw::RenderGraphExecutionContext context;
-    SW_ASSERT_TRUE( graph.executeParallel( context, &sw::engine::getTaskManager(), &device ) );
+    SW_ASSERT_TRUE( graph.executeParallel( context, &sw::engine::getSubsystem<sw::TaskManager>(), &device ) );
 
     SW_EXPECT_EQUAL( 1, countA.load() );
     SW_EXPECT_EQUAL( 1, countB.load() );
@@ -308,7 +308,7 @@ SW_TEST_CASE( RenderGraphTest, ParallelExecutionSubmitsNothingWhenACommandListCa
     sw::RenderGraphExecutionContext context;
     {
         test::ScopedDefensiveTestLog expected( "a device that cannot make more command lists" );
-        SW_EXPECT_FALSE( graph.executeParallel( context, &sw::engine::getTaskManager(), &device ) );
+        SW_EXPECT_FALSE( graph.executeParallel( context, &sw::engine::getSubsystem<sw::TaskManager>(), &device ) );
     }
     SW_EXPECT_EQUAL( size_t( 0 ), device._listExecuted.size() );
     SW_EXPECT_EQUAL( 0, countA.load() );

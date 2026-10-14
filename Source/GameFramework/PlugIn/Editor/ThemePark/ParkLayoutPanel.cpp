@@ -26,7 +26,7 @@ namespace sw::editor
 
     void ParkLayoutPanel::drawContent()
     {
-        ParkLayoutPreview* pPreview = getService<ParkLayoutPreview>();
+        ParkLayoutPreview* pPreview = findSubsystem<ParkLayoutPreview>();
         if ( pPreview == nullptr )
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         ParkLayoutPreview& preview = *pPreview;

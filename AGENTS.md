@@ -322,6 +322,11 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
 - **Start threads with `sw::thread`** (`Core/Concurrency/thread.h`), never `std::thread` in `Source/`: it has the same shape, tells the lock
   observer what `join` waits for (so a join cycle shows up in the deadlock detector), and asserts instead of hanging when `join` runs under the
   loader lock (`DllMain`, a module's static destructor). Tests may use `std::thread`. Enforced by `CheckStdThread.py`.
+- **Reach a service through the window of its lifetime**: `getSubsystem<T>()` (must exist, returns `T&`) or `findSubsystem<T>()` (may be missing,
+  returns `T*`; check it) on `engine::`, `game::`, `editor::` or the owning object (`GameObjectManager` for a scene, `EditorContext`, `GameInstanceBase`).
+  A new service is a subsystem added to a scope; an engine service read on hot paths also gets a row in `EngineServiceList.xxx`. No named accessors
+  (`engine::getFooManager()`) and no `static getInstance()` (stateless codecs and link-time registries are the listed exceptions). Tests inject mocks through
+  scopes (`test::ScopedEngineServiceOverride`, `game::ScopedGameScope`, `editor::ScopedEditorScope`). Enforced by `CheckServiceAccess.py`.
 - Construct into memory you already hold with `sw_placement_new( pMemory ) T( ... )`
   (`Core/Memory/Memory.h`), never a bare `new ( pMemory ) T( ... )`. Enforced by
   `CheckCodeConventions.py` (`Style/PlacementNew`).

@@ -765,8 +765,8 @@ namespace sw
             }
             batch.finish();
             // 중첩 프리팹 부품 표시도 같은 id 로 옮긴다 — 없으면 들어온 씬을 저장할 때 부품이 따로 엔티티로 적혀 다음 로드에서 두 벌이 된다.
-            const PrefabInstanceRegistry& sourceParts = pSource->getSceneService<PrefabInstanceRegistry>();
-            PrefabInstanceRegistry&       targetParts = pTarget->getSceneService<PrefabInstanceRegistry>();
+            const PrefabInstanceRegistry& sourceParts = pSource->getSubsystem<PrefabInstanceRegistry>();
+            PrefabInstanceRegistry&       targetParts = pTarget->getSubsystem<PrefabInstanceRegistry>();
             for ( const CarriedObject& carried : listCarried )
             {
                 const PrefabNestedPart* pPart = ( carried._pTarget != nullptr ) ? sourceParts.findNestedPart( carried._identity._objectID ) : nullptr;
@@ -858,7 +858,7 @@ namespace sw
         if ( _commandStackClearHandle.isValid() )
             _onSceneObjectsInvalidated.remove( _commandStackClearHandle );
         _commandStackClearHandle          = DelegateHandle{};
-        CommandStack* const pCommandStack = engine::areEngineServicesBound() ? engine::getBoundEngineServices()._pCommandStack : nullptr;
+        CommandStack* const pCommandStack = engine::findSubsystem<CommandStack>();
         if ( pCommandStack != nullptr )
             _commandStackClearHandle = _onSceneObjectsInvalidated.add( SW_DELEGATE_METHOD( Delegate<void()>, &CommandStack::clear, pCommandStack ) );
         return SubsystemInitResult::Succeeded;

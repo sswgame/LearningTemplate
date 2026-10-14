@@ -26,7 +26,7 @@ namespace sw
             SW_LOG_ERROR( "The host could not load its type-providing modules - scenes are not read" );
             return SubsystemInitResult::Failed;
         }
-        engine::getTypeRegistry().markAllModuleTypesRegistered();
+        engine::getSubsystem<TypeRegistry>().markAllModuleTypesRegistered();
         return SubsystemInitResult::Succeeded;
     }
 

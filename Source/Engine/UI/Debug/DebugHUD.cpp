@@ -695,7 +695,7 @@ namespace sw
         _screen = kInvalidUIScreenHandle;
         _window = kInvalidUIScreenHandle;
         if ( _bProfilerEnabledByHUD == SW_TRUE && engine::areEngineServicesBound() )
-            engine::getFrameProfiler().setEnabled( false );
+            engine::getSubsystem<FrameProfiler>().setEnabled( false );
         _bProfilerEnabledByHUD = SW_FALSE;
         _pUI                   = nullptr;
         _pSettings             = nullptr;
@@ -872,7 +872,7 @@ namespace sw
             (void)_pSettings->applyPending();                      // 저장 실패는 매니저가 로그에 남긴다
             return;
         }
-        GlobalVariableInfo* pVariable = engine::getGlobalVariableManager().findVariable( pVariableName );
+        GlobalVariableInfo* pVariable = engine::getSubsystem<GlobalVariableManager>().findVariable( pVariableName );
         if ( pVariable == nullptr || pVariable->setValueFromString( value ) == false )
             SW_LOG_WARNING( "Debug HUD could not write %# = '%#'", pVariableName, value );
     }
@@ -910,7 +910,7 @@ namespace sw
             }
         }
         const bool     bNeedsProfiler = _screen != kInvalidUIScreenHandle && _bSectionsNeedProfiler == SW_TRUE;
-        FrameProfiler& profiler       = engine::getFrameProfiler();
+        FrameProfiler& profiler       = engine::getSubsystem<FrameProfiler>();
         if ( bNeedsProfiler && profiler.isEnabled() == false )
         {
             profiler.setEnabled( true );

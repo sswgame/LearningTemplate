@@ -307,8 +307,8 @@ namespace sw
     {
         // 문맥은 파일마다 첫 줄 — 크래시 보고 · 로그와 같은 세션 id, 심볼과 짝지을 빌드 id.
         const GameConfig&    gameConfig   = GameConfig::getActive();
-        UserSettingsManager& userSettings = engine::getUserSettingsManager();
-        const string&        engineSchema = engine::getEngineDefaultAssets()._telemetrySchema;
+        UserSettingsManager& userSettings = engine::getSubsystem<UserSettingsManager>();
+        const string&        engineSchema = engine::getSubsystem<EngineDefaultAssets>()._telemetrySchema;
         TelemetryContext     context;
         context._sessionID   = CrashHandler::getSessionID();
         context._buildConfig = build::kConfigName;
@@ -335,7 +335,7 @@ namespace sw
         const string crashFolder = getCrashReportFolder();
         if ( crashFolder.empty() == false )
         {
-            CrashReportService& crashReports = engine::getCrashReportService();
+            CrashReportService& crashReports = engine::getSubsystem<CrashReportService>();
             const string        reportsFolder =
                 FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( crashFolder ) ), CrashReportService::kReportsFolderName );
             crashReports.initialize( crashFolder, reportsFolder, CrashHandler::getSessionID() );
@@ -349,7 +349,7 @@ namespace sw
 
     void TelemetryService::shutdownSubsystem()
     {
-        engine::getCrashReportService().shutdown();
+        engine::getSubsystem<CrashReportService>().shutdown();
         shutdown();
     }
 

@@ -284,7 +284,7 @@ namespace sw
     {
         if ( _listTextureOverride.empty() || engine::areEngineServicesBound() == false )
             return false;
-        TextureCache& textures = engine::getAssetManager().getAssetCache<TextureCache>();
+        TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
         bool          bChanged{ false };
         // 디바이스가 바뀌었으면 옛 디바이스로 빌린 것을 돌려주고 새로 빌린다(옛 것이 이미 죽었으면 forgetRHI 가 먼저 와서 비웠다).
         if ( _pTextureDevice != nullptr && _pTextureDevice != pRHI )
@@ -332,7 +332,7 @@ namespace sw
         for ( TextureOverride& texture : _listTextureOverride )
         {
             if ( texture._pTexture != nullptr && bServicesBound )
-                engine::getAssetManager().getAssetCache<TextureCache>().release( texture._acquiredPath, pRHI );
+                engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().release( texture._acquiredPath, pRHI );
             texture._pTexture = nullptr;
             texture._acquiredPath.clear();
         }

@@ -168,7 +168,7 @@ namespace sw
         event._request._interactor        = interactor.getHandle();
         event._request._interactable      = pOwner->getHandle();
         event._request._interaction       = pDef->_id;
-        IInteractionAuthority* pAuthority = game::getService<IInteractionAuthority>();
+        IInteractionAuthority* pAuthority = game::findSubsystem<IInteractionAuthority>();
         if ( pAuthority != nullptr )
             pAuthority->notifyInteractionCompleted( event._request );
         GameEventUtil::send( event );

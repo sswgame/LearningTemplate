@@ -15,7 +15,7 @@ namespace test
         const sw::SerializeContext& context = sw::SerializeContext::getDefault();
 
         sw::vector<const sw::TypeInfo*> listType;
-        sw::engine::getTypeRegistry().forEachType( [&listType]( const sw::TypeInfo& typeInfo )
+        sw::engine::getSubsystem<sw::TypeRegistry>().forEachType( [&listType]( const sw::TypeInfo& typeInfo )
         { listType.push_back( &typeInfo ); } );
 
         PropertyCarryReport report{};

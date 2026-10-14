@@ -104,7 +104,7 @@ namespace sw::editor
         const float64               viewTime  = rewind.isScrubbing() ? rewind.getScrubTime() : rewind.getLatestTime();
         const ComponentHandle       selected  = AnimationRewindPanelInternal::findSelectedUnit( pScene );
         const AnimationRewindTrack* pSelected = selected.isValid() ? rewind.findTrack( selected ) : nullptr;
-        DebugDrawQueue*             pQueue    = getService<DebugDrawQueue>();
+        DebugDrawQueue*             pQueue    = findSubsystem<DebugDrawQueue>();
         if ( _bDrawSkeleton == SW_TRUE && pQueue != nullptr )
         {
             for ( const AnimationRewindTrack& track : rewind.getTracks() )

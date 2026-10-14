@@ -42,7 +42,7 @@ namespace sw
             /** @brief 지금 UI 시스템입니다(서버처럼 없거나 시작 전이면 nullptr). */
             static UISystem* findUISystem()
             {
-                UISystem* pUI = engine::getBoundEngineServices()._pUISystem;
+                UISystem* pUI = engine::findSubsystem<UISystem>();
                 return pUI != nullptr && pUI->isInitialized() ? pUI : nullptr;
             }
         };

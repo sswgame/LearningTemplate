@@ -34,7 +34,7 @@ namespace sw::editor
 
     bool EditorGlobalVariableCommands::savePreset( const string& filePath, const string& presetName )
     {
-        GlobalVariableManager* pGvm = editor::getService<GlobalVariableManager>();
+        GlobalVariableManager* pGvm = editor::findSubsystem<GlobalVariableManager>();
         if ( pGvm == nullptr )
             return false;
 
@@ -64,7 +64,7 @@ namespace sw::editor
 
     bool EditorGlobalVariableCommands::loadPreset( const string& filePath )
     {
-        GlobalVariableManager* pGvm = editor::getService<GlobalVariableManager>();
+        GlobalVariableManager* pGvm = editor::findSubsystem<GlobalVariableManager>();
         if ( pGvm == nullptr )
             return false;
 

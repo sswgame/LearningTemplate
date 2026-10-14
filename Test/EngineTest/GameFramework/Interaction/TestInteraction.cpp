@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Common/EngineScope.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/ComponentRegistry.h"
@@ -66,7 +67,8 @@ namespace
             : _resources{ resources }
             , _bBound{ true }
         {
-            (void)_hostServices.bind( &_resources ); // 새 범위 — 겹치지 않는다
+            _hostServices.setParentScope( engine::getEngineSubsystems() ); // 표를 읽는 타입 레지스트리는 엔진 범위에서 찾는다
+            (void)_hostServices.bind( &_resources );                       // 새 범위 — 겹치지 않는다
             game::bindGameService( _hostServices );
         }
 

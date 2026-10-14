@@ -44,7 +44,7 @@ namespace sw
                     GameObject* pObject = manager.createGameObject( hashed_string( "AIController" ) );
                     return pObject != nullptr ? pObject->addComponent<AIControllerComponent>() : nullptr;
                 }
-                AssetManager*          pAssetManager = game::getService<AssetManager>();
+                AssetManager*          pAssetManager = game::findSubsystem<AssetManager>();
                 GameObject*            pObject       = pAssetManager != nullptr ? pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, prefabPath, "AIController" ) : nullptr;
                 AIControllerComponent* pAI           = pObject != nullptr ? pObject->getComponent<AIControllerComponent>() : nullptr;
                 if ( pAI == nullptr )
@@ -114,12 +114,12 @@ namespace sw
 
     InputManager* ControlSystem::findInputManager() const
     {
-        return _pInputOverride != nullptr ? _pInputOverride : game::getService<InputManager>();
+        return _pInputOverride != nullptr ? _pInputOverride : game::findSubsystem<InputManager>();
     }
 
     const UISystem* ControlSystem::findUISystem() const
     {
-        const UISystem* pUISystem = _pUISystemOverride != nullptr ? _pUISystemOverride : game::getService<UISystem>();
+        const UISystem* pUISystem = _pUISystemOverride != nullptr ? _pUISystemOverride : game::findSubsystem<UISystem>();
         return pUISystem != nullptr && pUISystem->isInitialized() ? pUISystem : nullptr;
     }
 

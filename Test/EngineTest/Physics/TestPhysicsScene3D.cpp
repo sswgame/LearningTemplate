@@ -45,7 +45,7 @@ namespace
 
     sw::unique_ptr<sw::IPhysicsScene3D> makeScene()
     {
-        return sw::engine::getPhysicsSystem().createScene3D( makeSettings() );
+        return sw::engine::getSubsystem<sw::PhysicsSystem>().createScene3D( makeSettings() );
     }
 
     sw::PhysicsShapeDesc3D makeBox( const sw::float3& halfExtents )

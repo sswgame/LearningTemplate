@@ -104,7 +104,7 @@ namespace sw
         /** @brief 이 컴포넌트가 지금까지 진행한 시간입니다. */
         float32 getTime() const { return _time; }
 
-        /** @brief id 로 이펙트, 어빌리티, 세트를 찾을 카탈로그를 정합니다. nullptr 이면 게임 서비스(`game::getService<AbilityCatalog>()`)를 씁니다. */
+        /** @brief id 로 이펙트, 어빌리티, 세트를 찾을 카탈로그를 정합니다. nullptr 이면 게임 서비스(`game::findSubsystem<AbilityCatalog>()`)를 씁니다. */
         void setCatalog( const AbilityCatalog* pCatalog ) { _pCatalog = pCatalog; }
         /** @brief 쓸 카탈로그입니다. 정해 둔 카탈로그가 없으면 게임 서비스를 쓰고, 그것도 없으면 nullptr 입니다. */
         const AbilityCatalog* findCatalog() const;

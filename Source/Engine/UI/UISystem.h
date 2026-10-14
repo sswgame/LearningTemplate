@@ -50,7 +50,7 @@ namespace sw
 {
     /**
      * @class UISystem
-     * @brief 런타임 UI 의 엔진 서비스입니다(`engine::getUISystem()`, 게임은 `game::getService<UISystem>()`).
+     * @brief 런타임 UI 의 엔진 서비스입니다(`engine::getSubsystem<UISystem>()`, 게임은 `game::findSubsystem<UISystem>()`).
      * @details 언리얼의 `FSlateApplication` 과 CommonUI 의 `UCommonUIActionRouter` 에 해당한다.
      *          틱은 둘로 나뉜다. `processInput` 은 입력 갱신 직후, 게임 틱 앞에서 돌아서 UI 가 처리한 입력을 폰이 보지 못하게 한다.
      *          `update` 는 게임 틱 뒤, 렌더 패킷 앞에서 돌며 이번 프레임의 게임 상태로 애니메이션, 바인딩, 스타일, 레이아웃, 그리기를 순서대로 처리한다.
@@ -233,7 +233,7 @@ namespace sw
         void setOffscreenView( UIScreenHandle handle, const UIViewport& viewport, float32 textScale, const hashed_string& theme );
         /**
          * @brief 오프스크린 화면 @p handle 이 글을 해석할 문화권 관리자를 정합니다(nullptr 이면 게임 UI 와 같은 문화권). 소유하지 않으므로 화면보다 오래 두어야 합니다.
-         * @details 문화권이 전역(`engine::getLocalizationManager()`)이라 게임 UI 는 그대로 두고 미리보기 화면만 다른 언어나 의사 문화권(`qps-ploc`, `qps-plocm`)으로 보는 길이다.
+         * @details 문화권이 전역(`engine::getSubsystem<LocalizationManager>()`)이라 게임 UI 는 그대로 두고 미리보기 화면만 다른 언어나 의사 문화권(`qps-ploc`, `qps-plocm`)으로 보는 길이다.
          *          관리자의 언어를 바꾼 뒤에도 부른다(글을 다시 해석하고 흐름 방향까지 다시 맞춘다). 오프스크린 화면의 애니메이션은 `findOffscreenScreen( handle )->getAnimationPlayer()`
          *          로 재생하며, 재생 중인 동안만 `update` 가 진행한다(문서의 애니메이션은 화면을 열 때 등록되고 `Open` 은 틀지 않는다).
          */

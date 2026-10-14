@@ -105,7 +105,7 @@ namespace sw
                     return resolvedPath;
 
                 string mappedPath;
-                if ( engine::getAssetManager().getAssetDatabase().tryGetPath( guid, mappedPath ) && mappedPath.empty() == false )
+                if ( engine::getSubsystem<AssetManager>().getAssetDatabase().tryGetPath( guid, mappedPath ) && mappedPath.empty() == false )
                     resolvedPath = std::move( mappedPath );
                 return resolvedPath;
             }
@@ -273,7 +273,7 @@ namespace sw
                 if ( node._prefabPath.empty() || engine::areEngineServicesBound() == false )
                     return node._prefabGuid;
                 UUID guid{};
-                if ( engine::getAssetManager().getAssetDatabase().tryGetGuid( node._prefabPath, guid ) && guid.isNull() == false )
+                if ( engine::getSubsystem<AssetManager>().getAssetDatabase().tryGetGuid( node._prefabPath, guid ) && guid.isNull() == false )
                     return guid.toString();
                 return node._prefabGuid;
             }
@@ -453,7 +453,7 @@ namespace sw
                 GameObjectManager* pManager = root.getManager();
                 if ( pManager == nullptr )
                     return;
-                const PrefabInstanceRegistry& registry = pManager->getSceneService<PrefabInstanceRegistry>();
+                const PrefabInstanceRegistry& registry = pManager->getSubsystem<PrefabInstanceRegistry>();
                 vector<uint64>                listPartID;
                 registry.collectNestedPartsOf( root.getObjectID(), listPartID );
                 if ( listPartID.empty() )
@@ -755,7 +755,7 @@ namespace sw
         }
 
         if ( engine::areEngineServicesBound() )
-            engine::getAssetManager().getAssetDatabase().ensureMeta( assetRelativePath );
+            engine::getSubsystem<AssetManager>().getAssetDatabase().ensureMeta( assetRelativePath );
         SW_LOG_INFO( "Saved '%#' -> %#", _name, absPath );
         return true;
     }
@@ -799,7 +799,7 @@ namespace sw
         }
 
         if ( engine::areEngineServicesBound() )
-            engine::getAssetManager().getAssetDatabase().ensureMeta( assetRelativePath );
+            engine::getSubsystem<AssetManager>().getAssetDatabase().ensureMeta( assetRelativePath );
         SW_LOG_INFO( "Saved '%#' JSON %#", _name, absPath );
         return true;
     }
@@ -859,7 +859,7 @@ namespace sw
 
         PrefabCache* pPrefabs = pNestedPrefabs;
         if ( pPrefabs == nullptr && engine::areEngineServicesBound() )
-            pPrefabs = &engine::getAssetManager().getAssetCache<PrefabCache>();
+            pPrefabs = &engine::getSubsystem<AssetManager>().getAssetCache<PrefabCache>();
         PrefabAssetInternal::captureNestedParts( *pGameObject, pPrefabs, _listNestedInstance );
     }
 
@@ -1005,7 +1005,7 @@ namespace sw
 
         // 배포 구성은 쿠킹본만 읽는다. 소스 트리를 올린 쿠킹(`ContentSource::SourceTree`)만 소스를 읽는다 — 쿠킹의 입력은 소스다.
 #if defined( SW_SHIPPING )
-        const bool bReadsSource = engine::areEngineServicesBound() && engine::getAssetManager().getContentSource() == ContentSource::SourceTree;
+        const bool bReadsSource = engine::areEngineServicesBound() && engine::getSubsystem<AssetManager>().getContentSource() == ContentSource::SourceTree;
 #else
         constexpr bool bReadsSource = true;
 #endif
@@ -1249,7 +1249,7 @@ namespace sw
             return 0;
         SW_MEMORY_SCOPE( Scene );
 
-        PrefabInstanceRegistry&               registry   = pManager->getSceneService<PrefabInstanceRegistry>();
+        PrefabInstanceRegistry&               registry   = pManager->getSubsystem<PrefabInstanceRegistry>();
         PrefabAssetInternal::PrefabPathStack& spawnStack = PrefabAssetInternal::getSpawnStack();
         vector<GameObject*>                   listCreated( listNode.size(), nullptr );
         uint32                                createdCount = 0;

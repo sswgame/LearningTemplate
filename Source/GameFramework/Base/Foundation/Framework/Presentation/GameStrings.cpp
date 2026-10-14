@@ -14,7 +14,7 @@ namespace sw
 
     bool GameStrings::initialize( string_view projectPath, string_view defaultLanguage, string_view fallbackLanguage )
     {
-        LocalizationManager* pLoc = game::getService<LocalizationManager>();
+        LocalizationManager* pLoc = game::findSubsystem<LocalizationManager>();
         if ( pLoc == nullptr )
         {
             SW_LOG_ERROR( "LocalizationManager service is not bound." );
@@ -26,7 +26,7 @@ namespace sw
 
     bool GameStrings::setLanguage( string_view languageCode )
     {
-        LocalizationManager* pLoc = game::getService<LocalizationManager>();
+        LocalizationManager* pLoc = game::findSubsystem<LocalizationManager>();
         if ( pLoc == nullptr )
             return false;
 
@@ -35,7 +35,7 @@ namespace sw
 
     string GameStrings::getLanguage()
     {
-        LocalizationManager* pLoc = game::getService<LocalizationManager>();
+        LocalizationManager* pLoc = game::findSubsystem<LocalizationManager>();
         if ( pLoc == nullptr )
             return {};
 
@@ -44,14 +44,14 @@ namespace sw
 
     void GameStrings::setFallbackLanguage( string_view languageCode )
     {
-        LocalizationManager* pLoc = game::getService<LocalizationManager>();
+        LocalizationManager* pLoc = game::findSubsystem<LocalizationManager>();
         if ( pLoc != nullptr )
             pLoc->setFallbackLanguage( languageCode );
     }
 
     string GameStrings::getFallbackLanguage()
     {
-        LocalizationManager* pLoc = game::getService<LocalizationManager>();
+        LocalizationManager* pLoc = game::findSubsystem<LocalizationManager>();
         if ( pLoc == nullptr )
             return {};
 
@@ -60,7 +60,7 @@ namespace sw
 
     bool GameStrings::hasLanguage( string_view languageCode )
     {
-        LocalizationManager* pLoc = game::getService<LocalizationManager>();
+        LocalizationManager* pLoc = game::findSubsystem<LocalizationManager>();
         if ( pLoc == nullptr )
             return false;
 
@@ -69,7 +69,7 @@ namespace sw
 
     vector<string> GameStrings::getAvailableLanguages()
     {
-        LocalizationManager* pLoc = game::getService<LocalizationManager>();
+        LocalizationManager* pLoc = game::findSubsystem<LocalizationManager>();
         if ( pLoc == nullptr )
             return {};
 
@@ -81,7 +81,7 @@ namespace sw
         if ( pKey == nullptr )
             return pFallback;
 
-        LocalizationManager* pLoc = game::getService<LocalizationManager>();
+        LocalizationManager* pLoc = game::findSubsystem<LocalizationManager>();
         if ( pLoc == nullptr )
             return pFallback;
 
@@ -93,7 +93,7 @@ namespace sw
         if ( pKey == nullptr )
             return pFallback;
 
-        LocalizationManager* pLoc = game::getService<LocalizationManager>();
+        LocalizationManager* pLoc = game::findSubsystem<LocalizationManager>();
         if ( pLoc == nullptr )
             return pFallback;
 
@@ -102,7 +102,7 @@ namespace sw
 
     uint32 GameStrings::registerLanguageChangedCallback( LanguageChangedCallback callback )
     {
-        LocalizationManager* pLoc = game::getService<LocalizationManager>();
+        LocalizationManager* pLoc = game::findSubsystem<LocalizationManager>();
         if ( pLoc == nullptr )
             return 0;
 
@@ -111,14 +111,14 @@ namespace sw
 
     void GameStrings::unregisterLanguageChangedCallback( uint32 callbackID )
     {
-        LocalizationManager* pLoc = game::getService<LocalizationManager>();
+        LocalizationManager* pLoc = game::findSubsystem<LocalizationManager>();
         if ( pLoc != nullptr )
             pLoc->unregisterLanguageChangedCallback( callbackID );
     }
 
     void GameStrings::clear()
     {
-        LocalizationManager* pLoc = game::getService<LocalizationManager>();
+        LocalizationManager* pLoc = game::findSubsystem<LocalizationManager>();
         if ( pLoc != nullptr )
             pLoc->unmountProjects( LocalizationScope::Game );
     }

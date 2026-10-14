@@ -60,7 +60,7 @@ namespace
     {
         for ( int32 frame = 0; frame < 2000 && pfnDone( sceneManager, data ) == false; ++frame )
         {
-            sw::engine::getTaskManager().waitAll();
+            sw::engine::getSubsystem<sw::TaskManager>().waitAll();
             sceneManager.tickTransitions();
             EditorPlaySession::update( data );
             if ( pfnDone( sceneManager, data ) == false )

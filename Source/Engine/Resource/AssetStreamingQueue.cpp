@@ -44,7 +44,7 @@ namespace sw
         // 순서: 찾기 태스크가 읽기를 다 걸게 둔다 → 걸린 바이트 읽기를 멈추고 완료(태스크 워커가 이 큐를 부른다)까지 기다린다. 핸들은 잠금 밖에서
         // 다룬다 — 취소의 완료가 이 스레드에서 바로 올 수 있고, 그 완료가 `_mutex` 를 잡는다.
         if ( engine::areEngineServicesBound() )
-            engine::getTaskManager().waitAll();
+            engine::getSubsystem<TaskManager>().waitAll();
         vector<AsyncReadHandle> listIO;
         {
             std::scoped_lock<mutex> lock{ _mutex };
@@ -64,7 +64,7 @@ namespace sw
         }
 
         if ( engine::areEngineServicesBound() )
-            engine::getTaskManager().waitAll();
+            engine::getSubsystem<TaskManager>().waitAll();
 
         {
             std::scoped_lock<mutex> lock{ _mutex };
@@ -163,7 +163,7 @@ namespace sw
         // 그 조회만 수백 ms 다. 찾은 뒤의 바이트 읽기는 비동기 IO 이므로 워커를 막지 않는다.
         if ( bIssueRead )
         {
-            TaskHandle handle = engine::getTaskManager().emplaceTask(
+            TaskHandle handle = engine::getSubsystem<TaskManager>().emplaceTask(
                 "AssetStreamingResolve",
                 SW_DELEGATE_LAMBDA( TaskDelegate, [this, pathStr, generation, priority]()
             {
@@ -227,7 +227,7 @@ namespace sw
     {
         if ( engine::areEngineServicesBound() )
         {
-            TaskHandle handle = engine::getTaskManager().emplaceTask(
+            TaskHandle handle = engine::getSubsystem<TaskManager>().emplaceTask(
                 "AssetStreamingTask",
                 SW_DELEGATE_METHOD( TaskArgsDelegate, &AssetStreamingQueue::processAssetTask, this ),
                 MakeTaskArgs( pathStr, generation, bFetchData ),

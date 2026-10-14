@@ -563,7 +563,7 @@ namespace sw
 
         string preferredLanguage;
         if ( engine::areEngineServicesBound() )
-            engine::getCommandLineManager().getArgument( CommandLineArgument::LANGUAGE, preferredLanguage );
+            engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::LANGUAGE, preferredLanguage );
         if ( preferredLanguage.empty() || hasLanguage( preferredLanguage ) == false )
             preferredLanguage = string( defaultLanguage );
         if ( hasLanguage( preferredLanguage ) == false )

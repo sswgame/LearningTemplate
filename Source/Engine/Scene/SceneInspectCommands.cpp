@@ -41,7 +41,7 @@ namespace sw
 
             static GameObjectManager* findActiveObjectManager()
             {
-                Scene* pScene = engine::areEngineServicesBound() ? engine::getSceneManager().getActiveScene() : nullptr;
+                Scene* pScene = engine::areEngineServicesBound() ? engine::getSubsystem<SceneManager>().getActiveScene() : nullptr;
                 return pScene != nullptr ? pScene->getObjectManager() : nullptr;
             }
 

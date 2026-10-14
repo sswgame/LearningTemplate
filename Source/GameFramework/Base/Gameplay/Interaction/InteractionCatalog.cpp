@@ -11,6 +11,7 @@
 
 #include "GameFramework/Base/Foundation/Data/GameDataCache.h"
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 
 namespace sw
 {
@@ -40,7 +41,7 @@ namespace sw
                 if ( pText == nullptr )
                     return true;
                 TEnum parsed{};
-                if ( engine::getTypeRegistry().enumFromString( string_view( pText ), parsed ) )
+                if ( game::getSubsystem<TypeRegistry>().enumFromString( string_view( pText ), parsed ) )
                 {
                     inoutValue = parsed;
                     return true;

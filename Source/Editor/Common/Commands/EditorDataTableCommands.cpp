@@ -234,7 +234,7 @@ namespace sw::editor
         }
         inoutSheet._listRemovedKey.clear();
 
-        LocalizationManager* pLocalizationManager = editor::getService<LocalizationManager>();
+        LocalizationManager* pLocalizationManager = editor::findSubsystem<LocalizationManager>();
         if ( pLocalizationManager != nullptr )
             (void)pLocalizationManager->reloadChangedFile( inoutSheet._projectPath ); // 올린 프로젝트가 아니면 false — 다시 읽을 것이 없다
         SW_LOG_INFO( "Saved localization project '%#'.", inoutSheet._projectPath.c_str() );

@@ -28,7 +28,7 @@ namespace sw
     void HUDControllerComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        UISystem* pUI = game::getService<UISystem>();
+        UISystem* pUI = game::findSubsystem<UISystem>();
         bindUISystem( pUI != nullptr && pUI->isInitialized() ? pUI : nullptr );
     }
 

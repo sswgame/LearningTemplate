@@ -287,7 +287,7 @@ namespace sw
         if ( engine::areEngineServicesBound() )
         {
             bool bCliVSync{ false };
-            if ( engine::getCommandLineManager().getArgument( CommandLineArgument::VSYNC, bCliVSync ) )
+            if ( engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::VSYNC, bCliVSync ) )
                 swapChainDesc._bVSync = bCliVSync;
         }
         // 채택값을 디바이스에 되돌려 적는다. 프레젠트 경로(`RenderThread`)가 이것을 읽는다.

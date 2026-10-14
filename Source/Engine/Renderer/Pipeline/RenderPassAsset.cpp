@@ -37,7 +37,7 @@ namespace sw
 
     TaskHandle RenderPassAsset::loadFromXMLFileAsync( string_view assetRelativePath )
     {
-        TaskHandle handle = engine::getTaskManager().emplaceTask(
+        TaskHandle handle = engine::getSubsystem<TaskManager>().emplaceTask(
             "LoadRenderPassAsync",
             SW_DELEGATE_FUNCTION( TaskArgsDelegate, RenderPassAsset::loadFromXMLFileAsyncJob ),
             MakeTaskArgs( this, string( assetRelativePath ) ) );

@@ -376,15 +376,15 @@ SW_TEST_CASE( NetSimHarnessTest, EveryWorldRunsItsOwnSceneAndPhysics )
     vector<NetSimWorld*> listClient;
     harness.collectClients( listClient );
     SW_ASSERT_EQUAL( size_t{ 3 }, listClient.size() );
-    const IPhysicsScene3D* pServerPhysics = harness.getServer().getObjectManager().getSceneService<sw::ScenePhysics>().findScene3D();
+    const IPhysicsScene3D* pServerPhysics = harness.getServer().getObjectManager().getSubsystem<sw::ScenePhysics>().findScene3D();
     SW_ASSERT_NOT_NULL( pServerPhysics );
-    SW_EXPECT_TRUE( harness.getServer().getObjectManager().getSceneService<sw::ScenePhysics>().getStepCount() >= 290 );
+    SW_EXPECT_TRUE( harness.getServer().getObjectManager().getSubsystem<sw::ScenePhysics>().getStepCount() >= 290 );
     for ( NetSimWorld* pClient : listClient )
     {
         GameObjectManager& manager = pClient->getObjectManager();
         SW_EXPECT_TRUE( &manager != &harness.getServer().getObjectManager() );
-        SW_EXPECT_TRUE( manager.getSceneService<sw::ScenePhysics>().findScene3D() != nullptr && manager.getSceneService<sw::ScenePhysics>().findScene3D() != pServerPhysics );
-        SW_EXPECT_TRUE( manager.getSceneService<sw::ScenePhysics>().getStepCount() >= 290 );
+        SW_EXPECT_TRUE( manager.getSubsystem<sw::ScenePhysics>().findScene3D() != nullptr && manager.getSubsystem<sw::ScenePhysics>().findScene3D() != pServerPhysics );
+        SW_EXPECT_TRUE( manager.getSubsystem<sw::ScenePhysics>().getStepCount() >= 290 );
         const float32 error = computeProxyError( harness, pClient->getWorldIndex() );
         SW_EXPECT_TRUE_MSG( 0.0f <= error && error < 0.01f, "client proxies rest where the server crates rest" );
     }

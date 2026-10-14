@@ -96,11 +96,11 @@ namespace sw
 
     GameObjectManager* GameInstanceBase::findActiveObjectManager()
     {
-        // `isServiceBound<SceneManager>()` 가 바로 이 서비스를 보므로 아래 널 검사에는 사실상 닿지 않는다.
-        // 그래도 `game::getService<T>()` 는 nullptr 을 반환할 수 있어서 `CheckNullableServiceUse` 린트가 요구하는 모양을 지킨다.
-        if ( game::isServiceBound<SceneManager>() == false )
+        // `findSubsystem<SceneManager>()` 가 바로 이 서비스를 보므로 아래 널 검사에는 사실상 닿지 않는다.
+        // 그래도 `game::findSubsystem<T>()` 는 nullptr 을 반환할 수 있어서 `CheckNullableServiceUse` 린트가 요구하는 모양을 지킨다.
+        if ( game::findSubsystem<SceneManager>() == nullptr )
             return nullptr;
-        SceneManager* pSceneManager = game::getService<SceneManager>();
+        SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
         if ( pSceneManager == nullptr )
             return nullptr;
         Scene* pActiveScene = pSceneManager->getActiveScene();
@@ -132,7 +132,7 @@ namespace sw
 
         // 플레이어 설정을 다시 넣는다. 언어 팩과 입력 맵(키 바인딩, 누르기/토글)은 위에서 막 생겼고, 엔진 기동 때의 적용은 그 대상이 없을 때 한 것이다.
         // 액션을 더 늦게(컴포넌트 시작 때) 만드는 게임은 그 뒤에 `UserSettingsManager::reapplyAll` 을 부른다.
-        UserSettingsManager* pUserSettings = game::getService<UserSettingsManager>();
+        UserSettingsManager* pUserSettings = game::findSubsystem<UserSettingsManager>();
         if ( pUserSettings != nullptr )
             pUserSettings->reapplyAll();
         return bInitialized;
@@ -160,7 +160,7 @@ namespace sw
         // 게임플레이 입력 맵은 `InputManager::beginFrame` 이 프레임마다 갱신하는 통합 맵이며, `PlayerController` 가 읽는다.
         if ( settings._inputMap.empty() == false )
         {
-            InputManager* pInput = game::getService<InputManager>();
+            InputManager* pInput = game::findSubsystem<InputManager>();
             if ( pInput == nullptr )
                 SW_LOG_WARNING( "GameSettings input map '%#' is not loaded - no InputManager service", settings._inputMap.c_str() );
             else if ( pInput->getInputMap().loadFromResource( settings._inputMap ) == false )
@@ -206,7 +206,7 @@ namespace sw
     {
         if ( scenePath.empty() )
             return false;
-        SceneManager* pSceneManager = game::getService<SceneManager>();
+        SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
         if ( pSceneManager == nullptr )
         {
             SW_LOG_WARNING( "The %# scene '%#' is not opened - no SceneManager service", pWhich, scenePath.c_str() );
@@ -254,7 +254,7 @@ namespace sw
     void GameInstanceBase::update( float32 deltaTime )
     {
         // 맡긴 씬 로드가 남았거나 씬 매니저가 전환 중이면 로딩 중이다. 페이드를 먼저 진행하고, 로딩 화면이 닫히면 페이드 인을 건다.
-        const SceneManager* pSceneManager = game::getService<SceneManager>();
+        const SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
         const bool          bLoading      = _listPendingSceneLoad.empty() == false || ( pSceneManager != nullptr && pSceneManager->isTransitioning() );
         // 페이드와 로딩 화면은 실제 시간으로 돌린다. 게임 시간으로 돌리면 정지 메뉴(게임 시간 0)가 뜬 동안 페이드가 반쯤 검은 채로 멈춘다.
         const float32            realDeltaTime    = GameTimeScale::getUnscaledDeltaTime( deltaTime );

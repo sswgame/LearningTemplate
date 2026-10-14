@@ -180,7 +180,7 @@ namespace sw
 
     bool ArenaDirectorComponent::startGame()
     {
-        const AbilityCatalog* pCatalog = game::getService<AbilityCatalog>();
+        const AbilityCatalog* pCatalog = game::findSubsystem<AbilityCatalog>();
         if ( pCatalog == nullptr || pCatalog->getAbilitySetCount() == 0 )
         {
             SW_LOG_WARNING( "[Arena] the ability catalog is not loaded - the arena cannot start" );

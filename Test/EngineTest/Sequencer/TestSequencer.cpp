@@ -460,9 +460,9 @@ SW_TEST_CASE( SequencerTest, ItemKindTableCoversEveryKind )
         SW_EXPECT_EQUAL( kindIndex, static_cast<int32>( pInfo->_kind ) );
     }
     // 에디터 트랙 이름은 리플렉션 enum 이름이다.
-    SW_EXPECT_STREQ( "Clip", sw::engine::getTypeRegistry().enumToString( sw::SequenceItemKind::Clip ) );
-    SW_EXPECT_STREQ( "Event", sw::engine::getTypeRegistry().enumToString( sw::SequenceItemKind::Event ) );
-    SW_EXPECT_STREQ( "CameraCut", sw::engine::getTypeRegistry().enumToString( sw::SequenceItemKind::CameraCut ) );
+    SW_EXPECT_STREQ( "Clip", sw::engine::getSubsystem<sw::TypeRegistry>().enumToString( sw::SequenceItemKind::Clip ) );
+    SW_EXPECT_STREQ( "Event", sw::engine::getSubsystem<sw::TypeRegistry>().enumToString( sw::SequenceItemKind::Event ) );
+    SW_EXPECT_STREQ( "CameraCut", sw::engine::getSubsystem<sw::TypeRegistry>().enumToString( sw::SequenceItemKind::CameraCut ) );
     SW_EXPECT_NULL( sw::SequenceAsset::findItemKindInfo( sw::SequenceItemKind::Count ) );
     SW_EXPECT_NULL( sw::SequenceAsset::findItemKindInfo( static_cast<sw::SequenceItemKind>( -1 ) ) );
 }

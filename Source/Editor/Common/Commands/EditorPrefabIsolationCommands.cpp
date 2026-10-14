@@ -179,7 +179,7 @@ namespace sw::editor
             return false;
 
         const PrefabIsolationFrame frame         = *pFrame;
-        SceneManager*              pSceneManager = editor::getService<SceneManager>();
+        SceneManager*              pSceneManager = editor::findSubsystem<SceneManager>();
         if ( pSceneManager == nullptr )
             return false;
         Scene*             pScene   = pSceneManager->getActiveScene();

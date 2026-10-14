@@ -3,6 +3,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -67,7 +68,7 @@ SW_TEST_CASE( PropertyUnitsTest, UnitsMatchHowValuesAreStored )
     SW_ASSERT_NOT_NULL( sw::HealthBarComponent::StaticType() );
 
     sw::vector<const sw::TypeInfo*> listType;
-    sw::engine::getTypeRegistry().forEachType( [&listType]( const sw::TypeInfo& typeInfo )
+    sw::engine::getSubsystem<sw::TypeRegistry>().forEachType( [&listType]( const sw::TypeInfo& typeInfo )
     { listType.push_back( &typeInfo ); } );
     SW_ASSERT_TRUE( listType.size() > 50 );
 

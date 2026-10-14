@@ -71,7 +71,7 @@ namespace sw::editor
              */
             static FrameRenderer* findFrameRenderer()
             {
-                return editor::getService<FrameRenderer>();
+                return editor::findSubsystem<FrameRenderer>();
             }
         };
     } // namespace

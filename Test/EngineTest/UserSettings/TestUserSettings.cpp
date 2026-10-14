@@ -85,7 +85,7 @@ namespace
         {
             resetTestVariables();
             sw::UserSettingsTargets targets;
-            targets._pGlobalVariableManager = &sw::engine::getGlobalVariableManager();
+            targets._pGlobalVariableManager = &sw::engine::getSubsystem<sw::GlobalVariableManager>();
             targets._pAudioService          = pAudioService;
             outSettings.initialize( targets );
             if ( outSettings.loadSchemaFromXMLText( kSchemaXML, "test.settings.xml" ) == false )
@@ -105,7 +105,7 @@ namespace
         static const sw::GlobalVariableInfo& findVariable( const utf8* pName )
         {
             static const sw::GlobalVariableInfo kMissing{};
-            const sw::GlobalVariableInfo*       pVariable = sw::engine::getGlobalVariableManager().findVariable( pName );
+            const sw::GlobalVariableInfo*       pVariable = sw::engine::getSubsystem<sw::GlobalVariableManager>().findVariable( pName );
             return pVariable != nullptr ? *pVariable : kMissing;
         }
 
@@ -116,7 +116,7 @@ namespace
         {
             sw::UserSettingsManager settings;
             sw::UserSettingsTargets targets;
-            targets._pGlobalVariableManager = &sw::engine::getGlobalVariableManager();
+            targets._pGlobalVariableManager = &sw::engine::getSubsystem<sw::GlobalVariableManager>();
             settings.initialize( targets );
             SW_TEST_DEFENSIVE_SCOPE( "a broken user settings schema is a load error" );
             return settings.loadSchemaFromXMLText( pXML, "broken.settings.xml" );
@@ -142,7 +142,7 @@ SW_TEST_CASE( UserSettingsTest, CommandLineGlobalVariableWinsAtStartup )
     gv_userSettingsTestFloat = 0.75f; // 엔진 기동은 명령줄을 전역 변수에 먼저 넣는다
     sw::UserSettingsManager settings;
     sw::UserSettingsTargets targets;
-    targets._pGlobalVariableManager = &sw::engine::getGlobalVariableManager();
+    targets._pGlobalVariableManager = &sw::engine::getSubsystem<sw::GlobalVariableManager>();
     targets._pCommandLineManager    = &commandLine;
     settings.initialize( targets );
     SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( UserSettingsTestInternal::kSchemaXML, "test.settings.xml" ) );
@@ -181,7 +181,7 @@ SW_TEST_CASE( UserSettingsTest, RegisteredCommandLineVariableWinsAtStartup )
     gv_userSettingsTestFloat = 0.75f;
     sw::UserSettingsManager settings;
     sw::UserSettingsTargets targets;
-    targets._pGlobalVariableManager = &sw::engine::getGlobalVariableManager();
+    targets._pGlobalVariableManager = &sw::engine::getSubsystem<sw::GlobalVariableManager>();
     targets._pCommandLineManager    = &commandLine;
     settings.initialize( targets );
     SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( UserSettingsTestInternal::kSchemaXML, "test.settings.xml" ) );
@@ -777,7 +777,7 @@ SW_TEST_CASE( UserSettingsTest, PseudoLocaleIsSelectableThroughTheLanguageSettin
 SW_TEST_CASE( UserSettingsTest, AccessibilitySettingsReachGlobalVariables )
 {
     using Internal                       = UserSettingsTestInternal;
-    sw::GlobalVariableManager& variables = sw::engine::getGlobalVariableManager();
+    sw::GlobalVariableManager& variables = sw::engine::getSubsystem<sw::GlobalVariableManager>();
     sw::UserSettingsManager    settings;
     sw::UserSettingsTargets    targets;
     targets._pGlobalVariableManager = &variables;
@@ -850,7 +850,7 @@ SW_TEST_CASE( UserSettingsTest, GameOverlayAndGameDefaults )
 {
     sw::UserSettingsManager settings;
     sw::UserSettingsTargets targets;
-    targets._pGlobalVariableManager = &sw::engine::getGlobalVariableManager();
+    targets._pGlobalVariableManager = &sw::engine::getSubsystem<sw::GlobalVariableManager>();
     settings.initialize( targets );
     SW_ASSERT_TRUE( settings.loadSchema( "engine/settings/engine.settings.xml" ) );
     SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1">

@@ -21,7 +21,7 @@ namespace sw
 {
     /**
      * @struct GameSound
-     * @brief `game::getService<IAudioService>()` 를 찾고 널을 거르는 일을 게임마다 다시 쓰지 않도록 모은 것입니다.
+     * @brief `game::findSubsystem<IAudioService>()` 를 찾고 널을 거르는 일을 게임마다 다시 쓰지 않도록 모은 것입니다.
      */
     struct SW_GF_API GameSound
     {

@@ -344,7 +344,7 @@ namespace sw
         const SceneEngineServices& getSceneEngineServices() const { return _services; }
         /**
          * @brief 생성자로 받은 에셋 매니저입니다(빌림). 없으면 nullptr 입니다.
-         * @details 씬 안의 엔진 코드(스프라이트 배치 · 애니메이션 알림)가 전역 조회 대신 씁니다. 게임 모듈은 `game::getService<AssetManager>()` 를 씁니다.
+         * @details 씬 안의 엔진 코드(스프라이트 배치 · 애니메이션 알림)가 전역 조회 대신 씁니다. 게임 모듈은 `game::findSubsystem<AssetManager>()` 를 씁니다.
          */
         AssetManager* findAssetManager() const { return _services._pAssetManager; }
         /**
@@ -355,16 +355,16 @@ namespace sw
         /**
          * @brief 이 씬의 서비스 @p TService 입니다(`ISceneService.h`). 레지스트리의 서비스는 매니저마다 하나씩 늘 있습니다.
          * @details 언리얼 `UWorld::GetSubsystem<T>()` 와 같은 자리입니다. 코어는 서비스 타입을 모르고, 부르는 쪽이 그 타입의 헤더를 듭니다
-         *          (`manager.getSceneService<sw::ScenePhysics>()` · `getSceneService<sw::SceneAudio>()` · `getSceneService<SceneNavigation>()`).
+         *          (`manager.getSubsystem<sw::ScenePhysics>()` · `getSubsystem<sw::SceneAudio>()` · `getSubsystem<SceneNavigation>()`).
          */
         template <typename TService>
-        TService& getSceneService()
+        TService& getSubsystem()
         {
             return _sceneScope.get<TService>();
         }
         /** @brief 이 씬의 서비스 @p TService 입니다. */
         template <typename TService>
-        const TService& getSceneService() const
+        const TService& getSubsystem() const
         {
             return _sceneScope.get<TService>();
         }

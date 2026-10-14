@@ -336,7 +336,7 @@ namespace sw
             const uint32 canvasWidth        = packet._viewportWidth > 0 ? packet._viewportWidth : pRHI->getDevice().getBackBufferWidth();
             const uint32 canvasHeight       = packet._viewportHeight > 0 ? packet._viewportHeight : pRHI->getDevice().getBackBufferHeight();
             CanvasTestPattern::paint( packet._canvas._mainOutput, float2{ static_cast<float32>( canvasWidth ), static_cast<float32>( canvasHeight ) }, pFontService,
-                                      engine::getFrameProfiler().getFrameCount() );
+                                      engine::getSubsystem<FrameProfiler>().getFrameCount() );
         }
         if ( pFontService != nullptr && pFontService->isInitialized() )
             pFontService->getGlyphCache().getAtlas().takeUploads( packet._canvas._listAtlasUpload );

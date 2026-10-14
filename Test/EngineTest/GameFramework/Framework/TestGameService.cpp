@@ -26,7 +26,7 @@ namespace
  */
 SW_TEST_CASE( GameServiceTest, ServiceIsFoundInTheCurrentGameScope )
 {
-    SW_EXPECT_TRUE( game::getService<GameServiceProbeCatalog>() == nullptr );
+    SW_EXPECT_TRUE( game::findSubsystem<GameServiceProbeCatalog>() == nullptr );
     GameServiceProbeCatalog first{ 1 };
     GameServiceProbeCatalog second{ 2 };
     {
@@ -34,11 +34,11 @@ SW_TEST_CASE( GameServiceTest, ServiceIsFoundInTheCurrentGameScope )
         game::ScopedGameScope activeScope( scope );
         SW_EXPECT_TRUE( scope.bind( &first ) );
         SW_EXPECT_FALSE( scope.bind( &second ) ); // 같은 타입은 거절 — 나중 것이 앞 것을 소리 없이 덮지 않는다
-        SW_EXPECT_TRUE( game::getService<GameServiceProbeCatalog>() == &first );
-        SW_EXPECT_TRUE( game::isServiceBound<GameServiceProbeCatalog>() );
+        SW_EXPECT_TRUE( game::findSubsystem<GameServiceProbeCatalog>() == &first );
+        SW_EXPECT_NOT_NULL( game::findSubsystem<GameServiceProbeCatalog>() );
     }
-    SW_EXPECT_TRUE( game::getService<GameServiceProbeCatalog>() == nullptr ); // 범위가 사라지면 칸도 없다(풀 일이 없다)
-    SW_EXPECT_FALSE( game::isServiceBound<GameServiceProbeCatalog>() );
+    SW_EXPECT_TRUE( game::findSubsystem<GameServiceProbeCatalog>() == nullptr ); // 범위가 사라지면 칸도 없다(풀 일이 없다)
+    SW_EXPECT_NULL( game::findSubsystem<GameServiceProbeCatalog>() );
 }
 
 /**
@@ -56,10 +56,10 @@ SW_TEST_CASE( GameServiceTest, NestedScopesShadowAndRestore )
         SubsystemScope        innerScope;
         game::ScopedGameScope activeInner( innerScope );
         SW_EXPECT_TRUE( game::findGameScope() == &innerScope );
-        SW_EXPECT_TRUE( game::getService<GameServiceProbeCatalog>() == &outerCatalog ); // 가까운 범위에 없으면 앞 범위
+        SW_EXPECT_TRUE( game::findSubsystem<GameServiceProbeCatalog>() == &outerCatalog ); // 가까운 범위에 없으면 앞 범위
         SW_EXPECT_TRUE( innerScope.bind( &innerCatalog ) );
-        SW_EXPECT_TRUE( game::getService<GameServiceProbeCatalog>() == &innerCatalog ); // 가까운 범위가 이긴다
+        SW_EXPECT_TRUE( game::findSubsystem<GameServiceProbeCatalog>() == &innerCatalog ); // 가까운 범위가 이긴다
     }
     SW_EXPECT_TRUE( game::findGameScope() == &outerScope );
-    SW_EXPECT_TRUE( game::getService<GameServiceProbeCatalog>() == &outerCatalog );
+    SW_EXPECT_TRUE( game::findSubsystem<GameServiceProbeCatalog>() == &outerCatalog );
 }

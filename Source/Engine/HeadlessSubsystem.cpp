@@ -41,7 +41,7 @@ namespace sw
 
     SubsystemInitResult HeadlessSubsystem::initializeSubsystem()
     {
-        CommandLineManager& commandLine = engine::getCommandLineManager();
+        CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
         // 전용 서버가 하는 헤드리스 작업은 씬 쿠킹(서버 팩)까지다. 셰이더 쿠킹(DXC) · 원본 임포트(에디터 모듈)는 App 의 일이다 — 조용히 넘기지 않고 실패한다.
         if ( _bDedicatedServer )
         {
@@ -85,7 +85,7 @@ namespace sw
         if ( commandLine.getArgument( CommandLineArgument::WRITE_REFLECTION_DOCS, reflectionDocsDir ) && reflectionDocsDir.empty() == false )
         {
             _state._bHeadless = true;
-            _state._bFailed   = ReflectionDocWriter::writeMarkdown( engine::getTypeRegistry(), reflectionDocsDir ) == 0;
+            _state._bFailed   = ReflectionDocWriter::writeMarkdown( engine::getSubsystem<TypeRegistry>(), reflectionDocsDir ) == 0;
             return SubsystemInitResult::SkipDependents;
         }
 

@@ -85,7 +85,7 @@ namespace sw
 
     IGrabPhysics& GrabberComponent::getBackend()
     {
-        IGrabPhysics* pService = game::getService<IGrabPhysics>();
+        IGrabPhysics* pService = game::findSubsystem<IGrabPhysics>();
         if ( pService == nullptr )
             return _fallback;
         return *pService;

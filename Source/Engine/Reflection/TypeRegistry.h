@@ -498,9 +498,3 @@ namespace sw
         return pCanonicalName != nullptr && isType( nameOrFqn, hashed_string( pCanonicalName ) );
     }
 } // namespace sw
-
-namespace sw::engine
-{
-    /** @brief 전역 TypeRegistry 인스턴스를 반환합니다. */
-    SW_API TypeRegistry& getTypeRegistry();
-} // namespace sw::engine

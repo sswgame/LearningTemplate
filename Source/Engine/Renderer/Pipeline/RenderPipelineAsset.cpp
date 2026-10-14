@@ -50,7 +50,7 @@ namespace sw
         {
             const RenderPassAttachment& attachment = _desc._listAttachment[attachmentIndex];
             RHIFormat                   parsed{};
-            if ( engine::getTypeRegistry().enumFromString( attachment._format, parsed ) == false )
+            if ( engine::getSubsystem<TypeRegistry>().enumFromString( attachment._format, parsed ) == false )
             {
                 SW_LOG_ERROR( "[%#] attachment '%#': 알 수 없는 포맷 '%#'", sourcePath, attachment._name, attachment._format );
                 ++issueCount;
@@ -88,7 +88,7 @@ namespace sw
 
         auto isDepthAttachment = [&]( const RenderPassAttachment* pAttachment ) -> bool
         {
-            return pAttachment != nullptr && engine::getTypeRegistry().enumFromString<RHIFormat>( pAttachment->_format ) == constant::kDepthStencilFormat;
+            return pAttachment != nullptr && engine::getSubsystem<TypeRegistry>().enumFromString<RHIFormat>( pAttachment->_format ) == constant::kDepthStencilFormat;
         };
 
         // 2) 패스: 이름이 하나뿐인가, 타입 표기가 해석되는가, 입출력이 선언된 첨부를 가리키는가.
@@ -107,7 +107,7 @@ namespace sw
         }
         for ( RenderGraphPassDesc& pass : _desc._listPass )
         {
-            pass._resolvedType = engine::getTypeRegistry().enumFromString<RenderPassType>( pass._type );
+            pass._resolvedType = engine::getSubsystem<TypeRegistry>().enumFromString<RenderPassType>( pass._type );
             pass._resolvedDepthAttachment =
                 pass._depthAttachment.empty() ? hashed_string{} : hashed_string( pass._depthAttachment.c_str() );
             pass._listResolvedInput.clear();
@@ -173,7 +173,7 @@ namespace sw
                                   sourcePath, pass._name, pass._depthAttachment );
                     ++issueCount;
                 }
-                else if ( engine::getTypeRegistry().enumFromString<RHIFormat>( pDepthAttachment->_format ) != constant::kDepthStencilFormat )
+                else if ( engine::getSubsystem<TypeRegistry>().enumFromString<RHIFormat>( pDepthAttachment->_format ) != constant::kDepthStencilFormat )
                 {
                     SW_LOG_ERROR( "[%#] pass '%#': 뎁스 첨부 '%#' 의 포맷이 '%#' 입니다 — 뎁스 포맷이어야 합니다",
                                   sourcePath, pass._name, pass._depthAttachment, pDepthAttachment->_format );
@@ -186,7 +186,7 @@ namespace sw
                 for ( const string& outputName : pass._listOutput )
                 {
                     const RenderPassAttachment* pAttachment = findAttachment( outputName );
-                    if ( pAttachment == nullptr || engine::getTypeRegistry().enumFromString<RHIFormat>( pAttachment->_format ) != constant::kDepthStencilFormat )
+                    if ( pAttachment == nullptr || engine::getSubsystem<TypeRegistry>().enumFromString<RHIFormat>( pAttachment->_format ) != constant::kDepthStencilFormat )
                         continue;
                     SW_LOG_ERROR( "[%#] pass '%#': 뎁스 첨부 '%#' 을 출력으로 선언했는데 _depthAttachment 가 비어 "
                                   "있습니다 — 이대로면 뎁스 없이 그립니다",
@@ -206,7 +206,7 @@ namespace sw
                 if ( pAttachment == nullptr )
                     continue;
                 RHIFormat fmt{};
-                if ( engine::getTypeRegistry().enumFromString( pAttachment->_format, fmt ) && fmt != RHIFormat::D24_UNORM_S8_UINT )
+                if ( engine::getSubsystem<TypeRegistry>().enumFromString( pAttachment->_format, fmt ) && fmt != RHIFormat::D24_UNORM_S8_UINT )
                     ++colorCount;
             }
             if ( colorCount > kMaxColorAttachments )
@@ -364,7 +364,7 @@ namespace sw
 
     TaskHandle RenderPipelineAsset::loadFromXMLFileAsync( string_view assetRelativePath )
     {
-        TaskHandle handle = engine::getTaskManager().emplaceTask(
+        TaskHandle handle = engine::getSubsystem<TaskManager>().emplaceTask(
             "LoadRenderPipelineAsync",
             SW_DELEGATE_FUNCTION( TaskArgsDelegate, RenderPipelineAsset::loadFromXMLFileAsyncJob ),
             MakeTaskArgs( this, string( assetRelativePath ) ) );

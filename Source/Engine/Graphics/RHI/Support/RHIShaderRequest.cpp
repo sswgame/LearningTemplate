@@ -57,7 +57,7 @@ namespace sw
     ShaderCompileResult RHIShaderRequest::compile( const ShaderCompileDesc& desc )
     {
         if ( engine::areEngineServicesBound() )
-            return engine::getShaderCache().getOrCompile( desc );
+            return engine::getSubsystem<ShaderCache>().getOrCompile( desc );
         return ShaderCompiler::compileHlsl( desc );
     }
 

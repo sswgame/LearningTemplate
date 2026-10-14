@@ -35,8 +35,8 @@ namespace sw
     SubsystemInitResult FrameRendererSubsystem::initializeSubsystem()
     {
         IRHIDevice& device = _rhiSubsystem.findRHI()->getDevice();
-        _packetBuilder->initialize( device, &engine::getTaskManager() );
-        if ( _frameRenderer->initialize( &device, &engine::getTaskManager() ) == false )
+        _packetBuilder->initialize( device, &engine::getSubsystem<TaskManager>() );
+        if ( _frameRenderer->initialize( &device, &engine::getSubsystem<TaskManager>() ) == false )
         {
             SW_LOG_ERROR( "Failed to initialize FrameRenderer!" );
             return SubsystemInitResult::Failed;

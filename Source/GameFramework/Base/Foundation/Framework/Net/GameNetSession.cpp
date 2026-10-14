@@ -34,7 +34,7 @@ namespace sw
              */
             [[maybe_unused]] static constexpr uint8 kTrafficMessageKind = NetMessageRange::kFramework - 1;
             /** @brief 지금 게임 인스턴스의 세션입니다(게임 범위의 서브시스템) — 개발 명령 `net.*` 이 읽는다(게임 스레드). 없으면 nullptr 입니다. */
-            [[maybe_unused]] static GameNetSession* findActiveSession() { return game::getService<GameNetSession>(); } // 개발 명령만 쓴다(Shipping 에는 없다)
+            [[maybe_unused]] static GameNetSession* findActiveSession() { return game::findSubsystem<GameNetSession>(); } // 개발 명령만 쓴다(Shipping 에는 없다)
 
 #if SW_DEV_COMMANDS_ENABLED
             /** @brief 명령을 받을 세션 — 없으면 답을 채우고 nullptr 입니다. */

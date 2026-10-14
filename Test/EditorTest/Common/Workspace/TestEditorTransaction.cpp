@@ -27,7 +27,7 @@ using namespace sw::editor;
 
 // EditorTransaction — Undo 스택이 **없을 때도** 안전한가, 있을 때는 제대로 닿는가.
 //
-// 이 스위트가 성립하는 이유: `editor::getService<T>()` 의 모듈 서비스 표(`s_editorService`)는
+// 이 스위트가 성립하는 이유: `editor::findSubsystem<T>()` 의 모듈 서비스 표(`s_editorService`)는
 // 모듈 export 매크로의 `bindService` 콜백이 채우는데, 테스트는 그것을 부르지 않는다. 그래서
 // **EditorTest 안에서는 커맨드 스택 서비스가 처음부터 nullptr 이다** — 즉 이 파일은 "서비스가
 // 없는 상태" 를 따로 만들 필요 없이 그냥 그 상태다. 반대 방향(있을 때)은
@@ -66,7 +66,7 @@ namespace
 
 /**
  * @brief [EditorTransactionTest] 커맨드 스택 서비스가 없어도 트랜잭션이 터지지 않는다
- * @details `editor::getService<T>()` 는 **문서대로 nullptr 을 돌려줄 수 있다.** 커맨드 스택은
+ * @details `editor::findSubsystem<T>()` 는 **문서대로 nullptr 을 돌려줄 수 있다.** 커맨드 스택은
  *          `Engine` 소유라 EditorModule 보다 오래 살고 **종료할 때 서비스 결합이 먼저 풀리므로**,
  *          그 창에서 트랜잭션이 확인 없이 `->` 로 따라가면 널 역참조다.
  *          이 테스트 환경이 바로 그 상태다 — 확인이 빠지면 이 케이스가 **프로세스를 죽인다**.
@@ -74,7 +74,7 @@ namespace
 SW_TEST_CASE( EditorTransactionTest, NoCommandStackServiceIsSafe )
 {
     // 서비스가 정말로 없는 상태인지부터 못 박는다 — 이 전제가 깨지면 이 테스트는 아무것도 안 본다.
-    SW_ASSERT_EQUAL( nullptr, getService<CommandStack>() );
+    SW_ASSERT_EQUAL( nullptr, findSubsystem<CommandStack>() );
 
     GameObjectManager manager;
     GameObject*       pObject = manager.createGameObject( hashed_string( "Probe" ) );
@@ -84,7 +84,7 @@ SW_TEST_CASE( EditorTransactionTest, NoCommandStackServiceIsSafe )
     callEveryTransactionEntryPoint( pObject );
 
     // 여기까지 왔다는 것이 결과다. 스택이 없으므로 아무것도 쌓이지 않았어야 한다.
-    SW_EXPECT_EQUAL( nullptr, getService<CommandStack>() );
+    SW_EXPECT_EQUAL( nullptr, findSubsystem<CommandStack>() );
 }
 
 /**
@@ -96,7 +96,7 @@ SW_TEST_CASE( EditorTransactionTest, BoundCommandStackReceivesPush )
 {
     CommandStack              stack;
     ScopedCommandStackService scoped{ stack };
-    SW_ASSERT_EQUAL( &stack, getService<CommandStack>() );
+    SW_ASSERT_EQUAL( &stack, findSubsystem<CommandStack>() );
 
     int32 value{ 0 };
     EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [&value]()
@@ -125,7 +125,7 @@ SW_TEST_CASE( EditorTransactionTest, BoundCommandStackReceivesPush )
  */
 SW_TEST_CASE( EditorTransactionTest, RecordModifyRunsToTheEndWithoutStack )
 {
-    SW_ASSERT_EQUAL( nullptr, getService<CommandStack>() );
+    SW_ASSERT_EQUAL( nullptr, findSubsystem<CommandStack>() );
 
     GameObjectManager manager;
     GameObject*       pObject = manager.createGameObject( hashed_string( "DirtyProbe" ) );

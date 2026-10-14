@@ -132,7 +132,7 @@ namespace sw
 
     SubsystemInitResult FontService::initializeSubsystem()
     {
-        return initialize( engine::getEngineDefaultAssets()._fontCatalog ) ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
+        return initialize( engine::getSubsystem<EngineDefaultAssets>()._fontCatalog ) ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
     }
 
     void FontService::shutdown()
@@ -364,6 +364,6 @@ namespace sw
     {
         if ( _pLocalization != nullptr )
             return _pLocalization;
-        return engine::getBoundEngineServices()._pLocalizationManager;
+        return engine::findSubsystem<LocalizationManager>();
     }
 } // namespace sw

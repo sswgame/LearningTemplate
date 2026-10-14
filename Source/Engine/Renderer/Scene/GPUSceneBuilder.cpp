@@ -770,7 +770,7 @@ namespace sw
     {
         if ( engine::areEngineServicesBound() == false )
             return;
-        const uint32 generation = engine::getAssetManager().getAssetCache<TextureCache>().getReloadGeneration();
+        const uint32 generation = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().getReloadGeneration();
         if ( generation == _lastTextureReloadGeneration )
             return;
         _lastTextureReloadGeneration = generation;

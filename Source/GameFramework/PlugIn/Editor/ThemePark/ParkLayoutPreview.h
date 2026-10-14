@@ -32,7 +32,7 @@ namespace sw::editor
     /**
      * @class ParkLayoutPreview
      * @brief 배치 파일 하나(기본 `game/themepark/data/rides.xml`)를 키트의 로더로 읽어 보관합니다. 파일 내용이 바뀌면 다시 읽습니다.
-     * @details 이 확장이 기여하는 에디터 서브시스템이다(`SW_EDITOR_SUBSYSTEM`) — 패널과 시각화가 `editor::getService<ParkLayoutPreview>()` 로 같이 본다.
+     * @details 이 확장이 기여하는 에디터 서브시스템이다(`SW_EDITOR_SUBSYSTEM`) — 패널과 시각화가 `editor::findSubsystem<ParkLayoutPreview>()` 로 같이 본다.
      */
     class ParkLayoutPreview final : public EditorSubsystem
     {

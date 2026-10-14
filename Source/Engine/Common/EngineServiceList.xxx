@@ -1,21 +1,21 @@
 /**
  * @file Engine/Common/EngineServiceList.xxx
- * @brief 엔진 서비스 표(`engine::getXxx()` — 바인딩 때 범위에서 한 번 찾아 둔 캐시)의 단일 등록표입니다(X-macro).
+ * @brief 엔진 범위에서 바인딩 때 한 번 찾아 두는 서비스의 단일 등록표입니다(X-macro). `engine::getSubsystem<T>()` 가 이 표의 칸을 읽습니다.
  * @details include 하기 전에 아래 매크로를 정의한 뒤 여러 번 include 합니다(#pragma once 없음).
- *          전방 선언 · EngineServices 멤버 · engine::getXxx() 선언/정의 · 필수 행 검사 · 모듈 범위 채우기(`bindModuleServices`)가 이 목록에서 생성됩니다.
- *          모듈은 이 목록을 모른다 — 호스트가 넘긴 범위에서 타입으로 찾는다(`game::getService<T>()` · `editor::getService<T>()`).
+ *          전방 선언 · 칸 색인 · 타입 → 칸 trait · 필수 행 검사 · 모듈 범위 채우기(`bindModuleServices`)가 이 목록에서 생성됩니다.
+ *          모듈은 이 목록을 모른다 — 호스트가 넘긴 범위에서 타입으로 찾는다(`game::findSubsystem<T>()` · `editor::findSubsystem<T>()`).
  *
- * SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility )
- *   Type& getter()        — 바인딩되지 않았으면 assert.
+ * SW_ENGINE_SERVICE( Tag, Type, requirement, visibility )
+ *   `engine::getSubsystem<Type>()` 는 `Type&`(비었으면 assert), `engine::findSubsystem<Type>()` 는 `Type*` 입니다.
  *   requirement — `Required` 면 areEngineServicesBound() 검사에 포함, `Optional` 이면 제외.
- *   visibility  — `GameVisible` 이면 게임 모듈(SWGame)에 노출, `HostOnly` 면 호스트 · 에디터 전용(게임이 요청하면 nullptr).
- * SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility )
- *   const Type& getter()  — 위와 같고, const 참조를 반환.
- * SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility )
- *   Type* getter()        — assert 없음(널 허용). bound 검사에서 제외.
+ *   visibility  — `GameVisible` 이면 게임 모듈(SWGame)의 범위에 건다, `HostOnly` 면 호스트 · 에디터 전용.
+ * SW_ENGINE_SERVICE_CONST( Tag, Type, requirement, visibility )
+ *   위와 같고, 두 창구 모두 const 로 돌려준다.
+ * SW_ENGINE_SERVICE_OPT( Tag, Type, visibility )
+ *   비어 있을 수 있는 칸입니다. `engine::findSubsystem<Type>()` 만 된다(`getSubsystem` 은 컴파일 오류). bound 검사에서 제외.
  *
  * 소유 — 줄의 객체는 **호스트의 서브시스템 컬렉션**(부트스트랩 · 서비스 · 엔진 범위)이 소유합니다. 이 목록은 무엇을 찾아 둘지만 말합니다 —
- *         `engine::bindEngineServices( 엔진 범위 )` 가 행마다 한 번 `locateSubsystem<Type>()`(타입 해시)으로 찾아 타입 포인터로 둡니다(프레임마다 찾지 않는다).
+ *         `engine::bindEngineServices( 엔진 범위 )` 가 행마다 한 번 `locateSubsystem<Type>()`(타입 해시)으로 찾아 칸에 둡니다(프레임마다 찾지 않는다).
  *         `Type` 이 서브시스템이 아니면(값 묶음 · 소유한 서브시스템 안의 객체) 호스트가 그 객체를 범위에 `bind` 합니다.
  *         필수 행이 비면 엔진 루프가 서지 않습니다(호스트가 그 서브시스템을 넣지 않았다).
  *
@@ -24,52 +24,52 @@
  * 정의하지 않은 변형은 include 하는 쪽이 빈 매크로로 채워야 합니다.
  */
 
-SW_ENGINE_SERVICE( _pCommandLineManager, class, CommandLineManager, getCommandLineManager, Required, HostOnly )
-SW_ENGINE_SERVICE( _pGlobalVariableManager, class, GlobalVariableManager, getGlobalVariableManager, Required, GameVisible )
-SW_ENGINE_SERVICE( _pLocalizationManager, class, LocalizationManager, getLocalizationManager, Required, GameVisible )
-SW_ENGINE_SERVICE( _pTaskManager, class, TaskManager, getTaskManager, Required, HostOnly )
-SW_ENGINE_SERVICE( _pTypeRegistry, class, TypeRegistry, getTypeRegistry, Required, GameVisible )
-SW_ENGINE_SERVICE( _pSceneManager, class, SceneManager, getSceneManager, Required, GameVisible )
-SW_ENGINE_SERVICE( _pInputManager, class, InputManager, getInputManager, Required, GameVisible )
-SW_ENGINE_SERVICE( _pAudioService, class, IAudioService, getAudioService, Required, GameVisible )
-SW_ENGINE_SERVICE( _pEventDispatcher, class, EventDispatcher, getEventDispatcher, Required, GameVisible )
+SW_ENGINE_SERVICE( class, CommandLineManager, Required, HostOnly )
+SW_ENGINE_SERVICE( class, GlobalVariableManager, Required, GameVisible )
+SW_ENGINE_SERVICE( class, LocalizationManager, Required, GameVisible )
+SW_ENGINE_SERVICE( class, TaskManager, Required, HostOnly )
+SW_ENGINE_SERVICE( class, TypeRegistry, Required, GameVisible )
+SW_ENGINE_SERVICE( class, SceneManager, Required, GameVisible )
+SW_ENGINE_SERVICE( class, InputManager, Required, GameVisible )
+SW_ENGINE_SERVICE( class, IAudioService, Required, GameVisible )
+SW_ENGINE_SERVICE( class, EventDispatcher, Required, GameVisible )
 // 비동기 파일 읽기(IOCP · io_uring · 스레드 풀). 에셋 스트리밍 큐 · 팩 리더가 쓴다. 시작 · 종료는 서브시스템 FileIO(`AsyncFileIO` 가 직접 상속)다.
-SW_ENGINE_SERVICE( _pAsyncFileIO, class, AsyncFileIO, getAsyncFileIO, Required, HostOnly )
-SW_ENGINE_SERVICE( _pAssetManager, class, AssetManager, getAssetManager, Required, GameVisible )
-SW_ENGINE_SERVICE( _pAssetStreamingQueue, class, AssetStreamingQueue, getAssetStreamingQueue, Required, HostOnly )
+SW_ENGINE_SERVICE( class, AsyncFileIO, Required, HostOnly )
+SW_ENGINE_SERVICE( class, AssetManager, Required, GameVisible )
+SW_ENGINE_SERVICE( class, AssetStreamingQueue, Required, HostOnly )
 // CommandStack 은 에디터 Undo/Redo 전용이라 Shipping 에서는 아예 만들지 않는다
 // (엔진 루프의 서비스 범위 `#if !defined(SW_SHIPPING)` 참고). 그런데 Required 면
 // areEngineServicesBound() 가 Shipping 에서 영영 false 가 되고, 그 함수로 게이팅되는 경로가
 // 모두 무력화된다(셰이더 캐시를 건너뛰고 런타임 컴파일러를 직접 부르다 Shipping 에는 DXC 가 없어 죽는다).
 // 이것을 쓰는 곳은 모두 Shipping 에서 빠져 있다.
-SW_ENGINE_SERVICE( _pCommandStack, class, CommandStack, getCommandStack, Optional, HostOnly )
-SW_ENGINE_SERVICE( _pDebugOverlayState, struct, DebugOverlayState, getDebugOverlayState, Required, GameVisible )
-SW_ENGINE_SERVICE( _pDebugDrawQueue, class, DebugDrawQueue, getDebugDrawQueue, Required, GameVisible )
-SW_ENGINE_SERVICE( _pRHIBackendRegistry, class, RHIBackendRegistry, getRHIBackendRegistry, Required, HostOnly )
-SW_ENGINE_SERVICE( _pCompressionCodecRegistry, class, CompressionCodecRegistry, getCompressionCodecRegistry, Required, GameVisible )
-SW_ENGINE_SERVICE( _pShaderCache, class, ShaderCache, getShaderCache, Required, GameVisible )
-SW_ENGINE_SERVICE( _pComponentDefaults, class, ComponentDefaults, getComponentDefaults, Required, GameVisible )
-SW_ENGINE_SERVICE( _pFrameProfiler, class, FrameProfiler, getFrameProfiler, Required, GameVisible )
-SW_ENGINE_SERVICE( _pUserSettingsManager, class, UserSettingsManager, getUserSettingsManager, Required, GameVisible )
+SW_ENGINE_SERVICE( class, CommandStack, Optional, HostOnly )
+SW_ENGINE_SERVICE( struct, DebugOverlayState, Required, GameVisible )
+SW_ENGINE_SERVICE( class, DebugDrawQueue, Required, GameVisible )
+SW_ENGINE_SERVICE( class, RHIBackendRegistry, Required, HostOnly )
+SW_ENGINE_SERVICE( class, CompressionCodecRegistry, Required, GameVisible )
+SW_ENGINE_SERVICE( class, ShaderCache, Required, GameVisible )
+SW_ENGINE_SERVICE( class, ComponentDefaults, Required, GameVisible )
+SW_ENGINE_SERVICE( class, FrameProfiler, Required, GameVisible )
+SW_ENGINE_SERVICE( class, UserSettingsManager, Required, GameVisible )
 // 글꼴 — 카탈로그 · 면 · 문화권 대체 사슬. 서브시스템 Fonts(Client 호스트)다.
-SW_ENGINE_SERVICE( _pFontService, class, FontService, getFontService, Required, GameVisible )
+SW_ENGINE_SERVICE( class, FontService, Required, GameVisible )
 // 런타임 UI — 화면 스택 · 입력 → UI 사건 · 갱신. 서브시스템 UI(Client 호스트)다.
-SW_ENGINE_SERVICE( _pUISystem, class, UISystem, getUISystem, Required, GameVisible )
-SW_ENGINE_SERVICE( _pPhysicsSystem, class, PhysicsSystem, getPhysicsSystem, Required, GameVisible )
+SW_ENGINE_SERVICE( class, UISystem, Required, GameVisible )
+SW_ENGINE_SERVICE( class, PhysicsSystem, Required, GameVisible )
 // 텔레메트리 — 동의(사용자 설정 telemetry.enabled, 기본 꺼짐)가 없으면 아무것도 모으지 않는다. 게임은 진행 사건을 `record` 한다.
 // 서브시스템 Telemetry(Client 호스트)다.
-SW_ENGINE_SERVICE( _pTelemetryService, class, TelemetryService, getTelemetryService, Required, GameVisible )
+SW_ENGINE_SERVICE( class, TelemetryService, Required, GameVisible )
 // 크래시 보고 — 다음 실행이 지난 크래시를 묶는다. 게임 UI 는 "보낼까요?" 를 `collectReports` · `decide` 로 묻는다(동의가 ask 일 때).
-SW_ENGINE_SERVICE( _pCrashReportService, class, CrashReportService, getCrashReportService, Required, GameVisible )
+SW_ENGINE_SERVICE( class, CrashReportService, Required, GameVisible )
 
 
-SW_ENGINE_SERVICE_CONST( _pEngineDefaultAssets, struct, EngineDefaultAssets, getEngineDefaultAssets, Required, HostOnly )
+SW_ENGINE_SERVICE_CONST( struct, EngineDefaultAssets, Required, HostOnly )
 
-SW_ENGINE_SERVICE_OPT( _pMemoryProfiler, class, MemoryProfiler, getMemoryProfiler, HostOnly )
+SW_ENGINE_SERVICE_OPT( class, MemoryProfiler, HostOnly )
 // 렌더 타깃 목록. 렌더러가 공개하고 에디터 패널이 읽는다(패널은 렌더러 내부 상태 대신 이 목록만 본다).
 // **OPT 다.** Required 로 두면 이것을 바인딩하지 않는 호스트(도구 · 테스트 하네스)에서
 // areEngineServicesBound() 가 영영 false 가 되고, 그 함수로 게이팅되는 경로가 통째로 무력화된다.
 // 위 CommandStack 주석이 그 실례다. 진단용 목록 하나 때문에 그런 일이 생겨서는 안 된다.
-SW_ENGINE_SERVICE_OPT( _pRenderTargetRegistry, class, RenderTargetRegistry, getRenderTargetRegistry, HostOnly )
-SW_ENGINE_SERVICE_OPT( _pFrameRenderer, class, FrameRenderer, getFrameRenderer, HostOnly )
+SW_ENGINE_SERVICE_OPT( class, RenderTargetRegistry, HostOnly )
+SW_ENGINE_SERVICE_OPT( class, FrameRenderer, HostOnly )
 

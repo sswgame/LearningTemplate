@@ -1,7 +1,7 @@
 /**
  * @file MeshModifierSession.h
  * @brief 메시 모디파이어 편집 세션 — 대상 메시 오브젝트, 스택, 되돌리기, 미리보기 정점, 사이드카 저장, 굽기를 한 곳에 둡니다(ImGui 를 모릅니다).
- * @details 이 확장이 기여하는 에디터 서브시스템이다(`SW_EDITOR_SUBSYSTEM`). 패널과 시각화가 `editor::getService<MeshModifierSession>()` 로 같이 본다.
+ * @details 이 확장이 기여하는 에디터 서브시스템이다(`SW_EDITOR_SUBSYSTEM`). 패널과 시각화가 `editor::findSubsystem<MeshModifierSession>()` 로 같이 본다.
  *          씬에는 아무것도 붙이지 않는다 — 스택은 메시 옆 사이드카 문서(`<메시>.modifiers.json`)에, 결과는 굽기로 새 `.mesh` 에셋이 된다.
  *          그래서 확장 모듈이 없는 런타임(게임 · Shipping)에서도 씬과 에셋이 그대로 읽힌다.
  */

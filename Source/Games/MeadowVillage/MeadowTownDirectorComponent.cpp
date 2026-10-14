@@ -142,8 +142,8 @@ namespace sw
         }
 
         // 키는 입력 맵(`data/meadow.input.xml`)이 정한다. 대화는 하루 한 번(키트가 막는다).
-        const InputManager* pInput = game::getService<InputManager>();
-        if ( pInput != nullptr && UIInputMapView( pInput->getInputMap(), game::getService<UISystem>() ).wasActionTriggered( hashed_string( MeadowVillageData::kTalkAction ) ) )
+        const InputManager* pInput = game::findSubsystem<InputManager>();
+        if ( pInput != nullptr && UIInputMapView( pInput->getInputMap(), game::findSubsystem<UISystem>() ).wasActionTriggered( hashed_string( MeadowVillageData::kTalkAction ) ) )
         {
             const CreatureInteractResult result = _town.talkTo( sprout );
             SW_LOG_INFO( "[Meadow] talk to sprout: %# (friendship %#)", toString( result ), _town.getFriendship( sprout ) );
@@ -170,7 +170,7 @@ namespace sw
 
     bool MeadowTownDirectorComponent::initializeTown( CreatureTown& outTown, SessionStateComponent& state )
     {
-        const CreatureLifeCatalog* pCatalog = game::getService<CreatureLifeCatalog>();
+        const CreatureLifeCatalog* pCatalog = game::findSubsystem<CreatureLifeCatalog>();
         if ( pCatalog == nullptr )
         {
             SW_LOG_WARNING( "[Meadow] the town cannot start - the creature catalog is not loaded" );

@@ -201,7 +201,7 @@ namespace sw
     InputManager* PlayerControllerComponent::findInputManager( const GameObjectManager& manager )
     {
         const ControlSystem* pSystem = ControlSystem::find( manager );
-        return pSystem != nullptr ? pSystem->findInputManager() : game::getService<InputManager>();
+        return pSystem != nullptr ? pSystem->findInputManager() : game::findSubsystem<InputManager>();
     }
 
     void PlayerControllerComponent::sendPossessionChanged( const GameObjectHandle& pawnObject )

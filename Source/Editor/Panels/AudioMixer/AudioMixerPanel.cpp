@@ -239,7 +239,7 @@ namespace sw::editor
     {
         using Internal               = AudioMixerPanelInternal;
         Internal::ProbeState& probe  = Internal::getProbeState();
-        IAudioService*        pAudio = editor::getService<IAudioService>();
+        IAudioService*        pAudio = editor::findSubsystem<IAudioService>();
         if ( pAudio == nullptr || pAudio->isInitialized() == false )
         {
             EditorWidgets::drawEmptyHint( "The audio service is not running" );

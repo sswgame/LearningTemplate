@@ -13,6 +13,7 @@
 #include "Core/String/TagID.h"
 #include "Core/String/fixed_string.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
@@ -275,7 +276,7 @@ namespace sw
                         parseTextAsNumber( out );
                     return out._bText || out._bNumber;
                 }
-                const EnumInfo* pEnumInfo = engine::getTypeRegistry().findEnum( in._typeName );
+                const EnumInfo* pEnumInfo = engine::getSubsystem<TypeRegistry>().findEnum( in._typeName );
                 if ( pEnumInfo == nullptr || in._value.getStoredSize() != pEnumInfo->_size )
                     return false;
                 const int64 raw = pEnumInfo->readValueFromMemory( in._value.getRawPtr() );
@@ -317,7 +318,7 @@ namespace sw
                 return static_cast<int32>( index );
         }
         // 별칭(`int` · `sw::string` …)은 레지스트리의 정규 이름으로 다시 찾는다.
-        const hashed_string canonical = engine::getTypeRegistry().canonicalTypeName( typeName );
+        const hashed_string canonical = engine::getSubsystem<TypeRegistry>().canonicalTypeName( typeName );
         if ( canonical == typeName )
             return -1;
         for ( size_t index = 0; index < listName.size(); ++index )
@@ -340,13 +341,13 @@ namespace sw
 
     bool ReflectValueUtil::readEnumValue( const ReflectValue& in, const hashed_string& enumTypeName, int64& outValue )
     {
-        const EnumInfo* pTarget = engine::getTypeRegistry().findEnum( enumTypeName );
+        const EnumInfo* pTarget = engine::getSubsystem<TypeRegistry>().findEnum( enumTypeName );
         if ( pTarget == nullptr )
             return false;
         // 다른 열거형의 값은 받지 않는다 — 숫자가 같아도 뜻이 다르다.
         if ( ReflectValueUtil::findBuiltinIndex( in._typeName ) < 0 )
         {
-            const EnumInfo* pSource = engine::getTypeRegistry().findEnum( in._typeName );
+            const EnumInfo* pSource = engine::getSubsystem<TypeRegistry>().findEnum( in._typeName );
             if ( pSource != pTarget || in._value.getStoredSize() != pTarget->_size )
                 return false;
             outValue = pTarget->readValueFromMemory( in._value.getRawPtr() );
@@ -368,7 +369,7 @@ namespace sw
         const int32 builtinIndex = findBuiltinIndex( value._typeName );
         if ( 0 <= builtinIndex )
             return ReflectValueInternal::kArrBuiltinRow[builtinIndex]._pFormat( value._value.getRawPtr() );
-        const EnumInfo* pEnumInfo = engine::getTypeRegistry().findEnum( value._typeName );
+        const EnumInfo* pEnumInfo = engine::getSubsystem<TypeRegistry>().findEnum( value._typeName );
         if ( pEnumInfo != nullptr && value._value.getStoredSize() == pEnumInfo->_size )
         {
             const int64 raw   = pEnumInfo->readValueFromMemory( value._value.getRawPtr() );

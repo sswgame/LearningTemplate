@@ -223,7 +223,7 @@ namespace sw::editor
             [[nodiscard]] static bool readDocumentIsProbeAsset( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const MaterialPanel*      pPanel = findOpenPanel();
-                GlobalVariableManager*    pGvm   = editor::getService<GlobalVariableManager>();
+                GlobalVariableManager*    pGvm   = editor::findSubsystem<GlobalVariableManager>();
                 const GlobalVariableInfo* pInfo  = pGvm != nullptr ? pGvm->findVariable( "gv_editorProbeAsset" ) : nullptr;
                 if ( pPanel == nullptr || pInfo == nullptr )
                     return false;
@@ -486,7 +486,7 @@ namespace sw::editor
             _status = SW_LOCKEY( "EditorMaterial", "SaveFailedStatus" );
             return false;
         }
-        AssetManager*  pResources = editor::getService<AssetManager>();
+        AssetManager*  pResources = editor::findSubsystem<AssetManager>();
         EditorContext* pContext   = EditorContext::get();
         if ( pResources != nullptr && pContext != nullptr )
             pResources->getAssetCache<MaterialCache>().reload( getLoadedAssetPath(), pContext->getSubsystem<EditorRenderViews>().getRHIDevice() );

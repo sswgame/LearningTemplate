@@ -260,7 +260,7 @@ namespace sw::editor
             static bool runSelectType( const vector<string>& listArgument, string& outReply )
             {
                 GameObjectManager* pManager               = editor::getActiveObjectManager();
-                TypeRegistry*      pRegistry              = editor::getService<TypeRegistry>();
+                TypeRegistry*      pRegistry              = editor::findSubsystem<TypeRegistry>();
                 const bool         bInvalidSpawnArguments = listArgument.size() != 1 || pManager == nullptr || pRegistry == nullptr;
                 if ( bInvalidSpawnArguments )
                     return false;
@@ -314,7 +314,7 @@ namespace sw::editor
                 if ( listArgument.size() > 1 || ( listArgument.size() == 1 && parseCount( listArgument[0], seconds ) == false ) )
                     return false;
                 const CameraComponent* pCamera = EditorCamera::ensure( editor::getActiveScene() );
-                DebugDrawQueue*        pQueue  = editor::getService<DebugDrawQueue>();
+                DebugDrawQueue*        pQueue  = editor::findSubsystem<DebugDrawQueue>();
                 if ( pCamera == nullptr || pQueue == nullptr )
                     return false;
                 const float4x4 world    = pCamera->getWorldMatrix();
@@ -326,7 +326,7 @@ namespace sw::editor
                 pQueue->drawSphere( center + right * 1.5f, 0.6f, float4{ 0.2f, 0.8f, 1.0f, 1.0f }, duration, "Demo" );
                 pQueue->drawArrow( center - right * 0.6f, center + right * 0.6f, float4{ 0.3f, 1.0f, 0.3f, 1.0f }, duration, "Demo" );
                 pQueue->drawText( center + float3{ 0.0f, 1.0f, 0.0f }, "DebugDrawQueue demo", float4{ 1.0f, 1.0f, 0.3f, 1.0f }, duration, "Demo" );
-                if ( DebugOverlayState* pOverlay = editor::getService<DebugOverlayState>() )
+                if ( DebugOverlayState* pOverlay = editor::findSubsystem<DebugOverlayState>() )
                     pOverlay->setFloat( hashed_string( "debugdraw.demo.seconds" ), duration );
                 outReply = "debug draw demo for " + to_string( seconds ) + " s";
                 return true;

@@ -9,6 +9,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 
 namespace sw
 {
@@ -392,7 +393,7 @@ namespace sw
                 else
                     return failParam( context, "mode must be Once, Loop or PingPong" );
                 BlendCurve curve{ BlendCurve::Linear };
-                if ( engine::getTypeRegistry().enumFromString( string_view( context.getText( 2 ) ), curve ) == false )
+                if ( game::getSubsystem<TypeRegistry>().enumFromString( string_view( context.getText( 2 ) ), curve ) == false )
                     return failParam( context, "curve is not a BlendCurve name (Linear, EaseIn, EaseOut, EaseInOut, SmoothStep, Cubic, Exponential)" );
                 context._pIntState[4] = static_cast<int32>( curve );
                 context._pIntState[1] = 1;

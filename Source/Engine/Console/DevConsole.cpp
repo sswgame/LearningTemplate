@@ -126,7 +126,7 @@ namespace sw
     {
         if ( _pVariables != nullptr )
             return _pVariables;
-        return engine::areEngineServicesBound() ? &engine::getGlobalVariableManager() : nullptr;
+        return engine::areEngineServicesBound() ? &engine::getSubsystem<GlobalVariableManager>() : nullptr;
     }
 
     void DevConsole::tokenize( string_view line, vector<string>& outListToken )

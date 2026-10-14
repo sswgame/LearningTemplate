@@ -131,7 +131,7 @@ SW_TEST_CASE( ModuleHostTest, SuspendingAnEditorWithoutStopLeavesTheWorldStopped
     int32 editorToken  = 0;
     host.attachEditorInstance( api, &editorToken );
 
-    SceneManager& sceneManager     = engine::getSceneManager();
+    SceneManager& sceneManager     = engine::getSubsystem<SceneManager>();
     const bool    bWasWorldPlaying = sceneManager.isWorldPlaying();
     sceneManager.setWorldPlaying( true );
     host.suspendModules( ModuleScope::Editor, false );
@@ -264,14 +264,14 @@ namespace
         if ( pService != nullptr )
             return;
         ++s_editorUnbindCount;
-        s_bEditorTypesGoneAtUnbind = engine::getGlobalVariableManager().findVariable( kEditorTeardownProbe ) == nullptr;
+        s_bEditorTypesGoneAtUnbind = engine::getSubsystem<GlobalVariableManager>().findVariable( kEditorTeardownProbe ) == nullptr;
     }
     void recordGameBindService( const ISubsystemLocator* pService )
     {
         if ( pService != nullptr )
             return;
         ++s_gameUnbindCount;
-        s_bGameTypesGoneAtUnbind = engine::getGlobalVariableManager().findVariable( kGameTeardownProbe ) == nullptr;
+        s_bGameTypesGoneAtUnbind = engine::getSubsystem<GlobalVariableManager>().findVariable( kGameTeardownProbe ) == nullptr;
     }
 
     /** @brief @p pName 이 @p listCall 에 있는지 봅니다. */
@@ -327,7 +327,7 @@ SW_TEST_CASE( ModuleHostTest, EditorAndGameTearDownInTheSameOrder )
     if ( engine::areEngineServicesBound() == false )
         SW_TEST_SKIP( "engine services are not bound in this executable" );
 
-    GlobalVariableManager& variableManager = engine::getGlobalVariableManager();
+    GlobalVariableManager& variableManager = engine::getSubsystem<GlobalVariableManager>();
     SW_ASSERT_TRUE( variableManager.registerVariable( kEditorTeardownProbe, GlobalVariableType::Int32, &s_teardownProbeValue, int32{ 0 },
                                                       "ModuleHostTest teardown probe", "", "EditorModule" ) );
     SW_ASSERT_TRUE( variableManager.registerVariable( kGameTeardownProbe, GlobalVariableType::Int32, &s_teardownProbeValue, int32{ 0 },
@@ -360,7 +360,7 @@ SW_TEST_CASE( ModuleHostTest, EditorAndGameTearDownInTheSameOrder )
     // 뒤처리: 실패했을 때도 탐침이 다음 케이스로 새지 않게 한다. 저장 막음은 게임 내리기가 건 것이다.
     variableManager.unregisterVariablesByModule( "EditorModule" );
     variableManager.unregisterVariablesByModule( "SWGame" );
-    engine::getSceneManager().setSaveBlockReason( {} );
+    engine::getSubsystem<SceneManager>().setSaveBlockReason( {} );
     host.shutdown();
 }
 

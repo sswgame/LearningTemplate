@@ -61,7 +61,7 @@ namespace sw
 {
     /**
      * @class CrashReportService
-     * @brief 엔진 서비스입니다(`game::getService<CrashReportService>()`). 기동 단계 `Telemetry` 가 세우고 지난 크래시를 묶습니다.
+     * @brief 엔진 서비스입니다(`game::findSubsystem<CrashReportService>()`). 기동 단계 `Telemetry` 가 세우고 지난 크래시를 묶습니다.
      * @details **묶음** `<보고 폴더>/crash_<세션>/`: `crash.dmp` · `crash.txt`(컨텍스트 — 사유 · 주소 · 백엔드 · GPU · 빌드 id) · `crash.stack.txt` ·
      *          `crash.breadcrumbs.txt`(최근 사건) · `last.log`(그 세션의 로그, 끝 `kMaxLogBytes`) · `manifest.json`(세션 · 상태 · 사유 · 빌드 id · 시스템 정보 · 파일 목록).
      *          원래 크래시 파일은 묶음으로 옮기고(다시 묶지 않는다), 로그는 복사합니다. 묶음은 `kMaxReports` 개까지 — 넘으면 오래된 것부터 지웁니다.

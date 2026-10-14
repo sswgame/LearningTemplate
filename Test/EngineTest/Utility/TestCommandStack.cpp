@@ -116,7 +116,7 @@ SW_TEST_CASE( CommandStackTest, ParkedHistoryComesBackIntact )
  */
 SW_TEST_CASE( CommandStackTest, GlobalSingletonAndMultiStepChain )
 {
-    sw::CommandStack& globalStack = sw::engine::getCommandStack();
+    sw::CommandStack& globalStack = sw::engine::getSubsystem<sw::CommandStack>();
     globalStack.clear();
 
     SW_EXPECT_FALSE( globalStack.canUndo() );

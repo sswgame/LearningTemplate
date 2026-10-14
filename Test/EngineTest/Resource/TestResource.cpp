@@ -179,8 +179,8 @@ SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXML )
     SW_ASSERT_TRUE( root.isValid() );
 
     sw::AssetFormatVersion source = 99;
-    SW_EXPECT_TRUE( sw::engine::getAssetManager().getAssetFormatRegistry().upgradeXML( sw::AssetKind::Material, doc, root,
-                                                                                       sw::AssetFormatVersions::kMaterial, &source ) );
+    SW_EXPECT_TRUE( sw::engine::getSubsystem<sw::AssetManager>().getAssetFormatRegistry().upgradeXML( sw::AssetKind::Material, doc, root,
+                                                                                                      sw::AssetFormatVersions::kMaterial, &source ) );
     SW_EXPECT_EQUAL( sw::AssetFormatVersions::kMaterial, source );
     SW_EXPECT_TRUE( root.findAttribute( "formatVersion" ) != nullptr );
     SW_EXPECT_STREQ( "0", root.findAttribute( "formatVersion" ) );
@@ -978,7 +978,7 @@ SW_TEST_CASE( ResourceTest, AssetDatabaseKnowsAssetsBeforeTheyAreLoaded )
     }
 
     sw::UUID   guid{};
-    const bool bFound = sw::engine::getAssetManager().getAssetDatabase().tryGetGuid( pAsset, guid );
+    const bool bFound = sw::engine::getSubsystem<sw::AssetManager>().getAssetDatabase().tryGetGuid( pAsset, guid );
     SW_EXPECT_TRUE_MSG( bFound, "시작 시점에 toonshowcase_ground.material 의 GUID 를 모른다 — 레지스트리/.meta 스캔이 안 돌았다" );
     if ( bFound )
         SW_EXPECT_STREQ( expected.c_str(), guid.toString().c_str() );
@@ -1000,8 +1000,8 @@ SW_TEST_CASE( ResourceTest, OutOfRangeFormatVersionIsRejected )
         sw::XMLNode root = doc.getRoot( "MaterialDesc" );
         SW_ASSERT_TRUE( root.isValid() );
         test::ScopedLogSuppressor suppressor;
-        SW_EXPECT_FALSE_MSG( sw::engine::getAssetManager().getAssetFormatRegistry().upgradeXML( sw::AssetKind::Material, doc, root,
-                                                                                                sw::AssetFormatVersions::kMaterial ),
+        SW_EXPECT_FALSE_MSG( sw::engine::getSubsystem<sw::AssetManager>().getAssetFormatRegistry().upgradeXML( sw::AssetKind::Material, doc, root,
+                                                                                                               sw::AssetFormatVersions::kMaterial ),
                              pVersion );
     }
 }

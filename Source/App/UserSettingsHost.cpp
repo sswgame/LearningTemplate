@@ -49,7 +49,7 @@ namespace sw
         if ( gv_userSettingsApply.empty() == false && _frameIndex == static_cast<uint32>( gv_userSettingsApplyFrame ) )
             applyCommandLineSettings();
 
-        UserSettingsManager& settings = engine::getUserSettingsManager();
+        UserSettingsManager& settings = engine::getSubsystem<UserSettingsManager>();
         settings.update( deltaSeconds );
         DisplaySettingsRequest request;
         if ( settings.consumeDisplayRequest( request ) )
@@ -58,7 +58,7 @@ namespace sw
 
     void UserSettingsHost::applyCommandLineSettings()
     {
-        UserSettingsManager& settings = engine::getUserSettingsManager();
+        UserSettingsManager& settings = engine::getSubsystem<UserSettingsManager>();
         const string_view    text( gv_userSettingsApply );
         size_t               start = 0;
         while ( start < text.size() )

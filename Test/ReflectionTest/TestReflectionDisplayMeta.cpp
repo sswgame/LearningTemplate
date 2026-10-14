@@ -162,7 +162,7 @@ SW_TEST_CASE( ReflectionDisplayMetaTest, EveryEditConditionResolves )
 {
     sw::string failures;
     uint32     checkedCount = 0;
-    sw::engine::getTypeRegistry().forEachType( [&failures, &checkedCount]( const sw::TypeInfo& type )
+    sw::engine::getSubsystem<sw::TypeRegistry>().forEachType( [&failures, &checkedCount]( const sw::TypeInfo& type )
     {
         for ( const sw::PropertyInfo& prop : type.getPropertiesWithBase() )
         {

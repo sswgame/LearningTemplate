@@ -53,7 +53,7 @@ namespace sw
         _devConsoleController = make_unique<DevConsoleController>();
         // 에디터가 있으면 입력을 받지 않는다(Output Log 입력 줄이 같은 콘솔이다). 시작 명령만 실행한다.
         if ( bEnableEditor == false && engine::areEngineServicesBound() )
-            (void)_devConsoleController->initialize( &engine::getInputManager(), pWindow ); // 창을 만들지 못해도 입력과 시작 명령은 돈다(경고는 그쪽이 남긴다).
+            (void)_devConsoleController->initialize( &engine::getSubsystem<InputManager>(), pWindow ); // 창을 만들지 못해도 입력과 시작 명령은 돈다(경고는 그쪽이 남긴다).
         _bExecPending = gv_devConsoleExec.empty() ? SW_FALSE : SW_TRUE;
         if ( gv_devConsoleOpen != 0 && bEnableEditor == false )
             _devConsoleController->setOpen( true );
@@ -82,7 +82,7 @@ namespace sw
         const bool bConsoleNotReadyToExecute = _bExecPending == SW_FALSE || _devConsoleController == nullptr || engine::areEngineServicesBound() == false;
         if ( bConsoleNotReadyToExecute )
             return;
-        const SceneManager& sceneManager = engine::getSceneManager();
+        const SceneManager& sceneManager = engine::getSubsystem<SceneManager>();
         if ( sceneManager.isTransitioning() || sceneManager.getActiveScene() == nullptr )
             return;
         _bExecPending = SW_FALSE;

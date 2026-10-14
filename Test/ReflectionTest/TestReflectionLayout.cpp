@@ -215,11 +215,11 @@ SW_TEST_CASE( ReflectionContainersTest, AdditionalContainerWrappers )
 SW_TEST_CASE( ReflectionInnerTypesTest, FindOuterStruct )
 {
     const sw::TypeInfo* typeInfoFqn =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct" ) );
     SW_EXPECT_TRUE( typeInfoFqn != nullptr );
 
     const sw::TypeInfo* typeInfoShort =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "OuterStruct" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "OuterStruct" ) );
     SW_EXPECT_TRUE( typeInfoShort != nullptr );
 
     if ( typeInfoFqn == nullptr )
@@ -240,11 +240,11 @@ SW_TEST_CASE( ReflectionInnerTypesTest, FindOuterStruct )
 SW_TEST_CASE( ReflectionInnerTypesTest, FindInnerStruct )
 {
     const sw::TypeInfo* typeInfoFqn =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct::InnerStruct" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct::InnerStruct" ) );
     SW_EXPECT_TRUE( typeInfoFqn != nullptr );
 
     const sw::TypeInfo* typeInfoShort =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "InnerStruct" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "InnerStruct" ) );
     SW_EXPECT_TRUE( typeInfoShort != nullptr );
 
     if ( typeInfoFqn == nullptr )
@@ -272,11 +272,11 @@ SW_TEST_CASE( ReflectionInnerTypesTest, FindInnerStruct )
 SW_TEST_CASE( ReflectionInnerTypesTest, FindInnerClass )
 {
     const sw::TypeInfo* typeInfoFqn =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct::InnerClass" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct::InnerClass" ) );
     SW_EXPECT_TRUE( typeInfoFqn != nullptr );
 
     const sw::TypeInfo* typeInfoShort =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "InnerClass" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "InnerClass" ) );
     SW_EXPECT_TRUE( typeInfoShort != nullptr );
 
     if ( typeInfoFqn == nullptr )
@@ -299,11 +299,11 @@ SW_TEST_CASE( ReflectionInnerTypesTest, FindInnerClass )
 SW_TEST_CASE( ReflectionInnerTypesTest, FindInnerEnum )
 {
     const sw::EnumInfo* enumInfoFqn =
-        sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct::InnerEnum" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findEnum( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct::InnerEnum" ) );
     SW_EXPECT_TRUE( enumInfoFqn != nullptr );
 
     const sw::EnumInfo* enumInfoShort =
-        sw::engine::getTypeRegistry().findEnum( sw::hashed_string( "InnerEnum" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findEnum( sw::hashed_string( "InnerEnum" ) );
     SW_EXPECT_TRUE( enumInfoShort != nullptr );
 
     if ( enumInfoFqn == nullptr )
@@ -322,7 +322,7 @@ SW_TEST_CASE( ReflectionInnerTypesTest, FindInnerEnum )
 SW_TEST_CASE( ReflectionInnerTypesTest, InnerStructSerializationRoundtrip )
 {
     const sw::TypeInfo* typeInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct::InnerStruct" ) );
+        sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::InnerNamespaceForTest::OuterStruct::InnerStruct" ) );
     SW_EXPECT_TRUE( typeInfo != nullptr );
     if ( typeInfo == nullptr )
         return;
@@ -355,7 +355,7 @@ SW_TEST_CASE( ReflectionInnerTypesTest, InnerStructSerializationRoundtrip )
  */
 SW_TEST_CASE( ReflectionBitfieldTest, BitfieldPropertyMetadata )
 {
-    const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::BitfieldTestActor>();
+    const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::BitfieldTestActor>();
     SW_ASSERT_NOT_NULL( pType );
 
     const sw::PropertyInfo* pPropActive = pType->findProperty( sw::hashed_string( "_bActive" ) );
@@ -384,7 +384,7 @@ SW_TEST_CASE( ReflectionBitfieldTest, BitfieldPropertyMetadata )
  */
 SW_TEST_CASE( ReflectionBitfieldTest, BitfieldGetSetValue )
 {
-    const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::BitfieldTestActor>();
+    const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::BitfieldTestActor>();
     SW_ASSERT_NOT_NULL( pType );
 
     const sw::PropertyInfo* pPropActive  = pType->findProperty( sw::hashed_string( "_bActive" ) );
@@ -428,7 +428,7 @@ SW_TEST_CASE( ReflectionBitfieldTest, BitfieldGetSetValue )
  */
 SW_TEST_CASE( ReflectionBitfieldTest, BitfieldSerializationRoundtrip )
 {
-    const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::BitfieldTestActor>();
+    const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::BitfieldTestActor>();
     SW_ASSERT_NOT_NULL( pType );
 
     sw::BitfieldTestActor source;
@@ -474,7 +474,7 @@ SW_TEST_CASE( ReflectionBitfieldTest, BitfieldSerializationRoundtrip )
  */
 SW_TEST_CASE( ReflectionBitfieldTest, WideBitfieldGetSetValue )
 {
-    const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::WideBitfieldTestActor>();
+    const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::WideBitfieldTestActor>();
     SW_ASSERT_NOT_NULL( pType );
 
     const sw::PropertyInfo* pProp16A = pType->findProperty( sw::hashed_string( "_bFlag16_A" ) );
@@ -539,7 +539,7 @@ SW_TEST_CASE( ReflectionBitfieldTest, WideBitfieldGetSetValue )
  */
 SW_TEST_CASE( ReflectionBitfieldTest, WideBitfieldSerializationRoundtrip )
 {
-    const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType<sw::WideBitfieldTestActor>();
+    const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::WideBitfieldTestActor>();
     SW_ASSERT_NOT_NULL( pType );
 
     sw::WideBitfieldTestActor source;

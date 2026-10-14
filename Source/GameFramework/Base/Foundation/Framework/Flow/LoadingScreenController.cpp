@@ -51,13 +51,13 @@ namespace sw
     SubsystemInitResult LoadingScreenController::initializeSubsystem()
     {
         // 게임 인스턴스가 초기화 앞에 gamesettings 를 게임 범위에 건다. 없으면(테스트 범위) 문서 기본값을 둔다.
-        if ( const GameSettings* pSettings = game::getService<GameSettings>() )
+        if ( const GameSettings* pSettings = game::findSubsystem<GameSettings>() )
         {
             LoadingScreenSettings settings = _settings;
             settings._documentPath         = pSettings->_loadingScreen;
             setSettings( settings );
         }
-        UISystem* pUISystem = game::getService<UISystem>();
+        UISystem* pUISystem = game::findSubsystem<UISystem>();
         bindUISystem( pUISystem != nullptr && pUISystem->isInitialized() ? pUISystem : nullptr );
         return SubsystemInitResult::Succeeded;
     }
@@ -209,7 +209,7 @@ namespace sw
             return;
         }
         // 팁은 현지화 키(원문)다 — 지금 문화권의 글로 푼다(표에 없으면 원문 그대로).
-        const LocalizationManager* pLocalization = game::getService<LocalizationManager>();
+        const LocalizationManager* pLocalization = game::findSubsystem<LocalizationManager>();
         pTip->setText( pLocalization != nullptr ? pLocalization->getStringByText( _currentTip, _currentTip.c_str() ) : _currentTip.c_str() );
         pTip->setVisibility( WidgetVisibility::HitTestInvisible );
     }

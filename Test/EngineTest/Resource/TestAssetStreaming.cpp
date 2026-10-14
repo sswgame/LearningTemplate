@@ -184,7 +184,7 @@ SW_TEST_CASE( AssetStreamingTest, StreamingFutureAndSpscQueue )
 
     // 동기/비동기 태스크 완료 대기 및 락-프리 큐 펌프
     if ( sw::engine::areEngineServicesBound() )
-        sw::engine::getTaskManager().waitAll();
+        sw::engine::getSubsystem<sw::TaskManager>().waitAll();
 
     queue.update( 32 );
 
@@ -251,7 +251,7 @@ SW_TEST_CASE( AssetStreamingTest, MultiThreadedConcurrentStreamingStress )
 
     // 백그라운드 태스크 대기 및 락-프리 완료 큐 드레인
     if ( sw::engine::areEngineServicesBound() )
-        sw::engine::getTaskManager().waitAll();
+        sw::engine::getSubsystem<sw::TaskManager>().waitAll();
 
     for ( int32 drainStep = 0; drainStep < 50; ++drainStep )
     {
@@ -366,7 +366,7 @@ SW_TEST_CASE( AssetStreamingTest, StreamingPriorityMapsOntoTaskPriority )
 SW_TEST_CASE( AssetStreamingTest, HighPriorityRequestOvertakesAnEarlierNormalOne )
 {
     SW_ASSERT_TRUE( sw::engine::areEngineServicesBound() );
-    sw::TaskManager& taskMgr = sw::engine::getTaskManager();
+    sw::TaskManager& taskMgr = sw::engine::getSubsystem<sw::TaskManager>();
     taskMgr.initialize();
     const uint32 workerCount = taskMgr.getWorkerCount();
     SW_ASSERT_TRUE( workerCount >= 1 );
@@ -505,8 +505,8 @@ SW_TEST_CASE( AssetStreamingTest, CanceledDataRequestCompletesOnceAsFailure )
     SW_EXPECT_FALSE( queue.isStreaming( assetPath ) );
 
     // 걸려 있던 읽기가 끝날 시간을 준다 — 그 완료는 세대가 지나 버려져야 한다.
-    sw::engine::getAsyncFileIO().waitIdle();
-    sw::engine::getTaskManager().waitAll();
+    sw::engine::getSubsystem<sw::AsyncFileIO>().waitIdle();
+    sw::engine::getSubsystem<sw::TaskManager>().waitAll();
     for ( uint32 pump = 0; pump < 4; ++pump )
     {
         queue.update();
@@ -545,8 +545,8 @@ SW_TEST_CASE( AssetStreamingTest, CancelAfterReadFinishedButBeforeUpdateDelivers
     const sw::Deadline deadline = sw::Deadline::afterMilliseconds( 5000 );
     while ( queue.isStreaming( assetPath ) && deadline.isExpired() == false )
     {
-        sw::engine::getTaskManager().waitAll();
-        sw::engine::getAsyncFileIO().waitIdle();
+        sw::engine::getSubsystem<sw::TaskManager>().waitAll();
+        sw::engine::getSubsystem<sw::AsyncFileIO>().waitIdle();
     }
     SW_ASSERT_FALSE( queue.isStreaming( assetPath ) );
     SW_ASSERT_TRUE( queue.isLoaded( assetPath ) );

@@ -43,7 +43,7 @@ namespace sw
 
             static bool runExpectUI( AutomationRunner& runner, const AutomationStep& step )
             {
-                const UISystem& ui = engine::getUISystem();
+                const UISystem& ui = engine::getSubsystem<UISystem>();
                 string          failure;
                 if ( UIAutomationSteps::isExpectUIMet( ui, step, failure ) == false )
                     runner.recordFailure( step, failure );
@@ -65,7 +65,7 @@ namespace sw
                 const string& file = *step.findAttribute( "file" );
                 const string  path = FileUtil::isAbsolutePath( file ) ? file : FileUtil::joinPath( runner.getOutputDirectory(), file );
                 (void)FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( path ) );
-                if ( FileUtil::writeTextFile( path, engine::getUISystem().makeLayoutDump() ) == false )
+                if ( FileUtil::writeTextFile( path, engine::getSubsystem<UISystem>().makeLayoutDump() ) == false )
                     runner.recordFailure( step, "could not write " + path );
                 return true;
             }
@@ -73,7 +73,7 @@ namespace sw
             /** @brief 로딩 화면이 떠 있으면 게임 입력이 막혀 있습니다. `ScenePlaying` 시나리오는 로딩 화면이 사라질 때까지 시작하지 않습니다. */
             static bool isLoadingScreenBlocking()
             {
-                const UISystem* pUISystem = engine::areEngineServicesBound() ? engine::getBoundEngineServices()._pUISystem : nullptr;
+                const UISystem* pUISystem = engine::findSubsystem<UISystem>();
                 return pUISystem != nullptr && pUISystem->isInitialized() && pUISystem->isLoadingScreenShown();
             }
         };

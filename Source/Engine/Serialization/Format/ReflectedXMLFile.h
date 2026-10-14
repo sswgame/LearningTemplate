@@ -37,7 +37,7 @@ namespace sw
         template <typename DescType>
         [[nodiscard]] static bool loadDesc( string_view assetRelativePath, DescType& outDesc )
         {
-            return loadDescInternal( assetRelativePath, &outDesc, engine::getTypeRegistry().findType<DescType>() );
+            return loadDescInternal( assetRelativePath, &outDesc, engine::getSubsystem<TypeRegistry>().findType<DescType>() );
         }
 
         /**
@@ -48,7 +48,7 @@ namespace sw
         template <typename DescType>
         [[nodiscard]] static bool saveDesc( string_view assetRelativePath, const DescType& desc )
         {
-            return saveDescInternal( assetRelativePath, &desc, engine::getTypeRegistry().findType<DescType>() );
+            return saveDescInternal( assetRelativePath, &desc, engine::getSubsystem<TypeRegistry>().findType<DescType>() );
         }
 
     private:

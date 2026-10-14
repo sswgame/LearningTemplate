@@ -300,7 +300,7 @@ SW_TEST_CASE( GameObjectManagerTest, TickDoesNotWaitForForeignTasks )
     manager.tick( 0.016f );
 
     BlockingForeignTask task;
-    TaskManager&        taskManager = sw::engine::getTaskManager();
+    TaskManager&        taskManager = sw::engine::getSubsystem<sw::TaskManager>();
     TaskHandle          handle      = taskManager.emplaceTask( "BlockingForeignTask", SW_DELEGATE_METHOD( TaskDelegate, &BlockingForeignTask::run, &task ) );
     handle.submit();
     // 워커가 집어 갔을 때부터 측정한다. 아직 큐에 있으면 틱의 합류 대기가 그것을 도와 실행해 버릴 수 있다.
@@ -906,7 +906,7 @@ SW_TEST_CASE( GameObjectManagerTest, ParallelTransformFlushMatchesSerial )
  */
 SW_TEST_CASE( GameObjectManagerTest, CodegenFillsCreationFunctionForConcreteComponentsOnly )
 {
-    const TypeRegistry& registry   = engine::getTypeRegistry();
+    const TypeRegistry& registry   = engine::getSubsystem<TypeRegistry>();
     const TypeInfo*     pScene     = registry.findType( hashed_string( "SceneComponent" ) );
     const TypeInfo*     pLight     = registry.findType( hashed_string( "LightComponent" ) );
     const TypeInfo*     pEngineDat = registry.findType( hashed_string( "EngineDefaultAssets" ) );
@@ -1015,7 +1015,7 @@ const TypeInfo* sw::ShadowProbeRightComponent::StaticType()
 const TypeInfo* sw::KitProbeComponent::StaticType()
 {
     static const TypeInfo s_embeddedInfo = makeKitProbeTypeInfo();
-    const TypeInfo*       pRegistered    = engine::getTypeRegistry().findType( hashed_string( "sw::KitProbeComponent" ) );
+    const TypeInfo*       pRegistered    = engine::getSubsystem<TypeRegistry>().findType( hashed_string( "sw::KitProbeComponent" ) );
     return ( pRegistered != nullptr ) ? pRegistered : &s_embeddedInfo;
 }
 
@@ -1031,7 +1031,7 @@ SW_TEST_CASE( GameObjectManagerTest, CreationFunctionLivesInTheTypeTableAndLeave
     static TypeRegistrar  s_kitRegistrar{ &registerKitProbeTypeInternal, s_pKitHead };
 
     GameObjectManager manager; // 모듈보다 먼저 만든다
-    TypeRegistry&     registry = engine::getTypeRegistry();
+    TypeRegistry&     registry = engine::getSubsystem<TypeRegistry>();
     registry.registerPendingTypes( "GF_TestKit", s_pKitHead, nullptr );
 
     const TypeInfo* pKitType = registry.findType( hashed_string( "KitProbeComponent" ) );
@@ -1063,7 +1063,7 @@ SW_TEST_CASE( GameObjectManagerTest, CreationFunctionLivesInTheTypeTableAndLeave
  */
 SW_TEST_CASE( GameObjectManagerTest, AddComponentByNameFollowsTheTypeTableWhenANameIsTaken )
 {
-    TypeRegistry& registry = engine::getTypeRegistry();
+    TypeRegistry& registry = engine::getSubsystem<TypeRegistry>();
     registry.registerClass( *ShadowProbeLeftComponent::StaticType() );
 
     GameObjectManager manager;
@@ -1126,9 +1126,9 @@ SW_TEST_CASE( GameObjectManagerTest, SceneScopeOwnsSceneServicesAndChainsToTheEn
 {
     sw::GameObjectManager     manager;
     const sw::SubsystemScope& sceneScope = manager.getSceneScope();
-    SW_EXPECT_TRUE( sceneScope.find<sw::ScenePhysics>() == &manager.getSceneService<sw::ScenePhysics>() );
+    SW_EXPECT_TRUE( sceneScope.find<sw::ScenePhysics>() == &manager.getSubsystem<sw::ScenePhysics>() );
     SW_EXPECT_TRUE( sceneScope.find<sw::TaskManager>() == nullptr ); // 씬 범위 자신에는 없다
-    SW_EXPECT_TRUE( sw::locateSubsystem<sw::TaskManager>( &sceneScope ) == &sw::engine::getTaskManager() );
+    SW_EXPECT_TRUE( sw::locateSubsystem<sw::TaskManager>( &sceneScope ) == &sw::engine::getSubsystem<sw::TaskManager>() );
     // 씬 서비스는 모두 섰다(초기화 순서에 든다).
     SW_EXPECT_EQUAL( sceneScope.getCollection().getSubsystemCount(), static_cast<uint32>( sceneScope.getCollection().getInitializedIndices().size() ) );
 }

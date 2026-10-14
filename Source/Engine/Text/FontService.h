@@ -63,7 +63,7 @@ namespace sw
 {
     /**
      * @class FontService
-     * @brief 엔진 폰트 서비스입니다(`engine::getFontService()`).
+     * @brief 엔진 폰트 서비스입니다(`engine::getSubsystem<FontService>()`).
      * @details 폰트가 하나도 없는 기계(시스템 폰트가 없는 리눅스 CI, 서버)에서도 저장소 폰트(기본 패밀리)는 항상 열린다. 연쇄의 끝이 기본 패밀리이고,
      *          시스템 패밀리를 찾지 못하면 처음 한 번 경고하고 건너뛴다. 그 문자는 두부(글리프 0)로 그려진다.
      *          엔진에서는 서브시스템 `Fonts`(Client 대상)입니다 — 엔진 데이터의 글꼴 카탈로그로 서고, 쿠킹(Headless)이면 열지 않는다.
@@ -74,7 +74,7 @@ namespace sw
         FontService();
         /**
          * @brief 래스터라이저(테스트는 결정적인 가짜)와 문화권 출처를 주입합니다.
-         * @param pLocalization 대체 목록을 묻는 곳. nullptr 이면 엔진 서비스(`engine::getLocalizationManager()`)를 씁니다.
+         * @param pLocalization 대체 목록을 묻는 곳. nullptr 이면 엔진 서비스(`engine::getSubsystem<LocalizationManager>()`)를 씁니다.
          */
         explicit FontService( unique_ptr<IFontRasterizer> rasterizer, const LocalizationManager* pLocalization = nullptr );
         ~FontService() override;

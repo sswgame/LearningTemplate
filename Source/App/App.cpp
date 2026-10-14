@@ -291,7 +291,7 @@ namespace sw
         const vector<string> listPendingName = pCommandLineManager->collectPendingGlobalNames();
         for ( const string& pendingName : listPendingName )
         {
-            if ( engine::getGlobalVariableManager().findVariable( pendingName ) == nullptr )
+            if ( engine::getSubsystem<GlobalVariableManager>().findVariable( pendingName ) == nullptr )
                 SW_LOG_WARNING( "%#: 그런 전역 변수가 없습니다. 무시됩니다", pendingName.c_str() );
         }
     }
@@ -506,7 +506,7 @@ namespace sw
     bool App::onWindowMessage( const NativeWindowEvent& event )
     {
         // 무인 자동화는 사람의 마우스와 키보드 입력을 여기서 버린다. 에디터(ImGui)와 게임 입력 둘 다에 닿지 않는다. 창 이벤트는 그대로 지나간다.
-        if ( engine::areEngineServicesBound() && engine::getInputManager().shouldDropNativeEvent( event ) )
+        if ( engine::areEngineServicesBound() && engine::getSubsystem<InputManager>().shouldDropNativeEvent( event ) )
             return false;
 
         // 이벤트를 ModuleHost(ImGui 등)에 먼저 보낸다.
@@ -514,7 +514,7 @@ namespace sw
 
         // 에디터가 가로채지 않았을 때만 게임 InputManager 로 전달한다.
         if ( bConsumedByEditor == false && engine::areEngineServicesBound() )
-            engine::getInputManager().processNativeEvent( event );
+            engine::getSubsystem<InputManager>().processNativeEvent( event );
 
         // Win32 OS 수준의 포커스와 활성화(DefWindowProc)가 정상적으로 동작하도록 false 를 반환한다.
         return false;

@@ -207,7 +207,7 @@ namespace sw::editor
 
     void AudioEventBrowserPanel::drawContent()
     {
-        IAudioService* pAudio = editor::getService<IAudioService>();
+        IAudioService* pAudio = editor::findSubsystem<IAudioService>();
         if ( pAudio == nullptr || pAudio->isInitialized() == false )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAudioEvents", "NoService" ) );

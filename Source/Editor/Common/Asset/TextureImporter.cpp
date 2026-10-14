@@ -157,7 +157,7 @@ namespace sw::editor
                 job._format = format;
                 // 작업 시스템이 없으면(테스트 하니스, 서비스 연결 전) 현재 스레드가 띠를 차례로 압축한다. 결과 바이트는 같다.
                 const uint32                bandCount    = static_cast<uint32>( listBand.size() );
-                TaskManager*                pTaskManager = editor::getService<TaskManager>();
+                TaskManager*                pTaskManager = editor::findSubsystem<TaskManager>();
                 const ParallelBlockDelegate body         = SW_DELEGATE_METHOD( ParallelBlockDelegate, &BandCompressJobInternal::run, &job );
                 if ( pTaskManager != nullptr )
                     pTaskManager->runParallel( bandCount, 2, body );

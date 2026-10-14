@@ -82,7 +82,7 @@ namespace sw::editor
         setActive( this );
 
         // 에디터 UI 문구 — 엔진 표와 따로 올려 에디터가 있는 동안만 쓰인다(없으면 SW_LOCTEXT 가 영어 원문을 돌려준다).
-        if ( LocalizationManager* pLocalization = getService<LocalizationManager>() )
+        if ( LocalizationManager* pLocalization = findSubsystem<LocalizationManager>() )
         {
             if ( pLocalization->mountProject( EditorPaths::kLocalizationProject, LocalizationScope::Editor ) == false )
                 SW_LOG_WARNING( "Editor localization project '%#' is not (fully) loaded", EditorPaths::kLocalizationProject );
@@ -97,7 +97,7 @@ namespace sw::editor
         if ( findEditorScope() == &_scope )
             setActive( nullptr );
 
-        if ( LocalizationManager* pLocalization = getService<LocalizationManager>() )
+        if ( LocalizationManager* pLocalization = findSubsystem<LocalizationManager>() )
             pLocalization->unmountProjects( LocalizationScope::Editor );
 
         // 초기화한 것을 역순으로 종료하고, 모두를 역순으로 소멸시킨다(넷 플레이 세션의 자식 프로세스 종료도 여기 — 엔진 로거는 아직 있다).

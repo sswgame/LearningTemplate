@@ -44,7 +44,7 @@ namespace sw::editor
         const EditorListFilter compFilter{ search.c_str() };
         const bool             bHasFilter = compFilter.isActive();
 
-        auto*         pRegistry = editor::getService<TypeRegistry>();
+        auto*         pRegistry = editor::findSubsystem<TypeRegistry>();
         bool          bAdded{ false };
         hashed_string firstMatch{};
         auto          addType = [&]( const hashed_string& typeName )

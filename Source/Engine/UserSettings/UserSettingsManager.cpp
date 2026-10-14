@@ -968,15 +968,15 @@ namespace sw
     SubsystemInitResult UserSettingsManager::initializeSubsystem()
     {
         UserSettingsTargets targets;
-        targets._pGlobalVariableManager = &engine::getGlobalVariableManager();
-        targets._pCommandLineManager    = &engine::getCommandLineManager();
-        targets._pInputMap              = &engine::getInputManager().getInputMap();
-        targets._pAudioService          = &engine::getAudioService();
-        targets._pLocalizationManager   = &engine::getLocalizationManager();
+        targets._pGlobalVariableManager = &engine::getSubsystem<GlobalVariableManager>();
+        targets._pCommandLineManager    = &engine::getSubsystem<CommandLineManager>();
+        targets._pInputMap              = &engine::getSubsystem<InputManager>().getInputMap();
+        targets._pAudioService          = &engine::getSubsystem<IAudioService>();
+        targets._pLocalizationManager   = &engine::getSubsystem<LocalizationManager>();
         initialize( targets );
 
         const GameConfig& gameConfig = GameConfig::getActive();
-        if ( loadSchema( engine::getEngineDefaultAssets()._userSettingsSchema ) && gameConfig._userSettingsSchema.empty() == false )
+        if ( loadSchema( engine::getSubsystem<EngineDefaultAssets>()._userSettingsSchema ) && gameConfig._userSettingsSchema.empty() == false )
         {
             const string gameSchema = FileUtil::joinPath( FileUtil::trimTrailingSlashes( gameConfig._packRoot ), gameConfig._userSettingsSchema );
             if ( loadSchema( gameSchema ) == false )

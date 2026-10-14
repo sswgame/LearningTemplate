@@ -16,7 +16,7 @@ using namespace sw::editor;
  */
 SW_TEST_CASE( EditorComponentIconTest, DerivedTypeWinsOverBaseRow )
 {
-    const TypeRegistry& registry   = engine::getTypeRegistry();
+    const TypeRegistry& registry   = engine::getSubsystem<TypeRegistry>();
     const TypeInfo*     pPointType = registry.findType( hashed_string( "PointLightComponent" ) );
     const TypeInfo*     pSpotType  = registry.findType( hashed_string( "SpotLightComponent" ) );
     SW_ASSERT_TRUE( pPointType != nullptr && pSpotType != nullptr );
@@ -31,7 +31,7 @@ SW_TEST_CASE( EditorComponentIconTest, DerivedTypeWinsOverBaseRow )
  */
 SW_TEST_CASE( EditorComponentIconTest, EveryTypeRowNamesARegisteredType )
 {
-    const TypeRegistry& registry = engine::getTypeRegistry();
+    const TypeRegistry& registry = engine::getSubsystem<TypeRegistry>();
     for ( uint32 index = 0; index < EditorComponentIcon::getTypeRowCount(); ++index )
     {
         const EditorComponentIconRow& row = EditorComponentIcon::getTypeRow( index );

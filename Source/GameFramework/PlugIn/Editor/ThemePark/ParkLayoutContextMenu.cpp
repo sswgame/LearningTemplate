@@ -26,7 +26,7 @@ namespace sw::editor
             /** @brief 놀이기구가 읽혀 있는 미리보기입니다. 없거나 비어 있으면 nullptr 입니다. */
             static const ParkLayoutPreview* findLoadedPreview()
             {
-                const ParkLayoutPreview* pPreview            = getService<ParkLayoutPreview>();
+                const ParkLayoutPreview* pPreview            = findSubsystem<ParkLayoutPreview>();
                 const bool               bPreviewUnavailable = pPreview == nullptr || pPreview->isLoaded() == false || pPreview->getRides().empty();
                 if ( bPreviewUnavailable )
                     return nullptr;

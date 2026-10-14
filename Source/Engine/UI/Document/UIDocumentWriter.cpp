@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -56,7 +57,7 @@ namespace sw
                     const XMLNode       defaultChild = defaults.isValid() ? defaults.findChild( child.getName() ) : XMLNode{};
                     const PropertyInfo* pProperty    = findProperty( type, child.getName() );
                     const bool          bStruct      = pProperty != nullptr && pProperty->_bIsContainer == SW_FALSE;
-                    const TypeInfo*     pNestedType  = bStruct ? engine::getTypeRegistry().findType( pProperty->_typeName ) : nullptr;
+                    const TypeInfo*     pNestedType  = bStruct ? engine::getSubsystem<TypeRegistry>().findType( pProperty->_typeName ) : nullptr;
                     if ( pNestedType == nullptr )
                     {
                         if ( defaultChild.isValid() && child.toString() == defaultChild.toString() )

@@ -271,7 +271,7 @@ SW_TEST_CASE( ActionCombatTest, ProjectilePassesItsInstigatorAndWhatIsAttachedTo
 SW_TEST_CASE( ActionCombatTest, ProjectileIgnoresUnitsOnALayerItDoesNotCollideWith )
 {
     GameObjectManager manager;
-    manager.getSceneService<sw::ScenePhysics>().getOverlapWorld2D().getPhysicsOverlapWorld().layers().setLayerCollision( 1, 2, false );
+    manager.getSubsystem<sw::ScenePhysics>().getOverlapWorld2D().getPhysicsOverlapWorld().layers().setLayerCollision( 1, 2, false );
     UnitStatsComponent*  pAlly       = spawnUnit( manager, "Ally", 3.0f, 100, 0, 0.0f );
     ProjectileComponent* pProjectile = spawnBullet( manager, 0.0f, 0.0f, 6.0f, 10 );
     SW_ASSERT_TRUE( pAlly != nullptr && pProjectile != nullptr );

@@ -418,7 +418,7 @@ namespace sw
                 case AIDirectorEventKind::PhaseChanged:
                 {
                     // 쌓기로 돌아왔다 = 새 웨이브. 진행 사건(동의가 없으면 텔레메트리가 버린다).
-                    TelemetryService* pTelemetry = game::getService<TelemetryService>();
+                    TelemetryService* pTelemetry = game::findSubsystem<TelemetryService>();
                     const bool        bNewWave   = event._source.empty() == false && event._id == _profile.getPhases()[static_cast<size_t>( _profile.getStartPhaseIndex() )]._id;
                     if ( pTelemetry != nullptr && bNewWave )
                     {

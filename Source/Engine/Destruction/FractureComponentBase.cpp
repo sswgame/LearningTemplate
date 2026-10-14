@@ -691,7 +691,7 @@ namespace sw
     bool FractureComponentBase::applyRaycastDamage( GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, float32 strain,
                                                     float32 impulse, float3* pOutPoint )
     {
-        IPhysicsScene3D* pScene = manager.getSceneService<sw::ScenePhysics>().findScene3D();
+        IPhysicsScene3D* pScene = manager.getSubsystem<sw::ScenePhysics>().findScene3D();
         if ( pScene == nullptr )
             return false;
         PhysicsCastHit3D hit;

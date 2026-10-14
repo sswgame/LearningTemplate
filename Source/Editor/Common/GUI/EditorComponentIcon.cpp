@@ -136,7 +136,7 @@ namespace sw::editor
 
     const EditorComponentIconRow& EditorComponentIcon::findRow( const TypeInfo* pType )
     {
-        const TypeRegistry* pRegistry = editor::getService<TypeRegistry>();
+        const TypeRegistry* pRegistry = editor::findSubsystem<TypeRegistry>();
         if ( pType == nullptr || pRegistry == nullptr )
             return EditorComponentIconInternal::findRowUncached( pType );
         // 모듈 언로드 · 리로드면 같은 주소에 다른 타입이 올 수 있다 — 타입 표 세대가 바뀌면 캐시를 비운다.

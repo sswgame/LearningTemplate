@@ -610,7 +610,7 @@ SW_TEST_CASE( UIStyleTest, HighContrastThemeLoads )
  */
 SW_TEST_CASE( UIStyleTest, ThemeFollowsUserSetting )
 {
-    sw::GlobalVariableInfo* pSetting = sw::engine::getGlobalVariableManager().findVariable( "gv_uiTheme" );
+    sw::GlobalVariableInfo* pSetting = sw::engine::getSubsystem<sw::GlobalVariableManager>().findVariable( "gv_uiTheme" );
     SW_ASSERT_NOT_NULL( pSetting );
     const sw::string   previous = pSetting->getValueAsString();
     sw::UIThemeCatalog catalog{};

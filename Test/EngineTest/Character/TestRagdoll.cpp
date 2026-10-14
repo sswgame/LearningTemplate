@@ -78,7 +78,7 @@ namespace
         {
             float3           position{};
             quaternion       rotation{};
-            IPhysicsScene3D* pScene = manager.getSceneService<sw::ScenePhysics>().findScene3D();
+            IPhysicsScene3D* pScene = manager.getSubsystem<sw::ScenePhysics>().findScene3D();
             if ( pScene != nullptr && bodyIndex >= 0 )
                 (void)pScene->getBodyTransform( ragdoll.getRagdoll()._listBody[static_cast<size_t>( bodyIndex )], position, rotation );
             return position;

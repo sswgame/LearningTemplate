@@ -328,7 +328,7 @@ namespace sw
             {
                 // 이 스레드가 태스크를 기다리며 받은 도우미 슬롯을 반환한다. 렌더 스레드는 백엔드 교체와 토글마다 새로 만들어진다.
                 if ( engine::areEngineServicesBound() )
-                    engine::getTaskManager().releaseCurrentThreadHelperSlot();
+                    engine::getSubsystem<TaskManager>().releaseCurrentThreadHelperSlot();
                 break;
             }
 
@@ -662,7 +662,7 @@ namespace sw
 
     void RenderThread::readRequestedRenderTarget()
     {
-        RenderTargetRegistry* pRegistry             = engine::getRenderTargetRegistry();
+        RenderTargetRegistry* pRegistry             = engine::findSubsystem<RenderTargetRegistry>();
         const bool            bNoRenderTargetSource = pRegistry == nullptr || _pDevice == nullptr || _pDevice->getResourceFactory() == nullptr;
         if ( bNoRenderTargetSource )
             return;

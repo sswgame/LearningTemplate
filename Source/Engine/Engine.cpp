@@ -390,7 +390,7 @@ namespace sw
         }
         // 셸 키(콘솔 여는 키 …)를 플레이어가 바꾼 것도 사용자 설정과 같은 폴더에 둔다. 셸 맵은 처음 돌 때 만들므로 그 전에 경로를 알려 준다.
         if ( bDedicatedServer == false && _headlessState._bHeadless == false )
-            _shellActions.setUserBindingsPath( ShellInputActions::makeUserBindingsPath( engine::getUserSettingsManager().getUserFilePath() ) );
+            _shellActions.setUserBindingsPath( ShellInputActions::makeUserBindingsPath( engine::getSubsystem<UserSettingsManager>().getUserFilePath() ) );
         // 장면별 프레임 시간 · flush 는 프레임 관찰자로 돈다(씬 틱 뒤 — `TelemetryService::onAfterSceneTick`). 텔레메트리가 섰을 때만 붙인다.
         // 떼는 것은 `shutdown` 이 단계 종료 전에 관찰자 목록을 비우는 것으로 끝난다.
         if ( telemetryService.isInitialized() )
@@ -417,7 +417,7 @@ namespace sw
 
         _profileSession.begin();
 #if SW_PROFILER_TRACE_ENABLED
-        ProfilerTraceExport::startExitCapture( engine::getFrameProfiler() ); // `-gv_traceSaveOnExit` — 없으면 아무것도 하지 않는다
+        ProfilerTraceExport::startExitCapture( engine::getSubsystem<FrameProfiler>() ); // `-gv_traceSaveOnExit` — 없으면 아무것도 하지 않는다
 #endif
 
         MemoryProfiler::captureMemoryLeakBaseline();
@@ -430,7 +430,7 @@ namespace sw
 #if SW_PROFILER_TRACE_ENABLED
         // 종료 트레이스(`-gv_traceSaveOnExit`)는 서비스 · 프로파일러가 아직 있을 때 쓴다. 기동이 서비스 표 전에 멈췄으면 쓸 것이 없다.
         if ( engine::areEngineServicesBound() && _headlessState._bHeadless == false )
-            ProfilerTraceExport::finishExitCapture( engine::getFrameProfiler(), _hostRole == EngineHostRole::DedicatedServer ? "Server" : "App" );
+            ProfilerTraceExport::finishExitCapture( engine::getSubsystem<FrameProfiler>(), _hostRole == EngineHostRole::DedicatedServer ? "Server" : "App" );
 #endif
         // 프레임 관찰자는 붙인 쪽이 서비스보다 먼저 내린다(로그 리스너 · 입력을 빌려 쓴다). 남은 것은 더 부르지 않는다.
         // 목록의 용량은 기동 뒤에 잡았으므로 누수 보고 전에 해제한다.
@@ -577,7 +577,7 @@ namespace sw
 
         if ( gv_dumpReflection.empty() == false )
         {
-            const TypeRegistry&   registry = engine::getTypeRegistry();
+            const TypeRegistry&   registry = engine::getSubsystem<TypeRegistry>();
             const string_splitter parts( string_view{ gv_dumpReflection.c_str(), gv_dumpReflection.size() }, { "," } );
             for ( const string_view part : parts.getSplitList() )
             {
@@ -605,7 +605,7 @@ namespace sw
         if ( _headlessState._bHeadless )
             return;
 
-        FrameProfiler& profiler = engine::getFrameProfiler();
+        FrameProfiler& profiler = engine::getSubsystem<FrameProfiler>();
         profiler.beginFrame();
 
         // 게임 스레드 전체를 한 구간으로 잡는다. 보고서가 RT 구간만 보여 주면 "프레임의 몇 % 를 측정했나" 에
@@ -626,7 +626,7 @@ namespace sw
 #endif
             // 파일 대화 상자 결과를 **여기서** 메인 스레드로 넘긴다. 대화 상자는 별도 스레드가 띄운다.
             FileUtil::pumpFileDialogResults();
-            engine::getAssetStreamingQueue().update();
+            engine::getSubsystem<AssetStreamingQueue>().update();
 
             if ( _pSceneManager != nullptr )
                 _pSceneManager->tickTransitions();
@@ -653,11 +653,11 @@ namespace sw
 
         // 물리 · 내비 디버그 선 — 씬 틱이 이번 프레임의 바디 · 경로를 정한 **뒤**, 관찰자 · UI · 패킷 **앞**이다(이번 프레임에 넣은 선이 endFrame 에서 확정된다).
         if ( _pSceneManager != nullptr )
-            SceneDebugDraw::update( _pSceneManager->getActiveScene(), engine::getDebugDrawQueue() );
+            SceneDebugDraw::update( _pSceneManager->getActiveScene(), engine::getSubsystem<DebugDrawQueue>() );
 #if SW_DEV_COMMANDS_ENABLED
         // 서버가 가진 위치를 고스트로 겹친다(`-gv_authorityGhostPort` 가 0 이면 아무 일도 없다, 서버 디버깅 S6).
         if ( _pSceneManager != nullptr )
-            AuthorityGhost::get().update( _pSceneManager->getActiveScene(), engine::getDebugDrawQueue() );
+            AuthorityGhost::get().update( _pSceneManager->getActiveScene(), engine::getSubsystem<DebugDrawQueue>() );
 #endif
 
         // 관찰자 훅 `onAfterSceneTick` — 이 프레임의 게임 상태가 정해진 뒤(씬 틱 · 디버그 그리기 뒤), 런타임 UI · 렌더 패킷 앞이라는 순서가 뜻이 있다(텔레메트리의 장면별 프레임 시간).
@@ -701,7 +701,7 @@ namespace sw
         // 처음 쓰는 머티리얼의 스폰)만 렌더 스레드를 기다린다.
         if ( _pRHI != nullptr && _pRHI->hasDevice() )
         {
-            MaterialCache& materials = engine::getAssetManager().getAssetCache<MaterialCache>();
+            MaterialCache& materials = engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
             if ( materials.hasPendingInitialize() && _pRenderThread != nullptr )
                 _pRenderThread->waitIdle();
             materials.initializePending( &_pRHI->getDevice() );
@@ -747,9 +747,9 @@ namespace sw
 
     void Engine::endFrame()
     {
-        engine::getFrameProfiler().endFrame();
+        engine::getSubsystem<FrameProfiler>().endFrame();
 #if SW_PROFILER_TRACE_ENABLED
-        ProfilerTraceExport::tickRecording( engine::getFrameProfiler() ); // `profile.trace record` 의 끝 시각 확인(진행 중이 아니면 atomic 하나)
+        ProfilerTraceExport::tickRecording( engine::getSubsystem<FrameProfiler>() ); // `profile.trace record` 의 끝 시각 확인(진행 중이 아니면 atomic 하나)
 #endif
         // 외부 프로파일러(Tracy)의 주 프레임 경계 — 게임 스레드 프레임이다.
         IProfilerBackend* pProfilerBackend = ProfilerBackend::getActiveBackend();
@@ -780,7 +780,7 @@ namespace sw
         if ( _pInputManager != nullptr )
             _pInputManager->endFrame();
         // 이번 프레임에 넣은 디버그 도형을 보이는 목록으로 확정하고, 씬이 흘린 시간만큼 지속 시간을 줄인다(일시정지면 그대로 남는다).
-        engine::getDebugDrawQueue().endFrame( _sceneDeltaSeconds );
+        engine::getSubsystem<DebugDrawQueue>().endFrame( _sceneDeltaSeconds );
     }
 
     bool Engine::applyPendingBackendChange()
@@ -805,7 +805,7 @@ namespace sw
 
             // 옛 디바이스의 GPU 자원은 recreateDevice 안의 shutdown 이 레지스트리에 통보하며 거둔다.
             _pRHI->getDevice().waitIdle();
-            engine::getShaderCache().clearCache();
+            engine::getSubsystem<ShaderCache>().clearCache();
         }
 
         if ( _pRHI->recreateDevice( requested ) == false )

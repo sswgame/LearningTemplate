@@ -154,7 +154,7 @@ SW_TEST_CASE( DismembermentRuntimeTest, FatalHeadHitSeversAndSpawnsPhysicsPiece 
     SW_EXPECT_EQUAL( 0u, vertexCountAfter % 3 );
     SW_EXPECT_NEAR_EQUAL( 1.0f, pDismember->getSurfaceState().getRegionValue( static_cast<uint32>( pDismember->findRegionIndex( hashed_string( "Head" ) ) ), hashed_string( "Blood" ) ),
                           1e-6f );
-    IPhysicsScene3D* pScene = manager.getSceneService<sw::ScenePhysics>().findScene3D();
+    IPhysicsScene3D* pScene = manager.getSubsystem<sw::ScenePhysics>().findScene3D();
     SW_ASSERT_NOT_NULL( pScene );
     SW_EXPECT_FALSE( pScene->isBodyEnabled( pRagdoll->getRagdoll()._listBody[static_cast<size_t>( head )] ) );
 

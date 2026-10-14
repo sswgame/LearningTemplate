@@ -105,7 +105,7 @@ namespace sw::editor
             static bool drawEnumWidget( GlobalVariableInfo& info )
             {
                 const int32     currentVal = info.getValueAsInt();
-                TypeRegistry*   pRegistry  = editor::getService<TypeRegistry>();
+                TypeRegistry*   pRegistry  = editor::findSubsystem<TypeRegistry>();
                 const EnumInfo* pEnumInfo =
                     ( pRegistry != nullptr && info._enumType.empty() == false )
                         ? pRegistry->findEnum( hashed_string( info._enumType.c_str() ) )
@@ -215,7 +215,7 @@ namespace sw::editor
 
     void GlobalVariablesPanel::revertDocument()
     {
-        GlobalVariableManager* pGvm = editor::getService<GlobalVariableManager>();
+        GlobalVariableManager* pGvm = editor::findSubsystem<GlobalVariableManager>();
         if ( pGvm != nullptr )
             pGvm->resetAllToDefault();
     }
@@ -227,7 +227,7 @@ namespace sw::editor
 
     void GlobalVariablesPanel::drawContent()
     {
-        GlobalVariableManager* pGvm = editor::getService<GlobalVariableManager>();
+        GlobalVariableManager* pGvm = editor::findSubsystem<GlobalVariableManager>();
         if ( pGvm == nullptr )
             return;
 

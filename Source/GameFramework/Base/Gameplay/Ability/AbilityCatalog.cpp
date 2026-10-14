@@ -8,6 +8,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Gameplay/Ability/CombatAttributeSet.h"
 
 namespace sw
@@ -41,14 +42,14 @@ namespace sw
                 }
 
                 const utf8* pOp = node.findAttribute( "op" );
-                if ( pOp != nullptr && engine::getTypeRegistry().enumFromString( string_view( pOp ), outModifier._op ) == false )
+                if ( pOp != nullptr && game::getSubsystem<TypeRegistry>().enumFromString( string_view( pOp ), outModifier._op ) == false )
                 {
                     SW_LOG_WARNING( "%#: effect '%#' has unknown modifier op '%#' - skipped", sourceName, pEffectID, pOp );
                     return false;
                 }
 
                 const utf8* pSource = node.findAttribute( "source" );
-                if ( pSource != nullptr && engine::getTypeRegistry().enumFromString( string_view( pSource ), outModifier._magnitudeSource ) == false )
+                if ( pSource != nullptr && game::getSubsystem<TypeRegistry>().enumFromString( string_view( pSource ), outModifier._magnitudeSource ) == false )
                 {
                     SW_LOG_WARNING( "%#: effect '%#' has unknown magnitude source '%#' - skipped", sourceName, pEffectID, pSource );
                     return false;
@@ -279,7 +280,7 @@ namespace sw
         outDef._id = hashed_string( pID );
 
         const utf8* pDuration = node.findAttribute( "duration" );
-        if ( pDuration != nullptr && engine::getTypeRegistry().enumFromString( string_view( pDuration ), outDef._durationPolicy ) == false )
+        if ( pDuration != nullptr && game::getSubsystem<TypeRegistry>().enumFromString( string_view( pDuration ), outDef._durationPolicy ) == false )
         {
             SW_LOG_WARNING( "%#: effect '%#' has unknown duration policy '%#' - skipped", sourceName, pID, pDuration );
             return false;
@@ -294,13 +295,13 @@ namespace sw
             outDef._stackLimit = 1;
 
         const utf8* pStacking = node.findAttribute( "stacking" );
-        if ( pStacking != nullptr && engine::getTypeRegistry().enumFromString( string_view( pStacking ), outDef._stackingPolicy ) == false )
+        if ( pStacking != nullptr && game::getSubsystem<TypeRegistry>().enumFromString( string_view( pStacking ), outDef._stackingPolicy ) == false )
         {
             SW_LOG_WARNING( "%#: effect '%#' has unknown stacking policy '%#' - skipped", sourceName, pID, pStacking );
             return false;
         }
         const utf8* pExpiration = node.findAttribute( "stackExpiration" );
-        if ( pExpiration != nullptr && engine::getTypeRegistry().enumFromString( string_view( pExpiration ), outDef._stackExpirationPolicy ) == false )
+        if ( pExpiration != nullptr && game::getSubsystem<TypeRegistry>().enumFromString( string_view( pExpiration ), outDef._stackExpirationPolicy ) == false )
         {
             SW_LOG_WARNING( "%#: effect '%#' has unknown stack expiration '%#' - skipped", sourceName, pID, pExpiration );
             return false;

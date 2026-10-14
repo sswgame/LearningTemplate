@@ -202,7 +202,7 @@ SW_TEST_CASE( LiveShaderTest, LiveCompileWritesUnderItsOwnCodegen )
         // 엔진 캐시에 남은 프로브 항목도 비운다 — 남기면 다음 케이스의 수동 리로드(`triggerReloadAll`)가 지워진 소스를 다시 컴파일하려다
         // "Shader reload failed" 를 남긴다(섞은 순서 `--test_shuffle=13` 에서 `ManualReloadWithNoTargetsIsNoop` 이 졌다).
         if ( sw::engine::areEngineServicesBound() )
-            sw::engine::getShaderCache().clearCache();
+            sw::engine::getSubsystem<sw::ShaderCache>().clearCache();
     } ) );
     SW_ASSERT_TRUE( sw::FileUtil::removeFile( livePath ) );
     SW_ASSERT_TRUE( sw::FileUtil::removeFile( requestPath ) );
@@ -223,8 +223,8 @@ SW_TEST_CASE( LiveShaderTest, LiveCompileWritesUnderItsOwnCodegen )
     // 핫 리로드도 같은 요청으로 다시 컴파일한다 — 소스가 그대로이니 같은 자리에 같은 바이트다.
     if ( sw::engine::areEngineServicesBound() == false )
         return;
-    sw::engine::getShaderCache().clearCache();
-    SW_ASSERT_TRUE( sw::engine::getShaderCache().getOrCompile( desc )._bSuccess );
+    sw::engine::getSubsystem<sw::ShaderCache>().clearCache();
+    SW_ASSERT_TRUE( sw::engine::getSubsystem<sw::ShaderCache>().getOrCompile( desc )._bSuccess );
     sw::ShaderRecompiler manager;
     SW_ASSERT_TRUE( manager.initialize() );
     manager.triggerReloadAll();

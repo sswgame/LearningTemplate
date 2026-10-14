@@ -4,6 +4,7 @@
 
 #include "Core/Memory/LifetimeScope.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -21,7 +22,7 @@ namespace sw
             {
                 if ( typeName.empty() )
                     return nullptr;
-                const TypeInfo* pType = engine::getTypeRegistry().findType( typeName );
+                const TypeInfo* pType = engine::getSubsystem<TypeRegistry>().findType( typeName );
                 if ( pType == nullptr || pType->isPrimitive() )
                     return nullptr;
                 return pType;

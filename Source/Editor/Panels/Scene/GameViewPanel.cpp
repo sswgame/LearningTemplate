@@ -107,7 +107,7 @@ namespace sw::editor
 
         if ( imageSize.x > 1.0f && imageSize.y > 1.0f )
         {
-            InputManager* pInput = getService<InputManager>();
+            InputManager* pInput = findSubsystem<InputManager>();
             if ( pInput != nullptr && ViewportInputOverlay::getConfig()._bEnabled == SW_TRUE )
                 ViewportInputOverlay::draw( pDrawList, imagePos, imageSize, pInput, &pInput->getInputMap() );
         }
