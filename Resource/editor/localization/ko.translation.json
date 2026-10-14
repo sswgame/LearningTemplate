@@ -2532,6 +2532,410 @@
         "EditorUIPreview.WaitingForTexture": {
             "text": "렌더 스레드가 미리보기 텍스처를 만들기를 기다리는 중...",
             "sourceHash": "98fcdf13e55ddd57"
+        },
+        "EdAbilityDebug.PickTarget": {
+            "text": "어빌리티 시스템 고르기...",
+            "sourceHash": "0f5befa1ba0a7140"
+        },
+        "EdAbilityDebug.NoComponentsInScene": {
+            "text": "활성 씬에 AbilitySystemComponent 가 없습니다",
+            "sourceHash": "f9aceb1e918e73da"
+        },
+        "EdAbilityDebug.HintPlayOnly": {
+            "text": "어빌리티 런타임 상태는 플레이 중에만 있습니다. 플레이를 눌러 확인하세요.",
+            "sourceHash": "7adebb387e539a62"
+        },
+        "EdAbilityDebug.HintNoTarget": {
+            "text": "AbilitySystemComponent 가 있는 오브젝트를 선택하거나 위에서 고르세요.",
+            "sourceHash": "937bde747e495279"
+        },
+        "EdAbilityDebug.SectionAttributes": {
+            "text": "어트리뷰트",
+            "sourceHash": "16b9446e3a70e1f4"
+        },
+        "EdAbilityDebug.SectionEffects": {
+            "text": "걸린 이펙트",
+            "sourceHash": "6991d93fa865e70d"
+        },
+        "EdAbilityDebug.SectionTags": {
+            "text": "소유 태그",
+            "sourceHash": "35d4aac5d07d7ce3"
+        },
+        "EdAbilityDebug.SectionAbilities": {
+            "text": "부여된 어빌리티",
+            "sourceHash": "59c749c8cdb544fa"
+        },
+        "EdAbilityDebug.ColumnName": {
+            "text": "이름",
+            "sourceHash": "ef49aec68fd1dc66"
+        },
+        "EdAbilityDebug.ColumnBase": {
+            "text": "기본값",
+            "sourceHash": "c1a4e2a7a8e20d58"
+        },
+        "EdAbilityDebug.ColumnCurrent": {
+            "text": "현재값",
+            "sourceHash": "ab8b4cbbb1fa71fa"
+        },
+        "EdAbilityDebug.ColumnRemaining": {
+            "text": "남은 시간",
+            "sourceHash": "dd9423c2ce1195a3"
+        },
+        "EdAbilityDebug.ColumnStacks": {
+            "text": "스택",
+            "sourceHash": "1d286181862db5e4"
+        },
+        "EdAbilityDebug.ColumnTag": {
+            "text": "태그",
+            "sourceHash": "6ce0cb19e201b153"
+        },
+        "EdAbilityDebug.ColumnCount": {
+            "text": "개수",
+            "sourceHash": "71a5c9f4b68ef4d4"
+        },
+        "EdAbilityDebug.ColumnActive": {
+            "text": "실행 중",
+            "sourceHash": "a45a194b58837e4f"
+        },
+        "EdAbilityDebug.ColumnCooldown": {
+            "text": "쿨다운",
+            "sourceHash": "8b59db90be866528"
+        },
+        "EdAbilityDebug.Infinite": {
+            "text": "무한",
+            "sourceHash": "0c024c0024360a2d"
+        },
+        "EditorAudioEvents.FieldBus": {
+            "text": "버스",
+            "sourceHash": "166a3d19b1137d79"
+        },
+        "EditorAudioEvents.FieldVolume": {
+            "text": "볼륨",
+            "sourceHash": "5b528a7f6c0c40af"
+        },
+        "EditorAudioEvents.FieldPitch": {
+            "text": "피치",
+            "sourceHash": "1369ddcc1b221411"
+        },
+        "EditorAudioEvents.FieldRadius": {
+            "text": "반경",
+            "sourceHash": "8afc8c5aafb392d3"
+        },
+        "EditorAudioEvents.FieldContainer": {
+            "text": "컨테이너",
+            "sourceHash": "c1034375f5a9f098"
+        },
+        "EditorAudioEvents.FieldClipCount": {
+            "text": "클립 수",
+            "sourceHash": "4c5ffcfb7b5612d8"
+        },
+        "EditorAudioEvents.FieldMaxInstances": {
+            "text": "최대 인스턴스",
+            "sourceHash": "2731fc1693b7ec61"
+        },
+        "EditorAudioEvents.FieldSteal": {
+            "text": "뺏기 규칙",
+            "sourceHash": "40c827fb76b7856a"
+        },
+        "EditorAudioEvents.FieldPriority": {
+            "text": "우선순위",
+            "sourceHash": "a4e407b3a0fe4669"
+        },
+        "EditorAudioEvents.FieldVirtual": {
+            "text": "가상화 방식",
+            "sourceHash": "4dc6a55cfd970117"
+        },
+        "EditorAudioEvents.FieldCooldown": {
+            "text": "쿨다운",
+            "sourceHash": "8b59db90be866528"
+        },
+        "EditorAudioEvents.FieldFade": {
+            "text": "페이드",
+            "sourceHash": "19b53a85180aefd3"
+        },
+        "EditorAudioEvents.FieldLoop": {
+            "text": "반복",
+            "sourceHash": "4efee5b48a4593cb"
+        },
+        "EditorAudioEvents.FieldParameterCount": {
+            "text": "파라미터 곡선 수",
+            "sourceHash": "775c3b8fdb4a6fa8"
+        },
+        "EditorAudioEvents.RemainingLoop": {
+            "text": "반복",
+            "sourceHash": "cdece4ad70d57deb"
+        },
+        "EditorAudioEvents.NoLibrary": {
+            "text": "로드된 이벤트 라이브러리가 없습니다",
+            "sourceHash": "4f1746ead14e88d2"
+        },
+        "EditorAudioEvents.SelectEvent": {
+            "text": "왼쪽에서 이벤트를 고르세요",
+            "sourceHash": "6a6ebb1818fb7e8b"
+        },
+        "EditorAudioEvents.PostEvent": {
+            "text": "이벤트 재생",
+            "sourceHash": "29c60846920313bf"
+        },
+        "EditorAudioEvents.OpenDataFile": {
+            "text": "데이터 파일 열기",
+            "sourceHash": "398cfeb5d8e43ccf"
+        },
+        "EditorAudioEvents.OpenDataFileTip": {
+            "text": "이벤트 데이터는 .audioevents.xml 파일에서 고칩니다. 저장하면 다시 읽습니다. 여는 도구가 없으면 경로를 복사합니다",
+            "sourceHash": "a8f35b402024c30d"
+        },
+        "EditorAudioEvents.ColumnField": {
+            "text": "항목",
+            "sourceHash": "42a1ebe17efda727"
+        },
+        "EditorAudioEvents.ColumnValue": {
+            "text": "값",
+            "sourceHash": "41f7dca46d3f1b4a"
+        },
+        "EditorAudioEvents.Clips": {
+            "text": "클립",
+            "sourceHash": "4c5ffcfb7b5612d8"
+        },
+        "EditorAudioEvents.OnlySelected": {
+            "text": "고른 이벤트만",
+            "sourceHash": "777abfbbad63b075"
+        },
+        "EditorAudioEvents.NothingPlaying": {
+            "text": "재생 중인 것이 없습니다",
+            "sourceHash": "2e965cf7c814ca40"
+        },
+        "EditorAudioEvents.ColumnEvent": {
+            "text": "이벤트",
+            "sourceHash": "d0ea7366ebc403ff"
+        },
+        "EditorAudioEvents.ColumnBus": {
+            "text": "버스",
+            "sourceHash": "166a3d19b1137d79"
+        },
+        "EditorAudioEvents.ColumnElapsed": {
+            "text": "지난 시간",
+            "sourceHash": "123599b6570bb99b"
+        },
+        "EditorAudioEvents.ColumnRemaining": {
+            "text": "남은 시간",
+            "sourceHash": "dd9423c2ce1195a3"
+        },
+        "EditorAudioEvents.ColumnVoices": {
+            "text": "보이스",
+            "sourceHash": "e3767266a468255e"
+        },
+        "EditorAudioEvents.RealVoices": {
+            "text": "실제 보이스",
+            "sourceHash": "97a9fea95c6a8b58"
+        },
+        "EditorAudioEvents.AllVoices": {
+            "text": "전체 보이스",
+            "sourceHash": "5a72c09c45ad973f"
+        },
+        "EditorAudioEvents.VirtualVoices": {
+            "text": "가상 보이스",
+            "sourceHash": "6dfba19a93c88787"
+        },
+        "EditorAudioEvents.PeakRealVoices": {
+            "text": "최대 실제 보이스",
+            "sourceHash": "7e343e210dadd585"
+        },
+        "EditorAudioEvents.Instances": {
+            "text": "인스턴스",
+            "sourceHash": "2f4f955934b0c573"
+        },
+        "EditorAudioEvents.PlayedDropped": {
+            "text": "재생 / 버림",
+            "sourceHash": "6c5d3ea980697579"
+        },
+        "EditorAudioEvents.PlayedDroppedTip": {
+            "text": "시작 뒤 재생한 이벤트와 쿨다운 · 상한 · 슬롯 부족으로 버린 이벤트",
+            "sourceHash": "62daf983a4cdc9a6"
+        },
+        "EditorAudioEvents.TabProperties": {
+            "text": "속성",
+            "sourceHash": "6b7d7afabc24ff1c"
+        },
+        "EditorAudioEvents.TabPlaying": {
+            "text": "재생 중",
+            "sourceHash": "308604b3ae13fbb5"
+        },
+        "EditorAudioEvents.TabVoices": {
+            "text": "보이스",
+            "sourceHash": "e3767266a468255e"
+        },
+        "EditorAudioEvents.NoService": {
+            "text": "오디오 서비스가 실행 중이 아닙니다",
+            "sourceHash": "f0ad4f0ff56a00ed"
+        },
+        "EditorInspector.AddToFavorites": {
+            "text": "즐겨찾기에 추가",
+            "sourceHash": "7b1bc15f29f533d4"
+        },
+        "EditorInspector.RemoveFromFavorites": {
+            "text": "즐겨찾기에서 제거",
+            "sourceHash": "36c7ff52d04afe46"
+        },
+        "EditorInspector.FavoriteProperty": {
+            "text": "즐겨찾기한 프로퍼티",
+            "sourceHash": "fb249f89853db486"
+        },
+        "EditorInspector.FavoritesSection": {
+            "text": "즐겨찾기",
+            "sourceHash": "20a500234e838dda"
+        },
+        "EditorSettings.ModuleChangeTarget": {
+            "text": "모듈",
+            "sourceHash": "2c4f75473cf240bd"
+        },
+        "EditorSettings.ModuleChangeNoCascade": {
+            "text": "다른 모듈은 바뀌지 않습니다.",
+            "sourceHash": "5f8d22c3c20a3607"
+        },
+        "EditorSettings.ModuleChangeTurnsOff": {
+            "text": "함께 꺼짐",
+            "sourceHash": "ecda9ad346bd5d9b"
+        },
+        "EditorSettings.ModuleChangeTurnsOn": {
+            "text": "함께 켜짐",
+            "sourceHash": "07f410511c693db7"
+        },
+        "EditorSettings.ModuleKindAll": {
+            "text": "모든 종류",
+            "sourceHash": "6376d96dd9fddb50"
+        },
+        "EditorSettings.ModuleKindFilter": {
+            "text": "한 종류의 모듈만 보입니다",
+            "sourceHash": "72239a1f3f3a2d1e"
+        },
+        "EditorSettings.ModuleStateAll": {
+            "text": "켜짐과 꺼짐",
+            "sourceHash": "da342a28fba6d2a8"
+        },
+        "EditorSettings.ModuleStateOn": {
+            "text": "켜진 것만",
+            "sourceHash": "2e77987092ac5362"
+        },
+        "EditorSettings.ModuleStateOff": {
+            "text": "꺼진 것만",
+            "sourceHash": "df497b60dde2d708"
+        },
+        "EditorSettings.ModuleStateFilter": {
+            "text": "켜짐 여부로 모듈을 거릅니다",
+            "sourceHash": "c6afdd8f2975fe8b"
+        },
+        "EditorSettings.ModuleVersion": {
+            "text": "버전",
+            "sourceHash": "f4122b220926be97"
+        },
+        "EditorSettings.ModuleDefaultState": {
+            "text": "기본값",
+            "sourceHash": "11326fd2590f4e5e"
+        },
+        "EditorSettings.ModuleOverride": {
+            "text": "프로젝트 오버라이드",
+            "sourceHash": "b197434dc23346d2"
+        },
+        "EditorSettings.ModuleOverrideNone": {
+            "text": "없음(기본값 사용)",
+            "sourceHash": "d7559924e3148c21"
+        },
+        "EditorSettings.ModuleResetOverride": {
+            "text": "기본값으로 되돌리기",
+            "sourceHash": "844a76d1843ceb3c"
+        },
+        "EditorSettings.ModuleResetOverrideTip": {
+            "text": "프로젝트 매니페스트에서 이 모듈 줄을 지웁니다(먼저 변경을 미리 보여 줍니다)",
+            "sourceHash": "faf412e0e9ee5e3b"
+        },
+        "EditorSettings.ModuleDependencies": {
+            "text": "의존 모듈",
+            "sourceHash": "35078fbad7759569"
+        },
+        "EditorSettings.ModuleDependents": {
+            "text": "이 모듈에 의존하는 모듈",
+            "sourceHash": "1553a04a9f9c808d"
+        },
+        "EditorSequencer.AddRigSlotTrackTip": {
+            "text": "리그 슬롯 가중치(PoseModifierComponent)에 키를 찍는 트랙을 추가합니다",
+            "sourceHash": "4f864229801873f0"
+        },
+        "EditorSequencer.RigSlotTip": {
+            "text": "리그 슬롯 이름(리그 에셋의 weight_slot), 값은 0..1 로 자릅니다",
+            "sourceHash": "5e4b75f95a284380"
+        },
+        "EditorSequencer.RigSlotTargetNotFound": {
+            "text": "대상에 Pose Modifier 가 없습니다",
+            "sourceHash": "68a7295429437195"
+        },
+        "EditorRigDebug.SelectRig": {
+            "text": "Pose Modifier 컴포넌트가 있는 오브젝트를 고르세요",
+            "sourceHash": "9ba35bfa3cc48f03"
+        },
+        "EditorRigDebug.RigNotReady": {
+            "text": "리그가 아직 바인딩되지 않았습니다(리그 에셋과 스켈레톤을 확인하세요)",
+            "sourceHash": "7cd60c3b68098ed5"
+        },
+        "EditorRigDebug.BoneMarkersTip": {
+            "text": "고른 노드가 쓰는 본을 뷰포트에 표시합니다",
+            "sourceHash": "7b034c0791d256c3"
+        },
+        "EdSchedule.EmptyHint": {
+            "text": "실행 중인 일정 시스템이 없습니다. 일정을 가진 NPC 가 있는 상태로 플레이를 시작하세요.",
+            "sourceHash": "c440b029ca8db326"
+        },
+        "EdSchedule.SystemIndex": {
+            "text": "일정 시스템",
+            "sourceHash": "22b2a2f792a7281d"
+        },
+        "EdSchedule.SelectNpcHint": {
+            "text": "왼쪽에서 NPC 를 고르세요",
+            "sourceHash": "2d4aa57458132d18"
+        },
+        "EdSchedule.NpcListTitle": {
+            "text": "NPC 목록",
+            "sourceHash": "578931c5a8afe279"
+        },
+        "EdSchedule.FollowClock": {
+            "text": "게임 시계 따라가기",
+            "sourceHash": "9331e1eca52eafa8"
+        },
+        "EdSchedule.GameTime": {
+            "text": "게임 시각",
+            "sourceHash": "312a78762d9ad9a4"
+        },
+        "EdSchedule.ColumnTime": {
+            "text": "시각",
+            "sourceHash": "48e186fb300e5464"
+        },
+        "EdSchedule.ColumnTravel": {
+            "text": "이동",
+            "sourceHash": "bb87af74ab3706b9"
+        },
+        "EdSchedule.ColumnPlace": {
+            "text": "장소",
+            "sourceHash": "13b3f5afa0862d1c"
+        },
+        "EdSchedule.ColumnActivity": {
+            "text": "행동",
+            "sourceHash": "6c76b294d740446c"
+        },
+        "EdSchedule.ColumnSource": {
+            "text": "출처",
+            "sourceHash": "5f43af3669b1e098"
+        },
+        "EdSchedule.EmptyPlan": {
+            "text": "오늘 계획이 없습니다",
+            "sourceHash": "b3a79d044bf5027f"
+        },
+        "EdSchedule.WhyNow": {
+            "text": "지금 왜 이 행동인가",
+            "sourceHash": "998a39497efff850"
+        },
+        "EdSchedule.RawTimeline": {
+            "text": "타임라인 원문",
+            "sourceHash": "60d9224c1e5f1898"
         }
     }
 }

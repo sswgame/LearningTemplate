@@ -3803,6 +3803,410 @@
             "origins": [
                 "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
             ]
+        },
+        "EdAbilityDebug.PickTarget": {
+            "source": "Pick an ability system...",
+            "origins": []
+        },
+        "EdAbilityDebug.NoComponentsInScene": {
+            "source": "No AbilitySystemComponent in the active scene",
+            "origins": []
+        },
+        "EdAbilityDebug.HintPlayOnly": {
+            "source": "Runtime ability state exists only during play. Press Play to inspect it.",
+            "origins": []
+        },
+        "EdAbilityDebug.HintNoTarget": {
+            "source": "Select an object with an AbilitySystemComponent, or pick one above.",
+            "origins": []
+        },
+        "EdAbilityDebug.SectionAttributes": {
+            "source": "Attributes",
+            "origins": []
+        },
+        "EdAbilityDebug.SectionEffects": {
+            "source": "Active Effects",
+            "origins": []
+        },
+        "EdAbilityDebug.SectionTags": {
+            "source": "Owned Tags",
+            "origins": []
+        },
+        "EdAbilityDebug.SectionAbilities": {
+            "source": "Granted Abilities",
+            "origins": []
+        },
+        "EdAbilityDebug.ColumnName": {
+            "source": "Name",
+            "origins": []
+        },
+        "EdAbilityDebug.ColumnBase": {
+            "source": "Base",
+            "origins": []
+        },
+        "EdAbilityDebug.ColumnCurrent": {
+            "source": "Current",
+            "origins": []
+        },
+        "EdAbilityDebug.ColumnRemaining": {
+            "source": "Remaining",
+            "origins": []
+        },
+        "EdAbilityDebug.ColumnStacks": {
+            "source": "Stacks",
+            "origins": []
+        },
+        "EdAbilityDebug.ColumnTag": {
+            "source": "Tag",
+            "origins": []
+        },
+        "EdAbilityDebug.ColumnCount": {
+            "source": "Count",
+            "origins": []
+        },
+        "EdAbilityDebug.ColumnActive": {
+            "source": "Active",
+            "origins": []
+        },
+        "EdAbilityDebug.ColumnCooldown": {
+            "source": "Cooldown",
+            "origins": []
+        },
+        "EdAbilityDebug.Infinite": {
+            "source": "Infinite",
+            "origins": []
+        },
+        "EditorAudioEvents.FieldBus": {
+            "source": "Bus",
+            "origins": []
+        },
+        "EditorAudioEvents.FieldVolume": {
+            "source": "Volume",
+            "origins": []
+        },
+        "EditorAudioEvents.FieldPitch": {
+            "source": "Pitch",
+            "origins": []
+        },
+        "EditorAudioEvents.FieldRadius": {
+            "source": "Radius",
+            "origins": []
+        },
+        "EditorAudioEvents.FieldContainer": {
+            "source": "Container",
+            "origins": []
+        },
+        "EditorAudioEvents.FieldClipCount": {
+            "source": "Clips",
+            "origins": []
+        },
+        "EditorAudioEvents.FieldMaxInstances": {
+            "source": "Max instances",
+            "origins": []
+        },
+        "EditorAudioEvents.FieldSteal": {
+            "source": "Steal policy",
+            "origins": []
+        },
+        "EditorAudioEvents.FieldPriority": {
+            "source": "Priority",
+            "origins": []
+        },
+        "EditorAudioEvents.FieldVirtual": {
+            "source": "Virtual mode",
+            "origins": []
+        },
+        "EditorAudioEvents.FieldCooldown": {
+            "source": "Cooldown",
+            "origins": []
+        },
+        "EditorAudioEvents.FieldFade": {
+            "source": "Fade",
+            "origins": []
+        },
+        "EditorAudioEvents.FieldLoop": {
+            "source": "Loop",
+            "origins": []
+        },
+        "EditorAudioEvents.FieldParameterCount": {
+            "source": "Parameter curves",
+            "origins": []
+        },
+        "EditorAudioEvents.RemainingLoop": {
+            "source": "loop",
+            "origins": []
+        },
+        "EditorAudioEvents.NoLibrary": {
+            "source": "No event library loaded",
+            "origins": []
+        },
+        "EditorAudioEvents.SelectEvent": {
+            "source": "Select an event on the left",
+            "origins": []
+        },
+        "EditorAudioEvents.PostEvent": {
+            "source": "Post Event",
+            "origins": []
+        },
+        "EditorAudioEvents.OpenDataFile": {
+            "source": "Open Data File",
+            "origins": []
+        },
+        "EditorAudioEvents.OpenDataFileTip": {
+            "source": "Event data is edited in its .audioevents.xml file; saving reloads it. Copies the path when no tool opens it",
+            "origins": []
+        },
+        "EditorAudioEvents.ColumnField": {
+            "source": "Field",
+            "origins": []
+        },
+        "EditorAudioEvents.ColumnValue": {
+            "source": "Value",
+            "origins": []
+        },
+        "EditorAudioEvents.Clips": {
+            "source": "Clips",
+            "origins": []
+        },
+        "EditorAudioEvents.OnlySelected": {
+            "source": "Only the selected event",
+            "origins": []
+        },
+        "EditorAudioEvents.NothingPlaying": {
+            "source": "Nothing is playing",
+            "origins": []
+        },
+        "EditorAudioEvents.ColumnEvent": {
+            "source": "Event",
+            "origins": []
+        },
+        "EditorAudioEvents.ColumnBus": {
+            "source": "Bus",
+            "origins": []
+        },
+        "EditorAudioEvents.ColumnElapsed": {
+            "source": "Elapsed",
+            "origins": []
+        },
+        "EditorAudioEvents.ColumnRemaining": {
+            "source": "Remaining",
+            "origins": []
+        },
+        "EditorAudioEvents.ColumnVoices": {
+            "source": "Voices",
+            "origins": []
+        },
+        "EditorAudioEvents.RealVoices": {
+            "source": "Real voices",
+            "origins": []
+        },
+        "EditorAudioEvents.AllVoices": {
+            "source": "All voices",
+            "origins": []
+        },
+        "EditorAudioEvents.VirtualVoices": {
+            "source": "Virtual voices",
+            "origins": []
+        },
+        "EditorAudioEvents.PeakRealVoices": {
+            "source": "Peak real voices",
+            "origins": []
+        },
+        "EditorAudioEvents.Instances": {
+            "source": "Instances",
+            "origins": []
+        },
+        "EditorAudioEvents.PlayedDropped": {
+            "source": "Played / dropped",
+            "origins": []
+        },
+        "EditorAudioEvents.PlayedDroppedTip": {
+            "source": "Events posted since start, and events dropped by cooldown, limit or slot shortage",
+            "origins": []
+        },
+        "EditorAudioEvents.TabProperties": {
+            "source": "Properties",
+            "origins": []
+        },
+        "EditorAudioEvents.TabPlaying": {
+            "source": "Playing",
+            "origins": []
+        },
+        "EditorAudioEvents.TabVoices": {
+            "source": "Voices",
+            "origins": []
+        },
+        "EditorAudioEvents.NoService": {
+            "source": "The audio service is not running",
+            "origins": []
+        },
+        "EditorInspector.AddToFavorites": {
+            "source": "Add to Favorites",
+            "origins": []
+        },
+        "EditorInspector.RemoveFromFavorites": {
+            "source": "Remove from Favorites",
+            "origins": []
+        },
+        "EditorInspector.FavoriteProperty": {
+            "source": "Favorite property",
+            "origins": []
+        },
+        "EditorInspector.FavoritesSection": {
+            "source": "Favorites",
+            "origins": []
+        },
+        "EditorSettings.ModuleChangeTarget": {
+            "source": "Module",
+            "origins": []
+        },
+        "EditorSettings.ModuleChangeNoCascade": {
+            "source": "No other modules change.",
+            "origins": []
+        },
+        "EditorSettings.ModuleChangeTurnsOff": {
+            "source": "Also turns off",
+            "origins": []
+        },
+        "EditorSettings.ModuleChangeTurnsOn": {
+            "source": "Also turns on",
+            "origins": []
+        },
+        "EditorSettings.ModuleKindAll": {
+            "source": "All categories",
+            "origins": []
+        },
+        "EditorSettings.ModuleKindFilter": {
+            "source": "Show only one module category",
+            "origins": []
+        },
+        "EditorSettings.ModuleStateAll": {
+            "source": "On and off",
+            "origins": []
+        },
+        "EditorSettings.ModuleStateOn": {
+            "source": "On only",
+            "origins": []
+        },
+        "EditorSettings.ModuleStateOff": {
+            "source": "Off only",
+            "origins": []
+        },
+        "EditorSettings.ModuleStateFilter": {
+            "source": "Filter modules by whether they are on",
+            "origins": []
+        },
+        "EditorSettings.ModuleVersion": {
+            "source": "Version",
+            "origins": []
+        },
+        "EditorSettings.ModuleDefaultState": {
+            "source": "Default",
+            "origins": []
+        },
+        "EditorSettings.ModuleOverride": {
+            "source": "Project override",
+            "origins": []
+        },
+        "EditorSettings.ModuleOverrideNone": {
+            "source": "None (uses default)",
+            "origins": []
+        },
+        "EditorSettings.ModuleResetOverride": {
+            "source": "Reset to default",
+            "origins": []
+        },
+        "EditorSettings.ModuleResetOverrideTip": {
+            "source": "Remove this module's line from the project manifest (previews the change first)",
+            "origins": []
+        },
+        "EditorSettings.ModuleDependencies": {
+            "source": "Depends on",
+            "origins": []
+        },
+        "EditorSettings.ModuleDependents": {
+            "source": "Required by",
+            "origins": []
+        },
+        "EditorSequencer.AddRigSlotTrackTip": {
+            "source": "Add a track that keys a rig slot weight (PoseModifierComponent)",
+            "origins": []
+        },
+        "EditorSequencer.RigSlotTip": {
+            "source": "Rig slot name (weight_slot in the rig asset); value is clamped to 0..1",
+            "origins": []
+        },
+        "EditorSequencer.RigSlotTargetNotFound": {
+            "source": "Target has no Pose Modifier",
+            "origins": []
+        },
+        "EditorRigDebug.SelectRig": {
+            "source": "Select an object with a Pose Modifier component",
+            "origins": []
+        },
+        "EditorRigDebug.RigNotReady": {
+            "source": "The rig is not bound yet (check the rig asset and skeleton)",
+            "origins": []
+        },
+        "EditorRigDebug.BoneMarkersTip": {
+            "source": "Draw the bones written by the selected node in the viewport",
+            "origins": []
+        },
+        "EdSchedule.EmptyHint": {
+            "source": "No schedule system is running. Start play with NPCs that have schedules.",
+            "origins": []
+        },
+        "EdSchedule.SystemIndex": {
+            "source": "Schedule system",
+            "origins": []
+        },
+        "EdSchedule.SelectNpcHint": {
+            "source": "Select an NPC on the left",
+            "origins": []
+        },
+        "EdSchedule.NpcListTitle": {
+            "source": "NPCs",
+            "origins": []
+        },
+        "EdSchedule.FollowClock": {
+            "source": "Follow game clock",
+            "origins": []
+        },
+        "EdSchedule.GameTime": {
+            "source": "Game time",
+            "origins": []
+        },
+        "EdSchedule.ColumnTime": {
+            "source": "Time",
+            "origins": []
+        },
+        "EdSchedule.ColumnTravel": {
+            "source": "Travel",
+            "origins": []
+        },
+        "EdSchedule.ColumnPlace": {
+            "source": "Place",
+            "origins": []
+        },
+        "EdSchedule.ColumnActivity": {
+            "source": "Activity",
+            "origins": []
+        },
+        "EdSchedule.ColumnSource": {
+            "source": "Source",
+            "origins": []
+        },
+        "EdSchedule.EmptyPlan": {
+            "source": "No plan for today",
+            "origins": []
+        },
+        "EdSchedule.WhyNow": {
+            "source": "Why this activity now",
+            "origins": []
+        },
+        "EdSchedule.RawTimeline": {
+            "source": "Raw timeline",
+            "origins": []
         }
     }
 }
