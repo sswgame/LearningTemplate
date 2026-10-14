@@ -8,6 +8,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -65,6 +66,8 @@ namespace sw
         _gameScope.addSubsystem( make_unique<ScreenTransitionManager>() );
         _gameScope.addSubsystem( make_unique<LoadingScreenController>() );
         _gameScope.addSubsystem( make_unique<GameNetSession>() );
+        // 엔진 컴포넌트 중 PROPERTY 밖의 편집 상태를 가진 것 — 지형의 저장하지 않은 높이 · 스플랫이 모듈 리로드와 백엔드 교체를 넘어간다.
+        registerStatefulComponent<TerrainComponent>();
     }
 
     GameInstanceBase::~GameInstanceBase()

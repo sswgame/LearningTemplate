@@ -17,6 +17,7 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/Image/ImageFileWriter.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Serialization/Format/Archive.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -465,6 +466,87 @@ SW_TEST_CASE( TerrainTest, WriteHeightsUpdatesQueriesAndSaves )
     SW_EXPECT_EQUAL( 65u, loaded._resolution );
     const float32 expectedRaw = ( 7.0f - TerrainTestUtil::kHeightMin ) / ( TerrainTestUtil::kHeightMax - TerrainTestUtil::kHeightMin ) * 65535.0f;
     SW_EXPECT_NEAR_EQUAL( expectedRaw, static_cast<float32>( loaded.getSample( 17, 16 ) ), 1.0f );
+}
+
+/**
+ * @brief [TerrainTest] 저장하지 않은 높이 · 스플랫 편집은 상태 스냅샷(`writeState` → `restoreState`)으로 다시 읽은 지형에 돌아간다 — 모듈 리로드 · 백엔드 교체 경로
+ * @details 변이: `writeState` 가 높이나 스플랫을 싣지 않으면 되살린 지형이 디스크 값이라 비교가 진다. 쓰지 않은 지형은 버전과 빈 표시만 싣는다.
+ */
+SW_TEST_CASE( TerrainTest, UnsavedEditsSurviveStateSnapshot )
+{
+    const string    heightfieldPath = test::makeTempPath( "snapshot.heightfield" );
+    HeightfieldData data            = TerrainTestUtil::makeData( 33, &TerrainTestUtil::wave );
+    SW_ASSERT_TRUE( data.saveToFile( heightfieldPath ) );
+    constexpr uint32 kSplatSize = 8;
+    vector<uint8>    splatBytes( kSplatSize * kSplatSize * 4, 0u );
+    for ( size_t texel = 0; texel < kSplatSize * kSplatSize; ++texel )
+    {
+        splatBytes[texel * 4] = 255u;
+    }
+    const string splatPath = test::makeTempPath( "snapshot_splat.dds" );
+    SW_ASSERT_TRUE( ImageFileWriter::writeDDSRgba8( splatPath, splatBytes, kSplatSize, kSplatSize ) );
+
+    GameObjectManager manager;
+    TerrainComponent* arrTerrain[2]{};
+    for ( TerrainComponent*& pTerrain : arrTerrain )
+    {
+        GameObject* pObject = manager.createGameObject( hashed_string( "Terrain" ) );
+        SW_ASSERT_NOT_NULL( pObject );
+        pTerrain = pObject->addComponent<TerrainComponent>();
+        SW_ASSERT_NOT_NULL( pTerrain );
+        pTerrain->setHeightfieldPath( heightfieldPath );
+        pTerrain->setSplatTexturePath( splatPath );
+        pTerrain->setSize( float2{ 32.0f, 32.0f } );
+        pTerrain->setHeightRange( TerrainTestUtil::kHeightMin, TerrainTestUtil::kHeightMax );
+        pTerrain->setChunkCells( 16 );
+        pTerrain->setMaterialPath( "" );
+        SW_ASSERT_TRUE( pTerrain->reloadTerrain() );
+    }
+    TerrainComponent& edited   = *arrTerrain[0];
+    TerrainComponent& restored = *arrTerrain[1];
+
+    // 편집이 없으면 싣는 것이 작다(버전 + 빈 표시 둘).
+    Archive untouched;
+    edited.writeState( untouched );
+    vector<uint8> untouchedBytes;
+    untouched.writeData( untouchedBytes );
+    SW_EXPECT_TRUE( untouchedBytes.size() < 16u );
+
+    vector<float32> listHeight = edited.getHeightfield().getHeightSamples();
+    listHeight[5 * 33 + 6]     = 6.5f;
+    TerrainSampleRect heightRect;
+    heightRect.include( 6, 5 );
+    SW_ASSERT_TRUE( edited.writeHeights( listHeight, heightRect ) );
+    vector<float4> listWeight;
+    SW_ASSERT_TRUE( edited.getHeightfield().readSplatWeights( listWeight ) );
+    listWeight[2 * kSplatSize + 3] = float4{ 0.0f, 0.25f, 0.75f, 0.0f };
+    TerrainSampleRect splatRect;
+    splatRect.include( 3, 2 );
+    SW_ASSERT_TRUE( edited.writeLayerWeights( listWeight, splatRect ) );
+
+    Archive state;
+    edited.writeState( state );
+    vector<uint8> stateBytes;
+    state.writeData( stateBytes );
+    restored.restoreState( std::move( stateBytes ) );
+    SW_EXPECT_TRUE( restored.getHeightfield().getHeightSamples() == edited.getHeightfield().getHeightSamples() );
+    SW_EXPECT_TRUE( restored.getHeightfield().getSplatBytes() == edited.getHeightfield().getSplatBytes() );
+    SW_EXPECT_TRUE( restored.getHeightfield().getSplatBytes() != splatBytes );
+
+    SW_TEST_DEFENSIVE_SCOPE( "a snapshot of another heightfield size is rejected and the asset values stay" );
+    const string    otherPath = test::makeTempPath( "snapshot_other.heightfield" );
+    HeightfieldData other     = TerrainTestUtil::makeData( 17, &TerrainTestUtil::wave );
+    SW_ASSERT_TRUE( other.saveToFile( otherPath ) );
+    restored.setHeightfieldPath( otherPath );
+    restored.setSize( float2{ 16.0f, 16.0f } );
+    SW_ASSERT_TRUE( restored.reloadTerrain() );
+    const vector<float32> listAsset = restored.getHeightfield().getHeightSamples();
+    Archive               again;
+    edited.writeState( again );
+    vector<uint8> againBytes;
+    again.writeData( againBytes );
+    restored.restoreState( std::move( againBytes ) );
+    SW_EXPECT_TRUE( restored.getHeightfield().getHeightSamples() == listAsset );
 }
 
 /**

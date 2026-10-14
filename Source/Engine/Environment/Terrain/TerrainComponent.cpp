@@ -19,6 +19,7 @@
 #include "Engine/Resource/Image/DDSLoader.h"
 #include "Engine/Resource/Image/ImageFileWriter.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Serialization/Format/Archive.h"
 
 namespace sw
 {
@@ -40,6 +41,8 @@ namespace sw
              * @details Debug 측정으로 32 칸 청크 하나가 약 4.4 ms 이고(`TerrainBenchTest.WriteHeightsRectSizes`), 257 샘플 전체(청크 64)는 288 ms 였다.
              */
             static constexpr uint32 kMaxChunkMeshRebuildsPerFrame = 4;
+            /** @brief `writeState` 형식 버전입니다. 형식을 바꾸면 올린다. */
+            static constexpr uint32 kStateVersion = 1;
 
             /** @brief 지형마다의 스플랫 텍스처 경로(`cpu/terrain/<번호>`)를 새로 냅니다. 놓인 경로를 다시 쓰지 않도록 번호는 프로세스 안에서 늘기만 한다. */
             static string makeCPUSplatPath()
@@ -115,6 +118,7 @@ namespace sw
         , _heightfieldGeneration{ 0 }
         , _splatRevision{ 0 }
         , _bOriginDirty{ false }
+        , _bHeightsWritten{ false }
     {
         setCanEverTick( true );
         setTickGroup( TickGroup::PostUpdate );
@@ -237,7 +241,8 @@ namespace sw
         _heightfield.shutdown();
         _listChunkGeneration.clear();
         ++_heightfieldGeneration; // 실패해도 오른다 — 비워진 높이장으로 만든 바디도 낡았다
-        _splatRevision = 0;
+        _splatRevision   = 0;
+        _bHeightsWritten = false;
         releaseCPUSplat(); // 칠한 것은 버리고 디스크 스플랫으로 돌아간다
         if ( _heightfieldPath.empty() )
             return false;
@@ -266,6 +271,7 @@ namespace sw
             return false;
         using Internal = TerrainComponentInternal;
         ++_heightfieldGeneration;
+        _bHeightsWritten = true;
         // 충돌은 바뀐 샘플을 가진 청크만 낡는다(청크 경계 샘플은 양쪽 청크가 쓴다).
         TerrainSampleRect chunkRect = Internal::findChunksOfSamples( _layout, rect );
         for ( uint32 chunkZ = chunkRect._minZ; chunkZ <= chunkRect._maxZ; ++chunkZ )
@@ -371,6 +377,87 @@ namespace sw
         if ( _heightfield.getSplatWidth() == 0 )
             return false;
         return ImageFileWriter::writeDDSRgba8( filePath, _heightfield.getSplatBytes(), _heightfield.getSplatWidth(), _heightfield.getSplatHeight() );
+    }
+
+    void TerrainComponent::writeState( Archive& outArchive ) const
+    {
+        outArchive << TerrainComponentInternal::kStateVersion;
+        const bool bHeights = _bHeightsWritten && _heightfield.isValid();
+        outArchive << bHeights;
+        if ( bHeights )
+        {
+            const vector<float32>& listHeight = _heightfield.getHeightSamples();
+            outArchive << _heightfield.getResolution();
+            outArchive << static_cast<uint32>( listHeight.size() );
+            outArchive.writeBytes( listHeight.data(), listHeight.size() * sizeof( float32 ) );
+        }
+        const bool bSplat = _splatRevision > 0 && _heightfield.getSplatWidth() > 0;
+        outArchive << bSplat;
+        if ( bSplat )
+        {
+            outArchive << _heightfield.getSplatWidth();
+            outArchive << _heightfield.getSplatHeight();
+            outArchive << _heightfield.getSplatBytes();
+        }
+    }
+
+    void TerrainComponent::restoreState( vector<uint8>&& bytes )
+    {
+        Archive archive( bytes.data(), static_cast<uint64>( bytes.size() ) );
+        uint32  version{ 0 };
+        bool    bHeights{ false };
+        archive >> version >> bHeights;
+        if ( archive.isError() || version != TerrainComponentInternal::kStateVersion )
+        {
+            SW_LOG_WARNING( "Terrain '%#': unsaved edit state (version %#) did not read - keeping the asset values", _heightfieldPath.c_str(), version );
+            return;
+        }
+        if ( bHeights )
+        {
+            uint32 resolution{ 0 };
+            uint32 sampleCount{ 0 };
+            archive >> resolution >> sampleCount;
+            // 크기를 먼저 견준다 — 맞지 않는 수로 버퍼를 잡지 않는다.
+            const bool        bFits = archive.isOk() && resolution > 0 && resolution == _heightfield.getResolution() && sampleCount == _heightfield.getHeightSamples().size();
+            vector<float32>   listHeight( bFits ? sampleCount : 0u );
+            const bool        bRead = bFits && archive.readBytes( listHeight.data(), static_cast<uint64>( sampleCount ) * sizeof( float32 ) );
+            TerrainSampleRect all{};
+            all.include( 0, 0 );
+            all.include( resolution - 1, resolution - 1 );
+            if ( bRead == false || writeHeights( listHeight, all ) == false )
+            {
+                SW_LOG_WARNING( "Terrain '%#': unsaved height edits (%#x%#) do not fit the reloaded heightfield - keeping the asset values", _heightfieldPath.c_str(), resolution, resolution );
+                return;
+            }
+        }
+        bool bSplat{ false };
+        archive >> bSplat;
+        if ( bSplat == false )
+            return;
+        uint32        width{ 0 };
+        uint32        height{ 0 };
+        vector<uint8> splatBytes;
+        archive >> width >> height >> splatBytes;
+        const size_t texelCount = static_cast<size_t>( width ) * height;
+        const bool   bFits      = archive.isOk() && texelCount > 0 && width == _heightfield.getSplatWidth() && height == _heightfield.getSplatHeight();
+        if ( bFits == false || splatBytes.size() != texelCount * 4 )
+        {
+            SW_LOG_WARNING( "Terrain '%#': unsaved splat edits (%#x%#) do not fit the reloaded splat - keeping the asset values", _heightfieldPath.c_str(), width, height );
+            return;
+        }
+        // 바이트를 그대로 되돌리도록 가중치는 정규화하지 않는다(`writeLayerWeights` 는 x 255 를 반올림한다).
+        vector<float4> listWeight( texelCount );
+        for ( size_t texel = 0; texel < texelCount; ++texel )
+        {
+            const uint8* pTexel = &splatBytes[texel * 4];
+            listWeight[texel]   = float4{ static_cast<float32>( pTexel[0] ) / 255.0f, static_cast<float32>( pTexel[1] ) / 255.0f, static_cast<float32>( pTexel[2] ) / 255.0f,
+                                        static_cast<float32>( pTexel[3] ) / 255.0f };
+        }
+        TerrainSampleRect all{};
+        all.include( 0, 0 );
+        all.include( width - 1, height - 1 );
+        if ( writeLayerWeights( listWeight, all ) == false )
+            SW_LOG_WARNING( "Terrain '%#': could not write back the unsaved splat edits", _heightfieldPath.c_str() );
     }
 
     void TerrainComponent::loadSplatWeights()

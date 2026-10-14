@@ -16,9 +16,11 @@
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Automation/AutomationWindowSteps.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/RawInputEvent.h"
+#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Scene/Scene.h"
@@ -344,6 +346,21 @@ namespace sw
             }
 
             /** @brief 탐침 `Scene.ObjectCount` 입니다. 활성 씬의 오브젝트 수입니다(핫 리로드 · 백엔드 교체 앞뒤로 씬이 그대로인지 볼 때 씁니다). */
+            /** @brief 탐침 `Terrain.WrittenEditCount` 입니다. 디스크에서 다시 읽은 뒤 높이나 스플랫을 쓴 지형 수입니다(저장하지 않은 편집이 교체 · 리로드를 넘었는지 본다). */
+            [[nodiscard]] static bool readTerrainWrittenEditCount( const GameObjectManager* pManager, float64& outValue )
+            {
+                if ( pManager == nullptr )
+                    return false;
+                uint32 count{ 0 };
+                for ( const TerrainComponent* pTerrain : pManager->getComponentRegistry().getAll<TerrainComponent>() )
+                {
+                    if ( pTerrain->hasWrittenEdits() )
+                        ++count;
+                }
+                outValue = static_cast<float64>( count );
+                return true;
+            }
+
             [[nodiscard]] static bool readSceneObjectCount( const GameObjectManager* pManager, float64& outValue )
             {
                 if ( pManager == nullptr )
@@ -385,6 +402,8 @@ namespace sw
     SW_AUTOMATION_PROBE( inputOsDeviceInputBlocked, "Input.OsDeviceInputBlocked", "1 while unattended automation drops the person's mouse and keyboard window events",
                          &AutomationRunnerInternal::readOsDeviceInputBlocked );
     SW_AUTOMATION_PROBE( sceneObjectCount, "Scene.ObjectCount", "Objects in the active scene", &AutomationRunnerInternal::readSceneObjectCount );
+    SW_AUTOMATION_PROBE( terrainWrittenEditCount, "Terrain.WrittenEditCount", "Terrains whose heights or splat were written since they were last read from disk",
+                         &AutomationRunnerInternal::readTerrainWrittenEditCount );
     SW_AUTOMATION_PROBE( sceneTransitioning, "Scene.Transitioning", "1 while an asynchronous scene load or transition is in flight",
                          &AutomationRunnerInternal::readSceneTransitioning );
 #if SW_PROFILER_TRACE_ENABLED

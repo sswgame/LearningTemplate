@@ -19,6 +19,7 @@
 
 namespace sw
 {
+    class Archive;
     class GameObjectManager;
     class MeshInstanceBatch;
     class PrimitiveRegistry;
@@ -138,6 +139,16 @@ namespace sw
         /** @brief 지금 CPU 스플랫을 비압축 RGBA8 DDS 로 절대 경로에 씁니다. 스플랫이 없으면 false 입니다. */
         [[nodiscard]] bool saveSplat( string_view filePath ) const;
 
+        /**
+         * @brief 상태 스냅샷 계약(`ComponentStateStore`) — 마지막 `reloadTerrain` 뒤에 쓴 높이 · 스플랫을 씁니다. 쓴 것이 없으면 버전과 빈 표시만 씁니다.
+         * @details 모듈 리로드와 백엔드 교체는 씬을 속성으로 되살리고 `onPostLoad` 가 디스크 에셋을 다시 읽으므로, 저장하지 않은 편집은 여기로만 넘어간다.
+         */
+        void writeState( Archive& outArchive ) const;
+        /** @brief 마지막 `reloadTerrain` 뒤에 높이나 스플랫을 썼으면 true 입니다(`writeState` 가 싣는 것이 있다). 저장해도 다시 읽기 전까지는 true 로 남는다. */
+        bool hasWrittenEdits() const { return _bHeightsWritten || _splatRevision > 0; }
+        /** @brief 상태 스냅샷 계약 — 다시 읽은 지형에 `writeState` 의 편집을 되돌려 씁니다. 크기가 맞지 않거나 읽지 못하면 알리고 디스크 값으로 둡니다. */
+        void restoreState( vector<uint8>&& bytes );
+
         /** @brief 청크 배치입니다. */
         const TerrainChunkLayout& getChunkLayout() const { return _layout; }
         /** @brief 청크 (x, z) 의 지금 LOD 입니다. 범위 밖이면 0 입니다. */
@@ -231,5 +242,6 @@ namespace sw
         uint32              _heightfieldGeneration; ///< `reloadTerrain` 과 `writeHeights` 마다 오른다(`getHeightfieldGeneration`)
         uint32              _splatRevision;         ///< `writeLayerWeights` 마다 오른다(`getSplatRevision`)
         atomic<bool>        _bOriginDirty;          ///< 오너가 움직여 지형 원점이 낡았다
+        bool                _bHeightsWritten;       ///< 마지막 `reloadTerrain` 뒤에 `writeHeights` 가 성공했다(`writeState` 가 싣는다)
     };
 } // namespace sw
