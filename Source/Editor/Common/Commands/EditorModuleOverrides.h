@@ -19,6 +19,19 @@ namespace sw
 
 namespace sw::editor
 {
+    /** @brief 모듈 창 상세 영역 한 모듈의 내용입니다. */
+    struct EditorModuleDetail
+    {
+        string         _name;
+        string         _description;
+        string         _version;
+        vector<string> _listDependency; ///< 이 모듈이 의존하는 모듈(매니페스트 순서)
+        vector<string> _listDependent;  ///< 이 모듈에 직접 의존하는 모듈(이름 순)
+        bool           _bEnabledByDefault{ true };
+        bool           _bHasOverride{ false };     ///< 프로젝트 매니페스트에 이 모듈 줄이 있다
+        bool           _bOverrideEnabled{ false }; ///< `_bHasOverride` 일 때 그 줄의 값
+    };
+
     /**
      * @struct EditorModuleOverrideUtil
      * @brief 언리얼 Plugins 창의 켜고 끄기에 해당합니다. CMake 가 같은 매니페스트로 짓기 때문에 실행 중에 켜지 않고, 매니페스트를 고친 뒤 빌드하고 다시 시작합니다.
@@ -36,5 +49,11 @@ namespace sw::editor
          */
         [[nodiscard]] static bool previewToggle( const ModuleCatalog& catalog, const ModuleResolveContext& context, string_view moduleName, bool bEnabled,
                                                  vector<ModuleInactiveEntry>& outListNewlyInactive, vector<string>& outListNewlyActive, string& outError );
+        /**
+         * @brief 모듈 창 상세 영역(언리얼 Plugins 상세 · 유니티 Package Manager 상세)에 보일 @p moduleName 의 정보를 @p catalog 에서 모읍니다.
+         * @details 역의존(이 모듈에 직접 의존하는 모듈)은 이름 순입니다. 현재 덮어쓰기는 @p projectModule 매니페스트의 `_listModuleOverride` 에서 찾습니다.
+         * @return 그 모듈이 카탈로그에 없으면 false 입니다.
+         */
+        [[nodiscard]] static bool buildDetail( const ModuleCatalog& catalog, string_view projectModule, string_view moduleName, EditorModuleDetail& outDetail );
     };
 } // namespace sw::editor

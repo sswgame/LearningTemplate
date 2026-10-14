@@ -5,6 +5,8 @@
 #include "Engine/Module/ModuleCatalog.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
+#include <algorithm>
+
 namespace sw::editor
 {
     bool EditorModuleOverrideUtil::setOverride( string_view manifestJSON, string_view moduleName, bool bEnabled, bool bEnabledByDefault, string& outManifestJSON )
@@ -68,6 +70,48 @@ namespace sw::editor
         {
             if ( before.isActive( name ) == false )
                 outListNewlyActive.push_back( name );
+        }
+        return true;
+    }
+
+    bool EditorModuleOverrideUtil::buildDetail( const ModuleCatalog& catalog, string_view projectModule, string_view moduleName, EditorModuleDetail& outDetail )
+    {
+        outDetail                       = EditorModuleDetail{};
+        const ModuleManifest* pManifest = catalog.findManifest( moduleName );
+        if ( pManifest == nullptr )
+            return false;
+        outDetail._name              = pManifest->_name;
+        outDetail._description       = pManifest->_description;
+        outDetail._version           = pManifest->_version.toString();
+        outDetail._bEnabledByDefault = pManifest->_bEnabledByDefault;
+        for ( const ModuleDependency& dependency : pManifest->_listDependency )
+        {
+            outDetail._listDependency.push_back( dependency._name );
+        }
+        for ( const ModuleManifest& other : catalog.getManifests() )
+        {
+            for ( const ModuleDependency& dependency : other._listDependency )
+            {
+                if ( dependency._name == pManifest->_name )
+                {
+                    outDetail._listDependent.push_back( other._name );
+                    break;
+                }
+            }
+        }
+        std::sort( outDetail._listDependent.begin(), outDetail._listDependent.end() );
+        const ModuleManifest* pProject = catalog.findManifest( projectModule );
+        if ( pProject != nullptr )
+        {
+            for ( const ModuleOverride& entry : pProject->_listModuleOverride )
+            {
+                if ( entry._name == pManifest->_name )
+                {
+                    outDetail._bHasOverride     = true;
+                    outDetail._bOverrideEnabled = entry._bEnabled;
+                    break;
+                }
+            }
         }
         return true;
     }
