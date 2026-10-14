@@ -41,7 +41,7 @@ namespace sw::editor
     SocketEditModel::SocketEditModel()
         : _sockets{}
         , _kinds{}
-        , _mirrorRules{ MirrorNameRules::makeDefault() }
+        , _mirrorRules{}
         , _listBoneName{}
         , _savedText{ _sockets.saveToXMLText() }
         , _history{}

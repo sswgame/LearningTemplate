@@ -403,12 +403,13 @@
   `AppearanceDatabase` 다시 읽기, 시퀀서 트랙 · 스폰 · 프리팹이 프리셋을 이름으로 가리키기 · 프리로드 세트가 프리셋 참조를 따라 모으기, 편집 창의
   "지금 모습을 프리셋으로 저장" · 썸네일 렌더 · 규칙 설명(`_listTrace`) 표시. 칸 점유(양손 무기)는 아직 외형만 본다 — 게임플레이에서 보조 손을 막을지는
   게임이 정한다 ⑥ 캐릭터 편집 창 — 첫 단계는 들어갔다(`GameFramework/PlugIn/Editor/CharacterEditor`, README): 소켓 파일 · 외형 선택 편집 모델(되돌리기 · 검증 · 좌우 대칭 · 저장)과
-  미리보기 없는 패널 뼈대. 남은 것 — (a) 미리보기 씬 위로 옮기기(`EditorMultiWorld` 단계 1~4 뒤: `EditorPreviewPanel` 상속 · 캐릭터 스폰 · `EditorAssetType` 에 소켓 종류를 더해
-  `EditorDocumentPanel` 계약으로 더티 · 저장 · 되돌리기 이관) (b) 스켈레톤을 읽어 본 목록을 `SocketEditModel::setBoneNames` 에 넣기 · 본 트리 + 기즈모 포즈 편집
-  (`ReferencePoseOverride` 쓰기 함수가 없다) · 뷰포트 소켓 축 표시 · 저장 직후 핫 리로드 감시 무시 한 번 (c) 체형 · 얼굴 슬라이더(`CustomizationSchema` 로 슬라이더를 만든다, GPU 모프 풀 통합 뒤)
-  (d) 장비 입히기(슬롯 표 · 세트 목록으로 걸러 넘기기) · 규칙 설명(`_listTrace`) 표시 (e) 피팅 확인 표시(보기 전용: 관통 점 · 잘린 면 · 조임 강도, 슬라이더를 놓을 때 한 번 계산)
-  (f) 대칭 이름 규칙 표를 데이터 파일로(지금은 `MirrorNameRules::makeDefault` + `addPair`) · 제약 리그 미리보기 · 애니메이션 재생 (g) 외형 선택을 파일로 저장(`UserAppearancePresetStore` 는
-  메모리 목록까지만 넣는다 — 세이브 쓰기는 `AppearanceDatabase` 가 필요) · 썸네일 렌더. 패널의 화면 세부(배치 · 입력 흐름)는 아직 눈으로 확인하지 않았다.
+  패널(소켓 · 스켈레톤 · 외형 탭)과 모델이 들어갔다 — 스켈레톤 본 트리 · 레퍼런스 포즈 숫자 편집(`BonePoseEditModel`, `*.refpose.xml`) · 본 목록 → 소켓 부모 검증 · 좌우 이름 표 데이터 파일 ·
+  장비 칸 콤보 · 세트 입히기 · 규칙 설명(`_listTrace`) · 프리셋 파일 저장 · 피팅 요약 표시(`FitCheckSummary`) · 자기 저장 뒤 핫 리로드 무시(`SaveReloadGuard`). 남은 것 —
+  (a) 미리보기 씬 위로 옮기기: **`EditorMultiWorld` 단계 1~4 의 `EditorPreviewPanel` 이 main 에 들어온 뒤**(`multiworld2` 작업)에 `EditorPreviewPanel` 상속 · 캐릭터 스폰 · `EditorAssetType` 에 소켓 종류를 더해
+  `EditorDocumentPanel` 계약으로 더티 · 저장 · 되돌리기 이관. 그때 같이 할 것: 뷰포트 기즈모 포즈 편집 · 뷰포트 소켓 축 표시 · 제약 리그 미리보기 · 애니메이션 재생 · 썸네일 렌더
+  (`UserAppearancePresetStore::setThumbnailPath` 에 경로만 넣으면 된다) · 피팅 계산 연결(`CharacterEditorPanel::setFitResult` 로 푼 결과를 넘긴다 — 슬라이더를 놓을 때 한 번 풀고, 몸 메시 →
+  `AppearanceGeometry` 변환은 통합 항목) · 핫 리로드 결과를 모델에 다시 반영(지금은 외부 변경 알림만). (c) 체형 · 얼굴 슬라이더 UI(`CustomizationSchema` 로 슬라이더를 만든다)는 GPU 모프 풀 통합 뒤 —
+  꾸미기 값 모델 · 직렬화는 있다. 이 패널의 기본 경로는 shooter3d 데이터다(경로 칸에서 바꾼다).
   계획: docs/plans/EditorCharacterEditor.md
 
 - `D4-9` **남은 대기열 — 빠른 순(2026-10-04 사용자 지시).** 진행 방식은 [작업 방식](11_Workflow.md) — 결함 먼저 · 겹치는 파일 없게 나누고, 병합은 준비되는 대로, 전체 검증은 큰 묶음 뒤 한 번.
