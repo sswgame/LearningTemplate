@@ -26,6 +26,7 @@
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/Panels/Inspector/InspectorComponentManager.h"
+#include "Editor/Panels/Inspector/InspectorFavorites.h"
 #include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
 #include "Editor/Panels/Inspector/InspectorPropertyManager.h"
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
@@ -115,7 +116,9 @@ namespace sw::editor
         , _pEditTargetComponent{ nullptr }
         , _pEditTargetObject{ nullptr }
         , _propertyDrawDepth{ 0 }
+        , _pFavorites{ nullptr }
         , _openAllRequest{ 0 }
+        , _bFavoritesOnly{ false }
         , _bShowModifiedOnly{ false }
     {
     }
@@ -166,6 +169,18 @@ namespace sw::editor
         endTarget();
         // 편집 알림(다중 선택의 나머지에 값 적용)이 끝난 뒤에 되돌리기를 남긴다.
         InspectorPropertyUndo::commitFinishedEdits();
+    }
+
+    void EditorPropertyGrid::drawFavoriteProperties( const EditorPropertyGridTarget& target )
+    {
+        if ( _pFavorites == nullptr || target._pType == nullptr || _pFavorites->hasAnyForType( target._pType->_name.c_str() ) == false )
+            return;
+        // 본문 그리드와 같은 카테고리 · 프로퍼티 id 를 쓰므로 id 공간을 나눈다.
+        ImGui::PushID( "##favorites" );
+        _bFavoritesOnly = true;
+        drawProperties( target, nullptr, {} );
+        _bFavoritesOnly = false;
+        ImGui::PopID();
     }
 
     void EditorPropertyGrid::drawMethodsAndEvents( const EditorPropertyGridTarget& target, bool bEvents )
@@ -221,6 +236,9 @@ namespace sw::editor
 
     void EditorPropertyGrid::drawTypeProperties( void* pInstance, const TypeInfo* pTypeInfo, const utf8* pSectionTitle, const vector<hashed_string>& listDrawnName )
     {
+        // 즐겨찾기 거르기는 이번 한 번만이다. 중첩 그리기가 다시 들어와도 거르지 않게 먼저 지운다.
+        const bool bFavoritesOnly = _bFavoritesOnly && _pFavorites != nullptr;
+        _bFavoritesOnly           = false;
         if ( pInstance == nullptr || pTypeInfo == nullptr )
             return;
 
@@ -229,6 +247,25 @@ namespace sw::editor
         vector<InspectorPropertyGroup> listGroup;
         InspectorPropertyLayout::collectPropertyGroups( *pTypeInfo, listDrawnName, filter, listGroup );
 
+        // 즐겨찾기 구역이면 즐겨찾기한 프로퍼티만 타입 이름 머리 하나로 모은다.
+        if ( bFavoritesOnly )
+        {
+            InspectorPropertyGroup favoriteGroup;
+            favoriteGroup._category = pTypeInfo->getDisplayName();
+            for ( const InspectorPropertyGroup& group : listGroup )
+            {
+                for ( const PropertyInfo* pProp : group._listProperty )
+                {
+                    if ( _pFavorites->contains( InspectorFavorites::makeKey( pTypeInfo->_name.c_str(), pProp->_name.c_str() ) ) )
+                        favoriteGroup._listProperty.push_back( pProp );
+                }
+            }
+            listGroup.clear();
+            if ( favoriteGroup._listProperty.empty() )
+                return;
+            listGroup.push_back( std::move( favoriteGroup ) );
+        }
+
         // 검색어가 아무 프로퍼티도 맞히지 못하면 그렇다고 알려 준다.
         if ( listGroup.empty() )
         {
@@ -236,6 +273,9 @@ namespace sw::editor
                 EditorWidgets::drawNoSearchResultHint( filter.getText() );
             return;
         }
+        // 행 메뉴의 즐겨찾기 토글은 대상 자신(컴포넌트나 오브젝트)의 프로퍼티에만 둔다. 중첩 구조체의 필드는 키가 대상 타입이 아니다.
+        const bool bFavoriteTarget = _pFavorites != nullptr &&
+                                     ( pInstance == static_cast<void*>( _pEditTargetComponent ) || pInstance == static_cast<void*>( _pEditTargetObject ) );
 
         if ( pSectionTitle != nullptr )
             ImGui::SeparatorText( pSectionTitle );
@@ -291,11 +331,29 @@ namespace sw::editor
                         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "MultipleValues" ) );
                         ImGui::SameLine();
                     }
+                    const string favoriteKey = bFavoriteTarget ? InspectorFavorites::makeKey( pTypeInfo->_name.c_str(), prop->_name.c_str() ) : string{};
+                    const bool   bFavorite   = bFavoriteTarget && _pFavorites->contains( favoriteKey );
+                    if ( bFavorite )
+                    {
+                        ImGui::TextUnformatted( editoricon::kStar );
+                        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "FavoriteProperty" ) );
+                        ImGui::SameLine();
+                    }
                     ImGui::TextUnformatted( InspectorPropertyLayout::getPropertyLabel( *prop ) );
                     EditorWidgets::drawTooltip( prop->_metadata._tooltip.c_str() );
 
                     if ( ImGui::BeginPopupContextItem( "PropCtx" ) )
                     {
+                        // 언리얼 Details 의 행 메뉴 Add to Favorites · Remove from Favorites 에 해당한다. 바꾸면 바로 저장한다.
+                        if ( bFavoriteTarget )
+                        {
+                            if ( ImGui::MenuItem( bFavorite ? SW_LOCKEY( "EditorInspector", "RemoveFromFavorites" ) : SW_LOCKEY( "EditorInspector", "AddToFavorites" ) ) )
+                            {
+                                (void)_pFavorites->toggle( favoriteKey );
+                                (void)_pFavorites->saveFile( InspectorFavorites::getDefaultFilePath() ); // 실패는 saveFile 이 경고한다
+                            }
+                            ImGui::Separator();
+                        }
                         if ( pDefaultInstance != nullptr || prop->_metadata._defaultValue.empty() == false )
                         {
                             if ( ImGui::MenuItem( "Reset to Default" ) )

@@ -31,6 +31,11 @@ namespace sw
 
 namespace sw::editor
 {
+    class InspectorFavorites;
+} // namespace sw::editor
+
+namespace sw::editor
+{
     /**
      * @struct EditorPropertyGridTarget
      * @brief 그리드가 그리고 편집하는 대상 하나입니다. 리플렉션 인스턴스와 편집했을 때 알릴 대상, Undo 를 기록할 오브젝트를 담습니다.
@@ -90,6 +95,16 @@ namespace sw::editor
          * @details Reset, Paste Value, 그리기 확장(`IInspectorProperty`)의 팝업 편집기가 함께 쓴다. 대상이 설정된 그리는 동안에만 호출한다.
          */
         void applyPropertyTextAsEdit( void* pInstance, const PropertyInfo& prop, string_view text, const utf8* pUndoLabel );
+        /**
+         * @brief 즐겨찾기 집합을 연결합니다. 연결하면 프로퍼티 행의 우클릭 메뉴에 즐겨찾기 토글이 생기고 즐겨찾기 행 이름 앞에 별을 그립니다. nullptr 이면 끕니다.
+         * @details 집합의 주인은 인스펙터 패널이다. 환경설정 창처럼 즐겨찾기가 없는 그리드는 연결하지 않는다. 토글하면 저장 파일에 바로 쓴다.
+         */
+        void setFavorites( InspectorFavorites* pFavorites ) { _pFavorites = pFavorites; }
+        /**
+         * @brief 대상의 프로퍼티 중 즐겨찾기한 것만 타입 이름 머리 아래에 그립니다. 그릴 것이 없으면 아무것도 그리지 않습니다.
+         * @details 인스펙터 맨 위 Favorites 구역이 쓴다. 키는 대상 타입 이름과 프로퍼티 이름이다(`InspectorFavorites::makeKey`).
+         */
+        void drawFavoriteProperties( const EditorPropertyGridTarget& target );
 
     private:
         void beginTarget( const EditorPropertyGridTarget& target );
@@ -144,7 +159,9 @@ namespace sw::editor
         Component*                                                   _pEditTargetComponent; ///< 현재 프로퍼티를 그리는 컴포넌트. 편집 알림을 받는다
         GameObject*                                                  _pEditTargetObject;    ///< 현재 프로퍼티를 그리는 GameObject. 컴포넌트가 없을 때만 쓴다
         uint32                                                       _propertyDrawDepth;    ///< 중첩과 컨테이너의 재귀 깊이. 알림은 가장 바깥에서 한 번만 보낸다
+        InspectorFavorites*                                          _pFavorites;           ///< 즐겨찾기 집합. nullptr 이면 즐겨찾기를 쓰지 않는다
         int32                                                        _openAllRequest;       ///< 이번 프레임의 모두 펼치기(1) · 접기(-1) 요청. 0 이면 없다
+        bool                                                         _bFavoritesOnly;       ///< 다음 `drawTypeProperties` 한 번만 즐겨찾기 프로퍼티로 거른다
         bool                                                         _bShowModifiedOnly;    ///< 기본값과 다른 프로퍼티만 그린다(언리얼 Show Only Modified Properties)
     };
 } // namespace sw::editor

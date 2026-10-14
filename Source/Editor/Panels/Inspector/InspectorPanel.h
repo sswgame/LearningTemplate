@@ -16,6 +16,7 @@
 #include "Editor/Common/Commands/EditorMultiEdit.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
+#include "Editor/Panels/Inspector/InspectorFavorites.h"
 
 namespace sw
 {
@@ -73,10 +74,17 @@ namespace sw::editor
         void drawGameObjectHeader( GameObject* pObj );
         /** @brief 컴포넌트 섹션을 그립니다. */
         void drawComponentSection( Component* pComp, IRHIDevice* pRHIDevice );
+        /**
+         * @brief 맨 위 Favorites 구역을 그립니다. 오브젝트와 그 컴포넌트의 즐겨찾기 프로퍼티를 타입마다 모아 보입니다. 즐겨찾기가 없으면 그리지 않습니다.
+         * @details 언리얼 Details 의 Favorites 에 해당한다. 다중 선택에서는 주 선택 오브젝트 기준이다.
+         */
+        void drawFavoritesSection( GameObject* pObj );
 
     private:
         /** @brief 리플렉션 프로퍼티, 메서드, 이벤트를 그립니다. 검색 입력란을 포함하며, 컴포넌트와 오브젝트마다 대상을 바꿔 호출합니다. */
         EditorPropertyGrid _propertyGrid;
+        /** @brief 즐겨찾기 프로퍼티 키 집합입니다. 처음 그릴 때 저장 파일에서 읽고, 그리드가 토글할 때마다 씁니다. */
+        InspectorFavorites _favorites;
         /** @brief 다중 선택의 공통 컴포넌트입니다. 그리는 프레임마다 다시 모읍니다. */
         vector<EditorMultiEditComponent> _listMultiEditComponent;
         /** @brief 현재 그리는 공통 컴포넌트입니다. 그리드 콜백이 읽습니다. */
@@ -92,6 +100,7 @@ namespace sw::editor
         int32                                _pendingMoveDirection;
         fixed_string<constant::kMaxBuffer64> _addComponentSearch; ///< Add Component 팝업의 검색어
         uint8                                _bComponentPresetDirty : 1;
-        [[maybe_unused]] uint8               _reserved              : 7;
+        uint8                                _bFavoritesLoaded      : 1; ///< `_favorites` 를 저장 파일에서 읽었다
+        [[maybe_unused]] uint8               _reserved              : 6;
     };
 } // namespace sw::editor
