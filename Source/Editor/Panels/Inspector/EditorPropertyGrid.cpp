@@ -115,7 +115,37 @@ namespace sw::editor
         , _pEditTargetComponent{ nullptr }
         , _pEditTargetObject{ nullptr }
         , _propertyDrawDepth{ 0 }
+        , _openAllRequest{ 0 }
+        , _bShowModifiedOnly{ false }
     {
+    }
+
+    void EditorPropertyGrid::drawSearchBarWithOptions( const utf8* pFieldTooltip )
+    {
+        const float32 buttonWidth = ImGui::GetFrameHeight();
+        const float32 fieldWidth  = MathUtil::max( ImGui::GetContentRegionAvail().x - buttonWidth - ImGui::GetStyle().ItemSpacing.x, 1.0f );
+        EditorWidgets::drawSearchField( "##propFilter", _propertyFilter, SW_LOCKEY( "EditorInspector", "SearchPropertiesHint" ), fieldWidth );
+        if ( pFieldTooltip != nullptr )
+            EditorWidgets::drawTooltip( pFieldTooltip );
+        ImGui::SameLine();
+        // 켜져 있으면 강조색으로 그려 거른 상태임을 알린다. 꺼진 줄 모르고 프로퍼티가 사라졌다고 여기지 않게 한다.
+        if ( EditorWidgets::drawToggleIconButton( "##inspectorViewOptions", _bShowModifiedOnly, editoricon::kFilter, editoricon::kFilter,
+                                                  SW_LOCKEY( "EditorInspector", "ViewOptions" ), SW_LOCKEY( "EditorInspector", "ViewOptions" ) ) )
+            ImGui::OpenPopup( "InspectorViewOptions" );
+        EditorSelfTestMarks::note( "inspector.viewOptions" );
+        if ( ImGui::BeginPopup( "InspectorViewOptions" ) )
+        {
+            ImGui::MenuItem( "Show Only Modified Properties", nullptr, &_bShowModifiedOnly );
+            EditorSelfTestMarks::note( "inspector.viewOptions.modifiedOnly" );
+            ImGui::Separator();
+            if ( ImGui::MenuItem( "Expand All" ) )
+                _openAllRequest = 1;
+            EditorSelfTestMarks::note( "inspector.viewOptions.expandAll" );
+            if ( ImGui::MenuItem( "Collapse All" ) )
+                _openAllRequest = -1;
+            EditorSelfTestMarks::note( "inspector.viewOptions.collapseAll" );
+            ImGui::EndPopup();
+        }
     }
 
     void EditorPropertyGrid::drawSearchBar( const utf8* pMarkKey )
@@ -214,10 +244,28 @@ namespace sw::editor
         EditorContext* pDefaultContext  = EditorContext::get();
         if ( _pEditTargetComponent != nullptr && pInstance == _pEditTargetComponent && pDefaultContext != nullptr )
             pDefaultInstance = pDefaultContext->getSubsystem<EditorDefaultObjects>().findDefault( *pTypeInfo );
+        // 바뀐 것만 보기이면 기본값과 같은 프로퍼티를 뺀다. 남은 것이 없는 카테고리는 머리째 감춘다.
+        if ( _bShowModifiedOnly )
+        {
+            for ( InspectorPropertyGroup& group : listGroup )
+            {
+                auto& props = group._listProperty;
+                props.erase( std::remove_if( props.begin(), props.end(), [pInstance, pDefaultInstance]( const PropertyInfo* pProp )
+                                             { return EditorDefaultObjects::isDefaultValue( *pProp, pInstance, pDefaultInstance ); } ),
+                             props.end() );
+            }
+            listGroup.erase( std::remove_if( listGroup.begin(), listGroup.end(), []( const InspectorPropertyGroup& group )
+                                             { return group._listProperty.empty(); } ),
+                             listGroup.end() );
+            if ( listGroup.empty() )
+                return;
+        }
         for ( const InspectorPropertyGroup& group : listGroup )
         {
             const string& category = group._category;
             const auto&   props    = group._listProperty;
+            if ( _openAllRequest != 0 )
+                ImGui::SetNextItemOpen( _openAllRequest > 0 );
             if ( ImGui::CollapsingHeader( category.c_str(), ImGuiTreeNodeFlags_DefaultOpen ) == false )
                 continue;
 

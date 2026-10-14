@@ -2001,6 +2001,12 @@
                 "Source/Editor/Panels/Inspector/InspectorPanel.cpp"
             ]
         },
+        "EditorInspector.ViewOptions": {
+            "source": "View options: show only modified properties, expand or collapse all sections",
+            "origins": [
+                "Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp"
+            ]
+        },
         "EditorMapCheck.CheckMap": {
             "source": "Validate every object of the active scene again",
             "origins": [
