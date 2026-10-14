@@ -258,6 +258,10 @@ uint swComputeLightCount()
  */
 float3 swShadeLights( float3 albedo, float3 worldPosition, float3 normal, float shadow )
 {
+#if defined( SW_VIEWMODE_LIGHTINGONLY )
+	// 보기 모드 LightingOnly — 포워드 셰이더의 표면 색을 회색으로 바꾼다(binding.hlsli 의 SW_VIEWMODE_LIGHTINGONLY_ALBEDO).
+	albedo = SW_VIEWMODE_LIGHTINGONLY_ALBEDO;
+#endif
 	// 앰비언트는 빛 목록과 무관하게 **한 번만** 더한다 — 라이트마다 더하면 빛을 늘릴수록 화면이 바랜다.
 	float3 lit = albedo * g_KeyLightColor.rgb * g_KeyLightColor.a;
 

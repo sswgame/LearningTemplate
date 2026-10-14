@@ -124,3 +124,32 @@ SW_TEST_CASE( RenderViewSchedulerTest, FullRectIsDetected )
     settings._screenRect = float4{ 0.5f, 0.0f, 0.5f, 1.0f };
     SW_EXPECT_FALSE( settings.isFullRect() );
 }
+
+/**
+ * @brief [RenderViewModeTest] 보기 모드 표의 이름이 겹치지 않고, LightingOnly 는 셰이더 define 을 갖되 톤맵 · 후처리를 그대로 쓴다
+ * @details 툴바와 셀프 테스트 표식(`viewport.viewMode.<이름>`)이 이름으로 모드를 찾으므로 이름이 겹치면 다른 모드를 고른다.
+ *          쿠커는 define 이 있는 모드만 변형을 굽는다 — define 이 비면 Shipping 에서 PSO 가 없다.
+ */
+SW_TEST_CASE( RenderViewModeTest, NamesAreUniqueAndLightingOnlyIsShaded )
+{
+    const uint32 modeCount = static_cast<uint32>( RenderViewMode::Count );
+    for ( uint32 first = 0; first < modeCount; ++first )
+    {
+        for ( uint32 second = first + 1; second < modeCount; ++second )
+        {
+            const string firstName( getRenderViewModeInfo( static_cast<RenderViewMode>( first ) )._pName );
+            const string secondName( getRenderViewModeInfo( static_cast<RenderViewMode>( second ) )._pName );
+            SW_EXPECT_TRUE( firstName != secondName );
+        }
+    }
+
+    const RenderViewModeInfo& lightingOnly = getRenderViewModeInfo( RenderViewMode::LightingOnly );
+    SW_EXPECT_TRUE( string( lightingOnly._pName ) == string( "LightingOnly" ) );
+    SW_EXPECT_TRUE( lightingOnly._pShaderDefine != nullptr );
+    SW_EXPECT_FALSE( lightingOnly._bShowsBuffer );
+    SW_EXPECT_FALSE( lightingOnly._bWireframe );
+    SW_EXPECT_FALSE( lightingOnly._bAdditiveNoDepth );
+
+    // 범위 밖 값은 Lit 항목으로 떨어진다.
+    SW_EXPECT_TRUE( string( getRenderViewModeInfo( RenderViewMode::Count )._pName ) == string( "Lit" ) );
+}
