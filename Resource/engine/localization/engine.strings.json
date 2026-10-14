@@ -1129,6 +1129,38 @@
             "source": "{count, plural, one {# setting takes} other {# settings take}} effect after a restart.",
             "comment": "Shown after applying settings marked apply=restart",
             "maxLength": 80
+        },
+        "EdMeshModifiers.CurveEditHint": {
+            "source": "Click to edit the curve",
+            "origins": []
+        },
+        "EdMeshModifiers.MoveRowUp": {
+            "source": "Move row up",
+            "origins": []
+        },
+        "EdMeshModifiers.MoveRowDown": {
+            "source": "Move row down",
+            "origins": []
+        },
+        "EdMeshModifiers.DuplicateRow": {
+            "source": "Duplicate row",
+            "origins": []
+        },
+        "EdMeshModifiers.RemoveRow": {
+            "source": "Remove row",
+            "origins": []
+        },
+        "EdMeshModifiers.ReferenceNone": {
+            "source": "(None)",
+            "origins": []
+        },
+        "EdMeshModifiers.ReferenceNoMatch": {
+            "source": "No object has component:",
+            "origins": []
+        },
+        "EdMeshModifiers.UseSelectionForParam": {
+            "source": "Use Selection",
+            "origins": []
         }
     }
 }

@@ -496,6 +496,38 @@
         "settings.restartRequired": {
             "text": "설정 {count}개는 다시 시작한 뒤에 적용됩니다.",
             "sourceHash": "6462a7414eb6a4f5"
+        },
+        "EdMeshModifiers.CurveEditHint": {
+            "text": "눌러서 곡선 편집",
+            "sourceHash": "d2457db110d81830"
+        },
+        "EdMeshModifiers.MoveRowUp": {
+            "text": "행을 위로",
+            "sourceHash": "8ae65593ed9e4275"
+        },
+        "EdMeshModifiers.MoveRowDown": {
+            "text": "행을 아래로",
+            "sourceHash": "e614e211c8b34f94"
+        },
+        "EdMeshModifiers.DuplicateRow": {
+            "text": "행 복제",
+            "sourceHash": "1eb11810b6d41e8e"
+        },
+        "EdMeshModifiers.RemoveRow": {
+            "text": "행 삭제",
+            "sourceHash": "77318393dfdb0775"
+        },
+        "EdMeshModifiers.ReferenceNone": {
+            "text": "(없음)",
+            "sourceHash": "cc766cf900364200"
+        },
+        "EdMeshModifiers.ReferenceNoMatch": {
+            "text": "이 컴포넌트를 가진 오브젝트가 없습니다:",
+            "sourceHash": "4e824d53a2525bd0"
+        },
+        "EdMeshModifiers.UseSelectionForParam": {
+            "text": "선택 사용",
+            "sourceHash": "18163441a7dc78f2"
         }
     }
 }
