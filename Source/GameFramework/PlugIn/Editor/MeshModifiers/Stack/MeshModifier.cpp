@@ -158,16 +158,53 @@ namespace sw::editor
                        kind == MeshModifierParamKind::Axis;
             }
 
+            /** @brief 선형 키 하나입니다(자동 접선 없음 - 보간이 Linear 면 접선은 안 쓰인다). */
+            static FloatCurveKey makeLinearKey( float32 time, float32 value )
+            {
+                FloatCurveKey key{};
+                key._time          = time;
+                key._value         = value;
+                key._interpolation = CurveInterpolation::Linear;
+                key._bAutoTangent  = false;
+                return key;
+            }
+
+            /**
+             * @brief 곡선을 매개변수 규칙으로 다듬어 @p outCurve 에 넣습니다: 유한하지 않은 키는 버리고, 시간은 [0,1] 로 자르고, 접선이 유한하지 않으면 0 으로 하고,
+             *        시간 순으로 정렬한 뒤 자동 접선 키의 접선을 다시 센다.
+             */
+            static void sanitizeCurve( const FloatCurve& source, FloatCurve& outCurve )
+            {
+                FloatCurve result{};
+                result._listKey.reserve( source._listKey.size() );
+                for ( const FloatCurveKey& sourceKey : source._listKey )
+                {
+                    if ( MathUtil::isFinite( sourceKey._time ) == false || MathUtil::isFinite( sourceKey._value ) == false )
+                        continue;
+                    FloatCurveKey key = sourceKey;
+                    key._time         = MathUtil::saturate( key._time );
+                    if ( MathUtil::isFinite( key._arriveTangent ) == false )
+                        key._arriveTangent = 0.0f;
+                    if ( MathUtil::isFinite( key._leaveTangent ) == false )
+                        key._leaveTangent = 0.0f;
+                    result._listKey.push_back( key );
+                }
+                result.sortAndComputeAutoTangents();
+                outCurve = std::move( result );
+            }
+
             static void makeDefaultValue( const MeshModifierParamDef& def, MeshModifierParamValue& outValue )
             {
                 outValue._value = def._default;
-                outValue._listCurveKey.clear();
+                outValue._curve._listKey.clear();
+                outValue._listCurve.clear();
                 outValue._listNumber.clear();
                 outValue._text.clear();
+                outValue._listText.clear();
                 if ( def._kind == MeshModifierParamKind::Curve )
                 {
-                    outValue._listCurveKey.push_back( float2{ 0.0f, def._default._x } );
-                    outValue._listCurveKey.push_back( float2{ 1.0f, def._default._y } );
+                    outValue._curve._listKey.push_back( makeLinearKey( 0.0f, def._default._x ) );
+                    outValue._curve._listKey.push_back( makeLinearKey( 1.0f, def._default._y ) );
                 }
             }
         };
@@ -401,26 +438,7 @@ namespace sw::editor
 
     float32 MeshModifier::evaluateCurve( uint32 paramIndex, float32 x ) const
     {
-        const vector<float2>& listKey = _listParamValue[paramIndex]._listCurveKey;
-        if ( listKey.empty() )
-            return 0.0f;
-        if ( x <= listKey.front()._x )
-            return listKey.front()._y;
-        if ( x >= listKey.back()._x )
-            return listKey.back()._y;
-        for ( size_t index = 1; index < listKey.size(); ++index )
-        {
-            const float2& right = listKey[index];
-            if ( x > right._x )
-                continue;
-            const float2& left  = listKey[index - 1];
-            const float32 width = right._x - left._x;
-            if ( width <= MathUtil::kEpsilon )
-                return right._y;
-            const float32 ratio = ( x - left._x ) / width;
-            return left._y + ( right._y - left._y ) * ratio;
-        }
-        return listKey.back()._y;
+        return _listParamValue[paramIndex]._curve.evaluate( x, 0.0f );
     }
 
     void MeshModifier::setScalar( uint32 paramIndex, float32 value )
@@ -456,20 +474,13 @@ namespace sw::editor
     {
         if ( _listParamDef[paramIndex]._kind != MeshModifierParamKind::Curve )
             return;
-        vector<float2>& listTarget = _listParamValue[paramIndex]._listCurveKey;
-        listTarget.clear();
+        FloatCurve curve{};
+        curve._listKey.reserve( listKey.size() );
         for ( const float2& key : listKey )
         {
-            if ( MathUtil::isFinite( key._x ) == false || MathUtil::isFinite( key._y ) == false )
-                continue;
-            const float2 clampedKey{ MathUtil::saturate( key._x ), key._y };
-            size_t       insertIndex = listTarget.size();
-            while ( insertIndex > 0 && listTarget[insertIndex - 1]._x > clampedKey._x )
-            {
-                --insertIndex;
-            }
-            listTarget.insert( listTarget.begin() + static_cast<ptrdiff_t>( insertIndex ), clampedKey );
+            curve._listKey.push_back( MeshModifierInternal::makeLinearKey( key._x, key._y ) );
         }
+        MeshModifierInternal::sanitizeCurve( curve, _listParamValue[paramIndex]._curve );
     }
 
     void MeshModifier::setNumberList( uint32 paramIndex, const vector<float32>& listNumber )
@@ -495,6 +506,66 @@ namespace sw::editor
         if ( kind != MeshModifierParamKind::Reference && kind != MeshModifierParamKind::AssetPath )
             return;
         _listParamValue[paramIndex]._text = string( text );
+    }
+
+    void MeshModifier::setParamValue( uint32 paramIndex, const MeshModifierParamValue& value )
+    {
+        const MeshModifierParamDef& def = _listParamDef[paramIndex];
+        switch ( def._kind )
+        {
+            case MeshModifierParamKind::Float:
+            case MeshModifierParamKind::Int:
+            case MeshModifierParamKind::Bool:
+            case MeshModifierParamKind::Axis:
+            {
+                setScalar( paramIndex, value._value._x );
+                break;
+            }
+            case MeshModifierParamKind::Vector3:
+            {
+                setVector3( paramIndex, value._value );
+                break;
+            }
+            case MeshModifierParamKind::Curve:
+            {
+                MeshModifierInternal::sanitizeCurve( value._curve, _listParamValue[paramIndex]._curve );
+                break;
+            }
+            case MeshModifierParamKind::CurveList:
+            {
+                const size_t        count      = MathUtil::min( value._listCurve.size(), def.getListLimit() );
+                vector<FloatCurve>& listTarget = _listParamValue[paramIndex]._listCurve;
+                listTarget.clear();
+                listTarget.resize( count );
+                for ( size_t index = 0; index < count; ++index )
+                {
+                    MeshModifierInternal::sanitizeCurve( value._listCurve[index], listTarget[index] );
+                }
+                break;
+            }
+            case MeshModifierParamKind::NumberList:
+            {
+                setNumberList( paramIndex, value._listNumber );
+                break;
+            }
+            case MeshModifierParamKind::Reference:
+            case MeshModifierParamKind::AssetPath:
+            {
+                setText( paramIndex, value._text );
+                break;
+            }
+            case MeshModifierParamKind::ReferenceList:
+            {
+                const size_t    count      = MathUtil::min( value._listText.size(), def.getListLimit() );
+                vector<string>& listTarget = _listParamValue[paramIndex]._listText;
+                listTarget.clear();
+                for ( size_t index = 0; index < count; ++index )
+                {
+                    listTarget.push_back( value._listText[index] );
+                }
+                break;
+            }
+        }
     }
 
     uint32 MeshModifier::addParam( const MeshModifierParamDef& def )

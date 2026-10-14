@@ -26,14 +26,17 @@
 
 1. `Modifiers/<이름>Modifier.cpp` 를 만들고 `MeshModifier` 를 상속한다.
 2. 생성자에서 `addParam( MeshModifierParamDef{ … } )` 로 매개변수를 선언한다 — **기본값은 항등**이어야 한다(기본값 그대로면 메시가 변하지 않는다).
-   종류: `Float · Int · Bool · Axis · Vector3 · Curve · Reference · AssetPath · NumberList(stride)`.
+   종류: `Float · Int · Bool · Axis · Vector3 · Curve · Reference · AssetPath · NumberList(stride) · CurveList · ReferenceList`.
+   값 구조(`MeshModifierParamValue`)가 종류마다 쓰는 칸을 갖는다 — 곡선은 엔진 공용 `FloatCurve`(키마다 보간 Constant · Linear · Cubic 과 접선), 목록 종류의 `_max` 는 항목 수 상한이다.
+   읽기는 `getParamValue( i )` 의 칸을 그대로 쓰고(`_curve` · `_listCurve` · `_listText` …), 종류별 setter 로 못 넣는 값(보간이 있는 곡선 · 곡선 목록 · 참조 목록)은 `setParamValue( i, value )` 하나로 넣는다 —
+   선언 규칙(범위 · 정렬 · 항목 수 상한)으로 다듬는다. 목록 종류를 위한 전용 getter · setter 를 늘리지 않는다.
 3. 점 단위면 `deformPoint` 만, 메시 전체를 봐야 하면 `applyToMesh` 를 재정의한다.
 4. 파일 끝에 `SW_MESH_MODIFIER( 클래스, "id", "표시 이름", "카테고리" );` 한 줄. id 는 소문자 영숫자이고 겹치면 안 된다.
 5. 점 단위 수학이면 `supportsGPU()` 를 true 로 두고 `packGPUParams` 를 기본 구현으로 쓴다(외부 입력 · 곡선 · 파일이 필요하면 false).
 
 6. **패널 표시용 칸(선택, 직렬화에 영향 없음)**: 매개변수 선언에 `with*` 도우미를 이어 붙인다 — 도우미는 복사본을 돌려주므로 순서는 자유다.
    `withLayout( 구역, 툴팁, 단위 )`(구역 이름이 같은 매개변수는 접히는 머리 하나로 묶인다, 3 개 이하면 `nullptr`), `withColumns( 열 배열 )`(`NumberList` 를 열 이름이 있는 표로 — 열 종류 `Float · Int · Combo · Vector3`),
-   `withRequiredComponent( "컴포넌트 타입 이름" )`(`Reference` 를 그 컴포넌트를 가진 오브젝트로 걸러 보인다 — **정확한 타입 이름만** 맞고 파생 컴포넌트는 빠진다), `withAssetFilter( 확장자 )`(`AssetPath` 슬롯).
+   `withRequiredComponent( "컴포넌트 타입 이름" )`(`Reference` · `ReferenceList` 를 그 컴포넌트를 가진 오브젝트로 걸러 보인다 — 등록된 타입이면 파생 컴포넌트도 맞는다, `MeshModifierParamEdit::matchesComponentHint`), `withAssetFilter( 확장자 )`(`AssetPath` 슬롯).
    `getDescription()` 을 재정의하면 추가 메뉴 항목의 툴팁이 된다(영어 한 문장). 열 선언과 stride 가 맞는지는 `TestPanelLogic` 이 등록된 모든 모디파이어에 대해 검사한다.
 
 패널의 추가 메뉴 · 직렬화 · 공용 속성 테스트는 등록 표를 훑으므로 **공용 파일을 고칠 필요가 없다.** 테스트 소스는 `Test/EngineTest/CMakeLists.txt` 가
@@ -59,18 +62,20 @@
   엔진의 `SurfaceBvh` 는 질의 후보를 멤버 스크래치에 받아 한 스레드만 물을 수 있어서, 같은 규칙(상자 여유 · 양면 교차 · 최근접점)을 후보 버퍼를 부르는 쪽이 넘기는 const 질의로 다시 썼다.
   정점은 `MeshModifierUtil::runBlocks` 의 4096 정점 덩어리로 나뉘어 덩어리마다 자기 후보 버퍼로 병렬 질의한다(직렬과 비트 단위로 같다 — `ConformSurfaceTest`).
   BVH 는 모디파이어 인스턴스가 들고, 적용 때 넘어온 삼각형 목록이 지난번과 한 바이트도 다르지 않을 때만 재사용한다(해시가 아니라 값 비교). 같은 인스턴스를 두 스레드에서 동시에 적용하지 않는다.
-- **Curve Sculpt Layered** 는 층마다 곡선이 없고 Shape 곡선 하나를 공유한다(매개변수에 곡선 목록 종류가 없다). **Conform Multi** 는 참조 목록 대신 칸 4개다(참조 목록 종류가 없다).
-- **Deformable** 은 하위 스택을 품지만 패널에서 편집하는 UI 가 없다. 하위 스택은 `extra.stack` 한 줄 JSON 으로 저장된다.
+- **Curve Sculpt Layered** 의 "Layer Curves"(곡선 목록)는 층 번호가 같은 항목이 있고 키가 하나 이상이면 그 곡선을, 아니면 공유 Shape 곡선을 쓴다. **Conform Multi** 의 "Targets"(참조 목록)는 최대 16 개, 빈 이름 · 못 찾은 이름은 건너뛴다.
+- **곡선 보간**: 곡선 매개변수가 `FloatCurve` 를 그대로 들어 공용 곡선 편집기에서 Cubic · Constant 로 바꿔도 값에 남는다(예전에는 어댑터가 선형으로 되돌렸다). 저장 문서의 키는 선형 `[시간, 값]`(옛 문서와 같다), 상수 · 자동 접선 큐빅 `[시간, 값, 보간]`, 접선을 손으로 둔 큐빅 `[시간, 값, 보간, 들어오는 접선, 나가는 접선]` 이다.
+- **Deformable** 은 하위 스택을 품지만 패널에서 편집하는 UI 가 없다(남은 일). 하위 스택은 `extra.stack` 한 줄 JSON 으로 저장되고 두 단계 중첩도 왕복한다. UI 가 들고 다닐 "고른 모디파이어" 는 번호 목록 경로로 가리키고(`DeformableModifier::findByPath` · `findOwningStack` - 담은 스택에 추가 · 삭제 · 위아래를 건다), `DeformableNestingTest` 가 고정한다.
 - **Point Cache** 는 경로를 파일 경로로 그대로 읽는다(리소스 id 를 절대 경로로 푸는 일은 엔진 서비스가 필요하다).
 - **Displace 계열** 은 세션의 `trySampleTexture` 가 CPU 텍스처 표본기(`Stack/MeshModifierTextureSampler`)를 부른다. 이미지를 float4 텍셀로 디코드해 캐시하고(디코드는 Editor 의 `ImageUtil::loadFloat4FromMemory`),
   이중선형 · Repeat 로 표본한다. 파일이 바뀌면 최대 1 초 뒤 다시 읽는다. 4096² 한 장이 256 MB 이고 메모리 상한은 없다. 웹캠은 정적 프레임으로 대체한다.
 - **Rolled** 는 한 바퀴를 넘으면 겹이 같은 반경에 겹친다. 값 노이즈 해시는 `Stack/MeshModifierNoise.h` 한 곳이다(VertexAnim 만 해시 식이 달라 `hashToUnit` · `valueNoise1D` 로 따로 둔다).
 - **뷰포트 편집**(`MeshModifiersVisualizer` + 순수 계산 `Stack/ModifierGizmoLogic`): 기즈모 이동 화살표 · 회전 고리, 범위 표시(반경 · 한계 · 중심 · 방향 — 힌트 다음 이름 규칙),
   격자 · ffd2d 제어점 클릭 고르기와 끌기(대칭은 세션 설정). 회전 고리는 기준 축 둘레 증분 회전을 곱한 뒤 Rz·Ry·Rx 오일러로 다시 푼다(`applyRotationDelta`, 짐벌 근처는 X 를 0 으로 두고 Z 에 몰아 유한하게 만든다). 손잡이를 집는 순간
-  `EditorViewportMouseClaim::acquire` 로 뷰포트의 클릭 선택 · 변환 기즈모를 양보시키고 놓을 때 `release` 한다(호버만으로는 잡지 않는다). 시각화 그리기 안에서 잡으므로 뷰포트가 같은 프레임에 클릭을 먼저 처리하면
-  첫 클릭이 샐 수 있고, 끄는 중에 시각화 토글을 끄면 해제가 빠질 수 있다. 범위 표시와 ffd2d 격자 상자는 선택한 모디파이어의 **입력 메시 상자**(앞 모디파이어까지 건 결과)를 쓴다.
+  `EditorViewportMouseClaim::acquire` 로 뷰포트의 클릭 선택 · 변환 기즈모를 양보시키고 끄는 동안 매 프레임 다시 잡으며 놓을 때 `release` 한다(호버만으로는 잡지 않는다). 뷰포트는 시각화를 그린 뒤에 클릭 선택을 처리하므로 첫 클릭이 새지 않고,
+  끄는 중에 시각화 토글을 꺼도 다음 프레임 시작(`beginFrame`)에 양보가 거둬진다. 범위 표시와 ffd2d 격자 상자는 선택한 모디파이어의 **입력 메시 상자**(앞 모디파이어까지 건 결과)를 쓴다.
   툴바 "Stage" 는 고른 모디파이어까지만 건 결과를 다른 색으로 겹친다. 미리보기는 정점 버퍼를 건드리지 않고 와이어(최대 2 만 삼각형)로 그린다.
-- 굽기는 스킨 가중치를 옮기고 모프 타깃은 위치가 맞지 않아 버리며 경고한다. 결과 메시는 아무도 참조하지 않아 `orphans` 규칙이 경고(오류 아님)를 낸다.
+- 굽기는 스킨 가중치를 옮기고 모프 타깃은 위치가 맞지 않아 버리며 경고한다. 결과 메시는 씬이 쓰기 전까지 아무도 참조하지 않아 `orphans` 규칙이 경고(오류 아님)를 낸다 - 쓰이지 않는 에셋이라는 사실 그대로의 알림이라 고칠 결함이 아니고, 메시 컴포넌트가 가리키면 사라진다
+  (규칙 표에 예외를 달면 "어떤 파일에도 안 맞는 예외" 검사가 오래된 예외로 잡는다).
 - 월드 공간 워프(별도 씬 오브젝트로 여러 메시에 적용)는 모디파이어의 `setWorldSpace` + 기준 오브젝트 id 까지만 있다.
 
 ## 컴퓨트 셰이더 (2단계 — 아직 없음)

@@ -2,8 +2,8 @@
  * @file CurveSculptLayeredModifier.cpp
  * @brief 곡선 조각 층 여러 개(목록)를 겹쳐 법선 방향으로 미는 모디파이어입니다.
  * @details 층 하나 = (u, v, 반경, 높이). u, v, 반경은 상자 수직 평면 비율 [0,1] 좌표이고, 층 중심에서의 거리 d / 반경 이 1 보다 작으면
- *          높이 × 모양 곡선(d / 반경) 을 더한다. 층마다 독립 곡선을 둘 매개변수 종류가 없어 모양 곡선은 모든 층이 함께 쓴다.
- *          목록이 비면 항등이다.
+ *          높이 × 모양 곡선(d / 반경) 을 더한다. 모양 곡선은 층 번호와 같은 번호의 "Layer Curves" 항목이 있으면(키가 하나 이상) 그것을,
+ *          없으면 모든 층이 함께 쓰는 "Shape" 곡선을 쓴다. 목록이 비면 항등이다.
  */
 #include "pch.h"
 
@@ -19,6 +19,8 @@ namespace sw::editor
     {
     public:
         /** @brief Layers 표의 열 — u · v · 반경 · 높이(stride 4). */
+        static constexpr float32 kMaxLayerCount = 64.0f; ///< "Layers" 행과 "Layer Curves" 항목 수 상한
+
         static constexpr MeshModifierListColumn kArrColumn[] = {
             {     "U", MeshModifierListColumnKind::Float},
             {     "V", MeshModifierListColumnKind::Float},
@@ -32,7 +34,8 @@ namespace sw::editor
                   addParam( MeshModifierParamDef{ "Shape", MeshModifierParamKind::Curve, -10.0f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } }
                                 .withLayout( "Sculpt", "Falloff profile shared by every layer" ) )
         },
-            _layersParam{ addParam( MeshModifierParamDef{ "Layers", MeshModifierParamKind::NumberList, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f }, 4, "u v radius height" }.withLayout( "Layers", "One row per layer: center (U, V), radius and height, in bounds fractions" ).withColumns( kArrColumn ) ) }
+            _layersParam{ addParam( MeshModifierParamDef{ "Layers", MeshModifierParamKind::NumberList, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f }, 4, "u v radius height" }.withLayout( "Layers", "One row per layer: center (U, V), radius and height, in bounds fractions" ).withColumns( kArrColumn ) ) },
+            _layerCurveParam{ addParam( MeshModifierParamDef{ "Layer Curves", MeshModifierParamKind::CurveList, 0.0f, kMaxLayerCount, float3{ 0.0f, 0.0f, 0.0f }, 1, "one falloff curve per layer" }.withLayout( "Layers", "Optional falloff curve for layer N (same order as the rows); layers without one use the Shape curve" ) ) }
         {
         }
 
@@ -40,7 +43,8 @@ namespace sw::editor
 
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override
         {
-            const vector<float32>& listLayer = getNumberList( _layersParam );
+            const vector<float32>&    listLayer = getNumberList( _layersParam );
+            const vector<FloatCurve>& listCurve = getParamValue( _layerCurveParam )._listCurve;
             if ( listLayer.size() < 4 )
                 return point._position;
             const uint32  axis   = context._axisIndex;
@@ -63,7 +67,9 @@ namespace sw::editor
                 const float32 distance = MathUtil::sqrt( deltaU * deltaU + deltaV * deltaV ) / radius;
                 if ( distance >= 1.0f )
                     continue;
-                height += listLayer[index + 3] * evaluateCurve( _shapeParam, distance );
+                const size_t layer     = index / 4;
+                const bool   bOwnCurve = layer < listCurve.size() && listCurve[layer]._listKey.empty() == false;
+                height += listLayer[index + 3] * ( bOwnCurve ? listCurve[layer].evaluate( distance, 0.0f ) : evaluateCurve( _shapeParam, distance ) );
             }
             return point._position + point._normal * height;
         }
@@ -71,6 +77,7 @@ namespace sw::editor
     private:
         uint32 _shapeParam;
         uint32 _layersParam;
+        uint32 _layerCurveParam;
     };
 
     SW_MESH_MODIFIER( CurveSculptLayeredModifier, "curvesculptlayered", "Curve Sculpt Layered", "Curve" );

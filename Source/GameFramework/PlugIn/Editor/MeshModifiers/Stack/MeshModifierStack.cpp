@@ -41,6 +41,66 @@ namespace sw::editor
                 return float3{ static_cast<float32>( x ), static_cast<float32>( y ), static_cast<float32>( z ) };
             }
 
+            /**
+             * @brief 곡선 키 하나를 배열로 씁니다. 선형 키는 [시간, 값](옛 문서와 같다), 상수 · 자동 접선 큐빅은 [시간, 값, 보간],
+             *        접선을 손으로 둔 큐빅은 [시간, 값, 보간, 들어오는 접선, 나가는 접선]입니다.
+             */
+            static void writeCurveKey( const JSONValue& array, const FloatCurveKey& key )
+            {
+                const JSONValue pair = array.pushBack();
+                pair.setArray();
+                pair.pushBack().setFloat( static_cast<float64>( key._time ) );
+                pair.pushBack().setFloat( static_cast<float64>( key._value ) );
+                if ( key._interpolation == CurveInterpolation::Linear )
+                    return;
+                pair.pushBack().setUint( static_cast<uint64>( key._interpolation ) );
+                if ( key._interpolation == CurveInterpolation::Cubic && key._bAutoTangent == false )
+                {
+                    pair.pushBack().setFloat( static_cast<float64>( key._arriveTangent ) );
+                    pair.pushBack().setFloat( static_cast<float64>( key._leaveTangent ) );
+                }
+            }
+
+            static void writeCurve( const JSONValue& array, const FloatCurve& curve )
+            {
+                array.setArray();
+                for ( const FloatCurveKey& key : curve._listKey )
+                {
+                    writeCurveKey( array, key );
+                }
+            }
+
+            /** @brief `writeCurveKey` 의 배열을 읽습니다. 모양이 틀리면 키를 버립니다. 선형이 아닌 키의 자동 접선은 `setParamValue` 의 다듬기가 다시 센다. */
+            static void readCurve( const JSONValue& source, FloatCurve& outCurve )
+            {
+                outCurve._listKey.clear();
+                for ( size_t index = 0; index < source.size(); ++index )
+                {
+                    const JSONValue pair = source.at( index );
+                    if ( pair.isArray() == false || ( pair.size() != 2 && pair.size() != 3 && pair.size() != 5 ) )
+                        continue;
+                    FloatCurveKey key{};
+                    key._time          = static_cast<float32>( pair.at( 0 ).asFloat() );
+                    key._value         = static_cast<float32>( pair.at( 1 ).asFloat() );
+                    key._interpolation = CurveInterpolation::Linear;
+                    key._bAutoTangent  = false;
+                    if ( pair.size() >= 3 )
+                    {
+                        const int32 interpolation = static_cast<int32>( pair.at( 2 ).asFloat() );
+                        if ( interpolation < 0 || interpolation > static_cast<int32>( CurveInterpolation::Cubic ) )
+                            continue;
+                        key._interpolation = static_cast<CurveInterpolation>( interpolation );
+                        key._bAutoTangent  = pair.size() == 3;
+                    }
+                    if ( pair.size() == 5 )
+                    {
+                        key._arriveTangent = static_cast<float32>( pair.at( 3 ).asFloat() );
+                        key._leaveTangent  = static_cast<float32>( pair.at( 4 ).asFloat() );
+                    }
+                    outCurve._listKey.push_back( key );
+                }
+            }
+
             static void writeParam( const MeshModifier& modifier, uint32 paramIndex, const JSONValue& params )
             {
                 const MeshModifierParamDef&   def   = modifier.getParamDefs()[paramIndex];
@@ -62,14 +122,26 @@ namespace sw::editor
                     }
                     case MeshModifierParamKind::Curve:
                     {
+                        writeCurve( params.set( def._pName ), value._curve );
+                        break;
+                    }
+                    case MeshModifierParamKind::CurveList:
+                    {
                         const JSONValue array = params.set( def._pName );
                         array.setArray();
-                        for ( const float2& key : value._listCurveKey )
+                        for ( const FloatCurve& curve : value._listCurve )
                         {
-                            const JSONValue pair = array.pushBack();
-                            pair.setArray();
-                            pair.pushBack().setFloat( static_cast<float64>( key._x ) );
-                            pair.pushBack().setFloat( static_cast<float64>( key._y ) );
+                            writeCurve( array.pushBack(), curve );
+                        }
+                        break;
+                    }
+                    case MeshModifierParamKind::ReferenceList:
+                    {
+                        const JSONValue array = params.set( def._pName );
+                        array.setArray();
+                        for ( const string& text : value._listText )
+                        {
+                            array.pushBack().setString( text );
                         }
                         break;
                     }
@@ -117,14 +189,37 @@ namespace sw::editor
                     {
                         if ( source.isArray() == false )
                             break;
-                        vector<float2> listKey;
+                        MeshModifierParamValue value{};
+                        readCurve( source, value._curve );
+                        modifier.setParamValue( paramIndex, value );
+                        break;
+                    }
+                    case MeshModifierParamKind::CurveList:
+                    {
+                        if ( source.isArray() == false )
+                            break;
+                        MeshModifierParamValue value{};
+                        value._listCurve.resize( source.size() );
                         for ( size_t index = 0; index < source.size(); ++index )
                         {
-                            const JSONValue pair = source.at( index );
-                            if ( pair.isArray() && pair.size() == 2 )
-                                listKey.push_back( float2{ static_cast<float32>( pair.at( 0 ).asFloat() ), static_cast<float32>( pair.at( 1 ).asFloat() ) } );
+                            const JSONValue item = source.at( index );
+                            if ( item.isArray() )
+                                readCurve( item, value._listCurve[index] );
                         }
-                        modifier.setCurveKeys( paramIndex, listKey );
+                        modifier.setParamValue( paramIndex, value );
+                        break;
+                    }
+                    case MeshModifierParamKind::ReferenceList:
+                    {
+                        if ( source.isArray() == false )
+                            break;
+                        MeshModifierParamValue value{};
+                        for ( size_t index = 0; index < source.size(); ++index )
+                        {
+                            const JSONValue item = source.at( index );
+                            value._listText.push_back( item.isString() ? string( item.asString() ) : string() );
+                        }
+                        modifier.setParamValue( paramIndex, value );
                         break;
                     }
                     case MeshModifierParamKind::NumberList:

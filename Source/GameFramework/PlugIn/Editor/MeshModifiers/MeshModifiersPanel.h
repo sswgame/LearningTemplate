@@ -44,12 +44,21 @@ namespace sw::editor
         /** @brief 매개변수를 구역(`_pGroup`)별 접히는 머리로 묶어 그립니다. 구역 없는 매개변수는 맨 위입니다. */
         void drawParams( MeshModifierSession& session, MeshModifier& modifier );
         void drawParam( MeshModifierSession& session, MeshModifier& modifier, uint32 paramIndex );
-        /** @brief 곡선 미리보기를 그리고, 누르면 공용 곡선 편집기 팝업을 엽니다. 편집을 마칠 때 되돌리기 기록 하나로 값에 넣습니다. */
+        /** @brief 곡선 매개변수를 그립니다(이름 + `drawCurveField`). */
         void drawCurveParam( MeshModifierSession& session, MeshModifier& modifier, uint32 paramIndex );
+        /**
+         * @brief 곡선 미리보기를 그리고, 누르면 공용 곡선 편집기 팝업을 엽니다. 편집을 마칠 때 되돌리기 기록 하나로 값에 넣습니다.
+         * @param itemIndex 곡선 목록의 항목 번호입니다. 단일 곡선이면 -1 입니다.
+         */
+        void drawCurveField( MeshModifierSession& session, MeshModifier& modifier, uint32 paramIndex, int32 itemIndex, const FloatCurve& curve );
+        /** @brief 곡선 목록을 항목마다 곡선 칸 + 위 · 아래 · 복제 · 삭제 단추로 그리고, 끝에 추가 단추를 둡니다. */
+        void drawCurveListParam( MeshModifierSession& session, MeshModifier& modifier, uint32 paramIndex );
         /** @brief NumberList 를 행 × 열 표로 그립니다(열 선언이 맞으면 이름 · 종류별 입력칸, 아니면 일반 숫자 열). */
         void drawNumberListParam( MeshModifierSession& session, MeshModifier& modifier, uint32 paramIndex );
         /** @brief 씬 오브젝트 고르기 콤보와 "선택 사용" 단추를 그립니다. */
         void drawReferenceParam( MeshModifierSession& session, MeshModifier& modifier, uint32 paramIndex );
+        /** @brief 참조 목록을 항목마다 고르기 칸 + 위 · 아래 · 복제 · 삭제 단추로 그리고, 끝에 추가 단추를 둡니다. */
+        void drawReferenceListParam( MeshModifierSession& session, MeshModifier& modifier, uint32 paramIndex );
         /** @brief 추가 메뉴 항목에 마우스가 있으면 모디파이어 설명을 툴팁으로 보입니다(설명은 항목마다 한 번 만들어 둡니다). */
         void drawRegistrationTooltip( const MeshModifierRegistration& registration );
         void drawLatticePoints( MeshModifierSession& session, LatticeModifier& lattice );
@@ -62,6 +71,7 @@ namespace sw::editor
         EditorCurveEditorState _curveState;      ///< 열린 곡선 편집기 팝업 하나의 상태
         const MeshModifier*    _pCurveModifier;  ///< 곡선 팝업을 연 모디파이어(그 프레임 안에서 비교만 한다 — 역참조하지 않는다)
         uint32                 _curveParamIndex; ///< 곡선 팝업을 연 매개변수 번호
+        int32                  _curveItemIndex;  ///< 곡선 팝업을 연 목록 항목 번호(단일 곡선이면 -1)
         string                 _descriptionID;   ///< 설명을 만들어 둔 등록 id
         string                 _description;     ///< `_descriptionID` 모디파이어의 설명
         bool                   _bEditing;
