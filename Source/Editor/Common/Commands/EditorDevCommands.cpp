@@ -1,14 +1,18 @@
 /**
  * @file EditorDevCommands.cpp
- * @brief 에디터가 내주는 개발 명령(에디터 커맨드 실행 · 플레이 세션 · 씬 열고 저장 · 선택 · 디버그 그리기 데모)입니다. 에디터 모듈과 함께 올라오고 내려갑니다.
+ * @brief 에디터가 내주는 개발 명령(에디터 커맨드 실행 · 플레이 세션 · 씬 열고 저장 · 임시 에셋 열기 · 선택 · 디버그 그리기 데모)입니다. 에디터 모듈과 함께 올라오고 내려갑니다.
+ * @details 임시 에셋(`asset.open` · `asset.removeTemp` · 탐침 `Editor.TempAssetExists`)은 시나리오가 문서 패널의 저장을 저장소 리소스를
+ *          바꾸지 않고 시험하는 길이다. 경로는 작업 폴더의 `Saved/Automation/` 아래만 받는다 — 리소스 트리는 거절한다.
  */
 #include "pch.h"
 
 #include "Core/Console/DevCommandRegistry.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/TagID.h"
 
+#include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Commands/EditorSceneFileCommands.h"
@@ -19,6 +23,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -159,6 +164,96 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 마지막으로 `asset.open` 한 임시 에셋의 절대 경로입니다. 탐침 `Editor.TempAssetExists` 가 읽습니다. */
+            static string& getLastTempAssetPath()
+            {
+                static string s_path;
+                return s_path;
+            }
+
+            /** @brief @p path 가 @p folder 와 같거나 그 아래인지입니다. 둘 다 `normalizePath` 를 거친 뒤 대소문자 없이 견줍니다. */
+            [[nodiscard]] static bool isUnderFolder( const string& path, const string& folder )
+            {
+                if ( folder.empty() || StringUtil::startsWith( path, folder, true ) == false )
+                    return false;
+                return path.size() == folder.size() || path[folder.size()] == '/';
+            }
+
+            /**
+             * @brief 임시 에셋 인자를 절대 경로로 바꿉니다. 작업 폴더의 `Saved/Automation/` 아래이고 리소스 트리 밖일 때만 true 입니다.
+             * @details 시나리오가 저장 단계를 밟아도 저장소 리소스가 바뀌지 않게 하는 문지기다. 상대 경로는 작업 폴더 기준이다(`scene.saveAs` 와 같다).
+             */
+            [[nodiscard]] static bool resolveTempAssetPath( const string& path, string& outAbsolutePath, string& outReply )
+            {
+                string absolutePath;
+                string automationFolder;
+                if ( path.empty() || FileUtil::makeAbsolutePath( path, absolutePath ) == false ||
+                     FileUtil::makeAbsolutePath( "Saved/Automation", automationFolder ) == false )
+                {
+                    outReply = "could not resolve '" + path + "'";
+                    return false;
+                }
+                const string normalized = FileUtil::normalizePath( absolutePath );
+                if ( isUnderFolder( normalized, FileUtil::normalizePath( automationFolder ) ) == false )
+                {
+                    outReply = "temp assets must be under Saved/Automation/: '" + absolutePath + "'";
+                    return false;
+                }
+                const string& resourceRoot = ResourcePaths::getRootFolderPath();
+                if ( resourceRoot.empty() == false && isUnderFolder( normalized, FileUtil::normalizePath( resourceRoot ) ) )
+                {
+                    outReply = "temp assets must not be in the resource tree: '" + absolutePath + "'";
+                    return false;
+                }
+                outAbsolutePath = absolutePath;
+                return true;
+            }
+
+            /** @brief 임시 에셋 하나를 새 문서로 엽니다. 남은 옛 파일은 먼저 지워 매번 같은 상태(파일 없음 — 기본 문서)로 시작합니다. */
+            static bool runOpenTempAsset( const vector<string>& listArgument, string& outReply )
+            {
+                string absolutePath;
+                if ( listArgument.size() != 1 || resolveTempAssetPath( listArgument[0], absolutePath, outReply ) == false )
+                    return false;
+                if ( FileUtil::exists( absolutePath ) && FileUtil::removeFile( absolutePath ) == false )
+                {
+                    outReply = "could not remove the old temp asset '" + absolutePath + "'";
+                    return false;
+                }
+                (void)FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( absolutePath ) );
+                if ( EditorAssetCommands::openPath( absolutePath ) == false )
+                {
+                    outReply = "no editor opens '" + absolutePath + "'";
+                    return false;
+                }
+                getLastTempAssetPath() = absolutePath;
+                outReply = "opening " + absolutePath;
+                return true;
+            }
+
+            /** @brief 시나리오 끝 정리 — 임시 에셋 파일을 지웁니다. 없으면 할 일이 없어 성공입니다. */
+            static bool runRemoveTempAsset( const vector<string>& listArgument, string& outReply )
+            {
+                string absolutePath;
+                if ( listArgument.size() != 1 || resolveTempAssetPath( listArgument[0], absolutePath, outReply ) == false )
+                    return false;
+                if ( FileUtil::exists( absolutePath ) && FileUtil::removeFile( absolutePath ) == false )
+                {
+                    outReply = "could not remove '" + absolutePath + "'";
+                    return false;
+                }
+                outReply = "removed " + absolutePath;
+                return true;
+            }
+
+            /** @brief 마지막 `asset.open` 의 파일이 디스크에 있으면 1 입니다. 연 적이 없으면 0 입니다. */
+            [[nodiscard]] static bool readTempAssetExists( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const string& path = getLastTempAssetPath();
+                outValue           = ( path.empty() == false && FileUtil::exists( path ) ) ? 1.0 : 0.0;
+                return true;
+            }
+
             static bool runSelectType( const vector<string>& listArgument, string& outReply )
             {
                 GameObjectManager* pManager  = editor::getActiveObjectManager();
@@ -247,6 +342,13 @@ namespace sw::editor
     SW_DEV_COMMAND( OpenScene, "scene.open", "scene.open <path>",
                     "Open a scene file without the unsaved-changes prompt (a resource id, or a path relative to the working folder)",
                     &EditorDevCommandsInternal::runOpenScene );
+    SW_DEV_COMMAND( OpenTempAsset, "asset.open", "asset.open <path>",
+                    "Open a new document at a temp path under Saved/Automation/ in its editor panel (an old file there is removed first)",
+                    &EditorDevCommandsInternal::runOpenTempAsset );
+    SW_DEV_COMMAND( RemoveTempAsset, "asset.removeTemp", "asset.removeTemp <path>", "Remove a temp asset file under Saved/Automation/",
+                    &EditorDevCommandsInternal::runRemoveTempAsset );
+    SW_AUTOMATION_PROBE( editorTempAssetExists, "Editor.TempAssetExists", "1 when the file of the last asset.open exists on disk",
+                         &EditorDevCommandsInternal::readTempAssetExists );
     SW_DEV_COMMAND( Step, "step", "step [frames]", "Advance the play session by N frames, then pause", &EditorDevCommandsInternal::runStep );
     SW_DEV_COMMAND( SelectType, "select.type", "select.type <ComponentType>", "Select every object with that component type (or a derived one)",
                     &EditorDevCommandsInternal::runSelectType );
