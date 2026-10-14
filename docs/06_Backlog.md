@@ -242,6 +242,9 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   계약이 있어야 한다(지금은 지형 깊이를 정점에 굽는다). (5) 흔드는 식생의 그림자는 흔들리지 않는다(`shadowdepth.hlsl` 이 머티리얼 정점 변형을 모른다 — 풀은 그림자를 끔).
   (6) 지형 LOD 교체 프레임의 최악 시간이 기준(GT 2 ms)을 넘는다(측정값은 [검증과 측정](08_Verification.md) 2절 "지형 LOD 교체"). 메시 집합이 바뀌어 RT 는 정점 풀을
   통째로 다시 만든다(`RT.GPUScene.vertexPool`, 벤치에는 없다 — App 표로). LOD 메시를 미리 만들어 두거나 청크 정점을 풀에서 부분 갱신한다. 지오모프(LOD 튐) · 레이어 다섯 이상(두 번째 스플랫 — 머티리얼 텍스처 칸이 넷이다)이 없다.
+  (7) **지형 편집 쓰기 API가 없다**(2026-10-14) — `TerrainHeightfield` 는 만든 뒤 읽기만 하는 객체이고(병렬 틱과 배치 계산이 동시에 읽는다) `TerrainComponent` 에는 높이 · 스플랫을 바꾸는 공개 함수 ·
+  청크 더티 표시 · 저장 경로가 없다. 에디터 칠하기 도구(`D3-1` ⑧)의 드래그 적용과 되돌리기가 이것을 기다린다 — 읽는 쪽과 겹치지 않게 쓰는 길(이중 버퍼 또는 렌더 스레드 동기), 변경 청크만 다시 굽는 더티 표시,
+  높이장 · 레이어 가중치 맵 저장을 정한 뒤 `TerrainBrush::applyHeight` · `applyLayerWeight` 를 잇는다. 브러시 선택은 레이 전진이 걸음마다 `findTerrainAt` 으로 지형 전체를 훑어 먼 거리에서 비싸다(측정 안 함).
   에디터 칠하기 도구는 `D3-1` ⑧.
 
 - `D2-6` **툰 머티리얼(`toon.hlsl`, MToon 1.0 체계)의 남은 것** — 노멀 맵(정점에 탄젠트가 없다) · UV 스크롤 애니메이션 · 셰이딩 시프트 / 림 곱 / 외곽선 두께 텍스처(머티리얼 텍스처 칸이 넷이라 기본 · 그림자 · 발광 · 맷캡만 받는다) · 디퍼드의 계단 셰이딩(G버퍼는 표면만 적어 램버트로 칠해진다) · 그림자 패스의 알파 컷오프
@@ -264,12 +267,14 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   키트 영역은 `GF_EditorPlugIn_<이름>` 확장 모듈에 둔다. 남은 것 —
   ⑦ 카탈로그 편집기 뒤: 엔진 데이터 종류(장면 · 머티리얼 · 파이프라인 …)는 아직 `ResourceDataSchemaTest` 의 표에 있고, 카탈로그 밖(Engine 쪽) 열거자 이름 표는 `EnumNameTable` 로 모으지 않았다.
   층 규칙은 걸림돌이 아니다(레지스트리는 티어 5 라 위 티어가 채울 수 있다) — 실제 걸림돌 셋과 단계적 대안은 [결정 기록](09_Decisions.md) 5-11 "엔진 데이터 종류의 레지스트리 이전" 이다
-  (첫 단계: `EnumNameTable` 을 Core 로 옮기고 GameFramework include 만 고친다, 동작 불변). ⑧ 지형 칠하기 도구 모드(`D2-5` 환경).
+  (첫 단계: `EnumNameTable` 을 Core 로 옮기고 GameFramework include 만 고친다, 동작 불변). ⑧ 지형 칠하기 도구 모드는 기초만 들어갔다(`TerrainBrush` 순수 로직 · 단위 테스트 · 뷰포트 브러시 원 시각화 `terrainbrush`) —
+  드래그 적용과 되돌리기는 지형 쓰기 API 가 필요하다(`D2-5` (7)).
   다중 월드 툴 창과 그 위의 미리보기 창은 `D3-7`, UI 문서 디자이너는 `D3-3` 이다.
   에디터에 이미 있는 것(전역 변수 표, 커맨드 팔레트, 핫 리로드, Undo, Play 와 Step, InputReplay, 기즈모, RenderTargetPanel, 프로파일러와 Tracy)은 다시 만들지 않는다.
 
 - `D3-3` **UI 미리보기 패널의 디자이너 다음 단계**(`Editor/Panels/UIPreview/UIPreviewPanel`). 팔레트 끌어 놓기 · 지우기 · 부모 패널 종류별 슬롯 필드 편집(캔버스 · 상자 · 격자 · 공통) ·
-  캔버스 앵커 프리셋 열둘은 들어갔다. 남은 것: 상자 · 격자에서 그림 위로 끌어 순서 · 칸을 바꾸는 손잡이, 슬롯 편집 탐침, 앵커 프리셋을 고른 직후 부모 여백이 있을 때 위젯이 약간 밀리는지 확인.
+  캔버스 앵커 프리셋 열둘 · 상자 순서 / 격자 칸 끌기 손잡이 · 탐침 `Editor.UIPreviewSlotEditCount` 는 들어갔다. 남은 것: 앵커 프리셋을 고른 직후 부모 여백이 있을 때 위젯이 약간 밀리는지 확인,
+  손잡이의 가정(`D3-8` UI 디자이너 줄) 보완.
 
 - `D3-4` **콘솔 · 치트의 남은 것** — 게임 · 키트의 치트 명령(무적 · 아이템 주기 · 돈 …)을 각 게임 · 킷에 `SW_DEV_COMMAND` 로 단다(지금 게임 · 키트 쪽 명령은 `GameNetSession` 하나뿐 — 레지스트리 · 콘솔 ·
   엔진 명령은 `Source/Engine/` "개발 콘솔"). 리눅스 오버레이(`X11DevConsoleWindow`)는 실기로 띄워 보지 않았고, X11 그리기는 `XDrawString`(Latin-1)이라 한글이 깨진다.
@@ -292,17 +297,23 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   계획: docs/plans/EditorMultiWorld.md
 
 - `D3-8` **에디터 보강 묶음(2026-10-14)에서 남긴 것.**
-  - **시나리오 녹화**(`ScenarioRecorder` · `scenario.record` · `automation.toggleScenarioRecord`): 휠 · 더블클릭 · 조합 중 글자 · 포커스 · 포인터 출입 · 패드 연결은 기록하지 않고 건너뛴 수만 센다
-    (시나리오 실행기에 받는 단계가 없다). 녹화 파일을 재생해 보는 확인도 안 했다.
-  - **인스펙터**(`Panels/Inspector/`): 즐겨찾기(언리얼 Favorites — 저장소가 필요하다)와 디버그 모드(유니티 Debug 인스펙터 — 숨은 필드는 리플렉션 범위 밖)는 하지 않았다.
-    "바뀐 것만 보기" 는 다중 선택에서 주 선택 오브젝트의 값만 기준으로 거른다.
-  - **모듈 패키지 관리**(모듈 설치 · 제거 · 의존 해결 UI): 없다 — 설계 판단이 커서 이번 묶음에서 뺐다. 지금은 `ModulesPanel` 의 켜고 끄기 + 빌드 · 재시작뿐이다.
-  - **UI 디자이너**(`D3-3`)의 상자 · 격자에서 끌어 순서 · 칸을 바꾸는 손잡이.
+  - **시나리오 녹화**(`ScenarioRecorder` · `scenario.record` · `automation.toggleScenarioRecord`): 마우스 휠은 `Wheel` 단계로, 더블클릭은 두 번째 `Press` 로 기록한다. 조합 중 글자 · 포커스 · 포인터 출입 ·
+    패드 연결은 시나리오 의미가 없어 건너뛴 수만 센다. 재생은 원시 Down 을 두 번 내므로 더블클릭 이벤트 자체를 보는 UI 코드는 재현되지 않는다(`DoubleClick` 단계가 필요하면 `VirtualInputScript` 를 고친다).
+    녹화 파일을 실제로 재생해 보는 확인은 안 했다.
+  - **인스펙터**(`Panels/Inspector/`): 즐겨찾기(`InspectorFavorites` — 행 우클릭, 맨 위 Favorites 구역, `Saved/Editor/InspectorFavorites.txt` 에 저장)는 들어갔다. 키가 가장 파생된 타입 이름이라 기반 클래스에
+    즐겨찾기한 프로퍼티는 파생 타입마다 따로 저장된다. 디버그 모드(유니티 Debug 인스펙터 — 숨은 필드는 리플렉션 범위 밖)는 하지 않았다. "바뀐 것만 보기" 는 다중 선택에서 주 선택 오브젝트의 값만 기준으로 거른다.
+  - **모듈 창**(`ModulesPanel`): 종류 · 켜짐 필터, 상세(의존 · 역의존 · 오버라이드), 연쇄 영향 확인 창, 오버라이드 초기화는 들어갔다. 모듈 설치 · 제거(파일 복사 · 삭제) · 외부 패키지 받기는 없다 —
+    위험이 커서 뺐다. 확인 창이 패널 수준 ID 로 열려 셀프테스트 시나리오가 창 위치에 기댄다면 영향이 있을 수 있다.
+  - **UI 디자이너**(`D3-3`)의 상자 · 격자 손잡이는 들어갔다. 상자 순서 계산은 "가운데 좌표가 커지면 자식 번호도 커진다" 고 가정해 RTL · 음수 간격에서 거꾸로 나온다. 격자 줄은 자식 사각형으로 추정해
+    걸친 칸(span)이 섞이고 빈 행 · 열로는 끌어 놓을 수 없다.
 
 - `D3-9` **에디터 보강 묶음(2026-10-14, 브랜치 `wt/editor`) — 실행으로 확인할 것.** 빌드(Debug `all AllTests` 경고 0)와 `ctest` nogpu 48/49(실패 하나는 이 PC 에서 파이썬이 git 출력을 못 받는 환경 문제)는 통과했다.
   아직 사람이 눈으로 · 실제 실행으로 본 적 없는 것: 버그 리포트 창(`BugItPanel`, Window 메뉴에 실리는지) · 인스펙터 보기 옵션(펼치기 · 접기가 컴포넌트 카드에 먹는지, 검색란 폭) · 하이어라키 · 콘텐츠 브라우저 ·
   뷰포트 우클릭 메뉴 확장(`SW_EDITOR_CONTEXT_MENU_ENTRY`, 비행 모드의 끌기 판정, ThemePark "Nearest Park Ride") · UI 디자이너 슬롯 편집 · 앵커 프리셋 · 시나리오 녹화 · 포토 모드 ·
-  `LightingOnly` 보기 모드의 4 백엔드 그림과 Shipping 베이크(`D2-10`) · 입력 맵 패널의 시간 · Negate · `taps` 칸 · `D3-5` 시나리오 둘.
+  `LightingOnly` 보기 모드의 4 백엔드 그림과 Shipping 베이크(`D2-10`) · 입력 맵 패널의 시간 · Negate · `taps` 칸 · `D3-5` 시나리오 둘 · 어빌리티 디버거(`ability_debugger`) · NPC 일정 창(`npc_schedule`) ·
+  오디오 이벤트 창(`audioevents`) · 리그 디버그 창(`rig_debug`)과 시퀀서 `RigSlot` 트랙 · 모듈 창 상세와 확인 창 · 인스펙터 즐겨찾기(저장 · 복원) · UI 디자이너 끌기 손잡이 · 지형 브러시 원 시각화 ·
+  치트 명령(`cheat.*`) · 포토 모드. 2차 묶음의 `nogpu` 테스트도 48/49 로 통과했다(실패 하나는 위 환경 문제). 두 번째 묶음에서 실제 빌드가 잡은 것: 확장 모듈이 쓰는 `EditorPlaySession::isStopped` 의 내보내기 누락,
+  `EditorTest` 의 직접 컴파일 목록 누락, GameFramework 패널 키가 editor 표에 들어갔던 일 — 에이전트가 이 PC 에서 빌드 없이 쓴 코드는 이런 종류의 누락이 있을 수 있다.
   **이 PC 의 환경 문제**: 파이썬이 git 을 띄워 출력을 파이프로 받으면 항상 빈 문자열이다(`worktree-make` · pre-commit 훅 · `PythonTest_TestAcronymSpelling` 이 죽는다). 이 묶음의 커밋은 모두 `--no-verify` 라
   정상 환경에서 훅(`PreCommitLint`)을 한 번 돌려 린트 위반이 없는지 봐야 한다.
 
@@ -334,7 +345,9 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
 - `D4-6` **애니메이션(로드맵).** 지금 있는 것은 `Source/Engine/Animation/`(임포트 · 코덱 · 재생 · 상태 기계 · 블렌드 스페이스 · AnimationSystem · GPU 스키닝 · 2D/3D 공용 재생),
   알림 디스패치(구간 알림 · 처리기 레지스트리 · `*.notifies.xml`)는 `Source/Engine/Character/`. 남은 것 —
   ① 그래프에 레이어를 데이터로(지금 레이어는 `addLayer` 코드), 스켈레탈 애니메이터가 블렌드 스페이스 상태를 재생하는 연결(블렌드 스페이스 · 동기 그룹은 그래프 데이터다)
-  ② 후처리 리그(`PoseModifierComponent`): 시퀀서 트랙이 `setSlotWeight` 를 쓰기(칸은 있다), 에디터 리그 패널(노드 목록 · 대상 · 기즈모)
+  ② 후처리 리그(`PoseModifierComponent`): 시퀀서 `RigSlot` 트랙(`setSlotWeight` 에 키 찍기)과 리그 디버그 창(`RigDebugPanel` — 노드 가중치 · 켜짐 · 쓰는 본 표시)은 들어갔다. 남은 것: 창에서 고친 가중치 · 켜짐은
+    런타임 인스턴스의 복제본에만 들어가 저장되지 않는다(리그 에셋에 쓰는 길), 노드 대상 본 기즈모 편집, 시퀀서가 슬롯 가중치를 읽는 함수가 엔진에 없어 `readTrackValues` 는 컴포넌트가 있으면 1 을 돌려준다,
+    `Engine/Sequencer` 가 `Engine/Character` 헤더를 새로 include 한다(레이어 검사 확인)
   ③ 애니메이션 LOD(`AnimationLOD.h` — 리그 노드도 화면 크기 `min_screen_size` 로 꺼진다): 메시 LOD 가 생기면 본 LOD 를 메시 LOD 와 묶기
   ④ 군중 공유(`AnimationCrowd.h`): 섞기 묶음(언리얼 Animation Sharing 의 블렌드 액터 — 지금 섞는 유닛은 사본으로 혼자 평가), Shooter3D 군중 켜기.
   얼굴(`FacialAnimationComponent`): 음소 인식 립싱크(지금은 세 대역 모양 분류 — 모음 넷 · 치찰음 정도만 가른다) · 실제 얼굴 에셋(KayKit 은 모프가 없다 — 합성 테스트 머리뿐) ·
@@ -392,7 +405,8 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
 
 - `D4-11` **어빌리티 시스템의 다음 조각(쓰는 게임이 생기면).** 언리얼 GAS 에 있고 여기 없는 것: 이펙트가 주는 어빌리티(장비가 스킬을 준다), 걸린 동안의 태그 조건
   (`OngoingTagRequirements` — 기절 중 버프 정지), 태그가 붙을 때 발동(`OwnedTagAdded` 트리거), 큐를 데이터로 이어 주는 큐 매니저(큐 태그 → 프리팹 · 사운드),
-  어트리뷰트를 `SaveGame` 에 싣는 도우미, 에디터의 런타임 상태 패널(걸린 이펙트 · 태그 개수 · 쿨다운). 넣을 때마다 `AbilitySystemTest` 에 테스트 하나.
+  어트리뷰트를 `SaveGame` 에 싣는 도우미. 넣을 때마다 `AbilitySystemTest` 에 테스트 하나. 에디터의 런타임 상태 패널은 들어갔다(`AbilityDebugPanel` — `GF_EditorPlugIn_Base`, `ability_debugger`,
+  읽기 전용, 플레이 중에만 값이 있다). 무적 API 는 없다(`D3-4`).
 
 - `D4-12` **상호작용 · 기믹의 남은 것**(`GameFramework/Base/Gameplay/Interaction` · `Gimmick` · `Spline` README).
   - 렌더러: `InteractableComponent::getHighlightRequest`(Outline · Sense)를 읽는 외곽선 · 감각 모드 패스.
@@ -408,7 +422,9 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
 
 ### D5. 오디오 · 현지화 · AI
 
-- `D5-1` **오디오 엔진(`Engine/Audio/README.md`)의 남은 것.** (2) 에디터 — 이벤트 브라우저는 로드된 라이브러리의 이벤트 이름 목록뿐이다(이벤트별 파라미터 편집 · 인스턴스 목록 없음), 보이스 · 가상화 프로파일러.
+- `D5-1` **오디오 엔진(`Engine/Audio/README.md`)의 남은 것.** (2) 에디터 — 이벤트 창(`AudioEventBrowserPanel`, `audioevents`: 이벤트 속성 · 재생 중 인스턴스 · 보이스 프로파일)은 들어갔다.
+  남은 것: 이벤트 데이터를 창에서 고쳐 저장하기(엔진에 `AudioEventLibrary` 를 쓰는 길이 없어 지금은 "데이터 파일 열기" 뿐), `Source/Engine/Audio` · Editor README 에 새 창과 읽기 API(`findEventDesc` ·
+  `getInstanceStatuses`)를 적기, 게시 상태가 블록마다 인스턴스 × 보이스를 훑는 비용 측정.
   (4) 출력: HRTF(바이노럴) · 5.1/7.1(지금 출력은 스테레오), 리눅스 출력 백엔드(지금 Null — 후보는 `G-11`). (5) 회절. (6) 컨볼루션 리버브, 그래뉼러 · 절차 소리
   그래프(MetaSounds 급).
 
@@ -417,7 +433,8 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
 
 - `D5-3` **NPC 하루 일정(`GameFramework/Base/Actor/AI/Schedule`)의 남은 것**(`AI/Schedule/README.md`). (3) 쓰는 게임이 없다 — HarvestValley 마을 사람(데이터
   `game/harvestvalley/data/villagers.schedules.xml` 은 있다, 몸은 `NavAgent` 가 `ScheduleNpcView` 를 따라감, 저장은 `ScheduleSaveState` 를 게임 세이브에).
-  (4) 에디터 패널(`dumpTimeline` · `explainNpc` 글을 그대로).
+  (4) 에디터 패널은 들어갔다(`ScheduleDebugPanel` — `GF_EditorPlugIn_Base`, `npc_schedule`, `ScheduleSystem::collectLiveSystems`). 일정 시스템을 만드는 게임이 아직 없어 실물에서는 빈 상태 힌트만 보인다.
+  `AI/Schedule/README.md` 는 없다(위 (3) 이 끝나면 쓴다). 목록 함수는 시스템을 같은 스레드에서 읽는다고 가정한다.
 
 ### D6. 런타임 UI
 
