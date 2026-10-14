@@ -173,8 +173,9 @@ namespace sw
             const string_view slotText   = bindNode.getAttributeText( Internal::kSlotAttr );
             int32             bindIndex  = 0;
             InputSlot         slot{};
-            if ( actionText.empty() || bindNode.tryGetAttributeIntInRange( Internal::kIndexAttr, 0, 0, Internal::kMaxBindIndex, bindIndex ) == false ||
-                 InputSlotUtil::tryParse( slotText, slot ) == false )
+            const bool        bUnreadableBind = actionText.empty() || bindNode.tryGetAttributeIntInRange( Internal::kIndexAttr, 0, 0, Internal::kMaxBindIndex, bindIndex ) == false ||
+                                         InputSlotUtil::tryParse( slotText, slot ) == false;
+            if ( bUnreadableBind )
             {
                 SW_LOG_WARNING( "Shell user bindings '%#': a <bind> with action '%#' and slot '%#' cannot be read - skipped", filePath, string( actionText ).c_str(),
                                 string( slotText ).c_str() );
@@ -228,8 +229,9 @@ namespace sw
                 if ( listArgument.size() == 3 && StringUtil::parseInt( listArgument[2], bindIndex ) == false )
                     return false;
                 const hashed_string action( listArgument[0].c_str() );
-                InputMap&           map = *pShell->getInputMap();
-                if ( bindIndex < 0 || map.hasAction( action ) == false || map.rebindSlot( action, slot, static_cast<uint32>( bindIndex ) ) == false )
+                InputMap&           map             = *pShell->getInputMap();
+                const bool          bRebindRejected = bindIndex < 0 || map.hasAction( action ) == false || map.rebindSlot( action, slot, static_cast<uint32>( bindIndex ) ) == false;
+                if ( bRebindRejected )
                 {
                     outReply = "'" + listArgument[0] + "' has no rebindable binding " + to_string( bindIndex );
                     return false;

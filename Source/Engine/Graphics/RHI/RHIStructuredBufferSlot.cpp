@@ -59,7 +59,8 @@ namespace sw
 
     void RHIStructuredBufferSlot::upload( IRHIDevice* pDevice, const void* pData, uint32 byteSize, uint32 byteOffset ) const
     {
-        if ( pDevice == nullptr || _buffer == 0 || pData == nullptr || byteSize == 0 )
+        const bool bNothingToUpload = pDevice == nullptr || _buffer == 0 || pData == nullptr || byteSize == 0;
+        if ( bNothingToUpload )
             return;
         pDevice->getResourceFactory()->updateStructuredBufferRange( _buffer, pData, byteSize, byteOffset );
     }

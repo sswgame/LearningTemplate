@@ -51,8 +51,9 @@ namespace sw
                                          size_t&     outCompressedSize,
                                          int32       compressionLevel )
     {
-        outCompressedSize = 0;
-        if ( pSrc == nullptr || pDst == nullptr || srcSize == 0 )
+        outCompressedSize                = 0;
+        const bool bInvalidCompressInput = pSrc == nullptr || pDst == nullptr || srcSize == 0;
+        if ( bInvalidCompressInput )
             return false;
 
         const int32 level    = ( compressionLevel != 0 ) ? compressionLevel : ZSTD_defaultCLevel();
@@ -81,8 +82,9 @@ namespace sw
                                            size_t      dstCapacity,
                                            size_t&     outUncompressedSize )
     {
-        outUncompressedSize = 0;
-        if ( pSrc == nullptr || pDst == nullptr || srcSize == 0 )
+        outUncompressedSize                = 0;
+        const bool bInvalidDecompressInput = pSrc == nullptr || pDst == nullptr || srcSize == 0;
+        if ( bInvalidDecompressInput )
             return false;
 
         // ZSTD_decompressDCtx 는 프레임 헤더의 크기를 보고 대상 용량을 스스로 검사한다. 손상된 입력이

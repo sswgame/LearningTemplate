@@ -335,8 +335,9 @@ namespace sw
         _bInterpolationReady   = SW_FALSE;
         _pBoneLODMaskSkeleton  = nullptr;
         refreshBoneLODMasks();
-        const shared_ptr<Mesh>& mesh = getMesh();
-        if ( mesh != nullptr && mesh->hasSkin() && mesh->getSkinBoneCount() != _skeleton->getBoneCount() )
+        const shared_ptr<Mesh>& mesh               = getMesh();
+        const bool              bBoneCountMismatch = mesh != nullptr && mesh->hasSkin() && mesh->getSkinBoneCount() != _skeleton->getBoneCount();
+        if ( bBoneCountMismatch )
             SW_LOG_ERROR( "Skinned mesh '%#' expects %# bones but skeleton '%#' has %#", getMeshID().c_str(), mesh->getSkinBoneCount(), _skeletonPath.c_str(),
                           _skeleton->getBoneCount() );
     }
@@ -368,7 +369,8 @@ namespace sw
 
     SkeletalMeshComponent* SkeletalMeshComponent::findLeaderPose() const
     {
-        if ( _leader.isValid() == false || getOwner() == nullptr || getOwner()->getManager() == nullptr )
+        const bool bNoLeader = _leader.isValid() == false || getOwner() == nullptr || getOwner()->getManager() == nullptr;
+        if ( bNoLeader )
             return nullptr;
         return castTo<SkeletalMeshComponent>( getOwner()->getManager()->resolveComponent( _leader ) );
     }
@@ -475,7 +477,8 @@ namespace sw
     bool SkeletalMeshComponent::describeSharedPose( AnimationSharedPoseRequest& outRequest ) const
     {
         // 리더를 따르거나 후처리 일이 있으면 유닛마다 포즈가 다르다 — 나눌 수 없다. 모프 가중치(얼굴 · 커브)도 묶음이 나누지 않는다.
-        if ( _listTask.size() != 1 || _leader.isValid() || hasActiveMorphWeights() )
+        const bool bPoseNotShareable = _listTask.size() != 1 || _leader.isValid() || hasActiveMorphWeights();
+        if ( bPoseNotShareable )
             return false;
         return _listTask[0]->describeSharedPose( outRequest );
     }
@@ -514,7 +517,8 @@ namespace sw
         if ( clip != nullptr )
         {
             // 아주 멀면 VAT — 따르는 유닛이 없고 재생 속도가 1 일 때(셰이더는 VAT 시계를 그대로 흘린다).
-            if ( _lodState._bVertexAnimation == SW_TRUE && _bHasDependents == SW_FALSE && request._playRate == 1.0f )
+            const bool bUseVertexAnimation = _lodState._bVertexAnimation == SW_TRUE && _bHasDependents == SW_FALSE && request._playRate == 1.0f;
+            if ( bUseVertexAnimation )
             {
                 shared_ptr<Mesh> vertexMesh =
                     crowd.findVertexAnimationMesh( _skinSourceMesh, *_skeleton, *clip, request._bAnchorRootMotion == SW_TRUE, getMeshID() );

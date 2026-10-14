@@ -48,10 +48,11 @@ namespace sw
         map<string, string> mapPair;
         for ( size_t index = 0; error.empty() && index < entries.size(); ++index )
         {
-            const JSONValue entry  = entries.at( index );
-            const JSONValue source = entry.get( "source", false );
-            const JSONValue text   = entry.get( "text", false );
-            if ( entry.isObject() == false || entry.getMemberNames().size() != 2 || source.isString() == false || text.isString() == false )
+            const JSONValue entry           = entries.at( index );
+            const JSONValue source          = entry.get( "source", false );
+            const JSONValue text            = entry.get( "text", false );
+            const bool      bMalformedEntry = entry.isObject() == false || entry.getMemberNames().size() != 2 || source.isString() == false || text.isString() == false;
+            if ( bMalformedEntry )
             {
                 error = string( sourceName ) + ": entries[" + to_string( static_cast<uint64>( index ) ) + "] needs exactly \"source\" and \"text\"";
                 break;
@@ -102,7 +103,8 @@ namespace sw
     {
         const string text = toJSONText();
         string       existing;
-        if ( FileUtil::exists( absolutePath ) && FileUtil::readTextFile( absolutePath, existing ) && existing == text )
+        const bool   bFileContentUnchanged = FileUtil::exists( absolutePath ) && FileUtil::readTextFile( absolutePath, existing ) && existing == text;
+        if ( bFileContentUnchanged )
             return true;
         return FileUtil::ensureParentDirectoryExists( absolutePath ) && FileUtil::writeTextFile( absolutePath, text );
     }

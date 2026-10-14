@@ -398,7 +398,8 @@ namespace sw
 
     void InputMap::bindChord( const hashed_string& action, Key modifierKey, Key triggerKey, ActionTrigger trigger, const hashed_string& layer )
     {
-        if ( action.empty() || modifierKey == Key::Unknown || triggerKey == Key::Unknown )
+        const bool bInvalidChordArguments = action.empty() || modifierKey == Key::Unknown || triggerKey == Key::Unknown;
+        if ( bInvalidChordArguments )
             return;
 
         ActionBinding binding = beginBinding( action, BindingKind::Chord, trigger, layer );
@@ -796,8 +797,9 @@ namespace sw
 
     bool InputMap::setBindingTrigger( const hashed_string& action, uint32 bindIndex, ActionTrigger trigger )
     {
-        ActionEntry* pEntry = findAction( action );
-        if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() || trigger >= ActionTrigger::Count )
+        ActionEntry* pEntry                = findAction( action );
+        const bool   bInvalidTriggerRebind = pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() || trigger >= ActionTrigger::Count;
+        if ( bInvalidTriggerRebind )
             return false;
         pEntry->_listBinding[bindIndex]._trigger = trigger;
         return true;

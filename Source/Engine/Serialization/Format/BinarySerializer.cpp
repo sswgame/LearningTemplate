@@ -172,10 +172,11 @@ namespace sw
 
                 for ( uint32 propIndex = 0; propIndex < propCount; ++propIndex )
                 {
-                    uint32 tagHash{ 0 };
-                    uint32 wireTypeHash{ 0 };
-                    uint32 payloadSize{ 0 };
-                    if ( reader.read( tagHash ) == false || reader.read( wireTypeHash ) == false || reader.read( payloadSize ) == false )
+                    uint32     tagHash{ 0 };
+                    uint32     wireTypeHash{ 0 };
+                    uint32     payloadSize{ 0 };
+                    const bool bTruncatedTag = reader.read( tagHash ) == false || reader.read( wireTypeHash ) == false || reader.read( payloadSize ) == false;
+                    if ( bTruncatedTag )
                         return false;
 
                     const size_t payloadStart = reader.getOffset();
@@ -233,8 +234,9 @@ namespace sw
                         // 4 바이트가 int32 로 바뀐 필드에 그대로 읽히게 된다).
                         if ( wireTypeName.empty() == false )
                         {
-                            bApplied = tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, context, wireTypeName, wireVersion );
-                            if ( bApplied == false && bStrict == false && isValueOnlyCoercion( prop._typeName, wireTypeName ) == false )
+                            bApplied                  = tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, context, wireTypeName, wireVersion );
+                            const bool bFallbackApply = bApplied == false && bStrict == false && isValueOnlyCoercion( prop._typeName, wireTypeName ) == false;
+                            if ( bFallbackApply )
                                 bApplied = applyPropertyPayload( pInstance, prop, pData, payloadStart, payloadSize, context, false, wireVersion );
                         }
                     }
@@ -338,7 +340,8 @@ namespace sw
             template <typename DeserializeRawFunc>
             static bool decompressThenDeserialize( void* pInstance, const uint8* pData, size_t dataSize, DeserializeRawFunc&& deserializeRaw )
             {
-                if ( pInstance == nullptr || pData == nullptr || dataSize == 0 )
+                const bool bInvalidCompressedInput = pInstance == nullptr || pData == nullptr || dataSize == 0;
+                if ( bInvalidCompressedInput )
                     return false;
 
                 vector<uint8> listRawBinary;
@@ -369,10 +372,11 @@ namespace sw
                 const uint32 propCount = header & kTaggedCountMask;
                 for ( uint32 propIndex = 0; propIndex < propCount; ++propIndex )
                 {
-                    uint32 tagHash{ 0 };
-                    uint32 wireTypeHash{ 0 };
-                    uint32 payloadSize{ 0 };
-                    if ( reader.read( tagHash ) == false || reader.read( wireTypeHash ) == false || reader.read( payloadSize ) == false )
+                    uint32     tagHash{ 0 };
+                    uint32     wireTypeHash{ 0 };
+                    uint32     payloadSize{ 0 };
+                    const bool bTruncatedTagHeader = reader.read( tagHash ) == false || reader.read( wireTypeHash ) == false || reader.read( payloadSize ) == false;
+                    if ( bTruncatedTagHeader )
                         return false;
                     if ( reader.skip( payloadSize ) == false )
                         return false;
@@ -437,10 +441,11 @@ namespace sw
                 {
                     for ( uint64 entryIndex = 0; entryIndex < entryCount; ++entryIndex )
                     {
-                        uint64 propIndex{ 0 };
-                        uint64 payloadSize{ 0 };
-                        if ( reader.readVarUint( propIndex ) == false || reader.readVarUint( payloadSize ) == false ||
-                             reader.skip( static_cast<size_t>( payloadSize ) ) == false )
+                        uint64     propIndex{ 0 };
+                        uint64     payloadSize{ 0 };
+                        const bool bTruncatedProperty = reader.readVarUint( propIndex ) == false || reader.readVarUint( payloadSize ) == false ||
+                                                        reader.skip( static_cast<size_t>( payloadSize ) ) == false;
+                        if ( bTruncatedProperty )
                             return false;
                     }
                 }
@@ -461,7 +466,8 @@ namespace sw
             [[nodiscard]] static bool deserializeArchiveStream( Archive& inArchive, MeasureStreamFn measure, DeserializeBytesFunc&& deserializeBytes )
 
             {
-                if ( inArchive.isError() || inArchive.getData() == nullptr || inArchive.getOffset() >= inArchive.getSize() )
+                const bool bInvalidArchive = inArchive.isError() || inArchive.getData() == nullptr || inArchive.getOffset() >= inArchive.getSize();
+                if ( bInvalidArchive )
                     return false;
                 const uint8* pStream    = inArchive.getData() + inArchive.getOffset();
                 size_t       streamSize = 0;
@@ -560,7 +566,8 @@ namespace sw
     bool BinarySerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
                                             vector<SchemaOrphanValue>* pOutOrphans, const SerializeContext& context )
     {
-        if ( pInstance == nullptr || pData == nullptr || dataSize == 0 )
+        const bool bInvalidDeserializeInput = pInstance == nullptr || pData == nullptr || dataSize == 0;
+        if ( bInvalidDeserializeInput )
             return false;
         return BinarySerializerInternal::deserializeTagged( pInstance, typeInfo, pData, dataSize, context, pOutOrphans, false );
     }
@@ -796,7 +803,8 @@ namespace sw
                                                size_t                  dataSize,
                                                const SerializeContext& context )
     {
-        if ( pInstance == nullptr || pData == nullptr || dataSize == 0 )
+        const bool bInvalidRawInput = pInstance == nullptr || pData == nullptr || dataSize == 0;
+        if ( bInvalidRawInput )
             return false;
 
         BinaryStreamReader          reader( pData, dataSize );

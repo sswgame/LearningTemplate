@@ -42,7 +42,8 @@ namespace sw
 
     void PhysicsPairFilter::setPairCollision( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB, bool bCollide )
     {
-        if ( bodyA == bodyB || bodyA.isValid() == false || bodyB.isValid() == false )
+        const bool bInvalidPair = bodyA == bodyB || bodyA.isValid() == false || bodyB.isValid() == false;
+        if ( bInvalidPair )
             return;
         const uint64 keyA = bodyA.packed();
         const uint64 keyB = bodyB.packed();

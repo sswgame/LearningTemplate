@@ -272,7 +272,8 @@ namespace sw
             /** @brief 키가 같으면 true 를 반환합니다. */
             bool operator==( const CompositeFboKey& other ) const
             {
-                if ( _colorCount != other._colorCount || _depth != other._depth || _depthSlice != other._depthSlice )
+                const bool bFboKeyMismatch = _colorCount != other._colorCount || _depth != other._depth || _depthSlice != other._depthSlice;
+                if ( bFboKeyMismatch )
                     return false;
                 for ( uint32 colorIndex = 0; colorIndex < _colorCount; ++colorIndex )
                 {
@@ -420,7 +421,8 @@ namespace sw
             : _pDevice{ pDevice }
             , _bNeedsUnbind{ false }
         {
-            if ( _pDevice != nullptr && _pDevice->requiresExclusiveContextThread() && _pDevice->isGraphicsContextCurrent() == false )
+            const bool bNeedsContextAcquire = _pDevice != nullptr && _pDevice->requiresExclusiveContextThread() && _pDevice->isGraphicsContextCurrent() == false;
+            if ( bNeedsContextAcquire )
             {
                 // **기다려서** 가져온다. 한 번 시도하고 포기하면 `_bNeedsUnbind` 만 false 가 되고 본문은
                 // 그대로 실행되어, 컨텍스트 없이 glGen* 이 나가 리소스가 조용히 만들어지지 않는다.

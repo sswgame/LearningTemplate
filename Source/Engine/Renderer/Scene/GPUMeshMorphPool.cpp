@@ -79,8 +79,9 @@ namespace sw
             return false;
         for ( size_t index = 0; index < listMesh.size(); ++index )
         {
-            const Mesh* pMesh = listMesh[index];
-            if ( listBuilt[index] != pMesh || pMesh == nullptr || listBuiltContentID[index] != pMesh->getContentID() )
+            const Mesh* pMesh           = listMesh[index];
+            const bool  bStaleBuiltMesh = listBuilt[index] != pMesh || pMesh == nullptr || listBuiltContentID[index] != pMesh->getContentID();
+            if ( bStaleBuiltMesh )
                 return false;
         }
         return true;
@@ -93,7 +94,8 @@ namespace sw
         vector<const Mesh*> listSource;
         for ( const Mesh* pMesh : listSkinMesh )
         {
-            if ( pMesh == nullptr || pMesh->hasSkin() == false || pMesh->getVertexCount() == 0 )
+            const bool bSkipSkinMesh = pMesh == nullptr || pMesh->hasSkin() == false || pMesh->getVertexCount() == 0;
+            if ( bSkipSkinMesh )
                 continue;
             const uint64 dataID = pMesh->getSkinDataID();
             if ( std::find( listDataID.begin(), listDataID.end(), dataID ) != listDataID.end() )
@@ -239,7 +241,8 @@ namespace sw
         uint32 resultOffset   = 0;
         for ( Mesh* pMesh : listSkinMesh )
         {
-            if ( pMesh == nullptr || pMesh->hasSkin() == false || pMesh->getVertexCount() == 0 || _mapBase.find( pMesh ) != _mapBase.end() )
+            const bool bSkipMesh = pMesh == nullptr || pMesh->hasSkin() == false || pMesh->getVertexCount() == 0 || _mapBase.find( pMesh ) != _mapBase.end();
+            if ( bSkipMesh )
                 continue;
             const auto sourceIt = std::find( _listSourceDataID.begin(), _listSourceDataID.end(), pMesh->getSkinDataID() );
             if ( sourceIt == _listSourceDataID.end() )
@@ -331,7 +334,8 @@ namespace sw
     void GPUMeshMorphPool::uploadSkinPalettes( IRHIDevice* pDevice, const vector<GPUSkinPalette>& listPalette, const vector<float4>* pListRow,
                                                const vector<float32>* pListMorphWeight )
     {
-        if ( pDevice == nullptr || _skinBoneCount == 0 || _skinPalette.isValid() == false )
+        const bool bNothingToUploadPalette = pDevice == nullptr || _skinBoneCount == 0 || _skinPalette.isValid() == false;
+        if ( bNothingToUploadPalette )
             return;
 
         // 메시 → 팔레트 항목 표를 한 번 짓는다 — 인스턴스마다 목록을 훑으면 캐릭터 천 명에서 백만 번 비교다.
@@ -369,8 +373,9 @@ namespace sw
                 pRow[2] = float4{ 0.0f, 0.0f, 1.0f, 0.0f };
             }
             // 모프 가중치 — 팔레트 뒤 구간에 이 인스턴스 몫(타깃 수)만큼. 없으면 0(레스트).
-            const GPUSkinInstanceRow& row = _listSkinRow[skinIndex];
-            if ( row._morphTargetCount == 0 || pFound == nullptr || pListMorphWeight == nullptr )
+            const GPUSkinInstanceRow& row             = _listSkinRow[skinIndex];
+            const bool                bNoMorphWeights = row._morphTargetCount == 0 || pFound == nullptr || pListMorphWeight == nullptr;
+            if ( bNoMorphWeights )
                 continue;
             float32* pWeight = reinterpret_cast<float32*>( _listScratchPaletteRow.data() ) + row._morphWeightBase;
             for ( uint32 targetIndex = 0; targetIndex < row._morphTargetCount && targetIndex < pFound->_morphWeightCount; ++targetIndex )

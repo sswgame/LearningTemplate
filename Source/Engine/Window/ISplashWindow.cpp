@@ -41,7 +41,8 @@ namespace sw
     {
         if ( pSource == nullptr || pOutPixel == nullptr )
             return;
-        if ( sourceWidth == 0 || sourceHeight == 0 || destWidth == 0 || destHeight == 0 )
+        const bool bEmptyImageSize = sourceWidth == 0 || sourceHeight == 0 || destWidth == 0 || destHeight == 0;
+        if ( bEmptyImageSize )
             return;
 
         const size_t sourceStride = static_cast<size_t>( sourceWidth ) * 4u;

@@ -196,7 +196,8 @@ namespace sw
 
         D3D12RHIDevice::BindlessResourceRecord& record = listRegistry[index];
         // 이미 빈 슬롯을 다시 프리리스트에 넣으면 같은 인덱스가 두 리소스에 발급된다.
-        if ( record._resource == nullptr && record._buffer == 0 && record._texture == 0 )
+        const bool bSlotAlreadyFree = record._resource == nullptr && record._buffer == 0 && record._texture == 0;
+        if ( bSlotAlreadyFree )
         {
             SW_LOG_ERROR( "%# index %# is already free; ignoring the duplicate release.",
                           bUav ? "Bindless UAV" : "Bindless", index );

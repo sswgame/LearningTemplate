@@ -76,9 +76,10 @@ namespace sw
             _listLength[index] = ( _listAnimated[index] - _listAnimated[index - 1] ).getLength();
         }
 
-        const float3 root      = _listAnimated[0];
-        const bool   bTeleport = _bInitialized == SW_TRUE && ( root - _lastRootPosition ).getLength() > settings._teleportDistance;
-        if ( _bInitialized == SW_FALSE || bTeleport || _listPosition.size() != count )
+        const float3 root              = _listAnimated[0];
+        const bool   bTeleport         = _bInitialized == SW_TRUE && ( root - _lastRootPosition ).getLength() > settings._teleportDistance;
+        const bool   bNeedsSpringReset = _bInitialized == SW_FALSE || bTeleport || _listPosition.size() != count;
+        if ( bNeedsSpringReset )
         {
             _listPosition         = _listAnimated;
             _listPreviousPosition = _listAnimated;

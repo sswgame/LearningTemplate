@@ -28,7 +28,8 @@ namespace sw
     RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
     {
         _pDevice->assertRegistryMutableNow( "registerBindlessTexture" );
-        if ( texture == 0 || _pDevice->_textureSet == VK_NULL_HANDLE || _pDevice->_defaultSampler == VK_NULL_HANDLE )
+        const bool bCannotRegisterTexture = texture == 0 || _pDevice->_textureSet == VK_NULL_HANDLE || _pDevice->_defaultSampler == VK_NULL_HANDLE;
+        if ( bCannotRegisterTexture )
             return kInvalidDescriptorIndex;
 
         VulkanRHIDevice::VulkanTextureRecord* pResolved = _pDevice->resolveTexture( texture );
@@ -176,8 +177,9 @@ namespace sw
         _pDevice->assertRegistryMutableNow( "registerBindlessTextureUav" );
         if ( texture == 0 || _pDevice->_textureSet == VK_NULL_HANDLE )
             return kInvalidDescriptorIndex;
-        VulkanRHIDevice::VulkanTextureRecord* pResolved = _pDevice->resolveTexture( texture );
-        if ( pResolved == nullptr || pResolved->_imageView == VK_NULL_HANDLE || pResolved->_bDepthStencil != SW_FALSE )
+        VulkanRHIDevice::VulkanTextureRecord* pResolved                 = _pDevice->resolveTexture( texture );
+        const bool                            bTextureNotStorageCapable = pResolved == nullptr || pResolved->_imageView == VK_NULL_HANDLE || pResolved->_bDepthStencil != SW_FALSE;
+        if ( bTextureNotStorageCapable )
             return kInvalidDescriptorIndex;
 
         // 버퍼 UAV 와 같은 인덱스 공간이다. 인덱스가 곧 RW 텍스처 배열(set 1 binding 3)의 원소다.

@@ -34,7 +34,8 @@ namespace sw
         }
         for ( const FoliageInfluencerComponent* pInfluencer : manager.getComponentRegistry().getAll<FoliageInfluencerComponent>() )
         {
-            if ( pInfluencer->isPendingDestroy() || pInfluencer->isActive() == false || pInfluencer->_radius <= 0.0f )
+            const bool bInactiveInfluencer = pInfluencer->isPendingDestroy() || pInfluencer->isActive() == false || pInfluencer->_radius <= 0.0f;
+            if ( bInactiveInfluencer )
                 continue;
             const float3  center   = pInfluencer->getWorldPosition();
             const float32 distance = ( center - viewPosition ).getLengthSquared();

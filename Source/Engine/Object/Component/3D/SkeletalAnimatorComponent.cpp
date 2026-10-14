@@ -351,7 +351,8 @@ namespace sw
         const AnimationPlayer& player   = _graphPlayer.getPlayer();
         const AnimationClip*   pCurrent = static_cast<const AnimationClip*>( player.getCurrentPlayable() );
         // 섞는 중(끊긴 페이드를 이어 섞는 중 포함) · 레이어 · 시퀀서 덮어쓰기는 캐릭터마다 다르다. 반복하지 않는 클립은 시작 시각이 캐릭터마다 달라 칸으로 묶지 않는다.
-        if ( pCurrent == nullptr || player.isCrossfading() || _bCarryingOver == SW_TRUE || player.isCurrentLooping() == false || _listLayer.empty() == false || _sequencerWeight > 0.0f )
+        const bool bNotShareable = pCurrent == nullptr || player.isCrossfading() || _bCarryingOver == SW_TRUE || player.isCurrentLooping() == false || _listLayer.empty() == false || _sequencerWeight > 0.0f;
+        if ( bNotShareable )
             return false;
         outRequest._pClip             = pCurrent;
         outRequest._time              = player.getCurrentTime();

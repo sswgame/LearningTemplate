@@ -845,8 +845,9 @@ namespace sw
      */
     inline bool computeRHITextureMipLayout( RHIFormat format, uint32 width, uint32 height, uint32 mip, RHITextureMipSpan& outSpan )
     {
-        const RHIFormatBlockInfo info = getRHIFormatBlockInfo( format );
-        if ( info._blockBytes == 0 || width == 0 || height == 0 )
+        const RHIFormatBlockInfo info                = getRHIFormatBlockInfo( format );
+        const bool               bInvalidBlockLayout = info._blockBytes == 0 || width == 0 || height == 0;
+        if ( bInvalidBlockLayout )
             return false;
         const uint32 mipWidth  = ( width >> mip ) > 0 ? ( width >> mip ) : 1u;
         const uint32 mipHeight = ( height >> mip ) > 0 ? ( height >> mip ) : 1u;
@@ -892,11 +893,13 @@ namespace sw
     inline uint32 resolveTextureUploadMips( const RHITextureUploadDesc& desc, RHIFormat format, uint32 width, uint32 height,
                                             uint32 textureMipCount, RHITextureMipSpan* pOutSpan, uint32 outCapacity )
     {
-        if ( desc._pData == nullptr || desc._sizeBytes == 0 || pOutSpan == nullptr )
+        const bool bNoUploadData = desc._pData == nullptr || desc._sizeBytes == 0 || pOutSpan == nullptr;
+        if ( bNoUploadData )
             return 0;
 
-        const uint32 mipCount = ( desc._mipLevels == 0 ) ? textureMipCount : desc._mipLevels;
-        if ( mipCount == 0 || mipCount > textureMipCount || mipCount > outCapacity )
+        const uint32 mipCount         = ( desc._mipLevels == 0 ) ? textureMipCount : desc._mipLevels;
+        const bool   bInvalidMipCount = mipCount == 0 || mipCount > textureMipCount || mipCount > outCapacity;
+        if ( bInvalidMipCount )
             return 0;
 
         const uint8* pBase  = static_cast<const uint8*>( desc._pData );

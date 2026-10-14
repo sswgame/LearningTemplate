@@ -31,7 +31,8 @@ namespace sw
 
     bool VulkanRHIRenderPassCache::CompositeKey::operator==( const CompositeKey& other ) const
     {
-        if ( _colorCount != other._colorCount || _depth != other._depth || _depthLoadOp != other._depthLoadOp || _depthSlice != other._depthSlice )
+        const bool bCompositeKeyMismatch = _colorCount != other._colorCount || _depth != other._depth || _depthLoadOp != other._depthLoadOp || _depthSlice != other._depthSlice;
+        if ( bCompositeKeyMismatch )
             return false;
         for ( uint32 colorIndex = 0; colorIndex < _colorCount; ++colorIndex )
         {
@@ -189,7 +190,8 @@ namespace sw
             outRecord = existing->second;
             return outRecord._framebuffer != VK_NULL_HANDLE && outRecord._renderPass != VK_NULL_HANDLE;
         }
-        if ( device == nullptr || attachmentCount == 0 || pAttachmentView == nullptr )
+        const bool bInvalidCompositeRequest = device == nullptr || attachmentCount == 0 || pAttachmentView == nullptr;
+        if ( bInvalidCompositeRequest )
             return false;
 
         CompositeRecord record{};
@@ -261,7 +263,8 @@ namespace sw
         RenderPassRecord* pRecord = resolveRenderPassRecord( handle );
         if ( pRecord == nullptr )
             return;
-        if ( pRecord->_bOwned != SW_FALSE && pRecord->_renderPass != VK_NULL_HANDLE && pRecord->_renderPass != swapchainRenderPass )
+        const bool bOwnedRenderPass = pRecord->_bOwned != SW_FALSE && pRecord->_renderPass != VK_NULL_HANDLE && pRecord->_renderPass != swapchainRenderPass;
+        if ( bOwnedRenderPass )
             vkDestroyRenderPass( device, pRecord->_renderPass, nullptr );
         *pRecord = RenderPassRecord{};
     }
@@ -287,7 +290,8 @@ namespace sw
         _mapPipelineRenderPass.clear();
         for ( RenderPassRecord& record : _listRenderPassRecord )
         {
-            if ( record._bOwned != SW_FALSE && record._renderPass != VK_NULL_HANDLE && record._renderPass != swapchainRenderPass )
+            const bool bOwnedRenderPass = record._bOwned != SW_FALSE && record._renderPass != VK_NULL_HANDLE && record._renderPass != swapchainRenderPass;
+            if ( bOwnedRenderPass )
                 vkDestroyRenderPass( device, record._renderPass, nullptr );
         }
         _listRenderPassRecord.clear();

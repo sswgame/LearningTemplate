@@ -139,10 +139,12 @@ namespace sw
             const Unit* pUnit = findUnit( slot._unit );
             for ( const hashed_string& candidate : slot._def._listFallback )
             {
-                SocketID candidateID = findSocket( candidate );
-                if ( ( candidateID == kInvalidSocketID || isSocketActive( candidateID ) == false ) && pUnit != nullptr && pUnit->_prefix.empty() == false )
+                SocketID   candidateID            = findSocket( candidate );
+                const bool bTryPrefixedSocketName = ( candidateID == kInvalidSocketID || isSocketActive( candidateID ) == false ) && pUnit != nullptr && pUnit->_prefix.empty() == false;
+                if ( bTryPrefixedSocketName )
                     candidateID = findSocket( makeFullName( pUnit->_prefix, candidate ) );
-                if ( candidateID != kInvalidSocketID && isSocketActive( candidateID ) && &_listSlot[candidateID] != &slot )
+                const bool bUsableRedirectSocket = candidateID != kInvalidSocketID && isSocketActive( candidateID ) && &_listSlot[candidateID] != &slot;
+                if ( bUsableRedirectSocket )
                 {
                     slot._redirect = candidateID;
                     break;
@@ -155,7 +157,8 @@ namespace sw
     {
         for ( Slot& slot : _listSlot )
         {
-            if ( slot._bActive == SW_FALSE || slot._unit != unitIndex || slot._surfaceBinding._bBound == SW_FALSE )
+            const bool bSkipSocketSlot = slot._bActive == SW_FALSE || slot._unit != unitIndex || slot._surfaceBinding._bBound == SW_FALSE;
+            if ( bSkipSocketSlot )
                 continue;
             if ( slot._surfaceBinding._triangle >= shapedGeometry.getTriangleCount() )
                 continue;

@@ -139,7 +139,8 @@ namespace sw
     void MaterialCache::initializePending( IRHIDevice* pDevice )
     {
         SW_MEMORY_SCOPE( Material );
-        if ( pDevice == nullptr || _impl == nullptr || _impl->_pendingCount.load( std::memory_order_acquire ) == 0 )
+        const bool bNoPendingMaterials = pDevice == nullptr || _impl == nullptr || _impl->_pendingCount.load( std::memory_order_acquire ) == 0;
+        if ( bNoPendingMaterials )
             return;
 
         vector<string> listKey;

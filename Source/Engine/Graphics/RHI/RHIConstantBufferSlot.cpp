@@ -9,7 +9,8 @@ namespace sw
 {
     bool RHIConstantBufferSlot::create( IRHIDevice* pDevice, uint32 byteSize )
     {
-        if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr || byteSize == 0 )
+        const bool bInvalidSlotCreation = pDevice == nullptr || pDevice->getResourceFactory() == nullptr || byteSize == 0;
+        if ( bInvalidSlotCreation )
             return false;
         if ( _buffer != 0 )
             return isValid();
@@ -23,7 +24,8 @@ namespace sw
 
     void RHIConstantBufferSlot::update( IRHICommandList& cmd, const void* pData, uint32 byteSize ) const
     {
-        if ( _buffer == 0 || pData == nullptr || byteSize == 0 )
+        const bool bNothingToUpdate = _buffer == 0 || pData == nullptr || byteSize == 0;
+        if ( bNothingToUpdate )
             return;
         cmd.updateConstantBuffer( _buffer, pData, byteSize );
     }

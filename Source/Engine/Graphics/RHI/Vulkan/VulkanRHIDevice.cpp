@@ -271,9 +271,10 @@ namespace sw
 
     void VulkanRHIDevice::writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
     {
-        const auto          slotIt  = _mapCbSlotSize.find( buffer );
-        VulkanBufferRecord* pRecord = resolveAllocatedBuffer( buffer );
-        if ( slotIt == _mapCbSlotSize.end() || pRecord == nullptr || pRecord->_memory == VK_NULL_HANDLE || pData == nullptr || size == 0 )
+        const auto          slotIt                      = _mapCbSlotSize.find( buffer );
+        VulkanBufferRecord* pRecord                     = resolveAllocatedBuffer( buffer );
+        const bool          bCannotUpdateConstantBuffer = slotIt == _mapCbSlotSize.end() || pRecord == nullptr || pRecord->_memory == VK_NULL_HANDLE || pData == nullptr || size == 0;
+        if ( bCannotUpdateConstantBuffer )
             return;
         const uint32 slotSize  = slotIt->second;
         const uint32 copyBytes = MathUtil::min( size, slotSize );

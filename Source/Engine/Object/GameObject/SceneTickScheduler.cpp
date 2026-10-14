@@ -45,8 +45,9 @@ namespace sw
             /** @brief 항목 하나를 삭제 대기 · 자기 활성만 보고 돌립니다. 소유 오브젝트는 보지 않습니다(레지스트리 칸 설명). */
             static void runTickItemIfLive( float32 deltaTime, const TickItem& item )
             {
-                Component* pComp = item._pComponent;
-                if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->isSelfActive() == false )
+                Component* pComp                  = item._pComponent;
+                const bool bInactiveTickComponent = pComp == nullptr || pComp->isPendingDestroy() || pComp->isSelfActive() == false;
+                if ( bInactiveTickComponent )
                     return;
                 runTickItem( deltaTime, item );
             }
@@ -149,9 +150,10 @@ namespace sw
                     TickThreadState& threadState = beginRange( *_pHierarchy );
                     for ( uint32 index = start; index < end; ++index )
                     {
-                        const TickItem& item  = _pItem[index];
-                        Component*      pComp = item._pComponent;
-                        if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->isActive() == false )
+                        const TickItem& item               = _pItem[index];
+                        Component*      pComp              = item._pComponent;
+                        const bool      bInactiveComponent = pComp == nullptr || pComp->isPendingDestroy() || pComp->isActive() == false;
+                        if ( bInactiveComponent )
                             continue;
                         GameObject* pOwner = pComp->getOwner();
                         if ( pOwner == nullptr || pOwner->isPendingDestroy() )

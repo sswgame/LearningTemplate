@@ -60,9 +60,10 @@ namespace sw
 
     void D3D12RHIDevice::writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
     {
-        const auto sizeIt = _mapCbAlignedSize.find( buffer );
-        const auto mapIt  = _mapCbMapped.find( buffer );
-        if ( sizeIt == _mapCbAlignedSize.end() || mapIt == _mapCbMapped.end() || mapIt->second == nullptr || pData == nullptr )
+        const auto sizeIt                      = _mapCbAlignedSize.find( buffer );
+        const auto mapIt                       = _mapCbMapped.find( buffer );
+        const bool bCannotUpdateConstantBuffer = sizeIt == _mapCbAlignedSize.end() || mapIt == _mapCbMapped.end() || mapIt->second == nullptr || pData == nullptr;
+        if ( bCannotUpdateConstantBuffer )
             return;
         const uint32 alignedSize = sizeIt->second;
         const uint32 copyBytes   = MathUtil::min( size, alignedSize );

@@ -94,7 +94,8 @@ namespace sw
         static const hashed_string s_positionName( "_localPosition" );
         static const hashed_string s_rotationName( "_localRotation" );
         static const hashed_string s_scaleName( "_localScale" );
-        if ( propertyName == s_positionName || propertyName == s_rotationName || propertyName == s_scaleName )
+        const bool                 bTransformProperty = propertyName == s_positionName || propertyName == s_rotationName || propertyName == s_scaleName;
+        if ( bTransformProperty )
             markTransformDirty();
     }
 
@@ -371,9 +372,10 @@ namespace sw
 
         // 오브젝트 사슬의 순환. 오브젝트의 부모는 "primary 가 붙은 컴포넌트의 소유자" 라, 붙는 것이 소유자의 primary 일 때만 오브젝트의
         // 부모가 바뀐다. 소켓을 거치면 위의 컴포넌트 검사는 통과한다(A 의 primary → B 의 소켓, B 의 primary → A 의 소켓).
-        const GameObject* pOwner = getOwner();
-        if ( pOwner != nullptr && pParentOwner != nullptr && pParentOwner != pOwner && pOwner->getPrimarySceneComponent() == this &&
-             pParentOwner->isDescendantOf( pOwner ) )
+        const GameObject* pOwner            = getOwner();
+        const bool        bWouldCreateCycle = pOwner != nullptr && pParentOwner != nullptr && pParentOwner != pOwner && pOwner->getPrimarySceneComponent() == this &&
+                                       pParentOwner->isDescendantOf( pOwner );
+        if ( bWouldCreateCycle )
         {
             SW_LOG_WARNING( "attachToComponent: '%#' would become a descendant of its own child '%#' - rejected", pOwner->getName().c_str(),
                             pParentOwner->getName().c_str() );

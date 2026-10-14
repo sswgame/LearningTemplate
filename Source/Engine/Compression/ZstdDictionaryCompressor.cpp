@@ -86,8 +86,9 @@ namespace sw
     bool ZstdDictionaryCompressor::decompress( const uint8* pSource, int32 sourceSize, int32 maxRawSize, vector<uint8>& outBytes )
     {
         // 원래 크기는 프레임 머리에 있다 — 상한을 넘으면 풀기 전에 거절하고, 버퍼는 그 크기만 잡는다.
-        const uint64 contentSize = ZSTD_getFrameContentSize( pSource, static_cast<size_t>( sourceSize ) );
-        if ( contentSize == ZSTD_CONTENTSIZE_ERROR || contentSize == ZSTD_CONTENTSIZE_UNKNOWN || contentSize > static_cast<uint64>( maxRawSize ) )
+        const uint64 contentSize         = ZSTD_getFrameContentSize( pSource, static_cast<size_t>( sourceSize ) );
+        const bool   bInvalidContentSize = contentSize == ZSTD_CONTENTSIZE_ERROR || contentSize == ZSTD_CONTENTSIZE_UNKNOWN || contentSize > static_cast<uint64>( maxRawSize );
+        if ( bInvalidContentSize )
         {
             outBytes.clear();
             return false;

@@ -42,7 +42,8 @@ namespace sw
                     const JSONValue rightValue = right.get( key, false );
                     if ( leftValue.isValid() == false || rightValue.isValid() == false )
                         continue;
-                    if ( fileValue.isObject() && leftValue.isObject() && rightValue.isObject() && fileValue.getMemberNames().empty() == false )
+                    const bool bRecurseIntoMembers = fileValue.isObject() && leftValue.isObject() && rightValue.isObject() && fileValue.getMemberNames().empty() == false;
+                    if ( bRecurseIntoMembers )
                     {
                         collectEqualMembers( fileValue, leftValue, rightValue, path, outListKey );
                         continue;
@@ -90,7 +91,8 @@ namespace sw
             {
                 for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
                 {
-                    if ( prop._bIsBitField == SW_TRUE || prop._bIsContainer == SW_TRUE || prop.hasValueAccessor() )
+                    const bool bSkipProperty = prop._bIsBitField == SW_TRUE || prop._bIsContainer == SW_TRUE || prop.hasValueAccessor();
+                    if ( bSkipProperty )
                         continue;
                     const string    path    = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
                     const TypeInfo* pNested = engine::getTypeRegistry().findType( prop._typeName );
@@ -151,8 +153,9 @@ namespace sw
         JSONDocument fileDoc;
         JSONDocument leftDoc;
         JSONDocument rightDoc;
-        if ( fileDoc.parse( jsonStr ) == false || leftDoc.parse( JSONSerializer::serialize( pLeft, typeInfo ) ) == false ||
-             rightDoc.parse( JSONSerializer::serialize( pRight, typeInfo ) ) == false )
+        const bool   bParseFailed = fileDoc.parse( jsonStr ) == false || leftDoc.parse( JSONSerializer::serialize( pLeft, typeInfo ) ) == false ||
+                                  rightDoc.parse( JSONSerializer::serialize( pRight, typeInfo ) ) == false;
+        if ( bParseFailed )
             return false;
         ConfigManagerInternal::collectEqualMembers( fileDoc.getRoot(), leftDoc.getRoot(), rightDoc.getRoot(), string(), outListKey );
         return true;

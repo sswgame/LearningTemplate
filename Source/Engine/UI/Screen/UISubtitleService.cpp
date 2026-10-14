@@ -136,11 +136,12 @@ namespace sw
             return false;
         }
         // 문서에 적힌 크기와 바탕이 기준이다(설정이 곱하고 알파를 바꾼다). 슬롯 0 의 값을 모든 슬롯에 쓴다.
-        const WidgetTree&  tree     = pScreen->getTree();
-        const BorderPanel* pLine    = tree.findWidget<BorderPanel>( UISubtitleServiceInternal::makeSlotName( "Line", 0 ) );
-        const TextWidget*  pSpeaker = tree.findWidget<TextWidget>( UISubtitleServiceInternal::makeSlotName( "Speaker", 0 ) );
-        const TextWidget*  pText    = tree.findWidget<TextWidget>( UISubtitleServiceInternal::makeSlotName( "Text", 0 ) );
-        if ( pLine == nullptr || pSpeaker == nullptr || pText == nullptr )
+        const WidgetTree&  tree                    = pScreen->getTree();
+        const BorderPanel* pLine                   = tree.findWidget<BorderPanel>( UISubtitleServiceInternal::makeSlotName( "Line", 0 ) );
+        const TextWidget*  pSpeaker                = tree.findWidget<TextWidget>( UISubtitleServiceInternal::makeSlotName( "Speaker", 0 ) );
+        const TextWidget*  pText                   = tree.findWidget<TextWidget>( UISubtitleServiceInternal::makeSlotName( "Text", 0 ) );
+        const bool         bMissingSubtitleWidgets = pLine == nullptr || pSpeaker == nullptr || pText == nullptr;
+        if ( bMissingSubtitleWidgets )
         {
             SW_LOG_ERROR( "[UI] Subtitle screen '%#' lacks Line0 / Speaker0 / Text0 - subtitles are not shown", kDocumentPath );
             closeScreen();
@@ -163,12 +164,13 @@ namespace sw
 
     void UISubtitleService::applySlot( UIScreen& screen, uint32 slot, const UISubtitleLine* pLine, float32 sizeScale, float32 backgroundOpacity )
     {
-        using Internal          = UISubtitleServiceInternal;
-        const WidgetTree& tree  = screen.getTree();
-        BorderPanel*      pBack = tree.findWidget<BorderPanel>( Internal::makeSlotName( "Line", slot ) );
-        TextWidget*       pName = tree.findWidget<TextWidget>( Internal::makeSlotName( "Speaker", slot ) );
-        TextWidget*       pText = tree.findWidget<TextWidget>( Internal::makeSlotName( "Text", slot ) );
-        if ( pBack == nullptr || pName == nullptr || pText == nullptr )
+        using Internal                        = UISubtitleServiceInternal;
+        const WidgetTree& tree                = screen.getTree();
+        BorderPanel*      pBack               = tree.findWidget<BorderPanel>( Internal::makeSlotName( "Line", slot ) );
+        TextWidget*       pName               = tree.findWidget<TextWidget>( Internal::makeSlotName( "Speaker", slot ) );
+        TextWidget*       pText               = tree.findWidget<TextWidget>( Internal::makeSlotName( "Text", slot ) );
+        const bool        bMissingSlotWidgets = pBack == nullptr || pName == nullptr || pText == nullptr;
+        if ( bMissingSlotWidgets )
             return;
         if ( pLine == nullptr )
         {

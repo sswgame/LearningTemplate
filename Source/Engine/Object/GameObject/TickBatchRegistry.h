@@ -71,7 +71,8 @@ namespace sw
                 TComponent*             pComp   = static_cast<TComponent*>( element._pComponent );
                 threadState._pTickingObject     = element._pObject;
                 threadState._pTickWriter        = element._pObject;
-                if ( pComp->isPendingDestroy() || pComp->isSelfActive() == false || pComp->canEverTick() == false )
+                const bool bSkipTick            = pComp->isPendingDestroy() || pComp->isSelfActive() == false || pComp->canEverTick() == false;
+                if ( bSkipTick )
                     continue;
                 pComp->TComponent::onTick( deltaTime );
             }

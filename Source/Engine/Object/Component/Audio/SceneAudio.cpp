@@ -28,7 +28,8 @@ namespace sw
             /** @brief 켜져 있고 삭제 대기가 아닌 컴포넌트인지입니다. */
             static bool isUsable( const Component* pComponent )
             {
-                if ( pComponent == nullptr || pComponent->isPendingDestroy() || pComponent->isActive() == false )
+                const bool bUnusableComponent = pComponent == nullptr || pComponent->isPendingDestroy() || pComponent->isActive() == false;
+                if ( bUnusableComponent )
                     return false;
                 const GameObject* pOwner = pComponent->getOwner();
                 return pOwner != nullptr && pOwner->isPendingDestroy() == false;

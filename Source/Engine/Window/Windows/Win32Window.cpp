@@ -232,9 +232,10 @@ namespace sw
                     // 크기 0 이 됐다는 뜻이 되어 버린다. 그 상태에서 `recreate()`(백엔드 교체가
                     // 이 경로로 온다)가 돌면 기억해 둔 0x0 으로 창을 다시 만들고, 복원해도 그 크기가
                     // 그대로 남는다. 최소화가 말하는 것은 "안 보인다" 이지 "크기가 0 이다" 가 아니다.
-                    const uint32 clientWidth  = LOWORD( lParam );
-                    const uint32 clientHeight = HIWORD( lParam );
-                    if ( wParam == SIZE_MINIMIZED || clientWidth == 0 || clientHeight == 0 )
+                    const uint32 clientWidth   = LOWORD( lParam );
+                    const uint32 clientHeight  = HIWORD( lParam );
+                    const bool   bIgnoreResize = wParam == SIZE_MINIMIZED || clientWidth == 0 || clientHeight == 0;
+                    if ( bIgnoreResize )
                         return 0;
 
                     pThis->_width  = clientWidth;
@@ -243,7 +244,8 @@ namespace sw
                     // 등을 거쳐 SendMessageW 로 같은 스레드에 WM_SIZE 를 재진입시킬 수 있다. 재진입 가드
                     // 없이 onResize(스왑체인 리사이즈)를 중첩 호출하면 아직 다시 만드는 중인 렌더 타깃을
                     // 다시 정리 · 생성하게 되어 DataRaceDetector 가 레이스로 감지해 크래시한다.
-                    if ( pThis->_bRecreating == SW_FALSE && pThis->_bResizing == SW_FALSE && pThis->_onResize.isBound() )
+                    const bool bCanNotifyResize = pThis->_bRecreating == SW_FALSE && pThis->_bResizing == SW_FALSE && pThis->_onResize.isBound();
+                    if ( bCanNotifyResize )
                     {
                         // 재진입한 WM_SIZE 는 위에서 크기만 적고 콜백을 건너뛴다. 그래서 콜백이 돌아온 뒤 크기가 바뀌었으면 **마지막 크기로 한 번
                         // 더** 부른다. 바깥 호출이 넘긴 옛 크기로 끝나면 스왑체인이 다음 WM_SIZE 까지 옛 크기로 남는다(DPI 변경의
@@ -280,7 +282,8 @@ namespace sw
                     // 창 모드에서 사용자가 줄일 수 있는 하한(`setMinimumClientSize`)이다. 클라이언트 크기에 테두리와 제목 줄을 더해 창 크기로 넘긴다
                     // (`setDisplayMode` 와 같은 `AdjustWindowRect`). SetWindowPos 도 DefWindowProcW 의 WM_WINDOWPOSCHANGING 이 이 값으로 자른다.
                     // 이 메시지는 WM_NCCREATE 보다 먼저 오는 첫 메시지다. 그때는 pThis 가 없어 기본 처리로 간다.
-                    if ( pThis->_displayMode != WindowDisplayMode::Windowed || pThis->_minClientWidth == 0 || pThis->_minClientHeight == 0 )
+                    const bool bNoMinimumSize = pThis->_displayMode != WindowDisplayMode::Windowed || pThis->_minClientWidth == 0 || pThis->_minClientHeight == 0;
+                    if ( bNoMinimumSize )
                         break;
                     RECT frameRect = { 0, 0, static_cast<LONG>( pThis->_minClientWidth ), static_cast<LONG>( pThis->_minClientHeight ) };
                     AdjustWindowRect( &frameRect, WS_OVERLAPPEDWINDOW, FALSE );

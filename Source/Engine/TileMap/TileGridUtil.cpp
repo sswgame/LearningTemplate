@@ -38,7 +38,8 @@ namespace sw
             /** @brief 셀이 단단한지 반환합니다. 맵 밖은 빈 셀입니다. */
             static bool isSolid( const vector<uint8>& listSolid, int32 width, int32 height, int32 x, int32 y )
             {
-                if ( x < 0 || y < 0 || x >= width || y >= height )
+                const bool bOutsideGrid = x < 0 || y < 0 || x >= width || y >= height;
+                if ( bOutsideGrid )
                     return false;
                 return listSolid[static_cast<size_t>( y ) * static_cast<size_t>( width ) + static_cast<size_t>( x )] != 0;
             }
@@ -48,8 +49,9 @@ namespace sw
     void TileGridUtil::mergeSolidRectangles( const vector<uint8>& listSolid, int32 width, int32 height, vector<TileRect>& outListRect )
     {
         outListRect.clear();
-        const size_t count = static_cast<size_t>( width ) * static_cast<size_t>( height );
-        if ( width <= 0 || height <= 0 || listSolid.size() < count )
+        const size_t count             = static_cast<size_t>( width ) * static_cast<size_t>( height );
+        const bool   bInvalidGridInput = width <= 0 || height <= 0 || listSolid.size() < count;
+        if ( bInvalidGridInput )
             return;
         using Internal = TileGridUtilInternal;
         vector<uint8> listUsed( count, 0 );
@@ -61,8 +63,11 @@ namespace sw
                     continue;
                 // 오른쪽으로 아직 쓰지 않은 단단한 셀이 이어지는 만큼 폭을 잡는다.
                 int32 runWidth = 1;
-                while ( x + runWidth < width && listSolid[Internal::indexOf( width, x + runWidth, y )] != 0 && listUsed[Internal::indexOf( width, x + runWidth, y )] == 0 )
+                while ( true )
                 {
+                    const bool bNextCellFree = x + runWidth < width && listSolid[Internal::indexOf( width, x + runWidth, y )] != 0 && listUsed[Internal::indexOf( width, x + runWidth, y )] == 0;
+                    if ( bNextCellFree == false )
+                        break;
                     ++runWidth;
                 }
                 // 아래 행의 같은 위치에 **같은 폭의 줄**이 있을 때만 내려간다(그 줄이 양옆으로 더 이어지면 멈춘다). 바닥 줄 위에 기둥 하나가
@@ -88,8 +93,9 @@ namespace sw
     {
         using Internal = TileGridUtilInternal;
         outListEdge.clear();
-        const size_t count = static_cast<size_t>( width ) * static_cast<size_t>( height );
-        if ( width <= 0 || height <= 0 || listSolid.size() < count )
+        const size_t count             = static_cast<size_t>( width ) * static_cast<size_t>( height );
+        const bool   bInvalidEdgeInput = width <= 0 || height <= 0 || listSolid.size() < count;
+        if ( bInvalidEdgeInput )
             return;
         // 가로 변: 행 y 의 위쪽(바깥 (0, -1))과 아래쪽(바깥 (0, 1)) 변을 x 방향으로 이어 붙인다.
         for ( int32 y = 0; y < height; ++y )
@@ -151,8 +157,9 @@ namespace sw
         outListSolid.assign( listBrushIndex.size(), 0 );
         for ( size_t cellIndex = 0; cellIndex < listBrushIndex.size(); ++cellIndex )
         {
-            const uint16 value = listBrushIndex[cellIndex];
-            if ( value != 0 && value <= listBrush.size() && listBrush[value - 1u]._bSolid != SW_FALSE )
+            const uint16 value       = listBrushIndex[cellIndex];
+            const bool   bSolidBrush = value != 0 && value <= listBrush.size() && listBrush[value - 1u]._bSolid != SW_FALSE;
+            if ( bSolidBrush )
                 outListSolid[cellIndex] = 1;
         }
     }

@@ -38,7 +38,8 @@ namespace sw
         bool              bFound     = false;
         pComp->getOwner()->forEachComponent( [&]( const Component* pOther )
         {
-            if ( bFound || pOther == nullptr || getBaseName( pOther ) != targetBase )
+            const bool bSkipOtherComponent = bFound || pOther == nullptr || getBaseName( pOther ) != targetBase;
+            if ( bSkipOtherComponent )
                 return;
             if ( pOther == pComp )
                 bFound = true;
@@ -78,7 +79,8 @@ namespace sw
         Component* pFound     = nullptr;
         pOwner->forEachComponent( [&]( Component* pComp )
         {
-            if ( pFound != nullptr || pComp == nullptr || getBaseName( pComp ) != requestedBase )
+            const bool bSkipComponent = pFound != nullptr || pComp == nullptr || getBaseName( pComp ) != requestedBase;
+            if ( bSkipComponent )
                 return;
             if ( occurrence == requestedOccurrence )
                 pFound = pComp;

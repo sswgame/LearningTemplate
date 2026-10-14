@@ -115,7 +115,8 @@ namespace sw
     void VirtualInputScript::emitFrame( uint32 frameIndex, vector<RawInputEvent>& outListEvent )
     {
         // 프레임 번호가 되돌아갔으면(뗐다가 다시 붙인 경우) 처음부터 찾는다.
-        if ( _cursor > 0 && _cursor <= _listEntry.size() && _listEntry[_cursor - 1]._frameIndex >= frameIndex )
+        const bool bFrameRewound = _cursor > 0 && _cursor <= _listEntry.size() && _listEntry[_cursor - 1]._frameIndex >= frameIndex;
+        if ( bFrameRewound )
             _cursor = 0;
         while ( _cursor < _listEntry.size() && _listEntry[_cursor]._frameIndex < frameIndex )
         {

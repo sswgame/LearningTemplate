@@ -21,7 +21,8 @@ namespace sw
         {
             static void recordRenderPass( RenderGraphNode* pNode, IRHICommandList* pCmdList, bool bAlreadyBegun )
             {
-                if ( pNode == nullptr || pCmdList == nullptr || pNode->_execute.isBound() == false )
+                const bool bNodeNotRecordable = pNode == nullptr || pCmdList == nullptr || pNode->_execute.isBound() == false;
+                if ( bNodeNotRecordable )
                     return;
 
                 // 레벨의 첫 리스트는 렌더 스레드가 이미 열어 배리어를 앞머리에 기록해 뒀다. 이어서 기록한다.
@@ -348,8 +349,9 @@ namespace sw
         if ( _listCompiledExecutionOrder.empty() && compile() == false )
             return false;
 
-        if ( pTaskManager == nullptr || pDevice == nullptr || _listCompiledExecutionOrder.size() <= 1 ||
-             pDevice->getCapabilities()._bParallelCommandRecording == SW_FALSE )
+        const bool bSequentialExecution = pTaskManager == nullptr || pDevice == nullptr || _listCompiledExecutionOrder.size() <= 1 ||
+                                          pDevice->getCapabilities()._bParallelCommandRecording == SW_FALSE;
+        if ( bSequentialExecution )
             return execute( context );
 
         context.reset();

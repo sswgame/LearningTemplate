@@ -159,14 +159,16 @@ namespace sw
 
             static bool validateMousePosition( const AutomationStep& step, string& outError )
             {
-                if ( checkAttributeNames( step, { "x", "y" }, outError ) == false || requireAttribute( step, "x", outError ) == nullptr ||
-                     requireAttribute( step, "y", outError ) == nullptr )
+                const bool bInvalidMouseAttributes = checkAttributeNames( step, { "x", "y" }, outError ) == false || requireAttribute( step, "x", outError ) == nullptr ||
+                                                     requireAttribute( step, "y", outError ) == nullptr;
+                if ( bInvalidMouseAttributes )
                     return false;
                 float32 valueX = 0.0f;
                 float32 valueY = 0.0f;
                 if ( readFloat( step, "x", 0.0f, valueX, outError ) == false || readFloat( step, "y", 0.0f, valueY, outError ) == false )
                     return false;
-                if ( valueX < 0.0f || valueX > 1.0f || valueY < 0.0f || valueY > 1.0f )
+                const bool bMouseFractionOutOfRange = valueX < 0.0f || valueX > 1.0f || valueY < 0.0f || valueY > 1.0f;
+                if ( bMouseFractionOutOfRange )
                 {
                     outError = step.describe() + ": x and y are fractions of the client area (0..1)";
                     return false;
@@ -445,8 +447,9 @@ namespace sw
         static bool prepareMousePosition( AutomationRunner& runner, const AutomationStep& step, string& outError )
         {
             // 창 클라이언트 영역의 비율을 픽셀로 바꾼다(시작할 때의 창 크기). 창이 없으면(헤드리스) 그 위치를 낼 수 없다.
-            const IWindow* pWindow = IWindow::getActiveWindow();
-            if ( pWindow == nullptr || pWindow->getWidth() == 0 || pWindow->getHeight() == 0 )
+            const IWindow* pWindow             = IWindow::getActiveWindow();
+            const bool     bNoWindowForPointer = pWindow == nullptr || pWindow->getWidth() == 0 || pWindow->getHeight() == 0;
+            if ( bNoWindowForPointer )
             {
                 outError = step.describe() + ": no window to place the pointer in";
                 return false;
@@ -768,8 +771,11 @@ namespace sw
         {
             const vector<AutomationStep>& listStep = _scenario.getSteps();
             // `<=` 이므로 스크린샷을 기다리느라 밀린 단계는 다음 프레임에 이어서 돈다.
-            while ( _nextStepIndex < listStep.size() && listStep[_nextStepIndex]._frameIndex <= _frameIndex && _result == AutomationResult::Running )
+            while ( true )
             {
+                const bool bNextStepDue = _nextStepIndex < listStep.size() && listStep[_nextStepIndex]._frameIndex <= _frameIndex && _result == AutomationResult::Running;
+                if ( bNextStepDue == false )
+                    break;
                 const AutomationStep&             step          = listStep[_nextStepIndex];
                 const AutomationStepRegistration* pRegistration = AutomationStepRegistry::find( step._kind );
                 const AutomationStepHold          hold          = pRegistration != nullptr && pRegistration->_pHold != nullptr ? pRegistration->_pHold( *this, step, input )
@@ -785,14 +791,16 @@ namespace sw
                 if ( pRegistration == nullptr || ( bRunsNow && pRegistration->_pRun( *this, step ) == false ) )
                     finish( AutomationResult::LoadError, step.describe() + ": the step could not run" );
             }
-            if ( _result == AutomationResult::Running && _exitDeadlineSeconds > 0.0 &&
-                 static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 > _exitDeadlineSeconds )
+            const bool bExitDeadlineExceeded = _result == AutomationResult::Running && _exitDeadlineSeconds > 0.0 &&
+                                               _exitDeadlineSeconds < static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6;
+            if ( bExitDeadlineExceeded )
                 finish( AutomationResult::Failed, "the window was asked to close but the loop kept running past ExpectExitWithin" );
             // 끝난 프레임은 세지 않는다. 보고의 프레임은 끝낸 단계의 프레임이다. `WaitUntil` 이 붙잡은 프레임도 세지 않는다(뒤 단계가 그만큼 밀린다).
             if ( _result == AutomationResult::Running && _holdFrameCount == 0 )
                 ++_frameIndex;
             // 창 닫기를 기다리는 동안은 프레임 시한을 보지 않는다(벽시계 시한이 본다).
-            if ( _result == AutomationResult::Running && _exitDeadlineSeconds <= 0.0 && _frameIndex > _scenario.getTimeoutFrames() )
+            const bool bFrameTimeoutReached = _result == AutomationResult::Running && _exitDeadlineSeconds <= 0.0 && _frameIndex > _scenario.getTimeoutFrames();
+            if ( bFrameTimeoutReached )
                 finish( AutomationResult::TimedOut, "timeoutFrames reached without <Pass/>" );
         }
         if ( _result != AutomationResult::Running )

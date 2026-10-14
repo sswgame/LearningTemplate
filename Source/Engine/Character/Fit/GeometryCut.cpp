@@ -386,10 +386,11 @@ namespace sw
         }
         for ( const auto& [edgeKey, count] : mapEdgeCount )
         {
-            const uint32 from     = static_cast<uint32>( edgeKey >> 32 );
-            const uint32 to       = static_cast<uint32>( edgeKey & 0xFFFFFFFFu );
-            const auto   opposite = mapEdgeCount.find( GeometryCutInternal::makeEdgeKey( to, from ) );
-            if ( count != 1 || opposite == mapEdgeCount.end() || opposite->second != 1 )
+            const uint32 from              = static_cast<uint32>( edgeKey >> 32 );
+            const uint32 to                = static_cast<uint32>( edgeKey & 0xFFFFFFFFu );
+            const auto   opposite          = mapEdgeCount.find( GeometryCutInternal::makeEdgeKey( to, from ) );
+            const bool   bOpenBoundaryEdge = count != 1 || opposite == mapEdgeCount.end() || opposite->second != 1;
+            if ( bOpenBoundaryEdge )
                 return false;
         }
         return true;

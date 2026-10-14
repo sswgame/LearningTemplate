@@ -184,8 +184,9 @@ namespace sw
 
     bool CanvasPainter::drawGlyph( const float2& origin, FontFaceID face, uint32 glyphIndex, const CanvasGlyphStyle& style, GlyphCache& glyphCache, uint64 frameIndex )
     {
-        const CachedGlyph* pGlyph = glyphCache.findOrAddGlyph( face, glyphIndex, frameIndex );
-        if ( pGlyph == nullptr || pGlyph->_rect._width == 0 || pGlyph->_rect._height == 0 )
+        const CachedGlyph* pGlyph            = glyphCache.findOrAddGlyph( face, glyphIndex, frameIndex );
+        const bool         bGlyphNotDrawable = pGlyph == nullptr || pGlyph->_rect._width == 0 || pGlyph->_rect._height == 0;
+        if ( bGlyphNotDrawable )
             return false;
 
         // 래스터 픽셀 → UI 단위 → 물리 픽셀. 글리프 비트맵은 윤곽 둘레로 spread 만큼 넓고, 베어링은 그 비트맵의 왼쪽 위다(기준선 위가 +).
@@ -264,7 +265,8 @@ namespace sw
 
     bool CanvasPainter::findClipVerticalRange( float32& outTop, float32& outBottom ) const
     {
-        if ( _listClip.empty() || _listTransform.empty() == false || _uiScale <= 0.0f )
+        const bool bClipRangeUnavailable = _listClip.empty() || _listTransform.empty() == false || _uiScale <= 0.0f;
+        if ( bClipRangeUnavailable )
             return false;
         const ClipState& clip = _listClip.back();
         outTop                = clip._bounds._y / _uiScale;

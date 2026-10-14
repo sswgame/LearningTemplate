@@ -406,7 +406,8 @@ namespace sw
                         SW_LOG_ERROR( "CommandList='%#', Total=%#, Executed=%#",
                                       pNode->pCommandListDebugNameA ? pNode->pCommandListDebugNameA : "unnamed",
                                       pNode->BreadcrumbCount, executed );
-                        if ( pNode->pCommandHistory != nullptr && 0 < executed && executed <= pNode->BreadcrumbCount )
+                        const bool bHasCompletedBreadcrumb = pNode->pCommandHistory != nullptr && 0 < executed && executed <= pNode->BreadcrumbCount;
+                        if ( bHasCompletedBreadcrumb )
                         {
                             SW_LOG_ERROR( "Last completed Op index=%#, OpType=%#",
                                           executed - 1, static_cast<uint32>( pNode->pCommandHistory[executed - 1] ) );

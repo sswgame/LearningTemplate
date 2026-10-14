@@ -19,7 +19,8 @@ namespace sw
         Component::onPropertyChanged( propertyName );
         GameObject* pOwner = getOwner();
         AABB        box{};
-        if ( pOwner != nullptr && pOwner->getManager() != nullptr && pOwner->getWorldBox( box ) )
+        const bool  bHasWorldBox = pOwner != nullptr && pOwner->getManager() != nullptr && pOwner->getWorldBox( box );
+        if ( bHasWorldBox )
             pOwner->getManager()->getSceneService<SceneNavigation>().invalidateArea( box, true );
     }
 } // namespace sw

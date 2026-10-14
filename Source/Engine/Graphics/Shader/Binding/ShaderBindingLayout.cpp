@@ -21,9 +21,11 @@ namespace sw
                 return ShaderBindingKind::Sampler;
             if ( typeLabel == "ConstantBuffer" )
                 return ShaderBindingKind::ConstantBuffer;
-            if ( typeLabel == "StructuredBuffer" || typeLabel == "StorageBuffer" || typeLabel == "ByteAddressBuffer" )
+            const bool bStructuredBufferLabel = typeLabel == "StructuredBuffer" || typeLabel == "StorageBuffer" || typeLabel == "ByteAddressBuffer";
+            if ( bStructuredBufferLabel )
                 return ShaderBindingKind::StructuredBuffer;
-            if ( typeLabel == "UAV" || typeLabel == "RWStructuredBuffer" || typeLabel == "RWByteAddressBuffer" )
+            const bool bRwStructuredBufferLabel = typeLabel == "UAV" || typeLabel == "RWStructuredBuffer" || typeLabel == "RWByteAddressBuffer";
+            if ( bRwStructuredBufferLabel )
                 return ShaderBindingKind::RwStructuredBuffer;
             if ( typeLabel == "RWTexture" )
                 return ShaderBindingKind::RwTexture;
@@ -33,10 +35,12 @@ namespace sw
         /** @brief `g_ShadowMap` / `g_ShadowMapIndex` / `ShadowMap` 을 `"ShadowMap"`(레지스트리 조회 키)으로 모읍니다. */
         string_view canonicalResourceView( string_view identifier, bool bStripIndexSuffix )
         {
-            string_view name = identifier;
-            if ( name.size() > 2 && name[0] == 'g' && name[1] == '_' )
+            string_view name             = identifier;
+            const bool  bHasGlobalPrefix = name.size() > 2 && name[0] == 'g' && name[1] == '_';
+            if ( bHasGlobalPrefix )
                 name = name.substr( 2 );
-            if ( bStripIndexSuffix && name.size() > 5 && name.substr( name.size() - 5 ) == "Index" )
+            const bool bHasIndexSuffix = bStripIndexSuffix && name.size() > 5 && name.substr( name.size() - 5 ) == "Index";
+            if ( bHasIndexSuffix )
                 name = name.substr( 0, name.size() - 5 );
             return name;
         }
@@ -139,8 +143,9 @@ namespace sw
                 const hashed_string name{ static_cast<string_view>( element._name ) };
                 for ( ShaderBindingSlot& slot : layout._listSlot )
                 {
-                    const bool bStructured = ( slot._kind == ShaderBindingKind::StructuredBuffer || slot._kind == ShaderBindingKind::RwStructuredBuffer );
-                    if ( bStructured && slot._name == name && slot._elementStride == 0 )
+                    const bool bStructured         = ( slot._kind == ShaderBindingKind::StructuredBuffer || slot._kind == ShaderBindingKind::RwStructuredBuffer );
+                    const bool bNeedsElementStride = bStructured && slot._name == name && slot._elementStride == 0;
+                    if ( bNeedsElementStride )
                     {
                         slot._elementStride     = element._totalSize;
                         slot._listElementMember = element._listVariable;

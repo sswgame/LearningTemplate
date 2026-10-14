@@ -101,8 +101,9 @@ namespace sw
              */
             static bool isMemcpyProperty( const TypeRegistry& registry, const PropertyInfo& prop, size_t& outSize )
             {
-                outSize = 0;
-                if ( prop._bIsContainer == SW_TRUE || prop._containerKind != ContainerKind::None || prop._bIsBitField == SW_TRUE )
+                outSize                                  = 0;
+                const bool bUnsupportedContainerProperty = prop._bIsContainer == SW_TRUE || prop._containerKind != ContainerKind::None || prop._bIsBitField == SW_TRUE;
+                if ( bUnsupportedContainerProperty )
                     return false;
                 if ( registry.isType( prop._typeName, hashed_string{ PredefinedNameType::NameType_string } ) ||
                      registry.isType( prop._typeName, hashed_string{ PredefinedNameType::NameType_hashed_string } ) )

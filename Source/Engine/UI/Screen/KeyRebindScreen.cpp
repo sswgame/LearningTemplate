@@ -67,9 +67,10 @@ namespace sw
 
     void KeyRebindScreen::onTick( float32 deltaSeconds )
     {
-        UISystem*     pUI    = getUISystem();
-        InputManager* pInput = pUI != nullptr ? pUI->getInputManager() : nullptr;
-        if ( _bListening == false || pInput == nullptr || _pSettings == nullptr )
+        UISystem*     pUI           = getUISystem();
+        InputManager* pInput        = pUI != nullptr ? pUI->getInputManager() : nullptr;
+        const bool    bNotListening = _bListening == false || pInput == nullptr || _pSettings == nullptr;
+        if ( bNotListening )
             return;
         // 연 프레임의 입력(창을 연 확인이나 클릭)은 받지 않는다.
         if ( pInput->getBeginFrameCount() == _openFrame )

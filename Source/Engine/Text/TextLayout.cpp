@@ -97,7 +97,8 @@ namespace sw
                     return BreakKind::Mandatory;
                 if ( forbidsBreakAfter( current ) || forbidsBreakBefore( next ) )
                     return BreakKind::None;
-                if ( isSpace( current ) || current == '-' || current == 0x2010u )
+                const bool bBreakOpportunity = isSpace( current ) || current == '-' || current == 0x2010u;
+                if ( bBreakOpportunity )
                     return BreakKind::Allowed;
                 const bool bCjkBoundary = isIdeographicOrHangul( current ) || isIdeographicOrHangul( next );
                 if ( bCjkBoundary == false )
@@ -467,8 +468,11 @@ namespace sw
             if ( range._bEllipsis )
             {
                 // 줄임표가 들어갈 때까지 뒤에서 글리프를 뺀다(빼고 남은 끝 공백도 뺀다).
-                while ( visibleEnd > range._begin && maxWidth > 0.0f && trimmed + ellipsisWidth > maxWidth + Internal::kWidthTolerance )
+                while ( true )
                 {
+                    const bool bEllipsisOverflows = visibleEnd > range._begin && maxWidth > 0.0f && trimmed + ellipsisWidth > maxWidth + Internal::kWidthTolerance;
+                    if ( bEllipsisOverflows == false )
+                        break;
                     --visibleEnd;
                     trimmed -= _listWidthScratch[visibleEnd];
                 }

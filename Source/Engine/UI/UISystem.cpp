@@ -719,8 +719,9 @@ namespace sw
     {
         if ( _input.setInputMode( mode ) == false )
             return;
-        UIScreen* pActive = getActiveScreen();
-        if ( mode == UIInputMode::Navigation && pActive != nullptr && _input.getFocusManager().getFocusedTree() != &pActive->getTree() )
+        UIScreen*  pActive                 = getActiveScreen();
+        const bool bRestoreNavigationFocus = mode == UIInputMode::Navigation && pActive != nullptr && _input.getFocusManager().getFocusedTree() != &pActive->getTree();
+        if ( bRestoreNavigationFocus )
             _input.restoreFocus( *pActive );
     }
 

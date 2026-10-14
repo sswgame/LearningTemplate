@@ -121,13 +121,14 @@ namespace sw
 
     bool ScrollPanel::computeScrollBar( UIOrientation axis, ScrollBarLayout& outLayout ) const
     {
-        const bool    bVertical  = axis == UIOrientation::Vertical;
-        const bool    bScrolls   = bVertical ? _bScrollVertical : _bScrollHorizontal;
-        const float2  maxOffset  = getMaxScrollOffset();
-        const float32 axisMax    = bVertical ? maxOffset._y : maxOffset._x;
-        const float32 viewLength = bVertical ? _viewportSize._y : _viewportSize._x;
-        const float32 content    = bVertical ? _contentSize._y : _contentSize._x;
-        if ( bScrolls == false || axisMax <= 0.0f || viewLength <= 0.0f || content <= 0.0f )
+        const bool    bVertical    = axis == UIOrientation::Vertical;
+        const bool    bScrolls     = bVertical ? _bScrollVertical : _bScrollHorizontal;
+        const float2  maxOffset    = getMaxScrollOffset();
+        const float32 axisMax      = bVertical ? maxOffset._y : maxOffset._x;
+        const float32 viewLength   = bVertical ? _viewportSize._y : _viewportSize._x;
+        const float32 content      = bVertical ? _contentSize._y : _contentSize._x;
+        const bool    bNoScrollBar = bScrolls == false || axisMax <= 0.0f || viewLength <= 0.0f || content <= 0.0f;
+        if ( bNoScrollBar )
             return false;
         const float32 trackLength = viewLength;
         const float32 thumbLength = MathUtil::min( trackLength, MathUtil::max( _minThumbLength, trackLength * viewLength / content ) );
@@ -171,7 +172,8 @@ namespace sw
             case UIPointerEventKind::Down:
             {
                 // 터널: 막대는 내용 위에 겹쳐 그리므로 막대 위 누름은 내용(버튼)보다 먼저 받는다.
-                if ( phase != UIRoutePhase::Tunnel || event._button != MouseButton::Left || _bDraggingBar )
+                const bool bIgnoreBarPress = phase != UIRoutePhase::Tunnel || event._button != MouseButton::Left || _bDraggingBar;
+                if ( bIgnoreBarPress )
                     return UIReply::makeUnhandled();
                 return beginScrollBarDrag( local );
             }
@@ -320,7 +322,8 @@ namespace sw
         const float32 contentX = isRightToLeft() ? size._x - _contentSize._x + _scrollOffset._x : -_scrollOffset._x;
         arrangeChild( context, content, float2{ contentX, -_scrollOffset._y }, _contentSize );
         // 막대 엄지의 길이와 위치는 내용 크기, 보이는 크기, 오프셋에서 나온다. 그리기만 다시 하며 레이아웃 비트는 건드리지 않는다.
-        if ( previousContent != _contentSize || previousViewport != _viewportSize || previousOffset != _scrollOffset )
+        const bool bScrollStateChanged = previousContent != _contentSize || previousViewport != _viewportSize || previousOffset != _scrollOffset;
+        if ( bScrollStateChanged )
             invalidate( WidgetDirty::kPaint );
     }
 } // namespace sw

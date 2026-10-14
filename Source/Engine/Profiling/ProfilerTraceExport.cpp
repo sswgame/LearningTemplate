@@ -617,8 +617,9 @@ namespace sw
                 outReport = "input " + to_string( index ) + " has no traceEvents array";
                 return false;
             }
-            const JSONValue other = root.isObject() ? root.get( "otherData" ) : JSONValue{};
-            if ( other.isObject() && other.has( "wallUnixMilliseconds" ) && other.has( "monotonicNanoseconds" ) )
+            const JSONValue other         = root.isObject() ? root.get( "otherData" ) : JSONValue{};
+            const bool      bHasClockData = other.isObject() && other.has( "wallUnixMilliseconds" ) && other.has( "monotonicNanoseconds" );
+            if ( bHasClockData )
             {
                 pSource->_bHasClock            = true;
                 pSource->_hostName             = other.get( "hostName" ).asString();

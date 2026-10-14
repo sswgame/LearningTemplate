@@ -56,8 +56,9 @@ namespace sw
     {
         (void)settings;
         outBytes.clear();
-        const uint32 trackCount = rawClip.getTrackCount();
-        if ( rawClip._sampleCount == 0 || trackCount == 0 || rawClip._listSample.size() != static_cast<size_t>( rawClip._sampleCount ) * trackCount )
+        const uint32 trackCount      = rawClip.getTrackCount();
+        const bool   bInvalidRawClip = rawClip._sampleCount == 0 || trackCount == 0 || rawClip._listSample.size() != static_cast<size_t>( rawClip._sampleCount ) * trackCount;
+        if ( bInvalidRawClip )
             return false;
 
         outBytes.reserve( RawAnimationCodecInternal::kHeaderSize + rawClip._listSample.size() * RawAnimationCodecInternal::kFloatPerTransform * sizeof( float32 ) );

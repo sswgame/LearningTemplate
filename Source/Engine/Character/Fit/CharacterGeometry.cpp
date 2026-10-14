@@ -29,12 +29,13 @@ namespace sw
         const size_t vertexCount = _listPosition.size();
         if ( _listIndex.size() % 3 != 0 )
             return false;
-        const bool bNormalMismatch = _listNormal.empty() == false && _listNormal.size() != vertexCount;
-        const bool bUvMismatch     = _listUv.empty() == false && _listUv.size() != vertexCount;
-        const bool bSkinMismatch   = _listSkin.empty() == false && _listSkin.size() != vertexCount;
-        const bool bGroupMismatch  = _listVertexGroup.empty() == false && _listVertexGroup.size() != vertexCount;
-        const bool bPartMismatch   = _listTrianglePart.empty() == false && _listTrianglePart.size() != getTriangleCount();
-        if ( bNormalMismatch || bUvMismatch || bSkinMismatch || bGroupMismatch || bPartMismatch )
+        const bool bNormalMismatch             = _listNormal.empty() == false && _listNormal.size() != vertexCount;
+        const bool bUvMismatch                 = _listUv.empty() == false && _listUv.size() != vertexCount;
+        const bool bSkinMismatch               = _listSkin.empty() == false && _listSkin.size() != vertexCount;
+        const bool bGroupMismatch              = _listVertexGroup.empty() == false && _listVertexGroup.size() != vertexCount;
+        const bool bPartMismatch               = _listTrianglePart.empty() == false && _listTrianglePart.size() != getTriangleCount();
+        const bool bInconsistentGeometryArrays = bNormalMismatch || bUvMismatch || bSkinMismatch || bGroupMismatch || bPartMismatch;
+        if ( bInconsistentGeometryArrays )
             return false;
         for ( const uint32 index : _listIndex )
         {
@@ -176,8 +177,9 @@ namespace sw
             outV = 0.0f;
             return b;
         }
-        const float32 vc = d1 * d4 - d3 * d2;
-        if ( vc <= 0.0f && d1 >= 0.0f && d3 <= 0.0f )
+        const float32 vc               = d1 * d4 - d3 * d2;
+        const bool    bClosestOnEdgeAB = vc <= 0.0f && d1 >= 0.0f && d3 <= 0.0f;
+        if ( bClosestOnEdgeAB )
         {
             const float32 edgeWeight = d1 / ( d1 - d3 );
             outU                     = edgeWeight;
@@ -193,16 +195,18 @@ namespace sw
             outV = 1.0f;
             return c;
         }
-        const float32 vb = d5 * d2 - d1 * d6;
-        if ( vb <= 0.0f && d2 >= 0.0f && d6 <= 0.0f )
+        const float32 vb               = d5 * d2 - d1 * d6;
+        const bool    bClosestOnEdgeAC = vb <= 0.0f && d2 >= 0.0f && d6 <= 0.0f;
+        if ( bClosestOnEdgeAC )
         {
             const float32 edgeWeight = d2 / ( d2 - d6 );
             outU                     = 0.0f;
             outV                     = edgeWeight;
             return a + ac * edgeWeight;
         }
-        const float32 va = d3 * d6 - d5 * d4;
-        if ( va <= 0.0f && ( d4 - d3 ) >= 0.0f && ( d5 - d6 ) >= 0.0f )
+        const float32 va               = d3 * d6 - d5 * d4;
+        const bool    bClosestOnEdgeBC = va <= 0.0f && ( d4 - d3 ) >= 0.0f && ( d5 - d6 ) >= 0.0f;
+        if ( bClosestOnEdgeBC )
         {
             const float32 edgeWeight = ( d4 - d3 ) / ( ( d4 - d3 ) + ( d5 - d6 ) );
             outU                     = 1.0f - edgeWeight;

@@ -93,8 +93,9 @@ namespace sw
 
     void D3D12RHIDevice::executeCommandList( IRHICommandList* pCmdList )
     {
-        auto* pNative = static_cast<D3D12RHICommandList*>( pCmdList );
-        if ( pNative == nullptr || _commandQueue == nullptr || _pActiveFrameList == nullptr )
+        auto*      pNative                  = static_cast<D3D12RHICommandList*>( pCmdList );
+        const bool bCannotSubmitCommandList = pNative == nullptr || _commandQueue == nullptr || _pActiveFrameList == nullptr;
+        if ( bCannotSubmitCommandList )
             return;
 
         ID3D12GraphicsCommandList* pList = pNative->getNativeCommandList();
@@ -406,7 +407,8 @@ namespace sw
 
     void D3D12RHIDevice::ensureTimestampResources()
     {
-        if ( _bTimestampEnabled == SW_FALSE || _timestampHeap != nullptr || _device == nullptr || _commandQueue == nullptr )
+        const bool bTimestampResourcesNotNeeded = _bTimestampEnabled == SW_FALSE || _timestampHeap != nullptr || _device == nullptr || _commandQueue == nullptr;
+        if ( bTimestampResourcesNotNeeded )
             return;
 
         UINT64 frequency{ 0 };
@@ -444,8 +446,9 @@ namespace sw
     {
         // 이 슬롯은 방금 펜스를 통과했다. 지난번 이 슬롯에 적은 값이 GPU 에서 이미 끝나 있다.
         _timestampFrame._listMicro.clear();
-        const uint32 writtenMask = _arrTimestampMask[_frameRing.currentIndex()];
-        if ( _timestampReadback == nullptr || _timestampFrequency == 0 || writtenMask == 0 )
+        const uint32 writtenMask         = _arrTimestampMask[_frameRing.currentIndex()];
+        const bool   bNoTimestampsToRead = _timestampReadback == nullptr || _timestampFrequency == 0 || writtenMask == 0;
+        if ( bNoTimestampsToRead )
             return;
 
         const uint32 base       = getTimestampBase();
@@ -544,8 +547,9 @@ namespace sw
                 // 슬롯 번호는 **패스 인덱스로 고정**이라 병렬 기록에도 경쟁이 없다.
                 const uint32 writtenMask                     = _timestampWrittenMask.load( std::memory_order_relaxed );
                 _arrTimestampMask[_frameRing.currentIndex()] = writtenMask;
-                if ( _bTimestampEnabled != SW_FALSE && _timestampHeap != nullptr && _timestampReadback != nullptr &&
-                     writtenMask != 0 )
+                const bool bShouldResolveTimestamps          = _bTimestampEnabled != SW_FALSE && _timestampHeap != nullptr && _timestampReadback != nullptr &&
+                                                      writtenMask != 0;
+                if ( bShouldResolveTimestamps )
                 {
                     const uint32 base = getTimestampBase();
                     _pActiveFrameList->ResolveQueryData( _timestampHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, base,

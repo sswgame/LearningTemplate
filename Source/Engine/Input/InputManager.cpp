@@ -276,18 +276,22 @@ namespace sw
         }
 
         // 대표 편의 포인터(키보드, 마우스, 게임패드)가 해제되면 남은 장치 중 같은 종류로 다시 잡는다.
-        if ( bWasKeyboard == false && bWasMouse == false && bWasGamepad == false )
+        const bool bNoPrimaryDeviceRemoved = bWasKeyboard == false && bWasMouse == false && bWasGamepad == false;
+        if ( bNoPrimaryDeviceRemoved )
             return;
 
         for ( const auto& pRemaining : _listDevice )
         {
             if ( pRemaining == nullptr )
                 continue;
-            if ( bWasKeyboard && _pKeyboard == nullptr && pRemaining->getDeviceKind() == InputDeviceKind::Keyboard )
+            const bool bAdoptAsMouse    = bWasMouse && _pMouse == nullptr && pRemaining->getDeviceKind() == InputDeviceKind::Mouse;
+            const bool bAdoptAsGamepad  = bWasGamepad && _pGamepad == nullptr && pRemaining->getDeviceKind() == InputDeviceKind::Gamepad;
+            const bool bReplaceKeyboard = bWasKeyboard && _pKeyboard == nullptr && pRemaining->getDeviceKind() == InputDeviceKind::Keyboard;
+            if ( bReplaceKeyboard )
                 _pKeyboard = static_cast<KeyboardDevice*>( pRemaining.get() );
-            else if ( bWasMouse && _pMouse == nullptr && pRemaining->getDeviceKind() == InputDeviceKind::Mouse )
+            else if ( bAdoptAsMouse )
                 _pMouse = static_cast<MouseDevice*>( pRemaining.get() );
-            else if ( bWasGamepad && _pGamepad == nullptr && pRemaining->getDeviceKind() == InputDeviceKind::Gamepad )
+            else if ( bAdoptAsGamepad )
                 _pGamepad = static_cast<GamepadDevice*>( pRemaining.get() );
         }
     }
@@ -296,7 +300,8 @@ namespace sw
     {
         for ( const auto& pDev : _listDevice )
         {
-            if ( pDev != nullptr && pDev->getDeviceKind() == kind && pDev->getDeviceIndex() == deviceIndex )
+            const bool bMatchingDevice = pDev != nullptr && pDev->getDeviceKind() == kind && pDev->getDeviceIndex() == deviceIndex;
+            if ( bMatchingDevice )
                 return pDev.get();
         }
         return nullptr;
@@ -355,7 +360,8 @@ namespace sw
         }
 
         // 2-2) 가상 커서(패드 스틱 → 마우스 이동 · 버튼)의 이벤트를 붙인다. 가상 입력이 붙어 있으면 그쪽이 입력을 정하므로 쉰다.
-        if ( _virtualCursor.isEnabled() && _pVirtualInput == nullptr && _pMouse != nullptr )
+        const bool bVirtualCursorActive = _virtualCursor.isEnabled() && _pVirtualInput == nullptr && _pMouse != nullptr;
+        if ( bVirtualCursorActive )
         {
             const IWindow* pWindow = IWindow::getActiveWindow();
             if ( pWindow != nullptr )
@@ -385,15 +391,17 @@ namespace sw
 
         // 가운데 고정 잠금: 이번 프레임의 델타를 측정한 뒤에 커서를 되돌린다. 잠금이 쉬는 동안(포커스 밖, Alt, 콘솔)은 되돌리지 않는다.
         // 되돌리면 잠금이 풀린 커서도 프레임마다 가운데로 끌려와서 제목 표시줄이나 X 에 닿지 못한다.
-        if ( _pMouse != nullptr && _pMouse->getLockMode() == MouseLockMode::LockedInCenter && isMouseLockActive() )
+        const bool bRecenterLockedCursor = _pMouse != nullptr && _pMouse->getLockMode() == MouseLockMode::LockedInCenter && isMouseLockActive();
+        if ( bRecenterLockedCursor )
             recenterLockedCursorPlatform();
 
         // 4) 활성 장치 자동 감지(O(1) 플래그 조회)
         if ( _pGamepad != nullptr && _pGamepad->isConnected() )
         {
-            const float2 stick        = _pGamepad->getLeftStick();
-            const bool   bStickActive = stick.getLengthSquared() > 0.04f;
-            if ( bStickActive || _pGamepad->getLeftTrigger() > 0.1f || _pGamepad->getRightTrigger() > 0.1f || _pGamepad->wasAnyButtonPressed() )
+            const float2 stick                 = _pGamepad->getLeftStick();
+            const bool   bStickActive          = stick.getLengthSquared() > 0.04f;
+            const bool   bGamepadInputDetected = bStickActive || _pGamepad->getLeftTrigger() > 0.1f || _pGamepad->getRightTrigger() > 0.1f || _pGamepad->wasAnyButtonPressed();
+            if ( bGamepadInputDetected )
                 setActiveGlyphStyle( InputGlyphStyle::GamepadXbox );
         }
 
@@ -402,8 +410,9 @@ namespace sw
 
         if ( _pMouse != nullptr )
         {
-            const int2 mouseDelta = _pMouse->getDelta();
-            if ( _pMouse->wasAnyButtonPressed() || mouseDelta != int2{} || _pMouse->getMouseWheel() != 0.0f )
+            const int2 mouseDelta          = _pMouse->getDelta();
+            const bool bMouseInputDetected = _pMouse->wasAnyButtonPressed() || mouseDelta != int2{} || _pMouse->getMouseWheel() != 0.0f;
+            if ( bMouseInputDetected )
                 setActiveGlyphStyle( InputGlyphStyle::KeyboardMouse );
         }
 
@@ -718,13 +727,15 @@ namespace sw
     bool InputManager::wasAnyInputPressed() const
     {
         // 키보드는 게임이 포커스를 가질 때만 "아무 키" 로 본다. 콘솔에 치는 글자가 "Press Any Key" 를 넘기지 않게 하기 위해서다.
-        if ( _pKeyboard != nullptr && _keyboardFocus == InputKeyboardFocus::Game && _pKeyboard->wasAnyKeyPressed() )
+        const bool bKeyboardAnyKey = _pKeyboard != nullptr && _keyboardFocus == InputKeyboardFocus::Game && _pKeyboard->wasAnyKeyPressed();
+        if ( bKeyboardAnyKey )
             return true;
 
         if ( _pMouse != nullptr && _pMouse->wasAnyButtonPressed() )
             return true;
 
-        if ( _pGamepad != nullptr && _pGamepad->isConnected() && _pGamepad->wasAnyButtonPressed() )
+        const bool bGamepadAnyButton = _pGamepad != nullptr && _pGamepad->isConnected() && _pGamepad->wasAnyButtonPressed();
+        if ( bGamepadAnyButton )
             return true;
 
         return false;
@@ -818,7 +829,8 @@ namespace sw
         // 배타 가상 입력 중에는 게임이 OS 포인터를 잡지 않는다(사람이 같은 기계를 쓴다). 잠금 모드(장치 상태)는 남겨 두고, 가상 입력을 떼면 `syncMouseLock` 이 다시 건다.
         if ( isOsInputSuppressed() )
             return false;
-        if ( _bWindowFocused == SW_FALSE || _bAltHeld == SW_TRUE || _keyboardFocus != InputKeyboardFocus::Game )
+        const bool bInputWindowInactive = _bWindowFocused == SW_FALSE || _bAltHeld == SW_TRUE || _keyboardFocus != InputKeyboardFocus::Game;
+        if ( bInputWindowInactive )
             return false;
         return _pMouse == nullptr || _pMouse->getLockMode() == MouseLockMode::None || _bMouseLockEngaged == SW_TRUE;
     }
@@ -862,7 +874,8 @@ namespace sw
         _bMouseLockEngaged    = SW_TRUE;
         syncMouseLock();
         // 잠금을 건 그 누름은 "창으로 돌아온다" 는 뜻이라 게임에 넘기지 않는다(언리얼 뷰포트의 마우스 캡처 클릭과 같다).
-        if ( bWasActive || isMouseLockActive() == false || button >= MouseButton::Count )
+        const bool bIgnoreLockClick = bWasActive || isMouseLockActive() == false || button >= MouseButton::Count;
+        if ( bIgnoreLockClick )
             return false;
         _consumedButtonMask = static_cast<uint8>( _consumedButtonMask | ( 1u << static_cast<uint32>( button ) ) );
         return true;

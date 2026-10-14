@@ -81,7 +81,8 @@ namespace sw
     int32 AutomationSession::onFrameEnd( const EngineFrameContext& context )
     {
         // `isActive` 가 아니라 `hasEnded` — 시작 프레임에서 진 시나리오(읽기 오류 · 시작 시한)도 여기서 끝맺고 그 코드로 끝난다.
-        if ( _pRunner == nullptr || _pRunner->hasEnded() || context._pInput == nullptr )
+        const bool bNoRunnerToUpdate = _pRunner == nullptr || _pRunner->hasEnded() || context._pInput == nullptr;
+        if ( bNoRunnerToUpdate )
             return kRunning;
         const uint32 completedScreenshotCount = context._completedScreenshotCount;
         _pRunner->setCompletedScreenshotCount( completedScreenshotCount >= _screenshotBaseline ? completedScreenshotCount - _screenshotBaseline : 0u );
@@ -137,7 +138,8 @@ namespace sw
     void AutomationSession::onBuildRenderPacket( EngineRenderPacketContext& inoutContext )
     {
         // 패킷 하나에는 스크린샷이 하나다 — 이미 찼으면 꺼내지 않고 다음 패킷에 싣는다.
-        if ( _pRunner == nullptr || inoutContext._pScreenshotPath == nullptr || inoutContext._pScreenshotPath->empty() == false )
+        const bool bCannotTakeScreenshot = _pRunner == nullptr || inoutContext._pScreenshotPath == nullptr || inoutContext._pScreenshotPath->empty() == false;
+        if ( bCannotTakeScreenshot )
             return;
         (void)_pRunner->takePendingScreenshotPath( *inoutContext._pScreenshotPath ); // 요청이 없으면 빈 채로 둔다
     }

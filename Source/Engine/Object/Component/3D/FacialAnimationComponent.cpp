@@ -42,7 +42,8 @@ namespace sw
             /** @brief 깜빡임 정도입니다 — 길이의 앞 절반에 감고 뒤 절반에 뜬다. */
             static float32 computeBlinkAmount( float32 elapsed, float32 duration )
             {
-                if ( elapsed < 0.0f || duration <= 0.0f || elapsed >= duration )
+                const bool bOutsideBlinkWindow = elapsed < 0.0f || duration <= 0.0f || elapsed >= duration;
+                if ( bOutsideBlinkWindow )
                     return 0.0f;
                 return 1.0f - MathUtil::abs( 2.0f * elapsed / duration - 1.0f );
             }
@@ -267,8 +268,9 @@ namespace sw
             vector<uint8> bytes;
             AudioPcm      pcm;
             AudioClipData clip;
-            if ( ResourceIO::readBinaryResource( audioPath, bytes ) && AudioClipDecoder::decode( audioPath, bytes.data(), bytes.size(), pcm ) &&
-                 AudioClipData::convertPcm( pcm, clip ) )
+            const bool    bAudioDecoded = ResourceIO::readBinaryResource( audioPath, bytes ) && AudioClipDecoder::decode( audioPath, bytes.data(), bytes.size(), pcm ) &&
+                                       AudioClipData::convertPcm( pcm, clip );
+            if ( bAudioDecoded )
             {
                 vector<float32> listSample;
                 clip.copyMonoSamples( listSample );
@@ -363,8 +365,9 @@ namespace sw
         }
 
         // 사카드: 간격마다 최대 크기 안의 작은 요 · 피치로 튄다(시선 목표가 있을 때만).
-        const FacialGazeSettings& gaze = _rig.getGaze();
-        if ( _bSaccades == SW_TRUE && _bLookAt == SW_TRUE && gaze._listEyeBone.empty() == false )
+        const FacialGazeSettings& gaze           = _rig.getGaze();
+        const bool                bSaccadeActive = _bSaccades == SW_TRUE && _bLookAt == SW_TRUE && gaze._listEyeBone.empty() == false;
+        if ( bSaccadeActive )
         {
             _saccadeTimer -= deltaSeconds;
             if ( _saccadeTimer <= 0.0f )
@@ -446,8 +449,9 @@ namespace sw
         refreshBindings( unit );
 
         // 표정 — 명시 가중치 + 같은 오브젝트 애니메이터의 같은 이름 커브(애니메이터의 시간 단계가 이미 이번 프레임 커브를 냈다).
-        const SkeletalAnimatorComponent* pAnimator = nullptr;
-        if ( _animator.isValid() && unit.getOwner() != nullptr && unit.getOwner()->getManager() != nullptr )
+        const SkeletalAnimatorComponent* pAnimator           = nullptr;
+        const bool                       bAnimatorResolvable = _animator.isValid() && unit.getOwner() != nullptr && unit.getOwner()->getManager() != nullptr;
+        if ( bAnimatorResolvable )
             pAnimator = castTo<SkeletalAnimatorComponent>( unit.getOwner()->getManager()->resolveComponent( _animator ) );
         const vector<FacialPose>& listExpression = _rig.getExpressions();
         for ( size_t poseIndex = 0; poseIndex < listExpression.size(); ++poseIndex )
@@ -496,7 +500,8 @@ namespace sw
 
     void FacialAnimationComponent::applyGaze( SkeletalMeshComponent& unit )
     {
-        if ( _bLookAt == SW_FALSE || _bLookAtModelReady == SW_FALSE || _listEyeBone.empty() )
+        const bool bGazeUnavailable = _bLookAt == SW_FALSE || _bLookAtModelReady == SW_FALSE || _listEyeBone.empty();
+        if ( bGazeUnavailable )
             return;
         const FacialGazeSettings& gaze       = _rig.getGaze();
         const vector<float4x4>&   listModel  = unit.getModelSpaceTransforms();
@@ -507,7 +512,8 @@ namespace sw
         const quaternion          saccade    = quaternion::makeFromYawPitchRoll( _saccadeOffset._x, _saccadeOffset._y, 0.0f );
         for ( const int32 boneIndex : _listEyeBone )
         {
-            if ( boneIndex < 0 || static_cast<size_t>( boneIndex ) >= listModel.size() || static_cast<uint32>( boneIndex ) >= pose.getBoneCount() )
+            const bool bInvalidEyeBone = boneIndex < 0 || static_cast<size_t>( boneIndex ) >= listModel.size() || static_cast<uint32>( boneIndex ) >= pose.getBoneCount();
+            if ( bInvalidEyeBone )
                 continue;
             // 부모 공간에서 돌린다 — 지금 로컬 회전의 앞 방향을 목표 방향으로 돌리는 가장 작은 회전을 최대 각으로 자르고 로컬 회전 뒤에 붙인다.
             const int32    parentIndex = listParent[static_cast<size_t>( boneIndex )];

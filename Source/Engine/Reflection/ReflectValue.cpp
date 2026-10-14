@@ -120,6 +120,10 @@ namespace sw
             /** @brief 벡터 · 사원수 글(`1, 2, 3` · `(1 2 3)`)의 구분자입니다. */
             static constexpr string_view kVectorSeparators = " ,()\t";
 
+            /** @brief T 가 float2 · float3 · float4 중 하나인지입니다. */
+            template <typename T>
+            static constexpr bool kIsFloatVector = std::is_same_v<T, float2> || std::is_same_v<T, float3> || std::is_same_v<T, float4>;
+
             /** @brief 원본 값을 내장 타입 T 로 바꿉니다. 숫자 범위를 넘거나 소수를 정수로 바꾸는 것은 거절합니다(조용히 깎지 않게). */
             template <typename T>
             [[nodiscard]] static bool convertSource( const SourceValue& source, TaskValue& outValue )
@@ -176,7 +180,7 @@ namespace sw
                     outValue = TaskValue{ source._text.empty() ? TagID{} : TagID::request( source._text ) };
                     return true;
                 }
-                else if constexpr ( std::is_same_v<T, float2> || std::is_same_v<T, float3> || std::is_same_v<T, float4> )
+                else if constexpr ( kIsFloatVector<T> )
                 {
                     constexpr uint32 kCount = sizeof( T ) / sizeof( float32 );
                     float32          arrValue[4]{};
@@ -389,8 +393,9 @@ namespace sw
             return string();
         }
         // 문자열 리터럴(`"idle"` · `u8"idle"`)은 따옴표를 벗기고 이스케이프를 푼다.
-        const size_t quote = text.find( '"' );
-        if ( quote != string_view::npos && text.size() >= quote + 2 && text.back() == '"' )
+        const size_t quote          = text.find( '"' );
+        const bool   bQuotedLiteral = quote != string_view::npos && text.size() >= quote + 2 && text.back() == '"';
+        if ( bQuotedLiteral )
         {
             string unescaped;
             for ( size_t charIndex = quote + 1; charIndex + 1 < text.size(); ++charIndex )
@@ -409,7 +414,8 @@ namespace sw
             return unescaped;
         }
         // 실수 접미사(`1.5f`)는 숫자 읽기가 모른다.
-        if ( text.size() > 1 && ( text.back() == 'f' || text.back() == 'F' ) && ( ( '0' <= text[text.size() - 2] && text[text.size() - 2] <= '9' ) || text[text.size() - 2] == '.' ) )
+        const bool bFloatSuffix = text.size() > 1 && ( text.back() == 'f' || text.back() == 'F' ) && ( ( '0' <= text[text.size() - 2] && text[text.size() - 2] <= '9' ) || text[text.size() - 2] == '.' );
+        if ( bFloatSuffix )
             text.remove_suffix( 1 );
         // 열거자(`Mode::Fast`)는 끝 이름만 — 열거형 읽기가 이름으로 찾는다.
         const size_t scope = text.rfind( "::" );

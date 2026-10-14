@@ -69,7 +69,8 @@ namespace sw
     void CameraComponent::declareRenderTexture() const
     {
         // 렌더 텍스처의 크기를 먼저 알린다 — 그 텍스처를 읽는 머티리얼이 카메라보다 먼저 빌려도 같은 크기로 만들어지게.
-        if ( _renderOutput._target != CameraOutputTarget::RenderTexture || _renderOutput._renderTexture.empty() || engine::areEngineServicesBound() == false )
+        const bool bNoRenderTextureToDeclare = _renderOutput._target != CameraOutputTarget::RenderTexture || _renderOutput._renderTexture.empty() || engine::areEngineServicesBound() == false;
+        if ( bNoRenderTextureToDeclare )
             return;
         engine::declareRenderTarget( _renderOutput._renderTexture, _renderOutput._renderTextureWidth, _renderOutput._renderTextureHeight );
     }

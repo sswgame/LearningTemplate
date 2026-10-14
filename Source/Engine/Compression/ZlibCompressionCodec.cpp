@@ -148,8 +148,9 @@ namespace sw
                                          size_t&     outCompressedSize,
                                          int32       compressionLevel )
     {
-        outCompressedSize = 0;
-        if ( pSrc == nullptr || pDst == nullptr || srcSize == 0 )
+        outCompressedSize                = 0;
+        const bool bInvalidCompressInput = pSrc == nullptr || pDst == nullptr || srcSize == 0;
+        if ( bInvalidCompressInput )
             return false;
         if ( isZlibRepresentableSize( srcSize ) == false || isZlibRepresentableSize( dstCapacity ) == false )
         {
@@ -182,8 +183,9 @@ namespace sw
                                            size_t      dstCapacity,
                                            size_t&     outUncompressedSize )
     {
-        outUncompressedSize = 0;
-        if ( pSrc == nullptr || pDst == nullptr || srcSize == 0 )
+        outUncompressedSize                = 0;
+        const bool bInvalidDecompressInput = pSrc == nullptr || pDst == nullptr || srcSize == 0;
+        if ( bInvalidDecompressInput )
             return false;
         if ( isZlibRepresentableSize( srcSize ) == false || isZlibRepresentableSize( dstCapacity ) == false )
         {

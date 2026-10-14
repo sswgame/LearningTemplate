@@ -250,8 +250,9 @@ namespace sw
             bChanged = false;
             for ( size_t body = 0; body < bodyCount; ++body )
             {
-                const int32 parent = _ragdoll._listParentBody[body];
-                if ( inoutListMask[body] == SW_FALSE && parent >= 0 && inoutListMask[static_cast<size_t>( parent )] == SW_TRUE )
+                const int32 parent                = _ragdoll._listParentBody[body];
+                const bool  bPropagateToChildBody = inoutListMask[body] == SW_FALSE && parent >= 0 && inoutListMask[static_cast<size_t>( parent )] == SW_TRUE;
+                if ( bPropagateToChildBody )
                 {
                     inoutListMask[body] = SW_TRUE;
                     bChanged            = true;
@@ -293,8 +294,9 @@ namespace sw
 
     const PhysicsHitZoneDef* RagdollComponent::findHitZone( PhysicsBodyHandle body, int32& outBodyIndex ) const
     {
-        outBodyIndex = _ragdoll.findBodyIndex( body );
-        if ( outBodyIndex < 0 || _asset == nullptr || static_cast<size_t>( outBodyIndex ) >= _asset->_listBody.size() )
+        outBodyIndex          = _ragdoll.findBodyIndex( body );
+        const bool bNoHitZone = outBodyIndex < 0 || _asset == nullptr || static_cast<size_t>( outBodyIndex ) >= _asset->_listBody.size();
+        if ( bNoHitZone )
             return nullptr;
         const PhysicsHitZoneDef& zone = _asset->_listBody[static_cast<size_t>( outBodyIndex )]._hitZone;
         return zone._name.empty() ? nullptr : &zone;
@@ -384,9 +386,10 @@ namespace sw
         }
         applyHitReaction( bodyIndex, impulse, hit._point );
         // 가산 움찔: 한 번 도는 레이어를 처음부터 다시 시작하고, 가중치는 `_flinchSeconds` 동안 1 에서 0 으로 줄인다.
-        GameObject*                pOwner    = getOwner();
-        SkeletalAnimatorComponent* pAnimator = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
-        if ( _flinchClip.empty() || pAnimator == nullptr || _state == RagdollState::Ragdoll )
+        GameObject*                pOwner        = getOwner();
+        SkeletalAnimatorComponent* pAnimator     = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
+        const bool                 bCannotFlinch = _flinchClip.empty() || pAnimator == nullptr || _state == RagdollState::Ragdoll;
+        if ( bCannotFlinch )
             return;
         if ( _flinchLayer < 0 )
             _flinchLayer = pAnimator->addLayer( AnimationLayerDesc{ _flinchClip, hashed_string{}, 1.0f, AnimationLayerBlend::Additive, SW_FALSE } );
@@ -409,7 +412,8 @@ namespace sw
             pAnimator->setLayerWeight( static_cast<uint32>( _flinchLayer ), weight );
         }
         // 기상 클립이 끝나면 다음 상태로.
-        if ( _bGettingUp && pAnimator != nullptr && pAnimator->getGraphPlayer().getPlayer().hasFinished() )
+        const bool bGetUpFinished = _bGettingUp && pAnimator != nullptr && pAnimator->getGraphPlayer().getPlayer().hasFinished();
+        if ( bGetUpFinished )
         {
             _bGettingUp = false;
             if ( _getUpExitState.empty() == false )
@@ -494,9 +498,10 @@ namespace sw
 
     void RagdollComponent::blendPhysicsPose( SkeletalMeshComponent& unit )
     {
-        const Skeleton& skeleton  = unit.getSkeleton();
-        const uint32    boneCount = skeleton.getBoneCount();
-        if ( _bHasPhysicsPose == false || _listPhysicsModel.size() != boneCount || _listBoneWeight.size() != boneCount )
+        const Skeleton& skeleton             = unit.getSkeleton();
+        const uint32    boneCount            = skeleton.getBoneCount();
+        const bool      bPhysicsPoseUnusable = _bHasPhysicsPose == false || _listPhysicsModel.size() != boneCount || _listBoneWeight.size() != boneCount;
+        if ( bPhysicsPoseUnusable )
             return;
         bool bAnyWeight = false;
         for ( const float32 weight : _listBoneWeight )
@@ -519,10 +524,11 @@ namespace sw
 
     bool RagdollComponent::getUp()
     {
-        GameObject*                pOwner    = getOwner();
-        SceneComponent*            pRoot     = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
-        SkeletalAnimatorComponent* pAnimator = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
-        if ( _state != RagdollState::Ragdoll || _bHasPhysicsPose == false || _pUnit == nullptr || pRoot == nullptr || pAnimator == nullptr )
+        GameObject*                pOwner                  = getOwner();
+        SceneComponent*            pRoot                   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        SkeletalAnimatorComponent* pAnimator               = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
+        const bool                 bCannotApplyPhysicsPose = _state != RagdollState::Ragdoll || _bHasPhysicsPose == false || _pUnit == nullptr || pRoot == nullptr || pAnimator == nullptr;
+        if ( bCannotApplyPhysicsPose )
             return false;
         const Skeleton& skeleton  = _pUnit->getSkeleton();
         const uint32    boneCount = skeleton.getBoneCount();
@@ -667,8 +673,9 @@ namespace sw
 
     void RagdollComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
     {
-        IPhysicsBodyScene3D* pScene = physics.findScene3D();
-        if ( pScene == nullptr || _ragdoll.isEmpty() || _pUnit == nullptr )
+        IPhysicsBodyScene3D* pScene           = physics.findScene3D();
+        const bool           bNoRagdollBodies = pScene == nullptr || _ragdoll.isEmpty() || _pUnit == nullptr;
+        if ( bNoRagdollBodies )
             return;
         const size_t            bodyCount = _ragdoll._listBody.size();
         const vector<float4x4>& listModel = _pUnit->getModelSpaceTransforms();
@@ -703,8 +710,9 @@ namespace sw
     void RagdollComponent::endPhysicsFrame( ScenePhysics& physics, float32 alpha )
     {
         (void)alpha;
-        IPhysicsBodyScene3D* pScene = physics.findScene3D();
-        if ( pScene == nullptr || _ragdoll.isEmpty() || _pUnit == nullptr )
+        IPhysicsBodyScene3D* pScene                  = physics.findScene3D();
+        const bool           bNoRagdollBodiesToBlend = pScene == nullptr || _ragdoll.isEmpty() || _pUnit == nullptr;
+        if ( bNoRagdollBodiesToBlend )
             return;
         // 돌아가는 동안은 시작할 때의 래그돌 자세를 그대로 둔다(바디는 이미 애니메이션을 따른다).
         if ( _state == RagdollState::BlendingBack )

@@ -317,11 +317,12 @@ namespace sw
             return true;
         }
 
-        const bool bSelectLeft  = action == hashed_string( UIActionName::kTextSelectLeft );
-        const bool bSelectRight = action == hashed_string( UIActionName::kTextSelectRight );
-        const bool bLeft        = action == hashed_string( UIActionName::kTextCaretLeft );
-        const bool bRight       = action == hashed_string( UIActionName::kTextCaretRight );
-        if ( bSelectLeft || bSelectRight || bLeft || bRight )
+        const bool bSelectLeft     = action == hashed_string( UIActionName::kTextSelectLeft );
+        const bool bSelectRight    = action == hashed_string( UIActionName::kTextSelectRight );
+        const bool bLeft           = action == hashed_string( UIActionName::kTextCaretLeft );
+        const bool bRight          = action == hashed_string( UIActionName::kTextCaretRight );
+        const bool bCaretKeyAction = bSelectLeft || bSelectRight || bLeft || bRight;
+        if ( bCaretKeyAction )
         {
             if ( _composition.empty() == false )
                 return true;
@@ -344,11 +345,12 @@ namespace sw
             return true;
         }
 
-        const bool bHome       = action == hashed_string( UIActionName::kTextHome );
-        const bool bEnd        = action == hashed_string( UIActionName::kTextEnd );
-        const bool bSelectHome = action == hashed_string( UIActionName::kTextSelectHome );
-        const bool bSelectEnd  = action == hashed_string( UIActionName::kTextSelectEnd );
-        if ( bHome || bEnd || bSelectHome || bSelectEnd )
+        const bool bHome          = action == hashed_string( UIActionName::kTextHome );
+        const bool bEnd           = action == hashed_string( UIActionName::kTextEnd );
+        const bool bSelectHome    = action == hashed_string( UIActionName::kTextSelectHome );
+        const bool bSelectEnd     = action == hashed_string( UIActionName::kTextSelectEnd );
+        const bool bHomeEndAction = bHome || bEnd || bSelectHome || bSelectEnd;
+        if ( bHomeEndAction )
         {
             if ( _composition.empty() == false )
                 return true;
@@ -357,10 +359,11 @@ namespace sw
             return true;
         }
 
-        const bool bCopy  = action == hashed_string( UIActionName::kTextCopy );
-        const bool bCut   = action == hashed_string( UIActionName::kTextCut );
-        const bool bPaste = action == hashed_string( UIActionName::kTextPaste );
-        if ( bCopy || bCut || bPaste )
+        const bool bCopy            = action == hashed_string( UIActionName::kTextCopy );
+        const bool bCut             = action == hashed_string( UIActionName::kTextCut );
+        const bool bPaste           = action == hashed_string( UIActionName::kTextPaste );
+        const bool bClipboardAction = bCopy || bCut || bPaste;
+        if ( bClipboardAction )
         {
             if ( _composition.empty() == false )
                 return true;
@@ -386,7 +389,8 @@ namespace sw
 
     UIReply TextInputWidget::onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase )
     {
-        if ( phase != UIRoutePhase::Bubble || event._kind != UIPointerEventKind::Down || event._button != MouseButton::Left )
+        const bool bNotLeftDown = phase != UIRoutePhase::Bubble || event._kind != UIPointerEventKind::Down || event._button != MouseButton::Left;
+        if ( bNotLeftDown )
             return UIReply::makeUnhandled();
         if ( hasFocus() == false )
             _bKeepCaretOnFocus = true; // 곧 올 포커스 알림이 눌러서 정한 커서를 글 끝으로 덮지 않게 한다
@@ -438,7 +442,8 @@ namespace sw
         if ( event._bComposition == SW_TRUE )
         {
             // 조합이 시작되면 선택은 그 글로 바뀐다(조합을 확정할 때 대신하는 것이 아니라 시작할 때 지운다).
-            if ( _composition.empty() && hasSelection() && replaceSelection( string_view{} ) )
+            const bool bReplaceSelectionOnCompose = _composition.empty() && hasSelection() && replaceSelection( string_view{} );
+            if ( bReplaceSelectionOnCompose )
                 notifyTextEdited();
             _composition = event._text;
             refreshDisplay();

@@ -52,7 +52,8 @@ namespace sw
                     StringBuilder<constant::kMaxBuffer8192> text;
                     SerializerUtil::valueToText( text, pValPtr, typeName, context );
                     JSONDocument parsed;
-                    if ( parsed.tryParse( text.view() ) && parsed.getRoot().isObject() == false && parsed.getRoot().isArray() == false )
+                    const bool   bParsedScalar = parsed.tryParse( text.view() ) && parsed.getRoot().isObject() == false && parsed.getRoot().isArray() == false;
+                    if ( bParsedScalar )
                     {
                         dst.assignFrom( parsed.getRoot() );
                         return;
@@ -474,8 +475,9 @@ namespace sw
             bool bCaseVariant{ false };
             // 대소문자를 가리는 문맥에서 대소문자만 다른 키: orphan 목록이 없으면 건너뛴다(그 문맥의 계약 — 묶지 않을 뿐 실패는 아니다).
             // 목록이 있으면(설정 읽기 `ConfigManager::readConfigJSON`) 아래에서 모르는 키로 이름을 알린다 — 조용히 버리면 `_Width` 오타가 사라진다.
-            const PropertyInfo* pMatched = SerializerUtil::matchProperty( listProp, keyRaw, bIgnoreCaseKeys, bCaseVariant );
-            if ( pMatched == nullptr && bCaseVariant && pOutListOrphan == nullptr )
+            const PropertyInfo* pMatched            = SerializerUtil::matchProperty( listProp, keyRaw, bIgnoreCaseKeys, bCaseVariant );
+            const bool          bSkipCaseVariantKey = pMatched == nullptr && bCaseVariant && pOutListOrphan == nullptr;
+            if ( bSkipCaseVariantKey )
                 continue;
 
             if ( pMatched == nullptr || pMatched->_metadata._bTransient == SW_TRUE )

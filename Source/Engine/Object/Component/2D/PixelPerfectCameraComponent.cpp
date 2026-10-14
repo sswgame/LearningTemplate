@@ -101,8 +101,9 @@ namespace sw
                                                                    uint32 viewportHeight, bool bCropX, bool bCropY )
     {
         PixelPerfectLayout layout{};
-        const float32      ppu = MathUtil::max( pixelsPerUnit, 1e-3f );
-        if ( viewportWidth == 0 || viewportHeight == 0 || referenceResolution._x < 1.0f || referenceResolution._y < 1.0f )
+        const float32      ppu                 = MathUtil::max( pixelsPerUnit, 1e-3f );
+        const bool         bInvalidLayoutInput = viewportWidth == 0 || viewportHeight == 0 || referenceResolution._x < 1.0f || referenceResolution._y < 1.0f;
+        if ( bInvalidLayoutInput )
         {
             layout._orthoHeight     = ( viewportHeight > 0 ) ? static_cast<float32>( viewportHeight ) / ppu : referenceResolution._y / ppu;
             layout._screenPixelUnit = 1.0f / ppu;

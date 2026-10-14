@@ -256,8 +256,11 @@ namespace sw
                         ++position;
                     }
                     const size_t begin = position;
-                    while ( position < item.size() && item[position] != ' ' && item[position] != '\t' )
+                    while ( true )
                     {
+                        const bool bInsideToken = position < item.size() && item[position] != ' ' && item[position] != '\t';
+                        if ( bInsideToken == false )
+                            break;
                         ++position;
                     }
                     if ( position == begin )
@@ -425,7 +428,8 @@ namespace sw
     {
         using Internal = UIStyleTransitionInternal;
         // 처음 맞추는 위젯, 스타일이 사라진 경우, 움직임 줄이기는 전환 없이 바로 바꾼다.
-        if ( pOld == nullptr || pNew == nullptr || gv_uiReduceMotion )
+        const bool bSnapWithoutTransition = pOld == nullptr || pNew == nullptr || gv_uiReduceMotion;
+        if ( bSnapWithoutTransition )
         {
             widget._styleTransition.reset();
             return;

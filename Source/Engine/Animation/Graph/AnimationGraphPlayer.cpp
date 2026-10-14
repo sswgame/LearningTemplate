@@ -53,7 +53,8 @@ namespace sw
 
     void AnimationGraphPlayer::update( float32 deltaSeconds, AnimationParameterSet* pParameter, vector<AnimationFiredNotify>* pOutListFired )
     {
-        if ( _pGraph != nullptr && _currentNodeID > 0 && pParameter != nullptr )
+        const bool bCanEvaluateLinks = _pGraph != nullptr && _currentNodeID > 0 && pParameter != nullptr;
+        if ( bCanEvaluateLinks )
         {
             for ( const AnimationGraphLink& link : _pGraph->_listLink )
             {
@@ -72,7 +73,8 @@ namespace sw
 
         _player.update( deltaSeconds, pOutListFired );
 
-        if ( _pGraph == nullptr || _currentNodeID <= 0 || _player.hasFinished() == false )
+        const bool bStateNotFinished = _pGraph == nullptr || _currentNodeID <= 0 || _player.hasFinished() == false;
+        if ( bStateNotFinished )
             return;
         // 재생할 것이 없는 상태는 길이가 0 이라 곧 "끝났다"가 된다. 그래도 다음으로 바로 넘어가지 않고 머문다(다음 advance 나 play 까지).
         if ( _player.getCurrentPlayable() == nullptr )

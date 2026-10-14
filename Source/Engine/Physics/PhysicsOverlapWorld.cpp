@@ -80,10 +80,11 @@ namespace sw
 
     int64 PhysicsOverlapWorld::CellRange::getCellCount() const noexcept
     {
-        const int64 spanX = static_cast<int64>( _maxX ) - static_cast<int64>( _minX ) + 1;
-        const int64 spanY = static_cast<int64>( _maxY ) - static_cast<int64>( _minY ) + 1;
-        const int64 spanZ = static_cast<int64>( _maxZ ) - static_cast<int64>( _minZ ) + 1;
-        if ( spanX <= 0 || spanY <= 0 || spanZ <= 0 )
+        const int64 spanX          = static_cast<int64>( _maxX ) - static_cast<int64>( _minX ) + 1;
+        const int64 spanY          = static_cast<int64>( _maxY ) - static_cast<int64>( _minY ) + 1;
+        const int64 spanZ          = static_cast<int64>( _maxZ ) - static_cast<int64>( _minZ ) + 1;
+        const bool  bEmptyGridSpan = spanX <= 0 || spanY <= 0 || spanZ <= 0;
+        if ( bEmptyGridSpan )
             return 0;
 
         // **곱하기 전에 넘칠지 확인한다.** 셀 번호는 int32 라 한 축의 폭이 2^32 까지 가고, 세 축을 곱하면
@@ -377,9 +378,10 @@ namespace sw
         size_t currentIndex  = 0;
         while ( previousIndex < _listOverlapPair.size() || currentIndex < _listScratchPair.size() )
         {
-            const bool bHasPrevious = previousIndex < _listOverlapPair.size();
-            const bool bHasCurrent  = currentIndex < _listScratchPair.size();
-            if ( bHasPrevious && bHasCurrent && _listOverlapPair[previousIndex].isSamePair( _listScratchPair[currentIndex] ) )
+            const bool bHasPrevious    = previousIndex < _listOverlapPair.size();
+            const bool bHasCurrent     = currentIndex < _listScratchPair.size();
+            const bool bSamePairInBoth = bHasPrevious && bHasCurrent && _listOverlapPair[previousIndex].isSamePair( _listScratchPair[currentIndex] );
+            if ( bSamePairInBoth )
             {
                 ++previousIndex;
                 ++currentIndex;

@@ -717,8 +717,9 @@ namespace sw
 
     void JoltPhysicsScene::moveKinematic( PhysicsBodyHandle body, const float3& targetPosition, const quaternion& targetRotation, float32 deltaTime )
     {
-        const BodyRecord* pRecord = findBody( body );
-        if ( pRecord == nullptr || pRecord->_type != PhysicsBodyType::Kinematic || deltaTime <= 0.0f )
+        const BodyRecord* pRecord           = findBody( body );
+        const bool        bNotKinematicBody = pRecord == nullptr || pRecord->_type != PhysicsBodyType::Kinematic || deltaTime <= 0.0f;
+        if ( bNotKinematicBody )
             return;
         _system.GetBodyInterface().MoveKinematic( pRecord->_bodyID, JoltUtil::toJolt( targetPosition ), JoltUtil::toJolt( targetRotation ), deltaTime );
     }
@@ -847,8 +848,9 @@ namespace sw
 
     void JoltPhysicsScene::wakeBody( PhysicsBodyHandle body )
     {
-        const BodyRecord* pRecord = findBody( body );
-        if ( pRecord != nullptr && pRecord->_bEnabled && pRecord->_type != PhysicsBodyType::Static )
+        const BodyRecord* pRecord      = findBody( body );
+        const bool        bActivatable = pRecord != nullptr && pRecord->_bEnabled && pRecord->_type != PhysicsBodyType::Static;
+        if ( bActivatable )
             _system.GetBodyInterface().ActivateBody( pRecord->_bodyID );
     }
 

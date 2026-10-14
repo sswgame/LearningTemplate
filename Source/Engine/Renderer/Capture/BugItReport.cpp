@@ -71,7 +71,8 @@ namespace sw
                 {
                     for ( CameraComponent* pCamera : scene.getObjectManager()->getCameraRegistry().getAll() )
                     {
-                        if ( pCamera != nullptr && pCamera->getRole() == CameraRole::Viewport && CameraRegistry::isUsableCamera( pCamera ) )
+                        const bool bViewportCamera = pCamera != nullptr && pCamera->getRole() == CameraRole::Viewport && CameraRegistry::isUsableCamera( pCamera );
+                        if ( bViewportCamera )
                             return pCamera;
                     }
                 }

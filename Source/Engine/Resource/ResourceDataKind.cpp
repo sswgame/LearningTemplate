@@ -11,7 +11,8 @@ namespace sw
 
     bool ResourceDataKind::matches( string_view resourceID ) const
     {
-        if ( _pPrefix == nullptr && _pContains == nullptr && _pSuffix == nullptr )
+        const bool bNoMatchRule = _pPrefix == nullptr && _pContains == nullptr && _pSuffix == nullptr;
+        if ( bNoMatchRule )
             return false;
         if ( _pPrefix != nullptr && StringUtil::startsWith( resourceID, string_view( _pPrefix ), true ) == false )
             return false;
@@ -39,7 +40,8 @@ namespace sw
 
     bool ResourceDataKindRegistry::registerKind( const ResourceDataKind* pKind )
     {
-        if ( pKind == nullptr || StringUtil::isNullOrEmpty( pKind->_pLabel ) || pKind->_pLoad == nullptr )
+        const bool bInvalidKind = pKind == nullptr || StringUtil::isNullOrEmpty( pKind->_pLabel ) || pKind->_pLoad == nullptr;
+        if ( bInvalidKind )
             return false;
         RegistrationResult result = RegistrationResult::Added;
         {

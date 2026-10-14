@@ -66,8 +66,9 @@ namespace sw
         if ( src == 0 )
         {
             // 창(기본 프레임버퍼) → 텍스처. 창의 0 행은 **아래**라 원본 y 를 뒤집어 읽는다 — 결과 텍스처의 0 행이 화면 위(D3D 와 같은 뜻)다.
-            const OpenGLRHIDevice::OpenGLTextureRecord* pDstRecord = _pDevice->resolveTexture( dst );
-            if ( pDstRecord == nullptr || pDstRecord->_fbo == 0 || pDstRecord->_bDepthStencil != SW_FALSE )
+            const OpenGLRHIDevice::OpenGLTextureRecord* pDstRecord                = _pDevice->resolveTexture( dst );
+            const bool                                  bInvalidDestinationTarget = pDstRecord == nullptr || pDstRecord->_fbo == 0 || pDstRecord->_bDepthStencil != SW_FALSE;
+            if ( bInvalidDestinationTarget )
                 return;
             const GLint backWidth  = static_cast<GLint>( _pDevice->_width );
             const GLint backHeight = static_cast<GLint>( _pDevice->_height );
@@ -79,8 +80,9 @@ namespace sw
             return;
         }
 
-        const OpenGLRHIDevice::OpenGLTextureRecord* pSrcRecord = _pDevice->resolveTexture( src );
-        if ( pSrcRecord == nullptr || pSrcRecord->_fbo == 0 || pSrcRecord->_bDepthStencil != SW_FALSE )
+        const OpenGLRHIDevice::OpenGLTextureRecord* pSrcRecord            = _pDevice->resolveTexture( src );
+        const bool                                  bInvalidSourceTexture = pSrcRecord == nullptr || pSrcRecord->_fbo == 0 || pSrcRecord->_bDepthStencil != SW_FALSE;
+        if ( bInvalidSourceTexture )
             return;
 
         GLuint dstFbo{ 0 };
@@ -88,8 +90,9 @@ namespace sw
         uint32 dstH = _pDevice->_height;
         if ( dst != 0 )
         {
-            const OpenGLRHIDevice::OpenGLTextureRecord* pDstRecord = _pDevice->resolveTexture( dst );
-            if ( pDstRecord == nullptr || pDstRecord->_fbo == 0 || pDstRecord->_bDepthStencil != SW_FALSE )
+            const OpenGLRHIDevice::OpenGLTextureRecord* pDstRecord                = _pDevice->resolveTexture( dst );
+            const bool                                  bInvalidDestinationRecord = pDstRecord == nullptr || pDstRecord->_fbo == 0 || pDstRecord->_bDepthStencil != SW_FALSE;
+            if ( bInvalidDestinationRecord )
                 return;
             dstFbo = pDstRecord->_fbo;
             dstW   = pDstRecord->_width;
@@ -188,21 +191,24 @@ namespace sw
             colorHandles[attachmentIndex] = beginInfo._arrColorTarget[attachmentIndex];
         }
 
-        bool bDepthOnly = ( bBindColor == false );
-        if ( bDepthOnly == false && colorCount == 1 && colorHandles[0] != 0 )
+        bool       bDepthOnly         = ( bBindColor == false );
+        const bool bSingleColorTarget = bDepthOnly == false && colorCount == 1 && colorHandles[0] != 0;
+        if ( bSingleColorTarget )
         {
             const OpenGLRHIDevice::OpenGLTextureRecord* pColorRecord = _pDevice->resolveTexture( colorHandles[0] );
             if ( pColorRecord != nullptr && pColorRecord->_bDepthStencil != SW_FALSE )
                 bDepthOnly = true;
         }
 
-        GLuint fbo{ 0 };
-        if ( bBindColor && bDepthOnly == false && colorCount > 0 && colorHandles[0] != 0 )
+        GLuint     fbo{ 0 };
+        const bool bUseColorComposite = bBindColor && bDepthOnly == false && colorCount > 0 && colorHandles[0] != 0;
+        if ( bUseColorComposite )
             fbo = _pDevice->ensureCompositeFboMrt( colorHandles, beginInfo._arrColorTargetSlice, colorCount, beginInfo._depthTarget, beginInfo._depthTargetSlice );
         else if ( bBindColor == false && bHasDepth )
             fbo = _pDevice->ensureCompositeFboMrt( nullptr, nullptr, 0, beginInfo._depthTarget, beginInfo._depthTargetSlice );
 
-        if ( fbo == 0 && colorCount == 1 && colorHandles[0] != 0 )
+        const bool bNeedsSingleColorFallback = fbo == 0 && colorCount == 1 && colorHandles[0] != 0;
+        if ( bNeedsSingleColorFallback )
         {
             const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( colorHandles[0] );
             if ( pRecord != nullptr )
@@ -443,8 +449,9 @@ namespace sw
     {
         // 그래픽스 bindConstantBuffer 와 같은 근거다. 명시 [[vk::binding]] 이 있으면 -fvk-b-shift 는 적용되지
         // 않으므로 b# 는 SPIR-V binding # 그대로다(gpucull 의 CullParams b0 = binding 0).
-        if ( _pDevice->_bInitialized == SW_FALSE || constantBufferIndex == kInvalidDescriptorIndex ||
-             constantBufferIndex >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
+        const bool bInvalidConstantBufferIndex = _pDevice->_bInitialized == SW_FALSE || constantBufferIndex == kInvalidDescriptorIndex ||
+                                                 constantBufferIndex >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() );
+        if ( bInvalidConstantBufferIndex )
             return;
         const GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[constantBufferIndex]._buffer );
         if ( ubo != 0 )
@@ -454,8 +461,9 @@ namespace sw
     void OpenGLRHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
         // HLSL t# 는 시프트 없이 그대로 GL SSBO 바인딩 # 에 매핑된다(gpucull 의 g_Instances 등).
-        if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex ||
-             index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
+        const bool bInvalidBufferIndex = _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex ||
+                                         index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() );
+        if ( bInvalidBufferIndex )
             return;
         const GLuint ssbo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[index]._buffer );
         if ( ssbo != 0 )
@@ -537,7 +545,8 @@ namespace sw
 
     void OpenGLRHICommandContext::drawArrays( uint32 vertexCount, uint32 instanceCount, uint32 startVertex )
     {
-        if ( _pDevice->_bInitialized == SW_FALSE || vertexCount == 0 || instanceCount == 0 )
+        const bool bNothingToDraw = _pDevice->_bInitialized == SW_FALSE || vertexCount == 0 || instanceCount == 0;
+        if ( bNothingToDraw )
             return;
 
         GLuint program{ 0 };
@@ -603,8 +612,9 @@ namespace sw
         // 주의: 엔진이 16+# 에 걸면 셰이더가 PassCB 를 못 읽어 g_ViewProj 가 0 이 되고, 드로우도 GL 에러도
         // 정상인 채로 메시가 하나도 그려지지 않는다.
         // 확인 방법: 쿠킹된 .spv 의 OpDecorate 를 읽으면 `PassCB DescriptorSet 0 Binding 0` 이 그대로 보인다.
-        if ( _pDevice->_bInitialized == SW_FALSE || constantBufferIndex == kInvalidDescriptorIndex ||
-             constantBufferIndex >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
+        const bool bInvalidComputeConstantBufferIndex = _pDevice->_bInitialized == SW_FALSE || constantBufferIndex == kInvalidDescriptorIndex ||
+                                                        constantBufferIndex >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() );
+        if ( bInvalidComputeConstantBufferIndex )
             return;
         const GLuint ubo = _pDevice->resolveGlBuffer( _pDevice->_listRegisteredBindless[constantBufferIndex]._buffer );
         if ( ubo != 0 )
@@ -689,7 +699,8 @@ namespace sw
 
     void OpenGLRHICommandContext::setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues )
     {
-        if ( _pDevice->_bInitialized == SW_FALSE || num32BitValues == 0 || pData == nullptr )
+        const bool bInvalidRootConstants = _pDevice->_bInitialized == SW_FALSE || num32BitValues == 0 || pData == nullptr;
+        if ( bInvalidRootConstants )
             return;
         if ( destOffsetIn32BitValues >= shaderslot::kRootConstantDwords )
             return;
@@ -718,7 +729,8 @@ namespace sw
     void OpenGLRHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount,
                                                 RHIBufferHandle countBuffer, uint32 countBufferOffset )
     {
-        if ( _pDevice->_bInitialized == SW_FALSE || argumentBuffer == 0 || drawCount == 0 )
+        const bool bNothingToDrawIndirect = _pDevice->_bInitialized == SW_FALSE || argumentBuffer == 0 || drawCount == 0;
+        if ( bNothingToDrawIndirect )
             return;
 
         GLuint program{ 0 };
@@ -732,7 +744,8 @@ namespace sw
         const GLuint buf = _pDevice->resolveGlBuffer( argumentBuffer );
         if ( vbo == 0 && _pState->_boundMeshVb != 0 )
             RHIDrawDiagnostics::reportDestroyedVertexBuffer( "OpenGL", _pState->_boundMeshVb );
-        if ( vbo == 0 || _pDevice->_meshVao == 0 || buf == 0 )
+        const bool bMissingMeshBuffers = vbo == 0 || _pDevice->_meshVao == 0 || buf == 0;
+        if ( bMissingMeshBuffers )
             return;
 
         bindMeshVaoAttribs( vbo );

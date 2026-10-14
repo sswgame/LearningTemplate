@@ -361,7 +361,8 @@ namespace sw
             static string transcodeBinaryToText( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo, const SerializeContext& context,
                                                  SerializeTextFunc&& serializeText )
             {
-                if ( pData == nullptr || dataSize == 0 || typeInfo._size == 0 )
+                const bool bEmptyTranscodeInput = pData == nullptr || dataSize == 0 || typeInfo._size == 0;
+                if ( bEmptyTranscodeInput )
                     return {};
 
                 ScopedScratchInstance scratch( typeInfo );
@@ -510,10 +511,11 @@ namespace sw
             return typeName;
 
         // 없으면 리플렉션이 아는 원본 이름(`_name`)으로 한 번 더 물어본다. Alias 나 옛 이름으로 들어온 경우다.
-        const TypeRegistry& registry  = context.getTypeRegistry();
-        const TypeInfo*     pTypeInfo = registry.findType( typeName );
-        if ( pTypeInfo != nullptr && pTypeInfo->_name.empty() == false &&
-             ( context.findBinaryWriter( pTypeInfo->_name ) != nullptr || context.findTextWriter( pTypeInfo->_name ) != nullptr ) )
+        const TypeRegistry& registry         = context.getTypeRegistry();
+        const TypeInfo*     pTypeInfo        = registry.findType( typeName );
+        const bool          bHasCustomWriter = pTypeInfo != nullptr && pTypeInfo->_name.empty() == false &&
+                                      ( context.findBinaryWriter( pTypeInfo->_name ) != nullptr || context.findTextWriter( pTypeInfo->_name ) != nullptr );
+        if ( bHasCustomWriter )
             return pTypeInfo->_name;
 
         return typeName;
@@ -693,8 +695,9 @@ namespace sw
         const EnumInfo* pEnumInfo = context.getTypeRegistry().findEnum( typeName );
         if ( pEnumInfo != nullptr )
         {
-            string_view flagsText = valStr;
-            if ( flagsText.size() >= 2 && flagsText.front() == '"' && flagsText.back() == '"' )
+            string_view flagsText    = valStr;
+            const bool  bQuotedFlags = flagsText.size() >= 2 && flagsText.front() == '"' && flagsText.back() == '"';
+            if ( bQuotedFlags )
                 flagsText = flagsText.substr( 1, flagsText.size() - 2 );
             // 모르는 이름이면 쓰지 않고 실패를 반환한다(값은 그대로이며 대개 멤버 초기값이다). 읽는 쪽이 orphan 으로 남기거나 실패로 알린다.
             int64 parsedValue{ 0 };
@@ -712,8 +715,9 @@ namespace sw
         {
             if ( pStructInfo->isPrimitive() == false )
             {
-                string_view sv = StringUtil::trim( valStr );
-                if ( sv.size() >= 2 && sv.front() == '"' && sv.back() == '"' )
+                string_view sv            = StringUtil::trim( valStr );
+                const bool  bQuotedStruct = sv.size() >= 2 && sv.front() == '"' && sv.back() == '"';
+                if ( bQuotedStruct )
                 {
                     const string unescaped = JSONDocument::unescapeString( sv.substr( 1, sv.size() - 2 ) );
                     return JSONSerializer::deserialize( pValPtr, *pStructInfo, unescaped, context );

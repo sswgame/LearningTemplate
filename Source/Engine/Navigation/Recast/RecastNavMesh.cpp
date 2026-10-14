@@ -214,7 +214,8 @@ namespace sw
     void RecastNavMesh::collectTilesOverlapping( const AABB& bounds, vector<int2>& outListTile ) const
     {
         outListTile.clear();
-        if ( _pNavMesh == nullptr || _grid._tileWorldSize <= 0.0f || bounds.isValid() == false )
+        const bool bNothingToQuery = _pNavMesh == nullptr || _grid._tileWorldSize <= 0.0f || bounds.isValid() == false;
+        if ( bNothingToQuery )
             return;
         // 베이크 테두리(몸 반지름 + 3 셀)만큼 넓힌다. 이웃 타일의 기하가 이 타일 가장자리의 깎기를 바꾸기 때문이다.
         const float32 border = ( MathUtil::ceil( _agentType._radius / _agentType._cellSize ) + 3.0f ) * _agentType._cellSize;
@@ -531,8 +532,9 @@ namespace sw
         const dtNavMesh* const pConst = _pNavMesh;
         for ( int32 tileIndex = 0; tileIndex < pConst->getMaxTiles(); ++tileIndex )
         {
-            const dtMeshTile* pTile = pConst->getTile( tileIndex );
-            if ( pTile != nullptr && pTile->header != nullptr && pTile->header->offMeshConCount > 0 )
+            const dtMeshTile* pTile            = pConst->getTile( tileIndex );
+            const bool        bHasOffMeshLinks = pTile != nullptr && pTile->header != nullptr && pTile->header->offMeshConCount > 0;
+            if ( bHasOffMeshLinks )
                 applyLinkFlags( pTile->header->x, pTile->header->y );
         }
     }
@@ -551,8 +553,9 @@ namespace sw
         {
             for ( int32 tileX = 0; tileX < _grid._tileCountX; ++tileX )
             {
-                const dtMeshTile* pTile = _pNavMesh->getTileAt( tileX, tileZ, 0 );
-                if ( pTile == nullptr || pTile->header == nullptr || pTile->data == nullptr )
+                const dtMeshTile* pTile            = _pNavMesh->getTileAt( tileX, tileZ, 0 );
+                const bool        bTileDataMissing = pTile == nullptr || pTile->header == nullptr || pTile->data == nullptr;
+                if ( bTileDataMissing )
                     continue;
                 NavTileData tile;
                 tile._tileX = tileX;

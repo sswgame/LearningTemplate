@@ -41,7 +41,8 @@ namespace sw
 
     void OpenGLRHIDevice::writeTimestampSlot( uint32 slotIndex )
     {
-        if ( _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE || slotIndex >= constant::kMaxGPUTimestampSlot )
+        const bool bCannotWriteTimestamp = _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE || slotIndex >= constant::kMaxGPUTimestampSlot;
+        if ( bCannotWriteTimestamp )
             return;
 
         // glQueryCounter 는 Begin/End 쌍이 아니다. 한 번 부르면 "여기까지 GPU 가 끝낸 시각" 이 찍힌다.
@@ -54,8 +55,9 @@ namespace sw
         if ( _bTimestampEnabled == SW_FALSE || _bTimestampReady != SW_FALSE )
             return;
         // GL 3.3 코어이지만 로더가 못 채웠을 수 있다. 없으면 이 백엔드는 조용히 보고하지 않는다.
-        if ( glGenQueries == nullptr || glQueryCounter == nullptr || glGetQueryObjectui64v == nullptr ||
-             glGetQueryObjectiv == nullptr )
+        const bool bQueryFunctionsMissing = glGenQueries == nullptr || glQueryCounter == nullptr || glGetQueryObjectui64v == nullptr ||
+                                            glGetQueryObjectiv == nullptr;
+        if ( bQueryFunctionsMissing )
             return;
 
         constexpr uint32 kQueryCount = constant::kMaxGPUTimestampSlot * constant::kMaxFrameCountInFlight;
@@ -68,8 +70,9 @@ namespace sw
     void OpenGLRHIDevice::collectTimestampsForSlot()
     {
         _timestampFrame._listMicro.clear();
-        const uint32 writtenMask = _arrTimestampMask[_timestampFrameIndex];
-        if ( _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE || writtenMask == 0 )
+        const uint32 writtenMask         = _arrTimestampMask[_timestampFrameIndex];
+        const bool   bNoTimestampsToRead = _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE || writtenMask == 0;
+        if ( bNoTimestampsToRead )
             return;
 
         const uint32 base = _timestampFrameIndex * constant::kMaxGPUTimestampSlot;

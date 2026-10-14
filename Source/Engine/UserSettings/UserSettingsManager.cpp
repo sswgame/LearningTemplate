@@ -421,7 +421,8 @@ namespace sw
             return UserSettingSetResult::Rejected;
 
         // 공급자 열거형은 지금 공급자가 주는 선택지와 대조한다(공급자가 아직 비었으면, 곧 언어 팩을 읽기 전이면 형식만 본다).
-        if ( def._type == UserSettingType::Enum && def._optionProvider.empty() == false && normalized.empty() == false )
+        const bool bCheckProviderOption = def._type == UserSettingType::Enum && def._optionProvider.empty() == false && normalized.empty() == false;
+        if ( bCheckProviderOption )
         {
             vector<UserSettingOption> listOption;
             collectOptionsOf( def, listOption );
@@ -807,8 +808,9 @@ namespace sw
                     return false;
                 // 기동이나 다시 만들 때의 적용은 명령줄로 준 변수를 덮지 않는다. 실행 한 번의 값(명령줄)이 저장된 값(사용자 설정)을 이긴다(화면 설정과 같은 순서).
                 // 메뉴에서 바꾼 값(bStartup 이 false)은 덮는다. 플레이어가 지금 고른 값이기 때문이다.
-                const CommandLineManager* pCommandLineManager = getTargets()._pCommandLineManager;
-                if ( bStartup && pCommandLineManager != nullptr && pCommandLineManager->isGlobalVariableProvided( def._targetName.view() ) )
+                const CommandLineManager* pCommandLineManager   = getTargets()._pCommandLineManager;
+                const bool                bKeepCommandLineValue = bStartup && pCommandLineManager != nullptr && pCommandLineManager->isGlobalVariableProvided( def._targetName.view() );
+                if ( bKeepCommandLineValue )
                     return true;
                 if ( def._type != UserSettingType::Enum )
                     return pVariable->setValueFromString( value );

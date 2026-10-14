@@ -212,8 +212,9 @@ namespace sw
                 bChanged       = true;
             }
             // 머티리얼 셰이더를 쓰는 패스만 경로를 교체한다(그림자와 뎁스는 자기 지오메트리 셰이더가 기준이다).
-            if ( FrameRendererUtil::usesMaterialShader( passType ) && pPermutation->_shaderPath.empty() == false &&
-                 pPermutation->_shaderPath != desc._vertexShaderPath )
+            const bool bReplaceShaderPath = FrameRendererUtil::usesMaterialShader( passType ) && pPermutation->_shaderPath.empty() == false &&
+                                            pPermutation->_shaderPath != desc._vertexShaderPath;
+            if ( bReplaceShaderPath )
             {
                 desc._vertexShaderPath = pPermutation->_shaderPath;
                 desc._pixelShaderPath  = pPermutation->_shaderPath;
@@ -391,7 +392,8 @@ namespace sw
         // (해시 0은 퍼뮤테이션 없음을 뜻한다. 실제 퍼뮤테이션 해시가 0이 되더라도 같은 키로
         //  떨어지는데, 그 둘이 만드는 디스크립터는 어차피 같으므로 해롭지 않다.)
         const bool bReverseCulling = ( batch._bReverseCulling != SW_FALSE );
-        if ( permutationHash == 0 && viewMode == RenderViewMode::Lit && bReverseCulling == false )
+        const bool bDefaultPassPSO = permutationHash == 0 && viewMode == RenderViewMode::Lit && bReverseCulling == false;
+        if ( bDefaultPassPSO )
             return passPSO;
 
         // 찾지 못하면 패스 PSO 로 그린다. ensureMaterialPSOs 가 기록 전에 채우므로 정상 경로에서는 항상 있다.

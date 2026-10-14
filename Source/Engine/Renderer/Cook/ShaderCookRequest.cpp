@@ -42,10 +42,11 @@ namespace sw
 
                 for ( const ShaderCookRequest& existing : outListRequest )
                 {
-                    if ( existing._stage == stage &&
-                         existing._permutationHash == permutationHash &&
-                         existing._entryPoint == entryPoint &&
-                         existing._shaderPath == normPath )
+                    const bool bDuplicateRequest = existing._stage == stage &&
+                                                   existing._permutationHash == permutationHash &&
+                                                   existing._entryPoint == entryPoint &&
+                                                   existing._shaderPath == normPath;
+                    if ( bDuplicateRequest )
                         return;
                 }
 

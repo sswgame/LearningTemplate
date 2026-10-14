@@ -88,9 +88,10 @@ namespace sw
     uint32 GPUMaterialRegistry::assignMaterialElement( const shared_ptr<Material>& material, const shared_ptr<MaterialInstance>& instance, uint32 groupIndex,
                                                        GPUSceneSnapshot& inoutSnapshot )
     {
-        Material* const         pMaterial = material.get();
-        MaterialInstance* const pInstance = instance.get();
-        if ( pMaterial == nullptr || groupIndex >= inoutSnapshot._listMaterialGroup.size() || groupIndex >= _listMaterialGroupState.size() )
+        Material* const         pMaterial             = material.get();
+        MaterialInstance* const pInstance             = instance.get();
+        const bool              bInvalidMaterialGroup = pMaterial == nullptr || groupIndex >= inoutSnapshot._listMaterialGroup.size() || groupIndex >= _listMaterialGroupState.size();
+        if ( bInvalidMaterialGroup )
             return 0;
         GPUMaterialGroup&           group = inoutSnapshot._listMaterialGroup[groupIndex];
         MaterialGroupState&         state = _listMaterialGroupState[groupIndex];

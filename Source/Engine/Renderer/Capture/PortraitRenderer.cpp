@@ -106,7 +106,8 @@ namespace sw
     bool PortraitRenderer::renderPrefab( const PortraitRequest& request, vector<uint8>& outRgbaBytes )
     {
         outRgbaBytes.clear();
-        if ( _renderer == nullptr || _pDevice == nullptr || request._prefabPath.empty() || engine::areEngineServicesBound() == false )
+        const bool bCannotRender = _renderer == nullptr || _pDevice == nullptr || request._prefabPath.empty() || engine::areEngineServicesBound() == false;
+        if ( bCannotRender )
             return false;
 
         // 스튜디오 — 씬 매니저에 등록하지 않는 씬이라 틱하지 않고 게임 화면에 나오지 않는다.

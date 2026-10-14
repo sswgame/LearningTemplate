@@ -122,7 +122,8 @@ namespace sw
 
     void NavMeshGeometry::addTriangles( const float3* pPoint, uint32 pointCount, const uint32* pIndex, uint32 indexCount, const float4x4& world, uint8 area )
     {
-        if ( pPoint == nullptr || pIndex == nullptr || pointCount == 0 || indexCount < 3 )
+        const bool bInvalidTriangleInput = pPoint == nullptr || pIndex == nullptr || pointCount == 0 || indexCount < 3;
+        if ( bInvalidTriangleInput )
             return;
         const uint32 base = static_cast<uint32>( _listVertex.size() );
         _listVertex.reserve( _listVertex.size() + pointCount );
@@ -135,10 +136,11 @@ namespace sw
         const uint32 triangleCount = indexCount / 3;
         for ( uint32 triangleIndex = 0; triangleIndex < triangleCount; ++triangleIndex )
         {
-            const uint32 a = pIndex[triangleIndex * 3 + 0];
-            const uint32 b = pIndex[triangleIndex * 3 + 1];
-            const uint32 c = pIndex[triangleIndex * 3 + 2];
-            if ( a >= pointCount || b >= pointCount || c >= pointCount )
+            const uint32 a                = pIndex[triangleIndex * 3 + 0];
+            const uint32 b                = pIndex[triangleIndex * 3 + 1];
+            const uint32 c                = pIndex[triangleIndex * 3 + 2];
+            const bool   bIndexOutOfRange = a >= pointCount || b >= pointCount || c >= pointCount;
+            if ( bIndexOutOfRange )
                 continue;
             _listIndex.push_back( base + a );
             _listIndex.push_back( base + b );
@@ -149,7 +151,8 @@ namespace sw
 
     void NavMeshGeometry::addTriangleList( const void* pFirstPosition, uint32 vertexCount, uint32 stride, const float4x4& world, uint8 area )
     {
-        if ( pFirstPosition == nullptr || vertexCount < 3 || stride < sizeof( float3 ) )
+        const bool bInvalidTriangleList = pFirstPosition == nullptr || vertexCount < 3 || stride < sizeof( float3 );
+        if ( bInvalidTriangleList )
             return;
         const uint32 base   = static_cast<uint32>( _listVertex.size() );
         const uint8* pBytes = static_cast<const uint8*>( pFirstPosition );
@@ -247,7 +250,8 @@ namespace sw
 
     void NavMeshGeometry::addHeightfield( const float32* pHeight, uint32 resolution, const float3& origin, const float2& cellSize, const uint8* pHoleCell, uint8 area )
     {
-        if ( pHeight == nullptr || resolution < 2 || cellSize._x <= 0.0f || cellSize._y <= 0.0f )
+        const bool bInvalidHeightfield = pHeight == nullptr || resolution < 2 || cellSize._x <= 0.0f || cellSize._y <= 0.0f;
+        if ( bInvalidHeightfield )
             return;
         const uint32 base       = static_cast<uint32>( _listVertex.size() );
         const uint32 cellPerRow = resolution - 1;

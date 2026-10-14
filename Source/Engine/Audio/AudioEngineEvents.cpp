@@ -159,7 +159,8 @@ namespace sw
 
         // 쿨다운은 오디오 시각(렌더한 프레임)으로 측정한다.
         const uint64 cooldownFrames = static_cast<uint64>( event._cooldownSeconds * static_cast<float32>( audio::kSampleRate ) );
-        if ( cooldownFrames > 0 && state._bPostedOnce && _renderedFrameCount - state._lastPostFrame < cooldownFrames )
+        const bool   bInCooldown    = cooldownFrames > 0 && state._bPostedOnce && _renderedFrameCount - state._lastPostFrame < cooldownFrames;
+        if ( bInCooldown )
         {
             ++_droppedEventCount;
             return;
@@ -172,8 +173,9 @@ namespace sw
             int32  victimIndex = -1;
             for ( size_t instanceIndex = 0; instanceIndex < _listInstance.size(); ++instanceIndex )
             {
-                const EventInstance& instance = _listInstance[instanceIndex];
-                if ( instance._bInUse == false || instance._bStopping || instance._pDesc == nullptr || instance._pDesc->_name != event._name )
+                const EventInstance& instance                = _listInstance[instanceIndex];
+                const bool           bNotLiveInstanceOfEvent = instance._bInUse == false || instance._bStopping || instance._pDesc == nullptr || instance._pDesc->_name != event._name;
+                if ( bNotLiveInstanceOfEvent )
                     continue;
                 ++liveCount;
                 if ( victimIndex < 0 )
@@ -400,7 +402,8 @@ namespace sw
                 snapshot._intensity   = bRising ? MathUtil::min( snapshot._target, snapshot._intensity + move )
                                                 : MathUtil::max( snapshot._target, snapshot._intensity - move );
             }
-            if ( snapshot._intensity <= 0.0f && snapshot._target <= 0.0f && snapshot._bDriven == false )
+            const bool bSnapshotFinished = snapshot._intensity <= 0.0f && snapshot._target <= 0.0f && snapshot._bDriven == false;
+            if ( bSnapshotFinished )
             {
                 _listSnapshot.erase( _listSnapshot.begin() + static_cast<ptrdiff_t>( snapshotIndex ) );
                 continue;

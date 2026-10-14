@@ -149,7 +149,8 @@ namespace sw
 
     void MaterialUtil::appendAttribute( XMLNode parent, const utf8* pName, string_view value )
     {
-        if ( parent.isValid() == false || pName == nullptr || value.empty() )
+        const bool bNothingToAppend = parent.isValid() == false || pName == nullptr || value.empty();
+        if ( bNothingToAppend )
             return;
         parent.appendAttribute( pName, value );
     }

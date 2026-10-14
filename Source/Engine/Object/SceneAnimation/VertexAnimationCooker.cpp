@@ -70,9 +70,10 @@ namespace sw
     {
         if ( AnimationJSONUtil::hasOnlyKnownKeys( root, { "mesh", "skeleton", "clip_folder", "clips" }, sourceLabel ) == false )
             return false;
-        const JSONValue clips = root.get( "clips" );
-        if ( root.get( "mesh" ).isString() == false || root.get( "skeleton" ).isString() == false || root.get( "clip_folder" ).isString() == false ||
-             clips.isArray() == false || clips.size() == 0 )
+        const JSONValue clips                 = root.get( "clips" );
+        const bool      bInvalidAnimationList = root.get( "mesh" ).isString() == false || root.get( "skeleton" ).isString() == false || root.get( "clip_folder" ).isString() == false ||
+                                           clips.isArray() == false || clips.size() == 0;
+        if ( bInvalidAnimationList )
         {
             SW_LOG_ERROR( "Vertex animation list '%#' needs mesh, skeleton, clip_folder and a non-empty clips array", sourceLabel );
             return false;

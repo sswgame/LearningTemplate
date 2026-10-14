@@ -33,10 +33,11 @@ namespace sw
 {
     PhysicsVehicleHandle JoltPhysicsScene::createWheeledVehicle( PhysicsBodyHandle chassis, const PhysicsWheeledVehicleDesc& desc )
     {
-        using Internal                   = JoltPhysicsSceneVehicleInternal;
-        const BodyRecord* pChassis       = findBody( chassis );
-        const bool        bHasDrivenAxle = desc._listDrivenAxle.size() >= 2 && ( desc._listDrivenAxle.size() % 2 ) == 0;
-        if ( pChassis == nullptr || pChassis->_type != PhysicsBodyType::Dynamic || desc._listWheel.empty() || bHasDrivenAxle == false )
+        using Internal                               = JoltPhysicsSceneVehicleInternal;
+        const BodyRecord* pChassis                   = findBody( chassis );
+        const bool        bHasDrivenAxle             = desc._listDrivenAxle.size() >= 2 && ( desc._listDrivenAxle.size() % 2 ) == 0;
+        const bool        bInvalidVehicleDescription = pChassis == nullptr || pChassis->_type != PhysicsBodyType::Dynamic || desc._listWheel.empty() || bHasDrivenAxle == false;
+        if ( bInvalidVehicleDescription )
         {
             SW_LOG_ERROR( "Wheeled vehicle needs a dynamic chassis body, wheels and driven axle pairs" );
             return PhysicsVehicleHandle{};

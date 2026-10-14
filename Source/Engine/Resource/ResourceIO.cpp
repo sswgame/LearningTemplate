@@ -99,7 +99,8 @@ namespace sw
 
             // 3. 낱개 경로를 **못 푼 경우에만** 상대 경로 그대로 마지막으로 본다.
             //    풀렸는데 없었다면 위에서 이미 확인했으므로 다시 묻지 않는다.
-            if ( bLooseFirst && loosePath.empty() && FileUtil::isRegularFile( relativePath ) )
+            const bool bLooseFallback = bLooseFirst && loosePath.empty() && FileUtil::isRegularFile( relativePath );
+            if ( bLooseFallback )
             {
                 if ( pOutAbsPath != nullptr )
                     *pOutAbsPath = string( relativePath );

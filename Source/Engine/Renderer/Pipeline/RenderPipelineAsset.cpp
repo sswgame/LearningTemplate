@@ -263,9 +263,10 @@ namespace sw
         //      노멀이 없어 Lighting · SSAO 가 읽을 것이 없다.
         for ( const RenderGraphPassDesc& pass : _desc._listPass )
         {
-            const uint32 expectedColorCount = getRenderPassTypeInfo( RenderPassType::GBuffer )._colorTargetCount;
-            if ( pass._resolvedType != RenderPassType::GBuffer || pass._listResolvedColorOutput.empty() ||
-                 pass._listResolvedColorOutput.size() == expectedColorCount )
+            const uint32 expectedColorCount      = getRenderPassTypeInfo( RenderPassType::GBuffer )._colorTargetCount;
+            const bool   bSkipGBufferOutputCheck = pass._resolvedType != RenderPassType::GBuffer || pass._listResolvedColorOutput.empty() ||
+                                                 pass._listResolvedColorOutput.size() == expectedColorCount;
+            if ( bSkipGBufferOutputCheck )
                 continue;
             SW_LOG_ERROR( "[%#] pass '%#'(%#): 컬러 출력이 %#개입니다 — G버퍼는 알베도 · 노멀 %#개를 한 MRT 패스로 씁니다",
                           sourcePath, pass._name, pass._type, static_cast<uint32>( pass._listResolvedColorOutput.size() ), expectedColorCount );

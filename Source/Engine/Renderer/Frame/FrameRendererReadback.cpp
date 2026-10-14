@@ -80,12 +80,14 @@ namespace sw
 
     bool FrameRenderer::dumpTextureToFile( RHITextureHandle texture, RHIFormat format, string_view outFilePath )
     {
-        if ( _pDevice == nullptr || texture == 0 || outFilePath.empty() )
+        const bool bInvalidDumpArguments = _pDevice == nullptr || texture == 0 || outFilePath.empty();
+        if ( bInvalidDumpArguments )
             return false;
 
         vector<uint8>     bytes;
         RHITextureMipSpan layout{};
-        if ( _pDevice->getResourceFactory()->readbackTexture2D( texture, 0, 0, bytes, layout ) == false || layout._width == 0 || layout._height == 0 )
+        const bool        bReadbackFailed = _pDevice->getResourceFactory()->readbackTexture2D( texture, 0, 0, bytes, layout ) == false || layout._width == 0 || layout._height == 0;
+        if ( bReadbackFailed )
         {
             SW_LOG_ERROR( "dumpTextureToFile: readbackTexture2D failed (%#).", string( outFilePath ).c_str() );
             return false;

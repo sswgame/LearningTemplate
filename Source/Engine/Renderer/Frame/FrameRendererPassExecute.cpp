@@ -523,10 +523,11 @@ namespace sw
                     const bool bSkipPost = activeView._settings.usesPostProcess() == false;
                     if ( bSkipPost )
                     {
-                        const RHITextureHandle target      = findTransient( taaTarget.view() );
-                        IRHIResourceFactory*   pFactory    = _pDevice->getResourceFactory();
-                        const bool             bSameFormat = source != 0 && target != 0 && pFactory->getTextureFormat( source ) == pFactory->getTextureFormat( target );
-                        if ( bSameFormat || source == 0 || target == 0 || source == target )
+                        const RHITextureHandle target              = findTransient( taaTarget.view() );
+                        IRHIResourceFactory*   pFactory            = _pDevice->getResourceFactory();
+                        const bool             bSameFormat         = source != 0 && target != 0 && pFactory->getTextureFormat( source ) == pFactory->getTextureFormat( target );
+                        const bool             bNoShaderPassNeeded = bSameFormat || source == 0 || target == 0 || source == target;
+                        if ( bNoShaderPassNeeded )
                         {
                             if ( bSameFormat && source != target )
                                 context._pCmd->blitTexture( source, target );
@@ -551,8 +552,9 @@ namespace sw
                         context._pCmd->endRenderPass();
                     }
 
-                    const RHITextureHandle taaOut = findTransient( taaTarget.view() );
-                    if ( taaOut != 0 && activeView._taaHistory != 0 && bSkipPost == false )
+                    const RHITextureHandle taaOut              = findTransient( taaTarget.view() );
+                    const bool             bTaaHistoryWritable = taaOut != 0 && activeView._taaHistory != 0 && bSkipPost == false;
+                    if ( bTaaHistoryWritable )
                         context._pCmd->blitTexture( taaOut, activeView._taaHistory );
                     break;
                 }
@@ -706,7 +708,8 @@ namespace sw
     bool FrameRenderer::beginColorPassMrt( FramePassContext& context, const string_view* pColorNames, const float4* pTargetClearColor, const RHIRenderPassLoadOp* pColorLoad,
                                            uint32 colorCount, string_view depthName, RHIRenderPassLoadOp depthLoad )
     {
-        if ( _pDevice == nullptr || context._pCmd == nullptr || pColorNames == nullptr || colorCount == 0 )
+        const bool bInvalidPassTargets = _pDevice == nullptr || context._pCmd == nullptr || pColorNames == nullptr || colorCount == 0;
+        if ( bInvalidPassTargets )
             return false;
 
         RHIRenderPassBeginInfo beginInfo{};
@@ -813,7 +816,8 @@ namespace sw
             context._pCmd->prepareTextureForShaderRead( attachment._texture );
         context._resourceRegistry.registerTexture( canonicalName, attachment._texture, attachment._srv );
         // 원본을 비켜 읽는 효과(블룸)는 그 원본의 텍셀 크기로 비켜야 한다. 반해상도 첨부면 프레임 텍셀의 두 배다. context 는 패스마다 시드의 사본이라 다음 패스로 새지 않는다.
-        if ( canonicalName == attachmentNames()._sourceColor && attachment._width > 0 && attachment._height > 0 )
+        const bool bSourceColorAttachment = canonicalName == attachmentNames()._sourceColor && attachment._width > 0 && attachment._height > 0;
+        if ( bSourceColorAttachment )
         {
             const float32 width  = static_cast<float32>( attachment._width );
             const float32 height = static_cast<float32>( attachment._height );
@@ -877,7 +881,8 @@ namespace sw
         // 텍스처에 그린다. 백버퍼는 핸들이 없어 읽을 수 없고, 후처리와 UI 가 끝난 최종 화면을 볼 방법이 그것뿐이다. 캡처는 주 출력만 받는다.
         const ViewTarget& activeView = *_pActiveView;
         RHITextureHandle  ownOutput{ 0 };
-        if ( isRenderingExtraView() && activeView._outputKind == RenderViewOutputKind::RenderTexture && activeView._pOutputTexture != nullptr )
+        const bool        bExtraViewOwnOutput = isRenderingExtraView() && activeView._outputKind == RenderViewOutputKind::RenderTexture && activeView._pOutputTexture != nullptr;
+        if ( bExtraViewOwnOutput )
             ownOutput = activeView._pOutputTexture->getHandle();
         else if ( isRenderingExtraView() && activeView._outputKind == RenderViewOutputKind::HostTarget )
             ownOutput = activeView._hostTarget;

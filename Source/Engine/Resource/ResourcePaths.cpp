@@ -42,8 +42,9 @@ namespace sw
                 outRoot.clear();
                 outKeyUnderRoot.clear();
 
-                const string& resourceRoot = ResourcePaths::getRootFolderPath();
-                if ( resourceRoot.empty() || lowerRel.empty() || FileUtil::isAbsolutePath( lowerRel ) )
+                const string& resourceRoot      = ResourcePaths::getRootFolderPath();
+                const bool    bUnresolvablePath = resourceRoot.empty() || lowerRel.empty() || FileUtil::isAbsolutePath( lowerRel );
+                if ( bUnresolvablePath )
                     return false;
 
                 // 1. game/<pack>/... 형식을 쪼갠다
@@ -340,8 +341,9 @@ namespace sw
         {
             id.erase( 0, 2 );
         }
-        if ( id.empty() || id == "." || id == ".." || StringUtil::startsWith( id, "../" ) || id.find( "/../" ) != string::npos ||
-             StringUtil::endsWith( id, "/.." ) )
+        const bool bUnsafeID = id.empty() || id == "." || id == ".." || StringUtil::startsWith( id, "../" ) || id.find( "/../" ) != string::npos ||
+                               StringUtil::endsWith( id, "/.." );
+        if ( bUnsafeID )
             id.clear();
         return id;
     }
@@ -600,9 +602,10 @@ namespace sw
         for ( const string& folder : _s_listHostExcludedFolder )
         {
             // 폴더 조각은 경로 처음이거나 '/' 뒤에서 시작해 '/' 로 끝나야 한다(`shaders/bin` 이 `myshaders/binary` 에 맞지 않게).
-            const size_t position = normalized.find( folder );
-            if ( position != string::npos && ( position == 0 || normalized[position - 1] == '/' ) && position + folder.size() < normalized.size() &&
-                 normalized[position + folder.size()] == '/' )
+            const size_t position            = normalized.find( folder );
+            const bool   bFolderSegmentMatch = position != string::npos && ( position == 0 || normalized[position - 1] == '/' ) && position + folder.size() < normalized.size() &&
+                                             normalized[position + folder.size()] == '/';
+            if ( bFolderSegmentMatch )
                 return true;
         }
         return false;

@@ -97,15 +97,16 @@ namespace sw
     bool RigIKSolver::solveTwoBone( RigPoseBuffer& pose, uint32 rootBone, uint32 midBone, uint32 endBone, const float3& target, const float3* pPole,
                                     const RigSolveSpace& space )
     {
-        const float3  rootPosition = pose.getModelPosition( rootBone );
-        const float3  midPosition  = pose.getModelPosition( midBone );
-        const float3  endPosition  = pose.getModelPosition( endBone );
-        const float32 upperLength  = ( midPosition - rootPosition ).getLength();
-        const float32 lowerLength  = ( endPosition - midPosition ).getLength();
-        const float3  goal         = space.projectPoint( target, rootPosition );
-        const float3  toGoal       = goal - rootPosition;
-        const float32 goalDistance = toGoal.getLength();
-        if ( goalDistance < MathUtil::kEpsilon || upperLength < MathUtil::kEpsilon || lowerLength < MathUtil::kEpsilon )
+        const float3  rootPosition       = pose.getModelPosition( rootBone );
+        const float3  midPosition        = pose.getModelPosition( midBone );
+        const float3  endPosition        = pose.getModelPosition( endBone );
+        const float32 upperLength        = ( midPosition - rootPosition ).getLength();
+        const float32 lowerLength        = ( endPosition - midPosition ).getLength();
+        const float3  goal               = space.projectPoint( target, rootPosition );
+        const float3  toGoal             = goal - rootPosition;
+        const float32 goalDistance       = toGoal.getLength();
+        const bool    bDegenerateIKChain = goalDistance < MathUtil::kEpsilon || upperLength < MathUtil::kEpsilon || lowerLength < MathUtil::kEpsilon;
+        if ( bDegenerateIKChain )
             return false;
 
         const float3  direction = toGoal / goalDistance;

@@ -159,7 +159,8 @@ namespace sw
 
     bool Texture2D::createRenderTarget( IRHIDevice* pDevice, string_view name, uint32 width, uint32 height, RHIFormat format )
     {
-        if ( pDevice == nullptr || name.empty() || width == 0 || height == 0 )
+        const bool bInvalidRenderTargetArguments = pDevice == nullptr || name.empty() || width == 0 || height == 0;
+        if ( bInvalidRenderTargetArguments )
             return false;
         if ( _handle != 0 )
             releaseRHI( pDevice );
@@ -301,7 +302,8 @@ namespace sw
     void Texture2D::releaseRHI( IRHIDevice* pDevice )
     {
         // 남의 디바이스가 죽는 통보라면 내 것이 아니다.
-        if ( pDevice != nullptr && _pDevice != nullptr && _pDevice != pDevice )
+        const bool bForeignDeviceNotice = pDevice != nullptr && _pDevice != nullptr && _pDevice != pDevice;
+        if ( bForeignDeviceNotice )
             return;
 
         if ( pDevice != nullptr )

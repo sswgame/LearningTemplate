@@ -135,7 +135,8 @@ namespace sw
     uint32 CanvasRenderer::drawList( IRHICommandList& cmd, const CanvasDrawList& list, uint32 quadBase, RHIPipelineStateHandle pso, uint32 targetWidth,
                                      uint32 targetHeight, bool bNativeBindless, uint32 colorVisionMode ) const
     {
-        if ( list.isEmpty() || pso == 0 || _quadBuffer.isValid() == false || targetWidth == 0 || targetHeight == 0 )
+        const bool bNothingToDraw = list.isEmpty() || pso == 0 || _quadBuffer.isValid() == false || targetWidth == 0 || targetHeight == 0;
+        if ( bNothingToDraw )
             return 0;
         SW_PROFILE_SCOPE( "RT.Canvas.Draw" );
 
@@ -267,12 +268,13 @@ namespace sw
             Memory::copy( page._bytes.data() + static_cast<size_t>( upload._y + row ) * kPageSize + upload._x, upload._bytes.data() + static_cast<size_t>( row ) * upload._width,
                           upload._width );
         }
+        const bool bPartialRegionDirty = page._bWholePageDirty == SW_FALSE && upload._width > 0 && upload._height > 0;
         if ( upload._bWholePage == SW_TRUE )
         {
             page._bWholePageDirty = SW_TRUE;
             page._listDirty.clear();
         }
-        else if ( page._bWholePageDirty == SW_FALSE && upload._width > 0 && upload._height > 0 )
+        else if ( bPartialRegionDirty )
         {
             page._listDirty.push_back( GlyphAtlasRect{ upload._page, upload._x, upload._y, upload._width, upload._height } );
         }

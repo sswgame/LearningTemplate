@@ -203,7 +203,8 @@ namespace sw
                     readMouseEventPositionInternal( event._lParam, mouseX, mouseY );
                     const uint8 modifierMask = getWin32ModifierMaskInternal();
 
-                    if ( ( GetKeyState( VK_LBUTTON ) & 0x8000 ) == 0 && ( GetKeyState( VK_RBUTTON ) & 0x8000 ) == 0 && ( GetKeyState( VK_MBUTTON ) & 0x8000 ) == 0 )
+                    const bool bNoMouseButtonHeld = ( GetKeyState( VK_LBUTTON ) & 0x8000 ) == 0 && ( GetKeyState( VK_RBUTTON ) & 0x8000 ) == 0 && ( GetKeyState( VK_MBUTTON ) & 0x8000 ) == 0;
+                    if ( bNoMouseButtonHeld )
                         ReleaseCapture();
 
                     if ( onPlatformPointerReleased( btn ) )

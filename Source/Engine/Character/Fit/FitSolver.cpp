@@ -164,7 +164,8 @@ namespace sw
             const FitPartInput& partInput = input._listPart[partIndex];
             FitPartState&       part      = outState._listPart[partIndex];
             part._pInput                  = &partInput;
-            if ( partInput._pGeometry == nullptr || partInput._pFitData == nullptr || partInput._pGeometry->isValid() == false )
+            const bool bInvalidPartInput  = partInput._pGeometry == nullptr || partInput._pFitData == nullptr || partInput._pGeometry->isValid() == false;
+            if ( bInvalidPartInput )
             {
                 outReport._listMessage.push_back( string( "part '" ) + partInput._name.c_str() + "' has no valid geometry or fit data" );
                 bValid = false;

@@ -201,9 +201,10 @@ namespace sw
                 }
                 for ( const FractureLink& link : listLink )
                 {
-                    const uint32 ownerA = listOwner[link._leafA];
-                    const uint32 ownerB = listOwner[link._leafB];
-                    if ( ownerA == 0xFFFFFFFFu || ownerB == 0xFFFFFFFFu || ownerA == ownerB )
+                    const uint32 ownerA          = listOwner[link._leafA];
+                    const uint32 ownerB          = listOwner[link._leafB];
+                    const bool   bSkipLinkOwners = ownerA == 0xFFFFFFFFu || ownerB == 0xFFFFFFFFu || ownerA == ownerB;
+                    if ( bSkipLinkOwners )
                         continue;
                     if ( listGroupOf[ownerA] == listGroupOf[ownerB] )
                         unite( listParent, ownerA, ownerB );
@@ -268,8 +269,9 @@ namespace sw
         };
         if ( _leafCount == 0 || _listNode.size() < _leafCount )
             return fail( "no leaves" );
-        const uint32 root = getRootNode();
-        if ( _listNode[root]._parent != -1 || _listNode[root]._firstLeaf != 0 || _listNode[root]._leafCount != _leafCount )
+        const uint32 root             = getRootNode();
+        const bool   bInvalidRootNode = _listNode[root]._parent != -1 || _listNode[root]._firstLeaf != 0 || _listNode[root]._leafCount != _leafCount;
+        if ( bInvalidRootNode )
             return fail( "root must hold every leaf" );
         for ( uint32 nodeIndex = 0; nodeIndex < static_cast<uint32>( _listNode.size() ); ++nodeIndex )
         {
@@ -300,7 +302,8 @@ namespace sw
         }
         for ( const FractureLink& link : _listLink )
         {
-            if ( link._leafA >= link._leafB || link._leafB >= _leafCount || link._area < 0.0f )
+            const bool bInvalidLink = link._leafA >= link._leafB || link._leafB >= _leafCount || link._area < 0.0f;
+            if ( bInvalidLink )
                 return fail( "bad link" );
         }
         return true;
@@ -335,7 +338,8 @@ namespace sw
         {
             if ( link._leafA == link._leafB )
                 continue;
-            if ( listMerged.empty() == false && listMerged.back()._leafA == link._leafA && listMerged.back()._leafB == link._leafB )
+            const bool bDuplicateLink = listMerged.empty() == false && listMerged.back()._leafA == link._leafA && listMerged.back()._leafB == link._leafB;
+            if ( bDuplicateLink )
                 listMerged.back()._area += link._area;
             else
                 listMerged.push_back( link );

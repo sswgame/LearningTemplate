@@ -82,10 +82,11 @@ namespace sw
     {
         if ( AnimationJSONUtil::hasOnlyKnownKeys( root, { "variations_per_clip", "bucket_keep_seconds", "vertex_animation_frames_per_second" }, sourceLabel ) == false )
             return false;
-        const JSONValue variations = root.get( "variations_per_clip" );
-        const JSONValue keep       = root.get( "bucket_keep_seconds" );
-        const JSONValue frameRate  = root.get( "vertex_animation_frames_per_second" );
-        if ( variations.isNumber() == false || keep.isNumber() == false || frameRate.isNumber() == false || variations.asInt( 0 ) < 1 || frameRate.asFloat() <= 0.0 )
+        const JSONValue variations            = root.get( "variations_per_clip" );
+        const JSONValue keep                  = root.get( "bucket_keep_seconds" );
+        const JSONValue frameRate             = root.get( "vertex_animation_frames_per_second" );
+        const bool      bInvalidCrowdSettings = variations.isNumber() == false || keep.isNumber() == false || frameRate.isNumber() == false || variations.asInt( 0 ) < 1 || frameRate.asFloat() <= 0.0;
+        if ( bInvalidCrowdSettings )
         {
             SW_LOG_ERROR( "Animation crowd settings '%#': variations_per_clip (>= 1), bucket_keep_seconds and vertex_animation_frames_per_second (> 0) are required",
                           sourceLabel );
@@ -177,8 +178,9 @@ namespace sw
     AnimationCrowdBucket* AnimationCrowd::joinBucket( AnimationCrowdBucket* pCurrent, const AnimationSharedPoseRequest& request, const shared_ptr<const Skeleton>& skeleton,
                                                       const shared_ptr<Mesh>& sourceMesh, const shared_ptr<const AnimationClip>& clip )
     {
-        if ( request._pClip == nullptr || skeleton == nullptr || sourceMesh == nullptr || clip == nullptr || clip.get() != request._pClip ||
-             clip->getDuration() <= 0.0f )
+        const bool bInvalidBucketRequest = request._pClip == nullptr || skeleton == nullptr || sourceMesh == nullptr || clip == nullptr || clip.get() != request._pClip ||
+                                           clip->getDuration() <= 0.0f;
+        if ( bInvalidBucketRequest )
             return nullptr;
         AnimationCrowdBucketKey key{};
         key._pSkeleton         = skeleton.get();
@@ -295,7 +297,8 @@ namespace sw
         const uint8  anchor     = bAnchorRootMotion ? SW_TRUE : SW_FALSE;
         for ( const VertexAnimationEntry& entry : _listVertexAnimation )
         {
-            if ( entry._skinDataID == skinDataID && entry._pSkeleton == &skeleton && entry._pClip == &clip && entry._bAnchorRootMotion == anchor )
+            const bool bCachedVertexAnimation = entry._skinDataID == skinDataID && entry._pSkeleton == &skeleton && entry._pClip == &clip && entry._bAnchorRootMotion == anchor;
+            if ( bCachedVertexAnimation )
                 return entry._mesh;
         }
         // 쿠킹본이 있으면(배포본의 팩) 읽고, 없으면 처음 쓸 때 굽는다 — 같은 원본 · 클립의 먼 캐릭터는 이 메시 하나를 나눈다.
@@ -303,13 +306,14 @@ namespace sw
         SW_PROFILE_SCOPE( "GT.Animation.bakeVertexAnimation" );
         shared_ptr<MeshVertexAnimation> animation = make_shared<MeshVertexAnimation>();
         VertexAnimationEntry            entry{};
-        entry._skinDataID        = skinDataID;
-        entry._pSkeleton         = &skeleton;
-        entry._pClip             = &clip;
-        entry._bAnchorRootMotion = anchor;
-        const string cookedPath  = MeshVertexAnimation::makeCookedPath( meshPath, clip.getName() );
-        bool         bReady      = false;
-        if ( cookedPath.empty() == false && ResourceIO::hasResource( cookedPath ) && animation->loadFromResource( cookedPath ) )
+        entry._skinDataID               = skinDataID;
+        entry._pSkeleton                = &skeleton;
+        entry._pClip                    = &clip;
+        entry._bAnchorRootMotion        = anchor;
+        const string cookedPath         = MeshVertexAnimation::makeCookedPath( meshPath, clip.getName() );
+        bool         bReady             = false;
+        const bool   bCookedBinaryFound = cookedPath.empty() == false && ResourceIO::hasResource( cookedPath ) && animation->loadFromResource( cookedPath );
+        if ( bCookedBinaryFound )
         {
             // 쿠킹본은 같은 조건(정점 수 · 루트 묶기)일 때만 쓴다 — 아니면 굽는다.
             bReady = animation->_vertexCount == sourceMesh->getVertexCount() && animation->_bAnchorRootMotion == anchor;

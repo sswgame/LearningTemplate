@@ -60,8 +60,9 @@ namespace sw
             {
                 const uint32 pendingBefore = _pendingLeafShapeCount;
                 ensureLeafShape( _nextWarmLeaf++ );
-                const bool bCreated = pendingBefore != _pendingLeafShapeCount;
-                if ( bCreated && deadlineNanoseconds != 0 && MonotonicClock::nowNanoseconds() >= deadlineNanoseconds )
+                const bool bCreated               = pendingBefore != _pendingLeafShapeCount;
+                const bool bWarmUpDeadlineReached = bCreated && deadlineNanoseconds != 0 && MonotonicClock::nowNanoseconds() >= deadlineNanoseconds;
+                if ( bWarmUpDeadlineReached )
                     break;
             }
             return _pendingLeafShapeCount;
@@ -709,7 +710,8 @@ namespace sw
     void FractureComponentBase::onCollisionBegin( const CollisionInfo& collision )
     {
         PhysicsComponent::onCollisionBegin( collision );
-        if ( _bAuthority == false || _bStateReady == SW_FALSE || collision._impulse <= _profile._minImpulse )
+        const bool bIgnoreCollision = _bAuthority == false || _bStateReady == SW_FALSE || collision._impulse <= _profile._minImpulse;
+        if ( bIgnoreCollision )
             return;
         // 갓 갈라진 조각끼리는 맞닿은 채 생성된다. 그 밀어냄은 피해가 아니다(같은 오브젝트 조각끼리, 생성 후 kSpawnGraceTime 안).
         if ( collision._pOther == getOwner() )
@@ -761,7 +763,8 @@ namespace sw
                 return;
         }
         // 온전한 동안 데이터가 다시 읽혔으면(핫 리로드) 상태를 다시 시작한다. 쪼갠 뒤에는 현재 조각을 유지한다.
-        if ( _bStateReady == SW_TRUE && _bFractured == SW_FALSE && isFractureStale() )
+        const bool bIntactStateStale = _bStateReady == SW_TRUE && _bFractured == SW_FALSE && isFractureStale();
+        if ( bIntactStateStale )
             _bStateReady = SW_FALSE;
         if ( _bFractureMissing == SW_TRUE && isFractureStale() == false )
             return;
@@ -813,9 +816,11 @@ namespace sw
             _stillFrameCount = 0;
             _bPoseDirty      = SW_FALSE;
         }
-        else if ( bFading == false && _renderUnits.isBaked() == false && ++_stillFrameCount >= FractureComponentBaseInternal::kBakeAfterStillFrames )
+        else
         {
-            setBaked( true );
+            const bool bStillLongEnough = bFading == false && _renderUnits.isBaked() == false && ++_stillFrameCount >= FractureComponentBaseInternal::kBakeAfterStillFrames;
+            if ( bStillLongEnough )
+                setBaked( true );
         }
         _lastPoseMicroseconds = static_cast<float32>( stopwatch.getElapsedMicroseconds() );
     }
@@ -1071,7 +1076,8 @@ namespace sw
 
     void FractureComponentBase::prepareLeafPoints( float32 scale )
     {
-        if ( _physics == nullptr || _asset == nullptr || scale == _leafShapeScale )
+        const bool bNothingToRebuildLeafPoints = _physics == nullptr || _asset == nullptr || scale == _leafShapeScale;
+        if ( bNothingToRebuildLeafPoints )
             return;
         _physics->prepareLeafPoints( *_asset, scale, _profile._hullShrink, _profile._physicsMaterial );
         _leafShapeScale = scale;
@@ -1250,7 +1256,8 @@ namespace sw
 
     bool FractureComponentBase::isLeafInAnchoredGroup( uint32 leaf ) const
     {
-        if ( _bFractured == SW_FALSE || _asset == nullptr || leaf >= _asset->getPieceCount() )
+        const bool bNoFracturedLeaf = _bFractured == SW_FALSE || _asset == nullptr || leaf >= _asset->getPieceCount();
+        if ( bNoFracturedLeaf )
             return false;
         const DestructionGroup* pGroup = _state.findGroup( _state.getGroupOfLeaf( leaf ) );
         return pGroup != nullptr && pGroup->_bAnchored == SW_TRUE;
@@ -1369,8 +1376,9 @@ namespace sw
                     runtime._bFrozen = SW_TRUE;
                 }
             }
-            const bool bSmall = runtime._volume < _profile._smallDebrisVolume;
-            if ( bSmall && runtime._bFading == SW_FALSE && runtime._age >= _profile._debrisLifetime )
+            const bool bSmall              = runtime._volume < _profile._smallDebrisVolume;
+            const bool bSmallDebrisExpired = bSmall && runtime._bFading == SW_FALSE && runtime._age >= _profile._debrisLifetime;
+            if ( bSmallDebrisExpired )
                 runtime._bFading = SW_TRUE;
             if ( runtime._bFading == SW_TRUE )
             {
@@ -1405,7 +1413,8 @@ namespace sw
                 const bool bSmaller = pOldest != nullptr && runtime._volume < _profile._keepCollisionVolume && pOldest->_volume >= _profile._keepCollisionVolume;
                 const bool bOlder   = pOldest != nullptr && runtime._spawnOrder < pOldest->_spawnOrder &&
                                     ( runtime._volume < _profile._keepCollisionVolume ) == ( pOldest->_volume < _profile._keepCollisionVolume );
-                if ( pOldest == nullptr || bSmaller || bOlder )
+                const bool bReplaceOldestCandidate = pOldest == nullptr || bSmaller || bOlder;
+                if ( bReplaceOldestCandidate )
                     pOldest = &runtime;
             }
             if ( pOldest == nullptr )
@@ -1640,8 +1649,9 @@ namespace sw
             return;
         for ( const FractureGroupPose& target : listDrive )
         {
-            FractureGroupRuntime* pRuntime = findRuntime( target._groupID );
-            if ( pRuntime == nullptr || pRuntime->_bAnchored == SW_TRUE || pRuntime->_bGone == SW_TRUE )
+            FractureGroupRuntime* pRuntime         = findRuntime( target._groupID );
+            const bool            bSkipGroupTarget = pRuntime == nullptr || pRuntime->_bAnchored == SW_TRUE || pRuntime->_bGone == SW_TRUE;
+            if ( bSkipGroupTarget )
                 continue;
             const DestructionGroup* pGroup = _state.findGroup( target._groupID );
             if ( pGroup == nullptr )
@@ -1745,7 +1755,8 @@ namespace sw
                     }
                     spawnGroup( runtime, group, float3{}, float3{} );
                     // 받는 쪽의 덩어리는 서버 자세를 따른다. 멈춘 덩어리의 자세는 다시 오지 않으므로 스냅샷 자세에서 키네마틱으로 둔다.
-                    if ( _bAuthority == false && pPose != nullptr && isChunkVolume( runtime._volume ) && runtime._body.isValid() )
+                    const bool bKinematicFromSnapshot = _bAuthority == false && pPose != nullptr && isChunkVolume( runtime._volume ) && runtime._body.isValid();
+                    if ( bKinematicFromSnapshot )
                     {
                         _physics->setBodyKinematic( runtime._body );
                         runtime._bDriven       = SW_TRUE;

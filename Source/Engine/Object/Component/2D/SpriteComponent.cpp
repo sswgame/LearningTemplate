@@ -69,6 +69,8 @@ namespace sw
         static const hashed_string s_drawMode( "_drawMode" );
         static const hashed_string s_size( "_size" );
         static const hashed_string s_sliceBorder( "_sliceBorder" );
+        const bool                 bInstanceDataChanged = propertyName == s_clipFrame || propertyName == s_uvRect || propertyName == s_tint;
+        const bool                 bDrawModeMeshChanged = propertyName == s_drawMode || propertyName == s_size || propertyName == s_sliceBorder;
         if ( propertyName == s_clipPath )
         {
             refreshClip();
@@ -80,12 +82,12 @@ namespace sw
         {
             refreshTextureInstance();
         }
-        else if ( propertyName == s_clipFrame || propertyName == s_uvRect || propertyName == s_tint )
+        else if ( bInstanceDataChanged )
         {
             refreshSpriteInstanceData();
             refreshDrawModeMesh(); // 프레임마다 테두리가 다를 수 있다
         }
-        else if ( propertyName == s_drawMode || propertyName == s_size || propertyName == s_sliceBorder )
+        else if ( bDrawModeMeshChanged )
         {
             refreshDrawModeMesh();
         }
@@ -224,9 +226,10 @@ namespace sw
         }
 
         const hashed_string     texture( string{ textureName }.c_str() );
-        const hashed_string     normalMap = _normalMapName.empty() ? hashed_string{} : hashed_string( string_view( _normalMapName ) );
-        const MaterialInstance* pCurrent  = getRawMaterialInstance();
-        if ( texture == _appliedTexture && normalMap == _appliedNormalMap && pCurrent != nullptr && pCurrent->getParent() == pMaterial )
+        const hashed_string     normalMap            = _normalMapName.empty() ? hashed_string{} : hashed_string( string_view( _normalMapName ) );
+        const MaterialInstance* pCurrent             = getRawMaterialInstance();
+        const bool              bAppearanceUnchanged = texture == _appliedTexture && normalMap == _appliedNormalMap && pCurrent != nullptr && pCurrent->getParent() == pMaterial;
+        if ( bAppearanceUnchanged )
             return;
         _appliedTexture   = texture;
         _appliedNormalMap = normalMap;

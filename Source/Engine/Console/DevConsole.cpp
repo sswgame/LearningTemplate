@@ -55,9 +55,12 @@ namespace sw
                 for ( const string& candidate : listCandidate )
                 {
                     size_t index = 0;
-                    while ( index < length && index < candidate.size() &&
-                            StringUtil::toLowerChar( candidate[index] ) == StringUtil::toLowerChar( listCandidate[0][index] ) )
+                    while ( true )
                     {
+                        const bool bCommonPrefixContinues = index < length && index < candidate.size() &&
+                                                            StringUtil::toLowerChar( candidate[index] ) == StringUtil::toLowerChar( listCandidate[0][index] );
+                        if ( bCommonPrefixContinues == false )
+                            break;
                         ++index;
                     }
                     length = index;

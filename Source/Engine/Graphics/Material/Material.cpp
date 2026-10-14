@@ -200,7 +200,8 @@ namespace sw
 
     bool Material::refreshTextureBindings()
     {
-        if ( _listAcquiredTexturePath.empty() || _pRHIDevice == nullptr || engine::areEngineServicesBound() == false )
+        const bool bTextureRefreshUnavailable = _listAcquiredTexturePath.empty() || _pRHIDevice == nullptr || engine::areEngineServicesBound() == false;
+        if ( bTextureRefreshUnavailable )
             return false;
         TextureCache& textures   = engine::getAssetManager().getAssetCache<TextureCache>();
         const uint32  generation = textures.getReloadGeneration();
@@ -215,7 +216,8 @@ namespace sw
         size_t     ordinal{ 0 };
         for ( const MaterialProperty& prop : _data._listProperty )
         {
-            if ( ordinal >= _listAcquiredTexturePath.size() || ordinal >= _listBorrowedTexturePath.size() || ordinal >= _listMaterialTextureSrv.size() )
+            const bool bOrdinalOutOfRange = ordinal >= _listAcquiredTexturePath.size() || ordinal >= _listBorrowedTexturePath.size() || ordinal >= _listMaterialTextureSrv.size();
+            if ( bOrdinalOutOfRange )
                 break;
             if ( MaterialUtil::isTextureType( prop._type ) == false || prop._assetPath != _listAcquiredTexturePath[ordinal] )
                 continue;
@@ -303,7 +305,8 @@ namespace sw
     void Material::releaseRHI( IRHIDevice* pRHI )
     {
         // 남의 디바이스가 죽는 통보라면 내 것이 아니다.
-        if ( pRHI != nullptr && _pRHIDevice != nullptr && _pRHIDevice != pRHI )
+        const bool bDeviceNotMine = pRHI != nullptr && _pRHIDevice != nullptr && _pRHIDevice != pRHI;
+        if ( bDeviceNotMine )
             return;
 
         releaseTextureAssets( pRHI );

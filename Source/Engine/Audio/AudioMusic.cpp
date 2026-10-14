@@ -75,8 +75,9 @@ namespace sw
             }
             for ( const AudioMusicLayerDesc& layer : segment._listLayer )
             {
-                const bool bCurveMissing = layer._parameter.empty() == false && layer._listPoint.empty();
-                if ( layer._path.empty() || bCurveMissing || AudioMixerDesc::isCurveSorted( layer._listPoint ) == false )
+                const bool bCurveMissing      = layer._parameter.empty() == false && layer._listPoint.empty();
+                const bool bInvalidMusicLayer = layer._path.empty() || bCurveMissing || AudioMixerDesc::isCurveSorted( layer._listPoint ) == false;
+                if ( bInvalidMusicLayer )
                 {
                     SW_LOG_ERROR( "%#: segment '%#' has a layer with no clip, or a parameter with an empty or unordered curve", sourceName, pName );
                     bValid = false;
