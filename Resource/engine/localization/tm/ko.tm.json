@@ -10,6 +10,18 @@
             "text": "접근성"
         },
         {
+            "source": "Active",
+            "text": "실행 중"
+        },
+        {
+            "source": "Active Effects",
+            "text": "걸린 이펙트"
+        },
+        {
+            "source": "Activity",
+            "text": "행동"
+        },
+        {
             "source": "Aim",
             "text": "조준"
         },
@@ -18,12 +30,20 @@
             "text": "환경음 음량"
         },
         {
+            "source": "Attributes",
+            "text": "어트리뷰트"
+        },
+        {
             "source": "Audio",
             "text": "오디오"
         },
         {
             "source": "Background opacity of the Debug HUD panels.",
             "text": "디버그 HUD 패널의 배경 불투명도입니다."
+        },
+        {
+            "source": "Base",
+            "text": "기본값"
         },
         {
             "source": "Borderless",
@@ -46,8 +66,20 @@
             "text": "조작"
         },
         {
+            "source": "Cooldown",
+            "text": "쿨다운"
+        },
+        {
+            "source": "Count",
+            "text": "개수"
+        },
+        {
             "source": "Crouch",
             "text": "앉기"
+        },
+        {
+            "source": "Current",
+            "text": "현재값"
         },
         {
             "source": "Custom",
@@ -86,6 +118,14 @@
             "text": "초목 밀도"
         },
         {
+            "source": "Follow game clock",
+            "text": "게임 시계 따라가기"
+        },
+        {
+            "source": "Game time",
+            "text": "게임 시각"
+        },
+        {
             "source": "Gamepad Sensitivity",
             "text": "게임패드 감도"
         },
@@ -96,6 +136,10 @@
         {
             "source": "Got away safely!",
             "text": "무사히 도망쳤다!"
+        },
+        {
+            "source": "Granted Abilities",
+            "text": "부여된 어빌리티"
         },
         {
             "source": "Graphics",
@@ -120,6 +164,10 @@
         {
             "source": "How the curve moves from this key to the next: Constant holds the value, Linear is a straight line, Cubic is a smooth spline.",
             "text": "이 키에서 다음 키까지 곡선이 움직이는 방식입니다. Constant 는 값을 유지하고, Linear 는 직선, Cubic 은 부드러운 스플라인입니다."
+        },
+        {
+            "source": "Infinite",
+            "text": "무한"
         },
         {
             "source": "Interface Volume",
@@ -166,8 +214,40 @@
             "text": "음소거"
         },
         {
+            "source": "NPCs",
+            "text": "NPC 목록"
+        },
+        {
+            "source": "Name",
+            "text": "이름"
+        },
+        {
+            "source": "No AbilitySystemComponent in the active scene",
+            "text": "활성 씬에 AbilitySystemComponent 가 없습니다"
+        },
+        {
+            "source": "No plan for today",
+            "text": "오늘 계획이 없습니다"
+        },
+        {
+            "source": "No schedule system is running. Start play with NPCs that have schedules.",
+            "text": "실행 중인 일정 시스템이 없습니다. 일정을 가진 NPC 가 있는 상태로 플레이를 시작하세요."
+        },
+        {
             "source": "Off",
             "text": "끔"
+        },
+        {
+            "source": "Owned Tags",
+            "text": "소유 태그"
+        },
+        {
+            "source": "Pick an ability system...",
+            "text": "어빌리티 시스템 고르기..."
+        },
+        {
+            "source": "Place",
+            "text": "장소"
         },
         {
             "source": "Post-Processing Quality",
@@ -178,12 +258,20 @@
             "text": "적색약"
         },
         {
+            "source": "Raw timeline",
+            "text": "타임라인 원문"
+        },
+        {
             "source": "Reduce Flashing",
             "text": "번쩍임 줄이기"
         },
         {
             "source": "Reduce Motion",
             "text": "움직임 줄이기"
+        },
+        {
+            "source": "Remaining",
+            "text": "남은 시간"
         },
         {
             "source": "Render Scale",
@@ -194,6 +282,22 @@
             "text": "해상도"
         },
         {
+            "source": "Runtime ability state exists only during play. Press Play to inspect it.",
+            "text": "어빌리티 런타임 상태는 플레이 중에만 있습니다. 플레이를 눌러 확인하세요."
+        },
+        {
+            "source": "Schedule system",
+            "text": "일정 시스템"
+        },
+        {
+            "source": "Select an NPC on the left",
+            "text": "왼쪽에서 NPC 를 고르세요"
+        },
+        {
+            "source": "Select an object with an AbilitySystemComponent, or pick one above.",
+            "text": "AbilitySystemComponent 가 있는 오브젝트를 선택하거나 위에서 고르세요."
+        },
+        {
             "source": "Shadow Quality",
             "text": "그림자 품질"
         },
@@ -202,12 +306,20 @@
             "text": "게임 안 디버그 HUD 의 이 구역을 보이거나 숨깁니다. 회색 글자는 구역의 등록 이름입니다."
         },
         {
+            "source": "Source",
+            "text": "출처"
+        },
+        {
             "source": "Spatial",
             "text": "공간"
         },
         {
             "source": "Sprint",
             "text": "달리기"
+        },
+        {
+            "source": "Stacks",
+            "text": "스택"
         },
         {
             "source": "Stick Dead Zone",
@@ -224,6 +336,10 @@
         {
             "source": "Subtitles",
             "text": "자막"
+        },
+        {
+            "source": "Tag",
+            "text": "태그"
         },
         {
             "source": "Text Language",
@@ -246,8 +362,16 @@
             "text": "같은 체크리스트를 런타임 UI 창으로 엽니다(플레이 중 게임 뷰에 보입니다)."
         },
         {
+            "source": "Time",
+            "text": "시각"
+        },
+        {
             "source": "Toggle",
             "text": "전환"
+        },
+        {
+            "source": "Travel",
+            "text": "이동"
         },
         {
             "source": "Tritanopia",
@@ -296,6 +420,10 @@
         {
             "source": "Which screen corner the Debug HUD is anchored to.",
             "text": "디버그 HUD 를 붙여 둘 화면 모서리입니다."
+        },
+        {
+            "source": "Why this activity now",
+            "text": "지금 왜 이 행동인가"
         },
         {
             "source": "Window Mode",

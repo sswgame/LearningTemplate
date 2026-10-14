@@ -995,6 +995,252 @@
                 "Source/Editor/Panels/Animation/AnimationRewindPanel.cpp"
             ]
         },
+        "EditorAudioEvents.AllVoices": {
+            "source": "All voices",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.Clips": {
+            "source": "Clips",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.ColumnBus": {
+            "source": "Bus",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.ColumnElapsed": {
+            "source": "Elapsed",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.ColumnEvent": {
+            "source": "Event",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.ColumnField": {
+            "source": "Field",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.ColumnRemaining": {
+            "source": "Remaining",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.ColumnValue": {
+            "source": "Value",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.ColumnVoices": {
+            "source": "Voices",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.FieldBus": {
+            "source": "Bus",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp"
+            ]
+        },
+        "EditorAudioEvents.FieldClipCount": {
+            "source": "Clips",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp"
+            ]
+        },
+        "EditorAudioEvents.FieldContainer": {
+            "source": "Container",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp"
+            ]
+        },
+        "EditorAudioEvents.FieldCooldown": {
+            "source": "Cooldown",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp"
+            ]
+        },
+        "EditorAudioEvents.FieldFade": {
+            "source": "Fade",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp"
+            ]
+        },
+        "EditorAudioEvents.FieldLoop": {
+            "source": "Loop",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp"
+            ]
+        },
+        "EditorAudioEvents.FieldMaxInstances": {
+            "source": "Max instances",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp"
+            ]
+        },
+        "EditorAudioEvents.FieldParameterCount": {
+            "source": "Parameter curves",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp"
+            ]
+        },
+        "EditorAudioEvents.FieldPitch": {
+            "source": "Pitch",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp"
+            ]
+        },
+        "EditorAudioEvents.FieldPriority": {
+            "source": "Priority",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp"
+            ]
+        },
+        "EditorAudioEvents.FieldRadius": {
+            "source": "Radius",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp"
+            ]
+        },
+        "EditorAudioEvents.FieldSteal": {
+            "source": "Steal policy",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp"
+            ]
+        },
+        "EditorAudioEvents.FieldVirtual": {
+            "source": "Virtual mode",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp"
+            ]
+        },
+        "EditorAudioEvents.FieldVolume": {
+            "source": "Volume",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp"
+            ]
+        },
+        "EditorAudioEvents.Instances": {
+            "source": "Instances",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.NoLibrary": {
+            "source": "No event library loaded",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.NoService": {
+            "source": "The audio service is not running",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.NothingPlaying": {
+            "source": "Nothing is playing",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.OnlySelected": {
+            "source": "Only the selected event",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.OpenDataFile": {
+            "source": "Open Data File",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.OpenDataFileTip": {
+            "source": "Event data is edited in its .audioevents.xml file; saving reloads it. Copies the path when no tool opens it",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.PeakRealVoices": {
+            "source": "Peak real voices",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.PlayedDropped": {
+            "source": "Played / dropped",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.PlayedDroppedTip": {
+            "source": "Events posted since start, and events dropped by cooldown, limit or slot shortage",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.PostEvent": {
+            "source": "Post Event",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.RealVoices": {
+            "source": "Real voices",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.RemainingLoop": {
+            "source": "loop",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp"
+            ]
+        },
+        "EditorAudioEvents.SelectEvent": {
+            "source": "Select an event on the left",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.TabPlaying": {
+            "source": "Playing",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.TabProperties": {
+            "source": "Properties",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.TabVoices": {
+            "source": "Voices",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
+        "EditorAudioEvents.VirtualVoices": {
+            "source": "Virtual voices",
+            "origins": [
+                "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp"
+            ]
+        },
         "EditorBugIt.Capture": {
             "source": "Collect a screenshot, log, scene copy, camera position and repro command into Saved/BugIt/<time>/ with the note above",
             "origins": [
@@ -1841,6 +2087,12 @@
                 "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
             ]
         },
+        "EditorInspector.AddToFavorites": {
+            "source": "Add to Favorites",
+            "origins": [
+                "Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp"
+            ]
+        },
         "EditorInspector.ApplyToPrefab": {
             "source": "Save this object's changes to the source prefab file",
             "origins": [
@@ -1851,6 +2103,18 @@
             "source": "Clear asset reference",
             "origins": [
                 "Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp"
+            ]
+        },
+        "EditorInspector.FavoriteProperty": {
+            "source": "Favorite property",
+            "origins": [
+                "Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp"
+            ]
+        },
+        "EditorInspector.FavoritesSection": {
+            "source": "Favorites",
+            "origins": [
+                "Source/Editor/Panels/Inspector/InspectorPanel.cpp"
             ]
         },
         "EditorInspector.FollowingSelection": {
@@ -1942,6 +2206,12 @@
             "source": "Preset Name...",
             "origins": [
                 "Source/Editor/Panels/Inspector/InspectorPanel.cpp"
+            ]
+        },
+        "EditorInspector.RemoveFromFavorites": {
+            "source": "Remove from Favorites",
+            "origins": [
+                "Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp"
             ]
         },
         "EditorInspector.ResetToDefaultTooltip": {
@@ -2628,6 +2898,24 @@
                 "Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp"
             ]
         },
+        "EditorRigDebug.BoneMarkersTip": {
+            "source": "Draw the bones written by the selected node in the viewport",
+            "origins": [
+                "Source/Editor/Panels/Animation/RigDebugPanel.cpp"
+            ]
+        },
+        "EditorRigDebug.RigNotReady": {
+            "source": "The rig is not bound yet (check the rig asset and skeleton)",
+            "origins": [
+                "Source/Editor/Panels/Animation/RigDebugPanel.cpp"
+            ]
+        },
+        "EditorRigDebug.SelectRig": {
+            "source": "Select an object with a Pose Modifier component",
+            "origins": [
+                "Source/Editor/Panels/Animation/RigDebugPanel.cpp"
+            ]
+        },
         "EditorScene.ApplyAllOverrides": {
             "source": "Write every override of this instance back to the prefab template",
             "origins": [
@@ -2808,6 +3096,12 @@
                 "Source/Editor/Panels/Animation/SequencerPanel.cpp"
             ]
         },
+        "EditorSequencer.AddRigSlotTrackTip": {
+            "source": "Add a track that keys a rig slot weight (PoseModifierComponent)",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
         "EditorSequencer.AddTransformTrackTip": {
             "source": "Add a track that keys the selected object's position, rotation and scale.",
             "origins": [
@@ -2892,6 +3186,18 @@
                 "Source/Editor/Panels/Animation/SequencerPanel.cpp"
             ]
         },
+        "EditorSequencer.RigSlotTargetNotFound": {
+            "source": "Target has no Pose Modifier",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
+        "EditorSequencer.RigSlotTip": {
+            "source": "Rig slot name (weight_slot in the rig asset); value is clamped to 0..1",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
         "EditorSequencer.SaveTip": {
             "source": "Write the sequence to the focused .seq file.",
             "origins": [
@@ -2940,8 +3246,86 @@
                 "Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp"
             ]
         },
+        "EditorSettings.ModuleChangeNoCascade": {
+            "source": "No other modules change.",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
+        "EditorSettings.ModuleChangeTarget": {
+            "source": "Module",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
+        "EditorSettings.ModuleChangeTurnsOff": {
+            "source": "Also turns off",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
+        "EditorSettings.ModuleChangeTurnsOn": {
+            "source": "Also turns on",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
+        "EditorSettings.ModuleDefaultState": {
+            "source": "Default",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
+        "EditorSettings.ModuleDependencies": {
+            "source": "Depends on",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
+        "EditorSettings.ModuleDependents": {
+            "source": "Required by",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
+        "EditorSettings.ModuleKindAll": {
+            "source": "All categories",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
+        "EditorSettings.ModuleKindFilter": {
+            "source": "Show only one module category",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
         "EditorSettings.ModuleLocked": {
             "source": "Editor and game modules cannot be turned off here",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
+        "EditorSettings.ModuleOverride": {
+            "source": "Project override",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
+        "EditorSettings.ModuleOverrideNone": {
+            "source": "None (uses default)",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
+        "EditorSettings.ModuleResetOverride": {
+            "source": "Reset to default",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
+        "EditorSettings.ModuleResetOverrideTip": {
+            "source": "Remove this module's line from the project manifest (previews the change first)",
             "origins": [
                 "Source/Editor/Panels/Settings/ModulesPanel.cpp"
             ]
@@ -2952,8 +3336,38 @@
                 "Source/Editor/Panels/Settings/ModulesPanel.cpp"
             ]
         },
+        "EditorSettings.ModuleStateAll": {
+            "source": "On and off",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
+        "EditorSettings.ModuleStateFilter": {
+            "source": "Filter modules by whether they are on",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
+        "EditorSettings.ModuleStateOff": {
+            "source": "Off only",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
+        "EditorSettings.ModuleStateOn": {
+            "source": "On only",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
         "EditorSettings.ModuleToggle": {
             "source": "Turn this module on or off (the affected modules are shown before it applies)",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
+        "EditorSettings.ModuleVersion": {
+            "source": "Version",
             "origins": [
                 "Source/Editor/Panels/Settings/ModulesPanel.cpp"
             ]
@@ -3803,410 +4217,6 @@
             "origins": [
                 "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
             ]
-        },
-        "EdAbilityDebug.PickTarget": {
-            "source": "Pick an ability system...",
-            "origins": []
-        },
-        "EdAbilityDebug.NoComponentsInScene": {
-            "source": "No AbilitySystemComponent in the active scene",
-            "origins": []
-        },
-        "EdAbilityDebug.HintPlayOnly": {
-            "source": "Runtime ability state exists only during play. Press Play to inspect it.",
-            "origins": []
-        },
-        "EdAbilityDebug.HintNoTarget": {
-            "source": "Select an object with an AbilitySystemComponent, or pick one above.",
-            "origins": []
-        },
-        "EdAbilityDebug.SectionAttributes": {
-            "source": "Attributes",
-            "origins": []
-        },
-        "EdAbilityDebug.SectionEffects": {
-            "source": "Active Effects",
-            "origins": []
-        },
-        "EdAbilityDebug.SectionTags": {
-            "source": "Owned Tags",
-            "origins": []
-        },
-        "EdAbilityDebug.SectionAbilities": {
-            "source": "Granted Abilities",
-            "origins": []
-        },
-        "EdAbilityDebug.ColumnName": {
-            "source": "Name",
-            "origins": []
-        },
-        "EdAbilityDebug.ColumnBase": {
-            "source": "Base",
-            "origins": []
-        },
-        "EdAbilityDebug.ColumnCurrent": {
-            "source": "Current",
-            "origins": []
-        },
-        "EdAbilityDebug.ColumnRemaining": {
-            "source": "Remaining",
-            "origins": []
-        },
-        "EdAbilityDebug.ColumnStacks": {
-            "source": "Stacks",
-            "origins": []
-        },
-        "EdAbilityDebug.ColumnTag": {
-            "source": "Tag",
-            "origins": []
-        },
-        "EdAbilityDebug.ColumnCount": {
-            "source": "Count",
-            "origins": []
-        },
-        "EdAbilityDebug.ColumnActive": {
-            "source": "Active",
-            "origins": []
-        },
-        "EdAbilityDebug.ColumnCooldown": {
-            "source": "Cooldown",
-            "origins": []
-        },
-        "EdAbilityDebug.Infinite": {
-            "source": "Infinite",
-            "origins": []
-        },
-        "EditorAudioEvents.FieldBus": {
-            "source": "Bus",
-            "origins": []
-        },
-        "EditorAudioEvents.FieldVolume": {
-            "source": "Volume",
-            "origins": []
-        },
-        "EditorAudioEvents.FieldPitch": {
-            "source": "Pitch",
-            "origins": []
-        },
-        "EditorAudioEvents.FieldRadius": {
-            "source": "Radius",
-            "origins": []
-        },
-        "EditorAudioEvents.FieldContainer": {
-            "source": "Container",
-            "origins": []
-        },
-        "EditorAudioEvents.FieldClipCount": {
-            "source": "Clips",
-            "origins": []
-        },
-        "EditorAudioEvents.FieldMaxInstances": {
-            "source": "Max instances",
-            "origins": []
-        },
-        "EditorAudioEvents.FieldSteal": {
-            "source": "Steal policy",
-            "origins": []
-        },
-        "EditorAudioEvents.FieldPriority": {
-            "source": "Priority",
-            "origins": []
-        },
-        "EditorAudioEvents.FieldVirtual": {
-            "source": "Virtual mode",
-            "origins": []
-        },
-        "EditorAudioEvents.FieldCooldown": {
-            "source": "Cooldown",
-            "origins": []
-        },
-        "EditorAudioEvents.FieldFade": {
-            "source": "Fade",
-            "origins": []
-        },
-        "EditorAudioEvents.FieldLoop": {
-            "source": "Loop",
-            "origins": []
-        },
-        "EditorAudioEvents.FieldParameterCount": {
-            "source": "Parameter curves",
-            "origins": []
-        },
-        "EditorAudioEvents.RemainingLoop": {
-            "source": "loop",
-            "origins": []
-        },
-        "EditorAudioEvents.NoLibrary": {
-            "source": "No event library loaded",
-            "origins": []
-        },
-        "EditorAudioEvents.SelectEvent": {
-            "source": "Select an event on the left",
-            "origins": []
-        },
-        "EditorAudioEvents.PostEvent": {
-            "source": "Post Event",
-            "origins": []
-        },
-        "EditorAudioEvents.OpenDataFile": {
-            "source": "Open Data File",
-            "origins": []
-        },
-        "EditorAudioEvents.OpenDataFileTip": {
-            "source": "Event data is edited in its .audioevents.xml file; saving reloads it. Copies the path when no tool opens it",
-            "origins": []
-        },
-        "EditorAudioEvents.ColumnField": {
-            "source": "Field",
-            "origins": []
-        },
-        "EditorAudioEvents.ColumnValue": {
-            "source": "Value",
-            "origins": []
-        },
-        "EditorAudioEvents.Clips": {
-            "source": "Clips",
-            "origins": []
-        },
-        "EditorAudioEvents.OnlySelected": {
-            "source": "Only the selected event",
-            "origins": []
-        },
-        "EditorAudioEvents.NothingPlaying": {
-            "source": "Nothing is playing",
-            "origins": []
-        },
-        "EditorAudioEvents.ColumnEvent": {
-            "source": "Event",
-            "origins": []
-        },
-        "EditorAudioEvents.ColumnBus": {
-            "source": "Bus",
-            "origins": []
-        },
-        "EditorAudioEvents.ColumnElapsed": {
-            "source": "Elapsed",
-            "origins": []
-        },
-        "EditorAudioEvents.ColumnRemaining": {
-            "source": "Remaining",
-            "origins": []
-        },
-        "EditorAudioEvents.ColumnVoices": {
-            "source": "Voices",
-            "origins": []
-        },
-        "EditorAudioEvents.RealVoices": {
-            "source": "Real voices",
-            "origins": []
-        },
-        "EditorAudioEvents.AllVoices": {
-            "source": "All voices",
-            "origins": []
-        },
-        "EditorAudioEvents.VirtualVoices": {
-            "source": "Virtual voices",
-            "origins": []
-        },
-        "EditorAudioEvents.PeakRealVoices": {
-            "source": "Peak real voices",
-            "origins": []
-        },
-        "EditorAudioEvents.Instances": {
-            "source": "Instances",
-            "origins": []
-        },
-        "EditorAudioEvents.PlayedDropped": {
-            "source": "Played / dropped",
-            "origins": []
-        },
-        "EditorAudioEvents.PlayedDroppedTip": {
-            "source": "Events posted since start, and events dropped by cooldown, limit or slot shortage",
-            "origins": []
-        },
-        "EditorAudioEvents.TabProperties": {
-            "source": "Properties",
-            "origins": []
-        },
-        "EditorAudioEvents.TabPlaying": {
-            "source": "Playing",
-            "origins": []
-        },
-        "EditorAudioEvents.TabVoices": {
-            "source": "Voices",
-            "origins": []
-        },
-        "EditorAudioEvents.NoService": {
-            "source": "The audio service is not running",
-            "origins": []
-        },
-        "EditorInspector.AddToFavorites": {
-            "source": "Add to Favorites",
-            "origins": []
-        },
-        "EditorInspector.RemoveFromFavorites": {
-            "source": "Remove from Favorites",
-            "origins": []
-        },
-        "EditorInspector.FavoriteProperty": {
-            "source": "Favorite property",
-            "origins": []
-        },
-        "EditorInspector.FavoritesSection": {
-            "source": "Favorites",
-            "origins": []
-        },
-        "EditorSettings.ModuleChangeTarget": {
-            "source": "Module",
-            "origins": []
-        },
-        "EditorSettings.ModuleChangeNoCascade": {
-            "source": "No other modules change.",
-            "origins": []
-        },
-        "EditorSettings.ModuleChangeTurnsOff": {
-            "source": "Also turns off",
-            "origins": []
-        },
-        "EditorSettings.ModuleChangeTurnsOn": {
-            "source": "Also turns on",
-            "origins": []
-        },
-        "EditorSettings.ModuleKindAll": {
-            "source": "All categories",
-            "origins": []
-        },
-        "EditorSettings.ModuleKindFilter": {
-            "source": "Show only one module category",
-            "origins": []
-        },
-        "EditorSettings.ModuleStateAll": {
-            "source": "On and off",
-            "origins": []
-        },
-        "EditorSettings.ModuleStateOn": {
-            "source": "On only",
-            "origins": []
-        },
-        "EditorSettings.ModuleStateOff": {
-            "source": "Off only",
-            "origins": []
-        },
-        "EditorSettings.ModuleStateFilter": {
-            "source": "Filter modules by whether they are on",
-            "origins": []
-        },
-        "EditorSettings.ModuleVersion": {
-            "source": "Version",
-            "origins": []
-        },
-        "EditorSettings.ModuleDefaultState": {
-            "source": "Default",
-            "origins": []
-        },
-        "EditorSettings.ModuleOverride": {
-            "source": "Project override",
-            "origins": []
-        },
-        "EditorSettings.ModuleOverrideNone": {
-            "source": "None (uses default)",
-            "origins": []
-        },
-        "EditorSettings.ModuleResetOverride": {
-            "source": "Reset to default",
-            "origins": []
-        },
-        "EditorSettings.ModuleResetOverrideTip": {
-            "source": "Remove this module's line from the project manifest (previews the change first)",
-            "origins": []
-        },
-        "EditorSettings.ModuleDependencies": {
-            "source": "Depends on",
-            "origins": []
-        },
-        "EditorSettings.ModuleDependents": {
-            "source": "Required by",
-            "origins": []
-        },
-        "EditorSequencer.AddRigSlotTrackTip": {
-            "source": "Add a track that keys a rig slot weight (PoseModifierComponent)",
-            "origins": []
-        },
-        "EditorSequencer.RigSlotTip": {
-            "source": "Rig slot name (weight_slot in the rig asset); value is clamped to 0..1",
-            "origins": []
-        },
-        "EditorSequencer.RigSlotTargetNotFound": {
-            "source": "Target has no Pose Modifier",
-            "origins": []
-        },
-        "EditorRigDebug.SelectRig": {
-            "source": "Select an object with a Pose Modifier component",
-            "origins": []
-        },
-        "EditorRigDebug.RigNotReady": {
-            "source": "The rig is not bound yet (check the rig asset and skeleton)",
-            "origins": []
-        },
-        "EditorRigDebug.BoneMarkersTip": {
-            "source": "Draw the bones written by the selected node in the viewport",
-            "origins": []
-        },
-        "EdSchedule.EmptyHint": {
-            "source": "No schedule system is running. Start play with NPCs that have schedules.",
-            "origins": []
-        },
-        "EdSchedule.SystemIndex": {
-            "source": "Schedule system",
-            "origins": []
-        },
-        "EdSchedule.SelectNpcHint": {
-            "source": "Select an NPC on the left",
-            "origins": []
-        },
-        "EdSchedule.NpcListTitle": {
-            "source": "NPCs",
-            "origins": []
-        },
-        "EdSchedule.FollowClock": {
-            "source": "Follow game clock",
-            "origins": []
-        },
-        "EdSchedule.GameTime": {
-            "source": "Game time",
-            "origins": []
-        },
-        "EdSchedule.ColumnTime": {
-            "source": "Time",
-            "origins": []
-        },
-        "EdSchedule.ColumnTravel": {
-            "source": "Travel",
-            "origins": []
-        },
-        "EdSchedule.ColumnPlace": {
-            "source": "Place",
-            "origins": []
-        },
-        "EdSchedule.ColumnActivity": {
-            "source": "Activity",
-            "origins": []
-        },
-        "EdSchedule.ColumnSource": {
-            "source": "Source",
-            "origins": []
-        },
-        "EdSchedule.EmptyPlan": {
-            "source": "No plan for today",
-            "origins": []
-        },
-        "EdSchedule.WhyNow": {
-            "source": "Why this activity now",
-            "origins": []
-        },
-        "EdSchedule.RawTimeline": {
-            "source": "Raw timeline",
-            "origins": []
         }
     }
 }

@@ -74,6 +74,10 @@
             "text": "왼쪽에 입력한 키로 문자열을 추가합니다. 테이블에 이미 있는 키는 무시합니다."
         },
         {
+            "source": "Add a track that keys a rig slot weight (PoseModifierComponent)",
+            "text": "리그 슬롯 가중치(PoseModifierComponent)에 키를 찍는 트랙을 추가합니다"
+        },
+        {
             "source": "Add a track that keys one numeric property of a component on the selected object.",
             "text": "고른 오브젝트 컴포넌트의 숫자 프로퍼티 하나를 키로 모는 트랙을 더합니다"
         },
@@ -102,6 +106,10 @@
             "text": "바인딩 없이 액션을 추가합니다. 목록에서 선택해 키를 추가합니다."
         },
         {
+            "source": "Add to Favorites",
+            "text": "즐겨찾기에 추가"
+        },
+        {
             "source": "Add up the message kinds every process received instead of only the selected one",
             "text": "고른 프로세스 대신 모든 프로세스가 받은 메시지 종류를 합쳐 봅니다"
         },
@@ -126,8 +134,24 @@
             "text": "모든 모듈"
         },
         {
+            "source": "All categories",
+            "text": "모든 종류"
+        },
+        {
             "source": "All log levels are hidden. Re-enable one in the toolbar.",
             "text": "모든 로그 수준이 숨겨져 있습니다. 툴바에서 하나를 다시 켜세요."
+        },
+        {
+            "source": "All voices",
+            "text": "전체 보이스"
+        },
+        {
+            "source": "Also turns off",
+            "text": "함께 꺼짐"
+        },
+        {
+            "source": "Also turns on",
+            "text": "함께 켜짐"
         },
         {
             "source": "Anchor Max",
@@ -192,6 +216,10 @@
         {
             "source": "Bug report saved",
             "text": "버그 리포트를 저장했습니다"
+        },
+        {
+            "source": "Bus",
+            "text": "버스"
         },
         {
             "source": "Camera bookmarks: move the view to a saved camera position (Ctrl+1~9)",
@@ -286,6 +314,10 @@
             "text": "클립보드가 비어 있습니다"
         },
         {
+            "source": "Clips",
+            "text": "클립 수"
+        },
+        {
             "source": "Closest distance the camera draws. Geometry nearer than this is clipped; keep it as large as the scene allows to avoid depth fighting.",
             "text": "카메라가 그리는 가장 가까운 거리입니다. 이보다 가까운 지오메트리는 잘려 나갑니다. 깊이 충돌(z-fighting)을 피하려면 장면이 허용하는 만큼 크게 두세요."
         },
@@ -334,12 +366,20 @@
             "text": "붙은 클라이언트 / 띄운 클라이언트 — 프로세스 목록 · 서버 일시정지는 Window > Multiplayer"
         },
         {
+            "source": "Container",
+            "text": "컨테이너"
+        },
+        {
             "source": "Context: {context}\nComment: {comment}\nMax length: {maxLength}",
             "text": "컨텍스트: {context}\n주석: {comment}\n최대 길이: {maxLength}"
         },
         {
             "source": "Convert stored depth back to view distance using Near/Far. Perspective depth crowds near 1, so the raw image looks almost white.",
             "text": "Near/Far 로 저장된 깊이를 뷰 거리로 되돌립니다. 원근 깊이는 1 근처에 몰려 있어 그대로 보면 거의 흰색입니다."
+        },
+        {
+            "source": "Cooldown",
+            "text": "쿨다운"
         },
         {
             "source": "Copy every filtered console log to the clipboard",
@@ -394,8 +434,16 @@
             "text": "디버그 HUD 가 실행 중이 아닙니다(Shipping 이거나 테스트 호스트입니다)."
         },
         {
+            "source": "Default",
+            "text": "기본값"
+        },
+        {
             "source": "Delete this saved layout.",
             "text": "저장된 레이아웃을 지웁니다."
+        },
+        {
+            "source": "Depends on",
+            "text": "의존 모듈"
         },
         {
             "source": "Description: {description}",
@@ -462,6 +510,10 @@
             "text": "선택한 캐릭터뿐 아니라 기록된 모든 캐릭터의 스켈레톤을 그립니다."
         },
         {
+            "source": "Draw the bones written by the selected node in the viewport",
+            "text": "고른 노드가 쓰는 본을 뷰포트에 표시합니다"
+        },
+        {
             "source": "Draw the recorded skeleton in the viewport at the time being viewed.",
             "text": "보고 있는 시각의 기록된 스켈레톤을 뷰포트에 그립니다."
         },
@@ -486,6 +538,10 @@
             "text": "에디터 · 게임 모듈은 여기서 끌 수 없습니다"
         },
         {
+            "source": "Elapsed",
+            "text": "지난 시간"
+        },
+        {
             "source": "Enable or disable this component.",
             "text": "컴포넌트 활성화/비활성화"
         },
@@ -496,6 +552,18 @@
         {
             "source": "Enter a UI document path (*.ui.xml).",
             "text": "UI 문서 경로(*.ui.xml)를 입력합니다."
+        },
+        {
+            "source": "Event",
+            "text": "이벤트"
+        },
+        {
+            "source": "Event data is edited in its .audioevents.xml file; saving reloads it. Copies the path when no tool opens it",
+            "text": "이벤트 데이터는 .audioevents.xml 파일에서 고칩니다. 저장하면 다시 읽습니다. 여는 도구가 없으면 경로를 복사합니다"
+        },
+        {
+            "source": "Events posted since start, and events dropped by cooldown, limit or slot shortage",
+            "text": "시작 뒤 재생한 이벤트와 쿨다운 · 상한 · 슬롯 부족으로 버린 이벤트"
         },
         {
             "source": "Ex: boss_defeated && gold >= 10",
@@ -516,6 +584,10 @@
         {
             "source": "Expression the game evaluates when the conversation reaches this node; true follows the True link, false the False link.",
             "text": "대화가 이 노드에 닿으면 게임이 평가하는 식입니다. 참이면 True 링크, 거짓이면 False 링크를 따라갑니다."
+        },
+        {
+            "source": "Fade",
+            "text": "페이드"
         },
         {
             "source": "Failed to apply the preset to this component",
@@ -542,8 +614,20 @@
             "text": "카메라가 그리는 가장 먼 거리입니다. 이보다 먼 지오메트리는 잘려 나갑니다."
         },
         {
+            "source": "Favorite property",
+            "text": "즐겨찾기한 프로퍼티"
+        },
+        {
+            "source": "Favorites",
+            "text": "즐겨찾기"
+        },
+        {
             "source": "Feed the recorded frames to the engine in place of real devices, starting from the current frame.",
             "text": "현재 프레임부터 실제 장치 대신 기록된 프레임을 엔진에 넣습니다."
+        },
+        {
+            "source": "Field",
+            "text": "항목"
         },
         {
             "source": "Fighting-game command to test, in numpad directions (2 down, 6 right, 3 down-right ...) followed by a button letter. Perform it on the gamepad or keyboard to see it match.",
@@ -576,6 +660,10 @@
         {
             "source": "Filter by property and component name",
             "text": "프로퍼티 및 컴포넌트 이름을 검색하여 필터링합니다"
+        },
+        {
+            "source": "Filter modules by whether they are on",
+            "text": "켜짐 여부로 모듈을 거릅니다"
         },
         {
             "source": "Filter scopes...",
@@ -774,6 +862,10 @@
             "text": "InputManager 서비스를 쓸 수 없습니다."
         },
         {
+            "source": "Instances",
+            "text": "인스턴스"
+        },
+        {
             "source": "Isolated the prefab in the current scene",
             "text": "현재 씬에서 프리팹을 격리했습니다"
         },
@@ -874,6 +966,10 @@
             "text": "이 오브젝트에 고정되어 있습니다 - 클릭하면 선택을 따라갑니다"
         },
         {
+            "source": "Loop",
+            "text": "반복"
+        },
+        {
             "source": "Make the paint tools clear cells instead of painting them.",
             "text": "칠하기 도구가 칸을 칠하는 대신 지우게 합니다."
         },
@@ -906,6 +1002,10 @@
             "text": "최대 크기"
         },
         {
+            "source": "Max instances",
+            "text": "최대 인스턴스"
+        },
+        {
             "source": "Maximize On Play - keep only the game view while playing and restore the layout on Stop",
             "text": "Maximize On Play - 플레이하는 동안 게임 뷰만 남기고, Stop 하면 배치를 되돌립니다"
         },
@@ -916,6 +1016,10 @@
         {
             "source": "Min Size",
             "text": "최소 크기"
+        },
+        {
+            "source": "Module",
+            "text": "모듈"
         },
         {
             "source": "Module set changed - build to apply, then restart the editor.",
@@ -1018,6 +1122,10 @@
             "text": "활성 씬에 컴포넌트가 없습니다."
         },
         {
+            "source": "No event library loaded",
+            "text": "로드된 이벤트 라이브러리가 없습니다"
+        },
+        {
             "source": "No global variables registered.",
             "text": "등록된 전역 변수가 없습니다."
         },
@@ -1064,6 +1172,10 @@
         {
             "source": "No node matches.",
             "text": "일치하는 노드가 없습니다."
+        },
+        {
+            "source": "No other modules change.",
+            "text": "다른 모듈은 바뀌지 않습니다."
         },
         {
             "source": "No presets found.",
@@ -1118,8 +1230,16 @@
             "text": "검증 문제가 없습니다. Check Map 은 활성 씬의 모든 오브젝트를 검증합니다."
         },
         {
+            "source": "None (uses default)",
+            "text": "없음(기본값 사용)"
+        },
+        {
             "source": "Note to attach (what you did and what went wrong)",
             "text": "붙일 메모(무엇을 했고 무엇이 잘못됐는지)"
+        },
+        {
+            "source": "Nothing is playing",
+            "text": "재생 중인 것이 없습니다"
         },
         {
             "source": "Nothing recorded yet. Turn recording on and play (PIE) - or 'anim.rewind on' in the console.",
@@ -1158,6 +1278,10 @@
             "text": "활성 씬에서 오브젝트를 찾지 못했습니다."
         },
         {
+            "source": "Off only",
+            "text": "꺼진 것만"
+        },
+        {
             "source": "Off shows only the active game pack; on shows every pack under game/ (default: Preferences > Content Browser)",
             "text": "끄면 활성 게임 팩만, 켜면 game/ 의 모든 팩을 보입니다(기본값은 환경설정 Content Browser)"
         },
@@ -1170,8 +1294,24 @@
             "text": "오프셋 최소"
         },
         {
+            "source": "On and off",
+            "text": "켜짐과 꺼짐"
+        },
+        {
+            "source": "On only",
+            "text": "켜진 것만"
+        },
+        {
+            "source": "Only the selected event",
+            "text": "고른 이벤트만"
+        },
+        {
             "source": "Only the world is ticking: no game module update and no game input.",
             "text": "월드만 도는 중 — 게임 모듈 업데이트 · 게임 입력 없음"
+        },
+        {
+            "source": "Open Data File",
+            "text": "데이터 파일 열기"
         },
         {
             "source": "Open Saved/Profiler/ProfilerCapture.txt (pauses live capture)",
@@ -1258,6 +1398,10 @@
             "text": "눌러 끈 사각형을 놓을 때 칠합니다 (U)"
         },
         {
+            "source": "Parameter curves",
+            "text": "파라미터 곡선 수"
+        },
+        {
             "source": "Paste",
             "text": "붙여넣기"
         },
@@ -1286,6 +1430,10 @@
             "text": "게임 실행을 일시 정지합니다"
         },
         {
+            "source": "Peak real voices",
+            "text": "최대 실제 보이스"
+        },
+        {
             "source": "Pick a render target on the left.",
             "text": "왼쪽에서 렌더 타깃을 고릅니다."
         },
@@ -1304,6 +1452,10 @@
         {
             "source": "Pin to favorites",
             "text": "즐겨찾기에 고정"
+        },
+        {
+            "source": "Pitch",
+            "text": "피치"
         },
         {
             "source": "Play",
@@ -1326,6 +1478,10 @@
             "text": "재생은 리플레이를 전용 가상 입력으로 붙입니다. 기록된 n번째 프레임은 n번째 입력 프레임에 적용됩니다."
         },
         {
+            "source": "Played / dropped",
+            "text": "재생 / 버림"
+        },
+        {
             "source": "Player UI scale setting to simulate, 0.5 to 2.",
             "text": "흉내 낼 플레이어 UI 배율 설정(0.5~2)입니다."
         },
@@ -1334,8 +1490,16 @@
             "text": "흉내 낼 플레이어 글자 크기 설정(0.75~2)입니다. 넘치는 라벨을 찾을 때 씁니다."
         },
         {
+            "source": "Playing",
+            "text": "재생 중"
+        },
+        {
             "source": "Position: {position}",
             "text": "위치: {position}"
+        },
+        {
+            "source": "Post Event",
+            "text": "이벤트 재생"
         },
         {
             "source": "Prefab",
@@ -1370,8 +1534,20 @@
             "text": "진입 상태부터 0.75초마다 다음 상태로 넘어가며 그래프를 미리 봅니다. 전이 순서를 확인할 때 씁니다."
         },
         {
+            "source": "Priority",
+            "text": "우선순위"
+        },
+        {
             "source": "Process the tabs act on: the server or one client",
             "text": "탭이 다루는 프로세스입니다(서버 또는 클라이언트 하나)"
+        },
+        {
+            "source": "Project override",
+            "text": "프로젝트 오버라이드"
+        },
+        {
+            "source": "Properties",
+            "text": "속성"
         },
         {
             "source": "Put every action back to the bindings it was loaded with.",
@@ -1380,6 +1556,10 @@
         {
             "source": "Put this action's bindings back to the ones it was loaded with.",
             "text": "이 액션의 바인딩을 읽어 들였을 때의 것으로 되돌립니다."
+        },
+        {
+            "source": "Radius",
+            "text": "반경"
         },
         {
             "source": "Read frames from the replay file, replacing the current recording. Stops any playback first.",
@@ -1412,6 +1592,10 @@
         {
             "source": "Reading the target...",
             "text": "타깃을 읽는 중..."
+        },
+        {
+            "source": "Real voices",
+            "text": "실제 보이스"
         },
         {
             "source": "Rebuild the preview from the file, for example after editing the XML outside the editor.",
@@ -1482,6 +1666,14 @@
             "text": "저장하지 않은 편집을 버리고 디스크에서 그래프를 다시 읽습니다."
         },
         {
+            "source": "Remaining",
+            "text": "남은 시간"
+        },
+        {
+            "source": "Remove from Favorites",
+            "text": "즐겨찾기에서 제거"
+        },
+        {
             "source": "Remove the loaded trace from the timeline",
             "text": "불러온 트레이스를 타임라인에서 뺍니다"
         },
@@ -1496,6 +1688,10 @@
         {
             "source": "Remove this key from the source table and every translation table when you save.",
             "text": "저장할 때 이 키를 원문 테이블과 모든 번역 테이블에서 지웁니다."
+        },
+        {
+            "source": "Remove this module's line from the project manifest (previews the change first)",
+            "text": "프로젝트 매니페스트에서 이 모듈 줄을 지웁니다(먼저 변경을 미리 보여 줍니다)"
         },
         {
             "source": "Remove this track's keys at the current frame on every channel.",
@@ -1526,6 +1722,10 @@
             "text": "이 바인딩의 키를 바꿉니다. 키를 누르거나 열리는 목록에서 고릅니다."
         },
         {
+            "source": "Required by",
+            "text": "이 모듈에 의존하는 모듈"
+        },
+        {
             "source": "Reset every global variable to its default value",
             "text": "모든 전역 변수를 기본값으로 되돌립니다"
         },
@@ -1544,6 +1744,10 @@
         {
             "source": "Reset this variable to its default value",
             "text": "이 변수를 기본값으로 되돌립니다"
+        },
+        {
+            "source": "Reset to default",
+            "text": "기본값으로 되돌리기"
         },
         {
             "source": "Reset to the default value",
@@ -1608,6 +1812,10 @@
         {
             "source": "Revert this property to the prefab value",
             "text": "이 프로퍼티를 프리팹 값으로 되돌립니다"
+        },
+        {
+            "source": "Rig slot name (weight_slot in the rig asset); value is clamped to 0..1",
+            "text": "리그 슬롯 이름(리그 에셋의 weight_slot), 값은 0..1 로 자릅니다"
         },
         {
             "source": "Rotate: turn the selection around an axis (E)",
@@ -1834,8 +2042,16 @@
             "text": "바인딩과 트리거를 편집할 액션을 선택합니다."
         },
         {
+            "source": "Select an event on the left",
+            "text": "왼쪽에서 이벤트를 고르세요"
+        },
+        {
             "source": "Select an object first",
             "text": "먼저 오브젝트를 고르십시오"
+        },
+        {
+            "source": "Select an object with a Pose Modifier component",
+            "text": "Pose Modifier 컴포넌트가 있는 오브젝트를 고르세요"
         },
         {
             "source": "Selected object no longer exists.",
@@ -1896,6 +2112,10 @@
         {
             "source": "Show in the Content Browser",
             "text": "콘텐츠 브라우저에서 보여 줍니다"
+        },
+        {
+            "source": "Show only one module category",
+            "text": "한 종류의 모듈만 보입니다"
         },
         {
             "source": "Show only the properties that differ from the prefab",
@@ -1990,6 +2210,10 @@
             "text": "고른 Net Mode 로 서버와 클라이언트를 시작합니다"
         },
         {
+            "source": "Steal policy",
+            "text": "뺏기 규칙"
+        },
+        {
             "source": "Step the preview to the next state by one transition.",
             "text": "미리보기를 전이 하나만큼 다음 상태로 넘깁니다."
         },
@@ -2066,6 +2290,10 @@
             "text": "누른 칸의 값을 칠할 값으로 가져옵니다 (I)"
         },
         {
+            "source": "Target has no Pose Modifier",
+            "text": "대상에 Pose Modifier 가 없습니다"
+        },
+        {
             "source": "Target object not found",
             "text": "대상 오브젝트를 찾을 수 없습니다"
         },
@@ -2080,6 +2308,10 @@
         {
             "source": "The accent color used for buttons, selection highlights, folders and active items.",
             "text": "버튼, 선택 하이라이트, 폴더 및 활성 항목에 적용할 대표 액센트 색상"
+        },
+        {
+            "source": "The audio service is not running",
+            "text": "오디오 서비스가 실행 중이 아닙니다"
         },
         {
             "source": "The bug report could not be saved (see the log)",
@@ -2116,6 +2348,10 @@
         {
             "source": "The renderer is not attached yet.",
             "text": "렌더러가 아직 붙지 않았습니다"
+        },
+        {
+            "source": "The rig is not bound yet (check the rig asset and skeleton)",
+            "text": "리그가 아직 바인딩되지 않았습니다(리그 에셋과 스켈레톤을 확인하세요)"
         },
         {
             "source": "The same checklist as a runtime UI window (shows in the game view while playing)",
@@ -2286,8 +2522,16 @@
             "text": "활성 씬의 모든 오브젝트를 다시 검증합니다"
         },
         {
+            "source": "Value",
+            "text": "값"
+        },
+        {
             "source": "Value the action reports: Boolean for buttons, Axis 1D for a trigger or one axis, Vector 2D for a stick or WASD.",
             "text": "액션이 보고하는 값입니다. 버튼은 Boolean, 트리거나 축 하나는 Axis 1D, 스틱이나 WASD 는 Vector 2D 입니다."
+        },
+        {
+            "source": "Version",
+            "text": "버전"
         },
         {
             "source": "Vertical Alignment",
@@ -2314,8 +2558,24 @@
             "text": "오버레이를 그릴 뷰포트 모서리입니다."
         },
         {
+            "source": "Virtual mode",
+            "text": "가상화 방식"
+        },
+        {
+            "source": "Virtual voices",
+            "text": "가상 보이스"
+        },
+        {
             "source": "Visible in the editor - click to hide (not saved)",
             "text": "에디터에서 보입니다 - 클릭하면 숨깁니다(저장하지 않습니다)"
+        },
+        {
+            "source": "Voices",
+            "text": "보이스"
+        },
+        {
+            "source": "Volume",
+            "text": "볼륨"
         },
         {
             "source": "Waiting for input...",
@@ -2432,6 +2692,10 @@
         {
             "source": "linear",
             "text": "선형"
+        },
+        {
+            "source": "loop",
+            "text": "반복"
         },
         {
             "source": "missing",

@@ -60,6 +60,198 @@
                 "engine/ui/confirm_unsaved.ui.xml"
             ]
         },
+        "EdAbilityDebug.ColumnActive": {
+            "source": "Active",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp"
+            ]
+        },
+        "EdAbilityDebug.ColumnBase": {
+            "source": "Base",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp"
+            ]
+        },
+        "EdAbilityDebug.ColumnCooldown": {
+            "source": "Cooldown",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp"
+            ]
+        },
+        "EdAbilityDebug.ColumnCount": {
+            "source": "Count",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp"
+            ]
+        },
+        "EdAbilityDebug.ColumnCurrent": {
+            "source": "Current",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp"
+            ]
+        },
+        "EdAbilityDebug.ColumnName": {
+            "source": "Name",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp"
+            ]
+        },
+        "EdAbilityDebug.ColumnRemaining": {
+            "source": "Remaining",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp"
+            ]
+        },
+        "EdAbilityDebug.ColumnStacks": {
+            "source": "Stacks",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp"
+            ]
+        },
+        "EdAbilityDebug.ColumnTag": {
+            "source": "Tag",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp"
+            ]
+        },
+        "EdAbilityDebug.HintNoTarget": {
+            "source": "Select an object with an AbilitySystemComponent, or pick one above.",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp"
+            ]
+        },
+        "EdAbilityDebug.HintPlayOnly": {
+            "source": "Runtime ability state exists only during play. Press Play to inspect it.",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp"
+            ]
+        },
+        "EdAbilityDebug.Infinite": {
+            "source": "Infinite",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp"
+            ]
+        },
+        "EdAbilityDebug.NoComponentsInScene": {
+            "source": "No AbilitySystemComponent in the active scene",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp"
+            ]
+        },
+        "EdAbilityDebug.PickTarget": {
+            "source": "Pick an ability system...",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp"
+            ]
+        },
+        "EdAbilityDebug.SectionAbilities": {
+            "source": "Granted Abilities",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp"
+            ]
+        },
+        "EdAbilityDebug.SectionAttributes": {
+            "source": "Attributes",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp"
+            ]
+        },
+        "EdAbilityDebug.SectionEffects": {
+            "source": "Active Effects",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp"
+            ]
+        },
+        "EdAbilityDebug.SectionTags": {
+            "source": "Owned Tags",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp"
+            ]
+        },
+        "EdSchedule.ColumnActivity": {
+            "source": "Activity",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp"
+            ]
+        },
+        "EdSchedule.ColumnPlace": {
+            "source": "Place",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp"
+            ]
+        },
+        "EdSchedule.ColumnSource": {
+            "source": "Source",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp"
+            ]
+        },
+        "EdSchedule.ColumnTime": {
+            "source": "Time",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp"
+            ]
+        },
+        "EdSchedule.ColumnTravel": {
+            "source": "Travel",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp"
+            ]
+        },
+        "EdSchedule.EmptyHint": {
+            "source": "No schedule system is running. Start play with NPCs that have schedules.",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp"
+            ]
+        },
+        "EdSchedule.EmptyPlan": {
+            "source": "No plan for today",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp"
+            ]
+        },
+        "EdSchedule.FollowClock": {
+            "source": "Follow game clock",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp"
+            ]
+        },
+        "EdSchedule.GameTime": {
+            "source": "Game time",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp"
+            ]
+        },
+        "EdSchedule.NpcListTitle": {
+            "source": "NPCs",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp"
+            ]
+        },
+        "EdSchedule.RawTimeline": {
+            "source": "Raw timeline",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp"
+            ]
+        },
+        "EdSchedule.SelectNpcHint": {
+            "source": "Select an NPC on the left",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp"
+            ]
+        },
+        "EdSchedule.SystemIndex": {
+            "source": "Schedule system",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp"
+            ]
+        },
+        "EdSchedule.WhyNow": {
+            "source": "Why this activity now",
+            "origins": [
+                "Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp"
+            ]
+        },
         "Keep": {
             "source": "Keep",
             "context": "TextWidget._text",

@@ -1,6 +1,134 @@
 {
     "culture": "ko",
     "entries": {
+        "EdAbilityDebug.ColumnActive": {
+            "text": "실행 중",
+            "sourceHash": "a45a194b58837e4f"
+        },
+        "EdAbilityDebug.ColumnBase": {
+            "text": "기본값",
+            "sourceHash": "c1a4e2a7a8e20d58"
+        },
+        "EdAbilityDebug.ColumnCooldown": {
+            "text": "쿨다운",
+            "sourceHash": "8b59db90be866528"
+        },
+        "EdAbilityDebug.ColumnCount": {
+            "text": "개수",
+            "sourceHash": "71a5c9f4b68ef4d4"
+        },
+        "EdAbilityDebug.ColumnCurrent": {
+            "text": "현재값",
+            "sourceHash": "ab8b4cbbb1fa71fa"
+        },
+        "EdAbilityDebug.ColumnName": {
+            "text": "이름",
+            "sourceHash": "ef49aec68fd1dc66"
+        },
+        "EdAbilityDebug.ColumnRemaining": {
+            "text": "남은 시간",
+            "sourceHash": "dd9423c2ce1195a3"
+        },
+        "EdAbilityDebug.ColumnStacks": {
+            "text": "스택",
+            "sourceHash": "1d286181862db5e4"
+        },
+        "EdAbilityDebug.ColumnTag": {
+            "text": "태그",
+            "sourceHash": "6ce0cb19e201b153"
+        },
+        "EdAbilityDebug.HintNoTarget": {
+            "text": "AbilitySystemComponent 가 있는 오브젝트를 선택하거나 위에서 고르세요.",
+            "sourceHash": "937bde747e495279"
+        },
+        "EdAbilityDebug.HintPlayOnly": {
+            "text": "어빌리티 런타임 상태는 플레이 중에만 있습니다. 플레이를 눌러 확인하세요.",
+            "sourceHash": "7adebb387e539a62"
+        },
+        "EdAbilityDebug.Infinite": {
+            "text": "무한",
+            "sourceHash": "0c024c0024360a2d"
+        },
+        "EdAbilityDebug.NoComponentsInScene": {
+            "text": "활성 씬에 AbilitySystemComponent 가 없습니다",
+            "sourceHash": "f9aceb1e918e73da"
+        },
+        "EdAbilityDebug.PickTarget": {
+            "text": "어빌리티 시스템 고르기...",
+            "sourceHash": "0f5befa1ba0a7140"
+        },
+        "EdAbilityDebug.SectionAbilities": {
+            "text": "부여된 어빌리티",
+            "sourceHash": "59c749c8cdb544fa"
+        },
+        "EdAbilityDebug.SectionAttributes": {
+            "text": "어트리뷰트",
+            "sourceHash": "16b9446e3a70e1f4"
+        },
+        "EdAbilityDebug.SectionEffects": {
+            "text": "걸린 이펙트",
+            "sourceHash": "6991d93fa865e70d"
+        },
+        "EdAbilityDebug.SectionTags": {
+            "text": "소유 태그",
+            "sourceHash": "35d4aac5d07d7ce3"
+        },
+        "EdSchedule.ColumnActivity": {
+            "text": "행동",
+            "sourceHash": "6c76b294d740446c"
+        },
+        "EdSchedule.ColumnPlace": {
+            "text": "장소",
+            "sourceHash": "13b3f5afa0862d1c"
+        },
+        "EdSchedule.ColumnSource": {
+            "text": "출처",
+            "sourceHash": "5f43af3669b1e098"
+        },
+        "EdSchedule.ColumnTime": {
+            "text": "시각",
+            "sourceHash": "48e186fb300e5464"
+        },
+        "EdSchedule.ColumnTravel": {
+            "text": "이동",
+            "sourceHash": "bb87af74ab3706b9"
+        },
+        "EdSchedule.EmptyHint": {
+            "text": "실행 중인 일정 시스템이 없습니다. 일정을 가진 NPC 가 있는 상태로 플레이를 시작하세요.",
+            "sourceHash": "c440b029ca8db326"
+        },
+        "EdSchedule.EmptyPlan": {
+            "text": "오늘 계획이 없습니다",
+            "sourceHash": "b3a79d044bf5027f"
+        },
+        "EdSchedule.FollowClock": {
+            "text": "게임 시계 따라가기",
+            "sourceHash": "9331e1eca52eafa8"
+        },
+        "EdSchedule.GameTime": {
+            "text": "게임 시각",
+            "sourceHash": "312a78762d9ad9a4"
+        },
+        "EdSchedule.NpcListTitle": {
+            "text": "NPC 목록",
+            "sourceHash": "578931c5a8afe279"
+        },
+        "EdSchedule.RawTimeline": {
+            "text": "타임라인 원문",
+            "sourceHash": "60d9224c1e5f1898"
+        },
+        "EdSchedule.SelectNpcHint": {
+            "text": "왼쪽에서 NPC 를 고르세요",
+            "sourceHash": "2d4aa57458132d18"
+        },
+        "EdSchedule.SystemIndex": {
+            "text": "일정 시스템",
+            "sourceHash": "22b2a2f792a7281d"
+        },
+        "EdSchedule.WhyNow": {
+            "text": "지금 왜 이 행동인가",
+            "sourceHash": "998a39497efff850"
+        },
         "settings.accessibility.colorVision": {
             "text": "색각 보정",
             "sourceHash": "dbb8616605f92363"
