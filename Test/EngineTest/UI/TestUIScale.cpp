@@ -71,6 +71,38 @@ SW_TEST_CASE( UIScaleTest, ShortestSideRule )
     SW_EXPECT_NEAR_EQUAL( 4.0f, settings.computeResolutionScale( sw::float2{ 10000.0f, 10000.0f } ), 0.0001f );
 }
 
+/** @brief [UIScaleTest] 혼합 규칙: 0 이면 너비, 1 이면 높이, 가운데는 두 배율의 기하 평균(로그 공간 보간) */
+SW_TEST_CASE( UIScaleTest, MatchWidthOrHeightRule )
+{
+    sw::UIScaleSettings settings{};
+    settings._rule = sw::UIScaleRule::MatchWidthOrHeight;
+
+    // 울트라와이드 3440×1080: 너비 배율 1.7917, 높이 배율 1
+    const sw::float2 ultraWide{ 3440.0f, 1080.0f };
+    settings._matchWidthOrHeight = 0.0f;
+    SW_EXPECT_NEAR_EQUAL( 1.7917f, settings.computeResolutionScale( ultraWide ), 0.0001f );
+    settings._matchWidthOrHeight = 1.0f;
+    SW_EXPECT_NEAR_EQUAL( 1.0f, settings.computeResolutionScale( ultraWide ), 0.0001f );
+    settings._matchWidthOrHeight = 0.5f;
+    SW_EXPECT_NEAR_EQUAL( 1.3385f, settings.computeResolutionScale( ultraWide ), 0.0001f ); // sqrt( 1.7917 × 1 )
+
+    // 기준 해상도에서는 어떤 값이든 1 이다
+    SW_EXPECT_NEAR_EQUAL( 1.0f, settings.computeResolutionScale( sw::float2{ 1920.0f, 1080.0f } ), 0.0001f );
+
+    // 로그 공간 보간이라 가로로 길어진 비율과 세로로 길어진 비율이 대칭이다(곱하면 1)
+    const float32 wide = settings.computeResolutionScale( sw::float2{ 3840.0f, 1080.0f } );
+    const float32 tall = settings.computeResolutionScale( sw::float2{ 960.0f, 1080.0f } );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, wide * tall, 0.0001f );
+
+    // 범위 밖 값은 0..1 로 묶고, 0 크기 창에서도 NaN 이 아니라 최소 배율이다
+    settings._matchWidthOrHeight = 7.0f;
+    SW_EXPECT_NEAR_EQUAL( 1.0f, settings.computeResolutionScale( ultraWide ), 0.0001f );
+    settings._matchWidthOrHeight = 0.5f;
+    const float32 zero           = settings.computeResolutionScale( sw::float2{ 0.0f, 0.0f } );
+    SW_EXPECT_TRUE( zero == zero );
+    SW_EXPECT_NEAR_EQUAL( settings._minScale, zero, 0.0001f );
+}
+
 /** @brief [UIScaleTest] gv_uiScale 1.25 → 배율 1.25 배, UI 뷰포트 = 물리 / 배율 */
 SW_TEST_CASE( UIScaleTest, UserScaleMultiplies )
 {

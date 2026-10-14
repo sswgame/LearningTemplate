@@ -55,6 +55,30 @@ namespace sw
                 scale = physicalSize._y / MathUtil::max( 1.0f, _referenceHeight );
                 break;
             }
+            case UIScaleRule::MatchWidthOrHeight:
+            {
+                // 로그 공간 보간(유니티 CanvasScaler 와 같다): 비율이 달라도 너비 쪽과 높이 쪽 확대가 대칭이다.
+                // 양 끝은 로그와 지수를 쓰지 않는다. 프레임마다 한 번 불리므로 중간 값도 로그 둘과 지수 하나뿐이다.
+                const float32 match       = MathUtil::clamp( _matchWidthOrHeight, 0.0f, 1.0f );
+                const float32 widthScale  = physicalSize._x / MathUtil::max( 1.0f, _referenceWidth );
+                const float32 heightScale = physicalSize._y / MathUtil::max( 1.0f, _referenceHeight );
+                const bool    bWidthOnly  = match <= 0.0f;
+                const bool    bHeightOnly = match >= 1.0f;
+                if ( bWidthOnly )
+                {
+                    scale = widthScale;
+                }
+                else if ( bHeightOnly )
+                {
+                    scale = heightScale;
+                }
+                else
+                {
+                    constexpr float32 kTiny = 1.0e-6f; // 0 크기 창에서 로그가 무한대가 되지 않게 한다
+                    scale                   = MathUtil::exp( ( 1.0f - match ) * MathUtil::log( MathUtil::max( widthScale, kTiny ) ) + match * MathUtil::log( MathUtil::max( heightScale, kTiny ) ) );
+                }
+                break;
+            }
             case UIScaleRule::Fixed:
             {
                 scale = 1.0f;
