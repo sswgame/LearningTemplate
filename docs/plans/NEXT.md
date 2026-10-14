@@ -80,7 +80,6 @@ Conform 의 `SurfaceBvh`)을 풀었다. 최종 검증: Debug `all AllTests` **�
   단독 3/3 통과, 창이 앞으로 오지 못한 포커스 문제로 의심(미확정), 서브시스템 변경과는 무관해 보인다(로그 `...\Bin\Saved\Automation\closewindow_dx11.log`).
 - 미확인: 마지막 AppTest(필터 `*EditorScenariosPassOn*` + `EditorSelfTestsPassInsideTheEditor` + `KitExtensionSelfTestsPassInTheirGame`)의 스모크 둘은
   셸 종료 코드 127 이라 결과를 보지 못했다(로그는 조정자 scratchpad 의 `v_ed.log`).
-- 따로 본 결함(미조사): 키트 리로드 때 `Online server kit 'chat'/'admin' is registered twice` 가 [Error] 로 남는다 — 백로그 `E-11`.
 
 **새 세션의 첫 일(남은 검증)**: Release 빌드 + 네 백엔드 스크린샷 sha 대조(기준 `D:\w\perfbase` 는 Ninja-Release 만 있다), 수정이 들어간 뒤 `hostgpu` 재확인
 (1차와 같은 조건 — 직렬), 위 스모크 둘 확인. 그다음 3절.
