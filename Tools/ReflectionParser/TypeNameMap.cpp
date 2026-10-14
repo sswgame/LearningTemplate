@@ -110,9 +110,10 @@ namespace sw
             result = "std::" + result.substr( kCxx11Prefix.size() );
 
         // 2) 템플릿 타입(예: map<K, V>, vector<T>)이면 재귀적으로 정규화
-        const size_t openAngle  = result.find( '<' );
-        const size_t closeAngle = result.rfind( '>' );
-        if ( openAngle != string::npos && closeAngle != string::npos && openAngle < closeAngle )
+        const size_t openAngle             = result.find( '<' );
+        const size_t closeAngle            = result.rfind( '>' );
+        const bool   bHasTemplateArguments = openAngle != string::npos && closeAngle != string::npos && openAngle < closeAngle;
+        if ( bHasTemplateArguments )
         {
             const string stem  = string{ StringUtil::trim( string_view{ result }.substr( 0, openAngle ) ) };
             const string inner = string{ StringUtil::trim( string_view{ result }.substr( openAngle + 1, closeAngle - openAngle - 1 ) ) };

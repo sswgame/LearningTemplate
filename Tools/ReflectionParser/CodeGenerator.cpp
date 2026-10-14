@@ -294,8 +294,11 @@ namespace sw
         if ( node != nullptr && node->_bIsContainer )
         {
             emit.linef( "using NestC0 = decltype( std::declval<%#>().%# );", typeInfo._fullyQualifiedName, prop._memberName );
-            while ( node != nullptr && node->_bIsContainer && depth < CodeGeneratorInternal::kMaxNestedContainerDepth )
+            while ( true )
             {
+                const bool bNestedContainer = node != nullptr && node->_bIsContainer && depth < CodeGeneratorInternal::kMaxNestedContainerDepth;
+                if ( bNestedContainer == false )
+                    break;
                 const utf8* kind              = toCppExpr( node->_containerKind );
                 const utf8* elementTypeMember = containerElementTypeMember( prevKind );
                 emit.linef( "using NestC%# = typename NestC%#::%#;", depth, depth - 1, elementTypeMember );

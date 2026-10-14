@@ -326,8 +326,9 @@ namespace sw
             }
             case LoadBotAction::SocialFriendRandom:
             {
-                const LoadBot* pOther = _pRunner->findBot( _random.nextInt( 0, _pRunner->getBotCount() - 1 ) );
-                if ( pOther == nullptr || pOther == this || pOther->getAccountID() == kInvalidAccountID )
+                const LoadBot* pOther           = _pRunner->findBot( _random.nextInt( 0, _pRunner->getBotCount() - 1 ) );
+                const bool     bNoPeerAvailable = pOther == nullptr || pOther == this || pOther->getAccountID() == kInvalidAccountID;
+                if ( bNoPeerAvailable )
                 {
                     advance(); // 고를 상대가 아직 없다 — 건너뛴다(지표에 적지 않는다)
                     return;

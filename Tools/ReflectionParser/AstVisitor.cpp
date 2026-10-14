@@ -211,7 +211,8 @@ namespace sw
                         }
                         else if ( bInBlockComment )
                         {
-                            if ( window[index] == '*' && index + 1 < pos && window[index + 1] == '/' )
+                            const bool bBlockCommentEnd = window[index] == '*' && index + 1 < pos && window[index + 1] == '/';
+                            if ( bBlockCommentEnd )
                             {
                                 bInBlockComment = false;
                                 ++index;
@@ -246,9 +247,10 @@ namespace sw
                             bInQuote = false;
                         continue;
                     }
+                    const bool bStatementBoundary = character == ';' || character == '{' || character == '}';
                     if ( character == '"' )
                         bInQuote = true;
-                    else if ( character == ';' || character == '{' || character == '}' )
+                    else if ( bStatementBoundary )
                         return false;
                 }
                 return true;
@@ -370,9 +372,10 @@ namespace sw
             /** @brief `T<A,B>` 에서 최외곽 템플릿 인자를 나눕니다. */
             static vector<string> extractTemplateArgs( const string_view typeStr )
             {
-                const size_t start = typeStr.find( '<' );
-                const size_t end   = typeStr.rfind( '>' );
-                if ( start == string_view::npos || end == string_view::npos || end <= start )
+                const size_t start              = typeStr.find( '<' );
+                const size_t end                = typeStr.rfind( '>' );
+                const bool   bInvalidAngleRange = start == string_view::npos || end == string_view::npos || end <= start;
+                if ( bInvalidAngleRange )
                     return {};
                 return ParserUtil::splitCommaRespectingAngles( typeStr.substr( start + 1, end - start - 1 ) );
             }
@@ -538,9 +541,10 @@ namespace sw
                     const string  spelling = takeString( clang_getTypeSpelling( current ) );
                     ContainerKind kind     = ContainerKind::None;
                     string        wrapperStem;
-                    const CXType  named = current.kind == CXType_Elaborated ? clang_Type_getNamedType( current ) : current;
-                    if ( session._containerTypeMap.match( spelling ) != nullptr || findReflectContainer( current, session._config, kind, wrapperStem ) ||
-                         session._typeNameMap.isKnown( spelling ) || named.kind != CXType_Typedef )
+                    const CXType  named         = current.kind == CXType_Elaborated ? clang_Type_getNamedType( current ) : current;
+                    const bool    bResolvedType = session._containerTypeMap.match( spelling ) != nullptr || findReflectContainer( current, session._config, kind, wrapperStem ) ||
+                                               session._typeNameMap.isKnown( spelling ) || named.kind != CXType_Typedef;
+                    if ( bResolvedType )
                     {
                         resolved = current;
                         break;
@@ -692,9 +696,11 @@ namespace sw
             /** @brief 여는 괄호류면 +1, 닫는 괄호류면 -1 입니다. `<` · `>` 도 셉니다(템플릿 인자 안의 쉼표를 가르지 않게). */
             static int32 getBracketDelta( const string_view spelling ) noexcept
             {
-                if ( spelling == "(" || spelling == "[" || spelling == "{" || spelling == "<" )
+                const bool bOpeningBracket = spelling == "(" || spelling == "[" || spelling == "{" || spelling == "<";
+                if ( bOpeningBracket )
                     return 1;
-                if ( spelling == ")" || spelling == "]" || spelling == "}" || spelling == ">" )
+                const bool bClosingBracket = spelling == ")" || spelling == "]" || spelling == "}" || spelling == ">";
+                if ( bClosingBracket )
                     return -1;
                 if ( spelling == ">>" )
                     return -2;
@@ -712,7 +718,8 @@ namespace sw
                     if ( bWordLike && tokenIndex > begin )
                     {
                         const CXTokenKind previousKind = listToken[tokenIndex - 1]._kind;
-                        if ( previousKind == CXToken_Identifier || previousKind == CXToken_Keyword || previousKind == CXToken_Literal )
+                        const bool        bNeedsSpace  = previousKind == CXToken_Identifier || previousKind == CXToken_Keyword || previousKind == CXToken_Literal;
+                        if ( bNeedsSpace )
                             text.push_back( ' ' );
                     }
                     text += token._spelling;
@@ -1181,8 +1188,9 @@ namespace sw
             {
                 for ( const ParsedMethodSignature& signature : collector._listMethodSignature )
                 {
-                    if ( signature._name == name && signature._listParameterTypeName.size() == 1 &&
-                         signature._listParameterTypeName[0] == annotation::kValidationContextTypeName )
+                    const bool bMatchesValidationSignature = signature._name == name && signature._listParameterTypeName.size() == 1 &&
+                                                             signature._listParameterTypeName[0] == annotation::kValidationContextTypeName;
+                    if ( bMatchesValidationSignature )
                         return true;
                 }
                 return false;
@@ -1280,7 +1288,8 @@ namespace sw
                     return false;
                 }
 
-                if ( fieldType.kind == CXType_ConstantArray && prop._containerTree != nullptr && prop._containerTree->_elementNested != nullptr )
+                const bool bFixedArrayOfContainers = fieldType.kind == CXType_ConstantArray && prop._containerTree != nullptr && prop._containerTree->_elementNested != nullptr;
+                if ( bFixedArrayOfContainers )
                 {
                     SW_LOG_ERROR( "ERROR: PROPERTY() on '%#' is a fixed array of containers - use a container of containers (vector<array<…>>) instead.", owner );
                     return false;
@@ -1333,7 +1342,8 @@ namespace sw
                     if ( prop._typeName == pTypeName )
                         bKnownType = true;
                 }
-                if ( bKnownType && prop._bIsContainer == SW_FALSE && prop._bIsBitField == SW_FALSE )
+                const bool bAnimatableProperty = bKnownType && prop._bIsContainer == SW_FALSE && prop._bIsBitField == SW_FALSE;
+                if ( bAnimatableProperty )
                     return true;
                 SW_LOG_ERROR( "ERROR: PROPERTY( Interp ) on '%#' (%#) - only a single number, float2/3/4 or quaternion can be animated by a value track.",
                               owner, prop._typeName );

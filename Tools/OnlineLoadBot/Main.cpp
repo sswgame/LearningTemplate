@@ -105,8 +105,9 @@ namespace sw
                 {
                     const string_view argument = argv[argumentIndex];
                     string            value;
-                    if ( readValue( argument, "--scenario=", outOptions._scenarioPath ) || readValue( argument, "--report=", outOptions._reportPath ) ||
-                         readValue( argument, "--server=", outOptions._serverAddress ) )
+                    const bool        bPathOrAddressOption = readValue( argument, "--scenario=", outOptions._scenarioPath ) || readValue( argument, "--report=", outOptions._reportPath ) ||
+                                                      readValue( argument, "--server=", outOptions._serverAddress );
+                    if ( bPathOrAddressOption )
                         continue;
                     bool bNumberOk = true;
                     if ( readValue( argument, "--bots=", value ) )
@@ -143,9 +144,10 @@ namespace sw
                         return false;
                     }
                 }
-                const bool bNoTarget  = outOptions._serverAddress.empty() && outOptions._bLocalServer == SW_FALSE;
-                const bool bTwoTarget = outOptions._serverAddress.empty() == false && outOptions._bLocalServer == SW_TRUE;
-                if ( outOptions._scenarioPath.empty() || bNoTarget || bTwoTarget )
+                const bool bNoTarget             = outOptions._serverAddress.empty() && outOptions._bLocalServer == SW_FALSE;
+                const bool bTwoTarget            = outOptions._serverAddress.empty() == false && outOptions._bLocalServer == SW_TRUE;
+                const bool bInvalidTargetOptions = outOptions._scenarioPath.empty() || bNoTarget || bTwoTarget;
+                if ( bInvalidTargetOptions )
                 {
                     outError = "need --scenario=<json> and exactly one of --server=<ip:port> or --local-server[=<port>]";
                     return false;

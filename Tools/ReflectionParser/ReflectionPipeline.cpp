@@ -184,9 +184,10 @@ namespace sw
                     path              = clang_getCString( fileName ) != nullptr ? string( clang_getCString( fileName ) ) : string();
                     clang_disposeString( fileName );
                 }
-                path = FileUtil::normalizeSeparators( path );
-                if ( path.empty() || StringUtil::startsWith( path, collector._outputDirPrefix, true ) ||
-                     ( collector._outputDirRealPrefix.empty() == false && StringUtil::startsWith( path, collector._outputDirRealPrefix, true ) ) )
+                path                 = FileUtil::normalizeSeparators( path );
+                const bool bSkipPath = path.empty() || StringUtil::startsWith( path, collector._outputDirPrefix, true ) ||
+                                       ( collector._outputDirRealPrefix.empty() == false && StringUtil::startsWith( path, collector._outputDirRealPrefix, true ) );
+                if ( bSkipPath )
                     return;
                 const uint64 writeTime = GeneratedFileUtil::getWriteTime( path );
                 if ( writeTime == 0 )
