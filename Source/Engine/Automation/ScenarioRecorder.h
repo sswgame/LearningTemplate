@@ -29,7 +29,7 @@ namespace sw
     {
         string _xmlText;
         uint32 _writtenStepCount{ 0 };
-        uint32 _skippedEventCount{ 0 }; ///< 시나리오 단계로 나타낼 수 없어 건너뛴 원시 이벤트 수입니다(휠 · 조합 중 글자 · 포커스 등).
+        uint32 _skippedEventCount{ 0 }; ///< 시나리오 단계로 나타낼 수 없어 건너뛴 원시 이벤트 수입니다(조합 중 글자 · 포커스 · 포인터 출입 · 패드 연결 등).
     };
 
     /**

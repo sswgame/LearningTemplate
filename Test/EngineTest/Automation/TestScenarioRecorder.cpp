@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
+
 #include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Automation/ScenarioRecorder.h"
 #include "Engine/Input/InputSlotUtil.h"
@@ -23,11 +25,20 @@ namespace
             }
             return count;
         }
+
+        static float32 readFloat( const sw::AutomationStep& step, sw::string_view name )
+        {
+            float32           value      = 0.0f;
+            const sw::string*      pAttribute = step.findAttribute( name );
+            if ( pAttribute != nullptr )
+                (void)sw::StringUtil::parseFloat( *pAttribute, value ); // 읽지 못하면 0 으로 남아 기대값과 어긋난다
+            return value;
+        }
     };
 } // namespace
 
 /**
- * @brief [ScenarioRecorderTest] 녹화 프레임은 다시 읽히는 시나리오가 되고, 단계로 못 쓰는 입력(휠)은 건너뛰어 센다
+ * @brief [ScenarioRecorderTest] 녹화 프레임은 다시 읽히는 시나리오가 되고, 단계로 못 쓰는 입력은 건너뛰어 센다
  */
 SW_TEST_CASE( ScenarioRecorderTest, FramesBecomeParsableInputSteps )
 {
@@ -61,8 +72,9 @@ SW_TEST_CASE( ScenarioRecorderTest, FramesBecomeParsableInputSteps )
     SW_EXPECT_EQUAL( 1u, TestScenarioRecorderInternal::countKind( scenario, "MouseDelta" ) );
     SW_EXPECT_EQUAL( 1u, TestScenarioRecorderInternal::countKind( scenario, "Text" ) );
     SW_EXPECT_EQUAL( 1u, TestScenarioRecorderInternal::countKind( scenario, "Pass" ) );
-    SW_EXPECT_EQUAL( 3u + slotSteps, output._writtenStepCount );
-    SW_EXPECT_EQUAL( 1u + ( 2u - slotSteps ), output._skippedEventCount );
+    SW_EXPECT_EQUAL( 1u, TestScenarioRecorderInternal::countKind( scenario, "Wheel" ) );
+    SW_EXPECT_EQUAL( 4u + slotSteps, output._writtenStepCount );
+    SW_EXPECT_EQUAL( 2u - slotSteps, output._skippedEventCount );
 
     for ( const sw::AutomationStep& step : scenario.getSteps() )
     {
@@ -82,6 +94,84 @@ SW_TEST_CASE( ScenarioRecorderTest, FramesBecomeParsableInputSteps )
             SW_EXPECT_EQUAL( 23u, step._frameIndex );
         }
     }
+}
+
+/**
+ * @brief [ScenarioRecorderTest] 휠은 프레임마다 합친 `Wheel` 단계로 왕복하고, 포커스 · 포인터 출입 · 패드 연결 · 조합 중 글자는 건너뛴다
+ */
+SW_TEST_CASE( ScenarioRecorderTest, WheelRoundTripsAndWindowStateIsSkipped )
+{
+    sw::vector<sw::InputReplayFrame> listFrame( 3 );
+    listFrame[0]._listRawEvent.push_back( sw::RawInputEvent::makeMouseWheel( 1.0f ) );
+    listFrame[0]._listRawEvent.push_back( sw::RawInputEvent::makeMouseWheel( 2.0f ) );
+    listFrame[0]._listRawEvent.push_back( sw::RawInputEvent::makeMouseHorizontalWheel( -1.5f ) );
+    listFrame[2]._listRawEvent.push_back( sw::RawInputEvent::makeMouseWheel( -1.0f ) );
+    sw::RawInputEvent focus{};
+    focus._type = sw::RawInputEventType::FocusLost;
+    listFrame[1]._listRawEvent.push_back( focus );
+    sw::RawInputEvent pointer{};
+    pointer._type = sw::RawInputEventType::PointerLeft;
+    listFrame[1]._listRawEvent.push_back( pointer );
+
+    sw::ScenarioRecordSettings settings;
+    settings._name = "recorded.wheel";
+    const sw::ScenarioRecordOutput output = sw::ScenarioRecorder::toScenarioXml( listFrame, settings );
+    SW_EXPECT_EQUAL( 2u, output._writtenStepCount );
+    SW_EXPECT_EQUAL( 2u, output._skippedEventCount );
+
+    sw::AutomationScenario scenario;
+    sw::string             error;
+    SW_ASSERT_TRUE( scenario.parse( output._xmlText, "recorded.scenario.xml", error ) );
+    SW_EXPECT_EQUAL( 2u, TestScenarioRecorderInternal::countKind( scenario, "Wheel" ) );
+
+    uint32 wheelIndex = 0;
+    for ( const sw::AutomationStep& step : scenario.getSteps() )
+    {
+        if ( sw::string_view{ step._kind } != "Wheel" )
+            continue;
+        const float32 valueY = TestScenarioRecorderInternal::readFloat( step, "y" );
+        if ( wheelIndex == 0 )
+        {
+            SW_EXPECT_EQUAL( settings._firstFrame, step._frameIndex );
+            SW_EXPECT_NEAR_EQUAL( 3.0f, valueY, 1e-4f );
+            SW_ASSERT_TRUE( step.findAttribute( "x" ) != nullptr );
+            SW_EXPECT_NEAR_EQUAL( -1.5f, TestScenarioRecorderInternal::readFloat( step, "x" ), 1e-4f );
+        }
+        else
+        {
+            SW_EXPECT_EQUAL( settings._firstFrame + 2u, step._frameIndex );
+            SW_EXPECT_NEAR_EQUAL( -1.0f, valueY, 1e-4f );
+            SW_EXPECT_TRUE( step.findAttribute( "x" ) == nullptr ); // 가로 휠이 없으면 x 를 쓰지 않는다
+        }
+        ++wheelIndex;
+    }
+}
+
+/**
+ * @brief [ScenarioRecorderTest] 두 번째 누름이 DoubleClick 으로 와도 Press 둘 · Release 둘이 된다
+ */
+SW_TEST_CASE( ScenarioRecorderTest, DoubleClickBecomesSecondPress )
+{
+    sw::InputSlot parsed{};
+    if ( sw::InputSlotUtil::tryParse( sw::InputSlotUtil::toText( sw::InputSlot::fromMouseButton( sw::MouseButton::Left ) ), parsed ) == false )
+        return; // 마우스 버튼 이름은 엔진 서비스가 있어야 다시 읽힌다
+
+    sw::vector<sw::InputReplayFrame> listFrame( 4 );
+    listFrame[0]._listRawEvent.push_back( sw::RawInputEvent::makeMouseButtonDown( sw::MouseButton::Left ) );
+    listFrame[1]._listRawEvent.push_back( sw::RawInputEvent::makeMouseButtonUp( sw::MouseButton::Left ) );
+    listFrame[2]._listRawEvent.push_back( sw::RawInputEvent::makeMouseDoubleClick( sw::MouseButton::Left ) );
+    listFrame[3]._listRawEvent.push_back( sw::RawInputEvent::makeMouseButtonUp( sw::MouseButton::Left ) );
+
+    sw::ScenarioRecordSettings settings;
+    settings._name = "recorded.double";
+    const sw::ScenarioRecordOutput output = sw::ScenarioRecorder::toScenarioXml( listFrame, settings );
+    SW_EXPECT_EQUAL( 0u, output._skippedEventCount );
+
+    sw::AutomationScenario scenario;
+    sw::string             error;
+    SW_ASSERT_TRUE( scenario.parse( output._xmlText, "recorded.scenario.xml", error ) );
+    SW_EXPECT_EQUAL( 2u, TestScenarioRecorderInternal::countKind( scenario, "Press" ) );
+    SW_EXPECT_EQUAL( 2u, TestScenarioRecorderInternal::countKind( scenario, "Release" ) );
 }
 
 /**

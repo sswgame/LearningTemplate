@@ -72,6 +72,9 @@ namespace sw
                 bool    bHasDelta    = false;
                 float32 deltaX       = 0.0f;
                 float32 deltaY       = 0.0f;
+                bool    bHasWheel    = false;
+                float32 wheelX       = 0.0f;
+                float32 wheelY       = 0.0f;
                 string  slotText;
 
                 const auto appendSlot = [&]( const utf8* pKind, const InputSlot& slot )
@@ -103,6 +106,10 @@ namespace sw
                             appendSlot( "Release", InputSlot::fromKey( event._payload._keyData._key ) );
                             break;
                         case RawInputEventType::MouseButtonDown:
+                        case RawInputEventType::MouseDoubleClick:
+                            // Win32 는 두 번째 누름을 Down 대신 DoubleClick 으로 보낸다(Down · Up · DoubleClick · Up).
+                            // 입력 관리자도 이를 버튼 눌림으로 다루므로 Press 로 쓴다. 건너뛰면 두 번째 누름이 사라진다.
+                            // 재생은 원시 Down 둘을 내므로 DoubleClick 이벤트 자체에 기대는 코드는 재현되지 않는다.
                             appendSlot( "Press", InputSlot::fromMouseButton( event._payload._mouseData._button ) );
                             break;
                         case RawInputEventType::MouseButtonUp:
@@ -129,6 +136,14 @@ namespace sw
                             deltaX += event._payload._mouseData._rawDelta._x;
                             deltaY += event._payload._mouseData._rawDelta._y;
                             break;
+                        case RawInputEventType::MouseWheel:
+                            bHasWheel = true;
+                            wheelY += event._payload._mouseData._wheelDelta;
+                            break;
+                        case RawInputEventType::MouseWheelHorizontal:
+                            bHasWheel = true;
+                            wheelX += event._payload._mouseData._wheelDelta;
+                            break;
                         case RawInputEventType::GamepadAxis:
                             outBody += "<GamepadAxis axis=\"" + to_string( static_cast<uint32>( event._payload._gamepadData._axisIndex ) ) + "\" value=\"";
                             appendFloat( outBody, event._payload._gamepadData._axisValue );
@@ -151,15 +166,14 @@ namespace sw
                             break;
                         }
                         case RawInputEventType::None:
-                        case RawInputEventType::MouseDoubleClick:
-                        case RawInputEventType::MouseWheel:
-                        case RawInputEventType::MouseWheelHorizontal:
                         case RawInputEventType::GamepadConnectionChanged:
                         case RawInputEventType::TextComposition:
                         case RawInputEventType::FocusGained:
                         case RawInputEventType::FocusLost:
                         case RawInputEventType::PointerEntered:
                         case RawInputEventType::PointerLeft:
+                            // 조합 중 글자는 확정 뒤 TextInput 으로 다시 오고, 포커스 · 포인터 출입 · 패드 연결은 창과 장치의 상태라
+                            // 시나리오 단계로 낼 뜻이 없다(실행기는 창을 가진 채 입력만 넣는다).
                             ++outResult._skippedEventCount;
                             break;
                     }
@@ -172,6 +186,20 @@ namespace sw
                     appendFloat( outBody, toFraction( positionX, settings._clientWidth ) );
                     outBody += "\" y=\"";
                     appendFloat( outBody, toFraction( positionY, settings._clientHeight ) );
+                    outBody += "\"/>";
+                    ++outResult._writtenStepCount;
+                }
+                if ( bHasWheel )
+                {
+                    outBody += "<Wheel";
+                    if ( wheelX != 0.0f )
+                    {
+                        outBody += " x=\"";
+                        appendFloat( outBody, wheelX );
+                        outBody += "\"";
+                    }
+                    outBody += " y=\"";
+                    appendFloat( outBody, wheelY );
                     outBody += "\"/>";
                     ++outResult._writtenStepCount;
                 }
