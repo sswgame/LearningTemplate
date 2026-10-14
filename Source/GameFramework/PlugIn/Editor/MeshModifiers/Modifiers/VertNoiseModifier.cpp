@@ -8,61 +8,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifier.h"
+#include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifierNoise.h"
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifierRegistry.h"
-
-namespace sw::editor
-{
-    namespace
-    {
-        struct VertNoiseModifierInternal
-        {
-            static uint32 hashLattice( int32 x, int32 y, int32 z, uint32 seed )
-            {
-                uint32 hash = seed * 0x9E3779B1u;
-                hash ^= static_cast<uint32>( x ) * 0x85EBCA6Bu;
-                hash = ( hash << 13 ) | ( hash >> 19 );
-                hash ^= static_cast<uint32>( y ) * 0xC2B2AE35u;
-                hash = ( hash << 13 ) | ( hash >> 19 );
-                hash ^= static_cast<uint32>( z ) * 0x27D4EB2Fu;
-                hash ^= hash >> 16;
-                hash *= 0x85EBCA6Bu;
-                hash ^= hash >> 13;
-                hash *= 0xC2B2AE35u;
-                hash ^= hash >> 16;
-                return hash;
-            }
-
-            static float32 getLatticeValue( int32 x, int32 y, int32 z, uint32 seed )
-            {
-                return static_cast<float32>( hashLattice( x, y, z, seed ) & 0xFFFFu ) / 32767.5f - 1.0f;
-            }
-
-            static float32 smooth( float32 t ) { return t * t * ( 3.0f - 2.0f * t ); }
-
-            static float32 lerp( float32 from, float32 to, float32 t ) { return from + ( to - from ) * t; }
-
-            /** @brief 값 노이즈 [-1, 1] 입니다. */
-            static float32 computeValueNoise( const float3& point, uint32 seed )
-            {
-                const float32 floorX = MathUtil::floor( point._x );
-                const float32 floorY = MathUtil::floor( point._y );
-                const float32 floorZ = MathUtil::floor( point._z );
-                const int32   x      = static_cast<int32>( floorX );
-                const int32   y      = static_cast<int32>( floorY );
-                const int32   z      = static_cast<int32>( floorZ );
-                const float32 tx     = smooth( point._x - floorX );
-                const float32 ty     = smooth( point._y - floorY );
-                const float32 tz     = smooth( point._z - floorZ );
-
-                const float32 value00 = lerp( getLatticeValue( x, y, z, seed ), getLatticeValue( x + 1, y, z, seed ), tx );
-                const float32 value10 = lerp( getLatticeValue( x, y + 1, z, seed ), getLatticeValue( x + 1, y + 1, z, seed ), tx );
-                const float32 value01 = lerp( getLatticeValue( x, y, z + 1, seed ), getLatticeValue( x + 1, y, z + 1, seed ), tx );
-                const float32 value11 = lerp( getLatticeValue( x, y + 1, z + 1, seed ), getLatticeValue( x + 1, y + 1, z + 1, seed ), tx );
-                return lerp( lerp( value00, value10, ty ), lerp( value01, value11, ty ), tz );
-            }
-        };
-    } // namespace
-} // namespace sw::editor
 
 namespace sw::editor
 {
@@ -91,7 +38,7 @@ namespace sw::editor
             const uint32  seed   = static_cast<uint32>( getInt( _seedParam ) );
             const float32 drift  = getFloat( _speedParam ) * context.getTime();
             const float3  sample = point._position * getFloat( _frequencyParam ) + float3{ drift, drift * 0.5f, drift * 0.25f };
-            return point._position + point._normal * ( VertNoiseModifierInternal::computeValueNoise( sample, seed ) * amplitude );
+            return point._position + point._normal * ( MeshModifierNoise::valueNoise3D( sample, seed ) * amplitude );
         }
 
     private:

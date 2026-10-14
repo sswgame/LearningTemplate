@@ -32,6 +32,14 @@ namespace sw::editor
 
         const utf8* getDescription() const override { return "Bends the mesh in place along the shape of a spline."; }
 
+        /** @brief 경로의 회전 최소화 프레임 표를 한 번 만들고(단일 스레드) 기본 정점 루프를 돈다 — 정점 루프는 표를 읽기만 한다. */
+        void applyToMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context ) const override
+        {
+            _frameCache.build( context, getText( _pathParam ), PathModifierUtil::PathSpace::PathLocal );
+            MeshModifier::applyToMesh( inoutMesh, context );
+            _frameCache.clear();
+        }
+
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override
         {
             float32 length = 0.0f;
@@ -46,13 +54,14 @@ namespace sw::editor
             PathModifierUtil::rotate2D( MathUtil::toRadian( getFloat( _rotateParam ) + getFloat( _twistParam ) * fraction ), coordU, coordV );
             float3 result{ 0.0f, 0.0f, 0.0f };
             if ( PathModifierUtil::tryPlaceOnPath( context, getText( _pathParam ), PathModifierUtil::PathSpace::PathLocal, length, distance, getBool( _loopParam ), coordU,
-                                                   coordV, result )
+                                                   coordV, result, &_frameCache )
                  == false )
                 result = point._position; // 경로를 못 얻으면 변형 없이 통과한다
             return result;
         }
 
     private:
+        mutable PathModifierUtil::PathFrameCache _frameCache; ///< `applyToMesh` 동안만 채워지는 경로 프레임 표
         uint32 _pathParam;
         uint32 _stretchParam;
         uint32 _offsetParam;

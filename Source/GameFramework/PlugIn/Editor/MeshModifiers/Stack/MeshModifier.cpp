@@ -118,6 +118,11 @@ namespace sw::editor
                         point._uv          = bHasUV ? mesh._listUV[index] : float2{ 0.0f, 0.0f };
                         point._color       = bHasColor ? mesh._listColor[index] : float4{ 1.0f, 1.0f, 1.0f, 1.0f };
                         point._vertexIndex = static_cast<uint32>( index );
+                        if ( _pContext->_pListOriginalPosition != nullptr )
+                        {
+                            point._originalPosition     = ( *_pContext->_pListOriginalPosition )[index];
+                            point._bHasOriginalPosition = true;
+                        }
 
                         const float3 moved = blend( point._position, _pModifier->deformPoint( point, *_pContext ), weight );
                         mesh._listPosition[index] = moved;
@@ -253,6 +258,19 @@ namespace sw::editor
         context._axisIndex       = MathUtil::min( _gizmo._axisIndex, 2u );
         context._modifierToWorld = modifierToLocal * evaluation._meshToWorld;
         context._worldToModifier = context._modifierToWorld.invert();
+
+        // 변형 전 원본 위치도 같은 공간 변환으로 모디파이어 공간에 둔다(스택 입력이 없으면 이 모디파이어의 입력 위치)
+        vector<float3> listOriginalPosition;
+        if ( needsOriginalPosition() )
+        {
+            const vector<float3>* pListSource = evaluation._pListStackInputPosition;
+            if ( pListSource == nullptr || pListSource->size() != inoutMesh._listPosition.size() )
+                pListSource = &inoutMesh._listPosition;
+            listOriginalPosition.reserve( pListSource->size() );
+            for ( const float3& position : *pListSource )
+                listOriginalPosition.push_back( float3::transform( position, localToModifier ) );
+            context._pListOriginalPosition = &listOriginalPosition;
+        }
 
         MeshModifierInternal::transformMesh( inoutMesh, localToModifier, localToModifierNormal );
         context._bounds = MeshModifierBounds::makeFromPoints( inoutMesh._listPosition );

@@ -276,9 +276,21 @@ namespace sw::editor
 
     void MeshModifierStack::apply( MeshModifierMesh& inoutMesh, const MeshModifierEvaluation& evaluation ) const
     {
+        // 원본 위치가 필요한 모디파이어가 있을 때만 스택 입력을 복사해 넘긴다(바깥 스택이 이미 넘겼으면 그것을 쓴다)
+        bool bNeedsOriginal = false;
+        for ( const unique_ptr<MeshModifier>& modifier : _listModifier )
+            bNeedsOriginal = bNeedsOriginal || ( modifier->isEnabled() && modifier->needsOriginalPosition() );
+        vector<float3>         listStackInputPosition;
+        MeshModifierEvaluation stackEvaluation = evaluation;
+        if ( bNeedsOriginal && stackEvaluation._pListStackInputPosition == nullptr )
+        {
+            listStackInputPosition                   = inoutMesh._listPosition;
+            stackEvaluation._pListStackInputPosition = &listStackInputPosition;
+        }
+
         for ( const unique_ptr<MeshModifier>& modifier : _listModifier )
         {
-            modifier->apply( inoutMesh, evaluation );
+            modifier->apply( inoutMesh, stackEvaluation );
         }
         if ( _bRecomputeNormals )
             MeshModifierUtil::recomputeFaceNormals( inoutMesh._listPosition, inoutMesh._listNormal );
