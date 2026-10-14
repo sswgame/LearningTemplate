@@ -3,7 +3,7 @@
  * @brief 사용자 설정(옵션 메뉴)의 스키마와 그 XML 로더를 정의합니다. 스키마는 카테고리, 설정 정의, 그래픽 품질 프리셋, 사용자 파일 버전 올리기 단계로 이루어집니다.
  *
  * 스키마는 사람이 편집하는 데이터(`*.settings.xml`)입니다. 엔진 파일(`engine/settings/engine.settings.xml`) 위에 게임 파일(게임 프리셋의
- * `_userSettingsSchema`)을 덧붙입니다. 코드가 가진 것은 이름으로 고르는 적용 등록부(`UserSettingApplierRegistry`)뿐입니다.
+ * `_userSettingsSchema`)을 덧붙입니다. 코드가 가진 것은 이름으로 고르는 적용 등록부(`UserSettingsApplierRegistry`)뿐입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -16,7 +16,7 @@
 namespace sw
 {
     class GlobalVariableManager;
-    class UserSettingApplierRegistry;
+    class UserSettingsApplierRegistry;
     class XMLNode;
 
     /** @brief 설정 값의 종류입니다. 값은 늘 정규화한 글(`UserSettingsSchema::normalizeValue`)로 다닙니다. */
@@ -51,7 +51,7 @@ namespace sw
     {
         None,           ///< 대상이 없습니다. 게임 코드가 `UserSettingsManager::getValue` 와 변경 통보로 읽습니다(난이도 등).
         GlobalVariable, ///< 전역 변수(`gv:gv_name`)입니다. `GlobalVariableInfo::setValueFromString` 으로 넣습니다.
-        Applier,        ///< 이름 붙은 적용 함수(`applier:name`)입니다. `UserSettingApplierRegistry` 에서 찾습니다.
+        Applier,        ///< 이름 붙은 적용 함수(`applier:name`)입니다. `UserSettingsApplierRegistry` 에서 찾습니다.
     };
 
     /** @brief 의존 조건의 비교입니다. */
@@ -266,7 +266,7 @@ namespace sw
          * @param pGlobalVariableManager 전역 변수 대상을 대조할 테이블입니다. nullptr 이면 전역 변수 검사를 건너뜁니다.
          * @return 문제가 하나라도 있으면 false 입니다(모두 오류로 알립니다).
          */
-        [[nodiscard]] bool validate( const UserSettingApplierRegistry& registry, GlobalVariableManager* pGlobalVariableManager ) const;
+        [[nodiscard]] bool validate( const UserSettingsApplierRegistry& registry, GlobalVariableManager* pGlobalVariableManager ) const;
 
         /**
          * @brief @p text 를 @p def 의 정규화한 텍스트로 바꿉니다. 숫자는 범위와 눈금에 맞춰 고칩니다(Clamped).

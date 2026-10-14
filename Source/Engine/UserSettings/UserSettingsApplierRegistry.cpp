@@ -1,18 +1,18 @@
 #include "pch.h"
 
-#include "Engine/UserSettings/UserSettingApplierRegistry.h"
+#include "Engine/UserSettings/UserSettingsApplierRegistry.h"
 
 #include "Engine/UserSettings/UserSettingsSchema.h"
 
 namespace sw
 {
-    UserSettingApplierRegistry::UserSettingApplierRegistry()
+    UserSettingsApplierRegistry::UserSettingsApplierRegistry()
         : _listApplier{}
         , _listProvider{}
     {
     }
 
-    void UserSettingApplierRegistry::registerApplier( const hashed_string& name, const UserSettingApplierDelegate& applier, const UserSettingValueFilterDelegate& filter )
+    void UserSettingsApplierRegistry::registerApplier( const hashed_string& name, const UserSettingApplierDelegate& applier, const UserSettingValueFilterDelegate& filter )
     {
         for ( ApplierEntry& entry : _listApplier )
         {
@@ -26,7 +26,7 @@ namespace sw
         _listApplier.push_back( ApplierEntry{ name, applier, filter } );
     }
 
-    void UserSettingApplierRegistry::unregisterApplier( const hashed_string& name )
+    void UserSettingsApplierRegistry::unregisterApplier( const hashed_string& name )
     {
         for ( size_t entryIndex = 0; entryIndex < _listApplier.size(); ++entryIndex )
         {
@@ -38,12 +38,12 @@ namespace sw
         }
     }
 
-    bool UserSettingApplierRegistry::hasApplier( const hashed_string& name ) const
+    bool UserSettingsApplierRegistry::hasApplier( const hashed_string& name ) const
     {
         return findApplierEntry( name ) != nullptr;
     }
 
-    bool UserSettingApplierRegistry::invokeApplier( const hashed_string& name, const UserSettingApplyParams& context ) const
+    bool UserSettingsApplierRegistry::invokeApplier( const hashed_string& name, const UserSettingApplyParams& context ) const
     {
         const ApplierEntry* pEntry = findApplierEntry( name );
         if ( pEntry == nullptr || pEntry->_applier.isBound() == false )
@@ -53,7 +53,7 @@ namespace sw
         return applier( context );
     }
 
-    bool UserSettingApplierRegistry::acceptsValue( const hashed_string& name, string_view value ) const
+    bool UserSettingsApplierRegistry::acceptsValue( const hashed_string& name, string_view value ) const
     {
         const ApplierEntry* pEntry = findApplierEntry( name );
         if ( pEntry == nullptr || pEntry->_filter.isBound() == false )
@@ -61,7 +61,7 @@ namespace sw
         return pEntry->_filter( value );
     }
 
-    void UserSettingApplierRegistry::registerOptionProvider( const hashed_string& name, const UserSettingOptionProviderDelegate& provider )
+    void UserSettingsApplierRegistry::registerOptionProvider( const hashed_string& name, const UserSettingOptionProviderDelegate& provider )
     {
         for ( ProviderEntry& entry : _listProvider )
         {
@@ -74,12 +74,12 @@ namespace sw
         _listProvider.push_back( ProviderEntry{ name, provider } );
     }
 
-    bool UserSettingApplierRegistry::hasOptionProvider( const hashed_string& name ) const
+    bool UserSettingsApplierRegistry::hasOptionProvider( const hashed_string& name ) const
     {
         return findProviderEntry( name ) != nullptr;
     }
 
-    bool UserSettingApplierRegistry::collectOptions( const hashed_string& name, vector<UserSettingOption>& outListOption ) const
+    bool UserSettingsApplierRegistry::collectOptions( const hashed_string& name, vector<UserSettingOption>& outListOption ) const
     {
         outListOption.clear();
         const ProviderEntry* pEntry = findProviderEntry( name );
@@ -89,7 +89,7 @@ namespace sw
         return true;
     }
 
-    uint32 UserSettingApplierRegistry::removeCodeWithin( const void* pBegin, const void* pEnd )
+    uint32 UserSettingsApplierRegistry::removeCodeWithin( const void* pBegin, const void* pEnd )
     {
         uint32 removedCount{ 0 };
         for ( size_t entryIndex = _listApplier.size(); entryIndex > 0; --entryIndex )
@@ -113,13 +113,13 @@ namespace sw
         return removedCount;
     }
 
-    void UserSettingApplierRegistry::clear()
+    void UserSettingsApplierRegistry::clear()
     {
         _listApplier.clear();
         _listProvider.clear();
     }
 
-    const UserSettingApplierRegistry::ApplierEntry* UserSettingApplierRegistry::findApplierEntry( const hashed_string& name ) const
+    const UserSettingsApplierRegistry::ApplierEntry* UserSettingsApplierRegistry::findApplierEntry( const hashed_string& name ) const
     {
         for ( const ApplierEntry& entry : _listApplier )
         {
@@ -129,7 +129,7 @@ namespace sw
         return nullptr;
     }
 
-    const UserSettingApplierRegistry::ProviderEntry* UserSettingApplierRegistry::findProviderEntry( const hashed_string& name ) const
+    const UserSettingsApplierRegistry::ProviderEntry* UserSettingsApplierRegistry::findProviderEntry( const hashed_string& name ) const
     {
         for ( const ProviderEntry& entry : _listProvider )
         {

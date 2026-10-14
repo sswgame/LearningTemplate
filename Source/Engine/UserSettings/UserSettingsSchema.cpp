@@ -9,7 +9,7 @@
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
-#include "Engine/UserSettings/UserSettingApplierRegistry.h"
+#include "Engine/UserSettings/UserSettingsApplierRegistry.h"
 
 namespace sw
 {
@@ -661,7 +661,7 @@ namespace sw
         return UserSettingValueResult::Rejected;
     }
 
-    bool UserSettingsSchema::validate( const UserSettingApplierRegistry& registry, GlobalVariableManager* pGlobalVariableManager ) const
+    bool UserSettingsSchema::validate( const UserSettingsApplierRegistry& registry, GlobalVariableManager* pGlobalVariableManager ) const
     {
         bool bOk = true;
 

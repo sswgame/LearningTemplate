@@ -17,7 +17,7 @@
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Common/EngineSubsystemHost.h"
-#include "Engine/UserSettings/UserSettingApplierRegistry.h"
+#include "Engine/UserSettings/UserSettingsApplierRegistry.h"
 #include "Engine/UserSettings/UserSettingsEngineAppliers.h"
 #include "Engine/UserSettings/UserSettingsSchema.h"
 
@@ -250,9 +250,9 @@ namespace sw
         DelegateHandle registerEventListener( const UserSettingEventListener& listener );
         void           unregisterEventListener( const DelegateHandle& handle );
         /** @brief 변경 통보를 받는 리스너가 하나라도 있으면 true 입니다(화면이 닫힐 때 해제했는지 테스트가 확인합니다). */
-        bool                        hasEventListener() const { return _onEvent.isBound(); }
-        UserSettingApplierRegistry& getRegistry() { return _registry; }
-        const UserSettingsTargets&  getTargets() const { return _engineAppliers.getTargets(); }
+        bool                         hasEventListener() const { return _onEvent.isBound(); }
+        UserSettingsApplierRegistry& getRegistry() { return _registry; }
+        const UserSettingsTargets&   getTargets() const { return _engineAppliers.getTargets(); }
         /** @brief 화면 설정의 지금 요청입니다(기동 때 창과 스왑체인을 만드는 쪽이 읽습니다). */
         const DisplaySettingsRequest& getDisplayRequest() const { return _engineAppliers.getDisplayRequest(); }
         /** @brief 실행 중에 바뀐 화면 요청을 꺼냅니다(호스트가 프레임 맨 앞에서). */
@@ -294,15 +294,15 @@ namespace sw
         [[nodiscard]] bool   saveIfPathSet();
 
     private:
-        UserSettingsSchema         _schema;
-        UserSettingApplierRegistry _registry;
-        UserSettingsEngineAppliers _engineAppliers;
-        vector<SettingState>       _listState;
-        UserSettingEventDelegate   _onEvent;
-        string                     _userFilePath;
-        float32                    _confirmSecondsLeft;
-        bool                       _bUserFileLoaded;
-        bool                       _bStartupApplied;       ///< 첫 `reapplyAll`(기동 적용)이 지났는지 나타냅니다. 그 뒤로 `NeedsRestart` 값은 바뀌지 않습니다.
-        vector<string>             _listStartupSchemaPath; ///< `addStartupSchema` 가 더한 스키마(기동이 사용자 파일보다 먼저 읽는다)
+        UserSettingsSchema          _schema;
+        UserSettingsApplierRegistry _registry;
+        UserSettingsEngineAppliers  _engineAppliers;
+        vector<SettingState>        _listState;
+        UserSettingEventDelegate    _onEvent;
+        string                      _userFilePath;
+        float32                     _confirmSecondsLeft;
+        bool                        _bUserFileLoaded;
+        bool                        _bStartupApplied;       ///< 첫 `reapplyAll`(기동 적용)이 지났는지 나타냅니다. 그 뒤로 `NeedsRestart` 값은 바뀌지 않습니다.
+        vector<string>              _listStartupSchemaPath; ///< `addStartupSchema` 가 더한 스키마(기동이 사용자 파일보다 먼저 읽는다)
     };
 } // namespace sw

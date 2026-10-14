@@ -50,7 +50,7 @@ namespace sw
     {
     }
 
-    void UserSettingsEngineAppliers::initialize( const UserSettingsTargets& targets, UserSettingApplierRegistry& registry )
+    void UserSettingsEngineAppliers::initialize( const UserSettingsTargets& targets, UserSettingsApplierRegistry& registry )
     {
         _targets = targets;
         registry.registerApplier( "audio.busVolume", SW_DELEGATE_METHOD( UserSettingApplierDelegate, &UserSettingsEngineAppliers::applyBusVolume, this ) );

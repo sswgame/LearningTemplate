@@ -1,7 +1,8 @@
 /**
- * @file UserSettingApplierRegistry.h
+ * @file UserSettingsApplierRegistry.h
  * @brief 사용자 설정이 값을 넘기는 이름 붙은 적용 함수와, 런타임 선택지 공급자의 레지스트리를 정의합니다.
- * @details 스키마(데이터)는 `target="applier:<name>"` 과 `optionsFrom="<name>"` 으로 여기의 이름을 고른다. 코드는 이름과 동작만 가진다.
+ * @details 이 폴더에서 "적용 함수"는 코드의 `applier` 를 가리킨다(설정 값을 받아 엔진에 건네는 델리게이트 `UserSettingApplierDelegate`).
+ *          스키마(데이터)는 `target="applier:<name>"` 과 `optionsFrom="<name>"` 으로 여기의 이름을 고른다. 코드는 이름과 동작만 가진다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -37,15 +38,15 @@ namespace sw
 namespace sw
 {
     /**
-     * @class UserSettingApplierRegistry
+     * @class UserSettingsApplierRegistry
      * @brief 이름에서 적용 함수와 선택지 공급자를 찾는 레지스트리입니다.
      * @details 모듈(게임, 키트)도 등록할 수 있다. 모듈 이미지를 언로드하기 전에 `UserSettingsManager`(IModuleUnloadListener)가 그 범위의 것을
      *          제거한다(`removeCodeWithin`). 다만 스키마 검사는 스키마를 읽을 때 한 번만 하므로, 엔진 기동 때 읽는 스키마가 쓰는 이름은 엔진이 등록해야 한다.
      */
-    class SW_API UserSettingApplierRegistry
+    class SW_API UserSettingsApplierRegistry
     {
     public:
-        UserSettingApplierRegistry();
+        UserSettingsApplierRegistry();
 
         /** @brief 적용 함수를 올립니다. 같은 이름이 있으면 바꿉니다. @p filter 는 받는 값을 아는 적용 함수만 줍니다. */
         void registerApplier( const hashed_string& name, const UserSettingApplierDelegate& applier, const UserSettingValueFilterDelegate& filter = {} );

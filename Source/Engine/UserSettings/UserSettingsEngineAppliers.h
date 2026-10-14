@@ -9,7 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/UserSettings/UserSettingApplierRegistry.h"
+#include "Engine/UserSettings/UserSettingsApplierRegistry.h"
 #include "Engine/Window/IWindow.h"
 
 namespace sw
@@ -70,7 +70,7 @@ namespace sw
         UserSettingsEngineAppliers();
 
         /** @brief 대상을 정하고 적용 함수와 공급자를 @p registry 에 등록합니다. */
-        void initialize( const UserSettingsTargets& targets, UserSettingApplierRegistry& registry );
+        void initialize( const UserSettingsTargets& targets, UserSettingsApplierRegistry& registry );
         /** @brief 대상을 잊습니다. */
         void shutdown();
 
