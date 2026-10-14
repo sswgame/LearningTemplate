@@ -18,10 +18,12 @@ namespace sw::editor
     public:
         ScaleModifier()
             : MeshModifier()
-            , _uniformParam{ addParam( MeshModifierParamDef{ "Uniform", MeshModifierParamKind::Float, -10.0f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
-            , _axisScaleParam{ addParam( MeshModifierParamDef{ "Axis Scale", MeshModifierParamKind::Vector3, -10.0f, 10.0f, float3{ 1.0f, 1.0f, 1.0f } } ) }
+            , _uniformParam{ addParam( MeshModifierParamDef{ "Uniform", MeshModifierParamKind::Float, -10.0f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Scale applied to all axes (1 = no change)" ) ) }
+            , _axisScaleParam{ addParam( MeshModifierParamDef{ "Axis Scale", MeshModifierParamKind::Vector3, -10.0f, 10.0f, float3{ 1.0f, 1.0f, 1.0f } }.withLayout( nullptr, "Extra scale per modifier-space axis (1 1 1 = no change)" ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "Scales the mesh around the gizmo center, uniformly and per axis."; }
 
         bool supportsGPU() const override { return true; }
 

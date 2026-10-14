@@ -18,9 +18,11 @@ namespace sw::editor
     public:
         RadialSkewModifier()
             : MeshModifier()
-            , _angleParam{ addParam( MeshModifierParamDef{ "Angle", MeshModifierParamKind::Float, -85.0f, 85.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
+            , _angleParam{ addParam( MeshModifierParamDef{ "Angle", MeshModifierParamKind::Float, -85.0f, 85.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( nullptr, "Outward lean of the sides (0 = no change, negative narrows toward the top)", "deg" ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "Flares the mesh outward from the main axis in proportion to height, like a cone."; }
 
         bool supportsGPU() const override { return true; }
 

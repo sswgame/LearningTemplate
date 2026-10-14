@@ -18,12 +18,14 @@ namespace sw::editor
     public:
         SinusCurveModifier()
             : MeshModifier()
-            , _amplitudeParam{ addParam( MeshModifierParamDef{ "Amplitude", MeshModifierParamKind::Float, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _frequencyParam{ addParam( MeshModifierParamDef{ "Frequency", MeshModifierParamKind::Float, 0.0f, 20.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
-            , _phaseParam{ addParam( MeshModifierParamDef{ "Phase", MeshModifierParamKind::Float, -360.0f, 360.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _directionParam{ addParam( MeshModifierParamDef{ "Direction", MeshModifierParamKind::Float, -180.0f, 180.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
+            , _amplitudeParam{ addParam( MeshModifierParamDef{ "Amplitude", MeshModifierParamKind::Float, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Shape", "Sideways offset at the peaks (0 = no change)", "m" ) ) }
+            , _frequencyParam{ addParam( MeshModifierParamDef{ "Frequency", MeshModifierParamKind::Float, 0.0f, 20.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Shape", "Number of sine periods over the mesh height" ) ) }
+            , _phaseParam{ addParam( MeshModifierParamDef{ "Phase", MeshModifierParamKind::Float, -360.0f, 360.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Shape", "Offset of the curve along the main axis", "deg" ) ) }
+            , _directionParam{ addParam( MeshModifierParamDef{ "Direction", MeshModifierParamKind::Float, -180.0f, 180.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Shape", "Direction of the sideways offset, around the main axis", "deg" ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "Bends the mesh sideways along a sine curve that follows the main axis."; }
 
         bool supportsGPU() const override { return true; }
 

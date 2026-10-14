@@ -18,12 +18,14 @@ namespace sw::editor
     public:
         BulgeModifier()
             : MeshModifier()
-            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -1.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _curvatureParam{ addParam( MeshModifierParamDef{ "Curvature", MeshModifierParamKind::Float, 0.1f, 8.0f, float3{ 2.0f, 0.0f, 0.0f } } ) }
-            , _lowerParam{ addParam( MeshModifierParamDef{ "Lower Limit", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _upperParam{ addParam( MeshModifierParamDef{ "Upper Limit", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
+            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -1.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Shape", "Extra cross-section scale at the middle of the range (0 = no change, negative pinches)" ) ) }
+            , _curvatureParam{ addParam( MeshModifierParamDef{ "Curvature", MeshModifierParamKind::Float, 0.1f, 8.0f, float3{ 2.0f, 0.0f, 0.0f } }.withLayout( "Shape", "Sharpness of the bulge profile (higher = flatter top)" ) ) }
+            , _lowerParam{ addParam( MeshModifierParamDef{ "Lower Limit", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Limits", "Start of the bulged range along the main axis (0 = bottom)" ) ) }
+            , _upperParam{ addParam( MeshModifierParamDef{ "Upper Limit", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Limits", "End of the bulged range along the main axis (1 = top)" ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "Bulges the mesh outward around the middle of a range along the main axis."; }
 
         bool supportsGPU() const override { return true; }
 

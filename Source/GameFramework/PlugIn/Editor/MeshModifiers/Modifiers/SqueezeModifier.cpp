@@ -18,10 +18,12 @@ namespace sw::editor
     public:
         SqueezeModifier()
             : MeshModifier()
-            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -2.0f, 0.9f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _preserveParam{ addParam( MeshModifierParamDef{ "Volume Preservation", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
+            , _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -2.0f, 0.9f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( nullptr, "How much to compress along the main axis (0 = no change, negative stretches)" ) ) }
+            , _preserveParam{ addParam( MeshModifierParamDef{ "Volume Preservation", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( nullptr, "How much the sides widen to keep volume (0 = none, 1 = full)" ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "Squashes the mesh along the main axis and widens it sideways, optionally keeping volume."; }
 
         bool supportsGPU() const override { return true; }
 
