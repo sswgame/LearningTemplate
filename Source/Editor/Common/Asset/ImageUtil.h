@@ -4,6 +4,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/EditorExports.h"
+
 namespace sw::editor
 {
     /**
@@ -36,7 +38,7 @@ namespace sw::editor
      * @struct ImageUtil
      * @brief 에디터에서 소스 이미지(PNG/JPG/TGA/BMP)를 RGBA 버퍼로 디코딩하는 유틸리티입니다(stb_image 를 감쌉니다).
      */
-    struct ImageUtil
+    struct SW_EDITOR_API ImageUtil
     {
         /**
          * @brief 파일 경로의 이미지를 읽어 4채널(RGBA) 버퍼로 디코딩합니다.
