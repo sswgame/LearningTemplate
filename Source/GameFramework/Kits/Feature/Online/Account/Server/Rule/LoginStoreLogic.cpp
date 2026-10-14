@@ -243,9 +243,10 @@ namespace sw
                 outKey.reserve( loginName.size() );
                 for ( const utf8 ch : loginName )
                 {
-                    const bool bLetter = ( 'a' <= ch && ch <= 'z' ) || ( 'A' <= ch && ch <= 'Z' );
-                    const bool bDigit  = '0' <= ch && ch <= '9';
-                    if ( bLetter == false && bDigit == false && ch != '_' )
+                    const bool bLetter                   = ( 'a' <= ch && ch <= 'z' ) || ( 'A' <= ch && ch <= 'Z' );
+                    const bool bDigit                    = '0' <= ch && ch <= '9';
+                    const bool bInvalidLoginKeyCharacter = bLetter == false && bDigit == false && ch != '_';
+                    if ( bInvalidLoginKeyCharacter )
                         return false;
                     outKey.push_back( StringUtil::toLowerChar( ch ) );
                 }
@@ -350,9 +351,10 @@ namespace sw
                 string name;
                 for ( const utf8 ch : hint )
                 {
-                    const bool bLetter = ( 'a' <= ch && ch <= 'z' ) || ( 'A' <= ch && ch <= 'Z' );
-                    const bool bDigit  = '0' <= ch && ch <= '9';
-                    if ( bLetter || bDigit || ch == '_' )
+                    const bool bLetter        = ( 'a' <= ch && ch <= 'z' ) || ( 'A' <= ch && ch <= 'Z' );
+                    const bool bDigit         = '0' <= ch && ch <= '9';
+                    const bool bHintCharacter = bLetter || bDigit || ch == '_';
+                    if ( bHintCharacter )
                         name.push_back( ch );
                     if ( static_cast<int32>( name.size() ) >= kMaxHintNameSize )
                         break;

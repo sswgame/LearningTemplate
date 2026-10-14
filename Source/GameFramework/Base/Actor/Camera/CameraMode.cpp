@@ -76,9 +76,10 @@ namespace sw
             static float32 resolveArm( const CameraCollisionDef& collision, const float3& pivot, const float3& backward, float32 distance, float32 deltaTime,
                                        const ICameraCollisionProbe* pProbe, CameraModeState& inoutState )
             {
-                float32 allowed = distance;
-                bool    bHit    = false;
-                if ( collision._bEnabled && pProbe != nullptr && distance > 0.0f )
+                float32    allowed         = distance;
+                bool       bHit            = false;
+                const bool bCollisionProbe = collision._bEnabled && pProbe != nullptr && distance > 0.0f;
+                if ( bCollisionProbe )
                 {
                     float32 hitDistance = distance;
                     bHit                = pProbe->sweepSphere( pivot, pivot + backward * distance, collision._radius, hitDistance );
@@ -341,7 +342,8 @@ namespace sw
             pose._position    = pivot - forward * arm;
         }
 
-        if ( bCompose && framing._bCompose && pose._bOrthographic == SW_FALSE )
+        const bool bComposeFraming = bCompose && framing._bCompose && pose._bOrthographic == SW_FALSE;
+        if ( bComposeFraming )
         {
             // 대상이 화면 위치에 오도록 조준을 비튼다. 데드존 안의 움직임은 카메라를 돌리지 않고, 소프트존 밖으로는 나가지 않는다.
             const float32 tanHalfY     = MathUtil::tan( pose._fieldOfViewY * 0.5f );
@@ -372,7 +374,8 @@ namespace sw
             pose._rotation = quaternion::makeFromYawPitchRoll( yaw, pitch, 0.0f );
         }
 
-        if ( confiner._bBounds && view._mode != CameraPresetMode::OrthoTopDown && bPlaced == false )
+        const bool bClampToBounds = confiner._bBounds && view._mode != CameraPresetMode::OrthoTopDown && bPlaced == false;
+        if ( bClampToBounds )
             pose._position = CameraModeInternal::clampToBounds( confiner, pose._position );
         return pose;
     }

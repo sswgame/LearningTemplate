@@ -119,12 +119,13 @@ namespace sw
     bool OnlineServiceClient::initialize( IStreamTransport* pTransport, const OnlineServiceClientSettings& settings, string& outError )
     {
         SW_ASSERT( _bInitialized == SW_FALSE );
-        _settings           = settings;
-        _pTransport         = pTransport;
-        _ownedEndpoint      = sw::make_unique<StreamMessageEndpoint>();
-        _ownedRequestClient = sw::make_unique<NetRequestClient>();
-        if ( pTransport == nullptr || _ownedEndpoint->initialize( pTransport, settings._endpointSettings ) == false ||
-             pTransport->initialize( _ownedEndpoint.get(), settings._transportSettings ) == false )
+        _settings                        = settings;
+        _pTransport                      = pTransport;
+        _ownedEndpoint                   = sw::make_unique<StreamMessageEndpoint>();
+        _ownedRequestClient              = sw::make_unique<NetRequestClient>();
+        const bool bTransportStartFailed = pTransport == nullptr || _ownedEndpoint->initialize( pTransport, settings._endpointSettings ) == false ||
+                                           pTransport->initialize( _ownedEndpoint.get(), settings._transportSettings ) == false;
+        if ( bTransportStartFailed )
         {
             outError = "online service client could not start its stream transport";
             return false;
@@ -141,7 +142,8 @@ namespace sw
                                                           const OnlineServiceClientSettings& settings )
     {
         SW_ASSERT( _bInitialized == SW_FALSE );
-        if ( pEndpoint == nullptr || pRequestClient == nullptr || handle.isValid() == false )
+        const bool bInvalidClientArguments = pEndpoint == nullptr || pRequestClient == nullptr || handle.isValid() == false;
+        if ( bInvalidClientArguments )
             return false;
         _settings        = settings;
         _pEndpoint       = pEndpoint;

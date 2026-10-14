@@ -224,7 +224,8 @@ namespace sw
 
     void HorrorMatch::syncHealthState( HorrorSurvivor& survivor )
     {
-        if ( survivor._state != SurvivorState::Healthy && survivor._state != SurvivorState::Injured && survivor._state != SurvivorState::Dying )
+        const bool bNotSurvivorHealthState = survivor._state != SurvivorState::Healthy && survivor._state != SurvivorState::Injured && survivor._state != SurvivorState::Dying;
+        if ( bNotSurvivorHealthState )
             return;
         if ( survivor._vitality.isDowned() )
             survivor._state = SurvivorState::Dying;

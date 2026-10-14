@@ -222,8 +222,9 @@ namespace sw
 
     int32 MonsterRules::gainExp( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, int64 amount, vector<MonsterGrowthEvent>& outListEvent )
     {
-        const MonsterSpeciesDef* pSpecies = catalog.findSpecies( inoutMonster._speciesID );
-        if ( pSpecies == nullptr || amount <= 0 || inoutMonster._level >= MonsterCollectorCatalog::kMaxLevel )
+        const MonsterSpeciesDef* pSpecies       = catalog.findSpecies( inoutMonster._speciesID );
+        const bool               bCannotGainExp = pSpecies == nullptr || amount <= 0 || inoutMonster._level >= MonsterCollectorCatalog::kMaxLevel;
+        if ( bCannotGainExp )
             return 0;
 
         const int64 maxExp = MonsterCollectorCatalog::computeTotalExp( pSpecies->_expGroup, MonsterCollectorCatalog::kMaxLevel );
@@ -348,7 +349,8 @@ namespace sw
 
     bool MonsterStorage::depositToBox( int32 partyIndex )
     {
-        if ( partyIndex < 0 || partyIndex >= static_cast<int32>( _listParty.size() ) || static_cast<int32>( _listBox.size() ) >= _boxCapacity )
+        const bool bCannotDeposit = partyIndex < 0 || partyIndex >= static_cast<int32>( _listParty.size() ) || static_cast<int32>( _listBox.size() ) >= _boxCapacity;
+        if ( bCannotDeposit )
             return false;
         int32 usableOthers = 0;
         for ( int32 index = 0; index < static_cast<int32>( _listParty.size() ); ++index )
@@ -364,7 +366,8 @@ namespace sw
 
     bool MonsterStorage::withdrawFromBox( int32 boxIndex )
     {
-        if ( boxIndex < 0 || boxIndex >= static_cast<int32>( _listBox.size() ) || static_cast<int32>( _listParty.size() ) >= kPartySize )
+        const bool bCannotWithdraw = boxIndex < 0 || boxIndex >= static_cast<int32>( _listBox.size() ) || static_cast<int32>( _listParty.size() ) >= kPartySize;
+        if ( bCannotWithdraw )
             return false;
         _listParty.push_back( _listBox[static_cast<size_t>( boxIndex )] );
         _listBox.erase( _listBox.begin() + boxIndex );
@@ -373,8 +376,9 @@ namespace sw
 
     bool MonsterStorage::swapPartyOrder( int32 firstIndex, int32 secondIndex )
     {
-        const int32 count = static_cast<int32>( _listParty.size() );
-        if ( firstIndex < 0 || secondIndex < 0 || firstIndex >= count || secondIndex >= count )
+        const int32 count             = static_cast<int32>( _listParty.size() );
+        const bool  bInvalidSwapIndex = firstIndex < 0 || secondIndex < 0 || firstIndex >= count || secondIndex >= count;
+        if ( bInvalidSwapIndex )
             return false;
         std::swap( _listParty[static_cast<size_t>( firstIndex )], _listParty[static_cast<size_t>( secondIndex )] );
         return true;

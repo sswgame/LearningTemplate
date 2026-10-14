@@ -234,9 +234,10 @@ namespace sw
 
     void HorrorMatch::stepEndgame( float32 deltaTime )
     {
-        const AsymmetricHorrorRules& rules    = _pCatalog->getRules();
-        const int32                  standing = countStandingSurvivors();
-        if ( _bHatchPlaced == SW_TRUE && _bHatchOpen == SW_FALSE && _bHatchClosed == SW_FALSE && standing > 0 && standing <= rules._hatchSurvivorCount )
+        const AsymmetricHorrorRules& rules            = _pCatalog->getRules();
+        const int32                  standing         = countStandingSurvivors();
+        const bool                   bShouldOpenHatch = _bHatchPlaced == SW_TRUE && _bHatchOpen == SW_FALSE && _bHatchClosed == SW_FALSE && standing > 0 && standing <= rules._hatchSurvivorCount;
+        if ( bShouldOpenHatch )
         {
             _bHatchOpen = SW_TRUE;
             pushEvent( AsymmetricHorrorEvent::Kind::HatchOpened, -1, -1, 0.0f, _hatchPosition );

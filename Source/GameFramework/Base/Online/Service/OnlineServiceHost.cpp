@@ -296,7 +296,8 @@ namespace sw
             bTopicStillOpen = bTopicStillOpen || _listBusSubscription[index]._topic == topic;
             ++index;
         }
-        if ( bRemoved && bTopicStillOpen == false && _settings._pServerBus != nullptr )
+        const bool bUnsubscribeTopic = bRemoved && bTopicStillOpen == false && _settings._pServerBus != nullptr;
+        if ( bUnsubscribeTopic )
             _settings._pServerBus->unsubscribe( topic );
     }
 

@@ -177,8 +177,9 @@ namespace sw
 
     void RhythmPlaySession::press( int32 lane, float32 time )
     {
-        const bool bValidLane = 0 <= lane && lane < static_cast<int32>( _listLane.size() );
-        if ( _state != RhythmPlayState::Playing || bValidLane == false || _settings._bAutoPlay == SW_TRUE )
+        const bool bValidLane    = 0 <= lane && lane < static_cast<int32>( _listLane.size() );
+        const bool bInputIgnored = _state != RhythmPlayState::Playing || bValidLane == false || _settings._bAutoPlay == SW_TRUE;
+        if ( bInputIgnored )
             return;
         RhythmInputRecord record;
         record._time   = time;
@@ -194,8 +195,9 @@ namespace sw
 
     void RhythmPlaySession::release( int32 lane, float32 time )
     {
-        const bool bValidLane = 0 <= lane && lane < static_cast<int32>( _listLane.size() );
-        if ( _state != RhythmPlayState::Playing || bValidLane == false || _settings._bAutoPlay == SW_TRUE )
+        const bool bValidLane    = 0 <= lane && lane < static_cast<int32>( _listLane.size() );
+        const bool bInputIgnored = _state != RhythmPlayState::Playing || bValidLane == false || _settings._bAutoPlay == SW_TRUE;
+        if ( bInputIgnored )
             return;
         RhythmInputRecord record;
         record._time   = time;
@@ -264,7 +266,8 @@ namespace sw
         archive >> noteCount;
         archive >> laneCount;
         // 같은 채보(노트 수와 레인 수)로 `initialize` 한 판이어야 한다. 레인 대기열은 채보에서 다시 만든 것을 쓴다.
-        if ( archive.isError() || noteCount != listNote.size() || laneCount != _listLane.size() )
+        const bool bChartMismatch = archive.isError() || noteCount != listNote.size() || laneCount != _listLane.size();
+        if ( bChartMismatch )
             return false;
         vector<LaneQueue> listLane = _listLane;
         for ( size_t laneIndex = 0; laneIndex < listLane.size(); ++laneIndex )
@@ -275,7 +278,8 @@ namespace sw
             archive >> lane._holdingNote;
             const bool bHoldingValid = lane._holdingNote < 0 ||
                                        ( static_cast<size_t>( lane._holdingNote ) < listNote.size() && listNote[static_cast<size_t>( lane._holdingNote )]._lane == static_cast<int32>( laneIndex ) );
-            if ( archive.isError() || cursor > lane._listNoteIndex.size() || bHoldingValid == false )
+            const bool bInvalidLaneState = archive.isError() || cursor > lane._listNoteIndex.size() || bHoldingValid == false;
+            if ( bInvalidLaneState )
                 return false;
             lane._cursor = cursor;
         }
@@ -322,7 +326,8 @@ namespace sw
         archive >> missCount;
         archive >> judgedCount;
         archive >> state;
-        if ( archive.isError() || state > static_cast<uint8>( RhythmPlayState::Failed ) || combo < 0 || combo > maxCombo )
+        const bool bInvalidSessionState = archive.isError() || state > static_cast<uint8>( RhythmPlayState::Failed ) || combo < 0 || combo > maxCombo;
+        if ( bInvalidSessionState )
             return false;
         _listLane          = std::move( listLane );
         _listGradeCount    = std::move( listGradeCount );
@@ -504,7 +509,8 @@ namespace sw
 
     void RhythmPlaySession::finishIfDone()
     {
-        if ( _pChart == nullptr || _state != RhythmPlayState::Playing || _judgedCount < _pChart->getJudgmentCount() )
+        const bool bNotFinished = _pChart == nullptr || _state != RhythmPlayState::Playing || _judgedCount < _pChart->getJudgmentCount();
+        if ( bNotFinished )
             return;
         _state = RhythmPlayState::Cleared;
         RhythmEvent cleared;

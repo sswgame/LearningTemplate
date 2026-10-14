@@ -56,9 +56,10 @@ namespace sw
 
     void ControllerComponent::possess( PawnComponent& pawn )
     {
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr || pawn.getOwner() == nullptr || _pawn == pawn.getHandle() )
+        GameObject*        pOwner         = getOwner();
+        GameObjectManager* pManager       = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const bool         bCannotPossess = pManager == nullptr || pawn.getOwner() == nullptr || _pawn == pawn.getHandle();
+        if ( bCannotPossess )
             return;
         _bSwitchingPawn = SW_TRUE;
         unpossess();

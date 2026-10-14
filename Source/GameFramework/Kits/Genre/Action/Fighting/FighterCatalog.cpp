@@ -142,8 +142,9 @@ namespace sw
             const bool bSidestepOk  = FighterCatalogInternal::parseCommandOr( parser, node.getAttributeText( "sidestep" ), "u", fighter._sidestepUp );
             const bool bSidestepDownOk =
                 FighterCatalogInternal::parseCommandOr( parser, node.getAttributeText( "sidestepDown" ), "d,n", fighter._sidestepDown );
-            const bool bJumpOk = FighterCatalogInternal::parseCommandOr( parser, node.getAttributeText( "jump" ), "u/f", fighter._jump );
-            if ( bSidestepOk == false || bSidestepDownOk == false || bJumpOk == false )
+            const bool bJumpOk                   = FighterCatalogInternal::parseCommandOr( parser, node.getAttributeText( "jump" ), "u/f", fighter._jump );
+            const bool bAnyMoveCommandUnreadable = bSidestepOk == false || bSidestepDownOk == false || bJumpOk == false;
+            if ( bAnyMoveCommandUnreadable )
                 SW_LOG_WARNING( "%#: fighter '%#' has an unreadable sidestep/jump command - movement disabled", sourceName, pID );
 
             for ( XMLNode child = node.findChild( "Move" ); child; child = child.findNextSibling( "Move" ) )

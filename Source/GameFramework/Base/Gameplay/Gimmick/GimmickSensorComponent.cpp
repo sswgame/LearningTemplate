@@ -77,7 +77,8 @@ namespace sw
     {
         Component::onOverlapBegin( overlap );
         const bool bIgnoredTrigger = overlap._bOtherTrigger == SW_TRUE && _bCountTriggers == false;
-        if ( overlap._pOther == nullptr || bIgnoredTrigger || acceptsOccupant( *overlap._pOther ) == false )
+        const bool bIgnoreOverlap  = overlap._pOther == nullptr || bIgnoredTrigger || acceptsOccupant( *overlap._pOther ) == false;
+        if ( bIgnoreOverlap )
             return;
         addOccupant( *overlap._pOther );
     }

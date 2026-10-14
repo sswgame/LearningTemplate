@@ -150,7 +150,8 @@ namespace sw
 
     void TileMap::paintEdgeWarpPreset( int32 edge, string_view targetMap, int32 tx, int32 ty )
     {
-        if ( _data._width <= 0 || _data._height <= 0 || targetMap.empty() )
+        const bool bInvalidWarpArguments = _data._width <= 0 || _data._height <= 0 || targetMap.empty();
+        if ( bInvalidWarpArguments )
             return;
 
         auto stamp = [&]( int32 tileX, int32 tileY )

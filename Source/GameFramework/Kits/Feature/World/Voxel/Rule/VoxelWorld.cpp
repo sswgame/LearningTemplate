@@ -159,7 +159,8 @@ namespace sw
         int32 chunkCountZ = 0;
         archive >> chunkCountX;
         archive >> chunkCountZ;
-        if ( archive.isError() || chunkCountX != _chunkCountX || chunkCountZ != _chunkCountZ || _pCatalog == nullptr )
+        const bool bInvalidChunkHeader = archive.isError() || chunkCountX != _chunkCountX || chunkCountZ != _chunkCountZ || _pCatalog == nullptr;
+        if ( bInvalidChunkHeader )
             return false;
         const size_t       blockLimit = _pCatalog->getBlocks().size(); // 0은 공기이고 1부터 카탈로그 순서이다
         vector<VoxelChunk> listChunk( _listChunk.size() );
@@ -203,7 +204,8 @@ namespace sw
 
     const VoxelChunk* VoxelWorld::findChunk( int32 chunkX, int32 chunkZ ) const
     {
-        if ( chunkX < 0 || chunkZ < 0 || chunkX >= _chunkCountX || chunkZ >= _chunkCountZ )
+        const bool bChunkOutOfRange = chunkX < 0 || chunkZ < 0 || chunkX >= _chunkCountX || chunkZ >= _chunkCountZ;
+        if ( bChunkOutOfRange )
             return nullptr;
         return &_listChunk[static_cast<size_t>( chunkZ * _chunkCountX + chunkX )];
     }
@@ -224,7 +226,8 @@ namespace sw
 
     VoxelChunk* VoxelWorld::findChunkMutable( int32 chunkX, int32 chunkZ )
     {
-        if ( chunkX < 0 || chunkZ < 0 || chunkX >= _chunkCountX || chunkZ >= _chunkCountZ )
+        const bool bChunkOutOfRange = chunkX < 0 || chunkZ < 0 || chunkX >= _chunkCountX || chunkZ >= _chunkCountZ;
+        if ( bChunkOutOfRange )
             return nullptr;
         return &_listChunk[static_cast<size_t>( chunkZ * _chunkCountX + chunkX )];
     }

@@ -290,7 +290,8 @@ namespace sw
                     _report.addError( "rule '%#' chooses variant '%#' no visual declares", rule._id.c_str(), action._name.c_str() );
                 if ( action._part.empty() == false && isPartDeclared( action._part ) == false )
                     _report.addError( "rule '%#' names part '%#' no visual declares", rule._id.c_str(), action._part.c_str() );
-                if ( action._kind == AppearanceRuleActionKind::HideRegion && pListKnownBodyRegion != nullptr && AppearanceXMLUtil::containsName( *pListKnownBodyRegion, action._name ) == false )
+                const bool bUnknownBodyRegion = action._kind == AppearanceRuleActionKind::HideRegion && pListKnownBodyRegion != nullptr && AppearanceXMLUtil::containsName( *pListKnownBodyRegion, action._name ) == false;
+                if ( bUnknownBodyRegion )
                     _report.addError( "rule '%#' hides unknown body region '%#'", rule._id.c_str(), action._name.c_str() );
             }
         }

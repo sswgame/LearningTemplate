@@ -29,9 +29,10 @@ namespace sw::editor
             /** @brief 편집 칸의 16 진 문자열을 계정 id 로 바꿉니다. 비었거나 16 진이 아니면 false 입니다. */
             [[nodiscard]] static bool parseAccountID( const string& text, AccountID& outAccountID )
             {
-                const string_view trimmed = StringUtil::trim( string_view( text ) );
-                uint64            value   = 0;
-                if ( trimmed.empty() || StringUtil::parseUint64( trimmed, value, 16 ) == false || value == kInvalidAccountID )
+                const string_view trimmed             = StringUtil::trim( string_view( text ) );
+                uint64            value               = 0;
+                const bool        bInvalidAccountText = trimmed.empty() || StringUtil::parseUint64( trimmed, value, 16 ) == false || value == kInvalidAccountID;
+                if ( bInvalidAccountText )
                     return false;
                 outAccountID = value;
                 return true;

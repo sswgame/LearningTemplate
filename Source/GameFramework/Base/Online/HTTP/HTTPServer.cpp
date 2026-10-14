@@ -30,7 +30,8 @@ namespace sw
     bool HTTPServer::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportSettings& transportSettings, const HTTPServerSettings& settings,
                                  IHTTPRequestHandler* pHandler )
     {
-        if ( transport == nullptr || pHandler == nullptr || _bInitialized == SW_TRUE )
+        const bool bCannotStart = transport == nullptr || pHandler == nullptr || _bInitialized == SW_TRUE;
+        if ( bCannotStart )
             return false;
         _transport     = std::move( transport );
         _settings      = settings;

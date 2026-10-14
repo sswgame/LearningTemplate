@@ -281,8 +281,9 @@ namespace sw
     {
         if ( isDrifting() == false )
         {
-            const int32 steerSign = ArcadeVehicleMotorInternal::signOf( input._steer );
-            if ( input._bDriftHeld != SW_FALSE && isAirborne() == false && steerSign != 0 && forwardSpeed >= _settings._driftMinSpeed )
+            const int32 steerSign   = ArcadeVehicleMotorInternal::signOf( input._steer );
+            const bool  bStartDrift = input._bDriftHeld != SW_FALSE && isAirborne() == false && steerSign != 0 && forwardSpeed >= _settings._driftMinSpeed;
+            if ( bStartDrift )
             {
                 _driftDirection = steerSign;
                 _driftCharge    = 0.0f;

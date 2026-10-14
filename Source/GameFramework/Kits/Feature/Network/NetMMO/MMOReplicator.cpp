@@ -138,7 +138,8 @@ namespace sw
     NetHandleResult MMOReplicator::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
         // 메시지 펌프(게임 스레드)에서 불린다. 같은 스레드에서 차례로 실행되므로 `update` 의 병렬 본문과 겹치지 않는다.
-        if ( context._kind != NetMMOMessage::kUpdateAck || context._connectionID < 0 || context._connectionID >= static_cast<int32>( _listObserver.size() ) )
+        const bool bNotValidAck = context._kind != NetMMOMessage::kUpdateAck || context._connectionID < 0 || context._connectionID >= static_cast<int32>( _listObserver.size() );
+        if ( bNotValidAck )
             return NetHandleResult::Handled;
         const uint32 newestTick = static_cast<uint32>( body.readVarUint() );
         const uint32 bits       = body.readUint32();

@@ -133,8 +133,9 @@ namespace sw
             {
                 for ( size_t slotIndex = 0; slotIndex < listSlot.size(); ++slotIndex )
                 {
-                    const EquipSlot& slot = listSlot[slotIndex];
-                    if ( static_cast<int32>( slotIndex ) == selfSlotIndex || slot._item.isEmpty() || slot._bSuppressed == SW_TRUE )
+                    const EquipSlot& slot      = listSlot[slotIndex];
+                    const bool       bSkipSlot = static_cast<int32>( slotIndex ) == selfSlotIndex || slot._item.isEmpty() || slot._bSuppressed == SW_TRUE;
+                    if ( bSkipSlot )
                         continue;
                     const ItemDef* pDef = catalog.findItem( slot._item._itemID );
                     if ( pDef != nullptr && pDef->hasTagUnder( condition._tag ) )

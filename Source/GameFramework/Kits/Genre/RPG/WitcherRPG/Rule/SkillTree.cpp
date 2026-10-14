@@ -175,7 +175,8 @@ namespace sw
         {
             for ( size_t other = 0; other < _listRank.size(); ++other )
             {
-                if ( static_cast<int32>( other ) != index && _listRank[other] > 0 && _pTree->_listSkill[other]._group == skill._group )
+                const bool bGroupConflict = static_cast<int32>( other ) != index && _listRank[other] > 0 && _pTree->_listSkill[other]._group == skill._group;
+                if ( bGroupConflict )
                     return SkillResult::GroupTaken;
             }
         }

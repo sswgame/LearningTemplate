@@ -88,10 +88,11 @@ namespace sw
         const size_t entityCount = pListOrder != nullptr ? pListOrder->size() : _listEntity.size();
         for ( size_t orderIndex = 0; orderIndex < entityCount; ++orderIndex )
         {
-            const size_t          entityIndex = pListOrder != nullptr ? static_cast<size_t>( ( *pListOrder )[orderIndex] ) : orderIndex;
-            const NetEntityState& entity      = _listEntity[entityIndex];
-            const NetEntityState* pOld        = pBaseline != nullptr ? pBaseline->findEntity( entity._entityID ) : nullptr;
-            if ( pOld != nullptr && pOld->_typeID == entity._typeID && pOld->_buffer == entity._buffer )
+            const size_t          entityIndex      = pListOrder != nullptr ? static_cast<size_t>( ( *pListOrder )[orderIndex] ) : orderIndex;
+            const NetEntityState& entity           = _listEntity[entityIndex];
+            const NetEntityState* pOld             = pBaseline != nullptr ? pBaseline->findEntity( entity._entityID ) : nullptr;
+            const bool            bEntityUnchanged = pOld != nullptr && pOld->_typeID == entity._typeID && pOld->_buffer == entity._buffer;
+            if ( bEntityUnchanged )
             {
                 if ( pOutListCurrent != nullptr )
                     ( *pOutListCurrent )[entityIndex] = kEntityAlreadyCurrent;

@@ -168,7 +168,8 @@ namespace sw
                     }
                 }
             }
-            if ( unitIndex < 0 || field.canAct( unitIndex ) == false || runUnit( field, unitIndex ) == false )
+            const bool bStopActing = unitIndex < 0 || field.canAct( unitIndex ) == false || runUnit( field, unitIndex ) == false;
+            if ( bStopActing )
                 break;
             ++movedCount;
         }

@@ -184,7 +184,8 @@ namespace sw
             if ( inputMap.getActionHandle( name ).isValid() == false )
                 SW_LOG_WARNING( "Pawn '%#' intent analog '%#' has no InputMap action - a player cannot drive it", pPawnName, name.c_str() );
         }
-        if ( pawn.wantsMouseLock() && _mouseLockAction.empty() == false && inputMap.getActionHandle( _mouseLockAction ).isValid() == false )
+        const bool bMissingMouseLockAction = pawn.wantsMouseLock() && _mouseLockAction.empty() == false && inputMap.getActionHandle( _mouseLockAction ).isValid() == false;
+        if ( bMissingMouseLockAction )
             SW_LOG_WARNING( "Pawn '%#' locks the mouse but the InputMap has no '%#' action - the player cannot release the cursor", pPawnName, _mouseLockAction.c_str() );
     }
 

@@ -96,8 +96,9 @@ namespace sw
 
     string AutosaveSettings::makeSlotPath( int32 slot ) const
     {
-        string path = _directory;
-        if ( path.empty() == false && path.back() != '/' && path.back() != '\\' )
+        string     path            = _directory;
+        const bool bNeedsSeparator = path.empty() == false && path.back() != '/' && path.back() != '\\';
+        if ( bNeedsSeparator )
             path += '/';
         path += _prefix;
         path += to_string( slot );
@@ -160,7 +161,8 @@ namespace sw
                 }
             }
         }
-        if ( _bPending == SW_FALSE || isBlocked() || _bSaving == SW_TRUE )
+        const bool bNothingToSaveNow = _bPending == SW_FALSE || isBlocked() || _bSaving == SW_TRUE;
+        if ( bNothingToSaveNow )
             return;
         // 최소 간격 — 지역을 빠르게 오가도 저장이 줄지어 서지 않는다. 체크포인트 · 보스 앞은 간격을 지키되 기다렸다 저장한다(버리지 않는다).
         const bool bTooSoon = _lastSaveTime >= 0.0 && _playTime - _lastSaveTime < static_cast<float64>( _settings._minimumGap );
@@ -283,7 +285,8 @@ namespace sw
         const AutosaveSlotInfo* pLatest = nullptr;
         for ( const AutosaveSlotInfo& slot : _listSlot )
         {
-            if ( slot._sequence != 0 && slot._trigger == trigger && ( pLatest == nullptr || slot._sequence > pLatest->_sequence ) )
+            const bool bLatestOfTrigger = slot._sequence != 0 && slot._trigger == trigger && ( pLatest == nullptr || slot._sequence > pLatest->_sequence );
+            if ( bLatestOfTrigger )
                 pLatest = &slot;
         }
         return pLatest;
@@ -409,8 +412,9 @@ namespace sw
         archive >> outInfo._sequence;
         archive >> outInfo._playTime;
         archive >> trigger;
-        if ( StateArchiveUtil::readName( archive, outInfo._label ) == false || archive.isError() || trigger > static_cast<uint8>( AutosaveTrigger::Manual ) ||
-             outInfo._sequence == 0 )
+        const bool bInvalidSlotInfo = StateArchiveUtil::readName( archive, outInfo._label ) == false || archive.isError() || trigger > static_cast<uint8>( AutosaveTrigger::Manual ) ||
+                                      outInfo._sequence == 0;
+        if ( bInvalidSlotInfo )
             return false;
         outInfo._trigger = static_cast<AutosaveTrigger>( trigger );
         return true;

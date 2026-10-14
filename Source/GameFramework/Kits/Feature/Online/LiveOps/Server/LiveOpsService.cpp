@@ -231,8 +231,9 @@ namespace sw
 
     string LiveOpsService::resolveValue( const string& value ) const
     {
-        string text;
-        if ( value.empty() || value.front() != '@' || _dependencies._pRemoteConfig == nullptr )
+        string     text;
+        const bool bLiteralValue = value.empty() || value.front() != '@' || _dependencies._pRemoteConfig == nullptr;
+        if ( bLiteralValue )
         {
             text = value;
             return text;

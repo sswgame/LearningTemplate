@@ -62,7 +62,8 @@ namespace sw
 {
     bool OnlineServerService::initialize( const ServerServiceContext& context, string& outError )
     {
-        if ( context._pServerConfig == nullptr || context._pConfigManager == nullptr || context._serverConfigPath.empty() )
+        const bool bNoServerConfig = context._pServerConfig == nullptr || context._pConfigManager == nullptr || context._serverConfigPath.empty();
+        if ( bNoServerConfig )
             return true; // 서버 설정이 없는 호스트(테스트)에서는 할 일이 없다
         const string           path   = OnlineServerConfig::makeConfigPath( context._serverConfigPath );
         const ConfigReadResult result = context._pConfigManager->loadConfigFile<OnlineServerConfig>( path );

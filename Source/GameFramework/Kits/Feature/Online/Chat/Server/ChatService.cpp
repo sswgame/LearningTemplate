@@ -590,7 +590,8 @@ namespace sw
             return;
         for ( const AccountID recipientID : channelIt->second )
         {
-            if ( _dependencies._pPolicy != nullptr && recipientID != message._senderID && _dependencies._pPolicy->isBlocked( recipientID, message._senderID ) )
+            const bool bSkipBlockedRecipient = _dependencies._pPolicy != nullptr && recipientID != message._senderID && _dependencies._pPolicy->isBlocked( recipientID, message._senderID );
+            if ( bSkipBlockedRecipient )
                 continue; // 막은 사람의 채널 말은 받는 쪽에게 보이지 않는다
             _deliveryBuffer.push( ChatDelivery{ message, recipientID } );
         }
@@ -618,7 +619,8 @@ namespace sw
             return;
         if ( message._kind == ChatChannelKind::Whisper )
         {
-            if ( topic == _serverTopic && _dependencies._pDirectory != nullptr && _dependencies._pDirectory->isAccountOnline( message._recipientID ) )
+            const bool bDeliverWhisper = topic == _serverTopic && _dependencies._pDirectory != nullptr && _dependencies._pDirectory->isAccountOnline( message._recipientID );
+            if ( bDeliverWhisper )
                 deliverWhisperLocally( message );
             return;
         }
@@ -638,7 +640,8 @@ namespace sw
 
     void ChatService::tick( int64 nowMs )
     {
-        if ( _dependencies._pStore == nullptr || _bHistoryWriting == SW_TRUE || _listHistoryQueue.empty() )
+        const bool bNothingToFlush = _dependencies._pStore == nullptr || _bHistoryWriting == SW_TRUE || _listHistoryQueue.empty();
+        if ( bNothingToFlush )
             return;
         const size_t        takeCount = std::min( _listHistoryQueue.size(), static_cast<size_t>( _settings._historyFlushMax ) );
         vector<ChatMessage> listMessage( _listHistoryQueue.begin(), _listHistoryQueue.begin() + static_cast<ptrdiff_t>( takeCount ) );
@@ -680,9 +683,10 @@ namespace sw
 
     void ChatService::readHistory( AccountID accountID, string_view channelID, string_view cursor, int32 maxCount, uint64 requestTag )
     {
-        ChatChannelKind kind = ChatChannelKind::World;
-        if ( ChatChannelID::parseKind( channelID, kind ) == false || maxCount < 1 || maxCount > ChatLimit::kMaxHistoryPage ||
-             cursor.size() > static_cast<size_t>( ChatProtocol::kMaxCursorSize ) )
+        ChatChannelKind kind                   = ChatChannelKind::World;
+        const bool      bInvalidHistoryRequest = ChatChannelID::parseKind( channelID, kind ) == false || maxCount < 1 || maxCount > ChatLimit::kMaxHistoryPage ||
+                                            cursor.size() > static_cast<size_t>( ChatProtocol::kMaxCursorSize );
+        if ( bInvalidHistoryRequest )
         {
             completeSimple( ChatMethod::kHistory, requestTag, ChatResult::Invalid );
             return;

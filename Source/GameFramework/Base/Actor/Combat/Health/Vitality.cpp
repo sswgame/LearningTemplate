@@ -120,7 +120,8 @@ namespace sw
             _downedHealth -= result._healthDamage;
             if ( result._healthDamage > 0.0f )
                 pushEvent( VitalityEventType::Damaged, result._healthDamage, instigatorID );
-            if ( amount > 0.0f && isReviving() && _settings._bDamageInterruptsRevive == SW_TRUE )
+            const bool bReviveInterrupted = amount > 0.0f && isReviving() && _settings._bDamageInterruptsRevive == SW_TRUE;
+            if ( bReviveInterrupted )
             {
                 pushEvent( VitalityEventType::ReviveInterrupted, 0.0f, instigatorID );
                 stopRevive();
@@ -149,7 +150,8 @@ namespace sw
         }
 
         // 경직 — 붕괴 중에는 더 쌓지 않는다(붕괴가 끝나면 가득 찬다).
-        if ( _settings._poiseMax > 0.0f && poiseDamage > 0.0f && isPoiseBroken() == false )
+        const bool bPoiseDamageApplies = _settings._poiseMax > 0.0f && poiseDamage > 0.0f && isPoiseBroken() == false;
+        if ( bPoiseDamageApplies )
         {
             _sincePoiseDamage = 0.0f;
             _poise            = MathUtil::max( 0.0f, _poise - poiseDamage );
@@ -165,7 +167,8 @@ namespace sw
         {
             _health                   = 0.0f;
             const bool bDownLimitLeft = _settings._maxDownCount == 0 || _downCount < _settings._maxDownCount;
-            if ( _settings._bDownedEnabled == SW_TRUE && bDownLimitLeft && _settings._downedHealth > 0.0f )
+            const bool bEnterDowned   = _settings._bDownedEnabled == SW_TRUE && bDownLimitLeft && _settings._downedHealth > 0.0f;
+            if ( bEnterDowned )
             {
                 enterDowned( instigatorID );
                 result._bDowned = SW_TRUE;

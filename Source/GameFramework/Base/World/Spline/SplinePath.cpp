@@ -250,7 +250,8 @@ namespace sw
     void SplinePath::sampleUniform( float32 spacing, vector<SplineSample>& outListSample ) const
     {
         outListSample.clear();
-        if ( isValid() == false || spacing <= 0.0f || _length <= 0.0f )
+        const bool bCannotSample = isValid() == false || spacing <= 0.0f || _length <= 0.0f;
+        if ( bCannotSample )
             return;
         const int32 stepCount = static_cast<int32>( _length / spacing );
         outListSample.reserve( static_cast<size_t>( stepCount ) + 2 );

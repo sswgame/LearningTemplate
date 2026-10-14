@@ -172,12 +172,13 @@ namespace sw
         vector<Entry> listEntry;
         for ( size_t index = 0; index < keys.size(); ++index )
         {
-            const JSONValue key   = keys.at( index );
-            const JSONValue use   = key.get( "use", false );
-            const JSONValue kid   = key.get( "kid", false );
-            const JSONValue type  = key.get( "kty", false );
-            const bool      bSign = use.isValid() == false || use.isNull() || use.asString() == "sig";
-            if ( key.isObject() == false || bSign == false || kid.isString() == false || type.isString() == false )
+            const JSONValue key      = keys.at( index );
+            const JSONValue use      = key.get( "use", false );
+            const JSONValue kid      = key.get( "kid", false );
+            const JSONValue type     = key.get( "kty", false );
+            const bool      bSign    = use.isValid() == false || use.isNull() || use.asString() == "sig";
+            const bool      bSkipKey = key.isObject() == false || bSign == false || kid.isString() == false || type.isString() == false;
+            if ( bSkipKey )
                 continue;
             Entry entry;
             entry._keyID          = kid.asString();

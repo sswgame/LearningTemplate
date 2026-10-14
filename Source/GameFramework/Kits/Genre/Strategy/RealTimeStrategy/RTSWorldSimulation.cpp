@@ -92,7 +92,8 @@ namespace sw
     {
         if ( RTSWorldSimulationInternal::isGround( unit ) == false )
         {
-            if ( bForce || unit._agent.isMoving() == false || float3::getHorizontalDistance( unit._moveGoal, target ) > 0.25f )
+            const bool bShouldRepathAir = bForce || unit._agent.isMoving() == false || float3::getHorizontalDistance( unit._moveGoal, target ) > 0.25f;
+            if ( bShouldRepathAir )
             {
                 unit._moveGoal = target;
                 unit._agent.followPath( vector<float3>{
@@ -104,7 +105,8 @@ namespace sw
         const bool bGoalMoved = float3::getHorizontalDistance( unit._moveGoal, target ) > 1.0f;
         if ( bForce == false && unit._repathTimer.isActive() )
             return;
-        if ( bForce == false && unit._agent.isMoving() && bGoalMoved == false )
+        const bool bPathStillValid = bForce == false && unit._agent.isMoving() && bGoalMoved == false;
+        if ( bPathStillValid )
             return;
         unit._moveGoal = target;
         unit._repathTimer.start( _settings._repathInterval );
@@ -133,8 +135,9 @@ namespace sw
             queryUnits( unit._position, unit._pDef->_radius * 2.0f, _listQueryScratch );
             for ( const RTSUnitID otherID : _listQueryScratch )
             {
-                const RTSUnit* pOther = findUnit( otherID );
-                if ( pOther == nullptr || pOther == &unit || pOther->isMobile() == false || RTSWorldSimulationInternal::isGround( *pOther ) != bGround )
+                const RTSUnit* pOther         = findUnit( otherID );
+                const bool     bSkipOtherUnit = pOther == nullptr || pOther == &unit || pOther->isMobile() == false || RTSWorldSimulationInternal::isGround( *pOther ) != bGround;
+                if ( bSkipOtherUnit )
                     continue;
                 const RTSOrder* pOtherOrder = pOther->findOrder();
                 if ( pOtherOrder != nullptr && pOtherOrder->_type == RTSOrderType::Gather )
@@ -251,8 +254,9 @@ namespace sw
             }
             return;
         }
-        const bool bOrdered = pOrder != nullptr && pOrder->_type == RTSOrderType::Attack;
-        if ( unit.isMobile() == false || bHold || ( bOrdered == false && distance > unit._pDef->_sight * 1.5f ) )
+        const bool bOrdered    = pOrder != nullptr && pOrder->_type == RTSOrderType::Attack;
+        const bool bLostTarget = unit.isMobile() == false || bHold || ( bOrdered == false && distance > unit._pDef->_sight * 1.5f );
+        if ( bLostTarget )
         {
             unit._attackTarget = RTSUnitID{}; // 목표를 놓쳤다. 자동으로 고른 목표에만 해당하며, 명령한 목표는 끝까지 쫓는다
             return;
@@ -274,7 +278,8 @@ namespace sw
             }
         }
         // 할 일이 없을 때 맞으면 되받아친다.
-        if ( target.isMobile() && target._listOrder.empty() && target._attackTarget.isValid() == false && canAttack( target, attacker ) )
+        const bool bShouldRetaliate = target.isMobile() && target._listOrder.empty() && target._attackTarget.isValid() == false && canAttack( target, attacker );
+        if ( bShouldRetaliate )
             target._attackTarget = attacker._id;
         if ( target._hp <= 0.0f )
             killUnit( target, attacker._id );
@@ -342,13 +347,15 @@ namespace sw
         vector<int32> listBuildingCount( _listPlayer.size(), 0 );
         for ( const RTSUnit& unit : _listUnit )
         {
-            if ( unit._bAlive && unit._owner != kNoOwner && unit.isBuilding() )
+            const bool bCountsAsBuilding = unit._bAlive && unit._owner != kNoOwner && unit.isBuilding();
+            if ( bCountsAsBuilding )
                 ++listBuildingCount[static_cast<size_t>( unit._owner )];
         }
         for ( size_t index = 0; index < _listPlayer.size(); ++index )
         {
-            RTSPlayer& player = _listPlayer[index];
-            if ( player._bDefeated || player._bHadBuilding == SW_FALSE || listBuildingCount[index] > 0 )
+            RTSPlayer& player            = _listPlayer[index];
+            const bool bNotNewlyDefeated = player._bDefeated || player._bHadBuilding == SW_FALSE || listBuildingCount[index] > 0;
+            if ( bNotNewlyDefeated )
                 continue;
             player._bDefeated = SW_TRUE;
             pushEvent( RTSEvent::Kind::PlayerDefeated, static_cast<int32>( index ), RTSUnitID{}, hashed_string{} );

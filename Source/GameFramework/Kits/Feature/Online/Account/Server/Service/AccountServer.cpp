@@ -276,8 +276,9 @@ namespace sw
         const uint64    sessionID = reader.readVarUint();
         const uint64    reason    = reader.readVarUint();
         string          reasonCode;
-        if ( ServiceKeyUtil::readString( reader, LoginConstant::kMaxReasonCodeSize, reasonCode ) == false || reader.hasOverflowed() ||
-             reason > static_cast<uint64>( LoginRevokeReason::AccountDeleted ) )
+        const bool      bMalformedRevoke = ServiceKeyUtil::readString( reader, LoginConstant::kMaxReasonCodeSize, reasonCode ) == false || reader.hasOverflowed() ||
+                                      reason > static_cast<uint64>( LoginRevokeReason::AccountDeleted );
+        if ( bMalformedRevoke )
         {
             SW_LOG_WARNING( "Malformed account revoke bus message from server %#", message._originServerID );
             return;
@@ -357,8 +358,9 @@ namespace sw
             _mapAccountToSession[accountID] = BoundSession{ completion._grant._token, call._connection };
             _presence.noteOnline( completion._grant._identity );
         }
-        const bool bLinkOperation = completion._operation == LoginOperation::LinkCredential || completion._operation == LoginOperation::LinkPlatform;
-        if ( bOk && bLinkOperation && _mapAccountToSession.find( completion._identity._accountID ) != _mapAccountToSession.end() )
+        const bool bLinkOperation   = completion._operation == LoginOperation::LinkCredential || completion._operation == LoginOperation::LinkPlatform;
+        const bool bPresenceRefresh = bOk && bLinkOperation && _mapAccountToSession.find( completion._identity._accountID ) != _mapAccountToSession.end();
+        if ( bPresenceRefresh )
             _presence.noteOnline( completion._identity ); // 표시 이름이나 게스트 플래그가 바뀌었다
         (void)host.respondOk( call._token, body );
         if ( bOk && completion._operation == LoginOperation::Logout )

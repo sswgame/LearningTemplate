@@ -70,7 +70,8 @@ namespace sw
         const bool bStale     = _keyCache.hasKeys() && nowMs - _keyCache.getFetchedAtMs() >= _settings._jwksRefreshMs;
         const bool bMayFetch  = _jwksFetchCount == 0 || nowMs - _lastFetchStartMs >= _settings._minRefetchMs;
         const bool bWantFirst = _keyCache.hasKeys() == false && _listPending.empty() == false;
-        if ( _jwksRequestID == 0 && ( bStale || bWantFirst ) && bMayFetch )
+        const bool bFetchKeys = _jwksRequestID == 0 && ( bStale || bWantFirst ) && bMayFetch;
+        if ( bFetchKeys )
             startJwksFetch( nowMs );
 
         for ( size_t pendingIndex = 0; pendingIndex < _listPending.size(); )
@@ -144,12 +145,13 @@ namespace sw
         {
             bAudience = bAudience || token.hasAudience( clientID );
         }
-        const bool bIssuerOk  = token.findText( "iss", issuer ) && issuer == _settings._issuer;
-        const bool bExpiresOk = token.findInteger( "exp", expiresAt ) && nowMs < expiresAt * constant::kMillisecondsPerSecond + _settings._clockSkewMs;
-        const bool bIssuedOk  = token.findInteger( "iat", issuedAt ) == false || issuedAt * constant::kMillisecondsPerSecond <= nowMs + _settings._clockSkewMs;
-        const bool bNonceOk   = _settings._bRequireNonce == SW_FALSE || ( pending._nonce.empty() == false && token.findText( "nonce", nonce ) && nonce == pending._nonce );
-        const bool bSubjectOk = token.findText( _settings._subjectPath, subject ) && subject.empty() == false;
-        if ( bAudience == false || bIssuerOk == false || bExpiresOk == false || bIssuedOk == false || bNonceOk == false || bSubjectOk == false )
+        const bool bIssuerOk      = token.findText( "iss", issuer ) && issuer == _settings._issuer;
+        const bool bExpiresOk     = token.findInteger( "exp", expiresAt ) && nowMs < expiresAt * constant::kMillisecondsPerSecond + _settings._clockSkewMs;
+        const bool bIssuedOk      = token.findInteger( "iat", issuedAt ) == false || issuedAt * constant::kMillisecondsPerSecond <= nowMs + _settings._clockSkewMs;
+        const bool bNonceOk       = _settings._bRequireNonce == SW_FALSE || ( pending._nonce.empty() == false && token.findText( "nonce", nonce ) && nonce == pending._nonce );
+        const bool bSubjectOk     = token.findText( _settings._subjectPath, subject ) && subject.empty() == false;
+        const bool bTokenRejected = bAudience == false || bIssuerOk == false || bExpiresOk == false || bIssuedOk == false || bNonceOk == false || bSubjectOk == false;
+        if ( bTokenRejected )
         {
             outVerification._bRejected = SW_TRUE;
             return Decision::Done;

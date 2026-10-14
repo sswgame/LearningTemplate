@@ -178,7 +178,8 @@ namespace sw
 
     void AdminService::seedRole( AccountID accountID, AdminRole role, int64 nowMs )
     {
-        if ( _pStore == nullptr || accountID == kInvalidAccountID || role == AdminRole::None || role >= AdminRole::Count )
+        const bool bInvalidSeed = _pStore == nullptr || accountID == kInvalidAccountID || role == AdminRole::None || role >= AdminRole::Count;
+        if ( bInvalidSeed )
             return;
         ++_pendingSeedCount;
         _pStore->submit( make_unique<AdminSeedWork>( this, accountID, role, nowMs ) );
@@ -217,7 +218,8 @@ namespace sw
             const PendingCall& pending = _listPendingCall[pendingIndex];
             if ( pending._callID != callID )
                 continue;
-            if ( pending._method == AdminMethod::kLookupAccount && inoutReply._result == AdminResult::Ok && _settings._pDirectory != nullptr )
+            const bool bLookupWithDirectory = pending._method == AdminMethod::kLookupAccount && inoutReply._result == AdminResult::Ok && _settings._pDirectory != nullptr;
+            if ( bLookupWithDirectory )
             {
                 AccountIdentity identity;
                 if ( _settings._pDirectory->findIdentity( pending._targetID, identity ) )

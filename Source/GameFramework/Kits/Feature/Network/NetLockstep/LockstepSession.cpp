@@ -66,8 +66,9 @@ namespace sw
             return false;
         // 신뢰 순서 채널이라 플레이어별로 빈틈없이 온다. 다음 틱이 아닌 입력(겹친 입력, 먼 틱의 입력)은 버린다.
         // 이탈한 뒤의 틱도 버린다. 모두가 그 틱을 빈 입력으로 처리하기 때문이다.
-        const bool bInWindow = _currentTick <= tick && tick - _currentTick < kInputWindow;
-        if ( tick != _listNextInputTick[static_cast<size_t>( player )] || isPresentAt( player, tick ) == false || bInWindow == false )
+        const bool bInWindow    = _currentTick <= tick && tick - _currentTick < kInputWindow;
+        const bool bRejectInput = tick != _listNextInputTick[static_cast<size_t>( player )] || isPresentAt( player, tick ) == false || bInWindow == false;
+        if ( bRejectInput )
             return false;
         TickInput* pTickInput = _listTickInput.find( tick );
         if ( pTickInput == nullptr )
@@ -156,8 +157,9 @@ namespace sw
 
     void LockstepSession::storeChecksum( int32 player, uint32 tick, uint32 checksum )
     {
-        const bool bInWindow = tick + kChecksumWindow >= _currentTick && tick < _currentTick + kChecksumWindow;
-        if ( player < 0 || player >= _playerCount || _bDesynced == SW_TRUE || bInWindow == false )
+        const bool bInWindow       = tick + kChecksumWindow >= _currentTick && tick < _currentTick + kChecksumWindow;
+        const bool bRejectChecksum = player < 0 || player >= _playerCount || _bDesynced == SW_TRUE || bInWindow == false;
+        if ( bRejectChecksum )
             return;
         vector<int64>* pListChecksum = _listTickChecksum.find( tick );
         if ( pListChecksum == nullptr )
@@ -198,8 +200,9 @@ namespace sw
     void LockstepSession::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
     {
         (void)reason;
-        const int32 player = connectionID + 1;
-        if ( _pHost == nullptr || _pHost->isServer() == false || player <= 0 || player >= _playerCount || hasLeft( player ) )
+        const int32 player            = connectionID + 1;
+        const bool  bIgnoreDisconnect = _pHost == nullptr || _pHost->isServer() == false || player <= 0 || player >= _playerCount || hasLeft( player );
+        if ( bIgnoreDisconnect )
             return;
         // 서버가 받은 마지막 입력의 다음 틱을 이탈 틱으로 한다. 그 이전의 입력은 이미 모두에게 신뢰 순서로 나갔고, 그 이후의 입력은 아무도 받지 못했다.
         const uint32 tick = MathUtil::max( _listNextInputTick[static_cast<size_t>( player )], _currentTick );
@@ -220,7 +223,8 @@ namespace sw
             if ( body.hasOverflowed() )
                 return NetHandleResult::Malformed;
             // 이탈은 서버만 정한다.
-            if ( bServer == false && 0 < player && player < _playerCount && hasLeft( player ) == false )
+            const bool bApplyLeave = bServer == false && 0 < player && player < _playerCount && hasLeft( player ) == false;
+            if ( bApplyLeave )
                 applyLeave( player, tick );
             return NetHandleResult::Handled;
         }

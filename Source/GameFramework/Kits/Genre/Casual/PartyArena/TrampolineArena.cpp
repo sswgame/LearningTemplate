@@ -129,12 +129,13 @@ namespace sw
                 archive >> outBody._bShield;
                 archive >> outBody._bHitThisDash;
                 archive >> state;
-                const bool bInputValid  = outBody._input._bJumpPressed <= SW_TRUE && outBody._input._bAttackPressed <= SW_TRUE && outBody._input._bPoundPressed <= SW_TRUE;
-                const bool bFlagsValid  = outBody._bPounding <= SW_TRUE && outBody._bSuperBounce <= SW_TRUE && outBody._bShield <= SW_TRUE && outBody._bHitThisDash <= SW_TRUE;
-                const bool bHitterValid = -1 <= outBody._lastHitter && outBody._lastHitter < playerCount;
-                const bool bStateValid  = state <= static_cast<uint8>( TrampolinePlayerState::Respawning );
-                if ( bTimersRead == false || bHeavyRead == false || archive.isError() || bInputValid == false || bFlagsValid == false || bHitterValid == false ||
-                     bStateValid == false || outBody._combo < 0 )
+                const bool bInputValid       = outBody._input._bJumpPressed <= SW_TRUE && outBody._input._bAttackPressed <= SW_TRUE && outBody._input._bPoundPressed <= SW_TRUE;
+                const bool bFlagsValid       = outBody._bPounding <= SW_TRUE && outBody._bSuperBounce <= SW_TRUE && outBody._bShield <= SW_TRUE && outBody._bHitThisDash <= SW_TRUE;
+                const bool bHitterValid      = -1 <= outBody._lastHitter && outBody._lastHitter < playerCount;
+                const bool bStateValid       = state <= static_cast<uint8>( TrampolinePlayerState::Respawning );
+                const bool bInvalidBodyState = bTimersRead == false || bHeavyRead == false || archive.isError() || bInputValid == false || bFlagsValid == false || bHitterValid == false ||
+                                               bStateValid == false || outBody._combo < 0;
+                if ( bInvalidBodyState )
                     return false;
                 outBody._state = static_cast<TrampolinePlayerState>( state );
                 return true;
@@ -416,14 +417,16 @@ namespace sw
         const TrampolineInput& input = body._input;
         if ( input._bJumpPressed == SW_TRUE )
             body._jumpPressTime = _time;
-        const bool bCanControl = body._stunTimer.isActive() == false && body._bPounding == SW_FALSE;
-        if ( bCanControl && input._bPoundPressed == SW_TRUE && body._position._y >= _settings._poundMinHeight )
+        const bool bCanControl  = body._stunTimer.isActive() == false && body._bPounding == SW_FALSE;
+        const bool bStartAttack = bCanControl && input._bAttackPressed == SW_TRUE && body._attackCooldown.isActive() == false;
+        const bool bCanPound    = bCanControl && input._bPoundPressed == SW_TRUE && body._position._y >= _settings._poundMinHeight;
+        if ( bCanPound )
         {
             body._bPounding = SW_TRUE;
             body._attackTimer.clear();
             body._velocity = float3{ 0.0f, -_settings._poundSpeed, 0.0f };
         }
-        else if ( bCanControl && input._bAttackPressed == SW_TRUE && body._attackCooldown.isActive() == false )
+        else if ( bStartAttack )
         {
             float3        direction{ input._moveX, 0.0f, input._moveZ };
             const float32 length = Internal::computeFlatLength( direction );
@@ -514,9 +517,10 @@ namespace sw
         int32 pushed    = 0;
         for ( int32 other = 0; other < getPlayerCount(); ++other )
         {
-            TrampolinePlayer& target   = _listPlayer[static_cast<size_t>( other )];
-            const bool        bOnBoard = target._state == TrampolinePlayerState::Air || target._state == TrampolinePlayerState::Contact;
-            if ( other == player || bOnBoard == false || target._invulnerableTimer.isActive() || target._position._y >= _settings._poundHitHeight )
+            TrampolinePlayer& target           = _listPlayer[static_cast<size_t>( other )];
+            const bool        bOnBoard         = target._state == TrampolinePlayerState::Air || target._state == TrampolinePlayerState::Contact;
+            const bool        bSkipPoundTarget = other == player || bOnBoard == false || target._invulnerableTimer.isActive() || target._position._y >= _settings._poundHitHeight;
+            if ( bSkipPoundTarget )
                 continue;
             float3        away     = float3{ target._position._x - body._position._x, 0.0f, target._position._z - body._position._z };
             const float32 distance = Internal::computeFlatLength( away );
@@ -569,14 +573,16 @@ namespace sw
         const float32 reach = _settings._bodyRadius * 2.0f + _settings._attackRadius;
         for ( int32 attacker = 0; attacker < getPlayerCount(); ++attacker )
         {
-            TrampolinePlayer& body = _listPlayer[static_cast<size_t>( attacker )];
-            if ( body._attackTimer.isActive() == false || body._bHitThisDash == SW_TRUE || body._state != TrampolinePlayerState::Air )
+            TrampolinePlayer& body              = _listPlayer[static_cast<size_t>( attacker )];
+            const bool        bSkipDashAttacker = body._attackTimer.isActive() == false || body._bHitThisDash == SW_TRUE || body._state != TrampolinePlayerState::Air;
+            if ( bSkipDashAttacker )
                 continue;
             for ( int32 victim = 0; victim < getPlayerCount(); ++victim )
             {
-                TrampolinePlayer& target   = _listPlayer[static_cast<size_t>( victim )];
-                const bool        bOnBoard = target._state == TrampolinePlayerState::Air || target._state == TrampolinePlayerState::Contact;
-                if ( victim == attacker || bOnBoard == false || target._invulnerableTimer.isActive() )
+                TrampolinePlayer& target          = _listPlayer[static_cast<size_t>( victim )];
+                const bool        bOnBoard        = target._state == TrampolinePlayerState::Air || target._state == TrampolinePlayerState::Contact;
+                const bool        bSkipDashTarget = victim == attacker || bOnBoard == false || target._invulnerableTimer.isActive();
+                if ( bSkipDashTarget )
                     continue;
                 if ( float3::getDistance( body._position, target._position ) > reach )
                     continue;

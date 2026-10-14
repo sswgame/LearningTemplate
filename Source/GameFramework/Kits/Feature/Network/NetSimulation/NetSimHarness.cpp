@@ -305,9 +305,10 @@ namespace sw
 
     void NetSimHarness::applyLinkConditions( int32 worldIndex, const NetSimLinkConditions& conditions )
     {
-        Link* pClientLink = findLink( worldIndex );
-        Link* pServerLink = findLink( 0 );
-        if ( pClientLink == nullptr || pServerLink == nullptr || worldIndex == 0 )
+        Link*      pClientLink   = findLink( worldIndex );
+        Link*      pServerLink   = findLink( 0 );
+        const bool bInvalidLinks = pClientLink == nullptr || pServerLink == nullptr || worldIndex == 0;
+        if ( bInvalidLinks )
             return;
         pClientLink->_pEmulation->setDefaultConditions( conditions._upstream );
         pServerLink->_pEmulation->setConditions( pClientLink->_address, conditions._downstream );

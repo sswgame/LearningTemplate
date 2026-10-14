@@ -52,11 +52,12 @@ namespace sw
     void PhysicsCarComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        GameObject*              pOwner   = getOwner();
-        const PawnComponent*     pPawn    = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        WheeledVehicleComponent* pVehicle = pOwner != nullptr ? pOwner->getComponent<WheeledVehicleComponent>() : nullptr;
-        const SceneComponent*    pRoot    = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
-        if ( pPawn == nullptr || pVehicle == nullptr || pRoot == nullptr )
+        GameObject*              pOwner           = getOwner();
+        const PawnComponent*     pPawn            = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+        WheeledVehicleComponent* pVehicle         = pOwner != nullptr ? pOwner->getComponent<WheeledVehicleComponent>() : nullptr;
+        const SceneComponent*    pRoot            = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        const bool               bMissingCarParts = pPawn == nullptr || pVehicle == nullptr || pRoot == nullptr;
+        if ( bMissingCarParts )
             return;
         const float3          forward = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, pRoot->getWorldMatrix() );
         const PhysicsCarInput input   = toCarInput( pPawn->getIntent(), forward, pVehicle->getVehicleState()._forwardSpeed, _reverseSpeed, _handBrakeIndex );

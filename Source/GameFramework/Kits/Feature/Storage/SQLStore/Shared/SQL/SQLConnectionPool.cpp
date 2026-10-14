@@ -203,8 +203,9 @@ namespace sw
                 _listQueuedJob.pop_front();
                 bStopping = _bStopping == SW_TRUE;
             }
-            const bool bNeedsReconnect = connection == nullptr || connection->isAlive() == false;
-            if ( bNeedsReconnect && bStopping == false && retryAt.isExpired() )
+            const bool bNeedsReconnect  = connection == nullptr || connection->isAlive() == false;
+            const bool bShouldReconnect = bNeedsReconnect && bStopping == false && retryAt.isExpired();
+            if ( bShouldReconnect )
             {
                 connection = _pDriver->openConnection( _settings._connection, _settings._secret, error );
                 if ( connection == nullptr )

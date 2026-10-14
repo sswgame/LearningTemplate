@@ -53,7 +53,8 @@ namespace sw
 
     void OnlinePresence::attach( OnlineServiceHost* pHost )
     {
-        if ( pHost == nullptr || pHost->getEphemeralRouter() == nullptr || pHost->getServerBus() == nullptr )
+        const bool bCannotAttachPresence = pHost == nullptr || pHost->getEphemeralRouter() == nullptr || pHost->getServerBus() == nullptr;
+        if ( bCannotAttachPresence )
             return; // 서버가 한 대이므로 이 프로세스의 계정 디렉터리로 충분하다
         _pHost    = pHost;
         _serverID = pHost->getServerBus()->getServerID();
@@ -102,8 +103,9 @@ namespace sw
 
     void OnlinePresence::noteOnline( const AccountIdentity& identity )
     {
-        const auto identityIt = _mapAccountToIdentity.find( identity._accountID );
-        if ( identityIt != _mapAccountToIdentity.end() && identityIt->second._displayName != identity._displayName && _pHost != nullptr )
+        const auto identityIt          = _mapAccountToIdentity.find( identity._accountID );
+        const bool bDisplayNameChanged = identityIt != _mapAccountToIdentity.end() && identityIt->second._displayName != identity._displayName && _pHost != nullptr;
+        if ( bDisplayNameChanged )
         {
             // 표시 이름이 바뀌었으면(연동) 이전 이름의 기록을 지운다. 내 것일 때만 지운다.
             const AccountIdentity& previous = identityIt->second;
@@ -305,7 +307,8 @@ namespace sw
             identity._bGuest    = reader.readBool() ? SW_TRUE : SW_FALSE;
             const bool bNameOk  = ServiceKeyUtil::readString( reader, LoginConstant::kMaxDisplayNameSize, identity._displayName );
             // 해시는 같지만 다른 이름이면 없는 것으로 본다.
-            if ( bNameOk && reader.hasOverflowed() == false && StringUtil::toLower( identity._displayName.c_str() ) == pending._nameKey )
+            const bool bNameMatchesLookup = bNameOk && reader.hasOverflowed() == false && StringUtil::toLower( identity._displayName.c_str() ) == pending._nameKey;
+            if ( bNameMatchesLookup )
                 found = AccountPresenceResult{ std::move( identity ), pending._lookupID, server };
         }
         if ( pending._onFound.isBound() )
@@ -341,8 +344,9 @@ namespace sw
 
     void OnlinePresence::finishPush( const PendingOperation& pending, const EphemeralReply& reply )
     {
-        uint64 serverID = 0;
-        if ( reply._result != EphemeralResult::Ok || OnlinePresenceInternal::readServerID( reply._value, serverID ) == false || _pHost == nullptr )
+        uint64     serverID          = 0;
+        const bool bDropNotification = reply._result != EphemeralResult::Ok || OnlinePresenceInternal::readServerID( reply._value, serverID ) == false || _pHost == nullptr;
+        if ( bDropNotification )
             return; // 접속해 있지 않으므로 알림은 버린다. 다시 접속하면 저장소에서 다시 읽는다
         BitWriter body;
         if ( pending._bodyBytes.empty() == false )

@@ -124,16 +124,17 @@ namespace sw
         if ( reader.readUint32() != KartGhostInternal::kMagic || reader.readBits( 8 ) != kVersion )
             return false;
         float3 startPosition;
-        startPosition._x         = reader.readFloat();
-        startPosition._y         = reader.readFloat();
-        startPosition._z         = reader.readFloat();
-        const float32 startYaw   = reader.readFloat();
-        const float32 step       = reader.readFloat();
-        const float32 finishTime = reader.readFloat();
-        const uint64  frameCount = reader.readVarUint();
-        const int32   frameBits  = 8 + 8 + KartGhostInternal::kButtonBits;
-        const bool    bCountFits = frameCount <= static_cast<uint64>( reader.getBitsRemaining() / frameBits );
-        if ( reader.hasOverflowed() || bCountFits == false || step <= 0.0f )
+        startPosition._x                = reader.readFloat();
+        startPosition._y                = reader.readFloat();
+        startPosition._z                = reader.readFloat();
+        const float32 startYaw          = reader.readFloat();
+        const float32 step              = reader.readFloat();
+        const float32 finishTime        = reader.readFloat();
+        const uint64  frameCount        = reader.readVarUint();
+        const int32   frameBits         = 8 + 8 + KartGhostInternal::kButtonBits;
+        const bool    bCountFits        = frameCount <= static_cast<uint64>( reader.getBitsRemaining() / frameBits );
+        const bool    bInvalidGhostData = reader.hasOverflowed() || bCountFits == false || step <= 0.0f;
+        if ( bInvalidGhostData )
             return false;
         vector<KartGhostFrame> listFrame;
         listFrame.reserve( static_cast<size_t>( frameCount ) );

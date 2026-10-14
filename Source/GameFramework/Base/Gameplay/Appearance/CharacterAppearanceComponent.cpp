@@ -348,8 +348,9 @@ namespace sw
         const ComponentHandle bodyHandle    = body.getHandle();
         for ( size_t partIndex = 0; partIndex < _resolved._listPart.size(); ++partIndex )
         {
-            const ResolvedPart& part = _resolved._listPart[partIndex];
-            if ( listPartCovered[partIndex] == SW_TRUE || static_cast<int32>( partIndex ) == bodyPart || part._asset.empty() )
+            const ResolvedPart& part      = _resolved._listPart[partIndex];
+            const bool          bSkipPart = listPartCovered[partIndex] == SW_TRUE || static_cast<int32>( partIndex ) == bodyPart || part._asset.empty();
+            if ( bSkipPart )
                 continue;
             GameObject* pObject = nullptr;
             SpawnedPart spawned;
@@ -409,7 +410,8 @@ namespace sw
             spawned._holderUnit            = unitIndex;
             const hashed_string socketName = part._placement._listSocket.empty() ? hashed_string{} : part._placement._listSocket[0];
             // 같은 holder 와 소켓이면 위치만 고친다. 다시 붙이면 되돌아가기 블렌드가 끊기기 때문이다.
-            if ( pBinding->getState() == SocketBindingState::Bound && pBinding->getHolder() == pHolder->getHandle() && pBinding->getSocketName() == socketName )
+            const bool bSameSocketBinding = pBinding->getState() == SocketBindingState::Bound && pBinding->getHolder() == pHolder->getHandle() && pBinding->getSocketName() == socketName;
+            if ( bSameSocketBinding )
                 pBinding->updateSocketTransform( inUnit );
             else
                 (void)pBinding->bindToSocket( pHolder, socketName, inUnit );

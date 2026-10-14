@@ -133,7 +133,8 @@ namespace sw
         }
         for ( const RTSUnit& unit : _listUnit )
         {
-            if ( unit._bAlive != SW_FALSE && unit.isMobile() == false && unit._pDef->_bExtractor == SW_FALSE )
+            const bool bStaticBlocker = unit._bAlive != SW_FALSE && unit.isMobile() == false && unit._pDef->_bExtractor == SW_FALSE;
+            if ( bStaticBlocker )
                 placeFootprint( unit, true );
         }
     }
@@ -245,7 +246,8 @@ namespace sw
                     return RTSUnitID{};
                 for ( const RTSUnit& other : _listUnit )
                 {
-                    if ( other._bAlive && other.isResource() && other._pDef->_resourceType == RTSResourceType::Gas && other._cell == cell )
+                    const bool bGasAtCell = other._bAlive && other.isResource() && other._pDef->_resourceType == RTSResourceType::Gas && other._cell == cell;
+                    if ( bGasAtCell )
                         linkedResource = other._id;
                 }
             }
@@ -261,9 +263,11 @@ namespace sw
                 }
             }
         }
-        else if ( pDef->_bAir == SW_FALSE && _grid.isWalkable( cell ) == false && _grid.findNearestWalkable( cell, 8, cell ) == false )
+        else
         {
-            return RTSUnitID{};
+            const bool bNoWalkableCellNearby = pDef->_bAir == SW_FALSE && _grid.isWalkable( cell ) == false && _grid.findNearestWalkable( cell, 8, cell ) == false;
+            if ( bNoWalkableCellNearby )
+                return RTSUnitID{};
         }
         const int32 footprint = pDef->_footprint;
         if ( pDef->_kind == RTSUnitKind::Building && _land.claimRect( cell._x, cell._y, cell._x + footprint - 1, cell._y + footprint - 1, true ) == false )
@@ -473,7 +477,8 @@ namespace sw
 
     bool RTSWorld::canAttack( const RTSUnit& attacker, const RTSUnit& target ) const
     {
-        if ( attacker._pDef->canAttack() == false || target._bAlive == SW_FALSE || target.isResource() || areEnemies( attacker._owner, target._owner ) == false )
+        const bool bCannotAttack = attacker._pDef->canAttack() == false || target._bAlive == SW_FALSE || target.isResource() || areEnemies( attacker._owner, target._owner ) == false;
+        if ( bCannotAttack )
             return false;
         return target._pDef->_bAir ? attacker._pDef->_bTargetsAir != SW_FALSE : attacker._pDef->_bTargetsGround != SW_FALSE;
     }

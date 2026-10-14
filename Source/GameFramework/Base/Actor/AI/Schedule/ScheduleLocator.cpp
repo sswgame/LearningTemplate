@@ -148,8 +148,9 @@ namespace sw
         int32 count = 0;
         for ( const Reservation& reservation : _listReservation )
         {
-            const bool bOverlaps = reservation._startMinute < endMinute && startMinute < reservation._endMinute;
-            if ( reservation._spotIndex == spotIndex && reservation._day == day && bOverlaps )
+            const bool bOverlaps        = reservation._startMinute < endMinute && startMinute < reservation._endMinute;
+            const bool bSameSpotOverlap = reservation._spotIndex == spotIndex && reservation._day == day && bOverlaps;
+            if ( bSameSpotOverlap )
                 ++count;
         }
         return count;

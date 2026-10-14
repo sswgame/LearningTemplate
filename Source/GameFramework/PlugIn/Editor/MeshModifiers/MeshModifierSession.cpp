@@ -413,8 +413,9 @@ namespace sw::editor
     {
         outListSegmentPoint.clear();
         refreshPreview();
-        const int32 lastIndex = _selectedIndex;
-        if ( hasTarget() == false || lastIndex < 0 || lastIndex + 1 >= _stack.getModifierCount() )
+        const int32 lastIndex       = _selectedIndex;
+        const bool  bNoNextModifier = hasTarget() == false || lastIndex < 0 || lastIndex + 1 >= _stack.getModifierCount();
+        if ( bNoNextModifier )
             return;
         if ( _bStagePreviewDirty || _stagePreviewIndex != lastIndex )
         {
@@ -439,15 +440,17 @@ namespace sw::editor
     const MeshModifierBounds& MeshModifierSession::getSelectedModifierInputBounds()
     {
         refreshPreview();
-        const int32 selectedIndex = _selectedIndex;
-        if ( hasTarget() == false || selectedIndex <= 0 || selectedIndex >= _stack.getModifierCount() )
+        const int32 selectedIndex       = _selectedIndex;
+        const bool  bNoPreviousModifier = hasTarget() == false || selectedIndex <= 0 || selectedIndex >= _stack.getModifierCount();
+        if ( bNoPreviousModifier )
             return _sourceBounds; // 첫 모디파이어의 입력은 원본 그대로다
         if ( _bInputBoundsDirty || _inputBoundsIndex != selectedIndex )
         {
-            _bInputBoundsDirty    = false;
-            _inputBoundsIndex     = selectedIndex;
-            const int32 lastIndex = selectedIndex - 1;
-            if ( _bStagePreviewDirty == false && _stagePreviewIndex == lastIndex && _stagePreviewMesh._listPosition.empty() == false )
+            _bInputBoundsDirty            = false;
+            _inputBoundsIndex             = selectedIndex;
+            const int32 lastIndex         = selectedIndex - 1;
+            const bool  bStageCacheUsable = _bStagePreviewDirty == false && _stagePreviewIndex == lastIndex && _stagePreviewMesh._listPosition.empty() == false;
+            if ( bStageCacheUsable )
             {
                 // 단계 미리보기 캐시가 바로 앞 모디파이어까지 건 결과면 그대로 쓴다
                 _inputBounds = MeshModifierBounds::makeFromPoints( _stagePreviewMesh._listPosition );

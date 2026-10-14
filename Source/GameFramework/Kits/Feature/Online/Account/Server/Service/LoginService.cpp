@@ -617,13 +617,15 @@ namespace sw
         const bool bGrantOperation = completion._operation == LoginOperation::Login || completion._operation == LoginOperation::Resume ||
                                      completion._operation == LoginOperation::GuestLogin || completion._operation == LoginOperation::PlatformLogin;
         const bool bLinkOperation = completion._operation == LoginOperation::LinkCredential || completion._operation == LoginOperation::LinkPlatform;
-        if ( completion._result == LoginResult::Ok && bGrantOperation && completion._grant._identity._accountID != kInvalidAccountID )
+        const bool bRegisterGrant = completion._result == LoginResult::Ok && bGrantOperation && completion._grant._identity._accountID != kInvalidAccountID;
+        if ( bRegisterGrant )
         {
             const AccountIdentity& identity                                                  = completion._grant._identity;
             _mapAccountToIdentity[identity._accountID]                                       = identity;
             _mapNameKeyToAccount[LoginServiceInternal::makeNameKey( identity._displayName )] = identity._accountID;
         }
-        if ( completion._result == LoginResult::Ok && bLinkOperation && isAccountOnline( completion._identity._accountID ) )
+        const bool bUpdateLinkedIdentity = completion._result == LoginResult::Ok && bLinkOperation && isAccountOnline( completion._identity._accountID );
+        if ( bUpdateLinkedIdentity )
         {
             // 연동이 표시 이름과 게스트 플래그를 바꿨으므로 이전 이름 인덱스를 지우고 새 것으로 바꾼다.
             const AccountIdentity& identity = completion._identity;

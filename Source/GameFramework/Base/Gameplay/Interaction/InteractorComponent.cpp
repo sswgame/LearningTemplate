@@ -259,8 +259,9 @@ namespace sw
                 _montageStep = 0;
             else if ( event == InteractionSessionEvent::StepCompleted )
                 ++_montageStep;
-            const bool bStepStarts = event == InteractionSessionEvent::Started || event == InteractionSessionEvent::StepCompleted;
-            if ( bStepStarts && pEventDef != nullptr && 0 <= _montageStep && _montageStep < static_cast<int32>( pEventDef->_listStep.size() ) )
+            const bool bStepStarts       = event == InteractionSessionEvent::Started || event == InteractionSessionEvent::StepCompleted;
+            const bool bStartMontageStep = bStepStarts && pEventDef != nullptr && 0 <= _montageStep && _montageStep < static_cast<int32>( pEventDef->_listStep.size() );
+            if ( bStartMontageStep )
                 InteractorComponentInternal::playStepMontage( *pOwner, pEventDef->_listStep[static_cast<size_t>( _montageStep )], _resumeState );
             if ( event == InteractionSessionEvent::Cancelled )
             {
@@ -285,7 +286,8 @@ namespace sw
         _prompt._progress                   = _session.getStepProgress();
         _prompt._stepIndex                  = _session.isActive() ? _session.getStepIndex() : 0;
         _prompt._stepCount                  = pDef != nullptr ? static_cast<int32>( pDef->_listStep.size() ) : 0;
-        if ( pStep == nullptr && pDef != nullptr && pDef->_listStep.empty() == false )
+        const bool bFallbackToFirstStep     = pStep == nullptr && pDef != nullptr && pDef->_listStep.empty() == false;
+        if ( bFallbackToFirstStep )
             pStep = &pDef->_listStep.front();
         if ( pStep != nullptr )
         {

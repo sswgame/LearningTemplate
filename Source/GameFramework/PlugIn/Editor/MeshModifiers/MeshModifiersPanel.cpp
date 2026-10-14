@@ -92,7 +92,8 @@ namespace sw::editor
             /** @brief 직전 항목에 마우스가 있으면 툴팁을 보입니다. */
             static void drawItemTooltip( const utf8* pTooltip )
             {
-                if ( pTooltip != nullptr && pTooltip[0] != '\0' && ImGui::IsItemHovered() )
+                const bool bTooltipVisible = pTooltip != nullptr && pTooltip[0] != '\0' && ImGui::IsItemHovered();
+                if ( bTooltipVisible )
                     ImGui::SetTooltip( "%s", pTooltip );
             }
 
@@ -918,7 +919,8 @@ namespace sw::editor
         }
 
         // 표를 다 그린 뒤 행을 옮긴다(그리는 도중에 바꾸면 행 번호와 입력칸이 어긋난다). 범위는 방금 그린 행이라 맞다
-        if ( upRow >= 0 || downRow >= 0 || duplicateAt >= 0 || removeAt >= 0 )
+        const bool bRowChangeRequested = upRow >= 0 || downRow >= 0 || duplicateAt >= 0 || removeAt >= 0;
+        if ( bRowChangeRequested )
         {
             session.recordUndo();
             if ( upRow >= 0 )

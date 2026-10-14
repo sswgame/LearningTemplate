@@ -199,7 +199,8 @@ namespace sw
         archive >> restored._hatchPosition;
         const uint8 flags =
             static_cast<uint8>( restored._bGatesPowered | restored._bHatchPlaced | restored._bHatchOpen | restored._bHatchClosed | restored._bCollapseStarted );
-        if ( bCollapseRead == false || archive.isError() || flags > SW_TRUE || restored._completedGeneratorCount < 0 )
+        const bool bInvalidRestoredFlags = bCollapseRead == false || archive.isError() || flags > SW_TRUE || restored._completedGeneratorCount < 0;
+        if ( bInvalidRestoredFlags )
             return false;
 
         uint32 hookCount = 0;
@@ -257,7 +258,8 @@ namespace sw
             archive >> position;
             archive >> bKicked;
             archive >> bBlocked;
-            if ( archive.isError() || bKicked > SW_TRUE || bBlocked > SW_TRUE )
+            const bool bInvalidGeneratorFlags = archive.isError() || bKicked > SW_TRUE || bBlocked > SW_TRUE;
+            if ( bInvalidGeneratorFlags )
                 return false;
             const int32 generator = restored.addGenerator( position );
             restored.configureGenerator( generator, bKicked == SW_TRUE ); // 걷어차인 발전기는 퇴행 규칙을 쓴다
@@ -334,9 +336,10 @@ namespace sw
 
     bool HorrorMatch::readSurvivor( Archive& archive, HorrorSurvivor& outSurvivor ) const
     {
-        uint8 state    = 0;
-        uint8 activity = 0;
-        if ( outSurvivor._vitality.readState( archive ) == false || outSurvivor._healing.readState( archive ) == false || outSurvivor._score.readState( archive ) == false )
+        uint8      state                    = 0;
+        uint8      activity                 = 0;
+        const bool bSurvivorStateReadFailed = outSurvivor._vitality.readState( archive ) == false || outSurvivor._healing.readState( archive ) == false || outSurvivor._score.readState( archive ) == false;
+        if ( bSurvivorStateReadFailed )
             return false;
         archive >> outSurvivor._lastMoveSpeed;
         const bool bHasteRead = StateArchiveUtil::readCountdown( archive, outSurvivor._hasteRemaining );

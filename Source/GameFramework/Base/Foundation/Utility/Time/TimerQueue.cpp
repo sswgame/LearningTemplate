@@ -92,8 +92,9 @@ namespace sw
         {
             for ( int32 catchUp = 0; catchUp < TimerQueueInternal::kMaxCatchUpCount; ++catchUp )
             {
-                Timer& timer = _listTimer[timerIndex];
-                if ( timer._bCancelled != SW_FALSE || timer._bPaused != SW_FALSE || timer._dueTime > _time )
+                Timer&     timer             = _listTimer[timerIndex];
+                const bool bTimerNotRunnable = timer._bCancelled != SW_FALSE || timer._bPaused != SW_FALSE || timer._dueTime > _time;
+                if ( bTimerNotRunnable )
                     break;
                 const Callback callback = timer._callback; // 콜백이 목록을 늘려 자리가 옮겨져도 안전하게 복사해서 부른다
                 if ( timer._bRepeat != SW_FALSE )
@@ -104,8 +105,9 @@ namespace sw
                 ++callCount;
             }
             // 따라잡기 한도를 넘었으면 지금 시각으로 다시 맞춘다.
-            Timer& timer = _listTimer[timerIndex];
-            if ( timer._bRepeat != SW_FALSE && timer._bCancelled == SW_FALSE && timer._dueTime <= _time )
+            Timer&     timer          = _listTimer[timerIndex];
+            const bool bRepeatOverdue = timer._bRepeat != SW_FALSE && timer._bCancelled == SW_FALSE && timer._dueTime <= _time;
+            if ( bRepeatOverdue )
                 timer._dueTime = _time + static_cast<float64>( timer._interval );
         }
         _bAdvancing = SW_FALSE;

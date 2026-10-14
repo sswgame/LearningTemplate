@@ -245,7 +245,8 @@ namespace sw
         const bool bHealth = name == _healthAttribute;
         if ( bHealth || name == _maxHealthAttribute )
             notifyHealthChanged( false );
-        if ( bHealth && newValue < oldValue && _bShowDamageNumbers )
+        const bool bDamageTaken = bHealth && newValue < oldValue && _bShowDamageNumbers;
+        if ( bDamageTaken )
             spawnDamageNumber( oldValue - newValue );
     }
 } // namespace sw

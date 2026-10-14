@@ -84,8 +84,9 @@ namespace sw
 
     int32 MechArenaWorld::addPilot( const MechPilotConfig& config )
     {
-        if ( _bStarted == SW_TRUE || _pMechCatalog == nullptr || config._listMechID.empty() || config._team < 0 ||
-             config._team >= static_cast<int32>( _listTeamName.size() ) )
+        const bool bPilotRejected = _bStarted == SW_TRUE || _pMechCatalog == nullptr || config._listMechID.empty() || config._team < 0 ||
+                                    config._team >= static_cast<int32>( _listTeamName.size() );
+        if ( bPilotRejected )
             return -1;
         MechPilot pilot;
         int32     deckCost = 0;
@@ -178,8 +179,9 @@ namespace sw
             return MechSwapResult::NotDestroyed;
         if ( deckIndex < 0 || deckIndex >= static_cast<int32>( target._listDeckMech.size() ) )
             return MechSwapResult::InvalidSlot;
-        const MatchTeam* pTeam = _match.findTeam( target._team );
-        if ( pTeam != nullptr && pTeam->_bIgnoreCost == SW_FALSE && target._listDeckMech[static_cast<size_t>( deckIndex )]->_cost > pTeam->_costPool )
+        const MatchTeam* pTeam         = _match.findTeam( target._team );
+        const bool       bSwapOverCost = pTeam != nullptr && pTeam->_bIgnoreCost == SW_FALSE && target._listDeckMech[static_cast<size_t>( deckIndex )]->_cost > pTeam->_costPool;
+        if ( bSwapOverCost )
             return MechSwapResult::OverCost;
         target._deckIndex = deckIndex;
         pushEvent( MechArenaEvent::Kind::MechSwapped, pilot, -1, static_cast<float32>( deckIndex ), target._listDeckMech[static_cast<size_t>( deckIndex )]->_id );

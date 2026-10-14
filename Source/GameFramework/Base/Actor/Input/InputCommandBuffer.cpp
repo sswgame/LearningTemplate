@@ -86,8 +86,9 @@ namespace sw
         const string_view head = plus == string_view::npos ? token : token.substr( 0, plus );
         const string_view rest = plus == string_view::npos ? string_view() : token.substr( plus + 1 );
         InputCommandStep  step;
-        bool              bKnown = true;
-        if ( head == "qcf" || head == "qcb" || head == "dp" )
+        bool              bKnown       = true;
+        const bool        bMotionToken = head == "qcf" || head == "qcb" || head == "dp";
+        if ( bMotionToken )
         {
             const uint8 arrMotion[3][3] = {
                 {2, 3, 6},
@@ -244,7 +245,8 @@ namespace sw
             if ( frame._direction != wanted )
                 return false;
             // 버튼과 함께면 누르고 있기만 해도 된다("f+2"). 방향만이면 새로 넣어야 한다("f,f").
-            if ( step._buttons == 0 && step._bHold == SW_FALSE && previous._direction == wanted )
+            const bool bDirectionNotNew = step._buttons == 0 && step._bHold == SW_FALSE && previous._direction == wanted;
+            if ( bDirectionNotNew )
                 return false;
         }
         if ( step._buttons != 0 )

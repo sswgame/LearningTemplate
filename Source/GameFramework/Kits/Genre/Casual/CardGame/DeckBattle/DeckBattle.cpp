@@ -203,7 +203,8 @@ namespace sw
 
     bool DeckBattle::playCard( int32 handIndex )
     {
-        if ( _phase != DeckBattlePhase::PlayerTurn || handIndex < 0 || _hand.getCount() <= handIndex )
+        const bool bCannotPlayCard = _phase != DeckBattlePhase::PlayerTurn || handIndex < 0 || _hand.getCount() <= handIndex;
+        if ( bCannotPlayCard )
             return false;
         const DeckBattleCardDef* pDef = getCardDef( _hand.getAt( handIndex ) );
         if ( pDef == nullptr || _energy < pDef->_cost )
@@ -332,7 +333,8 @@ namespace sw
         archive >> battle._energy;
         archive >> battle._turn;
         archive >> phase;
-        if ( archive.isError() || phase > static_cast<uint8>( DeckBattlePhase::Lost ) || battle._enemy._intentIndex < 0 )
+        const bool bInvalidBattleState = archive.isError() || phase > static_cast<uint8>( DeckBattlePhase::Lost ) || battle._enemy._intentIndex < 0;
+        if ( bInvalidBattleState )
             return false;
         battle._phase = static_cast<DeckBattlePhase>( phase );
 

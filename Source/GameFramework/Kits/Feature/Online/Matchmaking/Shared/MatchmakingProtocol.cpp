@@ -114,10 +114,11 @@ namespace sw
                              ServiceKeyUtil::readString( reader, MatchmakingLimit::kMaxIDSize, outLobby._modeID );
         if ( bTextOk == false )
             return false;
-        outLobby._createdMs      = reader.readVarInt();
-        outLobby._maxMemberCount = static_cast<int32>( reader.readVarInt() );
-        const uint32 state       = reader.readBits( 8 );
-        if ( state >= static_cast<uint32>( LobbyState::Count ) || outLobby._maxMemberCount < 0 || outLobby._maxMemberCount > PartyLobbyLimit::kMaxLobbySize )
+        outLobby._createdMs              = reader.readVarInt();
+        outLobby._maxMemberCount         = static_cast<int32>( reader.readVarInt() );
+        const uint32 state               = reader.readBits( 8 );
+        const bool   bInvalidLobbyHeader = state >= static_cast<uint32>( LobbyState::Count ) || outLobby._maxMemberCount < 0 || outLobby._maxMemberCount > PartyLobbyLimit::kMaxLobbySize;
+        if ( bInvalidLobbyHeader )
             return false;
         outLobby._state          = static_cast<LobbyState>( state );
         const uint64 memberCount = reader.readVarUint();

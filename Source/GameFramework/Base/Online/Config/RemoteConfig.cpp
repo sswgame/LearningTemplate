@@ -202,7 +202,8 @@ namespace sw
 
     void RemoteConfig::submitSet( IServiceStore& store, IServerBus* pBus, string_view key, const RemoteConfigValue& value, const ServiceAuditEntry& audit )
     {
-        if ( isValidKey( key ) == false || RemoteConfigInternal::isValidValue( value ) == false || ServiceAuditLog::isValidEntry( audit ) == false )
+        const bool bRejectedChange = isValidKey( key ) == false || RemoteConfigInternal::isValidValue( value ) == false || ServiceAuditLog::isValidEntry( audit ) == false;
+        if ( bRejectedChange )
         {
             SW_LOG_WARNING( "Rejected remote config change '%#' — invalid key, value or audit entry", key );
             _lastSetResult = ServiceStoreResult::Invalid;

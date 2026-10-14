@@ -88,7 +88,8 @@ namespace sw
             return;
         for ( const MetroPickupDef& pickup : _pCatalog->getPickups() )
         {
-            if ( isCollected( pickup._id ) || _pGraph->isVisited( pickup._area ) || isShownOnMap( pickup._area ) == false )
+            const bool bPickupHidden = isCollected( pickup._id ) || _pGraph->isVisited( pickup._area ) || isShownOnMap( pickup._area ) == false;
+            if ( bPickupHidden )
                 continue;
             outListPickup.push_back( &pickup );
         }
@@ -96,7 +97,8 @@ namespace sw
 
     bool MetroMapState::activateSite( const hashed_string& siteID )
     {
-        if ( _pCatalog == nullptr || _pGraph == nullptr || isSiteActive( siteID ) )
+        const bool bCannotActivateSite = _pCatalog == nullptr || _pGraph == nullptr || isSiteActive( siteID );
+        if ( bCannotActivateSite )
             return false;
         const MetroSiteDef* pSite = _pCatalog->findSite( siteID );
         if ( pSite == nullptr || _pGraph->isVisited( pSite->_area ) == false )
@@ -114,9 +116,10 @@ namespace sw
     {
         if ( _pCatalog == nullptr || fromSiteID == toSiteID )
             return false;
-        const MetroSiteDef* pFrom = _pCatalog->findSite( fromSiteID );
-        const MetroSiteDef* pTo   = _pCatalog->findSite( toSiteID );
-        if ( pFrom == nullptr || pTo == nullptr || pFrom->_bFastTravel == SW_FALSE || pTo->_bFastTravel == SW_FALSE )
+        const MetroSiteDef* pFrom                  = _pCatalog->findSite( fromSiteID );
+        const MetroSiteDef* pTo                    = _pCatalog->findSite( toSiteID );
+        const bool          bFastTravelUnavailable = pFrom == nullptr || pTo == nullptr || pFrom->_bFastTravel == SW_FALSE || pTo->_bFastTravel == SW_FALSE;
+        if ( bFastTravelUnavailable )
             return false;
         return isSiteActive( fromSiteID ) && isSiteActive( toSiteID );
     }

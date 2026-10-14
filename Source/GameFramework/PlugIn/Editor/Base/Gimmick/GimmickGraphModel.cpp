@@ -328,8 +328,9 @@ namespace sw::editor
         }
         for ( const GimmickGraphWire& wire : _listWire )
         {
-            if ( wire._fromNode == fromNode && wire._toNode == toNode && GimmickGraphModelInternal::isSamePort( wire._fromPort, fromPort ) &&
-                 GimmickGraphModelInternal::isSamePort( wire._toPort, toPort ) )
+            const bool bWireExists = wire._fromNode == fromNode && wire._toNode == toNode && GimmickGraphModelInternal::isSamePort( wire._fromPort, fromPort ) &&
+                                     GimmickGraphModelInternal::isSamePort( wire._toPort, toPort );
+            if ( bWireExists )
             {
                 outError = "the wire already exists";
                 return false;
@@ -381,9 +382,10 @@ namespace sw::editor
             bool bChanged = false;
             for ( const GimmickGraphWire& wire : _listWire )
             {
-                const int32 fromIndex = findNodeIndex( wire._fromNode );
-                const int32 toIndex   = findNodeIndex( wire._toNode );
-                if ( fromIndex < 0 || toIndex < 0 || fromIndex == toIndex )
+                const int32 fromIndex             = findNodeIndex( wire._fromNode );
+                const int32 toIndex               = findNodeIndex( wire._toNode );
+                const bool  bInvalidWireEndpoints = fromIndex < 0 || toIndex < 0 || fromIndex == toIndex;
+                if ( bInvalidWireEndpoints )
                     continue;
                 const int32 wanted = listLevel[static_cast<size_t>( fromIndex )] + 1;
                 if ( listLevel[static_cast<size_t>( toIndex )] < wanted && wanted < static_cast<int32>( nodeCount ) )

@@ -118,7 +118,8 @@ namespace sw
         int32 stunnedCount = 0;
         for ( GhostInstance& ghost : _listGhost )
         {
-            if ( ghost._state != GhostState::Attacking || ghost._pDef->_bStrobeOnly == SW_TRUE || isInCone( eye, forward, ghost._position, false ) == false )
+            const bool bNotStunnable = ghost._state != GhostState::Attacking || ghost._pDef->_bStrobeOnly == SW_TRUE || isInCone( eye, forward, ghost._position, false ) == false;
+            if ( bNotStunnable )
                 continue;
             enterState( ghost, GhostState::Stunned );
             ++stunnedCount;
@@ -153,8 +154,9 @@ namespace sw
 
     bool GhostEncounter::startSuction( uint32 ghostID, const float3& playerPosition )
     {
-        GhostInstance* pGhost = findGhostMutable( ghostID );
-        if ( _suctionTarget != 0 || pGhost == nullptr || pGhost->_state != GhostState::Stunned || _pCatalog == nullptr )
+        GhostInstance* pGhost      = findGhostMutable( ghostID );
+        const bool     bCannotSuck = _suctionTarget != 0 || pGhost == nullptr || pGhost->_state != GhostState::Stunned || _pCatalog == nullptr;
+        if ( bCannotSuck )
             return false;
         const float3 toGhost{ pGhost->_position._x - playerPosition._x, 0.0f, pGhost->_position._z - playerPosition._z };
         if ( toGhost.getLength() > _pCatalog->getVacuum()._range )
@@ -184,8 +186,9 @@ namespace sw
     GhostSuctionTick GhostEncounter::updateSuction( const float3& pullDirection, float32 deltaTime )
     {
         GhostSuctionTick tick;
-        GhostInstance*   pGhost = findGhostMutable( _suctionTarget );
-        if ( pGhost == nullptr || pGhost->_state != GhostState::Sucking || deltaTime <= 0.0f )
+        GhostInstance*   pGhost         = findGhostMutable( _suctionTarget );
+        const bool       bNoSuctionTick = pGhost == nullptr || pGhost->_state != GhostState::Sucking || deltaTime <= 0.0f;
+        if ( bNoSuctionTick )
             return tick;
         const GhostVacuumSettings& vacuum = _pCatalog->getVacuum();
         const float3               pull   = GhostEncounterInternal::flatten( pullDirection );

@@ -63,12 +63,14 @@ namespace sw
 
     bool HorrorMatch::startRepair( int32 survivor, int32 generator )
     {
-        if ( isValidSurvivor( survivor ) == false || generator < 0 || generator >= static_cast<int32>( _listGenerator.size() ) || isEnded() )
+        const bool bInvalidRepairRequest = isValidSurvivor( survivor ) == false || generator < 0 || generator >= static_cast<int32>( _listGenerator.size() ) || isEnded();
+        if ( bInvalidRepairRequest )
             return false;
-        HorrorSurvivor&  target = _listSurvivor[static_cast<size_t>( survivor )];
-        HorrorGenerator& gen    = _listGenerator[static_cast<size_t>( generator )];
-        if ( target.canAct() == false || gen._bBlocked == SW_TRUE || gen._progress.isCompleted() ||
-             isNear( target._position, gen._position, _pCatalog->getRules()._interactRange ) == false )
+        HorrorSurvivor&  target        = _listSurvivor[static_cast<size_t>( survivor )];
+        HorrorGenerator& gen           = _listGenerator[static_cast<size_t>( generator )];
+        const bool       bCannotRepair = target.canAct() == false || gen._bBlocked == SW_TRUE || gen._progress.isCompleted() ||
+                                   isNear( target._position, gen._position, _pCatalog->getRules()._interactRange ) == false;
+        if ( bCannotRepair )
             return false;
         if ( target._activity == SurvivorActivity::Repairing && target._activityTarget == generator )
             return true;
@@ -84,12 +86,14 @@ namespace sw
 
     bool HorrorMatch::startHeal( int32 healer, int32 patient )
     {
-        if ( isValidSurvivor( healer ) == false || isValidSurvivor( patient ) == false || healer == patient || isEnded() )
+        const bool bInvalidHealRequest = isValidSurvivor( healer ) == false || isValidSurvivor( patient ) == false || healer == patient || isEnded();
+        if ( bInvalidHealRequest )
             return false;
-        HorrorSurvivor& doctor = _listSurvivor[static_cast<size_t>( healer )];
-        HorrorSurvivor& target = _listSurvivor[static_cast<size_t>( patient )];
-        const bool      bHurt  = target._state == SurvivorState::Injured || target._state == SurvivorState::Dying;
-        if ( doctor.canAct() == false || bHurt == false || isNear( doctor._position, target._position, _pCatalog->getRules()._interactRange ) == false )
+        HorrorSurvivor& doctor      = _listSurvivor[static_cast<size_t>( healer )];
+        HorrorSurvivor& target      = _listSurvivor[static_cast<size_t>( patient )];
+        const bool      bHurt       = target._state == SurvivorState::Injured || target._state == SurvivorState::Dying;
+        const bool      bCannotHeal = doctor.canAct() == false || bHurt == false || isNear( doctor._position, target._position, _pCatalog->getRules()._interactRange ) == false;
+        if ( bCannotHeal )
             return false;
         if ( doctor._activity == SurvivorActivity::Healing && doctor._activityTarget == patient )
             return true;
@@ -105,11 +109,13 @@ namespace sw
 
     bool HorrorMatch::startOpenGate( int32 survivor, int32 gate )
     {
-        if ( isValidSurvivor( survivor ) == false || gate < 0 || gate >= static_cast<int32>( _listGate.size() ) || _bGatesPowered == SW_FALSE || isEnded() )
+        const bool bInvalidGateRequest = isValidSurvivor( survivor ) == false || gate < 0 || gate >= static_cast<int32>( _listGate.size() ) || _bGatesPowered == SW_FALSE || isEnded();
+        if ( bInvalidGateRequest )
             return false;
-        HorrorSurvivor& target = _listSurvivor[static_cast<size_t>( survivor )];
-        HorrorGate&     exit   = _listGate[static_cast<size_t>( gate )];
-        if ( target.canAct() == false || exit._progress.isCompleted() || isNear( target._position, exit._position, _pCatalog->getRules()._interactRange ) == false )
+        HorrorSurvivor& target          = _listSurvivor[static_cast<size_t>( survivor )];
+        HorrorGate&     exit            = _listGate[static_cast<size_t>( gate )];
+        const bool      bCannotOpenGate = target.canAct() == false || exit._progress.isCompleted() || isNear( target._position, exit._position, _pCatalog->getRules()._interactRange ) == false;
+        if ( bCannotOpenGate )
             return false;
         leaveActivity( survivor );
         if ( exit._progress.join( static_cast<uint32>( survivor ) ) == false )
@@ -123,8 +129,9 @@ namespace sw
     {
         if ( isValidSurvivor( survivor ) == false )
             return;
-        const SurvivorActivity activity = _listSurvivor[static_cast<size_t>( survivor )]._activity;
-        if ( activity == SurvivorActivity::Repairing || activity == SurvivorActivity::Healing || activity == SurvivorActivity::OpeningGate )
+        const SurvivorActivity activity               = _listSurvivor[static_cast<size_t>( survivor )]._activity;
+        const bool             bInterruptibleActivity = activity == SurvivorActivity::Repairing || activity == SurvivorActivity::Healing || activity == SurvivorActivity::OpeningGate;
+        if ( bInterruptibleActivity )
             leaveActivity( survivor );
     }
 
@@ -136,12 +143,14 @@ namespace sw
 
     bool HorrorMatch::rescue( int32 rescuer, int32 hooked )
     {
-        if ( isValidSurvivor( rescuer ) == false || isValidSurvivor( hooked ) == false || rescuer == hooked || isEnded() )
+        const bool bInvalidRescueRequest = isValidSurvivor( rescuer ) == false || isValidSurvivor( hooked ) == false || rescuer == hooked || isEnded();
+        if ( bInvalidRescueRequest )
             return false;
-        HorrorSurvivor& helper = _listSurvivor[static_cast<size_t>( rescuer )];
-        HorrorSurvivor& target = _listSurvivor[static_cast<size_t>( hooked )];
-        if ( helper.canAct() == false || target._state != SurvivorState::Hooked ||
-             isNear( helper._position, target._position, _pCatalog->getRules()._interactRange ) == false )
+        HorrorSurvivor& helper        = _listSurvivor[static_cast<size_t>( rescuer )];
+        HorrorSurvivor& target        = _listSurvivor[static_cast<size_t>( hooked )];
+        const bool      bCannotRescue = helper.canAct() == false || target._state != SurvivorState::Hooked ||
+                                   isNear( helper._position, target._position, _pCatalog->getRules()._interactRange ) == false;
+        if ( bCannotRescue )
             return false;
         leaveActivity( rescuer );
         restoreInjured( target );
@@ -155,13 +164,15 @@ namespace sw
 
     bool HorrorMatch::dropPallet( int32 survivor, int32 pallet )
     {
-        if ( isValidSurvivor( survivor ) == false || pallet < 0 || pallet >= static_cast<int32>( _listPallet.size() ) || isEnded() )
+        const bool bInvalidPalletRequest = isValidSurvivor( survivor ) == false || pallet < 0 || pallet >= static_cast<int32>( _listPallet.size() ) || isEnded();
+        if ( bInvalidPalletRequest )
             return false;
-        HorrorSurvivor&              target   = _listSurvivor[static_cast<size_t>( survivor )];
-        const AsymmetricHorrorRules& rules    = _pCatalog->getRules();
-        const float3&                position = _listPallet[static_cast<size_t>( pallet )];
-        if ( target.canAct() == false || _listPalletState[static_cast<size_t>( pallet )] != PalletState::Upright ||
-             isNear( target._position, position, rules._interactRange ) == false )
+        HorrorSurvivor&              target            = _listSurvivor[static_cast<size_t>( survivor )];
+        const AsymmetricHorrorRules& rules             = _pCatalog->getRules();
+        const float3&                position          = _listPallet[static_cast<size_t>( pallet )];
+        const bool                   bCannotDropPallet = target.canAct() == false || _listPalletState[static_cast<size_t>( pallet )] != PalletState::Upright ||
+                                       isNear( target._position, position, rules._interactRange ) == false;
+        if ( bCannotDropPallet )
             return false;
         leaveActivity( survivor );
         _listPalletState[static_cast<size_t>( pallet )] = PalletState::Dropped;
@@ -179,12 +190,14 @@ namespace sw
 
     bool HorrorMatch::vault( int32 survivor, int32 window )
     {
-        if ( isValidSurvivor( survivor ) == false || window < 0 || window >= static_cast<int32>( _listWindow.size() ) || isEnded() )
+        const bool bInvalidVaultRequest = isValidSurvivor( survivor ) == false || window < 0 || window >= static_cast<int32>( _listWindow.size() ) || isEnded();
+        if ( bInvalidVaultRequest )
             return false;
-        HorrorSurvivor&              target = _listSurvivor[static_cast<size_t>( survivor )];
-        HorrorWindow&                frame  = _listWindow[static_cast<size_t>( window )];
-        const AsymmetricHorrorRules& rules  = _pCatalog->getRules();
-        if ( target.canAct() == false || frame._blockedRemaining > 0.0f || isNear( target._position, frame._position, rules._interactRange ) == false )
+        HorrorSurvivor&              target       = _listSurvivor[static_cast<size_t>( survivor )];
+        HorrorWindow&                frame        = _listWindow[static_cast<size_t>( window )];
+        const AsymmetricHorrorRules& rules        = _pCatalog->getRules();
+        const bool                   bCannotVault = target.canAct() == false || frame._blockedRemaining > 0.0f || isNear( target._position, frame._position, rules._interactRange ) == false;
+        if ( bCannotVault )
             return false;
         leaveActivity( survivor );
         const bool bFast       = target._lastMoveSpeed >= rules._survivorSpeed * rules._fastVaultSpeedRatio;
@@ -213,12 +226,14 @@ namespace sw
 
     bool HorrorMatch::enterLocker( int32 survivor, int32 locker )
     {
-        if ( isValidSurvivor( survivor ) == false || locker < 0 || locker >= static_cast<int32>( _listLocker.size() ) || isEnded() )
+        const bool bInvalidLockerRequest = isValidSurvivor( survivor ) == false || locker < 0 || locker >= static_cast<int32>( _listLocker.size() ) || isEnded();
+        if ( bInvalidLockerRequest )
             return false;
-        HorrorSurvivor& target   = _listSurvivor[static_cast<size_t>( survivor )];
-        const float3&   position = _listLocker[static_cast<size_t>( locker )];
-        if ( target.canAct() == false || _listLockerOccupant[static_cast<size_t>( locker )] >= 0 ||
-             isNear( target._position, position, _pCatalog->getRules()._interactRange ) == false )
+        HorrorSurvivor& target             = _listSurvivor[static_cast<size_t>( survivor )];
+        const float3&   position           = _listLocker[static_cast<size_t>( locker )];
+        const bool      bCannotEnterLocker = target.canAct() == false || _listLockerOccupant[static_cast<size_t>( locker )] >= 0 ||
+                                        isNear( target._position, position, _pCatalog->getRules()._interactRange ) == false;
+        if ( bCannotEnterLocker )
             return false;
         leaveActivity( survivor );
         _listLockerOccupant[static_cast<size_t>( locker )] = survivor;
@@ -248,7 +263,8 @@ namespace sw
         {
             bCanLeave = bCanLeave || ( gate._progress.isCompleted() && isNear( target._position, gate._position, rules._interactRange ) );
         }
-        if ( bCanLeave == false && _bHatchOpen == SW_TRUE && isNear( target._position, _hatchPosition, rules._interactRange ) )
+        const bool bCanLeaveThroughHatch = bCanLeave == false && _bHatchOpen == SW_TRUE && isNear( target._position, _hatchPosition, rules._interactRange );
+        if ( bCanLeaveThroughHatch )
         {
             bCanLeave     = true;
             bThroughHatch = true;
@@ -282,7 +298,8 @@ namespace sw
 
     void HorrorMatch::moveKiller( const float3& direction, float32 deltaTime )
     {
-        if ( _killer._pDef == nullptr || _killer.canAct() == false || isEnded() )
+        const bool bKillerCannotMove = _killer._pDef == nullptr || _killer.canAct() == false || isEnded();
+        if ( bKillerCannotMove )
             return;
         const float3  move   = HorrorMatchActionInternal::clampDirection( direction );
         const float32 length = move.getLength();
@@ -296,7 +313,8 @@ namespace sw
 
     KillerAttackResult HorrorMatch::killerAttack()
     {
-        if ( _killer._pDef == nullptr || _killer.canAct() == false || _killer._carrying >= 0 || _killer._attackCooldown.isActive() || isEnded() )
+        const bool bKillerNotReady = _killer._pDef == nullptr || _killer.canAct() == false || _killer._carrying >= 0 || _killer._attackCooldown.isActive() || isEnded();
+        if ( bKillerNotReady )
             return KillerAttackResult::NotReady;
         const HorrorKillerDef& def    = *_killer._pDef;
         const float32          minDot = MathUtil::cos( MathUtil::toRadian( def._lungeAngle * 0.5f ) );
@@ -351,7 +369,8 @@ namespace sw
 
     bool HorrorMatch::pickUp( int32 survivor )
     {
-        if ( isValidSurvivor( survivor ) == false || _killer.canAct() == false || _killer._carrying >= 0 || isEnded() )
+        const bool bCannotPickUp = isValidSurvivor( survivor ) == false || _killer.canAct() == false || _killer._carrying >= 0 || isEnded();
+        if ( bCannotPickUp )
             return false;
         HorrorSurvivor& target = _listSurvivor[static_cast<size_t>( survivor )];
         if ( target._state != SurvivorState::Dying || isNear( _killer._position, target._position, _pCatalog->getRules()._interactRange ) == false )
@@ -368,7 +387,8 @@ namespace sw
 
     bool HorrorMatch::hookCarried( int32 hook )
     {
-        if ( _killer._carrying < 0 || hook < 0 || hook >= static_cast<int32>( _listHook.size() ) || _killer.canAct() == false || isEnded() )
+        const bool bCannotHook = _killer._carrying < 0 || hook < 0 || hook >= static_cast<int32>( _listHook.size() ) || _killer.canAct() == false || isEnded();
+        if ( bCannotHook )
             return false;
         const AsymmetricHorrorRules& rules    = _pCatalog->getRules();
         const float3&                position = _listHook[static_cast<size_t>( hook )];
@@ -394,7 +414,8 @@ namespace sw
 
     bool HorrorMatch::kickGenerator( int32 generator )
     {
-        if ( generator < 0 || generator >= static_cast<int32>( _listGenerator.size() ) || _killer.canAct() == false || _killer._carrying >= 0 || isEnded() )
+        const bool bCannotKickGenerator = generator < 0 || generator >= static_cast<int32>( _listGenerator.size() ) || _killer.canAct() == false || _killer._carrying >= 0 || isEnded();
+        if ( bCannotKickGenerator )
             return false;
         HorrorGenerator&             gen       = _listGenerator[static_cast<size_t>( generator )];
         const AsymmetricHorrorRules& rules     = _pCatalog->getRules();
@@ -413,7 +434,8 @@ namespace sw
 
     bool HorrorMatch::breakPallet( int32 pallet )
     {
-        if ( pallet < 0 || pallet >= static_cast<int32>( _listPallet.size() ) || _killer.canAct() == false || isEnded() )
+        const bool bCannotBreakPallet = pallet < 0 || pallet >= static_cast<int32>( _listPallet.size() ) || _killer.canAct() == false || isEnded();
+        if ( bCannotBreakPallet )
             return false;
         if ( _listPalletState[static_cast<size_t>( pallet )] != PalletState::Dropped ||
              isNear( _killer._position, _listPallet[static_cast<size_t>( pallet )], _pCatalog->getRules()._interactRange ) == false )
@@ -425,7 +447,8 @@ namespace sw
 
     bool HorrorMatch::killerVault( int32 window )
     {
-        if ( window < 0 || window >= static_cast<int32>( _listWindow.size() ) || _killer.canAct() == false || isEnded() )
+        const bool bCannotKillerVault = window < 0 || window >= static_cast<int32>( _listWindow.size() ) || _killer.canAct() == false || isEnded();
+        if ( bCannotKillerVault )
             return false;
         const HorrorWindow& frame = _listWindow[static_cast<size_t>( window )];
         if ( isNear( _killer._position, frame._position, _pCatalog->getRules()._interactRange ) == false )
@@ -439,7 +462,8 @@ namespace sw
 
     bool HorrorMatch::searchLocker( int32 locker )
     {
-        if ( locker < 0 || locker >= static_cast<int32>( _listLocker.size() ) || _killer.canAct() == false || _killer._carrying >= 0 || isEnded() )
+        const bool bCannotSearchLocker = locker < 0 || locker >= static_cast<int32>( _listLocker.size() ) || _killer.canAct() == false || _killer._carrying >= 0 || isEnded();
+        if ( bCannotSearchLocker )
             return false;
         const float3& position = _listLocker[static_cast<size_t>( locker )];
         if ( isNear( _killer._position, position, _pCatalog->getRules()._interactRange ) == false )
@@ -471,8 +495,9 @@ namespace sw
 
     bool HorrorMatch::closeHatch()
     {
-        if ( _bHatchOpen == SW_FALSE || _killer.canAct() == false || isEnded() ||
-             isNear( _killer._position, _hatchPosition, _pCatalog->getRules()._interactRange ) == false )
+        const bool bCannotCloseHatch = _bHatchOpen == SW_FALSE || _killer.canAct() == false || isEnded() ||
+                                       isNear( _killer._position, _hatchPosition, _pCatalog->getRules()._interactRange ) == false;
+        if ( bCannotCloseHatch )
             return false;
         _bHatchOpen   = SW_FALSE;
         _bHatchClosed = SW_TRUE;
@@ -489,7 +514,8 @@ namespace sw
 
     bool HorrorMatch::useKillerAbility()
     {
-        if ( _killer._pDef == nullptr || _killer.canAct() == false || _killer._abilityCooldown.isActive() || isEnded() )
+        const bool bAbilityUnavailable = _killer._pDef == nullptr || _killer.canAct() == false || _killer._abilityCooldown.isActive() || isEnded();
+        if ( bAbilityUnavailable )
             return false;
         _killer._abilityCooldown.start( _killer._pDef->_abilityCooldown );
         return true;

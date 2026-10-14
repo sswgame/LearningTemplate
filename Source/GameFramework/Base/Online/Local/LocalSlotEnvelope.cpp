@@ -189,7 +189,8 @@ namespace sw
     {
         using Internal = LocalSlotEnvelopeInternal;
         outBodyBytes.clear();
-        if ( envelopeByteCount < kHeaderSize || std::memcmp( pEnvelopeBytes, Internal::kArrMagic, 4 ) != 0 || pEnvelopeBytes[4] != kEnvelopeVersion )
+        const bool bBadEnvelopeHeader = envelopeByteCount < kHeaderSize || std::memcmp( pEnvelopeBytes, Internal::kArrMagic, 4 ) != 0 || pEnvelopeBytes[4] != kEnvelopeVersion;
+        if ( bBadEnvelopeHeader )
             return LocalStoreResult::Corrupt;
         if ( pEnvelopeBytes[5] > static_cast<uint8>( LocalStoreSeal::Encrypted ) )
             return LocalStoreResult::Corrupt; // 모르는 봉인

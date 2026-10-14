@@ -318,7 +318,8 @@ namespace sw
 
     bool ServiceScheduler::isValidDefinition( const ScheduleDefinition& definition )
     {
-        if ( definition._jobID.empty() || definition._jobID.size() > static_cast<size_t>( ServiceSchedulerInternal::kMaxJobIDSize ) || definition._leaseMs <= 0 )
+        const bool bInvalidJobDefinition = definition._jobID.empty() || definition._jobID.size() > static_cast<size_t>( ServiceSchedulerInternal::kMaxJobIDSize ) || definition._leaseMs <= 0;
+        if ( bInvalidJobDefinition )
             return false;
         for ( const utf8 ch : definition._jobID )
         {

@@ -77,7 +77,8 @@ namespace sw
 
     bool ActionStageRun::collectSecret( const hashed_string& secretID )
     {
-        if ( _state != ActionStageState::Playing || VectorUtil::contains( _pStage->_listSecret, secretID ) == false || isSecretFound( secretID ) )
+        const bool bSecretNotCollectable = _state != ActionStageState::Playing || VectorUtil::contains( _pStage->_listSecret, secretID ) == false || isSecretFound( secretID );
+        if ( bSecretNotCollectable )
             return false;
         _listSecretPending.push_back( secretID );
         return true;

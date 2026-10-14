@@ -178,7 +178,8 @@ namespace sw
 
     KartTrackProjection KartTrack::project( const float3& position, float32 hintDistance, float32 searchRange ) const
     {
-        if ( isValid() == false || searchRange <= 0.0f || searchRange * 2.0f >= _length )
+        const bool bUseGlobalProjection = isValid() == false || searchRange <= 0.0f || searchRange * 2.0f >= _length;
+        if ( bUseGlobalProjection )
             return project( position );
         // 힌트 거리의 구간에서 앞뒤로 범위만큼 본다. 샘플 간격이 고르지 않아도 거리로 센다.
         const int32   count  = static_cast<int32>( _listSample.size() );

@@ -97,11 +97,12 @@ namespace sw
         // 회피 동작은 끝날 때까지 입력을 받지 않는다(공중에서 방향을 바꿀 수 없다).
         if ( _evade.isActive() && _evade.tick( deltaTime ) == false )
             return _state;
-        const bool bLocked  = _selector.hasTarget();
-        const bool bBack    = moveInput._y < -_settings._deadZone && MathUtil::abs( moveInput._y ) >= MathUtil::abs( moveInput._x );
-        const bool bSide    = MathUtil::abs( moveInput._x ) > _settings._deadZone && MathUtil::abs( moveInput._x ) > MathUtil::abs( moveInput._y );
-        const bool bToRight = moveInput._x > 0.0f;
-        if ( bLocked && bJumpPressed && ( bBack || bSide ) )
+        const bool bLocked               = _selector.hasTarget();
+        const bool bBack                 = moveInput._y < -_settings._deadZone && MathUtil::abs( moveInput._y ) >= MathUtil::abs( moveInput._x );
+        const bool bSide                 = MathUtil::abs( moveInput._x ) > _settings._deadZone && MathUtil::abs( moveInput._x ) > MathUtil::abs( moveInput._y );
+        const bool bToRight              = moveInput._x > 0.0f;
+        const bool bLockedDodgeRequested = bLocked && bJumpPressed && ( bBack || bSide );
+        if ( bLockedDodgeRequested )
         {
             if ( bBack )
             {

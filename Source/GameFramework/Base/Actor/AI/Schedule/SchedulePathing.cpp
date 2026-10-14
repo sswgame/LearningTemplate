@@ -139,8 +139,9 @@ namespace sw
     {
         if ( pOutListPoint != nullptr )
             pOutListPoint->clear();
-        const float32 straight = float3::getDistance( from._position, to._position );
-        if ( _pGrid == nullptr || _pPathfinder == nullptr || straight <= 0.0f )
+        const float32 straight        = float3::getDistance( from._position, to._position );
+        const bool    bNoStraightPath = _pGrid == nullptr || _pPathfinder == nullptr || straight <= 0.0f;
+        if ( bNoStraightPath )
         {
             if ( pOutListPoint != nullptr )
             {
@@ -234,8 +235,9 @@ namespace sw
         vector<hashed_string> listPathArea;
         const bool            bOtherArea = from._area.empty() == false && to._area.empty() == false && from._area != to._area;
         GameFlags             noFlags;
-        const GameFlags&      flags = _pFlags != nullptr ? *_pFlags : noFlags;
-        if ( bOtherArea && _pGraph != nullptr && _pGraph->findPath( from._area, to._area, flags, listPathArea ) && listPathArea.size() >= 2 )
+        const GameFlags&      flags         = _pFlags != nullptr ? *_pFlags : noFlags;
+        const bool            bUseAreaGraph = bOtherArea && _pGraph != nullptr && _pGraph->findPath( from._area, to._area, flags, listPathArea ) && listPathArea.size() >= 2;
+        if ( bUseAreaGraph )
         {
             for ( size_t areaIndex = 0; areaIndex < listPathArea.size(); ++areaIndex )
             {

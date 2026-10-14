@@ -97,10 +97,11 @@ namespace sw
         outSnapshot    = MechArenaSnapshot{};
         if ( reader.readUint32() != Internal::kMagic )
             return false;
-        outSnapshot._tick          = reader.readUint32();
-        outSnapshot._arenaHalfSize = reader.readFloat();
-        outSnapshot._ceiling       = reader.readFloat();
-        if ( reader.hasOverflowed() || ( outSnapshot._arenaHalfSize >= 1.0f ) == false || ( outSnapshot._ceiling >= 1.0f ) == false )
+        outSnapshot._tick            = reader.readUint32();
+        outSnapshot._arenaHalfSize   = reader.readFloat();
+        outSnapshot._ceiling         = reader.readFloat();
+        const bool bInvalidArenaSize = reader.hasOverflowed() || ( outSnapshot._arenaHalfSize >= 1.0f ) == false || ( outSnapshot._ceiling >= 1.0f ) == false;
+        if ( bInvalidArenaSize )
             return false;
         const float32 halfSize     = outSnapshot._arenaHalfSize;
         const float32 ceiling      = outSnapshot._ceiling;

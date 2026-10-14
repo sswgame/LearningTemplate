@@ -107,7 +107,8 @@ namespace sw
             if ( bControl )
             {
                 const bool bPressedTransform = MechArenaWorldStepInternal::isPressed( input._bTransform, previous._bTransform );
-                if ( bPressedTransform && pilot._transformCooldown.isActive() == false && pilot._comboStage < 0 && pMech->_listMode.size() > 1 )
+                const bool bCanTransform     = bPressedTransform && pilot._transformCooldown.isActive() == false && pilot._comboStage < 0 && pMech->_listMode.size() > 1;
+                if ( bCanTransform )
                 {
                     pilot._mode = ( pilot._mode + 1 ) % static_cast<int32>( pMech->_listMode.size() );
                     pilot._transformCooldown.start( pMech->_transformTime );
@@ -152,7 +153,8 @@ namespace sw
                 pilot._dashRemaining.start( pMech->_dashTime );
                 pilot._dashDirection = Internal::flattenDirection( move, pilot._forward );
             }
-            if ( bPressedJump && pilot._bGrounded == SW_TRUE && pilot._boost.trySpend( pMech->_jumpCost * costScale ) )
+            const bool bCanJump = bPressedJump && pilot._bGrounded == SW_TRUE && pilot._boost.trySpend( pMech->_jumpCost * costScale );
+            if ( bCanJump )
             {
                 pilot._velocity._y = pMech->_jumpSpeed;
                 pilot._bGrounded   = SW_FALSE;
@@ -265,10 +267,11 @@ namespace sw
             const MechWeaponSlotDef& slot = pilot.getMode()->_listWeapon[static_cast<size_t>( pilot._meleeSlot - pilot.getMech()->computeSlotOffset( pilot._mode ) )];
             if ( bPressedMelee )
                 pilot._bMeleeQueued = SW_TRUE;
-            const int32          nextStage = pilot._comboStage + 1;
-            const bool           bHasNext  = nextStage < static_cast<int32>( slot._listMoveID.size() );
-            const MoveFrameData* pNext     = bHasNext ? _pMoveCatalog->findMove( slot._listMoveID[static_cast<size_t>( nextStage )] ) : nullptr;
-            if ( pilot._bMeleeQueued == SW_TRUE && pNext != nullptr && pilot._melee.canCancelInto( pNext->_id ) )
+            const int32          nextStage          = pilot._comboStage + 1;
+            const bool           bHasNext           = nextStage < static_cast<int32>( slot._listMoveID.size() );
+            const MoveFrameData* pNext              = bHasNext ? _pMoveCatalog->findMove( slot._listMoveID[static_cast<size_t>( nextStage )] ) : nullptr;
+            const bool           bCanCancelIntoNext = pilot._bMeleeQueued == SW_TRUE && pNext != nullptr && pilot._melee.canCancelInto( pNext->_id );
+            if ( bCanCancelIntoNext )
             {
                 // 캔슬 창이 열려서 다음 단이 이 프레임에 나간다.
                 pilot._melee.start( *pNext );
@@ -333,9 +336,10 @@ namespace sw
             if ( remaining.tick( deltaTime ) )
                 pushEvent( MechArenaEvent::Kind::SkillEnded, pilotIndex, -1, 0.0f, pilot._listSkill[static_cast<size_t>( index )]->_id );
         }
-        const int32 slot           = pilot._input._skillSlot;
-        const bool  bPressedManual = slot >= 0 && slot < count && slot != pilot._previousInput._skillSlot;
-        if ( bPressedManual && pilot.canAct() && pilot._listSkill[static_cast<size_t>( slot )]->_trigger == MechSkillTrigger::Manual )
+        const int32 slot                       = pilot._input._skillSlot;
+        const bool  bPressedManual             = slot >= 0 && slot < count && slot != pilot._previousInput._skillSlot;
+        const bool  bShouldActivateManualSkill = bPressedManual && pilot.canAct() && pilot._listSkill[static_cast<size_t>( slot )]->_trigger == MechSkillTrigger::Manual;
+        if ( bShouldActivateManualSkill )
             activateSkill( pilotIndex, slot );
     }
 
@@ -346,7 +350,8 @@ namespace sw
         for ( size_t readIndex = 0; readIndex < _listProjectile.size(); ++readIndex )
         {
             MechProjectile projectile = _listProjectile[readIndex];
-            if ( projectile._target >= 0 && projectile._homing > 0.0f && isTargetable( projectile._target ) )
+            const bool     bCanHome   = projectile._target >= 0 && projectile._homing > 0.0f && isTargetable( projectile._target );
+            if ( bCanHome )
             {
                 const float3 targetCenter = computeCenter( _listPilot[static_cast<size_t>( projectile._target )] );
                 const float3 desired      = Internal::normalizeOr( targetCenter - projectile._position, projectile._direction );

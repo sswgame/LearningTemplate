@@ -67,13 +67,14 @@ namespace sw
         _listEnemy.clear();
         _eventBuffer.clear();
         _turnOrder.initialize( TurnOrderMode::Rounds, _random.nextUint() );
-        _comboPoints  = 0;
-        _round        = 0;
-        _fleeAttempts = 0;
-        _rewardExp    = 0;
-        _rewardGold   = 0;
-        _outcome      = JRPGBattleOutcome::Ongoing;
-        if ( _pCatalog == nullptr || pParty == nullptr || pParty->countAlive() == 0 )
+        _comboPoints                  = 0;
+        _round                        = 0;
+        _fleeAttempts                 = 0;
+        _rewardExp                    = 0;
+        _rewardGold                   = 0;
+        _outcome                      = JRPGBattleOutcome::Ongoing;
+        const bool bCannotStartBattle = _pCatalog == nullptr || pParty == nullptr || pParty->countAlive() == 0;
+        if ( bCannotStartBattle )
             return false;
         for ( const hashed_string& enemyID : listEnemyID )
         {
@@ -92,15 +93,17 @@ namespace sw
 
     bool JRPGBattle::setCommand( int32 memberIndex, const JRPGCommand& command )
     {
-        if ( _outcome != JRPGBattleOutcome::Ongoing || _pParty == nullptr || memberIndex < 0 || memberIndex >= _pParty->getMemberCount() )
+        const bool bCannotSetCommand = _outcome != JRPGBattleOutcome::Ongoing || _pParty == nullptr || memberIndex < 0 || memberIndex >= _pParty->getMemberCount();
+        if ( bCannotSetCommand )
             return false;
         const JRPGMember& member = _pParty->getMember( memberIndex );
         if ( member.isAlive() == false )
             return false;
         if ( command._kind == JRPGCommandKind::Spell )
         {
-            const JRPGSpellDef* pSpell = _pCatalog->findSpell( command._id );
-            if ( pSpell == nullptr || _pParty->canUseSpell( memberIndex, command._id ) == false || member._mp < pSpell->_mpCost )
+            const JRPGSpellDef* pSpell         = _pCatalog->findSpell( command._id );
+            const bool          bSpellUnusable = pSpell == nullptr || _pParty->canUseSpell( memberIndex, command._id ) == false || member._mp < pSpell->_mpCost;
+            if ( bSpellUnusable )
                 return false;
             if ( _settings._bWuxia && member._inner < pSpell->_innerCost )
                 return false;
@@ -266,7 +269,8 @@ namespace sw
 
     void JRPGBattle::executeMember( int32 memberIndex )
     {
-        if ( memberIndex < 0 || memberIndex >= static_cast<int32>( _listCommand.size() ) || _pParty->getMember( memberIndex ).isAlive() == false )
+        const bool bCannotExecuteMember = memberIndex < 0 || memberIndex >= static_cast<int32>( _listCommand.size() ) || _pParty->getMember( memberIndex ).isAlive() == false;
+        if ( bCannotExecuteMember )
             return;
         const JRPGCommand command = _listCommand[static_cast<size_t>( memberIndex )];
         switch ( command._kind )
@@ -584,15 +588,17 @@ namespace sw
 
     bool JRPGBattle::isTimed( JRPGTimingKind kind, int32 memberIndex ) const
     {
-        float32 offset = 0.0f;
-        if ( _pJudge == nullptr || _pTimingInput == nullptr || _pTimingInput->findPressOffset( kind, memberIndex, offset ) == false )
+        float32    offset       = 0.0f;
+        const bool bNoTimingHit = _pJudge == nullptr || _pTimingInput == nullptr || _pTimingInput->findPressOffset( kind, memberIndex, offset ) == false;
+        if ( bNoTimingHit )
             return false;
         return _pJudge->judge( 0.0f, offset ).isHit();
     }
 
     int32 JRPGBattle::findLivingEnemy( int32 preferred ) const
     {
-        if ( preferred >= 0 && preferred < static_cast<int32>( _listEnemy.size() ) && _listEnemy[static_cast<size_t>( preferred )].isAlive() )
+        const bool bPreferredEnemyAlive = preferred >= 0 && preferred < static_cast<int32>( _listEnemy.size() ) && _listEnemy[static_cast<size_t>( preferred )].isAlive();
+        if ( bPreferredEnemyAlive )
             return preferred;
         for ( int32 enemyIndex = 0; enemyIndex < static_cast<int32>( _listEnemy.size() ); ++enemyIndex )
         {

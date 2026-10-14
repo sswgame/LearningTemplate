@@ -46,7 +46,8 @@ namespace sw
                 stopMoving();
             return;
         }
-        if ( _bCalled == SW_TRUE || distance > _followDistance || hasDestination() )
+        const bool bShouldMoveToOwner = _bCalled == SW_TRUE || distance > _followDistance || hasDestination();
+        if ( bShouldMoveToOwner )
             moveTo( float3{ ownerPosition._x, horsePosition._y, ownerPosition._z } );
     }
 } // namespace sw

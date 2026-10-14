@@ -102,8 +102,9 @@ namespace sw
         bool                           bAny     = false;
         for ( const MonsterMoveSlot& moveSlot : monster._arrMove )
         {
-            const MonsterMoveDef* pMove = pCatalog != nullptr ? pCatalog->findMove( moveSlot._moveID ) : nullptr;
-            if ( pMove == nullptr || pMove->isDamaging() == false || moveSlot._pp <= 0 )
+            const MonsterMoveDef* pMove            = pCatalog != nullptr ? pCatalog->findMove( moveSlot._moveID ) : nullptr;
+            const bool            bNotDamagingMove = pMove == nullptr || pMove->isDamaging() == false || moveSlot._pp <= 0;
+            if ( bNotDamagingMove )
                 continue;
             const float32 multiplier = battle.computeTypeMultiplier( pMove->_type, battle.getActive( foeSide ) );
             best                     = bAny ? ( multiplier > best ? multiplier : best ) : multiplier;
@@ -114,11 +115,12 @@ namespace sw
 
     float32 MonsterTrainerAI::computeThreatMultiplier( const MonsterBattle& battle, const MonsterInstance& monster, int32 foeSide )
     {
-        const MonsterCollectorCatalog* pCatalog = battle.getCatalog();
-        const ElementChart*            pChart   = battle.getChart();
-        const MonsterSpeciesDef*       pFoe     = pCatalog != nullptr ? pCatalog->findSpecies( battle.getActive( foeSide )._speciesID ) : nullptr;
-        const MonsterSpeciesDef*       pSelf    = pCatalog != nullptr ? pCatalog->findSpecies( monster._speciesID ) : nullptr;
-        if ( pFoe == nullptr || pSelf == nullptr || pChart == nullptr )
+        const MonsterCollectorCatalog* pCatalog           = battle.getCatalog();
+        const ElementChart*            pChart             = battle.getChart();
+        const MonsterSpeciesDef*       pFoe               = pCatalog != nullptr ? pCatalog->findSpecies( battle.getActive( foeSide )._speciesID ) : nullptr;
+        const MonsterSpeciesDef*       pSelf              = pCatalog != nullptr ? pCatalog->findSpecies( monster._speciesID ) : nullptr;
+        const bool                     bMissingThreatData = pFoe == nullptr || pSelf == nullptr || pChart == nullptr;
+        if ( bMissingThreatData )
             return 1.0f;
         float32 threat = 0.0f;
         for ( const hashed_string& type : pFoe->_listType )

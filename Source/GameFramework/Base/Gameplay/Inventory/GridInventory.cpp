@@ -58,7 +58,8 @@ namespace sw
         int32 footWidth  = 0;
         int32 footHeight = 0;
         computeFootprint( shape, bRotated, footWidth, footHeight );
-        if ( x < 0 || y < 0 || x + footWidth > _topology._width || y + footHeight > _topology._height )
+        const bool bOutOfGrid = x < 0 || y < 0 || x + footWidth > _topology._width || y + footHeight > _topology._height;
+        if ( bOutOfGrid )
             return false;
         for ( int32 cellY = y; cellY < y + footHeight; ++cellY )
         {
@@ -97,7 +98,8 @@ namespace sw
     int32 GridInventory::placeItem( const hashed_string& itemID, int32 count, int32 x, int32 y, bool bRotated )
     {
         GridItemShape shape;
-        if ( findShape( itemID, shape ) == false || count <= 0 || count > shape._maxStack || canPlace( itemID, x, y, bRotated ) == false )
+        const bool    bCannotAddItem = findShape( itemID, shape ) == false || count <= 0 || count > shape._maxStack || canPlace( itemID, x, y, bRotated ) == false;
+        if ( bCannotAddItem )
             return -1;
         GridItem item;
         item._itemID     = itemID;
@@ -317,8 +319,9 @@ namespace sw
         archive >> width;
         archive >> height;
         archive >> nextInstanceID;
-        const uint64 cellCount = static_cast<uint64>( MathUtil::max( 0, width ) ) * static_cast<uint64>( MathUtil::max( 0, height ) );
-        if ( archive.isError() || width < 0 || height < 0 || archive.hasBytesAvailable( cellCount * 4 ) == false )
+        const uint64 cellCount           = static_cast<uint64>( MathUtil::max( 0, width ) ) * static_cast<uint64>( MathUtil::max( 0, height ) );
+        const bool   bInvalidGridArchive = archive.isError() || width < 0 || height < 0 || archive.hasBytesAvailable( cellCount * 4 ) == false;
+        if ( bInvalidGridArchive )
             return false;
         vector<int32> listCell( static_cast<size_t>( cellCount ), -1 );
         for ( int32& cell : listCell )

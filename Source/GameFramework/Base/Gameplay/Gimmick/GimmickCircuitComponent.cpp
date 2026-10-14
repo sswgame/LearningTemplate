@@ -207,7 +207,8 @@ namespace sw
     {
         Component::onBeginPlay();
         setTickGroup( TickGroup::PrePhysics );
-        if ( _circuit.isBuilt() == false && rebuild() && _stateBytes.empty() == false )
+        const bool bRestoreState = _circuit.isBuilt() == false && rebuild() && _stateBytes.empty() == false;
+        if ( bRestoreState )
             (void)_circuit.loadState( _stateBytes ); // 구조가 다른 저장이면 false 이고, 이 경우 회로는 처음 상태로 시작한다
         bindNodes();
         GameObject*        pOwner   = getOwner();
@@ -276,9 +277,10 @@ namespace sw
 
     float32 GimmickCircuitComponent::computeProximity( GameObjectManager& manager, int32 node, const GameObject& target ) const
     {
-        const string*         pTag   = GimmickCircuitComponentInternal::readText( _circuit, node, "tag" );
-        const SceneComponent* pScene = target.getPrimarySceneComponent();
-        if ( pTag == nullptr || pTag->empty() || pScene == nullptr )
+        const string*         pTag         = GimmickCircuitComponentInternal::readText( _circuit, node, "tag" );
+        const SceneComponent* pScene       = target.getPrimarySceneComponent();
+        const bool            bNoTagFilter = pTag == nullptr || pTag->empty() || pScene == nullptr;
+        if ( bNoTagFilter )
             return GimmickCircuitComponentInternal::kFarDistance;
         const TagID  tag      = TagID::request( *pTag );
         const bool   bPlanar  = GimmickCircuitComponentInternal::readNumber( _circuit, node, "planar", 0.0f ) != 0.0f;
@@ -287,8 +289,9 @@ namespace sw
         const uint64 targetID = target.getObjectID();
         manager.forEachGameObject( [&]( GameObject* pObject )
         {
-            const SceneComponent* pOther = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
-            if ( pOther == nullptr || pObject->getObjectID() == targetID || pObject->isActiveInHierarchy() == false || pObject->hasTag( tag ) == false )
+            const SceneComponent* pOther         = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
+            const bool            bSkipCandidate = pOther == nullptr || pObject->getObjectID() == targetID || pObject->isActiveInHierarchy() == false || pObject->hasTag( tag ) == false;
+            if ( bSkipCandidate )
                 return;
             float3 delta = pOther->getWorldPosition() - origin;
             if ( bPlanar )
@@ -416,7 +419,8 @@ namespace sw
                 const SplineComponent* pSpline = pTarget->getComponent<SplineComponent>();
                 if ( pSpline == nullptr && getOwner() != nullptr )
                     pSpline = getOwner()->getComponent<SplineComponent>();
-                if ( pScene == nullptr || pSpline == nullptr || pSpline->getWorldPath().isValid() == false )
+                const bool bSplineUnavailable = pScene == nullptr || pSpline == nullptr || pSpline->getWorldPath().isValid() == false;
+                if ( bSplineUnavailable )
                     break;
                 const SplineSample sample = pSpline->getWorldPath().sampleAtDistance( value );
                 pScene->setWorldPosition( sample._position );
@@ -474,8 +478,9 @@ namespace sw
             }
             case Binding::Spawner:
             {
-                const string* pPrefab = Internal::readText( _circuit, node, "prefab" );
-                if ( _circuit.getOutput( node, hashed_string( "OnSpawn" ) ) == false || pPrefab == nullptr || pPrefab->empty() || pScene == nullptr )
+                const string* pPrefab      = Internal::readText( _circuit, node, "prefab" );
+                const bool    bCannotSpawn = _circuit.getOutput( node, hashed_string( "OnSpawn" ) ) == false || pPrefab == nullptr || pPrefab->empty() || pScene == nullptr;
+                if ( bCannotSpawn )
                     break;
                 const string       prefab   = *pPrefab;
                 const float3       position = pScene->getWorldPosition() + Internal::readVector( _circuit, node, "offset" );
@@ -492,8 +497,9 @@ namespace sw
             }
             case Binding::Sound:
             {
-                const string* pSound = Internal::readText( _circuit, node, "sound" );
-                if ( _circuit.getOutput( node, hashed_string( "OnPlay" ) ) == false || pSound == nullptr || pSound->empty() )
+                const string* pSound           = Internal::readText( _circuit, node, "sound" );
+                const bool    bCannotPlaySound = _circuit.getOutput( node, hashed_string( "OnPlay" ) ) == false || pSound == nullptr || pSound->empty();
+                if ( bCannotPlaySound )
                     break;
                 const string sound = *pSound;
                 manager.executeOrDeferPostTick( [sound]()

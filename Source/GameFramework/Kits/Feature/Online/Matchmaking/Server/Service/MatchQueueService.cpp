@@ -538,16 +538,18 @@ namespace sw
         if ( Internal::hasPrefix( topic, Internal::kQueuePrefix ) )
         {
             MatchTicket ticket;
-            ModeState*  pState = findModeState( topic.substr( string_view( Internal::kQueuePrefix ).size() ) );
-            if ( pState != nullptr && pState->_bAuthority != SW_FALSE && MatchmakingProtocol::readTicket( reader, ticket ) )
+            ModeState*  pState        = findModeState( topic.substr( string_view( Internal::kQueuePrefix ).size() ) );
+            const bool  bAcceptTicket = pState != nullptr && pState->_bAuthority != SW_FALSE && MatchmakingProtocol::readTicket( reader, ticket );
+            if ( bAcceptTicket )
                 (void)pState->_maker.addTicket( ticket );
             return;
         }
         if ( Internal::hasPrefix( topic, Internal::kCancelPrefix ) )
         {
-            const uint64 ticketID = reader.readVarUint();
-            ModeState*   pState   = findModeState( topic.substr( string_view( Internal::kCancelPrefix ).size() ) );
-            if ( pState != nullptr && pState->_bAuthority != SW_FALSE && reader.hasOverflowed() == false )
+            const uint64 ticketID      = reader.readVarUint();
+            ModeState*   pState        = findModeState( topic.substr( string_view( Internal::kCancelPrefix ).size() ) );
+            const bool   bAcceptCancel = pState != nullptr && pState->_bAuthority != SW_FALSE && reader.hasOverflowed() == false;
+            if ( bAcceptCancel )
                 (void)pState->_maker.removeTicket( ticketID ); // 이미 짝지어졌거나 없는 표면 false — 지울 것이 없다
             return;
         }

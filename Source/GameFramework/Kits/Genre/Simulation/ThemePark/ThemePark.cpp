@@ -735,9 +735,10 @@ namespace sw
             archive >> guest._queueTime;
             archive >> state;
             archive >> thought;
-            const bool bEnumValid = state <= static_cast<uint8>( ParkGuestState::Left ) && thought <= static_cast<uint8>( ParkGuestThought::NothingToRide );
-            const bool bRideValid = -1 <= guest._targetRideIndex && guest._targetRideIndex < static_cast<int32>( rideCount );
-            if ( archive.isError() || bEnumValid == false || bRideValid == false )
+            const bool bEnumValid        = state <= static_cast<uint8>( ParkGuestState::Left ) && thought <= static_cast<uint8>( ParkGuestThought::NothingToRide );
+            const bool bRideValid        = -1 <= guest._targetRideIndex && guest._targetRideIndex < static_cast<int32>( rideCount );
+            const bool bInvalidGuestData = archive.isError() || bEnumValid == false || bRideValid == false;
+            if ( bInvalidGuestData )
                 return false;
             guest._state   = static_cast<ParkGuestState>( state );
             guest._thought = static_cast<ParkGuestThought>( thought );

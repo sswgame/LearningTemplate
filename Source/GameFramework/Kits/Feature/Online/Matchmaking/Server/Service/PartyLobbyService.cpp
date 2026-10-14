@@ -29,10 +29,11 @@ namespace sw
 
             static bool isValidLobbyRequest( const LobbySnapshot& request )
             {
-                const bool bNameOk  = request._name.empty() == false && request._name.size() <= static_cast<size_t>( PartyLobbyLimit::kMaxLobbyNameSize );
-                const bool bSizeOk  = PartyLobbyLimit::kMinLobbySize <= request._maxMemberCount && request._maxMemberCount <= PartyLobbyLimit::kMaxLobbySize;
-                const bool bCountOk = static_cast<int32>( request._listSetting.size() ) <= PartyLobbyLimit::kMaxLobbySetting;
-                if ( bNameOk == false || bSizeOk == false || bCountOk == false || isValidMatchModeID( request._modeID ) == false )
+                const bool bNameOk              = request._name.empty() == false && request._name.size() <= static_cast<size_t>( PartyLobbyLimit::kMaxLobbyNameSize );
+                const bool bSizeOk              = PartyLobbyLimit::kMinLobbySize <= request._maxMemberCount && request._maxMemberCount <= PartyLobbyLimit::kMaxLobbySize;
+                const bool bCountOk             = static_cast<int32>( request._listSetting.size() ) <= PartyLobbyLimit::kMaxLobbySetting;
+                const bool bInvalidLobbyRequest = bNameOk == false || bSizeOk == false || bCountOk == false || isValidMatchModeID( request._modeID ) == false;
+                if ( bInvalidLobbyRequest )
                     return false;
                 for ( const LobbySetting& setting : request._listSetting )
                 {
@@ -634,10 +635,16 @@ namespace sw
                 PartySnapshot     party;
                 MatchmakingResult result = MatchmakingResult::Ok;
                 if ( bUnavailable )
+                {
                     result = MatchmakingResult::Unavailable;
-                else if ( reply._result != EphemeralResult::Ok || MatchmakingProtocol::decodeParty( reply._value, party ) == false ||
-                          party.hasMember( step._request._actorID ) == false )
-                    result = MatchmakingResult::NotInParty; // 인덱스만 남았다. 파티가 만료됐다
+                }
+                else
+                {
+                    const bool bNotInParty = reply._result != EphemeralResult::Ok || MatchmakingProtocol::decodeParty( reply._value, party ) == false ||
+                                             party.hasMember( step._request._actorID ) == false;
+                    if ( bNotInParty )
+                        result = MatchmakingResult::NotInParty; // 인덱스만 남았다. 파티가 만료됐다
+                }
                 if ( step._request._onPartyFound.isBound() )
                     step._request._onPartyFound( step._request._requestTag, result, party );
                 break;
@@ -790,7 +797,8 @@ namespace sw
             case PartyLobbyOperation::PartyLeave:
             case PartyLobbyOperation::PartyKick:
             {
-                if ( result == MatchmakingResult::NotInParty && request._operation == PartyLobbyOperation::PartyLeave && party._listMemberID.empty() )
+                const bool bStaleLeaveIndex = result == MatchmakingResult::NotInParty && request._operation == PartyLobbyOperation::PartyLeave && party._listMemberID.empty();
+                if ( bStaleLeaveIndex )
                 {
                     // 인덱스만 남았다. 파티 기록이 만료된 것이며 인덱스를 지우면 떠난 것과 같다
                     submitFireAndForget( EphemeralRequest::makeCompareAndErase( makeAccountPartyKey( request._actorID ), indexValue ) );

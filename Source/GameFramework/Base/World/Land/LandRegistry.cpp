@@ -176,7 +176,8 @@ namespace sw
         uint32 ownerCount = 0;
         archive >> width;
         archive >> height;
-        if ( archive.isError() || width != _topology._width || height != _topology._height )
+        const bool bGridMismatch = archive.isError() || width != _topology._width || height != _topology._height;
+        if ( bGridMismatch )
             return false;
         if ( StateArchiveUtil::readCount( archive, sizeof( uint32 ), ownerCount ) == false )
             return false;
@@ -197,7 +198,8 @@ namespace sw
             uint8  bBlocking  = SW_FALSE;
             archive >> savedOwner;
             archive >> bBlocking;
-            if ( archive.isError() || savedOwner > ownerCount || bBlocking > SW_TRUE )
+            const bool bInvalidCellRecord = archive.isError() || savedOwner > ownerCount || bBlocking > SW_TRUE;
+            if ( bInvalidCellRecord )
                 return false;
             cell._owner     = savedOwner == kNoOwner ? kNoOwner : listOwnerMap[static_cast<size_t>( savedOwner - 1 )];
             cell._bBlocking = savedOwner == kNoOwner ? SW_FALSE : bBlocking;
