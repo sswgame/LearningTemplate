@@ -32,10 +32,14 @@ namespace sw::editor
         HitDeformModifier()
             : MeshModifier()
             , _hitsParam{ addParam( MeshModifierParamDef{ "Hits", MeshModifierParamKind::NumberList, -1000.0f, 1000.0f, float3{ 0.0f, 0.0f, 0.0f }, kStride,
-                                                          "x y z dirX dirY dirZ radius strength falloff" }.withColumns( kArrColumn ) ) }
-            , _scaleParam{ addParam( MeshModifierParamDef{ "Scale", MeshModifierParamKind::Float, 0.0f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
+                                                          "x y z dirX dirY dirZ radius strength falloff" }
+                                                          .withColumns( kArrColumn )
+                                                          .withLayout( "Hits", "Static hit points in modifier space that dent nearby vertices" ) ) }
+            , _scaleParam{ addParam( MeshModifierParamDef{ "Scale", MeshModifierParamKind::Float, 0.0f, 10.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Response", "Multiplier applied to every hit strength" ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "Dents vertices within each hit radius along the hit direction (static hit list for baking)."; }
 
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override
         {

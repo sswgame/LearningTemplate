@@ -50,13 +50,15 @@ namespace sw::editor
     public:
         VertexAnimModifier()
             : MeshModifier()
-            , _amplitudeParam{ addParam( MeshModifierParamDef{ "Amplitude", MeshModifierParamKind::Vector3, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _speedParam{ addParam( MeshModifierParamDef{ "Speed", MeshModifierParamKind::Float, 0.0f, 50.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
-            , _phaseVariationParam{ addParam( MeshModifierParamDef{ "Phase Variation", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } } ) }
-            , _noiseParam{ addParam( MeshModifierParamDef{ "Noise", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _seedParam{ addParam( MeshModifierParamDef{ "Seed", MeshModifierParamKind::Int, 0.0f, 10000.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
+            , _amplitudeParam{ addParam( MeshModifierParamDef{ "Amplitude", MeshModifierParamKind::Vector3, -10.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Motion", "Per-axis offset amplitude", "m" ) ) }
+            , _speedParam{ addParam( MeshModifierParamDef{ "Speed", MeshModifierParamKind::Float, 0.0f, 50.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Motion", "Oscillation speed over time" ) ) }
+            , _phaseVariationParam{ addParam( MeshModifierParamDef{ "Phase Variation", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 1.0f, 0.0f, 0.0f } }.withLayout( "Variation", "How much each vertex phase differs (0 = all move together)" ) ) }
+            , _noiseParam{ addParam( MeshModifierParamDef{ "Noise", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Variation", "Blend from sine (0) to smooth value noise (1)" ) ) }
+            , _seedParam{ addParam( MeshModifierParamDef{ "Seed", MeshModifierParamKind::Int, 0.0f, 10000.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Variation", "Random seed for per-vertex phase and noise" ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "Adds a per-vertex sine or noise offset over time with deterministic phase per vertex."; }
 
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override
         {

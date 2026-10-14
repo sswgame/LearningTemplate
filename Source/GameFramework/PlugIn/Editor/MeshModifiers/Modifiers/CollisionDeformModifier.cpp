@@ -82,11 +82,15 @@ namespace sw::editor
             : MeshModifier()
             , _collidersParam{ addParam( MeshModifierParamDef{ "Colliders", MeshModifierParamKind::NumberList, -1000.0f, 1000.0f, float3{ 0.0f, 0.0f, 0.0f },
                                                                CollisionDeformModifierInternal::kStride,
-                                                               "type(0 sphere 1 box 2 plane) cx cy cz sx sy sz" }.withColumns( kArrColumn ) ) }
-            , _marginParam{ addParam( MeshModifierParamDef{ "Margin", MeshModifierParamKind::Float, 0.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _softnessParam{ addParam( MeshModifierParamDef{ "Softness", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
+                                                               "type(0 sphere 1 box 2 plane) cx cy cz sx sy sz" }
+                                                               .withColumns( kArrColumn )
+                                                               .withLayout( "Colliders", "Static collider shapes in modifier space (sphere uses size x as radius)" ) ) }
+            , _marginParam{ addParam( MeshModifierParamDef{ "Margin", MeshModifierParamKind::Float, 0.0f, 10.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Response", "Extra distance kept outside each collider surface", "m" ) ) }
+            , _softnessParam{ addParam( MeshModifierParamDef{ "Softness", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Response", "Reduces the push-out (0 = to the surface, 1 = almost none)" ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "Pushes vertices inside static sphere, box or plane colliders back out to the surface."; }
 
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override
         {

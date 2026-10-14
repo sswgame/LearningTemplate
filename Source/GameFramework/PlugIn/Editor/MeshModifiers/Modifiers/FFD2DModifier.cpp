@@ -55,12 +55,16 @@ namespace sw::editor
 
         FFD2DModifier()
             : MeshModifier()
-            , _resolutionXParam{ addParam( MeshModifierParamDef{ "Resolution X", MeshModifierParamKind::Int, 2.0f, 8.0f, float3{ 3.0f, 0.0f, 0.0f } } ) }
-            , _resolutionYParam{ addParam( MeshModifierParamDef{ "Resolution Y", MeshModifierParamKind::Int, 2.0f, 8.0f, float3{ 3.0f, 0.0f, 0.0f } } ) }
+            , _resolutionXParam{ addParam( MeshModifierParamDef{ "Resolution X", MeshModifierParamKind::Int, 2.0f, 8.0f, float3{ 3.0f, 0.0f, 0.0f } }.withLayout( "Lattice", "Control point count along X" ) ) }
+            , _resolutionYParam{ addParam( MeshModifierParamDef{ "Resolution Y", MeshModifierParamKind::Int, 2.0f, 8.0f, float3{ 3.0f, 0.0f, 0.0f } }.withLayout( "Lattice", "Control point count along Y" ) ) }
             , _offsetsParam{ addParam( MeshModifierParamDef{ "Offsets", MeshModifierParamKind::NumberList, -2.0f, 2.0f, float3{ 0.0f, 0.0f, 0.0f }, 2,
-                                                             "dx dy per control point (i + resX * j), box-size ratio" }.withColumns( kArrColumn ) ) }
+                                                             "dx dy per control point (i + resX * j), box-size ratio" }
+                                                             .withColumns( kArrColumn )
+                                                             .withLayout( "Control Points", "Control point offsets as a ratio of the box size" ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "2D free-form lattice deform on the XY plane for sprite meshes; Z is left unchanged."; }
 
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override
         {

@@ -23,6 +23,7 @@ namespace sw::editor
         /** @brief 묶음 모디파이어(레지스트리 id `deformable`)면 그 포인터, 아니면 nullptr 입니다. RTTI 없이 id 로 가린다. */
         static DeformableModifier* findFrom( MeshModifier& modifier );
 
+        const utf8*        getDescription() const override { return "Groups a nested modifier stack and applies it as one unit in this modifier's gizmo space."; }
         void               applyToMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context ) const override;
         void               writeExtraJSON( const JSONValue& object ) const override;
         [[nodiscard]] bool readExtraJSON( const JSONValue& object ) override;
