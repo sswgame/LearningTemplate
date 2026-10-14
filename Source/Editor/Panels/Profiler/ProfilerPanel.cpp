@@ -56,15 +56,15 @@ namespace sw::editor
             template <uint32 N>
             static void formatBytes( uint64 bytes, fixed_string<N>& out )
             {
-                if ( bytes < 1024 )
+                if ( bytes < constant::kBytesPerKilobyte )
                     formatstring( out.data(), out.capacity(), "%# B", bytes );
 
-                else if ( bytes < uint64{ 1024 } * 1024 )
-                    formatstring( out.data(), out.capacity(), "%# KB", Fmt( static_cast<float64>( bytes ) / 1024.0, Format().precision( 2 ) ) );
-                else if ( bytes < uint64{ 1024 } * 1024 * 1024 )
-                    formatstring( out.data(), out.capacity(), "%# MB", Fmt( static_cast<float64>( bytes ) / ( 1024.0 * 1024.0 ), Format().precision( 2 ) ) );
+                else if ( bytes < constant::kBytesPerMegabyte )
+                    formatstring( out.data(), out.capacity(), "%# KB", Fmt( static_cast<float64>( bytes ) / constant::kBytesPerKilobyte, Format().precision( 2 ) ) );
+                else if ( bytes < 1024 * constant::kBytesPerMegabyte )
+                    formatstring( out.data(), out.capacity(), "%# MB", Fmt( static_cast<float64>( bytes ) / constant::kBytesPerMegabyte, Format().precision( 2 ) ) );
                 else
-                    formatstring( out.data(), out.capacity(), "%# GB", Fmt( static_cast<float64>( bytes ) / ( 1024.0 * 1024.0 * 1024.0 ), Format().precision( 2 ) ) );
+                    formatstring( out.data(), out.capacity(), "%# GB", Fmt( static_cast<float64>( bytes ) / ( 1024 * constant::kBytesPerMegabyte ), Format().precision( 2 ) ) );
             }
 
             /** @brief 아는 값은 `formatBytes` 로, 드라이버가 응답하지 않은 값은 "Unknown" 으로 표시합니다. */
@@ -659,7 +659,7 @@ namespace sw::editor
             const utf8*                  pName = findName( event._slot );
             ImGui::BeginTooltip();
             ImGui::TextUnformatted( pName != nullptr ? pName : "?" );
-            ImGui::Text( "%.1f us, depth %u", static_cast<float64>( event._endNanos - event._beginNanos ) / 1000.0, static_cast<uint32>( event._depth ) );
+            ImGui::Text( "%.1f us, depth %u", static_cast<float64>( event._endNanos - event._beginNanos ) / constant::kNanosecondsPerMicrosecond, static_cast<uint32>( event._depth ) );
             ImGui::TextDisabled( "%s", listThread[pHoveredRect->_threadIndex]._name.c_str() );
             // 같은 구간(같은 스레드, 같은 슬롯)의 횟수, 합계, 최대를 구한다. 어느 구간이 늘었는지 한눈에 볼 수 있다.
             uint32  sameCount{ 0 };
@@ -669,7 +669,7 @@ namespace sw::editor
             {
                 if ( other._slot != event._slot )
                     continue;
-                const float64 micros = static_cast<float64>( other._endNanos - other._beginNanos ) / 1000.0;
+                const float64 micros = static_cast<float64>( other._endNanos - other._beginNanos ) / constant::kNanosecondsPerMicrosecond;
                 ++sameCount;
                 sameTotalUs += micros;
                 sameMaxUs = MathUtil::max( sameMaxUs, micros );
@@ -693,7 +693,7 @@ namespace sw::editor
                 maxMicro = MathUtil::max( maxMicro, value );
             }
         }
-        const float32 maxMs = maxMicro / 1000.0f;
+        const float32 maxMs = maxMicro / constant::kMicrosecondsPerMillisecond;
         for ( const utf8* pSeriesName : kArrSeriesName )
         {
             if ( _scopeHistory.copySeries( pSeriesName, _listScratchSeries ) == false || _listScratchSeries.empty() )
@@ -807,7 +807,7 @@ namespace sw::editor
     void ProfilerPanel::drawPerformanceTab()
     {
         const float32 dt          = ImGui::GetIO().DeltaTime;
-        const float32 frameTimeMs = dt * 1000.0f;
+        const float32 frameTimeMs = dt * constant::kMillisecondsPerSecond;
         const float32 fps         = ( dt > 0.0f ) ? ( 1.0f / dt ) : 0.0f;
 
         _arrFrameTimeHistory[_historyOffset] = frameTimeMs;
@@ -1113,14 +1113,16 @@ namespace sw::editor
 
     void ProfilerPanel::pauseOnSpike()
     {
-        float32 frameMicro{ 0.0f };
-        if ( _bPauseOnSpike == SW_FALSE || _scopeHistory.readValue( "GT.Frame", 0, frameMicro ) == false || frameMicro < _spikeThresholdMs * 1000.0f )
+        float32    frameMicro{ 0.0f };
+        const bool bHasFrame = _scopeHistory.readValue( "GT.Frame", 0, frameMicro );
+        const bool bSpike    = bHasFrame && frameMicro >= _spikeThresholdMs * constant::kMicrosecondsPerMillisecond;
+        if ( _bPauseOnSpike == SW_FALSE || bSpike == false )
             return;
         _bCapturePaused        = SW_TRUE;
         _rowQuery._frameOffset = 0;
         if ( EditorPlaySession::isPlaying() )
             EditorPlaySession::pause();
-        SW_LOG_INFO( "Profiler paused on a spike: GT.Frame %# ms (threshold %# ms)", Fmt( static_cast<float64>( frameMicro ) / 1000.0, Format().precision( 2 ) ),
+        SW_LOG_INFO( "Profiler paused on a spike: GT.Frame %# ms (threshold %# ms)", Fmt( static_cast<float64>( frameMicro ) / constant::kMicrosecondsPerMillisecond, Format().precision( 2 ) ),
                      Fmt( static_cast<float64>( _spikeThresholdMs ), Format().precision( 1 ) ) );
     }
 
@@ -1222,13 +1224,12 @@ namespace sw::editor
         // 바깥쪽 두 단계는 펼쳐 둔다. 프레임과 큰 단계가 바로 보이게 하기 위해서다.
         if ( node._depth < 2 )
             treeFlags |= ImGuiTreeNodeFlags_DefaultOpen;
-        const bool    bOpen       = ImGui::TreeNodeEx( pName != nullptr ? pName : "?", treeFlags );
-        const float64 kNanosPerMs = 1000000.0;
-        const float64 frameCount  = static_cast<float64>( MathUtil::max( _timelineFrameCount, 1u ) );
+        const bool    bOpen      = ImGui::TreeNodeEx( pName != nullptr ? pName : "?", treeFlags );
+        const float64 frameCount = static_cast<float64>( MathUtil::max( _timelineFrameCount, 1u ) );
         ImGui::TableNextColumn();
-        ImGui::Text( "%.3f", static_cast<float64>( node._totalNanos ) / kNanosPerMs / frameCount );
+        ImGui::Text( "%.3f", static_cast<float64>( node._totalNanos ) / constant::kNanosecondsPerMillisecond / frameCount );
         ImGui::TableNextColumn();
-        ImGui::Text( "%.3f", static_cast<float64>( node._selfNanos ) / kNanosPerMs / frameCount );
+        ImGui::Text( "%.3f", static_cast<float64>( node._selfNanos ) / constant::kNanosecondsPerMillisecond / frameCount );
         ImGui::TableNextColumn();
         ImGui::Text( "%u", node._callCount );
         if ( bOpen && bLeaf == false )

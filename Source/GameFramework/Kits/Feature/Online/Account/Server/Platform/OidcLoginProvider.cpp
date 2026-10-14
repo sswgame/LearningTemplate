@@ -145,8 +145,8 @@ namespace sw
             bAudience = bAudience || token.hasAudience( clientID );
         }
         const bool bIssuerOk  = token.findText( "iss", issuer ) && issuer == _settings._issuer;
-        const bool bExpiresOk = token.findInteger( "exp", expiresAt ) && nowMs < expiresAt * 1000 + _settings._clockSkewMs;
-        const bool bIssuedOk  = token.findInteger( "iat", issuedAt ) == false || issuedAt * 1000 <= nowMs + _settings._clockSkewMs;
+        const bool bExpiresOk = token.findInteger( "exp", expiresAt ) && nowMs < expiresAt * constant::kMillisecondsPerSecond + _settings._clockSkewMs;
+        const bool bIssuedOk  = token.findInteger( "iat", issuedAt ) == false || issuedAt * constant::kMillisecondsPerSecond <= nowMs + _settings._clockSkewMs;
         const bool bNonceOk   = _settings._bRequireNonce == SW_FALSE || ( pending._nonce.empty() == false && token.findText( "nonce", nonce ) && nonce == pending._nonce );
         const bool bSubjectOk = token.findText( _settings._subjectPath, subject ) && subject.empty() == false;
         if ( bAudience == false || bIssuerOk == false || bExpiresOk == false || bIssuedOk == false || bNonceOk == false || bSubjectOk == false )

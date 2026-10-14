@@ -11,6 +11,7 @@
  *          - 서버 계약(`IServiceStore`: 64 KiB 레코드, 여러 키 트랜잭션)은 쓰지 않는다. 파일 저장소가 지킬 수 없는 약속이기 때문이다. 경쟁 데이터의 원본은 서버이다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -122,7 +123,7 @@ namespace sw
     class SW_GF_API ILocalStore
     {
     public:
-        static constexpr int64 kMaxSlotSize     = 64ll * 1024 * 1024;
+        static constexpr int64 kMaxSlotSize     = static_cast<int64>( 64 * constant::kBytesPerMegabyte );
         static constexpr int32 kMaxSlotNameSize = 64;
 
         ILocalStore()          = default;

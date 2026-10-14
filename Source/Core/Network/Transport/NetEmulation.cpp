@@ -18,7 +18,6 @@ namespace sw
         {
             static constexpr float64 kMillisecond   = 0.001;
             static constexpr float32 kPercent       = 0.01f;
-            static constexpr int32   kKilobyte      = 1024;
             static constexpr uint32  kDefaultRandom = HashUtil::kGoldenRatio32;
             static constexpr uint8   kCorruptMask   = 0x5A; ///< 깨짐 — 고른 바이트에 XOR 한다
 
@@ -89,7 +88,7 @@ namespace sw
         conditions._lossRate                = static_cast<float32>( MathUtil::clamp( gv_netEmuLossPercent, 0, 100 ) ) * Internal::kPercent;
         conditions._duplicateRate           = static_cast<float32>( MathUtil::clamp( gv_netEmuDuplicatePercent, 0, 100 ) ) * Internal::kPercent;
         conditions._reorderRate             = static_cast<float32>( MathUtil::clamp( gv_netEmuReorderPercent, 0, 100 ) ) * Internal::kPercent;
-        conditions._bandwidthBytesPerSecond = MathUtil::max( 0, gv_netEmuBandwidthKilobytesPerSecond ) * Internal::kKilobyte;
+        conditions._bandwidthBytesPerSecond = MathUtil::max( 0, gv_netEmuBandwidthKilobytesPerSecond ) * static_cast<int32>( constant::kBytesPerKilobyte );
         return conditions;
     }
 
@@ -106,7 +105,7 @@ namespace sw
             outConditions._lossRate                = preset._lossPercent * Internal::kPercent;
             outConditions._duplicateRate           = preset._duplicatePercent * Internal::kPercent;
             outConditions._reorderRate             = preset._reorderPercent * Internal::kPercent;
-            outConditions._bandwidthBytesPerSecond = preset._bandwidthKilobytesPerSecond * Internal::kKilobyte;
+            outConditions._bandwidthBytesPerSecond = preset._bandwidthKilobytesPerSecond * static_cast<int32>( constant::kBytesPerKilobyte );
             return true;
         }
         return false;
@@ -144,7 +143,7 @@ namespace sw
             else if ( key == "reorderPercent" )
                 parsed._reorderRate = MathUtil::min( value, 100.0f ) * Internal::kPercent;
             else if ( key == "bandwidthKBps" )
-                parsed._bandwidthBytesPerSecond = static_cast<int32>( value ) * Internal::kKilobyte;
+                parsed._bandwidthBytesPerSecond = static_cast<int32>( value ) * static_cast<int32>( constant::kBytesPerKilobyte );
             else
             {
                 outError = "unknown key '" + string( key ) + "' (latencyMs, jitterMs, lossPercent, duplicatePercent, reorderPercent, bandwidthKBps)";
@@ -167,7 +166,7 @@ namespace sw
         Internal::appendValue( text, "lossPercent", static_cast<float64>( _lossRate / Internal::kPercent ) );
         Internal::appendValue( text, "duplicatePercent", static_cast<float64>( _duplicateRate / Internal::kPercent ) );
         Internal::appendValue( text, "reorderPercent", static_cast<float64>( _reorderRate / Internal::kPercent ) );
-        Internal::appendValue( text, "bandwidthKBps", static_cast<float64>( _bandwidthBytesPerSecond ) / static_cast<float64>( Internal::kKilobyte ) );
+        Internal::appendValue( text, "bandwidthKBps", static_cast<float64>( _bandwidthBytesPerSecond ) / static_cast<float64>( constant::kBytesPerKilobyte ) );
         return text;
     }
 

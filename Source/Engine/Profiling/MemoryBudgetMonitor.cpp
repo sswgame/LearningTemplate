@@ -27,9 +27,6 @@ namespace sw
         {
             /** @brief 바이트를 KB 의 10 배로 바꿉니다(소수 한 자리를 정수로 찍기 위해). */
             [[maybe_unused]] static constexpr uint64 toKilobytesX10( uint64 bytes ) { return ( bytes * 10 ) / 1024; }
-
-            /** @brief 한 메가바이트입니다. */
-            static constexpr uint64 kBytesPerMegabyte = 1024ull * 1024ull;
         };
     } // namespace
 } // namespace sw
@@ -87,7 +84,7 @@ namespace sw
                 outError = "budget entry " + to_string( index ) + ": tag '" + entry._tag + "' is listed twice";
                 return false;
             }
-            arrBudgetBytes[tagIndex] = static_cast<uint64>( entry._megabytes * static_cast<float64>( MemoryBudgetMonitorInternal::kBytesPerMegabyte ) );
+            arrBudgetBytes[tagIndex] = static_cast<uint64>( entry._megabytes * static_cast<float64>( constant::kBytesPerMegabyte ) );
         }
 
         for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )

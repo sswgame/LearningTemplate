@@ -6,6 +6,7 @@
  *          값은 와이어 형식이므로 바꾸면 `TradeProtocol::kVersion` 을 올려야 한다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
@@ -23,9 +24,8 @@ namespace sw
     struct TradeConstant
     {
         static constexpr int32 kMaxLegsPerSide  = 8; ///< 원장 이동 항목은 16개이며 양쪽이 8개씩이다
-        static constexpr int64 kInviteTimeoutMs = 30 * 1000;
-        static constexpr int64 kIdleTimeoutMs   = 5 * 60 * 1000;
-        static constexpr int32 kMaxAssetIDSize  = 48;
+        static constexpr int64 kInviteTimeoutMs = 30 * constant::kMillisecondsPerSecond;
+        static constexpr int64 kIdleTimeoutMs   = 5 * 60 * constant::kMillisecondsPerSecond;
     };
 } // namespace sw
 

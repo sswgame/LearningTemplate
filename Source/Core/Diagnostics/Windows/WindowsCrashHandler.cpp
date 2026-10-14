@@ -250,7 +250,7 @@ namespace sw
                 // 보고 스레드에 맡기고 시한까지만 기다린다(이 스레드의 스택과 예외 정보는 그동안 그대로다).
                 s_pendingCrash = crash;
                 SetEvent( s_hReportRequested );
-                if ( WaitForSingleObject( s_hReportFinished, getCrashReportDeadlineSeconds() * 1000 ) != WAIT_OBJECT_0 )
+                if ( WaitForSingleObject( s_hReportFinished, static_cast<DWORD>( getCrashReportDeadlineSeconds() * constant::kMillisecondsPerSecond ) ) != WAIT_OBJECT_0 )
                 {
                     // **stdio 를 거치지 않는다.** 보고가 막힌 지점이 바로 stderr 의 락일 수 있다(CrashTestKind::StderrHeld). fputs 로
                     // 쓰면 시한이 지나도 여기서 다시 막힌다. 그리고 이전 필터에 넘기지 않고 여기서 끝낸다. 그 필터도
@@ -387,7 +387,7 @@ namespace sw
         s_hReportRequested = CreateEventW( nullptr, FALSE, FALSE, nullptr );
         s_hReportFinished  = CreateEventW( nullptr, FALSE, FALSE, nullptr );
         if ( s_hReportRequested != nullptr && s_hReportFinished != nullptr )
-            s_hReportThread = CreateThread( nullptr, 1024 * 1024, &reportThreadMainInternal, nullptr, STACK_SIZE_PARAM_IS_A_RESERVATION, &s_reportThreadID );
+            s_hReportThread = CreateThread( nullptr, constant::kBytesPerMegabyte, &reportThreadMainInternal, nullptr, STACK_SIZE_PARAM_IS_A_RESERVATION, &s_reportThreadID );
         if ( s_hReportThread == nullptr )
             SW_LOG_WARNING( "Crash report thread could not be created - reports will be written on the faulting thread." );
 

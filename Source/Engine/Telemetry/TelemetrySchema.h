@@ -5,6 +5,7 @@
  *          기록되지 않습니다(언리얼 Analytics 의 자유 형식 속성과 달리, 받는 쪽 테이블과 맞는 사건만 나간다 — Unity Analytics 의 사건 스키마와 같은 쪽).
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
@@ -57,13 +58,13 @@ namespace sw
     /** @brief 파이프라인 설정입니다(`<Pipeline>`). */
     struct TelemetryPipelineSettings
     {
-        uint64  _maxTotalBytes{ 2u * 1024u * 1024u }; ///< 보내지 못한 스풀 전체 상한 — 넘으면 가장 오래된 닫힌 파일부터 지운다
-        float32 _flushSeconds{ 30.0f };               ///< 이만큼 지나면 모인 사건을 쓴다
-        float32 _sessionSampleRate{ 1.0f };           ///< 이 비율의 세션만 무엇이든 남긴다(세션 id 해시로 정한다)
-        uint32  _batchEvents{ 32 };                   ///< 이만큼 모이면 바로 쓴다
-        uint32  _maxFileBytes{ 256u * 1024u };        ///< 파일 하나의 상한 — 넘으면 닫고(올릴 대상) 새 파일로 회전
-        uint32  _maxFiles{ 16 };                      ///< 스풀 파일 수 상한
-        uint32  _breadcrumbCount{ 32 };               ///< 크래시 보고에 붙일 최근 사건 수
+        uint64  _maxTotalBytes{ 2 * constant::kBytesPerMegabyte }; ///< 보내지 못한 스풀 전체 상한 — 넘으면 가장 오래된 닫힌 파일부터 지운다
+        float32 _flushSeconds{ 30.0f };                            ///< 이만큼 지나면 모인 사건을 쓴다
+        float32 _sessionSampleRate{ 1.0f };                        ///< 이 비율의 세션만 무엇이든 남긴다(세션 id 해시로 정한다)
+        uint32  _batchEvents{ 32 };                                ///< 이만큼 모이면 바로 쓴다
+        uint32  _maxFileBytes{ 256u * 1024u };                     ///< 파일 하나의 상한 — 넘으면 닫고(올릴 대상) 새 파일로 회전
+        uint32  _maxFiles{ 16 };                                   ///< 스풀 파일 수 상한
+        uint32  _breadcrumbCount{ 32 };                            ///< 크래시 보고에 붙일 최근 사건 수
     };
 } // namespace sw
 

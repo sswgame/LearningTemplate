@@ -231,7 +231,7 @@ namespace sw
         }
 
         _expectedEvaluationMicroseconds = AnimationLODUtil::allocateBudget( _listScratchBudgetItem.data(), static_cast<uint32>( _listScratchBudgetItem.size() ),
-                                                                            _averageEvaluationMicroseconds, _lodSettings._budgetMilliseconds * 1000.0f,
+                                                                            _averageEvaluationMicroseconds, _lodSettings._budgetMilliseconds * constant::kMicrosecondsPerMillisecond,
                                                                             _lodSettings._maxUpdateRateDivisor );
         size_t budgetIndex              = 0;
         for ( size_t clientIndex = 0; clientIndex < clientCount; ++clientIndex )

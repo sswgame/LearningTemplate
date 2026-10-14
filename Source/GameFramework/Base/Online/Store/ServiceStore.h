@@ -123,7 +123,6 @@ namespace sw
     class SW_GF_API IServiceStoreConnection
     {
     public:
-        static constexpr int32 kMaxKeySize    = 256;
         static constexpr int32 kMaxRecordSize = 64 * 1024;
 
         IServiceStoreConnection()          = default;

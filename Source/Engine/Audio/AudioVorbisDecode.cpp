@@ -155,7 +155,7 @@ namespace sw
         struct OggOpenUtil
         {
             static constexpr size_t kInitialArenaBytes = 256 * 1024;
-            static constexpr size_t kMaxArenaBytes     = 64 * 1024 * 1024;
+            static constexpr size_t kMaxArenaBytes     = 64 * constant::kBytesPerMegabyte;
 
             static stb_vorbis* openWithArena( const uint8* pBytes, size_t byteCount, vector<uint8>& inoutListArena )
             {

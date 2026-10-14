@@ -46,11 +46,11 @@ namespace sw
             static constexpr int32  kMaxSendBytes             = 256 * 1024;
             static constexpr int32  kEventBatch               = 64;
             static constexpr int32  kLoopWaitMilli            = 100;
-            static constexpr int64  kSweepIntervalNanoseconds = 100 * 1000 * 1000;
+            static constexpr int64  kSweepIntervalNanoseconds = 100 * constant::kNanosecondsPerMillisecond;
             static constexpr uint64 kListenTag                = ~0ull;      ///< epoll 데이터. 리슨 소켓이다(연결은 핸들 packed 값이며, 세대가 0xFFFFFFFF 에 닿기 전에는 겹치지 않는다).
             static constexpr uint64 kWakeTag                  = ~0ull - 1u; ///< epoll 데이터. eventfd 이다.
 
-            static int64       toNanoseconds( float64 seconds ) { return static_cast<int64>( seconds * 1.0e9 ); }
+            static int64       toNanoseconds( float64 seconds ) { return static_cast<int64>( seconds * constant::kNanosecondsPerSecond ); }
             static NetAddress  makeNetAddress( const sockaddr_in& native ) { return NetAddress{ ntohl( native.sin_addr.s_addr ), ntohs( native.sin_port ) }; }
             static sockaddr_in makeNativeAddress( const NetAddress& address )
             {

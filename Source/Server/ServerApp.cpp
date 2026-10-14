@@ -71,7 +71,7 @@ namespace sw
             static constexpr int64  kProcessSampleIntervalMs = 1000;
             static constexpr uint64 kBytesPerMebibyte        = uint64{ 1024 } * 1024;
 
-            static int64 nowMonotonicMs() { return MonotonicClock::nowNanoseconds() / 1000000; }
+            static int64 nowMonotonicMs() { return MonotonicClock::nowNanoseconds() / constant::kNanosecondsPerMillisecond; }
         };
 
         /** @brief 링커가 표식 문자열을 버리지 못하게 정적 초기화에서 한 번 읽습니다(서버 전용 모듈의 생성 표식과 같은 방식입니다). */
@@ -206,7 +206,7 @@ namespace sw
         // 여기부터 모든 줄에 `[tick=N]`이 붙는다. N 은 끝낸 틱 수이며, 지금 도는 틱의 0 기준 번호다. 멀티 프로세스 재생의 Output Log 가 서버 줄을 틱 기준으로 맞춰 본다.
         Logger::setTickNumber( _tickCount );
         SW_LOG_INFO( "Dedicated server ready - target %#, %# Hz, game port %#, service port %#, startup %# ms", build::kTargetName, _pServerConfig->_tickRateHz,
-                     _pServerConfig->_gamePort, _pServerConfig->_servicePort, ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / 1000000 );
+                     _pServerConfig->_gamePort, _pServerConfig->_servicePort, ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::kNanosecondsPerMillisecond );
         return true;
     }
 
@@ -289,7 +289,7 @@ namespace sw
         _pServiceConnectionGauge =
             _metricRegistry->registerGauge( "server_service_connections", "Connections held by the server services (online service host and others)" );
         _processMetrics = make_unique<ProcessMetrics>();
-        _processMetrics->initialize( _metricRegistry.get(), WallClock::nowUnixMilliseconds() - ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / 1000000 );
+        _processMetrics->initialize( _metricRegistry.get(), WallClock::nowUnixMilliseconds() - ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::kNanosecondsPerMillisecond );
         if ( _pServerConfig->_opsPort == 0 )
             return true;
         OpsHTTPEndpointSettings opsSettings;
@@ -451,7 +451,7 @@ namespace sw
                 const uint32 dropped = static_cast<uint32>( ( now - deadline ) / _tickNanoseconds );
                 if ( _droppedTickCount == 0 ||
                      _droppedTickCount / ServerAppInternal::kDroppedTickWarningInterval != ( _droppedTickCount + dropped ) / ServerAppInternal::kDroppedTickWarningInterval )
-                    SW_LOG_WARNING( "Server is behind: dropped %# ticks (total %#), last tick %# us", dropped, _droppedTickCount + dropped, tickTime / 1000 );
+                    SW_LOG_WARNING( "Server is behind: dropped %# ticks (total %#), last tick %# us", dropped, _droppedTickCount + dropped, tickTime / constant::kNanosecondsPerMicrosecond );
                 _droppedTickCount += dropped;
                 _pDroppedTickCounter->add( dropped );
                 deadline = now;
@@ -568,7 +568,7 @@ namespace sw
     void ServerApp::logStatus() const
     {
         const int64 uptimeSeconds   = ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::kNanosecondsPerSecond;
-        const int64 averageMicro    = _statusTickSampleCount > 0 ? _statusTickSumNanoseconds / _statusTickSampleCount / 1000 : 0;
+        const int64 averageMicro    = _statusTickSampleCount > 0 ? _statusTickSumNanoseconds / _statusTickSampleCount / constant::kNanosecondsPerMicrosecond : 0;
         const int32 serviceCount    = _serverServices != nullptr ? _serverServices->getRunningCount() : 0;
         const int32 connectionCount = _serverServices != nullptr ? _serverServices->getConnectionCount() : 0;
         uint64      residentBytes   = 0;
@@ -576,7 +576,7 @@ namespace sw
         (void)ProcessMetrics::tryGetResidentBytes( residentBytes, peakBytes ); // 답하지 못하면 0 을 적는다
         SW_LOG_INFO( "Dedicated server status - uptime %# s, tick %#%#, tick time avg %# us / max %# us (budget %# us), dropped ticks %#, services %# (connections %#), "
                      "resident %# MiB",
-                     uptimeSeconds, _tickCount, _bPaused == SW_TRUE ? " (paused)" : "", averageMicro, _statusTickMaxNanoseconds / 1000, _tickNanoseconds / 1000,
+                     uptimeSeconds, _tickCount, _bPaused == SW_TRUE ? " (paused)" : "", averageMicro, _statusTickMaxNanoseconds / constant::kNanosecondsPerMicrosecond, _tickNanoseconds / constant::kNanosecondsPerMicrosecond,
                      _droppedTickCount, serviceCount, connectionCount, residentBytes / ServerAppInternal::kBytesPerMebibyte );
     }
 

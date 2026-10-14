@@ -21,7 +21,6 @@ namespace sw
     {
         struct ProcessMetricsInternal
         {
-            static constexpr float64 kMillisecondsPerSecond = 1000.0;
         };
     } // namespace
 } // namespace sw
@@ -42,7 +41,7 @@ namespace sw
         _pPeakResidentGauge = pRegistry->registerGauge( "process_resident_memory_max_bytes", "Peak resident memory size in bytes since the process started" );
         MetricGauge* pStart = pRegistry->registerGauge( "process_start_time_seconds", "Start time of the process since the Unix epoch in seconds" );
         if ( pStart != nullptr )
-            pStart->set( static_cast<float64>( startUnixMilliseconds ) / ProcessMetricsInternal::kMillisecondsPerSecond );
+            pStart->set( static_cast<float64>( startUnixMilliseconds ) / constant::kMillisecondsPerSecond );
         update();
     }
 

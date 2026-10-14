@@ -33,7 +33,7 @@ namespace sw
         }
         SlotEntry& entry   = _mapSlot[slot];
         entry._envelope    = envelopeBytes;
-        entry._writtenAtMs = FileUtil::getCurrentFileWriteTime() / ( FileUtil::kFileTimeTicksPerSecond / 1000 );
+        entry._writtenAtMs = FileUtil::getCurrentFileWriteTime() / ( FileUtil::kFileTimeTicksPerSecond / constant::kMillisecondsPerSecond );
         return LocalStoreResult::Ok;
     }
 

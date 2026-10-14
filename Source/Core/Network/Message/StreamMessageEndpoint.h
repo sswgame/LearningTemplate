@@ -32,10 +32,10 @@ namespace sw
     struct StreamEndpointSettings
     {
         int32                  _maxFrameBodySize{ StreamFrameConstant::kDefaultMaxFrameSize };
-        int32                  _maxPendingReceiveBytes{ 4 * 1024 * 1024 }; ///< 연결 하나가 `pump` 를 기다리며 쌓아 둘 수 있는 바이트. 넘으면 읽기를 멈춘다.
-        float64                _pingIntervalSeconds{ 15.0 };               ///< 0이면 끈다. 전송의 유휴 시한보다 짧게 잡는다.
-        NetCompressionSettings _compression{};                             ///< 보내는 프레임 본문의 압축(기본값은 꺼짐). 받는 쪽은 설정과 상관없이 레지스트리에 있는 코덱이면 푼다.
-        StreamSecuritySettings _security{};                                ///< TLS 컨텍스트가 있으면 모든 연결이 TLS 를 쓴다. 열림은 핸드셰이크가 끝난 뒤에 알린다.
+        int32                  _maxPendingReceiveBytes{ StreamLimit::kDefaultMaxQueuedBytes }; ///< 연결 하나가 `pump` 를 기다리며 쌓아 둘 수 있는 바이트. 넘으면 읽기를 멈춘다.
+        float64                _pingIntervalSeconds{ 15.0 };                                   ///< 0이면 끈다. 전송의 유휴 시한보다 짧게 잡는다.
+        NetCompressionSettings _compression{};                                                 ///< 보내는 프레임 본문의 압축(기본값은 꺼짐). 받는 쪽은 설정과 상관없이 레지스트리에 있는 코덱이면 푼다.
+        StreamSecuritySettings _security{};                                                    ///< TLS 컨텍스트가 있으면 모든 연결이 TLS 를 쓴다. 열림은 핸드셰이크가 끝난 뒤에 알린다.
     };
 } // namespace sw
 

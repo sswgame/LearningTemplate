@@ -127,7 +127,7 @@ namespace sw
     bool LoopbackTransport::waitForReceive( float64 timeoutSeconds )
     {
         // 배달은 누군가의 `update`(`deliverInFlight`)가 한다 — 깨울 수단 없이 짧게 나눠 자며 받은 편지함을 본다.
-        const Deadline deadline = Deadline::afterMilliseconds( static_cast<int64>( timeoutSeconds * 1000.0 ) );
+        const Deadline deadline = Deadline::afterMilliseconds( static_cast<int64>( timeoutSeconds * constant::kMillisecondsPerSecond ) );
         while ( _pNetwork->hasDatagram( this ) == false )
         {
             if ( deadline.isExpired() )

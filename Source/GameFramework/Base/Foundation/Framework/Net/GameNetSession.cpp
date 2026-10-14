@@ -24,8 +24,6 @@ namespace sw
             static constexpr int32 kMaxPort = 65535;
             /** @brief 비율(0~1)을 백분율로 바꾸는 배수입니다. */
             static constexpr float32 kPercent = 100.0f;
-            /** @brief 초를 밀리초로 바꾸는 배수입니다. */
-            static constexpr float32 kMillisecondsPerSecond = 1000.0f;
             /** @brief 초당 킬로비트(`NetConnectionStats::_sentBandwidth`)를 초당 바이트로 바꾸는 배수입니다(1000 / 8). */
             static constexpr float32 kBytesPerKilobit = 125.0f;
             /** @brief `net.traffic` 이 한 번에 보낼 수 있는 메시지 상한(신뢰 창 `NetConnection::kReliableWindow` 를 넘으면 보내기가 거절된다). */
@@ -470,7 +468,7 @@ namespace sw
                 continue;
             report._resentMessageCount += stats._resentMessageCount;
             report._measuredLossPercent = MathUtil::max( report._measuredLossPercent, stats._packetLoss * GameNetSessionInternal::kPercent );
-            report._rttMilliseconds     = MathUtil::max( report._rttMilliseconds, stats._rtt * GameNetSessionInternal::kMillisecondsPerSecond );
+            report._rttMilliseconds     = MathUtil::max( report._rttMilliseconds, stats._rtt * constant::kMillisecondsPerSecond );
         }
         return report;
     }
@@ -494,7 +492,7 @@ namespace sw
             report._sentBytesPerSecond += stats._sentBandwidth * GameNetSessionInternal::kBytesPerKilobit;
             report._receivedBytesPerSecond += stats._receivedBandwidth * GameNetSessionInternal::kBytesPerKilobit;
             report._lossPercent     = MathUtil::max( report._lossPercent, stats._packetLoss * GameNetSessionInternal::kPercent );
-            report._rttMilliseconds = MathUtil::max( report._rttMilliseconds, stats._rtt * GameNetSessionInternal::kMillisecondsPerSecond );
+            report._rttMilliseconds = MathUtil::max( report._rttMilliseconds, stats._rtt * constant::kMillisecondsPerSecond );
         }
         report.populateKinds( _router );
         return report;

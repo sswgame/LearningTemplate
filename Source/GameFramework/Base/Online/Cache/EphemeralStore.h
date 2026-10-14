@@ -19,6 +19,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "GameFramework/Base/Online/Service/OnlineLimit.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -151,7 +152,6 @@ namespace sw
     class SW_GF_API IEphemeralStore
     {
     public:
-        static constexpr int32 kMaxKeySize   = 256;
         static constexpr int32 kMaxValueSize = 64 * 1024;
         static constexpr int64 kMaxAbsScore  = 1ll << 53;
 

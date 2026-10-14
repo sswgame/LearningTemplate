@@ -14,7 +14,6 @@ namespace sw
     {
         struct MemoryEphemeralStoreInternal
         {
-            static constexpr int64 kNanosecondsPerMillisecond = 1000000;
 
             static bool isExpired( int64 expiresAtMs, int64 nowMs ) { return expiresAtMs != 0 && nowMs >= expiresAtMs; }
 
@@ -214,7 +213,7 @@ namespace sw
     {
         if ( _bManualTime == SW_TRUE )
             return _manualTimeMs;
-        return MonotonicClock::nowNanoseconds() / MemoryEphemeralStoreInternal::kNanosecondsPerMillisecond;
+        return MonotonicClock::nowNanoseconds() / constant::kNanosecondsPerMillisecond;
     }
 
     MemoryEphemeralDatabase::ValueEntry* MemoryEphemeralDatabase::findValue( const string& key, int64 nowMs )

@@ -8,6 +8,7 @@
 
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
+#include "GameFramework/Base/Online/Server/OnlineStoreDriverTable.h"
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/CacheStoreFactory.h"
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/Resp/RespEphemeralStore.h"
 
@@ -285,7 +286,7 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, FactoryReadsTheEndpointAndRefuse
     SW_EXPECT_FALSE( CacheStoreFactory::parseEndpoint( "127.0.0.1:6379?tls=yes", endpoint, error ) );
     SW_EXPECT_FALSE( CacheStoreFactory::parseEndpoint( "", endpoint, error ) );
 
-    unique_ptr<IEphemeralStore> memory = CacheStoreFactory::createEphemeralStore( CacheStoreFactory::kMemoryDriverName, "", "", error );
+    unique_ptr<IEphemeralStore> memory = CacheStoreFactory::createEphemeralStore( OnlineStoreDriverTable::kMemoryDriverName, "", "", error );
     SW_EXPECT_TRUE( memory != nullptr );
     SW_EXPECT_TRUE( CacheStoreFactory::createEphemeralStore( "redis-cluster", "127.0.0.1:6379", "", error ) == nullptr );
     SW_EXPECT_TRUE( error.find( "redis-cluster" ) != string::npos );

@@ -210,7 +210,7 @@ namespace sw
             call._options._traceID = LogContext::getCurrent()._traceID; // Hello 전에 모았다 보내도 부른 쪽의 추적 id 로
         call._onResponse       = onResponse;
         call._requestID        = _nextRequestID++;
-        call._deadlineMs       = _nowMs + static_cast<int64>( options._timeoutSeconds * 1000.0 );
+        call._deadlineMs       = _nowMs + static_cast<int64>( options._timeoutSeconds * constant::kMillisecondsPerSecond );
         call._method           = method;
         const uint64 requestID = call._requestID;
         if ( _bInitialized == SW_FALSE || _state == OnlineClientState::VersionMismatch )
@@ -317,7 +317,7 @@ namespace sw
     {
         const int64       remainingMs = std::max<int64>( 1, call._deadlineMs - _nowMs );
         NetRequestOptions options     = call._options;
-        options._timeoutSeconds       = static_cast<float64>( remainingMs ) / 1000.0;
+        options._timeoutSeconds       = static_cast<float64>( remainingMs ) / constant::kMillisecondsPerSecond;
         _pSendingCall                 = &call;
         const uint64 netRequestID     = _pRequestClient->sendRequest( _connection, call._method, call._bodyBytes.data(), static_cast<int32>( call._bodyBytes.size() ),
                                                                       options, Delegate<void( const NetResponse& )>::create<&OnlineServiceClient::onNetResponse>( this ) );

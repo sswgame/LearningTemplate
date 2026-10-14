@@ -85,8 +85,7 @@ namespace sw
 
         // 확장 값은 KB 단위이고, 다른 프로세스 몫까지 든 디바이스 전체 값이다. 그래서 장부를 빼 "엔진 밖" 을 내지 않는다(Scope Device).
         ScopedOpenGLContext contextScope( this );
-        constexpr uint64    kKilobyte = 1024;
-        outBudget._scope              = RHIMemoryScope::Device;
+        outBudget._scope = RHIMemoryScope::Device;
         if ( _bNvxMemoryInfo == SW_TRUE )
         {
             GLint totalKb{ 0 };
@@ -95,8 +94,8 @@ namespace sw
             glGetIntegerv( OpenGLRHIDeviceInternal::kGPUMemoryInfoCurrentAvailableNvx, &currentKb );
             if ( totalKb <= 0 )
                 return false;
-            const uint64 totalBytes    = static_cast<uint64>( totalKb ) * kKilobyte;
-            const uint64 currentBytes  = currentKb > 0 ? static_cast<uint64>( currentKb ) * kKilobyte : 0;
+            const uint64 totalBytes    = static_cast<uint64>( totalKb ) * constant::kBytesPerKilobyte;
+            const uint64 currentBytes  = currentKb > 0 ? static_cast<uint64>( currentKb ) * constant::kBytesPerKilobyte : 0;
             outBudget._budgetBytes     = totalBytes;
             outBudget._availableBytes  = currentBytes;
             outBudget._usageBytes      = totalBytes > currentBytes ? totalBytes - currentBytes : 0;
@@ -111,7 +110,7 @@ namespace sw
         glGetIntegerv( OpenGLRHIDeviceInternal::kTextureFreeMemoryAti, arrTextureFreeKb );
         if ( arrTextureFreeKb[0] <= 0 )
             return false;
-        outBudget._availableBytes  = static_cast<uint64>( arrTextureFreeKb[0] ) * kKilobyte;
+        outBudget._availableBytes  = static_cast<uint64>( arrTextureFreeKb[0] ) * constant::kBytesPerKilobyte;
         outBudget._bAvailableKnown = SW_TRUE;
         return true;
     }

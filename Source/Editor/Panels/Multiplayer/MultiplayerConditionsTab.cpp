@@ -135,7 +135,7 @@ namespace sw::editor
                     askedCount += pSession->sendProcessCommand( processIndex, kStatsCommand ) ? 1 : 0;
                 }
                 int32 answeredCount = 0;
-                pSession->updateUntil( static_cast<int64>( seconds ) * 1000, [&]()
+                pSession->updateUntil( static_cast<int64>( seconds ) * constant::kMillisecondsPerSecond, [&]()
                 {
                     answeredCount = 0;
                     for ( int32 processIndex = 0; processIndex < processCount; ++processIndex )

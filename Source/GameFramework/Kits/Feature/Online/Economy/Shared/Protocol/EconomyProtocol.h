@@ -131,7 +131,6 @@ namespace sw
         static constexpr int32  kMaxIDSize        = 64;
         static constexpr int32  kMaxCursorSize    = 512;
         static constexpr int32  kMaxHistoryCount  = 100;
-        static constexpr int32  kMaxBalanceCount  = 1024;
         static constexpr int32  kMaxPurchaseCount = 1000;
 
         static void               writePurchaseRequest( BitWriter& outWriter, const EconomyPurchaseRequest& request );

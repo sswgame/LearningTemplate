@@ -7,6 +7,7 @@
 
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Base/Online/Service/OnlineLimit.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 
@@ -16,15 +17,14 @@ namespace sw
     {
         struct GuildServiceInternal
         {
-            static constexpr uint8       kFormatVersion    = 1;
-            static constexpr int32       kMaxConflictRetry = 4;
-            static constexpr const utf8* kSequenceKey      = "guild";
-            static constexpr uint32      kReplacementChar  = 0xFFFDu;
-            static constexpr uint32      kFirstPrintable   = 0x20u;
-            static constexpr uint32      kDeleteChar       = 0x7Fu;
-            static constexpr const utf8* kStorageDomain    = "guild";
-            static constexpr const utf8* kDepositReason    = "guild.deposit";
-            static constexpr const utf8* kWithdrawReason   = "guild.withdraw";
+            static constexpr uint8       kFormatVersion   = 1;
+            static constexpr const utf8* kSequenceKey     = "guild";
+            static constexpr uint32      kReplacementChar = 0xFFFDu;
+            static constexpr uint32      kFirstPrintable  = 0x20u;
+            static constexpr uint32      kDeleteChar      = 0x7Fu;
+            static constexpr const utf8* kStorageDomain   = "guild";
+            static constexpr const utf8* kDepositReason   = "guild.deposit";
+            static constexpr const utf8* kWithdrawReason  = "guild.withdraw";
 
             /** @brief 길드 창고 보유자(`esc/guild/<길드 16진>`)입니다. */
             static LedgerHolder makeStorageHolder( uint64 guildID ) { return LedgerHolder::makeEscrow( kStorageDomain, ServiceKeyUtil::makeHex64( guildID ) ); }
@@ -187,7 +187,7 @@ namespace sw
 
             void run( IServiceStoreConnection& connection ) override
             {
-                for ( int32 attempt = 0; attempt < GuildServiceInternal::kMaxConflictRetry; ++attempt )
+                for ( int32 attempt = 0; attempt < OnlineLimit::kMaxConflictRetry; ++attempt )
                 {
                     _outcome                        = GuildOutcome{};
                     const ServiceStoreResult result = runOnce( connection );

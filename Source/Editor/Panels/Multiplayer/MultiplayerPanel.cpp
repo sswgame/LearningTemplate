@@ -108,7 +108,7 @@ namespace sw::editor
                     outReply = "no multiplayer session is running";
                     return true;
                 }
-                pSession->updateUntil( static_cast<int64>( seconds ) * 1000, [&]()
+                pSession->updateUntil( static_cast<int64>( seconds ) * constant::kMillisecondsPerSecond, [&]()
                 { return pSession->getConnectedClientCount() >= clientCount; } );
                 outReply = "netplay connected clients " + to_string( pSession->getConnectedClientCount() ) + " of " + to_string( clientCount );
                 return true;

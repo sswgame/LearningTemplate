@@ -4,6 +4,8 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
+
 namespace sw
 {
     const utf8* toString( TradeResult result )
@@ -72,7 +74,7 @@ namespace sw
         for ( uint64 index = 0; index < legCount; ++index )
         {
             vector<uint8> assetBytes;
-            if ( reader.readBlob( assetBytes, TradeConstant::kMaxAssetIDSize ) == false )
+            if ( reader.readBlob( assetBytes, LedgerConstant::kMaxAssetIDSize ) == false )
                 return false;
             TradeLeg& leg = outListLeg.emplace_back();
             leg._assetID.assign( reinterpret_cast<const utf8*>( assetBytes.data() ), assetBytes.size() );
