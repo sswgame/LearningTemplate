@@ -8,7 +8,7 @@
 main 은 이 문서의 커밋이고, 그 앞이 통합 담당 1 의 C-25 테스트 수정 `1f7c3657b`(Empty 기준 시나리오 · 스모크)다. push 와 CI 확인은 조정자의 일이고,
 이 문서를 쓸 때의 CI 결과는 적지 않았다. 서브시스템 정리의 ① ~ ⑤ 와 C-27 ① ② · C-26 · C-27 ④ 가
 main 에 있습니다. 워크트리 `D:\w\rest` 에 **빌드하지 않은 코드**가 남아 있습니다 — C-27 ③(`ProfilerBackendSubsystem` · `MemoryBudgetSubsystem`)과
-⑥(`CrashHandlerSubsystem` 에서 리소스 루트 · 게임 선택을 `ContentRootSubsystem` 으로 떼고 `OnlineLoadBot` 이 부트스트랩 서브시스템을 쓴다). 코드는 커밋하지 않은 채 워크트리에 있습니다(위치 `D:\w\rest`, 브랜치 `wt/rest`).
+⑥(`CrashHandlerSubsystem` 에서 리소스 루트 · 게임 선택을 `ContentRootSubsystem` 으로 떼고 `OnlineLoadBot` 이 부트스트랩 서브시스템을 쓴다). **원격 브랜치 `origin/wt/rest` 에 빌드 전 WIP 커밋(`7e7c1c0fd`)으로 있습니다**(main 에는 병합하지 않았다 — 로컬은 `D:\w\rest` 의 `wt/rest`).
 새 세션은 4절의 남은 검증 다음에 이것을 빌드 · 검증해 커밋합니다(3절).
 
 ## 2. 이번 세션에서 확정된 방침
@@ -29,7 +29,7 @@ main 에 있습니다. 워크트리 `D:\w\rest` 에 **빌드하지 않은 코드
 지금 모양: 호스트(엔진 루프 · 테스트 하네스)가 부트스트랩 → 서비스 → 엔진 세 `SubsystemScope` 를 부모로 잇고, 씬은 `GameObjectManager` 의 씬 범위,
 게임 · 에디터는 각자 범위를 듭니다. 서비스 표(`engine::getXxx`)는 바인딩 때 한 번 찾아 둔 캐시이고, 모듈은 호스트가 넘긴 서비스 범위에서 타입으로 찾습니다.
 
-1. **C-27 ③ · ⑥ 빌드와 커밋**(코드는 `D:\w\rest` 에 있다). 부트스트랩 순서는 진단 → 이름 풀 → 로거 → 명령줄 → 크래시 핸들러 → 리소스 루트 → 메모리 예산 →
+1. **C-27 ③ · ⑥ 빌드와 병합** — `origin/wt/rest` 의 WIP 를 main 위로 rebase → 빌드 → Shipping 포함 검증 → main 에 병합한다. 부트스트랩 순서는 진단 → 이름 풀 → 로거 → 명령줄 → 크래시 핸들러 → 리소스 루트 → 메모리 예산 →
    정적 저장소가 된다(`EngineInitSequenceTest.BootstrapScopeRunsFromDiagnosticsToStaticStorage` 의 기대 글도 고쳐 두었다).
    남은 ③: 자동화 구동기(`AutomationSession`)는 App 호스트 범위로(4번과 함께). `Dev` 호스트 비트는 두지 않는다 — 개발 도구는 호스트가 `#if !defined( SW_SHIPPING )`
    한 자리에서 넣는다. `DevCommandRegistry` · `AutomationStepRegistry` · `AutomationProbes` 는 정적 등록 표라 제외.
@@ -110,6 +110,8 @@ main 에 있습니다. 워크트리 `D:\w\rest` 에 **빌드하지 않은 코드
 
 1. 이 문서 → [작업 방식](../11_Workflow.md) → [백로그](../06_Backlog.md) C 절(`C-24` · `C-27` · `C-28`) → [결정 기록](../09_Decisions.md) 서브시스템 절 순서로 읽는다.
    C++ 을 쓰기 전에 [AGENTS.md](../../AGENTS.md).
-2. 첫 명령: `git -C D:/w/rest status --short` 로 빌드하지 않은 C-27 ③ · ⑥ 코드를 확인하고, `D:\w\rest` 에서 `cmake --build --preset Ninja-Debug --target all AllTests`
-   → `ctest --test-dir build/Ninja-Debug -L "lint|nogpu" -j 6` → `cmake --build --preset Ninja-Shipping --target all AllTests` → `ctest --test-dir build/Ninja-Shipping -L nogpu -j 6`.
-3. 통과하면 커밋 → main 에 ff 병합 → 3절 2번부터 이어간다.
+2. 4절의 남은 검증(Release 빌드 + 스크린샷 sha 대조 · hostgpu 재확인 · 스모크 둘)을 먼저 한다.
+3. 그다음 원격 브랜치 `origin/wt/rest` 의 빌드 전 WIP(C-27 ③ · ⑥)를 main 위로 rebase 하고(`git fetch` → `git rebase origin/main`),
+   `cmake --build --preset Ninja-Debug --target all AllTests` → `ctest --test-dir build/Ninja-Debug -L "lint|nogpu" -j 6` →
+   `cmake --build --preset Ninja-Shipping --target all AllTests` → `ctest --test-dir build/Ninja-Shipping -L nogpu -j 6` 를 통과시킨 뒤 커밋 제목의 'WIP, 빌드 전' 을 떼고
+   main 에 ff 병합 → 3절 2번부터 이어간다. 병합한 뒤 원격 브랜치 `wt/rest` 는 지운다.
