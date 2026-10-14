@@ -98,8 +98,30 @@ namespace sw
         float4 computeLayerWeightsAt( float32 worldX, float32 worldZ ) const { return _heightfield.computeLayerWeightsAt( worldX, worldZ ); }
         /** @brief CPU 높이장을 반환합니다(물리 충돌 `TerrainColliderComponent` 와 배치 표면이 읽습니다). */
         const TerrainHeightfield& getHeightfield() const { return _heightfield; }
-        /** @brief 높이장을 다시 읽을 때마다(`reloadTerrain`) 오르는 세대입니다. 높이장에서 만든 것(물리 바디)이 낡았는지 견줍니다. */
+        /** @brief 높이장을 다시 읽거나 높이를 쓸 때마다(`reloadTerrain`, `writeHeights`) 오르는 세대입니다. 높이장에서 만든 것(물리 바디)이 낡았는지 견줍니다. */
         uint32 getHeightfieldGeneration() const { return _heightfieldGeneration; }
+        /**
+         * @brief 높이 샘플 전부(`getHeightfield().getHeightSamples()` 를 복사해 고친 사본)에서 @p rect 의 샘플을 반영합니다(월드 높이, m).
+         * @details 바뀐 샘플이 닿는 청크(노멀이 이웃 샘플을 읽으므로 한 샘플 바깥까지)의 메시와 바운드를 지금 다시 만들고, `getHeightfieldGeneration` 을 올려
+         *          물리 바디가 다시 만들어지게 한다. 되돌리기는 편집 전에 복사해 둔 사본과 같은 @p rect 로 이 함수를 다시 부르면 된다.
+         *          틱 밖에서만 부른다(`reloadTerrain` 과 같다 — 락이 없다). 메시를 다시 만드는 것이라 스트로크마다가 아니라 프레임에 한 번 부른다.
+         *          이 지형을 읽어 만든 배치 결과(식생 등)는 다시 계산하지 않는다. 쓴 값은 저장(`saveHeightfield`)하기 전에 `reloadTerrain`(속성 변경 · 오너 이동)이 돌면 에셋 값으로 돌아간다.
+         * @return 반영했으면 true 입니다(지형이 없거나 크기 · 범위가 틀리면 false 이고 아무것도 바꾸지 않습니다).
+         */
+        [[nodiscard]] bool writeHeights( const vector<float32>& listHeight, const TerrainSampleRect& rect );
+        /**
+         * @brief 레이어 가중치 전부(`getHeightfield().readSplatWeights` 로 읽어 고친 사본)에서 @p rect(스플랫 텍셀 좌표)를 CPU 스플랫에 반영하고 `getSplatRevision` 을 올립니다.
+         * @details GPU 스플랫 텍스처는 갱신하지 않는다(RHI 에 텍스처 부분 업로드가 없다) — 그릴 때는 낡은 스플랫이 보인다. 업로드 쪽이 `getSplatRevision` 을 견줘 다시 올린다.
+         *          틱 밖에서만 부른다.
+         */
+        [[nodiscard]] bool writeLayerWeights( const vector<float4>& listWeight, const TerrainSampleRect& rect );
+        /** @brief `writeLayerWeights` 마다 오르는 세대입니다(`reloadTerrain` 은 0 으로 돌립니다). GPU 스플랫이 낡았는지 견줍니다. */
+        uint32 getSplatRevision() const { return _splatRevision; }
+        /** @brief 지금 높이를 `.heightfield` 형식으로 절대 경로에 씁니다(높이는 `_heightMin`..`_heightMax` 로 양자화). 높이장이 없으면 false 입니다. */
+        [[nodiscard]] bool saveHeightfield( string_view filePath ) const;
+        /** @brief 지금 CPU 스플랫을 비압축 RGBA8 DDS 로 절대 경로에 씁니다. 스플랫이 없으면 false 입니다. */
+        [[nodiscard]] bool saveSplat( string_view filePath ) const;
+
         /** @brief 청크 배치입니다. */
         const TerrainChunkLayout& getChunkLayout() const { return _layout; }
         /** @brief 청크 (x, z) 의 지금 LOD 입니다. 범위 밖이면 0 입니다. */
@@ -182,7 +204,8 @@ namespace sw
         vector<uint32>      _listWantedLOD; ///< updateLODs 의 스크래치(청크마다 고른 LOD)
         EnvironmentMaterial _material;
         PrimitiveRegistry*  _pPrimitiveRegistry;    ///< 등록된 매니저의 레지스트리(구조 링크라 생포인터)
-        uint32              _heightfieldGeneration; ///< `reloadTerrain` 마다 오른다(`getHeightfieldGeneration`)
+        uint32              _heightfieldGeneration; ///< `reloadTerrain` 과 `writeHeights` 마다 오른다(`getHeightfieldGeneration`)
+        uint32              _splatRevision;         ///< `writeLayerWeights` 마다 오른다(`getSplatRevision`)
         atomic<bool>        _bOriginDirty;          ///< 오너가 움직여 지형 원점이 낡았다
     };
 } // namespace sw
