@@ -23,7 +23,7 @@ namespace sw
         , _queuedBytes{ 0 }
         , _highWatermarkBytes{ 256 * 1024 }
         , _lowWatermarkBytes{ 64 * 1024 }
-        , _maxQueuedBytes{ StreamLimit::kDefaultMaxQueuedBytes }
+        , _maxQueuedBytes{ StreamLimit::kDefaultMaxQueuedSendBytes }
         , _bAboveHighWatermark{ SW_FALSE }
     {
     }

@@ -13,7 +13,8 @@ namespace sw
     /** @brief 스트림 전송 · 메시지 층이 나눠 쓰는 기본 상한입니다. */
     struct StreamLimit
     {
-        static constexpr int32 kDefaultMaxQueuedBytes = static_cast<int32>( 4 * constant::kBytesPerMegabyte ); ///< 보낼 줄 · 받아 쌓는 줄의 기본 상한(4 MiB)
+        static constexpr int32 kDefaultMaxQueuedSendBytes     = static_cast<int32>( 4 * constant::kBytesPerMegabyte ); ///< 보낼 줄의 기본 상한(4 MiB)
+        static constexpr int32 kDefaultMaxPendingReceiveBytes = static_cast<int32>( 4 * constant::kBytesPerMegabyte ); ///< 받아 쌓는 적체의 기본 상한(4 MiB)
     };
 } // namespace sw
 
@@ -77,12 +78,12 @@ namespace sw
     /** @brief 스트림 전송 설정입니다. 시간은 초, 크기는 바이트입니다. */
     struct StreamTransportSettings
     {
-        int32   _ioThreadCount{ 1 };                                        ///< 0 = 전용 스레드 없음 — 부르는 쪽이 `pollIO` 를 돈다
-        int32   _maxConnections{ 1024 };                                    ///< 넘는 수락은 바로 닫는다
-        int32   _receiveChunkBytes{ 16 * 1024 };                            ///< 읽기 한 번의 버퍼(연결마다 하나)
-        int32   _sendHighWatermarkBytes{ 256 * 1024 };                      ///< 줄이 이것을 넘으면 `QueuedAboveHighWatermark`
-        int32   _sendLowWatermarkBytes{ 64 * 1024 };                        ///< 높은 물금을 넘었던 줄이 이 아래로 내려가면 `onStreamWritable`
-        int32   _maxQueuedSendBytes{ StreamLimit::kDefaultMaxQueuedBytes }; ///< 넘으면 `QueueFull`
+        int32   _ioThreadCount{ 1 };                                            ///< 0 = 전용 스레드 없음 — 부르는 쪽이 `pollIO` 를 돈다
+        int32   _maxConnections{ 1024 };                                        ///< 넘는 수락은 바로 닫는다
+        int32   _receiveChunkBytes{ 16 * 1024 };                                ///< 읽기 한 번의 버퍼(연결마다 하나)
+        int32   _sendHighWatermarkBytes{ 256 * 1024 };                          ///< 줄이 이것을 넘으면 `QueuedAboveHighWatermark`
+        int32   _sendLowWatermarkBytes{ 64 * 1024 };                            ///< 높은 물금을 넘었던 줄이 이 아래로 내려가면 `onStreamWritable`
+        int32   _maxQueuedSendBytes{ StreamLimit::kDefaultMaxQueuedSendBytes }; ///< 넘으면 `QueueFull`
         int32   _listenBacklog{ 512 };
         float64 _idleTimeoutSeconds{ 60.0 }; ///< 0 = 끈다. 위 층의 핑 간격보다 길게
         float64 _connectTimeoutSeconds{ 10.0 };
