@@ -97,7 +97,7 @@ namespace sw
         static string getExtension( string_view fileName );
         /** @brief 마지막 확장자를 뷰로 돌려줍니다(할당 없음). */
         static void getExtension( string_view fileName, string_view& outExtension );
-        /** @brief 경로가 지정한 확장자로 끝나는지 대소문자 구분 없이 확인합니다(앞의 '.' 는 생략해도 됩니다). */
+        /** @brief 경로가 지정한 확장자로 끝나는지 대소문자 구분 없이 확인합니다(앞의 '.' 는 생략해도 됩니다). ".modifiers.json" 같은 두 단계 접미사도 맞춥니다. */
         static bool hasExtension( string_view fileName, string_view extension );
         /** @brief 지정한 확장자 중 하나와 대소문자 구분 없이 일치하는지 확인합니다. */
         static bool hasAnyExtension( string_view fileName, std::initializer_list<string_view> listExtension );

@@ -354,6 +354,16 @@ namespace sw
         if ( dot == string_view::npos || dot < start )
             return false;
 
+        // 두 단계 이상 접미사(".modifiers.json")는 마지막 점 뒤만 보면 영영 안 맞는다 — 파일 이름이 "." + 접미사로 끝나는지 본다.
+        if ( expected.find( '.' ) != string_view::npos )
+        {
+            const string_view name = fileName.substr( start );
+            if ( name.size() <= expected.size() )
+                return false;
+            const string_view tail = name.substr( name.size() - expected.size() - 1 );
+            return tail.front() == '.' && StringUtil::equals( tail.substr( 1 ), expected, true );
+        }
+
         const string_view actual = fileName.substr( dot + 1 );
         return StringUtil::equals( actual, expected, true );
     }
