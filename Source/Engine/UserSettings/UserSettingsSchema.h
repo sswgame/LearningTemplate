@@ -3,7 +3,7 @@
  * @brief 사용자 설정(옵션 메뉴)의 스키마와 그 XML 로더를 정의합니다. 스키마는 카테고리, 설정 정의, 그래픽 품질 프리셋, 사용자 파일 버전 올리기 단계로 이루어집니다.
  *
  * 스키마는 사람이 편집하는 데이터(`*.settings.xml`)입니다. 엔진 파일(`engine/settings/engine.settings.xml`) 위에 게임 파일(게임 프리셋의
- * `_userSettingsSchema`)을 덧붙입니다. 코드가 가진 것은 이름으로 고르는 적용 등록부(`UserSettingsApplierRegistry`)뿐입니다.
+ * `_userSettingsSchema`)을 덧붙입니다. 코드가 가진 것은 이름으로 고르는 핸들러 등록부(`UserSettingsHandlerRegistry`)뿐입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -16,7 +16,7 @@
 namespace sw
 {
     class GlobalVariableManager;
-    class UserSettingsApplierRegistry;
+    class UserSettingsHandlerRegistry;
     class XMLNode;
 
     /** @brief 설정 값의 종류입니다. 값은 늘 정규화한 글(`UserSettingsSchema::normalizeValue`)로 다닙니다. */
@@ -51,7 +51,7 @@ namespace sw
     {
         None,           ///< 대상이 없습니다. 게임 코드가 `UserSettingsManager::getValue` 와 변경 통보로 읽습니다(난이도 등).
         GlobalVariable, ///< 전역 변수(`gv:gv_name`)입니다. `GlobalVariableInfo::setValueFromString` 으로 넣습니다.
-        Applier,        ///< 이름 붙은 적용 함수(`applier:name`)입니다. `UserSettingsApplierRegistry` 에서 찾습니다.
+        Handler,        ///< 이름 붙은 핸들러(`handler:name`)입니다. `UserSettingsHandlerRegistry` 에서 찾습니다.
     };
 
     /** @brief 의존 조건의 비교입니다. */
@@ -108,8 +108,8 @@ namespace sw
         string                       _defaultValue{};         ///< 정규화한 기본값입니다(게임 프리셋 덮어쓰기 전).
         vector<UserSettingOption>    _listOption{};           ///< 열거형 선택지(공급자를 쓰면 빈 목록)
         hashed_string                _optionProvider{};       ///< 런타임 선택지 공급자 이름(`optionsFrom`)
-        hashed_string                _targetName{};           ///< 대상 이름(전역 변수 이름 또는 적용 함수 이름)
-        string                       _targetParam{};          ///< 적용 함수에 넘기는 인자입니다(`param`, 예: 버스 이름, 액션 이름).
+        hashed_string                _targetName{};           ///< 대상 이름(전역 변수 이름 또는 핸들러 이름)
+        string                       _targetParam{};          ///< 핸들러에 넘기는 인자입니다(`param`, 예: 버스 이름, 액션 이름).
         vector<UserSettingCondition> _listEnabledCondition{}; ///< 모두 참일 때만 켜집니다(`enabledWhen`)
         hashed_string                _action{};               ///< 키 바인딩의 입력 맵 액션입니다.
         hashed_string                _context{};              ///< 키 바인딩: 겹침을 보는 범위(입력 맵 레이어). 비면 바인딩의 레이어입니다.
@@ -261,12 +261,12 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
 
         /**
-         * @brief 정의 전체를 검사합니다. 범위, 기본값, 선택지, 의존 대상, 품질 번들, 적용 함수와 전역 변수 이름을 확인합니다.
-         * @param registry 적용 함수와 선택지 공급자 이름을 대조할 레지스트리입니다.
+         * @brief 정의 전체를 검사합니다. 범위, 기본값, 선택지, 의존 대상, 품질 번들, 핸들러와 전역 변수 이름을 확인합니다.
+         * @param registry 핸들러와 선택지 공급자 이름을 대조할 레지스트리입니다.
          * @param pGlobalVariableManager 전역 변수 대상을 대조할 테이블입니다. nullptr 이면 전역 변수 검사를 건너뜁니다.
          * @return 문제가 하나라도 있으면 false 입니다(모두 오류로 알립니다).
          */
-        [[nodiscard]] bool validate( const UserSettingsApplierRegistry& registry, GlobalVariableManager* pGlobalVariableManager ) const;
+        [[nodiscard]] bool validate( const UserSettingsHandlerRegistry& registry, GlobalVariableManager* pGlobalVariableManager ) const;
 
         /**
          * @brief @p text 를 @p def 의 정규화한 텍스트로 바꿉니다. 숫자는 범위와 눈금에 맞춰 고칩니다(Clamped).

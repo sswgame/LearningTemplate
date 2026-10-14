@@ -1,0 +1,141 @@
+#include "pch.h"
+
+#include "Engine/UserSettings/UserSettingsHandlerRegistry.h"
+
+#include "Engine/UserSettings/UserSettingsSchema.h"
+
+namespace sw
+{
+    UserSettingsHandlerRegistry::UserSettingsHandlerRegistry()
+        : _listHandler{}
+        , _listProvider{}
+    {
+    }
+
+    void UserSettingsHandlerRegistry::registerHandler( const hashed_string& name, const UserSettingHandlerDelegate& handler, const UserSettingValueFilterDelegate& filter )
+    {
+        for ( HandlerEntry& entry : _listHandler )
+        {
+            if ( entry._name == name )
+            {
+                entry._handler = handler;
+                entry._filter  = filter;
+                return;
+            }
+        }
+        _listHandler.push_back( HandlerEntry{ name, handler, filter } );
+    }
+
+    void UserSettingsHandlerRegistry::unregisterHandler( const hashed_string& name )
+    {
+        for ( size_t entryIndex = 0; entryIndex < _listHandler.size(); ++entryIndex )
+        {
+            if ( _listHandler[entryIndex]._name == name )
+            {
+                _listHandler.erase( _listHandler.begin() + static_cast<ptrdiff_t>( entryIndex ) );
+                return;
+            }
+        }
+    }
+
+    bool UserSettingsHandlerRegistry::hasHandler( const hashed_string& name ) const
+    {
+        return findHandlerEntry( name ) != nullptr;
+    }
+
+    bool UserSettingsHandlerRegistry::invokeHandler( const hashed_string& name, const UserSettingApplyParams& context ) const
+    {
+        const HandlerEntry* pEntry = findHandlerEntry( name );
+        if ( pEntry == nullptr || pEntry->_handler.isBound() == false )
+            return false;
+        // 핸들러가 레지스트리를 바꿀 수 있으므로(다른 핸들러를 등록하는 게임 코드) 사본을 부른다.
+        const UserSettingHandlerDelegate handler = pEntry->_handler;
+        return handler( context );
+    }
+
+    bool UserSettingsHandlerRegistry::acceptsValue( const hashed_string& name, string_view value ) const
+    {
+        const HandlerEntry* pEntry = findHandlerEntry( name );
+        if ( pEntry == nullptr || pEntry->_filter.isBound() == false )
+            return true;
+        return pEntry->_filter( value );
+    }
+
+    void UserSettingsHandlerRegistry::registerOptionProvider( const hashed_string& name, const UserSettingOptionProviderDelegate& provider )
+    {
+        for ( ProviderEntry& entry : _listProvider )
+        {
+            if ( entry._name == name )
+            {
+                entry._provider = provider;
+                return;
+            }
+        }
+        _listProvider.push_back( ProviderEntry{ name, provider } );
+    }
+
+    bool UserSettingsHandlerRegistry::hasOptionProvider( const hashed_string& name ) const
+    {
+        return findProviderEntry( name ) != nullptr;
+    }
+
+    bool UserSettingsHandlerRegistry::collectOptions( const hashed_string& name, vector<UserSettingOption>& outListOption ) const
+    {
+        outListOption.clear();
+        const ProviderEntry* pEntry = findProviderEntry( name );
+        if ( pEntry == nullptr || pEntry->_provider.isBound() == false )
+            return false;
+        pEntry->_provider( outListOption );
+        return true;
+    }
+
+    uint32 UserSettingsHandlerRegistry::removeCodeWithin( const void* pBegin, const void* pEnd )
+    {
+        uint32 removedCount{ 0 };
+        for ( size_t entryIndex = _listHandler.size(); entryIndex > 0; --entryIndex )
+        {
+            const HandlerEntry& entry        = _listHandler[entryIndex - 1];
+            const bool          bInsideRange = entry._handler.isCodeWithin( pBegin, pEnd ) || entry._filter.isCodeWithin( pBegin, pEnd );
+            if ( bInsideRange )
+            {
+                _listHandler.erase( _listHandler.begin() + static_cast<ptrdiff_t>( entryIndex - 1 ) );
+                ++removedCount;
+            }
+        }
+        for ( size_t entryIndex = _listProvider.size(); entryIndex > 0; --entryIndex )
+        {
+            if ( _listProvider[entryIndex - 1]._provider.isCodeWithin( pBegin, pEnd ) )
+            {
+                _listProvider.erase( _listProvider.begin() + static_cast<ptrdiff_t>( entryIndex - 1 ) );
+                ++removedCount;
+            }
+        }
+        return removedCount;
+    }
+
+    void UserSettingsHandlerRegistry::clear()
+    {
+        _listHandler.clear();
+        _listProvider.clear();
+    }
+
+    const UserSettingsHandlerRegistry::HandlerEntry* UserSettingsHandlerRegistry::findHandlerEntry( const hashed_string& name ) const
+    {
+        for ( const HandlerEntry& entry : _listHandler )
+        {
+            if ( entry._name == name )
+                return &entry;
+        }
+        return nullptr;
+    }
+
+    const UserSettingsHandlerRegistry::ProviderEntry* UserSettingsHandlerRegistry::findProviderEntry( const hashed_string& name ) const
+    {
+        for ( const ProviderEntry& entry : _listProvider )
+        {
+            if ( entry._name == name )
+                return &entry;
+        }
+        return nullptr;
+    }
+} // namespace sw

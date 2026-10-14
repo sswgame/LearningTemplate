@@ -19,9 +19,9 @@
 
 | id | 타입 | 기본값 | 범위 | 적용 | 대상 |
 |---|---|---|---|---|---|
-| `display.windowMode` | enum | `windowed` |  | confirm | `applier:display.windowMode` |
-| `display.resolution` | enum | `1280x720` |  | confirm | `applier:display.resolution` |
-| `display.vsync` | bool | `false` |  | confirm | `applier:display.vsync` |
+| `display.windowMode` | enum | `windowed` |  | confirm | `handler:display.windowMode` |
+| `display.resolution` | enum | `1280x720` |  | confirm | `handler:display.resolution` |
+| `display.vsync` | bool | `false` |  | confirm | `handler:display.vsync` |
 | `graphics.quality` | enum | `high` |  | confirm | `게임 코드` |
 | `graphics.upscaler` | enum | `off` |  | confirm | `gv:gv_upscaler` |
 | `graphics.renderScale` | float | `1` | 0.5 ~ 1 (눈금 0.05) | confirm | `gv:gv_renderScale` |
@@ -32,20 +32,20 @@
 | `graphics.textureQuality` | enum | `high` |  | restart | `gv:gv_textureQuality` |
 | `graphics.effectsQuality` | enum | `high` |  | confirm | `gv:gv_effectsQuality` |
 | `graphics.motionBlur` | bool | `true` |  | confirm | `gv:gv_motionBlur` |
-| `audio.masterVolume` | float | `1` | 0 ~ 1 (눈금 0.05) | immediate | `applier:audio.busVolume` |
-| `audio.musicVolume` | float | `0.8` | 0 ~ 1 (눈금 0.05) | immediate | `applier:audio.busVolume` |
-| `audio.sfxVolume` | float | `1` | 0 ~ 1 (눈금 0.05) | immediate | `applier:audio.busVolume` |
-| `audio.voiceVolume` | float | `1` | 0 ~ 1 (눈금 0.05) | immediate | `applier:audio.busVolume` |
-| `audio.ambientVolume` | float | `1` | 0 ~ 1 (눈금 0.05) | immediate | `applier:audio.busVolume` |
-| `audio.uiVolume` | float | `1` | 0 ~ 1 (눈금 0.05) | immediate | `applier:audio.busVolume` |
-| `audio.mute` | bool | `false` |  | immediate | `applier:audio.mute` |
-| `controls.mouseSensitivity` | float | `1` | 0.1 ~ 5 (눈금 0.05) | confirm | `applier:input.mouseSensitivity` |
-| `controls.gamepadSensitivity` | float | `1` | 0.1 ~ 5 (눈금 0.05) | confirm | `applier:input.gamepadSensitivity` |
-| `controls.invertY` | bool | `false` |  | confirm | `applier:input.invertY` |
-| `controls.stickDeadzone` | float | `0.15` | 0 ~ 0.5 (눈금 0.01) | confirm | `applier:input.stickDeadzone` |
-| `controls.aimMode` | enum | `hold` |  | confirm | `applier:input.toggleMode` |
-| `controls.crouchMode` | enum | `hold` |  | confirm | `applier:input.toggleMode` |
-| `controls.sprintMode` | enum | `hold` |  | confirm | `applier:input.toggleMode` |
+| `audio.masterVolume` | float | `1` | 0 ~ 1 (눈금 0.05) | immediate | `handler:audio.busVolume` |
+| `audio.musicVolume` | float | `0.8` | 0 ~ 1 (눈금 0.05) | immediate | `handler:audio.busVolume` |
+| `audio.sfxVolume` | float | `1` | 0 ~ 1 (눈금 0.05) | immediate | `handler:audio.busVolume` |
+| `audio.voiceVolume` | float | `1` | 0 ~ 1 (눈금 0.05) | immediate | `handler:audio.busVolume` |
+| `audio.ambientVolume` | float | `1` | 0 ~ 1 (눈금 0.05) | immediate | `handler:audio.busVolume` |
+| `audio.uiVolume` | float | `1` | 0 ~ 1 (눈금 0.05) | immediate | `handler:audio.busVolume` |
+| `audio.mute` | bool | `false` |  | immediate | `handler:audio.mute` |
+| `controls.mouseSensitivity` | float | `1` | 0.1 ~ 5 (눈금 0.05) | confirm | `handler:input.mouseSensitivity` |
+| `controls.gamepadSensitivity` | float | `1` | 0.1 ~ 5 (눈금 0.05) | confirm | `handler:input.gamepadSensitivity` |
+| `controls.invertY` | bool | `false` |  | confirm | `handler:input.invertY` |
+| `controls.stickDeadzone` | float | `0.15` | 0 ~ 0.5 (눈금 0.01) | confirm | `handler:input.stickDeadzone` |
+| `controls.aimMode` | enum | `hold` |  | confirm | `handler:input.toggleMode` |
+| `controls.crouchMode` | enum | `hold` |  | confirm | `handler:input.toggleMode` |
+| `controls.sprintMode` | enum | `hold` |  | confirm | `handler:input.toggleMode` |
 | `gameplay.fieldOfView` | float | `70` | 60 ~ 110 (눈금 1) | confirm | `gv:gv_cameraFieldOfView` |
 | `gameplay.cameraShake` | float | `1` | 0 ~ 1 (눈금 0.1) | confirm | `gv:gv_cameraShakeScale` |
 | `gameplay.headBob` | bool | `true` |  | confirm | `gv:gv_cameraHeadBob` |
@@ -59,7 +59,7 @@
 | `accessibility.subtitles` | bool | `true` |  | confirm | `gv:gv_subtitles` |
 | `accessibility.subtitleSize` | enum | `medium` |  | confirm | `gv:gv_subtitleSize` |
 | `accessibility.subtitleBackground` | float | `0.5` | 0 ~ 1 (눈금 0.1) | confirm | `gv:gv_subtitleBackgroundOpacity` |
-| `language.text` | enum | `` |  | immediate | `applier:localization.language` |
+| `language.text` | enum | `` |  | immediate | `handler:localization.language` |
 | `telemetry.enabled` | bool | `false` |  | confirm | `게임 코드` |
 | `telemetry.crashReports` | enum | `local` |  | confirm | `게임 코드` |
 

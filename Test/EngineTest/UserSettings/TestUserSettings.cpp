@@ -16,7 +16,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 사용자 설정(옵션 메뉴 백엔드) — 스키마 검사 · 적용 등록부 · 품질 프리셋 · 사용자 파일 · 적용/되돌리기 · 확인 카운트다운 · 키 바인딩 · 언어 · 접근성.
+// 사용자 설정(옵션 메뉴 백엔드) — 스키마 검사 · 핸들러 등록부 · 품질 프리셋 · 사용자 파일 · 적용/되돌리기 · 확인 카운트다운 · 키 바인딩 · 언어 · 접근성.
 
 // 설정 대상은 등록된 전역 변수여야 한다 — Shipping 테스트에서도 표에 있도록 남긴다(빠진 테스트 변수는 등록되지 않는다).
 SW_TEST_GLOBAL_VARIABLE_SHIPPED( float32, gv_userSettingsTestFloat, 1.0f, "UserSettingsTest 전용 실수 대상" );
@@ -48,7 +48,7 @@ namespace
             }
         }
 
-        /** @brief 테스트 스키마 — 카테고리 둘, 전역 변수 대상 셋, 적용 함수 대상 하나, 품질 묶음 하나, 확인 카운트다운 하나. */
+        /** @brief 테스트 스키마 — 카테고리 둘, 전역 변수 대상 셋, 핸들러 대상 하나, 품질 묶음 하나, 확인 카운트다운 하나. */
         static constexpr const utf8* kSchemaXML = R"(
 <UserSettingsSchema version="1">
     <Category id="video" text="t.video"/>
@@ -65,7 +65,7 @@ namespace
     </Setting>
     <Setting id="video.scale" category="video" type="float" default="1" min="0.5" max="1" step="0.25" target="gv:gv_userSettingsTestFloat"/>
     <Setting id="video.shadows" category="video" type="bool" default="true" target="gv:gv_userSettingsTestBool" enabledWhen="video.mode!=c"/>
-    <Setting id="sound.volume" category="sound" type="float" default="1" min="0" max="1" apply="immediate" target="applier:audio.busVolume" param="voice"/>
+    <Setting id="sound.volume" category="sound" type="float" default="1" min="0" max="1" apply="immediate" target="handler:audio.busVolume" param="voice"/>
     <Setting id="sound.restart" category="sound" type="int" default="2" min="0" max="4" apply="restart"/>
     <Scalability setting="video.quality" custom="custom" autoDetectFallback="low">
         <Preset name="low">
@@ -226,7 +226,7 @@ SW_TEST_CASE( UserSettingsTest, SchemaRejectsUnknownNamesAndInvalidValues )
     SW_EXPECT_FALSE( Internal::loadsSchema( R"(<UserSettingsSchema version="1"><Category id="c"/><Setting id="c.x" category="nowhere" type="bool" default="true"/></UserSettingsSchema>)" ) );
     SW_EXPECT_FALSE( Internal::loadsSchema( R"(<UserSettingsSchema version="1"><Category id="c"/><Setting id="c.x" category="c" type="float" default="3" min="0" max="1"/></UserSettingsSchema>)" ) );
     SW_EXPECT_FALSE( Internal::loadsSchema( R"(<UserSettingsSchema version="1"><Category id="c"/><Setting id="c.x" category="c" type="enum" default="z"><Option value="a"/></Setting></UserSettingsSchema>)" ) );
-    SW_EXPECT_FALSE( Internal::loadsSchema( R"(<UserSettingsSchema version="1"><Category id="c"/><Setting id="c.x" category="c" type="bool" default="true" target="applier:no.such"/></UserSettingsSchema>)" ) );
+    SW_EXPECT_FALSE( Internal::loadsSchema( R"(<UserSettingsSchema version="1"><Category id="c"/><Setting id="c.x" category="c" type="bool" default="true" target="handler:no.such"/></UserSettingsSchema>)" ) );
     SW_EXPECT_FALSE( Internal::loadsSchema( R"(<UserSettingsSchema version="1"><Category id="c"/><Setting id="c.x" category="c" type="bool" default="true" target="gv:gv_noSuchVariable"/></UserSettingsSchema>)" ) );
     SW_EXPECT_FALSE( Internal::loadsSchema( R"(<UserSettingsSchema version="1"><Category id="c"/><Setting id="c.x" category="c" type="bool" default="true" target="gv:gv_userSettingsTestFloat"/></UserSettingsSchema>)" ) );
     SW_EXPECT_FALSE( Internal::loadsSchema( R"(<UserSettingsSchema version="1"><Category id="c"/><Setting id="c.x" category="c" type="bool" default="true" enabledWhen="c.y=true"/></UserSettingsSchema>)" ) );
@@ -235,13 +235,13 @@ SW_TEST_CASE( UserSettingsTest, SchemaRejectsUnknownNamesAndInvalidValues )
         <Setting id="c.q" category="c" type="enum" default="low"><Option value="low"/><Option value="high"/><Option value="custom"/></Setting>
         <Scalability setting="c.q" custom="custom"><Preset name="low"/></Scalability></UserSettingsSchema>)" ) );
     SW_EXPECT_FALSE( Internal::loadsSchema( R"(<UserSettingsSchema version="1"><Category id="c"/><Setting id="c.x" category="c" type="keyBinding" default="Key.Space"/></UserSettingsSchema>)" ) );
-    SW_EXPECT_FALSE( Internal::loadsSchema( R"(<UserSettingsSchema version="1"><Category id="c"/><Setting id="c.x" category="c" type="enum" default="windowed" target="applier:display.windowMode"><Option value="windowed"/><Option value="exclusive"/></Setting></UserSettingsSchema>)" ) );
+    SW_EXPECT_FALSE( Internal::loadsSchema( R"(<UserSettingsSchema version="1"><Category id="c"/><Setting id="c.x" category="c" type="enum" default="windowed" target="handler:display.windowMode"><Option value="windowed"/><Option value="exclusive"/></Setting></UserSettingsSchema>)" ) );
 }
 
 /**
- * @brief [UserSettingsTest] 적용 함수는 데이터가 이름으로 고른다 — 게임이 올린 적용 함수가 값 · 인자를 받고, 내리면 그 이름을 쓰는 스키마는 로드 오류다
+ * @brief [UserSettingsTest] 핸들러는 데이터가 이름으로 고른다 — 게임이 올린 핸들러가 값 · 인자를 받고, 내리면 그 이름을 쓰는 스키마는 로드 오류다
  */
-SW_TEST_CASE( UserSettingsTest, ApplierRegistryDispatchesByName )
+SW_TEST_CASE( UserSettingsTest, HandlerRegistryDispatchesByName )
 {
     struct Recorder
     {
@@ -260,9 +260,9 @@ SW_TEST_CASE( UserSettingsTest, ApplierRegistryDispatchesByName )
 
     sw::UserSettingsManager settings;
     settings.initialize( sw::UserSettingsTargets{} );
-    settings.getRegistry().registerApplier( "game.record", SW_DELEGATE_METHOD( sw::UserSettingApplierDelegate, &Recorder::record, &recorder ) );
+    settings.getRegistry().registerHandler( "game.record", SW_DELEGATE_METHOD( sw::UserSettingHandlerDelegate, &Recorder::record, &recorder ) );
     SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="g"/>
-        <Setting id="g.level" category="g" type="int" default="3" min="1" max="9" target="applier:game.record" param="slot2"/></UserSettingsSchema>)",
+        <Setting id="g.level" category="g" type="int" default="3" min="1" max="9" target="handler:game.record" param="slot2"/></UserSettingsSchema>)",
                                                     "game.settings.xml" ) );
 
     settings.reapplyAll();
@@ -270,7 +270,7 @@ SW_TEST_CASE( UserSettingsTest, ApplierRegistryDispatchesByName )
     SW_EXPECT_STREQ( "3", recorder._value );
     SW_EXPECT_STREQ( "slot2", recorder._param );
 
-    // 범위 밖은 맞춰 넣고(Clamped), 적용 때 적용 함수가 받는다.
+    // 범위 밖은 맞춰 넣고(Clamped), 적용 때 핸들러가 받는다.
     SW_EXPECT_TRUE( settings.setPendingIntValue( "g.level", 42 ) == sw::UserSettingSetResult::Clamped );
     SW_EXPECT_EQUAL( 1u, recorder._callCount );
     (void)settings.applyPending(); // 적용 결과는 아래 단언이 대상 값으로 확인한다
@@ -278,10 +278,10 @@ SW_TEST_CASE( UserSettingsTest, ApplierRegistryDispatchesByName )
     SW_EXPECT_STREQ( "9", recorder._value );
 
     // 같은 이름이 레지스트리에 없으면 그 이름을 쓰는 스키마는 읽히지 않는다.
-    settings.getRegistry().unregisterApplier( "game.record" );
-    SW_TEST_DEFENSIVE_SCOPE( "an applier name nobody registered" );
+    settings.getRegistry().unregisterHandler( "game.record" );
+    SW_TEST_DEFENSIVE_SCOPE( "an handler name nobody registered" );
     SW_EXPECT_FALSE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="h"/>
-        <Setting id="h.x" category="h" type="bool" default="true" target="applier:game.record"/></UserSettingsSchema>)",
+        <Setting id="h.x" category="h" type="bool" default="true" target="handler:game.record"/></UserSettingsSchema>)",
                                                      "game2.settings.xml" ) );
 }
 
@@ -299,22 +299,22 @@ SW_TEST_CASE( UserSettingsTest, RejectedApplyIsCountedAndReported )
 
     sw::UserSettingsManager settings;
     settings.initialize( sw::UserSettingsTargets{} );
-    settings.getRegistry().registerApplier( "game.refuse", SW_DELEGATE_METHOD( sw::UserSettingApplierDelegate, &Refuser::refuse, &refuser ) );
+    settings.getRegistry().registerHandler( "game.refuse", SW_DELEGATE_METHOD( sw::UserSettingHandlerDelegate, &Refuser::refuse, &refuser ) );
     SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="g"/>
-        <Setting id="g.refused" category="g" type="int" default="3" min="1" max="9" target="applier:game.refuse"/></UserSettingsSchema>)",
+        <Setting id="g.refused" category="g" type="int" default="3" min="1" max="9" target="handler:game.refuse"/></UserSettingsSchema>)",
                                                     "refuse.settings.xml" ) );
     SW_EXPECT_TRUE( settings.setPendingIntValue( "g.refused", 5 ) == sw::UserSettingSetResult::Accepted );
 
     test::ScopedLogCollector    collector;
     sw::UserSettingsApplyResult result;
     {
-        SW_TEST_DEFENSIVE_SCOPE( "an applier that refuses the value" );
+        SW_TEST_DEFENSIVE_SCOPE( "an handler that refuses the value" );
         result = settings.applyPending();
     }
     SW_EXPECT_EQUAL( 1u, result._failedCount );
     SW_EXPECT_EQUAL( 0u, result._appliedCount );
     SW_EXPECT_TRUE_MSG( collector.countContaining( "g.refused" ) > 0, collector.joined().c_str() );
-    settings.getRegistry().unregisterApplier( "game.refuse" );
+    settings.getRegistry().unregisterHandler( "game.refuse" );
 }
 
 /**
@@ -630,7 +630,7 @@ SW_TEST_CASE( UserSettingsTest, LanguageSwitchChangesLocalizedString )
     settings.initialize( targets );
     SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="language"/>
         <Setting id="language.text" category="language" type="enum" default="" optionsFrom="localization.languages" apply="immediate"
-                 target="applier:localization.language"/></UserSettingsSchema>)",
+                 target="handler:localization.language"/></UserSettingsSchema>)",
                                                     "language.settings.xml" ) );
     settings.reapplyAll();
     SW_EXPECT_STREQ( "Start", localization.getString( kKey ) );
@@ -685,7 +685,7 @@ SW_TEST_CASE( UserSettingsTest, OptionProviderOverridesFixedOptionsAndFallsBack 
 
 /**
  * @brief [UserSettingsTest] 게임 스키마의 키 바인딩 설정은 그 게임 입력 맵에 있는 액션의 다시 잡을 수 있는 바인딩을 가리킨다
- * @details 액션 이름을 틀리거나 입력 맵에서 액션을 지우면 설정은 적용 함수에서 조용히 건너뛰어져 메뉴의 줄이 아무 일도 하지 않는다. 여기서 드러낸다.
+ * @details 액션 이름을 틀리거나 입력 맵에서 액션을 지우면 설정은 핸들러에서 조용히 건너뛰어져 메뉴의 줄이 아무 일도 하지 않는다. 여기서 드러낸다.
  */
 SW_TEST_CASE( UserSettingsTest, ShippedGameKeyBindingsNameRealInputMapActions )
 {
@@ -750,7 +750,7 @@ SW_TEST_CASE( UserSettingsTest, PseudoLocaleIsSelectableThroughTheLanguageSettin
     settings.initialize( targets );
     SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="language"/>
         <Setting id="language.text" category="language" type="enum" default="" optionsFrom="localization.languages" apply="immediate"
-                 target="applier:localization.language"/></UserSettingsSchema>)",
+                 target="handler:localization.language"/></UserSettingsSchema>)",
                                                     "language.settings.xml" ) );
     settings.reapplyAll();
     sw::vector<sw::UserSettingOption> listOption;
