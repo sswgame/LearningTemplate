@@ -41,16 +41,25 @@ namespace sw::editor
 
     /**
      * @brief 에디터 서비스를 찾습니다. **없으면 nullptr 이므로** 받는 쪽이 확인해야 합니다.
-     * @details 지금 에디터 범위(그 상위 범위까지)에서 먼저 찾고, 없으면 호스트 서비스 표를 본다. 짝인 `game::getService<T>()` 와 같은 계약이다 —
+     * @details 지금 에디터 범위(그 상위 범위까지)에서 먼저 찾고, 없으면 호스트 서비스 범위를 본다. 짝인 `game::findSubsystem<T>()` 와 같은 계약이다 —
      *          한쪽만 실패 자리에 assert 를 두면 **Debug 에서만** 프로세스가 죽는다. `CheckNullableServiceUse` 린트가 두 창구를 모두 본다.
      */
     template <typename T>
-    T* getService()
+    T* findSubsystem()
     {
         T* pScoped = locateSubsystem<T>( findEditorScope() );
         if ( pScoped != nullptr )
             return pScoped;
         return locateSubsystem<T>( internal::findHostServices() );
+    }
+
+    /** @brief 반드시 있어야 하는 에디터 · 호스트 서비스 @p T 입니다(`findSubsystem<T>()` 와 같은 순서). 없으면 부른 쪽의 잘못이라 `SW_ASSERT` 로 멈춥니다. */
+    template <typename T>
+    T& getSubsystem()
+    {
+        T* pFound = findSubsystem<T>();
+        SW_ASSERT( pFound != nullptr );
+        return *pFound;
     }
 
     /**

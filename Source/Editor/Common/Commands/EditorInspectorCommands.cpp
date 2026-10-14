@@ -36,7 +36,7 @@ namespace sw::editor
             return false;
 
         // 캐시된 옛 내용으로 스폰하지 않게 다음 로드가 파일을 다시 읽도록 한다.
-        AssetManager* pResources = editor::getService<AssetManager>();
+        AssetManager* pResources = editor::findSubsystem<AssetManager>();
         if ( pResources != nullptr )
             pResources->getAssetCache<PrefabCache>().reload( prefabPath, nullptr );
         SW_LOG_INFO( "Saved prefab changes to %#", string{ prefabPath }.c_str() );
@@ -50,7 +50,7 @@ namespace sw::editor
         if ( pObj == nullptr || prefabPath.empty() )
             return false;
 
-        AssetManager* pResources = editor::getService<AssetManager>();
+        AssetManager* pResources = editor::findSubsystem<AssetManager>();
         if ( pResources == nullptr )
             return false;
 

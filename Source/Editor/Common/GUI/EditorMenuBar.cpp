@@ -157,7 +157,7 @@ namespace sw::editor
 
     void EditorMenuBar::drawStatusArea()
     {
-        IModuleCompiler* pCompiler = getService<IModuleCompiler>();
+        IModuleCompiler* pCompiler = findSubsystem<IModuleCompiler>();
         if ( pCompiler != nullptr )
             notifyLiveCodingResult( *pCompiler );
 

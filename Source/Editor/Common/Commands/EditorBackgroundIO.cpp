@@ -16,7 +16,7 @@ namespace sw::editor
             /** @brief TaskManager 가 없으면(테스트·초기화 전) 같은 스레드에서 바로 돌립니다. */
             static void submitOrRun( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args )
             {
-                TaskManager* pTaskManager = editor::getService<TaskManager>();
+                TaskManager* pTaskManager = editor::findSubsystem<TaskManager>();
                 if ( pTaskManager == nullptr )
                 {
                     delegate( args );

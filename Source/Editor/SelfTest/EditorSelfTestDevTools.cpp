@@ -116,7 +116,7 @@ namespace sw::editor
             {
                 if ( openSceneView( context ) == nullptr )
                     return EditorSelfTestStep::Done;
-                DebugDrawQueue* pQueue = getService<DebugDrawQueue>();
+                DebugDrawQueue* pQueue = findSubsystem<DebugDrawQueue>();
                 if ( context.expect( pQueue != nullptr, "no DebugDrawQueue service" ) == false )
                     return EditorSelfTestStep::Done;
 

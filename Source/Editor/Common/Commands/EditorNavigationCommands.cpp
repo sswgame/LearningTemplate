@@ -13,7 +13,7 @@ namespace sw::editor
 
     uint32 EditorNavigationCommands::bakeAll( GameObjectManager& manager )
     {
-        SceneNavigation&      navigation = manager.getSceneService<SceneNavigation>();
+        SceneNavigation&      navigation = manager.getSubsystem<SceneNavigation>();
         const NavMeshSettings settings   = navigation.getSettings();
         navigation.setSettings( settings ); // 같은 표를 다시 걸어 마련해 둔 내비메시를 버린다
         uint32 bakedCount{ 0 };
@@ -30,7 +30,7 @@ namespace sw::editor
 
     uint32 EditorNavigationCommands::countBakedMeshes( GameObjectManager& manager )
     {
-        SceneNavigation& navigation = manager.getSceneService<SceneNavigation>();
+        SceneNavigation& navigation = manager.getSubsystem<SceneNavigation>();
         uint32           count{ 0 };
         for ( const NavAgentTypeDef& agentType : navigation.getSettings()._listAgentType )
         {

@@ -95,7 +95,7 @@ namespace sw::editor
             {
                 if ( s_recorder.isRecording() == false )
                     return;
-                InputManager* pInput = getService<InputManager>();
+                InputManager* pInput = findSubsystem<InputManager>();
                 if ( pInput != nullptr )
                     s_recorder.tick( *pInput, ImGui::GetIO().DeltaTime );
             }

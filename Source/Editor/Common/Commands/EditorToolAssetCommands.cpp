@@ -236,7 +236,7 @@ namespace sw::editor
             outPrefabPath = pContext->getSubsystem<EditorWorkspace>().getGameObjectPrefabPath( pInstance->getObjectID() );
         // 포커스된 에셋으로 넘어가지 않는다 — 머티리얼 · 씬일 수 있어 프리팹으로 읽으면 [Error] 를 남긴다. 프리팹 포커스는 부르는 쪽이 종류를 보고 넘긴다.
 
-        AssetManager* pResources = editor::getService<AssetManager>();
+        AssetManager* pResources = editor::findSubsystem<AssetManager>();
         if ( pResources == nullptr || outPrefabPath.empty() )
             return;
 
@@ -307,7 +307,7 @@ namespace sw::editor
             return;
         }
 
-        AssetManager* pResources = editor::getService<AssetManager>();
+        AssetManager* pResources = editor::findSubsystem<AssetManager>();
         if ( pResources == nullptr )
             return;
         PrefabAsset* pLoaded = pResources->getAssetCache<PrefabCache>().loadPrefab( prefabPath );

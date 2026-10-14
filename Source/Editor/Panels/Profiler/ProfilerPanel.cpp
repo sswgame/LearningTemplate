@@ -156,7 +156,7 @@ namespace sw::editor
     void ProfilerPanel::drawContent()
     {
         // 패널이 열려 있는 동안 엔진 프로파일러를 켜 두고 프레임마다 한 칸씩 담는다. 탭과 무관하게 담으므로 탭을 바꿔도 그래프가 끊기지 않는다.
-        FrameProfiler* pProfiler = editor::getService<FrameProfiler>();
+        FrameProfiler* pProfiler = editor::findSubsystem<FrameProfiler>();
         if ( pProfiler != nullptr )
         {
             if ( _bCollect == SW_TRUE && pProfiler->isEnabled() == false )
@@ -229,7 +229,7 @@ namespace sw::editor
         if ( ImGui::Checkbox( "Collect", &bCollect ) )
         {
             _bCollect                = bCollect ? SW_TRUE : SW_FALSE;
-            FrameProfiler* pProfiler = editor::getService<FrameProfiler>();
+            FrameProfiler* pProfiler = editor::findSubsystem<FrameProfiler>();
             if ( pProfiler != nullptr )
                 pProfiler->setEnabled( bCollect );
         }
@@ -339,7 +339,7 @@ namespace sw::editor
 
     void ProfilerPanel::drawTimelineTab()
     {
-        FrameProfiler* pProfiler = editor::getService<FrameProfiler>();
+        FrameProfiler* pProfiler = editor::findSubsystem<FrameProfiler>();
         if ( pProfiler == nullptr )
         {
             ImGui::TextDisabled( "Engine profiler is not available" );
@@ -550,7 +550,7 @@ namespace sw::editor
 
     void ProfilerPanel::drawTimelineCanvas( const vector<ProfilerTimelineThread>& listThread, const vector<string>* pLoadedSlotName )
     {
-        const FrameProfiler* pProfiler  = editor::getService<FrameProfiler>();
+        const FrameProfiler* pProfiler  = editor::findSubsystem<FrameProfiler>();
         const float32        dpiScale   = EditorThemeUtil::getDpiScale();
         const float32        labelWidth = ProfilerPanelInternal::kTimelineLabelWidth * dpiScale;
         const float32        laneHeight = ImGui::GetTextLineHeight() + 4.0f * dpiScale;
@@ -866,7 +866,7 @@ namespace sw::editor
 
         if ( ImGui::CollapsingHeader( "Task Manager & Concurrency", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
-            TaskManager* pTaskManager = editor::getService<TaskManager>();
+            TaskManager* pTaskManager = editor::findSubsystem<TaskManager>();
             if ( pTaskManager != nullptr )
             {
                 ImGui::BulletText( "Worker Threads: %u", pTaskManager->getWorkerCount() );
@@ -1002,7 +1002,7 @@ namespace sw::editor
 
     void ProfilerPanel::drawMemoryTab()
     {
-        MemoryProfiler* pProfiler = editor::getService<MemoryProfiler>();
+        MemoryProfiler* pProfiler = editor::findSubsystem<MemoryProfiler>();
         if ( pProfiler == nullptr )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorProfiler", "MemoryProfilerInactive" ) );
@@ -1133,7 +1133,7 @@ namespace sw::editor
 
     void ProfilerPanel::drawCallTreeTab()
     {
-        FrameProfiler* pProfiler = editor::getService<FrameProfiler>();
+        FrameProfiler* pProfiler = editor::findSubsystem<FrameProfiler>();
         if ( pProfiler == nullptr )
         {
             ImGui::TextDisabled( "Engine profiler is not available" );
@@ -1213,7 +1213,7 @@ namespace sw::editor
 
     void ProfilerPanel::drawCallTreeNode( uint32 nodeIndex )
     {
-        const FrameProfiler*    pProfiler = editor::getService<FrameProfiler>();
+        const FrameProfiler*    pProfiler = editor::findSubsystem<FrameProfiler>();
         const ProfilerCallNode& node      = _listCallNode[nodeIndex];
         const utf8*             pName     = pProfiler != nullptr ? pProfiler->findScopeName( node._slot ) : nullptr;
         ImGui::TableNextRow();

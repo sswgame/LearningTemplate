@@ -326,7 +326,7 @@ namespace sw::editor
             const string rel = AssetDatabase::toRelativePath( destPath );
             if ( rel.empty() == false )
             {
-                AssetManager* pResources = editor::getService<AssetManager>();
+                AssetManager* pResources = editor::findSubsystem<AssetManager>();
                 if ( pResources != nullptr )
                     pResources->getAssetDatabase().ensureMeta( rel, true );
             }

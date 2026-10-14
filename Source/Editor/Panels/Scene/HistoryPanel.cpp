@@ -42,7 +42,7 @@ namespace sw::editor
 
     void HistoryPanel::drawContent()
     {
-        CommandStack* pCmdStack = editor::getService<CommandStack>();
+        CommandStack* pCmdStack = editor::findSubsystem<CommandStack>();
         if ( pCmdStack == nullptr )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorScene", "CommandStackUnavailable" ) );

@@ -88,7 +88,7 @@ namespace sw::editor
     {
         if ( ImGui::BeginPopup( "##DebugDrawCategories" ) == false )
             return;
-        DebugDrawQueue* pQueue = getService<DebugDrawQueue>();
+        DebugDrawQueue* pQueue = findSubsystem<DebugDrawQueue>();
         _listDebugCategory.clear();
         if ( pQueue != nullptr )
             pQueue->collectCategories( _listDebugCategory );

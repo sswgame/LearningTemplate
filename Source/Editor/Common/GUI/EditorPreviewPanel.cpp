@@ -66,7 +66,7 @@ namespace sw::editor
 
     bool EditorPreviewPanel::recordPreviewModify( GameObject& obj, const ObjectSnapshot& before, const ObjectSnapshot& after, string_view label )
     {
-        SceneManager* pSceneManager = getService<SceneManager>();
+        SceneManager* pSceneManager = findSubsystem<SceneManager>();
         if ( pSceneManager == nullptr )
             return false;
         _commandStack.push( ObjectUndoUtil::makeModify( _commandStack, *pSceneManager, obj, before, after, label ) );
@@ -75,7 +75,7 @@ namespace sw::editor
 
     void EditorPreviewPanel::applyWindowFocus( bool bFocused )
     {
-        SceneManager* pSceneManager = getService<SceneManager>();
+        SceneManager* pSceneManager = findSubsystem<SceneManager>();
         Scene*        pScene        = _viewport.getScene();
         if ( bFocused && pScene != nullptr )
         {

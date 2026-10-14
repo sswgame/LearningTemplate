@@ -81,8 +81,8 @@ namespace sw::editor
             return nullptr;
         }
 
-        // `getService<T>()` 는 nullptr 을 반환할 수 있다. 역참조하기 전에 확인한다.
-        AssetManager* pResources = editor::getService<AssetManager>();
+        // `findSubsystem<T>()` 는 nullptr 을 반환할 수 있다. 역참조하기 전에 확인한다.
+        AssetManager* pResources = editor::findSubsystem<AssetManager>();
         if ( pResources == nullptr )
         {
             SW_LOG_WARNING( "AssetManager 서비스가 없어 프리팹을 스폰할 수 없습니다: %#", pPath );

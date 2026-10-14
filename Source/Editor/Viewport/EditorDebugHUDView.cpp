@@ -74,7 +74,7 @@ namespace sw::editor
 
     void EditorDebugHUDView::refresh()
     {
-        const FrameProfiler* pProfiler   = editor::getService<FrameProfiler>();
+        const FrameProfiler* pProfiler   = editor::findSubsystem<FrameProfiler>();
         const bool           bProfilerOn = pProfiler != nullptr && pProfiler->isEnabled();
         _skippedProfilerSectionCount     = 0;
         for ( SectionSlot& slot : _listSlot )

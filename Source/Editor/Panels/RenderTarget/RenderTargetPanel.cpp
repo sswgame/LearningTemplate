@@ -132,7 +132,7 @@ namespace sw::editor
     void RenderTargetPanel::refreshTargetsIfStale()
     {
         // 엔진 서비스는 **에디터 로케이터**로 받는다. `EngineServices.h` 는 Engine/App/Test 전용이다.
-        RenderTargetRegistry* pRegistry = editor::getService<RenderTargetRegistry>();
+        RenderTargetRegistry* pRegistry = editor::findSubsystem<RenderTargetRegistry>();
         if ( pRegistry == nullptr )
         {
             _listTarget.clear();
@@ -173,7 +173,7 @@ namespace sw::editor
 
     void RenderTargetPanel::syncSnapshot()
     {
-        RenderTargetRegistry*   pRegistry          = editor::getService<RenderTargetRegistry>();
+        RenderTargetRegistry*   pRegistry          = editor::findSubsystem<RenderTargetRegistry>();
         const RenderTargetInfo* pSelected          = findByName( _listTarget, _selectedName );
         const bool              bTargetNotReadable = pRegistry == nullptr || pSelected == nullptr || RenderTargetViewUtil::isDecodableFormat( pSelected->_format, pSelected->_bDepth != SW_FALSE ) == false;
         if ( bTargetNotReadable )

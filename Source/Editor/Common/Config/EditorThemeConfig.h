@@ -50,7 +50,7 @@ namespace sw::editor
 {
     /**
      * @class EditorTheme
-     * @brief 지금 적용된 테마 값을 드는 에디터 서브시스템입니다. 조회 · 교체는 `EditorThemeUtil` 이 `editor::getService<EditorTheme>()` 로 합니다.
+     * @brief 지금 적용된 테마 값을 드는 에디터 서브시스템입니다. 조회 · 교체는 `EditorThemeUtil` 이 `editor::findSubsystem<EditorTheme>()` 로 합니다.
      */
     class EditorTheme final : public EditorSubsystem
     {

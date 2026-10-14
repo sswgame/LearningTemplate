@@ -58,7 +58,7 @@ namespace sw::editor
             /** @brief 지금 백엔드의 App 명령줄 플래그(`-dx12` …)입니다. 모르면 빈 글이라 App 이 설정의 기본 백엔드로 뜬다. */
             static string makeBackendArgument()
             {
-                const FrameRenderer* pRenderer = editor::getService<FrameRenderer>();
+                const FrameRenderer* pRenderer = editor::findSubsystem<FrameRenderer>();
                 if ( pRenderer == nullptr || pRenderer->getDevice() == nullptr )
                     return string{};
                 const utf8* pFlag = BugItReport::findBackendFlag( pRenderer->getDevice()->getBackendName() );

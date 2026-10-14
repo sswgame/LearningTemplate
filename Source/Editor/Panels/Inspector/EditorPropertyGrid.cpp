@@ -460,7 +460,7 @@ namespace sw::editor
 
         const bool bReadOnly = prop._metadata._bReadOnly != SW_FALSE;
 
-        auto* pRegistry = editor::getService<TypeRegistry>();
+        auto* pRegistry = editor::findSubsystem<TypeRegistry>();
         if ( pRegistry == nullptr )
             return;
 
@@ -490,7 +490,7 @@ namespace sw::editor
     void EditorPropertyGrid::drawEnumProperty( void* pInstance, const PropertyInfo& prop, const EnumInfo& enumInfo, bool bReadOnly )
     {
         const utf8* pLabel    = "##value";
-        auto*       pRegistry = editor::getService<TypeRegistry>();
+        auto*       pRegistry = editor::findSubsystem<TypeRegistry>();
         if ( pRegistry == nullptr )
             return;
 
@@ -1003,8 +1003,8 @@ namespace sw::editor
     void EditorPropertyGrid::invokeTypeMethod( void* pInstance, const TypeInfo* pTypeInfo, const FunctionInfo& method,
                                                const TaskArgs& args )
     {
-        // `getService<T>()` 는 nullptr 을 반환할 수 있다. 역참조하기 전에 확인한다.
-        TypeRegistry* pTypeRegistry = editor::getService<TypeRegistry>();
+        // `findSubsystem<T>()` 는 nullptr 을 반환할 수 있다. 역참조하기 전에 확인한다.
+        TypeRegistry* pTypeRegistry = editor::findSubsystem<TypeRegistry>();
         if ( pTypeRegistry == nullptr )
             return;
 

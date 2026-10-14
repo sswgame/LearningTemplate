@@ -337,7 +337,7 @@ namespace sw
     {
         outListProjectPath.clear();
         // 에디터 모듈은 엔진 서비스를 서비스 테이블로만 접근한다. EngineServices.h 는 Engine, App, 테스트 전용이다. 테이블이 없으면(테스트) 기본값을 쓴다.
-        const EngineDefaultAssets* pDefaultAssets = editor::getService<const EngineDefaultAssets>();
+        const EngineDefaultAssets* pDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
         const string               engineProject  = pDefaultAssets != nullptr ? pDefaultAssets->_localizationProject : EngineDefaultAssets{}._localizationProject;
         if ( engineProject.empty() == false )
             outListProjectPath.push_back( LocalizationToolsInternal::resolveAbsolutePath( engineProject ) );

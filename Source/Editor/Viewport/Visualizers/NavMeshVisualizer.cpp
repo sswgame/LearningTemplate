@@ -27,7 +27,7 @@ namespace sw::editor
                 stats._navMeshSegmentCount        = 0;
                 if ( args._pObjectManager == nullptr || args._pViewProj == nullptr )
                     return;
-                const SceneNavigation&      navigation = static_cast<const GameObjectManager*>( args._pObjectManager )->getSceneService<SceneNavigation>();
+                const SceneNavigation&      navigation = static_cast<const GameObjectManager*>( args._pObjectManager )->getSubsystem<SceneNavigation>();
                 EditorProjectedLineRenderer renderer{ args._pDrawList, *args._pViewProj, args._canvasPos, args._canvasSize };
                 navigation.drawDebug( renderer, NavDebugDrawFlag::kMesh );
                 stats._navMeshSegmentCount = renderer.getDrawnSegmentCount();

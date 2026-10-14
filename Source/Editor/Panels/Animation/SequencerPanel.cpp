@@ -63,7 +63,7 @@ namespace sw::editor
         }
         const utf8* GetItemTypeName( int32 typeIndex ) const override
         {
-            const TypeRegistry* pRegistry = editor::getService<TypeRegistry>();
+            const TypeRegistry* pRegistry = editor::findSubsystem<TypeRegistry>();
             const utf8*         pName     = pRegistry != nullptr ? pRegistry->enumToString( static_cast<SequenceItemKind>( typeIndex ) ) : nullptr;
             return pName != nullptr ? pName : "?";
         }

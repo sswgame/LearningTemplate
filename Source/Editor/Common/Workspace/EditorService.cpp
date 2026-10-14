@@ -78,19 +78,19 @@ namespace sw::editor
 
     Scene* getActiveScene()
     {
-        SceneManager* pSceneManager = getService<SceneManager>();
+        SceneManager* pSceneManager = findSubsystem<SceneManager>();
         return pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
     }
 
     Scene* getFocusedScene()
     {
-        SceneManager* pSceneManager = getService<SceneManager>();
+        SceneManager* pSceneManager = findSubsystem<SceneManager>();
         return pSceneManager != nullptr ? pSceneManager->getFocusedScene() : nullptr;
     }
 
     CommandStack* getFocusedCommandStack()
     {
-        return s_pFocusedCommandStack != nullptr ? s_pFocusedCommandStack : getService<CommandStack>();
+        return s_pFocusedCommandStack != nullptr ? s_pFocusedCommandStack : findSubsystem<CommandStack>();
     }
 
     void setFocusedCommandStack( CommandStack* pStack )

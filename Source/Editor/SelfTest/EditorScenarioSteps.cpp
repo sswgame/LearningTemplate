@@ -497,7 +497,7 @@ namespace sw::editor
                     return false;
                 }
                 const string* pComponent = step.findAttribute( "component" );
-                TypeRegistry* pRegistry  = editor::getService<TypeRegistry>();
+                TypeRegistry* pRegistry  = editor::findSubsystem<TypeRegistry>();
                 if ( pComponent != nullptr && ( pRegistry == nullptr || pRegistry->findType( hashed_string( *pComponent ) ) == nullptr ) )
                 {
                     outError = step.describe() + ": unknown component type '" + *pComponent + "'";
@@ -522,7 +522,7 @@ namespace sw::editor
 
                 vector<GameObject*> listObject;
                 const string*       pComponent = step.findAttribute( "component" );
-                TypeRegistry*       pRegistry  = editor::getService<TypeRegistry>();
+                TypeRegistry*       pRegistry  = editor::findSubsystem<TypeRegistry>();
                 if ( pComponent != nullptr && pRegistry != nullptr )
                     EditorSceneCommands::collectObjectsWithComponent( *pManager, pRegistry->findType( hashed_string( *pComponent ) ), listObject );
                 else
@@ -749,7 +749,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool readUndoCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const CommandStack* pStack = editor::getService<CommandStack>();
+                const CommandStack* pStack = editor::findSubsystem<CommandStack>();
                 if ( pStack == nullptr )
                     return false;
                 outValue = static_cast<float64>( pStack->getCommandCount() );
@@ -758,7 +758,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool readUndoIndex( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const CommandStack* pStack = editor::getService<CommandStack>();
+                const CommandStack* pStack = editor::findSubsystem<CommandStack>();
                 if ( pStack == nullptr )
                     return false;
                 outValue = static_cast<float64>( pStack->getCurrentIndex() );
@@ -767,7 +767,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool readLoadingScreenShown( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const UISystem* pUI = editor::getService<UISystem>();
+                const UISystem* pUI = editor::findSubsystem<UISystem>();
                 if ( pUI == nullptr )
                     return false;
                 outValue = pUI->isLoadingScreenShown() ? 1.0 : 0.0;
@@ -1303,7 +1303,7 @@ namespace sw::editor
             /** @brief 씬 뷰(툴바)나 주 출력(게임 뷰)의 보기 모드 번호(`RenderViewMode`)를 읽습니다. 렌더러가 없으면 false 입니다. */
             [[nodiscard]] static bool readViewMode( bool bSceneView, float64& outValue )
             {
-                const FrameRenderer* pRenderer = editor::getService<FrameRenderer>();
+                const FrameRenderer* pRenderer = editor::findSubsystem<FrameRenderer>();
                 if ( pRenderer == nullptr )
                     return false;
                 outValue = static_cast<float64>( bSceneView ? pRenderer->getSceneViewMode() : pRenderer->getViewMode() );
@@ -1456,7 +1456,7 @@ namespace sw::editor
             [[nodiscard]] static bool readProfilerTimelineThreadCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 constexpr uint32     kRecentFrameCount = 4;
-                const FrameProfiler* pProfiler         = editor::getService<FrameProfiler>();
+                const FrameProfiler* pProfiler         = editor::findSubsystem<FrameProfiler>();
                 if ( pProfiler == nullptr )
                     return false;
                 outValue = static_cast<float64>( pProfiler->getTimeline().countActiveThreads( kRecentFrameCount ) );

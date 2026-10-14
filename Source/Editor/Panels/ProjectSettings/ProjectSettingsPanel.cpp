@@ -126,7 +126,7 @@ namespace sw::editor
         }
         ProjectSettingsCatalog::expandWildcards( EditorPaths::getProjectRootPath(), listEntry );
 
-        TypeRegistry* pRegistry = editor::getService<TypeRegistry>();
+        TypeRegistry* pRegistry = editor::findSubsystem<TypeRegistry>();
         for ( ProjectSettingsEntry& entry : listEntry )
         {
             unique_ptr<Page> pPage = make_unique<Page>();
@@ -140,7 +140,7 @@ namespace sw::editor
     void ProjectSettingsPanel::openPage( Page& page )
     {
         page._bOpened             = true;
-        TypeRegistry*   pRegistry = editor::getService<TypeRegistry>();
+        TypeRegistry*   pRegistry = editor::findSubsystem<TypeRegistry>();
         const TypeInfo* pType     = pRegistry != nullptr ? pRegistry->findType( hashed_string( page._entry._typeName.c_str() ) ) : nullptr;
         if ( pType == nullptr )
         {
