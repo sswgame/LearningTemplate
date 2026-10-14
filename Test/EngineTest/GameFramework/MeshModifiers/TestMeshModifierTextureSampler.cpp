@@ -15,7 +15,7 @@ namespace
     struct TextureSamplerTestInternal
     {
         /** @brief 비압축 32 비트 TGA(위가 첫 행) 2×2 를 씁니다. 텍셀 순서는 (0,0) (1,0) (0,1) (1,1), 각 RGBA 입니다. */
-        static bool writeTga2x2( const string& path, const uint8 ( &listRgba )[16] )
+        [[nodiscard]] static bool writeTga2x2( const string& path, const uint8 ( &listRgba )[16] )
         {
             vector<uint8> bytes( 18, 0 );
             bytes[2]  = 2;    // 비압축 트루컬러
@@ -23,12 +23,12 @@ namespace
             bytes[14] = 2;    // 세로
             bytes[16] = 32;   // 텍셀당 비트
             bytes[17] = 0x28; // 알파 8 비트 + 위가 원점
-            for ( uint32 i = 0; i < 4; ++i )
+            for ( uint32 texelIndex = 0; texelIndex < 4; ++texelIndex )
             {
-                bytes.push_back( listRgba[i * 4 + 2] ); // TGA 는 BGRA 순서
-                bytes.push_back( listRgba[i * 4 + 1] );
-                bytes.push_back( listRgba[i * 4 + 0] );
-                bytes.push_back( listRgba[i * 4 + 3] );
+                bytes.push_back( listRgba[texelIndex * 4 + 2] ); // TGA 는 BGRA 순서
+                bytes.push_back( listRgba[texelIndex * 4 + 1] );
+                bytes.push_back( listRgba[texelIndex * 4 + 0] );
+                bytes.push_back( listRgba[texelIndex * 4 + 3] );
             }
             return FileUtil::writeFile( path, bytes.data(), bytes.size() );
         }
