@@ -41,7 +41,8 @@ namespace sw
             {
                 for ( const SequenceTrackItem* pActive : listActive )
                 {
-                    if ( pActive != nullptr && drivesTarget( *pActive ) && pActive->_targetObject == targetObject )
+                    const bool bActiveDrivesTarget = pActive != nullptr && drivesTarget( *pActive ) && pActive->_targetObject == targetObject;
+                    if ( bActiveDrivesTarget )
                         return true;
                 }
                 return false;
@@ -115,7 +116,8 @@ namespace sw
             {
                 Component*          pComponent{ nullptr };
                 const PropertyInfo* pProperty{ nullptr };
-                if ( track._listChannel.empty() || track._listChannel[0]._listKey.empty() || findTrackProperty( pTarget, track, pComponent, pProperty ) == false )
+                const bool          bNoKeyData = track._listChannel.empty() || track._listChannel[0]._listKey.empty() || findTrackProperty( pTarget, track, pComponent, pProperty ) == false;
+                if ( bNoKeyData )
                     return;
                 if ( pProperty->_typeName == hashed_string( "float32" ) )
                 {
@@ -130,7 +132,8 @@ namespace sw
             /** @brief 리그 슬롯 트랙의 가중치를 대상의 `PoseModifierComponent` 에 씁니다. 키나 슬롯 이름이 없으면 건드리지 않습니다. */
             static void applyRigSlotTrack( GameObject* pTarget, const SequenceKeyTrack& track, float32 frame )
             {
-                if ( track._propertyPath.empty() || track._listChannel.empty() || track._listChannel[0]._listKey.empty() )
+                const bool bNoRigKeys = track._propertyPath.empty() || track._listChannel.empty() || track._listChannel[0]._listKey.empty();
+                if ( bNoRigKeys )
                     return;
                 PoseModifierComponent* pModifier = pTarget->getComponent<PoseModifierComponent>();
                 if ( pModifier == nullptr )
@@ -235,8 +238,9 @@ namespace sw
 
     bool SequenceTimelineUtil::readTrackValues( GameObjectManager* pManager, const SequenceKeyTrack& track, float32* pOutArrValue, uint32 valueCapacity )
     {
-        GameObject* pTarget = SequenceTimelineUtilInternal::findTarget( pManager, track._targetObject );
-        if ( pTarget == nullptr || pOutArrValue == nullptr || valueCapacity < SequenceKeyTrack::getChannelCount( track._kind ) )
+        GameObject* pTarget               = SequenceTimelineUtilInternal::findTarget( pManager, track._targetObject );
+        const bool  bInvalidSampleRequest = pTarget == nullptr || pOutArrValue == nullptr || valueCapacity < SequenceKeyTrack::getChannelCount( track._kind );
+        if ( bInvalidSampleRequest )
             return false;
         if ( track._kind == SequenceTrackKind::Transform )
         {

@@ -118,7 +118,8 @@ namespace sw
 
     float32 BrMatch::applyDamage( int32 victim, int32 attacker, float32 damage, BrHitZone hitZone )
     {
-        if ( isValidPlayer( victim ) == false || damage <= 0.0f || _matchState.getPhase() != MatchPhase::InProgress )
+        const bool bDamageRejected = isValidPlayer( victim ) == false || damage <= 0.0f || _matchState.getPhase() != MatchPhase::InProgress;
+        if ( bDamageRejected )
             return 0.0f;
         BrPlayer& target = _listPlayer[static_cast<size_t>( victim )];
         if ( target.isDead() )
@@ -149,7 +150,8 @@ namespace sw
 
     bool BrMatch::beginRevive( int32 reviver, int32 target )
     {
-        if ( isValidPlayer( reviver ) == false || isValidPlayer( target ) == false || reviver == target )
+        const bool bReviveRejected = isValidPlayer( reviver ) == false || isValidPlayer( target ) == false || reviver == target;
+        if ( bReviveRejected )
             return false;
         BrPlayer&  helper = _listPlayer[static_cast<size_t>( reviver )];
         BrPlayer&  downed = _listPlayer[static_cast<size_t>( target )];

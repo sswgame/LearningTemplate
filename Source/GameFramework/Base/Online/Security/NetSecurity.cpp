@@ -26,7 +26,8 @@ namespace sw
             static string makeProjectPath( string_view path )
             {
                 const string& projectFolder = ResourcePaths::getProjectFolderPath();
-                if ( path.empty() || projectFolder.empty() || FileUtil::isAbsolutePath( path ) )
+                const bool    bKeepPathAsIs = path.empty() || projectFolder.empty() || FileUtil::isAbsolutePath( path );
+                if ( bKeepPathAsIs )
                     return string( path );
                 return FileUtil::joinPath( projectFolder, path );
             }

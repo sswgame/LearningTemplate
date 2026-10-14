@@ -320,15 +320,17 @@ namespace sw
     {
         // 캔버스(화면 2D) — 런타임 UI 가 칠한 목록(내용 번호가 같으면 렌더러가 사각형을 다시 올리지 않는다), 개발 테스트 그림은 그 위에.
         // 글리프 아틀라스의 새 구간은 칠한 것이 없어도 늘 넘긴다(렌더러의 거울이 게임 스레드의 페이지와 어긋나지 않게).
-        const bool bUIReady = pUISystem != nullptr && pUISystem->isInitialized();
-        if ( bSceneMain == false && bUIReady && pUISystem->getCanvas().isEmpty() == false )
+        const bool bUIReady          = pUISystem != nullptr && pUISystem->isInitialized();
+        const bool bSubmitMainCanvas = bSceneMain == false && bUIReady && pUISystem->getCanvas().isEmpty() == false;
+        if ( bSubmitMainCanvas )
         {
             packet._canvas._mainOutput      = pUISystem->getCanvas();
             packet._canvas._contentRevision = pUISystem->getCanvasRevision();
         }
         if ( bUIReady )
             pUISystem->collectWorldCanvases( packet._canvas._listTarget ); // 월드 공간 UI 의 렌더 텍스처
-        if ( bSceneMain == false && gv_canvasTestPattern && pRHI != nullptr && pRHI->hasDevice() )
+        const bool bSubmitTestPattern = bSceneMain == false && gv_canvasTestPattern && pRHI != nullptr && pRHI->hasDevice();
+        if ( bSubmitTestPattern )
         {
             packet._canvas._contentRevision = 0; // 테스트 그림은 내용 번호가 없다 — 늘 올린다
             const uint32 canvasWidth        = packet._viewportWidth > 0 ? packet._viewportWidth : pRHI->getDevice().getBackBufferWidth();

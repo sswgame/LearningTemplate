@@ -159,7 +159,8 @@ namespace sw
 
     AbilityTask* GameplayAbility::addTask( unique_ptr<AbilityTask> pTask )
     {
-        if ( pTask == nullptr || isActive() == false || _bEnding == SW_TRUE )
+        const bool bCannotAddTask = pTask == nullptr || isActive() == false || _bEnding == SW_TRUE;
+        if ( bCannotAddTask )
             return nullptr;
 
         AbilityTask* pRaw = pTask.get();
@@ -306,8 +307,9 @@ namespace sw
         if ( pAbilitySystem != nullptr && selfEffect.empty() == false )
             (void)applyEffectSpecToOwner( makeOutgoingSpec( selfEffect ) ); // 대상 태그에 막혀도 어빌리티는 끝난다
 
-        const hashed_string targetEffect = getNameParameter( "targetEffect" );
-        if ( pAbilitySystem != nullptr && targetEffect.empty() == false && pTriggerEvent != nullptr )
+        const hashed_string targetEffect       = getNameParameter( "targetEffect" );
+        const bool          bApplyTargetEffect = pAbilitySystem != nullptr && targetEffect.empty() == false && pTriggerEvent != nullptr;
+        if ( bApplyTargetEffect )
         {
             // 상대는 이벤트의 "다른 쪽" 이다. 받은 이벤트(`_target` 이 주인 자신인 피격)이면 일으킨 쪽이고, 보낸 이벤트이면 받은 쪽이다.
             GameObject*             pOwner        = pAbilitySystem->getOwner();

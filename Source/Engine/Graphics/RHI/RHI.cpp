@@ -181,7 +181,8 @@ namespace sw
             SW_LOG_ERROR( "uploadTexture2DRegion: format %# is compressed, depth or unknown", static_cast<uint32>( format ) );
             return false;
         }
-        if ( desc._mip >= mipLevels || desc._arraySlice >= arraySize || desc._width == 0 || desc._height == 0 )
+        const bool bInvalidUploadRegion = desc._mip >= mipLevels || desc._arraySlice >= arraySize || desc._width == 0 || desc._height == 0;
+        if ( bInvalidUploadRegion )
         {
             SW_LOG_ERROR( "uploadTexture2DRegion: mip %# of %#, slice %# of %#, or an empty %#x%# region", desc._mip, mipLevels, desc._arraySlice, arraySize,
                           desc._width, desc._height );

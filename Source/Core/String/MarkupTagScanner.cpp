@@ -28,15 +28,19 @@ namespace sw
                 {
                     ++cursor;
                 }
-                const size_t nameEnd    = cursor;
-                size_t       valueStart = cursor;
-                size_t       valueEnd   = cursor;
-                if ( bClose == false && cursor < markup.size() && markup[cursor] == '=' )
+                const size_t nameEnd      = cursor;
+                size_t       valueStart   = cursor;
+                size_t       valueEnd     = cursor;
+                const bool   bHasTagValue = bClose == false && cursor < markup.size() && markup[cursor] == '=';
+                if ( bHasTagValue )
                 {
                     valueStart = cursor + 1;
                     cursor     = valueStart;
-                    while ( cursor < markup.size() && markup[cursor] != ']' && markup[cursor] != '[' )
+                    while ( true )
                     {
+                        const bool bInsideTagValue = cursor < markup.size() && markup[cursor] != ']' && markup[cursor] != '[';
+                        if ( bInsideTagValue == false )
+                            break;
                         ++cursor;
                     }
                     valueEnd = cursor;

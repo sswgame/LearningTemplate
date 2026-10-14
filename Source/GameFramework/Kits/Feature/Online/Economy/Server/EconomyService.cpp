@@ -135,7 +135,8 @@ namespace sw
 
     bool EconomyService::initialize( IServiceStore* pStore, const EconomyServiceSettings& settings )
     {
-        if ( pStore == nullptr || settings._pCurrencyCatalog == nullptr || settings._pOfferCatalog == nullptr )
+        const bool bMissingDependencies = pStore == nullptr || settings._pCurrencyCatalog == nullptr || settings._pOfferCatalog == nullptr;
+        if ( bMissingDependencies )
         {
             SW_LOG_ERROR( "EconomyService needs a store and both catalogs" );
             return false;
@@ -177,9 +178,10 @@ namespace sw
 
     void EconomyService::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
     {
-        const bool          bMutating = context._method == EconomyMethod::kPurchase || context._method == EconomyMethod::kRedeemReceipt;
-        const RemoteConfig* pConfig   = host.getRemoteConfig();
-        if ( bMutating && pConfig != nullptr && pConfig->isFeatureEnabled( kFeatureFlag, context._accountID, true ) == false )
+        const bool          bMutating        = context._method == EconomyMethod::kPurchase || context._method == EconomyMethod::kRedeemReceipt;
+        const RemoteConfig* pConfig          = host.getRemoteConfig();
+        const bool          bFeatureDisabled = bMutating && pConfig != nullptr && pConfig->isFeatureEnabled( kFeatureFlag, context._accountID, true ) == false;
+        if ( bFeatureDisabled )
         {
             (void)host.respondError( context._token, OnlineError::kFeatureDisabled );
             return;

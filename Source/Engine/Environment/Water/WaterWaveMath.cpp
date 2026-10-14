@@ -24,7 +24,8 @@ namespace sw
 
             static bool makeTerm( const float4& wave, uint32 activeCount, const float2& origin, float32 time, float32 gravity, WaveTerm& outTerm )
             {
-                if ( wave._z <= 0.0f || wave._y <= 0.0f || activeCount == 0 )
+                const bool bInactiveWave = wave._z <= 0.0f || wave._y <= 0.0f || activeCount == 0;
+                if ( bInactiveWave )
                     return false;
                 outTerm._direction  = float2{ MathUtil::cos( wave._x ), MathUtil::sin( wave._x ) };
                 outTerm._waveNumber = MathUtil::kTwoPi / wave._y;

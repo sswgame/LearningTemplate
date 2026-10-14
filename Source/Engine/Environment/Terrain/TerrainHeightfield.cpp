@@ -40,7 +40,8 @@ namespace sw
     bool TerrainHeightfield::initialize( const HeightfieldData& data, const float3& origin, const float2& size, float32 heightMin, float32 heightMax )
     {
         shutdown();
-        if ( data.isValid() == false || size._x <= 0.0f || size._y <= 0.0f )
+        const bool bUnusableHeightfield = data.isValid() == false || size._x <= 0.0f || size._y <= 0.0f;
+        if ( bUnusableHeightfield )
         {
             SW_LOG_WARNING( "Terrain heightfield is not usable (resolution %#, size %#x%#)", data._resolution, size._x, size._y );
             return false;
@@ -173,7 +174,8 @@ namespace sw
 
     bool TerrainHeightfield::isHoleCell( uint32 cellX, uint32 cellZ ) const
     {
-        if ( _listHoleCell.empty() || cellX + 1 >= _resolution || cellZ + 1 >= _resolution )
+        const bool bNoHoleAtCell = _listHoleCell.empty() || cellX + 1 >= _resolution || cellZ + 1 >= _resolution;
+        if ( bNoHoleAtCell )
             return false;
         return _listHoleCell[static_cast<size_t>( cellZ ) * ( _resolution - 1 ) + cellX] != 0;
     }

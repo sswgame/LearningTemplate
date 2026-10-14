@@ -75,8 +75,9 @@ namespace sw
             }
             case ChatMethod::kSend:
             {
-                if ( ServiceKeyUtil::readString( body, ChatLimit::kMaxChannelIDSize, channelID ) == false ||
-                     ServiceKeyUtil::readString( body, ChatLimit::kMaxTextSize, text ) == false || body.hasOverflowed() )
+                const bool bMalformedSend = ServiceKeyUtil::readString( body, ChatLimit::kMaxChannelIDSize, channelID ) == false ||
+                                            ServiceKeyUtil::readString( body, ChatLimit::kMaxTextSize, text ) == false || body.hasOverflowed();
+                if ( bMalformedSend )
                     break;
                 _pService->sendMessage( context._accountID, channelID, text, context._nowMs, _pendingTable.add( context._token ) );
                 return;

@@ -641,8 +641,9 @@ namespace sw
         Target        target      = findNearestTarget( unit._team, unit._x, searchRange, bRam == false, true );
         if ( target.isValid() )
         {
-            const float32 distance = MathUtil::abs( target._x - unit._x );
-            if ( unit._order == ConquestOrder::Follow && unit._squadSlot >= 0 && _commander._bAlive == SW_TRUE && MathUtil::abs( target._x - _commander._x ) > rules._followLeash )
+            const float32 distance             = MathUtil::abs( target._x - unit._x );
+            const bool    bFollowLeashExceeded = unit._order == ConquestOrder::Follow && unit._squadSlot >= 0 && _commander._bAlive == SW_TRUE && MathUtil::abs( target._x - _commander._x ) > rules._followLeash;
+            if ( bFollowLeashExceeded )
                 target = Target{};
             else if ( unit._order == ConquestOrder::Hold && distance > def._range )
                 target = Target{};
@@ -656,8 +657,9 @@ namespace sw
                 float32 best  = ConquestWorldInternal::kFarAway;
                 for ( const ConquestSite& site : _listSite )
                 {
-                    const float32 ahead = ( site._pDef->_x - unit._x ) * direction;
-                    if ( site._owner != unit._team && ahead >= -site._pDef->_captureRadius && MathUtil::abs( ahead ) < best )
+                    const float32 ahead                = ( site._pDef->_x - unit._x ) * direction;
+                    const bool    bUncapturedSiteAhead = site._owner != unit._team && ahead >= -site._pDef->_captureRadius && MathUtil::abs( ahead ) < best;
+                    if ( bUncapturedSiteAhead )
                     {
                         best  = MathUtil::abs( ahead );
                         goalX = site._pDef->_x;
@@ -702,8 +704,9 @@ namespace sw
                 contender = ConquestTeam::Player;
             else if ( bEnemyInside && bPlayerInside == false )
                 contender = ConquestTeam::Enemy;
-            const bool bBarred = site._gateHealth > 0.0f && site._owner != ConquestTeam::Neutral && isLaddered( siteIndex, contender ) == false;
-            if ( contender == ConquestTeam::Neutral || contender == site._owner || bBarred )
+            const bool bBarred    = site._gateHealth > 0.0f && site._owner != ConquestTeam::Neutral && isLaddered( siteIndex, contender ) == false;
+            const bool bNoCapture = contender == ConquestTeam::Neutral || contender == site._owner || bBarred;
+            if ( bNoCapture )
             {
                 site._captureProgress = MathUtil::max( 0.0f, site._captureProgress - deltaTime );
                 continue;
@@ -916,7 +919,8 @@ namespace sw
         const float32 plantX    = computeGateX( _listSite[static_cast<size_t>( siteIndex )], attacker ) - direction * ConquestWorldInternal::kGateStandOff;
         for ( const ConquestUnit& unit : _listUnit )
         {
-            if ( unit._bAlive == SW_TRUE && unit._team == attacker && unit._bPlanted == SW_TRUE && unit._pDef->_siegeRole == ConquestSiegeRole::Ladder && MathUtil::abs( unit._x - plantX ) <= ConquestWorldInternal::kLadderReach )
+            const bool bLadderReaches = unit._bAlive == SW_TRUE && unit._team == attacker && unit._bPlanted == SW_TRUE && unit._pDef->_siegeRole == ConquestSiegeRole::Ladder && MathUtil::abs( unit._x - plantX ) <= ConquestWorldInternal::kLadderReach;
+            if ( bLadderReaches )
                 return true;
         }
         return false;
@@ -928,8 +932,9 @@ namespace sw
         const float32 direction = ConquestWorldInternal::computeDirection( team );
         for ( int32 siteIndex = 0; siteIndex < static_cast<int32>( _listSite.size() ); ++siteIndex )
         {
-            const ConquestSite& site = _listSite[static_cast<size_t>( siteIndex )];
-            if ( ConquestWorldInternal::isHostile( team, site._owner ) == false || site._gateHealth <= 0.0f || isLaddered( siteIndex, team ) )
+            const ConquestSite& site             = _listSite[static_cast<size_t>( siteIndex )];
+            const bool          bGateNotBlocking = ConquestWorldInternal::isHostile( team, site._owner ) == false || site._gateHealth <= 0.0f || isLaddered( siteIndex, team );
+            if ( bGateNotBlocking )
                 continue;
             const float32 stopX = computeGateX( site, team ) - direction * ConquestWorldInternal::kGateStandOff;
             // 성문 앞(공격하는 쪽)에 있던 것만 막는다. 이미 안쪽에 있는 것은 그대로 둔다.
@@ -951,8 +956,9 @@ namespace sw
 
     float32 ConquestWorld::computeMoraleScale( ConquestTeam team, float32 x ) const
     {
-        const ConquestRules& rules = _pCatalog->getRules();
-        if ( team != ConquestTeam::Player || _commander._bAlive == SW_FALSE || MathUtil::abs( x - _commander._x ) > rules._moraleRadius )
+        const ConquestRules& rules          = _pCatalog->getRules();
+        const bool           bNoMoraleBonus = team != ConquestTeam::Player || _commander._bAlive == SW_FALSE || MathUtil::abs( x - _commander._x ) > rules._moraleRadius;
+        if ( bNoMoraleBonus )
             return 1.0f;
         return 1.0f + rules._moraleDamageBonus;
     }
@@ -966,7 +972,8 @@ namespace sw
             float32       damage = baseDamage;
             for ( const ConquestSite& site : _listSite )
             {
-                if ( site._owner == victim._team && site._wallHealth > 0.0f && MathUtil::abs( victim._x - site._pDef->_x ) <= site._pDef->_captureRadius )
+                const bool bWallProtects = site._owner == victim._team && site._wallHealth > 0.0f && MathUtil::abs( victim._x - site._pDef->_x ) <= site._pDef->_captureRadius;
+                if ( bWallProtects )
                 {
                     damage *= 1.0f - rules._wallProtection;
                     break;

@@ -40,7 +40,8 @@ namespace sw
 
             static DWORD WINAPI onControl( DWORD control, DWORD, LPVOID, LPVOID )
             {
-                if ( control == SERVICE_CONTROL_STOP || control == SERVICE_CONTROL_PRESHUTDOWN || control == SERVICE_CONTROL_SHUTDOWN )
+                const bool bStopRequest = control == SERVICE_CONTROL_STOP || control == SERVICE_CONTROL_PRESHUTDOWN || control == SERVICE_CONTROL_SHUTDOWN;
+                if ( bStopRequest )
                 {
                     reportStatus( SERVICE_STOP_PENDING, kStopWaitHintMilliseconds );
                     ShutdownSignal::request( ShutdownCause::ServiceStop );

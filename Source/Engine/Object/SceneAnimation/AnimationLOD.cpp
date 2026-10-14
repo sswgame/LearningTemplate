@@ -93,7 +93,8 @@ namespace sw
         {
             expected += costPerEvaluationMicroseconds / static_cast<float32>( MathUtil::max( pItem[itemIndex]._updateRateDivisor, 1u ) );
         }
-        if ( budgetMicroseconds <= 0.0f || expected <= budgetMicroseconds || costPerEvaluationMicroseconds <= 0.0f )
+        const bool bThrottleNotNeeded = budgetMicroseconds <= 0.0f || expected <= budgetMicroseconds || costPerEvaluationMicroseconds <= 0.0f;
+        if ( bThrottleNotNeeded )
             return expected;
 
         // 덜 중요한 것부터 — 같으면 앞의 것(등록 순서)이 먼저 늘어난다(결정적).

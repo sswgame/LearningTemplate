@@ -109,9 +109,10 @@ namespace sw::editor
     bool ImageUtil::loadGray16FromMemory( const uint8* pBuffer, size_t bufferSize, vector<uint16>& outListSample, int32& outWidth, int32& outHeight )
     {
         outListSample.clear();
-        outWidth  = 0;
-        outHeight = 0;
-        if ( pBuffer == nullptr || bufferSize == 0 || bufferSize > static_cast<size_t>( MathUtil::kMaxInt32 ) )
+        outWidth                       = 0;
+        outHeight                      = 0;
+        const bool bInvalidImageBuffer = pBuffer == nullptr || bufferSize == 0 || bufferSize > static_cast<size_t>( MathUtil::kMaxInt32 );
+        if ( bInvalidImageBuffer )
         {
             SW_LOG_ERROR( "Image buffer is empty or larger than stb_image can address (%# bytes).", bufferSize );
             return false;
@@ -135,9 +136,10 @@ namespace sw::editor
     bool ImageUtil::loadFloat4FromMemory( const uint8* pBuffer, size_t bufferSize, vector<float4>& outListTexel, int32& outWidth, int32& outHeight )
     {
         outListTexel.clear();
-        outWidth  = 0;
-        outHeight = 0;
-        if ( pBuffer == nullptr || bufferSize == 0 || bufferSize > static_cast<size_t>( MathUtil::kMaxInt32 ) )
+        outWidth                       = 0;
+        outHeight                      = 0;
+        const bool bInvalidImageBuffer = pBuffer == nullptr || bufferSize == 0 || bufferSize > static_cast<size_t>( MathUtil::kMaxInt32 );
+        if ( bInvalidImageBuffer )
         {
             SW_LOG_ERROR( "Image buffer is empty or larger than stb_image can address (%# bytes).", bufferSize );
             return false;

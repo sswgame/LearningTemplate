@@ -141,13 +141,15 @@ namespace sw
         }
         else
         {
-            const string_view minuteText = trimmed.substr( colon + 1 );
-            if ( minuteText.size() != 2 || StringUtil::parseInt( trimmed.substr( 0, colon ), hours ) == false || StringUtil::parseInt( minuteText, minutes ) == false )
+            const string_view minuteText      = trimmed.substr( colon + 1 );
+            const bool        bMalformedClock = minuteText.size() != 2 || StringUtil::parseInt( trimmed.substr( 0, colon ), hours ) == false || StringUtil::parseInt( minuteText, minutes ) == false;
+            if ( bMalformedClock )
                 return false;
         }
-        const bool  bMinuteValid = 0 <= minutes && minutes < 60;
-        const int32 total        = hours * 60 + minutes;
-        if ( bMinuteValid == false || hours < 0 || total > kScheduleMinutesPerDay )
+        const bool  bMinuteValid      = 0 <= minutes && minutes < 60;
+        const int32 total             = hours * 60 + minutes;
+        const bool  bInvalidClockTime = bMinuteValid == false || hours < 0 || total > kScheduleMinutesPerDay;
+        if ( bInvalidClockTime )
             return false;
         outMinutes = total;
         return true;

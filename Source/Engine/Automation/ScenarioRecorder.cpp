@@ -332,7 +332,8 @@ namespace sw
             return false;
         if ( path.substr( path.size() - Internal::kScenarioSuffix.size() ) != Internal::kScenarioSuffix )
             return false;
-        if ( path.find( ".." ) != string_view::npos || path.find( '\\' ) != string_view::npos || path.find( ':' ) != string_view::npos )
+        const bool bUnsafeScenarioPath = path.find( ".." ) != string_view::npos || path.find( '\\' ) != string_view::npos || path.find( ':' ) != string_view::npos;
+        if ( bUnsafeScenarioPath )
             return false;
         return true;
     }

@@ -90,7 +90,8 @@ namespace sw::editor
             return false;
 
         RHINativeHandles vkNative{};
-        if ( pRHIDevice->queryNativeHandles( vkNative ) == false || vkNative._backend != RHIBackend::Vulkan || vkNative._pDevice == nullptr )
+        const bool       bVulkanHandlesUnavailable = pRHIDevice->queryNativeHandles( vkNative ) == false || vkNative._backend != RHIBackend::Vulkan || vkNative._pDevice == nullptr;
+        if ( bVulkanHandlesUnavailable )
             return false;
 
         _pRHIDevice  = pRHIDevice;
@@ -264,14 +265,16 @@ namespace sw::editor
 
     void ImGuiVulkanRendererBackend::render( class IRHIDevice* pRHIDevice, ImDrawData* pDrawData )
     {
-        VkCommandBuffer cmdBuffer = static_cast<VkCommandBuffer>( pRHIDevice->getNativeContext() );
-        if ( cmdBuffer != nullptr && pDrawData != nullptr && _pRHIDevice != nullptr )
+        VkCommandBuffer cmdBuffer          = static_cast<VkCommandBuffer>( pRHIDevice->getNativeContext() );
+        const bool      bCanRenderDrawData = cmdBuffer != nullptr && pDrawData != nullptr && _pRHIDevice != nullptr;
+        if ( bCanRenderDrawData )
             ImGui_ImplVulkan_RenderDrawData( pDrawData, cmdBuffer );
     }
 
     void* ImGuiVulkanRendererBackend::registerTexture( RHITextureHandle texture )
     {
-        if ( texture == 0 || _pRHIDevice == nullptr || _pSampler == nullptr )
+        const bool bCannotRegisterTexture = texture == 0 || _pRHIDevice == nullptr || _pSampler == nullptr;
+        if ( bCannotRegisterTexture )
             return nullptr;
 
         void* pImageViewPtr{ nullptr };

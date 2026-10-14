@@ -19,7 +19,8 @@ namespace sw
             {
                 while ( inOutCursor < size )
                 {
-                    const uint8 character = pData[inOutCursor];
+                    const uint8 character   = pData[inOutCursor];
+                    const bool  bWhitespace = character == ' ' || character == '\t' || character == '\r' || character == '\n';
                     if ( character == '#' )
                     {
                         while ( inOutCursor < size && pData[inOutCursor] != '\n' )
@@ -27,7 +28,7 @@ namespace sw
                             ++inOutCursor;
                         }
                     }
-                    else if ( character == ' ' || character == '\t' || character == '\r' || character == '\n' )
+                    else if ( bWhitespace )
                     {
                         ++inOutCursor;
                     }
@@ -38,8 +39,11 @@ namespace sw
                 }
                 uint64 value  = 0;
                 size_t digits = 0;
-                while ( inOutCursor < size && pData[inOutCursor] >= '0' && pData[inOutCursor] <= '9' && digits < 9 )
+                while ( true )
                 {
+                    const bool bReadingDigit = inOutCursor < size && pData[inOutCursor] >= '0' && pData[inOutCursor] <= '9' && digits < 9;
+                    if ( bReadingDigit == false )
+                        break;
                     value = value * 10u + static_cast<uint64>( pData[inOutCursor] - '0' );
                     ++inOutCursor;
                     ++digits;
@@ -72,18 +76,20 @@ namespace sw
 
     bool AutomationImageMetric::parsePpm( const uint8* pData, size_t size, AutomationImage& outImage, string& outError )
     {
-        using Internal = AutomationImageMetricInternal;
-        size_t cursor  = 2;
-        uint32 width   = 0;
-        uint32 height  = 0;
-        uint32 maxVal  = 0;
-        if ( pData == nullptr || size < 2 || pData[0] != 'P' || pData[1] != '6' )
+        using Internal          = AutomationImageMetricInternal;
+        size_t     cursor       = 2;
+        uint32     width        = 0;
+        uint32     height       = 0;
+        uint32     maxVal       = 0;
+        const bool bNotPpmMagic = pData == nullptr || size < 2 || pData[0] != 'P' || pData[1] != '6';
+        if ( bNotPpmMagic )
         {
             outError = "not a binary PPM (P6)";
             return false;
         }
-        if ( Internal::readHeaderNumber( pData, size, cursor, width ) == false || Internal::readHeaderNumber( pData, size, cursor, height ) == false ||
-             Internal::readHeaderNumber( pData, size, cursor, maxVal ) == false || width == 0 || height == 0 || maxVal != 255 || cursor >= size )
+        const bool bBrokenPpmHeader = Internal::readHeaderNumber( pData, size, cursor, width ) == false || Internal::readHeaderNumber( pData, size, cursor, height ) == false ||
+                                      Internal::readHeaderNumber( pData, size, cursor, maxVal ) == false || width == 0 || height == 0 || maxVal != 255 || cursor >= size;
+        if ( bBrokenPpmHeader )
         {
             outError = "the PPM header is broken (needs width height 255)";
             return false;
@@ -124,7 +130,8 @@ namespace sw
         float32 arrValue[4]{};
         for ( size_t index = 0; index < 4; ++index )
         {
-            if ( StringUtil::parseFloat( StringUtil::trim( parts.getSplitList()[index] ), arrValue[index] ) == false || arrValue[index] < 0.0f || arrValue[index] > 1.0f )
+            const bool bInvalidRectComponent = StringUtil::parseFloat( StringUtil::trim( parts.getSplitList()[index] ), arrValue[index] ) == false || arrValue[index] < 0.0f || arrValue[index] > 1.0f;
+            if ( bInvalidRectComponent )
                 return false;
         }
         if ( arrValue[0] >= arrValue[2] || arrValue[1] >= arrValue[3] )

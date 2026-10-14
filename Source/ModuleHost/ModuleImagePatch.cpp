@@ -167,11 +167,13 @@ namespace sw
             /** @brief PE32+ 인지 보고, 섹션 표와 두 import 디렉터리의 RVA 를 찾습니다. */
             static bool findPe( const vector<uint8>& bytes, PeView& outView )
             {
-                if ( bytes.size() < kDosNewHeaderOffset + 4 || bytes[0] != 'M' || bytes[1] != 'Z' )
+                const bool bNotPeImage = bytes.size() < kDosNewHeaderOffset + 4 || bytes[0] != 'M' || bytes[1] != 'Z';
+                if ( bNotPeImage )
                     return false;
-                uint32 peOffset{ 0 };
-                uint32 signature{ 0 };
-                if ( readAt( bytes, kDosNewHeaderOffset, peOffset ) == false || readAt( bytes, peOffset, signature ) == false || signature != kPeSignature )
+                uint32     peOffset{ 0 };
+                uint32     signature{ 0 };
+                const bool bInvalidPeSignature = readAt( bytes, kDosNewHeaderOffset, peOffset ) == false || readAt( bytes, peOffset, signature ) == false || signature != kPeSignature;
+                if ( bInvalidPeSignature )
                     return false;
                 uint16     optionalHeaderSize{ 0 };
                 uint16     magic{ 0 };
@@ -378,8 +380,9 @@ namespace sw
 
     string ModuleImagePatch::makeGenerationName( string_view libraryName, uint32 generation )
     {
-        size_t extensionPos = libraryName.find( ".so" );
-        if ( extensionPos == string_view::npos && libraryName.size() > 4 && StringUtil::endsWith( libraryName, ".dll", true ) )
+        size_t     extensionPos           = libraryName.find( ".so" );
+        const bool bShouldTryDllExtension = extensionPos == string_view::npos && libraryName.size() > 4 && StringUtil::endsWith( libraryName, ".dll", true );
+        if ( bShouldTryDllExtension )
             extensionPos = libraryName.size() - 4;
         if ( extensionPos == string_view::npos )
             return {};

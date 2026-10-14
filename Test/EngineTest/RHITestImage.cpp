@@ -15,9 +15,10 @@ namespace test
         /** @brief IEEE 반정밀도 하나를 [0,1] 로 자른 0~255 로 바꿉니다(음수 · 비정상 수 · 무한은 0). */
         uint8 toUnitByteFromHalf( uint16 half )
         {
-            const uint32 exponent = ( half >> 10 ) & 0x1Fu;
-            const uint32 mantissa = half & 0x3FFu;
-            if ( exponent == 0 || exponent == 0x1Fu || ( half & 0x8000u ) != 0 )
+            const uint32 exponent             = ( half >> 10 ) & 0x1Fu;
+            const uint32 mantissa             = half & 0x3FFu;
+            const bool   bUnrepresentableHalf = exponent == 0 || exponent == 0x1Fu || ( half & 0x8000u ) != 0;
+            if ( bUnrepresentableHalf )
                 return 0;
             const float32 value = ( 1.0f + static_cast<float32>( mantissa ) / 1024.0f ) * std::ldexp( 1.0f, static_cast<int32>( exponent ) - 15 );
             return static_cast<uint8>( sw::MathUtil::clamp( value, 0.0f, 1.0f ) * 255.0f );

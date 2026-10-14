@@ -107,7 +107,8 @@ namespace sw
         uint32             entryCount     = 0;
         const bool         bHeader        = reader.read( magic ) && reader.read( version ) && reader.readString( backendName ) && reader.read( backendVersion ) &&
                              reader.read( entryCount );
-        if ( bHeader == false || magic != NavMeshAssetInternal::kMagic || version != kVersion )
+        const bool bInvalidHeader = bHeader == false || magic != NavMeshAssetInternal::kMagic || version != kVersion;
+        if ( bInvalidHeader )
         {
             SW_LOG_ERROR( "'%#' is not a navmesh of format %#", sourceLabel, kVersion );
             return false;
@@ -122,9 +123,10 @@ namespace sw
         {
             NavMeshAssetEntry entry;
             string            agentType;
-            uint32            tileCount = 0;
-            if ( reader.readString( agentType ) == false || reader.read( entry._settingsHash ) == false || reader.read( entry._inputHash ) == false ||
-                 reader.read( entry._bounds ) == false || reader.read( tileCount ) == false )
+            uint32            tileCount       = 0;
+            const bool        bTruncatedEntry = reader.readString( agentType ) == false || reader.read( entry._settingsHash ) == false || reader.read( entry._inputHash ) == false ||
+                                         reader.read( entry._bounds ) == false || reader.read( tileCount ) == false;
+            if ( bTruncatedEntry )
             {
                 SW_LOG_ERROR( "'%#' is truncated", sourceLabel );
                 _listEntry.clear();
@@ -134,7 +136,8 @@ namespace sw
             entry._listTile.resize( tileCount );
             for ( NavTileData& tile : entry._listTile )
             {
-                if ( reader.read( tile._tileX ) == false || reader.read( tile._tileZ ) == false || reader.readBytes( tile._bytes ) == false )
+                const bool bTruncatedTile = reader.read( tile._tileX ) == false || reader.read( tile._tileZ ) == false || reader.readBytes( tile._bytes ) == false;
+                if ( bTruncatedTile )
                 {
                     SW_LOG_ERROR( "'%#' is truncated", sourceLabel );
                     _listEntry.clear();

@@ -106,7 +106,8 @@ namespace sw
 
                 // 속성은 시작 태그 안에서만 찾는다(`findStartTagEnd` 설명). 태그 이름 뒤 첫 공백이 태그 밖이면 속성이 없는 요소다.
                 listAttrEnd.clear();
-                if ( line.size() > kXMLWrapColumn && bOpenTag && firstSpace != string_view::npos && tagEnd != string_view::npos && firstSpace < tagEnd )
+                const bool bWrapAttributes = line.size() > kXMLWrapColumn && bOpenTag && firstSpace != string_view::npos && tagEnd != string_view::npos && firstSpace < tagEnd;
+                if ( bWrapAttributes )
                     collectAttributeEnds( line.substr( 0, tagEnd ), firstSpace, listAttrEnd );
 
                 if ( listAttrEnd.size() < 2 )

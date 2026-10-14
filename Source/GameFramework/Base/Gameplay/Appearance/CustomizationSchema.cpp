@@ -463,7 +463,8 @@ namespace sw
             return true;
         for ( const CustomizationParamDef& partner : schema._listParameter )
         {
-            if ( partner._symmetry != pParam->_symmetry || partner._name == pParam->_name || partner._kind != pParam->_kind )
+            const bool bNotMirrorPartner = partner._symmetry != pParam->_symmetry || partner._name == pParam->_name || partner._kind != pParam->_kind;
+            if ( bNotMirrorPartner )
                 continue;
             CustomizationValue mirrored = value;
             mirrored._parameter         = partner._name;

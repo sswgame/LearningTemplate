@@ -70,7 +70,8 @@ namespace sw
                 // Display 만 비교하면 안 된다. 같은 X 서버에서 창을 다시 만들면(에디터 창 재생성, 테스트가
                 // 창을 반복해서 생성하고 파괴할 때) 캐시된 XIC 가 이미 파괴된 Window 를 XNClientWindow 로 가리키고 있어
                 // 텍스트 입력이 조용히 죽는다. 창까지 함께 비교해야 한다.
-                if ( s_pInputContext != nullptr && s_pImDisplay == pDisplay && s_imWindow == x11Window )
+                const bool bCachedContextReusable = s_pInputContext != nullptr && s_pImDisplay == pDisplay && s_imWindow == x11Window;
+                if ( bCachedContextReusable )
                     return s_pInputContext;
 
                 if ( s_pInputContext != nullptr )
@@ -415,7 +416,8 @@ namespace sw
 
     void InputManager::recenterLockedCursorPlatform()
     {
-        if ( _pMouse == nullptr || _pMouse->getLockMode() != MouseLockMode::LockedInCenter || X11InputInternal::s_bWindowFocused == false )
+        const bool bCannotRecenter = _pMouse == nullptr || _pMouse->getLockMode() != MouseLockMode::LockedInCenter || X11InputInternal::s_bWindowFocused == false;
+        if ( bCannotRecenter )
             return;
 
         IWindow* pWindow = IWindow::getActiveWindow();

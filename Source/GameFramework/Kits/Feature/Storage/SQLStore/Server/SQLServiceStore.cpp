@@ -147,8 +147,9 @@ namespace sw
             private:
                 ServiceStoreResult applyWrites( const ServiceTransaction& transaction, ServiceCommitInfo& outInfo )
                 {
-                    SQLResult result = _connection.execute( _connection.getDialect()._pNextCommitVersion, nullptr, 0, &_rowSet );
-                    if ( result != SQLResult::Ok || _rowSet._listRow.empty() || _rowSet._listRow[0].empty() )
+                    SQLResult  result                    = _connection.execute( _connection.getDialect()._pNextCommitVersion, nullptr, 0, &_rowSet );
+                    const bool bCommitVersionUnavailable = result != SQLResult::Ok || _rowSet._listRow.empty() || _rowSet._listRow[0].empty();
+                    if ( bCommitVersionUnavailable )
                         return toStoreResult( result == SQLResult::Ok || result == SQLResult::Constraint ? SQLResult::Error : result );
                     const int64                 commitVersion = _rowSet._listRow[0][0]._integer;
                     const vector<ServiceWrite>& listWrite     = transaction.getWrites();

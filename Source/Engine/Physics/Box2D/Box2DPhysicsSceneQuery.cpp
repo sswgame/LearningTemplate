@@ -117,8 +117,9 @@ namespace sw
 
             static bool collectPlane( b2ShapeId shapeID, const b2PlaneResult* pPlane, void* pContext )
             {
-                MoverContext& context = *static_cast<MoverContext*>( pContext );
-                if ( pPlane->hit == false || b2Shape_IsSensor( shapeID ) || context._planeCount >= kMaxMoverPlaneCount )
+                MoverContext& context    = *static_cast<MoverContext*>( pContext );
+                const bool    bSkipPlane = pPlane->hit == false || b2Shape_IsSensor( shapeID ) || context._planeCount >= kMaxMoverPlaneCount;
+                if ( bSkipPlane )
                     return true;
                 context._pPlane[context._planeCount] = b2CollisionPlane{ pPlane->plane, FLT_MAX, 0.0f, true };
                 ++context._planeCount;

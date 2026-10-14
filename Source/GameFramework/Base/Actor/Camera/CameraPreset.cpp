@@ -378,9 +378,11 @@ namespace sw
             const bool bToMatches   = rule._to == to;
             if ( bFromMatches && bToMatches )
                 return rule._blend;
-            if ( pFromAny == nullptr && rule._from == any && bToMatches )
+            const bool bFromAnyMatch = pFromAny == nullptr && rule._from == any && bToMatches;
+            if ( bFromAnyMatch )
                 pFromAny = &rule._blend;
-            if ( pToAny == nullptr && bFromMatches && rule._to == any )
+            const bool bToAnyMatch = pToAny == nullptr && bFromMatches && rule._to == any;
+            if ( bToAnyMatch )
                 pToAny = &rule._blend;
         }
         if ( pFromAny != nullptr )

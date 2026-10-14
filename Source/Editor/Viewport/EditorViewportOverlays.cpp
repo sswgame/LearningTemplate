@@ -73,7 +73,8 @@ namespace sw::editor
         // 저장된 값을 먼저 읽고 등록한다 — 등록은 저장된 바를 덮지 않고 기본값만 적는다.
         const string path = EditorPaths::resolveEditorStateFile( EditorViewportOverlaysInternal::kFileName );
         KeyValueMap  mapData;
-        if ( path.empty() == false && FileUtil::exists( path ) && KeyValueFile::loadFile( path, mapData ) ) // 처음엔 파일이 없다
+        const bool   bCanLoadOverlayState = path.empty() == false && FileUtil::exists( path ) && KeyValueFile::loadFile( path, mapData );
+        if ( bCanLoadOverlayState ) // 처음엔 파일이 없다
             _layout.readFrom( EditorViewportOverlaysInternal::kViewPrefix, mapData );
         for ( const EditorViewportOverlaysInternal::BarDesc& desc : EditorViewportOverlaysInternal::kArrBar )
         {

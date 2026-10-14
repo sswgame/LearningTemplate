@@ -244,7 +244,8 @@ namespace sw::editor
              */
             static void handleHierarchyDrop( GameObject* pTarget, const ImGuiPayload* pPayload, GameObjectManager* pManager )
             {
-                if ( pPayload == nullptr || pManager == nullptr || pTarget == nullptr )
+                const bool bInvalidDropTarget = pPayload == nullptr || pManager == nullptr || pTarget == nullptr;
+                if ( bInvalidDropTarget )
                     return;
                 if ( pPayload->DataSize != static_cast<int32>( sizeof( uint64 ) ) )
                     return;
@@ -308,7 +309,8 @@ namespace sw::editor
                 const bool bEditsAllowed = EditorPlaySession::areSceneEditsAllowed();
                 if ( bEditsAllowed == false )
                     ImGui::BeginDisabled();
-                if ( ImGui::MenuItem( "Remove Component" ) && pComp != nullptr && pManager != nullptr )
+                const bool bRemoveComponentConfirmed = ImGui::MenuItem( "Remove Component" ) && pComp != nullptr && pManager != nullptr;
+                if ( bRemoveComponentConfirmed )
                     EditorSceneCommands::destroyComponent( pManager, pObj, pComp );
                 if ( bEditsAllowed == false )
                     ImGui::EndDisabled();
@@ -333,7 +335,8 @@ namespace sw::editor
             /** @brief 이 오브젝트의 컴포넌트 종류와 태그마다 "그것을 가진 오브젝트 모두 선택" 을 고르는 메뉴입니다. */
             static void drawSelectSameMenu( GameObject* pObj, GameObjectManager* pManager )
             {
-                if ( pObj == nullptr || pManager == nullptr || ImGui::BeginMenu( "Select All With" ) == false )
+                const bool bSelectSameMenuUnavailable = pObj == nullptr || pManager == nullptr || ImGui::BeginMenu( "Select All With" ) == false;
+                if ( bSelectSameMenuUnavailable )
                     return;
                 vector<GameObject*> listMatch;
                 for ( const Component* pComponent : pObj->getComponents() )
@@ -767,10 +770,11 @@ namespace sw::editor
         rowState._listPreviousRow.swap( rowState._listDrawnRow );
         rowState._listDrawnRow.clear();
         {
-            EditorContext*    pContext  = EditorContext::get();
-            const GameObject* pPrimary  = pContext != nullptr ? pContext->getSubsystem<EditorSelection>().getPrimaryObject() : nullptr;
-            const uint64      primaryID = pPrimary != nullptr ? pPrimary->getObjectID() : 0;
-            if ( primaryID != rowState._lastPrimaryID && rowState._bClickedThisFrame == false && primaryID != 0 )
+            EditorContext*    pContext             = EditorContext::get();
+            const GameObject* pPrimary             = pContext != nullptr ? pContext->getSubsystem<EditorSelection>().getPrimaryObject() : nullptr;
+            const uint64      primaryID            = pPrimary != nullptr ? pPrimary->getObjectID() : 0;
+            const bool        bRevealPrimaryObject = primaryID != rowState._lastPrimaryID && rowState._bClickedThisFrame == false && primaryID != 0;
+            if ( bRevealPrimaryObject )
                 rowState._revealObjectID = primaryID;
             rowState._lastPrimaryID     = primaryID;
             rowState._bClickedThisFrame = false;
@@ -914,7 +918,8 @@ namespace sw::editor
             HierarchyPanelInternal::RowState& rowState = HierarchyPanelInternal::getRowState();
             const vector<uint64>&             listRow  = rowState._listPreviousRow;
 
-            if ( io.KeyCtrl && ImGui::IsKeyPressed( ImGuiKey_V, false ) && EditorSceneCommands::hasCopiedObjects() )
+            const bool bPasteShortcutPressed = io.KeyCtrl && ImGui::IsKeyPressed( ImGuiKey_V, false ) && EditorSceneCommands::hasCopiedObjects();
+            if ( bPasteShortcutPressed )
             {
                 vector<GameObject*> listPasted;
                 EditorSceneCommands::pasteObjects( pManager, listPasted ); // 되돌리기는 한 단계이고, 붙여 넣은 것을 선택한다
@@ -932,7 +937,8 @@ namespace sw::editor
                 }
                 return;
             }
-            if ( io.KeyCtrl == false && ( ImGui::IsKeyPressed( ImGuiKey_UpArrow ) || ImGui::IsKeyPressed( ImGuiKey_DownArrow ) ) && listRow.empty() == false )
+            const bool bArrowNavigationPressed = io.KeyCtrl == false && ( ImGui::IsKeyPressed( ImGuiKey_UpArrow ) || ImGui::IsKeyPressed( ImGuiKey_DownArrow ) ) && listRow.empty() == false;
+            if ( bArrowNavigationPressed )
             {
                 const GameObject* pPrimary = editorSelection.getPrimaryObject();
                 size_t            current  = listRow.size();
@@ -952,7 +958,8 @@ namespace sw::editor
                 }
                 return;
             }
-            if ( io.KeyCtrl && ImGui::IsKeyPressed( ImGuiKey_C, false ) && listSel.empty() == false )
+            const bool bCopyShortcutPressed = io.KeyCtrl && ImGui::IsKeyPressed( ImGuiKey_C, false ) && listSel.empty() == false;
+            if ( bCopyShortcutPressed )
             {
                 (void)EditorSceneCommands::copyObjects( listSel ); // 복사한 수는 붙여 넣을 때 확인할 수 있다
                 return;

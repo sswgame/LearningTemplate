@@ -254,7 +254,8 @@ namespace sw
     {
         if ( _textureSet != VK_NULL_HANDLE )
             return true;
-        if ( _device == VK_NULL_HANDLE || _descriptorPool == VK_NULL_HANDLE || _defaultSampler == VK_NULL_HANDLE || _textureSetLayout == VK_NULL_HANDLE )
+        const bool bDescriptorObjectsMissing = _device == VK_NULL_HANDLE || _descriptorPool == VK_NULL_HANDLE || _defaultSampler == VK_NULL_HANDLE || _textureSetLayout == VK_NULL_HANDLE;
+        if ( bDescriptorObjectsMissing )
             return false;
 
         // 1x1 더미 이미지. 안 쓰는 텍스처 원소가 유효하도록 한다.
@@ -333,7 +334,8 @@ namespace sw
 
     void VulkanRHIDevice::writeBindlessTextureSlot( RHIDescriptorIndex index, VkImageView view, uint32 imageLayout )
     {
-        if ( _textureSet == VK_NULL_HANDLE || view == VK_NULL_HANDLE || index >= kBindlessTextureCount )
+        const bool bInvalidTextureSlotWrite = _textureSet == VK_NULL_HANDLE || view == VK_NULL_HANDLE || index >= kBindlessTextureCount;
+        if ( bInvalidTextureSlotWrite )
             return;
 
         // 레이아웃은 샘플 시점에 이미지가 실제로 있을 레이아웃과 같아야 한다. 컬러는 SHADER_READ_ONLY,
@@ -356,7 +358,8 @@ namespace sw
 
     void VulkanRHIDevice::writeBindlessStorageImageSlot( RHIDescriptorIndex index, VkImageView view )
     {
-        if ( _textureSet == VK_NULL_HANDLE || view == VK_NULL_HANDLE || index >= kBindlessStorageImageCount )
+        const bool bInvalidStorageImageSlotWrite = _textureSet == VK_NULL_HANDLE || view == VK_NULL_HANDLE || index >= kBindlessStorageImageCount;
+        if ( bInvalidStorageImageSlotWrite )
             return;
 
         VkDescriptorImageInfo imageInfo{};

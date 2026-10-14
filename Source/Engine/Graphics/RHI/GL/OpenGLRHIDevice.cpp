@@ -186,8 +186,9 @@ namespace sw
         {
             if ( key._arrColor[colorIndex] == 0 )
                 continue;
-            const OpenGLTextureRecord* pRecord = resolveTexture( key._arrColor[colorIndex] );
-            if ( pRecord == nullptr || pRecord->_bDepthStencil != SW_FALSE || key._arrColorSlice[colorIndex] >= pRecord->_arraySize )
+            const OpenGLTextureRecord* pRecord                 = resolveTexture( key._arrColor[colorIndex] );
+            const bool                 bInvalidColorAttachment = pRecord == nullptr || pRecord->_bDepthStencil != SW_FALSE || key._arrColorSlice[colorIndex] >= pRecord->_arraySize;
+            if ( bInvalidColorAttachment )
                 return 0;
             arrColorSlice[attachedColors]    = key._arrColorSlice[colorIndex];
             arrColorRecord[attachedColors++] = pRecord;
@@ -196,8 +197,9 @@ namespace sw
         const OpenGLTextureRecord* pDepthRecord{ nullptr };
         if ( depth != 0 )
         {
-            pDepthRecord = resolveTexture( depth );
-            if ( pDepthRecord == nullptr || pDepthRecord->_bDepthStencil == SW_FALSE || depthSlice >= pDepthRecord->_arraySize )
+            pDepthRecord                       = resolveTexture( depth );
+            const bool bInvalidDepthAttachment = pDepthRecord == nullptr || pDepthRecord->_bDepthStencil == SW_FALSE || depthSlice >= pDepthRecord->_arraySize;
+            if ( bInvalidDepthAttachment )
                 return 0;
         }
         if ( attachedColors == 0 && pDepthRecord == nullptr )

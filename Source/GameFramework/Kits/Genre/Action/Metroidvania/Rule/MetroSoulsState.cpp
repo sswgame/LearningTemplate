@@ -86,7 +86,8 @@ namespace sw
 
     bool MetroSoulsState::tryRecoverCorpse( const hashed_string& areaID, const float2& position )
     {
-        if ( _corpse._bActive == SW_FALSE || _corpse._area != areaID || _pCatalog == nullptr )
+        const bool bCorpseNotRecoverable = _corpse._bActive == SW_FALSE || _corpse._area != areaID || _pCatalog == nullptr;
+        if ( bCorpseNotRecoverable )
             return false;
         const float32 radius = _pCatalog->getRules()._corpseRecoverRadius;
         if ( float2::getDistanceSquared( _corpse._position, position ) > radius * radius )

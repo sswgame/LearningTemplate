@@ -26,7 +26,8 @@ namespace sw
             {
                 if ( def._kind == CityBuildingKind::Service && def._service == CityService::Water )
                     return 0;
-                if ( def._kind == CityBuildingKind::Producer || def._kind == CityBuildingKind::Storage || def._kind == CityBuildingKind::Market )
+                const bool bStorageLikeBuilding = def._kind == CityBuildingKind::Producer || def._kind == CityBuildingKind::Storage || def._kind == CityBuildingKind::Market;
+                if ( bStorageLikeBuilding )
                     return 1;
                 return 2;
             }
@@ -173,7 +174,8 @@ namespace sw
         const CityTile* pTile = findTile( x, y );
         if ( pTile == nullptr )
             return CityPlaceResult::OutOfBounds;
-        if ( pTile->_bRoad != SW_FALSE || pTile->_buildingIndex >= 0 || _land.isUsable( x, y ) == false )
+        const bool bTileOccupied = pTile->_bRoad != SW_FALSE || pTile->_buildingIndex >= 0 || _land.isUsable( x, y ) == false;
+        if ( bTileOccupied )
             return CityPlaceResult::Occupied;
         if ( pTile->_terrain == CityTerrain::Water || pTile->_terrain == CityTerrain::Rock )
             return CityPlaceResult::BadTerrain;
@@ -216,8 +218,9 @@ namespace sw
         {
             for ( int32 dx = 0; dx < pDef->_size; ++dx )
             {
-                const CityTile* pTile = findTile( x + dx, y + dy );
-                if ( pTile->_bRoad != SW_FALSE || pTile->_buildingIndex >= 0 || _land.isUsable( x + dx, y + dy ) == false )
+                const CityTile* pTile              = findTile( x + dx, y + dy );
+                const bool      bFootprintOccupied = pTile->_bRoad != SW_FALSE || pTile->_buildingIndex >= 0 || _land.isUsable( x + dx, y + dy ) == false;
+                if ( bFootprintOccupied )
                     return CityPlaceResult::Occupied;
                 if ( pTile->_terrain == CityTerrain::Water || pTile->_terrain == CityTerrain::Rock )
                     return CityPlaceResult::BadTerrain;
@@ -313,9 +316,10 @@ namespace sw
             {
                 if ( isRoad( x, y ) == false )
                     continue;
-                const bool bInsideX = x >= building._origin._x && x < building._origin._x + size;
-                const bool bInsideY = y >= building._origin._y && y < building._origin._y + size;
-                if ( building.isHouse() == false && bInsideX == false && bInsideY == false )
+                const bool bInsideX     = x >= building._origin._x && x < building._origin._x + size;
+                const bool bInsideY     = y >= building._origin._y && y < building._origin._y + size;
+                const bool bNotEntrance = building.isHouse() == false && bInsideX == false && bInsideY == false;
+                if ( bNotEntrance )
                     continue; // 대각선 모서리는 입구가 아니다
                 const int32 score = CitySimulationInternal::computeChebyshev( int2{ x, y }, building._origin, size ) * 100 + y * 10 + x;
                 if ( score < bestScore )
@@ -449,7 +453,8 @@ namespace sw
         {
             for ( CityBuilding& building : _listBuilding )
             {
-                if ( building._bAlive == SW_FALSE || building.isHouse() || CitySimulationInternal::computeLaborPriority( *building._pDef ) != priority )
+                const bool bSkipLaborBuilding = building._bAlive == SW_FALSE || building.isHouse() || CitySimulationInternal::computeLaborPriority( *building._pDef ) != priority;
+                if ( bSkipLaborBuilding )
                     continue;
                 const int32 needed = building._pDef->_workers;
                 // 길이 없으면 일꾼이 오지 못한다. 반경 서비스(우물)는 길이 없어도 된다.
@@ -466,8 +471,9 @@ namespace sw
     {
         for ( int32 buildingIndex = 0; buildingIndex < static_cast<int32>( _listBuilding.size() ); ++buildingIndex )
         {
-            CityBuilding& building = _listBuilding[static_cast<size_t>( buildingIndex )];
-            if ( building._bAlive == SW_FALSE || building.isHouse() || building._efficiency <= 0.0f )
+            CityBuilding& building          = _listBuilding[static_cast<size_t>( buildingIndex )];
+            const bool    bInactiveBuilding = building._bAlive == SW_FALSE || building.isHouse() || building._efficiency <= 0.0f;
+            if ( bInactiveBuilding )
                 continue;
             const CityBuildingDef& def = *building._pDef;
             switch ( def._kind )
@@ -479,14 +485,16 @@ namespace sw
                         // 반경 안의 집에 항상 준다(파라오의 우물).
                         for ( CityBuilding& house : _listBuilding )
                         {
-                            if ( house._bAlive != SW_FALSE && house.isHouse() &&
-                                 CitySimulationInternal::computeChebyshev( house._origin, building._origin, def._size ) <= def._range )
+                            const bool bHouseInServiceRange = house._bAlive != SW_FALSE && house.isHouse() &&
+                                                              CitySimulationInternal::computeChebyshev( house._origin, building._origin, def._size ) <= def._range;
+                            if ( bHouseInServiceRange )
                                 house._arrServiceTime[static_cast<int32>( def._service )] = _time;
                         }
                         break;
                     }
                     building._walkerTimer += deltaTime * building._efficiency;
-                    if ( building._walkerTimer >= def._walkerInterval && building._activeWalkerCount == 0 && building.hasRoadAccess() )
+                    const bool bShouldSpawnServiceWalker = building._walkerTimer >= def._walkerInterval && building._activeWalkerCount == 0 && building.hasRoadAccess();
+                    if ( bShouldSpawnServiceWalker )
                     {
                         building._walkerTimer = 0.0f;
                         spawnRoamer( buildingIndex, CityWalkerKind::Service );
@@ -503,7 +511,8 @@ namespace sw
                         building._productionProgress -= 1.0f;
                         building._stock.addItem( def._listGood.front(), def._productionAmount );
                     }
-                    if ( building._activeWalkerCount == 0 && building._stock.isEmpty() == false && building.hasRoadAccess() )
+                    const bool bShouldSpawnCart = building._activeWalkerCount == 0 && building._stock.isEmpty() == false && building.hasRoadAccess();
+                    if ( bShouldSpawnCart )
                         spawnCart( buildingIndex );
                     break;
                 }
@@ -519,8 +528,9 @@ namespace sw
                         {
                             if ( want <= 0 )
                                 break;
-                            if ( storage._bAlive == SW_FALSE || storage._pDef->_kind != CityBuildingKind::Storage || storage._efficiency <= 0.0f ||
-                                 getRoadComponent( storage._accessTile ) != component || component < 0 )
+                            const bool bUnusableStorage = storage._bAlive == SW_FALSE || storage._pDef->_kind != CityBuildingKind::Storage || storage._efficiency <= 0.0f ||
+                                                          getRoadComponent( storage._accessTile ) != component || component < 0;
+                            if ( bUnusableStorage )
                                 continue;
                             const int32 moved = MathUtil::min( want, storage._stock.getItemCount( goodID ) );
                             if ( moved > 0 && storage._stock.moveItemTo( building._stock, goodID, moved ) )
@@ -528,8 +538,9 @@ namespace sw
                         }
                     }
                     building._walkerTimer += deltaTime * building._efficiency;
-                    if ( building._walkerTimer >= def._walkerInterval && building._activeWalkerCount == 0 && building._stock.isEmpty() == false &&
-                         building.hasRoadAccess() )
+                    const bool bShouldSpawnTrader = building._walkerTimer >= def._walkerInterval && building._activeWalkerCount == 0 && building._stock.isEmpty() == false &&
+                                                    building.hasRoadAccess();
+                    if ( bShouldSpawnTrader )
                     {
                         building._walkerTimer = 0.0f;
                         spawnRoamer( buildingIndex, CityWalkerKind::Trader );
@@ -599,8 +610,9 @@ namespace sw
         int32 incoming = 0;
         for ( const CityWalker& walker : _listWalker )
         {
-            if ( walker._bAlive != SW_FALSE && walker._kind == CityWalkerKind::Cart && walker._targetBuilding >= 0 &&
-                 &_listBuilding[static_cast<size_t>( walker._targetBuilding )] == &storage )
+            const bool bIncomingCart = walker._bAlive != SW_FALSE && walker._kind == CityWalkerKind::Cart && walker._targetBuilding >= 0 &&
+                                     &_listBuilding[static_cast<size_t>( walker._targetBuilding )] == &storage;
+            if ( bIncomingCart )
                 incoming += walker._cargoAmount;
         }
         return storage._pDef->_capacity - storage._stock.getTotalCount() - incoming;
@@ -612,9 +624,10 @@ namespace sw
         int32 bestDistance = 1 << 30;
         for ( int32 buildingIndex = 0; buildingIndex < static_cast<int32>( _listBuilding.size() ); ++buildingIndex )
         {
-            const CityBuilding& storage = _listBuilding[static_cast<size_t>( buildingIndex )];
-            if ( storage._bAlive == SW_FALSE || storage._pDef->_kind != CityBuildingKind::Storage || storage._efficiency <= 0.0f || roadComponent < 0 ||
-                 getRoadComponent( storage._accessTile ) != roadComponent )
+            const CityBuilding& storage          = _listBuilding[static_cast<size_t>( buildingIndex )];
+            const bool          bStorageRejected = storage._bAlive == SW_FALSE || storage._pDef->_kind != CityBuildingKind::Storage || storage._efficiency <= 0.0f || roadComponent < 0 ||
+                                          getRoadComponent( storage._accessTile ) != roadComponent;
+            if ( bStorageRejected )
                 continue;
             if ( std::find( storage._pDef->_listGood.begin(), storage._pDef->_listGood.end(), goodID ) == storage._pDef->_listGood.end() )
                 continue;
@@ -633,7 +646,8 @@ namespace sw
     bool CitySimulation::findRoadPath( const int2& from, const int2& to, vector<int2>& outListPath ) const
     {
         outListPath.clear();
-        if ( isRoad( from._x, from._y ) == false || isRoad( to._x, to._y ) == false || getRoadComponent( from ) != getRoadComponent( to ) )
+        const bool bNoRoadConnection = isRoad( from._x, from._y ) == false || isRoad( to._x, to._y ) == false || getRoadComponent( from ) != getRoadComponent( to );
+        if ( bNoRoadConnection )
             return false;
         // 타일 표시, 부모, 큐는 재사용 스크래치에 둔다. 일꾼을 내보낼 때마다 W x H 를 새로 할당하지 않기 위해서다.
         const int32 goal = _topology.toIndex( to );
@@ -863,7 +877,8 @@ namespace sw
             const int32              capacity = pLevel != nullptr ? pLevel->_population : 0;
             if ( house._population > capacity )
                 house._population = capacity; // 내려간 집에서 사람이 떠난다
-            if ( house.hasRoadAccess() && bAttractive && house._population < capacity )
+            const bool bCanImmigrate = house.hasRoadAccess() && bAttractive && house._population < capacity;
+            if ( bCanImmigrate )
             {
                 house._immigrationTimer += deltaTime;
                 if ( house._immigrationTimer >= _settings._immigrationInterval )
@@ -900,7 +915,8 @@ namespace sw
         int32 income = 0;
         for ( CityBuilding& house : _listBuilding )
         {
-            if ( house._bAlive == SW_FALSE || house.isHouse() == false || house._population <= 0 )
+            const bool bSkipHouse = house._bAlive == SW_FALSE || house.isHouse() == false || house._population <= 0;
+            if ( bSkipHouse )
                 continue;
             // 먹기: 가진 물자마다 네 사람에 하나를 먹는다.
             const int32           need = ( house._population + 3 ) / 4 * _settings._goodsPerFourPeople;
@@ -1063,7 +1079,8 @@ namespace sw
         int32 height = 0;
         archive >> width;
         archive >> height;
-        if ( archive.isError() || width != _topology._width || height != _topology._height || _pCatalog == nullptr )
+        const bool bInvalidCityHeader = archive.isError() || width != _topology._width || height != _topology._height || _pCatalog == nullptr;
+        if ( bInvalidCityHeader )
             return false;
 
         const int32      buildingLimit = static_cast<int32>( _listTile.size() ); // 건물은 적어도 한 셀을 차지한다
@@ -1076,7 +1093,8 @@ namespace sw
             archive >> tile._desirability;
             archive >> terrain;
             archive >> tile._bRoad;
-            if ( archive.isError() || terrain > static_cast<uint8>( CityTerrain::Rock ) || tile._buildingIndex >= buildingLimit )
+            const bool bInvalidTileData = archive.isError() || terrain > static_cast<uint8>( CityTerrain::Rock ) || tile._buildingIndex >= buildingLimit;
+            if ( bInvalidTileData )
                 return false;
             tile._terrain = static_cast<CityTerrain>( terrain );
         }
@@ -1154,9 +1172,10 @@ namespace sw
             archive >> service;
             archive >> walker._bReturning;
             archive >> walker._bAlive;
-            const bool bHomeValid = -1 <= walker._homeBuilding && walker._homeBuilding < static_cast<int32>( buildingCount );
-            const bool bEnumValid = kind <= static_cast<uint8>( CityWalkerKind::Cart ) && service <= static_cast<uint8>( CityService::Count );
-            if ( archive.isError() || bHomeValid == false || bEnumValid == false )
+            const bool bHomeValid         = -1 <= walker._homeBuilding && walker._homeBuilding < static_cast<int32>( buildingCount );
+            const bool bEnumValid         = kind <= static_cast<uint8>( CityWalkerKind::Cart ) && service <= static_cast<uint8>( CityService::Count );
+            const bool bInvalidWalkerData = archive.isError() || bHomeValid == false || bEnumValid == false;
+            if ( bInvalidWalkerData )
                 return false;
             walker._kind    = static_cast<CityWalkerKind>( kind );
             walker._service = static_cast<CityService>( service );

@@ -64,12 +64,13 @@ namespace sw::editor
                 settings._mode                  = settings._mode == EditorNetMode::Standalone ? EditorNetMode::DedicatedServer : settings._mode;
                 for ( const string& argument : listArgument )
                 {
-                    int32 playerCount = 0;
+                    int32      playerCount          = 0;
+                    const bool bPlayerCountArgument = StringUtil::parseInt( argument, playerCount ) && 1 <= playerCount && playerCount <= EditorNetModeCombo::kMaxPlayerCount;
                     if ( argument == "dedicated" )
                         settings._mode = EditorNetMode::DedicatedServer;
                     else if ( argument == "listen" )
                         settings._mode = EditorNetMode::ListenHost;
-                    else if ( StringUtil::parseInt( argument, playerCount ) && 1 <= playerCount && playerCount <= EditorNetModeCombo::kMaxPlayerCount )
+                    else if ( bPlayerCountArgument )
                         settings._clientCount = playerCount;
                     else
                         return false;
@@ -97,10 +98,11 @@ namespace sw::editor
             /** @brief `netplay.wait <클라이언트 수> [<초>]` — 그만큼 붙을 때까지 이 프레임을 붙잡습니다(자동화 시나리오용 — 시나리오는 프레임 단위라 기동 시간을 모른다). */
             static bool runWait( const vector<string>& listArgument, string& outReply )
             {
-                int32 clientCount = 0;
-                int32 seconds     = kDefaultWaitSeconds;
-                if ( listArgument.empty() || StringUtil::parseInt( listArgument[0], clientCount ) == false ||
-                     ( listArgument.size() > 1 && StringUtil::parseInt( listArgument[1], seconds ) == false ) )
+                int32      clientCount             = 0;
+                int32      seconds                 = kDefaultWaitSeconds;
+                const bool bInvalidClientArguments = listArgument.empty() || StringUtil::parseInt( listArgument[0], clientCount ) == false ||
+                                                     ( listArgument.size() > 1 && StringUtil::parseInt( listArgument[1], seconds ) == false );
+                if ( bInvalidClientArguments )
                     return false;
                 EditorNetPlaySession* pSession = findSession();
                 if ( pSession == nullptr || pSession->isRunning() == false )

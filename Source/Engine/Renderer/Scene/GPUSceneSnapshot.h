@@ -141,7 +141,8 @@ namespace sw
          */
         static bool canShareMaterialBinding( const GPUMeshBatch& head, const GPUMeshBatch& other, bool bShaderBindsMaterialCb )
         {
-            if ( other._materialBuffer != head._materialBuffer || other._materialSrv != head._materialSrv || other._materialCount != head._materialCount )
+            const bool bDifferentMaterialBinding = other._materialBuffer != head._materialBuffer || other._materialSrv != head._materialSrv || other._materialCount != head._materialCount;
+            if ( bDifferentMaterialBinding )
                 return false;
             if ( bShaderBindsMaterialCb && other._materialCb != head._materialCb )
                 return false;

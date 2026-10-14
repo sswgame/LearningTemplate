@@ -82,7 +82,8 @@ namespace sw
 
     void MatchState::update( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f || _phase == MatchPhase::Waiting || _phase == MatchPhase::Ended )
+        const bool bNotRunning = deltaTime <= 0.0f || _phase == MatchPhase::Waiting || _phase == MatchPhase::Ended;
+        if ( bNotRunning )
             return;
         _elapsed += deltaTime;
         _phaseTime += deltaTime;
@@ -216,7 +217,8 @@ namespace sw
 
     void MatchState::addScore( int32 team, int32 amount )
     {
-        if ( isValidTeam( team ) == false || amount == 0 || _phase == MatchPhase::Ended )
+        const bool bIgnoreScore = isValidTeam( team ) == false || amount == 0 || _phase == MatchPhase::Ended;
+        if ( bIgnoreScore )
             return;
         MatchTeam& target = _listTeam[static_cast<size_t>( team )];
         target._score += amount;
@@ -245,9 +247,10 @@ namespace sw
         {
             bAnyCostLoss = bAnyCostLoss || ( team._bEliminated && team._bIgnoreCost == SW_FALSE && team._costPool <= 0 );
         }
+        const bool bLastTeamStanding = standingCount == 1 && ( _settings._bLastTeamStandingWins || bAnyCostLoss ) && _listTeam.size() > 1;
         if ( standingCount == 0 )
             endMatch( -1 );
-        else if ( standingCount == 1 && ( _settings._bLastTeamStandingWins || bAnyCostLoss ) && _listTeam.size() > 1 )
+        else if ( bLastTeamStanding )
             endMatch( standingTeam );
     }
 
@@ -378,7 +381,8 @@ namespace sw
             archive >> team._placement;
             archive >> team._bIgnoreCost;
             archive >> team._bEliminated;
-            if ( archive.isError() || team._bIgnoreCost > SW_TRUE || team._bEliminated > SW_TRUE )
+            const bool bInvalidTeamFlags = archive.isError() || team._bIgnoreCost > SW_TRUE || team._bEliminated > SW_TRUE;
+            if ( bInvalidTeamFlags )
                 return false;
         }
         uint32 participantCount = 0;

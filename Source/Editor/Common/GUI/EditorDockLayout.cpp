@@ -127,7 +127,8 @@ namespace sw::editor
     {
         EditorContext* pContext = EditorContext::get();
         string         safeName;
-        if ( pContext == nullptr || ImGui::GetCurrentContext() == nullptr || EditorLayoutStore::sanitizeName( name, safeName ) == false )
+        const bool     bCannotSaveLayout = pContext == nullptr || ImGui::GetCurrentContext() == nullptr || EditorLayoutStore::sanitizeName( name, safeName ) == false;
+        if ( bCannotSaveLayout )
             return false;
         const string targetFolder = folder.empty() ? EditorLayoutStore::getDefaultFolder() : string( folder );
         if ( targetFolder.empty() )
@@ -319,7 +320,8 @@ namespace sw::editor
         }
 
         // 도킹 레이아웃도 같다. 스위치가 만든 배치(전부 떠 있는 창, 기본 배치)를 사용자의 imgui.ini 에 쓰지 않는다.
-        if ( _imguiIniPath.empty() == false && isPanelOverrideActive() == false && ImGui::GetCurrentContext() != nullptr )
+        const bool bCanSaveImguiLayout = _imguiIniPath.empty() == false && isPanelOverrideActive() == false && ImGui::GetCurrentContext() != nullptr;
+        if ( bCanSaveImguiLayout )
         {
             ImGui::SaveIniSettingsToDisk( _imguiIniPath.c_str() );
             SW_LOG_TRACE( "Saved ImGui layout to %#", _imguiIniPath.c_str() );
@@ -369,8 +371,9 @@ namespace sw::editor
             return;
 
         // 숨은 탭의 창도 Active 다. Begin 은 호출되고 내용만 건너뛴다. 닫힌 패널의 창은 Active 가 아니므로 고를 탭이 없다.
-        ImGuiWindow* pWindow = ImGui::FindWindowByName( EditorDockLayoutInternal::kFrontTabWindowTitle );
-        if ( pWindow == nullptr || pWindow->Active == false || _frontTabFrameCount >= EditorDockLayoutInternal::kMaxFrontTabFrames )
+        ImGuiWindow* pWindow              = ImGui::FindWindowByName( EditorDockLayoutInternal::kFrontTabWindowTitle );
+        const bool   bFrontTabUnavailable = pWindow == nullptr || pWindow->Active == false || _frontTabFrameCount >= EditorDockLayoutInternal::kMaxFrontTabFrames;
+        if ( bFrontTabUnavailable )
         {
             _bFrontTabPending = SW_FALSE;
             return;
@@ -378,8 +381,9 @@ namespace sw::editor
 
         // DockTabIsVisible 는 이번 프레임의 Begin 이 정한 값이다. 도킹된 창이 탭 막대에서 선택되어 보이면 참이다. 같은 프레임에 뒤에서 처음 나타난
         // 창(다시 연 패널)이 포커스를 가져가면 다음 프레임에 탭이 바뀌므로, 두 프레임 동안 포커스를 주고 나서 확인한다.
-        constexpr uint32 kMinFocusFrames = 2;
-        if ( pWindow->DockNode != nullptr && pWindow->DockTabIsVisible && _frontTabFrameCount >= kMinFocusFrames )
+        constexpr uint32 kMinFocusFrames  = 2;
+        const bool       bFrontTabSettled = pWindow->DockNode != nullptr && pWindow->DockTabIsVisible && _frontTabFrameCount >= kMinFocusFrames;
+        if ( bFrontTabSettled )
         {
             _bFrontTabPending = SW_FALSE;
             return;
@@ -404,8 +408,9 @@ namespace sw::editor
             _lastDockspaceHeight = bHasSavedSize ? pRoot->Size.y : workSize.y;
         }
 
-        const bool bResized = workSize.x != _lastDockspaceWidth || workSize.y != _lastDockspaceHeight;
-        if ( bResized && pRoot != nullptr && pRoot->IsSplitNode() )
+        const bool bResized           = workSize.x != _lastDockspaceWidth || workSize.y != _lastDockspaceHeight;
+        const bool bRescaleSplitNodes = bResized && pRoot != nullptr && pRoot->IsSplitNode();
+        if ( bRescaleSplitNodes )
         {
             const ImVec2 scale{ workSize.x / _lastDockspaceWidth, workSize.y / _lastDockspaceHeight };
             EditorDockLayoutInternal::scaleSizeRef( pRoot->ChildNodes[0], scale );

@@ -73,7 +73,8 @@ namespace sw
         vector<GameObjectHandle> listRider;
         for ( const VehicleSeatComponent* pSeat : pManager->getComponentRegistry().getAll<VehicleSeatComponent>() )
         {
-            if ( pSeat != nullptr && pSeat->getOwner() == pOwner && pSeat->isFree() == false )
+            const bool bOwnerRiderSeat = pSeat != nullptr && pSeat->getOwner() == pOwner && pSeat->isFree() == false;
+            if ( bOwnerRiderSeat )
                 listRider.push_back( pSeat->getOccupant() );
         }
         for ( const GameObjectHandle& rider : listRider )
@@ -93,7 +94,8 @@ namespace sw
             return false;
         for ( const VehicleSeatComponent* pSeat : pManager->getComponentRegistry().getAll<VehicleSeatComponent>() )
         {
-            if ( pSeat != nullptr && pSeat->getOwner() == pOwner && pSeat->isDriverSeat() && pSeat->isFree() == false )
+            const bool bOccupiedDriverSeat = pSeat != nullptr && pSeat->getOwner() == pOwner && pSeat->isDriverSeat() && pSeat->isFree() == false;
+            if ( bOccupiedDriverSeat )
                 return true;
         }
         return false;

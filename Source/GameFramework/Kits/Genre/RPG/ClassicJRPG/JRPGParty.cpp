@@ -77,8 +77,9 @@ namespace sw
 
     int32 JRPGParty::addMember( const hashed_string& memberID, string_view name, const hashed_string& classID, int32 level )
     {
-        const JRPGClassDef* pClass = _pCatalog != nullptr ? _pCatalog->findClass( classID ) : nullptr;
-        if ( pClass == nullptr || static_cast<int32>( _listMember.size() ) >= kMaxMembers || findMemberIndex( memberID ) >= 0 )
+        const JRPGClassDef* pClass           = _pCatalog != nullptr ? _pCatalog->findClass( classID ) : nullptr;
+        const bool          bCannotAddMember = pClass == nullptr || static_cast<int32>( _listMember.size() ) >= kMaxMembers || findMemberIndex( memberID ) >= 0;
+        if ( bCannotAddMember )
             return -1;
 
         JRPGMember member;
@@ -141,7 +142,8 @@ namespace sw
 
     int32 JRPGParty::addExp( int32 memberIndex, int64 amount )
     {
-        if ( isValidIndex( memberIndex ) == false || amount <= 0 || _pCatalog == nullptr )
+        const bool bCannotAddExp = isValidIndex( memberIndex ) == false || amount <= 0 || _pCatalog == nullptr;
+        if ( bCannotAddExp )
             return 0;
         const JRPGClassDef* pClass = _pCatalog->findClass( _listMember[static_cast<size_t>( memberIndex )]._classID );
         if ( pClass == nullptr )
@@ -211,7 +213,8 @@ namespace sw
 
     void JRPGParty::learnManual( int32 memberIndex, const hashed_string& manualID )
     {
-        if ( isValidIndex( memberIndex ) == false || _pCatalog == nullptr || _pCatalog->findManual( manualID ) == nullptr )
+        const bool bCannotLearnManual = isValidIndex( memberIndex ) == false || _pCatalog == nullptr || _pCatalog->findManual( manualID ) == nullptr;
+        if ( bCannotLearnManual )
             return;
         JRPGMember& member = _listMember[static_cast<size_t>( memberIndex )];
         if ( member.findProficiency( manualID ) >= 0 )
@@ -288,7 +291,8 @@ namespace sw
     {
         uint32 memberCount = 0;
         // 멤버마다 id, 직업, 이름(12) + 주문, 비급, 슬롯 수(12) + 레벨(20) + 능력치(28) + HP, MP, 내공(12) 바이트 이상
-        if ( _pCatalog == nullptr || StateArchiveUtil::readCount( archive, 84, memberCount ) == false || memberCount > static_cast<uint32>( kMaxMembers ) )
+        const bool bInvalidPartyData = _pCatalog == nullptr || StateArchiveUtil::readCount( archive, 84, memberCount ) == false || memberCount > static_cast<uint32>( kMaxMembers );
+        if ( bInvalidPartyData )
             return false;
         vector<JRPGMember> listMember( memberCount );
         for ( JRPGMember& member : listMember )

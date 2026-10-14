@@ -76,8 +76,9 @@ namespace sw
     void ImageWidget::paint( CanvasPainter& painter, const UIPaintContext& context ) const
     {
         (void)context;
-        const bool bImagePath = _image == nullptr && _imagePath.empty() == false;
-        if ( _image == nullptr && bImagePath == false && _brush.isInvisible() )
+        const bool bImagePath      = _image == nullptr && _imagePath.empty() == false;
+        const bool bNothingToPaint = _image == nullptr && bImagePath == false && _brush.isInvisible();
+        if ( bNothingToPaint )
             return;
         CanvasBrush brush = _brush.makeCanvasBrush( _image );
         if ( bImagePath )

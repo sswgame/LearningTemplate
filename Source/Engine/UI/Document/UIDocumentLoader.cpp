@@ -79,8 +79,9 @@ namespace sw
                 const hashed_string name = hashed_string::findInterned( string_view( pName ) );
                 if ( name.empty() )
                     return nullptr;
-                const TypeInfo* pType = engine::getTypeRegistry().findType( name );
-                if ( pType == nullptr || pType->isAlive() == false || pType->isDerivedFrom( Widget::StaticType() ) == false )
+                const TypeInfo* pType          = engine::getTypeRegistry().findType( name );
+                const bool      bNotWidgetType = pType == nullptr || pType->isAlive() == false || pType->isDerivedFrom( Widget::StaticType() ) == false;
+                if ( bNotWidgetType )
                     return nullptr;
                 return pType;
             }
@@ -268,9 +269,10 @@ namespace sw
             static unique_ptr<Widget> instantiateNode( InstantiateContext& context, const UIDocumentAsset& document, uint32 nodeIndex, const string& namePrefix )
             {
                 unique_ptr<Widget>    widget;
-                const UIDocumentNode& node  = document._listNode[nodeIndex];
-                const TypeInfo*       pType = engine::getTypeRegistry().findType( node._typeName );
-                if ( pType == nullptr || pType->isAlive() == false || pType->isDerivedFrom( Widget::StaticType() ) == false )
+                const UIDocumentNode& node               = document._listNode[nodeIndex];
+                const TypeInfo*       pType              = engine::getTypeRegistry().findType( node._typeName );
+                const bool            bNotWidgetTypeName = pType == nullptr || pType->isAlive() == false || pType->isDerivedFrom( Widget::StaticType() ) == false;
+                if ( bNotWidgetTypeName )
                 {
                     widget = failInstantiate( context, document, node, string( "'" ) + node._typeName.c_str() + "' is not a widget type" );
                     return widget;
@@ -454,7 +456,8 @@ namespace sw
     {
         // `Widget` 이 첫 기반(단일 상속 연쇄)이므로 블록 시작이 곧 `Widget*` 이다.
         static const hashed_string s_ctor( "$ctor" );
-        if ( type.canConstruct() == false || type._size == 0 || type.isDerivedFrom( Widget::StaticType() ) == false )
+        const bool                 bNotConstructibleWidget = type.canConstruct() == false || type._size == 0 || type.isDerivedFrom( Widget::StaticType() ) == false;
+        if ( bNotConstructibleWidget )
             return {};
         const FunctionInfo* pCtor = type.findMethod( s_ctor );
         if ( pCtor == nullptr || pCtor->_invoker.isBound() == false )

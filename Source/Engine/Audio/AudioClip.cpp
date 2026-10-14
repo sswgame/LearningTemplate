@@ -68,8 +68,9 @@ namespace sw
 {
     bool AudioClipData::convertPcm( const AudioPcm& pcm, AudioClipData& outClip )
     {
-        const uint32 bytesPerSample = pcm._bitsPerSample / 8u;
-        if ( pcm._channelCount == 0 || pcm._sampleRate == 0 || bytesPerSample == 0 || bytesPerSample > 4 )
+        const uint32 bytesPerSample        = pcm._bitsPerSample / 8u;
+        const bool   bUnsupportedPcmLayout = pcm._channelCount == 0 || pcm._sampleRate == 0 || bytesPerSample == 0 || bytesPerSample > 4;
+        if ( bUnsupportedPcmLayout )
             return false;
         if ( pcm._bFloat == SW_TRUE && bytesPerSample != 4 )
             return false;
@@ -246,7 +247,8 @@ namespace sw
             }
         }
         // 공통 디코더가 못 읽는 WAV(ADPCM 등)와 다른 형식(MP3 등)은 백엔드의 대체 디코더에 넘긴다. OGG 는 넘기지 않는다(Media Foundation 은 Vorbis 를 모른다).
-        if ( bDecoded == false && _pFallbackDecoder != nullptr && FileUtil::hasExtension( pathView, ".ogg" ) == false )
+        const bool bUseFallbackDecoder = bDecoded == false && _pFallbackDecoder != nullptr && FileUtil::hasExtension( pathView, ".ogg" ) == false;
+        if ( bUseFallbackDecoder )
             bDecoded = _pFallbackDecoder( pathView, pcm );
         if ( bDecoded == false )
         {

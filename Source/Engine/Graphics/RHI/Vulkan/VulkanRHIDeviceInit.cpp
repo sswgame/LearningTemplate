@@ -537,7 +537,8 @@ namespace sw
 
     bool VulkanRHIDevice::recreateSwapChain()
     {
-        if ( _device == nullptr || _width == 0 || _height == 0 )
+        const bool bCannotRecreateSwapChain = _device == nullptr || _width == 0 || _height == 0;
+        if ( bCannotRecreateSwapChain )
             return false;
         {
             std::scoped_lock<mutex> queueLock{ _queueMutex };

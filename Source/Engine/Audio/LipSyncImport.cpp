@@ -37,8 +37,9 @@ namespace sw
             vector<uint8> bytes;
             AudioPcm      pcm;
             AudioClipData clip;
-            if ( ResourceIO::readBinaryResource( relative, bytes ) == false || AudioClipDecoder::decode( relative, bytes.data(), bytes.size(), pcm ) == false ||
-                 AudioClipData::convertPcm( pcm, clip ) == false )
+            const bool    bDecodeFailed = ResourceIO::readBinaryResource( relative, bytes ) == false || AudioClipDecoder::decode( relative, bytes.data(), bytes.size(), pcm ) == false ||
+                                       AudioClipData::convertPcm( pcm, clip ) == false;
+            if ( bDecodeFailed )
             {
                 SW_LOG_ERROR( "Lip sync import could not decode '%#'", relative.c_str() );
                 ++outFailedCount;

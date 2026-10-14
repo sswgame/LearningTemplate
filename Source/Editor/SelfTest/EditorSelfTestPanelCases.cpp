@@ -493,8 +493,9 @@ namespace sw::editor
                 uint32        scrollingTableCount{ 0 };
                 for ( int32 tableIndex = 0; tableIndex < imguiContext.Tables.GetMapSize(); ++tableIndex )
                 {
-                    ImGuiTable* pTable = imguiContext.Tables.TryGetMapData( tableIndex );
-                    if ( pTable == nullptr || pTable->LastFrameActive != imguiContext.FrameCount || pTable->ColumnsCount != 5 )
+                    ImGuiTable* pTable            = imguiContext.Tables.TryGetMapData( tableIndex );
+                    const bool  bNotMatchingTable = pTable == nullptr || pTable->LastFrameActive != imguiContext.FrameCount || pTable->ColumnsCount != 5;
+                    if ( bNotMatchingTable )
                         continue;
                     const string_view firstName{ ImGui::TableGetColumnName( pTable, 0 ) };
                     const string_view lastName{ ImGui::TableGetColumnName( pTable, 4 ) };
@@ -669,7 +670,8 @@ namespace sw::editor
                 {
                     const bool bInSceneView = pWindow != nullptr && pWindow->RootWindow != nullptr && pWindow->RootWindow->Name != nullptr &&
                                               StringUtil::equals( pWindow->RootWindow->Name, kSceneViewTitle ) && pWindow->LastFrameActive == imguiContext.FrameCount;
-                    if ( bInSceneView && view._pTextureID != nullptr && findImageCommand( pWindow->DrawList, textureID, imageCommandIndex, canvasRect ) )
+                    const bool bSceneViewCanvasFound = bInSceneView && view._pTextureID != nullptr && findImageCommand( pWindow->DrawList, textureID, imageCommandIndex, canvasRect );
+                    if ( bSceneViewCanvasFound )
                     {
                         pCanvasDrawList = pWindow->DrawList;
                         break;

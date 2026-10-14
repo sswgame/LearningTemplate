@@ -30,8 +30,9 @@ namespace sw
         _listEntry.clear();
         for ( GimmickCircuitComponent* pCircuit : manager.getComponentRegistry().getAll<GimmickCircuitComponent>() )
         {
-            const GameObject* pOwner = pCircuit->getOwner();
-            if ( pOwner == nullptr || pCircuit->isPendingDestroy() || pCircuit->getCircuit().isBuilt() == false )
+            const GameObject* pOwner       = pCircuit->getOwner();
+            const bool        bSkipCircuit = pOwner == nullptr || pCircuit->isPendingDestroy() || pCircuit->getCircuit().isBuilt() == false;
+            if ( bSkipCircuit )
                 continue;
             GimmickStateEntry entry;
             entry._ownerKey = makeOwnerKey( pOwner->getName() );
@@ -94,8 +95,9 @@ namespace sw
 
     bool GimmickStateBundle::read( const uint8* pData, size_t size )
     {
-        using Internal = GimmickStateBundleInternal;
-        if ( pData == nullptr || size < Internal::kHeaderBytes || LittleEndianUtil::readUint32( pData ) != kMagic || LittleEndianUtil::readUint32( pData + 4 ) != kVersion )
+        using Internal            = GimmickStateBundleInternal;
+        const bool bInvalidBundle = pData == nullptr || size < Internal::kHeaderBytes || LittleEndianUtil::readUint32( pData ) != kMagic || LittleEndianUtil::readUint32( pData + 4 ) != kVersion;
+        if ( bInvalidBundle )
             return false;
         const uint32 count = LittleEndianUtil::readUint32( pData + 8 );
         if ( count > kMaxEntryCount )

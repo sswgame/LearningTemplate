@@ -63,7 +63,8 @@ namespace sw::editor
                 EditorProjectedLineRenderer renderer{ args._pDrawList, *args._pViewProj, args._canvasPos, args._canvasSize };
                 for ( const GameObject* pObject : *args._pListObject )
                 {
-                    if ( pObject == nullptr || pObject->isActiveInHierarchy() == false || pObject->isHiddenInEditor() )
+                    const bool bSkipObject = pObject == nullptr || pObject->isActiveInHierarchy() == false || pObject->isHiddenInEditor();
+                    if ( bSkipObject )
                         continue;
                     pObject->forEachComponentOfType<RigidBodyComponent>( [&renderer]( RigidBodyComponent* pBody )
                     {

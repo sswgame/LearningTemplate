@@ -64,7 +64,8 @@ namespace sw
         Component::onBeginPlay();
         if ( _bProfileReady == SW_FALSE && _profilePath.empty() == false )
             setProfilePath( _profilePath );
-        if ( _bSourceFromParent == SW_TRUE && getOwner() != nullptr && getOwner()->getParent() != nullptr )
+        const bool bBindToParentSource = _bSourceFromParent == SW_TRUE && getOwner() != nullptr && getOwner()->getParent() != nullptr;
+        if ( bBindToParentSource )
             setSource( getOwner()->getParent()->getComponent<SkeletalMeshComponent>() );
         bindToUnit();
     }
@@ -111,8 +112,9 @@ namespace sw
 
     SkeletalMeshComponent* PoseRetargetComponent::findSource() const
     {
-        const GameObject* pOwner = getOwner();
-        if ( _source.isValid() == false || pOwner == nullptr || pOwner->getManager() == nullptr )
+        const GameObject* pOwner              = getOwner();
+        const bool        bSourceUnresolvable = _source.isValid() == false || pOwner == nullptr || pOwner->getManager() == nullptr;
+        if ( bSourceUnresolvable )
             return nullptr;
         return castTo<SkeletalMeshComponent>( pOwner->getManager()->resolveComponent( _source ) );
     }
@@ -123,9 +125,10 @@ namespace sw
         SkeletalMeshComponent* pOld = findSource();
         if ( pOld != nullptr && _pUnit != nullptr )
             _pUnit->removeAnimationDependency( pOld );
-        _source               = ( pSource != nullptr ) ? pSource->getHandle() : ComponentHandle{};
-        _pBoundSourceSkeleton = nullptr;
-        if ( pSource != nullptr && _pUnit != nullptr && pSource != _pUnit )
+        _source                     = ( pSource != nullptr ) ? pSource->getHandle() : ComponentHandle{};
+        _pBoundSourceSkeleton       = nullptr;
+        const bool bNeedsDependency = pSource != nullptr && _pUnit != nullptr && pSource != _pUnit;
+        if ( bNeedsDependency )
             _pUnit->addAnimationDependency( pSource ); // 원본의 기본 포즈가 먼저 끝나야 한다
     }
 

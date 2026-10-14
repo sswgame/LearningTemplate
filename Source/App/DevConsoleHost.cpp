@@ -79,7 +79,8 @@ namespace sw
     {
 #if !defined( SW_SHIPPING )
         // 시작 씬이 다 열린 뒤에 실행한다. 씬을 보는 명령(teleport, select, debugdraw.demo)이 빈 씬에 닿지 않게 하기 위해서다.
-        if ( _bExecPending == SW_FALSE || _devConsoleController == nullptr || engine::areEngineServicesBound() == false )
+        const bool bConsoleNotReadyToExecute = _bExecPending == SW_FALSE || _devConsoleController == nullptr || engine::areEngineServicesBound() == false;
+        if ( bConsoleNotReadyToExecute )
             return;
         const SceneManager& sceneManager = engine::getSceneManager();
         if ( sceneManager.isTransitioning() || sceneManager.getActiveScene() == nullptr )
@@ -96,7 +97,8 @@ namespace sw
     void DevConsoleHost::update( [[maybe_unused]] InputMap* pShellMap )
     {
 #if !defined( SW_SHIPPING )
-        if ( _bEnableEditor == SW_FALSE && _devConsoleController != nullptr && pShellMap != nullptr )
+        const bool bUpdateHeadlessConsole = _bEnableEditor == SW_FALSE && _devConsoleController != nullptr && pShellMap != nullptr;
+        if ( bUpdateHeadlessConsole )
             _devConsoleController->update( *pShellMap );
 #endif
     }

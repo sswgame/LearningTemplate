@@ -389,8 +389,9 @@ namespace sw
         }
 
 #elif defined( SW_PLATFORM_LINUX )
-        struct link_map* pLinkMap = nullptr;
-        if ( dlinfo( pHandle, RTLD_DI_LINKMAP, &pLinkMap ) != 0 || pLinkMap == nullptr || pLinkMap->l_ld == nullptr )
+        struct link_map* pLinkMap            = nullptr;
+        const bool       bLinkMapUnavailable = dlinfo( pHandle, RTLD_DI_LINKMAP, &pLinkMap ) != 0 || pLinkMap == nullptr || pLinkMap->l_ld == nullptr;
+        if ( bLinkMapUnavailable )
             return 0;
 
         uintptr_t stringTable{ 0 };

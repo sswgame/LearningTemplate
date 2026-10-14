@@ -274,8 +274,9 @@ namespace sw
 
     uint32 CrashReportService::collectNewCrashes()
     {
-        using Internal = CrashReportServiceInternal;
-        if ( _bInitialized == SW_FALSE || _crashFolder.empty() || FileUtil::isDirectory( _crashFolder ) == false )
+        using Internal            = CrashReportServiceInternal;
+        const bool bNoCrashFolder = _bInitialized == SW_FALSE || _crashFolder.empty() || FileUtil::isDirectory( _crashFolder ) == false;
+        if ( bNoCrashFolder )
             return 0;
         vector<string> listFile;
         if ( FileUtil::collectFiles( _crashFolder, "", listFile, false ) == false )

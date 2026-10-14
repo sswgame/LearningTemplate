@@ -122,8 +122,9 @@ namespace sw
 
     GameObject* SocketBindingComponent::resolveHolder() const
     {
-        const GameObject* pOwner = getOwner();
-        if ( pOwner == nullptr || pOwner->getManager() == nullptr || _holder.isValid() == false )
+        const GameObject* pOwner          = getOwner();
+        const bool        bNoHolderObject = pOwner == nullptr || pOwner->getManager() == nullptr || _holder.isValid() == false;
+        if ( bNoHolderObject )
             return nullptr;
         return pOwner->getManager()->resolveGameObject( _holder );
     }
@@ -131,8 +132,9 @@ namespace sw
     ISocketPhysicsBody* SocketBindingComponent::resolvePhysicsBody() const
     {
         // 인터페이스 포인터는 핸들이 살아 있다고 확인될 때만 쓴다. 바디 컴포넌트가 먼저 사라질 수 있다.
-        const GameObject* pOwner = getOwner();
-        if ( _pPhysicsBody == nullptr || pOwner == nullptr || pOwner->getManager() == nullptr )
+        const GameObject* pOwner               = getOwner();
+        const bool        bNoPhysicsBodyObject = _pPhysicsBody == nullptr || pOwner == nullptr || pOwner->getManager() == nullptr;
+        if ( bNoPhysicsBodyObject )
             return nullptr;
         return pOwner->getManager()->resolveComponent( _physicsBodyComponent ) != nullptr ? _pPhysicsBody : nullptr;
     }
@@ -148,9 +150,10 @@ namespace sw
 
     bool SocketBindingComponent::attachToHolder()
     {
-        SceneComponent*   pScene  = findOwnerScene();
-        const GameObject* pHolder = resolveHolder();
-        if ( pScene == nullptr || pHolder == nullptr || pHolder->getPrimarySceneComponent() == nullptr )
+        SceneComponent*   pScene                = findOwnerScene();
+        const GameObject* pHolder               = resolveHolder();
+        const bool        bCannotAttachToHolder = pScene == nullptr || pHolder == nullptr || pHolder->getPrimarySceneComponent() == nullptr;
+        if ( bCannotAttachToHolder )
             return false;
         SceneComponent* pHolderScene = pHolder->getPrimarySceneComponent();
         if ( pScene->getParent() != pHolderScene && pScene->attachToComponent( pHolderScene, AttachRule::KeepRelative ) == false )
@@ -188,7 +191,8 @@ namespace sw
 
     bool SocketBindingComponent::bindToSocket( GameObject* pHolder, const hashed_string& socketName, const float4x4& socketInHolder )
     {
-        if ( pHolder == nullptr || pHolder->getPrimarySceneComponent() == nullptr || findOwnerScene() == nullptr )
+        const bool bInvalidBindTarget = pHolder == nullptr || pHolder->getPrimarySceneComponent() == nullptr || findOwnerScene() == nullptr;
+        if ( bInvalidBindTarget )
             return false;
         endPhysicsIfRunning();
         _holder         = pHolder->getHandle();
@@ -250,8 +254,9 @@ namespace sw
 
     bool SocketBindingComponent::transferTo( GameObject* pNewHolder, const hashed_string& socketName, const float4x4& socketInHolder, bool bBlend )
     {
-        SceneComponent* pScene = findOwnerScene();
-        if ( pScene == nullptr || pNewHolder == nullptr || pNewHolder->getPrimarySceneComponent() == nullptr )
+        SceneComponent* pScene            = findOwnerScene();
+        const bool      bInvalidNewHolder = pScene == nullptr || pNewHolder == nullptr || pNewHolder->getPrimarySceneComponent() == nullptr;
+        if ( bInvalidNewHolder )
             return false;
         if ( pScene->canAttachTo( pNewHolder->getPrimarySceneComponent() ) == false )
             return false;

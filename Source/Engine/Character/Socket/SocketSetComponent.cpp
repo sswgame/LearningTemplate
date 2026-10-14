@@ -117,8 +117,9 @@ namespace sw
         const VirtualBoneDef* pVirtual = _socketSet->findVirtualBone( pSocket->_parent );
         float4x4              from;
         float4x4              to;
-        if ( pVirtual == nullptr || SocketSetComponentInternal::findBone( pUnit, pVirtual->_from, from ) == false ||
-             SocketSetComponentInternal::findBone( pUnit, pVirtual->_to, to ) == false )
+        const bool            bVirtualBoneUnresolved = pVirtual == nullptr || SocketSetComponentInternal::findBone( pUnit, pVirtual->_from, from ) == false ||
+                                            SocketSetComponentInternal::findBone( pUnit, pVirtual->_to, to ) == false;
+        if ( bVirtualBoneUnresolved )
             return false;
         outUnitTransform = local * CharacterGeometryUtil::blendTransforms( from, to, pVirtual->_weight );
         return true;

@@ -146,8 +146,9 @@ namespace sw
         outAddress._host   = string( authority.substr( 0, colon ) );
         if ( colon != string_view::npos )
         {
-            int64 port = 0;
-            if ( HTTPTypesInternal::parseUnsigned( authority.substr( colon + 1 ), 10, port ) == false || port <= 0 || port > 65535 )
+            int64      port         = 0;
+            const bool bInvalidPort = HTTPTypesInternal::parseUnsigned( authority.substr( colon + 1 ), 10, port ) == false || port <= 0 || port > 65535;
+            if ( bInvalidPort )
                 return false;
             outAddress._port = static_cast<uint16>( port );
         }
@@ -356,8 +357,9 @@ namespace sw
                 _method = HTTPMethod::Post;
             else
                 return false;
-            _target = string( firstLine.substr( space + 1, secondSpace - space - 1 ) );
-            if ( _target.empty() || _target.front() != '/' || static_cast<int32>( _target.size() ) > HTTPTypesInternal::kMaxTargetBytes )
+            _target                   = string( firstLine.substr( space + 1, secondSpace - space - 1 ) );
+            const bool bInvalidTarget = _target.empty() || _target.front() != '/' || static_cast<int32>( _target.size() ) > HTTPTypesInternal::kMaxTargetBytes;
+            if ( bInvalidTarget )
                 return false;
         }
         while ( rest.empty() == false )
@@ -389,7 +391,8 @@ namespace sw
                     size_t headEnd = string::npos;
                     for ( size_t index = 0; index + 3 < _buffer.size(); ++index )
                     {
-                        if ( _buffer[index] == '\r' && _buffer[index + 1] == '\n' && _buffer[index + 2] == '\r' && _buffer[index + 3] == '\n' )
+                        const bool bHeaderTerminator = _buffer[index] == '\r' && _buffer[index + 1] == '\n' && _buffer[index + 2] == '\r' && _buffer[index + 3] == '\n';
+                        if ( bHeaderTerminator )
                         {
                             headEnd = index;
                             break;

@@ -127,8 +127,9 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return nullptr;
-                const UIPreviewPanel* pPanel = static_cast<const UIPreviewPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "ui_preview" ) );
-                if ( pPanel == nullptr || pPanel->isOpen() == false || pPanel->getProbe()._bValid == false )
+                const UIPreviewPanel* pPanel            = static_cast<const UIPreviewPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "ui_preview" ) );
+                const bool            bProbeUnavailable = pPanel == nullptr || pPanel->isOpen() == false || pPanel->getProbe()._bValid == false;
+                if ( bProbeUnavailable )
                     return nullptr;
                 return &pPanel->getProbe();
             }
@@ -457,10 +458,11 @@ namespace sw::editor
 
     void UIPreviewPanel::syncPreview( UISystem& ui )
     {
-        _viewport               = UIPreviewLogic::makeViewport( ui.getScaleSettings(), _resolutionIndex, _uiScale, _safeZone );
-        const string targetPath = UIPreviewLogic::makeTargetPath( _viewport );
-        const bool   bReopen    = _screen == kInvalidUIScreenHandle || ui.findOffscreenScreen( _screen ) == nullptr || _openedDocument != _documentPath;
-        if ( bReopen && _documentPath.empty() == false && _error.empty() == false && _openedDocument == _documentPath )
+        _viewport                        = UIPreviewLogic::makeViewport( ui.getScaleSettings(), _resolutionIndex, _uiScale, _safeZone );
+        const string targetPath          = UIPreviewLogic::makeTargetPath( _viewport );
+        const bool   bReopen             = _screen == kInvalidUIScreenHandle || ui.findOffscreenScreen( _screen ) == nullptr || _openedDocument != _documentPath;
+        const bool   bPreviousOpenFailed = bReopen && _documentPath.empty() == false && _error.empty() == false && _openedDocument == _documentPath;
+        if ( bPreviousOpenFailed )
             return; // 같은 문서가 지난번에 짓지 못했다 — 고칠 때까지(경로를 바꾸거나 다시 열기) 프레임마다 다시 시도하지 않는다
         if ( bReopen )
         {
@@ -568,8 +570,9 @@ namespace sw::editor
         if ( texture == _texture && _pTextureID != nullptr )
             return;
         releaseTexture();
-        EditorContext* pContext = EditorContext::get();
-        if ( texture == 0 || pContext == nullptr || pContext->getSubsystem<EditorRenderViews>().getRendererBackend() == nullptr )
+        EditorContext* pContext               = EditorContext::get();
+        const bool     bCannotRegisterTexture = texture == 0 || pContext == nullptr || pContext->getSubsystem<EditorRenderViews>().getRendererBackend() == nullptr;
+        if ( bCannotRegisterTexture )
             return; // 렌더 스레드가 아직 만들지 않았다(다음 프레임)
         _pTextureID = pContext->getSubsystem<EditorRenderViews>().getRendererBackend()->registerTexture( texture );
         _texture    = _pTextureID != nullptr ? texture : 0;
@@ -789,8 +792,9 @@ namespace sw::editor
 
     void UIPreviewPanel::applyReattach( uint32 generation, uint32 parentOrdinal, uint32 index, const shared_ptr<RemovedWidget>& pHolder )
     {
-        UIScreen* pScreen = generation == _generation ? findPreviewScreen() : nullptr;
-        if ( pScreen == nullptr || pHolder == nullptr || pHolder->_pWidget == nullptr )
+        UIScreen*  pScreen             = generation == _generation ? findPreviewScreen() : nullptr;
+        const bool bCannotAttachWidget = pScreen == nullptr || pHolder == nullptr || pHolder->_pWidget == nullptr;
+        if ( bCannotAttachWidget )
             return;
         Widget* pAttached = UIPreviewLogic::attachWidget( pScreen->getTree(), std::move( pHolder->_pWidget ), parentOrdinal, index );
         if ( pAttached != nullptr )
@@ -1161,9 +1165,10 @@ namespace sw::editor
 
     void UIPreviewPanel::drawSlotHandles( UIScreen& screen, const float2& drawSize, const float2& origin )
     {
-        using Internal  = UIPreviewPanelInternal;
-        Widget* pWidget = screen.getTree().findWidgetByID( _selected );
-        if ( pWidget == nullptr || UIPreviewLogic::canEditSlotByHandle( *pWidget ) == false || drawSize._x <= 0.0f || drawSize._y <= 0.0f )
+        using Internal             = UIPreviewPanelInternal;
+        Widget*    pWidget         = screen.getTree().findWidgetByID( _selected );
+        const bool bCannotEditSlot = pWidget == nullptr || UIPreviewLogic::canEditSlotByHandle( *pWidget ) == false || drawSize._x <= 0.0f || drawSize._y <= 0.0f;
+        if ( bCannotEditSlot )
             return;
         const PropertyInfo* pSlotProp = UIPreviewLogic::findWidgetProperty( *pWidget, "_slot" );
         if ( pSlotProp == nullptr )
@@ -1225,10 +1230,11 @@ namespace sw::editor
 
     void UIPreviewPanel::drawLayoutHandle( UIScreen& screen, const float2& drawSize, const float2& origin )
     {
-        using Internal      = UIPreviewPanelInternal;
-        WidgetTree& tree    = screen.getTree();
-        Widget*     pWidget = tree.findWidgetByID( _selected );
-        if ( pWidget == nullptr || drawSize._x <= 0.0f || drawSize._y <= 0.0f )
+        using Internal                = UIPreviewPanelInternal;
+        WidgetTree& tree              = screen.getTree();
+        Widget*     pWidget           = tree.findWidgetByID( _selected );
+        const bool  bCannotEditLayout = pWidget == nullptr || drawSize._x <= 0.0f || drawSize._y <= 0.0f;
+        if ( bCannotEditLayout )
             return;
         PanelWidget*    pParent = pWidget->getParent();
         const BoxPanel* pBox    = castTo<const BoxPanel>( pParent );
@@ -1458,8 +1464,9 @@ namespace sw::editor
                 int32 picked = -1;
                 for ( int32 index = 0; index < kPresetCount; ++index )
                 {
-                    const UIPreviewAnchorValues values = UIPreviewLogic::getAnchorPreset( static_cast<UIPreviewAnchorPreset>( index ) );
-                    if ( values._anchorMin._x == s._anchorMin._x && values._anchorMin._y == s._anchorMin._y && values._anchorMax._x == s._anchorMax._x && values._anchorMax._y == s._anchorMax._y )
+                    const UIPreviewAnchorValues values               = UIPreviewLogic::getAnchorPreset( static_cast<UIPreviewAnchorPreset>( index ) );
+                    const bool                  bMatchesAnchorPreset = values._anchorMin._x == s._anchorMin._x && values._anchorMin._y == s._anchorMin._y && values._anchorMax._x == s._anchorMax._x && values._anchorMax._y == s._anchorMax._y;
+                    if ( bMatchesAnchorPreset )
                     {
                         picked = index;
                         break;
@@ -1575,7 +1582,8 @@ namespace sw::editor
         event._delta    = float2{ event._position._x - _lastPointer._x, event._position._y - _lastPointer._y };
         if ( bHovered )
         {
-            if ( _bPointerInside == false || event._delta._x != 0.0f || event._delta._y != 0.0f )
+            const bool bPointerEnteredOrMoved = _bPointerInside == false || event._delta._x != 0.0f || event._delta._y != 0.0f;
+            if ( bPointerEnteredOrMoved )
             {
                 if ( _bNavigationMode )
                 {
@@ -1711,8 +1719,9 @@ namespace sw::editor
         }
         if ( pSelected != nullptr )
             drawBox( UIPreviewLogic::mapUIToImage( pSelected->getGeometry().computeScreenBounds(), drawSize, _viewport ), EditorColorUtil::toImU32( style::kHighlight ), 2.0f );
-        const float4& insets = _viewport._safeInsets;
-        if ( insets._x > 0.0f || insets._y > 0.0f || insets._z > 0.0f || insets._w > 0.0f )
+        const float4& insets         = _viewport._safeInsets;
+        const bool    bHasSafeInsets = insets._x > 0.0f || insets._y > 0.0f || insets._z > 0.0f || insets._w > 0.0f;
+        if ( bHasSafeInsets )
         {
             const UIRect safe{ insets._x, insets._y, _viewport._size._x - insets._z, _viewport._size._y - insets._w };
             drawBox( UIPreviewLogic::mapUIToImage( safe, drawSize, _viewport ), EditorColorUtil::toImU32( Internal::kSafeZoneColor ), 1.0f );
@@ -1723,7 +1732,8 @@ namespace sw::editor
             drawSlotHandles( screen, drawSize, origin );
             drawLayoutHandle( screen, drawSize, origin );
         }
-        if ( bImageClicked && _bSlotDragging == false && _bLayoutDragging == false )
+        const bool bSelectWidgetByClick = bImageClicked && _bSlotDragging == false && _bLayoutDragging == false;
+        if ( bSelectWidgetByClick )
         {
             const ImVec2 mouse = ImGui::GetMousePos();
             const float2 point = UIPreviewLogic::mapImageToUI( float2{ mouse.x - origin._x, mouse.y - origin._y }, drawSize, _viewport );

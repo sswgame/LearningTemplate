@@ -57,7 +57,8 @@ namespace sw
                         continue;
                     for ( SceneComponent* pChild : pScene->getChildren() )
                     {
-                        if ( pChild == nullptr || pChild->getOwner() == nullptr || pChild->getOwner() == pGameObject )
+                        const bool bForeignChild = pChild == nullptr || pChild->getOwner() == nullptr || pChild->getOwner() == pGameObject;
+                        if ( bForeignChild )
                             continue;
                         outListLink.push_back( ChildLink{ pChild->getHandle(), ComponentStableKey::makeKey( pScene ) } );
                     }
@@ -149,8 +150,9 @@ namespace sw
             /** @brief 원소가 `MissingComponent` 이면 보관한 원문을 반환합니다. 직렬화기가 같은 형식이면 그대로 다시 씁니다. */
             static bool queryMissingComponent( const void* pElement, SerializeContext::OpaqueElementView& outElement )
             {
-                const Component* pComp = static_cast<const Component*>( pElement );
-                if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->getTypeInfo() != MissingComponent::StaticType() )
+                const Component* pComp                = static_cast<const Component*>( pElement );
+                const bool       bNotMissingComponent = pComp == nullptr || pComp->isPendingDestroy() || pComp->getTypeInfo() != MissingComponent::StaticType();
+                if ( bNotMissingComponent )
                     return false;
                 return static_cast<const MissingComponent*>( pComp )->tryGetOriginalElement( outElement );
             }
@@ -426,7 +428,8 @@ namespace sw
 
     size_t ObjectStateSerializer::loadFromBinaryBuffer( GameObject* pGameObject, const uint8* pData, size_t size, const ObjectLoadContext& context )
     {
-        if ( pGameObject == nullptr || pData == nullptr || size == 0 )
+        const bool bInvalidLoadArguments = pGameObject == nullptr || pData == nullptr || size == 0;
+        if ( bInvalidLoadArguments )
             return 0;
 
         const TypeInfo* pTypeInfo = pGameObject->getTypeInfo();
@@ -581,8 +584,9 @@ namespace sw
         //    되돌리면 앞의 것이 뒤의 것 이름을 잠시 차지하고 있어서, 이 단계가 없으면 앞의 것이 영영 `Left_2` 로 남는다. 아직 차지한 오브젝트가 있으면 그대로 둔다.
         for ( const Entry& entry : _listEntry )
         {
-            GameObject* pObject = entry._pObject;
-            if ( pObject->getManager() == nullptr || pObject->isPendingDestroy() || entry._savedName.empty() || pObject->getName() == entry._savedName )
+            GameObject* pObject     = entry._pObject;
+            const bool  bSkipRename = pObject->getManager() == nullptr || pObject->isPendingDestroy() || entry._savedName.empty() || pObject->getName() == entry._savedName;
+            if ( bSkipRename )
                 continue;
             pObject->setName( entry._savedName ); // 아직 다른 오브젝트가 사용 중이면 매니저가 현재 이름(번호)을 그대로 둔다
         }
@@ -830,7 +834,8 @@ namespace sw
 
         for ( Component* pComp : pObject->getComponents() )
         {
-            if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->isSceneComponent() == false )
+            const bool bSkipNonSceneChild = pComp == nullptr || pComp->isPendingDestroy() || pComp->isSceneComponent() == false;
+            if ( bSkipNonSceneChild )
                 continue;
             SceneComponent*      pScene    = static_cast<SceneComponent*>( pComp );
             SceneAttachReference reference = pScene->getLoadedAttachReference();
@@ -849,9 +854,10 @@ namespace sw
                 continue;
             }
 
-            Component*      pParentComp = ( pOwner != nullptr ) ? ComponentStableKey::findComponent( pOwner, reference._componentKey.c_str() ) : nullptr;
-            SceneComponent* pParent     = ( pParentComp != nullptr && pParentComp->isSceneComponent() ) ? static_cast<SceneComponent*>( pParentComp ) : nullptr;
-            if ( pParent != nullptr && pParent != pScene && pScene->attachToComponent( pParent ) )
+            Component*      pParentComp     = ( pOwner != nullptr ) ? ComponentStableKey::findComponent( pOwner, reference._componentKey.c_str() ) : nullptr;
+            SceneComponent* pParent         = ( pParentComp != nullptr && pParentComp->isSceneComponent() ) ? static_cast<SceneComponent*>( pParentComp ) : nullptr;
+            const bool      bParentAttached = pParent != nullptr && pParent != pScene && pScene->attachToComponent( pParent );
+            if ( bParentAttached )
                 continue;
 
             // 찾지 못했다. 지우지 않고 남긴다. 다음 저장이 그대로 다시 쓰고, 부모가 돌아오면(프리팹을 되찾은 경우) 다음 로드가 붙인다.

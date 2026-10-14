@@ -515,8 +515,9 @@ namespace sw
                 }
                 else if ( reflectedA._space == bindless::kTextureSpace )
                 {
-                    const bool bKindOk = ( reflectedA._kind == ShaderBindingKind::Texture || reflectedA._kind == ShaderBindingKind::RwTexture );
-                    if ( bKindOk == false || reflectedA._bindPoint != 0 || ( reflectedA._bindCount != Internal::ReflectedBinding::kUnknownCount && reflectedA._bindCount != 0 ) )
+                    const bool bKindOk                     = ( reflectedA._kind == ShaderBindingKind::Texture || reflectedA._kind == ShaderBindingKind::RwTexture );
+                    const bool bViolatesUnboundedArrayRule = bKindOk == false || reflectedA._bindPoint != 0 || ( reflectedA._bindCount != Internal::ReflectedBinding::kUnknownCount && reflectedA._bindCount != 0 );
+                    if ( bViolatesUnboundedArrayRule )
                         Internal::report( pOutIssue, shaderLabel, reflectedA._name, "space1 은 무제한 텍스처 배열(t0 / u0, []) 전용입니다", issueCount );
                 }
                 else if ( reflectedA._space == shaderslot::kRootConstantSpace )
@@ -550,10 +551,11 @@ namespace sw
                 }
                 else if ( reflectedA._space == bindless::kVkTextureSet )
                 {
-                    const bool bArray   = ( reflectedA._bindPoint == bindless::kVkTextureBinding ) && ( reflectedA._kind == ShaderBindingKind::Texture || reflectedA._kind == ShaderBindingKind::Sampler );
-                    const bool bSampler = ( reflectedA._bindPoint == bindless::kVkSamplerBinding || reflectedA._bindPoint == bindless::kVkShadowSamplerBinding ) && reflectedA._kind == ShaderBindingKind::Sampler;
-                    const bool bRwArray = ( reflectedA._bindPoint == bindless::kVkRwTextureBinding ) && reflectedA._kind == ShaderBindingKind::RwTexture;
-                    if ( bArray == false && bSampler == false && bRwArray == false )
+                    const bool bArray                  = ( reflectedA._bindPoint == bindless::kVkTextureBinding ) && ( reflectedA._kind == ShaderBindingKind::Texture || reflectedA._kind == ShaderBindingKind::Sampler );
+                    const bool bSampler                = ( reflectedA._bindPoint == bindless::kVkSamplerBinding || reflectedA._bindPoint == bindless::kVkShadowSamplerBinding ) && reflectedA._kind == ShaderBindingKind::Sampler;
+                    const bool bRwArray                = ( reflectedA._bindPoint == bindless::kVkRwTextureBinding ) && reflectedA._kind == ShaderBindingKind::RwTexture;
+                    const bool bUnknownBindlessBinding = bArray == false && bSampler == false && bRwArray == false;
+                    if ( bUnknownBindlessBinding )
                         Internal::report( pOutIssue, shaderLabel, reflectedA._name, "세트 1 은 텍스처 배열(binding 0)·샘플러(binding 1·2)·RW 텍스처 배열(binding 3) 전용입니다", issueCount );
                 }
                 else

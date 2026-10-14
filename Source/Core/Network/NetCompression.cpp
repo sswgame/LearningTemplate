@@ -49,7 +49,8 @@ namespace sw
                                                CompressionCodecRegistry* pRegistry )
     {
         outBytes.clear();
-        if ( settings._codec == CompressionCodecType::None || size < settings._minInputBytes || size <= 0 )
+        const bool bCompressionSkipped = settings._codec == CompressionCodecType::None || size < settings._minInputBytes || size <= 0;
+        if ( bCompressionSkipped )
             return false;
         CompressionCodecRegistry* pResolved = NetCompressionInternal::resolveRegistry( pRegistry );
         ICompressionCodec*        pCodec    = pResolved != nullptr ? pResolved->getCodec( settings._codec ) : nullptr;
@@ -75,9 +76,10 @@ namespace sw
         outBytes.clear();
         if ( pData == nullptr || size < 2 )
             return false;
-        uint32      rawSize   = 0;
-        const int32 sizeBytes = NetCompressionInternal::readVarUint( pData + 1, size - 1, rawSize );
-        if ( sizeBytes == 0 || rawSize == 0 || rawSize > static_cast<uint32>( maxRawSize ) )
+        uint32      rawSize                  = 0;
+        const int32 sizeBytes                = NetCompressionInternal::readVarUint( pData + 1, size - 1, rawSize );
+        const bool  bInvalidCompressedHeader = sizeBytes == 0 || rawSize == 0 || rawSize > static_cast<uint32>( maxRawSize );
+        if ( bInvalidCompressedHeader )
             return false; // 폭탄 · 깨진 크기 — 코덱을 부르기 전에 끊는다
         if ( pData[0] == static_cast<uint8>( CompressionCodecType::None ) )
             return false;

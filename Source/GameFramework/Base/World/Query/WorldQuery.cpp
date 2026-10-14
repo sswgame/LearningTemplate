@@ -48,7 +48,8 @@ namespace sw
         for ( const PhysicsOverlapWorld::BodyHandle handle : listHandle )
         {
             PhysicsBody body;
-            if ( _physicsWorld.tryGetBody( handle, body ) == false || body._bTrigger == SW_TRUE || body._objectID == ignoreObjectID )
+            const bool  bSkipBody = _physicsWorld.tryGetBody( handle, body ) == false || body._bTrigger == SW_TRUE || body._objectID == ignoreObjectID;
+            if ( bSkipBody )
                 continue;
             AABB target = body._aabb;
             if ( target._min._z == target._max._z )

@@ -191,8 +191,9 @@ namespace sw
             return false;
         copyTracksToPose( scratchTrackPose, listTrackToBone, inoutPose, pTrackMask );
         // 루트 모션을 추출하면 그 본은 클립 시작 위치에 고정한다. 움직임은 오브젝트가 맡는다.
-        const int32 rootTrack = _rootMotionTrack;
-        if ( bAnchorRootMotion == false || rootTrack < 0 || static_cast<size_t>( rootTrack ) >= listTrackToBone.size() || listTrackToBone[static_cast<size_t>( rootTrack )] < 0 )
+        const int32 rootTrack              = _rootMotionTrack;
+        const bool  bRootMotionNotAnchored = bAnchorRootMotion == false || rootTrack < 0 || static_cast<size_t>( rootTrack ) >= listTrackToBone.size() || listTrackToBone[static_cast<size_t>( rootTrack )] < 0;
+        if ( bRootMotionNotAnchored )
             return true;
         if ( pTrackMask != nullptr && pTrackMask[rootTrack] == 0 )
             return true;
@@ -315,8 +316,9 @@ namespace sw
     bool AnimationClip::readFromBytes( const uint8* pData, size_t byteCount, string_view sourceLabel )
     {
         clear();
-        if ( pData == nullptr || byteCount < sizeof( AnimationClipInternal::kArrMagic ) ||
-             Memory::compare( pData, AnimationClipInternal::kArrMagic, sizeof( AnimationClipInternal::kArrMagic ) ) != 0 )
+        const bool bMissingClipMagic = pData == nullptr || byteCount < sizeof( AnimationClipInternal::kArrMagic ) ||
+                                       Memory::compare( pData, AnimationClipInternal::kArrMagic, sizeof( AnimationClipInternal::kArrMagic ) ) != 0;
+        if ( bMissingClipMagic )
         {
             SW_LOG_ERROR( "Animation clip '%#' has no SWAC magic", sourceLabel );
             return false;
@@ -382,10 +384,11 @@ namespace sw
             }
         }
 
-        const bool bCodecKnown  = codecValue < static_cast<uint32>( AnimationCodecID::Count );
-        const bool bRootInRange = _rootMotionTrack >= -1 && _rootMotionTrack < static_cast<int32>( _listTrackName.size() );
-        const bool bValidHeader = MathUtil::isFinite( _duration ) && _duration >= 0.0f;
-        if ( reader._bFailed || reader._offset != byteCount || bCodecKnown == false || bRootInRange == false || bValidHeader == false )
+        const bool bCodecKnown    = codecValue < static_cast<uint32>( AnimationCodecID::Count );
+        const bool bRootInRange   = _rootMotionTrack >= -1 && _rootMotionTrack < static_cast<int32>( _listTrackName.size() );
+        const bool bValidHeader   = MathUtil::isFinite( _duration ) && _duration >= 0.0f;
+        const bool bMalformedClip = reader._bFailed || reader._offset != byteCount || bCodecKnown == false || bRootInRange == false || bValidHeader == false;
+        if ( bMalformedClip )
         {
             SW_LOG_ERROR( "Animation clip '%#' is malformed", sourceLabel );
             clear();

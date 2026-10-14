@@ -99,7 +99,8 @@ namespace sw::editor
         using Internal = EditorSiblingOrderInternal;
         if ( EditorPlaySession::areSceneEditsAllowed() == false )
             return false;
-        if ( pDragged == nullptr || pTarget == nullptr || pDragged == pTarget )
+        const bool bInvalidDragTarget = pDragged == nullptr || pTarget == nullptr || pDragged == pTarget;
+        if ( bInvalidDragTarget )
             return false;
         GameObject* pNewParent = pTarget->getParent();
         if ( pNewParent != nullptr && EditorSceneCommands::wouldCreateParentCycle( pDragged, pNewParent ) )

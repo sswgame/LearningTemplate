@@ -23,7 +23,8 @@ namespace sw
          */
         uint32 toRegister( uint32 slot, uint32 rangeShift )
         {
-            if ( rangeShift > 0 && slot >= rangeShift && slot < rangeShift + shaderslot::vk::kRangeSize )
+            const bool bInsideRegisterRange = rangeShift > 0 && slot >= rangeShift && slot < rangeShift + shaderslot::vk::kRangeSize;
+            if ( bInsideRegisterRange )
                 return slot - rangeShift;
             return slot;
         }
@@ -129,9 +130,10 @@ namespace sw
         if ( src == 0 )
         {
             // 백버퍼 → 텍스처. 스왑체인 이미지는 PRESENT_SRC 로 끝나 있다(Present 패스 · 캡처 블릿). 블릿이라 포맷(BGRA ↔ RGBA)을 바꿔 준다.
-            const VkImage                         backImage    = _pDevice->_swapChain.getCurrentImage();
-            VulkanRHIDevice::VulkanTextureRecord* pDstResolved = _pDevice->resolveTexture( dst );
-            if ( backImage == VK_NULL_HANDLE || pDstResolved == nullptr || pDstResolved->_image == VK_NULL_HANDLE )
+            const VkImage                         backImage              = _pDevice->_swapChain.getCurrentImage();
+            VulkanRHIDevice::VulkanTextureRecord* pDstResolved           = _pDevice->resolveTexture( dst );
+            const bool                            bInvalidBackBufferBlit = backImage == VK_NULL_HANDLE || pDstResolved == nullptr || pDstResolved->_image == VK_NULL_HANDLE;
+            if ( bInvalidBackBufferBlit )
                 return;
             _pDevice->transitionImageLayout( cmd, backImage, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT );
             _pDevice->transitionTextureLayout( cmd, *pDstResolved, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT );
@@ -149,8 +151,9 @@ namespace sw
             return;
         }
 
-        VulkanRHIDevice::VulkanTextureRecord* pSrcResolved = _pDevice->resolveTexture( src );
-        if ( pSrcResolved == nullptr || pSrcResolved->_image == VK_NULL_HANDLE || pSrcResolved->_bDepthStencil != SW_FALSE )
+        VulkanRHIDevice::VulkanTextureRecord* pSrcResolved          = _pDevice->resolveTexture( src );
+        const bool                            bInvalidSourceTexture = pSrcResolved == nullptr || pSrcResolved->_image == VK_NULL_HANDLE || pSrcResolved->_bDepthStencil != SW_FALSE;
+        if ( bInvalidSourceTexture )
             return;
 
         VulkanRHIDevice::VulkanTextureRecord& srcRecord = *pSrcResolved;
@@ -251,8 +254,9 @@ namespace sw
         VkCommandBuffer cmd = commandBuffer();
         if ( cmd == VK_NULL_HANDLE || texture == 0 )
             return;
-        VulkanRHIDevice::VulkanTextureRecord* pResolved = _pDevice->resolveTexture( texture );
-        if ( pResolved == nullptr || pResolved->_image == VK_NULL_HANDLE || pResolved->_bDepthStencil != SW_FALSE )
+        VulkanRHIDevice::VulkanTextureRecord* pResolved             = _pDevice->resolveTexture( texture );
+        const bool                            bInvalidTargetTexture = pResolved == nullptr || pResolved->_image == VK_NULL_HANDLE || pResolved->_bDepthStencil != SW_FALSE;
+        if ( bInvalidTargetTexture )
             return;
 
         if ( _pState->_bRenderPassActive == SW_TRUE )
@@ -424,8 +428,9 @@ namespace sw
             RHITextureHandle colorTarget = ( colorCount > 0 ) ? colorHandles[0] : 0;
             if ( colorTarget != 0 )
             {
-                VulkanRHIDevice::VulkanTextureRecord* pTex = _pDevice->resolveTexture( colorTarget );
-                if ( pTex == nullptr || pTex->findSliceFramebuffer( beginInfo._arrColorTargetSlice[0] ) == VK_NULL_HANDLE || pTex->_renderPass == VK_NULL_HANDLE )
+                VulkanRHIDevice::VulkanTextureRecord* pTex                      = _pDevice->resolveTexture( colorTarget );
+                const bool                            bColorTargetNotRenderable = pTex == nullptr || pTex->findSliceFramebuffer( beginInfo._arrColorTargetSlice[0] ) == VK_NULL_HANDLE || pTex->_renderPass == VK_NULL_HANDLE;
+                if ( bColorTargetNotRenderable )
                     return;
 
                 constexpr uint32 aspect = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -497,9 +502,10 @@ namespace sw
 
     void VulkanRHICommandContext::uavBarrier( RHIBufferHandle buffer )
     {
-        VkCommandBuffer                      cmd     = commandBuffer();
-        VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( buffer );
-        if ( cmd == VK_NULL_HANDLE || pRecord == nullptr || pRecord->_buffer == VK_NULL_HANDLE )
+        VkCommandBuffer                      cmd                  = commandBuffer();
+        VulkanRHIDevice::VulkanBufferRecord* pRecord              = _pDevice->resolveAllocatedBuffer( buffer );
+        const bool                           bInvalidBufferRecord = cmd == VK_NULL_HANDLE || pRecord == nullptr || pRecord->_buffer == VK_NULL_HANDLE;
+        if ( bInvalidBufferRecord )
             return;
 
         if ( _pState->_bRenderPassActive == SW_TRUE )
@@ -634,9 +640,10 @@ namespace sw
             }
         }
 
-        const uint64 slotBit     = ( uint64{ 1 } << bindingIndex );
-        const bool   bAlreadySet = ( state._slotSetMask & slotBit ) != 0;
-        if ( bAlreadySet && slot._buffer == candidate._buffer && slot._offset == candidate._offset && slot._range == candidate._range )
+        const uint64 slotBit        = ( uint64{ 1 } << bindingIndex );
+        const bool   bAlreadySet    = ( state._slotSetMask & slotBit ) != 0;
+        const bool   bSlotUnchanged = bAlreadySet && slot._buffer == candidate._buffer && slot._offset == candidate._offset && slot._range == candidate._range;
+        if ( bSlotUnchanged )
             return; // 같은 값이다. 세트를 새로 할당할 이유가 없다.
 
         slot = candidate;
@@ -682,7 +689,8 @@ namespace sw
             const bool bUniform = bindingIndex < vk::kTShift;
             if ( bBound == false )
             {
-                if ( bUniform == false || bindingIndex >= shaderslot::kConstantBufferSlotCount || _pDevice->_dummyUBO == VK_NULL_HANDLE )
+                const bool bCannotFillDummyUniform = bUniform == false || bindingIndex >= shaderslot::kConstantBufferSlotCount || _pDevice->_dummyUBO == VK_NULL_HANDLE;
+                if ( bCannotFillDummyUniform )
                     continue;
                 arrInfo[writeCount].buffer = _pDevice->_dummyUBO;
                 arrInfo[writeCount].offset = 0;
@@ -965,9 +973,10 @@ namespace sw
     void VulkanRHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount,
                                                 RHIBufferHandle countBuffer, uint32 countBufferOffset )
     {
-        VkCommandBuffer                            cmd   = commandBuffer();
-        const VulkanRHIDevice::VulkanBufferRecord* pArgs = _pDevice->resolveAllocatedBuffer( argumentBuffer );
-        if ( cmd == VK_NULL_HANDLE || pArgs == nullptr || pArgs->_buffer == VK_NULL_HANDLE || drawCount == 0 )
+        VkCommandBuffer                            cmd                    = commandBuffer();
+        const VulkanRHIDevice::VulkanBufferRecord* pArgs                  = _pDevice->resolveAllocatedBuffer( argumentBuffer );
+        const bool                                 bNothingToDrawIndirect = cmd == VK_NULL_HANDLE || pArgs == nullptr || pArgs->_buffer == VK_NULL_HANDLE || drawCount == 0;
+        if ( bNothingToDrawIndirect )
             return;
 
         if ( bindActiveGraphicsPipeline() == false )
@@ -1011,8 +1020,9 @@ namespace sw
         // 디버그 라벨 함수가 없어도(검증 레이어 없는 실행) 패스 이름은 남긴다 — 디바이스 손실 로그가 이것을 읽는다.
         if ( pName != nullptr )
             _lastEventMarker = pName;
-        VkCommandBuffer cmd = commandBuffer();
-        if ( cmd == VK_NULL_HANDLE || pName == nullptr || _pDevice->_instance == VK_NULL_HANDLE )
+        VkCommandBuffer cmd               = commandBuffer();
+        const bool      bCannotBeginLabel = cmd == VK_NULL_HANDLE || pName == nullptr || _pDevice->_instance == VK_NULL_HANDLE;
+        if ( bCannotBeginLabel )
             return;
 
         PFN_vkCmdBeginDebugUtilsLabelEXT pFn = reinterpret_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(

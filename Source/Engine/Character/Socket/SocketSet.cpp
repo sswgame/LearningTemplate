@@ -230,11 +230,12 @@ namespace sw
     {
         reader.reportUnknownAttributes( node, SocketSetInternal::kArrVirtualBoneAttribute );
         VirtualBoneDef virtualBone;
-        virtualBone._name   = reader.readName( node, "name", true );
-        virtualBone._from   = reader.readName( node, "from", true );
-        virtualBone._to     = reader.readName( node, "to", true );
-        virtualBone._weight = reader.readFloat( node, "weight", 0.5f );
-        if ( virtualBone._name.empty() || virtualBone._from.empty() || virtualBone._to.empty() )
+        virtualBone._name                 = reader.readName( node, "name", true );
+        virtualBone._from                 = reader.readName( node, "from", true );
+        virtualBone._to                   = reader.readName( node, "to", true );
+        virtualBone._weight               = reader.readFloat( node, "weight", 0.5f );
+        const bool bIncompleteVirtualBone = virtualBone._name.empty() || virtualBone._from.empty() || virtualBone._to.empty();
+        if ( bIncompleteVirtualBone )
             return;
         if ( findVirtualBone( virtualBone._name ) != nullptr )
         {
@@ -376,7 +377,8 @@ namespace sw
         }
         for ( const SocketDef& socket : _listSocket )
         {
-            if ( socket._parent.empty() || bones.findBone( socket._parent ) >= 0 || findVirtualBone( socket._parent ) != nullptr )
+            const bool bParentEmptyOrResolved = socket._parent.empty() || bones.findBone( socket._parent ) >= 0 || findVirtualBone( socket._parent ) != nullptr;
+            if ( bParentEmptyOrResolved )
                 continue;
             bValid = false;
             if ( pOutError != nullptr )

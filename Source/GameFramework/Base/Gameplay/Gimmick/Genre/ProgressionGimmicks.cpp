@@ -46,10 +46,11 @@ namespace sw
 
     void AbilityGateComponent::stepOnce()
     {
-        GameObject*           pOwner   = getOwner();
-        GameObjectManager*    pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const SceneComponent* pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
-        if ( pManager == nullptr || pScene == nullptr || ( _bOpen && _bStaysOpen ) || _requiredTags.getTagCount() == 0 )
+        GameObject*           pOwner           = getOwner();
+        GameObjectManager*    pManager         = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const SceneComponent* pScene           = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        const bool            bCannotCheckDoor = pManager == nullptr || pScene == nullptr || ( _bOpen && _bStaysOpen ) || _requiredTags.getTagCount() == 0;
+        if ( bCannotCheckDoor )
             return;
         const float3        center     = pScene->getWorldPosition();
         const uint64        selfID     = pOwner->getObjectID();
@@ -59,8 +60,9 @@ namespace sw
         bool                bQualified = false;
         pManager->forEachGameObject( [&bQualified, &required, center, selfID, radius, bPlanar]( GameObject* pObject )
         {
-            const SceneComponent* pOther = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
-            if ( bQualified || pOther == nullptr || pObject->getObjectID() == selfID || pObject->getTags().hasAllTags( required ) == false )
+            const SceneComponent* pOther      = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
+            const bool            bSkipObject = bQualified || pOther == nullptr || pObject->getObjectID() == selfID || pObject->getTags().hasAllTags( required ) == false;
+            if ( bSkipObject )
                 return;
             float3 offset = pOther->getWorldPosition() - center;
             if ( bPlanar )

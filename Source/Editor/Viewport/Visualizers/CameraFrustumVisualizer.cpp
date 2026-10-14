@@ -47,12 +47,13 @@ namespace sw::editor
                     const float3 p2         = nearCenter + rgt * 0.6f + up * 0.4f;
                     const float3 p3         = nearCenter - rgt * 0.6f + up * 0.4f;
 
-                    ImVec2 sEye, s0, s1, s2, s3;
-                    if ( EditorViewportProjectionUtil::projectPoint( *args._pViewProj, eye, args._canvasPos, args._canvasSize, sEye ) &&
-                         EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p0, args._canvasPos, args._canvasSize, s0 ) &&
-                         EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p1, args._canvasPos, args._canvasSize, s1 ) &&
-                         EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p2, args._canvasPos, args._canvasSize, s2 ) &&
-                         EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p3, args._canvasPos, args._canvasSize, s3 ) )
+                    ImVec2     sEye, s0, s1, s2, s3;
+                    const bool bFrustumProjectable = EditorViewportProjectionUtil::projectPoint( *args._pViewProj, eye, args._canvasPos, args._canvasSize, sEye ) &&
+                                                     EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p0, args._canvasPos, args._canvasSize, s0 ) &&
+                                                     EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p1, args._canvasPos, args._canvasSize, s1 ) &&
+                                                     EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p2, args._canvasPos, args._canvasSize, s2 ) &&
+                                                     EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p3, args._canvasPos, args._canvasSize, s3 );
+                    if ( bFrustumProjectable )
                     {
                         args._pDrawList->AddLine( sEye, s0, colorCameraWire, 1.2f );
                         args._pDrawList->AddLine( sEye, s1, colorCameraWire, 1.2f );

@@ -79,10 +79,11 @@ namespace sw
                 archive >> outKart._input._vehicle._bBoostPressed;
                 archive >> outKart._input._vehicle._bJumpPressed;
                 archive >> outKart._input._bUseItem;
-                const ArcadeVehicleInput& vehicle       = outKart._input._vehicle;
-                const bool                bVehicleValid = vehicle._bDriftHeld <= SW_TRUE && vehicle._bBoostPressed <= SW_TRUE && vehicle._bJumpPressed <= SW_TRUE;
-                const bool                bDriftValid   = -1 <= driftSide && driftSide <= 1;
-                if ( archive.isError() || bVehicleValid == false || outKart._input._bUseItem > SW_TRUE || bDriftValid == false )
+                const ArcadeVehicleInput& vehicle           = outKart._input._vehicle;
+                const bool                bVehicleValid     = vehicle._bDriftHeld <= SW_TRUE && vehicle._bBoostPressed <= SW_TRUE && vehicle._bJumpPressed <= SW_TRUE;
+                const bool                bDriftValid       = -1 <= driftSide && driftSide <= 1;
+                const bool                bInvalidKartState = archive.isError() || bVehicleValid == false || outKart._input._bUseItem > SW_TRUE || bDriftValid == false;
+                if ( bInvalidKartState )
                     return false;
                 uint32 lapCount = 0;
                 // 바퀴마다 기록(4)
@@ -171,7 +172,8 @@ namespace sw
 
     int32 KartRace::addRacer( const ArcadeVehicleSettings& vehicleSettings, bool bAI )
     {
-        if ( _phase != KartRacePhase::Setup || _pTrack == nullptr || _pTrack->isValid() == false )
+        const bool bCannotAddRacer = _phase != KartRacePhase::Setup || _pTrack == nullptr || _pTrack->isValid() == false;
+        if ( bCannotAddRacer )
             return -1;
         _listRacer.emplace_back();
         KartRacer& kart    = _listRacer.back();
@@ -190,7 +192,8 @@ namespace sw
 
     void KartRace::start()
     {
-        if ( _phase != KartRacePhase::Setup || _listRacer.empty() || _pTrack == nullptr )
+        const bool bCannotStartRace = _phase != KartRacePhase::Setup || _listRacer.empty() || _pTrack == nullptr;
+        if ( bCannotStartRace )
             return;
         // 격자: 결승선 뒤로 두 줄씩, 왼쪽과 오른쪽을 번갈아 세운다.
         const float32 laneOffset = _pTrack->getWidth() * 0.25f;
@@ -352,7 +355,8 @@ namespace sw
         {
             --kart._nextCheckpoint;
         }
-        const int32 finishCrossing = _pTrack->computeGateCrossing( 0, kart._previousPosition, position );
+        const int32 finishCrossing         = _pTrack->computeGateCrossing( 0, kart._previousPosition, position );
+        const bool  bCrossedFinishBackward = finishCrossing < 0 && kart._nextCheckpoint == 0 && kart._lap > 0 && kart._bFinished == SW_FALSE;
         if ( finishCrossing > 0 )
         {
             if ( kart._nextCheckpoint >= checkpointCount )
@@ -360,7 +364,7 @@ namespace sw
             else
                 pushEvent( KartRaceEvent::Kind::CheckpointMissed, racer, -1, kart._nextCheckpoint, _raceTime );
         }
-        else if ( finishCrossing < 0 && kart._nextCheckpoint == 0 && kart._lap > 0 && kart._bFinished == SW_FALSE )
+        else if ( bCrossedFinishBackward )
         {
             // 결승선을 뒤로 넘었다. 바퀴를 되돌리고 그 바퀴 기록을 지운다.
             --kart._lap;
@@ -635,11 +639,12 @@ namespace sw
             const float32 reach = pItem->_radius + kartRadius;
             for ( size_t racerIndex = 0; racerIndex < _listRacer.size(); ++racerIndex )
             {
-                const int32      racer       = static_cast<int32>( racerIndex );
-                const KartRacer& kart        = _listRacer[racerIndex];
-                const bool       bOwnerGrace = racer == projectile._owner && projectile._age < _settings._ownerGrace;
-                const bool       bNotTarget  = projectile._kind == KartItemKind::LeaderShell && racer != projectile._target;
-                if ( kart._bFinished == SW_TRUE || bOwnerGrace || bNotTarget )
+                const int32      racer         = static_cast<int32>( racerIndex );
+                const KartRacer& kart          = _listRacer[racerIndex];
+                const bool       bOwnerGrace   = racer == projectile._owner && projectile._age < _settings._ownerGrace;
+                const bool       bNotTarget    = projectile._kind == KartItemKind::LeaderShell && racer != projectile._target;
+                const bool       bSkipHitCheck = kart._bFinished == SW_TRUE || bOwnerGrace || bNotTarget;
+                if ( bSkipHitCheck )
                     continue;
                 if ( float3::getHorizontalDistanceSquared( kart._motor.getPosition(), projectile._position ) > reach * reach )
                     continue;
@@ -734,7 +739,8 @@ namespace sw
 
     float32 KartRace::computeRubberBandScale( int32 racer ) const
     {
-        if ( isValidRacer( racer ) == false || _settings._bRubberBand == SW_FALSE || _settings._rubberBandDistance <= 0.0f )
+        const bool bRubberBandDisabled = isValidRacer( racer ) == false || _settings._bRubberBand == SW_FALSE || _settings._rubberBandDistance <= 0.0f;
+        if ( bRubberBandDisabled )
             return 1.0f;
         const KartRacer& kart = _listRacer[static_cast<size_t>( racer )];
         if ( kart._bAI == SW_FALSE || kart._bFinished == SW_TRUE )
@@ -914,9 +920,10 @@ namespace sw
             archive >> projectile._target;
             archive >> kind;
             archive >> projectile._bActive;
-            const bool bOwnerValid  = -1 <= projectile._owner && projectile._owner < count;
-            const bool bTargetValid = -1 <= projectile._target && projectile._target < count;
-            if ( archive.isError() || bOwnerValid == false || bTargetValid == false || kind > KartRaceInternal::kLastItemKind || projectile._bActive > SW_TRUE )
+            const bool bOwnerValid             = -1 <= projectile._owner && projectile._owner < count;
+            const bool bTargetValid            = -1 <= projectile._target && projectile._target < count;
+            const bool bInvalidProjectileState = archive.isError() || bOwnerValid == false || bTargetValid == false || kind > KartRaceInternal::kLastItemKind || projectile._bActive > SW_TRUE;
+            if ( bInvalidProjectileState )
                 return false;
             projectile._kind = static_cast<KartItemKind>( kind );
         }
@@ -950,8 +957,9 @@ namespace sw
         archive >> race._firstFinishTime;
         archive >> race._finishedCount;
         archive >> phase;
-        const bool bFinishedValid = 0 <= race._finishedCount && race._finishedCount <= count;
-        if ( bRandomRead == false || bCountdownRead == false || archive.isError() || bFinishedValid == false || phase > static_cast<uint8>( KartRacePhase::Ended ) )
+        const bool bFinishedValid    = 0 <= race._finishedCount && race._finishedCount <= count;
+        const bool bInvalidRaceState = bRandomRead == false || bCountdownRead == false || archive.isError() || bFinishedValid == false || phase > static_cast<uint8>( KartRacePhase::Ended );
+        if ( bInvalidRaceState )
             return false;
         race._phase = static_cast<KartRacePhase>( phase );
         race._eventBuffer.clear();

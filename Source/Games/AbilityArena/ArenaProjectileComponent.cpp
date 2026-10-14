@@ -54,7 +54,8 @@ namespace sw
     void ArenaProjectileComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        if ( _bLaunched == SW_FALSE || _bFinished == SW_TRUE || deltaTime <= 0.0f )
+        const bool bNotFlying = _bLaunched == SW_FALSE || _bFinished == SW_TRUE || deltaTime <= 0.0f;
+        if ( bNotFlying )
             return;
         GameObject*                   pOwner    = getOwner();
         GameObjectManager*            pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
@@ -80,7 +81,8 @@ namespace sw
         {
             const ArenaUnitView& view      = pView[viewIndex];
             const bool           bSameTeam = ( view._kind == ArenaUnitKind::Player ) == ( _bFromPlayer == SW_TRUE );
-            if ( bSameTeam || view._bAlive == SW_FALSE || float3::getDistance( view._position, _position ) > reach )
+            const bool           bSkipUnit = bSameTeam || view._bAlive == SW_FALSE || float3::getDistance( view._position, _position ) > reach;
+            if ( bSkipUnit )
                 continue;
             applyHit( view._object );
             finish();

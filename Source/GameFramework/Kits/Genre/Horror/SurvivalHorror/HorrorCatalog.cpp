@@ -41,8 +41,9 @@ namespace sw
                 outListLink.clear();
                 StringUtil::forEachToken( text, ",; ", [&]( string_view token )
                 {
-                    const size_t dash = token.find( '-' );
-                    if ( dash == string_view::npos || dash == 0 || dash + 1 >= token.size() )
+                    const size_t dash           = token.find( '-' );
+                    const bool   bMalformedLink = dash == string_view::npos || dash == 0 || dash + 1 >= token.size();
+                    if ( bMalformedLink )
                     {
                         SW_LOG_WARNING( "%#: deduction '%#' has a bad link '%#' (expected clueA-clueB)", sourceName, pID, token );
                         return;
@@ -166,7 +167,8 @@ namespace sw
             const hashed_string firstItem( node.getAttributeText( "a" ) );
             const hashed_string secondItem( node.getAttributeText( "b" ) );
             const hashed_string outItem( node.getAttributeText( "out" ) );
-            if ( firstItem.empty() || secondItem.empty() || outItem.empty() )
+            const bool          bIncompleteCombine = firstItem.empty() || secondItem.empty() || outItem.empty();
+            if ( bIncompleteCombine )
             {
                 SW_LOG_WARNING( "%#: combine '%#' needs a, b and out - skipped", sourceName, pID );
                 continue;

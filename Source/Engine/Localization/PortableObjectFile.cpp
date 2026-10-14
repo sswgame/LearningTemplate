@@ -25,8 +25,9 @@ namespace sw
             /** @brief `"…"` 하나를 해석해 @p outText 에 붙입니다. 따옴표로 시작하거나 끝나지 않으면 false 입니다. */
             [[nodiscard]] static bool appendQuoted( string_view token, string& outText )
             {
-                token = StringUtil::trim( token );
-                if ( token.size() < 2 || token.front() != kDoubleQuote || token.back() != kDoubleQuote )
+                token                      = StringUtil::trim( token );
+                const bool bNotQuotedToken = token.size() < 2 || token.front() != kDoubleQuote || token.back() != kDoubleQuote;
+                if ( bNotQuotedToken )
                     return false;
                 token = token.substr( 1, token.size() - 2 );
                 for ( size_t index = 0; index < token.size(); ++index )
@@ -56,7 +57,8 @@ namespace sw
                 string value;
                 StringUtil::forEachLine( header, [&]( string_view line )
                 {
-                    if ( StringUtil::startsWith( line, fieldName, true ) == false || line.size() <= fieldName.size() || line[fieldName.size()] != ':' )
+                    const bool bOtherField = StringUtil::startsWith( line, fieldName, true ) == false || line.size() <= fieldName.size() || line[fieldName.size()] != ':';
+                    if ( bOtherField )
                         return true;
                     value = string( StringUtil::trim( line.substr( fieldName.size() + 1 ) ) );
                     return false;
@@ -142,7 +144,8 @@ namespace sw
             string_view line = text.substr( lineStart, lineEnd - lineStart );
             lineStart        = lineEnd + 1;
             ++lineNumber;
-            if ( lineNumber == 1 && line.size() >= 3 && static_cast<uint8>( line[0] ) == 0xEF )
+            const bool bUtf8Bom = lineNumber == 1 && line.size() >= 3 && static_cast<uint8>( line[0] ) == 0xEF;
+            if ( bUtf8Bom )
                 line.remove_prefix( 3 ); // UTF-8 BOM
             line = StringUtil::trim( line );
             if ( line.empty() )
@@ -232,7 +235,8 @@ namespace sw
             if ( lineEnd == text.size() )
                 break;
         }
-        if ( error.empty() && state._bHasSource && state._bHasTranslation == false )
+        const bool bMissingTranslation = error.empty() && state._bHasSource && state._bHasTranslation == false;
+        if ( bMissingTranslation )
             error = "msgid without msgstr";
         if ( error.empty() == false )
         {

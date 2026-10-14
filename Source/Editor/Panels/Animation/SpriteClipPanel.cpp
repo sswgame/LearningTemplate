@@ -83,8 +83,9 @@ namespace sw::editor
             notifyDocumentEdited( "Add Sprite Frame" );
         }
         ImGui::SameLine();
-        if ( ImGui::Button( "Remove Frame" ) && 0 <= _selectedFrame &&
-             _selectedFrame < static_cast<int32>( _listFrame.size() ) )
+        const bool bRemoveFrameRequested = ImGui::Button( "Remove Frame" ) && 0 <= _selectedFrame &&
+                                           _selectedFrame < static_cast<int32>( _listFrame.size() );
+        if ( bRemoveFrameRequested )
         {
             _listFrame.erase( _listFrame.begin() + _selectedFrame );
             if ( _selectedFrame >= static_cast<int32>( _listFrame.size() ) )
@@ -140,8 +141,9 @@ namespace sw::editor
             notifyDocumentEdited( "Add Sprite Key" );
         }
         ImGui::SameLine();
-        if ( ImGui::Button( "Remove Key" ) && 0 <= _selectedKey &&
-             _selectedKey < static_cast<int32>( _listKey.size() ) )
+        const bool bRemoveKeyRequested = ImGui::Button( "Remove Key" ) && 0 <= _selectedKey &&
+                                         _selectedKey < static_cast<int32>( _listKey.size() );
+        if ( bRemoveKeyRequested )
         {
             _listKey.erase( _listKey.begin() + _selectedKey );
             if ( _selectedKey >= static_cast<int32>( _listKey.size() ) )

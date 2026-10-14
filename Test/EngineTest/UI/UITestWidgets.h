@@ -67,7 +67,8 @@ namespace sw::uitest
             const utf8* pPhase = phase == UIRoutePhase::Tunnel ? "T" : "B";
             if ( _pRecord != nullptr )
                 _pRecord->add( getName(), pPhase );
-            if ( _pScreenToClose != nullptr && event._kind == UIPointerEventKind::Down && phase == UIRoutePhase::Bubble )
+            const bool bShouldCloseScreen = _pScreenToClose != nullptr && event._kind == UIPointerEventKind::Down && phase == UIRoutePhase::Bubble;
+            if ( bShouldCloseScreen )
                 _pScreenToClose->close(); // 사건 처리 중에 자기 화면을 닫는다 — 지워지는 것은 경로가 끝난 뒤
             const bool bHandle = ( phase == UIRoutePhase::Tunnel && _bHandleTunnel ) || ( phase == UIRoutePhase::Bubble && _bHandleBubble );
             if ( bHandle == false )
@@ -84,7 +85,8 @@ namespace sw::uitest
         {
             if ( _pRecord != nullptr )
                 _pRecord->add( getName(), phase == UIRoutePhase::Tunnel ? "T action" : "B action" );
-            if ( phase == UIRoutePhase::Bubble && _bFocusable && event._action == hashed_string( "UI.Accept" ) )
+            const bool bAcceptClick = phase == UIRoutePhase::Bubble && _bFocusable && event._action == hashed_string( "UI.Accept" );
+            if ( bAcceptClick )
             {
                 ++_clickCount;
                 return UIReply::makeHandled();

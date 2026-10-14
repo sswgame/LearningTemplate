@@ -115,7 +115,8 @@ namespace sw
             SW_LOG_WARNING( "cannot place unit '%#' with pilot '%#' - unknown id", unitID.c_str(), pilotID.c_str() );
             return -1;
         }
-        if ( isInside( cell ) == false || findUnitAt( cell ) >= 0 || computeTerrainCost( unit, cell ) < 0 )
+        const bool bCannotPlaceUnit = isInside( cell ) == false || findUnitAt( cell ) >= 0 || computeTerrainCost( unit, cell ) < 0;
+        if ( bCannotPlaceUnit )
             return -1;
         unit._cell = cell;
         unit._team = team;
@@ -183,8 +184,9 @@ namespace sw
 
     bool SRPGBattlefield::canAct( int32 unitIndex ) const
     {
-        const SRPGUnit* pUnit = findUnit( unitIndex );
-        if ( pUnit == nullptr || _turn <= 0 || pUnit->_bAlive == SW_FALSE || pUnit->_bActed == SW_TRUE )
+        const SRPGUnit* pUnit      = findUnit( unitIndex );
+        const bool      bCannotAct = pUnit == nullptr || _turn <= 0 || pUnit->_bAlive == SW_FALSE || pUnit->_bActed == SW_TRUE;
+        if ( bCannotAct )
             return false;
         if ( _settings._turnMode == SRPGTurnMode::Individual )
             return unitIndex == _activeUnit;
@@ -309,7 +311,8 @@ namespace sw
     {
         for ( const SRPGUnit& unit : _listUnit )
         {
-            if ( unit._team == _phaseTeam && unit._bAlive == SW_TRUE && unit._bActed == SW_FALSE )
+            const bool bUnitStillPending = unit._team == _phaseTeam && unit._bAlive == SW_TRUE && unit._bActed == SW_FALSE;
+            if ( bUnitStillPending )
                 return false;
         }
         return true;
@@ -330,7 +333,8 @@ namespace sw
     {
         for ( const SRPGUnit& other : _listUnit )
         {
-            if ( other._bAlive == SW_TRUE && isHostile( other._team, unit._team ) && computeDistance( other._cell, cell ) == 1 )
+            const bool bHostileAdjacent = other._bAlive == SW_TRUE && isHostile( other._team, unit._team ) && computeDistance( other._cell, cell ) == 1;
+            if ( bHostileAdjacent )
                 return true;
         }
         return false;
@@ -356,7 +360,8 @@ namespace sw
             const int32 occupant = findUnitAt( toCell );
             if ( occupant >= 0 && isHostile( _listUnit[static_cast<size_t>( occupant )]._team, unit._team ) )
                 return -1; // 적이 선 셀은 막는다
-            if ( bZoc && fromCell != start && isInEnemyZone( unit, fromCell ) )
+            const bool bZocStop = bZoc && fromCell != start && isInEnemyZone( unit, fromCell );
+            if ( bZocStop )
                 return -1; // 적과 이웃한 셀에 들어오면 거기서 멈춘다
             return computeTerrainCost( unit, toCell );
         },
@@ -527,8 +532,9 @@ namespace sw
 
     void SRPGBattlefield::grantXp( int32 unitIndex, int64 amount )
     {
-        SRPGUnit* pUnit = findUnit( unitIndex );
-        if ( pUnit == nullptr || _pCatalog == nullptr || amount <= 0 )
+        SRPGUnit*  pUnit          = findUnit( unitIndex );
+        const bool bCannotGrantXp = pUnit == nullptr || _pCatalog == nullptr || amount <= 0;
+        if ( bCannotGrantXp )
             return;
         if ( pUnit->_pilotLevel.addXp( _pCatalog->getPilotCurve(), amount ) > 0 )
             pushEvent( SRPGEvent{ unitIndex, -1, pUnit->_pilotLevel.getLevel(), SRPGEvent::Kind::PilotLevelUp, pUnit->_team } );
@@ -588,7 +594,8 @@ namespace sw
         int32 height = 0;
         archive >> width;
         archive >> height;
-        if ( archive.isError() || _pCatalog == nullptr || width != _topology._width || height != _topology._height )
+        const bool bBattlefieldMismatch = archive.isError() || _pCatalog == nullptr || width != _topology._width || height != _topology._height;
+        if ( bBattlefieldMismatch )
             return false;
         // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 카탈로그와 설정은 사본도 그대로 가지고 있다.
         SRPGBattlefield restored = *this;

@@ -68,10 +68,11 @@ namespace sw
                     return false;
                 }
 
-                const size_t written  = ( size > 0 ) ? std::fwrite( pData, 1, size, pFile ) : 0;
-                const bool   bFlushed = std::fflush( pFile ) == 0;
-                const bool   bClosed  = std::fclose( pFile ) == 0;
-                if ( written != size || bFlushed == false || bClosed == false )
+                const size_t written          = ( size > 0 ) ? std::fwrite( pData, 1, size, pFile ) : 0;
+                const bool   bFlushed         = std::fflush( pFile ) == 0;
+                const bool   bClosed          = std::fclose( pFile ) == 0;
+                const bool   bWriteIncomplete = written != size || bFlushed == false || bClosed == false;
+                if ( bWriteIncomplete )
                 {
                     SW_LOG_ERROR( "Failed to write %# bytes to %# (wrote %#) — the original file was left untouched", size, filePath.c_str(), written );
                     discardTempFile( tempPath );
@@ -437,7 +438,8 @@ namespace sw
         if ( path.empty() )
             return false;
 
-        if ( path.size() >= 2 && ( ( 'a' <= path[0] && path[0] <= 'z' ) || ( 'A' <= path[0] && path[0] <= 'Z' ) ) && path[1] == ':' )
+        const bool bHasDriveLetterPrefix = path.size() >= 2 && ( ( 'a' <= path[0] && path[0] <= 'z' ) || ( 'A' <= path[0] && path[0] <= 'Z' ) ) && path[1] == ':';
+        if ( bHasDriveLetterPrefix )
             return true;
 
         return path[0] == '/' || path[0] == '\\';
@@ -664,20 +666,22 @@ namespace sw
 
     string_view FileUtil::skipUtf8Bom( string_view text )
     {
-        if ( text.size() >= 3 &&
-             static_cast<uint8>( text[0] ) == 0xEF &&
-             static_cast<uint8>( text[1] ) == 0xBB &&
-             static_cast<uint8>( text[2] ) == 0xBF )
+        const bool bHasUtf8Bom = text.size() >= 3 &&
+                                 static_cast<uint8>( text[0] ) == 0xEF &&
+                                 static_cast<uint8>( text[1] ) == 0xBB &&
+                                 static_cast<uint8>( text[2] ) == 0xBF;
+        if ( bHasUtf8Bom )
             return text.substr( 3 );
         return text;
     }
 
     void FileUtil::skipUtf8Bom( const uint8*& pData, size_t& size )
     {
-        if ( pData != nullptr && size >= 3 &&
-             pData[0] == 0xEF &&
-             pData[1] == 0xBB &&
-             pData[2] == 0xBF )
+        const bool bHasUtf8Bom = pData != nullptr && size >= 3 &&
+                                 pData[0] == 0xEF &&
+                                 pData[1] == 0xBB &&
+                                 pData[2] == 0xBF;
+        if ( bHasUtf8Bom )
         {
             pData += 3;
             size -= 3;

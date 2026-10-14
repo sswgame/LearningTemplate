@@ -48,8 +48,9 @@ namespace sw
             static bool validateSide( const BodyShapeAxis& axis, const BodyShapeAxisSide& side, const AppearanceGeometry* pBody, const CharacterBoneArray* pBones,
                                       string* pOutError )
             {
-                bool bValid = true;
-                if ( pBody != nullptr && side._morph.empty() == false && pBody->findMorph( side._morph ) == nullptr )
+                bool       bValid            = true;
+                const bool bUnknownMorphName = pBody != nullptr && side._morph.empty() == false && pBody->findMorph( side._morph ) == nullptr;
+                if ( bUnknownMorphName )
                 {
                     bValid = false;
                     appendError( pOutError, string( "body shape axis '" ) + axis._name.c_str() + "' names unknown morph '" + side._morph.c_str() + "'" );
@@ -176,11 +177,12 @@ namespace sw
             }
             reader.reportUnknownAttributes( axisNode, BodyShapeInternal::kArrAxisAttribute );
             BodyShapeAxis axis;
-            axis._name    = reader.readName( axisNode, "name", true );
-            axis._min     = reader.readFloat( axisNode, "min", -1.0f );
-            axis._max     = reader.readFloat( axisNode, "max", 1.0f );
-            axis._default = reader.readFloat( axisNode, "default", 0.0f );
-            if ( axis._min > 0.0f || axis._max < 0.0f || axis._min >= axis._max )
+            axis._name                   = reader.readName( axisNode, "name", true );
+            axis._min                    = reader.readFloat( axisNode, "min", -1.0f );
+            axis._max                    = reader.readFloat( axisNode, "max", 1.0f );
+            axis._default                = reader.readFloat( axisNode, "default", 0.0f );
+            const bool bInvalidAxisRange = axis._min > 0.0f || axis._max < 0.0f || axis._min >= axis._max;
+            if ( bInvalidAxisRange )
                 reader.addError( axisNode, "needs min <= 0 <= max with min < max" );
             for ( XMLNode sideNode = axisNode.findChild(); sideNode; sideNode = sideNode.findNextSibling() )
             {
@@ -304,8 +306,9 @@ namespace sw
         bool         bNormalsChanged = false;
         for ( const BodyMorphWeight& morphWeight : listMorphWeight )
         {
-            const GeometryMorphTarget* pMorph = inoutGeometry.findMorph( morphWeight._morph );
-            if ( pMorph == nullptr || pMorph->_listPositionDelta.size() != vertexCount || morphWeight._weight == 0.0f )
+            const GeometryMorphTarget* pMorph     = inoutGeometry.findMorph( morphWeight._morph );
+            const bool                 bSkipMorph = pMorph == nullptr || pMorph->_listPositionDelta.size() != vertexCount || morphWeight._weight == 0.0f;
+            if ( bSkipMorph )
                 continue;
             for ( uint32 vertex = 0; vertex < vertexCount; ++vertex )
             {

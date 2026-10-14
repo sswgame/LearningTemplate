@@ -566,8 +566,9 @@ namespace sw
 
     void Box2DPhysicsScene::moveKinematic( PhysicsBodyHandle body, const float2& targetPosition, const float32& targetRotation, float32 deltaTime )
     {
-        const BodyRecord* pRecord = findBody( body );
-        if ( pRecord == nullptr || pRecord->_type != PhysicsBodyType::Kinematic || deltaTime <= 0.0f )
+        const BodyRecord* pRecord             = findBody( body );
+        const bool        bNotKinematicTarget = pRecord == nullptr || pRecord->_type != PhysicsBodyType::Kinematic || deltaTime <= 0.0f;
+        if ( bNotKinematicTarget )
             return;
         b2Body_SetTargetTransform( pRecord->_bodyID, b2Transform{ Box2DUtil::toBox2D( targetPosition ), b2MakeRot( targetRotation ) }, deltaTime );
     }
@@ -690,9 +691,10 @@ namespace sw
 
     void Box2DPhysicsScene::setPairCollision( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB, bool bCollide )
     {
-        const BodyRecord* pRecordA = findBody( bodyA );
-        const BodyRecord* pRecordB = findBody( bodyB );
-        if ( pRecordA == nullptr || pRecordB == nullptr || bodyA == bodyB )
+        const BodyRecord* pRecordA            = findBody( bodyA );
+        const BodyRecord* pRecordB            = findBody( bodyB );
+        const bool        bInvalidJointBodies = pRecordA == nullptr || pRecordB == nullptr || bodyA == bodyB;
+        if ( bInvalidJointBodies )
             return;
         const pair<uint64, uint64>                           key  = Box2DPhysicsSceneInternal::makePairKey( bodyA, bodyB );
         const map<pair<uint64, uint64>, b2JointId>::iterator iter = _mapPairToJoint.find( key );

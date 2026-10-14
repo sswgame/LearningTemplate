@@ -389,8 +389,9 @@ namespace sw
             return ServerDirectoryResult::Invalid;
         for ( const ServerStatus& status : pReader->getSnapshot() )
         {
-            const bool bStale = nowMs - status._heartbeatMs > _settings._staleMs;
-            if ( bStale || status._state == ServerState::Starting || static_cast<int32>( outListEntry.size() ) >= ServerDirectoryLimit::kMaxServerListCount )
+            const bool bStale      = nowMs - status._heartbeatMs > _settings._staleMs;
+            const bool bSkipServer = bStale || status._state == ServerState::Starting || static_cast<int32>( outListEntry.size() ) >= ServerDirectoryLimit::kMaxServerListCount;
+            if ( bSkipServer )
                 continue;
             ServerListEntry& entry = outListEntry.emplace_back();
             entry._serverID        = status._descriptor._serverID;
@@ -421,8 +422,9 @@ namespace sw
         const bool bScopeOk = window._scope == MaintenanceWindow::kScopeAll || ServerRecord::isValidName( window._scope );
         const bool bSizesOk = static_cast<int32>( window._listAllowedAccount.size() ) <= ServerDirectoryLimit::kMaxAllowedAccountCount &&
                               static_cast<int32>( window._messageKey.size() ) <= ServerDirectoryLimit::kMaxMessageKeySize;
-        const bool bWindowOk = window._endMs == 0 || window._startMs < window._endMs;
-        if ( bScopeOk == false || bSizesOk == false || bWindowOk == false )
+        const bool bWindowOk             = window._endMs == 0 || window._startMs < window._endMs;
+        const bool bInvalidWindowRequest = bScopeOk == false || bSizesOk == false || bWindowOk == false;
+        if ( bInvalidWindowRequest )
         {
             _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryResult::Invalid } );
             return;
@@ -462,10 +464,11 @@ namespace sw
 
     void ServerDirectoryService::postNotice( const ServiceNotice& notice, AccountID actorID, int64 nowMs, uint64 requestTag )
     {
-        using Internal       = ServerDirectoryServiceInternal;
-        const bool bTextOk   = notice._text.empty() == false && static_cast<int32>( notice._text.size() ) <= ServerDirectoryLimit::kMaxNoticeTextSize;
-        const bool bWindowOk = notice._endMs == 0 || notice._startMs < notice._endMs;
-        if ( notice._noticeID == 0 || bTextOk == false || bWindowOk == false )
+        using Internal            = ServerDirectoryServiceInternal;
+        const bool bTextOk        = notice._text.empty() == false && static_cast<int32>( notice._text.size() ) <= ServerDirectoryLimit::kMaxNoticeTextSize;
+        const bool bWindowOk      = notice._endMs == 0 || notice._startMs < notice._endMs;
+        const bool bInvalidNotice = notice._noticeID == 0 || bTextOk == false || bWindowOk == false;
+        if ( bInvalidNotice )
         {
             _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryResult::Invalid } );
             return;

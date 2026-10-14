@@ -481,7 +481,8 @@ namespace sw
             // 연속 값 바인딩(2D 합성, 스틱, 마우스 이동량)은 매 프레임 읽는 값이라 Down 으로 고정한다. 다른 trigger 는 조용히 버리지 않고 경고한다.
             const bool bHasContinuousBinding = actionNode.findChild( "vector2d" ).isValid() || actionNode.findChild( "stick" ).isValid() ||
                                                actionNode.findChild( "mouseDelta" ).isValid();
-            if ( bActionTriggerWritten && defaultTrigger != ActionTrigger::Down && bHasContinuousBinding )
+            const bool bIgnoredTrigger = bActionTriggerWritten && defaultTrigger != ActionTrigger::Down && bHasContinuousBinding;
+            if ( bIgnoredTrigger )
                 SW_LOG_WARNING( "Action '%#' sets trigger '%#', but its vector2d/stick/mouseDelta bindings are continuous values read every frame - "
                                 "the trigger is ignored for them",
                                 pActionName, pTriggerAttr );
@@ -585,7 +586,8 @@ namespace sw
                     compLayer = hashed_string( pCompLayerAttr );
                     ensureLayer( compLayer );
                 }
-                if ( upKey != Key::Unknown && downKey != Key::Unknown && leftKey != Key::Unknown && rightKey != Key::Unknown )
+                const bool bCompleteDirectionKeys = upKey != Key::Unknown && downKey != Key::Unknown && leftKey != Key::Unknown && rightKey != Key::Unknown;
+                if ( bCompleteDirectionKeys )
                     bindVector2D( hashed_string( pActionName ), upKey, downKey, leftKey, rightKey, deadzone, hashed_string( compLayer.view() ) );
             }
 
@@ -958,12 +960,13 @@ namespace sw
                 }
                 case BindingKind::Vector2DComposite:
                 {
-                    const Key     upKey    = KeyCodeUtil::fromName( bindNode.getAttributeText( "up" ) );
-                    const Key     downKey  = KeyCodeUtil::fromName( bindNode.getAttributeText( "down" ) );
-                    const Key     leftKey  = KeyCodeUtil::fromName( bindNode.getAttributeText( "left" ) );
-                    const Key     rightKey = KeyCodeUtil::fromName( bindNode.getAttributeText( "right" ) );
-                    const float32 deadzone = bindNode.getAttributeFloat( "deadzone", 0.0f );
-                    if ( upKey != Key::Unknown && downKey != Key::Unknown && leftKey != Key::Unknown && rightKey != Key::Unknown )
+                    const Key     upKey                  = KeyCodeUtil::fromName( bindNode.getAttributeText( "up" ) );
+                    const Key     downKey                = KeyCodeUtil::fromName( bindNode.getAttributeText( "down" ) );
+                    const Key     leftKey                = KeyCodeUtil::fromName( bindNode.getAttributeText( "left" ) );
+                    const Key     rightKey               = KeyCodeUtil::fromName( bindNode.getAttributeText( "right" ) );
+                    const float32 deadzone               = bindNode.getAttributeFloat( "deadzone", 0.0f );
+                    const bool    bAllDirectionKeysBound = upKey != Key::Unknown && downKey != Key::Unknown && leftKey != Key::Unknown && rightKey != Key::Unknown;
+                    if ( bAllDirectionKeysBound )
                         bindVector2D( hashed_string( pAction ), upKey, downKey, leftKey, rightKey, deadzone, hashed_string( layer ) );
                     break;
                 }

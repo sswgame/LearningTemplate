@@ -208,8 +208,9 @@ namespace sw::editor
             const string_view                  pattern{ _searchBuffer.c_str() };
             for ( const CommandPaletteEntry& entry : _listAllCommand )
             {
-                if ( CommandPalettePopupInternal::fuzzyMatch( entry._label, pattern ) || CommandPalettePopupInternal::fuzzyMatch( entry._category, pattern ) ||
-                     CommandPalettePopupInternal::fuzzyMatch( entry._detail, pattern ) )
+                const bool bMatchesPattern = CommandPalettePopupInternal::fuzzyMatch( entry._label, pattern ) || CommandPalettePopupInternal::fuzzyMatch( entry._category, pattern ) ||
+                                             CommandPalettePopupInternal::fuzzyMatch( entry._detail, pattern );
+                if ( bMatchesPattern )
                     listFiltered.push_back( &entry );
             }
 

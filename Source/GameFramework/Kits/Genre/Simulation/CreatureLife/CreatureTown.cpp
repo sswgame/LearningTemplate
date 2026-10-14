@@ -242,8 +242,9 @@ namespace sw
         {
             for ( int32 speciesIndex = 0; speciesIndex < static_cast<int32>( listSpecies.size() ) && hasRoom( instance ); ++speciesIndex )
             {
-                const CreatureSpeciesDef& species = listSpecies[static_cast<size_t>( speciesIndex )];
-                if ( findCreatureIndex( species._id ) >= 0 || species.likesHabitat( instance._habitatID ) == false || species.comesIn( phase, weatherID ) == false )
+                const CreatureSpeciesDef& species      = listSpecies[static_cast<size_t>( speciesIndex )];
+                const bool                bSkipSpecies = findCreatureIndex( species._id ) >= 0 || species.likesHabitat( instance._habitatID ) == false || species.comesIn( phase, weatherID ) == false;
+                if ( bSkipSpecies )
                     continue;
                 // 서식지 번호가 아니라 위치로 섞는다. 같은 배치면 지어 온 순서와 상관없이 같은 답이 나온다.
                 const uint32  placeKey = static_cast<uint32>( _topology.toIndex( instance._origin ) ) * 4u + static_cast<uint32>( instance._rotation );
@@ -381,7 +382,8 @@ namespace sw
 
     int32 CreatureTown::placeHouse( int32 x, int32 y, int32 capacity )
     {
-        if ( _topology.isInside( x, y ) == false || _listObject[static_cast<size_t>( _topology.toIndex( x, y ) )].empty() == false || _land.isUsable( x, y ) == false )
+        const bool bCannotPlaceHouse = _topology.isInside( x, y ) == false || _listObject[static_cast<size_t>( _topology.toIndex( x, y ) )].empty() == false || _land.isUsable( x, y ) == false;
+        if ( bCannotPlaceHouse )
             return -1;
         CreatureHouse house;
         house._tile     = int2{ x, y };
@@ -503,10 +505,11 @@ namespace sw
 
     int32 CreatureTown::countAbilityUsesLeft( const hashed_string& speciesID, const hashed_string& abilityID ) const
     {
-        const TownCreature*       pCreature = findCreature( speciesID );
-        const CreatureSpeciesDef* pSpecies  = _pCatalog != nullptr ? _pCatalog->findSpecies( speciesID ) : nullptr;
-        const CreatureAbilityDef* pAbility  = _pCatalog != nullptr ? _pCatalog->findAbility( abilityID ) : nullptr;
-        if ( pCreature == nullptr || pSpecies == nullptr || pAbility == nullptr )
+        const TownCreature*       pCreature           = findCreature( speciesID );
+        const CreatureSpeciesDef* pSpecies            = _pCatalog != nullptr ? _pCatalog->findSpecies( speciesID ) : nullptr;
+        const CreatureAbilityDef* pAbility            = _pCatalog != nullptr ? _pCatalog->findAbility( abilityID ) : nullptr;
+        const bool                bAbilityDataMissing = pCreature == nullptr || pSpecies == nullptr || pAbility == nullptr;
+        if ( bAbilityDataMissing )
             return 0;
         for ( size_t slot = 0; slot < pSpecies->_listAbility.size(); ++slot )
         {
@@ -594,9 +597,10 @@ namespace sw
         {
             for ( size_t oldIndex = 0; oldIndex < _listHabitat.size(); ++oldIndex )
             {
-                const HabitatInstance& old = _listHabitat[oldIndex];
-                if ( listKept[oldIndex] == SW_FALSE && old._habitatID == match._habitatID && old._rotation == match._rotation && old._origin._x == match._origin._x &&
-                     old._origin._y == match._origin._y )
+                const HabitatInstance& old                = _listHabitat[oldIndex];
+                const bool             bMatchesOldHabitat = listKept[oldIndex] == SW_FALSE && old._habitatID == match._habitatID && old._rotation == match._rotation && old._origin._x == match._origin._x &&
+                                                old._origin._y == match._origin._y;
+                if ( bMatchesOldHabitat )
                 {
                     match._id          = old._id;
                     listKept[oldIndex] = SW_TRUE;
@@ -633,7 +637,8 @@ namespace sw
             const CreatureSpeciesDef* pSpecies = _pCatalog->findSpecies( creature._speciesID );
             for ( const HabitatInstance& instance : _listHabitat )
             {
-                if ( pSpecies != nullptr && pSpecies->likesHabitat( instance._habitatID ) && hasRoom( instance ) )
+                const bool bHabitatHasRoom = pSpecies != nullptr && pSpecies->likesHabitat( instance._habitatID ) && hasRoom( instance );
+                if ( bHabitatHasRoom )
                 {
                     creature._habitat = instance._id;
                     break;
@@ -831,7 +836,8 @@ namespace sw
         int32 height = 0;
         archive >> width;
         archive >> height;
-        if ( archive.isError() || width != _topology._width || height != _topology._height )
+        const bool bTownSizeMismatch = archive.isError() || width != _topology._width || height != _topology._height;
+        if ( bTownSizeMismatch )
             return false;
         // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 카탈로그, 설정, 빌린 일지와 시계 포인터는 사본도 그대로 가지고 있다.
         CreatureTown town      = *this;

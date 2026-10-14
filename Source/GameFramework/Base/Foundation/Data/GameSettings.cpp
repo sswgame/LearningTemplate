@@ -107,15 +107,16 @@ namespace sw
             if ( StringUtil::isNullOrEmpty( pName ) )
                 continue;
 
-            if ( StringUtil::equals( pName, "startMap" ) ||
-                 StringUtil::equals( pName, "titleScene" ) ||
-                 StringUtil::equals( pName, "entranceScene" ) ||
-                 StringUtil::equals( pName, "defaultSavePath" ) ||
-                 StringUtil::equals( pName, "localizationProject" ) ||
-                 StringUtil::equals( pName, "defaultLanguage" ) ||
-                 StringUtil::equals( pName, "fallbackLanguage" ) ||
-                 StringUtil::equals( pName, "inputMap" ) ||
-                 StringUtil::equals( pName, "loadingScreen" ) )
+            const bool bReservedSetting = StringUtil::equals( pName, "startMap" ) ||
+                                          StringUtil::equals( pName, "titleScene" ) ||
+                                          StringUtil::equals( pName, "entranceScene" ) ||
+                                          StringUtil::equals( pName, "defaultSavePath" ) ||
+                                          StringUtil::equals( pName, "localizationProject" ) ||
+                                          StringUtil::equals( pName, "defaultLanguage" ) ||
+                                          StringUtil::equals( pName, "fallbackLanguage" ) ||
+                                          StringUtil::equals( pName, "inputMap" ) ||
+                                          StringUtil::equals( pName, "loadingScreen" );
+            if ( bReservedSetting )
                 continue;
 
             if ( StringUtil::equals( pName, "custom" ) )

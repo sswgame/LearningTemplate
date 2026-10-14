@@ -314,7 +314,8 @@ namespace sw
 
     bool UIInputRouter::pollPauseAction( bool bHasPauseMenu )
     {
-        if ( _uiInputMap == nullptr || bHasPauseMenu == false || _pInput->getKeyboardFocus() == InputKeyboardFocus::DevConsole )
+        const bool bPauseNotPollable = _uiInputMap == nullptr || bHasPauseMenu == false || _pInput->getKeyboardFocus() == InputKeyboardFocus::DevConsole;
+        if ( bPauseNotPollable )
             return false;
         const hashed_string pauseAction( UIActionName::kPause );
         if ( _uiInputMap->wasActionTriggered( pauseAction ) == false || _consumption.isActionConsumed( *_uiInputMap, *_pInput, pauseAction ) )
@@ -326,7 +327,8 @@ namespace sw
 
     void UIInputRouter::processActions( UIScreen* pActive, float32 deltaSeconds )
     {
-        if ( pActive == nullptr || _uiInputMap == nullptr || pActive->wantsUIActions() == false )
+        const bool bNoUIActions = pActive == nullptr || _uiInputMap == nullptr || pActive->wantsUIActions() == false;
+        if ( bNoUIActions )
         {
             _bStickHeld = SW_FALSE;
             return;

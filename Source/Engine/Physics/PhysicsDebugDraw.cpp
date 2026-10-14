@@ -145,10 +145,11 @@ namespace sw
                 const size_t               pointCount = geometry._listPoint.size();
                 for ( size_t index = 0; index + 2 < geometry._listIndex.size(); index += 3 )
                 {
-                    const uint32 indexA = geometry._listIndex[index];
-                    const uint32 indexB = geometry._listIndex[index + 1];
-                    const uint32 indexC = geometry._listIndex[index + 2];
-                    if ( indexA >= pointCount || indexB >= pointCount || indexC >= pointCount )
+                    const uint32 indexA           = geometry._listIndex[index];
+                    const uint32 indexB           = geometry._listIndex[index + 1];
+                    const uint32 indexC           = geometry._listIndex[index + 2];
+                    const bool   bIndexOutOfRange = indexA >= pointCount || indexB >= pointCount || indexC >= pointCount;
+                    if ( bIndexOutOfRange )
                         continue;
                     const float3 pointA = frame.apply( geometry._listPoint[indexA] );
                     const float3 pointB = frame.apply( geometry._listPoint[indexB] );

@@ -401,7 +401,8 @@ SW_TEST_CASE( AsyncFileIOTest, ManyRangesOfOneOpenFile )
             // 핸들은 버린다 — 성공은 콜백이 okCount 로 센다
             (void)io.readRange( file, offset, kRangeBytes, sw::AsyncIOPriority::Normal, SW_DELEGATE_LAMBDA( sw::AsyncReadCompleteDelegate, [&okCount, offset]( sw::AsyncReadResult& result )
             {
-                if ( result.isSucceeded() && result._offset == offset && matchesFileRange( result._bytes, offset ) )
+                const bool bReadMatches = result.isSucceeded() && result._offset == offset && matchesFileRange( result._bytes, offset );
+                if ( bReadMatches )
                     okCount.fetch_add( 1 );
             } ) );
         }

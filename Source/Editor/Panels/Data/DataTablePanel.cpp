@@ -203,9 +203,10 @@ namespace sw::editor
             {
                 for ( size_t projectIndex = 0; projectIndex < _listLocalizationProject.size(); ++projectIndex )
                 {
-                    const bool   bSelected = static_cast<int32>( projectIndex ) == _selectedProjectIndex;
-                    const string label     = FileUtil::getFileNamePart( _listLocalizationProject[projectIndex] );
-                    if ( ImGui::Selectable( label.c_str(), bSelected ) && bSelected == false && _bLocalizationDirty == SW_FALSE )
+                    const bool   bSelected      = static_cast<int32>( projectIndex ) == _selectedProjectIndex;
+                    const string label          = FileUtil::getFileNamePart( _listLocalizationProject[projectIndex] );
+                    const bool   bSwitchProject = ImGui::Selectable( label.c_str(), bSelected ) && bSelected == false && _bLocalizationDirty == SW_FALSE;
+                    if ( bSwitchProject )
                     {
                         _selectedProjectIndex = static_cast<int32>( projectIndex );
                         reloadLocalization();
@@ -230,7 +231,8 @@ namespace sw::editor
             ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
             ImGui::InputTextWithHint( "##newKey", SW_LOCKEY( "EditorDataTable", "NewKeyHint" ), _newKeyBuffer.data(), _newKeyBuffer.capacity() );
             ImGui::SameLine();
-            if ( ImGui::Button( "Add Key" ) && _newKeyBuffer.empty() == false && _localizationSheet._listTablePath.empty() == false )
+            const bool bAddKeyRequested = ImGui::Button( "Add Key" ) && _newKeyBuffer.empty() == false && _localizationSheet._listTablePath.empty() == false;
+            if ( bAddKeyRequested )
             {
                 const string newKey{ _newKeyBuffer.c_str() };
                 bool         bExists{ false };

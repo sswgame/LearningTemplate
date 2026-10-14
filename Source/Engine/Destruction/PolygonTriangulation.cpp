@@ -151,8 +151,9 @@ namespace sw
                         bool bContainsOther = false;
                         for ( size_t other = 0; other < count; ++other )
                         {
-                            const float2& point = listPoint[listPolygon[other]];
-                            if ( isSamePoint( point, prev ) || isSamePoint( point, cur ) || isSamePoint( point, next ) )
+                            const float2& point                 = listPoint[listPolygon[other]];
+                            const bool    bSharesTriangleVertex = isSamePoint( point, prev ) || isSamePoint( point, cur ) || isSamePoint( point, next );
+                            if ( bSharesTriangleVertex )
                                 continue;
                             if ( isPointInTriangle( point, prev, cur, next, sign ) )
                             {

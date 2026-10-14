@@ -20,9 +20,10 @@ namespace sw::editor
     EditorViewRect EditorViewTargetUtil::fitViewImage( const float2& available, EditorGameViewAspect aspect )
     {
         EditorViewRect rect{};
-        const float32  width  = MathUtil::floor( MathUtil::max( available._x, 0.0f ) );
-        const float32  height = MathUtil::floor( MathUtil::max( available._y, 0.0f ) );
-        if ( aspect != EditorGameViewAspect::Ratio16x9 || width <= 0.0f || height <= 0.0f )
+        const float32  width        = MathUtil::floor( MathUtil::max( available._x, 0.0f ) );
+        const float32  height       = MathUtil::floor( MathUtil::max( available._y, 0.0f ) );
+        const bool     bUseFullRect = aspect != EditorGameViewAspect::Ratio16x9 || width <= 0.0f || height <= 0.0f;
+        if ( bUseFullRect )
         {
             rect._size = float2{ width, height };
             return rect;

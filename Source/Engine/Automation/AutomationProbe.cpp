@@ -27,7 +27,8 @@ namespace sw
 {
     bool AutomationProbes::registerProbe( const AutomationProbeRegistration* pRegistration )
     {
-        if ( pRegistration == nullptr || pRegistration->_pName == nullptr || pRegistration->_pFunction == nullptr )
+        const bool bInvalidProbeRegistration = pRegistration == nullptr || pRegistration->_pName == nullptr || pRegistration->_pFunction == nullptr;
+        if ( bInvalidProbeRegistration )
             return false;
         if ( AutomationProbeInternal::getRegistrations().add( pRegistration, pRegistration->_pName ) != RegistrationResult::Added )
         {

@@ -104,8 +104,9 @@ namespace
 
         bool initialize( uint32 seed )
         {
-            if ( _catalog.loadFromXMLText( kBrCatalogXML, "BattleRoyaleTest" ) == false || _itemCatalog.loadFromXMLText( kBrItemXML, "BattleRoyaleTest" ) == false ||
-                 _lootCatalog.loadFromXMLText( kBrLootXML, "BattleRoyaleTest" ) == false )
+            const bool bCatalogLoadFailed = _catalog.loadFromXMLText( kBrCatalogXML, "BattleRoyaleTest" ) == false || _itemCatalog.loadFromXMLText( kBrItemXML, "BattleRoyaleTest" ) == false ||
+                                            _lootCatalog.loadFromXMLText( kBrLootXML, "BattleRoyaleTest" ) == false;
+            if ( bCatalogLoadFailed )
                 return false;
             _match.initialize( &_catalog, &_itemCatalog, &_lootCatalog, seed, nullptr );
             return true;

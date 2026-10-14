@@ -149,7 +149,8 @@ namespace sw
                 const uint64 pathHash = StringUtil::computeHash64( relativePath );
                 for ( const MountedPack& mounted : listMountedPack )
                 {
-                    if ( mounted._pReader != nullptr && mounted._pReader->hasFile( pathHash ) && visit( mounted, pathHash, relativePath ) )
+                    const bool bPackHasFile = mounted._pReader != nullptr && mounted._pReader->hasFile( pathHash ) && visit( mounted, pathHash, relativePath );
+                    if ( bPackHasFile )
                         return true;
                 }
 

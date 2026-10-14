@@ -86,7 +86,8 @@ namespace sw::editor
 
     hashed_string ModelImportUtil::makeMorphTargetName( const cgltf_mesh* pMesh, cgltf_size targetIndex )
     {
-        if ( pMesh != nullptr && targetIndex < pMesh->target_names_count && pMesh->target_names[targetIndex] != nullptr )
+        const bool bHasMorphTargetName = pMesh != nullptr && targetIndex < pMesh->target_names_count && pMesh->target_names[targetIndex] != nullptr;
+        if ( bHasMorphTargetName )
             return hashed_string( pMesh->target_names[targetIndex] );
         return hashed_string( "target" + to_string( static_cast<uint64>( targetIndex ) ) );
     }

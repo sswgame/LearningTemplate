@@ -79,10 +79,11 @@ namespace sw
 
     bool VulkanRHIDevice::transitionImageLayout( VkCommandBuffer cmd, VkImage image, uint32 oldLayoutU32, uint32 newLayoutU32, uint32 aspectU32 )
     {
-        const VkImageLayout      oldLayout = static_cast<VkImageLayout>( oldLayoutU32 );
-        const VkImageLayout      newLayout = static_cast<VkImageLayout>( newLayoutU32 );
-        const VkImageAspectFlags aspect    = aspectU32;
-        if ( cmd == VK_NULL_HANDLE || image == VK_NULL_HANDLE || oldLayout == newLayout )
+        const VkImageLayout      oldLayout           = static_cast<VkImageLayout>( oldLayoutU32 );
+        const VkImageLayout      newLayout           = static_cast<VkImageLayout>( newLayoutU32 );
+        const VkImageAspectFlags aspect              = aspectU32;
+        const bool               bNoLayoutTransition = cmd == VK_NULL_HANDLE || image == VK_NULL_HANDLE || oldLayout == newLayout;
+        if ( bNoLayoutTransition )
             return true;
 
         VkImageMemoryBarrier barrier{};
@@ -276,9 +277,10 @@ namespace sw
         if ( desc._bEnableDepthTest != 0 )
         {
             // FrameRenderer 는 RHI D24 를 요청하지만 GPU 가 지원하지 않을 수 있다 → 디바이스가 고른 포맷을 쓴다.
-            VkFormat depthFmt = VulkanRHIDeviceInternal::toVulkanTextureFormat( desc._depthStencilFormat );
-            if ( desc._depthStencilFormat == sw::RHIFormat::D24_UNORM_S8_UINT ||
-                 depthFmt == VK_FORMAT_D24_UNORM_S8_UINT || depthFmt == VK_FORMAT_UNDEFINED )
+            VkFormat   depthFmt              = VulkanRHIDeviceInternal::toVulkanTextureFormat( desc._depthStencilFormat );
+            const bool bUseDeviceDepthFormat = desc._depthStencilFormat == sw::RHIFormat::D24_UNORM_S8_UINT ||
+                                               depthFmt == VK_FORMAT_D24_UNORM_S8_UINT || depthFmt == VK_FORMAT_UNDEFINED;
+            if ( bUseDeviceDepthFormat )
                 depthFmt = static_cast<VkFormat>( _depthFormat );
             key._depthFormat = static_cast<uint32>( depthFmt );
         }
@@ -306,8 +308,9 @@ namespace sw
         VulkanRHIRenderPassCache::RenderPassSpec spec{};
         for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
         {
-            VulkanTextureRecord* pTex = resolveTexture( key._arrColor[colorIndex] );
-            if ( pTex == nullptr || pTex->findAttachmentView( key._arrColorSlice[colorIndex] ) == VK_NULL_HANDLE || pTex->_bDepthStencil != SW_FALSE )
+            VulkanTextureRecord* pTex                    = resolveTexture( key._arrColor[colorIndex] );
+            const bool           bInvalidColorAttachment = pTex == nullptr || pTex->findAttachmentView( key._arrColorSlice[colorIndex] ) == VK_NULL_HANDLE || pTex->_bDepthStencil != SW_FALSE;
+            if ( bInvalidColorAttachment )
                 return false;
             arrFbAttachment[colorIndex] = pTex->findAttachmentView( key._arrColorSlice[colorIndex] );
             width                       = pTex->_width;
@@ -319,8 +322,9 @@ namespace sw
         uint32 attachCount = key._colorCount;
         if ( key._depth != 0 )
         {
-            VulkanTextureRecord* pTex = resolveTexture( key._depth );
-            if ( pTex == nullptr || pTex->findAttachmentView( key._depthSlice ) == VK_NULL_HANDLE || pTex->_bDepthStencil == SW_FALSE )
+            VulkanTextureRecord* pTex                    = resolveTexture( key._depth );
+            const bool           bInvalidDepthAttachment = pTex == nullptr || pTex->findAttachmentView( key._depthSlice ) == VK_NULL_HANDLE || pTex->_bDepthStencil == SW_FALSE;
+            if ( bInvalidDepthAttachment )
                 return false;
             arrFbAttachment[attachCount] = pTex->findAttachmentView( key._depthSlice );
             ++attachCount;

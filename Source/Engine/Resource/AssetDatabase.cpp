@@ -307,7 +307,8 @@ namespace sw
             const utf8* pGuidText = nullptr;
             if ( KeyValueFile::loadFile( metaAbs, mapData ) )
                 pGuidText = KeyValueFile::get( mapData, "guid", nullptr );
-            if ( pGuidText == nullptr || UUID::tryParse( pGuidText, guid ) == false || guid.isNull() )
+            const bool bUnreadableGuid = pGuidText == nullptr || UUID::tryParse( pGuidText, guid ) == false || guid.isNull();
+            if ( bUnreadableGuid )
             {
                 SW_LOG_ERROR( "Asset registry: '%#' has no readable guid - the asset is left out of the shipped registry", metaAbs );
                 ++outFailedCount;
@@ -423,8 +424,9 @@ namespace sw
         if ( ResourceIO::readTextResource( metaRel, metaText ) == false || KeyValueFile::parse( metaText, mapData ) == false )
             return false;
 
-        const utf8* pGuidStr = KeyValueFile::get( mapData, "guid", nullptr );
-        if ( pGuidStr == nullptr || UUID::tryParse( pGuidStr, outGuid ) == false || outGuid.isNull() )
+        const utf8* pGuidStr     = KeyValueFile::get( mapData, "guid", nullptr );
+        const bool  bInvalidGuid = pGuidStr == nullptr || UUID::tryParse( pGuidStr, outGuid ) == false || outGuid.isNull();
+        if ( bInvalidGuid )
             return false;
         if ( pOutImported != nullptr )
             *pOutImported = KeyValueFile::getInt( mapData, "imported", 0 ) != 0;

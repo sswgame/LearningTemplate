@@ -26,15 +26,17 @@ namespace sw::editor
 {
     bool GimmickGraphBridge::load( const GimmickCircuitComponent& component, GimmickGraphModel& outModel )
     {
-        const PropertyInfo* pNode   = GimmickGraphBridgeInternal::findProperty( component, "_listNode" );
-        const PropertyInfo* pTarget = GimmickGraphBridgeInternal::findProperty( component, "_listNodeTarget" );
-        const PropertyInfo* pWire   = GimmickGraphBridgeInternal::findProperty( component, "_listWire" );
-        if ( pNode == nullptr || pTarget == nullptr || pWire == nullptr )
+        const PropertyInfo* pNode            = GimmickGraphBridgeInternal::findProperty( component, "_listNode" );
+        const PropertyInfo* pTarget          = GimmickGraphBridgeInternal::findProperty( component, "_listNodeTarget" );
+        const PropertyInfo* pWire            = GimmickGraphBridgeInternal::findProperty( component, "_listWire" );
+        const bool          bMissingProperty = pNode == nullptr || pTarget == nullptr || pWire == nullptr;
+        if ( bMissingProperty )
             return false;
-        const vector<GimmickNodeDesc>*  pListNode   = pNode->getValuePtr<vector<GimmickNodeDesc>>( static_cast<const void*>( &component ) );
-        const vector<GameObjectHandle>* pListTarget = pTarget->getValuePtr<vector<GameObjectHandle>>( static_cast<const void*>( &component ) );
-        const vector<GimmickWireDesc>*  pListWire   = pWire->getValuePtr<vector<GimmickWireDesc>>( static_cast<const void*>( &component ) );
-        if ( pListNode == nullptr || pListTarget == nullptr || pListWire == nullptr )
+        const vector<GimmickNodeDesc>*  pListNode        = pNode->getValuePtr<vector<GimmickNodeDesc>>( static_cast<const void*>( &component ) );
+        const vector<GameObjectHandle>* pListTarget      = pTarget->getValuePtr<vector<GameObjectHandle>>( static_cast<const void*>( &component ) );
+        const vector<GimmickWireDesc>*  pListWire        = pWire->getValuePtr<vector<GimmickWireDesc>>( static_cast<const void*>( &component ) );
+        const bool                      bMissingValuePtr = pListNode == nullptr || pListTarget == nullptr || pListWire == nullptr;
+        if ( bMissingValuePtr )
             return false;
         outModel.populate( *pListNode, *pListTarget, *pListWire );
         return true;
@@ -50,15 +52,17 @@ namespace sw::editor
 
     bool GimmickGraphBridge::apply( GimmickCircuitComponent& component, const GimmickGraphModel& model )
     {
-        const PropertyInfo* pNode   = GimmickGraphBridgeInternal::findProperty( component, "_listNode" );
-        const PropertyInfo* pTarget = GimmickGraphBridgeInternal::findProperty( component, "_listNodeTarget" );
-        const PropertyInfo* pWire   = GimmickGraphBridgeInternal::findProperty( component, "_listWire" );
-        if ( pNode == nullptr || pTarget == nullptr || pWire == nullptr )
+        const PropertyInfo* pNode            = GimmickGraphBridgeInternal::findProperty( component, "_listNode" );
+        const PropertyInfo* pTarget          = GimmickGraphBridgeInternal::findProperty( component, "_listNodeTarget" );
+        const PropertyInfo* pWire            = GimmickGraphBridgeInternal::findProperty( component, "_listWire" );
+        const bool          bMissingProperty = pNode == nullptr || pTarget == nullptr || pWire == nullptr;
+        if ( bMissingProperty )
             return false;
-        vector<GimmickNodeDesc>*  pListNode   = pNode->getValuePtr<vector<GimmickNodeDesc>>( static_cast<void*>( &component ) );
-        vector<GameObjectHandle>* pListTarget = pTarget->getValuePtr<vector<GameObjectHandle>>( static_cast<void*>( &component ) );
-        vector<GimmickWireDesc>*  pListWire   = pWire->getValuePtr<vector<GimmickWireDesc>>( static_cast<void*>( &component ) );
-        if ( pListNode == nullptr || pListTarget == nullptr || pListWire == nullptr )
+        vector<GimmickNodeDesc>*  pListNode        = pNode->getValuePtr<vector<GimmickNodeDesc>>( static_cast<void*>( &component ) );
+        vector<GameObjectHandle>* pListTarget      = pTarget->getValuePtr<vector<GameObjectHandle>>( static_cast<void*>( &component ) );
+        vector<GimmickWireDesc>*  pListWire        = pWire->getValuePtr<vector<GimmickWireDesc>>( static_cast<void*>( &component ) );
+        const bool                bMissingValuePtr = pListNode == nullptr || pListTarget == nullptr || pListWire == nullptr;
+        if ( bMissingValuePtr )
             return false;
         model.exportTo( *pListNode, *pListTarget, *pListWire );
         component.onPropertyChanged( hashed_string( "_listNode" ) ); // 인스펙터가 속성을 고쳤을 때와 같은 알림 - 회로를 다시 짓는다

@@ -46,7 +46,8 @@ namespace sw::editor
                 uint64 value = 0;
                 for ( const utf8 ch : text )
                 {
-                    if ( ch < '0' || '9' < ch || value > 1000000 )
+                    const bool bInvalidCountDigit = ch < '0' || '9' < ch || value > 1000000;
+                    if ( bInvalidCountDigit )
                         return false;
                     value = value * 10 + static_cast<uint64>( ch - '0' );
                 }
@@ -106,8 +107,9 @@ namespace sw::editor
 
             static bool runStep( const vector<string>& listArgument, string& outReply )
             {
-                uint32 frameCount = 1;
-                if ( listArgument.size() > 1 || ( listArgument.size() == 1 && parseCount( listArgument[0], frameCount ) == false ) || frameCount == 0 )
+                uint32     frameCount            = 1;
+                const bool bInvalidStepArguments = listArgument.size() > 1 || ( listArgument.size() == 1 && parseCount( listArgument[0], frameCount ) == false ) || frameCount == 0;
+                if ( bInvalidStepArguments )
                     return false;
                 EditorPlaySession::stepFrames( frameCount );
                 outReply = "step " + to_string( frameCount );
@@ -185,10 +187,11 @@ namespace sw::editor
              */
             [[nodiscard]] static bool resolveTempAssetPath( const string& path, string& outAbsolutePath, string& outReply )
             {
-                string absolutePath;
-                string automationFolder;
-                if ( path.empty() || FileUtil::makeAbsolutePath( path, absolutePath ) == false ||
-                     FileUtil::makeAbsolutePath( "Saved/Automation", automationFolder ) == false )
+                string     absolutePath;
+                string     automationFolder;
+                const bool bUnresolvedPaths = path.empty() || FileUtil::makeAbsolutePath( path, absolutePath ) == false ||
+                                              FileUtil::makeAbsolutePath( "Saved/Automation", automationFolder ) == false;
+                if ( bUnresolvedPaths )
                 {
                     outReply = "could not resolve '" + path + "'";
                     return false;
@@ -256,9 +259,10 @@ namespace sw::editor
 
             static bool runSelectType( const vector<string>& listArgument, string& outReply )
             {
-                GameObjectManager* pManager  = editor::getActiveObjectManager();
-                TypeRegistry*      pRegistry = editor::getService<TypeRegistry>();
-                if ( listArgument.size() != 1 || pManager == nullptr || pRegistry == nullptr )
+                GameObjectManager* pManager               = editor::getActiveObjectManager();
+                TypeRegistry*      pRegistry              = editor::getService<TypeRegistry>();
+                const bool         bInvalidSpawnArguments = listArgument.size() != 1 || pManager == nullptr || pRegistry == nullptr;
+                if ( bInvalidSpawnArguments )
                     return false;
                 const TypeInfo* pType = pRegistry->findType( hashed_string( listArgument[0] ) );
                 if ( pType == nullptr )

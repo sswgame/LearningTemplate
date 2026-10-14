@@ -44,9 +44,10 @@ namespace sw
                 const size_t pos = line.find( pMacroName );
                 if ( pos == string_view::npos )
                     return false;
-                const size_t open  = line.find( '(', pos );
-                const size_t close = line.rfind( ')' );
-                if ( open == string_view::npos || close == string_view::npos || close <= open )
+                const size_t open                = line.find( '(', pos );
+                const size_t close               = line.rfind( ')' );
+                const bool   bInvalidMacroParens = open == string_view::npos || close == string_view::npos || close <= open;
+                if ( bInvalidMacroParens )
                     return false;
                 outListMacroArgument = ParserUtil::splitCommaRespectingAngles( line.substr( open + 1, close - open - 1 ) );
                 return outListMacroArgument.empty() == false;
@@ -68,8 +69,9 @@ namespace sw
                 const string_splitter lines( text, { "\r\n", "\n" } );
                 for ( const string_view rawLine : lines.getSplitList() )
                 {
-                    const string_view line = StringUtil::trim( rawLine );
-                    if ( line.empty() || line.front() == '#' || line.front() == '/' )
+                    const string_view line         = StringUtil::trim( rawLine );
+                    const bool        bSkippedLine = line.empty() || line.front() == '#' || line.front() == '/';
+                    if ( bSkippedLine )
                         continue;
 
                     BuiltinRow row;
@@ -181,9 +183,10 @@ namespace sw
         if ( ReflectBuiltinsLoaderInternal::readRows( builtinsAbsPath, listRow ) == false )
             return false;
 
-        const EmitTemplateStore& tpls = session._emitTemplateStore;
-        if ( tpls.isLoaded() == false || tpls.has( templatefile::kBuiltinFileHeader ) == false ||
-             tpls.has( templatefile::kBuiltinTypeRegistrar ) == false || tpls.has( templatefile::kBuiltinFileFooter ) == false )
+        const EmitTemplateStore& tpls                  = session._emitTemplateStore;
+        const bool               bMissingEmitTemplates = tpls.isLoaded() == false || tpls.has( templatefile::kBuiltinFileHeader ) == false ||
+                                           tpls.has( templatefile::kBuiltinTypeRegistrar ) == false || tpls.has( templatefile::kBuiltinFileFooter ) == false;
+        if ( bMissingEmitTemplates )
         {
             SW_LOG_ERROR( "emit requires %# (%# / %# / %#).", cli::kEmitTemplates, templatefile::kBuiltinFileHeader,
                           templatefile::kBuiltinTypeRegistrar, templatefile::kBuiltinFileFooter );

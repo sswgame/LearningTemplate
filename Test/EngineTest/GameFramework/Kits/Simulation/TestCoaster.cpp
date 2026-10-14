@@ -145,9 +145,10 @@ SW_TEST_CASE( CoasterTest, LiftBrakesAndStationDriveTheTrain )
     for ( int32 frameIndex = 0; frameIndex < 60 * 120 && train.getLapCount() < 1; ++frameIndex )
     {
         train.step( 1.0f / 60.0f );
-        const uint8 flags = train.getFrame()._flags;
-        bLeftStation      = bLeftStation || train.getDistance() > 12.0f;
-        if ( ( flags & CoasterSegmentFlag::kLift ) != 0 && train.getDistance() > 20.0f && train.getDistance() < 38.0f )
+        const uint8 flags         = train.getFrame()._flags;
+        bLeftStation              = bLeftStation || train.getDistance() > 12.0f;
+        const bool bInLiftSection = ( flags & CoasterSegmentFlag::kLift ) != 0 && train.getDistance() > 20.0f && train.getDistance() < 38.0f;
+        if ( bInLiftSection )
         {
             bSawLift     = true;
             bLiftAtSpeed = bLiftAtSpeed && MathUtil::abs( train.getSpeed() - params._liftSpeed ) < 0.2f;

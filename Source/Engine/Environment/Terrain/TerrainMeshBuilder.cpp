@@ -93,8 +93,9 @@ namespace sw
 {
     bool TerrainMeshBuilder::makeLayout( uint32 resolution, uint32 chunkCells, TerrainChunkLayout& outLayout )
     {
-        outLayout = TerrainChunkLayout{};
-        if ( resolution < 2 || chunkCells == 0 || MathUtil::isPowerOfTwo( chunkCells ) == false || ( resolution - 1 ) % chunkCells != 0 )
+        outLayout                      = TerrainChunkLayout{};
+        const bool bInvalidChunkLayout = resolution < 2 || chunkCells == 0 || MathUtil::isPowerOfTwo( chunkCells ) == false || ( resolution - 1 ) % chunkCells != 0;
+        if ( bInvalidChunkLayout )
             return false;
         outLayout._chunkCells  = chunkCells;
         outLayout._chunkCountX = ( resolution - 1 ) / chunkCells;
@@ -184,7 +185,8 @@ namespace sw
                 };
                 for ( const Internal::GridPoint( &triangle )[3] : arrTriangle )
                 {
-                    if ( triangle[0] == triangle[1] || triangle[1] == triangle[2] || triangle[0] == triangle[2] )
+                    const bool bDegenerateTriangle = triangle[0] == triangle[1] || triangle[1] == triangle[2] || triangle[0] == triangle[2];
+                    if ( bDegenerateTriangle )
                         continue;
                     for ( const Internal::GridPoint& corner : triangle )
                     {

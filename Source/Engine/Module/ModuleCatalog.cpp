@@ -60,7 +60,8 @@ namespace sw
                 bDigit = true;
                 continue;
             }
-            if ( ch != '.' || bDigit == false || partIndex == 2 )
+            const bool bBadVersionSeparator = ch != '.' || bDigit == false || partIndex == 2;
+            if ( bBadVersionSeparator )
                 return false;
             ++partIndex;
             bDigit = false;

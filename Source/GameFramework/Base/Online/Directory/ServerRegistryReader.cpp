@@ -112,13 +112,14 @@ namespace sw
         const uint64 serverID = serverIt != _mapRequestToServer.end() ? serverIt->second : 0;
         if ( serverIt != _mapRequestToServer.end() )
             _mapRequestToServer.erase( serverIt );
+        const bool bServerRecordExpired = reply._result == EphemeralResult::NotFound && serverID != 0 && _pRouter != nullptr;
         if ( reply._result == EphemeralResult::Ok )
         {
             ServerStatus status;
             if ( ServerRecord::decode( reply._value, status ) && status._descriptor._serverID == serverID )
                 _listBuilding.push_back( std::move( status ) );
         }
-        else if ( reply._result == EphemeralResult::NotFound && serverID != 0 && _pRouter != nullptr )
+        else if ( bServerRecordExpired )
         {
             // 기록이 시한으로 사라졌다 — 서버가 죽었다. 색인의 낡은 멤버를 지운다(어느 읽는 쪽이 지워도 같다).
             (void)_pRouter->submit( EphemeralRequest::makeScoreRemove( ServerRecord::makeIndexKey( _kind ), ServerRecord::makeMember( serverID ) ),

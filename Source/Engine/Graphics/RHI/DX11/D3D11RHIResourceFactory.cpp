@@ -19,7 +19,8 @@ namespace sw
 
     RHIBufferHandle D3D11RHIResourceFactory::createConstantBuffer( uint32 size )
     {
-        if ( _pDevice == nullptr || _pDevice->_device == nullptr || size == 0 )
+        const bool bInvalidConstantBufferRequest = _pDevice == nullptr || _pDevice->_device == nullptr || size == 0;
+        if ( bInvalidConstantBufferRequest )
         {
             SW_LOG_ERROR( "createConstantBuffer: invalid device or size=%#", size );
             return 0;
@@ -50,7 +51,8 @@ namespace sw
 
     void D3D11RHIResourceFactory::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
-        if ( buffer == 0 || pData == nullptr || _pDevice->_deviceContext == nullptr )
+        const bool bInvalidConstantBufferUpdate = buffer == 0 || pData == nullptr || _pDevice->_deviceContext == nullptr;
+        if ( bInvalidConstantBufferUpdate )
             return;
         ID3D11Buffer* pResource = _pDevice->resolveBuffer( buffer );
         if ( pResource == nullptr )
@@ -150,7 +152,8 @@ namespace sw
     void D3D11RHIResourceFactory::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
                                                                  const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        if ( buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 || _pDevice->_deviceContext == nullptr )
+        const bool bInvalidBufferRegionUpdate = buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 || _pDevice->_deviceContext == nullptr;
+        if ( bInvalidBufferRegionUpdate )
             return;
         ID3D11Buffer* pResource = _pDevice->resolveBuffer( buffer );
         if ( pResource == nullptr )
@@ -204,7 +207,8 @@ namespace sw
 
     RHIBufferHandle D3D11RHIResourceFactory::createFilledBuffer( const void* pData, uint32 sizeBytes, uint32 bindFlags )
     {
-        if ( _pDevice == nullptr || pData == nullptr || sizeBytes == 0 )
+        const bool bInvalidFilledBufferRequest = _pDevice == nullptr || pData == nullptr || sizeBytes == 0;
+        if ( bInvalidFilledBufferRequest )
             return 0;
 
         D3D11_BUFFER_DESC bufferDesc{};
@@ -262,8 +266,9 @@ namespace sw
 
     bool D3D11RHIResourceFactory::uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
-        D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
-        if ( pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_deviceContext == nullptr )
+        D3D11RHIDevice::TextureRecord* pRecord               = _pDevice->resolveTexture( texture );
+        const bool                     bTextureNotUploadable = pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_deviceContext == nullptr;
+        if ( bTextureNotUploadable )
             return false;
         if ( pRecord->_bDepth != SW_FALSE )
             return false;
@@ -299,8 +304,9 @@ namespace sw
 
     bool D3D11RHIResourceFactory::uploadTexture2DRegion( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
     {
-        D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
-        if ( pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_deviceContext == nullptr || pRecord->_bDepth != SW_FALSE )
+        D3D11RHIDevice::TextureRecord* pRecord                     = _pDevice->resolveTexture( texture );
+        const bool                     bTextureRegionNotUploadable = pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_deviceContext == nullptr || pRecord->_bDepth != SW_FALSE;
+        if ( bTextureRegionNotUploadable )
             return false;
 
         D3D11_TEXTURE2D_DESC texDesc{};
@@ -332,8 +338,9 @@ namespace sw
 
     bool D3D11RHIResourceFactory::readbackTexture2D( RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
     {
-        D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
-        if ( pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_device == nullptr || _pDevice->_deviceContext == nullptr )
+        D3D11RHIDevice::TextureRecord* pRecord             = _pDevice->resolveTexture( texture );
+        const bool                     bTextureNotReadable = pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_device == nullptr || _pDevice->_deviceContext == nullptr;
+        if ( bTextureNotReadable )
             return false;
 
         D3D11_TEXTURE2D_DESC texDesc{};
@@ -382,7 +389,8 @@ namespace sw
 
     RHITextureHandle D3D11RHIResourceFactory::createTexture2D( const RHITextureDesc& desc )
     {
-        if ( _pDevice == nullptr || desc._width == 0 || desc._height == 0 )
+        const bool bInvalidTextureRequest = _pDevice == nullptr || desc._width == 0 || desc._height == 0;
+        if ( bInvalidTextureRequest )
             return 0;
         if ( isRHITextureShapeValid( desc ) == false )
         {

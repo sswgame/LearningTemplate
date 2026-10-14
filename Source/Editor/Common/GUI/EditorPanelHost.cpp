@@ -46,7 +46,8 @@ namespace sw::editor
         vector<string> listCloseID;
         for ( const EditorPanelEntry& entry : _panelManager.getPanels() )
         {
-            if ( entry._id != keepPanelID && entry._pInstance != nullptr && entry._pInstance->isOpen() )
+            const bool bPanelToClose = entry._id != keepPanelID && entry._pInstance != nullptr && entry._pInstance->isOpen();
+            if ( bPanelToClose )
                 listCloseID.push_back( entry._id );
         }
         for ( const string& panelID : listCloseID )

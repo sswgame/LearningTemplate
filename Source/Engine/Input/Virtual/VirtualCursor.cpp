@@ -34,8 +34,9 @@ namespace sw
 
     void VirtualCursor::emitFrame( const GamepadDevice* pPad, int2 mousePosition, int2 clientSize, float32 deltaSeconds, vector<RawInputEvent>& outListEvent )
     {
-        _bEmittedLastFrame = false;
-        if ( _bEnabled == false || pPad == nullptr || pPad->isConnected() == false || clientSize._x <= 0 || clientSize._y <= 0 )
+        _bEmittedLastFrame         = false;
+        const bool bCursorInactive = _bEnabled == false || pPad == nullptr || pPad->isConnected() == false || clientSize._x <= 0 || clientSize._y <= 0;
+        if ( bCursorInactive )
             return;
 
         // 실제 마우스가 움직였으면(지난 프레임에 낸 위치와 다르면) 거기서 이어 움직인다.

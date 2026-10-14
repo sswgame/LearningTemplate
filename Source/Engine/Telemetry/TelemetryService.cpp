@@ -615,7 +615,8 @@ namespace sw
     void TelemetryService::recordFrame( string_view sceneID, float32 deltaSeconds )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        if ( _bInitialized == SW_FALSE || _bConsent == SW_FALSE || deltaSeconds <= 0.0f )
+        const bool              bTelemetryDisabled = _bInitialized == SW_FALSE || _bConsent == SW_FALSE || deltaSeconds <= 0.0f;
+        if ( bTelemetryDisabled )
             return;
         if ( _currentScene != sceneID )
         {

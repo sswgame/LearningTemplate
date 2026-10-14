@@ -177,7 +177,8 @@ namespace sw
         if ( pOwner == nullptr || _pPhysics == nullptr )
             return;
         // 시작 전(편집 중)이거나 꺼진 콜라이더는 겹침에 들지 않는다 — 유니티도 꺼진 콜라이더를 시뮬레이션에서 뺀다.
-        if ( hasBegunPlay() == false || isActive() == false || isPendingDestroy() )
+        const bool bNotSimulated = hasBegunPlay() == false || isActive() == false || isPendingDestroy();
+        if ( bNotSimulated )
         {
             unregisterPhysicsBody();
             return;

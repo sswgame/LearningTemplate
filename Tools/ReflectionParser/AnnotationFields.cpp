@@ -144,8 +144,9 @@ namespace sw
                     const string_view token = StringUtil::trim( tokenView );
                     if ( token.empty() )
                         continue;
-                    const size_t colon = token.find( ':' );
-                    if ( colon == string_view::npos || colon == 0 || colon + 1 >= token.size() )
+                    const size_t colon           = token.find( ':' );
+                    const bool   bMalformedAlias = colon == string_view::npos || colon == 0 || colon + 1 >= token.size();
+                    if ( bMalformedAlias )
                     {
                         SW_LOG_WARNING( "ENUM ValueAlias expected Old:Current, got '%#'", token );
                         continue;

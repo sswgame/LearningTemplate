@@ -87,8 +87,9 @@ namespace sw
 
             static SQLResult toSQLResult( const PGresult* pResult, const PGconn* pConnection )
             {
-                const ExecStatusType status = PQresultStatus( pResult );
-                if ( status == PGRES_COMMAND_OK || status == PGRES_TUPLES_OK || status == PGRES_EMPTY_QUERY )
+                const ExecStatusType status           = PQresultStatus( pResult );
+                const bool           bStatusSucceeded = status == PGRES_COMMAND_OK || status == PGRES_TUPLES_OK || status == PGRES_EMPTY_QUERY;
+                if ( bStatusSucceeded )
                     return SQLResult::Ok;
                 if ( PQstatus( pConnection ) == CONNECTION_BAD )
                     return SQLResult::ConnectionLost;
@@ -98,7 +99,8 @@ namespace sw
                     return SQLResult::Constraint;
                 if ( state == "40001" || state == "40P01" )
                     return SQLResult::SerializationFailure;
-                if ( state.size() == 5 && state[0] == '0' && state[1] == '8' )
+                const bool bConnectionClassError = state.size() == 5 && state[0] == '0' && state[1] == '8';
+                if ( bConnectionClassError )
                     return SQLResult::ConnectionLost;
                 if ( state == "55P03" )
                     return SQLResult::Busy; // lock_not_available

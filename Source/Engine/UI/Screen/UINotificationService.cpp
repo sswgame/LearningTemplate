@@ -140,7 +140,8 @@ namespace sw
             showEntry( _listVisible.back() );
         }
         // 3) 보일 것이 없으면 화면을 닫는다(오버레이라 입력과 무관하며, 열고 닫는 비용은 알림 단위로 든다).
-        if ( _listVisible.empty() && _listFading.empty() && _screen != kInvalidUIScreenHandle )
+        const bool bIdleScreenOpen = _listVisible.empty() && _listFading.empty() && _screen != kInvalidUIScreenHandle;
+        if ( bIdleScreenOpen )
         {
             _ui.closeScreen( _screen );
             _screen = kInvalidUIScreenHandle;

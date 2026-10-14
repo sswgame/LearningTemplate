@@ -160,10 +160,11 @@ namespace sw
             return false;
         for ( const utf8 ch : key )
         {
-            const bool bLower = 'a' <= ch && ch <= 'z';
-            const bool bDigit = '0' <= ch && ch <= '9';
-            const bool bMark  = ch == '_' || ch == '.' || ch == ':' || ch == '/' || ch == '-';
-            if ( bLower == false && bDigit == false && bMark == false )
+            const bool bLower               = 'a' <= ch && ch <= 'z';
+            const bool bDigit               = '0' <= ch && ch <= '9';
+            const bool bMark                = ch == '_' || ch == '.' || ch == ':' || ch == '/' || ch == '-';
+            const bool bInvalidKeyCharacter = bLower == false && bDigit == false && bMark == false;
+            if ( bInvalidKeyCharacter )
                 return false;
         }
         return true;

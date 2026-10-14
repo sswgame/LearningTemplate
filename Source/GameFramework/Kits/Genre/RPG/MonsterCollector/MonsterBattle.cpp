@@ -106,7 +106,8 @@ namespace sw
 
     void MonsterBattle::setWeather( const hashed_string& weatherID, int32 turns )
     {
-        if ( weatherID.empty() || _pCatalog == nullptr || _pCatalog->findWeather( weatherID ) == nullptr )
+        const bool bClearWeather = weatherID.empty() || _pCatalog == nullptr || _pCatalog->findWeather( weatherID ) == nullptr;
+        if ( bClearWeather )
         {
             if ( _weatherID.empty() == false )
                 pushEvent( MonsterBattleEvent::Kind::WeatherEnded, kPlayerSide, 0, _weatherID );
@@ -130,7 +131,8 @@ namespace sw
 
     bool MonsterBattle::setAction( int32 side, const MonsterAction& action )
     {
-        if ( side < 0 || side >= kSideCount || _outcome != MonsterBattleOutcome::Ongoing || _arrSide[side]._bNeedsSwitch )
+        const bool bActionRejected = side < 0 || side >= kSideCount || _outcome != MonsterBattleOutcome::Ongoing || _arrSide[side]._bNeedsSwitch;
+        if ( bActionRejected )
             return false;
         const Side& entry = _arrSide[side];
         switch ( action._kind )
@@ -149,7 +151,8 @@ namespace sw
             }
             case MonsterActionKind::Switch:
             {
-                if ( action._index < 0 || action._index >= static_cast<int32>( entry._listMonster.size() ) || action._index == entry._activeIndex )
+                const bool bInvalidSwitchTarget = action._index < 0 || action._index >= static_cast<int32>( entry._listMonster.size() ) || action._index == entry._activeIndex;
+                if ( bInvalidSwitchTarget )
                     return false;
                 if ( entry._listMonster[static_cast<size_t>( action._index )].isFainted() )
                     return false;
@@ -307,7 +310,8 @@ namespace sw
                                  ( pMove->_statStages != 0 && pMove->_statTarget == MonsterEffectTarget::Foe );
         if ( bTargetsFoe && getActive( foeSide ).isFainted() )
             return;
-        if ( bTargetsFoe && pMove->_accuracy > 0 && _random.nextInt( 1, 100 ) > pMove->_accuracy )
+        const bool bMissedByAccuracy = bTargetsFoe && pMove->_accuracy > 0 && _random.nextInt( 1, 100 ) > pMove->_accuracy;
+        if ( bMissedByAccuracy )
         {
             pushEvent( MonsterBattleEvent::Kind::Missed, side, 0, pMove->_id );
             return;
@@ -345,7 +349,8 @@ namespace sw
             }
         }
 
-        if ( pMove->_status != MonsterStatus::None && pMove->_statusChance > 0 && _random.nextInt( 1, 100 ) <= pMove->_statusChance )
+        const bool bStatusProcs = pMove->_status != MonsterStatus::None && pMove->_statusChance > 0 && _random.nextInt( 1, 100 ) <= pMove->_statusChance;
+        if ( bStatusProcs )
             applyStatus( foeSide, pMove->_status );
         if ( pMove->_statStages != 0 && _random.nextInt( 1, 100 ) <= pMove->_statChance )
             applyStatChange( pMove->_statTarget == MonsterEffectTarget::Self ? side : foeSide, pMove->_stat, pMove->_statStages );
@@ -414,10 +419,12 @@ namespace sw
 
     bool MonsterBattle::switchFainted( int32 side, int32 partyIndex )
     {
-        if ( side < 0 || side >= kSideCount || _arrSide[side]._bNeedsSwitch == false )
+        const bool bInvalidSwitchRequest = side < 0 || side >= kSideCount || _arrSide[side]._bNeedsSwitch == false;
+        if ( bInvalidSwitchRequest )
             return false;
-        const Side& entry = _arrSide[side];
-        if ( partyIndex < 0 || partyIndex >= static_cast<int32>( entry._listMonster.size() ) || entry._listMonster[static_cast<size_t>( partyIndex )].isFainted() )
+        const Side& entry              = _arrSide[side];
+        const bool  bInvalidPartyIndex = partyIndex < 0 || partyIndex >= static_cast<int32>( entry._listMonster.size() ) || entry._listMonster[static_cast<size_t>( partyIndex )].isFainted();
+        if ( bInvalidPartyIndex )
             return false;
         switchTo( side, partyIndex );
         return true;
@@ -630,7 +637,8 @@ namespace sw
 
     float32 MonsterBattle::computeTypeMultiplier( const hashed_string& moveType, const MonsterInstance& defender ) const
     {
-        if ( _pChart == nullptr || _pCatalog == nullptr || moveType.empty() )
+        const bool bNoTypeMultiplier = _pChart == nullptr || _pCatalog == nullptr || moveType.empty();
+        if ( bNoTypeMultiplier )
             return 1.0f;
         return _pChart->computeMultiplier( moveType, MonsterBattleInternal::findTypes( *_pCatalog, defender ) );
     }
@@ -676,7 +684,8 @@ namespace sw
 
     float32 MonsterBattle::computeWeatherMultiplier( const hashed_string& moveType ) const
     {
-        if ( _weatherID.empty() || _pCatalog == nullptr || moveType.empty() )
+        const bool bNoWeatherMultiplier = _weatherID.empty() || _pCatalog == nullptr || moveType.empty();
+        if ( bNoWeatherMultiplier )
             return 1.0f;
         const MonsterWeatherDef* pWeather = _pCatalog->findWeather( _weatherID );
         if ( pWeather == nullptr )

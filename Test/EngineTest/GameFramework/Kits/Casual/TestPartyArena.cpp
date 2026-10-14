@@ -245,8 +245,9 @@ SW_TEST_CASE( PartyArenaTest, AirAttackRingsOutOpponentAndCreditsAttacker )
     {
         const float32   distance = float3::getDistance( arena.findPlayer( 0 )->_position, arena.findPlayer( 1 )->_position );
         TrampolineInput input;
-        input._moveX = bSwung ? 0.0f : -1.0f;
-        if ( bSwung == false && distance < 2.5f && arena.findPlayer( 0 )->_state == TrampolinePlayerState::Air )
+        input._moveX            = bSwung ? 0.0f : -1.0f;
+        const bool bShouldSwing = bSwung == false && distance < 2.5f && arena.findPlayer( 0 )->_state == TrampolinePlayerState::Air;
+        if ( bShouldSwing )
         {
             input._bAttackPressed = SW_TRUE;
             bSwung                = true;

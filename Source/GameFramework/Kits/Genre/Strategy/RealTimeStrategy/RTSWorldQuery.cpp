@@ -30,7 +30,8 @@ namespace sw
         int32 count = 0;
         for ( const RTSUnit& unit : _listUnit )
         {
-            if ( unit._bAlive && unit._owner == player && unit._pDef->_id == defID && ( bIncludeUnfinished || unit.isConstructed() ) )
+            const bool bCountsTowardTotal = unit._bAlive && unit._owner == player && unit._pDef->_id == defID && ( bIncludeUnfinished || unit.isConstructed() );
+            if ( bCountsTowardTotal )
                 ++count;
         }
         return count;
@@ -83,12 +84,14 @@ namespace sw
             // 같은 셀 위치에 같은 크기의 빈 가스 간헐천이 있을 때만 놓을 수 있다.
             for ( const RTSUnit& unit : _listUnit )
             {
-                if ( unit._bAlive == SW_FALSE || unit.isResource() == false || unit._pDef->_resourceType != RTSResourceType::Gas || unit._cell != cell ||
-                     unit._pDef->_footprint != footprint )
+                const bool bNotMatchingGas = unit._bAlive == SW_FALSE || unit.isResource() == false || unit._pDef->_resourceType != RTSResourceType::Gas || unit._cell != cell ||
+                                             unit._pDef->_footprint != footprint;
+                if ( bNotMatchingGas )
                     continue;
                 for ( const RTSUnit& other : _listUnit )
                 {
-                    if ( other._bAlive && other._pDef->_bExtractor && other._linkedResource == unit._id )
+                    const bool bExtractorLinked = other._bAlive && other._pDef->_bExtractor && other._linkedResource == unit._id;
+                    if ( bExtractorLinked )
                         return false;
                 }
                 return true;
@@ -105,8 +108,9 @@ namespace sw
         }
         for ( const RTSUnit& unit : _listUnit )
         {
-            if ( unit._bAlive && unit.isMobile() && unit._id != ignoreUnit && RTSWorldQueryInternal::isGround( unit ) &&
-                 computeRectDistance( unit._position, cell, footprint ) < unit._pDef->_radius * 0.9f )
+            const bool bBlockingUnit = unit._bAlive && unit.isMobile() && unit._id != ignoreUnit && RTSWorldQueryInternal::isGround( unit ) &&
+                                       computeRectDistance( unit._position, cell, footprint ) < unit._pDef->_radius * 0.9f;
+            if ( bBlockingUnit )
                 return false;
         }
         return true;
@@ -123,7 +127,8 @@ namespace sw
             bool    bFound       = false;
             for ( const RTSUnit& unit : _listUnit )
             {
-                if ( unit._bAlive == SW_FALSE || unit.isResource() == false || unit._pDef->_resourceType != RTSResourceType::Gas )
+                const bool bNotGasResource = unit._bAlive == SW_FALSE || unit.isResource() == false || unit._pDef->_resourceType != RTSResourceType::Gas;
+                if ( bNotGasResource )
                     continue;
                 const float32 distance = float3::getHorizontalDistance( nearPosition, unit._position );
                 if ( distance < bestDistance && canPlaceBuilding( buildingID, unit._cell ) )
@@ -174,7 +179,8 @@ namespace sw
         float32   bestDistance = maxDistance;
         for ( const RTSUnit& unit : _listUnit )
         {
-            if ( unit._bAlive == SW_FALSE || unit.isResource() == false || unit._pDef->_resourceType != type || unit._resourceLeft <= 0 )
+            const bool bNotUsableResource = unit._bAlive == SW_FALSE || unit.isResource() == false || unit._pDef->_resourceType != type || unit._resourceLeft <= 0;
+            if ( bNotUsableResource )
                 continue;
             const float32 distance = float3::getHorizontalDistance( position, unit._position );
             if ( distance <= bestDistance )
@@ -192,7 +198,8 @@ namespace sw
         float32   bestDistance = MathUtil::kMaxFloat;
         for ( const RTSUnit& unit : _listUnit )
         {
-            if ( unit._bAlive == SW_FALSE || unit._owner != player || unit._pDef->_bDepot == SW_FALSE || unit.isConstructed() == false )
+            const bool bNotUsableDepot = unit._bAlive == SW_FALSE || unit._owner != player || unit._pDef->_bDepot == SW_FALSE || unit.isConstructed() == false;
+            if ( bNotUsableDepot )
                 continue;
             const float32 distance = float3::getHorizontalDistance( position, unit._position );
             if ( distance < bestDistance )

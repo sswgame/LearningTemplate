@@ -47,8 +47,9 @@ namespace sw::editor
         {
             // 테스트용은 저장하지 않는다. 프리셋에 `gv_profileFrames` 가 들어가면 불러온 에디터가 N 프레임 뒤 스스로 꺼지고,
             // `gv_crashTest` 가 들어가면 일부러 죽는다. 실행 한 번에만 줄 스위치다.
-            const GlobalVariableInfo* pInfo = pGvm->findVariable( varName );
-            if ( pInfo == nullptr || pInfo->_pData == nullptr || pInfo->_bTestOnly )
+            const GlobalVariableInfo* pInfo         = pGvm->findVariable( varName );
+            const bool                bSkipVariable = pInfo == nullptr || pInfo->_pData == nullptr || pInfo->_bTestOnly;
+            if ( bSkipVariable )
                 continue;
 
             XMLNode varNode = root.appendChild( "Var" );

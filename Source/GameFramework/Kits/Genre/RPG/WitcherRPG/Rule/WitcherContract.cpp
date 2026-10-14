@@ -284,7 +284,8 @@ namespace sw
             return false;
         const WitcherContractDef* pContract = _pCatalog->findContract( contractID );
         archive >> stepIndex;
-        if ( pContract == nullptr || archive.isError() || StateArchiveUtil::readCount( archive, 4, count ) == false )
+        const bool bInvalidContractData = pContract == nullptr || archive.isError() || StateArchiveUtil::readCount( archive, 4, count ) == false;
+        if ( bInvalidContractData )
             return false;
         const bool bStepInside = 0 <= stepIndex && stepIndex <= static_cast<int32>( pContract->_listStep.size() );
         if ( bStepInside == false )

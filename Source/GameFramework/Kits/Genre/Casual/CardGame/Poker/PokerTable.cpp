@@ -244,7 +244,8 @@ namespace sw
 
     bool PokerTable::act( int32 seat, PokerActionKind kind, int32 amount )
     {
-        if ( _street == PokerStreet::HandOver || seat != _currentSeat || seat < 0 || canAct( seat ) == false )
+        const bool bActionNotAllowed = _street == PokerStreet::HandOver || seat != _currentSeat || seat < 0 || canAct( seat ) == false;
+        if ( bActionNotAllowed )
             return false;
         PokerSeat&  pokerSeat = _listSeat[static_cast<size_t>( seat )];
         const int32 toCall    = _currentBet - pokerSeat._committed;
@@ -564,9 +565,10 @@ namespace sw
         archive >> table._currentBet;
         archive >> table._lastRaiseSize;
         archive >> street;
-        const bool bButtonValid = -1 <= table._button && table._button < count;
-        const bool bSeatValid   = -1 <= table._currentSeat && table._currentSeat < count;
-        if ( archive.isError() || bButtonValid == false || bSeatValid == false || street > static_cast<uint8>( PokerStreet::HandOver ) )
+        const bool bButtonValid       = -1 <= table._button && table._button < count;
+        const bool bSeatValid         = -1 <= table._currentSeat && table._currentSeat < count;
+        const bool bInvalidTableState = archive.isError() || bButtonValid == false || bSeatValid == false || street > static_cast<uint8>( PokerStreet::HandOver );
+        if ( bInvalidTableState )
             return false;
         table._street = static_cast<PokerStreet>( street );
         table._eventBuffer.clear();

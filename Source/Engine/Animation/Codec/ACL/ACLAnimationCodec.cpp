@@ -86,8 +86,9 @@ namespace sw
     bool ACLAnimationCodec::compress( const AnimationRawClip& rawClip, const AnimationCodecSettings& settings, vector<uint8>& outBytes ) const
     {
         outBytes.clear();
-        const uint32 trackCount = rawClip.getTrackCount();
-        if ( rawClip._sampleCount == 0 || trackCount == 0 || rawClip._listSample.size() != static_cast<size_t>( rawClip._sampleCount ) * trackCount )
+        const uint32 trackCount      = rawClip.getTrackCount();
+        const bool   bInvalidRawClip = rawClip._sampleCount == 0 || trackCount == 0 || rawClip._listSample.size() != static_cast<size_t>( rawClip._sampleCount ) * trackCount;
+        if ( bInvalidRawClip )
             return false;
 
         ACLAllocator          allocator;
@@ -135,7 +136,8 @@ namespace sw
 
     bool ACLAnimationCodec::sample( const uint8* pBytes, size_t byteCount, float32 time, Pose& outPose, const uint8* pTrackMask ) const
     {
-        if ( pBytes == nullptr || byteCount == 0 || ( reinterpret_cast<uintptr_t>( pBytes ) & 15u ) != 0 )
+        const bool bInvalidCompressedBytes = pBytes == nullptr || byteCount == 0 || ( reinterpret_cast<uintptr_t>( pBytes ) & 15u ) != 0;
+        if ( bInvalidCompressedBytes )
             return false;
         const acl::compressed_tracks* pTracks = acl::make_compressed_tracks( pBytes );
         if ( pTracks == nullptr || pTracks->get_size() != byteCount )

@@ -224,8 +224,9 @@ namespace sw::editor
             ImGui::EndTable();
         }
 
-        DebugDrawQueue* pQueue = getService<DebugDrawQueue>();
-        if ( _bDrawMarkers == SW_TRUE && pQueue != nullptr && pUnit != nullptr && listSelectedBone.empty() == false )
+        DebugDrawQueue* pQueue              = getService<DebugDrawQueue>();
+        const bool      bCanDrawBoneMarkers = _bDrawMarkers == SW_TRUE && pQueue != nullptr && pUnit != nullptr && listSelectedBone.empty() == false;
+        if ( bCanDrawBoneMarkers )
             RigDebugPanelInternal::drawBoneMarkers( *pQueue, *pUnit, listSelectedBone );
     }
 } // namespace sw::editor

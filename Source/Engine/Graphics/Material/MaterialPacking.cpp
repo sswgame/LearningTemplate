@@ -195,7 +195,8 @@ namespace sw
              */
             [[nodiscard]] static bool writeBoundedValue( void* pDst, size_t packSize, const void* pSrc, size_t byteCount )
             {
-                if ( pDst == nullptr || pSrc == nullptr || byteCount > packSize )
+                const bool bInvalidBoundedWrite = pDst == nullptr || pSrc == nullptr || byteCount > packSize;
+                if ( bInvalidBoundedWrite )
                     return false;
                 Memory::copy( pDst, pSrc, byteCount );
                 return true;
@@ -203,13 +204,15 @@ namespace sw
 
             [[nodiscard]] static bool writeNumericValue( void* pDst, size_t packSize, MaterialPropertyType shaderType, string_view value )
             {
-                const uint32 need = MaterialUtil::packedSizeOf( shaderType );
-                if ( need == 0 || packSize < need || pDst == nullptr )
+                const uint32 need                  = MaterialUtil::packedSizeOf( shaderType );
+                const bool   bInvalidPackArguments = need == 0 || packSize < need || pDst == nullptr;
+                if ( bInvalidPackArguments )
                     return false;
 
                 string_splitter splitter( value, { " ", "	", "," } );
-                const auto&     tokens = splitter.getSplitList();
-                if ( shaderType == MaterialPropertyType::Float || shaderType == MaterialPropertyType::Float2 || shaderType == MaterialPropertyType::Float3 || shaderType == MaterialPropertyType::Float4 || shaderType == MaterialPropertyType::Float4x4 || shaderType == MaterialPropertyType::Range || shaderType == MaterialPropertyType::Color )
+                const auto&     tokens           = splitter.getSplitList();
+                const bool      bFloatPackedType = shaderType == MaterialPropertyType::Float || shaderType == MaterialPropertyType::Float2 || shaderType == MaterialPropertyType::Float3 || shaderType == MaterialPropertyType::Float4 || shaderType == MaterialPropertyType::Float4x4 || shaderType == MaterialPropertyType::Range || shaderType == MaterialPropertyType::Color;
+                if ( bFloatPackedType )
                 {
                     float32* pPtr  = reinterpret_cast<float32*>( pDst );
                     uint32   count = need / 4;
@@ -227,7 +230,8 @@ namespace sw
                     }
                     return true;
                 }
-                if ( shaderType == MaterialPropertyType::Uint || shaderType == MaterialPropertyType::Uint2 || shaderType == MaterialPropertyType::Uint3 || shaderType == MaterialPropertyType::Uint4 )
+                const bool bUintPackedType = shaderType == MaterialPropertyType::Uint || shaderType == MaterialPropertyType::Uint2 || shaderType == MaterialPropertyType::Uint3 || shaderType == MaterialPropertyType::Uint4;
+                if ( bUintPackedType )
                 {
                     uint32* pPtr  = reinterpret_cast<uint32*>( pDst );
                     uint32  count = need / 4;
@@ -240,7 +244,8 @@ namespace sw
                     }
                     return true;
                 }
-                if ( shaderType == MaterialPropertyType::Int || shaderType == MaterialPropertyType::Int2 || shaderType == MaterialPropertyType::Int3 || shaderType == MaterialPropertyType::Int4 )
+                const bool bIntPackedType = shaderType == MaterialPropertyType::Int || shaderType == MaterialPropertyType::Int2 || shaderType == MaterialPropertyType::Int3 || shaderType == MaterialPropertyType::Int4;
+                if ( bIntPackedType )
                 {
                     int32* pPtr  = reinterpret_cast<int32*>( pDst );
                     uint32 count = need / 4;
@@ -351,8 +356,9 @@ namespace sw
         if ( typeName.empty() == false )
         {
             uint32                     ignored{ 0 };
-            const MaterialPropertyType reflectedType = MaterialUtil::stringToType( typeName, ignored );
-            if ( reflectedType != MaterialPropertyType::Unknown && MaterialUtil::isNonBufferType( reflectedType ) == false && MaterialUtil::isTextureType( reflectedType ) == false && reflectedType != MaterialPropertyType::Enum && reflectedType != MaterialPropertyType::BitFlag && reflectedType != MaterialPropertyType::Range && reflectedType != MaterialPropertyType::Color && reflectedType != MaterialPropertyType::ChannelMask && reflectedType != MaterialPropertyType::Bool )
+            const MaterialPropertyType reflectedType       = MaterialUtil::stringToType( typeName, ignored );
+            const bool                 bPlainReflectedType = reflectedType != MaterialPropertyType::Unknown && MaterialUtil::isNonBufferType( reflectedType ) == false && MaterialUtil::isTextureType( reflectedType ) == false && reflectedType != MaterialPropertyType::Enum && reflectedType != MaterialPropertyType::BitFlag && reflectedType != MaterialPropertyType::Range && reflectedType != MaterialPropertyType::Color && reflectedType != MaterialPropertyType::ChannelMask && reflectedType != MaterialPropertyType::Bool;
+            if ( bPlainReflectedType )
                 return reflectedType;
             // HLSL 의 bool 은 보통 "Bool" 로 보고된다
             if ( MaterialPackingInternal::iequals( typeName, "Bool" ) )

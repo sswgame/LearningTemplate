@@ -94,8 +94,9 @@ namespace sw::editor
         {
             if ( pComponent == nullptr || pComponent == pSkipCamera )
                 return;
-            GameObject* pObject = pComponent->getOwner();
-            if ( pObject == nullptr || pObject->isPendingDestroy() || pObject->isActiveInHierarchy() == false )
+            GameObject* pObject           = pComponent->getOwner();
+            const bool  bObjectNotVisible = pObject == nullptr || pObject->isPendingDestroy() || pObject->isActiveInHierarchy() == false;
+            if ( bObjectNotVisible )
                 return;
             for ( const EditorViewportBillboardItem& item : outListItem )
             {
@@ -105,8 +106,9 @@ namespace sw::editor
             const EditorComponentIconRow& row = EditorComponentIcon::findRow( pComponent->getTypeInfo() );
             float3                        position{};
             ImVec2                        screen{};
-            if ( row._bBillboard == false || EditorViewportBillboardInternal::findWorldPosition( *pObject, *pComponent, position ) == false ||
-                 EditorViewportProjectionUtil::projectPoint( viewProj, position, canvasPos, canvasSize, screen ) == false )
+            const bool                    bBillboardNotProjectable = row._bBillboard == false || EditorViewportBillboardInternal::findWorldPosition( *pObject, *pComponent, position ) == false ||
+                                                  EditorViewportProjectionUtil::projectPoint( viewProj, position, canvasPos, canvasSize, screen ) == false;
+            if ( bBillboardNotProjectable )
                 return;
             const bool bInside =
                 screen.x >= canvasPos._x && screen.y >= canvasPos._y && screen.x <= canvasPos._x + canvasSize._x && screen.y <= canvasPos._y + canvasSize._y;

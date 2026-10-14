@@ -350,10 +350,11 @@ namespace sw::editor
                 }
                 if ( string_view( modifier.getTypeID() ) != string_view( kFFD2DTypeID ) )
                     return false;
-                uint32 resolutionXParam = 0;
-                uint32 resolutionYParam = 0;
-                if ( modifier.tryGetParamIndex( "Resolution X", resolutionXParam ) == false || modifier.tryGetParamIndex( "Resolution Y", resolutionYParam ) == false ||
-                     modifier.tryGetParamIndex( "Offsets", outSet._offsetsParam ) == false || frame._modifierBox.isValid() == false )
+                uint32     resolutionXParam  = 0;
+                uint32     resolutionYParam  = 0;
+                const bool bInvalidFFDParams = modifier.tryGetParamIndex( "Resolution X", resolutionXParam ) == false || modifier.tryGetParamIndex( "Resolution Y", resolutionYParam ) == false ||
+                                               modifier.tryGetParamIndex( "Offsets", outSet._offsetsParam ) == false || frame._modifierBox.isValid() == false;
+                if ( bInvalidFFDParams )
                     return false;
                 outSet._pFFD2D                    = &modifier;
                 outSet._box                       = frame._modifierBox; // ffd2d 는 입력 정점 상자의 XY 를 격자로 쓴다
@@ -685,9 +686,10 @@ namespace sw::editor
                     }
                 }
 
-                int32 hoveredHandle = -1;
-                int32 hoveredPoint  = -1;
-                if ( state._bDragging == false && bMouseInside && bHasRay && args._bGizmoDragging == false )
+                int32      hoveredHandle = -1;
+                int32      hoveredPoint  = -1;
+                const bool bCanHover     = state._bDragging == false && bMouseInside && bHasRay && args._bGizmoDragging == false;
+                if ( bCanHover )
                 {
                     float32 bestDistance = 1e30f;
                     for ( size_t index = 0; index < s_listHandle.size(); ++index )
@@ -739,8 +741,9 @@ namespace sw::editor
 
             static void draw( const EditorViewportVisualizerArgs& args )
             {
-                MeshModifierSession* pSession = getService<MeshModifierSession>();
-                if ( pSession == nullptr || pSession->hasTarget() == false || pSession->findTarget() == nullptr )
+                MeshModifierSession* pSession      = getService<MeshModifierSession>();
+                const bool           bNoDragTarget = pSession == nullptr || pSession->hasTarget() == false || pSession->findTarget() == nullptr;
+                if ( bNoDragTarget )
                 {
                     endDrag( getDragState() );
                     return;
@@ -775,8 +778,9 @@ namespace sw::editor
 
             static void drawStage( const EditorViewportVisualizerArgs& args )
             {
-                MeshModifierSession* pSession = getService<MeshModifierSession>();
-                if ( pSession == nullptr || pSession->hasTarget() == false || pSession->findTarget() == nullptr )
+                MeshModifierSession* pSession        = getService<MeshModifierSession>();
+                const bool           bNoActiveTarget = pSession == nullptr || pSession->hasTarget() == false || pSession->findTarget() == nullptr;
+                if ( bNoActiveTarget )
                     return;
                 static vector<float3> s_listStagePoint; // 프레임마다 다시 채우는 재사용 버퍼
                 pSession->makeStagePreviewSegments( s_listStagePoint );

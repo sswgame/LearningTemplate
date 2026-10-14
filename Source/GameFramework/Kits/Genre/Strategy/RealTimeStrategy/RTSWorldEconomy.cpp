@@ -105,9 +105,10 @@ namespace sw
                 queryUnits( unit._position, 2.0f, _listQueryScratch );
                 for ( const RTSUnitID otherID : _listQueryScratch )
                 {
-                    const RTSUnit* pOther = findUnit( otherID );
-                    if ( pOther != nullptr && pOther != pTarget && pOther->isResource() &&
-                         pOther->_pDef->_resourceType == RTSResourceType::Minerals && findUnit( pOther->_harvester ) == nullptr )
+                    const RTSUnit* pOther       = findUnit( otherID );
+                    const bool     bFreeMineral = pOther != nullptr && pOther != pTarget && pOther->isResource() &&
+                                              pOther->_pDef->_resourceType == RTSResourceType::Minerals && findUnit( pOther->_harvester ) == nullptr;
+                    if ( bFreeMineral )
                     {
                         order._targetUnit = otherID;
                         order._target     = pOther->_position;
@@ -128,8 +129,9 @@ namespace sw
     // ------------------------------------------------------------------------------
     void RTSWorld::startConstruction( RTSUnit& worker, RTSOrder& order )
     {
-        const RTSUnitDef* pDef = _pCatalog->findUnit( order._buildID );
-        if ( pDef == nullptr || evaluateCost( worker._owner, *pDef ) != RTSCommandResult::Ok || canPlaceBuilding( order._buildID, order._buildCell, worker._id ) == false )
+        const RTSUnitDef* pDef          = _pCatalog->findUnit( order._buildID );
+        const bool        bBuildAborted = pDef == nullptr || evaluateCost( worker._owner, *pDef ) != RTSCommandResult::Ok || canPlaceBuilding( order._buildID, order._buildCell, worker._id ) == false;
+        if ( bBuildAborted )
         {
             finishOrder( worker );
             return;
@@ -212,8 +214,9 @@ namespace sw
             building._listProduction.pop_front();
             return;
         }
-        RTSPlayer& player = _listPlayer[static_cast<size_t>( building._owner )];
-        if ( building._productionTimer <= 0.0f && building._supplyReserved == 0 && pDef->_supplyCost > 0 )
+        RTSPlayer& player                  = _listPlayer[static_cast<size_t>( building._owner )];
+        const bool bNeedsSupplyReservation = building._productionTimer <= 0.0f && building._supplyReserved == 0 && pDef->_supplyCost > 0;
+        if ( bNeedsSupplyReservation )
         {
             if ( player._supplyUsed + pDef->_supplyCost > player._supplyCap )
             {

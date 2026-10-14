@@ -269,7 +269,8 @@ namespace sw
             if ( alive._entryIndex < 0 || alive._entryIndex >= entryCount )
                 archive.setError();
         }
-        if ( archive.isError() || StateArchiveUtil::readCount( archive, 4, count ) == false || count != _listAliveCount.size() )
+        const bool bInvalidAliveState = archive.isError() || StateArchiveUtil::readCount( archive, 4, count ) == false || count != _listAliveCount.size();
+        if ( bInvalidAliveState )
             return false;
         vector<int32> listAliveCount( count, 0 );
         for ( int32& aliveCount : listAliveCount )

@@ -145,9 +145,10 @@ namespace sw
 
     bool UserAppearancePresetStore::renamePreset( string_view fromName, string_view toName )
     {
-        const string          cleanName = UserAppearancePresetStoreInternal::sanitizeName( toName );
-        UserAppearancePreset* pPreset   = findMutablePreset( fromName );
-        if ( pPreset == nullptr || cleanName.empty() || findPresetByName( string_view( cleanName.c_str(), cleanName.size() ) ) != nullptr )
+        const string          cleanName     = UserAppearancePresetStoreInternal::sanitizeName( toName );
+        UserAppearancePreset* pPreset       = findMutablePreset( fromName );
+        const bool            bCannotRename = pPreset == nullptr || cleanName.empty() || findPresetByName( string_view( cleanName.c_str(), cleanName.size() ) ) != nullptr;
+        if ( bCannotRename )
             return false;
         pPreset->_name = cleanName;
         return true;

@@ -837,8 +837,9 @@ namespace sw::editor
 
     void TileMapPanel::paintEdgeWarp( int32 edge )
     {
-        const fixed_string<constant::kMaxBuffer128>* targets[] = { &_edgeTargetN, &_edgeTargetE, &_edgeTargetS, &_edgeTargetW };
-        if ( edge < 0 || edge > 3 || targets[edge]->empty() )
+        const fixed_string<constant::kMaxBuffer128>* targets[]          = { &_edgeTargetN, &_edgeTargetE, &_edgeTargetS, &_edgeTargetW };
+        const bool                                   bInvalidEdgeTarget = edge < 0 || edge > 3 || targets[edge]->empty();
+        if ( bInvalidEdgeTarget )
             return;
 
         auto stamp = [&]( int32 tileX, int32 tileY )

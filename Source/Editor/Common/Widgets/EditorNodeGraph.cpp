@@ -156,7 +156,8 @@ namespace sw::editor
             if ( listIndex.empty() )
                 ImGui::TextDisabled( "%s", SW_LOCKEY( "EdCommon", "NoNodeMatches" ) );
             // Enter 는 맨 위 줄을 고른다(언리얼 · 유니티 검색 팝업과 같다).
-            if ( bEnter && bPicked == false && listIndex.empty() == false )
+            const bool bPickFirstNode = bEnter && bPicked == false && listIndex.empty() == false;
+            if ( bPickFirstNode )
             {
                 outKindID = listKind[listIndex[0]]._kindID;
                 bPicked   = true;
@@ -175,9 +176,10 @@ namespace sw::editor
         bool bAccepted = false;
         if ( ed::BeginCreate() )
         {
-            ed::PinId pinA;
-            ed::PinId pinB;
-            if ( ed::QueryNewLink( &pinA, &pinB ) && pinA.Get() != 0 && pinB.Get() != 0 )
+            ed::PinId  pinA;
+            ed::PinId  pinB;
+            const bool bNewLinkProposed = ed::QueryNewLink( &pinA, &pinB ) && pinA.Get() != 0 && pinB.Get() != 0;
+            if ( bNewLinkProposed )
             {
                 const int32        idA = static_cast<int32>( pinA.Get() );
                 const int32        idB = static_cast<int32>( pinB.Get() );

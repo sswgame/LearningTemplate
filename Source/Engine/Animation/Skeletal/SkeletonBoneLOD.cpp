@@ -80,8 +80,9 @@ namespace sw
             const JSONValue level = levels.at( levelIndex );
             if ( AnimationJSONUtil::hasOnlyKnownKeys( level, { "max_screen_size", "remove" }, sourceLabel ) == false )
                 return false;
-            const JSONValue removed = level.get( "remove" );
-            if ( level.get( "max_screen_size" ).isNumber() == false || removed.isArray() == false || removed.size() == 0 )
+            const JSONValue removed          = level.get( "remove" );
+            const bool      bInvalidLODLevel = level.get( "max_screen_size" ).isNumber() == false || removed.isArray() == false || removed.size() == 0;
+            if ( bInvalidLODLevel )
             {
                 SW_LOG_ERROR( "Bone LOD '%#': level %# needs 'max_screen_size' (number) and a non-empty 'remove' array", sourceLabel, levelIndex );
                 return false;

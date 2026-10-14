@@ -278,7 +278,8 @@ namespace sw
 
     BehaviorStatus BehaviorTreeRunner::tick( Blackboard& blackboard, void* pOwner, float32 deltaTime )
     {
-        if ( _pTree == nullptr || _pTree->getNodeCount() == 0 || static_cast<int32>( _listActive.size() ) != _pTree->getNodeCount() )
+        const bool bInvalidTreeState = _pTree == nullptr || _pTree->getNodeCount() == 0 || static_cast<int32>( _listActive.size() ) != _pTree->getNodeCount();
+        if ( bInvalidTreeState )
             return BehaviorStatus::Failure;
         _elapsedTime += deltaTime;
         _context._pBlackboard = &blackboard;
@@ -302,7 +303,8 @@ namespace sw
             const bool  bRisen                               = bNow != SW_FALSE && _listLastCondition[static_cast<size_t>( index )] == SW_FALSE;
             _listLastCondition[static_cast<size_t>( index )] = bNow;
             // 노드 번호가 앞 = 깊이 우선 순서가 앞 = 우선순위가 높다. 도는 가지 안의 조건(자기 조상)은 Self 쪽 일이다.
-            if ( bRisen && _activeLeaf >= 0 && index < _activeLeaf && _listActive[static_cast<size_t>( index )] == SW_FALSE )
+            const bool bHigherPriorityRisen = bRisen && _activeLeaf >= 0 && index < _activeLeaf && _listActive[static_cast<size_t>( index )] == SW_FALSE;
+            if ( bHigherPriorityRisen )
                 bTriggered = true;
         }
         return bTriggered;

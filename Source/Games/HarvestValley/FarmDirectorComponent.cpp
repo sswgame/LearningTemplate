@@ -355,8 +355,9 @@ namespace sw
         archive >> bRaining;
         int32 dayStarted = 0;
         archive >> dayStarted;
-        const bool bToolValid = tool <= static_cast<uint8>( FarmTool::Hand );
-        if ( archive.isError() || archive.getRemainingBytes() != 0 || bToolValid == false )
+        const bool bToolValid        = tool <= static_cast<uint8>( FarmTool::Hand );
+        const bool bInvalidFarmState = archive.isError() || archive.getRemainingBytes() != 0 || bToolValid == false;
+        if ( bInvalidFarmState )
             return false;
         _field             = std::move( field );
         _shipment          = std::move( shipment );
@@ -564,9 +565,10 @@ namespace sw
                 GameObject*  pCrop     = spawnPrefab( manager, _cropPrefab, "FarmCrop" );
                 if ( pSoil == nullptr || pCrop == nullptr )
                     continue;
-                MeshComponent* pSoilMesh = pSoil->getComponent<MeshComponent>();
-                MeshComponent* pCropMesh = pCrop->getComponent<MeshComponent>();
-                if ( _arrSoilLook[0] == nullptr && pSoilMesh != nullptr && pCropMesh != nullptr )
+                MeshComponent* pSoilMesh           = pSoil->getComponent<MeshComponent>();
+                MeshComponent* pCropMesh           = pCrop->getComponent<MeshComponent>();
+                const bool     bShouldPrepareLooks = _arrSoilLook[0] == nullptr && pSoilMesh != nullptr && pCropMesh != nullptr;
+                if ( bShouldPrepareLooks )
                     prepareLooks( pSoilMesh->getMaterial(), pCropMesh->getMaterial() );
                 if ( pSoilMesh != nullptr )
                     pSoilMesh->setLocalPosition( center + float3{ 0.0f, pSoilMesh->getLocalScale()._y * 0.5f, 0.0f } );

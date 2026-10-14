@@ -59,7 +59,8 @@ namespace sw
     {
         TransientAttachmentPool& pool             = view._transientPool;
         const uint32             shadowResolution = getShadowMapResolution();
-        if ( width == pool.getWidth() && height == pool.getHeight() && pool.isEmpty() == false && view._shadowMapResolution == shadowResolution )
+        const bool               bPoolUnchanged   = width == pool.getWidth() && height == pool.getHeight() && pool.isEmpty() == false && view._shadowMapResolution == shadowResolution;
+        if ( bPoolUnchanged )
             return false;
 
         releaseViewTransients( view );
@@ -85,12 +86,13 @@ namespace sw
             float4     clearColor{};
             const bool bHasClear = tryGetAttachmentClearColor( name, clearColor );
 
+            const bool bHalfFloatAttachment = name == FrameRendererUtil::Attachment::kGBufferNormal || name == FrameRendererUtil::Attachment::kLitColor || name == FrameRendererUtil::Attachment::kBloomColor || name == FrameRendererUtil::Attachment::kBloomBright;
             if ( name == FrameRendererUtil::Attachment::kShadowMap )
                 (void)pool.allocateSized( _pDevice, name, RHIFormat::D24_UNORM_S8_UINT, true, bHasClear ? clearColor : FrameRendererUtil::kDepthClear,
                                           shadowResolution, shadowResolution );
             else if ( name == FrameRendererUtil::Attachment::kSceneDepth )
                 allocateTransient( pool, name, RHIFormat::D24_UNORM_S8_UINT, true, bHasClear ? clearColor : FrameRendererUtil::kDepthClear );
-            else if ( name == FrameRendererUtil::Attachment::kGBufferNormal || name == FrameRendererUtil::Attachment::kLitColor || name == FrameRendererUtil::Attachment::kBloomColor || name == FrameRendererUtil::Attachment::kBloomBright )
+            else if ( bHalfFloatAttachment )
                 allocateTransient( pool, name, RHIFormat::R16G16B16A16_FLOAT, false, bHasClear ? clearColor : FrameRendererUtil::kBloomClear );
             else if ( name == FrameRendererUtil::Attachment::kSceneColor )
                 allocateTransient( pool, name, RHIFormat::R8G8B8A8_UNORM, false, bHasClear ? clearColor : FrameRendererUtil::kSceneClear );

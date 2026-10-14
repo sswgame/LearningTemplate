@@ -85,7 +85,8 @@ namespace sw
         int32 height = 0;
         archive >> width;
         archive >> height;
-        if ( archive.isError() || width != _topology._width || height != _topology._height )
+        const bool bFieldSizeMismatch = archive.isError() || width != _topology._width || height != _topology._height;
+        if ( bFieldSizeMismatch )
             return false;
         vector<FarmTile> listTile( _listTile.size() );
         for ( FarmTile& tile : listTile )

@@ -151,7 +151,8 @@ namespace sw
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         float3             viewPosition{};
-        if ( pManager != nullptr && _listCell.empty() == false && EnvironmentUtil::findViewPosition( *pManager, viewPosition ) )
+        const bool         bCanUpdateView = pManager != nullptr && _listCell.empty() == false && EnvironmentUtil::findViewPosition( *pManager, viewPosition );
+        if ( bCanUpdateView )
             updateView( viewPosition );
         if ( pManager != nullptr && _bBuiltOnTerrain == SW_TRUE )
             followTerrainEdits( *pManager, deltaTime );
@@ -290,8 +291,9 @@ namespace sw
             unordered_map<uint64, vector<uint32>> mapCellToInstance;
             for ( uint32 instanceIndex = 0; instanceIndex < listInstance.size(); ++instanceIndex )
             {
-                const PlacementInstance& instance = listInstance[instanceIndex];
-                if ( instance._entryIndex < 0 || static_cast<size_t>( instance._entryIndex ) >= listMesh.size() || listMesh[static_cast<size_t>( instance._entryIndex )] == nullptr )
+                const PlacementInstance& instance            = listInstance[instanceIndex];
+                const bool               bMissingFoliageMesh = instance._entryIndex < 0 || static_cast<size_t>( instance._entryIndex ) >= listMesh.size() || listMesh[static_cast<size_t>( instance._entryIndex )] == nullptr;
+                if ( bMissingFoliageMesh )
                     continue;
                 const int32  cellX = static_cast<int32>( MathUtil::floor( instance._planePosition._x / cellSize ) );
                 const int32  cellZ = static_cast<int32>( MathUtil::floor( instance._planePosition._y / cellSize ) );

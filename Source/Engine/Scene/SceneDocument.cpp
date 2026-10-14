@@ -113,8 +113,9 @@ namespace sw
 
                 // 엔티티마다 0 이 아닌 파일 id 가 있다(`Scene::serializeToDocument` 가 늘 적는다). 없거나 못 읽는 문서는 받지 않는다 —
                 // 부착 · 핸들이 이 값으로 부모를 가리키고, 쿠커는 이 값으로 엔티티를 찾는다.
-                const utf8* pFileID = sceneObjectNode.findAttribute( SceneDocumentInternal::kFileID );
-                if ( pFileID == nullptr || StringUtil::parseUint64( pFileID, node._fileID ) == false || node._fileID == 0 )
+                const utf8* pFileID        = sceneObjectNode.findAttribute( SceneDocumentInternal::kFileID );
+                const bool  bInvalidFileID = pFileID == nullptr || StringUtil::parseUint64( pFileID, node._fileID ) == false || node._fileID == 0;
+                if ( bInvalidFileID )
                 {
                     SW_LOG_ERROR( "Entity '%#' has no valid id ('%#') in %# - the scene is not loaded", node._name, pFileID != nullptr ? pFileID : "",
                                   absPath );
@@ -328,8 +329,9 @@ namespace sw
 
         for ( const SceneObjectNode& entity : _listSceneObjectNode )
         {
-            string prefabGuid = entity._prefabGuid;
-            if ( prefabGuid.empty() && entity._prefab.empty() == false && engine::areEngineServicesBound() )
+            string     prefabGuid         = entity._prefabGuid;
+            const bool bResolvePrefabGuid = prefabGuid.empty() && entity._prefab.empty() == false && engine::areEngineServicesBound();
+            if ( bResolvePrefabGuid )
             {
                 UUID resolvedGuid{};
                 if ( engine::getAssetManager().getAssetDatabase().tryGetGuid( entity._prefab, resolvedGuid ) && resolvedGuid.isNull() == false )
@@ -373,7 +375,8 @@ namespace sw
         if ( FileUtil::hasExtension( path, ".bin" ) )
             return loadBinary( path );
 
-        if ( binPath.empty() == false && ResourceIO::hasResource( binPath ) && loadBinary( binPath ) )
+        const bool bBinaryLoaded = binPath.empty() == false && ResourceIO::hasResource( binPath ) && loadBinary( binPath );
+        if ( bBinaryLoaded )
             return true;
 
         return loadXML( path );

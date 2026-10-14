@@ -267,7 +267,8 @@ namespace sw
                 {
                     bMetBefore = bMetBefore || metIndex == segment._ownerIndex;
                 }
-                if ( bAppointment && bMetBefore == false && isAppointmentMet( segment._sourceID ) )
+                const bool bFirstAppointmentMet = bAppointment && bMetBefore == false && isAppointmentMet( segment._sourceID );
+                if ( bFirstAppointmentMet )
                 {
                     _listMetAppointment.push_back( segment._ownerIndex );
                     emitEvent( ScheduleEvent::Kind::AppointmentMet, npcIndex, &segment, segment._sourceID );

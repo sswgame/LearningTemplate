@@ -22,7 +22,8 @@ namespace sw
 {
     void NavGeometryContributorRegistry::add( const NavGeometryContribution* pContribution )
     {
-        if ( pContribution == nullptr || pContribution->_pGetType == nullptr || pContribution->_pContribute == nullptr )
+        const bool bInvalidContribution = pContribution == nullptr || pContribution->_pGetType == nullptr || pContribution->_pContribute == nullptr;
+        if ( bInvalidContribution )
             return;
         vector<const NavGeometryContribution*>& listContribution = NavGeometryContributorInternal::getContributions();
         for ( const NavGeometryContribution* pExisting : listContribution )

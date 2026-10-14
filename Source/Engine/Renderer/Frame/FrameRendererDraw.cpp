@@ -103,9 +103,10 @@ namespace sw
         // 컬링이 실제로 목록을 만들었을 때만 건다. 안 걸리면 셰이더가 g_SwVisibleInstanceIDsIndex 로 알아채고
         // 배치 시작 + 서수를 쓴다(컬링 없음 경로). 반대로 목록만 걸고 컬링을 안 돌리면 **비어 있는
         // 목록**을 읽어 모두 0 번 인스턴스를 그린다. 그래서 둘은 반드시 같이 켜지고 같이 꺼진다.
-        const GPUCullViewResources& cullView = _gpuScene.getCullView( context._cullViewIndex );
-        if ( _bGPUCullingActive != SW_FALSE && cullView._visibleInstances._buffer != 0 &&
-             cullView._visibleInstances._srv != kInvalidDescriptorIndex )
+        const GPUCullViewResources& cullView                  = _gpuScene.getCullView( context._cullViewIndex );
+        const bool                  bVisibleInstanceListReady = _bGPUCullingActive != SW_FALSE && cullView._visibleInstances._buffer != 0 &&
+                                               cullView._visibleInstances._srv != kInvalidDescriptorIndex;
+        if ( bVisibleInstanceListReady )
         {
             context._resourceRegistry.registerBuffer( passConstantNames()._swVisibleInstanceIDs,
                                                       cullView._visibleInstances._buffer, cullView._visibleInstances._srv );
@@ -135,9 +136,10 @@ namespace sw
             const ShaderBindingSlot*   pSlot   = ( pLayout != nullptr ) ? pLayout->find( passConstantNames()._swMaterials ) : nullptr;
             if ( pSlot == nullptr || pSlot->_elementStride == 0 )
                 return; // 셰이더가 머티리얼 버퍼를 선언하지 않았다. 걸 것도 없다.
-            const auto                     it        = _mapLayoutMaterialFallback.find( pLayout );
-            const RHIStructuredBufferSlot* pFallback = ( it != _mapLayoutMaterialFallback.end() ) ? &_listMaterialFallback[it->second]._buffer : nullptr;
-            if ( pFallback != nullptr && pFallback->isValid() && pFallback->_srv != kInvalidDescriptorIndex )
+            const auto                     it                   = _mapLayoutMaterialFallback.find( pLayout );
+            const RHIStructuredBufferSlot* pFallback            = ( it != _mapLayoutMaterialFallback.end() ) ? &_listMaterialFallback[it->second]._buffer : nullptr;
+            const bool                     bUseFallbackMaterial = pFallback != nullptr && pFallback->isValid() && pFallback->_srv != kInvalidDescriptorIndex;
+            if ( bUseFallbackMaterial )
             {
                 context._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, pFallback->_buffer, pFallback->_srv );
                 context._drawMaterialCount = 1u;
@@ -234,7 +236,8 @@ namespace sw
         SW_PROFILE_SCOPE( "RT.Draw.gpuBatches" );
 
         (void)cbIndex;
-        if ( _pDevice == nullptr || context._pCmd == nullptr || _gpuScene.isUploaded() == false )
+        const bool bCannotDraw = _pDevice == nullptr || context._pCmd == nullptr || _gpuScene.isUploaded() == false;
+        if ( bCannotDraw )
             return;
 
         if ( pso != 0 )
@@ -287,7 +290,8 @@ namespace sw
         const RenderPassType passType      = context._passType;
         auto                 sameDrawGroup = [this, pso, passType, &layoutBindsMaterialCb]( const GPUMeshBatch& head, const GPUMeshBatch& other ) -> bool
         {
-            if ( other._vertexBuffer == 0 || other._instanceCount == 0 || drawsBatchInPass( passType, other ) == false )
+            const bool bOtherBatchNotDrawable = other._vertexBuffer == 0 || other._instanceCount == 0 || drawsBatchInPass( passType, other ) == false;
+            if ( bOtherBatchNotDrawable )
                 return false;
             if ( other._vertexBuffer != head._vertexBuffer || psoForBatch( pso, other ) != psoForBatch( pso, head ) )
                 return false;
@@ -313,9 +317,10 @@ namespace sw
         const uint32    batchCount = static_cast<uint32>( batches.size() );
         while ( orderIndex < batchCount )
         {
-            const uint32        batchIndex = ( pOrder != nullptr ) ? ( *pOrder )[orderIndex] : orderIndex;
-            const GPUMeshBatch& head       = batches[batchIndex];
-            if ( head._vertexBuffer == 0 || head._instanceCount == 0 || drawsBatchInPass( passType, head ) == false )
+            const uint32        batchIndex       = ( pOrder != nullptr ) ? ( *pOrder )[orderIndex] : orderIndex;
+            const GPUMeshBatch& head             = batches[batchIndex];
+            const bool          bHeadNotDrawable = head._vertexBuffer == 0 || head._instanceCount == 0 || drawsBatchInPass( passType, head ) == false;
+            if ( bHeadNotDrawable )
             {
                 ++orderIndex;
                 continue;

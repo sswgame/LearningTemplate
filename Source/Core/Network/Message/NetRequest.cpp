@@ -562,8 +562,9 @@ namespace sw
         const bool bOverCapacity = static_cast<int32>( _mapIdempotency.size() ) > _settings._maxIdempotencyEntries;
         while ( _listExpiry.empty() == false && ( _listExpiry.front().second <= now || bOverCapacity ) )
         {
-            const auto found = _mapIdempotency.find( _listExpiry.front().first );
-            if ( found != _mapIdempotency.end() && found->second._bDone == SW_TRUE && found->second._expireNanoseconds == _listExpiry.front().second )
+            const auto found                  = _mapIdempotency.find( _listExpiry.front().first );
+            const bool bExpiredEntryCompleted = found != _mapIdempotency.end() && found->second._bDone == SW_TRUE && found->second._expireNanoseconds == _listExpiry.front().second;
+            if ( bExpiredEntryCompleted )
                 _mapIdempotency.erase( found );
             _listExpiry.pop_front();
             if ( bOverCapacity && static_cast<int32>( _mapIdempotency.size() ) <= _settings._maxIdempotencyEntries )

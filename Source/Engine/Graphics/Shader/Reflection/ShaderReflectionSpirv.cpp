@@ -391,9 +391,10 @@ namespace sw
             // 타깃)이거나, 구식으로는 Uniform 저장 클래스에 구조체 타입이 BufferBlock 으로 데코레이션된다.
             // 둘 다 봐야 한다. 앞쪽만 보면 GL 용 SPIR-V 의 StructuredBuffer 가 상수버퍼로 분류돼, 바인더가 그것을 CB 슬롯으로
             // 걸고 bindStructuredBuffer 는 부르지 않는다(GL 에서 인스턴스 행렬이 모두 0 으로 읽혀 메시가 하나도 안 그려진다).
-            bool bIsStorageBuffer = ( var._storageClass == spirv::kStorageClassStorageBuffer );
-            if ( bIsStorageBuffer == false && var._storageClass == spirv::kStorageClassUniform &&
-                 blockTypeID != 0 && uniqueBufferBlockType.find( blockTypeID ) != uniqueBufferBlockType.end() )
+            bool       bIsStorageBuffer        = ( var._storageClass == spirv::kStorageClassStorageBuffer );
+            const bool bPromoteToStorageBuffer = bIsStorageBuffer == false && var._storageClass == spirv::kStorageClassUniform &&
+                                                 blockTypeID != 0 && uniqueBufferBlockType.find( blockTypeID ) != uniqueBufferBlockType.end();
+            if ( bPromoteToStorageBuffer )
                 bIsStorageBuffer = true;
 
             // 진짜 cbuffer(Uniform storage class)만 "CB 레이아웃(멤버 오프셋 포함)" 으로 채운다.
@@ -444,9 +445,10 @@ namespace sw
             // 그 필드들을 원소 레이아웃으로 낸다. stride 는 배열 타입의 ArrayStride 다(std430: 예 float4+float+uint = 32).
             if ( bIsStorageBuffer && blockTypeID != 0 )
             {
-                auto blockIt = mapType.find( blockTypeID );
-                if ( blockIt != mapType.end() && blockIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Struct &&
-                     blockIt->second._listMemberTypeID.size() == 1 )
+                auto       blockIt             = mapType.find( blockTypeID );
+                const bool bWrapperStructBlock = blockIt != mapType.end() && blockIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Struct &&
+                                                 blockIt->second._listMemberTypeID.size() == 1;
+                if ( bWrapperStructBlock )
                 {
                     auto arrIt = mapType.find( blockIt->second._listMemberTypeID[0] );
                     if ( arrIt != mapType.end() &&
@@ -481,11 +483,12 @@ namespace sw
             else if ( var._storageClass == spirv::kStorageClassUniformConstant )
             {
                 // 포인터의 원소 타입으로 샘플러만 가른다. 배열(bindless)은 원소를 따라가서 본다.
-                res._type      = "TextureOrSampler";
-                auto pointeeIt = mapType.find( blockTypeID );
+                res._type                = "TextureOrSampler";
+                auto       pointeeIt     = mapType.find( blockTypeID );
+                const bool bStorageImage = pointeeIt != mapType.end() && pointeeIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Image && pointeeIt->second._count == 2;
                 if ( pointeeIt != mapType.end() && pointeeIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Sampler )
                     res._type = "Sampler";
-                else if ( pointeeIt != mapType.end() && pointeeIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Image && pointeeIt->second._count == 2 )
+                else if ( bStorageImage )
                     res._type = "RWTexture"; // 스토리지 이미지(RWTexture2D)
             }
             else
@@ -515,7 +518,7 @@ namespace sw
                 ShaderVertexInputInfo input{};
                 input._location   = locationIt->second;
                 size_t digitBegin = name.size();
-                while ( digitBegin > 0 && name[digitBegin - 1] >= '0' && name[digitBegin - 1] <= '9' )
+                while ( digitBegin > 0 && StringUtil::isDigitChar( name[digitBegin - 1] ) )
                 {
                     --digitBegin;
                 }

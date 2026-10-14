@@ -253,9 +253,10 @@ namespace sw
 
         void postReceiveLocked( IocpConnection& connection )
         {
-            const bool bReceiving = connection._state == IocpConnectionState::Open || connection._state == IocpConnectionState::Closing;
-            if ( bReceiving == false || connection._socket == INVALID_SOCKET || connection._bReceivePosted == SW_TRUE || connection._bReceivePaused == SW_TRUE ||
-                 connection._bRemoteFinished == SW_TRUE )
+            const bool bReceiving         = connection._state == IocpConnectionState::Open || connection._state == IocpConnectionState::Closing;
+            const bool bCannotPostReceive = bReceiving == false || connection._socket == INVALID_SOCKET || connection._bReceivePosted == SW_TRUE || connection._bReceivePaused == SW_TRUE ||
+                                            connection._bRemoteFinished == SW_TRUE;
+            if ( bCannotPostReceive )
                 return;
             IocpOperation& operation = connection._receiveOperation;
             std::memset( &operation._overlapped, 0, sizeof( operation._overlapped ) );
@@ -275,8 +276,9 @@ namespace sw
 
         void postSendLocked( IocpConnection& connection )
         {
-            const bool bSending = connection._state == IocpConnectionState::Open || connection._state == IocpConnectionState::Closing;
-            if ( bSending == false || connection._socket == INVALID_SOCKET || connection._bSendPosted == SW_TRUE )
+            const bool bSending        = connection._state == IocpConnectionState::Open || connection._state == IocpConnectionState::Closing;
+            const bool bCannotPostSend = bSending == false || connection._socket == INVALID_SOCKET || connection._bSendPosted == SW_TRUE;
+            if ( bCannotPostSend )
                 return;
             if ( connection._sendQueue.isEmpty() )
             {
@@ -433,9 +435,10 @@ namespace sw
             bool                   bOpened = false;
             {
                 std::scoped_lock<mutex> lock{ connection._mutex };
-                handle = StreamConnectionHandle::make( index, connection._generation );
-                remote = connection._remote;
-                if ( bSucceeded && connection._socket != INVALID_SOCKET && connection._state == IocpConnectionState::Connecting )
+                handle                       = StreamConnectionHandle::make( index, connection._generation );
+                remote                       = connection._remote;
+                const bool bConnectCompleted = bSucceeded && connection._socket != INVALID_SOCKET && connection._state == IocpConnectionState::Connecting;
+                if ( bConnectCompleted )
                 {
                     (void)setsockopt( connection._socket, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0 );
                     Internal::setNoDelay( connection._socket, _settings._bTCPNoDelay == SW_TRUE );
@@ -489,8 +492,9 @@ namespace sw
             const SOCKET    accepted = slot._socket;
             slot._socket             = INVALID_SOCKET;
             _pendingAcceptCount.fetch_sub( 1, std::memory_order_relaxed );
-            const bool bStopping = _bStopping.load( std::memory_order_acquire );
-            if ( bSucceeded && bStopping == false && accepted != INVALID_SOCKET )
+            const bool bStopping     = _bStopping.load( std::memory_order_acquire );
+            const bool bAcceptUsable = bSucceeded && bStopping == false && accepted != INVALID_SOCKET;
+            if ( bAcceptUsable )
             {
                 (void)setsockopt( accepted, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, reinterpret_cast<const utf8*>( &_listenSocket ), sizeof( _listenSocket ) );
                 sockaddr_in remote{};
@@ -665,7 +669,8 @@ namespace sw
 
     bool IocpStreamTransport::initialize( IStreamHandler* pHandler, const StreamTransportSettings& settings )
     {
-        if ( pHandler == nullptr || _state->_bInitialized == SW_TRUE || PlatformSocketUtil::initialize() == false )
+        const bool bCannotInitialize = pHandler == nullptr || _state->_bInitialized == SW_TRUE || PlatformSocketUtil::initialize() == false;
+        if ( bCannotInitialize )
             return false;
         const int32 threadCount = settings._ioThreadCount > 0 ? settings._ioThreadCount : 1;
         _state->_completionPort = CreateIoCompletionPort( INVALID_HANDLE_VALUE, nullptr, 0, static_cast<DWORD>( threadCount ) );

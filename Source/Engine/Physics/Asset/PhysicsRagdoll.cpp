@@ -48,8 +48,9 @@ namespace sw
 
             static uint8 resolveLayer( const PhysicsRagdollOptions& options, const hashed_string& layerName )
             {
-                uint8 layer = 0;
-                if ( options._pSettings != nullptr && layerName.empty() == false && options._pSettings->findLayerIndex( layerName, layer ) == false )
+                uint8      layer             = 0;
+                const bool bUnknownLayerName = options._pSettings != nullptr && layerName.empty() == false && options._pSettings->findLayerIndex( layerName, layer ) == false;
+                if ( bUnknownLayerName )
                 {
                     SW_LOG_ERROR( "Ragdoll body names unknown layer '%#' - using layer 0", layerName.c_str() );
                     layer = 0;
@@ -215,8 +216,9 @@ namespace sw
     void PhysicsRagdollBuilder::readBoneTransforms( const IPhysicsBodyScene3D& scene, const PhysicsRagdoll& ragdoll, const PhysicsSkeletonView& skeleton,
                                                     const float4x4& worldFromModel, span<float4x4> outListModelSpaceBone )
     {
-        const size_t boneCount = skeleton._listModelSpaceBone.size();
-        if ( outListModelSpaceBone.size() < boneCount || skeleton._listParentIndex.size() != boneCount || ragdoll._listBodyOfBone.size() != boneCount )
+        const size_t boneCount              = skeleton._listModelSpaceBone.size();
+        const bool   bBoneCountDisagreement = outListModelSpaceBone.size() < boneCount || skeleton._listParentIndex.size() != boneCount || ragdoll._listBodyOfBone.size() != boneCount;
+        if ( bBoneCountDisagreement )
         {
             SW_LOG_ERROR( "readBoneTransforms: the output, the skeleton and the ragdoll disagree on the bone count" );
             return;

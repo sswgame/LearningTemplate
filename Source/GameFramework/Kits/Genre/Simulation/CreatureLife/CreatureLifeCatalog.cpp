@@ -165,7 +165,8 @@ namespace sw
 
     void CreatureLifeCatalog::addHabitat( const HabitatDef& habitat )
     {
-        if ( habitat._width <= 0 || habitat._height <= 0 || static_cast<int32>( habitat._listCell.size() ) != habitat._width * habitat._height )
+        const bool bMalformedHabitat = habitat._width <= 0 || habitat._height <= 0 || static_cast<int32>( habitat._listCell.size() ) != habitat._width * habitat._height;
+        if ( bMalformedHabitat )
         {
             SW_LOG_WARNING( "habitat '%#' has a malformed pattern - skipped", habitat._id.c_str() );
             return;

@@ -116,7 +116,8 @@ namespace sw
 
     bool SRPGCampaign::beginMission( int32 nodeIndex )
     {
-        if ( _bFailed == SW_TRUE || _bInMission == SW_TRUE || _runMap.moveTo( nodeIndex ) == false )
+        const bool bCannotBeginMission = _bFailed == SW_TRUE || _bInMission == SW_TRUE || _runMap.moveTo( nodeIndex ) == false;
+        if ( bCannotBeginMission )
             return false;
         _bInMission = SW_TRUE;
         return true;
@@ -221,7 +222,8 @@ namespace sw
         archive >> seed;
         archive >> bInMission;
         archive >> bFailed;
-        if ( archive.isError() || bInMission > SW_TRUE || bFailed > SW_TRUE )
+        const bool bInvalidCampaignFlags = archive.isError() || bInMission > SW_TRUE || bFailed > SW_TRUE;
+        if ( bInvalidCampaignFlags )
             return false;
         _runMap     = std::move( runMap );
         _listRoster = std::move( listRoster );

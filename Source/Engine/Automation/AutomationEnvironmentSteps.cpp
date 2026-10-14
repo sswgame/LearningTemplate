@@ -108,10 +108,11 @@ namespace sw
             /** @brief 창 크기 속성(픽셀, 1..16384)을 읽습니다. */
             [[nodiscard]] static bool parseSize( const AutomationStep& step, string_view name, uint32& outValue )
             {
-                constexpr int32 kMaxWindowSide = 16384;
-                const string*   pText          = step.findAttribute( name );
-                int32           value          = 0;
-                if ( pText == nullptr || StringUtil::parseInt( string_view{ *pText }, value ) == false || value < 1 || value > kMaxWindowSide )
+                constexpr int32 kMaxWindowSide     = 16384;
+                const string*   pText              = step.findAttribute( name );
+                int32           value              = 0;
+                const bool      bInvalidWindowSide = pText == nullptr || StringUtil::parseInt( string_view{ *pText }, value ) == false || value < 1 || value > kMaxWindowSide;
+                if ( bInvalidWindowSide )
                     return false;
                 outValue = static_cast<uint32>( value );
                 return true;

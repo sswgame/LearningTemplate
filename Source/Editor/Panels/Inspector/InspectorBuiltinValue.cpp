@@ -174,7 +174,8 @@ namespace sw::editor
     {
         if ( pOutBuf == nullptr || capacity == 0 )
             return false;
-        if ( returnType.empty() || returnType == "void" || value.hasValue() == false )
+        const bool bNoReturnValue = returnType.empty() || returnType == "void" || value.hasValue() == false;
+        if ( bNoReturnValue )
         {
             formatstring( pOutBuf, capacity, "(void / empty)" );
             return true;

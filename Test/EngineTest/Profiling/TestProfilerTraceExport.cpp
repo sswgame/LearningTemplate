@@ -198,8 +198,9 @@ namespace
     {
         for ( size_t index = 0; index < events.size(); ++index )
         {
-            const sw::JSONValue event = events.at( index );
-            if ( event.get( "ph" ).asString() == "X" && event.get( "name" ).asString() == "GT.Frame" && event.get( "pid" ).asInt() == pid )
+            const sw::JSONValue event                 = events.at( index );
+            const bool          bGameThreadFrameEvent = event.get( "ph" ).asString() == "X" && event.get( "name" ).asString() == "GT.Frame" && event.get( "pid" ).asInt() == pid;
+            if ( bGameThreadFrameEvent )
                 return event.get( "ts" ).asFloat();
         }
         return -1.0;

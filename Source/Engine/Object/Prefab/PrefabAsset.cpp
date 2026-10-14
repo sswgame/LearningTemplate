@@ -467,8 +467,9 @@ namespace sw
                 vector<NestedPartEntry> listCaptured;
                 for ( const uint64 partID : listPartID )
                 {
-                    const GameObject* pPart = pManager->findGameObjectByID( partID );
-                    if ( pPart == nullptr || pPart->isPendingDestroy() || registry.isAttachedNestedPart( pPart ) == false )
+                    const GameObject* pPart        = pManager->findGameObjectByID( partID );
+                    const bool        bForeignPart = pPart == nullptr || pPart->isPendingDestroy() || registry.isAttachedNestedPart( pPart ) == false;
+                    if ( bForeignPart )
                         continue; // 지운 부품 · 옮긴 부품은 이 프리팹의 것이 아니다
                     const PrefabNestedPart* pRecord = registry.findNestedPart( partID );
 
@@ -492,8 +493,9 @@ namespace sw
                             continue;
                         }
                     }
-                    const SceneComponent* pAttachedTo = pPartRoot != nullptr ? pPartRoot->getParent() : nullptr;
-                    if ( pAttachedTo != nullptr && pParent != nullptr && pAttachedTo != pParent->getPrimarySceneComponent() )
+                    const SceneComponent* pAttachedTo               = pPartRoot != nullptr ? pPartRoot->getParent() : nullptr;
+                    const bool            bAttachedToOtherComponent = pAttachedTo != nullptr && pParent != nullptr && pAttachedTo != pParent->getPrimarySceneComponent();
+                    if ( bAttachedToOtherComponent )
                         node._attachKey = ComponentStableKey::makeKey( pAttachedTo );
                     node._name       = pPart->getName().c_str();
                     node._prefabPath = pRecord->_prefabPath;
@@ -1109,10 +1111,11 @@ namespace sw
         SceneComponent* pNewRoot = pInstance->getPrimarySceneComponent();
         if ( pNewRoot != nullptr )
         {
-            GameObjectManager* pManager = pInstance->getManager();
-            Component*         pParent  = ( pManager != nullptr && parentHandle.isValid() ) ? pManager->resolveComponent( parentHandle ) : nullptr;
-            if ( pParent != nullptr && pParent->isSceneComponent() && pNewRoot->getParent() != pParent &&
-                 pNewRoot->attachToComponent( static_cast<SceneComponent*>( pParent ) ) == false )
+            GameObjectManager* pManager        = pInstance->getManager();
+            Component*         pParent         = ( pManager != nullptr && parentHandle.isValid() ) ? pManager->resolveComponent( parentHandle ) : nullptr;
+            const bool         bReattachNeeded = pParent != nullptr && pParent->isSceneComponent() && pNewRoot->getParent() != pParent &&
+                                         pNewRoot->attachToComponent( static_cast<SceneComponent*>( pParent ) ) == false;
+            if ( bReattachNeeded )
                 SW_LOG_WARNING( "Revert of '%#' could not re-attach it to its parent - it stays at the root", name.c_str() );
             if ( bHadRoot )
             {

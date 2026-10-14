@@ -105,7 +105,7 @@ Scripts/
   │     ├── gate/                     # 위반이 있으면 **실패한다** — 빌드와 커밋을 막는 건 이 폴더뿐
   │     │     ├── CheckCodeConventions.py     # C++ 엔진 코딩 컨벤션 — 진입점 · 파일 고르기 · 보고(규칙은 lint/conventions/, 맨이름 `out` 도 여기)
   │     │     ├── CheckLoopBraces.py          # 본문에 중괄호가 없는 for · while
-  │     │     ├── CheckConditionParts.py      # if · while 조건이 && · || 로 세 부분 이상이면 이름 붙이기 (훅은 추가한 줄만 · 전체는 rules 기준선 초과만)
+  │     │     ├── CheckConditionParts.py      # if · while 조건이 && · || 로 세 부분 이상이면 이름 붙이기 (훅은 추가한 줄만 · 전체는 rules 기준선 0)
   │     │     ├── CheckDiscardReason.py       # 실패 가능 함수 결과를 (void) 로 버리는 자리의 이유 한 줄
   │     │     ├── CheckSuppressionReasons.py  # NOLINT · diagnostic ignored · CMake 경고 끄기의 검사 이름과 이유
   │     │     ├── CheckProductNames.py        # 제품 이름 식별자는 드라이버 · 제공자 · 백엔드 · 플랫폼 폴더 안에서만

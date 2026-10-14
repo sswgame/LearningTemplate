@@ -85,12 +85,13 @@ namespace sw
             {
                 reader.reportUnknownAttributes( child, FitPartDataInternal::kArrRingAttribute );
                 FitRingDef ring;
-                ring._bone   = reader.readName( child, "bone", false );
-                ring._offset = reader.readFloat3( child, "offset", float3::Zero );
-                ring._axis   = reader.readFloat3( child, "axis", ring._axis );
-                ring._radius = reader.readFloat( child, "radius", ring._radius );
-                ring._width  = reader.readFloat( child, "width", ring._width );
-                if ( ring._radius <= 0.0f || ring._width < 0.0f || ring._axis.getLengthSquared() <= 0.0f )
+                ring._bone              = reader.readName( child, "bone", false );
+                ring._offset            = reader.readFloat3( child, "offset", float3::Zero );
+                ring._axis              = reader.readFloat3( child, "axis", ring._axis );
+                ring._radius            = reader.readFloat( child, "radius", ring._radius );
+                ring._width             = reader.readFloat( child, "width", ring._width );
+                const bool bInvalidRing = ring._radius <= 0.0f || ring._width < 0.0f || ring._axis.getLengthSquared() <= 0.0f;
+                if ( bInvalidRing )
                     reader.addError( child, "needs radius > 0, width >= 0 and a non-zero axis" );
                 else
                     _listRing.push_back( ring );

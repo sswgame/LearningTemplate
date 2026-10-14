@@ -232,7 +232,8 @@ namespace sw
         bool bAny = false;
         for ( Component* pComp : _listComponent )
         {
-            if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->isSceneComponent() == false || pComp->isSelfActive() == false )
+            const bool bSkipInactiveComponent = pComp == nullptr || pComp->isPendingDestroy() || pComp->isSceneComponent() == false || pComp->isSelfActive() == false;
+            if ( bSkipInactiveComponent )
                 continue;
             AABB componentBox{};
             if ( static_cast<const SceneComponent*>( pComp )->getWorldBox( componentBox ) == false )
@@ -353,7 +354,8 @@ namespace sw
         // 켜진 채다(틱하고 그려진다). 자식 목록을 만들지 않는다. 재귀는 계층을 바꾸지 않으므로 그대로 돈다.
         for ( Component* pOwnComp : _listComponent )
         {
-            if ( pOwnComp == nullptr || pOwnComp->isPendingDestroy() || pOwnComp->isSceneComponent() == false )
+            const bool bSkipNonSceneComponent = pOwnComp == nullptr || pOwnComp->isPendingDestroy() || pOwnComp->isSceneComponent() == false;
+            if ( bSkipNonSceneComponent )
                 continue;
             for ( SceneComponent* pChildComp : static_cast<SceneComponent*>( pOwnComp )->getChildren() )
             {
@@ -438,7 +440,8 @@ namespace sw
         Component* pFound = nullptr;
         for ( Component* pComp : _listComponent )
         {
-            if ( pComp != nullptr && pComp->isPendingDestroy() == false && pComp->isSceneComponent() )
+            const bool bLiveSceneComponent = pComp != nullptr && pComp->isPendingDestroy() == false && pComp->isSceneComponent();
+            if ( bLiveSceneComponent )
             {
                 pFound = pComp;
                 break;
@@ -546,7 +549,8 @@ namespace sw
         }
         for ( Component* pComp : _listComponent )
         {
-            if ( pComp != nullptr && pComp->isPendingDestroy() == false && pComp->getComponentName() == typeName )
+            const bool bLiveNamedComponent = pComp != nullptr && pComp->isPendingDestroy() == false && pComp->getComponentName() == typeName;
+            if ( bLiveNamedComponent )
                 return pComp;
         }
         return nullptr;
@@ -608,8 +612,9 @@ namespace sw
         // 둘째 씬 컴포넌트부터는 primary 에 붙인다. 오브젝트의 루트는 하나다(언리얼의 RootComponent). 루트로 두면 **월드 원점**에 놓여
         // 오브젝트를 옮겨도 콜라이더와 메시가 따라오지 않는다.
         // 상태 읽기는 이 뒤에 저장된 부착(소켓, 다른 오브젝트)으로 다시 붙이고, 부착이 비어 있으면 이대로 둔다.
-        Component* pPrimary = _pPrimaryScene.load( std::memory_order_relaxed );
-        if ( pComp->isSceneComponent() && pPrimary != nullptr && pPrimary != pComp )
+        Component* pPrimary            = _pPrimaryScene.load( std::memory_order_relaxed );
+        const bool bAttachUnderPrimary = pComp->isSceneComponent() && pPrimary != nullptr && pPrimary != pComp;
+        if ( bAttachUnderPrimary )
         {
             if ( static_cast<SceneComponent*>( pComp )->attachToComponent( static_cast<SceneComponent*>( pPrimary ) ) == false )
                 SW_LOG_WARNING( "'%#': a second scene component could not be put under the primary - it stays a root", getName().c_str() );
@@ -718,7 +723,8 @@ namespace sw
 
     bool GameObject::moveComponent( Component* pComp, int32 direction )
     {
-        if ( pComp == nullptr || pComp->getOwner() != this || direction == 0 || isComponentMutationFrozen() )
+        const bool bInvalidMoveRequest = pComp == nullptr || pComp->getOwner() != this || direction == 0 || isComponentMutationFrozen();
+        if ( bInvalidMoveRequest )
             return false;
         const auto it = std::find( _listComponent.begin(), _listComponent.end(), pComp );
         if ( it == _listComponent.end() )

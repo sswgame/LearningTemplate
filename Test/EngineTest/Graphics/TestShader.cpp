@@ -663,7 +663,8 @@ SW_TEST_CASE( ShaderCookStampTest, HeaderInAnotherIncludeRootMakesOutputStale )
     const sw::string binDir           = sw::ResourcePaths::getResourcePath( "common/shaders/bin/dx12" );
     const sw::string engineShadersDir = sw::ResourcePaths::getDomainFolderPath( "engine", "shaders" );
     // 쿠킹된 트리가 없는 환경(클린 체크아웃 직후)에서는 볼 것이 없다.
-    if ( shaderPath.empty() || binDir.empty() || engineShadersDir.empty() )
+    const bool bMissingShaderPaths = shaderPath.empty() || binDir.empty() || engineShadersDir.empty();
+    if ( bMissingShaderPaths )
         return;
 
     sw::ShaderCooker::invalidateSharedHeaderCache();

@@ -165,9 +165,10 @@ namespace sw
                         emitLiteral( bEmit, rawRun, resolvedRun, outText );
                         rawRun.clear();
                         resolvedRun.clear();
+                        const bool bEmitPluralNumber = bEmit && _mode == TextWalkMode::Format && _listPluralNumber.empty() == false;
                         if ( bEmit && _mode == TextWalkMode::Rebuild )
                             outText.push_back( '#' );
-                        else if ( bEmit && _mode == TextWalkMode::Format && _listPluralNumber.empty() == false )
+                        else if ( bEmitPluralNumber )
                             outText.append( _listPluralNumber.back() );
                         ++_position;
                         continue;
@@ -252,7 +253,8 @@ namespace sw
                 skipSpace();
                 const string_view type = readWord();
                 skipSpace();
-                if ( type == "plural" || type == "select" || type == "selectordinal" )
+                const bool bSelectorType = type == "plural" || type == "select" || type == "selectordinal";
+                if ( bSelectorType )
                 {
                     if ( _position >= _pattern.size() || _pattern[_position] != ',' )
                         return fail( "',' expected after plural/select" );
@@ -297,8 +299,9 @@ namespace sw
                 if ( bRebuild )
                     outText.append( _pattern.substr( openPos, _position - openPos ) );
 
-                float64 offset{ 0.0 };
-                if ( bPlural && bOrdinal == false && _pattern.substr( _position ).substr( 0, 7 ) == "offset:" )
+                float64    offset{ 0.0 };
+                const bool bHasOffsetPrefix = bPlural && bOrdinal == false && _pattern.substr( _position ).substr( 0, 7 ) == "offset:";
+                if ( bHasOffsetPrefix )
                 {
                     _position += 7;
                     skipSpace();
@@ -332,7 +335,8 @@ namespace sw
                     if ( bExact && bPlural == false )
                         return fail( "'=N' is only for plural" );
                     PluralCategory category{ PluralCategory::Other };
-                    if ( bPlural && bExact == false && PluralRuleUtil::tryParseCategory( selector, category ) == false )
+                    const bool     bUnknownPluralKeyword = bPlural && bExact == false && PluralRuleUtil::tryParseCategory( selector, category ) == false;
+                    if ( bUnknownPluralKeyword )
                         return fail( "unknown plural keyword '" + string( selector ) + "'" );
                     skipSpace();
                     if ( _position >= _pattern.size() || _pattern[_position] != '{' )

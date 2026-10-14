@@ -151,7 +151,8 @@ namespace sw
                         oldestMs   = registration._registeredMs;
                     }
                 }
-                if ( bReplacing == false && deviceCount >= PushLimit::kMaxDevicePerAccount && pOldestKey != nullptr )
+                const bool bEvictOldestDevice = bReplacing == false && deviceCount >= PushLimit::kMaxDevicePerAccount && pOldestKey != nullptr;
+                if ( bEvictOldestDevice )
                     transaction.erase( table, *pOldestKey ); // 한도를 넘었으므로 가장 오래 등록된 기기를 밀어낸다
                 transaction.put( table, _key, Internal::encodeDevice( _registration ) );
             }
@@ -333,7 +334,8 @@ namespace sw
 
     void PushNotificationDispatcher::unregisterDevice( AccountID accountID, string_view providerID, string_view token, uint64 requestTag )
     {
-        if ( PushLimit::isValidProviderID( providerID ) == false || token.empty() || _pStore == nullptr )
+        const bool bInvalidUnregister = PushLimit::isValidProviderID( providerID ) == false || token.empty() || _pStore == nullptr;
+        if ( bInvalidUnregister )
         {
             if ( requestTag != 0 )
                 _completionBuffer.push( PushDeviceCompletion{ requestTag, LiveOpsResult::Invalid } );

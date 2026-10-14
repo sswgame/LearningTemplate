@@ -174,7 +174,8 @@ namespace sw
         ReplayHeader header{};
         if ( InputReplayInternal::readBytes( pCursor, pEnd, header ) == false )
             return false;
-        if ( header._arrMagic[0] != 'S' || header._arrMagic[1] != 'W' || header._arrMagic[2] != 'R' || header._arrMagic[3] != 'P' )
+        const bool bBadMagic = header._arrMagic[0] != 'S' || header._arrMagic[1] != 'W' || header._arrMagic[2] != 'R' || header._arrMagic[3] != 'P';
+        if ( bBadMagic )
             return false;
 
         // 버전이 다르면 프레임 배치도 다르다. 읽어 봐야 엉뚱한 값이 나오므로 여기서 멈춘다.
@@ -200,8 +201,9 @@ namespace sw
             InputReplayFrame frame{};
             uint32           eventCount = 0;
             // 잘린 프레임에서 멈춘다. 그 뒤를 읽으면 엉뚱한 입력이 재생된다.
-            if ( InputReplayInternal::readBytes( pCursor, pEnd, frame._deltaTime ) == false || InputReplayInternal::readBytes( pCursor, pEnd, eventCount ) == false ||
-                 static_cast<size_t>( pEnd - pCursor ) / sizeof( RawInputEvent ) < eventCount )
+            const bool bTruncatedFrame = InputReplayInternal::readBytes( pCursor, pEnd, frame._deltaTime ) == false || InputReplayInternal::readBytes( pCursor, pEnd, eventCount ) == false ||
+                                         static_cast<size_t>( pEnd - pCursor ) / sizeof( RawInputEvent ) < eventCount;
+            if ( bTruncatedFrame )
             {
                 SW_LOG_WARNING( "Input replay is truncated at frame %# — refusing to load: %#", frameIndex, filePath );
                 return false;

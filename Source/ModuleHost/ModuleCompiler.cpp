@@ -173,7 +173,8 @@ namespace sw
             if ( outputLine.find( "failed to write output" ) != string::npos && outputLine.find( "permission denied" ) != string::npos )
                 _bBlockedByLoadedBinary.store( 1, std::memory_order_relaxed );
 
-            if ( outputLine.find( "FAILED:" ) != string::npos || outputLine.find( "error:" ) != string::npos || outputLine.find( "Error" ) != string::npos )
+            const bool bIsErrorLine = outputLine.find( "FAILED:" ) != string::npos || outputLine.find( "error:" ) != string::npos || outputLine.find( "Error" ) != string::npos;
+            if ( bIsErrorLine )
                 SW_LOG_ERROR( "%#", outputLine.c_str() );
             else if ( outputLine.find( "warning:" ) != string::npos || outputLine.find( "Warning" ) != string::npos )
                 SW_LOG_WARNING( "%#", outputLine.c_str() );

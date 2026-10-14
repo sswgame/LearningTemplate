@@ -65,11 +65,12 @@ namespace sw
     {
         if ( inoutCarcass._bSkinned != SW_FALSE || isRotten( catalog, inoutCarcass ) )
             return false;
-        outPelt._animalID               = inoutCarcass._animalID;
-        outPelt._stars                  = computeCarcassStars( catalog, inoutCarcass );
-        inoutCarcass._bSkinned          = SW_TRUE;
-        const WesternAnimalDef* pAnimal = catalog.findAnimal( inoutCarcass._animalID );
-        if ( pLoot != nullptr && pAnimal != nullptr && pAnimal->_lootTable.empty() == false )
+        outPelt._animalID                     = inoutCarcass._animalID;
+        outPelt._stars                        = computeCarcassStars( catalog, inoutCarcass );
+        inoutCarcass._bSkinned                = SW_TRUE;
+        const WesternAnimalDef* pAnimal       = catalog.findAnimal( inoutCarcass._animalID );
+        const bool              bHasLootTable = pLoot != nullptr && pAnimal != nullptr && pAnimal->_lootTable.empty() == false;
+        if ( bHasLootTable )
             (void)pLoot->roll( pAnimal->_lootTable, random, outItems );
         return true;
     }

@@ -22,7 +22,8 @@ namespace sw
     // ------------------------------------------------------------------------------
     void PassConstantValues::setBytes( hashed_string name, const void* pData, uint32 byteSize )
     {
-        if ( pData == nullptr || byteSize == 0 || byteSize > kMaxValueBytes )
+        const bool bInvalidValueBytes = pData == nullptr || byteSize == 0 || byteSize > kMaxValueBytes;
+        if ( bInvalidValueBytes )
             return;
 
         // **값이 실제로 달라질 때만** 버전을 올린다. 같은 값을 다시 넣는 호출이 흔한데(드로우마다 g_World 를
@@ -117,8 +118,9 @@ namespace sw
         //    이름을 intern 하지도 않는다.
         // 값 · 레지스트리가 그대로면 버퍼 내용도 그대로다. 다시 만들지도, 올리지도 않는다.
         // 배치마다 바뀌는 값은 루트 상수로 나가므로(binding.hlsli) 한 패스의 두 번째 드로우부터는 늘 여기로 온다.
-        const uint32 engineCbSize = layout.getEngineCbSize();
-        if ( engineCbSize > 0 && engineCb._buffer != 0 && bEngineCbUpToDate == false )
+        const uint32 engineCbSize    = layout.getEngineCbSize();
+        const bool   bUploadEngineCb = engineCbSize > 0 && engineCb._buffer != 0 && bEngineCbUpToDate == false;
+        if ( bUploadEngineCb )
         {
             // 드로우마다 힙에서 새로 잡지 않는다. 병렬 패스 기록이 여러 스레드에서 이 함수를
             // 동시에 부르므로 스레드마다 자기 버퍼를 갖는다.

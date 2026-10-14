@@ -50,7 +50,8 @@ namespace sw
     {
         outGPUNanos = 0;
         // 주파수는 프레임 disjoint 가 준다 — 아직 한 프레임도 읽지 않았으면 틱을 나노초로 바꿀 근거가 없다.
-        if ( _device == nullptr || _deviceContext == nullptr || _lastTimestampFrequency == 0 )
+        const bool bTimestampUnavailable = _device == nullptr || _deviceContext == nullptr || _lastTimestampFrequency == 0;
+        if ( bTimestampUnavailable )
             return false;
 
         std::scoped_lock<mutex> lock{ _immediateContextMutex };
@@ -80,8 +81,9 @@ namespace sw
 
     void D3D11RHIDevice::writeTimestampSlot( ID3D11DeviceContext* pContext, uint32 slotIndex )
     {
-        if ( pContext == nullptr || _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE ||
-             slotIndex >= constant::kMaxGPUTimestampSlot )
+        const bool bCannotWriteTimestamp = pContext == nullptr || _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE ||
+                                           slotIndex >= constant::kMaxGPUTimestampSlot;
+        if ( bCannotWriteTimestamp )
             return;
 
         // 이 프레임 묶음의 칸 하나. Deferred Context 마다 다른 칸이라 같은 쿼리 객체가 겹치지 않는다.
@@ -95,7 +97,8 @@ namespace sw
 
     void D3D11RHIDevice::ensureTimestampResources()
     {
-        if ( _bTimestampEnabled == SW_FALSE || _bTimestampReady != SW_FALSE || _device == nullptr )
+        const bool bTimestampResourcesNotNeeded = _bTimestampEnabled == SW_FALSE || _bTimestampReady != SW_FALSE || _device == nullptr;
+        if ( bTimestampResourcesNotNeeded )
             return;
 
         D3D11_QUERY_DESC disjointDesc{};
@@ -120,9 +123,10 @@ namespace sw
     void D3D11RHIDevice::collectTimestampsForSlot()
     {
         _timestampFrame._listMicro.clear();
-        D3D11TimestampFrame& frame = _arrTimestampFrame[_timestampFrameIndex];
-        if ( _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE || frame._bPending == SW_FALSE ||
-             frame._writtenMask == 0 )
+        D3D11TimestampFrame& frame                   = _arrTimestampFrame[_timestampFrameIndex];
+        const bool           bNoTimestampFrameToRead = _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE || frame._bPending == SW_FALSE ||
+                                             frame._writtenMask == 0;
+        if ( bNoTimestampFrameToRead )
             return;
 
         std::scoped_lock<mutex> lock{ _immediateContextMutex };

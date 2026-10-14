@@ -66,10 +66,11 @@ namespace sw::editor
 
         float3 deformPoint( const MeshModifierPoint& point, const MeshModifierContext& context ) const override
         {
-            const float32              amount  = getFloat( _amountParam );
-            const string&              path    = getText( _frameParam );
-            const IMeshModifierInputs* pInputs = context.getInputs();
-            if ( MathUtil::abs( amount ) < MathUtil::kEpsilon || path.empty() || pInputs == nullptr )
+            const float32              amount          = getFloat( _amountParam );
+            const string&              path            = getText( _frameParam );
+            const IMeshModifierInputs* pInputs         = context.getInputs();
+            const bool                 bNoDisplacement = MathUtil::abs( amount ) < MathUtil::kEpsilon || path.empty() || pInputs == nullptr;
+            if ( bNoDisplacement )
                 return point._position;
             const float2 uv{ getBool( _mirrorParam ) ? 1.0f - point._uv._x : point._uv._x, point._uv._y };
             float4       color{ 0.0f, 0.0f, 0.0f, 0.0f };

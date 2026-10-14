@@ -14,8 +14,9 @@ namespace sw
         {
             static bool hitTestRecursive( const Widget& widget, const float2& screenPoint, vector<WidgetID>& inoutListWidget )
             {
-                const WidgetVisibility visibility = widget.getVisibility();
-                if ( visibility == WidgetVisibility::Collapsed || visibility == WidgetVisibility::Hidden || visibility == WidgetVisibility::HitTestInvisible )
+                const WidgetVisibility visibility      = widget.getVisibility();
+                const bool             bNotHitTestable = visibility == WidgetVisibility::Collapsed || visibility == WidgetVisibility::Hidden || visibility == WidgetVisibility::HitTestInvisible;
+                if ( bNotHitTestable )
                     return false;
                 float2 local{};
                 if ( widget.getGeometry().inverseTransformPoint( screenPoint, local ) == false )

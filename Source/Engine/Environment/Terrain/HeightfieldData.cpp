@@ -33,7 +33,8 @@ namespace sw
 
     bool HeightfieldData::isHoleCell( uint32 cellX, uint32 cellZ ) const
     {
-        if ( _listHoleCell.empty() || cellX + 1 >= _resolution || cellZ + 1 >= _resolution )
+        const bool bNoHoleAtCell = _listHoleCell.empty() || cellX + 1 >= _resolution || cellZ + 1 >= _resolution;
+        if ( bNoHoleAtCell )
             return false;
         return _listHoleCell[static_cast<size_t>( cellZ ) * ( _resolution - 1 ) + cellX] != 0;
     }

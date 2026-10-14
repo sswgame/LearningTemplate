@@ -206,8 +206,9 @@ namespace sw
 
     bool HorrorSession::storeInBox( int32 instanceID, int32 count )
     {
-        const GridItem* pItem = _pInventory->findInstance( instanceID );
-        if ( pItem == nullptr || count <= 0 || pItem->_count < count )
+        const GridItem* pItem               = _pInventory->findInstance( instanceID );
+        const bool      bInvalidMoveRequest = pItem == nullptr || count <= 0 || pItem->_count < count;
+        if ( bInvalidMoveRequest )
             return false;
         const hashed_string itemID = pItem->_itemID;
         if ( _pItemBox->hasRoomFor( itemID, count ) == false )
@@ -463,7 +464,8 @@ namespace sw
 
     bool HorrorSession::linkClues( const hashed_string& firstClue, const hashed_string& secondClue )
     {
-        if ( firstClue == secondClue || hasClue( firstClue ) == false || hasClue( secondClue ) == false || isLinked( firstClue, secondClue ) )
+        const bool bCannotLinkClues = firstClue == secondClue || hasClue( firstClue ) == false || hasClue( secondClue ) == false || isLinked( firstClue, secondClue );
+        if ( bCannotLinkClues )
             return false;
         HorrorClueLink link;
         link._first  = firstClue;
@@ -589,8 +591,9 @@ namespace sw
         // 순서 퍼즐 진행은 다음 걸음의 index 이므로 그 퍼즐의 걸음 수 안이어야 한다.
         for ( const auto& [puzzleID, progress] : restored._mapSequenceProgress )
         {
-            const HorrorSequenceDef* pSequence = _pCatalog != nullptr ? _pCatalog->findSequence( puzzleID ) : nullptr;
-            if ( pSequence == nullptr || progress < 0 || progress >= static_cast<int32>( pSequence->_listStep.size() ) )
+            const HorrorSequenceDef* pSequence                = _pCatalog != nullptr ? _pCatalog->findSequence( puzzleID ) : nullptr;
+            const bool               bInvalidSequenceProgress = pSequence == nullptr || progress < 0 || progress >= static_cast<int32>( pSequence->_listStep.size() );
+            if ( bInvalidSequenceProgress )
                 return false;
         }
         restored._eventBuffer.clear();

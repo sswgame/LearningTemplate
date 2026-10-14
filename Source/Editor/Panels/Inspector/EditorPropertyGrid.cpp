@@ -176,7 +176,8 @@ namespace sw::editor
 
     void EditorPropertyGrid::drawFavoriteProperties( const EditorPropertyGridTarget& target )
     {
-        if ( _pFavorites == nullptr || target._pType == nullptr || _pFavorites->hasAnyForType( target._pType->_name.c_str() ) == false )
+        const bool bNoFavoritesToDraw = _pFavorites == nullptr || target._pType == nullptr || _pFavorites->hasAnyForType( target._pType->_name.c_str() ) == false;
+        if ( bNoFavoritesToDraw )
             return;
         // 본문 그리드와 같은 카테고리 · 프로퍼티 id 를 쓰므로 id 공간을 나눈다.
         ImGui::PushID( "##favorites" );
@@ -283,9 +284,10 @@ namespace sw::editor
         if ( pSectionTitle != nullptr )
             ImGui::SeparatorText( pSectionTitle );
         // 컴포넌트이면 그 타입의 기본 인스턴스(CDO)와 비교한다. 중첩 구조체와 씬 밖 객체는 메타의 기본값 텍스트만 있다.
-        const void*    pDefaultInstance = nullptr;
-        EditorContext* pDefaultContext  = EditorContext::get();
-        if ( _pEditTargetComponent != nullptr && pInstance == _pEditTargetComponent && pDefaultContext != nullptr )
+        const void*    pDefaultInstance   = nullptr;
+        EditorContext* pDefaultContext    = EditorContext::get();
+        const bool     bIsEditedComponent = _pEditTargetComponent != nullptr && pInstance == _pEditTargetComponent && pDefaultContext != nullptr;
+        if ( bIsEditedComponent )
             pDefaultInstance = pDefaultContext->getSubsystem<EditorDefaultObjects>().findDefault( *pTypeInfo );
         // 바뀐 것만 보기이면 기본값과 같은 프로퍼티를 뺀다. 남은 것이 없는 카테고리는 머리째 감춘다.
         if ( _bShowModifiedOnly )
@@ -421,7 +423,8 @@ namespace sw::editor
         --_propertyDrawDepth;
 
         // 컨테이너와 중첩 구조체는 이 함수가 재귀한다. 알림은 가장 바깥에서 한 번만 한다.
-        if ( _propertyDrawDepth == 0 && bEditedBefore == false && g.ActiveIdHasBeenEditedThisFrame )
+        const bool bOutermostEdit = _propertyDrawDepth == 0 && bEditedBefore == false && g.ActiveIdHasBeenEditedThisFrame;
+        if ( bOutermostEdit )
             notifyPropertyEdited( prop );
     }
 
@@ -884,7 +887,8 @@ namespace sw::editor
 
     void EditorPropertyGrid::drawTypeMethods( void* pInstance, const TypeInfo* pTypeInfo )
     {
-        if ( pInstance == nullptr || pTypeInfo == nullptr || pTypeInfo->_listMethod.empty() )
+        const bool bNoMethodsToDraw = pInstance == nullptr || pTypeInfo == nullptr || pTypeInfo->_listMethod.empty();
+        if ( bNoMethodsToDraw )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorInspector", "NoFunctionMethods" ) );
             return;

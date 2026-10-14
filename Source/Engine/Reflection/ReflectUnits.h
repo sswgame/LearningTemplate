@@ -97,9 +97,10 @@ namespace sw
          */
         [[nodiscard]] static bool convert( const float64 value, const string_view fromUnit, const string_view toUnit, float64& outValue ) noexcept
         {
-            const ReflectUnit* pFrom = findUnit( fromUnit );
-            const ReflectUnit* pTo   = findUnit( toUnit );
-            if ( pFrom == nullptr || pTo == nullptr || pFrom->_dimension != pTo->_dimension )
+            const ReflectUnit* pFrom              = findUnit( fromUnit );
+            const ReflectUnit* pTo                = findUnit( toUnit );
+            const bool         bIncompatibleUnits = pFrom == nullptr || pTo == nullptr || pFrom->_dimension != pTo->_dimension;
+            if ( bIncompatibleUnits )
                 return false;
             outValue = value * pFrom->_toBase / pTo->_toBase;
             return true;
@@ -120,7 +121,8 @@ namespace sw
                 const bool bDigit    = '0' <= character && character <= '9';
                 const bool bExponent = ( character == 'e' || character == 'E' ) && split + 1 < trimmed.size() &&
                                        ( ( '0' <= trimmed[split + 1] && trimmed[split + 1] <= '9' ) || trimmed[split + 1] == '-' || trimmed[split + 1] == '+' );
-                if ( bDigit == false && bExponent == false && character != '.' && character != '+' && character != '-' )
+                const bool bNumberEnded = bDigit == false && bExponent == false && character != '.' && character != '+' && character != '-';
+                if ( bNumberEnded )
                     break;
                 ++split;
             }

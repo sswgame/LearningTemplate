@@ -36,9 +36,10 @@ namespace
             const int2 delta = listCell[cellIndex] - listCell[cellIndex - 1];
             if ( MathUtil::abs( delta._x ) > 1 || MathUtil::abs( delta._y ) > 1 )
                 return false;
-            if ( delta._x != 0 && delta._y != 0 &&
-                 ( grid.isWalkable( listCell[cellIndex - 1]._x + delta._x, listCell[cellIndex - 1]._y ) == false ||
-                   grid.isWalkable( listCell[cellIndex - 1]._x, listCell[cellIndex - 1]._y + delta._y ) == false ) )
+            const bool bBlockedDiagonal = delta._x != 0 && delta._y != 0 &&
+                                          ( grid.isWalkable( listCell[cellIndex - 1]._x + delta._x, listCell[cellIndex - 1]._y ) == false ||
+                                            grid.isWalkable( listCell[cellIndex - 1]._x, listCell[cellIndex - 1]._y + delta._y ) == false );
+            if ( bBlockedDiagonal )
                 return false;
         }
         return true;

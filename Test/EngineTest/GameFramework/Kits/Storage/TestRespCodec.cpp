@@ -46,7 +46,8 @@ namespace
 
     bool isSameValue( const RespValue& left, const RespValue& right )
     {
-        if ( left._type != right._type || left._integer != right._integer || left._bytes != right._bytes || left._listElement.size() != right._listElement.size() )
+        const bool bDifferentValue = left._type != right._type || left._integer != right._integer || left._bytes != right._bytes || left._listElement.size() != right._listElement.size();
+        if ( bDifferentValue )
             return false;
         for ( size_t index = 0; index < left._listElement.size(); ++index )
         {

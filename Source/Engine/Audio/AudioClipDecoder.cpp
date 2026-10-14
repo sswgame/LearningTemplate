@@ -76,10 +76,12 @@ namespace sw
             offset += chunkSize + ( chunkSize & 1u );
         }
 
-        if ( bHaveFmt == false || pData == nullptr || dataSize == 0 )
+        const bool bMissingWaveChunks = bHaveFmt == false || pData == nullptr || dataSize == 0;
+        if ( bMissingWaveChunks )
             return false;
-        if ( ( baseFormatTag != Internal::kWaveFormatPcm && baseFormatTag != Internal::kWaveFormatIeeeFloat ) || pcm._channelCount == 0 || pcm._sampleRate == 0 ||
-             pcm._bitsPerSample == 0 || ( pcm._bitsPerSample % 8u ) != 0 )
+        const bool bUnsupportedWaveFormat = ( baseFormatTag != Internal::kWaveFormatPcm && baseFormatTag != Internal::kWaveFormatIeeeFloat ) || pcm._channelCount == 0 || pcm._sampleRate == 0 ||
+                                            pcm._bitsPerSample == 0 || ( pcm._bitsPerSample % 8u ) != 0;
+        if ( bUnsupportedWaveFormat )
             return false;
 
         pcm._bFloat   = baseFormatTag == Internal::kWaveFormatIeeeFloat ? SW_TRUE : SW_FALSE;

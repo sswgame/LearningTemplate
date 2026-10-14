@@ -280,8 +280,9 @@ namespace sw
         const SequenceTrackItem* pCut = nullptr;
         for ( const SequenceTrackItem& item : _listItem )
         {
-            const SequenceItemKindInfo* pInfo = findItemKindInfo( item._kind );
-            if ( pInfo == nullptr || pInfo->_bCutsCamera == false || frame < item._start || item._end < frame )
+            const SequenceItemKindInfo* pInfo            = findItemKindInfo( item._kind );
+            const bool                  bNotCuttingFrame = pInfo == nullptr || pInfo->_bCutsCamera == false || frame < item._start || item._end < frame;
+            if ( bNotCuttingFrame )
                 continue;
             if ( pCut == nullptr || item._start >= pCut->_start )
                 pCut = &item;

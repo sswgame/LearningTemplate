@@ -187,7 +187,8 @@ namespace sw::editor
             return pByte[0];
         if ( ( pByte[0] & 0xE0 ) == 0xC0 && pByte[1] != 0 )
             return ( static_cast<uint32>( pByte[0] & 0x1F ) << 6 ) | ( pByte[1] & 0x3F );
-        if ( ( pByte[0] & 0xF0 ) == 0xE0 && pByte[1] != 0 && pByte[2] != 0 )
+        const bool bThreeByteSequence = ( pByte[0] & 0xF0 ) == 0xE0 && pByte[1] != 0 && pByte[2] != 0;
+        if ( bThreeByteSequence )
             return ( static_cast<uint32>( pByte[0] & 0x0F ) << 12 ) | ( static_cast<uint32>( pByte[1] & 0x3F ) << 6 ) | ( pByte[2] & 0x3F );
         return 0;
     }

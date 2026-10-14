@@ -62,7 +62,8 @@ namespace sw
                         bValid = StringUtil::parseInt( token, first );
                         last   = first;
                     }
-                    if ( bValid == false || first < 1 || last < first || maxDay < last )
+                    const bool bInvalidDayRange = bValid == false || first < 1 || last < first || maxDay < last;
+                    if ( bInvalidDayRange )
                     {
                         SW_LOG_WARNING( "%#: '%#' has an invalid %# '%#'", sourceName, ownerName, pWhat, token );
                         return;
@@ -91,8 +92,9 @@ namespace sw
                     else if ( dayText.empty() )
                         dayText = token;
                 } );
-                int32 day{ 0 };
-                if ( seasonName.empty() || StringUtil::parseInt( dayText, day ) == false || day < 1 )
+                int32      day{ 0 };
+                const bool bInvalidSeasonDate = seasonName.empty() || StringUtil::parseInt( dayText, day ) == false || day < 1;
+                if ( bInvalidSeasonDate )
                 {
                     SW_LOG_WARNING( "%#: '%#' has an invalid %# date '%#' (expected \"Season day\")", sourceName, ownerName, pWhat, text );
                     return false;
@@ -290,7 +292,8 @@ namespace sw
             const int32 fromSeason    = _fromDay > 0 ? Internal::findSeasonIndex( context._pSeasonOrder, _fromSeason ) : 0;
             const int32 toSeason      = _toDay > 0 ? Internal::findSeasonIndex( context._pSeasonOrder, _toSeason ) : 0;
             bool        bInRange      = false;
-            if ( currentSeason >= 0 && fromSeason >= 0 && toSeason >= 0 )
+            const bool  bKnownSeasons = currentSeason >= 0 && fromSeason >= 0 && toSeason >= 0;
+            if ( bKnownSeasons )
             {
                 const int32 current = currentSeason * Internal::kSeasonKeyStride + context._dayOfSeason;
                 const int32 from    = fromSeason * Internal::kSeasonKeyStride + _fromDay;

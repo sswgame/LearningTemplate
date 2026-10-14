@@ -192,8 +192,9 @@ namespace sw
         {
             for ( const RecipeDef& recipe : recipes.getRecipes() )
             {
-                const bool bSingleOutput = recipe._outputs.getItems().size() == 1;
-                if ( ( recipe._station == _station ) == false || bSingleOutput == false || AdventureCookingInternal::isSameItems( recipe._inputs, pot ) == false )
+                const bool bSingleOutput   = recipe._outputs.getItems().size() == 1;
+                const bool bRecipeMismatch = ( recipe._station == _station ) == false || bSingleOutput == false || AdventureCookingInternal::isSameItems( recipe._inputs, pot ) == false;
+                if ( bRecipeMismatch )
                     continue;
                 const CraftResult craftResult = crafter.craft( recipe._id, inventory, _station, level );
                 if ( craftResult == CraftResult::NoRoom )

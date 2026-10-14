@@ -27,8 +27,9 @@ namespace sw
 
             static bool destroyIfDefaultConstructed( void* pPtr, const TypeInfo& typeInfo )
             {
-                const FunctionInfo* pCtor = typeInfo.findMethod( hashed_string( "$ctor" ) );
-                if ( pCtor == nullptr || pCtor->_invoker.isBound() == false || typeInfo._destroyInstance == nullptr )
+                const FunctionInfo* pCtor          = typeInfo.findMethod( hashed_string( "$ctor" ) );
+                const bool          bCannotDestroy = pCtor == nullptr || pCtor->_invoker.isBound() == false || typeInfo._destroyInstance == nullptr;
+                if ( bCannotDestroy )
                     return false;
                 typeInfo._destroyInstance( pPtr );
                 return true;
@@ -36,7 +37,8 @@ namespace sw
 
             static string_view stripJSONQuotes( string_view text )
             {
-                if ( text.size() >= 2 && text.front() == '"' && text.back() == '"' )
+                const bool bQuotedJSON = text.size() >= 2 && text.front() == '"' && text.back() == '"';
+                if ( bQuotedJSON )
                 {
                     text.remove_prefix( 1 );
                     text.remove_suffix( 1 );
@@ -435,7 +437,8 @@ namespace sw
         const SchemaOrphanValue* pOrphan = findOrphan( propName );
         if ( pOrphan == nullptr )
             pOrphan = findOrphanHash( propName.getHash() );
-        if ( pOrphan == nullptr || _pInstance == nullptr || _pTypeInfo == nullptr )
+        const bool bCannotApplyOrphan = pOrphan == nullptr || _pInstance == nullptr || _pTypeInfo == nullptr;
+        if ( bCannotApplyOrphan )
             return false;
 
         const SerializeContext& context = _pSerializeContext != nullptr ? *_pSerializeContext : SerializeContext::getDefault();
@@ -445,7 +448,8 @@ namespace sw
     bool SchemaMigrateContext::applyOrphanToPath( const utf8* pDottedPath, hashed_string wireTypeHint ) const
     {
         // `applyOrphanTo` 와 같은 검사.
-        if ( pDottedPath == nullptr || _pInstance == nullptr || _pTypeInfo == nullptr )
+        const bool bInvalidDottedPath = pDottedPath == nullptr || _pInstance == nullptr || _pTypeInfo == nullptr;
+        if ( bInvalidDottedPath )
             return false;
         const vector<string> listPart = SchemaMigrateInternal::splitPath( pDottedPath );
         if ( listPart.empty() )
@@ -470,7 +474,8 @@ namespace sw
 
     bool SchemaMigrateContext::movePropertyPath( const utf8* pFromPath, const utf8* pToPath ) const
     {
-        if ( _pInstance == nullptr || _pTypeInfo == nullptr || pFromPath == nullptr || pToPath == nullptr )
+        const bool bCannotMovePath = _pInstance == nullptr || _pTypeInfo == nullptr || pFromPath == nullptr || pToPath == nullptr;
+        if ( bCannotMovePath )
             return false;
 
         const SerializeContext& context = _pSerializeContext != nullptr ? *_pSerializeContext : SerializeContext::getDefault();

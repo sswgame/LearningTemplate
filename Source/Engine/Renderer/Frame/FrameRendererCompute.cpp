@@ -57,11 +57,13 @@ namespace sw
         // 결과가 같지만, 이동을 넣는 순간 한 프레임 늦은 컬링이 된다.
         // 회전을 요청한 인스턴스가 하나도 없으면 디스패치 자체를 건너뛴다. 안 그러면 회전을 쓰지 않는 씬도
         // 매 프레임 인스턴스당 96바이트를 읽고 아무 일도 하지 않는다. 컬링 능력과는 무관하다(DX11 도 돈다).
-        if ( _gpuScene.isUploaded() && instanceCount > 0 && _gpuScene.getSpinInstanceCount() > 0 )
+        const bool bSpinAnimationNeeded = _gpuScene.isUploaded() && instanceCount > 0 && _gpuScene.getSpinInstanceCount() > 0;
+        if ( bSpinAnimationNeeded )
         {
-            const RHIPipelineStateHandle animationPSO = getEnginePSO( RenderPassType::InstanceAnimation );
-            if ( animationPSO != 0 && _deform._instanceAnimationCb.isValid() &&
-                 _gpuScene.getInstanceUav() != kInvalidDescriptorIndex )
+            const RHIPipelineStateHandle animationPSO        = getEnginePSO( RenderPassType::InstanceAnimation );
+            const bool                   bSpinAnimationReady = animationPSO != 0 && _deform._instanceAnimationCb.isValid() &&
+                                             _gpuScene.getInstanceUav() != kInvalidDescriptorIndex;
+            if ( bSpinAnimationReady )
             {
                 FrameRendererUtil::GPUAnimationParams animationParams{};
                 animationParams._time = getAnimationTime();
@@ -250,7 +252,8 @@ namespace sw
             return;
         const int32 morphDiag = getEffectiveMeshMorphDiag();
         // 진단 2와 3은 레스트 버퍼를 그대로 바인딩해 "컴퓨트 없이" 를 본다. 스키닝도 돌리지 않는다(바인드 포즈).
-        if ( ( _pDevice->getCapabilities()._bGPUMeshMorph == SW_FALSE && morphDiag == 0 ) || morphDiag == 2 || morphDiag == 3 )
+        const bool bSkipMorphSkinning = ( _pDevice->getCapabilities()._bGPUMeshMorph == SW_FALSE && morphDiag == 0 ) || morphDiag == 2 || morphDiag == 3;
+        if ( bSkipMorphSkinning )
             return;
         if ( _deform._meshMorphPool.isSkinDispatchable() == false )
             return;
@@ -293,8 +296,9 @@ namespace sw
         // FInstanceCullingContext 를 두는 것과 같은 이유다. 이번 프레임에 그리는 추가 뷰(CCTV, PiP)도 자기 슬롯을 돈다.
         if ( _gpuScene.isUploaded() == false || _gpuScene.areIndirectCountsGPUFilled() == false )
             return;
-        if ( getEnginePSO( RenderPassType::GPUCull ) == 0 || _gpuScene.getInstanceSrv() == kInvalidDescriptorIndex ||
-             _gpuScene.getBatchInfoSrv() == kInvalidDescriptorIndex )
+        const bool bCullingUnavailable = getEnginePSO( RenderPassType::GPUCull ) == 0 || _gpuScene.getInstanceSrv() == kInvalidDescriptorIndex ||
+                                         _gpuScene.getBatchInfoSrv() == kInvalidDescriptorIndex;
+        if ( bCullingUnavailable )
             return;
 
         bool bAllViewsCulled = true;
@@ -320,8 +324,9 @@ namespace sw
     {
         if ( cullViewIndex >= _gpuScene.getCullViewCount() )
             return false;
-        const GPUCullViewResources& view = _gpuScene.getCullView( cullViewIndex );
-        if ( view._indirectArgs._uav == kInvalidDescriptorIndex || view._visibleInstances._uav == kInvalidDescriptorIndex || renderView.isReadyForCulling() == false )
+        const GPUCullViewResources& view              = _gpuScene.getCullView( cullViewIndex );
+        const bool                  bCullViewNotReady = view._indirectArgs._uav == kInvalidDescriptorIndex || view._visibleInstances._uav == kInvalidDescriptorIndex || renderView.isReadyForCulling() == false;
+        if ( bCullViewNotReady )
             return false;
 
         FrameRendererUtil::GPUCullParams cullParams{};
@@ -358,8 +363,9 @@ namespace sw
         _pCmd->uavBarrier( view._indirectArgs._buffer );
         _pCmd->uavBarrier( view._visibleInstances._buffer );
 
-        const RHIPipelineStateHandle sortPSO = getEnginePSO( RenderPassType::InstanceSort );
-        if ( sortPSO != 0 && renderView._sortCb.isValid() && cullParams._batchCount > 0 )
+        const RHIPipelineStateHandle sortPSO        = getEnginePSO( RenderPassType::InstanceSort );
+        const bool                   bSortPassReady = sortPSO != 0 && renderView._sortCb.isValid() && cullParams._batchCount > 0;
+        if ( bSortPassReady )
         {
             FrameRendererUtil::GPUSortParams sortParams{};
             // 셰이더는 인스턴스 번호로 정렬한다(정렬 기준은 CPU 한 곳이며 정렬 레이어와 시선 축을 쓴다). 추가 뷰는 CPU 가 그 뷰의 시점으로 다시 정한 순번(t2)으로 정렬한다.

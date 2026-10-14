@@ -260,7 +260,8 @@ namespace sw
 
     EquipResult Equipment::equipFromInventory( Inventory& inventory, int32 inventorySlot, const hashed_string& slot )
     {
-        if ( inventorySlot < 0 || inventorySlot >= inventory.getSlotCount() || inventory.getSlot( inventorySlot ).isEmpty() )
+        const bool bInvalidInventorySlot = inventorySlot < 0 || inventorySlot >= inventory.getSlotCount() || inventory.getSlot( inventorySlot ).isEmpty();
+        if ( bInvalidInventorySlot )
             return EquipResult::UnknownItem;
         const InventorySlot source     = inventory.getSlot( inventorySlot );
         const hashed_string targetSlot = slot.empty() ? findSlotFor( source._itemID ) : slot;

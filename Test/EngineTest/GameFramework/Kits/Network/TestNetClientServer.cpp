@@ -740,7 +740,8 @@ SW_TEST_CASE( NetClientServerTest, OversizedInputIsRejectedAtTheSender )
     int32 exactCount = 0;
     for ( uint32 tick = 0; tick < 39; ++tick )
     {
-        if ( liveServer.popInput( 0, tick, input, bExact ) && bExact && input.size() == 200 && input[0] == static_cast<uint8>( tick ) )
+        const bool bExactInput = liveServer.popInput( 0, tick, input, bExact ) && bExact && input.size() == 200 && input[0] == static_cast<uint8>( tick );
+        if ( bExactInput )
             ++exactCount;
     }
     SW_EXPECT_EQUAL( 39, exactCount );

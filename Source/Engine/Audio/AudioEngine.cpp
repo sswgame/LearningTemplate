@@ -868,8 +868,9 @@ namespace sw
                 const bool bEvent = slot._instanceIndex >= 0 && _listInstance[static_cast<size_t>( slot._instanceIndex )]._pDesc != nullptr;
                 seconds           = bEvent ? _listInstance[static_cast<size_t>( slot._instanceIndex )]._pDesc->_fadeOutSeconds : 0.0f;
             }
-            const uint32 fadeFrames = static_cast<uint32>( seconds * static_cast<float32>( audio::kSampleRate ) );
-            if ( slot._bWaitingForClip || fadeFrames == 0 || slot._bVirtual )
+            const uint32 fadeFrames            = static_cast<uint32>( seconds * static_cast<float32>( audio::kSampleRate ) );
+            const bool   bStopVoiceImmediately = slot._bWaitingForClip || fadeFrames == 0 || slot._bVirtual;
+            if ( bStopVoiceImmediately )
                 freeVoice( slot );
             else
                 slot._voice.setFade( 0.0f, fadeFrames, 0, true );
@@ -1185,8 +1186,9 @@ namespace sw
                         continue;
                     ++status._voiceCount;
                     status._virtualVoiceCount += slot._bVirtual ? 1u : 0u;
-                    const AudioClipData* pClip = slot._voice.getClip();
-                    if ( slot._bLoop || pClip == nullptr || pClip->_sampleRate == 0 )
+                    const AudioClipData* pClip           = slot._voice.getClip();
+                    const bool           bClipEndUnknown = slot._bLoop || pClip == nullptr || pClip->_sampleRate == 0;
+                    if ( bClipEndUnknown )
                     {
                         bUnknownEnd = true;
                         continue;

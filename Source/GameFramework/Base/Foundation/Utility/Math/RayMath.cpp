@@ -60,7 +60,8 @@ namespace sw
                 const float32 distance   = ( -quadB - MathUtil::sqrt( discriminant ) ) / ( 2.0f * quadA );
                 const float32 hitOnAxis  = ( fromStart + ray._direction * distance ).dot( unitAxis );
                 const bool    bOnSegment = 0.0f <= hitOnAxis && hitOnAxis <= axisLength;
-                if ( distance >= 0.0f && bOnSegment && distance <= best )
+                const bool    bBetterHit = distance >= 0.0f && bOnSegment && distance <= best;
+                if ( bBetterHit )
                 {
                     best = distance;
                     bHit = true;

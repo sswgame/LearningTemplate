@@ -90,7 +90,8 @@ namespace sw
 
     bool LoginTicketAuthority::verifyTicket( const uint8* pToken, int32 tokenSize, const hashed_string& serverID, int64 nowMs, NetGameTicketClaim& outClaim ) const
     {
-        if ( _pCrypto == nullptr || pToken == nullptr || tokenSize != NetGameTicket::kTokenSize )
+        const bool bInvalidTicketInput = _pCrypto == nullptr || pToken == nullptr || tokenSize != NetGameTicket::kTokenSize;
+        if ( bInvalidTicketInput )
             return false;
         uint8 arrTag[NetGameTicket::kTagSize];
         if ( computeTag( pToken, arrTag ) == false )

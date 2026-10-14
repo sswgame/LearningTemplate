@@ -55,7 +55,8 @@ namespace sw
 
     bool IngredientStock::consume( const hashed_string& itemID, int32 count, int64& outCost )
     {
-        if ( _pInventory == nullptr || count <= 0 || _pInventory->hasItem( itemID, count ) == false )
+        const bool bCannotConsume = _pInventory == nullptr || count <= 0 || _pInventory->hasItem( itemID, count ) == false;
+        if ( bCannotConsume )
             return false;
         reconcile( itemID );
         if ( _pInventory->removeItem( itemID, count ) == false )
@@ -110,9 +111,10 @@ namespace sw
             --batch._daysLeft;
             if ( batch._daysLeft > 0 || batch._count <= 0 )
                 continue;
-            const int32 heldCount    = _pInventory != nullptr ? _pInventory->getItemCount( batch._itemID ) : 0;
-            const int32 spoiledCount = batch._count < heldCount ? batch._count : heldCount;
-            if ( spoiledCount > 0 && _pInventory != nullptr && _pInventory->removeItem( batch._itemID, spoiledCount ) )
+            const int32 heldCount         = _pInventory != nullptr ? _pInventory->getItemCount( batch._itemID ) : 0;
+            const int32 spoiledCount      = batch._count < heldCount ? batch._count : heldCount;
+            const bool  bCanRemoveSpoiled = spoiledCount > 0 && _pInventory != nullptr && _pInventory->removeItem( batch._itemID, spoiledCount );
+            if ( bCanRemoveSpoiled )
                 outListSpoilage.push_back( IngredientSpoilage{ batch._itemID, batch._unitCost * spoiledCount, spoiledCount } );
             batch._count = 0;
         }

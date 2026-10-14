@@ -111,7 +111,8 @@ namespace sw
                     SW_LOG_ERROR( "%#: bus '%#' ducks itself", sourceName, bus._name.c_str() );
                     bValid = false;
                 }
-                if ( 0.0f < duck._depthDb || duck._attackSeconds < 0.0f || duck._releaseSeconds < 0.0f )
+                const bool bInvalidDuckSettings = 0.0f < duck._depthDb || duck._attackSeconds < 0.0f || duck._releaseSeconds < 0.0f;
+                if ( bInvalidDuckSettings )
                 {
                     SW_LOG_ERROR( "%#: bus '%#' has a duck with a positive depth or a negative time", sourceName, bus._name.c_str() );
                     bValid = false;

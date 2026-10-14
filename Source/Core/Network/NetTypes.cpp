@@ -15,10 +15,11 @@ namespace sw
         size_t            start       = 0;
         while ( index < 4 )
         {
-            const size_t      dot   = hostPart.find( '.', start );
-            const string_view token = hostPart.substr( start, dot == string_view::npos ? string_view::npos : dot - start );
-            int32             value = 0;
-            if ( token.empty() || StringUtil::parseInt( token, value ) == false || value < 0 || value > 255 )
+            const size_t      dot           = hostPart.find( '.', start );
+            const string_view token         = hostPart.substr( start, dot == string_view::npos ? string_view::npos : dot - start );
+            int32             value         = 0;
+            const bool        bInvalidOctet = token.empty() || StringUtil::parseInt( token, value ) == false || value < 0 || value > 255;
+            if ( bInvalidOctet )
                 return false;
             arrOctet[index++] = static_cast<uint32>( value );
             if ( dot == string_view::npos )

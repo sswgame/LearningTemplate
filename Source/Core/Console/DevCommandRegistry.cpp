@@ -30,7 +30,8 @@ namespace sw
 
     bool DevCommandRegistry::registerCommand( const DevCommandRegistration* pRegistration )
     {
-        if ( pRegistration == nullptr || StringUtil::isNullOrEmpty( pRegistration->_pName ) || pRegistration->_pFunc == nullptr )
+        const bool bInvalidRegistration = pRegistration == nullptr || StringUtil::isNullOrEmpty( pRegistration->_pName ) || pRegistration->_pFunc == nullptr;
+        if ( bInvalidRegistration )
             return false;
         RegistrationResult result = RegistrationResult::Added;
         {

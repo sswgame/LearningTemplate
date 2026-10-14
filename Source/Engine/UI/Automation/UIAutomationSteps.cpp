@@ -52,7 +52,8 @@ namespace sw
 
             static bool validateLayoutDump( const AutomationStep& step, string& outError )
             {
-                if ( step._listAttribute.size() == 1 && step._listAttribute[0]._name == "file" && step._listAttribute[0]._value.empty() == false )
+                const bool bValidFileOnly = step._listAttribute.size() == 1 && step._listAttribute[0]._name == "file" && step._listAttribute[0]._value.empty() == false;
+                if ( bValidFileOnly )
                     return true;
                 outError = step.describe() + ": needs only file=\"…\"";
                 return false;
@@ -95,7 +96,8 @@ namespace sw
         }
         for ( const AutomationAttribute& attribute : step._listAttribute )
         {
-            if ( attribute._name != "focus" && attribute._name != "screen" && attribute._name != "screens" )
+            const bool bUnknownAttribute = attribute._name != "focus" && attribute._name != "screen" && attribute._name != "screens";
+            if ( bUnknownAttribute )
             {
                 outError = step.describe() + ": unknown attribute '" + attribute._name + "' (focus · screen · screens)";
                 return false;

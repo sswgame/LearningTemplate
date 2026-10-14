@@ -157,7 +157,8 @@ namespace sw
 
     bool D3D12RHIResourceFactory::waitForQueueDrain()
     {
-        if ( _pDevice->_commandQueue == nullptr || _pDevice->_fence == nullptr || _pDevice->_fenceEvent == nullptr )
+        const bool bQueueNotReady = _pDevice->_commandQueue == nullptr || _pDevice->_fence == nullptr || _pDevice->_fenceEvent == nullptr;
+        if ( bQueueNotReady )
             return false;
         if ( _pDevice->_device != nullptr && FAILED( _pDevice->_device->GetDeviceRemovedReason() ) )
             return false;
@@ -182,7 +183,8 @@ namespace sw
 
     bool D3D12RHIResourceFactory::acquireUploadStaging( uint64 sizeBytes, uint64 alignment, uint32& outSlotIndex, uint64& outOffset, void*& pOutMapped )
     {
-        if ( sizeBytes == 0 || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr )
+        const bool bCannotAcquireStaging = sizeBytes == 0 || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr;
+        if ( bCannotAcquireStaging )
             return false;
 
         // 프레임 링 슬롯 하나를 재사용한다(매 호출마다 업로드 힙 · 얼로케이터 · 리스트를 새로 만들지 않는다).
@@ -242,8 +244,9 @@ namespace sw
     void D3D12RHIResourceFactory::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
                                                                  const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        if ( buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 ||
-             _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr )
+        const bool bInvalidBufferRegionUpload = buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 ||
+                                                _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr;
+        if ( bInvalidBufferRegionUpload )
             return;
 
         ID3D12Resource* pDest = _pDevice->resolveBuffer( buffer );
@@ -333,8 +336,9 @@ namespace sw
 
     bool D3D12RHIResourceFactory::uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
-        ID3D12Resource* pTexture = _pDevice->resolveTexture( texture );
-        if ( pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr )
+        ID3D12Resource* pTexture                  = _pDevice->resolveTexture( texture );
+        const bool      bTextureUploadUnavailable = pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr;
+        if ( bTextureUploadUnavailable )
             return false;
 
         std::scoped_lock<mutex> uploadLock{ _pDevice->_uploadSlotMutex };
@@ -427,8 +431,9 @@ namespace sw
 
     bool D3D12RHIResourceFactory::uploadTexture2DRegion( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
     {
-        ID3D12Resource* pTexture = _pDevice->resolveTexture( texture );
-        if ( pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr )
+        ID3D12Resource* pTexture                        = _pDevice->resolveTexture( texture );
+        const bool      bTextureRegionUploadUnavailable = pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr;
+        if ( bTextureRegionUploadUnavailable )
             return false;
 
         // 슬롯 · 얼로케이터 규칙은 전체 업로드와 같은 것 하나다(acquireUploadStaging) — 같은 프레임에 업로드가 여럿이어도 슬롯을 두 번 Reset 하지 않는다.
@@ -514,8 +519,9 @@ namespace sw
 
     bool D3D12RHIResourceFactory::readbackTexture2D( RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
     {
-        ID3D12Resource* pTexture = _pDevice->resolveTexture( texture );
-        if ( pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr )
+        ID3D12Resource* pTexture                    = _pDevice->resolveTexture( texture );
+        const bool      bTextureReadbackUnavailable = pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr;
+        if ( bTextureReadbackUnavailable )
             return false;
 
         std::scoped_lock<mutex> uploadLock{ _pDevice->_uploadSlotMutex };
@@ -614,7 +620,8 @@ namespace sw
 
     RHIBufferHandle D3D12RHIResourceFactory::createUploadBuffer( const void* pData, uint32 sizeBytes )
     {
-        if ( _pDevice->_device == nullptr || pData == nullptr || sizeBytes == 0 )
+        const bool bInvalidUploadBufferRequest = _pDevice->_device == nullptr || pData == nullptr || sizeBytes == 0;
+        if ( bInvalidUploadBufferRequest )
             return 0;
 
         Microsoft::WRL::ComPtr<ID3D12Resource> buffer;

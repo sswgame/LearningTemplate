@@ -397,8 +397,9 @@ namespace sw
             SW_LOG_WARNING( "Scene copy refused — %#", _saveBlockReason );
             return false;
         }
-        Scene* pScene = getActiveScene();
-        if ( pScene == nullptr || pScene->getObjectManager() == nullptr || path.empty() )
+        Scene*     pScene      = getActiveScene();
+        const bool bCannotSave = pScene == nullptr || pScene->getObjectManager() == nullptr || path.empty();
+        if ( bCannotSave )
             return false;
         SceneDocument doc{};
         if ( pScene->serializeToDocument( doc ) == false )
@@ -431,8 +432,9 @@ namespace sw
         // 여기서 다시 짓는다. 대기열은 그대로 두어, 다시 지은 결과가 두 요청자를 함께 채운다.
         const bool bQueuedSamePath = _queuedPath.empty() == false && pendingScene != nullptr &&
                                      FileUtil::pathsEqualNormalized( pendingScene->getSourcePath(), _queuedPath );
-        const bool bTypeTableChanged = _services._pTypeRegistry != nullptr && _asyncLoad->_typeTableGeneration != _services._pTypeRegistry->getGeneration();
-        if ( pendingScene != nullptr && ( _queuedPath.empty() || bQueuedSamePath ) && bTypeTableChanged )
+        const bool bTypeTableChanged    = _services._pTypeRegistry != nullptr && _asyncLoad->_typeTableGeneration != _services._pTypeRegistry->getGeneration();
+        const bool bReloadForTypeChange = pendingScene != nullptr && ( _queuedPath.empty() || bQueuedSamePath ) && bTypeTableChanged;
+        if ( bReloadForTypeChange )
         {
             const string path = pendingScene->getSourcePath();
             SW_LOG_INFO( "Reflected types changed while '%#' was loading — loading it again", path );
@@ -707,9 +709,10 @@ namespace sw
 
     void SceneManager::carryPersistentObjects( Scene* pFrom, Scene* pTo )
     {
-        GameObjectManager* pSource = ( pFrom != nullptr ) ? pFrom->getObjectManager() : nullptr;
-        GameObjectManager* pTarget = ( pTo != nullptr ) ? pTo->getObjectManager() : nullptr;
-        if ( pSource == nullptr || pTarget == nullptr || _listPersistentObjectID.empty() )
+        GameObjectManager* pSource         = ( pFrom != nullptr ) ? pFrom->getObjectManager() : nullptr;
+        GameObjectManager* pTarget         = ( pTo != nullptr ) ? pTo->getObjectManager() : nullptr;
+        const bool         bNothingToCarry = pSource == nullptr || pTarget == nullptr || _listPersistentObjectID.empty();
+        if ( bNothingToCarry )
             return;
 
         struct CarriedObject
@@ -781,13 +784,16 @@ namespace sw
         if ( _pActiveScene == pScene )
             return;
         // 플레이 중이면 영속 루트를 들어오는 씬으로 옮겨 심는다 — 나가는 씬이 끝나기(endPlay) 전에, 상태가 살아 있을 때.
-        if ( _bWorldPlaying && _pActiveScene != nullptr && pScene != nullptr )
+        const bool bCarryPersistent = _bWorldPlaying && _pActiveScene != nullptr && pScene != nullptr;
+        if ( bCarryPersistent )
             carryPersistentObjects( _pActiveScene, pScene );
         // 플레이 중이면 나가는 씬을 끝내고 들어오는 씬을 시작한다(씬을 내리기 전 — 언로드는 활성을 먼저 비운다).
-        if ( _bWorldPlaying && _pActiveScene != nullptr && _pActiveScene->getObjectManager() != nullptr )
+        const bool bEndOutgoingPlay = _bWorldPlaying && _pActiveScene != nullptr && _pActiveScene->getObjectManager() != nullptr;
+        if ( bEndOutgoingPlay )
             _pActiveScene->getObjectManager()->endPlay();
-        _pActiveScene = pScene;
-        if ( _bWorldPlaying && pScene != nullptr && pScene->getObjectManager() != nullptr )
+        _pActiveScene                 = pScene;
+        const bool bBeginIncomingPlay = _bWorldPlaying && pScene != nullptr && pScene->getObjectManager() != nullptr;
+        if ( bBeginIncomingPlay )
             pScene->getObjectManager()->beginPlay();
     }
 

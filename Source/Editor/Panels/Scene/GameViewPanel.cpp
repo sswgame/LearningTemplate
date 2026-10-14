@@ -80,8 +80,9 @@ namespace sw::editor
         const ImVec2 imagePos{ origin.x + rect._offset._x, origin.y + rect._offset._y };
         const ImVec2 imageSize{ rect._size._x, rect._size._y };
         ImGui::SetCursorScreenPos( imagePos );
-        const void* pTextureID = pEditorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game )._pTextureID;
-        if ( pTextureID != nullptr && imageSize.x > 1.0f && imageSize.y > 1.0f )
+        const void* pTextureID        = pEditorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game )._pTextureID;
+        const bool  bCanDrawGameImage = pTextureID != nullptr && imageSize.x > 1.0f && imageSize.y > 1.0f;
+        if ( bCanDrawGameImage )
             ImGui::Image( reinterpret_cast<ImTextureID>( pTextureID ), imageSize );
         else
             ImGui::Dummy( ImVec2{ MathUtil::max( imageSize.x, 1.0f ), MathUtil::max( imageSize.y, 1.0f ) } );
@@ -92,7 +93,8 @@ namespace sw::editor
         const CameraComponent* pGameCamera = pScene != nullptr ? pScene->getActiveGameCamera() : nullptr;
         _bNoCameraHintShown                = CameraRegistry::isUsableCamera( pGameCamera ) == false;
         ImDrawList* pDrawList              = ImGui::GetWindowDrawList();
-        if ( _bNoCameraHintShown && imageSize.x > 1.0f && imageSize.y > 1.0f )
+        const bool  bShowNoCameraHint      = _bNoCameraHintShown && imageSize.x > 1.0f && imageSize.y > 1.0f;
+        if ( bShowNoCameraHint )
         {
             constexpr const utf8*  kHint = "No camera rendering";
             static constexpr Color kHintBackground{ Color::fromBytes( 0, 0, 0 ) };

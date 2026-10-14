@@ -86,9 +86,10 @@ namespace sw
         float32 bestGap = MathUtil::kMaxFloat;
         for ( const LockOnCandidate& candidate : listCandidate )
         {
-            if ( candidate._id == _target || candidate._id == 0 || candidate._bVisible == SW_FALSE ||
-                 LockOnSelectorInternal::computeDistance( eye, candidate._position ) > _settings._maxDistance ||
-                 LockOnSelectorInternal::computeAngle( eye, forward, candidate._position ) > _settings._maxAngle )
+            const bool bSkipCandidate = candidate._id == _target || candidate._id == 0 || candidate._bVisible == SW_FALSE ||
+                                        LockOnSelectorInternal::computeDistance( eye, candidate._position ) > _settings._maxDistance ||
+                                        LockOnSelectorInternal::computeAngle( eye, forward, candidate._position ) > _settings._maxAngle;
+            if ( bSkipCandidate )
                 continue;
             const float32 gap = ( computeYawOffset( eye, forward, candidate._position ) - currentYaw ) * static_cast<float32>( direction >= 0 ? 1 : -1 );
             if ( gap > 0.0f && gap < bestGap )

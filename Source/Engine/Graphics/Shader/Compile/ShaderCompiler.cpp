@@ -62,7 +62,8 @@ namespace sw
                 {
                     (void)includeType;
                     (void)pParentData;
-                    if ( pFileName == nullptr || ppData == nullptr || pBytes == nullptr )
+                    const bool bInvalidIncludeArguments = pFileName == nullptr || ppData == nullptr || pBytes == nullptr;
+                    if ( bInvalidIncludeArguments )
                         return E_FAIL;
 
                     for ( const string& root : _listRoot )
@@ -122,10 +123,12 @@ namespace sw
                     const uint32 length = pWord[offset] >> 16;
                     if ( length == 0 || offset + length > wordCount )
                         break;
-                    uint32* pValue = nullptr;
-                    if ( opcode == spirv::kOpDecorate && length >= 4 && pWord[offset + 2] == spirv::kDecorationBuiltIn )
+                    uint32*    pValue             = nullptr;
+                    const bool bMemberBuiltIn     = opcode == spirv::kOpMemberDecorate && length >= 5 && pWord[offset + 3] == spirv::kDecorationBuiltIn;
+                    const bool bBuiltInDecoration = opcode == spirv::kOpDecorate && length >= 4 && pWord[offset + 2] == spirv::kDecorationBuiltIn;
+                    if ( bBuiltInDecoration )
                         pValue = &pWord[offset + 3];
-                    else if ( opcode == spirv::kOpMemberDecorate && length >= 5 && pWord[offset + 3] == spirv::kDecorationBuiltIn )
+                    else if ( bMemberBuiltIn )
                         pValue = &pWord[offset + 4];
                     if ( pValue != nullptr )
                     {
@@ -302,7 +305,8 @@ namespace sw
 
         auto saveToCacheIfEnabled = [&]( const vector<uint8>& bytecode )
         {
-            if ( ShaderCompilerInternal::s_bDiskCacheEnabled.load( std::memory_order_relaxed ) && cachePath.empty() == false && bytecode.empty() == false )
+            const bool bDiskCacheWritable = ShaderCompilerInternal::s_bDiskCacheEnabled.load( std::memory_order_relaxed ) && cachePath.empty() == false && bytecode.empty() == false;
+            if ( bDiskCacheWritable )
             {
                 FileUtil::ensureParentDirectoryExists( cachePath );
                 if ( FileUtil::writeFile( cachePath, bytecode.data(), bytecode.size() ) == false )

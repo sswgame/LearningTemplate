@@ -61,8 +61,9 @@ namespace sw
                 view._bRenderThisFrame = SW_FALSE;
 
             // 렌더 텍스처는 캐시에서 빌린다 — 머티리얼이 같은 경로로 읽는다. 크기는 텍스처의 실제 크기다(먼저 만든 쪽이 정했다).
-            const bool bRenderTexture = view._outputKind == RenderViewOutputKind::RenderTexture;
-            if ( bRenderTexture && ( view._outputPath == request._renderTexture ) == false && engine::areEngineServicesBound() )
+            const bool bRenderTexture       = view._outputKind == RenderViewOutputKind::RenderTexture;
+            const bool bBorrowRenderTexture = bRenderTexture && ( view._outputPath == request._renderTexture ) == false && engine::areEngineServicesBound();
+            if ( bBorrowRenderTexture )
             {
                 TextureCache& textures = engine::getAssetManager().getAssetCache<TextureCache>();
                 if ( view._pOutputTexture != nullptr )
@@ -84,10 +85,11 @@ namespace sw
 
             // 컬링 · 정렬 상수버퍼는 뷰마다 자기 것이다(나눠 쓰면 뒤 업로드가 앞 디스패치를 덮어쓴다). 그림자 패스의 컬링도 뷰마다 자기 슬롯 · 상수버퍼다
             // (정렬은 그림자에 필요 없다 — 깊이만 쓴다).
-            const bool bCullCb       = view._cullInput._cullCb.isValid() || view._cullInput._cullCb.create( _pDevice, sizeof( FrameRendererUtil::GPUCullParams ) );
-            const bool bSortCb       = view._cullInput._sortCb.isValid() || view._cullInput._sortCb.create( _pDevice, sizeof( FrameRendererUtil::GPUSortParams ) );
-            const bool bShadowCullCb = view._shadowCullInput._cullCb.isValid() || view._shadowCullInput._cullCb.create( _pDevice, sizeof( FrameRendererUtil::GPUCullParams ) );
-            if ( bCullCb == false || bSortCb == false || bShadowCullCb == false )
+            const bool bCullCb                     = view._cullInput._cullCb.isValid() || view._cullInput._cullCb.create( _pDevice, sizeof( FrameRendererUtil::GPUCullParams ) );
+            const bool bSortCb                     = view._cullInput._sortCb.isValid() || view._cullInput._sortCb.create( _pDevice, sizeof( FrameRendererUtil::GPUSortParams ) );
+            const bool bShadowCullCb               = view._shadowCullInput._cullCb.isValid() || view._shadowCullInput._cullCb.create( _pDevice, sizeof( FrameRendererUtil::GPUCullParams ) );
+            const bool bConstantBufferCreateFailed = bCullCb == false || bSortCb == false || bShadowCullCb == false;
+            if ( bConstantBufferCreateFailed )
             {
                 SW_LOG_ERROR( "Failed to create the cull / sort constant buffers of extra view %# - it is not drawn", view._viewID );
                 view._bRenderThisFrame = SW_FALSE;

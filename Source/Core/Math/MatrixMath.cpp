@@ -551,7 +551,8 @@ namespace sw
         // 움직이는 컴포넌트가 월드 행렬을 다시 만들 때마다 지나는 자리이고, 회전 없는 물체(격자 배치 · 파티클 · 떠다니는 소품)가 흔하다.
         // 결과는 아래 경로와 같다. 단위 쿼터니언의 행렬은 대각선이 1, 나머지가 0 이기 때문이다(음수 스케일이면 0 의 부호만 +0 으로 다를 수 있다).
         // 합성 한 번이 약 3 배 빨라진다(~24 -> ~9 ns). 회전이 있는 경우는 비교 세 번만큼(~2 ns) 늘어난다.
-        if ( rotation._x == 0.f && rotation._y == 0.f && rotation._z == 0.f )
+        const bool bNoRotation = rotation._x == 0.f && rotation._y == 0.f && rotation._z == 0.f;
+        if ( bNoRotation )
         {
             return float4x4{ scale._x, 0.f, 0.f, 0.f, 0.f, scale._y, 0.f, 0.f, 0.f, 0.f, scale._z, 0.f, position._x, position._y, position._z, 1.f };
         }
@@ -573,7 +574,8 @@ namespace sw
         outTranslation = getTranslation();
         outScale       = getScale();
 
-        if ( MathUtil::nearEqual( outScale._x, 0.f ) || MathUtil::nearEqual( outScale._y, 0.f ) || MathUtil::nearEqual( outScale._z, 0.f ) )
+        const bool bDegenerateScale = MathUtil::nearEqual( outScale._x, 0.f ) || MathUtil::nearEqual( outScale._y, 0.f ) || MathUtil::nearEqual( outScale._z, 0.f );
+        if ( bDegenerateScale )
         {
             outRotation = quaternion::Identity;
             return false;

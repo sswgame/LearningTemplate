@@ -39,9 +39,10 @@ namespace sw
         if ( src == 0 )
         {
             // 백버퍼 → 텍스처. CopyResource 는 포맷 · 크기가 같아야 한다(받는 쪽은 getBackBufferFormat 으로 만든다).
-            const Microsoft::WRL::ComPtr<ID3D11Texture2D> backTex    = _pDevice->_swapChain.getBackBufferTexture();
-            const D3D11RHIDevice::TextureRecord*          pDstRecord = _pDevice->resolveTexture( dst );
-            if ( backTex == nullptr || pDstRecord == nullptr || pDstRecord->_texture == nullptr || pDstRecord->_bDepth != SW_FALSE )
+            const Microsoft::WRL::ComPtr<ID3D11Texture2D> backTex                = _pDevice->_swapChain.getBackBufferTexture();
+            const D3D11RHIDevice::TextureRecord*          pDstRecord             = _pDevice->resolveTexture( dst );
+            const bool                                    bInvalidBackBufferBlit = backTex == nullptr || pDstRecord == nullptr || pDstRecord->_texture == nullptr || pDstRecord->_bDepth != SW_FALSE;
+            if ( bInvalidBackBufferBlit )
                 return;
             D3D11_TEXTURE2D_DESC backDesc{};
             D3D11_TEXTURE2D_DESC dstDesc{};
@@ -58,8 +59,9 @@ namespace sw
             return;
         }
 
-        const D3D11RHIDevice::TextureRecord* pSrcRecord = _pDevice->resolveTexture( src );
-        if ( pSrcRecord == nullptr || pSrcRecord->_texture == nullptr || pSrcRecord->_bDepth != SW_FALSE )
+        const D3D11RHIDevice::TextureRecord* pSrcRecord            = _pDevice->resolveTexture( src );
+        const bool                           bInvalidSourceTexture = pSrcRecord == nullptr || pSrcRecord->_texture == nullptr || pSrcRecord->_bDepth != SW_FALSE;
+        if ( bInvalidSourceTexture )
             return;
 
         Microsoft::WRL::ComPtr<ID3D11Texture2D> dstTex;
@@ -71,8 +73,9 @@ namespace sw
         }
         else
         {
-            const D3D11RHIDevice::TextureRecord* pDstRecord = _pDevice->resolveTexture( dst );
-            if ( pDstRecord == nullptr || pDstRecord->_texture == nullptr || pDstRecord->_bDepth != SW_FALSE )
+            const D3D11RHIDevice::TextureRecord* pDstRecord                 = _pDevice->resolveTexture( dst );
+            const bool                           bInvalidDestinationTexture = pDstRecord == nullptr || pDstRecord->_texture == nullptr || pDstRecord->_bDepth != SW_FALSE;
+            if ( bInvalidDestinationTexture )
                 return;
             dstTex = pDstRecord->_texture;
         }
@@ -232,7 +235,8 @@ namespace sw
         // 출력(UAV)과 입력(SRV)에 동시에 걸 수 없어서, UAV 를 안 떼면 런타임이 SRV 를 NULL 로 강제하고
         // 경고만 낸다. 정점 셰이더는 0 을 읽고 화면에서 통째로 사라진다(예: 인스턴스 버퍼 t4).
         // 그래서 읽기 상태로 돌릴 때 이 버퍼가 걸린 CS UAV 슬롯을 여기서 뗀다.
-        if ( _pContext == nullptr || _pState == nullptr || buffer == 0 || newState == RHIBufferState::UnorderedAccess )
+        const bool bNoUavToRelease = _pContext == nullptr || _pState == nullptr || buffer == 0 || newState == RHIBufferState::UnorderedAccess;
+        if ( bNoUavToRelease )
             return;
 
         ID3D11UnorderedAccessView* pNull{ nullptr };
@@ -373,7 +377,8 @@ namespace sw
 
     void D3D11RHICommandContext::drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance )
     {
-        if ( _pContext == nullptr || vertexCount == 0 || instanceCount == 0 )
+        const bool bNothingToDraw = _pContext == nullptr || vertexCount == 0 || instanceCount == 0;
+        if ( bNothingToDraw )
             return;
 
         if ( bindGraphicsPipelineForDraw() == false )
@@ -384,7 +389,8 @@ namespace sw
 
     void D3D11RHICommandContext::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
-        if ( _pContext == nullptr || _pDevice == nullptr || buffer == 0 || pData == nullptr )
+        const bool bInvalidConstantUpdate = _pContext == nullptr || _pDevice == nullptr || buffer == 0 || pData == nullptr;
+        if ( bInvalidConstantUpdate )
             return;
         ID3D11Buffer* pResource = _pDevice->resolveBuffer( buffer );
         if ( pResource == nullptr )
@@ -403,8 +409,9 @@ namespace sw
 
     void D3D11RHICommandContext::bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
     {
-        if ( _pContext == nullptr || constantBufferIndex == kInvalidDescriptorIndex ||
-             constantBufferIndex >= static_cast<RHIDescriptorIndex>( _pDevice->bindlessBufferCount() ) )
+        const bool bInvalidConstantBufferIndex = _pContext == nullptr || constantBufferIndex == kInvalidDescriptorIndex ||
+                                                 constantBufferIndex >= static_cast<RHIDescriptorIndex>( _pDevice->bindlessBufferCount() );
+        if ( bInvalidConstantBufferIndex )
             return;
         ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->bindlessBufferAt( constantBufferIndex ) );
         if ( pCb == nullptr )
@@ -440,8 +447,9 @@ namespace sw
 
     void D3D11RHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
     {
-        if ( _pContext == nullptr || constantBufferIndex == kInvalidDescriptorIndex ||
-             constantBufferIndex >= static_cast<RHIDescriptorIndex>( _pDevice->bindlessBufferCount() ) )
+        const bool bInvalidConstantBufferIndex = _pContext == nullptr || constantBufferIndex == kInvalidDescriptorIndex ||
+                                                 constantBufferIndex >= static_cast<RHIDescriptorIndex>( _pDevice->bindlessBufferCount() );
+        if ( bInvalidConstantBufferIndex )
             return;
         ID3D11Buffer* pCb = _pDevice->resolveBuffer( _pDevice->bindlessBufferAt( constantBufferIndex ) );
         if ( pCb == nullptr )
@@ -497,7 +505,8 @@ namespace sw
 
     void D3D11RHICommandContext::writeRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues, bool bCompute )
     {
-        if ( _pContext == nullptr || num32BitValues == 0 || pData == nullptr )
+        const bool bInvalidRootConstants = _pContext == nullptr || num32BitValues == 0 || pData == nullptr;
+        if ( bInvalidRootConstants )
             return;
         if ( destOffsetIn32BitValues >= shaderslot::kRootConstantDwords )
             return;
@@ -551,7 +560,8 @@ namespace sw
         // (countBuffer 는 GPU 가 정한 개수라 CPU 가 읽을 수 없으므로 drawCount 를 상한으로 그대로 쓴다.)
         (void)countBuffer;
         (void)countBufferOffset;
-        if ( _pDevice == nullptr || _pContext == nullptr || argumentBuffer == 0 || drawCount == 0 )
+        const bool bNothingToDrawIndirect = _pDevice == nullptr || _pContext == nullptr || argumentBuffer == 0 || drawCount == 0;
+        if ( bNothingToDrawIndirect )
             return;
 
         ID3D11Buffer* pBuf = _pDevice->resolveBuffer( argumentBuffer );
@@ -616,7 +626,8 @@ namespace sw
     {
         // D3D11 은 상태를 전이하지 않는다. 대신 같은 리소스가 입력과 출력에 함께 걸리면 OMSetRenderTargets 가 SRV 쪽을 NULL 로
         // 강제한다(해저드 경고). 첨부로 쓰기 전에 이 텍스처가 걸린 PS SRV 슬롯만 뗀다. 백버퍼(0)는 SRV 로 걸리지 않는다.
-        if ( _pContext == nullptr || _pState == nullptr || texture == 0 )
+        const bool bNoSrvToRelease = _pContext == nullptr || _pState == nullptr || texture == 0;
+        if ( bNoSrvToRelease )
             return;
         ID3D11ShaderResourceView* pNull{ nullptr };
         for ( uint32 slot = 0; slot < D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT; ++slot )

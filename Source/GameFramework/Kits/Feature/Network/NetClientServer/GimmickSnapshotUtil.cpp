@@ -63,8 +63,9 @@ namespace sw
         vector<GimmickChunk> listChunk;
         for ( const NetEntityState& entity : snapshot._listEntity )
         {
-            const bool bInRange = firstEntityID <= entity._entityID && entity._entityID < rangeEnd;
-            if ( bInRange == false || entity._typeID != typeID || entity._buffer.size() < kChunkHeaderBytes )
+            const bool bInRange    = firstEntityID <= entity._entityID && entity._entityID < rangeEnd;
+            const bool bSkipEntity = bInRange == false || entity._typeID != typeID || entity._buffer.size() < kChunkHeaderBytes;
+            if ( bSkipEntity )
                 continue;
             GimmickChunk chunk;
             chunk._pEntity  = &entity;

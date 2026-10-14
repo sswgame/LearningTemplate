@@ -134,7 +134,8 @@ SW_TEST_CASE( EditorSceneCommandsTest, DuplicateCopiesTheSubtreeAndKeepsItsAttac
     SceneComponent* pCopyArm = nullptr;
     for ( Component* pComp : pCopy->getComponents() )
     {
-        if ( pComp != nullptr && pComp->isSceneComponent() && pComp != pCopyRoot )
+        const bool bIsArmComponent = pComp != nullptr && pComp->isSceneComponent() && pComp != pCopyRoot;
+        if ( bIsArmComponent )
             pCopyArm = static_cast<SceneComponent*>( pComp );
     }
     SW_ASSERT_NOT_NULL( pCopyArm );

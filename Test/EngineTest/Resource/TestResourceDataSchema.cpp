@@ -336,9 +336,10 @@ namespace
                 const sw::JSONValue notifies = clip.get( "notifies" );
                 for ( size_t notifyIndex = 0; notifies.isArray() && notifyIndex < notifies.size(); ++notifyIndex )
                 {
-                    const sw::JSONValue notify = notifies.at( notifyIndex );
-                    if ( sw::AnimationJSONUtil::hasOnlyKnownKeys( notify, { "name", "time", "duration" }, resourceID ) == false || notify.get( "name" ).isString() == false ||
-                         notify.get( "time" ).isNumber() == false )
+                    const sw::JSONValue notify         = notifies.at( notifyIndex );
+                    const bool          bInvalidNotify = sw::AnimationJSONUtil::hasOnlyKnownKeys( notify, { "name", "time", "duration" }, resourceID ) == false || notify.get( "name" ).isString() == false ||
+                                                notify.get( "time" ).isNumber() == false;
+                    if ( bInvalidNotify )
                         return false;
                 }
             }

@@ -245,19 +245,22 @@ namespace sw::editor
             const float32 d4 = ac.dot( bp );
             if ( d3 >= 0.0f && d4 <= d3 )
                 return b;
-            const float32 vc = d1 * d4 - d3 * d2;
-            if ( vc <= 0.0f && d1 >= 0.0f && d3 <= 0.0f )
+            const float32 vc              = d1 * d4 - d3 * d2;
+            const bool    bInEdgeRegionAB = vc <= 0.0f && d1 >= 0.0f && d3 <= 0.0f;
+            if ( bInEdgeRegionAB )
                 return a + ab * ( d1 / ( d1 - d3 ) );
             const float3  cp = point - c;
             const float32 d5 = ab.dot( cp );
             const float32 d6 = ac.dot( cp );
             if ( d6 >= 0.0f && d5 <= d6 )
                 return c;
-            const float32 vb = d5 * d2 - d1 * d6;
-            if ( vb <= 0.0f && d2 >= 0.0f && d6 <= 0.0f )
+            const float32 vb              = d5 * d2 - d1 * d6;
+            const bool    bInEdgeRegionAC = vb <= 0.0f && d2 >= 0.0f && d6 <= 0.0f;
+            if ( bInEdgeRegionAC )
                 return a + ac * ( d2 / ( d2 - d6 ) );
-            const float32 va = d3 * d6 - d5 * d4;
-            if ( va <= 0.0f && ( d4 - d3 ) >= 0.0f && ( d5 - d6 ) >= 0.0f )
+            const float32 va              = d3 * d6 - d5 * d4;
+            const bool    bInEdgeRegionBC = va <= 0.0f && ( d4 - d3 ) >= 0.0f && ( d5 - d6 ) >= 0.0f;
+            if ( bInEdgeRegionBC )
                 return b + ( c - b ) * ( ( d4 - d3 ) / ( ( d4 - d3 ) + ( d5 - d6 ) ) );
             const float32 denominator = va + vb + vc;
             if ( MathUtil::abs( denominator ) < MathUtil::kEpsilon )

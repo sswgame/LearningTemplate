@@ -20,7 +20,8 @@ namespace sw::editor
 
     void EditorViewportVisualizer::drawAll( const EditorViewportVisualizerArgs& args, const EditorVisualizerToggles& toggles )
     {
-        if ( args._pDrawList == nullptr || args._pViewProj == nullptr || args._pListObject == nullptr )
+        const bool bMissingDrawInputs = args._pDrawList == nullptr || args._pViewProj == nullptr || args._pListObject == nullptr;
+        if ( bMissingDrawInputs )
             return;
 
         for ( uint32 index = 0; index < getCount(); ++index )

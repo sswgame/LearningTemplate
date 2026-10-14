@@ -625,8 +625,9 @@ namespace sw
 
     bool GuildService::isValidName( string_view name )
     {
-        const bool bSizeOk = name.empty() == false && name.size() <= static_cast<size_t>( GuildLimit::kMaxNameSize );
-        if ( bSizeOk == false || name.front() == ' ' || name.back() == ' ' )
+        const bool bSizeOk           = name.empty() == false && name.size() <= static_cast<size_t>( GuildLimit::kMaxNameSize );
+        const bool bInvalidGuildName = bSizeOk == false || name.front() == ' ' || name.back() == ' ';
+        if ( bInvalidGuildName )
             return false;
         size_t offset = 0;
         while ( offset < name.size() )

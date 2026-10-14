@@ -154,10 +154,11 @@ namespace sw
                 {
                     if ( MathUtil::max( MathUtil::abs( dx ), MathUtil::abs( dz ) ) != radius )
                         continue;
-                    const int32 x    = centerX + dx;
-                    const int32 z    = centerZ + dz;
-                    const int32 topY = _world.findTopSolidY( x, z );
-                    if ( topY >= 0 && _world.getBlock( x, topY + 1, z ) != water && _world.getBlock( x, topY + 1, z ) == kVoxelAirBlock )
+                    const int32 x            = centerX + dx;
+                    const int32 z            = centerZ + dz;
+                    const int32 topY         = _world.findTopSolidY( x, z );
+                    const bool  bOpenAirSpot = topY >= 0 && _world.getBlock( x, topY + 1, z ) != water && _world.getBlock( x, topY + 1, z ) == kVoxelAirBlock;
+                    if ( bOpenAirSpot )
                         return float3{ static_cast<float32>( x ) + 0.5f, static_cast<float32>( topY + 1 ) + 0.01f, static_cast<float32>( z ) + 0.5f };
                 }
             }
@@ -220,17 +221,19 @@ namespace sw
         {
             for ( int32 x = 0; x < _world.getSizeX(); ++x )
             {
-                const int32 topY = _world.findTopSolidY( x, z );
-                if ( topY >= 34 && _world.getBlock( x, topY, z ) == grass && snow != kVoxelAirBlock )
+                const int32 topY           = _world.findTopSolidY( x, z );
+                const bool  bShouldSnowCap = topY >= 34 && _world.getBlock( x, topY, z ) == grass && snow != kVoxelAirBlock;
+                if ( bShouldSnowCap )
                     (void)_world.setBlock( x, topY, z, snow );
                 for ( int32 y = 1; y < topY - 3; ++y )
                 {
                     if ( _world.getBlock( x, y, z ) != stone )
                         continue;
-                    const uint32 roll = VoxelDirectorComponentInternal::hashCoord( x, y, z ) % 1000u;
+                    const uint32 roll       = VoxelDirectorComponentInternal::hashCoord( x, y, z ) % 1000u;
+                    const bool   bPlaceIron = roll < 18u && y < 12 && iron != kVoxelAirBlock;
                     if ( roll < 12u && coal != kVoxelAirBlock )
                         (void)_world.setBlock( x, y, z, coal );
-                    else if ( roll < 18u && y < 12 && iron != kVoxelAirBlock )
+                    else if ( bPlaceIron )
                         (void)_world.setBlock( x, y, z, iron );
                 }
             }

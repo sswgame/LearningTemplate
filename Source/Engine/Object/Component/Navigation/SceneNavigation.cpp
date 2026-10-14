@@ -124,7 +124,8 @@ namespace sw
 
     void SceneNavigation::unregisterAgent( NavMeshAgentComponent* pAgent )
     {
-        if ( pAgent == nullptr || pAgent->_navIndex >= _listAgent.size() || _listAgent[pAgent->_navIndex] != pAgent )
+        const bool bNotRegisteredAgent = pAgent == nullptr || pAgent->_navIndex >= _listAgent.size() || _listAgent[pAgent->_navIndex] != pAgent;
+        if ( bNotRegisteredAgent )
             return;
         releaseAgent( pAgent );
         NavMeshAgentComponent* pMoved = _listAgent.back();
@@ -173,7 +174,8 @@ namespace sw
 
     void SceneNavigation::unregisterObstacle( NavMeshObstacleComponent* pObstacle )
     {
-        if ( pObstacle == nullptr || pObstacle->_navIndex >= _listObstacle.size() || _listObstacle[pObstacle->_navIndex] != pObstacle )
+        const bool bNotRegisteredObstacle = pObstacle == nullptr || pObstacle->_navIndex >= _listObstacle.size() || _listObstacle[pObstacle->_navIndex] != pObstacle;
+        if ( bNotRegisteredObstacle )
             return;
         if ( pObstacle->_bCarved == SW_TRUE )
         {
@@ -211,7 +213,8 @@ namespace sw
 
     void SceneNavigation::unregisterLink( NavMeshLinkComponent* pLink )
     {
-        if ( pLink == nullptr || pLink->_navIndex >= _listLink.size() || _listLink[pLink->_navIndex] != pLink )
+        const bool bNotRegisteredLink = pLink == nullptr || pLink->_navIndex >= _listLink.size() || _listLink[pLink->_navIndex] != pLink;
+        if ( bNotRegisteredLink )
             return;
         NavMeshLinkComponent* pMoved = _listLink.back();
         _listLink[pLink->_navIndex]  = pMoved;
@@ -454,10 +457,11 @@ namespace sw
 
     bool SceneNavigation::makeCookedEntry( const hashed_string& agentType, NavMeshAssetEntry& outEntry )
     {
-        outEntry                 = NavMeshAssetEntry{};
-        const INavMesh* pNavMesh = ensureNavMesh( agentType );
-        NavMeshRuntime* pRuntime = findRuntime( agentType );
-        if ( pNavMesh == nullptr || pRuntime == nullptr || pRuntime->_pGeometry == nullptr )
+        outEntry                            = NavMeshAssetEntry{};
+        const INavMesh* pNavMesh            = ensureNavMesh( agentType );
+        NavMeshRuntime* pRuntime            = findRuntime( agentType );
+        const bool      bRuntimeUnavailable = pNavMesh == nullptr || pRuntime == nullptr || pRuntime->_pGeometry == nullptr;
+        if ( bRuntimeUnavailable )
             return false;
         outEntry._agentType    = pRuntime->_agentType;
         outEntry._settingsHash = NavMeshSettings::computeAgentTypeHash( pNavMesh->getAgentType() );

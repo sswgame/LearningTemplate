@@ -85,7 +85,8 @@ namespace sw
     Texture2D* TextureCache::acquire( string_view relativePath, IRHIDevice* pDevice )
     {
         SW_MEMORY_SCOPE( Texture );
-        if ( relativePath.empty() || _impl == nullptr || pDevice == nullptr )
+        const bool bInvalidLoadRequest = relativePath.empty() || _impl == nullptr || pDevice == nullptr;
+        if ( bInvalidLoadRequest )
             return nullptr;
         const string key = FileUtil::normalizePath( relativePath );
 
@@ -209,7 +210,8 @@ namespace sw
 
     void TextureCache::declareRenderTarget( string_view relativePath, uint32 width, uint32 height )
     {
-        if ( _impl == nullptr || isRenderTargetPath( relativePath ) == false || width == 0 || height == 0 )
+        const bool bInvalidDeclaration = _impl == nullptr || isRenderTargetPath( relativePath ) == false || width == 0 || height == 0;
+        if ( bInvalidDeclaration )
             return;
         const string                        key = FileUtil::normalizePath( relativePath );
         std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
@@ -221,7 +223,8 @@ namespace sw
     bool TextureCache::resizeRenderTarget( string_view relativePath, uint32 width, uint32 height, IRHIDevice* pDevice )
     {
         SW_MEMORY_SCOPE( Texture );
-        if ( _impl == nullptr || pDevice == nullptr || isRenderTargetPath( relativePath ) == false || width == 0 || height == 0 )
+        const bool bInvalidRenderTargetRequest = _impl == nullptr || pDevice == nullptr || isRenderTargetPath( relativePath ) == false || width == 0 || height == 0;
+        if ( bInvalidRenderTargetRequest )
             return false;
         const string key = FileUtil::normalizePath( relativePath );
 
@@ -241,8 +244,9 @@ namespace sw
                 _impl->_cvLoaded.wait( lock );
                 continue;
             }
-            const Texture2D& existing = *it->second._texture;
-            if ( existing.isRHIValid() && existing.getWidth() == width && existing.getHeight() == height )
+            const Texture2D& existing              = *it->second._texture;
+            const bool       bRenderTargetUpToDate = existing.isRHIValid() && existing.getWidth() == width && existing.getHeight() == height;
+            if ( bRenderTargetUpToDate )
                 return false;
             it->second._bLoading = true;
             pTexture             = it->second._texture.get();

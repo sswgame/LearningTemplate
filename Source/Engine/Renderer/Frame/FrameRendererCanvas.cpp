@@ -84,16 +84,19 @@ namespace sw
                     break;
                 }
             }
-            if ( pState == nullptr || pState->_pTexture == nullptr || pState->_pTexture->isRHIValid() == false )
+            const bool bUnusableCanvasTexture = pState == nullptr || pState->_pTexture == nullptr || pState->_pTexture->isRHIValid() == false;
+            if ( bUnusableCanvasTexture )
                 continue;
             // 텍스처는 그린 것을 지킨다 — 내용이 같고 같은 텍스처면 다시 그리지 않는다(언리얼 위젯 컴포넌트의 다시 그리기 조건과 같은 자리).
-            const RHITextureHandle texture = pState->_pTexture->getHandle();
-            if ( target._contentRevision != 0 && target._contentRevision == pState->_drawnRevision && texture == pState->_drawnTexture )
+            const RHITextureHandle texture          = pState->_pTexture->getHandle();
+            const bool             bCanvasUnchanged = target._contentRevision != 0 && target._contentRevision == pState->_drawnRevision && texture == pState->_drawnTexture;
+            if ( bCanvasUnchanged )
                 continue;
-            const uint32                 width  = pState->_pTexture->getWidth();
-            const uint32                 height = pState->_pTexture->getHeight();
-            const RHIPipelineStateHandle pso    = findOutputPSO( RenderPassType::Canvas, pState->_pTexture->getFormat() );
-            if ( pso == 0 || width == 0 || height == 0 )
+            const uint32                 width                = pState->_pTexture->getWidth();
+            const uint32                 height               = pState->_pTexture->getHeight();
+            const RHIPipelineStateHandle pso                  = findOutputPSO( RenderPassType::Canvas, pState->_pTexture->getFormat() );
+            const bool                   bInvalidCanvasTarget = pso == 0 || width == 0 || height == 0;
+            if ( bInvalidCanvasTarget )
                 continue;
             RHIRenderPassBeginInfo beginInfo{};
             beginInfo.setColorTarget( texture, target._clearColor, RHIRenderPassLoadOp::Clear );

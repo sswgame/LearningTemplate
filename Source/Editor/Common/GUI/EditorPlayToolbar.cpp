@@ -118,7 +118,8 @@ namespace sw::editor
                 const bool             bSimulating  = EditorPlaySession::isSimulating();
 
                 // Net Mode 고르기는 에디터 안 재생이 멈췄을 때만 — 재생 중에 바꾸면 Stop 단추가 사라진다.
-                if ( pContext != nullptr && EditorPlaySession::isStopped() && drawNetPlayControls( *pContext ) )
+                const bool bNetPlayControlsHandled = pContext != nullptr && EditorPlaySession::isStopped() && drawNetPlayControls( *pContext );
+                if ( bNetPlayControlsHandled )
                     return;
                 if ( EditorPlaySession::isPlayQueued() )
                 {

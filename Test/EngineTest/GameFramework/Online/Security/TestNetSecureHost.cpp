@@ -61,7 +61,8 @@ namespace
         bool send( const NetAddress& to, const uint8* pData, int32 size ) override
         {
             vector<uint8> bytes( pData, pData + size );
-            if ( _bTamperNext == SW_TRUE && NetHost::peekPacketType( pData, size ) == NetHost::PacketType::Payload && size > 40 )
+            const bool    bShouldTamper = _bTamperNext == SW_TRUE && NetHost::peekPacketType( pData, size ) == NetHost::PacketType::Payload && size > 40;
+            if ( bShouldTamper )
             {
                 _bTamperNext = SW_FALSE;
                 bytes[static_cast<size_t>( size - 20 )] ^= 0x01;

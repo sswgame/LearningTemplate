@@ -281,10 +281,11 @@ namespace sw
 
     bool AdventureDungeonState::openTreasure( const hashed_string& dungeonID, const hashed_string& treasureID, GameFlags& flags, ItemStackList& outReward )
     {
-        const AdventureDungeonDef*  pDungeon  = nullptr;
-        DungeonRuntime*             pRuntime  = findRuntime( dungeonID, &pDungeon );
-        const AdventureTreasureDef* pTreasure = pDungeon != nullptr ? pDungeon->findTreasure( treasureID ) : nullptr;
-        if ( pRuntime == nullptr || pTreasure == nullptr || flags.hasFlag( pTreasure->_flag ) )
+        const AdventureDungeonDef*  pDungeon             = nullptr;
+        DungeonRuntime*             pRuntime             = findRuntime( dungeonID, &pDungeon );
+        const AdventureTreasureDef* pTreasure            = pDungeon != nullptr ? pDungeon->findTreasure( treasureID ) : nullptr;
+        const bool                  bTreasureUnavailable = pRuntime == nullptr || pTreasure == nullptr || flags.hasFlag( pTreasure->_flag );
+        if ( bTreasureUnavailable )
             return false;
         flags.setFlag( pTreasure->_flag, 1 );
         AdventureDungeonProgress& progress = pRuntime->_progress;
@@ -305,9 +306,10 @@ namespace sw
 
     int32 AdventureDungeonState::revealMap( const hashed_string& dungeonID, AreaGraph& areaGraph ) const
     {
-        const AdventureDungeonProgress* pProgress = findProgress( dungeonID );
-        const AdventureDungeonDef*      pDungeon  = _pCatalog != nullptr ? _pCatalog->findDungeon( dungeonID ) : nullptr;
-        if ( pProgress == nullptr || pDungeon == nullptr || pProgress->_bMap == SW_FALSE )
+        const AdventureDungeonProgress* pProgress       = findProgress( dungeonID );
+        const AdventureDungeonDef*      pDungeon        = _pCatalog != nullptr ? _pCatalog->findDungeon( dungeonID ) : nullptr;
+        const bool                      bMapUnavailable = pProgress == nullptr || pDungeon == nullptr || pProgress->_bMap == SW_FALSE;
+        if ( bMapUnavailable )
             return 0;
         return areaGraph.discoverRegion( pDungeon->_region );
     }
@@ -316,9 +318,10 @@ namespace sw
                                                       vector<const AdventureTreasureDef*>& outListTreasure ) const
     {
         outListTreasure.clear();
-        const AdventureDungeonProgress* pProgress = findProgress( dungeonID );
-        const AdventureDungeonDef*      pDungeon  = _pCatalog != nullptr ? _pCatalog->findDungeon( dungeonID ) : nullptr;
-        if ( pProgress == nullptr || pDungeon == nullptr || pProgress->_bCompass == SW_FALSE )
+        const AdventureDungeonProgress* pProgress           = findProgress( dungeonID );
+        const AdventureDungeonDef*      pDungeon            = _pCatalog != nullptr ? _pCatalog->findDungeon( dungeonID ) : nullptr;
+        const bool                      bCompassUnavailable = pProgress == nullptr || pDungeon == nullptr || pProgress->_bCompass == SW_FALSE;
+        if ( bCompassUnavailable )
             return;
         for ( const AdventureTreasureDef& treasure : pDungeon->_listTreasure )
         {
@@ -379,9 +382,10 @@ namespace sw
         const int32                index    = pDungeon != nullptr ? pDungeon->findDeviceIndex( deviceID ) : -1;
         if ( pRuntime == nullptr || index < 0 )
             return false;
-        const AdventureDeviceDef& def    = pDungeon->_listDevice[static_cast<size_t>( index )];
-        DeviceRuntime&            device = pRuntime->_listDevice[static_cast<size_t>( index )];
-        if ( def._kind != AdventureDeviceKind::TorchGroup || device._bActive == SW_TRUE || device._litCount >= def._torchCount )
+        const AdventureDeviceDef& def                = pDungeon->_listDevice[static_cast<size_t>( index )];
+        DeviceRuntime&            device             = pRuntime->_listDevice[static_cast<size_t>( index )];
+        const bool                bTorchNotLightable = def._kind != AdventureDeviceKind::TorchGroup || device._bActive == SW_TRUE || device._litCount >= def._torchCount;
+        if ( bTorchNotLightable )
             return false;
         if ( device._litCount == 0 )
             device._timer.start( def._duration );
@@ -402,15 +406,16 @@ namespace sw
             DungeonRuntime&            runtime = _listRuntime[dungeonIndex];
             for ( size_t deviceIndex = 0; deviceIndex < runtime._listDevice.size(); ++deviceIndex )
             {
-                const AdventureDeviceDef& def    = dungeon._listDevice[deviceIndex];
-                DeviceRuntime&            device = runtime._listDevice[deviceIndex];
+                const AdventureDeviceDef& def                = dungeon._listDevice[deviceIndex];
+                DeviceRuntime&            device             = runtime._listDevice[deviceIndex];
+                const bool                bTorchTimerRunning = def._kind == AdventureDeviceKind::TorchGroup && device._bActive == SW_FALSE && device._litCount > 0 && def._duration > 0.0f;
                 if ( def._kind == AdventureDeviceKind::TimedSwitch && device._bActive == SW_TRUE )
                 {
                     device._timer.tick( deltaTime );
                     if ( device._timer.isActive() == false )
                         setDeviceActive( dungeon, static_cast<int32>( deviceIndex ), false, flags );
                 }
-                else if ( def._kind == AdventureDeviceKind::TorchGroup && device._bActive == SW_FALSE && device._litCount > 0 && def._duration > 0.0f )
+                else if ( bTorchTimerRunning )
                 {
                     device._timer.tick( deltaTime );
                     if ( device._timer.isActive() == false )

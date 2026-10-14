@@ -73,7 +73,8 @@ namespace sw
         bool bValid = FacialRigInternal::hasUniquePoseNames( _listExpression, "_listExpression", sourceLabel );
         if ( FacialRigInternal::hasUniquePoseNames( _listViseme, "_listViseme", sourceLabel ) == false )
             bValid = false;
-        if ( _blink._minInterval <= 0.0f || _blink._maxInterval < _blink._minInterval || _blink._duration <= 0.0f )
+        const bool bInvalidBlinkSettings = _blink._minInterval <= 0.0f || _blink._maxInterval < _blink._minInterval || _blink._duration <= 0.0f;
+        if ( bInvalidBlinkSettings )
         {
             SW_LOG_ERROR( "Facial rig '%#': _blink intervals must be positive and ordered, _duration positive", sourceLabel );
             bValid = false;

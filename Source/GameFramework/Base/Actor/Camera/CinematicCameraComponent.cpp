@@ -168,9 +168,10 @@ namespace sw
         if ( signal._blendSeconds <= 0.0f )
             return;
         // 게임 카메라 화면에서 첫 컷으로 섞어 들어간다(언리얼 시퀀스 Blend In). 디렉터가 없는 컷 카메라는 섞을 수 없어 끊어 바꾼다.
-        const CameraComponent*   pGameCamera = findGameCamera();
-        CameraDirectorComponent* pDirector   = findDirector( pTarget );
-        if ( pGameCamera != nullptr && pDirector != nullptr && pGameCamera->getOwner() != pTarget )
+        const CameraComponent*   pGameCamera          = findGameCamera();
+        CameraDirectorComponent* pDirector            = findDirector( pTarget );
+        const bool               bBlendFromGameCamera = pGameCamera != nullptr && pDirector != nullptr && pGameCamera->getOwner() != pTarget;
+        if ( bBlendFromGameCamera )
             pDirector->blendFromPose( CameraPoseUtil::makePoseFromCamera( *pGameCamera ), makeCinematicBlend( signal._blendSeconds ) );
     }
 

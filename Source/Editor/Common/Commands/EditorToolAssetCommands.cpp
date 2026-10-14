@@ -230,8 +230,9 @@ namespace sw::editor
         outPrefabPath   = string{ prefabPath };
         outInstanceName = pInstance != nullptr ? string{ pInstance->getName().c_str() } : string{};
 
-        EditorContext* pContext = EditorContext::get();
-        if ( outPrefabPath.empty() && pInstance != nullptr && pContext != nullptr )
+        EditorContext* pContext             = EditorContext::get();
+        const bool     bCanLookUpPrefabPath = outPrefabPath.empty() && pInstance != nullptr && pContext != nullptr;
+        if ( bCanLookUpPrefabPath )
             outPrefabPath = pContext->getSubsystem<EditorWorkspace>().getGameObjectPrefabPath( pInstance->getObjectID() );
         // 포커스된 에셋으로 넘어가지 않는다 — 머티리얼 · 씬일 수 있어 프리팹으로 읽으면 [Error] 를 남긴다. 프리팹 포커스는 부르는 쪽이 종류를 보고 넘긴다.
 
@@ -326,10 +327,11 @@ namespace sw::editor
     {
         if ( pInstance == nullptr || pCdo == nullptr )
             return false;
-        Component* pInstanceComponent = ComponentStableKey::findComponent( pInstance, item._componentKey );
-        Component* pCdoComp           = ComponentStableKey::findComponent( pCdo, item._componentKey );
-        if ( pInstanceComponent == nullptr || pCdoComp == nullptr || pInstanceComponent->getTypeInfo() == nullptr ||
-             pInstanceComponent->getTypeInfo() != pCdoComp->getTypeInfo() )
+        Component* pInstanceComponent   = ComponentStableKey::findComponent( pInstance, item._componentKey );
+        Component* pCdoComp             = ComponentStableKey::findComponent( pCdo, item._componentKey );
+        const bool bNoMatchingComponent = pInstanceComponent == nullptr || pCdoComp == nullptr || pInstanceComponent->getTypeInfo() == nullptr ||
+                                          pInstanceComponent->getTypeInfo() != pCdoComp->getTypeInfo();
+        if ( bNoMatchingComponent )
         {
             SW_LOG_WARNING( "Prefab override '%#.%#' has no matching component to revert", item._componentKey.c_str(), item._propertyName.c_str() );
             return false;

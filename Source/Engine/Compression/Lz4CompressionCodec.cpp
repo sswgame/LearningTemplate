@@ -38,8 +38,9 @@ namespace sw
                                         size_t&     outCompressedSize,
                                         int32       compressionLevel )
     {
-        outCompressedSize = 0;
-        if ( pSrc == nullptr || pDst == nullptr || srcSize == 0 )
+        outCompressedSize                = 0;
+        const bool bInvalidCompressInput = pSrc == nullptr || pDst == nullptr || srcSize == 0;
+        if ( bInvalidCompressInput )
             return false;
         if ( srcSize > static_cast<size_t>( LZ4_MAX_INPUT_SIZE ) )
         {
@@ -81,8 +82,9 @@ namespace sw
                                           size_t      dstCapacity,
                                           size_t&     outUncompressedSize )
     {
-        outUncompressedSize = 0;
-        if ( pSrc == nullptr || pDst == nullptr || srcSize == 0 )
+        outUncompressedSize                = 0;
+        const bool bInvalidDecompressInput = pSrc == nullptr || pDst == nullptr || srcSize == 0;
+        if ( bInvalidDecompressInput )
             return false;
 
         // 입력 크기를 **여기서도** 본다. 외부에서 온 바이트를 먹는 쪽은 이쪽이다. 2GB 를 넘는 값을 int32 로 캐스팅하면 음수가 되어 LZ4 에 그대로

@@ -153,11 +153,12 @@ namespace sw
 
         // 자기 요 방향으로 간다. 요가 0 이면 +Z 쪽이고 +X 쪽으로 돈다. 루트 모션이면 애니메이션이 옮긴다.
         const float3                  velocity{ MathUtil::sin( _facingYaw ) * _forwardSpeed, 0.0f, MathUtil::cos( _facingYaw ) * _forwardSpeed };
-        CharacterControllerComponent* pController = pOwner->getComponent<CharacterControllerComponent>();
-        SceneComponent*               pRoot       = pOwner->getPrimarySceneComponent();
+        CharacterControllerComponent* pController       = pOwner->getComponent<CharacterControllerComponent>();
+        SceneComponent*               pRoot             = pOwner->getPrimarySceneComponent();
+        const bool                    bMoveRootDirectly = pRoot != nullptr && _bUseRootMotion == false && _forwardSpeed != 0.0f;
         if ( pController != nullptr )
             pController->setMoveVelocity( _bUseRootMotion ? float3{} : velocity );
-        else if ( pRoot != nullptr && _bUseRootMotion == false && _forwardSpeed != 0.0f )
+        else if ( bMoveRootDirectly )
             pRoot->setWorldPosition( pRoot->getWorldPosition() + velocity * deltaTime );
         SkeletalAnimatorComponent* pAnimator = pOwner->getComponent<SkeletalAnimatorComponent>();
         if ( pAnimator != nullptr )

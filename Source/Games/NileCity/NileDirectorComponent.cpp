@@ -395,7 +395,8 @@ namespace sw
         WorldClock      clock;
         clock.initialize( makeClockSettings() );
         city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeCitySettings(), makeRefs() );
-        if ( city.readState( archive ) == false || planner.readState( archive ) == false || wallet.readState( archive ) == false || clock.readState( archive ) == false )
+        const bool bStateReadFailed = city.readState( archive ) == false || planner.readState( archive ) == false || wallet.readState( archive ) == false || clock.readState( archive ) == false;
+        if ( bStateReadFailed )
             return false;
         float32 timeScale       = 1.0f;
         int32   selectedTool    = 0;
@@ -409,7 +410,8 @@ namespace sw
         archive >> evolvedCount;
         archive >> bPaused;
         archive >> bAutoPlanToggle;
-        if ( archive.isError() || archive.getRemainingBytes() != 0 || timeScale <= 0.0f )
+        const bool bInvalidDirectorState = archive.isError() || archive.getRemainingBytes() != 0 || timeScale <= 0.0f;
+        if ( bInvalidDirectorState )
             return false;
         _city            = std::move( city );
         _planner         = std::move( planner );
@@ -654,7 +656,8 @@ namespace sw
             _selectedTool = ( _selectedTool + toolCount - 1 ) % toolCount;
         if ( bRoadTool )
             _selectedTool = 0;
-        if ( bNextTool || bPrevTool || bRoadTool )
+        const bool bToolChanged = bNextTool || bPrevTool || bRoadTool;
+        if ( bToolChanged )
         {
             [[maybe_unused]] const CityBuildingDef* pDef = _listTool[static_cast<size_t>( _selectedTool )];
             SW_LOG_INFO( "[Nile] tool: %# ($%#)", getToolName(), pDef != nullptr ? pDef->_cost : _catalog.getRoadCost() );

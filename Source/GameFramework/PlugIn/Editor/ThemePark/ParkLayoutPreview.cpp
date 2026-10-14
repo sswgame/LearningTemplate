@@ -74,8 +74,9 @@ namespace sw::editor
             _listTrackPoint.clear();
             return false;
         }
-        const uint64 contentHash = StringUtil::computeHash64( text.data(), text.size(), false );
-        if ( bForce == false && _bLoaded && contentHash == _contentHash )
+        const uint64 contentHash       = StringUtil::computeHash64( text.data(), text.size(), false );
+        const bool   bUnchangedContent = bForce == false && _bLoaded && contentHash == _contentHash;
+        if ( bUnchangedContent )
             return false;
         _contentHash = contentHash;
 

@@ -227,7 +227,7 @@ namespace sw
                     ++cursor;
                 }
                 const size_t start = cursor;
-                while ( cursor < cells.size() && cells[cursor] >= '0' && cells[cursor] <= '9' )
+                while ( cursor < cells.size() && StringUtil::isDigitChar( cells[cursor] ) )
                 {
                     ++cursor;
                 }
@@ -241,9 +241,10 @@ namespace sw
                     }
                     break;
                 }
-                int32 value = 0;
-                if ( StringUtil::parseInt( cells.substr( start, cursor - start ), value ) == false || value < 0 ||
-                     static_cast<size_t>( value ) > _listPaletteName.size() )
+                int32      value                = 0;
+                const bool bInvalidPaletteIndex = StringUtil::parseInt( cells.substr( start, cursor - start ), value ) == false || value < 0 ||
+                                                  static_cast<size_t>( value ) > _listPaletteName.size();
+                if ( bInvalidPaletteIndex )
                 {
                     SW_LOG_ERROR( "TileMap '%#': tile cell %# is outside the palette (%# names)", _name, value, static_cast<uint32>( _listPaletteName.size() ) );
                     *this = {};
@@ -285,7 +286,8 @@ namespace sw
 
     string_view TileMapXMLData::getTileBrushName( int32 x, int32 y ) const
     {
-        if ( x < 0 || y < 0 || x >= _width || y >= _height )
+        const bool bOutsideMap = x < 0 || y < 0 || x >= _width || y >= _height;
+        if ( bOutsideMap )
             return {};
         const size_t cellIndex = static_cast<size_t>( y ) * static_cast<size_t>( _width ) + static_cast<size_t>( x );
         if ( cellIndex >= _listTileCell.size() )
@@ -321,7 +323,8 @@ namespace sw
 
     bool TileMapXMLData::setTileBrush( int32 x, int32 y, string_view brushName )
     {
-        if ( x < 0 || y < 0 || x >= _width || y >= _height )
+        const bool bOutsideTileMap = x < 0 || y < 0 || x >= _width || y >= _height;
+        if ( bOutsideTileMap )
             return false;
         const size_t count = static_cast<size_t>( _width ) * static_cast<size_t>( _height );
         if ( _listTileCell.size() != count )

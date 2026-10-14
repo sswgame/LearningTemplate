@@ -65,7 +65,8 @@ namespace sw
                 commandLine.getArgument( CommandLineArgument::EXPORT_PO, bExportPo );
                 commandLine.getArgument( CommandLineArgument::IMPORT_PO, importPoPath );
                 commandLine.getArgument( CommandLineArgument::LOC_PROJECT, projectPath );
-                if ( bGatherText == false && bCheckText == false && bExportPo == false && importPoPath.empty() )
+                const bool bNoLocalizationTask = bGatherText == false && bCheckText == false && bExportPo == false && importPoPath.empty();
+                if ( bNoLocalizationTask )
                     return TaskResult::NotRequested;
 
                 bool bSucceeded = true;

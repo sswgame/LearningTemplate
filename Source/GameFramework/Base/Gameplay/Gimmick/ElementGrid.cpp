@@ -70,7 +70,8 @@ namespace sw
 
     bool ElementGrid::hasStatus( const int2& cell, int32 status ) const
     {
-        if ( isInside( cell ) == false || status < 0 || status >= ElementRuleTable::kMaxStatusCount )
+        const bool bInvalidStatus = isInside( cell ) == false || status < 0 || status >= ElementRuleTable::kMaxStatusCount;
+        if ( bInvalidStatus )
             return false;
         return ( _listCell[static_cast<size_t>( toIndex( cell ) )]._statusBits & ( 1u << static_cast<uint32>( status ) ) ) != 0;
     }
@@ -376,8 +377,9 @@ namespace sw
         archive >> height;
         const uint64 cellCount = static_cast<uint64>( MathUtil::max( 0, width ) ) * static_cast<uint64>( MathUtil::max( 0, height ) );
         // 크기는 initialize 의 것이어야 한다. 셀마다 재질, 상태 비트(2), 상태 값을 쓴다
-        const uint64 cellBytes = 2u + ElementRuleTable::kMaxStatusCount;
-        if ( archive.isError() || width != _topology._width || height != _topology._height || archive.hasBytesAvailable( cellCount * cellBytes ) == false )
+        const uint64 cellBytes           = 2u + ElementRuleTable::kMaxStatusCount;
+        const bool   bInvalidGridArchive = archive.isError() || width != _topology._width || height != _topology._height || archive.hasBytesAvailable( cellCount * cellBytes ) == false;
+        if ( bInvalidGridArchive )
             return false;
         vector<Cell> listCell( static_cast<size_t>( cellCount ) );
         for ( Cell& cell : listCell )

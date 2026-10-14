@@ -369,12 +369,13 @@ namespace sw
             if ( bClaimable == false )
                 continue;
             MailboxClaimInput input;
-            input._mailKey             = record._key;
-            input._accountID           = accountID;
-            input._nowMs               = nowMs;
-            input._pPolicy             = pPolicy;
-            const MailboxResult result = claim( connection, input, outReply );
-            if ( result != MailboxResult::Ok && result != MailboxResult::AlreadyClaimed && firstFailure == MailboxResult::Ok )
+            input._mailKey                    = record._key;
+            input._accountID                  = accountID;
+            input._nowMs                      = nowMs;
+            input._pPolicy                    = pPolicy;
+            const MailboxResult result        = claim( connection, input, outReply );
+            const bool          bFirstFailure = result != MailboxResult::Ok && result != MailboxResult::AlreadyClaimed && firstFailure == MailboxResult::Ok;
+            if ( bFirstFailure )
                 firstFailure = result; // 하나가 상한에 걸려도 나머지는 받는다. 첫 실패를 알린다
         }
         return MailboxStoreLogicInternal::finish( outReply, outReply._claimedCount > 0 ? MailboxResult::Ok : firstFailure );

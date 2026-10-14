@@ -61,8 +61,9 @@ namespace
         const sw::string normPath = sw::FileUtil::normalizeSeparators( shaderPath );
         for ( const sw::ShaderCookRequest& request : listRequest )
         {
-            if ( request._stage == stage && request._permutationHash == permutationHash && request._entryPoint == entryPoint &&
-                 request._shaderPath == normPath )
+            const bool bRequestMatches = request._stage == stage && request._permutationHash == permutationHash && request._entryPoint == entryPoint &&
+                                         request._shaderPath == normPath;
+            if ( bRequestMatches )
                 return true;
         }
         return false;
@@ -170,8 +171,9 @@ SW_TEST_CASE( ShaderCookRequestTest, RequestedShaderPathsAreUniqueAcrossDomains 
         const size_t     shaderPos = normPath.find( "shaders/" );
         if ( shaderPos == sw::string::npos )
             continue;
-        const auto [it, bInserted] = mapDomainlessToPath.emplace( normPath.substr( shaderPos ), normPath );
-        if ( bInserted || it->second == normPath || uniqueCopyPath.insert( normPath ).second == false )
+        const auto [it, bInserted]   = mapDomainlessToPath.emplace( normPath.substr( shaderPos ), normPath );
+        const bool bNotDuplicateCopy = bInserted || it->second == normPath || uniqueCopyPath.insert( normPath ).second == false;
+        if ( bNotDuplicateCopy )
             continue;
         SW_EXPECT_TRUE_MSG( false, ( normPath + " 와 " + it->second + " 가 같은 셰이더의 사본이다 — 하나를 지우고 경로 하나로 부를 것" ).c_str() );
     }

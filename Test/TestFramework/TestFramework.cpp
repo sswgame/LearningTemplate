@@ -375,9 +375,10 @@ namespace test
         // 샤드 — gtest 의 환경 변수도 받는다(아래 `--test_shard=` 가 있으면 그쪽이 이긴다).
         const auto setShard = [this]( std::string_view indexText, std::string_view countText )
         {
-            const int32 index = std::atoi( sw::string( indexText ).c_str() );
-            const int32 count = std::atoi( sw::string( countText ).c_str() );
-            if ( count < 1 || index < 0 || index >= count )
+            const int32 index         = std::atoi( sw::string( indexText ).c_str() );
+            const int32 count         = std::atoi( sw::string( countText ).c_str() );
+            const bool  bInvalidShard = count < 1 || index < 0 || index >= count;
+            if ( bInvalidShard )
             {
                 _bInvalidArgument = true;
                 std::fprintf( stdout, "Invalid test shard '%s/%s' (expected <index>/<count> with 0 <= index < count)\n", sw::string( indexText ).c_str(),
@@ -396,7 +397,8 @@ namespace test
         {
             const std::string_view arg = argv[argIndex] != nullptr ? argv[argIndex] : "";
             // 도움말 — 엔진 명령줄로 넘기면 모르는 인자로 무시되고 전체 시험이 돈다. 하네스가 먼저 가져가 기동 전에 끝낸다.
-            if ( arg == "--help" || arg == "-h" || arg == "-?" || arg == "/?" || arg == "--gtest_help" )
+            const bool bHelpArgument = arg == "--help" || arg == "-h" || arg == "-?" || arg == "/?" || arg == "--gtest_help";
+            if ( bHelpArgument )
             {
                 _bHelpRequested = true;
                 continue;
@@ -846,10 +848,11 @@ namespace test
         sw::vector<sw::string> listEmptySuite;
         for ( const sw::string& suiteName : listSuiteOrder )
         {
-            const sw::pair<int32, int32>& ranSkipped = mapSuiteRanSkipped[suiteName];
-            const uint32                  casesHere  = static_cast<uint32>( ranSkipped.first + ranSkipped.second ) / _repeatCount;
-            const bool                    bSplit     = _shardCount > 1 && mapSuiteSelectedCount[suiteName] > casesHere;
-            if ( ranSkipped.first == 0 && ranSkipped.second > 0 && bSplit == false )
+            const sw::pair<int32, int32>& ranSkipped  = mapSuiteRanSkipped[suiteName];
+            const uint32                  casesHere   = static_cast<uint32>( ranSkipped.first + ranSkipped.second ) / _repeatCount;
+            const bool                    bSplit      = _shardCount > 1 && mapSuiteSelectedCount[suiteName] > casesHere;
+            const bool                    bEmptySuite = ranSkipped.first == 0 && ranSkipped.second > 0 && bSplit == false;
+            if ( bEmptySuite )
                 listEmptySuite.push_back( suiteName );
         }
 

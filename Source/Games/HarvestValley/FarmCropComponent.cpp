@@ -93,10 +93,11 @@ namespace sw
     {
         using Internal = FarmCropComponentInternal;
         Component::onTick( deltaTime );
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
-        if ( pManager == nullptr || pMesh == nullptr || _tileIndex < 0 )
+        GameObject*        pOwner       = getOwner();
+        GameObjectManager* pManager     = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        MeshComponent*     pMesh        = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
+        const bool         bMissingTile = pManager == nullptr || pMesh == nullptr || _tileIndex < 0;
+        if ( bMissingTile )
             return;
         const FarmDirectorComponent* pDirector = GameDirectorComponent::resolve<FarmDirectorComponent>( *pManager, _director );
         if ( pDirector == nullptr )

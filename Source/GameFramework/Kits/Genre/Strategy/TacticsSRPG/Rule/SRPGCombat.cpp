@@ -109,8 +109,9 @@ namespace sw
                     return;
                 for ( int32 index = 0; index < static_cast<int32>( field.getUnits().size() ); ++index )
                 {
-                    const SRPGUnit& ally = field.getUnits()[static_cast<size_t>( index )];
-                    if ( index == attackerIndex || index == supportIndex || ally._bAlive == SW_FALSE || ally._team != pAttacker->_team )
+                    const SRPGUnit& ally      = field.getUnits()[static_cast<size_t>( index )];
+                    const bool      bSkipAlly = index == attackerIndex || index == supportIndex || ally._bAlive == SW_FALSE || ally._team != pAttacker->_team;
+                    if ( bSkipAlly )
                         continue;
                     const SRPGStrikePreview preview = findBestStrike( field, index, defenderIndex, field.getSettings()._syncDamagePercent );
                     if ( preview.isValid() )
@@ -126,9 +127,10 @@ namespace sw
             /** @brief 타격 하나를 굴립니다. 명중과 크리티컬을 판정하고 피해, 기력, 경험치, 이벤트를 처리합니다. */
             static void resolveStrike( SRPGBattlefield& field, const SRPGStrikePreview& preview, SRPGStrikeRole role, SRPGCombatResult& outResult )
             {
-                const SRPGUnit* pAttacker = field.findUnit( preview._attacker );
-                const SRPGUnit* pDefender = field.findUnit( preview._defender );
-                if ( pAttacker == nullptr || pDefender == nullptr || pAttacker->_bAlive == SW_FALSE || pDefender->_bAlive == SW_FALSE )
+                const SRPGUnit* pAttacker      = field.findUnit( preview._attacker );
+                const SRPGUnit* pDefender      = field.findUnit( preview._defender );
+                const bool      bDeadCombatant = pAttacker == nullptr || pDefender == nullptr || pAttacker->_bAlive == SW_FALSE || pDefender->_bAlive == SW_FALSE;
+                if ( bDeadCombatant )
                     return;
                 const SRPGSettings& settings      = field.getSettings();
                 const int32         attackerLevel = pAttacker->_pilotLevel.getLevel();
@@ -168,10 +170,11 @@ namespace sw
                                                  const int2& defenderCell, int32 damagePercent )
     {
         SRPGStrikePreview    preview{};
-        const SRPGUnit*      pAttacker = field.findUnit( attackerIndex );
-        const SRPGUnit*      pDefender = field.findUnit( defenderIndex );
-        const SRPGWeaponDef* pWeapon   = pAttacker != nullptr ? field.findWeapon( *pAttacker, weaponIndex ) : nullptr;
-        if ( pAttacker == nullptr || pDefender == nullptr || pWeapon == nullptr )
+        const SRPGUnit*      pAttacker          = field.findUnit( attackerIndex );
+        const SRPGUnit*      pDefender          = field.findUnit( defenderIndex );
+        const SRPGWeaponDef* pWeapon            = pAttacker != nullptr ? field.findWeapon( *pAttacker, weaponIndex ) : nullptr;
+        const bool           bMissingStrikeData = pAttacker == nullptr || pDefender == nullptr || pWeapon == nullptr;
+        if ( bMissingStrikeData )
             return preview;
         const SRPGSettings&   settings = field.getSettings();
         const SRPGUnit&       attacker = *pAttacker;
@@ -281,9 +284,10 @@ namespace sw
 
     SRPGWeaponStatus SRPGCombat::executeAttack( SRPGBattlefield& field, int32 attackerIndex, int32 weaponIndex, int32 defenderIndex, SRPGCombatResult& outResult )
     {
-        outResult                 = SRPGCombatResult{};
-        const SRPGUnit* pAttacker = field.findUnit( attackerIndex );
-        if ( pAttacker == nullptr || field.canAct( attackerIndex ) == false || pAttacker->_bAttacked == SW_TRUE )
+        outResult                          = SRPGCombatResult{};
+        const SRPGUnit* pAttacker          = field.findUnit( attackerIndex );
+        const bool      bAttackerCannotAct = pAttacker == nullptr || field.canAct( attackerIndex ) == false || pAttacker->_bAttacked == SW_TRUE;
+        if ( bAttackerCannotAct )
             return outResult._status = SRPGWeaponStatus::CannotAct;
         SRPGForecast forecast;
         outResult._status = computeForecast( field, attackerIndex, weaponIndex, defenderIndex, forecast );
@@ -308,7 +312,8 @@ namespace sw
             field.findUnit( forecast._supportAttack._attacker )->_bSupportUsed = SW_TRUE;
             SRPGCombatInternal::resolveStrike( field, forecast._supportAttack, SRPGStrikeRole::Support, outResult );
         }
-        if ( forecast._counter.isValid() && field.findUnit( defenderIndex )->_bAlive == SW_TRUE && field.findUnit( attackerIndex )->_bAlive == SW_TRUE )
+        const bool bCounterPossible = forecast._counter.isValid() && field.findUnit( defenderIndex )->_bAlive == SW_TRUE && field.findUnit( attackerIndex )->_bAlive == SW_TRUE;
+        if ( bCounterPossible )
         {
             field.consumeWeapon( defenderIndex, forecast._counter._weapon );
             SRPGCombatInternal::resolveStrike( field, forecast._counter, SRPGStrikeRole::Counter, outResult );
@@ -318,9 +323,10 @@ namespace sw
 
     SRPGWeaponStatus SRPGCombat::executeMapAttack( SRPGBattlefield& field, int32 attackerIndex, int32 weaponIndex, const int2& aimCell, SRPGCombatResult& outResult )
     {
-        outResult                 = SRPGCombatResult{};
-        const SRPGUnit* pAttacker = field.findUnit( attackerIndex );
-        if ( pAttacker == nullptr || field.canAct( attackerIndex ) == false || pAttacker->_bAttacked == SW_TRUE )
+        outResult                             = SRPGCombatResult{};
+        const SRPGUnit* pAttacker             = field.findUnit( attackerIndex );
+        const bool      bAttackerCannotAttack = pAttacker == nullptr || field.canAct( attackerIndex ) == false || pAttacker->_bAttacked == SW_TRUE;
+        if ( bAttackerCannotAttack )
             return outResult._status = SRPGWeaponStatus::CannotAct;
         outResult._status = field.computeWeaponStatus( *pAttacker, weaponIndex, pAttacker->_bMoved == SW_TRUE );
         if ( outResult._status != SRPGWeaponStatus::Ok )

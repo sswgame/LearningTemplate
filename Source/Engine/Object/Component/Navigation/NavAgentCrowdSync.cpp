@@ -185,8 +185,9 @@ namespace sw
             agent._writtenPosition = state._position;
             agent._bHasWritten     = SW_TRUE;
         }
-        const float32 speed = MathUtil::sqrt( state._velocity._x * state._velocity._x + state._velocity._z * state._velocity._z );
-        if ( agent._bUpdateRotation && pScene != nullptr && speed > Internal::kTurnSpeed )
+        const float32 speed           = MathUtil::sqrt( state._velocity._x * state._velocity._x + state._velocity._z * state._velocity._z );
+        const bool    bTurnToVelocity = agent._bUpdateRotation && pScene != nullptr && speed > Internal::kTurnSpeed;
+        if ( bTurnToVelocity )
         {
             float3        rotation = pScene->getLocalRotation();
             const float32 wantYaw  = MathUtil::atan2( state._velocity._x, state._velocity._z );

@@ -296,7 +296,8 @@ namespace sw
             overlap._bOtherTrigger = bOtherTrigger ? SW_TRUE : SW_FALSE;
             for ( Component* pComponent : listTarget )
             {
-                if ( pComponent == nullptr || pComponent->isPendingDestroy() || pComponent->isSelfActive() == false )
+                const bool bInactiveTickTarget = pComponent == nullptr || pComponent->isPendingDestroy() || pComponent->isSelfActive() == false;
+                if ( bInactiveTickTarget )
                     continue;
                 switch ( phase )
                 {
@@ -329,7 +330,8 @@ namespace sw
         collision._bIs2D     = bIs2D;
         for ( Component* pComponent : listTarget )
         {
-            if ( pComponent == nullptr || pComponent->isPendingDestroy() || pComponent->isSelfActive() == false )
+            const bool bInactivePhysicsTarget = pComponent == nullptr || pComponent->isPendingDestroy() || pComponent->isSelfActive() == false;
+            if ( bInactivePhysicsTarget )
                 continue;
             switch ( phase )
             {

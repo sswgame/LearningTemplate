@@ -238,10 +238,11 @@ namespace sw
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr )
             return; // 오브젝트 밖이다(테스트가 `applyPlacement` 로 직접 놓는다)
-        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const SceneComponent*    pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
-        const CameraComponent*   pCamera  = pManager != nullptr ? pManager->getCameraRegistry().selectCamera( CameraRole::Game ) : nullptr;
-        if ( pScene == nullptr || pCamera == nullptr || isActive() == false || _bHidden == SW_TRUE )
+        const GameObjectManager* pManager      = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const SceneComponent*    pScene        = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        const CameraComponent*   pCamera       = pManager != nullptr ? pManager->getCameraRegistry().selectCamera( CameraRole::Game ) : nullptr;
+        const bool               bMarkerHidden = pScene == nullptr || pCamera == nullptr || isActive() == false || _bHidden == SW_TRUE;
+        if ( bMarkerHidden )
         {
             WidgetMarkerPlacement hidden{};
             hidden._bVisible = SW_FALSE;

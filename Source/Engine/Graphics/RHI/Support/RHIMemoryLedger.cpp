@@ -128,9 +128,10 @@ namespace sw
 
     void RHIMemoryLedger::recordAllocation( const RHIMemoryKey& key, RHIMemoryKind kind, uint64 bytes )
     {
-        const uint32 spaceIndex = static_cast<uint32>( key._space );
-        const uint32 kindIndex  = static_cast<uint32>( kind );
-        if ( spaceIndex >= kRHIMemoryKeySpaceCount || kindIndex >= kRHIMemoryKindCount || key._id == 0 )
+        const uint32 spaceIndex        = static_cast<uint32>( key._space );
+        const uint32 kindIndex         = static_cast<uint32>( kind );
+        const bool   bInvalidLedgerKey = spaceIndex >= kRHIMemoryKeySpaceCount || kindIndex >= kRHIMemoryKindCount || key._id == 0;
+        if ( bInvalidLedgerKey )
             return;
 
         std::scoped_lock<mutex>           lock{ _mutex };

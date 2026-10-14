@@ -185,12 +185,13 @@ namespace sw
                     SW_LOG_WARNING( "Entity '%#' could not be cooked to binary state - keeping XML.", entity._name );
                 continue;
             }
-            const auto        sourceIt = mapSourceByFileID.find( entity._fileID );
-            const auto        verifyIt = mapVerifyByFileID.find( entity._fileID );
-            const GameObject* pSource  = ( sourceIt != mapSourceByFileID.end() ) ? sourceIt->second : nullptr;
-            const GameObject* pVerify  = ( verifyIt != mapVerifyByFileID.end() ) ? verifyIt->second : nullptr;
-            if ( pSource == nullptr || pVerify == nullptr ||
-                 SceneCookerInternal::makeStateText( source, pSource ) != SceneCookerInternal::makeStateText( verify, pVerify ) )
+            const auto        sourceIt       = mapSourceByFileID.find( entity._fileID );
+            const auto        verifyIt       = mapVerifyByFileID.find( entity._fileID );
+            const GameObject* pSource        = ( sourceIt != mapSourceByFileID.end() ) ? sourceIt->second : nullptr;
+            const GameObject* pVerify        = ( verifyIt != mapVerifyByFileID.end() ) ? verifyIt->second : nullptr;
+            const bool        bStateMismatch = pSource == nullptr || pVerify == nullptr ||
+                                        SceneCookerInternal::makeStateText( source, pSource ) != SceneCookerInternal::makeStateText( verify, pVerify );
+            if ( bStateMismatch )
             {
                 SW_LOG_WARNING( "Entity '%#' changes when its cooked state is read back - keeping XML.", entity._name );
                 continue;

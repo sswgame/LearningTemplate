@@ -120,7 +120,8 @@ namespace sw
 
     bool Archive::readBytes( void* pOutBuffer, uint64 byteSize )
     {
-        if ( pOutBuffer == nullptr || byteSize == 0 || _pData == nullptr )
+        const bool bInvalidReadRequest = pOutBuffer == nullptr || byteSize == 0 || _pData == nullptr;
+        if ( bInvalidReadRequest )
         {
             if ( byteSize > 0 )
                 _bError = SW_TRUE;
@@ -715,7 +716,8 @@ namespace sw
 
     string Archive::convertBinaryToJSON( const TypeInfo& typeInfo, bool bPretty )
     {
-        if ( _pData == nullptr || _offset >= _dataSize || typeInfo._size == 0 )
+        const bool bNothingToConvert = _pData == nullptr || _offset >= _dataSize || typeInfo._size == 0;
+        if ( bNothingToConvert )
             return {};
 
         return SerializerUtil::transcodeBinaryToJSON( _pData + _offset, _dataSize - _offset, typeInfo, bPretty );

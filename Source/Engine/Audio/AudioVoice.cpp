@@ -110,7 +110,8 @@ namespace sw
         _startDelayFrames = startDelayFrames;
         _bFinished        = ( _pClip == nullptr || _pClip->_frameCount == 0 ) ? SW_TRUE : SW_FALSE;
         // 스트리밍 클립은 보이스마다 디코더를 연다(압축 바이트는 클립이 한 벌만 든다). 열지 못하면 소리 없이 끝난다.
-        if ( _bFinished == SW_FALSE && _pClip->isStreamed() && _stream.open( *_pClip->_pStream ) == false )
+        const bool bStreamOpenFailed = _bFinished == SW_FALSE && _pClip->isStreamed() && _stream.open( *_pClip->_pStream ) == false;
+        if ( bStreamOpenFailed )
             _bFinished = SW_TRUE;
     }
 

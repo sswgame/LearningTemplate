@@ -204,7 +204,8 @@ namespace sw
 
     void HorrorMatch::start()
     {
-        if ( _bStarted == SW_TRUE || _pCatalog == nullptr || _killer._pDef == nullptr )
+        const bool bCannotStart = _bStarted == SW_TRUE || _pCatalog == nullptr || _killer._pDef == nullptr;
+        if ( bCannotStart )
             return;
         _match.initialize( makeMatchSettings() );
         _survivorTeam = _match.addTeam( hashed_string( "Survivors" ) );
@@ -233,7 +234,8 @@ namespace sw
 
     float32 HorrorMatch::computeHeartbeat( int32 survivor ) const
     {
-        if ( isValidSurvivor( survivor ) == false || _killer._pDef == nullptr || _killer._pDef->_terrorRadius <= 0.0f )
+        const bool bNoHeartbeat = isValidSurvivor( survivor ) == false || _killer._pDef == nullptr || _killer._pDef->_terrorRadius <= 0.0f;
+        if ( bNoHeartbeat )
             return 0.0f;
         const float32 distance = float3::getHorizontalDistance( _killer._position, _listSurvivor[static_cast<size_t>( survivor )]._position );
         return MathUtil::saturate( 1.0f - distance / _killer._pDef->_terrorRadius );
@@ -254,7 +256,8 @@ namespace sw
 
     float32 HorrorMatch::computeKillerSpeed() const
     {
-        if ( _killer._pDef == nullptr || _pCatalog == nullptr || _killer.canAct() == false )
+        const bool bKillerCannotMove = _killer._pDef == nullptr || _pCatalog == nullptr || _killer.canAct() == false;
+        if ( bKillerCannotMove )
             return 0.0f;
         float32 speed = _pCatalog->getRules()._survivorSpeed * _killer._pDef->_speedRatio;
         if ( _killer._attackCooldown.isActive() )

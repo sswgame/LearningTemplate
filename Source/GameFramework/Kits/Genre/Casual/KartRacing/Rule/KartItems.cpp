@@ -97,8 +97,9 @@ namespace sw
     {
         if ( _listRankTable.empty() )
             return nullptr;
-        int32 tablePlace = place;
-        if ( _referencePlaceCount > 1 && racerCount > 1 && racerCount != _referencePlaceCount )
+        int32      tablePlace               = place;
+        const bool bShouldScaleByRacerCount = _referencePlaceCount > 1 && racerCount > 1 && racerCount != _referencePlaceCount;
+        if ( bShouldScaleByRacerCount )
         {
             // 인원을 테이블의 기준 인원으로 늘린다(꼴찌는 항상 꼴찌 테이블을 쓴다).
             const float32 ratio = static_cast<float32>( place - 1 ) / static_cast<float32>( racerCount - 1 );

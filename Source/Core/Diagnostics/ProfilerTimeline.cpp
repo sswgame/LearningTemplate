@@ -238,8 +238,9 @@ namespace sw
         const uint32 threadCount = MathUtil::min( _threadCount.load( std::memory_order_acquire ), kMaxThread );
         for ( uint32 threadIndex = 0; threadIndex < threadCount; ++threadIndex )
         {
-            const ThreadBuffer* pBuffer = _arrThreadBuffer[threadIndex].load( std::memory_order_acquire );
-            if ( pBuffer == nullptr || pBuffer->_longEpoch != epoch || pBuffer->_listLong.empty() )
+            const ThreadBuffer* pBuffer           = _arrThreadBuffer[threadIndex].load( std::memory_order_acquire );
+            const bool          bSkipThreadBuffer = pBuffer == nullptr || pBuffer->_longEpoch != epoch || pBuffer->_listLong.empty();
+            if ( bSkipThreadBuffer )
                 continue;
             ProfilerTimelineThread thread;
             thread._name      = pBuffer->_name;

@@ -171,9 +171,10 @@ namespace sw::editor
         _box                = MeshModifierBounds{};
         if ( box.isObject() && box.get( "valid" ).asBool( false ) )
         {
-            const JSONValue boxMin = box.get( "min" );
-            const JSONValue boxMax = box.get( "max" );
-            if ( boxMin.isArray() && boxMin.size() == 3 && boxMax.isArray() && boxMax.size() == 3 )
+            const JSONValue boxMin    = box.get( "min" );
+            const JSONValue boxMax    = box.get( "max" );
+            const bool      bValidBox = boxMin.isArray() && boxMin.size() == 3 && boxMax.isArray() && boxMax.size() == 3;
+            if ( bValidBox )
             {
                 _box._min = float3{ static_cast<float32>( boxMin.at( 0 ).asFloat() ), static_cast<float32>( boxMin.at( 1 ).asFloat() ),
                                     static_cast<float32>( boxMin.at( 2 ).asFloat() ) };
@@ -182,9 +183,10 @@ namespace sw::editor
             }
         }
 
-        const JSONValue resolution = object.get( "resolution" );
-        const JSONValue points     = object.get( "controlPoints" );
-        if ( resolution.isArray() == false || resolution.size() != 3 || points.isArray() == false )
+        const JSONValue resolution          = object.get( "resolution" );
+        const JSONValue points              = object.get( "controlPoints" );
+        const bool      bInvalidLatticeData = resolution.isArray() == false || resolution.size() != 3 || points.isArray() == false;
+        if ( bInvalidLatticeData )
             return false;
         const int32 countX     = static_cast<int32>( resolution.at( 0 ).asInt() );
         const int32 countY     = static_cast<int32>( resolution.at( 1 ).asInt() );
@@ -218,10 +220,11 @@ namespace sw::editor
 
     void LatticeModifier::setResolution( int32 countX, int32 countY, int32 countZ )
     {
-        const int32 newX = MathUtil::clamp( countX, kMinResolution, kMaxResolution );
-        const int32 newY = MathUtil::clamp( countY, kMinResolution, kMaxResolution );
-        const int32 newZ = MathUtil::clamp( countZ, kMinResolution, kMaxResolution );
-        if ( newX == _countX && newY == _countY && newZ == _countZ )
+        const int32 newX                 = MathUtil::clamp( countX, kMinResolution, kMaxResolution );
+        const int32 newY                 = MathUtil::clamp( countY, kMinResolution, kMaxResolution );
+        const int32 newZ                 = MathUtil::clamp( countZ, kMinResolution, kMaxResolution );
+        const bool  bResolutionUnchanged = newX == _countX && newY == _countY && newZ == _countZ;
+        if ( bResolutionUnchanged )
         {
             syncResolutionParams();
             return;

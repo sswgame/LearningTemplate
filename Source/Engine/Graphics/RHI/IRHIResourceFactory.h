@@ -92,18 +92,21 @@ namespace sw
          */
         virtual RHIBufferHandle createBuffer( const RHIBufferDesc& desc )
         {
-            if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Vertex ) && desc._pInitialData != nullptr && desc._sizeBytes > 0 )
+            const bool bHasVertexInitialData = EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Vertex ) && desc._pInitialData != nullptr && desc._sizeBytes > 0;
+            if ( bHasVertexInitialData )
                 return createVertexBuffer( desc._pInitialData, desc._sizeBytes );
-            if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Index ) && desc._pInitialData != nullptr && desc._sizeBytes > 0 )
+            const bool bHasIndexInitialData = EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Index ) && desc._pInitialData != nullptr && desc._sizeBytes > 0;
+            if ( bHasIndexInitialData )
                 return createIndexBuffer( desc._pInitialData, desc._sizeBytes, ( desc._elementSize == 2 ) ? 2u : 4u );
             if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Constant ) )
                 return createConstantBuffer( desc._sizeBytes > 0 ? desc._sizeBytes : 256u );
-            const uint32    elemSize  = desc._elementSize > 0 ? desc._elementSize : 4u;
-            const uint32    elemCount = desc._elementCount > 0
-                                          ? desc._elementCount
-                                          : ( desc._sizeBytes > 0 ? ( desc._sizeBytes / elemSize ) : 1u );
-            RHIBufferHandle buffer    = createStructuredBuffer( elemSize, elemCount );
-            if ( buffer != 0 && desc._pInitialData != nullptr && desc._sizeBytes > 0 )
+            const uint32    elemSize                  = desc._elementSize > 0 ? desc._elementSize : 4u;
+            const uint32    elemCount                 = desc._elementCount > 0
+                                                          ? desc._elementCount
+                                                          : ( desc._sizeBytes > 0 ? ( desc._sizeBytes / elemSize ) : 1u );
+            RHIBufferHandle buffer                    = createStructuredBuffer( elemSize, elemCount );
+            const bool      bHasStructuredInitialData = buffer != 0 && desc._pInitialData != nullptr && desc._sizeBytes > 0;
+            if ( bHasStructuredInitialData )
                 updateStructuredBuffer( buffer, desc._pInitialData, desc._sizeBytes );
             return buffer;
         }

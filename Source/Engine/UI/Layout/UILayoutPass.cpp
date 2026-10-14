@@ -119,8 +119,9 @@ namespace sw
 
         for ( const WidgetID id : listRoot )
         {
-            Widget* const pWidget = tree.findWidgetByID( id );
-            if ( pWidget == nullptr || pWidget == pRoot || ( pWidget->_dirtyFlags & WidgetDirty::kLayoutRoot ) == 0 )
+            Widget* const pWidget        = tree.findWidgetByID( id );
+            const bool    bNotLayoutRoot = pWidget == nullptr || pWidget == pRoot || ( pWidget->_dirtyFlags & WidgetDirty::kLayoutRoot ) == 0;
+            if ( bNotLayoutRoot )
                 continue;
             if ( pWidget->_layoutSerial == 0 || pWidget->getParent() == nullptr )
                 continue; // 아직 배치된 적이 없다. 조상의 순회가 처음 측정한다

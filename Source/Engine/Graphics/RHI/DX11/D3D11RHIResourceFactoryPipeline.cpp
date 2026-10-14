@@ -43,10 +43,11 @@ namespace sw
             // 참고). 뎁스 전용(RT 0 개)이면 경로가 있어도 PS 를 붙이지 않는다.
             ShaderCompileResult vsResult{};
             ShaderCompileResult psResult{};
-            if ( RHIShaderRequest::compileGraphics( request, vsResult, psResult ) == false ||
-                 FAILED( _pDevice->_device->CreateVertexShader( vsResult._bytecode.data(), vsResult._bytecode.size(), nullptr, pso._vs.GetAddressOf() ) ) ||
-                 ( request._bHasPixelShader != SW_FALSE &&
-                   FAILED( _pDevice->_device->CreatePixelShader( psResult._bytecode.data(), psResult._bytecode.size(), nullptr, pso._ps.GetAddressOf() ) ) ) )
+            const bool          bShaderCreationFailed = RHIShaderRequest::compileGraphics( request, vsResult, psResult ) == false ||
+                                               FAILED( _pDevice->_device->CreateVertexShader( vsResult._bytecode.data(), vsResult._bytecode.size(), nullptr, pso._vs.GetAddressOf() ) ) ||
+                                               ( request._bHasPixelShader != SW_FALSE &&
+                                                 FAILED( _pDevice->_device->CreatePixelShader( psResult._bytecode.data(), psResult._bytecode.size(), nullptr, pso._ps.GetAddressOf() ) ) );
+            if ( bShaderCreationFailed )
             {
                 SW_LOG_WARNING( "createPipelineState: shader compile/create failed (vs=%# ps=%#) %#", vsResult._bSuccess, psResult._bSuccess,
                                 desc._vertexShaderPath.c_str() );

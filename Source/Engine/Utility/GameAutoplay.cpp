@@ -36,7 +36,8 @@ namespace sw
 {
     void GameAutoplay::registerAutoplay( const GameAutoplayRegistration* pRegistration )
     {
-        if ( pRegistration == nullptr || pRegistration->_pValue == nullptr || pRegistration->_pVariableName == nullptr )
+        const bool bInvalidAutoplayRegistration = pRegistration == nullptr || pRegistration->_pValue == nullptr || pRegistration->_pVariableName == nullptr;
+        if ( bInvalidAutoplayRegistration )
             return;
         const RegistrationResult result = GameAutoplayInternal::getRegistrations().add( pRegistration, pRegistration->_pVariableName );
         if ( result == RegistrationResult::DuplicateName )

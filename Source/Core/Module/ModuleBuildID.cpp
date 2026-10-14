@@ -81,13 +81,14 @@ namespace sw
                     const uint8* pEnd    = pCursor + header.p_memsz;
                     while ( pCursor + sizeof( ElfW( Nhdr ) ) <= pEnd )
                     {
-                        const ElfW( Nhdr )* pNote = reinterpret_cast<const ElfW( Nhdr )*>( pCursor );
-                        const size_t nameSize     = ( pNote->n_namesz + 3u ) & ~size_t( 3 );
-                        const size_t descSize     = ( pNote->n_descsz + 3u ) & ~size_t( 3 );
-                        const uint8* pName        = pCursor + sizeof( ElfW( Nhdr ) );
-                        const uint8* pDesc        = pName + nameSize;
-                        const bool   bGnu         = pNote->n_namesz == 4 && StringUtil::equals( string_view( reinterpret_cast<const utf8*>( pName ), 3 ), "GNU" );
-                        if ( pNote->n_type == NT_GNU_BUILD_ID && bGnu && pDesc + pNote->n_descsz <= pEnd )
+                        const ElfW( Nhdr )* pNote         = reinterpret_cast<const ElfW( Nhdr )*>( pCursor );
+                        const size_t nameSize             = ( pNote->n_namesz + 3u ) & ~size_t( 3 );
+                        const size_t descSize             = ( pNote->n_descsz + 3u ) & ~size_t( 3 );
+                        const uint8* pName                = pCursor + sizeof( ElfW( Nhdr ) );
+                        const uint8* pDesc                = pName + nameSize;
+                        const bool   bGnu                 = pNote->n_namesz == 4 && StringUtil::equals( string_view( reinterpret_cast<const utf8*>( pName ), 3 ), "GNU" );
+                        const bool   bValidGnuBuildIDNote = pNote->n_type == NT_GNU_BUILD_ID && bGnu && pDesc + pNote->n_descsz <= pEnd;
+                        if ( bValidGnuBuildIDNote )
                         {
                             StringBuilder<constant::kMaxBuffer256> text;
                             appendHex( text, pDesc, pNote->n_descsz, false );

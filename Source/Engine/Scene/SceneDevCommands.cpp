@@ -36,9 +36,10 @@ namespace sw
 
             static bool runTeleport( const vector<string>& listArgument, string& outReply )
             {
-                float3 position{};
-                if ( listArgument.size() != 4 || StringUtil::parseFloat( listArgument[1], position._x ) == false ||
-                     StringUtil::parseFloat( listArgument[2], position._y ) == false || StringUtil::parseFloat( listArgument[3], position._z ) == false )
+                float3     position{};
+                const bool bInvalidMoveArguments = listArgument.size() != 4 || StringUtil::parseFloat( listArgument[1], position._x ) == false ||
+                                                   StringUtil::parseFloat( listArgument[2], position._y ) == false || StringUtil::parseFloat( listArgument[3], position._z ) == false;
+                if ( bInvalidMoveArguments )
                     return false;
                 GameObjectManager* pManager  = findActiveObjectManager();
                 GameObject*        pObject   = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( listArgument[0] ) ) : nullptr;
@@ -108,8 +109,9 @@ namespace sw
 
             static bool runAnimationRewindSeconds( const vector<string>& listArgument, string& outReply )
             {
-                float32 seconds = 0.0f;
-                if ( listArgument.size() != 1 || StringUtil::parseFloat( listArgument[0], seconds ) == false || seconds <= 0.0f )
+                float32    seconds                 = 0.0f;
+                const bool bInvalidWindowArguments = listArgument.size() != 1 || StringUtil::parseFloat( listArgument[0], seconds ) == false || seconds <= 0.0f;
+                if ( bInvalidWindowArguments )
                     return false;
                 AnimationRewindRecorder::setRequestedWindowSeconds( seconds );
                 outReply = "rewind window = " + to_string( AnimationRewindRecorder::getRequestedWindowSeconds() ) + " s";
@@ -131,8 +133,9 @@ namespace sw
                     outReply = describeRewind( rewind );
                     return true;
                 }
-                float32 secondsAgo = 0.0f;
-                if ( listArgument.size() != 1 || StringUtil::parseFloat( listArgument[0], secondsAgo ) == false || secondsAgo < 0.0f )
+                float32    secondsAgo              = 0.0f;
+                const bool bInvalidRewindArguments = listArgument.size() != 1 || StringUtil::parseFloat( listArgument[0], secondsAgo ) == false || secondsAgo < 0.0f;
+                if ( bInvalidRewindArguments )
                     return false;
                 if ( rewind.getTracks().empty() )
                 {

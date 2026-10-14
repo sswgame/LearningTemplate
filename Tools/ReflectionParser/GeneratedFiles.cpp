@@ -49,7 +49,8 @@ namespace sw
             /** @brief `"<키> <나머지>"` 꼴 줄에서 키 뒤의 나머지를 꺼냅니다. 키가 다르면 false. */
             static bool takeKeyedRest( string_view line, string_view key, string_view& outRest )
             {
-                if ( line.size() <= key.size() || line.substr( 0, key.size() ) != key || line[key.size()] != ' ' )
+                const bool bKeyMismatch = line.size() <= key.size() || line.substr( 0, key.size() ) != key || line[key.size()] != ' ';
+                if ( bKeyMismatch )
                     return false;
                 outRest = line.substr( key.size() + 1 );
                 return true;
@@ -137,8 +138,9 @@ namespace sw
     {
         if ( FileUtil::exists( path ) )
         {
-            string existingContent;
-            if ( FileUtil::readTextFile( path, existingContent ) && existingContent.empty() == false && string_view( existingContent ) == content )
+            string     existingContent;
+            const bool bContentUnchanged = FileUtil::readTextFile( path, existingContent ) && existingContent.empty() == false && string_view( existingContent ) == content;
+            if ( bContentUnchanged )
                 return true;
         }
 
@@ -244,8 +246,9 @@ namespace sw
 
     bool IncrementalCheck::isUpToDate( const string& inputFile, const GeneratedPaths& paths ) const
     {
-        const uint64 stampTime = GeneratedFilesInternal::getWriteTime( paths._stampPath );
-        if ( stampTime == 0 || FileUtil::exists( paths._cppPath ) == false || FileUtil::exists( paths._headerPath ) == false )
+        const uint64 stampTime     = GeneratedFilesInternal::getWriteTime( paths._stampPath );
+        const bool   bStampMissing = stampTime == 0 || FileUtil::exists( paths._cppPath ) == false || FileUtil::exists( paths._headerPath ) == false;
+        if ( bStampMissing )
             return false;
 
         // 스탬프 파일의 시각은 **도구**가 더 새로운지만 가린다. 입력은 스탬프에 적힌 "파싱 전에 본 시각" 과 같은지로 본다(아래).

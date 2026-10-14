@@ -348,7 +348,8 @@ namespace sw::editor
         GameObject* pTagged   = nullptr;
         manager.forEachGameObject( [&pTagged, playerTag]( GameObject* pObj )
         {
-            if ( pTagged == nullptr && pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( playerTag, true ) )
+            const bool bFirstTaggedPlayer = pTagged == nullptr && pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( playerTag, true );
+            if ( bFirstTaggedPlayer )
                 pTagged = pObj;
         } );
         if ( pTagged != nullptr )
@@ -467,8 +468,9 @@ namespace sw::editor
 
         // 편집 내역은 Play 동안 맡겨 두고 Stop 뒤에 되찾는다(아래 분기). 플레이 중의 편집은 Stop 이 스냅샷으로 되돌리므로 그동안의 기록은 버린다.
         // 플레이와 일시정지 사이에서는 비우기만 한다.
-        CommandStack* pCommandStack = editor::getService<CommandStack>();
-        if ( pCommandStack != nullptr && previous != PlaySessionState::Stopped && state != PlaySessionState::Stopped )
+        CommandStack* pCommandStack            = editor::getService<CommandStack>();
+        const bool    bShouldClearCommandStack = pCommandStack != nullptr && previous != PlaySessionState::Stopped && state != PlaySessionState::Stopped;
+        if ( bShouldClearCommandStack )
             pCommandStack->clear();
 
         // 정지 상태를 떠날 때와 정지 상태로 돌아올 때로 나눈다. 목표 상태가 무엇이든 같다. Stopped 에서 Playing 으로 갈 때만 월드를 켜면, 정지에서

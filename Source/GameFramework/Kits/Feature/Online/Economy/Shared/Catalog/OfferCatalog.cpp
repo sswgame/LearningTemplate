@@ -38,7 +38,8 @@ namespace sw
     {
         const bool bPriceXorProduct = def._listPrice.empty() != def._listProduct.empty();
         const bool bShapeOk         = def._listGrant.empty() == false && bPriceXorProduct && def._maxCountPerPurchase >= 1 && def._limitPerAccount >= 0;
-        if ( bShapeOk == false || LedgerUtil::isValidAssetID( def._id ) == false || findOffer( def._id ) != nullptr )
+        const bool bInvalidOffer    = bShapeOk == false || LedgerUtil::isValidAssetID( def._id ) == false || findOffer( def._id ) != nullptr;
+        if ( bInvalidOffer )
             return false;
         for ( const OfferGrant& grant : def._listGrant )
         {

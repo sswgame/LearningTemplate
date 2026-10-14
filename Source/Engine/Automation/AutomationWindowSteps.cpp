@@ -151,7 +151,8 @@ namespace sw
                 const HWND hwnd = findWindowHandle();
                 RECT       clip{};
                 RECT       client{};
-                if ( hwnd == nullptr || GetClipCursor( &clip ) == FALSE || GetClientRect( hwnd, &client ) == FALSE )
+                const bool bCursorClipUnreadable = hwnd == nullptr || GetClipCursor( &clip ) == FALSE || GetClientRect( hwnd, &client ) == FALSE;
+                if ( bCursorClipUnreadable )
                 {
                     runner.recordFailure( step, "could not read the cursor clip or the window rectangle" );
                     return true;
@@ -202,7 +203,8 @@ namespace sw
                 const HWND hwnd = findWindowHandle();
                 RECT       clientRect{};
                 POINT      origin{ 0, 0 };
-                if ( hwnd == nullptr || GetClientRect( hwnd, &clientRect ) == FALSE || ClientToScreen( hwnd, &origin ) == FALSE )
+                const bool bCaptureAreaUnavailable = hwnd == nullptr || GetClientRect( hwnd, &clientRect ) == FALSE || ClientToScreen( hwnd, &origin ) == FALSE;
+                if ( bCaptureAreaUnavailable )
                 {
                     runner.finish( AutomationResult::Failed, step.describe() + ": no window to capture" );
                     return true;

@@ -71,9 +71,10 @@ namespace sw
     BrArmorResult BrLoadout::absorbDamage( float32 damage, BrHitZone hitZone )
     {
         BrArmorResult result;
-        result._damage     = MathUtil::max( 0.0f, damage );
-        BrArmorSlot* pSlot = hitZone == BrHitZone::Head ? &_helmet : ( hitZone == BrHitZone::Body ? &_vest : nullptr );
-        if ( pSlot == nullptr || pSlot->isEmpty() || result._damage <= 0.0f )
+        result._damage                  = MathUtil::max( 0.0f, damage );
+        BrArmorSlot* pSlot              = hitZone == BrHitZone::Head ? &_helmet : ( hitZone == BrHitZone::Body ? &_vest : nullptr );
+        const bool   bNoArmorAbsorption = pSlot == nullptr || pSlot->isEmpty() || result._damage <= 0.0f;
+        if ( bNoArmorAbsorption )
             return result;
         result._absorbed = result._damage * pSlot->_pDef->_reduction;
         result._damage -= result._absorbed;

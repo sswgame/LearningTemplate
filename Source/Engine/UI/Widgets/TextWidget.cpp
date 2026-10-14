@@ -142,13 +142,15 @@ namespace sw
 
     void TextWidget::onBoundPropertyChanged( const PropertyInfo& property )
     {
-        const hashed_string& name = property._name;
-        if ( name == hashed_string( "_color" ) || name == hashed_string( "_outlineColor" ) || name == hashed_string( "_outlineWidth" ) )
+        const hashed_string& name           = property._name;
+        const bool           bPaintProperty = name == hashed_string( "_color" ) || name == hashed_string( "_outlineColor" ) || name == hashed_string( "_outlineWidth" );
+        if ( bPaintProperty )
         {
             invalidate( WidgetDirty::kPaint );
             return;
         }
-        if ( name == hashed_string( "_text" ) || name == hashed_string( "_style" ) || name == hashed_string( "_bRichText" ) || name == hashed_string( "_bLocalized" ) )
+        const bool bTextProperty = name == hashed_string( "_text" ) || name == hashed_string( "_style" ) || name == hashed_string( "_bRichText" ) || name == hashed_string( "_bLocalized" );
+        if ( bTextProperty )
         {
             invalidateText();
             return;
@@ -257,14 +259,16 @@ namespace sw
 
     void TextWidget::paint( CanvasPainter& painter, const UIPaintContext& context ) const
     {
-        if ( context._pTextLayout == nullptr || context._pGlyphCache == nullptr || _text.empty() )
+        const bool bNothingToPaintText = context._pTextLayout == nullptr || context._pGlyphCache == nullptr || _text.empty();
+        if ( bNothingToPaintText )
             return;
         resolveDisplayText( context._pLocalization, context._textRevision, context._pActionGlyphs );
-        const TextLayoutStyle  style  = makeLayoutStyle( context._textScale );
-        const float32          width  = getGeometry()._size._x;
-        const bool             bRtl   = style._paragraphDirection == TextDirection::RightToLeft;
-        const UIComputedStyle* pStyle = getComputedStyle();
-        if ( _bLayoutValid == false || _layoutWidth != width || _layoutFontSize != style._fontSize || _bLayoutRtl != bRtl || _pLayoutStyle != pStyle )
+        const TextLayoutStyle  style        = makeLayoutStyle( context._textScale );
+        const float32          width        = getGeometry()._size._x;
+        const bool             bRtl         = style._paragraphDirection == TextDirection::RightToLeft;
+        const UIComputedStyle* pStyle       = getComputedStyle();
+        const bool             bLayoutStale = _bLayoutValid == false || _layoutWidth != width || _layoutFontSize != style._fontSize || _bLayoutRtl != bRtl || _pLayoutStyle != pStyle;
+        if ( bLayoutStale )
         {
             // 픽셀 맞춤(UILayoutPass)은 양 끝을 반올림해 원하는 너비에 놓인 텍스트를 물리 픽셀 하나까지 줄인다. 그만큼은 넘쳐도 한 줄로 둔다
             // (상자 줄의 버튼 텍스트가 끝 글자를 다음 줄로 넘기지 않게 하기 위해서다).

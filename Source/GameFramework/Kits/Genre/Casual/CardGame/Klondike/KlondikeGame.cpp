@@ -157,7 +157,8 @@ namespace sw
 
     bool KlondikeGame::moveWasteToTableau( int32 column )
     {
-        if ( isColumnValid( column ) == false || _state._waste.isEmpty() || canStackOnTableau( _state._waste.getTop(), _state._arrTableau[column] ) == false )
+        const bool bInvalidWasteMove = isColumnValid( column ) == false || _state._waste.isEmpty() || canStackOnTableau( _state._waste.getTop(), _state._arrTableau[column] ) == false;
+        if ( bInvalidWasteMove )
             return false;
         pushHistory();
         (void)_state._waste.drawInto( _state._arrTableau[column], 1 );
@@ -177,7 +178,8 @@ namespace sw
 
     bool KlondikeGame::moveTableauToFoundation( int32 column )
     {
-        if ( isColumnValid( column ) == false || _state._arrTableau[column].isEmpty() || canPlaceOnFoundation( _state._arrTableau[column].getTop() ) == false )
+        const bool bInvalidFoundationMove = isColumnValid( column ) == false || _state._arrTableau[column].isEmpty() || canPlaceOnFoundation( _state._arrTableau[column].getTop() ) == false;
+        if ( bInvalidFoundationMove )
             return false;
         pushHistory();
         Card card;
@@ -189,7 +191,8 @@ namespace sw
 
     bool KlondikeGame::moveTableauToTableau( int32 fromColumn, int32 count, int32 toColumn )
     {
-        if ( isColumnValid( fromColumn ) == false || isColumnValid( toColumn ) == false || fromColumn == toColumn || count <= 0 )
+        const bool bInvalidTableauMove = isColumnValid( fromColumn ) == false || isColumnValid( toColumn ) == false || fromColumn == toColumn || count <= 0;
+        if ( bInvalidTableauMove )
             return false;
         const CardPile& from   = _state._arrTableau[fromColumn];
         const int32     faceUp = from.getCount() - _state._arrFaceDownCount[fromColumn];
@@ -222,7 +225,8 @@ namespace sw
 
     bool KlondikeGame::moveFoundationToTableau( int32 suit, int32 column )
     {
-        if ( isColumnValid( column ) == false || suit < 0 || KlondikeState::kFoundationCount <= suit || _state._arrFoundation[suit].isEmpty() )
+        const bool bInvalidFoundationReturn = isColumnValid( column ) == false || suit < 0 || KlondikeState::kFoundationCount <= suit || _state._arrFoundation[suit].isEmpty();
+        if ( bInvalidFoundationReturn )
             return false;
         if ( canStackOnTableau( _state._arrFoundation[suit].getTop(), _state._arrTableau[column] ) == false )
             return false;

@@ -54,8 +54,9 @@ namespace sw
     bool MeshVertexAnimationBaker::bake( const Mesh& skinMesh, const Skeleton& skeleton, const AnimationClip& clip, float32 framesPerSecond, bool bAnchorRootMotion,
                                          MeshVertexAnimation& outAnimation )
     {
-        outAnimation = MeshVertexAnimation{};
-        if ( skinMesh.hasSkin() == false || skinMesh.getSkinBoneCount() != skeleton.getBoneCount() || framesPerSecond <= 0.0f )
+        outAnimation           = MeshVertexAnimation{};
+        const bool bCannotBake = skinMesh.hasSkin() == false || skinMesh.getSkinBoneCount() != skeleton.getBoneCount() || framesPerSecond <= 0.0f;
+        if ( bCannotBake )
         {
             SW_LOG_WARNING( "Vertex animation bake skipped: the mesh has no skin or its bone count (%#) differs from the skeleton (%#)", skinMesh.getSkinBoneCount(),
                             skeleton.getBoneCount() );

@@ -190,7 +190,8 @@ namespace sw
 #endif
 
         vector<uint8> precookedBytes;
-        if ( bPrecookedUsable && ResourceIO::readBinaryResource( precookedRelPath, precookedBytes ) && precookedBytes.empty() == false )
+        const bool    bPrecookedBinaryLoaded = bPrecookedUsable && ResourceIO::readBinaryResource( precookedRelPath, precookedBytes ) && precookedBytes.empty() == false;
+        if ( bPrecookedBinaryLoaded )
         {
             SW_LOG_TRACE( "Loaded pre-cooked shader binary: %# (%zu bytes)", precookedRelPath.c_str(), precookedBytes.size() );
             ShaderCompileResult result{};

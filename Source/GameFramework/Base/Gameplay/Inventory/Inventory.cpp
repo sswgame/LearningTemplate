@@ -91,7 +91,8 @@ namespace sw
         {
             if ( left <= 0 )
                 break;
-            if ( slot.isEmpty() || slot._itemID != itemID || slot._count >= maxStack )
+            const bool bSkipStack = slot.isEmpty() || slot._itemID != itemID || slot._count >= maxStack;
+            if ( bSkipStack )
                 continue;
             const int32 moved = MathUtil::min( left, maxStack - slot._count );
             slot._count += moved;
@@ -166,7 +167,8 @@ namespace sw
 
     InventorySlot Inventory::takeFromSlot( int32 slot, int32 count )
     {
-        if ( isValidSlot( slot ) == false || count <= 0 || _listSlot[static_cast<size_t>( slot )].isEmpty() )
+        const bool bInvalidTakeRequest = isValidSlot( slot ) == false || count <= 0 || _listSlot[static_cast<size_t>( slot )].isEmpty();
+        if ( bInvalidTakeRequest )
             return InventorySlot{};
         InventorySlot& source = _listSlot[static_cast<size_t>( slot )];
         InventorySlot  taken  = source;
@@ -180,14 +182,16 @@ namespace sw
 
     bool Inventory::moveSlot( int32 fromSlot, int32 toSlot )
     {
-        if ( isValidSlot( fromSlot ) == false || isValidSlot( toSlot ) == false || fromSlot == toSlot )
+        const bool bInvalidMoveRequest = isValidSlot( fromSlot ) == false || isValidSlot( toSlot ) == false || fromSlot == toSlot;
+        if ( bInvalidMoveRequest )
             return false;
         InventorySlot& source = _listSlot[static_cast<size_t>( fromSlot )];
         InventorySlot& target = _listSlot[static_cast<size_t>( toSlot )];
         if ( source.isEmpty() )
             return false;
-        const int32 maxStack = _pCatalog != nullptr ? _pCatalog->getMaxStack( source._itemID ) : 1;
-        if ( target.isEmpty() == false && target._itemID == source._itemID && maxStack > 1 )
+        const int32 maxStack         = _pCatalog != nullptr ? _pCatalog->getMaxStack( source._itemID ) : 1;
+        const bool  bStackIntoTarget = target.isEmpty() == false && target._itemID == source._itemID && maxStack > 1;
+        if ( bStackIntoTarget )
         {
             const int32 moved = MathUtil::min( source._count, maxStack - target._count );
             if ( moved <= 0 )
@@ -207,7 +211,8 @@ namespace sw
 
     int32 Inventory::splitSlot( int32 slot, int32 count )
     {
-        if ( isValidSlot( slot ) == false || count <= 0 || _listSlot[static_cast<size_t>( slot )]._count <= count )
+        const bool bInvalidSplitRequest = isValidSlot( slot ) == false || count <= 0 || _listSlot[static_cast<size_t>( slot )]._count <= count;
+        if ( bInvalidSplitRequest )
             return -1;
         for ( size_t index = 0; index < _listSlot.size(); ++index )
         {
@@ -235,7 +240,8 @@ namespace sw
             int32       left     = slot._count;
             for ( InventorySlot& merged : listStack )
             {
-                if ( left > 0 && maxStack > 1 && merged._itemID == slot._itemID && merged._count < maxStack )
+                const bool bMergeIntoStack = left > 0 && maxStack > 1 && merged._itemID == slot._itemID && merged._count < maxStack;
+                if ( bMergeIntoStack )
                 {
                     const int32 moved = MathUtil::min( left, maxStack - merged._count );
                     merged._count += moved;
@@ -405,7 +411,8 @@ namespace sw
         uint32  slotCount = 0;
         archive >> maxWeight;
         // 슬롯마다 이름(4) + 개수, 내구도, 피해(12) + 꾸미기 수, 부품 수(8)
-        if ( archive.isError() || ( 0.0f <= maxWeight ) == false || StateArchiveUtil::readCount( archive, 24, slotCount ) == false || slotCount != _listSlot.size() )
+        const bool bInvalidInventoryArchive = archive.isError() || ( 0.0f <= maxWeight ) == false || StateArchiveUtil::readCount( archive, 24, slotCount ) == false || slotCount != _listSlot.size();
+        if ( bInvalidInventoryArchive )
             return false;
         vector<InventorySlot> listSlot( slotCount );
         for ( InventorySlot& slot : listSlot )

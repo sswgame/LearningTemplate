@@ -49,7 +49,8 @@ namespace sw
             {
                 const int32 distance = MathUtil::abs( offsetX ) + MathUtil::abs( offsetY );
                 const int2  cell{ center._x + offsetX, center._y + offsetY };
-                if ( distance < minRange || distance > maxRange || cell._x < 0 || cell._y < 0 || cell._x >= width || cell._y >= height )
+                const bool  bOutsideRange = distance < minRange || distance > maxRange || cell._x < 0 || cell._y < 0 || cell._x >= width || cell._y >= height;
+                if ( bOutsideRange )
                     continue;
                 outListCell.push_back( cell );
             }

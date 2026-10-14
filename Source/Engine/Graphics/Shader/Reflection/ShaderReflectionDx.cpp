@@ -72,7 +72,8 @@ namespace sw
 
                 if ( varClass == D3D_SVC_MATRIX_ROWS || varClass == D3D_SVC_MATRIX_COLUMNS )
                 {
-                    if ( rows == 4 && columns == 4 && varType == D3D_SVT_FLOAT )
+                    const bool bFloat4x4Matrix = rows == 4 && columns == 4 && varType == D3D_SVT_FLOAT;
+                    if ( bFloat4x4Matrix )
                         return string( "Float4x4" );
                     return string( pBase ) + to_string( rows ) + "x" + to_string( columns );
                 }
@@ -157,7 +158,8 @@ namespace sw
                     {
                         TTypeDesc onlyTypeDesc{};
                         pOnlyType->GetDesc( &onlyTypeDesc );
-                        if ( onlyTypeDesc.Class == D3D_SVC_STRUCT && onlyTypeDesc.Elements <= 1 && onlyTypeDesc.Members > 0 )
+                        const bool bSingleStructBlock = onlyTypeDesc.Class == D3D_SVC_STRUCT && onlyTypeDesc.Elements <= 1 && onlyTypeDesc.Members > 0;
+                        if ( bSingleStructBlock )
                         {
                             TVarDesc onlyVarDesc{};
                             pOnly->GetDesc( &onlyVarDesc );

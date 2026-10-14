@@ -41,7 +41,8 @@ namespace sw
             if ( StateArchiveUtil::readName( archive, itemID ) == false )
                 return false;
             archive >> itemCount;
-            if ( archive.isError() || itemID.empty() || itemCount <= 0 )
+            const bool bInvalidStackRecord = archive.isError() || itemID.empty() || itemCount <= 0;
+            if ( bInvalidStackRecord )
                 return false;
             list.addItem( itemID, itemCount );
         }
@@ -64,8 +65,9 @@ namespace sw
 
     bool ItemStackList::removeItem( const hashed_string& itemID, int32 count )
     {
-        ItemStack* pStack = findStack( itemID );
-        if ( count <= 0 || pStack == nullptr || pStack->_count < count )
+        ItemStack* pStack        = findStack( itemID );
+        const bool bCannotRemove = count <= 0 || pStack == nullptr || pStack->_count < count;
+        if ( bCannotRemove )
             return false;
         pStack->_count -= count;
         if ( pStack->_count == 0 )

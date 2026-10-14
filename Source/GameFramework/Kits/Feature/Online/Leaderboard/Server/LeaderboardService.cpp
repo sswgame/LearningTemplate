@@ -648,7 +648,8 @@ namespace sw
             return false;
         const bool bAlreadyRegistered  = _mapBoard.find( definition._boardID ) != _mapBoard.end();
         _mapBoard[definition._boardID] = definition;
-        if ( definition._reset != LeaderboardReset::Season || _pScheduler == nullptr || bAlreadyRegistered )
+        const bool bSkipSeasonJobs     = definition._reset != LeaderboardReset::Season || _pScheduler == nullptr || bAlreadyRegistered;
+        if ( bSkipSeasonJobs )
             return true; // 같은 보드를 다시 등록해도 정산 작업은 한 번만 만든다
         for ( const LeaderboardSeason& season : definition._listSeason )
         {

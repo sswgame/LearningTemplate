@@ -24,7 +24,8 @@ namespace sw
 
     bool SmartObjectSlots::claim( int32 slot, uint64 claimantID )
     {
-        if ( slot < 0 || slot >= getSlotCount() || claimantID == 0 )
+        const bool bInvalidClaim = slot < 0 || slot >= getSlotCount() || claimantID == 0;
+        if ( bInvalidClaim )
             return false;
         uint64& holder = _listClaimant[static_cast<size_t>( slot )];
         if ( holder == claimantID )
@@ -183,8 +184,9 @@ namespace sw
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         for ( int32 slot = 0; slot < _slots.getSlotCount(); ++slot )
         {
-            const uint64 claimant = _slots.getClaimant( slot );
-            if ( claimant != 0 && pManager != nullptr && pManager->resolveGameObject( GameObjectHandle::make( claimant ) ) == nullptr )
+            const uint64 claimant             = _slots.getClaimant( slot );
+            const bool   bReleaseDeadClaimant = claimant != 0 && pManager != nullptr && pManager->resolveGameObject( GameObjectHandle::make( claimant ) ) == nullptr;
+            if ( bReleaseDeadClaimant )
                 (void)_slots.release( claimant );
             _listClaimant[static_cast<size_t>( slot )] = _slots.isFree( slot ) ? GameObjectHandle{} : GameObjectHandle::make( _slots.getClaimant( slot ) );
         }

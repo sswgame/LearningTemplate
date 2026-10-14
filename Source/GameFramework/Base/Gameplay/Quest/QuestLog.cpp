@@ -83,7 +83,8 @@ namespace sw
         const QuestProgress* pProgress = findProgress( questID );
         if ( pProgress != nullptr && pProgress->_status == QuestStatus::Active )
             return QuestStartResult::AlreadyActive;
-        if ( pProgress != nullptr && pProgress->_completedCount > 0 && pQuest->_bRepeatable == SW_FALSE )
+        const bool bAlreadyCompleted = pProgress != nullptr && pProgress->_completedCount > 0 && pQuest->_bRepeatable == SW_FALSE;
+        if ( bAlreadyCompleted )
             return QuestStartResult::AlreadyDone;
         for ( const hashed_string& requiredID : pQuest->_listRequiredQuest )
         {
@@ -229,8 +230,9 @@ namespace sw
 
     bool QuestLog::choose( const hashed_string& questID, const hashed_string& choice )
     {
-        QuestProgress* pProgress = findProgressMutable( questID );
-        if ( pProgress == nullptr || pProgress->_status != QuestStatus::Active || pProgress->_bAwaitingChoice == SW_FALSE )
+        QuestProgress* pProgress        = findProgressMutable( questID );
+        const bool     bNoPendingChoice = pProgress == nullptr || pProgress->_status != QuestStatus::Active || pProgress->_bAwaitingChoice == SW_FALSE;
+        if ( bNoPendingChoice )
             return false;
         const QuestDef*   pQuest = _pCatalog->findQuest( questID );
         const QuestStage* pStage = pQuest->findStage( pProgress->_stageID );

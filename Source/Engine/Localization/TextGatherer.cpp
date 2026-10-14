@@ -65,13 +65,15 @@ namespace sw
                         ++_position;
                         continue;
                     }
-                    if ( character == ' ' || character == '\t' || character == '\r' )
+                    const bool bWhitespaceCharacter = character == ' ' || character == '\t' || character == '\r';
+                    if ( bWhitespaceCharacter )
                     {
                         ++_position;
                         continue;
                     }
-                    _bLineStart = false;
-                    if ( character == kDoubleQuote || character == kSingleQuote || isRawStringStart() )
+                    _bLineStart              = false;
+                    const bool bLiteralStart = character == kDoubleQuote || character == kSingleQuote || isRawStringStart();
+                    if ( bLiteralStart )
                     {
                         string ignored;
                         (void)readLiteral( ignored ); // 건너뛰는 리터럴이다. 닫히지 않았으면 그 줄 끝에서 멈추고 훑기를 이어 간다
@@ -138,13 +140,14 @@ namespace sw
             {
                 while ( _position < _text.size() )
                 {
-                    const utf8 character = _text[_position];
+                    const utf8 character    = _text[_position];
+                    const bool bInlineSpace = character == ' ' || character == '\t' || character == '\r';
                     if ( character == '\n' )
                     {
                         ++_line;
                         ++_position;
                     }
-                    else if ( character == ' ' || character == '\t' || character == '\r' )
+                    else if ( bInlineSpace )
                         ++_position;
                     else if ( isPair( '/', '/' ) )
                     {
@@ -540,8 +543,9 @@ namespace sw
     void TextGatherer::addKeyedText( string_view key, string_view source, string_view context, string_view origin, uint32 maxLength )
     {
         bool          bAdded{ false };
-        GatheredText& text = getOrAddText( key, GatheredTextKind::Keyed, origin, bAdded );
-        if ( bAdded == false && text._source.empty() == false && text._source != source )
+        GatheredText& text               = getOrAddText( key, GatheredTextKind::Keyed, origin, bAdded );
+        const bool    bConflictingSource = bAdded == false && text._source.empty() == false && text._source != source;
+        if ( bConflictingSource )
         {
             addIssue( origin, "key '" + string( key ) + "' has two different source texts ('" + text._source + "' and '" + string( source ) + "') - the first one is kept", true );
             return;

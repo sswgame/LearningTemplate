@@ -24,8 +24,9 @@ namespace sw
 {
     bool InputSlotUtil::tryParse( string_view text, InputSlot& outSlot )
     {
-        const size_t dotPos = text.find( '.' );
-        if ( dotPos == string_view::npos || dotPos == 0 || dotPos + 1 >= text.size() )
+        const size_t dotPos             = text.find( '.' );
+        const bool   bMalformedSlotText = dotPos == string_view::npos || dotPos == 0 || dotPos + 1 >= text.size();
+        if ( bMalformedSlotText )
             return false;
         const string_view device = text.substr( 0, dotPos );
         const string_view name   = text.substr( dotPos + 1 );

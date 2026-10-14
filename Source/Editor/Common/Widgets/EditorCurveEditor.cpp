@@ -256,7 +256,8 @@ namespace sw::editor
                 const bool bMoving = bActive && ( io.MouseDelta.x != 0.0f || io.MouseDelta.y != 0.0f );
                 if ( bMoving && state._drag == EditorCurveDrag::Pan )
                     view.pan( toFloat2( io.MouseDelta ) );
-                if ( bMoving && state._drag == EditorCurveDrag::Key && state._selectedKey < curve._listKey.size() )
+                const bool bDraggingSelectedKey = bMoving && state._drag == EditorCurveDrag::Key && state._selectedKey < curve._listKey.size();
+                if ( bDraggingSelectedKey )
                 {
                     FloatCurveKey& key = curve._listKey[state._selectedKey];
                     float32        time{ 0.0f };
@@ -269,8 +270,9 @@ namespace sw::editor
                     curve.sortAndComputeAutoTangents();
                     state._bDragMoved = true;
                 }
-                const bool bTangentDrag = state._drag == EditorCurveDrag::LeaveTangent || state._drag == EditorCurveDrag::ArriveTangent;
-                if ( bMoving && bTangentDrag && state._selectedKey < curve._listKey.size() )
+                const bool bTangentDrag             = state._drag == EditorCurveDrag::LeaveTangent || state._drag == EditorCurveDrag::ArriveTangent;
+                const bool bDraggingSelectedTangent = bMoving && bTangentDrag && state._selectedKey < curve._listKey.size();
+                if ( bDraggingSelectedTangent )
                 {
                     // 두 접선을 함께 움직인다(매끈한 키 — 언리얼 User 접선). 손으로 정했으니 자동 접선은 끈다.
                     FloatCurveKey& key   = curve._listKey[state._selectedKey];

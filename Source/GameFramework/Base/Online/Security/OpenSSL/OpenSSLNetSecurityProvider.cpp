@@ -96,8 +96,9 @@ namespace sw
             static int32 providePassphrase( utf8* pBuffer, int32 size, int32 writing, void* pUserData )
             {
                 (void)writing;
-                const string* pPassphrase = static_cast<const string*>( pUserData );
-                if ( pPassphrase == nullptr || pPassphrase->empty() || static_cast<int32>( pPassphrase->size() ) > size )
+                const string* pPassphrase        = static_cast<const string*>( pUserData );
+                const bool    bInvalidPassphrase = pPassphrase == nullptr || pPassphrase->empty() || static_cast<int32>( pPassphrase->size() ) > size;
+                if ( bInvalidPassphrase )
                     return 0;
                 std::memcpy( pBuffer, pPassphrase->data(), pPassphrase->size() );
                 return static_cast<int32>( pPassphrase->size() );
@@ -177,7 +178,8 @@ namespace sw
                 , _pWriteBio{ BIO_new( BIO_s_mem() ) }
                 , _state{ TLSSessionState::Handshaking }
             {
-                if ( _pSsl == nullptr || _pReadBio == nullptr || _pWriteBio == nullptr )
+                const bool bSslSetupFailed = _pSsl == nullptr || _pReadBio == nullptr || _pWriteBio == nullptr;
+                if ( bSslSetupFailed )
                 {
                     (void)fail( "SSL_new failed" );
                     return;
@@ -732,7 +734,8 @@ namespace sw
 
     bool OpenSSLNetSecurityProvider::computeSha256( const uint8* pData, int32 dataSize, uint8* pOutDigest )
     {
-        if ( pOutDigest == nullptr || dataSize < 0 || ( pData == nullptr && dataSize > 0 ) )
+        const bool bInvalidDigestArguments = pOutDigest == nullptr || dataSize < 0 || ( pData == nullptr && dataSize > 0 );
+        if ( bInvalidDigestArguments )
             return false;
         uint32 digestSize = 0;
         return EVP_Digest( pData, static_cast<size_t>( dataSize ), pOutDigest, &digestSize, EVP_sha256(), nullptr ) == 1 && digestSize == 32;
@@ -740,8 +743,9 @@ namespace sw
 
     bool OpenSSLNetSecurityProvider::verifySignature( const NetPublicKey& publicKey, const uint8* pData, int32 dataSize, const uint8* pSignature, int32 signatureSize )
     {
-        using Internal = OpenSSLSignatureInternal;
-        if ( pSignature == nullptr || signatureSize <= 0 || dataSize < 0 )
+        using Internal                        = OpenSSLSignatureInternal;
+        const bool bInvalidSignatureArguments = pSignature == nullptr || signatureSize <= 0 || dataSize < 0;
+        if ( bInvalidSignatureArguments )
             return false;
         EVP_PKEY* pKey = Internal::createPublicKey( publicKey );
         if ( pKey == nullptr )

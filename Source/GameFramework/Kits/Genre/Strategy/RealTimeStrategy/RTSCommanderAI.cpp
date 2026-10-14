@@ -110,7 +110,8 @@ namespace sw
         RTSUnitID depotID{};
         _pWorld->forEachUnit( [&]( const RTSUnit& unit )
         {
-            if ( depotID.isValid() == false && unit._owner == _player && unit._pDef->_id == _settings._depotID && unit.isConstructed() )
+            const bool bDepotCandidate = depotID.isValid() == false && unit._owner == _player && unit._pDef->_id == _settings._depotID && unit.isConstructed();
+            if ( bDepotCandidate )
                 depotID = unit._id;
         } );
         return depotID;
@@ -121,7 +122,8 @@ namespace sw
         outListUnit.clear();
         _pWorld->forEachUnit( [&]( const RTSUnit& unit )
         {
-            if ( unit._owner == _player && unit.isMobile() && unit._pDef->_bWorker == SW_FALSE && unit._pDef->canAttack() )
+            const bool bCombatUnit = unit._owner == _player && unit.isMobile() && unit._pDef->_bWorker == SW_FALSE && unit._pDef->canAttack();
+            if ( bCombatUnit )
                 outListUnit.push_back( unit._id );
         } );
     }
@@ -141,13 +143,14 @@ namespace sw
         {
             if ( unit._owner != _player || unit._pDef->_id != _settings._workerID )
                 return;
-            const RTSOrder* pOrder = unit.findOrder();
-            int32           score  = 3;
+            const RTSOrder* pOrder                   = unit.findOrder();
+            int32           score                    = 3;
+            const bool      bGatheringWithEmptyCargo = pOrder != nullptr && pOrder->_type == RTSOrderType::Gather && unit._cargoAmount == 0;
             if ( pOrder == nullptr )
                 score = 0;
-            else if ( pOrder->_type == RTSOrderType::Gather && unit._cargoAmount == 0 && unit._gatherPhase != RTSGatherPhase::Harvesting )
+            else if ( bGatheringWithEmptyCargo && unit._gatherPhase != RTSGatherPhase::Harvesting )
                 score = 1;
-            else if ( pOrder->_type == RTSOrderType::Gather && unit._cargoAmount == 0 )
+            else if ( bGatheringWithEmptyCargo )
                 score = 2;
             if ( score < bestScore )
             {
@@ -189,7 +192,8 @@ namespace sw
         vector<RTSUnitID> listIdle;
         world.forEachUnit( [&]( const RTSUnit& unit )
         {
-            if ( unit._owner == self._player && unit._pDef->_bWorker && unit.isIdle() )
+            const bool bIdleWorker = unit._owner == self._player && unit._pDef->_bWorker && unit.isIdle();
+            if ( bIdleWorker )
                 listIdle.push_back( unit._id );
         } );
         for ( const RTSUnitID workerID : listIdle )
@@ -204,10 +208,11 @@ namespace sw
 
     BehaviorStatus RTSCommanderAI::taskTrainWorkers( BehaviorContext& context )
     {
-        RTSCommanderAI& self   = *static_cast<RTSCommanderAI*>( context._pOwner );
-        RTSWorld&       world  = *self._pWorld;
-        const RTSUnit*  pDepot = world.findUnit( self.findDepot() );
-        if ( pDepot == nullptr || pDepot->_listProduction.empty() == false || world.countPlanned( self._player, self._settings._workerID ) >= self._settings._workerTarget )
+        RTSCommanderAI& self               = *static_cast<RTSCommanderAI*>( context._pOwner );
+        RTSWorld&       world              = *self._pWorld;
+        const RTSUnit*  pDepot             = world.findUnit( self.findDepot() );
+        const bool      bCannotTrainWorker = pDepot == nullptr || pDepot->_listProduction.empty() == false || world.countPlanned( self._player, self._settings._workerID ) >= self._settings._workerTarget;
+        if ( bCannotTrainWorker )
             return BehaviorStatus::Failure;
         return world.train( pDepot->_id, self._settings._workerID ) == RTSCommandResult::Ok ? BehaviorStatus::Success : BehaviorStatus::Failure;
     }
@@ -244,7 +249,8 @@ namespace sw
         vector<RTSUnitID> listIdleProducer;
         world.forEachUnit( [&]( const RTSUnit& unit )
         {
-            if ( unit._owner == self._player && unit._pDef->_id == self._settings._productionID && unit.isConstructed() && unit._listProduction.empty() )
+            const bool bIdleProducer = unit._owner == self._player && unit._pDef->_id == self._settings._productionID && unit.isConstructed() && unit._listProduction.empty();
+            if ( bIdleProducer )
                 listIdleProducer.push_back( unit._id );
         } );
         bool bTrained = false;
@@ -264,8 +270,9 @@ namespace sw
         vector<RTSUnitID> listIdle;
         for ( const RTSUnitID unitID : listArmy )
         {
-            const RTSUnit* pUnit = world.findUnit( unitID );
-            if ( pUnit != nullptr && pUnit->isIdle() && pUnit->_attackTarget.isValid() == false )
+            const RTSUnit* pUnit         = world.findUnit( unitID );
+            const bool     bIdleAttacker = pUnit != nullptr && pUnit->isIdle() && pUnit->_attackTarget.isValid() == false;
+            if ( bIdleAttacker )
                 listIdle.push_back( unitID );
         }
         if ( static_cast<int32>( listIdle.size() ) < self._settings._attackArmySize )
