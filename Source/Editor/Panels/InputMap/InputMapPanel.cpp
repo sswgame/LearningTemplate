@@ -491,6 +491,20 @@ namespace sw::editor
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "NotRebindableTip" ) );
             else
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RebindTip" ) );
+            // 바인딩마다 발화 시간(초)과 값 부호 뒤집기. 시간을 쓰지 않는 트리거(Pressed 등)면 시간 칸은 숨긴다.
+            const float32 effectiveTime = _inputMap.getEffectiveTriggerTime( *pBinding );
+            if ( effectiveTime > 0.0f )
+            {
+                float32 editTime = effectiveTime;
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth( ImGui::GetFontSize() * 4.0f );
+                if ( ImGui::DragFloat( "s##time", &editTime, 0.01f, 0.01f, 10.0f, "%.2f" ) && _inputMap.setBindingTriggerTime( action, bindIndex, editTime ) )
+                    markDocumentDirty();
+            }
+            bool bNegate = pBinding->_bNegate;
+            ImGui::SameLine();
+            if ( ImGui::Checkbox( "Negate", &bNegate ) && _inputMap.setBindingNegate( action, bindIndex, bNegate ) )
+                markDocumentDirty();
             ImGui::PopID();
         }
         if ( bindingCount == 0 )

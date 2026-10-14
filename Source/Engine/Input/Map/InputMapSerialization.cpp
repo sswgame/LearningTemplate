@@ -169,6 +169,7 @@ namespace sw
                         }
                         if ( pTriggerName != nullptr )
                             bindNode.appendAttribute( InputMapXML::kAttrTrigger, pTriggerName );
+                        InputMapSerializationInternal::writeBindingModifier( bindNode, binding );
                         bindNode.appendAttribute( InputMapXML::kAttrLayer, binding._layer.c_str() );
                         return true;
                     }
@@ -179,6 +180,7 @@ namespace sw
                         chordNode.appendAttribute( "trigger", KeyCodeUtil::toName( static_cast<Key>( binding._arrSlot[1]._controlIndex ) ) );
                         if ( pTriggerName != nullptr )
                             chordNode.appendAttribute( "triggerMode", pTriggerName );
+                        InputMapSerializationInternal::writeBindingModifier( chordNode, binding );
                         chordNode.appendAttribute( InputMapXML::kAttrLayer, binding._layer.c_str() );
                         return true;
                     }
@@ -210,6 +212,7 @@ namespace sw
                         // Down 은 적지 않아도 Down 으로 읽히므로, 그 밖의 trigger 만 적는다.
                         if ( binding._trigger != ActionTrigger::Down && pTriggerName != nullptr )
                             axisNode.appendAttribute( InputMapXML::kAttrTrigger, pTriggerName );
+                        InputMapSerializationInternal::writeBindingModifier( axisNode, binding );
                         axisNode.appendAttribute( InputMapXML::kAttrLayer, binding._layer.c_str() );
                         return true;
                     }
@@ -294,6 +297,30 @@ namespace sw
             {
                 outAxisScale    = float2{ node.getAttributeFloat( "scaleX", 1.0f ), node.getAttributeFloat( "scaleY", 1.0f ) };
                 outScaleByDelta = node.getAttributeBool( "scaleByDelta", false );
+            }
+
+            /** @brief 바인딩마다 발화 시간 · 부호 뒤집기(`time` · `negate`)를 적습니다. 기본값(0, false)이면 적지 않아 기존 파일이 그대로 나온다. */
+            static void writeBindingModifier( XMLNode node, const ActionBinding& binding )
+            {
+                if ( binding._triggerTime > 0.0f )
+                    node.appendAttribute( "time", binding._triggerTime );
+                if ( binding._bNegate )
+                    node.appendAttribute( "negate", true );
+            }
+
+            /**
+             * @brief @p node 를 읽어 방금 더한 바인딩(인덱스 @p countBefore)에 발화 시간 · 부호 뒤집기를 겁니다.
+             * @details 바인딩을 더하지 못했으면(모르는 키 등) 아무것도 하지 않는다. 없는 속성은 기본값(0 = 맵 값, false)이라 옛 파일은 그대로 읽힌다.
+             */
+            static void readBindingModifier( InputMap& inputMap, const hashed_string& action, uint32 countBefore, XMLNode node )
+            {
+                if ( inputMap.getBindingCount( action ) <= countBefore )
+                    return;
+                const float32 triggerTime = node.getAttributeFloat( "time", 0.0f );
+                if ( triggerTime > 0.0f )
+                    (void)inputMap.setBindingTriggerTime( action, countBefore, triggerTime ); // 바로 위에서 바인딩이 있음을 확인했다
+                if ( node.getAttributeBool( "negate", false ) )
+                    (void)inputMap.setBindingNegate( action, countBefore, true ); // 바로 위에서 바인딩이 있음을 확인했다
             }
 
             /**
@@ -457,6 +484,7 @@ namespace sw
                 const utf8* pCode   = bindNode.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrCode );
                 if ( pSource == nullptr || StringUtil::isNullOrEmpty( pCode ) )
                     continue;
+                const uint32 bindCountBefore = getBindingCount( hashed_string( pActionName ) );
 
                 ActionTrigger trigger          = defaultTrigger;
                 const utf8*   pBindTriggerAttr = bindNode.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrTrigger );
@@ -492,6 +520,7 @@ namespace sw
                     if ( modifierKey != Key::Unknown && triggerKey != Key::Unknown )
                     {
                         bindChord( hashed_string( pActionName ), modifierKey, triggerKey, trigger, hashed_string( bindLayer.view() ) );
+                        InputMapSerializationInternal::readBindingModifier( *this, hashed_string( pActionName ), bindCountBefore, bindNode );
                         continue;
                     }
                 }
@@ -528,6 +557,7 @@ namespace sw
                     if ( mouse != MouseButton::Count )
                         bind( hashed_string( pActionName ), mouse, trigger, hashed_string( bindLayer.view() ) );
                 }
+                InputMapSerializationInternal::readBindingModifier( *this, hashed_string( pActionName ), bindCountBefore, bindNode );
             }
 
             // 2) <vector2d> 태그 파싱
@@ -572,7 +602,9 @@ namespace sw
                     if ( parsed != ActionTrigger::Count )
                         axisTrigger = parsed;
                 }
+                const uint32 axisCountBefore = getBindingCount( hashed_string( pActionName ) );
                 bindAxis1DComposite( hashed_string( pActionName ), negativeSlot, positiveSlot, hashed_string( axisLayer.view() ), axisTrigger );
+                InputMapSerializationInternal::readBindingModifier( *this, hashed_string( pActionName ), axisCountBefore, axisNode );
             }
 
             // 4) <stick> 태그 파싱
@@ -619,8 +651,10 @@ namespace sw
                     chordLayer = hashed_string( pChordLayerAttr );
                     ensureLayer( chordLayer );
                 }
+                const uint32 chordCountBefore = getBindingCount( hashed_string( pActionName ) );
                 if ( modifierKey != Key::Unknown && triggerKey != Key::Unknown )
                     bindChord( hashed_string( pActionName ), modifierKey, triggerKey, trigger, hashed_string( chordLayer.view() ) );
+                InputMapSerializationInternal::readBindingModifier( *this, hashed_string( pActionName ), chordCountBefore, chordNode );
             }
 
             // 6) <mouseDelta> 태그 파싱. 마우스 이동량(시점)이며 scale 은 감도 배율이다(1 = 픽셀 그대로).
@@ -754,6 +788,7 @@ namespace sw
                 const utf8* pTriggerName = actionTriggerToName( b._trigger );
                 if ( pTriggerName != nullptr )
                     bindNode.appendAttribute( "trigger", pTriggerName );
+                InputMapSerializationInternal::writeBindingModifier( bindNode, b );
 
                 // 종류를 추가하고 여기를 빠뜨리면 그 바인딩이 특성 하나 없이 저장되어 조용히 사라진다. 그래서 default 에서 오류를 남긴다.
                 switch ( b._kind )
@@ -898,6 +933,8 @@ namespace sw
                 continue;
             }
 
+            const hashed_string actionName( pAction );
+            const uint32        countBefore = getBindingCount( actionName );
             switch ( parsedKind )
             {
                 case BindingKind::Axis1DComposite:
@@ -1025,6 +1062,7 @@ namespace sw
                     break;
                 }
             }
+            InputMapSerializationInternal::readBindingModifier( *this, actionName, countBefore, bindNode );
         }
         return true;
     }

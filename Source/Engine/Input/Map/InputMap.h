@@ -3,7 +3,7 @@
  * @brief 입력 액션을 정의하고 매 프레임 평가하는 통합 InputMap 을 선언합니다.
  * @details `ActionBinding` 하나로 단일 슬롯, 1D/2D 합성 축, 스틱, 조합 키를 모두 표현한다.
  *          액션은 `ActionPhase` 상태 머신(Started, Ongoing, Triggered, Completed, Canceled)으로 평가하고,
- *          모디파이어 파이프라인(데드존, 축 반전, 감도 배율)을 거친다.
+ *          모디파이어 파이프라인(데드존, 축 반전, 감도 배율, 바인딩마다 부호 뒤집기)을 거친다. 시간을 쓰는 트리거는 바인딩마다 시간을 둘 수 있다.
  *          그 밖에 LIFO 컨텍스트 스택, 이벤트 델리게이트 디스패치, 선입력 버퍼링, 격투 커맨드 시퀀스, XML 직렬화를 제공한다.
  */
 #pragma once
@@ -250,6 +250,15 @@ namespace sw
         float32        _scale{ 1.0f };                          /**< MouseDelta2D · MouseWheel1D: 감도 배율. VirtualJoystick2D: 드래그 반경(px). */
         float2         _axisScale{ 1.0f, 1.0f };                /**< GamepadStick2D: 축마다 배율(언리얼 Enhanced Input 의 Scale). 마우스 Y 는 아래가 +라 스틱을 Look 에 묶으려면 Y 를 음수로 둔다. */
         bool           _bScaleByDelta{ false };                 /**< GamepadStick2D: 프레임 시간을 곱한다(Scale By Delta Time). 배율을 초당 값(픽셀/초)으로 적을 수 있다. */
+        /**
+         * @brief 이 바인딩의 발화 시간(초)입니다. 0 이면 맵 전체 값을 씁니다(`InputMap::getEffectiveTriggerTime`).
+         * @details Hold · HoldAndRelease 는 누를 시간, Tap 은 떼야 할 최대 시간, Pulse 는 반복 간격, DoubleTap · DoubleClicked 는 두 누름 사이 최대 간격이다.
+         *          언리얼 Enhanced Input 의 트리거마다 시간(Hold Time Threshold · Tap Release Time Threshold · Pulse Interval),
+         *          유니티 Input System 의 Interaction 마다 duration 에 해당한다. 같은 맵에서 짧은 차지와 긴 차지를 함께 쓸 수 있다.
+         */
+        float32        _triggerTime{ 0.0f };
+        /** @brief 바인딩 값의 부호를 뒤집습니다(언리얼 Negate 모디파이어, 유니티 Invert 프로세서). 눌림과 발화는 그대로이고 값만 바뀐다. */
+        bool           _bNegate{ false };
         mutable uint32 _cachedLayerIndex{ kInvalidLayerIndex }; /**< `_listLayerEntry` 의 안정된 인덱스입니다. 포인터가 아니라 인덱스라서 재할당되어도 안전합니다. */
         mutable float2 _joystickAnchor{ 0.0f, 0.0f };           /**< VirtualJoystick2D 전용입니다. 드래그를 시작한 순간의 마우스 위치(플로팅 앵커)입니다. */
         mutable bool   _bJoystickAnchored{ false };             /**< VirtualJoystick2D 전용입니다. 드래그 중이라 앵커가 잡혀 있는지 나타냅니다. */
@@ -506,6 +515,15 @@ namespace sw
         ActionTrigger                getBindingTrigger( const hashed_string& action, uint32 bindIndex ) const;
         /** @brief 바인딩 @p bindIndex 의 발화 규칙을 바꿉니다(에디터용). 액션이나 바인딩이 없으면 false 입니다. */
         [[nodiscard]] bool   setBindingTrigger( const hashed_string& action, uint32 bindIndex, ActionTrigger trigger );
+        /**
+         * @brief 바인딩 @p bindIndex 의 발화 시간(`ActionBinding::_triggerTime`)을 바꿉니다. 0 이하면 맵 전체 값으로 돌아갑니다.
+         * @details 맵 정의의 일부라서 기본 바인딩(`resetActionToDefault` 가 되돌리는 대상)에도 같이 적는다. 액션이나 바인딩이 없으면 false 입니다.
+         */
+        [[nodiscard]] bool setBindingTriggerTime( const hashed_string& action, uint32 bindIndex, float32 seconds );
+        /** @brief 바인딩 @p bindIndex 의 값 부호 뒤집기(`ActionBinding::_bNegate`)를 바꿉니다. 기본 바인딩에도 같이 적습니다. */
+        [[nodiscard]] bool setBindingNegate( const hashed_string& action, uint32 bindIndex, bool bNegate );
+        /** @brief 바인딩의 트리거가 실제로 쓰는 시간(초)입니다. 바인딩 값이 0 이면 트리거별 맵 값입니다. 시간을 쓰지 않는 트리거는 0 입니다. */
+        float32 getEffectiveTriggerTime( const ActionBinding& binding ) const;
         uint32               getBindingCount( const hashed_string& action ) const;
         const ActionBinding* getBinding( const hashed_string& action, uint32 bindIndex ) const;
 
@@ -650,7 +668,7 @@ namespace sw
          *          마우스 이동량 몫(@p relative)은 묶지 않고 그대로 더한다. 이동량은 픽셀 단위 상대값이고, 반전은 바인딩 평가에서 이미 적용했기 때문이다.
          */
         float2 composeActionValue( const float2& bounded, const float2& relative ) const;
-        bool   evaluateTrigger( ActionTrigger trigger, const ActionBindingState& state, float32 deltaSeconds ) const;
+        bool   evaluateTrigger( const ActionBinding& binding, const ActionBindingState& state, float32 deltaSeconds ) const;
         bool   isBindingLayerActive( const ActionBinding& binding ) const;
         /**
          * @brief 활성 레이어의 코드(chord) 바인딩 중 수식 키가 눌려 있고 방아쇠 키가 조건을 만족하는 것이 있는지 봅니다.

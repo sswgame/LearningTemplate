@@ -1450,3 +1450,111 @@ SW_TEST_CASE( InputMapTest, CompositeBindingCountsATapWithinOneFrame )
     input.endFrame();
     input.shutdown();
 }
+
+/**
+ * @brief [InputMapTest] 바인딩마다 발화 시간(`time`)은 맵 전체 홀드 시간을 그 바인딩에만 덮어쓴다 — 짧은 차지와 긴 차지가 한 맵에 함께 있다
+ * @details 언리얼 Enhanced Input 의 트리거마다 시간, 유니티 Interaction 마다 duration 에 해당한다. 시간을 적지 않은 바인딩은 맵 값(0.4 초) 그대로다.
+ */
+SW_TEST_CASE( InputMapTest, PerBindingTriggerTimeOverridesTheMapHoldTime )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::InputMap& inputMap = input.getInputMap();
+    inputMap.bind( "QuickCharge", sw::Key::K, sw::ActionTrigger::HoldThreshold );
+    inputMap.bind( "FullCharge", sw::Key::K, sw::ActionTrigger::HoldThreshold );
+    SW_ASSERT_TRUE( inputMap.setBindingTriggerTime( "QuickCharge", 0, 0.1f ) );
+
+    const sw::ActionBinding* pQuick = inputMap.getBinding( "QuickCharge", 0 );
+    const sw::ActionBinding* pFull  = inputMap.getBinding( "FullCharge", 0 );
+    SW_ASSERT_NOT_NULL( pQuick );
+    SW_ASSERT_NOT_NULL( pFull );
+    SW_EXPECT_NEAR_EQUAL( 0.1f, inputMap.getEffectiveTriggerTime( *pQuick ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( inputMap.getHoldThreshold(), inputMap.getEffectiveTriggerTime( *pFull ), 1.0e-6f );
+
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::K ) );
+    input.beginFrame( 0.15f );
+    SW_EXPECT_TRUE( inputMap.wasActionTriggered( "QuickCharge" ) );
+    SW_EXPECT_FALSE( inputMap.wasActionTriggered( "FullCharge" ) );
+    input.endFrame();
+    input.beginFrame( 0.3f ); // 누른 지 0.45 초
+    SW_EXPECT_TRUE( inputMap.wasActionTriggered( "FullCharge" ) );
+    input.endFrame();
+
+    // 기본 바인딩에도 함께 적혀 기본값 되돌리기 뒤에도 남는다. 0 이하로 두면 맵 값으로 돌아간다.
+    SW_ASSERT_TRUE( inputMap.setBindingTriggerTime( "FullCharge", 0, 0.8f ) );
+    SW_EXPECT_TRUE( inputMap.resetActionToDefault( "FullCharge" ) );
+    SW_EXPECT_NEAR_EQUAL( 0.8f, inputMap.getBinding( "FullCharge", 0 )->_triggerTime, 1.0e-6f );
+    SW_ASSERT_TRUE( inputMap.setBindingTriggerTime( "FullCharge", 0, -1.0f ) );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, inputMap.getBinding( "FullCharge", 0 )->_triggerTime, 1.0e-6f );
+    SW_EXPECT_FALSE( inputMap.setBindingTriggerTime( "Missing", 0, 0.5f ) );
+    input.shutdown();
+}
+
+/**
+ * @brief [InputMapTest] `negate` 는 바인딩 값의 부호만 뒤집는다 — 눌림과 발화는 그대로다(언리얼 Negate, 유니티 Invert)
+ */
+SW_TEST_CASE( InputMapTest, NegateFlipsOnlyTheBindingValue )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::InputMap& inputMap = input.getInputMap();
+    inputMap.bindAxis1DComposite( "Steer", sw::Key::A, sw::Key::D );
+    SW_ASSERT_TRUE( inputMap.setBindingNegate( "Steer", 0, true ) );
+
+    input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::D ) );
+    input.beginFrame( 1.0f / 60.0f );
+    SW_EXPECT_NEAR_EQUAL( -1.0f, inputMap.getAxis1D( "Steer" ), 1.0e-5f );
+    SW_EXPECT_TRUE( inputMap.isActionDown( "Steer" ) );
+    SW_EXPECT_TRUE( inputMap.wasActionTriggered( "Steer" ) );
+    input.endFrame();
+    input.shutdown();
+}
+
+/**
+ * @brief [InputMapTest] `time` · `negate` 속성은 맵 정의와 유저 바인딩 둘 다 읽고 쓴다 — 없는 옛 파일은 기본값(0, false)으로 그대로 읽힌다
+ */
+SW_TEST_CASE( InputMapTest, TriggerTimeAndNegateRoundTripThroughXml )
+{
+    const sw::string definitionPath = test::makeTempPath( "binding_modifier.input.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( definitionPath, "<InputMap defaultLayer=\"Gameplay\">\n"
+                                                                 "\t<layers><layer name=\"Gameplay\" enabled=\"1\"/></layers>\n"
+                                                                 "\t<action name=\"Charge\" layer=\"Gameplay\">\n"
+                                                                 "\t\t<bind source=\"key\" code=\"K\" trigger=\"Hold\" time=\"0.75\"/>\n"
+                                                                 "\t\t<bind source=\"key\" code=\"L\" trigger=\"Hold\"/>\n"
+                                                                 "\t</action>\n"
+                                                                 "\t<action name=\"Steer\" layer=\"Gameplay\" valueType=\"Axis1D\">\n"
+                                                                 "\t\t<axis1d negative=\"A\" positive=\"D\" negate=\"true\"/>\n"
+                                                                 "\t</action>\n"
+                                                                 "\t<action name=\"Dodge\" layer=\"Gameplay\">\n"
+                                                                 "\t\t<chord modifier=\"LeftShift\" trigger=\"Space\" triggerMode=\"Tap\" time=\"0.3\"/>\n"
+                                                                 "\t</action>\n"
+                                                                 "</InputMap>\n" ) );
+
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::InputMap& inputMap = input.getInputMap();
+    SW_ASSERT_TRUE( inputMap.loadFromResource( definitionPath ) );
+    SW_ASSERT_EQUAL( 2u, inputMap.getBindingCount( "Charge" ) );
+    SW_EXPECT_NEAR_EQUAL( 0.75f, inputMap.getBinding( "Charge", 0 )->_triggerTime, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, inputMap.getBinding( "Charge", 1 )->_triggerTime, 1.0e-6f ); // 적지 않았으면 맵 값을 쓴다
+    SW_EXPECT_FALSE( inputMap.getBinding( "Charge", 1 )->_bNegate );
+    SW_ASSERT_NOT_NULL( inputMap.getBinding( "Steer", 0 ) );
+    SW_EXPECT_TRUE( inputMap.getBinding( "Steer", 0 )->_bNegate );
+    SW_ASSERT_NOT_NULL( inputMap.getBinding( "Dodge", 0 ) );
+    SW_EXPECT_NEAR_EQUAL( 0.3f, inputMap.getBinding( "Dodge", 0 )->_triggerTime, 1.0e-6f );
+
+    // 유저 바인딩 파일로 저장했다가 빈 맵에 읽어도 남는다. 유저 파일은 액션 순서가 해시 순이라 Charge 두 줄 중 큰 값을 본다.
+    const sw::string userPath = test::makeTempPath( "binding_modifier.user.xml" );
+    SW_ASSERT_TRUE( inputMap.saveUserBindings( userPath ) );
+    sw::InputMap reloaded;
+    SW_ASSERT_TRUE( reloaded.loadUserBindings( userPath ) );
+    SW_ASSERT_EQUAL( 2u, reloaded.getBindingCount( "Charge" ) );
+    const sw::float32 chargeTime0 = reloaded.getBinding( "Charge", 0 )->_triggerTime;
+    const sw::float32 chargeTime1 = reloaded.getBinding( "Charge", 1 )->_triggerTime;
+    SW_EXPECT_NEAR_EQUAL( 0.75f, chargeTime0 > chargeTime1 ? chargeTime0 : chargeTime1, 1.0e-6f );
+    SW_ASSERT_NOT_NULL( reloaded.getBinding( "Steer", 0 ) );
+    SW_EXPECT_TRUE( reloaded.getBinding( "Steer", 0 )->_bNegate );
+    SW_ASSERT_NOT_NULL( reloaded.getBinding( "Dodge", 0 ) );
+    SW_EXPECT_NEAR_EQUAL( 0.3f, reloaded.getBinding( "Dodge", 0 )->_triggerTime, 1.0e-6f );
+    input.shutdown();
+}
