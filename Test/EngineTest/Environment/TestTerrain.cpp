@@ -3,14 +3,19 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Environment/Terrain/HeightfieldData.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
 #include "Engine/Environment/Terrain/TerrainMeshBuilder.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
+#include "Engine/Resource/AssetManager.h"
+#include "Engine/Resource/Image/ImageFileWriter.h"
 #include "Engine/Scene/Scene.h"
 
 #include "TestFramework/TestFramework.h"
@@ -540,4 +545,78 @@ SW_TEST_CASE( TerrainTest, WriteLayerWeightsUpdatesSplat )
     outside.include( 3, 3 );
     outside.include( 4, 4 );
     SW_EXPECT_FALSE( field.writeSplatWeights( listWeight, outside ) );
+}
+
+/**
+ * @brief [TerrainTest] 칠하기는 지형마다 자기 스플랫 텍스처에 한다 — 같은 DDS 를 쓰는 다른 지형은 디스크 스플랫 그대로 · 텍스처 원본은 GPU 없이도 칠한 값을 따라간다
+ *        (디바이스를 다시 만들면 이 원본을 올린다) · `reloadTerrain` 은 자기 텍스처를 캐시에서 놓는다
+ * @details 변이: `writeLayerWeights` 가 디스크 경로(`_splatTexturePath`)에 구간을 올리면 자기 경로가 비어 첫 단언이 지고, 흘려보내기가 CPU 텍스처 원본을 고치지 않으면
+ *          두 번째 바이트 비교가 진다.
+ */
+SW_TEST_CASE( TerrainTest, PaintedSplatIsPerTerrainAndKeptOnCPU )
+{
+    SW_ASSERT_TRUE( engine::areEngineServicesBound() );
+    const string    heightfieldPath = test::makeTempPath( "paint.heightfield" );
+    HeightfieldData data            = TerrainTestUtil::makeData( 33, &TerrainTestUtil::wave );
+    SW_ASSERT_TRUE( data.saveToFile( heightfieldPath ) );
+    constexpr uint32 kSplatSize = 8;
+    vector<uint8>    splatBytes( kSplatSize * kSplatSize * 4, 0u );
+    for ( size_t texel = 0; texel < kSplatSize * kSplatSize; ++texel )
+    {
+        splatBytes[texel * 4] = 255u; // 전부 레이어 0
+    }
+    const string splatPath = test::makeTempPath( "paint_splat.dds" );
+    SW_ASSERT_TRUE( ImageFileWriter::writeDDSRgba8( splatPath, splatBytes, kSplatSize, kSplatSize ) );
+
+    GameObjectManager manager;
+    TerrainComponent* arrTerrain[2]{};
+    const utf8*       arrName[2] = { "PaintedTerrain", "OtherTerrain" };
+    for ( uint32 index = 0; index < 2; ++index )
+    {
+        GameObject* pObject = manager.createGameObject( hashed_string( arrName[index] ) );
+        SW_ASSERT_NOT_NULL( pObject );
+        TerrainComponent*& pTerrain = arrTerrain[index];
+        pTerrain                    = pObject->addComponent<TerrainComponent>();
+        SW_ASSERT_NOT_NULL( pTerrain );
+        pTerrain->setHeightfieldPath( heightfieldPath );
+        pTerrain->setSplatTexturePath( splatPath );
+        pTerrain->setSize( float2{ 32.0f, 32.0f } );
+        pTerrain->setHeightRange( TerrainTestUtil::kHeightMin, TerrainTestUtil::kHeightMax );
+        pTerrain->setChunkCells( 16 );
+        pTerrain->setMaterialPath( "" );
+        SW_ASSERT_TRUE( pTerrain->reloadTerrain() );
+    }
+    TerrainComponent& painted  = *arrTerrain[0];
+    TerrainComponent& other    = *arrTerrain[1];
+    TextureCache&     textures = engine::getAssetManager().getAssetCache<TextureCache>();
+    (void)textures.flushRegionUpdates( nullptr ); // 앞선 테스트가 남긴 구간을 비운다
+
+    vector<float4> listWeight;
+    SW_ASSERT_TRUE( painted.getHeightfield().readSplatWeights( listWeight ) );
+    listWeight[3 * kSplatSize + 2] = float4{ 0.0f, 1.0f, 0.0f, 0.0f };
+    TerrainSampleRect first;
+    first.include( 2, 3 );
+    SW_ASSERT_TRUE( painted.writeLayerWeights( listWeight, first ) );
+    const string ownPath = painted.getCPUSplatPath();
+    SW_ASSERT_TRUE( TextureCache::isCPUTexturePath( ownPath ) );
+    SW_EXPECT_TRUE( other.getCPUSplatPath().empty() );
+    SW_EXPECT_TRUE( other.getHeightfield().getSplatBytes() == splatBytes );
+    const Texture2D* pTexture = textures.find( ownPath );
+    SW_ASSERT_NOT_NULL( pTexture );
+    SW_EXPECT_TRUE( pTexture->getCPUBytes() == painted.getHeightfield().getSplatBytes() );
+
+    // 두 번째 쓰기는 같은 텍스처에 구간으로 간다. GPU 가 없어도 원본은 따라간다.
+    listWeight[5 * kSplatSize + 5] = float4{ 0.0f, 0.0f, 1.0f, 0.0f };
+    TerrainSampleRect second;
+    second.include( 5, 5 );
+    SW_ASSERT_TRUE( painted.writeLayerWeights( listWeight, second ) );
+    SW_EXPECT_EQUAL( ownPath, painted.getCPUSplatPath() );
+    SW_EXPECT_EQUAL( 1u, textures.flushRegionUpdates( nullptr ) );
+    SW_EXPECT_TRUE( pTexture->getCPUBytes() == painted.getHeightfield().getSplatBytes() );
+    SW_EXPECT_TRUE( pTexture->getCPUBytes() != splatBytes );
+
+    // 다시 읽으면 디스크 스플랫으로 돌아가고 자기 텍스처는 캐시에서 빠진다(빌린 머티리얼이 없다).
+    SW_ASSERT_TRUE( painted.reloadTerrain() );
+    SW_EXPECT_TRUE( painted.getCPUSplatPath().empty() );
+    SW_EXPECT_FALSE( textures.isCached( ownPath ) );
 }

@@ -46,6 +46,7 @@ namespace sw
             uint32                _refCount{ 0 };
             bool                  _bLoading{ false };   ///< 잠금 밖에서 올리는 중 — 다른 스레드는 `_cvLoaded` 로 기다린다
             bool                  _bPublished{ false }; ///< 한 번이라도 올라왔는가 — `find` 는 이것만 내준다
+            bool                  _bPinned{ false };    ///< CPU 텍스처 — `releaseCPUTexture` 전에는 참조가 0 이어도 지우지 않는다
         };
         struct RenderTargetSize
         {
@@ -98,6 +99,9 @@ namespace sw
             const auto it = _impl->_mapEntry.find( key );
             if ( it == _impl->_mapEntry.end() )
             {
+                // CPU 텍스처는 원본이 있어야 만든다 — 소유자가 이미 놓았다.
+                if ( isCPUTexturePath( key ) )
+                    return nullptr;
                 Impl::Entry& entry = _impl->_mapEntry[key];
                 entry._texture     = make_unique<Texture2D>();
                 entry._bLoading    = true;
@@ -130,9 +134,14 @@ namespace sw
         }
         lock.unlock();
 
-        // 렌더 텍스처는 파일이 없다. 알린 크기(없으면 기본)로 렌더 타깃을 만든다.
-        const bool bReady = bRenderTarget ? pTexture->createRenderTarget( pDevice, key, size._width, size._height, constant::kOffscreenColorFormat )
-                                          : pTexture->loadFromResource( pDevice, key );
+        // 렌더 텍스처는 파일이 없다. 알린 크기(없으면 기본)로 렌더 타깃을 만든다. CPU 텍스처는 자기 원본을 올린다.
+        bool bReady{ false };
+        if ( bRenderTarget )
+            bReady = pTexture->createRenderTarget( pDevice, key, size._width, size._height, constant::kOffscreenColorFormat );
+        else if ( pTexture->hasCPUBytes() )
+            bReady = pTexture->loadFromCPUBytes( pDevice );
+        else
+            bReady = pTexture->loadFromResource( pDevice, key );
 
         lock.lock();
         const auto it = _impl->_mapEntry.find( key );
@@ -147,7 +156,7 @@ namespace sw
         else
         {
             pTexture = nullptr;
-            if ( entry._refCount == 0 )
+            if ( entry._refCount == 0 && entry._bPinned == false )
                 _impl->_mapEntry.erase( it );
         }
         lock.unlock();
@@ -158,6 +167,44 @@ namespace sw
     bool TextureCache::isRenderTargetPath( string_view relativePath )
     {
         return StringUtil::startsWith( relativePath, string_view{ kRenderTargetPrefix }, true );
+    }
+
+    bool TextureCache::isCPUTexturePath( string_view relativePath )
+    {
+        return StringUtil::startsWith( relativePath, string_view{ kCPUTexturePrefix }, true );
+    }
+
+    bool TextureCache::createCPUTexture( string_view relativePath, uint32 width, uint32 height, vector<uint8> rgbaBytes )
+    {
+        const bool bSizeMatches  = width > 0 && height > 0 && rgbaBytes.size() == static_cast<size_t>( width ) * height * 4;
+        const bool bValidRequest = isCPUTexturePath( relativePath ) && bSizeMatches;
+        if ( _impl == nullptr || bValidRequest == false )
+            return false;
+        const string                        key = FileUtil::normalizePath( relativePath );
+        std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
+        if ( _impl->_mapEntry.find( key ) != _impl->_mapEntry.end() )
+            return false;
+        Impl::Entry& entry = _impl->_mapEntry[key];
+        entry._texture     = make_unique<Texture2D>();
+        entry._texture->setCPUBytes( key, width, height, std::move( rgbaBytes ) );
+        entry._bPublished = true;
+        entry._bPinned    = true;
+        return true;
+    }
+
+    void TextureCache::releaseCPUTexture( string_view relativePath )
+    {
+        if ( _impl == nullptr || isCPUTexturePath( relativePath ) == false )
+            return;
+        const string                        key = FileUtil::normalizePath( relativePath );
+        std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
+        const auto                          it = _impl->_mapEntry.find( key );
+        if ( it == _impl->_mapEntry.end() )
+            return;
+        it->second._bPinned = false;
+        // 참조가 0 이면 GPU 자원도 없다(`release` 가 내렸고 `initRHI` 는 CPU 텍스처를 올리지 않는다).
+        if ( it->second._refCount == 0 && it->second._bLoading == false )
+            _impl->_mapEntry.erase( it );
     }
 
     void TextureCache::declareRenderTarget( string_view relativePath, uint32 width, uint32 height )
@@ -229,8 +276,10 @@ namespace sw
     void TextureCache::reload( string_view relativePath, IRHIDevice* pDevice )
     {
         SW_MEMORY_SCOPE( Texture );
-        // 렌더 텍스처는 디스크에 없다 — 다시 읽을 것이 없다.
-        if ( relativePath.empty() || _impl == nullptr || pDevice == nullptr || isRenderTargetPath( relativePath ) )
+        // 렌더 텍스처 · CPU 텍스처는 디스크에 없다 — 다시 읽을 것이 없다.
+        const bool bNotOnDisk = relativePath.empty() || isRenderTargetPath( relativePath ) || isCPUTexturePath( relativePath );
+        const bool bCanReload = _impl != nullptr && pDevice != nullptr;
+        if ( bNotOnDisk || bCanReload == false )
             return;
         const string key = FileUtil::normalizePath( relativePath );
 
@@ -288,7 +337,8 @@ namespace sw
         std::shared_lock<std::shared_mutex> lock{ _impl->_mutex };
         const auto                          it = _impl->_mapEntry.find( key );
         // 올리는 중(처음 acquire · reload)인 항목은 내주지 않는다 — 그 스레드가 잠금 없이 같은 객체의 핸들 · SRV 를 바꾸고 있다.
-        if ( it == _impl->_mapEntry.end() || it->second._bPublished == false || it->second._bLoading )
+        const bool bReady = it != _impl->_mapEntry.end() && it->second._bPublished && it->second._bLoading == false;
+        if ( bReady == false )
             return nullptr;
         return it->second._texture.get();
     }
@@ -316,7 +366,7 @@ namespace sw
 
     uint32 TextureCache::flushRegionUpdates( IRHIDevice* pDevice )
     {
-        if ( _impl == nullptr || pDevice == nullptr )
+        if ( _impl == nullptr )
             return 0;
         {
             std::scoped_lock<mutex> lock{ _impl->_regionMutex };
@@ -324,20 +374,37 @@ namespace sw
                 return 0;
             _impl->_listFlushingRegion.swap( _impl->_listPendingRegion );
         }
-        uint32 uploadedCount{ 0 };
+        uint32                     uploadedCount{ 0 };
+        vector<Impl::RegionUpdate> listRetry;
         for ( Impl::RegionUpdate& update : _impl->_listFlushingRegion )
         {
             // 올리는 동안 같은 텍스처를 놓거나 다시 올리지 못하게 읽기 잠금을 쥔다(release · reload 는 쓰기 잠금을 잡는다).
             std::shared_lock<std::shared_mutex> lock{ _impl->_mutex };
-            const auto                          it        = _impl->_mapEntry.find( update._key );
-            const bool                          bResident = it != _impl->_mapEntry.end() && it->second._bPublished && it->second._bLoading == false &&
-                                   it->second._texture != nullptr && it->second._texture->isRHIValid();
-            if ( bResident == false )
+            const auto                          it     = _impl->_mapEntry.find( update._key );
+            Texture2D*                          pFound = it != _impl->_mapEntry.end() ? it->second._texture.get() : nullptr;
+            RHITextureRegionUploadDesc          desc{};
+            desc._pData     = update._rgbaBytes.data();
+            desc._sizeBytes = static_cast<uint32>( update._rgbaBytes.size() );
+            desc._x         = update._x;
+            desc._y         = update._y;
+            desc._width     = update._width;
+            desc._height    = update._height;
+            // CPU 텍스처는 GPU 에 없어도 원본을 고친다. 올리는 중이면 다음 프레임으로 미룬다(그 스레드가 원본을 읽고 있다).
+            if ( pFound != nullptr && pFound->hasCPUBytes() )
+            {
+                if ( it->second._bLoading )
+                    listRetry.push_back( std::move( update ) );
+                else if ( pFound->writeCPUBytes( pDevice, desc ) )
+                    ++uploadedCount;
+                continue;
+            }
+            const bool bResident = pFound != nullptr && it->second._bPublished && it->second._bLoading == false && pFound->isRHIValid();
+            if ( bResident == false || pDevice == nullptr )
             {
                 SW_LOG_WARNING( "Region update for texture %# dropped - the texture is not resident", update._key.c_str() );
                 continue;
             }
-            const Texture2D& texture = *it->second._texture;
+            const Texture2D& texture = *pFound;
             if ( texture.getFormat() == RHIFormat::B8G8R8A8_UNORM )
             {
                 for ( size_t offset = 0; offset + 3 < update._rgbaBytes.size(); offset += 4 )
@@ -350,17 +417,17 @@ namespace sw
                 SW_LOG_WARNING( "Region update for texture %# dropped - only RGBA8 and BGRA8 textures take RGBA8 bytes", update._key.c_str() );
                 continue;
             }
-            RHITextureRegionUploadDesc desc{};
-            desc._pData     = update._rgbaBytes.data();
-            desc._sizeBytes = static_cast<uint32>( update._rgbaBytes.size() );
-            desc._x         = update._x;
-            desc._y         = update._y;
-            desc._width     = update._width;
-            desc._height    = update._height;
             if ( pDevice->getResourceFactory()->uploadTexture2DRegion( texture.getHandle(), desc ) )
                 ++uploadedCount;
         }
         _impl->_listFlushingRegion.clear();
+        if ( listRetry.empty() == false )
+        {
+            // 미룬 것은 새로 들어온 것보다 앞에 둔다 — 같은 자리를 다시 칠했으면 나중 것이 이긴다.
+            std::scoped_lock<mutex> lock{ _impl->_regionMutex };
+            listRetry.insert( listRetry.end(), std::make_move_iterator( _impl->_listPendingRegion.begin() ), std::make_move_iterator( _impl->_listPendingRegion.end() ) );
+            _impl->_listPendingRegion.swap( listRetry );
+        }
         return uploadedCount;
     }
     void TextureCache::release( string_view relativePath, IRHIDevice* pDevice )
@@ -380,7 +447,9 @@ namespace sw
         {
             if ( it->second._texture != nullptr )
                 it->second._texture->releaseRHI( pDevice );
-            _impl->_mapEntry.erase( it );
+            // CPU 텍스처는 원본을 남긴다 — 소유자가 `releaseCPUTexture` 로 지운다.
+            if ( it->second._bPinned == false )
+                _impl->_mapEntry.erase( it );
         }
     }
 

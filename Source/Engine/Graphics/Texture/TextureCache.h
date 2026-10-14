@@ -44,6 +44,8 @@ namespace sw
         static constexpr const utf8* kRenderTargetPrefix = "rendertarget/";
         /// @brief 크기를 알리지 않은 렌더 텍스처의 한 변(px)입니다.
         static constexpr uint32 kDefaultRenderTargetSize = 256;
+        /// @brief CPU 텍스처 경로의 머리입니다(`createCPUTexture`).
+        static constexpr const utf8* kCPUTexturePrefix = "cpu/";
 
         /**
          * @brief 경로의 텍스처를 확보하고 GPU 에 올립니다(렌더 텍스처 경로면 렌더 타깃을 만든다). 실패하면 nullptr 입니다.
@@ -53,6 +55,17 @@ namespace sw
         Texture2D* acquire( string_view relativePath, IRHIDevice* pDevice );
         /** @brief 렌더 텍스처 경로(`rendertarget/...`)인지입니다. */
         static bool isRenderTargetPath( string_view relativePath );
+        /** @brief CPU 텍스처 경로(`cpu/...`)인지입니다. */
+        static bool isCPUTexturePath( string_view relativePath );
+        /**
+         * @brief CPU 픽셀(RGBA8 밉 하나, 빈틈없는 행)을 원본으로 하는 텍스처를 @p relativePath(`cpu/...`)에 만듭니다(게임 스레드). GPU 자원은 첫 `acquire` 가 올립니다.
+         * @details 언리얼 랜드스케이프 가중치 맵 · 유니티 `TerrainData` 알파맵처럼 **한 소유자만 쓰는** 텍스처입니다(지형마다의 스플랫). 원본은 캐시가 들고
+         *          `requestRegionUpdate` 가 고치므로 디바이스를 다시 만들어도 칠한 내용이 남습니다. 항목은 `releaseCPUTexture` 까지 남습니다(참조 0 이면 GPU 자원만 내립니다).
+         * @return 경로가 `cpu/` 가 아니거나, 이미 있거나, 크기가 틀리면 false 입니다.
+         */
+        [[nodiscard]] bool createCPUTexture( string_view relativePath, uint32 width, uint32 height, vector<uint8> rgbaBytes );
+        /** @brief `createCPUTexture` 로 만든 항목을 놓습니다(게임 스레드). 빌린 머티리얼이 남아 있으면 그쪽의 마지막 `release` 가 지웁니다. */
+        void releaseCPUTexture( string_view relativePath );
         /**
          * @brief 렌더 텍스처의 크기를 알립니다(게임 스레드 — 카메라가 붙을 때). 이미 만들어진 것은 바꾸지 않습니다(다음에 새로 만들 때부터).
          * @details 머티리얼이 카메라보다 먼저 빌려도 같은 크기로 만들어지게 하는 자리입니다. 렌더러는 늘 텍스처의 실제 크기로 그립니다.
@@ -90,12 +103,14 @@ namespace sw
          * @details @p rgbaBytes 는 RGBA8 순서의 빈틈없는 행(`width × 4` 바이트) × @p height 입니다. 텍스처가 BGRA8 이면 렌더 스레드가 채널을 바꿔 올리고,
          *          다른 포맷이거나 그때 캐시에 없으면 버립니다(경고). 밉 0 만 올리므로 밉이 없는 텍스처(`Terrain_Weights` 규칙)용입니다.
          *          업로드는 호출당 비용이라 부르는 쪽이 한 프레임의 변경을 사각형 하나로 모아 한 번 부릅니다. 디스크의 DDS 는 바꾸지 않으므로
-         *          디바이스를 다시 만들거나(`initRHI`) `reload` 하면 디스크 내용으로 돌아갑니다.
+         *          디바이스를 다시 만들거나(`initRHI`) `reload` 하면 디스크 내용으로 돌아갑니다 — 내용이 남아야 하면 CPU 텍스처(`createCPUTexture`)에 씁니다.
+         *          CPU 텍스처는 GPU 에 없어도 원본을 고칩니다.
          */
         void requestRegionUpdate( string_view relativePath, uint32 x, uint32 y, uint32 width, uint32 height, vector<uint8> rgbaBytes );
         /**
          * @brief 맡겨 둔 구간 업로드를 모두 올립니다(렌더 스레드 — 프레임 기록 전, `FrameRenderer::executePacket`).
-         * @return 실제로 올린 구간 수입니다.
+         * @details @p pDevice 가 nullptr 이면 CPU 텍스처의 원본만 고치고 나머지는 버립니다(GPU 없는 테스트).
+         * @return 반영한 구간 수입니다.
          */
         uint32 flushRegionUpdates( IRHIDevice* pDevice );
         /** @brief 참조를 하나 놓습니다. 0 이 되면 GPU 자원까지 해제합니다. */

@@ -41,6 +41,13 @@ namespace sw
              */
             static constexpr uint32 kMaxChunkMeshRebuildsPerFrame = 4;
 
+            /** @brief 지형마다의 스플랫 텍스처 경로(`cpu/terrain/<번호>`)를 새로 냅니다. 놓인 경로를 다시 쓰지 않도록 번호는 프로세스 안에서 늘기만 한다. */
+            static string makeCPUSplatPath()
+            {
+                static atomic<uint32> s_serial{ 0 };
+                return string{ TextureCache::kCPUTexturePrefix } + "terrain/splat" + to_string( s_serial.fetch_add( 1u, std::memory_order_relaxed ) );
+            }
+
             static const hashed_string& getLayerColorName( uint32 layerIndex )
             {
                 static const hashed_string s_arrName[TerrainComponent::kMaxLayerCount] = { hashed_string( "layer0Color" ), hashed_string( "layer1Color" ),
@@ -116,6 +123,7 @@ namespace sw
     TerrainComponent::~TerrainComponent()
     {
         releaseChunks();
+        releaseCPUSplat();
     }
 
     void TerrainComponent::onRegister( GameObjectManager& manager )
@@ -131,6 +139,7 @@ namespace sw
     {
         releaseChunks();
         _material.release();
+        releaseCPUSplat();
         _pPrimitiveRegistry = nullptr;
         manager.getComponentRegistry().remove<TerrainComponent>( this );
         SceneComponent::onUnregister( manager );
@@ -193,8 +202,9 @@ namespace sw
             return;
         }
         (void)rebuildStaleChunkMeshes( TerrainComponentInternal::kMaxChunkMeshRebuildsPerFrame );
-        float3 viewPosition{};
-        if ( pManager != nullptr && _listChunk.empty() == false && EnvironmentUtil::findViewPosition( *pManager, viewPosition ) )
+        float3     viewPosition{};
+        const bool bHasChunks = pManager != nullptr && _listChunk.empty() == false;
+        if ( bHasChunks && EnvironmentUtil::findViewPosition( *pManager, viewPosition ) )
             (void)updateLODs( viewPosition );
     }
 
@@ -228,6 +238,7 @@ namespace sw
         _listChunkGeneration.clear();
         ++_heightfieldGeneration; // 실패해도 오른다 — 비워진 높이장으로 만든 바디도 낡았다
         _splatRevision = 0;
+        releaseCPUSplat(); // 칠한 것은 버리고 디스크 스플랫으로 돌아간다
         if ( _heightfieldPath.empty() )
             return false;
 
@@ -305,21 +316,45 @@ namespace sw
         if ( _heightfield.writeSplatWeights( listWeight, rect ) == false )
             return false;
         ++_splatRevision;
-        // GPU 스플랫은 바뀐 사각형만 한 번에 올린다(렌더 스레드가 다음 프레임 기록 전에 올린다). 엔진 서비스가 없으면(CPU 테스트) CPU 값만 바뀐다.
-        if ( _splatTexturePath.empty() || engine::areEngineServicesBound() == false )
+        // 엔진 서비스가 없으면(CPU 테스트) CPU 값만 바뀐다.
+        if ( engine::areEngineServicesBound() == false )
             return true;
-        const uint32         width      = rect._maxX - rect._minX + 1;
-        const uint32         height     = rect._maxZ - rect._minZ + 1;
+        TextureCache&        textures   = engine::getAssetManager().getAssetCache<TextureCache>();
         const uint32         splatWidth = _heightfield.getSplatWidth();
         const vector<uint8>& listByte   = _heightfield.getSplatBytes();
-        vector<uint8>        rgbaBytes( static_cast<size_t>( width ) * height * 4 );
+        // 처음 칠하면 이 지형만의 스플랫 텍스처를 지금 가중치 전부로 만들고 머티리얼을 그쪽으로 바꾼다(헤더 — 디스크 DDS 는 다른 지형과 나눠 쓴다).
+        if ( _cpuSplatPath.empty() )
+        {
+            string path = TerrainComponentInternal::makeCPUSplatPath();
+            if ( textures.createCPUTexture( path, splatWidth, _heightfield.getSplatHeight(), listByte ) == false )
+            {
+                SW_LOG_WARNING( "Terrain '%#': could not create its own splat texture - the painted weights stay on the CPU", _heightfieldPath.c_str() );
+                return true;
+            }
+            _cpuSplatPath = std::move( path );
+            _material.setTexture( hashed_string( "splatMap" ), _cpuSplatPath );
+            return true;
+        }
+        // 그 뒤로는 바뀐 사각형만 한 번에 올린다(렌더 스레드가 다음 프레임 기록 전에 올린다).
+        const uint32  width  = rect._maxX - rect._minX + 1;
+        const uint32  height = rect._maxZ - rect._minZ + 1;
+        vector<uint8> rgbaBytes( static_cast<size_t>( width ) * height * 4 );
         for ( uint32 row = 0; row < height; ++row )
         {
             const size_t source = ( static_cast<size_t>( rect._minZ + row ) * splatWidth + rect._minX ) * 4;
             Memory::copy( rgbaBytes.data() + static_cast<size_t>( row ) * width * 4, listByte.data() + source, static_cast<size_t>( width ) * 4 );
         }
-        engine::getAssetManager().getAssetCache<TextureCache>().requestRegionUpdate( _splatTexturePath, rect._minX, rect._minZ, width, height, std::move( rgbaBytes ) );
+        textures.requestRegionUpdate( _cpuSplatPath, rect._minX, rect._minZ, width, height, std::move( rgbaBytes ) );
         return true;
+    }
+
+    void TerrainComponent::releaseCPUSplat()
+    {
+        if ( _cpuSplatPath.empty() )
+            return;
+        if ( engine::areEngineServicesBound() )
+            engine::getAssetManager().getAssetCache<TextureCache>().releaseCPUTexture( _cpuSplatPath );
+        _cpuSplatPath.clear();
     }
 
     bool TerrainComponent::saveHeightfield( string_view filePath ) const

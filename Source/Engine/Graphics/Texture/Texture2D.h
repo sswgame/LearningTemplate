@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/vector.h"
 
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -36,11 +37,30 @@ namespace sw
          * @details 렌더러가 카메라의 그림을 여기에 그리고, 머티리얼은 DDS 텍스처와 같은 SRV 로 읽습니다. 디바이스가 바뀌면 같은 크기로 다시 만듭니다(내용은 비어 있다).
          */
         [[nodiscard]] bool createRenderTarget( IRHIDevice* pDevice, string_view name, uint32 width, uint32 height, RHIFormat format );
+        /**
+         * @brief CPU 픽셀(RGBA8, 밉 하나)을 원본으로 둡니다(CPU 텍스처 — 지형마다의 스플랫). GPU 자원은 만들지 않습니다(`loadFromCPUBytes`).
+         * @details 원본은 이 객체가 들고 있어 디바이스가 바뀌어도 칠한 내용이 남습니다. 공개 전(게임 스레드 — `TextureCache::createCPUTexture`)에만 부릅니다.
+         */
+        void setCPUBytes( string_view name, uint32 width, uint32 height, vector<uint8> rgbaBytes );
+        /** @brief CPU 픽셀 원본을 GPU 에 올립니다(렌더 스레드). 이미 올라가 있으면 true 입니다. */
+        [[nodiscard]] bool loadFromCPUBytes( IRHIDevice* pDevice );
+        /**
+         * @brief CPU 픽셀 원본의 사각형을 @p desc(RGBA8 행)로 바꾸고, GPU 에 올라가 있으면 그 구간도 올립니다(렌더 스레드).
+         * @return 원본이 없거나 범위 · 크기가 틀리거나 업로드가 실패하면 false 입니다.
+         */
+        [[nodiscard]] bool writeCPUBytes( IRHIDevice* pDevice, const RHITextureRegionUploadDesc& desc );
+        /** @brief CPU 픽셀 원본을 가진 텍스처인지입니다. */
+        bool                 hasCPUBytes() const { return _cpuBytes.empty() == false; }
+        const vector<uint8>& getCPUBytes() const { return _cpuBytes; }
         /** @brief (RHIRenderResource) 살아 있는 디바이스에 텍스처를 돌려줍니다. */
         void releaseRHI( IRHIDevice* pDevice ) override;
         /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 핸들만 잊습니다. */
         void forgetRHI( IRHIDevice* pDevice ) override;
-        /** @brief (RHIRenderResource) 새 디바이스에 같은 경로의 DDS 를 다시 올립니다(렌더 타깃이면 같은 크기로 다시 만듭니다). */
+        /**
+         * @brief (RHIRenderResource) 새 디바이스에 같은 경로의 DDS 를 다시 올립니다(렌더 타깃이면 같은 크기로 다시 만듭니다).
+         * @details CPU 텍스처는 여기서 올리지 않습니다. 빌린 머티리얼이 디바이스 교체 때 놓았다가 다시 빌리면 `TextureCache::acquire` 가 올립니다
+         *          — 참조가 0 인 CPU 텍스처는 GPU 자원이 없다는 캐시의 불변식을 지키기 위해서입니다.
+         */
         bool initRHI( IRHIDevice* pDevice ) override;
 
         bool               isRHIValid() const { return _handle != 0 && _srv != kInvalidDescriptorIndex; }
@@ -67,5 +87,6 @@ namespace sw
         uint32             _mipCount;
         RHIFormat          _format;
         uint8              _bRenderTarget; ///< `createRenderTarget` 으로 만들었다 — 다시 만들 때 DDS 를 읽지 않는다
+        vector<uint8>      _cpuBytes;      ///< CPU 텍스처의 원본(RGBA8 밉 0) — 비었으면 DDS · 렌더 타깃이다
     };
 } // namespace sw

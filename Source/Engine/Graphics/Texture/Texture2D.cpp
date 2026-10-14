@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/Texture/Texture2D.h"
 
+#include "Core/Memory/Memory.h"
+
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Resource/AssetLoadProfiler.h"
@@ -205,7 +207,85 @@ namespace sw
         // 렌더 타깃은 파일이 없다 — 같은 크기 · 포맷으로 다시 만든다(그림은 다음에 그 뷰를 그릴 때 채워진다).
         if ( _bRenderTarget == SW_TRUE )
             return createRenderTarget( pDevice, _path, _width, _height, _format );
+        // CPU 텍스처는 다시 빌릴 때 캐시가 올린다(헤더 — 참조 0 이면 GPU 자원이 없다).
+        if ( hasCPUBytes() )
+            return true;
         return loadFromResource( pDevice, _path );
+    }
+
+    void Texture2D::setCPUBytes( string_view name, uint32 width, uint32 height, vector<uint8> rgbaBytes )
+    {
+        SW_ASSERT( _handle == 0 );
+        _path     = string{ name };
+        _width    = width;
+        _height   = height;
+        _mipCount = 1;
+        _format   = RHIFormat::R8G8B8A8_UNORM;
+        _cpuBytes = std::move( rgbaBytes );
+    }
+
+    bool Texture2D::loadFromCPUBytes( IRHIDevice* pDevice )
+    {
+        if ( isRHIValid() )
+            return true;
+        if ( pDevice == nullptr || hasCPUBytes() == false )
+            return false;
+        RHITextureDesc desc{};
+        desc._width                    = _width;
+        desc._height                   = _height;
+        desc._mipLevels                = 1;
+        desc._format                   = _format;
+        desc._bIsShaderResource        = SW_TRUE;
+        IRHIResourceFactory* pResource = pDevice->getResourceFactory();
+        _handle                        = pResource->createTexture2D( desc );
+        if ( _handle == 0 )
+        {
+            SW_LOG_ERROR( "Texture2D: createTexture2D failed for CPU texture '%#' (%#×%#)", _path.c_str(), _width, _height );
+            return false;
+        }
+        RHITextureUploadDesc upload{};
+        upload._pData     = _cpuBytes.data();
+        upload._sizeBytes = static_cast<uint32>( _cpuBytes.size() );
+        upload._mipLevels = 1;
+        if ( pResource->uploadTexture2D( _handle, upload ) == false )
+        {
+            SW_LOG_ERROR( "Texture2D: uploadTexture2D failed for CPU texture '%#'", _path.c_str() );
+            pResource->destroyTexture( _handle );
+            _handle = 0;
+            return false;
+        }
+        _srv = pResource->registerBindlessTexture( _handle );
+        if ( _srv == kInvalidDescriptorIndex )
+        {
+            SW_LOG_ERROR( "Texture2D: registerBindlessTexture failed for CPU texture '%#'", _path.c_str() );
+            pResource->destroyTexture( _handle );
+            _handle = 0;
+            return false;
+        }
+        _pDevice = pDevice;
+        return true;
+    }
+
+    bool Texture2D::writeCPUBytes( IRHIDevice* pDevice, const RHITextureRegionUploadDesc& desc )
+    {
+        const size_t rowBytes     = static_cast<size_t>( desc._width ) * 4;
+        const bool   bInsideX     = desc._x + desc._width <= _width;
+        const bool   bInsideY     = desc._y + desc._height <= _height;
+        const bool   bEnoughBytes = desc._pData != nullptr && desc._sizeBytes >= rowBytes * desc._height;
+        const bool   bValidRegion = bInsideX && bInsideY && bEnoughBytes && desc._mip == 0;
+        if ( hasCPUBytes() == false || bValidRegion == false )
+            return false;
+        const uint8* pSource = static_cast<const uint8*>( desc._pData );
+        for ( uint32 row = 0; row < desc._height; ++row )
+        {
+            const size_t target = ( static_cast<size_t>( desc._y + row ) * _width + desc._x ) * 4;
+            Memory::copy( _cpuBytes.data() + target, pSource + row * rowBytes, rowBytes );
+        }
+        // GPU 에 없으면 원본만 고친다 — 다음에 올릴 때(`loadFromCPUBytes`) 이 내용이 올라간다.
+        const bool bResidentOnDevice = pDevice != nullptr && isRHIValid() && _pDevice == pDevice;
+        if ( bResidentOnDevice == false )
+            return true;
+        return pDevice->getResourceFactory()->uploadTexture2DRegion( _handle, desc );
     }
 
     void Texture2D::forgetRHI( IRHIDevice* pDevice )
@@ -235,8 +315,8 @@ namespace sw
         _handle  = 0;
         _srv     = kInvalidDescriptorIndex;
         _pDevice = nullptr;
-        // 렌더 타깃은 크기 · 포맷이 곧 정의다 — 새 디바이스에서 다시 만들 때(`initRHI`) 쓴다.
-        if ( _bRenderTarget == SW_TRUE )
+        // 렌더 타깃 · CPU 텍스처는 크기 · 포맷이 곧 정의다 — 다시 만들 때 쓴다.
+        if ( _bRenderTarget == SW_TRUE || hasCPUBytes() )
             return;
         _width    = 0;
         _height   = 0;

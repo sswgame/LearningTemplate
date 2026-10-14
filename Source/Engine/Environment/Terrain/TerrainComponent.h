@@ -123,13 +123,16 @@ namespace sw
         [[nodiscard]] bool writeHeights( const vector<float32>& listHeight, const TerrainSampleRect& rect );
         /**
          * @brief 레이어 가중치 전부(`getHeightfield().readSplatWeights` 로 읽어 고친 사본)에서 @p rect(스플랫 텍셀 좌표)를 CPU 스플랫에 반영하고 `getSplatRevision` 을 올립니다.
-         * @details GPU 스플랫 텍스처는 @p rect 만 한 번에 올리도록 맡긴다(`TextureCache::requestRegionUpdate` — 렌더 스레드가 다음 프레임 기록 전에 올린다).
-         *          텍스처는 경로로 캐시가 나눠 쓰므로 같은 스플랫을 쓰는 다른 지형의 그림도 바뀐다(CPU 가중치는 이 지형만). 디스크 DDS 는 `saveSplat` 전까지 그대로라
-         *          디바이스를 다시 만들면(백엔드 교체) GPU 는 디스크 값으로 돌아간다. 틱 밖에서만 부른다.
+         * @details 처음 쓸 때 이 지형만의 CPU 텍스처(`getCPUSplatPath`, `TextureCache::createCPUTexture`)를 만들어 머티리얼의 스플랫을 그것으로 바꾼다 — 디스크 DDS 는
+         *          경로로 캐시가 나눠 쓰므로 그대로 칠하면 같은 스플랫을 쓰는 다른 지형도 칠해지고, 디바이스를 다시 만들면 디스크 값으로 돌아간다(언리얼 랜드스케이프 가중치 맵처럼
+         *          지형마다 자기 텍스처를 둔다). 다음 쓰기부터는 @p rect 만 한 번에 맡긴다(`TextureCache::requestRegionUpdate` — 렌더 스레드가 다음 프레임 기록 전에 올린다).
+         *          디스크 DDS 는 `saveSplat` 전까지 그대로이고 `reloadTerrain` 은 디스크 값으로 돌아간다. 틱 밖에서만 부른다.
          */
         [[nodiscard]] bool writeLayerWeights( const vector<float4>& listWeight, const TerrainSampleRect& rect );
         /** @brief `writeLayerWeights` 마다 오르는 세대입니다(`reloadTerrain` 은 0 으로 돌립니다). 가중치로 만든 것(레이어 필터 배치)이 낡았는지 견줍니다. */
         uint32 getSplatRevision() const { return _splatRevision; }
+        /** @brief 칠한 뒤 이 지형이 그리는 자기 스플랫 텍스처의 캐시 경로(`cpu/terrain/...`)입니다. 아직 칠하지 않았으면 비어 있습니다(디스크 스플랫을 그린다). */
+        const string& getCPUSplatPath() const { return _cpuSplatPath; }
         /** @brief 지금 높이를 `.heightfield` 형식으로 절대 경로에 씁니다(높이는 `_heightMin`..`_heightMax` 로 양자화). 높이장이 없으면 false 입니다. */
         [[nodiscard]] bool saveHeightfield( string_view filePath ) const;
         /** @brief 지금 CPU 스플랫을 비압축 RGBA8 DDS 로 절대 경로에 씁니다. 스플랫이 없으면 false 입니다. */
@@ -185,6 +188,8 @@ namespace sw
         void acquireMaterial();
         /** @brief 스플랫 DDS 를 CPU 로 읽어 높이장에 줍니다. 비압축 RGBA8/BGRA8 만 읽습니다. */
         void loadSplatWeights();
+        /** @brief 자기 스플랫 텍스처(`_cpuSplatPath`)를 캐시에 돌려줍니다. 없으면 아무것도 하지 않습니다. */
+        void releaseCPUSplat();
 
     private:
         PROPERTY( Category = "Terrain", DisplayName = "Heightfield", AssetPath, Tooltip = "Imported .heightfield asset" )
@@ -221,6 +226,7 @@ namespace sw
         vector<uint32>      _listChunkGeneration; ///< 청크마다 높이를 마지막으로 바꾼 세대(`getChunkGenerations`)
         vector<uint32>      _listStaleChunk;      ///< 메시를 다시 만들 청크(쓴 순서, `rebuildStaleChunkMeshes`)
         EnvironmentMaterial _material;
+        string              _cpuSplatPath;          ///< 칠한 뒤의 자기 스플랫 텍스처(`getCPUSplatPath`)
         PrimitiveRegistry*  _pPrimitiveRegistry;    ///< 등록된 매니저의 레지스트리(구조 링크라 생포인터)
         uint32              _heightfieldGeneration; ///< `reloadTerrain` 과 `writeHeights` 마다 오른다(`getHeightfieldGeneration`)
         uint32              _splatRevision;         ///< `writeLayerWeights` 마다 오른다(`getSplatRevision`)
