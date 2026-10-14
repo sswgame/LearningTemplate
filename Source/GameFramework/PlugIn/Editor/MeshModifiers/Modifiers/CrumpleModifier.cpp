@@ -76,12 +76,14 @@ namespace sw::editor
     public:
         CrumpleModifier()
             : MeshModifier()
-            , _amplitudeParam{ addParam( MeshModifierParamDef{ "Amplitude", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _frequencyParam{ addParam( MeshModifierParamDef{ "Frequency", MeshModifierParamKind::Float, 0.001f, 100.0f, float3{ 2.0f, 0.0f, 0.0f } } ) }
-            , _seedParam{ addParam( MeshModifierParamDef{ "Seed", MeshModifierParamKind::Int, 0.0f, 65535.0f, float3{ 0.0f, 0.0f, 0.0f } } ) }
-            , _normalBlendParam{ addParam( MeshModifierParamDef{ "Normal Blend", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.5f, 0.0f, 0.0f } } ) }
+            , _amplitudeParam{ addParam( MeshModifierParamDef{ "Amplitude", MeshModifierParamKind::Float, 0.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Shape", "Crumple depth; 0 leaves the mesh unchanged", "m" ) ) }
+            , _frequencyParam{ addParam( MeshModifierParamDef{ "Frequency", MeshModifierParamKind::Float, 0.001f, 100.0f, float3{ 2.0f, 0.0f, 0.0f } }.withLayout( "Noise", "Number of wrinkles per meter" ) ) }
+            , _seedParam{ addParam( MeshModifierParamDef{ "Seed", MeshModifierParamKind::Int, 0.0f, 65535.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Noise", "Random seed for the wrinkle pattern" ) ) }
+            , _normalBlendParam{ addParam( MeshModifierParamDef{ "Normal Blend", MeshModifierParamKind::Float, 0.0f, 1.0f, float3{ 0.5f, 0.0f, 0.0f } }.withLayout( "Shape", "0 pushes along noise directions, 1 pushes along vertex normals" ) ) }
         {
         }
+
+        const utf8* getDescription() const override { return "Crumples the surface with noise along the normals like crushed paper."; }
 
         bool supportsGPU() const override { return true; }
 
