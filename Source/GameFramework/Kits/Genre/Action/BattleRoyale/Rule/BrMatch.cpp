@@ -69,9 +69,9 @@ namespace sw
 
     void BrMatch::initializePlayer( BrPlayer& outPlayer, int32 team, int32 participant ) const
     {
-        const BrPlayerSettings& playerSettings = _pCatalog->getPlayerSettings();
-        BrPlayer&               player         = outPlayer;
-        player._team                           = team;
+        const BrPlayerDef& playerSettings = _pCatalog->getPlayerSettings();
+        BrPlayer&          player         = outPlayer;
+        player._team                      = team;
 
         VitalitySettings vitality;
         vitality._maxHealth               = playerSettings._maxHealth;

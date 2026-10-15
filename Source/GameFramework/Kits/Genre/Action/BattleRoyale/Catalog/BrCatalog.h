@@ -29,7 +29,7 @@ namespace sw
 namespace sw
 {
     /** @brief 자기장 설정입니다. */
-    struct BrZoneSettings
+    struct BrZoneDef
     {
         vector<BrZonePhaseDef> _listPhase{};
         float32                _startRadius{ 0.0f };  ///< 첫 원 반지름(0이면 맵을 덮는 반 대각선)
@@ -40,7 +40,7 @@ namespace sw
 namespace sw
 {
     /** @brief 비행기 설정입니다. 거리는 m, 속도는 m/s 입니다. */
-    struct BrFlightSettings
+    struct BrFlightDef
     {
         float32 _speed{ 100.0f };
         float32 _altitude{ 600.0f };
@@ -53,7 +53,7 @@ namespace sw
 namespace sw
 {
     /** @brief 낙하 설정입니다. 속도는 m/s 입니다. */
-    struct BrFallSettings
+    struct BrFallDef
     {
         float32 _freeFallSpeed{ 50.0f };           ///< 자유 낙하의 수직 속도
         float32 _freeFallHorizontalSpeed{ 20.0f }; ///< 자유 낙하 중 최대 수평 속도
@@ -66,7 +66,7 @@ namespace sw
 namespace sw
 {
     /** @brief 체력, 기절, 부활 설정입니다. */
-    struct BrPlayerSettings
+    struct BrPlayerDef
     {
         float32 _maxHealth{ 100.0f };
         float32 _downedHealth{ 100.0f };
@@ -119,7 +119,7 @@ namespace sw
 namespace sw
 {
     /** @brief 보급 상자 설정입니다. */
-    struct BrSupplyDropSettings
+    struct BrSupplyDropDef
     {
         vector<float32> _listTime{}; ///< 판이 시작된 뒤 상자가 떨어지는 시각(초, 오름차순)
         hashed_string   _tableID{};
@@ -141,15 +141,15 @@ namespace sw
     public:
         BrCatalog();
 
-        const BrArmorDef*           findArmor( const hashed_string& id ) const { return _armorCatalog.find( id ); }
-        const BrBackpackDef*        findBackpack( const hashed_string& id ) const { return _backpackCatalog.find( id ); }
-        const BrLootSpotDef*        findLootSpot( const hashed_string& id ) const { return _lootSpotCatalog.find( id ); }
-        const BrZoneSettings&       getZoneSettings() const { return _zone; }
-        const BrFlightSettings&     getFlightSettings() const { return _flight; }
-        const BrFallSettings&       getFallSettings() const { return _fall; }
-        const BrPlayerSettings&     getPlayerSettings() const { return _player; }
-        const BrSupplyDropSettings& getSupplyDropSettings() const { return _supplyDrop; }
-        float32                     getMapSize() const { return _mapSize; }
+        const BrArmorDef*      findArmor( const hashed_string& id ) const { return _armorCatalog.find( id ); }
+        const BrBackpackDef*   findBackpack( const hashed_string& id ) const { return _backpackCatalog.find( id ); }
+        const BrLootSpotDef*   findLootSpot( const hashed_string& id ) const { return _lootSpotCatalog.find( id ); }
+        const BrZoneDef&       getZoneSettings() const { return _zone; }
+        const BrFlightDef&     getFlightSettings() const { return _flight; }
+        const BrFallDef&       getFallSettings() const { return _fall; }
+        const BrPlayerDef&     getPlayerSettings() const { return _player; }
+        const BrSupplyDropDef& getSupplyDropSettings() const { return _supplyDrop; }
+        float32                getMapSize() const { return _mapSize; }
 
     private:
         static constexpr const utf8* kXMLRootName = "BattleRoyaleCatalog"; ///< 루트 원소(`XMLCatalog`)
@@ -158,11 +158,11 @@ namespace sw
         GameCatalog<BrArmorDef>    _armorCatalog;
         GameCatalog<BrBackpackDef> _backpackCatalog;
         GameCatalog<BrLootSpotDef> _lootSpotCatalog;
-        BrZoneSettings             _zone;
-        BrFlightSettings           _flight;
-        BrFallSettings             _fall;
-        BrPlayerSettings           _player;
-        BrSupplyDropSettings       _supplyDrop;
+        BrZoneDef                  _zone;
+        BrFlightDef                _flight;
+        BrFallDef                  _fall;
+        BrPlayerDef                _player;
+        BrSupplyDropDef            _supplyDrop;
         float32                    _mapSize;
     };
 } // namespace sw

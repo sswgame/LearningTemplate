@@ -77,7 +77,7 @@ namespace
         vector<ChatCompletion>    _listCompletion;
         vector<ChatDelivery>      _listDelivery;
 
-        ChatNode( MemoryServiceDatabase* pDatabase, LocalServerBusHub* pHub, uint64 serverID, const ChatSettings& settings = ChatSettings{} )
+        ChatNode( MemoryServiceDatabase* pDatabase, LocalServerBusHub* pHub, uint64 serverID, const ChatServiceConfig& settings = ChatServiceConfig{} )
             : _store{ pDatabase }
             , _bus{ pHub, serverID }
             , _directory{}
@@ -253,7 +253,7 @@ SW_TEST_CASE( ChatServiceTest, FilterAndSpamApplyToChannelMessages )
 {
     MemoryServiceDatabase database;
     LocalServerBusHub     hub;
-    ChatSettings          settings;
+    ChatServiceConfig     settings;
     settings._bannedWordsPath = FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), "Config/Server/chat_banned_words.txt" );
     ChatNode node( &database, &hub, 1, settings );
     node._directory._mapOnline[10] = "alice";
@@ -422,7 +422,7 @@ SW_TEST_CASE( ChatServiceTest, HistoryPastRetentionIsTrimmedAndFailedWritesAreDr
 {
     MemoryServiceDatabase database;
     LocalServerBusHub     hub;
-    ChatSettings          settings;
+    ChatServiceConfig     settings;
     settings._historyRetentionMs = 1000;
     settings._historyTrimEvery   = 1; // 모든 쓰기가 그 채널을 정리한다
     ChatNode node( &database, &hub, 1, settings );

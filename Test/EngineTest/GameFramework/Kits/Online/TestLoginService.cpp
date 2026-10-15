@@ -120,7 +120,7 @@ namespace
         unique_ptr<LoginService> _service;
         uint64                   _nextTag;
 
-        LoginNode( MemoryServiceDatabase* pDatabase, uint64 seed, const LoginSettings& settings )
+        LoginNode( MemoryServiceDatabase* pDatabase, uint64 seed, const LoginServiceConfig& settings )
             : _store{ pDatabase }
             , _crypto{ seed }
             , _service{}
@@ -136,7 +136,7 @@ namespace
         }
 
         /** @brief 프로세스가 죽고 다시 떴다 — 서비스만 새로 만든다(저장소 데이터는 그대로). */
-        void restart( const LoginSettings& settings )
+        void restart( const LoginServiceConfig& settings )
         {
             (void)_store.pollCompletions();
             _service = make_unique<LoginService>();
@@ -309,7 +309,7 @@ namespace
     struct LoginFixture
     {
         MemoryServiceDatabase _database;
-        LoginSettings         _settings;
+        LoginServiceConfig    _settings;
         LoginNode             _node;
 
         LoginFixture()
@@ -556,7 +556,7 @@ SW_TEST_CASE( LoginServiceTest, TwoServersLoggingInTheSameAccountLastOneWins )
 {
     using Internal = TestLoginServiceInternal;
     MemoryServiceDatabase database;
-    LoginSettings         settings;
+    LoginServiceConfig    settings;
     LoginNode             serverA{ &database, 11u, settings };
     LoginNode             serverB{ &database, 12u, settings };
     SW_ASSERT_TRUE( serverA.registerAccount( Internal::makeCredential( "gina", "password123" ), 0 ) == LoginResult::Ok );
@@ -681,7 +681,7 @@ SW_TEST_CASE( LoginServiceTest, RealCryptoHashesWithArgon2idAndSignsTickets )
 {
     using Internal = TestLoginServiceInternal;
     NetSecurityLoginCrypto crypto{ &NetSecurity::getProvider() };
-    LoginSettings          settings; // 기본 Argon2id 매개변수(OWASP 19 MiB · 2 회 · 1 레인)
+    LoginServiceConfig     settings; // 기본 Argon2id 매개변수(OWASP 19 MiB · 2 회 · 1 레인)
     SW_ASSERT_TRUE( crypto.isPasswordHashSupported( settings._passwordHashParams ) );
 
     MemoryServiceDatabase database;

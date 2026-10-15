@@ -1237,7 +1237,7 @@
       },
       {
        "name": "_blink",
-       "type": "FacialBlinkSettings",
+       "type": "FacialBlinkDef",
        "default": "",
        "min": "",
        "max": "",
@@ -1246,7 +1246,7 @@
       },
       {
        "name": "_gaze",
-       "type": "FacialGazeSettings",
+       "type": "FacialGazeDef",
        "default": "",
        "min": "",
        "max": "",
@@ -1280,7 +1280,7 @@
      ]
     },
     {
-     "name": "FacialBlinkSettings",
+     "name": "FacialBlinkDef",
      "source": "Source/Engine/Animation/Facial/FacialRig.h",
      "fields": [
       {
@@ -1322,7 +1322,7 @@
      ]
     },
     {
-     "name": "FacialGazeSettings",
+     "name": "FacialGazeDef",
      "source": "Source/Engine/Animation/Facial/FacialRig.h",
      "fields": [
       {

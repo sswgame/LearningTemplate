@@ -33,7 +33,7 @@ namespace sw
     {
     }
 
-    void RollbackSession::initialize( NetHost* pHost, IRollbackGame* pGame, int32 playerCount, int32 localPlayer, const RollbackSettings& settings )
+    void RollbackSession::initialize( NetHost* pHost, IRollbackGame* pGame, int32 playerCount, int32 localPlayer, const RollbackConfig& settings )
     {
         _pHost                   = pHost;
         _pGame                   = pGame;

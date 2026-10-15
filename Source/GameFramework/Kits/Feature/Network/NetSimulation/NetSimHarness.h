@@ -67,12 +67,12 @@ namespace sw
 namespace sw
 {
     /** @brief 하니스 설정입니다. */
-    struct NetSimSettings
+    struct NetSimConfig
     {
-        NetHostSettings _hostSettings{};             ///< 월드마다 쓰는 호스트 설정. 챌린지 솔트 시드는 `_seed` 로 다시 정한다
-        float64         _tickInterval{ 1.0 / 60.0 }; ///< 고정 스텝(초). 오브젝트 틱과 망 시각이 모두 이 간격으로 진행한다
-        uint32          _seed{ 1u };                 ///< 망, 연결별 흉내, 챌린지 솔트의 시드
-        uint16          _serverPort{ 7000 };         ///< 서버 엔드포인트 포트. 클라이언트는 그다음 번호부터 차례로 받고 다시 쓰지 않는다
+        NetHostConfig _hostSettings{};             ///< 월드마다 쓰는 호스트 설정. 챌린지 솔트 시드는 `_seed` 로 다시 정한다
+        float64       _tickInterval{ 1.0 / 60.0 }; ///< 고정 스텝(초). 오브젝트 틱과 망 시각이 모두 이 간격으로 진행한다
+        uint32        _seed{ 1u };                 ///< 망, 연결별 흉내, 챌린지 솔트의 시드
+        uint16        _serverPort{ 7000 };         ///< 서버 엔드포인트 포트. 클라이언트는 그다음 번호부터 차례로 받고 다시 쓰지 않는다
     };
 } // namespace sw
 
@@ -198,7 +198,7 @@ namespace sw
     class SW_KIT_API NetSimWorld
     {
     public:
-        NetSimWorld( NetSimRole role, int32 worldIndex, INetTransport* pTransport, const NetHostSettings& hostSettings );
+        NetSimWorld( NetSimRole role, int32 worldIndex, INetTransport* pTransport, const NetHostConfig& hostSettings );
         ~NetSimWorld();
 
         NetSimWorld( const NetSimWorld& )            = delete;
@@ -271,7 +271,7 @@ namespace sw
         NetSimHarness& operator=( const NetSimHarness& ) = delete;
 
         /** @brief 망을 만들고 서버 월드를 만듭니다. `INetSimGame::createSession` 호출, 플레이 시작, listen 까지 처리합니다. @p pGame 은 하니스보다 오래 살아야 합니다. */
-        [[nodiscard]] bool initialize( const NetSimSettings& settings, INetSimGame* pGame );
+        [[nodiscard]] bool initialize( const NetSimConfig& settings, INetSimGame* pGame );
         /** @brief 클라이언트와 서버 월드를 모두 종료합니다. 소멸자도 이 함수를 부릅니다. */
         void shutdown();
 
@@ -322,7 +322,7 @@ namespace sw
         void         applyLinkConditions( int32 worldIndex, const NetSimLinkConditions& conditions );
         void         updateNetwork();
 
-        NetSimSettings                  _settings;
+        NetSimConfig                    _settings;
         unique_ptr<LoopbackNetwork>     _pNetwork;
         vector<unique_ptr<Link>>        _listLink;
         unique_ptr<NetSimWorld>         _pServer;

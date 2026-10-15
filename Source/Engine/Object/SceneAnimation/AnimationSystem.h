@@ -56,7 +56,7 @@ namespace sw
 {
     /**
      * @class IAnimationPhaseTask
-     * @brief 유닛 하나의 단계에 끼어드는 작업입니다(애니메이터, 이후의 PoseModifier, 소켓 부착). 유닛에 등록합니다(`SkeletalMeshComponent::addAnimationPhaseTask`).
+     * @brief 유닛 하나의 단계에 끼어드는 작업입니다(애니메이터, 이후의 PoseModifier, 소켓 부착). 유닛에 등록합니다(`SkeletalMeshComponent::registerAnimationPhaseTask`).
      * @details 단계 함수는 워커에서 불린다. 자기 유닛과, 의존으로 선언한 위 유닛만 읽는다. 게임 스레드에서 해야 하는 일(트랜스폼 쓰기)은
      *          `finishAnimationFrame` 에 둔다(모든 단계가 끝난 뒤 게임 스레드에서 차례로 불린다).
      */

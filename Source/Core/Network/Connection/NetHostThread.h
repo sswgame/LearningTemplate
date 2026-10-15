@@ -21,11 +21,11 @@ namespace sw
     class NetHost;
 
     /** @brief 네트워크 스레드 설정입니다. 시간은 초입니다. */
-    struct NetHostThreadSettings
+    struct NetHostThreadConfig
     {
         /**
          * @brief 받을 것이 없을 때 한 번에 기다리는 가장 긴 시간입니다. 보낼 패킷(보내기 간격 · 재전송 · 유지)은 이 간격 안에 나간다 —
-         *        `NetHostSettings::_sendInterval` 보다 충분히 짧게. 받을 것이 오면 바로 깬다(UDP).
+         *        `NetHostConfig::_sendInterval` 보다 충분히 짧게. 받을 것이 오면 바로 깬다(UDP).
          */
         float32 _maxWaitSeconds{ 0.002f };
     };
@@ -55,7 +55,7 @@ namespace sw
         NetHostThread& operator=( const NetHostThread& ) = delete;
 
         /** @brief 스레드를 띄웁니다. 이미 돌고 있거나 @p pHost 가 없으면 false 입니다. */
-        [[nodiscard]] bool start( NetHost* pHost, const NetHostThreadSettings& settings = NetHostThreadSettings{} );
+        [[nodiscard]] bool start( NetHost* pHost, const NetHostThreadConfig& settings = NetHostThreadConfig{} );
         /** @brief 멈추고 합류합니다(최대 `_maxWaitSeconds` 남짓). 돌고 있지 않으면 아무것도 하지 않는다. */
         void stop();
 
@@ -68,11 +68,11 @@ namespace sw
     private:
         void run();
 
-        sw::thread            _thread;
-        NetHost*              _pHost;
-        NetHostThreadSettings _settings;
-        atomic<uint64>        _updateCount;
-        atomic<bool>          _bStopRequested;
-        atomic<bool>          _bRunning;
+        sw::thread          _thread;
+        NetHost*            _pHost;
+        NetHostThreadConfig _settings;
+        atomic<uint64>      _updateCount;
+        atomic<bool>        _bStopRequested;
+        atomic<bool>        _bRunning;
     };
 } // namespace sw

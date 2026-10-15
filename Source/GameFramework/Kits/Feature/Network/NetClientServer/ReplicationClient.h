@@ -21,7 +21,7 @@ namespace sw
     class NetHost;
 
     /** @brief 클라이언트 설정입니다. */
-    struct ReplicationClientSettings
+    struct ReplicationClientConfig
     {
         float32 _tickInterval{ 1.0f / 30.0f }; ///< 서버 틱 간격. 스냅샷이 틱마다 오므로 표본 간격이기도 하다
         float32 _interpolationDelay{ 0.1f };   ///< 렌더 지연의 최솟값. 실제 값은 이 값과 (틱 간격 × `NetClock::kSampleIntervalsBehind`) 중 큰 쪽이며, 스냅샷 하나를 잃어도 끊기지 않게 하려는 것이다
@@ -41,7 +41,7 @@ namespace sw
     public:
         ReplicationClient();
 
-        void            initialize( NetHost* pHost, const ReplicationClientSettings& settings );
+        void            initialize( NetHost* pHost, const ReplicationClientConfig& settings );
         uint8           getMessageRangeBase() const override { return NetKitMessageRange::kClientServer; }
         uint16          getMessageKindMask() const override { return 1u << ( NetClientServerMessage::kSnapshot - NetKitMessageRange::kClientServer ); }
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
@@ -79,7 +79,7 @@ namespace sw
         TickRingBuffer<NetSnapshot> _listSnapshot;  ///< 받은 스냅샷. 델타의 기준과 보간 구간을 틱으로 찾는다. 가장 새 틱이 마지막으로 받은 것이다
         NetSnapshot                 _decodeScratch; ///< 받은 델타를 복원하는 버퍼. 링 버퍼 슬롯과 맞바꿔 밀려난 스냅샷의 버퍼를 다음 복원이 재사용하므로 기준 슬롯을 덮어쓰지 않는다
         NetInputSendWindow          _inputWindow;   ///< 내 입력. 서버가 스냅샷에 실어 돌려준 확인 틱의 다음 틱부터 싣는다
-        ReplicationClientSettings   _settings;
+        ReplicationClientConfig     _settings;
         NetHost*                    _pHost;
         NetClock                    _clock; ///< 렌더 틱의 시계. 받은 스냅샷 틱의 하한에 흐른 시간을 더하고 지연을 뺀 값이며, 받은 가장 새 틱까지만 가고 되돌아가지 않는다
         uint64                      _decodeFailureCount;

@@ -21,7 +21,7 @@
  *
  *          패킷 끝의 1비트는 "확인을 바로 돌려 달라"는 요청이다.
  *          메시지를 실었거나 확인할 것이 없던(연결 유지) 패킷만 이 비트를 켜고, 확인만 담은 답은 끈다.
- *          그래야 한가할 때 양쪽이 확인에 확인으로 끝없이 주고받지 않고 `NetHostSettings::_keepAliveInterval` 마다만 오간다.
+ *          그래야 한가할 때 양쪽이 확인에 확인으로 끝없이 주고받지 않고 `NetHostConfig::_keepAliveInterval` 마다만 오간다.
  *          RTT와 손실률도 이 비트를 켠 패킷으로만 측정한다.
  */
 #pragma once
@@ -100,7 +100,7 @@ namespace sw
         /**
          * @brief 패킷 본문을 씁니다. 헤더(시퀀스, ack, ack 비트), 들어가는 만큼의 메시지, 확인 요청 비트 순서입니다.
          * @param ackRequestInterval 확인만 담은 답이라도 마지막 확인 요청에서 이 간격이 지났으면 확인을 요청합니다.
-         *                           양쪽의 연결 유지 시각이 맞물려 한쪽이 늘 답만 보내게 되어도 그쪽 RTT 를 측정하기 위해서입니다(`NetHostSettings::_keepAliveInterval`).
+         *                           양쪽의 연결 유지 시각이 맞물려 한쪽이 늘 답만 보내게 되어도 그쪽 RTT 를 측정하기 위해서입니다(`NetHostConfig::_keepAliveInterval`).
          */
         void writePacket( float64 time, BitWriter& writer, int32 maxBytes, float64 ackRequestInterval = kDefaultAckRequestInterval,
                           float64 maxUnreliableAgeSeconds = kDefaultMaxUnreliableAge );

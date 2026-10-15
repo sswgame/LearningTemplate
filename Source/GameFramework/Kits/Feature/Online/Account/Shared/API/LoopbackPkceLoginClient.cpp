@@ -56,18 +56,18 @@ namespace sw
     }
 
     bool LoopbackPkceLoginClient::initialize( unique_ptr<IStreamTransport> serverTransport, unique_ptr<IStreamTransport> clientTransport,
-                                              const StreamTransportSettings& transportSettings, INetSecurityProvider* pProvider, IExternalBrowser* pBrowser,
-                                              const vector<PkceLoginProviderSettings>& listProviderSettings )
+                                              const StreamTransportConfig& transportSettings, INetSecurityProvider* pProvider, IExternalBrowser* pBrowser,
+                                              const vector<PkceLoginProviderConfig>& listProviderSettings )
     {
         if ( pProvider == nullptr || pBrowser == nullptr )
             return false;
         _pProvider            = pProvider;
         _pBrowser             = pBrowser;
         _listProviderSettings = listProviderSettings;
-        HTTPServerSettings serverSettings; // 127.0.0.1:0 으로 연다. 다른 기계에서 닿지 않고 포트는 OS 가 고른다
+        HTTPServerConfig serverSettings; // 127.0.0.1:0 으로 연다. 다른 기계에서 닿지 않고 포트는 OS 가 고른다
         if ( _redirectServer.initialize( std::move( serverTransport ), transportSettings, serverSettings, this ) == false )
             return false;
-        return _httpClient.initialize( std::move( clientTransport ), transportSettings, HTTPClientSettings{} );
+        return _httpClient.initialize( std::move( clientTransport ), transportSettings, HTTPClientConfig{} );
     }
 
     void LoopbackPkceLoginClient::shutdown()
@@ -86,10 +86,10 @@ namespace sw
         using Internal         = LoopbackPkceLoginClientInternal;
         const uint64 requestID = _nextRequestID++;
         PendingLogin pending;
-        pending._requestID                         = requestID;
-        pending._provider                          = string( provider );
-        const PkceLoginProviderSettings* pSettings = findSettings( provider );
-        const bool                       bSecrets  = pSettings != nullptr && makeRandomText( Internal::kVerifierBytes, pending._codeVerifier ) &&
+        pending._requestID                       = requestID;
+        pending._provider                        = string( provider );
+        const PkceLoginProviderConfig* pSettings = findSettings( provider );
+        const bool                     bSecrets  = pSettings != nullptr && makeRandomText( Internal::kVerifierBytes, pending._codeVerifier ) &&
                               makeRandomText( Internal::kStateBytes, pending._state ) && makeRandomText( Internal::kStateBytes, pending._nonce );
         uint8      arrChallenge[NetSecurityConstant::kSha256Size];
         const bool bChallenge = bSecrets && _pProvider->computeSha256( reinterpret_cast<const uint8*>( pending._codeVerifier.data() ),
@@ -134,11 +134,11 @@ namespace sw
                 PendingLogin& pending = _listPending[pendingIndex];
                 if ( pending._tokenRequestID != response._requestID )
                     continue;
-                const PkceLoginProviderSettings* pSettings = findSettings( pending._provider );
-                JSONDocument                     document;
-                const bool                       bParsed = response.isSuccess() && document.tryParse( response.getBodyText() ) && document.getRoot().isObject();
-                const JSONValue                  token   = bParsed ? document.getRoot().get( pSettings->_bUseIDToken == SW_TRUE ? "id_token" : "access_token", false )
-                                                                   : JSONValue{};
+                const PkceLoginProviderConfig* pSettings = findSettings( pending._provider );
+                JSONDocument                   document;
+                const bool                     bParsed = response.isSuccess() && document.tryParse( response.getBodyText() ) && document.getRoot().isObject();
+                const JSONValue                token   = bParsed ? document.getRoot().get( pSettings->_bUseIDToken == SW_TRUE ? "id_token" : "access_token", false )
+                                                                 : JSONValue{};
                 if ( token.isString() == false || token.asString().empty() )
                 {
                     finish( pending, false, false, response._bTransportFailed == SW_TRUE ? response._failureText : string( "token endpoint refused the code" ), vector<uint8>{} );
@@ -201,10 +201,10 @@ namespace sw
             return;
         }
         Internal::setPage( outResponse, HTTPConstant::kStatusOk );
-        const HTTPHeader*                pError       = request.findQuery( "error" );
-        const HTTPHeader*                pCode        = request.findQuery( "code" );
-        const PkceLoginProviderSettings* pSettings    = findSettings( pFound->_provider );
-        const bool                       bLoginDenied = pError != nullptr || pCode == nullptr || pCode->_value.empty() || pSettings == nullptr;
+        const HTTPHeader*              pError       = request.findQuery( "error" );
+        const HTTPHeader*              pCode        = request.findQuery( "code" );
+        const PkceLoginProviderConfig* pSettings    = findSettings( pFound->_provider );
+        const bool                     bLoginDenied = pError != nullptr || pCode == nullptr || pCode->_value.empty() || pSettings == nullptr;
         if ( bLoginDenied )
         {
             const bool   bDenied = pError != nullptr && pError->_value == "access_denied";
@@ -235,9 +235,9 @@ namespace sw
         pFound->_tokenRequestID = _httpClient.submitRequest( tokenRequest, _nowMs );
     }
 
-    const PkceLoginProviderSettings* LoopbackPkceLoginClient::findSettings( string_view provider ) const
+    const PkceLoginProviderConfig* LoopbackPkceLoginClient::findSettings( string_view provider ) const
     {
-        for ( const PkceLoginProviderSettings& settings : _listProviderSettings )
+        for ( const PkceLoginProviderConfig& settings : _listProviderSettings )
         {
             if ( settings._provider == provider )
                 return &settings;

@@ -27,7 +27,7 @@ namespace sw
     class MetricRegistry;
 
     /** @brief GM 서비스 설정입니다. 포인터는 빌려 씁니다. */
-    struct AdminServiceSettings
+    struct AdminServiceConfig
     {
         const IAccountDirectory* _pDirectory{ nullptr };      ///< 이름으로 찾기, 표시 이름, 접속 여부에 쓴다. 없으면 id 로만 찾는다
         IAccountSessionControl*  _pSessionControl{ nullptr }; ///< 정지나 영구 정지 뒤에 세션을 끊는다. 계정 키트가 구현한다
@@ -52,7 +52,7 @@ namespace sw
         AdminService& operator=( const AdminService& ) = delete;
 
         /** @brief 저장소가 없으면 false 를 반환합니다. */
-        [[nodiscard]] bool initialize( IServiceStore* pStore, const AdminServiceSettings& settings );
+        [[nodiscard]] bool initialize( IServiceStore* pStore, const AdminServiceConfig& settings );
         /** @brief 맡긴 작업이 끝날 때까지 저장소를 회수합니다. 상한은 5초이며 저장소를 종료하기 전에 부릅니다. */
         void shutdown();
 
@@ -90,12 +90,12 @@ namespace sw
         void startCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, int64 nowMs, PendingCall pending );
         void finishCall( size_t pendingIndex, const AdminReply& reply );
 
-        vector<PendingCall>  _listPendingCall;
-        ServiceMetrics       _metrics;
-        AdminServiceSettings _settings;
-        IServiceStore*       _pStore;
-        uint64               _nextCallID;
-        int64                _nowMs;
-        int32                _pendingSeedCount;
+        vector<PendingCall> _listPendingCall;
+        ServiceMetrics      _metrics;
+        AdminServiceConfig  _settings;
+        IServiceStore*      _pStore;
+        uint64              _nextCallID;
+        int64               _nowMs;
+        int32               _pendingSeedCount;
     };
 } // namespace sw

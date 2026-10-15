@@ -121,7 +121,7 @@ namespace sw
 namespace sw
 {
     /** @brief TLS 컨텍스트 설정입니다. 인증서, 키, 신뢰 목록은 PEM 문자열이며, 파일 경로는 `NetSecurity` 가 읽어서 채웁니다. */
-    struct TLSContextSettings
+    struct TLSContextConfig
     {
         string     _certificatePem{};             ///< 서버 전용. 끝 인증서와 중간 인증서(체인).
         string     _privateKeyPem{};              ///< 서버 전용.

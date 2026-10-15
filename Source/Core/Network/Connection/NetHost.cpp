@@ -95,7 +95,7 @@ namespace sw
 
     NetHost::~NetHost() = default;
 
-    void NetHost::initialize( INetTransport* pTransport, const NetHostSettings& settings )
+    void NetHost::initialize( INetTransport* pTransport, const NetHostConfig& settings )
     {
         vector<FinishedConnect> listFinished;
         {
@@ -174,7 +174,7 @@ namespace sw
         if ( isEncrypted() && _settings._security._pAuthenticator == nullptr )
         {
             // 인증기 없는 암호화(일회용 키)는 도청만 막고 중간자 공격은 막지 못하므로 개발 빌드에서만 쓴다.
-            SW_LOG_ERROR( "NetHost: a shipping server must bind encrypted connections to session tokens (set NetSecuritySettings::_pAuthenticator)" );
+            SW_LOG_ERROR( "NetHost: a shipping server must bind encrypted connections to session tokens (set NetSecurityConfig::_pAuthenticator)" );
             return false;
         }
 #endif
@@ -263,7 +263,7 @@ namespace sw
             slot._security = make_unique<NetSlotSecurity>();
             if ( _settings._security._pProvider == nullptr || _settings._security._pProvider->makeX25519KeyPair( slot._security->_keyPair ) == false )
             {
-                SW_LOG_ERROR( "NetHost: cannot create a key pair - is NetSecuritySettings::_pProvider set?" );
+                SW_LOG_ERROR( "NetHost: cannot create a key pair - is NetSecurityConfig::_pProvider set?" );
                 closeSlot( 0, NetDisconnectReason::Rejected, false );
                 return false;
             }

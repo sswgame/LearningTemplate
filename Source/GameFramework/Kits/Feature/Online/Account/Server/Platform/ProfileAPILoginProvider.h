@@ -11,7 +11,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProvider.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderSettings.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderConfig.h"
 
 namespace sw
 {
@@ -26,7 +26,7 @@ namespace sw
     {
     public:
         /** @brief @p pHTTPClient 는 빌려 쓰며 그 응답은 이 객체만 회수합니다. */
-        ProfileAPILoginProvider( const PlatformLoginProviderSettings& settings, HTTPClient* pHTTPClient );
+        ProfileAPILoginProvider( const PlatformLoginProviderConfig& settings, HTTPClient* pHTTPClient );
 
         const utf8* getName() const override { return _settings._name.c_str(); }
         uint64      submitVerification( const vector<uint8>& ticketBytes, int64 nowMs ) override;
@@ -37,7 +37,7 @@ namespace sw
         [[nodiscard]] static bool findPathText( const JSONValue& root, string_view path, string& outText );
 
     private:
-        PlatformLoginProviderSettings     _settings;
+        PlatformLoginProviderConfig       _settings;
         unordered_map<uint64, uint64>     _mapRequestToVerification;
         vector<PlatformLoginVerification> _listDone;
         HTTPClient*                       _pHTTPClient;

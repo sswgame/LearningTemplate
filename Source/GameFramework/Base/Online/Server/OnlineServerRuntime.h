@@ -30,7 +30,7 @@ namespace sw
     class ServiceHealthRegistry;
 
     /** @brief 저장소나 캐시 하나의 드라이버 항목입니다. 비밀은 이미 환경 변수에서 읽은 값입니다. */
-    struct OnlineServerStoreSettings
+    struct OnlineServerStoreConfig
     {
         string _driver{ "memory" };
         string _connection{}; ///< 저장소의 접속 문자열 · 캐시의 엔드포인트
@@ -41,21 +41,21 @@ namespace sw
 namespace sw
 {
     /** @brief 런타임 설정입니다. 전용 서버는 서버 설정과 온라인 설정에서 채우고, 테스트와 봇은 직접 채웁니다. */
-    struct OnlineServerRuntimeSettings
+    struct OnlineServerRuntimeConfig
     {
-        OnlineServerConfig        _config{};
-        OnlineServerStoreSettings _store{};
-        OnlineServerStoreSettings _cache{};
-        NetAddress                _listenAddress{ NetAddress::makeLoopback( 0 ) }; ///< 포트 0 = 아무 포트(`getListenPort`)
-        string                    _tlsCertificateFile{};                           ///< `_bTLS` 일 때. 둘 다 비면 Dev 만 개발용 인증서
-        string                    _tlsPrivateKeyFile{};
-        string                    _tlsPrivateKeyPassphrase{}; ///< 런타임이 쓰고 나면 비운다
-        IStreamTransport*         _pTransport{ nullptr };     ///< 빌려 쓴다. null 이면 플랫폼 전송을 만든다
-        MetricRegistry*           _pMetricRegistry{ nullptr };
-        ServiceHealthRegistry*    _pHealthRegistry{ nullptr };
-        uint16                    _gamePort{ 0 };                ///< 디렉터리에 알릴 게임(UDP) 포트
-        uint8                     _bTLS{ SW_TRUE };              ///< 서비스 스트림을 TLS 1.3 으로 받는다(테스트와 봇은 끈다)
-        uint8                     _bManualCacheTime{ SW_FALSE }; ///< 메모리 캐시의 만료를 `tick` 의 시각으로 잰다(가짜 시각 테스트, 봇)
+        OnlineServerConfig      _config{};
+        OnlineServerStoreConfig _store{};
+        OnlineServerStoreConfig _cache{};
+        NetAddress              _listenAddress{ NetAddress::makeLoopback( 0 ) }; ///< 포트 0 = 아무 포트(`getListenPort`)
+        string                  _tlsCertificateFile{};                           ///< `_bTLS` 일 때. 둘 다 비면 Dev 만 개발용 인증서
+        string                  _tlsPrivateKeyFile{};
+        string                  _tlsPrivateKeyPassphrase{}; ///< 런타임이 쓰고 나면 비운다
+        IStreamTransport*       _pTransport{ nullptr };     ///< 빌려 쓴다. null 이면 플랫폼 전송을 만든다
+        MetricRegistry*         _pMetricRegistry{ nullptr };
+        ServiceHealthRegistry*  _pHealthRegistry{ nullptr };
+        uint16                  _gamePort{ 0 };                ///< 디렉터리에 알릴 게임(UDP) 포트
+        uint8                   _bTLS{ SW_TRUE };              ///< 서비스 스트림을 TLS 1.3 으로 받는다(테스트와 봇은 끈다)
+        uint8                   _bManualCacheTime{ SW_FALSE }; ///< 메모리 캐시의 만료를 `tick` 의 시각으로 잰다(가짜 시각 테스트, 봇)
     };
 } // namespace sw
 
@@ -77,7 +77,7 @@ namespace sw
         OnlineServerRuntime& operator=( const OnlineServerRuntime& ) = delete;
 
         /** @brief 조립하고 받기 시작합니다. 실패하면 false 와 @p outError 이며, 만든 것은 `shutdown` 이 정리합니다. @p nowMs 는 서비스 시각(UTC 밀리초)입니다. */
-        [[nodiscard]] bool initialize( OnlineServerRuntimeSettings settings, int64 nowMs, string& outError );
+        [[nodiscard]] bool initialize( OnlineServerRuntimeConfig settings, int64 nowMs, string& outError );
         /** @brief 만든 역순으로 내립니다. 두 번 불러도 됩니다. */
         void shutdown();
         /** @brief 호스트, 예약 작업, 키트, 서버 등록 하트비트를 돌립니다. */
@@ -97,10 +97,10 @@ namespace sw
     private:
         struct Parts;
 
-        [[nodiscard]] bool createStores( OnlineServerRuntimeSettings& settings, int64 nowMs, string& outError );
-        [[nodiscard]] bool createKits( const OnlineServerRuntimeSettings& settings, string& outError );
-        [[nodiscard]] bool startHost( OnlineServerRuntimeSettings& settings, string& outError );
-        [[nodiscard]] bool registerServer( const OnlineServerRuntimeSettings& settings, string& outError );
+        [[nodiscard]] bool createStores( OnlineServerRuntimeConfig& settings, int64 nowMs, string& outError );
+        [[nodiscard]] bool createKits( const OnlineServerRuntimeConfig& settings, string& outError );
+        [[nodiscard]] bool startHost( OnlineServerRuntimeConfig& settings, string& outError );
+        [[nodiscard]] bool registerServer( const OnlineServerRuntimeConfig& settings, string& outError );
 
         unique_ptr<Parts> _parts;
         uint8             _bInitialized;

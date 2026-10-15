@@ -113,7 +113,7 @@ namespace sw
     {
     public:
         /** @brief 설정의 상한 · 태스크 매니저를 받습니다. */
-        explicit AsyncFileIOQueue( const AsyncFileIOSettings& settings );
+        explicit AsyncFileIOQueue( const AsyncFileIOConfig& settings );
 
         /** @brief 새 요청이 들어올 때 백엔드를 깨우는 콜백을 겁니다. */
         void setWakeDelegate( const Delegate<void()>& wakeDelegate ) { _wakeDelegate = wakeDelegate; }

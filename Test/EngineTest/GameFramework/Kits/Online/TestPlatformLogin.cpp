@@ -16,7 +16,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/JSONWebToken.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/OidcLoginProvider.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderSettings.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderConfig.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/ProfileAPILoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
 #include "GameFramework/Kits/Feature/Online/Account/Shared/API/LoopbackPkceLoginClient.h"
@@ -196,31 +196,31 @@ namespace
             string                certificatePem;
             string                privateKeyPem;
             (void)provider.createSelfSignedCertificate( "localhost", 1, certificatePem, privateKeyPem ); // 실패면 PEM 이 비어 아래 TLS 준비가 실패로 드러난다
-            TLSContextSettings serverTLS;
+            TLSContextConfig serverTLS;
             serverTLS._role           = TLSRole::Server;
             serverTLS._certificatePem = certificatePem;
             serverTLS._privateKeyPem  = privateKeyPem;
-            TLSContextSettings clientTLS;
+            TLSContextConfig clientTLS;
             clientTLS._role       = TLSRole::Client;
             clientTLS._trustPem   = certificatePem;
             clientTLS._serverName = "localhost";
             string error;
             _serverContext = provider.createTLSContext( serverTLS, error );
             _clientContext = provider.createTLSContext( clientTLS, error );
-            StreamTransportSettings transportSettings;
+            StreamTransportConfig transportSettings;
             transportSettings._ioThreadCount = 0;
-            HTTPServerSettings serverSettings;
+            HTTPServerConfig serverSettings;
             serverSettings._pTLSContext = _serverContext.get();
             (void)_server.initialize( _network.createTransport(), transportSettings, serverSettings, &_handler );
-            (void)_client.initialize( _network.createTransport(), transportSettings, HTTPClientSettings{} );
+            (void)_client.initialize( _network.createTransport(), transportSettings, HTTPClientConfig{} );
             _client.registerTLSContext( "localhost", _clientContext.get() );
         }
 
         string makeURL( const utf8* pPath ) const { return "https://localhost:" + to_string( static_cast<int32>( _server.getListenPort() ) ) + pPath; }
 
-        PlatformLoginProviderSettings makeOidcSettings() const
+        PlatformLoginProviderConfig makeOidcSettings() const
         {
-            PlatformLoginProviderSettings settings;
+            PlatformLoginProviderConfig settings;
             settings._name    = "google";
             settings._kind    = PlatformLoginProviderKind::Oidc;
             settings._issuer  = "https://issuer.test";
@@ -279,8 +279,8 @@ SW_TEST_CASE( PlatformLoginTest, OidcAcceptsValidTokenAndRejectsBadOnes )
     SW_EXPECT_TRUE( fixture.verify( provider, noneHeader + "." + body + ".AA" )._bRejected == SW_TRUE );
     SW_EXPECT_TRUE( fixture.verify( provider, "not-a-token" )._bRejected == SW_TRUE );
 
-    PlatformLoginProviderSettings nonceSettings = fixture.makeOidcSettings();
-    nonceSettings._bRequireNonce                = SW_TRUE;
+    PlatformLoginProviderConfig nonceSettings = fixture.makeOidcSettings();
+    nonceSettings._bRequireNonce              = SW_TRUE;
     OidcLoginProvider nonceProvider{ nonceSettings, &NetSecurity::getProvider(), &fixture._client };
     const string      withNonce = Internal::makeToken( key, "https://issuer.test", "client-a", 2000, "user-2", "n-abc" );
     SW_EXPECT_TRUE( fixture.verify( nonceProvider, withNonce )._bRejected == SW_TRUE );            // 클라이언트가 nonce 를 싣지 않았다
@@ -327,8 +327,8 @@ SW_TEST_CASE( PlatformLoginTest, OidcRefetchesOnKeyRotationAndKeepsWorkingFromCa
 
 SW_TEST_CASE( PlatformLoginTest, ProfileAPIProviderReadsTheSubjectPath )
 {
-    IssuerFixture                 fixture;
-    PlatformLoginProviderSettings settings;
+    IssuerFixture               fixture;
+    PlatformLoginProviderConfig settings;
     settings._name            = "naver";
     settings._kind            = PlatformLoginProviderKind::AccessTokenProfile;
     settings._profileURL      = fixture.makeURL( "/profile" );
@@ -347,14 +347,14 @@ SW_TEST_CASE( PlatformLoginTest, ProfileAPIProviderReadsTheSubjectPath )
 
 SW_TEST_CASE( PlatformLoginTest, ProviderSettingsComeFromData )
 {
-    const utf8*                           pJSON = "{\"providers\":["
-                                                  "{\"name\":\"google\",\"kind\":\"oidc\",\"issuer\":\"https://accounts.google.com\",\"jwksUrl\":\"https://www.googleapis.com/oauth2/v3/certs\","
-                                                  "\"clientIds\":[\"a\",\"b\"],\"requireNonce\":true},"
-                                                  "{\"name\":\"kakao\",\"kind\":\"oidc\",\"issuer\":\"https://kauth.kakao.com\",\"jwksUrl\":\"https://kauth.kakao.com/.well-known/jwks.json\","
-                                                  "\"clientIds\":[\"k\"],\"displayNamePath\":\"nickname\"},"
-                                                  "{\"name\":\"naver\",\"kind\":\"profile\",\"profileUrl\":\"https://openapi.naver.com/v1/nid/me\",\"subjectPath\":\"response.id\"}]}";
-    vector<PlatformLoginProviderSettings> listSettings;
-    string                                error;
+    const utf8*                         pJSON = "{\"providers\":["
+                                                "{\"name\":\"google\",\"kind\":\"oidc\",\"issuer\":\"https://accounts.google.com\",\"jwksUrl\":\"https://www.googleapis.com/oauth2/v3/certs\","
+                                                "\"clientIds\":[\"a\",\"b\"],\"requireNonce\":true},"
+                                                "{\"name\":\"kakao\",\"kind\":\"oidc\",\"issuer\":\"https://kauth.kakao.com\",\"jwksUrl\":\"https://kauth.kakao.com/.well-known/jwks.json\","
+                                                "\"clientIds\":[\"k\"],\"displayNamePath\":\"nickname\"},"
+                                                "{\"name\":\"naver\",\"kind\":\"profile\",\"profileUrl\":\"https://openapi.naver.com/v1/nid/me\",\"subjectPath\":\"response.id\"}]}";
+    vector<PlatformLoginProviderConfig> listSettings;
+    string                              error;
     SW_ASSERT_TRUE( PlatformLoginProviderFactory::readSettings( pJSON, listSettings, error ) );
     SW_ASSERT_EQUAL( size_t( 3 ), listSettings.size() );
     SW_EXPECT_EQUAL( size_t( 2 ), listSettings[0]._listClientID.size() );
@@ -374,15 +374,15 @@ SW_TEST_CASE( PlatformLoginTest, ProviderSettingsComeFromData )
 SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIDTokenWithNonce )
 {
     using Internal = TestPlatformLoginInternal;
-    IssuerFixture             fixture;
-    RecordingBrowser          browser;
-    LoopbackPkceLoginClient   client;
-    PkceLoginProviderSettings settings;
+    IssuerFixture           fixture;
+    RecordingBrowser        browser;
+    LoopbackPkceLoginClient client;
+    PkceLoginProviderConfig settings;
     settings._provider         = "google";
     settings._authorizationURL = fixture.makeURL( "/authorize?prompt=select_account" );
     settings._tokenURL         = fixture.makeURL( "/token" );
     settings._clientID         = "client-a";
-    StreamTransportSettings transportSettings;
+    StreamTransportConfig transportSettings;
     transportSettings._ioThreadCount = 0;
     SW_ASSERT_TRUE( client.initialize( fixture._network.createTransport(), fixture._network.createTransport(), transportSettings, &NetSecurity::getProvider(),
                                        &browser, { settings } ) );
@@ -473,7 +473,7 @@ SW_TEST_CASE( PlatformLoginTest, LoginServiceCreatesAnAccountFromAVerifiedIDToke
     MemoryServiceDatabase  database;
     MemoryServiceStore     store{ &database };
     NetSecurityLoginCrypto crypto{ &NetSecurity::getProvider() };
-    LoginSettings          settings;
+    LoginServiceConfig     settings;
     settings._passwordHashParams._memoryKiB = 64; // 이 테스트는 비밀번호를 쓰지 않는다 — 없는 계정 해시를 가볍게
     const uint8  arrMasterKey[LoginTicketAuthority::kMasterKeySize]{};
     LoginService service;

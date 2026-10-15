@@ -64,7 +64,7 @@ namespace sw
     {
     }
 
-    bool NetMessageRouter::addHandler( INetMessageHandler* pHandler )
+    bool NetMessageRouter::registerHandler( INetMessageHandler* pHandler )
     {
         if ( pHandler == nullptr )
             return false;
@@ -87,7 +87,7 @@ namespace sw
         return true;
     }
 
-    void NetMessageRouter::removeHandler( INetMessageHandler* pHandler )
+    void NetMessageRouter::unregisterHandler( INetMessageHandler* pHandler )
     {
         _listHandler.erase( std::remove( _listHandler.begin(), _listHandler.end(), pHandler ), _listHandler.end() );
         rebuildKindTable();

@@ -90,7 +90,7 @@ namespace sw
     bool LoadBotLocalServer::initialize( IStreamTransport* pTransport, const LoadBotLocalServerSettings& settings, string& outError )
     {
         using Internal = LoadBotLocalServerInternal;
-        OnlineServerRuntimeSettings runtimeSettings;
+        OnlineServerRuntimeConfig runtimeSettings;
         Internal::fillConfig( settings, runtimeSettings._config );
         runtimeSettings._listenAddress    = NetAddress::makeLoopback( settings._port );
         runtimeSettings._pTransport       = pTransport;

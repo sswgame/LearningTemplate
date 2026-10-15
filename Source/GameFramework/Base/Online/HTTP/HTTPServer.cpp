@@ -27,7 +27,7 @@ namespace sw
         shutdown();
     }
 
-    bool HTTPServer::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportSettings& transportSettings, const HTTPServerSettings& settings,
+    bool HTTPServer::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const HTTPServerConfig& settings,
                                  IHTTPRequestHandler* pHandler )
     {
         const bool bCannotStart = transport == nullptr || pHandler == nullptr || _bInitialized == SW_TRUE;

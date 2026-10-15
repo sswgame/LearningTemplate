@@ -108,12 +108,12 @@ namespace
         SecurePair( NetSecurityMode serverMode, NetSecurityMode clientMode, bool bAuthenticator )
             : _clientTap{ _network.createEndpoint( 5000 ) }
         {
-            NetHostSettings serverSettings;
+            NetHostConfig serverSettings;
             serverSettings._saltSeed                 = 11u;
             serverSettings._security._mode           = serverMode;
             serverSettings._security._pProvider      = &NetSecurity::getProvider();
             serverSettings._security._pAuthenticator = bAuthenticator ? &_authenticator : nullptr;
-            NetHostSettings clientSettings;
+            NetHostConfig clientSettings;
             clientSettings._saltSeed            = 12u;
             clientSettings._security._mode      = clientMode;
             clientSettings._security._pProvider = &NetSecurity::getProvider();

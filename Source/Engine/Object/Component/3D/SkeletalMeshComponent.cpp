@@ -397,7 +397,7 @@ namespace sw
         notifyOrderChanged();
     }
 
-    void SkeletalMeshComponent::addAnimationPhaseTask( IAnimationPhaseTask* pTask )
+    void SkeletalMeshComponent::registerAnimationPhaseTask( IAnimationPhaseTask* pTask )
     {
         if ( pTask == nullptr || std::find( _listTask.begin(), _listTask.end(), pTask ) != _listTask.end() )
             return;
@@ -405,7 +405,7 @@ namespace sw
         _bPoseDirty = SW_TRUE;
     }
 
-    void SkeletalMeshComponent::removeAnimationPhaseTask( IAnimationPhaseTask* pTask )
+    void SkeletalMeshComponent::unregisterAnimationPhaseTask( IAnimationPhaseTask* pTask )
     {
         const auto it = std::find( _listTask.begin(), _listTask.end(), pTask );
         if ( it == _listTask.end() )

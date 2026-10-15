@@ -153,9 +153,9 @@ namespace sw
         /** @brief 등록된 알림 수신자를 반환합니다. */
         IAnimationNotifyListener* getNotifyListener() const { return _pNotifyListener; }
         /** @brief 루트 모션을 옮기기 전에 고치는 쪽을 등록합니다(소유하지 않으므로 사라지기 전에 해제해야 합니다). 등록한 순서대로 불립니다. */
-        void addRootMotionModifier( IRootMotionModifier* pModifier );
+        void registerRootMotionModifier( IRootMotionModifier* pModifier );
         /** @brief 고치는 쪽을 해제합니다. */
-        void removeRootMotionModifier( IRootMotionModifier* pModifier );
+        void unregisterRootMotionModifier( IRootMotionModifier* pModifier );
         /** @brief 루트 모션을 같은 오브젝트의 캐릭터 컨트롤러로 옮길지 정합니다(컨트롤러가 있을 때만 적용되며, 벽에 막히고 턱을 오릅니다). */
         void setRootMotionThroughController( bool bThrough ) { _bRootMotionThroughController = bThrough ? SW_TRUE : SW_FALSE; }
         /** @brief 재생 속도 배율을 반환합니다. */

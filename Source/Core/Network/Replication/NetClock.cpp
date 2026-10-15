@@ -15,7 +15,7 @@ namespace sw
     {
     }
 
-    void NetClock::initialize( const NetClockSettings& settings )
+    void NetClock::initialize( const NetClockConfig& settings )
     {
         _settings = settings;
         reset();

@@ -84,7 +84,7 @@ namespace sw
                 outRotation._w = reader.readFloat();
             }
 
-            static void writeQuantizedPose( BitWriter& writer, const float3& position, const quaternion& rotation, const DestructionReplicationSettings& settings )
+            static void writeQuantizedPose( BitWriter& writer, const float3& position, const quaternion& rotation, const DestructionReplicationConfig& settings )
             {
                 const float32 range = settings._positionRange;
                 writer.writeQuantizedFloat3( position, float3( -range, -range, -range ), float3( range, range, range ), settings._positionResolution );
@@ -94,7 +94,7 @@ namespace sw
                 writer.writeQuantizedFloat( rotation._w, -1.0f, 1.0f, kQuaternionResolution );
             }
 
-            static void readQuantizedPose( BitReader& reader, float3& outPosition, quaternion& outRotation, const DestructionReplicationSettings& settings )
+            static void readQuantizedPose( BitReader& reader, float3& outPosition, quaternion& outRotation, const DestructionReplicationConfig& settings )
             {
                 const float32 range = settings._positionRange;
                 outPosition         = reader.readQuantizedFloat3( float3( -range, -range, -range ), float3( range, range, range ), settings._positionResolution );
@@ -130,7 +130,7 @@ namespace sw
     {
     }
 
-    void DestructionReplicationServer::initialize( NetHost* pHost, GameObjectManager* pManager, const DestructionReplicationSettings& settings )
+    void DestructionReplicationServer::initialize( NetHost* pHost, GameObjectManager* pManager, const DestructionReplicationConfig& settings )
     {
         _pHost    = pHost;
         _pManager = pManager;
@@ -423,14 +423,14 @@ namespace sw
     {
     }
 
-    void DestructionReplicationClient::initialize( NetHost* pHost, GameObjectManager* pManager, const DestructionReplicationSettings& settings )
+    void DestructionReplicationClient::initialize( NetHost* pHost, GameObjectManager* pManager, const DestructionReplicationConfig& settings )
     {
         _pHost    = pHost;
         _pManager = pManager;
         _settings = settings;
         _listEntry.clear();
         _stats = DestructionReplicationStats{};
-        NetClockSettings clockSettings;
+        NetClockConfig clockSettings;
         clockSettings._tickInterval       = settings._tickInterval;
         clockSettings._interpolationDelay = settings._interpolationDelay;
         clockSettings._sampleInterval     = 0.0f; // 등록하는 오브젝트의 자세 간격으로 키운다(registerObject)

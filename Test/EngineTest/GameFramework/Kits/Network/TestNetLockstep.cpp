@@ -22,7 +22,7 @@ namespace
     /** @brief 서버(포트 4000) + 클라이언트 @p clientCount(4001 부터)를 30 프레임 동안 연결하고, 그 뒤 모든 엔드포인트에 @p conditions 를 겁니다. */
     void connectLockstepCluster( test::LoopbackCluster& cluster, int32 clientCount, const NetEmulationConditions& conditions )
     {
-        NetHostSettings settings;
+        NetHostConfig settings;
         settings._sendInterval = 1.0 / 60.0;
         for ( int32 index = 0; index <= clientCount; ++index )
         {
@@ -109,7 +109,7 @@ namespace
     class RollbackNetSimSession final : public INetSimSession
     {
     public:
-        RollbackNetSimSession( NetSimWorld& world, const RollbackSettings& settings, int32 startDelayTicks )
+        RollbackNetSimSession( NetSimWorld& world, const RollbackConfig& settings, int32 startDelayTicks )
             : _game{}
             , _session{}
             , _settings{ settings }
@@ -117,7 +117,7 @@ namespace
             , _startDelayTicks{ startDelayTicks }
             , _localFrame{ 0 }
         {
-            world.getRouter().addHandler( &_session );
+            world.getRouter().registerHandler( &_session );
         }
 
         void onTickEnd( NetSimWorld& world, float32 deltaTime ) override
@@ -136,18 +136,18 @@ namespace
                 ++_localFrame;
         }
 
-        TrackedDuel      _game;
-        RollbackSession  _session;
-        RollbackSettings _settings;
-        int32            _player;
-        int32            _startDelayTicks;
-        int32            _localFrame;
+        TrackedDuel     _game;
+        RollbackSession _session;
+        RollbackConfig  _settings;
+        int32           _player;
+        int32           _startDelayTicks;
+        int32           _localFrame;
     };
 
     class RollbackNetSimGame final : public INetSimGame
     {
     public:
-        RollbackNetSimGame( const RollbackSettings& settings, int32 clientStartDelayTicks )
+        RollbackNetSimGame( const RollbackConfig& settings, int32 clientStartDelayTicks )
             : _settings{ settings }
             , _clientStartDelayTicks{ clientStartDelayTicks }
         {
@@ -159,8 +159,8 @@ namespace
         }
 
     private:
-        RollbackSettings _settings;
-        int32            _clientStartDelayTicks;
+        RollbackConfig _settings;
+        int32          _clientStartDelayTicks;
     };
 
     /** @brief 흉내 거르개 — 하니스 틱이 [_beginTick, _endTick) 안이면 모두 버린다(한 방향 연속 손실). */
@@ -225,9 +225,9 @@ namespace
     /** @brief 클라이언트 → 서버가 틱 [120, 150) 동안 모두 사라지는 회선(그 밖은 지연 30 ms · 손실 2 %)에서 720 틱을 돌립니다. */
     RollbackRunResult runRollbackBurstLoss( uint32 seed )
     {
-        RollbackNetSimGame game( RollbackSettings{}, 0 );
+        RollbackNetSimGame game( RollbackConfig{}, 0 );
         NetSimHarness      harness;
-        NetSimSettings     settings;
+        NetSimConfig       settings;
         settings._seed                       = seed;
         settings._hostSettings._sendInterval = 1.0 / 60.0;
         if ( harness.initialize( settings, &game ) == false )
@@ -309,8 +309,8 @@ namespace
             , _hash{ sw::HashUtil::kFnvOffset32 }
             , _bStarted{ false }
         {
-            world.getRouter().addHandler( &_session );
-            world.getRouter().addHandler( this );
+            world.getRouter().registerHandler( &_session );
+            world.getRouter().registerHandler( this );
         }
 
         uint8           getMessageRangeBase() const override { return NetMessageRange::kGame; }
@@ -424,7 +424,7 @@ namespace
     {
         LeaveLockstepGame game( 4, 10, 10 );
         NetSimHarness     harness;
-        NetSimSettings    settings;
+        NetSimConfig      settings;
         settings._seed                         = seed;
         settings._hostSettings._timeoutSeconds = 1.0;
         settings._hostSettings._sendInterval   = 1.0 / 60.0;
@@ -567,9 +567,9 @@ SW_TEST_CASE( NetLockstepTest, RollbackPredictsRewindsAndConvergesOnBothSides )
     connectLockstepCluster( cluster, 1, conditions );
     SW_ASSERT_TRUE( cluster.areClientsConnected() );
 
-    TrackedDuel      arrGame[2];
-    RollbackSession  arrSession[2];
-    RollbackSettings settings;
+    TrackedDuel     arrGame[2];
+    RollbackSession arrSession[2];
+    RollbackConfig  settings;
     settings._inputDelay = 2;
     for ( int32 index = 0; index < 2; ++index )
     {
@@ -645,9 +645,9 @@ SW_TEST_CASE( NetLockstepTest, RollbackSurvivesBurstLossLongerThanRedundancy )
  */
 SW_TEST_CASE( NetLockstepTest, RollbackLeadingPeerWaitsForTheOther )
 {
-    RollbackNetSimGame game( RollbackSettings{}, 12 );
+    RollbackNetSimGame game( RollbackConfig{}, 12 );
     NetSimHarness      harness;
-    NetSimSettings     settings;
+    NetSimConfig       settings;
     settings._hostSettings._sendInterval = 1.0 / 60.0;
     SW_ASSERT_TRUE( harness.initialize( settings, &game ) );
     NetSimLinkConditions link;
@@ -660,7 +660,7 @@ SW_TEST_CASE( NetLockstepTest, RollbackLeadingPeerWaitsForTheOther )
     const RollbackSession& other  = static_cast<const RollbackNetSimSession*>( harness.findClient( client )->getSession() )->_session;
     const int32            lead   = server.getFrame() - other.getFrame();
     SW_EXPECT_TRUE( server.getTimeSyncWaitCount() > 0 );
-    SW_EXPECT_TRUE_MSG( -3 <= lead && lead <= RollbackSettings{}._maxFrameAdvantage + 1, "the leading side waited until the two frames met" );
+    SW_EXPECT_TRUE_MSG( -3 <= lead && lead <= RollbackConfig{}._maxFrameAdvantage + 1, "the leading side waited until the two frames met" );
     SW_EXPECT_TRUE( other.getFrame() > 500 );
     const RollbackRunResult result = collectRollbackRun( harness, client );
     SW_EXPECT_TRUE( result._confirmedFrame > 480 );
@@ -674,7 +674,7 @@ SW_TEST_CASE( NetLockstepTest, RollbackIgnoresInputsOutsideTheFrameWindow )
 {
     InputRecordingGame game;
     RollbackSession    session;
-    session.initialize( nullptr, &game, 2, 0, RollbackSettings{} );
+    session.initialize( nullptr, &game, 2, 0, RollbackConfig{} );
     sendRollbackInput( session, 2, vector<uint8>{ 2, 3, 4, 5 } );
     sendRollbackInput( session, 3 + RollbackSession::kHistorySize, vector<uint8>{ 9 } );
     for ( int32 frame = 0; frame < 6; ++frame )
@@ -726,7 +726,7 @@ SW_TEST_CASE( NetLockstepTest, ChecksumHistoryStaysBounded )
 {
     LeaveLockstepGame game( 2, 1, 0 );
     NetSimHarness     harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimSettings{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
     (void)harness.addClient( NetSimLinkConditions{} );
     harness.stepTicks( 800 );
     const LockstepSession& server = getLeaveLockstepSession( harness.getServer() )._session;

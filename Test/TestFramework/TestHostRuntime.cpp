@@ -255,7 +255,7 @@ namespace test
         }
         {
             SW_MEMORY_SCOPE( Asset );
-            sw::AsyncFileIOSettings fileIOSettings{};
+            sw::AsyncFileIOConfig fileIOSettings{};
             fileIOSettings._pTaskManager = pTaskManager;
             startup.addSubsystem( sw::make_unique<sw::AsyncFileIO>() ).setSubsystemSettings( fileIOSettings );
         }

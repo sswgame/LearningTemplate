@@ -50,7 +50,7 @@ namespace
         {
             (void)_store.pollCompletions();
             _service = make_unique<TradeService>();
-            _service->initialize( &_store, &_policy, nullptr, _serverID, TradeSettings{} );
+            _service->initialize( &_store, &_policy, nullptr, _serverID, TradeServiceConfig{} );
         }
 
         TradeCompletion settle()

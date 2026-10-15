@@ -39,7 +39,7 @@ namespace sw
          * @param migrationFolder 리소스 경로(`common/sql/servicestore`)나 디스크 폴더입니다.
          * @param nowMs 마이그레이션 기록에 남길 벽시계 시각(밀리초)입니다.
          */
-        [[nodiscard]] bool initialize( string_view driverName, const SQLConnectionPoolSettings& settings, string_view migrationFolder, int64 nowMs, string& outError );
+        [[nodiscard]] bool initialize( string_view driverName, const SQLConnectionPoolConfig& settings, string_view migrationFolder, int64 nowMs, string& outError );
 
         void  submit( unique_ptr<IServiceStoreWork> work ) override;
         int32 pollCompletions() override { return _pool.pollCompletions(); }

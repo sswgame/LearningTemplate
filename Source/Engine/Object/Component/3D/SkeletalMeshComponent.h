@@ -121,9 +121,9 @@ namespace sw
         const vector<ComponentHandle>& getAnimationDependencies() const { return _listDependency; }
 
         /** @brief 단계에 끼어드는 작업을 등록합니다(소유하지 않습니다). 같은 작업은 한 번만 등록됩니다. */
-        void addAnimationPhaseTask( IAnimationPhaseTask* pTask );
+        void registerAnimationPhaseTask( IAnimationPhaseTask* pTask );
         /** @brief 작업을 해제합니다. 그 작업에 `onAnimationUnitDetached` 를 알립니다. */
-        void removeAnimationPhaseTask( IAnimationPhaseTask* pTask );
+        void unregisterAnimationPhaseTask( IAnimationPhaseTask* pTask );
 
         /** @brief 포즈를 만드는 주기(프레임 수)입니다. 1 이면 매 프레임입니다. */
         void   setUpdateRateDivisor( uint32 divisor );

@@ -50,8 +50,8 @@ namespace
             , _listEntity{}
             , _pProbe{ pProbe }
         {
-            _server.initialize( &world.getHost(), ReplicationServerSettings{} );
-            world.getRouter().addHandler( &_server );
+            _server.initialize( &world.getHost(), ReplicationServerConfig{} );
+            world.getRouter().registerHandler( &_server );
             for ( uint32 index = 0; index < NetReplicationBenchInternal::kEntityCount; ++index )
             {
                 _listEntity.push_back( NetEntityState{ vector<uint8>( NetReplicationBenchInternal::kStateBytes, static_cast<uint8>( index ) ), index + 1, 1 } );
@@ -99,10 +99,10 @@ namespace
         explicit BenchClientSession( NetSimWorld& world )
             : _client{}
         {
-            ReplicationClientSettings settings;
+            ReplicationClientConfig settings;
             settings._tickInterval = 1.0f / 60.0f;
             _client.initialize( &world.getHost(), settings );
-            world.getRouter().addHandler( &_client );
+            world.getRouter().registerHandler( &_client );
         }
 
         void onTickBegin( NetSimWorld& world, float32 deltaTime ) override
@@ -140,7 +140,7 @@ SW_TEST_CASE( NetReplicationBenchTest, SixteenClientsThousandEntitiesAtSixtyHert
     using Internal = NetReplicationBenchInternal;
     BenchGame     game;
     NetSimHarness harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimSettings{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
     for ( uint32 index = 0; index < Internal::kClientCount; ++index )
     {
         SW_ASSERT_TRUE( harness.addClient( NetSimLinkConditions{} ) > 0 );

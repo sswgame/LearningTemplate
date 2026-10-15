@@ -152,7 +152,7 @@ namespace sw
 namespace sw
 {
     /** @brief 플레이어 생존 수치입니다. 온도는 섭씨이고, 코어는 0..100 입니다. */
-    struct WesternSurvivalSettings
+    struct WesternSurvivalDef
     {
         float32 _comfortMin{ 5.0f };       ///< 체감 온도가 이보다 낮으면 춥다고 보고, 체력 코어가 더 준다
         float32 _comfortMax{ 30.0f };      ///< 체감 온도가 이보다 높으면 덥다고 보고, 스태미나 코어가 더 준다
@@ -279,9 +279,9 @@ namespace sw
 
         const vector<WesternBondLevelDef>& getBondLevels() const { return _listBondLevel; }
         /** @brief 유대 단계 사이의 경험치 테이블(기반 `ExperienceCurve`)입니다. 레벨 L 은 `getBondLevels()[L − 1]` 단계입니다. */
-        const ExperienceCurve&         getBondCurve() const { return _bondCurve; }
-        const WesternBondExperience&   getBondExperience() const { return _bondExperience; }
-        const WesternSurvivalSettings& getSurvival() const { return _survival; }
+        const ExperienceCurve&       getBondCurve() const { return _bondCurve; }
+        const WesternBondExperience& getBondExperience() const { return _bondExperience; }
+        const WesternSurvivalDef&    getSurvival() const { return _survival; }
         /** @brief 명예 세력 하나가 가진 평판 카탈로그입니다(`ReputationState` 가 빌려 씁니다). */
         const ReputationCatalog& getHonorReputation() const { return _honorReputation; }
         /** @brief 등급(0..3)의 값 배율입니다. */
@@ -311,7 +311,7 @@ namespace sw
         ReputationCatalog                  _honorReputation;
         WesternBondExperience              _bondExperience;
         ExperienceCurve                    _bondCurve; ///< 단계 사이 경험치(정렬한 `_listBondLevel` 의 임계값 차이)
-        WesternSurvivalSettings            _survival;
+        WesternSurvivalDef                 _survival;
         hashed_string                      _currency;
         int32                              _extraHitPenalty; ///< 첫 발 뒤 한 발마다 떨어지는 등급
     };

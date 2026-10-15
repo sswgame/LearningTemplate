@@ -114,11 +114,11 @@ namespace sw
         // ----------------------------------------------------------------------
         /**
          * @brief 프레임 관찰자(`IEngineFrameObserver`)를 붙입니다. 붙인 순서대로 부르고, 같은 관찰자를 두 번 붙이지 않습니다.
-         * @details 루프는 관찰자가 무엇인지 모릅니다(자동화 시나리오 · 시퀀서 · AI 구동기). 수명은 붙인 쪽이 쥐고, 없애기 전에 `removeFrameObserver` 로 뗍니다.
+         * @details 루프는 관찰자가 무엇인지 모릅니다(자동화 시나리오 · 시퀀서 · AI 구동기). 수명은 붙인 쪽이 쥐고, 없애기 전에 `unregisterFrameObserver` 로 뗍니다.
          */
-        void addFrameObserver( IEngineFrameObserver* pObserver );
+        void registerFrameObserver( IEngineFrameObserver* pObserver );
         /** @brief 붙인 프레임 관찰자를 뗍니다. 붙어 있지 않으면 아무것도 하지 않습니다. */
-        void removeFrameObserver( IEngineFrameObserver* pObserver );
+        void unregisterFrameObserver( IEngineFrameObserver* pObserver );
 
         void setPresentHook( sw::PresentHookDelegate presentHook );
         void setPostPresentHook( sw::PresentHookDelegate postPresentHook );

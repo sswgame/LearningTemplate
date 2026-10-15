@@ -92,7 +92,7 @@ namespace sw
         shutdown();
     }
 
-    bool OnlineServerRuntime::initialize( OnlineServerRuntimeSettings settings, int64 nowMs, string& outError )
+    bool OnlineServerRuntime::initialize( OnlineServerRuntimeConfig settings, int64 nowMs, string& outError )
     {
         SW_ASSERT( _bInitialized == SW_FALSE );
         _parts        = make_unique<Parts>();
@@ -135,7 +135,7 @@ namespace sw
         return true;
     }
 
-    bool OnlineServerRuntime::createStores( OnlineServerRuntimeSettings& settings, int64 nowMs, string& outError )
+    bool OnlineServerRuntime::createStores( OnlineServerRuntimeConfig& settings, int64 nowMs, string& outError )
     {
         using Internal = OnlineServerRuntimeInternal;
         Parts& parts   = *_parts;
@@ -201,7 +201,7 @@ namespace sw
         return true;
     }
 
-    bool OnlineServerRuntime::createKits( const OnlineServerRuntimeSettings& settings, string& outError )
+    bool OnlineServerRuntime::createKits( const OnlineServerRuntimeConfig& settings, string& outError )
     {
         (void)settings;
         Parts&                          parts = *_parts;
@@ -264,10 +264,10 @@ namespace sw
         return true;
     }
 
-    bool OnlineServerRuntime::startHost( OnlineServerRuntimeSettings& settings, string& outError )
+    bool OnlineServerRuntime::startHost( OnlineServerRuntimeConfig& settings, string& outError )
     {
-        Parts&                    parts = *_parts;
-        OnlineServiceHostSettings hostSettings;
+        Parts&                  parts = *_parts;
+        OnlineServiceHostConfig hostSettings;
         hostSettings._transportSettings._ioThreadCount  = parts._config._ioThreadCount;
         hostSettings._transportSettings._maxConnections = parts._config._maxConnections;
         hostSettings._listenAddress                     = settings._listenAddress;
@@ -308,7 +308,7 @@ namespace sw
         return true;
     }
 
-    bool OnlineServerRuntime::registerServer( const OnlineServerRuntimeSettings& settings, string& outError )
+    bool OnlineServerRuntime::registerServer( const OnlineServerRuntimeConfig& settings, string& outError )
     {
         Parts& parts = *_parts;
         if ( parts._config._publicAddress.empty() )

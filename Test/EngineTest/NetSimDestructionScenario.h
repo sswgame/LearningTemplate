@@ -66,12 +66,12 @@ namespace test
         {
             (void)world.getScene().instantiate( document );
             _objects.collect( world.getObjectManager() );
-            _replication.initialize( &world.getHost(), &world.getObjectManager(), DestructionReplicationSettings{} );
+            _replication.initialize( &world.getHost(), &world.getObjectManager(), DestructionReplicationConfig{} );
             for ( uint32 index = 0; index < static_cast<uint32>( _objects._listFracture.size() ); ++index )
             {
                 _replication.registerObject( index + 1, *_objects._listFracture[index] );
             }
-            world.getRouter().addHandler( &_replication );
+            world.getRouter().registerHandler( &_replication );
         }
 
         void onTickEnd( NetSimWorld& world, float32 deltaTime ) override
@@ -105,12 +105,12 @@ namespace test
                     pBarrel->setActive( false );
             }
             _objects.collect( world.getObjectManager() );
-            _replication.initialize( &world.getHost(), &world.getObjectManager(), DestructionReplicationSettings{} );
+            _replication.initialize( &world.getHost(), &world.getObjectManager(), DestructionReplicationConfig{} );
             for ( uint32 index = 0; index < static_cast<uint32>( _objects._listFracture.size() ); ++index )
             {
                 _replication.registerObject( index + 1, *_objects._listFracture[index] );
             }
-            world.getRouter().addHandler( &_replication );
+            world.getRouter().registerHandler( &_replication );
         }
 
         void onTickBegin( NetSimWorld& world, float32 deltaTime ) override
@@ -295,7 +295,7 @@ namespace test
         ScenarioResult result;
         ShowcaseGame   game{ document };
         NetSimHarness  harness;
-        NetSimSettings settings;
+        NetSimConfig   settings;
         settings._seed = options._seed;
         if ( harness.initialize( settings, &game ) == false )
             return result;

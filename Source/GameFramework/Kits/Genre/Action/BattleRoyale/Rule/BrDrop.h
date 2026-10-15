@@ -26,7 +26,7 @@ namespace sw
         float32 _jumpEndRatio{ 1.0f };
 
         /** @brief 시드로 방향과 중심에서 비킨 거리를 골라 맵 경계에서 자른 경로입니다. 같은 시드면 같은 경로가 나옵니다. */
-        static BrFlightPath makeRandom( const BrFlightSettings& settings, float32 mapSize, uint32 seed );
+        static BrFlightPath makeRandom( const BrFlightDef& settings, float32 mapSize, uint32 seed );
 
         float32 computeLength() const;
         float32 computeDuration() const;
@@ -61,14 +61,14 @@ namespace sw
     public:
         BrSkydiver();
 
-        void initialize( const BrFallSettings& settings, const float3& position, float32 groundHeight );
+        void initialize( const BrFallDef& settings, const float3& position, float32 groundHeight );
         /** @brief 낙하산을 폅니다. 자유 낙하 중이 아니면 false 를 반환합니다. */
         [[nodiscard]] bool tryOpenParachute();
         /** @brief @p steer 방향(수평이며 길이는 1로 자른다)으로 조종하며 떨어집니다. */
         void update( float32 deltaTime, const float2& steer );
 
         /** @brief 지금부터 @p steer 로 계속 조종하면 내릴 위치(높이는 땅 높이)를 예측합니다. */
-        static float3 predictLanding( const BrFallSettings& settings, const float3& position, float32 groundHeight, const float2& steer, BrFallStage stage );
+        static float3 predictLanding( const BrFallDef& settings, const float3& position, float32 groundHeight, const float2& steer, BrFallStage stage );
 
         const float3& getPosition() const { return _position; }
         BrFallStage   getStage() const { return _stage; }
@@ -76,9 +76,9 @@ namespace sw
         float3        predictLanding( const float2& steer ) const { return predictLanding( _settings, _position, _groundHeight, steer, _stage ); }
 
     private:
-        BrFallSettings _settings;
-        float3         _position;
-        float32        _groundHeight;
-        BrFallStage    _stage;
+        BrFallDef   _settings;
+        float3      _position;
+        float32     _groundHeight;
+        BrFallStage _stage;
     };
 } // namespace sw

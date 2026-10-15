@@ -45,7 +45,7 @@ namespace sw
 namespace sw
 {
     /** @brief 풀 설정입니다. */
-    struct SQLConnectionPoolSettings
+    struct SQLConnectionPoolConfig
     {
         string _connection{};     ///< 드라이버 고유의 접속 문자열이다. 비밀은 포함하지 않는다
         string _secret{};         ///< 비밀번호이다. 연결을 다시 열 때도 쓰므로 풀이 보관한다
@@ -69,7 +69,7 @@ namespace sw
         SQLConnectionPool& operator=( const SQLConnectionPool& ) = delete;
 
         /** @brief 이 스레드에서 연결 하나를 먼저 열어 보고(기동 오류를 바로 알린다) 워커를 시작합니다. 열지 못하면 false 와 실패 이유를 반환하며 폴백은 없습니다. */
-        [[nodiscard]] bool initialize( ISQLDriver* pDriver, const SQLConnectionPoolSettings& settings, string& outError );
+        [[nodiscard]] bool initialize( ISQLDriver* pDriver, const SQLConnectionPoolConfig& settings, string& outError );
         /** @brief 새 작업을 막고, 남은 작업은 닫힌 연결로 실행해 완료 큐에 넣은 뒤 워커를 합류시킵니다. 그 뒤 `pollCompletions` 한 번이 모두 회수합니다. */
         void shutdown();
 
@@ -84,7 +84,7 @@ namespace sw
         vector<sw::thread>          _listWorker;
         deque<unique_ptr<ISQLJob>>  _listQueuedJob;
         vector<unique_ptr<ISQLJob>> _listCompleted;
-        SQLConnectionPoolSettings   _settings;
+        SQLConnectionPoolConfig     _settings;
         mutable mutex               _mutex;
         std::condition_variable_any _jobReady;
         ISQLDriver*                 _pDriver;

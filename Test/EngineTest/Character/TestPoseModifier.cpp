@@ -97,7 +97,7 @@ SW_TEST_CASE( PoseModifierTest, RunsInPostProcessBeforeSkinning )
     SW_ASSERT_NOT_NULL( pUnit );
     TestPoseModifierInternal::RootTurnTask turn;
     turn._angle = 0.5f;
-    pUnit->addAnimationPhaseTask( &turn );
+    pUnit->registerAnimationPhaseTask( &turn );
     GameObject* pBall = TestPoseModifierInternal::createMarker( manager, "Ball", float3{ 5.0f, 1.5f, 1.0f } );
     SW_ASSERT_NOT_NULL( pBall );
     PoseModifierComponent* pModifier = TestPoseModifierInternal::addRig(
@@ -115,7 +115,7 @@ SW_TEST_CASE( PoseModifierTest, RunsInPostProcessBeforeSkinning )
     // 기본 포즈(루트 회전)는 리그 앞에 있었다 — 리그가 덮지 않은 본 1 은 돌아간 자리다.
     SW_EXPECT_TRUE( MathUtil::abs( pUnit->getLocalPose().getBoneTransform( 0 )._rotation._y ) > 0.1f );
 
-    pUnit->removeAnimationPhaseTask( &turn );
+    pUnit->unregisterAnimationPhaseTask( &turn );
     pModifier->setRigEnabled( false );
     manager.getAnimationSystem().evaluate( 1.0f / 60.0f ); // 끈 프레임 — 리그 없는 포즈를 한 번 다시 만든다
     SW_EXPECT_TRUE( TestPoseModifierInternal::isNear( float3{ 0.0f, 2.0f, 0.0f }, TestPoseModifierInternal::getBoneModel( *pUnit, 2 ), 1e-4f ) );
@@ -133,7 +133,7 @@ SW_TEST_CASE( PoseModifierTest, CrossUnitTargetOrdersUnitsAndRejectsCycle )
     SkeletalMeshComponent* pBody = TestPoseModifierInternal::createUnit( manager, "Body", float3{ 0.0f, 0.0f, 0.0f } );
     SW_ASSERT_TRUE( pProp != nullptr && pBody != nullptr );
     TestPoseModifierInternal::RootTurnTask turn;
-    pBody->addAnimationPhaseTask( &turn );
+    pBody->registerAnimationPhaseTask( &turn );
 
     PoseModifierComponent* pFollow = TestPoseModifierInternal::addRig( *pProp, R"({ "targets": [ { "name": "Hand", "bone": "bone2", "unit": "Body" } ],
         "nodes": [ { "type": "CopyTransform", "name": "Follow", "bone": "bone0", "target": "Hand" } ] })" );
@@ -166,7 +166,7 @@ SW_TEST_CASE( PoseModifierTest, CrossUnitTargetOrdersUnitsAndRejectsCycle )
     }
     system.evaluate( 1.0f / 60.0f );
     SW_EXPECT_FALSE( system.hasDependencyCycle() );
-    pBody->removeAnimationPhaseTask( &turn );
+    pBody->unregisterAnimationPhaseTask( &turn );
 }
 
 /**
@@ -178,7 +178,7 @@ SW_TEST_CASE( PoseModifierTest, SpaceTargetRidesOwnBoneWithoutDependency )
     SkeletalMeshComponent* pBody = TestPoseModifierInternal::createUnit( manager, "Body", float3{} );
     SW_ASSERT_NOT_NULL( pBody );
     TestPoseModifierInternal::RootTurnTask turn;
-    pBody->addAnimationPhaseTask( &turn );
+    pBody->registerAnimationPhaseTask( &turn );
     GameObject* pGrip = TestPoseModifierInternal::createMarker( manager, "Grip", float3{} );
     SW_ASSERT_NOT_NULL( pGrip );
     PoseModifierComponent* pModifier = TestPoseModifierInternal::addRig( *pBody, R"({ "targets": [ { "name": "Grip", "object": "Grip", "space": "bone1" } ],
@@ -201,7 +201,7 @@ SW_TEST_CASE( PoseModifierTest, SpaceTargetRidesOwnBoneWithoutDependency )
         if ( frame > 0 )
             SW_EXPECT_TRUE( TestPoseModifierInternal::isNear( expected, TestPoseModifierInternal::getBoneModel( *pBody, 2 ), 1e-4f ) );
     }
-    pBody->removeAnimationPhaseTask( &turn );
+    pBody->unregisterAnimationPhaseTask( &turn );
 }
 
 /**
@@ -410,7 +410,7 @@ SW_TEST_CASE( PoseModifierTest, PoseDriverCorrectiveMorphDrivesMeshMorphWeight )
         float32 _degrees{ 90.0f };
     };
     ElbowTask elbow;
-    pUnit->addAnimationPhaseTask( &elbow );
+    pUnit->registerAnimationPhaseTask( &elbow );
     PoseModifierComponent* pModifier = TestPoseModifierInternal::addRig( *pUnit, R"({ "nodes": [ { "type": "PoseDriver", "name": "Elbow", "driver": "bone1",
         "radius_degrees": 60, "poses": [ { "name": "Rest", "rotation": [0, 0, 0] },
         { "name": "Bent", "rotation": [90, 0, 0], "morphs": [ { "morph": "ElbowBend", "weight": 1 } ] } ] } ] })" );
@@ -425,5 +425,5 @@ SW_TEST_CASE( PoseModifierTest, PoseDriverCorrectiveMorphDrivesMeshMorphWeight )
     pUnit->markPoseDirty();
     manager.getAnimationSystem().evaluate( 1.0f / 60.0f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pUnit->getMorphWeights()[0], 1e-4f );
-    pUnit->removeAnimationPhaseTask( &elbow );
+    pUnit->unregisterAnimationPhaseTask( &elbow );
 }

@@ -79,7 +79,7 @@ namespace sw
     {
     }
 
-    void MMOReplicator::initialize( NetHost* pHost, const MMOReplicatorSettings& settings, const IInterestPolicy* pPolicy )
+    void MMOReplicator::initialize( NetHost* pHost, const MMOReplicatorConfig& settings, const IInterestPolicy* pPolicy )
     {
         _pHost                 = pHost;
         _settings              = settings;

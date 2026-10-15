@@ -27,7 +27,7 @@
 namespace sw
 {
     /** @brief RESP 구현의 설정입니다. */
-    struct RespStoreSettings
+    struct RespStoreConfig
     {
         string     _keyPrefix{}; ///< 모든 키와 채널 앞에 붙이는 접두어이다(예: `game1:`)
         string     _userName{};  ///< 비면 `AUTH <비밀번호>` 형식으로 보낸다
@@ -55,7 +55,7 @@ namespace sw
          * @param transport 이 저장소가 소유합니다. `_ioThreadCount` 는 설정 그대로 둡니다. 0이면 이 저장소가 직접 돌립니다.
          * @param tlsContext 있으면 연결마다 TLS 세션(클라이언트 역할)을 만듭니다.
          */
-        [[nodiscard]] bool initialize( unique_ptr<IStreamTransport> transport, const StreamTransportSettings& transportSettings, const RespStoreSettings& settings,
+        [[nodiscard]] bool initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const RespStoreConfig& settings,
                                        unique_ptr<ITLSContext> tlsContext, string& outError );
 
         uint64 submit( const EphemeralRequest& request ) override;
@@ -107,8 +107,8 @@ namespace sw
         string      makeKey( string_view key ) const;
         RespCommand makeAuthCommand() const;
 
-        RespStoreSettings            _settings;
-        StreamTransportSettings      _transportSettings;
+        RespStoreConfig              _settings;
+        StreamTransportConfig        _transportSettings;
         mutable mutex                _mutex; ///< 두 연결, 받은 메시지, 확인 수를 보호한다. I/O 스레드와 함께 쓴다
         RespConnection               _commandConnection;
         RespConnection               _subscribeConnection;

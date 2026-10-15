@@ -45,7 +45,7 @@ SW_TEST_CASE( StreamEndpointTest, MessagesKeepBoundariesAndOrderAcrossChunks )
 {
     EndpointRecord           serverRecord;
     EndpointRecord           clientRecord;
-    test::StreamEndpointPair pair( serverRecord, clientRecord, StreamEndpointSettings{}, LoopbackStreamConditions{ 5, 0 } ); // 1..5 바이트 조각
+    test::StreamEndpointPair pair( serverRecord, clientRecord, StreamEndpointConfig{}, LoopbackStreamConditions{ 5, 0 } ); // 1..5 바이트 조각
     pair.step( 2 );
     SW_ASSERT_EQUAL( 1, static_cast<int32>( serverRecord._listOpened.size() ) );
     for ( int32 index = 0; index < 50; ++index )
@@ -68,7 +68,7 @@ SW_TEST_CASE( StreamEndpointTest, MalformedFrameClosesWithProtocolError )
 {
     EndpointRecord           serverRecord;
     EndpointRecord           clientRecord;
-    test::StreamEndpointPair pair( serverRecord, clientRecord, StreamEndpointSettings{}, LoopbackStreamConditions{} );
+    test::StreamEndpointPair pair( serverRecord, clientRecord, StreamEndpointConfig{}, LoopbackStreamConditions{} );
     pair.step( 2 );
     // 엔드포인트를 거치지 않고 전송에 직접 깨진 머리를 쓴다(모르는 종류 0x7F).
     const uint8 arrWire[6] = { 0x02, 0x00, 0x00, 0x00, 0x7F, 0x00 };
@@ -88,7 +88,7 @@ SW_TEST_CASE( StreamEndpointTest, MalformedFrameClosesWithProtocolError )
  */
 SW_TEST_CASE( StreamEndpointTest, PendingReceiveCapPausesTransportUntilPumped )
 {
-    StreamEndpointSettings settings;
+    StreamEndpointConfig settings;
     settings._maxPendingReceiveBytes = 4096;
     EndpointRecord           serverRecord;
     EndpointRecord           clientRecord;
@@ -113,7 +113,7 @@ SW_TEST_CASE( StreamEndpointTest, PendingReceiveCapPausesTransportUntilPumped )
 
 SW_TEST_CASE( StreamEndpointTest, PingMeasuresRoundTripAndFailedConnectStillCloses )
 {
-    StreamEndpointSettings settings;
+    StreamEndpointConfig settings;
     settings._pingIntervalSeconds = 0.001;
     EndpointRecord           serverRecord;
     EndpointRecord           clientRecord;

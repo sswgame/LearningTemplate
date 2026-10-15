@@ -37,7 +37,7 @@ namespace test
         {
         }
 
-        bool                       initialize( sw::IStreamHandler* pHandler, const sw::StreamTransportSettings& settings ) override { return _inner->initialize( pHandler, settings ); }
+        bool                       initialize( sw::IStreamHandler* pHandler, const sw::StreamTransportConfig& settings ) override { return _inner->initialize( pHandler, settings ); }
         void                       shutdown() override { _inner->shutdown(); }
         bool                       listen( const sw::NetAddress& bindAddress ) override { return _inner->listen( bindAddress ); }
         uint16                     getListenPort() const override { return _inner->getListenPort(); }
@@ -73,7 +73,7 @@ namespace test
             , _acceptedCount{ 0 }
             , _bHoldReplies{ false }
         {
-            sw::StreamTransportSettings settings;
+            sw::StreamTransportConfig settings;
             settings._ioThreadCount      = 0;
             settings._idleTimeoutSeconds = 0.0;
             (void)_transport->initialize( this, settings );

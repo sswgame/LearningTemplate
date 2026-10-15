@@ -88,7 +88,7 @@ namespace sw
         const XMLNode body = root.findChild( "Body" );
         if ( body )
         {
-            ActionBodySettings& settings       = _bodySettings;
+            ActionBodyDef& settings            = _bodySettings;
             settings._glideFallSpeed           = MathUtil::max( 0.1f, body.getAttributeFloat( "glideFallSpeed", settings._glideFallSpeed ) );
             settings._glideGravityScale        = MathUtil::clamp( body.getAttributeFloat( "glideGravityScale", settings._glideGravityScale ), 0.0f, 1.0f );
             settings._grappleRange             = MathUtil::max( 0.0f, body.getAttributeFloat( "grappleRange", settings._grappleRange ) );

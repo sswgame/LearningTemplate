@@ -154,6 +154,9 @@ reports keys that no longer match. The `on*` and spell-it-out rules are kept by 
   | work out a value from inputs | `compute` | `calculate`, `calc` |
   | advance one frame / one fixed step / gather input | `update` · `step` · `poll` | `tick` (outside the tick system) |
   | move a clock by a given amount (`advance( seconds )`, `advanceDay()`) | `advance` | — |
+  | put a value or an object into a container this object owns / take it out (the container decides order or key) | `add` / `remove` | `push` outside a stack or queue |
+  | hand over something that is called or looked up later — a callback, observer, handler, task, factory, cache — whose lifetime the caller keeps and ends with the pair | `register` / `unregister` | `add*Handler`, `add*Observer`, `add*Listener`, `remove*Handler` |
+  | join to the end of an ordered sequence (text, bytes, a list whose order is the meaning) | `append` | `add` for text |
 
   Other spellings of get-or-create (`findOrAdd*`, an `ensure*` that returns) are aligned when their function is touched.
   `tick` names only the tick system itself (`SceneTickScheduler`, `TickBatchRegistry`, component `onTick`) and behavior-tree
@@ -163,8 +166,10 @@ reports keys that no longer match. The `on*` and spell-it-out rules are kept by 
 - **Type suffixes say what the data is for.** `Def` — authored data definition (read from a file, shared, immutable);
   `Desc` — creation description handed to a `create*` call; `Spec` — a granted runtime instance in the Unreal GAS sense
   (`AbilitySpec` ↔ `FGameplayAbilitySpec`; the authored data is the `Def`); `Config` — preset or deployment configuration
-  (project, server, build); `Settings` — user or game settings someone changes at run time; `Params` — call arguments
-  bundled into one value.
+  (project, server, build, and the `initialize` configuration of a service, host, transport or store driver); `Settings` — user or
+  game settings someone changes at run time (project-wide engine settings tables such as `PhysicsSettings` · `UIScaleSettings` keep
+  the Unreal `U*Settings` name, and so do match rules a game picks per match); `Params` — call arguments bundled into one value.
+  A sub-struct of a catalog file is a `Def` (`BrZoneDef` inside `BrCatalog`).
 - **`RT` means render thread** (profile tags `RT.Frame`, `RT.BeginFrame`). A render target is spelled `RenderTarget`.
 
 - **A name is a `hashed_string`, and only that.** Take names as `const hashed_string&`; a string literal converts

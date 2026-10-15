@@ -8,7 +8,7 @@
 
 namespace sw
 {
-    ProfileAPILoginProvider::ProfileAPILoginProvider( const PlatformLoginProviderSettings& settings, HTTPClient* pHTTPClient )
+    ProfileAPILoginProvider::ProfileAPILoginProvider( const PlatformLoginProviderConfig& settings, HTTPClient* pHTTPClient )
         : _settings{ settings }
         , _mapRequestToVerification{}
         , _listDone{}

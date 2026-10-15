@@ -58,7 +58,7 @@ namespace
     }
 
     /** @brief 서버(포트 4000, listen) + 클라이언트 @p clientCount(포트 5000 부터 — 연결은 케이스가)를 세우고 모두 자기 네트워크 스레드에서 돌립니다. */
-    bool startThreadedCluster( test::LoopbackCluster& cluster, int32 clientCount, const NetHostSettings& settings )
+    bool startThreadedCluster( test::LoopbackCluster& cluster, int32 clientCount, const NetHostConfig& settings )
     {
         (void)cluster.addHost( 4000, settings );
         if ( cluster.getServer().listen() == false )
@@ -74,7 +74,7 @@ namespace
 SW_TEST_CASE( NetworkThreadTest, ThreadedHostsConnectAsyncAndExchangeWithoutGameUpdates )
 {
     test::LoopbackCluster cluster( 3u );
-    SW_ASSERT_TRUE( startThreadedCluster( cluster, 1, NetHostSettings{} ) );
+    SW_ASSERT_TRUE( startThreadedCluster( cluster, 1, NetHostConfig{} ) );
     NetHost& client = cluster.getClient( 0 );
 
     // 비동기 연결 — 게임 스레드는 update 를 부르지 않는다. 후속 작업은 네트워크 스레드에서 잠금 밖에서 불린다.
@@ -137,7 +137,7 @@ SW_TEST_CASE( NetworkThreadTest, GameThreadsSendAndReceiveConcurrently )
     // 클라이언트 둘(각자 스레드) — 게임 스레드 넷이 동시에 보내고(한 클라이언트에 둘씩), 서버 쪽은 두 스레드가 동시에 꺼낸다.
     constexpr int32 kSenderCount      = 4;
     constexpr int32 kMessagePerSender = 300;
-    NetHostSettings settings;
+    NetHostConfig   settings;
     settings._sendInterval = 1.0 / 120.0;
     test::LoopbackCluster cluster( 3u );
     SW_ASSERT_TRUE( startThreadedCluster( cluster, 2, settings ) );
@@ -231,7 +231,7 @@ SW_TEST_CASE( NetworkThreadTest, GameThreadsSendAndReceiveConcurrently )
 
 SW_TEST_CASE( NetworkThreadTest, ConnectAsyncReportsEveryFailure )
 {
-    NetHostSettings settings;
+    NetHostConfig settings;
     settings._maxConnections = 1;
     settings._connectTimeout = 0.3;
     test::LoopbackCluster cluster( 3u );
@@ -268,7 +268,7 @@ SW_TEST_CASE( NetworkThreadTest, ConnectAsyncReportsEveryFailure )
 SW_TEST_CASE( NetworkThreadTest, ConnectionsSurviveStalledGameThread )
 {
     // 타임아웃 0.5 초 — 게임 스레드가 1 초 멈춰도(로딩 · 긴 프레임) 네트워크 스레드가 유지 패킷을 주고받아 끊기지 않는다.
-    NetHostSettings settings;
+    NetHostConfig settings;
     settings._timeoutSeconds = 0.5;
     test::LoopbackCluster cluster( 3u );
     SW_ASSERT_TRUE( startThreadedCluster( cluster, 1, settings ) );
@@ -320,8 +320,8 @@ SW_TEST_CASE( NetworkThreadTest, UDPHostsRunOnThreadsOverLocalhost )
     SW_ASSERT_TRUE( clientTransport.open( 0, true ) );
     NetHost server;
     NetHost client;
-    server.initialize( &serverTransport, NetHostSettings{} );
-    client.initialize( &clientTransport, NetHostSettings{} );
+    server.initialize( &serverTransport, NetHostConfig{} );
+    client.initialize( &clientTransport, NetHostConfig{} );
     SW_ASSERT_TRUE( server.listen() );
     NetHostThread serverThread;
     NetHostThread clientThread;
@@ -363,7 +363,7 @@ SW_TEST_CASE( NetworkThreadTest, UDPHostsRunOnThreadsOverLocalhost )
  */
 SW_TEST_CASE( NetworkThreadTest, LargeReliableMessagesCrossHostThreads )
 {
-    NetHostSettings settings;
+    NetHostConfig settings;
     settings._sendInterval = 1.0 / 240.0; // 스레드가 2 ms 마다 돈다 — 조각 107 개가 0.5 초 안팎
     test::LoopbackCluster cluster( 3u );
     SW_ASSERT_TRUE( startThreadedCluster( cluster, 1, settings ) );
@@ -408,7 +408,7 @@ SW_TEST_CASE( NetworkThreadTest, LargeReliableMessagesCrossHostThreads )
  */
 SW_TEST_CASE( NetworkThreadTest, SendRateCapHoldsOnHostThreads )
 {
-    NetHostSettings settings;
+    NetHostConfig settings;
     settings._maxBytesPerSecond = 200000;
     test::LoopbackCluster cluster( 3u );
     SW_ASSERT_TRUE( startThreadedCluster( cluster, 1, settings ) );

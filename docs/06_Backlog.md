@@ -176,7 +176,7 @@
 
 - `C-17` **다음 이름 점검**(2026-10-13 이름 점검에서 남긴 것). 기준은 [AGENTS.md](../AGENTS.md) "Class suffixes" 절과 [결정 기록](09_Decisions.md) 5-1 이다. 아직 보지 않은 것:
   ① `Context` 접미어 타입이 무엇을 담는지, ② `*Util` 정적 클래스 중 한 타입의 메서드가 된 것이 나은 것,
-  ③ `Unit` 계열(812 회), ④ 남은 지역 · 멤버 변수 단독 `value` 약 50 곳. `Settings` · `Config` 기준은 `C-26` ③.
+  ③ `Unit` 계열(812 회), ④ 남은 지역 · 멤버 변수 단독 `value` 약 50 곳. `Settings` · `Config` · `Def` 기준은 AGENTS.md "Type suffixes".
 
 - `C-18` **100 줄 넘는 함수 정리.** 분해는 총량을 줄이지 않는다. 중복을 먼저 없애고, 그래도 문제면 본다. 목록이 필요하면 여러 줄 시그니처를 중괄호 깊이로 측정하는 스크립트로
   뽑는다(단순 정규식은 틀린다).
@@ -191,9 +191,7 @@
 
 - `C-26` **구조 리팩토링 · 데이터 주도의 남은 것**(2026-10-15 묶음 뒤). 끝난 것: 온라인 키트 클라이언트 골격(`OnlineKitClient`), 열거자 이름 표 → `ENUM()` · `getEnumName`,
   위임 카탈로그 18 개 → `GameCatalog<TDef>` 직접 상속, 틱 시스템 밖 `tick` → `update` 와 개수 이름(`Naming/CountFirst`), 컴포넌트 아이콘 → `REFLECT( Meta = "Icon=…" )`,
-  머티리얼 사용 define · 서비스 지표 결과 라벨 → 열거자 이름, `InputMap` 의 `InputActionBuffer` 분리, 키트 서버 조립의 옵션 표(`readOptions`) · 메서드 표(`OnlineMethodTable`), 얇은 `Util` 열 개 정리. 남은 것(순서대로):
-  ③ **이름**: `add` / `register` / `append` 의 쓰임 기준(컨테이너에 넣기 · 콜백 등록 · 끝에 잇기)을 AGENTS.md 표로 정하고 어긋난 것을 고친다.
-     `Settings` 중 `Config`(배포 · 프리셋) 31 개와 `Def`(저작 데이터) 27 개 후보를 하나씩 판정해 개명한다 — 리플렉션 타입 이름이 데이터에 적힌 곳은 데이터도 다시 쓴다.
+  머티리얼 사용 define · 서비스 지표 결과 라벨 → 열거자 이름, `InputMap` 의 `InputActionBuffer` 분리, 키트 서버 조립의 옵션 표(`readOptions`) · 메서드 표(`OnlineMethodTable`), 얇은 `Util` 열 개 정리, `add` / `register` / `append` 어휘표와 `Settings` → `Config` · `Def` 판정. 남은 것(순서대로):
   ④ **데이터 주도**: 게임 · 키트 튜닝 상수 → `PROPERTY` · 팩 설정, 작물 · 유닛 색 → `Def` 속성, `LoadBot` 동작 표 통합, 이벤트 필드 목록 → 필드 표 Emit 열,
      확장자 → 종류 정본 하나(에디터 `EditorAssetType` 의 확장자 표 · 엔진 포맷 `kExtension` · 쿠킹 경로 · `ResourceDataKind`를 한 표로, 계약 테스트는 그 표로),
      `UIStyleField` 서술자 표. 손 이름 표가 남은 열거형(`TelemetryUploadResult` · `CrashReport*` · `AIDirector*` 등 표가 함수 밖에 있어 이번 자동 변환이 못 본 것)도 `ENUM()` 으로.

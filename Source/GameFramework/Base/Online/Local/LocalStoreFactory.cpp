@@ -32,7 +32,7 @@ namespace sw
 
 namespace sw
 {
-    unique_ptr<ILocalStore> LocalStoreFactory::createLocalStore( string_view gameName, const LocalStoreSettings& settings, const LocalSealContext& sealContext,
+    unique_ptr<ILocalStore> LocalStoreFactory::createLocalStore( string_view gameName, const LocalStoreConfig& settings, const LocalSealContext& sealContext,
                                                                  string& outError )
     {
         unique_ptr<ILocalSlotStorage> storage;

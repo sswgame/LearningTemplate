@@ -289,7 +289,7 @@ SW_TEST_CASE( AdminServiceTest, ServiceRevokesSessionsAfterSuspendOnce )
     MemoryServiceStore    store{ &database };
     FakeSessionControl    sessions;
     AdminService          service;
-    AdminServiceSettings  settings;
+    AdminServiceConfig    settings;
     settings._pSessionControl = &sessions;
     SW_ASSERT_TRUE( service.initialize( &store, settings ) );
     service.seedRole( AdminFixture::kOperator, AdminRole::Operator, 1 );
@@ -322,8 +322,8 @@ SW_TEST_CASE( AdminServiceTest, SanctionChangeIsPublishedOnceOnTheBus )
     LocalServerBus        adminBus{ &hub, 1 };
     LocalServerBus        chatBus{ &hub, 2 }; // 다른 서버의 채팅이 듣는다
     chatBus.subscribe( ServiceSanctionBus::kChangedTopic );
-    AdminService         service;
-    AdminServiceSettings settings;
+    AdminService       service;
+    AdminServiceConfig settings;
     settings._pBus = &adminBus;
     SW_ASSERT_TRUE( service.initialize( &store, settings ) );
     service.seedRole( AdminFixture::kSupport, AdminRole::Support, 1 );

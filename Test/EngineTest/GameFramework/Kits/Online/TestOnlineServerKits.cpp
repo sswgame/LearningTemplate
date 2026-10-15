@@ -21,7 +21,7 @@ namespace
     {
         static constexpr int64 kStartMs = 1767225600000; ///< 2026-01-01 00:00:00 UTC
 
-        static OnlineServerKitEntry& addKit( OnlineServerRuntimeSettings& inoutSettings, const utf8* pName )
+        static OnlineServerKitEntry& addKit( OnlineServerRuntimeConfig& inoutSettings, const utf8* pName )
         {
             OnlineServerKitEntry& entry = inoutSettings._config._listKit.emplace_back();
             entry._name                 = pName;
@@ -35,9 +35,9 @@ namespace
             option._value              = pValue;
         }
 
-        static OnlineServerRuntimeSettings makeSettings( IStreamTransport* pTransport, uint16 port )
+        static OnlineServerRuntimeConfig makeSettings( IStreamTransport* pTransport, uint16 port )
         {
-            OnlineServerRuntimeSettings settings;
+            OnlineServerRuntimeConfig settings;
             settings._bTLS                  = SW_FALSE;
             settings._bManualCacheTime      = SW_TRUE;
             settings._pTransport            = pTransport;
@@ -56,7 +56,7 @@ SW_TEST_CASE( OnlineServerKitsTest, AccountMailboxTradeAndAdminAssembleAndShutDo
     using Internal = OnlineServerKitsTestInternal;
     LoopbackStreamNetwork        network;
     unique_ptr<IStreamTransport> transport = network.createTransport();
-    OnlineServerRuntimeSettings  settings  = Internal::makeSettings( transport.get(), 7461 );
+    OnlineServerRuntimeConfig    settings  = Internal::makeSettings( transport.get(), 7461 );
     Internal::addOption( Internal::addKit( settings, "account" ), "lightPasswordHash", "1" );
     (void)Internal::addKit( settings, "mailbox" );
     Internal::addOption( Internal::addKit( settings, "trade" ), "tradable", "cur.gold" );
@@ -85,7 +85,7 @@ SW_TEST_CASE( OnlineServerKitsTest, StartupStopsOnUnknownOptionsAndMissingDepend
     {
         LoopbackStreamNetwork        network;
         unique_ptr<IStreamTransport> transport = network.createTransport();
-        OnlineServerRuntimeSettings  settings  = Internal::makeSettings( transport.get(), 7462 );
+        OnlineServerRuntimeConfig    settings  = Internal::makeSettings( transport.get(), 7462 );
         Internal::addOption( Internal::addKit( settings, "account" ), "ticketKey", "abc" ); // 철자가 틀린 옵션
         OnlineServerRuntime runtime;
         string              error;
@@ -95,7 +95,7 @@ SW_TEST_CASE( OnlineServerKitsTest, StartupStopsOnUnknownOptionsAndMissingDepend
     {
         LoopbackStreamNetwork        network;
         unique_ptr<IStreamTransport> transport = network.createTransport();
-        OnlineServerRuntimeSettings  settings  = Internal::makeSettings( transport.get(), 7463 );
+        OnlineServerRuntimeConfig    settings  = Internal::makeSettings( transport.get(), 7463 );
         Internal::addOption( Internal::addKit( settings, "chat" ), "bannedWords", "none" ); // 계정 키트 없이 채팅
         OnlineServerRuntime runtime;
         string              error;
@@ -105,7 +105,7 @@ SW_TEST_CASE( OnlineServerKitsTest, StartupStopsOnUnknownOptionsAndMissingDepend
     {
         LoopbackStreamNetwork        network;
         unique_ptr<IStreamTransport> transport = network.createTransport();
-        OnlineServerRuntimeSettings  settings  = Internal::makeSettings( transport.get(), 7464 );
+        OnlineServerRuntimeConfig    settings  = Internal::makeSettings( transport.get(), 7464 );
         (void)Internal::addKit( settings, "economy" ); // 카탈로그 없이 경제
         OnlineServerRuntime runtime;
         string              error;
@@ -115,7 +115,7 @@ SW_TEST_CASE( OnlineServerKitsTest, StartupStopsOnUnknownOptionsAndMissingDepend
     {
         LoopbackStreamNetwork        network;
         unique_ptr<IStreamTransport> transport = network.createTransport();
-        OnlineServerRuntimeSettings  settings  = Internal::makeSettings( transport.get(), 7465 );
+        OnlineServerRuntimeConfig    settings  = Internal::makeSettings( transport.get(), 7465 );
         OnlineServerRuntime          runtime;
         string                       error;
         SW_EXPECT_FALSE( runtime.initialize( settings, Internal::kStartMs, error ) ); // 키트를 하나도 적지 않았다

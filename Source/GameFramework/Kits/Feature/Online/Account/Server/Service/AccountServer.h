@@ -27,13 +27,13 @@
 namespace sw
 {
     /** @brief 계정 바인딩 설정입니다. */
-    struct AccountServerSettings
+    struct AccountServerConfig
     {
-        int64                  _purgeIntervalMs{ 60000 };   ///< 탈퇴 계정을 정리하는 간격이다
-        int64                  _refreshIntervalMs{ 10000 }; ///< 접속해 있는 세션을 다시 읽는 간격이다. 서버가 여러 대일 때 버스 알림을 놓친 변경을 찾아낸다
-        int32                  _refreshCount{ 64 };
-        int32                  _purgeCount{ 32 };
-        OnlinePresenceSettings _presence{};
+        int64                _purgeIntervalMs{ 60000 };   ///< 탈퇴 계정을 정리하는 간격이다
+        int64                _refreshIntervalMs{ 10000 }; ///< 접속해 있는 세션을 다시 읽는 간격이다. 서버가 여러 대일 때 버스 알림을 놓친 변경을 찾아낸다
+        int32                _refreshCount{ 64 };
+        int32                _purgeCount{ 32 };
+        OnlinePresenceConfig _presence{};
     };
 } // namespace sw
 
@@ -49,7 +49,7 @@ namespace sw
         AccountServer();
 
         /** @brief @p pLoginService 는 빌려 씁니다. 이 객체보다 오래 살아야 하며 호스트에 등록하기 전에 지정합니다. */
-        void initialize( LoginService* pLoginService, const AccountServerSettings& settings );
+        void initialize( LoginService* pLoginService, const AccountServerConfig& settings );
         void shutdown();
 
         // IOnlineHostService
@@ -103,7 +103,7 @@ namespace sw
         vector<LoginCompletion>                _listCompletionScratch;
         vector<LoginEvent>                     _listEventScratch;
         OnlinePresence                         _presence;
-        AccountServerSettings                  _settings;
+        AccountServerConfig                    _settings;
         LoginService*                          _pLoginService;
         uint64                                 _nextTag;
         int64                                  _nowMs;

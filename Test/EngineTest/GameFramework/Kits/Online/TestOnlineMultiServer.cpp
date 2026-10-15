@@ -57,20 +57,20 @@ namespace
             , _transport{ network.createTransport() }
             , _host{}
         {
-            LoginSettings settings;
+            LoginServiceConfig settings;
             settings._passwordHashParams._memoryKiB                        = 256;
             settings._passwordHashParams._iterationCount                   = 1;
             const uint8 arrMasterKey[LoginTicketAuthority::kMasterKeySize] = { 5, 5, 5 };
             _loginService.initialize( &_store, &_crypto, settings, arrMasterKey );
-            AccountServerSettings accountSettings;
+            AccountServerConfig accountSettings;
             accountSettings._refreshIntervalMs           = 1000000000; // 세션 다시 읽기는 끈다 — 버스만으로 닫혀야 한다
             accountSettings._presence._refreshIntervalMs = 1000;
             _accountServer.initialize( &_loginService, accountSettings );
-            _tradeService.initialize( &_store, &_tradePolicy, nullptr, serverID, TradeSettings{} );
+            _tradeService.initialize( &_store, &_tradePolicy, nullptr, serverID, TradeServiceConfig{} );
             _tradeServer.initialize( &_tradeService, &_loginService, _accountServer.getPresence() );
             SW_EXPECT_TRUE( _host.registerHostService( &_accountServer ) );
             SW_EXPECT_TRUE( _host.registerHostService( &_tradeServer ) );
-            OnlineServiceHostSettings hostSettings;
+            OnlineServiceHostConfig hostSettings;
             hostSettings._transportSettings._ioThreadCount = 0;
             hostSettings._listenAddress                    = NetAddress::makeLoopback( static_cast<uint16>( kFirstPort + serverID ) );
             hostSettings._pServiceStore                    = &_store;
@@ -112,7 +112,7 @@ namespace
             _trade.initialize( &_client );
             SW_EXPECT_TRUE( _client.registerClientService( &_account ) );
             SW_EXPECT_TRUE( _client.registerClientService( &_trade ) );
-            OnlineServiceClientSettings settings;
+            OnlineServiceClientConfig settings;
             settings._transportSettings._ioThreadCount = 0;
             settings._serverAddress                    = NetAddress::makeLoopback( static_cast<uint16>( kFirstPort + serverID ) );
             settings._maxBackoffMs                     = 200;

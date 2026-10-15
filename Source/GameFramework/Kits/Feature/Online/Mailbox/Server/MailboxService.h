@@ -28,7 +28,7 @@ namespace sw
     class MetricRegistry;
 
     /** @brief 우편함 서비스 설정입니다. 포인터는 빌려 씁니다. */
-    struct MailboxServiceSettings
+    struct MailboxServiceConfig
     {
         const ILedgerPolicy* _pPolicy{ nullptr }; ///< 계정 상한이다. 게임이 CurrencyCatalog 를 넘기며, 기반 계층의 계약이라 키트끼리 몰라도 된다
         MetricRegistry*      _pMetricRegistry{ nullptr };
@@ -66,7 +66,7 @@ namespace sw
         MailboxService& operator=( const MailboxService& ) = delete;
 
         /** @brief 저장소가 없으면 false 를 반환합니다. 첫 `tick` 이 캠페인 읽기를 맡깁니다. */
-        [[nodiscard]] bool initialize( IServiceStore* pStore, const MailboxServiceSettings& settings );
+        [[nodiscard]] bool initialize( IServiceStore* pStore, const MailboxServiceConfig& settings );
         /** @brief 맡긴 작업(요청, 만료 정리, 캠페인)이 끝날 때까지 저장소를 회수합니다. 상한은 5초이며 저장소를 종료하기 전에 부릅니다. */
         void shutdown();
 
@@ -110,7 +110,7 @@ namespace sw
         vector<PendingCall>         _listPendingCall;
         vector<ServiceMailCampaign> _listCampaign;
         ServiceMetrics              _metrics;
-        MailboxServiceSettings      _settings;
+        MailboxServiceConfig        _settings;
         IServiceStore*              _pStore;
         MetricCounter*              _arrExpiredCounter[3]; ///< discarded · returned · removed
         uint64                      _nextCallID;

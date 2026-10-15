@@ -1,5 +1,5 @@
 /**
- * @file PlatformLoginProviderSettings.h
+ * @file PlatformLoginProviderConfig.h
  * @brief 외부 로그인 제공자의 설정입니다. 제공자는 코드가 아니라 **데이터**로 정의합니다.
  * @details 설정은 이름, 방식(OIDC 또는 액세스 토큰으로 프로필 조회), 발급자와 JWKS 주소 또는 프로필 주소, client id(aud), 주체 필드 경로로 이루어진다.
  *          팩토리가 설정에서 공통 구현(`OidcLoginProvider`, `ProfileAPILoginProvider`)을 만들고, 서버 설정 JSON 의 목록을 읽는다.
@@ -32,7 +32,7 @@ namespace sw
 namespace sw
 {
     /** @brief 제공자 하나의 설정입니다. 시간은 밀리초입니다. */
-    struct PlatformLoginProviderSettings
+    struct PlatformLoginProviderConfig
     {
         vector<string>            _listClientID{};       ///< Oidc 에서 `aud` 로 받아들이는 client id 이다. 플랫폼마다 다를 수 있다
         string                    _name{};               ///< `[a-z0-9_]` 형식이며 16자 이하이다. 저장 키에 들어간다
@@ -56,13 +56,13 @@ namespace sw
     struct SW_KIT_SERVER_API PlatformLoginProviderFactory
     {
         /** @brief 설정으로 공통 구현을 만듭니다. @p pHTTPClient 는 빌려 쓰며 이 제공자만 응답을 회수합니다. 응답을 다른 쪽과 나누지 않습니다. 설정이 틀리면 nullptr 을 반환합니다. */
-        static unique_ptr<IPlatformLoginProvider> create( const PlatformLoginProviderSettings& settings, INetSecurityProvider* pProvider, HTTPClient* pHTTPClient );
+        static unique_ptr<IPlatformLoginProvider> create( const PlatformLoginProviderConfig& settings, INetSecurityProvider* pProvider, HTTPClient* pHTTPClient );
         /**
          * @brief `{"providers":[{"name","kind":"oidc|profile","issuer","jwksUrl","clientIDs":[…],"requireNonce","profileUrl","subjectPath","displayNamePath"}]}` 를 읽습니다.
          * @details 모르는 키, 빠진 필수 키, 규칙에 맞지 않는 이름은 오류(@p outError)로 처리한다. 철자가 틀린 설정이 조용히 기본값이 되지 않게 하려는 것이다.
          */
-        [[nodiscard]] static bool readSettings( string_view jsonText, vector<PlatformLoginProviderSettings>& outListSettings, string& outError );
+        [[nodiscard]] static bool readSettings( string_view jsonText, vector<PlatformLoginProviderConfig>& outListSettings, string& outError );
         /** @brief 설정을 쓸 수 있으면 true 입니다. 이름 규칙과 방식별 필수 항목을 검사합니다. */
-        static bool isValidSettings( const PlatformLoginProviderSettings& settings );
+        static bool isValidSettings( const PlatformLoginProviderConfig& settings );
     };
 } // namespace sw

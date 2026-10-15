@@ -54,7 +54,7 @@ namespace sw
                 uint8             _arrDeviceSecret[LoginConstant::kDeviceSecretSize];
                 uint8             _bUpdateRecommended;
 
-                LoginWork( LoginService* pService, ILoginCrypto* pCrypto, const LoginSettings& settings, LoginOperation operation, uint64 requestTag, int64 nowMs )
+                LoginWork( LoginService* pService, ILoginCrypto* pCrypto, const LoginServiceConfig& settings, LoginOperation operation, uint64 requestTag, int64 nowMs )
                     : _credential{}
                     , _token{}
                     , _serverID{}
@@ -175,12 +175,12 @@ namespace sw
                 void complete() override { _pService->applyCompletion( std::move( _completion ), _outcome ); }
 
             private:
-                LoginStoreOutcome _outcome;
-                LoginCompletion   _completion;
-                LoginSettings     _settings; ///< 복사한 값이다. 서비스 설정이 바뀌어도 이 작업은 맡길 때의 값으로 실행한다
-                LoginService*     _pService;
-                ILoginCrypto*     _pCrypto;
-                int64             _nowMs;
+                LoginStoreOutcome  _outcome;
+                LoginCompletion    _completion;
+                LoginServiceConfig _settings; ///< 복사한 값이다. 서비스 설정이 바뀌어도 이 작업은 맡길 때의 값으로 실행한다
+                LoginService*      _pService;
+                ILoginCrypto*      _pCrypto;
+                int64              _nowMs;
             };
 
             /** @brief 끊김, 세션 다시 읽기, 탈퇴 정리 작업입니다. 완료가 없고 부작용만 있습니다. */
@@ -191,7 +191,7 @@ namespace sw
                 uint64                  _disconnectedSessionID;
                 int32                   _purgeCount;
 
-                LoginMaintenanceWork( LoginService* pService, ILoginCrypto* pCrypto, const LoginSettings& settings, int64 nowMs )
+                LoginMaintenanceWork( LoginService* pService, ILoginCrypto* pCrypto, const LoginServiceConfig& settings, int64 nowMs )
                     : _listOnline{}
                     , _disconnectedSessionID{ 0 }
                     , _purgeCount{ 0 }
@@ -222,11 +222,11 @@ namespace sw
                 }
 
             private:
-                LoginStoreOutcome _outcome;
-                LoginSettings     _settings;
-                LoginService*     _pService;
-                ILoginCrypto*     _pCrypto;
-                int64             _nowMs;
+                LoginStoreOutcome  _outcome;
+                LoginServiceConfig _settings;
+                LoginService*      _pService;
+                ILoginCrypto*      _pCrypto;
+                int64              _nowMs;
             };
         };
     } // namespace
@@ -255,7 +255,7 @@ namespace sw
     {
     }
 
-    void LoginService::initialize( IServiceStore* pStore, ILoginCrypto* pCrypto, const LoginSettings& settings,
+    void LoginService::initialize( IServiceStore* pStore, ILoginCrypto* pCrypto, const LoginServiceConfig& settings,
                                    const uint8 ( &arrTicketMasterKey )[LoginTicketAuthority::kMasterKeySize] )
     {
         _pStore   = pStore;

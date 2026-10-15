@@ -50,7 +50,7 @@ namespace sw
 {
     /** @brief 눈 깜빡임입니다. 타깃(눈꺼풀)과 간격, 길이(초)를 담습니다. 타깃이 없으면 깜빡이지 않습니다. */
     REFLECT()
-    struct SW_API FacialBlinkSettings
+    struct SW_API FacialBlinkDef
     {
         REFLECT_BODY();
 
@@ -69,7 +69,7 @@ namespace sw
 {
     /** @brief 시선입니다. 눈 본들이 목표를 봅니다(앞 축과 최대 각). 사카드(작은 튐)는 간격과 크기로 정합니다. 눈 본이 없으면 보지 않습니다. */
     REFLECT()
-    struct SW_API FacialGazeSettings
+    struct SW_API FacialGazeDef
     {
         REFLECT_BODY();
 
@@ -110,10 +110,10 @@ namespace sw
         /** @brief 메시의 모프 타깃 이름에 없는 타깃, 스켈레톤에 없는 눈 본, 타깃과 같은 이름의 표정(커브가 둘 다 움직임)이 있으면 오류를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool validate( const vector<hashed_string>& listMorphTargetName, const Skeleton& skeleton, string_view sourceLabel ) const;
 
-        const vector<FacialPose>&  getExpressions() const { return _listExpression; }
-        const vector<FacialPose>&  getVisemes() const { return _listViseme; }
-        const FacialBlinkSettings& getBlink() const { return _blink; }
-        const FacialGazeSettings&  getGaze() const { return _gaze; }
+        const vector<FacialPose>& getExpressions() const { return _listExpression; }
+        const vector<FacialPose>& getVisemes() const { return _listViseme; }
+        const FacialBlinkDef&     getBlink() const { return _blink; }
+        const FacialGazeDef&      getGaze() const { return _gaze; }
         /** @brief 이름의 표정 번호입니다. 없으면 -1 입니다. */
         int32 findExpressionIndex( const hashed_string& name ) const;
         /** @brief 이름의 비즘 번호입니다. 없으면 -1 입니다. */
@@ -128,8 +128,8 @@ namespace sw
         PROPERTY( Tooltip = "Visemes: morph target weight sets the lip sync drives by viseme name" )
         vector<FacialPose> _listViseme;
         PROPERTY( Tooltip = "Eye blink" )
-        FacialBlinkSettings _blink;
+        FacialBlinkDef _blink;
         PROPERTY( Tooltip = "Eye gaze and saccades" )
-        FacialGazeSettings _gaze;
+        FacialGazeDef _gaze;
     };
 } // namespace sw

@@ -288,7 +288,7 @@ namespace sw
                     pTaskManager = &_startup.addSubsystem( sw::make_unique<TaskManager>() );
                 }
                 // 완료 콜백(팩 해제 · CRC · 스트리밍 완료 기록)은 태스크 워커에서 돈다 — IO 스레드는 다음 읽기를 거는 일만 한다.
-                AsyncFileIOSettings fileIOSettings{};
+                AsyncFileIOConfig fileIOSettings{};
                 fileIOSettings._pTaskManager = pTaskManager;
                 {
                     SW_MEMORY_SCOPE( Asset );
@@ -394,7 +394,7 @@ namespace sw
         // 장면별 프레임 시간 · flush 는 프레임 관찰자로 돈다(씬 틱 뒤 — `TelemetryService::onAfterSceneTick`). 텔레메트리가 섰을 때만 붙인다.
         // 떼는 것은 `shutdown` 이 단계 종료 전에 관찰자 목록을 비우는 것으로 끝난다.
         if ( telemetryService.isInitialized() )
-            addFrameObserver( &telemetryService );
+            registerFrameObserver( &telemetryService );
         if ( bDedicatedServer )
         {
             // 실제 바이너리에서 단계가 빠졌는지 테스트(ServerBootTest)가 이 줄로 본다. 초기화 순서대로 적는다.
@@ -505,7 +505,7 @@ namespace sw
         SW_LOG_INFO( "Quit requested (exit code %#)", exitCode );
     }
 
-    void Engine::addFrameObserver( IEngineFrameObserver* pObserver )
+    void Engine::registerFrameObserver( IEngineFrameObserver* pObserver )
     {
         if ( pObserver == nullptr )
             return;
@@ -517,7 +517,7 @@ namespace sw
         _listFrameObserver.push_back( pObserver );
     }
 
-    void Engine::removeFrameObserver( IEngineFrameObserver* pObserver )
+    void Engine::unregisterFrameObserver( IEngineFrameObserver* pObserver )
     {
         for ( size_t index = 0; index < _listFrameObserver.size(); ++index )
         {

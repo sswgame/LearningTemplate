@@ -72,7 +72,7 @@ namespace
             dependencies._pPresence  = &server._presence;
             dependencies._pDirectory = &_directory;
             dependencies._serverID   = server.getServerID();
-            SW_EXPECT_TRUE( _service.initialize( dependencies, ChatSettings{} ) );
+            SW_EXPECT_TRUE( _service.initialize( dependencies, ChatServiceConfig{} ) );
             _binding.initialize( &_service );
         }
 

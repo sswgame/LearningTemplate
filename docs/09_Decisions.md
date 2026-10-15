@@ -224,6 +224,9 @@
 | `Object/GameObject/{ScenePhysics,SceneOverlapWorld2D,SceneAudio,MeshInstanceBatch,SpriteInstanceBatch}` · `GameObjectManager::getScenePhysics` · `getSceneAudio` · `getOverlapWorld2D` | `Object/Component/{Physics,Audio,3D,2D}/` · `getSubsystem<ScenePhysics>()` · `getSubsystem<SceneAudio>()` · `getSubsystem<ScenePhysics>().getOverlapWorld2D()`(2026-10-13) |
 | `EngineLoop` · `Engine/EngineLoop.h` · `_engineLoop`(2026-10-15) | `Engine` · `Engine/Engine.h` · `_engine` (네임스페이스 `engine` 은 그대로 — 5-3) |
 | `PhysicsTypes.h` 의 `PhysicsHandle` · `PhysicsBodyHandle` 등 핸들 | `Engine/Common/PhysicsHandle.h`(2026-10-13 — 컴포넌트 모델 코어가 Physics 를 include 하지 않게) |
+| 서비스 · 호스트 · 전송 · 저장소의 `initialize` 설정 `*Settings` 41 개(`NetHostSettings` · `MailboxServiceSettings` · `TLSContextSettings` …) | `*Config`(2026-10-15, C-26 ③). `ChatSettings` · `TradeSettings` · `LoginSettings` · `ServerDirectorySettings` 는 `*ServiceConfig` |
+| 카탈로그 파일 안의 `*Settings` 18 개(`BrZoneSettings` · `ScavengerQuotaSettings` · `FacialBlinkSettings` …) | `*Def`(`WitcherAlchemySettings` 는 `WitcherAlchemyRuleDef` — 연금 아이템 정의 `WitcherAlchemyDef` 와 구분) |
+| `NetMessageRouter::addHandler` · `Engine::addFrameObserver` · `addRootMotionModifier` · `addAnimationPhaseTask` · `GameDataCacheRegistry::addCache`(와 짝 `remove*`) | `register*` · `unregister*`(2026-10-15 — 나중에 불리는 것을 넘기는 일, AGENTS.md 어휘표) |
 
 일부러 둔 용어: stamp · kit · cook · orphan · chord · pin.
 
@@ -673,7 +676,7 @@
   `NetCompressionBenchTest`(Release, 3 회 가운데 값, 패킷마다 봉투 3 B, 줄지 않으면 원문)에서 레지스트리 코덱은 어느 흐름에서도 규칙을 넘지 못했습니다.
   스냅숏(평균 1009 B)은 LZ4 1 % · 1.1 us, zstd1 15 % · 11.7 us, zstd1 + 사전 16 KB 34 % · 6.0 us 였습니다. 파괴(302 B)는 LZ4 3 % · 0.37 us, zstd1 4 % · 6.4 us, 사전 35 % · 1.6 us 였습니다.
   채팅(43 B, 합성)은 LZ4 1 %, zstd 0 %, 사전 27 % · 0.74 us 였습니다. 규칙을 넘는 것은 학습 사전뿐(파괴, 채팅)이라, 사전 배포(버전 · id 협상, 사전 갱신)를 하게 되면 다시 봅니다.
-  스트림 프레임 압축은 있지만 기본으로 꺼져 있습니다(`StreamEndpointSettings::_compression`, 봉투 `NetCompressionUtil`). 받는 쪽은 푼 크기를 본문 상한으로 보고 풀기 전에 거절합니다.
+  스트림 프레임 압축은 있지만 기본으로 꺼져 있습니다(`StreamEndpointConfig::_compression`, 봉투 `NetCompressionUtil`). 받는 쪽은 푼 크기를 본문 상한으로 보고 풀기 전에 거절합니다.
 - **암호 라이브러리는 OpenSSL(vcpkg, Apache-2.0)입니다**(2026-10-06). Windows 에서는 지금 트리플릿대로 DLL 로 링크합니다. 비밀번호 해시는 보안 제공자의 Argon2id 이고, 기본값은 OWASP 권장(19 MiB, 반복 2)입니다.
 - **인증기 없는 UDP 암호화와 자체 서명 개발용 인증서는 개발 빌드에만 있습니다**(2026-10-06). Shipping 서버는 설정 파일의 인증서와 키 경로가 필수입니다.
 - **계정**(2026-10-06): 같은 계정으로 다시 로그인하면 새 로그인이 옛 세션을 밀어냅니다. 게스트를 정식 계정에 연동할 때 이미 쓰인 이름이나 플랫폼 계정은 거절합니다(자동 합치기 없음).

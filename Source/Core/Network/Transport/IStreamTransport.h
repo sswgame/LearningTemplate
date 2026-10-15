@@ -56,7 +56,7 @@ namespace sw
         IStreamTransport& operator=( const IStreamTransport& ) = delete;
 
         /** @brief 처리기와 설정을 정하고 I/O 스레드를 띄웁니다. */
-        [[nodiscard]] virtual bool initialize( IStreamHandler* pHandler, const StreamTransportSettings& settings ) = 0;
+        [[nodiscard]] virtual bool initialize( IStreamHandler* pHandler, const StreamTransportConfig& settings ) = 0;
         /** @brief 모든 연결을 끊고(Shutdown) I/O 스레드를 합류합니다. 두 번 불러도 됩니다. */
         virtual void shutdown() = 0;
 

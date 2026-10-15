@@ -457,7 +457,7 @@ namespace sw
 
 namespace sw
 {
-    LoginStoreLogic::LoginStoreLogic( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginSettings& settings,
+    LoginStoreLogic::LoginStoreLogic( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginServiceConfig& settings,
                                       const LoginTicketAuthority& ticketAuthority, LoginStoreOutcome& outOutcome )
         : _connection{ connection }
         , _crypto{ crypto }

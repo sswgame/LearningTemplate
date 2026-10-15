@@ -36,7 +36,7 @@ namespace sw
 
         ScavengerQuota();
 
-        void initialize( const ScavengerQuotaSettings& settings );
+        void initialize( const ScavengerQuotaDef& settings );
         /** @brief 회사에 판 값을 더합니다. */
         void addFulfilled( int32 value );
         /** @brief 하루를 끝냅니다. 마감 날이면 판정하고, 아니면 남은 날을 하나 줄입니다. @p outOvertimeBonus 는 넘긴 만큼의 보너스입니다. */
@@ -57,11 +57,11 @@ namespace sw
         bool  isGameOver() const { return _bGameOver == SW_TRUE; }
 
     private:
-        ScavengerQuotaSettings _settings;
-        int32                  _quota;
-        int32                  _fulfilled;
-        int32                  _daysLeft;
-        int32                  _cycle;
-        uint8                  _bGameOver;
+        ScavengerQuotaDef _settings;
+        int32             _quota;
+        int32             _fulfilled;
+        int32             _daysLeft;
+        int32             _cycle;
+        uint8             _bGameOver;
     };
 } // namespace sw

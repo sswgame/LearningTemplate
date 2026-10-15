@@ -11,7 +11,7 @@ using namespace sw;
 SW_TEST_CASE( ChatSpamGuardTest, BurstThenRateLimitPerAccount )
 {
     ChatSpamGuard guard;
-    guard.initialize( ChatSpamSettings{} );
+    guard.initialize( ChatSpamConfig{} );
     int64 retryAfterMs = 0;
     for ( int32 index = 0; index < 5; ++index )
     {
@@ -29,7 +29,7 @@ SW_TEST_CASE( ChatSpamGuardTest, BurstThenRateLimitPerAccount )
 SW_TEST_CASE( ChatSpamGuardTest, ThirdRepeatInsideWindowIsRejected )
 {
     ChatSpamGuard guard;
-    guard.initialize( ChatSpamSettings{} );
+    guard.initialize( ChatSpamConfig{} );
     int64 retryAfterMs = 0;
     SW_EXPECT_TRUE( guard.check( 1, "buy gold", 1000, retryAfterMs ) == ChatSpamVerdict::Allowed );
     SW_EXPECT_TRUE( guard.check( 1, "BUY  GOLD", 2000, retryAfterMs ) == ChatSpamVerdict::Allowed );
@@ -43,7 +43,7 @@ SW_TEST_CASE( ChatSpamGuardTest, ThirdRepeatInsideWindowIsRejected )
 SW_TEST_CASE( ChatSpamGuardTest, ForgetClearsRepeatHistory )
 {
     ChatSpamGuard guard;
-    guard.initialize( ChatSpamSettings{} );
+    guard.initialize( ChatSpamConfig{} );
     int64 retryAfterMs = 0;
     SW_EXPECT_TRUE( guard.check( 1, "hello", 1000, retryAfterMs ) == ChatSpamVerdict::Allowed );
     SW_EXPECT_TRUE( guard.check( 1, "hello", 1000, retryAfterMs ) == ChatSpamVerdict::Allowed );

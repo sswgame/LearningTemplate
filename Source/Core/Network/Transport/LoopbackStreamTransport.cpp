@@ -103,7 +103,7 @@ namespace sw
 
             ~LoopbackStreamTransport() override { shutdown(); }
 
-            bool initialize( IStreamHandler* pHandler, const StreamTransportSettings& settings ) override
+            bool initialize( IStreamHandler* pHandler, const StreamTransportConfig& settings ) override
             {
                 if ( pHandler == nullptr || settings._ioThreadCount != 0 )
                 {
@@ -184,7 +184,7 @@ namespace sw
                 link._arrHandle[1]                      = peerHandle;
                 for ( int32 side = 0; side < 2; ++side )
                 {
-                    const StreamTransportSettings& sideSettings = link._arrSide[side]->_settings;
+                    const StreamTransportConfig& sideSettings = link._arrSide[side]->_settings;
                     link._arrQueue[side].configure( sideSettings._sendHighWatermarkBytes, sideSettings._sendLowWatermarkBytes, sideSettings._maxQueuedSendBytes );
                 }
                 _listSlot[handle._index]._linkIndex            = linkIndex;
@@ -465,7 +465,7 @@ namespace sw
             vector<uint32>             _listFreeSlot;
             vector<LoopbackEvent>      _listPending;  ///< 망 잠금 안에서 쌓인 사건
             vector<LoopbackEvent>      _listDispatch; ///< pollIO 스레드 전용 — 잠금 밖에서 넘긴다
-            StreamTransportSettings    _settings;
+            StreamTransportConfig      _settings;
             StreamTransportStats       _stats;
             LoopbackNetworkState*      _pState;
             IStreamHandler*            _pHandler;

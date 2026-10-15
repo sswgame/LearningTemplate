@@ -92,7 +92,7 @@ namespace sw
 
             bool start( OnlineServerKitContext& context, string& outError ) override
             {
-                AdminServiceSettings settings;
+                AdminServiceConfig settings;
                 settings._pDirectory      = context._pAccountDirectory;
                 settings._pSessionControl = context._pSessionControl;
                 settings._pBus            = context._pBus;

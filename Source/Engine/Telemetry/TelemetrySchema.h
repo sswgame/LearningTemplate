@@ -56,7 +56,7 @@ namespace sw
 namespace sw
 {
     /** @brief 파이프라인 설정입니다(`<Pipeline>`). */
-    struct TelemetryPipelineSettings
+    struct TelemetryPipelineConfig
     {
         uint64  _maxTotalBytes{ 2 * constant::kBytesPerMegabyte }; ///< 보내지 못한 스풀 전체 상한 — 넘으면 가장 오래된 닫힌 파일부터 지운다
         float32 _flushSeconds{ 30.0f };                            ///< 이만큼 지나면 모인 사건을 쓴다
@@ -95,14 +95,14 @@ namespace sw
 
         const TelemetryEventDef*         findEvent( const hashed_string& eventID ) const;
         const vector<TelemetryEventDef>& getEvents() const { return _listEvent; }
-        const TelemetryPipelineSettings& getSettings() const { return _settings; }
+        const TelemetryPipelineConfig&   getSettings() const { return _settings; }
         int32                            getVersion() const { return _version; }
 
     private:
         [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
 
         vector<TelemetryEventDef> _listEvent;
-        TelemetryPipelineSettings _settings;
+        TelemetryPipelineConfig   _settings;
         int32                     _version;
     };
 } // namespace sw

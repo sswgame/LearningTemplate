@@ -26,8 +26,8 @@ JSON 키는 아래 필드 이름 그대로입니다(앞의 `_` 포함). 적지 �
 |---|---|---|---|---|---|
 | `_listExpression` | `vector<FacialPose>` | — |  |  | Expressions: named morph target weight sets, driven by the curve of the same name |
 | `_listViseme` | `vector<FacialPose>` | — |  |  | Visemes: morph target weight sets the lip sync drives by viseme name |
-| `_blink` | `FacialBlinkSettings` | — |  |  | Eye blink |
-| `_gaze` | `FacialGazeSettings` | — |  |  | Eye gaze and saccades |
+| `_blink` | `FacialBlinkDef` | — |  |  | Eye blink |
+| `_gaze` | `FacialGazeDef` | — |  |  | Eye gaze and saccades |
 
 ## `FacialPose`
 
@@ -40,7 +40,7 @@ JSON 키는 아래 필드 이름 그대로입니다(앞의 `_` 포함). 적지 �
 | `_name` | `hashed_string` | — |  |  | Pose name (expression curve name, or a viseme name of the lip sync table); unique in its list |
 | `_listTarget` | `vector<FacialTargetWeight>` | — |  |  | Morph target weights of this pose (empty: the pose moves nothing) |
 
-## `FacialBlinkSettings`
+## `FacialBlinkDef`
 
 눈 깜빡임입니다. 타깃(눈꺼풀)과 간격, 길이(초)를 담습니다. 타깃이 없으면 깜빡이지 않습니다.
 
@@ -53,7 +53,7 @@ JSON 키는 아래 필드 이름 그대로입니다(앞의 `_` 포함). 적지 �
 | `_maxInterval` | `float32` | `5.0` | 0.0 ~ - | s | Longest time between blinks (not below the shortest) |
 | `_duration` | `float32` | `0.15` | 0.0 ~ - | s | Length of one blink (greater than 0) |
 
-## `FacialGazeSettings`
+## `FacialGazeDef`
 
 시선입니다. 눈 본들이 목표를 봅니다(앞 축과 최대 각). 사카드(작은 튐)는 간격과 크기로 정합니다. 눈 본이 없으면 보지 않습니다.
 

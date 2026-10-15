@@ -54,10 +54,10 @@ namespace sw
         _settings = settings;
         if ( settings._botCountOverride > 0 )
             _scenario._botCount = settings._botCountOverride;
-        StreamTransportSettings transportSettings;
+        StreamTransportConfig transportSettings;
         transportSettings._ioThreadCount  = 0;
         transportSettings._maxConnections = std::max( transportSettings._maxConnections, _scenario._botCount + LoadBotRunnerInternal::kSpareConnectionCount );
-        StreamEndpointSettings endpointSettings;
+        StreamEndpointConfig endpointSettings;
         endpointSettings._security._pTLSContext = settings._pTLSContext;
         const bool bTransportSetupFailed        = pTransport == nullptr || _endpoint.initialize( pTransport, endpointSettings ) == false || pTransport->initialize( &_endpoint, transportSettings ) == false;
         if ( bTransportSetupFailed )

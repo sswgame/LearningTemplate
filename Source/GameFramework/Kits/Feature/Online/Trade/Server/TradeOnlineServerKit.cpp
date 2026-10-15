@@ -89,7 +89,7 @@ namespace sw
                     outError = "trade needs the account kit (finding the other trader)";
                     return false;
                 }
-                _service.initialize( context._pStore, &_policy, context._pLedgerPolicy, context._serverID, TradeSettings{} );
+                _service.initialize( context._pStore, &_policy, context._pLedgerPolicy, context._serverID, TradeServiceConfig{} );
                 _server.initialize( &_service, context._pAccountDirectory, context._pPresence );
                 _bStarted = true;
                 return true;

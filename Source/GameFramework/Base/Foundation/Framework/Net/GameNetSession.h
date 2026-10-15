@@ -61,11 +61,11 @@ namespace sw
     /** @brief 세션을 여는 인자입니다. */
     struct GameNetSessionParams
     {
-        NetHostSettings _hostSettings{};
-        NetAddress      _serverAddress{}; ///< 클라이언트 — 붙을 서버
-        uint16          _listenPort{ 0 }; ///< 서버 — 열 UDP 포트
-        GameNetRole     _role{ GameNetRole::None };
-        bool            _bLoopbackOnly{ true }; ///< 이 기계의 상대만 받는다 — 개발 실행의 기본. 다른 기계와 하려면 `gv_netLoopbackOnly=0`
+        NetHostConfig _hostSettings{};
+        NetAddress    _serverAddress{}; ///< 클라이언트 — 붙을 서버
+        uint16        _listenPort{ 0 }; ///< 서버 — 열 UDP 포트
+        GameNetRole   _role{ GameNetRole::None };
+        bool          _bLoopbackOnly{ true }; ///< 이 기계의 상대만 받는다 — 개발 실행의 기본. 다른 기계와 하려면 `gv_netLoopbackOnly=0`
     };
 } // namespace sw
 
@@ -78,7 +78,7 @@ namespace sw
      *     GameNetSessionParams params;
      *     if ( GameNetSession::makeParamsFromGlobalVariables( params ) )
      *         (void)session.initialize( params );
-     *     session.getRouter().addHandler( &replicationServer ); // 키트
+     *     session.getRouter().registerHandler( &replicationServer ); // 키트
      *     session.update();                                     // 프레임마다(게임 스레드)
      *     session.shutdown();
      * @endcode

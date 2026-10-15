@@ -88,7 +88,7 @@ namespace sw
         SW_ASSERT( _pTransport == nullptr );
     }
 
-    bool OpsHTTPEndpoint::initialize( IStreamTransport* pTransport, const StreamTransportSettings& transportSettings, const OpsHTTPEndpointSettings& settings,
+    bool OpsHTTPEndpoint::initialize( IStreamTransport* pTransport, const StreamTransportConfig& transportSettings, const OpsHTTPEndpointConfig& settings,
                                       const MetricRegistry* pMetricRegistry, const ServiceHealthRegistry* pHealthRegistry )
     {
         if ( pTransport == nullptr )

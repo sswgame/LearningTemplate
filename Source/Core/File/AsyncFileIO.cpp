@@ -193,7 +193,7 @@ namespace sw
 
 namespace sw
 {
-    AsyncFileIOQueue::AsyncFileIOQueue( const AsyncFileIOSettings& settings )
+    AsyncFileIOQueue::AsyncFileIOQueue( const AsyncFileIOConfig& settings )
         : _mutex{}
         , _cv{}
         , _arrQueue{}
@@ -583,7 +583,7 @@ namespace sw
         shutdown();
     }
 
-    bool AsyncFileIO::initialize( const AsyncFileIOSettings& settings )
+    bool AsyncFileIO::initialize( const AsyncFileIOConfig& settings )
     {
         if ( _backend != nullptr )
             return true;

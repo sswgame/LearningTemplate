@@ -45,7 +45,7 @@ namespace sw
 
 namespace sw
 {
-    bool NetCompressionUtil::compressEnvelope( const NetCompressionSettings& settings, const uint8* pData, int32 size, vector<uint8>& outBytes,
+    bool NetCompressionUtil::compressEnvelope( const NetCompressionConfig& settings, const uint8* pData, int32 size, vector<uint8>& outBytes,
                                                CompressionCodecRegistry* pRegistry )
     {
         outBytes.clear();

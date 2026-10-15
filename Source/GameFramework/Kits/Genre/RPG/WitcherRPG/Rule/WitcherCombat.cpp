@@ -25,9 +25,9 @@ namespace sw
     void WitcherCombat::initialize( const WitcherCatalog* pCatalog, uint32 seed )
     {
         _pCatalog = pCatalog;
-        const WitcherCombatSettings  fallback{};
-        const WitcherCombatSettings& combat = pCatalog != nullptr ? pCatalog->getCombat() : fallback;
-        ResourceGaugeSettings        stamina;
+        const WitcherCombatDef  fallback{};
+        const WitcherCombatDef& combat = pCatalog != nullptr ? pCatalog->getCombat() : fallback;
+        ResourceGaugeSettings   stamina;
         stamina._max        = combat._stamina;
         stamina._regenRate  = combat._staminaRegen;
         stamina._regenDelay = combat._staminaDelay;
@@ -78,8 +78,8 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return;
-        const WitcherCombatSettings& combat = _pCatalog->getCombat();
-        _adrenaline                         = MathUtil::min( combat._adrenalineMax, _adrenaline + combat._adrenalinePerHit );
+        const WitcherCombatDef& combat = _pCatalog->getCombat();
+        _adrenaline                    = MathUtil::min( combat._adrenalineMax, _adrenaline + combat._adrenalinePerHit );
     }
 
     void WitcherCombat::registerHitTaken()
@@ -112,7 +112,7 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return 0.0f;
-        const WitcherCombatSettings& combat = _pCatalog->getCombat();
+        const WitcherCombatDef& combat = _pCatalog->getCombat();
         switch ( action )
         {
             case WitcherAction::FastAttack:

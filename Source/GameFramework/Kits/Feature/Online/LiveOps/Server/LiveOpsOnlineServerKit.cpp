@@ -41,7 +41,7 @@ namespace sw
                 },
                                         outError ) == false )
                     return false;
-                _dispatcher.initialize( context._pStore, PushDispatcherSettings{} );
+                _dispatcher.initialize( context._pStore, PushDispatcherConfig{} );
                 if ( bFakePush )
                 {
 #if defined( SW_SHIPPING )

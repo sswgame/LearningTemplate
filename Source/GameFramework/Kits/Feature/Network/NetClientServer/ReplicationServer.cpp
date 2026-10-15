@@ -28,7 +28,7 @@ namespace sw
     {
     }
 
-    void ReplicationServer::initialize( NetHost* pHost, const ReplicationServerSettings& settings, const IReplicationPolicy* pPolicy )
+    void ReplicationServer::initialize( NetHost* pHost, const ReplicationServerConfig& settings, const IReplicationPolicy* pPolicy )
     {
         _pHost    = pHost;
         _settings = settings;

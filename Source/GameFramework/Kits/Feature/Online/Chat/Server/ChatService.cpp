@@ -210,7 +210,7 @@ namespace sw
         shutdown();
     }
 
-    bool ChatService::initialize( const ChatServiceDependencies& dependencies, const ChatSettings& settings )
+    bool ChatService::initialize( const ChatServiceDependencies& dependencies, const ChatServiceConfig& settings )
     {
         if ( dependencies._pStore == nullptr || dependencies._pDirectory == nullptr )
         {

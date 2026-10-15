@@ -21,24 +21,24 @@ namespace
 {
     struct RespStoreHarness
     {
-        static StreamTransportSettings makeTransportSettings()
+        static StreamTransportConfig makeTransportSettings()
         {
-            StreamTransportSettings settings;
+            StreamTransportConfig settings;
             settings._ioThreadCount      = 0; // 루프백 — 앞이 직접 돈다
             settings._idleTimeoutSeconds = 0.0;
             return settings;
         }
 
-        static RespStoreSettings makeSettings( const NetAddress& address )
+        static RespStoreConfig makeSettings( const NetAddress& address )
         {
-            RespStoreSettings settings;
+            RespStoreConfig settings;
             settings._address   = address;
             settings._keyPrefix = "t1:";
             settings._timeoutMs = 3000;
             return settings;
         }
 
-        static bool initializeStore( RespEphemeralStore& store, test::FakeRespServer& server, const RespStoreSettings& settings,
+        static bool initializeStore( RespEphemeralStore& store, test::FakeRespServer& server, const RespStoreConfig& settings,
                                      unique_ptr<ITLSContext> tlsContext = nullptr )
         {
             string     error;
@@ -158,7 +158,7 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, TimedOutRequestIsUnavailableAndT
     LoopbackStreamNetwork network{ 4u };
     test::FakeRespServer  server{ network };
     RespEphemeralStore    store;
-    RespStoreSettings     settings = RespStoreHarness::makeSettings( server.getAddress() );
+    RespStoreConfig       settings = RespStoreHarness::makeSettings( server.getAddress() );
     settings._timeoutMs            = 100;
     SW_ASSERT_TRUE( RespStoreHarness::initializeStore( store, server, settings ) );
 
@@ -187,13 +187,13 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, AuthIsSentFirstAndAWrongPassword
     server.setPassword( "s3cret" );
 
     RespEphemeralStore good;
-    RespStoreSettings  goodSettings = RespStoreHarness::makeSettings( server.getAddress() );
+    RespStoreConfig    goodSettings = RespStoreHarness::makeSettings( server.getAddress() );
     goodSettings._password          = "s3cret";
     SW_ASSERT_TRUE( RespStoreHarness::initializeStore( good, server, goodSettings ) );
     SW_EXPECT_TRUE( test::EphemeralStoreContract::executeResult( good, EphemeralRequest::makeSet( "a", vector<uint8>{ 1 }, 0 ) ) == EphemeralResult::Ok );
 
     RespEphemeralStore bad;
-    RespStoreSettings  badSettings = RespStoreHarness::makeSettings( server.getAddress() );
+    RespStoreConfig    badSettings = RespStoreHarness::makeSettings( server.getAddress() );
     badSettings._password          = "wrong";
     SW_ASSERT_TRUE( RespStoreHarness::initializeStore( bad, server, badSettings ) );
     {
@@ -208,13 +208,13 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, TLSCarriesTheCommands )
     string                certificatePem;
     string                privateKeyPem;
     SW_ASSERT_TRUE( provider.createSelfSignedCertificate( "localhost", 30, certificatePem, privateKeyPem ) );
-    string             error;
-    TLSContextSettings serverSettings;
+    string           error;
+    TLSContextConfig serverSettings;
     serverSettings._role                  = TLSRole::Server;
     serverSettings._certificatePem        = certificatePem;
     serverSettings._privateKeyPem         = privateKeyPem;
     unique_ptr<ITLSContext> serverContext = provider.createTLSContext( serverSettings, error );
-    TLSContextSettings      clientSettings;
+    TLSContextConfig        clientSettings;
     clientSettings._role                  = TLSRole::Client;
     clientSettings._trustPem              = certificatePem;
     clientSettings._serverName            = "localhost";

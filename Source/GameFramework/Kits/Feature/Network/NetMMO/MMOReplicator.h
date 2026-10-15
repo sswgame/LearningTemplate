@@ -109,7 +109,7 @@ namespace sw
 namespace sw
 {
     /** @brief 복제 설정입니다. */
-    struct MMOReplicatorSettings
+    struct MMOReplicatorConfig
     {
         float32 _cellSize{ 32.0f };
         float32 _enterRadius{ 60.0f };
@@ -136,7 +136,7 @@ namespace sw
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
         void            onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
 
-        void initialize( NetHost* pHost, const MMOReplicatorSettings& settings, const IInterestPolicy* pPolicy = nullptr );
+        void initialize( NetHost* pHost, const MMOReplicatorConfig& settings, const IInterestPolicy* pPolicy = nullptr );
         /** @brief 엔티티를 추가하거나 갱신합니다. 상태가 `NetMMOMessage::kMaxStateBytes` 를 넘으면 받지 않고 그 엔티티는 지난 값을 유지합니다. 처음 한 번만 경고하고 그 뒤로는 횟수만 셉니다. */
         void setEntity( const MMOEntity& entity );
         void removeEntity( uint32 entityID );
@@ -202,7 +202,7 @@ namespace sw
         unordered_map<uint32, MMOEntity>    _mapEntity;
         vector<Observer>                    _listObserver;
         SpatialHashGrid2D                   _grid; ///< 엔티티 위치(XZ 평면의 점). 키는 `MMOReplicatorInternal::makeGridKey` 로 만든다
-        MMOReplicatorSettings               _settings;
+        MMOReplicatorConfig                 _settings;
         IInterestPolicy                     _defaultPolicy;
         NetHost*                            _pHost;
         const IInterestPolicy*              _pPolicy;

@@ -88,7 +88,7 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return false;
-        const GhostFlashlightSettings& flashlight = _pCatalog->getFlashlight();
+        const GhostFlashlightDef& flashlight = _pCatalog->getFlashlight();
         return bStrobe ? RayMath::isInFlatCone( eye, forward, flashlight._strobeHalfAngle, flashlight._strobeRange, position )
                        : RayMath::isInFlatCone( eye, forward, flashlight._halfAngle, flashlight._range, position );
     }
@@ -170,14 +170,14 @@ namespace sw
         const bool       bNoSuctionTick = pGhost == nullptr || pGhost->_state != GhostState::Sucking || deltaTime <= 0.0f;
         if ( bNoSuctionTick )
             return tick;
-        const GhostVacuumSettings& vacuum = _pCatalog->getVacuum();
-        const float3               pull   = GhostEncounterInternal::flatten( pullDirection );
-        tick._alignment                   = -pull.dot( pGhost->_fleeDirection );
-        const bool bAligned               = pull.getLengthSquared() > 0.5f && tick._alignment >= vacuum._alignThreshold;
-        tick._bAligned                    = bAligned ? SW_TRUE : SW_FALSE;
-        tick._damage                      = computeVacuumPower() * deltaTime * ( bAligned ? vacuum._alignBonus : 1.0f );
-        const float32 dragScale           = vacuum._dragSpeed * pGhost->_pDef->_pull * deltaTime * ( bAligned ? 1.0f - vacuum._dragReduction : 1.0f );
-        tick._drag                        = pGhost->_fleeDirection * dragScale;
+        const GhostVacuumDef& vacuum = _pCatalog->getVacuum();
+        const float3          pull   = GhostEncounterInternal::flatten( pullDirection );
+        tick._alignment              = -pull.dot( pGhost->_fleeDirection );
+        const bool bAligned          = pull.getLengthSquared() > 0.5f && tick._alignment >= vacuum._alignThreshold;
+        tick._bAligned               = bAligned ? SW_TRUE : SW_FALSE;
+        tick._damage                 = computeVacuumPower() * deltaTime * ( bAligned ? vacuum._alignBonus : 1.0f );
+        const float32 dragScale      = vacuum._dragSpeed * pGhost->_pDef->_pull * deltaTime * ( bAligned ? 1.0f - vacuum._dragReduction : 1.0f );
+        tick._drag                   = pGhost->_fleeDirection * dragScale;
         if ( bAligned )
             _surgeGauge = MathUtil::min( 1.0f, _surgeGauge + deltaTime / vacuum._surgeFillTime );
         const uint32 ghostID = pGhost->_id;

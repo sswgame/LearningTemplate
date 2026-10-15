@@ -63,9 +63,9 @@ namespace sw
             }
 
         private:
-            MailboxService         _service;
-            MailboxServiceSettings _settings;
-            bool                   _bStarted;
+            MailboxService       _service;
+            MailboxServiceConfig _settings;
+            bool                 _bStarted;
         };
     } // namespace
 } // namespace sw

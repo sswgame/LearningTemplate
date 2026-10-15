@@ -112,8 +112,8 @@ namespace
         ClientSide               _clientSide{};
         test::StreamEndpointPair _pair;
 
-        explicit RequestRig( const NetRequestServerSettings& serverSettings = NetRequestServerSettings{}, uint64 principalID = 0 )
-            : _pair{ _serverSide, _clientSide, StreamEndpointSettings{}, LoopbackStreamConditions{} }
+        explicit RequestRig( const NetRequestServerConfig& serverSettings = NetRequestServerConfig{}, uint64 principalID = 0 )
+            : _pair{ _serverSide, _clientSide, StreamEndpointConfig{}, LoopbackStreamConditions{} }
         {
             _serverSide._principalID = principalID;
             _serverSide._server.initialize( &_pair._server, serverSettings );
@@ -190,7 +190,7 @@ SW_TEST_CASE( NetRequestTest, IdempotentRetryAfterReconnectIsProcessedOnce )
     ResponseLog                  lostLog;
     ResponseLog                  retryLog;
     ResponseLog                  freshLog;
-    RequestRig                   rig( NetRequestServerSettings{}, 42 );
+    RequestRig                   rig( NetRequestServerConfig{}, 42 );
     const StreamConnectionHandle first = rig._pair._clientHandle;
     NetRequestOptions            options;
     options._idempotencyKey = NetIdempotencyKey{ 0x1234u, 0x5678u };
@@ -243,7 +243,7 @@ SW_TEST_CASE( NetRequestTest, InFlightDuplicateKeyWaitsForFirstResponse )
 
 SW_TEST_CASE( NetRequestTest, ConnectionLossAndOverloadComplete )
 {
-    NetRequestServerSettings settings;
+    NetRequestServerConfig settings;
     settings._maxInFlightPerConnection = 2;
     RequestRig  rig( settings );
     ResponseLog log;
@@ -266,7 +266,7 @@ SW_TEST_CASE( NetRequestTest, ConnectionLossAndOverloadComplete )
 
 SW_TEST_CASE( NetRequestTest, TraceIDTravelsInTheHeadAndWrapsTheHandler )
 {
-    RequestRig  rig( NetRequestServerSettings{}, 7 );
+    RequestRig  rig( NetRequestServerConfig{}, 7 );
     ResponseLog log;
     LogContext  caller;
     caller._traceID = LogTraceID{ 0xAB, 0xCD };

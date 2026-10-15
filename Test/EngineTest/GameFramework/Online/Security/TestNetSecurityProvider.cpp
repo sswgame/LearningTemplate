@@ -62,13 +62,13 @@ namespace
         string                privateKeyPem;
         if ( provider.createSelfSignedCertificate( "localhost", 30, outPair._certificatePem, privateKeyPem ) == false )
             return false;
-        string             error;
-        TLSContextSettings server;
+        string           error;
+        TLSContextConfig server;
         server._role           = TLSRole::Server;
         server._certificatePem = outPair._certificatePem;
         server._privateKeyPem  = privateKeyPem;
         outPair._serverContext = provider.createTLSContext( server, error );
-        TLSContextSettings client;
+        TLSContextConfig client;
         client._role                       = TLSRole::Client;
         client._trustPem                   = outPair._certificatePem;
         client._serverName                 = "localhost";
@@ -231,7 +231,7 @@ SW_TEST_CASE( NetSecurityProviderTest, TLSHandshakeCarriesDataAndRefusesDowngrad
     string hex;
     SW_ASSERT_TRUE( NetSecurity::getProvider().computeCertificateSha256( pair._certificatePem, hex ) );
     SW_EXPECT_EQUAL( 64, static_cast<int32>( hex.size() ) );
-    TLSContextSettings matching;
+    TLSContextConfig matching;
     matching._role                       = TLSRole::Client;
     matching._trustPem                   = pair._certificatePem;
     matching._serverName                 = "localhost";

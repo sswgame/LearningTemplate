@@ -41,7 +41,7 @@ namespace
             dependencies._pStore  = &_store;
             dependencies._pRouter = &_router;
             dependencies._pBus    = &_bus;
-            ServerDirectorySettings settings;
+            ServerDirectoryServiceConfig settings;
             settings._listServerKind.push_back( "game" );
             _service.initialize( dependencies, settings );
         }

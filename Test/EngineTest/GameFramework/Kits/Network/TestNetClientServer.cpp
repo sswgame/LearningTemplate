@@ -215,7 +215,7 @@ SW_TEST_CASE( NetClientServerTest, DeltaReconstructionMatchesAfterSlotReuse )
 SW_TEST_CASE( NetClientServerTest, RedundantInputsSkipKnownTicksAndKeepLaterPayloads )
 {
     ReplicationServer server;
-    server.initialize( nullptr, ReplicationServerSettings{}, nullptr );
+    server.initialize( nullptr, ReplicationServerConfig{}, nullptr );
 
     // 틱 5 를 먼저 받는다. 다음 메시지는 4(새) · 5(이미 가짐) · 6(새) — 오래된 것부터.
     SW_ASSERT_TRUE( NetHandleResult::Handled == server.handleMessage( 0, makeInputMessage( 5, {
@@ -251,7 +251,7 @@ SW_TEST_CASE( NetClientServerTest, ReplicationInterpolatesOverLossyLatencyAndCar
     conditions._lossRate = 0.1f;
     serverTransport.setDefaultConditions( conditions );
     clientTransport.setDefaultConditions( conditions );
-    NetHostSettings hostSettings;
+    NetHostConfig hostSettings;
     hostSettings._sendInterval = 1.0 / 60.0;
     NetHost serverHost;
     NetHost clientHost;
@@ -260,12 +260,12 @@ SW_TEST_CASE( NetClientServerTest, ReplicationInterpolatesOverLossyLatencyAndCar
     SW_ASSERT_TRUE( serverHost.listen() );
     SW_ASSERT_TRUE( clientHost.connect( NetAddress::makeLoopback( 4000 ) ) );
 
-    HideThreePolicy           policy;
-    ReplicationServer         server;
-    ReplicationClient         client;
-    ReplicationClientSettings clientSettings;
+    HideThreePolicy         policy;
+    ReplicationServer       server;
+    ReplicationClient       client;
+    ReplicationClientConfig clientSettings;
     clientSettings._tickInterval = 1.0f / 30.0f;
-    server.initialize( &serverHost, ReplicationServerSettings{}, &policy );
+    server.initialize( &serverHost, ReplicationServerConfig{}, &policy );
     client.initialize( &clientHost, clientSettings );
 
     // 30 Hz 서버 틱, 60 Hz 프레임. 엔티티 1 은 x = 틱 × 0.1 로 움직인다.
@@ -414,7 +414,7 @@ SW_TEST_CASE( NetClientServerTest, ReplicationSurvivesEmulatedBadNetwork )
     conditions._bandwidthBytesPerSecond = 64 * 1024;
     serverTransport.setDefaultConditions( conditions );
     clientTransport.setDefaultConditions( conditions );
-    NetHostSettings hostSettings;
+    NetHostConfig hostSettings;
     hostSettings._sendInterval = 1.0 / 60.0;
     NetHost serverHost;
     NetHost clientHost;
@@ -423,11 +423,11 @@ SW_TEST_CASE( NetClientServerTest, ReplicationSurvivesEmulatedBadNetwork )
     SW_ASSERT_TRUE( serverHost.listen() );
     SW_ASSERT_TRUE( clientHost.connect( NetAddress::makeLoopback( 4100 ) ) );
 
-    ReplicationServer         server;
-    ReplicationClient         client;
-    ReplicationClientSettings clientSettings;
+    ReplicationServer       server;
+    ReplicationClient       client;
+    ReplicationClientConfig clientSettings;
     clientSettings._tickInterval = 1.0f / 30.0f;
-    server.initialize( &serverHost, ReplicationServerSettings{} );
+    server.initialize( &serverHost, ReplicationServerConfig{} );
     client.initialize( &clientHost, clientSettings );
 
     float64       time         = 0.0;
@@ -525,7 +525,7 @@ SW_TEST_CASE( NetClientServerTest, EmulationConditionsComeFromGlobalVariables )
  */
 SW_TEST_CASE( NetClientServerTest, ReconnectOnSameSlotResetsHandlerState )
 {
-    NetHostSettings settings;
+    NetHostConfig settings;
     settings._maxConnections = 1;
     LoopbackNetwork network;
     NetHost         serverHost;
@@ -536,9 +536,9 @@ SW_TEST_CASE( NetClientServerTest, ReconnectOnSameSlotResetsHandlerState )
     second.initialize( network.createEndpoint( 5002 ), settings );
     SW_ASSERT_TRUE( serverHost.listen() );
     ReplicationServer server;
-    server.initialize( &serverHost, ReplicationServerSettings{}, nullptr );
+    server.initialize( &serverHost, ReplicationServerConfig{}, nullptr );
     NetMessageRouter router;
-    router.addHandler( &server );
+    router.registerHandler( &server );
     float64    time   = 0.0;
     const auto runAll = [&]( float64 seconds )
     {
@@ -595,9 +595,9 @@ SW_TEST_CASE( NetClientServerTest, ReconnectOnSameSlotResetsHandlerState )
 SW_TEST_CASE( NetClientServerTest, KindMaskRoutesSharedRange )
 {
     ReplicationServer server;
-    server.initialize( nullptr, ReplicationServerSettings{}, nullptr );
+    server.initialize( nullptr, ReplicationServerConfig{}, nullptr );
     ReplicationClient client;
-    client.initialize( nullptr, ReplicationClientSettings{} );
+    client.initialize( nullptr, ReplicationClientConfig{} );
     const uint8         otherKind = NetKitMessageRange::kClientServer + 7;
     const vector<uint8> message{ otherKind, 1 };
     SW_EXPECT_TRUE( NetHandleResult::NotMine == server.handleMessage( 0, message ) );
@@ -607,10 +607,10 @@ SW_TEST_CASE( NetClientServerTest, KindMaskRoutesSharedRange )
     KindCounter      clientSide{ otherKind };
     NetMessageRouter serverRouter;
     NetMessageRouter clientRouter;
-    SW_ASSERT_TRUE( serverRouter.addHandler( &server ) ); // 키트 처리기와 게임 처리기는 서로 다른 종류를 맡는다(겹치면 라우터가 받지 않는다)
-    SW_ASSERT_TRUE( serverRouter.addHandler( &serverSide ) );
-    SW_ASSERT_TRUE( clientRouter.addHandler( &client ) );
-    SW_ASSERT_TRUE( clientRouter.addHandler( &clientSide ) );
+    SW_ASSERT_TRUE( serverRouter.registerHandler( &server ) ); // 키트 처리기와 게임 처리기는 서로 다른 종류를 맡는다(겹치면 라우터가 받지 않는다)
+    SW_ASSERT_TRUE( serverRouter.registerHandler( &serverSide ) );
+    SW_ASSERT_TRUE( clientRouter.registerHandler( &client ) );
+    SW_ASSERT_TRUE( clientRouter.registerHandler( &clientSide ) );
     SW_EXPECT_TRUE( NetHandleResult::Handled == serverRouter.dispatch( NetMessageContext{}, message.data(), static_cast<int32>( message.size() ) ) );
     SW_EXPECT_TRUE( NetHandleResult::Handled == clientRouter.dispatch( NetMessageContext{}, message.data(), static_cast<int32>( message.size() ) ) );
     SW_EXPECT_EQUAL( 1, serverSide._count );
@@ -678,20 +678,20 @@ SW_TEST_CASE( NetClientServerTest, SnapshotStaysUnderMessageLimitWithManyRemoval
 SW_TEST_CASE( NetClientServerTest, OversizedInputIsRejectedAtTheSender )
 {
     ReplicationClient offline;
-    offline.initialize( nullptr, ReplicationClientSettings{} );
+    offline.initialize( nullptr, ReplicationClientConfig{} );
     SW_EXPECT_FALSE( offline.sendInput( 0, vector<uint8>( NetClientServerMessage::kMaxInputBytes + 1, 1 ) ) );
     SW_EXPECT_TRUE( offline.sendInput( 0, vector<uint8>( NetClientServerMessage::kMaxInputBytes, 1 ) ) );
 
     // 손으로 지은 메시지 — 틱 4 는 1 B, 틱 5 는 300 B(상한 넘음).
     ReplicationServer server;
-    server.initialize( nullptr, ReplicationServerSettings{}, nullptr );
+    server.initialize( nullptr, ReplicationServerConfig{}, nullptr );
     SW_EXPECT_TRUE( NetHandleResult::Malformed == server.handleMessage( 0, makeInputMessage( 4, { vector<uint8>{ 9 }, vector<uint8>( 300, 7 ) } ) ) );
     vector<uint8> input;
     bool          bExact = false;
     SW_EXPECT_FALSE( server.popInput( 0, 4, input, bExact ) ); // 깨진 항목 앞의 성한 입력도 들어가지 않았다
 
     // 입력 200 B — 메시지 하나에 다섯 개쯤. 서버가 스냅숏에 실어 준 확인을 따라 오래된 것부터 이어 실어 40 틱이 모두 간다.
-    NetHostSettings hostSettings;
+    NetHostConfig hostSettings;
     hostSettings._sendInterval = 1.0 / 60.0;
     LoopbackNetwork network;
     NetHost         serverHost;
@@ -702,12 +702,12 @@ SW_TEST_CASE( NetClientServerTest, OversizedInputIsRejectedAtTheSender )
     SW_ASSERT_TRUE( clientHost.connect( NetAddress::makeLoopback( 4000 ) ) );
     ReplicationServer liveServer;
     ReplicationClient liveClient;
-    liveServer.initialize( &serverHost, ReplicationServerSettings{}, nullptr );
-    liveClient.initialize( &clientHost, ReplicationClientSettings{} );
+    liveServer.initialize( &serverHost, ReplicationServerConfig{}, nullptr );
+    liveClient.initialize( &clientHost, ReplicationClientConfig{} );
     NetMessageRouter serverRouter;
     NetMessageRouter clientRouter;
-    serverRouter.addHandler( &liveServer );
-    clientRouter.addHandler( &liveClient );
+    serverRouter.registerHandler( &liveServer );
+    clientRouter.registerHandler( &liveClient );
     float64 time = 0.0;
     for ( int32 frame = 0; frame < 30; ++frame )
     {
@@ -761,7 +761,7 @@ SW_TEST_CASE( NetClientServerTest, InputBurstLossLeavesNoGap )
     conditions._pDropFilter        = &dropInputBurst;
     conditions._pDropFilterContext = &dropper;
     clientTransport.setDefaultConditions( conditions );
-    NetHostSettings hostSettings;
+    NetHostConfig hostSettings;
     hostSettings._sendInterval = 1.0 / 60.0;
     NetHost serverHost;
     NetHost clientHost;
@@ -772,12 +772,12 @@ SW_TEST_CASE( NetClientServerTest, InputBurstLossLeavesNoGap )
 
     ReplicationServer server;
     ReplicationClient client;
-    server.initialize( &serverHost, ReplicationServerSettings{} );
-    client.initialize( &clientHost, ReplicationClientSettings{} );
+    server.initialize( &serverHost, ReplicationServerConfig{} );
+    client.initialize( &clientHost, ReplicationClientConfig{} );
     NetMessageRouter serverRouter;
     NetMessageRouter clientRouter;
-    serverRouter.addHandler( &server );
-    clientRouter.addHandler( &client );
+    serverRouter.registerHandler( &server );
+    clientRouter.registerHandler( &client );
 
     // 30 Hz 틱 · 60 Hz 프레임. 서버는 입력을 24 틱 늦게 꺼낸다 — 끊김이 끝난 뒤 다시 온 입력이 꺼내기 전에 닿는다.
     const uint32  popDelay     = 24;
@@ -832,8 +832,8 @@ SW_TEST_CASE( NetClientServerTest, InputBurstLossLeavesNoGap )
  */
 SW_TEST_CASE( NetClientServerTest, RenderTickNeverGoesBackAcrossASnapshotGap )
 {
-    ReplicationClient         client;
-    ReplicationClientSettings clientSettings;
+    ReplicationClient       client;
+    ReplicationClientConfig clientSettings;
     clientSettings._tickInterval = 1.0f / 30.0f;
     client.initialize( nullptr, clientSettings );
     float32    lastRenderTick = -1.0e9f; // 첫 스냅숏의 렌더 틱(0 − 지연 = −3)은 받기 전 값보다 작다 — 받은 뒤부터 본다

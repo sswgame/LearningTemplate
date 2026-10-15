@@ -11,7 +11,7 @@ namespace sw
 
 namespace sw
 {
-    OidcLoginProvider::OidcLoginProvider( const PlatformLoginProviderSettings& settings, INetSecurityProvider* pProvider, HTTPClient* pHTTPClient )
+    OidcLoginProvider::OidcLoginProvider( const PlatformLoginProviderConfig& settings, INetSecurityProvider* pProvider, HTTPClient* pHTTPClient )
         : _settings{ settings }
         , _keyCache{}
         , _listPending{}

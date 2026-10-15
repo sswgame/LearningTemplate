@@ -57,7 +57,7 @@ namespace sw
 namespace sw
 {
     /** @brief 이동 모드 수치입니다(기반 몸 위에 얹는 활공, 갈고리, 드릴). 거리는 월드 단위, 시간은 초입니다. */
-    struct ActionBodySettings
+    struct ActionBodyDef
     {
         float32 _glideFallSpeed{ 2.0f };            ///< 우산을 펴면 이 속도보다 빨리 떨어지지 않는다
         float32 _glideGravityScale{ 0.35f };        ///< 우산을 펴고 있는 동안 적용하는 중력 배율
@@ -150,7 +150,7 @@ namespace sw
         const ActionComboDef*     findCombo( const hashed_string& id ) const { return _comboCatalog.find( id ); }
         const ActionPatternDef*   findPattern( const hashed_string& id ) const { return _patternCatalog.find( id ); }
         const ActionGradingRules& getGrading() const { return _grading; }
-        const ActionBodySettings& getBodySettings() const { return _bodySettings; }
+        const ActionBodyDef&      getBodySettings() const { return _bodySettings; }
         const ActionParryRules&   getParryRules() const { return _parryRules; }
         ActionParryRules&         getParryRules() { return _parryRules; }
 
@@ -163,7 +163,7 @@ namespace sw
         GameCatalog<ActionComboDef>   _comboCatalog;
         GameCatalog<ActionPatternDef> _patternCatalog;
         ActionGradingRules            _grading;
-        ActionBodySettings            _bodySettings;
+        ActionBodyDef                 _bodySettings;
         ActionParryRules              _parryRules;
     };
 } // namespace sw

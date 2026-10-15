@@ -63,7 +63,7 @@ namespace sw
 namespace sw
 {
     /** @brief 파괴 복제 설정입니다. */
-    struct DestructionReplicationSettings
+    struct DestructionReplicationConfig
     {
         float32 _tickInterval{ 1.0f / 60.0f }; ///< 서버 틱 간격. 자세의 시각 계산에 쓴다
         float32 _hashInterval{ 1.0f };         ///< 서버가 상태 해시를 보내는 간격(초)
@@ -101,7 +101,7 @@ namespace sw
      * @code
      *     server.initialize( &host, &manager, settings );
      *     server.registerObject( netID, *pFracture );           // 서버와 클라이언트가 같은 번호를 쓴다(씬 엔티티 순서 등)
-     *     router.addHandler( &server );                         // 라우터가 연결 이벤트도 넘겨 준다(늦은 참가 스냅숏)
+     *     router.registerHandler( &server );                         // 라우터가 연결 이벤트도 넘겨 준다(늦은 참가 스냅숏)
      *     server.update( serverTick );                          // 월드 틱 뒤에 부른다
      * @endcode
      */
@@ -110,7 +110,7 @@ namespace sw
     public:
         DestructionReplicationServer();
 
-        void initialize( NetHost* pHost, GameObjectManager* pManager, const DestructionReplicationSettings& settings );
+        void initialize( NetHost* pHost, GameObjectManager* pManager, const DestructionReplicationConfig& settings );
         /** @brief 파괴 오브젝트를 번호로 등록합니다. 서버 쪽은 권한을 켜며, 같은 번호가 이미 있으면 교체합니다. */
         void registerObject( uint32 netID, FractureComponentBase& component );
         /** @brief 월드 틱 뒤에 부릅니다. 새 이벤트, 스냅숏, 자세, 해시 순서로 보냅니다. */
@@ -159,14 +159,14 @@ namespace sw
         void               sendHash( const Entry& entry, const FractureComponentBase& component );
         int32              broadcast( NetChannelType channel );
 
-        vector<Entry>                  _listEntry;
-        vector<Request>                _listRequest;
-        DestructionReplicationSettings _settings;
-        DestructionReplicationStats    _stats;
-        NetMessageWriter               _writer;
-        NetHost*                       _pHost;
-        GameObjectManager*             _pManager;
-        float32                        _hashTime;
+        vector<Entry>                _listEntry;
+        vector<Request>              _listRequest;
+        DestructionReplicationConfig _settings;
+        DestructionReplicationStats  _stats;
+        NetMessageWriter             _writer;
+        NetHost*                     _pHost;
+        GameObjectManager*           _pManager;
+        float32                      _hashTime;
     };
 } // namespace sw
 
@@ -178,7 +178,7 @@ namespace sw
      * @code
      *     client.initialize( &host, &manager, settings );
      *     client.registerObject( netID, *pFracture );          // 권한을 끈다
-     *     router.addHandler( &client );
+     *     router.registerHandler( &client );
      *     client.update( deltaTime );                          // 월드 틱 앞에 부른다(받은 메시지를 분배한 뒤)
      * @endcode
      */
@@ -187,7 +187,7 @@ namespace sw
     public:
         DestructionReplicationClient();
 
-        void initialize( NetHost* pHost, GameObjectManager* pManager, const DestructionReplicationSettings& settings );
+        void initialize( NetHost* pHost, GameObjectManager* pManager, const DestructionReplicationConfig& settings );
         /** @brief 파괴 오브젝트를 번호로 등록합니다. 권한을 끄므로 충돌이 이벤트를 만들지 않습니다. */
         void registerObject( uint32 netID, FractureComponentBase& component );
         /** @brief 월드 틱 앞에 부릅니다. 지난 틱에 적용된 상태로 해시를 비교하고, 렌더 틱을 진행해 덩어리 자세를 보간합니다. */
@@ -262,12 +262,12 @@ namespace sw
         void               driveChunks( Entry& entry, FractureComponentBase& component );
         void               requestSnapshot( Entry& entry );
 
-        vector<Entry>                  _listEntry;
-        DestructionReplicationSettings _settings;
-        DestructionReplicationStats    _stats;
-        NetMessageWriter               _writer;
-        NetHost*                       _pHost;
-        GameObjectManager*             _pManager;
-        NetClock                       _clock; ///< 덩어리를 그리는 서버 틱의 시계. 흐른 시간으로 서버 틱을 추정하고(받은 가장 새 틱 + 지연까지) 보간 지연을 뺀 값이며 뒤로 가지 않는다. 표본 간격은 등록한 오브젝트 중 가장 긴 자세 간격이다
+        vector<Entry>                _listEntry;
+        DestructionReplicationConfig _settings;
+        DestructionReplicationStats  _stats;
+        NetMessageWriter             _writer;
+        NetHost*                     _pHost;
+        GameObjectManager*           _pManager;
+        NetClock                     _clock; ///< 덩어리를 그리는 서버 틱의 시계. 흐른 시간으로 서버 틱을 추정하고(받은 가장 새 틱 + 지연까지) 보간 지연을 뺀 값이며 뒤로 가지 않는다. 표본 간격은 등록한 오브젝트 중 가장 긴 자세 간격이다
     };
 } // namespace sw

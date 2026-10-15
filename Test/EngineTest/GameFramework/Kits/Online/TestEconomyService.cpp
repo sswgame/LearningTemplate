@@ -65,7 +65,7 @@ namespace
             // 가짜 검증기는 개발 전용이라 Shipping 의 경제 서비스는 그것이 든 레지스트리를 거절한다(ShippingRefusesDevelopmentValidator).
             (void)_receipts.registerValidator( &_fake );
 #endif
-            EconomyServiceSettings settings;
+            EconomyServiceConfig settings;
             settings._pCurrencyCatalog = &_currencies;
             settings._pOfferCatalog    = &_offers;
             settings._pReceiptRegistry = &_receipts;
@@ -190,7 +190,7 @@ SW_TEST_CASE( EconomyServiceTest, ShippingRefusesDevelopmentValidator )
     MemoryServiceStore       store{ &database };
     EconomyService           service;
     SW_ASSERT_TRUE( receipts.registerValidator( &fake ) );
-    EconomyServiceSettings settings;
+    EconomyServiceConfig settings;
     settings._pCurrencyCatalog = &currencies;
     settings._pOfferCatalog    = &offers;
     settings._pReceiptRegistry = &receipts;

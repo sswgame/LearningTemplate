@@ -17,7 +17,7 @@ namespace sw
         EpollStreamTransport();
         ~EpollStreamTransport() override;
 
-        [[nodiscard]] bool     initialize( IStreamHandler* pHandler, const StreamTransportSettings& settings ) override;
+        [[nodiscard]] bool     initialize( IStreamHandler* pHandler, const StreamTransportConfig& settings ) override;
         void                   shutdown() override;
         [[nodiscard]] bool     listen( const NetAddress& bindAddress ) override;
         uint16                 getListenPort() const override;

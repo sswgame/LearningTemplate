@@ -38,7 +38,7 @@ namespace sw
             EconomyHistoryRequest _history;
             AccountID             _accountID;
 
-            EconomyRequestWork( EconomyService* pService, const EconomyServiceSettings& settings, uint64 callID, int32 methodIndex )
+            EconomyRequestWork( EconomyService* pService, const EconomyServiceConfig& settings, uint64 callID, int32 methodIndex )
                 : _purchase{}
                 , _redeem{}
                 , _history{}
@@ -88,11 +88,11 @@ namespace sw
             void complete() override { _pService->completeCall( _callID, _reply ); }
 
         private:
-            EconomyReply           _reply;
-            EconomyServiceSettings _settings;
-            EconomyService*        _pService;
-            uint64                 _callID;
-            int32                  _methodIndex;
+            EconomyReply         _reply;
+            EconomyServiceConfig _settings;
+            EconomyService*      _pService;
+            uint64               _callID;
+            int32                _methodIndex;
         };
     } // namespace
 } // namespace sw
@@ -114,7 +114,7 @@ namespace sw
         SW_ASSERT( _listPendingCall.empty() );
     }
 
-    bool EconomyService::initialize( IServiceStore* pStore, const EconomyServiceSettings& settings )
+    bool EconomyService::initialize( IServiceStore* pStore, const EconomyServiceConfig& settings )
     {
         const bool bMissingDependencies = pStore == nullptr || settings._pCurrencyCatalog == nullptr || settings._pOfferCatalog == nullptr;
         if ( bMissingDependencies )

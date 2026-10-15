@@ -86,9 +86,9 @@ namespace
 
         bool start()
         {
-            StreamTransportSettings settings;
+            StreamTransportConfig settings;
             settings._ioThreadCount = 0;
-            OpsHTTPEndpointSettings opsSettings;
+            OpsHTTPEndpointConfig opsSettings;
             opsSettings._bindAddress = NetAddress::makeLoopback( 0 );
             const bool bEndpoint     = _endpoint.initialize( _serverTransport.get(), settings, opsSettings, &_metrics, &_health );
             const bool bClient       = _clientTransport->initialize( &_probe, settings );
@@ -191,14 +191,14 @@ SW_TEST_CASE( OpsHTTPEndpointTest, ServesHealthOverARealSocketOnThisMachine )
     unique_ptr<IStreamTransport> serverTransport = StreamTransportFactory::createPlatformTransport();
     unique_ptr<IStreamTransport> clientTransport = StreamTransportFactory::createPlatformTransport();
     SW_ASSERT_TRUE( serverTransport != nullptr && clientTransport != nullptr );
-    MetricRegistry          metrics;
-    ServiceHealthRegistry   health;
-    OpsHTTPEndpoint         endpoint;
-    OpsHTTPProbe            probe;
-    OpsHTTPEndpointSettings opsSettings;
+    MetricRegistry        metrics;
+    ServiceHealthRegistry health;
+    OpsHTTPEndpoint       endpoint;
+    OpsHTTPProbe          probe;
+    OpsHTTPEndpointConfig opsSettings;
     SW_EXPECT_TRUE( opsSettings._bindAddress == NetAddress::makeLoopback( 9100 ) ); // 기본은 이 기계만
     opsSettings._bindAddress = NetAddress::makeLoopback( 0 );
-    StreamTransportSettings transportSettings;
+    StreamTransportConfig transportSettings;
     transportSettings._maxConnections = 8;
     health.markTick( MonotonicClock::nowNanoseconds() / 1000000 );
     SW_ASSERT_TRUE( endpoint.initialize( serverTransport.get(), transportSettings, opsSettings, &metrics, &health ) );

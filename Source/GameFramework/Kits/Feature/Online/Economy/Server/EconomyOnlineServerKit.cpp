@@ -67,7 +67,7 @@ namespace sw
                     outError = "the fake receipt validator could not be registered";
                     return false;
                 }
-                EconomyServiceSettings settings;
+                EconomyServiceConfig settings;
                 settings._pCurrencyCatalog       = &_currencyCatalog;
                 settings._pOfferCatalog          = &_offerCatalog;
                 settings._pReceiptRegistry       = &_receiptRegistry;

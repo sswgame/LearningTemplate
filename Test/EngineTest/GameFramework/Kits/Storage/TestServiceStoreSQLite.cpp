@@ -24,7 +24,7 @@ namespace
             , _store{}
             , _bReady{ false }
         {
-            SQLConnectionPoolSettings settings;
+            SQLConnectionPoolConfig settings;
             settings._connection  = _path;
             settings._workerCount = 2;
             string error;
@@ -100,8 +100,8 @@ SW_SERVICE_STORE_CONTRACT_SUITE( ServiceStoreSQLiteTest, SQLiteStoreFixture )
 
 SW_TEST_CASE( ServiceStoreSQLiteTest, DataAndVersionsSurviveARestart )
 {
-    const string              path = test::makeTempPath( "restart.db" );
-    SQLConnectionPoolSettings settings;
+    const string            path = test::makeTempPath( "restart.db" );
+    SQLConnectionPoolConfig settings;
     settings._connection = path;
     string             error;
     ServiceRecord      record;

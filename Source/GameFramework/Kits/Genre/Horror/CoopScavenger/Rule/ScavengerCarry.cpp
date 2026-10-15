@@ -16,7 +16,7 @@ namespace sw
     {
     }
 
-    void ScavengerCarry::initialize( const ScavengerCarrySettings& settings )
+    void ScavengerCarry::initialize( const ScavengerCarryDef& settings )
     {
         _settings = settings;
         _listScrap.clear();

@@ -435,7 +435,7 @@ SW_TEST_CASE( RetargetTest, ComponentFollowsSourceUnit )
     pSource->setSkeleton( make_shared<Skeleton>( chain ) );
     pTarget->setSkeleton( make_shared<Skeleton>( chain ) );
     TestRetargetInternal::BendTask bend;
-    pSource->addAnimationPhaseTask( &bend );
+    pSource->registerAnimationPhaseTask( &bend );
 
     RetargetProfile profile;
     profile.setRootAndPelvis( "bone0", "bone0", "bone0", "bone0", RetargetTranslationMode::Copy );
@@ -461,7 +461,7 @@ SW_TEST_CASE( RetargetTest, ComponentFollowsSourceUnit )
     SW_ASSERT_TRUE( pTarget->findBoneModelTransform( "bone2", targetTip ) );
     SW_EXPECT_TRUE( TestRetargetInternal::isNear( sourceTip.getTranslation(), targetTip.getTranslation(), 1e-4f ) );
     SW_EXPECT_TRUE( sourceTip.getTranslation()._x < -0.3f ); // 굽힘이 실제로 옮겨졌다
-    pSource->removeAnimationPhaseTask( &bend );
+    pSource->unregisterAnimationPhaseTask( &bend );
 }
 
 /**

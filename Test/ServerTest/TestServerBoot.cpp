@@ -139,7 +139,7 @@ namespace
     {
         unique_ptr<IStreamTransport> probe = StreamTransportFactory::createPlatformTransport();
         NullStreamHandler            handler;
-        if ( probe == nullptr || probe->initialize( &handler, StreamTransportSettings{} ) == false )
+        if ( probe == nullptr || probe->initialize( &handler, StreamTransportConfig{} ) == false )
             return 0;
         uint16 port = 0;
         if ( probe->listen( NetAddress::makeLoopback( 0 ) ) )
@@ -299,7 +299,7 @@ SW_TEST_CASE( ServerBootTest, NetListenPortAcceptsAClientFromAnotherProcess )
         NetHostThread   thread;
         if ( transport.open( 0, true ) )
         {
-            client.initialize( &transport, NetHostSettings{} );
+            client.initialize( &transport, NetHostConfig{} );
             TaskFuture<NetConnectResult> future = client.connectAsync( NetAddress::makeLoopback( port ) );
             if ( thread.start( &client ) )
             {

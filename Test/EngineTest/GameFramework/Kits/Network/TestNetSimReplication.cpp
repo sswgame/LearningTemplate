@@ -22,7 +22,7 @@ namespace
     struct ReplicationTable
     {
         vector<NetEntityState>    _listEntity{};
-        ReplicationServerSettings _settings{};
+        ReplicationServerConfig   _settings{};
         const IReplicationPolicy* _pPolicy{ nullptr };
         uint8                     _bStampTick{ SW_FALSE }; ///< 상태 앞 4 바이트에 서버 틱을 적는다(틱마다 바뀌고, 받은 쪽이 낡은 정도를 측정한다)
     };
@@ -35,7 +35,7 @@ namespace
             , _pTable{ pTable }
         {
             _server.initialize( &world.getHost(), pTable->_settings, pTable->_pPolicy );
-            world.getRouter().addHandler( &_server );
+            world.getRouter().registerHandler( &_server );
         }
 
         void onTickEnd( NetSimWorld& world, float32 deltaTime ) override
@@ -73,10 +73,10 @@ namespace
             , _measureFromTick{ 0xFFFFFFFFu }
             , _lastSeenTick{ 0 }
         {
-            ReplicationClientSettings settings;
+            ReplicationClientConfig settings;
             settings._tickInterval = kReplicationTickSeconds;
             _client.initialize( &world.getHost(), settings );
-            world.getRouter().addHandler( &_client );
+            world.getRouter().registerHandler( &_client );
         }
 
         void onTickBegin( NetSimWorld& world, float32 deltaTime ) override
@@ -181,7 +181,7 @@ SW_TEST_CASE( NetSimReplicationTest, MassRemovalStaysUnderMessageLimit )
         game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 4, static_cast<uint8>( index ) ), kFirstID + index, 1 } );
     }
     NetSimHarness harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimSettings{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
     const int32 client = harness.addClient( NetSimLinkConditions{} );
 
     EntityCountGoal full{ client, kEntityCount, 0 };
@@ -220,7 +220,7 @@ SW_TEST_CASE( NetSimReplicationTest, LowPriorityEntitiesAreNotStarved )
         game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 240, 0 ), entityID, 10 } );
     }
     game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 240, 0 ), kLowID, 1 } );
-    NetSimSettings settings;
+    NetSimConfig settings;
     settings._hostSettings._sendInterval = 1.0 / 60.0; // 스냅숏마다 한 패킷 — 순서만 채널이 앞 스냅숏을 지우지 않게
     NetSimHarness harness;
     SW_ASSERT_TRUE( harness.initialize( settings, &game ) );
@@ -263,7 +263,7 @@ SW_TEST_CASE( NetSimReplicationTest, LowPriorityStateLostInASnapshotIsResentSoon
         game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 240, 0 ), entityID, 10 } );
     }
     game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 240, 0 ), kLowID, 1 } );
-    NetSimSettings settings;
+    NetSimConfig settings;
     settings._hostSettings._sendInterval = 1.0 / 60.0;
     NetSimHarness harness;
     SW_ASSERT_TRUE( harness.initialize( settings, &game ) );

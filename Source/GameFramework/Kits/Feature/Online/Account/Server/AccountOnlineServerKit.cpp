@@ -75,15 +75,15 @@ namespace sw
             bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
                 using Internal [[maybe_unused]] = AccountOnlineServerKitInternal;
-                LoginSettings loginSettings;
-                bool          bLightHash = false;
-                string        ticketKeyEnvironment;
-                const bool    bOptionOk = entry.readOptions( {
+                LoginServiceConfig loginSettings;
+                bool               bLightHash = false;
+                string             ticketKeyEnvironment;
+                const bool         bOptionOk = entry.readOptions( {
                                                               {"ticketKeySecretEnvironment",        ticketKeyEnvironment},
                                                               {              "attemptBurst", loginSettings._attemptBurst},
                                                               {         "lightPasswordHash",                  bLightHash}
                 },
-                                                             outError );
+                                                                  outError );
                 if ( bOptionOk == false )
                     return false;
                 if ( bLightHash )
@@ -103,7 +103,7 @@ namespace sw
                 Memory::set( arrTicketKey, 0, sizeof( arrTicketKey ) );
                 _bLoginStarted = true;
                 _loginService.setRemoteConfig( context._pRemoteConfig );
-                _accountServer.initialize( &_loginService, AccountServerSettings{} );
+                _accountServer.initialize( &_loginService, AccountServerConfig{} );
                 if ( registerHostService( context, entry, &_accountServer, outError ) == false )
                     return false;
                 context._pAccountDirectory = &_loginService;

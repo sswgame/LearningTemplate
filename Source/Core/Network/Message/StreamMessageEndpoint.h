@@ -21,7 +21,7 @@ namespace sw
 namespace sw
 {
     /** @brief 스트림 엔드포인트의 TLS 설정입니다. 컨텍스트(인증서와 신뢰 목록)는 `INetSecurityProvider::createTLSContext` 로 만들어 엔드포인트보다 오래 두며, 없으면 평문입니다. */
-    struct StreamSecuritySettings
+    struct StreamSecurityConfig
     {
         ITLSContext* _pTLSContext{ nullptr };
     };
@@ -29,13 +29,13 @@ namespace sw
 
 namespace sw
 {
-    struct StreamEndpointSettings
+    struct StreamEndpointConfig
     {
-        int32                  _maxFrameBodySize{ StreamFrameConstant::kDefaultMaxFrameSize };
-        int32                  _maxPendingReceiveBytes{ StreamLimit::kDefaultMaxPendingReceiveBytes }; ///< 연결 하나가 `pump` 를 기다리며 쌓아 둘 수 있는 바이트. 넘으면 읽기를 멈춘다.
-        float64                _pingIntervalSeconds{ 15.0 };                                           ///< 0이면 끈다. 전송의 유휴 시한보다 짧게 잡는다.
-        NetCompressionSettings _compression{};                                                         ///< 보내는 프레임 본문의 압축(기본값은 꺼짐). 받는 쪽은 설정과 상관없이 레지스트리에 있는 코덱이면 푼다.
-        StreamSecuritySettings _security{};                                                            ///< TLS 컨텍스트가 있으면 모든 연결이 TLS 를 쓴다. 열림은 핸드셰이크가 끝난 뒤에 알린다.
+        int32                _maxFrameBodySize{ StreamFrameConstant::kDefaultMaxFrameSize };
+        int32                _maxPendingReceiveBytes{ StreamLimit::kDefaultMaxPendingReceiveBytes }; ///< 연결 하나가 `pump` 를 기다리며 쌓아 둘 수 있는 바이트. 넘으면 읽기를 멈춘다.
+        float64              _pingIntervalSeconds{ 15.0 };                                           ///< 0이면 끈다. 전송의 유휴 시한보다 짧게 잡는다.
+        NetCompressionConfig _compression{};                                                         ///< 보내는 프레임 본문의 압축(기본값은 꺼짐). 받는 쪽은 설정과 상관없이 레지스트리에 있는 코덱이면 푼다.
+        StreamSecurityConfig _security{};                                                            ///< TLS 컨텍스트가 있으면 모든 연결이 TLS 를 쓴다. 열림은 핸드셰이크가 끝난 뒤에 알린다.
     };
 } // namespace sw
 
@@ -93,7 +93,7 @@ namespace sw
         StreamMessageEndpoint( const StreamMessageEndpoint& )            = delete;
         StreamMessageEndpoint& operator=( const StreamMessageEndpoint& ) = delete;
 
-        [[nodiscard]] bool initialize( IStreamTransport* pTransport, const StreamEndpointSettings& settings );
+        [[nodiscard]] bool initialize( IStreamTransport* pTransport, const StreamEndpointConfig& settings );
         /** @brief 소유자가 전송을 먼저 종료한 뒤 부릅니다. 연결 테이블을 비웁니다. */
         void shutdown();
 
@@ -144,7 +144,7 @@ namespace sw
         vector<Event>                                 _listPumping; ///< pump 스레드 전용. 맞바꿔서 꺼낸다.
         vector<uint8>                                 _pumpingBytes;
         unordered_map<uint64, int64>                  _mapLastPingTime; ///< pump 스레드 전용. 열린 연결의 마지막 핑 시각(나노초).
-        StreamEndpointSettings                        _settings;
+        StreamEndpointConfig                          _settings;
         IStreamTransport*                             _pTransport;
     };
 } // namespace sw

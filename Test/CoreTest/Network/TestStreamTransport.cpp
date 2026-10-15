@@ -135,28 +135,28 @@ namespace
         unique_ptr<IStreamTransport>      _client{};
         uint8                             _bManualPoll{ SW_TRUE };
 
-        static bool makeLoopback( StreamRig& outRig, const StreamTransportSettings& baseSettings, const LoopbackStreamConditions& conditions )
+        static bool makeLoopback( StreamRig& outRig, const StreamTransportConfig& baseSettings, const LoopbackStreamConditions& conditions )
         {
             outRig._network = make_unique<LoopbackStreamNetwork>( 7u );
             outRig._network->setConditions( conditions );
-            outRig._server                   = outRig._network->createTransport();
-            outRig._client                   = outRig._network->createTransport();
-            StreamTransportSettings settings = baseSettings;
-            settings._ioThreadCount          = 0;
-            outRig._bManualPoll              = SW_TRUE;
+            outRig._server                 = outRig._network->createTransport();
+            outRig._client                 = outRig._network->createTransport();
+            StreamTransportConfig settings = baseSettings;
+            settings._ioThreadCount        = 0;
+            outRig._bManualPoll            = SW_TRUE;
             return outRig._server->initialize( &outRig._serverRecorder, settings ) && outRig._client->initialize( &outRig._clientRecorder, settings );
         }
 
         /** @brief 이 플랫폼의 실제 전송 한 쌍 — I/O 스레드 둘(완료가 두 스레드로 갈려도 계약이 선다). */
-        static bool makePlatform( StreamRig& outRig, const StreamTransportSettings& baseSettings )
+        static bool makePlatform( StreamRig& outRig, const StreamTransportConfig& baseSettings )
         {
             outRig._server = StreamTransportFactory::createPlatformTransport();
             outRig._client = StreamTransportFactory::createPlatformTransport();
             if ( outRig._server == nullptr || outRig._client == nullptr )
                 return false;
-            StreamTransportSettings settings = baseSettings;
-            settings._ioThreadCount          = 2;
-            outRig._bManualPoll              = SW_FALSE;
+            StreamTransportConfig settings = baseSettings;
+            settings._ioThreadCount        = 2;
+            outRig._bManualPoll            = SW_FALSE;
             return outRig._server->initialize( &outRig._serverRecorder, settings ) && outRig._client->initialize( &outRig._clientRecorder, settings );
         }
 
@@ -307,21 +307,21 @@ namespace
 SW_TEST_CASE( StreamTransportTest, LoopbackOpensSendsInOrderAndClosesGracefully )
 {
     StreamRig rig;
-    SW_ASSERT_TRUE( StreamRig::makeLoopback( rig, StreamTransportSettings{}, LoopbackStreamConditions{ 777, 0 } ) ); // 1..777 조각으로 쪼개 받는다
+    SW_ASSERT_TRUE( StreamRig::makeLoopback( rig, StreamTransportConfig{}, LoopbackStreamConditions{ 777, 0 } ) ); // 1..777 조각으로 쪼개 받는다
     runOpenSendGracefulClose( rig );
 }
 
 SW_TEST_CASE( StreamTransportTest, LoopbackAbortResetsPeer )
 {
     StreamRig rig;
-    SW_ASSERT_TRUE( StreamRig::makeLoopback( rig, StreamTransportSettings{}, LoopbackStreamConditions{} ) );
+    SW_ASSERT_TRUE( StreamRig::makeLoopback( rig, StreamTransportConfig{}, LoopbackStreamConditions{} ) );
     runAbortResetsPeer( rig );
 }
 
 SW_TEST_CASE( StreamTransportTest, LoopbackConnectToClosedPortFails )
 {
     StreamRig rig;
-    SW_ASSERT_TRUE( StreamRig::makeLoopback( rig, StreamTransportSettings{}, LoopbackStreamConditions{} ) );
+    SW_ASSERT_TRUE( StreamRig::makeLoopback( rig, StreamTransportConfig{}, LoopbackStreamConditions{} ) );
     runConnectToClosedPortFails( rig );
 }
 
@@ -331,7 +331,7 @@ SW_TEST_CASE( StreamTransportTest, LoopbackShutsDownAfterThePeerTransportIsDestr
     LoopbackStreamNetwork        network{ 21u };
     StreamRecorder               serverRecorder;
     StreamRecorder               clientRecorder;
-    StreamTransportSettings      settings;
+    StreamTransportConfig        settings;
     unique_ptr<IStreamTransport> server = network.createTransport();
     settings._ioThreadCount             = 0;
     SW_ASSERT_TRUE( server->initialize( &serverRecorder, settings ) );
@@ -351,7 +351,7 @@ SW_TEST_CASE( StreamTransportTest, LoopbackShutsDownAfterThePeerTransportIsDestr
 
 SW_TEST_CASE( StreamTransportTest, LoopbackBackpressureFillsThenDrains )
 {
-    StreamTransportSettings settings;
+    StreamTransportConfig settings;
     settings._sendHighWatermarkBytes = 64 * 1024;
     settings._sendLowWatermarkBytes  = 16 * 1024;
     settings._maxQueuedSendBytes     = 256 * 1024;
@@ -399,25 +399,25 @@ SW_TEST_CASE( StreamTransportTest, SendQueueTracksWatermarksAcrossChunks )
 
 SW_TEST_CASE( StreamTransportTest, PlatformOpensSendsInOrderAndClosesGracefully )
 {
-    SW_STREAM_PLATFORM_RIG( rig, StreamTransportSettings{} );
+    SW_STREAM_PLATFORM_RIG( rig, StreamTransportConfig{} );
     runOpenSendGracefulClose( rig );
 }
 
 SW_TEST_CASE( StreamTransportTest, PlatformAbortResetsPeer )
 {
-    SW_STREAM_PLATFORM_RIG( rig, StreamTransportSettings{} );
+    SW_STREAM_PLATFORM_RIG( rig, StreamTransportConfig{} );
     runAbortResetsPeer( rig );
 }
 
 SW_TEST_CASE( StreamTransportTest, PlatformConnectToClosedPortFails )
 {
-    SW_STREAM_PLATFORM_RIG( rig, StreamTransportSettings{} );
+    SW_STREAM_PLATFORM_RIG( rig, StreamTransportConfig{} );
     runConnectToClosedPortFails( rig );
 }
 
 SW_TEST_CASE( StreamTransportTest, PlatformBackpressureFillsThenDrains )
 {
-    StreamTransportSettings settings;
+    StreamTransportConfig settings;
     settings._sendHighWatermarkBytes = 256 * 1024;
     settings._sendLowWatermarkBytes  = 64 * 1024;
     settings._maxQueuedSendBytes     = 1024 * 1024;
@@ -432,7 +432,7 @@ SW_TEST_CASE( StreamTransportTest, PlatformBackpressureFillsThenDrains )
  */
 SW_TEST_CASE( StreamTransportTest, PlatformAbortWithNothingPendingStillCloses )
 {
-    SW_STREAM_PLATFORM_RIG( rig, StreamTransportSettings{} );
+    SW_STREAM_PLATFORM_RIG( rig, StreamTransportConfig{} );
     SW_ASSERT_TRUE( rig._server->listen( NetAddress::makeLoopback( 0 ) ) );
     const StreamConnectionHandle clientHandle = rig._client->connect( NetAddress::makeLoopback( rig._server->getListenPort() ) );
     SW_ASSERT_TRUE( rig.runUntil( [&]()
@@ -462,7 +462,7 @@ SW_TEST_CASE( StreamTransportTest, PlatformAbortWithNothingPendingStillCloses )
  */
 SW_TEST_CASE( StreamTransportTest, PlatformIdleConnectionTimesOut )
 {
-    StreamTransportSettings settings;
+    StreamTransportConfig settings;
     settings._idleTimeoutSeconds = 0.3;
     SW_STREAM_PLATFORM_RIG( rig, settings );
     SW_ASSERT_TRUE( rig._server->listen( NetAddress::makeLoopback( 0 ) ) );
@@ -490,7 +490,7 @@ SW_TEST_CASE( StreamTransportTest, PlatformManyConnectionsEchoConcurrently )
     StreamRecorder               clientRecorder;
     unique_ptr<IStreamTransport> server = StreamTransportFactory::createPlatformTransport();
     unique_ptr<IStreamTransport> client = StreamTransportFactory::createPlatformTransport();
-    StreamTransportSettings      settings;
+    StreamTransportConfig        settings;
     settings._ioThreadCount = 2;
     echo.setTransport( server.get() );
     SW_ASSERT_TRUE( server->initialize( &echo, settings ) );

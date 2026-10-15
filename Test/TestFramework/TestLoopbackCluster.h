@@ -34,14 +34,14 @@ namespace test
         LoopbackCluster& operator=( const LoopbackCluster& ) = delete;
 
         /** @brief 엔드포인트(`127.0.0.1:port`) · 흉내 · 호스트를 하나 더합니다. 호스트 번호(더한 순서)이고, 포트가 겹치면 -1 입니다. */
-        int32 addHost( uint16 port, const sw::NetHostSettings& settings );
+        int32 addHost( uint16 port, const sw::NetHostConfig& settings );
         /**
          * @brief 호스트 0 이 listen 하고 나머지가 0 에 connect 한 뒤 @p stepCount 번 `step` 합니다.
          * @return listen · connect 를 모두 시작했고 클라이언트가 모두 연결됐으면 true 입니다.
          */
         [[nodiscard]] bool connectClients( int32 stepCount, float64 deltaTime = 1.0 / 60.0 );
         /** @brief 호스트마다 네트워크 스레드를 띄웁니다. 하나라도 못 띄우면 false 입니다. */
-        [[nodiscard]] bool startThreads( const sw::NetHostThreadSettings& settings = sw::NetHostThreadSettings{} );
+        [[nodiscard]] bool startThreads( const sw::NetHostThreadConfig& settings = sw::NetHostThreadConfig{} );
         /** @brief 스레드를 모두 멈춥니다(여러 번 불러도 된다). 그 뒤 `step` 을 다시 쓸 수 있다. */
         void stopThreads();
 

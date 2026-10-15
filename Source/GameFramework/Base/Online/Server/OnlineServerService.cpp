@@ -50,7 +50,7 @@ namespace sw
             int32 getConnectionCount() const override { return _runtime.getConnectionCount(); }
 
         private:
-            [[nodiscard]] static bool fillStoreSettings( const ServerConfig& serverConfig, const OnlineServerConfig& onlineConfig, OnlineServerRuntimeSettings& outSettings,
+            [[nodiscard]] static bool fillStoreSettings( const ServerConfig& serverConfig, const OnlineServerConfig& onlineConfig, OnlineServerRuntimeConfig& outSettings,
                                                          string& outError );
 
             OnlineServerRuntime _runtime;
@@ -85,7 +85,7 @@ namespace sw
             return false;
         }
 
-        OnlineServerRuntimeSettings settings;
+        OnlineServerRuntimeConfig settings;
         settings._config          = *pOnlineConfig;
         settings._pMetricRegistry = context._pMetricRegistry;
         settings._pHealthRegistry = context._pHealthRegistry;
@@ -110,7 +110,7 @@ namespace sw
         return _runtime.initialize( std::move( settings ), WallClock::nowUnixMilliseconds(), outError );
     }
 
-    bool OnlineServerService::fillStoreSettings( const ServerConfig& serverConfig, const OnlineServerConfig& onlineConfig, OnlineServerRuntimeSettings& outSettings,
+    bool OnlineServerService::fillStoreSettings( const ServerConfig& serverConfig, const OnlineServerConfig& onlineConfig, OnlineServerRuntimeConfig& outSettings,
                                                  string& outError )
     {
         const ServerStoreEntry* pStore = OnlineServerServiceInternal::findEntry( serverConfig._listStore, onlineConfig._storeName );

@@ -36,7 +36,7 @@ namespace
         static constexpr int32  kEnvelopeBytes    = 3; ///< 코덱 표식 1 + 원래 크기 varuint(1200 이하는 2)
         static constexpr int32  kDictionaryBytes  = 16 * 1024;
         static constexpr uint32 kRounds           = 5;
-        static constexpr uint16 kServerPort       = 7000; ///< NetSimSettings::_serverPort 기본값 — 이 포트가 아닌 곳으로 간 것이 서버 → 클라이언트
+        static constexpr uint16 kServerPort       = 7000; ///< NetSimConfig::_serverPort 기본값 — 이 포트가 아닌 곳으로 간 것이 서버 → 클라이언트
         static constexpr uint32 kClientCount      = 8;
         static constexpr uint32 kEntityCount      = 500;
         static constexpr uint32 kStateBytes       = 16;
@@ -179,8 +179,8 @@ namespace
             : _server{}
             , _listEntity{}
         {
-            _server.initialize( &world.getHost(), ReplicationServerSettings{} );
-            world.getRouter().addHandler( &_server );
+            _server.initialize( &world.getHost(), ReplicationServerConfig{} );
+            world.getRouter().registerHandler( &_server );
             for ( uint32 index = 0; index < NetCompressionBenchInternal::kEntityCount; ++index )
             {
                 NetEntityState entity{ vector<uint8>( NetCompressionBenchInternal::kStateBytes, 0 ), index + 1, 1 + index % 4 };
@@ -240,10 +240,10 @@ namespace
         explicit SnapshotClientSession( NetSimWorld& world )
             : _client{}
         {
-            ReplicationClientSettings settings;
+            ReplicationClientConfig settings;
             settings._tickInterval = 1.0f / 60.0f;
             _client.initialize( &world.getHost(), settings );
-            world.getRouter().addHandler( &_client );
+            world.getRouter().registerHandler( &_client );
         }
 
         void onTickBegin( NetSimWorld& world, float32 deltaTime ) override
@@ -362,7 +362,7 @@ SW_TEST_CASE( NetCompressionBenchTest, ReplicationSnapshotPackets )
     SnapshotGame  game;
     DatagramTap   tap;
     NetSimHarness harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimSettings{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
     NetSimLinkConditions conditions;
     conditions._downstream._pDropFilter        = &DatagramTap::capture;
     conditions._downstream._pDropFilterContext = &tap;

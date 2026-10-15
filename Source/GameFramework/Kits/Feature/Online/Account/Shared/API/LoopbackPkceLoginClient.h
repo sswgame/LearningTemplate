@@ -23,7 +23,7 @@ namespace sw
     class IStreamTransport;
 
     /** @brief 제공자 하나의 PKCE 설정입니다. 앱 등록에서 받은 client id 와 주소를 담은 데이터입니다. */
-    struct PkceLoginProviderSettings
+    struct PkceLoginProviderConfig
     {
         string _provider{};         ///< 계정 서버의 제공자 이름과 같은 값이다
         string _authorizationURL{}; ///< 인증 주소이다. 브라우저가 연다
@@ -52,8 +52,8 @@ namespace sw
          * @details 토큰 주소가 `https://` 이면 그 호스트의 TLS 컨텍스트를 `getHTTPClient().registerTLSContext` 로 등록한다.
          */
         [[nodiscard]] bool initialize( unique_ptr<IStreamTransport> serverTransport, unique_ptr<IStreamTransport> clientTransport,
-                                       const StreamTransportSettings& transportSettings, INetSecurityProvider* pProvider, IExternalBrowser* pBrowser,
-                                       const vector<PkceLoginProviderSettings>& listProviderSettings );
+                                       const StreamTransportConfig& transportSettings, INetSecurityProvider* pProvider, IExternalBrowser* pBrowser,
+                                       const vector<PkceLoginProviderConfig>& listProviderSettings );
         void               shutdown();
 
         uint64 beginLogin( string_view provider, int64 nowMs ) override;
@@ -78,14 +78,14 @@ namespace sw
             int64  _deadlineMs{ 0 };
         };
 
-        const PkceLoginProviderSettings* findSettings( string_view provider ) const;
-        [[nodiscard]] bool               makeRandomText( int32 byteCount, string& outText );
-        void                             finish( PendingLogin& pending, bool bSucceeded, bool bCancelled, string_view failureText, vector<uint8> ticketBytes );
-        string                           makeRedirectUri() const;
+        const PkceLoginProviderConfig* findSettings( string_view provider ) const;
+        [[nodiscard]] bool             makeRandomText( int32 byteCount, string& outText );
+        void                           finish( PendingLogin& pending, bool bSucceeded, bool bCancelled, string_view failureText, vector<uint8> ticketBytes );
+        string                         makeRedirectUri() const;
 
         HTTPServer                        _redirectServer;
         HTTPClient                        _httpClient;
-        vector<PkceLoginProviderSettings> _listProviderSettings;
+        vector<PkceLoginProviderConfig>   _listProviderSettings;
         vector<PendingLogin>              _listPending;
         vector<PlatformLoginClientResult> _listDone;
         INetSecurityProvider*             _pProvider;

@@ -111,7 +111,7 @@ namespace sw
 
         ActionPlatformerBody();
 
-        void initialize( const PlatformerSettings& motorSettings, const ActionBodySettings& settings );
+        void initialize( const PlatformerSettings& motorSettings, const ActionBodyDef& settings );
         void setPosition( const float2& position );
         void update( const PlatformTileMap& map, const ActionTerrainGrid& terrain, const ActionBodyInput& input, float32 deltaTime );
 
@@ -146,7 +146,7 @@ namespace sw
 
         PlatformerMotor2D  _motor;
         PlatformerSettings _motorSettings;
-        ActionBodySettings _settings;
+        ActionBodyDef      _settings;
         float2             _position; ///< 갈고리와 드릴 모드의 위치
         float2             _velocity; ///< 갈고리와 드릴 모드의 속도
         float2             _anchor;

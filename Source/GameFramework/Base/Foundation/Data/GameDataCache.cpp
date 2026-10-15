@@ -30,7 +30,7 @@ namespace sw
 
 namespace sw
 {
-    void GameDataCacheRegistry::addCache( IAssetCache* pCache )
+    void GameDataCacheRegistry::registerCache( IAssetCache* pCache )
     {
         if ( pCache == nullptr )
             return;
@@ -41,7 +41,7 @@ namespace sw
             state._pAssetManager->registerAssetCache( pCache );
     }
 
-    void GameDataCacheRegistry::removeCache( const IAssetCache* pCache )
+    void GameDataCacheRegistry::unregisterCache( const IAssetCache* pCache )
     {
         GameDataCacheInternal::RegistryState& state = GameDataCacheInternal::getState();
         std::scoped_lock<mutex>               lock{ state._mutex };

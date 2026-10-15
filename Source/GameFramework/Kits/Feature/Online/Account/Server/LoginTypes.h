@@ -26,7 +26,7 @@ namespace sw
 namespace sw
 {
     /** @brief 로그인 서비스 설정입니다. 시간은 밀리초입니다. */
-    struct LoginSettings
+    struct LoginServiceConfig
     {
         NetPasswordHashParams _passwordHashParams{};                                                                       ///< Argon2id 해시 파라미터이다. 기본값은 OWASP 권장(19 MiB, 2회, 1레인)이며, 바꾸면 다음 로그인에서 다시 해시한다
         int64                 _sessionLifetimeMs{ 12 * constant::kSecondsPerHour * constant::kMillisecondsPerSecond };     ///< 세션의 절대 수명이다. 지나면 비밀번호로 다시 로그인해야 한다

@@ -116,7 +116,7 @@ namespace sw
         }
     }
 
-    bool OnlineServiceClient::initialize( IStreamTransport* pTransport, const OnlineServiceClientSettings& settings, string& outError )
+    bool OnlineServiceClient::initialize( IStreamTransport* pTransport, const OnlineServiceClientConfig& settings, string& outError )
     {
         SW_ASSERT( _bInitialized == SW_FALSE );
         _settings                        = settings;
@@ -139,7 +139,7 @@ namespace sw
     }
 
     bool OnlineServiceClient::initializeOnSharedEndpoint( StreamMessageEndpoint* pEndpoint, NetRequestClient* pRequestClient, StreamConnectionHandle handle,
-                                                          const OnlineServiceClientSettings& settings )
+                                                          const OnlineServiceClientConfig& settings )
     {
         SW_ASSERT( _bInitialized == SW_FALSE );
         const bool bInvalidClientArguments = pEndpoint == nullptr || pRequestClient == nullptr || handle.isValid() == false;

@@ -32,7 +32,7 @@ namespace sw
     class ReceiptValidatorRegistry;
 
     /** @brief 서비스 설정입니다. 포인터는 모두 빌려 쓰며 서비스보다 오래 살아야 합니다. */
-    struct EconomyServiceSettings
+    struct EconomyServiceConfig
     {
         const CurrencyCatalog*    _pCurrencyCatalog{ nullptr };
         const OfferCatalog*       _pOfferCatalog{ nullptr };
@@ -74,7 +74,7 @@ namespace sw
         EconomyService& operator=( const EconomyService& ) = delete;
 
         /** @brief 카탈로그나 저장소가 없거나 Shipping 에 개발 전용 영수증 제공자가 있으면 false 를 반환합니다. 호스트에 등록하는 일은 호출하는 쪽이 합니다(`host.registerHostService( &service )`). */
-        [[nodiscard]] bool initialize( IServiceStore* pStore, const EconomyServiceSettings& settings );
+        [[nodiscard]] bool initialize( IServiceStore* pStore, const EconomyServiceConfig& settings );
         void               shutdown();
 
         /** @brief 요청 하나를 맡깁니다. 서비스 스레드에서 부릅니다. @p onReply 는 정확히 한 번 불리며, 규칙 위반 거절은 바로, 나머지는 저장소 완료에서 불립니다. */
@@ -110,11 +110,11 @@ namespace sw
         void finishCall( size_t pendingIndex, const EconomyReply& reply );
         void pollReceipts();
 
-        vector<PendingCall>    _listPendingCall;
-        ServiceMetrics         _metrics;
-        EconomyServiceSettings _settings;
-        IServiceStore*         _pStore;
-        uint64                 _nextCallID;
-        int64                  _nowMs;
+        vector<PendingCall>  _listPendingCall;
+        ServiceMetrics       _metrics;
+        EconomyServiceConfig _settings;
+        IServiceStore*       _pStore;
+        uint64               _nextCallID;
+        int64                _nowMs;
     };
 } // namespace sw

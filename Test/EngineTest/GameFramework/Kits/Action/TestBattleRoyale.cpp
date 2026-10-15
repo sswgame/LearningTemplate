@@ -319,9 +319,9 @@ SW_TEST_CASE( BattleRoyaleTest, FlightPathCrossesMapAndLandingIsPredicted )
     SW_EXPECT_NEAR_EQUAL( ( path._start._x + path._end._x ) * 0.5f, middle._x, 0.01f );
 
     // 낙하 — 600 m 에서 동쪽으로: 자유 낙하 500 m 는 10 s(× 20 m/s = 200 m), 낙하산 100 m 는 20 s(× 8 m/s = 160 m) — 360 m.
-    const BrFallSettings& fall  = catalog.getFallSettings();
-    const float2          steer = float2{ 1.0f, 0.0f };
-    BrSkydiver            diver;
+    const BrFallDef& fall  = catalog.getFallSettings();
+    const float2     steer = float2{ 1.0f, 0.0f };
+    BrSkydiver       diver;
     diver.initialize( fall, float3{ middle._x, 600.0f, middle._y }, 0.0f );
     const float3 predicted = diver.predictLanding( steer );
     SW_EXPECT_NEAR_EQUAL( middle._x + 360.0f, predicted._x, 0.01f );

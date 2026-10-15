@@ -289,10 +289,10 @@ SW_TEST_CASE( MailboxTest, TradeReturnMailClaimsFromEscrow )
 
 SW_TEST_CASE( MailboxTest, ServiceClaimNeedsAKeyAndSweepsOnItsPeriod )
 {
-    MailFixture            fixture;
-    MemoryServiceStore     store{ &fixture._database };
-    MailboxService         service;
-    MailboxServiceSettings settings;
+    MailFixture          fixture;
+    MemoryServiceStore   store{ &fixture._database };
+    MailboxService       service;
+    MailboxServiceConfig settings;
     settings._sweepIntervalMs = 1000;
     SW_ASSERT_TRUE( service.initialize( &store, settings ) );
     const string mailKey = fixture.send( "svc", LedgerHolder::makeMint(), 7, 1000, 4000 );
