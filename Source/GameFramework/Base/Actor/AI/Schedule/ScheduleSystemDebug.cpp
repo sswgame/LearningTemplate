@@ -11,6 +11,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Reflection/EnumName.h"
+
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleActivity.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCatalog.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSaveState.h"
@@ -79,8 +81,8 @@ namespace sw
         text.appendFormat( "npc '%#' day %# (%#, %#, day %# of season, weather '%#') ", def._id.c_str(), npc._planDay, context._weekday.c_str(), context._season.c_str(),
                            context._dayOfSeason, _weather.c_str() );
         Internal::appendClock( text, now );
-        text.appendFormat( " - %# %# at (%#, %#, %#) area '%#' [%#]\n", toString( view._phase ), view._activity.c_str(), view._location._position._x,
-                           view._location._position._y, view._location._position._z, view._location._area.c_str(), toString( view._lod ) );
+        text.appendFormat( " - %# %# at (%#, %#, %#) area '%#' [%#]\n", getEnumName( view._phase ), view._activity.c_str(), view._location._position._x,
+                           view._location._position._y, view._location._position._z, view._location._area.c_str(), getEnumName( view._lod ) );
         if ( view._segmentIndex >= 0 )
         {
             const ScheduleSegment& segment = npc._listSegment[static_cast<size_t>( view._segmentIndex )];

@@ -7,6 +7,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/UI/Screen/UINotificationService.h"
@@ -38,26 +39,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( AutosaveTrigger trigger )
-    {
-        switch ( trigger )
-        {
-            case AutosaveTrigger::Interval:
-                return "Interval";
-            case AutosaveTrigger::AreaChanged:
-                return "AreaChanged";
-            case AutosaveTrigger::Checkpoint:
-                return "Checkpoint";
-            case AutosaveTrigger::BeforeBoss:
-                return "BeforeBoss";
-            case AutosaveTrigger::Quit:
-                return "Quit";
-            case AutosaveTrigger::Manual:
-                return "Manual";
-        }
-        return "Unknown";
-    }
-
     // ------------------------------------------------------------------------------
     // 정책 수치
     // ------------------------------------------------------------------------------
@@ -173,7 +154,7 @@ namespace sw
         _bPending                     = SW_FALSE;
         _pendingLabel                 = hashed_string{};
         if ( performSave( trigger, label ) == false )
-            SW_LOG_WARNING( "Autosave (%#) failed - the previous slots are kept", toString( trigger ) );
+            SW_LOG_WARNING( "Autosave (%#) failed - the previous slots are kept", getEnumName( trigger ) );
     }
 
     void AutosaveManager::requestSave( AutosaveTrigger trigger, const hashed_string& label )
@@ -360,7 +341,7 @@ namespace sw
         ++_saveCount;
         _lastSaveTime  = _playTime;
         _intervalTimer = 0.0f;
-        SW_LOG_INFO( "Autosaved (%#%#%#) to %#", toString( trigger ), label.empty() ? "" : " ", label.c_str(), info._path.c_str() );
+        SW_LOG_INFO( "Autosaved (%#%#%#) to %#", getEnumName( trigger ), label.empty() ? "" : " ", label.c_str(), info._path.c_str() );
         // 플레이어에게 알린다(UI 가 없는 서버 · 테스트는 건너뛴다) — 같은 알림이 떠 있으면 센다.
         if ( UISystem* pUI = game::findSubsystem<UISystem>(); pUI != nullptr )
         {

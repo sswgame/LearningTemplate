@@ -10,6 +10,8 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -19,6 +21,7 @@ namespace sw
     class XMLNode;
 
     /** @brief 통계가 값을 받는 방법입니다. 데이터(`kind`)에는 이름 그대로 적습니다. */
+    ENUM()
     enum class StatKind : uint8
     {
         Counter = 0, ///< 더하기만 한다(처치 수, 걸음 수). 줄지 않는다
@@ -28,7 +31,6 @@ namespace sw
     };
 
     [[nodiscard]] SW_GF_API bool parseStatKind( string_view text, StatKind& outKind );
-    SW_GF_API const utf8*        toString( StatKind kind );
 
     /** @brief 통계 하나의 정의입니다. */
     struct StatDef

@@ -94,14 +94,14 @@ namespace sw
         void               stop();
 
         // 응답 처리기 — 키트마다 하나(지연 · 오류만 본다)
-        void onChatReply( const ChatClientReply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
-        void onSocialReply( const SocialClientReply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
-        void onLeaderboardReply( const LeaderboardClientReply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
-        void onMatchmakingReply( const MatchmakingClientReply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
-        void onLiveOpsReply( const LiveOpsClientReply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
+        void onChatReply( const ChatClient::Reply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
+        void onSocialReply( const SocialClient::Reply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
+        void onLeaderboardReply( const LeaderboardClient::Reply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
+        void onMatchmakingReply( const MatchmakingClient::Reply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
+        void onLiveOpsReply( const LiveOpsClient::Reply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
         void onDirectoryStatus( uint16 errorCode, const ServerDirectoryStatus& status );
         void onDirectoryAssignment( uint16 errorCode, const ServerAssignment& assignment );
-        void onFriendAccepted( const SocialClientReply& reply );
+        void onFriendAccepted( const SocialClient::Reply& reply );
 
         OnlineServiceClient        _client;
         AccountClient              _accountClient;

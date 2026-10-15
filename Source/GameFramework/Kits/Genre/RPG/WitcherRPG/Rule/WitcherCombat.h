@@ -9,6 +9,8 @@
 #include "Core/Common/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Actor/Combat/Health/ResourceGauge.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -31,6 +33,7 @@ namespace sw
     };
 
     /** @brief 동작과 표식의 결과입니다. */
+    ENUM()
     enum class WitcherCombatResult : uint8
     {
         Ok = 0,
@@ -38,8 +41,6 @@ namespace sw
         NotEnoughStamina,
         AlternateLocked ///< 대체 시전 스킬을 배우지 않았다
     };
-
-    SW_KIT_API const utf8* toString( WitcherCombatResult result );
 
     /** @brief 표식 한 번의 결과입니다. */
     struct WitcherSignCast

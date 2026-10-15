@@ -10,6 +10,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
@@ -20,6 +22,7 @@ namespace sw
     class XMLNode;
 
     /** @brief 진영입니다. 플레이어는 왼쪽(작은 x)에서 오른쪽으로 쳐들어갑니다. */
+    ENUM()
     enum class ConquestTeam : uint8
     {
         Neutral = 0,
@@ -44,7 +47,6 @@ namespace sw
     };
 
     [[nodiscard]] SW_KIT_API bool parseConquestTeam( string_view text, ConquestTeam& outTeam );
-    SW_KIT_API const utf8*        toString( ConquestTeam team );
 
     /** @brief 건물 하나입니다. */
     struct ConquestBuildingDef

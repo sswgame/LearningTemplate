@@ -151,28 +151,6 @@ namespace sw
         return true;
     }
 
-    const utf8* toString( LedgerResult result )
-    {
-        switch ( result )
-        {
-            case LedgerResult::Ok:
-                return "Ok";
-            case LedgerResult::InsufficientFunds:
-                return "InsufficientFunds";
-            case LedgerResult::CapExceeded:
-                return "CapExceeded";
-            case LedgerResult::JournalKeyReused:
-                return "JournalKeyReused";
-            case LedgerResult::Conflict:
-                return "Conflict";
-            case LedgerResult::Invalid:
-                return "Invalid";
-            case LedgerResult::Unavailable:
-                return "Unavailable";
-        }
-        return "Unknown";
-    }
-
     string LedgerJournalKey::makeFromIdempotency( string_view scope, uint64 keyHigh, uint64 keyLow )
     {
         string key{ scope };

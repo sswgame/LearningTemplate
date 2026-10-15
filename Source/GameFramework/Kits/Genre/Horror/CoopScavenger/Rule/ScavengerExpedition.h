@@ -11,6 +11,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Actor/AI/SpawnDirector.h"
 #include "GameFramework/Base/Actor/Combat/Health/Vitality.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
@@ -42,6 +44,7 @@ namespace sw
     };
 
     /** @brief 명령의 결과입니다. */
+    ENUM()
     enum class ScavengerActionResult : uint8
     {
         Ok = 0,
@@ -53,8 +56,6 @@ namespace sw
         NotCompany,    ///< 회사 위성에서만 팔 수 있다
         NotOnShip      ///< 우주선 안에서만 할 수 있다
     };
-
-    SW_KIT_API const utf8* toString( ScavengerActionResult result );
 
     /** @brief 사람 하나입니다. */
     struct ScavengerCrewMember

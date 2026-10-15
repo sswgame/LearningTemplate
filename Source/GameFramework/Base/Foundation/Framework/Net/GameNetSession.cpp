@@ -10,6 +10,8 @@
 #include "Core/Network/Message/NetStatsReport.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
 
+#include "Engine/Reflection/EnumName.h"
+
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 
 namespace sw
@@ -212,7 +214,7 @@ namespace sw
                     outReply = "net session: none (start with -gv_netListenPort=<port> or -gv_netConnectAddress=<host:port>)";
                     return true;
                 }
-                outReply = string( "net session: " ) + toString( pSession->getRole() ) + ", connected " + to_string( pSession->getConnectedCount() );
+                outReply = string( "net session: " ) + getEnumName( pSession->getRole() ) + ", connected " + to_string( pSession->getConnectedCount() );
                 if ( pSession->getRole() == GameNetRole::Server )
                     outReply += ", port " + to_string( pSession->getListenPort() );
                 return true;
@@ -241,20 +243,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( GameNetRole role )
-    {
-        switch ( role )
-        {
-            case GameNetRole::None:
-                return "None";
-            case GameNetRole::Server:
-                return "Server";
-            case GameNetRole::Client:
-                return "Client";
-        }
-        return "Unknown";
-    }
-
     GameNetSession::GameNetSession()
         : _host{}
         , _thread{}
@@ -385,7 +373,7 @@ namespace sw
         }
         _host.disconnectAll();
         if ( _role != GameNetRole::None )
-            SW_LOG_INFO( "Net session closed (%#)", toString( _role ) );
+            SW_LOG_INFO( "Net session closed (%#)", getEnumName( _role ) );
         _emulation.reset(); // 안쪽 전송보다 먼저 — 흉내는 안쪽을 빌려 쓴다
         _transport.reset();
         _connectFuture = TaskFuture<NetConnectResult>{};
@@ -435,7 +423,7 @@ namespace sw
             return;
         _connectFuture = TaskFuture<NetConnectResult>{}; // 붙는 중이던 것도 버린다 — 끊긴 채로 남는다
         _host.disconnectAll();
-        SW_LOG_INFO( "Net session disconnected its peers on request (%#)", toString( _role ) );
+        SW_LOG_INFO( "Net session disconnected its peers on request (%#)", getEnumName( _role ) );
     }
 
     bool GameNetSession::reconnect()

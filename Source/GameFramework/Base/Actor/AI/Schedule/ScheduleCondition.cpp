@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
@@ -202,7 +203,7 @@ namespace sw
             for ( uint32 phaseIndex = 0; phaseIndex <= static_cast<uint32>( DayPhase::Dusk ); ++phaseIndex )
             {
                 const DayPhase phase = static_cast<DayPhase>( phaseIndex );
-                if ( name == hashed_string( toString( phase ) ) )
+                if ( name == hashed_string( getEnumName( phase ) ) )
                 {
                     mask   = static_cast<uint8>( mask | makeDayPhaseBit( phase ) );
                     bFound = true;

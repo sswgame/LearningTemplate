@@ -7,12 +7,15 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     /** @brief 라이브 운영 요청의 결과입니다. 와이어 값이므로 순서를 바꾸지 않고 새 값은 끝에만 추가합니다. */
+    ENUM( Count = Count )
     enum class LiveOpsResult : uint8
     {
         Ok = 0,
@@ -23,8 +26,6 @@ namespace sw
         UnknownProvider, ///< 푸시에서 이 서버 빌드에 없는 제공자이다
         Count
     };
-
-    SW_KIT_API const utf8* toString( LiveOpsResult result );
 } // namespace sw
 
 namespace sw

@@ -13,32 +13,6 @@ namespace sw
 {
     SW_LOG_CALLER( "SkillTree" );
 
-    const utf8* toString( SkillResult result )
-    {
-        switch ( result )
-        {
-            case SkillResult::Ok:
-                return "Ok";
-            case SkillResult::UnknownSkill:
-                return "UnknownSkill";
-            case SkillResult::MaxRank:
-                return "MaxRank";
-            case SkillResult::NotEnoughPoints:
-                return "NotEnoughPoints";
-            case SkillResult::LevelTooLow:
-                return "LevelTooLow";
-            case SkillResult::RequirementMissing:
-                return "RequirementMissing";
-            case SkillResult::TierLocked:
-                return "TierLocked";
-            case SkillResult::GroupTaken:
-                return "GroupTaken";
-            case SkillResult::RequiredByOther:
-                return "RequiredByOther";
-        }
-        return "Unknown";
-    }
-
     const SkillDef* SkillTreeDef::findSkill( const hashed_string& skillID ) const
     {
         for ( const SkillDef& skill : _listSkill )

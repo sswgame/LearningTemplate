@@ -10,6 +10,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -89,6 +91,7 @@ namespace sw
     };
 
     /** @brief 원장 호출의 결과입니다. */
+    ENUM()
     enum class LedgerResult : uint8
     {
         Ok = 0,            ///< 적용했다 — 또는 같은 분개 키로 이미 적용돼 있었다(`_bReplayed`)
@@ -99,8 +102,6 @@ namespace sw
         Invalid,           ///< 규칙 위반(다리 수 · 금액 · 같은 보유자끼리 · 시스템끼리 · 글자 규칙 · 쓰기 상한)
         Unavailable        ///< 저장소 — 적용됐는지 모른다(같은 키로 다시 하면 가려진다)
     };
-
-    SW_GF_API const utf8* toString( LedgerResult result );
 } // namespace sw
 
 namespace sw

@@ -14,6 +14,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -26,6 +28,7 @@ namespace sw
     class GhostCatalog;
 
     /** @brief 유령의 상태입니다. */
+    ENUM()
     enum class GhostState : uint8
     {
         Hidden = 0, ///< 보이지 않는다. 빛도 청소기도 닿지 않는다
@@ -35,8 +38,6 @@ namespace sw
         Sucking,    ///< 흡입 중이다. 줄다리기를 한다
         Caught
     };
-
-    SW_KIT_API const utf8* toString( GhostState state );
 
     /** @brief 싸움 중인 유령 하나입니다. */
     struct GhostInstance

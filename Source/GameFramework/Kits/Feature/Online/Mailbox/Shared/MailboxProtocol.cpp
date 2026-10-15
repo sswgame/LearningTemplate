@@ -14,7 +14,6 @@ namespace sw
     {
         struct MailboxProtocolInternal
         {
-
             static void writeAttachments( BitWriter& outWriter, const vector<ServiceMailAttachment>& listAttachment )
             {
                 outWriter.writeVarUint( listAttachment.size() );
@@ -79,15 +78,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( MailboxResult result )
-    {
-        static constexpr const utf8* kArrName[] = { "Ok", "NotSignedIn", "InvalidRequest", "NotFound", "AlreadyClaimed",
-                                                    "Expired", "HasAttachments", "CapExceeded", "Busy", "Unavailable" };
-        static_assert( SW_COUNT_OF( kArrName ) == static_cast<size_t>( MailboxResult::Count ), "MailboxResult names must match the enum" );
-        const size_t index = static_cast<size_t>( result );
-        return index < SW_COUNT_OF( kArrName ) ? kArrName[index] : "Unknown";
-    }
-
     void MailboxProtocol::writeRequest( BitWriter& outWriter, const MailboxRequest& request )
     {
         ServiceKeyUtil::writeString( outWriter, request._mailKey );

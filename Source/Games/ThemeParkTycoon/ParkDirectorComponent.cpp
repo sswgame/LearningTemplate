@@ -14,6 +14,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/UI/Input/UIInputMapView.h"
 #include "Engine/UI/UISystem.h"
@@ -713,7 +714,7 @@ namespace sw
         {
             const uint32 count = _simulation.countGuestsThinking( thought );
             if ( count > 0 )
-                SW_LOG_INFO( "[Park] %# guests think: %#", count, toString( thought ) );
+                SW_LOG_INFO( "[Park] %# guests think: %#", count, getEnumName( thought ) );
         }
     }
 

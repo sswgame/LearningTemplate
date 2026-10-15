@@ -6,6 +6,8 @@
 #include "Core/Network/BitStream.h"
 #include "Core/String/Base64Util.h"
 
+#include "Engine/Reflection/EnumName.h"
+
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
@@ -210,7 +212,7 @@ namespace sw
                 entry._fallbackItem  = fallback;
                 entry._reason        = reason;
                 outReport._listSlotFallback.push_back( entry );
-                SW_LOG_WARNING( "Appearance slot '%#': '%#' %# - using '%#'", slot.c_str(), requested.c_str(), toString( reason ), fallback.c_str() );
+                SW_LOG_WARNING( "Appearance slot '%#': '%#' %# - using '%#'", slot.c_str(), requested.c_str(), getEnumName( reason ), fallback.c_str() );
             }
 
             static void addDropped( AppearanceSelectionReport& outReport, const hashed_string& name )
@@ -241,22 +243,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( AppearanceFallbackReason reason )
-    {
-        switch ( reason )
-        {
-            case AppearanceFallbackReason::MissingItem:
-                return "MissingItem";
-            case AppearanceFallbackReason::LockedItem:
-                return "LockedItem";
-            case AppearanceFallbackReason::UnknownSlot:
-                return "UnknownSlot";
-            case AppearanceFallbackReason::MissingVisual:
-                return "MissingVisual";
-        }
-        return "Unknown";
-    }
-
     bool AppearanceSelection::includesCategory( const hashed_string& category ) const
     {
         return _listCategory.empty() || AppearanceXMLUtil::containsName( _listCategory, category );

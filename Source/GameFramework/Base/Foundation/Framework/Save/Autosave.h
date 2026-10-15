@@ -29,8 +29,6 @@ namespace sw
         Quit,         ///< 게임을 끈다
         Manual        ///< 게임 코드가 직접 불렀다
     };
-
-    SW_GF_API const utf8* toString( AutosaveTrigger trigger );
 } // namespace sw
 
 namespace sw

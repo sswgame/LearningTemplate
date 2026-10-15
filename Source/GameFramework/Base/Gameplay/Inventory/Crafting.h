@@ -11,6 +11,8 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
@@ -39,6 +41,7 @@ namespace sw
 namespace sw
 {
     /** @brief 제작할 수 있는지, 없다면 왜 없는지 나타냅니다. */
+    ENUM()
     enum class CraftResult : uint8
     {
         Ok = 0,
@@ -50,8 +53,6 @@ namespace sw
         MissingTools,
         NoRoom ///< 결과를 넣을 공간이 없다
     };
-
-    SW_GF_API const utf8* toString( CraftResult result );
 
     /**
      * @class RecipeCatalog

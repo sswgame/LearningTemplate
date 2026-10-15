@@ -4,52 +4,6 @@
 
 namespace sw
 {
-    const utf8* toString( MatchmakingResult result )
-    {
-        switch ( result )
-        {
-            case MatchmakingResult::Ok:
-                return "Ok";
-            case MatchmakingResult::UnknownMode:
-                return "UnknownMode";
-            case MatchmakingResult::AlreadyQueued:
-                return "AlreadyQueued";
-            case MatchmakingResult::NotQueued:
-                return "NotQueued";
-            case MatchmakingResult::PartyTooLarge:
-                return "PartyTooLarge";
-            case MatchmakingResult::NotPartyLeader:
-                return "NotPartyLeader";
-            case MatchmakingResult::PartyFull:
-                return "PartyFull";
-            case MatchmakingResult::NotInParty:
-                return "NotInParty";
-            case MatchmakingResult::AlreadyInParty:
-                return "AlreadyInParty";
-            case MatchmakingResult::LobbyFull:
-                return "LobbyFull";
-            case MatchmakingResult::NotInLobby:
-                return "NotInLobby";
-            case MatchmakingResult::NotLobbyOwner:
-                return "NotLobbyOwner";
-            case MatchmakingResult::LobbyNotReady:
-                return "LobbyNotReady";
-            case MatchmakingResult::InviteMissing:
-                return "InviteMissing";
-            case MatchmakingResult::NoServer:
-                return "NoServer";
-            case MatchmakingResult::Invalid:
-                return "Invalid";
-            case MatchmakingResult::Unavailable:
-                return "Unavailable";
-            case MatchmakingResult::Conflict:
-                return "Conflict";
-            case MatchmakingResult::Count:
-                break;
-        }
-        return "Unknown";
-    }
-
     bool isValidMatchModeID( string_view modeID )
     {
         if ( modeID.empty() || modeID.size() > static_cast<size_t>( MatchmakingLimit::kMaxIDSize ) )

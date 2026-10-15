@@ -12,6 +12,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Data/CustomizationValueSet.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceTypes.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -52,6 +54,7 @@ namespace sw
 namespace sw
 {
     /** @brief 슬롯을 기본으로 되돌린 이유입니다. */
+    ENUM()
     enum class AppearanceFallbackReason : uint8
     {
         MissingItem = 0, ///< 콘텐츠에서 지워진 아이템
@@ -59,8 +62,6 @@ namespace sw
         UnknownSlot,     ///< 지워진 슬롯
         MissingVisual    ///< 지워진 보이는 외형(형상 변경만 버린다)
     };
-
-    SW_GF_API const utf8* toString( AppearanceFallbackReason reason );
 
     /** @brief 선택을 지금 콘텐츠에 맞춰 펼친 결과의 보고입니다. 무엇을 버렸고 무엇을 기본으로 되돌렸는지 담으며, 플레이어에게 보여 줍니다. */
     struct AppearanceSelectionReport

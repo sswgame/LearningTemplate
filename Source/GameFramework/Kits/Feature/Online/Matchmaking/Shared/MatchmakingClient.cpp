@@ -9,78 +9,71 @@
 namespace sw
 {
     MatchmakingClient::MatchmakingClient()
-        : _callTable{}
-        , _partyBuffer{}
+        : _partyBuffer{}
         , _inviteBuffer{}
         , _lobbyBuffer{}
         , _matchBuffer{}
         , _party{}
-        , _pClient{ nullptr }
     {
-    }
-
-    void MatchmakingClient::initialize( OnlineServiceClient* pClient )
-    {
-        _pClient = pClient;
     }
 
     uint64 MatchmakingClient::createParty( const ReplyDelegate& onReply )
     {
-        return send( MatchmakingMethod::kPartyCreate, BitWriter{}, onReply );
+        return sendCall( MatchmakingMethod::kPartyCreate, BitWriter{}, NetIdempotencyKey{}, onReply );
     }
 
     uint64 MatchmakingClient::inviteToParty( AccountID targetID, const ReplyDelegate& onReply )
     {
         BitWriter body;
         body.writeVarUint( targetID );
-        return send( MatchmakingMethod::kPartyInvite, body, onReply );
+        return sendCall( MatchmakingMethod::kPartyInvite, body, NetIdempotencyKey{}, onReply );
     }
 
     uint64 MatchmakingClient::acceptPartyInvite( uint64 partyID, const ReplyDelegate& onReply )
     {
         BitWriter body;
         body.writeVarUint( partyID );
-        return send( MatchmakingMethod::kPartyAccept, body, onReply );
+        return sendCall( MatchmakingMethod::kPartyAccept, body, NetIdempotencyKey{}, onReply );
     }
 
     uint64 MatchmakingClient::leaveParty( const ReplyDelegate& onReply )
     {
-        return send( MatchmakingMethod::kPartyLeave, BitWriter{}, onReply );
+        return sendCall( MatchmakingMethod::kPartyLeave, BitWriter{}, NetIdempotencyKey{}, onReply );
     }
 
     uint64 MatchmakingClient::kickFromParty( AccountID targetID, const ReplyDelegate& onReply )
     {
         BitWriter body;
         body.writeVarUint( targetID );
-        return send( MatchmakingMethod::kPartyKick, body, onReply );
+        return sendCall( MatchmakingMethod::kPartyKick, body, NetIdempotencyKey{}, onReply );
     }
 
     uint64 MatchmakingClient::createLobby( const LobbySnapshot& request, const ReplyDelegate& onReply )
     {
         BitWriter body;
         MatchmakingProtocol::writeLobby( body, request );
-        return send( MatchmakingMethod::kLobbyCreate, body, onReply );
+        return sendCall( MatchmakingMethod::kLobbyCreate, body, NetIdempotencyKey{}, onReply );
     }
 
     uint64 MatchmakingClient::listLobbies( string_view modeID, const ReplyDelegate& onReply )
     {
         BitWriter body;
         ServiceKeyUtil::writeString( body, modeID );
-        return send( MatchmakingMethod::kLobbyList, body, onReply );
+        return sendCall( MatchmakingMethod::kLobbyList, body, NetIdempotencyKey{}, onReply );
     }
 
     uint64 MatchmakingClient::joinLobby( uint64 lobbyID, const ReplyDelegate& onReply )
     {
         BitWriter body;
         body.writeVarUint( lobbyID );
-        return send( MatchmakingMethod::kLobbyJoin, body, onReply );
+        return sendCall( MatchmakingMethod::kLobbyJoin, body, NetIdempotencyKey{}, onReply );
     }
 
     uint64 MatchmakingClient::leaveLobby( uint64 lobbyID, const ReplyDelegate& onReply )
     {
         BitWriter body;
         body.writeVarUint( lobbyID );
-        return send( MatchmakingMethod::kLobbyLeave, body, onReply );
+        return sendCall( MatchmakingMethod::kLobbyLeave, body, NetIdempotencyKey{}, onReply );
     }
 
     uint64 MatchmakingClient::setLobbyReady( uint64 lobbyID, bool bReady, const ReplyDelegate& onReply )
@@ -88,14 +81,14 @@ namespace sw
         BitWriter body;
         body.writeVarUint( lobbyID );
         body.writeBool( bReady );
-        return send( MatchmakingMethod::kLobbyReady, body, onReply );
+        return sendCall( MatchmakingMethod::kLobbyReady, body, NetIdempotencyKey{}, onReply );
     }
 
     uint64 MatchmakingClient::startLobby( uint64 lobbyID, const ReplyDelegate& onReply )
     {
         BitWriter body;
         body.writeVarUint( lobbyID );
-        return send( MatchmakingMethod::kLobbyStart, body, onReply );
+        return sendCall( MatchmakingMethod::kLobbyStart, body, NetIdempotencyKey{}, onReply );
     }
 
     uint64 MatchmakingClient::joinQueue( string_view modeID, string_view region, const ReplyDelegate& onReply )
@@ -103,12 +96,12 @@ namespace sw
         BitWriter body;
         ServiceKeyUtil::writeString( body, modeID );
         ServiceKeyUtil::writeString( body, region );
-        return send( MatchmakingMethod::kQueueJoin, body, onReply );
+        return sendCall( MatchmakingMethod::kQueueJoin, body, NetIdempotencyKey{}, onReply );
     }
 
     uint64 MatchmakingClient::leaveQueue( const ReplyDelegate& onReply )
     {
-        return send( MatchmakingMethod::kQueueLeave, BitWriter{}, onReply );
+        return sendCall( MatchmakingMethod::kQueueLeave, BitWriter{}, NetIdempotencyKey{}, onReply );
     }
 
     void MatchmakingClient::onServicePush( uint16 kind, BitReader& body )
@@ -150,44 +143,5 @@ namespace sw
                 break;
             }
         }
-    }
-
-    uint64 MatchmakingClient::send( uint16 method, const BitWriter& body, const ReplyDelegate& onReply )
-    {
-        if ( _pClient == nullptr )
-        {
-            MatchmakingClientReply reply;
-            reply._errorCode     = OnlineError::kUnavailable;
-            reply._reply._result = MatchmakingResult::Unavailable;
-            if ( onReply.isBound() )
-                onReply( reply );
-            return 0;
-        }
-        return _callTable.send( *_pClient, method, body, NetRequestOptions{}, OnlineResponseDelegate::create<&MatchmakingClient::onResponse>( this ), onReply );
-    }
-
-    void MatchmakingClient::onResponse( const OnlineResponse& response )
-    {
-        ReplyDelegate onReply;
-        if ( _callTable.take( response._requestID, onReply ) == false )
-            return;
-        MatchmakingClientReply reply;
-        reply._requestID = response._requestID;
-        reply._errorCode = response._errorCode;
-        if ( response._errorCode != OnlineError::kOk || response.isOk() == false )
-        {
-            reply._reply._result = MatchmakingProtocol::fromErrorCode( response._errorCode == OnlineError::kOk ? OnlineError::kUnavailable : response._errorCode );
-        }
-        else
-        {
-            BitReader reader( response._pBody, response._bodySize );
-            if ( MatchmakingProtocol::readReply( reader, reply._reply ) == false )
-            {
-                reply._reply         = MatchmakingReply{};
-                reply._reply._result = MatchmakingResult::Invalid;
-            }
-        }
-        if ( onReply.isBound() )
-            onReply( reply );
     }
 } // namespace sw

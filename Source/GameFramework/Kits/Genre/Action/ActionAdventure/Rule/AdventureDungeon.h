@@ -13,6 +13,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
@@ -138,6 +140,7 @@ namespace sw
 namespace sw
 {
     /** @brief 문 열기 결과입니다. */
+    ENUM()
     enum class AdventureDoorResult : uint8
     {
         Opened = 0,
@@ -147,8 +150,6 @@ namespace sw
         NeedBossKey,
         ConditionNotMet
     };
-
-    SW_KIT_API const utf8* toString( AdventureDoorResult result );
 
     /** @brief 던전 알림 종류입니다. */
     enum class AdventureDungeonEventType : uint8

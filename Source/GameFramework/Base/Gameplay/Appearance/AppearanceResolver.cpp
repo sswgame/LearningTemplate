@@ -6,6 +6,8 @@
 #include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Reflection/EnumName.h"
+
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
 #include "GameFramework/Base/Gameplay/Inventory/Equipment.h"
@@ -40,7 +42,6 @@ namespace sw
             /** @brief FNV-1a 64 로 값을 누적합니다. 이름은 내용 해시(대소문자 무시)이므로 프로세스나 기계가 달라도 같은 값이 나옵니다. */
             struct HashBuilder
             {
-
                 uint64 _value{ HashUtil::kFnvOffset64 };
 
                 void addUint64( uint64 value )
@@ -311,14 +312,14 @@ namespace sw
                         continue;
                     if ( rule._priority > decision._pRule->_priority )
                     {
-                        addTrace( out, AppearanceTraceStep::Rule, decision._pRule->_id, "%# overridden by rule '%#' (priority %# > %#)", toString( action._kind ), rule._id.c_str(),
+                        addTrace( out, AppearanceTraceStep::Rule, decision._pRule->_id, "%# overridden by rule '%#' (priority %# > %#)", getEnumName( action._kind ), rule._id.c_str(),
                                   rule._priority, decision._pRule->_priority );
                         decision._pAction = &action;
                         decision._pRule   = &rule;
                     }
                     else
                     {
-                        addTrace( out, AppearanceTraceStep::Rule, rule._id, "%# overridden by rule '%#'", toString( action._kind ), decision._pRule->_id.c_str() );
+                        addTrace( out, AppearanceTraceStep::Rule, rule._id, "%# overridden by rule '%#'", getEnumName( action._kind ), decision._pRule->_id.c_str() );
                     }
                     return;
                 }
@@ -509,26 +510,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( AppearanceTraceStep step )
-    {
-        switch ( step )
-        {
-            case AppearanceTraceStep::Customization:
-                return "Customization";
-            case AppearanceTraceStep::Occupancy:
-                return "Occupancy";
-            case AppearanceTraceStep::SetComplete:
-                return "SetComplete";
-            case AppearanceTraceStep::Damage:
-                return "Damage";
-            case AppearanceTraceStep::Rule:
-                return "Rule";
-            case AppearanceTraceStep::Output:
-                return "Output";
-        }
-        return "Unknown";
-    }
-
     const ResolvedPart* ResolvedAppearance::findPart( const hashed_string& owner, const hashed_string& partName ) const
     {
         for ( const ResolvedPart& part : _listPart )

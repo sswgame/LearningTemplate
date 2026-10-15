@@ -50,26 +50,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( CityPlaceResult result )
-    {
-        switch ( result )
-        {
-            case CityPlaceResult::Ok:
-                return "Ok";
-            case CityPlaceResult::OutOfBounds:
-                return "OutOfBounds";
-            case CityPlaceResult::Occupied:
-                return "Occupied";
-            case CityPlaceResult::BadTerrain:
-                return "BadTerrain";
-            case CityPlaceResult::NotEnoughMoney:
-                return "NotEnoughMoney";
-            case CityPlaceResult::UnknownBuilding:
-                return "UnknownBuilding";
-        }
-        return "?";
-    }
-
     CitySimulation::CitySimulation()
         : _listTile{}
         , _listBuilding{}

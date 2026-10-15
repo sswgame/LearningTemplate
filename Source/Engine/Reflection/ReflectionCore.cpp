@@ -1136,6 +1136,23 @@ namespace sw
         return it != _mapNameToEnum.end() ? it->second : nullptr;
     }
 
+    const EnumInfo* TypeRegistry::findEnumByTypeFqn( const hashed_string& fqn ) const
+    {
+        const EnumInfo* pInfo = findEnum( fqn );
+        if ( pInfo != nullptr )
+            return pInfo;
+        const utf8* pCstr = fqn.c_str();
+        if ( pCstr == nullptr || *pCstr == 0 )
+            return nullptr;
+        const string_view fqnView{ pCstr };
+        const size_t      lastScope = fqnView.rfind( constant::reflection::kScopeDelimiter );
+        if ( lastScope == string_view::npos )
+            return nullptr;
+        const size_t      delimiterLength = StringUtil::strlen( constant::reflection::kScopeDelimiter );
+        const string_view leaf            = fqnView.substr( lastScope + delimiterLength );
+        return findEnum( hashed_string( leaf.data(), static_cast<uint32>( leaf.size() ) ) );
+    }
+
     const EnumInfo* TypeRegistry::findEnumByNameHash( const uint32 nameHash ) const
     {
         if ( nameHash == 0 )

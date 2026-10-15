@@ -10,11 +10,14 @@
 #include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     /** @brief 활동이 가는 곳을 정하는 방식입니다. */
+    ENUM()
     enum class ScheduleActivityTarget : uint8
     {
         Place = 0,   ///< 일정 칸의 `place`(장소 id)
@@ -23,8 +26,6 @@ namespace sw
         Appointment, ///< 약속(`appointment`)의 장소 · 시간
         Wander       ///< `place` 둘레 `radius` 안을 `wanderMinutes` 마다 옮겨 다닌다
     };
-
-    SW_GF_API const utf8* toString( ScheduleActivityTarget target );
 } // namespace sw
 
 namespace sw

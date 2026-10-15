@@ -43,30 +43,6 @@ namespace sw::editor
             }
         };
     } // namespace
-
-    const utf8* toString( EditorNetProfilerChannel channel )
-    {
-        switch ( channel )
-        {
-            case EditorNetProfilerChannel::SentBytesPerSecond:
-                return "SentBytesPerSecond";
-            case EditorNetProfilerChannel::ReceivedBytesPerSecond:
-                return "ReceivedBytesPerSecond";
-            case EditorNetProfilerChannel::SentPacketsPerSecond:
-                return "SentPacketsPerSecond";
-            case EditorNetProfilerChannel::ReceivedPacketsPerSecond:
-                return "ReceivedPacketsPerSecond";
-            case EditorNetProfilerChannel::ResentMessagesPerSecond:
-                return "ResentMessagesPerSecond";
-            case EditorNetProfilerChannel::RttMilliseconds:
-                return "RttMilliseconds";
-            case EditorNetProfilerChannel::LossPercent:
-                return "LossPercent";
-            case EditorNetProfilerChannel::Count:
-                return "Count";
-        }
-        return "Unknown";
-    }
 } // namespace sw::editor
 
 namespace sw::editor

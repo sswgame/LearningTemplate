@@ -8,6 +8,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -29,6 +31,7 @@ namespace sw
 namespace sw
 {
     /** @brief 경로 결과입니다. */
+    ENUM()
     enum class GridPathResult : uint8
     {
         Found = 0,   ///< 목적지까지
@@ -36,9 +39,6 @@ namespace sw
         NoPath,      ///< 갈 곳이 없다(부분 경로를 받지 않을 때)
         InvalidStart ///< 시작 칸이 밖이거나 막혔다
     };
-
-    /** @brief 결과 이름입니다(로그). */
-    SW_GF_API const utf8* toString( GridPathResult result );
 
     /**
      * @class GridPathfinder

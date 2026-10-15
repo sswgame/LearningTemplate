@@ -10,6 +10,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -31,6 +33,7 @@ namespace sw
     };
 
     /** @brief 받기의 결과입니다. */
+    ENUM()
     enum class QuestStartResult : uint8
     {
         Ok = 0,
@@ -40,8 +43,6 @@ namespace sw
         RequirementMissing,
         LevelTooLow
     };
-
-    SW_GF_API const utf8* toString( QuestStartResult result );
 
     /** @brief 진행 중이거나 끝난 퀘스트 하나입니다. */
     struct QuestProgress

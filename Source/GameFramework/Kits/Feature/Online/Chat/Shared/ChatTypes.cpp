@@ -22,38 +22,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( ChatResult result )
-    {
-        switch ( result )
-        {
-            case ChatResult::Ok:
-                return "Ok";
-            case ChatResult::NotMember:
-                return "NotMember";
-            case ChatResult::NotJoinable:
-                return "NotJoinable";
-            case ChatResult::Muted:
-                return "Muted";
-            case ChatResult::RateLimited:
-                return "RateLimited";
-            case ChatResult::Repeated:
-                return "Repeated";
-            case ChatResult::Rejected:
-                return "Rejected";
-            case ChatResult::TargetOffline:
-                return "TargetOffline";
-            case ChatResult::Invalid:
-                return "Invalid";
-            case ChatResult::Unavailable:
-                return "Unavailable";
-            case ChatResult::TooManyChannels:
-                return "TooManyChannels";
-            case ChatResult::NotSignedIn:
-                return "NotSignedIn";
-        }
-        return "Unknown";
-    }
-
     bool ChatChannelID::parseKind( string_view channelID, ChatChannelKind& outKind )
     {
         if ( channelID.empty() || channelID.size() > static_cast<size_t>( ChatLimit::kMaxChannelIDSize ) )

@@ -25,6 +25,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleLocator.h"
 #include "GameFramework/Base/Actor/AI/Schedule/SchedulePathing.h"
@@ -42,6 +43,7 @@ namespace sw
     class ScheduleCatalog;
 
     /** @brief 계산을 얼마나 곱게 할지 정합니다. */
+    ENUM()
     enum class ScheduleLOD : uint8
     {
         Near = 0, ///< 화면 안 — 고운 경로 위 자리, 애니메이션 훅
@@ -49,6 +51,7 @@ namespace sw
     };
 
     /** @brief NPC 가 지금 하는 일입니다. */
+    ENUM()
     enum class ScheduleNpcPhase : uint8
     {
         Traveling = 0, ///< 다음 칸의 자리로 가는 중
@@ -65,8 +68,6 @@ namespace sw
         Appointment
     };
 
-    SW_GF_API const utf8* toString( ScheduleLOD lod );
-    SW_GF_API const utf8* toString( ScheduleNpcPhase phase );
     SW_GF_API const utf8* toString( ScheduleSegmentSource source );
 } // namespace sw
 

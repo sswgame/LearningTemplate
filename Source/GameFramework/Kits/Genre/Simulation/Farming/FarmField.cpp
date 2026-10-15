@@ -11,34 +11,6 @@
 
 namespace sw
 {
-    const utf8* toString( FarmActionResult result )
-    {
-        switch ( result )
-        {
-            case FarmActionResult::Done:
-                return "Done";
-            case FarmActionResult::OutOfBounds:
-                return "OutOfBounds";
-            case FarmActionResult::NotTilled:
-                return "NotTilled";
-            case FarmActionResult::AlreadyTilled:
-                return "AlreadyTilled";
-            case FarmActionResult::AlreadyWatered:
-                return "AlreadyWatered";
-            case FarmActionResult::Occupied:
-                return "Occupied";
-            case FarmActionResult::NoCrop:
-                return "NoCrop";
-            case FarmActionResult::NotReady:
-                return "NotReady";
-            case FarmActionResult::UnknownSeed:
-                return "UnknownSeed";
-            case FarmActionResult::OutOfSeason:
-                return "OutOfSeason";
-        }
-        return "Unknown";
-    }
-
     FarmField::FarmField()
         : _listTile{}
         , _pCatalog{ nullptr }

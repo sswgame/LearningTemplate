@@ -7,12 +7,15 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     /** @brief 매칭 요청의 결과입니다. 키트 오류 코드는 `OnlineMethodRange::kMatchmaking` 에 값을 더한 것이며 0은 성공입니다. 와이어 형식입니다. */
+    ENUM( Count = Count )
     enum class MatchmakingResult : uint8
     {
         Ok = 0,
@@ -37,8 +40,6 @@ namespace sw
         Conflict,
         Count
     };
-
-    SW_KIT_API const utf8* toString( MatchmakingResult result );
 } // namespace sw
 
 namespace sw

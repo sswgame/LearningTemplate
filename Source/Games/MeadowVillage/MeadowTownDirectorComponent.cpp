@@ -7,6 +7,7 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/UI/Input/UIInputMapView.h"
 #include "Engine/UI/UISystem.h"
@@ -146,7 +147,7 @@ namespace sw
         if ( pInput != nullptr && UIInputMapView( pInput->getInputMap(), game::findSubsystem<UISystem>() ).wasActionTriggered( hashed_string( MeadowVillageData::kTalkAction ) ) )
         {
             const CreatureInteractResult result = _town.talkTo( sprout );
-            SW_LOG_INFO( "[Meadow] talk to sprout: %# (friendship %#)", toString( result ), _town.getFriendship( sprout ) );
+            SW_LOG_INFO( "[Meadow] talk to sprout: %# (friendship %#)", getEnumName( result ), _town.getFriendship( sprout ) );
         }
     }
 

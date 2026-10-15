@@ -7,18 +7,11 @@
 namespace sw
 {
     LeaderboardClient::LeaderboardClient()
-        : _callTable{}
-        , _unlockBuffer{}
-        , _pClient{ nullptr }
+        : _unlockBuffer{}
     {
     }
 
-    void LeaderboardClient::initialize( OnlineServiceClient* pClient )
-    {
-        _pClient = pClient;
-    }
-
-    uint64 LeaderboardClient::requestTop( string_view boardID, int32 offset, int32 count, const LeaderboardReplyDelegate& onReply )
+    uint64 LeaderboardClient::requestTop( string_view boardID, int32 offset, int32 count, const ReplyDelegate& onReply )
     {
         LeaderboardRequest request;
         request._boardID = string( boardID );
@@ -27,7 +20,7 @@ namespace sw
         return send( LeaderboardMethod::kGetTop, request, onReply );
     }
 
-    uint64 LeaderboardClient::requestAround( string_view boardID, int32 radius, const LeaderboardReplyDelegate& onReply )
+    uint64 LeaderboardClient::requestAround( string_view boardID, int32 radius, const ReplyDelegate& onReply )
     {
         LeaderboardRequest request;
         request._boardID = string( boardID );
@@ -35,12 +28,12 @@ namespace sw
         return send( LeaderboardMethod::kGetAround, request, onReply );
     }
 
-    uint64 LeaderboardClient::requestStats( const LeaderboardReplyDelegate& onReply )
+    uint64 LeaderboardClient::requestStats( const ReplyDelegate& onReply )
     {
         return send( LeaderboardMethod::kGetStats, LeaderboardRequest{}, onReply );
     }
 
-    uint64 LeaderboardClient::submitScore( string_view boardID, int64 score, const LeaderboardReplyDelegate& onReply )
+    uint64 LeaderboardClient::submitScore( string_view boardID, int64 score, const ReplyDelegate& onReply )
     {
         LeaderboardRequest request;
         request._boardID = string( boardID );
@@ -48,12 +41,12 @@ namespace sw
         return send( LeaderboardMethod::kSubmitScore, request, onReply );
     }
 
-    uint64 LeaderboardClient::requestAchievements( const LeaderboardReplyDelegate& onReply )
+    uint64 LeaderboardClient::requestAchievements( const ReplyDelegate& onReply )
     {
         return send( LeaderboardMethod::kGetAchievements, LeaderboardRequest{}, onReply );
     }
 
-    uint64 LeaderboardClient::requestSeasonResult( string_view boardID, uint32 seasonID, const LeaderboardReplyDelegate& onReply )
+    uint64 LeaderboardClient::requestSeasonResult( string_view boardID, uint32 seasonID, const ReplyDelegate& onReply )
     {
         LeaderboardRequest request;
         request._boardID  = string( boardID );
@@ -70,49 +63,12 @@ namespace sw
             _unlockBuffer.push( std::move( achievement ) );
     }
 
-    uint64 LeaderboardClient::send( uint16 method, const LeaderboardRequest& request, const LeaderboardReplyDelegate& onReply )
+    uint64 LeaderboardClient::send( uint16 method, const LeaderboardRequest& request, const ReplyDelegate& onReply )
     {
-        if ( _pClient == nullptr )
-        {
-            LeaderboardClientReply reply;
-            reply._method        = method;
-            reply._errorCode     = OnlineError::kUnavailable;
-            reply._reply._result = LeaderboardResult::Unavailable;
-            if ( onReply.isBound() )
-                onReply( reply );
-            return 0;
-        }
         BitWriter body;
         LeaderboardProtocol::writeRequest( body, request );
-        NetRequestOptions options;
-        if ( method == LeaderboardMethod::kSubmitScore )
-            options._idempotencyKey = NetIdempotencyKey::makeRandom(); // 다시 보내도 합산 보드에 두 번 들어가지 않게 한다
-        return _callTable.send( *_pClient, method, body, options, OnlineResponseDelegate::create<&LeaderboardClient::onResponse>( this ), PendingCall{ onReply, method } );
-    }
-
-    void LeaderboardClient::onResponse( const OnlineResponse& response )
-    {
-        PendingCall call;
-        if ( _callTable.take( response._requestID, call ) == false )
-            return;
-        LeaderboardClientReply reply;
-        reply._requestID = response._requestID;
-        reply._method    = call._method;
-        reply._errorCode = response._errorCode;
-        if ( response._errorCode != OnlineError::kOk )
-        {
-            reply._reply._result = LeaderboardProtocol::fromErrorCode( response._errorCode );
-        }
-        else
-        {
-            BitReader reader( response._pBody, response._bodySize );
-            if ( LeaderboardProtocol::readReply( reader, reply._reply ) == false )
-            {
-                reply._reply         = LeaderboardReply{};
-                reply._reply._result = LeaderboardResult::Unavailable;
-            }
-        }
-        if ( call._onReply.isBound() )
-            call._onReply( reply );
+        // 다시 보내도 합산 보드에 두 번 들어가지 않게 점수 제출에는 멱등 키를 붙인다.
+        const NetIdempotencyKey key = method == LeaderboardMethod::kSubmitScore ? NetIdempotencyKey::makeRandom() : NetIdempotencyKey{};
+        return sendCall( method, body, key, onReply );
     }
 } // namespace sw

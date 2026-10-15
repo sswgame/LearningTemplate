@@ -8,6 +8,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Gameplay/Inventory/EquipCondition.h"
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -32,6 +34,7 @@ namespace sw
 namespace sw
 {
     /** @brief 끼기와 벗기의 결과입니다. */
+    ENUM()
     enum class EquipResult : uint8
     {
         Ok = 0,
@@ -43,8 +46,6 @@ namespace sw
         RefusedByDependent, ///< 이 변화가 다른 장비의 조건을 깨는데 그 장비가 벗기를 거부한다(`EquipBreakPolicy::RefuseUnequip`)
         EmptySlot           ///< 벗을 것이 없다
     };
-
-    SW_GF_API const utf8* toString( EquipResult result );
 
     /**
      * @class Equipment

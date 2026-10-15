@@ -43,26 +43,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( AdventureCookResult result )
-    {
-        switch ( result )
-        {
-            case AdventureCookResult::Ok:
-                return "Ok";
-            case AdventureCookResult::EmptyPot:
-                return "EmptyPot";
-            case AdventureCookResult::TooManyIngredients:
-                return "TooManyIngredients";
-            case AdventureCookResult::UnknownIngredient:
-                return "UnknownIngredient";
-            case AdventureCookResult::MissingIngredients:
-                return "MissingIngredients";
-            case AdventureCookResult::NoRoom:
-                return "NoRoom";
-        }
-        return "Unknown";
-    }
-
     AdventureCooking::AdventureCooking()
         : _ingredientCatalog{}
         , _effectCatalog{}

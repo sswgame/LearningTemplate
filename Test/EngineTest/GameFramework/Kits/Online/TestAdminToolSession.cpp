@@ -13,10 +13,10 @@ namespace
 {
     struct AdminToolReplyCapture
     {
-        AdminClientReply _reply{};
-        int32            _count{ 0 };
+        AdminClient::Reply _reply{};
+        int32              _count{ 0 };
 
-        void onReply( const AdminClientReply& reply )
+        void onReply( const AdminClient::Reply& reply )
         {
             _reply = reply;
             ++_count;
