@@ -1144,7 +1144,7 @@ namespace sw
             recordFailure( step, "Expect " + message );
     }
 
-    AutomationStepHold AutomationRunner::holdUntilReady( const AutomationStep& step, InputManager& input, bool bReady, uint32 timeoutFrames )
+    AutomationStepHold AutomationRunner::holdUntilReady( [[maybe_unused]] const AutomationStep& step, InputManager& input, bool bReady, uint32 timeoutFrames )
     {
         if ( bReady || _holdFrameCount >= timeoutFrames )
         {
