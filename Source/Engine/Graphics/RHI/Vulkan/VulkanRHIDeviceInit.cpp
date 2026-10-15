@@ -49,6 +49,10 @@ namespace sw
                  strstr( pCallbackData->pMessage, "performs a layout transition" ) != nullptr )
                 return VK_FALSE;
         }
+        // 정점 셰이더가 내보내고 픽셀 셰이더가 읽지 않는 출력은 명세상 허용된다(보간 슬롯 하나가 노는 것뿐). 셰이더 하나를 여러 픽셀 셰이더와
+        // 짝지우면 늘 생기므로 언리얼 VulkanRHI 도 이 메시지를 거른다.
+        if ( pCallbackData->pMessageIdName != nullptr && strstr( pCallbackData->pMessageIdName, "OutputNotConsumed" ) != nullptr )
+            return VK_FALSE;
 
         if ( messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT )
             SW_LOG_ERROR( "%#", pCallbackData->pMessage );

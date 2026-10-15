@@ -20,6 +20,11 @@
 
 namespace sw
 {
+    class ValidationContext;
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class RigidBody2DComponent
      * @brief 2D 강체입니다(유니티 Rigidbody2D + Collider2D). 셰이프는 이 컴포넌트의 속성입니다 — 둘 이상이면 컴파운드. 3D 판(`RigidBodyComponent`)과 규칙이 같고
@@ -103,6 +108,12 @@ namespace sw
         void releasePhysics( ScenePhysics& physics ) override;
 
     private:
+        /** @brief `_layer` 가 물리 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
+        void validateLayer( ValidationContext& context ) const;
+        /** @brief `_material` 가 물리 재질 표에 있는지 봅니다(`ComponentNameValidation`). */
+        void validateMaterial( ValidationContext& context ) const;
+
+    private:
         /** @brief 지금 속성 · 자세로 바디를 만듭니다. */
         void createBody( ScenePhysics& physics, IPhysicsBodyScene2D& scene, const float2& position, float32 angle, const float3& scale );
 
@@ -110,9 +121,9 @@ namespace sw
         PhysicsBodyType _bodyType;
         PROPERTY( Category = "Body", Tooltip = "Collision shapes; more than one makes a compound body" )
         vector<PhysicsShapeDesc2D> _listShape;
-        PROPERTY( Category = "Body", Tooltip = "Collision layer name from the physics settings" )
+        PROPERTY( Category = "Body", Tooltip = "Collision layer name from the physics settings", Validate = validateLayer )
         hashed_string _layer;
-        PROPERTY( Category = "Body", Tooltip = "Physics material name (empty: the first material)" )
+        PROPERTY( Category = "Body", Tooltip = "Physics material name (empty: the first material)", Validate = validateMaterial )
         hashed_string _material;
         PROPERTY( Category = "Body", Tooltip = "Hit zone of this body for weapon traces (name and damage multiplier); empty name is no zone" )
         PhysicsHitZoneDef _hitZone;

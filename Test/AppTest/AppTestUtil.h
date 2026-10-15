@@ -62,6 +62,8 @@ namespace test
         static constexpr int32 kSkippedExitCode = 13;
         /** @brief App 을 띄우지 못했다(실행 파일이 없다). */
         static constexpr int32 kNotLaunchedExitCode = -1000;
+        /** @brief 시나리오는 통과했지만 출력에 허용하지 않은 Warning · Error 가 있다(`AutomationResult::Failed` 와 같은 값). */
+        static constexpr int32 kUnexpectedLogExitCode = 10;
 
         /**
          * @brief 자동화 시나리오 @p scenarioPath 를 백엔드 스위치 @p pBackendSwitch(`-dx12` · 빈 글 = 빌드 기본)로 돌려 종료 코드를 돌려줍니다.
@@ -87,9 +89,18 @@ namespace test
          * @details 같은 시나리오는 백엔드마다 같은 줄을 내야 한다(게임 상태는 CPU 에서만 정해진다) — `AppScenarioTest` 가 비교한다.
          */
         static sw::vector<sw::string> readReportRecords( const sw::string& reportPath );
+        /**
+         * @brief 프로세스 출력 @p output 에서 로그 게이트가 보는 줄(`[Warning]` · `[Error]`) 가운데 허용하지 않은 것을 돌려줍니다.
+         * @details 허용은 `AutomationLogPolicy` 의 전역 목록과 @p scenarioArgument(경로 하나 또는 쉼표 목록) 시나리오들의 `<ExpectLog>` 다.
+         *          실행기는 시나리오 구간만 보므로, 기동 · 종료 구간의 줄은 여기서 잡는다. 목록을 읽지 못하면 그 이유를 한 줄로 돌려준다.
+         */
+        static sw::vector<sw::string> collectUnexpectedLogLines( const sw::string& output, const sw::string& scenarioArgument );
 
     private:
-        /** @brief `-scenario=` 인자(경로 하나 또는 쉼표 목록)를 받아 App 을 띄우고 종료 코드를 돌려줍니다. */
+        /**
+         * @brief `-scenario=` 인자(경로 하나 또는 쉼표 목록)를 받아 App 을 띄우고 종료 코드를 돌려줍니다.
+         * @details 종료 코드 0 이어도 출력에 허용하지 않은 Warning · Error 가 있으면 그 줄을 @p outScenarioLines 에 붙이고 10(실패)을 돌려준다.
+         */
         static int32 runScenarioArgument( const sw::string& scenarioArgument, const sw::string& outputStem, const utf8* pBackendSwitch, sw::string& outScenarioLines,
                                           sw::string_view extraArguments, uint32 timeoutSeconds );
     };

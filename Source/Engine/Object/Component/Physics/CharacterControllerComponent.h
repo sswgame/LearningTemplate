@@ -16,6 +16,11 @@
 
 namespace sw
 {
+    class ValidationContext;
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class CharacterControllerComponent
      * @brief 3D 캐릭터 컨트롤러입니다(유니티 CharacterController · 언리얼 CharacterMovement 의 충돌 부분). 이 컴포넌트의 월드 자리가 발입니다.
@@ -77,6 +82,10 @@ namespace sw
         void releasePhysics( ScenePhysics& physics ) override;
 
     private:
+        /** @brief `_layer` 가 물리 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
+        void validateLayer( ValidationContext& context ) const;
+
+    private:
         PROPERTY( Category = "Character", Min = 0.01, Tooltip = "Capsule radius", Units = m )
         float32 _radius;
         PROPERTY( Category = "Character", Min = 0.0, Tooltip = "Half the cylinder part; height = 2 * (half height + radius)", Units = m )
@@ -89,7 +98,7 @@ namespace sw
         float32 _gravityScale;
         PROPERTY( Category = "Character", Min = 0.0, Tooltip = "Mass used to push dynamic bodies", Units = kg )
         float32 _mass;
-        PROPERTY( Category = "Character", Tooltip = "Collision layer name from the physics settings" )
+        PROPERTY( Category = "Character", Tooltip = "Collision layer name from the physics settings", Validate = validateLayer )
         hashed_string _layer;
 
         PhysicsCharacterHandle  _character;

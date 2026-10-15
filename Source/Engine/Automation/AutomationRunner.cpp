@@ -22,6 +22,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/RawInputEvent.h"
+#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -918,6 +919,7 @@ namespace sw
         : _scenario{}
         , _inputScript{}
         , _logCapture{}
+        , _logPolicy{}
         , _reportWriter{}
         , _listFailure{}
         , _listPendingScreenshot{}
@@ -1193,6 +1195,13 @@ namespace sw
                 return false;
             if ( pRegistration->_pPrepare != nullptr && pRegistration->_pPrepare( *this, step, outError ) == false )
                 return false;
+        }
+        if ( _logPolicy.loadAllowList( outError ) == false )
+            return false;
+        for ( const AutomationStep& step : _scenario.getSteps() )
+        {
+            if ( step._kind == "ExpectLog" )
+                _logPolicy.addAllowed( *step.findAttribute( "contains" ), "declared by <ExpectLog>" ); // 검사 함수가 contains 를 요구했다
         }
         prepareWatches();
         _listRemembered.clear();
@@ -1602,6 +1611,30 @@ namespace sw
         return true;
     }
 
+    void AutomationRunner::applyLogGate()
+    {
+        vector<string> listUnexpected = _logCapture.collectUnexpectedLines( _logPolicy );
+        if ( engine::areEngineServicesBound() )
+        {
+            for ( const string& key : engine::getSubsystem<LocalizationManager>().getMissingKeys() )
+            {
+                const string line         = "Missing localized text for key '" + key + "'";
+                const bool   bAlreadySeen = _logCapture.containsLine( line ); // 시나리오 구간에 남은 경고 줄은 위에서 이미 셌다
+                if ( bAlreadySeen == false && _logPolicy.isAllowed( line ) == false )
+                    listUnexpected.push_back( "[Warning] [LocalizationManager] " + line + " (before the scenario started)" );
+            }
+        }
+        if ( listUnexpected.empty() )
+            return;
+        for ( string& line : listUnexpected )
+        {
+            _listFailure.push_back( "unexpected log: " + std::move( line ) );
+        }
+        _result       = AutomationResult::Failed;
+        _finishReason = "unexpected Warning/Error log line(s) - fix them, declare them with <ExpectLog>, or add them with a reason to " +
+                        string( AutomationLogPolicy::kAllowListPath );
+    }
+
     void AutomationRunner::endRun( InputManager* pInput )
     {
         if ( _bEnded == SW_TRUE )
@@ -1610,6 +1643,8 @@ namespace sw
         if ( pInput != nullptr && pInput->getVirtualInput() == &_inputScript )
             pInput->detachVirtualInput();
         _logCapture.stop();
+        if ( _result == AutomationResult::Passed )
+            applyLogGate();
         if ( _result == AutomationResult::Passed )
         {
             SW_LOG_INFO( "[Scenario] PASS %# (%# frame(s))", _scenario.getName().c_str(), _frameIndex );

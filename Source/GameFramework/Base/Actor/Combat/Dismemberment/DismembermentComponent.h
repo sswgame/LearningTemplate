@@ -27,6 +27,11 @@
 
 namespace sw
 {
+    class ValidationContext;
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class DismembermentComponent
      * @brief 파일 머리말을 참고하세요. 같은 오브젝트의 `SkeletalMeshComponent`(스킨드 메시, 스켈레톤)를 씁니다.
@@ -66,15 +71,21 @@ namespace sw
         int32 findRegionIndex( const hashed_string& region ) const;
 
     private:
+        /** @brief `_pieceLayer` 가 물리 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
+        void validatePieceLayer( ValidationContext& context ) const;
+        /** @brief `_pieceMaterial` 가 물리 재질 표에 있는지 봅니다(`ComponentNameValidation`). */
+        void validatePieceMaterial( ValidationContext& context ) const;
+
+    private:
         void loadRegionTable();
 
         PROPERTY( Category = "Dismemberment", DisplayName = "Region Table", AssetPath, Tooltip = "Body regions (*.fit.xml <Region> rows, bone weights)" )
         string _regionTablePath;
         PROPERTY( Category = "Dismemberment", DisplayName = "Severable Regions", Tooltip = "Regions a fatal hit may cut off" )
         vector<hashed_string> _listSeverableRegion;
-        PROPERTY( Category = "Dismemberment", DisplayName = "Piece Layer", Tooltip = "Collision layer of the severed piece" )
+        PROPERTY( Category = "Dismemberment", DisplayName = "Piece Layer", Tooltip = "Collision layer of the severed piece", Validate = validatePieceLayer )
         hashed_string _pieceLayer;
-        PROPERTY( Category = "Dismemberment", DisplayName = "Piece Material", Tooltip = "Physics material of the severed piece" )
+        PROPERTY( Category = "Dismemberment", DisplayName = "Piece Material", Tooltip = "Physics material of the severed piece", Validate = validatePieceMaterial )
         hashed_string _pieceMaterial;
         PROPERTY( Category = "Dismemberment", DisplayName = "Blood Channel", Tooltip = "Surface channel raised on the severed region" )
         hashed_string _bloodChannel;

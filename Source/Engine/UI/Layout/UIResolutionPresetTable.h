@@ -19,8 +19,8 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY()
-        string _name{}; ///< 목록에 보이는 이름
+        PROPERTY( Meta = "NotLocalizable" )
+        string _name{}; ///< 목록에 보이는 이름(에디터 UI 미리보기의 개발자 목록이라 번역하지 않는다)
 
         PROPERTY( Min = 1 )
         uint32 _width{};

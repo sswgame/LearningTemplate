@@ -18,6 +18,7 @@ namespace sw
     struct TerrainChunkLayout;
 
     class TerrainHeightfield;
+    class ValidationContext;
 
     /**
      * @struct TerrainCollisionUtil
@@ -81,9 +82,15 @@ namespace sw
         void releasePhysics( ScenePhysics& physics ) override;
 
     private:
-        PROPERTY( Category = "Collision", Tooltip = "Collision layer name from the physics settings" )
+        /** @brief `_layer` 가 물리 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
+        void validateLayer( ValidationContext& context ) const;
+        /** @brief `_material` 가 물리 재질 표에 있는지 봅니다(`ComponentNameValidation`). */
+        void validateMaterial( ValidationContext& context ) const;
+
+    private:
+        PROPERTY( Category = "Collision", Tooltip = "Collision layer name from the physics settings", Validate = validateLayer )
         hashed_string _layer;
-        PROPERTY( Category = "Collision", Tooltip = "Physics material name (empty: the first material)" )
+        PROPERTY( Category = "Collision", Tooltip = "Physics material name (empty: the first material)", Validate = validateMaterial )
         hashed_string _material;
 
         vector<PhysicsBodyHandle> _listBody;            ///< 청크마다 바디 하나(모두 구멍인 청크는 무효 핸들)

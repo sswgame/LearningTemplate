@@ -16,6 +16,11 @@
 
 namespace sw
 {
+    class ValidationContext;
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class CharacterController2DComponent
      * @brief 2D 캐릭터 컨트롤러입니다(플랫포머의 키네마틱 무버). 이 컴포넌트의 월드 XY 가 발이고 Z 는 그대로 둡니다. 3D 판과 규칙이 같습니다 —
@@ -62,6 +67,10 @@ namespace sw
         void releasePhysics( ScenePhysics& physics ) override;
 
     private:
+        /** @brief `_layer` 가 물리 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
+        void validateLayer( ValidationContext& context ) const;
+
+    private:
         PROPERTY( Category = "Character", Min = 0.01, Tooltip = "Capsule radius", Units = m )
         float32 _radius;
         PROPERTY( Category = "Character", Min = 0.0, Tooltip = "Half the cylinder part; height = 2 * (half height + radius)", Units = m )
@@ -70,7 +79,7 @@ namespace sw
         float32 _maxSlopeAngle;
         PROPERTY( Category = "Character", Tooltip = "Multiplier on scene gravity (0 floats)" )
         float32 _gravityScale;
-        PROPERTY( Category = "Character", Tooltip = "Collision layer name from the physics settings" )
+        PROPERTY( Category = "Character", Tooltip = "Collision layer name from the physics settings", Validate = validateLayer )
         hashed_string _layer;
 
         PhysicsCharacterHandle  _character;

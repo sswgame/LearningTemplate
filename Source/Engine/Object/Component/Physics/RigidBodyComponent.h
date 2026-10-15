@@ -22,6 +22,7 @@
 namespace sw
 {
     class RigidBodyComponent;
+    class ValidationContext;
 
     /**
      * @class RigidBodySocketPhysics
@@ -128,6 +129,12 @@ namespace sw
         void releasePhysics( ScenePhysics& physics ) override;
 
     private:
+        /** @brief `_layer` 가 물리 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
+        void validateLayer( ValidationContext& context ) const;
+        /** @brief `_material` 가 물리 재질 표에 있는지 봅니다(`ComponentNameValidation`). */
+        void validateMaterial( ValidationContext& context ) const;
+
+    private:
         /** @brief 지금 속성 · 자세로 바디를 만듭니다. */
         void createBody( ScenePhysics& physics, IPhysicsBodyScene3D& scene, const float3& position, const quaternion& rotation, const float3& scale );
 
@@ -135,9 +142,9 @@ namespace sw
         PhysicsBodyType _bodyType;
         PROPERTY( Category = "Body", Tooltip = "Collision shapes; more than one makes a compound body" )
         vector<PhysicsShapeDesc3D> _listShape;
-        PROPERTY( Category = "Body", Tooltip = "Collision layer name from the physics settings" )
+        PROPERTY( Category = "Body", Tooltip = "Collision layer name from the physics settings", Validate = validateLayer )
         hashed_string _layer;
-        PROPERTY( Category = "Body", Tooltip = "Physics material name (empty: the first material)" )
+        PROPERTY( Category = "Body", Tooltip = "Physics material name (empty: the first material)", Validate = validateMaterial )
         hashed_string _material;
         PROPERTY( Category = "Body", Tooltip = "Hit zone of this body for weapon traces (name and damage multiplier); empty name is no zone" )
         PhysicsHitZoneDef _hitZone;

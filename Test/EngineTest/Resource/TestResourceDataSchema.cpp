@@ -16,6 +16,7 @@
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/AudioMusic.h"
+#include "Engine/Automation/AutomationLogPolicy.h"
 #include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
 #include "Engine/Character/Fit/BodyShape.h"
@@ -96,6 +97,7 @@ namespace
         static bool isEngineDefaultAssets( sw::string_view resourceID ) { return endsWith( resourceID, "enginedefaultassets.xml" ); }
         static bool isInputMap( sw::string_view resourceID ) { return endsWith( resourceID, ".input.xml" ); }
         static bool isAutomationScenario( sw::string_view resourceID ) { return endsWith( resourceID, ".scenario.xml" ); }
+        static bool isAutomationAllowList( sw::string_view resourceID ) { return resourceID == sw::AutomationLogPolicy::kAllowListPath; }
         static bool isMaterial( sw::string_view resourceID ) { return endsWith( resourceID, ".material" ); }
         static bool isSpriteClip( sw::string_view resourceID ) { return endsWith( resourceID, ".sprite.json" ); }
         static bool isTelemetrySchema( sw::string_view resourceID ) { return endsWith( resourceID, ".telemetry.xml" ); }
@@ -200,6 +202,18 @@ namespace
             sw::AutomationScenario scenario;
             sw::string             error;
             const bool             bLoaded = scenario.loadFromPath( resourceID, error );
+            if ( bLoaded == false )
+                SW_LOG_WARNING( "%#", error.c_str() );
+            return bLoaded;
+        }
+
+        /** @brief 자동화 로그 게이트의 허용 목록 — 항목마다 이유가 있어야 읽힌다. */
+        [[nodiscard]] static bool loadAutomationAllowList( const sw::string& resourceID )
+        {
+            (void)resourceID; // 경로는 하나(`kAllowListPath`)뿐이다
+            sw::AutomationLogPolicy policy;
+            sw::string              error;
+            const bool              bLoaded = policy.loadAllowList( error );
             if ( bLoaded == false )
                 SW_LOG_WARNING( "%#", error.c_str() );
             return bLoaded;
@@ -454,6 +468,7 @@ namespace
             {"enginedefaultassets", &isEngineDefaultAssets,                           &loadEngineDefaultAssets},
             {           "inputmap",            &isInputMap,                                      &loadInputMap},
             {           "scenario",  &isAutomationScenario,                            &loadAutomationScenario},
+            {     "automationlogs", &isAutomationAllowList,                           &loadAutomationAllowList},
             {           "material",            &isMaterial,                                      &loadMaterial},
             {         "spriteclip",          &isSpriteClip,                                    &loadSpriteClip},
             {           "sequence",            &isSequence,                                      &loadSequence},

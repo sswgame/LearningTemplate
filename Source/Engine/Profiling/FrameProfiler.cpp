@@ -108,7 +108,7 @@ namespace sw
             // 측정이 실행을 막으면 안 된다. 한 번만 알리고 조용히 무시한다. 여러 스레드가 함께 넘칠 수 있어 원자로 한 번을 고른다.
             static atomic<bool> s_bWarned{ false };
             if ( s_bWarned.exchange( true, std::memory_order_relaxed ) == false )
-                SW_LOG_WARNING( "FrameProfiler: 구간이 %#개를 넘었습니다 — '%#' 이후는 무시합니다.", kMaxScope, pName );
+                SW_LOG_WARNING( "FrameProfiler: 구간이 %#개를 넘었습니다 — '%#' 이후는 무시합니다(kMaxScope 를 올린다).", kMaxScope, pName );
             return kInvalidSlot;
         }
 

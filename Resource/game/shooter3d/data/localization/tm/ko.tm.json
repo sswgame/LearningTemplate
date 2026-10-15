@@ -2,6 +2,10 @@
     "culture": "ko",
     "entries": [
         {
+            "source": "/",
+            "text": "/"
+        },
+        {
             "source": "Assault Blaster",
             "text": "돌격 블래스터"
         },

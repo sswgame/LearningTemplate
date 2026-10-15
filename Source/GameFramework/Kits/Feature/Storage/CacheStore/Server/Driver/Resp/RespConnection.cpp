@@ -82,6 +82,13 @@ namespace sw
         if ( _state == RespConnectionState::Closed )
             return;
         SW_LOG_WARNING( "RESP connection %# aborted: %#", static_cast<uint32>( _handle._index ), pReason );
+        closeForShutdown( transport );
+    }
+
+    void RespConnection::closeForShutdown( IStreamTransport& transport )
+    {
+        if ( _state == RespConnectionState::Closed )
+            return;
         const StreamConnectionHandle handle = _handle;
         _handle                             = StreamConnectionHandle{};
         _state                              = RespConnectionState::Closed;

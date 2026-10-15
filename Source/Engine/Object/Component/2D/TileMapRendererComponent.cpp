@@ -8,11 +8,13 @@
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Object/Component/2D/SpriteInstanceBatch.h"
 #include "Engine/Object/Component/2D/SpriteRenderUtil.h"
+#include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/PhysicsOverlapWorld.h"
+#include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
 {
@@ -464,5 +466,13 @@ namespace sw
         const GameObject*     pOwner = getOwner();
         const SceneComponent* pRoot  = ( pOwner != nullptr ) ? pOwner->getPrimarySceneComponent() : nullptr;
         return ( pRoot != nullptr ) ? pRoot->getWorldMatrix() : float4x4::Identity;
+    }
+} // namespace sw
+
+namespace sw
+{
+    void TileMapRendererComponent::validateSortingLayer( ValidationContext& context ) const
+    {
+        ComponentNameValidation::validateSortingLayer( context, "_sortingLayer", _sortingLayer );
     }
 } // namespace sw

@@ -2,9 +2,11 @@
 
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 
+#include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
 {
@@ -360,5 +362,18 @@ namespace sw
             pScene->destroyBody( _body );
         _body        = PhysicsBodyHandle{};
         _bHasWritten = false;
+    }
+} // namespace sw
+
+namespace sw
+{
+    void RigidBodyComponent::validateLayer( ValidationContext& context ) const
+    {
+        ComponentNameValidation::validatePhysicsLayer( context, "_layer", _layer );
+    }
+
+    void RigidBodyComponent::validateMaterial( ValidationContext& context ) const
+    {
+        ComponentNameValidation::validatePhysicsMaterial( context, "_material", _material );
     }
 } // namespace sw

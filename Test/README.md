@@ -150,9 +150,10 @@ py -3 -m Scripts test ProcessTest.* --repeat 20 --shuffle
 `<타깃>_HostOnly` 는 `--host_suites=only` 로 호스트 스위트만 돌고 `hostgpu` 라벨을 받습니다. 지금 선언된 호스트 스위트는 `EngineTest --test_list` 끝에 이유와 함께 출력됩니다.
 
 - `--host_suites=only` 실행이 아무것도 고르지 않으면 실패합니다. 선언한 스위트에 케이스가 없어도 실패합니다.
-- **호스트 스위트의 케이스는 예상하지 못한 `[Error]` 로그 하나로 실패합니다.** 검증 레이어와 드라이버 오류는 로그로만 남고 단언은 통과할 수 있기 때문입니다.
-  일부러 거절 경로를 부르는 곳은 `SW_TEST_DEFENSIVE_SCOPE( "이유" )` 로 감쌉니다. 그 안의 Error 로그는 표시가 붙어 세지 않습니다.
-- 원인이 엔진에 있고 아직 고치지 못한 Error는 스위트 파일에 `SW_TEST_KNOWN_ERROR_LOG( 스위트, "문구", "이유" )` 로 적습니다.
+- **호스트 스위트의 케이스는 예상하지 못한 `[Error]` · `[Warning]` 로그 하나로 실패합니다.** 검증 레이어와 드라이버 오류는 로그로만 남고 단언은 통과할 수 있기 때문입니다.
+  일부러 거절 경로를 부르는 곳은 `SW_TEST_DEFENSIVE_SCOPE( "이유" )` 로 감쌉니다. 그 안의 줄은 표시가 붙어 세지 않습니다.
+  App 을 띄우는 시나리오(`AppScenarioTest`)는 같은 규칙을 시나리오 실행기의 로그 게이트(`Source/Engine/Automation/AutomationLogPolicy.h`)로 지킵니다.
+- 원인이 엔진에 있고 아직 고치지 못한 줄은 스위트 파일에 `SW_TEST_KNOWN_LOG( 스위트, "문구", "이유" )` 로 적습니다.
   그 스위트의 그 문구만 허용하고, 실행 요약이 허용한 줄 수를 출력합니다. 한 번도 나오지 않으면 지우라고 알립니다.
 
 **샤드와 제한 시간은 한 실행 시간(`seconds`)에서 계산합니다.** 샤드 수는 `ceil(seconds / targetShardSeconds)`(30 초), 제한 시간은

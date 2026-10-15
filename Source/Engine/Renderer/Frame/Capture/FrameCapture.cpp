@@ -88,6 +88,9 @@ namespace sw
         const bool bSameFormat = format == constant::kBackBufferFormat;
         if ( bSameSize && bSameFormat )
             return true;
+        // 포맷을 모르는 출력은 아직(또는 이미) 없는 렌더 타깃이다 — 에디터 모듈을 다시 올리는 프레임의 게임 뷰. 어긋남이 아니라 건너뛸 프레임이다.
+        if ( format == RHIFormat::Unknown )
+            return false;
         if ( _bMismatchLogged.exchange( 1 ) == 0 )
             SW_LOG_WARNING( "Present capture skipped - the output render target (%#x%#, format %#) does not match the capture (%#x%#, format %#)",
                             width, height, static_cast<uint32>( format ), _width, _height, static_cast<uint32>( constant::kBackBufferFormat ) );

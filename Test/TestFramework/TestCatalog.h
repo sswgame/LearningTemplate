@@ -18,8 +18,8 @@ namespace test
         void addSuiteKind( const utf8* pSuiteName, SuiteKind kind, const utf8* pReason );
         /** @brief 스위트가 바깥 환경을 요구하며 환경 변수 @p pEnvironmentName 이 그 주소를 준다고 선언합니다(`SW_TEST_REQUIRES_ENVIRONMENT`). */
         void addEnvironmentSuite( const utf8* pSuiteName, const utf8* pEnvironmentName, const utf8* pReason );
-        /** @brief 호스트 스위트의 케이스가 남겨도 실패로 치지 않을 Error 로그(부분 문자열)를 더합니다(`SW_TEST_KNOWN_ERROR_LOG`). */
-        void addKnownErrorLog( const utf8* pSuiteName, const utf8* pSubstring, const utf8* pReason );
+        /** @brief 호스트 스위트의 케이스가 남겨도 실패로 치지 않을 Error 로그(부분 문자열)를 더합니다(`SW_TEST_KNOWN_LOG`). */
+        void addKnownLog( const utf8* pSuiteName, const utf8* pSubstring, const utf8* pReason );
         /** @brief 스위트의 케이스 하나가 넘지 말아야 할 시간을 선언합니다(`SW_TEST_TIME_BUDGET`). */
         void addTimeBudget( const utf8* pSuiteName, float64 maxCaseMilliseconds, const utf8* pReason );
 
@@ -30,9 +30,9 @@ namespace test
         bool                                         isSuiteOfKind( const sw::string& suiteName, SuiteKind kind ) const;
         const sw::map<sw::string, EnvironmentSuite>& getEnvironmentSuites() const { return _mapEnvironmentSuite; }
         /** @brief 이 스위트가 환경 스위트이고 그 변수가 비었는가입니다. */
-        bool                             isEnvironmentMissing( const sw::string& suiteName ) const;
-        sw::vector<KnownErrorLog>&       getListKnownErrorLog() { return _listKnownErrorLog; }
-        const sw::vector<KnownErrorLog>& getListKnownErrorLog() const { return _listKnownErrorLog; }
+        bool                        isEnvironmentMissing( const sw::string& suiteName ) const;
+        sw::vector<KnownLog>&       getListKnownLog() { return _listKnownLog; }
+        const sw::vector<KnownLog>& getListKnownLog() const { return _listKnownLog; }
         /** @brief 스위트의 시간 예산(없으면 널)입니다. */
         const TimeBudget* findTimeBudget( const sw::string& suiteName ) const;
         /** @brief 스위트에 케이스가 하나라도 있는가. */
@@ -48,7 +48,7 @@ namespace test
         sw::vector<TestCaseInfo>              _listCase;
         sw::map<sw::string, sw::string>       _arrMapSuiteKindReason[static_cast<size_t>( SuiteKind::Count )];
         sw::map<sw::string, EnvironmentSuite> _mapEnvironmentSuite;
-        sw::vector<KnownErrorLog>             _listKnownErrorLog;
+        sw::vector<KnownLog>                  _listKnownLog;
         sw::map<sw::string, TimeBudget>       _mapTimeBudget;
     };
 } // namespace test
@@ -85,11 +85,11 @@ namespace test
 
 namespace test
 {
-    /** @brief 정적 초기화로 알려진 Error 로그 선언을 붙입니다(`SW_TEST_KNOWN_ERROR_LOG`). */
-    class KnownErrorLogRegistrar
+    /** @brief 정적 초기화로 알려진 Error 로그 선언을 붙입니다(`SW_TEST_KNOWN_LOG`). */
+    class KnownLogRegistrar
     {
     public:
-        KnownErrorLogRegistrar( const utf8* pSuiteName, const utf8* pSubstring, const utf8* pReason );
+        KnownLogRegistrar( const utf8* pSuiteName, const utf8* pSubstring, const utf8* pReason );
     };
 } // namespace test
 
@@ -146,8 +146,8 @@ namespace test
  *          의도된 Error 는 `SW_TEST_DEFENSIVE_SCOPE` 로 감싸고, 이 선언은 **원인이 테스트 밖(엔진)에 있고 아직 못 고친 것**에만 쓴다.
  *          실행 요약이 견딘 줄 수를 찍고, 한 번도 나오지 않았으면 "지워도 된다" 고 알린다. 고쳤으면 이 줄을 지운다.
  */
-#define SW_TEST_KNOWN_ERROR_LOG( SuiteName, substring, reason ) \
-    static test::KnownErrorLogRegistrar SW_CONCAT( knownErrorLog_##SuiteName##_, __LINE__ )( #SuiteName, substring, reason )
+#define SW_TEST_KNOWN_LOG( SuiteName, substring, reason ) \
+    static test::KnownLogRegistrar SW_CONCAT( knownLog_##SuiteName##_, __LINE__ )( #SuiteName, substring, reason )
 
 /**
  * @brief 스위트의 케이스 하나가 @p milliseconds 를 넘지 말아야 한다고 선언합니다(시간 예산 — `TimeBudget`).
