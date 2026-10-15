@@ -34,6 +34,10 @@ namespace sw
             static constexpr uint32 kRootConstantCount = kRootColorVision + 1;
             static_assert( kRootConstantCount <= shaderslot::kRootConstantDwords, "canvas root constants exceed the four-backend budget" );
 
+            /** @brief 사각형 하나의 정점 수입니다 — canvas.hlsl 이 SV_VertexID 로 모서리 여섯을 만든다. 메시 없는 드로우라 장치 공용 대체 정점 버퍼가 이만큼 담아야 한다. */
+            static constexpr uint32 kVerticesPerQuad = 6;
+            static_assert( kVerticesPerQuad <= constant::kFallbackVertexCount, "the fallback vertex buffer must cover a canvas quad (slot 0 is read past its end)" );
+
             /** @brief 사각형 버퍼가 모자라면 이 배율로 키운다(프레임마다 조금씩 늘 때 다시 만들기를 줄인다). */
             static constexpr float32 kQuadBufferGrowth = 1.5f;
 
@@ -187,7 +191,7 @@ namespace sw
             }
             cmd.setGraphicsRootConstants( 0, CanvasRendererInternal::kRootConstantCount, arrRoot );
             // 시작 인스턴스는 0 — D3D 는 SV_InstanceID 에 시작 인스턴스를 더하지 않는다. 시작 사각형은 루트 상수로 간다.
-            cmd.drawInstanced( 6, batch._quadCount, 0, 0 );
+            cmd.drawInstanced( CanvasRendererInternal::kVerticesPerQuad, batch._quadCount, 0, 0 );
             ++drawnBatchCount;
         }
         // 가위를 대상 전체로 되돌린다(같은 패스에서 뒤에 그리는 것이 있어도 잘리지 않게).

@@ -173,7 +173,8 @@ namespace sw
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
         /** @brief `ID3D12Device5::RemoveDevice` 로 장치를 제거합니다. 이후 펜스는 끝난 값(UINT64_MAX)을 돌려주고 호출은 DXGI_ERROR_DEVICE_REMOVED 로 실패한다. */
-        bool debugRemoveDevice() override;
+        bool   debugRemoveDevice() override;
+        uint32 getValidationMessageCount() const override { return _validationMessageCount.load( std::memory_order_relaxed ); }
 
         /** @brief 리소스 생성과 파괴 인터페이스(D3D12RHIResourceFactory)를 반환합니다. */
         IRHIResourceFactory* getResourceFactory() override;
@@ -396,6 +397,12 @@ namespace sw
          * @brief D3D12 InfoQueue 메시지를 로그로 비웁니다.
          */
         void flushDebugMessages( const utf8* pStage );
+        /**
+         * @brief 디버그 레이어가 메시지를 내는 그 자리에서 부르는 콜백입니다(`ID3D12InfoQueue1::RegisterMessageCallback`, Debug 만). 경고 이상을 세고 앞의 몇 개를 로그로 남깁니다.
+         * @details 기록 스레드에서 API 호출 안에서 불린다. 그래서 로그 바로 앞의 패스 구간 로그와 함께 읽으면 어느 패스의 호출인지 보인다.
+         */
+        static void CALLBACK onValidationMessage( D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID id, LPCSTR pDescription,
+                                                  void* pContext );
 
         static constexpr uint32 kMaxOffscreenRtvs = 128; ///< 면마다 하나씩 쓴다. 큐브 하나가 여섯을 쓴다.
         static constexpr uint32 kMaxOffscreenDsvs = 64;
@@ -618,7 +625,9 @@ namespace sw
         uint8 _bBlitMismatchLogged;
         uint8 _bOnlineHeapExhaustedLogged; ///< 온라인 힙이 바닥났다는 경고를 한 번만 남기기 위한 래치입니다.
         /// @brief 엔진이 켜기 전에는 힙도 만들지 않습니다. 계측에는 비용이 듭니다.
-        uint8 _bTimestampEnabled;
+        uint8          _bTimestampEnabled;
+        atomic<uint32> _validationMessageCount;   ///< 디버그 레이어가 알린 경고 이상의 메시지 수(`onValidationMessage`)
+        DWORD          _validationCallbackCookie; ///< `RegisterMessageCallback` 이 준 번호입니다. 0 이면 등록하지 않았다.
 
         /// @brief 디바이스 프레임 스트림(스왑체인 begin/endFrame 과 백버퍼 패스)의 기록 상태입니다.
         /// @details RenderThread 가 백버퍼 렌더 패스(beginRenderPass 핸들 0)를 여는 정식 경로입니다. 패스별

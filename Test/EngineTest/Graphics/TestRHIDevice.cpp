@@ -1726,6 +1726,7 @@ SW_TEST_CASE( RHIDeviceTest, GPUTimestampsMarkUnwrittenSlotsAllBackends )
         // 엔진이 켜 주기 전에는 백엔드가 쿼리 자원조차 만들지 않는다 — 계측 비용을 안 내기 위해서다.
         pTimestamps->setTimestampEnabled( true );
 
+        const uint32          validationBefore = device->getValidationMessageCount();
         sw::RHITimestampFrame frame;
         bool                  bGotSample{ false };
         uint32                slotCount{ 0 };
@@ -1757,6 +1758,9 @@ SW_TEST_CASE( RHIDeviceTest, GPUTimestampsMarkUnwrittenSlotsAllBackends )
             if ( pTimestamps->readTimestamps( frame ) )
                 bGotSample = true;
         }
+        // 두 칸만 적은 프레임의 resolve 가 검증 오류를 내지 않는다(DX12 는 한 번도 적지 않은 쿼리를 Resolve 하면 오류 1319 다 — 적은 구간만 옮긴다).
+        SW_EXPECT_TRUE_MSG( device->getValidationMessageCount() == validationBefore,
+                            ( sw::string( pName ) + ": resolving the timestamps raised validation messages" ).c_str() );
         const sw::vector<float32>& listMicro = frame._listMicro;
 
         if ( bGotSample )
@@ -2079,6 +2083,36 @@ SW_TEST_CASE( RHIDeviceTest, EnqueuedGPUReleaseRunsOnceAfterItsFrame )
     }
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the GPU release test" );
+}
+
+/**
+ * @brief [RHIDeviceTest] Vulkan — 장치를 잃은 뒤(`debugRemoveDevice`, 개발 명령 `rhi.removeDevice`)에는 프레임이 GPU 완료를 기다리거나 주장하지 않고, `waitIdle` 은 기다리지 않고 해제 큐를 비운다
+ * @details 손실 뒤에도 펜스를 기다리면 TDR 중의 드라이버 안에서 멈출 수 있다(백로그 A-2 이던 것). 손실 뒤에 맡긴 해제는 프레임을 몇 번 돌려도 불리지 않아야 하고(완료를 본 프레임이 없다),
+ *          `waitIdle` 이 부른다. 변이: `VulkanRHIDevice::beginFrame` 의 손실 검사를 빼면 손실 뒤 제출하지 않은 프레임 펜스를 끝없이 기다려 멈춘다(CTest 시한이 끊는다) — 실제 TDR 뒤 행과 같은 모양이다.
+ */
+SW_TEST_CASE( RHIDeviceTest, VulkanLostDeviceStopsWaitingOnTheGPU )
+{
+    test::RHITestDevice device( sw::RHIBackend::Vulkan );
+    if ( device.isReady() == false )
+        SW_TEST_SKIP( "Vulkan device unavailable" );
+    device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+    device->endFrame( false, false );
+    device->waitIdle(); // 손실 전에 GPU 를 비운다 — 손실 뒤의 종료는 기다리지 않고 자원을 부순다
+    SW_ASSERT_TRUE( device->debugRemoveDevice() );
+
+    uint32  callCount{ 0 };
+    uint32* pCallCount = &callCount;
+    device->enqueueGPURelease( SW_DELEGATE_LAMBDA( sw::RHIResourceReleaseDelegate, [pCallCount]()
+    { ++( *pCallCount ); } ) );
+    constexpr uint32 kFrameCount = sw::constant::kGPUReleaseFrameLatency + sw::constant::kMaxFrameCountInFlight;
+    for ( uint32 frame = 0; frame < kFrameCount; ++frame )
+    {
+        device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+        device->endFrame( false, true );
+    }
+    SW_EXPECT_TRUE_MSG( callCount == 0, "a frame after the device loss waited on a fence and released GPU work" );
+    device->waitIdle();
+    SW_EXPECT_TRUE_MSG( callCount == 1, "waitIdle on a lost device did not flush the release queue" );
 }
 
 /**
