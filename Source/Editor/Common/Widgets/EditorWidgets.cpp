@@ -317,7 +317,10 @@ namespace sw::editor
     {
         if ( pText == nullptr )
             return;
-        ImGui::TextDisabled( "%s", pText );
+        // 안내문은 패널 폭에서 줄바꿈한다. 한 줄로 두면 좁은 도크에서 다음 행동을 알려 주는 뒷부분이 잘린다(UX 감사).
+        ImGui::PushStyleColor( ImGuiCol_Text, ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled ) );
+        ImGui::TextWrapped( "%s", pText );
+        ImGui::PopStyleColor();
     }
 
     void EditorWidgets::drawNoSearchResultHint( string_view filter )

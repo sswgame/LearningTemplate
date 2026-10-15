@@ -22,6 +22,7 @@
 namespace sw
 {
     class SpriteInstanceBatch;
+    class ValidationContext;
 
     /**
      * @class TileMapRendererComponent
@@ -104,6 +105,10 @@ namespace sw
         void setGenerateColliders( bool bGenerate ) { _bGenerateColliders = bGenerate; }
 
     private:
+        /** @brief `_sortingLayer` 가 정렬 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
+        void validateSortingLayer( ValidationContext& context ) const;
+
+    private:
         /** @brief 청크 배치를 모두 놓고, 칠한 칸이 있는 청크만 다시 만들어 모든 칸을 놓습니다. 바디는 건드리지 않습니다. 관리자가 없으면 false 입니다. */
         bool rebuildChunks();
         /** @brief 청크 하나의 배치를 만듭니다(이미 있으면 그대로). 만들었거나 있으면 true 입니다. */
@@ -126,7 +131,7 @@ namespace sw
         string _tileMapPath;
         PROPERTY( Category = "Tile Map", DisplayName = "Material", AssetPath, AssetType = "Material", Tooltip = "Sprite material for the tiles (point filter or lit)" )
         string _materialPath;
-        PROPERTY( Category = "Sorting", DisplayName = "Sorting Layer", Tooltip = "Sorting layer name from render2d.xml" )
+        PROPERTY( Category = "Sorting", DisplayName = "Sorting Layer", Tooltip = "Sorting layer name from render2d.xml", Validate = validateSortingLayer )
         hashed_string _sortingLayer;
         PROPERTY( Category = "Sorting", DisplayName = "Order In Layer", Tooltip = "Draw order inside the sorting layer", Min = -32767.0, Max = 32767.0 )
         int32 _orderInLayer;

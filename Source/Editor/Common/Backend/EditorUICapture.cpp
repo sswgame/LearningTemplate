@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 
@@ -82,10 +83,11 @@ namespace sw::editor
                     ++outJob._clippedWindowCount;
                     if ( outJob._clippedWindowNames.empty() == false )
                         outJob._clippedWindowNames.append( ", " );
+                    // 넘친 양을 함께 적는다. 몇 픽셀이면 여백 계산 차이, 수십 픽셀이면 실제로 글자 · 위젯이 잘린 것이다.
+                    StringBuilder<constant::kMaxBuffer64> overflow;
+                    overflow.appendFormat( "(%# x+%# y+%#)", pAxis, static_cast<int32>( pWindow->ScrollMax.x ), static_cast<int32>( pWindow->ScrollMax.y ) );
                     outJob._clippedWindowNames.append( pWindow->Name );
-                    outJob._clippedWindowNames.append( "(" );
-                    outJob._clippedWindowNames.append( pAxis );
-                    outJob._clippedWindowNames.append( ")" );
+                    outJob._clippedWindowNames.append( overflow.c_str() );
                 }
             }
 

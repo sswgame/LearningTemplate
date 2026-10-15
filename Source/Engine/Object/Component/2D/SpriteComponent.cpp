@@ -13,7 +13,9 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/Component/2D/SpriteRenderUtil.h"
+#include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
 {
@@ -282,4 +284,12 @@ namespace sw
         return true;
     }
 
+} // namespace sw
+
+namespace sw
+{
+    void SpriteComponent::validateSortingLayer( ValidationContext& context ) const
+    {
+        ComponentNameValidation::validateSortingLayer( context, "_sortingLayer", _sortingLayer );
+    }
 } // namespace sw

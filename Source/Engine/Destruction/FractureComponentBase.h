@@ -48,6 +48,7 @@ namespace sw
 
     class GameObjectManager;
     class IFracturePhysics;
+    class ValidationContext;
 
     /** @brief 어느 조각을 땅에 붙은(앵커) 것으로 볼지 정합니다. 앵커 볼륨(`_listAnchorVolume`)은 항상 추가로 적용합니다. */
     ENUM()
@@ -301,15 +302,23 @@ namespace sw
         void recordRecentStateHash();
 
     private:
+        /** @brief `_staticLayer` 가 물리 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
+        void validateStaticLayer( ValidationContext& context ) const;
+        /** @brief `_chunkLayer` 가 물리 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
+        void validateChunkLayer( ValidationContext& context ) const;
+        /** @brief `_debrisLayer` 가 물리 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
+        void validateDebrisLayer( ValidationContext& context ) const;
+
+    private:
         PROPERTY( Category = "Fracture", DisplayName = "Profile", AssetPath, Tooltip = "Destruction profile (*.destruction.xml); empty uses the engine default" )
         string _profilePath;
         PROPERTY( Category = "Fracture", DisplayName = "Interior Material", AssetPath, AssetType = "Material", Tooltip = "Material of the cut faces; empty uses the outer one" )
         hashed_string _interiorMaterialPath;
-        PROPERTY( Category = "Fracture", DisplayName = "Static Layer", Tooltip = "Physics layer of pieces still attached to the anchors" )
+        PROPERTY( Category = "Fracture", DisplayName = "Static Layer", Tooltip = "Physics layer of pieces still attached to the anchors", Validate = validateStaticLayer )
         hashed_string _staticLayer;
-        PROPERTY( Category = "Fracture", DisplayName = "Chunk Layer", Tooltip = "Physics layer of falling chunks that keep collision" )
+        PROPERTY( Category = "Fracture", DisplayName = "Chunk Layer", Tooltip = "Physics layer of falling chunks that keep collision", Validate = validateChunkLayer )
         hashed_string _chunkLayer;
-        PROPERTY( Category = "Fracture", DisplayName = "Debris Layer", Tooltip = "Physics layer of small debris" )
+        PROPERTY( Category = "Fracture", DisplayName = "Debris Layer", Tooltip = "Physics layer of small debris", Validate = validateDebrisLayer )
         hashed_string _debrisLayer;
         PROPERTY( Category = "Fracture", DisplayName = "Anchor Volumes", Tooltip = "Object-space boxes; pieces whose centre is inside are anchored" )
         vector<FractureAnchorVolume> _listAnchorVolume;

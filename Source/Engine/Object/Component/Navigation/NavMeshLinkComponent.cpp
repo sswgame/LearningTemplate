@@ -7,10 +7,12 @@
 
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/NavMeshSettings.h"
+#include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/Component/Navigation/SceneNavigation.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
 {
@@ -191,5 +193,13 @@ namespace sw
             return;
         _bLinkEnabled  = bEnabled;
         _bEnabledDirty = SW_TRUE;
+    }
+} // namespace sw
+
+namespace sw
+{
+    void NavMeshLinkComponent::validateAreaName( ValidationContext& context ) const
+    {
+        ComponentNameValidation::validateNavArea( context, "_areaName", _areaName );
     }
 } // namespace sw

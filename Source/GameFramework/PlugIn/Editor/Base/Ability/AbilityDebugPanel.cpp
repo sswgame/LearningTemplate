@@ -3,6 +3,7 @@
 #include "GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.h"
 
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -84,7 +85,7 @@ namespace sw::editor
 
         if ( EditorPlaySession::isStopped() )
         {
-            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdAbilityDebug", "HintPlayOnly" ) );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdAbilityDebug", "HintPlayOnly" ) );
             return;
         }
         if ( pTarget == nullptr )
