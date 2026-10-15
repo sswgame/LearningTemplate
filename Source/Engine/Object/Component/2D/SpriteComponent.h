@@ -15,6 +15,7 @@
 namespace sw
 {
     class SpriteClipAsset;
+    class ValidationContext;
 
     /**
      * @enum SpriteDrawMode
@@ -125,6 +126,10 @@ namespace sw
         hashed_string getDefaultMaterialPath() const override;
 
     private:
+        /** @brief `_sortingLayer` 가 정렬 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
+        void validateSortingLayer( ValidationContext& context ) const;
+
+    private:
         /**
          * @brief 텍스처 인스턴스를 현재 머티리얼과 텍스처에 맞춥니다. 같은 (머티리얼, 텍스처)는 인스턴스 하나를 공유합니다.
          * @details 이 컴포넌트가 등록한 인스턴스만 바꾸거나 해제한다(`_appliedTexture`). 텍스처가 비어 있으면 코드가 등록한 인스턴스는 그대로 둔다.
@@ -167,7 +172,7 @@ namespace sw
          * @brief 정렬 레이어 이름입니다. 투명 큐는 레이어, 레이어 안 순서, 깊이 순으로 그립니다(유니티의 Sorting Layer, Godot 의 CanvasLayer).
          * @details 같은 Z 의 월드 UI 와 스프라이트처럼 깊이가 같은 것의 앞뒤를 데이터로 정한다. 이름은 `render2d.xml` 의 테이블에 있어야 한다.
          */
-        PROPERTY( Category = "Sorting", DisplayName = "Sorting Layer", Tooltip = "Sorting layer name from render2d.xml; earlier layers draw first" )
+        PROPERTY( Category = "Sorting", DisplayName = "Sorting Layer", Tooltip = "Sorting layer name from render2d.xml; earlier layers draw first", Validate = validateSortingLayer )
         hashed_string _sortingLayer;
         PROPERTY( Category = "Rendering", DisplayName = "Draw Mode", Tooltip = "Simple stretches the quad; Sliced keeps the corners; Tiled repeats the middle" )
         SpriteDrawMode _drawMode;

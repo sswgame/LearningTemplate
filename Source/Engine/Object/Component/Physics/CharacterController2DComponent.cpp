@@ -4,8 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
 {
@@ -162,5 +164,13 @@ namespace sw
             pScene->destroyCharacter( _character );
         _character   = PhysicsCharacterHandle{};
         _bHasWritten = false;
+    }
+} // namespace sw
+
+namespace sw
+{
+    void CharacterController2DComponent::validateLayer( ValidationContext& context ) const
+    {
+        ComponentNameValidation::validatePhysicsLayer( context, "_layer", _layer );
     }
 } // namespace sw

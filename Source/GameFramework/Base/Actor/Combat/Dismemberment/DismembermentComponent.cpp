@@ -12,10 +12,12 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
+#include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
+#include "Engine/Reflection/ReflectionValidation.h"
 
 #include "GameFramework/Base/Actor/Combat/Dismemberment/Dismemberment.h"
 
@@ -389,5 +391,18 @@ namespace sw
         (void)_surfaceState.setRegionValue( static_cast<uint32>( regionIndex ), _bloodChannel, 1.0f );
         _listSeveredRegion.push_back( region );
         return true;
+    }
+} // namespace sw
+
+namespace sw
+{
+    void DismembermentComponent::validatePieceLayer( ValidationContext& context ) const
+    {
+        ComponentNameValidation::validatePhysicsLayer( context, "_pieceLayer", _pieceLayer );
+    }
+
+    void DismembermentComponent::validatePieceMaterial( ValidationContext& context ) const
+    {
+        ComponentNameValidation::validatePhysicsMaterial( context, "_pieceMaterial", _pieceMaterial );
     }
 } // namespace sw

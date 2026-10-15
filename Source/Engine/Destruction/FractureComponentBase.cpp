@@ -12,6 +12,7 @@
 #include "Engine/Destruction/FractureAsset.h"
 #include "Engine/Destruction/FractureRenderUtil.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/Component/Physics/RigidBody2DComponent.h"
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/Component/Physics/ScenePhysics.h"
@@ -21,6 +22,7 @@
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
 {
@@ -1772,5 +1774,23 @@ namespace sw
             _physics->destroyBodies( listDestroy );
         rebuildLeafRuntimeMap();
         _bPoseDirty = SW_TRUE;
+    }
+} // namespace sw
+
+namespace sw
+{
+    void FractureComponentBase::validateStaticLayer( ValidationContext& context ) const
+    {
+        ComponentNameValidation::validatePhysicsLayer( context, "_staticLayer", _staticLayer );
+    }
+
+    void FractureComponentBase::validateChunkLayer( ValidationContext& context ) const
+    {
+        ComponentNameValidation::validatePhysicsLayer( context, "_chunkLayer", _chunkLayer );
+    }
+
+    void FractureComponentBase::validateDebrisLayer( ValidationContext& context ) const
+    {
+        ComponentNameValidation::validatePhysicsLayer( context, "_debrisLayer", _debrisLayer );
     }
 } // namespace sw

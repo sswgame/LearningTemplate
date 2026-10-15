@@ -13,6 +13,11 @@
 
 namespace sw
 {
+    class ValidationContext;
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct PixelPerfectLayout
      * @brief 뷰포트 하나에서 픽셀 퍼펙트 카메라가 고른 값입니다(`PixelPerfectCameraComponent::computeLayout`).
@@ -95,6 +100,10 @@ namespace sw
         bool isUpscaleRenderTexture() const { return _bUpscaleRenderTexture; }
 
     private:
+        /** @brief `_barSortingLayer` 가 정렬 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
+        void validateBarSortingLayer( ValidationContext& context ) const;
+
+    private:
         /** @brief 카메라 출력의 정수 업스케일 배율을 바꿉니다. 같으면 아무것도 하지 않습니다. */
         static void applyUpscaleZoom( CameraComponent& camera, uint32 upscaleZoom );
         /** @brief 스냅 단위를 레지스트리와 씬의 메시에 알립니다. 값이 그대로면 아무것도 하지 않습니다. 틱 중이면 틱 뒤로 미룹니다. */
@@ -106,7 +115,7 @@ namespace sw
         float32 _pixelsPerUnit;
         PROPERTY( Category = "Pixel Perfect", DisplayName = "Reference Resolution", Tooltip = "Resolution the art is authored for (pixels)", Min = 1.0 )
         float2 _referenceResolution;
-        PROPERTY( Category = "Pixel Perfect", DisplayName = "Bar Sorting Layer", Tooltip = "Sorting layer of the letterbox bars (render2d.xml)" )
+        PROPERTY( Category = "Pixel Perfect", DisplayName = "Bar Sorting Layer", Tooltip = "Sorting layer of the letterbox bars (render2d.xml)", Validate = validateBarSortingLayer )
         hashed_string _barSortingLayer;
         PROPERTY( Category = "Pixel Perfect", DisplayName = "Crop X", Tooltip = "Cover the area outside the reference width with bars (pillarbox)" )
         bool _bCropX;
