@@ -18,6 +18,7 @@ namespace sw
 {
     // XML 구현 헤더를 끌어오지 않는다. 노드를 직접 읽는 .cpp 가 Engine/Serialization/XML/XMLDocument.h 를 스스로 include 한다.
     struct FloatCurve;
+    struct TypeInfo;
 
     class XMLDocument;
     class XMLNode;
@@ -81,6 +82,23 @@ namespace sw
         [[nodiscard]] static bool loadFileWith( void* pCall, ReadRootFunction pReadRoot, string_view path, const utf8* pRootName );
         /** @brief `loadFileWith` 의 XML 문자열 버전입니다. */
         [[nodiscard]] static bool loadTextWith( void* pCall, ReadRootFunction pReadRoot, string_view xmlText, string_view sourceName, const utf8* pRootName );
+
+        /**
+         * @brief 원소 @p node 의 속성을 리플렉션 Def(@p pInstance, @p typeInfo) 하나로 엄격하게 읽습니다 — 스키마(필드 표)가 기본값과 필수를 선언하고 이 함수가 로드 시점에 검증합니다.
+         * @details 속성 이름은 PROPERTY 이름에서 앞의 `_` 를 뗀 것이고, 불리언은 `b` 도 떼고 첫 글자를 소문자로 쓴다(`_bShootOnSight` → `shootOnSight`, `_runningCost` → `runningCost`).
+         *          적지 않은 칸은 Def 의 초기값(스키마 기본값)이고, `PROPERTY( Required )` 칸이 빠지면 오류다. 모르는 속성 · 읽지 못한 값 · `Min`/`Max` 밖 값도 이름과 함께 오류다.
+         *          읽는 코드가 리터럴로 기본값을 채우거나 범위를 조용히 자르지 않게 하는 창구다(언리얼 DataTable 행 구조체 · Godot Resource 의 export 칸 자리).
+         *          @p listHandRead 의 속성은 부르는 쪽이 따로 읽으므로 모르는 이름으로 보지 않는다(색 · 이름 목록처럼 칸 하나로 담지 않는 값).
+         * @return 오류가 하나도 없으면 true 입니다. 오류가 있어도 읽을 수 있는 칸은 채웁니다.
+         */
+        [[nodiscard]] static bool readFields( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, string_view sourceName,
+                                              std::initializer_list<string_view> listHandRead = {} );
+        /** @brief `readFields` 의 타입 지정 버전입니다(`TDef::StaticType()`). */
+        template <typename TDef>
+        [[nodiscard]] static bool readFields( const XMLNode& node, TDef& outDef, string_view sourceName, std::initializer_list<string_view> listHandRead = {} )
+        {
+            return readFields( node, &outDef, *TDef::StaticType(), sourceName, listHandRead );
+        }
 
         /** @brief `id` 속성을 반환합니다. 없거나 비면 "<원소> without an id - skipped" 를 경고하고 nullptr 를 반환합니다. */
         static const utf8* findRequiredID( const XMLNode& node, string_view sourceName );

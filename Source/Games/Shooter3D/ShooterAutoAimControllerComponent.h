@@ -37,5 +37,13 @@ namespace sw
         float32 _engageDistance;
         PROPERTY( Category = "Auto Play", DisplayName = "Close Range Distance", Tooltip = "Inside this distance the shotgun, outside it the rifle", Min = 0.0, Units = m )
         float32 _closeRangeDistance;
+        PROPERTY( Category = "Auto Play", DisplayName = "Aim Tolerance", Tooltip = "Fires when the aim is off by less than this", Min = 0.0, Units = rad )
+        float32 _aimTolerance;
+        PROPERTY( Category = "Auto Play", DisplayName = "Chest Height", Tooltip = "Fraction of the enemy's height aimed at", Min = 0.0, Max = 1.0, Units = ratio )
+        float32 _chestHeight;
+        PROPERTY( Category = "Auto Play", DisplayName = "Circle Tangent", Tooltip = "Sideways part of the circling move, multiplied by the position", Min = 0.0 )
+        float32 _circleTangent;
+        PROPERTY( Category = "Auto Play", DisplayName = "Circle Inward", Tooltip = "Part of the circling move that pulls toward the centre, multiplied by the position", Min = 0.0 )
+        float32 _circleInward;
     };
 } // namespace sw

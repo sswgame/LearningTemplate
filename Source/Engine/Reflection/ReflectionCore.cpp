@@ -177,6 +177,7 @@ namespace sw
         , _reservedFlags{ 0 }
 #endif
         , _bReplicated{ SW_FALSE }
+        , _bRequired{ SW_FALSE }
         , _bSaveGame{ SW_FALSE }
         , _bInterp{ SW_FALSE }
         , _reservedRoles{ 0 }
@@ -863,6 +864,7 @@ namespace sw
                     {   prop._metadata._bAssetPath != SW_FALSE,    "AssetPath"},
                     { prop._metadata._bPolymorphic != SW_FALSE,  "Polymorphic"},
                     { prop._metadata._bSkipIfEmpty != SW_FALSE,  "SkipIfEmpty"},
+                    {    prop._metadata._bRequired != SW_FALSE,     "Required"},
                 };
                 for ( const auto& [bSet, pFlagName] : arrFlag )
                 {

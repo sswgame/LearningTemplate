@@ -15,6 +15,9 @@
 
 정의를 찾지 못한 참조는 판단하지 않는다(매크로 없이 `registerVariable` 로 등록한 것 등).
 
+배포본에 남는 테스트용 변수(`SW_TEST_GLOBAL_VARIABLE_SHIPPED`)는 `rules/CheckGlobalVariableKinds.toml` 의 `[shipped]`(변수 → 배포 실행 파일을
+조종하는 곳)에 있어야 한다. Release 는 Shipping 이 아니라 테스트용 변수가 등록되므로, 측정 · 벤치 · 크래시 스위치는 여기 올리지 않는다.
+
   python Scripts/lint/gate/CheckGlobalVariableKinds.py [--root <repo>]
 """
 
@@ -30,7 +33,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
 from common import blankMatch, collectSourceFiles, kLintTargetRelDirs, normalizePath  # noqa: E402
+from common.RuleData import kKindReason  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
+
+#: 배포본에 남겨도 되는 테스트용 변수 → 배포 실행 파일을 조종하는 곳(`rules/CheckGlobalVariableKinds.toml` 의 `[shipped]`).
+_kRuleSchema = {"shipped": kKindReason}
 
 _kListScanRoot = kLintTargetRelDirs
 _kExternMacro = "SW_EXTERN_GLOBAL_VARIABLE"
@@ -110,6 +117,23 @@ def collectUses(repositoryRoot: Path) -> tuple[list[GlobalVariableUse], list[Glo
     return listDefinition, listExtern
 
 
+def findUnlistedShipped(listDefinition: list[GlobalVariableUse], mapShipped: dict[str, str]) -> list[str]:
+    """`[shipped]` 목록 밖의 SHIPPED 정의와, 정의가 없는 목록 줄을 위반 문자열로 돌려줍니다."""
+    violations: list[str] = []
+    setDefined: set[str] = set()
+    for definition in listDefinition:
+        if definition.macro != "SW_TEST_GLOBAL_VARIABLE_SHIPPED" or not definition.location.startswith("Source/"):
+            continue
+        setDefined.add(definition.name)
+        if definition.name not in mapShipped:
+            violations.append(f"[Shipped Global Variable] {definition.location}: {definition.name} 이(가) 배포본에 남지만 [shipped] 목록에 없습니다 — "
+                              "배포 실행 파일을 스크립트가 조종해야 하면 이유와 함께 목록에, 아니면 SW_TEST_GLOBAL_VARIABLE 로")
+    for name in sorted(mapShipped):
+        if name not in setDefined:
+            violations.append(f"[Shipped Global Variable] [shipped] 의 {name} 은(는) SHIPPED 로 정의된 곳이 없습니다 — 목록에서 지운다")
+    return violations
+
+
 def findKindMismatches(listDefinition: list[GlobalVariableUse], listExtern: list[GlobalVariableUse]) -> list[str]:
     """정의와 타입이 어긋나는 참조를 위반 문자열로 돌려줍니다."""
     mapDefinition = {definition.name: definition for definition in listDefinition}
@@ -128,12 +152,13 @@ def findKindMismatches(listDefinition: list[GlobalVariableUse], listExtern: list
 class CheckGlobalVariableKindsGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있다."""
 
-    description = "전역 변수 정의와 extern 참조의 타입 일치 검사"
+    description = "전역 변수 정의와 extern 참조의 타입 일치, 배포본에 남는 테스트용 변수의 허용 목록 검사"
+    ruleSchema = _kRuleSchema
     buildComment = "Checking global variable definitions against their extern declarations..."
     timeoutSeconds = 30
     preCommitPattern = ("*.h", "*.cpp", "*.inl")
     preCommitFileArgument = ""
-    violationHeader = "정의와 타입이 다른 전역 변수 참조"
+    violationHeader = "정의와 타입이 다른 참조 · 목록 밖의 배포본 테스트용 변수"
     hint = (
         "  참조는 정의와 같은 타입으로 적습니다:\n"
         "      SW_TEST_GLOBAL_VARIABLE( int32, gv_x, 0, \"…\" );  ->  SW_EXTERN_GLOBAL_VARIABLE( int32, gv_x );\n"
@@ -162,6 +187,9 @@ class CheckGlobalVariableKindsGate(LintGate):
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         listDefinition, listExtern = collectUses(repositoryRoot)
         violations = findKindMismatches(listDefinition, listExtern)
+        if (repositoryRoot / "Source").is_dir() and (repositoryRoot / ".git").exists():
+            # 목록은 저장소 전체의 정의와 대어 본다(자체 테스트의 조각 저장소에는 목록이 맞지 않는다).
+            violations += findUnlistedShipped(listDefinition, self.readRules(self.name, self.ruleSchema)["shipped"])
         return GateResult(listViolation=violations,
                           summary=f"정의 {len(listDefinition)}개 · 참조 {len(listExtern)}개")
 

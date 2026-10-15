@@ -59,7 +59,7 @@ namespace sw
      */
     struct AutomationLoad
     {
-        string  _network{};               ///< 회선 프리셋 이름(`NetEmulationConditions::tryGetPreset` — off · lan · wifi · lte · badwifi), 비면 흉내 없음
+        string  _network{};               ///< 회선 프리셋 이름(`NetEmulationPresetTable` 의 `_name`), 비면 흉내 없음
         float32 _durationSeconds{ 0.0f }; ///< 측정 창(초, 워밍업 60 프레임 뒤). 0 보다 커야 한다
         float32 _rampUpSeconds{ 0.0f };   ///< 클라이언트를 이 시간에 걸쳐 늘린다(봇 · 클러스터)
         uint32  _clientCount{ 0 };        ///< 동시 클라이언트 수(봇 · 클러스터). App 하나는 0

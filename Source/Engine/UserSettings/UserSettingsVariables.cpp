@@ -6,7 +6,7 @@
 // 설정 서비스 없이 도는 테스트와 도구는 이 값을 본다.
 SW_GLOBAL_VARIABLE( float32, gv_renderScale, 1.0f, "3D 렌더 해상도 배율 0.5~1 (사용자 설정 graphics.renderScale, 렌더러 미구현)" );
 SW_GLOBAL_VARIABLE( int32, gv_upscaler, 0, "업스케일러 (0 끔, 사용자 설정 graphics.upscaler)" );
-SW_GLOBAL_VARIABLE( int32, gv_shadowQuality, 2, "그림자 품질 0~3 (사용자 설정 graphics.shadowQuality)" );
+SW_GLOBAL_VARIABLE( int32, gv_shadowMapResolution, 2048, "그림자 맵 한 변 텍셀 수 (사용자 설정 graphics.shadowQuality 의 targetValue)" );
 SW_GLOBAL_VARIABLE( float32, gv_viewDistanceScale, 1.0f, "시야 거리 배율 (사용자 설정 graphics.viewDistance)" );
 SW_GLOBAL_VARIABLE( float32, gv_foliageDensity, 1.0f, "식생 밀도 배율 (사용자 설정 graphics.foliageDensity)" );
 SW_GLOBAL_VARIABLE( int32, gv_postQuality, 2, "후처리 품질 0~3 (사용자 설정 graphics.postQuality)" );
@@ -34,4 +34,4 @@ SW_GLOBAL_VARIABLE( sw::string, gv_debugHUDSections, "", "디버그 HUD 섹션 �
 SW_GLOBAL_VARIABLE( int32, gv_debugHUDCorner, 0, "디버그 HUD 모서리 0 왼위 1 오위 2 왼아래 3 오아래 (사용자 설정 debug.hudCorner)" );
 SW_GLOBAL_VARIABLE( float32, gv_debugHUDOpacity, 0.85f, "디버그 HUD 불투명도 0.2~1 (사용자 설정 debug.hudOpacity)" );
 
-SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::string, gv_userSettingsFile, "", "사용자 설정 파일 경로 (비면 사용자 폴더의 usersettings.json)" );
+SW_TEST_GLOBAL_VARIABLE( sw::string, gv_userSettingsFile, "", "사용자 설정 파일 경로 (비면 사용자 폴더의 usersettings.json)" );

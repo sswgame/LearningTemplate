@@ -27,6 +27,7 @@
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Serialization/Format/ReflectedXMLFile.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 #include "Engine/UI/World/WidgetComponent.h"
 
@@ -40,10 +41,8 @@ namespace sw
 {
     namespace
     {
-        /** @brief 큐브 사이 간격(월드 단위). */
-        constexpr float32 kBenchSpacing = 2.0f;
-        /** @brief 격자가 화면에 들어오도록 카메라를 뒤로 뺄 때 쓰는 여유 배수. */
-        constexpr float32 kBenchCameraMargin = 0.28f;
+        /** @brief 배치 · 튜닝 값의 정본입니다(`BenchSceneSettings`). 코드 쪽 기본값은 없습니다. */
+        constexpr const utf8* kBenchSettingsPath = "game/empty/data/benchscene.xml";
         /** @brief 스트레스가 보관할 머티리얼 인스턴스 상한입니다. 넘으면 새로 붙이는 대신 제거합니다. */
         constexpr size_t kChurnInstanceCap = 512;
         /** @brief 스트레스가 인스턴스에서 켜고 끄는 키워드입니다. 읽는 셰이더는 없고 퍼뮤테이션만 갈립니다. */
@@ -58,23 +57,6 @@ namespace sw
          *       기존 측정과 스크린샷을 비교할 수 있다.
          */
         constexpr const utf8* kArrBenchShape[] = { "Cube", "Sphere", "Cylinder", "Capsule", "Cone" };
-        /** @brief 벤치 캐릭터(KayKit 기사, CC0)의 스킨드 메시, 스켈레톤, 클립 폴더입니다(`App --import-models` 가 만듭니다). */
-        constexpr const utf8* kBenchCharacterMesh     = "game/shooter3d/models/kaykit/knight.mesh";
-        constexpr const utf8* kBenchCharacterSkeleton = "game/shooter3d/models/kaykit/knight/knight.skeleton.json";
-        constexpr const utf8* kBenchCharacterClips    = "game/shooter3d/models/kaykit/knight/clips";
-        /** @brief 벤치 캐릭터가 번갈아 재생하는 클립입니다(짝수 번째와 홀수 번째). */
-        constexpr const utf8* kArrBenchCharacterClip[] = { "Idle", "Walking_A" };
-        /** @brief 캐릭터 사이 간격(미터)입니다. */
-        constexpr float32 kBenchCharacterSpacing = 1.6f;
-        /// @brief 얼굴 벤치의 테스트 머리(합성, 모프 타깃 일곱 개와 눈 본 두 개)와 그 리그, 클립, 음성입니다.
-        constexpr const utf8* kBenchFaceMesh     = "game/empty/models/testhead.mesh";
-        constexpr const utf8* kBenchFaceSkeleton = "game/empty/models/testhead/testhead.skeleton.json";
-        constexpr const utf8* kBenchFaceClips    = "game/empty/models/testhead/clips";
-        constexpr const utf8* kBenchFaceRig      = "game/empty/models/testhead.facial.json";
-        constexpr const utf8* kBenchFaceVoice    = "game/empty/voice/testline.wav";
-        /// @brief 머리 사이 간격(m)과 머리 중심 높이(m)입니다.
-        constexpr float32 kBenchFaceSpacing = 0.45f;
-        constexpr float32 kBenchFaceHeight  = 1.635f;
     } // namespace
 
     // ------------------------------------------------------------------------------
@@ -84,7 +66,7 @@ namespace sw
      * @brief `-gv_benchMeshes=N`: 시작할 때 만들 벤치 큐브 수입니다. 0 이면 만들지 않습니다.
      * @details 이 값이 0 이 아니면 `EmptyGame` 은 `GameConfig` 의 시작 씬 대신 벤치 씬을 만든다.
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchMeshes, 0, "시작 시 생성할 벤치 큐브 수 (0=사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchMeshes, 0, "시작 시 생성할 벤치 큐브 수 (0=사용 안 함)" );
 
     /**
      * @brief `-gv_benchCharacters=N`: 스킨드 캐릭터(KayKit 기사) N 명을 한 줄로 세워 짝수는 Idle, 홀수는 Walking_A 를 재생합니다.
@@ -146,7 +128,7 @@ namespace sw
      *          지나지 않는다. 투명 큐브는 **소수의 머티리얼 인스턴스를 나눠 쓰므로** 한 배치에 투명
      *          인스턴스가 여럿 들어간다. 그래야 배치 안의 정렬이 실제로 검사된다.
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchTransparent, 25, "벤치 큐브 중 투명으로 만들 비율 (퍼센트)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchTransparent, 25, "벤치 큐브 중 투명으로 만들 비율 (퍼센트)" );
 
     /**
      * @brief `-gv_benchMaterialChurn=N`: 매 프레임 머티리얼 인스턴스 N 개의 **값**을 무작위로 바꿉니다.
@@ -205,14 +187,14 @@ namespace sw
      *          손대지 않은 대조군이 움직이면 하니스를 먼저 의심할 것. 회전만 멈추면 부족하다(사인파가 남아
      *          0.05% 흔들린다).
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchAnimate, 1, "벤치의 시간 구동 변화(회전·상하 이동·스케일) (0=멈춤, 픽셀 비교 검증용)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchAnimate, 1, "벤치의 시간 구동 변화(회전·상하 이동·스케일) (0=멈춤, 픽셀 비교 검증용)" );
 
     /**
      * @brief `-gv_benchUiMarkers=K`: 앞쪽 큐브 K 개에 화면 마커(`WidgetComponent` Screen, 숫자 글자)를 붙입니다(데미지 숫자가 많이 뜨는 경우를 재현합니다).
      * @details 마커는 프레임마다 월드 좌표를 화면에 투영해 배치한다. 위젯 벤치(`-gv_benchUiWidgets`, 엔진 `UIBenchScreen`)와 함께 `GT.UI.*` 로 측정한다.
      *          큐브 수(`-gv_benchMeshes`)보다 크면 큐브 수만큼 붙인다.
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchUiMarkers, 0, "앞쪽 벤치 큐브 K 개에 화면 마커(숫자 글)를 붙인다 (0=사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchUiMarkers, 0, "앞쪽 벤치 큐브 K 개에 화면 마커(숫자 글)를 붙인다 (0=사용 안 함)" );
 
     /**
      * @brief `-gv_benchMovePercent=<퍼센트>`: 프레임마다 위치와 스케일을 다시 쓰는 큐브의 비율입니다(기본값 100 은 전부).
@@ -276,7 +258,8 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchViews, 0, "격자를 둘러보는 캡처 카메라(렌더 텍스처 512²) 수 (0=사용 안 함)" );
 
     BenchScene::BenchScene()
-        : _listBenchMesh{}
+        : _settings{}
+        , _listBenchMesh{}
         , _listInstanceBatch{}
         , _instanceCubeCount{ 0 }
         , _listMeshVariant{}
@@ -309,6 +292,13 @@ namespace sw
         const bool bNoBenchmarkRequested = gv_benchMeshes <= 0 && gv_benchCharacters <= 0 && gv_benchFaces <= 0 && getRigCharacterCount() == 0 && gv_benchCombat <= 0;
         if ( bNoBenchmarkRequested )
             return false;
+        // 배치 · 튜닝 값은 데이터가 정본이다 — 못 읽으면 코드 쪽 값으로 대신 세우지 않는다(기준 이미지와 다른 그림이 된다).
+        _settings = BenchSceneSettings{};
+        if ( ReflectedXMLFile::loadDesc( kBenchSettingsPath, _settings ) == false )
+        {
+            SW_LOG_ERROR( "[Bench] %# 을 읽지 못해 벤치를 세우지 않습니다.", kBenchSettingsPath );
+            return false;
+        }
 
         if ( gv_benchMeshes > 0 )
             spawn( static_cast<uint32>( gv_benchMeshes ) );
@@ -435,7 +425,7 @@ namespace sw
         // 정사각에 가까운 격자로 흩는다. 전부 같은 메시·머티리얼이라 배치가 하나로 묶이는데,
         // 그게 지금 렌더러의 기본 경로(배치당 drawInstanced 한 번)를 측정하는 조건이다.
         const uint32  side   = static_cast<uint32>( MathUtil::sqrt( static_cast<float32>( meshCount ) ) ) + 1;
-        const float32 origin = -0.5f * static_cast<float32>( side - 1 ) * kBenchSpacing;
+        const float32 origin = -0.5f * static_cast<float32>( side - 1 ) * _settings._cubeSpacing;
 
         _listBenchMesh.clear();
         _listBenchMesh.reserve( meshCount );
@@ -461,7 +451,7 @@ namespace sw
             if ( _glassMaterial == nullptr )
             {
                 _glassMaterial = Material::create();
-                if ( _glassMaterial->loadFromFile( "engine/materials/glassmaterial.material" ) == false )
+                if ( _glassMaterial->loadFromFile( _settings._glassMaterial.c_str() ) == false )
                 {
                     SW_LOG_WARNING( "[Bench] 투명 머티리얼을 읽지 못했습니다 — 투명 큐브를 건너뜁니다." );
                     _glassMaterial.reset();
@@ -472,7 +462,7 @@ namespace sw
                 shared_ptr<MaterialInstance> instance = MaterialInstance::create( _glassMaterial.get() );
                 const float4                 tint     = makeBenchColor( slot * 977u + 13u );
                 // 알파를 눈에 띄게 낮춘다 — 1.0 에 가까우면 블렌딩이 됐는지 그림으로 구분할 수 없다.
-                const float32 alpha = 0.30f + 0.15f * static_cast<float32>( slot );
+                const float32 alpha = _settings._transparentAlphaBase + _settings._transparentAlphaStep * static_cast<float32>( slot );
                 instance->setVectorParameter( hashed_string( kMaterialColorParameter ), float4{ tint._x, tint._y, tint._z, alpha } );
                 _listChurnInstance.push_back( instance );
                 arrTransparentMaterial[slot] = std::move( instance );
@@ -496,7 +486,7 @@ namespace sw
             {
                 const uint32       col = index % side;
                 const uint32       row = index / side;
-                const float3       position{ origin + static_cast<float32>( col ) * kBenchSpacing, 0.0f, origin + static_cast<float32>( row ) * kBenchSpacing };
+                const float3       position{ origin + static_cast<float32>( col ) * _settings._cubeSpacing, 0.0f, origin + static_cast<float32>( row ) * _settings._cubeSpacing };
                 MeshInstanceBatch& batch = *_listInstanceBatch[index % meshVariantCount];
                 const uint32       entry = index / meshVariantCount;
                 batch.setWorld( entry, float4x4::makeTrs( position, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f } ) );
@@ -508,12 +498,12 @@ namespace sw
                 pObjects->getPrimitiveRegistry().addInstanceBatch( batch.get() );
             }
             _instanceCubeCount = meshCount;
-            spawnLight( pScene, halfExtentOf( side, kBenchSpacing ) );
-            spawnBenchLights( pScene, halfExtentOf( side, kBenchSpacing ) );
-            spawnGround( pScene, halfExtentOf( side, kBenchSpacing ) );
+            spawnLight( pScene, halfExtentOf( side, _settings._cubeSpacing ) );
+            spawnBenchLights( pScene, halfExtentOf( side, _settings._cubeSpacing ) );
+            spawnGround( pScene, halfExtentOf( side, _settings._cubeSpacing ) );
             _benchGridSide = side;
-            frameCameras( pScene, side, kBenchSpacing );
-            spawnBenchViews( pScene, halfExtentOf( side, kBenchSpacing ) );
+            frameCameras( pScene, side, _settings._cubeSpacing );
+            spawnBenchViews( pScene, halfExtentOf( side, _settings._cubeSpacing ) );
             SW_LOG_INFO( "[Bench] 씬 '%#' 에 큐브 %#개를 인스턴스 배치 %#개로 만들었습니다 (%#×%# 격자, GameObject 없음).",
                          pScene->getName(), meshCount, meshVariantCount, side, side );
             return;
@@ -547,12 +537,12 @@ namespace sw
             }
         }
 
-        spawnLight( pScene, halfExtentOf( side, kBenchSpacing ) );
-        spawnBenchLights( pScene, halfExtentOf( side, kBenchSpacing ) );
-        spawnGround( pScene, halfExtentOf( side, kBenchSpacing ) );
+        spawnLight( pScene, halfExtentOf( side, _settings._cubeSpacing ) );
+        spawnBenchLights( pScene, halfExtentOf( side, _settings._cubeSpacing ) );
+        spawnGround( pScene, halfExtentOf( side, _settings._cubeSpacing ) );
         _benchGridSide = side;
-        frameCameras( pScene, side, kBenchSpacing );
-        spawnBenchViews( pScene, halfExtentOf( side, kBenchSpacing ) );
+        frameCameras( pScene, side, _settings._cubeSpacing );
+        spawnBenchViews( pScene, halfExtentOf( side, _settings._cubeSpacing ) );
 
         SW_LOG_INFO( "[Bench] 메시 종류 %#개 (= 배치 수), 도형 %#종. -gv_benchMeshVariants · -gv_benchMeshShapes 로 바꾼다.",
                      meshVariantCount, shapeCount );
@@ -579,7 +569,7 @@ namespace sw
             return;
 
         const uint32  columns = ( gv_benchCharacterColumns > 0 ) ? static_cast<uint32>( gv_benchCharacterColumns ) : characterCount;
-        const float32 origin  = -0.5f * static_cast<float32>( MathUtil::min( columns, characterCount ) - 1 ) * kBenchCharacterSpacing;
+        const float32 origin  = -0.5f * static_cast<float32>( MathUtil::min( columns, characterCount ) - 1 ) * _settings._characterSpacing;
         for ( uint32 index = 0; index < characterCount; ++index )
         {
             StringBuilder<constant::kMaxBuffer64> nameBuilder;
@@ -592,21 +582,21 @@ namespace sw
             if ( pMesh == nullptr || pAnimator == nullptr )
                 continue;
             pMesh->setShareCrowdPose( gv_benchCrowdShare != 0 );
-            pMesh->setMeshID( kBenchCharacterMesh );
-            pMesh->setSkeletonPath( kBenchCharacterSkeleton );
+            pMesh->setMeshID( _settings._knightMesh.c_str() );
+            pMesh->setSkeletonPath( _settings._knightSkeleton.c_str() );
             pMesh->resolveRenderAssets();
             // 기사는 +Z 를 본다 — 카메라(-Z 쪽)를 보도록 돌린다. 격자면 열 · 행으로 펼친다(행은 +Z 로 멀어진다).
             const uint32 column = index % columns;
             const uint32 row    = index / columns;
-            pMesh->setLocalPosition( float3{ origin + static_cast<float32>( column ) * kBenchCharacterSpacing, 0.0f, static_cast<float32>( row ) * kBenchCharacterSpacing } );
+            pMesh->setLocalPosition( float3{ origin + static_cast<float32>( column ) * _settings._characterSpacing, 0.0f, static_cast<float32>( row ) * _settings._characterSpacing } );
             pMesh->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
-            pAnimator->setClipFolder( kBenchCharacterClips );
-            pAnimator->setInitialState( kArrBenchCharacterClip[index % SW_COUNT_OF( kArrBenchCharacterClip )] );
+            pAnimator->setClipFolder( _settings._knightClips.c_str() );
+            pAnimator->setInitialState( ( index % 2u ) == 0 ? _settings._characterEvenClip.c_str() : _settings._characterOddClip.c_str() );
             if ( gv_benchCharacterStagger != 0 )
             {
                 // 결정적 해시 — 실행마다 같은 그림이어야 비교가 된다.
                 const uint32 hash = ( index + 1u ) * 2654435761u;
-                pAnimator->setInitialTime( static_cast<float32>( hash >> 16 ) / 65535.0f * 2.0f );
+                pAnimator->setInitialTime( static_cast<float32>( hash >> 16 ) / 65535.0f * _settings._characterStaggerSeconds );
             }
             _listBenchExtra.push_back( pMesh->getHandle() );
         }
@@ -616,7 +606,7 @@ namespace sw
         spawnGround( pScene, halfExtent );
         _bCharacterFraming = SW_TRUE;
         frameCharacterCameras( pScene, halfExtent );
-        SW_LOG_INFO( "[Bench] 씬 '%#' 에 스킨드 캐릭터 %#명을 세웠습니다(%#).", pScene->getName(), characterCount, kBenchCharacterMesh );
+        SW_LOG_INFO( "[Bench] 씬 '%#' 에 스킨드 캐릭터 %#명을 세웠습니다(%#).", pScene->getName(), characterCount, _settings._knightMesh.c_str() );
     }
 
     void BenchScene::spawnCombat()
@@ -639,9 +629,9 @@ namespace sw
             if ( pFirst != nullptr )
                 _listBenchExtra.push_back( pFirst->getHandle() );
         }
-        spawnLight( pScene, 2.5f );
+        spawnLight( pScene, _settings._combatHalfExtent );
         _bCharacterFraming = SW_TRUE;
-        frameCharacterCameras( pScene, 2.5f );
+        frameCharacterCameras( pScene, _settings._combatHalfExtent );
         SW_LOG_INFO( "[Bench] 씬 '%#' 에 전투 연출(KayKit 스켈레톤 · 칼 · 바닥)을 세웠습니다.", pScene->getName() );
     }
 
@@ -661,8 +651,8 @@ namespace sw
         pScene->ensureDefaultCameras();
         GameObjectManager* pObjects = pScene->getObjectManager();
         // 머리는 원점에 서서 +Z 를 본다 — 카메라(-Z 쪽)를 보도록 돌리고, 눈은 카메라 높이의 앞 지점을 본다.
-        const float32 origin = -0.5f * static_cast<float32>( faceCount - 1 ) * kBenchFaceSpacing;
-        const float3  lookAt{ 0.0f, kBenchFaceHeight, -computeFaceCameraDistance( faceCount ) };
+        const float32 origin = -0.5f * static_cast<float32>( faceCount - 1 ) * _settings._faceSpacing;
+        const float3  lookAt{ 0.0f, _settings._faceHeight, -computeFaceCameraDistance( faceCount ) };
         for ( uint32 index = 0; index < faceCount; ++index )
         {
             StringBuilder<constant::kMaxBuffer64> nameBuilder;
@@ -673,10 +663,10 @@ namespace sw
             SkeletalMeshComponent* pMesh = pObject->addComponent<SkeletalMeshComponent>();
             if ( pMesh == nullptr )
                 continue;
-            pMesh->setMeshID( kBenchFaceMesh );
-            pMesh->setSkeletonPath( kBenchFaceSkeleton );
+            pMesh->setMeshID( _settings._faceMesh.c_str() );
+            pMesh->setSkeletonPath( _settings._faceSkeleton.c_str() );
             pMesh->resolveRenderAssets();
-            pMesh->setLocalPosition( float3{ origin + static_cast<float32>( index ) * kBenchFaceSpacing, 0.0f, 0.0f } );
+            pMesh->setLocalPosition( float3{ origin + static_cast<float32>( index ) * _settings._faceSpacing, 0.0f, 0.0f } );
             pMesh->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
             const bool bTalkClip = ( index % 2 ) == 0;
             if ( bTalkClip )
@@ -684,33 +674,33 @@ namespace sw
                 SkeletalAnimatorComponent* pAnimator = pObject->addComponent<SkeletalAnimatorComponent>();
                 if ( pAnimator != nullptr )
                 {
-                    pAnimator->setClipFolder( kBenchFaceClips );
-                    pAnimator->setInitialState( "Talk" );
+                    pAnimator->setClipFolder( _settings._faceClips.c_str() );
+                    pAnimator->setInitialState( _settings._faceTalkClip.c_str() );
                 }
             }
             FacialAnimationComponent* pFace = pObject->addComponent<FacialAnimationComponent>();
             if ( pFace == nullptr )
                 continue;
-            pFace->setFacialRigPath( kBenchFaceRig );
+            pFace->setFacialRigPath( _settings._faceRig.c_str() );
             pFace->setLookAtTarget( lookAt );
             if ( bTalkClip )
-                (void)pFace->setExpressionWeight( hashed_string( "Happy" ), 0.6f );
+                (void)pFace->setExpressionWeight( hashed_string( _settings._faceExpression.c_str() ), _settings._faceExpressionWeight );
             else
-                (void)pFace->speak( kBenchFaceVoice );
+                (void)pFace->speak( _settings._faceVoice.c_str() );
             _listBenchExtra.push_back( pMesh->getHandle() );
         }
 
-        spawnLight( pScene, 2.0f );
+        spawnLight( pScene, _settings._faceLightHalfExtent );
         _bFaceFraming = SW_TRUE;
         frameFaceCameras( pScene );
-        SW_LOG_INFO( "[Bench] 씬 '%#' 에 시험 머리 %#개를 세웠습니다(%#).", pScene->getName(), faceCount, kBenchFaceMesh );
+        SW_LOG_INFO( "[Bench] 씬 '%#' 에 시험 머리 %#개를 세웠습니다(%#).", pScene->getName(), faceCount, _settings._faceMesh.c_str() );
     }
 
-    float32 BenchScene::computeFaceCameraDistance( uint32 faceCount )
+    float32 BenchScene::computeFaceCameraDistance( uint32 faceCount ) const
     {
         // 머리 줄(폭 + 여유)이 화면 폭에 차는 거리 — 기본 카메라 시야 · 16:9 에서 측정한 근사다.
-        const float32 rowWidth = static_cast<float32>( MathUtil::max( faceCount, 1u ) ) * kBenchFaceSpacing;
-        return MathUtil::max( 0.6f, rowWidth * 1.1f );
+        const float32 rowWidth = static_cast<float32>( MathUtil::max( faceCount, 1u ) ) * _settings._faceSpacing;
+        return MathUtil::max( _settings._faceCameraMinDistance, rowWidth * _settings._faceCameraWidthMargin );
     }
 
     void BenchScene::frameFaceCameras( Scene* pScene )
@@ -720,15 +710,15 @@ namespace sw
         const float32 distance = computeFaceCameraDistance( static_cast<uint32>( MathUtil::max( gv_benchFaces, 1 ) ) );
         for ( CameraComponent* pCamera : pScene->getObjectManager()->getCameraRegistry().getAll() )
         {
-            pCamera->setLocalPosition( float3{ 0.0f, kBenchFaceHeight, -distance } );
-            pCamera->lookAt( float3{ 0.0f, kBenchFaceHeight, 0.0f } );
+            pCamera->setLocalPosition( float3{ 0.0f, _settings._faceHeight, -distance } );
+            pCamera->lookAt( float3{ 0.0f, _settings._faceHeight, 0.0f } );
         }
     }
 
-    float32 BenchScene::computeCharacterHalfExtent( uint32 characterCount )
+    float32 BenchScene::computeCharacterHalfExtent( uint32 characterCount ) const
     {
         const uint32 columns = ( gv_benchCharacterColumns > 0 ) ? MathUtil::min( static_cast<uint32>( gv_benchCharacterColumns ), characterCount ) : characterCount;
-        return MathUtil::max( 2.0f, 0.5f * static_cast<float32>( columns ) * kBenchCharacterSpacing );
+        return MathUtil::max( _settings._characterMinHalfExtent, 0.5f * static_cast<float32>( columns ) * _settings._characterSpacing );
     }
 
     void BenchScene::frameCharacterCameras( Scene* pScene, float32 halfExtent )
@@ -739,20 +729,20 @@ namespace sw
         // 격자(`-gv_benchCharacterColumns`)면 앞 위에서 격자 가운데를 내려다본다 — 앞줄은 크고 뒷줄은 작다.
         const uint32  characterCount = static_cast<uint32>( MathUtil::max( gv_benchCharacters, 1 ) );
         const uint32  columns        = ( gv_benchCharacterColumns > 0 ) ? static_cast<uint32>( gv_benchCharacterColumns ) : characterCount;
-        const float32 depth          = static_cast<float32>( ( characterCount + columns - 1 ) / columns - 1 ) * kBenchCharacterSpacing;
+        const float32 depth          = static_cast<float32>( ( characterCount + columns - 1 ) / columns - 1 ) * _settings._characterSpacing;
         for ( CameraComponent* pCamera : pScene->getObjectManager()->getCameraRegistry().getAll() )
         {
             const float32 tanHalf  = MathUtil::tan( pCamera->getFieldOfViewY() * 0.5f );
-            const float32 distance = ( tanHalf > MathUtil::kEpsilon ) ? ( halfExtent * 1.2f / tanHalf ) : ( halfExtent * 3.0f );
+            const float32 distance = ( tanHalf > MathUtil::kEpsilon ) ? ( halfExtent * _settings._characterFrameMargin / tanHalf ) : ( halfExtent * 3.0f );
             if ( depth <= 0.0f )
             {
-                pCamera->setLocalPosition( float3{ 0.0f, 1.4f, -distance } );
-                pCamera->lookAt( float3{ 0.0f, 0.9f, 0.0f } );
+                pCamera->setLocalPosition( float3{ 0.0f, _settings._characterEyeHeight, -distance } );
+                pCamera->lookAt( float3{ 0.0f, _settings._characterLookHeight, 0.0f } );
                 continue;
             }
-            pCamera->setLocalPosition( float3{ 0.0f, 0.35f * distance, -distance * 0.6f } );
+            pCamera->setLocalPosition( float3{ 0.0f, _settings._crowdEyeHeightRatio * distance, -distance * _settings._crowdBackRatio } );
             pCamera->setFarPlane( MathUtil::max( pCamera->getFarPlane(), ( distance + depth ) * 2.0f ) );
-            pCamera->lookAt( float3{ 0.0f, 0.9f, depth * 0.4f } );
+            pCamera->lookAt( float3{ 0.0f, _settings._characterLookHeight, depth * _settings._crowdLookDepthRatio } );
         }
     }
 
@@ -780,7 +770,7 @@ namespace sw
         if ( pSceneMaterial != nullptr )
             pMesh->setMaterial( pSceneMaterial );
         // 격자를 원점 기준으로 X/Z 양쪽에 펼친다 — 카메라를 정면에서 뒤로 빼면 전부 들어온다.
-        const float3 position{ origin + static_cast<float32>( col ) * kBenchSpacing, 0.0f, origin + static_cast<float32>( row ) * kBenchSpacing };
+        const float3 position{ origin + static_cast<float32>( col ) * _settings._cubeSpacing, 0.0f, origin + static_cast<float32>( row ) * _settings._cubeSpacing };
         pMesh->setLocalPosition( position );
 
         // GPU 가 이 큐브를 돌린다 — 시드가 각속도와 방향을 정하므로 큐브마다 속도가 다르다.
@@ -801,7 +791,7 @@ namespace sw
                 unique_ptr<TextWidget> number = make_unique<TextWidget>();
                 number->setText( to_string( 100u + index % 900u ) );
                 pMarker->setSpace( WidgetSpace::Screen );
-                pMarker->setWorldOffset( float3{ 0.0f, 1.0f, 0.0f } );
+                pMarker->setWorldOffset( float3{ 0.0f, _settings._markerHeight, 0.0f } );
                 pMarker->setContent( std::move( number ) );
             }
         }
@@ -815,7 +805,7 @@ namespace sw
             BenchMoverComponent* pMover = pObject->addComponent<BenchMoverComponent>();
             if ( pMover == nullptr )
                 break;
-            pMover->setTarget( pMesh, position, static_cast<float32>( index ) * 0.37f,
+            pMover->setTarget( pMesh, position, static_cast<float32>( index ) * _settings._wavePhaseStep,
                                moverIndex == 0 && gv_benchAnimate != 0 && ( index % 100u ) < movePercent );
         }
         return pMesh;
@@ -830,7 +820,7 @@ namespace sw
             return;
 
         const uint32  side   = MathUtil::max( _benchGridSide, 1u );
-        const float32 origin = -0.5f * static_cast<float32>( side - 1 ) * kBenchSpacing;
+        const float32 origin = -0.5f * static_cast<float32>( side - 1 ) * _settings._cubeSpacing;
         for ( uint32 step = 0; step < churnCount; ++step )
         {
             const uint32 index = _churnCursor;
@@ -891,12 +881,12 @@ namespace sw
 
         // 그림자 볼륨은 씬을 덮어야 한다. 엔진 기본값은 2 유닛이라 142 유닛 격자에서는
         // 그림자가 원점 근처 몇 개에만 걸린다.
-        pLight->setShadowExtent( halfExtent * 1.15f );
-        pLight->setShadowDistance( halfExtent * 1.5f );
+        pLight->setShadowExtent( halfExtent * _settings._shadowExtentRatio );
+        pLight->setShadowDistance( halfExtent * _settings._shadowDistanceRatio );
         pLight->setCastShadow( true );
-        pLight->setIntensity( 1.6f );
+        pLight->setIntensity( _settings._keyLightIntensity );
 
-        SW_LOG_INFO( "[Bench] 주광을 만들었습니다 (그림자 볼륨 반경 %#).", static_cast<int32>( halfExtent * 1.15f ) );
+        SW_LOG_INFO( "[Bench] 주광을 만들었습니다 (그림자 볼륨 반경 %#).", static_cast<int32>( halfExtent * _settings._shadowExtentRatio ) );
     }
 
     void BenchScene::spawnBenchLights( Scene* pScene, float32 halfExtent )
@@ -910,7 +900,7 @@ namespace sw
 
         // 반경은 비용을 정하는 값이다 — 기본값은 격자 간격의 몇 배로 두어, 한 픽셀에 라이트가
         // 여럿 닿게 한다(그래야 루프가 실제로 돌아 라이트 수에 따른 비용이 측정된다).
-        const float32 radius = ( gv_benchLightRadius > 0.0f ) ? gv_benchLightRadius : ( kBenchSpacing * 3.0f );
+        const float32 radius = ( gv_benchLightRadius > 0.0f ) ? gv_benchLightRadius : ( _settings._cubeSpacing * _settings._lightRadiusSpacingRatio );
 
         for ( int32 lightIndex = 0; lightIndex < lightCount; ++lightIndex )
         {
@@ -925,7 +915,7 @@ namespace sw
             const float32 unitZ = static_cast<float32>( ( hash >> 20 ) & 0x3FFu ) / 1023.0f;
 
             const float3 position{ ( unitX * 2.0f - 1.0f ) * halfExtent,
-                                   1.0f + unitY * 3.0f,
+                                   _settings._lightMinHeight + unitY * _settings._lightHeightRange,
                                    ( unitZ * 2.0f - 1.0f ) * halfExtent };
             const float3 color{ 0.3f + unitZ * 0.7f, 0.3f + unitX * 0.7f, 0.3f + unitY * 0.7f };
 
@@ -940,10 +930,10 @@ namespace sw
                 if ( pSpot == nullptr )
                     continue;
                 pSpot->setColor( color );
-                pSpot->setIntensity( 4.0f );
+                pSpot->setIntensity( _settings._spotLightIntensity );
                 pSpot->setRadius( radius );
-                pSpot->setOuterConeAngle( 0.6f );
-                pSpot->setInnerConeAngle( 0.25f );
+                pSpot->setOuterConeAngle( _settings._spotOuterConeAngle );
+                pSpot->setInnerConeAngle( _settings._spotInnerConeAngle );
                 pSpot->setLocalPosition( position ); // 회전은 주지 않는다 — 기본 방향이 아래다
                 _listBenchExtra.push_back( pSpot->getHandle() );
                 continue;
@@ -953,7 +943,7 @@ namespace sw
             if ( pPoint == nullptr )
                 continue;
             pPoint->setColor( color );
-            pPoint->setIntensity( 2.5f );
+            pPoint->setIntensity( _settings._pointLightIntensity );
             pPoint->setRadius( radius );
             pPoint->setLocalPosition( position );
             _listBenchExtra.push_back( pPoint->getHandle() );
@@ -979,11 +969,11 @@ namespace sw
             return;
 
         // 격자보다 넉넉히 크게 — 그림자 볼륨 가장자리가 화면 안에 들어오면 "그림자가 잘렸다" 로 오인한다.
-        const float32 size = halfExtent * 2.6f;
-        pMesh->setMesh( MeshUtil::createPlane( 24 ) );
+        const float32 size = halfExtent * _settings._groundSizeRatio;
+        pMesh->setMesh( MeshUtil::createPlane( _settings._groundSegmentCount ) );
         pMesh->setLocalScale( float3{ size, 1.0f, size } );
         // 평면의 면은 로컬 y = 0 이다 — 큐브 아랫면(-0.5)보다 조금 더 아래로 내린다.
-        pMesh->setLocalPosition( float3{ 0.0f, -0.6f, 0.0f } );
+        pMesh->setLocalPosition( float3{ 0.0f, _settings._groundHeight, 0.0f } );
         pMesh->setVisible( true );
         _listBenchExtra.push_back( pMesh->getHandle() );
 
@@ -1012,17 +1002,18 @@ namespace sw
             CameraRenderOutput output;
             output._target              = CameraOutputTarget::RenderTexture;
             output._renderTexture       = string( texture.c_str() );
-            output._renderTextureWidth  = 512;
-            output._renderTextureHeight = 512;
+            output._renderTextureWidth  = _settings._viewTextureSize;
+            output._renderTextureHeight = _settings._viewTextureSize;
             pCamera->setRole( CameraRole::Capture );
             const float32 angle = 2.0f * MathUtil::kPi * static_cast<float32>( viewIndex ) / static_cast<float32>( viewCount );
-            pCamera->setLocalPosition( float3{ MathUtil::cos( angle ) * halfExtent * 1.5f, halfExtent * 0.6f, MathUtil::sin( angle ) * halfExtent * 1.5f } );
-            pCamera->setFarPlane( MathUtil::max( pCamera->getFarPlane(), halfExtent * 6.0f ) );
+            pCamera->setLocalPosition( float3{ MathUtil::cos( angle ) * halfExtent * _settings._viewRadiusRatio, halfExtent * _settings._viewHeightRatio,
+                                               MathUtil::sin( angle ) * halfExtent * _settings._viewRadiusRatio } );
+            pCamera->setFarPlane( MathUtil::max( pCamera->getFarPlane(), halfExtent * _settings._viewFarRatio ) );
             pCamera->lookAt( float3{ 0.0f, 0.0f, 0.0f } );
             pCamera->setRenderOutput( output );
             _listBenchExtra.push_back( pCamera->getHandle() );
         }
-        SW_LOG_INFO( "[Bench] 캡처 카메라 %#개(렌더 텍스처 512²)를 격자 둘레에 두었습니다.", viewCount );
+        SW_LOG_INFO( "[Bench] 캡처 카메라 %#개(렌더 텍스처 %#²)를 격자 둘레에 두었습니다.", viewCount, _settings._viewTextureSize );
     }
 
     void BenchScene::frameCameras( Scene* pScene, uint32 side, float32 spacing )
@@ -1057,7 +1048,7 @@ namespace sw
         // 격자는 카메라 축(Z)으로도 ±halfExtent 펼쳐져 있다. 중심까지의 거리만 쓰면 가까운 쪽이
         // 화면을 넘치고, 깊이까지 다 빼면 격자가 점처럼 작아진다 — 절반만 더한다.
         // 높이는 낮게 둔다. 높이 올려 내려다보면 격자가 화면 아래쪽으로 쏠린다.
-        const float32 height = halfExtent * kBenchCameraMargin;
+        const float32 height = halfExtent * _settings._cameraHeightRatio;
         pCamera->setLocalPosition( float3{ 0.0f, height, -( distance + halfExtent * 0.5f ) } );
         pCamera->setFarPlane( MathUtil::max( pCamera->getFarPlane(), ( halfExtent + distance ) * 3.0f ) );
         pCamera->lookAt( float3{ 0.0f, 0.0f, 0.0f } );
@@ -1072,7 +1063,7 @@ namespace sw
         _benchElapsed += deltaTime;
 
         // 에디터 뷰포트 카메라는 게임 onInitialize 보다 늦게 만들어진다. 한 번만 다시 맞춘다.
-        if ( _bRefreshedCameras == SW_FALSE && _benchElapsed > 0.5f )
+        if ( _bRefreshedCameras == SW_FALSE && _benchElapsed > _settings._cameraRefreshDelay )
         {
             _bRefreshedCameras = SW_TRUE;
             if ( SceneManager* pSceneManager = game::findSubsystem<SceneManager>() )
@@ -1086,7 +1077,7 @@ namespace sw
                     else if ( _bCharacterFraming == SW_TRUE )
                         frameCharacterCameras( pScene, computeCharacterHalfExtent( static_cast<uint32>( MathUtil::max( gv_benchCharacters, 1 ) ) ) );
                     else
-                        frameCameras( pScene, _benchGridSide, kBenchSpacing );
+                        frameCameras( pScene, _benchGridSide, _settings._cubeSpacing );
                 }
             }
         }
@@ -1114,7 +1105,7 @@ namespace sw
         // 배치는 핸들 해석·필드 쓰기·더티 표시를 워커에 나누고 세대를 한 번만 올린다.
         const uint32  count       = _listInstanceBatch.empty() ? static_cast<uint32>( _listBenchMesh.size() ) : _instanceCubeCount;
         const uint32  side        = MathUtil::max( _benchGridSide, 1u );
-        const float32 origin      = -0.5f * static_cast<float32>( side - 1 ) * kBenchSpacing;
+        const float32 origin      = -0.5f * static_cast<float32>( side - 1 ) * _settings._cubeSpacing;
         const uint32  movePercent = static_cast<uint32>( MathUtil::clamp( gv_benchMovePercent, 0, 100 ) );
         if ( _listInstanceBatch.empty() == false )
         {
@@ -1125,12 +1116,12 @@ namespace sw
             {
                 if ( ( index % 100u ) >= movePercent )
                     continue;
-                const float32 phase = static_cast<float32>( index ) * 0.37f;
+                const float32 phase = static_cast<float32>( index ) * _settings._wavePhaseStep;
                 const float32 wave  = MathUtil::sin( _benchElapsed + phase );
-                const float3  position{ origin + static_cast<float32>( index % side ) * kBenchSpacing,
-                                       wave * 0.75f,
-                                       origin + static_cast<float32>( index / side ) * kBenchSpacing };
-                const float32 scale = 0.6f + 0.4f * MathUtil::abs( wave );
+                const float3  position{ origin + static_cast<float32>( index % side ) * _settings._cubeSpacing,
+                                       wave * _settings._waveHeight,
+                                       origin + static_cast<float32>( index / side ) * _settings._cubeSpacing };
+                const float32 scale = _settings._waveScaleMin + _settings._waveScaleRange * MathUtil::abs( wave );
                 _listInstanceBatch[index % variantCount]->setWorld(
                     index / variantCount, float4x4::makeTrs( position, float3{ 0.0f, 0.0f, 0.0f }, float3{ scale, scale, scale } ) );
             }
@@ -1148,16 +1139,16 @@ namespace sw
                 continue;
             // 인덱스마다 위상을 어긋나게 해 전부 같은 값이 되지 않도록 한다 — 전부 같으면
             // 배치 키는 물론 트랜스폼까지 동일해져 실제와 다른(너무 좋은) 결과가 나온다.
-            const float32 phase = static_cast<float32>( index ) * 0.37f;
+            const float32 phase = static_cast<float32>( index ) * _settings._wavePhaseStep;
             const float32 wave  = MathUtil::sin( _benchElapsed + phase );
 
             // 격자 자리는 생성 때와 같은 식으로 — 핸들을 풀어 읽지 않는다(그 읽기가 배치 쓰기 비용의 3 분의 1 쯤 된다).
             _listTransformWrite.emplace_back();
             SceneTransformWrite& write = _listTransformWrite.back();
             write._handle              = _listBenchMesh[index];
-            write._localPosition       = float3{ origin + static_cast<float32>( index % side ) * kBenchSpacing,
-                                           wave * 0.75f,
-                                           origin + static_cast<float32>( index / side ) * kBenchSpacing };
+            write._localPosition       = float3{ origin + static_cast<float32>( index % side ) * _settings._cubeSpacing,
+                                           wave * _settings._waveHeight,
+                                           origin + static_cast<float32>( index / side ) * _settings._cubeSpacing };
             write._bSetPosition        = SW_TRUE;
             // 회전은 **컴퓨트가 만든다**(instanceanimation.hlsl) — 시드 해시가 인스턴스마다 속도와 방향을 갈라 준다
             // (속도가 하나면 큐브가 몇 천 개여도 한 덩어리처럼 보인다). CPU 가 여기서 회전을 다시 쓰면 GPU 가 쓴 값을
@@ -1165,7 +1156,7 @@ namespace sw
 
             // 스케일도 흔든다 — 위치·회전만 바꾸면 월드 행렬의 회전/이동 성분만 갱신되므로
             // 스케일 경로(및 바운드 반지름을 쓰는 컬링)가 검증되지 않는다.
-            const float32 scale = 0.6f + 0.4f * MathUtil::abs( wave );
+            const float32 scale = _settings._waveScaleMin + _settings._waveScaleRange * MathUtil::abs( wave );
             write._localScale   = float3{ scale, scale, scale };
             write._bSetScale    = SW_TRUE;
         }

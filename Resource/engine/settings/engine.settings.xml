@@ -56,11 +56,11 @@
 	</Setting>
 	<Setting id="graphics.renderScale" category="graphics" type="float" default="1" min="0.5" max="1" step="0.05" target="gv:gv_renderScale"
 	         enabledWhen="graphics.upscaler=off" text="settings.graphics.renderScale"/>
-	<Setting id="graphics.shadowQuality" category="graphics" type="enum" default="high" target="gv:gv_shadowQuality" text="settings.graphics.shadowQuality">
-		<Option value="low"/>
-		<Option value="medium"/>
-		<Option value="high"/>
-		<Option value="ultra"/>
+	<Setting id="graphics.shadowQuality" category="graphics" type="enum" default="high" target="gv:gv_shadowMapResolution" text="settings.graphics.shadowQuality">
+		<Option value="low" targetValue="1024"/>
+		<Option value="medium" targetValue="1536"/>
+		<Option value="high" targetValue="2048"/>
+		<Option value="ultra" targetValue="4096"/>
 	</Setting>
 	<Setting id="graphics.viewDistance" category="graphics" type="float" default="1" min="0.25" max="2" step="0.25" target="gv:gv_viewDistanceScale" text="settings.graphics.viewDistance"/>
 	<Setting id="graphics.foliageDensity" category="graphics" type="float" default="1" min="0" max="1.5" step="0.25" target="gv:gv_foliageDensity" text="settings.graphics.foliageDensity"/>

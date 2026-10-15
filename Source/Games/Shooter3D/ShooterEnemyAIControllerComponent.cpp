@@ -18,9 +18,7 @@ namespace sw
     {
         struct ShooterEnemyAIControllerComponentInternal
         {
-            static constexpr const utf8* kAttack       = "Attack";
-            static constexpr float32     kStopFraction = 0.85f; ///< 손 닿는 거리의 이 비율 안이면 멈춰 선다
-            static constexpr float32     kFocusHeight  = 1.0f;  ///< 플레이어 발에서 바라보는 높이
+            static constexpr const utf8* kAttack = "Attack";
 
             /** @brief 몸의 단계를 판단 상태 이름으로 바꿉니다(탐침 `AI.State`). */
             static const utf8* getStateName( ShooterEnemyPhase phase )
@@ -48,6 +46,7 @@ namespace sw
 {
     ShooterEnemyAIControllerComponent::ShooterEnemyAIControllerComponent()
         : _retargetDistance{ 0.5f }
+        , _focusHeight{ 1.0f }
     {
     }
 
@@ -73,7 +72,7 @@ namespace sw
         const float32 deltaX   = target._x - position._x;
         const float32 deltaZ   = target._z - position._z;
         const float32 distance = MathUtil::sqrt( deltaX * deltaX + deltaZ * deltaZ );
-        const float3  focus    = target + float3{ 0.0f, Internal::kFocusHeight, 0.0f };
+        const float3  focus    = target + float3{ 0.0f, _focusHeight, 0.0f };
         holdButton( attack, distance < pEnemy->getReach() && pDirector->isPlayerAlive() );
 
         const ShooterEnemyPhase phase = pEnemy->getPhase();
@@ -88,7 +87,7 @@ namespace sw
                 clearFocus();
             return;
         }
-        if ( distance <= pEnemy->getReach() * Internal::kStopFraction )
+        if ( distance <= pEnemy->getReach() * pEnemy->getStopFraction() )
         {
             stopMoving();
             setFocus( focus );

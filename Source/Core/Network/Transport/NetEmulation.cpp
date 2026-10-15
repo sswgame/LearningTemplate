@@ -21,28 +21,6 @@ namespace sw
             static constexpr uint32  kDefaultRandom = HashUtil::kGoldenRatio32;
             static constexpr uint8   kCorruptMask   = 0x5A; ///< 깨짐 — 고른 바이트에 XOR 한다
 
-            /** @brief 회선 프리셋 하나입니다(한 방향). 값은 흔한 회선의 체감값이며, 정확한 측정값이 아니라 나쁜 정도의 단계입니다. */
-            struct Preset
-            {
-                const utf8* _pName;
-                int32       _latencyMs;
-                int32       _jitterMs;
-                float32     _lossPercent;
-                float32     _duplicatePercent;
-                float32     _reorderPercent;
-                int32       _bandwidthKilobytesPerSecond;
-            };
-
-            static constexpr Preset kArrPreset[] = {
-                {         "off",  0,  0,   0.0f, 0.0f, 0.0f,    0},
-                {         "lan",  1,  0,   0.0f, 0.0f, 0.0f,    0},
-                {        "wifi", 10,  5,   0.5f, 0.0f, 0.0f,    0},
-                {         "lte", 35, 15,   1.0f, 0.0f, 0.5f, 1024},
-                {     "badwifi", 80, 40,   5.0f, 1.0f, 2.0f,  256},
-                {"disconnected",  0,  0, 100.0f, 0.0f, 0.0f,    0},
-            };
-            static constexpr const utf8* kPresetNames = "off, lan, wifi, lte, badwifi, disconnected";
-
             /** @brief 0 이상 숫자를 읽습니다. */
             [[nodiscard]] static bool parseNonNegative( string_view text, float32& outValue ) { return StringUtil::parseFloat( text, outValue ) && outValue >= 0.0f; }
 
@@ -69,7 +47,6 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmuDuplicatePercent, 0, "네트워크 흉내: 중복(%) — PktDup" );
     SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmuReorderPercent, 0, "네트워크 흉내: 순서 뒤바뀜(%) — PktOrder" );
     SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmuBandwidthKilobytesPerSecond, 0, "네트워크 흉내: 회선 속도(KB/s, 0=제한 없음)" );
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_netEmuPreset, "", "네트워크 흉내: 회선 프리셋(off · lan · wifi · lte · badwifi — 비면 위 값들, 있으면 위 값들을 무시)" );
 } // namespace sw
 
 namespace sw
@@ -84,13 +61,6 @@ namespace sw
     {
         using Internal = NetEmulationInternal;
         NetEmulationConditions conditions;
-        // 프리셋 이름이 있으면 그것이 전부다(부하 검증의 `<Load network>` · 하드웨어 프로필이 이 하나로 넘긴다 — 프리셋 표를 밖에 다시 적지 않는다).
-        if ( gv_netEmuPreset.empty() == false )
-        {
-            if ( tryGetPreset( gv_netEmuPreset, conditions ) == false )
-                SW_LOG_WARNING( "gv_netEmuPreset '%#' is not a preset (%#) - no emulation", gv_netEmuPreset.c_str(), Internal::kPresetNames );
-            return conditions;
-        }
         conditions._latency                 = static_cast<float64>( MathUtil::max( 0, gv_netEmuLatencyMs ) ) * Internal::kMillisecond;
         conditions._jitter                  = static_cast<float64>( MathUtil::max( 0, gv_netEmuJitterMs ) ) * Internal::kMillisecond;
         conditions._lossRate                = static_cast<float32>( MathUtil::clamp( gv_netEmuLossPercent, 0, 100 ) ) * Internal::kPercent;
@@ -98,30 +68,6 @@ namespace sw
         conditions._reorderRate             = static_cast<float32>( MathUtil::clamp( gv_netEmuReorderPercent, 0, 100 ) ) * Internal::kPercent;
         conditions._bandwidthBytesPerSecond = MathUtil::max( 0, gv_netEmuBandwidthKilobytesPerSecond ) * static_cast<int32>( constant::kBytesPerKilobyte );
         return conditions;
-    }
-
-    bool NetEmulationConditions::tryGetPreset( string_view presetName, NetEmulationConditions& outConditions )
-    {
-        using Internal = NetEmulationInternal;
-        for ( const Internal::Preset& preset : Internal::kArrPreset )
-        {
-            if ( StringUtil::equals( presetName, preset._pName, true ) == false )
-                continue;
-            outConditions                          = NetEmulationConditions{};
-            outConditions._latency                 = static_cast<float64>( preset._latencyMs ) * Internal::kMillisecond;
-            outConditions._jitter                  = static_cast<float64>( preset._jitterMs ) * Internal::kMillisecond;
-            outConditions._lossRate                = preset._lossPercent * Internal::kPercent;
-            outConditions._duplicateRate           = preset._duplicatePercent * Internal::kPercent;
-            outConditions._reorderRate             = preset._reorderPercent * Internal::kPercent;
-            outConditions._bandwidthBytesPerSecond = preset._bandwidthKilobytesPerSecond * static_cast<int32>( constant::kBytesPerKilobyte );
-            return true;
-        }
-        return false;
-    }
-
-    const utf8* NetEmulationConditions::getPresetNames()
-    {
-        return NetEmulationInternal::kPresetNames;
     }
 
     bool NetEmulationConditions::parseOverrides( string_view text, NetEmulationConditions& inoutConditions, string& outError )

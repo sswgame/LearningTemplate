@@ -10,8 +10,10 @@
 
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "sw/config/CookContract.gen.h"
+#include "sw/config/ShippingHostDefaults.h"
 
 namespace sw
 {
@@ -29,6 +31,23 @@ namespace sw
              *          반대 순서로 잡는 곳은 없습니다.
              */
             inline static std::once_flag _s_initOnce{};
+
+            /** @brief 구성 때 구운 `EngineConfig.json` 사본의 `_listResourcePriority` 입니다. 읽지 못하면 오류를 남기고 빈 목록입니다. */
+            static vector<string> readBasePriority()
+            {
+                vector<string> listPriority;
+                JSONDocument   document;
+                if ( document.parse( shipping_host::kEngineConfigJSON, "EngineConfig.json (configure-time copy)" ) == false )
+                    return listPriority;
+                const JSONValue priority = document.getRoot().get( "_listResourcePriority", false );
+                for ( size_t index = 0; index < priority.size(); ++index )
+                {
+                    listPriority.push_back( priority.at( index ).asString() );
+                }
+                if ( listPriority.empty() )
+                    SW_LOG_ERROR( "EngineConfig.json has no _listResourcePriority - resource lookups before the config loads find nothing" );
+                return listPriority;
+            }
 
             /**
              * @brief 전역 ID(`engine/` · `common/` · `editor/` · `game/<pack>/`)를 도메인 루트로 매핑합니다.
@@ -469,7 +488,9 @@ namespace sw
 
     const vector<string>& ResourcePaths::getDefaultSearchPriority()
     {
-        static const vector<string> s_listDefaultPriority = EngineConfig{}._listResourcePriority;
+        // 값의 출처는 `Config/Engine/EngineConfig.json` 하나다. 기동의 이 시점에는 설정을 아직 읽지 않았으므로 구성 때 구운 같은 파일의 사본에서
+        // 이 칸만 읽는다(리플렉션이 서기 전이라 JSON 문서로). 실행 중 값은 설정을 읽은 뒤 `AssetManager::mountContent` 가 다시 넣는다.
+        static const vector<string> s_listDefaultPriority = ResourcePathsInternal::readBasePriority();
         return s_listDefaultPriority;
     }
 

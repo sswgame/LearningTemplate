@@ -194,21 +194,10 @@ SW_TEST_CASE( NetEmulationTest, CorruptionFlipsOneBytePerPacket )
 }
 
 /**
- * @brief [NetEmulationTest] 회선 프리셋을 이름으로 고르고(대소문자 무시), 키-값 덮어쓰기는 틀리면 아무것도 바꾸지 않는다(회선 조절 S4 의 개발 명령 · 에디터 패널이 쓴다)
+ * @brief [NetEmulationTest] 키-값 덮어쓰기는 틀리면 아무것도 바꾸지 않는다(회선 조절 S4 의 개발 명령 · 에디터 패널이 쓴다). 이름 있는 프리셋은 Engine 의 표다(`NetEmulationPresetTableTest`)
  */
-SW_TEST_CASE( NetEmulationTest, PresetsAndOverridesMakeConditions )
+SW_TEST_CASE( NetEmulationTest, OverridesMakeConditions )
 {
-    NetEmulationConditions conditions;
-    SW_ASSERT_TRUE( NetEmulationConditions::tryGetPreset( "LTE", conditions ) );
-    SW_EXPECT_NEAR_EQUAL( conditions._latency, 0.035, 1.0e-9 );
-    SW_EXPECT_EQUAL( conditions._bandwidthBytesPerSecond, 1024 * 1024 );
-    SW_EXPECT_TRUE( conditions.isActive() );
-    SW_ASSERT_TRUE( NetEmulationConditions::tryGetPreset( "off", conditions ) );
-    SW_EXPECT_FALSE( conditions.isActive() );
-    SW_ASSERT_TRUE( NetEmulationConditions::tryGetPreset( "disconnected", conditions ) );
-    SW_EXPECT_NEAR_EQUAL( conditions._lossRate, 1.0f, 1.0e-6f );
-    SW_EXPECT_FALSE( NetEmulationConditions::tryGetPreset( "dialup", conditions ) );
-
     NetEmulationConditions overridden;
     string                 error;
     SW_ASSERT_TRUE( NetEmulationConditions::parseOverrides( "latencyMs=80  jitterMs=20 lossPercent=5 bandwidthKBps=256", overridden, error ) );
@@ -226,12 +215,20 @@ SW_TEST_CASE( NetEmulationTest, PresetsAndOverridesMakeConditions )
 /**
  * @brief [NetEmulationTest] 덮어쓰기 글을 만들어 다시 읽으면 같은 조건이다 — 에디터 회선 조절이 보내는 글과 개발 명령이 읽는 글이 한 정의를 쓴다
  */
-SW_TEST_CASE( NetEmulationTest, OverrideTextRoundTripsEveryPreset )
+SW_TEST_CASE( NetEmulationTest, OverrideTextRoundTrips )
 {
-    for ( const utf8* pPreset : { "off", "lan", "wifi", "lte", "badwifi", "disconnected" } )
+    NetEmulationConditions lte;
+    lte._latency                 = 0.035;
+    lte._jitter                  = 0.015;
+    lte._lossRate                = 0.01f;
+    lte._reorderRate             = 0.005f;
+    lte._bandwidthBytesPerSecond = 1024 * 1024;
+    NetEmulationConditions lossy;
+    lossy._latency       = 0.08;
+    lossy._lossRate      = 0.05f;
+    lossy._duplicateRate = 0.01f;
+    for ( const NetEmulationConditions& preset : { NetEmulationConditions{}, lte, lossy } )
     {
-        NetEmulationConditions preset;
-        SW_ASSERT_TRUE( NetEmulationConditions::tryGetPreset( pPreset, preset ) );
         const string           text = preset.makeOverrideText();
         NetEmulationConditions parsed;
         parsed._latency = 9.0; // 글이 모든 키를 써서 앞 상태를 덮는지 본다
@@ -244,8 +241,6 @@ SW_TEST_CASE( NetEmulationTest, OverrideTextRoundTripsEveryPreset )
         SW_EXPECT_NEAR_EQUAL( parsed._reorderRate, preset._reorderRate, 1.0e-5f );
         SW_EXPECT_EQUAL( parsed._bandwidthBytesPerSecond, preset._bandwidthBytesPerSecond );
     }
-    NetEmulationConditions lte;
-    SW_ASSERT_TRUE( NetEmulationConditions::tryGetPreset( "lte", lte ) );
     SW_EXPECT_EQUAL( lte.makeOverrideText(), string( "latencyMs=35 jitterMs=15 lossPercent=1 duplicatePercent=0 reorderPercent=0.5 bandwidthKBps=1024" ) );
 }
 

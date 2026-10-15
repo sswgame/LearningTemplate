@@ -62,6 +62,10 @@ namespace sw::editor
         [[nodiscard]] uint32 countNonDefaultKeys() const;
         /** @brief 파일에 쓸 글 — 기본값과 다른 키만 든 JSON 입니다(들여쓰기 4). 열려 있지 않으면 빈 글입니다. */
         [[nodiscard]] string makeDifferenceJSON() const;
+        /** @brief 타입이 바탕 층(`REFLECT( Meta = "ConfigBaseLayer" )` — 값이 파일에만 있다)이면 true 입니다. 그때 저장은 모든 키를 쓰고 되돌리기는 파일 값입니다. */
+        [[nodiscard]] bool isBaseLayer() const;
+
+        static constexpr const utf8* kBaseLayerMeta = "ConfigBaseLayer"; ///< 바탕 층 표시 메타
 
         /** @brief 편집할 현재 값입니다. 그리드가 직접 고친다. 열려 있지 않으면 nullptr 입니다. */
         void* getInstance() { return _pCurrent; }

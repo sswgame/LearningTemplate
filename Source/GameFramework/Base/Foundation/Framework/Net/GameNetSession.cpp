@@ -10,6 +10,7 @@
 #include "Core/Network/Message/NetStatsReport.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
 
+#include "Engine/Config/NetEmulationPresetTable.h"
 #include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
@@ -106,9 +107,15 @@ namespace sw
                 const bool             bPreset = listArgument.size() > 1 && listArgument[1].find( '=' ) == string::npos;
                 if ( bPreset )
                 {
-                    if ( NetEmulationConditions::tryGetPreset( listArgument[1], preset ) == false )
+                    NetEmulationPresetTable presetTable;
+                    if ( presetTable.loadFromResource() == false )
                     {
-                        outReply = "unknown preset '" + listArgument[1] + "' (" + NetEmulationConditions::getPresetNames() + ")";
+                        outReply = string( "net emulation presets could not be read (" ) + NetEmulationPresetTable::kResourcePath + ")";
+                        return true;
+                    }
+                    if ( presetTable.tryGetConditions( listArgument[1], preset ) == false )
+                    {
+                        outReply = "unknown preset '" + listArgument[1] + "' (" + presetTable.makePresetNames() + ")";
                         return true;
                     }
                     overrideStart = 2;
@@ -239,6 +246,11 @@ namespace sw
      *          다른 기계와 붙을 때만 0 으로 둔다. 클라이언트는 서버 주소가 루프백이 아닐 때 이 값과 상관없이 모든 인터페이스에 묶는다(답을 받아야 한다).
      */
     SW_TEST_GLOBAL_VARIABLE( bool, gv_netLoopbackOnly, true, "게임 UDP 소켓을 127.0.0.1 에만 묶는다 (0=모든 인터페이스, 다른 기계와 붙을 때)" );
+    /**
+     * @brief `-gv_netEmuPreset=<이름>`: 회선 흉내를 프리셋 표(`NetEmulationPresetTable`)의 한 줄로 둡니다. 있으면 `gv_netEmu*` 낱값을 무시합니다.
+     * @details 부하 검증의 `<Load network>` 와 하드웨어 프로필이 이 하나로 넘긴다 — 프리셋 값을 밖에 다시 적지 않는다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_netEmuPreset, "", "네트워크 흉내: 회선 프리셋 이름(engine/settings/netemulation.presets.xml — 비면 gv_netEmu* 낱값)" );
 } // namespace sw
 
 namespace sw
@@ -312,8 +324,16 @@ namespace sw
         INetTransport* pHostTransport = _transport.get();
 #if !defined( SW_SHIPPING )
         // 회선 조절(개발 명령 net.emulation)이 실행 중에 조건을 바꿀 수 있게 늘 감싼다. 조건이 꺼져 있으면 그대로 넘긴다.
-        _emulation = make_unique<NetEmulationTransport>( _transport.get() );
-        _emulation->setDefaultConditions( NetEmulationConditions::makeFromGlobalVariables() );
+        _emulation                                 = make_unique<NetEmulationTransport>( _transport.get() );
+        NetEmulationConditions emulationConditions = NetEmulationConditions::makeFromGlobalVariables();
+        if ( gv_netEmuPreset.empty() == false )
+        {
+            NetEmulationPresetTable presetTable;
+            emulationConditions = NetEmulationConditions{};
+            if ( presetTable.loadFromResource() && presetTable.tryGetConditions( gv_netEmuPreset, emulationConditions ) == false )
+                SW_LOG_ERROR( "gv_netEmuPreset '%#' is not a preset (%#) - no emulation", gv_netEmuPreset.c_str(), presetTable.makePresetNames().c_str() );
+        }
+        _emulation->setDefaultConditions( emulationConditions );
         pHostTransport = _emulation.get();
 #endif
         _host.initialize( pHostTransport, params._hostSettings );

@@ -939,4 +939,55 @@ namespace sw
         } );
     }
 
+    void SerializerUtil::collectRangeErrors( const TypeInfo& typeInfo, const void* pInstance, const string& prefix, vector<string>& outListError )
+    {
+        for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
+        {
+            const bool bSkipProperty = prop._bIsBitField == SW_TRUE || prop._bIsContainer == SW_TRUE || prop.hasValueAccessor();
+            if ( bSkipProperty )
+                continue;
+            const string    path    = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
+            const TypeInfo* pNested = findNestedObjectType( prop._typeName, SerializeContext::getDefault() );
+            if ( pNested != nullptr )
+            {
+                collectRangeErrors( *pNested, prop.getRawPtr( pInstance ), path, outListError );
+                continue;
+            }
+            const PropertyMetadata& meta = prop._metadata;
+            if ( meta._bHasMinRange == SW_FALSE && meta._bHasMaxRange == SW_FALSE )
+                continue;
+            float64           value    = 0.0;
+            const void* const pValue   = prop.getRawPtr( pInstance );
+            const string_view typeName = prop._typeName.view();
+            if ( typeName == "float32" || typeName == "float" )
+                value = static_cast<float64>( *static_cast<const float32*>( pValue ) );
+            else if ( typeName == "float64" || typeName == "double" )
+                value = *static_cast<const float64*>( pValue );
+            else if ( typeName == "int32" || typeName == "int" )
+                value = static_cast<float64>( *static_cast<const int32*>( pValue ) );
+            else if ( typeName == "uint32" )
+                value = static_cast<float64>( *static_cast<const uint32*>( pValue ) );
+            else if ( typeName == "int64" )
+                value = static_cast<float64>( *static_cast<const int64*>( pValue ) );
+            else if ( typeName == "uint64" )
+                value = static_cast<float64>( *static_cast<const uint64*>( pValue ) );
+            else if ( typeName == "int16" )
+                value = static_cast<float64>( *static_cast<const int16*>( pValue ) );
+            else if ( typeName == "uint16" )
+                value = static_cast<float64>( *static_cast<const uint16*>( pValue ) );
+            else if ( typeName == "int8" )
+                value = static_cast<float64>( *static_cast<const int8*>( pValue ) );
+            else if ( typeName == "uint8" )
+                value = static_cast<float64>( *static_cast<const uint8*>( pValue ) );
+            else
+                continue;
+            const bool bBelow = meta._bHasMinRange == SW_TRUE && value < static_cast<float64>( meta._minRange );
+            const bool bAbove = meta._bHasMaxRange == SW_TRUE && value > static_cast<float64>( meta._maxRange );
+            if ( bBelow == false && bAbove == false )
+                continue;
+            const string lower = meta._bHasMinRange == SW_TRUE ? to_string( meta._minRange ) : string( "-" );
+            const string upper = meta._bHasMaxRange == SW_TRUE ? to_string( meta._maxRange ) : string( "-" );
+            outListError.push_back( path + " = " + to_string( value ) + " is outside [" + lower + ", " + upper + "]" );
+        }
+    }
 } // namespace sw

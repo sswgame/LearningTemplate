@@ -53,6 +53,7 @@
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Telemetry/TelemetrySchema.h"
 #include "Engine/Text/FontCatalog.h"
 #include "Engine/TileMap/TileMapXML.h"
@@ -520,11 +521,25 @@ namespace
                     continue;
                 for ( size_t reflectPos = text.find( "REFLECT(" ); reflectPos != sw::string::npos; reflectPos = text.find( "REFLECT(", reflectPos + 1 ) )
                 {
-                    const size_t classPos = text.find( "class ", reflectPos );
-                    if ( classPos == sw::string::npos )
+                    // 다음 `class` · `struct` 중 가까운 것이 이 REFLECT 의 타입이다(설정 구조체도 게임 모듈 타입이다).
+                    const size_t classPos   = text.find( "class ", reflectPos );
+                    const size_t structPos  = text.find( "struct ", reflectPos );
+                    const bool   bStruct    = structPos != sw::string::npos && ( classPos == sw::string::npos || structPos < classPos );
+                    const size_t keywordPos = bStruct ? structPos : classPos;
+                    if ( keywordPos == sw::string::npos )
                         break;
-                    size_t nameStart = classPos + 6;
-                    size_t nameEnd   = nameStart;
+                    size_t nameStart = keywordPos + ( bStruct ? 7 : 6 );
+                    while ( nameStart < text.size() && text.compare( nameStart, 3, "SW_" ) == 0 )
+                    {
+                        // 내보내기 매크로(`SW_API` 등)를 건너뛴다.
+                        nameStart = text.find( ' ', nameStart );
+                        if ( nameStart == sw::string::npos )
+                            break;
+                        ++nameStart;
+                    }
+                    if ( nameStart == sw::string::npos )
+                        break;
+                    size_t nameEnd = nameStart;
                     while ( nameEnd < text.size() && ( std::isalnum( static_cast<uint8>( text[nameEnd] ) ) != 0 || text[nameEnd] == '_' ) )
                     {
                         ++nameEnd;
@@ -533,6 +548,25 @@ namespace
                         outListTypeName.push_back( text.substr( nameStart, nameEnd - nameStart ) );
                 }
             }
+        }
+
+        /** @brief XML 데이터의 루트 원소 이름이 게임 모듈 타입이면 true 입니다. */
+        static bool hasGameModuleRoot( const sw::string& resourceID, const sw::vector<sw::string>& listGameTypeName )
+        {
+            if ( endsWith( resourceID, ".xml" ) == false )
+                return false;
+            sw::XMLDocument document;
+            if ( document.loadPath( resourceID ) == false )
+                return false;
+            const sw::XMLNode root = document.getRoot( nullptr, false );
+            if ( root.isValid() == false || root.getName() == nullptr )
+                return false;
+            for ( const sw::string& typeName : listGameTypeName )
+            {
+                if ( typeName == root.getName() )
+                    return true;
+            }
+            return false;
         }
 
         /** @brief 모은 경고에서 게임 모듈 타입의 "모르는 타입" 줄을 뺀 나머지입니다. */
@@ -687,6 +721,10 @@ SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNa
         sw::string                               conflict;
         const bool                               bUnambiguous = ResourceDataSchemaInternal::findKind( resourceID, kind, conflict );
         SW_EXPECT_TRUE_MSG( bUnambiguous, ( "한 파일이 두 종류에 맞습니다: " + resourceID + " - " + conflict ).c_str() );
+        // 루트가 게임 모듈 타입인 리플렉션 데이터(`benchscene.xml` 의 `BenchSceneSettings`)는 그 게임 모듈이 데이터 종류로 등록한다 — 이 실행 파일은 게임 모듈을 올리지 않는다.
+        const bool bGameModuleData = kind._pLoad == nullptr && ResourceDataSchemaInternal::hasGameModuleRoot( resourceID, listGameTypeName );
+        if ( bGameModuleData )
+            continue;
         SW_EXPECT_TRUE_MSG( kind._pLoad != nullptr || bUnambiguous == false, ( "종류 표에 없는 데이터 파일입니다: " + resourceID ).c_str() );
         if ( bUnambiguous == false || kind._pLoad == nullptr )
             continue;

@@ -11,8 +11,10 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Resource/ResourceDataKind.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
+#include "Engine/Serialization/Format/ReflectedXMLFile.h"
 #include "Engine/UI/Animation/UIAnimationPlayer.h"
 #include "Engine/UI/Base/PanelWidget.h"
 #include "Engine/UI/Base/Widget.h"
@@ -24,6 +26,7 @@
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Layout/GridPanel.h"
+#include "Engine/UI/Layout/UIResolutionPresetTable.h"
 #include "Engine/UI/Layout/UIScale.h"
 #include "Engine/UI/Layout/WidgetLayoutSlot.h"
 #include "Engine/UI/Screen/UIScreen.h"
@@ -35,15 +38,6 @@ namespace sw::editor
     {
         struct UIPreviewLogicInternal
         {
-            static constexpr UIPreviewResolution kArrResolution[] = {
-                {       "1280x720 (HD)", 1280,  720},
-                { "1920x1080 (Full HD)", 1920, 1080},
-                {     "2560x1440 (QHD)", 2560, 1440},
-                {      "3840x2160 (4K)", 3840, 2160},
-                {    "2560x1080 (21:9)", 2560, 1080},
-                {"1080x1920 (Portrait)", 1080, 1920},
-            };
-            static constexpr uint32 kResolutionCount = static_cast<uint32>( sizeof( kArrResolution ) / sizeof( kArrResolution[0] ) );
             /// 의사 문화권 코드(정규 표기)입니다. 엔진 문화권 표(`LocalizationManager::normalizeLanguageCode`)가 쓰는 이름과 같다.
             static constexpr string_view kPseudoAccented = "qps_ploc";
             static constexpr string_view kPseudoMirrored = "qps_plocm";
@@ -82,20 +76,9 @@ namespace sw::editor
         };
     } // namespace
 
-    uint32 UIPreviewLogic::getResolutionCount()
+    UIViewport UIPreviewLogic::makeViewport( const UIScaleSettings& settings, const UIResolutionPreset& resolution, float32 userScale, float32 safeZoneRatio )
     {
-        return UIPreviewLogicInternal::kResolutionCount;
-    }
-
-    const UIPreviewResolution& UIPreviewLogic::getResolution( uint32 index )
-    {
-        return UIPreviewLogicInternal::kArrResolution[index < UIPreviewLogicInternal::kResolutionCount ? index : 0];
-    }
-
-    UIViewport UIPreviewLogic::makeViewport( const UIScaleSettings& settings, uint32 index, float32 userScale, float32 safeZoneRatio )
-    {
-        const UIPreviewResolution& resolution = getResolution( index );
-        const float2               physicalSize{ static_cast<float32>( resolution._width ), static_cast<float32>( resolution._height ) };
+        const float2 physicalSize{ static_cast<float32>( resolution._width ), static_cast<float32>( resolution._height ) };
         // 창 OS 배율은 1 — 미리보기는 해상도 규칙과 사용자 배율만 본다(모니터 DPI 는 게임 창의 일).
         return UIScaleUtil::makeViewport( settings, physicalSize, userScale, 1.0f, safeZoneRatio );
     }
