@@ -6,6 +6,7 @@
 
 #include "Core/Container/StringUtil.h"
 
+#include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
 #include "Editor/Panels/Inspector/InspectorComponentManager.h"
@@ -34,7 +35,7 @@ namespace sw::editor
                     if ( StringUtil::isNullOrEmpty( tag._pString ) == false )
                     {
                         ImGui::SameLine();
-                        EditorWidgets::drawChip( tag._pString, editor::style::kOk );
+                        EditorWidgets::drawChip( tag._pString, EditorThemeUtil::getSuccessColor() );
                     }
                 }
             }

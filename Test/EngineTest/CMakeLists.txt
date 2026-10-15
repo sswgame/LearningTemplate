@@ -49,6 +49,10 @@ list(APPEND swEngineTestExtensionSource ${swCharacterEditorModelSource})
 # 텍스처 표본기가 이미지 디코드를 맡기는 Editor 의 ImageUtil(stb_image 를 감싼다)도 직접 컴파일한다 - EditorModule 은 링크하지 않는다.
 # stb include 는 `stb` 타깃을 직접 링크해 얻는다(아래 LIBS) — 다른 타깃이 끌어오는 vcpkg include 폴더는 구성마다 있거나 없다.
 list(APPEND swEngineTestExtensionSource "${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ImageUtil.cpp")
+# 에디터 테마 토큰(editor/theme/*.tokens.json)의 순수 로더와 데이터 종류 등록 줄도 직접 컴파일한다 - 스키마 테스트가 그 파일을 실제 로더로 읽는다.
+list(APPEND swEngineTestExtensionSource
+	"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorThemeTokens.cpp"
+	"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorThemeTokensDataKind.cpp")
 
 # 테스트 소스는 이 폴더를 훑는다(꺼진 키트의 헤더를 include 하는 파일은 빠진다 — 프로젝트 매니페스트가 키트를 끄면 그 키트의 테스트도 짓지 않는다).
 # 갈래(`_NoGPU` · `_HostOnly`) · 조각 · 시간 · 느린 케이스의 비용표는 Test/TestPolicy.json.
@@ -72,6 +76,14 @@ sw_addTestExecutable(EngineTest
 # 없으면 ShaderBindingValidatorTest.ReflectionNamesAreUniformAcrossBackends 가 DXIL 리플렉션을
 # 못 얻어 "forwardlit_ps g_SwMaterials 원소 없음: dx12" 로 실패한다 — 셰이더가 아니라 도구가
 # 없어서 나는 실패라 원인을 찾기 어렵다.
+# 에디터 테마 토큰(EditorThemeDef)은 REFLECT 타입이라 StaticType() 이 코드젠에서 나온다. EditorModule 을 링크하지 않으므로 이 헤더만 따로 코드젠한다.
+sw_addReflectionStep(EngineTest
+	HEADERS
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorThemeTokens.h"
+	INCLUDES
+		"${CMAKE_SOURCE_DIR}/Source"
+)
+
 sw_deployRuntimeDependencies(EngineTest ALWAYS_DXC)
 
 # RHI MODULE은 런타임 로드 — Engine과 순환 없이 테스트 빌드 시 플러그인 재빌드

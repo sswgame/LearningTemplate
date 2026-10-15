@@ -99,7 +99,7 @@ namespace sw::editor
                 }
                 fixed_string<constant::kMaxBuffer64> chip;
                 formatstring( chip.data(), chip.capacity(), "Net %d/%d", session.getConnectedClientCount(), session.getProcessCount() - 1 );
-                EditorWidgets::drawChip( chip.c_str(), editor::style::kOk );
+                EditorWidgets::drawChip( chip.c_str(), EditorThemeUtil::getSuccessColor() );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "NetPlayClients" ) );
                 ImGui::SameLine();
                 if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kStop, "Stop" ) ) )
@@ -123,13 +123,13 @@ namespace sw::editor
                     return;
                 if ( EditorPlaySession::isPlayQueued() )
                 {
-                    EditorWidgets::drawChip( "Starting", editor::style::kWarn );
+                    EditorWidgets::drawChip( "Starting", EditorThemeUtil::getWarningColor() );
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayStarting" ) );
                     ImGui::SameLine();
                 }
                 if ( currentState == PlaySessionState::Playing && bSimulating == false )
                 {
-                    EditorWidgets::drawChip( "Playing", editor::style::kOk );
+                    EditorWidgets::drawChip( "Playing", EditorThemeUtil::getSuccessColor() );
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayRunning" ) );
                 }
                 else
@@ -143,7 +143,7 @@ namespace sw::editor
                 ImGui::SameLine();
                 if ( currentState == PlaySessionState::Playing && bSimulating )
                 {
-                    EditorWidgets::drawChip( "Simulating", editor::style::kOk );
+                    EditorWidgets::drawChip( "Simulating", EditorThemeUtil::getSuccessColor() );
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "SimulateRunning" ) );
                 }
                 else
@@ -157,7 +157,7 @@ namespace sw::editor
                 ImGui::SameLine();
                 if ( currentState == PlaySessionState::Paused )
                 {
-                    EditorWidgets::drawChip( "Paused", editor::style::kWarn );
+                    EditorWidgets::drawChip( "Paused", EditorThemeUtil::getWarningColor() );
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayPaused" ) );
                 }
                 else
@@ -220,7 +220,7 @@ namespace sw::editor
                     return;
                 ImGui::SameLine();
                 const bool bOn = GameAutoplay::isOn();
-                if ( EditorWidgets::drawToggleButton( "Auto", bOn, editor::style::kOk ) )
+                if ( EditorWidgets::drawToggleButton( "Auto", bOn, EditorThemeUtil::getSuccessColor() ) )
                     (void)GameAutoplay::setOn( bOn == false ); // 등록은 위에서 확인했다
                 const string tooltip = SW_LOCKEYFORMAT( "EdCommon", "AutoplayToggle", TextArgumentList().addText( "game", pActive->_pGameName ).addText( "description", pActive->_pDescription ).addText( "variable", pActive->_pVariableName ) );
                 EditorWidgets::drawTooltip( tooltip.c_str() );

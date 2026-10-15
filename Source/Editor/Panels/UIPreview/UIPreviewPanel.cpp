@@ -1223,7 +1223,7 @@ namespace sw::editor
             ImGui::InvisibleButton( "##handle", ImVec2{ half * 2.0f, half * 2.0f } );
             Internal::noteMark( "uipreview.handle", row._pMark );
             ImGui::GetWindowDrawList()->AddRectFilled( ImVec2{ row._center._x - half, row._center._y - half }, ImVec2{ row._center._x + half, row._center._y + half },
-                                                       EditorColorUtil::toImU32( style::kHighlight ) );
+                                                       EditorColorUtil::toImU32( EditorThemeUtil::getHighlightColor() ) );
             if ( ImGui::IsItemActivated() )
             {
                 _bSlotDragging    = true;
@@ -1268,7 +1268,7 @@ namespace sw::editor
         const UIRect  box  = UIPreviewLogic::mapUIToImage( pWidget->getGeometry().computeScreenBounds(), drawSize, _viewport );
         const float32 half = Internal::kHandleSize * EditorThemeUtil::getDpiScale() * 0.5f;
         const ImVec2  center{ origin._x + ( box._left + box._right ) * 0.5f, origin._y + ( box._top + box._bottom ) * 0.5f };
-        const ImU32   color = EditorColorUtil::toImU32( style::kHighlight );
+        const ImU32   color = EditorColorUtil::toImU32( EditorThemeUtil::getHighlightColor() );
         ImGui::SetCursorScreenPos( ImVec2{ center.x - half, center.y - half } );
         ImGui::PushID( "layouthandle" );
         ImGui::InvisibleButton( "##reorder", ImVec2{ half * 2.0f, half * 2.0f } );
@@ -1754,7 +1754,7 @@ namespace sw::editor
             }
         }
         if ( pSelected != nullptr )
-            drawBox( UIPreviewLogic::mapUIToImage( pSelected->getGeometry().computeScreenBounds(), drawSize, _viewport ), EditorColorUtil::toImU32( style::kHighlight ), 2.0f );
+            drawBox( UIPreviewLogic::mapUIToImage( pSelected->getGeometry().computeScreenBounds(), drawSize, _viewport ), EditorColorUtil::toImU32( EditorThemeUtil::getHighlightColor() ), 2.0f );
         const float4& insets         = _viewport._safeInsets;
         const bool    bHasSafeInsets = insets._x > 0.0f || insets._y > 0.0f || insets._z > 0.0f || insets._w > 0.0f;
         if ( bHasSafeInsets )

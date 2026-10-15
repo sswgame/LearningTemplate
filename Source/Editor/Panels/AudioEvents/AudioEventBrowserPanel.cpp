@@ -45,7 +45,7 @@ namespace sw::editor
                     (void)std::snprintf( arrOverlay, sizeof( arrOverlay ), "%u / -", count );
                 else
                     (void)std::snprintf( arrOverlay, sizeof( arrOverlay ), "%u / %u", count, limit );
-                ImGui::PushStyleColor( ImGuiCol_PlotHistogram, EditorColorUtil::toImVec4( bLimitReached ? style::kWarn : style::kOk ) );
+                ImGui::PushStyleColor( ImGuiCol_PlotHistogram, EditorColorUtil::toImVec4( bLimitReached ? EditorThemeUtil::getWarningColor() : EditorThemeUtil::getSuccessColor() ) );
                 ImGui::ProgressBar( usage, ImVec2{ -1.0f, 0.0f }, arrOverlay );
                 ImGui::PopStyleColor();
             }

@@ -56,6 +56,8 @@
 | `gv_editorPanelTimes` | `int32` | `0` | 시험 | N 프레임 동안 에디터 패널마다 그리기 시간을 모아 한 번 로그로 찍는다 (0=끄기) | [EditorPanelManager.cpp](../../Source/Editor/Common/GUI/EditorPanelManager.cpp) |
 | `gv_editorPreviewScreenshot` | `string` | — | 시험 | 미리보기 씬 뷰포트의 렌더 타깃을 이 경로에 한 번 찍는다 (시나리오 눈 확인용, 비우면 안 함) | [EditorPreviewViewport.cpp](../../Source/Editor/Common/GUI/EditorPreviewViewport.cpp) |
 | `gv_editorStateDir` | `string` | — | 시험 | 에디터 상태 폴더(Saved/Editor 대신, 프로젝트 루트 기준 상대 또는 절대 경로) — 자동화가 빈 폴더로 시작할 때 쓴다 (비우면 Saved/Editor) | [EditorPaths.cpp](../../Source/Editor/Common/EditorPaths.cpp) |
+| `gv_screenshotEditor` | `string` | — | 시험 | 에디터 UI 전체(ImGui 패널 + 플로팅 창)를 이 경로(.png)에 한 장 찍는다 (비면 사용 안 함) | [EditorUICapture.cpp](../../Source/Editor/Common/Backend/EditorUICapture.cpp) |
+| `gv_screenshotEditorFrame` | `int32` | `60` | 시험 | -gv_screenshotEditor 를 찍을 에디터 UI 프레임 번호 (기본 60) | [EditorUICapture.cpp](../../Source/Editor/Common/Backend/EditorUICapture.cpp) |
 | `gv_tracyViewerPath` | `string` | — | 일반 | Tracy 뷰어(tracy-profiler 0.14.1) 경로 — 파일이나 폴더 (비우면 Tools/Tracy) | [EditorTracyLauncher.cpp](../../Source/Editor/Common/Commands/Dev/EditorTracyLauncher.cpp) |
 
 ## `Source/Editor/Panels`
@@ -70,7 +72,7 @@
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
-| `gv_editorProbeObject` | `string` | — | 시험 | 탐침 Editor.HierarchyRowIcon 이 볼 오브젝트 이름 (시나리오용) | [EditorScenarioSteps.cpp](../../Source/Editor/SelfTest/EditorScenarioSteps.cpp) |
+| `gv_editorProbeObject` | `string` | — | 시험 | 탐침 Editor.HierarchyRowIcon · Editor.BillboardIcon 이 볼 오브젝트 이름 (시나리오용) | [EditorScenarioSteps.cpp](../../Source/Editor/SelfTest/EditorScenarioSteps.cpp) |
 | `gv_editorProbeOverlay` | `string` | `view` | 시험 | 탐침 Editor.Overlay* 가 볼 씬 뷰 오버레이 바 id (view · transform · display · tools, 시나리오용) | [EditorScenarioSteps.cpp](../../Source/Editor/SelfTest/EditorScenarioSteps.cpp) |
 | `gv_editorProbePanel` | `string` | — | 시험 | 탐침 Editor.PanelOpen 이 볼 패널 id (시나리오용) | [EditorScenarioSteps.cpp](../../Source/Editor/SelfTest/EditorScenarioSteps.cpp) |
 | `gv_editorProbeProperty` | `string` | — | 시험 | 탐침 Editor.SelectedProperty 가 볼 <컴포넌트 타입>.<프로퍼티> (시나리오용) | [EditorScenarioSteps.cpp](../../Source/Editor/SelfTest/EditorScenarioSteps.cpp) |

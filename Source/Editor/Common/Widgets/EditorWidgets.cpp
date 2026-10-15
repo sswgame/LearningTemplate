@@ -115,9 +115,9 @@ namespace sw::editor
             ImGui::SameLine();
         };
 
-        axis( "X", values._x, style::kAxisX );
-        axis( "Y", values._y, style::kAxisY );
-        axis( "Z", values._z, style::kAxisZ );
+        axis( "X", values._x, EditorThemeUtil::getAxisXColor() );
+        axis( "Y", values._y, EditorThemeUtil::getAxisYColor() );
+        axis( "Z", values._z, EditorThemeUtil::getAxisZColor() );
 
         ImGui::PopStyleVar();
         ImGui::Columns( 1 );
@@ -244,9 +244,14 @@ namespace sw::editor
         ImGui::SameLine();
     }
 
+    bool EditorWidgets::drawToggleButton( const utf8* pLabel, bool bActive )
+    {
+        return drawToggleButton( pLabel, bActive, EditorThemeUtil::getAccentColor() );
+    }
+
     bool EditorWidgets::drawToggleButton( const utf8* pLabel, bool bActive, const Color& activeColor )
     {
-        const Color& color = bActive ? activeColor : style::kToggleInactive;
+        const Color& color = bActive ? activeColor : EditorThemeUtil::getToggleInactiveColor();
         ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( color ) );
         const bool bClicked = ImGui::Button( pLabel );
         ImGui::PopStyleColor();

@@ -182,7 +182,7 @@ namespace sw::editor
         // 구조 편집(컴포넌트 추가, 프리팹)은 씬 명령이 플레이 중에 스스로 거절한다.
         if ( EditorPlaySession::areSceneEditsAllowed() == false )
         {
-            EditorWidgets::drawChip( "Play Mode", editor::style::kWarn );
+            EditorWidgets::drawChip( "Play Mode", EditorThemeUtil::getWarningColor() );
             ImGui::SameLine();
             ImGui::TextDisabled( "Edits revert on Stop (Play > Keep Simulation Changes keeps the selection)." );
         }
@@ -333,7 +333,7 @@ namespace sw::editor
 
     void InspectorPanel::drawPrefabLinkSection( GameObject* pObj, string_view prefabPath )
     {
-        EditorWidgets::drawChip( "Prefab", editor::style::kAccent );
+        EditorWidgets::drawChip( "Prefab", EditorThemeUtil::getAccentColor() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "PrefabInstance" ) );
         ImGui::SameLine();
         ImGui::TextDisabled( "%.*s", static_cast<int32>( prefabPath.size() ), prefabPath.data() );
@@ -607,7 +607,7 @@ namespace sw::editor
                 if ( StringUtil::isNullOrEmpty( tag._pString ) == false )
                 {
                     ImGui::SameLine();
-                    EditorWidgets::drawChip( tag._pString, editor::style::kOk );
+                    EditorWidgets::drawChip( tag._pString, EditorThemeUtil::getSuccessColor() );
                 }
             }
         }

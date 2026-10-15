@@ -154,9 +154,9 @@ namespace sw::editor
             ImGui::Text( "%d", status._processID );
             ImGui::TableNextColumn();
             if ( status._bRunning )
-                EditorWidgets::drawChip( "running", editor::style::kOk );
+                EditorWidgets::drawChip( "running", EditorThemeUtil::getSuccessColor() );
             else
-                EditorWidgets::drawChip( ( "exited " + to_string( status._exitCode ) ).c_str(), editor::style::kWarn );
+                EditorWidgets::drawChip( ( "exited " + to_string( status._exitCode ) ).c_str(), EditorThemeUtil::getWarningColor() );
             ImGui::TableNextColumn();
             ImGui::TextUnformatted( processIndex == EditorNetPlaySession::kServerProcessIndex ? "server" : ( status._bConnected ? "connected" : "-" ) );
             ImGui::TableNextColumn();

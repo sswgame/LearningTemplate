@@ -176,7 +176,6 @@ namespace sw::editor
         overlayDesc._pID          = "##QuickLauncherOverlay";
         overlayDesc._pOpen        = &_bOpen;
         overlayDesc._size         = float2{ 620.0f, 400.0f };
-        overlayDesc._borderColor  = Color{ 0.25f, 0.55f, 0.85f, 1.0f };
         overlayDesc._pFocusOnOpen = &_bJustOpened;
 
         if ( EditorChrome::beginSearchOverlay( overlayDesc ) == false )

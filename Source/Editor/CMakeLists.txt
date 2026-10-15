@@ -35,6 +35,7 @@ sw_addModuleLibrary(EditorModule
 	REFLECTION_HEADERS
 		"${CMAKE_CURRENT_SOURCE_DIR}/Common/Config/EditorConfig.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Common/Config/EditorPreferences.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Common/Config/EditorThemeTokens.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Common/Config/EditorToolDefaults.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Common/GUI/EditorChrome.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/SelfTest/EditorCurveProbeComponent.h"
