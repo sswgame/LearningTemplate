@@ -30,7 +30,7 @@ namespace test
         _bytes.clear();
         _layout = {};
         _format = sw::RHIFormat::R8G8B8A8_UNORM;
-        if ( renderer.readbackTransient( attachmentName, _bytes, _layout, _format ) )
+        if ( renderer.getCapture().readbackTransient( attachmentName, _bytes, _layout, _format ) )
             return true;
 
         _bytes.clear();

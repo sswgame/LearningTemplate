@@ -227,6 +227,8 @@
 | 서비스 · 호스트 · 전송 · 저장소의 `initialize` 설정 `*Settings` 41 개(`NetHostSettings` · `MailboxServiceSettings` · `TLSContextSettings` …) | `*Config`(2026-10-15, C-26 ③). `ChatSettings` · `TradeSettings` · `LoginSettings` · `ServerDirectorySettings` 는 `*ServiceConfig` |
 | 카탈로그 파일 안의 `*Settings` 18 개(`BrZoneSettings` · `ScavengerQuotaSettings` · `FacialBlinkSettings` …) | `*Def`(`WitcherAlchemySettings` 는 `WitcherAlchemyRuleDef` — 연금 아이템 정의 `WitcherAlchemyDef` 와 구분) |
 | `NetMessageRouter::addHandler` · `Engine::addFrameObserver` · `addRootMotionModifier` · `addAnimationPhaseTask` · `GameDataCacheRegistry::addCache`(와 짝 `remove*`) | `register*` · `unregister*`(2026-10-15 — 나중에 불리는 것을 넘기는 일, AGENTS.md 어휘표) |
+| `PresentCaptureTarget` · `FrameRenderer::{setPresentCaptureEnabled, readbackPresentCapture, dumpPresentCaptureToFile, readbackTransient, dumpTransientToFile, dumpTextureToFile}` | `FrameCapture` · `getCapture().{setPresentEnabled, readbackPresent, dumpPresentToFile, readbackTransient, dumpTransientToFile, dumpTextureToFile}`(2026-10-15, C-26 ⑤) |
+| `FrameRenderer::{setMeshMorphDiag, setDrawMergeEnabled, setVertexPoolEnabled, setAnimationTimeOverride}` · `getLastDrawnCanvasTargetCount` | `setDebugOverrides( FrameDebugOverrides )`(배포본에 없음) · `getCanvasRenderer().getLastDrawnTargetCount()` |
 
 일부러 둔 용어: stamp · kit · cook · orphan · chord · pin.
 
@@ -586,6 +588,13 @@
   에디터 도구는 `TerrainBrushTool`(뷰포트 Terrain 토글)이고 드래그 하나가 되돌리기 하나입니다(닿은 사각형의 전 · 후 값만 담는다). 저장은 `saveHeightfield`(16 비트로 다시 양자화)와
   `saveSplat`(비압축 RGBA8 DDS)입니다. 가중치 사각형은 스플랫 **텍셀** 좌표이고 브러시 격자의 해상도는 스플랫 너비입니다(정사각형 스플랫만 브러시가 다룹니다).
 - **저장하지 않은 지형 편집은 상태 스냅샷으로 넘깁니다**(2026-10-15, `64c1fef75`). 교체 전에 묻는 대신(`setSaveBlockReason`) `GameInstanceBase` 가 `TerrainComponent` 를 `registerStatefulComponent` 로 올려 마지막 다시 읽기 뒤의 높이 · 스플랫을 싣습니다. 언리얼 랜드스케이프 편집도 저장 전까지 메모리의 레벨에 남는 것으로 알고 있습니다 — 렌더러를 바꾸는 일이 편집을 잃게 하면 안 됩니다.
+- **`FrameRenderer` 는 "한 씬의 프레임을 그래프로 그린다" 만 들고, 이미지를 꺼내는 일 · 진단 덮어쓰기 · 캔버스 렌더 텍스처 대상을 가릅니다**(2026-10-15, C-26 ⑤).
+  캡처 · 되읽기(Present 캡처 텍스처, 트랜지언트 · 임의 텍스처 읽기와 파일 쓰기)는 `FrameCapture`(`getCapture()`) — 언리얼이 스크린샷 · 프레임 그랩(`FScreenshotRequest` · `FFrameGrabber`)을
+  장면 렌더러 밖에 두는 자리이고, 렌더러의 디바이스 포인터 변수 · 주 시점 풀 · 파이프라인을 참조로 빌린다(렌더러가 `execute` 마다 디바이스를 다시 받으므로 사본을 들지 않는다).
+  진단 덮어쓰기 넷은 값 하나 `FrameDebugOverrides`(언리얼 `FEngineShowFlags` 처럼 값으로 주고받는다)이고 배포본 렌더러에는 칸도 세터도 없다. 렌더 텍스처 대상(월드 공간 UI)의 빌리기 · 다시 그리기 판정은
+  이미 경로 그림을 캐시에서 빌리고 대상별 사각형 자리를 들던 `CanvasRenderer` 로 옮겼다(언리얼 `FSlateRHIRenderer` 자리). 그대로 둔 것: 추가 뷰(`ViewTarget`)는 언리얼 `FViewInfo` 처럼
+  장면 렌더러 안의 뷰 상태라 남기고, 미리보기 씬 렌더러 목록은 주 렌더러와 디바이스 수명 · 파이프라인 · 작업 관리자를 함께 써서 남기며(밖으로 빼면 백엔드 교체의 종료 순서를 두 곳이 맞춰야 한다),
+  정점 변형 컴퓨트는 이미 `FrameMeshDeformState` 값이고 PSO 는 `RenderPSOCache` 라 더 가르지 않는다(기억에 의존한 비교).
 
 ### 5-6. 오브젝트, 조종, 입력
 
@@ -614,6 +623,7 @@
   `AbilitySystemComponent` 의 태그 개수 → `GameplayTagCountContainer`(언리얼 `FGameplayTagCountContainer`, 막힌 어빌리티 태그도 같은 타입),
   `UISystem` 의 입력 라우터 · 오프스크린 화면 전달 함수 열다섯 → `getInputRouter()` · `getOffscreenScreens()`, `InputManager` 의 게임패드 전달 함수 다섯(쓰는 곳 없음) 삭제.
   `GameObjectManager` 는 씬의 얼굴(만들기 · 찾기 · 풀기)을 그대로 둡니다 — 언리얼 `UWorld::SpawnActor` 처럼 저장소(`GameObjectStore`)를 숨기는 자리라 전달이 곧 계약입니다.
+  `InputMap` 의 리바인딩(rebind · reset · 충돌 판정)도 그대로 둡니다 — 바인딩 저장소를 직접 고치는 일이라 가르면 저장소를 밖에 내보여야 합니다.
 
 ### 5-7. 런타임 UI 와 글자
 

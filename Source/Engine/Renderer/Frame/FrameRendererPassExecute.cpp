@@ -640,7 +640,7 @@ namespace sw
                         context._pCmd->endRenderPass();
                     }
                     if ( target._bCaptureFromOutput == SW_TRUE && isLastSwapchainWriter( pPassDesc ) )
-                        _presentCapture.copyFromOutput( *context._pCmd, target._texture, target._width, target._height, target._format );
+                        _capture.copyPresentFromOutput( *context._pCmd, target._texture, target._width, target._height, target._format );
                     break;
                 }
                 case RenderPassType::Canvas:
@@ -669,7 +669,7 @@ namespace sw
                     if ( target._bCaptureToBack == SW_TRUE && isLastSwapchainWriter( pPassDesc ) )
                         context._pCmd->blitTexture( target._texture, 0 );
                     if ( target._bCaptureFromOutput == SW_TRUE && isLastSwapchainWriter( pPassDesc ) )
-                        _presentCapture.copyFromOutput( *context._pCmd, target._texture, target._width, target._height, target._format );
+                        _capture.copyPresentFromOutput( *context._pCmd, target._texture, target._width, target._height, target._format );
                     break;
                 }
                 // 실행 코드가 없는 타입이다. 패스 서술이 없는 일반 풀스크린 패스이거나, PSO 슬롯만 있는 엔진 내부 타입이다.
@@ -887,15 +887,15 @@ namespace sw
         else if ( isRenderingExtraView() && activeView._outputKind == RenderViewOutputKind::HostTarget )
             ownOutput = activeView._hostTarget;
         const bool bOwnOutput = ownOutput != 0;
-        const bool bCapture   = bOwnOutput == false && ( _outputRenderTarget == 0 ) && isPresentCaptureEnabled();
+        const bool bCapture   = bOwnOutput == false && ( _outputRenderTarget == 0 ) && _capture.isPresentActive();
         // 캡처를 백버퍼로 옮기는 것은 출력이 곧 백버퍼일 때만이다. 크기를 덮어쓴 출력(초상화 베이크)은 화면에 나가지 않는다(크기가 다르면 복사도 안 된다).
         const bool bCaptureToBack = bCapture && _outputWidth == _pDevice->getBackBufferWidth() && _outputHeight == _pDevice->getBackBufferHeight();
         // 출력이 RT(에디터 게임 뷰)면 그 RT 에 그대로 그리고 끝에 캡처로 복사한다. 화면 사각형 뷰도 같은 RT 에 겹쳐 그리므로 뷰마다 복사하면
         // 마지막 복사가 화면과 같다.
-        const bool bCaptureFromOutput = bOwnOutput == false && _outputRenderTarget != 0 && isPresentCaptureEnabled();
+        const bool bCaptureFromOutput = bOwnOutput == false && _outputRenderTarget != 0 && _capture.isPresentActive();
 
         PresentTarget target{};
-        target._texture = bOwnOutput ? ownOutput : bCapture ? _presentCapture.getTexture()
+        target._texture = bOwnOutput ? ownOutput : bCapture ? _capture.getPresentTexture()
                                                             : _outputRenderTarget;
         target._width   = bOwnOutput ? activeView._outputWidth : _outputWidth;
         target._height  = bOwnOutput ? activeView._outputHeight : _outputHeight;

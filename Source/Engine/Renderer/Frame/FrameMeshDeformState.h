@@ -46,12 +46,6 @@ namespace sw
          *          게임 시간을 건드리지 않는다.
          */
         GameTimer _animationTimer{};
-        /// @brief `setMeshMorphDiag` 로 받은 값입니다. 음수면 전역 변수 `gv_morphDiag` 를 따릅니다.
-        int32 _meshMorphDiagOverride{ -1 };
-#if !defined( SW_SHIPPING )
-        /// @brief `setAnimationTimeOverride` 로 받은 시각(초)입니다. 음수면 `_animationTimer` 를 따릅니다.
-        float32 _animationTimeOverride{ -1.0f };
-#endif
         /// @brief 진단(`-gv_morphDiag=2|3`)에서 정점 셰이더에 결과 대신 **레스트** 버퍼를 바인딩했는지 여부입니다.
         uint8 _bMorphBindsRest{ SW_FALSE };
     };

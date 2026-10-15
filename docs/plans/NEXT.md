@@ -32,24 +32,22 @@ Shipping 키트는 STATIC 이고 내보내기 매크로가 빈 것을 산출물�
 
 남은 검증은 다음과 같습니다.
 
-1. Release 빌드와 네 백엔드 스크린샷 sha 대조(기준 `D:\w\perfbase`). 이번 묶음에서 돌리지 않았습니다.
+1. Release 빌드와 네 백엔드 스크린샷 sha 대조(기준 `D:\w\perfbase`). `framerenderer` 묶음은 Debug 로 분할 전후를 대조했고(같음), perfbase(Release)와는 포워드가 같고 디퍼드가 그 전부터 다릅니다. 디퍼드가 언제 바뀌었는지는 보지 않았습니다.
 2. Linux 전용 파일은 Windows 에서 컴파일되지 않아 기계적 치환만 하고 짓지 못했습니다(`PosixCrashHandler.cpp` · `EpollStreamTransport.cpp` · `FileUtil.cpp` 의 `st_mtim` 분기 · `HardwareProbe.cpp`). 사용자가 요청할 때만 WSL 로 확인합니다.
 3. 열린 결함은 백로그 A-2(Vulkan 장치 손실 뒤 대기 — DX12 흉내로는 행 없음) · A-3 · A-4(D3D12 디버그 레이어의 `DrawInstanced` 정점 버퍼 부족 경고)와 관찰 E-11(netconditions DX11 1 회)입니다.
 
 ## 3. 계획한 큰 일 (순서대로)
 
-1. **`FrameRenderer` 분할.** 백로그 `C-26` ⑤ 하나가 남았습니다(4 절). GPU 검증이 필요합니다.
-2. **서브틱 활용 조사.** `PostUpdate` 로 옮긴 컴포넌트 41 개를 전수 분류합니다(5 절).
-3. **그 밖.** 지형 후속(식생 · 내비 재계산, 콜라이더 부분 갱신 측정), 다중 월드 잔여(프리팹 창, 창별 선택과 전역 선택 연결, 스카이), 캐릭터 편집 (a) 미리보기 씬 이관과 (c) 슬라이더, 서버 디버그 잔여(클라이언트 해시, 어긋난 오브젝트 짚기), `TaskNode` · PCH · 에디터 기동 시간 측정, 열린 결함 A-2 · A-4.
+1. **서브틱 활용 조사.** `PostUpdate` 로 옮긴 컴포넌트 41 개를 전수 분류합니다(5 절).
+2. **그 밖.** 지형 후속(식생 · 내비 재계산, 콜라이더 부분 갱신 측정), 다중 월드 잔여(프리팹 창, 창별 선택과 전역 선택 연결, 스카이), 캐릭터 편집 (a) 미리보기 씬 이관과 (c) 슬라이더, 서버 디버그 잔여(클라이언트 해시, 어긋난 오브젝트 짚기), `TaskNode` · PCH · 에디터 기동 시간 측정, 열린 결함 A-2 · A-4.
 
 ## 4. 구조 리팩토링과 데이터 주도 (2026-10-15 묶음 둘)
 
-`wt/structure` 와 `wt/structure2` 를 main 에 병합했습니다. 둘째 묶음은 C-26 ①~④ · ⑥ 과 ⑤ 의 넷을 마쳤고, 결정은 [결정 기록](../09_Decisions.md) 4 절(옛 이름) · 5-4 · 5-6 · 5-9 에 있습니다.
+`wt/structure` 와 `wt/structure2` 를 main 에 병합했습니다. C-26 은 모두 끝났습니다(마지막 ⑤ `FrameRenderer` 분할은 `wt/framerenderer`). 결정은 [결정 기록](../09_Decisions.md) 4 절(옛 이름) · 5-4 · 5-5 · 5-6 · 5-9 에 있습니다.
 
-- 남은 일은 백로그 `C-26` ⑤ `FrameRenderer` 하나입니다. 캡처 · 되읽기 묶음과 진단 덮어쓰기를 가르는 계획이 그 항목에 있고, 스크린샷 경로가 지나므로 `-L hostgpu` 와 네 백엔드 스크린샷 대조로 검증합니다.
 - 새로 생긴 규칙: 동사 `add` / `register` / `append` 쓰임표, `Config`(서비스 · 호스트 · 전송 · 저장소의 `initialize` 설정) · `Def`(카탈로그 하위 구조체) 기준(AGENTS.md).
   키트 서버 조립은 옵션 표(`OnlineServerKitEntry::readOptions`) 한 번과 메서드 표(`OnlineMethodTable`)를 씁니다. 확장자 → 에디터 종류의 정본은 `EditorAssetType.cpp` 이고 엔진 포맷은 `kExtension` 을 듭니다.
-- 둘째 묶음도 GPU 검증(`-L hostgpu`, 네 백엔드 × 대표 셋)은 돌리지 않았습니다. 렌더 경로는 바뀌지 않았고(머티리얼 · 스타일은 이름 · 확장자만), 게임 색 · 규칙 값은 옮기기 전과 같은 기본값입니다.
+- `FrameRenderer` 의 이미지 꺼내기는 `getCapture()`(`FrameCapture`), 진단 덮어쓰기는 `setDebugOverrides( FrameDebugOverrides )`(배포본에 없음), 캔버스 렌더 텍스처 대상은 `CanvasRenderer` 입니다.
 
 ## 5. 서브틱 활용 조사
 

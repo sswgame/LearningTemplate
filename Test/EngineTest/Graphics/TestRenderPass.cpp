@@ -1101,27 +1101,27 @@ SW_TEST_CASE( RenderPassTest, AttachmentRoleIsDeclaredNotNamed )
 
 namespace
 {
-    /** @brief `FrameRenderer::setAnimationTimeOverride` 가 이 구성에 있는가 — 테스트 전용 시계 고정이라 배포본에는 없어야 한다. */
+    /** @brief `FrameRenderer::setDebugOverrides` 가 이 구성에 있는가 — 테스트 전용 덮어쓰기(시계 고정 포함)라 배포본에는 없어야 한다. */
     template <typename T, typename = void>
-    struct HasAnimationTimeOverride : std::false_type
+    struct HasDebugOverrides : std::false_type
     {
     };
     template <typename T>
-    struct HasAnimationTimeOverride<T, std::void_t<decltype( std::declval<T&>().setAnimationTimeOverride( 0.0f ) )>> : std::true_type
+    struct HasDebugOverrides<T, std::void_t<decltype( std::declval<T&>().setDebugOverrides( sw::FrameDebugOverrides{} ) )>> : std::true_type
     {
     };
 } // namespace
 
 /**
- * @brief [RenderPassTest] 테스트 전용 시계 고정(`setAnimationTimeOverride`)은 배포본에서 컴파일되지 않는다
+ * @brief [RenderPassTest] 테스트 전용 덮어쓰기(`setDebugOverrides`, 시계 고정 포함)는 배포본에서 컴파일되지 않는다
  * @details 테스트가 모프 시각을 고정하려고 둔 창구다. 배포본에 남으면 배포본의 애니메이션 시계를 밖에서 바꿀 수 있고 필드 하나만큼 렌더러가 커진다.
  */
-SW_TEST_CASE( RenderPassTest, AnimationTimeOverrideIsCompiledOutOfShipping )
+SW_TEST_CASE( RenderPassTest, DebugOverridesAreCompiledOutOfShipping )
 {
 #if defined( SW_SHIPPING )
-    SW_EXPECT_FALSE( HasAnimationTimeOverride<sw::FrameRenderer>::value );
+    SW_EXPECT_FALSE( HasDebugOverrides<sw::FrameRenderer>::value );
 #else
-    SW_EXPECT_TRUE( HasAnimationTimeOverride<sw::FrameRenderer>::value );
+    SW_EXPECT_TRUE( HasDebugOverrides<sw::FrameRenderer>::value );
 #endif
 }
 
