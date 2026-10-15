@@ -44,8 +44,10 @@ from LintReport import LintReport, ReportContext  # noqa: E402
 kDefaultMaxSentenceLength = 120
 kDefaultMaxCellLength = 60
 
-#: 세지 않는 문서 — 생성 문서(코드에서 만든다)와 영어 규칙 문서, 할 일 목록, 출처 표기, 그리고 나쁜 예를 일부러 싣는 지침 문서.
-_kSkippedPathPrefix: tuple[str, ...] = ("docs/Config/", "AGENTS.md", "CLAUDE.md", "docs/06_Backlog.md", "docs/10_WritingDocs.md")
+#: 세지 않는 문서 — 생성 문서(코드에서 만든다)와 영어 규칙 문서, 할 일 목록(백로그 항목 파일), 출처 표기, 그리고 나쁜 예를 일부러 싣는 지침 문서.
+_kSkippedPathPrefix: tuple[str, ...] = ("docs/Config/", "AGENTS.md", "CLAUDE.md", "docs/backlog/", "docs/10_WritingDocs.md")
+#: 건너뛰는 폴더 안에서도 세는 문서 — 백로그 안내는 할 일 목록이 아니라 읽는 글이다.
+_kCountedPath: frozenset[str] = frozenset({"docs/backlog/README.md"})
 _kSkippedFileName: frozenset[str] = frozenset({"credits.md"})
 
 #: 저장소 조어 — 용어 대조표의 왼쪽 열. (정규식, 쓸 말) 쌍. 쓸 말은 보고에만 쓴다.
@@ -194,7 +196,7 @@ def collectDocuments(repositoryRoot: Path, listFile: list[str]) -> list[Path]:
     listPath: list[Path] = []
     for filePath in collectRepositoryFiles(repositoryRoot, suffixes=(".md",), excludedDirNames=kNotOurDirNames | {"ThirdParty"}):
         relativePath = filePath.relative_to(repositoryRoot).as_posix()
-        if relativePath.startswith(_kSkippedPathPrefix) or filePath.name in _kSkippedFileName:
+        if (relativePath.startswith(_kSkippedPathPrefix) and relativePath not in _kCountedPath) or filePath.name in _kSkippedFileName:
             continue
         listPath.append(filePath)
     return listPath

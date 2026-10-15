@@ -16,6 +16,7 @@
 cmake --build --preset Ninja-Debug            # 경고 0 이어야 한다(테스트 제외 — 테스트까지는 --target all AllTests)
 cmake --build --preset Ninja-Shipping         # Debug 가 숨기는 결함이 여기서 드러난다(테스트까지)
 ctest --preset Ninja-Debug-lint               # 컨벤션 · include 순서 · 린트 자기 테스트
+py -3 Scripts/lint/gate/CheckDataDrivenStructure.py --summary  # 데이터 주도 구조 위반(코드의 에셋 경로 · 조용한 폴백 · 버린 읽기 결과) 영역별 표 — 기준선은 0 으로 수렴해야 하고, 형식으로 막힌 종류는 게이트에서 뺀다
 # -j 는 값 없이 준다(CMake 3.29+: 이 PC 의 스레드 수). 테스트 프리셋은 CTEST_PARALLEL_LEVEL="" 로 같은 뜻이다(CMakePresets.json 의 parallel).
 # 항목끼리는 병렬로 돌 수 있다 — 직렬은 빌드 셋업 · Load · QA 셋, GPU 항목은 GPU 칸(gpuSlots)만큼. 도우미는 -j 2(11_Workflow.md 2절).
 ctest --test-dir build/Ninja-Debug -L nogpu -j --output-on-failure
@@ -427,6 +428,19 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
 
 push 뒤 결과를 기다리지 않는 것은 [작업 방식](11_Workflow.md) 4절의 규칙입니다. 실패를 알게 되면 공개 API 로 실행, 잡, 실패 주석을 읽습니다.
 
+**CI 단계 분류.** 단계마다 시간 예산이 달라 한 곳에 몰지 않습니다. GPU 가 필요한 것은 어느 CI 도 돌리지 않습니다(러너에 GPU · 창이 없음) — 로컬 `hostgpu` 가 맡습니다.
+
+| 단계 | 언제 | 무엇 | 파일 | 예산 |
+|---|---|---|---|---|
+| 린트 | 모든 push · PR (문서만 바뀌어도) | 게이트 + 셀프테스트 전부, 바뀐 파일이 문서뿐이면 빌드 잡을 건너뛰게 `code` 를 낸다 | `ci.yml` `lint` | 약 1 분 |
+| 빌드 · `nogpu` | push · PR, 린트 뒤 | 구성 열 개 — Windows Debug · STL · Shipping · 전용 서버 Shipping, Linux Debug · ASan · TSan · Shipping · 전용 서버 Shipping | `ci.yml` `build` | 15 ~ 30 분(가장 긴 잡이 전체 시간) |
+| 매일 컴파일 검사 | 03:00 KST · 수동 | 헤더 단독 컴파일, `SW_ENABLE_DEADLOCK_DETECTION` 구성 컴파일 | `header-self-contained.yml` | 약 30 분 |
+| 매일 퍼징 | 03:00 KST · 수동 | 로더 퍼저(ASan) | `fuzz.yml` | 최대 2 시간 |
+| 야간 부하 | 04:00 KST · 수동 | Release 부하 스위트 · 봇 · 클러스터 | `load.yml` | 최대 2.5 시간 |
+
+판단 기준: push 마다 돌려도 잡 시간을 늘리지 않는 것만 `ci.yml` 에 둔다. 전 트리를 다시 훑는 검사(14 분 이상)나 평소 어느 프리셋도 켜지 않는 구성은 매일 잡으로 보낸다 —
+`SW_ENABLE_DEADLOCK_DETECTION` 확인이 Windows Debug 잡에 있을 때 그 잡이 32 분으로 가장 길었고 14 분이 이 단계였다(옮기면 약 18 분으로 줄 것으로 본다 — 다음 main 실행으로 확인). 새 검사를 더할 때는 위 표에서 줄을 고른다.
+
 ```powershell
 py -3 -m Scripts ci-jobs --runs                    # main 의 최근 실행
 py -3 -m Scripts ci-jobs <실행 id> --annotations   # 실패한 잡과 실패 주석
@@ -445,7 +459,7 @@ py -3 -m Scripts ci-jobs <실행 id> --annotations   # 실패한 잡과 실패 �
 - **CI 실패는 실패한 잡과 같은 프리셋으로 재현한다.** Debug(Engine SHARED)는 Shipping 정적 링크 결함을 원리상 못 낸다. Windows CI 러너의 TEMP 는 8.3 짧은 이름
   (`RUNNER~1`)이라 경로를 글자로 비교하면 틀린다. 빨간 CI 는 다음 결함을 숨긴다(55 런 연속 실패를 아무도 몰랐다) — 런 상태:
   `curl -s "https://api.github.com/repos/sswgame/LearningTemplate/actions/runs?per_page=30&branch=main"`. 스킵은 실패보다 조용하다.
-- **`SW_ENABLE_DEADLOCK_DETECTION` 은 CI Windows Debug 잡이 `RunBuildWarnings.py --define SW_ENABLE_DEADLOCK_DETECTION --fail-on error` 로 지킨다.**
+- **`SW_ENABLE_DEADLOCK_DETECTION` 은 매일 도는 `header-self-contained.yml` 이 `RunBuildWarnings.py --define SW_ENABLE_DEADLOCK_DETECTION --fail-on error` 로 지킨다.** push 마다 돌리지 않으니 이 옵션을 건드린 변경은 같은 명령을 로컬에서 먼저 돌린다.
 - **CI 실패는 `Scripts/dev/CiFailureReport.py` 가 주석으로 올린다**(테스트 · 구성 실패의 vcpkg 포트 로그 · 크래시 스택 `Bin/Saved/Logs/crash_*.stack.txt`).
   정기 잡도 같다 — 헤더 단독 컴파일 잡의 빌드 오류(`build`), 퍼징 잡의 새니타이저 보고 · 스택 · 재현 입력(`fuzz`, libFuzzer 가 짧은 입력에 찍는 `Base64:` 줄).
   퍼징 실패는 그 Base64 를 풀어 대상 이름과 함께 `SW_FUZZ_TARGET=<대상> LoaderFuzzer <파일>` 로 재현하고, 고친 뒤 그 입력을 대상의 씨앗(`LoaderFuzzTargets.cpp`)에 더한다.

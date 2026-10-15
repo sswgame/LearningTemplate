@@ -1,7 +1,7 @@
 # CharacterEditor — 캐릭터 편집 에디터 플러그인
 
 `GF_EditorPlugIn_CharacterEditor` 는 캐릭터 편집 창(`docs/plans/EditorCharacterEditor.md`)의 **첫 단계**입니다. 화면 없이 테스트할 수 있는 편집 모델과, 그 모델을 그리는 도구 패널 뼈대까지 들어 있습니다.
-미리보기 씬이 필요한 부분(캐릭터 스폰, 뷰포트 기즈모, 피팅 표시, 애니메이션 재생, 썸네일)은 `EditorMultiWorld` 단계가 끝난 뒤 이어 붙입니다 — 남은 일은 `docs/06_Backlog.md` 의 `D4-8` ⑥ 에 있습니다.
+미리보기 씬이 필요한 부분(캐릭터 스폰, 뷰포트 기즈모, 피팅 표시, 애니메이션 재생, 썸네일)은 `EditorMultiWorld` 단계가 끝난 뒤 이어 붙입니다 — 남은 일은 `docs/backlog/gameplay.md` 의 `D4-8` ⑥ 에 있습니다.
 
 ## 구조
 

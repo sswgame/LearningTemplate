@@ -3,13 +3,19 @@
 Claude Code 안내. 이 저장소의 에이전트 규칙.
 
 ## 시작 전 필수 읽기
-- **남은 일**: [docs/06_Backlog.md](docs/06_Backlog.md) — 통째로 읽지 않는다(116KB). 위 `분류표`와 내 일의 항목(`C-2` 같은 번호로 grep)만 읽는다. 끝나면 항목을 지우고 교훈은 해당 코드의 헤더 주석 / Decisions / Verification으로 옮긴다.
+- **남은 일**: [docs/backlog/README.md](docs/backlog/README.md) — 백로그는 영역별 파일로 나뉘어 있고 통째로 읽지 않는다. 안내 문서에서 상태 태그와 일을 고르는 순서를 보고, 내 일의 항목은 `py -3 -m Scripts backlog --id <번호>`(예: `C-2`)로 본문만 읽는다. 끝나면 항목을 지우고 교훈은 해당 코드의 헤더 주석 / Decisions / Verification으로 옮긴다.
 - **작업 방식**: [docs/11_Workflow.md](docs/11_Workflow.md) — 워크트리, 동시 빌드 제한(최대 2), 검증 단계, push 규칙, 커밋 형식.
 - **코딩 규칙**: [AGENTS.md](AGENTS.md) — 이름·함수 어휘·헤더 순서 등. 51KB이므로 `grep -n '^#'`로 절을 찾아 일에 맞는 절만 읽는다: 이름은 `Naming`(CMake · C++ · Python · HLSL), 새 파일 · include는 `C++ structure and includes`, 상수는 `Constants`, 도우미는 `Helpers`, 스타일은 `C++ style`, 스크립트 편집은 `Editing traps`. (`docs/04_CodingGuidelines.md`는 예시만)
 - **스크립트로 파일을 고칠 때**: heredoc 금지 — [AGENTS.md](AGENTS.md) "Editing traps" 첫 항목.
 
 문서·주석은 한국어. 문서 작성 규칙은 `docs/10_WritingDocs.md`.
 새로 쓰는 모든 글(답변 · 에이전트 지시 · 커밋 메시지 · 주석 · 문서)은 그 문서의 용어 대조표를 따른다(예: 시험 → 테스트). 에이전트에게 일을 시킬 때 지시문에도 넣는다.
+
+## 해결 원칙 — 구조로 푼다 (사용자 지시, 상시)
+**원천적인 원인을 구조로 해결한다.** 같은 모양의 결함이 한 번 더 나올 수 있으면 증상을 고치지 않고, 그 모양을 쓸 수 없게 만드는 형식 · API · 데이터 구조를 바꾼다(예: 경로를 문자열이 아닌 `DataPath` 형식으로, 읽기 결과를 `[[nodiscard]]` 로).
+린트 게이트 · 주석 · 문서 규칙 · 코드 리뷰는 **최후의 수단**이다. 게이트부터 만들지 않고, 형식으로 막을 수 있는지 먼저 따진다. 막지 못하는 틈에만 게이트를 두고 그 이유를 적는다.
+폴백(없으면 조용히 기본값)을 두지 않는다 — 필수 값이 없으면 오류로 멈춘다. 값의 정본은 데이터이고 코드는 형식만 가진다([데이터 주도 구조 정리](docs/plans/DataDriven.md)).
+에이전트에게 일을 시킬 때도 이 원칙을 지시문에 적는다. 일을 마치면 "같은 결함이 다른 곳에 있을 수 있는가 · 뿌리는 어디인가"를 한 줄로 보고한다.
 
 ## 에이전트 · 토큰 예산
 `.claude/agents/`에 정의됨. **일에 맞는 가장 싼 모델을 고른다.** 일과 에이전트 · effort 표는 [docs/11_Workflow.md](docs/11_Workflow.md) 9절.
