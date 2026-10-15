@@ -18,9 +18,7 @@ namespace sw
     {
         struct MailboxServiceInternal
         {
-            static constexpr const utf8* kArrMethodName[]   = { "list", "mark_read", "claim", "claim_all", "delete" };
             static constexpr const utf8* kArrExpiryAction[] = { "discarded", "returned", "removed" };
-            static_assert( SW_COUNT_OF( kArrMethodName ) == static_cast<size_t>( MailboxMethod::kCount ), "method names must match MailboxMethod" );
         };
 
         /** @brief 우편함 요청 하나의 저장소 왕복입니다. */
@@ -168,7 +166,7 @@ namespace sw
         }
         _pStore   = pStore;
         _settings = settings;
-        _metrics.initialize<MailboxResult>( settings._pMetricRegistry, "mailbox", MailboxServiceInternal::kArrMethodName, MailboxMethod::kCount );
+        _metrics.initialize<MailboxMethodName, MailboxResult>( settings._pMetricRegistry, "mailbox" );
         if ( settings._pMetricRegistry != nullptr )
         {
             for ( int32 actionIndex = 0; actionIndex < static_cast<int32>( SW_COUNT_OF( _arrExpiredCounter ) ); ++actionIndex )

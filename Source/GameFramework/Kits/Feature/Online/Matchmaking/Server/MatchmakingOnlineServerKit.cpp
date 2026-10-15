@@ -44,26 +44,24 @@ namespace sw
 
             bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                const string* pUnknown = entry.findUnknownOption( { "catalog", "mode", "maxPartySize" } );
-                if ( pUnknown != nullptr )
-                {
-                    outError = "unknown option '" + *pUnknown + "'";
+                string         catalogPath;
+                vector<string> listCompact;
+                if ( entry.readOptions( {
+                                            {     "catalog",   catalogPath},
+                                            {        "mode",   listCompact},
+                                            {"maxPartySize", _maxPartySize}
+                },
+                                        outError ) == false )
                     return false;
-                }
-                if ( entry.readIntOption( "maxPartySize", _maxPartySize, outError ) == false )
-                    return false;
-                const string* pCatalog = entry.findOption( "catalog" );
-                if ( pCatalog != nullptr )
+                if ( catalogPath.empty() == false )
                 {
-                    if ( _catalog.loadFromResource( *pCatalog ) == false )
+                    if ( _catalog.loadFromResource( catalogPath ) == false )
                     {
-                        outError = "the match mode catalog '" + *pCatalog + "' could not be read";
+                        outError = "the match mode catalog '" + catalogPath + "' could not be read";
                         return false;
                     }
                     _listMode = _catalog.getModes();
                 }
-                vector<string> listCompact;
-                entry.collectOptions( "mode", listCompact );
                 for ( const string& compact : listCompact )
                 {
                     MatchModeDefinition mode;
@@ -79,11 +77,8 @@ namespace sw
                     outError = "the matchmaking kit needs at least one mode (catalog or mode option)";
                     return false;
                 }
-                if ( context._pHost->registerHostService( &_server ) == false )
-                {
-                    outError = "the matchmaking method range is already taken";
+                if ( registerHostService( context, entry, &_server, outError ) == false )
                     return false;
-                }
                 return true;
             }
 

@@ -54,22 +54,16 @@ namespace sw
 
             bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                const string* pUnknown = entry.findUnknownOption( { "bannedWords" } );
-                if ( pUnknown != nullptr )
-                {
-                    outError = "unknown option '" + *pUnknown + "'";
+                string bannedWords{ ChatOnlineServerKitInternal::kDefaultBannedWordsPath };
+                if ( entry.readOptions( {
+                                            { "bannedWords", bannedWords }
+                },
+                                        outError ) == false )
                     return false;
-                }
-                const string* pBannedWords = entry.findOption( "bannedWords" );
-                if ( pBannedWords == nullptr )
-                    _settings._bannedWordsPath = ChatOnlineServerKitInternal::kDefaultBannedWordsPath;
-                else if ( *pBannedWords != ChatOnlineServerKitInternal::kNoBannedWords )
-                    _settings._bannedWordsPath = *pBannedWords;
-                if ( context._pHost->registerHostService( &_server ) == false )
-                {
-                    outError = "the chat method range is already taken";
+                if ( bannedWords != ChatOnlineServerKitInternal::kNoBannedWords )
+                    _settings._bannedWordsPath = bannedWords;
+                if ( registerHostService( context, entry, &_server, outError ) == false )
                     return false;
-                }
                 return true;
             }
 

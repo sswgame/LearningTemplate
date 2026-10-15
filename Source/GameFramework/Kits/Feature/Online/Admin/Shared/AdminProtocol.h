@@ -25,26 +25,36 @@ namespace sw
     class BitReader;
     class BitWriter;
 
-    /** @brief GM 명령 메서드 번호입니다. 와이어 값이므로 바꾸면 `AdminProtocol::kVersion` 을 올려야 합니다. */
-    struct AdminMethod
+    /** @brief GM 명령 메서드 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)이고, 이름의 snake_case 가 지표 라벨입니다. 새 메서드는 `Count` 앞에만 더합니다. */
+    ENUM( Count = Count )
+    enum class AdminMethodName : uint8
     {
-        static constexpr uint16 kLookupAccount  = OnlineMethodRange::kAdmin + 0x01;
-        static constexpr uint16 kAdjustAsset    = OnlineMethodRange::kAdmin + 0x02;
-        static constexpr uint16 kSetSanction    = OnlineMethodRange::kAdmin + 0x03;
-        static constexpr uint16 kSendMail       = OnlineMethodRange::kAdmin + 0x04;
-        static constexpr uint16 kBulkMail       = OnlineMethodRange::kAdmin + 0x05;
-        static constexpr uint16 kCreateCampaign = OnlineMethodRange::kAdmin + 0x06;
-        static constexpr uint16 kListAudit      = OnlineMethodRange::kAdmin + 0x07;
-        static constexpr uint16 kSetRole        = OnlineMethodRange::kAdmin + 0x08;
-        static constexpr int32  kCount          = 8;
+        LookupAccount,
+        AdjustAsset,
+        SetSanction,
+        SendMail,
+        BulkMail,
+        CreateCampaign,
+        ListAudit,
+        SetRole,
+        Count,
+    };
+} // namespace sw
 
-        static_assert( OnlineMethodRange::isInRange( kSetRole, OnlineMethodRange::kAdmin ) && OnlineMethodRange::isMethod( kSetRole ) );
+namespace sw
+{
+    /** @brief GM 명령 메서드 번호입니다. 와이어 값이므로 바꾸면 `AdminProtocol::kVersion` 을 올려야 합니다. */
+    struct AdminMethod : OnlineMethodTable<AdminMethodName, OnlineMethodRange::kAdmin>
+    {
+        static constexpr uint16 kLookupAccount  = toMethod( AdminMethodName::LookupAccount );
+        static constexpr uint16 kAdjustAsset    = toMethod( AdminMethodName::AdjustAsset );
+        static constexpr uint16 kSetSanction    = toMethod( AdminMethodName::SetSanction );
+        static constexpr uint16 kSendMail       = toMethod( AdminMethodName::SendMail );
+        static constexpr uint16 kBulkMail       = toMethod( AdminMethodName::BulkMail );
+        static constexpr uint16 kCreateCampaign = toMethod( AdminMethodName::CreateCampaign );
+        static constexpr uint16 kListAudit      = toMethod( AdminMethodName::ListAudit );
+        static constexpr uint16 kSetRole        = toMethod( AdminMethodName::SetRole );
 
-        /** @brief 0부터 시작하는 번호입니다. 지표의 인덱스로 씁니다. 모르는 메서드이면 -1 입니다. */
-        static constexpr int32 toIndex( uint16 method )
-        {
-            return kLookupAccount <= method && method < kLookupAccount + kCount ? static_cast<int32>( method - kLookupAccount ) : -1;
-        }
         /** @brief 상태를 바꾸는 명령이면 true 입니다. 이 경우 멱등 키와 메모가 필수입니다. */
         static constexpr bool isMutating( uint16 method ) { return method != kLookupAccount && method != kListAudit; }
     };

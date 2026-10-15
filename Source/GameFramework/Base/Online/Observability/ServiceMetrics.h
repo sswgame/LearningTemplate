@@ -31,19 +31,14 @@ namespace sw
         ServiceMetrics();
 
         /**
-         * @brief 등록합니다. @p ppMethodName 은 번호 순 메서드 이름(정적 문자열)이고, 결과 라벨은 @p TResult 의 열거자 이름(`ENUM()`)을
-         *        snake_case 로 바꾼 것입니다(`NotSignedIn` → `not_signed_in`). 결과 번호는 `0 .. TResult::Count - 1` 입니다.
+         * @brief 등록합니다. 메서드 라벨은 @p TMethodName(키트의 메서드 이름 표, `OnlineMethodTable`), 결과 라벨은 @p TResult 의 열거자 이름(`ENUM()`)을
+         *        snake_case 로 바꾼 것입니다(`NotSignedIn` → `not_signed_in`). 번호는 각각 `0 .. Count - 1` 입니다.
          * @details 시리즈 수 = 메서드 × 결과 + 메서드 + 1 — 서비스당 수십 개.
          */
-        template <typename TResult>
-        void initialize( MetricRegistry* pRegistry, const utf8* pServiceName, const utf8* const* ppMethodName, int32 methodCount )
+        template <typename TMethodName, typename TResult>
+        void initialize( MetricRegistry* pRegistry, const utf8* pServiceName )
         {
-            vector<string> listResultName;
-            for ( int32 resultIndex = 0; resultIndex < static_cast<int32>( TResult::Count ); ++resultIndex )
-            {
-                listResultName.push_back( StringUtil::toSnakeCase( getEnumName( static_cast<TResult>( resultIndex ) ), false ) );
-            }
-            initializeWithResultNames( pRegistry, pServiceName, ppMethodName, methodCount, listResultName );
+            initializeWithNames( pRegistry, pServiceName, makeLabelNames<TMethodName>(), makeLabelNames<TResult>() );
         }
 
         /** @brief 범위 밖 번호는 무시합니다. */
@@ -52,8 +47,19 @@ namespace sw
         void             setPendingStoreWorkCount( int32 pendingCount );
 
     private:
-        void initializeWithResultNames( MetricRegistry* pRegistry, const utf8* pServiceName, const utf8* const* ppMethodName, int32 methodCount,
-                                        const vector<string>& listResultName );
+        /** @brief `ENUM( Count = Count )` 열거형의 열거자 이름을 순서대로 snake_case 로 바꿉니다. */
+        template <typename TEnum>
+        static vector<string> makeLabelNames()
+        {
+            vector<string> listName;
+            for ( int32 index = 0; index < static_cast<int32>( TEnum::Count ); ++index )
+            {
+                listName.push_back( StringUtil::toSnakeCase( getEnumName( static_cast<TEnum>( index ) ), false ) );
+            }
+            return listName;
+        }
+
+        void initializeWithNames( MetricRegistry* pRegistry, const utf8* pServiceName, const vector<string>& listMethodName, const vector<string>& listResultName );
 
         vector<MetricCounter*>   _listRequestCounter; ///< 메서드 × 결과
         vector<MetricHistogram*> _listLatency;        ///< 메서드

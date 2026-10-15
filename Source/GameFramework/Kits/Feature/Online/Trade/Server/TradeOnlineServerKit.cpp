@@ -66,25 +66,19 @@ namespace sw
 
             bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                const string* pUnknown = entry.findUnknownOption( { "tradable", "maxLegsPerSide" } );
-                if ( pUnknown != nullptr )
-                {
-                    outError = "unknown option '" + *pUnknown + "'";
+                if ( entry.readOptions( {
+                                            {      "tradable", _policy._listTradablePrefix},
+                                            {"maxLegsPerSide",     _policy._maxLegsPerSide}
+                },
+                                        outError ) == false )
                     return false;
-                }
-                entry.collectOptions( "tradable", _policy._listTradablePrefix );
                 if ( _policy._listTradablePrefix.empty() )
                 {
                     outError = "the trade kit needs at least one tradable option (an asset id prefix)";
                     return false;
                 }
-                if ( entry.readIntOption( "maxLegsPerSide", _policy._maxLegsPerSide, outError ) == false )
+                if ( registerHostService( context, entry, &_server, outError ) == false )
                     return false;
-                if ( context._pHost->registerHostService( &_server ) == false )
-                {
-                    outError = "the trade method range is already taken";
-                    return false;
-                }
                 return true;
             }
 
