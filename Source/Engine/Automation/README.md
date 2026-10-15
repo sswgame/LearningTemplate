@@ -73,6 +73,10 @@ frame 900 <ExpectVisited> #3: AI.State(FarmAutoFarmer) never went through 'Till 
 **결정적 재생과 녹화.** `-scenario-record=<Saved/Automation/...scenario.xml>` 를 주면 씬 플레이 첫 프레임부터 입력(시나리오가 낸 가상 입력 포함)을 적고, 끝날 때 `-scenario-record-probes` 의 탐침 값을 끝 프레임의 `<Expect>` 로 씁니다.
 녹화를 다시 돌리면 같은 입력과 같은 고정 틱이므로 같은 값이 나와야 합니다. `AppScenarioTest.RecordedPlayReplaysOnEveryBackend` 가 이 왕복을 네 백엔드에서 확인합니다.
 
+**로그 게이트.** `<Pass/>` 에 닿은 시나리오도 선언하지 않은 `[Warning]` · `[Error]` 를 남겼으면 실패입니다(`AutomationLogPolicy`). 실행기는 시나리오 구간의 줄과, 프로세스 전체에서 빠진 현지화 키(`LocalizationManager::getMissingKeys`)를 봅니다.
+`AppScenarioTest` 는 같은 판정을 프로세스 출력 전체(기동 · 종료 포함)에 다시 겁니다. 시나리오가 일부러 내는 줄은 그 시나리오에 `<ExpectLog contains="…">` 로 적고,
+고칠 수 없는 줄만 `Resource/engine/automation/allowedlogs.json` 에 이유와 함께 넣습니다. 실행기 줄(`[Scenario]`)과 테스트의 방어 구간 줄(`[Expected Defensive Test]`)은 보지 않습니다.
+
 ## 확장하는 법
 
 새 탐침을 더하는 절차입니다.

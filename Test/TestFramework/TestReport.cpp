@@ -165,10 +165,10 @@ namespace test
             }
         }
 
-        if ( catalog.getListKnownErrorLog().empty() == false )
+        if ( catalog.getListKnownLog().empty() == false )
         {
-            std::fprintf( stdout, " Known error logs (SW_TEST_KNOWN_ERROR_LOG - fix the cause, then delete the declaration):\n" );
-            for ( const KnownErrorLog& known : catalog.getListKnownErrorLog() )
+            std::fprintf( stdout, " Known error logs (SW_TEST_KNOWN_LOG - fix the cause, then delete the declaration):\n" );
+            for ( const KnownLog& known : catalog.getListKnownLog() )
             {
                 if ( known._hitCount > 0 )
                     std::fprintf( stdout, "   %s: tolerated %u line(s) containing '%s' - %s\n", known._suiteName.c_str(), known._hitCount, known._substring.c_str(),

@@ -10,16 +10,19 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Log/LogTypes.h"
 
 namespace sw
 {
-    struct LogEntry;
+    class AutomationLogPolicy;
 
-    /** @struct AutomationLogLine @brief 시나리오 동안 남은 로그 한 줄(`ExpectLog` 가 센다)입니다. */
+    /** @struct AutomationLogLine @brief 시나리오 동안 남은 로그 한 줄(`ExpectLog` 가 세고 로그 게이트가 본다)입니다. */
     struct AutomationLogLine
     {
-        string _message{};
-        uint32 _frameIndex{ 0 };
+        string   _message{};
+        string   _caller{}; ///< 로그 호출자 이름(`LocalizationManager` 등) — 게이트 실패 줄에 적는다
+        uint32   _frameIndex{ 0 };
+        LogLevel _level{ LogLevel::Info };
     };
 } // namespace sw
 
@@ -51,6 +54,10 @@ namespace sw
         void setFrameIndex( uint32 frameIndex ) { _frameIndex.store( frameIndex, std::memory_order_relaxed ); }
         /** @brief 프레임 @p sinceFrame 이후 줄 가운데 @p needle 을 포함한 줄 수입니다. */
         uint32 countMatchingLines( const string& needle, uint32 sinceFrame ) const;
+        /** @brief 게이트가 보는 수준(Warning · Error)인데 @p policy 가 허용하지 않은 줄을 `[수준] [호출자] 본문` 으로 돌려줍니다. */
+        vector<string> collectUnexpectedLines( const AutomationLogPolicy& policy ) const;
+        /** @brief 모은 줄 가운데 @p needle 을 담은 줄이 있으면 true 입니다(프레임 무관). */
+        bool containsLine( string_view needle ) const;
 
     private:
         void onLogWritten( const LogEntry& entry );

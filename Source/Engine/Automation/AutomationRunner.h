@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Automation/AutomationLogCapture.h"
+#include "Engine/Automation/AutomationLogPolicy.h"
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationReportWriter.h"
 #include "Engine/Automation/AutomationScenario.h"
@@ -162,12 +163,19 @@ namespace sw
         void               runExpectImage( const AutomationStep& step );
         /** @brief 끝 정리를 합니다. 가상 입력과 로그 수집을 떼고 요약 줄과 보고를 씁니다. 한 번만 돕니다. */
         void endRun( InputManager* pInput );
+        /**
+         * @brief 로그 게이트입니다. 통과한 시나리오가 허용하지 않은 Warning · Error 를 남겼거나 현지화 키가 빠졌으면 실패로 바꿉니다.
+         * @details 허용은 `AutomationLogPolicy`(전역 목록 + 이 시나리오의 `<ExpectLog>`)가 정한다. 빠진 현지화 키는 `LocalizationManager::getMissingKeys` 로
+         *          프로세스 전체를 본다(키마다 경고를 한 번만 남기므로 시나리오 앞 기동 구간에 남은 줄도 여기서 잡는다).
+         */
+        void applyLogGate();
         /** @brief 부하 시나리오(`<Load>`)면 시작 프레임에 측정 창(`gv_profileSeconds`)을 열고 멈춤 그물 시각을 잡습니다. 아니면 아무것도 하지 않습니다. */
         void startLoadWindow();
 
         AutomationScenario     _scenario;
         VirtualInputScript     _inputScript;
-        AutomationLogCapture   _logCapture;            ///< 시나리오 동안의 로그 줄(`<ExpectLog>`)
+        AutomationLogCapture   _logCapture;            ///< 시나리오 동안의 로그 줄(`<ExpectLog>`, 로그 게이트)
+        AutomationLogPolicy    _logPolicy;             ///< 로그 게이트의 허용 목록(전역 + `<ExpectLog>`)
         AutomationReportWriter _reportWriter;          ///< 보고 경로 · 지표 줄 · JSON 보고 쓰기
         vector<string>         _listFailure;           ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
         vector<string>         _listPendingScreenshot; ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로입니다.

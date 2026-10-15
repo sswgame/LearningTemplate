@@ -77,11 +77,11 @@ namespace test
 namespace test
 {
     /**
-     * @brief 호스트 스위트에서 아직 고치지 못한 Error 로그 하나(`SW_TEST_KNOWN_ERROR_LOG`).
-     * @details 그 스위트의 케이스가 남긴 Error 중 `_substring` 을 담은 줄은 예상 밖 Error 로 세지 않고 `_hitCount` 에 센다.
+     * @brief 호스트 스위트에서 아직 고치지 못한 Error · Warning 로그 하나(`SW_TEST_KNOWN_LOG`).
+     * @details 그 스위트의 케이스가 남긴 Error · Warning 중 `_substring` 을 담은 줄은 예상 밖 줄로 세지 않고 `_hitCount` 에 센다.
      *          실행 요약이 견딘 줄 수를 찍으므로 조용히 묻히지 않는다.
      */
-    struct KnownErrorLog
+    struct KnownLog
     {
         sw::string _suiteName;
         sw::string _substring;

@@ -8,6 +8,8 @@
 #include "Core/Process/Process.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Automation/AutomationLogPolicy.h"
+#include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -188,7 +190,54 @@ namespace test
         if ( result._bLaunched == false )
             return kNotLaunchedExitCode;
         (void)sw::FileUtil::writeTextFile( outputBase + ".log", result._output ); // 진단용 로그 사본 — 실패는 writeTextFile 이 오류로 남긴다
-        return result._bTimedOut ? -1 : result._exitCode;
+        if ( result._bTimedOut )
+            return -1;
+        if ( result._exitCode != 0 )
+            return result._exitCode;
+        const sw::vector<sw::string> listUnexpected = collectUnexpectedLogLines( result._output, scenarioArgument );
+        for ( const sw::string& line : listUnexpected )
+        {
+            outScenarioLines += "unexpected log (outside the scenario window): " + line + "\n";
+        }
+        return listUnexpected.empty() ? 0 : kUnexpectedLogExitCode;
+    }
+
+    sw::vector<sw::string> AppTestUtil::collectUnexpectedLogLines( const sw::string& output, const sw::string& scenarioArgument )
+    {
+        sw::vector<sw::string>  listLine;
+        sw::AutomationLogPolicy policy;
+        sw::string              error;
+        if ( sw::ResourcePaths::initialize() == false || policy.loadAllowList( error ) == false )
+        {
+            listLine.push_back( "log allow list is not loaded: " + error );
+            return listLine;
+        }
+        sw::StringUtil::forEachToken( scenarioArgument, ",", [&policy, &error]( sw::string_view scenarioPath )
+        {
+            sw::AutomationScenario scenario;
+            if ( scenario.loadFromPath( scenarioPath, error ) == false )
+                return; // 읽지 못한 시나리오는 App 이 이미 11(읽기 오류)로 끝냈다
+            for ( const sw::AutomationStep& step : scenario.getSteps() )
+            {
+                const sw::string* pContains = step._kind == "ExpectLog" ? step.findAttribute( "contains" ) : nullptr;
+                if ( pContains != nullptr )
+                    policy.addAllowed( *pContains, "declared by <ExpectLog>" );
+            }
+        } );
+        sw::StringUtil::forEachLine( output, [&policy, &listLine]( sw::string_view line )
+        {
+            // 콘솔 줄 모양: `[시각] [태그] [호출자] [Warning] - 본문`
+            size_t levelAt = line.find( "] [Warning] - " );
+            if ( levelAt == sw::string_view::npos )
+                levelAt = line.find( "] [Error] - " );
+            if ( levelAt == sw::string_view::npos )
+                return;
+            const sw::string_view message  = line.substr( line.find( " - ", levelAt ) + 3 );
+            const bool            bIgnored = sw::AutomationLogPolicy::isExemptMessage( message ) || policy.isAllowed( line );
+            if ( bIgnored == false )
+                listLine.push_back( sw::string( line ) );
+        } );
+        return listLine;
     }
 
     bool AppTestUtil::isSkippedExitCode( int32 exitCode )

@@ -391,6 +391,15 @@
 - **느슨한 트리의 `.meta` 스캔은 쿠킹한 팩과 같은 도메인(engine · common · 활성 게임)만 훑습니다**(2026-10-15). 다른 게임 팩의 GUID 는 이 게임이 닿지 않고, 팩 경로(`assetregistry.txt`)도 그 셋만 읽습니다. 기동의 파일 열기 385 → 316(렌더 벤치)입니다.
 - **플레이 중 처음 쓰는 메시는 판을 열 때 워커로 미리 읽어 쥡니다(`MeshPreloadSet`)**(2026-10-15). 언리얼 `FStreamableManager::RequestAsyncLoad` 의 핸들, 유니티 Addressables 의 미리 읽기와 같은 자리입니다. 메시 캐시가 약한 참조라 묶음이 쥐어야 남습니다.
   `MeshComponent` 를 비동기로 바꾸는 길(로드 동안 안 그림)은 모든 게임 · 테스트의 "지정하면 바로 그린다" 계약을 깨므로 두지 않았습니다. StarSkirmish LowEnd 최악 프레임 25.8 → 4.1 ms.
+- **Warning 은 조치가 필요한 것만 남기고, 예상된 상황(지원하는 사용법 · 정상 폴백)은 Info 입니다**(2026-10-15). 언리얼 verbosity 관례(Warning 은 고칠 것, 예상된 일은 Log · Verbose)와 같습니다.
+  같은 이름 오브젝트에 번호 붙이기(`GameObjectStore`, 언리얼 `MakeUniqueObjectName` 도 조용하다), 씬 없는 상태 스냅샷(`GameInstanceBase`)을 Info 로 내렸습니다.
+- **자동화 시나리오와 호스트 스위트는 선언하지 않은 Warning · Error 한 줄로 실패합니다**(2026-10-15). 언리얼 Automation 의 `AddExpectedError` 와 "경고를 실패로" 설정을 합친 자리입니다.
+  시나리오는 실행기(`AutomationRunner::applyLogGate`, 시나리오 구간 + 프로세스 전체의 빠진 현지화 키)와 `AppScenarioTest`(출력 전체, 기동 · 종료 포함) 두 겹이고,
+  허용은 시나리오의 `<ExpectLog>` 와 전역 목록 `Resource/engine/automation/allowedlogs.json`(항목마다 이유 필수) 둘뿐입니다. 호스트 스위트는 `SW_TEST_DEFENSIVE_SCOPE` · `SW_TEST_KNOWN_LOG` 입니다.
+  CPU 단위 테스트(nogpu)는 아직 Error 도 세지 않습니다 — 일부러 깨진 픽스처가 많아 경고 1,500 줄 남짓이 표식 없이 나옵니다(백로그).
+- **`--check-text` 는 빠진 번역도 실패로 봅니다 — 번역 테이블(`<culture>.translation.json`)이 있는 문화권만**(2026-10-15). 언리얼 Localization Dashboard 는 완성도만 보여 주지만,
+  런타임이 원문으로 대체하며 아무 경고도 내지 않아 한국어 실행에서도 빠진 번역이 드러나지 않았습니다. 테이블이 없는 문화권(엔진 `ja`, PO 만 낸 것)은 번역가 작업 중으로 보고 개수만 보고합니다.
+  CI 는 App 을 띄우지 않으므로 같은 판정을 `LocalizationGatherTest.RepositoryProjectsAreUpToDate`(EditorTest, nogpu)가 합니다.
 
 ### 5-3. Core 와 플랫폼
 

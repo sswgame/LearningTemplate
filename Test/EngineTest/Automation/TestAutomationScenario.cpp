@@ -6,6 +6,7 @@
 #include "Core/String/RegistrationList.h"
 
 #include "Engine/Automation/AutomationImageMetric.h"
+#include "Engine/Automation/AutomationLogPolicy.h"
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
@@ -13,6 +14,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -399,6 +401,55 @@ SW_TEST_CASE( AutomationScenarioTest, ExpectLogCountsLinesSinceAFrame )
     }
     SW_EXPECT_TRUE_MSG( result == sw::AutomationResult::Passed, runner.getFinishReason().c_str() );
     input.shutdown();
+}
+
+/**
+ * @brief [AutomationScenarioTest] 로그 게이트 — 선언하지 않은 Warning 을 남긴 시나리오는 `<Pass/>` 에 닿아도 실패고, 방어 구간 줄은 보지 않는다
+ * @details 게이트를 걸리게 할 줄은 방어 구간 밖에서 남겨야 하므로 테스트 로그에 `[AutoProbe] undeclared` 경고 한 줄이 남는다.
+ */
+SW_TEST_CASE( AutomationScenarioTest, UnexpectedWarningFailsAPassingScenario )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::AutomationRunner runner;
+    SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately"><At frame="3"><Pass/></At></Scenario>)" ) );
+    sw::AutomationResult result = sw::AutomationResult::Running;
+    for ( uint32 frame = 0; frame < 20 && result == sw::AutomationResult::Running; ++frame )
+    {
+        runner.onFrameBegin( input );
+        input.beginFrame( 1.0f / 60.0f );
+        if ( frame == 1 )
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "the gate ignores lines a test marked as expected" );
+            SW_LOG_WARNING( "[AutoProbe] marked" );
+        }
+        if ( frame == 2 )
+            SW_LOG_WARNING( "[AutoProbe] undeclared" ); // 이 줄이 게이트에 걸린다
+        result = runner.onFrameEnd( input );
+        input.endFrame();
+    }
+    SW_EXPECT_TRUE( result == sw::AutomationResult::Failed );
+    SW_EXPECT_TRUE_MSG( runner.getFinishReason().find( sw::AutomationLogPolicy::kAllowListPath ) != sw::string::npos, runner.getFinishReason().c_str() );
+    input.shutdown();
+}
+
+/**
+ * @brief [AutomationScenarioTest] 허용 목록은 항목마다 이유가 있어야 읽히고, 부분 문자열로 줄을 허용한다
+ */
+SW_TEST_CASE( AutomationScenarioTest, LogAllowListNeedsAReasonPerEntry )
+{
+    sw::AutomationLogPolicy policy;
+    sw::string              error;
+    SW_EXPECT_TRUE( policy.parseAllowList( R"({ "allowed": [ { "contains": "font has no glyph", "reason": "system font varies per PC" } ] })", "ok.json", error ) );
+    SW_EXPECT_TRUE( policy.isAllowed( "[Warning] [FontService] font has no glyph for U+AC00" ) );
+    SW_EXPECT_FALSE( policy.isAllowed( "[Warning] [FontService] font is missing" ) );
+    SW_EXPECT_FALSE( policy.parseAllowList( R"({ "allowed": [ { "contains": "x" } ] })", "noreason.json", error ) );
+    SW_EXPECT_TRUE( error.find( "reason" ) != sw::string::npos );
+    SW_EXPECT_TRUE( sw::AutomationLogPolicy::isExemptMessage( "[Expected Defensive Test] broken file" ) );
+    SW_EXPECT_TRUE( sw::AutomationLogPolicy::isExemptMessage( "[Scenario] FAIL t" ) );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    sw::AutomationLogPolicy repository;
+    SW_EXPECT_TRUE_MSG( repository.loadAllowList( error ), error.c_str() );
 }
 
 /**
