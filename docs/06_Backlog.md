@@ -35,7 +35,9 @@
 
 재현됐거나 코드로 확인된 열린 결함. 다른 어떤 일보다 먼저 본다.
 
-_열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
+- `A-5` **에디터를 켠 기동에서 `TypeRegistry::registerClass` 가 `DataRaceDetector` 로 죽는다(간헐, 두 번 봤다).** 둘 다 `-game=AbilityArena -EnableEditor`(2026-10-15 GL 1/36 실행 · D3-9 묶음 1 회).
+  에디터 모듈 타입 등록(`EditorToolDefaults` → `clearInheritedProperties`)이 같은 `TypeInfo` 의 속성 목록을 다른 스레드가 쓰는 중에 읽는다. 같은 때 AbilityArena 씬(334 엔티티)이 읽히고 있었다 —
+  씬 로드 쪽이 상속 속성 캐시를 늦게 채우는(쓰기) 경로가 의심된다. 감지기는 읽는 쪽 스택만 남기므로 쓰는 쪽을 잡으려면 `RaceDetectContext` 에 마지막 쓰기 스레드 스택을 남기거나 같은 조합을 반복해 재현율을 잰다.
 
 
 ---
@@ -193,6 +195,16 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   ④ `ctest --test-load`(테스트 프리셋 `execution.testLoad`)가 Windows 에서 효과가 있는지 확인하지 않았다 — 효과가 있으면 로컬 프리셋에 넣는다.
   ⑤ JUnit XML 리스너(`ITestRunListener`) — CI 대시보드가 필요해지면.
 
+- `C-30` **로그 게이트(2026-10-15)의 남은 것.** 시나리오 · 호스트 스위트는 선언하지 않은 Warning · Error 로 진다(결정 기록 5-2, `Source/Engine/Automation/README.md`). 남은 것 —
+  - CPU 단위 테스트(nogpu)는 아직 Error 도 세지 않는다. 2026-10-15 한 번에 표식 없는 Warning · Error 가 약 1,500 줄(일부러 깨진 카탈로그 픽스처 · 외형 스키마 테스트 · 경로 오류 등).
+    `SW_TEST_DEFENSIVE_SCOPE` 로 감싸거나 원인을 고친 뒤 `HostLogJudge` 를 모든 스위트로 넓힌다. 줄 목록은 `ctest -L nogpu` 뒤 LastTest.log 의 `[Warning]` · `[Error]` 를 (호출자, 문구) 로 묶어 본다.
+  - 로그 · assert 문자열이 한국어인 파일이 139 개다(`SW_LOG_*( "…한글…"` — 규칙은 영어). 고친 것은 이 묶음이 만진 곳뿐이다.
+  - `EditorContext::initialize` 가 `LocalizationManager` 를 못 찾으면 에디터 문구 표를 조용히 건너뛴다(그래서 문구 표 미적재가 경고 없이 묻혔다). wt/editorscn 의 `68525f070` 이 찾는 범위를 고쳤고,
+    그 뒤 못 찾으면 Error 를 남기게 한다(같은 줄이라 그 브랜치가 main 에 들어간 뒤).
+  - 전용 서버를 서버 설정이 없는 게임(`Config/Server/<게임>.json` 이 Empty 뿐)으로 띄우면 Dev 기본값 Warning 두 줄(`Server config … could not be read`, `ServerConfig using cpp defaults`). 서버를 낼 게임이 정해지면 설정 파일을 둔다.
+  - 에디터 켠 짧은 실행(`-gv_profileFrames=90`)을 다른 GPU 작업과 겹쳐 돌리면 종료 때 `Task fencing timeout (5000 ms) before module reload` Error 가 났다(36 회 중 3 회, 단독 재실행 0 회).
+    종료 경로(`ModuleHost::drainRenderWorkers`)는 리로드가 아닌데 같은 문구를 쓰고, 5 초 넘게 도는 에디터 배경 작업이 무엇인지 모른다 — 다시 보이면 `py -3 -m Scripts stacks <pid>` 로 워커 스택을 남긴다.
+
 - `C-29` **부하 검증(2026-10-15)의 남은 것과 첫 측정이 드러낸 것.** 쓰는 법은 [검증과 측정](08_Verification.md) "부하 검증" 절, 결정은 결정 기록 5-2 끝.
   ① **개발 배치의 기동 열기 309 ~ 316 번 중 셋은 Shipping 에 없는 일이다** — 키트 DLL 섀도 복사 61(읽고 쓰고 PDB 까지 복사), 모듈 매니페스트 70(`Bin/Modules/*.module.json` 낱개 — 언리얼 `.modules` 처럼 한 파일로 묶을 수 있다),
   셰이더 원본 해시 약 30(`.hlsl` · `.hlsli` 를 읽어 쿠킹 스탬프를 대조). LowEnd 흉내(8 ms)에서 이것만 약 1.3 s 다. 배포 기동을 재려면 쿠킹 팩을 올린 Release(`--cooked-dir`) 로 부하 시나리오를 돌리는 길을 먼저 만든다.
@@ -318,8 +330,7 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   **남은 것**: (1) 지형 브러시 원 시각화 — 시각화 단추는 켜지지만 `envshowcase` 씬의 에디터 카메라에서 원이 안 보였다(마우스 레이가 지형에 안 닿는지 카메라가 지형 밑인지 가르지 못함, 카메라를 지형 위로 옮겨 다시 볼 것).
   (2) 에디터 메뉴의 시나리오 녹화(`automation.toggleScenarioRecord`)는 자동화가 주입한 입력을 기록하지 않아(`0 steps`) 실제 입력으로만 확인된다(게임 실행의 `-scenario-record` 는 가상 입력도 적고 왕복 테스트가 있다).
   (3) 어빌리티 디버거 · 오디오 이벤트 · 리그 디버그 · 시퀀서 `RigSlot` 트랙 · UI 디자이너 앵커 프리셋 — 빈 상태(안내 글)까지만 봤다. 저장소에 이 기능들을 쓰는 데이터(리그 · 오디오 이벤트 라이브러리)가 없다.
-  NPC 일정 디버그 창은 HarvestValley 마을 사람(`FarmVillageDirectorComponent`)으로 실물이 생겼지만 에디터에서 열어 보지 않았다. (4) 시작 크래시 1회: `-game=AbilityArena -EnableEditor` 첫 실행이 모듈 로드 중 `DataRaceDetector` 로 죽었다
-  (`TypeRegistry::registerClass` → `clearInheritedProperties`, 읽는 스레드가 같은 `TypeInfo` 를 읽는 중; 이후 재실행은 통과해 간헐 — 재현율을 재고 읽는 쪽을 찾을 것). (5) 포토 모드는 게임 HUD 를 그대로 둔다(의도인지 확인).
+  NPC 일정 디버그 창은 HarvestValley 마을 사람(`FarmVillageDirectorComponent`)으로 실물이 생겼지만 에디터에서 열어 보지 않았다. (4) 시작 크래시는 `A-5` 로 옮겼다. (5) 포토 모드는 게임 HUD 를 그대로 둔다(의도인지 확인).
   (6) 뷰포트 옵션 팝업은 패널이 화면 오른쪽 끝이면 메인 창 밖으로 나가 클라이언트 캡처에 안 잡힌다. (7) 이 PC 의 파이썬이 git 출력을 못 받는 문제는 이 묶음 때 있었으나 이번 커밋 훅은 통과했다.
   캡처: `D:\wisual\captures\`.
 
