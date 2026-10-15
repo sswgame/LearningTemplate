@@ -101,5 +101,12 @@ namespace sw
          * @return OS 가 실패하면 false 입니다(파일 끝은 실패가 아니다).
          */
         [[nodiscard]] static bool readNativeFileAt( NativeFileHandle handle, uint64 offset, void* pDst, size_t size, size_t& outReadBytes );
+
+        /**
+         * @brief 디스크 흉내(`-gv_ioEmuReadLatencyMs` · `-gv_ioEmuReadKilobytesPerSecond`, 부하 검증의 하드웨어 프로필)가 켜져 있으면 읽기 한 번만큼 이 스레드를 재웁니다.
+         * @details 읽기 경로(`readNativeFileAt` · `FileUtil::readFile` · `readTextFile`)가 부릅니다. 꺼져 있으면(기본, 배포본은 늘) 아무것도 하지 않습니다.
+         *          느린 디스크의 지연 · 대역폭을 소프트웨어로 흉내 낸 것이라 OS 캐시 · 큐 깊이는 흉내 내지 않습니다.
+         */
+        static void emulateReadDelay( size_t byteCount );
     };
 } // namespace sw

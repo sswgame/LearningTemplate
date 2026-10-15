@@ -162,6 +162,8 @@ namespace sw
         void               runExpectImage( const AutomationStep& step );
         /** @brief 끝 정리를 합니다. 가상 입력과 로그 수집을 떼고 요약 줄과 보고를 씁니다. 한 번만 돕니다. */
         void endRun( InputManager* pInput );
+        /** @brief 부하 시나리오(`<Load>`)면 시작 프레임에 측정 창(`gv_profileSeconds`)을 열고 멈춤 그물 시각을 잡습니다. 아니면 아무것도 하지 않습니다. */
+        void startLoadWindow();
 
         AutomationScenario     _scenario;
         VirtualInputScript     _inputScript;
@@ -175,6 +177,7 @@ namespace sw
         GameObjectManager*     _pObjectManagerOverride; ///< `setObjectManager` 로 정한 매니저입니다(nullptr 이면 활성 씬).
         InputManager*          _pInputManager;          ///< 시작 프레임에 받은 입력 관리자(`onFrameBegin`)
         float64                _exitDeadlineSeconds;    ///< `ExpectExitWithin` 이 정한 벽시계 시한입니다(단조 시계 초). 0 이면 기다리지 않습니다.
+        float64                _loadDeadlineSeconds;    ///< 부하 시나리오(`<Load>`)의 멈춤 그물 — 측정 창이 이때까지 끝내지 못하면 시간 초과다(단조 시계 초). 0 이면 부하 시나리오가 아니다.
         size_t                 _nextStepIndex;
         uint32                 _frameIndex;
         uint32                 _waitFrameCount; ///< 시작 조건을 기다린 프레임 수입니다.

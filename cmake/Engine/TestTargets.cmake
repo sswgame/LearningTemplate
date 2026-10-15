@@ -260,11 +260,16 @@ function(sw_registerTestPolicy TARGET_NAME)
 			ARGS --host_suites=only LABELS "${swBaseLabels};hostgpu" TIMEOUT ${swHostTimeout} ASAN_OPTIONS ${swAsanOptions})
 	endif()
 
-	# 부하 · 시간 예산 검증(`SW_TEST_LOAD_SUITE`) — 혼자 돌아야 숫자가 뜻이 있어 직렬이고, 예산을 넘은 케이스가 진다.
+	# 부하 · 시간 예산 검증(`SW_TEST_LOAD_SUITE`) — 혼자 돌아야 숫자가 뜻이 있어 직렬이다. 예산을 넘은 케이스는 Release 에서만 진다
+	# (Debug 는 경합 검출기 · 할당 추적이 시간을 부풀리고, Shipping 은 측정 로그가 없다 — 다른 구성은 정확성만 보고 예산은 요약에 찍기만 한다).
 	if(NOT swLoadSeconds STREQUAL "")
 		sw_computeTestTimeout(swLoadTimeout ${swLoadSeconds} 1 0)
+		set(swLoadArgs --host_suites=all --load_suites=only)
+		if(CMAKE_BUILD_TYPE STREQUAL "Release")
+			list(APPEND swLoadArgs --enforce_budgets)
+		endif()
 		sw_registerTestRun(${TARGET_NAME}_Load ${TARGET_NAME} RUN_SERIAL
-			ARGS --host_suites=all --load_suites=only --enforce_budgets LABELS "${swBaseLabels};load" TIMEOUT ${swLoadTimeout} ASAN_OPTIONS ${swAsanOptions})
+			ARGS ${swLoadArgs} LABELS "${swBaseLabels};load" TIMEOUT ${swLoadTimeout} ASAN_OPTIONS ${swAsanOptions})
 	endif()
 endfunction()
 

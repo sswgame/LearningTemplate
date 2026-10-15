@@ -69,6 +69,7 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmuDuplicatePercent, 0, "네트워크 흉내: 중복(%) — PktDup" );
     SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmuReorderPercent, 0, "네트워크 흉내: 순서 뒤바뀜(%) — PktOrder" );
     SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmuBandwidthKilobytesPerSecond, 0, "네트워크 흉내: 회선 속도(KB/s, 0=제한 없음)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_netEmuPreset, "", "네트워크 흉내: 회선 프리셋(off · lan · wifi · lte · badwifi — 비면 위 값들, 있으면 위 값들을 무시)" );
 } // namespace sw
 
 namespace sw
@@ -83,6 +84,13 @@ namespace sw
     {
         using Internal = NetEmulationInternal;
         NetEmulationConditions conditions;
+        // 프리셋 이름이 있으면 그것이 전부다(부하 검증의 `<Load network>` · 하드웨어 프로필이 이 하나로 넘긴다 — 프리셋 표를 밖에 다시 적지 않는다).
+        if ( gv_netEmuPreset.empty() == false )
+        {
+            if ( tryGetPreset( gv_netEmuPreset, conditions ) == false )
+                SW_LOG_WARNING( "gv_netEmuPreset '%#' is not a preset (%#) - no emulation", gv_netEmuPreset.c_str(), Internal::kPresetNames );
+            return conditions;
+        }
         conditions._latency                 = static_cast<float64>( MathUtil::max( 0, gv_netEmuLatencyMs ) ) * Internal::kMillisecond;
         conditions._jitter                  = static_cast<float64>( MathUtil::max( 0, gv_netEmuJitterMs ) ) * Internal::kMillisecond;
         conditions._lossRate                = static_cast<float32>( MathUtil::clamp( gv_netEmuLossPercent, 0, 100 ) ) * Internal::kPercent;

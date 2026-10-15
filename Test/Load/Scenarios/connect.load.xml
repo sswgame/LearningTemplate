@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  부하 시나리오(서버) — 접속 N 명: 온라인 부하 봇이 같은 프로세스의 서버 조립(local-server 옵션)에 클라이언트 300 을 5 초에 걸쳐 붙이고 30 초 동안 로그인 · 채팅 · 매칭을 돈다.
+  <Load> 는 App 시나리오와 같은 선언이다(clients · rampUpSeconds · durationSeconds). 봇은 TCP 라 network 는 받지 않는다.
+-->
+<LoadScenario name="load.connect" driver="loadbot" botScenario="Tools/OnlineLoadBot/Scenarios/quick_check.json">
+	<Load clients="300" rampUpSeconds="5" durationSeconds="30"/>
+</LoadScenario>

@@ -19,6 +19,9 @@
 #include "TestFramework/Harness/TestBench.h"
 #include "TestFramework/TestFramework.h"
 
+SW_TEST_LOAD_SUITE( SerializationBenchTest, "largest scene load and object state round trip in three formats" );
+SW_TEST_TIME_BUDGET( SerializationBenchTest, 2500, "Release 케이스 최대 519 ms(2026-10-15, Ryzen 7 6800H, 세 번 중 최대)의 네 배 — CI 러너 여유" );
+
 namespace
 {
     struct SerializationBenchInternal

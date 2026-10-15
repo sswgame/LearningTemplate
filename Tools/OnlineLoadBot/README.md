@@ -14,10 +14,11 @@ Locust나 Gatling 같은 부하 테스트 도구와 같은 일을 하지만, HTT
 
 ## 따라 해 보기 — 빠른 확인 시나리오 돌리기
 
-같은 프로세스 안에 서버를 띄우고 봇 300개로 30초 동안 돌려 봅니다. 저장소 루트에서 실행합니다.
+같은 프로세스 안에 서버를 띄우고 봇 300개로 30초 동안 돌려 봅니다. 작업 폴더는 `Bin` 입니다(Windows 의 실행 파일은 키트 DLL 사본과 함께 `ToolBin` 에 있습니다 — 테스트의 `TestBin` 과 같은 이유).
 
 ```powershell
-build/Ninja-Debug/Bin/OnlineLoadBot.exe --scenario=Tools/OnlineLoadBot/Scenarios/quick_check.json --local-server --light-hash
+cd build/Ninja-Debug/Bin
+../ToolBin/OnlineLoadBot.exe --scenario=../../../Tools/OnlineLoadBot/Scenarios/quick_check.json --local-server --light-hash
 ```
 
 - `--local-server` 는 같은 프로세스에 서버를 조립합니다(`LoadBotLocalServer`). 전용 서버와 같은 조립(`OnlineServerRuntime`)으로 메모리 저장소, 캐시, 메시지 버스 위에
@@ -33,7 +34,7 @@ build/Ninja-Debug/Bin/OnlineLoadBot.exe --scenario=Tools/OnlineLoadBot/Scenarios
 ### 명령줄
 
 ```text
-OnlineLoadBot --scenario=<json> (--server=<ip:port> [--tls[=<PEM>]] | --local-server[=<port>]) [--bots=N] [--report=<json>] [--max-error-percent=N] [--light-hash]
+OnlineLoadBot --scenario=<json> (--server=<ip:port> [--tls[=<PEM>]] | --local-server[=<port>]) [--bots=N] [--ramp-up-seconds=S] [--duration-seconds=S] [--report=<json>] [--max-error-percent=N] [--light-hash]
 ```
 
 | 인자 | 뜻 |
@@ -41,6 +42,7 @@ OnlineLoadBot --scenario=<json> (--server=<ip:port> [--tls[=<PEM>]] | --local-se
 | `--scenario` | 시나리오 파일(필수) |
 | `--server`, `--local-server` | 둘 중 하나. 외부 서버 주소, 또는 같은 프로세스 서버 |
 | `--bots` | 시나리오의 봇 수를 덮어씁니다 |
+| `--ramp-up-seconds`, `--duration-seconds` | 시나리오의 늘리는 시간 · 실행 시간을 덮어씁니다(부하 검증 `<Load>` 가 넘긴다) |
 | `--report` | 결과를 JSON으로도 씁니다 |
 | `--max-error-percent` | 오류율 상한(기본 1%) |
 | `--light-hash` | 가벼운 비밀번호 해시 |
@@ -88,6 +90,9 @@ OnlineLoadBot --scenario=<json> (--server=<ip:port> [--tls[=<PEM>]] | --local-se
 - 알림 종류별 수, 연결 열림과 실패와 닫힘, 경기 수
 
 표는 로그에 나오고, `--report` 를 주면 JSON으로도 씁니다. 봇은 클라이언트 쪽 지표만 봅니다. 서버 쪽 지표는 서버의 운영 엔드포인트 `/metrics` 를 같이 봅니다.
+
+부하 검증(`py -3 -m Scripts load`)의 `loadbot` 드라이버가 `Test/Load/Scenarios/*.load.xml` 의 `<Load clients rampUpSeconds durationSeconds>` 를 위 세 인자로 넘기고 `--report` 의 JSON 을 읽어
+동작별 p50 · p99 · max 와 오류율을 예산(`Test/Load/Budgets.json`)과 견줍니다.
 
 ## 함정과 주의
 

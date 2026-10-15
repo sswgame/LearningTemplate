@@ -1,0 +1,28 @@
+{
+  "_doc": [
+    "부하 시나리오 목록과 묶음 — Scripts/qa/Load.py 가 읽는다. scenarios 는 이름 → 파일(저장소 기준). App 시나리오는 Resource/ 의 *.scenario.xml(엔진이 읽는다),",
+    "서버 시나리오는 Test/Load/Scenarios/*.load.xml(<LoadScenario driver=loadbot|cluster>)이고 둘 다 같은 <Load> 선언을 쓴다.",
+    "suites 는 묶음 이름 → [시나리오, 프로필] 목록. baseline 은 이 기계의 기준선, nightly 는 CI 야간 잡(GPU 없음 — App 드라이버는 건너뛴다)."
+  ],
+  "scenarios": {
+    "renderbench": "Resource/engine/automation/load/renderbench.scenario.xml",
+    "soak": "Resource/engine/automation/load/soak.scenario.xml",
+    "aiskirmish": "Resource/game/starskirmish/automation/load/aiskirmish.scenario.xml",
+    "connect": "Test/Load/Scenarios/connect.load.xml",
+    "replication": "Test/Load/Scenarios/replication.load.xml"
+  },
+  "suites": {
+    "baseline": [
+      ["renderbench", "Native"], ["renderbench", "HighEnd"], ["renderbench", "Mid"], ["renderbench", "LowEnd"],
+      ["aiskirmish", "HighEnd"], ["aiskirmish", "Mid"], ["aiskirmish", "LowEnd"],
+      ["connect", "HighEnd"], ["connect", "Mid"], ["connect", "LowEnd"],
+      ["replication", "HighEnd"], ["replication", "Mid"], ["replication", "LowEnd"]
+    ],
+    "nightly": [
+      ["connect", "Mid"], ["replication", "Mid"], ["replication", "LowEnd"]
+    ],
+    "soak": [
+      ["soak", "Native"]
+    ]
+  }
+}

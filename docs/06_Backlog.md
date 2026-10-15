@@ -192,13 +192,23 @@
 - `C-22` **작은 정리 후보(2026-10-13 병합 검토에서 모음).** `IPhysicsScene3D/2D` 전방 선언용 `*Fwd.h`, Core → Log 예외 다섯 파일(티어마다 필요한 것이 달라 함수 포인터 하나로 풀리지 않는다), 프렐류드 예외 제거(184 파일).
 
 - `C-28` **테스트 틀 개편(2026-10-15)의 남은 것.** 틀 · 정책 · 확장 지점은 들어갔다(`Test/README.md`, 결정 기록 5-2 끝). 남은 것 —
-  ① 부하 검증 단계: 벤치 · 부하 스위트(`*BenchTest`, `NetReplicationBenchTest` 41 초, `OnlineLoadBotTest` 19 초, `TerrainBenchTest` 18 · 16 초, `NetSimDestructionMatrixTest`)를
-  `SW_TEST_LOAD_SUITE` + `SW_TEST_TIME_BUDGET` 으로 옮기고 정책 줄에 `loadSeconds` 를 더한다. 옮기면 CI `nogpu` 에서 빠지므로 정확성 단언은 짧은 케이스로 남긴다(언리얼 Perf · Stress 필터처럼 갈래만 바꾼다).
+  ① 벤치 스위트는 부하 스위트로 옮겼다(2026-10-15). 옮긴 뒤의 `CoreTest` · `EngineTest` `seconds` 와 `loadSeconds` 는 뺄셈 어림이라 다음 정책 재측정 때 실제 값으로 맞춘다.
+  `NetSimDestructionMatrixTest` 는 손실 회선의 수렴(정확성) 테스트라 nogpu 에 남겼고, 호스트 벤치(`NetUDPBenchTest` · `GlyphBenchTest`)는 스위트 종류가 하나뿐이라 호스트로 남겼다.
   ② 구성 차이 건너뜀 중 `SW_TEST_REQUIRES_FEATURE` 로 아직 안 바꾼 것 — Shipping 의 에디터 · 설정 파일 · 개발 전역 변수 · 서버 팩 오디오 쪽(`TestAppScenario` · `TestConfigManager` · `TestNetClientServer` 등 열 곳 안팎).
   필요하면 `BuildFeature` 에 `Editor` · `DevGlobalVariables` 를 더한다.
   ③ `seconds` · `caseCosts` 는 부하가 걸린 이 PC(실행 파일 다섯 동시)에서 잰 값이다. CI 리눅스 Debug 가 조각마다 제한 시간의 절반을 넘으면 그 러너에서 다시 잰다.
   ④ `ctest --test-load`(테스트 프리셋 `execution.testLoad`)가 Windows 에서 효과가 있는지 확인하지 않았다 — 효과가 있으면 로컬 프리셋에 넣는다.
   ⑤ JUnit XML 리스너(`ITestRunListener`) — CI 대시보드가 필요해지면.
+
+- `C-29` **부하 검증(2026-10-15)의 남은 것과 첫 측정이 드러낸 것.** 쓰는 법은 [검증과 측정](08_Verification.md) "부하 검증" 절, 결정은 결정 기록 5-2 끝.
+  ① **기동이 작은 파일 읽기 수천 번에 묶여 있다.** 디스크 흉내(읽기마다 1 · 8 ms)를 켜면 렌더 벤치 기동이 0.7 s → 6.4 s(Mid) · 6.8 s(LowEnd)다 — 지연이 8 배여도 시간이 거의 같아,
+  읽기 한 번이 잠자기 해상도(약 1 ms)에 걸리는 횟수(수천)가 시간을 정한다. 기동에서 읽는 파일 수 · 동기 읽기 자리를 세고(쿠킹 팩 · 묶어 읽기), HDD 급 기기의 기동 예산(`startup_ms`)을 정한다.
+  ② **느린 디스크에서 플레이 중 히치가 는다.** aiskirmish 최악 프레임이 HighEnd 14.4 → Mid 19.2 → LowEnd 25.2 ms(16 ms 를 넘은 프레임 0 → 1 → 2)다. 렌더 벤치는 Native(워커 14)에서만 3 판 중 2 판이 19.6 ms 한 프레임을 냈다. 게임 스레드가 플레이 중에 동기로 파일을 읽는 자리를 찾는다(Tracy 로 그 프레임).
+  ③ 워커가 적을수록 aiskirmish 의 프레임당 할당이 는다(워커 10 · 4 · 2 에서 19 · 34 · 60 회) — 어느 자리인지 `-gv_profileAllocSites` 로 본다.
+  ④ **실행 중 자동 품질 조정**(언리얼 Dynamic Resolution · 유니티 Adaptive Performance)은 아직 없다. 지금은 `load scale` 이 밖에서 단계를 내려 예산을 지키는 첫 단계를 찾는다.
+  첫 측정에서는 모든 프로필이 GT · RT · GPU p99 예산(16.7 ms)의 1/10 안팎이라 실행 중 조정의 이득이 보이지 않았다 — 무거운 게임 장면이 예산을 깨면 그때 렌더 스케일부터(`gv_renderScale`) 들인다.
+  ⑤ 하드웨어 흉내는 코어 수 · 메모리 · 디스크 · 해상도 · 품질까지다. 클럭 · 캐시 · GPU 성능은 흉내 내지 않으니 LowEnd 의 프레임 시간이 Native 보다 짧게 나올 수 있다 — 실제 저사양 기기로 한 번 재서 흉내와의 차이를 적는다.
+  ⑥ 야간 잡(`load.yml`)이 아직 돌지 않았다. 리눅스 `CI-Release` 에서 OnlineLoadBot 이 서버 키트를 이름으로 올리는지(`dlopen` — Windows 만 확인), 러너 속도로 시간 예산이 지는지 본다.
 
 - `C-25` **게임 여럿을 빌드 한 번에 짓고, 실행할 때 고르고, 키트는 필요한 것만**(2026-10-13, 사용자 확정). 결정은 [결정 기록](09_Decisions.md) 5-2, 쓰는 법은 `Source/Games/README.md`.
   남은 것: 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸다(DX12 직접 실행으로 10 시나리오 통과만 확인).

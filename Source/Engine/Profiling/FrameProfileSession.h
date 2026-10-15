@@ -50,9 +50,18 @@ namespace sw
          */
         static bool isMeasureWindowDone( uint64 frames, uint64 frameTarget, int64 elapsedMicro, int64 secondsTarget );
 
+        /** @brief 히치 꼬리에 남기는 최악 프레임 수입니다. */
+        static constexpr uint32 kWorstFrameCount = 5;
+        /** @brief 히치로 세는 프레임 간격 문턱(마이크로초) — 60 Hz 한 주기 · 두 주기 · 100 ms 입니다. */
+        static constexpr int64 kArrHitchThresholdMicro[] = { 16667, 33333, 100000 };
+
     private:
         /** @brief 측정 창의 프레임당 할당 수와(켰다면) 콜스택별 상위 자리를 로그로 남깁니다. */
         void reportAllocations( uint64 frames );
+        /** @brief 측정 창 안 게임 스레드 프레임 간격(벽시계) 하나를 히치 꼬리에 더합니다. */
+        void recordFrameInterval( int64 intervalMicro );
+        /** @brief 히치 꼬리 줄(`[Profile] hitch`)을 남깁니다 — 최악 프레임 다섯과 문턱을 넘은 프레임 수. 평균 · 백분위 표가 가리는 한 번의 긴 프레임을 본다. */
+        void reportHitches() const;
 
         /** @brief 측정할 프레임 수입니다. 0 이면 프레임 수로 끊지 않습니다(시간 목표만 있을 때). */
         uint64 _frameTarget{ 0 };
@@ -76,5 +85,11 @@ namespace sw
          *          빨라져 렌더 스레드의 구간이 늘어 보일 때(경합인지 회귀인지) 가르려면 측정 구간 전체의 벽시계가 필요합니다.
          */
         int64 _measureStartMicro{ 0 };
+        /** @brief 앞 프레임이 끝난 벽시계 시각(마이크로초)입니다. 측정 창 안에서만 씁니다. */
+        int64 _lastFrameEndMicro{ 0 };
+        /** @brief 측정 창의 가장 긴 프레임 간격들(마이크로초, 큰 순)입니다. */
+        int64 _arrWorstFrameMicro[kWorstFrameCount]{};
+        /** @brief `kArrHitchThresholdMicro` 의 문턱마다 넘은 프레임 수입니다. */
+        uint32 _arrHitchCount[3]{};
     };
 } // namespace sw

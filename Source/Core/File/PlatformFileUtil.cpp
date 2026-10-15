@@ -4,6 +4,11 @@
 
 #include "Core/Common/Defines.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Math/MathUtil.h"
+
+#include <chrono>
+#include <thread>
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Common/PlatformOsHeaders.h"
@@ -53,10 +58,22 @@ namespace sw
 #endif
         };
     } // namespace
+
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_ioEmuReadLatencyMs, 0, "디스크 흉내: 파일 읽기 한 번마다 더하는 지연(ms, 0=끔)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_ioEmuReadKilobytesPerSecond, 0, "디스크 흉내: 파일 읽기 대역폭(KB/s, 0=제한 없음)" );
 } // namespace sw
 
 namespace sw
 {
+    void PlatformFileUtil::emulateReadDelay( size_t byteCount )
+    {
+        int64 delayMicro = static_cast<int64>( MathUtil::max( 0, gv_ioEmuReadLatencyMs ) ) * constant::kMicrosecondsPerMillisecond;
+        if ( gv_ioEmuReadKilobytesPerSecond > 0 )
+            delayMicro += static_cast<int64>( byteCount ) * constant::kMicrosecondsPerSecond / ( static_cast<int64>( gv_ioEmuReadKilobytesPerSecond ) * static_cast<int64>( constant::kBytesPerKilobyte ) );
+        if ( delayMicro > 0 )
+            std::this_thread::sleep_for( std::chrono::microseconds( delayMicro ) );
+    }
+
     FILE* PlatformFileUtil::openFile( const utf8* pFilePath, const utf8* pMode )
     {
         if ( pFilePath == nullptr || pMode == nullptr )
@@ -269,6 +286,7 @@ namespace sw
         outReadBytes = 0;
         if ( handle == kInvalidNativeFileHandle || ( pDst == nullptr && size > 0 ) )
             return false;
+        emulateReadDelay( size );
 
         uint8* pCursor = static_cast<uint8*>( pDst );
         while ( outReadBytes < size )

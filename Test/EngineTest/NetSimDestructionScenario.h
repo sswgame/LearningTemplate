@@ -8,6 +8,7 @@
  */
 #pragma once
 #include "Core/Math/MathUtil.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Destruction/FractureComponent.h"
 #include "Engine/Object/Component/Physics/ScenePhysics.h"
@@ -250,6 +251,8 @@ namespace test
         int32                  _skipEventClient{ -1 }; ///< 이 클라이언트(0 부터)가 벽의 다음 사건 하나를 빼먹는다
         uint32                 _seed{ 5u };
         uint32                 _settleTickLimit{ 600 }; ///< 창(_tickCount) 뒤에 모두가 서버와 같아질 때까지 더 도는 틱 상한
+        uint32                 _clientCount{ 3 };       ///< 처음 클라이언트 수(늦은 참가 제외)
+        uint32                 _rampUpTicks{ 0 };       ///< 0 이면 처음에 모두, 아니면 하나로 시작해 이 틱에 걸쳐 고르게 늘린다(부하 검증 `<Load rampUpSeconds>`)
     };
 } // namespace test
 
@@ -278,6 +281,7 @@ namespace test
         float32         _destructionBytesPerSecond{ 0.0f };      ///< 그중 파괴 메시지 몸
         float32         _peakServerUploadBytesPerSecond{ 0.0f }; ///< 1 초 창 가운데 가장 많이 내놓은 창
         uint64          _poseMessageCount{ 0 };
+        vector<float32> _listStepMicro{}; ///< 틱마다 `NetSimHarness::step` 의 벽시계(마이크로초 — 서버와 모든 클라이언트 월드 한 틱)
         bool            _bValid{ false };
     };
 
@@ -299,10 +303,12 @@ namespace test
         settings._seed = options._seed;
         if ( harness.initialize( settings, &game ) == false )
             return result;
-        for ( int32 index = 0; index < 3; ++index )
+        const uint32 initialClientCount = options._rampUpTicks > 0 ? MathUtil::min( 1u, options._clientCount ) : options._clientCount;
+        for ( uint32 index = 0; index < initialClientCount; ++index )
         {
             (void)harness.addClient( NetSimLinkConditions::makeSymmetric( options._conditions ) );
         }
+        uint32 addedClientCount = initialClientCount;
 
         ShowcaseObjects&     server      = getServerSession( harness )._objects;
         const uint32         objectCount = static_cast<uint32>( server._listFracture.size() );
@@ -350,7 +356,15 @@ namespace test
                 lateClient   = harness.addClient( NetSimLinkConditions::makeSymmetric( options._conditions ) );
                 lateJoinTick = static_cast<int32>( tick );
             }
+            // 램프업 — 틱 t 까지 clientCount × t / rampUpTicks 명이 들어와 있게 한다.
+            const uint32 rampTargetCount = options._rampUpTicks > 0 ? static_cast<uint32>( MathUtil::min<uint64>( options._clientCount, static_cast<uint64>( options._clientCount ) * ( tick + 1 ) / options._rampUpTicks + 1 ) ) : 0;
+            for ( ; addedClientCount < rampTargetCount; ++addedClientCount )
+            {
+                (void)harness.addClient( NetSimLinkConditions::makeSymmetric( options._conditions ) );
+            }
+            const int64 stepStartMicro = MonotonicClock::nowMicroseconds();
             harness.step();
+            result._listStepMicro.push_back( static_cast<float32>( MonotonicClock::nowMicroseconds() - stepStartMicro ) );
             const uint32 serverTick = harness.getServer().getLocalTick() - 1; // 방금 돈 틱(서버가 보낸 자세의 틱)
             harness.collectClients( listClient );
 

@@ -66,8 +66,19 @@ namespace sw
 
     void FrameProfileSession::onFrameEnd()
     {
-        if ( _bActive == SW_FALSE || _bReported == SW_TRUE )
+        if ( _bReported == SW_TRUE )
             return;
+        if ( _bActive == SW_FALSE )
+        {
+            // 기동 뒤에 목표를 걸 수 있다 — 부하 시나리오(`<Load durationSeconds>`)가 씬 플레이를 시작한 프레임에 `gv_profileSeconds` 를 넣어 측정 창을 연다.
+            const bool bLateStart = gv_profileFrames > 0 || gv_profileSeconds > 0;
+            if ( bLateStart )
+            {
+                begin();
+                engine::getSubsystem<FrameProfiler>().reset(); // 워밍업을 지금부터 센다
+            }
+            return;
+        }
 
         FrameProfiler& profiler = engine::getSubsystem<FrameProfiler>();
         const uint64   frames   = profiler.getFrameCount();
@@ -83,6 +94,7 @@ namespace sw
             // 프레임마다 다시 참이 되어 영원히 워밍업만 한다.
             _bWarmedUp         = SW_TRUE;
             _measureStartMicro = MonotonicClock::nowMicroseconds();
+            _lastFrameEndMicro = _measureStartMicro;
             profiler.reset();
             SW_LOG_INFO( "[Profile] 워밍업 %# 프레임을 버렸습니다. 지금부터 %# 프레임을 잽니다.", kWarmupFrames,
                          _frameTarget );
@@ -107,15 +119,18 @@ namespace sw
             return;
         }
 
-        if ( isMeasureWindowDone( frames, _frameTarget, MonotonicClock::nowMicroseconds() - _measureStartMicro, _secondsTarget ) == false )
+        const int64 frameEndMicro = MonotonicClock::nowMicroseconds();
+        recordFrameInterval( frameEndMicro - _lastFrameEndMicro );
+        _lastFrameEndMicro = frameEndMicro;
+        if ( isMeasureWindowDone( frames, _frameTarget, frameEndMicro - _measureStartMicro, _secondsTarget ) == false )
             return;
 
         _bReported = SW_TRUE;
         profiler.report( "frame breakdown" );
         // 측정 구간의 벽시계 시간이다. 프레임이 실제로 몇 us 마다 나왔는지(처리량)를 본다. 구간 표만으로는 병목이 어디서 기다리는지 알 수 없다.
-        [[maybe_unused]] const int64 nowMicro     = MonotonicClock::nowMicroseconds();
-        [[maybe_unused]] const int64 elapsedMicro = nowMicro - _measureStartMicro;
+        [[maybe_unused]] const int64 elapsedMicro = frameEndMicro - _measureStartMicro;
         SW_LOG_INFO( "[Profile] wall  %# frames in %# ms  = %# us/frame", frames, elapsedMicro / constant::kMicrosecondsPerMillisecond, elapsedMicro / static_cast<int64>( frames == 0 ? 1 : frames ) );
+        reportHitches();
         reportAllocations( frames );
 #if SW_PROFILER_TRACE_ENABLED
         if ( gv_profileTracePath.empty() == false )
@@ -123,6 +138,34 @@ namespace sw
 #endif
         profiler.setEnabled( false );
         _bQuitRequested = SW_TRUE;
+    }
+
+    void FrameProfileSession::recordFrameInterval( int64 intervalMicro )
+    {
+        for ( uint32 index = 0; index < static_cast<uint32>( std::size( kArrHitchThresholdMicro ) ); ++index )
+        {
+            if ( intervalMicro > kArrHitchThresholdMicro[index] )
+                ++_arrHitchCount[index];
+        }
+        // 큰 순으로 다섯 칸 — 들어갈 자리부터 뒤로 민다.
+        for ( uint32 index = 0; index < kWorstFrameCount; ++index )
+        {
+            if ( intervalMicro <= _arrWorstFrameMicro[index] )
+                continue;
+            for ( uint32 moveIndex = kWorstFrameCount - 1; moveIndex > index; --moveIndex )
+            {
+                _arrWorstFrameMicro[moveIndex] = _arrWorstFrameMicro[moveIndex - 1];
+            }
+            _arrWorstFrameMicro[index] = intervalMicro;
+            return;
+        }
+    }
+
+    void FrameProfileSession::reportHitches() const
+    {
+        // 줄 모양은 `Scripts/qa/Load.py` 가 읽는다 — 바꾸면 그 정규식도 고친다.
+        SW_LOG_INFO( "[Profile] hitch  worst %# %# %# %# %# us  over16ms %#  over33ms %#  over100ms %#", _arrWorstFrameMicro[0], _arrWorstFrameMicro[1], _arrWorstFrameMicro[2],
+                     _arrWorstFrameMicro[3], _arrWorstFrameMicro[4], _arrHitchCount[0], _arrHitchCount[1], _arrHitchCount[2] );
     }
 
     void FrameProfileSession::reportAllocations( [[maybe_unused]] uint64 frames )

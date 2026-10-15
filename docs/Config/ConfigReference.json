@@ -3058,6 +3058,14 @@
    "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
   },
   {
+   "name": "gv_emulatedGPUMemoryMb",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "하드웨어 흉내: 사양 조사가 보고하는 비디오 메모리 상한(MB, 0=실제 값)",
+   "source": "Source/Engine/UserSettings/HardwareProbe.cpp"
+  },
+  {
    "name": "gv_environmentAnimate",
    "type": "int32",
    "default": "1",
@@ -3120,6 +3128,22 @@
    "kind": "일반",
    "description": "GPU 업로드를 워커로 앞당긴다 (0=렌더 스레드가 그 자리에서 만든다)",
    "source": "Source/Engine/Graphics/Upload/GPUUploadQueue.cpp"
+  },
+  {
+   "name": "gv_ioEmuReadKilobytesPerSecond",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "디스크 흉내: 파일 읽기 대역폭(KB/s, 0=제한 없음)",
+   "source": "Source/Core/File/PlatformFileUtil.cpp"
+  },
+  {
+   "name": "gv_ioEmuReadLatencyMs",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "디스크 흉내: 파일 읽기 한 번마다 더하는 지연(ms, 0=끔)",
+   "source": "Source/Core/File/PlatformFileUtil.cpp"
   },
   {
    "name": "gv_meadowAutoPlay",
@@ -3215,6 +3239,14 @@
    "default": "0",
    "kind": "시험",
    "description": "네트워크 흉내: 손실(%) — PktLoss",
+   "source": "Source/Core/Network/Transport/NetEmulation.cpp"
+  },
+  {
+   "name": "gv_netEmuPreset",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "네트워크 흉내: 회선 프리셋(off · lan · wifi · lte · badwifi — 비면 위 값들, 있으면 위 값들을 무시)",
    "source": "Source/Core/Network/Transport/NetEmulation.cpp"
   },
   {
@@ -4202,6 +4234,7 @@
     "CI-Debug-ASAN",
     "CI-Debug-TSAN",
     "CI-Fuzz",
+    "CI-Release",
     "CI-Shipping"
    ]
   },

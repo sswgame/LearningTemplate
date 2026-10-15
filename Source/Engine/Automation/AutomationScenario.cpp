@@ -4,6 +4,7 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Network/Transport/NetEmulation.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -115,6 +116,7 @@ namespace sw
 
     AutomationScenario::AutomationScenario()
         : _listStep{}
+        , _load{}
         , _name{}
         , _sourcePath{}
         , _fixedDelta{ AutomationScenarioInternal::kDefaultFixedDelta }
@@ -244,9 +246,23 @@ namespace sw
         uint32 previousFrame = 0;
         for ( XMLNode atNode = root.findChild(); atNode.isValid(); atNode = atNode.findNextSibling() )
         {
+            if ( string_view{ atNode.getName() } == "Load" )
+            {
+                if ( _load._bDeclared )
+                {
+                    outError = _sourcePath + ": only one <Load> may sit under <Scenario>";
+                    return false;
+                }
+                if ( parseLoad( atNode, reason ) == false )
+                {
+                    outError = _sourcePath + ": <Load> " + reason;
+                    return false;
+                }
+                continue;
+            }
             if ( string_view{ atNode.getName() } != "At" )
             {
-                outError = _sourcePath + ": only <At frame=\"N\"> may sit under <Scenario>, got <" + atNode.getName() + ">";
+                outError = _sourcePath + ": only <Load> and <At frame=\"N\"> may sit under <Scenario>, got <" + atNode.getName() + ">";
                 return false;
             }
             uint32 frameIndex = 0;
@@ -284,6 +300,71 @@ namespace sw
         {
             return lhs._frameIndex < rhs._frameIndex;
         } );
+        // 부하 시나리오는 측정 창이 끝낸다 — `<Pass/>` 가 있으면 창이 닫히기 전에 프로세스가 끝나 보고가 없다.
+        for ( const AutomationStep& step : _listStep )
+        {
+            if ( _load._bDeclared && step._kind == "Pass" )
+            {
+                outError = _sourcePath + ": " + step.describe() + ": a scenario with <Load> ends when its measurement window closes - remove <Pass/>";
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool AutomationScenario::parseLoad( const XMLNode& node, string& outReason )
+    {
+        using Internal   = AutomationScenarioInternal;
+        _load._bDeclared = true;
+        for ( XMLAttribute attribute = node.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+        {
+            const string_view name  = attribute.getName();
+            const utf8*       pText = attribute.getValue();
+            if ( name == "clients" )
+            {
+                if ( Internal::readUint( pText, "clients", _load._clientCount, outReason ) == false )
+                    return false;
+            }
+            else if ( name == "meshes" )
+            {
+                if ( Internal::readUint( pText, "meshes", _load._meshCount, outReason ) == false )
+                    return false;
+            }
+            else if ( name == "movers" )
+            {
+                if ( Internal::readUint( pText, "movers", _load._moverCount, outReason ) == false )
+                    return false;
+            }
+            else if ( name == "durationSeconds" || name == "rampUpSeconds" )
+            {
+                float32& outSeconds = name == "durationSeconds" ? _load._durationSeconds : _load._rampUpSeconds;
+                if ( StringUtil::parseFloat( string_view{ pText }, outSeconds ) == false || outSeconds < 0.0f )
+                {
+                    outReason = string( name ) + " must be a non-negative number, got '" + pText + "'";
+                    return false;
+                }
+            }
+            else if ( name == "network" )
+            {
+                NetEmulationConditions conditions;
+                if ( NetEmulationConditions::tryGetPreset( pText, conditions ) == false )
+                {
+                    outReason = string( "unknown network preset '" ) + pText + "' (off | lan | wifi | lte | badwifi)";
+                    return false;
+                }
+                _load._network = pText;
+            }
+            else
+            {
+                outReason = "unknown attribute '" + string( name ) + "'";
+                return false;
+            }
+        }
+        if ( _load._durationSeconds <= 0.0f )
+        {
+            outReason = "needs durationSeconds > 0 (the measurement window)";
+            return false;
+        }
         return true;
     }
 } // namespace sw

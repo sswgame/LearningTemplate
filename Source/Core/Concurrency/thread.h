@@ -57,6 +57,13 @@ namespace sw
         /** @brief 스레드 식별자입니다. 없으면 기본값입니다. */
         id get_id() const noexcept { return _thread.get_id(); }
 
+        /**
+         * @brief 이 프로세스가 쓸 수 있는 논리 프로세서 수입니다(최소 1). 워커 풀 크기와 사양 조사는 이 값을 씁니다.
+         * @details `std::thread::hardware_concurrency` 는 기계 전체를 세어 친화도 · Job Object(부하 검증의 하드웨어 흉내 `py -3 -m Scripts load`) ·
+         *          컨테이너 CPU 제한을 보지 못한다. Windows 는 프로세스 친화도 마스크, 리눅스는 `sched_getaffinity` 의 비트 수이고, 못 읽으면 기계 전체 값이다.
+         */
+        static uint32 getUsableProcessorCount();
+
     private:
         template <typename TFunction, typename... TArgs>
         static void runThread( TFunction function, TArgs... args )

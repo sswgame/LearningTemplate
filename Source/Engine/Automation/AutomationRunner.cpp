@@ -863,6 +863,7 @@ namespace sw
         , _pObjectManagerOverride{ nullptr }
         , _pInputManager{ nullptr }
         , _exitDeadlineSeconds{ 0.0 }
+        , _loadDeadlineSeconds{ 0.0 }
         , _nextStepIndex{ 0 }
         , _frameIndex{ 0 }
         , _waitFrameCount{ 0 }
@@ -970,6 +971,7 @@ namespace sw
             // 배타 시나리오는 무인 실행이다. 사람이 같은 PC 에서 마우스를 움직여도 에디터 UI 까지 결과가 바뀌지 않게 장치 이벤트를 창 메시지 단계에서 버린다.
             input.setOsDeviceInputBlocked( _scenario.getInputMode() == VirtualInputMode::Exclusive );
             SW_LOG_INFO( "[Scenario] %# started after %# frame(s)", _scenario.getName().c_str(), _waitFrameCount );
+            startLoadWindow();
         }
         _logCapture.setFrameIndex( _frameIndex );
         // 액션 계층 단계(레지스트리의 `_bBeforeInput`)는 그 프레임의 입력 재생과 게임 틱 전에 넣는다.
@@ -1017,14 +1019,38 @@ namespace sw
             // 끝난 프레임은 세지 않는다. 보고의 프레임은 끝낸 단계의 프레임이다. `WaitUntil` 이 붙잡은 프레임도 세지 않는다(뒤 단계가 그만큼 밀린다).
             if ( _result == AutomationResult::Running && _holdFrameCount == 0 )
                 ++_frameIndex;
-            // 창 닫기를 기다리는 동안은 프레임 시한을 보지 않는다(벽시계 시한이 본다).
-            const bool bFrameTimeoutReached = _result == AutomationResult::Running && _exitDeadlineSeconds <= 0.0 && _frameIndex > _scenario.getTimeoutFrames();
+            // 창 닫기를 기다리는 동안은 프레임 시한을 보지 않는다(벽시계 시한이 본다). 부하 시나리오는 측정 창이 끝내므로 벽시계 그물만 본다.
+            const bool bFrameTimeoutReached = _result == AutomationResult::Running && _exitDeadlineSeconds <= 0.0 && _loadDeadlineSeconds <= 0.0 &&
+                                              _frameIndex > _scenario.getTimeoutFrames();
             if ( bFrameTimeoutReached )
                 finish( AutomationResult::TimedOut, "timeoutFrames reached without <Pass/>" );
+            const bool bLoadDeadlineExceeded = _result == AutomationResult::Running && _loadDeadlineSeconds > 0.0 &&
+                                               _loadDeadlineSeconds < static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6;
+            if ( bLoadDeadlineExceeded )
+                finish( AutomationResult::TimedOut, "the <Load> measurement window did not close in time (was -gv_profileFrames also given?)" );
         }
         if ( _result != AutomationResult::Running )
             endRun( &input );
         return _result;
+    }
+
+    void AutomationRunner::startLoadWindow()
+    {
+        const AutomationLoad& load = _scenario.getLoad();
+        if ( load._bDeclared == false )
+            return;
+        // 측정 창은 시나리오가 시작한 프레임부터다(로딩을 빼고 잰다). 끝은 측정 보고가 낸 종료 요청이다(`FrameProfileSession` 이 늦게 건 목표를 읽는다).
+        const int32 seconds = static_cast<int32>( MathUtil::ceil( load._durationSeconds ) );
+        if ( engine::getSubsystem<GlobalVariableManager>().setValueFromString( "gv_profileSeconds", to_string( seconds ) ) == false )
+        {
+            finish( AutomationResult::LoadError, "<Load> could not set gv_profileSeconds (a build without the frame profiler?)" );
+            return;
+        }
+        // 멈춤 그물 — 워밍업(60 프레임)과 느린 기계를 넉넉히 덮는다.
+        constexpr float64 kLoadDeadlineSlackSeconds = 120.0;
+        _loadDeadlineSeconds                        = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 + 2.0 * static_cast<float64>( seconds ) + kLoadDeadlineSlackSeconds;
+        SW_LOG_INFO( "[Scenario] load window %# s (clients %#, meshes %#, movers %#, network '%#')", seconds, load._clientCount, load._meshCount, load._moverCount,
+                     load._network.c_str() );
     }
 
     AutomationResult AutomationRunner::onWindowClosed( InputManager* pInput )
@@ -1038,6 +1064,11 @@ namespace sw
                     finish( AutomationResult::Passed, "the window closed within ExpectExitWithin" );
                 else
                     finish( AutomationResult::Failed, "the window closed after the ExpectExitWithin deadline" );
+            }
+            else if ( _loadDeadlineSeconds > 0.0 && _nextStepIndex >= _scenario.getSteps().size() )
+            {
+                // 부하 시나리오의 정상 끝 — 측정 창이 닫혀 엔진이 종료를 요청했다(보고가 남았는지는 실행기가 출력으로 본다).
+                finish( AutomationResult::Passed, "the <Load> measurement window closed" );
             }
             else
             {
