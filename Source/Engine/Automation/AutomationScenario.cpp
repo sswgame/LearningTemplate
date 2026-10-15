@@ -29,6 +29,69 @@ namespace sw
                 outValue = static_cast<uint32>( value );
                 return true;
             }
+
+            /** @brief 음이 아닌 초를 프레임으로 바꿉니다(고정 프레임 시간으로 반올림). 형식이 틀리면 false 와 이유. */
+            [[nodiscard]] static bool readSeconds( const utf8* pValue, const utf8* pName, float32 fixedDelta, uint32& outFrames, string& outReason )
+            {
+                float32 seconds = 0.0f;
+                if ( StringUtil::parseFloat( string_view{ pValue }, seconds ) == false || seconds < 0.0f )
+                {
+                    outReason = string( pName ) + " must be a non-negative number of seconds, got '" + pValue + "'";
+                    return false;
+                }
+                outFrames = static_cast<uint32>( seconds / fixedDelta + 0.5f );
+                return true;
+            }
+
+            /**
+             * @brief `<At>` 의 시점을 프레임으로 읽습니다. `frame`(절대 프레임) · `time`(시작부터 초) · `after`(앞 `<At>` 에서 프레임) · `afterSeconds`(앞 `<At>` 에서 초) 중 정확히 하나입니다.
+             * @details 상대 시점은 연속 동작("점프하고 0.2 초 뒤 이동")을 프레임 셈 없이 적게 한다. 초는 시나리오의 고정 프레임 시간으로 바꾼다.
+             */
+            [[nodiscard]] static bool readAtFrame( const XMLNode& atNode, float32 fixedDelta, uint32 previousFrame, uint32& outFrame, string& outReason )
+            {
+                uint32 timingCount = 0;
+                for ( XMLAttribute attribute = atNode.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+                {
+                    const string_view name   = attribute.getName();
+                    const utf8*       pText  = attribute.getValue();
+                    uint32            frames = 0;
+                    bool              bOk    = true;
+                    if ( name == "frame" )
+                    {
+                        bOk      = readUint( pText, "frame", frames, outReason );
+                        outFrame = frames;
+                    }
+                    else if ( name == "time" )
+                    {
+                        bOk      = readSeconds( pText, "time", fixedDelta, frames, outReason );
+                        outFrame = frames;
+                    }
+                    else if ( name == "after" )
+                    {
+                        bOk      = readUint( pText, "after", frames, outReason );
+                        outFrame = previousFrame + frames;
+                    }
+                    else if ( name == "afterSeconds" )
+                    {
+                        bOk      = readSeconds( pText, "afterSeconds", fixedDelta, frames, outReason );
+                        outFrame = previousFrame + frames;
+                    }
+                    else
+                    {
+                        outReason = "unknown <At> attribute '" + string( name ) + "' (frame · time · after · afterSeconds)";
+                        return false;
+                    }
+                    if ( bOk == false )
+                        return false;
+                    ++timingCount;
+                }
+                if ( timingCount != 1 )
+                {
+                    outReason = "<At> needs exactly one of frame=\"N\" · time=\"seconds\" · after=\"N\" · afterSeconds=\"seconds\"";
+                    return false;
+                }
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -177,7 +240,8 @@ namespace sw
             return false;
         }
 
-        uint32 orderInFile = 0;
+        uint32 orderInFile   = 0;
+        uint32 previousFrame = 0;
         for ( XMLNode atNode = root.findChild(); atNode.isValid(); atNode = atNode.findNextSibling() )
         {
             if ( string_view{ atNode.getName() } != "At" )
@@ -185,19 +249,20 @@ namespace sw
                 outError = _sourcePath + ": only <At frame=\"N\"> may sit under <Scenario>, got <" + atNode.getName() + ">";
                 return false;
             }
-            const utf8* pFrame     = atNode.findAttribute( "frame", false );
-            uint32      frameIndex = 0;
-            if ( pFrame == nullptr || Internal::readUint( pFrame, "frame", frameIndex, reason ) == false )
+            uint32 frameIndex = 0;
+            if ( Internal::readAtFrame( atNode, _fixedDelta, previousFrame, frameIndex, reason ) == false )
             {
-                outError = _sourcePath + ": <At> needs frame=\"N\" (N >= 0)";
+                outError = _sourcePath + ": " + reason;
                 return false;
             }
+            previousFrame          = frameIndex;
+            const string frameText = to_string( frameIndex );
             for ( XMLNode stepNode = atNode.findChild(); stepNode.isValid(); stepNode = stepNode.findNextSibling() )
             {
                 const string_view kind = stepNode.getName();
                 if ( kind.empty() )
                 {
-                    outError = _sourcePath + ": <At frame=\"" + pFrame + "\"> holds text — only step elements may sit there";
+                    outError = _sourcePath + ": <At frame=\"" + frameText + "\"> holds text — only step elements may sit there";
                     return false;
                 }
                 AutomationStep step{};

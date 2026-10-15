@@ -132,6 +132,13 @@ namespace sw
         advanceGameSeconds( gap );
     }
 
+    void WorldClock::advanceMinutes( float32 gameMinutes )
+    {
+        constexpr float32 kGameMinutesPerDay = static_cast<float32>( constant::kSecondsPerDay / constant::kSecondsPerMinute );
+        if ( gameMinutes > 0.0f )
+            advanceGameSeconds( gameMinutes / kGameMinutesPerDay * _settings._secondsPerDay );
+    }
+
     void WorldClock::advanceGameSeconds( float32 gameSeconds )
     {
         const float32 secondsPerHour = _settings._secondsPerDay / 24.0f;

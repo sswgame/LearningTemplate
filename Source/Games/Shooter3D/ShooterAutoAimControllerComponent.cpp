@@ -77,17 +77,25 @@ namespace sw
                 aimPoint     = chest;
             }
         }
+        // 상태(탐침 `AI.State`): 적이 없으면 Patrol, 겨누는 중이면 Aim, 이번 틱에 쏘면 Fire.
         if ( listView.empty() )
         {
+            setStateName( "Patrol" );
             clearFocus();
             return;
         }
+        setStateName( "Aim" );
         setFocus( aimPoint );
         const float3  toTarget  = aimPoint - eye;
         const float32 targetYaw = MathUtil::atan2( toTarget._x, toTarget._z );
         const float32 yawError  = MathUtil::wrapAngle( targetYaw - getControlYaw() );
-        if ( MathUtil::abs( yawError ) < Internal::kAimTolerance && bestDistance < _engageDistance )
+        const bool    bOnTarget = MathUtil::abs( yawError ) < Internal::kAimTolerance && bestDistance < _engageDistance;
+        getBlackboard().setFloat( "TargetDistance", bestDistance );
+        if ( bOnTarget )
+        {
+            setStateName( "Fire" );
             pressButton( hashed_string( Internal::kFire ) );
+        }
         // 가까우면 산탄총, 멀면 소총 — 탄이 남은 쪽만.
         const int32        wantedWeapon = bestDistance < _closeRangeDistance ? 1 : 0;
         const WeaponState& wanted       = pPlayer->getWeapon( wantedWeapon );

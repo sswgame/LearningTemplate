@@ -80,6 +80,13 @@ namespace test
                                        sw::string& outScenarioLines, sw::string_view extraArguments = {} );
         /** @brief 이 기계에서 돌릴 수 없어 건너뛸 종료 코드(13 건너뜀 · 77 백엔드 없음 · 못 띄움)면 true 입니다. */
         static bool isSkippedExitCode( int32 exitCode );
+        /** @brief `runScenario` 가 그 시나리오 · 백엔드로 쓴 보고 경로(`Saved/Automation/<이름 조각>_<백엔드>.json`)입니다. */
+        static sw::string makeReportPath( const sw::string& scenarioPath, const utf8* pBackendSwitch );
+        /**
+         * @brief 보고의 `records` 줄(`<Record>` — `frame 300 Scene.TransformHash = 12345`)을 읽습니다. 파일이 없거나 그 항목이 없으면 빈 목록입니다.
+         * @details 같은 시나리오는 백엔드마다 같은 줄을 내야 한다(게임 상태는 CPU 에서만 정해진다) — `AppScenarioTest` 가 비교한다.
+         */
+        static sw::vector<sw::string> readReportRecords( const sw::string& reportPath );
 
     private:
         /** @brief `-scenario=` 인자(경로 하나 또는 쉼표 목록)를 받아 App 을 띄우고 종료 코드를 돌려줍니다. */

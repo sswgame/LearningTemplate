@@ -55,6 +55,7 @@ namespace sw
     AutomationReportWriter::AutomationReportWriter()
         : _reportPath{}
         , _listMetricLine{}
+        , _listRecordLine{}
     {
     }
 
@@ -73,6 +74,8 @@ namespace sw
         Internal::appendStringArray( json, params._pListFailure != nullptr ? *params._pListFailure : listNoFailure );
         json += ",\n  \"metrics\": ";
         Internal::appendStringArray( json, _listMetricLine );
+        json += ",\n  \"records\": ";
+        Internal::appendStringArray( json, _listRecordLine );
         json += "\n}\n";
         const string directory = FileUtil::getDirectoryPart( _reportPath );
         if ( directory.empty() == false )

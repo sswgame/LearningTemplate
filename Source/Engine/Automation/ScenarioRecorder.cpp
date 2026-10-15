@@ -3,10 +3,13 @@
 #include "Engine/Automation/ScenarioRecorder.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/String/hashed_string.h"
 
+#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/RawInputEvent.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
 namespace sw
 {
@@ -56,6 +59,16 @@ namespace sw
                         }
                     }
                 }
+            }
+
+            /**
+             * @brief 고정 프레임 시간을 씁니다. 소수 일곱째 자리까지 쓴다. 넷째 자리에서 자르면(1/60 → 0.0167) 재생이 프레임마다 0.2 % 더 흘러 위치 검사점이 어긋난다.
+             */
+            static void appendFixedDelta( string& outText, float32 value )
+            {
+                utf8 arrDigit[constant::kMaxBuffer32]{};
+                (void)StringUtil::formatNumber( arrDigit, constant::kMaxBuffer32, value, 7 ); // 쓴 길이는 널 종료로 대신한다
+                outText += arrDigit;
             }
 
             static void appendFloat( string& outText, float32 value )
@@ -112,7 +125,7 @@ namespace sw
 
                 for ( const RawInputEvent& event : frame._listRawEvent )
                 {
-                    if ( event._bSynthetic != SW_FALSE )
+                    if ( event._bSynthetic != SW_FALSE && settings._bIncludeSynthetic == false )
                         continue; // 시나리오 재생이 낸 입력이다
                     switch ( event._type )
                     {
@@ -307,20 +320,96 @@ namespace sw
             body += "\t<At frame=\"" + to_string( frame ) + "\">" + frameBody + "</At>\n";
             lastFrame = frame;
         }
-        const uint32 passFrame = lastFrame + Internal::kTailFrameCount;
+        // 검사점은 마지막 녹화 프레임(값을 읽은 프레임)에 둔다 — 재생도 그 프레임의 씬 틱 뒤에 같은 값을 내야 한다.
+        const bool   bCheckpoints    = settings._listCheckpoint.empty() == false && listFrame.empty() == false;
+        const uint32 checkpointFrame = settings._firstFrame + static_cast<uint32>( listFrame.size() ) - ( listFrame.empty() ? 0u : 1u );
+        const uint32 passFrame       = bCheckpoints ? checkpointFrame + 1 : lastFrame + Internal::kTailFrameCount;
 
         string& text = result._xmlText;
         text         = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
-        text += "<!-- scenario.record 로 녹화한 입력입니다. 기대(Expect) 단계는 손으로 더합니다. -->\n";
+        text += bCheckpoints ? "<!-- 녹화한 입력과 끝 프레임의 검사점입니다. 같은 입력이면 같은 값이 나와야 합니다(결정적 재생). -->\n"
+                             : "<!-- scenario.record 로 녹화한 입력입니다. 기대(Expect) 단계는 손으로 더합니다. -->\n";
         text += "<Scenario name=\"";
         Internal::appendEscaped( text, settings._name );
         text += "\" fixedDelta=\"";
-        Internal::appendFloat( text, settings._fixedDelta > 0.0f ? settings._fixedDelta : 1.0f / 60.0f );
-        text += "\" timeoutFrames=\"" + to_string( passFrame + Internal::kTimeoutMargin ) + "\" startAfter=\"Immediately\" input=\"exclusive\">\n";
+        Internal::appendFixedDelta( text, settings._fixedDelta > 0.0f ? settings._fixedDelta : 1.0f / 60.0f );
+        text += "\" timeoutFrames=\"" + to_string( passFrame + Internal::kTimeoutMargin ) + "\" startAfter=\"" + string( settings._bStartWhenScenePlaying ? "ScenePlaying" : "Immediately" ) + "\" input=\"exclusive\">\n";
         text += body;
+        if ( bCheckpoints )
+        {
+            text += "\t<At frame=\"" + to_string( checkpointFrame ) + "\">";
+            for ( const ScenarioRecordCheckpoint& checkpoint : settings._listCheckpoint )
+            {
+                text += "<Expect probe=\"";
+                Internal::appendEscaped( text, checkpoint._probe );
+                text += "\"";
+                if ( checkpoint._target.empty() == false )
+                {
+                    text += " target=\"";
+                    Internal::appendEscaped( text, checkpoint._target );
+                    text += "\"";
+                }
+                if ( checkpoint._key.empty() == false )
+                {
+                    text += " key=\"";
+                    Internal::appendEscaped( text, checkpoint._key );
+                    text += "\"";
+                }
+                text += checkpoint._bText ? " is=\"" : " near=\"";
+                Internal::appendEscaped( text, checkpoint._value );
+                text += "\"";
+                if ( checkpoint._bText == false )
+                {
+                    text += " tolerance=\"";
+                    Internal::appendFloat( text, settings._checkpointTolerance );
+                    text += "\"";
+                }
+                text += "/>";
+            }
+            text += "</At>\n";
+        }
         text += "\t<At frame=\"" + to_string( passFrame ) + "\"><Pass/></At>\n";
         text += "</Scenario>\n";
         return result;
+    }
+
+    bool ScenarioRecorder::readCheckpoint( string_view spec, const GameObjectManager* pManager, ScenarioRecordCheckpoint& outCheckpoint, string& outError )
+    {
+        outCheckpoint         = ScenarioRecordCheckpoint{};
+        const size_t firstAt  = spec.find( '@' );
+        const size_t secondAt = firstAt == string_view::npos ? string_view::npos : spec.find( '@', firstAt + 1 );
+        outCheckpoint._probe  = string( StringUtil::trim( spec.substr( 0, firstAt ) ) );
+        if ( firstAt != string_view::npos )
+            outCheckpoint._target = string( StringUtil::trim( spec.substr( firstAt + 1, secondAt == string_view::npos ? string_view::npos : secondAt - firstAt - 1 ) ) );
+        if ( secondAt != string_view::npos )
+            outCheckpoint._key = string( StringUtil::trim( spec.substr( secondAt + 1 ) ) );
+        const AutomationProbeRegistration* pRegistration = AutomationProbes::find( outCheckpoint._probe );
+        if ( pRegistration == nullptr )
+        {
+            outError = "unknown probe '" + outCheckpoint._probe + "'";
+            return false;
+        }
+        AutomationProbeQuery query{};
+        query._pManager = pManager;
+        query._target   = outCheckpoint._target;
+        query._key      = outCheckpoint._key;
+        query._pTarget  = pManager != nullptr && outCheckpoint._target.empty() == false ? pManager->findGameObjectByName( hashed_string( outCheckpoint._target ) ) : nullptr;
+        AutomationProbeValue value{};
+        if ( AutomationProbes::read( *pRegistration, query, value ) == false )
+        {
+            outError = string( spec ) + " has no value" + ( value._bText ? " (" + value._text + ")" : string() );
+            return false;
+        }
+        outCheckpoint._bText = value._bText;
+        if ( value._bText )
+        {
+            outCheckpoint._value = value._text;
+            return true;
+        }
+        utf8 arrDigit[constant::kMaxBuffer64]{};
+        (void)StringUtil::formatNumber( arrDigit, constant::kMaxBuffer64, value._number, 6 ); // 쓴 길이는 널 종료로 대신한다
+        outCheckpoint._value = arrDigit;
+        return true;
     }
 
     bool ScenarioRecorder::isAllowedOutputPath( string_view path )

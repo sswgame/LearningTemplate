@@ -30,6 +30,9 @@ namespace sw
     AIControllerComponent::AIControllerComponent()
         : _turnRate{ 6.0f }
         , _arriveDistance{ 0.3f }
+        , _blackboard{}
+        , _stateName{}
+        , _pBehaviorTreeRunner{ nullptr }
         , _pending{}
         , _destination{}
         , _focusPoint{}

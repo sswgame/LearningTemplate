@@ -6,6 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Input/InputManager.h"
@@ -158,6 +159,48 @@ namespace sw
                 pMesh->setLocalScale( scale );
                 return pMesh;
             }
+
+            /** @brief 활성 씬의 첫 나일 디렉터입니다(탐침). */
+            static const NileDirectorComponent* findProbeDirector( const GameObjectManager* pManager )
+            {
+                const NileDirectorComponent* pFound = nullptr;
+                if ( pManager != nullptr )
+                {
+                    pManager->forEachComponentOfType<NileDirectorComponent>( [&pFound]( const NileDirectorComponent* pDirector )
+                    {
+                        if ( pFound == nullptr )
+                            pFound = pDirector;
+                    } );
+                }
+                return pFound;
+            }
+
+            [[nodiscard]] static bool readPopulation( const GameObjectManager* pManager, float64& outValue )
+            {
+                const NileDirectorComponent* pDirector = findProbeDirector( pManager );
+                if ( pDirector == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pDirector->getPopulation() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readMoney( const GameObjectManager* pManager, float64& outValue )
+            {
+                const NileDirectorComponent* pDirector = findProbeDirector( pManager );
+                if ( pDirector == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pDirector->getMoney() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readMonth( const GameObjectManager* pManager, float64& outValue )
+            {
+                const NileDirectorComponent* pDirector = findProbeDirector( pManager );
+                if ( pDirector == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pDirector->getMonthCount() );
+                return true;
+            }
         };
     } // namespace
 
@@ -167,6 +210,10 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_nileAutoPlay, 0, "NileCity: 자동 계획으로 도시를 짓고 돌리기 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_nileAutoPlay, "NileCity", "Build and run the city from the auto plan" );
+
+    SW_AUTOMATION_PROBE( nilePopulation, "Nile.Population", "Population of the city", &NileDirectorComponentInternal::readPopulation );
+    SW_AUTOMATION_PROBE( nileMoney, "Nile.Money", "Money in the city treasury", &NileDirectorComponentInternal::readMoney );
+    SW_AUTOMATION_PROBE( nileMonth, "Nile.Month", "Months the city has run", &NileDirectorComponentInternal::readMonth );
 } // namespace sw
 
 namespace sw
@@ -371,6 +418,16 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 상태 쓰기 · 복원하기(핫 리로드 · 세이브)
     // ------------------------------------------------------------------------------
+    int32 NileDirectorComponent::getPopulation() const
+    {
+        return _city.getPopulation();
+    }
+
+    int64 NileDirectorComponent::getMoney() const
+    {
+        return _wallet.getBalance( _city.getCurrency() );
+    }
+
     void NileDirectorComponent::writeState( Archive& outArchive ) const
     {
         StateArchiveUtil::writeHeader( outArchive, NileDirectorComponentInternal::kStateTag, NileDirectorComponentInternal::kStateVersion );

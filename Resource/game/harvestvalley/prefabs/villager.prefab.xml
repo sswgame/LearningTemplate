@@ -1,0 +1,25 @@
+<Prefab formatVersion="0" name="Villager">
+	<GameObject _schemaVersion="0" _name="Villager" _bActive="true">
+		<_listComponent>
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0.5,0"
+			               _localRotation="0,0,0"
+			               _localScale="0.45,0.5,0.45"
+			               _attachOwner="None"
+			               _attachOwnerID="0"
+			               _attachComponent="None"
+			               _meshID="Capsule"
+			               _materialPath="game/harvestvalley/materials/villager.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<FarmVillagerComponent _componentName="FarmVillagerComponent"
+			                       _bActive="true"
+			                       _director="0"
+			                       _npcIndex="-1"
+			                       _heightOffset="0.5" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

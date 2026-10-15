@@ -956,8 +956,14 @@ namespace sw
         if ( bResetState )
             resetAllDeviceState();
         const bool bExclusive = mode == VirtualInputMode::Exclusive;
+        // 배타 모드는 사람의 장치를 버린다. 포인터도 (0, 0) 에서 시작해야(가상 입력 스크립트의 단추 이벤트 기본 위치와 같다) 붙기 전 실제 마우스 위치가
+        // 커서를 따라가는 게임 상태(건설 커서 등)에 새지 않는다. 새면 같은 시나리오가 실행마다 다른 결과를 낸다.
         if ( bExclusive )
+        {
             _queueRawEvent.clear();
+            if ( bResetState && _pMouse != nullptr )
+                _pMouse->setPositionWithoutDelta( 0, 0 );
+        }
         if ( bExclusive != bWasExclusive )
             setGamepadVirtualSession( bExclusive );
         syncMouseLock();

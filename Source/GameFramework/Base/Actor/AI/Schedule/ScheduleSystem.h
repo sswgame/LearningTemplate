@@ -280,6 +280,7 @@ namespace sw
         bool                           isAppointmentMet( const hashed_string& appointmentID ) const;
         bool                           isAppointmentBroken( const hashed_string& appointmentID ) const;
         int32                          getMinute() const { return _minute; }
+        const ScheduleCatalog*         getCatalog() const { return _pCatalog; }
         int32                          getDay() const;
         void                           drainEvents( vector<ScheduleEvent>& outListEvent );
 

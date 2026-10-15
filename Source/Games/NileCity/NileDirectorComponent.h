@@ -61,6 +61,11 @@ namespace sw
         /** @brief 도시 상태(시뮬레이션, 자동 계획 진행, 월 수, 속도, 선택한 도구)를 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
         void writeState( Archive& outArchive ) const override;
 
+        // ---- 자동화 탐침이 읽는 것(게임 스레드, 틱 뒤) ----
+        int32 getPopulation() const;
+        int64 getMoney() const;
+        int32 getMonthCount() const { return _monthCount; }
+
         // ---- 뷰가 읽는 것(PostUpdate. 디렉터가 쓰지 않는 그룹) ----
         const CitySimulation& getCity() const { return _city; }
         /** @brief 커서가 땅 위에 있으면 true 를 반환하고, @p outTile 과 @p outSize 에 타일과 선택한 것의 크기(타일 수)를 채웁니다. */

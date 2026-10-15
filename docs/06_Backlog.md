@@ -21,7 +21,7 @@
 | **A. 결함 · 정확성** | 재현됐거나 코드로 확인된 열린 결함. 다른 어떤 일보다 먼저 본다. | 0 |
 | **B. 검증 · 측정 대기** | 코드는 들어갔고 돌려 보는 일이 남은 것. 이 PC 에서 못 돌린 환경(리눅스 · 실기)과 사용자 눈이 필요한 것도 여기다. | 12 |
 | **C. 구조 · 성능 · 정리** | 기능이 아니라 고칠 곳을 줄이는 일: 구조 분할 계획, 중복 · 의존 정리, 측정 뒤 정할 성능 후보, 린트 · 문서 정리. | 24 |
-| **D. 기능 로드맵** | 영역별로 묶은 새 기능 · 기능의 남은 조각. 위에 있을수록 먼저 볼 것이다. | 42 |
+| **D. 기능 로드맵** | 영역별로 묶은 새 기능 · 기능의 남은 조각. 위에 있을수록 먼저 볼 것이다. | 43 |
 | **E. 관찰 중** | 간헐 실패 · 원인 미상. 다시 보이면 그때 원인을 판다. CI 읽는 법은 [검증과 측정](08_Verification.md) 4절. | 9 |
 | **F. 결정 대기** | 사용자 결정이 있어야 움직이는 질문. | 1 |
 | **G. 조건부 · 낮은 우선순위** | 조건이 오면 하는 일(쓰는 게임이 생기면, 측정해서 이기면 …)과 이득이 작은 후보. | 12 |
@@ -302,7 +302,7 @@
 - `D3-8` **에디터 보강 묶음(2026-10-14)에서 남긴 것.**
   - **시나리오 녹화**(`ScenarioRecorder` · `scenario.record` · `automation.toggleScenarioRecord`): 마우스 휠은 `Wheel` 단계로, 더블클릭은 두 번째 `Press` 로 기록한다. 조합 중 글자 · 포커스 · 포인터 출입 ·
     패드 연결은 시나리오 의미가 없어 건너뛴 수만 센다. 재생은 원시 Down 을 두 번 내므로 더블클릭 이벤트 자체를 보는 UI 코드는 재현되지 않는다(`DoubleClick` 단계가 필요하면 `VirtualInputScript` 를 고친다).
-    녹화 파일을 실제로 재생해 보는 확인은 안 했다.
+    녹화는 키 · 단추 단계로 쓴다 — 입력 맵을 거꾸로 찾아 액션 단계(`Action` · `ActionAxis`)로 쓰면 키 배치를 바꿔도 녹화가 산다(아직 안 함).
   - **인스펙터**(`Panels/Inspector/`): 즐겨찾기(`InspectorFavorites` — 행 우클릭, 맨 위 Favorites 구역, `Saved/Editor/InspectorFavorites.txt` 에 저장)는 들어갔다. 키가 가장 파생된 타입 이름이라 기반 클래스에
     즐겨찾기한 프로퍼티는 파생 타입마다 따로 저장된다. 디버그 모드(유니티 Debug 인스펙터 — 숨은 필드는 리플렉션 범위 밖)는 하지 않았다. "바뀐 것만 보기" 는 다중 선택에서 주 선택 오브젝트의 값만 기준으로 거른다.
   - **모듈 창**(`ModulesPanel`): 종류 · 켜짐 필터, 상세(의존 · 역의존 · 오버라이드), 연쇄 영향 확인 창, 오버라이드 초기화는 들어갔다. 모듈 설치 · 제거(파일 복사 · 삭제) · 외부 패키지 받기는 없다 —
@@ -314,8 +314,9 @@
   인스펙터 보기 옵션(펼치기 · 접기 · 즐겨찾기 복원) · 하이어라키(행 메뉴 · 만들기 메뉴 · 걸러 보기) · 콘텐츠 브라우저 · 뷰포트 우클릭 메뉴(ThemePark 확장 항목) · UI 디자이너 슬롯 손잡이 · 입력 맵 패널(시간 · Negate · taps 칸,
   `inputmaptaps` 시나리오로 남김) · 모듈 창 상세 · 확인 창 · `LightingOnly` 4 백엔드(DX12 · DX11 · Vulkan · GL 이 Lit · LightingOnly 모두 바이트 동일) · 포토 모드 · 치트 명령(로그 응답) · E-11 리로드 로그.
   **남은 것**: (1) 지형 브러시 원 시각화 — 시각화 단추는 켜지지만 `envshowcase` 씬의 에디터 카메라에서 원이 안 보였다(마우스 레이가 지형에 안 닿는지 카메라가 지형 밑인지 가르지 못함, 카메라를 지형 위로 옮겨 다시 볼 것).
-  (2) 시나리오 녹화 — 자동화가 주입한 입력은 녹화기가 기록하지 않아(`0 steps`) 실제 입력으로만 확인된다. (3) 어빌리티 디버거 · NPC 일정 · 오디오 이벤트 · 리그 디버그 · 시퀀서 `RigSlot` 트랙 · UI 디자이너 앵커 프리셋 — 빈 상태(안내 글)까지만 봤다.
-  저장소에 이 기능들을 쓰는 데이터(일정 시스템 · 리그 · 오디오 이벤트 라이브러리)가 없다. (4) 시작 크래시 1회: `-game=AbilityArena -EnableEditor` 첫 실행이 모듈 로드 중 `DataRaceDetector` 로 죽었다
+  (2) 에디터 메뉴의 시나리오 녹화(`automation.toggleScenarioRecord`)는 자동화가 주입한 입력을 기록하지 않아(`0 steps`) 실제 입력으로만 확인된다(게임 실행의 `-scenario-record` 는 가상 입력도 적고 왕복 테스트가 있다).
+  (3) 어빌리티 디버거 · 오디오 이벤트 · 리그 디버그 · 시퀀서 `RigSlot` 트랙 · UI 디자이너 앵커 프리셋 — 빈 상태(안내 글)까지만 봤다. 저장소에 이 기능들을 쓰는 데이터(리그 · 오디오 이벤트 라이브러리)가 없다.
+  NPC 일정 디버그 창은 HarvestValley 마을 사람(`FarmVillageDirectorComponent`)으로 실물이 생겼지만 에디터에서 열어 보지 않았다. (4) 시작 크래시 1회: `-game=AbilityArena -EnableEditor` 첫 실행이 모듈 로드 중 `DataRaceDetector` 로 죽었다
   (`TypeRegistry::registerClass` → `clearInheritedProperties`, 읽는 스레드가 같은 `TypeInfo` 를 읽는 중; 이후 재실행은 통과해 간헐 — 재현율을 재고 읽는 쪽을 찾을 것). (5) 포토 모드는 게임 HUD 를 그대로 둔다(의도인지 확인).
   (6) 뷰포트 옵션 팝업은 패널이 화면 오른쪽 끝이면 메인 창 밖으로 나가 클라이언트 캡처에 안 잡힌다. (7) 이 PC 의 파이썬이 git 출력을 못 받는 문제는 이 묶음 때 있었으나 이번 커밋 훅은 통과했다.
   캡처: `D:\wisual\captures\`.
@@ -453,10 +454,15 @@
 - `D5-2` **로컬라이제이션 — 남은 것**(`Engine/Localization/README.md`). 아랍어 이외 RTL 문화권 데이터 · `ja` 번역(`po/ja.po` 의 글이 비어 있다).
   아이템 이름(Shooter3D)은 표에 모이지만 화면에 쓰는 코드가 아직 없다(무기 이름은 HUD 가 `getStringByText` 로 쓴다).
 
-- `D5-3` **NPC 하루 일정(`GameFramework/Base/Actor/AI/Schedule`)의 남은 것**(`AI/Schedule/README.md`). (3) 쓰는 게임이 없다 — HarvestValley 마을 사람(데이터
-  `game/harvestvalley/data/villagers.schedules.xml` 은 있다, 몸은 `NavAgent` 가 `ScheduleNpcView` 를 따라감, 저장은 `ScheduleSaveState` 를 게임 세이브에).
-  (4) 에디터 패널은 들어갔다(`ScheduleDebugPanel` — `GF_EditorPlugIn_Base`, `npc_schedule`, `ScheduleSystem::collectLiveSystems`). 일정 시스템을 만드는 게임이 아직 없어 실물에서는 빈 상태 힌트만 보인다.
-  `AI/Schedule/README.md` 는 없다(위 (3) 이 끝나면 쓴다). 목록 함수는 시스템을 같은 스레드에서 읽는다고 가정한다.
+- `D5-3` **NPC 하루 일정(`GameFramework/Base/Actor/AI/Schedule`)의 남은 것.** HarvestValley 마을 사람이 첫 사용처다(`FarmVillageDirectorComponent` — 판 상태 시계로 일정을 돌리고
+  `Villager.<id>` 몸이 일정상 자리를 곧장 따라간다, 시나리오 `harvestvalley/automation/schedule`). 남은 것: (1) 몸이 `NavAgent` 로 길을 따라가지 않는다(지금은 일정상 자리로 순간 이동 — 일정의 경로가 곧은 선이라 보이는 차이는 작다).
+  (2) 끼어들기(말 걸기)와 호감도를 쓰게 되면 `ScheduleSaveState` 를 디렉터의 상태 바이트에 싣는다(지금은 머리만 — 일정이 시계의 함수라 복원하면 같은 자리에 선다).
+  (3) 에디터 패널(`ScheduleDebugPanel`)을 실물로 열어 보지 않았다. (4) `AI/Schedule/README.md` 는 없다. 목록 함수는 시스템을 같은 스레드에서 읽는다고 가정한다.
+
+- `D5-4` **게임 로직 자동화(2026-10-15, `Engine/Automation/README.md`)의 남은 것.** (1) 탑승 단계 `Mount` · `Dismount` 와 탐침 `Pawn.Seat` 은 탈것을 쓰는 게임이 없어 실제로 돌리지 않았다
+  (키트 `OpenWorldWestern` 의 말이 생기면 시나리오로). (2) 새 단계를 쓰는 시나리오가 없는 게임: MeadowVillage · AbilityArena(적 AI `ArenaEnemyAIComponent` 는 상태 이름을 아직 안 낸다) · VoxelCraft · ThemePark.
+  (3) 적 AI 처럼 같은 이름의 오브젝트가 여럿이면(`AIController`) `target` 으로 하나를 고를 수 없다 — 이름 뒤 번호 규칙이나 "그 이름의 모두/아무나" 질의가 필요하다.
+  (4) GameFramework 의 `ensureLinked` 앵커(`ControlAutomationSteps`)는 Shipping 이 GameFramework 를 통째로 링크하므로(`sw_linkWholeArchive`) 필요 없다 — 지울 때 Engine 쪽 앵커도 같이 본다(Engine 은 테스트 실행 파일도 통째 링크).
 
 ### D6. 런타임 UI
 

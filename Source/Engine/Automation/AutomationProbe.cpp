@@ -27,7 +27,8 @@ namespace sw
 {
     bool AutomationProbes::registerProbe( const AutomationProbeRegistration* pRegistration )
     {
-        const bool bInvalidProbeRegistration = pRegistration == nullptr || pRegistration->_pName == nullptr || pRegistration->_pFunction == nullptr;
+        const bool bInvalidProbeRegistration =
+            pRegistration == nullptr || pRegistration->_pName == nullptr || ( pRegistration->_pFunction == nullptr ) == ( pRegistration->_pQueryFunction == nullptr );
         if ( bInvalidProbeRegistration )
             return false;
         if ( AutomationProbeInternal::getRegistrations().add( pRegistration, pRegistration->_pName ) != RegistrationResult::Added )
@@ -51,6 +52,17 @@ namespace sw
     const AutomationProbeRegistration* AutomationProbes::find( string_view name )
     {
         return AutomationProbeInternal::getRegistrations().findByName( name );
+    }
+
+    bool AutomationProbes::read( const AutomationProbeRegistration& registration, const AutomationProbeQuery& query, AutomationProbeValue& outValue )
+    {
+        if ( registration._pQueryFunction != nullptr )
+            return registration._pQueryFunction( query, outValue );
+        float64 number = 0.0;
+        if ( registration._pFunction( query._pManager, number ) == false )
+            return false;
+        outValue.setNumber( number );
+        return true;
     }
 
     AutomationProbeRegistrar::AutomationProbeRegistrar( const AutomationProbeRegistration* pRegistration )
