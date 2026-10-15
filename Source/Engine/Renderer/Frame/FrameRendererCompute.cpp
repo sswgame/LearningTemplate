@@ -92,14 +92,18 @@ namespace sw
 
     int32 FrameRenderer::getEffectiveMeshMorphDiag() const
     {
-        return ( _deform._meshMorphDiagOverride >= 0 ) ? _deform._meshMorphDiagOverride : gv_morphDiag;
+#if !defined( SW_SHIPPING )
+        if ( _debugOverrides._meshMorphDiag >= 0 )
+            return _debugOverrides._meshMorphDiag;
+#endif
+        return gv_morphDiag;
     }
 
     float32 FrameRenderer::getAnimationTime() const
     {
 #if !defined( SW_SHIPPING )
-        if ( _deform._animationTimeOverride >= 0.0f )
-            return _deform._animationTimeOverride;
+        if ( _debugOverrides._animationTime >= 0.0f )
+            return _debugOverrides._animationTime;
 #endif
         return _deform._animationTimer.getTotalTime();
     }

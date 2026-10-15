@@ -189,13 +189,6 @@
   - **씬 · UI 쪽의 엔진 창구 직접 읽기**: `SceneEngineServices` 주입(S10)과 같은 패턴이 범위 밖에 남았다 — `WidgetComponent`(`engine::findSubsystem<UISystem>()`) · `UISystem` · `FontService`,
     `SceneCooker` · `SceneNavigationCooker` · `PortraitRenderer` 의 인자 없는 `Scene` 생성. 서비스 클래스가 초기화 때 의존 서브시스템 포인터를 멤버로 받는 것(언리얼 `InitializeDependency`)은 고칠 때 함께 한다.
 
-- `C-26` **구조 리팩토링 · 데이터 주도의 남은 것**(2026-10-15 묶음 뒤). 끝난 것: 온라인 키트 클라이언트 골격(`OnlineKitClient`), 열거자 이름 표 → `ENUM()` · `getEnumName`,
-  위임 카탈로그 18 개 → `GameCatalog<TDef>` 직접 상속, 틱 시스템 밖 `tick` → `update` 와 개수 이름(`Naming/CountFirst`), 컴포넌트 아이콘 → `REFLECT( Meta = "Icon=…" )`,
-  머티리얼 사용 define · 서비스 지표 결과 라벨 → 열거자 이름, `InputMap` 의 `InputActionBuffer` 분리, 키트 서버 조립의 옵션 표(`readOptions`) · 메서드 표(`OnlineMethodTable`), 얇은 `Util` 열 개 정리, `add` / `register` / `append` 어휘표와 `Settings` → `Config` · `Def` 판정, 데이터 주도(확장자 → 종류 정본 · `UIStyleField` 서술자 · 이벤트 애노테이션 Emit 열 · 튜닝 · 색 · 부하 봇 동작 표 · 남은 손 이름 표), 입력 커맨드 둘 판정(모으지 않음), 큰 클래스 넷 분할(`InputPlayerSettings` · `GameplayTagCountContainer` · `UISystem` 전달 함수 · `InputManager` 게임패드 전달 함수). 남은 것:
-  ⑤ **`FrameRenderer`(126 메서드)**: 캡처 · 되읽기 묶음(`dumpTransientToFile` · `dumpTextureToFile` · `setPresentCaptureEnabled` · `readbackPresentCapture` · `dumpPresentCaptureToFile` · `readbackTransient`)을
-     `PresentCapture` 와 함께 캡처 객체로, 진단 덮어쓰기(`setMeshMorphDiag` · `setDrawMergeEnabled` · `setVertexPoolEnabled` · `setAnimationTimeOverride`)를 설정 값 하나로 가른다.
-     스크린샷(`-gv_screenshot`) 경로가 지나므로 `-L hostgpu` 와 네 백엔드 스크린샷 대조로 검증한다. `InputMap` 리바인딩(rebind · reset · 충돌 판정)은 바인딩 저장소를 직접 고쳐 따로 가르지 않았다.
-
 - `C-22` **작은 정리 후보(2026-10-13 병합 검토에서 모음).** `IPhysicsScene3D/2D` 전방 선언용 `*Fwd.h`, Core → Log 예외 다섯 파일(티어마다 필요한 것이 달라 함수 포인터 하나로 풀리지 않는다), 프렐류드 예외 제거(184 파일).
 
 - `C-25` **게임 여럿을 빌드 한 번에 짓고, 실행할 때 고르고, 키트는 필요한 것만**(2026-10-13, 사용자 확정). 결정은 [결정 기록](09_Decisions.md) 5-2, 쓰는 법은 `Source/Games/README.md`.
@@ -680,7 +673,7 @@
 | 1-6 | 게임프레임워크 · 킷 · 게임 | `C-4`, `C-5`, `D1-4`, `D3-7`, `D4-2`, `D4-3`, `D4-4`, `D4-5`, `D4-6`, `D4-7`, `D4-8`, `D4-9`, `D4-10`, `D4-11`, `D4-12`, `D4-13`, `D5-1`, `D5-2`, `D5-3`, `D6-1`, `D6-2`, `D6-3`, `D6-4`, `D6-5`, `D6-6`, `G-2`, `H-1` |
 | 1-7 | Core · 태스크 · 네트워크 | `B-9`, `B-10`, `D7-1`, `D7-2`, `D7-3`, `D7-5`, `D7-6` |
 | 1-8 | 성능 | `C-7`, `C-8`, `C-9` |
-| 1-9 | 빌드 · 린트 · CI · 테스트 | `B-5`, `C-11`, `C-12`, `C-13`, `C-14`, `C-15`, `C-16`, `C-17`, `C-26`, `E-2` |
+| 1-9 | 빌드 · 린트 · CI · 테스트 | `B-5`, `C-11`, `C-12`, `C-13`, `C-14`, `C-15`, `C-16`, `C-17`, `E-2` |
 | 1-10 | 관찰 중 | `B-6`, `B-7`, `E-1`, `E-3`, `E-4`, `E-5`, `E-6`, `E-7`, `E-8` |
 | 1-11 | 결정이 필요한 것 | `F-1`, `H-2` |
 | 1-12 | 낮은 우선순위 | `B-8`, `C-18`, `G-3`, `G-4`, `G-5`, `G-6`, `G-7`, `G-8`, `G-9`, `G-10`, `G-11`, `G-12` |

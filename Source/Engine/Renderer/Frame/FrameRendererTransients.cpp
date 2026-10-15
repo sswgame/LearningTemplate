@@ -3,7 +3,7 @@
  * @brief 프레임 첨부(트랜지언트 렌더 타깃)의 수명과 조회입니다. 파이프라인이 선언한 것을 창 크기로 만듭니다.
  * @details 첨부는 **구성이 바뀔 때만** 다시 만들어집니다(창 크기 · 파이프라인). 소유는 `TransientAttachmentPool` 이 하고
  *          여기서는 "무엇을 얼마나 만들지" 를 파이프라인 선언에서 읽어 채웁니다. 읽어 가는 쪽(리드백 · PPM 덤프)은
- *          프레임 경로가 아니라 GPU 를 기다리는 진단이라 `FrameRendererReadback.cpp` 로 갈라 두었습니다.
+ *          프레임 경로가 아니라 GPU 를 기다리는 진단이라 `FrameCapture` 로 갈라 두었습니다.
  */
 #include "pch.h"
 
@@ -52,7 +52,7 @@ namespace sw
                                                                                          settings._resolutionScale, settings._upscaleZoom );
         if ( ensureViewTransients( _mainView, poolWidth, poolHeight ) )
             publishRenderTargets();
-        _presentCapture.ensure( _pDevice, _outputWidth, _outputHeight );
+        _capture.ensurePresent( _outputWidth, _outputHeight );
     }
 
     bool FrameRenderer::ensureViewTransients( ViewTarget& view, uint32 width, uint32 height )
@@ -160,16 +160,6 @@ namespace sw
             view._taaHistorySrv = _pDevice->getResourceFactory()->registerBindlessTexture( view._taaHistory );
     }
 
-    void FrameRenderer::setPresentCaptureEnabled( bool bEnabled )
-    {
-        _presentCapture.setEnabled( _pDevice, bEnabled );
-        if ( bEnabled == false )
-            return;
-        // **여기서 만들어야 한다.** 트랜지언트 할당은 크기가 그대로면 통째로 건너뛰므로, 켜는
-        // 시점이 그 뒤면(커맨드라인은 프레임이 돌기 시작한 뒤에야 반영된다) 영영 안 만들어진다.
-        _presentCapture.ensure( _pDevice, _outputWidth, _outputHeight );
-    }
-
     void FrameRenderer::releaseTransientResources()
     {
         // 목록을 먼저 비운다. 놓는 도중에 UI 가 죽은 핸들을 집어 가면 안 된다.
@@ -182,7 +172,7 @@ namespace sw
             releaseViewTransients( *pView );
         }
         // 캡처도 트랜지언트와 크기가 같아야 한다. 같이 버리고 다음 ensureTransientResources 가 새 크기로 만든다.
-        _presentCapture.release( _pDevice );
+        _capture.releasePresent();
     }
 
     void FrameRenderer::releaseViewTransients( ViewTarget& view )

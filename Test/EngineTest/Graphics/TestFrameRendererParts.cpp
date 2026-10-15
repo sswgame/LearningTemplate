@@ -5,11 +5,13 @@
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Renderer/Frame/Capture/PresentCaptureTarget.h"
+#include "Engine/Renderer/Frame/Capture/FrameCapture.h"
 #include "Engine/Renderer/Frame/Capture/RenderTargetImageFile.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/Resource/TransientAttachmentPool.h"
 #include "Engine/Renderer/Frame/Timeline/GPUPassTimeline.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
+#include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -161,17 +163,20 @@ SW_TEST_CASE( RenderTargetImageFileTest, UnpacksDepthAndSingleChannelAsGray )
 }
 
 /**
- * @brief [PresentCaptureTargetTest] 디바이스가 없으면 텍스처를 만들지 않고, 크기나 포맷이 다른 출력은 복사 대상이 아니다
+ * @brief [FrameCaptureTest] 디바이스가 없으면 텍스처를 만들지 않고 읽지도 않으며, 크기나 포맷이 다른 출력은 복사 대상이 아니다
  */
-SW_TEST_CASE( PresentCaptureTargetTest, StaysInactiveWithoutDeviceAndRejectsMismatchedOutput )
+SW_TEST_CASE( FrameCaptureTest, StaysInactiveWithoutDeviceAndRejectsMismatchedOutput )
 {
-    sw::PresentCaptureTarget capture;
-    SW_EXPECT_FALSE( capture.isEnabled() );
-    capture.setEnabled( nullptr, true );
-    capture.ensure( nullptr, 64, 32 );
-    SW_EXPECT_TRUE( capture.isEnabled() );
-    SW_EXPECT_FALSE( capture.isActive() ); // 디바이스가 없어 텍스처가 없다.
-    SW_EXPECT_EQUAL( capture.getTexture(), static_cast<sw::RHITextureHandle>( 0 ) );
+    sw::IRHIDevice*             pDevice = nullptr;
+    sw::TransientAttachmentPool pool;
+    sw::RenderPipelineAsset     pipeline;
+    sw::FrameCapture            capture( pDevice, pool, pipeline );
+    SW_EXPECT_FALSE( capture.isPresentEnabled() );
+    capture.setPresentEnabled( true );
+    capture.ensurePresent( 64, 32 );
+    SW_EXPECT_TRUE( capture.isPresentEnabled() );
+    SW_EXPECT_FALSE( capture.isPresentActive() ); // 디바이스가 없어 텍스처가 없다.
+    SW_EXPECT_EQUAL( capture.getPresentTexture(), static_cast<sw::RHITextureHandle>( 0 ) );
 
     // 만든 적 없는 캡처의 크기는 0 이라 어떤 출력과도 맞지 않는다. 포맷이 계약값이 아니어도 맞지 않는다.
     SW_EXPECT_FALSE( capture.matchesOutput( 64, 32, sw::constant::kBackBufferFormat ) );
@@ -180,5 +185,8 @@ SW_TEST_CASE( PresentCaptureTargetTest, StaysInactiveWithoutDeviceAndRejectsMism
 
     sw::vector<uint8>     bytes;
     sw::RHITextureMipSpan layout{};
-    SW_EXPECT_FALSE( capture.readback( nullptr, bytes, layout ) );
+    SW_EXPECT_FALSE( capture.readbackPresent( bytes, layout ) );
+    sw::RHIFormat format = sw::RHIFormat::Unknown;
+    SW_EXPECT_FALSE( capture.readbackTransient( "SceneColor", bytes, layout, format ) );
+    SW_EXPECT_FALSE( capture.dumpTextureToFile( 1, sw::constant::kBackBufferFormat, "unused.ppm" ) );
 }

@@ -91,7 +91,7 @@ namespace sw
             _renderer.reset();
             return false;
         }
-        _renderer->setPresentCaptureEnabled( true );
+        _renderer->getCapture().setPresentEnabled( true );
         return true;
     }
 
@@ -167,7 +167,7 @@ namespace sw
         }
         RHITextureMipSpan layout{};
         vector<uint8>     captureBytes;
-        if ( bRendered == false || _renderer->readbackPresentCapture( captureBytes, layout ) == false )
+        if ( bRendered == false || _renderer->getCapture().readbackPresent( captureBytes, layout ) == false )
         {
             SW_LOG_ERROR( "Portrait: rendering '%#' failed", request._prefabPath.c_str() );
             return false;

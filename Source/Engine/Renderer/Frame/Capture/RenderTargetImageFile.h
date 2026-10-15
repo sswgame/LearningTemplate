@@ -1,7 +1,7 @@
 /**
  * @file RenderTargetImageFile.h
  * @brief GPU 에서 읽어 온 렌더 타깃 바이트를 이미지 파일(PNG 또는 PPM)로 씁니다. 트랜지언트, 임의 텍스처, Present 캡처 덤프가 함께 씁니다.
- * @details GPU 를 부르지 않는 순수 변환이라 테스트가 GPU 없이 부를 수 있습니다. 읽어 오는 쪽은 `FrameRendererReadback.cpp` 와 `PresentCaptureTarget` 입니다.
+ * @details GPU 를 부르지 않는 순수 변환이라 테스트가 GPU 없이 부를 수 있습니다. 읽어 오는 쪽은 `FrameCapture` 입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
