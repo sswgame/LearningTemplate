@@ -389,7 +389,9 @@ One meaning, one definition. A second copy of a value compiles, passes tests, an
 - **Gameplay tuning values** (speeds, distances, chances, intervals, model scales) are data: a `PROPERTY` on the component (default in the
   constructor, data without the key keeps it), or a field of the settings / catalog struct a kit already takes from the game. Performance
   thresholds (spin counts, parallel thresholds, buffer and pool limits) stay named constants next to their use; only one that someone needs
-  to change without a rebuild becomes a `gv_*`. Never a shared header.
+  to change without a rebuild becomes a `gv_*`. Never a shared header. Asset paths are data too (never a `"engine/…"` literal in code), and a
+  missing required value stops with an error instead of falling back (`*OrDefault`, `fallback` parameters, discarded load results);
+  `CheckDataDrivenStructure.py` freezes what remains (examples: `docs/04_CodingGuidelines.md` 4 "데이터 주도 규칙").
 - **Names**: `kPascalCase`, including `MathUtil`. Same meaning, same name across formats: a file or blob format declares `kMagic` · `kVersion` ·
   `kExtension` on its owning type; a state section declares `kStateTag` · `kStateVersion`; a second format in the same scope prefixes the
   format (`kBinMagic`). A value with a unit says it in the name unless the type does (`kTimeoutSeconds`, `kBudgetMilliseconds`, `kMaxBytes`,

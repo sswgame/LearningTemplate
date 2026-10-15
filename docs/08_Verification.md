@@ -16,6 +16,7 @@
 cmake --build --preset Ninja-Debug            # 경고 0 이어야 한다(테스트 제외 — 테스트까지는 --target all AllTests)
 cmake --build --preset Ninja-Shipping         # Debug 가 숨기는 결함이 여기서 드러난다(테스트까지)
 ctest --preset Ninja-Debug-lint               # 컨벤션 · include 순서 · 린트 자기 테스트
+py -3 Scripts/lint/gate/CheckDataDrivenStructure.py --summary  # 데이터 주도 구조 위반(코드의 에셋 경로 · 조용한 폴백 · 버린 읽기 결과) 영역별 표 — 기준선은 0 으로 수렴해야 하고, 형식으로 막힌 종류는 게이트에서 뺀다
 ctest --test-dir build/Ninja-Debug -L nogpu --output-on-failure
 ctest --test-dir build/Ninja-Shipping -L nogpu --output-on-failure
 
