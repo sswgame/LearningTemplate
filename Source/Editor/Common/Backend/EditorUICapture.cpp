@@ -190,6 +190,8 @@ namespace sw::editor
             return;
         }
 
+        // 메인 UI 를 그린 백버퍼 패스를 먼저 닫는다. 열린 채로 다음 패스를 열면 Vulkan 은 대상 레이아웃 전이(배리어)를 그 서브패스 안에 기록한다(검증 오류).
+        pStream->endRenderPass();
         RHIRenderPassBeginInfo capturePass{};
         capturePass._bBindColor        = SW_TRUE;
         capturePass._colorTargetCount  = 1;
