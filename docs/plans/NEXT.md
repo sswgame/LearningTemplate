@@ -86,6 +86,15 @@ Shipping 키트는 STATIC 이고 내보내기 매크로가 빈 것을 산출물�
   남은 기동 열기(개발 배치에만 있는 DLL 섀도 복사 · 매니페스트 · 셰이더 원본 해시)와 렌더 벤치의 13 ~ 20 ms 한 프레임은 백로그 `C-29` ① ② 입니다.
 - 진단: `py -3 -m Scripts load run <시나리오> --app-arg=-gv_ioLogReads=1`(파일 열기마다 경로 · 스레드), `--app-arg=-gv_profileAllocSites=12`(Release 로도 콜스택).
 
+## 5-3. 유지보수성을 위한 데이터화 (2026-10-15, wt/datadriven)
+
+기준(사용자 결정)과 정한 모양은 결정 기록 5-4 "유지보수성을 위한 데이터화", 남은 일은 백로그 `C-30` 이다.
+
+- 들어간 것: 액션 룸 내장 몬스터 · 배치 삭제(카탈로그 · `ActionRoomLayout` 필수), `EngineConfig.json` 바탕 층(헤더는 형식만), 회선 프리셋 표(`NetEmulationPresetTable`), 그림자 맵 한 변(스키마 `targetValue`),
+  UI 미리보기 해상도 표, 부하 봇 필수 키, `PROPERTY( Required )` + `GameDataXML::readFields`(첫 적용 `ParkLayout`), 게임 튜닝값 PROPERTY(여덟 게임) · 벤치 설정(`benchscene.xml`), 린트 `CheckDataDrivenLiterals`.
+- 배포본 테스트용 변수: `SW_TEST_GLOBAL_VARIABLE_SHIPPED` 는 `CheckGlobalVariableKinds.toml` `[shipped]` 목록(이유 포함)에 있는 것만 둔다. 벤치 · 크래시 · 측정 스위치는 내렸다(Release 는 등록된다).
+- **에디터 모듈의 리플렉션 헤더는 `Source/Editor/CMakeLists.txt` 의 `REFLECTION_HEADERS` 목록이다** — 새 REFLECT 헤더를 넣지 않으면 링크 오류(`StaticType` 미정의)로 드러난다(EditorTest 는 에디터 소스를 따로 컴파일해 그 코드젠을 받지 못하므로, 둘이 같이 쓰는 데이터 타입은 Engine 에 둔다 — `UIResolutionPresetTable`).
+
 ## 6. 확정된 방침
 
 - 상용 엔진과 비교해 고릅니다. 근거는 결정 기록에 "~로 알고 있다" 로 적어 기억 기반임을 밝힙니다.
