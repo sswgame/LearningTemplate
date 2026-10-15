@@ -367,7 +367,7 @@ SW_TEST_CASE( CrashBundleTest, RealCrashLeavesABundle )
 #if defined( SW_PLATFORM_WINDOWS )
     // 모든 구성이 /DEBUG 로 링크된다 — 부트스트랩이 올린 빌드 id 가 컨텍스트에 있다.
     SW_EXPECT_FALSE( report._buildID.empty() );
-    SW_EXPECT_TRUE( FileUtil::getFileSize( FileUtil::joinPath( report._folder, "crash.dmp" ) ) > 0u );
+    SW_EXPECT_TRUE_MSG( FileUtil::getFileSize( FileUtil::joinPath( report._folder, "crash.dmp" ) ) > 0u, child.getOutputTail().c_str() );
 #endif
     string breadcrumbs;
     SW_ASSERT_TRUE( FileUtil::readTextFile( FileUtil::joinPath( report._folder, "crash.breadcrumbs.txt" ), breadcrumbs ) );
