@@ -7,6 +7,7 @@
     python Scripts/dev/CiFailureReport.py tests --ctest-dir build/CI-Debug            # 진 테스트: 결과(Timeout · 경과 시간 · 종료 코드) · 실패 줄 · 마지막 [ RUN ] · 끝 25 줄 · 크래시 스택
     python Scripts/dev/CiFailureReport.py configure --log build/configure.log         # 구성 실패: vcpkg 가 가리킨 로그들의 끝
     python Scripts/dev/CiFailureReport.py build --log build/build.log                 # 빌드 실패: 오류 줄(컴파일 · 링크)과 앞뒤 몇 줄, 없으면 끝 60 줄
+    python Scripts/dev/CiFailureReport.py fuzz --log fuzz/Material/log.txt --target Material   # 퍼징 실패: 새니타이저 보고 · 스택 · 재현 입력(Base64)
 
 크래시 스택은 테스트 실행 파일의 크래시 핸들러가 로그 폴더(`Bin/Saved/Logs/crash_<세션>.stack.txt`)에 남긴 것입니다.
 진 테스트마다 제목에 결과를 붙입니다. `Timeout` 은 ctest 가 한도(`TIMEOUT` 속성, `ctest --show-only=json-v1` 로 읽음)에서 죽인 것이고,
@@ -44,6 +45,9 @@ _kLogTailLineCount = 60
 _kBuildErrorMarker = re.compile(r"\berror\b[:\s]|\bundefined (reference|symbol)\b|duplicate symbol|^FAILED:|ninja: build stopped|\bfatal error\b")
 _kMaxBuildErrorCount = 10  # 주석은 단계마다 error 10 개까지 보인다
 _kBuildContextLines = 2
+# libFuzzer 로그에서 고르는 줄: 새니타이저 · libFuzzer 보고(`==N==ERROR`, `SUMMARY`, `ALARM`(타임아웃), `out-of-memory`), 스택 프레임, 기록한 입력 경로.
+_kFuzzMarker = re.compile(r"^==\d+==|^SUMMARY:|^ALARM:|out-of-memory|deadly signal|^\s+#\d+ 0x|Test unit written to|runtime error:")
+_kMaxFuzzLineCount = 60
 # ctest 가 LastTest.log 에 남기는 경과 시간과 TestHost 가 끝낼 때 찍는 종료 코드.
 _kTestTime = re.compile(r"^Test time =\s*([0-9.]+) sec", re.M)
 _kTestHostExit = re.compile(r"\[TestHost\] shut down - exit code (-?\d+)")
@@ -179,6 +183,16 @@ def reportBuild(logPath: Path) -> int:
     return 0
 
 
+def reportFuzz(logPath: Path, target: str) -> int:
+    """libFuzzer 한 대상의 실패: 새니타이저 · libFuzzer 보고 줄, 스택 앞부분, 재현 입력(`Base64:`)을 올린다 — 아티팩트 없이 재현할 수 있게."""
+    lines = [_kAnsi.sub("", line) for line in readTextInternal(logPath).splitlines()]
+    listPicked = [line[:300] for line in lines if _kFuzzMarker.search(line)][:_kMaxFuzzLineCount]
+    listBase64 = [line[:_kMaxStackChars] for line in lines if line.startswith("Base64:")]
+    body = listPicked + listBase64[-1:] if listPicked else lines[-_kLogTailLineCount:]
+    emitErrorInternal(f"fuzz {target}", kNewline.join(body))
+    return 0
+
+
 def main(listArgument: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="CI 실패를 GitHub 주석으로 올린다")
     listSub = parser.add_subparsers(dest="kind", required=True)
@@ -188,9 +202,14 @@ def main(listArgument: list[str] | None = None) -> int:
     configure.add_argument("--log", type=Path, required=True)
     build = listSub.add_parser("build", help="빌드 실패")
     build.add_argument("--log", type=Path, required=True)
+    fuzz = listSub.add_parser("fuzz", help="libFuzzer 대상 하나의 크래시 · 타임아웃")
+    fuzz.add_argument("--log", type=Path, required=True)
+    fuzz.add_argument("--target", required=True)
     args = parser.parse_args(listArgument)
     if args.kind == "tests":
         return reportTests(args.ctest_dir)
+    if args.kind == "fuzz":
+        return reportFuzz(args.log, args.target)
     return reportBuild(args.log) if args.kind == "build" else reportConfigure(args.log)
 
 

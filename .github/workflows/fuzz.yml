@@ -53,10 +53,11 @@ jobs:
             echo "::error title=fuzz $target::seed dump failed - see the job log"
             continue
           fi
-          if ! (cd build/CI-Fuzz/Bin && SW_FUZZ_TARGET="$target" ./LoaderFuzzer "$GITHUB_WORKSPACE/fuzz/$target/corpus" "$GITHUB_WORKSPACE/fuzz/$target/seeds" \
-                -max_total_time=60 -timeout=10 -rss_limit_mb=4096 -artifact_prefix="$GITHUB_WORKSPACE/fuzz/$target/"); then
+          # 출력을 파일로도 받아(pipefail 로 종료 코드는 퍼저 것) 실패하면 보고 줄 · 스택 · 재현 입력(Base64)을 주석으로 올린다 — 작업 로그 · 아티팩트는 밖에서 403 이다.
+          if ! (set -o pipefail; cd build/CI-Fuzz/Bin && SW_FUZZ_TARGET="$target" ./LoaderFuzzer "$GITHUB_WORKSPACE/fuzz/$target/corpus" "$GITHUB_WORKSPACE/fuzz/$target/seeds" \
+                -max_total_time=60 -timeout=10 -rss_limit_mb=4096 -artifact_prefix="$GITHUB_WORKSPACE/fuzz/$target/" 2>&1 | tee "$GITHUB_WORKSPACE/fuzz/$target/log.txt"); then
             echo "$target" >> fuzz/failed.txt
-            echo "::error title=fuzz $target::libFuzzer found a crash or timeout - see the fuzz-findings artifact"
+            $PY Scripts/dev/CiFailureReport.py fuzz --log "fuzz/$target/log.txt" --target "$target"
           fi
         done
         test ! -s fuzz/failed.txt
@@ -68,6 +69,7 @@ jobs:
         name: fuzz-findings
         path: |
           fuzz/failed.txt
+          fuzz/**/log.txt
           fuzz/**/crash-*
           fuzz/**/timeout-*
           fuzz/**/oom-*
