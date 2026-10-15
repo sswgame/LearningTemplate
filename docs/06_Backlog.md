@@ -19,10 +19,10 @@
 | 분류 | 뜻 | 항목 수 |
 |---|---|---|
 | **A. 결함 · 정확성** | 재현됐거나 코드로 확인된 열린 결함. 다른 어떤 일보다 먼저 본다. | 0 |
-| **B. 검증 · 측정 대기** | 코드는 들어갔고 돌려 보는 일이 남은 것. 이 PC 에서 못 돌린 환경(리눅스 · 실기)과 사용자 눈이 필요한 것도 여기다. | 12 |
-| **C. 구조 · 성능 · 정리** | 기능이 아니라 고칠 곳을 줄이는 일: 구조 분할 계획, 중복 · 의존 정리, 측정 뒤 정할 성능 후보, 린트 · 문서 정리. | 25 |
+| **B. 검증 · 측정 대기** | 코드는 들어갔고 돌려 보는 일이 남은 것. 이 PC 에서 못 돌린 환경(리눅스 · 실기)과 사용자 눈이 필요한 것도 여기다. | 13 |
+| **C. 구조 · 성능 · 정리** | 기능이 아니라 고칠 곳을 줄이는 일: 구조 분할 계획, 중복 · 의존 정리, 측정 뒤 정할 성능 후보, 린트 · 문서 정리. | 26 |
 | **D. 기능 로드맵** | 영역별로 묶은 새 기능 · 기능의 남은 조각. 위에 있을수록 먼저 볼 것이다. | 43 |
-| **E. 관찰 중** | 간헐 실패 · 원인 미상. 다시 보이면 그때 원인을 판다. CI 읽는 법은 [검증과 측정](08_Verification.md) 4절. | 11 |
+| **E. 관찰 중** | 간헐 실패 · 원인 미상. 다시 보이면 그때 원인을 판다. CI 읽는 법은 [검증과 측정](08_Verification.md) 4절. | 14 |
 | **F. 결정 대기** | 사용자 결정이 있어야 움직이는 질문. | 1 |
 | **G. 조건부 · 낮은 우선순위** | 조건이 오면 하는 일(쓰는 게임이 생기면, 측정해서 이기면 …)과 이득이 작은 후보. | 12 |
 | **H. 보류 (사용자 결정)** | 사용자가 "나중에"로 정한 것. 풀 때까지 하지 않는다. | 3 |
@@ -104,6 +104,10 @@
   - **S21 · S22 는 Debug 빌드 · 링크까지만 확인했다**: `-L nogpu`(`NavMesh*` · `UserSettingsFileTest` · `AppHeadlessTasksTest` · `EditorFolderListing` 테스트),
     Shipping(단일 백엔드 정적 링크, `SW_PROFILE_COMPILED` 꺼짐), Linux(GLX 컨텍스트 · 다중 상속 경고), `OpenGLRHICommandList.cpp`(compile_commands 에 없어 문법 검사도 못 했다), 에디터 실기동(Present 훅),
     `assertdialog.scenario.xml`, `-gv_reloadGameAtFrame`, `-gv_standardInputCommands`. S18 의 새 클래스는 ImGui 에 의존해 단위 테스트가 없다 — 에디터 자체 테스트 · `AppScenarioTest` 에디터 케이스가 본다.
+
+- `B-14` **2026-10-15 `verify` 묶음 이후 남은 검증 둘.** ① Release 네 백엔드 스크린샷(`-gv_benchMeshes=8 -gv_benchAnimate=0 -gv_screenshotFrame=30`): main 은 포워드 · 디퍼드 모두 네 백엔드가 바이트까지 같다.
+  perfbase 와 포워드는 같고, 디퍼드 차이는 `ee6fff232`(반해상도 블룸)의 의도된 변경이다(결정 기록 5-5). 디퍼드 비교 기준은 그 커밋 이후다.
+  ② Linux 전용 파일은 Windows 에서 컴파일되지 않아 기계적 치환만 하고 짓지 못했다(`PosixCrashHandler.cpp` · `EpollStreamTransport.cpp` · `FileUtil.cpp` 의 `st_mtim` 분기 · `HardwareProbe.cpp`). 사용자가 요청할 때만 WSL 로 확인한다.
 
 ## C. 구조 · 성능 · 정리
 
@@ -223,6 +227,11 @@
   ① 입력 액션 이름의 생성자 기본값(`PawnComponent` 의 `Move` · `Look`, 카메라 액션)은 게임마다 맵이 달라 검증 함수로 못 본다 — 빙의 · 프리셋 때 런타임 경고가 본다.
   ② 카탈로그 안 id 참조는 팩 둘(`starskirmish-unit-tree` · `nilecity-goods`)만 규칙이 있다 — 나머지 키트 카탈로그는 로더 경고(스키마 테스트)에 기댄다.
   ③ 시나리오 `<DevCommand line="editor <명령>">` 의 에디터 명령 id(`EditorCommandRegistry` 는 실행 중 등록), UI 바인딩 경로(`UIBindingSet::bind` 오류 로그), 동적으로 지은 액션 이름은 런타임 경고 게이트(logwarn)에 맡긴다.
+
+- `C-35` **서브틱(`registerSubTick`) 활용 조사.** 서브틱은 `GameDirectorComponent.cpp` 한 곳에서만 쓰이고 `TickPhase` 의 `Early` · `Late` · `Finalize` 는 정의 밖 사용이 0 이다. 반면 `setTickGroup` 은 48 개 파일, `PostUpdate` 는 41 개 파일이다.
+  주석을 읽은 14 개는 "디렉터(`PrePhysics`)가 이 프레임의 ○○ 를 끝낸 뒤에 읽는다" 였고(HarvestValley · NileCity · StarSkirmish 의 컴포넌트, 카메라 계열), 선행 조건(`getTickHandle()` 로 다른 오브젝트 컴포넌트에도 건다)이 이 의도를 정확히 표현한다.
+  할 일: `PostUpdate` 41 개를 (렌더 직전이 필요한 것 / 특정 컴포넌트 뒤에 읽는 것 / 이유를 모르는 것) 로 분류한다. 후보 몇 개를 실제로 바꿔 프레임 시간과 동작을 비교한다. 이득이 없으면 서브틱 · `TickPhase` 를 삭제 후보로 구조 리팩토링 지도에 올린다.
+  선행 조건이 있는 서브틱은 별도 스테이지로 가므로 지금 방식보다 느릴 수도 있다 — 측정하지 않았다.
 
 ## D. 기능 로드맵
 
@@ -629,6 +638,7 @@
   앞선 순차 hostgpu 네 백엔드도 통과했다. 2026-10-16 독점 GPU 단독 Vulkan 5/5 통과. 참조 목록 항목 추가가 부하 아래 한 프레임 늦는지(고정 프레임 간격) 볼 것.
 - `E-15` **`shooter3d.closewindow` GL 1 회(2026-10-16).** 공유 GPU 잠금으로 돈 Debug hostgpu(`EveryGamePackScenarioPassesOnEveryBackend`)에서 frame 10 `ExpectCursorClip` 이 클립 0,0,2560,1440(화면 전체)을 봤다 —
   같은 때 다른 App 창(스크린샷 캡처)을 띄우고 있었다. 이 시나리오는 실제 포커스 · 커서 클립을 쓰므로(`input="mixed"`) 독점으로 단독 GL 5/5 통과. 겹친 창이 포커스를 가져간 것으로 본다.
+- `E-16` **WSL VM(Ubuntu-26.04)이 `wsl --shutdown` 후에도 1 초 안에 다시 뜬다.** VS Code 의 WSL 연결이나 다른 도구가 깨우는 것으로 보이며 원인을 특정하지 못했다.
 
 ---
 
