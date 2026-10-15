@@ -67,6 +67,14 @@ namespace sw
         int32 _startingGold;
         PROPERTY( Category = "Time", DisplayName = "Fast Time Scale", Tooltip = "Clock speed while fast forward is held", Min = 1.0 )
         float32 _fastTimeScale;
+        PROPERTY( Category = "Look", DisplayName = "Ready Color", Tooltip = "Tile tint when the crop is fully grown" )
+        float4 _readyColor;
+        PROPERTY( Category = "Look", DisplayName = "Watered Color" )
+        float4 _wateredColor;
+        PROPERTY( Category = "Look", DisplayName = "Tilled Color" )
+        float4 _tilledColor;
+        PROPERTY( Category = "Look", DisplayName = "Grass Color", Tooltip = "Tile tint before it is tilled" )
+        float4 _grassColor;
 
         FarmField                _field;
         MaterialTintCache        _tintCache;

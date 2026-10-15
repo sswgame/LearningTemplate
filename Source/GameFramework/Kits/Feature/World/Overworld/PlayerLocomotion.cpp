@@ -32,10 +32,10 @@ namespace sw
             _state = LocomotionState::Idle;
     }
 
-    void PlayerLocomotion::notifyStepStarted()
+    void PlayerLocomotion::notifyStepStarted( float32 stepSeconds )
     {
         _state = LocomotionState::Walk;
-        _stateTimer.start( kStepDuration );
+        _stateTimer.start( stepSeconds );
     }
 
     void PlayerLocomotion::notifyStepFinished()

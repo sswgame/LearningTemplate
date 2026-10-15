@@ -114,7 +114,7 @@ namespace sw
             for ( uint32 index = 0; index < static_cast<uint32>( UIStyleField::Count ); ++index )
             {
                 const UIStyleField field = static_cast<UIStyleField>( index );
-                if ( ( UIStyleFieldTable::getEntry( field )._flags & UIStyleFieldTable::kInherited ) == 0 || pParentStyle->has( field ) == false )
+                if ( ( UIStyleFieldTable::getFlags( field ) & UIStyleFieldTable::kInherited ) == 0 || pParentStyle->has( field ) == false )
                     continue;
                 style->_setMask |= UIStyleFieldTable::makeBit( field );
                 switch ( field )

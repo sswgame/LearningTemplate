@@ -2191,16 +2191,17 @@ SW_TEST_CASE( GameFrameworkTest, PlayerLocomotion_StepStaysInWalkForItsDuration 
     PlayerLocomotion loco;
     SW_ASSERT_TRUE( loco.canAcceptMoveInput() );
 
-    loco.notifyStepStarted();
+    const float32 stepSeconds = OverworldTileMoverSettings{}._stepSeconds;
+    loco.notifyStepStarted( stepSeconds );
     SW_EXPECT_TRUE_MSG( loco.getState() == LocomotionState::Walk, "걸음을 시작했는데 Walk 가 아닙니다" );
     SW_EXPECT_TRUE( loco.canAcceptMoveInput() == false );
 
     // 걸음 길이의 절반만 흘리면 아직 걷는 중이다.
-    loco.update( PlayerLocomotion::kStepDuration * 0.5f );
+    loco.update( stepSeconds * 0.5f );
     SW_EXPECT_TRUE_MSG( loco.getState() == LocomotionState::Walk, "걸음 중간인데 Walk 가 끝났습니다" );
 
     // 다 흘리면 스스로 끝난다 — 아무도 끝내 주지 않아도 된다.
-    loco.update( PlayerLocomotion::kStepDuration );
+    loco.update( stepSeconds );
     SW_EXPECT_TRUE_MSG( loco.getState() == LocomotionState::Idle, "걸음 길이를 넘겼는데 Walk 가 안 끝납니다" );
     SW_EXPECT_TRUE( loco.canAcceptMoveInput() );
 }

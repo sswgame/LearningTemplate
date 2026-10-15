@@ -58,6 +58,9 @@ namespace sw
     /** @brief TileMap XML 전체 문서 */
     struct TileMapXMLData
     {
+        /** @brief 타일맵 파일의 접미사입니다. 에디터 종류 표(`EditorAssetType.cpp`)가 이 값을 씁니다. */
+        static constexpr string_view kExtension = ".tilemap.xml";
+
         /**
          * @brief 타일맵 하나가 가질 수 있는 최대 셀 수입니다 (2048 x 2048).
          * @details 셀 수는 `_width x _height` 이고, 셀마다 배열(플래그 레이어와 비주얼)에 8 바이트가 든다. 이 상한이

@@ -17,9 +17,6 @@ namespace sw
         struct SkirmishMatchInternal
         {
             static constexpr float32 kStatusInterval = 30.0f;
-            static constexpr float32 kHuntInterval   = 4.0f;
-            static constexpr float32 kArrivedRadius  = 10.0f; ///< 적 시작 지점에서 이 안이면 "닿았다"
-            static constexpr int32   kStartMinerals  = 50;
 
             /** @brief 성향별 AI 설정입니다 — 0 러시(일찍 작게) · 1 운영(일꾼 · 병영을 늘려 크게) · 2 사람 상대(그 사이). */
             static RTSCommanderAISettings makeAISettings( int32 style )
@@ -66,6 +63,7 @@ namespace sw
         , _listEvent{}
         , _listFrameEvent{}
         , _listCliff{}
+        , _settings{}
         , _statusTimer{ 0.0f }
         , _huntTimer{ 0.0f }
         , _arrAIActive{ SW_FALSE, SW_FALSE }
@@ -74,8 +72,9 @@ namespace sw
     {
     }
 
-    void SkirmishMatch::initialize( const RTSCatalog* pCatalog, bool bHumanPlayer )
+    void SkirmishMatch::initialize( const RTSCatalog* pCatalog, bool bHumanPlayer, const SkirmishMatchSettings& matchSettings )
     {
+        _settings = matchSettings;
         _world.initialize( pCatalog, kMapSize, kMapSize, RTSSettings{} );
         _listEvent.clear();
         _listFrameEvent.clear();
@@ -91,7 +90,7 @@ namespace sw
         for ( Wallet& wallet : _arrWallet )
         {
             wallet.clear();
-            wallet.add( settings._mineralCurrency, SkirmishMatchInternal::kStartMinerals );
+            wallet.add( settings._mineralCurrency, _settings._startMinerals );
         }
         (void)_world.addPlayer( 0, &_arrWallet[0], float3{ 10.0f, 0.0f, 10.0f } );
         (void)_world.addPlayer( 1, &_arrWallet[1], float3{ farCenter, 0.0f, farCenter } );
@@ -278,7 +277,7 @@ namespace sw
             return;
         }
         _huntTimer += deltaTime;
-        if ( _huntTimer >= SkirmishMatchInternal::kHuntInterval )
+        if ( _huntTimer >= _settings._huntIntervalSeconds )
         {
             _huntTimer = 0.0f;
             for ( int32 player = 0; player < kPlayerCount; ++player )
@@ -314,7 +313,7 @@ namespace sw
             const bool bNotIdleArmyUnit = unit._owner != player || SkirmishMatchInternal::isArmy( unit ) == false || unit.isIdle() == false || unit._attackTarget.isValid();
             if ( bNotIdleArmyUnit )
                 return;
-            if ( float3::getHorizontalDistance( unit._position, pEnemy->_startPosition ) > SkirmishMatchInternal::kArrivedRadius )
+            if ( float3::getHorizontalDistance( unit._position, pEnemy->_startPosition ) > _settings._arrivedRadius )
                 return;
             listArrived.push_back( unit._id );
             groupPosition = unit._position;

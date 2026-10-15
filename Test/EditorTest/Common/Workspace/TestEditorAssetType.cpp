@@ -9,9 +9,27 @@
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 
+#include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/Graph/AnimationGraphAsset.h"
+#include "Engine/Animation/Rig/RigAsset.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Animation/Sprite/SpriteClipAsset.h"
+#include "Engine/Audio/AudioEvent.h"
+#include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Destruction/FractureAsset.h"
+#include "Engine/Dialogue/DialogueGraphAsset.h"
+#include "Engine/Environment/Terrain/HeightfieldData.h"
+#include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
+#include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/Cache/IAssetCache.h"
+#include "Engine/Resource/ResourceDataKind.h"
+#include "Engine/Sequencer/SequenceAsset.h"
+#include "Engine/TileMap/TileMapXML.h"
+#include "Engine/UI/Document/UIDocument.h"
+#include "Engine/UI/Style/UIStyleSheet.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -469,4 +487,68 @@ SW_TEST_CASE( EditorAssetTypeTest, UIDocumentOpensTheUIPreviewPanel )
     }
     SW_EXPECT_TRUE( bWatchesUIDocument );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findReloadRoute( "engine/ui/pause.ui.xml" )._pCacheKindName != nullptr );
+}
+
+/**
+ * @brief [EditorAssetTypeTest] 엔진이 읽는 포맷의 확장자(`kExtension`)는 에디터 종류 표에서 그 포맷의 종류로 판정된다
+ * @details 종류 표의 순서가 판정 우선순위라, 앞 줄(`.json` 의 Data 등)이 뒤 포맷을 가로채면 열기 · 리로드 · 아이콘이 모두 틀린다. 정본은 종류 표 하나이고
+ *          이 표는 그것을 확인만 한다.
+ */
+SW_TEST_CASE( EditorAssetTypeTest, EveryEngineFormatMapsToItsKind )
+{
+    using namespace sw;
+    using namespace sw::editor;
+    struct FormatRow
+    {
+        string_view     _extension;
+        EditorAssetType _kind;
+    };
+    const FormatRow arrFormat[] = {
+        {    MeshAssetFormat::kExtension,           EditorAssetType::Mesh},
+        {           Skeleton::kExtension,       EditorAssetType::Skeleton},
+        {           RigAsset::kExtension,            EditorAssetType::Rig},
+        {      AnimationClip::kExtension,  EditorAssetType::AnimationClip},
+        {      FractureAsset::kExtension,       EditorAssetType::Fracture},
+        {    HeightfieldData::kExtension,    EditorAssetType::Heightfield},
+        {           Material::kExtension,       EditorAssetType::Material},
+        {AnimationGraphAsset::kExtension, EditorAssetType::AnimationGraph},
+        { DialogueGraphAsset::kExtension,  EditorAssetType::DialogueGraph},
+        {    SpriteClipAsset::kExtension,     EditorAssetType::SpriteClip},
+        {      SequenceAsset::kExtension,       EditorAssetType::Sequence},
+        {     TileMapXMLData::kExtension,        EditorAssetType::TileMap},
+        {    UIDocumentAsset::kExtension,     EditorAssetType::UIDocument},
+        {  UIStyleSheetAsset::kExtension,           EditorAssetType::Data},
+        {     AudioMixerDesc::kExtension,           EditorAssetType::Data},
+        {  AudioEventLibrary::kExtension,           EditorAssetType::Data},
+        {  SourceStringTable::kExtension,           EditorAssetType::Data},
+        {   TranslationTable::kExtension,           EditorAssetType::Data},
+        {LocalizationProject::kExtension,           EditorAssetType::Data},
+    };
+    for ( const FormatRow& row : arrFormat )
+    {
+        const string path = string( "game/probe/sample" ) + string( row._extension );
+        SW_EXPECT_TRUE_MSG( EditorAssetTypeRegistry::findKind( path ) == row._kind, path.c_str() );
+    }
+}
+
+/**
+ * @brief [EditorAssetTypeTest] 등록된 데이터 파일 종류(`ResourceDataKind`)의 파일은 에디터에서 Data 다
+ * @details 카탈로그 편집기 · 스키마 테스트가 아는 데이터 파일을 콘텐츠 브라우저가 다른 종류(스프라이트 · 시퀀스)로 열면 같은 파일이 두 편집기에 걸린다.
+ */
+SW_TEST_CASE( EditorAssetTypeTest, EveryResourceDataKindIsData )
+{
+    using namespace sw;
+    using namespace sw::editor;
+    vector<const ResourceDataKind*> listKind;
+    ResourceDataKindRegistry::get().collectKinds( listKind );
+    for ( const ResourceDataKind* pKind : listKind )
+    {
+        if ( pKind->_pSuffix == nullptr )
+            continue;
+        string path = pKind->_pPrefix != nullptr ? string( pKind->_pPrefix ) : string( "game/probe/" );
+        if ( pKind->_pContains != nullptr )
+            path += string( "probe" ) + pKind->_pContains;
+        path += string( "sample" ) + pKind->_pSuffix;
+        SW_EXPECT_TRUE_MSG( EditorAssetTypeRegistry::findKind( path ) == EditorAssetType::Data, path.c_str() );
+    }
 }

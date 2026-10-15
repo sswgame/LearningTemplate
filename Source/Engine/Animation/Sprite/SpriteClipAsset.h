@@ -91,6 +91,9 @@ namespace sw
     class SW_API SpriteClipAsset
     {
     public:
+        /** @brief 스프라이트 클립 파일의 접미사입니다. 에디터 종류 표(`EditorAssetType.cpp`)가 이 값을 씁니다. */
+        static constexpr string_view kExtension = ".sprite.json";
+
         /** @brief 빈 클립을 만듭니다. */
         SpriteClipAsset() = default;
 

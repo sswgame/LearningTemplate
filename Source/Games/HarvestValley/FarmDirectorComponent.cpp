@@ -93,36 +93,6 @@ namespace sw
                 }
                 return "?";
             }
-
-            /** @brief 다 자란 작물의 색입니다. 모르는 작물은 초록입니다. */
-            static float4 findCropColor( const hashed_string& cropID )
-            {
-                struct CropColor
-                {
-                    const utf8* _pID;
-                    float4      _color;
-                };
-                static constexpr CropColor kArrCropColor[] = {
-                    {      "turnip", { 0.92f, 0.88f, 0.95f, 1.0f }},
-                    {      "potato", { 0.72f, 0.56f, 0.34f, 1.0f }},
-                    {    "cucumber", { 0.25f, 0.55f, 0.20f, 1.0f }},
-                    {  "strawberry", { 0.90f, 0.15f, 0.20f, 1.0f }},
-                    {      "tomato", { 0.95f, 0.25f, 0.15f, 1.0f }},
-                    {        "corn", { 0.98f, 0.85f, 0.25f, 1.0f }},
-                    {       "onion", { 0.85f, 0.70f, 0.45f, 1.0f }},
-                    {     "pumpkin", { 0.95f, 0.50f, 0.10f, 1.0f }},
-                    {    "eggplant", { 0.40f, 0.15f, 0.50f, 1.0f }},
-                    {      "carrot", { 0.95f, 0.45f, 0.10f, 1.0f }},
-                    {"sweet_potato", { 0.70f, 0.30f, 0.40f, 1.0f }},
-                    {     "spinach", { 0.15f, 0.45f, 0.15f, 1.0f }},
-                };
-                for ( const CropColor& entry : kArrCropColor )
-                {
-                    if ( cropID == hashed_string( entry._pID ) )
-                        return entry._color;
-                }
-                return float4{ 0.3f, 0.7f, 0.3f, 1.0f };
-            }
         };
 
         /** @brief 프로브가 읽는 디렉터입니다. 씬의 첫 농장 디렉터이며, 프로브는 단언 단계에서만 불리므로 프레임 경로가 아닙니다. */
@@ -599,7 +569,7 @@ namespace sw
         {
             CropLook look;
             look._cropID   = crop._id;
-            look._instance = _tintCache.acquire( pCropMaterial, FarmDirectorComponentInternal::findCropColor( crop._id ) );
+            look._instance = _tintCache.acquire( pCropMaterial, crop._color );
             _listCropLook.push_back( look );
         }
         _listCropMesh.clear();

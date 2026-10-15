@@ -23,6 +23,7 @@ namespace sw
     /** @brief 필드 값이 생성 코드의 어디로 가는지입니다(PredefinedAnnotationField.xxx 의 Emit 열). */
     enum class AnnotationEmit : uint8
     {
+        Display, ///< Editor 와 같은 자리에 쓰는 표시 메타 — 어느 멤버(이벤트 포함)에나 붙는다
         Editor,  ///< `#if !defined( SW_SHIPPING )` 블록 안의 `<접두>_metadata.<멤버>`
         Runtime, ///< 같은 꼴, 블록 밖
         Manual,  ///< CodeGenerator 가 직접 쓴다(템플릿 변수 · 별칭 등록 · 범위처럼 메타데이터 멤버가 아닌 자리)
@@ -117,6 +118,11 @@ namespace sw
          * @return 어긋난 곳이 없으면 true
          */
         static bool validateBindings( const AnnotationMeta& meta );
+
+        /** @brief 이벤트 필드의 PROPERTY 가 받는 필드인지 봅니다 — 표에서 Display 인 PROPERTY 줄과 이름(`Name`)입니다. */
+        static bool acceptsOnEvent( string_view propertyFieldID );
+        /** @brief 이벤트가 받는 필드 이름을 ", " 로 이은 글입니다(오류 글). */
+        static string makeEventFieldList();
     };
 
     // 정의는 AnnotationFields.cpp 에 있고 네 DTO 로만 인스턴스화합니다.

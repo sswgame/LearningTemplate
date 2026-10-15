@@ -20,26 +20,6 @@ namespace sw
 
     namespace
     {
-        /**
-         * @brief 이 킷의 플레이어 쪽 조절 값입니다. **한 곳에 모아 둡니다.** 적의 수치는 몬스터 정의(`MonsterDef`)에 있습니다.
-         * @details 같은 값을 두 곳에 적지 않는다. 예를 들어 대시 쿨다운은 `update()` 가 넣는 값이자
-         *          `getDashFill()` 의 분모이므로 한쪽만 바꾸면 **게이지가 거짓말을 한다**(쿨다운을 1.2초로
-         *          늘렸는데 게이지는 0.85초에 가득 차는 식이다).
-         */
-        struct ActionRoomTuning
-        {
-            /** @brief 대시 쿨다운(초)입니다. `getDashFill()` 의 분모이기도 합니다. */
-            static constexpr float32 kDashCooldown = 0.85f;
-            /** @brief 대시가 주는 무적 시간(초)입니다. */
-            static constexpr float32 kDashInvulnerable = 0.22f;
-            /** @brief 맞았을 때의 무적 시간(초)입니다. 대시가 주는 무적 시간보다 **깁니다.** */
-            static constexpr float32 kHitInvulnerable = 0.7f;
-            /** @brief 플레이어 공격 쿨다운(초)입니다. */
-            static constexpr float32 kAttackCooldown = 0.28f;
-            /** @brief 플레이어 공격 한 번의 피해입니다. 적의 방어(`MonsterDef::_def`)를 뺀 값이 들어갑니다(내장 그런트는 방어 0이라 34, 보스는 방어 16이라 18). */
-            static constexpr float32 kPlayerAttackDamage = 34.0f;
-        };
-
         /** @brief 룸에 스폰할 적 하나입니다. 종 id 와 위치(m)를 가집니다. */
         struct ActionRoomSpawnDef
         {
@@ -126,6 +106,7 @@ namespace sw
 {
     ActionRoom::ActionRoom()
         : _site{}
+        , _settings{}
         , _kind{ ActionRoomKind::None }
         , _layers{}
         , _listActor{}
@@ -217,7 +198,7 @@ namespace sw
     {
         if ( _dashCooldown.isActive() == false )
             return 1.0f;
-        return MathUtil::saturate( 1.0f - ( _dashCooldown.getRemaining() / ActionRoomTuning::kDashCooldown ) );
+        return MathUtil::saturate( 1.0f - ( _dashCooldown.getRemaining() / _settings._dashCooldownSeconds ) );
     }
 
     float32 ActionRoom::getBossHpFill() const
@@ -260,10 +241,10 @@ namespace sw
 
         if ( input._bDashPressed == SW_TRUE && _dashCooldown.isActive() == false )
         {
-            _dashCooldown.start( ActionRoomTuning::kDashCooldown );
+            _dashCooldown.start( _settings._dashCooldownSeconds );
             // **줄이지 않는다.** 그냥 대입하면 맞아서 얻은 0.7초짜리 무적이 대시 한 번에
             // 0.22초로 **깎인다.** 대시가 피해를 덜 받게 해야 하는데 오히려 더 받게 된다.
-            _invulnerable.extendTo( ActionRoomTuning::kDashInvulnerable );
+            _invulnerable.extendTo( _settings._dashInvulnerableSeconds );
             result._bDashStarted = SW_TRUE;
         }
 
@@ -362,7 +343,7 @@ namespace sw
         if ( input._bAttackPressed == SW_FALSE )
             return;
 
-        _attackCooldown.start( ActionRoomTuning::kAttackCooldown );
+        _attackCooldown.start( _settings._attackCooldownSeconds );
         const AABB atk = playerAttackBox( input._playerPos._x, input._playerPos._y, input._facing );
         for ( Actor& actor : _listActor )
         {
@@ -372,7 +353,7 @@ namespace sw
                 continue;
             // 방어 공식은 유닛 스탯과 같다(고정 방어를 빼고 최소 1을 보장한다). 같은 몬스터 정의를 두 곳이 다르게 읽지 않는다.
             const float32 defense = static_cast<float32>( _listMonsterDef[actor._defIndex]._def );
-            actor._hp -= DamageMath::applyArmor( ActionRoomTuning::kPlayerAttackDamage, defense, 0.0f, 1.0f );
+            actor._hp -= DamageMath::applyArmor( _settings._playerAttackDamage, defense, 0.0f, 1.0f );
             if ( actor._hp <= 0.0f )
             {
                 actor._hp     = 0.0f;
@@ -457,7 +438,7 @@ namespace sw
             if ( queryOverlaps( hurt, kLayerPlayer, computeActorBounds( actor ), kLayerEnemy, _layers ) == false )
                 continue;
             outResult._damageToPlayer += _listMonsterDef[actor._defIndex]._atk;
-            _invulnerable.start( ActionRoomTuning::kHitInvulnerable );
+            _invulnerable.start( _settings._hitInvulnerableSeconds );
             return;
         }
         for ( Projectile& projectile : _listProjectile )
@@ -468,7 +449,7 @@ namespace sw
                 continue;
             outResult._damageToPlayer += projectile._damage;
             projectile._bAlive = SW_FALSE;
-            _invulnerable.start( ActionRoomTuning::kHitInvulnerable );
+            _invulnerable.start( _settings._hitInvulnerableSeconds );
             return;
         }
     }

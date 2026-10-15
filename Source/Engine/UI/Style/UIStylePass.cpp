@@ -24,7 +24,7 @@ namespace sw
             const UIStyleField field = static_cast<UIStyleField>( index );
             if ( ( changedFields & UIStyleFieldTable::makeBit( field ) ) == 0 )
                 continue;
-            const uint32 flags = UIStyleFieldTable::getEntry( field )._flags;
+            const uint32 flags = UIStyleFieldTable::getFlags( field );
             if ( ( flags & UIStyleFieldTable::kAffectsLayout ) != 0 )
                 reason |= WidgetDirty::kLayout;
             if ( ( flags & UIStyleFieldTable::kAffectsSubtree ) != 0 )

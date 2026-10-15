@@ -33,6 +33,17 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 한 판의 규칙 수치입니다. 디렉터의 PROPERTY 가 채웁니다. */
+    struct SkirmishMatchSettings
+    {
+        float32 _huntIntervalSeconds{ 4.0f }; ///< 적 시작 지점에 닿아 노는 병력을 남은 적 건물로 보내는 주기
+        float32 _arrivedRadius{ 10.0f };      ///< 적 시작 지점에서 이 안이면 "닿았다"(m)
+        int32   _startMinerals{ 50 };         ///< 플레이어마다 시작 광물
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class SkirmishMatch
      * @brief 64×64 맵의 1 대 1 한 판입니다. 0 번은 남서쪽, 1 번은 북동쪽(점 대칭)에서 시작합니다.
@@ -52,7 +63,7 @@ namespace sw
          * @brief 맵을 칠하고 두 기지(본진 · 일꾼 넷 · 광물 여덟 · 간헐천)를 놓습니다.
          * @param bHumanPlayer 0 번을 사람이 맡는가(아니면 둘 다 AI). 사람 쪽 일꾼도 처음에는 광물을 캐러 간다.
          */
-        void initialize( const RTSCatalog* pCatalog, bool bHumanPlayer );
+        void initialize( const RTSCatalog* pCatalog, bool bHumanPlayer, const SkirmishMatchSettings& matchSettings );
         /** @brief 월드 · AI 를 돌리고 알림을 AI 에 넘깁니다. 상태는 30 초마다, 승패는 한 번 로그로 남깁니다. */
         void update( float32 deltaTime );
         /** @brief 이번까지 쌓인 월드 알림(화면용 사본)을 꺼냅니다. */
@@ -83,16 +94,17 @@ namespace sw
         /** @brief 적 시작 지점에 닿아 놀고 있는 병력을 가장 가까운 남은 적 건물로 보냅니다(멀리 지은 보급고가 남아 판이 끝나지 않는 일을 막는다). */
         void huntRemaining( int32 player );
 
-        RTSWorld         _world;
-        RTSCommanderAI   _arrAI[kPlayerCount];
-        Wallet           _arrWallet[kPlayerCount]; ///< 플레이어마다 광물 · 가스 — 키트 하나만 쓰는 게임이라 매치가 들고 월드에 빌려 준다
-        vector<RTSEvent> _listEvent;               ///< 화면이 꺼내 갈 사본
-        vector<RTSEvent> _listFrameEvent;
-        vector<uint8>    _listCliff;
-        float32          _statusTimer;
-        float32          _huntTimer;
-        uint8            _arrAIActive[kPlayerCount];
-        uint8            _bHumanPlayer;
-        uint8            _bReportedOver;
+        RTSWorld              _world;
+        RTSCommanderAI        _arrAI[kPlayerCount];
+        Wallet                _arrWallet[kPlayerCount]; ///< 플레이어마다 광물 · 가스 — 키트 하나만 쓰는 게임이라 매치가 들고 월드에 빌려 준다
+        vector<RTSEvent>      _listEvent;               ///< 화면이 꺼내 갈 사본
+        vector<RTSEvent>      _listFrameEvent;
+        vector<uint8>         _listCliff;
+        SkirmishMatchSettings _settings;
+        float32               _statusTimer;
+        float32               _huntTimer;
+        uint8                 _arrAIActive[kPlayerCount];
+        uint8                 _bHumanPlayer;
+        uint8                 _bReportedOver;
     };
 } // namespace sw

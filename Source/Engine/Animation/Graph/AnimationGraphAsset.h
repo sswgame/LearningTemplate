@@ -102,6 +102,9 @@ namespace sw
     class SW_API AnimationGraphAsset
     {
     public:
+        /** @brief 애니메이션 그래프 파일의 접미사입니다. 에디터 종류 표(`EditorAssetType.cpp`)가 이 값을 씁니다. */
+        static constexpr string_view kExtension = ".animgraph.json";
+
         /** @brief 빈 그래프를 만듭니다. */
         AnimationGraphAsset() = default;
 

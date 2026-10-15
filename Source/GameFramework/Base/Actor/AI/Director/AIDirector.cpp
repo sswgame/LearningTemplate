@@ -10,6 +10,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Actor/AI/Director/AIDirectorProfile.h"
@@ -24,8 +25,7 @@ namespace sw
     {
         struct AIDirectorInternal
         {
-            static constexpr const utf8* kArrEventKindName[] = { "PhaseChanged", "Spawned", "Despawned", "Encounter", "Reward" };
-            static constexpr const utf8* kArrBlockName[]     = { "weight", "pacing", "cooldown", "maxCount", "cycle", "minTime", "intensity", "area", "condition", "cost" };
+            static constexpr const utf8* kArrBlockName[] = { "weight", "pacing", "cooldown", "maxCount", "cycle", "minTime", "intensity", "area", "condition", "cost" };
             /** @brief 스폰 감독의 씨앗을 감독 씨앗에서 떼어 낼 때 섞는 값입니다(같은 씨앗이 두 수열에서 같은 수를 내지 않게). */
             static constexpr uint32 kSpawnSeedSalt  = 0x5bd1e995u;
             static constexpr uint32 kStateTag       = FourCcUtil::make( "AIDR" );
@@ -70,11 +70,6 @@ namespace sw
         _condition._dayOfSeason = clock.getDayOfSeason();
         _condition._season      = clock.getSeasonName();
         _condition._phase       = clock.getDayPhase();
-    }
-
-    const utf8* toString( AIDirectorEventKind kind )
-    {
-        return AIDirectorInternal::kArrEventKindName[static_cast<uint32>( kind )];
     }
 
     const utf8* AIDirectorBlock::getName( uint32 bitIndex )
@@ -476,7 +471,7 @@ namespace sw
         }
         if ( gv_aiDirectorTrace != 0 )
         {
-            SW_LOG_INFO( "[AIDirector] t=%.2f I=%.2f %# '%#' (%#) count %# scale %.2f", event._time, event._intensity, toString( event._kind ), event._id.c_str(),
+            SW_LOG_INFO( "[AIDirector] t=%.2f I=%.2f %# '%#' (%#) count %# scale %.2f", event._time, event._intensity, getEnumName( event._kind ), event._id.c_str(),
                          event._source.c_str(), event._count, event._scale );
         }
     }
@@ -563,7 +558,7 @@ namespace sw
         {
             const AIDirectorEvent&                 event = _listTrace[( static_cast<size_t>( _traceHead ) + offset ) % count];
             StringBuilder<constant::kMaxBuffer256> line;
-            line.appendFormat( "[%.2fs] I=%.2f %# '%#'", event._time, event._intensity, toString( event._kind ), event._id.c_str() );
+            line.appendFormat( "[%.2fs] I=%.2f %# '%#'", event._time, event._intensity, getEnumName( event._kind ), event._id.c_str() );
             if ( event._source.empty() == false )
                 line.appendFormat( " from '%#'", event._source.c_str() );
             if ( event._kind == AIDirectorEventKind::PhaseChanged )

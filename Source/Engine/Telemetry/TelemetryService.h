@@ -17,6 +17,7 @@
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Common/EngineSubsystemHost.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Telemetry/TelemetrySchema.h"
 #include "Engine/Utility/EngineFrameObserver.h"
 
@@ -42,6 +43,7 @@ namespace sw
 namespace sw
 {
     /** @brief `record` 의 결과입니다. */
+    ENUM()
     enum class TelemetryRecordResult : uint8
     {
         Recorded = 0,   ///< 묶음에 들어갔다
@@ -51,8 +53,6 @@ namespace sw
         UnknownEvent,   ///< 스키마에 없는 사건
         InvalidField    ///< 모르는 필드 · 타입이 다름 · 필수 필드 빠짐
     };
-
-    SW_API const utf8* toString( TelemetryRecordResult result );
 
     /** @brief 파이프라인 계수입니다. */
     struct TelemetryStats

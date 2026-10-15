@@ -473,7 +473,7 @@ namespace sw
             else if ( widget.tryGetOwnStyleField( field, channel._arrTo ) == false )
                 continue;
             UIStyleTransitionState::Channel mirrored{};
-            const bool                      bMirror = bOwnSpec == false && pNew->has( field ) && ( UIStyleFieldTable::getEntry( field )._flags & UIStyleFieldTable::kInherited ) != 0 &&
+            const bool                      bMirror = bOwnSpec == false && pNew->has( field ) && ( UIStyleFieldTable::getFlags( field ) & UIStyleFieldTable::kInherited ) != 0 &&
                                  findParentChannel( widget, field, channel._arrTo, mirrored );
             if ( bOwnSpec == false && bMirror == false )
                 continue; // 적지 않은 필드는 바로 바꾼다

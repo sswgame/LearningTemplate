@@ -37,6 +37,9 @@ namespace sw
     class SW_API Material final : public RHIRenderResource, public std::enable_shared_from_this<Material>
     {
     public:
+        /** @brief 머티리얼 파일의 확장자입니다. 에디터 종류 표(`EditorAssetType.cpp`)가 이 값을 씁니다. */
+        static constexpr string_view kExtension = ".material";
+
         /**
          * @brief 생성 키입니다. create() 만 만들 수 있습니다.
          * @details 생성자가 이 키를 요구하므로 `make_shared<Material>()` 도 스택의 `Material x;` 도 **컴파일되지 않는다.**

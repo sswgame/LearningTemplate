@@ -29,14 +29,14 @@ namespace sw
     {
         struct MeadowFarmDirectorComponentInternal
         {
-            /** @brief 칸 상태의 색 — 다 자람 노랑 · 물 줌 짙은 흙 · 갈았음 흙 · 갈지 않음 풀. */
-            static float4 findTileColor( const FarmTile& tile )
+            /** @brief 칸 상태의 색입니다 — 다 자람 · 물 줌 · 갈았음 · 갈지 않음 순서로 먼저 맞는 것(값은 디렉터의 PROPERTY). */
+            static const float4& findTileColor( const FarmTile& tile, const float4& readyColor, const float4& wateredColor, const float4& tilledColor, const float4& grassColor )
             {
                 if ( tile._bReady != SW_FALSE )
-                    return float4{ 0.95f, 0.85f, 0.30f, 1.0f };
+                    return readyColor;
                 if ( tile._bWatered != SW_FALSE )
-                    return float4{ 0.33f, 0.22f, 0.13f, 1.0f };
-                return tile._bTilled != SW_FALSE ? float4{ 0.58f, 0.40f, 0.24f, 1.0f } : float4{ 0.40f, 0.62f, 0.28f, 1.0f };
+                    return wateredColor;
+                return tile._bTilled != SW_FALSE ? tilledColor : grassColor;
             }
         };
     } // namespace
@@ -51,6 +51,10 @@ namespace sw
         : _tilePrefab{ "game/meadowvillage/prefabs/tile.prefab.xml" }
         , _startingGold{ 20 }
         , _fastTimeScale{ 8.0f }
+        , _readyColor{ 0.95f, 0.85f, 0.30f, 1.0f }
+        , _wateredColor{ 0.33f, 0.22f, 0.13f, 1.0f }
+        , _tilledColor{ 0.58f, 0.40f, 0.24f, 1.0f }
+        , _grassColor{ 0.40f, 0.62f, 0.28f, 1.0f }
         , _field{}
         , _tintCache{}
         , _listTileView{}
@@ -210,7 +214,7 @@ namespace sw
                 if ( pMesh == nullptr )
                     continue;
                 pMesh->setLocalPosition( float3{ ( static_cast<float32>( x ) + 0.5f ) * kTileSpacing, 0.05f, ( static_cast<float32>( y ) + 0.5f ) * kTileSpacing } );
-                _tintCache.apply( *pMesh, MeadowFarmDirectorComponentInternal::findTileColor( *pTile ) );
+                _tintCache.apply( *pMesh, MeadowFarmDirectorComponentInternal::findTileColor( *pTile, _readyColor, _wateredColor, _tilledColor, _grassColor ) );
                 _listTileView.push_back( pView->getHandle() );
             }
         }

@@ -3,6 +3,7 @@
 #include "Engine/UI/Style/WidgetStyle.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Math/MathUtil.h"
 
 namespace sw
 {
@@ -12,26 +13,26 @@ namespace sw
         {
             using Table = UIStyleFieldTable;
 
-            /** @brief 필드 테이블입니다. `UIStyleField` 순서이며 `WidgetStyle` 선언 순서와 같습니다. */
-            static constexpr Table::Entry kArrEntry[] = {
-                { "_backgroundColor",                                         0},
-                {    "_cornerRadius",                                         0},
-                {     "_borderWidth",                                         0},
-                {     "_borderColor",                                         0},
-                {     "_shadowColor",                                         0},
-                {    "_shadowOffset",                                         0},
-                {      "_shadowBlur",                                         0},
-                {         "_padding",                     Table::kAffectsLayout},
-                {            "_font", Table::kAffectsLayout | Table::kInherited},
-                {        "_fontSize", Table::kAffectsLayout | Table::kInherited},
-                {       "_textColor",                         Table::kInherited},
-                {"_textOutlineColor",                         Table::kInherited},
-                {"_textOutlineWidth",                         Table::kInherited},
-                {  "_focusRingColor",                                         0},
-                {         "_opacity",                    Table::kAffectsSubtree},
-                {      "_transition",                                         0},
+            /** @brief 필드마다 플래그입니다. `UIStyleField` 순서(`WidgetStyle` PROPERTY 선언 순서)입니다. */
+            static constexpr uint32 kArrFlags[] = {
+                0,                                         // BackgroundColor
+                0,                                         // CornerRadius
+                0,                                         // BorderWidth
+                0,                                         // BorderColor
+                0,                                         // ShadowColor
+                0,                                         // ShadowOffset
+                0,                                         // ShadowBlur
+                Table::kAffectsLayout,                     // Padding
+                Table::kAffectsLayout | Table::kInherited, // Font
+                Table::kAffectsLayout | Table::kInherited, // FontSize
+                Table::kInherited,                         // TextColor
+                Table::kInherited,                         // TextOutlineColor
+                Table::kInherited,                         // TextOutlineWidth
+                0,                                         // FocusRingColor
+                Table::kAffectsSubtree,                    // Opacity
+                0,                                         // Transition
             };
-            static_assert( sizeof( kArrEntry ) / sizeof( kArrEntry[0] ) == static_cast<size_t>( UIStyleField::Count ), "UIStyleField and the table differ" );
+            static_assert( SW_COUNT_OF( kArrFlags ) == static_cast<size_t>( UIStyleField::Count ), "UIStyleField and the flag table differ" );
 
             static bool isSameFont( const FontSpec& lhs, const FontSpec& rhs ) { return lhs._family == rhs._family && lhs._weight == rhs._weight && lhs._slant == rhs._slant; }
 
@@ -83,16 +84,19 @@ namespace sw
 
 namespace sw
 {
-    const UIStyleFieldTable::Entry& UIStyleFieldTable::getEntry( UIStyleField field )
+    uint32 UIStyleFieldTable::getFlags( UIStyleField field )
     {
-        return WidgetStyleInternal::kArrEntry[static_cast<uint32>( field )];
+        const uint32 index = static_cast<uint32>( field );
+        return index < static_cast<uint32>( UIStyleField::Count ) ? WidgetStyleInternal::kArrFlags[index] : 0u;
     }
 
     bool UIStyleFieldTable::tryFindField( string_view name, UIStyleField& outField )
     {
-        for ( uint32 index = 0; index < static_cast<uint32>( UIStyleField::Count ); ++index )
+        const vector<PropertyInfo>& listProperty = WidgetStyle::StaticType()->getPropertiesWithBase();
+        const uint32                fieldCount   = MathUtil::min( static_cast<uint32>( listProperty.size() ), static_cast<uint32>( UIStyleField::Count ) );
+        for ( uint32 index = 0; index < fieldCount; ++index )
         {
-            if ( StringUtil::equals( name, string_view( WidgetStyleInternal::kArrEntry[index]._pName ), true ) )
+            if ( StringUtil::equals( name, string_view( listProperty[index]._name.c_str() ), true ) )
             {
                 outField = static_cast<UIStyleField>( index );
                 return true;

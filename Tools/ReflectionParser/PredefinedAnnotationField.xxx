@@ -15,10 +15,12 @@
  *                     FunctionNetRole  → 넷 역할 (단독 토큰 `Server` 등. 토큰 자체가 값입니다)
  *                   그대로 넣는 줄(`REGISTER_ANNOTATION_FIELD`)은 uint8 과 string 만 받습니다. 나머지는 `_FN` 입니다.
  *          Fn     : `void Fn( 대상&, string_view 값 )`. `AnnotationFields.cpp` 에 있습니다.
- *          Emit   : Editor  — 생성 코드의 `#if !defined( SW_SHIPPING )` 블록 안에 `<접두>_metadata.<Member>` 로 씁니다
+ *          Emit   : Display — 어느 멤버(이벤트 포함)에나 붙는 표시 메타입니다. Editor 와 같은 블록에 씁니다.
+ *                             이벤트(`MulticastDelegate` 필드)의 PROPERTY 가 받는 필드는 이 열이 Display 인 줄과 `Name` 뿐입니다
+ *                   Editor  — 생성 코드의 `#if !defined( SW_SHIPPING )` 블록 안에 `<접두>_metadata.<Member>` 로 씁니다
  *                   Runtime — 같은 꼴로 블록 밖에 씁니다
  *                   Manual  — CodeGenerator 가 손으로 씁니다(템플릿 변수 · 별칭 등록 · 범위처럼 메타데이터 멤버가 아닌 자리)
- *                   Editor · Runtime 은 **엔진 쪽 메타데이터 멤버 이름이 DTO 멤버와 같다**는 약속입니다. 커스텀 메타
+ *                   Display · Editor · Runtime 은 **엔진 쪽 메타데이터 멤버 이름이 DTO 멤버와 같다**는 약속입니다. 커스텀 메타
  *                   (`_listCustomMeta`) 만 엔진에서 `_mapCustomMeta` 로 씁니다 — 목록 → 맵이라 이름이 다릅니다.
  *
  *          **행 순서 = 같은 Emit 묶음 안의 출력 순서입니다.** 적용은 이름으로 찾으므로 순서와 무관합니다.
@@ -28,18 +30,18 @@
  */
 
 // ── REFLECT (타입) ────────────────────────────────────────────────
-REGISTER_ANNOTATION_FIELD( Reflect, Category, _category, Editor )
-REGISTER_ANNOTATION_FIELD( Reflect, DisplayName, _displayName, Editor )
-REGISTER_ANNOTATION_FIELD( Reflect, Tooltip, _tooltip, Editor )
-REGISTER_ANNOTATION_FIELD( Reflect, HideInMenu, _bHideInMenu, Editor )
-REGISTER_ANNOTATION_FIELD_FN( Reflect, Meta, _listCustomMeta, appendCustomMeta, Editor )
+REGISTER_ANNOTATION_FIELD( Reflect, Category, _category, Display )
+REGISTER_ANNOTATION_FIELD( Reflect, DisplayName, _displayName, Display )
+REGISTER_ANNOTATION_FIELD( Reflect, Tooltip, _tooltip, Display )
+REGISTER_ANNOTATION_FIELD( Reflect, HideInMenu, _bHideInMenu, Display )
+REGISTER_ANNOTATION_FIELD_FN( Reflect, Meta, _listCustomMeta, appendCustomMeta, Display )
 REGISTER_ANNOTATION_FIELD( Reflect, Abstract, _bAbstract, Manual )
 REGISTER_ANNOTATION_FIELD( Reflect, Static, _bStatic, Manual )
 REGISTER_ANNOTATION_FIELD_FN( Reflect, Alias, _listAlias, appendAlias, Manual )
 REGISTER_ANNOTATION_FIELD( Reflect, Validate, _validate, Manual )
 
 // ── ENUM ─────────────────────────────────────────────────────────
-REGISTER_ANNOTATION_FIELD_FN( Enum, Meta, _listCustomMeta, appendCustomMeta, Editor )
+REGISTER_ANNOTATION_FIELD_FN( Enum, Meta, _listCustomMeta, appendCustomMeta, Display )
 REGISTER_ANNOTATION_FIELD( Enum, Invalid, _invalidEnumerator, Manual )
 REGISTER_ANNOTATION_FIELD( Enum, Count, _countEnumerator, Manual )
 REGISTER_ANNOTATION_FIELD( Enum, Flags, _bIsBitFlag, Manual )
@@ -47,11 +49,11 @@ REGISTER_ANNOTATION_FIELD_FN( Enum, Alias, _listAlias, appendAlias, Manual )
 REGISTER_ANNOTATION_FIELD_FN( Enum, ValueAlias, _listValueAlias, appendValueAlias, Manual )
 
 // ── PROPERTY ─────────────────────────────────────────────────────
-REGISTER_ANNOTATION_FIELD( Property, Category, _category, Editor )
-REGISTER_ANNOTATION_FIELD( Property, DisplayName, _displayName, Editor )
-REGISTER_ANNOTATION_FIELD( Property, Tooltip, _tooltip, Editor )
-REGISTER_ANNOTATION_FIELD( Property, HideInInspector, _bHideInInspector, Editor )
-REGISTER_ANNOTATION_FIELD_FN( Property, Meta, _listCustomMeta, appendCustomMeta, Editor )
+REGISTER_ANNOTATION_FIELD( Property, Category, _category, Display )
+REGISTER_ANNOTATION_FIELD( Property, DisplayName, _displayName, Display )
+REGISTER_ANNOTATION_FIELD( Property, Tooltip, _tooltip, Display )
+REGISTER_ANNOTATION_FIELD( Property, HideInInspector, _bHideInInspector, Display )
+REGISTER_ANNOTATION_FIELD_FN( Property, Meta, _listCustomMeta, appendCustomMeta, Display )
 REGISTER_ANNOTATION_FIELD( Property, EditCondition, _editCondition, Editor )
 REGISTER_ANNOTATION_FIELD( Property, EditConditionHides, _bEditConditionHides, Editor )
 REGISTER_ANNOTATION_FIELD( Property, ColorHdr, _bColorHdr, Editor )
@@ -79,12 +81,12 @@ REGISTER_ANNOTATION_FIELD_FN( Property, Alias, _listAlias, appendAlias, Manual )
 REGISTER_ANNOTATION_FIELD( Property, Name, _name, Manual )
 
 // ── FUNCTION ─────────────────────────────────────────────────────
-REGISTER_ANNOTATION_FIELD( Function, Category, _category, Editor )
-REGISTER_ANNOTATION_FIELD( Function, DisplayName, _displayName, Editor )
-REGISTER_ANNOTATION_FIELD( Function, Tooltip, _tooltip, Editor )
+REGISTER_ANNOTATION_FIELD( Function, Category, _category, Display )
+REGISTER_ANNOTATION_FIELD( Function, DisplayName, _displayName, Display )
+REGISTER_ANNOTATION_FIELD( Function, Tooltip, _tooltip, Display )
 REGISTER_ANNOTATION_FIELD( Function, CallInEditor, _bCallInEditor, Editor )
 REGISTER_ANNOTATION_FIELD( Function, EditorPreview, _editorPreview, Editor )
-REGISTER_ANNOTATION_FIELD_FN( Function, Meta, _listCustomMeta, appendCustomMeta, Editor )
+REGISTER_ANNOTATION_FIELD_FN( Function, Meta, _listCustomMeta, appendCustomMeta, Display )
 REGISTER_ANNOTATION_FIELD_FN( Function, NetRole, _netRole, applyNetRole, Runtime )
 REGISTER_ANNOTATION_FIELD( Function, Reliable, _bReliable, Runtime )
 REGISTER_ANNOTATION_FIELD( Function, Validate, _bValidate, Runtime )
