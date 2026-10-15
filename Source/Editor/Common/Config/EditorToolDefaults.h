@@ -10,6 +10,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Base/DataPath.h"
 
 namespace sw::editor
 {
@@ -33,6 +34,8 @@ namespace sw::editor
         string _warpMap{}; ///< 타일맵 패널의 워프 대상 기본값(리소스 경로, 비면 없음)
         PROPERTY()
         string _spriteAtlas{}; ///< 스프라이트 클립 패널의 기본 아틀라스(리소스 경로, 비면 없음)
+        PROPERTY( Required )
+        DataPath _uiPreviewDocument; ///< UI 미리보기 패널이 처음 여는 UI 문서(리소스 경로)
 
         PROPERTY( Required )
         float4 _clearColor{}; ///< 씬 뷰 · 게임 뷰 렌더 타깃 클리어 색

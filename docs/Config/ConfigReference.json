@@ -1509,6 +1509,15 @@
        "description": "스프라이트 클립 패널의 기본 아틀라스(리소스 경로, 비면 없음)"
       },
       {
+       "name": "_uiPreviewDocument",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "UI 미리보기 패널이 처음 여는 UI 문서(리소스 경로)"
+      },
+      {
        "name": "_clearColor",
        "type": "float4",
        "default": "",

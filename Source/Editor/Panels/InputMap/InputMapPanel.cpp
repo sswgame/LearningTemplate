@@ -16,6 +16,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/ViewportInputOverlay.h"
 
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
 #include "Engine/Input/Devices/MouseDevice.h"
@@ -217,7 +218,7 @@ namespace sw::editor
         : IEditorPanel( false ) // 필요할 때 여는 도구이므로 닫힌 채 시작한다. 열린 채 시작하면 떠 있는 창이 화면 가운데를 덮는다
         , _inputMap{}
         , _replay{}
-        , _inputMapPath{ "engine/input/default.input.xml" }
+        , _inputMapPath{ getSubsystem<const EngineDefaultAssets>()._shellInputMap.get() } // 처음 여는 맵은 셸 맵이다 — 경로의 정본은 enginedefaultassets.xml
         , _replayFilePath{ "engine/replay/demo_01.swreplay" }
         , _newActionName{ "" }
         , _selectedAction{ "" }

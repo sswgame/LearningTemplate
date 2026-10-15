@@ -11,6 +11,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
+#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -338,7 +339,7 @@ namespace sw::editor
         , _paletteFilter{}
         , _slotDragBaseline{}
         , _paletteType{}
-        , _documentPath{ "engine/ui/pause.ui.xml" }
+        , _documentPath{ getEditorToolDefaults()._uiPreviewDocument.get() } // 처음 여는 문서 — 정본은 editortooldefaults.json
         , _openedDocument{}
         , _targetPath{}
         , _error{}

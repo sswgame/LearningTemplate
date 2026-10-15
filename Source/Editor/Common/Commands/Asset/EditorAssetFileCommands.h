@@ -8,6 +8,13 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+namespace sw
+{
+    struct EngineDefaultAssets;
+
+    class DataPath;
+} // namespace sw
+
 namespace sw::editor
 {
     class EditorReferenceIndex;
@@ -15,15 +22,16 @@ namespace sw::editor
     /**
      * @brief 콘텐츠 브라우저 Add 메뉴가 만드는 새 에셋 하나의 틀입니다.
      * @details 종류를 더할 때는 `EditorAssetFileCommands.cpp` 의 `kArrNewAssetTemplate` 에 한 줄을 더합니다. Add 메뉴와 `createAsset` 이 그 표를 함께 읽습니다.
-     *          글은 `_pSourcePath`(베낄 리소스) 와 `_pText`(그대로 쓰는 글) 가운데 하나만 채웁니다.
+     *          글은 `_pfnSourcePath`(베낄 엔진 기본 에셋 칸) 와 `_pText`(그대로 쓰는 글) 가운데 하나만 채웁니다.
      */
     struct EditorNewAssetTemplate
     {
-        const utf8* _pID{ nullptr };            ///< 표 안에서 겹치지 않는 이름. Add 메뉴 표지는 `contentBrowser.add.<id>` 다
-        const utf8* _pLabel{ nullptr };         ///< Add 메뉴 라벨
-        const utf8* _pStem{ nullptr };          ///< 기본 이름 줄기(`new_material`)
-        const utf8* _pSuffix{ nullptr };        ///< 붙는 확장자(`.material`)
-        const utf8* _pSourcePath{ nullptr };    ///< 베낄 리소스 id. 손으로 지은 글이 퍼뮤테이션 같은 칸을 빠뜨리기 쉬운 종류가 쓴다
+        const utf8* _pID{ nullptr };     ///< 표 안에서 겹치지 않는 이름. Add 메뉴 표지는 `contentBrowser.add.<id>` 다
+        const utf8* _pLabel{ nullptr };  ///< Add 메뉴 라벨
+        const utf8* _pStem{ nullptr };   ///< 기본 이름 줄기(`new_material`)
+        const utf8* _pSuffix{ nullptr }; ///< 붙는 확장자(`.material`)
+        /** @brief 베낄 엔진 기본 에셋 칸을 고릅니다. 경로의 정본은 `enginedefaultassets.xml` 이다. 손으로 지은 글이 퍼뮤테이션 같은 칸을 빠뜨리기 쉬운 종류가 쓴다 */
+        const DataPath& ( *_pfnSourcePath )(const EngineDefaultAssets&){ nullptr };
         const utf8* _pText{ nullptr };          ///< 그대로 쓰는 글
         const utf8* _pNameAttribute{ nullptr }; ///< 베낀 글의 이름 속성 전체(`name="DefaultMaterial"`). 새 에셋은 `name="<줄기>"` 로 바꾼다. nullptr 이면 그대로 둔다
     };
