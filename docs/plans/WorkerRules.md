@@ -28,8 +28,9 @@ py -3 -m Scripts worktree-make <이름> --base main
 - 코드를 먼저 쓰고 빌드는 아껴서 합니다. 빌드가 겹쳐 시간 제한에 걸리면 단독으로 다시 돌려 구분합니다.
 - **빌드 로그를 UTF-8 로 쓰고 경고를 `Select-String | Measure-Object` 로 셉니다.** `Start-Process` 의 `*>` 로 쓴 로그는 UTF-16 이라 bash `grep` 이 항상 0 을 돌려줍니다.
   `cmake --build ... 2>&1 | Out-File -Encoding utf8 <로그>` 로 씁니다.
-- GPU 와 창을 쓰는 실행(앱 시나리오, 스크린샷, `hostgpu` 테스트)은 한 번에 하나만 합니다.
-  `py -3 -m Scripts shared-lock acquire gpu --owner <이름>` 으로 잠그고, 끝나면(실패해도) `release` 합니다. 잠금을 쥔 채 오래 있지 않습니다.
+- GPU 와 창을 쓰는 실행(앱 시나리오, 스크린샷, `hostgpu` 테스트)은 GPU 잠금을 잡고 합니다. 기능 확인(결정적 설정)은 공유 모드로 동시에 두 프로세스까지,
+  Release 측정 · 부하 기준선 · 실제 장치 제거 실험 · 실제 마우스와 창 포커스에 기대는 시나리오는 독점으로 혼자 돌립니다.
+  `py -3 -m Scripts shared-lock acquire gpu --owner <이름> --shared`(독점은 `--shared` 없이)로 잠그고, 끝나면(실패해도) 같은 모드로 `release` 합니다. 잠금을 쥔 채 오래 있지 않습니다.
   GPU 실행만 맡기려면 `gpu-verifier` 에이전트를 씁니다.
 
 ## 3. 화면을 확인하는 방법

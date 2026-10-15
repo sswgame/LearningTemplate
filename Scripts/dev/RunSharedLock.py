@@ -7,6 +7,13 @@
     py -3 -m Scripts shared-lock status                         # 잡힌 잠금과 소유자
     py -3 -m Scripts shared-lock acquire vcpkg --owner <이름>    # 비어 있을 때까지 기다렸다가 잡는다(기본 최대 1800 초)
     py -3 -m Scripts shared-lock release vcpkg --owner <이름>    # 내가 잡은 것만 놓는다
+    py -3 -m Scripts shared-lock acquire gpu --owner <이름> --shared   # 공유 모드(칸 2 개) — 독점이 없을 때 빈 칸을 잡는다
+    py -3 -m Scripts shared-lock release gpu --owner <이름> --shared   # 내가 잡은 공유 칸을 놓는다
+
+공유 모드는 GPU 처럼 "동시에 둘까지는 괜찮지만 단독이 필요한 일도 있는" 자원에 씁니다. 공유 칸은 `<자원>-shared<n>` 디렉터리이고,
+독점(기본)은 `<자원>` 디렉터리입니다. 독점은 먼저 자기 디렉터리를 만든 뒤 공유 보유자가 모두 놓을 때까지 기다리고(그동안 새 공유는 들어오지 못한다),
+공유는 칸을 잡은 뒤 독점이 있으면 칸을 놓고 기다립니다. 두 쪽 모두 "잡고 나서 확인" 하므로 동시에 시도해도 독점과 공유가 함께 쥐는 일이 없습니다.
+기능 확인용 시나리오 · hostgpu 실행은 공유로, Release 측정 · 부하 기준선 · 실제 장치 제거 실험은 독점으로 잡습니다(작업 방식 2 절).
 
 잠금은 main 체크아웃의 `build/.shared-locks/<자원>/` 디렉터리입니다(mkdir 이 원자적이라 먼저 만든 쪽이 잡는다). 안의 `owner.json` 에
 소유자 · 프로세스 번호 · 시각 · 하려는 일을 적어 두므로 `status` 로 누가 왜 잡았는지 볼 수 있습니다. 소유자 프로세스가 죽었고 마지막 기록이
@@ -38,6 +45,8 @@ kStaleSeconds = 6 * 3600
 #: 기다리는 최대 시간 기본값(초)과 폴링 간격(초).
 kDefaultWaitSeconds = 1800
 kPollSeconds = 5
+#: 공유 모드의 칸 수 기본값.
+kDefaultSharedSlots = 2
 
 
 def getLockDirectory(mainRoot: Path, resource: str) -> Path:
@@ -122,6 +131,76 @@ def tryAcquire(lockDirectory: Path, owner: str, purpose: str, pid: int, now: flo
     return False
 
 
+def getSharedSlotDirectories(mainRoot: Path, resource: str, slotCount: int) -> list[Path]:
+    """자원의 공유 칸 디렉터리들입니다(`<자원>-shared1` …)."""
+    return [getLockDirectory(mainRoot, f"{resource}-shared{index}") for index in range(1, slotCount + 1)]
+
+
+def isHeld(lockDirectory: Path, now: float) -> bool:
+    """잠금이 살아 있는 소유자에게 잡혀 있으면 True 입니다. 버려진 잠금은 치우고 False 입니다."""
+    if not lockDirectory.is_dir():
+        return False
+    if isStale(lockDirectory, now):
+        print(f"[SharedLock] 버려진 잠금을 치웁니다: {lockDirectory.name}")
+        release(lockDirectory, None)
+        return False
+    return True
+
+
+def acquireShared(mainRoot: Path, args: argparse.Namespace) -> int:
+    """공유 칸 하나를 잡습니다. 독점 보유자가 있거나 칸이 모두 찼으면 기다립니다."""
+    exclusiveDirectory = getLockDirectory(mainRoot, args.resource)
+    listSlot = getSharedSlotDirectories(mainRoot, args.resource, args.slots)
+    deadline = time.time() + args.wait
+    bShownWait = False
+    while True:
+        now = time.time()
+        if not isHeld(exclusiveDirectory, now):
+            for slotDirectory in listSlot:
+                if not tryAcquire(slotDirectory, args.owner, args.purpose, args.pid, now):
+                    continue
+                # 잡은 뒤 다시 본다 — 그사이 독점이 들어왔으면 놓고 기다린다(독점이 먼저다).
+                if isHeld(exclusiveDirectory, time.time()):
+                    release(slotDirectory, args.owner)
+                    break
+                print(f"[SharedLock] {args.resource} 공유 칸 {slotDirectory.name} 을 잡았습니다({args.owner}).")
+                return 0
+        if not bShownWait:
+            holder = describeOwner(exclusiveDirectory, now) if exclusiveDirectory.is_dir() else "공유 칸이 모두 찼습니다"
+            print(f"[SharedLock] {args.resource} 공유 칸을 기다립니다 — {holder}.")
+            bShownWait = True
+        if now >= deadline:
+            print(f"[SharedLock] {args.wait} 초를 기다렸지만 {args.resource} 공유 칸이 비지 않았습니다. 사용자에게 알리세요.", file=sys.stderr)
+            return 3
+        time.sleep(kPollSeconds)
+
+
+def waitForSharedHolders(mainRoot: Path, args: argparse.Namespace, deadline: float) -> bool:
+    """독점을 잡은 뒤 공유 보유자가 모두 놓을 때까지 기다립니다. 시한을 넘으면 False 입니다."""
+    listSlot = getSharedSlotDirectories(mainRoot, args.resource, args.slots)
+    bShownWait = False
+    while True:
+        now = time.time()
+        listHeld = [slot for slot in listSlot if isHeld(slot, now)]
+        if not listHeld:
+            return True
+        if not bShownWait:
+            print(f"[SharedLock] {args.resource} 독점 — 공유 보유자가 놓기를 기다립니다: " + ", ".join(describeOwner(slot, now) for slot in listHeld))
+            bShownWait = True
+        if now >= deadline:
+            return False
+        time.sleep(kPollSeconds)
+
+
+def releaseShared(mainRoot: Path, args: argparse.Namespace) -> int:
+    """내가 잡은 공유 칸을 놓습니다. 잡은 칸이 없으면 할 일이 없어 성공입니다."""
+    for slotDirectory in getSharedSlotDirectories(mainRoot, args.resource, args.slots):
+        record = readOwner(slotDirectory)
+        if slotDirectory.is_dir() and record is not None and record.get("owner") == args.owner:
+            release(slotDirectory, args.owner)
+    return 0
+
+
 def describeOwner(lockDirectory: Path, now: float) -> str:
     """사람이 읽는 소유자 한 줄입니다."""
     record = readOwner(lockDirectory)
@@ -152,6 +231,8 @@ def main(argv: list[str] | None = None) -> int:
     for subParser in (acquireParser, releaseParser):
         subParser.add_argument("resource", help="자원 이름(예: vcpkg)")
         subParser.add_argument("--owner", required=True, help="소유자 이름(에이전트 · 워크트리 이름)")
+        subParser.add_argument("--shared", action="store_true", help="공유 모드(칸 여럿 — 독점이 없을 때). 없으면 독점이며, 독점은 공유 보유자가 모두 놓을 때까지 기다린다")
+        subParser.add_argument("--slots", type=int, default=kDefaultSharedSlots, help=f"공유 칸 수(기본 {kDefaultSharedSlots})")
     acquireParser.add_argument("--purpose", default="", help="하려는 일(다른 쪽이 status 로 본다)")
     acquireParser.add_argument("--wait", type=int, default=kDefaultWaitSeconds, help=f"기다릴 최대 초(기본 {kDefaultWaitSeconds}). 넘으면 실패(종료 코드 3)")
     acquireParser.add_argument("--pid", type=int, default=os.getppid(), help="소유 프로세스 번호(기본: 부모). 죽으면 버려진 잠금이 된다")
@@ -167,13 +248,22 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if args.command == "release":
+        if args.shared:
+            return releaseShared(mainRoot, args)
         return 0 if release(lockDirectory, args.owner) else 1
+    if args.shared:
+        return acquireShared(mainRoot, args)
 
     deadline = time.time() + args.wait
     bShownWait = False
     while True:
         now = time.time()
         if tryAcquire(lockDirectory, args.owner, args.purpose, args.pid, now):
+            # 독점은 잡은 뒤 공유 보유자가 모두 놓기를 기다린다 — 그동안 새 공유는 독점을 보고 물러난다.
+            if not waitForSharedHolders(mainRoot, args, deadline):
+                release(lockDirectory, args.owner)
+                print(f"[SharedLock] {args.wait} 초를 기다렸지만 {args.resource} 공유 보유자가 놓지 않았습니다. 사용자에게 알리세요.", file=sys.stderr)
+                return 3
             print(f"[SharedLock] {args.resource} 를 잡았습니다({args.owner}).")
             return 0
         if not bShownWait:

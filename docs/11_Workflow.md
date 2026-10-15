@@ -39,6 +39,9 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
   이 빌드는 테스트를 짓지 않습니다. 테스트를 돌릴 도우미는 `--target all AllTests` 를 붙여 낮은 우선순위로 먼저 짓습니다(ctest · `py -3 -m Scripts test` 가 대신 지으면 보통 우선순위로 돈다).
 - **게임 코드는 `Ninja-Debug` 한 빌드가 모두 짓습니다(`SW_GAMES=ALL`).** 게임 실행 확인은 `App.exe -game=<게임>` 으로 합니다. 도우미가 `Ninja-Debug-Lean` 처럼 게임을 줄인 구성으로 지었으면 "게임 빌드 미확인" 으로 보고합니다.
 - 도우미가 동시에 빌드할 때는 `D:\Projects\Personal\LT-wt\BUILD-LOCK-README.txt` 의 슬롯 잠금(`LT-wt/.slot1` ~ `.slot3`)을 씁니다.
+- **GPU 실행은 잠금 모드로 나눕니다.** 결정적 설정으로 기능만 보는 시나리오 · `hostgpu` · 캡처는 `shared-lock acquire gpu --shared`(공유, 동시에 두 프로세스 — 백엔드를 나눠 병렬로 돌린다),
+  Release 측정 · 부하 기준선 · 실제 장치 제거(TDR) 실험과 실제 마우스 · 창 포커스에 기대는 시나리오(가상 입력으로 도는지 확인하지 못한 것)는 독점(`--shared` 없이)으로 혼자 돌립니다.
+  독점은 공유 보유자가 모두 놓을 때까지 기다리고, 그동안 새 공유는 들어오지 못합니다.
 - 스크립트로 파일을 고칠 때의 규칙(heredoc 금지 등)은 [AGENTS.md](../AGENTS.md) "Editing traps" 가 원본입니다. 임시 파일은 scratchpad 에 두고 이름 앞에 에이전트 이름을 붙입니다.
 - 컴파일러 경고 전체 조사(`Scripts/lint/report/RunBuildWarnings.py`, 세 프리셋)는 사용자가 요청할 때만 돌립니다. 내 변경이 만든 경고는 그 빌드가 이미 보여 줍니다.
 
