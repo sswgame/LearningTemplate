@@ -11,7 +11,7 @@
 // 그래픽: 품질 번들(`graphics.quality`)이 함께 바꾸는 값
 SW_EXTERN_GLOBAL_VARIABLE( float32, gv_renderScale );       ///< 3D 렌더 해상도 배율(0.5~1). 아직 렌더러가 읽지 않는다.
 SW_EXTERN_GLOBAL_VARIABLE( int32, gv_upscaler );            ///< 업스케일러(0 끔). 켜지면 `gv_renderScale` 은 업스케일러가 정한다.
-SW_EXTERN_GLOBAL_VARIABLE( int32, gv_shadowQuality );       ///< 그림자 품질 0~3 입니다. 그림자 맵 한 변은 1024, 1536, 2048, 4096 입니다(FrameRenderer::getShadowMapResolution).
+SW_EXTERN_GLOBAL_VARIABLE( int32, gv_shadowMapResolution ); ///< 그림자 맵 한 변의 텍셀 수입니다. 품질 단계마다의 값은 설정 스키마 `graphics.shadowQuality` 선택지의 `targetValue` 입니다.
 SW_EXTERN_GLOBAL_VARIABLE( float32, gv_viewDistanceScale ); ///< 시야 거리 배율. 아직 컬링이 읽지 않는다.
 SW_EXTERN_GLOBAL_VARIABLE( float32, gv_foliageDensity );    ///< 식생 밀도 배율. 식생 배치가 읽는다(env-world).
 SW_EXTERN_GLOBAL_VARIABLE( int32, gv_postQuality );         ///< 후처리 품질 0~3.
