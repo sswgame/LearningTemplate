@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 에디터 UI 캡처(`CaptureEditorUI`)가 네 백엔드에서 에디터 창 전체(패널 + 플로팅 창)를 PNG 로 쓰고,
+  빠진 텍스처 · 디버그 색(마젠타)이 UI 에 섞이지 않는지 본다. 테마 토큰 벌 셋(다크 · 라이트 · 고대비)을 차례로 찍는다.
+  `-gv_screenshot` 의 `<Screenshot>` 은 주 출력(게임 · 씬 뷰)만 담는다. 이 단계는 그 위의 ImGui 까지 다시 그려 담는다.
+  실행: App.exe -EnableEditor -scenario=engine/automation/editor/uicapture.scenario.xml -dx12   (AppScenarioTest.EditorScenariosPassOn<Backend> 가 백엔드마다 돈다)
+-->
+<Scenario name="editor.uicapture" isolated="true" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<At frame="90"><ResizeWindow width="1600" height="900"/></At>
+	<At frame="120"><CaptureEditorUI file="ui_dark.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="editor.theme light"/></At>
+	<At after="10">
+		<Expect probe="Editor.ThemeName" is="light"/>
+		<CaptureEditorUI file="ui_light.png" maxMagentaFraction="0"/>
+	</At>
+	<At after="2"><DevCommand line="editor.theme highcontrast"/></At>
+	<At after="10"><CaptureEditorUI file="ui_highcontrast.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="editor.theme dark"/></At>
+	<!-- 에디터 문구가 키 이름(EditorConsole.FilterHint 등)으로 보이지 않는다 — 에디터 지역화 프로젝트가 탑재됐다 -->
+	<At after="5"><ExpectLog contains="Missing localized text" count="0"/><Pass/></At>
+</Scenario>
