@@ -57,6 +57,16 @@ Shipping 키트는 STATIC 이고 내보내기 매크로가 빈 것을 산출물�
 - 결정적 재생: 시나리오 끝의 `<Record>` 를 `AppScenarioTest` 가 네 백엔드끼리 비교하고, `RecordedPlayReplaysOnEveryBackend` 가 녹화(`-scenario-record`)를 다시 돌려 검사점을 봅니다.
 - 남은 것은 백로그 `D5-4`(탑승 단계 실물 확인, 시나리오 없는 게임 네 개, 같은 이름 오브젝트 고르기, 링크 앵커 정리)와 `D5-3`(마을 사람의 길 찾기 · 세이브)입니다.
 
+## 4-2. 에디터 흐름 시나리오 (2026-10-15 묶음 `wt/editorscn`)
+
+에디터 기능을 잇는 흐름 시나리오 다섯(`flowboundaries` · `flowprefab` · `flowterrain` · `flowedit` · `flowselection`)과 경계 전후 견주기(`Remember` · `sameAs`,
+`SwapBackend other/start`, 편집 상태 탐침)를 더했습니다. 기능 × 시나리오 표와 못 한 것은 [에디터 시나리오 표](EditorScenarios.md), 결정은 결정 기록 5-11 첫 네 줄입니다.
+흐름 시나리오가 드러낸 결함 여섯(백엔드 교체 · 에디터 리로드 뒤 되돌리기 · 선택 소실, 프리팹 적용 미전파, 에디터 문구 표 미적재, 지형 편집의 플레이 소실, 메시 끌어 놓기 무시,
+에디터 모듈 리로드가 게임을 내려 저장을 막음)은 고쳤습니다.
+
+- 남은 것은 백로그 `D3-11`(에셋 임포트 · 캐릭터 편집 → 씬 · 스케줄 창은 시나리오로 못 돌린다, 중첩 프리팹 부품 전파).
+- 새 흐름 시나리오는 체인(`AppScenarioTest.EditorScenariosPassOn<백엔드>`)에서 돈다. 백엔드 교체를 넣은 둘(`flowboundaries` · `flowterrain`)은 DX11 · DX12 가 있어야 한다.
+
 ## 5. 서브틱 활용 조사
 
 서브틱(`registerSubTick`)은 `GameDirectorComponent.cpp` 한 곳에서만 쓰이고, `TickPhase` 의 `Early` · `Late` · `Finalize` 는 정의 밖 사용이 0 입니다. 반면 `setTickGroup` 은 48 개 파일, `PostUpdate` 는 41 개 파일입니다.
