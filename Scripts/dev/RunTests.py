@@ -71,7 +71,9 @@ def listChangedFiles(root: Path, base: str | None) -> list[str] | None:
 def selectCtestEntries(tree: BuildTree, selection: ListChangedTests.TestSelection, bGpu: bool) -> list[str]:
     """고른 실행 파일 · 라벨에 해당하는 ctest 항목 이름. 린트는 늘 든다."""
     listing = runProcess(["ctest", "--test-dir", str(tree.path), "-N", "--show-only=json-v1"])
-    data = json.loads(listing.stdout) if listing.bSucceeded else {"tests": []}
+    if not listing.bSucceeded:
+        raise ListChangedTests.ChangedTestsError([f"`ctest --test-dir {tree.path} -N` 가 졌다 — 빌드 폴더를 구성하고 다시:\n{listing.output[-2000:]}"])
+    data = json.loads(listing.stdout)
     setLabelWanted = {"lint", "nogpu"} | ({"hostgpu"} if bGpu else set())
     listName: list[str] = []
     for test in data.get("tests", []):
@@ -101,18 +103,27 @@ def runChangedInternal(tree: BuildTree, args: argparse.Namespace, listExtra: lis
         print(f"[RunTests] 기준 '{args.base}' 를 찾지 못했습니다", file=sys.stderr)
         return 2
     policy = json.loads((root / "Test" / "TestPolicy.json").read_text(encoding="utf-8"))
-    setTestExecutable = set(policy.get("executables", {}))
-    graph = ListChangedTests.readBuildGraph(tree.path, root)
-    selection = ListChangedTests.selectTests(listChanged, root, setTestExecutable, graph)
+    setTestExecutable = set(policy["executables"])
+    # 해석하지 못하면 전체 · 일부로 물러서지 않고 까닭을 보이며 멈춘다(ListChangedTests 머리말).
+    try:
+        bNeedsGraph = any(ListChangedTests.classifyPath(path) == "source" for path in listChanged)
+        graph = ListChangedTests.readBuildGraph(tree.path, root) if bNeedsGraph else None
+        selection = ListChangedTests.selectTests(listChanged, root, setTestExecutable, graph)
+        listEntry = selectCtestEntries(tree, selection, args.bGpu)
+    except ListChangedTests.ChangedTestsError as error:
+        print(f"[RunTests] 바뀐 파일 {len(listChanged)} 개를 테스트로 옮기지 못했습니다:", file=sys.stderr)
+        for reason in error.listReason:
+            print(f"    {reason}", file=sys.stderr)
+        return 2
     print(f"[RunTests] 바뀐 파일 {len(listChanged)} 개 → " + ("전체" if selection.bFull else
           f"실행 파일 {sorted(selection.setExecutable)} · 스위트 {dict((key, sorted(value)) for key, value in selection.mapExecutableSuite.items())}"
           f"{' · 파이썬' if selection.bPython else ''} (+ 린트)"))
     for reason in selection.listReason[:10]:
         print(f"    전체인 까닭: {reason}")
 
-    listEntry = selectCtestEntries(tree, selection, args.bGpu)
     bFailed = False
     if listEntry:
+        # `-j` 를 주지 않으면(0) 이 PC 의 스레드 수다 — 값이 없을 때의 대체가 아니라 옵션의 뜻이다(도우미는 -j 2 를 준다).
         jobCount = args.jobs or getCpuCount()
         regex = "^(" + "|".join(re.escape(name) for name in listEntry) + ")$"
         command = ["ctest", "--test-dir", str(tree.path), "-R", regex, "-j", str(jobCount), "--output-on-failure", "-FS", "SWTestBinaries"]
@@ -123,6 +134,8 @@ def runChangedInternal(tree: BuildTree, args: argparse.Namespace, listExtra: lis
     mapPath = {path.stem: path for path in listExecutable}
     for executable, setSuite in sorted(selection.mapExecutableSuite.items()):
         if executable not in mapPath:
+            print(f"[RunTests] 고른 실행 파일 {executable} 이 {tree.path} 에 없습니다(이 구성에서 짓지 않는 실행 파일인지 본다)", file=sys.stderr)
+            bFailed = True
             continue
         hostArgument = "--host_suites=all" if args.bGpu else "--host_suites=exclude"
         command = [str(mapPath[executable]), "--test_filter=" + ":".join(f"{suite}.*" for suite in sorted(setSuite)), hostArgument,

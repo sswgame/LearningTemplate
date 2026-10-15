@@ -22,7 +22,7 @@ def makeGraphInternal() -> ListChangedTests.BuildGraph:
         "source/core/math/mathutil.h": {"Core", "EngineTest"},
         "source/engine/scene/scene.cpp": {"Engine"},
         "source/editor/editorpanel.cpp": {"EditorModule", "EditorTest"},
-        "source/games/nilecity/game.cpp": {"SWGame_NileCity"},
+        "source/modulehost/host.cpp": {"ModuleHostLib"},
     }
     graph.mapDependent = {
         "Core": {"Engine"},
@@ -64,20 +64,29 @@ class ListChangedTestsTest(unittest.TestCase):
         self.assertFalse(selection.bFull)
         self.assertEqual({"CoreTest", "EngineTest"}, selection.setExecutable)
 
-    def testTargetWithoutTestDependentRunsEverything(self) -> None:
-        self.assertTrue(self.select(["Source/Games/NileCity/Game.cpp"]).bFull)
+    def testTableFullPathsRunEverything(self) -> None:
+        # 표가 `full` 로 정한 곳만 전체다 — 게임 모듈(실행 중에 올린다) · 빌드 규칙 · 리소스 · 테스트 틀.
+        for path in ("Source/Games/NileCity/Game.cpp", "Resource/engine/scene.xml", "CMakeLists.txt", "Test/TestFramework/TestRunner.cpp"):
+            self.assertTrue(self.select([path]).bFull, path)
 
-    def testUnknownSourceRunsEverything(self) -> None:
-        self.assertTrue(self.select(["Source/Engine/NewFile.cpp"]).bFull)
+    def testTargetWithoutTestDependentIsAnError(self) -> None:
+        with self.assertRaises(ListChangedTests.ChangedTestsError):
+            self.select(["Source/ModuleHost/Host.cpp"])
 
-    def testUnknownFolderRunsEverything(self) -> None:
-        self.assertTrue(self.select(["Resource/engine/scene.xml"]).bFull)
-        self.assertTrue(self.select(["CMakeLists.txt"]).bFull)
-        self.assertTrue(self.select(["Test/TestFramework/TestRunner.cpp"]).bFull)
+    def testUnknownSourceIsAnError(self) -> None:
+        with self.assertRaises(ListChangedTests.ChangedTestsError):
+            self.select(["Source/Engine/NewFile.cpp"])
 
-    def testMissingGraphRunsEverything(self) -> None:
-        selection = ListChangedTests.selectTests(["Source/Core/Math/MathUtil.h"], self.root, _kTestExecutable, None)
-        self.assertTrue(selection.bFull)
+    def testPathOutsideTheTableIsAnError(self) -> None:
+        # 전체로 물러서지 않는다 — 까닭에 경로가 든다.
+        with self.assertRaises(ListChangedTests.ChangedTestsError) as context:
+            self.select(["docs/06_Backlog.md", "Unknown/thing.txt", "Test/Golden/a.ppm"])
+        self.assertEqual(2, len(context.exception.listReason))
+
+    def testMissingGraphIsAnErrorForSourcePaths(self) -> None:
+        with self.assertRaises(ListChangedTests.ChangedTestsError):
+            ListChangedTests.selectTests(["Source/Core/Math/MathUtil.h"], self.root, _kTestExecutable, None)
+        self.assertTrue(ListChangedTests.selectTests(["Scripts/dev/RunTests.py"], self.root, _kTestExecutable, None).bPython)
 
     def testCaseOnlyTestFileRunsItsSuites(self) -> None:
         self.writeInternal("Test/EngineTest/Scene/TestScene.cpp", "SW_TEST_CASE( SceneTest, A )\n{}\nSW_TEST_CASE( SceneLoadTest, B )\n{}\n")

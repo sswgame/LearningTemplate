@@ -27,7 +27,7 @@ file(READ "${SW_TEST_POLICY_FILE}" SW_TEST_POLICY_JSON)
 # 자원 명세 파일은 이 빌드 폴더에 쓰고 `CTEST_RESOURCE_SPEC_FILE` 로 알린다 — `include(CTest)` 가 DartConfiguration 에 적어 `ctest` 가 인자 없이 쓴다.
 string(JSON swGpuSlots ERROR_VARIABLE swGpuSlotsError GET "${SW_TEST_POLICY_JSON}" gpuSlots)
 if(swGpuSlotsError)
-	set(swGpuSlots 1)
+	message(FATAL_ERROR "Test/TestPolicy.json 에 gpuSlots(hostgpu 항목이 동시에 받는 GPU 칸 수)가 없다 — 정책에 적는다")
 endif()
 set(CTEST_RESOURCE_SPEC_FILE "${CMAKE_BINARY_DIR}/CTestResources.json")
 file(CONFIGURE OUTPUT "${CTEST_RESOURCE_SPEC_FILE}" CONTENT
@@ -240,9 +240,10 @@ endfunction()
 # ------------------------------------------------------------------------------
 # sw_registerTestPolicy — 정책 JSON 의 한 줄(TARGET_NAME)대로 ctest 항목을 등록한다
 #
-#   라벨: `unit;<area>` 에 갈래마다 `nogpu`(CI 가 도는 집합) · `hostgpu`(호스트 스위트, 직렬) · `load`(부하 스위트, 직렬)를 붙인다.
+#   라벨: `unit;<area>` 에 갈래마다 `nogpu`(CI 가 도는 집합) · `hostgpu`(호스트 스위트, GPU 칸) · `load`(부하 스위트, 직렬) · `race`(Debug 레이스 묶음)를 붙인다.
 #   샤드: `shards` 가 없으면 ceil(seconds / targetShardSeconds). 비용표(`caseCosts`)는 샤드를 비용으로 고르게 나누는 데 넘긴다.
-#   이름: 갈래가 없으면 `<타깃>`(샤드면 `_Shard<k>`), `hostSplit` 이면 `<타깃>_NoGPU` · `<타깃>_HostOnly`, `loadSeconds` 가 있으면 `<타깃>_Load`.
+#   이름: 갈래가 없으면 `<타깃>`(샤드면 `_Shard<k>`), `hostSplit` 이면 `<타깃>_NoGPU` · `<타깃>_HostOnly`, `loadSeconds` 가 있으면 `<타깃>_Load`,
+#         `raceCases` 가 있으면(Debug) `<타깃>_Race`.
 #         갈라진 항목 말고 전체 실행을 하나 더 등록하지 않는다(라벨 없는 `ctest` 가 같은 테스트를 두 번 돈다).
 # ------------------------------------------------------------------------------
 function(sw_registerTestPolicy TARGET_NAME)
@@ -271,23 +272,34 @@ function(sw_registerTestPolicy TARGET_NAME)
 		endforeach()
 	endif()
 
-	set(swCosts "")
-	set(swMaxCaseSeconds 0)
-	string(JSON swCostCount ERROR_VARIABLE swError LENGTH "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME} caseCosts)
-	if(NOT swError AND swCostCount GREATER 0)
-		math(EXPR swLastCost "${swCostCount} - 1")
-		foreach(swIndex RANGE 0 ${swLastCost})
-			string(JSON swCaseName MEMBER "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME} caseCosts ${swIndex})
-			string(JSON swCaseSeconds GET "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME} caseCosts ${swCaseName})
-			if(swCosts)
-				string(APPEND swCosts ",")
-			endif()
-			string(APPEND swCosts "${swCaseName}=${swCaseSeconds}")
-			if(swCaseSeconds GREATER swMaxCaseSeconds)
-				set(swMaxCaseSeconds ${swCaseSeconds})
-			endif()
-		endforeach()
-	endif()
+	# 비용표 둘: `caseCosts`(nogpu 갈래 · 갈래 없는 실행)와 `hostCaseCosts`(`_HostOnly` 조각). 따로 두는 까닭: 가장 비싼 케이스가
+	# 그 갈래의 제한 시간을 정하므로, 분 단위 호스트 케이스가 몇 초짜리 nogpu 조각의 제한 시간을 늘리지 않게 한다. 키가 없으면 비용 없는 고른 분배다.
+	foreach(swCostKey IN ITEMS caseCosts hostCaseCosts)
+		set(swKeyCosts "")
+		set(swKeyMax 0)
+		string(JSON swCostCount ERROR_VARIABLE swError LENGTH "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME} ${swCostKey})
+		if(NOT swError AND swCostCount GREATER 0)
+			math(EXPR swLastCost "${swCostCount} - 1")
+			foreach(swIndex RANGE 0 ${swLastCost})
+				string(JSON swCaseName MEMBER "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME} ${swCostKey} ${swIndex})
+				string(JSON swCaseSeconds GET "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME} ${swCostKey} ${swCaseName})
+				if(swKeyCosts)
+					string(APPEND swKeyCosts ",")
+				endif()
+				string(APPEND swKeyCosts "${swCaseName}=${swCaseSeconds}")
+				if(swCaseSeconds GREATER swKeyMax)
+					set(swKeyMax ${swCaseSeconds})
+				endif()
+			endforeach()
+		endif()
+		if(swCostKey STREQUAL "caseCosts")
+			set(swCosts "${swKeyCosts}")
+			set(swMaxCaseSeconds ${swKeyMax})
+		else()
+			set(swHostCosts "${swKeyCosts}")
+			set(swHostMaxCaseSeconds ${swKeyMax})
+		endif()
+	endforeach()
 
 	if(swShards STREQUAL "")
 		math(EXPR swShards "(${swSeconds} + ${swTargetShardSeconds} - 1) / ${swTargetShardSeconds}")
@@ -298,6 +310,14 @@ function(sw_registerTestPolicy TARGET_NAME)
 	sw_computeTestTimeout(swTimeout ${swSeconds} ${swShards} ${swMaxCaseSeconds})
 	math(EXPR swShardCost "(${swSeconds} + ${swShards} - 1) / ${swShards}")
 
+	# 같은 `Bin` 에 산출물을 쓰는 호스트 실행은 정책의 `hostResourceLock` 으로 서로 비켜 간다(호스트 조각 · 레이스 묶음이 같이 쓴다).
+	# 선택 키다 — 키가 없으면 "다른 항목과 겹쳐도 되는 실행" 이라는 뜻이다(EngineTest 호스트 조각은 App 을 띄우지 않는다).
+	sw_getTestPolicyValue(swHostLock "" executables ${TARGET_NAME} hostResourceLock)
+	set(swHostLockArgs "")
+	if(swHostLock)
+		set(swHostLockArgs RESOURCE_LOCK ${swHostLock})
+	endif()
+
 	set(swBaseLabels "unit;${swArea}")
 	if(NOT swHostSplit)
 		sw_registerTestShards(${TARGET_NAME} ${TARGET_NAME} ${swShards}
@@ -305,17 +325,12 @@ function(sw_registerTestPolicy TARGET_NAME)
 	else()
 		sw_registerTestShards(${TARGET_NAME}_NoGPU ${TARGET_NAME} ${swShards}
 			ARGS --host_suites=exclude LABELS "${swBaseLabels};nogpu" TIMEOUT ${swTimeout} COSTS "${swCosts}" COST ${swShardCost} ASAN_OPTIONS ${swAsanOptions})
-		# 창을 띄우고 GPU 를 잡으므로 GPU 칸 하나를 받는다(동시에 `gpuSlots` 개까지 — 공유 GPU 잠금과 같은 수). 같은 `Bin` 에 산출물을 쓰는 실행은
-		# 정책의 `hostResourceLock` 으로 서로 비켜 간다. 조각마다 호스트 케이스가 하나는 있어야 한다(`--host_suites=only` 가 아무것도 고르지 않으면 진다).
-		sw_getTestPolicyValue(swHostLock "" executables ${TARGET_NAME} hostResourceLock)
-		set(swHostLockArgs "")
-		if(swHostLock)
-			set(swHostLockArgs RESOURCE_LOCK ${swHostLock})
-		endif()
-		sw_computeTestTimeout(swHostTimeout ${swHostSeconds} ${swHostShards} 0)
+		# 창을 띄우고 GPU 를 잡으므로 GPU 칸 하나를 받는다(동시에 `gpuSlots` 개까지 — 공유 GPU 잠금과 같은 수).
+		# 조각마다 호스트 케이스가 하나는 있어야 한다(`--host_suites=only` 가 아무것도 고르지 않으면 진다).
+		sw_computeTestTimeout(swHostTimeout ${swHostSeconds} ${swHostShards} ${swHostMaxCaseSeconds})
 		math(EXPR swHostShardCost "(${swHostSeconds} + ${swHostShards} - 1) / ${swHostShards}")
 		sw_registerTestShards(${TARGET_NAME}_HostOnly ${TARGET_NAME} ${swHostShards} GPU ${swHostLockArgs} COST ${swHostShardCost}
-			ARGS --host_suites=only LABELS "${swBaseLabels};hostgpu" TIMEOUT ${swHostTimeout} COSTS "${swCosts}" ASAN_OPTIONS ${swAsanOptions})
+			ARGS --host_suites=only LABELS "${swBaseLabels};hostgpu" TIMEOUT ${swHostTimeout} COSTS "${swHostCosts}" ASAN_OPTIONS ${swAsanOptions})
 	endif()
 
 	# 부하 · 시간 예산 검증(`SW_TEST_LOAD_SUITE`) — 혼자 돌아야 숫자가 뜻이 있어 직렬이다. 예산을 넘은 케이스는 Release 에서만 진다
@@ -328,6 +343,33 @@ function(sw_registerTestPolicy TARGET_NAME)
 		endif()
 		sw_registerTestRun(${TARGET_NAME}_Load ${TARGET_NAME} RUN_SERIAL
 			ARGS ${swLoadArgs} LABELS "${swBaseLabels};load" TIMEOUT ${swLoadTimeout} ASAN_OPTIONS ${swAsanOptions})
+	endif()
+
+	# 레이스 묶음(`race`) — 스레드 경로를 지나는 케이스(`raceCases`, `Suite.Case` · `Suite.*`)만 호스트 스위트까지 넣어 한 실행으로 돈다.
+	# Debug 에서만 등록한다: `DataRaceDetector` 는 `SW_DEBUG`(Debug 구성)에서만 켜지므로 다른 구성에서는 같은 케이스를 nogpu · hostgpu 가 이미 돈다.
+	# 호스트 실행 파일(`hostSplit`)이면 호스트 조각과 같은 GPU 칸 · 잠금을 받는다. 라벨 없는 `ctest` 에서는 이 케이스들이 한 번 더 돈다(묶음이 작아 받아들인다).
+	string(JSON swRaceCount ERROR_VARIABLE swError LENGTH "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME} raceCases)
+	if(NOT swError AND swRaceCount GREATER 0 AND CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT SW_SHIPPING_BUILD)
+		set(swRaceFilter "")
+		math(EXPR swLastRace "${swRaceCount} - 1")
+		foreach(swIndex RANGE 0 ${swLastRace})
+			string(JSON swRaceCase GET "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME} raceCases ${swIndex})
+			if(swRaceFilter)
+				string(APPEND swRaceFilter ",")
+			endif()
+			string(APPEND swRaceFilter "${swRaceCase}")
+		endforeach()
+		string(JSON swRaceSeconds ERROR_VARIABLE swError GET "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME} raceSeconds)
+		if(swError)
+			message(FATAL_ERROR "sw_addTestExecutable(${TARGET_NAME}): raceCases 가 있으면 raceSeconds(그 한 실행의 Debug 초)도 Test/TestPolicy.json 에 적는다")
+		endif()
+		sw_computeTestTimeout(swRaceTimeout ${swRaceSeconds} 1 0)
+		set(swRaceExtra "")
+		if(swHostSplit)
+			set(swRaceExtra GPU ${swHostLockArgs})
+		endif()
+		sw_registerTestRun(${TARGET_NAME}_Race ${TARGET_NAME} ${swRaceExtra} COST ${swRaceSeconds}
+			ARGS --host_suites=all "--test_filter=${swRaceFilter}" LABELS "${swBaseLabels};race" TIMEOUT ${swRaceTimeout} ASAN_OPTIONS ${swAsanOptions})
 	endif()
 endfunction()
 

@@ -16,18 +16,21 @@
 cmake --build --preset Ninja-Debug            # 경고 0 이어야 한다(테스트 제외 — 테스트까지는 --target all AllTests)
 cmake --build --preset Ninja-Shipping         # Debug 가 숨기는 결함이 여기서 드러난다(테스트까지)
 ctest --preset Ninja-Debug-lint               # 컨벤션 · include 순서 · 린트 자기 테스트
-ctest --test-dir build/Ninja-Debug -L nogpu --output-on-failure
-ctest --test-dir build/Ninja-Shipping -L nogpu --output-on-failure
+# -j 는 값 없이 준다(CMake 3.29+: 이 PC 의 스레드 수). 테스트 프리셋은 CTEST_PARALLEL_LEVEL="" 로 같은 뜻이다(CMakePresets.json 의 parallel).
+# 항목끼리는 병렬로 돌 수 있다 — 직렬은 빌드 셋업 · Load · QA 셋, GPU 항목은 GPU 칸(gpuSlots)만큼. 도우미는 -j 2(11_Workflow.md 2절).
+ctest --test-dir build/Ninja-Debug -L nogpu -j --output-on-failure
+ctest --test-dir build/Ninja-Shipping -L nogpu -j --output-on-failure
 
-# CI 가 못 도는 부분 — GPU 있는 PC 에서 일을 끝내기 전에 반드시 돌린다.
+# CI 가 못 도는 부분(CI 러너는 nogpu 만) — GPU 있는 PC 에서 일을 끝내기 전에 반드시 돌린다. 단계마다 무엇을 도는지는 11_Workflow.md 3절 표.
 # AppSmokeTest 가 네 백엔드 + 에디터(dx12 · gl)를 띄워 종료 코드 0 · 로그 [Error] 0건을 본다.
-ctest --test-dir build/Ninja-Debug -L hostgpu --output-on-failure
-ctest --test-dir build/Ninja-Shipping -L hostgpu --output-on-failure
+ctest --test-dir build/Ninja-Shipping -L hostgpu -j --output-on-failure   # 기능 시나리오 — Shipping 이 기본
+ctest --test-dir build/Ninja-Debug -L race -j --output-on-failure         # 레이스 묶음(Debug 전용 — DataRaceDetector 는 SW_DEBUG 에서만)
+ctest --test-dir build/Ninja-Debug -L hostgpu -j --output-on-failure      # Debug 전체 — 큰 단계 끝에 한 번
 
 # ASan (Windows)
 cmake --preset Ninja-Debug-ASAN
 cmake --build --preset Ninja-Debug-ASAN
-ctest --test-dir build/Ninja-Debug-ASAN -L nogpu
+ctest --test-dir build/Ninja-Debug-ASAN -L nogpu -j
 
 # 정적 분석 — 게이트가 아니라 판단 자료다(Scripts/README.md "함정 · 계약" 의 clang-tidy 참고)
 py -3 Scripts/lint/report/RunClangTidy.py [--filter Core] [--clang-tidy <경로>]
@@ -41,7 +44,7 @@ cd build/Ninja-Debug/Bin
 ```
 
 **단위마다 이 순서로 한다.** 테스트 먼저(이전 코드에서 지는 것을 확인) → 고침 → 변이 검사(고침을 되돌리면 테스트가 지는가) →
-Debug · Shipping · hostgpu → 커밋. 변이로 죽지 않는 테스트는 아무것도 지키지 않는다.
+Debug(`nogpu` · `race`) · Shipping(`hostgpu`) → 커밋. 변이로 죽지 않는 테스트는 아무것도 지키지 않는다.
 
 **에디터 패널에는 단위 테스트가 없다.** 컴파일이 통과해도 화면이 비어 있을 수 있다. 패널 · 위젯을 건드렸으면 실행해서 본다.
 화면을 볼 수 없으면 `-gv_editorPanelDump=N` — N 번째 ImGui 프레임에 창 하나당 한 줄(이름 · 크기 · 정점 수 · 상태)을 남긴다.

@@ -49,10 +49,16 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 
 어떤 명령으로 무엇을 보는지는 [검증과 측정](08_Verification.md) 이 원본입니다. 여기에는 언제 어디까지 돌리는지만 적습니다.
 
-- **도우미는 단축 검증만 합니다.** Debug 빌드(경고 0), 자기가 만들거나 고친 스위트(`--test_filter`, 테스트까지 지은 뒤), 고친 파일의 린트입니다.
-- **적용 담당은 배치마다 다음을 돌립니다.** Debug 경고 0, `ctest -L lint`, 바뀐 영역의 테스트, `-L nogpu`, Shipping 빌드와 `-L hostgpu`, 그 배치가 건드린 게임 × 네 백엔드입니다.
-  배치 끝에는 네 백엔드 × 대표 셋(Empty, 에디터, Shooter3D, NileCity)과 자동화 시나리오를 더합니다. 의존성을 올렸다면 그 변경에 걸린 기능(TLS, Tracy, 검증 레이어)도 봅니다.
-- **큰 단계의 끝에만 전체를 돌립니다.** 모든 게임 × 모든 백엔드, Release 빌드와 성능 기준, 전용 서버 전체, WSL 리눅스 빌드입니다. 엔진 런타임 전체를 바꾸는 변경이면 배치 안에서도 전체를 돌립니다.
+| 단계 | Debug | Shipping | 그 밖 |
+|---|---|---|---|
+| 도우미 | 빌드 경고 0, 고친 스위트(`--test_filter`) 또는 `py -3 -m Scripts test --changed`, 고친 파일의 린트 | — | — |
+| 적용 담당(배치마다) | 경고 0, `-L lint`, `-L nogpu`, `-L race` | 빌드, `-L nogpu`, `-L hostgpu` | 건드린 게임 × 네 백엔드. 배치 끝에 네 백엔드 × 대표 셋(Empty, 에디터, Shooter3D, NileCity) |
+| 큰 단계 끝 | 위 + `-L hostgpu` 전체 한 번 | 위와 같음 | 모든 게임 × 모든 백엔드, Release 빌드와 성능 기준, 전용 서버 전체, WSL 리눅스 빌드 |
+
+- **기능 시나리오(`hostgpu`)는 Shipping 이 기본입니다.** Debug 한 바퀴는 같은 검증의 수십 배가 걸립니다. 레이스 검사(`DataRaceDetector`)는 `SW_DEBUG` 에서만 켜지므로 Debug 는 스레드 경로를 지나는 묶음 `race` 만 돕니다(묶음은 `Test/TestPolicy.json` 의 `raceCases`).
+- 적용 담당 · 큰 단계의 ctest 는 `-j`(값 없이 — 스레드 수)로 돌리고 도우미는 `-j 2` 입니다. hostgpu 를 뺀 항목은 병렬로 돌 수 있습니다.
+- CI 러너는 GPU 가 없어 `nogpu` 만 돕니다. `race` 는 GPU 있는 PC 의 Debug 가 맡고, 리눅스 `CI-Debug-TSAN`(nogpu)이 보조입니다.
+- 엔진 런타임 전체를 바꾸는 변경이면 배치 안에서도 큰 단계 끝의 검증을 돌립니다. 의존성을 올렸다면 그 변경에 걸린 기능(TLS, Tracy, 검증 레이어)도 봅니다.
 - **에디터 변경은 에디터 시나리오로 확인합니다.** 시나리오 실행기의 에디터 단계(`-EnableEditor`)로 그 흐름을 하나 더하고 AppScenarioTest 로 돌립니다.
 - **손 확인을 사용자에게 넘기지 않습니다.** 화면에서 확인할 일은 자동화 시나리오(`Resource/<영역>/automation/*.scenario.xml`)로 만들어 직접 확인합니다. 시나리오로 못 하는 것만 이유와 함께 백로그에 적습니다.
 - 성능 주장은 Release 측정값으로만 하고, 측정 없이 최적화하지 않습니다. 측정하는 법은 [검증과 측정](08_Verification.md) 2절입니다.
