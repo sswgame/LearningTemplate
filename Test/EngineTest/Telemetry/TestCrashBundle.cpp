@@ -13,7 +13,7 @@
 #include "Engine/Telemetry/CrashReportUploader.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
-#include "TestFramework/TestChildProcess.h"
+#include "TestFramework/Harness/TestChildProcess.h"
 #include "TestFramework/TestFramework.h"
 
 #include <cstdlib>
@@ -350,7 +350,7 @@ SW_TEST_CASE( CrashBundleTest, RealCrashLeavesABundle )
     const test::ChildEnvironmentVariable arrEnvironment[] = {
         { "SW_CRASH_BUNDLE_CHILD_FOLDER", crashFolder }
     };
-    const test::ChildRunResult child = test::runThisExecutableAsChild( "CrashBundleTest.ChildCrashesWithBreadcrumbs", arrEnvironment, 30 );
+    const test::ProcessRunResult child = test::runThisExecutableAsChild( "CrashBundleTest.ChildCrashesWithBreadcrumbs", arrEnvironment, 30 );
     SW_ASSERT_TRUE( child._bLaunched );
     SW_ASSERT_TRUE_MSG( child._bTimedOut == false, child.getOutputTail().c_str() );
     SW_EXPECT_TRUE( child._exitCode != 0 );

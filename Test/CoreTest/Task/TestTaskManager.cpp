@@ -557,8 +557,7 @@ SW_TEST_CASE( TaskManagerTest, DestroyedManagerReturnsItsStageNodes )
  */
 SW_TEST_CASE( TaskManagerTest, HandlesOutlivingTheManagerKeepTheirNodes )
 {
-    if constexpr ( sw::kMemoryTagScopesEnabled == false )
-        SW_TEST_SKIP( "allocation headers are compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
     sw::MemoryProfiler* pMemory = sw::MemoryProfiler::getActive();
     SW_ASSERT_NOT_NULL( pMemory );
     const bool bWasTracking = pMemory->isTrackingEnabled();
@@ -971,8 +970,7 @@ SW_TEST_CASE( TaskManagerTest, HelperSlotIsRecycledWhenThreadEnds )
  */
 SW_TEST_CASE( TaskManagerTest, TaskInheritsCreatorMemoryTag )
 {
-    if constexpr ( sw::kMemoryTagScopesEnabled == false )
-        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
 
     sw::TaskManager manager;
     SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );

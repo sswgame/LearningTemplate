@@ -9,8 +9,10 @@ namespace test
         _testName = testName;
         _listFailure.clear();
         _listCleanup.clear();
-        _bSkipped      = false;
-        _bTempPathUsed = false;
+        _missingFeature = BuildFeature::Count;
+        _bSkipped       = false;
+        _bTempPathUsed  = false;
+        _bSeedUsed      = false;
     }
 
     void TestContext::deferCleanup( sw::Delegate<void()> cleanup )
@@ -28,18 +30,18 @@ namespace test
             }
             catch ( const std::exception& exception )
             {
-                addFailure( "cleanup", "TestFramework", 0, exception.what() );
+                addFailure( { "cleanup", "TestFramework", 0, exception.what(), {} } );
             }
             catch ( ... )
             {
-                addFailure( "cleanup", "TestFramework", 0, "Unknown cleanup exception" );
+                addFailure( { "cleanup", "TestFramework", 0, "Unknown cleanup exception", {} } );
             }
         }
         _listCleanup.clear();
     }
 
-    void TestContext::addFailure( const sw::string& condition, const sw::string& file, int32 line, const sw::string& message )
+    void TestContext::addFailure( const TestFailure& failure )
     {
-        _listFailure.push_back( { condition, file, line, message } );
+        _listFailure.push_back( failure );
     }
 } // namespace test

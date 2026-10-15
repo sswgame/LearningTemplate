@@ -13,6 +13,11 @@
 
 namespace test
 {
+    class ScopedTrace;
+} // namespace test
+
+namespace test
+{
     /**
      * @brief 네 백엔드 전부. 이 호스트에 없는 것(리눅스의 DX)은 `RHITestDevice` 가 창을 띄우기 전에 거르므로 목록을 플랫폼마다
      *        가를 필요가 없다.
@@ -103,6 +108,7 @@ namespace test
      *
      *          하나도 서지 않았으면 `getReadyCount()` 가 0 이다. `SW_TEST_SKIP` 은 케이스 몸통에서만 return 할 수 있으므로 건너뛰기는
      *          케이스가 한다(`if ( sweep.getReadyCount() == 0 ) SW_TEST_SKIP( ... );`). 범위는 한 번만 돈다.
+     *          몸통이 도는 동안 `backend=<이름>` 추적(`test::ScopedTrace`)이 걸려, 진 단언과 재현 요약이 어느 백엔드였는지 적는다.
      */
     class RHIBackendSweep
     {
@@ -141,6 +147,7 @@ namespace test
         /** @brief 이 순서로 돈다(실행 중에 순서를 정한 목록). */
         explicit RHIBackendSweep( const sw::vector<sw::RHIBackend>& listBackend );
 
+        ~RHIBackendSweep();
         RHIBackendSweep( const RHIBackendSweep& )            = delete;
         RHIBackendSweep& operator=( const RHIBackendSweep& ) = delete;
         RHIBackendSweep( RHIBackendSweep&& )                 = delete;
@@ -157,9 +164,10 @@ namespace test
         /** @brief 앞 디바이스를 내리고 목록의 다음 백엔드 중 서는 것을 세운다. 더 없으면 디바이스가 빈 채로 끝난다. */
         void advance();
 
-        RHITestDevice              _device;
-        sw::vector<sw::RHIBackend> _listBackend;
-        size_t                     _nextIndex;
-        uint32                     _readyCount;
+        RHITestDevice               _device;
+        sw::unique_ptr<ScopedTrace> _pTrace; ///< 지금 백엔드의 추적 — 다음 백엔드를 세우기 전에 내린다
+        sw::vector<sw::RHIBackend>  _listBackend;
+        size_t                      _nextIndex;
+        uint32                      _readyCount;
     };
 } // namespace test

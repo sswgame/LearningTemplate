@@ -578,8 +578,7 @@ SW_TEST_CASE( EngineInitSequenceTest, FailedRestartLeavesTheRestStopped )
  */
 SW_TEST_CASE( EngineInitSequenceTest, InitializeRunsUnderTheStepMemoryTag )
 {
-    if constexpr ( kMemoryTagScopesEnabled == false )
-        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
 
     StartupRecorder     recorder; // 목록보다 먼저 — 목록 소멸자가 서브시스템을 지우며 recorder 에 적는다
     SubsystemCollection sequence;

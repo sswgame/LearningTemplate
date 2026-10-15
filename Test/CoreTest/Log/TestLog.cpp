@@ -8,7 +8,7 @@
 #include "Core/LogSink/FileLogOutput.h"
 #include "Core/LogSink/ILogOutput.h"
 
-#include "TestFramework/TestChildProcess.h"
+#include "TestFramework/Harness/TestChildProcess.h"
 #include "TestFramework/TestFramework.h"
 
 #include <cstdlib>
@@ -203,6 +203,7 @@ SW_TEST_CASE( LogTest, LogFolderExists )
  */
 SW_TEST_CASE( LogTest, WriteLogDeliversEveryLevel )
 {
+    SW_TEST_REQUIRES_FEATURE( DebugLog );
 #if defined( SW_DEBUG )
     LogCapture capture;
     SW_ASSERT_TRUE( capture.isAttached() );
@@ -247,8 +248,6 @@ SW_TEST_CASE( LogTest, WriteLogDeliversEveryLevel )
         SW_EXPECT_FALSE( entry._file.empty() );
         SW_EXPECT_TRUE( entry._line > 0 );
     }
-#else
-    SW_TEST_SKIP( "SW_LOG_* is compiled out when SW_DEBUG is undefined" );
 #endif
 }
 
@@ -311,6 +310,7 @@ SW_TEST_CASE( LogTest, LogLevelCount )
  */
 SW_TEST_CASE( LogTest, LogMacrosFormatArguments )
 {
+    SW_TEST_REQUIRES_FEATURE( DebugLog );
 #if defined( SW_DEBUG )
     LogCapture capture;
     SW_ASSERT_TRUE( capture.isAttached() );
@@ -338,8 +338,6 @@ SW_TEST_CASE( LogTest, LogMacrosFormatArguments )
     // 실수 자릿수는 기본 정밀도에 달려 있으므로 앞부분만 확인합니다.
     const sw::string& traceMessage = capture.getEntries()[3]._message;
     SW_EXPECT_TRUE( sw::StringUtil::startsWith( traceMessage, "[TestLog] SW_LOG_TRACE 3.14" ) );
-#else
-    SW_TEST_SKIP( "SW_LOG_* is compiled out when SW_DEBUG is undefined" );
 #endif
 }
 
@@ -348,6 +346,7 @@ SW_TEST_CASE( LogTest, LogMacrosFormatArguments )
  */
 SW_TEST_CASE( LogTest, NonUtf8FallbackSafety )
 {
+    SW_TEST_REQUIRES_FEATURE( DebugLog );
 #if defined( SW_DEBUG )
     LogCapture capture;
     SW_ASSERT_TRUE( capture.isAttached() );
@@ -358,8 +357,6 @@ SW_TEST_CASE( LogTest, NonUtf8FallbackSafety )
 
     SW_ASSERT_EQUAL( 1u, capture.getCount() );
     SW_EXPECT_TRUE( sw::StringUtil::startsWith( capture.getEntries()[0]._message, "[TestLog] Bad:" ) );
-#else
-    SW_TEST_SKIP( "SW_LOG_* is compiled out when SW_DEBUG is undefined" );
 #endif
 }
 
@@ -368,6 +365,7 @@ SW_TEST_CASE( LogTest, NonUtf8FallbackSafety )
  */
 SW_TEST_CASE( LogTest, LogCallerHandling )
 {
+    SW_TEST_REQUIRES_FEATURE( DebugLog );
 #if defined( SW_DEBUG )
     LogCapture capture;
     SW_ASSERT_TRUE( capture.isAttached() );
@@ -380,8 +378,6 @@ SW_TEST_CASE( LogTest, LogCallerHandling )
     SW_EXPECT_STREQ( "[TestLog] Custom caller message", capture.getEntries()[0]._message );
     SW_EXPECT_STREQ( "TestLog", capture.getEntries()[1]._caller );
     SW_EXPECT_STREQ( "[TestLog] Warning from caller", capture.getEntries()[1]._message );
-#else
-    SW_TEST_SKIP( "SW_LOG_* is compiled out when SW_DEBUG is undefined" );
 #endif
 }
 
@@ -390,6 +386,7 @@ SW_TEST_CASE( LogTest, LogCallerHandling )
  */
 SW_TEST_CASE( LogTest, ConcurrentMultiThreadedLogging )
 {
+    SW_TEST_REQUIRES_FEATURE( DebugLog );
 #if defined( SW_DEBUG )
     ThreadSafeLogCapture capture;
     SW_ASSERT_TRUE( capture.isAttached() );
@@ -417,8 +414,6 @@ SW_TEST_CASE( LogTest, ConcurrentMultiThreadedLogging )
     }
 
     SW_EXPECT_EQUAL( kExpectedTotalLogs, capture.getCount() );
-#else
-    SW_TEST_SKIP( "SW_LOG_* is compiled out when SW_DEBUG is undefined" );
 #endif
 }
 
@@ -427,6 +422,7 @@ SW_TEST_CASE( LogTest, ConcurrentMultiThreadedLogging )
  */
 SW_TEST_CASE( LogTest, QueueOverflowFallbackStress )
 {
+    SW_TEST_REQUIRES_FEATURE( DebugLog );
 #if defined( SW_DEBUG )
     ThreadSafeLogCapture capture;
     SW_ASSERT_TRUE( capture.isAttached() );
@@ -438,8 +434,6 @@ SW_TEST_CASE( LogTest, QueueOverflowFallbackStress )
     }
 
     SW_EXPECT_EQUAL( kHeavyLogCount, capture.getCount() );
-#else
-    SW_TEST_SKIP( "SW_LOG_* is compiled out when SW_DEBUG is undefined" );
 #endif
 }
 
@@ -448,6 +442,7 @@ SW_TEST_CASE( LogTest, QueueOverflowFallbackStress )
  */
 SW_TEST_CASE( LogTest, ShutdownQueueDrainConsistency )
 {
+    SW_TEST_REQUIRES_FEATURE( DebugLog );
 #if defined( SW_DEBUG )
     ThreadSafeLogCapture capture;
     SW_ASSERT_TRUE( capture.isAttached() );
@@ -459,8 +454,6 @@ SW_TEST_CASE( LogTest, ShutdownQueueDrainConsistency )
     }
 
     SW_EXPECT_EQUAL( kDrainCount, capture.getCount() );
-#else
-    SW_TEST_SKIP( "SW_LOG_* is compiled out when SW_DEBUG is undefined" );
 #endif
 }
 
@@ -469,6 +462,7 @@ SW_TEST_CASE( LogTest, ShutdownQueueDrainConsistency )
  */
 SW_TEST_CASE( LogTest, ConcurrentListenerAttachDetach )
 {
+    SW_TEST_REQUIRES_FEATURE( DebugLog );
 #if defined( SW_DEBUG )
     std::thread emitter( []
     {
@@ -490,8 +484,6 @@ SW_TEST_CASE( LogTest, ConcurrentListenerAttachDetach )
 
     if ( emitter.joinable() )
         emitter.join();
-#else
-    SW_TEST_SKIP( "SW_LOG_* is compiled out when SW_DEBUG is undefined" );
 #endif
 }
 
@@ -669,7 +661,7 @@ SW_TEST_CASE( LogTest, ConsoleLogOutputReachesStandardOutput )
     const test::ChildEnvironmentVariable arrEnvironment[] = {
         { "SW_TEST_CONSOLE_LOG_CHILD", "1" }
     };
-    const test::ChildRunResult child = test::runThisExecutableAsChild( "LogTest.ConsoleChildRoleWritesAMarker", arrEnvironment, 60 );
+    const test::ProcessRunResult child = test::runThisExecutableAsChild( "LogTest.ConsoleChildRoleWritesAMarker", arrEnvironment, 60 );
     SW_ASSERT_TRUE( child._bLaunched );
     SW_EXPECT_FALSE( child._bTimedOut );
     SW_EXPECT_EQUAL( 0, child._exitCode );

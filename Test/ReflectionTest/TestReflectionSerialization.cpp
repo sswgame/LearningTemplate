@@ -18,8 +18,8 @@
 #include "ReflectionTest/TestReflectionFixtures.h"
 #include "ReflectionTest/TestSampleActor.h"
 
+#include "TestFramework/Harness/TestPropertyCoverage.h"
 #include "TestFramework/TestFramework.h"
-#include "TestFramework/TestPropertyCoverage.h"
 
 // 리플렉션 직렬화 — Binary/JSON/XML 왕복 · 버전 · 스키마 마이그레이션 · 골든 출력 · 딥카피.
 // 골든 비교 헬퍼는 아래 익명 네임스페이스에 있다.

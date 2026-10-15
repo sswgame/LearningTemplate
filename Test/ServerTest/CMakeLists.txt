@@ -11,10 +11,6 @@ endif()
 sw_addTestExecutable(ServerTest
 	LIBS
 		Engine
-	LABELS
-		"unit;server;nogpu"
-	TIMEOUT
-		180
 )
 # 테스트는 빌드된 Server 를 띄운다 — 옆에 서 있어야 한다(Dev 는 게임 모듈도).
 add_dependencies(ServerTest Server)

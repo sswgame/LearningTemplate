@@ -30,7 +30,7 @@
 
 #include "EngineTest/ResourcePakTestUtil.h"
 
-#include "TestFramework/TestBench.h"
+#include "TestFramework/Harness/TestBench.h"
 #include "TestFramework/TestFramework.h"
 
 #include <thread>

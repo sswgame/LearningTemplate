@@ -27,8 +27,8 @@
 #include "GameFramework/Base/Gameplay/Interaction/SmartObjectComponent.h"
 #include "GameFramework/Base/World/Environment/GravityComponent.h"
 
+#include "TestFramework/Harness/TestTick.h"
 #include "TestFramework/TestFramework.h"
-#include "TestFramework/TestTick.h"
 
 using namespace sw;
 

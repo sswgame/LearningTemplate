@@ -109,8 +109,7 @@ SW_TEST_CASE( ThreadTest, JoinIsAWaitOnTheThreadsJoinKey )
  */
 SW_TEST_CASE( ThreadTest, JoinWhileHoldingALockTheThreadWaitsForIsADeadlock )
 {
-    if ( test::ScopedAssertCapture::kAssertsAreActive == false )
-        SW_TEST_SKIP( "the detector reports through SW_ASSERT, which this configuration compiles out" );
+    SW_TEST_REQUIRES_FEATURE( DebugAsserts );
     if ( sw::mutex::getLockObserver() != nullptr )
         SW_TEST_SKIP( "another lock observer is registered" );
     sw::DeadlockDetector detector;
@@ -144,8 +143,7 @@ SW_TEST_CASE( ThreadTest, JoinWhileHoldingALockTheThreadWaitsForIsADeadlock )
  */
 SW_TEST_CASE( ThreadTest, JoinUnderTheLoaderLockAssertsAndDetaches )
 {
-    if ( test::ScopedAssertCapture::kAssertsAreActive == false )
-        SW_TEST_SKIP( "SW_ASSERT is compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( DebugAsserts );
     using LockLoaderLockFunction           = LONG( NTAPI* )( ULONG, ULONG*, void** );
     using UnlockLoaderLockFunction         = LONG( NTAPI* )( ULONG, void* );
     const HMODULE                  hNtdll  = GetModuleHandleW( L"ntdll.dll" );

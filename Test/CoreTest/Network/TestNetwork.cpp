@@ -12,8 +12,8 @@
 #include "Core/Network/Transport/NetTransport.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
 
+#include "TestFramework/Harness/TestLoopbackCluster.h"
 #include "TestFramework/TestFramework.h"
-#include "TestFramework/TestLoopbackCluster.h"
 
 // 네트워크 공통 계층 — 비트 스트림, 시퀀스 감김, 신뢰성(재전송 · 순서 · 중복 · 옛것 버리기 · RTT), 핸드셰이크(도전 · 가득 참 · 다른 프로토콜),
 // 나쁜 망(지연 · 흔들림 · 손실 · 중복 · 깨짐)에서의 신뢰 순서, 끊기 · 타임아웃, 실제 UDP 소켓, 한가할 때의 유지 패킷, 메시지 라우터, 많은 연결.

@@ -24,16 +24,7 @@ if(NOT SW_SHIPPING_BUILD)
 		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ModuleCallGuard.cpp
 		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ModuleImagePatch.cpp
 		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ShadowCopyName.cpp
-		# 패처는 파일 바이트만 다루므로 Windows 에서도 합성 ELF 로 측정한다(리눅스 핫 리로드의 SONAME 고유화).
-		TestModuleImagePatch.cpp
-		TestModuleCallGuard.cpp
-		TestShadowCopyName.cpp
-		# 매니페스트 로더는 이 빌드의 `Bin/Modules` · `Bin/Games` 를 읽는다(Shipping 은 매니페스트가 없다).
 		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ModuleCatalogLoader.cpp
-		TestModuleCatalogLoader.cpp
-		# 의존 그래프와 지연 언로드 큐는 DLL 없이 본다.
-		TestModuleDependencyGraph.cpp
-		TestDeferredImageUnloadQueue.cpp
 	)
 endif()
 
@@ -44,12 +35,10 @@ endif()
 # `%TEMP%/sw_<pid>/…`), 로그는 이름이 실행마다 다르고, Vulkan 파이프라인 캐시는 원자적으로 쓴다. 직렬로 묶으면
 # `ctest -L "nogpu|lint" -j 4` 의 끝이 이 테스트와 EngineTest_NoGPU 가 혼자 도는 구간이 된다. GPU 를 잡는 `_HostOnly` 는 그대로
 # 직렬이다(`sw_addTestExecutable`).
+# 테스트 소스는 이 폴더를 훑는다 — `Dev/` 의 케이스(핫 리로드 · 매니페스트 · 의존 그래프 · 지연 언로드)는 개발 구성에서만 짓는다.
+# 조각 · 시간 · ASan 옵션(report_globals=0 — 이유는 정책의 `_asanOptionsReason`)은 Test/TestPolicy.json.
 sw_addTestExecutable(SmokeTest
-	SOURCES
-		TestSmoke.cpp
-		TestModuleHost.cpp
-		# App 헤드리스 작업 표의 규칙(`AppHeadlessTasks::runTable`, 헤더 안 구현)은 모듈 없이 본다.
-		TestAppHeadlessTasks.cpp
+	EXTRA_SOURCES
 		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ModuleHost.cpp
 		# App 전용 층(에디터 인스턴스 · RHI 교체 뒤 재초기화)도 같은 테스트가 본다 — App 은 실행 파일이라 소스로 가져온다.
 		${CMAKE_SOURCE_DIR}/Source/App/EditorModuleHost.cpp
@@ -59,25 +48,6 @@ sw_addTestExecutable(SmokeTest
 		${swSmokeDevSources}
 	LIBS
 		${smokeLibs}
-	LABELS
-		"unit;module;nogpu"
-	TIMEOUT
-		180
-	# ASan 의 전역 오버플로 검사를 이 스위트에서만 끈다.
-	#
-	# 이 ASan 런타임은 **DLL 을 내려도 그 모듈의 전역 등록을 지우지 않는다**(report_globals=2 로
-	# 찍으면 "Added Global" 만 쌓이고 제거는 0건이다). 그래서 모듈을 내린 뒤 다음 모듈이 그 주소
-	# 범위에 매핑되면, 새 DLL 이 **자기 전역을** 읽는데도 앞 모듈이 남긴 레드존을 밟아
-	# global-buffer-overflow 로 보고된다(예: RHI_DX12 의 정적 초기화가 SW_LOG_CALLER 의 __FILE__ 를
-	# 읽는 자리). 게다가 보고하려고 주소를 설명하는 순간 이미 언매핑된 모듈의 디스크립터를
-	# 역참조해 "nested bug in the same thread, aborting" 으로 프로세스가 죽는다 — 겉으로는
-	# LoadLibrary err=1114 나 맨 세그폴트로 보인다.
-	#
-	# 이 스위트는 존재 이유가 모듈을 올렸다 내리는 것이라 우회할 방법이 없다. 전역 검사만
-	# 끄면 힙·스택·use-after-free 는 그대로 잡히고 케이스가 전부 돈다. 다른 테스트 실행 파일은
-	# 전역 검사를 켠 채로 남는다.
-	ASAN_OPTIONS
-		report_globals=0
 )
 
 if(NOT SW_SHIPPING_BUILD)

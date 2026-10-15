@@ -419,8 +419,7 @@ SW_TEST_CASE( SubsystemCollectionTest, FailedRestartLeavesTheRestStopped )
  */
 SW_TEST_CASE( SubsystemCollectionTest, InitializeRunsUnderTheSubsystemMemoryTag )
 {
-    if constexpr ( kMemoryTagScopesEnabled == false )
-        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
 
     SubsystemRecorder   recorder;
     SubsystemCollection collection;

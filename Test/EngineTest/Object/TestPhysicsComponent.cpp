@@ -14,8 +14,8 @@
 
 #include "EngineTest/TestGameObjectMocks.h"
 
+#include "TestFramework/Harness/TestTick.h"
 #include "TestFramework/TestFramework.h"
-#include "TestFramework/TestTick.h"
 
 namespace sw
 {

@@ -7,8 +7,8 @@
 #include "Core/Network/Transport/UDPNetTransport.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "TestFramework/Harness/TestLoopbackCluster.h"
 #include "TestFramework/TestFramework.h"
-#include "TestFramework/TestLoopbackCluster.h"
 
 #include <chrono>
 #include <thread>

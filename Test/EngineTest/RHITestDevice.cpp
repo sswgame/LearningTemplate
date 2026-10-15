@@ -5,6 +5,8 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 
+#include "TestFramework/TestScopes.h"
+
 namespace test
 {
     RHITestDevice::RHITestDevice( sw::RHIBackend backend )
@@ -71,6 +73,7 @@ namespace test
 
     RHIBackendSweep::RHIBackendSweep()
         : _device{}
+        , _pTrace{}
         , _listBackend( std::begin( kArrAllRHIBackend ), std::end( kArrAllRHIBackend ) )
         , _nextIndex{ 0 }
         , _readyCount{ 0 }
@@ -79,6 +82,7 @@ namespace test
 
     RHIBackendSweep::RHIBackendSweep( std::initializer_list<sw::RHIBackend> listBackend )
         : _device{}
+        , _pTrace{}
         , _listBackend( listBackend.begin(), listBackend.end() )
         , _nextIndex{ 0 }
         , _readyCount{ 0 }
@@ -87,6 +91,7 @@ namespace test
 
     RHIBackendSweep::RHIBackendSweep( const sw::vector<sw::RHIBackend>& listBackend )
         : _device{}
+        , _pTrace{}
         , _listBackend( listBackend.begin(), listBackend.end() )
         , _nextIndex{ 0 }
         , _readyCount{ 0 }
@@ -99,8 +104,11 @@ namespace test
         return Iterator{ this };
     }
 
+    RHIBackendSweep::~RHIBackendSweep() = default;
+
     void RHIBackendSweep::advance()
     {
+        _pTrace.reset();
         _device.shutdown();
         while ( _nextIndex < _listBackend.size() )
         {
@@ -109,6 +117,8 @@ namespace test
             if ( _device.initialize( backend ) )
             {
                 ++_readyCount;
+                const sw::RHIBackendInfo* pInfo = sw::RHIBackendInfoTable::find( backend );
+                _pTrace                         = sw::make_unique<ScopedTrace>( sw::string( "backend=" ) + ( pInfo != nullptr ? pInfo->_pName : "?" ) );
                 return;
             }
         }

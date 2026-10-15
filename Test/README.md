@@ -21,7 +21,7 @@
 | `PythonTest` | 파이썬 도구의 단위 테스트와 QA 러너 등록 |
 | `FuzzTest` | 커버리지 안내 퍼저(Linux 전용, CTest 항목 아님) |
 | `Qa` | QA 러너의 데이터. 게임별 자동 플레이 인자, 골든 이미지, 성능 기준 |
-| `TestFramework` | 테스트 등록, 실행, 필터, 결과 수집 |
+| `TestFramework` | 테스트 등록, 실행, 필터, 결과 수집. 스위트가 같이 쓰는 하네스는 `TestFramework/Harness/` |
 
 - `CoreTest` 의 테스트 파일은 Engine, GameFramework, Editor, Games, App 헤더를 include하지 않고 `engine::` 서비스를 부르지 않습니다.
   공용 `TestFramework` 가 Engine을 링크하므로 include 경로로는 막을 수 없어서, `CheckTestSuites.py` 가 이 규칙을 검사합니다. 엔진 타입이 필요하면 `EngineTest` 에 둡니다.
@@ -36,17 +36,22 @@
 flowchart LR
   Case["SW_TEST_CASE( Suite, Name )"] --> Exe["테스트 실행 파일<br/>EngineTest.exe"]
   Host["SW_TEST_REQUIRES_HOST( Suite, 이유 )"] --> Exe
-  Exe -- "HOST_SPLIT" --> NoGPU["EngineTest_NoGPU<br/>--host_suites=exclude<br/>라벨 nogpu: CI가 돌림"]
-  Exe -- "HOST_SPLIT" --> HostOnly["EngineTest_HostOnly<br/>--host_suites=only<br/>라벨 hostgpu: GPU 있는 PC에서"]
+  Policy["Test/TestPolicy.json<br/>hostSplit · seconds · caseCosts"] --> Exe
+  Exe -- "hostSplit" --> NoGPU["EngineTest_NoGPU_Shard1..n<br/>--host_suites=exclude<br/>라벨 nogpu: CI가 돌림"]
+  Exe -- "hostSplit" --> HostOnly["EngineTest_HostOnly<br/>--host_suites=only<br/>라벨 hostgpu: GPU 있는 PC에서"]
 ```
 
 **스위트와 케이스.** `SW_TEST_CASE( Suite, Name )` 하나가 케이스 하나이고, 같은 `Suite` 이름의 케이스를 스위트라고 부릅니다. 필터와 CI 분류는 모두 스위트 단위입니다.
 
 **호스트 스위트.** GPU, 디스플레이, DXC가 필요해서 CI가 돌릴 수 없는 스위트입니다. 스위트 파일 안에 `SW_TEST_REQUIRES_HOST( 스위트, "이유" )` 한 줄로 선언합니다.
-CMake에는 스위트 이름을 적지 않습니다. `HOST_SPLIT` 으로 등록한 실행 파일(`EngineTest`, `AppTest`)은 이 선언을 보고 CTest 항목을 둘로 나눕니다.
+CMake에는 스위트 이름을 적지 않습니다. 정책 파일에서 `hostSplit` 인 실행 파일(`EngineTest`, `AppTest`)은 이 선언을 보고 CTest 항목을 둘로 나눕니다.
 
-**라벨.** CTest 라벨은 `core`, `editor`, `engine`, `app`, `reflection`, `module`, `server`, `unit`, `nogpu`, `hostgpu`, `lint`, `python`, `qa`, `soak`, `perf` 입니다.
-`nogpu` 는 "CI 러너가 돌릴 수 있다"는 약속이고, `hostgpu` 는 CI가 돌릴 수 없는 것입니다.
+**등록 정책.** 라벨 · 샤드 · 제한 시간 · 호스트 분리는 `Test/TestPolicy.json` 한 곳이 정합니다. 폴더의 CMakeLists 는 무엇을 짓는지(소스 · 링크)만 적고,
+`sw_addTestExecutable(<이름>)` 이 같은 이름의 줄을 읽어 CTest 항목을 만듭니다. 폴더 이름은 실행 파일 이름과 같습니다.
+
+**라벨.** 쓸 수 있는 라벨은 정책 파일의 `labels` 표가 정본이고, 표에 없는 라벨은 configure 가 멈춥니다. 영역(`core` · `engine` · `editor` · `app` · `server` · `module` · `reflection`),
+`unit` · `nogpu` · `hostgpu` · `load` · `lint` · `python` · `qa` · `soak` · `perf` · `build` 가 있습니다.
+`nogpu` 는 "CI 러너가 돌릴 수 있다"는 약속이고, `hostgpu` 는 CI가 돌릴 수 없는 것입니다. `load` 는 부하 · 시간 예산 검증이라 기본 집합에서 빠집니다.
 
 **작업 폴더.** 테스트는 현재 폴더에서 위로 올라가며 `Resource/` 를 찾습니다. 그 탐색이 성공하는 위치가 `build/<프리셋>/Bin` 이므로, 테스트는 항상 `Bin` 에서 돌립니다. CTest도 그렇게 합니다.
 
@@ -141,7 +146,7 @@ py -3 -m Scripts test ProcessTest.* --repeat 20 --shuffle
 
 ### 호스트 스위트 나누기
 
-`HOST_SPLIT` 으로 등록한 실행 파일은 CTest 항목이 두 개입니다. `<타깃>_NoGPU` 는 `--host_suites=exclude` 로 호스트 스위트를 빼고 돌며 `nogpu` 라벨을 받습니다.
+정책에서 `hostSplit` 인 실행 파일은 CTest 항목이 두 갈래입니다. `<타깃>_NoGPU` 는 `--host_suites=exclude` 로 호스트 스위트를 빼고 돌며 `nogpu` 라벨을 받습니다.
 `<타깃>_HostOnly` 는 `--host_suites=only` 로 호스트 스위트만 돌고 `hostgpu` 라벨을 받습니다. 지금 선언된 호스트 스위트는 `EngineTest --test_list` 끝에 이유와 함께 출력됩니다.
 
 - `--host_suites=only` 실행이 아무것도 고르지 않으면 실패합니다. 선언한 스위트에 케이스가 없어도 실패합니다.
@@ -150,9 +155,15 @@ py -3 -m Scripts test ProcessTest.* --repeat 20 --shuffle
 - 원인이 엔진에 있고 아직 고치지 못한 Error는 스위트 파일에 `SW_TEST_KNOWN_ERROR_LOG( 스위트, "문구", "이유" )` 로 적습니다.
   그 스위트의 그 문구만 허용하고, 실행 요약이 허용한 줄 수를 출력합니다. 한 번도 나오지 않으면 지우라고 알립니다.
 
-**느린 실행 파일은 샤드로 나눕니다.** `sw_addTestExecutable` 에 `SHARDS <n>` 을 주면 `<타깃>_Shard1..n` 으로 등록되고, 각각 `--test_shard=<k>/<n>` 으로 돕니다.
-케이스는 스위트 안에서 나눠지므로 느린 스위트 하나가 반으로 쪼개집니다. `HOST_SHARDS <m>` 은 `_HostOnly` 를 나눕니다(`EngineTest` 는 3과 2).
-`ReflectionTest` 는 파서 스위트가 30초 제한 중 약 21초를 써서 샤드로 나눴습니다.
+**샤드와 제한 시간은 한 실행 시간(`seconds`)에서 계산합니다.** 샤드 수는 `ceil(seconds / targetShardSeconds)`(30 초), 제한 시간은
+`max(60, 4 × max(조각 하나의 초, 가장 비싼 케이스의 초))` 입니다. 샤드는 `<타깃>_Shard1..n` 으로 등록되고 각각 `--test_shard=<k>/<n>` 으로 돕니다.
+케이스는 비용으로 고르게 나뉩니다. 정책의 `caseCosts`(느린 케이스의 초)가 `--test_costs=` 로 넘어가고, 비싼 케이스부터 가장 가벼운 조각에 놓입니다(LPT).
+비용이 없는 케이스는 차례로 돌며 놓여 한 스위트가 한 조각에 몰리지 않습니다. `hostShards` 는 `_HostOnly` 를 나눕니다.
+
+- **제한 시간은 멈춤을 잡는 그물입니다.** 이 PC 는 빌드가 겹치면 같은 케이스가 두세 배 느려지므로, 제한 시간은 부하 없는 시간의 네 배로 잡습니다.
+  느려짐은 시간 예산(`SW_TEST_TIME_BUDGET`)이 따로 판정합니다.
+- 스위트가 크게 느려지면 `seconds` 와 `caseCosts` 를 다시 잽니다. 실행 파일을 직접 돌린 요약의 `Slowest cases:` 와 `[       OK ]` 줄의 시간이 재료입니다.
+- 비용표가 가리키는 케이스 이름이 바뀌면 `CheckTestSuites.py` 가 잡습니다.
 
 ### 구성마다 도는 케이스 수가 다릅니다
 
@@ -184,12 +195,14 @@ DXC가 사라지거나 쿠킹된 셰이더가 없어져도 초록으로 끝나�
 | `test::ScopedFailureCapture` | 테스트 단언의 실패를 가로챕니다. 단언 자체를 테스트할 때 씁니다 |
 | `test::runThisExecutableAsChild` | 자기 실행 파일을 자식 프로세스로 띄워 케이스 하나를 돌립니다 |
 
-- `ScopedLogCollector` 로 모은 로그는 `countContaining( "..." )` 로 그 경고가 나왔는지 확인하고, 실패 메시지에는 `joined()` 로 붙입니다. 이 도우미들은 `Test/TestFramework/TestFramework.h` 에 있습니다.
+- `ScopedLogCollector` 로 모은 로그는 `countContaining( "..." )` 로 그 경고가 나왔는지 확인하고, 실패 메시지에는 `joined()` 로 붙입니다. 이 도우미들은 `Test/TestFramework/TestScopes.h` 에 있습니다.
+- `test::ScopedTrace( "backend=Vulkan" )` 는 gtest 의 `SCOPED_TRACE` 와 같습니다. 그 범위에서 진 단언과 재현 요약에 맥락 한 줄이 붙습니다. `RHIBackendSweep` 은 백엔드마다 겁니다.
 - `ScopedDefensiveTestLog` 의 표시는 로그를 읽는 사람이 의도한 오류를 실패로 오해하지 않게 하려는 것입니다.
 - Debug의 엔진 단언은 디버거를 멈추지만(`SW_DEBUG_BREAK`), `ScopedAssertCapture` 를 건 동안은 멈추지 않고 셉니다. 그래서 방어 경로 테스트가 Debug에서도 돕니다. 유니티의 `LogAssert.Expect` 와 같습니다.
 - `ScopedFailureCapture` 는 gtest의 `EXPECT_FATAL_FAILURE` 와 같은 일을 합니다. `Test/CoreTest/TestTestFramework.cpp` 가 매크로마다 실패를 하나 남기는지, 무엇을 출력하는지, ASSERT가 멈추는지 확인합니다.
-- `runThisExecutableAsChild`(`TestFramework/TestChildProcess.h`)는 프로세스마다 한 번뿐인 상태나 프로세스를 죽이는 동작을 테스트할 때 씁니다. 환경 변수는 띄우는 동안만 걸고, 출력을 모으고, **제한 시간을 넘기면 자식을 죽입니다.**
-  제한 없이 기다리면 멈춘 자식 하나가 실행 파일 전체를 CTest 제한 시간까지 붙잡습니다.
+- `runThisExecutableAsChild`(`TestFramework/Harness/TestChildProcess.h`)는 프로세스마다 한 번뿐인 상태나 프로세스를 죽이는 동작을 테스트할 때 씁니다. 환경 변수는 띄우는 동안만 겁니다.
+- 테스트가 띄우는 프로세스(자식 테스트 실행 파일, 실제 App, 전용 서버)는 모두 `test::runProcessWithDeadline`(`Harness/TestProcessRun.h`)으로 돌립니다. 출력을 모으고, 줄마다 콜백을 부르고,
+  **제한 시간을 넘기면 죽입니다**(새니타이저 빌드는 열 배). 제한 없이 기다리면 멈춘 프로세스 하나가 실행 파일 전체를 CTest 제한 시간까지 붙잡습니다.
 - 배포본의 `SW_LOG_ASSERT` 는 멈추지 않고 로그만 남긴 뒤 진행합니다. 그래서 `ResourcePaths::initialize()` 를 쓰는 케이스는 그 결과를 `SW_ASSERT_TRUE` 로 감싸 그 자리에서 실패하게 합니다.
 - `ScopedDefensiveTestLog` 범위 안의 로그는 메시지 앞에 `"[Expected Defensive Test] "` 가 붙습니다. 그래서 로그 문구는 startsWith 가 아니라 포함 여부로 비교합니다.
 
@@ -198,7 +211,7 @@ DXC가 사라지거나 쿠킹된 셰이더가 없어져도 초록으로 끝나�
 - `test::makeTempPath` · `makeTempDirectory`(아래 "테스트가 남긴 상태 정리"), `test::RHITestDevice`(`kArrAllRHIBackend`) · `test::RHIBackendSweep` · `test::RHITestImage`, 병렬 기록을 nogpu 로 보는 `test::FakeRHIDevice`.
 - GPU 렌더 테스트 도우미: `makeSingleTargetPSODesc` · `beginOffscreenRenderPass` · `countPrimaryColorPixels` · `renderSceneFrame`, `LitCubeScene` · `renderPresentCaptureOf` · `compareCaptures`(`TestRenderPassGPU.cpp`). 새 GPU 케이스는 이것부터 봅니다.
 - 에디터 지역 서비스는 `Test/EditorTest/EditorTestServices.h` 에 있습니다.
-- 네트워크 호스트 묶음은 `test::LoopbackCluster`(`TestFramework/TestLoopbackCluster.h`)입니다. 루프백에 엔드포인트마다 회선 흉내를 붙이고, 손으로 진행하는 시각(`step`)과 호스트 스레드를 둘 다 쓸 수 있으며 CoreTest 도 씁니다. 씬과 라우터까지 필요하면 `NetSimHarness` 를 씁니다.
+- 네트워크 호스트 묶음은 `test::LoopbackCluster`(`TestFramework/Harness/TestLoopbackCluster.h`)입니다. 루프백에 엔드포인트마다 회선 흉내를 붙이고, 손으로 진행하는 시각(`step`)과 호스트 스레드를 둘 다 쓸 수 있으며 CoreTest 도 씁니다. 씬과 라우터까지 필요하면 `NetSimHarness` 를 씁니다.
 - 할당 실패 경로는 `Memory::injectAllocationFailures( count )`(Dev, 스레드 국소)로 테스트합니다. 이 스레드의 다음 count 번 `allocate` · `allocateAligned` 가 nullptr 를 돌려줍니다.
 - 낱개 파일과 팩의 경쟁을 테스트하려면 리소스 루트를 임시 폴더로 바꿉니다(`ResourcePaths::exchangeRootFolderPath` — 검색 폴더와 경로 캐시를 다시 만들고 앞 루트를 돌려준다).
 - 바깥 서버가 있어야 하는 테스트는 `SW_TEST_REQUIRES_ENVIRONMENT( 스위트, "변수", "까닭" );` 을 둡니다. 변수가 비면 그 스위트만 빠지고 `[ SKIP SUITE ]` 한 줄이 남습니다(실패도 "모두 건너뜀" 도 아니고, 호스트 스위트와 섞이지 않는다).
@@ -232,13 +245,18 @@ AssetManager 전체 종료나 전역 씬 초기화처럼 다른 테스트와 엔
 
 | 플래그 | 하는 일 |
 |---|---|
-| `--test_repeat=N`(`--gtest_repeat=N`) | 고른 케이스를 N번 반복합니다. 실패하면 몇 번째 반복이었는지 함께 출력합니다 |
+| `--test_repeat=N`(`--gtest_repeat=N`) | 고른 케이스를 N번 반복합니다. 실패하면 몇 번째 반복이었는지와 진 케이스마다 재현율(`failed 3 / 20 (15.0%) - intermittent`)을 출력합니다 |
+| `--test_seed=<씨앗>`(`--gtest_random_seed=<씨앗>`) | 섞기와 `test::getRandomSeed()` 가 쓰는 씨앗입니다. 주지 않으면 실행마다 고르고, 씨앗을 읽은 케이스가 지면 재현 명령에 붙습니다 |
 | `--test_shuffle`(`--gtest_shuffle`) | 스위트 순서와 스위트 안의 케이스 순서를 섞고, 쓴 씨앗을 맨 앞에 출력합니다 |
 | `--test_shuffle=<씨앗>`(`--gtest_random_seed=<씨앗>`) | 그 순서를 다시 만듭니다 |
 
 섞을 때 스위트끼리는 붙어 있습니다(gtest와 같음). 섞어서 실패한 실행은 끝에 다시 돌릴 플래그를 출력합니다.
 실행 요약에는 가장 오래 걸린 케이스 다섯 개가 `Slowest cases:` 로 나옵니다. 테스트가 느려지는 것은 조용히 일어나기 때문입니다.
 받는 플래그 전체는 `--help`(`-h` · `--gtest_help`)로 봅니다. 엔진을 세우지 않고 도움말만 찍은 뒤 종료 코드 0 으로 끝납니다.
+
+**진 실행은 다시 돌릴 명령을 출력합니다.** 요약 끝의 `Reproduce` 가 작업 폴더 · 실행 파일 · 진 케이스만 고른 필터 · 스위트 종류 · 씨앗 · 엔진 인자(`-gv_*`)와
+ctest 항목(`ctest -R "^EngineTest_NoGPU_Shard3$"`, `SW_TEST_CTEST_NAME`), 구성 이름을 한 번에 적습니다. 섞은 실행은 순서가 실패의 일부일 수 있어 원래 고른 집합 · 샤드 · 씨앗을 그대로 적습니다.
+`ScopedTrace` 가 걸린 실패는 `... failed under: backend=Vulkan` 줄이 붙습니다. 비결정 실패는 그 명령에 `--test_repeat=20` 을 붙여 재현율을 잽니다.
 
 ```powershell
 cd build/Ninja-Debug/Bin
@@ -304,7 +322,7 @@ $env:SW_FUZZ_ITERATIONS=20000; $env:SW_FUZZ_TRACE=1; cd build/Ninja-Debug/Bin; .
 퍼징 대상 목록은 `EngineTest/LoaderFuzzTargets.cpp` 에 있습니다. XML, JSON, DDS, `.mesh`, 팩, 씬 같은 로더 스물몇 개가 들어 있고, 씨앗은 저장소의 실제 파일입니다.
 엔진 단언도 결함으로 셉니다. 바깥 데이터로 단언이 걸린다면 입력 검증이 먼저 막아야 하기 때문입니다. 찾은 결함은 그 로더의 스위트에 회귀 테스트로 둡니다.
 커버리지 안내 퍼징(libFuzzer)은 `FuzzTest/` 의 `LoaderFuzzer` 가 같은 대상 목록으로 합니다. Linux 전용이고(`SW_ENABLE_FUZZING`, 프리셋 `CI-Fuzz`) `.github/workflows/fuzz.yml` 이 밤마다 돌립니다.
-퍼저와 테스트 실행 파일은 같은 초기화 코드(`Test/TestFramework/TestHostRuntime`)를 씁니다.
+퍼저와 테스트 실행 파일은 같은 초기화 코드(`Test/TestFramework/Harness/TestHostRuntime`)를 씁니다.
 
 ## 확장하는 법
 
@@ -317,19 +335,29 @@ $env:SW_FUZZ_ITERATIONS=20000; $env:SW_FUZZ_TRACE=1; cd build/Ninja-Debug/Bin; .
 
 **렌더링이 의도해서 바뀌었다면 골든 기준을 다시 만듭니다.** 벤치 장면은 `SW_UPDATE_GOLDEN=1` 로 그 케이스를 돌리고, 바뀐 `.ppm.z` 를 같은 커밋에 넣습니다. 게임 골든은 `py -3 -m Scripts golden --record` 를 씁니다.
 
-**새 테스트 실행 파일을 만들려면** `sw_addTestExecutable` 로 등록합니다. 호스트 스위트가 있으면 `HOST_SPLIT`, 느리면 `SHARDS` 를 줍니다. 등록하면 작업 폴더가 `Bin` 인 CTest 항목이 생깁니다(`sw_registerTestRun`).
+**새 테스트 실행 파일을 만들려면** `Test/<이름>/CMakeLists.txt` 에 `sw_addTestExecutable(<이름> LIBS …)` 를 두고 `Test/TestPolicy.json` 에 줄 하나(`area` · `seconds`, 호스트 스위트가 있으면 `hostSplit`)를 더합니다.
+소스는 폴더를 재귀로 훑으므로 목록을 적지 않습니다. `Dev/` 아래 파일은 개발 구성에서만 짓습니다(Shipping 에 없는 기능의 테스트). 등록하면 작업 폴더가 `Bin` 인 CTest 항목이 생깁니다(`sw_registerTestRun`).
+
+**구성마다 없는 기능은 데이터로 선언합니다.** 케이스 첫 줄에 `SW_TEST_REQUIRES_FEATURE( DevelopmentBuild )`(`DebugAsserts` · `DebugLog` · `MemoryTagScopes`)를 둡니다.
+그 기능이 없는 구성에서는 건너뛰고 요약이 기능별로 셉니다. 스위트가 전부 이것으로 건너뛰어도 "아무것도 검증하지 않은 스위트" 로 지지 않습니다. 본문이 쓰는 심볼이 없는 구성이면 본문만 `#if` 로 감싸고 등록은 남깁니다.
+환경 탓(파일 · 장치 · 서버가 없음)의 건너뜀은 `SW_TEST_SKIP` 이고, 이것만 빈 스위트 판정에 듭니다. 기능 표는 `TestCase.h` 의 `BuildFeature` 와 `TestCatalog.cpp` 의 표 한 줄입니다.
+
+**부하 · 시간 예산 검증을 더하려면** 스위트 파일에 `SW_TEST_LOAD_SUITE( 스위트, "이유" )` 와 `SW_TEST_TIME_BUDGET( 스위트, 밀리초, "이유" )` 를 두고, 정책 줄에 `loadSeconds` 를 더합니다.
+`<타깃>_Load`(라벨 `load`, 직렬)가 `--load_suites=only --enforce_budgets` 로 돌고 예산을 넘은 케이스가 집니다. 다른 실행은 부하 스위트를 빼고, 예산을 넘은 케이스를 요약에 찍기만 합니다.
+
+**판정이나 보고 형식을 더하려면** 실행기를 고치지 않습니다. 케이스를 지게 하는 규칙은 `ITestCaseJudge`(`TestJudge.h`, `TestRegistry::registerJudge`), 출력 형식은 `ITestRunListener`(`TestReport.h`, `registerListener`)를 하나 더 붙입니다.
 
 ## 함정과 주의
 
 - **스위트 이름은 `XxxTest` 형식으로 하고, 한 스위트는 한 파일에만 둡니다.** 대문자로 시작하고 `Test` 로 끝나며 밑줄이 없어야 합니다. `Core_` 나 `Engine_` 같은 계층 접두어는 붙이지 않습니다. 실행 파일 이름이 이미 그 정보를 줍니다.
   CI 분류와 `--test_filter` 가 모두 스위트 단위라서 이름이 흔들리면 둘이 흔들립니다. `CheckTestSuites.py` 가 강제합니다.
 - **호스트 스위트 파일에 다른 스위트를 두지 마세요.** 섞여 있으면 새 케이스를 옆 스위트에 붙이기 쉽고, 그 순간 GPU가 필요한 케이스가 CI로 들어갑니다.
-  `SW_TEST_REQUIRES_HOST` 는 `HOST_SPLIT` 으로 등록된 폴더에 있어야 효력이 있습니다. 그렇지 않으면 아무도 읽지 않아 CI가 그 스위트를 돌립니다. 이것도 `CheckTestSuites.py` 가 확인합니다.
+  `SW_TEST_REQUIRES_HOST` 는 정책에서 `hostSplit` 인 실행 파일의 폴더에 있어야 효력이 있습니다. 그렇지 않으면 아무도 읽지 않아 CI가 그 스위트를 돌립니다. 이것도 `CheckTestSuites.py` 가 확인합니다.
 - **실행 파일 폴더(`Bin`)나 소스 트리에 파일을 쓰지 마세요.** 같은 `Bin` 을 쓰는 다른 프로세스와 부딪치고, 단언으로 일찍 빠지면 파일이 남습니다.
   소스 트리의 `Resource/` 에 꼭 써야 한다면 만들기 **전에** `SW_TEST_DEFER_CLEANUP` 으로 지우는 일을 걸어 둡니다(`ResourceTest.ConfigurableResourcePriorityAndDlcSupport`).
 - **테스트 도우미의 실패 가능 bool 도 `[[nodiscard]]` 입니다.** `parsePpm` · `readCounters` · `createPackFile` 의 false 를 버리면 테스트가 통과한 척 이어집니다.
   부르는 쪽은 `SW_ASSERT_TRUE( … )` 로 받습니다. `CheckFallibleNodiscard.py` 가 `Test` 까지 봅니다.
-- **스킵은 "이 구성에 없다" 일 때만 씁니다.** 있어야 할 것이 실패하면 단언합니다. SmokeTest 는 모듈 파일이 있는지를 `isModuleBuilt` 로 보고 스킵하고,
+- **스킵은 "이 구성에 없다"(`SW_TEST_REQUIRES_FEATURE`) · "이 기계에 없다"(`SW_TEST_SKIP`) 일 때만 씁니다.** 있어야 할 것이 실패하면 단언합니다. SmokeTest 는 모듈 파일이 있는지를 `isModuleBuilt` 로 보고 스킵하고,
   지어진 모듈의 `registerModule` 실패(로드 · 바인딩)는 `SW_ASSERT_TRUE_MSG` 로 실패시킵니다. 등록 실패를 스킵으로 바꾸면 회귀가 스킵 줄 하나로 지나갑니다.
 - **오브젝트는 지역 `GameObjectManager` 로 만듭니다.** 전역 활성 씬을 빌려 쓰면 테스트끼리 상태가 샙니다.
 - **모듈 정적 캐시에 넣은 것은 케이스 끝에 비웁니다.** `makeTempPath` 는 반복 회차마다 같은 경로를 주므로, 표 캐시(`GameDataCache`)처럼 경로를 키로 쥐는 정적 상태가
@@ -352,7 +380,7 @@ $env:SW_FUZZ_ITERATIONS=20000; $env:SW_FUZZ_TRACE=1; cd build/Ninja-Debug/Bin; .
   환경 탓으로 물러나는 새 경로는 백엔드가 `_initResult` 를 적어야 건너뜀이 됩니다. 안 적으면 결함으로 실패합니다.
 - **설정 파일 테스트는 둘입니다.** `ConfigFileSchemaTest`(EngineTest, `Config/` 의 엔진 · 게임 · 서버)와 `EditorConfigFileSchemaTest`(EditorTest, `Config/Editor`)입니다.
   둘 다 테이블에 없는 파일을 실패로 보므로, 새 설정 파일은 그 테이블과 `Scripts/common/ConfigCatalog.py` 에 한 줄씩 더합니다.
-- **느린 시나리오는 조건마다 한 케이스로 쪼갭니다.** 샤드(`SHARDS`)는 스위트 안의 케이스를 번갈아 나누므로, 한 케이스에 조건 둘을 넣으면 한 샤드가 둘 다 짊어집니다
+- **느린 시나리오는 조건마다 한 케이스로 쪼갭니다.** 샤드는 케이스 단위로 나뉘므로, 한 케이스에 조건 둘을 넣으면 한 샤드가 둘 다 짊어집니다
   (`NetSimDestructionMatrixTest` 는 회선 둘을 두 케이스로 나눠 호스트 스위트에서 nogpu 로 옮겼다 — WSL Debug 에서 케이스마다 17 초).
 - **고정 틱 창 끝에서 "모두 같다" 를 보는 네트워크 테스트는 서버 물리가 그 창 안에 가라앉는다고 가정합니다.** 물리 궤적은 구성마다 달라, 리눅스 Shipping 에서는
   파괴 벽의 사건이 480 틱 창 너머까지 와서 수렴 단언이 실패했습니다(Debug 는 269 틱에 멈춤). 수렴은 창 뒤 상한 안에서 같아질 때까지 돌려 봅니다(`ScenarioOptions::_settleTickLimit`).
@@ -375,11 +403,16 @@ $env:SW_FUZZ_ITERATIONS=20000; $env:SW_FUZZ_TRACE=1; cd build/Ninja-Debug/Bin; .
 
 | 파일 | 내용 |
 |---|---|
-| `TestFramework/TestFramework.h` | 매크로, 단언, 도우미 |
-| `TestFramework/TestChildProcess.h` | 자식 프로세스로 케이스 돌리기 |
+| `TestFramework/TestFramework.h` | 테스트 파일이 include 하는 한 헤더(아래 책임별 헤더를 모은다) |
+| `TestFramework/TestAssert.h` · `TestCatalog.h` | 단언 매크로 · 케이스 등록과 스위트 선언 |
+| `TestFramework/TestRegistry.h` · `TestRunOptions.h` | 실행 · 선택 · 건너뜀 · 명령줄과 재현 인자 |
+| `TestFramework/TestReport.h` · `TestJudge.h` | 결과 줄 · 요약(리스너) · 단언 밖의 판정(판정기) |
+| `TestFramework/TestScopes.h` · `TestTempPath.h` | 가로채기 범위 · 추적 · 케이스마다의 임시 경로 |
+| `TestFramework/Harness/TestProcessRun.h` · `TestChildProcess.h` | 프로세스 한 판(시한 · 출력) · 자식 프로세스로 케이스 돌리기 |
 | `EngineTest/RHITestDevice.h` | GPU 테스트 장치 |
 | `AppTest/AppTestUtil.h` | App 실행 도우미, 건너뛸 종료 코드 |
-| `cmake/Engine/TestTargets.cmake` | `sw_addTestExecutable`, `HOST_SPLIT`, `SHARDS`, `sw_registerTestRun` |
+| `Test/TestPolicy.json` | 실행 파일마다 라벨 · 샤드 · 제한 시간 · 호스트 분리 · 비용표, 라벨 표 |
+| `cmake/Engine/TestTargets.cmake` | `sw_addTestExecutable`, `sw_registerTestPolicy`, `sw_registerTestRun` |
 
 - 검증 절차 전반: [docs/08_Verification.md](../docs/08_Verification.md)
 - 자동화 시나리오: `Source/Engine/Automation/` 의 소스와 헤더 주석

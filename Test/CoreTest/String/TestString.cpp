@@ -83,8 +83,7 @@ SW_TEST_CASE( StringTest, ClearedInternTableIsRebuiltNotLeftEmpty )
  */
 SW_TEST_CASE( StringTest, ClearedInternTableReturnsItsStorage )
 {
-    if constexpr ( sw::kMemoryTagScopesEnabled == false )
-        SW_TEST_SKIP( "allocation headers are compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
     const sw::MemoryProfiler* pProfiler = sw::MemoryProfiler::getActive();
     if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
         SW_TEST_SKIP( "no tracking memory profiler in this host" );
@@ -111,8 +110,7 @@ SW_TEST_CASE( StringTest, ClearedInternTableReturnsItsStorage )
  */
 SW_TEST_CASE( StringTest, InternPoolMemoryIsTaggedEngineMisc )
 {
-    if constexpr ( sw::kMemoryTagScopesEnabled == false )
-        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
     const sw::MemoryProfiler* pProfiler = sw::MemoryProfiler::getActive();
     if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
         SW_TEST_SKIP( "no tracking memory profiler in this host" );

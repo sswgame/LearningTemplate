@@ -6,10 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-namespace sw
-{
-    class Process;
-} // namespace sw
+#include "TestFramework/Harness/TestProcessRun.h"
 
 namespace test
 {
@@ -24,11 +21,24 @@ namespace test
         static sw::string findAppExecutablePath();
 
         /**
-         * @brief App 을 `arguments` 로 띄웁니다. 실행 파일을 못 찾았거나 띄우지 못하면 false 입니다.
-         * @details 작업 폴더는 바꾸지 않는다 — 테스트의 작업 폴더가 `Bin` 이고 App 도 거기서 `Resource/` 를 찾아 올라간다.
-         *          경로에 공백이 있을 수 있어 첫 토큰(실행 파일 경로)은 따옴표로 감싼다.
+         * @brief App 을 `arguments` 로 띄우는 명령줄입니다. 실행 파일을 못 찾으면 빈 문자열입니다.
+         * @details 경로에 공백이 있을 수 있어 첫 토큰(실행 파일 경로)은 따옴표로 감싸고, 사람이 지켜보지 않으므로 `-unattended` 를 붙인다
+         *          (에디터를 켜도 단언 대화상자를 걸지 않는다 — Debug 단언은 멈춘다).
          */
-        [[nodiscard]] static bool launchApp( sw::Process& outProcess, sw::string_view arguments );
+        static sw::string makeAppCommand( sw::string_view arguments );
+
+        /**
+         * @brief App 을 `arguments` 로 한 판 돌리고 줄마다 @p onLine( process, line ) 을 부릅니다. 못 찾거나 못 띄우면 `_bLaunched` 가 false 다.
+         * @details 작업 폴더는 바꾸지 않는다 — 테스트의 작업 폴더가 `Bin` 이고 App 도 거기서 `Resource/` 를 찾아 올라간다. 시한을 넘기면 죽인다.
+         */
+        template <typename TOnLine>
+        static ProcessRunResult runApp( sw::string_view arguments, uint32 timeoutSeconds, TOnLine&& onLine )
+        {
+            const sw::string command = makeAppCommand( arguments );
+            if ( command.empty() )
+                return ProcessRunResult{};
+            return runProcessWithDeadline( command, sw::ProcessOptions{}, timeoutSeconds, onLine );
+        }
 
         /**
          * @brief 게임 @p gameName 의 프리셋(`Config/Game/<게임>.json`)의 `_packRoot`(`game/<팩>`)입니다. 못 읽으면 빈 문자열입니다.
@@ -39,6 +49,8 @@ namespace test
         /** @brief 이 빌드가 함께 지은 게임 팩(`Bin/Games/<게임>/`, `SW_GAMES`)의 이름입니다(이름순). 없으면 비어 있다(Shipping · `SW_GAMES` 비움). */
         static sw::vector<sw::string> collectBuiltGamePacks();
 
+        /** @brief 시나리오가 아닌 App 한 판(스모크 · 쿠킹)의 프로세스 시한(초) — 멈춘 App 이 CTest 시한까지 붙잡지 않게 넉넉히 잡은 그물이다. */
+        static constexpr uint32 kAppRunTimeoutSeconds = 600;
         /** @brief 시나리오 하나의 프로세스 시한(초) — 넘으면 죽이고 -1 입니다(시나리오의 프레임 시한이 먼저 끝내야 한다). */
         static constexpr uint32 kScenarioTimeoutSeconds = 180;
         /**
