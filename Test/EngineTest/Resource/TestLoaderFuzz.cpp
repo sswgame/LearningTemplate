@@ -5,8 +5,11 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Graphics/RHI/RHIRenderResource.h"
+
 #include "EngineTest/LoaderFuzzTargets.h"
 
+#include "TestFramework/Harness/TestChildProcess.h"
 #include "TestFramework/TestFramework.h"
 
 #include <cinttypes>
@@ -207,6 +210,41 @@ namespace
         const utf8* pValue = std::getenv( pName );
         return pValue != nullptr && pValue[0] != '\0' ? std::strtoull( pValue, nullptr, 0 ) : fallback;
     }
+
+    /** @brief libFuzzer 가 먼저 먹이는 빈 입력 다음의 경계 입력입니다(1 바이트 · 공백 · 널 · 잘린 문서). */
+    constexpr string_view kArrBoundaryInput[] = {
+        { "\0", 1 },
+        " ",
+        " \r\n\t ",
+        "<",
+        "{",
+        "\xFF",
+        "<?xml version=\"1.0\"?>",
+        "<Material",
+        "<Material>",
+        "<a><b>",
+        "{\"a\":"
+    };
+
+    /** @brief 아무 장치도 붙지 않는 렌더 리소스입니다 — 레지스트리 등록 · 해제만 한다. */
+    class ExitProbeRenderResource final : public RHIRenderResource
+    {
+    public:
+        void releaseRHI( IRHIDevice* ) override {}
+        void forgetRHI( IRHIDevice* ) override {}
+    };
+
+    /**
+     * @brief 정적 소멸 끝 무렵에 렌더 리소스를 소멸시킵니다.
+     * @details 네임스페이스 범위라 `main` 앞에서 서고, 그 뒤 처음 쓰인 함수 지역 static 보다 늦게 소멸합니다. 리눅스에서는 엔진 공유 라이브러리의
+     *          정적 소멸과 한 목록에서 돌므로, 퍼저 하네스(정적 `TestHostRuntime`)가 정적 소멸 중에 엔진을 내리는 순서를 그대로 만듭니다.
+     */
+    struct ExitProbe
+    {
+        ExitProbeRenderResource* _pResource{ nullptr };
+        ~ExitProbe() { sw_delete( _pResource ); }
+    };
+    ExitProbe s_exitProbe;
 } // namespace
 
 /**
@@ -273,4 +311,59 @@ SW_TEST_CASE( LoaderFuzzTest, EveryLoaderSurvivesMutatedInput )
         }
     }
     SW_EXPECT_TRUE_MSG( targetCount > 0, "SW_FUZZ_TARGET names no target" );
+}
+
+/**
+ * @brief [LoaderFuzzTest] 모든 로더가 빈 입력(널 포인터 · 길이 0 포함)과 1 바이트 · 공백 · 잘린 문서에 죽지도 단언하지도 않는다
+ * @details libFuzzer 는 말뭉치보다 먼저 빈 입력을 한 번 먹인다. 시드 고정 변이는 씨앗에서 출발해 이 입력들을 거의 만들지 않으므로 따로 돈다.
+ */
+SW_TEST_CASE( LoaderFuzzTest, EveryLoaderSurvivesBoundaryInput )
+{
+    test::ScopedLogSuppressor suppressor;
+    test::ScopedAssertCapture asserts;
+    for ( const test::LoaderFuzzTarget& target : test::getLoaderFuzzTargets() )
+    {
+        const uint32 assertCountBefore = asserts.getCount();
+        const uint8  emptyByte         = 0;
+        target._pfnRun( nullptr, 0 );
+        target._pfnRun( &emptyByte, 0 );
+        for ( const string_view input : kArrBoundaryInput )
+        {
+            target._pfnRun( reinterpret_cast<const uint8*>( input.data() ), input.size() );
+        }
+        SW_EXPECT_TRUE_MSG( asserts.getCount() == assertCountBefore, ( string( "fuzz target " ) + target._pName + " asserted on a boundary input" ).c_str() );
+    }
+}
+
+/**
+ * @brief [LoaderFuzzTest] 자식 역할 — 모든 대상에 경계 입력을 먹이고, 레지스트리보다 늦게 소멸할 렌더 리소스를 하나 남긴다
+ * @details `RenderResourceOutlivesStaticDestruction` 이 띄운다. `main` 이 엔진을 내린 뒤 정적 소멸 끝에서 `s_exitProbe` 가 리소스를 지운다.
+ */
+SW_TEST_CASE( LoaderFuzzTest, ChildLeavesRenderResourceForStaticDestruction )
+{
+    if ( std::getenv( "SW_FUZZ_EXIT_PROBE_CHILD" ) == nullptr )
+        SW_TEST_SKIP( "exit probe child only — RenderResourceOutlivesStaticDestruction launches it" );
+    test::ScopedLogSuppressor suppressor;
+    for ( const test::LoaderFuzzTarget& target : test::getLoaderFuzzTargets() )
+    {
+        target._pfnRun( nullptr, 0 );
+    }
+    s_exitProbe._pResource = sw_new ExitProbeRenderResource();
+}
+
+/**
+ * @brief [LoaderFuzzTest] 대상이 처음 세운 렌더 리소스 레지스트리가 프로세스 끝의 정적 소멸 뒤에도 쓸 수 있다
+ * @details 퍼저 하네스는 정적 `TestHostRuntime` 이라 libFuzzer 의 `exit` 에서 정적 소멸 중에 엔진을 내린다. 그 전에 레지스트리가 소멸하면
+ *          `releaseRegistryStorage` 가 지워진 목록을 다시 놓았다(CI 퍼징 `Material`, ASan heap-use-after-free). 자식이 0 으로 끝나야 한다.
+ *          리눅스(ASan)에서만 그 순서가 드러난다 — Windows 는 DLL 마다 정적 소멸이 따로라 고치기 전에도 통과한다.
+ */
+SW_TEST_CASE( LoaderFuzzTest, RenderResourceOutlivesStaticDestruction )
+{
+    const test::ChildEnvironmentVariable arrEnvironment[] = {
+        { "SW_FUZZ_EXIT_PROBE_CHILD", "1" }
+    };
+    const test::ProcessRunResult child = test::runThisExecutableAsChild( "LoaderFuzzTest.ChildLeavesRenderResourceForStaticDestruction", arrEnvironment, 120 );
+    SW_ASSERT_TRUE( child._bLaunched );
+    SW_ASSERT_TRUE_MSG( child._bTimedOut == false, child.getOutputTail().c_str() );
+    SW_EXPECT_TRUE_MSG( child._exitCode == 0, child.getOutputTail().c_str() );
 }

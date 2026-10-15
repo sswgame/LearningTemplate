@@ -13,7 +13,10 @@
 // libFuzzer 진입점 — 대상은 환경 변수 SW_FUZZ_TARGET(LoaderFuzzTargets.cpp 의 표 이름). SW_FUZZ_LIST=1 이면 대상 이름을 줄마다 찍고 끝나고,
 // SW_FUZZ_DUMP_SEEDS=<폴더> 면 그 대상의 씨앗을 파일로 쓰고 끝난다(fuzz.yml 이 말뭉치 첫 판으로 쓴다). 엔진은 테스트 하네스와 같은 기동으로 한 번만 세운다.
 // 엔진 단언(`SW_ASSERT`)이 멈추면 libFuzzer 는 그것을 크래시로 본다 — 원하는 판정이다(죽지 않고 · 단언하지 않고).
-// 엔진 정리를 정적 소멸에 맡기지 않는다 — `std::exit` 앞에서 하네스를 명시적으로 내린다(정적 소멸 순서는 엔진 범위의 역순을 지키지 않는다).
+// 이 파일이 부르는 `std::exit` 앞에서는 하네스를 명시적으로 내린다(정적 소멸 순서는 엔진 범위의 역순을 지키지 않는다).
+// 주의: libFuzzer 가 정상으로 끝날 때(-max_total_time · -runs)는 스스로 `exit` 를 불러 하네스(`s_runtime`)가 정적 소멸 중에 내려간다. 대상이 처음 만든
+// 함수 지역 static 은 그보다 먼저 소멸하므로, 엔진 종료가 만지는 저장소는 소멸하지 않는 정적 저장소여야 한다(`RHIRenderResource` 레지스트리 · `hashed_string` 표).
+// 이때 libFuzzer 는 입력 밖의 죽음을 빈 입력(crash-da39a3ee…)으로 남긴다 — 빈 파일이 나오면 입력보다 종료 경로를 먼저 의심한다.
 
 namespace
 {
