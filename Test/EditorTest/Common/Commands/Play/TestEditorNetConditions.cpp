@@ -5,6 +5,8 @@
 #include "Editor/Common/Commands/Play/EditorNetConditions.h"
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 
+#include "Engine/Config/NetEmulationPresetTable.h"
+
 #include "TestFramework/TestFramework.h"
 
 using namespace sw;
@@ -32,40 +34,20 @@ namespace
 } // namespace
 
 /**
- * @brief [EditorNetConditionsTest] 패널 프리셋 단추는 모두 Core 프리셋 표에 있고, 패널 값으로 옮겨도 그 값이다(LAN · Wi-Fi · LTE · 나쁜 Wi-Fi · 끊김)
+ * @brief [EditorNetConditionsTest] 엔진 프리셋 표의 줄마다 단추 이름이 있고, 패널 값(ms · % · KB/s)으로 옮겨도 표의 값이다
  */
-SW_TEST_CASE( EditorNetConditionsTest, EveryPanelPresetIsACorePresetWithItsValues )
+SW_TEST_CASE( EditorNetConditionsTest, EveryPresetRowReachesThePanelWithItsValues )
 {
-    for ( const EditorNetPresetRow& row : EditorNetConditionsUtil::kArrPresetRow )
+    NetEmulationPresetTable table;
+    SW_ASSERT_TRUE( table.loadFromResource() );
+    for ( const NetEmulationPresetDef& preset : table._listPreset )
     {
-        NetEmulationConditions conditions;
-        SW_ASSERT_TRUE_MSG( NetEmulationConditions::tryGetPreset( row._pName, conditions ), row._pName );
-    }
-    // 패널 값(ms · % · KB/s)의 표 — Core 표가 바뀌면 이 테스트가 같이 고쳐진다.
-    struct ExpectedRow
-    {
-        const utf8* _pName;
-        float32     _latencyMilliseconds;
-        float32     _jitterMilliseconds;
-        float32     _lossPercent;
-        int32       _bandwidthKilobytesPerSecond;
-    };
-    constexpr ExpectedRow kArrExpected[] = {
-        {         "lan",  1.0f,  0.0f,   0.0f,    0},
-        {        "wifi", 10.0f,  5.0f,   0.5f,    0},
-        {         "lte", 35.0f, 15.0f,   1.0f, 1024},
-        {     "badwifi", 80.0f, 40.0f,   5.0f,  256},
-        {"disconnected",  0.0f,  0.0f, 100.0f,    0},
-    };
-    for ( const ExpectedRow& expected : kArrExpected )
-    {
-        NetEmulationConditions conditions;
-        SW_ASSERT_TRUE( NetEmulationConditions::tryGetPreset( expected._pName, conditions ) );
-        const EditorNetLinkSettings settings = EditorNetConditionsUtil::makeLinkSettings( conditions );
-        SW_EXPECT_NEAR_EQUAL( settings._latencyMilliseconds, expected._latencyMilliseconds, 1.0e-3f );
-        SW_EXPECT_NEAR_EQUAL( settings._jitterMilliseconds, expected._jitterMilliseconds, 1.0e-3f );
-        SW_EXPECT_NEAR_EQUAL( settings._lossPercent, expected._lossPercent, 1.0e-3f );
-        SW_EXPECT_EQUAL( settings._bandwidthKilobytesPerSecond, expected._bandwidthKilobytesPerSecond );
+        SW_EXPECT_TRUE_MSG( preset._label.empty() == false, preset._name.c_str() );
+        const EditorNetLinkSettings settings = EditorNetConditionsUtil::makeLinkSettings( preset.makeConditions() );
+        SW_EXPECT_NEAR_EQUAL( settings._latencyMilliseconds, static_cast<float32>( preset._latencyMs ), 1.0e-3f );
+        SW_EXPECT_NEAR_EQUAL( settings._jitterMilliseconds, static_cast<float32>( preset._jitterMs ), 1.0e-3f );
+        SW_EXPECT_NEAR_EQUAL( settings._lossPercent, preset._lossPercent, 1.0e-3f );
+        SW_EXPECT_EQUAL( settings._bandwidthKilobytesPerSecond, preset._bandwidthKilobytesPerSecond );
     }
 }
 

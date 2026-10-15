@@ -1,0 +1,53 @@
+<!-- 회선 흉내 프리셋(한 방향). 개발 명령 net.emulation · 에디터 Multiplayer 회선 조절 · 부하 시나리오 <Load network> · -gv_netEmuPreset 이 이 표를 읽는다(NetEmulationPresetTable). -->
+<NetEmulationPresetTable>
+	<_listPreset>
+		<NetEmulationPresetDef _name="off"
+		                       _label="Off"
+		                       _latencyMs="0"
+		                       _jitterMs="0"
+		                       _lossPercent="0"
+		                       _duplicatePercent="0"
+		                       _reorderPercent="0"
+		                       _bandwidthKilobytesPerSecond="0" />
+		<NetEmulationPresetDef _name="lan"
+		                       _label="LAN"
+		                       _latencyMs="1"
+		                       _jitterMs="0"
+		                       _lossPercent="0"
+		                       _duplicatePercent="0"
+		                       _reorderPercent="0"
+		                       _bandwidthKilobytesPerSecond="0" />
+		<NetEmulationPresetDef _name="wifi"
+		                       _label="Wi-Fi"
+		                       _latencyMs="10"
+		                       _jitterMs="5"
+		                       _lossPercent="0.5"
+		                       _duplicatePercent="0"
+		                       _reorderPercent="0"
+		                       _bandwidthKilobytesPerSecond="0" />
+		<NetEmulationPresetDef _name="lte"
+		                       _label="LTE"
+		                       _latencyMs="35"
+		                       _jitterMs="15"
+		                       _lossPercent="1"
+		                       _duplicatePercent="0"
+		                       _reorderPercent="0.5"
+		                       _bandwidthKilobytesPerSecond="1024" />
+		<NetEmulationPresetDef _name="badwifi"
+		                       _label="Bad Wi-Fi"
+		                       _latencyMs="80"
+		                       _jitterMs="40"
+		                       _lossPercent="5"
+		                       _duplicatePercent="1"
+		                       _reorderPercent="2"
+		                       _bandwidthKilobytesPerSecond="256" />
+		<NetEmulationPresetDef _name="disconnected"
+		                       _label="Disconnected"
+		                       _latencyMs="0"
+		                       _jitterMs="0"
+		                       _lossPercent="100"
+		                       _duplicatePercent="0"
+		                       _reorderPercent="0"
+		                       _bandwidthKilobytesPerSecond="0" />
+	</_listPreset>
+</NetEmulationPresetTable>

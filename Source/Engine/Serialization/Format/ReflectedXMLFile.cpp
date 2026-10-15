@@ -2,7 +2,11 @@
 
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 
+#include "Core/File/FileUtil.h"
+
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
@@ -19,13 +23,31 @@ namespace sw
         }
 
         // PROPERTY 그래프를 그대로 읽는다 — 필드를 손으로 읽으면 필드를 더할 때마다 파서와 라이터를 같이 고쳐야 하고,
-        // 하나만 빠뜨리면 조용히 빈 값이 된다.
-        if ( XMLSerializer::loadFile( assetRelativePath, pDesc, *pTypeInfo ) == false )
+        // 하나만 빠뜨리면 조용히 빈 값이 된다. 모르는 이름 · 읽지 못한 값 · `Min`/`Max` 밖 값은 이름과 함께 오류다(설정 JSON 과 같은 계약).
+        string text;
+        if ( ResourceIO::readTextResource( assetRelativePath, text ) == false && FileUtil::readTextFile( assetRelativePath, text ) == false )
         {
-            SW_LOG_ERROR( "XML 로드 실패: %# (%#)", assetRelativePath, pTypeInfo->_name.c_str() );
+            SW_LOG_ERROR( "XML 로드 실패: %# (%#) - file not found", assetRelativePath, pTypeInfo->_name.c_str() );
             return false;
         }
-        return true;
+        vector<SchemaOrphanValue> listOrphan;
+        if ( XMLSerializer::deserializeSoft( pDesc, *pTypeInfo, text, &listOrphan ) == false )
+        {
+            SW_LOG_ERROR( "XML 로드 실패: %# (%#) - not a <%#> document", assetRelativePath, pTypeInfo->_name.c_str(), pTypeInfo->_name.c_str() );
+            return false;
+        }
+        for ( const SchemaOrphanValue& orphan : listOrphan )
+        {
+            const utf8* const pName = orphan._writtenName.empty() ? orphan._name.c_str() : orphan._writtenName.c_str();
+            SW_LOG_ERROR( "%#: '%#' is unknown to %# or its value '%#' cannot be read", assetRelativePath, pName, pTypeInfo->_name.c_str(), orphan._text.c_str() );
+        }
+        vector<string> listRangeError;
+        SerializerUtil::collectRangeErrors( *pTypeInfo, pDesc, string(), listRangeError );
+        for ( const string& rangeError : listRangeError )
+        {
+            SW_LOG_ERROR( "%#: %#", assetRelativePath, rangeError.c_str() );
+        }
+        return listOrphan.empty() && listRangeError.empty();
     }
 
     bool ReflectedXMLFile::saveDescInternal( string_view assetRelativePath, const void* pDesc, const TypeInfo* pTypeInfo )
