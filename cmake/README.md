@@ -73,6 +73,7 @@ cmake/
 | `sw_configurePch` | `SW_ENABLE_PCH`가 ON일 때만 `target_precompile_headers`를 적용 (`TargetCompileRules.cmake`) |
 | `sw_addSharedPchOwner` · `sw_useSharedPch` · `sw_setTargetDefsHeader` | PCH 하나를 여러 타깃이 나눠 쓴다 — 정의 없는 소유자가 짓고, 쓰는 쪽은 PCH 플래그를 옵션 맨 앞에, 타깃 고유 정의는 PCH 뒤 강제 포함 헤더로(킷 전부가 소유자 하나) |
 | `sw_configureDllExports` | 내보내기 매크로 짝(ENGINE · GF · MODULE) |
+| `sw_keepImportLibraryIfUnchanged` | SHARED 타깃의 임포트 라이브러리를 내용이 바뀔 때만 갱신한다 — 코드만 고쳤을 때 그것을 링크하는 DLL 수십 개가 다시 링크되지 않는다 (`BuildLayout.cmake`, Windows) |
 | `sw_prependEnvPath` | configure 프로세스의 PATH 앞에 폴더를 붙인다(호스트 구분자, 이미 있으면 그대로 — `HostPath.cmake`) |
 | `sw_queueRuntimeCopy` / `sw_emitRuntimeCopies` | 런타임 DLL 복사를 모아 두었다가 타겟당 POST_BUILD 한 번으로 방출 (`BuildLayout.cmake`) |
 | `sw_deployRuntimeDependencies` | 실행 파일 옆 런타임 DLL(DXC · Debug 검증 레이어 · Tracy)을 구성에 맞게 골라 복사 (`BuildLayout.cmake`) |

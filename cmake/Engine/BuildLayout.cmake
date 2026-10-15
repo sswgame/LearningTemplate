@@ -170,6 +170,30 @@ function(sw_emitRuntimeCopies TARGET_NAME)
 	set_property(TARGET ${TARGET_NAME} PROPERTY SW_RUNTIME_COPIES_EMITTED TRUE)
 endfunction()
 
+# ------------------------------------------------------------------------------
+# sw_keepImportLibraryIfUnchanged — SHARED 타깃의 임포트 라이브러리(`Lib/<타깃>.lib`)를 내용이 바뀔 때만 갱신한다(Windows).
+#   내보내기가 같아도 링크는 `.lib` 를 다시 써서 수정 시각이 바뀌고, 그것을 링크하는 DLL · 실행 파일이 전부 다시 링크된다
+#   (`Engine.cpp` 하나를 고쳐도 킷 · 게임 · 에디터 DLL 84 개). 링크가 임시 경로(`ImportLibraryStage/`)로 내보내게 하고 POST_BUILD 의
+#   `copy_if_different` 가 옮긴다. 링크 규칙의 `RESTAT` 이 안 바뀐 출력을 보고 아래쪽 링크를 건너뛴다.
+#   `/IMPLIB` 는 CMake 가 `/implib:` 를 쓴 뒤의 링크 옵션이라 뒤쪽 값이 이긴다. 내보내기가 없는 MODULE 은 `.lib` 가 없으므로 SHARED 만 부른다.
+# ------------------------------------------------------------------------------
+function(sw_keepImportLibraryIfUnchanged TARGET_NAME)
+	if(NOT WIN32 OR NOT MSVC)
+		return()
+	endif()
+	get_target_property(targetType ${TARGET_NAME} TYPE)
+	if(NOT targetType STREQUAL "SHARED_LIBRARY")
+		return()
+	endif()
+	set(stageLibrary "${CMAKE_BINARY_DIR}/ImportLibraryStage/${TARGET_NAME}.lib")
+	file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/ImportLibraryStage")
+	target_link_options(${TARGET_NAME} PRIVATE "/IMPLIB:${stageLibrary}")
+	add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+		COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${stageLibrary}" "$<TARGET_LINKER_FILE:${TARGET_NAME}>"
+		VERBATIM
+	)
+endfunction()
+
 # 실행 파일 옆에 놓을 런타임 DLL — 구성마다 실제로 쓰는 것만(무조건 복사하면 배포 산출물에 셰이더 컴파일러 · 검증 레이어가 따라 들어간다).
 #   DXC        : 개발 빌드(런타임 HLSL 컴파일 · DXIL 리플렉션). ALWAYS_DXC 면 배포 구성에서도(테스트 — TestBin 이라 배포물과 섞이지 않는다)
 #   검증 레이어 : Debug 만(VulkanRHIDevice 가 SW_DEBUG 에서만 켠다 — 딸려 오는 mimalloc 도 그 의존성일 뿐이다)

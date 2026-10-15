@@ -85,6 +85,7 @@ target_sources(Engine PRIVATE $<TARGET_OBJECTS:Core_objects>)
 add_dependencies(Engine Core_objects)
 
 sw_configureDllExports(Engine ${coreLibType} ENGINE)
+sw_keepImportLibraryIfUnchanged(Engine)
 set_target_properties(Engine PROPERTIES FOLDER "Source/Engine")
 
 # ------------------------------------------------------------------------------
