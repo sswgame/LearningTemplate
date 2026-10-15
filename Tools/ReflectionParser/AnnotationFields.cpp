@@ -63,6 +63,9 @@ namespace sw
             static bool isValueSet( const vector<pair<string, string>>& listPair ) noexcept { return listPair.empty() == false; }
             static bool isValueSet( const FunctionNetRole role ) noexcept { return role != FunctionNetRole::Local; }
 
+            /** @brief `#if !defined( SW_SHIPPING )` 블록 안에 쓰는 줄인지 봅니다(Display · Editor). */
+            static constexpr bool isEditorBlock( const AnnotationEmit emit ) { return emit == AnnotationEmit::Display || emit == AnnotationEmit::Editor; }
+
             static void emitValue( CodeEmit& emit, const string_view prefix, const string_view member, const uint8 value )
             {
                 if ( isValueSet( value ) )
@@ -328,6 +331,7 @@ namespace sw
     []( const TParsed& parsed ) { return AnnotationFieldsInternal::isValueSet( parsed.Member ); }, \
         []( CodeEmit& emit, string_view prefix, const TParsed& parsed ) { AnnotationFieldsInternal::emitValue( emit, prefix, #Member, parsed.Member ); }
 #define SW_ANNOTATION_OUTPUT_Runtime                   SW_ANNOTATION_OUTPUT_Editor
+#define SW_ANNOTATION_OUTPUT_Display                   SW_ANNOTATION_OUTPUT_Editor
 #define SW_ANNOTATION_OUTPUT_Manual( TParsed, Member ) nullptr, nullptr
 
 #define SW_ANNOTATION_ROW( TParsed, ID, Member, ApplyStatement, Emit )                                                   \
@@ -386,6 +390,7 @@ namespace sw
 #undef SW_ANNOTATION_ROW
 #undef SW_ANNOTATION_OUTPUT_Editor
 #undef SW_ANNOTATION_OUTPUT_Runtime
+#undef SW_ANNOTATION_OUTPUT_Display
 #undef SW_ANNOTATION_OUTPUT_Manual
 #undef SW_ANNOTATION_TARGET_Reflect
 #undef SW_ANNOTATION_TARGET_Enum
@@ -437,7 +442,7 @@ namespace sw
         bool bHasEditorField = false;
         for ( const AnnotationField<TParsed>& field : scope )
         {
-            if ( field._emit == AnnotationEmit::Editor && field._pIsSet( parsed ) )
+            if ( AnnotationFieldsInternal::isEditorBlock( field._emit ) && field._pIsSet( parsed ) )
             {
                 bHasEditorField = true;
                 break;
@@ -449,7 +454,7 @@ namespace sw
             emit.line( "#if !defined( SW_SHIPPING )" );
             for ( const AnnotationField<TParsed>& field : scope )
             {
-                if ( field._emit == AnnotationEmit::Editor )
+                if ( AnnotationFieldsInternal::isEditorBlock( field._emit ) )
                     field._pEmit( emit, prefix, parsed );
             }
             emit.line( "#endif" );
@@ -466,6 +471,28 @@ namespace sw
     template void AnnotationFields::emitMetadata<ParsedEnumInfo>( CodeEmit&, const ParsedEnumInfo&, string_view );
     template void AnnotationFields::emitMetadata<ParsedPropertyInfo>( CodeEmit&, const ParsedPropertyInfo&, string_view );
     template void AnnotationFields::emitMetadata<ParsedFunctionInfo>( CodeEmit&, const ParsedFunctionInfo&, string_view );
+
+    bool AnnotationFields::acceptsOnEvent( const string_view propertyFieldID )
+    {
+        if ( propertyFieldID == "Name" )
+            return true;
+        const AnnotationField<ParsedPropertyInfo>* pField = kPropertyScope.findField( propertyFieldID );
+        return pField != nullptr && pField->_emit == AnnotationEmit::Display;
+    }
+
+    string AnnotationFields::makeEventFieldList()
+    {
+        string text;
+        for ( const AnnotationField<ParsedPropertyInfo>& field : kPropertyScope )
+        {
+            if ( field._emit != AnnotationEmit::Display )
+                continue;
+            text.append( field._id.data(), field._id.size() );
+            text += ", ";
+        }
+        text += "Name";
+        return text;
+    }
 
     bool AnnotationFields::validateBindings( const AnnotationMeta& meta )
     {

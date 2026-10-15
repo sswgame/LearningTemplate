@@ -107,6 +107,9 @@ namespace sw
             crop._seedPrice      = MathUtil::max( 0, node.getAttributeInt( "seedPrice", crop._seedPrice ) );
             crop._sellPrice      = MathUtil::max( 0, node.getAttributeInt( "sellPrice", crop._sellPrice ) );
             crop._harvestCount   = MathUtil::max( 1, node.getAttributeInt( "harvest", crop._harvestCount ) );
+            const utf8* pColor   = node.findAttribute( "color" );
+            if ( pColor != nullptr )
+                crop._color = GameDataXML::parseFloat4( string_view( pColor ), crop._color );
             const utf8* pSeasons = node.findAttribute( "seasons" );
             if ( pSeasons != nullptr )
                 CropCatalogInternal::parseSeasons( string_view( pSeasons ), _listKnownSeason, sourceName, pID, crop._listSeason );

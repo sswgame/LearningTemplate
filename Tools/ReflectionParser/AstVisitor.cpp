@@ -855,16 +855,6 @@ namespace sw
             }
 
             /**
-             * @brief 이벤트에 받는 애노테이션인지 봅니다 — 표시 메타(`Category` · `DisplayName` · `Tooltip` · `Meta` · `HideInInspector`)와 `Name` 만.
-             * @details 직렬화 · 범위 · 네트워크 플래그는 값이 아닌 구독 목록에 뜻이 없다. 조용히 버리지 않고 그 헤더를 멈춘다.
-             */
-            static bool isEventAnnotationField( const string_view fieldID ) noexcept
-            {
-                return fieldID == "Category" || fieldID == "DisplayName" || fieldID == "Tooltip" || fieldID == "Meta" || fieldID == "HideInInspector" ||
-                       fieldID == "Name";
-            }
-
-            /**
              * @brief 이벤트 필드 타입의 함수 타입(`void( int32, const string& )`)을 **적힌 꼴로** 찾습니다.
              * @details 정규 타입에서 꺼내면 인자 타입이 펼쳐진 철자(`sw::basic_string<char>`)라 정규 이름(`string`)이 되지 않는다. 별칭
              *          (`using ScoreEvent = …`)은 벗겨 적힌 템플릿 인자를 읽고, 그래도 못 찾으면 정규 타입으로 물러선다.
@@ -909,11 +899,10 @@ namespace sw
                     const AnnotationBinding* pBinding = ( eqPos == string::npos )
                                                           ? session._annotationMeta.findBare( annotation::kPropertyScope, token )
                                                           : session._annotationMeta.findKey( annotation::kPropertyScope, StringUtil::trim( string_view( token ).substr( 0, eqPos ) ) );
-                    if ( pBinding != nullptr && isEventAnnotationField( pBinding->_field ) == false )
+                    if ( pBinding != nullptr && AnnotationFields::acceptsOnEvent( pBinding->_field ) == false )
                     {
-                        SW_LOG_ERROR( "ERROR: PROPERTY() on event '%#' has '%#'. An event (multicast delegate) takes display metadata only "
-                                      "(Category, DisplayName, Tooltip, Meta, HideInInspector, Name).",
-                                      owner, token );
+                        SW_LOG_ERROR( "ERROR: PROPERTY() on event '%#' has '%#'. An event (multicast delegate) takes display metadata only (%#).", owner, token,
+                                      AnnotationFields::makeEventFieldList() );
                         collector._bHasError = SW_TRUE;
                         return;
                     }

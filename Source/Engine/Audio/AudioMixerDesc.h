@@ -240,6 +240,8 @@ namespace sw
     struct SW_API AudioMixerDesc
     {
         REFLECT_BODY();
+        /** @brief 믹서 그래프 파일의 접미사입니다. 에디터 종류 표(`EditorAssetType.cpp`)가 이 값을 씁니다. */
+        static constexpr string_view kExtension = ".audiomixer.xml";
 
         PROPERTY( Tooltip = "Buses (submixes); the master bus is the only root" )
         vector<AudioBusDesc> _listBus{};

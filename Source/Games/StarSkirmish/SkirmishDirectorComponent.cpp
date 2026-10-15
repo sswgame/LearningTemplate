@@ -61,16 +61,9 @@ namespace sw
              * @brief 해당 모습의 모델에 곱할 색입니다. 키트의 흰색과 회색 몸체가 팀 색(파랑, 빨강)으로, 자원은 광물이 하늘색, 가스가 초록색으로 보입니다. 선택하면 흰색 쪽으로 절반 섞습니다.
              * @details 건물과 일꾼을 어둡게, 밝게 나누던 일은 모델이 대신하므로 팀 색을 그대로 곱한다(곱하면 이미 어두워진다).
              */
-            static float4 computeLookColor( int32 category, bool bSelected )
+            static float4 computeLookColor( const float4 ( &arrCategoryColor )[kUnitLookCategory], int32 category, bool bSelected )
             {
-                constexpr float4 kArrCategoryColor[kUnitLookCategory] = {
-                    {0.25f, 0.45f, 0.95f, 1.0f},
-                    { 0.9f, 0.25f,  0.2f, 1.0f},
-                    { 0.7f,  0.7f,  0.7f, 1.0f},
-                    {0.35f, 0.85f,  1.0f, 1.0f},
-                    { 0.3f,  0.8f,  0.4f, 1.0f},
-                };
-                float4 color = kArrCategoryColor[MathUtil::clamp( category, 0, kUnitLookCategory - 1 )];
+                float4 color = arrCategoryColor[MathUtil::clamp( category, 0, kUnitLookCategory - 1 )];
                 if ( bSelected )
                     color = float4{ 0.5f + color._x * 0.5f, 0.5f + color._y * 0.5f, 0.5f + color._z * 0.5f, 1.0f };
                 return color;
@@ -140,6 +133,14 @@ namespace sw
         , _cameraRig{}
         , _watchFocus{ 32.0f, 0.0f, 30.0f }
         , _watchOrthoHeight{ 70.0f }
+        , _huntIntervalSeconds{ 4.0f }
+        , _arrivedRadius{ 10.0f }
+        , _startMinerals{ 50 }
+        , _playerZeroColor{ 0.25f, 0.45f, 0.95f, 1.0f }
+        , _playerOneColor{ 0.9f, 0.25f, 0.2f, 1.0f }
+        , _neutralColor{ 0.7f, 0.7f, 0.7f, 1.0f }
+        , _mineralColor{ 0.35f, 0.85f, 1.0f, 1.0f }
+        , _gasColor{ 0.3f, 0.8f, 0.4f, 1.0f }
         , _catalog{}
         , _match{}
         , _selection{}
@@ -297,7 +298,11 @@ namespace sw
             return false;
         }
         _bHuman = isAutoPlayOn() ? SW_FALSE : SW_TRUE;
-        _match.initialize( &_catalog, _bHuman == SW_TRUE );
+        SkirmishMatchSettings matchSettings;
+        matchSettings._huntIntervalSeconds = _huntIntervalSeconds;
+        matchSettings._arrivedRadius       = _arrivedRadius;
+        matchSettings._startMinerals       = _startMinerals;
+        _match.initialize( &_catalog, _bHuman == SW_TRUE, matchSettings );
         _selection.clear();
         _selection.setPlayer( 0 );
         _selection.setMaxCount( 12 );
@@ -384,11 +389,12 @@ namespace sw
     {
         using Internal = SkirmishDirectorComponentInternal;
         _listUnitLook.assign( static_cast<size_t>( Internal::kUnitLookCategory * 2 ), nullptr );
+        const float4 arrCategoryColor[Internal::kUnitLookCategory] = { _playerZeroColor, _playerOneColor, _neutralColor, _mineralColor, _gasColor };
         for ( int32 category = 0; category < Internal::kUnitLookCategory; ++category )
         {
             for ( int32 selected = 0; selected < 2; ++selected )
             {
-                _listUnitLook[static_cast<size_t>( category * 2 + selected )] = _tintCache.acquire( pMaterial, Internal::computeLookColor( category, selected == 1 ) );
+                _listUnitLook[static_cast<size_t>( category * 2 + selected )] = _tintCache.acquire( pMaterial, Internal::computeLookColor( arrCategoryColor, category, selected == 1 ) );
             }
         }
     }

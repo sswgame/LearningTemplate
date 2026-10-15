@@ -9,19 +9,20 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     class IHTTPClient;
 
     /** @brief 올리기 결과입니다. */
+    ENUM()
     enum class TelemetryUploadResult : uint8
     {
         Sent = 0, ///< 받는 쪽이 받았다 — 서비스가 파일을 지운다
         Kept,     ///< 보내지 않고 둔다(기본 업로더) — 파일은 상한 안에서 남는다
         Failed    ///< 보내다 실패 — 다음 flush 에 다시
     };
-
-    SW_API const utf8* toString( TelemetryUploadResult result );
 
     /** @brief 올릴 묶음 하나 — 닫힌 스풀 파일 하나입니다. 첫 줄이 문맥 줄(세션 · 빌드 · 플랫폼)입니다. */
     struct TelemetryUploadBatch

@@ -31,11 +31,12 @@ namespace sw
      */
     SW_KIT_API bool shouldEncounterOnStep( float32 encounterRate, uint32 stepCount );
 
-    /** @brief 이동 축 데드존과 조우율입니다. 버튼과 이동 액션 이름은 폰의 스키마(`PawnComponent`)가 정합니다. */
+    /** @brief 이동 축 데드존, 걸음 시간, 조우율입니다. 버튼과 이동 액션 이름은 폰의 스키마(`PawnComponent`)가 정합니다. */
     struct OverworldTileMoverSettings
     {
         float32 _moveDeadZone{ 0.5f };   ///< 이보다 작게 기운 이동 축은 걸음으로 보지 않는다
         float32 _encounterRate{ 0.33f }; ///< 수풀에서 한 걸음당 조우할 확률이다. 주기로 바꿔 쓸 수도 있다
+        float32 _stepSeconds{ 0.18f };   ///< 한 칸을 밟는 시간이다. 걷는 연출과 다음 입력 잠금이 같은 값을 쓴다
     };
 } // namespace sw
 

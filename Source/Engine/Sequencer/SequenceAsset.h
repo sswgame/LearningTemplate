@@ -166,6 +166,9 @@ namespace sw
     class SW_API SequenceAsset
     {
     public:
+        /** @brief 시퀀스 파일의 접미사입니다. 에디터 종류 표(`EditorAssetType.cpp`)가 이 값을 씁니다. */
+        static constexpr string_view kExtension = ".seq.json";
+
         /** @brief 빈 시퀀스를 만듭니다. */
         SequenceAsset() = default;
 

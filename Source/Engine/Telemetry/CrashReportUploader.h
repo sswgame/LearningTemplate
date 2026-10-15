@@ -9,19 +9,20 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     class IHTTPClient;
 
     /** @brief 올리기 결과입니다. */
+    ENUM()
     enum class CrashReportUploadResult : uint8
     {
         Sent = 0, ///< 받는 쪽이 받았다
         Kept,     ///< 보내지 않고 둔다(기본 업로더)
         Failed    ///< 보내다 실패
     };
-
-    SW_API const utf8* toString( CrashReportUploadResult result );
 
     /** @brief 올릴 묶음 — 묶음 폴더의 매니페스트와 파일들입니다. */
     struct CrashReportUploadBundle

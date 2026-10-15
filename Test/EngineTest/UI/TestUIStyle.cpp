@@ -6,6 +6,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/RawInputEvent.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/UI/Animation/UIStyleTransition.h"
 #include "Engine/UI/Base/UIFocusManager.h"
@@ -161,7 +162,13 @@ SW_TEST_CASE( UIStyleTest, FieldTableMatchesReflection )
     SW_ASSERT_EQUAL( static_cast<uint32>( sw::UIStyleField::Count ), static_cast<uint32>( listProperty.size() ) );
     for ( uint32 index = 0; index < static_cast<uint32>( listProperty.size() ); ++index )
     {
-        SW_EXPECT_STREQ( sw::UIStyleFieldTable::getEntry( static_cast<sw::UIStyleField>( index ) )._pName, listProperty[index]._name.c_str() );
+        // 필드 번호의 열거자 이름 = PROPERTY 이름에서 `_` 를 떼고 첫 글자를 대문자로 한 것(선언 순서가 같다).
+        const sw::UIStyleField field        = static_cast<sw::UIStyleField>( index );
+        sw::string             expectedName = sw::string( "_" ) + sw::getEnumName( field );
+        expectedName[1]                     = sw::StringUtil::toLowerChar( expectedName[1] );
+        SW_EXPECT_STREQ( expectedName.c_str(), listProperty[index]._name.c_str() );
+        sw::UIStyleField found = sw::UIStyleField::Count;
+        SW_EXPECT_TRUE( sw::UIStyleFieldTable::tryFindField( listProperty[index]._name.c_str(), found ) && found == field );
     }
 }
 

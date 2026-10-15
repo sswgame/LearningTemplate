@@ -60,7 +60,12 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `WidgetStyle` 의 필드 번호입니다(선언 순서와 같으며, 계산된 스타일의 "정한 필드" 비트 위치입니다). */
+    /**
+     * @brief `WidgetStyle` 의 필드 번호입니다(PROPERTY 선언 순서와 같으며, 계산된 스타일의 "정한 필드" 비트 위치입니다).
+     * @details 필드 이름(`_backgroundColor`)은 리플렉션 PROPERTY 이름이 정본이다 — `_` + 열거자 이름(첫 글자 소문자)과 같아야 한다
+     *          (`UIStyleTest.FieldTableMatchesReflection`).
+     */
+    ENUM( Count = Count )
     enum class UIStyleField : uint8
     {
         BackgroundColor,
@@ -84,7 +89,8 @@ namespace sw
 
     /**
      * @struct UIStyleFieldTable
-     * @brief 필드마다 이름, 바뀌면 무엇을 다시 하는지, 물려받는지를 정의한 테이블입니다(CSS 의 상속 속성과 레이아웃에 닿는 속성에 해당).
+     * @brief 필드마다 바뀌면 무엇을 다시 하는지, 물려받는지를 정의한 서술자 표입니다(CSS 의 상속 속성과 레이아웃에 닿는 속성에 해당).
+     * @details 이름은 표에 두지 않는다 — `WidgetStyle` 리플렉션의 PROPERTY 이름을 읽는다(`tryFindField`).
      */
     struct SW_API UIStyleFieldTable
     {
@@ -92,15 +98,9 @@ namespace sw
         static constexpr uint32 kAffectsSubtree = SW_BIT( 1 ); ///< 자손 그림에 반영됩니다(불투명도). 자손까지 다시 칠합니다.
         static constexpr uint32 kInherited      = SW_BIT( 2 ); ///< 부모의 계산된 값을 물려받습니다(텍스트 필드).
 
-        struct Entry
-        {
-            const utf8* _pName;
-            uint32      _flags;
-        };
-
-        /** @brief 필드 하나의 테이블 항목입니다. */
-        static const Entry& getEntry( UIStyleField field );
-        /** @brief 이름(`_backgroundColor`, 대소문자 무시)에 해당하는 필드를 찾습니다. 없으면 false 입니다. */
+        /** @brief 필드 하나의 플래그(`kAffectsLayout` · `kAffectsSubtree` · `kInherited`)입니다. */
+        static uint32 getFlags( UIStyleField field );
+        /** @brief `WidgetStyle` 의 PROPERTY 이름(`_backgroundColor`, 대소문자 무시)에 해당하는 필드를 찾습니다. 없으면 false 입니다. */
         [[nodiscard]] static bool tryFindField( string_view name, UIStyleField& outField );
         /** @brief 비트 하나(칸 하나)입니다. */
         static constexpr uint32 makeBit( UIStyleField field ) { return 1u << static_cast<uint32>( field ); }

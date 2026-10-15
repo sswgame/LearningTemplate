@@ -32,13 +32,6 @@ namespace sw
     class SW_KIT_API PlayerLocomotion
     {
     public:
-        /**
-         * @brief 한 칸을 밟는 데 걸리는 시간(초)입니다. **여기가 기준입니다.**
-         * @details `OverworldTileMover` 가 다음 입력을 막는 시간도 이 값입니다. 값을 따로 두면 한쪽만 바뀌어
-         *          걷는 연출과 입력 잠금이 어긋납니다.
-         */
-        static constexpr float32 kStepDuration = 0.18f;
-
         PlayerLocomotion();
 
         /** @brief 이동 상태를 설정합니다. */
@@ -46,12 +39,12 @@ namespace sw
         /** @brief 상태 타이머를 갱신합니다. */
         void update( float32 deltaTime );
         /** @brief 타일 스텝이 시작됐음을 알립니다. */
-        void notifyStepStarted();
+        void notifyStepStarted( float32 stepSeconds );
         /**
          * @brief 타일 스텝을 **지금 당장** 끝냅니다. 텔레포트처럼 걷는 시간이 없을 때만 씁니다.
          * @warning 걸음을 시작한 그 프레임에 이 함수를 부르면 `Walk` 상태가 한 프레임도 유지되지 못합니다.
          *          그러면 `LocomotionState::Walk` 가 바깥에서 관측되지 않아 걷는 애니메이션을 고를 근거가 사라집니다.
-         *          보통은 이 함수를 부르지 말고 `update( deltaTime )` 이 `kStepDuration` 뒤에 스스로 끝내게 둡니다.
+         *          보통은 이 함수를 부르지 말고 `update( deltaTime )` 이 걸음 시간(`OverworldTileMoverSettings::_stepSeconds`) 뒤에 스스로 끝내게 둡니다.
          */
         void notifyStepFinished();
         /** @brief 상호작용 상태를 시작합니다. */

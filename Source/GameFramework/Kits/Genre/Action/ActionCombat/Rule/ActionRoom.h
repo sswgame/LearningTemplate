@@ -94,6 +94,22 @@ namespace sw
     // 2) ActionRoom: 적과 투사체를 스폰하고, 클리어하면 게이트를 연다
     // ------------------------------------------------------------------------------
     /**
+     * @brief 플레이어 쪽 조절 값입니다. 적의 수치는 몬스터 정의(`MonsterDef`)에 있습니다. 게임이 `setSettings` 로 넘기고, 넘기지 않으면 기본값입니다.
+     * @details 대시 쿨다운은 `update` 가 넣는 값이자 `getDashFill` 의 분모라 이 칸 하나만 둔다(둘로 두면 게이지가 쿨다운과 어긋난다).
+     */
+    struct ActionRoomSettings
+    {
+        float32 _dashCooldownSeconds{ 0.85f };     ///< `getDashFill` 의 분모이기도 하다
+        float32 _dashInvulnerableSeconds{ 0.22f }; ///< 대시가 주는 무적
+        float32 _hitInvulnerableSeconds{ 0.7f };   ///< 맞았을 때의 무적 — 대시 무적보다 길다
+        float32 _attackCooldownSeconds{ 0.28f };
+        float32 _playerAttackDamage{ 34.0f }; ///< 적의 방어(`MonsterDef::_def`)를 뺀 값이 들어간다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @brief 적과 보스의 투사체를 스폰하고, 클리어하면 클리어 게이트를 엽니다.
      * @details 상태가 바뀔 때마다 "game" 채널에 룸 이벤트를 낸다(언리얼 GameMode 의 브로드캐스트에 해당하며 `GameEventUtil::send` 를 쓴다).
      *          - 전투를 시작하면(`beginEntrance`, `beginHall`, `beginBoss`) 게이트가 닫힌다(`ClearGateStateChangedEvent` 의 잠김과 진입 트리거).
@@ -117,6 +133,9 @@ namespace sw
         void setSite( const ActionRoomSite& site ) { _site = site; }
         /** @brief 이 룸이 어디에 있는지 반환합니다. */
         const ActionRoomSite& getSite() const { return _site; }
+        /** @brief 플레이어 조절 값을 정합니다. `clear` 로 지워지지 않습니다. */
+        void                      setSettings( const ActionRoomSettings& settings ) { _settings = settings; }
+        const ActionRoomSettings& getSettings() const { return _settings; }
 
         /** @brief 룸 상태와 액터를 비웁니다. */
         void clear();
@@ -248,6 +267,7 @@ namespace sw
         static constexpr uint8 kLayerProjectile = 3; ///< 적 투사체
 
         ActionRoomSite         _site;
+        ActionRoomSettings     _settings;
         ActionRoomKind         _kind;
         CollisionLayers        _layers;
         vector<Actor>          _listActor;

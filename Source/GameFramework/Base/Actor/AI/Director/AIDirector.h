@@ -15,6 +15,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Actor/AI/Director/AIDirectorIntensity.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCondition.h"
 #include "GameFramework/Base/Actor/AI/SpawnDirector.h"
@@ -44,6 +46,7 @@ namespace sw
 namespace sw
 {
     /** @brief 감독이 낸 이벤트의 종류입니다. */
+    ENUM()
     enum class AIDirectorEventKind : uint8
     {
         PhaseChanged = 0, ///< `_id` = 새 단계, `_source` = 앞 단계(시작이면 빈 이름), `_detail` = 나간 길 번호(−1 = 시작 · 강제)
@@ -52,8 +55,6 @@ namespace sw
         Encounter,        ///< `_id` = 조우 · 사건, `_source` = 풀, `_count` · `_scale` = 데이터의 값
         Reward            ///< `_id` = 보상, `_source` = 풀, `_count` · `_scale` = 데이터의 값
     };
-
-    SW_GF_API const utf8* toString( AIDirectorEventKind kind );
 
     /** @brief 감독이 낸 이벤트 하나입니다. 추적(`dumpTrace`)도 이것을 쌓습니다. */
     struct AIDirectorEvent

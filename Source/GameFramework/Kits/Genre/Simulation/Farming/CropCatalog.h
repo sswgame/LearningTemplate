@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
@@ -36,8 +37,9 @@ namespace sw
         int32                 _regrowDays{ 0 }; ///< 0 이면 한 번 거두고 끝난다
         int32                 _seedPrice{ 20 };
         int32                 _sellPrice{ 60 };
-        int32                 _harvestCount{ 1 }; ///< 한 번에 받는 수
-        vector<hashed_string> _listSeason{};      ///< 자라는 계절이다(시계의 계절 이름이며 `WorldClockSettings::_listSeason` 과 같다)
+        int32                 _harvestCount{ 1 };               ///< 한 번에 받는 수
+        vector<hashed_string> _listSeason{};                    ///< 자라는 계절이다(시계의 계절 이름이며 `WorldClockSettings::_listSeason` 과 같다)
+        float4                _color{ 0.3f, 0.7f, 0.3f, 1.0f }; ///< 다 자란 작물의 색(`color="r,g,b,a"`). 적지 않으면 초록이다
 
         /** @brief @p season 에 자라면 true 를 반환합니다. */
         bool growsIn( const hashed_string& season ) const { return std::find( _listSeason.begin(), _listSeason.end(), season ) != _listSeason.end(); }
@@ -49,7 +51,7 @@ namespace sw
     /**
      * @class CropCatalog
      * @brief `<CropCatalog><Crop id="turnip" name="Turnip" seed="turnip_seed" produce="turnip" days="4" regrow="0" seasons="Spring,Fall"
-     *        seedPrice="20" sellPrice="60" harvest="1"/></CropCatalog>` 를 읽습니다. 씨앗이나 수확물 아이템으로도 찾을 수 있습니다.
+     *        seedPrice="20" sellPrice="60" harvest="1" color="0.92,0.88,0.95,1"/></CropCatalog>` 를 읽습니다. 씨앗이나 수확물 아이템으로도 찾을 수 있습니다.
      */
     class SW_KIT_API CropCatalog : public XMLCatalog<CropCatalog>
     {

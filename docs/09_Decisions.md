@@ -507,6 +507,15 @@
   옮긴 곳: 부력 → `BuoyancyPontoon`, 찢김 → `SurfaceMask`, 체형 모프 · 스키닝 → `AppearanceGeometry`, 팟 → `PokerPot`, JWT 서명 → `JSONWebToken`, JWK 쓰기 → `JwksKeyCache`,
   인벤토리 → 거래 항목 → `TradeClient`, 에디터 서브시스템 등록 함수 → `EditorSubsystemRegistration`, 복수형 키워드 → `CultureInfo`(규칙 표는 `CultureInfo.cpp`), RHI 환경 판정 → `App.cpp`, 프레임 단계 실행 → `ImGuiEditor.cpp`.
   테스트만 부르던 일곱(JWT 서명 · JWK · 팟 · 거래 항목 등)은 상용 엔진 · 라이브러리에 대응 기능이 있어 제품 코드에 남겼습니다.
+- **확장자 → 에디터 종류의 정본은 종류 표(`EditorAssetType.cpp`) 하나입니다**(2026-10-15, C-26 ④). 엔진이 읽는 포맷은 그 타입이 `kExtension` 을 들고(`Material` · `AnimationGraphAsset` · `SpriteClipAsset` · `SequenceAsset` · `TileMapXMLData` · 오디오 데이터 둘을 더함)
+  표는 그 상수를 가리키며, 씬 · 프리팹은 쿠킹 규칙(`AssetCookPath`)을 따릅니다. `EveryEngineFormatMapsToItsKind` · `EveryResourceDataKindIsData` 가 엔진 포맷과 데이터 파일 종류를 이 표에 대어 봅니다.
+  언리얼은 팩토리 · 에셋 타입 액션이, Godot 은 `ResourceFormatLoader::get_recognized_extensions` 가 포맷마다 확장자를 드는 것과 같은 방향입니다(기억에 의존). 파일이 하나도 없던 맨 접미사(`.seq` · `.sprite` · `.dialogue` · `.tilemap`)는 별칭이라 지웠습니다.
+- **`UIStyleField` 서술자 표는 필드마다 플래그 한 칸이고, 필드 이름은 `WidgetStyle` 리플렉션 PROPERTY 이름입니다**(2026-10-15). 플래그를 PROPERTY `Meta` 로 옮기는 안은 기각했습니다 — 커스텀 메타는 Shipping 에 없습니다.
+- **이벤트(`MulticastDelegate` 필드)가 받는 애노테이션은 필드 표의 Emit 열이 `Display` 인 줄입니다**(2026-10-15). 표시 메타(Category · DisplayName · Tooltip · Meta · HideInInspector · HideInMenu)를 `Editor` 에서 갈라 `Display` 로 적고, 파서의 손 목록을 지웠습니다. 생성 코드는 같습니다.
+- **게임 · 키트 튜닝 값의 데이터화**(2026-10-15, C-26 ④): 작물 색 → `CropDef::_color`(`crops.xml` 의 `color`), StarSkirmish 유닛 색과 판 규칙(사냥 주기 · 도착 반경 · 시작 광물) → 디렉터 PROPERTY,
+  MeadowVillage 칸 색 → 디렉터 PROPERTY, `ActionRoom` 플레이어 조절 값 → `ActionRoomSettings`, 오버월드 걸음 시간 → `OverworldTileMoverSettings::_stepSeconds`. 와이어 양자화 상수(`MechArenaSnapshot` 등)는 형식이라 그대로 둡니다.
+  손 이름 표 중 철자가 열거자와 같은 `TelemetryUploadResult` · `CrashReportUploadResult` · `TelemetryRecordResult` · `AIDirectorEventKind` 는 `ENUM()` 으로 옮겼고, 소문자 데이터 철자인 `CrashReportConsent` · `CrashReportState` · `AIDirector` 신호 · 풀은 `EnumNameTable` 로 남깁니다.
+  부하 봇은 동작 이름 · 받는 칸 · 받는 값을 동작 표 한 줄(`LoadBotScenario.cpp`)로 모았습니다.
 - **게임플레이 튜닝 값은 컴포넌트 `PROPERTY` 나 키트 설정 구조체 필드로 둡니다**(2026-10-06). 언리얼의 UPROPERTY 와 데이터 에셋 방식입니다. 성능 임계값은 측정으로 정한 이름 붙은 상수로 두고, 언리얼처럼 실제로 조절할 것만 전역 변수로 만듭니다.
 - **중력의 출처는 물리 설정 하나입니다**(2026-10-06). 코드는 `PhysicsSystem::getConfiguredGravity` 로 읽고, 셰이더(파도)는 머티리얼 상수로 같은 값을 받습니다. 언리얼의 `UWorld::GetGravityZ` 에 해당합니다.
 - **4 글자 표식은 리틀 엔디언 FourCC 하나로 통일했습니다**(2026-10-06). 세이브와 쿠킹 바이너리를 다시 만들었습니다.
@@ -589,6 +598,9 @@
   인스턴스가 플레이 중에 등록하는 `INavGeometrySource` 는 플레이 전에 도는 쿠킹에 들지 않기 때문입니다. 언리얼 `INavRelevantInterface` 처럼 종류 단위 규칙이라 쿠킹과 런타임이 같습니다.
 - **패드 가상 커서는 명령 조종자(디렉터)가 플레이 동안만 켭니다**(2026-10-15). 게임 모듈의 `onInitialize` 가 켜면 에디터에서 편집 중에도 켜져 있고 조종 경계(`CheckControlBoundary`)도 넘습니다.
   언리얼에서 커서 표시 · 입력 모드를 `PlayerController` 가 정하는 것과 같은 자리입니다.
+- **입력 커맨드 버퍼 둘은 하나로 모으지 않습니다**(2026-10-15, C-26 ⑥). Engine `InputActionBuffer` 는 실시간(초) 액션 이력 · 선입력이고 에디터 InputMap 패널의 콤보 시험이 쓰며,
+  GameFramework `InputCommandBuffer` 는 틱 단위 넘패드 · 버튼 이력이라 롤백에서 다시 돌려도 같은 결과가 나와야 하고 바라보는 쪽을 뒤집습니다. 시간 단위(초 · 틱)와 결정성 요구가 달라
+  한쪽으로 모으면 롤백이 깨지거나(실시간) 에디터 · 엔진이 GameFramework 를 알아야 합니다(틱). 언리얼도 Enhanced Input 의 실시간 Combo 트리거와 격투 게임 코드의 프레임 버퍼가 따로 있습니다(기억에 의존).
 
 ### 5-7. 런타임 UI 와 글자
 

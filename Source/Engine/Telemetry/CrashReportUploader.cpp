@@ -14,7 +14,6 @@ namespace sw
     {
         struct CrashReportUploaderInternal
         {
-            static constexpr const utf8* kArrResultName[] = { "Sent", "Kept", "Failed" };
 
             static void appendPartHeader( string& inoutBody, string_view fieldName, string_view fileName, string_view contentType )
             {
@@ -49,11 +48,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( CrashReportUploadResult result )
-    {
-        return CrashReportUploaderInternal::kArrResultName[static_cast<uint32>( result )];
-    }
-
     CrashReportUploadResult NullCrashReportUploader::upload( const CrashReportUploadBundle& bundle )
     {
         (void)bundle;

@@ -191,13 +191,9 @@
 
 - `C-26` **구조 리팩토링 · 데이터 주도의 남은 것**(2026-10-15 묶음 뒤). 끝난 것: 온라인 키트 클라이언트 골격(`OnlineKitClient`), 열거자 이름 표 → `ENUM()` · `getEnumName`,
   위임 카탈로그 18 개 → `GameCatalog<TDef>` 직접 상속, 틱 시스템 밖 `tick` → `update` 와 개수 이름(`Naming/CountFirst`), 컴포넌트 아이콘 → `REFLECT( Meta = "Icon=…" )`,
-  머티리얼 사용 define · 서비스 지표 결과 라벨 → 열거자 이름, `InputMap` 의 `InputActionBuffer` 분리, 키트 서버 조립의 옵션 표(`readOptions`) · 메서드 표(`OnlineMethodTable`), 얇은 `Util` 열 개 정리, `add` / `register` / `append` 어휘표와 `Settings` → `Config` · `Def` 판정. 남은 것(순서대로):
-  ④ **데이터 주도**: 게임 · 키트 튜닝 상수 → `PROPERTY` · 팩 설정, 작물 · 유닛 색 → `Def` 속성, `LoadBot` 동작 표 통합, 이벤트 필드 목록 → 필드 표 Emit 열,
-     확장자 → 종류 정본 하나(에디터 `EditorAssetType` 의 확장자 표 · 엔진 포맷 `kExtension` · 쿠킹 경로 · `ResourceDataKind`를 한 표로, 계약 테스트는 그 표로),
-     `UIStyleField` 서술자 표. 손 이름 표가 남은 열거형(`TelemetryUploadResult` · `CrashReport*` · `AIDirector*` 등 표가 함수 밖에 있어 이번 자동 변환이 못 본 것)도 `ENUM()` 으로.
+  머티리얼 사용 define · 서비스 지표 결과 라벨 → 열거자 이름, `InputMap` 의 `InputActionBuffer` 분리, 키트 서버 조립의 옵션 표(`readOptions`) · 메서드 표(`OnlineMethodTable`), 얇은 `Util` 열 개 정리, `add` / `register` / `append` 어휘표와 `Settings` → `Config` · `Def` 판정, 데이터 주도(확장자 → 종류 정본 · `UIStyleField` 서술자 · 이벤트 애노테이션 Emit 열 · 튜닝 · 색 · 부하 봇 동작 표 · 남은 손 이름 표), 입력 커맨드 둘 판정(모으지 않음). 남은 것:
   ⑤ **큰 클래스 분할**: `FrameRenderer`(129, GPU 검증 필요) · `AbilitySystemComponent`(109) · `UISystem`(100) · `InputManager`(97) · `GameObjectManager`(66) — 책임이 갈리는 묶음부터.
      `InputMap` 은 리바인딩(rebind · reset · 충돌 판정)도 따로 갈 수 있다(언리얼 `UEnhancedInputUserSettings`).
-  ⑥ **입력 커맨드 둘**: Engine `InputActionBuffer`(실시간 액션 이력)와 GameFramework `InputCommandBuffer`(틱 단위 결정적 격투 커맨드)가 같은 일을 다른 단위로 한다. 하나로 모을지 판정한다.
 
 - `C-22` **작은 정리 후보(2026-10-13 병합 검토에서 모음).** `IPhysicsScene3D/2D` 전방 선언용 `*Fwd.h`, Core → Log 예외 다섯 파일(티어마다 필요한 것이 달라 함수 포인터 하나로 풀리지 않는다), 프렐류드 예외 제거(184 파일).
 

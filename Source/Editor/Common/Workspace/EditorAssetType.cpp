@@ -11,13 +11,21 @@
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 
 #include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Animation/Sprite/SpriteClipAsset.h"
+#include "Engine/Audio/AudioEvent.h"
+#include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Destruction/FractureAsset.h"
+#include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Environment/Terrain/HeightfieldData.h"
+#include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Resource/AssetFormat.h"
+#include "Engine/Sequencer/SequenceAsset.h"
+#include "Engine/TileMap/TileMapXML.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Style/UIStyleSheet.h"
 
@@ -33,6 +41,9 @@ namespace sw::editor
             RawHeightfield  ///< `heightfields_raw/` 아래의 높이장 원본이다. 같은 `.png` 라도 텍스처 원본이 아니다(`HeightfieldImporter::isRawHeightfieldPath`)
         };
 
+        // 이 표가 확장자 → 에디터 종류의 정본이다. 엔진이 읽는 포맷의 철자는 그 포맷 타입의 `kExtension` 을 가리키고(문자열을 다시 적지 않는다),
+        // 씬 · 프리팹은 쿠킹 규칙(`AssetCookPath`)을, 카탈로그 데이터는 `.xml` · `.json` 을 따른다. 계약은 `EditorAssetTypeTest` 의
+        // `EveryEngineFormatMapsToItsKind` · `EveryResourceDataKindIsData` 가 지킨다. 옛 맨 접미사(`.seq` · `.sprite` · `.dialogue` · `.tilemap`)는 두지 않는다.
         // 여기 적는 확장자는 이 저장소가 실제로 읽거나 쓰는 것만 둔다. 엔진은 HLSL 전용이므로 `.glsl` 등은 없고,
         // 오디오는 XAudio2 가 읽는 `.wav` 뿐이다. 셰이더는 공유 헤더 `.hlsli` 도 소스다.
         // `.spv` 는 넣지 않는다. 그것은 쿠킹된 산출물이므로(`Resource/common/shaders/bin/`) 셰이더
@@ -42,16 +53,16 @@ namespace sw::editor
         // 쿠커가 쿠킹하지 않는 이름(`_scene.xml`, 아무 `.xml`, 확장자 없는 `.scene` 등)도 씬이나 프리팹으로 열고 저장하게 되어 에디터에서는 되고
         // 배포본에는 없다. 쿠킹된 산출물(`.prefab.bin`)은 `.spv` 처럼 에셋이 아니다(`PrefabAsset::saveToFile` 은 소스만 쓴다).
         constexpr string_view kArrTextureExt[]         = { ".png", ".jpg", ".jpeg", ".tga", ".dds", ".hdr", ".bmp" };
-        constexpr string_view kArrMaterialExt[]        = { ".material" };
+        constexpr string_view kArrMaterialExt[]        = { Material::kExtension };
         constexpr string_view kArrShaderExt[]          = { ".hlsl", ".hlsli" };
         constexpr string_view kArrAudioExt[]           = { ".wav" };
         constexpr string_view kArrDataExt[]            = { ".xml", ".json", ".ini", ".kv" };
-        constexpr string_view kArrAnimationSuffix[]    = { ".animgraph.json" };
-        constexpr string_view kArrDialogueSuffix[]     = { ".dialogue.json", ".dialogue" };
-        constexpr string_view kArrSpriteDocSuffix[]    = { ".sprite.json", ".sprite" };
+        constexpr string_view kArrAnimationSuffix[]    = { AnimationGraphAsset::kExtension };
+        constexpr string_view kArrDialogueSuffix[]     = { DialogueGraphAsset::kExtension };
+        constexpr string_view kArrSpriteDocSuffix[]    = { SpriteClipAsset::kExtension };
         constexpr string_view kArrSpriteImageExt[]     = { ".png", ".jpg", ".jpeg", ".dds", ".tga" };
-        constexpr string_view kArrSequenceSuffix[]     = { ".seq.json", ".seq" };
-        constexpr string_view kArrTileMapSuffix[]      = { ".tilemap.xml", ".tilemap" };
+        constexpr string_view kArrSequenceSuffix[]     = { SequenceAsset::kExtension };
+        constexpr string_view kArrTileMapSuffix[]      = { TileMapXMLData::kExtension };
         constexpr string_view kArrMeshExt[]            = { MeshAssetFormat::kExtension };
         constexpr string_view kArrSkeletonSuffix[]     = { Skeleton::kExtension };
         constexpr string_view kArrRigSuffix[]          = { RigAsset::kExtension };
@@ -64,7 +75,7 @@ namespace sw::editor
         constexpr string_view kArrUIDocumentSuffix[]   = { UIDocumentAsset::kExtension };                                                                  ///< UI 문서다. 그 문서로 연 화면을 다시 만든다(`UISystem`)
         constexpr string_view kArrUIStyleSuffix[]      = { UIStyleSheetAsset::kExtension };                                                                ///< UI 스타일 시트다. 쓰는 화면을 다시 맞춘다
         constexpr string_view kArrModuleDataSuffix[]   = { ".interactions.xml", ".elements.xml" };                                                         ///< 모듈이 로드한 데이터 테이블 캐시다(GameFramework 의 상호작용 테이블과 원소 규칙 테이블)
-        constexpr string_view kArrAudioDataSuffix[]    = { ".audiomixer.xml", ".audioevents.xml" };                                                        ///< 오디오 서비스가 쓰는 믹서 그래프 · 이벤트 라이브러리다(엔진 캐시 `AudioData` 가 지금 쓰는 파일만 다시 읽는다)
+        constexpr string_view kArrAudioDataSuffix[]    = { AudioMixerDesc::kExtension, AudioEventLibrary::kExtension };                                    ///< 오디오 서비스가 쓰는 믹서 그래프 · 이벤트 라이브러리다(엔진 캐시 `AudioData` 가 지금 쓰는 파일만 다시 읽는다)
         /**
          * @struct AssetMatchRow
          * @brief 경로 판정 규칙 하나입니다. 어느 종류인지와 핫 리로드가 그 파일을 어떻게 다시 읽는지를 담습니다.

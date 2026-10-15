@@ -120,6 +120,22 @@ namespace sw
         float3 _watchFocus;
         PROPERTY( Category = "Scene", DisplayName = "Watch Ortho Height", Tooltip = "Camera height when both players are AI", Min = 0.1, Units = m )
         float32 _watchOrthoHeight;
+        PROPERTY( Category = "Rules", DisplayName = "Hunt Interval", Tooltip = "Seconds between sending idle army at the enemy start to the nearest enemy building", Min = 0.1 )
+        float32 _huntIntervalSeconds;
+        PROPERTY( Category = "Rules", DisplayName = "Arrived Radius", Tooltip = "Army within this distance of the enemy start counts as arrived", Min = 0.0, Units = m )
+        float32 _arrivedRadius;
+        PROPERTY( Category = "Rules", DisplayName = "Start Minerals", Min = 0 )
+        int32 _startMinerals;
+        PROPERTY( Category = "Look", DisplayName = "Player 0 Color", Tooltip = "Tint of player 0's units (multiplies the kit's white body)" )
+        float4 _playerZeroColor;
+        PROPERTY( Category = "Look", DisplayName = "Player 1 Color" )
+        float4 _playerOneColor;
+        PROPERTY( Category = "Look", DisplayName = "Neutral Color", Tooltip = "Tint of units no player owns" )
+        float4 _neutralColor;
+        PROPERTY( Category = "Look", DisplayName = "Mineral Color" )
+        float4 _mineralColor;
+        PROPERTY( Category = "Look", DisplayName = "Gas Color" )
+        float4 _gasColor;
 
         RTSCatalog                           _catalog;
         SkirmishMatch                        _match;

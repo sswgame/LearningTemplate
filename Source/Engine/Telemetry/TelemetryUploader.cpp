@@ -8,22 +8,10 @@ namespace sw
 {
     SW_LOG_CALLER( "TelemetryUploader" );
 
-    namespace
-    {
-        struct TelemetryUploaderInternal
-        {
-            static constexpr const utf8* kArrResultName[] = { "Sent", "Kept", "Failed" };
-        };
-    } // namespace
 } // namespace sw
 
 namespace sw
 {
-    const utf8* toString( TelemetryUploadResult result )
-    {
-        return TelemetryUploaderInternal::kArrResultName[static_cast<uint32>( result )];
-    }
-
     TelemetryUploadResult NullTelemetryUploader::upload( const TelemetryUploadBatch& batch )
     {
         (void)batch;

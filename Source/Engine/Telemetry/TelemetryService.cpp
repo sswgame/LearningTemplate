@@ -39,8 +39,7 @@ namespace sw
     {
         struct TelemetryServiceInternal
         {
-            static constexpr const utf8* kArrRecordResultName[] = { "Recorded", "NoConsent", "SampledOut", "NotInitialized", "UnknownEvent", "InvalidField" };
-            static constexpr uint32      kUnitMask              = 0xffffffu;
+            static constexpr uint32 kUnitMask = 0xffffffu;
 
             /** @brief 해시를 [0, 1] 로 — 표본 비교에 씁니다. */
             static float32 toUnit( uint64 hash ) { return static_cast<float32>( static_cast<uint32>( hash ^ ( hash >> 32 ) ) & kUnitMask ) / static_cast<float32>( kUnitMask ); }
@@ -145,11 +144,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( TelemetryRecordResult result )
-    {
-        return TelemetryServiceInternal::kArrRecordResultName[static_cast<uint32>( result )];
-    }
-
     TelemetryFrameHistogram::TelemetryFrameHistogram()
         : _listBucket{}
         , _totalMs{ 0.0 }

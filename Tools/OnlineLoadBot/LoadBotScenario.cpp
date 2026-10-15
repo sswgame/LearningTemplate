@@ -14,79 +14,75 @@ namespace sw
     {
         struct LoadBotScenarioInternal
         {
-            struct ActionName
+            /** @brief 동작 표 한 줄 — 시나리오 `_action` 이름 · 보고의 동작 이름, 그 동작이 받는 칸(`_action` 밖, 둘까지), 첫 칸이 받는 값(비면 아무 값). */
+            struct ActionRow
             {
-                LoadBotAction _action;
-                string_view   _name;
+                LoadBotAction      _action;
+                string_view        _name;
+                string_view        _arrKey[2];
+                const string_view* _pAllowedText;
+                uint32             _allowedTextCount;
             };
-
-            /** @brief 동작 이름 표 — 시나리오 `_action` 칸 · 보고의 동작 이름이 같은 표를 쓴다. */
-            static constexpr ActionName kArrActionName[] = {
-                {             LoadBotAction::Login,                "login"},
-                {            LoadBotAction::Logout,               "logout"},
-                {        LoadBotAction::Disconnect,           "disconnect"},
-                {         LoadBotAction::Reconnect,            "reconnect"},
-                {              LoadBotAction::Wait,                 "wait"},
-                {            LoadBotAction::Repeat,               "repeat"},
-                {   LoadBotAction::DirectoryStatus,     "directory_status"},
-                {   LoadBotAction::DirectoryAssign,     "directory_assign"},
-                {          LoadBotAction::ChatJoin,            "chat_join"},
-                {          LoadBotAction::ChatSend,            "chat_send"},
-                {       LoadBotAction::ChatHistory,         "chat_history"},
-                {    LoadBotAction::SocialPresence,      "social_presence"},
-                {LoadBotAction::SocialFriendRandom, "social_friend_random"},
-                {    LoadBotAction::LeaderboardTop,      "leaderboard_top"},
-                { LoadBotAction::LeaderboardAround,   "leaderboard_around"},
-                {  LoadBotAction::MatchmakingQueue,    "matchmaking_queue"},
-                {         LoadBotAction::WaitMatch,           "wait_match"},
-                {       LoadBotAction::PartyCreate,         "party_create"},
-                {      LoadBotAction::LiveOpsState,        "liveops_state"},
-            };
-            static_assert( std::size( kArrActionName ) == static_cast<size_t>( LoadBotAction::Count ), "every load bot action has a name" );
-
-            /** @brief 첫 칸(`_text`)으로 읽는 키 — 동작마다 많아야 하나다. */
-            static constexpr string_view kArrTextKey[] = { "_channel", "_board", "_mode", "_kind", "_status" };
 
             /** @brief 동작마다 받는 값 — 로그인 방식 · 접속 상태(봇이 같은 이름을 쓴다). 빈 값은 첫 값(기본). */
             static constexpr string_view kArrLoginMode[]      = { "guest", "password" };
             static constexpr string_view kArrPresenceStatus[] = { "online", "away", "busy", "in_game", "offline" };
 
+            /** @brief 동작 표 — 이름 찾기 · 칸 검사 · 값 검사가 이 표 하나를 쓴다. 열거형 순서와 같다. */
+            static constexpr ActionRow kArrAction[] = {
+                {             LoadBotAction::Login,                "login",                { "_mode" },      kArrLoginMode,      SW_COUNT_OF( kArrLoginMode )},
+                {            LoadBotAction::Logout,               "logout",                         {},            nullptr,                                 0},
+                {        LoadBotAction::Disconnect,           "disconnect",                         {},            nullptr,                                 0},
+                {         LoadBotAction::Reconnect,            "reconnect",                         {},            nullptr,                                 0},
+                {              LoadBotAction::Wait,                 "wait",     { "_minMs", "_maxMs" },            nullptr,                                 0},
+                {            LoadBotAction::Repeat,               "repeat",  { "_count", "_listStep" },            nullptr,                                 0},
+                {   LoadBotAction::DirectoryStatus,     "directory_status",                         {},            nullptr,                                 0},
+                {   LoadBotAction::DirectoryAssign,     "directory_assign",                { "_kind" },            nullptr,                                 0},
+                {          LoadBotAction::ChatJoin,            "chat_join",             { "_channel" },            nullptr,                                 0},
+                {          LoadBotAction::ChatSend,            "chat_send",    { "_channel", "_text" },            nullptr,                                 0},
+                {       LoadBotAction::ChatHistory,         "chat_history",   { "_channel", "_count" },            nullptr,                                 0},
+                {    LoadBotAction::SocialPresence,      "social_presence", { "_status", "_activity" }, kArrPresenceStatus, SW_COUNT_OF( kArrPresenceStatus )},
+                {LoadBotAction::SocialFriendRandom, "social_friend_random",                         {},            nullptr,                                 0},
+                {    LoadBotAction::LeaderboardTop,      "leaderboard_top",     { "_board", "_count" },            nullptr,                                 0},
+                { LoadBotAction::LeaderboardAround,   "leaderboard_around",     { "_board", "_count" },            nullptr,                                 0},
+                {  LoadBotAction::MatchmakingQueue,    "matchmaking_queue",                { "_mode" },            nullptr,                                 0},
+                {         LoadBotAction::WaitMatch,           "wait_match",           { "_timeoutMs" },            nullptr,                                 0},
+                {       LoadBotAction::PartyCreate,         "party_create",                         {},            nullptr,                                 0},
+                {      LoadBotAction::LiveOpsState,        "liveops_state",                         {},            nullptr,                                 0},
+            };
+            static_assert( std::size( kArrAction ) == static_cast<size_t>( LoadBotAction::Count ), "every load bot action has a row" );
+
+            /** @brief 표가 열거형 순서인지 봅니다 — `getRow` 가 열거자를 인덱스로 쓴다. */
+            static constexpr bool isInEnumOrder()
+            {
+                for ( size_t index = 0; index < std::size( kArrAction ); ++index )
+                {
+                    if ( static_cast<size_t>( kArrAction[index]._action ) != index )
+                        return false;
+                }
+                return true;
+            }
+
+            static const ActionRow& getRow( LoadBotAction action ) { return kArrAction[static_cast<size_t>( action )]; }
+
+            /** @brief 첫 칸(`_text`)으로 읽는 키 — 동작마다 많아야 하나다. */
+            static constexpr string_view kArrTextKey[] = { "_channel", "_board", "_mode", "_kind", "_status" };
+
             static constexpr int32 kMaxRepeatDepth        = 8;
             static constexpr int64 kDefaultMatchTimeoutMs = 60000;
             static constexpr int32 kDefaultRowCount       = 10;
 
-            /** @brief 동작마다 받는 칸입니다 — 그 밖의 칸은 오류. */
+            /** @brief 동작마다 받는 칸입니다(`kArrAction`) — 그 밖의 칸은 오류. */
             static bool isKnownKey( LoadBotAction action, string_view key )
             {
                 if ( key == "_action" )
                     return true;
-                switch ( action )
+                for ( const string_view known : getRow( action )._arrKey )
                 {
-                    case LoadBotAction::Wait:
-                        return key == "_minMs" || key == "_maxMs";
-                    case LoadBotAction::Repeat:
-                        return key == "_count" || key == "_listStep";
-                    case LoadBotAction::Login:
-                    case LoadBotAction::MatchmakingQueue:
-                        return key == "_mode";
-                    case LoadBotAction::ChatJoin:
-                        return key == "_channel";
-                    case LoadBotAction::ChatHistory:
-                        return key == "_channel" || key == "_count";
-                    case LoadBotAction::ChatSend:
-                        return key == "_channel" || key == "_text";
-                    case LoadBotAction::SocialPresence:
-                        return key == "_status" || key == "_activity";
-                    case LoadBotAction::LeaderboardTop:
-                    case LoadBotAction::LeaderboardAround:
-                        return key == "_board" || key == "_count";
-                    case LoadBotAction::WaitMatch:
-                        return key == "_timeoutMs";
-                    case LoadBotAction::DirectoryAssign:
-                        return key == "_kind";
-                    default:
-                        return false;
+                    if ( known.empty() == false && known == key )
+                        return true;
                 }
+                return false;
             }
 
             static bool isKnownRootKey( string_view key )
@@ -95,20 +91,24 @@ namespace sw
                        key == "_listStep";
             }
 
-            template <size_t Count>
-            static bool isOneOf( string_view value, const string_view ( &arrAllowed )[Count] )
+            /** @brief 첫 칸 값이 그 동작이 받는 값인지 봅니다. 허용 목록이 없거나 값이 비면(기본) 참입니다. */
+            static bool isAllowedText( const ActionRow& row, string_view value )
             {
-                for ( const string_view allowed : arrAllowed )
+                if ( row._pAllowedText == nullptr || value.empty() )
+                    return true;
+                for ( uint32 index = 0; index < row._allowedTextCount; ++index )
                 {
-                    if ( allowed == value )
+                    if ( row._pAllowedText[index] == value )
                         return true;
                 }
-                return value.empty();
+                return false;
             }
 
             [[nodiscard]] static bool readStep( const JSONValue& value, LoadBotStep& outStep, string& outError, int32 depth );
             [[nodiscard]] static bool readStepList( const JSONValue& listValue, vector<LoadBotStep>& outListStep, string& outError, int32 depth );
         };
+
+        static_assert( LoadBotScenarioInternal::isInEnumOrder(), "kArrAction rows follow LoadBotAction order" );
     } // namespace
 } // namespace sw
 
@@ -116,12 +116,9 @@ namespace sw
 {
     const utf8* toString( LoadBotAction action )
     {
-        for ( const LoadBotScenarioInternal::ActionName& entry : LoadBotScenarioInternal::kArrActionName )
-        {
-            if ( entry._action == action )
-                return entry._name.data();
-        }
-        return "unknown";
+        if ( action >= LoadBotAction::Count )
+            return "unknown";
+        return LoadBotScenarioInternal::getRow( action )._name.data();
     }
 
     bool LoadBotScenarioInternal::readStepList( const JSONValue& listValue, vector<LoadBotStep>& outListStep, string& outError, int32 depth )
@@ -148,7 +145,7 @@ namespace sw
         }
         const string actionName = value.get( "_action", false ).asString();
         bool         bFound     = false;
-        for ( const ActionName& entry : kArrActionName )
+        for ( const ActionRow& entry : kArrAction )
         {
             if ( entry._name == actionName )
             {
@@ -194,9 +191,8 @@ namespace sw
             outError = "action '" + actionName + "' has a negative time, _maxMs below _minMs or a non-positive _count";
             return false;
         }
-        const bool bBadLoginMode = outStep._action == LoadBotAction::Login && isOneOf( outStep._text, kArrLoginMode ) == false;
-        const bool bBadStatus    = outStep._action == LoadBotAction::SocialPresence && isOneOf( outStep._text, kArrPresenceStatus ) == false;
-        if ( bBadLoginMode || bBadStatus )
+        const bool bBadText = isAllowedText( getRow( outStep._action ), outStep._text ) == false;
+        if ( bBadText )
         {
             outError = "action '" + actionName + "' has an unknown value '" + outStep._text + "'";
             return false;
