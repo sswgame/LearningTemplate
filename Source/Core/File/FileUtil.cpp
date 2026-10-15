@@ -642,13 +642,17 @@ namespace sw
 
     bool FileUtil::readFile( string_view fileName, vector<uint8>& outBytes, const uint64 offset, const uint64 maxReadCount )
     {
-        return FileUtilInternal::readRange( fileName, offset, maxReadCount, outBytes );
+        if ( FileUtilInternal::readRange( fileName, offset, maxReadCount, outBytes ) == false )
+            return false;
+        PlatformFileUtil::emulateReadDelay( outBytes.size() );
+        return true;
     }
 
     bool FileUtil::readTextFile( string_view fileName, string& outText )
     {
         if ( FileUtilInternal::readRange( fileName, 0, std::numeric_limits<uint64>::max(), outText ) == false )
             return false;
+        PlatformFileUtil::emulateReadDelay( outText.size() );
 
         // BOM 판정의 기준은 아래 skipUtf8Bom 이다. 여기서 바이트를 따로 세면 한쪽만 고쳤을 때 읽기 경로와
         // 질의 경로가 서로 다른 답을 준다.

@@ -178,6 +178,7 @@ namespace sw
             pOperation->_overlapped.OffsetHigh = static_cast<DWORD>( position >> 32 );
 
             const HANDLE hFile = reinterpret_cast<HANDLE>( static_cast<intptr_t>( request._pFile->_handle ) );
+            PlatformFileUtil::emulateReadDelay( static_cast<size_t>( chunkBytes ) ); // 디스크 흉내 — IO 스레드 하나가 재우므로 느린 디스크 한 대처럼 줄을 선다
             if ( ReadFile( hFile, request._result._bytes.data() + request._bytesDone, static_cast<DWORD>( chunkBytes ), nullptr, &pOperation->_overlapped ) != FALSE )
                 return; // 바로 끝났어도 완료 패킷은 온다(FILE_SKIP_COMPLETION_PORT_ON_SUCCESS 를 켜지 않았다)
 

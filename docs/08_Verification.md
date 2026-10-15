@@ -257,6 +257,33 @@ cd build/Ninja-Debug/Bin
   `EngineJolt_objects` PCH 2.9 s + TU 2.6 s = 5.5 s. 한 파일 수정 뒤 다시 짓는 시간은 TU 하나당 1.9 ~ 2.5 s → 0.3 ~ 0.8 s 다.
   측정하는 법: `/clang:-ftime-trace` 를 `-c --` 앞에 넣는다(뒤에 두면 파일 이름으로 읽힌다). 다른 빌드가 돌 때 측정한 값은 1.5 배까지 흔들린다.
 
+## 2-1. 부하 검증
+
+부하 시나리오 × 하드웨어 프로필을 Release 로 여러 번 돌려 p50 · p99 · max 를 **예산**(제품 목표, `Test/Load/Budgets.json`)과 **기준선**(이 기계의 회귀, `Test/Load/Baselines.json`)에 견주고,
+진 조합은 어디(CPU 게임 스레드 · 렌더 스레드 · GPU · 메모리 · IO · 서버)가 예산을 깼는지 적습니다. 결정과 근거는 [결정 기록](09_Decisions.md) 5-2 끝입니다.
+
+```powershell
+py -3 -m Scripts load list                                       # 시나리오 · 프로필 · 묶음(Test/Load/Suites.json)
+py -3 -m Scripts load run renderbench --profile Mid LowEnd --runs 3
+py -3 -m Scripts load suite baseline --runs 3 --record           # 이 기계의 기준선을 새로 뜬다
+py -3 -m Scripts load scale renderbench --profile LowEnd         # 예산을 지키는 가장 높은 품질 단계
+py -3 -m Scripts load trend renderbench --metric GT.Frame.p99_us # <빌드>/LoadResults/trend.jsonl
+ctest --test-dir build/Ninja-Release -L load                     # 부하 스위트(벤치 · 클러스터) — 시간 예산은 Release 에서만 판정
+```
+
+- **시나리오.** 자동화 시나리오에 `<Load clients rampUpSeconds durationSeconds network meshes movers/>` 한 줄을 더한 것이 부하 시나리오입니다(`Resource/**/automation/load/` — `AppScenarioTest` 가 줍지 않는 폴더).
+  엔진이 시작 프레임에 측정 창을 열고, 창이 닫히면 보고와 함께 끝납니다(`<Pass/>` 를 두지 않는다). 서버 쪽은 `Test/Load/Scenarios/*.load.xml` 의 `<LoadScenario driver="loadbot|cluster">` 가 같은 `<Load>` 를 씁니다 —
+  `loadbot` 은 OnlineLoadBot(`--local-server`), `cluster` 는 EngineTest 의 부하 스위트 `NetSimLoadTest`(루프백 클러스터, 끝에 모든 클라이언트의 상태 해시가 서버와 같은지)입니다.
+- **하드웨어 프로필**(`Test/Load/Profiles.json`): CPU 코어 · 메모리는 Job Object, 엔진 워커 수는 친화도를 따르고(로그 `Initialized with N worker threads`), VRAM · 디스크 · 회선 · 해상도 · 품질은 스위치입니다.
+  소프트웨어 제한이라 결과에 `emulated` 가 붙고(표의 `*`), 기준선 키가 실제 기기 측정(`Native`)과 갈립니다. 클럭 · 캐시 · GPU 성능은 흉내 내지 않습니다 — GPU 숫자는 해상도 · 품질 차이만 반영합니다.
+- **지표.** 프로파일 표(`GT.Frame` · `RT.Frame` · `GPU.Frame` · `RT.BeginFrame` · `GT.Packet.submit` …의 p50 · p99 · max), 히치 꼬리(`[Profile] hitch` — 최악 프레임 다섯과 16 · 33 · 100 ms 를 넘은 프레임 수),
+  `alloc.per_frame`, `gpu_memory_mb`, `startup_ms`, 밖에서 뜬 `private_mb.max` · `handles.max` 와 소크 기울기(`private_mb_per_minute` · `handles_per_minute`, 워밍업 1/4 제외 최소제곱), 봇의 동작별 p99 · `error_percent`, 클러스터의 `tick_p99_us` · `converged`.
+- **판정.** 여러 판(기본 3)의 가운데 값으로만 견주고 최소..최대를 같이 적습니다. 기준선은 p50 15 % · p99 35 % + 바닥(150 us · 32 MB)을 넘으면 회귀이고, max · 히치 수는 기준선과 견주지 않고 예산으로만 봅니다.
+  Release 가 아니면 숫자만 적고 판정하지 않습니다(`--allow-debug` 로 덮는다). 판마다의 출력 전체는 `<빌드>/LoadResults/logs/`, 결과는 `<빌드>/LoadResults/<시각>.json` 입니다.
+- **병목 갈래**는 같은 판의 하위 구간 비율로 가릅니다 — `RT.BeginFrame` 이 `RT.Frame` 의 절반을 넘으면 GPU(펜스 대기), `GT.Packet.submit` 이 `GT.Frame` 의 절반을 넘으면 게임 스레드가 렌더 스레드를 기다린 것, 아니면 가장 무거운 `GT.*` 구간을 붙입니다.
+- **측정하기 전에** 다른 빌드 · GPU 실행이 없는지 봅니다 — `py -3 -m Scripts shared-lock acquire gpu --owner <이름>` 을 쥐고 재며, 다른 에이전트의 빌드가 돌면 기다립니다. VSync 는 기본으로 꺼져 있습니다(`display.vsync`).
+- **CI 야간 잡**(`.github/workflows/load.yml`, 리눅스 `CI-Release`)이 `ctest -L load` 와 묶음 `nightly`(봇 · 클러스터 — GPU 가 없어 App 드라이버 제외)를 돌리고 진 조합을 주석으로 올립니다(`CiFailureReport.py load`). 러너는 측정 기계가 아니므로 기준선은 알림뿐입니다.
+
 ## 3. 검증할 때의 함정
 
 테스트를 쓸 때의 규칙(스위트 이름, 도우미, 단언, 샤드, 골든 기준, EditorTest · CoreTest 의 제약)은 [Test README](../Test/README.md) "단언과 도우미" 와 "함정과 주의" 절이 원본입니다.

@@ -65,6 +65,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("golden", "qa.GoldenImages", "시험 게임 자동 플레이를 네 백엔드로 그려 골든 이미지와 지표로 견준다"),
     Subcommand("soak", "qa.Soak", "자동 플레이 장시간 실행 — 메모리 · 핸들 증가와 프레임 p99"),
     Subcommand("perf", "qa.PerfRegression", "Release 프레임 p50 · p99 를 이 기계의 기준과 견준다"),
+    Subcommand("load", "qa.Load", "부하 검증 — 부하 시나리오 × 하드웨어 프로필을 Release 로 재고 예산(p50 · p99 · max) · 기준선과 견주며 병목을 적는다"),
     Subcommand("perf-compare", "qa.PerfCompare", "성능 변경의 전 · 후(스위치 · 바이너리 A/B)를 번갈아 여러 번 재고 중앙값 표를 낸다"),
     Subcommand("scene-load-bench", "qa.SceneLoadBench", "큰 씬을 만들어 원본 XML 과 쿠킹본의 로드 시간 · 로드 중 최악 프레임을 견준다"),
     Subcommand("symbols", "dev.StoreSymbols", "빌드의 심볼(PDB · .debug)을 심볼 저장소 배치로 복사"),

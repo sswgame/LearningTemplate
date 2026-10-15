@@ -377,6 +377,15 @@
 - **진 실행은 다시 돌릴 명령을 스스로 출력합니다**(2026-10-15). gtest 는 섞기 씨앗만, 언리얼 Automation 은 테스트 이름만 남기는 것으로 알고 있습니다. 우리 요약은 작업 폴더 · 실행 파일 · 진 케이스 필터 · 스위트 종류 · 씨앗 · 엔진 인자 · ctest 항목 · 구성을 한 줄로 적고, `--test_repeat` 면 케이스마다 재현율을, `ScopedTrace`(gtest `SCOPED_TRACE`) 가 걸렸으면 조건(백엔드)을 붙입니다.
 - **테스트가 띄우는 프로세스는 공용 하네스 하나(`test::runProcessWithDeadline`)로 시한을 지킵니다**(2026-10-15). 자식 테스트 · 서버 · App 이 시한 감시를 저마다 짰고 AppSmoke · AppCook 은 시한이 없었습니다. 새니타이저 배수도 이 한 곳입니다.
 - **판정과 보고는 실행기 밖의 창구로 더합니다**(2026-10-15). 케이스를 지게 하는 규칙은 `ITestCaseJudge`, 출력 형식은 `ITestRunListener` 입니다(gtest `TestEventListener` 와 같은 자리). 호스트 스위트의 예상 밖 Error · 시간 예산 · 콘솔 출력이 첫 구현입니다.
+- **부하 검증은 밖의 실행기(`py -3 -m Scripts load`) + 엔진 측정 보고 + 데이터 넷(`Test/Load` 의 프로필 · 예산 · 기준선 · 묶음)입니다**(2026-10-15). 언리얼 Gauntlet 이 밖에서 띄우고 CSV 프로파일러를 읽어 판정하고, 유니티 Performance Testing 이 측정 그룹을 기준선과 견주는 것으로 알고 있습니다.
+  우리는 같은 자리에 둘을 더했습니다 — 예산 실패를 병목 갈래(CPU 게임 스레드 · 렌더 스레드 · GPU · 메모리 · IO · 서버)로 나눠 적고(같은 판의 `RT.BeginFrame` · `GT.Packet.submit` 비율로 누가 누구를 기다렸는지 가른다), 판정은 평균이 아니라 p50 · p99 · max 의 여러 판 가운데 값으로만 합니다.
+  예산(제품 목표)과 기준선(이 기계의 회귀)은 따로 둡니다. 판정은 Release 만(Debug 는 경합 검출기가 부풀리고 Shipping 은 보고가 없다) — `<타깃>_Load` 도 Release 에서만 `--enforce_budgets` 를 받습니다.
+- **부하 시나리오는 자동화 시나리오 형식에 `<Load>` 한 줄을 더한 것이고, 서버 쪽(`<LoadScenario driver="loadbot|cluster">`)도 같은 줄을 씁니다**(2026-10-15). 형식을 하나 더 만들면 App · 봇 · 클러스터가 클라이언트 수 · 램프업 · 시간 · 회선을 저마다 다른 이름으로 받게 됩니다(Nakama 부하 도구 · Locust 는 봇 쪽만 압니다).
+  엔진은 `<Load>` 를 읽어 형식을 검사하고 시작 프레임에 측정 창(`gv_profileSeconds`, 늦게 건 목표를 `FrameProfileSession` 이 읽는다)을 열 뿐, 메시 · 회선 같은 값은 실행기가 명령줄로 옮깁니다(`-gv_benchMeshes`, `-gv_netEmuPreset` — 회선 프리셋 표를 밖에 다시 적지 않으려고 프리셋 이름 변수를 더했다).
+  부하 시나리오는 `<Pass/>` 를 두지 않고 프레임 시한 대신 벽시계 그물만 봅니다. `automation/load/` 하위라 `AppScenarioTest` 가 줍지 않습니다.
+- **하드웨어 프로필(LowEnd · Mid · HighEnd)은 기기 없이 소프트웨어로 흉내 내고 결과에 `emulated` 를 적어 실제 기기 측정(Native)과 기준선 키를 가릅니다**(2026-10-15). 언리얼 Device Profiles 는 실제 기기를 고르는 자리로 알고 있는데, 기기가 없을 때 같은 판정을 미리 돌리는 길이 없습니다.
+  CPU 코어 · 메모리는 Job Object(멈춘 채 만든 뒤 넣는다 — 워커 수가 정해지는 순간과 겨루지 않게), 워커 풀은 친화도를 따르게 엔진을 고쳤고(`thread::getUsableProcessorCount` — `hardware_concurrency` 는 친화도 · 컨테이너 제한을 못 본다), 디스크는 `gv_ioEmuRead*`, VRAM 은 사양 조사가 보고하는 값(`gv_emulatedGPUMemoryMb`)입니다.
+  품질 단계는 이미 있는 Scalability(`graphics.quality` 프리셋 — 그림자 · 시야 거리 · 식생 밀도 · 후처리 · 렌더 스케일)를 프로필이 고르거나(`quality`) 흉내 낸 사양으로 엔진 자동 선택이 고릅니다(`auto`). 자동 조정은 먼저 밖에서 단계를 내려 가며 예산을 지키는 첫 단계를 찾는 `load scale` 로 두었고, 실행 중 동적 조정(언리얼 Dynamic Resolution · 유니티 Adaptive Performance)은 측정으로 이득이 보일 때 들입니다(백로그 `C-29`).
 
 ### 5-3. Core 와 플랫폼
 

@@ -3,9 +3,12 @@
 #include "Engine/UserSettings/HardwareProbe.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/File/FileUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EnginePlatformHeaders.h"
 
@@ -79,16 +82,25 @@ namespace sw
         };
     } // namespace
 
+    /** @brief 부하 검증의 하드웨어 흉내(`Test/Load/Profiles.json` 의 `vram_mb`) — 비디오 메모리를 이 값(MB) 이하로 보고합니다(0 = 실제 값). 품질 자동 선택이 흉내 낸 기계처럼 고른다. */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_emulatedGPUMemoryMb, 0, "하드웨어 흉내: 사양 조사가 보고하는 비디오 메모리 상한(MB, 0=실제 값)" );
+
     HardwareProbeResult HardwareProbe::probe()
     {
         HardwareProbeResult result;
-        result._logicalCoreCount = std::thread::hardware_concurrency();
+        result._logicalCoreCount = thread::getUsableProcessorCount();
 
 #if defined( SW_PLATFORM_WINDOWS )
         MEMORYSTATUSEX memoryStatus{};
         memoryStatus.dwLength = sizeof( memoryStatus );
         if ( GlobalMemoryStatusEx( &memoryStatus ) != FALSE )
             result._systemMemoryMb = static_cast<uint32>( memoryStatus.ullTotalPhys / constant::kBytesPerMegabyte );
+        // 메모리 상한이 걸린 Job Object 안이면(부하 검증의 하드웨어 흉내) 그 상한이 이 프로세스의 메모리다.
+        JOBOBJECT_EXTENDED_LIMIT_INFORMATION jobLimit{};
+        const bool                           bJobLimited = QueryInformationJobObject( nullptr, JobObjectExtendedLimitInformation, &jobLimit, sizeof( jobLimit ), nullptr ) != FALSE &&
+                                 ( jobLimit.BasicLimitInformation.LimitFlags & JOB_OBJECT_LIMIT_PROCESS_MEMORY ) != 0;
+        if ( bJobLimited )
+            result._systemMemoryMb = MathUtil::min( result._systemMemoryMb, static_cast<uint32>( jobLimit.ProcessMemoryLimit / constant::kBytesPerMegabyte ) );
 #elif defined( SW_PLATFORM_LINUX )
         const int64 pageCount = static_cast<int64>( sysconf( _SC_PHYS_PAGES ) );
         const int64 pageSize  = static_cast<int64>( sysconf( _SC_PAGE_SIZE ) );
@@ -96,6 +108,8 @@ namespace sw
             result._systemMemoryMb = static_cast<uint32>( ( pageCount / 1024 ) * pageSize / 1024 );
 #endif
         HardwareProbeInternal::probeAdapter( result );
+        if ( gv_emulatedGPUMemoryMb > 0 )
+            result._gpuMemoryMb = result._gpuMemoryMb > 0 ? MathUtil::min( result._gpuMemoryMb, static_cast<uint32>( gv_emulatedGPUMemoryMb ) ) : static_cast<uint32>( gv_emulatedGPUMemoryMb );
         return result;
     }
 

@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Console/DevCommandRegistry.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/RegistrationList.h"
 
@@ -8,6 +9,7 @@
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -299,6 +301,61 @@ SW_TEST_CASE( AutomationScenarioTest, TimeoutWithoutPass )
             SW_EXPECT_TRUE( result == sw::AutomationResult::TimedOut );
             SW_EXPECT_EQUAL( 0u, Internal::s_beforeInputRunCount );
         }
+    }
+    input.shutdown();
+}
+
+/**
+ * @brief [AutomationScenarioTest] `<Load>` 는 부하 선언을 읽고(모르는 속성 · 창 없음 · `<Pass/>` 는 읽기 오류), 시작 프레임에 측정 창(`gv_profileSeconds`)을 열며 `timeoutFrames` 를 보지 않고, 창이 닫혀 루프가 끝나면 통과다
+ */
+SW_TEST_CASE( AutomationScenarioTest, LoadScenarioOpensTheMeasureWindowAndIgnoresFrameTimeout )
+{
+    using Internal = TestAutomationScenarioInternal;
+    {
+        sw::AutomationScenario scenario;
+        sw::string             error;
+        SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="t"><Load clients="200" rampUpSeconds="2.5" durationSeconds="30" network="lte" meshes="8000" movers="1"/></Scenario>)", "",
+                                            error ),
+                            error.c_str() );
+        const sw::AutomationLoad& load = scenario.getLoad();
+        SW_EXPECT_TRUE( load._bDeclared );
+        SW_EXPECT_EQUAL( 200u, load._clientCount );
+        SW_EXPECT_EQUAL( 8000u, load._meshCount );
+        SW_EXPECT_EQUAL( 1u, load._moverCount );
+        SW_EXPECT_NEAR_EQUAL( 2.5f, load._rampUpSeconds, 1.0e-6f );
+        SW_EXPECT_NEAR_EQUAL( 30.0f, load._durationSeconds, 1.0e-6f );
+        SW_EXPECT_EQUAL( sw::string( "lte" ), load._network );
+    }
+    static constexpr const utf8* kArrBadLoad[] = {
+        R"(<Scenario name="t"><Load meshes="8"/></Scenario>)",
+        R"(<Scenario name="t"><Load durationSeconds="5" network="dialup"/></Scenario>)",
+        R"(<Scenario name="t"><Load durationSeconds="5" bots="3"/></Scenario>)",
+        R"(<Scenario name="t"><Load durationSeconds="5"/><Load durationSeconds="5"/></Scenario>)",
+        R"(<Scenario name="t"><Load durationSeconds="5"/><At frame="3"><Pass/></At></Scenario>)",
+    };
+    for ( const utf8* pFile : kArrBadLoad )
+    {
+        sw::AutomationScenario scenario;
+        sw::string             error;
+        SW_EXPECT_FALSE_MSG( scenario.parse( pFile, "", error ), pFile );
+        SW_EXPECT_TRUE_MSG( error.find( "Load" ) != sw::string::npos || error.find( "Pass" ) != sw::string::npos, error.c_str() );
+    }
+
+    sw::GlobalVariableManager& variables      = sw::engine::getSubsystem<sw::GlobalVariableManager>();
+    const sw::string           profileSeconds = variables.findVariable( "gv_profileSeconds" ) != nullptr ? variables.findVariable( "gv_profileSeconds" )->getValueAsString() : "0";
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [profileSeconds]()
+    {
+        (void)sw::engine::getSubsystem<sw::GlobalVariableManager>().setValueFromString( "gv_profileSeconds", profileSeconds ); // 원래 값으로 — 실패해도 다음 케이스가 이 변수를 읽지 않는다
+    } ) );
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    {
+        sw::AutomationRunner runner;
+        SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately" timeoutFrames="8"><Load durationSeconds="2.2"/><At frame="1"><TestMark/></At></Scenario>)" ) );
+        SW_EXPECT_TRUE( Internal::run( runner, input, 30 ) == sw::AutomationResult::Running ); // 프레임 시한(8)을 넘어도 측정 창이 끝낼 때까지 돈다
+        SW_EXPECT_EQUAL( sw::string( "3" ), variables.findVariable( "gv_profileSeconds" )->getValueAsString() );
+        // 측정 창이 닫혀 엔진이 루프를 끝내면(창 닫힘 자리) 단계를 다 돈 부하 시나리오는 통과다.
+        SW_EXPECT_TRUE_MSG( runner.onWindowClosed( &input ) == sw::AutomationResult::Passed, runner.getFinishReason().c_str() );
     }
     input.shutdown();
 }

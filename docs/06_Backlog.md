@@ -192,8 +192,8 @@
 - `C-22` **작은 정리 후보(2026-10-13 병합 검토에서 모음).** `IPhysicsScene3D/2D` 전방 선언용 `*Fwd.h`, Core → Log 예외 다섯 파일(티어마다 필요한 것이 달라 함수 포인터 하나로 풀리지 않는다), 프렐류드 예외 제거(184 파일).
 
 - `C-28` **테스트 틀 개편(2026-10-15)의 남은 것.** 틀 · 정책 · 확장 지점은 들어갔다(`Test/README.md`, 결정 기록 5-2 끝). 남은 것 —
-  ① 부하 검증 단계: 벤치 · 부하 스위트(`*BenchTest`, `NetReplicationBenchTest` 41 초, `OnlineLoadBotTest` 19 초, `TerrainBenchTest` 18 · 16 초, `NetSimDestructionMatrixTest`)를
-  `SW_TEST_LOAD_SUITE` + `SW_TEST_TIME_BUDGET` 으로 옮기고 정책 줄에 `loadSeconds` 를 더한다. 옮기면 CI `nogpu` 에서 빠지므로 정확성 단언은 짧은 케이스로 남긴다(언리얼 Perf · Stress 필터처럼 갈래만 바꾼다).
+  ① 벤치 스위트는 부하 스위트로 옮겼다(2026-10-15). 옮긴 뒤의 `CoreTest` · `EngineTest` `seconds` 와 `loadSeconds` 는 뺄셈 어림이라 다음 정책 재측정 때 실제 값으로 맞춘다.
+  `NetSimDestructionMatrixTest` 는 손실 회선의 수렴(정확성) 테스트라 nogpu 에 남겼고, 호스트 벤치(`NetUDPBenchTest` · `GlyphBenchTest`)는 스위트 종류가 하나뿐이라 호스트로 남겼다.
   ② 구성 차이 건너뜀 중 `SW_TEST_REQUIRES_FEATURE` 로 아직 안 바꾼 것 — Shipping 의 에디터 · 설정 파일 · 개발 전역 변수 · 서버 팩 오디오 쪽(`TestAppScenario` · `TestConfigManager` · `TestNetClientServer` 등 열 곳 안팎).
   필요하면 `BuildFeature` 에 `Editor` · `DevGlobalVariables` 를 더한다.
   ③ `seconds` · `caseCosts` 는 부하가 걸린 이 PC(실행 파일 다섯 동시)에서 잰 값이다. CI 리눅스 Debug 가 조각마다 제한 시간의 절반을 넘으면 그 러너에서 다시 잰다.

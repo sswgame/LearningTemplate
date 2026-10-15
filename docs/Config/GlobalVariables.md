@@ -21,6 +21,13 @@
 | `gv_userSettingsApplyFrame` | `int32` | `30` | 시험 · 배포본에도 | gv_userSettingsApply 를 적용할 프레임 | [UserSettingsHost.cpp](../../Source/App/UserSettingsHost.cpp) |
 | `gv_userSettingsAutoConfirm` | `bool` | `true` | 시험 · 배포본에도 | gv_userSettingsApply 의 화면 변경을 바로 확인한다 (false 면 카운트다운이 되돌린다) | [UserSettingsHost.cpp](../../Source/App/UserSettingsHost.cpp) |
 
+## `Source/Core/File`
+
+| 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
+|---|---|---|---|---|---|
+| `gv_ioEmuReadKilobytesPerSecond` | `int32` | `0` | 시험 | 디스크 흉내: 파일 읽기 대역폭(KB/s, 0=제한 없음) | [PlatformFileUtil.cpp](../../Source/Core/File/PlatformFileUtil.cpp) |
+| `gv_ioEmuReadLatencyMs` | `int32` | `0` | 시험 | 디스크 흉내: 파일 읽기 한 번마다 더하는 지연(ms, 0=끔) | [PlatformFileUtil.cpp](../../Source/Core/File/PlatformFileUtil.cpp) |
+
 ## `Source/Core/Network`
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
@@ -30,6 +37,7 @@
 | `gv_netEmuJitterMs` | `int32` | `0` | 시험 | 네트워크 흉내: ± 흔들림(ms) — PktLagVariance | [NetEmulation.cpp](../../Source/Core/Network/Transport/NetEmulation.cpp) |
 | `gv_netEmuLatencyMs` | `int32` | `0` | 시험 | 네트워크 흉내: 한쪽 지연(ms) — 언리얼 PktLag | [NetEmulation.cpp](../../Source/Core/Network/Transport/NetEmulation.cpp) |
 | `gv_netEmuLossPercent` | `int32` | `0` | 시험 | 네트워크 흉내: 손실(%) — PktLoss | [NetEmulation.cpp](../../Source/Core/Network/Transport/NetEmulation.cpp) |
+| `gv_netEmuPreset` | `string` | — | 시험 | 네트워크 흉내: 회선 프리셋(off · lan · wifi · lte · badwifi — 비면 위 값들, 있으면 위 값들을 무시) | [NetEmulation.cpp](../../Source/Core/Network/Transport/NetEmulation.cpp) |
 | `gv_netEmuReorderPercent` | `int32` | `0` | 시험 | 네트워크 흉내: 순서 뒤바뀜(%) — PktOrder | [NetEmulation.cpp](../../Source/Core/Network/Transport/NetEmulation.cpp) |
 
 ## `Source/Editor`
@@ -196,6 +204,7 @@
 | `gv_debugHUDOpacity` | `float32` | `0.85` | 일반 | 디버그 HUD 불투명도 0.2~1 (사용자 설정 debug.hudOpacity) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_debugHUDSections` | `string` | — | 일반 | 디버그 HUD 섹션 켬 · 끔 — 공백으로 나눈 '이름'(켬) · '-이름'(끔), 적지 않은 섹션은 기본 (사용자 설정 debug.hudSections) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_effectsQuality` | `int32` | `2` | 일반 | 이펙트 품질 0~3 (사용자 설정 graphics.effectsQuality) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
+| `gv_emulatedGPUMemoryMb` | `int32` | `0` | 시험 | 하드웨어 흉내: 사양 조사가 보고하는 비디오 메모리 상한(MB, 0=실제 값) | [HardwareProbe.cpp](../../Source/Engine/UserSettings/HardwareProbe.cpp) |
 | `gv_foliageDensity` | `float32` | `1.0` | 일반 | 식생 밀도 배율 (사용자 설정 graphics.foliageDensity) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_motionBlur` | `bool` | `true` | 일반 | 모션 블러 (사용자 설정 graphics.motionBlur) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_postQuality` | `int32` | `2` | 일반 | 후처리 품질 0~3 (사용자 설정 graphics.postQuality) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |

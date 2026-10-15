@@ -1,0 +1,42 @@
+{
+  "_doc": [
+    "부하 예산 — 시나리오 × 하드웨어 프로필마다 지표의 상한(가운데 값 기준, 여러 판). Scripts/qa/Load.py 가 Release 결과에만 판정한다.",
+    "이 값은 제품 목표다(측정값을 옮겨 적지 않는다). 회귀는 기준선(Baselines.json)이 따로 본다. '*' 는 모든 프로필의 기본이고 프로필 줄이 덮는다.",
+    "지표 이름: <구간>.p50_us · .p99_us · .max_us(프로파일 표 — GT.Frame · RT.Frame · GPU.Frame · GT.Scene.tick …), hitch.worst_us · hitch.over33ms(프레임 간격),",
+    "alloc.per_frame(프레임당 sw 할당), private_mb.max · gpu_memory_mb(메모리), private_mb_per_minute · handles_per_minute(소크 기울기), startup_ms(기동 — 디스크 흉내),",
+    "봇: <동작>.p99_us · error_percent, 클러스터: tick_p99_us · tick_max_us · converged(아래로 지키는 지표 — 1 이어야 한다)."
+  ],
+  "scenarios": {
+    "renderbench": {
+      "*": {
+        "GT.Frame.p99_us": 16667, "RT.Frame.p99_us": 16667, "GPU.Frame.p99_us": 16667,
+        "hitch.worst_us": 50000, "hitch.over33ms": 5, "alloc.per_frame": 64, "startup_ms": 15000
+      },
+      "Native": { "private_mb.max": 2048 },
+      "HighEnd": { "GT.Frame.p99_us": 8333, "RT.Frame.p99_us": 8333, "GPU.Frame.p99_us": 8333, "private_mb.max": 4096, "gpu_memory_mb": 6000 },
+      "Mid": { "private_mb.max": 2048, "gpu_memory_mb": 3000 },
+      "LowEnd": { "private_mb.max": 1536, "gpu_memory_mb": 1500, "startup_ms": 30000 }
+    },
+    "aiskirmish": {
+      "*": {
+        "GT.Frame.p99_us": 16667, "RT.Frame.p99_us": 16667, "GPU.Frame.p99_us": 16667,
+        "hitch.worst_us": 50000, "hitch.over33ms": 5, "alloc.per_frame": 256, "startup_ms": 15000
+      },
+      "HighEnd": { "private_mb.max": 4096 },
+      "Mid": { "private_mb.max": 2048 },
+      "LowEnd": { "private_mb.max": 1536, "startup_ms": 30000 }
+    },
+    "soak": {
+      "*": {
+        "GT.Frame.p99_us": 16667, "RT.Frame.p99_us": 16667, "hitch.worst_us": 100000, "hitch.over100ms": 0,
+        "private_mb_per_minute": 2.0, "handles_per_minute": 10.0
+      }
+    },
+    "connect": {
+      "*": { "error_percent": 1.0, "chat_send.p99_us": 500000, "login.p99_us": 1000000, "matchmaking_queue.p99_us": 500000, "private_mb.max": 2048 }
+    },
+    "replication": {
+      "*": { "converged": 1, "tick_p99_us": 16667, "tick_max_us": 100000, "private_mb.max": 2048 }
+    }
+  }
+}

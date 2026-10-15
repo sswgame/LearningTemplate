@@ -194,13 +194,11 @@ namespace sw
         if ( _bInitialized )
             return false;
 
-        constexpr uint32 kDefaultThreadCount = 4;
         if ( threadCount == 0 )
         {
-            threadCount = std::thread::hardware_concurrency();
-            if ( threadCount == 0 )
-                threadCount = kDefaultThreadCount;
-            else if ( threadCount > kReservedThreadCount + 1 )
+            // 친화도 · Job Object 로 줄인 코어 수를 본다(부하 검증의 하드웨어 흉내가 워커 수까지 줄이는 자리다).
+            threadCount = thread::getUsableProcessorCount();
+            if ( threadCount > kReservedThreadCount + 1 )
                 threadCount -= kReservedThreadCount;
             else
                 threadCount = 1;
