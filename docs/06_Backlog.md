@@ -198,7 +198,6 @@
 - `C-33` **로그 게이트(2026-10-15)의 남은 것.** 시나리오 · 호스트 스위트는 선언하지 않은 Warning · Error 로 진다(결정 기록 5-2, `Source/Engine/Automation/README.md`). 남은 것 —
   - CPU 단위 테스트(nogpu)는 아직 Error 도 세지 않는다. 2026-10-15 한 번에 표식 없는 Warning · Error 가 약 1,500 줄(일부러 깨진 카탈로그 픽스처 · 외형 스키마 테스트 · 경로 오류 등).
     `SW_TEST_DEFENSIVE_SCOPE` 로 감싸거나 원인을 고친 뒤 `HostLogJudge` 를 모든 스위트로 넓힌다. 줄 목록은 `ctest -L nogpu` 뒤 LastTest.log 의 `[Warning]` · `[Error]` 를 (호출자, 문구) 로 묶어 본다.
-  - 로그 · assert 문자열이 한국어인 파일이 139 개다(`SW_LOG_*( "…한글…"` — 규칙은 영어). 고친 것은 이 묶음이 만진 곳뿐이다.
   - 전용 서버를 서버 설정이 없는 게임(`Config/Server/<게임>.json` 이 Empty 뿐)으로 띄우면 Dev 기본값 Warning 두 줄(`Server config … could not be read`, `ServerConfig using cpp defaults`). 서버를 낼 게임이 정해지면 설정 파일을 둔다.
   - 에디터 켠 짧은 실행(`-gv_profileFrames=90`)을 다른 GPU 작업과 겹쳐 돌리면 종료 때 `Task fencing timeout (5000 ms) before module reload` Error 가 났다(36 회 중 3 회, 단독 재실행 0 회).
     종료 경로(`ModuleHost::drainRenderWorkers`)는 리로드가 아닌데 같은 문구를 쓰고, 5 초 넘게 도는 에디터 배경 작업이 무엇인지 모른다 — 다시 보이면 `py -3 -m Scripts stacks <pid>` 로 워커 스택을 남긴다.
