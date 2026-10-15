@@ -4,7 +4,7 @@
 # ==============================================================================
 #
 # **여기가 "아카이버를 누구로 쓸 것인가" 의 한 자리다.** 플랫폼별 파일이 `toolchain_config.json` 을 직접
-# 읽어 `llvm_path` 를 뒤지지 않는다 — 그 일은 `sw_findLlvmBin`(`FindLlvmBin.cmake`)이 한다.
+# 읽어 `llvm_path` 를 뒤지지 않는다 — DetectToolchain 이 생성 파일로 받아 둔 `SW_TOOLCHAIN_LLVM_PATH` 를 쓴다.
 #
 # 왜 아카이버가 중요한가: clang 이 `-flto` 로 내는 `.obj`/`.o` 는 LLVM 비트코드다.
 # 그것을 묶으려면 LLVM 아카이버여야 한다. 짝이 어긋나면 **LTO 가 통째로, 조용히 꺼진다** —
@@ -12,16 +12,12 @@
 # "이 컴파일러는 IPO 를 지원하지 않는다" 로 보고한다. 그러면 `SW_ENABLE_LTO=ON` 인데 `-flto` 가 한 TU 에도
 # 안 걸리고 아무 오류도 나지 않는다.
 
-include("${CMAKE_CURRENT_LIST_DIR}/FindLlvmBin.cmake")
-
 # ------------------------------------------------------------------------------
 # 1) sw_pinnedArchiverPath — LLVM 아카이버 경로 (없으면 빈 문자열)
 #
 # **실제로 쓰는 컴파일러 옆을 먼저 본다.** 아카이버는 컴파일러가 낸 비트코드를 읽어야 하므로
-# 둘은 같은 LLVM 에서 와야 한다. `sw_findLlvmBin` 은 "컴파일러를 어디서 찾을까" 에 답하는 함수라
-# **시스템 설치를 프로젝트 Tools 보다 먼저** 본다(최초 clone 시 Tools 가 없어도 되도록). 그 우선순위를
-# 아카이버에 그대로 쓰면 어긋난다 — 리눅스에서 시스템 clang 이 잡히면 `/usr/bin` 을 돌려주고,
-# 거기엔 llvm-ar 이 없어 LTO 가 조용히 꺼진다.
+# 둘은 같은 LLVM 에서 와야 한다. 컴파일러 경로가 링크(리눅스 `/usr/bin/clang++` → `/usr/lib/llvm-N/bin`)면
+# 링크가 가리키는 폴더도 본다 — `/usr/bin` 에는 llvm-ar 이 없어 LTO 가 조용히 꺼진다.
 # ------------------------------------------------------------------------------
 function(sw_pinnedArchiverPath OUT_VAR)
 	set(${OUT_VAR} "" PARENT_SCOPE)
@@ -32,22 +28,27 @@ function(sw_pinnedArchiverPath OUT_VAR)
 		set(swArName "llvm-ar")
 	endif()
 
-	# (1) 지금 쓰는 컴파일러 옆.
+	set(swCandidateDirs "")
+
+	# (1) 지금 쓰는 컴파일러 옆(그리고 링크가 가리키는 실제 폴더).
 	if(CMAKE_CXX_COMPILER)
 		get_filename_component(swCompilerDir "${CMAKE_CXX_COMPILER}" DIRECTORY)
+		get_filename_component(swCompilerRealPath "${CMAKE_CXX_COMPILER}" REALPATH)
+		get_filename_component(swCompilerRealDir "${swCompilerRealPath}" DIRECTORY)
+		list(APPEND swCandidateDirs "${swCompilerDir}" "${swCompilerRealDir}")
+	endif()
 
-		if(swCompilerDir AND EXISTS "${swCompilerDir}/${swArName}")
-			set(${OUT_VAR} "${swCompilerDir}/${swArName}" PARENT_SCOPE)
+	# (2) 저장소가 고정한 LLVM(SetupEnvironment 가 적은 llvm_path). `project()` 이전처럼 컴파일러가 아직 없을 때 여기가 답한다.
+	if(SW_TOOLCHAIN_LLVM_PATH)
+		list(APPEND swCandidateDirs "${SW_TOOLCHAIN_LLVM_PATH}/bin")
+	endif()
+
+	foreach(swCandidateDir IN LISTS swCandidateDirs)
+		if(EXISTS "${swCandidateDir}/${swArName}")
+			set(${OUT_VAR} "${swCandidateDir}/${swArName}" PARENT_SCOPE)
 			return()
 		endif()
-	endif()
-
-	# (2) 저장소가 고정한 LLVM. `project()` 이전처럼 컴파일러가 아직 없을 때도 여기가 답한다.
-	sw_findLlvmBin(swLlvmBin)
-
-	if(swLlvmBin AND EXISTS "${swLlvmBin}/${swArName}")
-		set(${OUT_VAR} "${swLlvmBin}/${swArName}" PARENT_SCOPE)
-	endif()
+	endforeach()
 endfunction()
 
 # ------------------------------------------------------------------------------
