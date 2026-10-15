@@ -641,13 +641,13 @@ msgstr "버튼, 입력 필드 및 컨트롤 프레임의 모서리 둥글기(px,
 
 #: Source/Editor/Common/GUI/EditorThemeUtil.cpp
 msgctxt "EdCommon.ThemePreset"
-msgid "Choose the theme preset for the whole editor (Modern Dark, Deep Charcoal, Midnight Blue and more)."
-msgstr "에디터 전체의 테마 프리셋(Modern Dark, Deep Charcoal, Midnight Blue 등)을 선택합니다"
+msgid "Choose the editor theme (Dark, Light, High Contrast and more). Themes are token files under Resource/editor/theme."
+msgstr "에디터 테마(다크, 라이트, 고대비 등)를 고릅니다. 테마는 Resource/editor/theme 의 토큰 파일입니다"
 
 #: Source/Editor/Common/GUI/EditorThemeUtil.cpp
 msgctxt "EdCommon.ThemeReset"
-msgid "Restore every theme setting to the Modern Dark defaults."
-msgstr "모든 테마 설정을 Modern Dark 기본값으로 복원합니다"
+msgid "Drop your accent and rounding changes and use the values of the current theme."
+msgstr "바꾼 강조색과 둥글기를 버리고 지금 테마의 값을 씁니다"
 
 #: Source/Editor/Common/GUI/EditorThemeUtil.cpp
 msgctxt "EdCommon.ThemeTabRounding"

@@ -33,8 +33,6 @@ namespace sw::editor
         PROPERTY()
         string _spriteAtlas{}; ///< 스프라이트 클립 패널의 기본 아틀라스(리소스 경로)
 
-        PROPERTY( Min = 6.0 )
-        float32 _fontSize{ 16.0f }; ///< 에디터 글꼴 크기(픽셀, DPI 배율 전)
         PROPERTY()
         float4 _clearColor{ 0.12f, 0.15f, 0.18f, 1.0f }; ///< 씬 뷰 · 게임 뷰 렌더 타깃 클리어 색
 

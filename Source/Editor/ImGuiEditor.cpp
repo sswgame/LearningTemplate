@@ -10,6 +10,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Backend/EditorDrawDataSnapshot.h"
+#include "Editor/Common/Backend/EditorUICapture.h"
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Backend/ImGuiOsInputFilter.h"
@@ -368,6 +369,7 @@ namespace sw::editor
         , _arrDrawSnapshot{}
         , _drawSnapshotHandoff{}
         , _lastDrawSnapshotSequence{ 0 }
+        , _pUICapture{ nullptr }
         , _bInitialized{ SW_FALSE }
         , _reservedFlags{ 0 }
     {
@@ -557,6 +559,7 @@ namespace sw::editor
         _editorContext = make_unique<EditorContext>();
         _editorContext->initialize();
         _editorContext->setDockLayout( &_dockLayout );
+        _pUICapture = &_editorContext->getSubsystem<EditorUICapture>();
         // 테마는 컨텍스트가 활성화된 뒤에 읽어야 한다. 테마 상태를 컨텍스트가 보관하므로, 그 전에 부르면 적용한 테마가 갈 곳이
         // 없어 조용히 버려진다. 이때 stored preset 이 0 에 머문다.
         EditorThemeUtil::loadFromConfig();
@@ -605,6 +608,9 @@ namespace sw::editor
         ImGuiEditorInternal::releaseModuleUndoCommands();
         if ( _editorContext == nullptr )
             return;
+        // 렌더 스레드는 이미 쉬고 있다(종료 경로가 렌더 워커를 비운 뒤다).
+        _pUICapture->releaseRHI( _pRHIDevice );
+        _pUICapture = nullptr;
         _editorContext->getSubsystem<EditorRenderViews>().destroyViewTargets();
         _editorContext->getSubsystem<EditorPanelManager>().shutdownAllPanels( nullptr );
         _editorContext->getSubsystem<EditorPanelManager>().clear();
@@ -680,6 +686,9 @@ namespace sw::editor
             // 프레임 앞의 상태 정리는 단계로 옮기지 않는다. 메뉴 · 패널이 이번 프레임에 읽을 값이라 프레임을 열기 전이어야 한다.
             // 확장 모듈은 에디터가 뜬 뒤에도 로드되고 언로드된다. 등록 세대가 바뀌었으면 인스턴스를 맞추고, 같으면 비교 한 번으로 끝난다.
             _editorContext->syncExtensionRegistrations();
+            // 토큰 파일이 바뀌었으면(핫 리로드) 프레임을 열기 전에 다시 읽어 이번 프레임부터 새 스타일로 그린다.
+            if ( _editorContext->getSubsystem<EditorTheme>().consumeTokensChanged() )
+                EditorThemeUtil::reloadThemes();
 #if !defined( SW_SHIPPING )
             // 기동 뒤에 올라온 확장 모듈의 환경설정 섹션은 기본값이다. 새 섹션이 없으면 목록을 한 번 훑고 끝난다.
             if ( EditorPreferencesStore::hasNewSections() )
@@ -751,7 +760,10 @@ namespace sw::editor
             ++_lastDrawSnapshotSequence;
             {
                 SW_EDITOR_PROFILE_SCOPE( "GT.Editor.captureDrawSnapshot" );
-                _arrDrawSnapshot[writeSlot].capture( _lastDrawSnapshotSequence );
+                // 에디터 UI 캡처 요청이 있으면 이 프레임의 모든 뷰포트 합본도 넘긴다. 잘림 지표는 창 상태가 남아 있는 지금 잰다.
+                EditorUICaptureJob captureJob{};
+                const bool         bCapture = _pUICapture != nullptr && _pUICapture->takeJob( captureJob );
+                _arrDrawSnapshot[writeSlot].capture( _lastDrawSnapshotSequence, bCapture ? &captureJob : nullptr );
             }
             if ( _rendererBackend != nullptr )
                 _rendererBackend->getDrawReleaseQueue().markSnapshotPublished( _lastDrawSnapshotSequence );
@@ -782,6 +794,12 @@ namespace sw::editor
             if ( pDrawData != nullptr )
                 renderBackend( pRHIDevice, pDrawData );
 
+            // 에디터 UI 캡처: 같은 프레임의 모든 뷰포트 합본을 캡처 텍스처에 한 번 더 그린다. GL 의 플로팅 창 렌더(아래)보다 먼저다 — 그것은 컨텍스트를 바꾼다.
+            ImDrawData* const pCaptureDrawData = _arrDrawSnapshot[slot].findCaptureDrawData();
+            const bool        bCapture         = pCaptureDrawData != nullptr && _pUICapture != nullptr && _rendererBackend != nullptr;
+            if ( bCapture )
+                _pUICapture->renderJob( *pRHIDevice, *_rendererBackend, *pCaptureDrawData, _arrDrawSnapshot[slot].getCaptureJob() );
+
             // 이 프레임의 스냅샷보다 먼저 해제 요청된 자원은 앞 프레임들만 그렸다. 이 프레임의 GPU 작업이 끝난 뒤에 해제되도록 디바이스로 넘긴다.
             if ( _rendererBackend != nullptr )
                 _rendererBackend->getDrawReleaseQueue().handOverToDevice( *pRHIDevice, _arrDrawSnapshot[slot].getSequence() );
@@ -799,7 +817,9 @@ namespace sw::editor
 
     void ImGuiEditor::postPresent( IRHIDevice* pRHIDevice )
     {
-        std::ignore = pRHIDevice;
+        // endFrame 뒤라 이 프레임에 그린 캡처를 읽을 수 있다(GPU 를 기다린다 — 캡처한 프레임만).
+        if ( _pUICapture != nullptr && pRHIDevice != nullptr )
+            _pUICapture->finishJob( *pRHIDevice );
         // 메인 스냅샷 렌더가 끝났으므로 UI 스레드가 다음 슬롯을 쓸 수 있게 해제한다.
         // 보조 뷰포트는 updateUI 에서 UI 스레드가 이미 렌더하고 present 했다.
         _drawSnapshotHandoff.endRender();

@@ -58,5 +58,5 @@ SW_TEST_CASE( ConfigHotReloadTest, ChangedFileGoesToItsOwner )
     EditorToolDefaults loaded{};
     SW_EXPECT_TRUE( loaded.loadFromHostPath( localToolDefaults ) );
     SW_EXPECT_EQUAL( string( "game/empty/maps/probe.tilemap.json" ), loaded._defaultMap );
-    SW_EXPECT_NEAR_EQUAL( EditorToolDefaults{}._fontSize, loaded._fontSize, 1e-6f );
+    SW_EXPECT_EQUAL( EditorToolDefaults{}._spriteAtlas, loaded._spriteAtlas );
 }

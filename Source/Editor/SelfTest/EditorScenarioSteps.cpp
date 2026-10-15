@@ -40,6 +40,7 @@
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorGridUtil.h"
+#include "Editor/Viewport/EditorViewportBillboard.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
 #include "Engine/Automation/AutomationProbe.h"
@@ -69,7 +70,7 @@ namespace sw::editor
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeVisualizer, "", "탐침 Editor.VisualizerOn 이 볼 뷰포트 시각화 id (시나리오용)" );
     /** @brief 프로브 `Editor.PanelOpen` 이 볼 패널 id 입니다. 시나리오가 `<Variable>` 로 정합니다. */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbePanel, "", "탐침 Editor.PanelOpen 이 볼 패널 id (시나리오용)" );
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeObject, "", "탐침 Editor.HierarchyRowIcon 이 볼 오브젝트 이름 (시나리오용)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeObject, "", "탐침 Editor.HierarchyRowIcon · Editor.BillboardIcon 이 볼 오브젝트 이름 (시나리오용)" );
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeOverlay, "view", "탐침 Editor.Overlay* 가 볼 씬 뷰 오버레이 바 id (view · transform · display · tools, 시나리오용)" );
     /** @brief 프로브 `Editor.SelectedProperty` 가 볼 `<컴포넌트 타입>.<프로퍼티>` 입니다. */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeProperty, "", "탐침 Editor.SelectedProperty 가 볼 <컴포넌트 타입>.<프로퍼티> (시나리오용)" );
@@ -752,9 +753,9 @@ namespace sw::editor
                 return true;
             }
 
-            [[nodiscard]] static bool readThemePreset( const GameObjectManager* /*pManager*/, float64& outValue )
+            [[nodiscard]] static bool readThemeName( const AutomationProbeQuery& /*query*/, AutomationProbeValue& outValue )
             {
-                outValue = static_cast<float64>( static_cast<uint32>( EditorThemeUtil::getActiveTheme()._preset ) );
+                outValue.setText( EditorThemeUtil::getActiveTheme()._name );
                 return true;
             }
 
@@ -1043,6 +1044,17 @@ namespace sw::editor
                 if ( pObject == nullptr )
                     return false;
                 outValue = static_cast<float64>( EditorComponentIcon::decodeGlyph( EditorComponentIcon::findObjectRow( *pObject )._pGlyph ) );
+                return true;
+            }
+
+            /** @brief `-gv_editorProbeObject` 이름의 오브젝트에 씬 뷰가 지난 그리기에서 넘긴 빌보드 글리프의 코드 포인트입니다. 쓰레기 문자열이면 0 입니다. */
+            [[nodiscard]] static bool readBillboardIcon( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const GameObjectManager* pManager = editor::getActiveObjectManager();
+                const GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( gv_editorProbeObject.c_str() ) ) : nullptr;
+                if ( pObject == nullptr )
+                    return false;
+                outValue = static_cast<float64>( EditorViewportBillboard::findDrawnGlyph( *pObject ) );
                 return true;
             }
 
@@ -1555,8 +1567,8 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readHierarchyVisibleRoots );
     SW_AUTOMATION_PROBE( editorNoSearchResultHintShown, "Editor.NoSearchResultHintShown", "1 when a panel drew its zero-results hint for a search this or last frame",
                          &EditorScenarioStepsInternal::readNoSearchResultHintShown );
-    SW_AUTOMATION_PROBE( editorThemePreset, "Editor.ThemePreset", "Active theme preset: 0 ModernDark, 1 DeepCharcoal, 2 MidnightBlue, 3 ClassicDark",
-                         &EditorScenarioStepsInternal::readThemePreset );
+    SW_AUTOMATION_QUERY_PROBE( editorThemeName, "Editor.ThemeName", "Active theme token set name (dark, light, highcontrast, ...)", &EditorScenarioStepsInternal::readThemeName,
+                               false, false );
     SW_AUTOMATION_PROBE( editorAccentColor, "Editor.AccentColor", "Accent color as 0xRRGGBB", &EditorScenarioStepsInternal::readAccentColor );
     SW_AUTOMATION_PROBE( editorSelectedIsEditorCamera, "Editor.SelectedIsEditorCamera", "1 when the primary selection is the viewport's editor camera",
                          &EditorScenarioStepsInternal::readSelectedIsEditorCamera );
@@ -1595,6 +1607,9 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readSelectedCurveKeyCount );
     SW_AUTOMATION_PROBE( editorHierarchyRowIcon, "Editor.HierarchyRowIcon", "Icon code point of the Hierarchy row of the object named by gv_editorProbeObject",
                          &EditorScenarioStepsInternal::readHierarchyRowIcon );
+    SW_AUTOMATION_PROBE( editorBillboardIcon, "Editor.BillboardIcon",
+                         "Icon code point the scene view billboard of the object named by gv_editorProbeObject drew last frame (0 when not drawn or not one glyph)",
+                         &EditorScenarioStepsInternal::readBillboardIcon );
     SW_AUTOMATION_PROBE( editorObjectActive, "Editor.ObjectActive", "Own active bit of the object named by gv_editorProbeObject", &EditorScenarioStepsInternal::readObjectActive );
     SW_AUTOMATION_PROBE( editorObjectHiddenInEditor, "Editor.ObjectHiddenInEditor", "1 when the object named by gv_editorProbeObject is hidden in the editor only",
                          &EditorScenarioStepsInternal::readObjectHiddenInEditor );

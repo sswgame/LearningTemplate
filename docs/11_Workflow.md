@@ -103,6 +103,7 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 | 이름 바꾸기 · 이동 · 문서 · 주석 다듬기 · 반복 편집 | `mech-worker`(sonnet) | low |
 | 범위가 정해진 C++ · CMake · 파이썬 변경 | `worker`(opus, 변경이 국소적이고 명세가 있으면 sonnet) | medium |
 | 설계 · 모듈을 넘는 리팩터 · GPU/스레드 결함 · 배치 통합 | `integrator`(opus) | high |
+| 에디터 UI 캡처의 UX 점검(읽기 전용, 기준은 [EditorUX](plans/EditorUX.md)) | `ux-reviewer`(sonnet) | medium |
 
 - 사용자가 요청을 넘기면, 지금 세션과 다른 모델 · effort 가 맞을 때 한 줄로 권하고 진행합니다. 질문 · 상태 확인 · 진행 보고는 low 로 충분합니다.
 - 요청이 이 문서의 규칙과 부딪히거나 한도에 닿으면 실행 전에 한 줄로 알립니다(규칙 이름 · 비용 · 권하는 행동).

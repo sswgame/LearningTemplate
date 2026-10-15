@@ -51,6 +51,8 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/GUI/EditorComponentIcon.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorToolDefaults.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorConfig.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorThemeConfig.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorThemeTokens.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorSettingsRegistry.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorPlaySession.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/EditorPaths.cpp"
@@ -143,12 +145,13 @@ if(swActiveGameTarget AND TARGET ${swActiveGameTarget})
 	add_dependencies(EditorTest ${swActiveGameTarget})
 endif()
 
-# EditorConfig·EditorToolDefaults 는 REFLECT 타입이라 StaticType() 이 코드젠에서 나온다. EditorModule 을
+# EditorConfig·EditorToolDefaults·EditorThemeTokens 는 REFLECT 타입이라 StaticType() 이 코드젠에서 나온다. EditorModule 을
 # 링크하지 않는 테스트도 그 심볼이 필요하므로 이 헤더들만 따로 코드젠한다.
 sw_addReflectionStep(EditorTest
 	HEADERS
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorConfig.h"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorPreferences.h"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorThemeTokens.h"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorToolDefaults.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/EditorPreviewProbe.h"
 	INCLUDES

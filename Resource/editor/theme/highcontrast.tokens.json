@@ -1,0 +1,61 @@
+{
+    "_name": "highcontrast",
+    "_displayName": "High Contrast",
+    "_color": {
+        "_text": "#FFFFFF",
+        "_accent": "#FFD900",
+        "_windowBg": "#000000",
+        "_panelBg": "#000000",
+        "_headerBg": "#1A1A1A",
+        "_frameBg": "#000000",
+        "_border": "#FFFFFF",
+        "_success": "#4CFF66",
+        "_warning": "#FFD900",
+        "_error": "#FF6666",
+        "_info": "#66E6FF",
+        "_textMuted": "#CCCCCC",
+        "_scrollbarBg": "#000000",
+        "_dockingEmptyBg": "#000000",
+        "_tableRowBgAlt": "#FFFFFF14",
+        "_overlayBg": "#000000",
+        "_selectionOutline": "#FF9E26F2",
+        "_highlight": "#FFC83C",
+        "_toggleInactive": "#737373",
+        "_axisX": "#D94040",
+        "_axisY": "#4CBF59",
+        "_axisZ": "#408CF2"
+    },
+    "_radius": {
+        "_window": 0,
+        "_frame": 0,
+        "_popup": 0,
+        "_tab": 0,
+        "_scrollbar": 0,
+        "_grab": 0
+    },
+    "_spacing": {
+        "_windowPaddingX": 8,
+        "_windowPaddingY": 8,
+        "_framePaddingX": 6,
+        "_framePaddingY": 4,
+        "_itemSpacingX": 6,
+        "_itemSpacingY": 4,
+        "_itemInnerSpacingX": 4,
+        "_itemInnerSpacingY": 4,
+        "_indent": 20,
+        "_scrollbarSize": 12,
+        "_grabMinSize": 8
+    },
+    "_stroke": {
+        "_window": 1,
+        "_child": 1,
+        "_popup": 2,
+        "_frame": 1,
+        "_tab": 1
+    },
+    "_typography": {
+        "_fontSize": 16,
+        "_iconScale": 0.8
+    },
+    "_density": 1.0
+}

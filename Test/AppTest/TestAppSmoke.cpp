@@ -746,7 +746,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|dpi.monitorScaleFollows",
         "EditorSelfTest|PASS|input.hierarchySearchTyping",
         "EditorSelfTest|PASS|input.tooltipOnHover",
-        "EditorSelfTest|PASS|input.classicDarkSwatch",
+        "EditorSelfTest|PASS|input.themeSwatch",
         "EditorSelfTest|PASS|hierarchy.visibilityToggleFits",
         "EditorSelfTest|PASS|contentBrowser.deleteRefreshesTheList",
         "EditorSelfTest|PASS|contentBrowser.browsingWritesNoMeta",

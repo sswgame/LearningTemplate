@@ -9,6 +9,7 @@
 #include "pch.h"
 
 #include "Editor/Common/Asset/EditorAssetValidation.h"
+#include "Editor/Common/Backend/EditorUICapture.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/EditorPaths.h"
@@ -75,18 +76,20 @@ namespace sw::editor
         _scope.addSubsystem( make_unique<EditorRenderViews>() );
         _scope.addSubsystem( make_unique<EditorPlaySessionState>() );
         _scope.addSubsystem( make_unique<EditorTheme>() );
+        _scope.addSubsystem( make_unique<EditorUICapture>() );
         _scope.addSubsystem( make_unique<EditorExtensionSubsystems>( _scope ) ); // 확장이 기여한 서브시스템(SW_EDITOR_SUBSYSTEM) — 프레임 앞 syncExtensionRegistrations 가 만든다
         // 확장 모듈이 언로드되기 전에 그 모듈의 등록 줄로 만든 인스턴스를 지운다 — 훑는 매니저들에 의존하므로 그들보다 먼저 내려간다.
         _scope.addSubsystem( make_unique<EditorModuleUnloadListener>( *this ) );
 
         setActive( this );
 
-        // 에디터 UI 문구 — 엔진 표와 따로 올려 에디터가 있는 동안만 쓰인다(없으면 SW_LOCTEXT 가 영어 원문을 돌려준다).
-        if ( LocalizationManager* pLocalization = findSubsystem<LocalizationManager>() )
-        {
-            if ( pLocalization->mountProject( EditorPaths::kLocalizationProject, LocalizationScope::Editor ) == false )
-                SW_LOG_WARNING( "Editor localization project '%#' is not (fully) loaded", EditorPaths::kLocalizationProject );
-        }
+        // 에디터 UI 문구 — 엔진 표와 따로 올려 에디터가 있는 동안만 쓰인다. 탑재하지 못하면 SW_LOCKEY 자리에 키 이름이 보인다.
+        // 주의: 지역화 관리자는 엔진 서비스다. 멤버 `findSubsystem` 은 이 컨텍스트의 범위만 보므로 `editor::findSubsystem`(호스트까지 찾는다)을 쓴다.
+        LocalizationManager* const pLocalization = editor::findSubsystem<LocalizationManager>();
+        if ( pLocalization == nullptr )
+            SW_LOG_WARNING( "No LocalizationManager - editor text shows its keys" );
+        else if ( pLocalization->mountProject( EditorPaths::kLocalizationProject, LocalizationScope::Editor ) == false )
+            SW_LOG_WARNING( "Editor localization project '%#' is not (fully) loaded", EditorPaths::kLocalizationProject );
 
         if ( _scope.getCollection().initializeAll( EngineSubsystemHost::kClient ) == false )
             SW_LOG_ERROR( "Editor subsystems did not all initialize: %#", _scope.getCollection().getError().c_str() );
@@ -97,7 +100,8 @@ namespace sw::editor
         if ( findEditorScope() == &_scope )
             setActive( nullptr );
 
-        if ( LocalizationManager* pLocalization = findSubsystem<LocalizationManager>() )
+        LocalizationManager* const pLocalization = editor::findSubsystem<LocalizationManager>(); // 엔진 서비스 — 탑재와 같은 창구
+        if ( pLocalization != nullptr )
             pLocalization->unmountProjects( LocalizationScope::Editor );
 
         // 초기화한 것을 역순으로 종료하고, 모두를 역순으로 소멸시킨다(넷 플레이 세션의 자식 프로세스 종료도 여기 — 엔진 로거는 아직 있다).
