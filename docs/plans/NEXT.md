@@ -25,7 +25,7 @@ main 은 `origin/main` 보다 184 커밋 앞서 있고 push 하지 않았습니�
 
 ## 2. 검증 상태와 남은 검증
 
-2026-10-15 `verify` 묶음이 병합된 전체(terrain2 · modgpu · fixnogpu · fixlint · cond · folders 포함)를 검증했습니다. Debug · Shipping `all AllTests` 경고 0 · 오류 0,
+2026-10-15 `verify` 묶음이 병합된 전체(terrain2 · modgpu · fixnogpu · fixlint · cond · folders · structure 포함)를 검증했습니다. Debug · Shipping `all AllTests` 경고 0 · 오류 0,
 `lint` 68/68, Debug `nogpu` 49/49, Shipping `nogpu` 48/48, Debug · Shipping `hostgpu` 7/7(에디터 체인 네 백엔드 · 게임 팩 시나리오 × 네 백엔드 · 스모크)입니다.
 Shipping 키트는 STATIC 이고 내보내기 매크로가 빈 것을 산출물로 확인했습니다(키트 TU 246 개에 내보내기 정의 0, 정적 `GF_*.lib` 47 개의 `/EXPORT` 지시문 0).
 `rhiswap` 시나리오 셋(`swapbackends` · `terrainedits` · `removedevice`)은 AppScenarioTest 밖이라 손으로 돌렸고 모두 통과했습니다.
