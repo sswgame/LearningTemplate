@@ -61,7 +61,7 @@ kWarmupFraction = 0.25
 _kHitchRe = re.compile(r"\[Profile\] hitch\s+worst (\d+) (\d+) (\d+) (\d+) (\d+) us\s+over16ms (\d+)\s+over33ms (\d+)\s+over100ms (\d+)")
 _kAllocRe = re.compile(r"\[Profile\] alloc/frame\s+(\d+)\.(\d)")
 _kGpuMemoryRe = re.compile(r"\[Profile\] GPU memory by kind .*?\s(\d+)\.(\d+) MB in")
-_kStartupRe = re.compile(r"startup (\d+) ms")
+_kStartupRe = re.compile(r"startup (\d+) ms(?:, (\d+) file opens)?")
 _kWorkerRe = re.compile(r"Initialized with (\d+) worker threads")
 _kLoadMetricRe = re.compile(r"\[LoadMetric\] (\w+)=(-?[\d.]+)")
 
@@ -220,6 +220,8 @@ def readAppMetricsInternal(listLine: list[str]) -> dict[str, float]:
             metrics["gpu_memory_mb"] = float(f"{match.group(1)}.{match.group(2)}")
         elif (match := _kStartupRe.search(line)) is not None:
             metrics["startup_ms"] = float(match.group(1))
+            if match.group(2) is not None:
+                metrics["startup_file_opens"] = float(match.group(2))  # 기동이 연 파일 수 — 느린 디스크에서 기동 시간을 정한다
         elif (match := _kWorkerRe.search(line)) is not None:
             metrics["workers"] = float(match.group(1))  # 하드웨어 흉내가 워커 풀까지 줄였는지(친화도 → 워커 수)
     return metrics
@@ -262,7 +264,7 @@ def makeAppArgumentsInternal(declaration: LoadDeclaration, profile: HardwareProf
 
 
 def runAppDriver(declaration: LoadDeclaration, profile: HardwareProfile, tree: BuildTree, backend: str, gameTable: dict,
-                 qualityOverride: str = "") -> RunMeasurement:
+                 qualityOverride: str = "", listExtraArgument: list[str] | None = None) -> RunMeasurement:
     measurement = RunMeasurement()
     appPath = tree.appExecutable
     if appPath is None:
@@ -277,7 +279,7 @@ def runAppDriver(declaration: LoadDeclaration, profile: HardwareProfile, tree: B
         quality = qualityOverride or profile.data.get("quality", "")
         if quality and quality != "auto":
             settingsPath.write_text(json.dumps({"version": 1, "values": readScalabilityPresetInternal(getProjectRoot(), quality)}) + "\n", encoding="utf-8")
-        listArgument = makeAppArgumentsInternal(declaration, profile, backend, gameTable, settingsPath)
+        listArgument = makeAppArgumentsInternal(declaration, profile, backend, gameTable, settingsPath) + list(listExtraArgument or [])
         measurement.command = [str(appPath), *listArgument]
         timeoutSeconds = declaration.durationSeconds * 2.0 + 240.0
         result = runApp(appPath, listArgument, timeoutSeconds=timeoutSeconds, sampleIntervalSeconds=max(1.0, declaration.durationSeconds / 60.0),
@@ -362,9 +364,9 @@ def runClusterDriver(declaration: LoadDeclaration, profile: HardwareProfile, tre
 
 
 def runOnce(catalog: LoadCatalog, declaration: LoadDeclaration, profile: HardwareProfile, tree: BuildTree, backend: str,
-            qualityOverride: str = "") -> RunMeasurement:
+            qualityOverride: str = "", listExtraArgument: list[str] | None = None) -> RunMeasurement:
     if declaration.driver == "app":
-        return runAppDriver(declaration, profile, tree, backend, loadGameTable(catalog.repositoryRoot), qualityOverride)
+        return runAppDriver(declaration, profile, tree, backend, loadGameTable(catalog.repositoryRoot), qualityOverride, listExtraArgument or [])
     if declaration.driver == "loadbot":
         return runLoadBotDriver(declaration, profile, tree, catalog.repositoryRoot)
     return runClusterDriver(declaration, profile, tree)
@@ -408,7 +410,7 @@ def classifyBottleneck(metricName: str, summary: dict[str, dict[str, float]]) ->
         return "memory"
     if metricName.startswith("handles"):
         return "OS handles (leak)"
-    if metricName == "startup_ms":
+    if metricName.startswith("startup_"):
         return "IO (startup reads)"
     if metricName.startswith("tick_") or metricName in ("converged", "hash_mismatch"):
         return "server tick (cluster)"
@@ -489,7 +491,7 @@ def runCombination(catalog: LoadCatalog, scenarioName: str, profileName: str, tr
     label = f"{scenarioName} x {profileName}{' (emulated)' if profile.bEmulated else ''}{f' quality={qualityOverride}' if qualityOverride else ''}"
     listMeasurement: list[RunMeasurement] = []
     for runIndex in range(max(1, args.runs)):
-        measurement = runOnce(catalog, declaration, profile, tree, args.backend, qualityOverride)
+        measurement = runOnce(catalog, declaration, profile, tree, args.backend, qualityOverride, args.app_arg)
         if measurement.skipReason:
             print(f"[Load] SKIP {label}: {measurement.skipReason}", flush=True)
             return {"scenario": scenarioName, "profile": profileName, "verdict": "skip", "skip_reason": measurement.skipReason}
@@ -580,6 +582,7 @@ def addRunArgumentsInternal(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--record", action="store_true", help="이 기계의 기준선을 남긴다(Test/Load/Baselines.json)")
     parser.add_argument("--allow-debug", action="store_true", help="Release 가 아닌 빌드도 판정한다(숫자는 의미가 적다)")
     parser.add_argument("--out", type=Path, default=None, help="결과 JSON 경로(기본 <빌드>/LoadResults/<시각>.json)")
+    parser.add_argument("--app-arg", action="append", default=[], help="App 에 더 넘길 인자(진단용, 여러 번 — 예: --app-arg=-gv_ioLogReads=1)")
 
 
 def commandList(catalog: LoadCatalog) -> int:

@@ -3146,6 +3146,14 @@
    "source": "Source/Core/File/PlatformFileUtil.cpp"
   },
   {
+   "name": "gv_ioLogReads",
+   "type": "bool",
+   "default": "false",
+   "kind": "시험",
+   "description": "읽으려고 연 파일마다 경로 · 바이트 · 스레드를 로그로 남긴다(기동 · 히치의 동기 읽기 찾기)",
+   "source": "Source/Core/File/PlatformFileUtil.cpp"
+  },
+  {
    "name": "gv_meadowAutoPlay",
    "type": "int32",
    "default": "0",
