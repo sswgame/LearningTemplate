@@ -196,6 +196,7 @@
   - 전용 서버를 서버 설정이 없는 게임(`Config/Server/<게임>.json` 이 Empty 뿐)으로 띄우면 Dev 기본값 Warning 두 줄(`Server config … could not be read`, `ServerConfig using cpp defaults`). 서버를 낼 게임이 정해지면 설정 파일을 둔다.
   - 에디터 켠 짧은 실행(`-gv_profileFrames=90`)을 다른 GPU 작업과 겹쳐 돌리면 종료 때 `Task fencing timeout (5000 ms) before module reload` Error 가 났다(36 회 중 3 회, 단독 재실행 0 회).
     종료 경로(`ModuleHost::drainRenderWorkers`)는 리로드가 아닌데 같은 문구를 쓰고, 5 초 넘게 도는 에디터 배경 작업이 무엇인지 모른다 — 다시 보이면 `py -3 -m Scripts stacks <pid>` 로 워커 스택을 남긴다.
+    2026-10-16 독점 GPU 단독 DX12 5 회 0 회.
 
 - `C-29` **부하 검증(2026-10-15)의 남은 것과 첫 측정이 드러낸 것.** 쓰는 법은 [검증과 측정](08_Verification.md) "부하 검증" 절, 결정은 결정 기록 5-2 끝.
   ① **개발 배치의 기동 열기 309 ~ 316 번 중 셋은 Shipping 에 없는 일이다** — 키트 DLL 섀도 복사 61(읽고 쓰고 PDB 까지 복사), 모듈 매니페스트 70(`Bin/Modules/*.module.json` 낱개 — 언리얼 `.modules` 처럼 한 파일로 묶을 수 있다),
@@ -207,18 +208,18 @@
   ⑤ 야간 잡(`load.yml`)이 아직 돌지 않았다. 리눅스 `CI-Release` 에서 OnlineLoadBot 이 서버 키트를 이름으로 올리는지(`dlopen` — Windows 만 확인), 러너 속도로 시간 예산이 지는지 본다.
 
 - `C-30` **유지보수성을 위한 데이터화(2026-10-15 `wt/datadriven`)의 남은 것.** 기준과 모양은 [결정 기록](09_Decisions.md) 5-4 "유지보수성을 위한 데이터화", 새 줄은 `CheckDataDrivenLiterals` 가 막는다(전체는 `[baseline]`).
-  ① **데이터 속성의 리터럴 기본값 · 조용한 자르기가 약 900 곳 남았다**(`py -3 Scripts/lint/gate/CheckDataDrivenLiterals.py --list`). 많은 순: WesternCatalog 64 · AsymmetricHorrorRules 51 · CameraPreset 43 · WitcherCatalog 41 ·
+  ① **데이터 속성의 리터럴 기본값 · 조용한 자르기가 904 곳 남았다**(기준선 `AttributeFallback`)(`py -3 Scripts/lint/gate/CheckDataDrivenLiterals.py --list`). 많은 순: WesternCatalog 64 · AsymmetricHorrorRules 51 · CameraPreset 43 · WitcherCatalog 41 ·
   ConquestCatalog 39 · ScavengerCatalog 39 · MechCatalog 38 · BrCatalog 33 · HorrorCatalog 32 · ActionPlatformerCatalog 29. 원소마다 리플렉션 Def(초기값 = 기본값, `Required`, `Min`/`Max`)를 두고 `GameDataXML::readFields` 로 바꾸며,
   데이터 속성 이름이 칸 이름과 다르면(`xp` ↔ `_experience`) 데이터를 다시 쓴다. 고칠 때마다 기준선을 낮춘다. `MonsterCatalog` 의 Stats · AI 원소는 `MonsterDef` 한 구조체라 하위 Def 로 나눠야 한다(필드 사용 130 곳).
   ② 게임 코드의 실수 리터럴 줄 약 700(constexpr 아닌 것), NileCity 자동 계획표의 좌표(27 · 37 · 집 줄 — 도로 x · 농장 x 만 PROPERTY), HarvestValley 작물 → 모델 표, StarSkirmish AI 성향 표(`makeAISettings`), FarmSun 빛 곡선. `TuningConstexpr` 기준선은 게임 · 키트의 나머지 실수 상수다.
   ③ `GameSettings::getCustomPropertyFloat( key, fallback )` 처럼 호출부가 기본값을 넘기는 API 는 스키마 선언으로 바꿀 후보다.
   ④ 에디터 색 · 아이콘 표(`EditorComponentIcon.cpp`)와 에디터 UI 크기 리터럴은 디자인 토큰 작업(editorux 묶음)이 맡는다.
-  ⑤ 배포본(Shipping)은 벤치 스위치가 없어 `AppSmokeTest.BenchFrameMatchesGoldenImage` 를 건너뛴다(Debug · Release 는 그대로). 배포 구성의 그림 비교가 필요하면 구운 게임의 팩 시나리오 스크린샷으로 기준을 둔다.
+  ⑤ 배포본(Shipping)은 벤치 · 자동 플레이 스위치가 없어 `AppSmokeTest.BenchFrameMatchesGoldenImage` 와 `QaGoldenImages`(캡처 인자가 버려지면 건너뜀)를 건너뛴다(Debug · Release 는 그대로). 배포 구성의 그림 비교가 필요하면 구운 게임의 팩 시나리오 스크린샷으로 기준을 둔다.
 
 - `C-25` **게임 여럿을 빌드 한 번에 짓고, 실행할 때 고르고, 키트는 필요한 것만**(2026-10-13, 사용자 확정). 결정은 [결정 기록](09_Decisions.md) 5-2, 쓰는 법은 `Source/Games/README.md`.
   남은 것: 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸다(DX12 직접 실행으로 10 시나리오 통과만 확인).
 
-- `C-30` **이름 참조 감사(2026-10-15)의 남은 것.** 데이터 쪽은 에셋 검증 `component_reference` 규칙, 코드 · 시나리오 쪽은 린트 `CheckNameReferences` 가 본다. 아직 정적으로 못 보는 것:
+- `C-34` **이름 참조 감사(2026-10-15)의 남은 것.** 데이터 쪽은 에셋 검증 `component_reference` 규칙, 코드 · 시나리오 쪽은 린트 `CheckNameReferences` 가 본다. 아직 정적으로 못 보는 것:
   ① 입력 액션 이름의 생성자 기본값(`PawnComponent` 의 `Move` · `Look`, 카메라 액션)은 게임마다 맵이 달라 검증 함수로 못 본다 — 빙의 · 프리셋 때 런타임 경고가 본다.
   ② 카탈로그 안 id 참조는 팩 둘(`starskirmish-unit-tree` · `nilecity-goods`)만 규칙이 있다 — 나머지 키트 카탈로그는 로더 경고(스키마 테스트)에 기댄다.
   ③ 시나리오 `<DevCommand line="editor <명령>">` 의 에디터 명령 id(`EditorCommandRegistry` 는 실행 중 등록), UI 바인딩 경로(`UIBindingSet::bind` 오류 로그), 동적으로 지은 액션 이름은 런타임 경고 게이트(logwarn)에 맡긴다.
@@ -484,7 +485,8 @@
   (4) 출력: HRTF(바이노럴) · 5.1/7.1(지금 출력은 스테레오), 리눅스 출력 백엔드(지금 Null — 후보는 `G-11`). (5) 회절. (6) 컨볼루션 리버브, 그래뉼러 · 절차 소리
   그래프(MetaSounds 급).
 
-- `D5-2` **로컬라이제이션 — 남은 것**(`Engine/Localization/README.md`). 아랍어 이외 RTL 문화권 데이터 · `ja` 번역(`po/ja.po` 의 글이 비어 있다).
+- `D5-2` **로컬라이제이션 — 남은 것**(`Engine/Localization/LocalizationDocuments.h`). 아랍어 이외 RTL 문화권 데이터 · `ja` 번역(`po/ja.po` 의 글이 비어 있다 — 끝나면 엔진 프로젝트 `stagedCultures` 에 넣는다).
+  쿠킹에는 문화권 필터가 없어 `stagedCultures` 밖 문화권의 번역 테이블도 팩에 들어간다(언리얼은 스테이지 목록 밖 문화권을 빼고 패키징한다) — 목록 밖 테이블이 생기면 쿠킹에서 거른다.
   아이템 이름(Shooter3D)은 표에 모이지만 화면에 쓰는 코드가 아직 없다(무기 이름은 HUD 가 `getStringByText` 로 쓴다).
 
 - `D5-3` **NPC 하루 일정(`GameFramework/Base/Actor/AI/Schedule`)의 남은 것.** HarvestValley 마을 사람이 첫 사용처다(`FarmVillageDirectorComponent` — 판 상태 시계로 일정을 돌리고
@@ -575,9 +577,6 @@
 
 간헐 실패 · 원인 미상. 다시 보이면 그때 원인을 판다. CI 읽는 법은 [검증과 측정](08_Verification.md) 4절.
 
-- **`meshmodifiers` Vulkan 체인 1 회(2026-10-15).** 에디터 체인(다른 hostgpu 와 GPU 공유 실행 중)에서 frame 585 `MeshModifiers.ReferenceListCount == 1, got 0`. 단독 Vulkan 2/2 통과,
-  앞선 순차 hostgpu 네 백엔드도 통과했다. 참조 목록 항목 추가가 부하 아래 한 프레임 늦는지(고정 프레임 간격) 볼 것.
-
 - `E-1` **다음 CI 실행으로 확인할 것**(리눅스는 컴파일까지 되고 테스트 단계에서 진다, CI 읽는 법은 [검증과 측정](08_Verification.md) 4절).
   고쳤고 통과를 확인할 것: `OnlineLoadBotTest.TwoHundredBots…`(캐시 TTL 을 서버 틱 시각으로), `EpollStreamTransport` 경합 보고, `StreamTransportTest.PlatformAbortWithNothingPendingStillCloses`(전송 모델별 기대),
   ASan 둘(OpenSSL 스택 수명, `NetRequestTest` 선언 순서), `ServerBootTest` 접속 로그, Linux Debug `EngineTest_NoGPU` 샤드의 180 초 초과(멈춤이 아니라 느림 — 샤드를 여섯으로 늘렸다).
@@ -620,11 +619,16 @@
   워커를 망가뜨려 태스크 매니저 join 이 멈춘 것인지 미확정. 종료 경로가 서브시스템 분해로 다시 쓰인 뒤 새 기준에서 다시 본다.
 - `E-11` **`editor.netconditions` 가 hostgpu 격리 실행 DX11 에서 한 번 졌다**(2026-10-15, `Editor.NetPlayResentMessages >= 1` 이 0, 프레임 91). 같은 날 DX11 단독 3/3 · 다른 백엔드 통과.
   지연 · 손실 조건이 프레임 91 안에 재전송을 한 번도 일으키지 못한 시간 문제로 보인다. 다시 지면 그 실행의 전송 통계(보낸 · 잃은 수)를 함께 남긴다.
+  2026-10-16 독점 GPU 단독 DX11 5/5 통과.
 - `E-12` **`editor.uipreview` Vulkan 1 회 "레이블 없음"**(2026-10-13 전체 체인, 프레임 180 `uipreview.language.en` — 콤보는 눌렀는데 항목이 없었다). 2026-10-15 Vulkan 단독 10 회(유휴 5 · CPU 부하 5)
   모두 통과해 재현하지 못했다. 에디터 입력 단계(`EditorClick` · `EditorDrag` · `EditorHover`)가 이제 레이블이 그려질 때까지 시계를 60 프레임까지 붙잡고(`AutomationRunner::holdUntilReady`)
   기다린 프레임을 `[Scenario] … held the clock for N frame(s)` 로 남긴다. 다시 지면 그 줄로 "늦게 열렸다"(기다려서 통과) · "닫혔다"(60 프레임 뒤에도 없음)를 가른다.
 - `E-13` **실제 TDR 뒤 행은 이 PC 에서 재현하지 못했다**(옛 A-2). `rhi.removeDevice` 로 DX12(장치 제거) · Vulkan(손실 상태로 둠) 모두 프레임을 계속 돌고 종료 코드 0 으로 끝난다
   (2026-10-15 Vulkan 런타임 3/3 · 에디터 2/2, DX12 1/1). 남은 것은 드라이버 안의 대기(첫 `VK_ERROR_DEVICE_LOST` 를 돌려주기 전)뿐이다. 다시 보이면 `py -3 -m Scripts stacks <pid>` 로 매달린 스레드의 스택을 남긴다.
+- `E-14` **`meshmodifiers` Vulkan 체인 1 회(2026-10-15).** 에디터 체인(다른 hostgpu 와 GPU 공유 실행 중)에서 frame 585 `MeshModifiers.ReferenceListCount == 1, got 0`. 단독 Vulkan 2/2 통과,
+  앞선 순차 hostgpu 네 백엔드도 통과했다. 2026-10-16 독점 GPU 단독 Vulkan 5/5 통과. 참조 목록 항목 추가가 부하 아래 한 프레임 늦는지(고정 프레임 간격) 볼 것.
+- `E-15` **`shooter3d.closewindow` GL 1 회(2026-10-16).** 공유 GPU 잠금으로 돈 Debug hostgpu(`EveryGamePackScenarioPassesOnEveryBackend`)에서 frame 10 `ExpectCursorClip` 이 클립 0,0,2560,1440(화면 전체)을 봤다 —
+  같은 때 다른 App 창(스크린샷 캡처)을 띄우고 있었다. 이 시나리오는 실제 포커스 · 커서 클립을 쓰므로(`input="mixed"`) 독점으로 단독 GL 5/5 통과. 겹친 창이 포커스를 가져간 것으로 본다.
 
 ---
 
