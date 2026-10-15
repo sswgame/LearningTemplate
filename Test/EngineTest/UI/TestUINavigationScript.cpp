@@ -180,7 +180,7 @@ namespace
                 collectFocusable( *tree.getRoot(), listFocusable );
             if ( listFocusable.empty() )
                 return 0;
-            sw::WidgetID start = ui.getFocusManager().getFocusedTree() == &tree ? ui.getFocusManager().getFocusedWidget() : sw::kInvalidWidgetID;
+            sw::WidgetID start = ui.getInputRouter().getFocusManager().getFocusedTree() == &tree ? ui.getInputRouter().getFocusManager().getFocusedWidget() : sw::kInvalidWidgetID;
             if ( start == sw::kInvalidWidgetID )
                 start = sw::UINavigationSolver::findFirstFocusable( *tree.getRoot() );
             sw::vector<sw::WidgetID>        listQueue{ start };

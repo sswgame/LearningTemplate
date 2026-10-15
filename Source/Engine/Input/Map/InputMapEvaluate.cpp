@@ -237,11 +237,11 @@ namespace sw
     float2 InputMap::composeActionValue( const float2& bounded, const float2& relative ) const
     {
         float2 value = bounded;
-        if ( _bInvertX == SW_TRUE )
+        if ( _playerSettings._bInvertX )
             value._x = -value._x;
-        if ( _bInvertY == SW_TRUE )
+        if ( _playerSettings._bInvertY )
             value._y = -value._y;
-        if ( _digitalNormalization == DigitalNormalization::Circular )
+        if ( _playerSettings._digitalNormalization == DigitalNormalization::Circular )
         {
             const float32 lenSq = value._x * value._x + value._y * value._y;
             if ( lenSq > 1.0f )
@@ -367,7 +367,7 @@ namespace sw
                     kbdVec._x += 1.0f;
 
                 const float32 lenSq = kbdVec._x * kbdVec._x + kbdVec._y * kbdVec._y;
-                if ( _digitalNormalization == DigitalNormalization::Circular && lenSq > 1.0f )
+                if ( _playerSettings._digitalNormalization == DigitalNormalization::Circular && lenSq > 1.0f )
                 {
                     const float32 invLen = 1.0f / MathUtil::sqrt( lenSq );
                     kbdVec._x *= invLen;
@@ -385,11 +385,11 @@ namespace sw
                     float32      stickX = stick._x;
                     float32      stickY = stick._y;
 
-                    const float32 inDeadzone  = _stickDeadzoneOverride >= 0.0f ? _stickDeadzoneOverride : binding._deadzone;
+                    const float32 inDeadzone  = _playerSettings._stickDeadzoneOverride >= 0.0f ? _playerSettings._stickDeadzoneOverride : binding._deadzone;
                     const float32 outDeadzone = binding._outerDeadzone > inDeadzone ? binding._outerDeadzone : 1.0f;
                     const float32 deadRange   = outDeadzone - inDeadzone;
 
-                    if ( _deadzoneShape == DeadzoneShape::Radial )
+                    if ( _playerSettings._deadzoneShape == DeadzoneShape::Radial )
                     {
                         const float32 mag = MathUtil::sqrt( stickX * stickX + stickY * stickY );
                         if ( mag <= inDeadzone )
@@ -422,14 +422,14 @@ namespace sw
                         stickY = applyAxialDeadzone( stickY );
                     }
 
-                    stickX *= _gamepadSensitivity._x;
-                    stickY *= _gamepadSensitivity._y;
+                    stickX *= _playerSettings._gamepadSensitivity._x;
+                    stickY *= _playerSettings._gamepadSensitivity._y;
                     if ( BindingKinds::isRelative( binding ) )
                     {
                         // 이동량으로 쓰는 스틱: 배율과 프레임 시간을 곱하고, 반전은 마우스 이동처럼 여기서 한 번만 적용한다(액션 값 단계는 이동량을 반전하지 않는다).
                         const float32 frameScale = binding._bScaleByDelta ? _lastDeltaSeconds : 1.0f;
-                        stickX *= binding._axisScale._x * frameScale * ( _bInvertX == SW_TRUE ? -1.0f : 1.0f );
-                        stickY *= binding._axisScale._y * frameScale * ( _bInvertY == SW_TRUE ? -1.0f : 1.0f );
+                        stickX *= binding._axisScale._x * frameScale * ( _playerSettings._bInvertX ? -1.0f : 1.0f );
+                        stickY *= binding._axisScale._y * frameScale * ( _playerSettings._bInvertY ? -1.0f : 1.0f );
                     }
                     outValue = float2{ stickX, stickY };
                     return ( stickX != 0.0f || stickY != 0.0f );
@@ -450,8 +450,8 @@ namespace sw
                 const float2  movement = _pInput->getMouse() != nullptr ? _pInput->getMouse()->getMovementDelta() : float2{};
                 const float32 rdx      = movement._x;
                 const float32 rdy      = movement._y;
-                outValue._x            = rdx * binding._scale * _mouseSensitivity._x * ( _bInvertX == SW_TRUE ? -1.0f : 1.0f );
-                outValue._y            = rdy * binding._scale * _mouseSensitivity._y * ( _bInvertY == SW_TRUE ? -1.0f : 1.0f );
+                outValue._x            = rdx * binding._scale * _playerSettings._mouseSensitivity._x * ( _playerSettings._bInvertX ? -1.0f : 1.0f );
+                outValue._y            = rdy * binding._scale * _playerSettings._mouseSensitivity._y * ( _playerSettings._bInvertY ? -1.0f : 1.0f );
                 return ( rdx != 0.0f || rdy != 0.0f );
             }
             case BindingKind::MouseWheel1D:

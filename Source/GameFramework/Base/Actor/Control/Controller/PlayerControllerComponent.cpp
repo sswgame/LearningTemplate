@@ -83,9 +83,9 @@ namespace sw
         // 모달 · 로딩 화면이 떠 있으면 게임 입력이 없다 — 의도는 0, 조종 회전은 그대로.
         if ( pUI != nullptr && pUI->isGameInputBlocked() )
             return;
-        if ( pawn.getMoveAction().empty() == false && ( pUI == nullptr || pUI->isActionConsumed( inputMap, pawn.getMoveAction() ) == false ) )
+        if ( pawn.getMoveAction().empty() == false && ( pUI == nullptr || pUI->getInputRouter().isActionConsumed( inputMap, pawn.getMoveAction() ) == false ) )
             outIntent._move = inputMap.getVector2D( pawn.getMoveAction() );
-        if ( pawn.getUpAction().empty() == false && ( pUI == nullptr || pUI->isActionConsumed( inputMap, pawn.getUpAction() ) == false ) )
+        if ( pawn.getUpAction().empty() == false && ( pUI == nullptr || pUI->getInputRouter().isActionConsumed( inputMap, pawn.getUpAction() ) == false ) )
             outIntent._moveUp = inputMap.getAxis1D( pawn.getUpAction() );
         if ( bLook && pawn.getLookAction().empty() == false )
         {
@@ -106,18 +106,18 @@ namespace sw
         for ( size_t analogIndex = 0; analogIndex < analogCount; ++analogIndex )
         {
             const hashed_string& name         = listAnalog[analogIndex];
-            outIntent._arrAnalog[analogIndex] = pUI != nullptr && pUI->isActionConsumed( inputMap, name ) ? 0.0f : inputMap.getAxis1D( name );
+            outIntent._arrAnalog[analogIndex] = pUI != nullptr && pUI->getInputRouter().isActionConsumed( inputMap, name ) ? 0.0f : inputMap.getAxis1D( name );
         }
     }
 
     bool PlayerControllerComponent::isActionDownForGame( const InputMap& inputMap, const UISystem* pUISystem, const hashed_string& action )
     {
-        return inputMap.isActionDown( action ) && ( pUISystem == nullptr || pUISystem->isActionConsumed( inputMap, action ) == false );
+        return inputMap.isActionDown( action ) && ( pUISystem == nullptr || pUISystem->getInputRouter().isActionConsumed( inputMap, action ) == false );
     }
 
     bool PlayerControllerComponent::wasActionTriggeredForGame( const InputMap& inputMap, const UISystem* pUISystem, const hashed_string& action )
     {
-        return inputMap.wasActionTriggered( action ) && ( pUISystem == nullptr || pUISystem->isActionConsumed( inputMap, action ) == false );
+        return inputMap.wasActionTriggered( action ) && ( pUISystem == nullptr || pUISystem->getInputRouter().isActionConsumed( inputMap, action ) == false );
     }
 
     void PlayerControllerComponent::onPossessed( PawnComponent& pawn )

@@ -21,6 +21,7 @@
 #include "GameFramework/Base/Gameplay/Ability/AbilitySystemTypes.h"
 #include "GameFramework/Base/Gameplay/Ability/AttributeSet.h"
 #include "GameFramework/Base/Gameplay/Ability/GameplayEffect.h"
+#include "GameFramework/Base/Gameplay/Ability/GameplayTagCountContainer.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -79,7 +80,6 @@ namespace sw
         REFLECT_BODY();
 
         using AttributeChangedDelegate = Delegate<void( const AttributeChangeData& )>;
-        using TagChangedDelegate       = Delegate<void( TagID, int32 )>;
         using EffectDelegate           = Delegate<void( const ActiveGameplayEffect& )>;
         using AbilityActivatedDelegate = Delegate<void( const GameplayAbility& )>;
         using AbilityEndedDelegate     = Delegate<void( const GameplayAbility&, bool )>;
@@ -156,23 +156,12 @@ namespace sw
         // --------------------------------------------------------------------------
         // 3) 태그. 개수로 센다(이펙트 둘이 같은 태그를 주면 둘 다 해제되어야 사라진다)
         // --------------------------------------------------------------------------
-        /** @brief 지금 가진 태그(개수 1 이상)의 목록입니다. */
-        const TagContainer& getOwnedTags() const { return _ownedTags; }
-        /** @brief @p tag 나 그 하위 태그를 가지고 있으면 true 입니다("Cooldown" 은 "Cooldown.Fireball" 과 일치). */
-        bool hasMatchingTag( TagID tag ) const;
-        /** @brief @p tags 를 모두 가지고 있으면 true 입니다. @p tags 가 비어 있으면 true 입니다. */
-        bool hasAllMatchingTags( const TagContainer& tags ) const;
-        /** @brief @p tags 중 하나라도 가지고 있으면 true 입니다. @p tags 가 비어 있으면 false 입니다. */
-        bool hasAnyMatchingTags( const TagContainer& tags ) const;
-        /** @brief @p tag 와 **같은** 태그의 개수입니다. 하위 태그는 세지 않습니다. */
-        int32 getTagCount( TagID tag ) const;
-        /** @brief 이펙트 없이 태그를 붙입니다(언리얼의 Loose Tag). 태그 개수가 @p count 만큼 늘어납니다. */
-        void addLooseTag( TagID tag, int32 count = 1 );
-        /** @brief 붙인 태그를 제거합니다. 개수는 0 아래로 내려가지 않습니다. */
-        void removeLooseTag( TagID tag, int32 count = 1 );
-        /** @brief 태그가 새로 생기거나(개수 0→1) 사라질 때(1→0) 호출할 델리게이트를 등록합니다. 인자는 태그와 새 개수입니다. */
-        DelegateHandle registerTagChanged( const TagChangedDelegate& delegate );
-        void           unregisterTagChanged( DelegateHandle handle );
+        /**
+         * @brief 가진 태그와 개수입니다. 이펙트 · 어빌리티가 준 태그와 이펙트 없이 붙인 태그(언리얼 Loose Tag, `updateCount`)를 함께 셉니다.
+         * @details 태그가 생기거나 사라질 때의 알림은 `registerChanged` 입니다. 조회는 `hasMatchingTag` · `hasAllMatchingTags` · `hasAnyMatchingTags` · `getCount`.
+         */
+        GameplayTagCountContainer&       getOwnedTagCounts() { return _ownedTagCounts; }
+        const GameplayTagCountContainer& getOwnedTagCounts() const { return _ownedTagCounts; }
 
         // --------------------------------------------------------------------------
         // 4) 게임플레이 이펙트
@@ -317,13 +306,6 @@ namespace sw
             uint8                       _bPendingRemove{ SW_FALSE };
         };
 
-        /** @brief 태그 하나의 개수입니다. */
-        struct TagCountEntry
-        {
-            TagID _tag{};
-            int32 _count{ 0 };
-        };
-
         /** @brief 스코프가 끝날 때까지 활성 이펙트와 스펙 목록에서 원소를 빼지 않게 합니다. 제거 요청은 표시만 해 두고 스코프가 끝날 때 실제로 지웁니다. */
         class ScopedListLock
         {
@@ -372,12 +354,6 @@ namespace sw
         void notifyAttributeChanged( AttributeSet& attributeSet, const hashed_string& name, float32 oldValue, float32 newValue );
 
         // ---- 태그 ----
-        /** @brief 태그 개수를 @p delta 만큼 바꿉니다. 개수가 0 과 1 사이를 넘나들면 소유 태그와 알림을 갱신합니다. */
-        void updateTagCount( TagID tag, int32 delta );
-        /** @brief 컨테이너의 태그마다 `updateTagCount` 를 부릅니다. */
-        void updateTagCounts( const TagContainer& tags, int32 delta );
-        /** @brief 막힌 어빌리티 태그의 개수를 바꿉니다. */
-        void updateBlockedAbilityTags( const TagContainer& tags, int32 delta );
         /** @brief 어빌리티 태그 중 하나라도 막혀 있으면 true 입니다. */
         bool isAbilityBlocked( const TagContainer& abilityTags ) const;
 
@@ -408,13 +384,11 @@ namespace sw
         vector<unique_ptr<AttributeSet>>                                                                _listAttributeSet;
         vector<unique_ptr<ActiveGameplayEffect>>                                                        _listActiveEffect;
         vector<unique_ptr<AbilitySpec>>                                                                 _listAbilitySpec;
-        unordered_map<uint64, TagCountEntry>                                                            _mapTagCount;          ///< 태그 id → 개수
-        unordered_map<uint64, TagCountEntry>                                                            _mapBlockedAbilityTag; ///< 막힌 어빌리티 태그 id → 개수
-        TagContainer                                                                                    _ownedTags;            ///< 개수 1 이상인 태그
+        GameplayTagCountContainer                                                                       _ownedTagCounts;
+        GameplayTagCountContainer                                                                       _blockedAbilityTagCounts; ///< `_blockAbilitiesWithTags` 가 막은 어빌리티 태그(알림 없이 센다)
         unordered_map<hashed_string, unique_ptr<MulticastDelegate<void( const AttributeChangeData& )>>> _mapAttributeChangedMulticast;
         unordered_map<uint64, unique_ptr<MulticastDelegate<void( const GameplayEventData& )>>>          _mapGameplayEventMulticast;
         MulticastDelegate<void( const AttributeChangeData& )>                                           _anyAttributeChangedMulticast;
-        MulticastDelegate<void( TagID, int32 )>                                                         _tagChangedMulticast;
         MulticastDelegate<void( const ActiveGameplayEffect& )>                                          _effectAppliedMulticast;
         MulticastDelegate<void( const ActiveGameplayEffect& )>                                          _effectRemovedMulticast;
         MulticastDelegate<void( const GameplayAbility& )>                                               _abilityActivatedMulticast;

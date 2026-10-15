@@ -224,24 +224,14 @@ namespace sw
          * @return 생성하지 못하면 무효 핸들입니다(오류는 로그에 남깁니다).
          */
         UIScreenHandle openOffscreenScreen( string_view documentPath, string_view targetPath );
-        void           closeOffscreenScreen( UIScreenHandle handle );
-        UIScreen*      findOffscreenScreen( UIScreenHandle handle ) const;
+        /** @brief 스택 밖 화면 목록입니다. 닫기 · 찾기 · 문화권 · 대상 경로 · 탐색 방식은 목록에 직접 묻습니다(`remove` · `findScreen` · `setLocalization` · `setTargetPath` · `setNavigationMode`). */
+        UIOffscreenScreens&       getOffscreenScreens() { return _offscreen; }
+        const UIOffscreenScreens& getOffscreenScreens() const { return _offscreen; }
         /**
          * @brief 오프스크린 화면의 뷰포트(UI 단위 크기, 배율, 안전 영역. 렌더 텍스처 크기가 물리 크기), 글자 배율, 테마(빈 이름이면 지금 테마)를 정합니다.
          * @details 테마가 바뀌면 그 화면의 스타일 시트만 다시 적용한다(게임 UI 의 테마는 그대로다).
          */
         void setOffscreenView( UIScreenHandle handle, const UIViewport& viewport, float32 textScale, const hashed_string& theme );
-        /**
-         * @brief 오프스크린 화면 @p handle 이 글을 해석할 문화권 관리자를 정합니다(nullptr 이면 게임 UI 와 같은 문화권). 소유하지 않으므로 화면보다 오래 두어야 합니다.
-         * @details 문화권이 전역(`engine::getSubsystem<LocalizationManager>()`)이라 게임 UI 는 그대로 두고 미리보기 화면만 다른 언어나 의사 문화권(`qps-ploc`, `qps-plocm`)으로 보는 길이다.
-         *          관리자의 언어를 바꾼 뒤에도 부른다(글을 다시 해석하고 흐름 방향까지 다시 맞춘다). 오프스크린 화면의 애니메이션은 `findOffscreenScreen( handle )->getAnimationPlayer()`
-         *          로 재생하며, 재생 중인 동안만 `update` 가 진행한다(문서의 애니메이션은 화면을 열 때 등록되고 `Open` 은 틀지 않는다).
-         */
-        void setOffscreenLocalization( UIScreenHandle handle, const LocalizationManager* pLocalization );
-        /** @brief 오프스크린 화면 @p handle 이 그릴 렌더 텍스처 경로를 바꿉니다. 해상도를 바꿔도 트리와 고친 값을 그대로 두려는 길입니다(렌더 텍스처 크기는 경로마다 정해진다). */
-        void setOffscreenTarget( UIScreenHandle handle, string_view targetPath );
-        /** @brief 오프스크린 화면 @p handle 이 탐색 방식(키보드, 패드)으로 보이게 합니다. 켜면 포커스 위젯이 `:focus-visible` 스타일을 받습니다(미리보기의 탐색 흉내). */
-        void setOffscreenNavigationMode( UIScreenHandle handle, bool bNavigationMode );
 
         // --- 핫 리로드 ---------------------------------------------------------------
         // 문서(`.ui.xml`)와 스타일 시트의 파일 변화는 **에디터**의 파일 감시가 캐시 다시 읽기로 이어 준다(`EditorAssetType` 표의 `kAnyCacheHoldingPath`).
@@ -282,23 +272,15 @@ namespace sw
         bool isOnScreenSuppressed() const { return _bOnScreenSuppressed == SW_TRUE; }
         /** @brief 활성 화면이 OS 커서를 필요로 하면 true 입니다(플레이어 컨트롤러가 마우스 잠금을 쉽니다). */
         bool wantsCursor() const;
-        /** @brief @p inputMap 의 액션 @p action 을 지금 누르는 물리 입력이 모두 UI 에 소비된 것이면 true 입니다(플레이어 컨트롤러가 묻습니다). */
-        bool isActionConsumed( const InputMap& inputMap, const hashed_string& action ) const;
-        /** @brief @p inputMap 의 액션 @p action 이 지금 쓰는 물리 입력을 소비합니다(UI 가 그 액션을 처리했습니다). */
-        void consumeAction( const InputMap& inputMap, const hashed_string& action );
-        /** @brief 마우스 버튼 @p button 을 소비합니다. */
-        void consumeMouseButton( MouseButton button ) { _input.getConsumption().consumeMouseButton( button ); }
-        /** @brief 원시 입력 슬롯 @p slot 을 소비합니다(키 바인딩 창이 받은 키이며, 뗄 때까지 게임과 UI 액션이 보지 못합니다). */
-        void                      consumeSlot( const InputSlot& slot ) { _input.getConsumption().consumeSlot( slot ); }
-        const UIInputConsumption& getInputConsumption() const { return _input.getConsumption(); }
-        /** @brief UI 액션 맵입니다(액션 맵을 지정하지 않았으면 nullptr). */
-        InputMap* getUIInputMap() const { return _input.getUIInputMap(); }
+        /**
+         * @brief UI 입력 라우터입니다 — 포커스, 포인터, 소비된 입력(`isActionConsumed` · `consumeAction` · `getConsumption`), UI 액션 맵, 입력 방식.
+         * @details 플레이어 컨트롤러가 의도를 만들 때 `getInputRouter().isActionConsumed( map, action )` 만 확인하면 된다. 입력 방식을 바꾸는 일은 화면 포커스를 함께
+         *          옮기므로 `setInputMode` 가 맡는다.
+         */
+        UIInputRouter&       getInputRouter() { return _input; }
+        const UIInputRouter& getInputRouter() const { return _input; }
 
-        // --- 포커스와 입력 방식 ---------------------------------------------------------------
-        UIFocusManager&       getFocusManager() { return _input.getFocusManager(); }
-        const UIFocusManager& getFocusManager() const { return _input.getFocusManager(); }
-        const UIPointerState& getPointerState() const { return _input.getPointerState(); }
-        UIInputMode           getInputMode() const { return _input.getInputMode(); }
+        // --- 입력 방식 ---------------------------------------------------------------------
         /** @brief 입력 방식을 바꿉니다. 탐색으로 바뀌는 순간 활성 화면에 포커스가 없으면 기본 포커스로 옮깁니다. */
         void setInputMode( UIInputMode mode );
 

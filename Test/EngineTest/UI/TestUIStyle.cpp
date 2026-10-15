@@ -252,7 +252,7 @@ SW_TEST_CASE( UIStyleTest, FocusVisibleOnlyInNavigationMode )
     sw::ButtonWidget* pGo = pScreen->getTree().findWidget<sw::ButtonWidget>( "Go" );
     SW_ASSERT_NOT_NULL( pGo );
     fixture._ui.setInputMode( sw::UIInputMode::Pointer );
-    SW_ASSERT_TRUE( fixture._ui.getFocusManager().setFocus( pScreen->getTree(), pGo->getID() ) );
+    SW_ASSERT_TRUE( fixture._ui.getInputRouter().getFocusManager().setFocus( pScreen->getTree(), pGo->getID() ) );
     Util::runFrame( fixture._input, fixture._ui );
     SW_EXPECT_EQUAL( 1.0f, pGo->getComputedStyle()->_value._borderWidth );
 
@@ -540,7 +540,7 @@ SW_TEST_CASE( UIStyleTest, OffscreenScreenFinishesTransitionsAtOnce )
                                 kTransitionBody + "</UIDocument>\n";
     fixture._ui.getDocumentCache().registerMemoryDocument( "test/offscreen_style.ui.xml", document );
     const sw::UIScreenHandle handle  = fixture._ui.openOffscreenScreen( "test/offscreen_style.ui.xml", "rendertarget/test_preview" );
-    sw::UIScreen*            pScreen = fixture._ui.findOffscreenScreen( handle );
+    sw::UIScreen*            pScreen = fixture._ui.getOffscreenScreens().findScreen( handle );
     SW_ASSERT_NOT_NULL( pScreen );
     sw::UIViewport viewport{};
     viewport._size         = sw::float2{ 640.0f, 360.0f };
@@ -556,7 +556,7 @@ SW_TEST_CASE( UIStyleTest, OffscreenScreenFinishesTransitionsAtOnce )
     SW_EXPECT_TRUE( Util::findBackground( pBox ) == Util::kBlue );
     Util::runFrame( fixture._input, fixture._ui );
     SW_EXPECT_TRUE( Util::findBackground( pBox ) == Util::kBlue );
-    fixture._ui.closeOffscreenScreen( handle );
+    fixture._ui.getOffscreenScreens().remove( handle );
 }
 
 /**

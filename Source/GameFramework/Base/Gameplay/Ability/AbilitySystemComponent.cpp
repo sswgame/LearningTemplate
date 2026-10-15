@@ -19,23 +19,6 @@
 namespace sw
 {
     SW_LOG_CALLER( "AbilitySystemComponent" );
-
-    namespace
-    {
-        struct AbilitySystemComponentInternal
-        {
-            /** @brief @p container 의 태그 중 하나라도 @p query 의 태그이거나 그 하위 태그이면 true 입니다. */
-            static bool matchesAnyTag( const TagContainer& container, const TagContainer& query )
-            {
-                for ( const TagID& queryTag : query.getTags() )
-                {
-                    if ( container.hasTag( queryTag, false ) )
-                        return true;
-                }
-                return false;
-            }
-        };
-    } // namespace
 } // namespace sw
 
 namespace sw
@@ -90,13 +73,11 @@ namespace sw
         : _listAttributeSet{}
         , _listActiveEffect{}
         , _listAbilitySpec{}
-        , _mapTagCount{}
-        , _mapBlockedAbilityTag{}
-        , _ownedTags{}
+        , _ownedTagCounts{}
+        , _blockedAbilityTagCounts{}
         , _mapAttributeChangedMulticast{}
         , _mapGameplayEventMulticast{}
         , _anyAttributeChangedMulticast{}
-        , _tagChangedMulticast{}
         , _effectAppliedMulticast{}
         , _effectRemovedMulticast{}
         , _abilityActivatedMulticast{}
@@ -122,7 +103,7 @@ namespace sw
         // 순서는 다음과 같다. 먼저 순회가 더 일어나지 않게 하고, 바깥 구독을 해제한다(지우는 중에 게임 코드를 부르지 않기 위해서다). 그다음 어빌리티를 지우고(작업이 이 컴포넌트에서 구독을 해제한다), 마지막에 나머지를 지운다.
         _pModuleCodeGuard.reset();
         _anyAttributeChangedMulticast.removeAll();
-        _tagChangedMulticast.removeAll();
+        _ownedTagCounts.unregisterAllChanged();
         _effectAppliedMulticast.removeAll();
         _effectRemovedMulticast.removeAll();
         _abilityActivatedMulticast.removeAll();
@@ -247,7 +228,7 @@ namespace sw
 
         for ( const TagID& tag : pSet->_looseTags.getTags() )
         {
-            addLooseTag( tag );
+            _ownedTagCounts.updateCount( tag, 1 );
         }
         for ( const AbilitySetAbilityEntry& abilityEntry : pSet->_listAbility )
         {
@@ -261,118 +242,15 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 3) 태그
-    // ------------------------------------------------------------------------------
-    bool AbilitySystemComponent::hasMatchingTag( TagID tag ) const
-    {
-        return tag.isValid() && _ownedTags.hasTag( tag, false );
-    }
-
-    bool AbilitySystemComponent::hasAllMatchingTags( const TagContainer& tags ) const
-    {
-        for ( const TagID& tag : tags.getTags() )
-        {
-            if ( hasMatchingTag( tag ) == false )
-                return false;
-        }
-        return true;
-    }
-
-    bool AbilitySystemComponent::hasAnyMatchingTags( const TagContainer& tags ) const
-    {
-        return AbilitySystemComponentInternal::matchesAnyTag( _ownedTags, tags );
-    }
-
-    int32 AbilitySystemComponent::getTagCount( TagID tag ) const
-    {
-        const auto mapIter = _mapTagCount.find( tag._id );
-        return mapIter != _mapTagCount.end() ? mapIter->second._count : 0;
-    }
-
-    void AbilitySystemComponent::addLooseTag( TagID tag, int32 count )
-    {
-        if ( count > 0 )
-            updateTagCount( tag, count );
-    }
-
-    void AbilitySystemComponent::removeLooseTag( TagID tag, int32 count )
-    {
-        if ( count > 0 )
-            updateTagCount( tag, -count );
-    }
-
-    DelegateHandle AbilitySystemComponent::registerTagChanged( const TagChangedDelegate& delegate )
-    {
-        return _tagChangedMulticast.add( delegate );
-    }
-
-    void AbilitySystemComponent::unregisterTagChanged( DelegateHandle handle )
-    {
-        _tagChangedMulticast.remove( handle );
-    }
-
-    // ------------------------------------------------------------------------------
     // 9) 내부: 태그
     // ------------------------------------------------------------------------------
-    void AbilitySystemComponent::updateTagCount( TagID tag, int32 delta )
-    {
-        if ( tag.isValid() == false || delta == 0 )
-            return;
-
-        const auto  mapIter  = _mapTagCount.find( tag._id );
-        const int32 oldCount = mapIter != _mapTagCount.end() ? mapIter->second._count : 0;
-        const int32 newCount = MathUtil::max( 0, oldCount + delta );
-        if ( newCount == oldCount )
-            return;
-
-        if ( newCount == 0 )
-            _mapTagCount.erase( tag._id );
-        else
-            _mapTagCount.insert_or_assign( tag._id, TagCountEntry{ tag, newCount } );
-
-        // 알림은 태그가 생기거나 사라질 때만 보낸다. 같은 태그를 주는 이펙트가 하나 더 걸려도 "태그가 생겼다" 고 알리지 않는다(언리얼의 NewOrRemoved 와 같음).
-        if ( oldCount == 0 )
-        {
-            _ownedTags.addTag( tag );
-            _tagChangedMulticast.broadcast( tag, newCount );
-        }
-        else if ( newCount == 0 )
-        {
-            _ownedTags.removeTag( tag );
-            _tagChangedMulticast.broadcast( tag, 0 );
-        }
-    }
-
-    void AbilitySystemComponent::updateTagCounts( const TagContainer& tags, int32 delta )
-    {
-        for ( const TagID& tag : tags.getTags() )
-        {
-            updateTagCount( tag, delta );
-        }
-    }
-
-    void AbilitySystemComponent::updateBlockedAbilityTags( const TagContainer& tags, int32 delta )
-    {
-        for ( const TagID& tag : tags.getTags() )
-        {
-            const auto  mapIter  = _mapBlockedAbilityTag.find( tag._id );
-            const int32 oldCount = mapIter != _mapBlockedAbilityTag.end() ? mapIter->second._count : 0;
-            const int32 newCount = MathUtil::max( 0, oldCount + delta );
-            if ( newCount == 0 )
-                _mapBlockedAbilityTag.erase( tag._id );
-            else
-                _mapBlockedAbilityTag.insert_or_assign( tag._id, TagCountEntry{ tag, newCount } );
-        }
-    }
-
     bool AbilitySystemComponent::isAbilityBlocked( const TagContainer& abilityTags ) const
     {
-        for ( const auto& [blockedID, blockedEntry] : _mapBlockedAbilityTag )
+        for ( const TagID& blockedTag : _blockedAbilityTagCounts.getTags().getTags() )
         {
-            (void)blockedID;
             for ( const TagID& abilityTag : abilityTags.getTags() )
             {
-                if ( abilityTag.isSubtagOf( blockedEntry._tag ) )
+                if ( abilityTag.isSubtagOf( blockedTag ) )
                     return true;
             }
         }
@@ -413,7 +291,7 @@ namespace sw
 
         // 1) 델리게이트: 게임이 등록한 구독이며 스텁이 그 모듈 안에 있다. 지우기 전에 해제해서 정리 중에 호출되지 않게 한다.
         releasedCount += _anyAttributeChangedMulticast.removeCodeWithin( pBegin, pEnd );
-        releasedCount += _tagChangedMulticast.removeCodeWithin( pBegin, pEnd );
+        releasedCount += _ownedTagCounts.unregisterChangedWithin( pBegin, pEnd );
         releasedCount += _effectAppliedMulticast.removeCodeWithin( pBegin, pEnd );
         releasedCount += _effectRemovedMulticast.removeCodeWithin( pBegin, pEnd );
         releasedCount += _abilityActivatedMulticast.removeCodeWithin( pBegin, pEnd );

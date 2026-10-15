@@ -143,7 +143,7 @@ namespace sw
     {
         const float32 sensitivity = UserSettingsEngineHandlersInternal::toFloat( context._value, 1.0f );
         if ( _targets._pInputMap != nullptr )
-            _targets._pInputMap->setMouseSensitivity( float2{ sensitivity, sensitivity } );
+            _targets._pInputMap->getPlayerSettings()._mouseSensitivity = float2{ sensitivity, sensitivity };
         return true;
     }
 
@@ -151,28 +151,28 @@ namespace sw
     {
         const float32 sensitivity = UserSettingsEngineHandlersInternal::toFloat( context._value, 1.0f );
         if ( _targets._pInputMap != nullptr )
-            _targets._pInputMap->setGamepadSensitivity( float2{ sensitivity, sensitivity } );
+            _targets._pInputMap->getPlayerSettings()._gamepadSensitivity = float2{ sensitivity, sensitivity };
         return true;
     }
 
     bool UserSettingsEngineHandlers::applyInvertX( const UserSettingApplyParams& context )
     {
         if ( _targets._pInputMap != nullptr )
-            _targets._pInputMap->setInvertX( UserSettingsEngineHandlersInternal::toBool( context._value ) );
+            _targets._pInputMap->getPlayerSettings()._bInvertX = UserSettingsEngineHandlersInternal::toBool( context._value );
         return true;
     }
 
     bool UserSettingsEngineHandlers::applyInvertY( const UserSettingApplyParams& context )
     {
         if ( _targets._pInputMap != nullptr )
-            _targets._pInputMap->setInvertY( UserSettingsEngineHandlersInternal::toBool( context._value ) );
+            _targets._pInputMap->getPlayerSettings()._bInvertY = UserSettingsEngineHandlersInternal::toBool( context._value );
         return true;
     }
 
     bool UserSettingsEngineHandlers::applyStickDeadzone( const UserSettingApplyParams& context )
     {
         if ( _targets._pInputMap != nullptr )
-            _targets._pInputMap->setStickDeadzoneOverride( UserSettingsEngineHandlersInternal::toFloat( context._value, -1.0f ) );
+            _targets._pInputMap->getPlayerSettings()._stickDeadzoneOverride = UserSettingsEngineHandlersInternal::toFloat( context._value, -1.0f );
         return true;
     }
 

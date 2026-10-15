@@ -221,18 +221,7 @@ namespace sw
         /** @brief 잠금과 커서 숨김을 지금 상태(`isMouseLockActive`)에 맞춰 OS 에 다시 적용합니다. 창 크기나 위치가 바뀌면 부릅니다. */
         void syncMouseLock();
 
-        // ------------------------------------------------------------------------------
-        // 6) 게임패드 편의 API(장치에 위임)
-        // ------------------------------------------------------------------------------
-        float32            getGamepadLeftTrigger( uint32 deviceIndex = 0 ) const;
-        float32            getGamepadRightTrigger( uint32 deviceIndex = 0 ) const;
-        GamepadBatteryInfo getGamepadBatteryInfo( uint32 deviceIndex = 0 ) const
-        {
-            GamepadDevice* pPad = getGamepad( deviceIndex );
-            return pPad != nullptr ? pPad->getBatteryInfo() : GamepadBatteryInfo{};
-        }
-        bool setGamepadVibration( float32 leftMotor, float32 rightMotor, uint32 deviceIndex = 0 );
-        bool playGamepadVibration( float32 leftMotor, float32 rightMotor, float32 durationSeconds, uint32 deviceIndex = 0 );
+        // 6) 게임패드의 방아쇠 · 배터리 · 진동은 장치에 직접 묻는다(`getGamepad( index )->getLeftTrigger()` · `getBatteryInfo()` · `playVibration(…)`).
 
         // ------------------------------------------------------------------------------
         // 7) 가상 입력(Virtual Input). 테스트, 시나리오, 입력 리플레이가 OS 이벤트와 같은 경로로 입력을 넣는다

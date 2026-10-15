@@ -424,14 +424,14 @@ SW_TEST_CASE( UIPaintTest, UISystemCanvasRevisionAndFocusRing )
     ui.update( 1.0f / 60.0f, viewport );
     SW_EXPECT_EQUAL( firstRevision + 1, ui.getCanvasRevision() );
 
-    SW_ASSERT_TRUE( ui.getFocusManager().setFocus( ui.findScreen( screen )->getTree(), pBox->getID() ) );
+    SW_ASSERT_TRUE( ui.getInputRouter().getFocusManager().setFocus( ui.findScreen( screen )->getTree(), pBox->getID() ) );
     ui.update( 1.0f / 60.0f, viewport );
     SW_EXPECT_EQUAL( size_t{ 1 }, ui.getCanvas()._listQuad.size() ); // 포인터 방식 — 테두리 없음
     ui.setInputMode( sw::UIInputMode::Navigation );
     ui.update( 1.0f / 60.0f, viewport );
     SW_ASSERT_EQUAL( size_t{ 2 }, ui.getCanvas()._listQuad.size() );
     SW_EXPECT_TRUE( ui.getCanvas()._listQuad[1]._params._x > 0.0f ); // 테두리 두께
-    ui.getFocusManager().clearFocus();
+    ui.getInputRouter().getFocusManager().clearFocus();
 }
 
 /**
@@ -532,18 +532,18 @@ SW_TEST_CASE( UIPaintTest, SliderTakesLeftRightActions )
         input.endFrame();
     };
     runFrame();
-    SW_ASSERT_TRUE( ui.getFocusManager().setFocus( ui.findScreen( screen )->getTree(), pSlider->getID() ) );
+    SW_ASSERT_TRUE( ui.getInputRouter().getFocusManager().setFocus( ui.findScreen( screen )->getTree(), pSlider->getID() ) );
 
     SW_EXPECT_TRUE( input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Left ) ) );
     runFrame();
     SW_EXPECT_NEAR_EQUAL( 4.0f, pSlider->getValue(), 1e-6f );
-    SW_EXPECT_EQUAL( pSlider->getID(), ui.getFocusManager().getFocusedWidget() );
+    SW_EXPECT_EQUAL( pSlider->getID(), ui.getInputRouter().getFocusManager().getFocusedWidget() );
     SW_EXPECT_TRUE( input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::Left ) ) );
     runFrame();
 
     SW_EXPECT_TRUE( input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Down ) ) );
     runFrame();
-    SW_EXPECT_EQUAL( pBelow->getID(), ui.getFocusManager().getFocusedWidget() );
+    SW_EXPECT_EQUAL( pBelow->getID(), ui.getInputRouter().getFocusManager().getFocusedWidget() );
     ui.shutdown();
     input.shutdown();
 }
@@ -676,7 +676,7 @@ SW_TEST_CASE( UIPaintTest, TextInputTypesAndDeletes )
         input.endFrame();
     };
     runFrame();
-    SW_ASSERT_TRUE( ui.getFocusManager().setFocus( ui.findScreen( screen )->getTree(), pField->getID() ) );
+    SW_ASSERT_TRUE( ui.getInputRouter().getFocusManager().setFocus( ui.findScreen( screen )->getTree(), pField->getID() ) );
     runFrame();
     SW_EXPECT_TRUE( input.getKeyboardFocus() == sw::InputKeyboardFocus::UI );
 

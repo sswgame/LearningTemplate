@@ -602,6 +602,12 @@
   GameFramework `InputCommandBuffer` 는 틱 단위 넘패드 · 버튼 이력이라 롤백에서 다시 돌려도 같은 결과가 나와야 하고 바라보는 쪽을 뒤집습니다. 시간 단위(초 · 틱)와 결정성 요구가 달라
   한쪽으로 모으면 롤백이 깨지거나(실시간) 에디터 · 엔진이 GameFramework 를 알아야 합니다(틱). 언리얼도 Enhanced Input 의 실시간 Combo 트리거와 격투 게임 코드의 프레임 버퍼가 따로 있습니다(기억에 의존).
 
+- **큰 클래스는 책임이 따로 서는 묶음을 값 객체로 가르고, 소유 객체에 그대로 넘기던 전달 함수는 지웁니다**(2026-10-15, C-26 ⑤).
+  `InputMap` 의 플레이어 설정(감도 · 반전 · 데드존 · 정규화) → `InputPlayerSettings`(언리얼 `UEnhancedInputUserSettings` 의 플레이어 설정 자리),
+  `AbilitySystemComponent` 의 태그 개수 → `GameplayTagCountContainer`(언리얼 `FGameplayTagCountContainer`, 막힌 어빌리티 태그도 같은 타입),
+  `UISystem` 의 입력 라우터 · 오프스크린 화면 전달 함수 열다섯 → `getInputRouter()` · `getOffscreenScreens()`, `InputManager` 의 게임패드 전달 함수 다섯(쓰는 곳 없음) 삭제.
+  `GameObjectManager` 는 씬의 얼굴(만들기 · 찾기 · 풀기)을 그대로 둡니다 — 언리얼 `UWorld::SpawnActor` 처럼 저장소(`GameObjectStore`)를 숨기는 자리라 전달이 곧 계약입니다.
+
 ### 5-7. 런타임 UI 와 글자
 
 - **저장소에는 CC0 라틴 글꼴만 둡니다**(2026-10-06, 사용자 결정). 한글과 CJK 는 OS 시스템 글꼴로 대체하고, 시스템 글꼴을 쓰는 테스트는 글리프가 있는지만 확인합니다.

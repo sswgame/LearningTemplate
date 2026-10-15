@@ -940,30 +940,6 @@ namespace sw
         syncMouseLock();
     }
 
-    float32 InputManager::getGamepadLeftTrigger( uint32 deviceIndex ) const
-    {
-        GamepadDevice* pPad = getGamepad( deviceIndex );
-        return pPad != nullptr ? pPad->getLeftTrigger() : 0.0f;
-    }
-
-    float32 InputManager::getGamepadRightTrigger( uint32 deviceIndex ) const
-    {
-        GamepadDevice* pPad = getGamepad( deviceIndex );
-        return pPad != nullptr ? pPad->getRightTrigger() : 0.0f;
-    }
-
-    bool InputManager::setGamepadVibration( float32 leftMotor, float32 rightMotor, uint32 deviceIndex )
-    {
-        GamepadDevice* pPad = getGamepad( deviceIndex );
-        return pPad != nullptr ? pPad->setVibration( leftMotor, rightMotor ) : false;
-    }
-
-    bool InputManager::playGamepadVibration( float32 leftMotor, float32 rightMotor, float32 durationSeconds, uint32 deviceIndex )
-    {
-        GamepadDevice* pPad = getGamepad( deviceIndex );
-        return pPad != nullptr ? pPad->playVibration( leftMotor, rightMotor, durationSeconds ) : false;
-    }
-
     void InputManager::attachVirtualInput( IVirtualInputSource* pSource, VirtualInputMode mode, bool bResetState )
     {
         if ( pSource == nullptr )

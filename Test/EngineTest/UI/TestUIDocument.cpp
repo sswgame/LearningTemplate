@@ -317,7 +317,7 @@ SW_TEST_CASE( UIDocumentTest, CommandRoutesToScreen )
     SW_ASSERT_NOT_NULL( pCounting );
     sw::ButtonWidget* pGo = pCounting->getTree().findWidget<sw::ButtonWidget>( "Go" );
     SW_ASSERT_NOT_NULL( pGo );
-    SW_ASSERT_TRUE( fixture._ui.getFocusManager().setFocus( pCounting->getTree(), pGo->getID() ) );
+    SW_ASSERT_TRUE( fixture._ui.getInputRouter().getFocusManager().setFocus( pCounting->getTree(), pGo->getID() ) );
     sw::UIActionEvent accept{};
     accept._action = sw::hashed_string( sw::UIActionName::kAccept );
     SW_EXPECT_TRUE( pGo->onActionEvent( accept, sw::UIRoutePhase::Bubble ).isHandled() );
@@ -427,7 +427,7 @@ SW_TEST_CASE( UIDocumentTest, ReloadRebuildsAndKeepsFocusByName )
     sw::ButtonWidget* pOldB = pScreen->getTree().findWidget<sw::ButtonWidget>( "B" );
     SW_ASSERT_NOT_NULL( pOldB );
     const sw::WidgetID oldID = pOldB->getID();
-    SW_ASSERT_TRUE( fixture._ui.getFocusManager().setFocus( pScreen->getTree(), oldID ) );
+    SW_ASSERT_TRUE( fixture._ui.getInputRouter().getFocusManager().setFocus( pScreen->getTree(), oldID ) );
     sw::ScrollPanel* pScroll = pScreen->getTree().findWidget<sw::ScrollPanel>( "Scroll" );
     SW_ASSERT_NOT_NULL( pScroll );
     pScroll->setScrollOffset( sw::float2{ 0.0f, 300.0f } );
@@ -441,7 +441,7 @@ SW_TEST_CASE( UIDocumentTest, ReloadRebuildsAndKeepsFocusByName )
     SW_EXPECT_TRUE( pNewB->getID() != oldID );
     SW_EXPECT_STREQ( "New", pNewB->getCommand().c_str() );
     SW_EXPECT_TRUE( pScreen->getTree().findWidgetByName( "C" ) != nullptr );
-    SW_EXPECT_EQUAL( pNewB->getID(), fixture._ui.getFocusManager().getFocusedWidget() );
+    SW_EXPECT_EQUAL( pNewB->getID(), fixture._ui.getInputRouter().getFocusManager().getFocusedWidget() );
     SW_EXPECT_EQUAL( 300.0f, pScreen->getTree().findWidget<sw::ScrollPanel>( "Scroll" )->getScrollOffset()._y );
     Util::runFrame( fixture._input, fixture._ui );
 }
@@ -535,7 +535,7 @@ SW_TEST_CASE( UIDocumentTest, OffscreenScreenDrawsToItsTargetAndReloads )
     sw::UIDocumentCache& cache = fixture._ui.getDocumentCache();
     cache.registerMemoryDocument( "test/offscreen.ui.xml", UIReloadTestUtil::makeReloadDocument( false, "Old" ) );
     const sw::UIScreenHandle handle  = fixture._ui.openOffscreenScreen( "test/offscreen.ui.xml", "rendertarget/test_preview" );
-    sw::UIScreen*            pScreen = fixture._ui.findOffscreenScreen( handle );
+    sw::UIScreen*            pScreen = fixture._ui.getOffscreenScreens().findScreen( handle );
     SW_ASSERT_NOT_NULL( pScreen );
     SW_EXPECT_EQUAL( 0u, fixture._ui.getScreenCount() );
     SW_EXPECT_TRUE( fixture._ui.getActiveScreen() == nullptr );
@@ -559,8 +559,8 @@ SW_TEST_CASE( UIDocumentTest, OffscreenScreenDrawsToItsTargetAndReloads )
     cache.reload( "test/offscreen.ui.xml", nullptr );
     SW_EXPECT_TRUE( pScreen->getTree().findWidgetByName( "B" )->getID() != oldID );
     SW_EXPECT_TRUE( pScreen->getTree().findWidgetByName( "C" ) != nullptr );
-    fixture._ui.closeOffscreenScreen( handle );
-    SW_EXPECT_TRUE( fixture._ui.findOffscreenScreen( handle ) == nullptr );
+    fixture._ui.getOffscreenScreens().remove( handle );
+    SW_EXPECT_TRUE( fixture._ui.getOffscreenScreens().findScreen( handle ) == nullptr );
 }
 
 /**
@@ -571,7 +571,7 @@ SW_TEST_CASE( UIDocumentTest, OffscreenScreenDoesNotPlayOpenAnimation )
 {
     UIDocumentFixture        fixture;
     const sw::UIScreenHandle offscreen = fixture._ui.openOffscreenScreen( "engine/ui/pause.ui.xml", "rendertarget/test_preview" );
-    sw::UIScreen*            pPreview  = fixture._ui.findOffscreenScreen( offscreen );
+    sw::UIScreen*            pPreview  = fixture._ui.getOffscreenScreens().findScreen( offscreen );
     SW_ASSERT_NOT_NULL( pPreview );
     const sw::UIScreenHandle stacked  = fixture._ui.openScreen( "engine/ui/pause.ui.xml" );
     sw::UIScreen*            pStacked = fixture._ui.findScreen( stacked );
@@ -586,7 +586,7 @@ SW_TEST_CASE( UIDocumentTest, OffscreenScreenDoesNotPlayOpenAnimation )
     fixture._ui.setOffscreenView( offscreen, viewport, 1.0f, sw::hashed_string{} );
     fixture._ui.update( 0.016f, viewport );
     SW_EXPECT_NEAR_EQUAL( 1.0f, pPreview->getTree().findWidgetByName( "Window" )->getOpacity(), 1e-4f );
-    fixture._ui.closeOffscreenScreen( offscreen );
+    fixture._ui.getOffscreenScreens().remove( offscreen );
 }
 
 /**
@@ -597,7 +597,7 @@ SW_TEST_CASE( UIDocumentTest, OffscreenScreenPlaysAnimationsTheCallerPicks )
 {
     UIDocumentFixture        fixture;
     const sw::UIScreenHandle offscreen = fixture._ui.openOffscreenScreen( "engine/ui/pause.ui.xml", "rendertarget/test_preview" );
-    sw::UIScreen*            pPreview  = fixture._ui.findOffscreenScreen( offscreen );
+    sw::UIScreen*            pPreview  = fixture._ui.getOffscreenScreens().findScreen( offscreen );
     SW_ASSERT_NOT_NULL( pPreview );
     const sw::hashed_string openName( sw::UIAnimation::kOpenName );
     SW_ASSERT_TRUE( pPreview->getAnimationPlayer().findAnimation( openName ) != nullptr ); // 등록은 하되 틀지는 않는다
@@ -623,5 +623,5 @@ SW_TEST_CASE( UIDocumentTest, OffscreenScreenPlaysAnimationsTheCallerPicks )
     }
     SW_EXPECT_NEAR_EQUAL( 1.0f, pWindow->getOpacity(), 1e-4f );
     SW_EXPECT_FALSE( pPreview->getAnimationPlayer().isAnyPlaying() );
-    fixture._ui.closeOffscreenScreen( offscreen );
+    fixture._ui.getOffscreenScreens().remove( offscreen );
 }

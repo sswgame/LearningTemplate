@@ -99,7 +99,7 @@ namespace sw
     {
         if ( _pAbilitySystem == nullptr || _config._pCooldownEffect == nullptr )
             return false;
-        return _pAbilitySystem->hasAnyMatchingTags( _config._pCooldownEffect->_grantedTags );
+        return _pAbilitySystem->getOwnedTagCounts().hasAnyMatchingTags( _config._pCooldownEffect->_grantedTags );
     }
 
     float32 GameplayAbility::getCooldownRemaining() const

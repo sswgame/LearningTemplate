@@ -2022,8 +2022,8 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_UnifiedActionPipeline_Axis1DAndVe
     SW_EXPECT_TRUE( moveVec._y > 0.5f );
 
     // 축 반전 활성화
-    inputMap.setInvertX( true );
-    inputMap.setInvertY( true );
+    inputMap.getPlayerSettings()._bInvertX = true;
+    inputMap.getPlayerSettings()._bInvertY = true;
     inputManager.beginFrame( 0.016f );
 
     moveVec = inputMap.getVector2D( "Move" );

@@ -170,7 +170,7 @@ namespace sw
         // 메타 어트리뷰트는 받자마자 비운다. 다음 피해가 이 값 위에 쌓이지 않게 하기 위해서다.
         const float32 damage = pAbilitySystem->getAttributeBaseValue( CombatAttributes::incomingDamage() );
         (void)pAbilitySystem->setAttributeBaseValue( CombatAttributes::incomingDamage(), 0.0f );
-        if ( damage <= 0.0f || pAbilitySystem->hasMatchingTag( getDeadTag() ) )
+        if ( damage <= 0.0f || pAbilitySystem->getOwnedTagCounts().hasMatchingTag( getDeadTag() ) )
             return;
 
         const float32 oldHealth = pAbilitySystem->getAttributeBaseValue( CombatAttributes::health() );
@@ -201,7 +201,7 @@ namespace sw
 
         const float32 healing = pAbilitySystem->getAttributeBaseValue( CombatAttributes::incomingHealing() );
         (void)pAbilitySystem->setAttributeBaseValue( CombatAttributes::incomingHealing(), 0.0f );
-        if ( healing <= 0.0f || pAbilitySystem->hasMatchingTag( getDeadTag() ) )
+        if ( healing <= 0.0f || pAbilitySystem->getOwnedTagCounts().hasMatchingTag( getDeadTag() ) )
             return;
 
         const float32 health = pAbilitySystem->getAttributeBaseValue( CombatAttributes::health() );
@@ -211,11 +211,11 @@ namespace sw
     void CombatAttributeSet::handleOutOfHealth( const AttributeModCallbackData& data )
     {
         AbilitySystemComponent* pAbilitySystem = getOwningAbilitySystem();
-        if ( pAbilitySystem == nullptr || pAbilitySystem->hasMatchingTag( getDeadTag() ) )
+        if ( pAbilitySystem == nullptr || pAbilitySystem->getOwnedTagCounts().hasMatchingTag( getDeadTag() ) )
             return;
 
         // 순서는 다음과 같다. 태그를 먼저 붙이고(이후 발동과 피해가 막힌다), 어빌리티를 취소하고, 컴포넌트 안의 반응(이벤트)을 처리한 뒤, 바깥(채널)에 알린다.
-        pAbilitySystem->addLooseTag( getDeadTag() );
+        pAbilitySystem->getOwnedTagCounts().updateCount( getDeadTag(), 1 );
         pAbilitySystem->cancelAllAbilities();
 
         GameObject*      pOwner     = pAbilitySystem->getOwner();

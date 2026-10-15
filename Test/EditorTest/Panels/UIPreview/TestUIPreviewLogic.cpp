@@ -180,7 +180,7 @@ SW_TEST_CASE( UIPreviewLogicTest, EditedPropertyIsWrittenIntoTheDocumentText )
     ui.getDocumentCache().registerMemoryDocument( "test/preview_save.ui.xml",
                                                   "<UIDocument _schemaVersion=\"1\">\n\t<BoxPanel _spacing=\"4\">\n\t\t<BorderPanel _name=\"Card\" />\n\t</BoxPanel>\n</UIDocument>\n" );
     const sw::UIScreenHandle handle  = ui.openOffscreenScreen( "test/preview_save.ui.xml", "rendertarget/test_preview_save" );
-    sw::UIScreen*            pScreen = ui.findOffscreenScreen( handle );
+    sw::UIScreen*            pScreen = ui.getOffscreenScreens().findScreen( handle );
     SW_ASSERT_NOT_NULL( pScreen );
 
     sw::string text;
@@ -203,7 +203,7 @@ SW_TEST_CASE( UIPreviewLogicTest, EditedPropertyIsWrittenIntoTheDocumentText )
         SW_EXPECT_FALSE( UIPreviewLogic::makeDocumentText( ui, *pScreen, "test/not_there.ui.xml", text, error ) );
         SW_EXPECT_FALSE( error.empty() );
     }
-    ui.closeOffscreenScreen( handle );
+    ui.getOffscreenScreens().remove( handle );
     ui.shutdown();
     input.shutdown();
 }

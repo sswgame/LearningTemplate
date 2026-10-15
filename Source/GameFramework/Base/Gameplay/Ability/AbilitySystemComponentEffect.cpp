@@ -312,9 +312,9 @@ namespace sw
     bool AbilitySystemComponent::canApplySpec( const GameplayEffectSpec& spec ) const
     {
         const GameplayEffectDef& def = *spec._pDef;
-        if ( hasAllMatchingTags( def._applicationRequiredTags ) == false )
+        if ( _ownedTagCounts.hasAllMatchingTags( def._applicationRequiredTags ) == false )
             return false;
-        return hasAnyMatchingTags( def._applicationBlockedTags ) == false;
+        return _ownedTagCounts.hasAnyMatchingTags( def._applicationBlockedTags ) == false;
     }
 
     bool AbilitySystemComponent::computeModifierMagnitude( const GameplayEffectModifier& modifier, const GameplayEffectSpec& spec, float32& outMagnitude ) const
@@ -484,7 +484,7 @@ namespace sw
         ActiveGameplayEffect* pActiveEffect = pNewEffect.get();
         _listActiveEffect.push_back( std::move( pNewEffect ) );
 
-        updateTagCounts( pActiveEffect->_grantedTags, 1 );
+        _ownedTagCounts.updateCounts( pActiveEffect->_grantedTags, 1 );
         for ( const EvaluatedModifier& modifier : pActiveEffect->_listEvaluatedModifier )
         {
             recomputeAttribute( modifier._attribute );
@@ -505,7 +505,7 @@ namespace sw
         activeEffect._bPendingRemove = SW_TRUE;
         _bHasPendingRemoval          = SW_TRUE;
 
-        updateTagCounts( activeEffect._grantedTags, -1 );
+        _ownedTagCounts.updateCounts( activeEffect._grantedTags, -1 );
         for ( const EvaluatedModifier& modifier : activeEffect._listEvaluatedModifier )
         {
             recomputeAttribute( modifier._attribute );

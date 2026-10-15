@@ -100,7 +100,7 @@ namespace sw
         {
             _bEscapeHeld       = true;
             _escapeHeldSeconds = 0.0f;
-            pUI->consumeSlot( slot );
+            pUI->getInputRouter().getConsumption().consumeSlot( slot );
             return;
         }
         capture( slot );
@@ -110,7 +110,7 @@ namespace sw
     {
         UISystem* pUI = getUISystem();
         if ( pUI != nullptr )
-            pUI->consumeSlot( slot );
+            pUI->getInputRouter().getConsumption().consumeSlot( slot );
         _capturedSlotText = InputSlotUtil::toText( slot );
         _bListening       = false;
         UserSettingBindingConflict conflict{};
@@ -147,6 +147,6 @@ namespace sw
             return;
         Widget* pFocus = pOther != nullptr ? pSwap : tree.findWidgetByName( "Cancel" );
         if ( pFocus != nullptr )
-            (void)pUI->getFocusManager().setFocus( tree, pFocus->getID() );
+            (void)pUI->getInputRouter().getFocusManager().setFocus( tree, pFocus->getID() );
     }
 } // namespace sw

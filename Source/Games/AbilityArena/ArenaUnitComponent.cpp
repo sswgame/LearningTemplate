@@ -66,7 +66,7 @@ namespace sw
         const bool              bMissingComponents = pManager == nullptr || pMesh == nullptr || pAbilitySystem == nullptr || pPawn == nullptr || deltaTime <= 0.0f;
         if ( bMissingComponents )
             return;
-        if ( _deathTimer >= 0.0f || pAbilitySystem->hasMatchingTag( CombatAttributeSet::getDeadTag() ) )
+        if ( _deathTimer >= 0.0f || pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) )
         {
             updateDeath( deltaTime, *pMesh );
             return;
@@ -88,7 +88,7 @@ namespace sw
 
         // (3) 이동 — 이동 속도는 어트리뷰트의 current 다(대시 ×3 · 둔화 이펙트가 그대로 반영된다).
         float3       position  = pMesh->getLocalPosition();
-        const float3 direction = pAbilitySystem->hasMatchingTag( "State.Dashing"_tag ) ? _facing : move;
+        const float3 direction = pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "State.Dashing"_tag ) ? _facing : move;
         if ( direction.getLengthSquared() > 0.0f )
         {
             const float32 speed = pAbilitySystem->getAttributeValue( CombatAttributes::moveSpeed() );
