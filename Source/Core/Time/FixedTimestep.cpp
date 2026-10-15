@@ -6,25 +6,33 @@
 
 namespace sw
 {
-    FixedTimestep::FixedTimestep( const FixedTimestepParams& defaults )
+    FixedTimestep::FixedTimestep()
         : _timer{}
-        , _defaults{ defaults }
-        , _params{ defaults }
+        , _params{}
         , _accumulator{ 0.0f }
     {
-        SW_ASSERT( defaults._maxFrameDeltaTime > 0.0f && defaults._fixedDeltaTime > 0.0f && defaults._maxFixedStepPerFrame > 0 );
+    }
+
+    FixedTimestep::FixedTimestep( const FixedTimestepParams& params )
+        : _timer{}
+        , _params{}
+        , _accumulator{ 0.0f }
+    {
+        configure( params );
     }
 
     void FixedTimestep::configure( const FixedTimestepParams& params )
     {
-        // 설정 로드가 범위(Min)를 이미 본다. 코드가 직접 부르는 길에서 0 으로 나누지 않게 만들 때 받은 기본값(출처는 값을 가진 쪽 하나)으로 되돌린다.
-        _params._maxFrameDeltaTime    = params._maxFrameDeltaTime > 0.0f ? params._maxFrameDeltaTime : _defaults._maxFrameDeltaTime;
-        _params._fixedDeltaTime       = params._fixedDeltaTime > 0.0f ? params._fixedDeltaTime : _defaults._fixedDeltaTime;
-        _params._maxFixedStepPerFrame = params._maxFixedStepPerFrame > 0 ? params._maxFixedStepPerFrame : _defaults._maxFixedStepPerFrame;
+        // 설정 로드가 범위(Min)를 이미 본다. 다른 값으로 몰래 바꾸면 틀린 설정이 조용히 다른 정책이 된다 — 계약 위반은 단언한다.
+        const bool bValid = params._maxFrameDeltaTime > 0.0f && params._fixedDeltaTime > 0.0f && params._maxFixedStepPerFrame > 0;
+        SW_LOG_ASSERT( bValid, "FixedTimestep needs positive time policy values (EngineConfig range checks should have rejected these)" );
+        if ( bValid )
+            _params = params;
     }
 
     void FixedTimestep::start()
     {
+        SW_LOG_ASSERT( isConfigured(), "FixedTimestep::start before configure - read EngineConfig first" );
         _accumulator = 0.0f;
         _timer.resetTimer();
         _timer.startTimer();

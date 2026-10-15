@@ -16,14 +16,6 @@ namespace sw
     {
         struct FarmCropComponentInternal
         {
-            /**
-             * @brief Kenney Nature Kit 모델의 배율입니다. 키트는 밭 한 줄(`crops_dirt_row`)이 1 이라 키트 1 칸이 밭 1 칸이지만, 위에서 비스듬히 보는
-             *        직교 카메라에서 작물이 콩알만 해서 1.6 배로 키운다(작물 폭 0.35 → 0.56 m, 칸 안에 들어간다).
-             * @details 모델은 바닥이 원점보다 0.05 아래다(키트 노드가 내려 둔 값) — 흙 윗면에 얹을 때 그만큼 올린다.
-             */
-            static constexpr float32 kModelFloor = 0.05f;
-            static constexpr float32 kSoilTop    = 0.08f;
-
             static constexpr const utf8* kArrModelName[] = { "crop_turnip", "crop_carrot", "crop_pumpkin", "crops_corn_stage_a",
                                                              "crops_corn_stage_b", "crops_corn_stage_c", "crops_corn_stage_d", "crops_leafs_stage_a",
                                                              "crops_leafs_stage_b" };
@@ -37,6 +29,8 @@ namespace sw
         : _director{}
         , _tileIndex{ -1 }
         , _modelScale{ 1.6f }
+        , _modelFloor{ 0.05f }
+        , _soilTop{ 0.08f }
         , _cropState{ -1 }
     {
         setCanEverTick( true );
@@ -91,7 +85,6 @@ namespace sw
 
     void FarmCropComponent::onTick( float32 deltaTime )
     {
-        using Internal = FarmCropComponentInternal;
         Component::onTick( deltaTime );
         GameObject*        pOwner       = getOwner();
         GameObjectManager* pManager     = pOwner != nullptr ? pOwner->getManager() : nullptr;
@@ -137,7 +130,7 @@ namespace sw
         pMesh->setMeshID( makeModelPath( pModel ) );
         pMesh->setMaterialInstance( look );
         pMesh->setLocalScale( float3{ size } );
-        pMesh->setLocalPosition( FarmDirectorComponent::computeTileCenter( x, y ) + float3{ 0.0f, Internal::kSoilTop + Internal::kModelFloor * size, 0.0f } );
+        pMesh->setLocalPosition( FarmDirectorComponent::computeTileCenter( x, y ) + float3{ 0.0f, _soilTop + _modelFloor * size, 0.0f } );
         pMesh->setVisible( true );
         _cropState = cropState;
     }

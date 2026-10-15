@@ -129,9 +129,9 @@ namespace sw
 
         /**
          * @brief XML 에서 몬스터 정의 테이블을 로드합니다. 에셋 상대 경로나 실제 파일 경로를 받습니다(`XMLDocument::loadPath`).
-         * @return 하나라도 읽었으면 true 입니다. 하나도 못 읽었으면 **최소 폴백을 채우고** false 를 반환합니다.
+         * @return 하나라도 읽었으면 true 입니다. 하나도 못 읽었으면 오류를 남기고 빈 카탈로그로 false 를 반환합니다(코드 폴백 정의는 없습니다).
          * @details 실패는 세 가지이고 모두 같게 다룬다. 파일이 없는 경우, 루트가 `<MonsterCatalog>` 가 아닌 경우, **읽었는데 `<Monster>` 가 하나도 없는** 경우다.
-         *          마지막 경우를 성공으로 취급하면 태그 철자를 틀렸을 때 텅 빈 카탈로그가 조용히 만들어진다. 폴백 없이 읽으려면 `XMLCatalog` 의 `loadFromXMLText` 를 쓴다.
+         *          마지막 경우를 성공으로 취급하면 태그 철자를 틀렸을 때 텅 빈 카탈로그가 조용히 만들어진다.
          */
         [[nodiscard]] bool loadFromResource( string_view assetRelativePath );
 
@@ -147,7 +147,6 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "MonsterCatalog"; ///< 루트 원소(`XMLCatalog`)
 
-        void seedFallback();
         /** @brief `<MonsterCatalog>` 루트의 `<Monster>` 들을 읽고(`XMLCatalog`), 읽은 수를 반환합니다. 0이면 실패입니다. */
         uint32 loadRoot( const XMLNode& root, string_view sourceName );
 

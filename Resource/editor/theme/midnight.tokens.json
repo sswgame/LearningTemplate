@@ -1,0 +1,61 @@
+{
+    "_name": "midnight",
+    "_displayName": "Midnight Blue",
+    "_color": {
+        "_text": "#EBF0F7",
+        "_accent": "#668CFF",
+        "_windowBg": "#121724",
+        "_panelBg": "#171F2E",
+        "_headerBg": "#243047",
+        "_frameBg": "#1C2638",
+        "_border": "#2E405C",
+        "_success": "#33D980",
+        "_warning": "#FFBF33",
+        "_error": "#FF5959",
+        "_info": "#66BFFF",
+        "_textMuted": "#8099BF",
+        "_scrollbarBg": "#05050859",
+        "_dockingEmptyBg": "#0D0D12",
+        "_tableRowBgAlt": "#FFFFFF05",
+        "_overlayBg": "#1F1F24",
+        "_selectionOutline": "#FF9E26F2",
+        "_highlight": "#FFC83C",
+        "_toggleInactive": "#33384299",
+        "_axisX": "#D94040",
+        "_axisY": "#4CBF59",
+        "_axisZ": "#408CF2"
+    },
+    "_radius": {
+        "_window": 4,
+        "_frame": 3,
+        "_popup": 4,
+        "_tab": 4,
+        "_scrollbar": 6,
+        "_grab": 3
+    },
+    "_spacing": {
+        "_windowPaddingX": 8,
+        "_windowPaddingY": 8,
+        "_framePaddingX": 6,
+        "_framePaddingY": 4,
+        "_itemSpacingX": 6,
+        "_itemSpacingY": 4,
+        "_itemInnerSpacingX": 4,
+        "_itemInnerSpacingY": 4,
+        "_indent": 20,
+        "_scrollbarSize": 12,
+        "_grabMinSize": 8
+    },
+    "_stroke": {
+        "_window": 1,
+        "_child": 1,
+        "_popup": 1,
+        "_frame": 1,
+        "_tab": 0
+    },
+    "_typography": {
+        "_fontSize": 16,
+        "_iconScale": 0.8
+    },
+    "_density": 1.0
+}

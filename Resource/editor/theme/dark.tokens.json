@@ -1,0 +1,61 @@
+{
+    "_name": "dark",
+    "_displayName": "Dark (Modern)",
+    "_color": {
+        "_text": "#EBF0F7",
+        "_accent": "#4591FF",
+        "_windowBg": "#1A1C24",
+        "_panelBg": "#212630",
+        "_headerBg": "#2E3647",
+        "_frameBg": "#262B38",
+        "_border": "#384254",
+        "_success": "#33BF59",
+        "_warning": "#F2B226",
+        "_error": "#F24C40",
+        "_info": "#4CB2F2",
+        "_textMuted": "#8C99AD",
+        "_scrollbarBg": "#05050859",
+        "_dockingEmptyBg": "#0D0D12",
+        "_tableRowBgAlt": "#FFFFFF05",
+        "_overlayBg": "#1F1F24",
+        "_selectionOutline": "#FF9E26F2",
+        "_highlight": "#FFC83C",
+        "_toggleInactive": "#33384299",
+        "_axisX": "#D94040",
+        "_axisY": "#4CBF59",
+        "_axisZ": "#408CF2"
+    },
+    "_radius": {
+        "_window": 4,
+        "_frame": 3,
+        "_popup": 4,
+        "_tab": 4,
+        "_scrollbar": 6,
+        "_grab": 3
+    },
+    "_spacing": {
+        "_windowPaddingX": 8,
+        "_windowPaddingY": 8,
+        "_framePaddingX": 6,
+        "_framePaddingY": 4,
+        "_itemSpacingX": 6,
+        "_itemSpacingY": 4,
+        "_itemInnerSpacingX": 4,
+        "_itemInnerSpacingY": 4,
+        "_indent": 20,
+        "_scrollbarSize": 12,
+        "_grabMinSize": 8
+    },
+    "_stroke": {
+        "_window": 1,
+        "_child": 1,
+        "_popup": 1,
+        "_frame": 1,
+        "_tab": 0
+    },
+    "_typography": {
+        "_fontSize": 16,
+        "_iconScale": 0.8
+    },
+    "_density": 1.0
+}

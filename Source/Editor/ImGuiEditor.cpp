@@ -10,6 +10,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Backend/EditorDrawDataSnapshot.h"
+#include "Editor/Common/Backend/EditorUICapture.h"
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Backend/ImGuiOsInputFilter.h"
@@ -35,8 +36,10 @@
 #include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorExtensionRegistryDump.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -52,6 +55,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/CommandStack.h"
+#include "Engine/Utility/EditSessionState.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
@@ -137,6 +141,63 @@ namespace sw::editor
                 SW_LOG_TRACE( "Splash: reading ForwardPipeline.xml" );
                 if ( pPipeline->loadFromXMLFile( pEngineDefaultAssets->_defaultForwardPipeline ) == false )
                     SW_LOG_WARNING( "Splash: could not read %#", pEngineDefaultAssets->_defaultForwardPipeline.c_str() );
+            }
+
+            /** @brief 인스턴스가 내려가기 전에 선택 · 미저장 표시를 엔진(`EditSessionState`)에 맡깁니다. 다음 인스턴스가 `resumeEditSession` 으로 찾아갑니다. */
+            static void storeEditSession( EditorContext& context )
+            {
+                EditSessionState* pSession      = editor::findSubsystem<EditSessionState>();
+                SceneManager*     pSceneManager = editor::findSubsystem<SceneManager>();
+                if ( pSession == nullptr || pSceneManager == nullptr )
+                    return;
+                const EditorWorkspace&     workspace = context.getSubsystem<EditorWorkspace>();
+                const EditorSelection&     selection = context.getSubsystem<EditorSelection>();
+                EditSessionState::Snapshot snapshot{};
+                // 워크스페이스가 아직 이 세대를 보지 못했으면 선택 · 표시는 옛 씬의 것이다 — 세대를 그대로 적어 다음 인스턴스가 버리게 한다.
+                snapshot._sceneGeneration = workspace.getObservedSceneGeneration();
+                snapshot._bSceneDirty     = workspace.isSceneDirty();
+                for ( const GameObjectHandle& handle : selection.getSelectedHandles() )
+                {
+                    snapshot._listSelectedObjectID.push_back( handle.objectID() );
+                }
+                snapshot._listSelectedAsset = selection.getSelectedAssets();
+                pSession->store( std::move( snapshot ) );
+            }
+
+            /**
+             * @brief 앞선 인스턴스가 맡긴 선택 · 미저장 표시를 되찾습니다. 앞선 인스턴스가 있었으면 true 입니다(씬이 그 뒤에 바뀌었으면 값은 버리지만 true).
+             * @details 워크스페이스는 지금 씬 세대를 이미 본 것으로 둔다 — 새 인스턴스가 지금 씬을 "새 씬" 으로 여겨 엔진의 되돌리기 스택을 비우지 않게 한다
+             *          (`EditorSceneGenerationSync`). 씬 오브젝트는 같은 id 로 이어지므로(게임 상태 복원 · 같은 씬) 선택 id 와 되돌리기 명령이 그대로 맞는다.
+             */
+            static bool resumeEditSession( EditorContext& context )
+            {
+                EditSessionState* pSession      = editor::findSubsystem<EditSessionState>();
+                SceneManager*     pSceneManager = editor::findSubsystem<SceneManager>();
+                if ( pSession == nullptr || pSceneManager == nullptr )
+                    return false;
+                const bool       bResumed   = pSession->hasSnapshot();
+                const uint64     generation = pSceneManager->getSceneGeneration();
+                EditorWorkspace& workspace  = context.getSubsystem<EditorWorkspace>();
+                workspace.setObservedSceneGeneration( generation );
+                EditSessionState::Snapshot snapshot{};
+                if ( pSession->take( generation, snapshot ) == false )
+                    return bResumed;
+                if ( snapshot._bSceneDirty )
+                    workspace.markSceneDirty();
+                vector<GameObject*> listObject;
+                for ( const uint64 objectID : snapshot._listSelectedObjectID )
+                {
+                    if ( GameObject* pObject = editor::findGameObject( GameObjectHandle::make( objectID ) ) )
+                        listObject.push_back( pObject );
+                }
+                EditorSelection& selection = context.getSubsystem<EditorSelection>();
+                if ( listObject.empty() == false )
+                    selection.selectObjects( listObject, SelectionMode::Replace );
+                if ( snapshot._listSelectedAsset.empty() == false )
+                    selection.selectAssets( snapshot._listSelectedAsset, SelectionMode::Replace );
+                SW_LOG_INFO( "Resumed the edit session: %# selected object(s), %#", static_cast<uint32>( listObject.size() ),
+                             snapshot._bSceneDirty ? "unsaved changes" : "no unsaved changes" );
+                return true;
             }
 
             /**
@@ -368,6 +429,7 @@ namespace sw::editor
         , _arrDrawSnapshot{}
         , _drawSnapshotHandoff{}
         , _lastDrawSnapshotSequence{ 0 }
+        , _pUICapture{ nullptr }
         , _bInitialized{ SW_FALSE }
         , _reservedFlags{ 0 }
     {
@@ -557,6 +619,7 @@ namespace sw::editor
         _editorContext = make_unique<EditorContext>();
         _editorContext->initialize();
         _editorContext->setDockLayout( &_dockLayout );
+        _pUICapture = &_editorContext->getSubsystem<EditorUICapture>();
         // 테마는 컨텍스트가 활성화된 뒤에 읽어야 한다. 테마 상태를 컨텍스트가 보관하므로, 그 전에 부르면 적용한 테마가 갈 곳이
         // 없어 조용히 버려진다. 이때 stored preset 이 0 에 머문다.
         EditorThemeUtil::loadFromConfig();
@@ -574,6 +637,7 @@ namespace sw::editor
             EditorTransaction::bindObjectEditListener( *pCommandStack );
         EditorExtensionRegistryDump::dumpIfRequested();
         _dockLayout.loadPanelVisibility();
+        const bool bResumedSession = ImGuiEditorInternal::resumeEditSession( *_editorContext );
 
         // 모니터 DPI 에 맞춰 스타일과 글자를 키운다. 테마를 읽은 뒤에 해야 한다. 테마가 96 DPI 기준 크기를 기록하기 때문이다.
         // 모니터를 옮기면 글자와 플랫폼 창이 따라간다(ImGui 1.92 동적 폰트).
@@ -589,8 +653,9 @@ namespace sw::editor
 
         // `-gv_editorStartupScene=<경로>` 는 검증용이다. 기동 검증이 오브젝트를 순회하는 코드까지 실행하게 한다. 정의는 이 파일 위쪽에 있다.
         // 스위치가 있으면 그 값을 쓰고, 없으면 환경설정(General 의 시작 씬)을 쓴다.
+        // 앞선 인스턴스를 이어받았으면(백엔드 교체 · 에디터 모듈 리로드) 시작 씬을 열지 않는다 — 열면 편집 중인 씬과 미저장 편집을 버린다.
         const string startupScene = gv_editorStartupScene.empty() == false ? string( gv_editorStartupScene ) : getPreferences<EditorGeneralPreferences>()._startupScene;
-        if ( startupScene.empty() == false )
+        if ( startupScene.empty() == false && bResumedSession == false )
         {
             SW_LOG_INFO( "시작 씬을 엽니다: %#", startupScene.c_str() );
             if ( EditorSceneFileCommands::loadScene( startupScene ) == false )
@@ -602,9 +667,16 @@ namespace sw::editor
     void ImGuiEditor::shutdownEditorContext()
     {
         // Undo 스택에서는 이 모듈의 코드를 가진 명령과 편집 리스너만 제거한다. 오브젝트 편집은 엔진 데이터 명령이므로 남는다.
-        ImGuiEditorInternal::releaseModuleUndoCommands();
+        // 호스트가 이미지를 내리지 않고 인스턴스만 다시 만들면(백엔드 교체) 모듈 명령도 남긴다 — 다음 인스턴스가 되돌릴 수 있다.
+        const EditSessionState* pEditSession = editor::findSubsystem<EditSessionState>();
+        if ( pEditSession == nullptr || pEditSession->isModuleImageKept() == false )
+            ImGuiEditorInternal::releaseModuleUndoCommands();
         if ( _editorContext == nullptr )
             return;
+        ImGuiEditorInternal::storeEditSession( *_editorContext );
+        // 렌더 스레드는 이미 쉬고 있다(종료 경로가 렌더 워커를 비운 뒤다).
+        _pUICapture->releaseRHI( _pRHIDevice );
+        _pUICapture = nullptr;
         _editorContext->getSubsystem<EditorRenderViews>().destroyViewTargets();
         _editorContext->getSubsystem<EditorPanelManager>().shutdownAllPanels( nullptr );
         _editorContext->getSubsystem<EditorPanelManager>().clear();
@@ -680,6 +752,9 @@ namespace sw::editor
             // 프레임 앞의 상태 정리는 단계로 옮기지 않는다. 메뉴 · 패널이 이번 프레임에 읽을 값이라 프레임을 열기 전이어야 한다.
             // 확장 모듈은 에디터가 뜬 뒤에도 로드되고 언로드된다. 등록 세대가 바뀌었으면 인스턴스를 맞추고, 같으면 비교 한 번으로 끝난다.
             _editorContext->syncExtensionRegistrations();
+            // 토큰 파일이 바뀌었으면(핫 리로드) 프레임을 열기 전에 다시 읽어 이번 프레임부터 새 스타일로 그린다.
+            if ( _editorContext->getSubsystem<EditorTheme>().consumeTokensChanged() )
+                EditorThemeUtil::reloadThemes();
 #if !defined( SW_SHIPPING )
             // 기동 뒤에 올라온 확장 모듈의 환경설정 섹션은 기본값이다. 새 섹션이 없으면 목록을 한 번 훑고 끝난다.
             if ( EditorPreferencesStore::hasNewSections() )
@@ -751,7 +826,10 @@ namespace sw::editor
             ++_lastDrawSnapshotSequence;
             {
                 SW_EDITOR_PROFILE_SCOPE( "GT.Editor.captureDrawSnapshot" );
-                _arrDrawSnapshot[writeSlot].capture( _lastDrawSnapshotSequence );
+                // 에디터 UI 캡처 요청이 있으면 이 프레임의 모든 뷰포트 합본도 넘긴다. 잘림 지표는 창 상태가 남아 있는 지금 잰다.
+                EditorUICaptureJob captureJob{};
+                const bool         bCapture = _pUICapture != nullptr && _pUICapture->takeJob( captureJob );
+                _arrDrawSnapshot[writeSlot].capture( _lastDrawSnapshotSequence, bCapture ? &captureJob : nullptr );
             }
             if ( _rendererBackend != nullptr )
                 _rendererBackend->getDrawReleaseQueue().markSnapshotPublished( _lastDrawSnapshotSequence );
@@ -782,6 +860,12 @@ namespace sw::editor
             if ( pDrawData != nullptr )
                 renderBackend( pRHIDevice, pDrawData );
 
+            // 에디터 UI 캡처: 같은 프레임의 모든 뷰포트 합본을 캡처 텍스처에 한 번 더 그린다. GL 의 플로팅 창 렌더(아래)보다 먼저다 — 그것은 컨텍스트를 바꾼다.
+            ImDrawData* const pCaptureDrawData = _arrDrawSnapshot[slot].findCaptureDrawData();
+            const bool        bCapture         = pCaptureDrawData != nullptr && _pUICapture != nullptr && _rendererBackend != nullptr;
+            if ( bCapture )
+                _pUICapture->renderJob( *pRHIDevice, *_rendererBackend, *pCaptureDrawData, _arrDrawSnapshot[slot].getCaptureJob() );
+
             // 이 프레임의 스냅샷보다 먼저 해제 요청된 자원은 앞 프레임들만 그렸다. 이 프레임의 GPU 작업이 끝난 뒤에 해제되도록 디바이스로 넘긴다.
             if ( _rendererBackend != nullptr )
                 _rendererBackend->getDrawReleaseQueue().handOverToDevice( *pRHIDevice, _arrDrawSnapshot[slot].getSequence() );
@@ -799,7 +883,9 @@ namespace sw::editor
 
     void ImGuiEditor::postPresent( IRHIDevice* pRHIDevice )
     {
-        std::ignore = pRHIDevice;
+        // endFrame 뒤라 이 프레임에 그린 캡처를 읽을 수 있다(GPU 를 기다린다 — 캡처한 프레임만).
+        if ( _pUICapture != nullptr && pRHIDevice != nullptr )
+            _pUICapture->finishJob( *pRHIDevice );
         // 메인 스냅샷 렌더가 끝났으므로 UI 스레드가 다음 슬롯을 쓸 수 있게 해제한다.
         // 보조 뷰포트는 updateUI 에서 UI 스레드가 이미 렌더하고 present 했다.
         _drawSnapshotHandoff.endRender();

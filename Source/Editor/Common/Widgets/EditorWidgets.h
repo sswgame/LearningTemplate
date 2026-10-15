@@ -64,7 +64,9 @@ namespace sw::editor
         /**
          * @brief 활성과 비활성에 따라 색이 바뀌는 토글 및 필터 칩 버튼을 그립니다. 클릭되면 true 를 반환합니다.
          */
-        static bool drawToggleButton( const utf8* pLabel, bool bActive, const Color& activeColor = style::kToggleActive );
+        static bool drawToggleButton( const utf8* pLabel, bool bActive, const Color& activeColor );
+        /** @brief 켜진 색이 테마 강조색인 토글입니다. */
+        static bool drawToggleButton( const utf8* pLabel, bool bActive );
         /**
          * @brief 켬/끔 아이콘 버튼(정사각, 한 줄 높이)을 그립니다. 눌렸으면 true 입니다. 툴팁은 상태에 따라 @p pTooltipOn 과 @p pTooltipOff 중 하나입니다.
          * @details 한 변이 `GetFrameHeight()` 이므로 글꼴과 DPI 배율이 함께 반영된다. 픽셀 상수로 폭을 주면 150 % 배율에서 글자가 잘린다.
@@ -184,6 +186,12 @@ namespace sw::editor
          * @brief 현재 아이템을 애셋 드롭 타깃으로 만들고 경로를 받습니다.
          */
         static bool acceptAssetDrop( string& outPath );
+        /**
+         * @brief 화면 사각형 [@p minPos, @p maxPos] 를 애셋 드롭 타깃으로 만들고 경로를 받습니다. @p pTargetID 는 창 안에서 타깃을 가리는 이름입니다.
+         * @details 뷰포트 캔버스처럼 위에 오버레이 · 기즈모 · HUD 가 그려지는 영역에 씁니다 — "마지막 아이템" 을 타깃으로 잡는 `acceptAssetDrop` 은
+         *          캔버스 다음에 그린 아이템(오버레이 단추 등)에 걸려 캔버스에 놓은 것을 받지 못한다.
+         */
+        static bool acceptAssetDropInRect( const float2& minPos, const float2& maxPos, const utf8* pTargetID, string& outPath );
 
         /**
          * @brief 검색 결과 목록에서 Up/Down 으로 선택을 움직입니다. Enter 면 true 입니다.

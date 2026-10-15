@@ -366,7 +366,9 @@ namespace sw::editor
         , _slotDragOrdinal{ UIPreviewLogic::kNoOrdinal }
         , _paletteFrame{ 0 }
         , _slotEditCount{ 0 }
-        , _resolutionIndex{ 1 }
+        , _resolutionTable{}
+        , _resolutionIndex{ 0 }
+        , _bResolutionTableAttempted{ false }
         , _uiScale{ 1.0f }
         , _textScale{ 1.0f }
         , _safeZone{ 0.0f }
@@ -457,9 +459,29 @@ namespace sw::editor
         _error.clear();
     }
 
+    const UIResolutionPreset* UIPreviewPanel::findSelectedResolution()
+    {
+        if ( _bResolutionTableAttempted == false )
+        {
+            _bResolutionTableAttempted = true;
+            (void)_resolutionTable.loadFromResource(); // 실패는 표가 알린다 — 목록이 비어 미리보기를 세우지 않는다
+        }
+        if ( _resolutionTable._listResolution.empty() )
+            return nullptr;
+        if ( _resolutionIndex >= _resolutionTable._listResolution.size() )
+            _resolutionIndex = 0;
+        return &_resolutionTable._listResolution[_resolutionIndex];
+    }
+
     void UIPreviewPanel::syncPreview( UISystem& ui )
     {
-        _viewport                        = UIPreviewLogic::makeViewport( ui.getScaleSettings(), _resolutionIndex, _uiScale, _safeZone );
+        const UIResolutionPreset* pResolution = findSelectedResolution();
+        if ( pResolution == nullptr )
+        {
+            _error = string( "UI preview resolutions could not be read (" ) + UIResolutionPresetTable::kResourcePath + ")";
+            return;
+        }
+        _viewport                        = UIPreviewLogic::makeViewport( ui.getScaleSettings(), *pResolution, _uiScale, _safeZone );
         const string targetPath          = UIPreviewLogic::makeTargetPath( _viewport );
         const bool   bReopen             = _screen == kInvalidUIScreenHandle || ui.getOffscreenScreens().findScreen( _screen ) == nullptr || _openedDocument != _documentPath;
         const bool   bPreviousOpenFailed = bReopen && _documentPath.empty() == false && _error.empty() == false && _openedDocument == _documentPath;
@@ -889,13 +911,14 @@ namespace sw::editor
                                     "changed the preview tree - Reload first." );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( 190.0f * EditorThemeUtil::getDpiScale() );
-        const bool bResolutionOpen = ImGui::BeginCombo( "##uipreviewres", UIPreviewLogic::getResolution( _resolutionIndex )._pName );
+        const UIResolutionPreset* pSelectedResolution = findSelectedResolution();
+        const bool                bResolutionOpen     = ImGui::BeginCombo( "##uipreviewres", pSelectedResolution != nullptr ? pSelectedResolution->_name.c_str() : "-" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "ResolutionTip" ) );
         if ( bResolutionOpen )
         {
-            for ( uint32 index = 0; index < UIPreviewLogic::getResolutionCount(); ++index )
+            for ( uint32 index = 0; index < static_cast<uint32>( _resolutionTable._listResolution.size() ); ++index )
             {
-                if ( ImGui::Selectable( UIPreviewLogic::getResolution( index )._pName, index == _resolutionIndex ) )
+                if ( ImGui::Selectable( _resolutionTable._listResolution[index]._name.c_str(), index == _resolutionIndex ) )
                     _resolutionIndex = index;
             }
             ImGui::EndCombo();
@@ -1204,7 +1227,7 @@ namespace sw::editor
             ImGui::InvisibleButton( "##handle", ImVec2{ half * 2.0f, half * 2.0f } );
             Internal::noteMark( "uipreview.handle", row._pMark );
             ImGui::GetWindowDrawList()->AddRectFilled( ImVec2{ row._center._x - half, row._center._y - half }, ImVec2{ row._center._x + half, row._center._y + half },
-                                                       EditorColorUtil::toImU32( style::kHighlight ) );
+                                                       EditorColorUtil::toImU32( EditorThemeUtil::getHighlightColor() ) );
             if ( ImGui::IsItemActivated() )
             {
                 _bSlotDragging    = true;
@@ -1249,7 +1272,7 @@ namespace sw::editor
         const UIRect  box  = UIPreviewLogic::mapUIToImage( pWidget->getGeometry().computeScreenBounds(), drawSize, _viewport );
         const float32 half = Internal::kHandleSize * EditorThemeUtil::getDpiScale() * 0.5f;
         const ImVec2  center{ origin._x + ( box._left + box._right ) * 0.5f, origin._y + ( box._top + box._bottom ) * 0.5f };
-        const ImU32   color = EditorColorUtil::toImU32( style::kHighlight );
+        const ImU32   color = EditorColorUtil::toImU32( EditorThemeUtil::getHighlightColor() );
         ImGui::SetCursorScreenPos( ImVec2{ center.x - half, center.y - half } );
         ImGui::PushID( "layouthandle" );
         ImGui::InvisibleButton( "##reorder", ImVec2{ half * 2.0f, half * 2.0f } );
@@ -1735,7 +1758,7 @@ namespace sw::editor
             }
         }
         if ( pSelected != nullptr )
-            drawBox( UIPreviewLogic::mapUIToImage( pSelected->getGeometry().computeScreenBounds(), drawSize, _viewport ), EditorColorUtil::toImU32( style::kHighlight ), 2.0f );
+            drawBox( UIPreviewLogic::mapUIToImage( pSelected->getGeometry().computeScreenBounds(), drawSize, _viewport ), EditorColorUtil::toImU32( EditorThemeUtil::getHighlightColor() ), 2.0f );
         const float4& insets         = _viewport._safeInsets;
         const bool    bHasSafeInsets = insets._x > 0.0f || insets._y > 0.0f || insets._z > 0.0f || insets._w > 0.0f;
         if ( bHasSafeInsets )

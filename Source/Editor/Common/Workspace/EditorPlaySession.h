@@ -49,6 +49,11 @@ namespace sw::editor
             string         _name;
             vector<uint8>  _bytes;
             string         _prefabPath; ///< 씬이 이 오브젝트에 연결한 프리팹 경로(`Scene::getEntityPrefabPath`). 씬을 다시 만들 때 복원한다
+            /**
+             * @brief 프로퍼티 밖에 있는 저장하지 않은 지형 편집(`TerrainComponent::writeState`)입니다. 없으면 비어 있습니다.
+             * @details 되돌리기는 컴포넌트를 다시 만들고 지형이 디스크 에셋을 다시 읽으므로, 플레이 전에 칠한 것은 이것으로만 돌아온다.
+             */
+            vector<uint8> _listTerrainEdit;
         };
 
         vector<ObjectSnapshot> _listSnapshot;

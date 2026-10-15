@@ -38,31 +38,12 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 패널의 프리셋 단추 하나입니다. `_pName` 은 Core 프리셋 이름(`NetEmulationConditions::tryGetPreset`)입니다. */
-    struct EditorNetPresetRow
-    {
-        const utf8* _pName;
-        const utf8* _pLabel;
-    };
-} // namespace sw::editor
-
-namespace sw::editor
-{
     /**
      * @struct EditorNetConditionsUtil
-     * @brief 프리셋 표, 패널 값 ↔ 조건 변환, 자식 프로세스에 보내는 `net.emulation` 명령 글을 만듭니다.
+     * @brief 패널 값 ↔ 조건 변환, 자식 프로세스에 보내는 `net.emulation` 명령 글을 만듭니다. 프리셋 단추는 엔진 프리셋 표(`NetEmulationPresetTable`)의 줄입니다.
      */
     struct EditorNetConditionsUtil
     {
-        /** @brief 패널 프리셋 단추(언리얼 Net Emulation 프로필 · 유니티 Network Simulator 프리셋의 자리). 값은 Core 표에 있다. */
-        static constexpr EditorNetPresetRow kArrPresetRow[] = {
-            {         "off",          "Off"},
-            {         "lan",          "LAN"},
-            {        "wifi",        "Wi-Fi"},
-            {         "lte",          "LTE"},
-            {     "badwifi",    "Bad Wi-Fi"},
-            {"disconnected", "Disconnected"},
-        };
         /** @brief 슬라이더 상한입니다(한 방향). */
         static constexpr float32 kMaxLatencyMilliseconds         = 1000.0f;
         static constexpr float32 kMaxJitterMilliseconds          = 500.0f;

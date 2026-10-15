@@ -11,6 +11,7 @@
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
+#include "Engine/UI/Layout/UIResolutionPresetTable.h"
 #include "Engine/UI/Layout/UIScale.h"
 #include "Engine/UI/Layout/WidgetLayoutSlot.h"
 #include "Engine/UI/Screen/UIScreen.h"
@@ -30,22 +31,36 @@ SW_TEST_CASE( UIPreviewLogicTest, ResolutionPresetMakesScaledViewport )
 {
     using sw::editor::UIPreviewLogic;
     const sw::UIScaleSettings settings{}; // 기준 1920 × 1080
-    SW_ASSERT_TRUE( UIPreviewLogic::getResolutionCount() >= 6u );
-    const sw::UIViewport full = UIPreviewLogic::makeViewport( settings, 1, 1.0f, 0.0f );
+    sw::UIResolutionPreset    fullHD;
+    fullHD._name   = "1920x1080";
+    fullHD._width  = 1920;
+    fullHD._height = 1080;
+    sw::UIResolutionPreset ultraHD;
+    ultraHD._name             = "3840x2160";
+    ultraHD._width            = 3840;
+    ultraHD._height           = 2160;
+    const sw::UIViewport full = UIPreviewLogic::makeViewport( settings, fullHD, 1.0f, 0.0f );
     SW_EXPECT_NEAR_EQUAL( 1920.0f, full._physicalSize._x, 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, full._uiScale, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 1920.0f, full._size._x, 1e-2f );
 
-    const sw::UIViewport uhd = UIPreviewLogic::makeViewport( settings, 3, 1.0f, 0.0f );
+    const sw::UIViewport uhd = UIPreviewLogic::makeViewport( settings, ultraHD, 1.0f, 0.0f );
     SW_EXPECT_NEAR_EQUAL( 2.0f, uhd._uiScale, 1e-4f ); // 4K = 기준의 두 배 — UI 단위 크기는 같다
     SW_EXPECT_NEAR_EQUAL( 1920.0f, uhd._size._x, 1e-2f );
 
-    const sw::UIViewport doubled = UIPreviewLogic::makeViewport( settings, 1, 2.0f, 0.05f );
+    const sw::UIViewport doubled = UIPreviewLogic::makeViewport( settings, fullHD, 2.0f, 0.05f );
     SW_EXPECT_NEAR_EQUAL( 2.0f, doubled._uiScale, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 960.0f, doubled._size._x, 1e-2f );
     SW_EXPECT_TRUE( doubled._safeInsets._x > 0.0f );
     SW_EXPECT_TRUE( UIPreviewLogic::makeTargetPath( full ) != UIPreviewLogic::makeTargetPath( uhd ) );
-    SW_EXPECT_STREQ( UIPreviewLogic::getResolution( 0 )._pName, UIPreviewLogic::getResolution( 999 )._pName ); // 범위 밖은 첫 견본
+
+    // 패널의 견본은 데이터 표다 — 읽히고, 모든 줄이 이름과 양의 크기를 가진다.
+    sw::UIResolutionPresetTable table;
+    SW_ASSERT_TRUE( table.loadFromResource() );
+    for ( const sw::UIResolutionPreset& resolution : table._listResolution )
+    {
+        SW_EXPECT_TRUE_MSG( resolution._name.empty() == false && resolution._width > 0u && resolution._height > 0u, resolution._name.c_str() );
+    }
 }
 
 /**

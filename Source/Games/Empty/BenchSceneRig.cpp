@@ -31,21 +31,6 @@ namespace sw
     {
         struct BenchSceneRigInternal
         {
-            static constexpr const utf8* kKnightMesh     = "game/shooter3d/models/kaykit/knight.mesh";
-            static constexpr const utf8* kKnightSkeleton = "game/shooter3d/models/kaykit/knight/knight.skeleton.json";
-            static constexpr const utf8* kKnightClips    = "game/shooter3d/models/kaykit/knight/clips";
-            static constexpr const utf8* kKnightState    = "2H_Ranged_Aiming";
-            static constexpr const utf8* kWeaponMesh     = "game/shooter3d/models/kaykit/rogue/parts/2h_crossbow.mesh";
-            static constexpr const utf8* kCapeMesh       = "game/shooter3d/models/kaykit/knight/parts/knight_cape.mesh";
-            static constexpr const utf8* kKnightRig      = "game/shooter3d/rigs/knight.rig.json";
-            static constexpr const utf8* kWeaponRig      = "game/shooter3d/rigs/knight_weapon.rig.json";
-            static constexpr const utf8* kCapeRig        = "game/shooter3d/rigs/knight_cape.rig.json";
-            static constexpr const utf8* kCapeSkeleton   = "game/shooter3d/rigs/knight_cape.skeleton.json";
-            static constexpr const utf8* kWeaponSockets  = "game/shooter3d/rigs/crossbow_2h.sockets.xml";
-            /** @brief 기울기(Z 축 둘레, 라디안) — +X 쪽이 높다. 두 발이 다른 높이에 서게 한다. */
-            static constexpr float32 kSlopeAngle = 0.3f;
-            static constexpr float32 kRigSpacing = 1.4f;
-
             /**
              * @brief 스킨 없는 메시를 본 하나(0)에 가중치 1 로 묶은 스킨드 사본을 만듭니다 — 암묵 스켈레톤 유닛(무기)이 뿌리 본 포즈로 움직인다.
              */
@@ -95,12 +80,12 @@ namespace sw
             }
 
             /** @brief 오브젝트에 유닛(스켈레탈 메시)을 붙이고 메시 id 를 풉니다. */
-            static SkeletalMeshComponent* addUnit( GameObject& object, const utf8* pMeshID )
+            static SkeletalMeshComponent* addUnit( GameObject& object, const string& meshID )
             {
                 SkeletalMeshComponent* pUnit = object.addComponent<SkeletalMeshComponent>();
                 if ( pUnit == nullptr )
                     return nullptr;
-                pUnit->setMeshID( pMeshID );
+                pUnit->setMeshID( meshID.c_str() );
                 pUnit->resolveRenderAssets();
                 return pUnit;
             }
@@ -115,13 +100,13 @@ namespace sw
      * @details 기사마다 무기(쇠뇌) · 망토 유닛이 자식으로 붙는다. 비용을 측정하려면 `-gv_benchRigEnabled=0` 과 짝으로 돌려
      *          `GT.Animation.evaluate` 차이를 기사 수로 나눈다.
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchRig, 0, "후처리 리그 데모 기사 수 (0=사용 안 함, 발 디딤 · 시선 · 왼손 IK · 망토 스프링)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchRig, 0, "후처리 리그 데모 기사 수 (0=사용 안 함, 발 디딤 · 시선 · 왼손 IK · 망토 스프링)" );
 
     /** @brief `-gv_benchRigEnabled=0` — 리그 컴포넌트를 끈 채 세웁니다(리그 비용 대조군). */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchRigEnabled, 1, "리그 데모의 PoseModifierComponent 를 켤지 (0=대조군)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchRigEnabled, 1, "리그 데모의 PoseModifierComponent 를 켤지 (0=대조군)" );
 
     /** @brief `-gv_benchRigView=N` — 리그 데모 카메라(기사 한 명일 때): 0 왼쪽 앞(시선 · 왼손 · 발) · 1 정면 · 2 오른쪽 옆(쇠뇌 · 망토) · 3 오른쪽 뒤(망토 · 발). */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchRigView, 0, "리그 데모 카메라 (0 왼쪽 앞 · 1 정면 · 2 오른쪽 옆 · 3 오른쪽 뒤)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchRigView, 0, "리그 데모 카메라 (0 왼쪽 앞 · 1 정면 · 2 오른쪽 옆 · 3 오른쪽 뒤)" );
 
     /** @brief 벤치 공통 스위치 — 0 이면 시간 구동 변화를 멈춘다(BenchScene.cpp 가 정의). */
     SW_EXTERN_GLOBAL_VARIABLE( int32, gv_benchAnimate );
@@ -144,16 +129,17 @@ namespace sw
         const bool         bRig    = gv_benchRigEnabled != 0;
 
         // 기울기 — 물리(정적 상자, 발 디딤의 광선이 맞는다)와 그림(같은 자리 · 크기의 큐브).
-        const float32 halfWidth = MathUtil::max( 3.0f, 0.5f * static_cast<float32>( characterCount ) * BenchSceneRigInternal::kRigSpacing + 1.0f );
-        const float3  slopeRotation{ 0.0f, 0.0f, BenchSceneRigInternal::kSlopeAngle };
-        const float3  slopeCenter{ 0.0f, -0.25f, 0.0f };
+        const float32 halfWidth =
+            MathUtil::max( _settings._rigSlopeMinHalfWidth, 0.5f * static_cast<float32>( characterCount ) * _settings._rigSpacing + _settings._rigSlopeEndMargin );
+        const float3  slopeRotation{ 0.0f, 0.0f, _settings._rigSlopeAngle };
+        const float3& slopeCenter = _settings._rigSlopeCenter;
         if ( GameObject* pSlope = objects.createGameObject( "RigSlope" ) )
         {
             RigidBodyComponent* pBody = pSlope->addComponent<RigidBodyComponent>();
             if ( pBody != nullptr )
             {
                 PhysicsShapeDesc3D box{};
-                box._halfExtents = float3{ halfWidth, 0.25f, 3.0f };
+                box._halfExtents = float3{ halfWidth, _settings._rigSlopeHalfThickness, _settings._rigSlopeHalfDepth };
                 pBody->setShape( box );
                 pBody->setBodyType( PhysicsBodyType::Static );
                 pBody->setLocalPosition( slopeCenter );
@@ -167,7 +153,7 @@ namespace sw
                 pVisual->setMaterial( pScene->getMaterial() );
                 pVisual->setLocalPosition( slopeCenter );
                 pVisual->setLocalRotation( slopeRotation );
-                pVisual->setLocalScale( float3{ halfWidth * 2.0f, 0.5f, 6.0f } );
+                pVisual->setLocalScale( float3{ halfWidth * 2.0f, _settings._rigSlopeHalfThickness * 2.0f, _settings._rigSlopeHalfDepth * 2.0f } );
                 pVisual->setVisible( true );
             }
         }
@@ -180,8 +166,8 @@ namespace sw
             {
                 pBall->setMesh( MeshUtil::createPrimitive( "Sphere" ) );
                 pBall->setMaterial( pScene->getMaterial() );
-                pBall->setLocalScale( float3{ 0.12f } );
-                pBall->setLocalPosition( float3{ 0.6f, 1.5f, -1.2f } );
+                pBall->setLocalScale( float3{ _settings._rigLookTargetScale } );
+                pBall->setLocalPosition( _settings._rigLookTargetStart );
                 pBall->setVisible( true );
                 _rigLookTarget = pBall->getHandle();
                 _listBenchExtra.push_back( pBall->getHandle() );
@@ -191,10 +177,10 @@ namespace sw
         SocketKindTable       kinds;
         shared_ptr<SocketSet> weaponSockets = make_shared<SocketSet>();
         if ( kinds.loadFromResource( SocketKindTable::kDefaultPath ) == false ||
-             weaponSockets->loadFromResource( BenchSceneRigInternal::kWeaponSockets, kinds ) == false )
-            SW_LOG_ERROR( "[Bench] 쇠뇌 소켓 '%#' 을 읽지 못했습니다.", BenchSceneRigInternal::kWeaponSockets );
+             weaponSockets->loadFromResource( _settings._rigWeaponSockets.c_str(), kinds ) == false )
+            SW_LOG_ERROR( "[Bench] 쇠뇌 소켓 '%#' 을 읽지 못했습니다.", _settings._rigWeaponSockets.c_str() );
 
-        const float32 origin = -0.5f * static_cast<float32>( characterCount - 1 ) * BenchSceneRigInternal::kRigSpacing;
+        const float32 origin = -0.5f * static_cast<float32>( characterCount - 1 ) * _settings._rigSpacing;
         for ( uint32 index = 0; index < characterCount; ++index )
         {
             StringBuilder<constant::kMaxBuffer64> name;
@@ -202,23 +188,23 @@ namespace sw
             GameObject* pKnight = objects.createGameObject( hashed_string( name.c_str(), name.size() ) );
             if ( pKnight == nullptr )
                 continue;
-            SkeletalMeshComponent*     pBody     = BenchSceneRigInternal::addUnit( *pKnight, BenchSceneRigInternal::kKnightMesh );
+            SkeletalMeshComponent*     pBody     = BenchSceneRigInternal::addUnit( *pKnight, _settings._knightMesh );
             SkeletalAnimatorComponent* pAnimator = pKnight->addComponent<SkeletalAnimatorComponent>();
             if ( pBody == nullptr || pAnimator == nullptr )
                 continue;
-            pBody->setSkeletonPath( BenchSceneRigInternal::kKnightSkeleton );
+            pBody->setSkeletonPath( _settings._knightSkeleton.c_str() );
             // 기사는 +Z 를 본다 — 카메라(-Z 쪽)를 보게 돌린다. 줄은 X 로 — 기울기라 사람마다 땅 높이가 다르다.
-            const float32 x = origin + static_cast<float32>( index ) * BenchSceneRigInternal::kRigSpacing;
-            pBody->setLocalPosition( float3{ x, MathUtil::tan( BenchSceneRigInternal::kSlopeAngle ) * x, 0.0f } );
+            const float32 x = origin + static_cast<float32>( index ) * _settings._rigSpacing;
+            pBody->setLocalPosition( float3{ x, MathUtil::tan( _settings._rigSlopeAngle ) * x, 0.0f } );
             pBody->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
-            pAnimator->setClipFolder( BenchSceneRigInternal::kKnightClips );
-            pAnimator->setInitialState( BenchSceneRigInternal::kKnightState );
+            pAnimator->setClipFolder( _settings._knightClips.c_str() );
+            pAnimator->setInitialState( _settings._rigAimState.c_str() );
             _listRigBody.push_back( pBody->getHandle() );
             _listBenchExtra.push_back( pBody->getHandle() );
 
             // 무기 유닛 — 오른손 소켓 자리를 리그(CopyTransform)가 따른다. 스킨 없는 쇠뇌를 뿌리 본에 묶은 사본으로 그린다.
             GameObject*            pWeapon     = objects.createGameObject( "RigWeapon" );
-            SkeletalMeshComponent* pWeaponUnit = ( pWeapon != nullptr ) ? BenchSceneRigInternal::addUnit( *pWeapon, BenchSceneRigInternal::kWeaponMesh ) : nullptr;
+            SkeletalMeshComponent* pWeaponUnit = ( pWeapon != nullptr ) ? BenchSceneRigInternal::addUnit( *pWeapon, _settings._rigWeaponMesh ) : nullptr;
             if ( pWeaponUnit != nullptr && pWeaponUnit->getMesh() != nullptr )
             {
                 (void)pWeapon->attachToParent( pKnight ); // 방금 만든 오브젝트끼리라 순환이 없어 실패하지 않는다
@@ -227,7 +213,7 @@ namespace sw
                 PoseModifierComponent* pWeaponRig = pWeapon->addComponent<PoseModifierComponent>();
                 if ( pWeaponRig != nullptr )
                 {
-                    pWeaponRig->setRigPath( BenchSceneRigInternal::kWeaponRig );
+                    pWeaponRig->setRigPath( _settings._rigWeaponRig.c_str() );
                     pWeaponRig->bindUnit( "Body", pBody );
                     pWeaponRig->setRigEnabled( bRig );
                 }
@@ -236,17 +222,17 @@ namespace sw
 
             // 망토 유닛 — 데모 데이터의 사슬 뼈 넷. 뿌리는 가슴 자리를 따르고(CopyTransform) 나머지는 스프링이다.
             GameObject*            pCape     = objects.createGameObject( "RigCape" );
-            SkeletalMeshComponent* pCapeUnit = ( pCape != nullptr ) ? BenchSceneRigInternal::addUnit( *pCape, BenchSceneRigInternal::kCapeMesh ) : nullptr;
+            SkeletalMeshComponent* pCapeUnit = ( pCape != nullptr ) ? BenchSceneRigInternal::addUnit( *pCape, _settings._rigCapeMesh ) : nullptr;
             if ( pCapeUnit != nullptr && pCapeUnit->getMesh() != nullptr )
             {
                 (void)pCape->attachToParent( pKnight ); // 방금 만든 오브젝트끼리라 순환이 없어 실패하지 않는다
-                pCapeUnit->setSkeletonPath( BenchSceneRigInternal::kCapeSkeleton );
+                pCapeUnit->setSkeletonPath( _settings._rigCapeSkeleton.c_str() );
                 pCapeUnit->setMesh( BenchSceneRigInternal::createCapeSkinnedCopy( *pCapeUnit->getMesh(), pCapeUnit->getSkeleton() ) );
                 pCapeUnit->resolveRenderAssets();
                 PoseModifierComponent* pCapeRig = pCape->addComponent<PoseModifierComponent>();
                 if ( pCapeRig != nullptr )
                 {
-                    pCapeRig->setRigPath( BenchSceneRigInternal::kCapeRig );
+                    pCapeRig->setRigPath( _settings._rigCapeRig.c_str() );
                     pCapeRig->bindUnit( "Body", pBody );
                     pCapeRig->setRigEnabled( bRig );
                 }
@@ -256,13 +242,13 @@ namespace sw
             PoseModifierComponent* pBodyRig = pKnight->addComponent<PoseModifierComponent>();
             if ( pBodyRig != nullptr )
             {
-                pBodyRig->setRigPath( BenchSceneRigInternal::kKnightRig );
+                pBodyRig->setRigPath( _settings._rigKnightRig.c_str() );
                 pBodyRig->bindUnit( "Weapon", pWeaponUnit, weaponSockets );
                 pBodyRig->setRigEnabled( bRig );
             }
         }
 
-        const float32 halfExtent = MathUtil::max( 2.0f, halfWidth );
+        const float32 halfExtent = MathUtil::max( _settings._rigMinHalfExtent, halfWidth );
         spawnLight( pScene, halfExtent );
         frameRigCameras( pScene );
         SW_LOG_INFO( "[Bench] 리그 기사 %#명을 기울기 위에 세웠습니다(리그 %#).", characterCount, bRig ? "켬" : "끔" );
@@ -273,26 +259,21 @@ namespace sw
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
             return;
         const uint32  count    = static_cast<uint32>( _listRigBody.size() );
-        const float32 halfSpan = 0.5f * static_cast<float32>( count ) * BenchSceneRigInternal::kRigSpacing;
+        const float32 halfSpan = 0.5f * static_cast<float32>( count ) * _settings._rigSpacing;
         for ( CameraComponent* pCamera : pScene->getObjectManager()->getCameraRegistry().getAll() )
         {
             if ( count <= 1 )
             {
                 // 한 명 — 상반신 · 다리가 함께 들어오게 비스듬히 가까이(손잡이 · 시선 · 망토 · 발이 한 화면).
-                const float3 arrEye[] = {
-                    float3{-2.3f, 1.5f, -2.9f},
-                    float3{ 0.0f, 1.2f, -3.4f},
-                    float3{ 3.4f, 1.2f,  0.0f},
-                    float3{ 2.9f, 1.7f,  3.3f}
-                };
+                const float3 arrEye[] = { _settings._rigViewFrontLeft, _settings._rigViewFront, _settings._rigViewRightSide, _settings._rigViewBackRight };
                 pCamera->setLocalPosition( arrEye[MathUtil::clamp( gv_benchRigView, 0, 3 )] );
-                pCamera->lookAt( float3{ 0.0f, 0.8f, 0.0f } );
+                pCamera->lookAt( _settings._rigViewFocus );
                 continue;
             }
             const float32 tanHalf  = MathUtil::tan( pCamera->getFieldOfViewY() * 0.5f );
-            const float32 distance = ( tanHalf > MathUtil::kEpsilon ) ? ( halfSpan * 1.2f / tanHalf ) : ( halfSpan * 3.0f );
-            pCamera->setLocalPosition( float3{ 0.0f, 1.4f, -distance } );
-            pCamera->lookAt( float3{ 0.0f, 0.9f, 0.0f } );
+            const float32 distance = ( tanHalf > MathUtil::kEpsilon ) ? ( halfSpan * _settings._characterFrameMargin / tanHalf ) : ( halfSpan * 3.0f );
+            pCamera->setLocalPosition( float3{ 0.0f, _settings._characterEyeHeight, -distance } );
+            pCamera->lookAt( float3{ 0.0f, _settings._characterLookHeight, 0.0f } );
         }
     }
 
@@ -313,11 +294,12 @@ namespace sw
             pObjects->getAnimationSystem().setLODViewPosition( listCamera.front()->getCameraPosition() );
 
         // `-gv_benchAnimate=0` 이면 멈춘 그림(스크린샷 비교) — 시선 목표 · 몸 틀기를 움직이지 않는다.
-        const float32 time = ( gv_benchAnimate != 0 ) ? _benchElapsed : 1.0f;
+        const float32 time = ( gv_benchAnimate != 0 ) ? _benchElapsed : _settings._rigStillTime;
         if ( MeshComponent* pBall = castTo<MeshComponent>( pObjects->resolveComponent( _rigLookTarget ) ) )
-            pBall->setLocalPosition( float3{ 0.9f * MathUtil::sin( time * 0.9f ), 1.35f + 0.35f * MathUtil::sin( time * 1.7f ), -1.1f } );
+            pBall->setLocalPosition( float3{ _settings._rigLookSwing * MathUtil::sin( time * _settings._rigLookSwingRate ),
+                                             _settings._rigLookHeight + _settings._rigLookBob * MathUtil::sin( time * _settings._rigLookBobRate ), _settings._rigLookDepth } );
         // 몸을 좌우로 틀어 망토가 관성으로 흔들리게 한다(스프링 본은 월드 공간 입자라 몸이 돌면 뒤처진다).
-        const float32 yaw = MathUtil::kPi + ( ( gv_benchAnimate != 0 ) ? 0.45f * MathUtil::sin( time * 2.2f ) : 0.0f );
+        const float32 yaw = MathUtil::kPi + ( ( gv_benchAnimate != 0 ) ? _settings._rigSwayAngle * MathUtil::sin( time * _settings._rigSwayRate ) : 0.0f );
         for ( const ComponentHandle handle : _listRigBody )
         {
             if ( SkeletalMeshComponent* pBody = castTo<SkeletalMeshComponent>( pObjects->resolveComponent( handle ) ) )

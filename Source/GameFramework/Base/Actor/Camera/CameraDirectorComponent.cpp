@@ -96,6 +96,7 @@ namespace sw
         , _director{}
         , _pendingStateBytes{}
         , _pExternalProbe{ nullptr }
+        , _inputCheckedPresetID{}
         , _pendingDeltaTime{ 0.0f }
     {
         setCanEverTick( true );
@@ -318,7 +319,9 @@ namespace sw
             SW_LOG_INFO( "Camera preset -> '%#'", nextID.c_str() );
         }
         const CameraInputDef& inputDef = _director.getActivePreset()._input;
-        CameraModeInput       input;
+        if ( _inputCheckedPresetID.isEqual( _director.getActivePresetID(), NameCase::CaseSensitive ) == false )
+            warnMissingPresetActions( pInput->getInputMap(), inputDef );
+        CameraModeInput input;
         // 장치는 입력 맵이 정한다(게임의 `Camera.Look` · `Camera.LookHold` · `Camera.Zoom` — 맵에 없으면 그 조작은 0).
         if ( inputDef._lookSensitivity > 0.0f )
         {
@@ -339,6 +342,25 @@ namespace sw
             input._rotateSteps += rotateInput > 0.0f ? 1 : ( rotateInput < 0.0f ? -1 : 0 );
         }
         _director.applyInput( input, deltaTime );
+    }
+
+    void CameraDirectorComponent::warnMissingPresetActions( const InputMap& inputMap, const CameraInputDef& inputDef )
+    {
+        _inputCheckedPresetID                  = _director.getActivePresetID();
+        const hashed_string* arrNeededAction[] = {
+            inputDef._lookSensitivity > 0.0f ? &_lookAction : nullptr,
+            inputDef._lookSensitivity > 0.0f && inputDef._bLookWhileHeld ? &_lookHoldAction : nullptr,
+            inputDef._zoomStep > 0.0f ? &_zoomAction : nullptr,
+            inputDef._panSpeed > 0.0f ? &_panAction : nullptr,
+            inputDef._rotateStep != 0.0f ? &_rotateAction : nullptr,
+        };
+        for ( const hashed_string* pAction : arrNeededAction )
+        {
+            const bool bMissing = pAction != nullptr && pAction->empty() == false && inputMap.getActionHandle( *pAction ).isValid() == false;
+            if ( bMissing )
+                SW_LOG_WARNING( "Camera preset '%#' reads action '%#', which the InputMap does not have - that control does nothing", _inputCheckedPresetID.c_str(),
+                                pAction->c_str() );
+        }
     }
 
     void CameraDirectorComponent::gatherPhotoModeInput( float32 unscaledDeltaTime )

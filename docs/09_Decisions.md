@@ -178,6 +178,9 @@
 | 렌더 그래프 wave / 틱 wave | level / stage(`GT.Scene.tick.stages`) |
 | `precede` · `succeed` | `runBefore` · `runAfter` |
 | lane | queue |
+| `EditorThemePreset`(ModernDark · DeepCharcoal · MidnightBlue · ClassicDark) · `applyPreset` · `EditorConfig::_themePreset` | 토큰 벌 `Resource/editor/theme/<이름>.tokens.json`(dark · charcoal · midnight · light · highcontrast) · `applyThemeByName` · `_themeName` |
+| `editor::style::kOk` · `kWarn` · `kError` · `kAccent` · `kHighlight` · `kOverlayBg` … | `EditorThemeUtil::getSuccessColor()` · `getWarningColor()` · `getErrorColor()` · `getAccentColor()` · `getHighlightColor()` · `getOverlayBgColor()` … |
+| 탐침 `Editor.ThemePreset`(수) · 자체 테스트 `input.classicDarkSwatch` | `Editor.ThemeName`(글) · `input.themeSwatch` |
 | `retire*` · `retireImage` | `DeferredImageUnloadQueue::deferUnload` · `free*` |
 | `*Recipe`(`D3D12RHIResourceRecipe` · `VulkanRHISamplerRecipe`) | `*Preset` · `ShaderCookRequest` |
 | `poisonLiveReload` | `markGraphBroken` |
@@ -551,10 +554,24 @@
   MeadowVillage 칸 색 → 디렉터 PROPERTY, `ActionRoom` 플레이어 조절 값 → `ActionRoomSettings`, 오버월드 걸음 시간 → `OverworldTileMoverSettings::_stepSeconds`. 와이어 양자화 상수(`MechArenaSnapshot` 등)는 형식이라 그대로 둡니다.
   손 이름 표 중 철자가 열거자와 같은 `TelemetryUploadResult` · `CrashReportUploadResult` · `TelemetryRecordResult` · `AIDirectorEventKind` 는 `ENUM()` 으로 옮겼고, 소문자 데이터 철자인 `CrashReportConsent` · `CrashReportState` · `AIDirector` 신호 · 풀은 `EnumNameTable` 로 남깁니다.
   부하 봇은 동작 이름 · 받는 칸 · 받는 값을 동작 표 한 줄(`LoadBotScenario.cpp`)로 모았습니다.
+- **유지보수성을 위한 데이터화**(2026-10-15, 사용자 기준). 코드에는 불변식(수학 상수, ABI · 프로토콜 필드 번호 · 상한, 세이브 태그 · 버전, 비트 마스크, enum 1:1 순서 표, 로그 · assert 문자열, PROPERTY 메타 리터럴)만 남기고
+  튜닝값 · 이름 표 · 기본값 · 색 · 크기 · 목록 · 표는 데이터(PROPERTY, 리플렉션 데이터, `Config/*.json`, 리소스 XML)로 둡니다. 정한 모양 —
+  ① **코드 폴백 정의를 두지 않는다**: 액션 룸의 내장 몬스터 · 배치와 `MonsterCatalog` 의 `default_monster` 를 지우고 카탈로그 · `ActionRoomLayout` 이 없으면 오류(언리얼 DataTable 이 행을 못 찾으면 null 인 것과 같다).
+  ② **엔진 기동 설정은 바탕 층 파일**: `Config/Engine/EngineConfig.json` 이 값의 정본이고 헤더는 형식만이다(언리얼 `BaseEngine.ini`). 바탕 층은 모든 키를 적고(`ConfigFileSchemaTest`), 프로젝트 설정 창은 `REFLECT( Meta = "ConfigBaseLayer" )` 를 보고 모든 키로 저장한다.
+  파일 · 구운 사본이 모두 없으면 형식(0)이 범위 검사에서 져 기동이 멈춘다. 기동 전 리소스 우선순위는 구운 사본에서 읽는다. `_window._defaultRHI` 만 쿠킹 표가 정본이다. `FixedTimestep` 의 "0 이하면 기본값" 폴백도 지웠다.
+  ③ **표는 엔진 데이터 하나**: 회선 흉내 프리셋은 `engine/settings/netemulation.presets.xml`(`NetEmulationPresetTable`, 유니티 Network Simulator 프리셋 자산 자리) — Core 는 리플렉션 아래라 표를 읽지 않고 조건만 갖는다. 에디터 단추 이름도 그 표의 `_label`.
+  UI 미리보기 해상도는 `editor/settings/uipreview.resolutions.xml`. 그림자 품질 단계의 한 변은 설정 스키마 선택지의 `targetValue`(`gv_shadowMapResolution`, 언리얼 Scalability ini 의 `r.Shadow.MaxResolution` 자리).
+  ④ **데이터 속성은 스키마가 기본값 · 필수 · 범위를 선언한다**: `GameDataXML::readFields` 가 리플렉션 Def 를 읽고 모르는 속성 · 빠진 `PROPERTY( Required )` · `Min`/`Max` 밖 값을 이름과 함께 오류로 낸다. 읽는 코드의 리터럴 기본값과 `MathUtil::max` 로 조용히 자르기는 쓰지 않는다
+  (첫 적용 `ParkLayout`, 데이터는 다시 썼다). 리플렉션 XML 파일(`ReflectedXMLFile::loadDesc`)도 모르는 이름 · 범위 밖 값을 이름과 함께 알린다.
+  ⑤ 부하 봇 시나리오의 `_count` · `_timeoutMs` · `_minMs` 는 필수다(읽는 코드의 숨은 기본값 제거). ⑥ 새로 들어오는 것은 `CheckDataDrivenLiterals`(추가한 줄 검사, 전체는 기준선)가 막는다.
+  에디터 색 · 아이콘 표는 디자인 토큰 작업(editorux 묶음)이 맡는다.
 - **게임플레이 튜닝 값은 컴포넌트 `PROPERTY` 나 키트 설정 구조체 필드로 둡니다**(2026-10-06). 언리얼의 UPROPERTY 와 데이터 에셋 방식입니다. 성능 임계값은 측정으로 정한 이름 붙은 상수로 두고, 언리얼처럼 실제로 조절할 것만 전역 변수로 만듭니다.
 - **중력의 출처는 물리 설정 하나입니다**(2026-10-06). 코드는 `PhysicsSystem::getConfiguredGravity` 로 읽고, 셰이더(파도)는 머티리얼 상수로 같은 값을 받습니다. 언리얼의 `UWorld::GetGravityZ` 에 해당합니다.
 - **4 글자 표식은 리틀 엔디언 FourCC 하나로 통일했습니다**(2026-10-06). 세이브와 쿠킹 바이너리를 다시 만들었습니다.
 - **엔진의 각도 필드는 라디안입니다**(2026-10-06). 도 단위 필드를 두지 않고, `PropertyUnitsTest` 가 이 규칙에 예외를 두지 않습니다.
+- **이름으로 다른 표를 가리키는 데이터는 저장소 전체를 정적으로 훑어 검사합니다**(2026-10-15, 참조 감사). 런타임이 모르는 이름을 기본값으로 대신하고 로그만 남기는 곳(물리 레이어 · 재질, 정렬 레이어, 내비 영역,
+  입력 액션 · 레이어, 카탈로그 id)은 그 장면을 돌리기 전엔 드러나지 않습니다. 언리얼 Data Validation · 유니티 missing reference 검사는 에디터에서 연 에셋만 보지만, 여기서는 에셋 검증 규칙
+  `component_reference`(기반 타입의 파생까지 · 팩별 표)로 일곱 팩 전부를 커밋 훅 · CI(nogpu)에서 봅니다. 규칙은 데이터 한 줄이고 검사기는 타입 · 칸 · 표만 압니다.
 
 - **이름은 상용 엔진과 견주어 정한다(2026-10-10, 이름 점검).** 이름 점검이 모호하다고 한 것을 모두 바꾸지 않는다. 그대로 두는 것: `GameObjectManager`(한 씬의 `GameObject` 를 만들고 소유하고 틱한다),
   `GPUScene`(언리얼 `GPUScene` 과 같은 용어), `PhysicsOverlapWorld`(겹침 질의 전용 월드 — 강체 씬 `IPhysicsScene` 과 헷갈리지 않게 2026-10-13 `PhysicsWorld` 에서 바꿨다), `GameConfig`(프리셋 JSON) 와 `GameSettings`(팩의 `gamesettings.xml`) — 언리얼도 프로젝트
@@ -834,6 +851,18 @@
 
 ### 5-11. 에디터와 외부 공개
 
+- **에디터 시나리오는 경계 전후 값을 이름으로 기억해 견준다(`Remember` · `sameAs` · `differsFrom`) — 단언마다 기대값을 손으로 적지 않는다**(2026-10-15, `AutomationRunner`).
+  언리얼 Functional Test 는 C++/블루프린트 변수로, 유니티 Editor Test 는 C# 지역 변수로 앞 값을 들고 견준다(기억에 의존한 비교). 우리 시나리오는 데이터라 변수가 없었고,
+  기억한 값을 글 그대로 견주는 단계를 더해 64 비트 상태 해시(`Editor.StateHash`)까지 정확히 견준다. 실행기가 엔진에 있어 플레이 · 모듈 리로드 · 백엔드 교체를 넘어 기억한다.
+- **에디터 인스턴스를 다시 만들 때 선택 · 미저장 표시는 엔진 서비스(`EditSessionState`)에 맡겨 넘기고, 되돌리기 스택은 비우지 않는다**(2026-10-15).
+  유니티는 도메인 리로드를 `SessionState` · 직렬화된 선택으로, 언리얼은 트랜잭션 버퍼가 핫 리로드를 넘는 것으로 같은 일을 한다(기억에 의존한 비교).
+  백엔드 교체는 모듈 이미지를 내리지 않으므로 모듈 코드를 가진 되돌리기 명령도 남긴다(`setModuleImageKept`). 패널을 가리키는 명령은 `this` 대신 표지(shared_ptr)로 잡는다.
+- **Apply to Prefab 은 같은 씬의 다른 인스턴스에 바로 퍼지고, 파일 쓰기와 인스턴스 갱신이 되돌리기 하나다**(2026-10-15, `PrefabCache::updateInstance`).
+  유니티 Apply Overrides · 언리얼 블루프린트 컴파일 뒤 레벨 인스턴스 갱신과 같은 규칙이다(기억에 의존한 비교). 덮어쓴 값은 옛 원형과 견줘 뽑아 새 원형에 얹는다 —
+  씬을 다시 읽을 때(`Scene::instantiate`)와 같은 식이라 저장 전후 결과가 같다.
+- **지형은 같은 에셋을 다시 읽을 때 저장하지 않은 편집을 넘긴다**(2026-10-15, `TerrainComponent::reloadTerrain`). 언리얼 랜드스케이프는 편집이 PIE · 액터 이동에 사라지지 않는다.
+  트랜스폼 · 프로퍼티 변경은 다시 읽기 안에서 편집을 들고 건너고(경로가 바뀌면 버린다), 컴포넌트를 새로 만드는 플레이 정지 복원은 플레이 스냅샷이 편집을 따로 싣는다.
+
 - **메시 모디파이어 셰이딩 미리보기는 GPU 로 못 옮기는 스택이면 CPU 결과 정점 메시로 내려간다 — 와이어만 남기지 않는다**(2026-10-15, `MeshModifierSession::updateShadedPreview`).
   언리얼 모델링 도구 · 3ds Max 수정자 스택은 경로와 무관하게 셰이딩된 결과를 보인다(기억에 의존한 비교). CPU 쪽은 바뀔 때마다 새 메시를 끼워 렌더 스레드가 든 사본과 겹치지 않는다.
 
@@ -936,3 +965,8 @@
 - **UI 미리보기 인스펙터는 검색창이 맨 위이고 슬롯 구역도 그 검색어로 거릅니다**(2026-10-15, `b7359358e`). 언리얼 UMG Details 는 검색창이 위에 있고 Slot 범주 행도 같은 검색에 걸리는 것으로 알고 있습니다. 자동화 표식은 잘렸는지(`_bClipped`)를 함께 기록하고 `EditorClick` · `EditorDrag` 는 잘린 표식을 누르지 않고 실패로 알립니다 — 잘린 자리를 누르면 다른 위젯이 받아 원인이 엉뚱한 기대 실패로 나타납니다.
 - **새 에디터 인스턴스의 씬 뷰는 씬에 남은 에디터 카메라의 포즈를 이어받습니다**(2026-10-15, `666257e08` · `0fa1e0b35`). 백엔드 교체 · 에디터 리로드는 에디터 모듈을 새로 만들지만 카메라 오브젝트는 씬과 함께 넘어갑니다. 판정은 "처음 쓰는 카메라가 생성 자리(`EditorCamera::getSpawnPosition`)에 있지 않다" 이고, `camera.reset` 은 마지막 카메라를 기억한 채 포즈만 되돌립니다.
 - **크래시 세션 ID 는 함수 지역 정적 초기화로 한 번 만들고, 크래시 핸들러 설치 때 미리 부릅니다**(2026-10-15, E-9). 언리얼 `FApp::GetSessionId` 처럼 시작 때 정해 두는 값입니다. 검사 후 채우는 정적 버퍼는 로그 워커와 크래시 보고 스레드가 동시에 처음 불러 덤프와 컨텍스트 파일의 세션 이름이 갈렸습니다(부하 40 병렬에서 3/280 → 0/480).
+- **에디터 테마의 원본은 저장소의 토큰 JSON(`Resource/editor/theme/*.tokens.json`)이고 Figma 는 선택 입력입니다**(2026-10-15, `MakeEditorTheme.py`). 언리얼 에디터의 스타일은 Slate 스타일셋(코드)과 테마 JSON 이고, 유니티 UI Toolkit 은 USS 변수, Godot 은 Theme 리소스 파일입니다. 어느 엔진도 디자인 도구를 원본으로 삼지 않고 엔진이 읽는 파일이 원본입니다(기억에 의존한 비교). 원본이 Figma 면 인증이 없는 환경(CI, 다른 PC, 에이전트)에서 테마를 검사하거나 고칠 수 없습니다. 그래서 Figma 는 `import-figma` / `export-figma` 로 값만 주고받습니다.
+- **Figma 와의 교환 형식은 W3C Design Tokens(DTCG) JSON 이고 Figma REST 변수 응답도 읽습니다**(2026-10-15, `MakeEditorTheme.py`). DTCG 는 `$value` / `$type` / 별칭 `{경로}` 가 정해진 표준이라 Tokens Studio, Style Dictionary 같은 도구가 읽고 씁니다. Figma 는 변수 JSON 가져오기를 기본 기능으로 두지 않고 플러그인에 맡깁니다(Figma 도움말 확인). 자체 형식을 만들면 그 도구들과 연결되지 않고, REST 응답만 쓰면 내보내기가 안 됩니다. 수 값은 단위 문자열 대신 `number` 로 씁니다. 실제 Figma 로 가져오는 시험은 하지 못했습니다.
+- **에디터 스타일 린트(`CheckEditorStyleLiterals`)는 커밋이 추가한 줄만 검사하고 전체 훑기는 기준선(현재 171건) 이하만 허용합니다**(2026-10-15). 기존 위반 170여 건을 한 번에 토큰으로 옮기면 병합 충돌과 시각 회귀 위험이 큽니다. 그렇다고 기준선 없이 두면 새 위반이 쌓입니다. 같은 이유로 `CheckConditionParts` 도 새 줄 방식을 씁니다. 언리얼의 에디터 코드 스타일 검사도 변경된 줄을 대상으로 하는 방식이 흔하다고 알려져 있습니다(기억에 의존한 비교, 확인하지 못함). 옮길 때마다 기준선을 낮춥니다.
+- **에디터 UI 캡처는 렌더 스레드가 그 프레임의 최종 ImGui 그리기 목록(모든 뷰포트 합본)을 오프스크린 타깃에 한 번 더 그려 읽습니다**(2026-10-15, `EditorUICapture`). 창 화면 복사(전경으로 올리기 · `BitBlt` · OS 창 캡처)는 가림 · 포커스 · 다른 창에 흔들리고 플로팅 창을 한 장에 담지 못합니다. 백버퍼 읽기(`blitTexture( 0, … )`)는 메인 창만 담습니다. 멀티 뷰포트의 목록은 모두 화면 좌표라 이어 붙이면 플로팅 창까지 한 장이 되고, 네 백엔드가 같은 ImGui 렌더러로 같은 목록을 그려 결과가 같습니다. 언리얼의 UI 포함 스크린샷(`FScreenshotRequest` · `HighResShot`)과 Slate 위젯 캡처가 위젯 트리를 다시 그려 얻는 것과 같은 방향입니다(기억에 의존한 비교). 단언은 그림 비교가 아니라 튼튼한 지표(마젠타 비율 · 스크롤바 없이 잘린 창 수)입니다.
+- **테마 토큰 파일의 키는 리플렉션 멤버 이름이고, 실행 값(`EditorThemeConfig`)에는 기본값을 두지 않습니다**(2026-10-15). 읽기 코드가 따로 없고 모르는 키 · 빠진 색은 읽기 오류입니다. 값의 원본이 파일 하나라서 코드와 파일이 어긋날 수 없습니다. 사용자가 바꾼 강조색 · 둥글기만 설정(`EditorConfig`)에 저장하고(바꾸지 않았으면 -1), 나머지는 늘 토큰 값을 따릅니다. ImGui 기본 다크를 그대로 쓰던 Classic Dark 는 토큰으로 나타낼 수 없는 예외 경로라 없앴습니다.

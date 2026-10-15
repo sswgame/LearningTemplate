@@ -22,6 +22,8 @@
 
 namespace sw::editor
 {
+    SW_LOG_CALLER( "EditorThemeUtil" );
+
     namespace
     {
         struct EditorThemeInternal
@@ -36,8 +38,8 @@ namespace sw::editor
             }
 
             /**
-             * @brief 컨텍스트가 없을 때 반환할 기본 테마입니다. 상수이므로 상태가 아닙니다.
-             * @details 색 게터가 `const Color&` 를 반환하므로 임시 객체를 참조로 넘길 수 없다.
+             * @brief 컨텍스트가 없을 때 반환할 빈 테마입니다. 상수이므로 상태가 아닙니다.
+             * @details 색 게터가 `const Color&` 를 반환하므로 임시 객체를 참조로 넘길 수 없다. 값은 토큰을 읽기 전의 기본값이라 의미가 없다.
              */
             static const EditorThemeConfig& fallbackTheme()
             {
@@ -45,7 +47,7 @@ namespace sw::editor
                 return kFallback;
             }
 
-            /** @brief 현재 적용된 테마를 반환합니다. 에디터 서브시스템 `EditorTheme` 이 들며, 에디터 범위가 없으면 기본값을 봅니다. */
+            /** @brief 현재 적용된 테마를 반환합니다. 에디터 서브시스템 `EditorTheme` 이 들며, 에디터 범위가 없으면 빈 테마를 봅니다. */
             static const EditorThemeConfig& activeTheme()
             {
                 const EditorTheme* pTheme = findSubsystem<EditorTheme>();
@@ -59,15 +61,54 @@ namespace sw::editor
                     pTheme->getConfig() = config;
             }
 
-            /** @brief 테마 고정 색입니다. 팔레트에서 오지 않는 항목입니다. */
-            static constexpr Color kText{ 0.92f, 0.94f, 0.97f, 1.0f };
-            static constexpr Color kScrollbarBg{ 0.02f, 0.02f, 0.03f, 0.35f };
-            static constexpr Color kDockingEmptyBg{ 0.05f, 0.05f, 0.07f, 1.0f };
-            static constexpr Color kTableRowBgAlt{ 1.0f, 1.0f, 1.0f, 0.02f };
-            static constexpr Color kClear{ 0.0f, 0.0f, 0.0f, 0.0f };
+            /** @brief 폴더에 있는 토큰 벌을 모두 읽어 둡니다. 읽지 못한 벌은 이유와 함께 로그로 남기고 뺀다. */
+            static void loadAvailableThemes( vector<EditorThemeConfig>& outListTheme )
+            {
+                outListTheme.clear();
+                vector<string> listName;
+                EditorThemeTokens::listThemeNames( listName );
+                for ( const string& name : listName )
+                {
+                    EditorThemeConfig config{};
+                    string            error;
+                    if ( EditorThemeTokens::loadTheme( name, config, error ) )
+                        outListTheme.push_back( std::move( config ) );
+                    else
+                        SW_LOG_ERROR( "Theme tokens '%#' were not loaded: %#", name.c_str(), error.c_str() );
+                }
+                if ( outListTheme.empty() )
+                    SW_LOG_ERROR( "No editor theme token file under %# - the editor keeps the ImGui default style", EditorThemeTokens::getFolderPath().c_str() );
+            }
+
+            /** @brief 읽어 둔 벌 목록입니다. 비었으면 지금 읽습니다. 에디터 범위가 없으면 nullptr 입니다. */
+            static vector<EditorThemeConfig>* availableThemes()
+            {
+                EditorTheme* pTheme = findSubsystem<EditorTheme>();
+                if ( pTheme == nullptr )
+                    return nullptr;
+                if ( pTheme->getAvailable().empty() )
+                    loadAvailableThemes( pTheme->getAvailable() );
+                return &pTheme->getAvailable();
+            }
+
+            static const EditorThemeConfig* findAvailable( string_view name )
+            {
+                const vector<EditorThemeConfig>* pListTheme = availableThemes();
+                if ( pListTheme == nullptr )
+                    return nullptr;
+                for ( const EditorThemeConfig& theme : *pListTheme )
+                {
+                    if ( StringUtil::equals( theme._name, name, true ) )
+                        return &theme;
+                }
+                return nullptr;
+            }
+
             /** @brief 뷰포트 호버 색이 강조색에서 흰색 쪽으로 가는 비율과 알파입니다. */
             static constexpr float32 kHoverWhiten = 0.45f;
             static constexpr float32 kHoverAlpha  = 0.75f;
+            /** @brief 둥글기를 한 슬라이더로 묶을 때 스크롤바 둥글기는 입력 칸 둥글기의 이 배수입니다. */
+            static constexpr float32 kScrollbarRadiusPerFrameRadius = 2.0f;
 
             static ImVec4 toImVec4( const Color& color, float32 alphaMultiplier = 1.0f )
             {
@@ -79,67 +120,11 @@ namespace sw::editor
                 return EditorColorUtil::toImVec4( color.scaleBrightness( factor ).saturate().withAlpha( alpha ) );
             }
 
-            /**
-             * @brief 프리셋 하나의 정의입니다. 이름과 팔레트가 한 항목에 모여 있습니다.
-             * @details 팔레트 적용, 설정 읽기와 쓰기의 이름 변환, 대화상자의 콤보가 모두 이 테이블을 본다. 프리셋을 추가하려면
-             *          항목 하나만 추가한다. 이름 배열을 따로 두고 열거형 순서로 인덱스를 삼으면 순서를 바꿀 때 콤보가 조용히 틀린 이름을 보여 준다.
-             */
-            struct ThemePresetRow
-            {
-                EditorThemePreset _preset;
-                const utf8*       _pConfigID;    ///< EditorConfig 에 저장되는 이름
-                const utf8*       _pDisplayName; ///< 콤보에 보이는 이름
-                /** @brief true 이면 창 색을 엔진 팔레트로 덮지 않고 ImGui 기본 다크를 씁니다. */
-                bool              _bUseImGuiDarkColors;
-                EditorThemeConfig _config;
-            };
-
-            static const ThemePresetRow* getPresetRows( uint32& outCount );
-
-            /** @brief 해당 프리셋의 항목을 반환합니다. 모르는 값이면 첫 항목(기본)입니다. */
-            static const ThemePresetRow& findRow( EditorThemePreset preset )
-            {
-                uint32                      rowCount{ 0 };
-                const ThemePresetRow* const pRow = getPresetRows( rowCount );
-                for ( uint32 index = 0; index < rowCount; ++index )
-                {
-                    if ( pRow[index]._preset == preset )
-                        return pRow[index];
-                }
-                return pRow[0];
-            }
-
-            /** @brief 저장된 이름에 해당하는 항목을 반환합니다. 찾지 못하면 첫 항목(기본)입니다. */
-            static const ThemePresetRow& findRowByConfigID( string_view configID )
-            {
-                uint32                      rowCount{ 0 };
-                const ThemePresetRow* const pRow = getPresetRows( rowCount );
-                for ( uint32 index = 0; index < rowCount; ++index )
-                {
-                    if ( configID == pRow[index]._pConfigID )
-                        return pRow[index];
-                }
-                return pRow[0];
-            }
-
             /** @brief DPI 배율입니다(`EditorThemeUtil::setDpiScale`). 테마는 96 DPI 기준 크기로 기록하고, 적용할 때 이 값을 곱합니다. */
             static float32& dpiScale()
             {
                 static float32 s_dpiScale{ 1.0f };
                 return s_dpiScale;
-            }
-
-            /** @brief 현재 ImGui 스타일의 지오메트리를 config 에 다시 읽어 옵니다. 스타일에는 DPI 배율이 곱해져 있으므로 나눠서 96 DPI 기준으로 기록합니다. */
-            static void readGeometryFromStyle( EditorThemeConfig& outConfig )
-            {
-                const ImGuiStyle& style      = ImGui::GetStyle();
-                const float32     invScale   = 1.0f / dpiScale();
-                outConfig._windowRounding    = style.WindowRounding * invScale;
-                outConfig._frameRounding     = style.FrameRounding * invScale;
-                outConfig._popupRounding     = style.PopupRounding * invScale;
-                outConfig._tabRounding       = style.TabRounding * invScale;
-                outConfig._scrollbarRounding = style.ScrollbarRounding * invScale;
-                outConfig._grabRounding      = style.GrabRounding * invScale;
             }
 
             /**
@@ -160,81 +145,28 @@ namespace sw::editor
                 fresh._NextFrameFontSizeBase = outStyle._NextFrameFontSizeBase;
                 outStyle                     = fresh;
             }
+
+            /** @brief 사용자 설정(강조색 · 둥글기 덮어쓰기)을 테마 위에 얹습니다. 값이 음수면 덮어쓰지 않은 것입니다. */
+            static void applyUserOverrides( const EditorConfig& editorConfig, EditorThemeConfig& inoutTheme )
+            {
+                const bool bHasAccentOverride = editorConfig._themeAccentR >= 0.0f && editorConfig._themeAccentG >= 0.0f && editorConfig._themeAccentB >= 0.0f;
+                if ( bHasAccentOverride )
+                {
+                    inoutTheme._accentColor       = Color{ editorConfig._themeAccentR, editorConfig._themeAccentG, editorConfig._themeAccentB, 1.0f };
+                    inoutTheme._bAccentOverridden = SW_TRUE;
+                }
+                if ( editorConfig._themeWindowRounding >= 0.0f )
+                {
+                    inoutTheme._radius._window    = editorConfig._themeWindowRounding;
+                    inoutTheme._radius._frame     = editorConfig._themeFrameRounding;
+                    inoutTheme._radius._tab       = editorConfig._themeTabRounding;
+                    inoutTheme._radius._popup     = editorConfig._themeWindowRounding;
+                    inoutTheme._radius._scrollbar = editorConfig._themeFrameRounding * kScrollbarRadiusPerFrameRadius;
+                    inoutTheme._radius._grab      = editorConfig._themeFrameRounding;
+                    inoutTheme._bRadiusOverridden = SW_TRUE;
+                }
+            }
         };
-
-        const EditorThemeInternal::ThemePresetRow* EditorThemeInternal::getPresetRows( uint32& outCount )
-        {
-            static const ThemePresetRow arrRow[] = {
-                {  EditorThemePreset::ModernDark,   "ModernDark", "Modern Dark (UE5 / JetBrains)", false,
-                 EditorThemeConfig{ EditorThemePreset::ModernDark,
-                 Color{ 0.27f, 0.57f, 1.0f, 1.0f }, // Electric Blue
-                 Color{ 0.10f, 0.11f, 0.14f, 1.0f },
-                 Color{ 0.13f, 0.15f, 0.19f, 1.0f },
-                 Color{ 0.18f, 0.21f, 0.28f, 1.0f },
-                 Color{ 0.15f, 0.17f, 0.22f, 1.0f },
-                 Color{ 0.22f, 0.26f, 0.33f, 1.0f },
-                 Color{ 0.20f, 0.75f, 0.35f, 1.0f },
-                 Color{ 0.95f, 0.70f, 0.15f, 1.0f },
-                 Color{ 0.95f, 0.30f, 0.25f, 1.0f },
-                 Color{ 0.30f, 0.70f, 0.95f, 1.0f },
-                 Color{ 0.55f, 0.60f, 0.68f, 1.0f },
-                 4.0f, 3.0f, 4.0f, 4.0f, 6.0f, 3.0f }},
-
-                {EditorThemePreset::DeepCharcoal, "DeepCharcoal",    "Deep Charcoal (Minimalist)", false,
-                 EditorThemeConfig{ EditorThemePreset::DeepCharcoal,
-                 Color{ 0.35f, 0.70f, 0.95f, 1.0f }, // Ice Blue
-                 Color{ 0.08f, 0.08f, 0.09f, 1.0f },
-                 Color{ 0.11f, 0.11f, 0.13f, 1.0f },
-                 Color{ 0.16f, 0.16f, 0.19f, 1.0f },
-                 Color{ 0.13f, 0.13f, 0.16f, 1.0f },
-                 Color{ 0.20f, 0.20f, 0.24f, 1.0f },
-                 Color{ 0.25f, 0.80f, 0.40f, 1.0f },
-                 Color{ 0.90f, 0.75f, 0.20f, 1.0f },
-                 Color{ 0.90f, 0.30f, 0.30f, 1.0f },
-                 Color{ 0.35f, 0.75f, 0.90f, 1.0f },
-                 Color{ 0.50f, 0.55f, 0.60f, 1.0f },
-                 2.0f, 2.0f, 2.0f, 2.0f, 4.0f, 2.0f }},
-
-                {EditorThemePreset::MidnightBlue, "MidnightBlue",     "Midnight Blue (High-Tech)", false,
-                 EditorThemeConfig{ EditorThemePreset::MidnightBlue,
-                 Color{ 0.40f, 0.55f, 1.0f, 1.0f }, // Neon Indigo
-                 Color{ 0.07f, 0.09f, 0.14f, 1.0f },
-                 Color{ 0.09f, 0.12f, 0.18f, 1.0f },
-                 Color{ 0.14f, 0.19f, 0.28f, 1.0f },
-                 Color{ 0.11f, 0.15f, 0.22f, 1.0f },
-                 Color{ 0.18f, 0.25f, 0.36f, 1.0f },
-                 Color{ 0.20f, 0.85f, 0.50f, 1.0f },
-                 Color{ 1.0f, 0.75f, 0.20f, 1.0f },
-                 Color{ 1.0f, 0.35f, 0.35f, 1.0f },
-                 Color{ 0.40f, 0.75f, 1.0f, 1.0f },
-                 Color{ 0.50f, 0.60f, 0.75f, 1.0f },
-                 4.0f, 3.0f, 4.0f, 4.0f, 6.0f, 3.0f }},
-
-                // 창 색은 ImGui 기본 다크를 그대로 쓰므로 아래 배경색은 적용되지 않는다. 다만 상태색
-                // (textSuccess, textWarning 등)과 액센트는 이 테마에서도 필요하므로 값을 채워 둔다.
-                // 이 프리셋도 활성 테마를 갱신해야 한다. 갱신하지 않으면 이전 테마의 색이 나온다.
-                { EditorThemePreset::ClassicDark,  "ClassicDark",  "Classic Dark (Default ImGui)",  true,
-                 EditorThemeConfig{ EditorThemePreset::ClassicDark,
-                 Color{ 0.26f, 0.59f, 0.98f, 1.0f }, // ImGui 기본 파랑
-                 Color{ 0.06f, 0.06f, 0.06f, 1.0f },
-                 Color{ 0.10f, 0.10f, 0.10f, 1.0f },
-                 Color{ 0.16f, 0.29f, 0.48f, 1.0f },
-                 Color{ 0.16f, 0.29f, 0.48f, 1.0f },
-                 Color{ 0.43f, 0.43f, 0.50f, 1.0f },
-                 Color{ 0.20f, 0.75f, 0.35f, 1.0f },
-                 Color{ 0.95f, 0.70f, 0.15f, 1.0f },
-                 Color{ 0.95f, 0.30f, 0.25f, 1.0f },
-                 Color{ 0.30f, 0.70f, 0.95f, 1.0f },
-                 Color{ 0.50f, 0.50f, 0.50f, 1.0f },
-                 0.0f, 0.0f, 0.0f, 4.0f, 9.0f, 0.0f }}
-            };
-
-            static_assert( sizeof( arrRow ) / sizeof( arrRow[0] ) == static_cast<size_t>( EditorThemePreset::Count ),
-                           "EditorThemePreset 과 프리셋 표의 개수가 다릅니다" );
-
-            outCount = static_cast<uint32>( sizeof( arrRow ) / sizeof( arrRow[0] ) );
-            return arrRow;
-        }
     } // namespace
 } // namespace sw::editor
 
@@ -245,42 +177,36 @@ namespace sw::editor
         return EditorThemeInternal::activeTheme();
     }
 
-    bool EditorThemeUtil::findPresetByConfigID( string_view configID, EditorThemePreset& outPreset )
+    bool EditorThemeUtil::applyThemeByName( string_view name )
     {
-        uint32                                           rowCount{ 0 };
-        const EditorThemeInternal::ThemePresetRow* const pRow = EditorThemeInternal::getPresetRows( rowCount );
-        for ( uint32 index = 0; index < rowCount; ++index )
-        {
-            if ( StringUtil::equals( configID, pRow[index]._pConfigID, true ) )
-            {
-                outPreset = pRow[index]._preset;
-                return true;
-            }
-        }
-        return false;
+        const EditorThemeConfig* pTheme = EditorThemeInternal::findAvailable( name );
+        if ( pTheme == nullptr )
+            return false;
+        applyTheme( *pTheme );
+        return true;
     }
 
-    void EditorThemeUtil::applyPreset( EditorThemePreset preset )
+    void EditorThemeUtil::listThemes( vector<string>& outListName )
     {
-        const EditorThemeInternal::ThemePresetRow& row = EditorThemeInternal::findRow( preset );
-
-        EditorThemeConfig config = row._config;
-        config._preset           = row._preset;
-
-        if ( row._bUseImGuiDarkColors )
-        {
-            // 창 색은 ImGui 기본 다크를 그대로 쓴다. 지오메트리는 건드리지 않는다.
-            ImGui::StyleColorsDark();
-
-            // 여기서 그대로 return 하면 활성 테마가 이전 프리셋에 머물러서 세 가지 문제가 생긴다.
-            // 이 선택이 저장되지 않고, 콤보가 이전 프리셋을 선택된 것으로 보여 주고, textWarning 등 상태색 API 가 이전 테마 색을 낸다.
-            // 지오메트리는 현재 스타일에서 다시 읽어 기록이 화면과 어긋나지 않게 한다.
-            EditorThemeInternal::readGeometryFromStyle( config );
-            EditorThemeInternal::setActiveTheme( config );
+        outListName.clear();
+        const vector<EditorThemeConfig>* pListTheme = EditorThemeInternal::availableThemes();
+        if ( pListTheme == nullptr )
             return;
+        for ( const EditorThemeConfig& theme : *pListTheme )
+        {
+            outListName.push_back( theme._name );
         }
+    }
 
-        applyTheme( config );
+    void EditorThemeUtil::reloadThemes()
+    {
+        EditorTheme* pTheme = findSubsystem<EditorTheme>();
+        if ( pTheme == nullptr )
+            return;
+        EditorThemeInternal::loadAvailableThemes( pTheme->getAvailable() );
+        // 지금 벌을 새 값으로 다시 적용하고, 사용자가 덮어쓴 강조색 · 둥글기는 설정에서 다시 얹는다.
+        loadFromConfig();
+        SW_LOG_INFO( "Editor theme tokens reloaded (%# set(s))", pTheme->getAvailable().size() );
     }
 
     void EditorThemeUtil::applyTheme( const EditorThemeConfig& config )
@@ -290,34 +216,39 @@ namespace sw::editor
         ImGuiStyle& style = ImGui::GetStyle();
         EditorThemeInternal::resetSizesToDefault( style );
 
-        // 1. 지오메트리와 레이아웃 메트릭
-        style.WindowRounding    = config._windowRounding;
-        style.ChildRounding     = config._frameRounding;
-        style.FrameRounding     = config._frameRounding;
-        style.PopupRounding     = config._popupRounding;
-        style.ScrollbarRounding = config._scrollbarRounding;
-        style.GrabRounding      = config._grabRounding;
-        style.TabRounding       = config._tabRounding;
+        // 1. 지오메트리와 레이아웃 메트릭(토큰). 여백 · 간격에는 밀도를 곱한다.
+        const EditorThemeRadiusDef&  radius  = config._radius;
+        const EditorThemeSpacingDef& spacing = config._spacing;
+        const EditorThemeStrokeDef&  stroke  = config._stroke;
+        const float32                density = config._density;
+        style.WindowRounding                 = radius._window;
+        style.ChildRounding                  = radius._frame;
+        style.FrameRounding                  = radius._frame;
+        style.PopupRounding                  = radius._popup;
+        style.ScrollbarRounding              = radius._scrollbar;
+        style.GrabRounding                   = radius._grab;
+        style.TabRounding                    = radius._tab;
 
-        style.WindowBorderSize = 1.0f;
-        style.ChildBorderSize  = 1.0f;
-        style.PopupBorderSize  = 1.0f;
-        style.FrameBorderSize  = 1.0f;
-        style.TabBorderSize    = 0.0f;
+        style.WindowBorderSize = stroke._window;
+        style.ChildBorderSize  = stroke._child;
+        style.PopupBorderSize  = stroke._popup;
+        style.FrameBorderSize  = stroke._frame;
+        style.TabBorderSize    = stroke._tab;
 
-        style.WindowPadding     = ImVec2( 8.0f, 8.0f );
-        style.FramePadding      = ImVec2( 6.0f, 4.0f );
-        style.ItemSpacing       = ImVec2( 6.0f, 4.0f );
-        style.ItemInnerSpacing  = ImVec2( 4.0f, 4.0f );
-        style.TouchExtraPadding = ImVec2( 0.0f, 0.0f );
-        style.IndentSpacing     = 20.0f;
-        style.ScrollbarSize     = 12.0f;
-        style.GrabMinSize       = 8.0f;
+        style.WindowPadding    = ImVec2( spacing._windowPaddingX * density, spacing._windowPaddingY * density );
+        style.FramePadding     = ImVec2( spacing._framePaddingX * density, spacing._framePaddingY * density );
+        style.ItemSpacing      = ImVec2( spacing._itemSpacingX * density, spacing._itemSpacingY * density );
+        style.ItemInnerSpacing = ImVec2( spacing._itemInnerSpacingX * density, spacing._itemInnerSpacingY * density );
+        style.IndentSpacing    = spacing._indent * density;
+        style.ScrollbarSize    = spacing._scrollbarSize;
+        style.GrabMinSize      = spacing._grabMinSize;
         // 위 크기는 96 DPI 기준이다. 모니터 배율을 곱한다(`setDpiScale`).
         if ( EditorThemeInternal::dpiScale() != 1.0f )
             style.ScaleAllSizes( EditorThemeInternal::dpiScale() );
+        // 글자 크기도 토큰이다. ImGui 1.92 동적 글꼴이라 다음 프레임부터 그 크기로 래스터한다(배율은 `FontScaleDpi` 가 따로 곱한다).
+        style.FontSizeBase = config._typography._fontSize;
 
-        // 2. 통합 컬러 팔레트 구성
+        // 2. 컬러 팔레트. 상태(호버 · 활성)는 토큰에서 밝기와 알파로 만든다.
         ImVec4* pColors = style.Colors;
 
         const Color& accent   = config._accentColor;
@@ -328,7 +259,7 @@ namespace sw::editor
         const Color& border   = config._border;
 
         // 텍스트
-        pColors[ImGuiCol_Text]         = EditorColorUtil::toImVec4( EditorThemeInternal::kText );
+        pColors[ImGuiCol_Text]         = EditorThemeInternal::toImVec4( config._text );
         pColors[ImGuiCol_TextDisabled] = EditorThemeInternal::toImVec4( config._textMuted, 1.0f );
 
         // 창 및 배경
@@ -336,7 +267,7 @@ namespace sw::editor
         pColors[ImGuiCol_ChildBg]      = EditorThemeInternal::toImVec4( panBg, 1.0f );
         pColors[ImGuiCol_PopupBg]      = EditorThemeInternal::adjustBrightness( winBg, 1.15f, 0.98f );
         pColors[ImGuiCol_Border]       = EditorThemeInternal::toImVec4( border, 1.0f );
-        pColors[ImGuiCol_BorderShadow] = EditorColorUtil::toImVec4( EditorThemeInternal::kClear );
+        pColors[ImGuiCol_BorderShadow] = EditorThemeInternal::toImVec4( border, 0.0f );
         pColors[ImGuiCol_MenuBarBg]    = EditorThemeInternal::adjustBrightness( winBg, 0.85f, 1.0f );
 
         // 입력 프레임
@@ -350,7 +281,7 @@ namespace sw::editor
         pColors[ImGuiCol_TitleBgCollapsed] = EditorThemeInternal::toImVec4( winBg, 0.75f );
 
         // 스크롤바
-        pColors[ImGuiCol_ScrollbarBg]          = EditorColorUtil::toImVec4( EditorThemeInternal::kScrollbarBg );
+        pColors[ImGuiCol_ScrollbarBg]          = EditorThemeInternal::toImVec4( config._scrollbarBg );
         pColors[ImGuiCol_ScrollbarGrab]        = EditorThemeInternal::adjustBrightness( border, 1.1f, 0.8f );
         pColors[ImGuiCol_ScrollbarGrabHovered] = EditorThemeInternal::adjustBrightness( border, 1.4f, 1.0f );
         pColors[ImGuiCol_ScrollbarGrabActive]  = EditorThemeInternal::toImVec4( accent, 0.9f );
@@ -372,13 +303,13 @@ namespace sw::editor
         pColors[ImGuiCol_TabUnfocused]       = EditorThemeInternal::adjustBrightness( winBg, 0.80f, 1.0f );
         pColors[ImGuiCol_TabUnfocusedActive] = EditorThemeInternal::adjustBrightness( panBg, 0.90f, 1.0f );
         pColors[ImGuiCol_DockingPreview]     = EditorThemeInternal::toImVec4( accent, 0.45f );
-        pColors[ImGuiCol_DockingEmptyBg]     = EditorColorUtil::toImVec4( EditorThemeInternal::kDockingEmptyBg );
+        pColors[ImGuiCol_DockingEmptyBg]     = EditorThemeInternal::toImVec4( config._dockingEmptyBg );
 
         // 구분선 & 기타
         pColors[ImGuiCol_Separator]         = EditorThemeInternal::toImVec4( border, 0.85f );
         pColors[ImGuiCol_SeparatorHovered]  = EditorThemeInternal::toImVec4( accent, 0.85f );
         pColors[ImGuiCol_SeparatorActive]   = EditorThemeInternal::toImVec4( accent, 1.0f );
-        pColors[ImGuiCol_ResizeGrip]        = EditorColorUtil::toImVec4( EditorThemeInternal::kClear );
+        pColors[ImGuiCol_ResizeGrip]        = EditorThemeInternal::toImVec4( accent, 0.0f );
         pColors[ImGuiCol_ResizeGripHovered] = EditorThemeInternal::toImVec4( accent, 0.60f );
         pColors[ImGuiCol_ResizeGripActive]  = EditorThemeInternal::toImVec4( accent, 0.90f );
         pColors[ImGuiCol_CheckMark]         = EditorThemeInternal::toImVec4( accent, 1.0f );
@@ -391,8 +322,8 @@ namespace sw::editor
         pColors[ImGuiCol_TableHeaderBg]     = EditorThemeInternal::toImVec4( headerBg, 1.0f );
         pColors[ImGuiCol_TableBorderStrong] = EditorThemeInternal::toImVec4( border, 1.0f );
         pColors[ImGuiCol_TableBorderLight]  = EditorThemeInternal::toImVec4( border, 0.5f );
-        pColors[ImGuiCol_TableRowBg]        = EditorColorUtil::toImVec4( EditorThemeInternal::kClear );
-        pColors[ImGuiCol_TableRowBgAlt]     = EditorColorUtil::toImVec4( EditorThemeInternal::kTableRowBgAlt );
+        pColors[ImGuiCol_TableRowBg]        = EditorThemeInternal::toImVec4( config._tableRowBgAlt, 0.0f );
+        pColors[ImGuiCol_TableRowBgAlt]     = EditorThemeInternal::toImVec4( config._tableRowBgAlt );
     }
 
     void EditorThemeUtil::setDpiScale( float32 dpiScale )
@@ -400,15 +331,9 @@ namespace sw::editor
         const float32 scale = ( dpiScale > 0.0f ) ? dpiScale : 1.0f;
         if ( EditorThemeInternal::dpiScale() == scale )
             return;
-        // 현재 테마를 96 DPI 기준으로 다시 읽고 새 배율로 다시 적용한다. ImGui 기본 다크 프리셋은 지오메트리를 건드리지 않으므로, 바뀐 비율만큼
-        // 현재 스타일을 늘린다.
-        const float32     previousScale = EditorThemeInternal::dpiScale();
-        EditorThemeConfig config        = getActiveTheme();
+        // 테마는 96 DPI 기준 값을 들고 있으므로 새 배율로 다시 적용하면 된다.
         EditorThemeInternal::dpiScale() = scale;
-        if ( EditorThemeInternal::findRow( config._preset )._bUseImGuiDarkColors )
-            ImGui::GetStyle().ScaleAllSizes( scale / previousScale );
-        else
-            applyTheme( config );
+        applyTheme( getActiveTheme() );
         ImGui::GetStyle().FontScaleDpi = scale;
     }
 
@@ -424,28 +349,18 @@ namespace sw::editor
             return;
         const EditorConfig& editorConfig = EditorConfig::getActive();
 
-        const EditorThemePreset preset = EditorThemeInternal::findRowByConfigID( editorConfig._themePreset )._preset;
-        applyPreset( preset );
-
-        if ( preset != EditorThemePreset::ClassicDark )
+        const EditorThemeConfig* pTheme = EditorThemeInternal::findAvailable( editorConfig._themeName );
+        if ( pTheme == nullptr )
         {
-            EditorThemeConfig themeConfig        = EditorThemeInternal::activeTheme();
-            const bool        bHasAccentOverride = editorConfig._themeAccentR > 0.0f || editorConfig._themeAccentG > 0.0f || editorConfig._themeAccentB > 0.0f;
-            if ( bHasAccentOverride )
-                themeConfig._accentColor = Color{ editorConfig._themeAccentR, editorConfig._themeAccentG, editorConfig._themeAccentB, 1.0f };
-
-            if ( editorConfig._themeWindowRounding >= 0.0f )
-            {
-                themeConfig._windowRounding    = editorConfig._themeWindowRounding;
-                themeConfig._frameRounding     = editorConfig._themeFrameRounding;
-                themeConfig._tabRounding       = editorConfig._themeTabRounding;
-                themeConfig._popupRounding     = editorConfig._themeWindowRounding;
-                themeConfig._scrollbarRounding = editorConfig._themeFrameRounding * 2.0f;
-                themeConfig._grabRounding      = editorConfig._themeFrameRounding;
-            }
-
-            applyTheme( themeConfig );
+            SW_LOG_WARNING( "Editor theme '%#' not found - using '%#'", editorConfig._themeName.c_str(), EditorThemeTokens::kDefaultName );
+            pTheme = EditorThemeInternal::findAvailable( EditorThemeTokens::kDefaultName );
         }
+        if ( pTheme == nullptr )
+            return; // 벌을 하나도 읽지 못했다(loadAvailableThemes 가 오류를 남겼다). ImGui 기본 스타일로 둔다
+
+        EditorThemeConfig themeConfig = *pTheme;
+        EditorThemeInternal::applyUserOverrides( editorConfig, themeConfig );
+        applyTheme( themeConfig );
     }
 
     void EditorThemeUtil::saveToConfig()
@@ -453,14 +368,18 @@ namespace sw::editor
         EditorConfig editorConfig = EditorConfig::getActive();
 
         const EditorThemeConfig& themeConfig = EditorThemeInternal::activeTheme();
-        editorConfig._themePreset            = EditorThemeInternal::findRow( themeConfig._preset )._pConfigID;
+        editorConfig._themeName              = themeConfig._name;
 
-        editorConfig._themeAccentR        = themeConfig._accentColor._r;
-        editorConfig._themeAccentG        = themeConfig._accentColor._g;
-        editorConfig._themeAccentB        = themeConfig._accentColor._b;
-        editorConfig._themeWindowRounding = themeConfig._windowRounding;
-        editorConfig._themeFrameRounding  = themeConfig._frameRounding;
-        editorConfig._themeTabRounding    = themeConfig._tabRounding;
+        // 덮어쓰지 않은 값은 음수로 둔다. 그래야 토큰 파일이 바뀌면 그 값을 따른다.
+        const bool bAccent         = themeConfig._bAccentOverridden == SW_TRUE;
+        editorConfig._themeAccentR = bAccent ? themeConfig._accentColor._r : EditorConfig::kNotOverridden;
+        editorConfig._themeAccentG = bAccent ? themeConfig._accentColor._g : EditorConfig::kNotOverridden;
+        editorConfig._themeAccentB = bAccent ? themeConfig._accentColor._b : EditorConfig::kNotOverridden;
+
+        const bool bRadius                = themeConfig._bRadiusOverridden == SW_TRUE;
+        editorConfig._themeWindowRounding = bRadius ? themeConfig._radius._window : EditorConfig::kNotOverridden;
+        editorConfig._themeFrameRounding  = bRadius ? themeConfig._radius._frame : EditorConfig::kNotOverridden;
+        editorConfig._themeTabRounding    = bRadius ? themeConfig._radius._tab : EditorConfig::kNotOverridden;
 
         EditorConfig::setActive( editorConfig );
         EditorConfig::saveToPreferences();
@@ -468,8 +387,9 @@ namespace sw::editor
 
     void EditorThemeUtil::setAccentColor( const Color& accentColor )
     {
-        EditorThemeConfig editorConfig = EditorThemeInternal::activeTheme();
-        editorConfig._accentColor      = accentColor;
+        EditorThemeConfig editorConfig  = EditorThemeInternal::activeTheme();
+        editorConfig._accentColor       = accentColor;
+        editorConfig._bAccentOverridden = SW_TRUE;
         applyTheme( editorConfig );
         saveToConfig();
     }
@@ -477,12 +397,17 @@ namespace sw::editor
     Color EditorThemeUtil::getViewportHoverColor()
     {
         const Color& accent = getAccentColor();
-        return Color::lerp( accent, Color{ 1.0f, 1.0f, 1.0f, 1.0f }, EditorThemeInternal::kHoverWhiten ).withAlpha( EditorThemeInternal::kHoverAlpha );
+        return Color::lerp( accent, getActiveTheme()._text, EditorThemeInternal::kHoverWhiten ).withAlpha( EditorThemeInternal::kHoverAlpha );
     }
 
     const Color& EditorThemeUtil::getAccentColor()
     {
         return EditorThemeInternal::activeTheme()._accentColor;
+    }
+
+    const Color& EditorThemeUtil::getTextColor()
+    {
+        return EditorThemeInternal::activeTheme()._text;
     }
 
     const Color& EditorThemeUtil::getWindowBgColor()
@@ -533,6 +458,41 @@ namespace sw::editor
     const Color& EditorThemeUtil::getTextMutedColor()
     {
         return EditorThemeInternal::activeTheme()._textMuted;
+    }
+
+    const Color& EditorThemeUtil::getOverlayBgColor()
+    {
+        return EditorThemeInternal::activeTheme()._overlayBg;
+    }
+
+    const Color& EditorThemeUtil::getSelectionOutlineColor()
+    {
+        return EditorThemeInternal::activeTheme()._selectionOutline;
+    }
+
+    const Color& EditorThemeUtil::getHighlightColor()
+    {
+        return EditorThemeInternal::activeTheme()._highlight;
+    }
+
+    const Color& EditorThemeUtil::getToggleInactiveColor()
+    {
+        return EditorThemeInternal::activeTheme()._toggleInactive;
+    }
+
+    const Color& EditorThemeUtil::getAxisXColor()
+    {
+        return EditorThemeInternal::activeTheme()._axisX;
+    }
+
+    const Color& EditorThemeUtil::getAxisYColor()
+    {
+        return EditorThemeInternal::activeTheme()._axisY;
+    }
+
+    const Color& EditorThemeUtil::getAxisZColor()
+    {
+        return EditorThemeInternal::activeTheme()._axisZ;
     }
 
     void EditorThemeUtil::textAccent( const utf8* pText )
@@ -617,28 +577,23 @@ namespace sw::editor
         {
             EditorThemeConfig editorConfig = EditorThemeInternal::activeTheme();
 
-            // 1) 프리셋 선택. 이름과 순서는 프리셋 테이블에서 온다. 열거형 값을 인덱스로 삼지 않는다.
-            uint32                                           rowCount{ 0 };
-            const EditorThemeInternal::ThemePresetRow* const pRow = EditorThemeInternal::getPresetRows( rowCount );
-
-            const utf8* arrPresetName[static_cast<size_t>( EditorThemePreset::Count )]{};
-            int32       currentPreset{ 0 };
-            for ( uint32 index = 0; index < rowCount; ++index )
+            // 1) 테마(토큰 벌) 선택. 목록은 `Resource/editor/theme/*.tokens.json` 이다.
+            const vector<EditorThemeConfig>* pListTheme = EditorThemeInternal::availableThemes();
+            if ( pListTheme != nullptr && ImGui::BeginCombo( "Theme", editorConfig._displayName.c_str() ) )
             {
-                arrPresetName[index] = pRow[index]._pDisplayName;
-                if ( pRow[index]._preset == editorConfig._preset )
-                    currentPreset = static_cast<int32>( index );
-            }
-
-            if ( ImGui::Combo( "Theme Preset", &currentPreset, arrPresetName, static_cast<int32>( rowCount ) ) )
-            {
-                const uint32 selected = static_cast<uint32>( currentPreset );
-                if ( selected < rowCount )
+                for ( const EditorThemeConfig& theme : *pListTheme )
                 {
-                    applyPreset( pRow[selected]._preset );
-                    saveToConfig();
-                    editorConfig = EditorThemeInternal::activeTheme();
+                    const bool bSelected = theme._name == editorConfig._name;
+                    if ( ImGui::Selectable( theme._displayName.c_str(), bSelected ) )
+                    {
+                        applyTheme( theme );
+                        saveToConfig();
+                        editorConfig = EditorThemeInternal::activeTheme();
+                    }
+                    if ( bSelected )
+                        ImGui::SetItemDefaultFocus();
                 }
+                ImGui::EndCombo();
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemePreset" ) );
 
@@ -648,36 +603,32 @@ namespace sw::editor
             // 2) 액센트 컬러 피커
             float32 arrAccentRaw[4] = { editorConfig._accentColor._r, editorConfig._accentColor._g, editorConfig._accentColor._b, editorConfig._accentColor._a };
             if ( ImGui::ColorEdit4( "Accent Color", arrAccentRaw, ImGuiColorEditFlags_NoAlpha ) )
-            {
-                editorConfig._accentColor = Color{ arrAccentRaw[0], arrAccentRaw[1], arrAccentRaw[2], arrAccentRaw[3] };
-                applyTheme( editorConfig );
-                saveToConfig();
-            }
+                setAccentColor( Color{ arrAccentRaw[0], arrAccentRaw[1], arrAccentRaw[2], arrAccentRaw[3] } );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeAccentColor" ) );
 
-            // 3) 빠른 액센트 팔레트 스와치
+            // 3) 빠른 액센트 팔레트 스와치(테마와 무관한 추천 색이다)
             ImGui::Text( "Accent Swatches:" );
             ImGui::SameLine();
-            const Color arrSwatches[] = {
+            static constexpr Color kArrSwatch[] = {
                 {0.27f, 0.57f,  1.0f, 1.0f}, // Electric Blue
                 {0.15f, 0.75f, 0.55f, 1.0f}, // Emerald Cyan
                 {0.65f, 0.35f, 0.95f, 1.0f}, // Neon Violet
                 {0.95f, 0.55f, 0.15f, 1.0f}, // Amber Gold
                 {0.90f, 0.25f, 0.35f, 1.0f}  // Crimson
             };
-
-            for ( int32 index = 0; index < 5; ++index )
+            const float32 swatchSize = ImGui::GetFrameHeight();
+            for ( int32 index = 0; index < static_cast<int32>( SW_COUNT_OF( kArrSwatch ) ); ++index )
             {
                 if ( index > 0 )
                     ImGui::SameLine();
                 ImGui::PushID( index );
-                if ( ImGui::ColorButton( "##swatch", EditorThemeInternal::toImVec4( arrSwatches[index] ), ImGuiColorEditFlags_NoAlpha, ImVec2( 22.0f * EditorThemeUtil::getDpiScale(), 22.0f * EditorThemeUtil::getDpiScale() ) ) )
+                if ( ImGui::ColorButton( "##swatch", EditorThemeInternal::toImVec4( kArrSwatch[index] ), ImGuiColorEditFlags_NoAlpha, ImVec2( swatchSize, swatchSize ) ) )
                 {
-                    setAccentColor( arrSwatches[index] );
+                    setAccentColor( kArrSwatch[index] );
                     editorConfig = getActiveTheme();
                 }
                 if ( index == 2 )
-                    EditorSelfTestMarks::note( "theme.swatch.violet" ); // 에디터 자체 테스트(input.classicDarkSwatch)가 누른다
+                    EditorSelfTestMarks::note( "theme.swatch.violet" ); // 에디터 자체 테스트(input.themeSwatch)가 누른다
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeAccentSwatch" ) );
                 ImGui::PopID();
             }
@@ -687,28 +638,29 @@ namespace sw::editor
 
             // 4) 라운딩 슬라이더
             bool bMetricsChanged = false;
-            bMetricsChanged |= ImGui::SliderFloat( "Window Rounding", &editorConfig._windowRounding, 0.0f, 12.0f, "%.0f px" );
+            bMetricsChanged |= ImGui::SliderFloat( "Window Rounding", &editorConfig._radius._window, 0.0f, 12.0f, "%.0f px" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeWindowRounding" ) );
-            bMetricsChanged |= ImGui::SliderFloat( "Frame Rounding", &editorConfig._frameRounding, 0.0f, 8.0f, "%.0f px" );
+            bMetricsChanged |= ImGui::SliderFloat( "Frame Rounding", &editorConfig._radius._frame, 0.0f, 8.0f, "%.0f px" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeFrameRounding" ) );
-            bMetricsChanged |= ImGui::SliderFloat( "Tab Rounding", &editorConfig._tabRounding, 0.0f, 8.0f, "%.0f px" );
+            bMetricsChanged |= ImGui::SliderFloat( "Tab Rounding", &editorConfig._radius._tab, 0.0f, 8.0f, "%.0f px" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeTabRounding" ) );
 
             if ( bMetricsChanged )
             {
-                editorConfig._popupRounding     = editorConfig._windowRounding;
-                editorConfig._scrollbarRounding = editorConfig._frameRounding * 2.0f;
-                editorConfig._grabRounding      = editorConfig._frameRounding;
+                editorConfig._radius._popup     = editorConfig._radius._window;
+                editorConfig._radius._scrollbar = editorConfig._radius._frame * EditorThemeInternal::kScrollbarRadiusPerFrameRadius;
+                editorConfig._radius._grab      = editorConfig._radius._frame;
+                editorConfig._bRadiusOverridden = SW_TRUE;
                 applyTheme( editorConfig );
                 saveToConfig();
             }
 
             ImGui::Separator();
 
-            // 5) 기본값 복원 버튼
-            if ( ImGui::Button( makeIconLabel( editoricon::kUndo, "Reset to Modern Dark" ) ) )
+            // 5) 덮어쓴 강조색 · 둥글기를 버리고 토큰 값으로 되돌린다.
+            if ( ImGui::Button( makeIconLabel( editoricon::kUndo, "Reset to Theme Defaults" ) ) )
             {
-                applyPreset( EditorThemePreset::ModernDark );
+                (void)applyThemeByName( editorConfig._name ); // 목록에 있는 벌이다(콤보가 고른 것)
                 saveToConfig();
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeReset" ) );

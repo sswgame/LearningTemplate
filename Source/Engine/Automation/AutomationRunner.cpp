@@ -28,6 +28,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/IWindow.h"
@@ -243,9 +244,9 @@ namespace sw
             {
                 if ( validateProbeReference( step, outError ) == false )
                     return false;
-                if ( countComparisons( step, { "equals", "near", "atLeast", "atMost", "is" } ) == false )
+                if ( countComparisons( step, { "equals", "near", "atLeast", "atMost", "is", "sameAs", "differsFrom" } ) == false )
                 {
-                    outError = step.describe() + ": needs exactly one of equals · near · atLeast · atMost · is";
+                    outError = step.describe() + ": needs exactly one of equals · near · atLeast · atMost · is · sameAs · differsFrom";
                     return false;
                 }
                 float32 value = 0.0f;
@@ -256,7 +257,7 @@ namespace sw
 
             static bool validateExpect( const AutomationStep& step, string& outError )
             {
-                return checkAttributeNames( step, { "probe", "target", "key", "equals", "near", "tolerance", "atLeast", "atMost", "is" }, outError ) &&
+                return checkAttributeNames( step, { "probe", "target", "key", "equals", "near", "tolerance", "atLeast", "atMost", "is", "sameAs", "differsFrom" }, outError ) &&
                        validateProbeComparison( step, outError );
             }
 
@@ -265,8 +266,10 @@ namespace sw
             {
                 uint32  count   = 0;
                 float32 seconds = 0.0f;
-                if ( checkAttributeNames( step, { "probe", "target", "key", "equals", "near", "tolerance", "atLeast", "atMost", "is", "timeoutFrames", "timeoutSeconds" }, outError ) ==
-                     false )
+                if ( checkAttributeNames( step,
+                                          { "probe", "target", "key", "equals", "near", "tolerance", "atLeast", "atMost", "is", "sameAs", "differsFrom", "timeoutFrames",
+                                            "timeoutSeconds" },
+                                          outError ) == false )
                     return false;
                 if ( step.findAttribute( "timeoutFrames" ) != nullptr && step.findAttribute( "timeoutSeconds" ) != nullptr )
                 {
@@ -295,6 +298,13 @@ namespace sw
             static bool validateRecord( const AutomationStep& step, string& outError )
             {
                 return checkAttributeNames( step, { "probe", "target", "key" }, outError ) && validateProbeReference( step, outError );
+            }
+
+            /** @brief `Remember` 입니다. 탐침 값을 `as` 이름으로 기억합니다(뒤 단계의 `sameAs` · `differsFrom` 이 견준다). */
+            static bool validateRemember( const AutomationStep& step, string& outError )
+            {
+                return checkAttributeNames( step, { "probe", "target", "key", "as" }, outError ) && requireAttribute( step, "as", outError ) != nullptr &&
+                       validateProbeReference( step, outError );
             }
 
             /** @brief 쉼표로 가른 값 목록입니다(앞뒤 공백을 제거하고 빈 항목은 버린다). */
@@ -505,6 +515,51 @@ namespace sw
                 return true;
             }
 
+            /**
+             * @brief 탐침 `Object.Property` 입니다. 대상 오브젝트의 컴포넌트 PROPERTY 값(`key="<컴포넌트 타입>.<프로퍼티>"`)입니다.
+             * @details 수(float32 · int32 · uint32)와 글(string)을 읽는다. 선택과 무관하게 이름으로 고르므로 여러 오브젝트를 한 프레임에 견줄 수 있다
+             *          (프리팹 인스턴스마다의 값, 플레이 전후의 값). 비트필드 bool 은 PROPERTY 주소가 없어 읽지 못한다.
+             */
+            [[nodiscard]] static bool readObjectProperty( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
+            {
+                if ( query._pTarget == nullptr )
+                    return false;
+                const size_t dot = query._key.find( '.' );
+                if ( dot == string_view::npos )
+                {
+                    outValue.setText( "key must be <ComponentType>.<property>" );
+                    return false;
+                }
+                const string componentName( query._key.substr( 0, dot ) );
+                const string propertyName( query._key.substr( dot + 1 ) );
+                Component*   pComponent = query._pTarget->findComponentByTypeName( hashed_string( componentName ) );
+                if ( pComponent == nullptr || pComponent->getTypeInfo() == nullptr )
+                {
+                    outValue.setText( "no " + componentName + " on the target" );
+                    return false;
+                }
+                const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( propertyName ) );
+                if ( pProperty == nullptr )
+                {
+                    outValue.setText( "no property " + propertyName );
+                    return false;
+                }
+                if ( pProperty->_typeName == hashed_string( "float32" ) )
+                    outValue.setNumber( static_cast<float64>( *pProperty->getValuePtr<float32>( pComponent ) ) );
+                else if ( pProperty->_typeName == hashed_string( "int32" ) )
+                    outValue.setNumber( static_cast<float64>( *pProperty->getValuePtr<int32>( pComponent ) ) );
+                else if ( pProperty->_typeName == hashed_string( "uint32" ) )
+                    outValue.setNumber( static_cast<float64>( *pProperty->getValuePtr<uint32>( pComponent ) ) );
+                else if ( pProperty->_typeName == hashed_string( "string" ) )
+                    outValue.setText( *pProperty->getValuePtr<string>( pComponent ) );
+                else
+                {
+                    outValue.setText( "property type " + string( pProperty->_typeName.c_str() ) + " is not readable here" );
+                    return false;
+                }
+                return true;
+            }
+
             /** @brief 탐침 `Object.DistanceTo` 입니다. 대상과 `key` 이름의 오브젝트 사이 월드 거리(m)입니다. */
             [[nodiscard]] static bool readObjectDistanceTo( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
             {
@@ -580,6 +635,8 @@ namespace sw
     SW_AUTOMATION_QUERY_PROBE( objectY, "Object.Y", "World Y of the target object (m)", &AutomationRunnerInternal::readObjectY, true, false );
     SW_AUTOMATION_QUERY_PROBE( objectZ, "Object.Z", "World Z of the target object (m)", &AutomationRunnerInternal::readObjectZ, true, false );
     SW_AUTOMATION_QUERY_PROBE( objectExists, "Object.Exists", "1 when the active scene has an object named target", &AutomationRunnerInternal::readObjectExists, true, false );
+    SW_AUTOMATION_QUERY_PROBE( objectProperty, "Object.Property", "Component property of the target object (key = <ComponentType>.<property>; numbers and strings)",
+                               &AutomationRunnerInternal::readObjectProperty, true, true );
     SW_AUTOMATION_QUERY_PROBE( objectDistanceTo, "Object.DistanceTo", "World distance from the target object to the object named key (m)",
                                &AutomationRunnerInternal::readObjectDistanceTo, true, true );
 #if SW_PROFILER_TRACE_ENABLED
@@ -718,6 +775,12 @@ namespace sw
             return true;
         }
 
+        static bool runRemember( AutomationRunner& runner, const AutomationStep& step )
+        {
+            runner.runRemember( step );
+            return true;
+        }
+
         static bool runExpectLog( AutomationRunner& runner, const AutomationStep& step )
         {
             runner.runExpectLog( step );
@@ -837,6 +900,7 @@ namespace sw
                                    &AutomationRunnerEngineSteps::holdWaitUntil, false );
     SW_AUTOMATION_STEP( runnerExpectVisited, "ExpectVisited", &AutomationRunnerEngineSteps::runExpectVisited, &AutomationRunnerInternal::validateExpectVisited, false );
     SW_AUTOMATION_STEP( runnerRecord, "Record", &AutomationRunnerEngineSteps::runRecord, &AutomationRunnerInternal::validateRecord, false );
+    SW_AUTOMATION_STEP( runnerRemember, "Remember", &AutomationRunnerEngineSteps::runRemember, &AutomationRunnerInternal::validateRemember, false );
     SW_AUTOMATION_STEP( runnerExpectLog, "ExpectLog", &AutomationRunnerEngineSteps::runExpectLog, &AutomationRunnerInternal::validateExpectLog, false );
     SW_AUTOMATION_STEP( runnerScreenshot, "Screenshot", &AutomationRunnerEngineSteps::runScreenshot, &AutomationRunnerInternal::validateScreenshot, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( runnerExpectImage, "ExpectImage", &AutomationRunnerEngineSteps::runExpectImage, &AutomationRunnerInternal::validateExpectImage, nullptr,
@@ -860,6 +924,7 @@ namespace sw
         , _listFailure{}
         , _listPendingScreenshot{}
         , _listWatch{}
+        , _listRemembered{}
         , _outputDirectory{}
         , _finishReason{}
         , _pObjectManagerOverride{ nullptr }
@@ -1139,6 +1204,7 @@ namespace sw
                 _logPolicy.addAllowed( *step.findAttribute( "contains" ), "declared by <ExpectLog>" ); // 검사 함수가 contains 를 요구했다
         }
         prepareWatches();
+        _listRemembered.clear();
         _logCapture.start();
         return true;
     }
@@ -1236,11 +1302,33 @@ namespace sw
         float32      tolerance = 0.0f;
         bool         bOk       = true;
         string       rule;
-        const bool   bNumberRule = step.findAttribute( "is" ) == nullptr;
+        const bool   bNumberRule = step.findAttribute( "is" ) == nullptr && step.findAttribute( "sameAs" ) == nullptr && step.findAttribute( "differsFrom" ) == nullptr;
         if ( bNumberRule && value._bText )
         {
             outMessage = subject + " is text ('" + value._text + "') - compare it with is=\"…\"";
             return false;
+        }
+        const string* pSameAs      = step.findAttribute( "sameAs" );
+        const string* pDiffersFrom = step.findAttribute( "differsFrom" );
+        if ( pSameAs != nullptr || pDiffersFrom != nullptr )
+        {
+            // 기억한 값과는 글 그대로 견준다 — 64 비트 해시 같은 값이 수 비교(float32)에서 뭉개지지 않는다.
+            const string& name        = pSameAs != nullptr ? *pSameAs : *pDiffersFrom;
+            const string* pRemembered = nullptr;
+            for ( const RememberedValue& remembered : _listRemembered )
+            {
+                if ( remembered._name == name )
+                    pRemembered = &remembered._text;
+            }
+            if ( pRemembered == nullptr )
+            {
+                outMessage = subject + ": nothing was remembered as '" + name + "' (add <Remember as=\"" + name + "\"> before this step)";
+                return false;
+            }
+            bOk        = pSameAs != nullptr ? valueText == *pRemembered : valueText != *pRemembered;
+            outMatched = bOk;
+            outMessage = subject + ( pSameAs != nullptr ? " same as " : " differs from " ) + name + " ('" + *pRemembered + "'), got " + valueText;
+            return true;
         }
         if ( step.findAttribute( "is" ) != nullptr )
         {
@@ -1395,6 +1483,29 @@ namespace sw
             return;
         }
         addRecordLine( "frame " + to_string( _frameIndex ) + " " + message + " = " + AutomationRunnerInternal::makeValueText( value ) );
+    }
+
+    void AutomationRunner::runRemember( const AutomationStep& step )
+    {
+        AutomationProbeValue value{};
+        string               message;
+        if ( readProbeValue( step, value, message ) == false )
+        {
+            recordFailure( step, "Remember " + message );
+            return;
+        }
+        const string& name = *step.findAttribute( "as" );
+        string        text = AutomationRunnerInternal::makeValueText( value );
+        SW_LOG_INFO( "[Scenario] frame %# remember %# = %# (%#)", _frameIndex, name.c_str(), text.c_str(), message.c_str() );
+        for ( RememberedValue& remembered : _listRemembered )
+        {
+            if ( remembered._name == name )
+            {
+                remembered._text = std::move( text );
+                return;
+            }
+        }
+        _listRemembered.push_back( RememberedValue{ name, std::move( text ) } );
     }
 
     void AutomationRunner::runExpectLog( const AutomationStep& step )

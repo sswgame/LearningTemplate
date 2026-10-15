@@ -8,6 +8,7 @@
 #include "Editor/Common/Asset/HeightfieldImporter.h"
 #include "Editor/Common/Asset/ModelImporter.h"
 #include "Editor/Common/Asset/TextureImporter.h"
+#include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 
 #include "Engine/Animation/AnimationClip.h"
@@ -68,6 +69,7 @@ namespace sw::editor
         constexpr string_view kArrRigSuffix[]          = { RigAsset::kExtension };
         constexpr string_view kArrAnimationClipExt[]   = { AnimationClip::kExtension };
         constexpr string_view kArrFractureExt[]        = { FractureAsset::kExtension };
+        constexpr string_view kArrThemeTokenSuffix[]   = { EditorThemeTokens::kExtension };
         constexpr string_view kArrModelSourceExt[]     = { ".glb", ".gltf", ".vrm" }; ///< `models_raw/` 의 원본이다. 임포트하는 것이 리로드다
         constexpr string_view kArrHeightfieldRawExt[]  = { ".png", ".r16" };          ///< `heightfields_raw/` 의 원본과 구멍 마스크다. 임포트하는 것이 리로드다
         constexpr string_view kArrHeightfieldExt[]     = { HeightfieldData::kExtension };
@@ -114,6 +116,7 @@ namespace sw::editor
             { EditorAssetType::AnimationClip,      MatchMode::Extension,   kArrAnimationClipExt,   SW_COUNT_OF( kArrAnimationClipExt ),                        "AnimationClip",                                              nullptr},
             {      EditorAssetType::Fracture,      MatchMode::Extension,        kArrFractureExt,        SW_COUNT_OF( kArrFractureExt ),                             "Fracture",                                              nullptr},
             {   EditorAssetType::Heightfield,      MatchMode::Extension,     kArrHeightfieldExt,     SW_COUNT_OF( kArrHeightfieldExt ),                                nullptr,                                              nullptr},
+            {          EditorAssetType::Data,       MatchMode::EndsWith,   kArrThemeTokenSuffix,   SW_COUNT_OF( kArrThemeTokenSuffix ),                                nullptr,                 &EditorTheme::importChangedTokenFile},
             {          EditorAssetType::Data,       MatchMode::EndsWith, kArrLocalizationSuffix, SW_COUNT_OF( kArrLocalizationSuffix ),                          "StringTable",                                              nullptr},
             {    EditorAssetType::UIDocument,       MatchMode::EndsWith,   kArrUIDocumentSuffix,   SW_COUNT_OF( kArrUIDocumentSuffix ), AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr},
             {          EditorAssetType::Data,       MatchMode::EndsWith,      kArrUIStyleSuffix,      SW_COUNT_OF( kArrUIStyleSuffix ), AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr},
@@ -125,7 +128,7 @@ namespace sw::editor
         // 종류마다 항목 하나다. 항목 순서가 곧 브라우저 필터, 도구 패널, 리소스 카탈로그의 표시 순서다.
         // 필드는 종류, 이름(단수), 브라우저 라벨, 패널 제목, 아이콘, 색, 액센트 색, Other 제외, 임포트 순서다
         constexpr EditorAssetTypeInfo kArrKindInfo[] = {
-            {         EditorAssetType::Scene,          "Scene",       "Scenes",           nullptr,          editoricon::kScene,                style::kAccent,  true,  true, false},
+            {         EditorAssetType::Scene,          "Scene",       "Scenes",           nullptr,          editoricon::kScene,                       Color{},  true,  true, false},
             {        EditorAssetType::Prefab,         "Prefab",      "Prefabs",   "Prefab Editor",         editoricon::kPrefab, { 0.35f, 0.70f, 1.00f, 1.0f }, false,  true,  true},
             {       EditorAssetType::Texture,        "Texture",     "Textures",           nullptr,        editoricon::kTexture, { 0.35f, 0.85f, 0.45f, 1.0f }, false,  true,  true},
             {        EditorAssetType::Shader,         "Shader",      "Shaders",           nullptr,         editoricon::kShader, { 0.95f, 0.45f, 0.35f, 1.0f }, false,  true,  true},

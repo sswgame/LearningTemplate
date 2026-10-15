@@ -31,27 +31,27 @@ namespace sw
      *          기준은 RTS 유닛 2,000 개이고, 게임 스레드 `GT.UI.*` 합이 0.5 ms 를 넘으면 투영 · 컬링 · 간접 드로우를 컴퓨트로 옮길지 정한다.
      *          HP 는 큐브마다 다른 고정값이다(바뀌지 않는 트리 출력 재사용이 어디까지 덮는지 같이 본다). `-gv_benchUiMarkers` 와 함께 주면 이름표가 이긴다.
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchUiNameplates, 0, "앞쪽 벤치 큐브 K 개에 RTS 이름표(이름 글 + HP 막대)를 붙인다 (0=사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchUiNameplates, 0, "앞쪽 벤치 큐브 K 개에 RTS 이름표(이름 글 + HP 막대)를 붙인다 (0=사용 안 함)" );
 
     /**
      * @brief `-gv_benchUiHangulGlyphs=N`: `gv_benchProbeFrame` 프레임에 서로 다른 한글 음절 N 개로 된 긴 글을 화면에 띄웁니다.
      * @details 새 글리프 수백 개를 처음 그리는 프레임(래스터화 · SDF · 아틀라스 업로드)의 최악 시간을 잰다. 표의 `GT.Frame` max 와 `RT.Canvas.Upload` max 를 본다.
      *          히치가 4 ms 를 넘으면 SDF 를 컴퓨트(점프 플러딩)로 만들지 정한다. 시스템 한글 글꼴(맑은 고딕 · Noto Sans KR)이 없으면 두부만 그려져 측정이 아니다.
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchUiHangulGlyphs, 0, "탐침 프레임에 서로 다른 한글 음절 N 개의 긴 글을 띄운다(새 글리프 첫 프레임 측정, 0=사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchUiHangulGlyphs, 0, "탐침 프레임에 서로 다른 한글 음절 N 개의 긴 글을 띄운다(새 글리프 첫 프레임 측정, 0=사용 안 함)" );
 
     /**
      * @brief `-gv_benchSceneLoadPath=<리소스 경로>`: `gv_benchProbeFrame` 프레임에 이 씬을 비동기로 엽니다.
      * @details 워커가 파싱 · 생성하는 동안과 활성 씬을 바꾸는 프레임의 최악 시간을 잰다(`GT.Frame` p99 · max). 로드 자체 시간은 로그
      *          `'Scene.load.parse'` · `'Scene.load.instantiate'` 이다. 쿠킹본을 재려면 `--cooked-dir` 로 쿠킹한 폴더를 마운트한다(`Scripts/qa/SceneLoadBench.py`).
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::string, gv_benchSceneLoadPath, "", "탐침 프레임에 이 씬을 비동기로 연다(로드 중 최악 프레임 측정, 비우면 사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_benchSceneLoadPath, "", "탐침 프레임에 이 씬을 비동기로 연다(로드 중 최악 프레임 측정, 비우면 사용 안 함)" );
 
     /**
      * @brief `-gv_benchProbeFrame=F`: 한 번 일어나는 탐침(한글 글, 씬 로드)을 거는 벤치 프레임입니다.
      * @details 프로파일 측정 창은 워밍업(60 프레임) 뒤에 시작하므로 그보다 뒤여야 표에 잡힌다.
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchProbeFrame, 180, "한 번 일어나는 벤치 탐침(한글 글 · 씬 로드)을 거는 프레임(측정 창 워밍업 60 뒤)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchProbeFrame, 180, "한 번 일어나는 벤치 탐침(한글 글 · 씬 로드)을 거는 프레임(측정 창 워밍업 60 뒤)" );
 } // namespace sw
 
 namespace sw
@@ -60,12 +60,8 @@ namespace sw
     {
         struct BenchSceneProbesInternal
         {
-            static constexpr float32 kNameplateWidth      = 72.0f;
-            static constexpr float32 kNameplateBarHeight  = 6.0f;
-            static constexpr float32 kNameplateTextHeight = 16.0f;
-            static constexpr float32 kHangulTextWidth     = 900.0f;
-            static constexpr uint32  kHangulFirst         = 0xAC00u; ///< '가'
-            static constexpr uint32  kHangulCount         = 11172u;  ///< 현대 한글 음절 수(U+AC00..U+D7A3)
+            static constexpr uint32 kHangulFirst = 0xAC00u; ///< '가'
+            static constexpr uint32 kHangulCount = 11172u;  ///< 현대 한글 음절 수(U+AC00..U+D7A3)
             /// 음절을 고르는 보폭이다. 음절 수와 서로소라 N 개가 모두 다르고, 받침 · 모음이 고루 섞인다.
             static constexpr uint32 kHangulStride = 37u;
             /// 몇 음절마다 띄어 쓸지다. 줄 바꿈이 단어 경계에서 일어나게 한다.
@@ -98,7 +94,7 @@ namespace sw
 
 namespace sw
 {
-    bool BenchScene::attachNameplate( GameObject& object, uint32 index )
+    bool BenchScene::attachNameplate( GameObject& object, uint32 index ) const
     {
         if ( gv_benchUiNameplates <= 0 || index >= static_cast<uint32>( gv_benchUiNameplates ) )
             return false;
@@ -107,20 +103,20 @@ namespace sw
             return false;
         unique_ptr<BoxPanel> column = make_unique<BoxPanel>();
         column->setOrientation( UIOrientation::Vertical );
-        column->setSpacing( 2.0f );
+        column->setSpacing( _settings._nameplateSpacing );
         unique_ptr<TextWidget> name = make_unique<TextWidget>();
         name->setLocalized( false );
         name->setText( "Unit " + to_string( index ) );
-        BenchSceneProbesInternal::setFixedSize( *name, BenchSceneProbesInternal::kNameplateWidth, BenchSceneProbesInternal::kNameplateTextHeight );
+        BenchSceneProbesInternal::setFixedSize( *name, _settings._nameplateWidth, _settings._nameplateTextHeight );
         (void)column->addChild( std::move( name ) );
         unique_ptr<ProgressBarWidget> health = make_unique<ProgressBarWidget>();
         health->setPercent( 0.2f + 0.8f * static_cast<float32>( ( index * 7u ) % 10u ) / 10.0f );
-        health->setFillColor( float4{ 0.2f, 0.85f, 0.3f, 1.0f } );
-        health->setBackgroundColor( float4{ 0.1f, 0.1f, 0.1f, 0.8f } );
-        BenchSceneProbesInternal::setFixedSize( *health, BenchSceneProbesInternal::kNameplateWidth, BenchSceneProbesInternal::kNameplateBarHeight );
+        health->setFillColor( _settings._nameplateFillColor );
+        health->setBackgroundColor( _settings._nameplateBackgroundColor );
+        BenchSceneProbesInternal::setFixedSize( *health, _settings._nameplateWidth, _settings._nameplateBarHeight );
         (void)column->addChild( std::move( health ) );
         pPlate->setSpace( WidgetSpace::Screen );
-        pPlate->setWorldOffset( float3{ 0.0f, 1.2f, 0.0f } );
+        pPlate->setWorldOffset( float3{ 0.0f, _settings._nameplateHeight, 0.0f } );
         pPlate->setContent( std::move( column ) );
         return true;
     }
@@ -140,7 +136,7 @@ namespace sw
                 unique_ptr<TextWidget> text = make_unique<TextWidget>();
                 text->setLocalized( false );
                 text->setText( BenchSceneProbesInternal::makeHangulText( static_cast<uint32>( gv_benchUiHangulGlyphs ) ) );
-                BenchSceneProbesInternal::setFixedSize( *text, BenchSceneProbesInternal::kHangulTextWidth, 0.0f ); // 높이는 줄 바꿈한 글이 정한다
+                BenchSceneProbesInternal::setFixedSize( *text, _settings._hangulTextWidth, 0.0f ); // 높이는 줄 바꿈한 글이 정한다
                 pText->setSpace( WidgetSpace::Screen );
                 pText->setContent( std::move( text ) );
                 _listBenchExtra.push_back( pText->getHandle() );

@@ -219,6 +219,12 @@ namespace sw
          */
         SW_API static bool isOwnedPointerElementType( hashed_string elementTypeName );
 
+        /**
+         * @brief `Min`/`Max` 밖 숫자 칸마다 "경로 = 값 is outside [아래, 위]" 한 줄을 모읍니다(로드 시점 계약 검사 — 설정 JSON 과 데이터 XML 이 함께 씁니다).
+         * @details 구조체 칸은 들어가 본다. 컨테이너 · 비트필드 · 접근자 칸은 보지 않는다(원소 검사는 원소마다 다시 부른다).
+         */
+        SW_API static void collectRangeErrors( const TypeInfo& typeInfo, const void* pInstance, const string& prefix, vector<string>& outListError );
+
         /** @brief 프로퍼티 목록에서 키에 맞는 프로퍼티 메타데이터를 찾습니다. */
         static const PropertyInfo* matchProperty( const vector<PropertyInfo>& listProp, string_view keyRaw,
                                                   bool bIgnoreCaseKeys, bool& bCaseVariant );

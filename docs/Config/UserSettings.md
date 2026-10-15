@@ -25,7 +25,7 @@
 | `graphics.quality` | enum | `high` |  | confirm | `게임 코드` |
 | `graphics.upscaler` | enum | `off` |  | confirm | `gv:gv_upscaler` |
 | `graphics.renderScale` | float | `1` | 0.5 ~ 1 (눈금 0.05) | confirm | `gv:gv_renderScale` |
-| `graphics.shadowQuality` | enum | `high` |  | confirm | `gv:gv_shadowQuality` |
+| `graphics.shadowQuality` | enum | `high` |  | confirm | `gv:gv_shadowMapResolution` |
 | `graphics.viewDistance` | float | `1` | 0.25 ~ 2 (눈금 0.25) | confirm | `gv:gv_viewDistanceScale` |
 | `graphics.foliageDensity` | float | `1` | 0 ~ 1.5 (눈금 0.25) | confirm | `gv:gv_foliageDensity` |
 | `graphics.postQuality` | enum | `high` |  | confirm | `gv:gv_postQuality` |

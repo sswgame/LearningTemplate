@@ -5,6 +5,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
+#include "Editor/Common/Config/EditorConfig.h"
+#include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
@@ -23,10 +25,26 @@ namespace sw::editor
         struct EditorFontSetupInternal
         {
             /**
-             * @brief 아이콘 폰트 크기 ÷ 본문 폰트 크기입니다.
-             * @details 아이콘은 24 격자의 가운데 20 칸에 그려져 있어 em 의 5/6 을 차지합니다. 0.8 이면 아이콘 높이가 본문 크기의 2/3 쯤입니다.
+             * @brief 글꼴 크기와 아이콘 비율을 지금 테마 토큰(`_typography`)에서 읽습니다. 테마 서브시스템보다 먼저 불리므로 파일을 직접 읽는다.
+             * @details 아이콘은 24 격자의 가운데 20 칸에 그려져 있어 em 의 5/6 을 차지합니다. 비율 0.8 이면 아이콘 높이가 본문 크기의 2/3 쯤입니다.
+             *          토큰을 읽지 못하면 ImGui 기본 크기와 비율 1 로 둔다(오류는 로그로 남는다).
              */
-            static constexpr float32 kIconFontScale = 0.8f;
+            static void readTypography( float32& outFontSize, float32& outIconScale )
+            {
+                outFontSize  = ImGui::GetStyle().FontSizeBase;
+                outIconScale = 1.0f;
+                EditorThemeConfig theme{};
+                string            error;
+                const bool        bLoaded = EditorThemeTokens::loadTheme( EditorConfig::getActive()._themeName, theme, error ) ||
+                                     EditorThemeTokens::loadTheme( EditorThemeTokens::kDefaultName, theme, error );
+                if ( bLoaded == false )
+                {
+                    SW_LOG_ERROR( "Editor font size falls back to the ImGui default: %#", error.c_str() );
+                    return;
+                }
+                outFontSize  = theme._typography._fontSize;
+                outIconScale = theme._typography._iconScale;
+            }
 
             /**
              * @brief 폰트 파일 이름을 프로젝트 에디터 폰트 폴더 및 OS 시스템 폰트 디렉터리에서 검색하여 절대 경로를 반환합니다.
@@ -96,9 +114,12 @@ namespace sw::editor
         io.Fonts->SetFontLoader( ImGuiFreeType::GetFontLoader() );
         io.Fonts->FontLoaderFlags = ImGuiFreeTypeLoaderFlags_LightHinting;
 
-        const EditorToolDefaults& data       = editor::getEditorToolDefaults();
-        const string              basePath   = EditorFontSetupInternal::resolveFontFile( data._listBaseFont );
-        const string              koreanPath = EditorFontSetupInternal::resolveFontFile( data._listKoreanFont );
+        const EditorToolDefaults& data = editor::getEditorToolDefaults();
+        float32                   fontSize{ 0.0f };
+        float32                   iconScale{ 0.0f };
+        EditorFontSetupInternal::readTypography( fontSize, iconScale );
+        const string basePath   = EditorFontSetupInternal::resolveFontFile( data._listBaseFont );
+        const string koreanPath = EditorFontSetupInternal::resolveFontFile( data._listKoreanFont );
 
         ImFont* pBaseFont{ nullptr };
         BLOCK( "Base Font" )
@@ -108,11 +129,11 @@ namespace sw::editor
             baseConfig.OversampleV = 1;
             // 명시적 크기가 필요하다. MergeMode 는 명시 크기를 쓰는데,
             // 대상 폰트가 암시적 참조 크기(AddFontDefault)이면 ImGui 가 assert 한다.
-            baseConfig.SizePixels = data._fontSize;
+            baseConfig.SizePixels = fontSize;
 
             if ( basePath.empty() == false )
             {
-                pBaseFont = io.Fonts->AddFontFromFileTTF( basePath.c_str(), data._fontSize, &baseConfig,
+                pBaseFont = io.Fonts->AddFontFromFileTTF( basePath.c_str(), fontSize, &baseConfig,
                                                           io.Fonts->GetGlyphRangesDefault() );
                 SW_LOG_TRACE( "Loaded base font: %#", basePath.c_str() );
             }
@@ -133,7 +154,7 @@ namespace sw::editor
                 mergeConfig.OversampleH = 2;
                 mergeConfig.OversampleV = 1;
                 mergeConfig.PixelSnapH  = true;
-                io.Fonts->AddFontFromFileTTF( koreanPath.c_str(), data._fontSize, &mergeConfig,
+                io.Fonts->AddFontFromFileTTF( koreanPath.c_str(), fontSize, &mergeConfig,
                                               io.Fonts->GetGlyphRangesKorean() );
                 SW_LOG_TRACE( "Merged Korean glyphs from: %#", koreanPath.c_str() );
             }
@@ -152,7 +173,7 @@ namespace sw::editor
             }
             else
             {
-                const float32 iconFontSize = data._fontSize * EditorFontSetupInternal::kIconFontScale;
+                const float32 iconFontSize = fontSize * iconScale;
                 ImFontConfig  iconConfig{};
                 iconConfig.MergeMode        = true;
                 iconConfig.PixelSnapH       = true;

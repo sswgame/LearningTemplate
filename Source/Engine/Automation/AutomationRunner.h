@@ -141,6 +141,17 @@ namespace sw
             string         _key{};
         };
 
+        /**
+         * @struct RememberedValue
+         * @brief `<Remember as="이름">` 이 남긴 탐침 값(끝의 0 을 정리한 글)입니다. 경계(플레이 · 백엔드 교체 · 모듈 리로드)를 넘긴 뒤 `sameAs` · `differsFrom` 이 견줍니다.
+         * @details 실행기는 엔진 쪽이라 모듈 리로드와 백엔드 교체를 넘어 남는다. 시나리오가 시작할 때 비운다.
+         */
+        struct RememberedValue
+        {
+            string _name{};
+            string _text{};
+        };
+
         /** @brief 단계의 탐침 · 대상 · 키를 읽어 값을 냅니다. 없으면 false 이고 @p outMessage 에 이유를 씁니다. */
         [[nodiscard]] bool readProbeValue( const AutomationStep& step, AutomationProbeValue& outValue, string& outMessage ) const;
         /** @brief 시작할 때 `<ExpectVisited>` 가 보는 탐침마다 이력을 만듭니다. */
@@ -149,6 +160,7 @@ namespace sw
         void sampleWatches();
         void runExpectVisited( const AutomationStep& step );
         void runRecord( const AutomationStep& step );
+        void runRemember( const AutomationStep& step );
         /** @brief 엔진 단계(`AutomationRunner.cpp`, 레지스트리에 등록)는 가상 입력 원천 · 스크린샷 대기열 · 종료 시한을 직접 만진다. */
         friend struct AutomationRunnerEngineSteps;
 
@@ -180,30 +192,31 @@ namespace sw
         /** @brief 부하 시나리오(`<Load>`)면 시작 프레임에 측정 창(`gv_profileSeconds`)을 열고 멈춤 그물 시각을 잡습니다. 아니면 아무것도 하지 않습니다. */
         void startLoadWindow();
 
-        AutomationScenario     _scenario;
-        VirtualInputScript     _inputScript;
-        AutomationLogCapture   _logCapture;            ///< 시나리오 동안의 로그 줄(`<ExpectLog>`, 로그 게이트)
-        AutomationLogPolicy    _logPolicy;             ///< 로그 게이트의 허용 목록(전역 + `<ExpectLog>`)
-        AutomationReportWriter _reportWriter;          ///< 보고 경로 · 지표 줄 · JSON 보고 쓰기
-        vector<string>         _listFailure;           ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
-        vector<string>         _listPendingScreenshot; ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로입니다.
-        vector<ProbeWatch>     _listWatch;             ///< `<ExpectVisited>` 가 보는 탐침 이력
-        string                 _outputDirectory;
-        string                 _finishReason;
-        GameObjectManager*     _pObjectManagerOverride; ///< `setObjectManager` 로 정한 매니저입니다(nullptr 이면 활성 씬).
-        InputManager*          _pInputManager;          ///< 시작 프레임에 받은 입력 관리자(`onFrameBegin`)
-        float64                _exitDeadlineSeconds;    ///< `ExpectExitWithin` 이 정한 벽시계 시한입니다(단조 시계 초). 0 이면 기다리지 않습니다.
-        float64                _loadDeadlineSeconds;    ///< 부하 시나리오(`<Load>`)의 멈춤 그물 — 측정 창이 이때까지 끝내지 못하면 시간 초과다(단조 시계 초). 0 이면 부하 시나리오가 아니다.
-        size_t                 _nextStepIndex;
-        uint32                 _frameIndex;
-        uint32                 _waitFrameCount; ///< 시작 조건을 기다린 프레임 수입니다.
-        uint32                 _screenshotRequestedCount;
-        uint32                 _screenshotCompletedCount;
-        uint32                 _imageWaitFrameCount; ///< `<ExpectImage>` 가 스크린샷을 기다린 프레임 수입니다.
-        uint32                 _holdFrameCount;      ///< 지금 단계(`<WaitUntil>` · 마크를 기다리는 에디터 입력)가 시나리오 시계를 붙잡은 프레임(`holdUntilReady`, 그동안 `_frameIndex` 는 그대로다)
-        AutomationResult       _result;
-        uint8                  _bStarted : 1;
-        uint8                  _bEnded   : 1;
-        [[maybe_unused]] uint8 _reserved : 6;
+        AutomationScenario      _scenario;
+        VirtualInputScript      _inputScript;
+        AutomationLogCapture    _logCapture;            ///< 시나리오 동안의 로그 줄(`<ExpectLog>`, 로그 게이트)
+        AutomationLogPolicy     _logPolicy;             ///< 로그 게이트의 허용 목록(전역 + `<ExpectLog>`)
+        AutomationReportWriter  _reportWriter;          ///< 보고 경로 · 지표 줄 · JSON 보고 쓰기
+        vector<string>          _listFailure;           ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
+        vector<string>          _listPendingScreenshot; ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로입니다.
+        vector<ProbeWatch>      _listWatch;             ///< `<ExpectVisited>` 가 보는 탐침 이력
+        vector<RememberedValue> _listRemembered;        ///< `<Remember>` 가 남긴 값
+        string                  _outputDirectory;
+        string                  _finishReason;
+        GameObjectManager*      _pObjectManagerOverride; ///< `setObjectManager` 로 정한 매니저입니다(nullptr 이면 활성 씬).
+        InputManager*           _pInputManager;          ///< 시작 프레임에 받은 입력 관리자(`onFrameBegin`)
+        float64                 _exitDeadlineSeconds;    ///< `ExpectExitWithin` 이 정한 벽시계 시한입니다(단조 시계 초). 0 이면 기다리지 않습니다.
+        float64                 _loadDeadlineSeconds;    ///< 부하 시나리오(`<Load>`)의 멈춤 그물 — 측정 창이 이때까지 끝내지 못하면 시간 초과다(단조 시계 초). 0 이면 부하 시나리오가 아니다.
+        size_t                  _nextStepIndex;
+        uint32                  _frameIndex;
+        uint32                  _waitFrameCount; ///< 시작 조건을 기다린 프레임 수입니다.
+        uint32                  _screenshotRequestedCount;
+        uint32                  _screenshotCompletedCount;
+        uint32                  _imageWaitFrameCount; ///< `<ExpectImage>` 가 스크린샷을 기다린 프레임 수입니다.
+        uint32                  _holdFrameCount;      ///< 지금 단계(`<WaitUntil>` · 마크를 기다리는 에디터 입력)가 시나리오 시계를 붙잡은 프레임(`holdUntilReady`, 그동안 `_frameIndex` 는 그대로다)
+        AutomationResult        _result;
+        uint8                   _bStarted : 1;
+        uint8                   _bEnded   : 1;
+        [[maybe_unused]] uint8  _reserved : 6;
     };
 } // namespace sw

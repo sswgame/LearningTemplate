@@ -1581,12 +1581,16 @@ SW_TEST_CASE( GameFrameworkTest, GameSettings_CustomPropertyParsingAndQuery )
  */
 SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterCatalogAndStats )
 {
-    // 1) MonsterCatalog fallback 및 조회 검증
+    // 1) MonsterCatalog — 없는 리소스는 실패하고 코드 폴백 없이 빈 카탈로그로 남는다.
     MonsterCatalog catalog;
-    (void)catalog.loadFromResource( "non_existent_monster.xml" ); // 없는 리소스 — 폴백 표가 심어지는지를 아래에서 본다
-    const MonsterDef* pMonster = catalog.findMonster( "default_monster" );
+    {
+        test::ScopedLogSuppressor suppressor;
+        SW_EXPECT_FALSE( catalog.loadFromResource( "non_existent_monster.xml" ) );
+    }
+    SW_EXPECT_TRUE( catalog.getAllMonsters().empty() );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( "<MonsterCatalog><Monster id=\"slime\"><Stats hp=\"100\" atk=\"10\"/></Monster></MonsterCatalog>", "slime" ) );
+    const MonsterDef* pMonster = catalog.findMonster( "slime" );
     SW_ASSERT_NOT_NULL( pMonster );
-    SW_EXPECT_EQUAL( string( "default_monster" ), pMonster->_id );
     SW_EXPECT_EQUAL( 100, pMonster->_hp );
     SW_EXPECT_EQUAL( 10, pMonster->_atk );
 
@@ -1636,18 +1640,10 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterCatalogAndStats )
  */
 SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterStatsAreInMetersAndReachUnitStats )
 {
-    MonsterCatalog catalog;
-    {
-        test::ScopedLogSuppressor suppressor;
-        (void)catalog.loadFromResource( "non_existent_monster.xml" ); // 폴백 표를 본다
-    }
-    const MonsterDef* pFallback = catalog.findMonster( "default_monster" );
-    SW_ASSERT_NOT_NULL( pFallback );
-    for ( const MonsterDef& monsterDef : { *pFallback, MonsterDef{} } )
-    {
-        SW_EXPECT_TRUE( 0.0f < monsterDef._speed && monsterDef._speed <= MonsterDef::kMaxSpeed );
-        SW_EXPECT_TRUE( monsterDef._attackRange < monsterDef._detectRange && monsterDef._detectRange <= MonsterDef::kMaxSpeed );
-    }
+    // 스키마 기본값(`MonsterDef` 의 초기값)이 미터 단위다.
+    const MonsterDef defaultDef{};
+    SW_EXPECT_TRUE( 0.0f < defaultDef._speed && defaultDef._speed <= MonsterDef::kMaxSpeed );
+    SW_EXPECT_TRUE( defaultDef._attackRange < defaultDef._detectRange && defaultDef._detectRange <= MonsterDef::kMaxSpeed );
 
     // 카탈로그의 상한은 유닛 스탯 Move Speed 의 상한과 같다.
     const TypeInfo* pStatsType = engine::getSubsystem<TypeRegistry>().findType( hashed_string( "sw::UnitStatsComponent" ) );
@@ -2078,7 +2074,19 @@ SW_TEST_CASE( GameFrameworkTest, ExpiredEffectObjectReturnsToThePool )
  */
 SW_TEST_CASE( GameFrameworkTest, ActionRoom_DashDoesNotShortenHitInvulnerability )
 {
+    // 룸의 적은 게임이 건 카탈로그와 배치에서 온다(코드 폴백이 없다).
+    MonsterCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( "<MonsterCatalog><Monster id=\"grunt\"><Stats hp=\"30\" maxHp=\"30\" atk=\"8\" speed=\"1.8\" radius=\"0.32\"/></Monster></MonsterCatalog>",
+                                             "dash_grunt" ) );
+    SubsystemScope        scope;
+    game::ScopedGameScope activeScope( scope );
+    SW_ASSERT_TRUE( scope.bind( &catalog ) );
+    ActionRoomLayout layout;
+    layout._listHallSpawn = {
+        { "grunt", float2{ 5.0f, 2.5f } }
+    };
     ActionRoom room;
+    room.setLayout( layout );
     room.beginHall();
 
     // 첫 그런트 바로 위에 선다 — 무적이 아니면 매 프레임 맞는 자리다.
@@ -2114,7 +2122,9 @@ SW_TEST_CASE( GameFrameworkTest, ActionRoom_DashDoesNotShortenHitInvulnerability
  */
 SW_TEST_CASE( GameFrameworkTest, ActionRoom_DashGaugeFillsAtTheCooldownRate )
 {
-    ActionRoom room;
+    SW_TEST_DEFENSIVE_SCOPE( "a fight without a layout is reported - this test needs no enemies" );
+    test::ScopedLogSuppressor suppressor;
+    ActionRoom                room;
     room.beginHall();
 
     // 적에게서 멀리 — 이 테스트에 피격이 끼어들면 안 된다.

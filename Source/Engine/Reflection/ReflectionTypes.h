@@ -132,6 +132,11 @@ namespace sw
         /** @brief 네트워크 복제 대상입니다(`Replicated`, `RepNotify`). 네트워크 계층이 `PropertyRoleUtil::collectReplicatedProperties` 로 모읍니다. */
         uint8 _bReplicated : 1;
         /**
+         * @brief 데이터 파일이 반드시 적어야 하는 칸입니다(`PROPERTY( Required )`). 빠지면 엄격한 읽기(`GameDataXML::readFields`)가 이름과 함께 오류를 냅니다.
+         * @details 초기값은 형식일 뿐 기본값이 아니라는 표시다. 표시가 없는 칸은 초기값이 스키마 기본값이다.
+         */
+        uint8 _bRequired : 1;
+        /**
          * @brief 세이브 대상입니다(`SaveGame`).
          * @details 타입(기반 포함)에 `SaveGame` 프로퍼티가 하나라도 있으면 세이브 직렬화(`SerializeContext::setSaveGameOnly`)는 그 프로퍼티만 쓴다.
          *          하나도 없는 타입은 모든 프로퍼티를 쓴다(`TypeInfo::hasSaveGameProperty`).
@@ -139,7 +144,7 @@ namespace sw
         uint8 _bSaveGame : 1;
         /** @brief 시퀀서 값 트랙이 섞을 수 있는 프로퍼티입니다(`Interp`). 숫자, float2, float3, float4, quaternion 만 허용하며 파서가 나머지를 막습니다. */
         uint8                  _bInterp       : 1;
-        [[maybe_unused]] uint8 _reservedRoles : 5;
+        [[maybe_unused]] uint8 _reservedRoles : 4;
 
         /** @brief 범위와 플래그를 끈 기본값으로 만듭니다. */
         PropertyMetadata() noexcept;

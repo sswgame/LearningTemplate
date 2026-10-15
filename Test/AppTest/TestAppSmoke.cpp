@@ -746,7 +746,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|dpi.monitorScaleFollows",
         "EditorSelfTest|PASS|input.hierarchySearchTyping",
         "EditorSelfTest|PASS|input.tooltipOnHover",
-        "EditorSelfTest|PASS|input.classicDarkSwatch",
+        "EditorSelfTest|PASS|input.themeSwatch",
         "EditorSelfTest|PASS|hierarchy.visibilityToggleFits",
         "EditorSelfTest|PASS|contentBrowser.deleteRefreshesTheList",
         "EditorSelfTest|PASS|contentBrowser.browsingWritesNoMeta",
@@ -1000,6 +1000,10 @@ SW_TEST_CASE( AppSmokeTest, BenchFrameMatchesGoldenImage )
     constexpr bool        kMissingGoldenFails   = false;
 #endif
 
+#if defined( SW_SHIPPING )
+    // 벤치 스위치(`gv_bench*`)는 배포본에 등록되지 않는다(측정은 Release) — 배포본의 화면은 게임 팩 시나리오 · 골든 스크립트가 본다.
+    SW_TEST_SKIP( "the bench switches are not registered in Shipping (measure and compare bench frames in Debug/Release)" );
+#endif
     // 기준 그림은 Empty 게임의 벤치 장면이다 — 다른 게임 프리셋의 App 은 자기 첫 씬(아레나 · 공원 …)을 그려 비교할 것이 없다.
     if ( test::AppTestUtil::readPackRoot( sw::GameSelection::getName() ) != "game/empty" )
         SW_TEST_SKIP( "golden images are the Empty game's bench scene; this preset runs another game" );

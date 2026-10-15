@@ -142,7 +142,7 @@ namespace sw
             return false;
         if ( ResourceIO::hasResource( path ) == false )
         {
-            SW_LOG_WARNING( "Audio resource not found: %#", path );
+            SW_LOG_ERROR( "Audio resource not found: %#", path );
             return false;
         }
         return _pEngine->playClip( hashed_string( path ), bus, AudioClipPlayParams{} ) != 0;
@@ -165,7 +165,7 @@ namespace sw
         // 있는 곡인지 **멈추기 전에** 확인한다. 없는 곡을 요청했다가 재생 중이던 BGM 만 꺼지면 안 된다.
         if ( ResourceIO::hasResource( path ) == false )
         {
-            SW_LOG_WARNING( "Audio resource not found: %#", path );
+            SW_LOG_ERROR( "Audio resource not found: %#", path );
             return false;
         }
         const bool bCrossfade = _musicPlayingID != 0;

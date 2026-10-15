@@ -12,6 +12,7 @@
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 
 #include "Engine/Automation/AutomationProbe.h"
+#include "Engine/Config/NetEmulationPresetTable.h"
 #include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
@@ -196,10 +197,12 @@ namespace sw::editor
         /** @brief 대상의 마지막 보고(`net.emulation stats` 의 답)를 한 줄로 그립니다. */
         static void drawReport( const EditorNetPlayProcessStatus& status );
 
-        vector<ProcessLink> _listLink;
-        float32             _spikeSeconds;
-        uint16              _sessionPort; ///< `_listLink` 가 맞춰진 세션(포트) — 바뀌면 지운다
-        bool                _bApplyToAll; ///< 대상 대신 모든 프로세스에 보낸다
+        vector<ProcessLink>     _listLink;
+        NetEmulationPresetTable _presetTable; ///< 프리셋 단추 — 탭을 처음 그릴 때 한 번 읽는다
+        float32                 _spikeSeconds;
+        uint16                  _sessionPort;           ///< `_listLink` 가 맞춰진 세션(포트) — 바뀌면 지운다
+        bool                    _bApplyToAll;           ///< 대상 대신 모든 프로세스에 보낸다
+        bool                    _bPresetTableAttempted; ///< 표를 읽어 봤다(실패도 한 번만 알린다)
     };
 } // namespace sw::editor
 
@@ -207,9 +210,11 @@ namespace sw::editor
 {
     MultiplayerConditionsTab::MultiplayerConditionsTab()
         : _listLink{}
+        , _presetTable{}
         , _spikeSeconds{ EditorNetConditionsUtil::kDefaultSpikeSeconds }
         , _sessionPort{ 0 }
         , _bApplyToAll{ false }
+        , _bPresetTableAttempted{ false }
     {
     }
 
@@ -276,25 +281,27 @@ namespace sw::editor
         ImGui::SameLine();
         ImGui::TextDisabled( "%s", _bApplyToAll ? "every process" : status._label.c_str() );
 
-        // 프리셋 — 두 방향을 같은 값으로(왕복이 그 회선이 된다).
-        for ( const EditorNetPresetRow& row : EditorNetConditionsUtil::kArrPresetRow )
+        // 프리셋 — 두 방향을 같은 값으로(왕복이 그 회선이 된다). 단추는 엔진 프리셋 표의 줄이다.
+        if ( _bPresetTableAttempted == false )
         {
-            if ( &row != &EditorNetConditionsUtil::kArrPresetRow[0] )
+            _bPresetTableAttempted = true;
+            (void)_presetTable.loadFromResource(); // 실패는 표가 알린다 — 단추가 없을 뿐 슬라이더는 그대로 쓴다
+        }
+        for ( const NetEmulationPresetDef& preset : _presetTable._listPreset )
+        {
+            if ( &preset != &_presetTable._listPreset.front() )
                 ImGui::SameLine();
-            if ( ImGui::Button( row._pLabel ) )
+            if ( ImGui::Button( preset._label.c_str() ) )
             {
-                NetEmulationConditions conditions;
-                if ( NetEmulationConditions::tryGetPreset( row._pName, conditions ) )
+                const NetEmulationConditions conditions = preset.makeConditions();
+                const int32                  firstIndex = _bApplyToAll ? 0 : targetIndex;
+                const int32                  lastIndex  = _bApplyToAll ? session.getProcessCount() - 1 : targetIndex;
+                for ( int32 processIndex = firstIndex; processIndex <= lastIndex; ++processIndex )
                 {
-                    const int32 firstIndex = _bApplyToAll ? 0 : targetIndex;
-                    const int32 lastIndex  = _bApplyToAll ? session.getProcessCount() - 1 : targetIndex;
-                    for ( int32 processIndex = firstIndex; processIndex <= lastIndex; ++processIndex )
-                    {
-                        _listLink[static_cast<size_t>( processIndex )]._up   = EditorNetConditionsUtil::makeLinkSettings( conditions );
-                        _listLink[static_cast<size_t>( processIndex )]._down = EditorNetConditionsUtil::makeLinkSettings( conditions );
-                    }
-                    sendToTargets( session, targetIndex, EditorNetConditionsUtil::makePresetCommand( row._pName ) );
+                    _listLink[static_cast<size_t>( processIndex )]._up   = EditorNetConditionsUtil::makeLinkSettings( conditions );
+                    _listLink[static_cast<size_t>( processIndex )]._down = EditorNetConditionsUtil::makeLinkSettings( conditions );
                 }
+                sendToTargets( session, targetIndex, EditorNetConditionsUtil::makePresetCommand( preset._name ) );
             }
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsPreset" ) );

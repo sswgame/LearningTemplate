@@ -106,6 +106,7 @@ Scripts/
   │     │     ├── CheckCodeConventions.py     # C++ 엔진 코딩 컨벤션 — 진입점 · 파일 고르기 · 보고(규칙은 lint/conventions/, 맨이름 `out` 도 여기)
   │     │     ├── CheckLoopBraces.py          # 본문에 중괄호가 없는 for · while
   │     │     ├── CheckConditionParts.py      # if · while 조건이 && · || 로 세 부분 이상이면 이름 붙이기 (훅은 추가한 줄만 · 전체는 rules 기준선 0)
+  │     │     ├── CheckEditorStyleLiterals.py # 에디터 코드의 숫자 리터럴 색 · 스타일 값(IM_COL32 · ImVec4 · PushStyleColor/Var)은 테마 토큰으로 (훅은 추가한 줄만 · 전체는 rules 기준선 이하)
   │     │     ├── CheckDiscardReason.py       # 실패 가능 함수 결과를 (void) 로 버리는 자리의 이유 한 줄
   │     │     ├── CheckSuppressionReasons.py  # NOLINT · diagnostic ignored · CMake 경고 끄기의 검사 이름과 이유
   │     │     ├── CheckProductNames.py        # 제품 이름 식별자는 드라이버 · 제공자 · 백엔드 · 플랫폼 폴더 안에서만
@@ -124,6 +125,7 @@ Scripts/
   │     │     ├── CheckControlBoundary.py     # 입력을 읽는 파일은 플레이어 조종자 · 플레이어 뷰 · 명령 디렉터만(폰은 의도만)
   │     │     ├── CheckLogViewArgument.py     # 로그 인자의 string_view::data()
   │     │     ├── CheckGlobalVariableKinds.py # 전역 변수 정의와 extern 참조의 종류 일치
+  │     │     ├── CheckNameReferences.py      # 실행 인자 · 시나리오의 -gv_ 이름과 코드가 부르는 입력 액션 · 오디오 이벤트 · 시나리오 단계 · 탐침 · 개발 명령 이름이 정의돼 있는지
   │     │     ├── CheckRenderOwnership.py     # 렌더 스냅샷 소유 규칙
   │     │     ├── CheckTestSuites.py          # 스위트 명명 · 한 파일 한 스위트 · CI 경계 표식 · CoreTest 는 엔진을 직접 쓰지 않음
   │     │     ├── CheckFallibleNodiscard.py   # 실패를 bool 로 알리는 함수 선언의 `[[nodiscard]]`
@@ -148,7 +150,7 @@ Scripts/
   │     │     ├── CheckThirdPartyIsolation.py # 감싼 서드파티의 헤더 · 링크가 백엔드 폴더 밖으로 새지 않는지
   │     │     ├── CheckWellKnownConstants.py  # 잘 알려진 상수(π · √2 · 중력 · 해시 상수)를 집 밖에서 리터럴로
   │     │     ├── CheckWin32WideCalls.py      # Win32 API 는 W 판 이름으로
-  │     │     ├── CheckAssetRules.py          # 에셋 검증 규칙의 오류 심각도(이름 · 텍스처 · 메시 예산 · 참조 · 머티리얼 · 컴포넌트 · id · guid · 팩 규칙)
+  │     │     ├── CheckAssetRules.py          # 에셋 검증 규칙의 오류 심각도(이름 · 텍스처 · 메시 예산 · 참조 · 머티리얼 · 컴포넌트 · id · guid · 팩 규칙 · 컴포넌트 이름 참조)
   │     │     ├── CheckTargetMacros.py        # 플랫폼 · 아키텍처 · 컴파일러를 SW_* 매크로로만 묻기 (컴파일러 내장 매크로 금지)
   │     │     ├── CheckX11Isolation.py        # X11 헤더는 X11 구현 .cpp 에서만 · 뒤에 매크로 지우기 · 서드파티와 한 TU 에 두지 않기
   │     │     ├── CheckCookContract.py        # 쿠커가 쿠킹 표대로 고르는지
@@ -213,6 +215,7 @@ Scripts/
   │     ├── RemoveWorktree.py         # 워크트리 지우기 — 나눠 쓰는 링크를 먼저 끊는다
   │     ├── ListCiJobs.py             # GitHub Actions 실행 · 잡 · 실패 주석을 공개 API 로(로그인 없이)
   │     ├── ListOutdatedDeps.py       # vcpkg 의존성의 지금 판 · 레지스트리 최신 판(오버레이 포함, docs/09 5-2)
+  │     ├── MakeEditorTheme.py        # 에디터 테마 토큰(tokens.json) ↔ Figma 변수 · DTCG: import-figma · export-figma · check (`py -3 -m Scripts editor-theme`)
   │     ├── MoveEditorState.py        # 체크아웃마다 한 번: 옛 자리(Config/Editor · 팩 gv 프리셋)의 에디터 로컬 상태를 Saved/Editor 로
   │     ├── RunTests.py               # 스위트 · 케이스 이름으로 테스트 실행 — 테스트까지 지은 뒤(`all` · `AllTests`) 그 케이스가 사는 실행 파일을 `Bin` 에서
   │     ├── RunBuildBaseline.py       # 빌드 시간 기준선(풀 · 헤더 수정 · .cpp 수정 · 워크트리 콜드, 각 3 회 중앙값, 머리에 PC · CPU)

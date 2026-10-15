@@ -333,18 +333,18 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "AutoScroll" ) );
 
             ImGui::SameLine();
-            if ( EditorWidgets::drawToggleButton( "Collapse", _bCollapse == SW_TRUE, editor::style::kOk ) )
+            if ( EditorWidgets::drawToggleButton( "Collapse", _bCollapse == SW_TRUE, EditorThemeUtil::getSuccessColor() ) )
                 _bCollapse = _bCollapse == SW_TRUE ? SW_FALSE : SW_TRUE;
             EditorSelfTestMarks::note( "console.collapse" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "Collapse" ) );
 
             ImGui::SameLine();
-            if ( EditorWidgets::drawToggleButton( "Clear on Play", _bClearOnPlay == SW_TRUE, editor::style::kOk ) )
+            if ( EditorWidgets::drawToggleButton( "Clear on Play", _bClearOnPlay == SW_TRUE, EditorThemeUtil::getSuccessColor() ) )
                 _bClearOnPlay = _bClearOnPlay == SW_TRUE ? SW_FALSE : SW_TRUE;
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ClearOnPlay" ) );
 
             ImGui::SameLine();
-            if ( EditorWidgets::drawToggleButton( "Error Pause", _bErrorPause == SW_TRUE, editor::style::kError ) )
+            if ( EditorWidgets::drawToggleButton( "Error Pause", _bErrorPause == SW_TRUE, EditorThemeUtil::getErrorColor() ) )
                 _bErrorPause = _bErrorPause == SW_TRUE ? SW_FALSE : SW_TRUE;
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ErrorPause" ) );
 
@@ -360,17 +360,17 @@ namespace sw::editor
             constexpr Color kTraceChip{ 0.40f, 0.40f, 0.45f, 1.0f };
 
             ImGui::SameLine();
-            if ( EditorWidgets::drawToggleButton( arrErrLabel.c_str(), _arrLevelEnabled[0], editor::style::kError ) )
+            if ( EditorWidgets::drawToggleButton( arrErrLabel.c_str(), _arrLevelEnabled[0], EditorThemeUtil::getErrorColor() ) )
                 _arrLevelEnabled[0] = ( _arrLevelEnabled[0] == false );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ShowErrors" ) );
 
             ImGui::SameLine();
-            if ( EditorWidgets::drawToggleButton( arrWarnLabel.c_str(), _arrLevelEnabled[1], editor::style::kWarn ) )
+            if ( EditorWidgets::drawToggleButton( arrWarnLabel.c_str(), _arrLevelEnabled[1], EditorThemeUtil::getWarningColor() ) )
                 _arrLevelEnabled[1] = ( _arrLevelEnabled[1] == false );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ShowWarnings" ) );
 
             ImGui::SameLine();
-            if ( EditorWidgets::drawToggleButton( arrInfoLabel.c_str(), _arrLevelEnabled[2], editor::style::kOk ) )
+            if ( EditorWidgets::drawToggleButton( arrInfoLabel.c_str(), _arrLevelEnabled[2], EditorThemeUtil::getSuccessColor() ) )
                 _arrLevelEnabled[2] = ( _arrLevelEnabled[2] == false );
             EditorSelfTestMarks::note( "console.level.info" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ShowInfo" ) );

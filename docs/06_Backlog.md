@@ -20,7 +20,7 @@
 |---|---|---|
 | **A. 결함 · 정확성** | 재현됐거나 코드로 확인된 열린 결함. 다른 어떤 일보다 먼저 본다. | 0 |
 | **B. 검증 · 측정 대기** | 코드는 들어갔고 돌려 보는 일이 남은 것. 이 PC 에서 못 돌린 환경(리눅스 · 실기)과 사용자 눈이 필요한 것도 여기다. | 12 |
-| **C. 구조 · 성능 · 정리** | 기능이 아니라 고칠 곳을 줄이는 일: 구조 분할 계획, 중복 · 의존 정리, 측정 뒤 정할 성능 후보, 린트 · 문서 정리. | 24 |
+| **C. 구조 · 성능 · 정리** | 기능이 아니라 고칠 곳을 줄이는 일: 구조 분할 계획, 중복 · 의존 정리, 측정 뒤 정할 성능 후보, 린트 · 문서 정리. | 25 |
 | **D. 기능 로드맵** | 영역별로 묶은 새 기능 · 기능의 남은 조각. 위에 있을수록 먼저 볼 것이다. | 43 |
 | **E. 관찰 중** | 간헐 실패 · 원인 미상. 다시 보이면 그때 원인을 판다. CI 읽는 법은 [검증과 측정](08_Verification.md) 4절. | 11 |
 | **F. 결정 대기** | 사용자 결정이 있어야 움직이는 질문. | 1 |
@@ -195,12 +195,10 @@
   ④ `ctest --test-load`(테스트 프리셋 `execution.testLoad`)가 Windows 에서 효과가 있는지 확인하지 않았다 — 효과가 있으면 로컬 프리셋에 넣는다.
   ⑤ JUnit XML 리스너(`ITestRunListener`) — CI 대시보드가 필요해지면.
 
-- `C-30` **로그 게이트(2026-10-15)의 남은 것.** 시나리오 · 호스트 스위트는 선언하지 않은 Warning · Error 로 진다(결정 기록 5-2, `Source/Engine/Automation/README.md`). 남은 것 —
+- `C-33` **로그 게이트(2026-10-15)의 남은 것.** 시나리오 · 호스트 스위트는 선언하지 않은 Warning · Error 로 진다(결정 기록 5-2, `Source/Engine/Automation/README.md`). 남은 것 —
   - CPU 단위 테스트(nogpu)는 아직 Error 도 세지 않는다. 2026-10-15 한 번에 표식 없는 Warning · Error 가 약 1,500 줄(일부러 깨진 카탈로그 픽스처 · 외형 스키마 테스트 · 경로 오류 등).
     `SW_TEST_DEFENSIVE_SCOPE` 로 감싸거나 원인을 고친 뒤 `HostLogJudge` 를 모든 스위트로 넓힌다. 줄 목록은 `ctest -L nogpu` 뒤 LastTest.log 의 `[Warning]` · `[Error]` 를 (호출자, 문구) 로 묶어 본다.
   - 로그 · assert 문자열이 한국어인 파일이 139 개다(`SW_LOG_*( "…한글…"` — 규칙은 영어). 고친 것은 이 묶음이 만진 곳뿐이다.
-  - `EditorContext::initialize` 가 `LocalizationManager` 를 못 찾으면 에디터 문구 표를 조용히 건너뛴다(그래서 문구 표 미적재가 경고 없이 묻혔다). wt/editorscn 의 `68525f070` 이 찾는 범위를 고쳤고,
-    그 뒤 못 찾으면 Error 를 남기게 한다(같은 줄이라 그 브랜치가 main 에 들어간 뒤).
   - 전용 서버를 서버 설정이 없는 게임(`Config/Server/<게임>.json` 이 Empty 뿐)으로 띄우면 Dev 기본값 Warning 두 줄(`Server config … could not be read`, `ServerConfig using cpp defaults`). 서버를 낼 게임이 정해지면 설정 파일을 둔다.
   - 에디터 켠 짧은 실행(`-gv_profileFrames=90`)을 다른 GPU 작업과 겹쳐 돌리면 종료 때 `Task fencing timeout (5000 ms) before module reload` Error 가 났다(36 회 중 3 회, 단독 재실행 0 회).
     종료 경로(`ModuleHost::drainRenderWorkers`)는 리로드가 아닌데 같은 문구를 쓰고, 5 초 넘게 도는 에디터 배경 작업이 무엇인지 모른다 — 다시 보이면 `py -3 -m Scripts stacks <pid>` 로 워커 스택을 남긴다.
@@ -214,8 +212,23 @@
   ④ 하드웨어 흉내는 코어 수 · 메모리 · 디스크 · 해상도 · 품질까지다. 클럭 · 캐시 · GPU 성능은 흉내 내지 않으니 LowEnd 의 프레임 시간이 Native 보다 짧게 나올 수 있다 — 실제 저사양 기기로 한 번 재서 흉내와의 차이를 적는다.
   ⑤ 야간 잡(`load.yml`)이 아직 돌지 않았다. 리눅스 `CI-Release` 에서 OnlineLoadBot 이 서버 키트를 이름으로 올리는지(`dlopen` — Windows 만 확인), 러너 속도로 시간 예산이 지는지 본다.
 
+- `C-30` **유지보수성을 위한 데이터화(2026-10-15 `wt/datadriven`)의 남은 것.** 기준과 모양은 [결정 기록](09_Decisions.md) 5-4 "유지보수성을 위한 데이터화", 새 줄은 `CheckDataDrivenLiterals` 가 막는다(전체는 `[baseline]`).
+  ① **데이터 속성의 리터럴 기본값 · 조용한 자르기가 약 900 곳 남았다**(`py -3 Scripts/lint/gate/CheckDataDrivenLiterals.py --list`). 많은 순: WesternCatalog 64 · AsymmetricHorrorRules 51 · CameraPreset 43 · WitcherCatalog 41 ·
+  ConquestCatalog 39 · ScavengerCatalog 39 · MechCatalog 38 · BrCatalog 33 · HorrorCatalog 32 · ActionPlatformerCatalog 29. 원소마다 리플렉션 Def(초기값 = 기본값, `Required`, `Min`/`Max`)를 두고 `GameDataXML::readFields` 로 바꾸며,
+  데이터 속성 이름이 칸 이름과 다르면(`xp` ↔ `_experience`) 데이터를 다시 쓴다. 고칠 때마다 기준선을 낮춘다. `MonsterCatalog` 의 Stats · AI 원소는 `MonsterDef` 한 구조체라 하위 Def 로 나눠야 한다(필드 사용 130 곳).
+  ② 게임 코드의 실수 리터럴 줄 약 700(constexpr 아닌 것), NileCity 자동 계획표의 좌표(27 · 37 · 집 줄 — 도로 x · 농장 x 만 PROPERTY), HarvestValley 작물 → 모델 표, StarSkirmish AI 성향 표(`makeAISettings`), FarmSun 빛 곡선. `TuningConstexpr` 기준선은 게임 · 키트의 나머지 실수 상수다.
+  ③ `GameSettings::getCustomPropertyFloat( key, fallback )` 처럼 호출부가 기본값을 넘기는 API 는 스키마 선언으로 바꿀 후보다.
+  ④ 에디터 색 · 아이콘 표(`EditorComponentIcon.cpp`)와 에디터 UI 크기 리터럴은 디자인 토큰 작업(editorux 묶음)이 맡는다.
+  ⑤ 배포본(Shipping)은 벤치 스위치가 없어 `AppSmokeTest.BenchFrameMatchesGoldenImage` 를 건너뛴다(Debug · Release 는 그대로). 배포 구성의 그림 비교가 필요하면 구운 게임의 팩 시나리오 스크린샷으로 기준을 둔다.
+
 - `C-25` **게임 여럿을 빌드 한 번에 짓고, 실행할 때 고르고, 키트는 필요한 것만**(2026-10-13, 사용자 확정). 결정은 [결정 기록](09_Decisions.md) 5-2, 쓰는 법은 `Source/Games/README.md`.
   남은 것: 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸다(DX12 직접 실행으로 10 시나리오 통과만 확인).
+
+- `C-30` **이름 참조 감사(2026-10-15)의 남은 것.** 데이터 쪽은 에셋 검증 `component_reference` 규칙, 코드 · 시나리오 쪽은 린트 `CheckNameReferences` 가 본다. 아직 정적으로 못 보는 것:
+  ① 컴포넌트 생성자 기본값의 이름(`FractureComponentBase` 의 레이어 기본값, `PawnComponent` 의 `Move` · `Look`) — 데이터에 없으면 규칙이 못 본다. `PROPERTY( Validate = fn )` 로 물리 레이어 ·
+  재질 · 정렬 레이어 · 내비 영역 이름을 설정 표에 대는 검증 함수를 붙이면 로드 · 인스펙터 · `ResourceDataSchemaTest` 가 기본값까지 본다(언리얼 `IsDataValid`).
+  ② 카탈로그 안 id 참조는 팩 둘(`starskirmish-unit-tree` · `nilecity-goods`)만 규칙이 있다 — 나머지 키트 카탈로그는 로더 경고(스키마 테스트)에 기댄다.
+  ③ 시나리오 `<DevCommand line="editor <명령>">` 의 에디터 명령 id(`EditorCommandRegistry` 는 실행 중 등록), UI 바인딩 경로(`UIBindingSet::bind` 오류 로그), 동적으로 지은 액션 이름은 런타임 경고 게이트(logwarn)에 맡긴다.
 
 ## D. 기능 로드맵
 
@@ -347,6 +360,14 @@
       두 Displace 의 필터 채우기, 참조 걸러 보기의 파생 컴포넌트 판정(`TypeInfo::isDerivedFrom`), 회전 고리의 오일러 정확도(`applyRotationDelta`), 범위 · ffd2d 상자가 앞 모디파이어 결과를 반영.
     - **남은 한계**: 기즈모를 끄는 매 프레임 앞 모디파이어를 다시 걸어 비용이 든다. clang-format 20.1.8 로 줄 길이를 맞출 것(이 PC 는 21.1.1).
   - **정리**: 월드 공간 워프를 별도 씬 오브젝트로(지금은 모디파이어의 기준 오브젝트 id). 값 노이즈는 `Stack/MeshModifierNoise.h` 한 곳으로 모았다(들어감).
+
+- `D3-11` **에디터 흐름 시나리오로 못 한 것(2026-10-15, `wt/editorscn`).** 기능 × 시나리오 표와 이유는 [에디터 시나리오 표](plans/EditorScenarios.md).
+  (1) **에셋 임포트** — Import 는 OS 파일 대화상자 + 리소스 트리로 복사라 무인 실행 · 임시 경로로 못 돌린다. 원본 경로를 받는 임포트 명령(`asset.import <원본> <리소스 폴더>`)과
+  시나리오가 끝나면 지우는 임시 리소스 폴더(무시 목록) 규칙을 정하면 흐름에 넣는다. (2) **캐릭터 편집 → 씬 사용** — 창의 프리셋은 세이브 형식(`UserAppearancePresetStore`)이고
+  `CharacterAppearanceComponent` 는 데이터 프리셋 id 만 가리켜 잇는 길이 없다(언리얼 · 유니티는 프리셋이 에셋이라 씬이 참조한다). 창이 데이터 프리셋(`presets.xml`)으로 내보내거나
+  컴포넌트가 프리셋 에셋 경로를 받게 정한 뒤 시나리오를 단다. (3) **스케줄 편집 창** — 에디터 체인은 Empty 로 돌아 일정 시스템이 없다. 게임 팩 시나리오에 `-EnableEditor` 실행을 더하는
+  길(시나리오 루트 속성)이 필요하다. (4) `prefab.applyOverrides` 는 중첩 프리팹 부품(`PrefabInstanceRegistry`)의 다른 인스턴스와 다른 씬에 놓인 인스턴스는 갱신하지 않는다
+  (다른 씬은 다시 열 때 퍼진다). (5) 에디터 UI 화면 확인은 `CaptureWindow` 로 DX12 에서만 봤다 — 흐름 시나리오의 스크린샷은 게임 · 씬 뷰 렌더 출력만 담는다.
 
 ### D4. 게임플레이 · 캐릭터 · 카메라 · 애니메이션
 
@@ -554,6 +575,9 @@
 ## E. 관찰 중
 
 간헐 실패 · 원인 미상. 다시 보이면 그때 원인을 판다. CI 읽는 법은 [검증과 측정](08_Verification.md) 4절.
+
+- **`meshmodifiers` Vulkan 체인 1 회(2026-10-15).** 에디터 체인(다른 hostgpu 와 GPU 공유 실행 중)에서 frame 585 `MeshModifiers.ReferenceListCount == 1, got 0`. 단독 Vulkan 2/2 통과,
+  앞선 순차 hostgpu 네 백엔드도 통과했다. 참조 목록 항목 추가가 부하 아래 한 프레임 늦는지(고정 프레임 간격) 볼 것.
 
 - `E-1` **다음 CI 실행으로 확인할 것**(리눅스는 컴파일까지 되고 테스트 단계에서 진다, CI 읽는 법은 [검증과 측정](08_Verification.md) 4절).
   고쳤고 통과를 확인할 것: `OnlineLoadBotTest.TwoHundredBots…`(캐시 TTL 을 서버 틱 시각으로), `EpollStreamTransport` 경합 보고, `StreamTransportTest.PlatformAbortWithNothingPendingStillCloses`(전송 모델별 기대),

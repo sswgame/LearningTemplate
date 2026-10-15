@@ -25,7 +25,6 @@ namespace sw
         struct ShooterEnemyComponentInternal
         {
             static constexpr const utf8* kAttackButton = "Attack"; ///< 폰 스키마의 휘두르기 버튼(AI 조종자가 누른다)
-            static constexpr float32     kStopFraction = 0.85f;    ///< 손 닿는 거리의 이 비율 — 내비메시 에이전트가 멈추는 거리
 
             /** @brief 최대 체력만 정한 체력 설정을 만듭니다. 실드 · 회복 · 기절은 기본값(꺼짐)입니다. */
             static VitalitySettings makeVitalitySettings( float32 maxHealth )
@@ -45,6 +44,7 @@ namespace sw
         , _radius{ 0.45f }
         , _height{ 2.0f }
         , _reach{ 1.7f }
+        , _stopFraction{ 0.85f }
         , _damage{ 9.0f }
         , _attackInterval{ 1.5f }
         , _attackHitTime{ 0.45f }
@@ -102,7 +102,7 @@ namespace sw
         if ( pAgent != nullptr )
         {
             pAgent->setMaxSpeed( speed );
-            pAgent->setStoppingDistance( _reach * ShooterEnemyComponentInternal::kStopFraction );
+            pAgent->setStoppingDistance( _reach * _stopFraction );
             pAgent->setRadius( _radius );
             pAgent->warp( position );
         }

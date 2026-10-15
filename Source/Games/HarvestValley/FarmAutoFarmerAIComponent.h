@@ -53,6 +53,8 @@ namespace sw
         int32 _buyBatch;
         PROPERTY( Category = "Auto Play", DisplayName = "Stand Tolerance", Tooltip = "Counts as standing on the spot inside this distance", Min = 0.0, Units = m )
         float32 _standTolerance;
+        PROPERTY( Category = "Auto Play", DisplayName = "Approach Back", Tooltip = "How far below the tile's stand spot the farmer steps back, to walk up into it facing up", Min = 0.0, Units = m )
+        float32 _approachBack;
 
         GameObjectHandle _director;       ///< 따르는 디렉터의 오브젝트
         float32          _actionTimer;    ///< 0 이하가 되면 다음 행동

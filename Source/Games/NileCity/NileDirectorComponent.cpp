@@ -48,102 +48,6 @@ namespace sw
             static constexpr const utf8* kEventBlocked = "Blocked";
             static constexpr const utf8* kEventEvolved = "Evolved";
 
-            static float4 computeServiceColor( CityService service )
-            {
-                switch ( service )
-                {
-                    case CityService::Water:
-                        return float4{ 0.25f, 0.5f, 0.95f, 1.0f };
-                    case CityService::Religion:
-                        return float4{ 0.95f, 0.8f, 0.2f, 1.0f };
-                    case CityService::Entertainment:
-                        return float4{ 0.7f, 0.35f, 0.85f, 1.0f };
-                    case CityService::Health:
-                        return float4{ 0.9f, 0.3f, 0.3f, 1.0f };
-                    case CityService::Education:
-                        return float4{ 0.2f, 0.75f, 0.7f, 1.0f };
-                    case CityService::Tax:
-                        return float4{ 0.95f, 0.55f, 0.15f, 1.0f };
-                    case CityService::Count:
-                        break;
-                }
-                return float4{ 0.6f, 0.6f, 0.6f, 1.0f };
-            }
-
-            /** @brief 모델에 곱할 색입니다. 서비스는 서비스 색을 흰색 쪽으로 반쯤 섞어 벽이 그 색으로 보이게 하고, 집, 나무, 화분은 팔레트 그대로입니다. */
-            static float4 computeModelTint( const CityBuildingDef& def )
-            {
-                const float4 white{ 1.0f, 1.0f, 1.0f, 1.0f };
-                switch ( def._kind )
-                {
-                    case CityBuildingKind::Service:
-                        return ( computeServiceColor( def._service ) + white ) * 0.5f;
-                    case CityBuildingKind::Producer:
-                        return float4{ 0.85f, 0.65f, 0.5f, 1.0f };
-                    case CityBuildingKind::Storage:
-                        return float4{ 0.8f, 0.68f, 0.55f, 1.0f };
-                    case CityBuildingKind::Market:
-                        return float4{ 1.0f, 0.75f, 0.55f, 1.0f };
-                    case CityBuildingKind::House:
-                    case CityBuildingKind::Decoration:
-                        break;
-                }
-                return white;
-            }
-
-            /** @brief 내장 도형으로 남는 건물(밭 · 조각상)의 색입니다. 집은 늘 모델이라 단계 색을 쓰지 않는다. */
-            static float4 computeBlockColor( const CityBuildingDef& def )
-            {
-                switch ( def._kind )
-                {
-                    case CityBuildingKind::House:
-                        return float4{ 0.75f, 0.62f, 0.42f, 1.0f };
-                    case CityBuildingKind::Service:
-                        return computeServiceColor( def._service );
-                    case CityBuildingKind::Producer:
-                        return def._bRequiresTerrain != SW_FALSE ? float4{ 0.78f, 0.8f, 0.3f, 1.0f } : float4{ 0.6f, 0.42f, 0.3f, 1.0f };
-                    case CityBuildingKind::Storage:
-                        return float4{ 0.5f, 0.35f, 0.2f, 1.0f };
-                    case CityBuildingKind::Market:
-                        return float4{ 0.9f, 0.45f, 0.2f, 1.0f };
-                    case CityBuildingKind::Decoration:
-                        return float4{ 0.3f, 0.75f, 0.35f, 1.0f };
-                }
-                return float4{ 1.0f, 0.0f, 1.0f, 1.0f };
-            }
-
-            static float4 computeTerrainColor( CityTerrain terrain )
-            {
-                switch ( terrain )
-                {
-                    case CityTerrain::Grass:
-                        return float4{ 0.45f, 0.62f, 0.3f, 1.0f };
-                    case CityTerrain::Sand:
-                        return float4{ 0.86f, 0.76f, 0.5f, 1.0f };
-                    case CityTerrain::Floodplain:
-                        return float4{ 0.36f, 0.42f, 0.2f, 1.0f };
-                    case CityTerrain::Water:
-                        return float4{ 0.2f, 0.45f, 0.75f, 1.0f };
-                    case CityTerrain::Rock:
-                        return float4{ 0.5f, 0.47f, 0.44f, 1.0f };
-                }
-                return float4{ 1.0f, 0.0f, 1.0f, 1.0f };
-            }
-
-            static float4 computeWalkerColor( CityWalkerKind kind, CityService service )
-            {
-                switch ( kind )
-                {
-                    case CityWalkerKind::Service:
-                        return computeServiceColor( service );
-                    case CityWalkerKind::Trader:
-                        return float4{ 1.0f, 0.6f, 0.2f, 1.0f };
-                    case CityWalkerKind::Cart:
-                        return float4{ 0.45f, 0.3f, 0.15f, 1.0f };
-                }
-                return float4{ 1.0f, 1.0f, 1.0f, 1.0f };
-            }
-
             static int32 makeWalkerLookKey( CityWalkerKind kind, CityService service )
             {
                 return static_cast<int32>( kind ) * kWalkerLookStride + static_cast<int32>( service );
@@ -230,6 +134,42 @@ namespace sw
         , _serviceDuration{ 60.0f }
         , _roadTileScale{ 4.8f }
         , _secondsPerMonth{ 20.0f }
+        , _riverCenterX{ 9.0f }
+        , _riverMeander{ 2.0f }
+        , _riverMeanderRate{ 0.22f }
+        , _riverHalfWidth{ 1.5f }
+        , _eastFloodWidth{ 8.0f }
+        , _westFloodWidth{ 3.0f }
+        , _desertDuneHeight{ 1.5f }
+        , _desertDuneRate{ 0.3f }
+        , _desertStartX{ 40 }
+        , _rockRidgeX{ 45 }
+        , _roadX{ 17 }
+        , _farmX{ 14 }
+        , _secondBlockPeople{ 60 }
+        , _thirdBlockPeople{ 160 }
+        , _waterServiceColor{ 0.25f, 0.5f, 0.95f, 1.0f }
+        , _religionServiceColor{ 0.95f, 0.8f, 0.2f, 1.0f }
+        , _entertainmentServiceColor{ 0.7f, 0.35f, 0.85f, 1.0f }
+        , _healthServiceColor{ 0.9f, 0.3f, 0.3f, 1.0f }
+        , _educationServiceColor{ 0.2f, 0.75f, 0.7f, 1.0f }
+        , _taxServiceColor{ 0.95f, 0.55f, 0.15f, 1.0f }
+        , _producerModelTint{ 0.85f, 0.65f, 0.5f, 1.0f }
+        , _storageModelTint{ 0.8f, 0.68f, 0.55f, 1.0f }
+        , _marketModelTint{ 1.0f, 0.75f, 0.55f, 1.0f }
+        , _houseBlockColor{ 0.75f, 0.62f, 0.42f, 1.0f }
+        , _fieldBlockColor{ 0.78f, 0.8f, 0.3f, 1.0f }
+        , _workshopBlockColor{ 0.6f, 0.42f, 0.3f, 1.0f }
+        , _storageBlockColor{ 0.5f, 0.35f, 0.2f, 1.0f }
+        , _marketBlockColor{ 0.9f, 0.45f, 0.2f, 1.0f }
+        , _decorationBlockColor{ 0.3f, 0.75f, 0.35f, 1.0f }
+        , _grassColor{ 0.45f, 0.62f, 0.3f, 1.0f }
+        , _sandColor{ 0.86f, 0.76f, 0.5f, 1.0f }
+        , _floodplainColor{ 0.36f, 0.42f, 0.2f, 1.0f }
+        , _waterColor{ 0.2f, 0.45f, 0.75f, 1.0f }
+        , _rockColor{ 0.5f, 0.47f, 0.44f, 1.0f }
+        , _traderColor{ 1.0f, 0.6f, 0.2f, 1.0f }
+        , _cartColor{ 0.45f, 0.3f, 0.15f, 1.0f }
         , _catalog{}
         , _city{}
         , _wallet{}
@@ -354,8 +294,9 @@ namespace sw
         _wallet.add( citySettings._currency, _startingMoney );
         _clock.initialize( makeClockSettings() );
         _city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, citySettings, makeRefs() );
-        NileCityPlanner::paintTerrain( _city );
-        _planner.reset();
+        const NileCityLayout layout = makeCityLayout();
+        NileCityPlanner::paintTerrain( _city, layout );
+        _planner.reset( layout );
         _listEvent.clear();
         _monthCount   = 0;
         _evolvedCount = 0;
@@ -415,6 +356,123 @@ namespace sw
         return settings;
     }
 
+    NileCityLayout NileDirectorComponent::makeCityLayout() const
+    {
+        NileCityLayout layout;
+        layout._riverCenterX      = _riverCenterX;
+        layout._riverMeander      = _riverMeander;
+        layout._riverMeanderRate  = _riverMeanderRate;
+        layout._riverHalfWidth    = _riverHalfWidth;
+        layout._eastFloodWidth    = _eastFloodWidth;
+        layout._westFloodWidth    = _westFloodWidth;
+        layout._desertDuneHeight  = _desertDuneHeight;
+        layout._desertDuneRate    = _desertDuneRate;
+        layout._desertStartX      = _desertStartX;
+        layout._rockRidgeX        = _rockRidgeX;
+        layout._roadX             = _roadX;
+        layout._farmX             = _farmX;
+        layout._secondBlockPeople = _secondBlockPeople;
+        layout._thirdBlockPeople  = _thirdBlockPeople;
+        return layout;
+    }
+
+    // ------------------------------------------------------------------------------
+    // 색(PROPERTY)
+    // ------------------------------------------------------------------------------
+    float4 NileDirectorComponent::computeServiceColor( CityService service ) const
+    {
+        switch ( service )
+        {
+            case CityService::Water:
+                return _waterServiceColor;
+            case CityService::Religion:
+                return _religionServiceColor;
+            case CityService::Entertainment:
+                return _entertainmentServiceColor;
+            case CityService::Health:
+                return _healthServiceColor;
+            case CityService::Education:
+                return _educationServiceColor;
+            case CityService::Tax:
+                return _taxServiceColor;
+            case CityService::Count:
+                break;
+        }
+        return float4{ 0.6f, 0.6f, 0.6f, 1.0f }; // 서비스 없음 — 칠할 일이 없는 칸이다.
+    }
+
+    float4 NileDirectorComponent::computeModelTint( const CityBuildingDef& def ) const
+    {
+        const float4 white{ 1.0f, 1.0f, 1.0f, 1.0f };
+        switch ( def._kind )
+        {
+            case CityBuildingKind::Service:
+                return ( computeServiceColor( def._service ) + white ) * 0.5f;
+            case CityBuildingKind::Producer:
+                return _producerModelTint;
+            case CityBuildingKind::Storage:
+                return _storageModelTint;
+            case CityBuildingKind::Market:
+                return _marketModelTint;
+            case CityBuildingKind::House:
+            case CityBuildingKind::Decoration:
+                break;
+        }
+        return white;
+    }
+
+    float4 NileDirectorComponent::computeBlockColor( const CityBuildingDef& def ) const
+    {
+        switch ( def._kind )
+        {
+            case CityBuildingKind::House:
+                return _houseBlockColor;
+            case CityBuildingKind::Service:
+                return computeServiceColor( def._service );
+            case CityBuildingKind::Producer:
+                return def._bRequiresTerrain != SW_FALSE ? _fieldBlockColor : _workshopBlockColor;
+            case CityBuildingKind::Storage:
+                return _storageBlockColor;
+            case CityBuildingKind::Market:
+                return _marketBlockColor;
+            case CityBuildingKind::Decoration:
+                return _decorationBlockColor;
+        }
+        return float4{ 1.0f, 0.0f, 1.0f, 1.0f }; // 모르는 종류 — 눈에 띄는 자홍색
+    }
+
+    float4 NileDirectorComponent::computeTerrainColor( CityTerrain terrain ) const
+    {
+        switch ( terrain )
+        {
+            case CityTerrain::Grass:
+                return _grassColor;
+            case CityTerrain::Sand:
+                return _sandColor;
+            case CityTerrain::Floodplain:
+                return _floodplainColor;
+            case CityTerrain::Water:
+                return _waterColor;
+            case CityTerrain::Rock:
+                return _rockColor;
+        }
+        return float4{ 1.0f, 0.0f, 1.0f, 1.0f }; // 모르는 땅 — 눈에 띄는 자홍색
+    }
+
+    float4 NileDirectorComponent::computeWalkerColor( CityWalkerKind kind, CityService service ) const
+    {
+        switch ( kind )
+        {
+            case CityWalkerKind::Service:
+                return computeServiceColor( service );
+            case CityWalkerKind::Trader:
+                return _traderColor;
+            case CityWalkerKind::Cart:
+                return _cartColor;
+        }
+        return float4{ 1.0f, 1.0f, 1.0f, 1.0f };
+    }
+
     // ------------------------------------------------------------------------------
     // 상태 쓰기 · 복원하기(핫 리로드 · 세이브)
     // ------------------------------------------------------------------------------
@@ -451,6 +509,7 @@ namespace sw
         NileCityPlanner planner;
         Wallet          wallet;
         WorldClock      clock;
+        planner.reset( makeCityLayout() );
         clock.initialize( makeClockSettings() );
         city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeCitySettings(), makeRefs() );
         const bool bStateReadFailed = city.readState( archive ) == false || planner.readState( archive ) == false || wallet.readState( archive ) == false || clock.readState( archive ) == false;
@@ -566,7 +625,7 @@ namespace sw
                 MeshComponent* pMesh  = Internal::placeMesh( pRun, float3{ static_cast<float32>( runStart ) + length * 0.5f, top - 0.1f, static_cast<float32>( y ) + 0.5f },
                                                              float3{ length, 0.2f, 1.0f } );
                 if ( pMesh != nullptr )
-                    _tintCache.apply( *pMesh, Internal::computeTerrainColor( runTerrain ) );
+                    _tintCache.apply( *pMesh, computeTerrainColor( runTerrain ) );
                 if ( runTerrain == CityTerrain::Rock )
                 {
                     for ( int32 rockX = runStart; rockX < x; ++rockX )
@@ -575,7 +634,7 @@ namespace sw
                         MeshComponent* pRockMesh = Internal::placeMesh( pRock, float3{ static_cast<float32>( rockX ) + 0.5f, 0.4f, static_cast<float32>( y ) + 0.5f },
                                                                         float3{ 0.9f, 0.8f, 0.9f } );
                         if ( pRockMesh != nullptr )
-                            _tintCache.apply( *pRockMesh, Internal::computeTerrainColor( CityTerrain::Rock ) );
+                            _tintCache.apply( *pRockMesh, computeTerrainColor( CityTerrain::Rock ) );
                     }
                 }
                 runStart = x;
@@ -608,10 +667,7 @@ namespace sw
         slot._object         = pBuilding->getHandle();
         MeshComponent* pMesh = pBuilding->getComponent<MeshComponent>();
         if ( pMesh != nullptr )
-        {
-            using Internal = NileDirectorComponentInternal;
-            _tintCache.apply( *pMesh, bModel ? Internal::computeModelTint( *pDef ) : Internal::computeBlockColor( *pDef ) );
-        }
+            _tintCache.apply( *pMesh, bModel ? computeModelTint( *pDef ) : computeBlockColor( *pDef ) );
         NileBuildingComponent* pView = pBuilding->getComponent<NileBuildingComponent>();
         if ( pView != nullptr )
             pView->assignBuilding( getOwner()->getHandle(), buildingIndex );
@@ -647,7 +703,7 @@ namespace sw
                 const CityWalkerKind walkerKind    = static_cast<CityWalkerKind>( kind );
                 const CityService    walkerService = static_cast<CityService>( service );
                 _listWalkerLook[static_cast<size_t>( Internal::makeWalkerLookKey( walkerKind, walkerService ) )] =
-                    _tintCache.acquire( pMaterial, Internal::computeWalkerColor( walkerKind, walkerService ) );
+                    _tintCache.acquire( pMaterial, computeWalkerColor( walkerKind, walkerService ) );
             }
         }
     }

@@ -17,6 +17,7 @@ namespace sw::editor
     struct EditorToolDefaults;
 
     class EditorContext;
+    class EditorUICapture;
     class IImGuiPlatformBackend;
     class IImGuiRendererBackend;
 
@@ -128,6 +129,8 @@ namespace sw::editor
         DrawSnapshotHandoff _drawSnapshotHandoff;
         /// @brief 마지막으로 낸 draw 스냅샷 번호입니다. UI 스레드 전용이며 1 부터 시작합니다. 해제한 리소스의 해제 순서를 이 번호로 정합니다(`EditorDrawReleaseQueue`).
         uint64 _lastDrawSnapshotSequence;
+        /// @brief 에디터 컨텍스트의 UI 캡처 서브시스템입니다. 컨텍스트와 수명이 같고, 렌더 스레드가 present 훅에서 쓰므로 찾지 않고 들어 둔다.
+        EditorUICapture* _pUICapture;
 
         uint8                  _bInitialized  : 1;
         [[maybe_unused]] uint8 _reservedFlags : 7;

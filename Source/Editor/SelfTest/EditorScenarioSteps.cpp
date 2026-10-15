@@ -7,6 +7,7 @@
  */
 #include "pch.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
@@ -50,6 +51,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Capture/RenderDocCapture.h"
@@ -753,9 +755,9 @@ namespace sw::editor
                 return true;
             }
 
-            [[nodiscard]] static bool readThemePreset( const GameObjectManager* /*pManager*/, float64& outValue )
+            [[nodiscard]] static bool readThemeName( const AutomationProbeQuery& /*query*/, AutomationProbeValue& outValue )
             {
-                outValue = static_cast<float64>( static_cast<uint32>( EditorThemeUtil::getActiveTheme()._preset ) );
+                outValue.setText( EditorThemeUtil::getActiveTheme()._name );
                 return true;
             }
 
@@ -796,6 +798,162 @@ namespace sw::editor
                 if ( pStack == nullptr )
                     return false;
                 outValue = static_cast<float64>( pStack->getCurrentIndex() );
+                return true;
+            }
+
+            // ------------------------------------------------------------------------------
+            // 편집 상태 탐침(글). 경계(플레이 · 백엔드 교체 · 모듈 리로드 · 레이아웃)를 넘기 전 값을 `<Remember>` 로 두고 뒤에서 `sameAs` 로 견준다
+            // ------------------------------------------------------------------------------
+
+            /** @brief 64 비트 값을 16 자리 16 진 글로 씁니다(수 탐침의 float 비교에서 뭉개지지 않게 글로 낸다). */
+            static string formatHash( uint64 hash )
+            {
+                constexpr const utf8* kHexDigit = "0123456789abcdef";
+                string                text;
+                for ( int32 nibble = 15; nibble >= 0; --nibble )
+                {
+                    text += kHexDigit[( hash >> ( nibble * 4 ) ) & 0xF];
+                }
+                return text;
+            }
+
+            /**
+             * @brief 편집 중인 씬의 내용 해시입니다. 오브젝트마다 (이름, 부모 이름, 상태 XML — 다른 오브젝트 참조는 빼고)를 이름 순으로 접습니다.
+             * @details 씬 뷰 카메라(에디터 카메라 오브젝트)는 뺀다 — 카메라를 움직이는 것은 편집이 아니다. 상태 XML 은 저장과 같은 직렬화기라 인스펙터로 고친 값이 다 들어간다.
+             *          `-gv_automationHashDump=1` 이면 오브젝트마다 해시를 로그로 남긴다(두 시점의 로그를 견줘 바뀐 오브젝트를 찾는다).
+             */
+            static bool computeSceneContentHash( uint64& outHash )
+            {
+                const GameObjectManager* pActive = editor::getActiveObjectManager();
+                if ( pActive == nullptr )
+                    return false;
+                vector<std::pair<string, uint64>> listEntry;
+                ObjectSaveOptions                 options{};
+                options._bOmitExternalParent = true;
+                pActive->forEachGameObject( [&listEntry, &options]( const GameObject* pObject )
+                {
+                    if ( pObject == nullptr || pObject->isPendingDestroy() )
+                        return;
+                    const CameraComponent* pCamera = pObject->getComponent<CameraComponent>();
+                    if ( pCamera != nullptr && pCamera->getRole() == CameraRole::Viewport )
+                        return;
+                    const GameObject* pParent = pObject->getParent();
+                    string            key     = string( pObject->getName().c_str() ) + "|" + ( pParent != nullptr ? string( pParent->getName().c_str() ) : string() );
+                    const string      state   = ObjectStateSerializer::saveToXMLString( pObject, options );
+                    listEntry.emplace_back( std::move( key ), StringUtil::computeHash64( state, false ) );
+                } );
+                std::sort( listEntry.begin(), listEntry.end() );
+                GlobalVariableManager*    pVariables = editor::findSubsystem<GlobalVariableManager>();
+                const GlobalVariableInfo* pDump      = pVariables != nullptr ? pVariables->findVariable( "gv_automationHashDump" ) : nullptr;
+                const bool                bDump      = pDump != nullptr && pDump->getValueAsInt() != 0;
+                uint64                    hash       = HashUtil::kFnvOffset64;
+                for ( const std::pair<string, uint64>& entry : listEntry )
+                {
+                    hash = HashUtil::combine( hash, StringUtil::computeHash64( entry.first, false ) );
+                    hash = HashUtil::combine( hash, entry.second );
+                    if ( bDump )
+                        SW_LOG_INFO( "[Scenario] scene hash item %# %#", entry.first.c_str(), formatHash( entry.second ).c_str() );
+                }
+                outHash = hash;
+                return true;
+            }
+
+            /** @brief 고른 오브젝트 이름(이름 순, 쉼표로 이음). 아무것도 고르지 않았으면 `(none)` 입니다. */
+            static bool makeSelectedNames( string& outText )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return false;
+                vector<GameObject*> listSelected;
+                pContext->getSubsystem<EditorSelection>().getSelectedObjects( listSelected );
+                vector<string> listName;
+                for ( const GameObject* pObject : listSelected )
+                {
+                    if ( pObject != nullptr )
+                        listName.emplace_back( pObject->getName().c_str() );
+                }
+                std::sort( listName.begin(), listName.end() );
+                outText.clear();
+                for ( const string& name : listName )
+                {
+                    if ( outText.empty() == false )
+                        outText += ",";
+                    outText += name;
+                }
+                if ( outText.empty() )
+                    outText = "(none)";
+                return true;
+            }
+
+            /** @brief 되돌리기 스택을 `<위치>/<수>:<레이블>|<레이블>…` 로 씁니다(아래에서 위로). */
+            static bool makeUndoState( string& outText )
+            {
+                const CommandStack* pStack = editor::findSubsystem<CommandStack>();
+                if ( pStack == nullptr )
+                    return false;
+                outText = to_string( pStack->getCurrentIndex() ) + "/" + to_string( pStack->getCommandCount() ) + ":";
+                for ( size_t index = 0; index < pStack->getCommandCount(); ++index )
+                {
+                    if ( index > 0 )
+                        outText += "|";
+                    outText += pStack->getCommand( index )._label;
+                }
+                return true;
+            }
+
+            [[nodiscard]] static bool readSceneHash( const AutomationProbeQuery& /*query*/, AutomationProbeValue& outValue )
+            {
+                uint64 hash = 0;
+                if ( computeSceneContentHash( hash ) == false )
+                {
+                    outValue.setText( "no edited scene" );
+                    return false;
+                }
+                outValue.setText( formatHash( hash ) );
+                return true;
+            }
+
+            [[nodiscard]] static bool readSelectedNames( const AutomationProbeQuery& /*query*/, AutomationProbeValue& outValue )
+            {
+                string text;
+                if ( makeSelectedNames( text ) == false )
+                {
+                    outValue.setText( "no editor context" );
+                    return false;
+                }
+                outValue.setText( text );
+                return true;
+            }
+
+            [[nodiscard]] static bool readUndoState( const AutomationProbeQuery& /*query*/, AutomationProbeValue& outValue )
+            {
+                string text;
+                if ( makeUndoState( text ) == false )
+                {
+                    outValue.setText( "no undo stack" );
+                    return false;
+                }
+                outValue.setText( text );
+                return true;
+            }
+
+            /** @brief 씬 내용 · 선택 · 되돌리기 스택 · 변경 표시를 한 해시로 접습니다. 경계 하나를 넘은 뒤 "편집 상태가 그대로다" 를 한 줄로 단언합니다. */
+            [[nodiscard]] static bool readEditorStateHash( const AutomationProbeQuery& /*query*/, AutomationProbeValue& outValue )
+            {
+                uint64         sceneHash = 0;
+                string         selected;
+                string         undoState;
+                EditorContext* pContext  = EditorContext::get();
+                const bool     bReadable = pContext != nullptr && computeSceneContentHash( sceneHash ) && makeSelectedNames( selected ) && makeUndoState( undoState );
+                if ( bReadable == false )
+                {
+                    outValue.setText( "no editor state" );
+                    return false;
+                }
+                uint64 hash = HashUtil::combine( sceneHash, StringUtil::computeHash64( selected, false ) );
+                hash        = HashUtil::combine( hash, StringUtil::computeHash64( undoState, false ) );
+                hash        = HashUtil::combine( hash, pContext->getSubsystem<EditorWorkspace>().isSceneDirty() ? 1u : 0u );
+                outValue.setText( formatHash( hash ) );
                 return true;
             }
 
@@ -1567,13 +1725,21 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readHierarchyVisibleRoots );
     SW_AUTOMATION_PROBE( editorNoSearchResultHintShown, "Editor.NoSearchResultHintShown", "1 when a panel drew its zero-results hint for a search this or last frame",
                          &EditorScenarioStepsInternal::readNoSearchResultHintShown );
-    SW_AUTOMATION_PROBE( editorThemePreset, "Editor.ThemePreset", "Active theme preset: 0 ModernDark, 1 DeepCharcoal, 2 MidnightBlue, 3 ClassicDark",
-                         &EditorScenarioStepsInternal::readThemePreset );
+    SW_AUTOMATION_QUERY_PROBE( editorThemeName, "Editor.ThemeName", "Active theme token set name (dark, light, highcontrast, ...)", &EditorScenarioStepsInternal::readThemeName,
+                               false, false );
     SW_AUTOMATION_PROBE( editorAccentColor, "Editor.AccentColor", "Accent color as 0xRRGGBB", &EditorScenarioStepsInternal::readAccentColor );
     SW_AUTOMATION_PROBE( editorSelectedIsEditorCamera, "Editor.SelectedIsEditorCamera", "1 when the primary selection is the viewport's editor camera",
                          &EditorScenarioStepsInternal::readSelectedIsEditorCamera );
     SW_AUTOMATION_PROBE( editorUndoCount, "Editor.UndoCount", "Commands on the undo stack", &EditorScenarioStepsInternal::readUndoCount );
     SW_AUTOMATION_PROBE( editorUndoIndex, "Editor.UndoIndex", "Position on the undo stack (commands not undone)", &EditorScenarioStepsInternal::readUndoIndex );
+    SW_AUTOMATION_QUERY_PROBE( editorSceneHash, "Editor.SceneHash", "Hash of the edited scene content (every object's name, parent and saved state; the scene view camera is left out)",
+                               &EditorScenarioStepsInternal::readSceneHash, false, false );
+    SW_AUTOMATION_QUERY_PROBE( editorSelectedNames, "Editor.SelectedNames", "Selected object names, sorted and comma separated ('(none)' when nothing is selected)",
+                               &EditorScenarioStepsInternal::readSelectedNames, false, false );
+    SW_AUTOMATION_QUERY_PROBE( editorUndoState, "Editor.UndoState", "Undo stack as '<index>/<count>:<label>|<label>...' from the oldest command",
+                               &EditorScenarioStepsInternal::readUndoState, false, false );
+    SW_AUTOMATION_QUERY_PROBE( editorStateHash, "Editor.StateHash", "Hash of the edited scene content, the selection, the undo stack and the unsaved flag",
+                               &EditorScenarioStepsInternal::readEditorStateHash, false, false );
     SW_AUTOMATION_PROBE( editorLoadingScreenShown, "Editor.LoadingScreenShown", "1 while the runtime UI shows its loading screen",
                          &EditorScenarioStepsInternal::readLoadingScreenShown );
     SW_AUTOMATION_PROBE( editorGridStep, "Editor.GridStep", "Fine line spacing of the viewport grid in meters (1, 10 or 100)",
