@@ -702,10 +702,10 @@ namespace sw
             const hashed_string candidate( sb.c_str(), sb.size() );
             if ( isNameTakenUnlocked( candidate ) == false )
             {
-                // 이름당 첫 중복만 경고한다. 총알처럼 같은 이름으로 수천 개를 스폰하는 게임에서 줄마다 경고는 로그 스팸이고,
-                // 그 로그 쓰기(개당 약 20 µs)가 생성 자체보다 비싸다. 그 뒤로는 조용히 번호를 붙인다.
+                // 같은 이름으로 여럿 만드는 것은 정상 사용(총알, 스폰)이라 Info 다(언리얼 MakeUniqueObjectName 도 조용하다).
+                // 이름당 첫 중복만 남긴다. 줄마다 쓰면 로그 쓰기(개당 약 20 µs)가 생성 자체보다 비싸다. 그 뒤로는 조용히 번호를 붙인다.
                 if ( bFirstDuplicate )
-                    SW_LOG_WARNING( "Duplicate name '%#' — using '%#' (further duplicates of this name are numbered silently)", requested.c_str(), candidate.c_str() );
+                    SW_LOG_INFO( "Duplicate name '%#' - using '%#' (further duplicates of this name are numbered silently)", requested.c_str(), candidate.c_str() );
                 outEntry._baseName = baseKey;
                 outEntry._suffix   = nameSuffix;
                 return candidate;
