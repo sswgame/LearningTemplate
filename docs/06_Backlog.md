@@ -559,6 +559,9 @@
 
 간헐 실패 · 원인 미상. 다시 보이면 그때 원인을 판다. CI 읽는 법은 [검증과 측정](08_Verification.md) 4절.
 
+- **`meshmodifiers` Vulkan 체인 1 회(2026-10-15).** 에디터 체인(다른 hostgpu 와 GPU 공유 실행 중)에서 frame 585 `MeshModifiers.ReferenceListCount == 1, got 0`. 단독 Vulkan 2/2 통과,
+  앞선 순차 hostgpu 네 백엔드도 통과했다. 참조 목록 항목 추가가 부하 아래 한 프레임 늦는지(고정 프레임 간격) 볼 것.
+
 - `E-1` **다음 CI 실행으로 확인할 것**(리눅스는 컴파일까지 되고 테스트 단계에서 진다, CI 읽는 법은 [검증과 측정](08_Verification.md) 4절).
   고쳤고 통과를 확인할 것: `OnlineLoadBotTest.TwoHundredBots…`(캐시 TTL 을 서버 틱 시각으로), `EpollStreamTransport` 경합 보고, `StreamTransportTest.PlatformAbortWithNothingPendingStillCloses`(전송 모델별 기대),
   ASan 둘(OpenSSL 스택 수명, `NetRequestTest` 선언 순서), `ServerBootTest` 접속 로그, Linux Debug `EngineTest_NoGPU` 샤드의 180 초 초과(멈춤이 아니라 느림 — 샤드를 여섯으로 늘렸다).
