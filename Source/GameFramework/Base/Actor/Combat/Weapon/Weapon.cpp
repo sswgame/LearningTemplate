@@ -28,13 +28,7 @@ namespace sw
     // WeaponCatalog
     // ------------------------------------------------------------------------------
     WeaponCatalog::WeaponCatalog()
-        : _catalog{}
     {
-    }
-
-    void WeaponCatalog::addWeapon( const WeaponDef& weapon )
-    {
-        (void)_catalog.add( weapon ); // 빈 id 는 카탈로그가 거른다
     }
 
     uint32 WeaponCatalog::loadRoot( const XMLNode& root, string_view sourceName )
@@ -70,7 +64,7 @@ namespace sw
             weapon._headshotMultiplier = MathUtil::max( 0.0f, node.getAttributeFloat( "headshotMultiplier", weapon._headshotMultiplier ) );
             const utf8* pAmmoID        = node.findAttribute( "ammo" );
             weapon._ammoID             = pAmmoID != nullptr ? hashed_string( pAmmoID ) : hashed_string{};
-            addWeapon( weapon );
+            add( weapon );
             ++loadedCount;
         }
         if ( loadedCount == 0 )

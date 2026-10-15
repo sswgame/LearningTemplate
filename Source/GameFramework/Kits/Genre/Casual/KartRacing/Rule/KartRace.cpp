@@ -316,7 +316,7 @@ namespace sw
             context._bHasItem        = kart._itemID.empty() ? SW_FALSE : SW_TRUE;
             context._itemHeldTime    = kart._itemHeldTime;
             context._bShielded       = kart._shieldTime.isActive() ? SW_TRUE : SW_FALSE;
-            const KartItemDef* pItem = _pItemCatalog != nullptr && kart._itemID.empty() == false ? _pItemCatalog->findItem( kart._itemID ) : nullptr;
+            const KartItemDef* pItem = _pItemCatalog != nullptr && kart._itemID.empty() == false ? _pItemCatalog->find( kart._itemID ) : nullptr;
             if ( pItem != nullptr )
                 context._itemKind = pItem->_kind;
             const int32 ahead  = findRacerAtPlace( kart._place - 1 );
@@ -514,7 +514,7 @@ namespace sw
         if ( isValidRacer( racer ) == false || _pItemCatalog == nullptr )
             return false;
         KartRacer&         kart  = _listRacer[static_cast<size_t>( racer )];
-        const KartItemDef* pItem = kart._itemID.empty() ? nullptr : _pItemCatalog->findItem( kart._itemID );
+        const KartItemDef* pItem = kart._itemID.empty() ? nullptr : _pItemCatalog->find( kart._itemID );
         if ( pItem == nullptr )
             return false;
         kart._itemID       = hashed_string{};
@@ -605,7 +605,7 @@ namespace sw
         for ( size_t projectileIndex = 0; projectileIndex < _listProjectile.size(); ++projectileIndex )
         {
             KartProjectile&    projectile = _listProjectile[projectileIndex];
-            const KartItemDef* pItem      = _pItemCatalog->findItem( projectile._itemID );
+            const KartItemDef* pItem      = _pItemCatalog->find( projectile._itemID );
             if ( pItem == nullptr || projectile._bActive == SW_FALSE )
             {
                 projectile._bActive = SW_FALSE;
@@ -969,7 +969,7 @@ namespace sw
 
     bool KartRace::isKnownItem( const hashed_string& itemID ) const
     {
-        return itemID.empty() || ( _pItemCatalog != nullptr && _pItemCatalog->findItem( itemID ) != nullptr );
+        return itemID.empty() || ( _pItemCatalog != nullptr && _pItemCatalog->find( itemID ) != nullptr );
     }
 
     void KartRace::pushEvent( KartRaceEvent::Kind kind, int32 racer, int32 other, int32 value, float32 time )

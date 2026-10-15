@@ -298,8 +298,8 @@ SW_TEST_CASE( ActionAdventureTest, DefaultFlagNamesCarryTheirKind )
 {
     AdventureDungeonScene scene;
     SW_ASSERT_TRUE( scene.initialize() );
-    SW_ASSERT_FALSE( scene._catalog.getDungeons().empty() );
-    const AdventureDungeonDef&  dungeon = scene._catalog.getDungeons().front();
+    SW_ASSERT_FALSE( scene._catalog.getAll().empty() );
+    const AdventureDungeonDef&  dungeon = scene._catalog.getAll().front();
     const AdventureTreasureDef* pChest  = dungeon.findTreasure( "keyChest" );
     SW_ASSERT_NOT_NULL( pChest );
     SW_EXPECT_TRUE( pChest->_flag == hashed_string( "treasure.keyChest" ) );

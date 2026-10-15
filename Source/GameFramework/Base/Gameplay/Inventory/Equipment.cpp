@@ -89,7 +89,7 @@ namespace sw
                     slot._bSuppressed = SW_FALSE;
                     continue;
                 }
-                const ItemDef* pDef = _pCatalog->findItem( slot._item._itemID );
+                const ItemDef* pDef = _pCatalog->find( slot._item._itemID );
                 if ( pDef == nullptr || pDef->hasEquipConditions() == false )
                     continue;
                 const bool bMet = areConditionsMet( *pDef, inoutListSlot, static_cast<int32>( slotIndex ) );
@@ -128,7 +128,7 @@ namespace sw
         outListRemoved.clear();
         if ( slotIndex < 0 )
             return EquipResult::UnknownSlot;
-        const ItemDef* pDef = _pCatalog != nullptr ? _pCatalog->findItem( item._itemID ) : nullptr;
+        const ItemDef* pDef = _pCatalog != nullptr ? _pCatalog->find( item._itemID ) : nullptr;
         if ( pDef == nullptr || item.isEmpty() )
             return EquipResult::UnknownItem;
         if ( pDef->_equipSlot != _listSlot[static_cast<size_t>( slotIndex )]._accept )
@@ -180,7 +180,7 @@ namespace sw
     hashed_string Equipment::findSlotFor( const hashed_string& itemID ) const
     {
         hashed_string  firstMatch{};
-        const ItemDef* pDef = _pCatalog != nullptr ? _pCatalog->findItem( itemID ) : nullptr;
+        const ItemDef* pDef = _pCatalog != nullptr ? _pCatalog->find( itemID ) : nullptr;
         if ( pDef == nullptr || pDef->isEquipment() == false )
             return firstMatch;
         for ( const EquipSlot& equipSlot : _listSlot )
@@ -324,7 +324,7 @@ namespace sw
         {
             if ( equipSlot._item.isEmpty() || equipSlot._bSuppressed == SW_TRUE )
                 continue;
-            const ItemDef* pDef = _pCatalog != nullptr ? _pCatalog->findItem( equipSlot._item._itemID ) : nullptr;
+            const ItemDef* pDef = _pCatalog != nullptr ? _pCatalog->find( equipSlot._item._itemID ) : nullptr;
             if ( pDef != nullptr )
                 outStats.merge( pDef->_stats );
         }

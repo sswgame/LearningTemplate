@@ -82,7 +82,7 @@ namespace sw
             static hashed_string findItemSocketSet( const AppearanceDatabase& database, const hashed_string& itemID )
             {
                 const ItemCatalog*   pItems  = database.getItemCatalog();
-                const ItemDef*       pItem   = pItems != nullptr ? pItems->findItem( itemID ) : nullptr;
+                const ItemDef*       pItem   = pItems != nullptr ? pItems->find( itemID ) : nullptr;
                 const ItemVisualDef* pVisual = pItem != nullptr ? database.getVisuals().findVisual( pItem->_visualID ) : nullptr;
                 if ( pVisual == nullptr )
                     return hashed_string{};
@@ -436,10 +436,10 @@ namespace sw
         const WeaponCatalog* pCatalog = game::findSubsystem<WeaponCatalog>();
         for ( int32 weaponIndex = 0; weaponIndex < kWeaponCount; ++weaponIndex )
         {
-            const WeaponDef* pDef                  = pCatalog != nullptr ? pCatalog->findWeapon( hashed_string( ShooterPlayerComponentInternal::kArrWeaponID[weaponIndex] ) ) : nullptr;
-            const bool       bShouldFallbackWeapon = pDef == nullptr && pCatalog != nullptr && pCatalog->getWeapons().empty() == false;
+            const WeaponDef* pDef                  = pCatalog != nullptr ? pCatalog->find( hashed_string( ShooterPlayerComponentInternal::kArrWeaponID[weaponIndex] ) ) : nullptr;
+            const bool       bShouldFallbackWeapon = pDef == nullptr && pCatalog != nullptr && pCatalog->getAll().empty() == false;
             if ( bShouldFallbackWeapon )
-                pDef = &pCatalog->getWeapons().front();
+                pDef = &pCatalog->getAll().front();
             if ( pDef != nullptr )
                 _arrWeapon[weaponIndex].equip( *pDef, pDef->_maxReserveAmmo / 2, 0x51ed270bu + static_cast<uint32>( weaponIndex ) );
         }
@@ -629,7 +629,7 @@ namespace sw
         {
             if ( pCameraDirector->isPendingDestroy() || pCameraDirector->getTarget() != self )
                 continue;
-            const CameraPresetDef* pPreset = pCameraDirector->getCatalog().findPreset( pCameraDirector->getActivePresetID() );
+            const CameraPresetDef* pPreset = pCameraDirector->getCatalog().find( pCameraDirector->getActivePresetID() );
             if ( pPreset != nullptr )
                 bFirstPerson = pPreset->_view._mode == CameraPresetMode::FirstPerson;
         }

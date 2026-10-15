@@ -70,7 +70,7 @@ namespace sw
         for ( XMLNode node = root.findChild( "Coaster" ); node; node = node.findNextSibling( "Coaster" ) )
         {
             const utf8*             pLayoutID = node.findAttribute( "layout" );
-            const CoasterLayoutDef* pLayout   = StringUtil::isNullOrEmpty( pLayoutID ) ? nullptr : layouts.findLayout( hashed_string( pLayoutID ) );
+            const CoasterLayoutDef* pLayout   = StringUtil::isNullOrEmpty( pLayoutID ) ? nullptr : layouts.find( hashed_string( pLayoutID ) );
             if ( pLayout == nullptr )
             {
                 SW_LOG_WARNING( "%#: <Coaster> layout '%#' is not in the coaster catalog - skipped", sourceName, pLayoutID != nullptr ? pLayoutID : "" );

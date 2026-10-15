@@ -130,7 +130,7 @@ namespace sw
             if ( _catalog.loadFromResource( _catalogPath ) == false )
                 SW_LOG_WARNING( "Camera presets '%#' did not load", _catalogPath );
         }
-        if ( _catalog.getPresets().empty() )
+        if ( _catalog.getAll().empty() )
             return;
         // 저장한 상태(핫 리로드, 세이브)가 있으면 시작 프리셋 대신 그 스택에서 이어 간다.
         if ( applyPendingState() == false )
@@ -243,10 +243,10 @@ namespace sw
         if ( gv_cameraPreset.empty() == false && bCapture == false )
         {
             const hashed_string overrideID( string_view{ gv_cameraPreset.c_str(), gv_cameraPreset.size() } );
-            if ( _catalog.findPreset( overrideID ) != nullptr )
+            if ( _catalog.find( overrideID ) != nullptr )
                 return overrideID;
         }
-        return _initialPreset.empty() ? _catalog.getPresets().front()._id : _initialPreset;
+        return _initialPreset.empty() ? _catalog.getAll().front()._id : _initialPreset;
     }
 
     void CameraDirectorComponent::onTick( float32 deltaTime )
@@ -267,7 +267,7 @@ namespace sw
 
     hashed_string CameraDirectorComponent::activateNextPreset()
     {
-        const vector<CameraPresetDef>& listPreset = _catalog.getPresets();
+        const vector<CameraPresetDef>& listPreset = _catalog.getAll();
         if ( listPreset.empty() )
             return hashed_string{};
         size_t nextIndex = 0;

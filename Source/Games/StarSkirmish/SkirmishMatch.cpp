@@ -193,7 +193,7 @@ namespace sw
 
     RTSUnitID SkirmishMatch::spawnAt( const utf8* pDefID, int32 owner, int32 x, int32 y, bool bMirror )
     {
-        const RTSUnitDef* pDef = _world.getCatalog()->findUnit( hashed_string( pDefID ) );
+        const RTSUnitDef* pDef = _world.getCatalog()->find( hashed_string( pDefID ) );
         if ( pDef == nullptr )
         {
             SW_LOG_WARNING( "[Skirmish] units.xml has no '%#' - not placed", pDefID );

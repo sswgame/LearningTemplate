@@ -271,7 +271,7 @@ namespace sw
         if ( placement._layoutID.empty() == false )
         {
             // 코스터는 건설하고 테스트 운행으로 평가를 받는다. 못 돌면(언덕을 못 넘는다) 건설하지 않는다.
-            const CoasterLayoutDef* pLayout = _layoutCatalog.findLayout( placement._layoutID );
+            const CoasterLayoutDef* pLayout = _layoutCatalog.find( placement._layoutID );
             CoasterRideStats        stats{};
             pCoaster = createCoaster( placementIndex, stats );
             if ( pLayout == nullptr || pCoaster == nullptr )
@@ -310,7 +310,7 @@ namespace sw
         if ( placementIndex < 0 || placementIndex >= static_cast<int32>( _listPlacement.size() ) )
             return nullptr;
         const RidePlacement&    placement = _listPlacement[static_cast<size_t>( placementIndex )];
-        const CoasterLayoutDef* pLayout   = _layoutCatalog.findLayout( placement._layoutID );
+        const CoasterLayoutDef* pLayout   = _layoutCatalog.find( placement._layoutID );
         if ( pLayout == nullptr )
             return nullptr;
         CoasterTrackBuilder builder;

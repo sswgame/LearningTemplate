@@ -125,17 +125,12 @@ namespace sw
      *         <Hitbox from="10" to="11" x=".." y=".." w=".." h=".." shape="Box"/><Cancel from="12" to="20" moves="a,b" onHit="true"/></Move></MoveCatalog>
      * @endcode
      */
-    class SW_GF_API MoveCatalog : public XMLCatalog<MoveCatalog>
+    class SW_GF_API MoveCatalog : public XMLCatalog<MoveCatalog>, public GameCatalog<MoveFrameData>
     {
         friend class XMLCatalog<MoveCatalog>;
 
     public:
         MoveCatalog();
-
-        void addMove( const MoveFrameData& move );
-
-        const MoveFrameData*         findMove( const hashed_string& id ) const { return _catalog.find( id ); }
-        const vector<MoveFrameData>& getMoves() const { return _catalog.getAll(); }
 
         /** @brief "High", "Mid", "Low", "Throw"(대소문자 무시)를 읽습니다. 모르는 값이면 @p fallback 을 반환합니다. */
         static AttackHeight parseAttackHeight( string_view text, AttackHeight fallback );
@@ -143,8 +138,6 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "MoveCatalog"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
-
-        GameCatalog<MoveFrameData> _catalog;
     };
 } // namespace sw
 

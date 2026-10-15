@@ -215,7 +215,7 @@ namespace sw
                     stock._requirement = pRequirement;
                 def._listStock.push_back( stock );
             }
-            addShop( def );
+            add( def );
             ++loadedCount;
         }
         if ( loadedCount == 0 )
@@ -243,7 +243,7 @@ namespace sw
         _eventBuffer.clear();
         if ( _pShopCatalog == nullptr )
             return;
-        for ( const ShopDef& shop : _pShopCatalog->getShops() )
+        for ( const ShopDef& shop : _pShopCatalog->getAll() )
         {
             ShopRuntime runtime;
             runtime._shopID = shop._id;
@@ -275,12 +275,12 @@ namespace sw
     ShopResult ShopState::evaluateBuy( const hashed_string& shopID, const hashed_string& itemID, int32 count, const Wallet& wallet,
                                        const Inventory& inventory ) const
     {
-        const ShopDef*     pShop    = _pShopCatalog != nullptr ? _pShopCatalog->findShop( shopID ) : nullptr;
+        const ShopDef*     pShop    = _pShopCatalog != nullptr ? _pShopCatalog->find( shopID ) : nullptr;
         const ShopRuntime* pRuntime = findRuntime( shopID );
         if ( pShop == nullptr || pRuntime == nullptr )
             return ShopResult::UnknownShop;
         const int32 stockIndex       = findStockIndex( *pShop, itemID );
-        const bool  bUnknownShopItem = stockIndex < 0 || _pItemCatalog == nullptr || _pItemCatalog->findItem( itemID ) == nullptr;
+        const bool  bUnknownShopItem = stockIndex < 0 || _pItemCatalog == nullptr || _pItemCatalog->find( itemID ) == nullptr;
         if ( bUnknownShopItem )
             return ShopResult::UnknownItem;
         if ( count <= 0 )
@@ -304,7 +304,7 @@ namespace sw
         const ShopResult result = evaluateBuy( shopID, itemID, count, wallet, inventory );
         if ( result != ShopResult::Ok )
             return result;
-        const ShopDef* pShop      = _pShopCatalog->findShop( shopID );
+        const ShopDef* pShop      = _pShopCatalog->find( shopID );
         ShopRuntime*   pRuntime   = findRuntime( shopID );
         const int32    stockIndex = findStockIndex( *pShop, itemID );
         const int64    total      = static_cast<int64>( computeBuyPrice( shopID, itemID ) ) * count;
@@ -324,11 +324,11 @@ namespace sw
 
     ShopResult ShopState::evaluateSell( const hashed_string& shopID, const hashed_string& itemID, int32 count, const Inventory& inventory ) const
     {
-        const ShopDef*     pShop    = _pShopCatalog != nullptr ? _pShopCatalog->findShop( shopID ) : nullptr;
+        const ShopDef*     pShop    = _pShopCatalog != nullptr ? _pShopCatalog->find( shopID ) : nullptr;
         const ShopRuntime* pRuntime = findRuntime( shopID );
         if ( pShop == nullptr || pRuntime == nullptr )
             return ShopResult::UnknownShop;
-        if ( _pItemCatalog == nullptr || _pItemCatalog->findItem( itemID ) == nullptr )
+        if ( _pItemCatalog == nullptr || _pItemCatalog->find( itemID ) == nullptr )
             return ShopResult::UnknownItem;
         if ( count <= 0 )
             return ShopResult::InvalidCount;
@@ -347,7 +347,7 @@ namespace sw
         const int64 total = computeSellTotal( shopID, itemID, count );
         if ( inventory.removeItem( itemID, count ) == false )
             return ShopResult::NotOwned;
-        const ShopDef* pShop    = _pShopCatalog->findShop( shopID );
+        const ShopDef* pShop    = _pShopCatalog->find( shopID );
         ShopRuntime*   pRuntime = findRuntime( shopID );
         wallet.add( pShop->_currency, total );
         if ( pOutReceived != nullptr )
@@ -374,7 +374,7 @@ namespace sw
             return;
         for ( ShopRuntime& runtime : _listRuntime )
         {
-            const ShopDef* pShop = _pShopCatalog->findShop( runtime._shopID );
+            const ShopDef* pShop = _pShopCatalog->find( runtime._shopID );
             if ( pShop == nullptr )
                 continue;
             for ( float32& factor : runtime._listSellFactor )
@@ -408,7 +408,7 @@ namespace sw
 
     int32 ShopState::computeBuyPrice( const hashed_string& shopID, const hashed_string& itemID ) const
     {
-        const ShopDef*     pShop    = _pShopCatalog != nullptr ? _pShopCatalog->findShop( shopID ) : nullptr;
+        const ShopDef*     pShop    = _pShopCatalog != nullptr ? _pShopCatalog->find( shopID ) : nullptr;
         const ShopRuntime* pRuntime = findRuntime( shopID );
         if ( pShop == nullptr || pRuntime == nullptr )
             return -1;
@@ -421,9 +421,9 @@ namespace sw
 
     int64 ShopState::computeSellTotal( const hashed_string& shopID, const hashed_string& itemID, int32 count ) const
     {
-        const ShopDef*     pShop               = _pShopCatalog != nullptr ? _pShopCatalog->findShop( shopID ) : nullptr;
+        const ShopDef*     pShop               = _pShopCatalog != nullptr ? _pShopCatalog->find( shopID ) : nullptr;
         const ShopRuntime* pRuntime            = findRuntime( shopID );
-        const ItemDef*     pItem               = _pItemCatalog != nullptr ? _pItemCatalog->findItem( itemID ) : nullptr;
+        const ItemDef*     pItem               = _pItemCatalog != nullptr ? _pItemCatalog->find( itemID ) : nullptr;
         const bool         bInvalidSellRequest = pShop == nullptr || pRuntime == nullptr || pItem == nullptr || count <= 0;
         if ( bInvalidSellRequest )
             return 0;
@@ -440,7 +440,7 @@ namespace sw
 
     int32 ShopState::getStockCount( const hashed_string& shopID, const hashed_string& itemID ) const
     {
-        const ShopDef*     pShop    = _pShopCatalog != nullptr ? _pShopCatalog->findShop( shopID ) : nullptr;
+        const ShopDef*     pShop    = _pShopCatalog != nullptr ? _pShopCatalog->find( shopID ) : nullptr;
         const ShopRuntime* pRuntime = findRuntime( shopID );
         if ( pShop == nullptr || pRuntime == nullptr )
             return 0;
@@ -466,7 +466,7 @@ namespace sw
 
     hashed_string ShopState::getCurrency( const hashed_string& shopID ) const
     {
-        const ShopDef* pShop = _pShopCatalog != nullptr ? _pShopCatalog->findShop( shopID ) : nullptr;
+        const ShopDef* pShop = _pShopCatalog != nullptr ? _pShopCatalog->find( shopID ) : nullptr;
         return pShop != nullptr ? pShop->_currency : Wallet::getDefaultCurrency();
     }
 
@@ -499,13 +499,13 @@ namespace sw
     {
         if ( stock._price >= 0 )
             return stock._price;
-        const ItemDef* pItem = _pItemCatalog != nullptr ? _pItemCatalog->findItem( stock._itemID ) : nullptr;
+        const ItemDef* pItem = _pItemCatalog != nullptr ? _pItemCatalog->find( stock._itemID ) : nullptr;
         return pItem != nullptr ? pItem->_value : 0;
     }
 
     bool ShopState::isRefused( const ShopDef& shop, const ShopRuntime& runtime, const hashed_string& itemID ) const
     {
-        const ItemDef* pItem = _pItemCatalog != nullptr ? _pItemCatalog->findItem( itemID ) : nullptr;
+        const ItemDef* pItem = _pItemCatalog != nullptr ? _pItemCatalog->find( itemID ) : nullptr;
         if ( pItem == nullptr || pItem->_category.empty() )
             return false;
         return shop.refusesCategory( pItem->_category ) || VectorUtil::contains( runtime._listExtraRefused, pItem->_category );

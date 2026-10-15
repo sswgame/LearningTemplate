@@ -99,7 +99,7 @@ namespace
                 item._id       = hashed_string( pItemID );
                 item._maxStack = 99;
                 item._value    = 3;
-                _items.addItem( item );
+                _items.add( item );
             }
             _curve.setFormula( 20.0f, 1.0f, 0.0f, 10 ); // 레벨 L → L+1 에 20 × L
             return _catalog.loadFromXMLText( kRestaurantTestXML, "RestaurantSimTest" ) && _recipes.loadFromXMLText( kRestaurantTestRecipeXML, "RestaurantSimTest" ) &&

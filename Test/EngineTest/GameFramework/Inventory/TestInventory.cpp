@@ -55,12 +55,12 @@ SW_TEST_CASE( InventoryTest, SlotsStackRespectWeightAndMoveSplitSortAndWear )
 {
     ItemCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kItemTestXML, "InventoryTest" ) );
-    const ItemDef* pSword = catalog.findItem( hashed_string( "sword" ) );
+    const ItemDef* pSword = catalog.find( hashed_string( "sword" ) );
     SW_ASSERT_NOT_NULL( pSword );
     SW_EXPECT_EQUAL( 1, pSword->_maxStack ); // 내구도가 있으면 겹치지 않는다
     SW_EXPECT_TRUE( pSword->hasTag( hashed_string( "Blade" ) ) );
     SW_EXPECT_NEAR_EQUAL( 12.0f, pSword->_stats.getValue( hashed_string( "attack" ) ), 1.0e-4f );
-    SW_EXPECT_TRUE( pSword->isEquipment() && catalog.findItem( hashed_string( "herb" ) )->isEquipment() == false );
+    SW_EXPECT_TRUE( pSword->isEquipment() && catalog.find( hashed_string( "herb" ) )->isEquipment() == false );
 
     Inventory inventory;
     inventory.initialize( &catalog, 4, 20.0f );

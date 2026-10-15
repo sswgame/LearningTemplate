@@ -427,19 +427,16 @@ namespace sw
      * @endcode
      * @details 모르는 속성, 원소, 열거자 이름은 경고하고 넘어간다. `ResourceDataSchemaTest` 가 그 경고를 잡는다.
      */
-    class SW_GF_API CameraPresetCatalog : public XMLCatalog<CameraPresetCatalog>
+    class SW_GF_API CameraPresetCatalog : public XMLCatalog<CameraPresetCatalog>, public GameCatalog<CameraPresetDef>
     {
         friend class XMLCatalog<CameraPresetCatalog>;
 
     public:
         CameraPresetCatalog();
 
-        void addPreset( const CameraPresetDef& def );
         void addBlendRule( const CameraBlendRule& rule );
         void clear();
 
-        const CameraPresetDef*         findPreset( const hashed_string& id ) const { return _catalog.find( id ); }
-        const vector<CameraPresetDef>& getPresets() const { return _catalog.getAll(); }
         /**
          * @brief @p from 에서 @p to 로 갈 때의 블렌드입니다.
          * @details 덮어쓰기 표(정확히 맞는 줄, `from="*"`, `to="*"` 순), @p to 프리셋의 들어오기 블렌드, 카탈로그 기본 순으로 찾는다.
@@ -454,8 +451,7 @@ namespace sw
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
     private:
-        GameCatalog<CameraPresetDef> _catalog;
-        vector<CameraBlendRule>      _listBlendRule;
-        BlendCurveDef                _defaultBlend;
+        vector<CameraBlendRule> _listBlendRule;
+        BlendCurveDef           _defaultBlend;
     };
 } // namespace sw

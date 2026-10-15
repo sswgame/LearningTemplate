@@ -261,9 +261,9 @@ SW_TEST_CASE( CameraPresetTest, CatalogReadsSectionsAndResolvesBlends )
         test::ScopedDefensiveTestLog expected( "unsorted custom keys are reported and sorted" );
         SW_ASSERT_TRUE( catalog.loadFromXMLText( pXML, "camera-test" ) );
     }
-    SW_ASSERT_EQUAL( size_t{ 3 }, catalog.getPresets().size() );
+    SW_ASSERT_EQUAL( size_t{ 3 }, catalog.getAll().size() );
 
-    const CameraPresetDef* pA = catalog.findPreset( "a" );
+    const CameraPresetDef* pA = catalog.find( "a" );
     SW_ASSERT_NOT_NULL( pA );
     SW_EXPECT_TRUE( pA->_view._mode == CameraPresetMode::Orbit );
     SW_EXPECT_NEAR_EQUAL( 30.0f * MathUtil::kDegreeToRadian, pA->_view._pitch, 1.0e-5f );
@@ -276,17 +276,17 @@ SW_TEST_CASE( CameraPresetTest, CatalogReadsSectionsAndResolvesBlends )
     SW_EXPECT_TRUE( pA->_blendIn._curve == BlendCurve::EaseIn );
     SW_EXPECT_NEAR_EQUAL( 3.0f, pA->_blendIn._exponent, 1.0e-6f );
 
-    const CameraPresetDef* pC = catalog.findPreset( "c" );
+    const CameraPresetDef* pC = catalog.find( "c" );
     SW_ASSERT_NOT_NULL( pC );
     SW_ASSERT_EQUAL( size_t{ 2 }, pC->_blendIn._listCustomKey.size() );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pC->_blendIn._listCustomKey[0]._time, 1.0e-6f );
 
-    SW_EXPECT_TRUE( catalog.getBlend( "a", "b" )._curve == BlendCurve::Cut );             // 정확히 맞는 줄
-    SW_EXPECT_TRUE( catalog.getBlend( "c", "b" )._curve == BlendCurve::Spring );          // from="*" 가 to="*" 보다 먼저
-    SW_EXPECT_TRUE( catalog.getBlend( "c", "a" )._curve == BlendCurve::Cubic );           // to="*"
-    SW_EXPECT_TRUE( catalog.getBlend( "b", "a" )._curve == BlendCurve::EaseIn );          // a 의 들어오기
-    SW_EXPECT_TRUE( catalog.getBlend( "a", "missing" )._curve == BlendCurve::Linear );    // 기본
-    SW_EXPECT_NEAR_EQUAL( 2.0f, catalog.findPreset( "b" )->_blendIn._duration, 1.0e-6f ); // <BlendIn> 이 없으면 기본
+    SW_EXPECT_TRUE( catalog.getBlend( "a", "b" )._curve == BlendCurve::Cut );          // 정확히 맞는 줄
+    SW_EXPECT_TRUE( catalog.getBlend( "c", "b" )._curve == BlendCurve::Spring );       // from="*" 가 to="*" 보다 먼저
+    SW_EXPECT_TRUE( catalog.getBlend( "c", "a" )._curve == BlendCurve::Cubic );        // to="*"
+    SW_EXPECT_TRUE( catalog.getBlend( "b", "a" )._curve == BlendCurve::EaseIn );       // a 의 들어오기
+    SW_EXPECT_TRUE( catalog.getBlend( "a", "missing" )._curve == BlendCurve::Linear ); // 기본
+    SW_EXPECT_NEAR_EQUAL( 2.0f, catalog.find( "b" )->_blendIn._duration, 1.0e-6f );    // <BlendIn> 이 없으면 기본
 
     test::ScopedLogCollector logs;
     {
@@ -314,7 +314,7 @@ SW_TEST_CASE( CameraPresetTest, CatalogReadsLensDollyAndPostProcess )
         </Preset>
     </CameraPresets>)",
                                              "lens-test" ) );
-    const CameraPresetDef* pCine = catalog.findPreset( "cine" );
+    const CameraPresetDef* pCine = catalog.find( "cine" );
     SW_ASSERT_NOT_NULL( pCine );
     SW_EXPECT_TRUE( pCine->_view._mode == CameraPresetMode::Dolly );
     SW_EXPECT_NEAR_EQUAL( 35.0f, pCine->_lens._focalLength, 1.0e-6f );
@@ -343,9 +343,9 @@ SW_TEST_CASE( CameraPresetTest, CatalogReadsLensDollyAndPostProcess )
 SW_TEST_CASE( CameraPresetTest, DirectorContinuesFromTheBlendedPoseWhenReactivatedMidBlend )
 {
     CameraPresetCatalog catalog;
-    catalog.addPreset( CameraPresetTestInternal::makeFixed( "a", float3{ 0.0f, 0.0f, 0.0f } ) );
-    catalog.addPreset( CameraPresetTestInternal::makeFixed( "b", float3{ 10.0f, 0.0f, 0.0f } ) );
-    catalog.addPreset( CameraPresetTestInternal::makeFixed( "c", float3{ 0.0f, 10.0f, 0.0f } ) );
+    catalog.add( CameraPresetTestInternal::makeFixed( "a", float3{ 0.0f, 0.0f, 0.0f } ) );
+    catalog.add( CameraPresetTestInternal::makeFixed( "b", float3{ 10.0f, 0.0f, 0.0f } ) );
+    catalog.add( CameraPresetTestInternal::makeFixed( "c", float3{ 0.0f, 10.0f, 0.0f } ) );
     const CameraTarget target;
 
     CameraDirector director;
@@ -379,9 +379,9 @@ SW_TEST_CASE( CameraPresetTest, DirectorContinuesFromTheBlendedPoseWhenReactivat
 SW_TEST_CASE( CameraPresetTest, DirectorKeepsTheOutgoingBlendRunningWhenReactivated )
 {
     CameraPresetCatalog catalog;
-    catalog.addPreset( CameraPresetTestInternal::makeFixed( "a", float3{ 0.0f, 0.0f, 0.0f } ) );
-    catalog.addPreset( CameraPresetTestInternal::makeFixed( "b", float3{ 10.0f, 0.0f, 0.0f } ) );
-    catalog.addPreset( CameraPresetTestInternal::makeFixed( "c", float3{ 0.0f, 10.0f, 0.0f } ) );
+    catalog.add( CameraPresetTestInternal::makeFixed( "a", float3{ 0.0f, 0.0f, 0.0f } ) );
+    catalog.add( CameraPresetTestInternal::makeFixed( "b", float3{ 10.0f, 0.0f, 0.0f } ) );
+    catalog.add( CameraPresetTestInternal::makeFixed( "c", float3{ 0.0f, 10.0f, 0.0f } ) );
     const CameraTarget target;
 
     CameraDirector director;
@@ -414,7 +414,7 @@ SW_TEST_CASE( CameraPresetTest, DirectorCollapsesTheBlendStackWithoutAJump )
     CameraPresetCatalog          catalog;
     for ( int32 presetIndex = 0; presetIndex < 8; ++presetIndex )
     {
-        catalog.addPreset( CameraPresetTestInternal::makeFixed( kArrPresetID[presetIndex], float3{ static_cast<float32>( presetIndex ) * 3.0f, 0.0f, 0.0f } ) );
+        catalog.add( CameraPresetTestInternal::makeFixed( kArrPresetID[presetIndex], float3{ static_cast<float32>( presetIndex ) * 3.0f, 0.0f, 0.0f } ) );
     }
     const CameraTarget target;
     CameraDirector     director;
@@ -437,11 +437,11 @@ SW_TEST_CASE( CameraPresetTest, DirectorCollapsesTheBlendStackWithoutAJump )
 SW_TEST_CASE( CameraPresetTest, DirectorStateRoundTripsTheBlendStack )
 {
     CameraPresetCatalog catalog;
-    catalog.addPreset( CameraPresetTestInternal::makeFixed( "a", float3{ 0.0f, 0.0f, 0.0f } ) );
+    catalog.add( CameraPresetTestInternal::makeFixed( "a", float3{ 0.0f, 0.0f, 0.0f } ) );
     CameraPresetDef orbit = CameraPresetTestInternal::makeFixed( "orbit", float3{} );
     orbit._view._mode     = CameraPresetMode::Orbit;
     orbit._view._distance = 6.0f;
-    catalog.addPreset( orbit );
+    catalog.add( orbit );
     CameraTarget target;
     target._focus = float3{ 1.0f, 0.0f, 2.0f };
 

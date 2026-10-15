@@ -58,23 +58,16 @@ namespace sw
 namespace sw
 {
     /** @brief `<WeaponCatalog><Weapon id="rifle" name="Rifle" fireInterval="0.1" .../></WeaponCatalog>` 를 읽습니다. 속성 이름은 필드 이름에서 `_` 를 뺀 것입니다. */
-    class SW_GF_API WeaponCatalog : public XMLCatalog<WeaponCatalog>
+    class SW_GF_API WeaponCatalog : public XMLCatalog<WeaponCatalog>, public GameCatalog<WeaponDef>
     {
         friend class XMLCatalog<WeaponCatalog>;
 
     public:
         WeaponCatalog();
 
-        void addWeapon( const WeaponDef& weapon );
-
-        const WeaponDef*         findWeapon( const hashed_string& id ) const { return _catalog.find( id ); }
-        const vector<WeaponDef>& getWeapons() const { return _catalog.getAll(); }
-
     private:
         static constexpr const utf8* kXMLRootName = "WeaponCatalog"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
-
-        GameCatalog<WeaponDef> _catalog; ///< 읽은 순서(무기 바꾸기 순환)
     };
 } // namespace sw
 

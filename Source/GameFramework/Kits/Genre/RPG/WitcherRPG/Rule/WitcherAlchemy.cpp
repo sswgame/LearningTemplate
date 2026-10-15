@@ -41,7 +41,7 @@ namespace sw
         const CraftResult result = _crafter.craft( recipeID, inoutInventory, station, level );
         if ( result != CraftResult::Ok )
             return result;
-        const RecipeDef* pRecipe = _pRecipeCatalog != nullptr ? _pRecipeCatalog->findRecipe( recipeID ) : nullptr;
+        const RecipeDef* pRecipe = _pRecipeCatalog != nullptr ? _pRecipeCatalog->find( recipeID ) : nullptr;
         if ( pRecipe == nullptr )
             return result;
         for ( const auto& output : pRecipe->_outputs.getItems() )

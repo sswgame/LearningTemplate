@@ -61,21 +61,14 @@ namespace sw
      * @brief `<ReputationCatalog><Faction id="town" min="-1000" max="1000" start="0" decay="0"><Tier name="Hated" min="-1000"/>
      *        <Tier name="Neutral" min="-100"/><Link faction="bandits" ratio="-0.5"/></Faction></ReputationCatalog>` 를 읽습니다.
      */
-    class SW_GF_API ReputationCatalog : public XMLCatalog<ReputationCatalog>
+    class SW_GF_API ReputationCatalog : public XMLCatalog<ReputationCatalog>, public GameCatalog<FactionDef>
     {
         friend class XMLCatalog<ReputationCatalog>;
 
     public:
-        void addFaction( const FactionDef& faction ) { (void)_catalog.add( faction ); }
-
-        const FactionDef*         findFaction( const hashed_string& id ) const { return _catalog.find( id ); }
-        const vector<FactionDef>& getFactions() const { return _catalog.getAll(); }
-
     private:
         static constexpr const utf8* kXMLRootName = "ReputationCatalog"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
-
-        GameCatalog<FactionDef> _catalog{};
     };
 } // namespace sw
 

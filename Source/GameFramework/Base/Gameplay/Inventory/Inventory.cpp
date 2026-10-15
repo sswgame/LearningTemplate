@@ -66,7 +66,7 @@ namespace sw
 
     float32 Inventory::getItemWeight( const hashed_string& itemID ) const
     {
-        const ItemDef* pDef = _pCatalog != nullptr ? _pCatalog->findItem( itemID ) : nullptr;
+        const ItemDef* pDef = _pCatalog != nullptr ? _pCatalog->find( itemID ) : nullptr;
         return pDef != nullptr ? pDef->_weight : 0.0f;
     }
 
@@ -83,7 +83,7 @@ namespace sw
     {
         if ( itemID.empty() || count <= 0 )
             return 0;
-        const ItemDef* pDef     = _pCatalog != nullptr ? _pCatalog->findItem( itemID ) : nullptr;
+        const ItemDef* pDef     = _pCatalog != nullptr ? _pCatalog->find( itemID ) : nullptr;
         const int32    maxStack = pDef != nullptr ? pDef->_maxStack : 1;
         int32          left     = computeWeightRoom( itemID, count );
         const int32    wanted   = left;
@@ -120,7 +120,7 @@ namespace sw
     {
         if ( stack.isEmpty() )
             return true;
-        const ItemDef* pDef = _pCatalog != nullptr ? _pCatalog->findItem( stack._itemID ) : nullptr;
+        const ItemDef* pDef = _pCatalog != nullptr ? _pCatalog->find( stack._itemID ) : nullptr;
         if ( ( pDef == nullptr || pDef->_maxDurability <= 0.0f ) && stack.hasInstanceState() == false )
         {
             if ( hasRoomFor( stack._itemID, stack._count ) == false )
@@ -258,8 +258,8 @@ namespace sw
         const ItemCatalog* pCatalog = _pCatalog;
         std::stable_sort( listStack.begin(), listStack.end(), [pCatalog]( const InventorySlot& lhs, const InventorySlot& rhs )
         {
-            const ItemDef*    pLhs        = pCatalog != nullptr ? pCatalog->findItem( lhs._itemID ) : nullptr;
-            const ItemDef*    pRhs        = pCatalog != nullptr ? pCatalog->findItem( rhs._itemID ) : nullptr;
+            const ItemDef*    pLhs        = pCatalog != nullptr ? pCatalog->find( lhs._itemID ) : nullptr;
+            const ItemDef*    pRhs        = pCatalog != nullptr ? pCatalog->find( rhs._itemID ) : nullptr;
             const string_view lhsCategory = pLhs != nullptr ? string_view( pLhs->_category.c_str() ) : string_view();
             const string_view rhsCategory = pRhs != nullptr ? string_view( pRhs->_category.c_str() ) : string_view();
             if ( lhsCategory != rhsCategory )

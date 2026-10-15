@@ -251,7 +251,7 @@ namespace sw
             if ( bPressedMelee == false || slotIndex < 0 )
                 return;
             const MechWeaponSlotDef& slot  = pilot.getMode()->_listWeapon[static_cast<size_t>( slotIndex - pilot.getMech()->computeSlotOffset( pilot._mode ) )];
-            const MoveFrameData*     pMove = slot._listMoveID.empty() ? nullptr : _pMoveCatalog->findMove( slot._listMoveID.front() );
+            const MoveFrameData*     pMove = slot._listMoveID.empty() ? nullptr : _pMoveCatalog->find( slot._listMoveID.front() );
             if ( pMove == nullptr )
                 return;
             (void)findLockTarget( pilotIndex );
@@ -269,7 +269,7 @@ namespace sw
                 pilot._bMeleeQueued = SW_TRUE;
             const int32          nextStage          = pilot._comboStage + 1;
             const bool           bHasNext           = nextStage < static_cast<int32>( slot._listMoveID.size() );
-            const MoveFrameData* pNext              = bHasNext ? _pMoveCatalog->findMove( slot._listMoveID[static_cast<size_t>( nextStage )] ) : nullptr;
+            const MoveFrameData* pNext              = bHasNext ? _pMoveCatalog->find( slot._listMoveID[static_cast<size_t>( nextStage )] ) : nullptr;
             const bool           bCanCancelIntoNext = pilot._bMeleeQueued == SW_TRUE && pNext != nullptr && pilot._melee.canCancelInto( pNext->_id );
             if ( bCanCancelIntoNext )
             {

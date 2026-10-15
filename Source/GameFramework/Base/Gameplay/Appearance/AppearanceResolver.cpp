@@ -603,7 +603,7 @@ namespace sw
         {
             if ( request._itemID.empty() )
                 continue;
-            const ItemDef*       pItem    = pItemCatalog != nullptr ? pItemCatalog->findItem( request._itemID ) : nullptr;
+            const ItemDef*       pItem    = pItemCatalog != nullptr ? pItemCatalog->find( request._itemID ) : nullptr;
             const hashed_string  visualID = request._visibleVisual.empty() == false ? request._visibleVisual : ( pItem != nullptr ? pItem->_visualID : hashed_string{} );
             const ItemVisualDef* pVisual  = database.getVisuals().findVisual( visualID );
             if ( pVisual == nullptr )
@@ -889,7 +889,7 @@ namespace sw
                 continue;
             }
             const InventorySlot& item = pEquipSlot->_item;
-            const ItemDef*       pDef = pCatalog != nullptr ? pCatalog->findItem( item._itemID ) : nullptr;
+            const ItemDef*       pDef = pCatalog != nullptr ? pCatalog->find( item._itemID ) : nullptr;
             const float32        worn = pDef != nullptr && pDef->_maxDurability > 0.0f ? 1.0f - MathUtil::saturate( item._durability / pDef->_maxDurability ) : 0.0f;
             request._customization    = item._customization;
             request._listDetachedPart = item._listDetachedPart;

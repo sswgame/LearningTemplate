@@ -211,7 +211,7 @@ SW_TEST_CASE( EquipConditionTest, InstanceStateKeepsItemsFromStacking )
     ItemDef     gem;
     gem._id       = hashed_string( "gem" );
     gem._maxStack = 10;
-    catalog.addItem( gem );
+    catalog.add( gem );
     Inventory inventory;
     inventory.initialize( &catalog, 4 );
     SW_EXPECT_EQUAL( 1, inventory.addItem( hashed_string( "gem" ), 1 ) );

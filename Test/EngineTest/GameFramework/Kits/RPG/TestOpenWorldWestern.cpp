@@ -150,7 +150,7 @@ SW_TEST_CASE( OpenWorldWesternTest, CatalogReadsLawHorseSurvivalAndHunting )
     SW_EXPECT_EQUAL( 3, catalog.findDeadEyeLevel( 5 )->_markCount );
     SW_EXPECT_NEAR_EQUAL( 0.6f, catalog.getGradeScale( 2 ), 1.0e-5f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, catalog.getGradeScale( 0 ), 1.0e-5f );
-    SW_EXPECT_TRUE( catalog.getHonorReputation().findFaction( hashed_string( WesternCatalog::kHonorFactionID ) ) != nullptr );
+    SW_EXPECT_TRUE( catalog.getHonorReputation().find( hashed_string( WesternCatalog::kHonorFactionID ) ) != nullptr );
 }
 
 SW_TEST_CASE( OpenWorldWesternTest, WitnessesReportAfterDelayUnlessSilencedAndLawmenReportAtOnce )

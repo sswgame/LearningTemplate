@@ -87,7 +87,7 @@ namespace sw
 
     int32 ItemCatalog::getMaxStack( const hashed_string& id ) const
     {
-        const ItemDef* pDef = _catalog.find( id );
+        const ItemDef* pDef = find( id );
         return pDef != nullptr ? pDef->_maxStack : 1;
     }
 
@@ -137,7 +137,7 @@ namespace sw
                 if ( ItemCatalogInternal::readRequires( requiresNode, condition, sourceName, pID ) )
                     def._listEquipCondition.push_back( condition );
             }
-            addItem( def );
+            add( def );
             ++loadedCount;
         }
         if ( loadedCount == 0 )

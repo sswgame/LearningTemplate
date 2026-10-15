@@ -33,7 +33,7 @@ SW_TEST_CASE( CombatTest, WeaponDamageFallsOffWithDistanceAndScalesOnHeadshots )
 {
     WeaponCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kCombatTestXML, "CombatTest" ) );
-    const WeaponDef* pSmg = catalog.findWeapon( hashed_string( "smg" ) );
+    const WeaponDef* pSmg = catalog.find( hashed_string( "smg" ) );
     SW_ASSERT_NOT_NULL( pSmg );
     SW_EXPECT_TRUE( pSmg->_ammoID == hashed_string( "ammo_9mm" ) );
     SW_EXPECT_NEAR_EQUAL( 20.0f, DamageMath::computeWeaponDamage( *pSmg, 5.0f, false ), 1.0e-4f );
@@ -41,7 +41,7 @@ SW_TEST_CASE( CombatTest, WeaponDamageFallsOffWithDistanceAndScalesOnHeadshots )
     SW_EXPECT_NEAR_EQUAL( 10.0f, DamageMath::computeWeaponDamage( *pSmg, 99.0f, false ), 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( 30.0f, DamageMath::computeWeaponDamage( *pSmg, 5.0f, true ), 1.0e-4f );
 
-    const WeaponDef* pBow = catalog.findWeapon( hashed_string( "bow" ) );
+    const WeaponDef* pBow = catalog.find( hashed_string( "bow" ) );
     SW_EXPECT_NEAR_EQUAL( 1.0f, DamageMath::computeFalloffScale( *pBow, 500.0f ), 1.0e-4f ); // 감쇠 없음
     SW_EXPECT_NEAR_EQUAL( 50.0f, pBow->_projectileSpeed, 1.0e-4f );
     SW_EXPECT_TRUE( pBow->_bAutomatic == SW_FALSE );

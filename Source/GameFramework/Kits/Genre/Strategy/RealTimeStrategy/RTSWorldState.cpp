@@ -134,7 +134,7 @@ namespace sw
             archive >> listGeneration[index];
             if ( StateArchiveUtil::readName( archive, defID ) == false )
                 return false;
-            unit._pDef = defID.empty() ? nullptr : _pCatalog->findUnit( defID );
+            unit._pDef = defID.empty() ? nullptr : _pCatalog->find( defID );
             if ( defID.empty() == false && unit._pDef == nullptr )
                 return false; // 카탈로그에서 빠진 유닛이라 판을 맞출 수 없다
             uint32 orderCount = 0;

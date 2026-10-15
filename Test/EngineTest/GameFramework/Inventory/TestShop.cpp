@@ -129,7 +129,7 @@ SW_TEST_CASE( ShopTest, BuyTakesMoneyAndStockAndFallsBackToItemValue )
 {
     ShopScene scene;
     SW_ASSERT_TRUE( scene._bLoaded );
-    const ShopDef* pGeneral = scene._shopCatalog.findShop( idGeneral() );
+    const ShopDef* pGeneral = scene._shopCatalog.find( idGeneral() );
     SW_ASSERT_NOT_NULL( pGeneral );
     SW_EXPECT_TRUE( pGeneral->_currency == idGold() ); // 통화를 적지 않으면 Gold
     SW_EXPECT_EQUAL( 3, static_cast<int32>( pGeneral->_listStock.size() ) );
@@ -188,7 +188,7 @@ SW_TEST_CASE( ShopTest, RequirementIsKeptAsTextAndLockedUntilTheGameSaysSo )
 {
     ShopScene scene;
     SW_ASSERT_TRUE( scene._bLoaded );
-    const ShopStockDef* pStock = scene._shopCatalog.findShop( idGeneral() )->findStock( idSword() );
+    const ShopStockDef* pStock = scene._shopCatalog.find( idGeneral() )->findStock( idSword() );
     SW_ASSERT_NOT_NULL( pStock );
     SW_EXPECT_TRUE( pStock->_requirement == "flag:chapter2 && !flag:banned" ); // 뜻은 모른 채 글자 그대로
     SW_EXPECT_EQUAL( -1, pStock->_count );                                     // 재고를 적지 않으면 끝없음
@@ -200,7 +200,7 @@ SW_TEST_CASE( ShopTest, RequirementIsKeptAsTextAndLockedUntilTheGameSaysSo )
     scene._shop.setConditionEvaluator( &evaluator );
     SW_EXPECT_TRUE( scene._shop.buy( idGeneral(), idSword(), 1, scene._wallet, scene._inventory ) == ShopResult::Locked );
     SW_EXPECT_TRUE( evaluator._lastExpression == "flag:chapter2 && !flag:banned" );
-    SW_EXPECT_TRUE( scene._shop.isUnlocked( *scene._shopCatalog.findShop( idGeneral() )->findStock( idPotion() ) ) ); // 조건 없는 줄은 묻지 않는다
+    SW_EXPECT_TRUE( scene._shop.isUnlocked( *scene._shopCatalog.find( idGeneral() )->findStock( idPotion() ) ) ); // 조건 없는 줄은 묻지 않는다
 
     evaluator._bOpen = true;
     SW_EXPECT_TRUE( scene._shop.buy( idGeneral(), idSword(), 2, scene._wallet, scene._inventory ) == ShopResult::Ok );

@@ -230,7 +230,7 @@ namespace sw
     void ActionCombatRig::startMove( int32 comboIndex )
     {
         const hashed_string& moveID = _pCombo->_listMove[static_cast<size_t>( comboIndex )];
-        const MoveFrameData* pMove  = _pMoves->findMove( moveID );
+        const MoveFrameData* pMove  = _pMoves->find( moveID );
         if ( pMove == nullptr )
             return;
         _timeline.start( *pMove );

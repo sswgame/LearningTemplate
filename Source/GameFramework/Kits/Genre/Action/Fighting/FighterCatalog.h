@@ -97,7 +97,7 @@ namespace sw
      * @details 기술의 프레임 데이터는 함께 넘긴 기반 `MoveCatalog` 에서 같은 id 로 복사해 온다(`frames="다른id"` 로 다른 id 를 지정할 수 있다). 프레임 데이터가 없거나 커맨드를 읽지 못하면 경고하고 그 기술만 버린다.
      *          `stance` 가 있으면 시작 자세는 `Stance` 다. `breakButtons` 는 커맨드 표기("1" 또는 "1+2")로 쓴다.
      */
-    class SW_KIT_API FighterCatalog
+    class SW_KIT_API FighterCatalog : public GameCatalog<FighterDef>
     {
     public:
         FighterCatalog();
@@ -106,12 +106,7 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, const MoveCatalog& moveCatalog, string_view sourceName = {} );
         void               addFighter( const FighterDef& fighter );
 
-        const FighterDef*         findFighter( const hashed_string& id ) const { return _catalog.find( id ); }
-        const vector<FighterDef>& getFighters() const { return _catalog.getAll(); }
-
     private:
         uint32 loadRoot( const XMLNode& root, const MoveCatalog& moveCatalog, string_view sourceName );
-
-        GameCatalog<FighterDef> _catalog;
     };
 } // namespace sw

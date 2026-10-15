@@ -291,7 +291,7 @@ namespace sw::editor
             if ( def._name == slot && def._accept.empty() == false )
                 accepted = def._accept;
         }
-        for ( const ItemDef& item : pCatalog->getItems() )
+        for ( const ItemDef& item : pCatalog->getAll() )
         {
             if ( item.isEquipment() && item._equipSlot == accepted )
                 outListItem.push_back( item._id );

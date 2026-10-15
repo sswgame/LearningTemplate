@@ -291,7 +291,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, MoveTimelineReplaysAfterRestore )
     jab._active   = 2;
     jab._recovery = 6;
     MoveCatalog catalog;
-    catalog.addMove( jab );
+    catalog.add( jab );
 
     MoveTimeline timeline;
     timeline.start( jab );

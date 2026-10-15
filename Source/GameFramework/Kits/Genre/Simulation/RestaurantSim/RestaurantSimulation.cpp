@@ -951,7 +951,7 @@ namespace sw
     {
         if ( _pShopCatalog == nullptr )
             return;
-        const vector<ShopDef>& listShop = _pShopCatalog->getShops();
+        const vector<ShopDef>& listShop = _pShopCatalog->getAll();
         const int32            day      = _pClock != nullptr ? _pClock->getDay() : 0;
         for ( int32 shopIndex = 0; shopIndex < static_cast<int32>( listShop.size() ); ++shopIndex )
         {
@@ -1028,7 +1028,7 @@ namespace sw
 
     const RecipeDef* RestaurantSimulation::findRecipe( const DishDef& dish ) const
     {
-        return _pRecipeCatalog != nullptr ? _pRecipeCatalog->findRecipe( dish._recipeID ) : nullptr;
+        return _pRecipeCatalog != nullptr ? _pRecipeCatalog->find( dish._recipeID ) : nullptr;
     }
 
     float32 RestaurantSimulation::computeDishDemand( const DishDef& dish, int64 price ) const

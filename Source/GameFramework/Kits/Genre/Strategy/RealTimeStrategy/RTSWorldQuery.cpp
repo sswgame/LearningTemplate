@@ -17,7 +17,6 @@ namespace sw
     {
         struct RTSWorldQueryInternal
         {
-
             static bool isGround( const RTSUnit& unit ) { return unit._pDef->_bAir == SW_FALSE; }
         };
     } // namespace
@@ -65,7 +64,7 @@ namespace sw
 
     bool RTSWorld::canPlaceBuilding( const hashed_string& buildingID, const int2& cell, RTSUnitID ignoreUnit ) const
     {
-        const RTSUnitDef* pDef = _pCatalog != nullptr ? _pCatalog->findUnit( buildingID ) : nullptr;
+        const RTSUnitDef* pDef = _pCatalog != nullptr ? _pCatalog->find( buildingID ) : nullptr;
         if ( pDef == nullptr || pDef->_kind != RTSUnitKind::Building )
             return false;
         const int32 footprint = pDef->_footprint;
@@ -118,7 +117,7 @@ namespace sw
 
     bool RTSWorld::findBuildSite( const hashed_string& buildingID, const float3& nearPosition, int32 minRadius, int32 maxRadius, int2& outCell ) const
     {
-        const RTSUnitDef* pDef = _pCatalog != nullptr ? _pCatalog->findUnit( buildingID ) : nullptr;
+        const RTSUnitDef* pDef = _pCatalog != nullptr ? _pCatalog->find( buildingID ) : nullptr;
         if ( pDef == nullptr || pDef->_kind != RTSUnitKind::Building )
             return false;
         if ( pDef->_bExtractor )

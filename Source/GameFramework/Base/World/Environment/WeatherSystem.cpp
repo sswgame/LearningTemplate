@@ -52,7 +52,7 @@ namespace sw
             const XMLNode valueNode = node.findChild( "Values" );
             if ( valueNode )
                 (void)weather._values.loadFromAttributes( valueNode ); // 읽은 속성 수만 돌려준다 — 없으면 빈 값이다
-            (void)_catalog.add( weather );
+            (void)add( weather );
             ++loadedCount;
         }
         return loadedCount;
@@ -83,14 +83,14 @@ namespace sw
         if ( _pCatalog == nullptr )
             return nullptr;
         float32 total = 0.0f;
-        for ( const WeatherDef& weather : _pCatalog->getWeathers() )
+        for ( const WeatherDef& weather : _pCatalog->getAll() )
         {
             total += &weather == pExclude ? 0.0f : weather.computeWeight( season );
         }
         if ( total <= 0.0f )
             return pExclude; // 다른 것이 없다 — 그대로 이어간다
         float32 pick = random.nextFloat() * total;
-        for ( const WeatherDef& weather : _pCatalog->getWeathers() )
+        for ( const WeatherDef& weather : _pCatalog->getAll() )
         {
             const float32 weight = &weather == pExclude ? 0.0f : weather.computeWeight( season );
             if ( pick < weight )
@@ -127,7 +127,7 @@ namespace sw
 
     void WeatherSystem::forceWeather( const hashed_string& weatherID, float32 duration, bool bImmediate )
     {
-        const WeatherDef* pWeather = _pCatalog != nullptr ? _pCatalog->findWeather( weatherID ) : nullptr;
+        const WeatherDef* pWeather = _pCatalog != nullptr ? _pCatalog->find( weatherID ) : nullptr;
         if ( pWeather == nullptr )
             return;
         if ( pWeather != _pCurrent )
@@ -191,8 +191,8 @@ namespace sw
         archive >> transitionElapsed;
         if ( bRead == false || archive.isError() )
             return false;
-        const WeatherDef* pCurrent  = currentID.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->findWeather( currentID );
-        const WeatherDef* pPrevious = previousID.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->findWeather( previousID );
+        const WeatherDef* pCurrent  = currentID.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->find( currentID );
+        const WeatherDef* pPrevious = previousID.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->find( previousID );
         const bool        bKnown    = ( currentID.empty() || pCurrent != nullptr ) && ( previousID.empty() || pPrevious != nullptr );
         if ( bKnown == false )
             return false;
