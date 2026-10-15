@@ -195,6 +195,12 @@ namespace sw
         bool isTransitioning() const;
         /** @brief 진행 중인 비동기 씬 로드를 취소하거나 끝날 때까지 기다리고 대기열을 비웁니다(핫 리로드 · 종료 펜스용). */
         void cancelPendingAsyncLoads();
+        /**
+         * @brief 워커에서 짓는 중인 씬 로드가 끝날 때까지 기다립니다. 결과는 버리지 않고 다음 `update` 가 받습니다(언리얼 `FlushAsyncLoading` 자리).
+         * @details 로드 잡은 타입 표(`TypeInfo` 의 상속 프로퍼티 · 검증 캐시)를 읽고 고친다. 타입을 등록 · 해제하는 쪽은 모든 타입의 그 캐시를 비우므로
+         *          먼저 이것을 불러 둘이 겹치지 않게 한다. 짓는 동안 표가 바뀌지 않으니 세대 비교(`_typeTableGeneration`)의 다시 짓기는 기다린 뒤의 등록에서만 일어난다.
+         */
+        void waitForPendingLoad() const;
         /** @brief 로드된 씬을 모두 반환합니다. */
         const vector<unique_ptr<Scene>>& getLoadedScenes() const { return _listLoadedScene; }
         /** @brief 이 매니저와 그 씬이 쓰는 엔진 서비스 묶음입니다. */

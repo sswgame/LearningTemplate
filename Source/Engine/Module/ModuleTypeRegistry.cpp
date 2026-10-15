@@ -102,6 +102,8 @@ namespace sw
             }
 
             // 컴포넌트 생성 함수는 타입과 함께 오른다(`TypeInfo::_addComponent`) — 씬마다 팩토리 표를 다시 채울 일이 없다.
+            // 등록은 모든 타입의 상속 캐시를 비운다 — 워커가 짓는 씬 로드가 그 캐시를 읽는 중이면 경합이다. 먼저 끝나기를 기다린다.
+            getSubsystem<SceneManager>().waitForPendingLoad();
             getSubsystem<TypeRegistry>().registerPendingTypes( moduleName, pTypeHead, pEnumHead );
 
             for ( const auto& scene : getSubsystem<SceneManager>().getLoadedScenes() )
@@ -131,6 +133,7 @@ namespace sw
         void unregisterModuleTypes( string_view moduleName )
         {
             getModuleHeadCache().erase( string{ moduleName } );
+            getSubsystem<SceneManager>().waitForPendingLoad(); // 해제도 상속 캐시를 비운다(등록과 같은 이유)
             // 씬은 엔진이 소유해 모듈보다 오래 산다. 이 모듈 타입의 인스턴스가 남아 있으면 vtable 이 사라진 객체가 된다.
             // 타입(생성 함수 포함)을 걷기 **전에** 인스턴스부터 지운다(소멸자가 아직 있는 동안).
             for ( const auto& scene : getSubsystem<SceneManager>().getLoadedScenes() )

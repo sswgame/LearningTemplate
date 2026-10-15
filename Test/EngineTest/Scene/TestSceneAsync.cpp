@@ -152,6 +152,12 @@ SW_TEST_CASE( SceneAsyncTest, AsyncRequestCompletes )
     manager.getActiveScene()->getObjectManager()->update( 0.0f );
     SW_EXPECT_EQUAL( size_t( 2 ), manager.getActiveScene()->getObjectManager()->getAllGameObjects().size() );
 
+    // 타입 등록 전에 부르는 기다림(`waitForPendingLoad`)은 잡이 끝날 때까지 막고 결과를 남긴다 — 다음 전환 한 번이 그 씬을 바로 받는다.
+    SW_ASSERT_TRUE( manager.requestLoadAsync( xmlPath ) );
+    manager.waitForPendingLoad();
+    manager.updateTransitions();
+    SW_EXPECT_FALSE_MSG( manager.isTransitioning(), "waitForPendingLoad returned before the load job finished, or dropped its result" );
+
     manager.shutdown();
 }
 
