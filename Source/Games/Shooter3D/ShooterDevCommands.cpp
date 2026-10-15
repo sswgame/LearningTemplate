@@ -22,9 +22,6 @@ namespace sw
     {
         struct ShooterDevCommandsInternal
         {
-            /** @brief `restoreHealth` 에 넘기는 양입니다. `Vitality::heal` 이 최대 체력에서 자르므로 가득 채운다. */
-            static constexpr float32 kFullHealAmount = 1.0e9f;
-
             /** @brief 활성 씬의 슈터 플레이어를 모읍니다. 씬이 없거나 하나도 없으면 답을 채우고 false 입니다. */
             static bool collectPlayers( vector<ShooterPlayerComponent*>& outListPlayer, string& outReply )
             {
@@ -73,7 +70,7 @@ namespace sw
                 {
                     if ( pPlayer->isAlive() == false )
                         continue;
-                    pPlayer->restoreHealth( kFullHealAmount );
+                    pPlayer->restoreHealth( pPlayer->getMaxHealth() ); // 최대 체력만큼 채우면 가득 찬다(heal 이 최대에서 자른다).
                     ++healedCount;
                 }
                 outReply = "cheat.shooter.heal healed " + to_string( healedCount ) + " of " + to_string( listPlayer.size() ) + " player(s)";

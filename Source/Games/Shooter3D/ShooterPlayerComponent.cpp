@@ -55,10 +55,6 @@ namespace sw
             static constexpr const utf8* kBodyMuzzleSocket   = "MainHand.Muzzle";
             static constexpr const utf8* kEyesSocket         = "Eyes";
 
-            static constexpr float4 kEnemyHitColor{ 1.0f, 0.45f, 0.2f, 1.0f };
-            static constexpr float4 kCoverHitColor{ 0.9f, 0.85f, 0.6f, 1.0f };
-            static constexpr float4 kTracerColor{ 3.0f, 2.2f, 0.6f, 1.0f };
-            static constexpr float4 kMuzzleFlashColor{ 4.0f, 2.8f, 0.8f, 1.0f };
             // 사운드 이벤트 이름(shooter3d.audioevents.xml). 플레이어 자신의 소리라 2D 로 낸다.
             static constexpr const utf8* kSoundLand     = "Land";
             static constexpr const utf8* kSoundHitEnemy = "HitEnemy";
@@ -191,6 +187,10 @@ namespace sw
         , _hitEffectLifetime{ 0.12f }
         , _tracerLifetime{ 0.07f }
         , _tracerWidth{ 0.025f }
+        , _enemyHitColor{ 1.0f, 0.45f, 0.2f, 1.0f }
+        , _coverHitColor{ 0.9f, 0.85f, 0.6f, 1.0f }
+        , _tracerColor{ 3.0f, 2.2f, 0.6f, 1.0f }
+        , _muzzleFlashColor{ 4.0f, 2.8f, 0.8f, 1.0f }
         , _arrWeapon{}
         , _vitality{}
         , _weaponSockets{}
@@ -495,7 +495,7 @@ namespace sw
         EffectRequest flash;
         flash._position = muzzle;
         flash._size     = _bFirstPerson == SW_TRUE ? 0.05f : 0.12f;
-        flash._color    = Internal::kMuzzleFlashColor;
+        flash._color    = _muzzleFlashColor;
         flash._lifetime = 0.05f;
         _listPendingEffect.push_back( flash );
         bool bAnyHit   = false;
@@ -513,7 +513,7 @@ namespace sw
                 EffectRequest effect;
                 effect._position = end;
                 effect._size     = bHitEnemy ? 0.18f : 0.1f;
-                effect._color    = bHitEnemy ? Internal::kEnemyHitColor : Internal::kCoverHitColor;
+                effect._color    = bHitEnemy ? _enemyHitColor : _coverHitColor;
                 effect._lifetime = _hitEffectLifetime;
                 _listPendingEffect.push_back( effect );
                 bHitCover = bHitCover || ( bHitEnemy == false && end._y > 0.05f );
@@ -724,7 +724,7 @@ namespace sw
             }
             for ( const TracerRequest& tracer : _listPendingTracer )
             {
-                pDirector->spawnTracer( tracer._from, tracer._to, _tracerWidth, Internal::kTracerColor, _tracerLifetime );
+                pDirector->spawnTracer( tracer._from, tracer._to, _tracerWidth, _tracerColor, _tracerLifetime );
             }
         }
         _listPendingEffect.clear();
