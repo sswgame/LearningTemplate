@@ -80,6 +80,8 @@ namespace sw
 
         /**
          * @brief 높이장과 스플랫을 다시 읽고 청크를 다시 만듭니다. 등록 전이면 데이터만 읽습니다.
+         * @details 같은 높이장 에셋을 다시 읽으면(트랜스폼 · 다른 프로퍼티가 바뀌었다) 저장하지 않은 높이 · 스플랫 편집을 `writeState` 로 들고 건너
+         *          다시 읽은 값에 되돌려 쓴다 — 지형을 옮기거나 플레이를 시작하는 것이 칠한 것을 버리지 않는다(언리얼 랜드스케이프와 같다). 경로가 바뀌면 버린다.
          * @return 높이장을 읽었으면 true 를 반환합니다(경로가 비었거나 읽지 못하면 false 이며, 그리지 않습니다).
          */
         [[nodiscard]] bool reloadTerrain();
@@ -189,6 +191,8 @@ namespace sw
         void markChunksDirty();
         /** @brief 청크 배치를 레지스트리에서 빼고 놓습니다. */
         void releaseChunks();
+        /** @brief 편집을 넘기지 않고 디스크 에셋을 읽습니다(`reloadTerrain` 의 본체). 칠한 것과 올린 높이는 버려집니다. */
+        [[nodiscard]] bool reloadTerrainFromDisk();
         /** @brief 지금 LOD 로 청크 배치를 모두 만들어 등록합니다. */
         void createChunks();
         /** @brief 청크 하나의 메시를 현재 LOD 와 이웃 LOD 로 다시 만들어 배치에 적용합니다. */
@@ -243,5 +247,6 @@ namespace sw
         uint32              _splatRevision;         ///< `writeLayerWeights` 마다 오른다(`getSplatRevision`)
         atomic<bool>        _bOriginDirty;          ///< 오너가 움직여 지형 원점이 낡았다
         bool                _bHeightsWritten;       ///< 마지막 `reloadTerrain` 뒤에 `writeHeights` 가 성공했다(`writeState` 가 싣는다)
+        string              _loadedHeightfieldPath; ///< 마지막으로 읽은 높이장 경로 — 같은 경로를 다시 읽을 때만 편집을 넘긴다
     };
 } // namespace sw

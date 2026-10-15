@@ -119,6 +119,7 @@ namespace sw
         , _splatRevision{ 0 }
         , _bOriginDirty{ false }
         , _bHeightsWritten{ false }
+        , _loadedHeightfieldPath{}
     {
         setCanEverTick( true );
         setTickGroup( TickGroup::PostUpdate );
@@ -237,6 +238,23 @@ namespace sw
 
     bool TerrainComponent::reloadTerrain()
     {
+        // 같은 에셋을 다시 읽으면 저장하지 않은 편집을 넘긴다(헤더 설명). 다시 읽은 크기가 맞지 않으면 restoreState 가 알리고 디스크 값으로 둔다.
+        vector<uint8> listCarriedEdit;
+        const bool    bCarryEdits = hasWrittenEdits() && _heightfieldPath == _loadedHeightfieldPath;
+        if ( bCarryEdits )
+        {
+            Archive archive;
+            writeState( archive );
+            listCarriedEdit.assign( archive.getData(), archive.getData() + archive.getSize() );
+        }
+        const bool bLoaded = reloadTerrainFromDisk();
+        if ( bLoaded && listCarriedEdit.empty() == false )
+            restoreState( std::move( listCarriedEdit ) );
+        return bLoaded;
+    }
+
+    bool TerrainComponent::reloadTerrainFromDisk()
+    {
         releaseChunks();
         _heightfield.shutdown();
         _listChunkGeneration.clear();
@@ -248,6 +266,7 @@ namespace sw
             return false;
 
         HeightfieldData data;
+        _loadedHeightfieldPath = _heightfieldPath;
         if ( data.loadFromResource( _heightfieldPath ) == false )
             return false;
         if ( _heightfield.initialize( data, getWorldPosition(), _size, _heightMin, _heightMax ) == false )

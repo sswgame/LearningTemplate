@@ -7,6 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/EditorExports.h"
@@ -31,6 +32,8 @@ namespace sw::editor
          * @param bLoadOnOpen true 이면 포커스가 없어도 첫 draw 에서 로드를 요청합니다. 기본 문서를 여는 용도입니다.
          */
         explicit EditorDocumentPanel( EditorAssetType kind, bool bLoadOnOpen );
+        /** @brief 쌓여 있는 되돌리기 항목이 사라진 패널을 부르지 않게 표지를 비웁니다(백엔드 교체는 패널을 다시 만들어도 되돌리기 스택을 남긴다). */
+        ~EditorDocumentPanel() override;
 
         /** @brief 포커스가 이 종류이고 현재 로드 경로와 다르면 true 입니다. */
         bool hasNewFocusedDocument() const;
@@ -114,6 +117,7 @@ namespace sw::editor
         string                                _pendingFocusPath;
         string                                _documentUndoBaseline;
         string                                _lastSavedDocumentText;
+        shared_ptr<EditorDocumentPanel*>      _pUndoTarget; ///< 되돌리기 항목이 이 패널을 찾는 표지 — 패널이 사라지면 nullptr 이다
         vector<string>                        _listRecentPath;
         vector<string>                        _listOpenCandidate; ///< 열기 팝업을 열 때 모은 이 종류의 에셋(리소스 id)
         fixed_string<constant::kMaxBuffer128> _openFilter;

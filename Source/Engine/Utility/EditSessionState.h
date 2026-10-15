@@ -42,6 +42,14 @@ namespace sw
         void store( Snapshot snapshot );
         /** @brief 맡긴 상태가 있으면(이 프로세스에서 앞선 에디터 인스턴스가 내려갔으면) true 입니다. */
         bool hasSnapshot() const { return _bStored; }
+
+        /**
+         * @brief 호스트가 에디터 인스턴스를 다시 만들되 모듈 이미지는 내리지 않는 동안(백엔드 교체) true 로 둡니다.
+         * @details 그동안 내려가는 인스턴스는 자기 모듈 코드를 가진 되돌리기 명령(지형 붓질 · 문서 편집)을 스택에서 떼지 않는다 — 코드가 그대로 매핑돼 있어
+         *          다음 인스턴스가 그 명령을 되돌릴 수 있다. 이미지를 내리는 리로드 · 종료에서는 false 이고, 인스턴스가 명령을 뗀다.
+         */
+        void setModuleImageKept( bool bKept ) { _bModuleImageKept = bKept; }
+        bool isModuleImageKept() const { return _bModuleImageKept; }
         /**
          * @brief 맡긴 상태를 찾아갑니다. 맡긴 것이 없거나 씬 세대가 @p sceneGeneration 과 다르면 false 입니다. 찾아가든 못 하든 맡긴 것은 비웁니다.
          */
@@ -50,5 +58,6 @@ namespace sw
     private:
         Snapshot _snapshot;
         bool     _bStored;
+        bool     _bModuleImageKept;
     };
 } // namespace sw

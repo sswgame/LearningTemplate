@@ -664,7 +664,10 @@ namespace sw::editor
     void ImGuiEditor::shutdownEditorContext()
     {
         // Undo 스택에서는 이 모듈의 코드를 가진 명령과 편집 리스너만 제거한다. 오브젝트 편집은 엔진 데이터 명령이므로 남는다.
-        ImGuiEditorInternal::releaseModuleUndoCommands();
+        // 호스트가 이미지를 내리지 않고 인스턴스만 다시 만들면(백엔드 교체) 모듈 명령도 남긴다 — 다음 인스턴스가 되돌릴 수 있다.
+        const EditSessionState* pEditSession = editor::findSubsystem<EditSessionState>();
+        if ( pEditSession == nullptr || pEditSession->isModuleImageKept() == false )
+            ImGuiEditorInternal::releaseModuleUndoCommands();
         if ( _editorContext == nullptr )
             return;
         ImGuiEditorInternal::storeEditSession( *_editorContext );
