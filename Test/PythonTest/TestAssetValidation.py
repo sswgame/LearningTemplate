@@ -261,6 +261,51 @@ class CheckTest(AssetValidationFixture):
                                       "elements": ["Unit"], "reference_attributes": ["producedBy", "requires"]})
         self.assertEqual(2, len(messages), messages)
 
+    def testMissingReferenceReadsJsonAndFolders(self) -> None:
+        self.put("Resource/game/p/models/here.mesh", makeMeshInternal(1))
+        self.put("Resource/game/p/models/clips/idle.animclip", b"x")
+        self.put("Resource/game/p/data/a.seq.json",
+                 '{"_listTrack": [{"_mesh": "game/p/models/here.mesh"}, {"_mesh": "game/p/models/gone.mesh"}], '
+                 '"_clipFolder": "game/p/models/noclips", "_name": "game/p/not a path"}')
+        self.put("Resource/game/p/maps/a.scene.xml",
+                 '<Scene><x _clipFolder="game/p/models/clips"/><y _clipFolder="game/p/models/gone"/><z _note="game/p/models/gone"/></Scene>')
+        messages = self.findMessages({"name": "r", "check": "missing_reference", "include_patterns": ["*.xml", "*.json"]})
+        self.assertEqual(3, len(messages), messages)
+        self.assertTrue(any("gone.mesh" in message for message in messages), messages)
+        self.assertTrue(any("noclips" in message for message in messages), messages)
+        self.assertTrue(any("models/gone'" in message for message in messages), messages)  # 폴더는 `…Folder` 칸만 본다(_note 는 아니다)
+
+    def testComponentReferenceFollowsDerivedTypesAndPackTables(self) -> None:
+        self.put("Source/Engine/Body.h", "class SW_API BodyComponent : public Component\n{};\nclass SW_API WheelComponent final : public BodyComponent\n{};\n")
+        self.put("Resource/engine/physics/settings.xml", '<Settings><LayerDef _name="Default"/><LayerDef _name="Static"/></Settings>')
+        self.put("Resource/game/p/data/p.input.xml", '<InputMap><action name="Jump"/></InputMap>')
+        self.put("Resource/game/q/data/q.input.xml", '<InputMap><action name="Dash"/></InputMap>')
+        self.put("Resource/game/p/maps/a.scene.xml",
+                 '<Scene><GameObject><_listComponent><BodyComponent _layer="Static" _action="Jump"/><WheelComponent _layer="Statik" _action="Dash"/>'
+                 '<OtherComponent _layer="Nowhere"/><BodyComponent _layer="None" _action=""/></_listComponent></GameObject></Scene>')
+        layer = {"name": "l", "check": "component_reference", "include_patterns": ["*.scene.xml"], "component_types": ["BodyComponent"],
+                 "attributes": ["_layer"], "target_patterns": ["engine/physics/settings.xml"], "target_elements": ["LayerDef"], "id_attribute": "_name"}
+        messages = self.findMessages(layer)
+        self.assertEqual(1, len(messages), messages)  # 파생 타입의 오타만 — 다른 타입의 같은 이름 칸 · 빈 값 · None 은 보지 않는다
+        self.assertIn("Statik", messages[0])
+        action = {"name": "a", "check": "component_reference", "include_patterns": ["*.scene.xml"], "attributes": ["_action"],
+                  "target_patterns": ["{pack}/*.input.xml"], "target_elements": ["action"], "id_attribute": "name"}
+        messages = self.findMessages(action)
+        self.assertEqual(1, len(messages), messages)  # 다른 팩(q)의 액션은 이 팩에서 풀리지 않는다
+        self.assertIn("Dash", messages[0])
+
+    def testComponentReferenceUsesTheCatalogTheElementNames(self) -> None:
+        self.put("Resource/game/p/data/a.cameras.xml", '<Cameras><Preset id="near"/></Cameras>')
+        self.put("Resource/game/p/data/b.cameras.xml", '<Cameras><Preset id="far"/></Cameras>')
+        self.put("Resource/game/p/maps/a.scene.xml",
+                 '<Scene><GameObject><_listComponent><Director _catalogPath="game/p/data/a.cameras.xml" _initialPreset="far"/>'
+                 '<Director _catalogPath="game/p/data/b.cameras.xml" _initialPreset="far"/></_listComponent></GameObject></Scene>')
+        messages = self.findMessages({"name": "c", "check": "component_reference", "include_patterns": ["*.scene.xml"],
+                                      "attributes": ["_initialPreset"], "catalog_attribute": "_catalogPath",
+                                      "target_patterns": ["game/p/data/*.cameras.xml"], "target_elements": ["Preset"]})
+        self.assertEqual(1, len(messages), messages)  # 첫 디렉터는 자기 카탈로그(a)에 없는 이름을 썼다
+        self.assertIn("a.cameras.xml", messages[0])
+
 
 class RepositoryRulesTest(unittest.TestCase):
     """저장소의 규칙 표가 읽히고, 지금 `Resource/` 에 오류 심각도 결과가 없다(게이트 `CheckAssetRules` 와 같은 판정)."""

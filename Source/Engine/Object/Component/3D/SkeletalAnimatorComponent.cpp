@@ -270,7 +270,7 @@ namespace sw
         _currentState     = _graphPlayer.getCurrentStateName().c_str();
         _stateTime        = 0.0f;
         if ( bFound == false && stateName.empty() == false )
-            SW_LOG_WARNING( "Animation clip '%#' was not found in '%#'", stateName.c_str(), _clipFolder.c_str() );
+            SW_LOG_ERROR( "Animation clip '%#' was not found in '%#'", stateName.c_str(), _clipFolder.c_str() );
         if ( _pUnit != nullptr )
             _pUnit->markPoseDirty();
         return bFound;
@@ -289,7 +289,7 @@ namespace sw
     {
         if ( preloadClip( desc._clipName ) == false )
         {
-            SW_LOG_WARNING( "Animation layer clip '%#' was not found in '%#'", desc._clipName.c_str(), _clipFolder.c_str() );
+            SW_LOG_ERROR( "Animation layer clip '%#' was not found in '%#'", desc._clipName.c_str(), _clipFolder.c_str() );
             return -1;
         }
         LayerState layer{};

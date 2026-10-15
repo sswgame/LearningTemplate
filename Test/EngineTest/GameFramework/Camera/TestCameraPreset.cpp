@@ -661,3 +661,49 @@ SW_TEST_CASE( CameraPresetTest, CycleActionSwitchesToTheNextPreset )
     scope.unbind<InputManager>();
     input.shutdown();
 }
+
+/**
+ * @brief [CameraPresetTest] 켠 프리셋이 받는 조작의 액션이 입력 맵에 없으면 프리셋마다 한 번 알리고, 받지 않는 조작의 액션은 없어도 조용하다
+ * @details 맵에 없는 액션 질의는 로그 없이 0 이다 — 액션 이름을 바꾸면 그 프리셋의 줌 · 둘러보기가 조용히 죽는다.
+ */
+SW_TEST_CASE( CameraPresetTest, PresetWarnsOnceAboutAnActionTheInputMapLacks )
+{
+    InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    SubsystemScope        scope; // input 보다 먼저 사라진다(뒤에 선언)
+    game::ScopedGameScope activeScope( scope );
+    SW_EXPECT_TRUE( scope.bind( &input ) );
+    input.getInputMap().bind( "CycleCamera", Key::C );
+    input.getInputMap().bindMouseDelta( "Camera.Look" );
+
+    GameObjectManager manager;
+    GameObject*       pCameraObject = manager.createGameObject( hashed_string( "DirectedCamera" ) );
+    SW_ASSERT_NOT_NULL( pCameraObject );
+    SW_ASSERT_NOT_NULL( pCameraObject->addComponent<CameraComponent>() );
+    CameraDirectorComponent* pDirector = pCameraObject->addComponent<CameraDirectorComponent>();
+    SW_ASSERT_NOT_NULL( pDirector );
+    SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXMLText( R"(<CameraPresets>
+        <Preset id="looker"><View mode="Orbit" distance="5"/><Input sensitivity="0.004"/></Preset>
+        <Preset id="zoomer"><View mode="Orbit" distance="9"/><Input sensitivity="0.004" zoomStep="0.85"/></Preset>
+    </CameraPresets>)",
+                                                             "missing-action-test" ) );
+    pDirector->setCycleAction( hashed_string( "CycleCamera" ) );
+    manager.beginPlay();
+
+    test::ScopedLogCollector logs;
+    pDirector->onTick( 0.016f );
+    pDirector->onTick( 0.016f );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "which the InputMap does not have" ) == 0u, logs.joined().c_str() ); // 둘러보기 액션은 맵에 있다
+
+    input.postRawEvent( RawInputEvent::makeKeyDown( Key::C ) );
+    input.beginFrame( 0.016f );
+    pDirector->onTick( 0.016f );
+    SW_ASSERT_TRUE( pDirector->getActivePresetID() == hashed_string( "zoomer" ) );
+    pDirector->onTick( 0.016f );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "Camera preset 'zoomer' reads action 'Camera.Zoom'" ) == 1u, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "which the InputMap does not have" ) == 1u, logs.joined().c_str() );
+
+    manager.endPlay();
+    scope.unbind<InputManager>();
+    input.shutdown();
+}
