@@ -159,6 +159,7 @@ Scripts/
   │     │     ├── CheckCmakeConventions.py    # CMake 명명 규칙
   │     │     ├── CheckCmakeReadme.py         # cmake/README.md 가 가리키는 파일 · 함수가 실재하는지
   │     │     ├── CheckDocPaths.py            # 문서(.md)의 링크 · 앵커 · 저장소 경로가 실재하는지, 모든 README 가 문서 지도에 있는지
+  │     │     ├── CheckDataDrivenStructure.py # 코드의 에셋 경로 · 조용한 폴백 · 버린 읽기 결과가 기준선(rules 의 [baseline])을 넘지 않는지 — --summary 가 진척 표
   │     │     ├── CheckBacklog.py             # 백로그 항목 번호가 하나뿐인지, 상태 태그가 허용값인지, 백로그를 가리키는 글이 맞는 파일 · 항목을 가리키는지
   │     │     ├── CheckPythonConventions.py   # 파이썬 이름 · 모양 규칙
   │     │     ├── CheckScriptEntryPoints.py   # 진입점이 모듈 수준에서 common 을 import 하는지(콘솔 UTF-8) · main(argv) 로 인자를 받는지

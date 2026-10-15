@@ -169,6 +169,19 @@ GameObject* pTarget = pManager->resolveGameObject( _targetHandle );   // 쓸 때
 | `nanoseconds / 1000000000` | `nanoseconds / constant::kNanosecondsPerSecond`(이름 붙은 비율) |
 | `0x53574846`(4 글자 표식) | `FourCcUtil::make( "SWHF" )` |
 
+### 데이터 주도 규칙
+
+값의 정본은 데이터 파일(XML · JSON · TOML)이고 코드 · 헤더는 형식만 가진다(결정 기록 5-4 "유지보수성을 위한 데이터화").
+
+| 쓰지 않는 것 | 쓰는 것 |
+| :--- | :--- |
+| 코드에 박은 에셋 경로 `"engine/shaders/forwardlit.hlsl"` | 그 경로를 읽는 데이터 파일의 칸(엔진 기본 에셋 표 · 게임 설정 · 카탈로그). 새 경로도 거기 쓴다 |
+| `readOrDefault( key, 1.0f )` · `float32 fallback` 인자 · "using defaults" 로그 | 필수 값이 없으면 오류로 멈춘다. 선택 값의 기본은 스키마(리플렉션 Def 의 초기값)가 정한다 |
+| `(void)table.loadFromResource();` | 읽기 결과를 받아 실패를 알리거나 멈춘다 |
+| 파이썬 `except Exception: pass` · `os.environ.get( "X", "경로" )` | 예상한 예외만 잡고, 필수 설정이 없으면 `sys.exit` 로 멈춘다 |
+
+새로 들어오는 위반은 `CheckDataDrivenStructure` 가 기준선(`<종류>:<파일>` 마다 줄 수)으로 막는다. 기준선은 0 으로 수렴해야 하고, 형식으로 막힌 종류는 게이트에서 뺀다.
+
 ## 5. 헬퍼 · 이름공간 — [AGENTS.md › Helpers](../AGENTS.md#helpers-util-vs-internal)
 
 ```cpp
