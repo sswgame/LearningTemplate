@@ -28,6 +28,7 @@ from typing import Iterator
 from xml.etree import ElementTree
 
 from .CodeText import blankCommentsAndLiterals, blankMatch
+from .CookContract import kCookContractConfigRelative
 from .ConfigCatalog import (ConfigFileEntry, kKeyStyleJsonMember, kKeyStyleKeyTable, kKeyStyleXmlElementBare, kKeyStyleXmlMember,
                             kListConfigFile, kListLayerOrder, kListResourceSettingPattern, kSetConfigFolderNonConfig)
 
@@ -527,13 +528,11 @@ def collectArguments(repositoryRoot: Path) -> list[ArgumentDoc]:
 
 def collectBackendArgumentsInternal(repositoryRoot: Path, description: str) -> list[ArgumentDoc]:
     """RHI 백엔드 플래그 줄 — 쿠킹 표의 `rhi_backends` 줄마다 하나입니다."""
-    contractPath = repositoryRoot / "Config/Engine/CookContract.json"
-    if contractPath.is_file() is False:
-        return []
-    contract = json.loads(contractPath.read_text(encoding="utf-8"))
+    # 쿠킹 표는 저장소에 늘 있다 — 없으면 멈춘다(빈 목록이면 백엔드 인자가 문서에서 조용히 빠진다).
+    contract = json.loads((repositoryRoot / kCookContractConfigRelative).read_text(encoding="utf-8"))
     return [ArgumentDoc(enumName=row["command_line_argument"], listSpelling=[row["command_line_name"]], valueKind="플래그(`-이름`)",
                         description=f"{row['name']} 백엔드로 띄운다. {description}".strip())
-            for row in contract.get("rhi_backends", [])]
+            for row in contract["rhi_backends"]]
 
 
 @dataclass
@@ -574,7 +573,7 @@ def collectBuildOptions(reader: SourceTreeReader) -> list[BuildOptionDoc]:
     mapChoice: dict[str, list[str]] = {}
     # configure 가 쿠킹 표에서 읽는 값(`Source/Engine/CMakeLists.txt` 의 Shipping RHI 기본) — 글로는 풀 수 없어 표에서 같은 값을 읽는다.
     repositoryRoot = reader.root
-    mapKnownVariable = {"swContractDefaultRhi": [findMacroValuesInternal(repositoryRoot).get("SW_RHI_BACKEND_DEFAULT", "")]}
+    mapKnownVariable = {"swContractDefaultRhi": [findMacroValuesInternal(repositoryRoot)["SW_RHI_BACKEND_DEFAULT"]]}
     for relative, text in reader.iterFiles(("CMakeLists.txt", "cmake", "Source", "Test", "Tools/ReflectionParser"), (".cmake", "CMakeLists.txt")):
         mapVariable = dict(mapKnownVariable)
         for match in _kLocalSetRe.finditer(text):
@@ -593,8 +592,7 @@ def collectBuildOptions(reader: SourceTreeReader) -> list[BuildOptionDoc]:
             mapOption.setdefault(match.group(1), BuildOptionDoc(match.group(1), match.group(3), defaultText, match.group(4), [], relative))
         for match in _kStringsRe.finditer(text):
             mapChoice[match.group(1)] = expandCMakeWordsInternal(match.group(2).split(), mapVariable)
-    presetPath = repositoryRoot / "CMakePresets.json"
-    listPreset = json.loads(presetPath.read_text(encoding="utf-8")).get("configurePresets", []) if presetPath.is_file() else []
+    listPreset = json.loads((repositoryRoot / "CMakePresets.json").read_text(encoding="utf-8"))["configurePresets"]
     for option in mapOption.values():
         option.listChoice = mapChoice.get(option.name, [])
         option.listPreset = sorted(preset["name"] for preset in listPreset if option.name in preset.get("cacheVariables", {}))
@@ -910,20 +908,18 @@ def makeUserSettingsPage(listSchema: list[tuple[str, list[dict[str, str]]]]) -> 
                 rangeText = f"{setting.get('min', '-')} ~ {setting.get('max', '-')}"
                 if "step" in setting:
                     rangeText += f" (눈금 {setting['step']})"
-            target = setting.get("target", "") or ("input.keyBinding" if setting.get("type") == "keyBinding" else "게임 코드")
-            lines.append(f"| `{setting.get('id', '')}` | {setting.get('type', '')} | `{escapeCellInternal(setting.get('default', ''))}` | {rangeText} | "
-                         f"{setting.get('apply', 'confirm')} | `{escapeCellInternal(target)}` |")
+            # id · type · default 는 스키마의 필수 속성이다(없으면 KeyError). apply 를 생략하면 런타임이 confirm 으로 읽는다(UserSettings 스키마 규칙).
+            target = setting.get("target") or ("input.keyBinding" if setting["type"] == "keyBinding" else "게임 코드")
+            lines.append(f"| `{setting['id']}` | {setting['type']} | `{escapeCellInternal(setting['default'])}` | {rangeText} | "
+                         f"{setting.get('apply') or 'confirm'} | `{escapeCellInternal(target)}` |")
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 
 
 def findMacroValuesInternal(repositoryRoot: Path) -> dict[str, str]:
     """기본값 칸에 나오는 생성 매크로의 값입니다(`SW_RHI_BACKEND_DEFAULT` → 쿠킹 표의 기본 백엔드)."""
-    contractPath = repositoryRoot / "Config/Engine/CookContract.json"
-    if contractPath.is_file() is False:
-        return {}
-    contract = json.loads(contractPath.read_text(encoding="utf-8"))
-    return {"SW_RHI_BACKEND_DEFAULT": str(contract.get("default_rhi_backend", ""))}
+    contract = json.loads((repositoryRoot / kCookContractConfigRelative).read_text(encoding="utf-8"))
+    return {"SW_RHI_BACKEND_DEFAULT": str(contract["default_rhi_backend"])}
 
 
 def buildConfigReference(repositoryRoot: Path) -> tuple[dict[str, str], list[str]]:

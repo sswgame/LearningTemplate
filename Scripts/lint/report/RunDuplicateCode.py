@@ -157,10 +157,7 @@ class Finding( NamedTuple ):
 
 def normalizeFile( repositoryRoot: Path, path: Path, spec: LanguageSpec ) -> tuple[ list[ str ], list[ int ] ]:
     """주석·공백·머리말(include/import)·독스트링을 걷어낸 줄들과, 각 줄의 원래 줄 번호를 돌려줍니다."""
-    try:
-        rawLines = ( repositoryRoot / path ).read_text( encoding = "utf-8", errors = "replace" ).split( "\n" )
-    except OSError:
-        return [], []
+    rawLines = ( repositoryRoot / path ).read_text( encoding = "utf-8", errors = "replace" ).split( "\n" )   # 못 읽으면 멈춘다
 
     normalized: list[ str ] = []
     lineNumbers: list[ int ] = []

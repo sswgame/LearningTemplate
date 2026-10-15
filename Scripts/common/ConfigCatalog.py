@@ -14,6 +14,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .AssetValidation import kAssetRuleConfigRelative
+from .Constants import kFilePackConfig, kFileRuntimeEditorToolDefaults, kFileRuntimeEngineConfig
+from .CookContract import kCookContractConfigRelative
+from .PackFormat import kPackFormatConfigRelative
+
 # ------------------------------------------------------------------------------
 # 1) 층 — `docs/07_Configuration.md` 의 결정표와 같은 이름이다
 # ------------------------------------------------------------------------------
@@ -72,7 +77,7 @@ class ConfigFileEntry:
 kListConfigFile: tuple[ConfigFileEntry, ...] = (
     # --- 엔진 기본값 ---------------------------------------------------------------------------------------------------------
     ConfigFileEntry(
-        page="EngineConfig", pathPattern="Config/Engine/EngineConfig.json", layer=kLayerEngineDefault, fileFormat="json",
+        page="EngineConfig", pathPattern=kFileRuntimeEngineConfig, layer=kLayerEngineDefault, fileFormat="json",
         reader="`ConfigManager::ensureConfig<EngineConfig>` (`Engine` Config 단계)",
         readWhen="기동 · 에디터 핫 리로드(창 크기 · 백엔드처럼 기동 때만 쓰는 값은 다음 실행부터)",
         shipping="configure 때 exe 에 구워 넣음(`ShippingHostDefaults.h`) — 디스크의 파일은 읽지 않는다", bCommitted=True,
@@ -178,7 +183,7 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         reader="`UIResolutionPresetTable::loadFromResource` (에디터 UI 미리보기 패널을 처음 그릴 때)", readWhen="패널을 처음 그릴 때",
         shipping="엔진 팩에 실림(읽는 곳은 에디터뿐)", bCommitted=True, ownerDoc="Source/Engine/UI/Layout/UIResolutionPresetTable.h"),
     ConfigFileEntry(
-        page="EditorToolDefaults", pathPattern="Config/Editor/editortooldefaults.json", layer=kLayerEditor, fileFormat="json",
+        page="EditorToolDefaults", pathPattern=kFileRuntimeEditorToolDefaults, layer=kLayerEditor, fileFormat="json",
         reader="`EditorToolDefaults::loadFromHostPath` (에디터 모듈 기동)", readWhen="에디터 기동 · 에디터 핫 리로드",
         shipping="없음(에디터 없음)", bCommitted=True,
         typeName="EditorToolDefaults", header="Source/Editor/Common/Config/EditorToolDefaults.h", keyStyle=kKeyStyleJsonMember, bOptional=True,
@@ -201,7 +206,7 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         keyTableSource="Source/Editor/Common/Asset/ModelImportConfig.cpp",
         listKeyTable=("kArrModelImportRootKeyDoc", "kArrModelImportRuleKeyDoc", "kArrModelImportFractureKeyDoc")),
     ConfigFileEntry(
-        page="", pathPattern="Config/Editor/AssetValidationRules.json", layer=kLayerEditor, fileFormat="json",
+        page="", pathPattern=kAssetRuleConfigRelative, layer=kLayerEditor, fileFormat="json",
         reader="`Scripts/common/AssetValidation.py` (에디터 `EditorAssetValidation` 도 이것을 돌린다)",
         readWhen="저장 · 임포트 직후(에디터) · `CheckAssetRules` 게이트 · `py -3 -m Scripts validate-assets`",
         shipping="없음", bCommitted=True, ownerDoc="Scripts/common/AssetValidation.py"),
@@ -219,16 +224,16 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         ownerDoc="Source/GameFramework/Kits/Feature/Online/Chat/Server/ChatWordFilter.h"),
     # --- 빌드 · 쿠킹 계약 ---------------------------------------------------------------------------------------------------
     ConfigFileEntry(
-        page="", pathPattern="Config/Engine/CookContract.json", layer=kLayerBuildContract, fileFormat="json",
+        page="", pathPattern=kCookContractConfigRelative, layer=kLayerBuildContract, fileFormat="json",
         reader="`GenerateCookContract.py`(→ `CookContract.gen.h`) · `Scripts/common/CookContract.py`",
         readWhen="configure · 쿠킹 · `CheckCookContract` 게이트", shipping="빌드에 굳음", bCommitted=True,
         ownerDoc="Scripts/common/CookContract.py"),
     ConfigFileEntry(
-        page="", pathPattern="Config/Engine/PackFormat.json", layer=kLayerBuildContract, fileFormat="json",
+        page="", pathPattern=kPackFormatConfigRelative, layer=kLayerBuildContract, fileFormat="json",
         reader="`GeneratePackFormat.py`(→ `PackFormat.gen.h`) · `Scripts/common/PackFormat.py`", readWhen="configure · 쿠킹",
         shipping="빌드에 굳음", bCommitted=True, ownerDoc="Scripts/common/PackFormat.py"),
     ConfigFileEntry(
-        page="", pathPattern="Config/Engine/PackConfig.json", layer=kLayerBuildContract, fileFormat="json",
+        page="", pathPattern=kFilePackConfig, layer=kLayerBuildContract, fileFormat="json",
         reader="`Scripts/generate/CookAssets.py`", readWhen="쿠킹(팩 만들기)", shipping="팩 모양을 정한다(파일은 안 실림)",
         bCommitted=True, ownerDoc="Scripts/generate/README.md"),
     # --- 모듈 매니페스트 ----------------------------------------------------------------------------------------------------

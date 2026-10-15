@@ -21,10 +21,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
-from common.AssetValidation import RuleConfigError, loadRules, validate  # noqa: E402
+from common.AssetValidation import RuleConfigError, kAssetRuleConfigRelative, loadRules, validate  # noqa: E402
 
 #: 규칙 표(저장소 루트 기준).
-_kRulePath = "Config/Editor/AssetValidationRules.json"
+_kRulePath = kAssetRuleConfigRelative
 
 #: 자기 테스트가 쓰는 최소 규칙 표 — 테스트 트리에는 저장소의 규칙 표가 없다.
 _kSelfTestRules = (
@@ -42,7 +42,7 @@ class CheckAssetRulesGate(LintGate):
     description = "에셋 검증 규칙(Config/Editor/AssetValidationRules.json)의 오류 심각도"
     buildComment = "Checking Resource/ against the asset validation rules..."
     timeoutSeconds = 60
-    preCommitPattern = ("Resource/*", "Config/Editor/AssetValidationRules.json", "Scripts/common/AssetValidation.py")
+    preCommitPattern = ("Resource/*", kAssetRuleConfigRelative, "Scripts/common/AssetValidation.py")
     preCommitFileArgument = "--files"
     violationHeader = "에셋 검증 규칙 위반"
     hint = "  `py -3 -m Scripts validate-assets` 로 경고까지 본다. 규칙은 Config/Editor/AssetValidationRules.json 에 있다."

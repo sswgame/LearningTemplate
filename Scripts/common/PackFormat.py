@@ -151,7 +151,7 @@ class PackFormatSpec:
         self.mapCodec: dict[str, int] = dict(spec["compression"]["codecs"])
         self.mapEncryption: dict[str, int] = dict(spec["encryption"])
         self.mapFlag: dict[str, int] = dict(spec["flags"])
-        self.deflateStrategy: str = str(spec["compression"].get("deflateStrategy", "default"))
+        self.deflateStrategy: str = str(spec["compression"]["deflateStrategy"])
 
         self._pathHashOffsetBasis: int = int(spec["pathHash"]["offsetBasis"])
         self._pathHashPrime: int = int(spec["pathHash"]["prime"])

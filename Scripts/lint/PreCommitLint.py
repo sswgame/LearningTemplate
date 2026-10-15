@@ -328,7 +328,10 @@ def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path]) -> bo
 
     gitCmd = runGit(["status", "--porcelain", "Resource/engine/shaders/bin/", "Resource/common/shaders/bin/"], cwd=projectRoot)
     if gitCmd.returnCode == 0 and gitCmd.stdout.strip():
-        runGit(["add", "Resource/engine/shaders/bin/", "Resource/common/shaders/bin/"], cwd=projectRoot)
+        added = runGit(["add", "Resource/engine/shaders/bin/", "Resource/common/shaders/bin/"], cwd=projectRoot)
+        if not added.bSucceeded:
+            print(f"  [Error] 갱신된 셰이더 바이너리를 stage 하지 못했습니다: {added.stderr.strip()}")
+            return False
         print("  - 갱신된 RHI별 바이너리(.dxil, .spv, .dxbc)를 자동으로 Git Stage에 추가했습니다.")
 
     return True
@@ -372,7 +375,9 @@ def main(argv: list[str] | None = None) -> int:
                 try:
                     listViolation = fixer.processFile(filePath, checkOnly=True)
                 except Exception as exception:
-                    print(f"  [Warning] {filePath.relative_to(projectRoot)} {label} 검사 중 오류: {exception}")
+                    # 검사기가 깨져 이 파일을 못 봤다 — 경고로 넘기면 검사 누락이 통과로 보이므로 커밋을 막는다.
+                    hasErrors = True
+                    print(f"  [Error] {filePath.relative_to(projectRoot)} {label} 검사 중 오류: {exception}")
                     continue
 
                 if listViolation:

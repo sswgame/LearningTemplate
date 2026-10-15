@@ -28,20 +28,16 @@ def resolveGitExecutable() -> str | None:
         return foundPath
 
     if sys.platform == "win32":
-        programFiles = os.environ.get("ProgramFiles", r"C:\Program Files")
-        programFilesX86 = os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")
-        localAppData = os.environ.get("LocalAppData", "")
-        candidateList = [
-            Path(programFiles) / "Git" / "cmd" / "git.exe",
-            Path(programFiles) / "Git" / "bin" / "git.exe",
-            Path(programFilesX86) / "Git" / "cmd" / "git.exe",
-            Path(programFilesX86) / "Git" / "bin" / "git.exe",
-        ]
-        if localAppData:
-            candidateList.extend([
-                Path(localAppData) / "Programs" / "Git" / "cmd" / "git.exe",
-                Path(localAppData) / "Programs" / "Git" / "bin" / "git.exe",
-            ])
+        # 설치 폴더는 환경 변수가 정본이다 — 경로 리터럴로 대신하면 다른 드라이브에 깐 PC 에서 엉뚱한 곳을 본다.
+        # ProgramFiles 는 Windows 가 늘 정의하므로 없으면 환경이 깨진 것이다. 나머지 둘은 없는 PC 가 있다(32비트 · 사용자 설치 안 함).
+        if "ProgramFiles" not in os.environ:
+            raise RuntimeError("[Host] 환경 변수 ProgramFiles 가 없어 Git 설치 폴더를 찾을 수 없습니다")
+        listInstallRoot = [Path(os.environ["ProgramFiles"])]
+        if programFilesX86 := os.environ.get("ProgramFiles(x86)"):
+            listInstallRoot.append(Path(programFilesX86))
+        if localAppData := os.environ.get("LocalAppData"):
+            listInstallRoot.append(Path(localAppData) / "Programs")
+        candidateList = [root / "Git" / folder / "git.exe" for root in listInstallRoot for folder in ("cmd", "bin")]
         return next((str(cand.resolve()) for cand in candidateList if cand.is_file()), None)
     return None
 
@@ -83,7 +79,8 @@ def listGitFilesInternal(projectRoot: Path, listGitArgument: list[str], extensio
     fileSet: set[Path] = set()
     gitResult = runGit(listGitArgument, cwd=projectRoot)
     if gitResult.returnCode != 0:
-        return fileSet
+        # 목록을 못 얻으면 "바뀐 파일 없음" 이 아니다 — 빈 목록이면 커밋 훅이 검사 없이 통과한다.
+        raise RuntimeError(f"git {' '.join(listGitArgument)} 실패: {gitResult.stderr.strip()}")
     for rawLine in gitResult.stdout.splitlines():
         if line := rawLine.strip():
             resolvedPath = (projectRoot / line).resolve()
@@ -108,14 +105,13 @@ def getMergeHeadRevisions(root: Path | None = None) -> list[str]:
     projectRoot = root or getProjectRoot()
     gitResult = runGit(["rev-parse", "--git-path", "MERGE_HEAD"], cwd=projectRoot)
     if gitResult.returnCode != 0:
-        return []
+        raise RuntimeError(f"git rev-parse --git-path MERGE_HEAD 실패: {gitResult.stderr.strip()}")
     mergeHeadPath = Path(gitResult.stdout.strip())
     if not mergeHeadPath.is_absolute():
         mergeHeadPath = projectRoot / mergeHeadPath
-    try:
-        text = mergeHeadPath.read_text(encoding="utf-8")
-    except OSError:
-        return []
+    if not mergeHeadPath.is_file():
+        return []   # 병합 중이 아니다
+    text = mergeHeadPath.read_text(encoding="utf-8")
     return [line.strip() for line in text.splitlines() if line.strip()]
 
 
@@ -124,7 +120,7 @@ def mapBlobByPathInternal(projectRoot: Path, listGitArgument: list[str], blobFie
     gitResult = runGit(listGitArgument, cwd=projectRoot)
     mapBlob: dict[str, str] = {}
     if gitResult.returnCode != 0:
-        return mapBlob
+        return mapBlob   # 대조할 수 없으면 아무 파일도 "부모와 같다" 로 빼지 않는다 — 모두 검사하는 쪽이다(listFilesUnlikeEveryParent)
     bIndex = listGitArgument[0] == "ls-files"
     for entry in gitResult.stdout.split("\0"):
         head, separator, relPath = entry.partition("\t")

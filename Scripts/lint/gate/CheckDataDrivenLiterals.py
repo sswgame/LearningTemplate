@@ -159,7 +159,7 @@ class CheckDataDrivenLiteralsGate(LintGate):
         listViolation: list[str] = []
         for rule in _kListRule:
             count = sum(1 for finding in listCounted if finding.rule == rule)
-            baseline = mapBaseline.get(rule, 0)
+            baseline = mapBaseline[rule]   # 규칙마다 기준선을 적는다 — 없으면 KeyError(0 으로 읽으면 새 규칙이 처음부터 전부 위반이 된다)
             listNote.append(f"{rule}: 기준선 {baseline} · 지금 {count}")
             if count < baseline:
                 listNote.append(f"  줄었다 — rules/{self.name}.toml 의 [baseline] {rule} 를 {count} 로 낮춘다")

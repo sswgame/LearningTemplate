@@ -44,7 +44,7 @@ class ServerPackExclusionTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.cooker = loadCookerInternal()
         cls.spec = CookContractSpec.load(kRepositoryRoot)
-        cls.packConfig = cls.cooker.readJsonDictInternal(kRepositoryRoot / kFilePackConfig, kFilePackConfig)
+        cls.packConfig = cls.cooker.requireConfig(kRepositoryRoot / kFilePackConfig, kFilePackConfig)
         cls.mapPackFilesByTarget: dict[str, list[str]] = {}
         for buildTarget in ("Server", "Client"):
             listRel: list[str] = []

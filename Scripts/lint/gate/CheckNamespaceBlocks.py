@@ -177,12 +177,12 @@ def splitNamespaceBlocks(text: str) -> tuple[str, list[tuple[int, str, str, int]
 
 def findViolations(filePath: Path, repositoryRoot: Path) -> list[str]:
     """파일 하나의 위반 — 읽기만 한다(고치는 것은 `fixText` · `FormatNamespaceBlocks`)."""
+    relativePath = filePath.relative_to(repositoryRoot).as_posix() if filePath.is_relative_to(repositoryRoot) else str(filePath)
     try:
         raw = filePath.read_bytes().decode("utf-8")
-    except (OSError, UnicodeDecodeError):
-        return []
+    except (OSError, UnicodeDecodeError) as error:
+        return [f"{relativePath}:1: 읽지 못해 검사할 수 없습니다 ({error}) — 파일을 UTF-8 로 저장하십시오"]
     _, listSplit = splitNamespaceBlocks(raw)
-    relativePath = filePath.relative_to(repositoryRoot).as_posix() if filePath.is_relative_to(repositoryRoot) else str(filePath)
     return [f"{relativePath}:{split[3] + 1}: 한 namespace 블록에 클래스 · 구조체 정의가 여럿입니다 — 정의마다 블록을 나누세요 "
             f"(`py -3 Scripts/lint/fixer/FormatNamespaceBlocks.py --files {relativePath}`)" for split in listSplit]
 

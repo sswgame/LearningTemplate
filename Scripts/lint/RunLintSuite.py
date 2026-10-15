@@ -82,10 +82,14 @@ def measureHookInternal(repositoryRoot: Path, fileCount: int) -> float | None:
     listCandidate = sorted(path for path in (repositoryRoot / _kHookSampleRoot).rglob("*") if path.suffix in (".cpp", ".h"))[:fileCount]
     if len(listCandidate) < fileCount:
         return None
-    indexPath = Path(runGit(["rev-parse", "--git-path", "index"], cwd=repositoryRoot).stdout.strip())
+    indexResult = runGit(["rev-parse", "--git-path", "index"], cwd=repositoryRoot)
+    blobResult = runProcess(["git", *_kEmptyBlobArgument], cwd=repositoryRoot, stdinText="")
+    if not indexResult.bSucceeded or not blobResult.bSucceeded:
+        raise RuntimeError(f"[RunLintSuite] 훅 표본을 만들 git 명령이 실패했습니다: {indexResult.stderr.strip()} {blobResult.stderr.strip()}")
+    indexPath = Path(indexResult.stdout.strip())
     if not indexPath.is_absolute():
         indexPath = repositoryRoot / indexPath
-    emptyBlob = runProcess(["git", *_kEmptyBlobArgument], cwd=repositoryRoot, stdinText="").stdout.strip()
+    emptyBlob = blobResult.stdout.strip()
     tempDir = Path(tempfile.mkdtemp(prefix="swHookSample"))
     try:
         tempIndex = tempDir / "index"
@@ -97,6 +101,7 @@ def measureHookInternal(repositoryRoot: Path, fileCount: int) -> float | None:
                               env=environment).bSucceeded:
                 return None
         start = time.perf_counter()
+        # 결과는 보지 않는다 — 빈 내용으로 바꾼 표본이라 린트가 지는 것이 정상이고, 재는 것은 시간뿐이다.
         runProcess([sys.executable, "-m", "Scripts", "lint"], cwd=repositoryRoot, env=environment)
         return time.perf_counter() - start
     finally:

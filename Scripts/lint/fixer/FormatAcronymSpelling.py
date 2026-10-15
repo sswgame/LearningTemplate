@@ -55,6 +55,7 @@ from common import (  # noqa: E402
     runProcess,
 )
 from LintFixer import FixerFileKind, FixPass, LintFixer, addFileArguments, selectFixerTargetFiles  # noqa: E402
+from setup.HostTools import findWindowsSdkPath  # noqa: E402
 
 #: 이번 실행이 고르는 약어(`--acronym`) — 변환(FixPass)이 읽는다. 조각 테스트는 기본값(전체)으로 돈다.
 _kState: dict[str, tuple[str, ...]] = {"acronyms": registry.kSelectable}
@@ -88,21 +89,19 @@ def findExternalHeaderRoots(repositoryRoot: Path) -> list[Path]:
     """남의 헤더가 있는 폴더 — 저장소 `ThirdParty/` · vcpkg 설치 헤더 · Windows SDK(um · shared · ucrt) · Vulkan SDK."""
     listRoot = [repositoryRoot / "ThirdParty"]
     listRoot += sorted(repositoryRoot.glob("build/vcpkg_installed/*/include"))   # vcpkg 설치 헤더(트리플릿마다)
-    sdkInclude = Path(os.environ.get("WindowsSdkDir", r"C:\Program Files (x86)\Windows Kits\10")) / "Include"
-    if sdkInclude.is_dir():
-        listVersion = sorted(path for path in sdkInclude.iterdir() if path.is_dir() and path.name[:1].isdigit())
-        if listVersion:
-            listRoot += [listVersion[-1] / name for name in ("um", "shared", "ucrt")]
+    if sys.platform == "win32":
+        # SDK 위치는 환경 변수 · 레지스트리(findWindowsSdkPath)가 정본이다 — 설치 경로 리터럴로 대신하지 않는다.
+        sdkDir, sdkVersion = findWindowsSdkPath()
+        if not sdkDir or not sdkVersion:
+            raise RuntimeError("[FormatAcronymSpelling] Windows SDK 를 찾지 못했습니다(WindowsSdkDir · 레지스트리 KitsRoot10)")
+        listRoot += [Path(sdkDir) / "Include" / sdkVersion / name for name in ("um", "shared", "ucrt")]
     if os.environ.get("VULKAN_SDK"):
         listRoot.append(Path(os.environ["VULKAN_SDK"]) / "Include")
     return [root for root in listRoot if root.is_dir()]
 
 
 def scanExternalNamesInternal(path: Path) -> set[str]:
-    try:
-        text = path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return set()
+    text = path.read_text(encoding="utf-8", errors="replace")
     return {site.name for site in registry.iterateNameSites(text, registry.kAcronym, masked=text)}
 
 
@@ -325,12 +324,10 @@ def replaceWordsInternal(text: str, mapReplace: dict[str, str], wordRe: re.Patte
     return wordRe.sub(replace, text), count
 
 
-def readTextInternal(path: Path) -> str | None:
-    try:
-        with path.open("r", encoding="utf-8", errors="strict", newline="") as file:
-            return file.read()
-    except (OSError, UnicodeDecodeError):
-        return None
+def readTextInternal(path: Path) -> str:
+    # 못 읽는 파일(UTF-8 이 아님 · 잠김)은 멈춘다 — 건너뛰면 코드모드가 그 파일만 옛 철자로 남기고 끝난다.
+    with path.open("r", encoding="utf-8", errors="strict", newline="") as file:
+        return file.read()
 
 
 def writeTextInternal(path: Path, text: str) -> None:
@@ -354,8 +351,6 @@ def applyFiles(repositoryRoot: Path, acronyms: tuple[str, ...], bDryRun: bool) -
                                               excludedDirNames=kNotOurCodeDirNames)
         for path in listTextFile:
             text = readTextInternal(path)
-            if text is None:
-                continue
             newText, count = replaceWordsInternal(text, mapBaseName, baseNameRe)
             if count:
                 listLine.append(f"파일 이름 치환 {count}곳: {path.relative_to(repositoryRoot).as_posix()}")
@@ -365,8 +360,6 @@ def applyFiles(repositoryRoot: Path, acronyms: tuple[str, ...], bDryRun: bool) -
     # 2) 데이터 — 리플렉션 타입 · 속성 이름.
     for path in collectDataFiles(repositoryRoot):
         text = readTextInternal(path)
-        if text is None:
-            continue
         mapToken = {token: dataTokenRename(token, mapRename, setIdentifier, acronyms) for token in set(_kWordRe.findall(text))}
         mapToken = {old: new for old, new in mapToken.items() if old != new}
         if not mapToken:
@@ -457,8 +450,6 @@ def applyText(repositoryRoot: Path, acronyms: tuple[str, ...], bDryRun: bool, bS
         if relPath in _kTextExcludedRel:
             continue
         text = readTextInternal(path)
-        if text is None:
-            continue
         newText, listEdit = rewriteText(relPath, text, mapRename, setIdentifier, acronyms, path.suffix.lower() in registry.kCodeSuffix, bStrings)
         listAll += listEdit
         if not bDryRun and newText != text:
@@ -488,7 +479,7 @@ def buildFolderRenameTable(repositoryRoot: Path, acronyms: tuple[str, ...]) -> l
     setModule: set[str] = set()
     for cmakePath in collectRepositoryFiles(repositoryRoot, ("Source", "Test", "cmake"), fileNames=("CMakeLists.txt",), suffixes=(".cmake",),
                                             excludedDirNames=kNotOurCodeDirNames):
-        text = readTextInternal(cmakePath) or ""
+        text = readTextInternal(cmakePath)
         setModule.update(re.findall(r"\bGF_\w+", text))
     for rootRel in _kFolderScanRelDir:
         root = repositoryRoot / rootRel

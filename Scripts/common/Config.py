@@ -21,19 +21,39 @@ from .Constants import (
 from .Paths import getProjectRoot, normalizePath
 
 
-def readJsonDictInternal(path: Path, label: str) -> dict[str, Any]:
-    """
-    JSON 객체를 읽어 딕셔너리로 반환합니다. 파일이 없거나 파싱 실패 시 빈 딕셔너리를 반환합니다.
-    """
-    if not path.is_file():
-        return {}
+class ConfigError(RuntimeError):
+    """설정 파일이 없거나(필수일 때) 읽을 수 없거나 JSON 객체가 아니다."""
+
+
+def parseJsonObjectInternal(path: Path, label: str) -> dict[str, Any]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        if isinstance(data, dict):
-            return data
-    except Exception as exception:
-        sys.stderr.write(f"[Config] Failed to read {label}: {exception}\n")
-    return {}
+    except (OSError, json.JSONDecodeError) as error:
+        raise ConfigError(f"[Config] {label} 를 읽지 못했습니다: {path}: {error}") from error
+    if not isinstance(data, dict):
+        raise ConfigError(f"[Config] {label} 는 JSON 객체여야 합니다: {path}")
+    return data
+
+
+def requireConfig(path: Path, label: str) -> dict[str, Any]:
+    """
+    필수 설정을 읽습니다. 없거나 깨졌거나 객체가 아니면 ConfigError 로 멈춥니다.
+
+    설정 읽기는 이 함수와 `readOptionalConfig` 둘뿐이다 — "없으면 빈 사전" 을 돌려주는 읽기가 있으면 필수 설정이 빠져도
+    호출부의 `.get(키, 기본값)` 이 조용히 기본값으로 돌아 아무도 모른다. 필수인지 선택인지를 함수 이름이 말하게 한다.
+    """
+    if not path.is_file():
+        raise ConfigError(f"[Config] 필수 설정 {label} 이 없습니다: {path}")
+    return parseJsonObjectInternal(path, label)
+
+
+def readOptionalConfig(path: Path, label: str) -> dict[str, Any] | None:
+    """
+    선택 설정을 읽습니다. 파일이 없으면 None(호출부가 "없음" 을 직접 다룬다), 있는데 깨졌으면 ConfigError 로 멈춥니다.
+    """
+    if not path.is_file():
+        return None
+    return parseJsonObjectInternal(path, label)
 
 
 def mergeJsonDictInternal(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
@@ -57,9 +77,12 @@ def mergeJsonDictInternal(base: dict[str, Any], override: dict[str, Any]) -> dic
 def loadToolchainConfig() -> dict[str, Any]:
     """
     개발 환경 툴체인 경로 캐시 파일(Config/Environment/toolchain_config.json)을 읽어 반환합니다.
+
+    이 파일은 SetupEnvironment 가 채우는 **캐시**라 처음 실행에는 없다 — 없으면 빈 캐시다. 깨졌으면 멈춘다.
     """
     configFile = getProjectRoot() / kDirConfigEnv / kFileToolchainConfig
-    return readJsonDictInternal(configFile, kFileToolchainConfig)
+    cached = readOptionalConfig(configFile, kFileToolchainConfig)
+    return {} if cached is None else cached
 
 
 def updateToolchainConfig(key: str, value: Any) -> None:
@@ -114,7 +137,7 @@ def loadSearchPaths() -> dict[str, Any]:
 
     - search_paths.json 이 없으면 **빈 오버라이드 파일**로 만듭니다.
     - 로컬 파일의 값이 기본값을 덮어씁니다(리스트는 통째로 교체, 없는 키는 기본값 유지).
-    - search_paths.defaults.json 이 존재하지 않거나 유효하지 않으면 예외를 발생시킵니다.
+    - search_paths.defaults.json 이 존재하지 않거나 유효하지 않으면 ConfigError 로 멈춥니다. 로컬 파일이 깨져도 멈춥니다.
 
     주의: defaults 를 **통째로 복사**해 두면 로컬 파일이 모든 키를 갖게 되고, 로컬이 우선이므로 defaults 를
     아무리 고쳐도 그 PC 에는 **영원히 닿지 않는다**. 그래서 로컬 파일에는 사용자가 실제로 바꾼 것만 남기고,
@@ -124,24 +147,18 @@ def loadSearchPaths() -> dict[str, Any]:
     jsonPath = configDir / kFileSearchPaths
     defaultsPath = configDir / kFileSearchPathsDefaults
 
-    if not defaultsPath.is_file():
-        sys.stderr.write(f"[Config Error] Required search paths defaults config not found: {defaultsPath}\n")
-        raise FileNotFoundError(f"Required search paths defaults config not found: {defaultsPath}")
+    defaults = requireConfig(defaultsPath, kFileSearchPathsDefaults)
 
     if not jsonPath.is_file():
+        # 오버라이드 파일은 사용자가 손볼 자리를 보여 주려고 만들 뿐이다 — 못 만들어도 defaults 만으로 맞게 돈다.
         try:
             configDir.mkdir(parents=True, exist_ok=True)
             jsonPath.write_text("{\n}\n", encoding="utf-8")
         except OSError as exception:
-            sys.stderr.write(f"[Config Error] Failed to create {kFileSearchPaths}: {exception}\n")
+            sys.stderr.write(f"[Config] {kFileSearchPaths} 를 만들지 못했습니다(defaults 만 씁니다): {exception}\n")
 
-    defaults = readJsonDictInternal(defaultsPath, kFileSearchPathsDefaults)
-    if not defaults:
-        sys.stderr.write(f"[Config Error] Failed to load or parse defaults from {defaultsPath}\n")
-        raise RuntimeError(f"Failed to load or parse defaults from {defaultsPath}")
-
-    local = readJsonDictInternal(jsonPath, kFileSearchPaths)
-    return expandSelfReferencesInternal(mergeJsonDictInternal(defaults, local))
+    local = readOptionalConfig(jsonPath, kFileSearchPaths)
+    return expandSelfReferencesInternal(mergeJsonDictInternal(defaults, {} if local is None else local))
 
 
 def recordEnginePath(key: str, path: str | Path) -> str:
@@ -164,7 +181,7 @@ def autoBootstrapEnabled(force: bool,
     if force:
         return True
     searchConfig = search if search is not None else loadSearchPaths()
-    if bool(searchConfig.get(configKey, False)):
+    if bool(searchConfig[configKey]):   # search_paths.defaults 의 필수 키
         return True
     flag = os.environ.get(envKey, "").strip().lower()
     return flag in ("1", "true", "on", "yes")

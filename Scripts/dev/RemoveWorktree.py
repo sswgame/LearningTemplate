@@ -79,9 +79,12 @@ def main(argv: list[str] | None = None) -> int:
             if not removed.bSucceeded and plan.worktreePath.exists():
                 shutil.rmtree(plan.worktreePath, ignore_errors=True)
         if not args.keep_branch:
-            runGit(["branch", "-D", plan.branch], cwd=mainRoot)
+            # 청소다 — 가지가 이미 없으면 지는 것이 정상이다. 남았으면 이유를 보인다.
+            deleted = runGit(["branch", "-D", plan.branch], cwd=mainRoot)
+            if not deleted.bSucceeded:
+                print(f"[RemoveWorktree] 가지 {plan.branch} 를 지우지 않았습니다: {deleted.stderr.strip()}", file=sys.stderr)
         print(f"[RemoveWorktree] 지움: {name}")
-    runGit(["worktree", "prune"], cwd=mainRoot)
+    runGit(["worktree", "prune"], cwd=mainRoot)   # 청소 — 남은 기록만 정리한다, 실패해도 다음 prune 이 한다
     return 1 if failureCount else 0
 
 

@@ -60,14 +60,13 @@ class TranslationUnitSweep:
         디스크에 없는 TU(낡은 DB)는 건너뛰고 `listMissingFile` 에 남긴다 — 컴파일러가 "파일 없음" 을 오류로 내면 경고 보고가 그 줄로 덮인다.
         """
         self.listMissingFile = []
-        try:
-            listDatabase = self.tree.readCompileDatabase()
-        except BuildTreeError:
-            return []
+        if not self.bHasDatabase:
+            return []   # configure 하지 않은 트리 — 호출부가 "건너뜀" 으로 알린다. 있는데 깨진 DB 는 BuildTreeError 로 멈춘다.
+        listDatabase = self.tree.readCompileDatabase()
 
         listEntry: list[dict] = []
         for entry in listDatabase:
-            filePath = str(entry.get("file", "")).replace("\\", "/")
+            filePath = str(entry["file"]).replace("\\", "/")
             if requirePathPart and requirePathPart not in filePath:
                 continue
             if any(part in filePath for part in _kAlwaysSkipPart):
@@ -78,7 +77,7 @@ class TranslationUnitSweep:
                 continue
             sourcePath = Path(filePath)
             if sourcePath.is_absolute() is False:
-                sourcePath = Path(str(entry.get("directory", ""))) / sourcePath
+                sourcePath = Path(str(entry["directory"])) / sourcePath
             if sourcePath.is_file() is False:
                 self.listMissingFile.append(filePath)
                 continue
