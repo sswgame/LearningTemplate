@@ -23,7 +23,8 @@ endforeach()
 # 2) QA 러너 — 빌드된 App 을 띄운다(`Scripts/qa/`)
 #
 # - `QaGoldenImages` (hostgpu): 활성 게임(`SW_ACTIVE_GAME`)의 자동 플레이를 네 백엔드로 그려 `Test/Golden/Games/<게임>/` 의 기준과
-#   배경을 뺀 지표로 견준다. 기준이 없는 백엔드 · 이 기계에서 못 도는 백엔드는 건너뛴다(로그에 남긴다). 직렬 — 창과 GPU 를 잡는다.
+#   배경을 뺀 지표로 견준다. 기준이 없는 백엔드 · 이 기계에서 못 도는 백엔드는 건너뛴다(로그에 남긴다). GPU 칸 하나를 받고, 같은 `Bin` 에서 App 을
+#   띄우는 AppTest 호스트 항목과는 잠금 `AppBin` 으로 비켜 간다.
 # - `QaSoak` (soak): 자동 플레이를 오래 돌려 메모리 · 핸들 증가와 프레임 p99 를 본다. 분 단위라 `-L soak` 로 고른다(Shipping 없음).
 # - `QaPerfRegression` (perf): Release 에서만 — 기준(`Test/Perf/Baseline/`)과 p50 · p99 를 견준다. 기계마다 기준이 다르다.
 # ------------------------------------------------------------------------------
@@ -34,7 +35,8 @@ if(TARGET App)
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin"
 		LABELS "hostgpu;app;qa"
 		TIMEOUT 900
-		RUN_SERIAL
+		GPU
+		RESOURCE_LOCK AppBin
 		SKIP_RETURN_CODE 77
 	)
 

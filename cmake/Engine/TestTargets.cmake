@@ -23,6 +23,16 @@ set(SW_TEST_POLICY_FILE "${CMAKE_SOURCE_DIR}/Test/TestPolicy.json")
 set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${SW_TEST_POLICY_FILE}")
 file(READ "${SW_TEST_POLICY_FILE}" SW_TEST_POLICY_JSON)
 
+# GPU 칸 — hostgpu 항목은 RUN_SERIAL 대신 ctest 자원 `gpu` 한 칸을 받는다(`RESOURCE_GROUPS gpu:1`). 칸 수는 정책 `gpuSlots`(GPU 공유 잠금의 두 프로세스와 같은 뜻).
+# 자원 명세 파일은 이 빌드 폴더에 쓰고 `CTEST_RESOURCE_SPEC_FILE` 로 알린다 — `include(CTest)` 가 DartConfiguration 에 적어 `ctest` 가 인자 없이 쓴다.
+string(JSON swGpuSlots ERROR_VARIABLE swGpuSlotsError GET "${SW_TEST_POLICY_JSON}" gpuSlots)
+if(swGpuSlotsError)
+	set(swGpuSlots 1)
+endif()
+set(CTEST_RESOURCE_SPEC_FILE "${CMAKE_BINARY_DIR}/CTestResources.json")
+file(CONFIGURE OUTPUT "${CTEST_RESOURCE_SPEC_FILE}" CONTENT
+	"{\"version\":{\"major\":1,\"minor\":0},\"local\":[{\"gpu\":[{\"id\":\"0\",\"slots\":${swGpuSlots}}]}]}\n")
+
 # ------------------------------------------------------------------------------
 # sw_getTestPolicyValue — 정책 JSON 의 값 하나(경로 ARGN). 없으면 DEFAULT_VALUE.
 # ------------------------------------------------------------------------------
@@ -155,8 +165,11 @@ endfunction()
 # `TestBin` 에서 돌게 되고, `AppTest` 는 거기서 `App.exe` 를, Dev 테스트는 `Engine.dll` 을 못 찾는다.
 # 항목 이름은 `SW_TEST_CTEST_NAME` 으로 넘어가 실패 요약의 재현 명령(`ctest -R`)에 찍힌다.
 # ------------------------------------------------------------------------------
+#   COST          예상 초 — ctest 가 병렬 실행에서 긴 항목부터 띄운다(실행 기록이 없는 새 빌드 폴더 · CI 도 같은 순서).
+#   GPU           GPU 칸 하나를 받는다(`RESOURCE_GROUPS gpu:1`, 칸 수는 정책 `gpuSlots`).
+#   RESOURCE_LOCK 같은 이름을 쥔 항목끼리는 동시에 돌지 않는다(같은 `Bin` 에 산출물을 쓰는 App 실행 등).
 function(sw_registerTestRun TEST_NAME TARGET_NAME)
-	cmake_parse_arguments(ARG "RUN_SERIAL" "TIMEOUT" "ARGS;LABELS;ASAN_OPTIONS" ${ARGN})
+	cmake_parse_arguments(ARG "RUN_SERIAL;GPU" "TIMEOUT;COST;RESOURCE_LOCK" "ARGS;LABELS;ASAN_OPTIONS" ${ARGN})
 
 	add_test(NAME ${TEST_NAME} COMMAND ${TARGET_NAME} ${ARG_ARGS})
 	set_tests_properties(${TEST_NAME} PROPERTIES
@@ -169,6 +182,15 @@ function(sw_registerTestRun TEST_NAME TARGET_NAME)
 	if(ARG_RUN_SERIAL)
 		set_tests_properties(${TEST_NAME} PROPERTIES RUN_SERIAL TRUE)
 	endif()
+	if(ARG_COST)
+		set_tests_properties(${TEST_NAME} PROPERTIES COST ${ARG_COST})
+	endif()
+	if(ARG_GPU)
+		set_tests_properties(${TEST_NAME} PROPERTIES RESOURCE_GROUPS "gpu:1")
+	endif()
+	if(ARG_RESOURCE_LOCK)
+		set_tests_properties(${TEST_NAME} PROPERTIES RESOURCE_LOCK ${ARG_RESOURCE_LOCK})
+	endif()
 
 	# 새니타이저 구성의 제한 시간 · 옵션(ODR 검사 끄기 · TSan 억제)은 한 함수가 정한다.
 	sw_applySanitizerTestProperties(${TEST_NAME} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
@@ -180,10 +202,19 @@ endfunction()
 #   ARGS 뒤에 붙인다. 나머지 인자(RUN_SERIAL · ARGS · LABELS · TIMEOUT · ASAN_OPTIONS)는 `sw_registerTestRun` 에 그대로 넘긴다.
 # ------------------------------------------------------------------------------
 function(sw_registerTestShards TEST_NAME TARGET_NAME SHARD_COUNT)
-	cmake_parse_arguments(ARG "RUN_SERIAL" "TIMEOUT;COSTS" "ARGS;LABELS;ASAN_OPTIONS" ${ARGN})
+	cmake_parse_arguments(ARG "RUN_SERIAL;GPU" "TIMEOUT;COSTS;COST;RESOURCE_LOCK" "ARGS;LABELS;ASAN_OPTIONS" ${ARGN})
 	set(runSerial "")
 	if(ARG_RUN_SERIAL)
 		set(runSerial RUN_SERIAL)
+	endif()
+	if(ARG_GPU)
+		list(APPEND runSerial GPU)
+	endif()
+	if(ARG_RESOURCE_LOCK)
+		list(APPEND runSerial RESOURCE_LOCK ${ARG_RESOURCE_LOCK})
+	endif()
+	if(ARG_COST)
+		list(APPEND runSerial COST ${ARG_COST})
 	endif()
 
 	if(SHARD_COUNT LESS_EQUAL 1)
@@ -265,19 +296,26 @@ function(sw_registerTestPolicy TARGET_NAME)
 		set(swShards 1)
 	endif()
 	sw_computeTestTimeout(swTimeout ${swSeconds} ${swShards} ${swMaxCaseSeconds})
+	math(EXPR swShardCost "(${swSeconds} + ${swShards} - 1) / ${swShards}")
 
 	set(swBaseLabels "unit;${swArea}")
 	if(NOT swHostSplit)
 		sw_registerTestShards(${TARGET_NAME} ${TARGET_NAME} ${swShards}
-			LABELS "${swBaseLabels};nogpu" TIMEOUT ${swTimeout} COSTS "${swCosts}" ASAN_OPTIONS ${swAsanOptions})
+			LABELS "${swBaseLabels};nogpu" TIMEOUT ${swTimeout} COSTS "${swCosts}" COST ${swShardCost} ASAN_OPTIONS ${swAsanOptions})
 	else()
 		sw_registerTestShards(${TARGET_NAME}_NoGPU ${TARGET_NAME} ${swShards}
-			ARGS --host_suites=exclude LABELS "${swBaseLabels};nogpu" TIMEOUT ${swTimeout} COSTS "${swCosts}" ASAN_OPTIONS ${swAsanOptions})
-		# 직렬인 이유: 창을 띄우고 GPU 를 잡는다. 다른 GPU 테스트와 겹치면 서로를 느리게 만들고, 드라이버에 따라
-		# 서로의 디바이스 생성을 막는다. 조각마다 호스트 케이스가 하나는 있어야 한다(`--host_suites=only` 가 아무것도 고르지 않으면 진다).
+			ARGS --host_suites=exclude LABELS "${swBaseLabels};nogpu" TIMEOUT ${swTimeout} COSTS "${swCosts}" COST ${swShardCost} ASAN_OPTIONS ${swAsanOptions})
+		# 창을 띄우고 GPU 를 잡으므로 GPU 칸 하나를 받는다(동시에 `gpuSlots` 개까지 — 공유 GPU 잠금과 같은 수). 같은 `Bin` 에 산출물을 쓰는 실행은
+		# 정책의 `hostResourceLock` 으로 서로 비켜 간다. 조각마다 호스트 케이스가 하나는 있어야 한다(`--host_suites=only` 가 아무것도 고르지 않으면 진다).
+		sw_getTestPolicyValue(swHostLock "" executables ${TARGET_NAME} hostResourceLock)
+		set(swHostLockArgs "")
+		if(swHostLock)
+			set(swHostLockArgs RESOURCE_LOCK ${swHostLock})
+		endif()
 		sw_computeTestTimeout(swHostTimeout ${swHostSeconds} ${swHostShards} 0)
-		sw_registerTestShards(${TARGET_NAME}_HostOnly ${TARGET_NAME} ${swHostShards} RUN_SERIAL
-			ARGS --host_suites=only LABELS "${swBaseLabels};hostgpu" TIMEOUT ${swHostTimeout} ASAN_OPTIONS ${swAsanOptions})
+		math(EXPR swHostShardCost "(${swHostSeconds} + ${swHostShards} - 1) / ${swHostShards}")
+		sw_registerTestShards(${TARGET_NAME}_HostOnly ${TARGET_NAME} ${swHostShards} GPU ${swHostLockArgs} COST ${swHostShardCost}
+			ARGS --host_suites=only LABELS "${swBaseLabels};hostgpu" TIMEOUT ${swHostTimeout} COSTS "${swCosts}" ASAN_OPTIONS ${swAsanOptions})
 	endif()
 
 	# 부하 · 시간 예산 검증(`SW_TEST_LOAD_SUITE`) — 혼자 돌아야 숫자가 뜻이 있어 직렬이다. 예산을 넘은 케이스는 Release 에서만 진다
@@ -398,10 +436,10 @@ endfunction()
 #   ARGS              스크립트 인자
 #   LABELS · TIMEOUT  실행 파일 테스트와 같은 철자(라벨은 `Test/TestPolicy.json` 의 labels 표에 있어야 한다)
 #   WORKING_DIRECTORY 기본은 저장소 루트(App 을 띄우는 QA 는 `Bin`)
-#   RUN_SERIAL · SKIP_RETURN_CODE
+#   RUN_SERIAL · SKIP_RETURN_CODE · GPU · RESOURCE_LOCK(`sw_registerTestRun` 과 같은 뜻)
 # ------------------------------------------------------------------------------
 function(sw_registerScriptTest TEST_NAME)
-	cmake_parse_arguments(ARG "RUN_SERIAL" "SCRIPT;TIMEOUT;SKIP_RETURN_CODE;WORKING_DIRECTORY" "ARGS;LABELS" ${ARGN})
+	cmake_parse_arguments(ARG "RUN_SERIAL;GPU" "SCRIPT;TIMEOUT;SKIP_RETURN_CODE;WORKING_DIRECTORY;RESOURCE_LOCK" "ARGS;LABELS" ${ARGN})
 	if(NOT ARG_SCRIPT OR NOT ARG_TIMEOUT)
 		message(FATAL_ERROR "sw_registerScriptTest(${TEST_NAME}): SCRIPT 와 TIMEOUT 은 꼭 준다")
 	endif()
@@ -420,6 +458,12 @@ function(sw_registerScriptTest TEST_NAME)
 	)
 	if(ARG_RUN_SERIAL)
 		set_tests_properties(${TEST_NAME} PROPERTIES RUN_SERIAL TRUE)
+	endif()
+	if(ARG_GPU)
+		set_tests_properties(${TEST_NAME} PROPERTIES RESOURCE_GROUPS "gpu:1")
+	endif()
+	if(ARG_RESOURCE_LOCK)
+		set_tests_properties(${TEST_NAME} PROPERTIES RESOURCE_LOCK ${ARG_RESOURCE_LOCK})
 	endif()
 	if(DEFINED ARG_SKIP_RETURN_CODE)
 		set_tests_properties(${TEST_NAME} PROPERTIES SKIP_RETURN_CODE ${ARG_SKIP_RETURN_CODE})

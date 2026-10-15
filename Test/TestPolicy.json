@@ -5,10 +5,13 @@
     "seconds 는 부하가 걸린 이 PC(16 스레드, 실행 파일 다섯을 함께 돌림)의 Debug 한 실행 시간이다. 샤드 수 = ceil(seconds / targetShardSeconds),",
     "제한 시간 = max(minimumTimeoutSeconds, timeoutHeadroom × max(seconds / 샤드 수, 가장 비싼 케이스)). 제한 시간은 멈춤을 잡는 그물이고 느려짐 판정은 SW_TEST_TIME_BUDGET 이 한다.",
     "caseCosts 는 느린 케이스의 초 — 샤드를 비용으로 고르게 나누는 데 쓴다(--test_costs). 스위트가 크게 느려지면 seconds 와 caseCosts 를 다시 잰다.",
-    "hostSplit 이면 <타깃>_NoGPU(nogpu) · <타깃>_HostOnly(hostgpu, 직렬, hostSeconds · hostShards) 로 가른다. loadSeconds 가 있으면 <타깃>_Load(load, 직렬, --load_suites=only --enforce_budgets)를 더한다.",
+    "ctest 항목마다 COST(조각 하나의 예상 초)를 달아 병렬 실행이 긴 항목부터 띄운다(실행 기록이 없는 CI 도 같다).",
+    "hostSplit 이면 <타깃>_NoGPU(nogpu) · <타깃>_HostOnly(hostgpu, GPU 칸 하나 — gpuSlots, hostSeconds · hostShards, hostResourceLock) 로 가른다. loadSeconds 가 있으면 <타깃>_Load(load, 직렬, --load_suites=only --enforce_budgets)를 더한다.",
     "shards 는 계산한 샤드 수를 덮는다 — 이유를 _shardsReason 에 적는다. 새 실행 파일은 여기 한 줄을 더하고 폴더 이름을 실행 파일 이름과 같게 둔다(CheckTestSuites).",
     "timeoutScale 은 위 제한 시간에 곱하는 배율이다. 새니타이저 구성은 sanitizer 하나만, 아니면 리눅스는 linux 를 곱한다(곱을 겹치지 않는다). 테스트가 띄우는 자식 프로세스의 시한도 같은 배율이다(test::ProcessDeadlineWatch)."
   ],
+  "gpuSlots": 2,
+  "_gpuSlotsReason": "hostgpu 항목이 동시에 받는 GPU 칸 수(ctest 자원 gpu). 결정적 기능 확인은 GPU 공유 잠금(shared-lock gpu --shared)과 같은 두 프로세스까지 겹쳐도 된다 — 결정 기록 5-2.",
   "timeoutHeadroom": 4,
   "minimumTimeoutSeconds": 60,
   "targetShardSeconds": 30,
@@ -43,7 +46,9 @@
       "hostSplit": true,
       "hostSeconds": 1380,
       "hostShards": 3,
-      "_hostShardsReason": "실기동 스모크 + 자동화 시나리오(시나리오 수 × 백엔드 넷). 에디터 시나리오만 백엔드마다 4~5 분이라 한 실행(약 23 분)을 조각 셋으로 나눈다."
+      "_hostShardsReason": "실기동 스모크 + 자동화 시나리오(시나리오 수 × 백엔드 넷). 에디터 시나리오만 백엔드마다 4~5 분이라 한 실행(약 23 분)을 조각 셋으로 나눈다.",
+      "hostResourceLock": "AppBin",
+      "_hostResourceLockReason": "App 을 같은 Bin 에서 띄워 Saved/Automation/<시나리오>/ 산출물 · 에디터 상태 · assetmanage 가 고치는 리소스가 겹친다 — 조각끼리 · QaGoldenImages 와 동시에 돌지 않는다(EngineTest 호스트 조각과는 겹친다)."
     },
     "CoreTest": {
       "area": "core",
