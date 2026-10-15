@@ -102,6 +102,13 @@ Shipping 키트는 STATIC 이고 내보내기 매크로가 빈 것을 산출물�
 
 - 들어간 것: 액션 룸 내장 몬스터 · 배치 삭제(카탈로그 · `ActionRoomLayout` 필수), `EngineConfig.json` 바탕 층(헤더는 형식만), 회선 프리셋 표(`NetEmulationPresetTable`), 그림자 맵 한 변(스키마 `targetValue`),
   UI 미리보기 해상도 표, 부하 봇 필수 키, `PROPERTY( Required )` + `GameDataXML::readFields`(첫 적용 `ParkLayout`), 게임 튜닝값 PROPERTY(여덟 게임) · 벤치 설정(`benchscene.xml`), 린트 `CheckDataDrivenLiterals`.
+
+## 5-4. 로그 Warning 정리와 로그 게이트 (2026-10-15, wt/logwarn → main `27d62df08`)
+
+- 사용자가 본 "계속 나오는 Warning" 은 에디터 실행마다 남던 `Missing localized text for key 'Ed…'`(약 80 줄, 9 게임 × 4 백엔드 × 에디터 켬 전부, 로케일 무관)였다 — 원인은 editorscn `68525f070`(에디터 문구 표 미적재).
+- 이제 시나리오는 선언하지 않은 Warning · Error · 빠진 현지화 키 하나로 진다(`AutomationLogPolicy`, 허용 목록 `Resource/engine/automation/allowedlogs.json` 은 비어 있다). 새 경고를 넣는 작업자는 시나리오가 깨질 수 있음을 안다.
+- `--check-text`(CI 에서는 `LocalizationGatherTest.RepositoryProjectsAreUpToDate`)는 번역 테이블이 있는 문화권의 빠진 · 낡은 번역과 수집 경고도 실패로 본다 — 원문을 바꾸면 ko 번역도 같은 커밋에서.
+- 병합 전 확인: Debug 경고 0, lint 71/71, nogpu 44/44(병합 전 트리), hostgpu 는 게임 팩 시나리오 × 4 백엔드 · 에디터 시나리오 DX12 만(사용자 지시로 전체는 통합 검증에서). 남은 일은 백로그 `C-33` · `A-5`.
 - 배포본 테스트용 변수: `SW_TEST_GLOBAL_VARIABLE_SHIPPED` 는 `CheckGlobalVariableKinds.toml` `[shipped]` 목록(이유 포함)에 있는 것만 둔다. 벤치 · 크래시 · 측정 스위치는 내렸다(Release 는 등록된다).
 - **에디터 모듈의 리플렉션 헤더는 `Source/Editor/CMakeLists.txt` 의 `REFLECTION_HEADERS` 목록이다** — 새 REFLECT 헤더를 넣지 않으면 링크 오류(`StaticType` 미정의)로 드러난다(EditorTest 는 에디터 소스를 따로 컴파일해 그 코드젠을 받지 못하므로, 둘이 같이 쓰는 데이터 타입은 Engine 에 둔다 — `UIResolutionPresetTable`).
 
