@@ -16,6 +16,8 @@
 #include "TestFramework/Harness/TestBench.h"
 #include "TestFramework/TestFramework.h"
 
+SW_TEST_LOAD_SUITE( NavMeshBenchTest, "nav mesh bake, path queries and crowd update cost" );
+
 SW_LOG_CALLER( "NavMeshBench" );
 
 namespace

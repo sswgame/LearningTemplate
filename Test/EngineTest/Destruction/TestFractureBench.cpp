@@ -13,6 +13,8 @@
 #include "TestFramework/Harness/TestBench.h"
 #include "TestFramework/TestFramework.h"
 
+SW_TEST_LOAD_SUITE( FractureBenchTest, "fracture begin-play, leaf shape warm-up and wall break frame cost" );
+
 namespace
 {
     struct FractureBenchInternal

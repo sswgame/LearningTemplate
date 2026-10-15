@@ -6,6 +6,8 @@
 
 #include "TestFramework/TestFramework.h"
 
+SW_TEST_LOAD_SUITE( MeshModifierBenchTest, "100k vertices through eight mesh modifiers" );
+
 // ------------------------------------------------------------------------------
 // MeshModifierBenchTest — 정점 약 10 만 개에 모디파이어 8 개를 거는 CPU 정본 경로의 비용. 숫자는 로그로만 남기고 기준값은 두지 않는다.
 // Release 에서 측정한다: EngineTest.exe --test_filter=MeshModifierBenchTest.*

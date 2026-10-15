@@ -20,6 +20,8 @@
 #include "TestFramework/Harness/TestBench.h"
 #include "TestFramework/TestFramework.h"
 
+SW_TEST_LOAD_SUITE( InteractionBenchTest, "interactor tick cost as the scene grows" );
+
 SW_LOG_CALLER( "InteractionBench" );
 
 namespace

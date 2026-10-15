@@ -20,6 +20,8 @@
 #include "TestFramework/Harness/TestBench.h"
 #include "TestFramework/TestFramework.h"
 
+SW_TEST_LOAD_SUITE( FixedStringBenchTest, "fixed_string size, assign, compare and clear micro-benchmarks" );
+
 SW_LOG_CALLER( "FixedStringBench" );
 
 namespace

@@ -31,6 +31,8 @@
 #include "TestFramework/Harness/TestBench.h"
 #include "TestFramework/TestFramework.h"
 
+SW_TEST_LOAD_SUITE( ContainerBenchTest, "container micro-benchmarks - lookup, intern hit, vector growth, slot table" );
+
 SW_LOG_CALLER( "ContainerBench" );
 
 namespace

@@ -13,6 +13,8 @@
 #include "TestFramework/Harness/TestBench.h"
 #include "TestFramework/TestFramework.h"
 
+SW_TEST_LOAD_SUITE( PhysicsBenchTest, "physics step cost with a far mover, many bodies and worker counts" );
+
 SW_LOG_CALLER( "PhysicsBench" );
 
 namespace

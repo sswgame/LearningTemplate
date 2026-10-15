@@ -15,6 +15,8 @@
 #include "TestFramework/Harness/TestBench.h"
 #include "TestFramework/TestFramework.h"
 
+SW_TEST_LOAD_SUITE( FileUtilBenchTest, "file system query and directory walk cost per call" );
+
 SW_LOG_CALLER( "FileUtilBench" );
 
 namespace
