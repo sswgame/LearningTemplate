@@ -282,6 +282,30 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
   Release 가 아니면 숫자만 적고 판정하지 않습니다(`--allow-debug` 로 덮는다). 판마다의 출력 전체는 `<빌드>/LoadResults/logs/`, 결과는 `<빌드>/LoadResults/<시각>.json` 입니다.
 - **병목 갈래**는 같은 판의 하위 구간 비율로 가릅니다 — `RT.BeginFrame` 이 `RT.Frame` 의 절반을 넘으면 GPU(펜스 대기), `GT.Packet.submit` 이 `GT.Frame` 의 절반을 넘으면 게임 스레드가 렌더 스레드를 기다린 것, 아니면 가장 무거운 `GT.*` 구간을 붙입니다.
 - **측정하기 전에** 다른 빌드 · GPU 실행이 없는지 봅니다 — `py -3 -m Scripts shared-lock acquire gpu --owner <이름>` 을 쥐고 재며, 다른 에이전트의 빌드가 돌면 기다립니다. VSync 는 기본으로 꺼져 있습니다(`display.vsync`).
+- **디스크 흉내의 해상도는 약 1 ms 입니다**(Windows 잠자기). 읽기마다 1 ms 를 줘도 8 ms 를 줘도 기동이 비슷하게 늘면 읽기 횟수가 시간을 정하는 것입니다(백로그 `C-29` ①).
+- **aiskirmish 는 StarSkirmish 가 든 빌드가 필요합니다** — Release 프리셋은 활성 게임만 지으므로 `cmake --preset Ninja-Release -DSW_GAMES=StarSkirmish` 로 구성합니다. 없으면 그 조합은 건너뜀(77)입니다.
+  OnlineLoadBot 은 Windows 에서 키트 DLL 사본과 함께 `ToolBin` 에 있고 작업 폴더는 `Bin` 입니다.
+
+**첫 기준선**(2026-10-15, PC `SW` · AMD Ryzen 7 6800H 16 스레드 · Radeon 내장 GPU, Release dx12 · VSync 꺼짐, 커밋 `wt/loadtest`, 조합마다 3 판의 가운데 값(최소..최대), `*` 는 흉내 낸 프로필):
+
+| 시나리오 × 프로필 | 워커 | GT p50 / p99 (us) | RT p99 | GPU p99 | 최악 프레임 (us) | 할당/프레임 | 사유 메모리 (MB) | GPU 메모리 (MB) | 기동 (ms) |
+|---|---:|---|---:|---:|---:|---:|---:|---:|---:|
+| renderbench(큐브 8000 · 무버) × Native | 14 | 983 / 1441 (1310..1703) | 1441 | 983 | 19618 (4736..20216) | 6 | 215 | 57 | 634 |
+| renderbench × HighEnd* | 10 | 1048 / 1572 | 1703 | 1179 | 3362 (3200..3717) | 6 | 221 | 64 | 601 |
+| renderbench × Mid* | 4 | 851 / 1310 (1310..1441) | 1441 | 917 | 2254 (2237..3561) | 6 | 204 | 48 | 6449 |
+| renderbench × LowEnd* | 2 | 655 / 1441 (1441..1572) | 1835 (1835..2097) | 1179 | 2899 (2269..2943) | 6 | 186 | 32 | 6816 |
+| aiskirmish(AI 두 진영) × HighEnd* | 10 | 786 / 1441 (1310..1441) | 1310 | 720 | 14386 (12567..14472) | 19 | 203 | 62 | 649 |
+| aiskirmish × Mid* | 4 | 589 / 1048 | 1048 | 589 | 19192 (17608..20545) | 34 | 185 | 47 | 6329 |
+| aiskirmish × LowEnd* | 2 | 458 / 786 (786..851) | 720 | 425 | 25153 (15918..26516) | 60 | 167 | 31 | 6893 |
+| soak(큐브 2000, 10 분) × Native | 14 | 720 / 1179 | 1310 | 786 | 13608 | 6 | 196(+0.07 MB/분) | — | — |
+
+| 서버 시나리오 × 프로필 | 지표(가운데 값, 최소..최대) |
+|---|---|
+| connect(봇 300 · 5 초 램프업 · 30 초) × HighEnd* · Mid* · LowEnd* | login p99 13.1 · 13.2 · 15.9 ms, chat_send p99 21.1 · 18.7 · 21.2 ms, matchmaking_queue p99 19.0 · 18.9 · 22.8 ms, 오류 0 %, 동작 4200, 사유 메모리 63 MB |
+| replication(클라이언트 8 · lte · 12 초) × HighEnd* · Mid* · LowEnd* | 틱 p50 2.9 · 3.0 · 3.2 ms, p99 9.2 (8.5..10.1) · 9.3 · 10.3 ms, max 45 · 43 · 44 ms(서버와 클라이언트 월드 아홉을 한 스레드에서), 수렴 1(상태 해시 일치) |
+
+  흉내는 클럭을 줄이지 않아 코어가 적은 프로필의 프레임이 오히려 짧습니다(경합이 준다). 이 표에서 프로필 차이로 읽을 수 있는 것은 워커 수 · 기동(디스크) · 히치 꼬리 · 메모리입니다.
+  부하 스위트의 시간 예산(`SW_TEST_TIME_BUDGET`)은 같은 날 Release 세 번 중 최대 케이스 시간의 네 배입니다(`TaskManagerBenchTest` 3.2 s · `PackReadBenchTest` 3.1 s · `NetSimLoadTest` 2.5 s 가 가장 길다).
 - **CI 야간 잡**(`.github/workflows/load.yml`, 리눅스 `CI-Release`)이 `ctest -L load` 와 묶음 `nightly`(봇 · 클러스터 — GPU 가 없어 App 드라이버 제외)를 돌리고 진 조합을 주석으로 올립니다(`CiFailureReport.py load`). 러너는 측정 기계가 아니므로 기준선은 알림뿐입니다.
 
 ## 3. 검증할 때의 함정

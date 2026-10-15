@@ -558,12 +558,14 @@ namespace sw
 
     string FileUtil::getBinaryDirectory()
     {
+        // 키트 DLL 을 링크하는 실행 파일(테스트 `TestBin`, 개발 도구 `ToolBin` — OnlineLoadBot)은 그 DLL 사본과 함께 따로 나오고 작업 폴더는 `Bin` 이다.
         static constexpr string_view kTestBinaryFolder = "TestBin";
+        static constexpr string_view kToolBinaryFolder = "ToolBin";
         static constexpr string_view kBinaryFolder     = "Bin";
         string                       binaryDir         = getDirectoryPart( getExecutablePath() );
         string_view                  folderName;
         getFileNamePart( binaryDir, folderName );
-        if ( folderName == kTestBinaryFolder )
+        if ( folderName == kTestBinaryFolder || folderName == kToolBinaryFolder )
         {
             const string siblingBinary = joinPath( getDirectoryPart( binaryDir ), kBinaryFolder );
             if ( isDirectory( siblingBinary ) )

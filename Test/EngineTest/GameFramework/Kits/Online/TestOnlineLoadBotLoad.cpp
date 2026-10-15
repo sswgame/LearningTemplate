@@ -17,6 +17,7 @@
 using namespace sw;
 
 SW_TEST_LOAD_SUITE( OnlineLoadBotLoadTest, "runs 200 load bots through the chat and matchmaking scenario on the loopback server assembly" );
+SW_TEST_TIME_BUDGET( OnlineLoadBotLoadTest, 2500, "Release 케이스 최대 513 ms(2026-10-15, Ryzen 7 6800H, 세 번 중 최대)의 네 배 — CI 러너 여유" );
 
 namespace
 {

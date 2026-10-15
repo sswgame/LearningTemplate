@@ -53,6 +53,8 @@ kTrackedScope: tuple[str, ...] = ("GT.Frame", "RT.Frame", "GPU.Frame", "GT.Scene
 #: 기준선과 견줄 때의 허용 — 값 > 기준 × (1 + 허용) + 바닥 이면 회귀. max 는 한 번의 사건이라 기준선과 견주지 않고 예산으로만 본다.
 kBaselineTolerance: dict[str, float] = {"p50_us": 0.15, "p99_us": 0.35, "_mb": 0.15, "per_frame": 0.25}
 kBaselineFloor: dict[str, float] = {"_us": 150.0, "_mb": 32.0, "per_frame": 2.0}
+#: 기다림 구간 — 다른 스레드 · GPU 를 기다린 시간이라 판마다 크게 흔들린다. 병목 갈래를 가를 때만 쓰고 기준선과 견주지 않는다.
+kWaitScope: tuple[str, ...] = ("RT.BeginFrame", "RT.Present", "GT.Packet.submit")
 #: 소크 기울기 — 앞 1/4 은 캐시 채우기라 뺀다(Scripts/qa/Soak.py 와 같다).
 kWarmupFraction = 0.25
 
@@ -223,6 +225,17 @@ def readAppMetricsInternal(listLine: list[str]) -> dict[str, float]:
     return metrics
 
 
+def readScalabilityPresetInternal(repositoryRoot: Path, quality: str) -> dict[str, str]:
+    """엔진 설정 스키마(`Resource/engine/settings/engine.settings.xml` 의 <Scalability>)에서 품질 프리셋이 묶는 설정 값들 — 프리셋 표를 여기 다시 적지 않는다."""
+    root = ElementTree.parse(repositoryRoot / "Resource/engine/settings/engine.settings.xml").getroot()
+    for scalability in root.iter("Scalability"):
+        for preset in scalability.findall("Preset"):
+            if preset.get("name") == quality:
+                mapValue = {value.get("setting", ""): value.get("value", "") for value in preset.findall("Value")}
+                return {scalability.get("setting", "graphics.quality"): quality, **mapValue}
+    raise ValueError(f"quality '{quality}' is not a preset in engine.settings.xml")
+
+
 def makeAppArgumentsInternal(declaration: LoadDeclaration, profile: HardwareProfile, backend: str, gameTable: dict, settingsPath: Path) -> list[str]:
     data = profile.data
     listArgument = [f"-game={declaration.gameName}", kBackendSwitch[backend], f"-scenario={declaration.resourceID}",
@@ -236,9 +249,6 @@ def makeAppArgumentsInternal(declaration: LoadDeclaration, profile: HardwareProf
         listArgument.append(f"-gv_benchTickMovers={declaration.moverCount}")
     if data.get("width") and data.get("height"):
         listArgument += [f"-W={data['width']}", f"-H={data['height']}"]
-    quality = data.get("quality", "")
-    if quality and quality != "auto":
-        listArgument.append(f"-gv_userSettingsApply=graphics.quality={quality}")
     if data.get("vram_mb"):
         listArgument.append(f"-gv_emulatedGPUMemoryMb={data['vram_mb']}")
     if data.get("io_latency_ms"):
@@ -261,7 +271,12 @@ def runAppDriver(declaration: LoadDeclaration, profile: HardwareProfile, tree: B
     if qualityOverride:
         profile = HardwareProfile(profile.name, {**profile.data, "quality": qualityOverride})
     with tempfile.TemporaryDirectory(prefix="sw_load_") as temporaryFolder:
-        settingsPath = Path(temporaryFolder) / "usersettings.json"  # 없는 파일 — 사용자 폴더를 건드리지 않고 품질은 명령줄 · 자동 선택이 정한다
+        # 사용자 폴더를 건드리지 않는 임시 설정 파일. 품질이 정해진 프로필은 파일에 적어 기동 적용(다시 시작이 필요한 텍스처 품질 포함)으로 넣고,
+        # `auto` 는 파일을 두지 않아 엔진이 흉내 낸 사양으로 고른다(첫 실행 자동 선택).
+        settingsPath = Path(temporaryFolder) / "usersettings.json"
+        quality = qualityOverride or profile.data.get("quality", "")
+        if quality and quality != "auto":
+            settingsPath.write_text(json.dumps({"version": 1, "values": readScalabilityPresetInternal(getProjectRoot(), quality)}) + "\n", encoding="utf-8")
         listArgument = makeAppArgumentsInternal(declaration, profile, backend, gameTable, settingsPath)
         measurement.command = [str(appPath), *listArgument]
         timeoutSeconds = declaration.durationSeconds * 2.0 + 240.0
@@ -269,6 +284,9 @@ def runAppDriver(declaration: LoadDeclaration, profile: HardwareProfile, tree: B
                         limits=profile.makeLimits())
     if result.bBackendUnusable:
         measurement.skipReason = f"{backend} is not usable on this machine"
+        return measurement
+    if any("is not built in this build" in line for line in result.listLine):
+        measurement.skipReason = f"game {declaration.gameName} is not built in {tree.name} - configure with -DSW_GAMES={declaration.gameName} (or ALL)"
         return measurement
     if not result.bClean:
         detail = result.listErrorLine[:3] if result.listErrorLine else [f"exit {result.exitCode}, timed out={result.bTimedOut}"]
@@ -283,9 +301,10 @@ def runAppDriver(declaration: LoadDeclaration, profile: HardwareProfile, tree: B
 
 def runLoadBotDriver(declaration: LoadDeclaration, profile: HardwareProfile, tree: BuildTree, repositoryRoot: Path) -> RunMeasurement:
     measurement = RunMeasurement()
-    botPath = tree.binDir / ("OnlineLoadBot.exe" if sys.platform == "win32" else "OnlineLoadBot")
+    # Windows 는 키트 DLL 사본과 함께 ToolBin 에 있고(작업 폴더는 Bin), 리눅스는 Bin 에 있다(Tools/OnlineLoadBot/CMakeLists.txt).
+    botPath = tree.path / "ToolBin" / "OnlineLoadBot.exe" if sys.platform == "win32" else tree.binDir / "OnlineLoadBot"
     if not botPath.is_file():
-        measurement.skipReason = f"no OnlineLoadBot in {tree.binDir} (the online kits are off in this build)"
+        measurement.skipReason = f"no {botPath} (the online kits are off in this build)"
         return measurement
     with tempfile.TemporaryDirectory(prefix="sw_load_") as temporaryFolder:
         reportPath = Path(temporaryFolder) / "report.json"
@@ -295,7 +314,7 @@ def runLoadBotDriver(declaration: LoadDeclaration, profile: HardwareProfile, tre
         if declaration.clientCount > 0:
             listArgument.append(f"--bots={declaration.clientCount}")
         measurement.command = [str(botPath), *listArgument]
-        result = runApp(botPath, listArgument, cwd=repositoryRoot, timeoutSeconds=declaration.durationSeconds * 3.0 + 120.0,
+        result = runApp(botPath, listArgument, cwd=tree.binDir, timeoutSeconds=declaration.durationSeconds * 3.0 + 120.0,
                         sampleIntervalSeconds=1.0, limits=profile.makeLimits())
         report = readJsonInternal(reportPath)
     measurement.listLine = result.listLine
@@ -417,7 +436,7 @@ def judgeBudget(budget: dict[str, float], summary: dict[str, dict[str, float]]) 
 
 def makeToleranceInternal(metricName: str) -> tuple[float, float] | None:
     """(허용 비율, 바닥) — 기준선과 견주는 지표만. max · 횟수 · 기울기는 견주지 않는다."""
-    if metricName.endswith(".max_us") or metricName.startswith("hitch.") or metricName.endswith("_per_minute") or metricName in ("wall.frames", "actions"):
+    if metricName.startswith(kWaitScope) or metricName.endswith(".max_us") or metricName.startswith("hitch.") or metricName.endswith("_per_minute") or metricName in ("wall.frames", "actions"):
         return None
     for suffix, tolerance in kBaselineTolerance.items():
         if metricName.endswith(suffix):

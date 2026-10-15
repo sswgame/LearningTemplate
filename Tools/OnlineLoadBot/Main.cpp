@@ -12,6 +12,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Module/ModuleImageUtil.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
@@ -92,6 +93,23 @@ namespace sw
             static constexpr int64  kIdleSleepNs          = 200000; ///< 틱 사이 — 전송을 I/O 스레드 없이 돌리므로 짧게
             static constexpr int32  kPercentScale         = 100;
             static constexpr int32  kSpareConnectionCount = 16;
+            /** @brief 서버 조립(`--local-server`)이 쓰는 서버 키트 모듈 — 실행 파일이 그 심볼을 쓰지 않아 링커가 import 를 버리므로 이름으로 올린다. */
+            static constexpr const utf8* kArrServerKitModule[] = { "GF_Server_Account", "GF_Server_Chat", "GF_Server_Leaderboard", "GF_Server_LiveOps",
+                                                                   "GF_Server_Matchmaking", "GF_Server_ServerDirectory", "GF_Server_Social" };
+
+            /** @brief 서버 키트 모듈을 올려 정적 등록자가 서버 조립 레지스트리에 오르게 합니다. 하나라도 못 올리면 false 와 그 이름입니다. 프로세스가 끝날 때까지 내리지 않는다. */
+            [[nodiscard]] static bool loadServerKitModules( string& outError )
+            {
+                for ( const utf8* pModule : kArrServerKitModule )
+                {
+                    if ( ModuleImageUtil::loadDynamicLibrary( ModuleImageUtil::findModuleLibraryPath( pModule ) ) == nullptr )
+                    {
+                        outError = string( "cannot load the server kit module " ) + pModule;
+                        return false;
+                    }
+                }
+                return true;
+            }
 
             [[nodiscard]] static bool readValue( string_view argument, string_view key, string& outValue )
             {
@@ -219,6 +237,11 @@ int32 main( int32 argc, utf8* argv[] )
     LoadBotLocalServer           localServer;
     if ( options._bLocalServer == SW_TRUE )
     {
+        if ( Internal::loadServerKitModules( error ) == false )
+        {
+            SW_LOG_ERROR( "OnlineLoadBot: %#", error );
+            return Internal::kExitUsage;
+        }
         serverTransport = StreamTransportFactory::createPlatformTransport();
         LoadBotLocalServerSettings serverSettings;
         serverSettings._port               = options._localServerPort;

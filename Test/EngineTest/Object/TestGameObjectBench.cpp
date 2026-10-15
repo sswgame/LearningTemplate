@@ -29,6 +29,7 @@
 #include "TestFramework/TestFramework.h"
 
 SW_TEST_LOAD_SUITE( GameObjectBenchTest, "game object spawn, tick, destroy, activation and component lookup cost" );
+SW_TEST_TIME_BUDGET( GameObjectBenchTest, 1000, "Release 케이스 최대 71 ms(2026-10-15, Ryzen 7 6800H, 세 번 중 최대)의 네 배 — CI 러너 여유" );
 
 SW_LOG_CALLER( "GameObjectBench" );
 

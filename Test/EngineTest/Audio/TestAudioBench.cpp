@@ -11,6 +11,7 @@
 #include "TestFramework/TestFramework.h"
 
 SW_TEST_LOAD_SUITE( AudioBenchTest, "audio render cost per voice" );
+SW_TEST_TIME_BUDGET( AudioBenchTest, 1000, "Release 케이스 최대 107 ms(2026-10-15, Ryzen 7 6800H, 세 번 중 최대)의 네 배 — CI 러너 여유" );
 
 // ------------------------------------------------------------------------------
 // AudioBenchTest — 보이스 N 개의 렌더 CPU 비용(실시간 대비). 숫자는 로그로 남기고, 테스트는 실제로 그만큼 섞었는지만 본다.

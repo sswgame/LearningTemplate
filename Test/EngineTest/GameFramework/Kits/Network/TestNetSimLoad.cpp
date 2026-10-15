@@ -15,7 +15,7 @@
 // 결과는 `[LoadMetric] <이름>=<값>` 줄로 남긴다 — `Scripts/qa/Load.py` 가 읽어 예산 · 기준선과 견준다.
 
 SW_TEST_LOAD_SUITE( NetSimLoadTest, "서버 + 클라이언트 여럿의 틱 시간과 부하 중 상태 해시 일치를 잰다(부하 검증의 cluster 드라이버)" );
-SW_TEST_TIME_BUDGET( NetSimLoadTest, 60000, "Release 기본값(클라이언트 8 · 12 초 창)이 이 PC 에서 약 20 초 — 세 배 여유" );
+SW_TEST_TIME_BUDGET( NetSimLoadTest, 10500, "Release 케이스 최대 2517 ms(2026-10-15, Ryzen 7 6800H, 세 번 중 최대)의 네 배 — CI 러너 여유" );
 
 using namespace test;
 

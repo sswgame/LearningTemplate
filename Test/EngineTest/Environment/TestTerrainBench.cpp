@@ -20,6 +20,7 @@
 #include "TestFramework/TestFramework.h"
 
 SW_TEST_LOAD_SUITE( TerrainBenchTest, "terrain LOD sweep, collider rebuild and height write cost" );
+SW_TEST_TIME_BUDGET( TerrainBenchTest, 4500, "Release 케이스 최대 1020 ms(2026-10-15, Ryzen 7 6800H, 세 번 중 최대)의 네 배 — CI 러너 여유" );
 
 /**
  * @brief [TerrainBenchTest] 눈이 지형을 가로지르는 600 프레임 — LOD 교체 프레임의 GT 비용(판정 · 청크 메시 · GPU 씬 수집)

@@ -17,6 +17,7 @@
 #include "TestFramework/TestFramework.h"
 
 SW_TEST_LOAD_SUITE( NavMeshBenchTest, "nav mesh bake, path queries and crowd update cost" );
+SW_TEST_TIME_BUDGET( NavMeshBenchTest, 1500, "Release 케이스 최대 281 ms(2026-10-15, Ryzen 7 6800H, 세 번 중 최대)의 네 배 — CI 러너 여유" );
 
 SW_LOG_CALLER( "NavMeshBench" );
 

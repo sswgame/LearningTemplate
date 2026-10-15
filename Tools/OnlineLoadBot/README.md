@@ -14,10 +14,11 @@ Locust나 Gatling 같은 부하 테스트 도구와 같은 일을 하지만, HTT
 
 ## 따라 해 보기 — 빠른 확인 시나리오 돌리기
 
-같은 프로세스 안에 서버를 띄우고 봇 300개로 30초 동안 돌려 봅니다. 저장소 루트에서 실행합니다.
+같은 프로세스 안에 서버를 띄우고 봇 300개로 30초 동안 돌려 봅니다. 작업 폴더는 `Bin` 입니다(Windows 의 실행 파일은 키트 DLL 사본과 함께 `ToolBin` 에 있습니다 — 테스트의 `TestBin` 과 같은 이유).
 
 ```powershell
-build/Ninja-Debug/Bin/OnlineLoadBot.exe --scenario=Tools/OnlineLoadBot/Scenarios/quick_check.json --local-server --light-hash
+cd build/Ninja-Debug/Bin
+../ToolBin/OnlineLoadBot.exe --scenario=../../../Tools/OnlineLoadBot/Scenarios/quick_check.json --local-server --light-hash
 ```
 
 - `--local-server` 는 같은 프로세스에 서버를 조립합니다(`LoadBotLocalServer`). 전용 서버와 같은 조립(`OnlineServerRuntime`)으로 메모리 저장소, 캐시, 메시지 버스 위에
