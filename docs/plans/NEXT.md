@@ -4,24 +4,16 @@
 [검증과 측정](../08_Verification.md), 남은 일 전체는 [백로그](../06_Backlog.md)(분류 A~H)에 있습니다. 작업 방식은 [작업 방식](../11_Workflow.md)이고,
 병렬 작업자에게 주는 공통 규칙은 [작업자 규칙](WorkerRules.md)입니다.
 
-## 1. 지금 상태 (2026-10-15)
+## 1. 지금 상태 (2026-10-16)
 
-main 은 `origin/main` 보다 184 커밋 앞서 있고 push 하지 않았습니다. 원격 브랜치는 `main` 하나입니다. 이번 세션에 병합한 것은 다음과 같습니다.
+main 은 `origin/main` 과 같습니다(2026-10-16 push 했습니다). 원격 브랜치는 `main` 하나입니다. 한 일은 `git log` 가 정본이고, 여기에는 다음 세션이 알아야 할 것만 적습니다.
 
-- 서브시스템 정리의 마지막 단계: `EngineLoop` 를 `Engine` 으로 개명, 호스트 범위(모듈 이미지 창구, 자동화 구동기), C-27 판정 마감.
-- 스레드: `sw::thread` 래퍼와 `CheckStdThread` 린트, 에디터 백그라운드 작업의 결과 · 대기 판정 통합(C-24).
-- 내보내기: 키트 DLL 이 `GameFramework.dll` 과 겹쳐 내보내던 심볼 제거(`SW_KIT_API` · `SW_KIT_SERVER_API`), `CheckExportMacros` 린트(C-3).
-- 상수: 시간 · 바이트 단위 공용 상수와 치환 106 개 파일, `OnlineLimit.h`, `CheckWellKnownConstants` 확장. 조건 세 부분 이상은 이름을 붙이라는 `CheckConditionParts` 린트(새 줄만 검사).
-- 이름: 사용자 설정의 `Applier` 를 `Handler` 로 바꿨고 한국어 "적용기" 를 없앴습니다. 정적 등록 표를 `RegistrationList` 로 모았습니다(`EditorAssetTypeActions` 포함).
-- 에디터: 서버 디버그 채널 · 상태 해시 · 권한 고스트(S3 · S6 · S7), 다중 월드 단계 2~5(미리보기 씬마다 렌더러, `EditorPreviewPanel`, 모듈 ABI v6), 지형 쓰기 API(CPU), 캐릭터 편집 창(스켈레톤 · 장비 · 피팅 표시 · 프리셋 파일), 메시 모디파이어 보강, UI 혼합 배율 `MatchWidthOrHeight`.
-- 결함: E-11(리로드 중복 등록), GL 체인 포커스 상실 입력 처리, 커서 클립 건너뜀 처리, 에디터 창 5 건(`visual`).
-- 도구: 가드 훅 `GuardCommands.py`, graphify MCP(`.mcp.json`), `gpu-verifier` · `code-reviewer` 에이전트.
+- 빌드 속도(2026-10-16): SHARED 타깃의 임포트 라이브러리를 내용이 바뀔 때만 갱신(`.cpp` 하나 고친 증분 13.9 → 5 s), PCH 에서 자주 바뀌는 헤더 여섯을 뺌(핵심 헤더 증분 131 → 14 ~ 77 s, 풀 빌드 +15 %).
+  다음 후보는 리플렉션 헤더 팬아웃([빌드 속도 계획](BuildSpeed.md) 12 단계). 리눅스 · PCH 끈 Windows CI 는 아직 이 변경으로 돌지 않았으니 push 뒤 첫 결과를 봅니다.
+- PCH 에 없는 `Component.h` · `GameObject.h` · `Scene.h` · `SceneManager.h` · `RHITypes.h` 는 쓰는 .cpp 가 직접 include 합니다. 새 .cpp 가 "incomplete type" 으로 서면 include 를 더합니다.
+- 문서 읽는 법(2026-10-16): 백로그는 분류표와 내 항목만, `AGENTS.md` 는 절만 읽습니다([CLAUDE.md](../../CLAUDE.md)). 에이전트 지시문에 읽을 문서와 절을 적습니다.
 
-**남은 워크트리.**
-
-- `terrain2`(지형 쓰기)와 `modgpu`(메시 모디파이어 컴퓨트 미리보기)는 병합했습니다. 지형 남은 일은 백로그 `D2-5` (7)입니다.
-- `D:\w\visual`: 병합은 끝났습니다. 에디터 기능 캡처(`captures/`)와 미추적 시나리오(`Resource/engine/automation/vis/`)가 남아 있으니 필요한 것만 챙기고 `py -3 -m Scripts worktree-remove visual --force` 로 지웁니다.
-- `D:\w\perfbase` · `perfbase2` 는 성능 기준선이라 남깁니다.
+**남은 워크트리.** `D:\w\perfbase` · `perfbase2` 는 성능 기준선이라 남깁니다. 그 밖의 것은 `git worktree list` 로 보고, 병합이 끝난 것은 `py -3 -m Scripts worktree-remove <이름>` 으로 지웁니다.
 
 ## 2. 검증 상태와 남은 검증
 
@@ -147,6 +139,6 @@ Shipping 키트는 STATIC 이고 내보내기 매크로가 빈 것을 산출물�
 ## 9. 새 세션 시작 절차
 
 1. 이 문서, [작업 방식](../11_Workflow.md), [작업자 규칙](WorkerRules.md), [백로그](../06_Backlog.md) 순서로 읽습니다. C++ 을 쓰기 전에 [AGENTS.md](../../AGENTS.md).
-2. `git worktree list` 로 남은 워크트리를 확인하고 1 절의 `terrain2` · `modgpu` 상태를 봅니다.
+2. `git worktree list` 로 남은 워크트리를 확인하고 병합이 끝난 것을 지웁니다.
 3. 2 절의 검증을 먼저 합니다.
 4. 3 절의 큰 일을 사용자와 순서를 확인한 뒤 시작합니다. 시작 전에 graphify 그래프를 갱신합니다.
