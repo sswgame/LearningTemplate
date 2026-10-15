@@ -565,6 +565,25 @@ namespace sw
         { return ( ch < 0x80 ) ? toLowerChar( ch ) : static_cast<utf16>( std::towlower( static_cast<wint_t>( ch ) ) ); } );
     }
 
+    string StringUtil::toSnakeCase( string_view pascalName, bool bUpper )
+    {
+        string result;
+        result.reserve( pascalName.size() + pascalName.size() / 2 );
+        for ( size_t index = 0; index < pascalName.size(); ++index )
+        {
+            const utf8 ch         = pascalName[index];
+            const bool bUpperChar = 'A' <= ch && ch <= 'Z';
+            const bool bPrevLower = index > 0 && ( ( 'a' <= pascalName[index - 1] && pascalName[index - 1] <= 'z' ) || ( '0' <= pascalName[index - 1] && pascalName[index - 1] <= '9' ) );
+            const bool bPrevUpper = index > 0 && 'A' <= pascalName[index - 1] && pascalName[index - 1] <= 'Z';
+            const bool bNextLower = index + 1 < pascalName.size() && 'a' <= pascalName[index + 1] && pascalName[index + 1] <= 'z';
+            const bool bWordStart = bUpperChar && ( bPrevLower || ( bPrevUpper && bNextLower ) ); // `HTTPMethod` 의 M 은 대문자 줄의 끝이자 새 낱말이다
+            if ( bWordStart )
+                result.push_back( '_' );
+            result.push_back( bUpper ? toUpperChar( ch ) : toLowerChar( ch ) );
+        }
+        return result;
+    }
+
     void StringUtil::replaceChar( string& inoutStr, const utf8 fromChar, const utf8 toChar )
     {
         for ( utf8& ch : inoutStr )

@@ -7,6 +7,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
+#include "Engine/Graphics/Material/MaterialUtil.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -52,6 +53,19 @@ SW_TEST_CASE( MaterialTest, MaterialLoadAndSave )
     bool                         reloadOk         = reloadedMaterial->loadFromFile( tempPath );
     SW_EXPECT_TRUE( reloadOk );
     SW_EXPECT_EQUAL( material->getName(), reloadedMaterial->getName() );
+}
+
+/**
+ * @brief [MaterialTest] 사용 define 은 열거자 이름에서 만든다 — 낱말마다 밑줄(PostProcess → POST_PROCESS), 약어는 한 낱말(UI)
+ */
+SW_TEST_CASE( MaterialTest, UsageDefinesComeFromEnumeratorNames )
+{
+    sw::vector<sw::string> listDefine;
+    sw::MaterialUtil::appendUsageDefines( sw::MaterialUsageFlags::PostProcess | sw::MaterialUsageFlags::UI | sw::MaterialUsageFlags::SkeletalMesh, listDefine );
+    SW_ASSERT_EQUAL( listDefine.size(), size_t{ 3 } );
+    SW_EXPECT_STREQ( listDefine[0].c_str(), "MATERIAL_USAGE_SKELETAL_MESH" );
+    SW_EXPECT_STREQ( listDefine[1].c_str(), "MATERIAL_USAGE_UI" );
+    SW_EXPECT_STREQ( listDefine[2].c_str(), "MATERIAL_USAGE_POST_PROCESS" );
 }
 
 /**

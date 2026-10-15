@@ -15,8 +15,8 @@ namespace sw
     {
     }
 
-    void ServiceMetrics::initialize( MetricRegistry* pRegistry, const utf8* pServiceName, const utf8* const* arrMethodName, int32 methodCount,
-                                     const utf8* const* arrResultName, int32 resultCount )
+    void ServiceMetrics::initializeWithResultNames( MetricRegistry* pRegistry, const utf8* pServiceName, const utf8* const* ppMethodName, int32 methodCount,
+                                                    const vector<string>& listResultName )
     {
         _listRequestCounter.clear();
         _listLatency.clear();
@@ -26,7 +26,7 @@ namespace sw
         if ( pRegistry == nullptr )
             return;
         _methodCount                    = methodCount;
-        _resultCount                    = resultCount;
+        _resultCount                    = static_cast<int32>( listResultName.size() );
         const vector<float64> listBound = MetricRegistry::makeLatencyBounds();
         vector<MetricLabel>   listLabel( 1 );
         listLabel[0] = MetricLabel{ "service", pServiceName };
@@ -34,12 +34,12 @@ namespace sw
         for ( int32 methodIndex = 0; methodIndex < methodCount; ++methodIndex )
         {
             listLabel.resize( 2 );
-            listLabel[1] = MetricLabel{ "method", arrMethodName[methodIndex] };
+            listLabel[1] = MetricLabel{ "method", ppMethodName[methodIndex] };
             _listLatency.push_back( pRegistry->registerHistogram( "service_request_seconds", "Service request latency from receive to reply", listBound, listLabel ) );
             listLabel.resize( 3 );
-            for ( int32 resultIndex = 0; resultIndex < resultCount; ++resultIndex )
+            for ( const string& resultName : listResultName )
             {
-                listLabel[2] = MetricLabel{ "result", arrResultName[resultIndex] };
+                listLabel[2] = MetricLabel{ "result", resultName };
                 _listRequestCounter.push_back( pRegistry->registerCounter( "service_requests_total", "Service requests by method and result", listLabel ) );
             }
         }
