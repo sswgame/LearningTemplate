@@ -99,6 +99,16 @@ namespace sw
                 infoQueue->SetBreakOnSeverity( D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE );
                 infoQueue->SetBreakOnSeverity( D3D12_MESSAGE_SEVERITY_ERROR, FALSE );
             }
+            // 큐는 장치 실패 때만 비운다(flushDebugMessages). 경고가 나는 그 자리에서 보이게 콜백을 단다(Windows 11 의 디버그 레이어부터 있다).
+            Microsoft::WRL::ComPtr<ID3D12InfoQueue1> infoQueue1;
+            const bool                               bCallbackRegistered = SUCCEEDED( _device.As( &infoQueue1 ) ) &&
+                                             SUCCEEDED( infoQueue1->RegisterMessageCallback( &D3D12RHIDevice::onValidationMessage, D3D12_MESSAGE_CALLBACK_FLAG_NONE,
+                                                                                             this, &_validationCallbackCookie ) );
+            if ( bCallbackRegistered == false )
+            {
+                _validationCallbackCookie = 0;
+                SW_LOG_INFO( "D3D12 debug layer has no message callback (ID3D12InfoQueue1) - validation warnings show only when the device fails" );
+            }
         }
     #endif
 
@@ -276,6 +286,12 @@ namespace sw
         _fence.Reset();
         _commandQueue.Reset();
         _memoryAdapter.Reset();
+        Microsoft::WRL::ComPtr<ID3D12InfoQueue1> infoQueue1;
+        const bool                               bHasValidationCallback = _validationCallbackCookie != 0 && _device != nullptr && SUCCEEDED( _device.As( &infoQueue1 ) );
+        if ( bHasValidationCallback )
+            infoQueue1->UnregisterMessageCallback( _validationCallbackCookie );
+        _validationCallbackCookie = 0;
+        infoQueue1.Reset();
         _device.Reset();
 
         if ( _fenceEvent != nullptr )

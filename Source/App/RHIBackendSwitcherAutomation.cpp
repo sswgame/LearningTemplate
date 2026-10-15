@@ -178,7 +178,7 @@ namespace sw
         };
     } // namespace
 
-    SW_DEV_COMMAND( rhiRemoveDevice, "rhi.removeDevice", "rhi.removeDevice", "Remove the GPU device as a TDR would (DirectX 12) to check that frames and shutdown do not hang",
+    SW_DEV_COMMAND( rhiRemoveDevice, "rhi.removeDevice", "rhi.removeDevice", "Remove the GPU device as a TDR would (DirectX 12; Vulkan marks it lost) to check that frames and shutdown do not hang",
                     &RHIBackendSwitcherAutomationInternal::runRemoveDevice );
     SW_AUTOMATION_STEP_WITH_HOOKS( swapBackend, "SwapBackend", &RHIBackendSwitcherAutomationInternal::runSwapBackend,
                                    &RHIBackendSwitcherAutomationInternal::validateSwapBackend, &RHIBackendSwitcherAutomationInternal::prepareSwapBackend, nullptr, false );

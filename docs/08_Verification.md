@@ -358,6 +358,8 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
   4 백엔드 대조는 Debug 로(Shipping 은 `SW_SHIPPING_RHI_BACKEND` 하나만 링크하고 `-vk` 를 거절한다).
 - **픽셀 지표는 튼튼하게.** "특정 색 픽셀 수" 는 클리어 색 · 톤맵에 무너진다 — 모서리 기준 배경 제거 + 평균(R−B) 대소, 또는 "고유 색 ≥ 2". sin(시간) 구동
   지표는 "달라진 픽셀 수" 로. define 이 GPU 에 닿았는지는 PSO 디스크립터가 아니라 픽셀로 본다. 막히면 PPM 을 덤프한다.
+- **D3D12 디버그 레이어 경고는 Debug DX12 로그의 `D3D12 debug layer (severity S, id N)` 줄이다**(앞 16 개만 적고 나머지는 센다 — `IRHIDevice::getValidationMessageCount`). 렌더 변경 뒤 이 줄이 0 인지 본다.
+  테스트는 그리기 전후의 수를 비교해 단언한다(`CanvasDrawsOnEveryBackend` · `GPUTimestampsMarkUnwrittenSlotsAllBackends`).
 - **`-gv_screenshot` 은 PrintWindow 가 아니다** — PPM 이 원본이다. `-gv_screenshotFrame=N` 으로 프레임을, `-gv_screenshotAttachment=<이름>` 으로 첨부를 고른다.
   "가끔 튄다" 는 한 장으로 안 잡힌다 — `-gv_screenshotCount=30 -gv_screenshotInterval=2` 로 연속으로 찍어(`_000` … 이 붙는다) 장을 나란히 본다.
 - **"조용한 프레임" 버그는 벤치가 가린다**(회전 큐브라 매 프레임 dirty). 에디터 정지 화면으로 본다: `-EnableEditor -gv_benchMeshes=1 -gv_screenshot -gv_screenshotFrame=60`.
@@ -403,7 +405,7 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
   ② 같은 명령을 `-gv_validateBindlessIndex=2` 로 다시 돌려 `[BindlessIndex]` 줄을 셉니다. `is not a live` 오류가 있으면 그 패스 · 필드가 원인 후보 1 순위이고, 없으면 `= absent` 목록에서 손실 패스의 필드를 고릅니다.
   ③ 후보 하나만 셰이더에서 바꿔(첨자를 배열 안으로 자르기, 값을 상수로) 3 회 이상 다시 돌려 재현율을 견줍니다. 셰이더는 개발 빌드에서 라이브 컴파일되므로 다시 빌드할 필요가 없고, 끝나면 `App --cook-shaders` 로 다시 굽습니다.
 - **백엔드 교체 · 장치 제거는 `engine/automation/rhiswap/` 시나리오로 본다**(네 백엔드가 모두 있는 PC 에서만 통과해 AppScenarioTest 가 줍지 않는다). `swapbackends`(네 백엔드 건너기),
-  `terrainedits`(저장하지 않은 지형 편집 · 씬 뷰 카메라가 교체를 넘는지), `removedevice`(개발 명령 `rhi.removeDevice` 로 DX12 장치를 제거한 뒤 프레임 · 종료가 멈추지 않는지).
+  `terrainedits`(저장하지 않은 지형 편집 · 씬 뷰 카메라가 교체를 넘는지), `removedevice`(개발 명령 `rhi.removeDevice` 로 DX12 장치를 제거하거나 Vulkan 장치를 손실 상태로 둔 뒤 프레임 · 종료가 멈추지 않는지 — `-dx12` · `-vk` 로 돌린다).
   교체 전후 그림을 견줄 때는 한 번 먼저 건너 도킹 배치를 안정시킨다 — imgui.ini 가 노드 크기를 정수로 저장해 첫 리로드에서 씬 뷰 너비가 1 픽셀 바뀔 수 있다.
 
 ## 4. CI

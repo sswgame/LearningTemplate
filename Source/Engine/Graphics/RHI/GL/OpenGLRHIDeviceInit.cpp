@@ -175,18 +175,11 @@ namespace sw
         _bInitialized = SW_TRUE;
 
         {
-            const RHIVertex arrFullscreenVert[3] = {
-                // 화면 공간 삼각형이라 노멀은 쓰이지 않는다. 레이아웃을 채우려고 +Z 를 둔다.
-                // 셰이더는 SV_VertexID 로 UV 를 만들지만 레이아웃에 맞춰 같은 값을 실어 둔다.
-                {{ -1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f },  { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
-                { { 3.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f },  { 2.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
-                { { -1.0f, 3.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, -1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
-            };
             glGenVertexArrays( 1, &_vao );
             glGenBuffers( 1, &_vbo );
             glBindVertexArray( _vao );
             glBindBuffer( GL_ARRAY_BUFFER, _vbo );
-            glBufferData( GL_ARRAY_BUFFER, static_cast<GLsizeiptr>( sizeof( arrFullscreenVert ) ), arrFullscreenVert, GL_STATIC_DRAW );
+            glBufferData( GL_ARRAY_BUFFER, static_cast<GLsizeiptr>( sizeof( constant::arrFallbackVertex ) ), constant::arrFallbackVertex, GL_STATIC_DRAW );
             for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
             {
                 const RHIVertexAttribute& attribute = constant::arrVertexAttribute[attributeIndex];

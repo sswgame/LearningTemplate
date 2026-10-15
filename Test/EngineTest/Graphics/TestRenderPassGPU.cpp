@@ -8035,6 +8035,7 @@ SW_TEST_CASE( RenderPassGPUTest, TwoSidedMaterialDrawsBackFaces )
  *          캔버스 밖은 A 그대로(Load — Clear 로 열면 장면이 사라진다), 둥근 모서리 바깥 · 가위 밖도 A 그대로, 겹친 곳은 빨강 반 + 파랑 반,
  *          글리프 상자의 밝기 증가가 백엔드끼리 2 % 안. 백버퍼 사본이 캡처와 같다 — 캡처 → 백버퍼 복사가 Canvas 뒤에 있다.
  *          경로 그림(네 칸 테스트 텍스처 — 게임 스레드는 경로만 싣고 렌더러가 `TextureCache` 로 푼다)은 칸마다 제 색이다(왼위 빨강 · 오위 초록 · 왼아래 파랑).
+ *          캔버스 프레임은 검증 경고를 내지 않는다(Debug DX12). 변이: DX12 대체 정점 버퍼 뷰(`bindFullscreenVertexBuffer`)를 세 정점으로 줄이면 슬롯 0 경고가 쌓인다.
  */
 SW_TEST_CASE( RenderPassGPUTest, CanvasDrawsOnEveryBackend )
 {
@@ -8101,7 +8102,11 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasDrawsOnEveryBackend )
         renderer.setCanvasFrame( canvas );
 
         test::RHITestImage window;
-        bOk = renderSceneFrameReadingBackBuffer( renderer, device.get(), stage._scene, clear, window );
+        const uint32       validationBefore = device->getValidationMessageCount();
+        bOk                                 = renderSceneFrameReadingBackBuffer( renderer, device.get(), stage._scene, clear, window );
+        // 캔버스는 메시 없이 사각형마다 정점 여섯을 그린다. 장치 공용 대체 정점 버퍼가 그만큼 담지 못하면 슬롯 0 을 범위 밖까지 읽는다(Debug DX12 디버그 레이어가 센다).
+        const uint32 validationAdded = device->getValidationMessageCount() - validationBefore;
+        SW_EXPECT_TRUE_MSG( validationAdded == 0, ( label + "캔버스 프레임이 검증 경고 " + sw::to_string( validationAdded ) + " 개를 냈다" ).c_str() );
         sw::vector<uint8>     bytesWith;
         sw::RHITextureMipSpan layoutWith{};
         bOk = bOk && renderer.getCapture().readbackPresent( bytesWith, layoutWith );
