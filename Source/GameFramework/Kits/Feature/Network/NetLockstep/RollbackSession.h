@@ -52,7 +52,7 @@ namespace sw
 namespace sw
 {
     /** @brief 롤백 설정입니다. 범위를 벗어난 값은 `initialize` 가 범위 안으로 맞춥니다. */
-    struct RollbackSettings
+    struct RollbackConfig
     {
         int32 _inputDelay{ 2 };        ///< 내 입력을 이만큼 뒤 프레임에 적용한다(0 ~ `RollbackSession::kMaxInputDelay`)
         int32 _maxPrediction{ 8 };     ///< 확인된 상대 입력보다 이 프레임 수를 넘겨 앞서지 않는다(1 ~ `RollbackSession::kMaxPrediction`)
@@ -83,7 +83,7 @@ namespace sw
 
         RollbackSession();
 
-        void initialize( NetHost* pHost, IRollbackGame* pGame, int32 playerCount, int32 localPlayer, const RollbackSettings& settings );
+        void initialize( NetHost* pHost, IRollbackGame* pGame, int32 playerCount, int32 localPlayer, const RollbackConfig& settings );
         /** @brief 이번 프레임의 내 입력을 넣고 한 프레임 진행합니다. 필요하면 먼저 되감습니다. 너무 앞서 멈췄거나 시간 동기로 쉬었으면 false 를 반환합니다. */
         bool  advanceFrame( uint8 localInput );
         uint8 getMessageRangeBase() const override { return NetKitMessageRange::kLockstep; }
@@ -135,7 +135,7 @@ namespace sw
         vector<PeerState>             _listPeer;            ///< 플레이어 순서이다. 내 항목은 쓰지 않는다
         vector<uint32>                _listNewFrameScratch; ///< 메시지 하나에서 새로 받은 프레임. 버퍼를 재사용한다
         NetInputSendWindow            _sendWindow;          ///< 내 입력. 모두가 확인한 다음 프레임부터 싣는다
-        RollbackSettings              _settings;
+        RollbackConfig                _settings;
         NetHost*                      _pHost;
         IRollbackGame*                _pGame;
         int32                         _playerCount;

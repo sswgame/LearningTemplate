@@ -95,14 +95,14 @@ namespace sw
         VersionMismatch ///< 다시 연결하지 않는다
     };
 
-    struct OnlineServiceClientSettings
+    struct OnlineServiceClientConfig
     {
-        StreamTransportSettings _transportSettings{}; ///< 자기 엔드포인트 모드 — `_ioThreadCount == 0` 이면 `tick` 이 전송을 돈다
-        StreamEndpointSettings  _endpointSettings{};
-        NetAddress              _serverAddress{};
-        string                  _gameBuild{}; ///< Hello 에 싣는 게임 빌드 글(64 B 이하)
-        int64                   _maxBackoffMs{ 5000 };
-        uint8                   _platform{ 0 };
+        StreamTransportConfig _transportSettings{}; ///< 자기 엔드포인트 모드 — `_ioThreadCount == 0` 이면 `tick` 이 전송을 돈다
+        StreamEndpointConfig  _endpointSettings{};
+        NetAddress            _serverAddress{};
+        string                _gameBuild{}; ///< Hello 에 싣는 게임 빌드 글(64 B 이하)
+        int64                 _maxBackoffMs{ 5000 };
+        uint8                 _platform{ 0 };
     };
 } // namespace sw
 
@@ -135,7 +135,7 @@ namespace sw
         void cancelRequestsOf( uint16 methodRange );
 
         /** @brief 자기 엔드포인트 모드로 시작합니다. 전송(빌려 쓴다)을 띄우고 서버에 연결을 겁니다. */
-        [[nodiscard]] bool initialize( IStreamTransport* pTransport, const OnlineServiceClientSettings& settings, string& outError );
+        [[nodiscard]] bool initialize( IStreamTransport* pTransport, const OnlineServiceClientConfig& settings, string& outError );
         /**
          * @brief 공유 엔드포인트 모드로 시작합니다.
          * @details 엔드포인트, 요청 클라이언트, 전송은 부르는 쪽(봇 실행기)이 갖는다. 이 객체는 연결 하나(@p handle, 이미 열린 것)의 Hello 와 알림 나누기만 한다.
@@ -143,7 +143,7 @@ namespace sw
          *          다시 연결하지 않는다. 봇이 스스로 다시 만든다.
          */
         [[nodiscard]] bool initializeOnSharedEndpoint( StreamMessageEndpoint* pEndpoint, NetRequestClient* pRequestClient, StreamConnectionHandle handle,
-                                                       const OnlineServiceClientSettings& settings );
+                                                       const OnlineServiceClientConfig& settings );
         void               shutdown();
 
         /** @brief 자기 엔드포인트 모드에서는 전송, 엔드포인트, 요청 시한, 다시 연결을 돌립니다. 두 모드 모두 모은 요청의 시한을 봅니다. */
@@ -207,7 +207,7 @@ namespace sw
         void        dispatchPush( const uint8* pBody, int32 bodySize );
         void        notifyServices( void ( IOnlineClientService::*pNotify )( OnlineServiceClient& ) );
 
-        OnlineServiceClientSettings        _settings;
+        OnlineServiceClientConfig          _settings;
         vector<IOnlineClientService*>      _listService;
         vector<QueuedCall>                 _listQueuedCall;
         vector<vector<QueuedCall>*>        _listDrainingCall; ///< `flushQueuedCalls` · `failQueuedCalls` 가 꺼내 도는 지역 목록(겹쳐 불리면 여럿)

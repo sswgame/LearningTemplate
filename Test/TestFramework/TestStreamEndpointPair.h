@@ -22,15 +22,15 @@ namespace test
         /** @brief 클라이언트 전송을 감쌀 때(엿보기 · 변조) — 루프백 전송을 받아 감싼 전송을 돌려준다. */
         using ClientTransportWrapper = sw::unique_ptr<sw::IStreamTransport> ( * )( sw::unique_ptr<sw::IStreamTransport> inner );
 
-        StreamEndpointPair( sw::IStreamEndpointListener& serverListener, sw::IStreamEndpointListener& clientListener, const sw::StreamEndpointSettings& endpointSettings,
+        StreamEndpointPair( sw::IStreamEndpointListener& serverListener, sw::IStreamEndpointListener& clientListener, const sw::StreamEndpointConfig& endpointSettings,
                             const sw::LoopbackStreamConditions& conditions )
             : StreamEndpointPair( serverListener, clientListener, endpointSettings, endpointSettings, conditions, nullptr )
         {
         }
 
         /** @brief 서버 · 클라이언트 설정을 따로(한쪽만 TLS 등) 받고, @p wrapClientTransport 가 있으면 클라이언트 전송을 감쌉니다. */
-        StreamEndpointPair( sw::IStreamEndpointListener& serverListener, sw::IStreamEndpointListener& clientListener, const sw::StreamEndpointSettings& serverSettings,
-                            const sw::StreamEndpointSettings& clientSettings, const sw::LoopbackStreamConditions& conditions, ClientTransportWrapper wrapClientTransport )
+        StreamEndpointPair( sw::IStreamEndpointListener& serverListener, sw::IStreamEndpointListener& clientListener, const sw::StreamEndpointConfig& serverSettings,
+                            const sw::StreamEndpointConfig& clientSettings, const sw::LoopbackStreamConditions& conditions, ClientTransportWrapper wrapClientTransport )
             : _network{ 11u }
             , _serverTransport{ _network.createTransport() }
             , _clientTransport{ wrapClientTransport != nullptr ? wrapClientTransport( _network.createTransport() ) : _network.createTransport() }
@@ -41,7 +41,7 @@ namespace test
             , _pClientListener{ &clientListener }
         {
             _network.setConditions( conditions );
-            sw::StreamTransportSettings transportSettings;
+            sw::StreamTransportConfig transportSettings;
             transportSettings._ioThreadCount = 0;
             (void)_server.initialize( _serverTransport.get(), serverSettings );
             (void)_client.initialize( _clientTransport.get(), clientSettings );

@@ -20,7 +20,7 @@ namespace sw
     {
     }
 
-    void ScavengerQuota::initialize( const ScavengerQuotaSettings& settings )
+    void ScavengerQuota::initialize( const ScavengerQuotaDef& settings )
     {
         _settings  = settings;
         _quota     = settings._startQuota;

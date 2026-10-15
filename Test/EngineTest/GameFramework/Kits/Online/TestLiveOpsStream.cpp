@@ -135,7 +135,7 @@ SW_TEST_CASE( LiveOpsStreamTest, DeviceRegistrationOverTheWireReachesTheDispatch
     LiveOpsDependencies dependencies;
     dependencies._pStore = &server._store;
     service.initialize( dependencies );
-    dispatcher.initialize( &server._store, PushDispatcherSettings{} );
+    dispatcher.initialize( &server._store, PushDispatcherConfig{} );
     SW_EXPECT_TRUE( dispatcher.registerProvider( &provider ) );
     binding.initialize( &service, &dispatcher );
 

@@ -35,7 +35,7 @@ namespace sw
      * @struct NetWireVersion
      * @brief 와이어 형식의 버전입니다. 계층마다 하나씩 있으며, Core(핸드셰이크, 패킷, 채널, 메시지 헤더)는 `kCore`, 키트는 `NetKitWireVersion`, 게임은 자기 값을 씁니다.
      * @details 형식(필드, 의미, 종류 바이트)을 바꾸는 커밋은 그 계층의 버전을 올린다. 버전이 다른 빌드끼리는 핸드셰이크에서 `VersionMismatch` 로 갈리며,
-     *          옛 형식을 읽는 경로는 두지 않는다. 게임과 키트 버전은 `combine` 으로 묶어 `NetHostSettings::_wireVersion` 에 둔다(Core 버전은 자동으로 섞인다).
+     *          옛 형식을 읽는 경로는 두지 않는다. 게임과 키트 버전은 `combine` 으로 묶어 `NetHostConfig::_wireVersion` 에 둔다(Core 버전은 자동으로 섞인다).
      */
     struct NetWireVersion
     {

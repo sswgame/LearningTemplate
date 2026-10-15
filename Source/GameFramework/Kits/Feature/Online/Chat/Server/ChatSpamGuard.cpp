@@ -16,7 +16,7 @@ namespace sw
     {
     }
 
-    void ChatSpamGuard::initialize( const ChatSpamSettings& settings )
+    void ChatSpamGuard::initialize( const ChatSpamConfig& settings )
     {
         _settings = settings;
         _bucketMap.initialize( settings._burstCount, settings._refillIntervalMs, static_cast<size_t>( settings._maxTrackedAccount ) );

@@ -88,7 +88,7 @@ namespace sw
             private:
                 TradeCompletion       _completion;
                 vector<TradeSnapshot> _listChanged;
-                TradeSettings         _settings;
+                TradeServiceConfig    _settings;
                 TradeService*         _pService;
                 const ITradePolicy*   _pPolicy;
                 const ILedgerPolicy*  _pLedgerPolicy;
@@ -115,7 +115,7 @@ namespace sw
     {
     }
 
-    void TradeService::initialize( IServiceStore* pStore, const ITradePolicy* pPolicy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, const TradeSettings& settings )
+    void TradeService::initialize( IServiceStore* pStore, const ITradePolicy* pPolicy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, const TradeServiceConfig& settings )
     {
         _pStore        = pStore;
         _pPolicy       = pPolicy;

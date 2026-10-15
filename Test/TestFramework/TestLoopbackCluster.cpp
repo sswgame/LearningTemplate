@@ -19,7 +19,7 @@ namespace test
         stopThreads();
     }
 
-    int32 LoopbackCluster::addHost( uint16 port, const sw::NetHostSettings& settings )
+    int32 LoopbackCluster::addHost( uint16 port, const sw::NetHostConfig& settings )
     {
         SW_ASSERT( _listThread.empty() && "LoopbackCluster::addHost called while host threads run" );
         sw::LoopbackTransport* pEndpoint = _network.createEndpoint( port );
@@ -52,7 +52,7 @@ namespace test
         return bStarted && areClientsConnected();
     }
 
-    bool LoopbackCluster::startThreads( const sw::NetHostThreadSettings& settings )
+    bool LoopbackCluster::startThreads( const sw::NetHostThreadConfig& settings )
     {
         SW_ASSERT( _listThread.empty() && "LoopbackCluster::startThreads called twice" );
         bool bStarted = true;

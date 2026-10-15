@@ -14,7 +14,7 @@
 namespace sw
 {
     /** @brief 도배 방지 설정입니다. */
-    struct ChatSpamSettings
+    struct ChatSpamConfig
     {
         int64 _refillIntervalMs{ 1000 };
         int64 _repeatWindowMs{ 10000 };
@@ -43,7 +43,7 @@ namespace sw
     public:
         ChatSpamGuard();
 
-        void initialize( const ChatSpamSettings& settings );
+        void initialize( const ChatSpamConfig& settings );
 
         /** @brief 말하기 하나를 판정합니다. 허락하면 버킷에서 토큰을 꺼내고 반복 기록에 넣습니다. 거절하면 @p outRetryAfterMs 가 기다릴 시간입니다. */
         ChatSpamVerdict check( AccountID accountID, string_view text, int64 nowMs, int64& outRetryAfterMs );
@@ -66,6 +66,6 @@ namespace sw
 
         TokenBucketMap                    _bucketMap;
         unordered_map<AccountID, History> _mapAccountToHistory;
-        ChatSpamSettings                  _settings;
+        ChatSpamConfig                    _settings;
     };
 } // namespace sw

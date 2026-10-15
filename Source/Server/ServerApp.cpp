@@ -305,7 +305,7 @@ namespace sw
         _processMetrics->initialize( _metricRegistry.get(), WallClock::nowUnixMilliseconds() - ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::kNanosecondsPerMillisecond );
         if ( _pServerConfig->_opsPort == 0 )
             return true;
-        OpsHTTPEndpointSettings opsSettings;
+        OpsHTTPEndpointConfig opsSettings;
         if ( NetAddress::parse( _pServerConfig->_opsListenAddress, static_cast<uint16>( _pServerConfig->_opsPort ), opsSettings._bindAddress ) == false )
         {
             SW_LOG_ERROR( "Server config _opsListenAddress '%#' is not an IPv4 address", _pServerConfig->_opsListenAddress.c_str() );
@@ -318,7 +318,7 @@ namespace sw
             SW_LOG_ERROR( "Ops HTTP endpoint needs a stream transport and this platform has none" );
             return false;
         }
-        StreamTransportSettings transportSettings;
+        StreamTransportConfig transportSettings;
         transportSettings._ioThreadCount      = 1;
         transportSettings._maxConnections     = ServerAppInternal::kOpsMaxConnections;
         transportSettings._idleTimeoutSeconds = ServerAppInternal::kOpsIdleTimeoutSeconds;
@@ -616,10 +616,10 @@ namespace sw
         const uint16 port = static_cast<uint16>( gv_debugChannelPort );
         _debugTransport   = StreamTransportFactory::createPlatformTransport();
         _debugChannel     = make_unique<DebugChannel>();
-        DebugChannelSettings settings;
+        DebugChannelConfig settings;
         settings._bindAddress = NetAddress::makeLoopback( port );
         settings._token       = gv_debugChannelToken;
-        StreamTransportSettings transportSettings;
+        StreamTransportConfig transportSettings;
         transportSettings._idleTimeoutSeconds = 0.0; // 에디터는 서버가 멈춰 있는 동안에도 붙어 있다
         const bool bStarted                   = _devConsole != nullptr &&
                               _debugChannel->initialize( _debugTransport.get(), transportSettings, settings,

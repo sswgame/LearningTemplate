@@ -109,7 +109,7 @@ namespace sw
 
 namespace sw
 {
-    struct NetRequestServerSettings
+    struct NetRequestServerConfig
     {
         int32   _maxInFlightPerConnection{ 64 }; ///< 진행 중인 요청이 이 수를 넘으면 Overloaded 로 응답한다.
         int32   _maxIdempotencyEntries{ 100000 };
@@ -206,7 +206,7 @@ namespace sw
     public:
         NetRequestServer();
 
-        void initialize( StreamMessageEndpoint* pEndpoint, const NetRequestServerSettings& settings );
+        void initialize( StreamMessageEndpoint* pEndpoint, const NetRequestServerConfig& settings );
         void shutdown();
 
         /** @brief 메서드에 처리기를 등록합니다. 이미 등록된 메서드면 오류 로그를 남기고 false 를 반환하며 앞 처리기를 그대로 둡니다(키트 둘이 같은 번호를 쓰는 조립). */
@@ -282,7 +282,7 @@ namespace sw
         deque<pair<ScopeKey, int64>>                            _listExpiry; ///< 끝난 기억의 만료 순서.
         mutex                                                   _writerMutex;
         BitWriter                                               _writer; ///< _writerMutex 안에서만 쓴다.
-        NetRequestServerSettings                                _settings;
+        NetRequestServerConfig                                  _settings;
         StreamMessageEndpoint*                                  _pEndpoint;
         uint32                                                  _nextSerial;
     };

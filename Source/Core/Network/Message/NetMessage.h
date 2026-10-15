@@ -149,12 +149,12 @@ namespace sw
     /**
      * @class NetMessageRouter
      * @brief 받은 메시지를 종류(첫 바이트)마다 맡은 처리기 하나에게 바로 전달합니다(종류 256개짜리 테이블). 연결 사건은 메시지보다 먼저 모든 처리기에 알립니다.
-     * @details - 처리기는 빌려 쓴다. 라우터보다 오래 살아야 하며, 먼저 없앨 때는 `removeHandler` 로 뺀다. 한 종류를 둘이 맡으려 하면 나중 것을 받지 않는다(`addHandler` 가 false 를 반환한다).
+     * @details - 처리기는 빌려 쓴다. 라우터보다 오래 살아야 하며, 먼저 없앨 때는 `unregisterHandler` 로 뺀다. 한 종류를 둘이 맡으려 하면 나중 것을 받지 않는다(`registerHandler` 가 false 를 반환한다).
      *          - `pump` 는 호스트에서 사건과 메시지를 잠금 한 번에 꺼내(`NetHost::drainInbound`) 잠금 밖에서 나눠 준다. 처리기는 그 안에서 보내도 된다.
      *          - 깨진 메시지(처리기가 Malformed 를 반환)는 세고(`getMalformedCount`) 버린다.
      * @code
-     *     router.addHandler( &replicationServer );
-     *     router.addHandler( &gameMessages );          // 0x80..0x8F
+     *     router.registerHandler( &replicationServer );
+     *     router.registerHandler( &gameMessages );          // 0x80..0x8F
      *     router.pump( host, &listUnhandled );          // 매 틱 host.update 뒤
      * @endcode
      */
@@ -173,8 +173,8 @@ namespace sw
          * @details 영역이 겹친 게임은 false 를 기동 실패로 다룬다. 키트는 자기 영역(`NetKitMessageRange`)을 쓰고, 게임 처리기 여럿은 영역 안에서 서로 다른 마스크를 쓴다.
          *          이미 단 처리기를 다시 달면 true 입니다.
          */
-        bool addHandler( INetMessageHandler* pHandler );
-        void removeHandler( INetMessageHandler* pHandler );
+        bool registerHandler( INetMessageHandler* pHandler );
+        void unregisterHandler( INetMessageHandler* pHandler );
         /** @brief 메시지 하나를 그 종류의 처리기에 넘깁니다. 처리기가 없으면(빈 메시지도) NotMine 을 반환합니다. */
         NetHandleResult dispatch( const NetMessageContext& context, const uint8* pData, int32 size );
         /** @brief 연결 사건 하나를 모든 처리기에 등록 순서대로 알립니다. */

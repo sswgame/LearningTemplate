@@ -17,7 +17,7 @@ namespace sw
     class XMLNode;
 
     /** @brief 손전등 수치입니다. 각은 원뿔의 절반(도)입니다. */
-    struct GhostFlashlightSettings
+    struct GhostFlashlightDef
     {
         float32 _range{ 8.0f };
         float32 _halfAngle{ 25.0f };
@@ -30,7 +30,7 @@ namespace sw
 namespace sw
 {
     /** @brief 청소기 수치입니다. */
-    struct GhostVacuumSettings
+    struct GhostVacuumDef
     {
         vector<float32> _listStagePower{};       ///< 강화 단계마다의 초당 피해이다(0단계부터)
         float32         _range{ 4.0f };          ///< 기절한 유령을 빨아들이기 시작할 수 있는 거리
@@ -135,10 +135,10 @@ namespace sw
     public:
         GhostCatalog();
 
-        const GhostFlashlightSettings& getFlashlight() const { return _flashlight; }
+        const GhostFlashlightDef& getFlashlight() const { return _flashlight; }
         /** @brief 잡은 유령의 동전을 넣는 지갑 통화를 반환합니다(루트의 `currency` 이고 기본은 "Coins" 입니다). */
         const hashed_string&             getCurrency() const { return _currency; }
-        const GhostVacuumSettings&       getVacuum() const { return _vacuum; }
+        const GhostVacuumDef&            getVacuum() const { return _vacuum; }
         const GhostDef*                  findGhost( const hashed_string& id ) const { return _ghostCatalog.find( id ); }
         const GhostRoomDef*              findRoom( const hashed_string& id ) const { return _roomCatalog.find( id ); }
         const GhostDoorDef*              findDoor( const hashed_string& id ) const { return _doorCatalog.find( id ); }
@@ -151,8 +151,8 @@ namespace sw
         static constexpr const utf8* kXMLRootName = "GhostHunt"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
-        GhostFlashlightSettings        _flashlight;
-        GhostVacuumSettings            _vacuum;
+        GhostFlashlightDef             _flashlight;
+        GhostVacuumDef                 _vacuum;
         GameCatalog<GhostDef>          _ghostCatalog;
         GameCatalog<GhostRoomDef>      _roomCatalog;
         GameCatalog<GhostDoorDef>      _doorCatalog;

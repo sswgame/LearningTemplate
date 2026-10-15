@@ -24,7 +24,7 @@ namespace sw
 namespace sw
 {
     /** @brief 운영 HTTP 엔드포인트 설정입니다. */
-    struct OpsHTTPEndpointSettings
+    struct OpsHTTPEndpointConfig
     {
         NetAddress _bindAddress{ NetAddress::makeLoopback( 9100 ) }; ///< 받을 주소 — 기본은 이 기계만. 포트 0 = 아무 포트(테스트)
         int32      _maxRequestBytes{ 8 * 1024 };                     ///< 요청 머리 상한(넘으면 431)
@@ -44,7 +44,7 @@ namespace sw
         OpsHTTPEndpoint& operator=( const OpsHTTPEndpoint& ) = delete;
 
         /** @brief 전송의 처리기가 되어 설정의 주소에서 받습니다. 레지스트리 둘은 빌려 쓴다(null 이면 그 경로는 404). */
-        [[nodiscard]] bool initialize( IStreamTransport* pTransport, const StreamTransportSettings& transportSettings, const OpsHTTPEndpointSettings& settings,
+        [[nodiscard]] bool initialize( IStreamTransport* pTransport, const StreamTransportConfig& transportSettings, const OpsHTTPEndpointConfig& settings,
                                        const MetricRegistry* pMetricRegistry, const ServiceHealthRegistry* pHealthRegistry );
         /** @brief 전송을 내립니다(남은 연결의 `onStreamClosed` 가 여기서 끝난다). 두 번 불러도 됩니다. */
         void   shutdown();
@@ -74,7 +74,7 @@ namespace sw
         Connection* findConnection( uint64 packedHandle );
 
         vector<Connection>           _listConnection;
-        OpsHTTPEndpointSettings      _settings;
+        OpsHTTPEndpointConfig        _settings;
         mutex                        _mutex;
         IStreamTransport*            _pTransport;
         const MetricRegistry*        _pMetricRegistry;

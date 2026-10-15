@@ -103,7 +103,7 @@ namespace sw
             pBackendVariable->_onValueChanged = SW_DELEGATE_METHOD( GlobalVariableChangedDelegate, &RHIBackendSwitcher::onBackendVariableChanged, this );
         // `-gv_rhiSwapAtFrame` 진단은 프레임 시작에서 본다 — 루프는 관찰자 목록만 안다.
         if ( _pEngine != nullptr )
-            _pEngine->addFrameObserver( this );
+            _pEngine->registerFrameObserver( this );
     }
 
     void RHIBackendSwitcher::shutdown()
@@ -117,7 +117,7 @@ namespace sw
         if ( RHIBackendSwitcherInternal::s_pActive == this )
             RHIBackendSwitcherInternal::s_pActive = nullptr;
         if ( _pEngine != nullptr )
-            _pEngine->removeFrameObserver( this );
+            _pEngine->unregisterFrameObserver( this );
         _pEngine     = nullptr;
         _pModuleHost = nullptr;
     }

@@ -162,7 +162,7 @@ namespace sw
     {
     }
 
-    void ActionPlatformerBody::initialize( const PlatformerSettings& motorSettings, const ActionBodySettings& settings )
+    void ActionPlatformerBody::initialize( const PlatformerSettings& motorSettings, const ActionBodyDef& settings )
     {
         _motorSettings = motorSettings;
         _settings      = settings;

@@ -54,7 +54,7 @@ SW_TEST_CASE( LocalStoreSQLiteTest, FactoryUsesTheRegisteredSQLiteBackend )
     SW_ASSERT_TRUE( SQLLocalSlotStorage::registerLocalStoreBackend() );
     SW_EXPECT_TRUE( SQLLocalSlotStorage::registerLocalStoreBackend() ); // 같은 함수를 다시 올려도 된다
     test::LocalStoreTestKey key;
-    LocalStoreSettings      settings;
+    LocalStoreConfig        settings;
     settings._backend = SQLLocalSlotStorage::kBackendName;
     settings._root    = test::makeTempDirectory( "local_store_sqlite_factory" );
     string                  error;

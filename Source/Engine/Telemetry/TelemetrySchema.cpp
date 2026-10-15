@@ -109,7 +109,7 @@ namespace sw
     void TelemetrySchema::clear()
     {
         _listEvent.clear();
-        _settings = TelemetryPipelineSettings{};
+        _settings = TelemetryPipelineConfig{};
         _version  = 0;
     }
 
@@ -134,7 +134,7 @@ namespace sw
         // 파일 하나는 통째로 받거나 통째로 버린다 — 반쯤 읽힌 스키마는 어느 사건이 빠졌는지 보이지 않는다.
         bool                      bValid    = Internal::reportUnknownNames( root, Internal::kArrRootAttribute, sourceName );
         vector<TelemetryEventDef> listEvent = _listEvent;
-        TelemetryPipelineSettings settings  = _settings;
+        TelemetryPipelineConfig   settings  = _settings;
         bValid                              = XMLNameCheck::reportUnknownChildren( root, Internal::kArrRootChild, sourceName, LogLevel::Warning ) && bValid;
         for ( XMLNode node = root.findChild( "Pipeline" ); node; node = node.findNextSibling( "Pipeline" ) )
         {

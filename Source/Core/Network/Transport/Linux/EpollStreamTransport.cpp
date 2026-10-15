@@ -121,7 +121,7 @@ namespace sw
         vector<uint32>                      _listFreeIndex;
         vector<unique_ptr<EpollLoop>>       _listLoop;
         int32                               _loopCount{ 0 };
-        StreamTransportSettings             _settings{};
+        StreamTransportConfig               _settings{};
         IStreamHandler*                     _pHandler{ nullptr };
         int64                               _manualNextSweepNanoseconds{ 0 }; ///< `pollIO` 로 도는 루프 0 의 다음 시한 점검 시각.
         int32                               _listenFd{ -1 };
@@ -622,7 +622,7 @@ namespace sw
         shutdown();
     }
 
-    bool EpollStreamTransport::initialize( IStreamHandler* pHandler, const StreamTransportSettings& settings )
+    bool EpollStreamTransport::initialize( IStreamHandler* pHandler, const StreamTransportConfig& settings )
     {
         State& state = *_state;
         if ( pHandler == nullptr || state._bInitialized == SW_TRUE )

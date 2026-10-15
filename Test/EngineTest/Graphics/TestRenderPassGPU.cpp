@@ -3495,7 +3495,7 @@ SW_TEST_CASE( RenderPassGPUTest, SkinnedMeshFollowsPaletteLikeCPUSkinning )
 
         // (B) · (C) 본 1 을 돌린다.
         BendTask task( kBendAngle );
-        pSkinned->addAnimationPhaseTask( &task );
+        pSkinned->registerAnimationPhaseTask( &task );
         pStatic->setMesh( cpuCube );
         const Snapshot bentSkinned = snapshot( renderer, *device, skinnedScene );
         const Snapshot bentStatic  = snapshot( staticRenderer, *device, staticScene );
@@ -3508,7 +3508,7 @@ SW_TEST_CASE( RenderPassGPUTest, SkinnedMeshFollowsPaletteLikeCPUSkinning )
                             ( label + ": GPU 스키닝이 CPU 스키닝과 다르다 (달라진 픽셀 " + sw::to_string( cpuDiff ) + " / 그려진 " +
                               sw::to_string( bentStatic._drawnCount ) + ")" )
                                 .c_str() );
-        pSkinned->removeAnimationPhaseTask( &task );
+        pSkinned->unregisterAnimationPhaseTask( &task );
     }
 
     if ( sweep.getReadyCount() == 0 )
@@ -3696,7 +3696,7 @@ SW_TEST_CASE( RenderPassGPUTest, MorphWeightsDeformBeforeSkinningLikeCPU )
 
         // (A) 가중치 0 — 모프 없이 굽힌 큐브와 같다.
         MorphBendTask task( kBendAngle, 0.0f );
-        pSkinned->addAnimationPhaseTask( &task );
+        pSkinned->registerAnimationPhaseTask( &task );
         pStatic->setMesh( cpuPlain );
         const Snapshot plainSkinned = snapshot( renderer, *device, morphScene );
         const Snapshot plainStatic  = snapshot( staticRenderer, *device, staticScene );
@@ -3720,7 +3720,7 @@ SW_TEST_CASE( RenderPassGPUTest, MorphWeightsDeformBeforeSkinningLikeCPU )
                             ( label + ": GPU 모프가 CPU 모프 · 스키닝과 다르다 (달라진 픽셀 " + sw::to_string( cpuDiff ) + " / 그려진 " +
                               sw::to_string( morphStatic._drawnCount ) + ")" )
                                 .c_str() );
-        pSkinned->removeAnimationPhaseTask( &task );
+        pSkinned->unregisterAnimationPhaseTask( &task );
     }
 
     if ( sweep.getReadyCount() == 0 )
@@ -7907,14 +7907,14 @@ SW_TEST_CASE( RenderPassGPUTest, MeshOutlineFollowsSkinnedPose )
         pSkinned->setBoundsRadius( 2.0f );
         pSkinned->setLocalScale( sw::float3{ ToonSphereScene::kSphereScale, ToonSphereScene::kSphereScale, ToonSphereScene::kSphereScale } );
         ShiftTask task( sw::float3{ kLocalShift, 0.0f, 0.0f } );
-        pSkinned->addAnimationPhaseTask( &task );
+        pSkinned->registerAnimationPhaseTask( &task );
         staticScene._pSphere->setMesh( shiftedMesh );
 
         test::RHITestImage skinnedImage;
         test::RHITestImage staticImage;
         const bool         bOk = renderAndReadAttachment( skinnedRenderer, device.get(), skinnedScene._scene, "SceneColor", skinnedImage ) &&
                          renderAndReadAttachment( staticRenderer, device.get(), staticScene._scene, "SceneColor", staticImage );
-        pSkinned->removeAnimationPhaseTask( &task );
+        pSkinned->unregisterAnimationPhaseTask( &task );
         SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
         if ( bOk == false )
             continue;

@@ -71,10 +71,10 @@ namespace sw
             }
 
         private:
-            ServerDirectoryService  _service;
-            ServerDirectoryServer   _server;
-            ServerDirectorySettings _settings;
-            bool                    _bStarted;
+            ServerDirectoryService       _service;
+            ServerDirectoryServer        _server;
+            ServerDirectoryServiceConfig _settings;
+            bool                         _bStarted;
         };
     } // namespace
 } // namespace sw

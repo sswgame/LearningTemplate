@@ -255,7 +255,7 @@ namespace test
         /** @brief 받기 시작합니다(서비스를 모두 올린 뒤). */
         void start()
         {
-            sw::OnlineServiceHostSettings settings;
+            sw::OnlineServiceHostConfig settings;
             settings._transportSettings._ioThreadCount = 0;
             settings._listenAddress                    = sw::NetAddress::makeLoopback( _port );
             settings._pServiceStore                    = &_store;
@@ -292,9 +292,9 @@ namespace test
             , _listHandle{}
             , _loginClientService{}
         {
-            sw::StreamTransportSettings transportSettings;
+            sw::StreamTransportConfig transportSettings;
             transportSettings._ioThreadCount = 0;
-            SW_EXPECT_TRUE( _endpoint.initialize( _transport.get(), sw::StreamEndpointSettings{} ) );
+            SW_EXPECT_TRUE( _endpoint.initialize( _transport.get(), sw::StreamEndpointConfig{} ) );
             SW_EXPECT_TRUE( _transport->initialize( &_endpoint, transportSettings ) );
             _requestClient.initialize( &_endpoint );
         }
@@ -354,7 +354,7 @@ namespace test
             (void)bAccepted;
             const int32 clientIndex = findClient( handle );
             if ( clientIndex >= 0 )
-                SW_EXPECT_TRUE( getClient( clientIndex ).initializeOnSharedEndpoint( &_endpoint, &_requestClient, handle, sw::OnlineServiceClientSettings{} ) );
+                SW_EXPECT_TRUE( getClient( clientIndex ).initializeOnSharedEndpoint( &_endpoint, &_requestClient, handle, sw::OnlineServiceClientConfig{} ) );
         }
 
         void onEndpointFrame( sw::StreamConnectionHandle handle, sw::StreamFrameKind kind, const uint8* pBody, int32 bodySize ) override

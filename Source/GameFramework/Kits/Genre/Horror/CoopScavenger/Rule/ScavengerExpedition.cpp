@@ -151,7 +151,7 @@ namespace sw
         const bool bNotUpdatable = _phase != ScavengerPhase::Landed || deltaTime <= 0.0f || _data._pCatalog == nullptr;
         if ( bNotUpdatable )
             return;
-        const ScavengerDaySettings& day = _data._pCatalog->getDaySettings();
+        const ScavengerDayDef& day = _data._pCatalog->getDaySettings();
         _hoursOnMoon += deltaTime * 24.0f / day._secondsPerDay;
         const float32 hour = day._arrivalHour + _hoursOnMoon;
 
@@ -443,8 +443,8 @@ namespace sw
         }
         pushEvent( ScavengerEvent::Kind::ShipDeparted, -1, bAuto ? 1 : 0 );
 
-        const ScavengerPenaltySettings& penalty   = _data._pCatalog->getPenaltySettings();
-        float32                         fineRatio = 0.0f;
+        const ScavengerPenaltyDef& penalty   = _data._pCatalog->getPenaltySettings();
+        float32                    fineRatio = 0.0f;
         for ( const ScavengerCrewMember& member : _listCrew )
         {
             if ( member.isDead() )
@@ -483,9 +483,9 @@ namespace sw
 
     void ScavengerExpedition::loseScrapOnWipe()
     {
-        const ScavengerPenaltySettings& penalty   = _data._pCatalog->getPenaltySettings();
-        const int32                     total     = static_cast<int32>( _listShipScrap.size() );
-        int32                           loseCount = static_cast<int32>( MathUtil::ceil( static_cast<float32>( total ) * penalty._allDeadLossRatio - 1.0e-4f ) );
+        const ScavengerPenaltyDef& penalty   = _data._pCatalog->getPenaltySettings();
+        const int32                total     = static_cast<int32>( _listShipScrap.size() );
+        int32                      loseCount = static_cast<int32>( MathUtil::ceil( static_cast<float32>( total ) * penalty._allDeadLossRatio - 1.0e-4f ) );
         if ( penalty._allDeadMaxKept > 0 )
             loseCount = MathUtil::min( loseCount, MathUtil::max( 0, total - penalty._allDeadMaxKept ) );
         loseCount = MathUtil::clamp( loseCount, 0, total );

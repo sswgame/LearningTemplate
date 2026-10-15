@@ -87,7 +87,7 @@ namespace sw
             if ( tlsContext == nullptr )
                 return nullptr;
         }
-        RespStoreSettings settings;
+        RespStoreConfig settings;
         settings._address   = parsed._address;
         settings._keyPrefix = parsed._keyPrefix;
         settings._timeoutMs = parsed._timeoutMs;
@@ -107,7 +107,7 @@ namespace sw
             outError = "cache driver resp: this platform has no stream transport";
             return nullptr;
         }
-        StreamTransportSettings transportSettings;
+        StreamTransportConfig transportSettings;
         transportSettings._ioThreadCount      = 1;
         transportSettings._maxConnections     = 4;
         transportSettings._idleTimeoutSeconds = 0.0; // 캐시 연결은 조용해도 유지한다. 구독 연결이 그렇다

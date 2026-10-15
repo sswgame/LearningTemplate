@@ -318,7 +318,7 @@ namespace sw
             return;
         if ( pRenderThread != nullptr )
             pRenderThread->setScenarioCaptureEnabled( true );
-        _engine.addFrameObserver( _pAutomationSession );
+        _engine.registerFrameObserver( _pAutomationSession );
     }
 
     void App::bindHostCallbacks()
@@ -374,7 +374,7 @@ namespace sw
         // 시나리오 실행기는 로그 리스너 · 입력을 빌려 쓴다 — 엔진 서비스보다 먼저 떼고 내린다. 호스트 범위는 엔진보다 오래 살아야 하므로(모듈 이미지 창구가
         // 엔진 종료 안에서 불린다) 범위째가 아니라 창구 뒤에 서는 구동기만 내린다.
         if ( _pAutomationSession != nullptr )
-            _engine.removeFrameObserver( _pAutomationSession );
+            _engine.unregisterFrameObserver( _pAutomationSession );
         if ( _pModuleImageHost != nullptr )
             _host.getCollection().shutdownDependentsOf( *_pModuleImageHost );
         _engine.shutdown();

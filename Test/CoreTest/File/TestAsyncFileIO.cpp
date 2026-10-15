@@ -62,7 +62,7 @@ namespace
     /** @brief 동시 진행 1 개 · 스레드 하나인 매니저를 시작합니다(순서 테스트용). */
     bool startSerialIO( sw::AsyncFileIO& io, sw::AsyncIOBackendKind kind )
     {
-        sw::AsyncFileIOSettings settings{};
+        sw::AsyncFileIOConfig settings{};
         settings._backendKind           = kind;
         settings._maxInFlightCount      = 1;
         settings._threadPoolThreadCount = 1;
@@ -125,8 +125,8 @@ SW_TEST_CASE( AsyncFileIOTest, ReadsWholeFileAndPartialRange )
 
     for ( const sw::AsyncIOBackendKind kind : kArrBackendKind )
     {
-        sw::AsyncFileIO         io;
-        sw::AsyncFileIOSettings settings{};
+        sw::AsyncFileIO       io;
+        sw::AsyncFileIOConfig settings{};
         settings._backendKind = kind;
         SW_ASSERT_TRUE( io.initialize( settings ) );
 
@@ -176,8 +176,8 @@ SW_TEST_CASE( AsyncFileIOTest, MissingFileAndRangePastEndFail )
 
     for ( const sw::AsyncIOBackendKind kind : kArrBackendKind )
     {
-        sw::AsyncFileIO         io;
-        sw::AsyncFileIOSettings settings{};
+        sw::AsyncFileIO       io;
+        sw::AsyncFileIOConfig settings{};
         settings._backendKind = kind;
         SW_ASSERT_TRUE( io.initialize( settings ) );
 
@@ -361,7 +361,7 @@ SW_TEST_CASE( AsyncFileIOTest, FutureCarriesTheResult )
     SW_ASSERT_FALSE( path.empty() );
 
     sw::AsyncFileIO io;
-    SW_ASSERT_TRUE( io.initialize( sw::AsyncFileIOSettings{} ) );
+    SW_ASSERT_TRUE( io.initialize( sw::AsyncFileIOConfig{} ) );
 
     sw::TaskFuture<sw::AsyncReadResult> future = io.readFileFuture( path, sw::AsyncIOPriority::Normal );
     sw::TaskFuture<size_t>              sized  = future.then( []( const sw::AsyncReadResult& result )
@@ -388,8 +388,8 @@ SW_TEST_CASE( AsyncFileIOTest, ManyRangesOfOneOpenFile )
     constexpr uint32 kRangeBytes = kFileBytes / kRangeCount;
     for ( const sw::AsyncIOBackendKind kind : kArrBackendKind )
     {
-        sw::AsyncFileIO         io;
-        sw::AsyncFileIOSettings settings{};
+        sw::AsyncFileIO       io;
+        sw::AsyncFileIOConfig settings{};
         settings._backendKind      = kind;
         settings._maxInFlightCount = 8;
         SW_ASSERT_TRUE( io.initialize( settings ) );
@@ -447,8 +447,8 @@ SW_TEST_CASE( AsyncFileIOTest, CompletionRunsOnTaskWorkerWhenGivenATaskManager )
     sw::TaskManager taskManager;
     SW_ASSERT_TRUE( taskManager.initialize( 2 ) );
     {
-        sw::AsyncFileIO         io;
-        sw::AsyncFileIOSettings settings{};
+        sw::AsyncFileIO       io;
+        sw::AsyncFileIOConfig settings{};
         settings._pTaskManager = &taskManager;
         SW_ASSERT_TRUE( io.initialize( settings ) );
 

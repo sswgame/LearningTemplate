@@ -51,7 +51,7 @@ namespace sw
         shutdown();
     }
 
-    bool OnlineServiceHost::initialize( IStreamTransport* pTransport, const OnlineServiceHostSettings& settings, string& outError )
+    bool OnlineServiceHost::initialize( IStreamTransport* pTransport, const OnlineServiceHostConfig& settings, string& outError )
     {
         SW_ASSERT( _bInitialized == SW_FALSE );
         if ( pTransport == nullptr )
@@ -69,7 +69,7 @@ namespace sw
             releaseTransportSide();
             return false;
         }
-        NetRequestServerSettings requestSettings;
+        NetRequestServerConfig requestSettings;
         _requestServer.initialize( &_endpoint, requestSettings );
         if ( _requestServer.registerMethod( OnlineHostMethod::kHello, this ) == false || _requestServer.registerMethod( OnlineHostMethod::kPing, this ) == false )
         {

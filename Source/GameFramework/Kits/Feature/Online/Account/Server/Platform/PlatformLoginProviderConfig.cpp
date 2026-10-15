@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderSettings.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderConfig.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -37,7 +37,7 @@ namespace sw
 
 namespace sw
 {
-    unique_ptr<IPlatformLoginProvider> PlatformLoginProviderFactory::create( const PlatformLoginProviderSettings& settings, INetSecurityProvider* pProvider,
+    unique_ptr<IPlatformLoginProvider> PlatformLoginProviderFactory::create( const PlatformLoginProviderConfig& settings, INetSecurityProvider* pProvider,
                                                                              HTTPClient* pHTTPClient )
     {
         if ( isValidSettings( settings ) == false || pHTTPClient == nullptr )
@@ -51,7 +51,7 @@ namespace sw
         return make_unique<ProfileAPILoginProvider>( settings, pHTTPClient );
     }
 
-    bool PlatformLoginProviderFactory::readSettings( string_view jsonText, vector<PlatformLoginProviderSettings>& outListSettings, string& outError )
+    bool PlatformLoginProviderFactory::readSettings( string_view jsonText, vector<PlatformLoginProviderConfig>& outListSettings, string& outError )
     {
         using Internal = PlatformLoginProviderSettingsInternal;
         outListSettings.clear();
@@ -83,9 +83,9 @@ namespace sw
                     return false;
                 }
             }
-            PlatformLoginProviderSettings& settings = outListSettings.emplace_back();
-            settings._name                          = Internal::readText( entry, "name", "" );
-            const string kind                       = Internal::readText( entry, "kind", "" );
+            PlatformLoginProviderConfig& settings = outListSettings.emplace_back();
+            settings._name                        = Internal::readText( entry, "name", "" );
+            const string kind                     = Internal::readText( entry, "kind", "" );
             if ( kind == "oidc" )
                 settings._kind = PlatformLoginProviderKind::Oidc;
             else if ( kind == "profile" )
@@ -115,7 +115,7 @@ namespace sw
         return true;
     }
 
-    bool PlatformLoginProviderFactory::isValidSettings( const PlatformLoginProviderSettings& settings )
+    bool PlatformLoginProviderFactory::isValidSettings( const PlatformLoginProviderConfig& settings )
     {
         if ( AccountUtil::isValidLowerToken( settings._name, LoginConstant::kMaxProviderNameSize ) == false || settings._subjectPath.empty() )
             return false;

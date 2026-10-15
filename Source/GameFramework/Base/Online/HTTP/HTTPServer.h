@@ -39,7 +39,7 @@ namespace sw
 namespace sw
 {
     /** @brief HTTP 서버 설정입니다. */
-    struct HTTPServerSettings
+    struct HTTPServerConfig
     {
         NetAddress   _listenAddress{ NetAddress::makeLoopback( 0 ) }; ///< 포트 0 = 아무 포트(`getListenPort`)
         ITLSContext* _pTLSContext{ nullptr };                         ///< 있으면 HTTPS(빌려 쓴다)
@@ -63,7 +63,7 @@ namespace sw
         HTTPServer& operator=( const HTTPServer& ) = delete;
 
         /** @brief 전송(넘겨받는다)을 띄우고 듣습니다. @p pHandler 는 빌려 쓴다. */
-        [[nodiscard]] bool initialize( unique_ptr<IStreamTransport> transport, const StreamTransportSettings& transportSettings, const HTTPServerSettings& settings,
+        [[nodiscard]] bool initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const HTTPServerConfig& settings,
                                        IHTTPRequestHandler* pHandler );
         void               shutdown();
         /** @brief 전송을 돌리고(I/O 스레드가 없을 때) 모인 요청을 처리기에 넘겨 답합니다. */
@@ -97,7 +97,7 @@ namespace sw
         unordered_map<uint64, unique_ptr<Peer>> _mapPeer;
         vector<ReadyRequest>                    _listReady;
         unique_ptr<IStreamTransport>            _transport;
-        HTTPServerSettings                      _settings;
+        HTTPServerConfig                        _settings;
         IHTTPRequestHandler*                    _pHandler;
         int32                                   _ioThreadCount;
         int32                                   _handledCount;

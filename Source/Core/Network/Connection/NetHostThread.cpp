@@ -29,7 +29,7 @@ namespace sw
         return static_cast<float64>( MonotonicClock::nowNanoseconds() ) * 1.0e-9;
     }
 
-    bool NetHostThread::start( NetHost* pHost, const NetHostThreadSettings& settings )
+    bool NetHostThread::start( NetHost* pHost, const NetHostThreadConfig& settings )
     {
         if ( pHost == nullptr || _thread.joinable() )
             return false;

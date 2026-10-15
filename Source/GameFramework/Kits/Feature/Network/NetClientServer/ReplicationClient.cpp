@@ -22,11 +22,11 @@ namespace sw
     {
     }
 
-    void ReplicationClient::initialize( NetHost* pHost, const ReplicationClientSettings& settings )
+    void ReplicationClient::initialize( NetHost* pHost, const ReplicationClientConfig& settings )
     {
         _pHost    = pHost;
         _settings = settings;
-        NetClockSettings clockSettings;
+        NetClockConfig clockSettings;
         clockSettings._tickInterval       = settings._tickInterval;
         clockSettings._interpolationDelay = settings._interpolationDelay;
         clockSettings._sampleInterval     = settings._tickInterval; // 스냅샷은 서버 틱마다 온다

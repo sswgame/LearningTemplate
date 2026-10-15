@@ -157,7 +157,7 @@ namespace sw
         SW_ASSERT( _listPendingCall.empty() );
     }
 
-    bool MailboxService::initialize( IServiceStore* pStore, const MailboxServiceSettings& settings )
+    bool MailboxService::initialize( IServiceStore* pStore, const MailboxServiceConfig& settings )
     {
         if ( pStore == nullptr )
         {

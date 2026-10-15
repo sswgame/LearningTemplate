@@ -55,7 +55,7 @@ namespace sw
     {
     }
 
-    void BrZone::initialize( const BrZoneSettings& settings, float32 mapSize, uint32 seed, const IBrZoneTerrain* pTerrain )
+    void BrZone::initialize( const BrZoneDef& settings, float32 mapSize, uint32 seed, const IBrZoneTerrain* pTerrain )
     {
         _settings = settings;
         _pTerrain = pTerrain;

@@ -25,7 +25,7 @@ namespace
             , _dispatcher{}
             , _listCompletion{}
         {
-            _dispatcher.initialize( &_store, PushDispatcherSettings{} );
+            _dispatcher.initialize( &_store, PushDispatcherConfig{} );
             SW_EXPECT_TRUE( _dispatcher.registerProvider( &_provider ) );
         }
 
@@ -147,7 +147,7 @@ SW_TEST_CASE( PushDispatcherTest, AccountRateLimit )
     SW_EXPECT_FALSE( node._dispatcher.notifyAccount( 1, Internal::makeMessage(), 0 ) );
     SW_EXPECT_EQUAL( node._dispatcher.getStats()._rateLimitedCount, uint64( 1 ) );
     SW_EXPECT_TRUE( node._dispatcher.notifyAccount( 2, Internal::makeMessage(), 0 ) ); // 계정마다 따로
-    SW_EXPECT_TRUE( node._dispatcher.notifyAccount( 1, Internal::makeMessage(), PushDispatcherSettings{}._accountRefillIntervalMs ) );
+    SW_EXPECT_TRUE( node._dispatcher.notifyAccount( 1, Internal::makeMessage(), PushDispatcherConfig{}._accountRefillIntervalMs ) );
     node.step( 0 );
     SW_EXPECT_EQUAL( node._provider.getSent().size(), size_t( 7 ) ); // 계정 2 는 기기가 없다
 }

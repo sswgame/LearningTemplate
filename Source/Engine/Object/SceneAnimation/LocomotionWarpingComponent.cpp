@@ -96,14 +96,14 @@ namespace sw
         unbindFromUnit();
         _pUnit = pUnit;
         if ( _pUnit != nullptr )
-            _pUnit->addAnimationPhaseTask( &_binding );
+            _pUnit->registerAnimationPhaseTask( &_binding );
         _bHasPrevious = false;
     }
 
     void LocomotionWarpingComponent::unbindFromUnit()
     {
         if ( _pUnit != nullptr )
-            _pUnit->removeAnimationPhaseTask( &_binding );
+            _pUnit->unregisterAnimationPhaseTask( &_binding );
         _pUnit = nullptr;
     }
 

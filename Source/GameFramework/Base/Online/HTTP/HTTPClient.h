@@ -24,7 +24,7 @@ namespace sw
     class ITLSContext;
 
     /** @brief HTTP 클라이언트 설정입니다. */
-    struct HTTPClientSettings
+    struct HTTPClientConfig
     {
         int32 _maxResponseBodyBytes{ HTTPConstant::kDefaultMaxBodyBytes };
         int32 _maxConcurrentRequests{ 32 }; ///< 넘으면 바로 전송 실패(쌓지 않는다)
@@ -47,7 +47,7 @@ namespace sw
         HTTPClient& operator=( const HTTPClient& ) = delete;
 
         /** @brief 전송(넘겨받는다)을 띄웁니다. */
-        [[nodiscard]] bool initialize( unique_ptr<IStreamTransport> transport, const StreamTransportSettings& transportSettings, const HTTPClientSettings& settings );
+        [[nodiscard]] bool initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const HTTPClientConfig& settings );
         /** @brief 날아가던 요청은 전송 실패로 끝나고 다음 `pollResponses` 가 거둔다. */
         void shutdown();
 
@@ -87,7 +87,7 @@ namespace sw
         unordered_map<string, ITLSContext*>     _mapHostToTLSContext;
         vector<HTTPClientResponse>              _listDone;
         unique_ptr<IStreamTransport>            _transport;
-        HTTPClientSettings                      _settings;
+        HTTPClientConfig                        _settings;
         uint64                                  _nextRequestID;
         int32                                   _ioThreadCount;
         uint8                                   _bInitialized;

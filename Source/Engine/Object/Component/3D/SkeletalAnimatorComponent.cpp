@@ -146,7 +146,7 @@ namespace sw
     SkeletalAnimatorComponent::~SkeletalAnimatorComponent()
     {
         if ( _pUnit != nullptr )
-            _pUnit->removeAnimationPhaseTask( &_binding );
+            _pUnit->unregisterAnimationPhaseTask( &_binding );
     }
 
     void SkeletalAnimatorComponent::onBeginPlay()
@@ -168,7 +168,7 @@ namespace sw
     void SkeletalAnimatorComponent::onEndPlay()
     {
         if ( _pUnit != nullptr )
-            _pUnit->removeAnimationPhaseTask( &_binding );
+            _pUnit->unregisterAnimationPhaseTask( &_binding );
         _pUnit = nullptr;
         Component::onEndPlay();
     }
@@ -197,10 +197,10 @@ namespace sw
         if ( pUnit == _pUnit )
             return;
         if ( _pUnit != nullptr )
-            _pUnit->removeAnimationPhaseTask( &_binding );
+            _pUnit->unregisterAnimationPhaseTask( &_binding );
         _pUnit = pUnit;
         if ( _pUnit != nullptr )
-            _pUnit->addAnimationPhaseTask( &_binding );
+            _pUnit->registerAnimationPhaseTask( &_binding );
         else
             SW_LOG_WARNING( "'%#': skeletal animator has no SkeletalMeshComponent on its object", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
     }
@@ -395,13 +395,13 @@ namespace sw
         _pNotifyListener->onAnimationNotifiesFired( frame );
     }
 
-    void SkeletalAnimatorComponent::addRootMotionModifier( IRootMotionModifier* pModifier )
+    void SkeletalAnimatorComponent::registerRootMotionModifier( IRootMotionModifier* pModifier )
     {
         if ( pModifier != nullptr && std::find( _listRootMotionModifier.begin(), _listRootMotionModifier.end(), pModifier ) == _listRootMotionModifier.end() )
             _listRootMotionModifier.push_back( pModifier );
     }
 
-    void SkeletalAnimatorComponent::removeRootMotionModifier( IRootMotionModifier* pModifier )
+    void SkeletalAnimatorComponent::unregisterRootMotionModifier( IRootMotionModifier* pModifier )
     {
         const auto it = std::find( _listRootMotionModifier.begin(), _listRootMotionModifier.end(), pModifier );
         if ( it != _listRootMotionModifier.end() )

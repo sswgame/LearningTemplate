@@ -477,7 +477,7 @@ namespace sw
         if ( _taskUnit == body.getHandle() )
             return;
         unregisterSocketTask();
-        body.addAnimationPhaseTask( &_socketTask );
+        body.registerAnimationPhaseTask( &_socketTask );
         _taskUnit = body.getHandle();
     }
 
@@ -487,7 +487,7 @@ namespace sw
         SkeletalMeshComponent* pUnit    = pManager != nullptr ? static_cast<SkeletalMeshComponent*>( pManager->resolveComponent( _taskUnit ) ) : nullptr;
         _taskUnit                       = ComponentHandle{};
         if ( pUnit != nullptr )
-            pUnit->removeAnimationPhaseTask( &_socketTask );
+            pUnit->unregisterAnimationPhaseTask( &_socketTask );
     }
 
     GameObject* CharacterAppearanceComponent::findUnitObject( GameObjectManager& manager, uint32 unitIndex ) const

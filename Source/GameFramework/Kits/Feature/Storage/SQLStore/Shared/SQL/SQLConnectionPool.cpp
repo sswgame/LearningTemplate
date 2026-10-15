@@ -78,7 +78,7 @@ namespace sw
         _listCompleted.clear();
     }
 
-    bool SQLConnectionPool::initialize( ISQLDriver* pDriver, const SQLConnectionPoolSettings& settings, string& outError )
+    bool SQLConnectionPool::initialize( ISQLDriver* pDriver, const SQLConnectionPoolConfig& settings, string& outError )
     {
         if ( pDriver == nullptr )
         {

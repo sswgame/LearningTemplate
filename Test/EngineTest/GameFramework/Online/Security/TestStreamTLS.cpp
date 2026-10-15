@@ -32,7 +32,7 @@ namespace
         {
         }
 
-        bool                   initialize( IStreamHandler* pHandler, const StreamTransportSettings& settings ) override { return _inner->initialize( pHandler, settings ); }
+        bool                   initialize( IStreamHandler* pHandler, const StreamTransportConfig& settings ) override { return _inner->initialize( pHandler, settings ); }
         void                   shutdown() override { _inner->shutdown(); }
         bool                   listen( const NetAddress& bindAddress ) override { return _inner->listen( bindAddress ); }
         uint16                 getListenPort() const override { return _inner->getListenPort(); }
@@ -110,13 +110,13 @@ namespace
             if ( provider.createSelfSignedCertificate( "localhost", 30, trustPem, strangerKeyPem ) == false )
                 return false;
         }
-        string             error;
-        TLSContextSettings server;
+        string           error;
+        TLSContextConfig server;
         server._role           = TLSRole::Server;
         server._certificatePem = certificatePem;
         server._privateKeyPem  = privateKeyPem;
         outContexts._server    = provider.createTLSContext( server, error );
-        TLSContextSettings client;
+        TLSContextConfig client;
         client._role        = TLSRole::Client;
         client._trustPem    = trustPem;
         client._serverName  = "localhost";
@@ -126,9 +126,9 @@ namespace
         return outContexts._server != nullptr && outContexts._client != nullptr;
     }
 
-    StreamEndpointSettings makeSettings( ITLSContext* pContext )
+    StreamEndpointConfig makeSettings( ITLSContext* pContext )
     {
-        StreamEndpointSettings settings;
+        StreamEndpointConfig settings;
         settings._security._pTLSContext = pContext;
         return settings;
     }

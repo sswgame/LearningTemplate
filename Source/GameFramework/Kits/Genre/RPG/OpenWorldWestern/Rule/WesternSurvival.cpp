@@ -46,9 +46,9 @@ namespace sw
     void WesternSurvival::initialize( const WesternCatalog* pCatalog )
     {
         _pCatalog = pCatalog;
-        const WesternSurvivalSettings  fallback{};
-        const WesternSurvivalSettings& survival = pCatalog != nullptr ? pCatalog->getSurvival() : fallback;
-        ResourceGaugeSettings          health;
+        const WesternSurvivalDef  fallback{};
+        const WesternSurvivalDef& survival = pCatalog != nullptr ? pCatalog->getSurvival() : fallback;
+        ResourceGaugeSettings     health;
         health._max        = survival._health;
         health._regenRate  = survival._healthRegen;
         health._regenDelay = 4.0f;
@@ -79,7 +79,7 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return;
-        const WesternSurvivalSettings& survival = _pCatalog->getSurvival();
+        const WesternSurvivalDef& survival = _pCatalog->getSurvival();
         if ( gameHours > 0.0f )
         {
             const float32 felt    = computeFeltTemperature( airTemperature );

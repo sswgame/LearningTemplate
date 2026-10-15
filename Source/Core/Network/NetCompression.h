@@ -19,7 +19,7 @@ namespace sw
 namespace sw
 {
     /** @brief 압축 설정입니다. 기본은 꺼짐 — 켤지는 측정으로 정한다(`NetCompressionBenchTest`). */
-    struct NetCompressionSettings
+    struct NetCompressionConfig
     {
         CompressionCodecType _codec{ CompressionCodecType::None }; ///< None = 끈다
         int32                _level{ 0 };                          ///< 코덱 레벨(0 = 코덱 기본)
@@ -37,7 +37,7 @@ namespace sw
          * @brief 압축해 @p outBytes 에 봉투를 씁니다. 줄었으면 true, 코덱이 없거나 줄지 않으면 false(@p outBytes 는 비운다 — 부르는 쪽이 원문을 보낸다).
          * @param pRegistry nullptr 이면 활성 레지스트리(`CompressionCodecRegistry::getActive`).
          */
-        [[nodiscard]] static bool compressEnvelope( const NetCompressionSettings& settings, const uint8* pData, int32 size, vector<uint8>& outBytes,
+        [[nodiscard]] static bool compressEnvelope( const NetCompressionConfig& settings, const uint8* pData, int32 size, vector<uint8>& outBytes,
                                                     CompressionCodecRegistry* pRegistry = nullptr );
         /**
          * @brief 봉투를 풉니다. 원래 크기가 @p maxRawSize 를 넘으면 **풀기 전에** false(압축 폭탄), 코덱이 없거나 깨졌거나 푼 크기가 다르면 false.

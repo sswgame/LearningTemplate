@@ -38,9 +38,9 @@ namespace sw
     struct SW_GF_API GameDataCacheRegistry
     {
         /** @brief 캐시를 목록에 넣고, 묶인 매니저가 있으면 그 레지스트리에 올립니다. 캐시 생성자가 부릅니다. */
-        static void addCache( IAssetCache* pCache );
+        static void registerCache( IAssetCache* pCache );
         /** @brief 캐시를 목록에서 뺍니다. 캐시 소멸자가 부릅니다. 프로세스 끝에는 매니저가 이미 사라졌을 수 있으므로 매니저는 건드리지 않습니다. */
-        static void removeCache( const IAssetCache* pCache );
+        static void unregisterCache( const IAssetCache* pCache );
         /** @brief 목록의 캐시를 @p pAssetManager 레지스트리에 올립니다. 앞서 묶인 매니저가 있으면 거기서 먼저 내립니다. nullptr 이면 내리기만 합니다. */
         static void attach( AssetManager* pAssetManager );
         /** @brief 묶인 매니저의 레지스트리에서 목록의 캐시를 내립니다. */
@@ -68,10 +68,10 @@ namespace sw
             , _listRetired{}
             , _reloadCount{ 0 }
         {
-            GameDataCacheRegistry::addCache( this );
+            GameDataCacheRegistry::registerCache( this );
         }
 
-        ~GameDataCache() override { GameDataCacheRegistry::removeCache( this ); }
+        ~GameDataCache() override { GameDataCacheRegistry::unregisterCache( this ); }
 
         GameDataCache( const GameDataCache& )            = delete;
         GameDataCache& operator=( const GameDataCache& ) = delete;

@@ -61,18 +61,18 @@ namespace sw
 namespace sw
 {
     /** @brief 채팅 설정입니다. */
-    struct ChatSettings
+    struct ChatServiceConfig
     {
-        ChatSpamSettings _spam{};
-        string           _bannedWordsPath{}; ///< 비면 거르지 않는다. 서버 조립 단계는 `Config/Server/chat_banned_words.txt` 를 쓴다
-        ChatFilterMode   _filterMode{ ChatFilterMode::Mask };
-        int64            _sanctionCacheMs{ 60 * constant::kMillisecondsPerSecond };
-        int64            _historyRetentionMs{ 30 * constant::kSecondsPerDay * constant::kMillisecondsPerSecond };
-        int32            _historyFlushMax{ 60 };           ///< 트랜잭션 하나에 쓰는 기록 수이다. 상한 64 안이다
-        int32            _historyTrimEvery{ 64 };          ///< 순번이 이 수의 배수인 메시지의 채널을 정리한다
-        int32            _maxQueuedHistory{ 4096 };        ///< 저장소가 늦을 때 쌓아 둘 기록 수이다. 넘으면 오래된 것부터 버린다
-        int32            _maxPendingSendPerMember{ 4 };    ///< 제재 첫 읽기를 기다리는 말하기 요청의 상한이다
-        int64            _pendingSendRetryAfterMs{ 1000 }; ///< 대기 큐가 찼을 때 클라이언트에 알려 줄 기다릴 시간(ms)이다
+        ChatSpamConfig _spam{};
+        string         _bannedWordsPath{}; ///< 비면 거르지 않는다. 서버 조립 단계는 `Config/Server/chat_banned_words.txt` 를 쓴다
+        ChatFilterMode _filterMode{ ChatFilterMode::Mask };
+        int64          _sanctionCacheMs{ 60 * constant::kMillisecondsPerSecond };
+        int64          _historyRetentionMs{ 30 * constant::kSecondsPerDay * constant::kMillisecondsPerSecond };
+        int32          _historyFlushMax{ 60 };           ///< 트랜잭션 하나에 쓰는 기록 수이다. 상한 64 안이다
+        int32          _historyTrimEvery{ 64 };          ///< 순번이 이 수의 배수인 메시지의 채널을 정리한다
+        int32          _maxQueuedHistory{ 4096 };        ///< 저장소가 늦을 때 쌓아 둘 기록 수이다. 넘으면 오래된 것부터 버린다
+        int32          _maxPendingSendPerMember{ 4 };    ///< 제재 첫 읽기를 기다리는 말하기 요청의 상한이다
+        int64          _pendingSendRetryAfterMs{ 1000 }; ///< 대기 큐가 찼을 때 클라이언트에 알려 줄 기다릴 시간(ms)이다
     };
 } // namespace sw
 
@@ -137,7 +137,7 @@ namespace sw
         ChatService& operator=( const ChatService& ) = delete;
 
         /** @brief 저장소나 계정 디렉터리가 없으면 false 를 반환합니다. 버스가 있으면 이 서버의 주제와 제재 주제의 구독을 요청합니다. */
-        [[nodiscard]] bool initialize( const ChatServiceDependencies& dependencies, const ChatSettings& settings );
+        [[nodiscard]] bool initialize( const ChatServiceDependencies& dependencies, const ChatServiceConfig& settings );
         /** @brief 맡긴 저장 작업이 끝날 때까지 저장소를 회수합니다. 상한은 5초이며 저장소를 종료하기 전에 부릅니다. */
         void shutdown();
 
@@ -228,7 +228,7 @@ namespace sw
         EventBuffer<ChatBusTopicChange>          _busTopicBuffer;
         ChatWordFilter                           _wordFilter;
         ChatSpamGuard                            _spamGuard;
-        ChatSettings                             _settings;
+        ChatServiceConfig                        _settings;
         ChatServiceDependencies                  _dependencies;
         string                                   _serverTopic;
         uint32                                   _sequence;

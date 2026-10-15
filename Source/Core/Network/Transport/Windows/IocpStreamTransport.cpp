@@ -150,7 +150,7 @@ namespace sw
         vector<uint32>                     _listFreeIndex;
         unique_ptr<IocpAcceptSlot[]>       _arrAcceptSlot;
         vector<sw::thread>                 _listThread;
-        StreamTransportSettings            _settings{};
+        StreamTransportConfig              _settings{};
         IStreamHandler*                    _pHandler{ nullptr };
         HANDLE                             _completionPort{ nullptr };
         SOCKET                             _listenSocket{ INVALID_SOCKET };
@@ -667,7 +667,7 @@ namespace sw
         shutdown();
     }
 
-    bool IocpStreamTransport::initialize( IStreamHandler* pHandler, const StreamTransportSettings& settings )
+    bool IocpStreamTransport::initialize( IStreamHandler* pHandler, const StreamTransportConfig& settings )
     {
         const bool bCannotInitialize = pHandler == nullptr || _state->_bInitialized == SW_TRUE || PlatformSocketUtil::initialize() == false;
         if ( bCannotInitialize )

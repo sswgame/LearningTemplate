@@ -739,8 +739,8 @@ namespace sw
 
     void TelemetryService::enforceCapsLocked()
     {
-        const TelemetryPipelineSettings& settings   = _schema.getSettings();
-        uint64                           totalBytes = _currentFileBytes;
+        const TelemetryPipelineConfig& settings   = _schema.getSettings();
+        uint64                         totalBytes = _currentFileBytes;
         for ( const string& path : _listClosedFile )
         {
             totalBytes += FileUtil::getFileSize( path );

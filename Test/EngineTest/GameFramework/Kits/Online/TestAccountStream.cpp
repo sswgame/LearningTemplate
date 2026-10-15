@@ -57,11 +57,11 @@ namespace
             string                certificatePem;
             string                privateKeyPem;
             (void)provider.createSelfSignedCertificate( "localhost", 1, certificatePem, privateKeyPem ); // 실패면 PEM 이 비어 아래 TLS 준비가 실패로 드러난다
-            TLSContextSettings serverTLS;
+            TLSContextConfig serverTLS;
             serverTLS._role           = TLSRole::Server;
             serverTLS._certificatePem = certificatePem;
             serverTLS._privateKeyPem  = privateKeyPem;
-            TLSContextSettings clientTLS;
+            TLSContextConfig clientTLS;
             clientTLS._role       = TLSRole::Client;
             clientTLS._trustPem   = certificatePem;
             clientTLS._serverName = "localhost";
@@ -89,15 +89,15 @@ namespace
             , _transport{ network.createTransport() }
             , _host{}
         {
-            LoginSettings settings;
+            LoginServiceConfig settings;
             settings._passwordHashParams._memoryKiB                        = 256; // 테스트 — 가벼운 Argon2id
             settings._passwordHashParams._iterationCount                   = 1;
             const uint8 arrMasterKey[LoginTicketAuthority::kMasterKeySize] = { 9, 8, 7, 6, 5, 4, 3, 2, 1 };
             _loginService.initialize( &_store, &_crypto, settings, arrMasterKey );
             _loginService.setRemoteConfig( pRemoteConfig );
-            _accountServer.initialize( &_loginService, AccountServerSettings{} );
+            _accountServer.initialize( &_loginService, AccountServerConfig{} );
             SW_EXPECT_TRUE( _host.registerHostService( &_accountServer ) );
-            OnlineServiceHostSettings hostSettings;
+            OnlineServiceHostConfig hostSettings;
             hostSettings._transportSettings._ioThreadCount        = 0;
             hostSettings._endpointSettings._security._pTLSContext = pTLSContext;
             hostSettings._listenAddress                           = NetAddress::makeLoopback( kServerPort );
@@ -132,7 +132,7 @@ namespace
         {
             _account.initialize( &_client, clientInfo );
             SW_EXPECT_TRUE( _client.registerClientService( &_account ) );
-            OnlineServiceClientSettings settings;
+            OnlineServiceClientConfig settings;
             settings._transportSettings._ioThreadCount        = 0;
             settings._endpointSettings._security._pTLSContext = pTLSContext;
             settings._serverAddress                           = NetAddress::makeLoopback( kServerPort );
@@ -235,12 +235,12 @@ namespace
             : _authenticator{ &authority, hashed_string( pServerID ) }
         {
             _authenticator.setNowMs( nowMs );
-            NetHostSettings serverSettings;
+            NetHostConfig serverSettings;
             serverSettings._saltSeed                 = 31u;
             serverSettings._security._mode           = NetSecurityMode::Encrypted;
             serverSettings._security._pProvider      = &NetSecurity::getProvider();
             serverSettings._security._pAuthenticator = &_authenticator;
-            NetHostSettings clientSettings;
+            NetHostConfig clientSettings;
             clientSettings._saltSeed            = 32u;
             clientSettings._security._mode      = NetSecurityMode::Encrypted;
             clientSettings._security._pProvider = &NetSecurity::getProvider();

@@ -58,8 +58,8 @@ namespace sw
             }
             if ( WitcherCatalogInternal::isNamed( name, "Combat" ) )
             {
-                WitcherCombatSettings& combat = _combat;
-                const hashed_string    stat   = GameDataXML::readName( node, "intensityStat" );
+                WitcherCombatDef&   combat = _combat;
+                const hashed_string stat   = GameDataXML::readName( node, "intensityStat" );
                 if ( stat.empty() == false )
                     combat._intensityStat = stat;
                 combat._stamina               = MathUtil::max( 1.0f, node.getAttributeFloat( "stamina", combat._stamina ) );

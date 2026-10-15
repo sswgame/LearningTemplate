@@ -84,7 +84,7 @@ namespace sw
         LoginService();
 
         /** @brief @p pStore 와 @p pCrypto 는 빌려 씁니다. @p pCrypto 는 스레드 안전해야 합니다. 저장소 워커에서 해시를 돌리기 때문입니다. @p arrTicketMasterKey 는 게임 서버와 나눠 가진 티켓 마스터 키입니다. */
-        void initialize( IServiceStore* pStore, ILoginCrypto* pCrypto, const LoginSettings& settings,
+        void initialize( IServiceStore* pStore, ILoginCrypto* pCrypto, const LoginServiceConfig& settings,
                          const uint8 ( &arrTicketMasterKey )[LoginTicketAuthority::kMasterKeySize] );
         void shutdown();
 
@@ -142,7 +142,7 @@ namespace sw
         /** @brief 맡겨 두고 아직 끝나지 않은 요청 수입니다. 외부 확인 대기도 포함합니다. */
         int32                       getPendingCount() const { return _pendingCount + static_cast<int32>( _listPendingVerification.size() ); }
         const LoginTicketAuthority& getTicketAuthority() const { return _ticketAuthority; }
-        const LoginSettings&        getSettings() const { return _settings; }
+        const LoginServiceConfig&   getSettings() const { return _settings; }
         int32                       getOnlineCount() const { return static_cast<int32>( _mapAccountToSession.size() ); }
         /** @brief 이 프로세스에 접속해 있는 계정의 현재 세션 id 입니다. 없으면 0입니다. */
         uint64 findOnlineSessionID( AccountID accountID ) const;
@@ -179,7 +179,7 @@ namespace sw
         EventBuffer<LoginEvent>                _remoteRevokeBuffer;
         EventBuffer<LoginCompletion>           _completionBuffer;
         LoginTicketAuthority                   _ticketAuthority;
-        LoginSettings                          _settings;
+        LoginServiceConfig                     _settings;
         vector<IPlatformLoginProvider*>        _listPlatformProvider;
         vector<PendingVerification>            _listPendingVerification;
         vector<PlatformLoginVerification>      _listVerificationScratch;

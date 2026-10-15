@@ -165,8 +165,8 @@ SW_TEST_CASE( ServiceClientCallTableTest, KitDestroyedWhileFailingQueuedCallsGet
     kit->_pOwner                                          = &kit;
     kit->_pResponseCount                                  = &responseCount;
     SW_ASSERT_TRUE( client.registerClientService( kit.get() ) );
-    string                      error;
-    OnlineServiceClientSettings settings;
+    string                    error;
+    OnlineServiceClientConfig settings;
     settings._transportSettings._ioThreadCount = 0;                                             // 루프백 전송은 IO 스레드를 두지 않는다
     SW_ASSERT_TRUE_MSG( client.initialize( transport.get(), settings, error ), error.c_str() ); // 서버가 없다 — 요청은 모인다
 

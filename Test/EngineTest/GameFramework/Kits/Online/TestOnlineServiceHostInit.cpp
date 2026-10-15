@@ -16,7 +16,7 @@ namespace
     class FailingListenTransport final : public IStreamTransport
     {
     public:
-        bool initialize( IStreamHandler* pHandler, const StreamTransportSettings& settings ) override
+        bool initialize( IStreamHandler* pHandler, const StreamTransportConfig& settings ) override
         {
             (void)pHandler;
             (void)settings;
@@ -75,10 +75,10 @@ namespace
  */
 SW_TEST_CASE( OnlineServiceHostInitTest, ListenFailureShutsTheTransportDown )
 {
-    FailingListenTransport    transport;
-    OnlineServiceHost         host;
-    OnlineServiceHostSettings settings;
-    string                    error;
+    FailingListenTransport  transport;
+    OnlineServiceHost       host;
+    OnlineServiceHostConfig settings;
+    string                  error;
 
     SW_EXPECT_FALSE( host.initialize( &transport, settings, error ) );
     SW_EXPECT_EQUAL( 1u, transport._initializeCount );

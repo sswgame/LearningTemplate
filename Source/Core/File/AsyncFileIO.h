@@ -171,7 +171,7 @@ namespace sw
 namespace sw
 {
     /** @brief `AsyncFileIO::initialize` 의 설정입니다. */
-    struct AsyncFileIOSettings
+    struct AsyncFileIOConfig
     {
         AsyncIOBackendKind _backendKind{ AsyncIOBackendKind::Auto }; ///< 쓸 백엔드
         uint32             _maxInFlightCount{ 32 };                  ///< OS 에 동시에 걸어 둘 요청 수(IOCP · io_uring). 큐의 우선순위는 이 너머에서 일한다
@@ -206,7 +206,7 @@ namespace sw
          * @brief 백엔드를 골라 IO 스레드를 띄웁니다.
          * @return 시작했으면 true. 명시한 백엔드(`Iocp` · `IOUring`)를 이 플랫폼 · 커널에서 쓸 수 없으면 폴백하지 않고 false 입니다.
          */
-        [[nodiscard]] bool initialize( const AsyncFileIOSettings& settings );
+        [[nodiscard]] bool initialize( const AsyncFileIOConfig& settings );
         /**
          * @brief 큐에 남은 요청을 `Canceled` 로 끝내고, OS 에 걸린 요청과 완료 콜백이 모두 끝나기를 기다린 뒤 IO 스레드를 내립니다.
          * @note 완료 콜백을 태스크로 싣는 설정이면 그 `TaskManager` 가 아직 돌고 있어야 합니다(엔진은 Task 단계가 FileIO 보다 늦게 내려간다).
@@ -216,7 +216,7 @@ namespace sw
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "FileIO";
         /** @brief 기동 순서가 `initialize` 에 넘길 설정입니다(완료 콜백을 싣는 태스크 매니저). 기동 전에 호스트가 정한다. */
-        void                setSubsystemSettings( const AsyncFileIOSettings& settings ) { _subsystemSettings = settings; }
+        void                setSubsystemSettings( const AsyncFileIOConfig& settings ) { _subsystemSettings = settings; }
         SubsystemInitResult initializeSubsystem() override;
         void                shutdownSubsystem() override;
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
@@ -255,6 +255,6 @@ namespace sw
 
         unique_ptr<AsyncFileIOQueue>    _queue;
         unique_ptr<IAsyncFileIOBackend> _backend;
-        AsyncFileIOSettings             _subsystemSettings; ///< `initializeSubsystem` 이 넘길 설정(`setSubsystemSettings`)
+        AsyncFileIOConfig               _subsystemSettings; ///< `initializeSubsystem` 이 넘길 설정(`setSubsystemSettings`)
     };
 } // namespace sw

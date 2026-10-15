@@ -26,7 +26,7 @@ namespace sw
     class ServiceTransaction;
 
     /** @brief 거래 서비스 설정입니다. 시간은 밀리초입니다. */
-    struct TradeSettings
+    struct TradeServiceConfig
     {
         int64 _idleTimeoutMs{ TradeConstant::kIdleTimeoutMs };
         int64 _inviteTimeoutMs{ TradeConstant::kInviteTimeoutMs };
@@ -42,7 +42,7 @@ namespace sw
     class SW_KIT_SERVER_API TradeStoreLogic
     {
     public:
-        TradeStoreLogic( IServiceStoreConnection& connection, const ITradePolicy& policy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, const TradeSettings& settings );
+        TradeStoreLogic( IServiceStoreConnection& connection, const ITradePolicy& policy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, const TradeServiceConfig& settings );
 
         static const hashed_string& getSessionTable();
         static const hashed_string& getActiveTable();
@@ -59,7 +59,7 @@ namespace sw
         /** @brief 이 서버가 주인인 열린 거래를 모두 닫습니다(ServerRestart). 아무것도 움직이지 않았으므로 안전합니다. 닫은 거래는 @p outListClosed 에 담습니다. */
         TradeResult recoverOwned( int64 nowMs, vector<TradeSnapshot>& outListClosed );
 
-        static bool isIdleExpired( const TradeSnapshot& trade, const TradeSettings& settings, int64 nowMs );
+        static bool isIdleExpired( const TradeSnapshot& trade, const TradeServiceConfig& settings, int64 nowMs );
 
     private:
         struct SessionRead
@@ -75,10 +75,10 @@ namespace sw
         /** @brief 잠그는 쪽의 항목을 원장 잔액과 비교합니다. 미리 확인하는 것이며 정산할 때 다시 확인합니다. */
         TradeResult evaluateFunds( const TradeSide& side );
 
-        IServiceStoreConnection& _connection;
-        const ITradePolicy&      _policy;
-        const ILedgerPolicy*     _pLedgerPolicy;
-        const TradeSettings&     _settings;
-        uint64                   _serverID;
+        IServiceStoreConnection&  _connection;
+        const ITradePolicy&       _policy;
+        const ILedgerPolicy*      _pLedgerPolicy;
+        const TradeServiceConfig& _settings;
+        uint64                    _serverID;
     };
 } // namespace sw

@@ -98,7 +98,7 @@ namespace
         if ( serverSocket.open( 0, true ) == false )
             return false;
         CountingTransport serverTransport( &serverSocket );
-        NetHostSettings   settings;
+        NetHostConfig     settings;
         settings._maxConnections = clientCount + 16;
         settings._timeoutSeconds = 20.0; // 측정 중 클라이언트 드라이버가 밀려도 끊기지 않게
         settings._connectTimeout = 20.0;

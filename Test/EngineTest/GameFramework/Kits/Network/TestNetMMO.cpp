@@ -35,10 +35,10 @@ namespace
     /** @brief 테스트가 틱 사이에 바꾸는 서버 쪽 엔티티 표입니다. 표의 엔티티를 틱마다 `setEntity` 하고, 빠진 것은 지운다. */
     struct MMOTable
     {
-        vector<MMOEntity>     _listEntity{};
-        vector<uint32>        _listRemoved{};
-        MMOReplicatorSettings _settings{};
-        uint8                 _bStampTick{ SW_FALSE }; ///< 상태 앞 4 바이트에 서버 틱(틱마다 바뀐다 — 받는 쪽이 되돌아감을 측정한다)
+        vector<MMOEntity>   _listEntity{};
+        vector<uint32>      _listRemoved{};
+        MMOReplicatorConfig _settings{};
+        uint8               _bStampTick{ SW_FALSE }; ///< 상태 앞 4 바이트에 서버 틱(틱마다 바뀐다 — 받는 쪽이 되돌아감을 측정한다)
     };
 
     /** @brief 서버 — 연결마다 관찰자 엔티티(`kMMOObserverID`)를 중심으로 관심 영역을 돌린다. 연결이 닫히면 라우터가 관찰자를 지운다. */
@@ -50,7 +50,7 @@ namespace
             , _pTable{ pTable }
         {
             _server.initialize( &world.getHost(), pTable->_settings );
-            world.getRouter().addHandler( &_server );
+            world.getRouter().registerHandler( &_server );
         }
 
         void onHostEvent( NetSimWorld& world, const NetHostEvent& event ) override
@@ -100,7 +100,7 @@ namespace
             , _regressionCount{ 0 }
             , _serverConnectionID{ -1 }
         {
-            world.getRouter().addHandler( &_view );
+            world.getRouter().registerHandler( &_view );
         }
 
         void onHostEvent( NetSimWorld& world, const NetHostEvent& event ) override
@@ -200,7 +200,7 @@ SW_TEST_CASE( NetMMOTest, ObserversSeeNearbyEntitiesWithinBudgetAndHysteresis )
     NetEmulationConditions conditions;
     conditions._latency  = 0.03;
     conditions._lossRate = 0.05f;
-    NetHostSettings hostSettings;
+    NetHostConfig hostSettings;
     hostSettings._sendInterval = 1.0 / 20.0;
     NetHost serverHost;
     NetHost clientHost;
@@ -219,10 +219,10 @@ SW_TEST_CASE( NetMMOTest, ObserversSeeNearbyEntitiesWithinBudgetAndHysteresis )
     serverTransport.setDefaultConditions( conditions );
     clientTransport.setDefaultConditions( conditions );
 
-    PartyPolicy           policy;
-    MMOReplicator         server;
-    MMOClientView         view;
-    MMOReplicatorSettings settings;
+    PartyPolicy         policy;
+    MMOReplicator       server;
+    MMOClientView       view;
+    MMOReplicatorConfig settings;
     settings._enterRadius       = 50.0f;
     settings._leaveRadius       = 60.0f;
     settings._updateBudgetBytes = 150;
@@ -364,7 +364,7 @@ SW_TEST_CASE( NetMMOTest, TeleportLeavesWithoutGhosts )
         } );
     }
     NetSimHarness harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimSettings{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
     const int32 client = harness.addClient( NetSimLinkConditions{} );
 
     MMOCountGoal all{ client, static_cast<int32>( kNeighborCount + 1 ) };
@@ -398,7 +398,7 @@ SW_TEST_CASE( NetMMOTest, ReorderedUpdateDoesNotOverwriteNewer )
             100 + index, 1, 1.0f
         } );
     }
-    NetSimSettings settings;
+    NetSimConfig settings;
     settings._hostSettings._sendInterval = 1.0 / 60.0;
     NetSimHarness harness;
     SW_ASSERT_TRUE( harness.initialize( settings, &game ) );
@@ -441,7 +441,7 @@ SW_TEST_CASE( NetMMOTest, OversizedStateIsRefusedByTheServer )
         51, 1, 1.0f
     } );
     NetSimHarness harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimSettings{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
     const int32 client = harness.addClient( NetSimLinkConditions{} );
     harness.stepTicks( 60 );
 
@@ -478,7 +478,7 @@ SW_TEST_CASE( NetMMOTest, EntersShareOneReliableMessagePerTick )
         } );
     }
     NetSimHarness harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimSettings{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
     const int32 client = harness.addClient( NetSimLinkConditions{} );
 
     // 들어옴이 나가는 틱의 서버 쪽 미확인 신뢰 수 — 엔티티마다 메시지 하나면 32 를 넘고, 묶으면 조각 17 남짓이다.
@@ -524,7 +524,7 @@ SW_TEST_CASE( NetMMOTest, UpdateBudgetFollowsTheConnectionCap )
                 200 + index, 1, 1.0f
             } );
         }
-        NetSimSettings settings;
+        NetSimConfig settings;
         settings._hostSettings._maxBytesPerSecond = maxBytesPerSecond;
         NetSimHarness harness;
         if ( harness.initialize( settings, &game ) == false )
@@ -533,7 +533,7 @@ SW_TEST_CASE( NetMMOTest, UpdateBudgetFollowsTheConnectionCap )
         harness.stepTicks( 120 );
         return getMMOServer( harness ).getServer().getSentUpdateCount();
     };
-    const uint64 defaultCount = countUpdates( NetHostSettings{}._maxBytesPerSecond );
+    const uint64 defaultCount = countUpdates( NetHostConfig{}._maxBytesPerSecond );
     const uint64 cappedCount  = countUpdates( 6000 );
     SW_LOG_INFO( "[NetMMO] updates in 120 ticks: default cap %#, 6 KB/s cap %#", defaultCount, cappedCount );
     SW_EXPECT_TRUE( defaultCount > 1000 );            // 600 B 예산 — 스물이 거의 매 틱
@@ -565,7 +565,7 @@ SW_TEST_CASE( NetMMOTest, LostUpdateIsResentSoonAfterTheAck )
         vector<uint8>( 16, 0 ), float3{ 50.0f, 0.0f, 0.0f },
         kFarID, 1, 1.0f
     } );
-    NetSimSettings settings;
+    NetSimConfig settings;
     settings._hostSettings._sendInterval = 1.0 / 60.0;
     NetSimHarness harness;
     SW_ASSERT_TRUE( harness.initialize( settings, &game ) );

@@ -38,7 +38,7 @@ namespace sw
 
         ScavengerCarry();
 
-        void initialize( const ScavengerCarrySettings& settings );
+        void initialize( const ScavengerCarryDef& settings );
         /** @brief 넣을 수 있는지 확인합니다(슬롯 수와 양손 여부). */
         ScavengerPickupResult evaluatePickup() const;
         /** @brief 넣습니다. `evaluatePickup` 이 Ok 가 아니면 넣지 않고 그 결과를 반환합니다. */
@@ -62,6 +62,6 @@ namespace sw
 
     private:
         vector<ScavengerScrap> _listScrap;
-        ScavengerCarrySettings _settings;
+        ScavengerCarryDef      _settings;
     };
 } // namespace sw

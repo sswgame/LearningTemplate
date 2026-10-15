@@ -131,7 +131,7 @@ namespace sw
     FacialAnimationComponent::~FacialAnimationComponent()
     {
         if ( _pUnit != nullptr )
-            _pUnit->removeAnimationPhaseTask( &_binding );
+            _pUnit->unregisterAnimationPhaseTask( &_binding );
     }
 
     void FacialAnimationComponent::onBeginPlay()
@@ -150,7 +150,7 @@ namespace sw
     void FacialAnimationComponent::onEndPlay()
     {
         if ( _pUnit != nullptr )
-            _pUnit->removeAnimationPhaseTask( &_binding );
+            _pUnit->unregisterAnimationPhaseTask( &_binding );
         _pUnit = nullptr;
         Component::onEndPlay();
     }
@@ -202,10 +202,10 @@ namespace sw
         if ( pUnit == _pUnit )
             return;
         if ( _pUnit != nullptr )
-            _pUnit->removeAnimationPhaseTask( &_binding );
+            _pUnit->unregisterAnimationPhaseTask( &_binding );
         _pUnit = pUnit;
         if ( _pUnit != nullptr )
-            _pUnit->addAnimationPhaseTask( &_binding );
+            _pUnit->registerAnimationPhaseTask( &_binding );
         else if ( pOwner != nullptr )
             SW_LOG_WARNING( "'%#': facial animation has no SkeletalMeshComponent on its object", pOwner->getName().c_str() );
     }
@@ -339,7 +339,7 @@ namespace sw
     void FacialAnimationComponent::advanceTime( float32 deltaSeconds )
     {
         // 깜빡임: 타이머가 다 되면 길이만큼 감았다 뜨고, 다음 간격을 뽑는다.
-        const FacialBlinkSettings& blink = _rig.getBlink();
+        const FacialBlinkDef& blink = _rig.getBlink();
         if ( _bBlink == SW_TRUE && blink._listTarget.empty() == false )
         {
             if ( _blinkElapsed >= 0.0f )
@@ -365,8 +365,8 @@ namespace sw
         }
 
         // 사카드: 간격마다 최대 크기 안의 작은 요 · 피치로 튄다(시선 목표가 있을 때만).
-        const FacialGazeSettings& gaze           = _rig.getGaze();
-        const bool                bSaccadeActive = _bSaccades == SW_TRUE && _bLookAt == SW_TRUE && gaze._listEyeBone.empty() == false;
+        const FacialGazeDef& gaze           = _rig.getGaze();
+        const bool           bSaccadeActive = _bSaccades == SW_TRUE && _bLookAt == SW_TRUE && gaze._listEyeBone.empty() == false;
         if ( bSaccadeActive )
         {
             _saccadeTimer -= deltaSeconds;
@@ -503,13 +503,13 @@ namespace sw
         const bool bGazeUnavailable = _bLookAt == SW_FALSE || _bLookAtModelReady == SW_FALSE || _listEyeBone.empty();
         if ( bGazeUnavailable )
             return;
-        const FacialGazeSettings& gaze       = _rig.getGaze();
-        const vector<float4x4>&   listModel  = unit.getModelSpaceTransforms();
-        const vector<int32>&      listParent = unit.getSkeleton().getParentIndices();
-        Pose&                     pose       = unit.getLocalPose();
-        quaternion*               pRotation  = pose.getRotationData();
-        const float32             maxAngle   = gaze._maxAngle;
-        const quaternion          saccade    = quaternion::makeFromYawPitchRoll( _saccadeOffset._x, _saccadeOffset._y, 0.0f );
+        const FacialGazeDef&    gaze       = _rig.getGaze();
+        const vector<float4x4>& listModel  = unit.getModelSpaceTransforms();
+        const vector<int32>&    listParent = unit.getSkeleton().getParentIndices();
+        Pose&                   pose       = unit.getLocalPose();
+        quaternion*             pRotation  = pose.getRotationData();
+        const float32           maxAngle   = gaze._maxAngle;
+        const quaternion        saccade    = quaternion::makeFromYawPitchRoll( _saccadeOffset._x, _saccadeOffset._y, 0.0f );
         for ( const int32 boneIndex : _listEyeBone )
         {
             const bool bInvalidEyeBone = boneIndex < 0 || static_cast<size_t>( boneIndex ) >= listModel.size() || static_cast<uint32>( boneIndex ) >= pose.getBoneCount();

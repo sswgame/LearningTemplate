@@ -171,20 +171,20 @@ namespace sw
             }
             if ( StringUtil::equals( name, string_view( "Survival" ), true ) )
             {
-                WesternSurvivalSettings& survival = _survival;
-                survival._comfortMin              = node.getAttributeFloat( "comfortMin", survival._comfortMin );
-                survival._comfortMax              = MathUtil::max( survival._comfortMin, node.getAttributeFloat( "comfortMax", survival._comfortMax ) );
-                survival._coreDrainPerHour        = MathUtil::max( 0.0f, node.getAttributeFloat( "coreDrain", survival._coreDrainPerHour ) );
-                survival._temperatureDrain        = MathUtil::max( 0.0f, node.getAttributeFloat( "temperatureDrain", survival._temperatureDrain ) );
-                survival._minRegenScale           = MathUtil::saturate( node.getAttributeFloat( "minRegenScale", survival._minRegenScale ) );
-                survival._health                  = MathUtil::max( 1.0f, node.getAttributeFloat( "health", survival._health ) );
-                survival._stamina                 = MathUtil::max( 1.0f, node.getAttributeFloat( "stamina", survival._stamina ) );
-                survival._deadEye                 = MathUtil::max( 1.0f, node.getAttributeFloat( "deadEye", survival._deadEye ) );
-                survival._healthRegen             = MathUtil::max( 0.0f, node.getAttributeFloat( "healthRegen", survival._healthRegen ) );
-                survival._staminaRegen            = MathUtil::max( 0.0f, node.getAttributeFloat( "staminaRegen", survival._staminaRegen ) );
-                survival._deadEyeRegen            = MathUtil::max( 0.0f, node.getAttributeFloat( "deadEyeRegen", survival._deadEyeRegen ) );
-                survival._deadEyeDrain            = MathUtil::max( 0.0f, node.getAttributeFloat( "deadEyeDrain", survival._deadEyeDrain ) );
-                survival._deadEyeMinimum          = MathUtil::max( 0.0f, node.getAttributeFloat( "deadEyeMinimum", survival._deadEyeMinimum ) );
+                WesternSurvivalDef& survival = _survival;
+                survival._comfortMin         = node.getAttributeFloat( "comfortMin", survival._comfortMin );
+                survival._comfortMax         = MathUtil::max( survival._comfortMin, node.getAttributeFloat( "comfortMax", survival._comfortMax ) );
+                survival._coreDrainPerHour   = MathUtil::max( 0.0f, node.getAttributeFloat( "coreDrain", survival._coreDrainPerHour ) );
+                survival._temperatureDrain   = MathUtil::max( 0.0f, node.getAttributeFloat( "temperatureDrain", survival._temperatureDrain ) );
+                survival._minRegenScale      = MathUtil::saturate( node.getAttributeFloat( "minRegenScale", survival._minRegenScale ) );
+                survival._health             = MathUtil::max( 1.0f, node.getAttributeFloat( "health", survival._health ) );
+                survival._stamina            = MathUtil::max( 1.0f, node.getAttributeFloat( "stamina", survival._stamina ) );
+                survival._deadEye            = MathUtil::max( 1.0f, node.getAttributeFloat( "deadEye", survival._deadEye ) );
+                survival._healthRegen        = MathUtil::max( 0.0f, node.getAttributeFloat( "healthRegen", survival._healthRegen ) );
+                survival._staminaRegen       = MathUtil::max( 0.0f, node.getAttributeFloat( "staminaRegen", survival._staminaRegen ) );
+                survival._deadEyeRegen       = MathUtil::max( 0.0f, node.getAttributeFloat( "deadEyeRegen", survival._deadEyeRegen ) );
+                survival._deadEyeDrain       = MathUtil::max( 0.0f, node.getAttributeFloat( "deadEyeDrain", survival._deadEyeDrain ) );
+                survival._deadEyeMinimum     = MathUtil::max( 0.0f, node.getAttributeFloat( "deadEyeMinimum", survival._deadEyeMinimum ) );
                 continue;
             }
             if ( StringUtil::equals( name, string_view( "DeadEye" ), true ) )

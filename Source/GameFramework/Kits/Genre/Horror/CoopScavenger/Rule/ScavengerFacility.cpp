@@ -121,9 +121,9 @@ namespace sw
         _pCatalog     = &catalog;
         _layoutMoonID = moon._id;
         _layoutSeed   = seed;
-        GameRandom                       random{ seed };
-        const ScavengerFacilitySettings& settings = catalog.getFacilitySettings();
-        string                           xml      = "<AreaGraph>";
+        GameRandom                  random{ seed };
+        const ScavengerFacilityDef& settings = catalog.getFacilitySettings();
+        string                      xml      = "<AreaGraph>";
         ScavengerFacilityInternal::appendArea( xml, "outside", 0, "Outside", 0, 0 );
         ScavengerFacilityInternal::appendArea( xml, "ship", 0, "Ship", -1, 0 );
         if ( moon._bCompany == SW_FALSE )

@@ -356,7 +356,7 @@ namespace sw
         class OpenSSLContext final : public ITLSContext
         {
         public:
-            OpenSSLContext( SSL_CTX* pContext, const TLSContextSettings& settings )
+            OpenSSLContext( SSL_CTX* pContext, const TLSContextConfig& settings )
                 : _serverName{ settings._serverName }
                 , _pinnedSha256Hex{ settings._pinnedCertificateSha256Hex }
                 , _pContext{ pContext }
@@ -606,7 +606,7 @@ namespace sw
         return aead;
     }
 
-    unique_ptr<ITLSContext> OpenSSLNetSecurityProvider::createTLSContext( const TLSContextSettings& settings, string& outError )
+    unique_ptr<ITLSContext> OpenSSLNetSecurityProvider::createTLSContext( const TLSContextConfig& settings, string& outError )
     {
         using Internal = OpenSSLNetSecurityInternal;
         ERR_clear_error();

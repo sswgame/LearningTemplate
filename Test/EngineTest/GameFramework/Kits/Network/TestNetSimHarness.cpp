@@ -65,8 +65,8 @@ namespace
                 const string name = string{ "Crate" } + sw::to_string( index );
                 _listCrate.push_back( spawnBox( manager, name.c_str(), position, float3{ 0.5f, 0.5f, 0.5f }, PhysicsBodyType::Dynamic ) );
             }
-            _server.initialize( &world.getHost(), ReplicationServerSettings{}, nullptr );
-            world.getRouter().addHandler( &_server );
+            _server.initialize( &world.getHost(), ReplicationServerConfig{}, nullptr );
+            world.getRouter().registerHandler( &_server );
         }
 
         void onTickEnd( NetSimWorld& world, float32 deltaTime ) override
@@ -113,10 +113,10 @@ namespace
             _listProxy.assign( kCrateCount, nullptr );
             // 바닥은 다시 찾지 않는다 — 실패면 상자가 떨어져 비교가 어긋난다
             (void)spawnBox( world.getObjectManager(), "Floor", float3{ 0.0f, -0.5f, 0.0f }, float3{ 20.0f, 0.5f, 20.0f }, PhysicsBodyType::Static );
-            ReplicationClientSettings settings;
+            ReplicationClientConfig settings;
             settings._tickInterval = kTickSeconds;
             _client.initialize( &world.getHost(), settings );
-            world.getRouter().addHandler( &_client );
+            world.getRouter().registerHandler( &_client );
         }
 
         void onTickBegin( NetSimWorld& world, float32 deltaTime ) override
@@ -244,7 +244,7 @@ namespace
             , _advancedCount{ 0 }
             , _bStarted{ false }
         {
-            world.getRouter().addHandler( &_session );
+            world.getRouter().registerHandler( &_session );
         }
 
         void onHostEvent( NetSimWorld& world, const NetHostEvent& event ) override
@@ -325,9 +325,9 @@ namespace
 
     NetSimRunResult runLossyScenario( uint32 seed )
     {
-        CrateGame      game;
-        NetSimHarness  harness;
-        NetSimSettings settings;
+        CrateGame     game;
+        NetSimHarness harness;
+        NetSimConfig  settings;
         settings._seed = seed;
         NetSimRunResult result;
         if ( harness.initialize( settings, &game ) == false )
@@ -365,7 +365,7 @@ SW_TEST_CASE( NetSimHarnessTest, EveryWorldRunsItsOwnSceneAndPhysics )
 {
     CrateGame     game;
     NetSimHarness harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimSettings{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
     for ( int32 index = 0; index < 3; ++index )
     {
         SW_ASSERT_TRUE( harness.addClient( NetSimLinkConditions::makeSymmetric( makeConditions( 0.03, 0.005, 0.02f ) ) ) > 0 );
@@ -402,7 +402,7 @@ SW_TEST_CASE( NetSimHarnessTest, LinkConditionsArePerClient )
 {
     CrateGame     game;
     NetSimHarness harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimSettings{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
     const int32          cleanClient = harness.addClient( NetSimLinkConditions{} );
     NetSimLinkConditions slow;
     slow._downstream       = makeConditions( 0.2, 0.0, 0.0f );
@@ -433,7 +433,7 @@ SW_TEST_CASE( NetSimHarnessTest, LateJoinConvergesAndLeaveNotifiesServer )
 {
     CrateGame     game;
     NetSimHarness harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimSettings{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
     const int32 firstClient  = harness.addClient( NetSimLinkConditions{} );
     const int32 secondClient = harness.addClient( NetSimLinkConditions{} );
     harness.stepTicks( 180 );
@@ -473,7 +473,7 @@ SW_TEST_CASE( NetSimHarnessTest, LostAcceptedStillGivesLockstepPlayersTheirNumbe
 {
     LockstepNetSimGame game( 2 );
     NetSimHarness      harness;
-    SW_ASSERT_TRUE( harness.initialize( NetSimSettings{}, &game ) );
+    SW_ASSERT_TRUE( harness.initialize( NetSimConfig{}, &game ) );
     AcceptedDropper      dropper;
     NetSimLinkConditions lostAccepted;
     dropper._remaining                           = 1;
@@ -499,9 +499,9 @@ SW_TEST_CASE( NetSimHarnessTest, LostAcceptedStillGivesLockstepPlayersTheirNumbe
  */
 SW_TEST_CASE( NetSimHarnessTest, SpoofedConnectRequestsDoNotFillTheServer )
 {
-    CrateGame      game;
-    NetSimHarness  harness;
-    NetSimSettings settings;
+    CrateGame     game;
+    NetSimHarness harness;
+    NetSimConfig  settings;
     settings._hostSettings._maxConnections = 4;
     SW_ASSERT_TRUE( harness.initialize( settings, &game ) );
     NetSimLinkConditions spoofed;

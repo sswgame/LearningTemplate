@@ -46,9 +46,9 @@ namespace
     };
 
     /** @brief 서버(포트 4000) + 클라이언트 kClientCount(5000 부터)를 세우고 30 프레임 돌려 연결합니다. 소금을 고정해 핸드셰이크 값까지 같게 한다(한 스레드라 망은 결정적). */
-    void connectHostCluster( test::LoopbackCluster& cluster, const NetHostSettings& settings )
+    void connectHostCluster( test::LoopbackCluster& cluster, const NetHostConfig& settings )
     {
-        NetHostSettings fixed = settings;
+        NetHostConfig fixed   = settings;
         fixed._saltSeed       = 99;
         fixed._maxConnections = kClientCount + 8;
         (void)cluster.addHost( 4000, fixed );
@@ -63,14 +63,14 @@ namespace
     /** @brief 권위 서버 판 — 클라이언트마다 받은 메시지 바이트의 해시입니다. */
     vector<uint64> runReplication( TaskManager* pTaskManager )
     {
-        NetHostSettings settings;
+        NetHostConfig settings;
         settings._sendInterval = 1.0 / 60.0;
         test::LoopbackCluster cluster( 21u );
         connectHostCluster( cluster, settings );
 
-        StripedPolicy             policy;
-        ReplicationServer         server;
-        ReplicationServerSettings serverSettings;
+        StripedPolicy           policy;
+        ReplicationServer       server;
+        ReplicationServerConfig serverSettings;
         serverSettings._snapshotBudgetBytes = 400; // 예산이 모자라 우선도 순서가 결과를 바꾼다
         server.initialize( &cluster.getServer(), serverSettings, &policy );
         server.setTaskManager( pTaskManager, 1 );
@@ -78,7 +78,7 @@ namespace
         for ( int32 index = 0; index < cluster.getClientCount(); ++index )
         {
             listReplication.emplace_back();
-            listReplication.back().initialize( &cluster.getClient( index ), ReplicationClientSettings{} );
+            listReplication.back().initialize( &cluster.getClient( index ), ReplicationClientConfig{} );
         }
 
         vector<uint64> listHash( kClientCount, sw::HashUtil::kFnvOffset64 );
@@ -122,13 +122,13 @@ namespace
     /** @brief MMO 판 — 관찰자마다 받은 메시지 바이트의 해시 + 보낸 갱신 수(마지막 칸)입니다. */
     vector<uint64> runMMO( TaskManager* pTaskManager )
     {
-        NetHostSettings settings;
+        NetHostConfig settings;
         settings._sendInterval = 1.0 / 20.0;
         test::LoopbackCluster cluster( 21u );
         connectHostCluster( cluster, settings );
 
-        MMOReplicator         server;
-        MMOReplicatorSettings mmoSettings;
+        MMOReplicator       server;
+        MMOReplicatorConfig mmoSettings;
         mmoSettings._enterRadius       = 50.0f;
         mmoSettings._leaveRadius       = 60.0f;
         mmoSettings._updateBudgetBytes = 120;

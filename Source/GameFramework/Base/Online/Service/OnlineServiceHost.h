@@ -109,19 +109,19 @@ namespace sw
 namespace sw
 {
     /** @brief 호스트 설정입니다. 저장소, 캐시, 버스, 원격 설정은 빌려 쓰므로 호스트보다 오래 살아야 합니다. */
-    struct OnlineServiceHostSettings
+    struct OnlineServiceHostConfig
     {
-        StreamTransportSettings _transportSettings{}; ///< `_ioThreadCount == 0` 이면 호스트 `tick` 이 전송을 돈다(루프백 테스트)
-        StreamEndpointSettings  _endpointSettings{};
-        NetAddress              _listenAddress{ NetAddress::makeAnyInterface( 7100 ) }; ///< 포트 0 = 아무 포트(`getListenPort`)
-        IServiceStore*          _pServiceStore{ nullptr };
-        IEphemeralStore*        _pEphemeralStore{ nullptr }; ///< 없으면 서버 한 대(라우터 없음)
-        IServerBus*             _pServerBus{ nullptr };
-        RemoteConfig*           _pRemoteConfig{ nullptr };
-        int32                   _requestBurstPerAccount{ 30 };
-        int64                   _requestRefillMsPerAccount{ 100 };
-        int32                   _requestBurstPerRemote{ 10 }; ///< 로그인 전(주소마다)
-        int64                   _requestRefillMsPerRemote{ 500 };
+        StreamTransportConfig _transportSettings{}; ///< `_ioThreadCount == 0` 이면 호스트 `tick` 이 전송을 돈다(루프백 테스트)
+        StreamEndpointConfig  _endpointSettings{};
+        NetAddress            _listenAddress{ NetAddress::makeAnyInterface( 7100 ) }; ///< 포트 0 = 아무 포트(`getListenPort`)
+        IServiceStore*        _pServiceStore{ nullptr };
+        IEphemeralStore*      _pEphemeralStore{ nullptr }; ///< 없으면 서버 한 대(라우터 없음)
+        IServerBus*           _pServerBus{ nullptr };
+        RemoteConfig*         _pRemoteConfig{ nullptr };
+        int32                 _requestBurstPerAccount{ 30 };
+        int64                 _requestRefillMsPerAccount{ 100 };
+        int32                 _requestBurstPerRemote{ 10 }; ///< 로그인 전(주소마다)
+        int64                 _requestRefillMsPerRemote{ 500 };
     };
 } // namespace sw
 
@@ -141,7 +141,7 @@ namespace sw
         OnlineServiceHost& operator=( const OnlineServiceHost& ) = delete;
 
         /** @brief 전송(빌려 쓴다)을 띄우고 받기 시작합니다. 서비스는 그 전에 올려야 합니다. */
-        [[nodiscard]] bool initialize( IStreamTransport* pTransport, const OnlineServiceHostSettings& settings, string& outError );
+        [[nodiscard]] bool initialize( IStreamTransport* pTransport, const OnlineServiceHostConfig& settings, string& outError );
         void               shutdown();
 
         /** @brief 서비스를 올립니다. 빌려 쓰며, 영역이 이미 있거나 메서드 번호가 겹치면 오류 로그를 남기고 false 를 반환하고 아무것도 올리지 않습니다. */
@@ -207,7 +207,7 @@ namespace sw
         void                dispatchServerBusMessage( const ServerBusMessage& message );
         void                notifyAccountLeft( AccountID accountID );
 
-        OnlineServiceHostSettings                        _settings;
+        OnlineServiceHostConfig                          _settings;
         StreamMessageEndpoint                            _endpoint;
         NetRequestServer                                 _requestServer;
         EphemeralStoreRouter                             _ephemeralRouter;

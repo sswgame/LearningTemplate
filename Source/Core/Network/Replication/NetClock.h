@@ -24,7 +24,7 @@
 namespace sw
 {
     /** @brief 시계 설정입니다. */
-    struct NetClockSettings
+    struct NetClockConfig
     {
         float32 _tickInterval{ 1.0f / 30.0f }; ///< 서버 틱 간격(초). 1e-4보다 작으면 1e-4로 올려 쓴다.
         float32 _interpolationDelay{ 0.1f };   ///< 렌더 지연의 최솟값(초). 실제 지연은 이 값과 (표본 간격 x `NetClock::kSampleIntervalsBehind`) 중 큰 쪽이다.
@@ -47,7 +47,7 @@ namespace sw
         NetClock();
 
         /** @brief 설정을 저장하고 상태를 비웁니다. */
-        void initialize( const NetClockSettings& settings );
+        void initialize( const NetClockConfig& settings );
         /** @brief 받은 서버 틱과 렌더 틱을 비웁니다. 재연결하면 새 서버의 틱이 옛 틱보다 작을 수 있기 때문입니다. 설정은 그대로 둡니다. */
         void reset();
         /** @brief 서버 틱이 든 메시지를 받았음을 알립니다. 처음이면 추정을 그 틱에, 렌더 틱을 그 틱 - 지연에 둡니다. 추정보다 앞이면 추정을 끌어올립니다. */
@@ -71,10 +71,10 @@ namespace sw
         float32 getTickInterval() const;
 
     private:
-        NetClockSettings _settings;
-        float32          _serverTick;
-        float32          _renderTick;
-        uint32           _newestTick;
-        uint8            _bHasServerTick;
+        NetClockConfig _settings;
+        float32        _serverTick;
+        float32        _renderTick;
+        uint32         _newestTick;
+        uint8          _bHasServerTick;
     };
 } // namespace sw

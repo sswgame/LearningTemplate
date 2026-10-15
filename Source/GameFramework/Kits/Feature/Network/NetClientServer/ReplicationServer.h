@@ -64,7 +64,7 @@ namespace sw
 namespace sw
 {
     /** @brief 서버 설정입니다. */
-    struct ReplicationServerSettings
+    struct ReplicationServerConfig
     {
         int32 _snapshotBudgetBytes{ 1000 };    ///< 클라이언트 한 명당 틱마다 보내는 스냅샷 메시지의 상한 바이트. 종류 바이트, 헤더, 사라진 목록을 포함하며 `NetConnection::kMaxSingleMessageSize` 로 잘린다.
                                                ///< 연결 상한에서 나온 할당량(`NetSendBudget::computeTickBudget`)이 더 작으면 그 값을 쓴다
@@ -83,7 +83,7 @@ namespace sw
      *     for ( each entity ) server.setEntity( id, typeID, bytes );
      *     server.endTick();
      *     server.sendSnapshots();
-     *     // 받은 메시지와 연결 이벤트: router.addHandler( &server ) 한 뒤 매 틱 router.pump( host ) 를 부른다.
+     *     // 받은 메시지와 연결 이벤트: router.registerHandler( &server ) 한 뒤 매 틱 router.pump( host ) 를 부른다.
      *     //                           직접 처리하려면 server.handleMessage( connectionID, bytes ), server.onConnectionOpened / onConnectionClosed 를 쓴다
      *     // 시뮬레이션: server.popInput( connectionID, tick, inputBytes ); ... server.setLastProcessedInputTick( connectionID, tick );
      * @endcode
@@ -93,7 +93,7 @@ namespace sw
     public:
         ReplicationServer();
 
-        void initialize( NetHost* pHost, const ReplicationServerSettings& settings, const IReplicationPolicy* pPolicy = nullptr );
+        void initialize( NetHost* pHost, const ReplicationServerConfig& settings, const IReplicationPolicy* pPolicy = nullptr );
         void beginTick( uint32 tick );
         /** @brief 이 틱의 엔티티를 등록합니다. 상태가 `NetSnapshot::kMaxEntityBytes` 를 넘으면 복제하지 않으며, 처음 한 번만 경고하고 그 뒤로는 횟수만 셉니다. */
         void setEntity( uint32 entityID, uint32 typeID, const vector<uint8>& buffer );
@@ -161,7 +161,7 @@ namespace sw
 
         vector<ClientState>                 _listClient;
         NetSnapshot                         _world;
-        ReplicationServerSettings           _settings;
+        ReplicationServerConfig             _settings;
         NetHost*                            _pHost;
         const IReplicationPolicy*           _pPolicy;
         IReplicationPolicy                  _defaultPolicy;

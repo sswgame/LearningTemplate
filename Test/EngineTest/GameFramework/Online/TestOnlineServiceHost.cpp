@@ -222,7 +222,7 @@ namespace
         {
             SW_EXPECT_TRUE( _client.registerClientService( &_serviceA ) );
             SW_EXPECT_TRUE( _client.registerClientService( &_serviceB ) );
-            OnlineServiceClientSettings settings;
+            OnlineServiceClientConfig settings;
             settings._transportSettings._ioThreadCount = 0;
             settings._serverAddress                    = NetAddress::makeLoopback( port );
             settings._gameBuild                        = "test-1";
@@ -242,7 +242,7 @@ namespace
         vector<ClientSide*>          _listClient;
         int64                        _nowMs;
 
-        explicit HostRig( OnlineServiceHostSettings settings = makeSettings() )
+        explicit HostRig( OnlineServiceHostConfig settings = makeSettings() )
             : _network{ 13u }
             , _hostTransport{ _network.createTransport() }
             , _serviceA{ OnlineServiceHostTestInternal::kRangeA }
@@ -257,9 +257,9 @@ namespace
             SW_EXPECT_TRUE_MSG( _host.initialize( _hostTransport.get(), settings, error ), error.c_str() );
         }
 
-        static OnlineServiceHostSettings makeSettings()
+        static OnlineServiceHostConfig makeSettings()
         {
-            OnlineServiceHostSettings settings;
+            OnlineServiceHostConfig settings;
             settings._transportSettings._ioThreadCount = 0;
             settings._listenAddress                    = NetAddress::makeLoopback( 0 );
             settings._requestBurstPerRemote            = 1000; // 테스트 클라이언트는 모두 127.0.0.1 — 도배 제한 테스트만 낮춘다
@@ -318,9 +318,9 @@ namespace
             , _lastBodyBytes{}
             , _bAnswered{ false }
         {
-            StreamTransportSettings transportSettings;
+            StreamTransportConfig transportSettings;
             transportSettings._ioThreadCount = 0;
-            SW_EXPECT_TRUE( _endpoint.initialize( _transport.get(), StreamEndpointSettings{} ) );
+            SW_EXPECT_TRUE( _endpoint.initialize( _transport.get(), StreamEndpointConfig{} ) );
             SW_EXPECT_TRUE( _transport->initialize( &_endpoint, transportSettings ) );
             _requestClient.initialize( &_endpoint );
             _handle = _endpoint.connect( NetAddress::makeLoopback( port ) );
@@ -388,9 +388,9 @@ namespace
             , _endpoint{}
             , _requestClient{}
         {
-            StreamTransportSettings transportSettings;
+            StreamTransportConfig transportSettings;
             transportSettings._ioThreadCount = 0;
-            SW_EXPECT_TRUE( _endpoint.initialize( _transport.get(), StreamEndpointSettings{} ) );
+            SW_EXPECT_TRUE( _endpoint.initialize( _transport.get(), StreamEndpointConfig{} ) );
             SW_EXPECT_TRUE( _transport->initialize( &_endpoint, transportSettings ) );
             _requestClient.initialize( &_endpoint );
             for ( int32 index = 0; index < 2; ++index )
@@ -425,7 +425,7 @@ namespace
             for ( int32 index = 0; index < 2; ++index )
             {
                 if ( _arrHandle[index] == handle )
-                    SW_EXPECT_TRUE( _arrClient[index].initializeOnSharedEndpoint( &_endpoint, &_requestClient, handle, OnlineServiceClientSettings{} ) );
+                    SW_EXPECT_TRUE( _arrClient[index].initializeOnSharedEndpoint( &_endpoint, &_requestClient, handle, OnlineServiceClientConfig{} ) );
             }
         }
         void onEndpointFrame( StreamConnectionHandle handle, StreamFrameKind kind, const uint8* pBody, int32 bodySize ) override
@@ -536,7 +536,7 @@ SW_TEST_CASE( OnlineServiceHostTest, AnonymousMethodsPassAndOthersNeedALogin )
 
 SW_TEST_CASE( OnlineServiceHostTest, OversizedBodiesAndFloodsAreRefused )
 {
-    OnlineServiceHostSettings settings = HostRig::makeSettings();
+    OnlineServiceHostConfig settings   = HostRig::makeSettings();
     settings._requestBurstPerRemote    = 3;
     settings._requestRefillMsPerRemote = 10000;
     HostRig    rig( settings );
@@ -657,11 +657,11 @@ SW_TEST_CASE( OnlineServiceHostTest, RetryWithTheSameIdempotencyKeyRunsTheHandle
 
 SW_TEST_CASE( OnlineServiceHostTest, EphemeralRepliesReachOnlyTheSubmittingService )
 {
-    MemoryEphemeralDatabase   database;
-    MemoryEphemeralStore      writer( &database );
-    MemoryEphemeralStore      hostCache( &database );
-    OnlineServiceHostSettings settings = HostRig::makeSettings();
-    settings._pEphemeralStore          = &hostCache;
+    MemoryEphemeralDatabase database;
+    MemoryEphemeralStore    writer( &database );
+    MemoryEphemeralStore    hostCache( &database );
+    OnlineServiceHostConfig settings = HostRig::makeSettings();
+    settings._pEphemeralStore        = &hostCache;
     HostRig rig( settings );
     (void)writer.submit( EphemeralRequest::makeSet( "a", vector<uint8>{ 1 }, 0 ) );
     (void)writer.submit( EphemeralRequest::makeSet( "b", vector<uint8>{ 2, 2 }, 0 ) );
@@ -679,11 +679,11 @@ SW_TEST_CASE( OnlineServiceHostTest, EphemeralRepliesReachOnlyTheSubmittingServi
 
 SW_TEST_CASE( OnlineServiceHostTest, ServerBusMessagesFanOutToSubscribedServices )
 {
-    LocalServerBusHub         hub;
-    LocalServerBus            busOfHost( &hub, 1 );
-    LocalServerBus            busOfOther( &hub, 2 );
-    OnlineServiceHostSettings settings = HostRig::makeSettings();
-    settings._pServerBus               = &busOfHost;
+    LocalServerBusHub       hub;
+    LocalServerBus          busOfHost( &hub, 1 );
+    LocalServerBus          busOfOther( &hub, 2 );
+    OnlineServiceHostConfig settings = HostRig::makeSettings();
+    settings._pServerBus             = &busOfHost;
     HostRig rig( settings );
     rig._host.subscribeServerBus( "sd.changed", &rig._serviceA );
     rig._host.subscribeServerBus( "sd.changed", &rig._serviceB );
@@ -706,13 +706,13 @@ SW_TEST_CASE( OnlineServiceHostTest, ShutdownTellsEveryServiceOnceAfterPendingCa
 {
     // 서비스 객체는 호스트보다 늦게 내려가도 된다 — 호스트가 내려가며 서비스마다 한 번 알리고(그 뒤로 서비스는 호스트를 부르지 않는다),
     // 알리기 전에 기다리던 캐시 요청은 Unavailable 로 끝낸다.
-    MemoryEphemeralDatabase   database;
-    MemoryEphemeralStore      hostCache( &database );
-    LocalServerBusHub         hub;
-    LocalServerBus            busOfHost( &hub, 1 );
-    OnlineServiceHostSettings settings = HostRig::makeSettings();
-    settings._pEphemeralStore          = &hostCache;
-    settings._pServerBus               = &busOfHost;
+    MemoryEphemeralDatabase database;
+    MemoryEphemeralStore    hostCache( &database );
+    LocalServerBusHub       hub;
+    LocalServerBus          busOfHost( &hub, 1 );
+    OnlineServiceHostConfig settings = HostRig::makeSettings();
+    settings._pEphemeralStore        = &hostCache;
+    settings._pServerBus             = &busOfHost;
     HostRig rig( settings );
     rig._host.subscribeServerBus( "sd.changed", &rig._serviceA );
     (void)rig._host.getEphemeralRouter()->submit( EphemeralRequest::makeGet( "never.pumped" ),

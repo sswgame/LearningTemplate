@@ -60,7 +60,7 @@ namespace sw
     class LoginStoreLogic
     {
     public:
-        LoginStoreLogic( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginSettings& settings, const LoginTicketAuthority& ticketAuthority,
+        LoginStoreLogic( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginServiceConfig& settings, const LoginTicketAuthority& ticketAuthority,
                          LoginStoreOutcome& outOutcome );
 
         LoginResult registerAccount( const LoginCredential& credential, uint64* pOutAccountID );
@@ -117,7 +117,7 @@ namespace sw
 
         IServiceStoreConnection&    _connection;
         ILoginCrypto&               _crypto;
-        const LoginSettings&        _settings;
+        const LoginServiceConfig&   _settings;
         const LoginTicketAuthority& _ticketAuthority;
         LoginStoreOutcome&          _outcome;
     };

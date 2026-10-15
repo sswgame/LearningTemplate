@@ -22,7 +22,7 @@
  *          챌린지 값과 솔트는 `NetChallenge`, 슬롯과 주소 맵은 `NetSlotTable`, AEAD 봉인과 키 유도는 `NetPacketSealer` 가 맡는다.
  *          셋 다 가상 함수 없는 값 멤버이고 잠금이 없으며, 이 호스트의 잠금(`_mutex`) 안에서만 쓴다.
  *
- *          **대역폭 상한**: 연결마다 토큰 버킷(`NetHostSettings::_maxBytesPerSecond`, 언리얼의 `NetSpeed`)을 둔다.
+ *          **대역폭 상한**: 연결마다 토큰 버킷(`NetHostConfig::_maxBytesPerSecond`, 언리얼의 `NetSpeed`)을 둔다.
  *          토큰이 남아 있으면 한 번의 전송에 패킷을 여럿(`kMaxPacketsPerSend` 까지) 보낸다.
  *          토큰을 다 쓰면 메시지 없이 헤더(확인과 연결 유지)만 보내므로, 대역폭이 포화돼도 연결은 끊기지 않는다.
  *          키트의 틱 예산은 `NetSendBudget::computeTickBudget` 이 이 값에서 할당받는다.
@@ -36,7 +36,7 @@
  *          잠금은 `_mutex` 하나뿐이고, 잠금을 쥔 채 부르는 바깥 코드는 `INetConnectAuthenticator` 와 `INetSecurityProvider` 뿐이다(둘 다 `NetHost` 를 부르지 않는다).
  *          전송의 `receive` · `send` 와 비동기 연결 결과(`TaskPromise::setValue`)는 잠금 밖에서 부른다.
  *
- *          **암호화**(`NetHostSettings::_security`, 기본값은 꺼짐, `NetHostSecurity.h`): 응답과 수락에 일회용 X25519 공개 키를 싣는다.
+ *          **암호화**(`NetHostConfig::_security`, 기본값은 꺼짐, `NetHostSecurity.h`): 응답과 수락에 일회용 X25519 공개 키를 싣는다.
  *          서버는 상태 없는 챌린지를 통과한 응답에만 키를 계산한다. 키는 HKDF(공유 비밀, 솔트는 세션 비밀)로 만든다.
  *          데이터 패킷과 끊기 패킷은 `[종류][연결 값][64비트 번호][AEAD + 태그]` 형식이고, AAD는 프로토콜 ID와 이 헤더를 이은 값이다.
  *          받는 쪽은 1024개 크기의 재전송 방지 윈도우로 걸러 내고, **복호가 성공한 뒤에** 번호를 표시한다. 먼저 표시하면 위조 패킷이 진짜 번호를 소모시킨다.
@@ -45,7 +45,7 @@
  *          암호화 방식과 토큰 결속 여부는 프로토콜 ID에 섞이지 않고 협상하지도 않는다. 한쪽만 켜면 `SecurityMismatch` 가 된다.
  *          인증기 없는 암호화(일회용 키라 중간자 공격은 막지 못한다)는 개발 빌드에서만 허용한다. Shipping 서버는 인증기 없이 암호화로 `listen` 할 수 없다.
  *
- *          **디버거 대기**(`NetHostSettings::_debugHold`, 개발 빌드만): 디버거가 붙은 호스트는 데이터 패킷마다 1비트로 이 사실을 알린다.
+ *          **디버거 대기**(`NetHostConfig::_debugHold`, 개발 빌드만): 디버거가 붙은 호스트는 데이터 패킷마다 1비트로 이 사실을 알린다.
  *          상대는 그 연결의 타임아웃을 `_debugHoldTimeoutSeconds` 로 늘리므로, 한쪽이 중단점에 멈춰도 다른 쪽이 연결을 끊지 않는다.
  *          멈췄던 쪽은 `update` 사이의 빈 시간만큼 연결 시계를 앞으로 민다.
  *          Shipping 은 이 비트를 보내지도 믿지도 않는다. 비트를 켠 클라이언트가 슬롯을 계속 붙잡는 일을 막기 위해서다.
@@ -74,7 +74,7 @@ namespace sw
     /**
      * @brief 이 호스트가 중단점에 멈출 수 있다고 상대에게 알릴 시점을 정합니다.
      * @details 개발 빌드에서만 동작한다. Shipping 은 알리지 않고 상대의 알림도 무시한다.
-     *          알리는 쪽은 데이터 패킷마다 1비트를 켠다. 받는 쪽은 그 연결의 타임아웃을 `NetHostSettings::_debugHoldTimeoutSeconds` 로 늘린다.
+     *          알리는 쪽은 데이터 패킷마다 1비트를 켠다. 받는 쪽은 그 연결의 타임아웃을 `NetHostConfig::_debugHoldTimeoutSeconds` 로 늘린다.
      *          알리는 쪽 자신은 `update` 사이가 크게 벌어지면(프로세스가 멈췄다고 보고) 그만큼 시계가 멈춘 것으로 간주한다(가상 시계).
      */
     enum class NetDebugHold : uint8
@@ -88,22 +88,22 @@ namespace sw
 namespace sw
 {
     /** @brief 호스트 설정입니다. 시간은 초입니다. */
-    struct NetHostSettings
+    struct NetHostConfig
     {
-        uint32              _gameID{ NetProtocol::kDefaultGameID }; ///< 게임마다 다르게 정한다. 다르면 연결을 Rejected 로 거절한다.
-        uint32              _wireVersion{ 0 };                      ///< 게임과 키트 계층의 버전(`NetWireVersion::combine`). 다르면 VersionMismatch 가 된다. Core 버전은 자동으로 섞인다.
-        uint64              _saltSeed{ 0 };                         ///< 챌린지 값의 시드. 0이면 운영체제 난수를 쓴다(위조 연결을 막는다). 테스트에서는 고정해도 된다.
-        float64             _timeoutSeconds{ 5.0 };
-        float64             _connectTimeout{ 5.0 };
-        float64             _connectRetryInterval{ 0.2 };
-        float64             _sendInterval{ 1.0 / 30.0 };                                         ///< 연결마다 패킷을 보내는 최소 간격.
-        float64             _keepAliveInterval{ 0.25 };                                          ///< 보낼 것(메시지, 재전송, 확인)이 없으면 이 간격으로만 보낸다(연결 유지와 RTT 측정).
-        float64             _debugHoldTimeoutSeconds{ 600.0 };                                   ///< 상대가 디버거 대기를 알린 연결의 타임아웃(개발 빌드만). 중단점에 오래 멈춰도 끊지 않는다.
-        float64             _maxUnreliableAgeSeconds{ NetConnection::kDefaultMaxUnreliableAge }; ///< 비신뢰 메시지가 보낼 줄에서 기다릴 수 있는 시간. 넘으면 버린다(0 = 상한 없음).
-        int32               _maxConnections{ 16 };
-        int32               _maxBytesPerSecond{ 100000 }; ///< 연결마다 보내는 바이트 상한(토큰 버킷, 언리얼 `NetSpeed` 기본값과 같다). 다 쓰면 메시지는 기다리고 확인과 연결 유지 패킷만 나간다. 패킷 하나(1200바이트)보다 작은 값은 패킷 하나 크기로 올려 쓴다.
-        NetSecuritySettings _security{};                  ///< 암호화와 토큰 결속 설정(기본값은 꺼짐). 양쪽이 같아야 연결된다.
-        NetDebugHold        _debugHold{ NetDebugHold::WhenDebuggerAttached };
+        uint32            _gameID{ NetProtocol::kDefaultGameID }; ///< 게임마다 다르게 정한다. 다르면 연결을 Rejected 로 거절한다.
+        uint32            _wireVersion{ 0 };                      ///< 게임과 키트 계층의 버전(`NetWireVersion::combine`). 다르면 VersionMismatch 가 된다. Core 버전은 자동으로 섞인다.
+        uint64            _saltSeed{ 0 };                         ///< 챌린지 값의 시드. 0이면 운영체제 난수를 쓴다(위조 연결을 막는다). 테스트에서는 고정해도 된다.
+        float64           _timeoutSeconds{ 5.0 };
+        float64           _connectTimeout{ 5.0 };
+        float64           _connectRetryInterval{ 0.2 };
+        float64           _sendInterval{ 1.0 / 30.0 };                                         ///< 연결마다 패킷을 보내는 최소 간격.
+        float64           _keepAliveInterval{ 0.25 };                                          ///< 보낼 것(메시지, 재전송, 확인)이 없으면 이 간격으로만 보낸다(연결 유지와 RTT 측정).
+        float64           _debugHoldTimeoutSeconds{ 600.0 };                                   ///< 상대가 디버거 대기를 알린 연결의 타임아웃(개발 빌드만). 중단점에 오래 멈춰도 끊지 않는다.
+        float64           _maxUnreliableAgeSeconds{ NetConnection::kDefaultMaxUnreliableAge }; ///< 비신뢰 메시지가 보낼 줄에서 기다릴 수 있는 시간. 넘으면 버린다(0 = 상한 없음).
+        int32             _maxConnections{ 16 };
+        int32             _maxBytesPerSecond{ 100000 }; ///< 연결마다 보내는 바이트 상한(토큰 버킷, 언리얼 `NetSpeed` 기본값과 같다). 다 쓰면 메시지는 기다리고 확인과 연결 유지 패킷만 나간다. 패킷 하나(1200바이트)보다 작은 값은 패킷 하나 크기로 올려 쓴다.
+        NetSecurityConfig _security{};                  ///< 암호화와 토큰 결속 설정(기본값은 꺼짐). 양쪽이 같아야 연결된다.
+        NetDebugHold      _debugHold{ NetDebugHold::WhenDebuggerAttached };
     };
 } // namespace sw
 
@@ -194,7 +194,7 @@ namespace sw
         NetHost& operator=( const NetHost& ) = delete;
 
         /** @brief 전송과 설정을 정합니다. `update` 를 도는 스레드가 없을 때 부른다. */
-        void               initialize( INetTransport* pTransport, const NetHostSettings& settings );
+        void               initialize( INetTransport* pTransport, const NetHostConfig& settings );
         [[nodiscard]] bool listen();
         [[nodiscard]] bool connect( const NetAddress& serverAddress );
         /** @brief 세션 토큰을 내밀며 연결합니다(토큰 결속 서버용). 토큰과 비밀은 로그인 키트가 TLS 로 받은 값입니다. */
@@ -246,7 +246,7 @@ namespace sw
         /** @brief 클라이언트에서 서버가 준 자기 번호(서버 쪽 연결 ID)를 반환합니다. 연결 전이면 -1 입니다. */
         int32 getClientIndex() const;
         void  collectConnected( vector<int32>& outListConnection ) const;
-        /** @brief 이 호스트가 지금 디버거 대기를 알리는지 반환합니다. 마지막 `update` 기준이며(`NetHostSettings::_debugHold`), Shipping 은 항상 false 입니다. */
+        /** @brief 이 호스트가 지금 디버거 대기를 알리는지 반환합니다. 마지막 `update` 기준이며(`NetHostConfig::_debugHold`), Shipping 은 항상 false 입니다. */
         bool   isDebugHoldAnnounced() const;
         uint64 getRejectedPacketCount() const;
         /** @brief 서버에서 인증기가 이 연결에 지정한 주체(로그인 계정)를 반환합니다. 없으면 0 입니다. */
@@ -257,7 +257,7 @@ namespace sw
         uint64 getReplayRejectedCount() const;
         /** @brief 이 호스트의 프로토콜 ID(`NetProtocol::makeProtocolID( 게임 ID, 와이어 버전 )`)입니다. */
         uint32 getProtocolID() const;
-        /** @brief 연결마다의 보내기 상한(초당 바이트, `NetHostSettings::_maxBytesPerSecond`)입니다. 키트가 틱 예산을 계산할 때 씁니다(`NetSendBudget::computeTickBudget`). */
+        /** @brief 연결마다의 보내기 상한(초당 바이트, `NetHostConfig::_maxBytesPerSecond`)입니다. 키트가 틱 예산을 계산할 때 씁니다(`NetSendBudget::computeTickBudget`). */
         int32 getMaxBytesPerSecond() const;
         /**
          * @brief 이 연결이 포화됐는가입니다. 대역폭 토큰을 다 썼거나 앞 패킷이 비신뢰 메시지를 다 싣지 못했으면 true 입니다. 연결돼 있지 않으면 false 입니다.
@@ -379,7 +379,7 @@ namespace sw
         vector<FinishedConnect>       _listDeliver;    ///< `update` 스레드 전용.
         BitWriter                     _plainWriter;    ///< 암호화에서 NetConnection 이 쓴 평문 패킷.
         NetConnectCredentials         _credentials;    ///< 클라이언트 전용. 지금 연결에 제시하는 자격.
-        NetHostSettings               _settings;
+        NetHostConfig                 _settings;
         INetTransport*                _pTransport;
         uint64                        _rejectedPacketCount;
         uint64                        _authenticationFailureCount;

@@ -59,11 +59,11 @@ namespace
 
         bool initialize( ITLSContext* pServerContext, int32 maxBodyBytes = HTTPConstant::kDefaultMaxBodyBytes )
         {
-            StreamTransportSettings transportSettings;
+            StreamTransportConfig transportSettings;
             transportSettings._ioThreadCount = 0;
-            HTTPServerSettings serverSettings;
+            HTTPServerConfig serverSettings;
             serverSettings._pTLSContext = pServerContext;
-            HTTPClientSettings clientSettings;
+            HTTPClientConfig clientSettings;
             clientSettings._maxResponseBodyBytes = maxBodyBytes;
             return _server.initialize( _network.createTransport(), transportSettings, serverSettings, &_handler ) &&
                    _client.initialize( _network.createTransport(), transportSettings, clientSettings );
@@ -182,11 +182,11 @@ SW_TEST_CASE( HTTPTest, LoopbackRequestsGetAnswersOverPlainAndTLS )
     string                certificatePem;
     string                privateKeyPem;
     SW_ASSERT_TRUE( provider.createSelfSignedCertificate( "localhost", 1, certificatePem, privateKeyPem ) );
-    TLSContextSettings serverTLS;
+    TLSContextConfig serverTLS;
     serverTLS._role           = TLSRole::Server;
     serverTLS._certificatePem = certificatePem;
     serverTLS._privateKeyPem  = privateKeyPem;
-    TLSContextSettings clientTLS;
+    TLSContextConfig clientTLS;
     clientTLS._role       = TLSRole::Client;
     clientTLS._trustPem   = certificatePem;
     clientTLS._serverName = "localhost";

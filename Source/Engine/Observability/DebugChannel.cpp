@@ -58,7 +58,7 @@ namespace sw
         SW_ASSERT( _pTransport == nullptr );
     }
 
-    bool DebugChannel::initialize( IStreamTransport* pTransport, const StreamTransportSettings& transportSettings, const DebugChannelSettings& settings,
+    bool DebugChannel::initialize( IStreamTransport* pTransport, const StreamTransportConfig& transportSettings, const DebugChannelConfig& settings,
                                    DebugChannelExecuteDelegate execute )
     {
         if ( pTransport == nullptr || execute.isBound() == false )
@@ -244,7 +244,7 @@ namespace sw
         _bOpen     = SW_FALSE;
         _bClosed   = SW_FALSE;
         _transport = StreamTransportFactory::createPlatformTransport();
-        StreamTransportSettings settings;
+        StreamTransportConfig settings;
         settings._idleTimeoutSeconds = 0.0;
         if ( _transport == nullptr || _transport->initialize( this, settings ) == false )
         {

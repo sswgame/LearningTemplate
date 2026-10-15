@@ -60,7 +60,7 @@ namespace sw
         TradeService();
 
         /** @brief 넘긴 객체는 모두 빌려 씁니다. @p serverID 는 이 서버 프로세스의 id 이며 0이 아니어야 합니다. 재시작 복구 인덱스에 씁니다. */
-        void initialize( IServiceStore* pStore, const ITradePolicy* pPolicy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, const TradeSettings& settings );
+        void initialize( IServiceStore* pStore, const ITradePolicy* pPolicy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, const TradeServiceConfig& settings );
         void shutdown();
         /** @brief 이 서버가 연 열린 거래를 모두 닫습니다. 기동할 때 한 번 부르며 닫힌 거래는 `drainUpdates` 로 회수합니다. */
         void recoverOwnedTrades( int64 nowMs );
@@ -79,8 +79,8 @@ namespace sw
         void drainCompletions( vector<TradeCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
         void drainUpdates( vector<TradeSnapshot>& outListUpdate ) { _updateBuffer.drainTo( outListUpdate ); }
 
-        int32                getPendingCount() const { return _pendingCount; }
-        const TradeSettings& getSettings() const { return _settings; }
+        int32                     getPendingCount() const { return _pendingCount; }
+        const TradeServiceConfig& getSettings() const { return _settings; }
         /** @brief 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
         void applyCompletion( TradeCompletion&& completion, const vector<TradeSnapshot>& listChanged );
 
@@ -91,7 +91,7 @@ namespace sw
         EventBuffer<TradeCompletion> _completionBuffer;
         EventBuffer<TradeSnapshot>   _updateBuffer;
         unordered_map<uint64, int64> _mapTradeToDeadline; ///< 이 서비스가 본 열린 거래에서 시한으로 가는 맵이다
-        TradeSettings                _settings;
+        TradeServiceConfig           _settings;
         IServiceStore*               _pStore;
         const ITradePolicy*          _pPolicy;
         const ILedgerPolicy*         _pLedgerPolicy;

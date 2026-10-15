@@ -82,8 +82,8 @@ SW_TEST_CASE( SQLDriverSQLiteTest, PoolCompletesOnThePollingThreadAndSurvivesShu
     SW_ASSERT_TRUE( fixture.isReady() );
     SW_ASSERT_TRUE( fixture.getConnection().executeScript( "CREATE TABLE pool_job ( id BIGINT PRIMARY KEY )" ) == SQLResult::Ok );
 
-    SQLConnectionPool         pool;
-    SQLConnectionPoolSettings settings;
+    SQLConnectionPool       pool;
+    SQLConnectionPoolConfig settings;
     settings._connection  = fixture._path;
     settings._workerCount = 2;
     string error;

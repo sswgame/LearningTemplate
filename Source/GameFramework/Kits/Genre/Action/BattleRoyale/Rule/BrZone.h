@@ -82,7 +82,7 @@ namespace sw
         BrZone();
 
         /** @brief 설정, 맵 크기, 시드, 지형(빌려 옴, nullptr 가능)을 설정하고, 첫 원을 맵 중심에 놓은 뒤 첫 단계의 다음 원을 고릅니다. */
-        void initialize( const BrZoneSettings& settings, float32 mapSize, uint32 seed, const IBrZoneTerrain* pTerrain );
+        void initialize( const BrZoneDef& settings, float32 mapSize, uint32 seed, const IBrZoneTerrain* pTerrain );
         void update( float32 deltaTime );
 
         bool isInside( const float2& position ) const;
@@ -119,7 +119,7 @@ namespace sw
         const BrZonePhaseDef* findPhase() const;
         void                  pushEvent( BrZoneEvent::Kind kind );
 
-        BrZoneSettings           _settings;
+        BrZoneDef                _settings;
         EventBuffer<BrZoneEvent> _eventBuffer;
         const IBrZoneTerrain*    _pTerrain;
         GameRandom               _random;

@@ -43,7 +43,7 @@ namespace sw
 
 namespace sw
 {
-    BrFlightPath BrFlightPath::makeRandom( const BrFlightSettings& settings, float32 mapSize, uint32 seed )
+    BrFlightPath BrFlightPath::makeRandom( const BrFlightDef& settings, float32 mapSize, uint32 seed )
     {
         GameRandom    random{ seed };
         const float32 size      = MathUtil::max( 1.0f, mapSize );
@@ -99,7 +99,7 @@ namespace sw
     {
     }
 
-    void BrSkydiver::initialize( const BrFallSettings& settings, const float3& position, float32 groundHeight )
+    void BrSkydiver::initialize( const BrFallDef& settings, const float3& position, float32 groundHeight )
     {
         _settings     = settings;
         _position     = position;
@@ -140,7 +140,7 @@ namespace sw
         }
     }
 
-    float3 BrSkydiver::predictLanding( const BrFallSettings& settings, const float3& position, float32 groundHeight, const float2& steer, BrFallStage stage )
+    float3 BrSkydiver::predictLanding( const BrFallDef& settings, const float3& position, float32 groundHeight, const float2& steer, BrFallStage stage )
     {
         const float2 direction = BrDropInternal::clampSteer( steer );
         float3       landing   = position;

@@ -94,7 +94,7 @@ namespace sw
         }
         if ( certificatePath.empty() && ensureDevCertificate( certificatePath, privateKeyPath, outError ) == false )
             return nullptr;
-        TLSContextSettings settings;
+        TLSContextConfig settings;
         settings._role                 = TLSRole::Server;
         settings._privateKeyPassphrase = string( privateKeyPassphrase );
         if ( Internal::readPem( certificatePath, settings._certificatePem, outError ) == false ||
@@ -108,7 +108,7 @@ namespace sw
     unique_ptr<ITLSContext> NetSecurity::createClientTLSContext( string_view trustFile, string_view serverName, string& outError )
     {
         using Internal = NetSecurityInternal;
-        TLSContextSettings settings;
+        TLSContextConfig settings;
         settings._role       = TLSRole::Client;
         settings._serverName = string( serverName );
         string trustPath     = Internal::makeProjectPath( trustFile );

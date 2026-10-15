@@ -53,23 +53,23 @@ namespace
             , _transport{ network.createTransport() }
             , _host{}
         {
-            LoginSettings settings;
+            LoginServiceConfig settings;
             settings._passwordHashParams._memoryKiB                        = 256;
             settings._passwordHashParams._iterationCount                   = 1;
             const uint8 arrMasterKey[LoginTicketAuthority::kMasterKeySize] = { 5, 5, 5 };
             _loginService.initialize( &_store, &_crypto, settings, arrMasterKey );
-            _accountServer.initialize( &_loginService, AccountServerSettings{} );
+            _accountServer.initialize( &_loginService, AccountServerConfig{} );
             SW_EXPECT_TRUE( _currencies.loadFromXMLText( R"(<CurrencyCatalog><Currency id="cur.gold"/></CurrencyCatalog>)", "currency" ) );
             SW_EXPECT_TRUE( _offers.loadFromXMLText(
                 R"(<OfferCatalog><Offer id="potion" maxCount="5"><Price currency="cur.gold" amount="20"/><Grant asset="item.potion" amount="1"/></Offer></OfferCatalog>)",
                 "offer" ) );
-            EconomyServiceSettings economySettings;
+            EconomyServiceConfig economySettings;
             economySettings._pCurrencyCatalog = &_currencies;
             economySettings._pOfferCatalog    = &_offers;
             SW_EXPECT_TRUE( _economy.initialize( &_store, economySettings ) );
             SW_EXPECT_TRUE( _host.registerHostService( &_accountServer ) );
             SW_EXPECT_TRUE( _host.registerHostService( &_economy ) );
-            OnlineServiceHostSettings hostSettings;
+            OnlineServiceHostConfig hostSettings;
             hostSettings._transportSettings._ioThreadCount = 0;
             hostSettings._listenAddress                    = NetAddress::makeLoopback( kPort );
             hostSettings._pServiceStore                    = &_store;
@@ -108,7 +108,7 @@ namespace
             _economy.initialize( &_client );
             SW_EXPECT_TRUE( _client.registerClientService( &_account ) );
             SW_EXPECT_TRUE( _client.registerClientService( &_economy ) );
-            OnlineServiceClientSettings settings;
+            OnlineServiceClientConfig settings;
             settings._transportSettings._ioThreadCount = 0;
             settings._serverAddress                    = NetAddress::makeLoopback( EconomyServerSide::kPort );
             settings._maxBackoffMs                     = 200;

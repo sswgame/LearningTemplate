@@ -72,7 +72,7 @@ SW_TEST_CASE( LocalStoreFileTest, FactoryBuildsFileAndMemoryAndRefusesUnknownBac
     test::LocalStoreTestKey key;
     const LocalSealContext  context = test::LocalStoreContract::makeSealContext( key );
     string                  error;
-    LocalStoreSettings      settings;
+    LocalStoreConfig        settings;
     settings._backend                 = LocalStoreFactory::kFileBackendName;
     settings._root                    = test::makeTempDirectory( "local_store_factory" ); // 절대 경로는 그대로
     unique_ptr<ILocalStore> fileStore = LocalStoreFactory::createLocalStore( "UnitGame", settings, context, error );

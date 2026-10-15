@@ -308,7 +308,7 @@ SW_TEST_CASE( AnimationLODTest, FrustumVisibilityAcrossViews )
     SW_ASSERT_NOT_NULL( pUnit );
     manager.flushSceneTransforms();
     TestAnimationLODInternal::CountingTask task( 0.1f );
-    pUnit->addAnimationPhaseTask( &task );
+    pUnit->registerAnimationPhaseTask( &task );
     AnimationSystem& system = manager.getAnimationSystem();
     system.setLODSettings( AnimationLODSettings::makeDefault() );
     system.evaluate( 0.016f ); // 처음은 포즈가 더러워 늘 만든다(뷰도 아직 없다)
@@ -336,7 +336,7 @@ SW_TEST_CASE( AnimationLODTest, FrustumVisibilityAcrossViews )
     system.evaluate( 0.016f );
     SW_EXPECT_TRUE( pUnit->isVisibleHint() );
     SW_EXPECT_EQUAL( 1u, pUnit->getAnimationLODState()._updateRateDivisor );
-    pUnit->removeAnimationPhaseTask( &task );
+    pUnit->unregisterAnimationPhaseTask( &task );
 }
 
 /**
@@ -352,7 +352,7 @@ SW_TEST_CASE( AnimationLODTest, UpdateRateFromScreenSizeInterpolates )
         SW_ASSERT_NOT_NULL( pUnit );
         manager.flushSceneTransforms();
         TestAnimationLODInternal::CountingTask task( 0.2f );
-        pUnit->addAnimationPhaseTask( &task );
+        pUnit->registerAnimationPhaseTask( &task );
         AnimationSystem& system = manager.getAnimationSystem();
         system.setLODSettings( TestAnimationLODInternal::makeTwoLevelSettings( bInterpolate ) );
         system.setLODViews( vector<AnimationLODView>{ TestAnimationLODInternal::makeForwardView( float3{}, float3{ 0.0f, 0.0f, 1.0f } ) } );
@@ -389,7 +389,7 @@ SW_TEST_CASE( AnimationLODTest, UpdateRateFromScreenSizeInterpolates )
         {
             SW_EXPECT_EQUAL( 0u, movedSkippedFrameCount );
         }
-        pUnit->removeAnimationPhaseTask( &task );
+        pUnit->unregisterAnimationPhaseTask( &task );
     }
 }
 

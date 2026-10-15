@@ -54,17 +54,17 @@ namespace
             , _transport{ network.createTransport() }
             , _host{}
         {
-            LoginSettings settings;
+            LoginServiceConfig settings;
             settings._passwordHashParams._memoryKiB                        = 256;
             settings._passwordHashParams._iterationCount                   = 1;
             const uint8 arrMasterKey[LoginTicketAuthority::kMasterKeySize] = { 4, 4, 4 };
             _loginService.initialize( &_store, &_crypto, settings, arrMasterKey );
-            _accountServer.initialize( &_loginService, AccountServerSettings{} );
-            _tradeService.initialize( &_store, &_tradePolicy, nullptr, 77, TradeSettings{} );
+            _accountServer.initialize( &_loginService, AccountServerConfig{} );
+            _tradeService.initialize( &_store, &_tradePolicy, nullptr, 77, TradeServiceConfig{} );
             _tradeServer.initialize( &_tradeService, &_loginService, nullptr );
             SW_EXPECT_TRUE( _host.registerHostService( &_accountServer ) );
             SW_EXPECT_TRUE( _host.registerHostService( &_tradeServer ) );
-            OnlineServiceHostSettings hostSettings;
+            OnlineServiceHostConfig hostSettings;
             hostSettings._transportSettings._ioThreadCount = 0;
             hostSettings._listenAddress                    = NetAddress::makeLoopback( kTradePort );
             hostSettings._pServiceStore                    = &_store;
@@ -106,7 +106,7 @@ namespace
             _trade.initialize( &_client );
             SW_EXPECT_TRUE( _client.registerClientService( &_account ) );
             SW_EXPECT_TRUE( _client.registerClientService( &_trade ) );
-            OnlineServiceClientSettings settings;
+            OnlineServiceClientConfig settings;
             settings._transportSettings._ioThreadCount = 0;
             settings._serverAddress                    = NetAddress::makeLoopback( kTradePort );
             settings._maxBackoffMs                     = 200;

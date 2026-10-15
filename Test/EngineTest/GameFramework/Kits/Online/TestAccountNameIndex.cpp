@@ -64,7 +64,7 @@ namespace
             , _index{}
             , _nextTag{ 1 }
         {
-            LoginSettings settings;
+            LoginServiceConfig settings;
             settings._passwordHashParams._memoryKiB                        = 256;
             settings._passwordHashParams._iterationCount                   = 1;
             const uint8 arrMasterKey[LoginTicketAuthority::kMasterKeySize] = { 7 };

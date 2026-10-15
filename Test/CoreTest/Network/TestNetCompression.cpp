@@ -87,9 +87,9 @@ namespace
         CompressionCodecRegistry* _pPrevious;
     };
 
-    NetCompressionSettings makeRleSettings()
+    NetCompressionConfig makeRleSettings()
     {
-        NetCompressionSettings settings;
+        NetCompressionConfig settings;
         settings._codec = CompressionCodecType::RLE;
         return settings;
     }
@@ -119,7 +119,7 @@ SW_TEST_CASE( NetCompressionTest, EnvelopeRoundTripsAndKeepsRawWhenNotSmaller )
     SW_EXPECT_TRUE( envelopeBytes.empty() );
     // 상한보다 작은 몸 · 꺼진 설정도 봉투를 쓰지 않는다.
     SW_EXPECT_FALSE( NetCompressionUtil::compressEnvelope( makeRleSettings(), repeatedBytes.data(), 64, envelopeBytes, &registry ) );
-    SW_EXPECT_FALSE( NetCompressionUtil::compressEnvelope( NetCompressionSettings{}, repeatedBytes.data(), 4000, envelopeBytes, &registry ) );
+    SW_EXPECT_FALSE( NetCompressionUtil::compressEnvelope( NetCompressionConfig{}, repeatedBytes.data(), 4000, envelopeBytes, &registry ) );
 }
 
 SW_TEST_CASE( NetCompressionTest, BombAndUnknownCodecAreRejectedBeforeInflating )
@@ -165,12 +165,12 @@ SW_TEST_CASE( NetCompressionTest, StreamEndpointInflatesCompressedFrames )
     ScopedActiveRegistry     scopedRegistry( &registry );
     const vector<uint8>      messageBytes( 4000, 0x5A );
 
-    StreamEndpointSettings clientSettings;
+    StreamEndpointConfig clientSettings;
     clientSettings._compression = makeRleSettings();
     {
         EndpointRecord           serverRecord;
         EndpointRecord           clientRecord;
-        test::StreamEndpointPair pair( serverRecord, clientRecord, StreamEndpointSettings{}, clientSettings, LoopbackStreamConditions{}, nullptr );
+        test::StreamEndpointPair pair( serverRecord, clientRecord, StreamEndpointConfig{}, clientSettings, LoopbackStreamConditions{}, nullptr );
         pair.step( 2 );
         SW_ASSERT_EQUAL( 1, serverRecord._openedCount );
         SW_EXPECT_TRUE( pair._client.sendMessage( pair._clientHandle, messageBytes.data(), 4000 ) != StreamSendResult::Closed );
@@ -181,7 +181,7 @@ SW_TEST_CASE( NetCompressionTest, StreamEndpointInflatesCompressedFrames )
     }
     {
         // 받는 쪽 몸 상한 1024 — 압축된 몸은 작아도 푼 크기가 넘으면 풀기 전에 끊는다.
-        StreamEndpointSettings serverSettings;
+        StreamEndpointConfig serverSettings;
         serverSettings._maxFrameBodySize = 1024;
         clientSettings._maxFrameBodySize = 8000;
         EndpointRecord           serverRecord;

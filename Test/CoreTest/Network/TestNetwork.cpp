@@ -23,7 +23,7 @@ using namespace sw;
 namespace
 {
     /** @brief 서버(포트 4000 — 호스트 0) · 클라이언트(포트 5000 — 호스트 1)를 더합니다. listen · connect 는 케이스가 한다. */
-    void addServerAndClient( test::LoopbackCluster& cluster, const NetHostSettings& settings )
+    void addServerAndClient( test::LoopbackCluster& cluster, const NetHostConfig& settings )
     {
         (void)cluster.addHost( 4000, settings );
         (void)cluster.addHost( 5000, settings );
@@ -592,7 +592,7 @@ SW_TEST_CASE( NetworkTest, SequencedReplacementTakesNewSizeAndAppendReceiveConca
 
 SW_TEST_CASE( NetworkTest, HostsHandshakeExchangeAndSurviveBadNetworks )
 {
-    NetHostSettings settings;
+    NetHostConfig settings;
     settings._maxConnections = 2;
     test::LoopbackCluster pair( 77u );
     addServerAndClient( pair, settings );
@@ -666,7 +666,7 @@ SW_TEST_CASE( NetworkTest, HostsHandshakeExchangeAndSurviveBadNetworks )
 
 SW_TEST_CASE( NetworkTest, HostsRejectFullServersForeignProtocolsAndDetectDisconnects )
 {
-    NetHostSettings settings;
+    NetHostConfig settings;
     settings._maxConnections = 1;
     settings._timeoutSeconds = 1.0;
     settings._debugHold      = NetDebugHold::Off; // 디버거 아래에서 돌려도 원래 시간 초과를 본다
@@ -678,8 +678,8 @@ SW_TEST_CASE( NetworkTest, HostsRejectFullServersForeignProtocolsAndDetectDiscon
     server.initialize( network.createEndpoint( 4000 ), settings );
     first.initialize( network.createEndpoint( 5001 ), settings );
     second.initialize( network.createEndpoint( 5002 ), settings );
-    NetHostSettings otherGame = settings;
-    otherGame._gameID         = 0xDEADBEEFu;
+    NetHostConfig otherGame = settings;
+    otherGame._gameID       = 0xDEADBEEFu;
     foreign.initialize( network.createEndpoint( 5003 ), otherGame );
     SW_EXPECT_TRUE( network.createEndpoint( 4000 ) == nullptr );
     SW_ASSERT_TRUE( server.listen() );
@@ -747,11 +747,11 @@ SW_TEST_CASE( NetworkTest, DebugHoldKeepsTheConnectionThroughABreakpoint )
 #if defined( SW_SHIPPING )
     SW_TEST_SKIP( "debug hold is a development-build feature" );
 #else
-    NetHostSettings clientSettings;
+    NetHostConfig clientSettings;
     clientSettings._timeoutSeconds          = 1.0;
     clientSettings._debugHoldTimeoutSeconds = 10.0;
     clientSettings._debugHold               = NetDebugHold::Off;
-    NetHostSettings serverSettings          = clientSettings;
+    NetHostConfig serverSettings            = clientSettings;
     serverSettings._debugHold               = NetDebugHold::Always;
     LoopbackNetwork network;
     NetHost         server;
@@ -824,9 +824,9 @@ SW_TEST_CASE( NetworkTest, WireVersionMismatchIsRefusedWithReason )
     static_assert( NetProtocol::makeProtocolID( 7u, 1u ) != NetProtocol::makeProtocolID( 8u, 1u ), "the game id is part of the protocol id" );
     static_assert( NetWireVersion::combine( { 1u, 2u } ) != NetWireVersion::combine( { 2u, 1u } ), "layer order is part of the version" );
 
-    NetHostSettings serverSettings;
+    NetHostConfig serverSettings;
     serverSettings._wireVersion = NetWireVersion::combine( { 1u, 4u } );
-    NetHostSettings oldSettings = serverSettings;
+    NetHostConfig oldSettings   = serverSettings;
     oldSettings._wireVersion    = NetWireVersion::combine( { 1u, 3u } );
     LoopbackNetwork network;
     NetHost         server;
@@ -873,9 +873,9 @@ SW_TEST_CASE( NetworkTest, LostAcceptedStillReportsClientIndex )
     NetHost server;
     NetHost first;
     NetHost second;
-    server.initialize( &serverLink, NetHostSettings{} );
-    first.initialize( network.createEndpoint( 5000 ), NetHostSettings{} );
-    second.initialize( network.createEndpoint( 5001 ), NetHostSettings{} );
+    server.initialize( &serverLink, NetHostConfig{} );
+    first.initialize( network.createEndpoint( 5000 ), NetHostConfig{} );
+    second.initialize( network.createEndpoint( 5001 ), NetHostConfig{} );
     SW_ASSERT_TRUE( server.listen() );
     float64    time   = 0.0;
     const auto runAll = [&]( float64 seconds )
@@ -989,7 +989,7 @@ SW_TEST_CASE( NetworkTest, BandwidthStatCountsEveryPacketInTheLastSecond )
  */
 SW_TEST_CASE( NetworkTest, ExpiredChallengeIsRejected )
 {
-    NetHostSettings settings;
+    NetHostConfig settings;
     settings._connectTimeout = 60.0;
     LoopbackNetwork        network;
     NetEmulationTransport  slowLink( network.createEndpoint( 5000 ) );
@@ -1198,7 +1198,7 @@ SW_TEST_CASE( NetworkTest, BitStreamKeepsWireLayoutAndRoundTripsRandomFields )
 SW_TEST_CASE( NetworkTest, IdleConnectionsSendKeepAlivesInsteadOfEveryInterval )
 {
     test::LoopbackCluster pair( 77u );
-    addServerAndClient( pair, NetHostSettings{} );
+    addServerAndClient( pair, NetHostConfig{} );
     SW_ASSERT_TRUE( pair.getServer().listen() );
     SW_ASSERT_TRUE( pair.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
     pair.run( 0.5 );
@@ -1237,7 +1237,7 @@ SW_TEST_CASE( NetworkTest, IdleConnectionsSendKeepAlivesInsteadOfEveryInterval )
 SW_TEST_CASE( NetworkTest, MessageRouterDispatchesByRangeAndKeepsUnhandled )
 {
     test::LoopbackCluster pair( 77u );
-    addServerAndClient( pair, NetHostSettings{} );
+    addServerAndClient( pair, NetHostConfig{} );
     SW_ASSERT_TRUE( pair.getServer().listen() );
     SW_ASSERT_TRUE( pair.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
     pair.run( 0.3 );
@@ -1248,9 +1248,9 @@ SW_TEST_CASE( NetworkTest, MessageRouterDispatchesByRangeAndKeepsUnhandled )
     CountingHandler  gameFirst( NetMessageRange::kGame, 0x81 );
     CountingHandler  gameSecond( NetMessageRange::kGame, 0x82 );
     NetMessageRouter router;
-    SW_ASSERT_TRUE( router.addHandler( &lockstep ) );
-    SW_ASSERT_TRUE( router.addHandler( &gameFirst ) );
-    SW_ASSERT_TRUE( router.addHandler( &gameSecond ) );
+    SW_ASSERT_TRUE( router.registerHandler( &lockstep ) );
+    SW_ASSERT_TRUE( router.registerHandler( &gameFirst ) );
+    SW_ASSERT_TRUE( router.registerHandler( &gameSecond ) );
 
     NetMessageWriter messageWriter;
     const uint8      arrKind[] = { 0x21, 0x81, 0x82, 0x82, 0x83, 0x51, 0x22 };
@@ -1285,7 +1285,7 @@ SW_TEST_CASE( NetworkTest, MessageRouterDispatchesByRangeAndKeepsUnhandled )
     SW_EXPECT_EQUAL( report._listKindEntry[0]._messageCount, uint64{ 2 } );
 
     // 뺀 처리기는 더 묻지 않는다. 빈 메시지는 누구에게도 가지 않는다.
-    router.removeHandler( &gameFirst );
+    router.unregisterHandler( &gameFirst );
     messageWriter.begin( 0x81 ).writeVarUint( 1 );
     SW_EXPECT_TRUE( NetHandleResult::NotMine == router.dispatch( NetMessageContext{}, messageWriter.getBytes().data(), messageWriter.getByteCount() ) );
     SW_EXPECT_TRUE( NetHandleResult::NotMine == router.dispatch( NetMessageContext{}, nullptr, 0 ) );
@@ -1301,11 +1301,11 @@ SW_TEST_CASE( NetworkTest, MessageRouterRefusesAHandlerThatOverlapsAClaimedKind 
     CountingHandler  overlapping( NetMessageRange::kGame, 0x81 );
     CountingHandler  disjoint( NetMessageRange::kGame, 0x82 );
     NetMessageRouter router;
-    SW_EXPECT_TRUE( router.addHandler( &first ) );
-    SW_EXPECT_FALSE( router.addHandler( &overlapping ) );
-    SW_EXPECT_TRUE( router.addHandler( &disjoint ) );
-    SW_EXPECT_TRUE( router.addHandler( &first ) ); // 이미 단 처리기
-    SW_EXPECT_FALSE( router.addHandler( nullptr ) );
+    SW_EXPECT_TRUE( router.registerHandler( &first ) );
+    SW_EXPECT_FALSE( router.registerHandler( &overlapping ) );
+    SW_EXPECT_TRUE( router.registerHandler( &disjoint ) );
+    SW_EXPECT_TRUE( router.registerHandler( &first ) ); // 이미 단 처리기
+    SW_EXPECT_FALSE( router.registerHandler( nullptr ) );
 
     const uint8 arrMessage[] = { 0x81, 0x01 };
     SW_EXPECT_TRUE( NetHandleResult::Handled == router.dispatch( NetMessageContext{}, arrMessage, static_cast<int32>( sizeof( arrMessage ) ) ) );
@@ -1313,8 +1313,8 @@ SW_TEST_CASE( NetworkTest, MessageRouterRefusesAHandlerThatOverlapsAClaimedKind 
     SW_EXPECT_EQUAL( 0, overlapping.getHandledCount() );
 
     // 거절된 처리기는 목록에 없다 — 먼저 단 처리기를 빼면 비로소 단다
-    router.removeHandler( &first );
-    SW_EXPECT_TRUE( router.addHandler( &overlapping ) );
+    router.unregisterHandler( &first );
+    SW_EXPECT_TRUE( router.registerHandler( &overlapping ) );
 }
 
 /**
@@ -1324,13 +1324,13 @@ SW_TEST_CASE( NetworkTest, MessageRouterRefusesAHandlerThatOverlapsAClaimedKind 
 SW_TEST_CASE( NetworkTest, MalformedMessageIsCountedNotForwarded )
 {
     test::LoopbackCluster pair( 77u );
-    addServerAndClient( pair, NetHostSettings{} );
+    addServerAndClient( pair, NetHostConfig{} );
     SW_ASSERT_TRUE( pair.getServer().listen() );
     SW_ASSERT_TRUE( pair.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
     pair.run( 0.3 );
     CountingHandler  handler( NetMessageRange::kGame, 0x81 );
     NetMessageRouter router;
-    router.addHandler( &handler );
+    router.registerHandler( &handler );
     NetMessageWriter messageWriter;
     (void)messageWriter.begin( 0x81 ); // 몸(가변 정수)이 없다
     SW_ASSERT_TRUE( messageWriter.send( pair.getClient( 0 ), 0, NetChannelType::ReliableOrdered ) );
@@ -1379,12 +1379,12 @@ SW_TEST_CASE( NetworkTest, RouterTellsHandlersAboutConnectionsBeforeTheirMessage
     };
 
     test::LoopbackCluster pair( 77u );
-    addServerAndClient( pair, NetHostSettings{} );
+    addServerAndClient( pair, NetHostConfig{} );
     SW_ASSERT_TRUE( pair.getServer().listen() );
     SW_ASSERT_TRUE( pair.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
     ConnectionTracker tracker;
     NetMessageRouter  router;
-    router.addHandler( &tracker );
+    router.registerHandler( &tracker );
     pair.run( 0.3 );
     NetMessageWriter messageWriter;
     messageWriter.begin( 0x80 ).writeVarUint( 1 );
@@ -1400,7 +1400,7 @@ SW_TEST_CASE( NetworkTest, RouterTellsHandlersAboutConnectionsBeforeTheirMessage
 SW_TEST_CASE( NetworkTest, ServerTellsManyClientsApartByAddress )
 {
     constexpr int32 kClientCount = 40;
-    NetHostSettings settings;
+    NetHostConfig   settings;
     settings._maxConnections = 48;
     LoopbackNetwork network;
     NetHost         server;
@@ -1467,11 +1467,11 @@ SW_TEST_CASE( NetworkTest, SendToPeersAndRelayReachEveryOtherPeer )
     LoopbackNetwork network;
     NetHost         server;
     NetHost         arrClient[2];
-    server.initialize( network.createEndpoint( 4000 ), NetHostSettings{} );
+    server.initialize( network.createEndpoint( 4000 ), NetHostConfig{} );
     SW_ASSERT_TRUE( server.listen() );
     for ( int32 index = 0; index < 2; ++index )
     {
-        arrClient[index].initialize( network.createEndpoint( static_cast<uint16>( 6000 + index ) ), NetHostSettings{} );
+        arrClient[index].initialize( network.createEndpoint( static_cast<uint16>( 6000 + index ) ), NetHostConfig{} );
         SW_ASSERT_TRUE( arrClient[index].connect( NetAddress::makeLoopback( 4000 ) ) );
     }
     float64    time   = 0.0;
@@ -1564,7 +1564,7 @@ SW_TEST_CASE( NetworkTest, LoopbackDeliversInSendOrderOnNextUpdate )
  */
 SW_TEST_CASE( NetworkTest, ReliableMessagesUpTo64KbArriveWholeOverABadLine )
 {
-    NetHostSettings settings;
+    NetHostConfig settings;
     settings._sendInterval = 1.0 / 60.0;
     test::LoopbackCluster cluster( 41u );
     addServerAndClient( cluster, settings );
@@ -1647,7 +1647,7 @@ SW_TEST_CASE( NetworkTest, OversizedMessagesAreRefusedLoudlyAndAFullWindowQuietl
 SW_TEST_CASE( NetworkTest, DisconnectMidMessageLeavesNoFragmentsBehind )
 {
     test::LoopbackCluster cluster( 43u );
-    addServerAndClient( cluster, NetHostSettings{} );
+    addServerAndClient( cluster, NetHostConfig{} );
     SW_ASSERT_TRUE( cluster.connectClients( 30 ) );
     const vector<uint8> large = makePatternMessage( 8u, NetConnection::kMaxReliableMessageSize );
     SW_ASSERT_TRUE( cluster.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, large ) );
@@ -1734,14 +1734,14 @@ SW_TEST_CASE( NetworkTest, SendRateCapPacesLargeMessagesAndKeepsTheConnection )
     // 기본 상한(100 KB/s) — 64 KB 셋(192 KB)이 2 초 남짓. 차례(1/30 초)마다 패킷 하나였다면 36 KB/s 라 5 초를 넘는다.
     {
         test::LoopbackCluster cluster( 51u );
-        addServerAndClient( cluster, NetHostSettings{} );
+        addServerAndClient( cluster, NetHostConfig{} );
         SW_ASSERT_TRUE( cluster.connectClients( 30 ) );
         const float64 seconds = measureArrivalSeconds( cluster, 3, 10.0 );
         SW_EXPECT_TRUE_MSG( seconds > 1.5 && seconds < 3.5, "the default cap moves 192 KB at about 100 KB/s, several packets per send turn" );
     }
     // 상한 20 KB/s — 192 KB 는 머리 몫까지 10 초 남짓. 타임아웃(5 초)보다 오래 포화돼도 확인 · 유지가 가 연결이 산다.
     {
-        NetHostSettings settings;
+        NetHostConfig settings;
         settings._maxBytesPerSecond = 20000;
         test::LoopbackCluster cluster( 52u );
         addServerAndClient( cluster, settings );
@@ -1761,7 +1761,7 @@ SW_TEST_CASE( NetworkTest, SendRateCapPacesLargeMessagesAndKeepsTheConnection )
  */
 SW_TEST_CASE( NetworkTest, KitTickBudgetFollowsTheConnectionCap )
 {
-    SW_EXPECT_EQUAL( 1000, NetSendBudget::computeTickBudget( 1000, NetHostSettings{}._maxBytesPerSecond, 1.0 / 30.0 ) ); // 몫 1666 — 설정이 작다
+    SW_EXPECT_EQUAL( 1000, NetSendBudget::computeTickBudget( 1000, NetHostConfig{}._maxBytesPerSecond, 1.0 / 30.0 ) ); // 몫 1666 — 설정이 작다
     SW_EXPECT_EQUAL( 333, NetSendBudget::computeTickBudget( 1000, 20000, 1.0 / 30.0 ) );
     SW_EXPECT_EQUAL( 1000, NetSendBudget::computeTickBudget( 1000, 0, 1.0 / 30.0 ) );
     SW_EXPECT_EQUAL( 1000, NetSendBudget::computeTickBudget( 1000, 20000, 0.0 ) );
@@ -1875,7 +1875,7 @@ SW_TEST_CASE( NetworkTest, UnreliableMessagesExpireAfterWaitingTooLong )
  */
 SW_TEST_CASE( NetworkTest, SaturatedConnectionIsReportedUntilTheQueueDrains )
 {
-    NetHostSettings settings;
+    NetHostConfig settings;
     settings._maxBytesPerSecond = 2400; // 패킷 두 개쯤 — 초당
     test::LoopbackCluster cluster( 61u );
     addServerAndClient( cluster, settings );

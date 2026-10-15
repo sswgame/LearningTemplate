@@ -33,7 +33,7 @@ namespace sw
             return make_unique<MemoryServiceStore>( &ServiceStoreFactoryInternal::getMemoryDatabase() );
         // 이 모듈의 드라이버(PostgreSQL)를 처음 쓸 때 등록한다. 같은 객체를 두 번 등록하면 레지스트리가 조용히 무시한다.
         SQLDriverRegistry::registerDriver( &PostgresDriver::getInstance() );
-        SQLConnectionPoolSettings settings;
+        SQLConnectionPoolConfig settings;
         settings._connection              = string( connection );
         settings._secret                  = string( secret );
         settings._workerCount             = workerCount;

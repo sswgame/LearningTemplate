@@ -90,7 +90,7 @@ namespace sw
 
     StreamMessageEndpoint::~StreamMessageEndpoint() = default;
 
-    bool StreamMessageEndpoint::initialize( IStreamTransport* pTransport, const StreamEndpointSettings& settings )
+    bool StreamMessageEndpoint::initialize( IStreamTransport* pTransport, const StreamEndpointConfig& settings )
     {
         if ( pTransport == nullptr )
             return false;

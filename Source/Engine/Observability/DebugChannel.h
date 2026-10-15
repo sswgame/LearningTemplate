@@ -30,7 +30,7 @@ namespace sw
     using DebugChannelExecuteDelegate = Delegate<bool( string_view line, string& outReply )>;
 
     /** @brief 디버그 채널 설정입니다. */
-    struct DebugChannelSettings
+    struct DebugChannelConfig
     {
         NetAddress _bindAddress{ NetAddress::makeLoopback( 0 ) }; ///< 루프백만 받는다(다른 주소면 시작을 거절). 포트 0 = 아무 포트
         string     _token;                                        ///< 비면 시작을 거절한다
@@ -52,7 +52,7 @@ namespace sw
         DebugChannel& operator=( const DebugChannel& ) = delete;
 
         /** @brief 루프백 주소와 토큰이 올바르면 받기를 시작합니다. 아니면 false(이유는 로그). */
-        [[nodiscard]] bool initialize( IStreamTransport* pTransport, const StreamTransportSettings& transportSettings, const DebugChannelSettings& settings,
+        [[nodiscard]] bool initialize( IStreamTransport* pTransport, const StreamTransportConfig& transportSettings, const DebugChannelConfig& settings,
                                        DebugChannelExecuteDelegate execute );
         /** @brief 전송을 내립니다. 두 번 불러도 됩니다. */
         void   shutdown();
@@ -82,7 +82,7 @@ namespace sw
 
         vector<Connection>          _listConnection;
         vector<Request>             _listRequest;
-        DebugChannelSettings        _settings;
+        DebugChannelConfig          _settings;
         DebugChannelExecuteDelegate _execute;
         mutex                       _mutex;
         IStreamTransport*           _pTransport;

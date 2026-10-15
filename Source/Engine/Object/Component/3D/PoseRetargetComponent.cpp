@@ -56,7 +56,7 @@ namespace sw
     PoseRetargetComponent::~PoseRetargetComponent()
     {
         if ( _pUnit != nullptr )
-            _pUnit->removeAnimationPhaseTask( &_binding );
+            _pUnit->unregisterAnimationPhaseTask( &_binding );
     }
 
     void PoseRetargetComponent::onBeginPlay()
@@ -74,7 +74,7 @@ namespace sw
     {
         setSource( nullptr );
         if ( _pUnit != nullptr )
-            _pUnit->removeAnimationPhaseTask( &_binding );
+            _pUnit->unregisterAnimationPhaseTask( &_binding );
         _pUnit = nullptr;
         Component::onEndPlay();
     }
@@ -139,10 +139,10 @@ namespace sw
         if ( pUnit == _pUnit )
             return;
         if ( _pUnit != nullptr )
-            _pUnit->removeAnimationPhaseTask( &_binding );
+            _pUnit->unregisterAnimationPhaseTask( &_binding );
         _pUnit = pUnit;
         if ( _pUnit != nullptr )
-            _pUnit->addAnimationPhaseTask( &_binding );
+            _pUnit->registerAnimationPhaseTask( &_binding );
     }
 
     void PoseRetargetComponent::populateBasePose( SkeletalMeshComponent& unit )

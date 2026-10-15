@@ -29,7 +29,7 @@ namespace sw
         shutdown();
     }
 
-    bool HTTPClient::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportSettings& transportSettings, const HTTPClientSettings& settings )
+    bool HTTPClient::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const HTTPClientConfig& settings )
     {
         if ( transport == nullptr || _bInitialized == SW_TRUE )
             return false;

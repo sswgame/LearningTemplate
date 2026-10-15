@@ -11,9 +11,9 @@ using namespace sw;
 
 namespace
 {
-    NetClockSettings makeClockSettings( float32 tickInterval, float32 sampleInterval )
+    NetClockConfig makeClockSettings( float32 tickInterval, float32 sampleInterval )
     {
-        NetClockSettings settings;
+        NetClockConfig settings;
         settings._tickInterval       = tickInterval;
         settings._interpolationDelay = 0.1f;
         settings._sampleInterval     = sampleInterval;

@@ -18,7 +18,7 @@ namespace sw
     class XMLNode;
 
     /** @brief 할당량 주기의 규칙입니다. */
-    struct ScavengerQuotaSettings
+    struct ScavengerQuotaDef
     {
         float32 _increase{ 100.0f };      ///< 다음 할당량에 더하는 기본 양
         float32 _steepness{ 16.0f };      ///< 늘어나는 양은 기본 x (1 + 주기^2 / 이 값)이다. 주기가 갈수록 가파르게 오른다
@@ -43,7 +43,7 @@ namespace sw
 namespace sw
 {
     /** @brief 하루 시각입니다(0..24시). */
-    struct ScavengerDaySettings
+    struct ScavengerDayDef
     {
         float32 _secondsPerDay{ 720.0f }; ///< 실제 초로 잰 하루 24시간의 길이
         float32 _arrivalHour{ 7.0f };     ///< 위성에 내리는 시각
@@ -55,7 +55,7 @@ namespace sw
 namespace sw
 {
     /** @brief 들고 다니기 규칙입니다. */
-    struct ScavengerCarrySettings
+    struct ScavengerCarryDef
     {
         float32 _speedPerWeight{ 0.004f }; ///< 무게 1 마다 줄어드는 이동 속도 비율
         float32 _minSpeedScale{ 0.4f };
@@ -67,7 +67,7 @@ namespace sw
 namespace sw
 {
     /** @brief 죽음과 전멸 규칙입니다. */
-    struct ScavengerPenaltySettings
+    struct ScavengerPenaltyDef
     {
         float32 _deathFine{ 0.2f };        ///< 시신을 못 가져온 사람마다 크레딧에서 이 비율을 벌금으로 낸다
         float32 _recoveredFine{ 0.05f };   ///< 시신을 가져온 사람마다 내는 벌금 비율
@@ -79,7 +79,7 @@ namespace sw
 namespace sw
 {
     /** @brief 시설(실내) 생성 규칙입니다. */
-    struct ScavengerFacilitySettings
+    struct ScavengerFacilityDef
     {
         float32 _lockedChance{ 0.2f }; ///< 방으로 들어가는 문이 잠겨 있을 확률
         float32 _loopChance{ 0.15f };  ///< 나무 구조에 더하는 고리 통로의 확률이다(방마다 적용)
@@ -143,15 +143,15 @@ namespace sw
         const ScavengerScrapDef*         findScrap( const hashed_string& id ) const { return _scrapCatalog.find( id ); }
         const vector<ScavengerScrapDef>& getScraps() const { return _scrapCatalog.getAll(); }
         /** @brief 마감까지 @p daysLeft 일 남았을 때의 매입률을 계산합니다. 점 사이는 선형으로 보간하고, 끝 밖은 끝 값을 쓰며, 점이 없으면 1 입니다. */
-        float32                          computeBuyRate( int32 daysLeft ) const;
-        const ScavengerQuotaSettings&    getQuotaSettings() const { return _quota; }
-        const ScavengerDaySettings&      getDaySettings() const { return _day; }
-        const ScavengerCarrySettings&    getCarrySettings() const { return _carry; }
-        const ScavengerPenaltySettings&  getPenaltySettings() const { return _penalty; }
-        const ScavengerFacilitySettings& getFacilitySettings() const { return _facility; }
-        const hashed_string&             getTerminalShopID() const { return _terminalShopID; }
-        const hashed_string&             getCurrency() const { return _currency; }
-        float32                          getCrewHealth() const { return _crewHealth; }
+        float32                     computeBuyRate( int32 daysLeft ) const;
+        const ScavengerQuotaDef&    getQuotaSettings() const { return _quota; }
+        const ScavengerDayDef&      getDaySettings() const { return _day; }
+        const ScavengerCarryDef&    getCarrySettings() const { return _carry; }
+        const ScavengerPenaltyDef&  getPenaltySettings() const { return _penalty; }
+        const ScavengerFacilityDef& getFacilitySettings() const { return _facility; }
+        const hashed_string&        getTerminalShopID() const { return _terminalShopID; }
+        const hashed_string&        getCurrency() const { return _currency; }
+        float32                     getCrewHealth() const { return _crewHealth; }
 
     private:
         static constexpr const utf8* kXMLRootName = "ScavengerCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
@@ -160,11 +160,11 @@ namespace sw
         GameCatalog<ScavengerMoonDef>  _moonCatalog;
         GameCatalog<ScavengerScrapDef> _scrapCatalog;
         vector<ScavengerBuyRatePoint>  _listBuyRate; ///< 남은 날 오름차순이다
-        ScavengerQuotaSettings         _quota;
-        ScavengerDaySettings           _day;
-        ScavengerCarrySettings         _carry;
-        ScavengerPenaltySettings       _penalty;
-        ScavengerFacilitySettings      _facility;
+        ScavengerQuotaDef              _quota;
+        ScavengerDayDef                _day;
+        ScavengerCarryDef              _carry;
+        ScavengerPenaltyDef            _penalty;
+        ScavengerFacilityDef           _facility;
         hashed_string                  _terminalShopID;
         hashed_string                  _currency;
         float32                        _crewHealth; ///< 사람 하나의 체력

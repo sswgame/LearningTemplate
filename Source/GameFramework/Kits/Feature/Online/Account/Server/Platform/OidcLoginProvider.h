@@ -13,7 +13,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/JSONWebToken.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProvider.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderSettings.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderConfig.h"
 
 namespace sw
 {
@@ -28,7 +28,7 @@ namespace sw
     {
     public:
         /** @brief @p pProvider 와 @p pHTTPClient 는 빌려 씁니다. @p pHTTPClient 의 응답은 이 객체만 회수합니다. */
-        OidcLoginProvider( const PlatformLoginProviderSettings& settings, INetSecurityProvider* pProvider, HTTPClient* pHTTPClient );
+        OidcLoginProvider( const PlatformLoginProviderConfig& settings, INetSecurityProvider* pProvider, HTTPClient* pHTTPClient );
 
         const utf8* getName() const override { return _settings._name.c_str(); }
         uint64      submitVerification( const vector<uint8>& ticketBytes, int64 nowMs ) override;
@@ -56,7 +56,7 @@ namespace sw
         void     startJwksFetch( int64 nowMs );
         Decision evaluate( const PendingTicket& pending, int64 nowMs, PlatformLoginVerification& outVerification );
 
-        PlatformLoginProviderSettings     _settings;
+        PlatformLoginProviderConfig       _settings;
         JwksKeyCache                      _keyCache;
         vector<PendingTicket>             _listPending;
         vector<PlatformLoginVerification> _listDone;

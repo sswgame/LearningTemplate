@@ -316,7 +316,7 @@ namespace sw
     {
     }
 
-    void NetRequestServer::initialize( StreamMessageEndpoint* pEndpoint, const NetRequestServerSettings& settings )
+    void NetRequestServer::initialize( StreamMessageEndpoint* pEndpoint, const NetRequestServerConfig& settings )
     {
         _pEndpoint = pEndpoint;
         _settings  = settings;

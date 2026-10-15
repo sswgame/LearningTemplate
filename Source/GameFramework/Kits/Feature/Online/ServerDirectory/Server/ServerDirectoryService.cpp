@@ -201,7 +201,7 @@ namespace sw
         shutdown();
     }
 
-    void ServerDirectoryService::initialize( const ServerDirectoryDependencies& dependencies, const ServerDirectorySettings& settings )
+    void ServerDirectoryService::initialize( const ServerDirectoryDependencies& dependencies, const ServerDirectoryServiceConfig& settings )
     {
         SW_ASSERT( dependencies._pStore != nullptr && dependencies._pRouter != nullptr );
         _dependencies = dependencies;

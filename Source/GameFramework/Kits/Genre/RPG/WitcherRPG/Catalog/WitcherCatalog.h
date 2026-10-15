@@ -93,7 +93,7 @@ namespace sw
 namespace sw
 {
     /** @brief 전투 수치입니다. */
-    struct WitcherCombatSettings
+    struct WitcherCombatDef
     {
         hashed_string _intensityStat{ "signIntensity" }; ///< 표식 위력(%)을 읽는 능력치 이름
         float32       _stamina{ 100.0f };
@@ -113,7 +113,7 @@ namespace sw
 namespace sw
 {
     /** @brief 연금술 수치입니다. */
-    struct WitcherAlchemySettings
+    struct WitcherAlchemyRuleDef
     {
         vector<hashed_string> _listAlcohol{}; ///< 명상에 쓰는 술(앞에서부터 찾는다)
         float32               _maxToxicity{ 100.0f };
@@ -234,8 +234,8 @@ namespace sw
 
         const vector<WitcherAlchemyDef>&   getAlchemyItems() const { return _alchemyCatalog.getAll(); }
         const vector<WitcherSlotGroupDef>& getSlotGroups() const { return _listSlotGroup; }
-        const WitcherCombatSettings&       getCombat() const { return _combat; }
-        const WitcherAlchemySettings&      getAlchemy() const { return _alchemy; }
+        const WitcherCombatDef&            getCombat() const { return _combat; }
+        const WitcherAlchemyRuleDef&       getAlchemy() const { return _alchemy; }
 
     private:
         static constexpr const utf8* kXMLRootName = "WitcherCatalog"; ///< 루트 원소(`XMLCatalog`)
@@ -250,7 +250,7 @@ namespace sw
         GameCatalog<WitcherContractDef>   _contractCatalog;
         GameCatalog<WitcherSkillColorDef> _skillColorCatalog;
         vector<WitcherSlotGroupDef>       _listSlotGroup; ///< 읽은 순서(그룹 번호)
-        WitcherCombatSettings             _combat;
-        WitcherAlchemySettings            _alchemy;
+        WitcherCombatDef                  _combat;
+        WitcherAlchemyRuleDef             _alchemy;
     };
 } // namespace sw

@@ -158,7 +158,7 @@ namespace sw
     {
         _bConnecting     = SW_FALSE;
         _bConnectionOpen = SW_TRUE;
-        OnlineServiceClientSettings settings;
+        OnlineServiceClientConfig settings;
         settings._gameBuild = LoadBotInternal::kGameBuild;
         if ( _client.initializeOnSharedEndpoint( pEndpoint, pRequestClient, handle, settings ) == false )
             stop();

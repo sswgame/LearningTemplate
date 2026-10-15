@@ -29,7 +29,7 @@ namespace sw
     class ServerDirectoryWriteWork;
 
     /** @brief 서버 디렉터리 설정입니다. */
-    struct ServerDirectorySettings
+    struct ServerDirectoryServiceConfig
     {
         vector<string> _listServerKind{};                ///< 배정과 목록을 받는 서버 종류이다(예: "game")
         int64          _reloadPeriodMs{ 30000 };         ///< 점검과 공지를 다시 읽는 주기이다
@@ -83,7 +83,7 @@ namespace sw
         ServerDirectoryService( const ServerDirectoryService& )            = delete;
         ServerDirectoryService& operator=( const ServerDirectoryService& ) = delete;
 
-        void initialize( const ServerDirectoryDependencies& dependencies, const ServerDirectorySettings& settings );
+        void initialize( const ServerDirectoryDependencies& dependencies, const ServerDirectoryServiceConfig& settings );
         /** @brief 서버 목록 읽기를 멈추고 기다리던 캐시 요청을 취소합니다. 맡긴 저장소 작업은 저장소의 `shutdown` 과 `pollCompletions` 가 회수하므로 이 객체는 그때까지 살아 있어야 합니다. */
         void shutdown();
 
@@ -126,7 +126,7 @@ namespace sw
         vector<MaintenanceWindow>                _listMaintenance;
         vector<ServiceNotice>                    _listNotice; ///< 우선순위 내림차순이다
         EventBuffer<ServerDirectoryCompletion>   _completionBuffer;
-        ServerDirectorySettings                  _settings;
+        ServerDirectoryServiceConfig             _settings;
         ServerDirectoryDependencies              _dependencies;
         int64                                    _lastReloadMs;
         uint64                                   _lastVisibleHash;

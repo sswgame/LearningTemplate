@@ -106,7 +106,7 @@ namespace sw
             ChatService                 _service;
             ChatServer                  _server;
             unique_ptr<ChatBlockPolicy> _policy;
-            ChatSettings                _settings;
+            ChatServiceConfig           _settings;
             bool                        _bStarted;
         };
     } // namespace

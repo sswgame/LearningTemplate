@@ -79,7 +79,7 @@ namespace sw
         SkeletalAnimatorComponent* pAnimator = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
         if ( pAnimator == nullptr )
             return;
-        pAnimator->addRootMotionModifier( &_binding );
+        pAnimator->registerRootMotionModifier( &_binding );
         _animator = pAnimator->getHandle();
     }
 
@@ -91,7 +91,7 @@ namespace sw
             ( pManager != nullptr && _animator.isValid() ) ? castTo<SkeletalAnimatorComponent>( pManager->resolveComponent( _animator ) ) : nullptr;
         _animator = ComponentHandle{};
         if ( pAnimator != nullptr )
-            pAnimator->removeRootMotionModifier( &_binding );
+            pAnimator->unregisterRootMotionModifier( &_binding );
     }
 
     void MotionWarpingComponent::setWarpTarget( const hashed_string& name, const float3& position, float32 yaw )

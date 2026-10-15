@@ -49,7 +49,7 @@ namespace sw
     {
     }
 
-    void AccountServer::initialize( LoginService* pLoginService, const AccountServerSettings& settings )
+    void AccountServer::initialize( LoginService* pLoginService, const AccountServerConfig& settings )
     {
         _pLoginService = pLoginService;
         _settings      = settings;

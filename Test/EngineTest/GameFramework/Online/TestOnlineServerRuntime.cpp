@@ -37,9 +37,9 @@ namespace
 
         static void reset() { vector<string>{}.swap( getLog() ); }
 
-        static OnlineServerRuntimeSettings makeSettings( std::initializer_list<const utf8*> listKitName )
+        static OnlineServerRuntimeConfig makeSettings( std::initializer_list<const utf8*> listKitName )
         {
-            OnlineServerRuntimeSettings settings;
+            OnlineServerRuntimeConfig settings;
             settings._bTLS                  = SW_FALSE;
             settings._bManualCacheTime      = SW_TRUE;
             settings._config._ioThreadCount = 0;
@@ -142,10 +142,10 @@ SW_TEST_CASE( OnlineServerRuntimeTest, KitsStartInOrderShareInterfacesAndStopInR
         unique_ptr<IStreamTransport>                    transport = network.createTransport();
         ServiceHealthRegistry                           health;
         // 설정에는 거꾸로 적어도 시작 순서(인터페이스를 내놓는 키트가 먼저)로 붙는다.
-        OnlineServerRuntimeSettings settings = OnlineServerRuntimeTestInternal::makeSettings( { ConsumerTestKit::kName, ProviderTestKit::kName } );
-        settings._pTransport                 = transport.get();
-        settings._pHealthRegistry            = &health;
-        settings._listenAddress              = NetAddress::makeLoopback( 7451 );
+        OnlineServerRuntimeConfig settings = OnlineServerRuntimeTestInternal::makeSettings( { ConsumerTestKit::kName, ProviderTestKit::kName } );
+        settings._pTransport               = transport.get();
+        settings._pHealthRegistry          = &health;
+        settings._listenAddress            = NetAddress::makeLoopback( 7451 );
         OnlineServerRuntime runtime;
         string              error;
         SW_ASSERT_TRUE_MSG( runtime.initialize( settings, 1000, error ), error.c_str() );
@@ -179,7 +179,7 @@ SW_TEST_CASE( OnlineServerRuntimeTest, UnknownKitStopsStartup )
     const OnlineServerKitRegistrar<ProviderTestKit> provider{ ProviderTestKit::kName, 9000 };
     LoopbackStreamNetwork                           network;
     unique_ptr<IStreamTransport>                    transport = network.createTransport();
-    OnlineServerRuntimeSettings                     settings  = OnlineServerRuntimeTestInternal::makeSettings( { ProviderTestKit::kName, "test.missing" } );
+    OnlineServerRuntimeConfig                       settings  = OnlineServerRuntimeTestInternal::makeSettings( { ProviderTestKit::kName, "test.missing" } );
     settings._pTransport                                      = transport.get();
     OnlineServerRuntime runtime;
     string              error;
@@ -198,7 +198,7 @@ SW_TEST_CASE( OnlineServerRuntimeTest, KitStartFailureUnwindsEveryKit )
         const OnlineServerKitRegistrar<ProviderTestKit> provider{ ProviderTestKit::kName, 9000 };
         LoopbackStreamNetwork                           network;
         unique_ptr<IStreamTransport>                    transport = network.createTransport();
-        OnlineServerRuntimeSettings                     settings  = OnlineServerRuntimeTestInternal::makeSettings( { ProviderTestKit::kName, ConsumerTestKit::kName } );
+        OnlineServerRuntimeConfig                       settings  = OnlineServerRuntimeTestInternal::makeSettings( { ProviderTestKit::kName, ConsumerTestKit::kName } );
         OnlineServerOption&                             option    = settings._config._listKit[1]._listOption.emplace_back();
         option._key                                               = "fail";
         option._value                                             = "start";

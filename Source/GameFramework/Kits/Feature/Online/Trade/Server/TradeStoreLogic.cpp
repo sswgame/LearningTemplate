@@ -104,7 +104,7 @@ namespace sw
 namespace sw
 {
     TradeStoreLogic::TradeStoreLogic( IServiceStoreConnection& connection, const ITradePolicy& policy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID,
-                                      const TradeSettings& settings )
+                                      const TradeServiceConfig& settings )
         : _connection{ connection }
         , _policy{ policy }
         , _pLedgerPolicy{ pLedgerPolicy }
@@ -131,7 +131,7 @@ namespace sw
         return s_table;
     }
 
-    bool TradeStoreLogic::isIdleExpired( const TradeSnapshot& trade, const TradeSettings& settings, int64 nowMs )
+    bool TradeStoreLogic::isIdleExpired( const TradeSnapshot& trade, const TradeServiceConfig& settings, int64 nowMs )
     {
         if ( trade.isClosed() )
             return false;
