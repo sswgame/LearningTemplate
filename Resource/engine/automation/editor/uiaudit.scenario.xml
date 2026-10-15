@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   에디터 시나리오 — UX 감사용 캡처. 패널마다 앞으로 꺼내 에디터 UI 전체를 PNG 로 찍는다(`CaptureEditorUI`).
-  마젠타(빠진 텍스처 · 디버그 색)는 어느 패널에서도 0 이어야 한다. 잘린 창 수는 실패로 보지 않고 로그(`Editor UI capture`)에 이름과 함께 남긴다.
+  마젠타(빠진 텍스처 · 디버그 색)는 어느 패널에서도 0 이어야 한다. 패널은 찍은 뒤 닫아 다음 패널을 가리지 않는다. 잘린 창 수는 실패로 보지 않고 로그(`Editor UI capture`)에 이름과 함께 남긴다.
   결과 그림은 `ux-reviewer` 에이전트가 docs/plans/EditorUX.md 체크리스트로 본다.
   실행: App.exe -EnableEditor -scenario=engine/automation/editor/uiaudit.scenario.xml -dx12
 -->
@@ -10,81 +10,117 @@
 	<At frame="90"><CaptureEditorUI file="audit/00_default.png" maxMagentaFraction="0"/></At>
 	<At after="2"><DevCommand line="panel.focus hierarchy"/></At>
 	<At after="20"><CaptureEditorUI file="audit/01_hierarchy.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close hierarchy"/></At>
 	<At after="2"><DevCommand line="panel.focus inspector"/></At>
 	<At after="20"><CaptureEditorUI file="audit/02_inspector.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close inspector"/></At>
 	<At after="2"><DevCommand line="panel.focus content_browser"/></At>
 	<At after="20"><CaptureEditorUI file="audit/03_content_browser.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close content_browser"/></At>
 	<At after="2"><DevCommand line="panel.focus console"/></At>
 	<At after="20"><CaptureEditorUI file="audit/04_console.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close console"/></At>
 	<At after="2"><DevCommand line="panel.focus scene_view"/></At>
 	<At after="20"><CaptureEditorUI file="audit/05_scene_view.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close scene_view"/></At>
 	<At after="2"><DevCommand line="panel.focus game_view"/></At>
 	<At after="20"><CaptureEditorUI file="audit/06_game_view.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close game_view"/></At>
 	<At after="2"><DevCommand line="panel.focus profiler"/></At>
 	<At after="20"><CaptureEditorUI file="audit/07_profiler.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close profiler"/></At>
 	<At after="2"><DevCommand line="panel.focus preferences"/></At>
 	<At after="20"><CaptureEditorUI file="audit/08_preferences.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close preferences"/></At>
 	<At after="2"><DevCommand line="panel.focus shortcuts"/></At>
 	<At after="20"><CaptureEditorUI file="audit/09_shortcuts.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close shortcuts"/></At>
 	<At after="2"><DevCommand line="panel.focus global_variables"/></At>
 	<At after="20"><CaptureEditorUI file="audit/10_global_variables.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close global_variables"/></At>
 	<At after="2"><DevCommand line="panel.focus history"/></At>
 	<At after="20"><CaptureEditorUI file="audit/11_history.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close history"/></At>
 	<At after="2"><DevCommand line="panel.focus modules"/></At>
 	<At after="20"><CaptureEditorUI file="audit/12_modules.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close modules"/></At>
 	<At after="2"><DevCommand line="panel.focus input_map"/></At>
 	<At after="20"><CaptureEditorUI file="audit/13_input_map.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close input_map"/></At>
 	<At after="2"><DevCommand line="panel.focus material"/></At>
 	<At after="20"><CaptureEditorUI file="audit/14_material.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close material"/></At>
 	<At after="2"><DevCommand line="panel.focus prefab_editor"/></At>
 	<At after="20"><CaptureEditorUI file="audit/15_prefab_editor.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close prefab_editor"/></At>
 	<At after="2"><DevCommand line="panel.focus animation_graph"/></At>
 	<At after="20"><CaptureEditorUI file="audit/16_animation_graph.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close animation_graph"/></At>
 	<At after="2"><DevCommand line="panel.focus dialogue_graph"/></At>
 	<At after="20"><CaptureEditorUI file="audit/17_dialogue_graph.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close dialogue_graph"/></At>
 	<At after="2"><DevCommand line="panel.focus gimmick_graph"/></At>
 	<At after="20"><CaptureEditorUI file="audit/18_gimmick_graph.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close gimmick_graph"/></At>
 	<At after="2"><DevCommand line="panel.focus sequencer"/></At>
 	<At after="20"><CaptureEditorUI file="audit/19_sequencer.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close sequencer"/></At>
 	<At after="2"><DevCommand line="panel.focus sprite_clip"/></At>
 	<At after="20"><CaptureEditorUI file="audit/20_sprite_clip.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close sprite_clip"/></At>
 	<At after="2"><DevCommand line="panel.focus tile_map"/></At>
 	<At after="20"><CaptureEditorUI file="audit/21_tile_map.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close tile_map"/></At>
 	<At after="2"><DevCommand line="panel.focus ui_preview"/></At>
 	<At after="20"><CaptureEditorUI file="audit/22_ui_preview.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close ui_preview"/></At>
 	<At after="2"><DevCommand line="panel.focus data_table"/></At>
 	<At after="20"><CaptureEditorUI file="audit/23_data_table.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close data_table"/></At>
 	<At after="2"><DevCommand line="panel.focus catalog_editor"/></At>
 	<At after="20"><CaptureEditorUI file="audit/24_catalog_editor.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close catalog_editor"/></At>
 	<At after="2"><DevCommand line="panel.focus render_targets"/></At>
 	<At after="20"><CaptureEditorUI file="audit/25_render_targets.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close render_targets"/></At>
 	<At after="2"><DevCommand line="panel.focus audiomixer"/></At>
 	<At after="20"><CaptureEditorUI file="audit/26_audiomixer.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close audiomixer"/></At>
 	<At after="2"><DevCommand line="panel.focus audioevents"/></At>
 	<At after="20"><CaptureEditorUI file="audit/27_audioevents.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close audioevents"/></At>
 	<At after="2"><DevCommand line="panel.focus projectsettings"/></At>
 	<At after="20"><CaptureEditorUI file="audit/28_projectsettings.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close projectsettings"/></At>
 	<At after="2"><DevCommand line="panel.focus user_settings"/></At>
 	<At after="20"><CaptureEditorUI file="audit/29_user_settings.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close user_settings"/></At>
 	<At after="2"><DevCommand line="panel.focus test_runner"/></At>
 	<At after="20"><CaptureEditorUI file="audit/30_test_runner.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close test_runner"/></At>
 	<At after="2"><DevCommand line="panel.focus multiplayer"/></At>
 	<At after="20"><CaptureEditorUI file="audit/31_multiplayer.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close multiplayer"/></At>
 	<At after="2"><DevCommand line="panel.focus ability_debugger"/></At>
 	<At after="20"><CaptureEditorUI file="audit/32_ability_debugger.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close ability_debugger"/></At>
 	<At after="2"><DevCommand line="panel.focus animation_rewind"/></At>
 	<At after="20"><CaptureEditorUI file="audit/33_animation_rewind.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close animation_rewind"/></At>
 	<At after="2"><DevCommand line="panel.focus rig_debug"/></At>
 	<At after="20"><CaptureEditorUI file="audit/34_rig_debug.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close rig_debug"/></At>
 	<At after="2"><DevCommand line="panel.focus npc_schedule"/></At>
 	<At after="20"><CaptureEditorUI file="audit/35_npc_schedule.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close npc_schedule"/></At>
 	<At after="2"><DevCommand line="panel.focus charactereditor.main"/></At>
 	<At after="20"><CaptureEditorUI file="audit/36_charactereditor_main.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close charactereditor.main"/></At>
 	<At after="2"><DevCommand line="panel.focus meshmodifiers.stack"/></At>
 	<At after="20"><CaptureEditorUI file="audit/37_meshmodifiers_stack.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close meshmodifiers.stack"/></At>
 	<At after="2"><DevCommand line="panel.focus admin.tool"/></At>
 	<At after="20"><CaptureEditorUI file="audit/38_admin_tool.png" maxMagentaFraction="0"/></At>
-	<At after="2"><DevCommand line="panel.focus themepark.layout"/></At>
-	<At after="20"><CaptureEditorUI file="audit/39_themepark_layout.png" maxMagentaFraction="0"/></At>
+	<At after="2"><DevCommand line="panel.close admin.tool"/></At>
 	<At after="2"><Pass/></At>
 </Scenario>
