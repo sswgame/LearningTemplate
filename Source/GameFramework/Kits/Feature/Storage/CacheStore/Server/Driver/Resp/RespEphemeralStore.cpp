@@ -242,8 +242,8 @@ namespace sw
         _bShutdown = SW_TRUE;
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            _commandConnection.abort( *_transport, "store shut down" );
-            _subscribeConnection.abort( *_transport, "store shut down" );
+            _commandConnection.closeForShutdown( *_transport );
+            _subscribeConnection.closeForShutdown( *_transport );
         }
         for ( Operation& operation : _listOperation )
         {

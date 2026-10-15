@@ -76,6 +76,8 @@ namespace sw
         bool sendCommand( IStreamTransport& transport, const RespCommand& command, const RespCommandTag& tag );
         /** @brief 바로 끊고(RST) 기다리던 태그를 모두 실패로 처리합니다. 이 핸들의 늦은 콜백은 버립니다. */
         void abort( IStreamTransport& transport, const utf8* pReason );
+        /** @brief 저장소를 내릴 때 끊습니다. `abort` 와 같지만 예상된 종료라 경고를 남기지 않습니다. */
+        void closeForShutdown( IStreamTransport& transport );
 
         /** @brief 전송 콜백입니다. 핸들이 이 연결의 것이 아니면 false 를 반환하고 아무것도 하지 않습니다. */
         bool handleOpened( IStreamTransport& transport, StreamConnectionHandle handle );

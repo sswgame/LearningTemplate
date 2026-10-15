@@ -1012,6 +1012,34 @@ SW_TEST_CASE( SceneTest, SceneCookCountsTheScenesItCouldNotCook )
 }
 
 /**
+ * @brief [SceneTest] 씬 쿠킹은 에디터만 여는 씬(에디터 팩 · 에디터 시나리오 픽스처)을 건너뛴다 — 깨진 픽스처여도 실패로 세지 않는다
+ */
+SW_TEST_CASE( SceneTest, SceneCookSkipsEditorOnlyScenes )
+{
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    const sw::string root   = test::makeTempDirectory( "scene_cook_editor_root" );
+    const sw::string cooked = test::makeTempDirectory( "scene_cook_editor_out" );
+
+    sw::SceneDocument good;
+    good._name                = "Good";
+    const sw::string goodPath = sw::FileUtil::joinPath( root, "engine/automation/good.scene.xml" );
+    sw::FileUtil::ensureParentDirectoryExists( goodPath );
+    SW_ASSERT_TRUE( good.saveXML( goodPath ) );
+    for ( const utf8* pEditorScene : { "editor/maps/preview.scene.xml", "engine/automation/editor/mapcheck/broken.scene.xml" } )
+    {
+        const sw::string path = sw::FileUtil::joinPath( root, pEditorScene );
+        sw::FileUtil::ensureParentDirectoryExists( path );
+        SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, "<Scene name=\"Broken\"><Entity" ) );
+    }
+
+    uint32 failedCount = 0;
+    SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookAllScenes( root, cooked, failedCount ) );
+    SW_EXPECT_EQUAL( 0u, failedCount );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( sw::FileUtil::joinPath( cooked, "editor/maps/preview.scene.bin" ) ) );
+}
+
+/**
  * @brief [SceneTest] 모든 타입 공급자가 등록을 끝내기 전(기동 단계 `ModuleTypes` 전)에는 씬을 읽지 않는다 — 로드 요청도 쿠킹도 거절한다
  * @details GameFramework 타입이 오르기 전에 씬을 읽으면 그 컴포넌트가 `MissingComponent` 로 지어진다(씬 쿠킹 · 에디터 시작 씬). 읽는 쪽이 "타입 등록
  *          완료" 를 확인하므로 기동 순서가 어긋나면 씬이 조용히 망가지는 대신 오류로 멈춘다. 등록이 끝나기 전의 레지스트리를 서비스 표에 꽂아 본다.

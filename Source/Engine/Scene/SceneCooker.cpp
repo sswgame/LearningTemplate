@@ -89,6 +89,16 @@ namespace sw
             }
 
             /**
+             * @brief @p relativePath(리소스 기준)가 에디터만 여는 씬이면 true 입니다 — 에디터 팩(`editor/`)과 에디터 시나리오 픽스처(`…/automation/editor/`).
+             * @details 에디터는 Dev 에만 있고 Dev 런타임은 쿠킹 폴더를 마운트하지 않으므로 쓰일 곳이 없다(언리얼 `DirectoriesToNeverCook`).
+             *          에디터 시나리오 픽스처에는 일부러 틀린 씬(`mapcheck_expect_error`)이 있어 쿠킹하면 검증 경고가 빌드 로그에 남는다.
+             */
+            static bool isEditorOnlyScene( string_view relativePath )
+            {
+                return StringUtil::startsWith( relativePath, "editor/", true ) || relativePath.find( "/automation/editor/" ) != string_view::npos;
+            }
+
+            /**
              * @brief 문서의 엔티티 상태에 지금 등록되지 않은 컴포넌트 타입이 있으면 true 입니다(짓지 않고 원소 이름만 본다).
              * @details 다른 게임의 팩은 그 게임 모듈의 컴포넌트를 쓴다 — 이 빌드에는 없는 모듈이다. 그런 씬을 지으면 모르는 타입마다 오류가 난다.
              */
@@ -246,6 +256,9 @@ namespace sw
         {
             if ( StringUtil::endsWith( scenePath, ".scene.xml", true ) == false )
                 continue;
+            const string relativeScene = FileUtil::normalizeSeparators( scenePath ).substr( std::min( normalizedRoot.size() + 1, scenePath.size() ) );
+            if ( SceneCookerInternal::isEditorOnlyScene( relativeScene ) )
+                continue;
 
             SceneDocument doc{};
             if ( doc.loadXML( scenePath ) == false )
@@ -256,7 +269,6 @@ namespace sw
             }
             // 다른 게임의 씬이 그 게임 모듈의 컴포넌트를 쓰면 건너뛴다 — 이 빌드에 없는 모듈이고, 배포본은 활성 게임의 팩만 연다.
             // 엔진 · 공용 타입만 쓰는 씬은 그대로 쿠킹한다(활성 팩의 모르는 타입은 아래에서 실패로 센다).
-            const string relativeScene = FileUtil::normalizeSeparators( scenePath ).substr( std::min( normalizedRoot.size() + 1, scenePath.size() ) );
             if ( SceneCookerInternal::isInInactiveGamePack( relativeScene, activePackRoot ) && SceneCookerInternal::usesUnregisteredComponentTypes( doc ) )
             {
                 SW_LOG_INFO( "Scene cook: '%#' uses components of another game's module - skipped", relativeScene );
