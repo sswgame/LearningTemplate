@@ -39,29 +39,29 @@ namespace sw
 
             bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                const string* pUnknown = entry.findUnknownOption( { "currencyCatalog", "offerCatalog", "fakeReceipts", "acceptSandboxReceipts" } );
-                if ( pUnknown != nullptr )
-                {
-                    outError = "unknown option '" + *pUnknown + "'";
+                string     currencyPath;
+                string     offerPath;
+                bool       bFakeReceipts  = false;
+                bool       bAcceptSandbox = false;
+                const bool bOptionOk      = entry.readOptions( {
+                                                              {      "currencyCatalog",   currencyPath},
+                                                              {         "offerCatalog",      offerPath},
+                                                              {         "fakeReceipts",  bFakeReceipts},
+                                                              {"acceptSandboxReceipts", bAcceptSandbox}
+                },
+                                                               outError );
+                if ( bOptionOk == false )
                     return false;
-                }
-                const string* pCurrencyPath = entry.findOption( "currencyCatalog" );
-                const string* pOfferPath    = entry.findOption( "offerCatalog" );
-                if ( pCurrencyPath == nullptr || pOfferPath == nullptr )
+                if ( currencyPath.empty() || offerPath.empty() )
                 {
                     outError = "the economy kit needs the currencyCatalog and offerCatalog options";
                     return false;
                 }
-                if ( _currencyCatalog.loadFromResource( *pCurrencyPath ) == false || _offerCatalog.loadFromResource( *pOfferPath ) == false )
+                if ( _currencyCatalog.loadFromResource( currencyPath ) == false || _offerCatalog.loadFromResource( offerPath ) == false )
                 {
-                    outError = "the economy catalogs could not be read ('" + *pCurrencyPath + "', '" + *pOfferPath + "')";
+                    outError = "the economy catalogs could not be read ('" + currencyPath + "', '" + offerPath + "')";
                     return false;
                 }
-                bool       bFakeReceipts  = false;
-                bool       bAcceptSandbox = false;
-                const bool bOptionOk      = entry.readBoolOption( "fakeReceipts", bFakeReceipts, outError ) && entry.readBoolOption( "acceptSandboxReceipts", bAcceptSandbox, outError );
-                if ( bOptionOk == false )
-                    return false;
                 if ( bFakeReceipts && _receiptRegistry.registerValidator( &_fakeValidator ) == false )
                 {
                     outError = "the fake receipt validator could not be registered";
@@ -79,11 +79,8 @@ namespace sw
                     return false;
                 }
                 _bServiceStarted = true;
-                if ( context._pHost->registerHostService( &_service ) == false )
-                {
-                    outError = "the economy method range is already taken";
+                if ( registerHostService( context, entry, &_service, outError ) == false )
                     return false;
-                }
                 context._pLedgerPolicy = &_currencyCatalog;
                 return true;
             }

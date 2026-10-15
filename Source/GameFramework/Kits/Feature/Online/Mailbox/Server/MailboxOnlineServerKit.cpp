@@ -29,21 +29,15 @@ namespace sw
 
             bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                const string* pUnknown = entry.findUnknownOption( { "sweepIntervalMs" } );
-                if ( pUnknown != nullptr )
-                {
-                    outError = "unknown option '" + *pUnknown + "'";
-                    return false;
-                }
                 int32 sweepIntervalMs = static_cast<int32>( _settings._sweepIntervalMs );
-                if ( entry.readIntOption( "sweepIntervalMs", sweepIntervalMs, outError ) == false )
+                if ( entry.readOptions( {
+                                            { "sweepIntervalMs", sweepIntervalMs }
+                },
+                                        outError ) == false )
                     return false;
                 _settings._sweepIntervalMs = sweepIntervalMs;
-                if ( context._pHost->registerHostService( &_service ) == false )
-                {
-                    outError = "the mailbox method range is already taken";
+                if ( registerHostService( context, entry, &_service, outError ) == false )
                     return false;
-                }
                 return true;
             }
 

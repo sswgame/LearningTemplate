@@ -32,20 +32,15 @@ namespace sw
 
             bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                const string* pUnknown = entry.findUnknownOption( { "serverKind" } );
-                if ( pUnknown != nullptr )
-                {
-                    outError = "unknown option '" + *pUnknown + "'";
+                if ( entry.readOptions( {
+                                            { "serverKind", _settings._listServerKind }
+                },
+                                        outError ) == false )
                     return false;
-                }
-                entry.collectOptions( "serverKind", _settings._listServerKind );
                 if ( _settings._listServerKind.empty() )
                     _settings._listServerKind.push_back( "game" );
-                if ( context._pHost->registerHostService( &_server ) == false )
-                {
-                    outError = "the server directory method range is already taken";
+                if ( registerHostService( context, entry, &_server, outError ) == false )
                     return false;
-                }
                 return true;
             }
 

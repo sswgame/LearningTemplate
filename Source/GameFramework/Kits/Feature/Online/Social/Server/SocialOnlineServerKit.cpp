@@ -49,16 +49,10 @@ namespace sw
 
             bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                if ( entry._listOption.empty() == false )
-                {
-                    outError = "the social kit takes no options";
+                if ( entry.readOptions( {}, outError ) == false )
                     return false;
-                }
-                if ( context._pHost->registerHostService( &_socialServer ) == false )
-                {
-                    outError = "the social method range is already taken";
+                if ( registerHostService( context, entry, &_socialServer, outError ) == false )
                     return false;
-                }
                 context._pBlockList = &_blockList;
                 return true;
             }

@@ -30,6 +30,7 @@ namespace sw
     class IAccountSessionControl;
     class IEphemeralStore;
     class ILedgerPolicy;
+    class IOnlineHostService;
     class IServerBus;
     class IServiceStore;
     class MetricRegistry;
@@ -109,6 +110,10 @@ namespace sw
         virtual void stop() = 0;
         /** @brief 호스트와 저장소를 내리고 남은 완료를 돌린 뒤입니다. 저장소 완료가 부르는 로직(로그인 서비스 등)의 마지막 정리를 합니다. */
         virtual void shutdown() {}
+
+    protected:
+        /** @brief @p pService 를 문맥의 호스트에 올립니다. 메서드 영역이 겹치면 false 와 키트 이름이 든 @p outError 입니다(겹친 번호는 호스트가 로그에 남긴다). */
+        [[nodiscard]] static bool registerHostService( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, IOnlineHostService* pService, string& outError );
     };
 } // namespace sw
 

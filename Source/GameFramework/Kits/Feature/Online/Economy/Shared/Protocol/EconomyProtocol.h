@@ -21,22 +21,27 @@ namespace sw
     class BitReader;
     class BitWriter;
 
-    /** @brief 경제 서비스 메서드 번호입니다. 와이어 값이므로 바꾸면 `EconomyProtocol::kVersion` 을 올려야 합니다. */
-    struct EconomyMethod
+    /** @brief 경제 서비스 메서드 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)이고, 이름의 snake_case 가 지표 라벨입니다. 새 메서드는 `Count` 앞에만 더합니다. */
+    ENUM( Count = Count )
+    enum class EconomyMethodName : uint8
     {
-        static constexpr uint16 kGetWallet     = OnlineMethodRange::kEconomy + 0x01;
-        static constexpr uint16 kGetHistory    = OnlineMethodRange::kEconomy + 0x02;
-        static constexpr uint16 kPurchase      = OnlineMethodRange::kEconomy + 0x03; ///< 멱등 키가 필수이다
-        static constexpr uint16 kRedeemReceipt = OnlineMethodRange::kEconomy + 0x04;
-        static constexpr int32  kCount         = 4;
+        GetWallet,
+        GetHistory,
+        Purchase,
+        RedeemReceipt,
+        Count,
+    };
+} // namespace sw
 
-        static_assert( OnlineMethodRange::isInRange( kRedeemReceipt, OnlineMethodRange::kEconomy ) && OnlineMethodRange::isMethod( kRedeemReceipt ) );
-
-        /** @brief 0부터 시작하는 번호입니다. 지표와 테이블의 인덱스로 씁니다. 모르는 메서드이면 -1 입니다. */
-        static constexpr int32 toIndex( uint16 method )
-        {
-            return kGetWallet <= method && method < kGetWallet + kCount ? static_cast<int32>( method - kGetWallet ) : -1;
-        }
+namespace sw
+{
+    /** @brief 경제 서비스 메서드 번호입니다. 와이어 값이므로 바꾸면 `EconomyProtocol::kVersion` 을 올려야 합니다. */
+    struct EconomyMethod : OnlineMethodTable<EconomyMethodName, OnlineMethodRange::kEconomy>
+    {
+        static constexpr uint16 kGetWallet     = toMethod( EconomyMethodName::GetWallet );
+        static constexpr uint16 kGetHistory    = toMethod( EconomyMethodName::GetHistory );
+        static constexpr uint16 kPurchase      = toMethod( EconomyMethodName::Purchase ); ///< 멱등 키가 필수이다
+        static constexpr uint16 kRedeemReceipt = toMethod( EconomyMethodName::RedeemReceipt );
     };
 } // namespace sw
 
