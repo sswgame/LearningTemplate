@@ -29,8 +29,13 @@ from LintGate import GateResult, LintGate  # noqa: E402
 def findCasingViolations(repositoryRoot: Path, listPath: Sequence[Path]) -> list[str]:
     """Resource/ 아래 파일의 경로 조각(폴더 · 파일 이름)에 대문자가 있으면 위반입니다(README.md 만 예외). 빈 폴더는 git 이 들지 않으므로 파일 경로로 본다."""
     violations: list[str] = []
+    rootResolved = repositoryRoot.resolve()
     for path in listPath:
-        relative = path.resolve().relative_to(repositoryRoot.resolve())
+        # 파일마다 resolve() 하면 Windows 에서 경로 하나에 핸들을 연다 — 차가운 캐시 · 병렬 ctest 에서 15 초 시한을 넘겼다. 루트 아래 절대 경로는 그대로 자른다.
+        try:
+            relative = path.relative_to(rootResolved)
+        except ValueError:
+            relative = path.resolve().relative_to(rootResolved)
         for part in relative.parts[1:]:
             if part in CheckResourceCasingGate.mapExemption:
                 CheckResourceCasingGate.useExemption(part)

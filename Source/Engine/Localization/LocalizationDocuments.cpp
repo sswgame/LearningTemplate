@@ -392,7 +392,7 @@ namespace sw
         if ( document.parse( FileUtil::skipUtf8Bom( jsonText ), sourceName ) == false )
             error = document.getLastError();
         const JSONValue              root            = document.getRoot();
-        static constexpr const utf8* kArrRootField[] = { "name", "sourceCulture", "cultures", "stringTables", "codeRoots", "assetRoots", "assetRules" };
+        static constexpr const utf8* kArrRootField[] = { "name", "sourceCulture", "cultures", "stagedCultures", "stringTables", "codeRoots", "assetRoots", "assetRules" };
         string                       unknown;
         if ( error.empty() && ( root.isObject() == false || LocalizationDocumentsInternal::hasOnlyKnownFields( root, kArrRootField, unknown ) == false ) )
             error = string( sourceName ) + ": " + ( unknown.empty() ? "root must be an object" : "unknown field '" + unknown + "'" );
@@ -403,6 +403,7 @@ namespace sw
             loaded._name          = root.get( "name", false ).asString();
             loaded._sourceCulture = CultureTable::normalizeCode( root.get( "sourceCulture", false ).asString() );
             const bool bListsRead = LocalizationDocumentsInternal::readStringList( root.get( "cultures", false ), loaded._listCulture ) &&
+                                    LocalizationDocumentsInternal::readStringList( root.get( "stagedCultures", false ), loaded._listStagedCulture ) &&
                                     LocalizationDocumentsInternal::readStringList( root.get( "stringTables", false ), loaded._listStringTable ) &&
                                     LocalizationDocumentsInternal::readStringList( root.get( "codeRoots", false ), loaded._listCodeRoot ) &&
                                     LocalizationDocumentsInternal::readStringList( root.get( "assetRoots", false ), loaded._listAssetRoot );
@@ -438,6 +439,13 @@ namespace sw
             {
                 culture = CultureTable::normalizeCode( culture );
             }
+            for ( string& culture : loaded._listStagedCulture )
+            {
+                culture            = CultureTable::normalizeCode( culture );
+                const bool bListed = std::find( loaded._listCulture.begin(), loaded._listCulture.end(), culture ) != loaded._listCulture.end();
+                if ( error.empty() && bListed == false )
+                    error = string( sourceName ) + ": stagedCultures '" + culture + "' is not in cultures";
+            }
         }
         if ( error.empty() == false )
         {
@@ -458,6 +466,12 @@ namespace sw
     string LocalizationProject::makeSiblingPath( string_view projectPath, string_view fileName )
     {
         return FileUtil::joinPath( FileUtil::getDirectoryPart( projectPath ), fileName );
+    }
+
+    bool LocalizationProject::isStagedCulture( string_view culture ) const
+    {
+        const string normalized = CultureTable::normalizeCode( culture );
+        return std::find( _listStagedCulture.begin(), _listStagedCulture.end(), normalized ) != _listStagedCulture.end();
     }
 
     string LocalizationProject::makeTranslationPath( string_view projectPath, string_view culture )

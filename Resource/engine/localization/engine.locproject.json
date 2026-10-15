@@ -2,6 +2,7 @@
     "name": "engine",
     "sourceCulture": "en",
     "cultures": [ "ko", "ja" ],
+    "stagedCultures": [ "ko" ],
     "stringTables": [ "engine.strings.json" ],
     "codeRoots": [ "Source/Engine", "Source/GameFramework" ],
     "assetRoots": [ "engine/settings", "engine/data", "engine/ui" ],

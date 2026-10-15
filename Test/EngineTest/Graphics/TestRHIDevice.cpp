@@ -400,7 +400,12 @@ SW_TEST_CASE( RHIDeviceTest, UnifiedPipelineStateAndRenderPassAllBackends )
         if ( pso != 0 )
         {
             // Present 없는 오프스크린 경로로 파이프라인 검증 (실패해도 RP/PSO create는 유효).
-            const bool bSmoke = executeOffscreenPipelineSmoke( *device, pso );
+            // fullscreentriangle 은 b1(MaterialCB)을 읽는다 — 묶지 않으면 DX12 루트 CBV 가 빈 채로 그려 장치가 제거된다(DEVICE_HUNG).
+            constexpr float32   kArrColor[4] = { 0.0f, 1.0f, 0.0f, 1.0f };
+            FullscreenDrawProbe probe;
+            SW_ASSERT_TRUE_MSG( probe.initialize( *device, kArrColor ), device->getBackendName() );
+            const bool bSmoke = executeOffscreenPipelineSmoke( *device, pso, probe._cbIndex );
+            probe.shutdown();
             if ( bSmoke == false )
                 SW_LOG_WARNING( "Offscreen pipeline smoke failed (backend %#) — create path still counted",
                                 static_cast<uint32>( device.getBackend() ) );
@@ -2098,6 +2103,7 @@ SW_TEST_CASE( RHIDeviceTest, VulkanLostDeviceStopsWaitingOnTheGPU )
     device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
     device->endFrame( false, false );
     device->waitIdle(); // 손실 전에 GPU 를 비운다 — 손실 뒤의 종료는 기다리지 않고 자원을 부순다
+    SW_TEST_DEFENSIVE_SCOPE( "marking the Vulkan device lost on request warns once" );
     SW_ASSERT_TRUE( device->debugRemoveDevice() );
 
     uint32  callCount{ 0 };

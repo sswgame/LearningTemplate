@@ -35,11 +35,6 @@
 
 재현됐거나 코드로 확인된 열린 결함. 다른 어떤 일보다 먼저 본다.
 
-- `A-5` **에디터를 켠 기동에서 `TypeRegistry::registerClass` 가 `DataRaceDetector` 로 죽는다(간헐, 두 번 봤다).** 둘 다 `-game=AbilityArena -EnableEditor`(2026-10-15 GL 1/36 실행 · D3-9 묶음 1 회).
-  에디터 모듈 타입 등록(`EditorToolDefaults` → `clearInheritedProperties`)이 같은 `TypeInfo` 의 속성 목록을 다른 스레드가 쓰는 중에 읽는다. 같은 때 AbilityArena 씬(334 엔티티)이 읽히고 있었다 —
-  씬 로드 쪽이 상속 속성 캐시를 늦게 채우는(쓰기) 경로가 의심된다. 감지기는 읽는 쪽 스택만 남기므로 쓰는 쪽을 잡으려면 `RaceDetectContext` 에 마지막 쓰기 스레드 스택을 남기거나 같은 조합을 반복해 재현율을 잰다.
-
-
 ---
 
 ## B. 검증 · 측정 대기

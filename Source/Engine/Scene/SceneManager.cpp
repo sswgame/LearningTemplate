@@ -8,6 +8,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/GameTimer.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Common/EngineServices.h"
@@ -321,6 +322,22 @@ namespace sw
             SW_LOG_TRACE( "Async load task completed for '%#'", pathStr );
         else
             SW_LOG_ERROR( "Async load task failed for '%#'", pathStr );
+    }
+
+    void SceneManager::waitForPendingLoad() const
+    {
+        // 로드 잡은 워커에서 파싱 · 인스턴스화만 하고 게임 스레드 일을 기다리지 않는다. 그래도 멈춤이 매달림으로 숨지 않게 시간으로 끊고 알린다.
+        constexpr int64 kWaitLimitSeconds = 30;
+        const Deadline  deadline          = Deadline::afterMilliseconds( kWaitLimitSeconds * constant::kMillisecondsPerSecond );
+        while ( _loadHandle.isValid() && _loadHandle.isCompleted() == false )
+        {
+            if ( deadline.isExpired() )
+            {
+                SW_LOG_ERROR( "Waited %# s for the in-flight scene load before changing reflected types - continuing without it", kWaitLimitSeconds );
+                return;
+            }
+            std::this_thread::yield();
+        }
     }
 
     void SceneManager::cancelPendingAsyncLoads()

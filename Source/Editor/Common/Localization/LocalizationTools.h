@@ -32,7 +32,7 @@ namespace sw
         uint32 _prefilledExact{ 0 }; ///< 번역 메모리의 같은 원문으로 채웠다
         uint32 _prefilledFuzzy{ 0 }; ///< 번역 메모리의 비슷한 원문으로 채웠다(검토 표시)
         bool   _bChanged{ false };   ///< 번역 테이블이나 번역 메모리를 고쳤다
-        bool   _bShipped{ false };   ///< 번역 테이블 파일이 있다 — 런타임이 고를 수 있는 문화권이라 확인 모드에서 빠지거나 낡은 번역을 허용하지 않는다
+        bool   _bStaged{ false };    ///< 프로젝트의 `stagedCultures` 에 있다 — 출시하는 문화권이라 확인 모드에서 빠지거나 낡은 번역을 허용하지 않는다
 
         /** @brief 빠졌거나 낡았거나 검토가 남은 번역 수입니다. */
         uint32 countIncomplete() const { return _staleCount + _reviewCount + _missingCount; }
@@ -98,12 +98,12 @@ namespace sw
         /**
          * @brief `--gather-text` 와 `--check-text` 의 본문입니다. @p projectArgument 가 비어 있으면 기본 대상을 모두 처리합니다.
          * @return 오류가 없고 모든 프로젝트를 읽었으면 true 입니다. 프로세스 종료 코드가 됩니다.
-         * @details 확인 모드(`--check-text`, `ctest -L lint` 의 `LocalizationTextCheck`)는 더 엄격하다. 원문 테이블 · 번역 테이블 · 번역 메모리가 수집 결과와 같아야 하고,
-         *          경고 수준 문제(자리 표시자 · 태그 · 길이)도 없어야 하며, 번역 테이블이 있는 문화권은 빠지거나 낡은 번역이 없어야 한다.
-         *          새 키를 번역 없이 넣거나 수집을 다시 돌리지 않은 변경은 여기서 걸린다. 번역 테이블이 없는 문화권(번역가에게 PO 만 낸 것)은 개수만 보고한다.
+         * @details 확인 모드(`--check-text`, CI 에서는 nogpu 의 `LocalizationGatherTest.RepositoryProjectsAreUpToDate`)는 더 엄격하다. 원문 테이블 · 번역 테이블 · 번역 메모리가 수집 결과와 같아야 하고,
+         *          경고 수준 문제(자리 표시자 · 태그 · 길이)도 없어야 하며, 출시 문화권(`stagedCultures`)은 빠지거나 낡은 번역이 없어야 한다.
+         *          새 키를 번역 없이 넣거나 수집을 다시 돌리지 않은 변경은 여기서 걸린다. 목록 밖 문화권(번역가에게 PO 만 낸 것)은 개수만 보고한다.
          */
         static bool runGatherCommand( bool bCheckOnly, string_view projectArgument );
-        /** @brief 확인 모드의 통과 조건입니다. 테이블이 최신이고, 문제(경고 포함)가 없고, 번역 테이블이 있는 문화권의 번역이 모두 최신이면 true 입니다. 실패 이유는 오류로 남깁니다. */
+        /** @brief 확인 모드의 통과 조건입니다. 테이블이 최신이고, 문제(경고 포함)가 없고, 출시 문화권의 번역이 모두 최신이면 true 입니다. 실패 이유는 오류로 남깁니다. */
         static bool isCheckClean( const LocalizationGatherResult& result );
 
         /** @brief 프로젝트의 문화권마다 `po/<culture>.po` 를 씁니다. 원문, 맥락, 설명, 최대 길이, 자리 표시자, 번역, 번역가 메모, fuzzy, 이전 원문을 담습니다. */

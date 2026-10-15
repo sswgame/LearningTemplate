@@ -79,6 +79,11 @@ class AppRunResult:
     def bClean(self) -> bool:
         return self.bLaunched and not self.bTimedOut and self.exitCode == 0 and not self.listErrorLine
 
+    def findIgnoredGlobals(self, listArgument: list[str]) -> list[str]:
+        """인자 중 App 이 "그런 전역 변수가 없다" 로 버린 `-gv_*` 이름들(`App::warnUnknownGlobalOverrides` 의 `<이름>: …` 경고 줄)."""
+        listName = [argument[1:].split("=", 1)[0] for argument in listArgument if argument.startswith("-gv_")]
+        return [name for name in listName if any("[Warning]" in line and f"- {name}: " in line for line in self.listLine)]
+
 
 @dataclass(frozen=True)
 class ProfileRow:

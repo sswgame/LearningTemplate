@@ -48,6 +48,10 @@ def captureInternal(appPath: Path, game: dict, table: dict, backend: str, workDi
     result = runApp(appPath, listArgument, timeoutSeconds=300.0)
     if result.bBackendUnusable:
         return "skip", "backend unusable on this machine"
+    listIgnored = result.findIgnoredGlobals(listArgument)
+    if listIgnored:
+        # 배포본은 벤치 · 자동 플레이 스위치를 등록하지 않는다 — 기준과 다른 장면을 견주지 않는다.
+        return "skip", f"this build has no {', '.join(listIgnored)} - the capture arguments do not apply"
     if not result.bClean:
         detail = result.listErrorLine[0] if result.listErrorLine else f"exit {result.exitCode}, timed out={result.bTimedOut}"
         # 진 판의 App 출력 전체를 남긴다 — 간헐 실패는 다시 돌리면 안 나온다.

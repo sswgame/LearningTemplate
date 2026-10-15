@@ -2,6 +2,7 @@
     "name": "shooter3d",
     "sourceCulture": "en",
     "cultures": [ "ko" ],
+    "stagedCultures": [ "ko" ],
     "stringTables": [ "shooter3d.strings.json" ],
     "codeRoots": [ "Source/Games/Shooter3D" ],
     "assetRoots": [ "game/shooter3d" ],
