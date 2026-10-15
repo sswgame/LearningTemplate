@@ -134,8 +134,7 @@ SW_TEST_CASE( PagedArrayTest, ReleaseDestroysEveryElementOfEveryChunk )
  */
 SW_TEST_CASE( PagedArrayTest, ChunkIsCountedUnderTheCurrentMemoryTag )
 {
-    if constexpr ( kMemoryTagScopesEnabled == false )
-        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
     const MemoryProfiler* pProfiler = MemoryProfiler::getActive();
     if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
         SW_TEST_SKIP( "no tracking memory profiler in this host" );

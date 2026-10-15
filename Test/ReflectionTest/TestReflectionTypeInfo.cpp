@@ -428,6 +428,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, PropertyAnnotationMetadataCodegen )
  */
 SW_TEST_CASE( ReflectionMetadataTest, TypeMetadataQuery )
 {
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild );
 #if !defined( SW_SHIPPING )
     const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::MetaTestActor>();
     SW_ASSERT_NOT_NULL( pType );
@@ -444,8 +445,6 @@ SW_TEST_CASE( ReflectionMetadataTest, TypeMetadataQuery )
     const sw::string* pPriority = pType->findCustomMeta( sw::hashed_string( "Priority" ) );
     SW_ASSERT_NOT_NULL( pPriority );
     SW_EXPECT_TRUE( *pPriority == "10" );
-#else
-    SW_TEST_SKIP( "Metadata is omitted in shipping builds" );
 #endif
 }
 
@@ -454,6 +453,7 @@ SW_TEST_CASE( ReflectionMetadataTest, TypeMetadataQuery )
  */
 SW_TEST_CASE( ReflectionMetadataTest, PropertyMetadataQuery )
 {
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild );
 #if !defined( SW_SHIPPING )
     const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::MetaTestActor>();
     SW_ASSERT_NOT_NULL( pType );
@@ -479,8 +479,6 @@ SW_TEST_CASE( ReflectionMetadataTest, PropertyMetadataQuery )
     SW_ASSERT_NOT_NULL( pArmor );
     SW_EXPECT_TRUE( pArmor->_metadata._bTransient == SW_FALSE );
     SW_EXPECT_TRUE( pArmor->_metadata._bHideInInspector == SW_FALSE );
-#else
-    SW_TEST_SKIP( "Metadata is omitted in shipping builds" );
 #endif
 }
 
@@ -489,6 +487,7 @@ SW_TEST_CASE( ReflectionMetadataTest, PropertyMetadataQuery )
  */
 SW_TEST_CASE( ReflectionMetadataTest, FunctionMetadataQuery )
 {
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild );
 #if !defined( SW_SHIPPING )
     const sw::TypeInfo* pType = sw::engine::getSubsystem<sw::TypeRegistry>().findType<sw::MetaTestActor>();
     SW_ASSERT_NOT_NULL( pType );
@@ -505,8 +504,6 @@ SW_TEST_CASE( ReflectionMetadataTest, FunctionMetadataQuery )
     const sw::string* pActionType = pMethod->findCustomMeta( sw::hashed_string( "ActionType" ) );
     SW_ASSERT_NOT_NULL( pActionType );
     SW_EXPECT_TRUE( *pActionType == "Reset" );
-#else
-    SW_TEST_SKIP( "Metadata is omitted in shipping builds" );
 #endif
 }
 
@@ -515,6 +512,7 @@ SW_TEST_CASE( ReflectionMetadataTest, FunctionMetadataQuery )
  */
 SW_TEST_CASE( ReflectionMetadataTest, EnumMetadataQuery )
 {
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild );
 #if !defined( SW_SHIPPING )
     const sw::EnumInfo* pEnumInfo = sw::engine::getSubsystem<sw::TypeRegistry>().findEnum( sw::hashed_string( "TestMetaEnum" ) );
     SW_ASSERT_NOT_NULL( pEnumInfo );
@@ -526,8 +524,6 @@ SW_TEST_CASE( ReflectionMetadataTest, EnumMetadataQuery )
     const sw::string* pVersion = pEnumInfo->findCustomMeta( sw::hashed_string( "Version" ) );
     SW_ASSERT_NOT_NULL( pVersion );
     SW_EXPECT_TRUE( *pVersion == "2" );
-#else
-    SW_TEST_SKIP( "Metadata is omitted in shipping builds" );
 #endif
 }
 

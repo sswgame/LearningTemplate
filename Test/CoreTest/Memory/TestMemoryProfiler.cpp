@@ -163,8 +163,7 @@ SW_TEST_CASE( MemoryProfilerTest, TopCallStackQueryDoesNotDriftLiveCounters )
  */
 SW_TEST_CASE( MemoryProfilerTest, ScopedTagAttributesAllocationsAndRestores )
 {
-    if constexpr ( kMemoryTagScopesEnabled == false )
-        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
     MemoryProfiler* pProfiler = MemoryProfiler::getActive();
     if ( pProfiler == nullptr )
         SW_TEST_SKIP( "no active memory profiler in this host" );
@@ -400,8 +399,7 @@ SW_TEST_CASE( MemoryProfilerTest, FindsTagsByName )
  */
 SW_TEST_CASE( MemoryProfilerTest, TagsFollowTheBlockAcrossThreads )
 {
-    if constexpr ( kMemoryTagScopesEnabled == false )
-        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
     MemoryProfiler* pProfiler = MemoryProfiler::getActive();
     if ( pProfiler == nullptr )
         SW_TEST_SKIP( "no active memory profiler in this host" );

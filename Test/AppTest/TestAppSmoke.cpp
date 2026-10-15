@@ -469,8 +469,7 @@ SW_TEST_CASE( AppSmokeTest, EditorStartupSceneIsTheSceneThatOpens )
  */
 SW_TEST_CASE( AppSmokeTest, EditorMemoryIsAttributedByTag )
 {
-    if constexpr ( kMemoryTagScopesEnabled == false )
-        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
 
     const AppRunResult result = runApp( "-gv_profileFrames=5 -gv_memoryTracking=1 -EnableEditor -dx12", "[Memory]   " );
     SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
@@ -492,8 +491,7 @@ SW_TEST_CASE( AppSmokeTest, EditorMemoryIsAttributedByTag )
  */
 SW_TEST_CASE( AppSmokeTest, RuntimeMemoryIsAttributedByTag )
 {
-    if constexpr ( kMemoryTagScopesEnabled == false )
-        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
 
     const AppRunResult result = runApp( "-gv_profileFrames=5 -gv_memoryTracking=1 -dx12", "[Memory]   " );
     SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );

@@ -1,6 +1,8 @@
 # ==============================================================================
 # @file cmake/Engine/TestTargets.cmake
 # @brief 테스트 타깃 · CTest 등록 — 실행 파일(sw_addTestExecutable · sw_registerTestRun · 샤드 · 새니타이저 보정)과 스크립트(sw_registerScriptTest)
+#
+# 라벨 · 샤드 · 제한 시간 · 호스트 분리는 `Test/TestPolicy.json` 한 곳이 정한다(머리말에 공식). 폴더의 CMakeLists 는 무엇을 짓는지(소스 · 링크)만 적는다.
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -16,12 +18,57 @@ endif()
 #: 테스트 실행 파일 항목이 기다리는 ctest 픽스처 — 그 셋업 항목이 `all` 과 `AllTests` 를 짓는다(`sw_registerTestBuildFixture`).
 set(SW_TEST_BUILD_FIXTURE "SWTestBinaries")
 
+#: 테스트 등록 정책 — 실행 파일마다 영역 라벨 · 시간 · 샤드 · 호스트 분리, 그리고 쓸 수 있는 라벨 표.
+set(SW_TEST_POLICY_FILE "${CMAKE_SOURCE_DIR}/Test/TestPolicy.json")
+set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${SW_TEST_POLICY_FILE}")
+file(READ "${SW_TEST_POLICY_FILE}" SW_TEST_POLICY_JSON)
+
+# ------------------------------------------------------------------------------
+# sw_getTestPolicyValue — 정책 JSON 의 값 하나(경로 ARGN). 없으면 DEFAULT_VALUE.
+# ------------------------------------------------------------------------------
+function(sw_getTestPolicyValue OUT_VAR DEFAULT_VALUE)
+	string(JSON swValue ERROR_VARIABLE swError GET "${SW_TEST_POLICY_JSON}" ${ARGN})
+	if(swError)
+		set(swValue "${DEFAULT_VALUE}")
+	endif()
+	set(${OUT_VAR} "${swValue}" PARENT_SCOPE)
+endfunction()
+
+# ------------------------------------------------------------------------------
+# sw_assertTestLabels — 라벨마다 정책의 `labels` 표에 있는지 본다. 모르는 라벨은 `ctest -L` 로 고를 수 없는 철자 실수다.
+# ------------------------------------------------------------------------------
+function(sw_assertTestLabels CONTEXT)
+	foreach(swLabel IN LISTS ARGN)
+		string(JSON swType ERROR_VARIABLE swError TYPE "${SW_TEST_POLICY_JSON}" labels "${swLabel}")
+		if(swError)
+			message(FATAL_ERROR "${CONTEXT}: 라벨 '${swLabel}' 이 Test/TestPolicy.json 의 labels 표에 없다 — 표에 뜻과 함께 더하거나 철자를 고친다")
+		endif()
+	endforeach()
+endfunction()
+
+# ------------------------------------------------------------------------------
+# sw_computeTestTimeout — 제한 시간 = max(최소, 여유 배수 × max(조각 하나의 초, 가장 비싼 케이스의 초))
+# ------------------------------------------------------------------------------
+function(sw_computeTestTimeout OUT_VAR TOTAL_SECONDS SHARD_COUNT MAX_CASE_SECONDS)
+	sw_getTestPolicyValue(swHeadroom 4 timeoutHeadroom)
+	sw_getTestPolicyValue(swMinimum 60 minimumTimeoutSeconds)
+	math(EXPR swShardSeconds "(${TOTAL_SECONDS} + ${SHARD_COUNT} - 1) / ${SHARD_COUNT}")
+	if(MAX_CASE_SECONDS GREATER swShardSeconds)
+		set(swShardSeconds ${MAX_CASE_SECONDS})
+	endif()
+	math(EXPR swTimeout "${swShardSeconds} * ${swHeadroom}")
+	if(swTimeout LESS swMinimum)
+		set(swTimeout ${swMinimum})
+	endif()
+	set(${OUT_VAR} ${swTimeout} PARENT_SCOPE)
+endfunction()
+
 # ------------------------------------------------------------------------------
 # sw_registerTestBuildFixture — `ctest` 가 테스트 실행 파일 없이 지지 않게, 첫 항목으로 빌드를 부르는 셋업 항목 하나
 #
 # 실행 파일 테스트(`sw_registerTestRun`)은 모두 이 픽스처를 요구한다. ctest 는 `-L` · `-R` 로 거른 실행에도 요구된 셋업 항목을 스스로 더하고,
 # 셋업이 지면 그 픽스처를 요구한 항목은 돌지 않는다. 이미 지은 트리면 ninja 가 할 일이 없어 몇 초다. 린트 · 스크립트 항목은 요구하지 않는다
-# (`ctest -L lint` 는 빌드하지 않는다). 빌드 없이 돌리려면 `ctest -FS BuildTestBinaries`(셋업 항목을 건너뛴다).
+# (`ctest -L lint` 는 빌드하지 않는다). 빌드 없이 돌리려면 `ctest -FS SWTestBinaries`(셋업 항목을 건너뛴다).
 # 직렬인 이유: 빌드가 CPU 를 다 쓰는 동안 다른 항목이 돌면 제한 시간이 가짜로 진다.
 # ------------------------------------------------------------------------------
 function(sw_registerTestBuildFixture)
@@ -51,7 +98,7 @@ function(sw_applySanitizerTestProperties TEST_NAME)
 	endif()
 
 	# ASan 은 실행을 한 자릿수 배로 늦춘다. 평시 기준을 그대로 쓰면 테스트가 전부 타임아웃으로
-	# 떨어져 결함처럼 보인다.
+	# 떨어져 결함처럼 보인다. 테스트가 띄우는 자식 프로세스의 시한도 같은 배수다(`test::ProcessDeadlineWatch`).
 	get_test_property(${TEST_NAME} TIMEOUT swCurrentTimeout)
 	if(NOT swCurrentTimeout)
 		set(swCurrentTimeout 30)
@@ -66,7 +113,7 @@ function(sw_applySanitizerTestProperties TEST_NAME)
 	# 보고 자체도 이 구조에서는 영구 오탐이다: 플러그인 DLL 이 여럿이고(RHI_*, SWGame, GF_*,
 	# EditorModule) 같은 SDK·CRT 헤더를 포함하니 헤더가 박는 전역이 DLL 마다 생긴다 — 나온 것이
 	# `d3d11.h` 의 D3D11_DEFAULT 와 CRT 내부 _Avx2WmemEnabledWeakValue 다.
-	# 테스트별 추가 옵션. 지금 쓰는 곳은 SmokeTest 하나다 — 아래 report_globals 주석 참고.
+	# 실행 파일별 추가 옵션은 정책의 `asanOptions` 다(지금은 SmokeTest 의 report_globals=0 하나).
 	set(swAsanOptions "detect_odr_violation=0")
 	foreach(swAsanOption IN LISTS ARG_ASAN_OPTIONS)
 		string(APPEND swAsanOptions ":${swAsanOption}")
@@ -76,10 +123,8 @@ function(sw_applySanitizerTestProperties TEST_NAME)
 	# 것이 정상이다(파일 머리말 — 스스로 동기화하는 서드파티는 계측해 짓는다). CI 와 손으로 돌린 ctest 가 같은 옵션을 쓴다.
 	set(swTsanOptions "suppressions=${CMAKE_SOURCE_DIR}/cmake/Modules/Options/TsanSuppressions.txt:second_deadlock_stack=1:history_size=4")
 
-	set_tests_properties(${TEST_NAME} PROPERTIES
-		TIMEOUT ${swCurrentTimeout}
-		ENVIRONMENT "ASAN_OPTIONS=${swAsanOptions};TSAN_OPTIONS=${swTsanOptions}"
-	)
+	set_tests_properties(${TEST_NAME} PROPERTIES TIMEOUT ${swCurrentTimeout})
+	set_property(TEST ${TEST_NAME} APPEND PROPERTY ENVIRONMENT "ASAN_OPTIONS=${swAsanOptions}" "TSAN_OPTIONS=${swTsanOptions}")
 endfunction()
 
 # ------------------------------------------------------------------------------
@@ -88,6 +133,7 @@ endfunction()
 # 작업 폴더는 **구성과 무관하게 `Bin`** 이다. 테스트는 거기서 위로 올라가며 `Resource/` 를 찾고, 실행 파일만
 # `TestBin` 으로 뺀다(`Bin` 에 테스트와 DXC 가 섞이지 않게). 주의: 실행 파일이 나가는 폴더를 작업 폴더로 쓰면
 # `TestBin` 에서 돌게 되고, `AppTest` 는 거기서 `App.exe` 를, Dev 테스트는 `Engine.dll` 을 못 찾는다.
+# 항목 이름은 `SW_TEST_CTEST_NAME` 으로 넘어가 실패 요약의 재현 명령(`ctest -R`)에 찍힌다.
 # ------------------------------------------------------------------------------
 function(sw_registerTestRun TEST_NAME TARGET_NAME)
 	cmake_parse_arguments(ARG "RUN_SERIAL" "TIMEOUT" "ARGS;LABELS;ASAN_OPTIONS" ${ARGN})
@@ -98,6 +144,7 @@ function(sw_registerTestRun TEST_NAME TARGET_NAME)
 		LABELS "${ARG_LABELS}"
 		TIMEOUT ${ARG_TIMEOUT}
 		FIXTURES_REQUIRED ${SW_TEST_BUILD_FIXTURE}
+		ENVIRONMENT "SW_TEST_CTEST_NAME=${TEST_NAME}"
 	)
 	if(ARG_RUN_SERIAL)
 		set_tests_properties(${TEST_NAME} PROPERTIES RUN_SERIAL TRUE)
@@ -109,11 +156,11 @@ endfunction()
 
 # ------------------------------------------------------------------------------
 # sw_registerTestShards — 같은 실행을 SHARD_COUNT 개의 ctest 항목으로 가른다
-#   1 이면 TEST_NAME 하나(`sw_registerTestRun` 그대로), 넘으면 `<TEST_NAME>_Shard<k>` 마다 `--test_shard=<k-1>/<n>` 을 ARGS 뒤에 붙인다.
-#   나머지 인자(RUN_SERIAL · ARGS · LABELS · TIMEOUT · ASAN_OPTIONS)는 `sw_registerTestRun` 에 그대로 넘긴다.
+#   1 이면 TEST_NAME 하나(`sw_registerTestRun` 그대로), 넘으면 `<TEST_NAME>_Shard<k>` 마다 `--test_shard=<k-1>/<n>` 과 비용표(COSTS → `--test_costs=`)를
+#   ARGS 뒤에 붙인다. 나머지 인자(RUN_SERIAL · ARGS · LABELS · TIMEOUT · ASAN_OPTIONS)는 `sw_registerTestRun` 에 그대로 넘긴다.
 # ------------------------------------------------------------------------------
 function(sw_registerTestShards TEST_NAME TARGET_NAME SHARD_COUNT)
-	cmake_parse_arguments(ARG "RUN_SERIAL" "TIMEOUT" "ARGS;LABELS;ASAN_OPTIONS" ${ARGN})
+	cmake_parse_arguments(ARG "RUN_SERIAL" "TIMEOUT;COSTS" "ARGS;LABELS;ASAN_OPTIONS" ${ARGN})
 	set(runSerial "")
 	if(ARG_RUN_SERIAL)
 		set(runSerial RUN_SERIAL)
@@ -130,6 +177,9 @@ function(sw_registerTestShards TEST_NAME TARGET_NAME SHARD_COUNT)
 			math(EXPR shardNumber "${shardIndex} + 1")
 			set(shardName ${TEST_NAME}_Shard${shardNumber})
 			list(APPEND shardArgs --test_shard=${shardIndex}/${SHARD_COUNT})
+			if(ARG_COSTS)
+				list(APPEND shardArgs "--test_costs=${ARG_COSTS}")
+			endif()
 		endif()
 		sw_registerTestRun(${shardName} ${TARGET_NAME} ${runSerial}
 			ARGS ${shardArgs} LABELS "${ARG_LABELS}" TIMEOUT ${ARG_TIMEOUT} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
@@ -137,36 +187,119 @@ function(sw_registerTestShards TEST_NAME TARGET_NAME SHARD_COUNT)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# sw_addTestExecutable — 테스트 실행 파일 타겟을 만들고 공통 PCH · 로그 태그 · ctest 등록을 한다
+# sw_registerTestPolicy — 정책 JSON 의 한 줄(TARGET_NAME)대로 ctest 항목을 등록한다
 #
-#   SOURCES       테스트 소스. 비우면 그 폴더의 소스를 재귀로 훑는다(테스트 폴더는 목록을 적지 않는 것이 기본이다).
-#   EXTRA_SOURCES 폴더 소스에 더할 소스 — 테스트가 같이 컴파일하는 엔진 밖 소스(에디터 · App 은 링크할 라이브러리가 없다).
-#   HOST_SPLIT   호스트 스위트(`SW_TEST_REQUIRES_HOST`)가 있는 실행 파일. ctest 항목을 둘로 가른다 —
-#                 `<타깃>_NoGPU`(`--host_suites=exclude`, 라벨 `nogpu`, CI 가 도는 집합)와
-#                 `<타깃>_HostOnly`(`--host_suites=only`, 라벨 `hostgpu`, 직렬). 어느 스위트가 호스트인지는
-#                 **코드의 선언이 정한다** — 여기에 스위트 이름을 적지 않는다. 갈라진 두 항목 말고 전체 실행을
-#                 하나 더 등록하지 말 것(라벨 없는 `ctest` 가 같은 테스트를 두 번 돈다).
-#   HOST_TIMEOUT  `_HostOnly` 의 제한 시간(기본: TIMEOUT).
-#   SHARDS        ctest 항목을 이 수만큼 `<타깃>_Shard<k>` 로 갈라 병렬로 돌린다(`--test_shard=<k-1>/<n>`). 케이스는 **스위트 안에서 번갈아**
-#                 나뉘므로 느린 스위트 하나가 끝을 정하는 실행 파일에 쓴다(ReflectionTest — 파서를 차례로 띄우는 스위트가 시간의 거의 전부).
-#                 스위트 이름을 적지 않는다. HOST_SPLIT 과 함께 쓰면 `_NoGPU` 를 `<타깃>_NoGPU_Shard<k>` 로 가른다
-#                 (`--host_suites=exclude --test_shard=…`, CI 가 병렬로 도는 쪽).
-#   HOST_SHARDS   HOST_SPLIT 의 `_HostOnly` 를 이 수만큼 `<타깃>_HostOnly_Shard<k>` 로 가른다(기본 1 — 하나). 조각도 **직렬**이다
-#                 (GPU 를 잡는다) — 합계 시간은 같고, 조각마다 제한 시간(HOST_TIMEOUT)을 따로 받는다. 조각마다 호스트 케이스가 하나는
-#                 있어야 한다(`--host_suites=only` 가 아무것도 고르지 않으면 진다).
-#   RUN_SERIAL    다른 테스트와 겹치면 안 되는 실행 파일(같은 파일 · 같은 장치를 쓰는 경우). **지금 쓰는 타겟은 없다.**
-#                 쓸 때는 그 이유를 옆에 적는다.
+#   라벨: `unit;<area>` 에 갈래마다 `nogpu`(CI 가 도는 집합) · `hostgpu`(호스트 스위트, 직렬) · `load`(부하 스위트, 직렬)를 붙인다.
+#   샤드: `shards` 가 없으면 ceil(seconds / targetShardSeconds). 비용표(`caseCosts`)는 샤드를 비용으로 고르게 나누는 데 넘긴다.
+#   이름: 갈래가 없으면 `<타깃>`(샤드면 `_Shard<k>`), `hostSplit` 이면 `<타깃>_NoGPU` · `<타깃>_HostOnly`, `loadSeconds` 가 있으면 `<타깃>_Load`.
+#         갈라진 항목 말고 전체 실행을 하나 더 등록하지 않는다(라벨 없는 `ctest` 가 같은 테스트를 두 번 돈다).
 # ------------------------------------------------------------------------------
-function(sw_addTestExecutable TARGET_NAME)
-	cmake_parse_arguments(ARG "RUN_SERIAL;HOST_SPLIT" "TIMEOUT;HOST_TIMEOUT;SHARDS;HOST_SHARDS" "SOURCES;EXTRA_SOURCES;LIBS;LABELS;DEFINITIONS;ASAN_OPTIONS" ${ARGN})
-	if(ARG_HOST_SHARDS AND NOT ARG_HOST_SPLIT)
-		message(FATAL_ERROR "sw_addTestExecutable(${TARGET_NAME}): HOST_SHARDS 는 HOST_SPLIT 의 `_HostOnly` 를 가른다 — HOST_SPLIT 없이 쓰지 않는다")
-	endif()
-	if(NOT ARG_SOURCES)
-		file(GLOB_RECURSE ARG_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+function(sw_registerTestPolicy TARGET_NAME)
+	string(JSON swRowType ERROR_VARIABLE swError TYPE "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME})
+	if(swError)
+		message(FATAL_ERROR "sw_addTestExecutable(${TARGET_NAME}): Test/TestPolicy.json 의 executables 에 줄이 없다 — 영역(area)과 한 실행 시간(seconds)을 더한다")
 	endif()
 
-	add_executable(${TARGET_NAME} ${ARG_SOURCES} ${ARG_EXTRA_SOURCES})
+	sw_getTestPolicyValue(swArea "" executables ${TARGET_NAME} area)
+	sw_getTestPolicyValue(swSeconds 30 executables ${TARGET_NAME} seconds)
+	sw_getTestPolicyValue(swShards "" executables ${TARGET_NAME} shards)
+	sw_getTestPolicyValue(swHostSplit OFF executables ${TARGET_NAME} hostSplit)
+	sw_getTestPolicyValue(swHostSeconds ${swSeconds} executables ${TARGET_NAME} hostSeconds)
+	sw_getTestPolicyValue(swHostShards 1 executables ${TARGET_NAME} hostShards)
+	sw_getTestPolicyValue(swLoadSeconds "" executables ${TARGET_NAME} loadSeconds)
+	sw_getTestPolicyValue(swTargetShardSeconds 30 targetShardSeconds)
+	sw_assertTestLabels("sw_addTestExecutable(${TARGET_NAME})" ${swArea})
+
+	set(swAsanOptions "")
+	string(JSON swAsanCount ERROR_VARIABLE swError LENGTH "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME} asanOptions)
+	if(NOT swError AND swAsanCount GREATER 0)
+		math(EXPR swLastAsan "${swAsanCount} - 1")
+		foreach(swIndex RANGE 0 ${swLastAsan})
+			string(JSON swOption GET "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME} asanOptions ${swIndex})
+			list(APPEND swAsanOptions "${swOption}")
+		endforeach()
+	endif()
+
+	set(swCosts "")
+	set(swMaxCaseSeconds 0)
+	string(JSON swCostCount ERROR_VARIABLE swError LENGTH "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME} caseCosts)
+	if(NOT swError AND swCostCount GREATER 0)
+		math(EXPR swLastCost "${swCostCount} - 1")
+		foreach(swIndex RANGE 0 ${swLastCost})
+			string(JSON swCaseName MEMBER "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME} caseCosts ${swIndex})
+			string(JSON swCaseSeconds GET "${SW_TEST_POLICY_JSON}" executables ${TARGET_NAME} caseCosts ${swCaseName})
+			if(swCosts)
+				string(APPEND swCosts ",")
+			endif()
+			string(APPEND swCosts "${swCaseName}=${swCaseSeconds}")
+			if(swCaseSeconds GREATER swMaxCaseSeconds)
+				set(swMaxCaseSeconds ${swCaseSeconds})
+			endif()
+		endforeach()
+	endif()
+
+	if(swShards STREQUAL "")
+		math(EXPR swShards "(${swSeconds} + ${swTargetShardSeconds} - 1) / ${swTargetShardSeconds}")
+	endif()
+	if(swShards LESS 1)
+		set(swShards 1)
+	endif()
+	sw_computeTestTimeout(swTimeout ${swSeconds} ${swShards} ${swMaxCaseSeconds})
+
+	set(swBaseLabels "unit;${swArea}")
+	if(NOT swHostSplit)
+		sw_registerTestShards(${TARGET_NAME} ${TARGET_NAME} ${swShards}
+			LABELS "${swBaseLabels};nogpu" TIMEOUT ${swTimeout} COSTS "${swCosts}" ASAN_OPTIONS ${swAsanOptions})
+	else()
+		sw_registerTestShards(${TARGET_NAME}_NoGPU ${TARGET_NAME} ${swShards}
+			ARGS --host_suites=exclude LABELS "${swBaseLabels};nogpu" TIMEOUT ${swTimeout} COSTS "${swCosts}" ASAN_OPTIONS ${swAsanOptions})
+		# 직렬인 이유: 창을 띄우고 GPU 를 잡는다. 다른 GPU 테스트와 겹치면 서로를 느리게 만들고, 드라이버에 따라
+		# 서로의 디바이스 생성을 막는다. 조각마다 호스트 케이스가 하나는 있어야 한다(`--host_suites=only` 가 아무것도 고르지 않으면 진다).
+		sw_computeTestTimeout(swHostTimeout ${swHostSeconds} ${swHostShards} 0)
+		sw_registerTestShards(${TARGET_NAME}_HostOnly ${TARGET_NAME} ${swHostShards} RUN_SERIAL
+			ARGS --host_suites=only LABELS "${swBaseLabels};hostgpu" TIMEOUT ${swHostTimeout} ASAN_OPTIONS ${swAsanOptions})
+	endif()
+
+	# 부하 · 시간 예산 검증(`SW_TEST_LOAD_SUITE`) — 혼자 돌아야 숫자가 뜻이 있어 직렬이고, 예산을 넘은 케이스가 진다.
+	if(NOT swLoadSeconds STREQUAL "")
+		sw_computeTestTimeout(swLoadTimeout ${swLoadSeconds} 1 0)
+		sw_registerTestRun(${TARGET_NAME}_Load ${TARGET_NAME} RUN_SERIAL
+			ARGS --host_suites=all --load_suites=only --enforce_budgets LABELS "${swBaseLabels};load" TIMEOUT ${swLoadTimeout} ASAN_OPTIONS ${swAsanOptions})
+	endif()
+endfunction()
+
+# ------------------------------------------------------------------------------
+# sw_addTestExecutable — 테스트 실행 파일 타겟을 만들고 공통 PCH · 로그 태그 · ctest 등록을 한다
+#
+#   소스는 **이 폴더를 재귀로 훑는다**(목록이 없다 — 케이스 · 파일을 더해도 CMake 를 고치지 않는다). 폴더 규칙:
+#     - `Dev/` 아래 파일은 개발 구성에서만 짓는다(Shipping 에 없는 기능의 테스트 — 핫 리로드 · 모듈 컴파일러).
+#     - 꺼진 키트의 헤더를 include 하는 파일은 빠진다(`sw_excludeSourcesOfInactiveKits`).
+#   EXTRA_SOURCES 폴더 소스에 더할 소스 — 테스트가 같이 컴파일하는 엔진 밖 소스(에디터 · App 은 링크할 라이브러리가 없다).
+#   EXCLUDE       이 구성에서 짓지 않을 테스트 소스의 정규식(그 도구 타깃이 없는 구성 — "짓지 않는 소스" 로 적힌다).
+#   LIBS · DEFINITIONS  링크할 것 · 정의.
+#   라벨 · 샤드 · 제한 시간 · 호스트 분리 · ASan 옵션은 `Test/TestPolicy.json` 의 같은 이름 줄이 정한다(`sw_registerTestPolicy`).
+#   폴더 이름은 실행 파일 이름과 같다(`Test/<이름>/`).
+# ------------------------------------------------------------------------------
+function(sw_addTestExecutable TARGET_NAME)
+	cmake_parse_arguments(ARG "" "" "EXTRA_SOURCES;EXCLUDE;LIBS;DEFINITIONS" ${ARGN})
+	if(ARG_UNPARSED_ARGUMENTS)
+		message(FATAL_ERROR "sw_addTestExecutable(${TARGET_NAME}): 모르는 인자 ${ARG_UNPARSED_ARGUMENTS} — 라벨 · 샤드 · 시간은 Test/TestPolicy.json 에 둔다")
+	endif()
+	get_filename_component(swFolderName "${CMAKE_CURRENT_SOURCE_DIR}" NAME)
+	if(NOT swFolderName STREQUAL TARGET_NAME)
+		message(FATAL_ERROR "sw_addTestExecutable(${TARGET_NAME}): 폴더 이름(${swFolderName})과 실행 파일 이름이 같아야 한다")
+	endif()
+
+	file(GLOB_RECURSE swSources CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+	sw_excludeSourcesOfInactiveKits(swSources)
+	if(SW_SHIPPING_BUILD)
+		sw_excludeUnbuiltSources(swSources "/${TARGET_NAME}/Dev/")
+	endif()
+	if(ARG_EXCLUDE)
+		sw_excludeUnbuiltSources(swSources ${ARG_EXCLUDE})
+	endif()
+
+	add_executable(${TARGET_NAME} ${swSources} ${ARG_EXTRA_SOURCES})
 	target_sources(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Test/TestFramework/main.cpp" "${CMAKE_SOURCE_DIR}/Test/TestFramework/Harness/TestHostRuntime.cpp")
 	sw_embedProcessManifest(${TARGET_NAME})
 	set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "Test")
@@ -230,48 +363,7 @@ function(sw_addTestExecutable TARGET_NAME)
 	if(NOT BUILD_TESTING)
 		return()
 	endif()
-
-	set(timeout 30)
-	if(ARG_TIMEOUT)
-		set(timeout ${ARG_TIMEOUT})
-	endif()
-
-	set(labels "unit")
-	if(ARG_LABELS)
-		set(labels "${ARG_LABELS}")
-	endif()
-
-	set(runSerial "")
-	if(ARG_RUN_SERIAL)
-		set(runSerial RUN_SERIAL)
-	endif()
-
-	set(shardCount 1)
-	if(ARG_SHARDS AND ARG_SHARDS GREATER 1)
-		set(shardCount ${ARG_SHARDS})
-	endif()
-
-	if(NOT ARG_HOST_SPLIT)
-		sw_registerTestShards(${TARGET_NAME} ${TARGET_NAME} ${shardCount} ${runSerial}
-			LABELS "${labels}" TIMEOUT ${timeout} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
-		return()
-	endif()
-
-	set(hostTimeout ${timeout})
-	if(ARG_HOST_TIMEOUT)
-		set(hostTimeout ${ARG_HOST_TIMEOUT})
-	endif()
-
-	sw_registerTestShards(${TARGET_NAME}_NoGPU ${TARGET_NAME} ${shardCount} ${runSerial}
-		ARGS --host_suites=exclude LABELS "${labels};nogpu" TIMEOUT ${timeout} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
-	# 직렬인 이유: 창을 띄우고 GPU 를 잡는다. 다른 GPU 테스트와 겹치면 서로를 느리게 만들고, 드라이버에 따라
-	# 서로의 디바이스 생성을 막는다.
-	set(hostShardCount 1)
-	if(ARG_HOST_SHARDS AND ARG_HOST_SHARDS GREATER 1)
-		set(hostShardCount ${ARG_HOST_SHARDS})
-	endif()
-	sw_registerTestShards(${TARGET_NAME}_HostOnly ${TARGET_NAME} ${hostShardCount} RUN_SERIAL
-		ARGS --host_suites=only LABELS "${labels};hostgpu" TIMEOUT ${hostTimeout} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
+	sw_registerTestPolicy(${TARGET_NAME})
 endfunction()
 
 # ------------------------------------------------------------------------------
@@ -279,7 +371,7 @@ endfunction()
 #
 #   SCRIPT            저장소 기준 .py 경로
 #   ARGS              스크립트 인자
-#   LABELS · TIMEOUT  실행 파일 테스트와 같은 철자
+#   LABELS · TIMEOUT  실행 파일 테스트와 같은 철자(라벨은 `Test/TestPolicy.json` 의 labels 표에 있어야 한다)
 #   WORKING_DIRECTORY 기본은 저장소 루트(App 을 띄우는 QA 는 `Bin`)
 #   RUN_SERIAL · SKIP_RETURN_CODE
 # ------------------------------------------------------------------------------
@@ -288,6 +380,7 @@ function(sw_registerScriptTest TEST_NAME)
 	if(NOT ARG_SCRIPT OR NOT ARG_TIMEOUT)
 		message(FATAL_ERROR "sw_registerScriptTest(${TEST_NAME}): SCRIPT 와 TIMEOUT 은 꼭 준다")
 	endif()
+	sw_assertTestLabels("sw_registerScriptTest(${TEST_NAME})" ${ARG_LABELS})
 	if(NOT ARG_WORKING_DIRECTORY)
 		set(ARG_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 	endif()

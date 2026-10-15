@@ -737,8 +737,7 @@ namespace sw::editor
      */
     SW_TEST_CASE( EditorTexturePipelineTest, ImageDecodeBufferIsTagged )
     {
-        if constexpr ( kMemoryTagScopesEnabled == false )
-            SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+        SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
         const MemoryProfiler* pProfiler = MemoryProfiler::getActive();
         if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
             SW_TEST_SKIP( "no tracking memory profiler in this host" );

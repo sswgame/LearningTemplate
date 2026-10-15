@@ -460,6 +460,7 @@ SW_TEST_CASE( ReflectionParserTest, RPCMethodMetadataAndInvokerExecution )
  */
 SW_TEST_CASE( ReflectionParserTest, MultiBitBitfieldCompilationErrorDiagnosis )
 {
+    SW_TEST_REQUIRES_FEATURE( DebugLog );
 #if defined( SW_DEBUG )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
@@ -484,8 +485,6 @@ SW_TEST_CASE( ReflectionParserTest, MultiBitBitfieldCompilationErrorDiagnosis )
     const bool bFoundErrorDiagnosis = ( run._log.find( "bit width 2" ) != sw::string::npos ||
                                         run._log.find( "Only 1-bit bitfield boolean flags" ) != sw::string::npos );
     SW_EXPECT_TRUE_MSG( bFoundErrorDiagnosis, run._log.c_str() );
-#else
-    SW_TEST_SKIP( "ReflectionParser diagnostic logging is compiled out in Shipping builds" );
 #endif
 }
 
@@ -497,6 +496,7 @@ SW_TEST_CASE( ReflectionParserTest, MultiBitBitfieldCompilationErrorDiagnosis )
  */
 SW_TEST_CASE( ReflectionParserTest, UnknownAnnotationTokenStopsTheBuild )
 {
+    SW_TEST_REQUIRES_FEATURE( DebugLog );
 #if defined( SW_DEBUG )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
@@ -534,8 +534,6 @@ SW_TEST_CASE( ReflectionParserTest, UnknownAnnotationTokenStopsTheBuild )
     const bool bNamesTheBadNumber = run._log.find( "Min = 0.5f  (value is not a number)" ) != sw::string::npos &&
                                     run._log.find( "sw::BadNumberSampleActor::_ratio" ) != sw::string::npos;
     SW_EXPECT_TRUE_MSG( bNamesTheBadNumber, run._log.c_str() );
-#else
-    SW_TEST_SKIP( "ReflectionParser diagnostic logging is compiled out in Shipping builds" );
 #endif
 }
 
@@ -545,6 +543,7 @@ SW_TEST_CASE( ReflectionParserTest, UnknownAnnotationTokenStopsTheBuild )
  */
 SW_TEST_CASE( ReflectionParserTest, AliasHasOneSpelling )
 {
+    SW_TEST_REQUIRES_FEATURE( DebugLog );
 #if defined( SW_DEBUG )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
@@ -572,8 +571,6 @@ SW_TEST_CASE( ReflectionParserTest, AliasHasOneSpelling )
     SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
     SW_EXPECT_TRUE_MSG( run._log.find( "unknown token 'PreviousName" ) != sw::string::npos, run._log.c_str() );
     SW_EXPECT_TRUE_MSG( run._log.find( "unknown token 'PreviousNames" ) != sw::string::npos, run._log.c_str() );
-#else
-    SW_TEST_SKIP( "ReflectionParser diagnostic logging is compiled out in Shipping builds" );
 #endif
 }
 
@@ -584,6 +581,7 @@ SW_TEST_CASE( ReflectionParserTest, AliasHasOneSpelling )
  */
 SW_TEST_CASE( ReflectionParserTest, EveryAnnotationErrorOfATypeIsReported )
 {
+    SW_TEST_REQUIRES_FEATURE( DebugLog );
 #if defined( SW_DEBUG )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
@@ -612,8 +610,6 @@ SW_TEST_CASE( ReflectionParserTest, EveryAnnotationErrorOfATypeIsReported )
     SW_EXPECT_TRUE_MSG( run._log.find( "bit width 2" ) != sw::string::npos, run._log.c_str() );
     SW_EXPECT_TRUE_MSG( run._log.find( "sw::ManyErrorsSampleActor::_third" ) != sw::string::npos, run._log.c_str() );
     SW_EXPECT_TRUE_MSG( run._listGeneratedCpp.empty() || run._listGeneratedCpp[0].empty(), "an errored header must not emit code" );
-#else
-    SW_TEST_SKIP( "ReflectionParser diagnostic logging is compiled out in Shipping builds" );
 #endif
 }
 
@@ -809,6 +805,7 @@ SW_TEST_CASE( ReflectionParserTest, AbstractComponentGetsNoFactory )
  */
 SW_TEST_CASE( ReflectionParserTest, ReflectBodyWithoutReflectStopsTheBuild )
 {
+    SW_TEST_REQUIRES_FEATURE( DebugLog );
 #if defined( SW_DEBUG )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
@@ -829,8 +826,6 @@ SW_TEST_CASE( ReflectionParserTest, ReflectBodyWithoutReflectStopsTheBuild )
     SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
     const bool bNamesTheType = run._log.find( "REFLECT_BODY() is used in class/struct 'sw::OrphanBodySampleActor'" ) != sw::string::npos;
     SW_EXPECT_TRUE_MSG( bNamesTheType, run._log.c_str() );
-#else
-    SW_TEST_SKIP( "ReflectionParser diagnostic logging is compiled out in Shipping builds" );
 #endif
 }
 
@@ -844,6 +839,7 @@ SW_TEST_CASE( ReflectionParserTest, ReflectBodyWithoutReflectStopsTheBuild )
  */
 SW_TEST_CASE( ReflectionParserTest, OneBrokenHeaderDoesNotBlockTheOthers )
 {
+    SW_TEST_REQUIRES_FEATURE( DebugLog );
 #if defined( SW_DEBUG )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
@@ -869,8 +865,6 @@ SW_TEST_CASE( ReflectionParserTest, OneBrokenHeaderDoesNotBlockTheOthers )
     SW_EXPECT_TRUE_MSG( syntaxRun._log.find( "Parse failed:" ) != sw::string::npos &&
                             syntaxRun._log.find( "BatchBrokenSample.h" ) != sw::string::npos,
                         syntaxRun._log.c_str() );
-#else
-    SW_TEST_SKIP( "ReflectionParser diagnostic logging is compiled out in Shipping builds" );
 #endif
 }
 
