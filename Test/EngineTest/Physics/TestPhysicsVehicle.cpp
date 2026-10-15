@@ -14,8 +14,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/IPhysicsScene.h"
 
+#include "TestFramework/Harness/TestTick.h"
 #include "TestFramework/TestFramework.h"
-#include "TestFramework/TestTick.h"
 
 #include <string>
 

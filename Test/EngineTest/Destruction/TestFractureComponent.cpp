@@ -18,8 +18,8 @@
 
 #include "EngineTest/DestructionTestUtil.h"
 
+#include "TestFramework/Harness/TestTick.h"
 #include "TestFramework/TestFramework.h"
-#include "TestFramework/TestTick.h"
 
 // FractureComponentTest — 온전할 때는 메시 하나 · 강체 하나, 첫 파괴에 조각(정적 · 동적 바디 + 스킨드 메시 둘)으로 바뀌고, 떨어진 것은 떨어지고,
 // 쉬면 바디를 빼고 정적 그림으로 구워지며, 같은 사건이면 다른 매니저에서도 같은 상태다.

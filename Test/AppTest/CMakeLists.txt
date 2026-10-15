@@ -18,21 +18,10 @@ endif()
 #
 # 테스트 소스는 이 폴더를 훑는다(`sw_addTestExecutable`). App 소스는 하나도 끌어오지 않는다 — 끌어오면 그 의존성이 조용히 따라온다.
 sw_addTestExecutable(AppTest
-	HOST_SPLIT
+	# `AppTest_NoGPU` 는 실기동 스모크(`AppSmokeTest`)와 시나리오(`AppScenarioTest` · `AppUITest`)를 빼고, `AppTest_HostOnly` 는 그것만 돈다
+	# (직렬 — 창을 띄우고 GPU 를 잡는다). 갈래 · 조각 · 시간은 Test/TestPolicy.json.
 	LIBS
 		Engine
-	LABELS
-		# `nogpu` · `hostgpu` 는 `HOST_SPLIT` 이 붙인다 — `AppTest_NoGPU` 는 실기동 스모크(`AppSmokeTest`)를 빼고,
-		# `AppTest_HostOnly` 는 그것과 자동화 시나리오(`AppScenarioTest`)만 돈다(직렬 — 창을 띄우고 GPU 를 잡는다).
-		"unit;app"
-	TIMEOUT
-		60
-	# 실기동 스모크 + 자동화 시나리오(AppScenarioTest — 시나리오 수 × 백엔드 넷 × 시나리오마다 수 초). 에디터 시나리오만 백엔드마다 4~5 분이라
-	# 한 실행(약 23 분)이 시한을 넘었다 — 조각 셋으로 나눈다(에디터 케이스는 백엔드마다 하나라 조각에 고루 갈린다).
-	HOST_TIMEOUT
-		1200
-	HOST_SHARDS
-		3
 )
 
 # 스모크는 **빌드된 App 을 띄운다** — 타깃이 옆에 서 있어야 한다.

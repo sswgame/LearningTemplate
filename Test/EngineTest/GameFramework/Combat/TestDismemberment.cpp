@@ -26,8 +26,8 @@
 #include "GameFramework/Base/Actor/Combat/Dismemberment/Dismemberment.h"
 #include "GameFramework/Base/Actor/Combat/Dismemberment/DismembermentComponent.h"
 
+#include "TestFramework/Harness/TestTick.h"
 #include "TestFramework/TestFramework.h"
-#include "TestFramework/TestTick.h"
 
 using namespace sw;
 

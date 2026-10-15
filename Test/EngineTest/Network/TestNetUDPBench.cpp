@@ -11,7 +11,7 @@
 #include "Core/Network/Transport/UDPNetTransport.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "TestFramework/TestBench.h"
+#include "TestFramework/Harness/TestBench.h"
 #include "TestFramework/TestFramework.h"
 
 #include <algorithm>

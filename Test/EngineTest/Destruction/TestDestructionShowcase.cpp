@@ -12,8 +12,8 @@
 
 #include "GameFramework/Base/Gameplay/Gimmick/Genre/ShooterGimmicks.h"
 
+#include "TestFramework/Harness/TestTick.h"
 #include "TestFramework/TestFramework.h"
-#include "TestFramework/TestTick.h"
 
 /**
  * @brief [DestructionShowcaseTest] 쇼케이스 씬 — 시작 1 초는 모두 온전, 3 초 뒤 두 드럼통이 터지고 벽(200 조각) · 상자가 조각으로 바뀌어 있다

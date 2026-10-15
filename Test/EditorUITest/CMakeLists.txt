@@ -27,10 +27,6 @@ sw_addTestExecutable(EditorUITest
 	LIBS
 		Engine
 		imgui
-	LABELS
-		"unit;editor;nogpu"
-	TIMEOUT
-		30
 )
 
 target_include_directories(EditorUITest PRIVATE "${CMAKE_SOURCE_DIR}/Source")

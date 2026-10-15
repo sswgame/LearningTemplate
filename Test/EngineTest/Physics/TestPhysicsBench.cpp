@@ -10,7 +10,7 @@
 #include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Physics/PhysicsSystem.h"
 
-#include "TestFramework/TestBench.h"
+#include "TestFramework/Harness/TestBench.h"
 #include "TestFramework/TestFramework.h"
 
 SW_LOG_CALLER( "PhysicsBench" );

@@ -5,8 +5,8 @@
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "TestFramework/Harness/TestStreamEndpointPair.h"
 #include "TestFramework/TestFramework.h"
-#include "TestFramework/TestStreamEndpointPair.h"
 
 // 스트림 엔드포인트 — 조각나 들어와도 메시지 경계 · 순서, 깨진 프레임은 ProtocolError 로 끊기, 받은 줄 상한에서 읽기 멈춤 → pump 뒤 다시, 핑 RTT, 연결 실패도 닫힘 한 번
 

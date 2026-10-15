@@ -50,8 +50,7 @@ namespace
  */
 SW_TEST_CASE( MemoryTagTest, HarnessStartupIsAttributed )
 {
-    if constexpr ( sw::kMemoryTagScopesEnabled == false )
-        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
     const sw::MemoryProfiler* pProfiler = sw::MemoryProfiler::getActive();
     if ( pProfiler == nullptr )
         SW_TEST_SKIP( "no active memory profiler in this host" );
@@ -91,8 +90,7 @@ SW_TEST_CASE( MemoryTagTest, DiagnosticBootstrapEnablesPlatformLeakChecks )
  */
 SW_TEST_CASE( MemoryTagTest, AsyncSceneLoadOnWorkerIsTaggedScene )
 {
-    if constexpr ( sw::kMemoryTagScopesEnabled == false )
-        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
     const sw::MemoryProfiler* pProfiler = sw::MemoryProfiler::getActive();
     if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
         SW_TEST_SKIP( "no tracking memory profiler in this host" );
@@ -140,8 +138,7 @@ SW_TEST_CASE( MemoryTagTest, PrimitiveMeshIsTaggedMesh )
 #if defined( SW_ENABLE_STL_CONTAINER )
     SW_TEST_SKIP( "mesh vertex and index storage uses std::allocator in the STL container build, which the memory profiler does not see" );
 #else
-    if constexpr ( sw::kMemoryTagScopesEnabled == false )
-        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
     const sw::MemoryProfiler* pProfiler = sw::MemoryProfiler::getActive();
     if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
         SW_TEST_SKIP( "no tracking memory profiler in this host" );
@@ -167,8 +164,7 @@ SW_TEST_CASE( MemoryTagTest, PrimitiveMeshIsTaggedMesh )
  */
 SW_TEST_CASE( MemoryTagTest, SceneTransformPageIsTagged )
 {
-    if constexpr ( sw::kMemoryTagScopesEnabled == false )
-        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
     const sw::MemoryProfiler* pProfiler = sw::MemoryProfiler::getActive();
     if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
         SW_TEST_SKIP( "no tracking memory profiler in this host" );
@@ -204,8 +200,7 @@ SW_TEST_CASE( MemoryTagTest, SceneTransformPageIsTagged )
  */
 SW_TEST_CASE( MemoryTagTest, ClearedPathCacheReturnsItsTable )
 {
-    if constexpr ( sw::kMemoryTagScopesEnabled == false )
-        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
 #if defined( SW_ENABLE_STL_CONTAINER )
     SW_TEST_SKIP( "containers use std::allocator in this configuration, so sw memory tags do not see them" );
 #endif
@@ -232,8 +227,7 @@ SW_TEST_CASE( MemoryTagTest, ClearedPathCacheReturnsItsTable )
  */
 SW_TEST_CASE( MemoryTagTest, PrimitiveDirtyFlagsAreTagged )
 {
-    if constexpr ( sw::kMemoryTagScopesEnabled == false )
-        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
 #if defined( SW_ENABLE_STL_CONTAINER )
     SW_TEST_SKIP( "containers use std::allocator in this configuration, so sw memory tags do not see them" );
 #endif
@@ -264,8 +258,7 @@ SW_TEST_CASE( MemoryTagTest, PrimitiveDirtyFlagsAreTagged )
  */
 SW_TEST_CASE( MemoryTagTest, XMLDocumentParseIsTagged )
 {
-    if constexpr ( sw::kMemoryTagScopesEnabled == false )
-        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
     const sw::MemoryProfiler* pProfiler = sw::MemoryProfiler::getActive();
     if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
         SW_TEST_SKIP( "no tracking memory profiler in this host" );
@@ -295,8 +288,7 @@ SW_TEST_CASE( MemoryTagTest, XMLDocumentParseIsTagged )
  */
 SW_TEST_CASE( MemoryTagTest, JSONDocumentParseIsTagged )
 {
-    if constexpr ( sw::kMemoryTagScopesEnabled == false )
-        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
     const sw::MemoryProfiler* pProfiler = sw::MemoryProfiler::getActive();
     if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
         SW_TEST_SKIP( "no tracking memory profiler in this host" );
@@ -329,8 +321,7 @@ SW_TEST_CASE( MemoryTagTest, JSONDocumentParseIsTagged )
  */
 SW_TEST_CASE( MemoryTagTest, CompressionWorkspacesAreTagged )
 {
-    if constexpr ( sw::kMemoryTagScopesEnabled == false )
-        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
     const sw::MemoryProfiler* pProfiler = sw::MemoryProfiler::getActive();
     if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
         SW_TEST_SKIP( "no tracking memory profiler in this host" );

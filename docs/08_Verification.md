@@ -149,7 +149,7 @@ cd build/Ninja-Debug/Bin
 - **워커가 쓴 데이터를 다른 코어가 읽으면** 캐시 이동이 항목당 일(~40 ns)보다 비싸다. 쓰는 스레드와 읽는 스레드를 같게 둔다.
 - **워커는 공유 카운터 · 비트필드에 쓰지 않는다.** `fetch_add` 한 줄이 병렬 플러시를 직렬보다 느리게 했다. "하나라도" 플래그는 프레임에 한 번 쓰고 읽기만 한다.
 - **도구**: `RunDuplicateCode.py --filter <dir> --no-headers`(머리말에 "합칠 대상 아님" 목록), `RunEngineLayerGraph.py`, `Scripts/dev/RunBackendSmoke.py`(4 백엔드 평균 RGB),
-  Release 로 읽는 `TaskManagerBenchTest` · `GameObjectBenchTest` · `ContainerBenchTest` · `NetReplicationBenchTest`(클라이언트 16 × 엔티티 1000), `Test/TestFramework/TestBench.h`.
+  Release 로 읽는 `TaskManagerBenchTest` · `GameObjectBenchTest` · `ContainerBenchTest` · `NetReplicationBenchTest`(클라이언트 16 × 엔티티 1000), `Test/TestFramework/Harness/TestBench.h`.
 - **측정 라운드마다 매니저 · 풀 · 레지스트리를 새로 만듭니다.** best-of-N 반복은 자라는 컨테이너가 만든 오염을 거르지 못합니다. 같은 값이 연달아 세 번 나올 때까지 수치를 믿지 않습니다.
 - **한 번만 일어나는 이벤트(백엔드 교체 프레임의 최대값 등)는 3 회 이상 되풀이해 이상치를 거릅니다.** 프레임 1 에만 일어나는 일(업로드 · PSO 생성)은 워밍업(`FrameProfileSession::kWarmupFrames`) 뒤의 측정 창 밖입니다.
   측정 창 안에서 전량 재생성을 일으키려면 `-gv_rhiSwapAtFrame` 을 워밍업보다 뒤로 줍니다. 히치 최적화는 평균이 아니라 최악 프레임으로 판정합니다.

@@ -75,15 +75,8 @@ namespace
      */
     AppRunResult runApp( string_view arguments, const utf8* pMarker = nullptr )
     {
-        AppRunResult result{};
-
-        Process process;
-        if ( test::AppTestUtil::launchApp( process, arguments ) == false )
-            return result;
-        result._bLaunched = true;
-
-        string line;
-        while ( process.readOutputLine( line ) )
+        AppRunResult                 result{};
+        const test::ProcessRunResult run = test::AppTestUtil::runApp( arguments, test::AppTestUtil::kAppRunTimeoutSeconds, [&result, pMarker]( Process&, const string& line )
         {
             ++result._lineCount;
             if ( line.find( "MissingComponent" ) != string::npos )
@@ -103,14 +96,14 @@ namespace
             }
 
             if ( line.find( "[Error]" ) == string::npos )
-                continue;
+                return;
 
             ++result._errorCount;
             if ( result._firstErrorLine.empty() )
                 result._firstErrorLine = line;
-        }
-
-        result._exitCode = process.waitForExit();
+        } );
+        result._bLaunched                = run._bLaunched;
+        result._exitCode                 = run._bTimedOut ? -1 : run._exitCode;
         // App 이 RHI 를 세우다 환경 탓(이 빌드에 없다 · 드라이버가 기능을 안 준다)으로 물러나면 이 코드로 끝난다. 로그 문구는 보지 않는다.
         result._bBackendUnusableHere = ( result._exitCode == kRHIUnusableHereExitCode );
         return result;
@@ -354,8 +347,9 @@ namespace
 SW_TEST_CASE( AppSmokeTest, WindowCloseEndsTheApp )
 {
 #if defined( SW_PLATFORM_WINDOWS )
-    Process process;
-    SW_ASSERT_TRUE( test::AppTestUtil::launchApp( process, "" ) );
+    Process      process;
+    const string command = test::AppTestUtil::makeAppCommand( "" );
+    SW_ASSERT_TRUE( command.empty() == false && process.launch( command ) );
     // 출력 파이프가 차면 App 이 쓰기에서 멈춘다 — 다른 스레드가 비운다.
     std::thread drainThread( [&process]()
     {
@@ -475,8 +469,7 @@ SW_TEST_CASE( AppSmokeTest, EditorStartupSceneIsTheSceneThatOpens )
  */
 SW_TEST_CASE( AppSmokeTest, EditorMemoryIsAttributedByTag )
 {
-    if constexpr ( kMemoryTagScopesEnabled == false )
-        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
 
     const AppRunResult result = runApp( "-gv_profileFrames=5 -gv_memoryTracking=1 -EnableEditor -dx12", "[Memory]   " );
     SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
@@ -498,8 +491,7 @@ SW_TEST_CASE( AppSmokeTest, EditorMemoryIsAttributedByTag )
  */
 SW_TEST_CASE( AppSmokeTest, RuntimeMemoryIsAttributedByTag )
 {
-    if constexpr ( kMemoryTagScopesEnabled == false )
-        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    SW_TEST_REQUIRES_FEATURE( MemoryTagScopes );
 
     const AppRunResult result = runApp( "-gv_profileFrames=5 -gv_memoryTracking=1 -dx12", "[Memory]   " );
     SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );

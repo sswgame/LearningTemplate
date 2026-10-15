@@ -1,5 +1,5 @@
 /**
- * @file Test/TestFramework/TestBench.h
+ * @file Test/TestFramework/Harness/TestBench.h
  * @brief 벤치 케이스(`XxxBenchTest`)가 함께 쓰는 시간 재기 · 표본 요약 · 한 줄 보고.
  */
 #pragma once

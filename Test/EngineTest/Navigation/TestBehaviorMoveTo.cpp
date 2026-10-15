@@ -13,8 +13,8 @@
 #include "GameFramework/Base/Actor/AI/BehaviorTree.h"
 #include "GameFramework/Base/Actor/AI/Blackboard.h"
 
+#include "TestFramework/Harness/TestTick.h"
 #include "TestFramework/TestFramework.h"
-#include "TestFramework/TestTick.h"
 
 namespace
 {

@@ -11,7 +11,7 @@ endif()
 
 add_executable(LoaderFuzzer
 	LoaderFuzzer.cpp
-	"${CMAKE_SOURCE_DIR}/Test/TestFramework/TestHostRuntime.cpp"
+	"${CMAKE_SOURCE_DIR}/Test/TestFramework/Harness/TestHostRuntime.cpp"
 	"${CMAKE_SOURCE_DIR}/Test/EngineTest/LoaderFuzzTargets.cpp"
 	"${CMAKE_SOURCE_DIR}/Test/EngineTest/ResourcePakTestUtil.cpp"
 )

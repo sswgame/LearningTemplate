@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "TestFramework/TestLoopbackCluster.h"
+#include "TestFramework/Harness/TestLoopbackCluster.h"
 
 namespace test
 {

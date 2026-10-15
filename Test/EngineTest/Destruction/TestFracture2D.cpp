@@ -13,8 +13,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCast.h"
 
+#include "TestFramework/Harness/TestTick.h"
 #include "TestFramework/TestFramework.h"
-#include "TestFramework/TestTick.h"
 
 // Fracture2DTest — 2D 다각형 보로노이(넓이 보존 · 변 길이 연결 · 결정적, 오목 모양)와, 같은 구조 · 피해 · 런타임 위의 Box2D 조각.
 

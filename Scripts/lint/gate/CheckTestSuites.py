@@ -6,7 +6,7 @@
 스위트 이름은 장식이 아니다. CI 가 못 돌리는 것은 **스위트 단위로** 선언되어 빠지고(`SW_TEST_REQUIRES_HOST`),
 `--test_filter` 도 스위트 단위로 고른다. 그래서 이름이 흔들리면 그 둘이 흔들린다.
 
-강제 규칙 일곱:
+강제 규칙 아홉:
 
   1) 스위트 이름은 `XxxTest` — 대문자로 시작하고 `Test` 로 끝나며 밑줄이 없다.
      관례가 섞이면 필터가 흔들린다 — `Core` 라는 스위트가 있으면 `--test_filter=Core*` 가 `Core_String` 까지 끌어온다.
@@ -20,8 +20,8 @@
      `sw_addTestExecutable( ... HOST_SPLIT )` 가 그 둘을 `<타깃>_NoGPU` · `<타깃>_HostOnly` 로 등록한다.
      이 검사가 보는 것은 선언이 **실제로 효력이 있는가** 다:
        - 선언한 스위트가 그 파일에 있는가(이름을 바꾸고 선언을 놓치면 그 스위트가 CI 로 들어간다).
-       - 그 폴더의 실행 파일이 `HOST_SPLIT` 으로 등록되는가(아니면 선언을 아무도 읽지 않는다 — CI 가 그것을 돈다).
-       - 거꾸로 `HOST_SPLIT` 인데 선언이 하나도 없으면 `_HostOnly` 는 빈 그물이다.
+       - 그 폴더의 실행 파일이 `Test/TestPolicy.json` 에서 `hostSplit` 인가(아니면 선언을 아무도 읽지 않는다 — CI 가 그것을 돈다).
+       - 거꾸로 `hostSplit` 인데 선언이 하나도 없으면 `_HostOnly` 는 빈 그물이다.
        - 주석 형태의 마커(`// SW_TEST_REQUIRES_HOST( X ): ...`)는 아무 효력이 없으므로 있으면 실패다.
 
   4) 마커가 붙은 스위트가 있는 파일에는 **다른 스위트를 두지 않는다.**
@@ -43,11 +43,20 @@
   7) 태그를 단 테스트 doc 블록(`@brief [스위트] …`)은 **자기 `SW_TEST_CASE` 바로 위**에 있고, 태그는 그 케이스의 스위트 이름이다.
      블록과 케이스 사이에 빈 줄이 끼거나 블록 둘이 겹치면, 블록을 옮기거나 케이스를 지울 때 블록만 남아 다른 케이스를 설명하게 된다.
 
+  8) 테스트 실행 파일과 등록 정책(`Test/TestPolicy.json`)이 한 짝이다 — 라벨 · 샤드 · 시간은 그 파일 한 곳에서만 정한다.
+       - `sw_addTestExecutable(<이름>)` 은 `Test/<이름>/` 에 있고 정책에 같은 이름의 줄이 있다. 줄만 있고 실행 파일이 없어도 실패다.
+       - 줄의 영역(`area`)과 스크립트 테스트의 `LABELS` 는 정책의 `labels` 표에 있다(모르는 라벨은 `ctest -L` 로 고를 수 없다).
+       - 비용표(`caseCosts`)가 가리키는 케이스는 그 폴더에 있다(이름을 바꾸면 비용이 조용히 사라져 샤드가 기운다).
+
+  9) 부하 스위트(`SW_TEST_LOAD_SUITE( 스위트, "이유" );`)는 자기 파일을 혼자 쓰고, 그 폴더의 정책 줄에 `loadSeconds` 가 있다
+     (없으면 `<타깃>_Load` 항목이 없어 그 스위트는 어디서도 돌지 않는다).
+
   python Scripts/lint/gate/CheckTestSuites.py [--root <repo>]
 """
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from collections import defaultdict
@@ -61,6 +70,7 @@ from LintGate import GateResult, LintGate  # noqa: E402
 
 _kTestRoot = "Test"
 _kEditorTestCMake = "Test/EditorTest/CMakeLists.txt"
+_kPolicyFile = "Test/TestPolicy.json"
 
 # 줄 맨 앞만 보면 안 된다 — `namespace sw::editor { ... }` 안에 들여쓴 케이스가 있으면 그 파일이 검사에서
 # 통째로 빠진다.
@@ -75,7 +85,10 @@ _kLegacyMarkerRe = re.compile(r"//\s*SW_TEST_REQUIRES_HOST\(\s*(\w+)\s*\)\s*:")
 # 바깥 환경(DB 서버)이 있어야 도는 스위트 — 변수가 비면 그 스위트만 빠진다. 호스트 스위트처럼 파일을 혼자 쓴다.
 _kEnvironmentMarkerRe = re.compile(r'^[ \t]*SW_TEST_REQUIRES_ENVIRONMENT\(\s*(\w+)\s*,\s*"(\w+)"\s*,\s*"([^"]*)"\s*\)\s*;', re.M)
 _kEnvironmentMarkerTokenRe = re.compile(r"^[ \t]*SW_TEST_REQUIRES_ENVIRONMENT\s*\(", re.M)
-_kHostSplitRe = re.compile(r"\bHOST_SPLIT\b")
+_kLoadMarkerRe = re.compile(r'^[ \t]*SW_TEST_LOAD_SUITE\(\s*(\w+)\s*,\s*"([^"]*)"\s*\)\s*;', re.M)
+_kLoadMarkerTokenRe = re.compile(r"^[ \t]*SW_TEST_LOAD_SUITE\s*\(", re.M)
+_kAddExecutableRe = re.compile(r"^[ \t]*sw_addTestExecutable\(\s*(\w+)", re.M)
+_kScriptLabelsRe = re.compile(r"\bLABELS\s+\"([^\"]*)\"")
 _kEditorSourceRe = re.compile(r"\$\{CMAKE_SOURCE_DIR\}/(Source/Editor/[\w/]+\.cpp)")
 _kImGuiIncludeRe = re.compile(r"^\s*#\s*include\s*[<\"][^>\"]*imgui[^>\"]*[>\"]", re.I | re.M)
 _kCoreTestFolder = "Test/CoreTest"
@@ -142,14 +155,72 @@ def collectEnvironmentMarkers(rootDir: Path) -> tuple[dict[str, tuple[str, str]]
     return out, errors
 
 
-def collectHostSplitFolders(rootDir: Path) -> set[str]:
-    """`HOST_SPLIT` 으로 등록하는 테스트 폴더(`Test/<폴더>`). 주석에 적힌 낱말은 세지 않는다."""
-    out: set[str] = set()
-    for path in sorted((rootDir / _kTestRoot).glob("*/CMakeLists.txt")):
-        code = "\n".join(line.split("#", 1)[0] for line in path.read_text(encoding="utf-8", errors="ignore").splitlines())
-        if _kHostSplitRe.search(code) is not None:
-            out.add(path.parent.relative_to(rootDir).as_posix())
-    return out
+def collectLoadMarkers(rootDir: Path) -> tuple[dict[str, tuple[str, str]], list[str]]:
+    """(스위트 -> (파일, 이유), 오류들) — `SW_TEST_LOAD_SUITE` 선언."""
+    out: dict[str, tuple[str, str]] = {}
+    errors: list[str] = []
+    for path in listTestSourceInternal(rootDir):
+        relPath = path.relative_to(rootDir).as_posix()
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        parsed = list(_kLoadMarkerRe.finditer(text))
+        for match in parsed:
+            out[match.group(1)] = (relPath, match.group(2).strip())
+        tokenCount = len(_kLoadMarkerTokenRe.findall(text))
+        if tokenCount != len(parsed):
+            errors.append(f"{relPath}: SW_TEST_LOAD_SUITE 를 {tokenCount}개 썼는데 {len(parsed)}개만 읽혔습니다 "
+                          f"— 한 줄에 `SW_TEST_LOAD_SUITE( 스위트, \"이유\" );` 로 쓰세요")
+    return out, errors
+
+
+def readPolicy(rootDir: Path) -> tuple[dict, list[str]]:
+    """`Test/TestPolicy.json` 과 읽기 오류."""
+    path = rootDir / _kPolicyFile
+    if path.exists() is False:
+        return {}, [f"{_kPolicyFile}: 파일이 없습니다 — 테스트 실행 파일의 라벨 · 샤드 · 시간을 정하는 곳입니다"]
+    try:
+        return json.loads(path.read_text(encoding="utf-8")), []
+    except json.JSONDecodeError as error:
+        return {}, [f"{_kPolicyFile}: JSON 이 아닙니다 ({error})"]
+
+
+def collectHostSplitFolders(policy: dict) -> set[str]:
+    """정책에서 `hostSplit` 인 실행 파일의 폴더(`Test/<이름>`)."""
+    return {f"{_kTestRoot}/{name}" for name, row in policy.get("executables", {}).items() if row.get("hostSplit") is True}
+
+
+def checkPolicy(rootDir: Path, policy: dict, cases: list[tuple[str, str, str]]) -> list[str]:
+    """실행 파일 ↔ 정책 줄 · 라벨 · 비용표가 한 짝인지 봅니다(규칙 8)."""
+    errors: list[str] = []
+    labels = set(policy.get("labels", {}))
+    rows: dict = policy.get("executables", {})
+    declared: dict[str, str] = {}
+    for cmakePath in sorted((rootDir / _kTestRoot).rglob("CMakeLists.txt")):
+        relPath = cmakePath.relative_to(rootDir).as_posix()
+        code = "\n".join(line.split("#", 1)[0] for line in cmakePath.read_text(encoding="utf-8", errors="ignore").splitlines())
+        for match in _kAddExecutableRe.finditer(code):
+            name = match.group(1)
+            declared[name] = relPath
+            if cmakePath.parent.name != name:
+                errors.append(f"{relPath}: `sw_addTestExecutable({name})` — 폴더 이름(`{cmakePath.parent.name}`)과 실행 파일 이름이 같아야 합니다")
+            if name not in rows:
+                errors.append(f"{relPath}: `{name}` 의 줄이 {_kPolicyFile} 에 없습니다 — 영역(area)과 한 실행 시간(seconds)을 더하세요")
+        for match in _kScriptLabelsRe.finditer(code):
+            for label in filter(None, match.group(1).split(";")):
+                if label not in labels:
+                    errors.append(f"{relPath}: 라벨 `{label}` 이 {_kPolicyFile} 의 labels 표에 없습니다")
+    casesByFolder: dict[str, set[str]] = defaultdict(set)
+    for suite, caseName, relPath in cases:
+        casesByFolder[testFolderOf(relPath)].add(f"{suite}.{caseName}")
+    for name, row in sorted(rows.items()):
+        if name not in declared:
+            errors.append(f"{_kPolicyFile}: `{name}` 줄이 있는데 `Test/{name}/CMakeLists.txt` 의 `sw_addTestExecutable({name})` 이 없습니다")
+        area = row.get("area")
+        if area not in labels:
+            errors.append(f"{_kPolicyFile}: `{name}` 의 영역 `{area}` 이 labels 표에 없습니다")
+        for caseName in row.get("caseCosts", {}):
+            if caseName not in casesByFolder.get(f"{_kTestRoot}/{name}", set()):
+                errors.append(f"{_kPolicyFile}: `{name}` 의 비용표가 없는 케이스 `{caseName}` 을 가리킵니다 — 이름을 바꿨으면 비용표도 바꾸세요")
+    return errors
 
 
 def testFolderOf(relPath: str) -> str:
@@ -270,7 +341,9 @@ def check(rootDir: Path) -> tuple[list[str], int, int]:
     # 3) 호스트 스위트 선언이 효력이 있는가
     markers, markerErrors = collectMarkers(rootDir)
     errors += markerErrors
-    hostSplitFolders = collectHostSplitFolders(rootDir)
+    policy, policyErrors = readPolicy(rootDir)
+    errors += policyErrors
+    hostSplitFolders = collectHostSplitFolders(policy)
     for suite, (relPath, reason) in sorted(markers.items()):
         if suite not in homes:
             errors.append(f"{relPath}: `SW_TEST_REQUIRES_HOST( {suite} )` — 그런 스위트가 없습니다 "
@@ -283,10 +356,10 @@ def check(rootDir: Path) -> tuple[list[str], int, int]:
             errors.append(f"{relPath}: `SW_TEST_REQUIRES_HOST( {suite} )` 에 이유가 없습니다")
         folder = testFolderOf(relPath)
         if folder not in hostSplitFolders:
-            errors.append(f"{relPath}: `{suite}` 는 호스트가 필요하다고 선언했는데 `{folder}/CMakeLists.txt` 의 "
-                          f"`sw_addTestExecutable` 에 `HOST_SPLIT` 이 없습니다 — **CI 가 이것을 돌립니다**")
+            errors.append(f"{relPath}: `{suite}` 는 호스트가 필요하다고 선언했는데 {_kPolicyFile} 의 "
+                          f"`{folder.split('/')[-1]}` 줄이 `hostSplit` 이 아닙니다 — **CI 가 이것을 돌립니다**")
     for folder in sorted(hostSplitFolders - {testFolderOf(relPath) for relPath, _ in markers.values()}):
-        errors.append(f"{folder}/CMakeLists.txt: `HOST_SPLIT` 인데 이 폴더에 `SW_TEST_REQUIRES_HOST` 선언이 하나도 "
+        errors.append(f"{_kPolicyFile}: `{folder.split('/')[-1]}` 는 `hostSplit` 인데 그 폴더에 `SW_TEST_REQUIRES_HOST` 선언이 하나도 "
                       f"없습니다 — `_HostOnly` 가 아무것도 돌지 않습니다")
 
     # 4) 마커가 붙은 스위트는 자기 파일을 독차지한다
@@ -327,12 +400,38 @@ def check(rootDir: Path) -> tuple[list[str], int, int]:
     # 7) 테스트 doc 블록은 제 케이스 바로 위, 태그는 그 스위트
     errors += checkTestDocBlocks(rootDir)
 
+    # 8) 실행 파일 ↔ 정책 줄 · 라벨 · 비용표
+    errors += checkPolicy(rootDir, policy, cases)
+
+    # 9) 부하 스위트 — 파일을 혼자 쓰고, 그 실행 파일에 `<타깃>_Load` 항목(`loadSeconds`)이 있다
+    loadMarkers, loadErrors = collectLoadMarkers(rootDir)
+    errors += loadErrors
+    for suite, (relPath, reason) in sorted(loadMarkers.items()):
+        if suite not in homes or relPath not in homes[suite]:
+            errors.append(f"{relPath}: `SW_TEST_LOAD_SUITE( {suite} )` — 그 스위트가 이 파일에 없습니다")
+            continue
+        if not reason:
+            errors.append(f"{relPath}: `SW_TEST_LOAD_SUITE( {suite} )` 에 이유가 없습니다")
+        others = sorted(suitesByFile.get(relPath, set()) - {suite})
+        if others:
+            errors.append(f"{relPath}: 부하 스위트 `{suite}` 와 같은 파일에 {' · '.join(others)} 가 있습니다 — 파일을 가르세요")
+        executable = testFolderOf(relPath).split("/")[-1]
+        if "loadSeconds" not in policy.get("executables", {}).get(executable, {}):
+            errors.append(f"{relPath}: 부하 스위트 `{suite}` 가 있는데 {_kPolicyFile} 의 `{executable}` 줄에 `loadSeconds` 가 없습니다 "
+                          f"— `<타깃>_Load` 항목이 없어 어디서도 돌지 않습니다")
+
     return errors, len(homes), len(cases)
 
 
-# 이 검사가 **통과하는** 가장 작은 저장소 — 호스트 스위트 하나(HOST_SPLIT 폴더) · 평범한 스위트 하나 · EditorTest 목록.
+_kCleanPolicy = (
+    '{"labels": {"unit": "", "nogpu": "", "hostgpu": "", "load": "", "engine": "", "editor": ""},\n'
+    ' "executables": {"EngineTest": {"area": "engine", "seconds": 1, "hostSplit": true}, "EditorTest": {"area": "editor", "seconds": 1}}}\n'
+)
+
+# 이 검사가 **통과하는** 가장 작은 저장소 — 호스트 스위트 하나(hostSplit 실행 파일) · 평범한 스위트 하나 · EditorTest 목록 · 정책.
 _kCleanFixture: dict[str, str] = {
-    "Test/EngineTest/CMakeLists.txt": "sw_addTestExecutable(EngineTest\n\tHOST_SPLIT\n)\n",
+    "Test/TestPolicy.json": _kCleanPolicy,
+    "Test/EngineTest/CMakeLists.txt": "sw_addTestExecutable(EngineTest)\n",
     "Test/EngineTest/TestHostProbe.cpp": (
         'SW_TEST_REQUIRES_HOST( HostProbeTest, "needs a GPU" );\nSW_TEST_CASE( HostProbeTest, One )\n{\n}\n'
     ),
@@ -348,9 +447,9 @@ class CheckTestSuitesGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있어 어긋날 수 없다."""
 
     description = "테스트 스위트 규칙 검사"
-    buildComment = "Checking test suite naming, one-file-per-suite, and that every SW_TEST_REQUIRES_HOST takes effect..."
+    buildComment = "Checking test suite naming, one-file-per-suite, test policy rows, and that every suite declaration takes effect..."
     timeoutSeconds = 15
-    preCommitPattern = ("Test/*",)
+    preCommitPattern = ("Test/*", "cmake/Engine/TestTargets.cmake")
     # 조각마다 **위반 하나만** 넣는다 — 나머지는 깨끗한 바탕(`_kCleanFixture`)이라, 이 검사가 그 바탕에서 통과하는
     # 한 실패는 넣은 위반 때문이다. 주의: 바탕부터 다른 규칙(예: EditorTest 소스 목록이 빈 것)에 걸리는 조각은
     # 넣은 규칙이 죽어도 실패하므로 증거가 아니다.
@@ -376,14 +475,15 @@ class CheckTestSuitesGate(LintGate):
             },
         },
         {
-            # 선언을 읽는 것은 `HOST_SPLIT` 으로 등록된 실행 파일뿐이다 — 없으면 그 스위트는 CI 에서 돈다.
-            "name": "호스트 선언이 있는데 HOST_SPLIT 이 없음",
+            # 선언을 읽는 것은 정책에서 `hostSplit` 인 실행 파일뿐이다 — 아니면 그 스위트는 CI 에서 돈다.
+            "name": "호스트 선언이 있는데 hostSplit 이 아님",
             "files": {
                 **_kCleanFixture,
+                "Test/TestPolicy.json": _kCleanPolicy.replace('"EditorTest"', '"GpuTest": {"area": "engine", "seconds": 1}, "EditorTest"'),
                 "Test/GpuTest/TestGpuProbe.cpp": (
                     'SW_TEST_REQUIRES_HOST( GpuProbeTest, "needs a GPU" );\nSW_TEST_CASE( GpuProbeTest, One )\n{\n}\n'
                 ),
-                "Test/GpuTest/CMakeLists.txt": "# HOST_SPLIT 은 주석으로만 적혀 있다\nsw_addTestExecutable(GpuTest)\n",
+                "Test/GpuTest/CMakeLists.txt": "sw_addTestExecutable(GpuTest)\n",
             },
         },
         {
@@ -432,6 +532,37 @@ class CheckTestSuitesGate(LintGate):
                     'SW_TEST_REQUIRES_ENVIRONMENT( ProbeTest, "SW_TEST_PROBE_URL", "needs a server" );\nSW_TEST_CASE( ProbeTest, One )\n{\n}\n'
                     "SW_TEST_CASE( NeighbourTest, Two )\n{\n}\n"
                 ),
+            },
+        },
+        {
+            "name": "정책에 줄이 없는 실행 파일",
+            "files": {
+                **_kCleanFixture,
+                "Test/ToolTest/CMakeLists.txt": "sw_addTestExecutable(ToolTest)\n",
+                "Test/ToolTest/TestToolProbe.cpp": "SW_TEST_CASE( ToolProbeTest, One )\n{\n}\n",
+            },
+        },
+        {
+            "name": "폴더 이름과 다른 실행 파일",
+            "files": {**_kCleanFixture, "Test/EditorTest/CMakeLists.txt": _kCleanFixture["Test/EditorTest/CMakeLists.txt"].replace("(EditorTest", "(EditorToolTest")},
+        },
+        {
+            "name": "모르는 라벨",
+            "files": {**_kCleanFixture, "Test/EngineTest/CMakeLists.txt": 'sw_addTestExecutable(EngineTest)\nsw_registerScriptTest(Probe LABELS "nogpu;gpuu")\n'},
+        },
+        {
+            # 이름을 바꾸면 비용이 조용히 사라져 샤드가 기운다.
+            "name": "비용표가 없는 케이스를 가리킴",
+            "files": {
+                **_kCleanFixture,
+                "Test/TestPolicy.json": _kCleanPolicy.replace('"hostSplit": true}', '"hostSplit": true, "caseCosts": {"PlainProbeTest.Renamed": 9}}'),
+            },
+        },
+        {
+            "name": "부하 스위트인데 loadSeconds 가 없음",
+            "files": {
+                **_kCleanFixture,
+                "Test/EngineTest/TestLoadProbe.cpp": 'SW_TEST_LOAD_SUITE( LoadProbeTest, "measures throughput" );\nSW_TEST_CASE( LoadProbeTest, One )\n{\n}\n',
             },
         },
         {

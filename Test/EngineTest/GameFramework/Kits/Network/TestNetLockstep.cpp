@@ -9,8 +9,8 @@
 #include "GameFramework/Kits/Feature/Network/NetLockstep/RollbackSession.h"
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h"
 
+#include "TestFramework/Harness/TestLoopbackCluster.h"
 #include "TestFramework/TestFramework.h"
-#include "TestFramework/TestLoopbackCluster.h"
 
 // 결정적 네트워크 키트 — 락스텝(셋이 같은 입력으로 같은 상태, 입력 위조 거절, 체크섬 비동기 감지, 떠난 플레이어를 모두 같은 틱에 빼기, 입력 · 체크섬 창)과
 // 롤백(지연 · 손실 망에서 예측 → 되감기 → 양쪽 확정 상태 일치, 너무 앞서면 멈춤, 확인 기반 다시 보내기, 시간 동기, 받는 창).

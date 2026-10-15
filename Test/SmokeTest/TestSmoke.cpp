@@ -41,9 +41,9 @@
 #include "RuntimeAPI/ABI/EditorAPI.h"
 #include "RuntimeAPI/ABI/GameAPI.h"
 
-#include "TestFramework/TestChildProcess.h"
+#include "TestFramework/Harness/TestChildProcess.h"
+#include "TestFramework/Harness/TestPropertyCoverage.h"
 #include "TestFramework/TestFramework.h"
-#include "TestFramework/TestPropertyCoverage.h"
 
 #if !defined( SW_SHIPPING )
 
@@ -1843,7 +1843,7 @@ SW_TEST_CASE( ModuleAPITest, GameFrameworkRegistersUnderItsOwnName )
     const test::ChildEnvironmentVariable arrEnvironment[] = {
         { "SW_SHARED_MODULE_CHILD", "1" }
     };
-    const test::ChildRunResult child = test::runThisExecutableAsChild( "ModuleAPITest.SharedModuleChildKeepsItsRegistrations", arrEnvironment, 60 );
+    const test::ProcessRunResult child = test::runThisExecutableAsChild( "ModuleAPITest.SharedModuleChildKeepsItsRegistrations", arrEnvironment, 60 );
     SW_ASSERT_TRUE( child._bLaunched );
     SW_EXPECT_FALSE_MSG( child._bTimedOut, ( "자식 프로세스가 시한 안에 끝나지 않았습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
     SW_EXPECT_TRUE_MSG( child._exitCode == 0,
@@ -1906,7 +1906,7 @@ SW_TEST_CASE( ModuleAPITest, EveryModulePropertyHasATypeTheSerializersCanCarry )
     const test::ChildEnvironmentVariable arrEnvironment[] = {
         { "SW_MODULE_PROPERTY_CHILD", "1" }
     };
-    const test::ChildRunResult child = test::runThisExecutableAsChild( "ModuleAPITest.ModulePropertyChildChecksEveryType", arrEnvironment, 60 );
+    const test::ProcessRunResult child = test::runThisExecutableAsChild( "ModuleAPITest.ModulePropertyChildChecksEveryType", arrEnvironment, 60 );
     SW_ASSERT_TRUE( child._bLaunched );
     SW_EXPECT_FALSE_MSG( child._bTimedOut, ( "자식 프로세스가 시한 안에 끝나지 않았습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
     SW_EXPECT_TRUE_MSG( child._exitCode == 0, ( "모듈 타입의 PROPERTY 판정이 실패했습니다 — 마지막 출력:" + child.getOutputTail( 40 ) ).c_str() );
@@ -2131,7 +2131,7 @@ SW_TEST_CASE( ModuleAPITest, UnloadReleasesTheChannelsTheImageCreated )
     const test::ChildEnvironmentVariable arrEnvironment[] = {
         { "SW_UNLOAD_CHANNEL_CHILD", "1" }
     };
-    const test::ChildRunResult child = test::runThisExecutableAsChild( "ModuleAPITest.UnloadChildReleasesTheChannelsItsImageCreated", arrEnvironment, 60 );
+    const test::ProcessRunResult child = test::runThisExecutableAsChild( "ModuleAPITest.UnloadChildReleasesTheChannelsItsImageCreated", arrEnvironment, 60 );
     SW_ASSERT_TRUE( child._bLaunched );
     SW_EXPECT_FALSE_MSG( child._bTimedOut, ( "자식 프로세스가 시한 안에 끝나지 않았습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
     SW_EXPECT_TRUE_MSG( child._exitCode == 0, ( "모듈을 내린 뒤 채널 항목이 남았거나 자식이 죽었습니다 — 마지막 출력:" + child.getOutputTail( 40 ) ).c_str() );

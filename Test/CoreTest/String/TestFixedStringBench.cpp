@@ -17,7 +17,7 @@
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/String/fixed_string.h"
 
-#include "TestFramework/TestBench.h"
+#include "TestFramework/Harness/TestBench.h"
 #include "TestFramework/TestFramework.h"
 
 SW_LOG_CALLER( "FixedStringBench" );

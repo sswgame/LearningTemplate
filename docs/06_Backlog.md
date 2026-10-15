@@ -20,7 +20,7 @@
 |---|---|---|
 | **A. 결함 · 정확성** | 재현됐거나 코드로 확인된 열린 결함. 다른 어떤 일보다 먼저 본다. | 0 |
 | **B. 검증 · 측정 대기** | 코드는 들어갔고 돌려 보는 일이 남은 것. 이 PC 에서 못 돌린 환경(리눅스 · 실기)과 사용자 눈이 필요한 것도 여기다. | 12 |
-| **C. 구조 · 성능 · 정리** | 기능이 아니라 고칠 곳을 줄이는 일: 구조 분할 계획, 중복 · 의존 정리, 측정 뒤 정할 성능 후보, 린트 · 문서 정리. | 23 |
+| **C. 구조 · 성능 · 정리** | 기능이 아니라 고칠 곳을 줄이는 일: 구조 분할 계획, 중복 · 의존 정리, 측정 뒤 정할 성능 후보, 린트 · 문서 정리. | 24 |
 | **D. 기능 로드맵** | 영역별로 묶은 새 기능 · 기능의 남은 조각. 위에 있을수록 먼저 볼 것이다. | 43 |
 | **E. 관찰 중** | 간헐 실패 · 원인 미상. 다시 보이면 그때 원인을 판다. CI 읽는 법은 [검증과 측정](08_Verification.md) 4절. | 9 |
 | **F. 결정 대기** | 사용자 결정이 있어야 움직이는 질문. | 1 |
@@ -190,6 +190,15 @@
     `SceneCooker` · `SceneNavigationCooker` · `PortraitRenderer` 의 인자 없는 `Scene` 생성. 서비스 클래스가 초기화 때 의존 서브시스템 포인터를 멤버로 받는 것(언리얼 `InitializeDependency`)은 고칠 때 함께 한다.
 
 - `C-22` **작은 정리 후보(2026-10-13 병합 검토에서 모음).** `IPhysicsScene3D/2D` 전방 선언용 `*Fwd.h`, Core → Log 예외 다섯 파일(티어마다 필요한 것이 달라 함수 포인터 하나로 풀리지 않는다), 프렐류드 예외 제거(184 파일).
+
+- `C-28` **테스트 틀 개편(2026-10-15)의 남은 것.** 틀 · 정책 · 확장 지점은 들어갔다(`Test/README.md`, 결정 기록 5-2 끝). 남은 것 —
+  ① 부하 검증 단계: 벤치 · 부하 스위트(`*BenchTest`, `NetReplicationBenchTest` 41 초, `OnlineLoadBotTest` 19 초, `TerrainBenchTest` 18 · 16 초, `NetSimDestructionMatrixTest`)를
+  `SW_TEST_LOAD_SUITE` + `SW_TEST_TIME_BUDGET` 으로 옮기고 정책 줄에 `loadSeconds` 를 더한다. 옮기면 CI `nogpu` 에서 빠지므로 정확성 단언은 짧은 케이스로 남긴다(언리얼 Perf · Stress 필터처럼 갈래만 바꾼다).
+  ② 구성 차이 건너뜀 중 `SW_TEST_REQUIRES_FEATURE` 로 아직 안 바꾼 것 — Shipping 의 에디터 · 설정 파일 · 개발 전역 변수 · 서버 팩 오디오 쪽(`TestAppScenario` · `TestConfigManager` · `TestNetClientServer` 등 열 곳 안팎).
+  필요하면 `BuildFeature` 에 `Editor` · `DevGlobalVariables` 를 더한다.
+  ③ `seconds` · `caseCosts` 는 부하가 걸린 이 PC(실행 파일 다섯 동시)에서 잰 값이다. CI 리눅스 Debug 가 조각마다 제한 시간의 절반을 넘으면 그 러너에서 다시 잰다.
+  ④ `ctest --test-load`(테스트 프리셋 `execution.testLoad`)가 Windows 에서 효과가 있는지 확인하지 않았다 — 효과가 있으면 로컬 프리셋에 넣는다.
+  ⑤ JUnit XML 리스너(`ITestRunListener`) — CI 대시보드가 필요해지면.
 
 - `C-25` **게임 여럿을 빌드 한 번에 짓고, 실행할 때 고르고, 키트는 필요한 것만**(2026-10-13, 사용자 확정). 결정은 [결정 기록](09_Decisions.md) 5-2, 쓰는 법은 `Source/Games/README.md`.
   남은 것: 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸다(DX12 직접 실행으로 10 시나리오 통과만 확인).
