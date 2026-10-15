@@ -17,6 +17,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Object/Component/2D/SpriteComponent.h"
+#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -139,6 +140,34 @@ namespace sw::editor
         }
 
         EditorTransaction::recordCreation( pSpawned, "Spawn Sprite in Viewport" );
+        EditorSceneCommands::select( pSpawned, SelectionMode::Replace );
+        return pSpawned;
+    }
+
+    GameObject* EditorAssetCommands::spawnMesh( GameObjectManager* pManager, const utf8* pPath, const float3& worldPos )
+    {
+        if ( EditorPlaySession::areSceneEditsAllowed() == false )
+            return nullptr;
+        if ( pManager == nullptr || StringUtil::isNullOrEmpty( pPath ) )
+            return nullptr;
+        // 메시 id 는 리소스 id 로 저장한다(씬 파일이 다른 PC 에서도 읽힌다). 리소스 트리 밖이면 만들지 않는다.
+        const string meshID = ResourcePaths::toResourceID( pPath );
+        if ( meshID.empty() )
+        {
+            SW_LOG_WARNING( "Mesh drop: '%#' is not inside the resource tree - nothing was placed", pPath );
+            return nullptr;
+        }
+        const string name     = FileUtil::removeExtension( FileUtil::getFileNamePart( pPath ) );
+        GameObject*  pSpawned = pManager->createGameObject( hashed_string( name.c_str() ) );
+        if ( pSpawned == nullptr )
+            return nullptr;
+        MeshComponent* pMesh = pSpawned->addComponent<MeshComponent>();
+        if ( pMesh != nullptr )
+        {
+            pMesh->setLocalPosition( worldPos );
+            pMesh->setMeshID( meshID );
+        }
+        EditorTransaction::recordCreation( pSpawned, "Spawn Mesh in Viewport" );
         EditorSceneCommands::select( pSpawned, SelectionMode::Replace );
         return pSpawned;
     }

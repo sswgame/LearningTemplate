@@ -70,6 +70,14 @@ frame 900 <ExpectVisited> #3: AI.State(FarmAutoFarmer) never went through 'Till 
 **단언과 이력.** 단언 단계는 그 프레임의 씬 틱 뒤에 돕니다. `ExpectVisited` 가 있으면 시작할 때 그 탐침(탐침, 대상, 키 조합)마다 이력을 만들고, 프레임마다 값을 읽어 바뀔 때만 프레임 번호와 함께 적습니다.
 `sequence="A, B, C"` 는 그 값들을 이 순서로 거쳤는지(사이에 다른 값이 끼어도 된다), `since` 는 그 프레임에 이미 들어 있던 값부터 셀지를 정합니다.
 
+**경계 전후 견주기.** `<Remember probe="Editor.StateHash" as="edited"/>` 가 그 프레임의 탐침 값을 이름으로 기억하고, 뒤의 `Expect` · `WaitUntil` 이
+`sameAs="edited"` · `differsFrom="edited"` 로 견줍니다. 값은 글 그대로 견주므로 64 비트 해시도 뭉개지지 않습니다. 실행기는 엔진 쪽이라 플레이 인/아웃,
+모듈 리로드, 백엔드 교체를 넘어 기억합니다. `SwapBackend backend="other"` 는 지금과 다른 백엔드(DirectX 12 가 아니면 DirectX 12, DirectX 12 면 DirectX 11)로,
+`backend="start"` 는 시나리오가 시작한 백엔드로 건너므로, 어느 백엔드로 돌리든 "갔다 돌아오는" 시나리오를 한 파일로 씁니다.
+에디터 편집 상태는 `Editor.SceneHash`(오브젝트별 이름 · 부모 · 상태 XML, 씬 뷰 카메라 제외) · `Editor.SelectedNames` · `Editor.UndoState`(`위치/수:레이블|…`) ·
+`Editor.StateHash`(넷을 접은 것)로 읽고, 오브젝트 하나의 컴포넌트 값은 `Object.Property target="이름" key="<컴포넌트>.<프로퍼티>"` 로 읽습니다.
+에디터 기능을 잇는 흐름 시나리오는 `engine/automation/editor/flow*.scenario.xml` 이고, 기능별 표는 [에디터 시나리오 표](../../../docs/plans/EditorScenarios.md) 에 있습니다.
+
 **결정적 재생과 녹화.** `-scenario-record=<Saved/Automation/...scenario.xml>` 를 주면 씬 플레이 첫 프레임부터 입력(시나리오가 낸 가상 입력 포함)을 적고, 끝날 때 `-scenario-record-probes` 의 탐침 값을 끝 프레임의 `<Expect>` 로 씁니다.
 녹화를 다시 돌리면 같은 입력과 같은 고정 틱이므로 같은 값이 나와야 합니다. `AppScenarioTest.RecordedPlayReplaysOnEveryBackend` 가 이 왕복을 네 백엔드에서 확인합니다.
 
@@ -95,6 +103,10 @@ AI 의 상태를 시나리오에서 보려면 `AIControllerComponent` 파생의 
 - **녹화로 정확히 재생하려면 녹화도 고정 프레임 시간으로 돌려야 합니다.** 시나리오 없이 사람이 녹화할 때는 `-gv_fixedFrameDelta=0.0166667` 를 함께 줍니다. 녹화는 고정 프레임 시간을 소수 일곱 자리로 씁니다. 넷째 자리에서 자르면 재생이 프레임마다 0.2 % 더 흘러 위치 검사점이 어긋납니다.
 - **배타 시나리오는 시작 조건을 기다리는 프레임부터 사람의 장치를 버리고 포인터를 (0, 0) 에 둡니다.** 기다리는 동안 게임이 실제 마우스 위치를 읽으면 그 값이 게임 상태(NileCity 건설 커서)에 남아 실행마다 다른 결과가 나옵니다.
   백엔드끼리 `records` 가 다르면 `-gv_automationHashDump=1` 로 두 번 돌려 `[Scenario] hash item` 줄을 비교하면 어긋난 오브젝트가 나옵니다.
+- **경계를 넘는 단언은 탐침 셋으로 나눠 둡니다.** `Editor.StateHash` 하나만 견주면 실패 줄이 해시 둘만 보여 줍니다. 같은 프레임에 `Editor.SceneHash` · `Editor.UndoState` ·
+  `Editor.SelectedNames` 를 함께 두면 어느 쪽이 달라졌는지 바로 나오고, 씬 내용이 다르면 `-gv_automationHashDump=1` 의 `[Scenario] scene hash item` 줄로 오브젝트를 찾습니다.
+- **`backend="other"` 로 건넌 뒤에는 그림을 견주지 않습니다.** 백엔드마다 그림이 조금씩 다르므로, 스크린샷 비교는 `backend="start"` 로 돌아온 뒤에 합니다.
+  그림이 "같다" 는 단언은 편집 크기보다 훨씬 작은 문턱(예: 편집이 0.015 면 0.002)으로 둡니다. 문턱이 편집 크기에 가까우면 편집이 사라져도 통과합니다.
 - **글 값 탐침을 수로 비교하면 실패로 적힙니다.** `AI.State` 같은 글 탐침은 `is` 로만 비교합니다. 수 탐침은 `is` 로도 비교할 수 있으며, 끝의 0 을 정리한 글(`1`, `0.5`)과 비교합니다.
 - **한 틱에 끝나는 작업만 있는 행동 트리는 도는 잎이 없습니다.** `AI.BehaviorTask` 와 `Skirmish.AITask` 는 그때 그 틱에 마지막으로 성공한 작업을 보이므로, 늘 성공하는 작업(노는 일꾼 보내기)이 대부분의 프레임을 차지합니다.
 

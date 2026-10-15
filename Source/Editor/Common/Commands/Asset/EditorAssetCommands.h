@@ -39,6 +39,8 @@ namespace sw::editor
         static GameObject* spawnPrefabWithoutUndo( GameObjectManager* pManager, const utf8* pPath, GameObject* pParent );
         /** @brief 텍스처 경로로 스프라이트 오브젝트를 만듭니다. */
         static GameObject* spawnSprite( GameObjectManager* pManager, const utf8* pPath, const float3& worldPos );
+        /** @brief 메시(`.mesh`) 경로로 그 메시를 그리는 오브젝트를 만들고 되돌리기 · 선택을 기록합니다. 이름은 파일 이름(확장자 뺌)입니다. */
+        static GameObject* spawnMesh( GameObjectManager* pManager, const utf8* pPath, const float3& worldPos );
         /** @brief 뷰포트에 드롭한 것을 스폰하거나 로드합니다. 히트 위치는 호출하는 쪽이 구합니다. */
         static void dropAt( GameObjectManager* pManager, const utf8* pPath, const float3& spawnPos );
     };
