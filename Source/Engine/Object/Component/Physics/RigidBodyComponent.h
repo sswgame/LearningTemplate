@@ -55,7 +55,7 @@ namespace sw
      *
      *          힘 · 충격량 · 속도 설정은 어느 틱에서든 부를 수 있습니다 — 다음 물리 프레임에 게임 스레드가 바디에 줍니다(`PhysicsBodyCommand`).
      */
-    REFLECT( Category = "Physics", DisplayName = "Rigid Body", Tooltip = "3D rigid body with its collision shapes" )
+    REFLECT( Category = "Physics", DisplayName = "Rigid Body", Tooltip = "3D rigid body with its collision shapes", Meta = "Icon=Physics, IconColor=Physics" )
     class SW_API RigidBodyComponent : public PhysicsComponent
     {
     public:

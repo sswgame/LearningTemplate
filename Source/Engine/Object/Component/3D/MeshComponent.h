@@ -26,7 +26,7 @@ namespace sw
      * @class MeshComponent
      * @brief GameObject 에 붙어 그려지는 메시입니다(월드 트랜스폼은 SceneComponent 에서 얻습니다).
      */
-    REFLECT( Category = "Rendering 3D", DisplayName = "Mesh Component", Tooltip = "3D Static Mesh Renderer" )
+    REFLECT( Category = "Rendering 3D", DisplayName = "Mesh Component", Tooltip = "3D Static Mesh Renderer", Meta = "Icon=Cube" )
     class SW_API MeshComponent : public SceneComponent
     {
         /// 레지스트리 슬롯과 더티 플래그를 관리하는 유일한 주체입니다.

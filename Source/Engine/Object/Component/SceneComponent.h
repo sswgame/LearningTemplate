@@ -56,7 +56,7 @@ namespace sw
      *          리플렉션 이름(`_localPosition`, `_localRotation`, `_localScale`)은 그대로이고 값 접근자가 슬롯을 찾으므로,
      *          씬 파일, 인스펙터, 직렬화는 달라지지 않는다. 계층(부모, 자식)과 더티 표시는 이 객체에 남아 있다.
      */
-    REFLECT( Category = "Transform", DisplayName = "Scene Component", Tooltip = "Provides Transform (Position, Rotation, Scale) and Hierarchy" )
+    REFLECT( Category = "Transform", DisplayName = "Scene Component", Tooltip = "Provides Transform (Position, Rotation, Scale) and Hierarchy", Meta = "Icon=Axes" )
     class SW_API SceneComponent : public Component
     {
         friend class SceneTransformHierarchy;

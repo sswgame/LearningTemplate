@@ -19,7 +19,7 @@ namespace sw
      * @class AudioAmbientEmitterComponent
      * @brief 점 · 상자 · 구 모양의 앰비언트 에미터입니다. 모양은 이 컴포넌트의 월드 위치가 가운데이고 축 정렬입니다(회전은 무시, 크기는 데이터 값).
      */
-    REFLECT( Category = "Audio", DisplayName = "Audio Ambient Emitter", Tooltip = "Looping ambience from a point, box or sphere (nearest point to the listener)" )
+    REFLECT( Category = "Audio", DisplayName = "Audio Ambient Emitter", Tooltip = "Looping ambience from a point, box or sphere (nearest point to the listener)", Meta = "Icon=AudioEmitter, IconColor=Audio, Billboard" )
     class SW_API AudioAmbientEmitterComponent : public AudioEmitterComponent
     {
     public:

@@ -62,7 +62,7 @@ namespace sw
      *          카메라 뒤나 화면 밖은 숨기고(`_bClampToScreenEdge` 면 가장자리에 붙인다), `_maxDistance` 밖도 숨긴다. 코드가 `setHidden` 으로 숨길 수도 있다
      *          (HP 바의 "맞으면 보임" 정책이며 저장하지 않는다). 2D(직교 카메라)도 같은 코드로 처리한다. 서버처럼 UI 가 없으면 아무것도 하지 않는다.
      */
-    REFLECT( Category = "UI", DisplayName = "Widget Component", Tooltip = "Shows a widget attached to this object, as a screen marker or a world quad" )
+    REFLECT( Category = "UI", DisplayName = "Widget Component", Tooltip = "Shows a widget attached to this object, as a screen marker or a world quad", Meta = "Icon=Widget" )
     class SW_API WidgetComponent : public Component
     {
     public:

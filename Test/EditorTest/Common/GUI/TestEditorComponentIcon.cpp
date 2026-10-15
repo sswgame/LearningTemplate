@@ -27,16 +27,24 @@ SW_TEST_CASE( EditorComponentIconTest, DerivedTypeWinsOverBaseRow )
 }
 
 /**
- * @brief [EditorComponentIconTest] 표의 타입 이름은 모두 레지스트리에 있다(타입 이름을 바꾸면 그 줄이 조용히 죽는다)
+ * @brief [EditorComponentIconTest] 모든 등록 타입의 `Icon` · `IconColor` 메타가 아는 이름이다(철자가 틀리면 아이콘이 조용히 Category 로 떨어진다)
  */
-SW_TEST_CASE( EditorComponentIconTest, EveryTypeRowNamesARegisteredType )
+SW_TEST_CASE( EditorComponentIconTest, EveryIconMetaNamesAKnownIconAndColor )
 {
-    const TypeRegistry& registry = engine::getSubsystem<TypeRegistry>();
-    for ( uint32 index = 0; index < EditorComponentIcon::getTypeRowCount(); ++index )
+    const TypeRegistry& registry      = engine::getSubsystem<TypeRegistry>();
+    uint32              iconTypeCount = 0;
+    registry.forEachType( [&]( const TypeInfo& type )
     {
-        const EditorComponentIconRow& row = EditorComponentIcon::getTypeRow( index );
-        SW_EXPECT_TRUE_MSG( registry.findType( hashed_string( row._pKey ) ) != nullptr, row._pKey );
-    }
+        const string* pIcon = type.findCustomMeta( "Icon" );
+        if ( pIcon == nullptr )
+            return;
+        ++iconTypeCount;
+        SW_EXPECT_TRUE_MSG( EditorComponentIcon::findGlyph( *pIcon ) != nullptr, type._name.c_str() );
+        const string* pColor = type.findCustomMeta( "IconColor" );
+        if ( pColor != nullptr )
+            SW_EXPECT_TRUE_MSG( EditorComponentIcon::isKnownColorName( *pColor ), type._name.c_str() );
+    } );
+    SW_EXPECT_TRUE( iconTypeCount >= 40u ); // Engine 컴포넌트가 메타를 들고 있다 — 파서가 Meta 를 버리면 여기서 드러난다
 }
 
 /**

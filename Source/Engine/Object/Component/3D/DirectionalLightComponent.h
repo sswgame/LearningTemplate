@@ -75,7 +75,7 @@ namespace sw
      * @note 방향은 기본 방향(위에서 비스듬히)을 이 컴포넌트의 월드 회전으로 돌린 것입니다(`LightComponent` 의 방향 규약).
      *       회전이 없는 루트면 기본 방향 그대로이고, 부모가 돌면 따라 돕니다.
      */
-    REFLECT( Category = "Rendering 3D", DisplayName = "Directional Light", Tooltip = "Scene key light and shadow volume" )
+    REFLECT( Category = "Rendering 3D", DisplayName = "Directional Light", Tooltip = "Scene key light and shadow volume", Meta = "Icon=LightDirectional, IconColor=Light, Billboard" )
     class SW_API DirectionalLightComponent : public LightComponent
     {
     public:

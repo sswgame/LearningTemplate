@@ -40,7 +40,7 @@ namespace sw
      *          프레임은 클립(`_clipPath`, `.sprite.json`)이 있으면 그 클립의 `_clipFrame` 번째 프레임이고, 없으면 `_uvRect` 다.
      *          텍스처 경로가 비어 있으면 클립의 아틀라스를 쓴다. 애니메이터(`SpriteAnimatorComponent`)는 `setClipFrame` 으로 프레임 번호만 넘긴다.
      */
-    REFLECT( Category = "Rendering 2D", DisplayName = "Sprite Component", Tooltip = "2D Sprite rendering component" )
+    REFLECT( Category = "Rendering 2D", DisplayName = "Sprite Component", Tooltip = "2D Sprite rendering component", Meta = "Icon=Sprite" )
     class SW_API SpriteComponent : public MeshComponent
     {
     public:

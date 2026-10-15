@@ -22,7 +22,7 @@ namespace sw
      * @class AudioEmitterComponent
      * @brief 사운드 이벤트를 내는 자리입니다. `_event` 를 시작할 때 내고(`_bPlayOnBeginPlay`), 끝날 때 멈춥니다(`_bStopOnEndPlay`).
      */
-    REFLECT( Category = "Audio", DisplayName = "Audio Emitter", Tooltip = "Posts sound events from this object's position" )
+    REFLECT( Category = "Audio", DisplayName = "Audio Emitter", Tooltip = "Posts sound events from this object's position", Meta = "Icon=AudioEmitter, IconColor=Audio, Billboard" )
     class SW_API AudioEmitterComponent : public SceneComponent
     {
     public:

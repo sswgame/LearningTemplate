@@ -19,7 +19,7 @@ namespace sw
      * @class AudioListenerComponent
      * @brief 리스너 칸 하나입니다. 앞 · 위는 이 컴포넌트의 월드 회전(+Z 앞, +Y 위)입니다.
      */
-    REFLECT( Category = "Audio", DisplayName = "Audio Listener", Tooltip = "Where the player hears from (overrides the game camera)" )
+    REFLECT( Category = "Audio", DisplayName = "Audio Listener", Tooltip = "Where the player hears from (overrides the game camera)", Meta = "Icon=AudioListener, IconColor=Audio, Billboard" )
     class SW_API AudioListenerComponent : public SceneComponent
     {
     public:

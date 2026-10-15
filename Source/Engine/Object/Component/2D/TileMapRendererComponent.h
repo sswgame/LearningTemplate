@@ -38,7 +38,7 @@ namespace sw
      *          **편집 중 미리보기.** 상태를 읽은 뒤(`onPostLoad`)와 맵 · 머티리얼 · 정렬을 바꿀 때 그리기 배치를 만듭니다 — 에디터에서 플레이 전에도 보입니다.
      *          물리 바디는 `rebuild`(플레이 시작)만 만듭니다. 편집 중에는 틱이 없으므로 오브젝트를 옮긴 뒤의 칸 자리는 다음 미리보기 갱신에 따라옵니다.
      */
-    REFLECT( Category = "Rendering 2D", DisplayName = "Tile Map Renderer", Tooltip = "Draws a tile layer with rule and animated tiles and builds its colliders" )
+    REFLECT( Category = "Rendering 2D", DisplayName = "Tile Map Renderer", Tooltip = "Draws a tile layer with rule and animated tiles and builds its colliders", Meta = "Icon=TileMap" )
     class SW_API TileMapRendererComponent : public Component
     {
     public:

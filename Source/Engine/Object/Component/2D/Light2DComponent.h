@@ -18,7 +18,7 @@ namespace sw
      *          감쇠: 안 반경 안은 1, 바깥 반경에서 0, 그 사이는 ((바깥 − 거리) / (바깥 − 안))^지수(`computeAttenuation` — 셰이더 lighting2d.hlsli 와 같은 식).
      *          원뿔 방향은 컴포넌트의 로컬 +X 를 월드 회전으로 돌린 것입니다(2D 는 Z 축 회전).
      */
-    REFLECT( Category = "Rendering 2D", DisplayName = "Point Light 2D", Tooltip = "2D point or spot light for lit sprites" )
+    REFLECT( Category = "Rendering 2D", DisplayName = "Point Light 2D", Tooltip = "2D point or spot light for lit sprites", Meta = "Icon=LightPoint, IconColor=Light, Billboard" )
     class SW_API PointLight2DComponent : public LightComponent
     {
     public:
@@ -70,7 +70,7 @@ namespace sw
      * @brief 빛 받는 스프라이트 모두에 같은 밝기를 주는 바탕 빛입니다(유니티 Global Light 2D · Godot CanvasModulate 의 자리).
      * @details 2D 빛이 하나도 없으면 빛 받는 스프라이트는 빛 없이(그대로) 그려집니다 — 빛을 하나라도 두면 바탕이 0 이 되므로 어두운 장면은 이것으로 바탕을 줍니다.
      */
-    REFLECT( Category = "Rendering 2D", DisplayName = "Global Light 2D", Tooltip = "Ambient light for every lit sprite" )
+    REFLECT( Category = "Rendering 2D", DisplayName = "Global Light 2D", Tooltip = "Ambient light for every lit sprite", Meta = "Icon=LightGlobal, IconColor=Light, Billboard" )
     class SW_API GlobalLight2DComponent : public LightComponent
     {
     public:

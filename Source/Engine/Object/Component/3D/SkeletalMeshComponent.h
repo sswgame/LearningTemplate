@@ -57,7 +57,7 @@ namespace sw
      *            평가하지 않습니다. `_updateRateDivisor`(PROPERTY)는 하한이고 LOD 가 더 늘릴 수 있습니다. 같은 주기의 유닛은 위상(핸들 해시)이 달라 같은
      *            프레임에 몰리지 않습니다. 쉬는 유닛(재생 없음, 포즈 깨끗함)은 비용이 없습니다.
      */
-    REFLECT( Category = "Rendering 3D", DisplayName = "Skeletal Mesh Component", Tooltip = "Skinned mesh driven by a skeleton pose (animation unit)" )
+    REFLECT( Category = "Rendering 3D", DisplayName = "Skeletal Mesh Component", Tooltip = "Skinned mesh driven by a skeleton pose (animation unit)", Meta = "Icon=Skeleton" )
     class SW_API SkeletalMeshComponent : public MeshComponent
     {
     public:
