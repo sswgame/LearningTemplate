@@ -149,7 +149,9 @@ namespace sw
          */
         void onAfterGameplayDllReload( void* pLibraryModule );
         /**
-         * @brief 연쇄 교체 대상이 모두 준비된 뒤 첫 commit 직전에 불립니다. 에디터가 아닌 모듈이 섞여 있으면 게임을 먼저 언로드합니다.
+         * @brief 연쇄 교체 대상이 모두 준비된 뒤 첫 commit 직전에 불립니다. 게임 쪽 모듈(SWGame · GameFramework · 키트)이 섞여 있으면 게임을 먼저 언로드합니다.
+         * @details 에디터 모듈과 에디터 확장(`GF_EditorPlugIn_*`)만의 배치는 게임을 건드리지 않는다 — 언로드하면 다시 만들 쪽(게임 리로드 콜백)이 오지 않아
+         *          게임 인스턴스가 사라지고 씬 저장이 막힌 채 남는다.
          * @param listModuleName 이번 배치에서 교체될 모듈 이름들
          * @return 게임 상태를 저장하지 못해 **아무것도 언로드하지 않았으면** false 를 반환합니다. 그러면 리로드를 취소하고 옛 게임 모듈이 계속 돕니다.
          */
@@ -272,6 +274,8 @@ namespace sw
 
         // 핫 리로드 때 게임 상태를 보존하는 재사용 버퍼.
         vector<uint8> _listGameSavedState;
+        /** @brief 게임 인스턴스와 함께 내려야 하는 모듈 이름(SWGame · GameFramework · 키트)입니다. `loadModuleImages` 가 채웁니다. */
+        vector<string> _listGameScopeModule;
 
         /** @brief 이번 프레임에 고정한 모듈 상태입니다. */
         ModuleFrameState _frameState;
