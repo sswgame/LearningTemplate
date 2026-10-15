@@ -121,7 +121,7 @@ namespace sw::editor
             ImGui::BeginDisabled();
         }
 
-        if ( ImGui::Button( "Apply All Overrides to Template", ImVec2( 220.0f * EditorThemeUtil::getDpiScale(), 0.0f ) ) )
+        if ( ImGui::Button( "Apply All Overrides to Template" ) )
         {
             if ( EditorToolAssetCommands::applyPrefabOverridesToTemplate( PrefabPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath ) )
                 SW_LOG_TRACE( "Applied all instance overrides back to template %s", _selectedPrefabPath.c_str() );
@@ -132,7 +132,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "ApplyAllOverrides" ) );
 
         ImGui::SameLine();
-        if ( ImGui::Button( "Revert All Overrides", ImVec2( 160.0f * EditorThemeUtil::getDpiScale(), 0.0f ) ) )
+        if ( ImGui::Button( "Revert All Overrides" ) )
         {
             if ( EditorToolAssetCommands::revertAllPrefabOverrides( PrefabPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath ) )
                 SW_LOG_TRACE( "Reverted all overrides on %s", _selectedInstanceName.c_str() );

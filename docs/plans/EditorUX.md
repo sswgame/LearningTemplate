@@ -172,7 +172,45 @@ Figma 값이 필요하면 사용자가 변수 JSON을 내려받아 `import-figma
 
 ## 8. 감사 결과
 
-작성 예정.
+### 8-1. 첫 감사(2026-10-15)
+
+조건: `uiaudit.scenario.xml` 을 DX12 로 돌려 기본 배치와 패널 39 개를 찍었다(1600x900, 밀도 1.0, 글자 16px, DPI 1.0). 기본 배치는 `uicapture.scenario.xml` 로 테마 셋 × 백엔드 넷을 더 찍었다.
+`ux-reviewer` 방식(이 문서 3절 체크리스트)으로 52 장을 보고, 측정 지표(마젠타 비율, 잘린 창)는 캡처 로그에서 읽었다.
+
+- **마젠타**: 모든 장 0 입니다. 감사 전에는 DX12 기본 배치에서 씬 뷰 빌보드 결함의 마젠타 846 픽셀(0.000588)이 잡혀 단계가 실패했고, `wt/uitext` 의 수정이 들어온 뒤 0 이 됐습니다.
+- **백엔드**: 네 백엔드의 기본 배치는 FPS · RHI 이름 · 로그 줄 수 말고는 같습니다(DX12 대비 다른 픽셀 0.04 ~ 0.4 %).
+- **잘린 창(측정)**: Hierarchy 트리(가로 +319px), Inspector(+430), Output Log(+856), Profiler(+1047), UI Preview 이미지(+725) 처럼 가로로 넘쳐 스크롤바 없이 잘리는 창이 많습니다.
+  `##MainMenuBar`(세로 +24) · `##EditorPlayToolbar`(가로 +8)는 눈으로 보면 잘린 글자가 없어 여백 계산 차이로 봅니다.
+
+고친 것(같은 묶음):
+
+| 우선순위 | 패널 | 결함 | 고침 |
+|---|---|---|---|
+| P0 | 에디터 전체 | 에디터 지역화 프로젝트가 탑재되지 않아 검색 힌트 · 빈 상태 · 툴팁 80 여 곳이 키 이름(`EditorConsole.FilterHint`)으로 보임 | 탑재를 `editor::findSubsystem` 으로, 시나리오가 누락 경고 0 을 단언 |
+| P1 | Inspector · Mesh Modifiers · Ability Debugger 등 | 빈 상태 안내문이 한 줄로 그려져 다음 행동이 잘림 | `EditorWidgets::drawEmptyHint` 가 줄바꿈한다 |
+| P1 | Prefab Editor | `Apply All Overrides to Te…` · `Revert All Overrid…` 버튼 글자 잘림(고정 폭 220 · 160px) | 글자에 맞춘 폭 |
+| P2 | Output Log | 오류 0 건인데 `Error (0)` 이 빨간 칩 | 0 건이면 강조색, 있을 때만 오류 · 경고색 |
+| P1 | 라이트 테마 | 헤더 · 선택 행 바탕(`_headerBg`)이 창 바탕과 거의 같음 | `#D6DEEB` → `#B8CDEB` |
+
+남은 결함(백로그 `D3-12`):
+
+| 우선순위 | 패널 | 캡처 | 결함 |
+|---|---|---|---|
+| P0 | Output Log · Content Browser(아래 도크) | 기본 배치 | 도크 높이가 낮아 로그 본문이 한 줄도 안 보이고 콘텐츠 타일은 윗부분만 보인다 |
+| P0 | Scene(뷰포트) | 기본 배치 | 통계 오버레이가 뷰포트 절반을 덮고 오른쪽 툴바와 겹쳐 마지막 줄이 잘린다 |
+| P1 | 도킹 탭 줄 · Profiler 하위 탭 | 07, 15~25 | 탭이 많으면 제목이 말줄임으로 뭉개진다. Profiler 표 헤더의 단위(`Avg (u…`)가 사라진다 |
+| P1 | Hierarchy | 전부 | 이름이 말줄임 · 툴팁 · 가로 스크롤 없이 잘린다(측정: +319px) |
+| P1 | Keyboard Shortcuts · Global Variables · Data Table · Project Settings · Modules | 09, 10, 23, 28, 12 | 열 폭 · 콤보 폭이 좁아 단축키 · 이름 · 툴바 단추가 말줄임 없이 잘린다. Global Variables 는 Reset 열이 창 밖이다 |
+| P1 | Preferences · User Settings | 08, 29 | 필드 이름이 내부 변수명(`_startupScene`, `display.windowMode`)이고 `_uiScale = 0.00` 의 뜻 설명이 없다 |
+| P1 | Input Map Editor | 13 | 경로 상자가 잘리고 라벨과 상자의 세로 중심이 어긋난다 |
+| P1 | Audio Mixer | 26 | 이벤트 콤보가 잘리고, 채널 슬라이더 높이가 채널마다 다르며, 재생 전 `-inf dB` 에 설명이 없다 |
+| P1 | 라이트 테마 | theme_light | 프리팹 인스턴스 이름(연한 파랑)과 로그의 파란 태그가 흰 바탕에서 대비가 낮다 |
+| P1 | 고대비 테마 | theme_highcontrast | 꺼진 토글(회색 면 + 흰 글자)과 `Error` 칩의 대비가 낮다 |
+| P2 | Scene 툴바 | 기본 배치 | `Rot Snap 15 (` 콤보 값이 잘리고 `5.0` 슬라이더 값이 막대에 가린다. 아래 아이콘 툴바는 켜짐 · 꺼짐 구분이 약하다 |
+| P2 | 용어 | 여러 패널 | 되돌리기가 `Reset` · `Revert` · `Revert All to Default` 로 패널마다 다르다 |
+| P3 | History · Catalog Editor · Multiplayer | 11, 24, 31 | 빈 영역에 이유와 다음 행동이 없다(빈 상태 문구) |
+
+판정 불가: 키보드 Tab 순서와 포커스 표시(정지 화면), 메뉴의 단축키 표기(메뉴를 펼친 캡처가 없음), 클릭 대상 24px 실측, 오류 상태(오류가 있는 캡처가 없음).
 
 ## 9. 더 볼 곳
 
