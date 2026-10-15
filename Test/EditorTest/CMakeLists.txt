@@ -51,6 +51,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/GUI/EditorComponentIcon.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorToolDefaults.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorConfig.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorThemeConfig.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorThemeTokens.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorSettingsRegistry.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorPlaySession.cpp"

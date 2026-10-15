@@ -6,7 +6,6 @@
 #include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Config/EditorThemeConfig.h"
-#include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/ConfigManager.h"
@@ -98,6 +97,16 @@ namespace sw::editor
         return loadThemeFile( FileUtil::joinPath( folder, fileName ), outConfig, outError );
     }
 
+    bool EditorThemeTokens::loadThemeResource( const string& resourceID )
+    {
+        EditorThemeConfig config{};
+        string            error;
+        if ( loadThemeFile( ResourcePaths::makeAbsolutePath( resourceID ), config, error ) )
+            return true;
+        SW_LOG_ERROR( "Theme tokens were not loaded: %#", error.c_str() );
+        return false;
+    }
+
     bool EditorThemeTokens::loadThemeFile( string_view absolutePath, EditorThemeConfig& outConfig, string& outError )
     {
         EditorThemeDef         def{};
@@ -112,14 +121,6 @@ namespace sw::editor
             outError = string{ absolutePath } + ": " + outError;
             return false;
         }
-        return true;
-    }
-
-    bool EditorThemeTokens::importChangedTokenFile( string_view relativePath )
-    {
-        if ( EditorTheme* pTheme = findSubsystem<EditorTheme>() )
-            pTheme->markTokensChanged();
-        SW_LOG_INFO( "Theme tokens changed: %#", string{ relativePath }.c_str() );
         return true;
     }
 

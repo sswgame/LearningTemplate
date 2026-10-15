@@ -67,5 +67,5 @@ SW_TEST_CASE( EditorThemeTokensTest, ResolveRejectsMalformedColor )
 SW_TEST_CASE( EditorThemeTokensTest, TokenFileChangeRoutesToThemeReload )
 {
     const sw::editor::AssetReloadRoute route = sw::editor::EditorAssetTypeRegistry::findReloadRoute( "editor/theme/dark.tokens.json" );
-    SW_EXPECT_TRUE( route._pfnImportSource == &sw::editor::EditorThemeTokens::importChangedTokenFile );
+    SW_EXPECT_TRUE( route._pfnImportSource == &sw::editor::EditorTheme::importChangedTokenFile );
 }

@@ -8,7 +8,7 @@
 #include "Editor/Common/Asset/HeightfieldImporter.h"
 #include "Editor/Common/Asset/ModelImporter.h"
 #include "Editor/Common/Asset/TextureImporter.h"
-#include "Editor/Common/Config/EditorThemeTokens.h"
+#include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 
 #include "Engine/Animation/AnimationClip.h"
@@ -116,7 +116,7 @@ namespace sw::editor
             { EditorAssetType::AnimationClip,      MatchMode::Extension,   kArrAnimationClipExt,   SW_COUNT_OF( kArrAnimationClipExt ),                        "AnimationClip",                                              nullptr},
             {      EditorAssetType::Fracture,      MatchMode::Extension,        kArrFractureExt,        SW_COUNT_OF( kArrFractureExt ),                             "Fracture",                                              nullptr},
             {   EditorAssetType::Heightfield,      MatchMode::Extension,     kArrHeightfieldExt,     SW_COUNT_OF( kArrHeightfieldExt ),                                nullptr,                                              nullptr},
-            {          EditorAssetType::Data,       MatchMode::EndsWith,   kArrThemeTokenSuffix,   SW_COUNT_OF( kArrThemeTokenSuffix ),                                nullptr,           &EditorThemeTokens::importChangedTokenFile},
+            {          EditorAssetType::Data,       MatchMode::EndsWith,   kArrThemeTokenSuffix,   SW_COUNT_OF( kArrThemeTokenSuffix ),                                nullptr,                 &EditorTheme::importChangedTokenFile},
             {          EditorAssetType::Data,       MatchMode::EndsWith, kArrLocalizationSuffix, SW_COUNT_OF( kArrLocalizationSuffix ),                          "StringTable",                                              nullptr},
             {    EditorAssetType::UIDocument,       MatchMode::EndsWith,   kArrUIDocumentSuffix,   SW_COUNT_OF( kArrUIDocumentSuffix ), AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr},
             {          EditorAssetType::Data,       MatchMode::EndsWith,      kArrUIStyleSuffix,      SW_COUNT_OF( kArrUIStyleSuffix ), AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr},
