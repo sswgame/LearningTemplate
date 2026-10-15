@@ -61,6 +61,20 @@ namespace
             return true;
         }
 
+        /** @brief 늦게 그려지는 위젯을 누르는 단계를 흉내 낸다 — 대상은 실제 프레임이 `s_readyAtRunFrame` 에 닿아야 있다. 차례 함수가 그때까지 시계를 붙잡는다. */
+        static sw::AutomationStepHold holdLate( sw::AutomationRunner& runner, const sw::AutomationStep& step, sw::InputManager& input )
+        {
+            constexpr uint32 kLateWaitFrames = 30;
+            return runner.holdUntilReady( step, input, s_runFrameCount >= s_readyAtRunFrame, kLateWaitFrames );
+        }
+
+        static bool runLate( sw::AutomationRunner& runner, const sw::AutomationStep& step )
+        {
+            if ( s_runFrameCount < s_readyAtRunFrame )
+                runner.recordFailure( step, "the late target is not there yet" );
+            return true;
+        }
+
         static bool validateMark( const sw::AutomationStep& step, sw::string& outError )
         {
             if ( step._listAttribute.empty() )
@@ -102,6 +116,8 @@ namespace
     SW_AUTOMATION_PROBE( testNothing, "Test.Nothing", "never has a value", &TestAutomationScenarioInternal::readNothing );
     SW_AUTOMATION_PROBE( testReady, "Test.Ready", "1 once the harness has run s_readyAtRunFrame frames", &TestAutomationScenarioInternal::readReady );
     SW_AUTOMATION_STEP( testMark, "TestMark", &TestAutomationScenarioInternal::runMark, &TestAutomationScenarioInternal::validateMark, true );
+    SW_AUTOMATION_STEP_WITH_HOOKS( testLate, "TestLate", &TestAutomationScenarioInternal::runLate, &TestAutomationScenarioInternal::validateMark, nullptr,
+                                   &TestAutomationScenarioInternal::holdLate, false );
 } // namespace
 
 /**
@@ -272,6 +288,43 @@ SW_TEST_CASE( AutomationScenarioTest, WaitUntilHoldsTheScenarioClock )
         SW_EXPECT_TRUE( Internal::run( runner, input ) == sw::AutomationResult::Failed );
         SW_ASSERT_EQUAL( 1u, static_cast<uint32>( runner.getFailures().size() ) );
         SW_EXPECT_TRUE_MSG( runner.getFailures()[0].find( "gave up after 5" ) != sw::string::npos, runner.getFailures()[0].c_str() );
+    }
+    input.shutdown();
+}
+
+/**
+ * @brief [AutomationScenarioTest] 차례 함수가 `holdUntilReady` 로 대상이 생길 때까지 시계를 붙잡는다 — 늦게 그려진 대상도 그 단계에서 누르고, 끝내 없으면 시한 뒤 단계가 실패를 적는다
+ * @details 에디터 입력 단계(`EditorClick` · `EditorDrag` · `EditorHover`)가 레이블을 기다리는 방식이다(백로그 A-3 이던 Vulkan 1 회 "레이블 없음").
+ *          변이: `holdUntilReady` 가 늘 Run 을 돌려주면 첫 시나리오가 "not there yet" 으로 진다.
+ */
+SW_TEST_CASE( AutomationScenarioTest, HoldUntilReadyWaitsForALateTarget )
+{
+    using Internal = TestAutomationScenarioInternal;
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    {
+        Internal::s_readyAtRunFrame = 12;
+        sw::AutomationRunner runner;
+        SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately" timeoutFrames="20">
+        <At frame="2"><TestLate/></At>
+        <At frame="3"><Pass/></At>
+      </Scenario>)" ) );
+        const sw::AutomationResult result = Internal::run( runner, input );
+        SW_EXPECT_TRUE_MSG( result == sw::AutomationResult::Passed, runner.getFailures().empty() ? runner.getFinishReason().c_str() : runner.getFailures()[0].c_str() );
+        SW_EXPECT_EQUAL( 3u, runner.getFrameIndex() ); // 붙잡은 프레임은 시나리오 프레임으로 세지 않는다
+    }
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a target that never appears fails after the wait" );
+        Internal::s_readyAtRunFrame = 1000;
+        sw::AutomationRunner runner;
+        SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately">
+        <At frame="1"><TestLate/></At>
+        <At frame="2"><Pass/></At>
+      </Scenario>)" ) );
+        SW_EXPECT_TRUE( Internal::run( runner, input ) == sw::AutomationResult::Failed );
+        SW_ASSERT_EQUAL( 1u, static_cast<uint32>( runner.getFailures().size() ) );
+        SW_EXPECT_TRUE_MSG( runner.getFailures()[0].find( "not there yet" ) != sw::string::npos, runner.getFailures()[0].c_str() );
+        SW_EXPECT_TRUE( Internal::s_runFrameCount >= 30u ); // 시한(30 프레임)까지 기다렸다
     }
     input.shutdown();
 }

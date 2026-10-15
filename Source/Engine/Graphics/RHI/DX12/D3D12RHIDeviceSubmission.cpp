@@ -561,9 +561,24 @@ namespace sw
                                                       writtenMask != 0;
                 if ( bShouldResolveTimestamps )
                 {
+                    // 적힌 칸의 연속 구간만 옮긴다. 한 번도 적지 않은 칸을 Resolve 하면 디버그 레이어 오류(1319 "Cannot Resolve query that has never been performed")다.
                     const uint32 base = getTimestampBase();
-                    _pActiveFrameList->ResolveQueryData( _timestampHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, base,
-                                                         constant::kMaxGPUTimestampSlot, _timestampReadback.Get(), sizeof( uint64 ) * base );
+                    uint32       slot = 0;
+                    while ( slot < constant::kMaxGPUTimestampSlot )
+                    {
+                        if ( ( writtenMask & ( 1u << slot ) ) == 0 )
+                        {
+                            ++slot;
+                            continue;
+                        }
+                        const uint32 runStart = slot;
+                        while ( slot < constant::kMaxGPUTimestampSlot && ( writtenMask & ( 1u << slot ) ) != 0 )
+                        {
+                            ++slot;
+                        }
+                        _pActiveFrameList->ResolveQueryData( _timestampHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, base + runStart, slot - runStart,
+                                                             _timestampReadback.Get(), sizeof( uint64 ) * ( base + runStart ) );
+                    }
                 }
                 _pActiveFrameList->Close();
                 _listPendingSubmit.push_back( _pActiveFrameList );
