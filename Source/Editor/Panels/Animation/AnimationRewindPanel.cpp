@@ -26,7 +26,7 @@
 
 namespace sw::editor
 {
-    SW_EDITOR_PANEL( AnimationRewindPanel, "animation_rewind", EditorPanelCategory::Tool, 1650 );
+    SW_EDITOR_PANEL( AnimationRewindPanel, AnimationRewindPanel::kPanelID, EditorPanelCategory::Tool, 1650 );
 
     namespace
     {

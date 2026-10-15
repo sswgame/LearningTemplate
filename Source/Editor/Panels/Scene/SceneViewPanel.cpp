@@ -23,7 +23,7 @@
 
 namespace sw::editor
 {
-    SW_EDITOR_PANEL( SceneViewPanel, "scene_view", EditorPanelCategory::Core, 300 );
+    SW_EDITOR_PANEL( SceneViewPanel, SceneViewPanel::kPanelID, EditorPanelCategory::Core, 300 );
 
     SceneViewPanel::SceneViewPanel()
         : _viewportClient{}

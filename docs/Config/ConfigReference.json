@@ -1434,7 +1434,7 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "타일맵 패널의 워프 대상 기본값(리소스 경로)"
+       "description": "타일맵 패널의 워프 대상 기본값(리소스 경로, 비면 없음)"
       },
       {
        "name": "_spriteAtlas",
@@ -1443,12 +1443,12 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "스프라이트 클립 패널의 기본 아틀라스(리소스 경로)"
+       "description": "스프라이트 클립 패널의 기본 아틀라스(리소스 경로, 비면 없음)"
       },
       {
        "name": "_clearColor",
        "type": "float4",
-       "default": "0.12, 0.15, 0.18, 1.0",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -1457,20 +1457,20 @@
       {
        "name": "_listBaseFont",
        "type": "vector<string>",
-       "default": "consola.ttf, Consolas.ttf, DejaVuSansMono.ttf, … (8 개)",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
-       "description": "라틴 글꼴 후보 — 에디터 팩 `fonts/` → OS 글꼴 폴더 순으로 앞의 것부터 찾는다"
+       "description": "라틴 글꼴 후보 — 에디터 팩 `fonts/` → OS 글꼴 폴더 순으로 앞의 것부터 찾는다. 하나도 없으면 에디터가 서지 않는다"
       },
       {
        "name": "_listKoreanFont",
        "type": "vector<string>",
-       "default": "malgun.ttf, malgunsl.ttf, NanumGothic.ttf, … (8 개)",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
-       "description": "한글 글꼴 후보(병합) — 찾는 순서는 위와 같다"
+       "description": "한글 글꼴 후보(병합) — 찾는 순서는 위와 같다. 하나도 없으면 에디터가 서지 않는다"
       },
       {
        "name": "_listHotReloadExtension",
@@ -3635,9 +3635,9 @@
   {
    "name": "gv_tracyViewerPath",
    "type": "string",
-   "default": "",
+   "default": "Tools/Tracy",
    "kind": "일반",
-   "description": "Tracy 뷰어(tracy-profiler 0.14.1) 경로 — 파일이나 폴더 (비우면 Tools/Tracy)",
+   "description": "Tracy 뷰어(tracy-profiler 0.14.1) 경로 — 파일이나 폴더, 상대 경로는 프로젝트 루트 기준",
    "source": "Source/Editor/Common/Commands/Dev/EditorTracyLauncher.cpp"
   },
   {

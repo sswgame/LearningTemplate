@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Module/ModuleUnloadListener.h"
 
+#include "Editor/Common/Config/EditorUserFile.h"
 #include "Editor/Common/EditorPaths.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
@@ -97,7 +98,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    bool EditorPreferencesStore::loadAll( string_view filePath )
+    EditorUserFileResult EditorPreferencesStore::loadAll( string_view filePath )
     {
         using SettingsRegistry = EditorSettingsRegistryInternal::SettingsRegistry;
         for ( uint32 index = 0; index < SettingsRegistry::getCount(); ++index )
@@ -107,12 +108,14 @@ namespace sw::editor
                 EditorSettingsRegistryInternal::markLoaded( registration._pfnGetInstance() );
         }
         if ( FileUtil::isRegularFile( filePath ) == false )
-            return false;
+            return EditorUserFileResult::Missing;
         JSONDocument document;
         if ( document.loadFile( filePath ) == false || document.getRoot().isObject() == false )
         {
-            SW_LOG_WARNING( "Editor preferences %# could not be read - using defaults", string( filePath ).c_str() );
-            return false;
+            // 깨진 사용자 파일은 치우고 새로 쓴다 — 그대로 두면 다음 저장이 사용자가 고친 값을 말없이 덮는다.
+            if ( EditorUserFile::quarantineCorruptFile( filePath, "not a JSON object" ) )
+                (void)saveAll( filePath ); // 실패는 saveAll 이 경고로 알린다
+            return EditorUserFileResult::Recovered;
         }
         const JSONValue root = document.getRoot();
         for ( const string& sectionID : root.getMemberNames() )
@@ -125,7 +128,7 @@ namespace sw::editor
             }
             EditorSettingsRegistryInternal::applySection( root, sectionID, *pRegistration );
         }
-        return true;
+        return EditorUserFileResult::Loaded;
     }
 
     uint32 EditorPreferencesStore::loadNewSections( string_view filePath )
@@ -145,7 +148,8 @@ namespace sw::editor
         JSONDocument document;
         if ( document.loadFile( filePath ) == false || document.getRoot().isObject() == false )
         {
-            SW_LOG_WARNING( "Editor preferences %# could not be read - new sections keep defaults", string( filePath ).c_str() );
+            // 실행 중에 깨졌다 — 기동 때와 같은 한 경로로 치운다. 새 파일은 다음 saveAll 이 쓴다(지금 쓰면 saveAll 이 이 함수를 다시 부른다).
+            (void)EditorUserFile::quarantineCorruptFile( filePath, "not a JSON object" ); // 못 옮겼으면 이유를 오류로 남겼다
             return 0;
         }
         const JSONValue root = document.getRoot();

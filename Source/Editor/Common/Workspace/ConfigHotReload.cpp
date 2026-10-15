@@ -73,11 +73,11 @@ namespace sw::editor
         if ( pConfigManager != nullptr && pConfigManager->reloadConfigFile( fullPath ) )
             return true;
 
-        // 에디터 도구 시드는 에디터가 들고 있다. 깨진 파일이면 이전 값을 그대로 둔다(읽기 실패는 loadFromHostPath 가 알린다).
+        // 에디터 도구 시드는 에디터가 들고 있다. 깨진 파일이면 이전 값을 그대로 둔다(읽기 실패는 loadFromHostPath 가 키 이름과 오류로 알린다).
         const string toolDefaultsPath = EditorPaths::resolveProjectRelativePath( config::kFileRuntimeEditorToolDefaults );
         if ( FileUtil::pathsEqualNormalized( toolDefaultsPath, fullPath ) == false )
             return false;
-        // 지워진 파일의 사건은 바꿀 것이 없다(없는 파일은 loadFromHostPath 가 기본값으로 성공시킨다 — 쓰던 값을 기본값으로 덮지 않는다).
+        // 편집기가 저장하며 잠시 지웠다 다시 쓰는 사건은 다시 읽을 것이 없다 — 이어지는 생성 사건이 읽는다. 정말 지웠으면 다음 기동이 오류로 멈춘다.
         if ( FileUtil::exists( toolDefaultsPath ) == false )
             return false;
         EditorToolDefaults reloaded{};

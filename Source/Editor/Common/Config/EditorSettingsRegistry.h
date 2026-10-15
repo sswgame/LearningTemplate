@@ -7,6 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Editor/Common/Config/EditorUserFile.h"
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
@@ -81,8 +82,11 @@ namespace sw::editor
      */
     struct SW_EDITOR_API EditorPreferencesStore
     {
-        /** @brief 등록된 섹션마다 파일의 값을 적용합니다. 없는 값은 그대로 둡니다. 적용한 섹션의 `_pfnOnChanged` 를 호출합니다. 파일이 없으면 false 이며, 처음 실행이면 정상입니다. */
-        [[nodiscard]] static bool loadAll( string_view filePath );
+        /**
+         * @brief 등록된 섹션마다 파일의 값을 적용합니다. 없는 값은 그대로 둡니다. 적용한 섹션의 `_pfnOnChanged` 를 호출합니다.
+         * @return 파일이 없으면 `Missing`(처음 실행). 깨졌으면 `.corrupt` 로 치우고 오류를 남긴 뒤 새 파일을 쓰고 `Recovered`(`EditorUserFile`).
+         */
+        [[nodiscard]] static EditorUserFileResult loadAll( string_view filePath );
         /** @brief 등록된 섹션을 모두 기본과의 차이만으로 씁니다. 차이가 없는 섹션은 빼고, 모두 없으면 빈 오브젝트를 씁니다. */
         [[nodiscard]] static bool saveAll( string_view filePath );
         /**

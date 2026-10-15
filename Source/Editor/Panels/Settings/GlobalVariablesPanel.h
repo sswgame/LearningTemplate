@@ -26,6 +26,9 @@ namespace sw::editor
     class GlobalVariablesPanel : public IEditorPanel
     {
     public:
+        /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
+        static constexpr const utf8* kPanelID = "global_variables";
+
         /** @brief 전역 변수 창을 만듭니다(도구 창이라 닫힌 채 시작합니다). */
         GlobalVariablesPanel();
         /** @brief 추가 해제할 GPU 리소스는 없습니다. */

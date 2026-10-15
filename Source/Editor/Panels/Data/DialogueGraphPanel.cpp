@@ -80,7 +80,7 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_LOG_CALLER( "DialogueGraphPanel" );
-    SW_EDITOR_PANEL( DialogueGraphPanel, "dialogue_graph", EditorPanelCategory::Tool, 1200 );
+    SW_EDITOR_PANEL( DialogueGraphPanel, DialogueGraphPanel::kPanelID, EditorPanelCategory::Tool, 1200 );
 
     DialogueGraphPanel::DialogueGraphPanel()
         : EditorGraphDocumentPanel{ EditorAssetType::DialogueGraph, "Move Dialogue Nodes", "dialogue-graph-layout" }

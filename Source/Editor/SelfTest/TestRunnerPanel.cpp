@@ -73,7 +73,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_EDITOR_PANEL( TestRunnerPanel, "test_runner", EditorPanelCategory::Tool, 2030 );
+    SW_EDITOR_PANEL( TestRunnerPanel, TestRunnerPanel::kPanelID, EditorPanelCategory::Tool, 2030 );
 
     TestRunnerPanel::TestRunnerPanel()
         : IEditorPanel( false )

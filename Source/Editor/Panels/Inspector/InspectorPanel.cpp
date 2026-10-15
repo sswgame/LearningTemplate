@@ -87,7 +87,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_EDITOR_PANEL( InspectorPanel, "inspector", EditorPanelCategory::Core, 200 );
+    SW_EDITOR_PANEL( InspectorPanel, InspectorPanel::kPanelID, EditorPanelCategory::Core, 200 );
 
     InspectorPanel::InspectorPanel()
         : _propertyGrid{}

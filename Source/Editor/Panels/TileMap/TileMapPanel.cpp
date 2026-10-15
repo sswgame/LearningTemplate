@@ -54,7 +54,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                const TileMapPanel* pPanel = static_cast<const TileMapPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "tile_map" ) );
+                const TileMapPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<TileMapPanel>();
                 if ( pPanel == nullptr )
                     return false;
                 outValue = static_cast<float64>( pPanel->countSelectedFlagCells() );
@@ -66,7 +66,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return false;
-                const TileMapPanel* pPanel = static_cast<const TileMapPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "tile_map" ) );
+                const TileMapPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<TileMapPanel>();
                 if ( pPanel == nullptr )
                     return false;
                 outValue = static_cast<float64>( pPanel->getPaintToolIndex() );
@@ -79,7 +79,7 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_LOG_CALLER( "TileMapPanel" );
-    SW_EDITOR_PANEL( TileMapPanel, "tile_map", EditorPanelCategory::Tool, 1500 );
+    SW_EDITOR_PANEL( TileMapPanel, TileMapPanel::kPanelID, EditorPanelCategory::Tool, 1500 );
     SW_AUTOMATION_PROBE( editorTileMapFlagCells, "Editor.TileMapFlagCells", "Cells set in the Tile Map Tool's selected flag layer (0 on other layers)",
                          &TileMapPanelInternal::readFlagCells );
     SW_AUTOMATION_PROBE( editorTileMapTool, "Editor.TileMapTool", "Tile Map Tool paint tool: 0 Brush, 1 Rect, 2 Fill, 3 Picker", &TileMapPanelInternal::readPaintTool );

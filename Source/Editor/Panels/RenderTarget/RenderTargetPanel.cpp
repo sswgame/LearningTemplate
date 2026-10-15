@@ -24,7 +24,7 @@
 
 namespace sw::editor
 {
-    SW_EDITOR_PANEL( RenderTargetPanel, "render_targets", EditorPanelCategory::Tool, 900 );
+    SW_EDITOR_PANEL( RenderTargetPanel, RenderTargetPanel::kPanelID, EditorPanelCategory::Tool, 900 );
 
     namespace
     {

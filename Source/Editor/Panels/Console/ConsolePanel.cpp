@@ -92,7 +92,7 @@ namespace sw::editor
             static ConsolePanel* findPanel()
             {
                 EditorContext* pContext = EditorContext::get();
-                return pContext != nullptr ? static_cast<ConsolePanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "console" ) ) : nullptr;
+                return pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<ConsolePanel>() : nullptr;
             }
 
             /** @brief Output Log 가 지난 그리기에 보인 줄 수입니다(접기 · 거르기 뒤). */
@@ -150,7 +150,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_EDITOR_PANEL( ConsolePanel, "console", EditorPanelCategory::Core, 400 );
+    SW_EDITOR_PANEL( ConsolePanel, ConsolePanel::kPanelID, EditorPanelCategory::Core, 400 );
     SW_AUTOMATION_PROBE( editorOutputLogVisibleRows, "Editor.OutputLogVisibleRows", "Rows the Output Log drew in the last frame (after its filters and Collapse)",
                          &ConsolePanelInternal::readVisibleRows );
     SW_DEV_COMMAND( LogRepeat, "log.repeat", "log.repeat <count> <warning|info> <text...>", "Write the same log line several times (Output Log Collapse checks)",

@@ -14,6 +14,9 @@ namespace sw::editor
     class AnimationGraphPanel : public EditorGraphDocumentPanel<AnimationGraphAsset>
     {
     public:
+        /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
+        static constexpr const utf8* kPanelID = "animation_graph";
+
         /** @brief 애니메이션 그래프 도구를 생성합니다. */
         AnimationGraphPanel();
         /** @brief 노드 에디터 컨텍스트를 해제합니다. */

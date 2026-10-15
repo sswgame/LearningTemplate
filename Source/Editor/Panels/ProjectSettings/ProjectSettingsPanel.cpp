@@ -52,7 +52,7 @@ namespace sw::editor
             {
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext != nullptr )
-                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "projectsettings", true ); // 패널은 이 파일에 등록되어 있다
+                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<ProjectSettingsPanel>( true ); // 패널은 이 파일에 등록되어 있다
             }
 
             [[nodiscard]] static bool readPageCount( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -341,7 +341,7 @@ namespace sw::editor
         ImGui::EndChild();
     }
 
-    SW_EDITOR_PANEL( ProjectSettingsPanel, "projectsettings", EditorPanelCategory::Tool, 2010 );
+    SW_EDITOR_PANEL( ProjectSettingsPanel, ProjectSettingsPanel::kPanelID, EditorPanelCategory::Tool, 2010 );
     SW_EDITOR_COMMAND( ProjectSettingsOpen, "editor.projectSettings", 2220, "Project Settings...", editoricon::kSettings, "Editor", "프로젝트 설정 창을 엽니다",
                        "Open project settings", {}, &ProjectSettingsPanelInternal::openPanel, nullptr, "MainMenu/Edit" );
 

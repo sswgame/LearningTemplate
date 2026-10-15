@@ -29,7 +29,7 @@
 
 namespace sw::editor
 {
-    SW_EDITOR_PANEL( RigDebugPanel, "rig_debug", EditorPanelCategory::Tool, 1660 );
+    SW_EDITOR_PANEL( RigDebugPanel, RigDebugPanel::kPanelID, EditorPanelCategory::Tool, 1660 );
 
     namespace
     {

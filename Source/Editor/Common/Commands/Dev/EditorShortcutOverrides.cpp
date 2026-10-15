@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
+#include "Editor/Common/Config/EditorUserFile.h"
 #include "Editor/Common/EditorPaths.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -13,18 +14,21 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "EditorShortcuts" );
 
-    bool EditorShortcutOverrides::loadFromFile( string_view filePath )
+    EditorUserFileResult EditorShortcutOverrides::loadFromFile( string_view filePath )
     {
         _listOverride.clear();
         if ( FileUtil::isRegularFile( filePath ) == false )
-            return false;
+            return EditorUserFileResult::Missing;
         JSONDocument document;
         if ( document.loadFile( filePath ) == false || document.getRoot().isObject() == false )
         {
-            SW_LOG_WARNING( "Shortcut overrides %# could not be read - using the default shortcuts", string( filePath ).c_str() );
-            return false;
+            // 깨진 사용자 파일은 치우고 새로 쓴다 — 그대로 두면 다음 저장이 사용자가 고친 줄을 말없이 덮는다.
+            if ( EditorUserFile::quarantineCorruptFile( filePath, "not a JSON object" ) )
+                (void)saveToFile( filePath ); // 덮어쓰기 없음. 실패는 saveToFile 이 경고로 알린다
+            return EditorUserFileResult::Recovered;
         }
         const JSONValue root = document.getRoot();
+        string          brokenCommandID;
         for ( const string& commandID : root.getMemberNames() )
         {
             const JSONValue        pair = root.get( commandID, false );
@@ -34,12 +38,18 @@ namespace sw::editor
                                 parseShortcut( pair.at( 1 ).asString(), entry._altShortcut );
             if ( bValid == false )
             {
-                SW_LOG_WARNING( "Shortcut override '%#' is not [ \"<combo>\", \"<combo>\" ] with known keys - skipped", commandID.c_str() );
+                SW_LOG_ERROR( "Shortcut override '%#' is not [ \"<combo>\", \"<combo>\" ] with known keys", commandID.c_str() );
+                brokenCommandID = commandID;
                 continue;
             }
             _listOverride.push_back( std::move( entry ) );
         }
-        return true;
+        if ( brokenCommandID.empty() )
+            return EditorUserFileResult::Loaded;
+        // 틀린 줄이 있으면 파일이 깨진 것이다. 원본은 `.corrupt` 로 남기고, 읽은 줄만으로 새로 쓴다 — 다음 저장이 틀린 줄을 말없이 지우지 않게.
+        if ( EditorUserFile::quarantineCorruptFile( filePath, "override '" + brokenCommandID + "' is not a known key pair" ) )
+            (void)saveToFile( filePath ); // 실패는 saveToFile 이 경고로 알린다
+        return EditorUserFileResult::Recovered;
     }
 
     bool EditorShortcutOverrides::saveToFile( string_view filePath ) const

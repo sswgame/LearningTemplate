@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
+#include "Editor/Common/Config/EditorUserFile.h"
 #include "Editor/Common/EditorExports.h"
 
 namespace sw::editor
@@ -31,8 +32,11 @@ namespace sw::editor
     class SW_EDITOR_API EditorShortcutOverrides
     {
     public:
-        /** @brief 파일을 읽습니다(앞 내용은 버린다). 파일이 없으면 false 입니다(처음 — 정상). 형식이 틀린 줄은 경고하고 건너뜁니다. */
-        [[nodiscard]] bool loadFromFile( string_view filePath );
+        /**
+         * @brief 파일을 읽습니다(앞 내용은 버린다). 파일이 없으면 `Missing`(처음 — 정상)입니다.
+         * @details 파일이 깨졌거나 형식이 틀린 줄이 있으면 오류를 남기고 원본을 `.corrupt` 로 치운 뒤, 읽은 줄만으로 새로 쓰고 `Recovered` 입니다(`EditorUserFile`).
+         */
+        [[nodiscard]] EditorUserFileResult loadFromFile( string_view filePath );
         /** @brief 파일에 씁니다. 덮어쓰기가 없으면 빈 오브젝트입니다. */
         [[nodiscard]] bool saveToFile( string_view filePath ) const;
         /** @brief 레지스트리의 커맨드에 덮어쓰기를 입힙니다. 입힌 수입니다. */

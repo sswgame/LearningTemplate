@@ -101,7 +101,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return nullptr;
-                return static_cast<const ContentBrowserPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "content_browser" ) );
+                return pContext->getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>();
             }
 
             [[nodiscard]] static bool readGameRootCount( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -129,9 +129,9 @@ namespace sw::editor
                 if ( listArgument.size() != 1 || pContext == nullptr )
                     return false;
                 const string folderAbs = FileUtil::joinPath( ResourcePaths::getRootFolderPath(), FileUtil::normalizePath( listArgument[0] ) );
-                if ( FileUtil::isDirectory( folderAbs ) == false || pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "content_browser", true ) == false )
+                if ( FileUtil::isDirectory( folderAbs ) == false || pContext->getSubsystem<EditorPanelManager>().setPanelOpen<ContentBrowserPanel>( true ) == false )
                     return false;
-                ContentBrowserPanel* pPanel = static_cast<ContentBrowserPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( "content_browser" ) );
+                ContentBrowserPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>();
                 if ( pPanel == nullptr )
                     return false;
                 pPanel->openFolder( folderAbs );
@@ -182,7 +182,7 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_LOG_CALLER( "ContentBrowserPanel" );
-    SW_EDITOR_PANEL( ContentBrowserPanel, "content_browser", EditorPanelCategory::Core, 600 );
+    SW_EDITOR_PANEL( ContentBrowserPanel, ContentBrowserPanel::kPanelID, EditorPanelCategory::Core, 600 );
     SW_AUTOMATION_PROBE( editorContentGameRootCount, "Editor.ContentGameRootCount", "Game pack roots the Content Browser lists (1 = active pack only)",
                          &ContentBrowserPanelInternal::readGameRootCount );
     SW_AUTOMATION_PROBE( editorReferenceIndexReady, "Editor.ReferenceIndexReady", "1 once the Content Browser reference index has been built",

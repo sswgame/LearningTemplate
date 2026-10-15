@@ -34,6 +34,9 @@ namespace sw::editor
     class RenderTargetPanel : public IEditorPanel
     {
     public:
+        /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
+        static constexpr const utf8* kPanelID = "render_targets";
+
         /** @brief 렌더 타깃 창을 만듭니다. 도구 창이므로 닫힌 채로 시작합니다. */
         RenderTargetPanel();
         /** @brief 소멸자입니다. ImGui 에 등록한 미리보기 텍스처는 shutdown() 이 놓습니다. */

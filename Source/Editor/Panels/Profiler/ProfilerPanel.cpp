@@ -106,7 +106,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_EDITOR_PANEL( ProfilerPanel, "profiler", EditorPanelCategory::Core, 500 );
+    SW_EDITOR_PANEL( ProfilerPanel, ProfilerPanel::kPanelID, EditorPanelCategory::Core, 500 );
 
     ProfilerPanel::ProfilerPanel()
         : IEditorPanel( false )

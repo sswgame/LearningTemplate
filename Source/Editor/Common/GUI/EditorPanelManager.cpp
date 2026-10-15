@@ -74,7 +74,7 @@ namespace sw::editor
         _listPanel.push_back( std::move( entry ) );
     }
 
-    IEditorPanel* EditorPanelManager::findPanel( string_view panelID ) const
+    IEditorPanel* EditorPanelManager::findPanelByID( string_view panelID ) const
     {
         for ( const EditorPanelEntry& entry : _listPanel )
         {
@@ -88,7 +88,7 @@ namespace sw::editor
 
     bool EditorPanelManager::setPanelOpen( string_view panelID, bool bOpen )
     {
-        IEditorPanel* pPanel = findPanel( panelID );
+        IEditorPanel* pPanel = findPanelByID( panelID );
         if ( pPanel != nullptr )
         {
             pPanel->setOpen( bOpen );

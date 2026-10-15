@@ -54,7 +54,7 @@ namespace sw::editor
             {
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext != nullptr )
-                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "preferences", true ); // 패널은 이 파일에 등록되어 있다
+                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<PreferencesPanel>( true ); // 패널은 이 파일에 등록되어 있다
             }
         };
     } // namespace
@@ -175,7 +175,7 @@ namespace sw::editor
         (void)EditorPreferencesStore::saveAll( EditorPreferencesStore::getDefaultFilePath() ); // 실패는 saveAll 이 경고로 알린다
     }
 
-    SW_EDITOR_PANEL( PreferencesPanel, "preferences", EditorPanelCategory::Tool, 2000 );
+    SW_EDITOR_PANEL( PreferencesPanel, PreferencesPanel::kPanelID, EditorPanelCategory::Tool, 2000 );
     SW_EDITOR_COMMAND( EditorPreferences, "editor.preferences", 2210, "Preferences...", editoricon::kSettings, "Editor", "에디터 환경설정 창을 엽니다",
                        "Open editor preferences", {}, &PreferencesPanelInternal::openPanel, nullptr, "MainMenu/Edit" );
 } // namespace sw::editor

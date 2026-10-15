@@ -19,7 +19,7 @@ namespace sw::editor
     {
         Launched,          ///< 출력을 켜고 뷰어를 띄웠다
         TracyNotCompiled,  ///< 이 빌드에 Tracy 가 없다(Shipping · SW_ENABLE_TRACY=OFF)
-        ViewerNotFound,    ///< 뷰어 실행 파일을 찾지 못했다(`gv_tracyViewerPath` · Tools/Tracy)
+        ViewerNotFound,    ///< 뷰어 실행 파일을 찾지 못했다(`gv_tracyViewerPath` 가 가리키는 자리)
         ViewerLaunchFailed ///< 뷰어 프로세스를 띄우지 못했다
     };
 } // namespace sw::editor
@@ -32,15 +32,13 @@ namespace sw::editor
      */
     struct EditorTracyLauncher
     {
-        /** @brief 저장소 안 기본 자리(저장소에 넣지 않는다 — `.gitignore` 의 Tools/Tracy/)입니다. */
-        static constexpr auto kDefaultViewerFolder = "Tools/Tracy";
-
         /** @brief 이 플랫폼의 뷰어 실행 파일 이름입니다(Windows 릴리스 zip 의 `tracy-profiler.exe`). */
         static const utf8* getViewerFileName();
 
         /**
-         * @brief 뷰어 실행 파일을 찾습니다. 순서: @p configuredPath(파일이거나 그 파일이 든 폴더) → `<projectRoot>/Tools/Tracy/<이름>`.
-         * @return 있는 파일을 찾았으면 true 입니다.
+         * @brief 설정한 자리 @p configuredPath(파일이거나 그 파일이 든 폴더)에서 뷰어 실행 파일을 찾습니다. 상대 경로면 @p projectRoot 기준입니다.
+         * @details 자리의 정본은 설정(`gv_tracyViewerPath`, 기본 `Tools/Tracy`) 하나다. 그 자리에 없으면 다른 자리를 더 뒤지지 않는다.
+         * @return 있는 파일을 찾았으면 true 입니다. @p configuredPath 가 비면 false 입니다.
          */
         [[nodiscard]] static bool findViewerPath( string_view configuredPath, string_view projectRoot, string& outPath );
 

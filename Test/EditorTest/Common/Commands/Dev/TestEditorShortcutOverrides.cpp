@@ -91,8 +91,37 @@ SW_TEST_CASE( EditorShortcutOverridesTest, ConflictIsReportedByValidateAndFileRo
     const string filePath = FileUtil::joinPath( test::makeTempDirectory( "editor_shortcut_overrides" ), EditorShortcutOverrides::kFileName );
     SW_ASSERT_TRUE( overrides.saveToFile( filePath ) );
     EditorShortcutOverrides loaded;
-    SW_ASSERT_TRUE( loaded.loadFromFile( filePath ) );
+    SW_ASSERT_TRUE( loaded.loadFromFile( filePath ) == EditorUserFileResult::Loaded );
     SW_ASSERT_EQUAL( size_t{ 1 }, loaded.getOverrides().size() );
     SW_EXPECT_TRUE( loaded.getOverrides()[0]._commandID == "edit.redo" );
     SW_EXPECT_TRUE( loaded.getOverrides()[0]._shortcut._key == EditorCommandKey::Z );
+}
+
+/**
+ * @brief [EditorShortcutOverridesTest] 깨진 사용자 파일은 기본으로 조용히 가지 않는다 — 원본을 `.corrupt` 로 치우고, 읽은 줄만으로 새 파일을 쓴다
+ * @details 틀린 줄을 건너뛰기만 하면 다음 저장이 그 줄을 말없이 지운다. 사용자가 고친 것이 어디로 갔는지 알 수 있게 원본을 남긴다.
+ */
+SW_TEST_CASE( EditorShortcutOverridesTest, BrokenFileIsMovedAsideAndRewritten )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "a broken shortcut file is moved aside" );
+    const string folder      = test::makeTempDirectory( "editor_shortcut_overrides_broken" );
+    const string filePath    = FileUtil::joinPath( folder, EditorShortcutOverrides::kFileName );
+    const string corruptPath = filePath + EditorUserFile::kCorruptSuffix;
+
+    // 1) JSON 이 아니다 — 치우고 빈 파일을 새로 쓴다.
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( filePath, "{ not json" ) );
+    EditorShortcutOverrides loaded;
+    SW_EXPECT_TRUE( loaded.loadFromFile( filePath ) == EditorUserFileResult::Recovered );
+    SW_EXPECT_TRUE( FileUtil::isRegularFile( corruptPath ) );
+    SW_EXPECT_TRUE( loaded.getOverrides().empty() );
+    SW_EXPECT_TRUE( loaded.loadFromFile( filePath ) == EditorUserFileResult::Loaded );
+
+    // 2) 한 줄이 틀렸다 — 원본을 치우고, 맞는 줄만으로 새로 쓴다.
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( filePath, "{ \"edit.redo\": [ \"Ctrl+Z\", \"\" ], \"edit.undo\": [ \"Ctrl+NoSuchKey\", \"\" ] }" ) );
+    SW_EXPECT_TRUE( loaded.loadFromFile( filePath ) == EditorUserFileResult::Recovered );
+    SW_ASSERT_EQUAL( size_t{ 1 }, loaded.getOverrides().size() );
+    EditorShortcutOverrides rewritten;
+    SW_EXPECT_TRUE( rewritten.loadFromFile( filePath ) == EditorUserFileResult::Loaded );
+    SW_ASSERT_EQUAL( size_t{ 1 }, rewritten.getOverrides().size() );
+    SW_EXPECT_TRUE( rewritten.getOverrides()[0]._commandID == "edit.redo" );
 }

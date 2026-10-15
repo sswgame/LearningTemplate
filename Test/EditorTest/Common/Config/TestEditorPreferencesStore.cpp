@@ -56,7 +56,7 @@ SW_TEST_CASE( EditorPreferencesStoreTest, RoundTripThroughTheFile )
     SW_ASSERT_TRUE( EditorPreferencesStore::saveAll( filePath ) );
     SW_EXPECT_EQUAL( 1u, EditorPreferencesStore::countSavedKeys( filePath ) );
     probe._speed = 5.0f;
-    SW_ASSERT_TRUE( EditorPreferencesStore::loadAll( filePath ) );
+    SW_ASSERT_TRUE( EditorPreferencesStore::loadAll( filePath ) == EditorUserFileResult::Loaded );
     SW_EXPECT_NEAR_EQUAL( 7.0f, probe._speed, 1e-6f );
     EditorPreferencesStore::resetSection( registrar.getRegistration() );
     SW_EXPECT_NEAR_EQUAL( 5.0f, probe._speed, 1e-6f );
@@ -73,7 +73,7 @@ SW_TEST_CASE( EditorPreferencesStoreTest, ReloadedSectionReadsTheFileOnce )
     };
     EditorPreferencesProbe& probe    = *static_cast<EditorPreferencesProbe*>( EditorSettingsInstance<EditorPreferencesProbe>::getInstance() );
     const string            filePath = FileUtil::joinPath( test::makeTempDirectory( "editor_preferences_reload" ), EditorPreferencesStore::kFileName );
-    (void)EditorPreferencesStore::loadAll( filePath ); // 파일이 아직 없다 — 섹션을 '입힘' 으로 적어 둔다
+    SW_ASSERT_TRUE( EditorPreferencesStore::loadAll( filePath ) == EditorUserFileResult::Missing ); // 파일이 아직 없다 — 섹션을 '입힘' 으로 적어 둔다
     probe._speed = 7.0f;
     SW_ASSERT_TRUE( EditorPreferencesStore::saveAll( filePath ) );
 
@@ -94,4 +94,17 @@ SW_TEST_CASE( EditorPreferencesStoreTest, ReloadedSectionReadsTheFileOnce )
     SW_EXPECT_EQUAL( 0u, EditorPreferencesStore::loadNewSections( filePath ) );
     SW_EXPECT_NEAR_EQUAL( 3.0f, probe._speed, 1e-6f );
     EditorPreferencesStore::resetSection( registrar.getRegistration() );
+}
+
+/**
+ * @brief [EditorPreferencesStoreTest] 깨진 환경설정 파일은 `.corrupt` 로 치우고 새로 쓴다 — 조용히 기본값으로 가지 않는다
+ */
+SW_TEST_CASE( EditorPreferencesStoreTest, BrokenFileIsMovedAsideAndRewritten )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "a broken preferences file is moved aside" );
+    const string filePath = FileUtil::joinPath( test::makeTempDirectory( "editor_preferences_broken" ), EditorPreferencesStore::kFileName );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( filePath, "[ not an object" ) );
+    SW_EXPECT_TRUE( EditorPreferencesStore::loadAll( filePath ) == EditorUserFileResult::Recovered );
+    SW_EXPECT_TRUE( FileUtil::isRegularFile( filePath + EditorUserFile::kCorruptSuffix ) );
+    SW_EXPECT_TRUE( EditorPreferencesStore::loadAll( filePath ) == EditorUserFileResult::Loaded );
 }

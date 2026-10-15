@@ -190,7 +190,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_EDITOR_PANEL( GlobalVariablesPanel, "global_variables", EditorPanelCategory::Tool, 800 );
+    SW_EDITOR_PANEL( GlobalVariablesPanel, GlobalVariablesPanel::kPanelID, EditorPanelCategory::Tool, 800 );
 
     GlobalVariablesPanel::GlobalVariablesPanel()
         : IEditorPanel( false )

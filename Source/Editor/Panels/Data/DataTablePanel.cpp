@@ -36,7 +36,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_EDITOR_PANEL( DataTablePanel, "data_table", EditorPanelCategory::Tool, 1700 );
+    SW_EDITOR_PANEL( DataTablePanel, DataTablePanel::kPanelID, EditorPanelCategory::Tool, 1700 );
 
     DataTablePanel::DataTablePanel()
         : IEditorPanel{ false }

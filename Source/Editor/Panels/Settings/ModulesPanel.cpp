@@ -393,5 +393,5 @@ namespace sw::editor
         return ModulesPanelInternal::getPreviewNewlyInactiveCount();
     }
 
-    SW_EDITOR_PANEL( ModulesPanel, "modules", EditorPanelCategory::Tool, 2020 );
+    SW_EDITOR_PANEL( ModulesPanel, ModulesPanel::kPanelID, EditorPanelCategory::Tool, 2020 );
 } // namespace sw::editor

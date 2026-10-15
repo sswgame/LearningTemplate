@@ -93,9 +93,27 @@ namespace sw::editor
                             EditorPanelCategory      category = EditorPanelCategory::Core );
 
         const vector<EditorPanelEntry>& getPanels() const { return _listPanel; }
-        IEditorPanel*                   findPanel( string_view panelID ) const;
-        bool                            setPanelOpen( string_view panelID, bool bOpen );
-        void                            clear();
+        /**
+         * @brief 패널 클래스로 찾습니다. 없으면 nullptr 입니다.
+         * @details id 는 그 클래스의 `kPanelID` 하나에서 온다 — 등록(`SW_EDITOR_PANEL( T, T::kPanelID, … )`)도 같은 상수라, 이름을 바꿔도 조회가 조용히 nullptr 이 되지 않는다.
+         *          코드가 아는 패널은 이것으로만 찾는다. 문자열 id 조회는 실행 중에 들어온 글(콘솔 인자 · `-gv_` · 창 배치 파일)용 `findPanelByID` 다.
+         */
+        template <typename TPanel>
+        TPanel* findPanel() const
+        {
+            return static_cast<TPanel*>( findPanelByID( TPanel::kPanelID ) );
+        }
+        /** @brief 패널 클래스로 열거나 닫습니다. 그 패널이 없으면 false 입니다(`findPanel` 과 같은 상수로 찾는다). */
+        template <typename TPanel>
+        bool setPanelOpen( bool bOpen )
+        {
+            return setPanelOpen( TPanel::kPanelID, bOpen );
+        }
+        /** @brief 실행 중에 들어온 id(콘솔 인자 · `-gv_` · 창 배치 파일 · 등록 목록)나 창 제목으로 찾습니다. 코드가 아는 패널은 `findPanel<T>()` 로 찾습니다. */
+        IEditorPanel* findPanelByID( string_view panelID ) const;
+        /** @brief id(또는 창 제목)로 열거나 닫습니다. 확장 모듈의 패널과 실행 중 id 용입니다 — 코드가 아는 패널은 `setPanelOpen<T>()` 를 씁니다. */
+        bool setPanelOpen( string_view panelID, bool bOpen );
+        void clear();
         /** @brief `SW_EDITOR_PANEL` 로 등록된 패널을 순서대로 만들어 둡니다. 이전 목록은 버립니다. */
         void registerDefaultPanels();
         /**
@@ -143,9 +161,9 @@ namespace sw::editor
 } // namespace sw::editor
 
 /**
- * @brief 패널 종류를 그 패널의 .cpp 에서 등록합니다. 예: `SW_EDITOR_PANEL( HierarchyPanel, "hierarchy", EditorPanelCategory::Core, 100 );`
+ * @brief 패널 종류를 그 패널의 .cpp 에서 등록합니다. 예: `SW_EDITOR_PANEL( HierarchyPanel, HierarchyPanel::kPanelID, EditorPanelCategory::Core, 100 );`
  * @param TPanel   기본 생성자가 있는 `IEditorPanel` 구현입니다.
- * @param pID      가시성을 저장하는 키입니다. 리터럴이며 종류 안에서 유일해야 합니다.
+ * @param pID      가시성을 저장하는 키입니다. 패널 클래스의 `kPanelID` 를 넘긴다 — 조회(`findPanel<T>()`)가 같은 상수를 쓴다. 종류 안에서 유일해야 합니다.
  * @param category Panel 메뉴의 그룹입니다.
  * @param order    Panel 메뉴와 그리기 순서입니다. 작을수록 앞입니다.
  */

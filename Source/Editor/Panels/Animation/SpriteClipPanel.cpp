@@ -27,7 +27,7 @@
 namespace sw::editor
 {
     SW_LOG_CALLER( "SpriteClip" );
-    SW_EDITOR_PANEL( SpriteClipPanel, "sprite_clip", EditorPanelCategory::Tool, 1600 );
+    SW_EDITOR_PANEL( SpriteClipPanel, SpriteClipPanel::kPanelID, EditorPanelCategory::Tool, 1600 );
 
     SpriteClipPanel::SpriteClipPanel()
         : EditorDocumentPanel{ EditorAssetType::SpriteClip, false }

@@ -20,6 +20,9 @@ namespace sw::editor
     class SpriteClipPanel : public EditorDocumentPanel
     {
     public:
+        /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회(`EditorPanelManager::findPanel<…>` · `setPanelOpen<…>`)가 모두 이 상수에서 온다. */
+        static constexpr const utf8* kPanelID = "sprite_clip";
+
         /** @brief 스프라이트 클립 도구를 생성합니다. */
         SpriteClipPanel();
 

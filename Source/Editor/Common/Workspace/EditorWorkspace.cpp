@@ -14,7 +14,6 @@
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw::editor
@@ -255,14 +254,12 @@ namespace sw::editor
             return;
 
         _copiedComponentTypeName = pComp->getTypeName().c_str();
-        _copiedComponentBytes.clear();
-        BinarySerializer::serialize( pComp, *pComp->getTypeInfo(), _copiedComponentBytes );
-        _copiedComponentXML = XMLSerializer::serialize( pComp, *pComp->getTypeInfo() );
+        _copiedComponentXML      = XMLSerializer::serialize( pComp, *pComp->getTypeInfo() );
     }
 
     bool EditorWorkspace::hasCopiedComponent() const
     {
-        return _copiedComponentBytes.empty() == false || _copiedComponentXML.empty() == false;
+        return _copiedComponentXML.empty() == false;
     }
 
     const string& EditorWorkspace::getPrefabIsolationPrefabPath() const

@@ -40,8 +40,6 @@ namespace sw::editor
 #define SW_PACKAGING_BACKEND_NAME( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) #Backend,
             static constexpr const utf8* kArrBackend[] = { "(preset default)", SW_RHI_BACKEND_TABLE( SW_PACKAGING_BACKEND_NAME ) };
 #undef SW_PACKAGING_BACKEND_NAME
-            /** @brief 산출 폴더의 기본값입니다(저장소 루트 기준, git 무시). */
-            static constexpr const utf8* kDefaultOutputFolder = "Saved/Packages";
             /** @brief 로그가 보이는 최대 줄 수입니다. */
             static constexpr size_t kVisibleLineCount = 400;
 
@@ -58,7 +56,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return nullptr;
-                return static_cast<const PackagingPanel*>( pContext->getSubsystem<EditorPanelManager>().findPanel( PackagingPanel::kPanelID ) );
+                return pContext->getSubsystem<EditorPanelManager>().findPanel<PackagingPanel>();
             }
 
             [[nodiscard]] static bool readPackagingState( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -84,7 +82,7 @@ namespace sw::editor
         , _pJob{ make_unique<EditorExternalToolJob>() }
         , _listGame{}
         , _listLine{}
-        , _outputFolder{ PackagingPanelInternal::kDefaultOutputFolder }
+        , _outputFolder{} // 비면 진입점의 기본 산출 폴더(`MakePackage.py --output` 의 기본값이 정본이다)
         , _progress{}
         , _gameIndex{ 0 }
         , _targetIndex{ 0 }
@@ -137,7 +135,8 @@ namespace sw::editor
             command += " --game " + _listGame[_gameIndex];
         if ( _rhiIndex > 0 )
             command += string{ " --rhi " } + Internal::kArrBackend[_rhiIndex];
-        command += " --output " + Internal::quote( _outputFolder );
+        if ( _outputFolder.empty() == false )
+            command += " --output " + Internal::quote( _outputFolder );
         if ( _bSkipBuild == SW_TRUE )
         {
             // 빌드를 건너뛰면 이 에디터의 Bin 을 스테이징한다(그 타깃의 Shipping 빌드가 없어도 흐름을 볼 수 있다).

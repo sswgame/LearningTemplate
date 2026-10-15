@@ -31,7 +31,7 @@
 
 namespace sw::editor
 {
-    SW_EDITOR_PANEL( InputMapPanel, "input_map", EditorPanelCategory::Tool, 1800 );
+    SW_EDITOR_PANEL( InputMapPanel, InputMapPanel::kPanelID, EditorPanelCategory::Tool, 1800 );
 
     namespace
     {

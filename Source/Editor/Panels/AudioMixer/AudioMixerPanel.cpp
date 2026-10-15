@@ -74,7 +74,7 @@ namespace sw::editor
             {
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext != nullptr )
-                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( "audiomixer", true ); // 패널은 이 파일에 등록되어 있다
+                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<AudioMixerPanel>( true ); // 패널은 이 파일에 등록되어 있다
             }
 
             [[nodiscard]] static bool readBusCount( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -279,7 +279,7 @@ namespace sw::editor
         ImGui::EndChild();
     }
 
-    SW_EDITOR_PANEL( AudioMixerPanel, "audiomixer", EditorPanelCategory::Tool, 2100 );
+    SW_EDITOR_PANEL( AudioMixerPanel, AudioMixerPanel::kPanelID, EditorPanelCategory::Tool, 2100 );
     SW_EDITOR_COMMAND( AudioMixerOpen, "window.audioMixer", 2230, "Audio Mixer", editoricon::kSettings, "Audio", "오디오 믹서 창을 엽니다(버스 미터 · 음소거 · 솔로 · 볼륨)", "Open the audio mixer",
                        {}, &AudioMixerPanelInternal::openPanel, nullptr, "MainMenu/Window" );
 

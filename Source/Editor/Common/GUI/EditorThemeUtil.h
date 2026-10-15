@@ -52,8 +52,8 @@ namespace sw::editor
         /** @brief 토큰 파일을 모두 다시 읽고 지금 테마를 다시 적용합니다(핫 리로드). 사용자가 덮어쓴 값은 설정에서 다시 얹습니다. */
         static void reloadThemes();
 
-        /** @brief EditorConfig(JSON)에 저장된 테마 설정을 읽어 적용합니다. */
-        static void loadFromConfig();
+        /** @brief EditorConfig(JSON)에 저장된 테마 설정을 읽어 적용합니다. 그 이름의 토큰 벌이 없으면 오류를 남기고 false 이며, 다른 벌로 대신하지 않습니다. */
+        [[nodiscard]] static bool loadFromConfig();
 
         /** @brief 현재 테마 설정을 EditorConfig(JSON)에 저장합니다. */
         static void saveToConfig();

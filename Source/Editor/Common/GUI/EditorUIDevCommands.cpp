@@ -70,7 +70,7 @@ namespace sw::editor
             static bool runPanelFocus( const vector<string>& listArgument, string& outReply )
             {
                 EditorContext*      pContext = EditorContext::get();
-                const IEditorPanel* pPanel   = ( listArgument.size() == 1 && pContext != nullptr ) ? pContext->getSubsystem<EditorPanelManager>().findPanel( listArgument[0] ) : nullptr;
+                const IEditorPanel* pPanel   = ( listArgument.size() == 1 && pContext != nullptr ) ? pContext->getSubsystem<EditorPanelManager>().findPanelByID( listArgument[0] ) : nullptr;
                 if ( pPanel == nullptr )
                     return false;
                 pContext->getSubsystem<EditorWorkspace>().requestOpenPanel( pPanel->getPanelTitle() );
