@@ -22,11 +22,11 @@ if(SW_LLVM_AUTO_BOOTSTRAP)
 	set(ENV{SW_LLVM_AUTO_BOOTSTRAP} "1")
 endif()
 
-# SetupEnvironment.py 실행 (설정 파일 변경 및 도구 경로 갱신을 항상 정확하게 반영)
+# SetupEnvironment.py 실행 (설정 파일 변경 및 도구 경로 갱신을 항상 정확하게 반영).
+# 필수다 — 실패하면 아래가 낡은 toolchain_config.json 이나 빈 값으로 지나가 다른 컴파일러를 집는다.
 sw_executePythonScript(
 	"${SW_SCRIPT_SETUP_ENVIRONMENT}"
-	WARN
-	RESULT_VARIABLE sw_setup_env_result
+	REQUIRED
 )
 
 # ------------------------------------------------------------------------------
@@ -35,15 +35,17 @@ sw_executePythonScript(
 # toolchain_config.json 을 CMake 가 다시 파싱하지 않는다. 그 파일을 쓰는 쪽이 파이썬이니
 # 읽는 모양도 파이썬이 준다 — CMake 가 키마다 `string(JSON ... GET)` 블록을 두면 같은 키를 곳마다
 # 다른 철자(상수 · 리터럴)로 적게 된다.
-# 값이 없으면 변수도 없다(= 빈 값). 아래 `if(X AND EXISTS ...)` 가 그대로 동작한다.
+# 키는 SetupEnvironment 가 늘 모두 쓴다. 값이 빈 것은 "이 호스트에 그 도구가 없다" 이다(리눅스의 Windows SDK 등) —
+# 그래서 아래는 `if(X AND EXISTS ...)` 로 묻는다. 파일 자체가 없으면 구성을 세운다.
 set(SW_GENERATED_TOOLCHAIN_VARS "${CMAKE_BINARY_DIR}/generated/sw/config/ToolchainVars.cmake")
 sw_executePythonScript("Scripts/generate/GenerateToolchainCMake.py"
 	ARGS "${SW_GENERATED_TOOLCHAIN_VARS}"
-	WARN
+	REQUIRED
 )
+include("${SW_GENERATED_TOOLCHAIN_VARS}")
 
-if(EXISTS "${SW_GENERATED_TOOLCHAIN_VARS}")
-	include("${SW_GENERATED_TOOLCHAIN_VARS}")
+if(NOT SW_TOOLCHAIN_CONFIG_FOUND)
+	message(FATAL_ERROR "[DetectToolchain] ${SW_DIR_CONFIG_ENV}/${SW_FILE_TOOLCHAIN_CONFIG} is missing after ${SW_SCRIPT_SETUP_ENVIRONMENT} ran")
 endif()
 
 if(SW_TOOLCHAIN_CONFIG_FOUND)
@@ -81,21 +83,20 @@ if(SW_TOOLCHAIN_CONFIG_FOUND)
 			include("${CMAKE_CURRENT_LIST_DIR}/FindWindowsTools.cmake")
 			sw_findWindowsArchiveAndMt(swAr swMt)
 
-			if(swAr)
-				set(CMAKE_AR "${swAr}" CACHE FILEPATH "정적 라이브러리 아카이버" FORCE)
-				set(CMAKE_C_COMPILER_AR "${swAr}" CACHE FILEPATH "" FORCE)
-				set(CMAKE_CXX_COMPILER_AR "${swAr}" CACHE FILEPATH "" FORCE)
-				message(STATUS "[DetectToolchain] CMAKE_AR=${CMAKE_AR}")
-			else()
-				message(WARNING "[DetectToolchain] lib.exe / llvm-lib not found — static libs (e.g. Core.lib) may fail")
+			# 아카이버 · 매니페스트 도구가 없으면 정적 라이브러리 · 링크가 나중에 선다 — 지금 세운다.
+			if(NOT swAr)
+				message(FATAL_ERROR "[DetectToolchain] llvm-lib / lib.exe not found (LLVM ${SW_TOOLCHAIN_LLVM_PATH}, MSVC '${SW_TOOLCHAIN_MSVC_TOOLS_DIR}')")
 			endif()
 
-			if(swMt)
-				set(CMAKE_MT "${swMt}" CACHE FILEPATH "매니페스트 도구" FORCE)
-				message(STATUS "[DetectToolchain] CMAKE_MT=${CMAKE_MT}")
-			else()
-				message(WARNING "[DetectToolchain] mt.exe / llvm-mt not found — clang-cl link test may fail")
+			if(NOT swMt)
+				message(FATAL_ERROR "[DetectToolchain] llvm-mt / mt.exe not found (Windows SDK '${SW_TOOLCHAIN_WINDOWS_SDK_DIR}' ${SW_TOOLCHAIN_WINDOWS_SDK_VERSION})")
 			endif()
+
+			set(CMAKE_AR "${swAr}" CACHE FILEPATH "정적 라이브러리 아카이버" FORCE)
+			set(CMAKE_C_COMPILER_AR "${swAr}" CACHE FILEPATH "" FORCE)
+			set(CMAKE_CXX_COMPILER_AR "${swAr}" CACHE FILEPATH "" FORCE)
+			set(CMAKE_MT "${swMt}" CACHE FILEPATH "매니페스트 도구" FORCE)
+			message(STATUS "[DetectToolchain] CMAKE_AR=${CMAKE_AR} CMAKE_MT=${CMAKE_MT}")
 
 			message(STATUS "[DetectToolchain] Using clang-cl from ${SW_TOOLCHAIN_LLVM_PATH}/bin")
 		elseif(EXISTS "${SW_TOOLCHAIN_LLVM_PATH}/bin/clang")

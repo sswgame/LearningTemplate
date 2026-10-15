@@ -18,36 +18,17 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server")
 	# ------------------------------------------------------------------------------
 	# 1) X11 / xcb — 윈도잉 + WSLg Vulkan WSI (XGetXCBConnection / VK_KHR_xcb_surface)
 	# ------------------------------------------------------------------------------
-	find_package(X11)
+	# 클라이언트 빌드에는 모두 필수다 — 없으면 구성을 세운다(예전에는 경고만 남기고 링크 단계에서야 섰다).
+	# 패키지: libx11-dev · libxcb1-dev · libx11-xcb-dev(.github/actions/setup-build-env 가 깐다).
+	find_package(X11 REQUIRED)
+	target_link_libraries(sw_platform_linux INTERFACE ${X11_LIBRARIES})
+	target_include_directories(sw_platform_linux INTERFACE ${X11_INCLUDE_DIR})
 
-	if(X11_FOUND)
-		target_link_libraries(sw_platform_linux INTERFACE ${X11_LIBRARIES})
-		target_include_directories(sw_platform_linux INTERFACE ${X11_INCLUDE_DIR})
-	endif()
-
-	find_path(SW_XCB_INCLUDE_DIR NAMES xcb/xcb.h)
-	find_library(SW_XCB_LIBRARY NAMES xcb)
-	find_library(SW_X11_XCB_LIBRARY NAMES X11-xcb)
-
-	if(SW_XCB_INCLUDE_DIR)
-		target_include_directories(sw_platform_linux INTERFACE ${SW_XCB_INCLUDE_DIR})
-	endif()
-
-	if(SW_XCB_LIBRARY)
-		target_link_libraries(sw_platform_linux INTERFACE ${SW_XCB_LIBRARY})
-	endif()
-
-	if(SW_X11_XCB_LIBRARY)
-		target_link_libraries(sw_platform_linux INTERFACE ${SW_X11_XCB_LIBRARY})
-	endif()
-
-	if(NOT SW_XCB_INCLUDE_DIR OR NOT SW_XCB_LIBRARY)
-		message(WARNING "[Linux] libxcb headers/libs not found — install libxcb1-dev (Vulkan xcb WSI)")
-	endif()
-
-	if(NOT SW_X11_XCB_LIBRARY)
-		message(WARNING "[Linux] libX11-xcb not found — install libx11-xcb-dev (XGetXCBConnection / WSLg Vulkan)")
-	endif()
+	find_path(SW_XCB_INCLUDE_DIR NAMES xcb/xcb.h REQUIRED)
+	find_library(SW_XCB_LIBRARY NAMES xcb REQUIRED)
+	find_library(SW_X11_XCB_LIBRARY NAMES X11-xcb REQUIRED)
+	target_include_directories(sw_platform_linux INTERFACE ${SW_XCB_INCLUDE_DIR})
+	target_link_libraries(sw_platform_linux INTERFACE ${SW_XCB_LIBRARY} ${SW_X11_XCB_LIBRARY})
 endif()
 
 # ------------------------------------------------------------------------------
@@ -59,7 +40,9 @@ if(NOT TARGET sw_graphics_gl_libs)
 	add_library(sw_graphics_gl_libs INTERFACE)
 endif()
 
-find_package(OpenGL)
+# GL · Vulkan 로더는 필수다 — 못 찾으면 구성을 세운다(예전에는 경고만 남기고 RHI 링크에서야 섰다). 아래 갈래는 폴백이 아니라
+# FindOpenGL · FindVulkan 이 시스템마다 다른 모양(타깃 · 변수 · GLVND)으로 답하는 것을 받는 자리다.
+find_package(OpenGL REQUIRED)
 
 if(OpenGL_FOUND)
 	if(TARGET OpenGL::GL)
@@ -73,14 +56,9 @@ if(OpenGL_FOUND)
 	elseif(OPENGL_opengl_LIBRARY AND NOT TARGET OpenGL::GL)
 		target_link_libraries(sw_graphics_gl_libs INTERFACE ${OPENGL_opengl_LIBRARY})
 	else()
-		find_library(SW_GLX_LIBRARY NAMES GLX glx)
-
-		if(SW_GLX_LIBRARY)
-			target_link_libraries(sw_graphics_gl_libs INTERFACE ${SW_GLX_LIBRARY})
-		endif()
+		find_library(SW_GLX_LIBRARY NAMES GLX glx REQUIRED)
+		target_link_libraries(sw_graphics_gl_libs INTERFACE ${SW_GLX_LIBRARY})
 	endif()
-else()
-	message(WARNING "[Linux] OpenGL not found — GL/GLX RHI link may fail")
 endif()
 
 if(NOT TARGET sw_graphics_vulkan_libs)
@@ -94,14 +72,10 @@ if(TARGET Vulkan::Vulkan)
 elseif(Vulkan_LIBRARIES)
 	target_link_libraries(sw_graphics_vulkan_libs INTERFACE ${Vulkan_LIBRARIES})
 else()
-	find_library(SW_SYSTEM_VULKAN_LIBRARY NAMES vulkan)
-
-	if(SW_SYSTEM_VULKAN_LIBRARY)
-		target_link_libraries(sw_graphics_vulkan_libs INTERFACE ${SW_SYSTEM_VULKAN_LIBRARY})
-		message(STATUS "[Linux] Vulkan loader (system): ${SW_SYSTEM_VULKAN_LIBRARY}")
-	else()
-		message(WARNING "[Linux] Vulkan loader not found — Vulkan RHI link may fail")
-	endif()
+	# FindVulkan 은 헤더까지 찾아야 답한다 — 헤더는 vcpkg 가 주고 로더만 시스템에 있는 경우 라이브러리를 직접 찾는다.
+	find_library(SW_SYSTEM_VULKAN_LIBRARY NAMES vulkan REQUIRED)
+	target_link_libraries(sw_graphics_vulkan_libs INTERFACE ${SW_SYSTEM_VULKAN_LIBRARY})
+	message(STATUS "[Linux] Vulkan loader (system): ${SW_SYSTEM_VULKAN_LIBRARY}")
 endif()
 
 if(NOT TARGET sw_graphics_libs)

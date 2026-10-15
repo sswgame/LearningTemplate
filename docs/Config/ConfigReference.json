@@ -4245,12 +4245,8 @@
    "choices": [],
    "description": "대형 라이브러리 타겟에 CMake UNITY_BUILD(여러 소스를 합쳐 컴파일) 사용",
    "presets": [
-    "CI-Debug",
-    "CI-Debug-ASAN",
-    "CI-Debug-TSAN",
     "CI-Fuzz",
-    "CI-Release",
-    "CI-Shipping"
+    "base-ci"
    ]
   },
   {
@@ -4312,9 +4308,7 @@
    "choices": [],
    "description": "배포용 단일 실행 파일 정적 링크 빌드 (Editor 모듈 제외 및 최고 성능 최적화)",
    "presets": [
-    "CI-Shipping",
-    "Ninja-Shipping",
-    "WSL-Shipping"
+    "base-shipping"
    ]
   },
   {
@@ -4342,13 +4336,10 @@
    ],
    "description": "빌드 타깃 종류: Game | Client | Server (비우면 Shipping=Client, 그 밖=Game)",
    "presets": [
-    "CI-Shipping",
     "CI-Shipping-Server",
     "Ninja-Debug-Server",
-    "Ninja-Shipping",
     "Ninja-Shipping-Server",
     "WSL-Debug-Server",
-    "WSL-Shipping",
     "WSL-Shipping-Server"
    ]
   },

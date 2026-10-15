@@ -111,7 +111,7 @@ macro(sw_bindClangClWindowsTools)
 
 			message(STATUS "[FindWindowsTools] archive tool=${swArTool}")
 		else()
-			message(WARNING "[FindWindowsTools] lib.exe not found — static libraries may fail to link")
+			message(FATAL_ERROR "[FindWindowsTools] llvm-lib / lib.exe not found — static libraries cannot be archived")
 		endif()
 	endif()
 endmacro()

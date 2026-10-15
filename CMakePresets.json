@@ -52,6 +52,22 @@
       }
     },
     {
+      "name": "base-ci",
+      "hidden": true,
+      "inherits": "base-vcpkg",
+      "cacheVariables": {
+        "SW_ENABLE_UNITY_BUILD": "ON"
+      }
+    },
+    {
+      "name": "base-shipping",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "SW_SHIPPING_BUILD": "ON"
+      }
+    },
+    {
       "name": "Ninja-Debug",
       "displayName": "Windows Ninja Debug (Clang-cl)",
       "description": "Windows Debug build using Ninja + Clang-cl",
@@ -94,12 +110,10 @@
       "name": "Ninja-Shipping",
       "displayName": "Windows Ninja Shipping (Clang-cl)",
       "description": "Windows Shipping build using Ninja + Clang-cl",
-      "inherits": "base-windows",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "SW_SHIPPING_BUILD": "ON",
-        "SW_TARGET_TYPE": "Client"
-      }
+      "inherits": [
+        "base-windows",
+        "base-shipping"
+      ]
     },
     {
       "name": "Ninja-Debug-Server",
@@ -141,12 +155,10 @@
       "name": "WSL-Shipping",
       "displayName": "WSL Ninja Shipping (Clang)",
       "description": "WSL Ubuntu Shipping build using Ninja + Clang",
-      "inherits": "base-wsl",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "SW_SHIPPING_BUILD": "ON",
-        "SW_TARGET_TYPE": "Client"
-      }
+      "inherits": [
+        "base-wsl",
+        "base-shipping"
+      ]
     },
     {
       "name": "WSL-Debug-Server",
@@ -170,34 +182,28 @@
       "name": "CI-Debug",
       "displayName": "CI Debug (Ninja)",
       "description": "CI Debug. Windows job sets clang-cl; Linux uses the system compiler.",
-      "inherits": "base-vcpkg",
+      "inherits": "base-ci",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "SW_ENABLE_UNITY_BUILD": "ON",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+        "CMAKE_BUILD_TYPE": "Debug"
       }
     },
     {
       "name": "CI-Release",
       "displayName": "CI Release (Ninja)",
       "description": "CI Release for the nightly load job (.github/workflows/load.yml) - budgets are judged only in Release.",
-      "inherits": "base-vcpkg",
+      "inherits": "base-ci",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "SW_ENABLE_UNITY_BUILD": "ON"
+        "CMAKE_BUILD_TYPE": "Release"
       }
     },
     {
       "name": "CI-Shipping",
       "displayName": "CI Shipping (Ninja, clang-cl on Windows)",
       "description": "CI Shipping. Windows job sets clang-cl like CI-Debug; Linux uses the system compiler plus distro libclang.",
-      "inherits": "base-vcpkg",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "SW_SHIPPING_BUILD": "ON",
-        "SW_ENABLE_UNITY_BUILD": "ON",
-        "SW_TARGET_TYPE": "Client"
-      }
+      "inherits": [
+        "base-ci",
+        "base-shipping"
+      ]
     },
     {
       "name": "CI-Shipping-Server",
@@ -212,12 +218,10 @@
       "name": "CI-Debug-ASAN",
       "displayName": "CI Debug + ASan (Ninja)",
       "description": "CI Debug with AddressSanitizer enabled",
-      "inherits": "base-vcpkg",
+      "inherits": "base-ci",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "SW_ENABLE_SANITIZER": "ON",
-        "SW_ENABLE_UNITY_BUILD": "ON",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+        "SW_ENABLE_SANITIZER": "ON"
       }
     },
     {
@@ -233,11 +237,10 @@
       "name": "CI-Debug-TSAN",
       "displayName": "CI Debug + TSan (Ninja, Linux Clang)",
       "description": "CI Debug with ThreadSanitizer enabled (Linux Clang only). Ports that synchronize their own threads (Jolt, Box2D) are built with -fsanitize=thread by the x64-linux-tsan triplet (cmake/Modules/Toolchain/VcpkgTsan), installed under this preset's own build folder. CC/CXX pin the port compiler to the project's clang.",
-      "inherits": "base-vcpkg",
-      "environment": {
-        "CC": "clang",
-        "CXX": "clang++"
-      },
+      "inherits": [
+        "base-ci",
+        "base-wsl"
+      ],
       "cacheVariables": {
         "VCPKG_TARGET_TRIPLET": "x64-linux-tsan",
         "VCPKG_HOST_TRIPLET": "x64-linux",
@@ -246,9 +249,7 @@
         "SW_VCPKG_FORCE_INSTALL": "ON",
         "CMAKE_BUILD_TYPE": "Debug",
         "SW_ENABLE_SANITIZER": "ON",
-        "SW_SANITIZER_KIND": "thread",
-        "SW_ENABLE_UNITY_BUILD": "ON",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+        "SW_SANITIZER_KIND": "thread"
       }
     },
     {

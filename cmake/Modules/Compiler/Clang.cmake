@@ -123,15 +123,15 @@ else()
 endif()
 
 # ------------------------------------------------------------------------------
-# 링크 — LLD가 있으면 사용, clang-cl은 MSVC 스타일 링크 옵션
+# 링크 — LLD 필수(리눅스 `-fuse-ld=lld`, Windows lld-link), clang-cl은 MSVC 스타일 링크 옵션
+# LLD 는 지금 쓰는 컴파일러와 같은 LLVM 에서 찾는다(링크면 가리키는 실제 폴더도). 없으면 구성을 세운다 — 예전에는 못 찾아도
+# 지나가서 링크 단계에서야 "ld.lld 없음" 으로 섰다.
 # ------------------------------------------------------------------------------
-include("${CMAKE_CURRENT_LIST_DIR}/../../Environment/FindLlvmBin.cmake")
-sw_findLlvmBin(llvmBin)
-find_program(SW_LLD_LINK_EXE NAMES lld-link lld HINTS "${llvmBin}")
-
-if(SW_LLD_LINK_EXE)
-	message(STATUS "[Clang.cmake] LLD Fast Linker detected: ${SW_LLD_LINK_EXE}")
-endif()
+get_filename_component(swClangDir "${CMAKE_CXX_COMPILER}" DIRECTORY)
+get_filename_component(swClangRealPath "${CMAKE_CXX_COMPILER}" REALPATH)
+get_filename_component(swClangRealDir "${swClangRealPath}" DIRECTORY)
+find_program(SW_LLD_LINK_EXE NAMES lld-link ld.lld HINTS "${swClangDir}" "${swClangRealDir}" REQUIRED)
+message(STATUS "[Clang.cmake] LLD linker: ${SW_LLD_LINK_EXE}")
 
 if(MSVC)
 	target_link_options(sw_compiler_clang INTERFACE
