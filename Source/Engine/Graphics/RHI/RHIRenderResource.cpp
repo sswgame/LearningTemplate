@@ -13,18 +13,25 @@ namespace sw
     {
         /**
          * @brief 레지스트리입니다. **소유하지 않습니다.** 통보할 대상의 주소만 압니다.
-         * @details 함수 지역 정적이라 첫 사용 시점에 만들어집니다. 전역 객체 초기화 순서에 기대면, 정적 수명 객체가
-         *          이 목록보다 먼저 · 나중에 파괴되며 목록이 없는 채로 등록 해제를 부르는 일이 생깁니다.
+         * @details 첫 사용 시점에 정적 저장소에 한 번 세우고 **소멸자를 부르지 않습니다.** 함수 지역 static 객체로 두면, 처음 쓴 시점이
+         *          엔진 하네스보다 늦을 때(퍼저의 정적 `TestHostRuntime` 이 기동한 뒤 첫 머티리얼) `exit()` 의 정적 소멸이 목록을 먼저 지우고,
+         *          뒤이어 도는 엔진 정리(`releaseRegistryStorage`)나 늦게 소멸하는 리소스가 지워진 목록을 씁니다. 버킷 메모리는
+         *          `releaseRegistryStorage`(엔진 종료)가 돌려줍니다.
+         * @note 리눅스는 공유 라이브러리와 실행 파일의 정적 소멸이 한 목록에서 섞여 돌아 이 순서가 드러나고, Windows 는 DLL 마다 따로 돌아 드러나지 않습니다.
          */
         unordered_set<RHIRenderResource*>& registryInternal()
         {
-            static unordered_set<RHIRenderResource*> s_registry;
+            using Registry = unordered_set<RHIRenderResource*>;
+            alignas( Registry ) static uint8 s_arrStorage[sizeof( Registry )];
+            static Registry&                 s_registry = *sw_placement_new( s_arrStorage ) Registry();
             return s_registry;
         }
 
+        /** @brief 레지스트리 잠금입니다. 목록과 같은 까닭으로 소멸자를 부르지 않습니다. */
         mutex& registryMutexInternal()
         {
-            static mutex s_mutex;
+            alignas( mutex ) static uint8 s_arrStorage[sizeof( mutex )];
+            static mutex&                 s_mutex = *sw_placement_new( s_arrStorage ) mutex();
             return s_mutex;
         }
 

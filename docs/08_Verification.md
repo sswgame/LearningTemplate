@@ -446,6 +446,8 @@ py -3 -m Scripts ci-jobs <실행 id> --annotations   # 실패한 잡과 실패 �
 - **CI 실패는 `Scripts/dev/CiFailureReport.py` 가 주석으로 올린다**(테스트 · 구성 실패의 vcpkg 포트 로그 · 크래시 스택 `Bin/Saved/Logs/crash_*.stack.txt`).
   정기 잡도 같다 — 헤더 단독 컴파일 잡의 빌드 오류(`build`), 퍼징 잡의 새니타이저 보고 · 스택 · 재현 입력(`fuzz`, libFuzzer 가 짧은 입력에 찍는 `Base64:` 줄).
   퍼징 실패는 그 Base64 를 풀어 대상 이름과 함께 `SW_FUZZ_TARGET=<대상> LoaderFuzzer <파일>` 로 재현하고, 고친 뒤 그 입력을 대상의 씨앗(`LoaderFuzzTargets.cpp`)에 더한다.
+  `Base64:` 가 비어 있고 재현 입력이 빈 파일(`crash-da39a3ee…`)이면 입력 밖의 죽음이다 — 새니타이저 스택이 `exit` · 하네스 `stop` 아래면 종료 경로(정적 소멸 순서)를 고친다.
+  빈 입력 · 경계 입력은 `LoaderFuzzTest.EveryLoaderSurvivesBoundaryInput` 이 모든 대상에 먹인다.
   작업 로그 · 아티팩트는 관리자 전용(API 403)이라 밖에서는 주석만 보인다. 저장소 주인 계정으로 로그인한 `gh` 가 있으면 잡 로그 전문을 받는다 —
   `gh api --allow-escape-sequences repos/sswgame/LearningTemplate/actions/jobs/<잡 id>/logs > job.log`(TSan 보고의 두 스택 · 자식 프로세스 출력이 거기 있다).
   진 테스트 주석의 제목에 결과가 붙는다. `[Timeout 180.0 s / 180 s]` 는 ctest 가 한도에서 죽인 것(멈춤이거나 느려진 것)이고, `[exit 1 after …]` 는 스스로 진 것,
