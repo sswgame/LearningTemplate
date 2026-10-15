@@ -28,20 +28,16 @@ def resolveGitExecutable() -> str | None:
         return foundPath
 
     if sys.platform == "win32":
-        programFiles = os.environ.get("ProgramFiles", r"C:\Program Files")
-        programFilesX86 = os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")
-        localAppData = os.environ.get("LocalAppData", "")
-        candidateList = [
-            Path(programFiles) / "Git" / "cmd" / "git.exe",
-            Path(programFiles) / "Git" / "bin" / "git.exe",
-            Path(programFilesX86) / "Git" / "cmd" / "git.exe",
-            Path(programFilesX86) / "Git" / "bin" / "git.exe",
-        ]
-        if localAppData:
-            candidateList.extend([
-                Path(localAppData) / "Programs" / "Git" / "cmd" / "git.exe",
-                Path(localAppData) / "Programs" / "Git" / "bin" / "git.exe",
-            ])
+        # 설치 폴더는 환경 변수가 정본이다 — 경로 리터럴로 대신하면 다른 드라이브에 깐 PC 에서 엉뚱한 곳을 본다.
+        # ProgramFiles 는 Windows 가 늘 정의하므로 없으면 환경이 깨진 것이다. 나머지 둘은 없는 PC 가 있다(32비트 · 사용자 설치 안 함).
+        if "ProgramFiles" not in os.environ:
+            raise RuntimeError("[Host] 환경 변수 ProgramFiles 가 없어 Git 설치 폴더를 찾을 수 없습니다")
+        listInstallRoot = [Path(os.environ["ProgramFiles"])]
+        if programFilesX86 := os.environ.get("ProgramFiles(x86)"):
+            listInstallRoot.append(Path(programFilesX86))
+        if localAppData := os.environ.get("LocalAppData"):
+            listInstallRoot.append(Path(localAppData) / "Programs")
+        candidateList = [root / "Git" / folder / "git.exe" for root in listInstallRoot for folder in ("cmd", "bin")]
         return next((str(cand.resolve()) for cand in candidateList if cand.is_file()), None)
     return None
 

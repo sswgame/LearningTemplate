@@ -129,10 +129,11 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
     try:
         content = readSourceTextInternal(filePath, "utf-8-sig")
     except UnicodeDecodeError:
-        try:
-            content = readSourceTextInternal(filePath, "latin-1")
-        except Exception:
-            return violations
+        content = readSourceTextInternal(filePath, "latin-1")   # latin-1 은 어떤 바이트도 읽는다
+    except OSError as error:
+        # 못 읽은 파일을 빈 위반 목록으로 돌려주면 검사를 건너뛴 것이 통과로 보인다 — 위반으로 알린다.
+        return [ConventionViolation(file_path=relPath, line_number=1, rule_category="Style/FileRead",
+                                    message=f"파일을 읽지 못해 규칙을 검사할 수 없습니다 ({error})", snippet=filePath.name)]
 
     lines = content.splitlines()
 

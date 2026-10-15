@@ -233,16 +233,14 @@ def setupBuildToolInternal(toolName: str,
         url, toolsCacheDir() / archiveName, minSize=50_000, label=toolName, sha256=expectedHash
     )
 
-    try:
-        extractFunc(archivePath, toolsDir, localExePath, exeName)
-        if localExePath.is_file():
-            if platform.system() != "Windows":
-                os.chmod(localExePath, 0o755)
-            logger.info(f"[{toolName}] Installed: {localExePath}")
-            return recordEnginePath(f"{toolName.lower()}_path", localExePath)
-    except Exception as exception:
-        logger.error(f"[{toolName} Error] {exception}")
-    return ""
+    # 받은 압축을 풀다 실패하면 "도구 없음" 이 아니라 오류다 — 예외 그대로 멈춘다.
+    extractFunc(archivePath, toolsDir, localExePath, exeName)
+    if not localExePath.is_file():
+        raise RuntimeError(f"[{toolName}] 압축을 풀었지만 {localExePath} 가 없습니다: {archivePath}")
+    if platform.system() != "Windows":
+        os.chmod(localExePath, 0o755)
+    logger.info(f"[{toolName}] Installed: {localExePath}")
+    return recordEnginePath(f"{toolName.lower()}_path", localExePath)
 
 
 def setupNinja() -> str:

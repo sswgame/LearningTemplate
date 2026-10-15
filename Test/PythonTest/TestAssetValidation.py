@@ -77,6 +77,10 @@ class RuleTableTest(unittest.TestCase):
         with self.assertRaises(RuleConfigError):
             parseRules({"rules": [{"name": "x", "check": "texture", "max_sise": 4}]})
 
+    def testMissingRequiredKeyIsAnError(self) -> None:
+        with self.assertRaisesRegex(RuleConfigError, "id_attribute"):
+            parseRules({"rules": [{"name": "x", "check": "catalog_reference", "reference_attributes": ["a"]}]})
+
     def testRepeatedNameIsAnError(self) -> None:
         with self.assertRaises(RuleConfigError):
             parseRules({"rules": [{"name": "x", "check": "orphan"}, {"name": "x", "check": "orphan"}]})
@@ -247,7 +251,7 @@ class CheckTest(AssetValidationFixture):
                  f'<Scene><entities><entity id="1" prefab="game/p/prefabs/a.prefab.xml" prefabGuid="{guidA}"/>'
                  f'<entity id="2" prefab="game/p/prefabs/a.prefab.xml" prefabGuid="{guidB}"/>'
                  f'<entity id="3" prefab="game/p/prefabs/moved/a.prefab.xml" prefabGuid="{guidA}"/></entities></Scene>')
-        rule = {"name": "g", "check": "prefab_guid", "include_patterns": ["*.scene.xml", "*.meta"]}
+        rule = {"name": "g", "check": "prefab_guid", "include_patterns": ["*.scene.xml", "*.meta"], "stale_path_only": False}
         messages = self.findMessages(rule)
         self.assertEqual(2, len(messages), messages)  # 2 번 엔티티(다른 프리팹의 guid) · b 의 sourcePath
         stale = self.findMessages({**rule, "stale_path_only": True})
@@ -258,7 +262,7 @@ class CheckTest(AssetValidationFixture):
                  '<Catalog><Unit id="worker"/><Unit id="barracks" producedBy="worker"/><Unit id="marine" producedBy="barrack" '
                  'requires="barracks academy"/></Catalog>')
         messages = self.findMessages({"name": "u", "check": "catalog_reference", "include_patterns": ["*/units.xml"],
-                                      "elements": ["Unit"], "reference_attributes": ["producedBy", "requires"]})
+                                      "elements": ["Unit"], "reference_attributes": ["producedBy", "requires"], "id_attribute": "id"})
         self.assertEqual(2, len(messages), messages)
 
     def testMissingReferenceReadsJsonAndFolders(self) -> None:
@@ -284,12 +288,13 @@ class CheckTest(AssetValidationFixture):
                  '<Scene><GameObject><_listComponent><BodyComponent _layer="Static" _action="Jump"/><WheelComponent _layer="Statik" _action="Dash"/>'
                  '<OtherComponent _layer="Nowhere"/><BodyComponent _layer="None" _action=""/></_listComponent></GameObject></Scene>')
         layer = {"name": "l", "check": "component_reference", "include_patterns": ["*.scene.xml"], "component_types": ["BodyComponent"],
-                 "attributes": ["_layer"], "target_patterns": ["engine/physics/settings.xml"], "target_elements": ["LayerDef"], "id_attribute": "_name"}
+                 "attributes": ["_layer"], "target_patterns": ["engine/physics/settings.xml"], "target_elements": ["LayerDef"], "id_attribute": "_name",
+                 "ignore_values": ["", "None"]}
         messages = self.findMessages(layer)
         self.assertEqual(1, len(messages), messages)  # 파생 타입의 오타만 — 다른 타입의 같은 이름 칸 · 빈 값 · None 은 보지 않는다
         self.assertIn("Statik", messages[0])
         action = {"name": "a", "check": "component_reference", "include_patterns": ["*.scene.xml"], "attributes": ["_action"],
-                  "target_patterns": ["{pack}/*.input.xml"], "target_elements": ["action"], "id_attribute": "name"}
+                  "target_patterns": ["{pack}/*.input.xml"], "target_elements": ["action"], "id_attribute": "name", "ignore_values": ["", "None"]}
         messages = self.findMessages(action)
         self.assertEqual(1, len(messages), messages)  # 다른 팩(q)의 액션은 이 팩에서 풀리지 않는다
         self.assertIn("Dash", messages[0])
@@ -302,7 +307,8 @@ class CheckTest(AssetValidationFixture):
                  '<Director _catalogPath="game/p/data/b.cameras.xml" _initialPreset="far"/></_listComponent></GameObject></Scene>')
         messages = self.findMessages({"name": "c", "check": "component_reference", "include_patterns": ["*.scene.xml"],
                                       "attributes": ["_initialPreset"], "catalog_attribute": "_catalogPath",
-                                      "target_patterns": ["game/p/data/*.cameras.xml"], "target_elements": ["Preset"]})
+                                      "target_patterns": ["game/p/data/*.cameras.xml"], "target_elements": ["Preset"],
+                                      "id_attribute": "id", "ignore_values": ["", "None"]})
         self.assertEqual(1, len(messages), messages)  # 첫 디렉터는 자기 카탈로그(a)에 없는 이름을 썼다
         self.assertIn("a.cameras.xml", messages[0])
 

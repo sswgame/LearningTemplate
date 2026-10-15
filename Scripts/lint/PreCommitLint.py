@@ -372,7 +372,9 @@ def main(argv: list[str] | None = None) -> int:
                 try:
                     listViolation = fixer.processFile(filePath, checkOnly=True)
                 except Exception as exception:
-                    print(f"  [Warning] {filePath.relative_to(projectRoot)} {label} 검사 중 오류: {exception}")
+                    # 검사기가 깨져 이 파일을 못 봤다 — 경고로 넘기면 검사 누락이 통과로 보이므로 커밋을 막는다.
+                    hasErrors = True
+                    print(f"  [Error] {filePath.relative_to(projectRoot)} {label} 검사 중 오류: {exception}")
                     continue
 
                 if listViolation:

@@ -43,7 +43,9 @@ from common import (
     kKeyRecursive,
     kKeyRules,
     normalizePath,
-    readJsonDictInternal,
+    readOptionalConfig,
+    requireConfig,
+    ConfigError,
     resolveDefaultOutputDir,
     BuildTreeError,
     runSceneCook,
@@ -180,10 +182,9 @@ def resolveTargetRhi(cliRhi: str = "", projectRoot: Path | None = None) -> str:
     if cliRhi:
         r = cliRhi.strip().lower()
     elif projectRoot:
-        engineCfgPath = projectRoot / kFileRuntimeEngineConfig
-        if engineCfgPath.is_file():
-            engineCfg = readJsonDictInternal(engineCfgPath, kFileRuntimeEngineConfig)
-            r = engineCfg.get("_window", {}).get("_defaultRHI", "").strip().lower()
+        engineCfg = readOptionalConfig(projectRoot / kFileRuntimeEngineConfig, kFileRuntimeEngineConfig)
+        if engineCfg is not None and "_defaultRHI" in engineCfg.get("_window", {}):
+            r = str(engineCfg["_window"]["_defaultRHI"]).strip().lower()
 
     backend = _gCookContract.findBackend(r) or _gCookContract.defaultBackend
     return backend.shaderFolder
@@ -719,9 +720,10 @@ def cookInternal(args: argparse.Namespace) -> int:
     if doPacks:
         stripNames = not args.include_debug_names
         configPath = Path(args.config) if args.config else (projectRoot / kFilePackConfig)
-        packConfig = readJsonDictInternal(configPath, kFilePackConfig)
-        if not packConfig:
-            print(f"[CookAssets Error] missing or invalid config: {configPath}", file=sys.stderr)
+        try:
+            packConfig = requireConfig(configPath, kFilePackConfig)
+        except ConfigError as error:
+            print(f"[CookAssets Error] {error}", file=sys.stderr)
             return 1
         targetRhi = resolveTargetRhi(cliRhi=args.target_rhi, projectRoot=projectRoot)
         print(f"[CookAssets] Target RHI for shader packaging: {targetRhi}")

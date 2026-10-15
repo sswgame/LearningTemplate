@@ -55,6 +55,7 @@ from common import (  # noqa: E402
     runProcess,
 )
 from LintFixer import FixerFileKind, FixPass, LintFixer, addFileArguments, selectFixerTargetFiles  # noqa: E402
+from setup.HostTools import findWindowsSdkPath  # noqa: E402
 
 #: 이번 실행이 고르는 약어(`--acronym`) — 변환(FixPass)이 읽는다. 조각 테스트는 기본값(전체)으로 돈다.
 _kState: dict[str, tuple[str, ...]] = {"acronyms": registry.kSelectable}
@@ -88,11 +89,12 @@ def findExternalHeaderRoots(repositoryRoot: Path) -> list[Path]:
     """남의 헤더가 있는 폴더 — 저장소 `ThirdParty/` · vcpkg 설치 헤더 · Windows SDK(um · shared · ucrt) · Vulkan SDK."""
     listRoot = [repositoryRoot / "ThirdParty"]
     listRoot += sorted(repositoryRoot.glob("build/vcpkg_installed/*/include"))   # vcpkg 설치 헤더(트리플릿마다)
-    sdkInclude = Path(os.environ.get("WindowsSdkDir", r"C:\Program Files (x86)\Windows Kits\10")) / "Include"
-    if sdkInclude.is_dir():
-        listVersion = sorted(path for path in sdkInclude.iterdir() if path.is_dir() and path.name[:1].isdigit())
-        if listVersion:
-            listRoot += [listVersion[-1] / name for name in ("um", "shared", "ucrt")]
+    if sys.platform == "win32":
+        # SDK 위치는 환경 변수 · 레지스트리(findWindowsSdkPath)가 정본이다 — 설치 경로 리터럴로 대신하지 않는다.
+        sdkDir, sdkVersion = findWindowsSdkPath()
+        if not sdkDir or not sdkVersion:
+            raise RuntimeError("[FormatAcronymSpelling] Windows SDK 를 찾지 못했습니다(WindowsSdkDir · 레지스트리 KitsRoot10)")
+        listRoot += [Path(sdkDir) / "Include" / sdkVersion / name for name in ("um", "shared", "ucrt")]
     if os.environ.get("VULKAN_SDK"):
         listRoot.append(Path(os.environ["VULKAN_SDK"]) / "Include")
     return [root for root in listRoot if root.is_dir()]
