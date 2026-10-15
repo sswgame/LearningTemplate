@@ -550,6 +550,45 @@ SW_TEST_CASE( TerrainTest, UnsavedEditsSurviveStateSnapshot )
 }
 
 /**
+ * @brief [TerrainTest] 프로퍼티 변경 · 오너 이동이 부르는 다시 읽기는 저장하지 않은 편집을 넘기고, `reloadTerrain` 을 직접 부르면 디스크 값으로 돌아간다
+ * @details 변이: `onPropertyChanged` 가 `reloadTerrain` 을 부르면 쓴 높이가 사라져 첫 비교가 진다(에디터 플레이 시작 · 지형 옮기기에서 칠한 것을 잃던 결함).
+ */
+SW_TEST_CASE( TerrainTest, PropertyChangeKeepsUnsavedEdits )
+{
+    const string    heightfieldPath = test::makeTempPath( "keep.heightfield" );
+    HeightfieldData data            = TerrainTestUtil::makeData( 33, &TerrainTestUtil::wave );
+    SW_ASSERT_TRUE( data.saveToFile( heightfieldPath ) );
+
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "Terrain" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    TerrainComponent* pTerrain = pObject->addComponent<TerrainComponent>();
+    SW_ASSERT_NOT_NULL( pTerrain );
+    pTerrain->setHeightfieldPath( heightfieldPath );
+    pTerrain->setSize( float2{ 32.0f, 32.0f } );
+    pTerrain->setHeightRange( TerrainTestUtil::kHeightMin, TerrainTestUtil::kHeightMax );
+    pTerrain->setChunkCells( 16 );
+    pTerrain->setMaterialPath( "" );
+    SW_ASSERT_TRUE( pTerrain->reloadTerrain() );
+    const vector<float32> listAsset = pTerrain->getHeightfield().getHeightSamples();
+
+    vector<float32> listHeight = listAsset;
+    listHeight[5 * 33 + 6]     = 6.5f;
+    TerrainSampleRect rect;
+    rect.include( 6, 5 );
+    SW_ASSERT_TRUE( pTerrain->writeHeights( listHeight, rect ) );
+    const vector<float32> listEdited = pTerrain->getHeightfield().getHeightSamples();
+
+    pTerrain->onPropertyChanged( hashed_string( "_lodDistance" ) );
+    SW_EXPECT_TRUE( pTerrain->hasWrittenEdits() );
+    SW_EXPECT_TRUE( pTerrain->getHeightfield().getHeightSamples() == listEdited );
+
+    SW_ASSERT_TRUE( pTerrain->reloadTerrain() );
+    SW_EXPECT_FALSE( pTerrain->hasWrittenEdits() );
+    SW_EXPECT_TRUE( pTerrain->getHeightfield().getHeightSamples() == listAsset );
+}
+
+/**
  * @brief [TerrainTest] 큰 사각형 높이 쓰기 — 청크 메시는 쓰기 한 번에 넷까지만 다시 만들고 나머지는 틱(`rebuildStaleChunkMeshes`)이 나눠 만든다
  */
 SW_TEST_CASE( TerrainTest, LargeHeightWriteSpreadsChunkRebuilds )

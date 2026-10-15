@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 흐름 시나리오 — 지형 편집이 플레이와 백엔드 교체를 넘는다. envshowcase 를 열고 지형 칠하기 도구로 높이를 올린 뒤(저장하지 않는다)
+  ① 플레이 인 → 플레이 아웃 ② 다른 백엔드로 갔다가 시작 백엔드로 돌아온다. 경계마다 편집이 남아 있고(Terrain.WrittenEditCount, 그림),
+  되돌리기 스택이 같으며(Editor.UndoState), 마지막에 Ctrl+Z 한 번이 그 붓질을 되돌려 그림이 편집 전으로 돌아온다.
+  처음에 한 번 건너는 것은 도킹 배치를 안정시키기 위해서다(rhiswap/terrainedits 와 같은 까닭 — 첫 리로드에서 씬 뷰 너비가 1 픽셀 바뀔 수 있다).
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/flowterrain.scenario.xml -dx12
+-->
+<Scenario name="editor.flowterrain" fixedDelta="0.0166667" timeoutFrames="4000" startAfter="Immediately" input="exclusive">
+	<At frame="1"><Variable name="gv_environmentAnimate" value="0"/></At>
+	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="25"><DevCommand line="panel.resetOptional"/><DevCommand line="layout.reset"/></At>
+	<At frame="30"><DevCommand line="scene.open game/empty/maps/envshowcase.scene.xml"/></At>
+	<At frame="31"><WaitUntil probe="Scene.Transitioning" equals="0" timeoutFrames="900"/></At>
+	<!-- 배치를 안정시키는 첫 교체 -->
+	<At frame="40"><SwapBackend backend="other"/></At>
+	<At frame="41"><WaitUntil probe="RHI.SwapPending" equals="0" timeoutFrames="900"/></At>
+	<At frame="60"><SwapBackend backend="start"/></At>
+	<At frame="61"><WaitUntil probe="RHI.SwapPending" equals="0" timeoutFrames="900"/></At>
+	<At frame="80"><DevCommand line="panel.focus scene_view"/></At>
+	<At frame="90"><DevCommand line="camera.reset"/></At>
+	<At frame="95"><DevCommand line="camera.set 0 70 -100 35 0"/></At>
+	<At frame="110"><EditorClick mark="viewport.visualizer.terrainbrush"/></At>
+	<At frame="111"><WaitUntil probe="Editor.TerrainBrushToolActive" equals="1" timeoutFrames="60"/></At>
+	<At frame="150">
+		<Expect probe="Terrain.WrittenEditCount" equals="0"/>
+		<Expect probe="Editor.UndoCount" equals="0"/>
+		<Screenshot file="flowterrain_before.ppm"/>
+	</At>
+
+	<!-- 높이를 올린다 — 붓질 하나가 되돌리기 하나 -->
+	<At frame="160"><DevCommand line="terrain.brush raise 15 120"/></At>
+	<At frame="170"><EditorDrag mark="sceneView.canvas" dx="0" dy="60"/></At>
+	<At frame="220">
+		<Expect probe="Editor.TerrainBrushStrokeCount" equals="1"/>
+		<Expect probe="Terrain.WrittenEditCount" equals="1"/>
+		<Expect probe="Editor.UndoCount" equals="1"/>
+		<Remember probe="Editor.UndoState" as="editedUndo"/>
+		<Screenshot file="flowterrain_edited.ppm"/>
+	</At>
+	<At frame="221"><ExpectImage file="flowterrain_edited.ppm" metric="differentFrom" reference="flowterrain_before.ppm" atLeast="0.005"/></At>
+
+	<!-- ① 플레이 인 → 플레이 아웃 -->
+	<At frame="230"><DevCommand line="play"/></At>
+	<At frame="231"><WaitUntil probe="Editor.PlayState" equals="1" timeoutFrames="600"/></At>
+	<At frame="260">
+		<Expect probe="Terrain.WrittenEditCount" equals="1"/>
+		<DevCommand line="stop"/>
+	</At>
+	<At frame="261"><WaitUntil probe="Editor.PlayState" equals="0" timeoutFrames="600"/></At>
+	<At frame="262"><DevCommand line="panel.focus scene_view"/></At>
+	<At frame="300">
+		<Expect probe="Terrain.WrittenEditCount" equals="1"/>
+		<Expect probe="Editor.UndoState" sameAs="editedUndo"/>
+		<Expect probe="Editor.SceneViewCameraY" near="70" tolerance="0.5"/>
+		<Screenshot file="flowterrain_afterplay.ppm"/>
+	</At>
+	<At frame="301"><ExpectImage file="flowterrain_afterplay.ppm" metric="differentFrom" reference="flowterrain_edited.ppm" atMost="0.002"/></At>
+
+	<!-- ② 백엔드 교체 -->
+	<At frame="310"><SwapBackend backend="other"/></At>
+	<At frame="311"><WaitUntil probe="RHI.SwapPending" equals="0" timeoutFrames="900"/></At>
+	<At frame="340">
+		<Expect probe="RHI.SwapFailedCount" equals="0"/>
+		<Expect probe="Terrain.WrittenEditCount" equals="1"/>
+		<Expect probe="Editor.UndoState" sameAs="editedUndo"/>
+	</At>
+	<At frame="350"><SwapBackend backend="start"/></At>
+	<At frame="351"><WaitUntil probe="RHI.SwapPending" equals="0" timeoutFrames="900"/></At>
+	<At frame="400">
+		<Expect probe="RHI.SwapFailedCount" equals="0"/>
+		<Expect probe="Terrain.WrittenEditCount" equals="1"/>
+		<Expect probe="Editor.UndoState" sameAs="editedUndo"/>
+		<Expect probe="Editor.SceneViewCameraY" near="70" tolerance="0.5"/>
+		<Screenshot file="flowterrain_swapped.ppm"/>
+	</At>
+	<At frame="401"><ExpectImage file="flowterrain_swapped.ppm" metric="differentFrom" reference="flowterrain_edited.ppm" atMost="0.002"/></At>
+
+	<!-- 경계를 넘은 붓질을 되돌린다 -->
+	<At frame="410"><DevCommand line="panel.focus scene_view"/></At>
+	<At frame="420"><EditorKey key="Ctrl+Z"/></At>
+	<At frame="460">
+		<Expect probe="Editor.UndoIndex" equals="0"/>
+		<Screenshot file="flowterrain_undone.ppm"/>
+	</At>
+	<At frame="461"><ExpectImage file="flowterrain_undone.ppm" metric="differentFrom" reference="flowterrain_before.ppm" atMost="0.002"/></At>
+	<At frame="470"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+</Scenario>

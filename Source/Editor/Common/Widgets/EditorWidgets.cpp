@@ -563,6 +563,16 @@ namespace sw::editor
         return bAccepted;
     }
 
+    bool EditorWidgets::acceptAssetDropInRect( const float2& minPos, const float2& maxPos, const utf8* pTargetID, string& outPath )
+    {
+        const ImRect rect( ImVec2( minPos._x, minPos._y ), ImVec2( maxPos._x, maxPos._y ) );
+        if ( ImGui::BeginDragDropTargetCustom( rect, ImGui::GetID( pTargetID ) ) == false )
+            return false;
+        const bool bAccepted = tryAcceptAssetPayload( outPath );
+        ImGui::EndDragDropTarget();
+        return bAccepted;
+    }
+
     bool EditorWidgets::updateListSelection( int32& selectedIndex, int32 itemCount, bool bRepeat )
     {
         if ( itemCount <= 0 )

@@ -114,6 +114,7 @@
 #include "Engine/UserSettings/UserSettingsVariables.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/DebugOverlayState.h"
+#include "Engine/Utility/EditSessionState.h"
 #include "Engine/Utility/EngineFrameObserver.h"
 #include "Engine/Utility/GameTimeScale.h"
 #include "Engine/Window/IWindow.h"
@@ -244,6 +245,8 @@ namespace sw
 #if !defined( SW_SHIPPING )
             // 에디터 Undo/Redo 전용이라 배포본에는 만들지 않는다(목록의 선택 행). 씬이 바뀌면 씬 매니저가 비운다.
             _services.addSubsystem( sw::make_unique<CommandStack>() );
+            // 에디터 인스턴스를 다시 만들 때(백엔드 교체 · 에디터 모듈 리로드) 선택 · 미저장 표시를 넘긴다.
+            _services.addSubsystem( sw::make_unique<EditSessionState>() );
 #endif
             _services.addSubsystem( sw::make_unique<DebugOverlayState>() );
             _services.addSubsystem( sw::make_unique<ComponentDefaults>() );
