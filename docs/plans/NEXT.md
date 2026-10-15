@@ -91,6 +91,10 @@ Shipping 키트는 STATIC 이고 내보내기 매크로가 빈 것을 산출물�
 - 첫 기준선은 이 PC(`SW`, Ryzen 7 6800H)의 `Test/Load/Baselines.json` 에 있습니다. 다른 PC 는 `py -3 -m Scripts load suite baseline --runs 3 --record` 로 자기 기준선을 뜹니다.
 - 야간 잡 `.github/workflows/load.yml` 은 아직 한 번도 돌지 않았습니다(push 뒤 첫 실행을 봅니다 — `CI-Release` 프리셋 · 리눅스 봇 빌드 · 러너 속도 대비 시간 예산).
 - 부하 스위트 시간 예산은 Release 케이스 최대의 네 배입니다. CI 러너가 그보다 느리면 그 러너 값으로 다시 잽니다.
+- 첫 측정의 병목 셋은 `wt/loadopt` 에서 닫았습니다(전후 표는 검증과 측정 "부하 검증" 절). 기동 6.4 s 는 디스크 흉내의 타이머 반올림 착시였고(지금 Mid 1.1 s · LowEnd 3.5 s),
+  플레이 중 히치는 StarSkirmish 가 처음 짓는 유닛 모델을 게임 스레드에서 읽던 것(`MeshPreloadSet`), 할당은 워커 수가 아니라 `RTSWorld::findAutoTarget` 의 지역 목록이었습니다.
+  남은 기동 열기(개발 배치에만 있는 DLL 섀도 복사 · 매니페스트 · 셰이더 원본 해시)와 렌더 벤치의 13 ~ 20 ms 한 프레임은 백로그 `C-29` ① ② 입니다.
+- 진단: `py -3 -m Scripts load run <시나리오> --app-arg=-gv_ioLogReads=1`(파일 열기마다 경로 · 스레드), `--app-arg=-gv_profileAllocSites=12`(Release 로도 콜스택).
 
 ## 6. 확정된 방침
 

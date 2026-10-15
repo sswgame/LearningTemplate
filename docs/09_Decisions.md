@@ -389,6 +389,11 @@
 - **하드웨어 프로필(LowEnd · Mid · HighEnd)은 기기 없이 소프트웨어로 흉내 내고 결과에 `emulated` 를 적어 실제 기기 측정(Native)과 기준선 키를 가릅니다**(2026-10-15). 언리얼 Device Profiles 는 실제 기기를 고르는 자리로 알고 있는데, 기기가 없을 때 같은 판정을 미리 돌리는 길이 없습니다.
   CPU 코어 · 메모리는 Job Object(멈춘 채 만든 뒤 넣는다 — 워커 수가 정해지는 순간과 겨루지 않게), 워커 풀은 친화도를 따르게 엔진을 고쳤고(`thread::getUsableProcessorCount` — `hardware_concurrency` 는 친화도 · 컨테이너 제한을 못 본다), 디스크는 `gv_ioEmuRead*`, VRAM 은 사양 조사가 보고하는 값(`gv_emulatedGPUMemoryMb`)입니다.
   품질 단계는 이미 있는 Scalability(`graphics.quality` 프리셋 — 그림자 · 시야 거리 · 식생 밀도 · 후처리 · 렌더 스케일)를 프로필이 고르거나(`quality`) 흉내 낸 사양으로 엔진 자동 선택이 고릅니다(`auto`). 자동 조정은 먼저 밖에서 단계를 내려 가며 예산을 지키는 첫 단계를 찾는 `load scale` 로 두었고, 실행 중 동적 조정(언리얼 Dynamic Resolution · 유니티 Adaptive Performance)은 측정으로 이득이 보일 때 들입니다(백로그 `C-29`).
+- **디스크 흉내는 장치 하나 · 큐 깊이 1 · 고해상도 마감 대기입니다**(2026-10-15). 스레드마다 `sleep_for` 하던 첫 판은 Windows 타이머 주기(약 15.6 ms)로 반올림돼 1 ms(SATA SSD) 와 8 ms(HDD) 가 같은 지연이 됐고, 첫 측정의 "기동 6.4 s" 는 그 착시였습니다(열기 385 번 × 15.6 ms).
+  여러 스레드가 나눠 읽으면 빨라지는 것처럼 보이지 않게 모든 읽기가 한 장치 시각(`busy until`)에 줄을 섭니다 — 병렬 읽기로 얻는 이득은 실제 기기에서 따로 잽니다. 언리얼 · 유니티에는 같은 흉내가 없고(실기기 Device Profile), 우리는 기기 없이 기동 · 히치 예산을 먼저 거는 쪽을 골랐습니다.
+- **느슨한 트리의 `.meta` 스캔은 쿠킹한 팩과 같은 도메인(engine · common · 활성 게임)만 훑습니다**(2026-10-15). 다른 게임 팩의 GUID 는 이 게임이 닿지 않고, 팩 경로(`assetregistry.txt`)도 그 셋만 읽습니다. 기동의 파일 열기 385 → 316(렌더 벤치)입니다.
+- **플레이 중 처음 쓰는 메시는 판을 열 때 워커로 미리 읽어 쥡니다(`MeshPreloadSet`)**(2026-10-15). 언리얼 `FStreamableManager::RequestAsyncLoad` 의 핸들, 유니티 Addressables 의 미리 읽기와 같은 자리입니다. 메시 캐시가 약한 참조라 묶음이 쥐어야 남습니다.
+  `MeshComponent` 를 비동기로 바꾸는 길(로드 동안 안 그림)은 모든 게임 · 테스트의 "지정하면 바로 그린다" 계약을 깨므로 두지 않았습니다. StarSkirmish LowEnd 최악 프레임 25.8 → 4.1 ms.
 
 ### 5-3. Core 와 플랫폼
 

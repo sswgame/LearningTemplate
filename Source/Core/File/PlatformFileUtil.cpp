@@ -3,12 +3,11 @@
 #include "Core/File/PlatformFileUtil.h"
 
 #include "Core/Common/Defines.h"
+#include "Core/Concurrency/ThreadName.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
-
-#include <chrono>
-#include <thread>
+#include "Core/Time/MonotonicClock.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Common/PlatformOsHeaders.h"
@@ -28,6 +27,10 @@ namespace sw
     {
         struct PlatformFileUtilInternal
         {
+            /** @brief 읽으려고 연 파일 수입니다(`noteFileOpenedForRead`). */
+            inline static std::atomic<uint64> s_fileOpenCount{ 0 };
+            /** @brief 디스크 흉내의 장치가 비는 시각(`MonotonicClock` 나노초) — 읽기마다 이 뒤에 제 지연을 붙인다. */
+            inline static std::atomic<int64> s_emulatedDiskBusyUntilNano{ 0 };
 
 #if defined( SW_PLATFORM_WINDOWS )
             /** @brief 스레드마다 하나인 수동 리셋 이벤트입니다 — 동기 위치 읽기가 완료를 기다린다. 스레드가 끝나면 닫는다. */
@@ -61,6 +64,7 @@ namespace sw
 
     SW_TEST_GLOBAL_VARIABLE( int32, gv_ioEmuReadLatencyMs, 0, "디스크 흉내: 파일 읽기 한 번마다 더하는 지연(ms, 0=끔)" );
     SW_TEST_GLOBAL_VARIABLE( int32, gv_ioEmuReadKilobytesPerSecond, 0, "디스크 흉내: 파일 읽기 대역폭(KB/s, 0=제한 없음)" );
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_ioLogReads, false, "읽으려고 연 파일마다 경로 · 바이트 · 스레드를 로그로 남긴다(기동 · 히치의 동기 읽기 찾기)" );
 } // namespace sw
 
 namespace sw
@@ -70,8 +74,35 @@ namespace sw
         int64 delayMicro = static_cast<int64>( MathUtil::max( 0, gv_ioEmuReadLatencyMs ) ) * constant::kMicrosecondsPerMillisecond;
         if ( gv_ioEmuReadKilobytesPerSecond > 0 )
             delayMicro += static_cast<int64>( byteCount ) * constant::kMicrosecondsPerSecond / ( static_cast<int64>( gv_ioEmuReadKilobytesPerSecond ) * static_cast<int64>( constant::kBytesPerKilobyte ) );
-        if ( delayMicro > 0 )
-            std::this_thread::sleep_for( std::chrono::microseconds( delayMicro ) );
+        if ( delayMicro <= 0 )
+            return;
+        // 디스크 한 대(큐 깊이 1): 여러 스레드의 읽기가 장치에서 줄을 선다 — 스레드마다 따로 자면 읽기를 나눠 부르기만 해도 디스크가 빨라진 것처럼 보인다.
+        // `sleep_for` 는 Windows 기본 타이머 해상도(약 15.6 ms)로 반올림돼 1 ms 와 8 ms 가 같은 지연이 된다 — 고해상도 마감 대기를 쓴다.
+        const int64 delayNano = delayMicro * constant::kNanosecondsPerMicrosecond;
+        const int64 nowNano   = MonotonicClock::nowNanoseconds();
+        int64       busyUntil = PlatformFileUtilInternal::s_emulatedDiskBusyUntilNano.load( std::memory_order_relaxed );
+        int64       doneNano  = 0;
+        do
+        {
+            doneNano = MathUtil::max( nowNano, busyUntil ) + delayNano;
+        } while ( PlatformFileUtilInternal::s_emulatedDiskBusyUntilNano.compare_exchange_weak( busyUntil, doneNano, std::memory_order_relaxed ) == false );
+        MonotonicClock::sleepUntilNanoseconds( doneNano );
+    }
+
+    void PlatformFileUtil::noteFileOpenedForRead( [[maybe_unused]] string_view filePath, [[maybe_unused]] size_t byteCount )
+    {
+        PlatformFileUtilInternal::s_fileOpenCount.fetch_add( 1, std::memory_order_relaxed );
+        if ( gv_ioLogReads == false )
+            return;
+        utf8 arrThreadName[64]{};
+        if ( ThreadName::tryGetCurrentThreadName( arrThreadName, static_cast<uint32>( sizeof( arrThreadName ) ) ) == false )
+            arrThreadName[0] = '\0';
+        SW_LOG_INFO( "[IO] open %# bytes=%# thread=%#", filePath, byteCount, static_cast<const utf8*>( arrThreadName ) );
+    }
+
+    uint64 PlatformFileUtil::getFileOpenCount()
+    {
+        return PlatformFileUtilInternal::s_fileOpenCount.load( std::memory_order_relaxed );
     }
 
     FILE* PlatformFileUtil::openFile( const utf8* pFilePath, const utf8* pMode )
@@ -227,6 +258,7 @@ namespace sw
     {
         if ( pFilePath == nullptr || pFilePath[0] == '\0' )
             return kInvalidNativeFileHandle;
+        noteFileOpenedForRead( pFilePath, 0 );
 #if defined( SW_PLATFORM_WINDOWS )
         const wstring widePath = StringUtil::utf8ToUtf16( pFilePath );
         const HANDLE  hFile    = CreateFileW( widePath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,

@@ -199,11 +199,15 @@ namespace sw
     {
         if ( InputManager* pInput = game::findSubsystem<InputManager>(); pInput != nullptr )
             pInput->getVirtualCursor().setEnabled( false );
+        _unitModels.clear();
         GameDirectorComponent::onEndPlay();
     }
 
     void SkirmishDirectorComponent::onGameStarted()
     {
+        // 처음 짓는 건물 · 유닛의 모델을 게임 스레드가 플레이 중에 디스크에서 읽지 않게 판을 열 때 워커로 미리 읽는다(느린 디스크의 히치).
+        if ( _unitModels.isComplete() && _unitModels.getLoadedCount() == 0 )
+            _unitModels.request( SkirmishUnitComponent::makeAllModelPaths() );
         // 사람 쪽은 글자 키가 명령이라 카메라는 방향키만 쓴다. 둘 다 AI 면 맵 전체가 보이게 물러서고 WASD 도 카메라를 움직인다.
         OrthoCameraRigComponent* pRig = findCameraRig();
         if ( pRig != nullptr )

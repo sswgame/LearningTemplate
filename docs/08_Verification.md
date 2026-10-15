@@ -282,7 +282,10 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
   Release 가 아니면 숫자만 적고 판정하지 않습니다(`--allow-debug` 로 덮는다). 판마다의 출력 전체는 `<빌드>/LoadResults/logs/`, 결과는 `<빌드>/LoadResults/<시각>.json` 입니다.
 - **병목 갈래**는 같은 판의 하위 구간 비율로 가릅니다 — `RT.BeginFrame` 이 `RT.Frame` 의 절반을 넘으면 GPU(펜스 대기), `GT.Packet.submit` 이 `GT.Frame` 의 절반을 넘으면 게임 스레드가 렌더 스레드를 기다린 것, 아니면 가장 무거운 `GT.*` 구간을 붙입니다.
 - **측정하기 전에** 다른 빌드 · GPU 실행이 없는지 봅니다 — `py -3 -m Scripts shared-lock acquire gpu --owner <이름>`(독점 — 공유 보유자가 다 놓을 때까지 기다린다)을 쥐고 재며, 다른 에이전트의 빌드가 돌면 기다립니다. VSync 는 기본으로 꺼져 있습니다(`display.vsync`).
-- **디스크 흉내의 해상도는 약 1 ms 입니다**(Windows 잠자기). 읽기마다 1 ms 를 줘도 8 ms 를 줘도 기동이 비슷하게 늘면 읽기 횟수가 시간을 정하는 것입니다(백로그 `C-29` ①).
+- **디스크 흉내는 장치 하나 · 큐 깊이 1 입니다**(고해상도 마감 대기 — `sleep_for` 는 Windows 타이머 주기 15.6 ms 로 반올림돼 1 ms 와 8 ms 를 구분하지 못했다). 기동은 대략 `Native 기동 + 열기 수 × 지연` 이고,
+  열기 수는 결과의 `startup_file_opens`(로그 `startup … ms, … file opens`)입니다. 어디서 읽는지는 `--app-arg=-gv_ioLogReads=1` 로 돌려 판 로그의 `[IO] open <경로> bytes=… thread=…` 를 봅니다(측정 창 안의 줄이 히치 후보).
+- **`--app-arg` 로 진단 스위치를 App 에 더 넘깁니다** — `-gv_ioLogReads=1`, `-gv_profileAllocSites=12`(Release 로도 콜스택이 나온다). 진단을 켠 판은 기준선을 남기지(`--record`) 않습니다.
+- **aiskirmish 의 `alloc.per_frame` 은 워커 수가 아니라 측정 창의 프레임 수를 따라갔습니다** — 고정 델타라 프레임이 많을수록 게임 시간이 길어 유닛이 늘었다. 할당 자리를 견줄 때는 `wall.frames` 도 같이 봅니다.
 - **aiskirmish 는 StarSkirmish 가 든 빌드가 필요합니다** — Release 프리셋은 활성 게임만 지으므로 `cmake --preset Ninja-Release -DSW_GAMES=StarSkirmish` 로 구성합니다. 없으면 그 조합은 건너뜀(77)입니다.
   OnlineLoadBot 은 Windows 에서 키트 DLL 사본과 함께 `ToolBin` 에 있고 작업 폴더는 `Bin` 입니다.
 
@@ -305,6 +308,22 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
 | replication(클라이언트 8 · lte · 12 초) × HighEnd* · Mid* · LowEnd* | 틱 p50 2.9 · 3.0 · 3.2 ms, p99 9.2 (8.5..10.1) · 9.3 · 10.3 ms, max 45 · 43 · 44 ms(서버와 클라이언트 월드 아홉을 한 스레드에서), 수렴 1(상태 해시 일치) |
 
   흉내는 클럭을 줄이지 않아 코어가 적은 프로필의 프레임이 오히려 짧습니다(경합이 준다). 이 표에서 프로필 차이로 읽을 수 있는 것은 워커 수 · 기동(디스크) · 히치 꼬리 · 메모리입니다.
+  이 표의 Mid · LowEnd 기동은 디스크 흉내의 타이머 반올림이 부풀린 값입니다(아래 표).
+
+**`C-29` 최적화 전후**(2026-10-15, 같은 PC · Release dx12, 조합마다 3 판의 가운데 값(최소..최대)): 디스크 흉내 정밀화, `.meta` 스캔을 도메인 셋으로, StarSkirmish 유닛 모델 미리 읽기(`MeshPreloadSet`),
+`RTSWorld::findAutoTarget` 의 지역 목록을 스크래치로. 후 값은 `Baselines.json` 에 기록한 판입니다.
+
+| 시나리오 × 프로필 | 기동 (ms) 전 → 후 | 파일 열기 | 최악 프레임 (us) 전 → 후 | 16 ms 넘은 프레임 | 할당/프레임 |
+|---|---|---|---|---|---|
+| renderbench × Native | 702 → 625 | 385 → 316 | 19536 (14065..20001) → 14278 (13711..14341) | 1 → 0 | 6 → 6 |
+| renderbench × Mid* | 6209 → 1139 | 385 → 316 | 12170 (2572..14079) → 14132 (14111..14369) | 0 → 0 | 6 → 6 |
+| renderbench × LowEnd* | 6906 → 3664 | 385 → 316 | 2628 (2185..2979) → 18667 (13465..19852) | 0 → 1 | 6 → 6 |
+| aiskirmish × HighEnd* | 628 → 848 (618..1093) | 394 → 309 | 14404 (14007..14555) → 14089 (6521..14157) | 0 → 0 | 20 → 6 |
+| aiskirmish × Mid* | 6461 → 1114 | 394 → 309 | 18632 (17173..19571) → 14301 (14281..14655) | 2 → 0 | 35 → 5 |
+| aiskirmish × LowEnd* | 6976 → 3550 | 394 → 309 | 25805 (20784..26055) → 4136 (3909..4322) | 3 → 0 | 65 → 5 |
+
+  최악 프레임의 13 ~ 20 ms 한 프레임은 디스크 · 이 변경과 무관합니다 — 측정 창 안 파일 열기가 0 이고, 디스크 흉내를 끈 LowEnd 도 14.0 ms 였으며, `.meta` 변경만 뺀 같은 빌드와 3 판씩 견준 가운데 값이 3.2 ms 로 같았습니다(판마다 나오다 말다 한다 — 백로그 `C-29` ②).
+  기동의 나머지 열기는 개발 배치에만 있는 것입니다 — 키트 DLL 섀도 복사 61 · 모듈 매니페스트 70 · 셰이더 원본 해시 약 30(Shipping 은 셋 다 없다, 백로그 `C-29` ①).
   부하 스위트의 시간 예산(`SW_TEST_TIME_BUDGET`)은 같은 날 Release 세 번 중 최대 케이스 시간의 네 배입니다(`TaskManagerBenchTest` 3.2 s · `PackReadBenchTest` 3.1 s · `NetSimLoadTest` 2.5 s 가 가장 길다).
 - **CI 야간 잡**(`.github/workflows/load.yml`, 리눅스 `CI-Release`)이 `ctest -L load` 와 묶음 `nightly`(봇 · 클러스터 — GPU 가 없어 App 드라이버 제외)를 돌리고 진 조합을 주석으로 올립니다(`CiFailureReport.py load`). 러너는 측정 기계가 아니므로 기준선은 알림뿐입니다.
 
