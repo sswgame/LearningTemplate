@@ -148,8 +148,7 @@ namespace sw
         , _actionBuffer{}
         , _nextGeneration{ 1 }
         , _defaultLayerName{ InputMapDefaults::kDefaultLayerName }
-        , _mouseSensitivity{ 1.0f, 1.0f }
-        , _gamepadSensitivity{ 1.0f, 1.0f }
+        , _playerSettings{}
         , _doubleClickTime{ InputMapDefaults::kDoubleClickTime }
         , _doubleClickMaxDistance{ InputMapDefaults::kDoubleClickMaxDistance }
         , _doubleTapTime{ InputMapDefaults::kDoubleTapTime }
@@ -158,11 +157,6 @@ namespace sw
         , _navRepeatRate{ 0.08f }
         , _totalElapsedTime{ 0.0f }
         , _lastDeltaSeconds{ 0.0f }
-        , _stickDeadzoneOverride{ -1.0f }
-        , _deadzoneShape{ DeadzoneShape::Radial }
-        , _digitalNormalization{ DigitalNormalization::Circular }
-        , _bInvertX{ SW_FALSE }
-        , _bInvertY{ SW_FALSE }
         , _bSuppressBaseActionOnChord{ SW_TRUE }
         , _bKeyboardFocusIgnored{ SW_FALSE }
         , _reservedFlags{ 0 }
@@ -278,7 +272,7 @@ namespace sw
             float32& accumulator = BindingKinds::isRelative( binding ) ? relative : bounded;
             accumulator += binding._bNegate ? -bVal._x : bVal._x; // 프레임 평가(InputMapEvaluate)와 같은 부호 뒤집기
         }
-        if ( _bInvertX == SW_TRUE )
+        if ( _playerSettings._bInvertX )
             bounded = -bounded;
         return MathUtil::clamp( bounded, -1.0f, 1.0f ) + relative;
     }

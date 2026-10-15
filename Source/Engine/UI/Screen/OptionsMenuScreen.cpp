@@ -249,10 +249,10 @@ namespace sw
         populateRows();
         // 탐색 방식이면 첫 행으로 간다. 탭을 바꾼 패드 사용자가 바로 행을 고를 수 있다.
         UISystem*  pUI                = getUISystem();
-        const bool bNoNavigationFocus = pUI == nullptr || pUI->getInputMode() != UIInputMode::Navigation || _listRow.empty() || pUI->getActiveScreen() != this;
+        const bool bNoNavigationFocus = pUI == nullptr || pUI->getInputRouter().getInputMode() != UIInputMode::Navigation || _listRow.empty() || pUI->getActiveScreen() != this;
         if ( bNoNavigationFocus )
             return;
-        (void)pUI->getFocusManager().setFocus( tree, _listRow.front()._value );
+        (void)pUI->getInputRouter().getFocusManager().setFocus( tree, _listRow.front()._value );
     }
 
     Widget* OptionsMenuScreen::findRowValueWidget( const hashed_string& settingID ) const
@@ -355,7 +355,7 @@ namespace sw
         UISystem* pUI  = getUISystem();
         if ( pUI == nullptr )
             return false;
-        const utf8*                             pDocumentPath = findRowDocument( setting, pUI->getInputMode() );
+        const utf8*                             pDocumentPath = findRowDocument( setting, pUI->getInputRouter().getInputMode() );
         string                                  error;
         const shared_ptr<const UIDocumentAsset> document = pUI->getDocumentCache().findOrLoad( pDocumentPath, error );
         vector<UIBindingDesc>                   listBinding;

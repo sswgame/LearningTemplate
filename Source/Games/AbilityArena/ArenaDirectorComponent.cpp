@@ -362,7 +362,7 @@ namespace sw
         request._position    = pFromView->_position + facing * ( _unitRadius + _projectileRadius );
         request._velocity    = facing * speed;
         request._range       = range;
-        request._bFromPlayer = from.hasMatchingTag( "Team.Player"_tag ) ? SW_TRUE : SW_FALSE;
+        request._bFromPlayer = from.getOwnedTagCounts().hasMatchingTag( "Team.Player"_tag ) ? SW_TRUE : SW_FALSE;
         // 어빌리티는 워커(유닛의 틱)에서 쏘고, 오브젝트는 틱이 끝난 뒤 게임 스레드에서 스폰한다. 그 사이 디렉터가 사라질 수 있으니 핸들로 다시 찾는다.
         const ComponentHandle self = getHandle();
         pManager->executeOrDeferPostTick( SW_DELEGATE_LAMBDA( GameObjectManager::PostTickDelegate, [pManager, self, request]()
@@ -595,7 +595,7 @@ namespace sw
                 _listUnit.erase( _listUnit.begin() + static_cast<ptrdiff_t>( unitIndex - 1 ) );
                 continue;
             }
-            if ( unit._deathTimer < 0.0f && pAbilitySystem->hasMatchingTag( CombatAttributeSet::getDeadTag() ) )
+            if ( unit._deathTimer < 0.0f && pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) )
             {
                 unit._deathTimer = kDeathLinger;
                 if ( unit._kind == ArenaUnitKind::Player )
@@ -654,9 +654,9 @@ namespace sw
             view._object      = unit._object;
             view._position    = pMesh->getWorldPosition();
             view._kind        = unit._kind;
-            view._bAlive      = unit._deathTimer < 0.0f && pAbilitySystem->hasMatchingTag( CombatAttributeSet::getDeadTag() ) == false ? SW_TRUE : SW_FALSE;
-            view._bPlayerTeam = pAbilitySystem->hasMatchingTag( "Team.Player"_tag ) ? SW_TRUE : SW_FALSE;
-            view._bEnemyTeam  = pAbilitySystem->hasMatchingTag( "Team.Enemy"_tag ) ? SW_TRUE : SW_FALSE;
+            view._bAlive      = unit._deathTimer < 0.0f && pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) == false ? SW_TRUE : SW_FALSE;
+            view._bPlayerTeam = pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "Team.Player"_tag ) ? SW_TRUE : SW_FALSE;
+            view._bEnemyTeam  = pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "Team.Enemy"_tag ) ? SW_TRUE : SW_FALSE;
             _listUnitView.push_back( view );
             if ( unit._kind == ArenaUnitKind::Player && bFocusSet == false )
             {

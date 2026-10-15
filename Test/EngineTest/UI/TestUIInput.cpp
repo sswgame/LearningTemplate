@@ -55,7 +55,7 @@ namespace
             gameMap.bind( "MoveForward", sw::Key::W, sw::ActionTrigger::Down );
             gameMap.bindGamepadStick2D( "Move" );
             SW_EXPECT_TRUE( _ui.initialize( _input, nullptr, UIInputTestUtil::kUIInputMap ) );
-            SW_EXPECT_NOT_NULL( _ui.getUIInputMap() );
+            SW_EXPECT_NOT_NULL( _ui.getInputRouter().getUIInputMap() );
         }
 
         ~UIInputFixture()
@@ -85,7 +85,7 @@ namespace
             _menu = _ui.pushScreen( sw::make_unique<sw::UIScreen>( sw::UIScreenDesc{}, std::move( root ) ) );
         }
 
-        bool focus( uint32 index ) { return _ui.getFocusManager().setFocus( _ui.findScreen( _menu )->getTree(), _listButton[index]->getID() ); }
+        bool focus( uint32 index ) { return _ui.getInputRouter().getFocusManager().setFocus( _ui.findScreen( _menu )->getTree(), _listButton[index]->getID() ); }
 
         /** @brief 지금 포커스 버튼의 자리입니다(없으면 -1). */
         int32 getFocusedIndex() const
@@ -127,13 +127,13 @@ namespace
         bool wasTriggeredForGame( const sw::hashed_string& action ) const
         {
             const sw::InputMap& gameMap = _input.getInputMap();
-            return gameMap.wasActionTriggered( action ) && _ui.isActionConsumed( gameMap, action ) == false;
+            return gameMap.wasActionTriggered( action ) && _ui.getInputRouter().isActionConsumed( gameMap, action ) == false;
         }
 
         bool isDownForGame( const sw::hashed_string& action ) const
         {
             const sw::InputMap& gameMap = _input.getInputMap();
-            return gameMap.isActionDown( action ) && _ui.isActionConsumed( gameMap, action ) == false;
+            return gameMap.isActionDown( action ) && _ui.getInputRouter().isActionConsumed( gameMap, action ) == false;
         }
     };
 } // namespace
@@ -185,7 +185,7 @@ SW_TEST_CASE( UIInputTest, UnhandledActionReachesGame )
     fixture.runFrame();
     fixture.beginFrame();
     SW_EXPECT_TRUE( fixture.wasTriggeredForGame( "Jump" ) );
-    SW_EXPECT_FALSE( fixture._ui.getInputConsumption().hasConsumedInput() );
+    SW_EXPECT_FALSE( fixture._ui.getInputRouter().getConsumption().hasConsumedInput() );
     fixture.endFrame();
 }
 
@@ -193,7 +193,7 @@ SW_TEST_CASE( UIInputTest, UnhandledActionReachesGame )
 SW_TEST_CASE( UIInputTest, DPadRepeatsWhileHeld )
 {
     UIInputFixture fixture;
-    fixture._ui.getUIInputMap()->setNavRepeatTiming( 0.4f, 0.1f );
+    fixture._ui.getInputRouter().getUIInputMap()->setNavRepeatTiming( 0.4f, 0.1f );
     fixture.openMenu( 6 );
     SW_ASSERT_TRUE( fixture.focus( 0 ) );
     SW_ASSERT_TRUE( fixture._script.addSlot( 1, sw::InputSlot::fromGamepadButton( sw::GamepadButton::DPadDown ), true ) );
@@ -211,7 +211,7 @@ SW_TEST_CASE( UIInputTest, DPadRepeatsWhileHeld )
 SW_TEST_CASE( UIInputTest, StickNavigatesOnceThenRepeats )
 {
     UIInputFixture fixture;
-    fixture._ui.getUIInputMap()->setNavRepeatTiming( 0.4f, 0.1f );
+    fixture._ui.getInputRouter().getUIInputMap()->setNavRepeatTiming( 0.4f, 0.1f );
     fixture.openMenu( 6 );
     SW_ASSERT_TRUE( fixture.focus( 0 ) );
     fixture._script.addGamepadAxis( 1, 1, -0.9f ); // 왼쪽 스틱 y — 아래
@@ -269,7 +269,7 @@ SW_TEST_CASE( UIInputTest, InputModeSwitchesWithLastDevice )
 {
     UIInputFixture fixture;
     fixture.openMenu( 2 );
-    SW_EXPECT_TRUE( fixture._ui.getInputMode() == sw::UIInputMode::Pointer );
+    SW_EXPECT_TRUE( fixture._ui.getInputRouter().getInputMode() == sw::UIInputMode::Pointer );
     SW_EXPECT_EQUAL( -1, fixture.getFocusedIndex() );
     fixture._script.addEvent( 0, sw::RawInputEvent::makeMouseMove( 640, 480 ) ); // 창이 뜰 때의 자리(이동 아님)
     SW_ASSERT_TRUE( fixture._script.addTap( 1, sw::InputSlot::fromGamepadButton( sw::GamepadButton::X ), 1 ) );
@@ -279,13 +279,13 @@ SW_TEST_CASE( UIInputTest, InputModeSwitchesWithLastDevice )
 
     fixture.runFrame();
     fixture.runFrame(); // 1 — 패드 X(UI 행동 아님)
-    SW_EXPECT_TRUE( fixture._ui.getInputMode() == sw::UIInputMode::Navigation );
+    SW_EXPECT_TRUE( fixture._ui.getInputRouter().getInputMode() == sw::UIInputMode::Navigation );
     SW_EXPECT_EQUAL( 0, fixture.getFocusedIndex() ); // 탐색으로 바뀌는 순간 기본 포커스
     fixture.runFrame();
     fixture.runFrame(); // 3 — 같은 자리 이동 사건
-    SW_EXPECT_TRUE( fixture._ui.getInputMode() == sw::UIInputMode::Navigation );
+    SW_EXPECT_TRUE( fixture._ui.getInputRouter().getInputMode() == sw::UIInputMode::Navigation );
     fixture.runFrame(); // 4 — 마우스 이동
-    SW_EXPECT_TRUE( fixture._ui.getInputMode() == sw::UIInputMode::Pointer );
+    SW_EXPECT_TRUE( fixture._ui.getInputRouter().getInputMode() == sw::UIInputMode::Pointer );
 }
 
 /**
@@ -341,7 +341,7 @@ SW_TEST_CASE( UIInputTest, PointerPositionIsInUIUnits )
     fixture.beginFrame();
     SW_EXPECT_TRUE( fixture._input.getInputMap().wasActionTriggered( "Fire" ) );
     SW_EXPECT_FALSE( fixture.wasTriggeredForGame( "Fire" ) );
-    SW_EXPECT_EQUAL( fixture._listButton[0]->getID(), fixture._ui.getPointerState().getHoveredWidget() );
+    SW_EXPECT_EQUAL( fixture._listButton[0]->getID(), fixture._ui.getInputRouter().getPointerState().getHoveredWidget() );
     fixture.endFrame();
 }
 
@@ -360,7 +360,7 @@ SW_TEST_CASE( UIInputTest, RightStickScrollsFocusedList )
     pContent->addChild( sw::make_unique<sw::test::TestFocusableFixedWidget>( "second", sw::float2{ 100.0f, 1000.0f } ) );
     const sw::UIScreenHandle screen = fixture._ui.pushScreen( sw::make_unique<sw::UIScreen>( sw::UIScreenDesc{}, std::move( root ) ) );
     fixture.runFrame(); // 놓는다
-    SW_ASSERT_TRUE( fixture._ui.getFocusManager().setFocus( fixture._ui.findScreen( screen )->getTree(), pFirst->getID() ) );
+    SW_ASSERT_TRUE( fixture._ui.getInputRouter().getFocusManager().setFocus( fixture._ui.findScreen( screen )->getTree(), pFirst->getID() ) );
     fixture._script.addGamepadAxis( 1, 3, -1.0f ); // 오른쪽 스틱 y — 아래
     fixture.attachScript();
 

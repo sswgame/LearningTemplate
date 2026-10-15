@@ -65,7 +65,7 @@ namespace sw
             pressButton( hashed_string( "Arena.Dash" ) );
             return;
         }
-        if ( pAbilitySystem->hasMatchingTag( "State.Dashing"_tag ) )
+        if ( pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "State.Dashing"_tag ) )
             return; // 대시는 바라보는 쪽으로 저절로 간다 — 걸어 둔 목적지를 그대로 둔다
         if ( distance > _meleeRange )
         {

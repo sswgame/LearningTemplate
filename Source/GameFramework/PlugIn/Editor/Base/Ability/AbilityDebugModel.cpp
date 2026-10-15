@@ -50,12 +50,12 @@ namespace sw::editor
             outSnapshot._listEffect.push_back( std::move( row ) );
         }
 
-        for ( const TagID& tag : abilitySystem.getOwnedTags().getTags() )
+        for ( const TagID& tag : abilitySystem.getOwnedTagCounts().getTags().getTags() )
         {
             AbilityDebugTagRow row;
             const utf8*        pName = tag.getString();
             row._tag                 = pName != nullptr ? pName : "(unnamed)";
-            row._count               = abilitySystem.getTagCount( tag );
+            row._count               = abilitySystem.getOwnedTagCounts().getCount( tag );
             outSnapshot._listTag.push_back( std::move( row ) );
         }
 

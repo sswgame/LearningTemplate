@@ -172,7 +172,7 @@ SW_TEST_CASE( UILocalizationTest, OffscreenScreenUsesItsOwnLocalization )
     UILocalizationFixture fixture;
     fixture._ui.getDocumentCache().registerMemoryDocument( "test/loc_preview.ui.xml", "<UIDocument _schemaVersion=\"1\">\n\t<TextWidget _name=\"Title\" _text=\"Menu.Start\" />\n</UIDocument>\n" );
     const sw::UIScreenHandle handle  = fixture._ui.openOffscreenScreen( "test/loc_preview.ui.xml", "rendertarget/test_loc_preview" );
-    sw::UIScreen*            pScreen = fixture._ui.findOffscreenScreen( handle );
+    sw::UIScreen*            pScreen = fixture._ui.getOffscreenScreens().findScreen( handle );
     SW_ASSERT_NOT_NULL( pScreen );
     sw::UIViewport viewport{};
     viewport._size         = sw::float2{ 640.0f, 360.0f };
@@ -186,15 +186,15 @@ SW_TEST_CASE( UILocalizationTest, OffscreenScreenUsesItsOwnLocalization )
     sw::LocalizationManager preview;
     preview.copyStateFrom( fixture._localization );
     SW_ASSERT_TRUE( preview.setCurrentLanguage( "ko" ) );
-    fixture._ui.setOffscreenLocalization( handle, &preview );
+    fixture._ui.getOffscreenScreens().setLocalization( handle, &preview );
     UILocalizationTestUtil::runFrame( fixture._input, fixture._ui );
     SW_EXPECT_STREQ( "새 게임을 시작합니다", pText->getDisplayText().c_str() );
     SW_EXPECT_EQUAL( sw::string( "en" ), fixture._localization.getCurrentLanguage() ); // 게임 UI 의 언어는 그대로
 
     SW_ASSERT_TRUE( preview.setCurrentLanguage( "qps-ploc" ) );
-    fixture._ui.setOffscreenLocalization( handle, &preview );
+    fixture._ui.getOffscreenScreens().setLocalization( handle, &preview );
     UILocalizationTestUtil::runFrame( fixture._input, fixture._ui );
     SW_EXPECT_TRUE_MSG( pText->getDisplayText() != "Start" && pText->getDisplayText() != "새 게임을 시작합니다", pText->getDisplayText().c_str() );
 
-    fixture._ui.closeOffscreenScreen( handle );
+    fixture._ui.getOffscreenScreens().remove( handle );
 }

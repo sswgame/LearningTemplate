@@ -445,7 +445,7 @@ SW_TEST_CASE( AbilitySystemTest, GrantedTagsAreCountedAndGateApplicationAndClean
     const hashed_string power{ "Power" };
 
     int32 tagEventCount = 0;
-    (void)pAbilitySystem->registerTagChanged( SW_DELEGATE_LAMBDA( AbilitySystemComponent::TagChangedDelegate, [&tagEventCount]( TagID tag, int32 newCount )
+    (void)pAbilitySystem->getOwnedTagCounts().registerChanged( SW_DELEGATE_LAMBDA( GameplayTagCountContainer::TagChangedDelegate, [&tagEventCount]( TagID tag, int32 newCount )
     {
         (void)newCount;
         if ( tag == "State.Burning"_tag )
@@ -459,26 +459,26 @@ SW_TEST_CASE( AbilitySystemTest, GrantedTagsAreCountedAndGateApplicationAndClean
 
     const ActiveEffectHandle firstHandle  = pAbilitySystem->applyGameplayEffectSpecToSelf( pAbilitySystem->makeOutgoingSpec( pBurn ) );
     const ActiveEffectHandle secondHandle = pAbilitySystem->applyGameplayEffectSpecToSelf( pAbilitySystem->makeOutgoingSpec( pBurn ) );
-    SW_EXPECT_EQUAL( 2, pAbilitySystem->getTagCount( "State.Burning"_tag ) );
-    SW_EXPECT_TRUE( pAbilitySystem->hasMatchingTag( "State"_tag ) ); // 조상 태그로도 맞는다
+    SW_EXPECT_EQUAL( 2, pAbilitySystem->getOwnedTagCounts().getCount( "State.Burning"_tag ) );
+    SW_EXPECT_TRUE( pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "State"_tag ) ); // 조상 태그로도 맞는다
     SW_EXPECT_EQUAL( 1, tagEventCount );
 
     SW_EXPECT_TRUE( pAbilitySystem->removeActiveEffect( firstHandle ) );
-    SW_EXPECT_TRUE( pAbilitySystem->hasMatchingTag( "State.Burning"_tag ) );
+    SW_EXPECT_TRUE( pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "State.Burning"_tag ) );
     SW_EXPECT_TRUE( pAbilitySystem->removeActiveEffect( secondHandle ) );
-    SW_EXPECT_FALSE( pAbilitySystem->hasMatchingTag( "State.Burning"_tag ) );
+    SW_EXPECT_FALSE( pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "State.Burning"_tag ) );
     SW_EXPECT_EQUAL( 2, tagEventCount );
 
-    pAbilitySystem->addLooseTag( "State.Immune.Fire"_tag );
+    pAbilitySystem->getOwnedTagCounts().updateCount( "State.Immune.Fire"_tag, 1 );
     SW_EXPECT_FALSE( pAbilitySystem->applyGameplayEffectSpecToSelf( pAbilitySystem->makeOutgoingSpec( pBurn ) ).isValid() );
-    pAbilitySystem->removeLooseTag( "State.Immune.Fire"_tag );
+    pAbilitySystem->getOwnedTagCounts().updateCount( "State.Immune.Fire"_tag, -1 );
     SW_EXPECT_TRUE( pAbilitySystem->applyGameplayEffectSpecToSelf( pAbilitySystem->makeOutgoingSpec( pBurn ) ).isValid() );
 
     shared_ptr<GameplayEffectDef> pCleanse = makeModifierEffect( "Cleanse", EffectDurationPolicy::Instant, 0.0f, power, AttributeModOp::Add, 0.0f );
     pCleanse->_removeEffectsWithTags.addTag( "State.Burning"_tag );
     (void)pAbilitySystem->applyGameplayEffectSpecToSelf( pAbilitySystem->makeOutgoingSpec( pCleanse ) ); // 즉시 이펙트라 핸들이 남지 않는다 — 아래 단언이 결과를 본다
     SW_EXPECT_EQUAL( 0u, pAbilitySystem->getActiveEffectCount() );
-    SW_EXPECT_FALSE( pAbilitySystem->hasMatchingTag( "State.Burning"_tag ) );
+    SW_EXPECT_FALSE( pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "State.Burning"_tag ) );
 }
 
 /**
@@ -530,8 +530,8 @@ SW_TEST_CASE( AbilitySystemTest, DamageExecutionMitigatesByArmorAndKillsExactlyO
     dispatcher.processEvents();
 
     SW_EXPECT_NEAR_EQUAL( 0.0f, pTarget->getAttributeValue( CombatAttributes::health() ), 0.001f );
-    SW_EXPECT_TRUE( pTarget->hasMatchingTag( CombatAttributeSet::getDeadTag() ) );
-    SW_EXPECT_EQUAL( 1, pTarget->getTagCount( CombatAttributeSet::getDeadTag() ) );
+    SW_EXPECT_TRUE( pTarget->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) );
+    SW_EXPECT_EQUAL( 1, pTarget->getOwnedTagCounts().getCount( CombatAttributeSet::getDeadTag() ) );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listDied.size() );
     SW_EXPECT_TRUE( listDied[0]._target == pTarget->getOwner()->getHandle() );
     SW_EXPECT_TRUE( listDied[0]._instigator == pAttacker->getOwner()->getHandle() );
@@ -632,17 +632,17 @@ SW_TEST_CASE( AbilitySystemTest, ActivationTagsBlockAndCancelOtherAbilities )
     SW_EXPECT_EQUAL( 3u, pAbilitySystem->getAbilityCount() );
 
     SW_EXPECT_TRUE( pAbilitySystem->tryActivateAbility( castHandle ) == AbilityActivationResult::Activated );
-    SW_EXPECT_TRUE( pAbilitySystem->hasMatchingTag( "State.Casting"_tag ) );
+    SW_EXPECT_TRUE( pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "State.Casting"_tag ) );
     SW_EXPECT_TRUE( pAbilitySystem->tryActivateAbility( castHandle ) == AbilityActivationResult::AlreadyActive );
     SW_EXPECT_TRUE( pAbilitySystem->tryActivateAbility( moveHandle ) == AbilityActivationResult::BlockedByTag );
 
     SW_EXPECT_TRUE( pAbilitySystem->tryActivateAbility( interruptHandle ) == AbilityActivationResult::Activated );
     SW_EXPECT_FALSE( pAbilitySystem->isAbilityActive( castHandle ) );
     SW_EXPECT_EQUAL( 1, pCastRaw->_cancelledCount );
-    SW_EXPECT_FALSE( pAbilitySystem->hasMatchingTag( "State.Casting"_tag ) );
+    SW_EXPECT_FALSE( pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "State.Casting"_tag ) );
     SW_EXPECT_TRUE( pAbilitySystem->tryActivateAbility( moveHandle ) == AbilityActivationResult::Activated );
 
-    pAbilitySystem->addLooseTag( "State.Dead"_tag );
+    pAbilitySystem->getOwnedTagCounts().updateCount( "State.Dead"_tag, 1 );
     SW_EXPECT_TRUE( pAbilitySystem->tryActivateAbility( moveHandle ) == AbilityActivationResult::BlockedByTag );
 }
 
@@ -775,7 +775,7 @@ SW_TEST_CASE( AbilitySystemTest, CatalogXMLGrantsAnAbilitySetAndRunsADataOnlyAbi
     SW_EXPECT_NEAR_EQUAL( 80.0f, pAbilitySystem->getAttributeValue( CombatAttributes::health() ), 0.001f );
     SW_EXPECT_NEAR_EQUAL( 120.0f, pAbilitySystem->getAttributeValue( CombatAttributes::maxHealth() ), 0.001f );
     SW_EXPECT_NEAR_EQUAL( 10.0f, pAbilitySystem->getAttributeValue( CombatAttributes::attackPower() ), 0.001f ); // 묶음 기본값
-    SW_EXPECT_TRUE( pAbilitySystem->hasMatchingTag( "Team.Hero"_tag ) );
+    SW_EXPECT_TRUE( pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "Team.Hero"_tag ) );
     SW_EXPECT_EQUAL( 1u, pAbilitySystem->getAbilityCount() );
     SW_EXPECT_EQUAL( 1u, pAbilitySystem->getActiveEffectCount() );
     SW_EXPECT_TRUE( pAbilitySystem->setAttributeBaseValue( "Stamina", 150.0f ) );
@@ -791,7 +791,7 @@ SW_TEST_CASE( AbilitySystemTest, CatalogXMLGrantsAnAbilitySetAndRunsADataOnlyAbi
     pAbilitySystem->abilityInputPressed( 3 );
     SW_EXPECT_NEAR_EQUAL( 110.0f, pAbilitySystem->getAttributeValue( CombatAttributes::health() ), 0.001f );
     SW_EXPECT_NEAR_EQUAL( 30.0f, pAbilitySystem->getAttributeValue( CombatAttributes::mana() ), 0.001f );
-    SW_EXPECT_TRUE( pAbilitySystem->hasMatchingTag( "Cooldown.Skill"_tag ) );
+    SW_EXPECT_TRUE( pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "Cooldown.Skill"_tag ) );
     SW_EXPECT_EQUAL( 1, healCueCount );
 
     pAbilitySystem->advanceTime( 1.0f );

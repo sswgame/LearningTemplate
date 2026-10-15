@@ -255,7 +255,7 @@ SW_TEST_CASE( UINavigationTest, NavigationStaysInsideModalScreen )
 
         SW_ASSERT_NOT_NULL( ui.getActiveScreen() );
         SW_EXPECT_TRUE( pModalButton->hasFocus() );
-        SW_EXPECT_FALSE( ui.getFocusManager().navigate( ui.getActiveScreen()->getTree(), sw::UINavigationDirection::Right ) );
+        SW_EXPECT_FALSE( ui.getInputRouter().getFocusManager().navigate( ui.getActiveScreen()->getTree(), sw::UINavigationDirection::Right ) );
         SW_EXPECT_TRUE( pModalButton->hasFocus() );
         SW_EXPECT_FALSE( pMenuButton->hasFocus() );
         ui.shutdown();

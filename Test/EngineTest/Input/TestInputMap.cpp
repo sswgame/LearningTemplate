@@ -156,8 +156,8 @@ SW_TEST_CASE( InputMapTest, MouseWheelIsNotClampedOrInvertedByLook )
     SW_ASSERT_TRUE( input.initialize() );
     sw::InputMap& inputMap = input.getInputMap();
     inputMap.bindMouseWheel( "Zoom" );
-    inputMap.setInvertX( true );
-    const sw::ActionHandle zoom = inputMap.getActionHandle( "Zoom" );
+    inputMap.getPlayerSettings()._bInvertX = true;
+    const sw::ActionHandle zoom            = inputMap.getActionHandle( "Zoom" );
 
     SW_ASSERT_TRUE( input.postRawEvent( sw::RawInputEvent::makeMouseWheel( 3.0f ) ) );
     input.beginFrame( 0.016f );
@@ -191,7 +191,7 @@ SW_TEST_CASE( InputMapTest, MouseDeltaIsNotClampedAndInvertsOnce )
     SW_EXPECT_NEAR_EQUAL( raw._x * 2.0f, byName._x, 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( raw._x * 2.0f, byHandle._x, 1.0e-4f );
 
-    inputMap.setInvertX( true );
+    inputMap.getPlayerSettings()._bInvertX = true;
     input.postRawEvent( sw::RawInputEvent::makeMouseMove( 60, 0 ) );
     input.beginFrame( 0.016f );
     const float32 movedX = static_cast<float32>( input.getMouseDelta()._x );
@@ -394,7 +394,7 @@ SW_TEST_CASE( InputMapTest, DigitalNormalizationModes )
     inputMap.bindVector2D( "Move", sw::Key::W, sw::Key::S, sw::Key::A, sw::Key::D );
 
     // 1) IndependentAxes 모드: W + D 대각선 입력 시 X=1.0, Y=1.0 유지
-    inputMap.setDigitalNormalization( sw::DigitalNormalization::IndependentAxes );
+    inputMap.getPlayerSettings()._digitalNormalization = sw::DigitalNormalization::IndependentAxes;
     input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::W ) );
     input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::D ) );
     input.beginFrame( 0.016f );
@@ -405,7 +405,7 @@ SW_TEST_CASE( InputMapTest, DigitalNormalizationModes )
     input.endFrame();
 
     // 2) Circular 모드: W + D 대각선 입력 시 단위 원(길이 1.0)으로 정규화
-    inputMap.setDigitalNormalization( sw::DigitalNormalization::Circular );
+    inputMap.getPlayerSettings()._digitalNormalization = sw::DigitalNormalization::Circular;
     input.beginFrame( 0.016f );
 
     sw::float2    vecCirc = inputMap.getVector2D( "Move" );

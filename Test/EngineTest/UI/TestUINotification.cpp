@@ -157,7 +157,7 @@ SW_TEST_CASE( UINotificationTest, NeverTakesFocusOrInput )
     SW_EXPECT_TRUE( fixture._ui.getActiveScreen() == nullptr );
     SW_EXPECT_FALSE( fixture._ui.isGameInputBlocked() );
     SW_EXPECT_FALSE( fixture._ui.wantsCursor() );
-    SW_EXPECT_FALSE( fixture._ui.getUIInputMap()->isLayerEnabled( "UI" ) ); // UI 행동을 켜지 않는다
+    SW_EXPECT_FALSE( fixture._ui.getInputRouter().getUIInputMap()->isLayerEnabled( "UI" ) ); // UI 행동을 켜지 않는다
 }
 
 /**

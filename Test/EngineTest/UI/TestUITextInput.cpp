@@ -52,7 +52,7 @@ namespace
             _viewport._size                   = sw::float2{ 800.0f, 600.0f };
             _viewport._physicalSize           = _viewport._size;
             runFrame();
-            _bReady = _ui.getFocusManager().setFocus( _ui.findScreen( _screen )->getTree(), _pField->getID() );
+            _bReady = _ui.getInputRouter().getFocusManager().setFocus( _ui.findScreen( _screen )->getTree(), _pField->getID() );
             runFrame();
         }
 
@@ -380,7 +380,7 @@ SW_TEST_CASE( UITextInputTest, PointerPlacesCaretAndSelectionIsPainted )
 
     // 포커스가 없는 칸의 "ab" 와 "c" 사이 경계 가까이(오른쪽으로 조금 치우침)를 누른다 — 포커스를 얻는 알림이 커서를 글 끝으로 덮지 않아야 한다.
     sw::WidgetTree& tree = fixture._ui.findScreen( fixture._screen )->getTree();
-    fixture._ui.getFocusManager().clearFocus();
+    fixture._ui.getInputRouter().getFocusManager().clearFocus();
     SW_ASSERT_FALSE( field.hasFocus() );
     sw::UIPointerEvent down{};
     down._kind              = sw::UIPointerEventKind::Down;
@@ -389,7 +389,7 @@ SW_TEST_CASE( UITextInputTest, PointerPlacesCaretAndSelectionIsPainted )
     const sw::UIReply reply = field.onPointerEvent( down, sw::UIRoutePhase::Bubble );
     SW_EXPECT_TRUE( reply.isHandled() );
     SW_ASSERT_TRUE( reply._focusRequest == field.getID() );
-    SW_ASSERT_TRUE( fixture._ui.getFocusManager().setFocus( tree, reply._focusRequest ) );
+    SW_ASSERT_TRUE( fixture._ui.getInputRouter().getFocusManager().setFocus( tree, reply._focusRequest ) );
     SW_EXPECT_EQUAL( 2u, field.getCaretByte() );
 
     field.selectAll();

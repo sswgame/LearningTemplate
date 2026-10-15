@@ -139,13 +139,13 @@ SW_TEST_CASE( UIScreenStackTest, ClosingRestoresLastFocus )
     UIScreenFixture          fixture;
     const sw::UIScreenHandle menu   = fixture._ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UILayer::Menu ), 0.0f, 0.0f, 800.0f, 600.0f, "menu", 3 ) );
     sw::Widget*              pMenu1 = fixture.find( menu, "menu1" );
-    SW_ASSERT_TRUE( fixture._ui.getFocusManager().setFocus( fixture._ui.findScreen( menu )->getTree(), pMenu1->getID() ) );
+    SW_ASSERT_TRUE( fixture._ui.getInputRouter().getFocusManager().setFocus( fixture._ui.findScreen( menu )->getTree(), pMenu1->getID() ) );
 
     fixture._ui.setInputMode( sw::UIInputMode::Navigation );
     const sw::UIScreenHandle modal =
         fixture._ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UILayer::Modal, true ), 300.0f, 300.0f, 300.0f, 100.0f, "modal", 1 ) );
     SW_EXPECT_FALSE( pMenu1->hasFocus() );
-    SW_EXPECT_EQUAL( fixture.find( modal, "modal0" )->getID(), fixture._ui.getFocusManager().getFocusedWidget() );
+    SW_EXPECT_EQUAL( fixture.find( modal, "modal0" )->getID(), fixture._ui.getInputRouter().getFocusManager().getFocusedWidget() );
 
     fixture._ui.closeScreen( modal );
     Util::runFrame( fixture._input, fixture._ui );
@@ -162,21 +162,21 @@ SW_TEST_CASE( UIScreenStackTest, DefaultFocusOnOpenInNavigationMode )
         sw::UIScreenDesc desc         = Util::makeDesc( sw::UILayer::Menu );
         desc._defaultFocus            = "menu2";
         const sw::UIScreenHandle menu = fixture._ui.pushScreen( Util::makeScreen( desc, 0.0f, 0.0f, 800.0f, 600.0f, "menu", 3 ) );
-        SW_EXPECT_EQUAL( fixture.find( menu, "menu2" )->getID(), fixture._ui.getFocusManager().getFocusedWidget() );
+        SW_EXPECT_EQUAL( fixture.find( menu, "menu2" )->getID(), fixture._ui.getInputRouter().getFocusManager().getFocusedWidget() );
     }
     {
         UIScreenFixture fixture;
         fixture._ui.setInputMode( sw::UIInputMode::Navigation );
         const sw::UIScreenHandle menu = fixture._ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UILayer::Menu ), 0.0f, 0.0f, 800.0f, 600.0f, "menu", 3 ) );
-        SW_EXPECT_EQUAL( fixture.find( menu, "menu0" )->getID(), fixture._ui.getFocusManager().getFocusedWidget() );
+        SW_EXPECT_EQUAL( fixture.find( menu, "menu0" )->getID(), fixture._ui.getInputRouter().getFocusManager().getFocusedWidget() );
     }
     {
         UIScreenFixture          fixture;
         const sw::UIScreenHandle menu = fixture._ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UILayer::Menu ), 0.0f, 0.0f, 800.0f, 600.0f, "menu", 3 ) );
-        SW_EXPECT_EQUAL( sw::kInvalidWidgetID, fixture._ui.getFocusManager().getFocusedWidget() );
+        SW_EXPECT_EQUAL( sw::kInvalidWidgetID, fixture._ui.getInputRouter().getFocusManager().getFocusedWidget() );
         // 포인터에서 탐색으로 바뀌는 순간 기본 포커스로.
         fixture._ui.setInputMode( sw::UIInputMode::Navigation );
-        SW_EXPECT_EQUAL( fixture.find( menu, "menu0" )->getID(), fixture._ui.getFocusManager().getFocusedWidget() );
+        SW_EXPECT_EQUAL( fixture.find( menu, "menu0" )->getID(), fixture._ui.getInputRouter().getFocusManager().getFocusedWidget() );
     }
 }
 
@@ -210,7 +210,7 @@ SW_TEST_CASE( UIScreenStackTest, HUDLayerNeverTakesFocus )
     fixture._ui.setInputMode( sw::UIInputMode::Navigation );
     (void)fixture._ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UILayer::HUD ), 0.0f, 0.0f, 800.0f, 600.0f, "hud", 2 ) );
     SW_EXPECT_TRUE( fixture._ui.getActiveScreen() == nullptr );
-    SW_EXPECT_EQUAL( sw::kInvalidWidgetID, fixture._ui.getFocusManager().getFocusedWidget() );
+    SW_EXPECT_EQUAL( sw::kInvalidWidgetID, fixture._ui.getInputRouter().getFocusManager().getFocusedWidget() );
     SW_EXPECT_FALSE( fixture._ui.wantsCursor() );
     SW_EXPECT_FALSE( fixture._ui.isGameInputBlocked() );
 
@@ -283,7 +283,7 @@ SW_TEST_CASE( UIScreenStackTest, BackClosesTopScreen )
         SW_ASSERT_NOT_NULL( ui.getActiveScreen() );
         SW_EXPECT_EQUAL( menu, ui.getActiveScreen()->getHandle() );
         SW_EXPECT_TRUE( input.getInputMap().wasActionTriggered( "Pause" ) );
-        SW_EXPECT_TRUE( ui.isActionConsumed( input.getInputMap(), "Pause" ) ); // 게임의 일시정지는 같은 Esc 를 받지 않는다
+        SW_EXPECT_TRUE( ui.getInputRouter().isActionConsumed( input.getInputMap(), "Pause" ) ); // 게임의 일시정지는 같은 Esc 를 받지 않는다
         input.endFrame();
         ui.shutdown();
     }

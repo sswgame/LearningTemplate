@@ -418,13 +418,13 @@ namespace sw::editor
         UISystem* pUI = editor::findSubsystem<UISystem>();
         if ( pUI != nullptr && _screen != kInvalidUIScreenHandle )
         {
-            UIScreen* pScreen = pUI->findOffscreenScreen( _screen );
+            UIScreen* pScreen = pUI->getOffscreenScreens().findScreen( _screen );
             if ( pScreen != nullptr )
             {
                 _pointer.forgetTree( pScreen->getTree() ); // 트리를 지우기 전에 호버와 포커스를 놓는다
                 _focus.forgetTree( pScreen->getTree() );
             }
-            pUI->closeOffscreenScreen( _screen );
+            pUI->getOffscreenScreens().remove( _screen );
         }
         _screen = kInvalidUIScreenHandle;
         _openedDocument.clear();
@@ -461,7 +461,7 @@ namespace sw::editor
     {
         _viewport                        = UIPreviewLogic::makeViewport( ui.getScaleSettings(), _resolutionIndex, _uiScale, _safeZone );
         const string targetPath          = UIPreviewLogic::makeTargetPath( _viewport );
-        const bool   bReopen             = _screen == kInvalidUIScreenHandle || ui.findOffscreenScreen( _screen ) == nullptr || _openedDocument != _documentPath;
+        const bool   bReopen             = _screen == kInvalidUIScreenHandle || ui.getOffscreenScreens().findScreen( _screen ) == nullptr || _openedDocument != _documentPath;
         const bool   bPreviousOpenFailed = bReopen && _documentPath.empty() == false && _error.empty() == false && _openedDocument == _documentPath;
         if ( bPreviousOpenFailed )
             return; // 같은 문서가 지난번에 짓지 못했다 — 고칠 때까지(경로를 바꾸거나 다시 열기) 프레임마다 다시 시도하지 않는다
@@ -480,7 +480,7 @@ namespace sw::editor
         {
             // 해상도를 바꿔도 화면(트리, 고친 값)은 그대로 두고 그릴 렌더 텍스처만 새 크기의 것으로 옮긴다.
             releaseTexture();
-            ui.setOffscreenTarget( _screen, targetPath );
+            ui.getOffscreenScreens().setTargetPath( _screen, hashed_string( targetPath ) );
             _targetPath = targetPath;
         }
         if ( _screen != kInvalidUIScreenHandle )
@@ -529,12 +529,12 @@ namespace sw::editor
         {
             if ( _pLocalization != nullptr )
             {
-                ui.setOffscreenLocalization( _screen, nullptr );
+                ui.getOffscreenScreens().setLocalization( _screen, nullptr );
                 _pLocalization.reset();
             }
             else if ( _bApplyLocalization && _screen != kInvalidUIScreenHandle )
             {
-                ui.setOffscreenLocalization( _screen, nullptr );
+                ui.getOffscreenScreens().setLocalization( _screen, nullptr );
             }
             _bApplyLocalization = false;
             return;
@@ -558,7 +558,7 @@ namespace sw::editor
         }
         if ( _bApplyLocalization && _screen != kInvalidUIScreenHandle )
         {
-            ui.setOffscreenLocalization( _screen, _pLocalization.get() );
+            ui.getOffscreenScreens().setLocalization( _screen, _pLocalization.get() );
             _bApplyLocalization = false;
         }
     }
@@ -587,7 +587,7 @@ namespace sw::editor
     bool UIPreviewPanel::saveDocument()
     {
         UISystem*       pUI     = editor::findSubsystem<UISystem>();
-        const UIScreen* pScreen = pUI != nullptr ? pUI->findOffscreenScreen( _screen ) : nullptr;
+        const UIScreen* pScreen = pUI != nullptr ? pUI->getOffscreenScreens().findScreen( _screen ) : nullptr;
         if ( pScreen == nullptr )
             return false;
         string text;
@@ -641,7 +641,7 @@ namespace sw::editor
     void UIPreviewPanel::onPropertyEdited( const PropertyInfo& prop )
     {
         UISystem* pUI     = editor::findSubsystem<UISystem>();
-        UIScreen* pScreen = pUI != nullptr ? pUI->findOffscreenScreen( _screen ) : nullptr;
+        UIScreen* pScreen = pUI != nullptr ? pUI->getOffscreenScreens().findScreen( _screen ) : nullptr;
         Widget*   pWidget = pScreen != nullptr ? pScreen->getTree().findWidgetByID( _selected ) : nullptr;
         if ( pWidget == nullptr )
             return;
@@ -687,7 +687,7 @@ namespace sw::editor
     UIScreen* UIPreviewPanel::findPreviewScreen() const
     {
         UISystem* pUI = editor::findSubsystem<UISystem>();
-        return pUI != nullptr ? pUI->findOffscreenScreen( _screen ) : nullptr;
+        return pUI != nullptr ? pUI->getOffscreenScreens().findScreen( _screen ) : nullptr;
     }
 
     void UIPreviewPanel::afterStructureEdit( UIScreen& screen, uint32 selectedOrdinal )
@@ -807,7 +807,7 @@ namespace sw::editor
         if ( generation != _generation )
             return; // 그 뒤에 트리를 다시 지었다 — 옛 항목이 새 트리에 값을 쓰지 않는다
         UISystem* pUI     = editor::findSubsystem<UISystem>();
-        UIScreen* pScreen = pUI != nullptr ? pUI->findOffscreenScreen( _screen ) : nullptr;
+        UIScreen* pScreen = pUI != nullptr ? pUI->getOffscreenScreens().findScreen( _screen ) : nullptr;
         if ( pScreen == nullptr )
             return;
         Widget* pWidget = pScreen->getTree().findWidgetByID( UIPreviewLogic::findWidgetByOrdinal( pScreen->getTree(), ordinal ) );
@@ -935,7 +935,7 @@ namespace sw::editor
         if ( pUI != nullptr )
         {
             _bNavigationMode = true;
-            pUI->setOffscreenNavigationMode( _screen, true );
+            pUI->getOffscreenScreens().setNavigationMode( _screen, true );
         }
         WidgetTree& tree = screen.getTree();
         if ( _focus.getFocusedTree() == &tree && tree.getFocusedWidget() != kInvalidWidgetID )
@@ -976,7 +976,7 @@ namespace sw::editor
         if ( ImGui::Checkbox( "Interact", &_bInteract ) && pUI != nullptr )
         {
             _bNavigationMode = false;
-            pUI->setOffscreenNavigationMode( _screen, false );
+            pUI->getOffscreenScreens().setNavigationMode( _screen, false );
             if ( _bInteract == false )
                 _pointer.clearHover();
         }
@@ -1603,7 +1603,7 @@ namespace sw::editor
                     UISystem* pUI    = editor::findSubsystem<UISystem>();
                     _bNavigationMode = false;
                     if ( pUI != nullptr )
-                        pUI->setOffscreenNavigationMode( _screen, false ); // 마우스를 움직이면 포인터 방식으로 돌아간다(포커스 테두리를 숨긴다)
+                        pUI->getOffscreenScreens().setNavigationMode( _screen, false ); // 마우스를 움직이면 포인터 방식으로 돌아간다(포커스 테두리를 숨긴다)
                 }
                 event._kind = UIPointerEventKind::Move;
                 (void)_pointer.process( tree, event );
@@ -1830,7 +1830,7 @@ namespace sw::editor
         syncPreview( *pUI );
         syncLanguage( *pUI );
         syncTexture();
-        UIScreen* pScreen = pUI->findOffscreenScreen( _screen );
+        UIScreen* pScreen = pUI->getOffscreenScreens().findScreen( _screen );
         if ( pScreen != nullptr )
         {
             syncTree( *pScreen );

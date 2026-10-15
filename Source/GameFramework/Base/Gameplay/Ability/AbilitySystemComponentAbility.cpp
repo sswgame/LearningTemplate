@@ -131,9 +131,9 @@ namespace sw
             return AbilityActivationResult::AlreadyActive;
         if ( isAbilityBlocked( config._abilityTags ) )
             return AbilityActivationResult::BlockedByTag;
-        if ( hasAllMatchingTags( config._activationRequiredTags ) == false )
+        if ( _ownedTagCounts.hasAllMatchingTags( config._activationRequiredTags ) == false )
             return AbilityActivationResult::MissingRequiredTag;
-        if ( hasAnyMatchingTags( config._activationBlockedTags ) )
+        if ( _ownedTagCounts.hasAnyMatchingTags( config._activationBlockedTags ) )
             return AbilityActivationResult::BlockedByTag;
         if ( ability.isOnCooldown() )
             return AbilityActivationResult::OnCooldown;
@@ -454,8 +454,8 @@ namespace sw
     void AbilitySystemComponent::handleAbilityActivated( GameplayAbility& ability )
     {
         const GameplayAbilityConfig& config = ability.getConfig();
-        updateTagCounts( config._activationOwnedTags, 1 );
-        updateBlockedAbilityTags( config._blockAbilitiesWithTags, 1 );
+        _ownedTagCounts.updateCounts( config._activationOwnedTags, 1 );
+        _blockedAbilityTagCounts.updateCounts( config._blockAbilitiesWithTags, 1 );
         cancelAbilitiesWithTags( config._cancelAbilitiesWithTags, &ability );
         _abilityActivatedMulticast.broadcast( ability );
     }
@@ -464,8 +464,8 @@ namespace sw
     {
         // 발동할 때 붙인 것을 그대로 뗀다. 실행 중에는 설정을 바꾸지 않는다는 `GameplayAbility::getConfig` 의 약속에 의존한다.
         const GameplayAbilityConfig& config = ability.getConfig();
-        updateTagCounts( config._activationOwnedTags, -1 );
-        updateBlockedAbilityTags( config._blockAbilitiesWithTags, -1 );
+        _ownedTagCounts.updateCounts( config._activationOwnedTags, -1 );
+        _blockedAbilityTagCounts.updateCounts( config._blockAbilitiesWithTags, -1 );
         _abilityEndedMulticast.broadcast( ability, bWasCancelled );
     }
 

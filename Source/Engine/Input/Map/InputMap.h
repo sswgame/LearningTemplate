@@ -95,7 +95,7 @@ namespace sw
         static uint32 getRebindSlotIndex( BindingKind kind );
         /**
          * @brief 이번 프레임의 이동량을 내는 종류(마우스 이동, 휠)인지 묻습니다.
-         * @details 이동량은 [-1, 1] 로 묶지 않고, 액션 값 단계의 전역 축 반전(`setInvertX/Y`)도 걸지 않는다.
+         * @details 이동량은 [-1, 1] 로 묶지 않고, 액션 값 단계의 전역 축 반전(`InputPlayerSettings::_bInvertX/Y`)도 걸지 않는다.
          *          휠 두 칸은 2 이고, 시점 반전이 확대나 핫바 방향을 뒤집지도 않는다.
          *          마우스 이동의 반전은 그 바인딩 평가에서 한 번만 적용한다.
          */
@@ -294,6 +294,25 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct InputPlayerSettings
+     * @brief 플레이어마다의 입력 설정입니다 — 감도, 축 반전, 스틱 데드존, 대각선 정규화. 맵 정의(바인딩 · 레이어)와 수명이 달라 맵을 다시 읽어도 남습니다.
+     * @details 사용자 설정 처리기(`UserSettingsEngineHandlers`)가 채운다. 언리얼 `UEnhancedInputUserSettings` 의 플레이어 설정 자리입니다.
+     */
+    struct InputPlayerSettings
+    {
+        float2               _mouseSensitivity{ 1.0f, 1.0f };
+        float2               _gamepadSensitivity{ 1.0f, 1.0f };
+        float32              _stickDeadzoneOverride{ -1.0f }; ///< 게임패드 스틱 바인딩의 안쪽 데드존을 덮어쓴다. 0 미만이면 바인딩마다의 값(`ActionBinding::_deadzone`)
+        DeadzoneShape        _deadzoneShape{ DeadzoneShape::Radial };
+        DigitalNormalization _digitalNormalization{ DigitalNormalization::Circular };
+        bool                 _bInvertX{ false };
+        bool                 _bInvertY{ false };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class InputMap
      * @brief 액션, 레이어, 바인딩을 보관하고 매 프레임 평가하는 통합 액션 맵입니다.
      */
@@ -399,24 +418,9 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 5) 감도, 축 반전, 데드존 모드, 접근성 설정
         // ------------------------------------------------------------------------------
-        void   setInvertX( bool invert ) { _bInvertX = invert ? SW_TRUE : SW_FALSE; }
-        void   setInvertY( bool invert ) { _bInvertY = invert ? SW_TRUE : SW_FALSE; }
-        bool   isInvertX() const { return _bInvertX == SW_TRUE; }
-        bool   isInvertY() const { return _bInvertY == SW_TRUE; }
-        void   setMouseSensitivity( float2 sensitivity ) { _mouseSensitivity = sensitivity; }
-        float2 getMouseSensitivity() const { return _mouseSensitivity; }
-        void   setGamepadSensitivity( float2 sensitivity ) { _gamepadSensitivity = sensitivity; }
-        float2 getGamepadSensitivity() const { return _gamepadSensitivity; }
-        /**
-         * @brief 게임패드 스틱 바인딩의 안쪽 데드존을 이 값으로 덮어씁니다(사용자 설정). 0 미만이면 바인딩마다 지정한 값(`ActionBinding::_deadzone`)을 씁니다.
-         * @details `clear` 나 맵 다시 읽기를 해도 유지된다. 감도, 축 반전과 같은 플레이어 설정이기 때문이다.
-         */
-        void                 setStickDeadzoneOverride( float32 deadzone ) { _stickDeadzoneOverride = deadzone; }
-        float32              getStickDeadzoneOverride() const { return _stickDeadzoneOverride; }
-        void                 setDeadzoneShape( DeadzoneShape shape ) { _deadzoneShape = shape; }
-        DeadzoneShape        getDeadzoneShape() const { return _deadzoneShape; }
-        void                 setDigitalNormalization( DigitalNormalization mode ) { _digitalNormalization = mode; }
-        DigitalNormalization getDigitalNormalization() const { return _digitalNormalization; }
+        /** @brief 플레이어 설정(감도 · 축 반전 · 데드존 · 대각선 정규화)입니다. `clear` 나 맵 다시 읽기를 해도 남습니다. */
+        InputPlayerSettings&       getPlayerSettings() { return _playerSettings; }
+        const InputPlayerSettings& getPlayerSettings() const { return _playerSettings; }
 
         /** @brief 액션의 토글 모드를 켜거나 끕니다(접근성: 조준이나 달리기를 한 번 눌러 켜기). */
         void setToggleMode( const hashed_string& action, bool bToggle );
@@ -696,8 +700,7 @@ namespace sw
         InputActionBuffer                    _actionBuffer;
         uint32                               _nextGeneration;
         hashed_string                        _defaultLayerName;
-        float2                               _mouseSensitivity;
-        float2                               _gamepadSensitivity;
+        InputPlayerSettings                  _playerSettings;
         float32                              _doubleClickTime;
         float32                              _doubleClickMaxDistance;
         float32                              _doubleTapTime;
@@ -706,13 +709,8 @@ namespace sw
         float32                              _navRepeatRate;
         float32                              _totalElapsedTime;
         float32                              _lastDeltaSeconds; ///< 가장 최근 `update` 의 프레임 시간. 프레임 시간 곱 바인딩이 쓴다.
-        float32                              _stickDeadzoneOverride;
-        DeadzoneShape                        _deadzoneShape;
-        DigitalNormalization                 _digitalNormalization;
-        uint8                                _bInvertX                   : 1;
-        uint8                                _bInvertY                   : 1;
         uint8                                _bSuppressBaseActionOnChord : 1;
         uint8                                _bKeyboardFocusIgnored      : 1; /**< 키보드 포커스와 상관없이 키를 읽습니다(셸 맵). */
-        [[maybe_unused]] uint8               _reservedFlags              : 4;
+        [[maybe_unused]] uint8               _reservedFlags              : 6;
     };
 } // namespace sw

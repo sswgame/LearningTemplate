@@ -17,7 +17,7 @@ namespace sw
     {
         if ( _pUISystem == nullptr )
             return false;
-        return _pUISystem->isGameInputBlocked() || _pUISystem->isActionConsumed( _inputMap, action );
+        return _pUISystem->isGameInputBlocked() || _pUISystem->getInputRouter().isActionConsumed( _inputMap, action );
     }
 
     bool UIInputMapView::wasActionTriggered( const hashed_string& action ) const

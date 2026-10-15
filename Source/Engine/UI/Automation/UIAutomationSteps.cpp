@@ -25,7 +25,7 @@ namespace sw
 
             static string describeFocus( const UISystem& ui )
             {
-                const UIFocusManager& focus   = ui.getFocusManager();
+                const UIFocusManager& focus   = ui.getInputRouter().getFocusManager();
                 const WidgetTree*     pTree   = focus.getFocusedTree();
                 const Widget*         pWidget = pTree != nullptr ? pTree->findWidgetByID( focus.getFocusedWidget() ) : nullptr;
                 if ( pWidget == nullptr )

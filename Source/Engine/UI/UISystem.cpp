@@ -491,36 +491,11 @@ namespace sw
         return screen._handle;
     }
 
-    void UISystem::closeOffscreenScreen( UIScreenHandle handle )
-    {
-        _offscreen.remove( handle );
-    }
-
-    UIScreen* UISystem::findOffscreenScreen( UIScreenHandle handle ) const
-    {
-        return _offscreen.findScreen( handle );
-    }
-
     void UISystem::setOffscreenView( UIScreenHandle handle, const UIViewport& viewport, float32 textScale, const hashed_string& theme )
     {
         // 테마가 바뀌면 그 화면의 스타일 시트만 다시 적용한다(게임 UI 의 테마는 그대로다).
         if ( _offscreen.setView( handle, viewport, textScale, theme ) )
             rebuildStyleSet( *_offscreen.findScreen( handle ), theme );
-    }
-
-    void UISystem::setOffscreenLocalization( UIScreenHandle handle, const LocalizationManager* pLocalization )
-    {
-        _offscreen.setLocalization( handle, pLocalization );
-    }
-
-    void UISystem::setOffscreenTarget( UIScreenHandle handle, string_view targetPath )
-    {
-        _offscreen.setTargetPath( handle, hashed_string( targetPath ) );
-    }
-
-    void UISystem::setOffscreenNavigationMode( UIScreenHandle handle, bool bNavigationMode )
-    {
-        _offscreen.setNavigationMode( handle, bNavigationMode );
     }
 
     bool UISystem::isDocumentUsing( const string& documentPath, string_view usedPath )
@@ -703,16 +678,6 @@ namespace sw
     {
         const UIScreen* pActive = getActiveScreen();
         return pActive != nullptr && pActive->getDesc()._bShowCursor;
-    }
-
-    bool UISystem::isActionConsumed( const InputMap& inputMap, const hashed_string& action ) const
-    {
-        return _input.isActionConsumed( inputMap, action );
-    }
-
-    void UISystem::consumeAction( const InputMap& inputMap, const hashed_string& action )
-    {
-        _input.consumeAction( inputMap, action );
     }
 
     void UISystem::setInputMode( UIInputMode mode )
