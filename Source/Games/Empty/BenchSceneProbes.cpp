@@ -60,12 +60,8 @@ namespace sw
     {
         struct BenchSceneProbesInternal
         {
-            static constexpr float32 kNameplateWidth      = 72.0f;
-            static constexpr float32 kNameplateBarHeight  = 6.0f;
-            static constexpr float32 kNameplateTextHeight = 16.0f;
-            static constexpr float32 kHangulTextWidth     = 900.0f;
-            static constexpr uint32  kHangulFirst         = 0xAC00u; ///< '가'
-            static constexpr uint32  kHangulCount         = 11172u;  ///< 현대 한글 음절 수(U+AC00..U+D7A3)
+            static constexpr uint32 kHangulFirst = 0xAC00u; ///< '가'
+            static constexpr uint32 kHangulCount = 11172u;  ///< 현대 한글 음절 수(U+AC00..U+D7A3)
             /// 음절을 고르는 보폭이다. 음절 수와 서로소라 N 개가 모두 다르고, 받침 · 모음이 고루 섞인다.
             static constexpr uint32 kHangulStride = 37u;
             /// 몇 음절마다 띄어 쓸지다. 줄 바꿈이 단어 경계에서 일어나게 한다.
@@ -98,7 +94,7 @@ namespace sw
 
 namespace sw
 {
-    bool BenchScene::attachNameplate( GameObject& object, uint32 index )
+    bool BenchScene::attachNameplate( GameObject& object, uint32 index ) const
     {
         if ( gv_benchUiNameplates <= 0 || index >= static_cast<uint32>( gv_benchUiNameplates ) )
             return false;
@@ -107,20 +103,20 @@ namespace sw
             return false;
         unique_ptr<BoxPanel> column = make_unique<BoxPanel>();
         column->setOrientation( UIOrientation::Vertical );
-        column->setSpacing( 2.0f );
+        column->setSpacing( _settings._nameplateSpacing );
         unique_ptr<TextWidget> name = make_unique<TextWidget>();
         name->setLocalized( false );
         name->setText( "Unit " + to_string( index ) );
-        BenchSceneProbesInternal::setFixedSize( *name, BenchSceneProbesInternal::kNameplateWidth, BenchSceneProbesInternal::kNameplateTextHeight );
+        BenchSceneProbesInternal::setFixedSize( *name, _settings._nameplateWidth, _settings._nameplateTextHeight );
         (void)column->addChild( std::move( name ) );
         unique_ptr<ProgressBarWidget> health = make_unique<ProgressBarWidget>();
         health->setPercent( 0.2f + 0.8f * static_cast<float32>( ( index * 7u ) % 10u ) / 10.0f );
-        health->setFillColor( float4{ 0.2f, 0.85f, 0.3f, 1.0f } );
-        health->setBackgroundColor( float4{ 0.1f, 0.1f, 0.1f, 0.8f } );
-        BenchSceneProbesInternal::setFixedSize( *health, BenchSceneProbesInternal::kNameplateWidth, BenchSceneProbesInternal::kNameplateBarHeight );
+        health->setFillColor( _settings._nameplateFillColor );
+        health->setBackgroundColor( _settings._nameplateBackgroundColor );
+        BenchSceneProbesInternal::setFixedSize( *health, _settings._nameplateWidth, _settings._nameplateBarHeight );
         (void)column->addChild( std::move( health ) );
         pPlate->setSpace( WidgetSpace::Screen );
-        pPlate->setWorldOffset( float3{ 0.0f, 1.2f, 0.0f } );
+        pPlate->setWorldOffset( float3{ 0.0f, _settings._nameplateHeight, 0.0f } );
         pPlate->setContent( std::move( column ) );
         return true;
     }
@@ -140,7 +136,7 @@ namespace sw
                 unique_ptr<TextWidget> text = make_unique<TextWidget>();
                 text->setLocalized( false );
                 text->setText( BenchSceneProbesInternal::makeHangulText( static_cast<uint32>( gv_benchUiHangulGlyphs ) ) );
-                BenchSceneProbesInternal::setFixedSize( *text, BenchSceneProbesInternal::kHangulTextWidth, 0.0f ); // 높이는 줄 바꿈한 글이 정한다
+                BenchSceneProbesInternal::setFixedSize( *text, _settings._hangulTextWidth, 0.0f ); // 높이는 줄 바꿈한 글이 정한다
                 pText->setSpace( WidgetSpace::Screen );
                 pText->setContent( std::move( text ) );
                 _listBenchExtra.push_back( pText->getHandle() );
