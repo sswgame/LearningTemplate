@@ -48,7 +48,7 @@ namespace sw
             {
 #if defined( SW_ENABLE_DEADLOCK_DETECTION )
                 MutexReentryGuard guard;
-                if ( guard == false )
+                if ( guard._bEntered == false )
                     return;
 #endif
                 ILockObserver* pObserver = mutex::getLockObserver();
