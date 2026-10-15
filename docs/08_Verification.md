@@ -423,7 +423,8 @@ py -3 -m Scripts ci-jobs <실행 id> --annotations   # 실패한 잡과 실패 �
   (Configure 50~90 분이 매번). 키는 OS 별 하나(트리플릿이 OS 당 하나). ③ 모든 잡이 PCH 를 켠 채 짓는다(로컬과 같은 구성). PCH 가 가리는 include 누락은
   하루 한 번 도는 헤더 단독 컴파일 잡(`header-self-contained.yml`)이 잡는다.
   작업 로그 · 아티팩트는 API 로 403 이라 진 테스트는 주석(annotation)으로 올린다 — 실행 목록 · 잡 단계 · 주석은 로그인 없이 읽힌다(시간당 60 회 한도를 여럿이 나눠 쓴다).
-- **리눅스 CI 는 ubuntu-22.04 의 `libclang-dev`(16 미만)다.** 파서에 새 libclang API 를 쓰면 리눅스 잡만 선다 — `CINDEX_VERSION` 으로 가른다. CI 러너 파이썬은 3.10 이라
+- **리눅스 CI 는 ubuntu-22.04 의 `libclang-dev`(16 미만)다.** 파서에 새 libclang API 를 쓰면 리눅스 잡만 선다 — `CINDEX_VERSION` 으로 가른다. 16 미만은 한정 없이 적은
+  타입도 FQN(`sw::editor::Foo`)으로 철자하므로 타입 이름은 `TypeNameMap::normalize` 가 잎 이름으로 맞춘다(`ReflectionParserTest.NestedNamespaceStructPropertyUsesTheLeafName`). CI 러너 파이썬은 3.10 이라
   f-string 식 안의 백슬래시 · 여러 줄 식이 configure 를 죽인다(`CheckPythonMinimumVersion.py`). GH Windows 러너는 cp1252 라 한글을 print 하는 스크립트가 빌드째 죽는다
   (증상: 구성 단계의 파이썬 생성기가 `UnicodeEncodeError` 로 끝난다) — 진입점은 `Scripts/common` 을 **모듈 수준에서** import 한다(UTF-8 stdout, 게이트 `CheckScriptEntryPoints` —
   함수 안의 import 는 치지 않는다: 한 갈래에서만 끌어오면 다른 갈래의 print 가 죽는다). 재현은 `PYTHONIOENCODING=cp1252`(cp949 는 `—` 에서 죽는다).
@@ -434,7 +435,8 @@ py -3 -m Scripts ci-jobs <실행 id> --annotations   # 실패한 잡과 실패 �
 - **CI 실패는 `Scripts/dev/CiFailureReport.py` 가 주석으로 올린다**(테스트 · 구성 실패의 vcpkg 포트 로그 · 크래시 스택 `Bin/Saved/Logs/crash_*.stack.txt`).
   정기 잡도 같다 — 헤더 단독 컴파일 잡의 빌드 오류(`build`), 퍼징 잡의 새니타이저 보고 · 스택 · 재현 입력(`fuzz`, libFuzzer 가 짧은 입력에 찍는 `Base64:` 줄).
   퍼징 실패는 그 Base64 를 풀어 대상 이름과 함께 `SW_FUZZ_TARGET=<대상> LoaderFuzzer <파일>` 로 재현하고, 고친 뒤 그 입력을 대상의 씨앗(`LoaderFuzzTargets.cpp`)에 더한다.
-  작업 로그 · 아티팩트는 관리자 전용(API 403)이라 밖에서는 주석만 보인다.
+  작업 로그 · 아티팩트는 관리자 전용(API 403)이라 밖에서는 주석만 보인다. 저장소 주인 계정으로 로그인한 `gh` 가 있으면 잡 로그 전문을 받는다 —
+  `gh api --allow-escape-sequences repos/sswgame/LearningTemplate/actions/jobs/<잡 id>/logs > job.log`(TSan 보고의 두 스택 · 자식 프로세스 출력이 거기 있다).
   진 테스트 주석의 제목에 결과가 붙는다. `[Timeout 180.0 s / 180 s]` 는 ctest 가 한도에서 죽인 것(멈춤이거나 느려진 것)이고, `[exit 1 after …]` 는 스스로 진 것,
   `[no exit line after …]` 는 한도 전에 종료 줄 없이 끝난 것(크래시)이다. `py -3 -m Scripts ci-jobs <실행 id> --annotations` 의 잡 표는 실패한 단계의 경과 시간 ·
   종료 코드와 ctest Timeout 수를 보인다. 응답은 임시 폴더에 캐시해 끝난 실행을 다시 물으면 API 를 쓰지 않는다(익명 한도는 시간당 60 회).

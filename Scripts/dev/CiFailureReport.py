@@ -41,6 +41,8 @@ _kMaxLogCount = 8
 _kMaxStackCount = 3
 _kMaxStackChars = 4000
 _kTailLineCount = 25
+_kMaxMarkedLineCount = 60
+_kMessageContinuationLineCount = 15
 _kLogTailLineCount = 60
 # 빌드 로그에서 오류를 고르는 줄: 컴파일러 `error:`, 링커 `undefined`/`duplicate symbol`, ninja `FAILED:`/`build stopped`.
 _kBuildErrorMarker = re.compile(r"\berror\b[:\s]|\bundefined (reference|symbol)\b|duplicate symbol|^FAILED:|ninja: build stopped|\bfatal error\b")
@@ -113,6 +115,24 @@ def describeTestResult(section: str, limitSeconds: float | None) -> str:
     return f"no exit line after {elapsed:.1f} s{limit}"
 
 
+def collectMarkedLinesInternal(listOutput: list[str]) -> list[str]:
+    """실패 표시 줄들. 여러 줄 메시지(`Message  :` 뒤에 이어지는 줄 — 판정에 걸린 이름 목록 · 자식 프로세스 출력)는 다음 표시 줄 · 로그 줄 전까지 함께 담는다."""
+    listMarked: list[str] = []
+    continuationCount = 0
+    for line in listOutput:
+        if _kTestMarker.search(line):
+            listMarked.append(line[:300])
+            continuationCount = _kMessageContinuationLineCount if line.startswith("    Message  :") else 0
+        elif continuationCount > 0 and line.strip() and not line.startswith(("[", " ->")):
+            listMarked.append(line[:300])
+            continuationCount -= 1
+        else:
+            continuationCount = 0
+        if len(listMarked) >= _kMaxMarkedLineCount:
+            break
+    return listMarked
+
+
 def reportTests(ctestDir: Path) -> int:
     tempDir = ctestDir / "Testing" / "Temporary"
     listFailed = [line.split(":", 1)[1].strip() for line in readTextInternal(tempDir / "LastTestsFailed.log").splitlines() if ":" in line]
@@ -126,7 +146,7 @@ def reportTests(ctestDir: Path) -> int:
         listLine = section.splitlines()
         # 꼬리는 테스트 출력까지만 — ctest 가 덧붙이는 경과 시간 · 구분선은 결과 줄에 들어간다.
         listOutput = listLine[:next((index for index, line in enumerate(listLine) if line.startswith("<end of output>")), len(listLine))]
-        listMarked = [line[:300] for line in listOutput if _kTestMarker.search(line)][:40]
+        listMarked = collectMarkedLinesInternal(listOutput)
         listRun = [line for line in listOutput if line.startswith("[ RUN")]
         listTail = [line[:300] for line in listOutput[-_kTailLineCount:]]
         result = describeTestResult(section, mapTimeout.get(name))
