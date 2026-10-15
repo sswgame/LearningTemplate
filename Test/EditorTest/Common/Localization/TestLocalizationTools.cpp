@@ -159,9 +159,44 @@ SW_TEST_CASE( LocalizationGatherTest, RepositoryProjectsAreUpToDate )
     {
         sw::LocalizationGatherResult result;
         SW_ASSERT_TRUE( sw::LocalizationTools::gatherProject( projectPath, repositoryRoot, false, result ) );
-        SW_EXPECT_TRUE_MSG( result._bOutOfDate == false, ( projectPath + " is out of date - run App --gather-text" ).c_str() );
-        SW_EXPECT_TRUE_MSG( result._report.hasErrors() == false, ( projectPath + " has gather errors" ).c_str() );
+        SW_EXPECT_TRUE_MSG( sw::LocalizationTools::isCheckClean( result ), ( projectPath + " fails --check-text (see the [CheckText] lines) - run App --gather-text and translate new keys" ).c_str() );
     }
+}
+
+/**
+ * @brief [LocalizationGatherTest] 확인 모드는 번역 테이블이 있는 문화권의 빠진 번역을 실패로 본다 — 테이블이 없는 문화권(PO 만 낸 것)은 개수만 센다
+ */
+SW_TEST_CASE( LocalizationGatherTest, CheckFailsOnMissingTranslationOfAShippedCulture )
+{
+    const sw::string repositoryRoot = test::makeTempDirectory( "loc_check_shipped" );
+    const sw::string codeFolder     = sw::FileUtil::joinPath( repositoryRoot, "Code" );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( codeFolder ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( codeFolder, "Menu.cpp" ),
+                                                 R"(auto a = SW_LOCTEXT( "Menu", "Start", "Start" ); auto b = SW_LOCTEXT( "Menu", "Quit", "Quit" );)" ) );
+    const sw::string locFolder   = sw::FileUtil::joinPath( repositoryRoot, "Loc" );
+    const sw::string projectPath = LocalizationTestUtil::writeProject( locFolder, "en", R"([ "ko", "ja" ])", R"("codeRoots": [ "Code" ])" );
+    LocalizationTestUtil::writeSourceTable( locFolder, "en", R"("Menu.Start": { "source": "Start", "origins": [ "Code/Menu.cpp" ] }, "Menu.Quit": { "source": "Quit", "origins": [ "Code/Menu.cpp" ] })" );
+    LocalizationTestUtil::writeTranslation( locFolder, "ko", R"("Menu.Start": { "text": "시작" })" );
+
+    // 쓰기 모드로 한 번 돌려 해시 · 번역 메모리를 맞춘다 — 남는 차이는 빠진 번역(ko 의 Menu.Quit, ja 전부)뿐이다.
+    sw::LocalizationGatherResult result;
+    SW_ASSERT_TRUE( sw::LocalizationTools::gatherProject( projectPath, repositoryRoot, true, result ) );
+    SW_ASSERT_TRUE( sw::LocalizationTools::gatherProject( projectPath, repositoryRoot, false, result ) );
+    SW_EXPECT_FALSE( result._bOutOfDate );
+    SW_ASSERT_EQUAL( size_t( 2 ), result._listCulture.size() );
+    SW_EXPECT_TRUE( result._listCulture[0]._bShipped );
+    SW_EXPECT_EQUAL( uint32( 1 ), result._listCulture[0]._missingCount );
+    SW_EXPECT_FALSE( result._listCulture[1]._bShipped );
+    SW_EXPECT_EQUAL( uint32( 2 ), result._listCulture[1]._missingCount );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a shipped culture with a missing translation fails --check-text" );
+        SW_EXPECT_FALSE( sw::LocalizationTools::isCheckClean( result ) );
+    }
+
+    LocalizationTestUtil::writeTranslation( locFolder, "ko", R"("Menu.Start": { "text": "시작" }, "Menu.Quit": { "text": "종료" })" );
+    SW_ASSERT_TRUE( sw::LocalizationTools::gatherProject( projectPath, repositoryRoot, true, result ) );
+    SW_ASSERT_TRUE( sw::LocalizationTools::gatherProject( projectPath, repositoryRoot, false, result ) );
+    SW_EXPECT_TRUE( sw::LocalizationTools::isCheckClean( result ) ); // ja 는 테이블이 없어 빠진 번역 둘을 세기만 한다
 }
 
 /**

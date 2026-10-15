@@ -99,7 +99,7 @@ namespace test
         TestContext                   _currentContext;
         TestEnvironment               _environment;
         ConsoleTestReporter           _consoleReporter;
-        HostErrorLogJudge             _hostErrorLogJudge;
+        HostLogJudge                  _hostLogJudge;
         TimeBudgetJudge               _timeBudgetJudge;
         sw::vector<ITestRunListener*> _listListener; ///< 콘솔 보고기가 맨 앞
         sw::vector<ITestCaseJudge*>   _listJudge;    ///< 기본 판정기 둘이 맨 앞

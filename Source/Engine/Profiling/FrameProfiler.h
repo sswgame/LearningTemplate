@@ -25,6 +25,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Diagnostics/ProfilerTimeline.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Profiling/ProfilerBackend.h"
@@ -66,7 +67,7 @@ namespace sw
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief 등록할 수 있는 구간 수입니다. 넘으면 새 구간은 조용히 무시됩니다(측정이 실행을 막으면 안 되기 때문입니다). */
-        static constexpr uint32 kMaxScope = 128;
+        static constexpr uint32 kMaxScope = 512;
         /** @brief 슬롯을 받지 못했을 때의 값입니다. */
         static constexpr uint32 kInvalidSlot = invalid_index::kUint32;
         /** @brief 분포 히스토그램에서 옥타브(2배 구간) 하나를 나누는 비트 수입니다. 3 이면 옥타브당 8 칸, 해상도는 약 9% 입니다. */
@@ -176,7 +177,7 @@ namespace sw
             uint64              _sampledFrames{ 0 };
             /**
              * @brief 프레임 값의 분포입니다. 옥타브마다 `kSubBucketCount` 칸이라 해상도는 약 ±9% 입니다.
-             * @details `endFrame` 만 씁니다(게임 스레드 하나). 그래서 원자가 아니어도 됩니다. 구간 128 × 칸 512 × 4 바이트 = 256 KB.
+             * @details `endFrame` 만 씁니다(게임 스레드 하나). 그래서 원자가 아니어도 됩니다. 구간 512 × 칸 512 × 4 바이트 = 1 MB(에디터 + 게임 + 렌더 스레드 구간이 128 을 넘었다).
              */
             uint32 _arrBucket[kBucketCount]{};
         };
@@ -186,11 +187,11 @@ namespace sw
         static void plotCounter( IProfilerBackend& backend, Scope& scope, uint64 value );
 
     private:
-        Scope            _arrScope[kMaxScope];
-        ProfilerTimeline _timeline;
-        atomic<uint32>   _scopeCount{ 0 };
-        atomic<uint64>   _frameCount{ 0 };
-        atomic<bool>     _bEnabled{ false };
+        unique_ptr<Scope[]> _arrScope{ make_unique<Scope[]>( kMaxScope ) }; ///< 힙에 둔다 — 구간 512 개면 1 MB 라 스택(테스트의 지역 프로파일러)에 못 놓는다
+        ProfilerTimeline    _timeline;
+        atomic<uint32>      _scopeCount{ 0 };
+        atomic<uint64>      _frameCount{ 0 };
+        atomic<bool>        _bEnabled{ false };
     };
 } // namespace sw
 

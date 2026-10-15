@@ -32,19 +32,19 @@ namespace test
 namespace test
 {
     /**
-     * @brief 호스트 스위트 케이스 하나 동안 남은 예상 밖 Error 로그를 세어, 하나라도 있으면 그 케이스를 지게 합니다.
-     * @details GPU 테스트는 검증 레이어 · 드라이버 오류를 Error 로그로만 남기고 단언은 통과할 수 있다. 의도된 Error 는 `SW_TEST_DEFENSIVE_SCOPE`
-     *          안에서 남기면 표식이 붙어 세지 않고, `SW_TEST_SUPPRESS_LOGS` 안의 로그는 아예 남지 않는다. 그 스위트에 선언된 알려진 Error
-     *          (`SW_TEST_KNOWN_ERROR_LOG`)는 세지 않고 그 선언의 `_hitCount` 에 센다. 실패를 기록하며 남기는 `[FAILED]` 줄은 세지 않는다.
+     * @brief 호스트 스위트 케이스 하나 동안 남은 예상 밖 Error · Warning 로그를 세어, 하나라도 있으면 그 케이스를 지게 합니다.
+     * @details GPU 테스트는 검증 레이어 · 드라이버 오류를 로그로만 남기고 단언은 통과할 수 있다. 의도된 줄은 `SW_TEST_DEFENSIVE_SCOPE`
+     *          안에서 남기면 표식이 붙어 세지 않고, `SW_TEST_SUPPRESS_LOGS` 안의 로그는 아예 남지 않는다. 그 스위트에 선언된 알려진 줄
+     *          (`SW_TEST_KNOWN_LOG`)는 세지 않고 그 선언의 `_hitCount` 에 센다. 실패를 기록하며 남기는 `[FAILED]` 줄은 세지 않는다.
      */
-    class HostErrorLogJudge final : public ITestCaseJudge
+    class HostLogJudge final : public ITestCaseJudge
     {
     public:
-        explicit HostErrorLogJudge( TestCatalog& catalog );
-        ~HostErrorLogJudge() override;
+        explicit HostLogJudge( TestCatalog& catalog );
+        ~HostLogJudge() override;
 
-        HostErrorLogJudge( const HostErrorLogJudge& )            = delete;
-        HostErrorLogJudge& operator=( const HostErrorLogJudge& ) = delete;
+        HostLogJudge( const HostLogJudge& )            = delete;
+        HostLogJudge& operator=( const HostLogJudge& ) = delete;
 
         void beginCase( const TestCaseInfo& testInfo ) override;
         void endCase( const TestCaseInfo& testInfo, float64 elapsedMs, TestRegistry& registry ) override;

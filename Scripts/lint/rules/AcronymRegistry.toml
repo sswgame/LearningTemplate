@@ -36,6 +36,7 @@ external_name = [
     "minLod", "maxLod", "mipLodBias",
     "queryId",
     "userId",
+    "pMessageIdName",
 ]
 
 # 약어처럼 보이지만 줄임말인 낱말 → 이유. `acronym` 에 오르면 레지스트리 검사(checkRegistry)가 멈춘다.

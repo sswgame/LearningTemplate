@@ -24,8 +24,8 @@ namespace sw
         PROPERTY()
         string _name; ///< 명령 · 시나리오가 적는 이름(대소문자 무시, 예: `lte`)
 
-        PROPERTY()
-        string _label; ///< 에디터 단추에 보이는 이름(예: `LTE`)
+        PROPERTY( Meta = "NotLocalizable" )
+        string _label; ///< 에디터 단추에 보이는 이름(예: `LTE`) — 개발자 도구라 번역하지 않는다
 
         PROPERTY( Min = 0 )
         int32 _latencyMs{ 0 }; ///< 한쪽 지연(ms)

@@ -506,12 +506,12 @@
             "sourceHash": "40e8eb7597a7ce09"
         },
         "EdCommon.ThemePreset": {
-            "text": "에디터 전체의 테마 프리셋(Modern Dark, Deep Charcoal, Midnight Blue 등)을 선택합니다",
-            "sourceHash": "ad97232ad2bda000"
+            "text": "에디터 테마(Dark, Light, High Contrast 등)를 선택합니다. 테마는 Resource/editor/theme 의 토큰 파일입니다.",
+            "sourceHash": "34f006980d92e600"
         },
         "EdCommon.ThemeReset": {
-            "text": "모든 테마 설정을 Modern Dark 기본값으로 복원합니다",
-            "sourceHash": "c3a7d4dd4bfbbb12"
+            "text": "강조색과 둥글기 변경을 버리고 현재 테마의 값을 씁니다",
+            "sourceHash": "7add27f13768a424"
         },
         "EdCommon.ThemeTabRounding": {
             "text": "도킹 탭 및 상단 패널 탭 모서리의 둥글기(px, 0 ~ 8)",
@@ -870,7 +870,7 @@
             "sourceHash": "43ae64223b4dba7c"
         },
         "EditorConsole.CommandHint": {
-            "text": "> 명령 또는 gv_이름 [값] (Tab 자동 완성, 위/아래 기록, help)",
+            "text": "> 명령 또는 gv_name [value] (Tab 자동 완성, 위/아래 기록, help)",
             "sourceHash": "5c94d2fbf05bc3dc"
         },
         "EditorConsole.CopyAll": {

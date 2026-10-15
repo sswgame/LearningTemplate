@@ -320,8 +320,8 @@ namespace sw
             AbilitySystemComponent* pTarget       = pTargetObject != nullptr ? pTargetObject->getComponent<AbilitySystemComponent>() : nullptr;
             if ( pTarget != nullptr )
                 (void)applyEffectSpecToTarget( makeOutgoingSpec( targetEffect ), pTarget ); // 이펙트 핸들은 쓰지 않는다. 막히면 걸리지 않을 뿐이다
-            else
-                SW_LOG_WARNING( "ApplyEffects '%#': the trigger event has no target with an AbilitySystemComponent", getConfig()._id.c_str() );
+            else                                                                            // 상대가 이미 사라졌거나(죽은 공격자) 어빌리티 시스템이 없는 것(함정)은 게임 중 흔한 일이다 — 언리얼 GAS 도 조용히 넘긴다
+                SW_LOG_TRACE( "ApplyEffects '%#': the trigger event has no target with an AbilitySystemComponent", getConfig()._id.c_str() );
         }
         endAbility();
     }

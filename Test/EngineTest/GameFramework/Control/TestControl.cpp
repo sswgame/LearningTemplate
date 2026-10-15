@@ -900,7 +900,8 @@ SW_TEST_CASE( ControlTest, ScenarioPossessStepMovesPossession )
         SW_ASSERT_TRUE( runner.startFromText( "<Scenario name=\"control.possess\">"
                                               "<At frame=\"5\"><Possess controller=\"Player\" pawn=\"Horse\"/></At>"
                                               "<At frame=\"8\"><Possess controller=\"Player\"/></At>"
-                                              "<At frame=\"10\"><Pass/></At>"
+                                              // 입력 맵이 없는 테스트 폰이라 빙의할 때 버튼마다 한 번 경고한다 — 시나리오가 기대한 줄로 선언한다
+                                              "<At frame=\"10\"><ExpectLog contains=\"has no InputMap action\" count=\"1\"/><Pass/></At>"
                                               "</Scenario>" ) );
         AutomationResult result = AutomationResult::Running;
         for ( uint32 frame = 0; frame < 30 && result == AutomationResult::Running; ++frame )
