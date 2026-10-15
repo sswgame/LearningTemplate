@@ -14,8 +14,8 @@
 #include "GameFramework/Kits/Feature/Network/NetClientServer/GimmickSnapshotUtil.h"
 #include "GameFramework/Kits/Feature/Network/NetClientServer/NetSnapshot.h"
 
+#include "TestFramework/Harness/TestTick.h"
 #include "TestFramework/TestFramework.h"
-#include "TestFramework/TestTick.h"
 
 using namespace sw;
 

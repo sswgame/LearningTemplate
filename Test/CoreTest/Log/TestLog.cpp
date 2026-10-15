@@ -8,7 +8,7 @@
 #include "Core/LogSink/FileLogOutput.h"
 #include "Core/LogSink/ILogOutput.h"
 
-#include "TestFramework/TestChildProcess.h"
+#include "TestFramework/Harness/TestChildProcess.h"
 #include "TestFramework/TestFramework.h"
 
 #include <cstdlib>
@@ -669,7 +669,7 @@ SW_TEST_CASE( LogTest, ConsoleLogOutputReachesStandardOutput )
     const test::ChildEnvironmentVariable arrEnvironment[] = {
         { "SW_TEST_CONSOLE_LOG_CHILD", "1" }
     };
-    const test::ChildRunResult child = test::runThisExecutableAsChild( "LogTest.ConsoleChildRoleWritesAMarker", arrEnvironment, 60 );
+    const test::ProcessRunResult child = test::runThisExecutableAsChild( "LogTest.ConsoleChildRoleWritesAMarker", arrEnvironment, 60 );
     SW_ASSERT_TRUE( child._bLaunched );
     SW_EXPECT_FALSE( child._bTimedOut );
     SW_EXPECT_EQUAL( 0, child._exitCode );

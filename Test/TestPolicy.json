@@ -1,0 +1,126 @@
+{
+  "_doc": [
+    "테스트 실행 파일의 CTest 등록 정책 — 라벨 · 샤드 · 제한 시간 · 호스트 분리를 이 파일 한 곳에서 정한다.",
+    "cmake/Engine/TestTargets.cmake 의 sw_addTestExecutable 이 실행 파일 이름으로 줄을 읽고, Scripts/lint/gate/CheckTestSuites.py 가 폴더 · 라벨 · 비용표를 대조한다.",
+    "seconds 는 부하가 걸린 이 PC(16 스레드, 실행 파일 다섯을 함께 돌림)의 Debug 한 실행 시간이다. 샤드 수 = ceil(seconds / targetShardSeconds),",
+    "제한 시간 = max(minimumTimeoutSeconds, timeoutHeadroom × max(seconds / 샤드 수, 가장 비싼 케이스)). 제한 시간은 멈춤을 잡는 그물이고 느려짐 판정은 SW_TEST_TIME_BUDGET 이 한다.",
+    "caseCosts 는 느린 케이스의 초 — 샤드를 비용으로 고르게 나누는 데 쓴다(--test_costs). 스위트가 크게 느려지면 seconds 와 caseCosts 를 다시 잰다.",
+    "hostSplit 이면 <타깃>_NoGPU(nogpu) · <타깃>_HostOnly(hostgpu, 직렬, hostSeconds · hostShards) 로 가른다. loadSeconds 가 있으면 <타깃>_Load(load, 직렬, --load_suites=only --enforce_budgets)를 더한다.",
+    "shards 는 계산한 샤드 수를 덮는다 — 이유를 _shardsReason 에 적는다. 새 실행 파일은 여기 한 줄을 더하고 폴더 이름을 실행 파일 이름과 같게 둔다(CheckTestSuites)."
+  ],
+  "timeoutHeadroom": 4,
+  "minimumTimeoutSeconds": 60,
+  "targetShardSeconds": 30,
+  "labels": {
+    "unit": "C++ 테스트 실행 파일의 항목 전부",
+    "nogpu": "CI 러너가 돌릴 수 있다 — GPU · 창 · DXC 가 필요 없다",
+    "hostgpu": "GPU · 창이 있는 PC 에서만 — CI 가 돌리지 않는다(직렬)",
+    "load": "부하 · 시간 예산 검증 — 기본 집합에서 빠지고 -L load 로 고른다(직렬, --enforce_budgets)",
+    "lint": "Scripts/lint 의 게이트와 자기 검사",
+    "python": "파이썬 도구의 단위 테스트",
+    "qa": "빌드된 App 을 돌리는 QA 러너",
+    "soak": "오래 돌려 누수를 보는 QA — -L soak 로 고른다",
+    "perf": "Release 성능 기준 비교 — -L perf 로 고른다",
+    "build": "테스트 실행 파일을 짓는 셋업 항목",
+    "core": "영역 — Source/Core",
+    "engine": "영역 — Engine · GameFramework · 키트",
+    "editor": "영역 — Editor",
+    "app": "영역 — App(런처)",
+    "server": "영역 — 전용 서버",
+    "module": "영역 — 모듈 로드 · 핫 리로드",
+    "reflection": "영역 — 리플렉션 · ReflectionParser"
+  },
+  "executables": {
+    "AppTest": {
+      "area": "app",
+      "seconds": 9,
+      "hostSplit": true,
+      "hostSeconds": 1380,
+      "hostShards": 3,
+      "_hostShardsReason": "실기동 스모크 + 자동화 시나리오(시나리오 수 × 백엔드 넷). 에디터 시나리오만 백엔드마다 4~5 분이라 한 실행(약 23 분)을 조각 셋으로 나눈다."
+    },
+    "CoreTest": {
+      "area": "core",
+      "seconds": 34,
+      "caseCosts": {
+        "TaskManagerBenchTest.StageLikeRenderGraphLevel": 4,
+        "StreamTransportTest.PlatformConnectToClosedPortFails": 3,
+        "StreamTransportTest.PlatformManyConnectionsEchoConcurrently": 3,
+        "CrashReportTest.EveryCrashKindLeavesAReport": 3,
+        "CrashReportTest.StuckReportStillEndsAndKeepsTheStackFile": 3
+      }
+    },
+    "EditorTest": {
+      "area": "editor",
+      "seconds": 38,
+      "caseCosts": {
+        "ModelImporterTest.SkinnedModelImportsSkeletonClipsAndAttachments": 21,
+        "EditorNetPlaySessionTest.DedicatedServerAndTwoClientsConnectPauseAndMergeTraces": 5,
+        "EditorNetPlaySessionTest.LineConditionsReachAClientAndItsReportShowsResends": 5,
+        "LocalizationGatherTest.RepositoryProjectsAreUpToDate": 3
+      }
+    },
+    "EditorUITest": {
+      "area": "editor",
+      "seconds": 1
+    },
+    "EngineTest": {
+      "area": "engine",
+      "seconds": 300,
+      "hostSplit": true,
+      "hostSeconds": 220,
+      "hostShards": 2,
+      "_hostShardsReason": "GPU 를 잡아 조각도 직렬이다 — 합계는 같고 조각마다 제한 시간을 받는다.",
+      "caseCosts": {
+        "NetReplicationBenchTest.SixteenClientsThousandEntitiesAtSixtyHertz": 41,
+        "OnlineLoadBotTest.TwoHundredBotsRunChatAndMatchmakingScenarioEndToEnd": 19,
+        "TerrainBenchTest.LODSweepWorstFrame": 18,
+        "TerrainBenchTest.ColliderRebuildAfterBrushWrite": 16,
+        "NetSimDestructionMatrixTest.MediumLossLinkConverges": 16,
+        "NetSimDestructionMatrixTest.HeavyLossDuplicateReorderLinkConverges": 15,
+        "NetSimDestructionMatrixTest.HeavyLossRepairsASkippedEvent": 15,
+        "LoaderFuzzTest.EveryLoaderSurvivesMutatedInput": 13,
+        "NetSimDestructionTest.CleanLinkConvergesLateJoinsAndRepairs": 12,
+        "NetCompressionBenchTest.ReplicationSnapshotPackets": 9,
+        "NetCompressionBenchTest.DestructionScenarioPackets": 8,
+        "ConformSurfaceTest.ParallelQueriesMatchSerialResult": 8,
+        "PhysicsBenchTest.Box2DStepByWorkerCount": 8,
+        "RealTimeStrategyTest.AIGrowsEconomyBuildsArmyAndWinsByRazingBuildings": 7,
+        "FractureTest.ManySeedsGiveOnlyClosedPieces": 4,
+        "MeshModifierPropertiesTest.FilledParamsStayFiniteAndDeterministic": 4,
+        "ShaderBindingValidatorTest.ReflectionNamesAreUniformAcrossBackends": 4,
+        "FractureBenchTest.ShowcaseLeafShapeWarmUp": 3,
+        "FractureBenchTest.WallBreakFrameColdAndWarm": 3,
+        "MeshModifierBenchTest.HundredThousandVerticesEightModifiers": 3,
+        "ShaderBindingValidatorTest.AllCookedShadersMatchContract": 3,
+        "ShaderBindingValidatorTest.InstanceElementLayoutMatchesCPUStruct": 3,
+        "ResourceDataSchemaTest.EveryResourceDataFileLoadsWithoutUnknownNames": 3,
+        "SceneTest.RepositoryScenesAndPrefabsKeepComponentNames": 3,
+        "SerializationRoundTripTest.EveryResourceComponentRewritesToTheSameBytes": 3
+      }
+    },
+    "ReflectionTest": {
+      "area": "reflection",
+      "seconds": 23
+    },
+    "ServerTest": {
+      "area": "server",
+      "seconds": 58,
+      "caseCosts": {
+        "ServerBootTest.PauseStopsTicksAndStepRunsExactlyN": 9,
+        "ServerBootTest.StateHashHistoryFindsTheFirstDivergentTick": 9,
+        "ServerBootTest.StartsTicksAndExitsWithoutWindowOrGPU": 6,
+        "ServerBootTest.ClosedStandardInputDoesNotStopTheServer": 6,
+        "ServerBootTest.OnlineServicesStartFromTheOnlineConfigBesideTheServerConfig": 6
+      }
+    },
+    "SmokeTest": {
+      "area": "module",
+      "seconds": 31,
+      "shards": 1,
+      "_shardsReason": "모듈을 실제로 올렸다 내리는 케이스가 앞 케이스의 모듈 상태 위에서 돈다 — 순서를 가르지 않는다.",
+      "asanOptions": [ "report_globals=0" ],
+      "_asanOptionsReason": "이 ASan 런타임은 DLL 을 내려도 전역 등록을 지우지 않아, 다음 모듈이 그 주소에 매핑되면 자기 전역을 읽어도 global-buffer-overflow 로 보고된다. 전역 검사만 끈다."
+    }
+  }
+}

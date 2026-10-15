@@ -20,8 +20,8 @@
 #include "GameFramework/Base/Gameplay/Gimmick/Genre/ShooterGimmicks.h"
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickSensorComponent.h"
 
+#include "TestFramework/Harness/TestTick.h"
 #include "TestFramework/TestFramework.h"
-#include "TestFramework/TestTick.h"
 
 namespace
 {

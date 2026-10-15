@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "TestFramework/TestBench.h"
+#include "TestFramework/Harness/TestBench.h"
 
 #include <algorithm>
 

@@ -58,18 +58,17 @@ namespace test
         return candidate;
     }
 
-    bool AppTestUtil::launchApp( sw::Process& outProcess, sw::string_view arguments )
+    sw::string AppTestUtil::makeAppCommand( sw::string_view arguments )
     {
         const sw::string executablePath = findAppExecutablePath();
         if ( executablePath.empty() )
-            return false;
+            return {};
 
-        // 테스트가 띄우는 App 은 사람이 지켜보지 않는다 — 에디터를 켜도 단언 대화상자를 걸지 않는다(Debug 단언은 멈춘다).
         sw::string command{ "\"" };
         command += executablePath;
         command += "\" -unattended ";
         command += arguments;
-        return outProcess.launch( command );
+        return command;
     }
 
     sw::string AppTestUtil::readPackRoot( sw::string_view gameName )
@@ -143,41 +142,15 @@ namespace test
             arguments += extraArguments;
         }
 
-        sw::Process process;
-        if ( launchApp( process, arguments ) == false )
-            return kNotLaunchedExitCode;
-
-        // 시한 감시 — 멈춘 App 이 CTest 시한까지 붙잡지 않게 죽인다(`terminate` 는 다른 스레드가 읽는 중에도 안전하다).
-        sw::atomic<bool> bDone{ false };
-        sw::atomic<bool> bKilled{ false };
-        std::thread      watchdog( [&process, &bDone, &bKilled, timeoutSeconds]()
+        const test::ProcessRunResult result = runApp( arguments, timeoutSeconds, [&outScenarioLines]( sw::Process&, const sw::string& line )
         {
-            const int64 deadline = sw::MonotonicClock::nowMicroseconds() + static_cast<int64>( timeoutSeconds ) * 1000000;
-            while ( bDone.load() == false && sw::MonotonicClock::nowMicroseconds() < deadline )
-            {
-                std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-            }
-            if ( bDone.load() == false )
-            {
-                bKilled.store( true );
-                (void)process.terminate( -1 );
-            }
-        } );
-
-        sw::string log;
-        sw::string line;
-        while ( process.readOutputLine( line ) )
-        {
-            log += line;
-            log += "\n";
             if ( line.find( "[Scenario]" ) != sw::string::npos )
                 outScenarioLines += line + "\n";
-        }
-        const int32 exitCode = process.waitForExit();
-        bDone.store( true );
-        watchdog.join();
-        (void)sw::FileUtil::writeTextFile( outputBase + ".log", log ); // 진단용 로그 사본 — 실패는 writeTextFile 이 오류로 남긴다
-        return bKilled.load() ? -1 : exitCode;
+        } );
+        if ( result._bLaunched == false )
+            return kNotLaunchedExitCode;
+        (void)sw::FileUtil::writeTextFile( outputBase + ".log", result._output ); // 진단용 로그 사본 — 실패는 writeTextFile 이 오류로 남긴다
+        return result._bTimedOut ? -1 : result._exitCode;
     }
 
     bool AppTestUtil::isSkippedExitCode( int32 exitCode )

@@ -188,7 +188,7 @@ DXC가 사라지거나 쿠킹된 셰이더가 없어져도 초록으로 끝나�
 - `ScopedDefensiveTestLog` 의 표시는 로그를 읽는 사람이 의도한 오류를 실패로 오해하지 않게 하려는 것입니다.
 - Debug의 엔진 단언은 디버거를 멈추지만(`SW_DEBUG_BREAK`), `ScopedAssertCapture` 를 건 동안은 멈추지 않고 셉니다. 그래서 방어 경로 테스트가 Debug에서도 돕니다. 유니티의 `LogAssert.Expect` 와 같습니다.
 - `ScopedFailureCapture` 는 gtest의 `EXPECT_FATAL_FAILURE` 와 같은 일을 합니다. `Test/CoreTest/TestTestFramework.cpp` 가 매크로마다 실패를 하나 남기는지, 무엇을 출력하는지, ASSERT가 멈추는지 확인합니다.
-- `runThisExecutableAsChild`(`TestFramework/TestChildProcess.h`)는 프로세스마다 한 번뿐인 상태나 프로세스를 죽이는 동작을 테스트할 때 씁니다. 환경 변수는 띄우는 동안만 걸고, 출력을 모으고, **제한 시간을 넘기면 자식을 죽입니다.**
+- `runThisExecutableAsChild`(`TestFramework/Harness/TestChildProcess.h`)는 프로세스마다 한 번뿐인 상태나 프로세스를 죽이는 동작을 테스트할 때 씁니다. 환경 변수는 띄우는 동안만 걸고, 출력을 모으고, **제한 시간을 넘기면 자식을 죽입니다.**
   제한 없이 기다리면 멈춘 자식 하나가 실행 파일 전체를 CTest 제한 시간까지 붙잡습니다.
 - 배포본의 `SW_LOG_ASSERT` 는 멈추지 않고 로그만 남긴 뒤 진행합니다. 그래서 `ResourcePaths::initialize()` 를 쓰는 케이스는 그 결과를 `SW_ASSERT_TRUE` 로 감싸 그 자리에서 실패하게 합니다.
 - `ScopedDefensiveTestLog` 범위 안의 로그는 메시지 앞에 `"[Expected Defensive Test] "` 가 붙습니다. 그래서 로그 문구는 startsWith 가 아니라 포함 여부로 비교합니다.
@@ -198,7 +198,7 @@ DXC가 사라지거나 쿠킹된 셰이더가 없어져도 초록으로 끝나�
 - `test::makeTempPath` · `makeTempDirectory`(아래 "테스트가 남긴 상태 정리"), `test::RHITestDevice`(`kArrAllRHIBackend`) · `test::RHIBackendSweep` · `test::RHITestImage`, 병렬 기록을 nogpu 로 보는 `test::FakeRHIDevice`.
 - GPU 렌더 테스트 도우미: `makeSingleTargetPSODesc` · `beginOffscreenRenderPass` · `countPrimaryColorPixels` · `renderSceneFrame`, `LitCubeScene` · `renderPresentCaptureOf` · `compareCaptures`(`TestRenderPassGPU.cpp`). 새 GPU 케이스는 이것부터 봅니다.
 - 에디터 지역 서비스는 `Test/EditorTest/EditorTestServices.h` 에 있습니다.
-- 네트워크 호스트 묶음은 `test::LoopbackCluster`(`TestFramework/TestLoopbackCluster.h`)입니다. 루프백에 엔드포인트마다 회선 흉내를 붙이고, 손으로 진행하는 시각(`step`)과 호스트 스레드를 둘 다 쓸 수 있으며 CoreTest 도 씁니다. 씬과 라우터까지 필요하면 `NetSimHarness` 를 씁니다.
+- 네트워크 호스트 묶음은 `test::LoopbackCluster`(`TestFramework/Harness/TestLoopbackCluster.h`)입니다. 루프백에 엔드포인트마다 회선 흉내를 붙이고, 손으로 진행하는 시각(`step`)과 호스트 스레드를 둘 다 쓸 수 있으며 CoreTest 도 씁니다. 씬과 라우터까지 필요하면 `NetSimHarness` 를 씁니다.
 - 할당 실패 경로는 `Memory::injectAllocationFailures( count )`(Dev, 스레드 국소)로 테스트합니다. 이 스레드의 다음 count 번 `allocate` · `allocateAligned` 가 nullptr 를 돌려줍니다.
 - 낱개 파일과 팩의 경쟁을 테스트하려면 리소스 루트를 임시 폴더로 바꿉니다(`ResourcePaths::exchangeRootFolderPath` — 검색 폴더와 경로 캐시를 다시 만들고 앞 루트를 돌려준다).
 - 바깥 서버가 있어야 하는 테스트는 `SW_TEST_REQUIRES_ENVIRONMENT( 스위트, "변수", "까닭" );` 을 둡니다. 변수가 비면 그 스위트만 빠지고 `[ SKIP SUITE ]` 한 줄이 남습니다(실패도 "모두 건너뜀" 도 아니고, 호스트 스위트와 섞이지 않는다).
@@ -304,7 +304,7 @@ $env:SW_FUZZ_ITERATIONS=20000; $env:SW_FUZZ_TRACE=1; cd build/Ninja-Debug/Bin; .
 퍼징 대상 목록은 `EngineTest/LoaderFuzzTargets.cpp` 에 있습니다. XML, JSON, DDS, `.mesh`, 팩, 씬 같은 로더 스물몇 개가 들어 있고, 씨앗은 저장소의 실제 파일입니다.
 엔진 단언도 결함으로 셉니다. 바깥 데이터로 단언이 걸린다면 입력 검증이 먼저 막아야 하기 때문입니다. 찾은 결함은 그 로더의 스위트에 회귀 테스트로 둡니다.
 커버리지 안내 퍼징(libFuzzer)은 `FuzzTest/` 의 `LoaderFuzzer` 가 같은 대상 목록으로 합니다. Linux 전용이고(`SW_ENABLE_FUZZING`, 프리셋 `CI-Fuzz`) `.github/workflows/fuzz.yml` 이 밤마다 돌립니다.
-퍼저와 테스트 실행 파일은 같은 초기화 코드(`Test/TestFramework/TestHostRuntime`)를 씁니다.
+퍼저와 테스트 실행 파일은 같은 초기화 코드(`Test/TestFramework/Harness/TestHostRuntime`)를 씁니다.
 
 ## 확장하는 법
 
@@ -376,7 +376,7 @@ $env:SW_FUZZ_ITERATIONS=20000; $env:SW_FUZZ_TRACE=1; cd build/Ninja-Debug/Bin; .
 | 파일 | 내용 |
 |---|---|
 | `TestFramework/TestFramework.h` | 매크로, 단언, 도우미 |
-| `TestFramework/TestChildProcess.h` | 자식 프로세스로 케이스 돌리기 |
+| `TestFramework/Harness/TestChildProcess.h` | 자식 프로세스로 케이스 돌리기 |
 | `EngineTest/RHITestDevice.h` | GPU 테스트 장치 |
 | `AppTest/AppTestUtil.h` | App 실행 도우미, 건너뛸 종료 코드 |
 | `cmake/Engine/TestTargets.cmake` | `sw_addTestExecutable`, `HOST_SPLIT`, `SHARDS`, `sw_registerTestRun` |

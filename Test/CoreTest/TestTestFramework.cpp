@@ -3,7 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "TestFramework/TestChildProcess.h"
+#include "TestFramework/Harness/TestChildProcess.h"
 #include "TestFramework/TestFilter.h"
 #include "TestFramework/TestFramework.h"
 
@@ -73,6 +73,27 @@ namespace
         sw::string argument( pArgument );
         utf8*      argv[] = { programName, argument.data() };
         registry.configureFromArgs( 2, argv );
+    }
+
+    /** @brief 아래 탐침 본문이 상태를 적을 지역 레지스트리 — 탐침은 프로세스 레지스트리가 아니라 그 레지스트리의 지금 케이스를 건너뛰게 한다. */
+    test::TestRegistry* s_pProbeRegistry = nullptr;
+
+    /** @brief 지역 레지스트리의 케이스 본문 — 구성 기능이 없어 건너뛴 것으로 표시한다(어느 구성에서나 같은 판정을 보려고 직접 표시). */
+    void skipForMissingDevelopmentFeature()
+    {
+        s_pProbeRegistry->getCurrentContext()->skipForMissingFeature( test::BuildFeature::DevelopmentBuild );
+    }
+
+    /** @brief 지역 레지스트리의 케이스 본문 — 환경 탓으로 건너뛴 것으로 표시한다. */
+    void skipForEnvironment()
+    {
+        s_pProbeRegistry->getCurrentContext()->skip();
+    }
+
+    /** @brief 지역 레지스트리의 케이스 본문 — 시간 예산(1 ms)을 넘길 만큼 잔다. */
+    void sleepPastTheBudget()
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
     }
 } // namespace
 
@@ -247,27 +268,27 @@ SW_TEST_CASE( TestFrameworkTest, HostSuitesArgumentSplitsByDeclaration )
     const test::TestCaseInfo plainCase{ "PlainProbeTest", "One", {} };
 
     test::TestRegistry defaultRegistry;
-    defaultRegistry.registerHostSuite( "GpuProbeTest", "needs a GPU" );
+    defaultRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
     SW_EXPECT_TRUE( defaultRegistry.isSelected( gpuCase ) );
     SW_EXPECT_TRUE( defaultRegistry.isSelected( plainCase ) );
 
     test::TestRegistry excludeRegistry;
-    excludeRegistry.registerHostSuite( "GpuProbeTest", "needs a GPU" );
+    excludeRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
     configureWithArgument( excludeRegistry, "--host_suites=exclude" );
     SW_EXPECT_FALSE( excludeRegistry.isSelected( gpuCase ) );
     SW_EXPECT_TRUE( excludeRegistry.isSelected( plainCase ) );
 
     test::TestRegistry onlyRegistry;
-    onlyRegistry.registerHostSuite( "GpuProbeTest", "needs a GPU" );
+    onlyRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
     configureWithArgument( onlyRegistry, "--host_suites=only" );
     SW_EXPECT_TRUE( onlyRegistry.isSelected( gpuCase ) );
     SW_EXPECT_FALSE( onlyRegistry.isSelected( plainCase ) );
 
     // 이름 필터와 함께 쓰면 둘 다 맞아야 고른다.
     test::TestRegistry filteredRegistry;
-    filteredRegistry.registerHostSuite( "GpuProbeTest", "needs a GPU" );
+    filteredRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
     configureWithArgument( filteredRegistry, "--host_suites=only" );
-    filteredRegistry.setFilter( "Plain*" );
+    filteredRegistry.getOptions().setFilter( "Plain*" );
     SW_EXPECT_FALSE( filteredRegistry.isSelected( gpuCase ) );
     SW_EXPECT_FALSE( filteredRegistry.isSelected( plainCase ) );
 }
@@ -286,13 +307,13 @@ SW_TEST_CASE( TestFrameworkTest, IneffectiveHostSuitesRunFails )
 
     // 호스트 선언이 없는 실행 파일의 `only` — 고른 것이 없다.
     test::TestRegistry onlyRegistry;
-    onlyRegistry.registerTest( "PlainProbeTest", "One", {} );
+    onlyRegistry.getCatalog().addCase( "PlainProbeTest", "One", {} );
     configureWithArgument( onlyRegistry, "--host_suites=only" );
     SW_EXPECT_EQUAL( 1, onlyRegistry.runAllTests() );
 
     // 케이스가 하나도 없는 스위트를 가리키는 선언 — 이름을 바꾸고 선언을 놓친 것이다.
     test::TestRegistry staleRegistry;
-    staleRegistry.registerHostSuite( "RenamedAwayTest", "needs a GPU" );
+    staleRegistry.getCatalog().addSuiteKind( "RenamedAwayTest", test::SuiteKind::Host, "needs a GPU" );
     configureWithArgument( staleRegistry, "--host_suites=exclude" );
     SW_EXPECT_EQUAL( 1, staleRegistry.runAllTests() );
 }
@@ -306,13 +327,13 @@ SW_TEST_CASE( TestFrameworkTest, FilterThatSelectsNothingFails )
     SW_TEST_SUPPRESS_LOGS();
 
     test::TestRegistry typoRegistry;
-    typoRegistry.registerTest( "PlainProbeTest", "One", {} );
-    typoRegistry.setFilter( "PlainProbTest.*:OtherProbeTest.*" );
+    typoRegistry.getCatalog().addCase( "PlainProbeTest", "One", {} );
+    typoRegistry.getOptions().setFilter( "PlainProbTest.*:OtherProbeTest.*" );
     SW_EXPECT_EQUAL( 1, typoRegistry.runAllTests() );
 
     test::TestRegistry excludeRegistry;
-    excludeRegistry.registerTest( "PlainProbeTest", "One", {} );
-    excludeRegistry.setFilter( "-PlainProbeTest.*" );
+    excludeRegistry.getCatalog().addCase( "PlainProbeTest", "One", {} );
+    excludeRegistry.getOptions().setFilter( "-PlainProbeTest.*" );
     SW_EXPECT_EQUAL( 0, excludeRegistry.runAllTests() );
 }
 
@@ -363,17 +384,17 @@ SW_TEST_CASE( TestFrameworkTest, FilterReadsColonCommaAndDash )
 SW_TEST_CASE( TestFrameworkTest, HostSuiteCaseFailsOnUnexpectedErrorLog )
 {
     test::TestRegistry hostRegistry;
-    hostRegistry.registerHostSuite( "GpuProbeTest", "needs a GPU" );
-    hostRegistry.registerTest( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
+    hostRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
+    hostRegistry.getCatalog().addCase( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
     SW_EXPECT_TRUE_MSG( hostRegistry.runAllTests() == 1, "a host suite case that logs an unexpected Error must fail" );
 
     test::TestRegistry defensiveRegistry;
-    defensiveRegistry.registerHostSuite( "GpuProbeTest", "needs a GPU" );
-    defensiveRegistry.registerTest( "GpuProbeTest", "LogsDefensiveError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeErrorInDefensiveScope ) );
+    defensiveRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
+    defensiveRegistry.getCatalog().addCase( "GpuProbeTest", "LogsDefensiveError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeErrorInDefensiveScope ) );
     SW_EXPECT_TRUE_MSG( defensiveRegistry.runAllTests() == 0, "an Error inside SW_TEST_DEFENSIVE_SCOPE is expected, not a failure" );
 
     test::TestRegistry plainRegistry;
-    plainRegistry.registerTest( "PlainProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
+    plainRegistry.getCatalog().addCase( "PlainProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
     SW_EXPECT_TRUE_MSG( plainRegistry.runAllTests() == 0, "only host suites count Error logs" );
 }
 
@@ -385,21 +406,21 @@ SW_TEST_CASE( TestFrameworkTest, HostSuiteCaseFailsOnUnexpectedErrorLog )
 SW_TEST_CASE( TestFrameworkTest, KnownErrorLogIsToleratedOnlyForItsSuiteAndText )
 {
     test::TestRegistry knownRegistry;
-    knownRegistry.registerHostSuite( "GpuProbeTest", "needs a GPU" );
-    knownRegistry.registerKnownErrorLog( "GpuProbeTest", "Deliberate probe error", "probe" );
-    knownRegistry.registerTest( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
+    knownRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
+    knownRegistry.getCatalog().addKnownErrorLog( "GpuProbeTest", "Deliberate probe error", "probe" );
+    knownRegistry.getCatalog().addCase( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
     SW_EXPECT_TRUE_MSG( knownRegistry.runAllTests() == 0, "a declared known error must be tolerated" );
 
     test::TestRegistry otherTextRegistry;
-    otherTextRegistry.registerHostSuite( "GpuProbeTest", "needs a GPU" );
-    otherTextRegistry.registerKnownErrorLog( "GpuProbeTest", "some other text", "probe" );
-    otherTextRegistry.registerTest( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
+    otherTextRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
+    otherTextRegistry.getCatalog().addKnownErrorLog( "GpuProbeTest", "some other text", "probe" );
+    otherTextRegistry.getCatalog().addCase( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
     SW_EXPECT_TRUE_MSG( otherTextRegistry.runAllTests() == 1, "a known error must not tolerate a different text" );
 
     test::TestRegistry otherSuiteRegistry;
-    otherSuiteRegistry.registerHostSuite( "GpuProbeTest", "needs a GPU" );
-    otherSuiteRegistry.registerKnownErrorLog( "OtherProbeTest", "Deliberate probe error", "probe" );
-    otherSuiteRegistry.registerTest( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
+    otherSuiteRegistry.getCatalog().addSuiteKind( "GpuProbeTest", test::SuiteKind::Host, "needs a GPU" );
+    otherSuiteRegistry.getCatalog().addKnownErrorLog( "OtherProbeTest", "Deliberate probe error", "probe" );
+    otherSuiteRegistry.getCatalog().addCase( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
     SW_EXPECT_TRUE_MSG( otherSuiteRegistry.runAllTests() == 1, "a known error must not tolerate another suite" );
 }
 
@@ -409,8 +430,7 @@ SW_TEST_CASE( TestFrameworkTest, KnownErrorLogIsToleratedOnlyForItsSuiteAndText 
  */
 SW_TEST_CASE( TestFrameworkTest, AssertCaptureCountsInsteadOfBreaking )
 {
-    if ( test::ScopedAssertCapture::kAssertsAreActive == false )
-        SW_TEST_SKIP( "asserts are compiled out outside Debug" );
+    SW_TEST_REQUIRES_FEATURE( DebugAsserts );
 
     SW_TEST_DEFENSIVE_SCOPE( "deliberate assertions inside an assert capture" );
     test::ScopedAssertCapture outer;
@@ -498,7 +518,7 @@ SW_TEST_CASE( TestFrameworkTest, ChildProcessGetsItsEnvironmentAndOutputIsCaptur
     const test::ChildEnvironmentVariable arrEnvironment[] = {
         { "SW_TEST_CHILD_MODE", "marker42" }
     };
-    const test::ChildRunResult child = test::runThisExecutableAsChild( "TestFrameworkTest.ChildRoleEchoesOrHangs", arrEnvironment, 60 );
+    const test::ProcessRunResult child = test::runThisExecutableAsChild( "TestFrameworkTest.ChildRoleEchoesOrHangs", arrEnvironment, 60 );
     SW_ASSERT_TRUE( child._bLaunched );
     SW_EXPECT_FALSE( child._bTimedOut );
     SW_EXPECT_EQUAL( 0, child._exitCode );
@@ -516,8 +536,8 @@ SW_TEST_CASE( TestFrameworkTest, HangingChildIsKilledAtTheDeadline )
     const test::ChildEnvironmentVariable arrEnvironment[] = {
         { "SW_TEST_CHILD_MODE", "hang" }
     };
-    const sw::Stopwatch        stopwatch;
-    const test::ChildRunResult child = test::runThisExecutableAsChild( "TestFrameworkTest.ChildRoleEchoesOrHangs", arrEnvironment, 1 );
+    const sw::Stopwatch          stopwatch;
+    const test::ProcessRunResult child = test::runThisExecutableAsChild( "TestFrameworkTest.ChildRoleEchoesOrHangs", arrEnvironment, 1 );
 
     const int64 elapsedSeconds = stopwatch.getElapsedMilliseconds() / 1000;
 
@@ -555,7 +575,7 @@ SW_TEST_CASE( TestFrameworkTest, HelpArgumentIsTakenByTheHarness )
  */
 SW_TEST_CASE( TestFrameworkTest, HelpPrintsUsageAndExitsWithoutRunningCases )
 {
-    const test::ChildRunResult child =
+    const test::ProcessRunResult child =
         test::runThisExecutableWithArguments( "--help --test_filter=TestFrameworkTest.ChildRoleEchoesOrHangs", sw::vector_reference<const test::ChildEnvironmentVariable>{}, 60 );
     SW_ASSERT_TRUE( child._bLaunched );
     SW_EXPECT_FALSE( child._bTimedOut );
@@ -619,7 +639,7 @@ SW_TEST_CASE( TestFrameworkTest, ShuffleKeepsEveryCaseAndReplaysWithTheSameSeed 
         {
             for ( const utf8* pCase : { "One", "Two", "Three", "Four", "Five" } )
             {
-                registry.registerTest( pSuite, pCase, {} );
+                registry.getCatalog().addCase( pSuite, pCase, {} );
             }
         }
     };
@@ -667,4 +687,161 @@ SW_TEST_CASE( TestFrameworkTest, ShuffleKeepsEveryCaseAndReplaysWithTheSameSeed 
         suiteChangeCount += previousSuite != currentSuite ? 1u : 0u;
     }
     SW_EXPECT_EQUAL( 3u, suiteChangeCount );
+}
+
+/**
+ * @brief [TestFrameworkTest] 샤드는 케이스 비용으로 고르게 나뉜다 — 비싼 케이스 둘이 한 샤드에 몰리지 않고, 샤드를 모두 합치면 빠짐없이 한 번씩이다
+ * @details 스위트 안에서 번갈아 나누면 느린 케이스(망 시뮬 · 벤치 10~40 초)가 우연히 한 샤드에 몰려 그 샤드만 시한에 닿는다. 비용표(`--test_costs`)를
+ *          받으면 비싼 것부터 가장 가벼운 샤드에 놓는다(LPT).
+ */
+SW_TEST_CASE( TestFrameworkTest, ShardsAreBalancedByCaseCost )
+{
+    constexpr uint32                   kShardCount = 3;
+    sw::vector<sw::vector<sw::string>> listShardCase( kShardCount );
+    for ( uint32 shardIndex = 0; shardIndex < kShardCount; ++shardIndex )
+    {
+        test::TestRegistry registry;
+        for ( const utf8* pCase : { "SlowA", "SlowB", "SlowC", "One", "Two", "Three", "Four", "Five", "Six" } )
+        {
+            registry.getCatalog().addCase( "CostProbeTest", pCase, {} );
+        }
+        const sw::string shardArgument = "--test_shard=" + sw::to_string( shardIndex ) + "/" + sw::to_string( kShardCount );
+        configureWithArgument( registry, shardArgument.c_str() );
+        registry.getOptions().setCaseCosts( "CostProbeTest.SlowA=30,CostProbeTest.SlowB=20,CostProbeTest.SlowC=25" );
+        for ( const test::TestCaseInfo* pTestInfo : registry.selectCasesForThisShard() )
+        {
+            listShardCase[shardIndex].push_back( pTestInfo->fullName() );
+        }
+    }
+
+    sw::vector<sw::string> listAll;
+    for ( uint32 shardIndex = 0; shardIndex < kShardCount; ++shardIndex )
+    {
+        uint32 slowCount = 0;
+        for ( const sw::string& name : listShardCase[shardIndex] )
+        {
+            slowCount += sw::StringUtil::contains( name, ".Slow" ) ? 1u : 0u;
+            listAll.push_back( name );
+        }
+        SW_EXPECT_EQUAL( 1u, slowCount );
+    }
+    std::sort( listAll.begin(), listAll.end() );
+    SW_EXPECT_EQUAL( size_t{ 9 }, listAll.size() );
+    SW_EXPECT_TRUE( std::adjacent_find( listAll.begin(), listAll.end() ) == listAll.end() );
+}
+
+/**
+ * @brief [TestFrameworkTest] 구성 기능이 없어 전부 건너뛴 스위트는 지지 않고, 환경 탓으로 전부 건너뛴 스위트는 진다
+ * @details `SW_TEST_REQUIRES_FEATURE` 는 "이 구성에 없다" 를 선언한 것이라 검증 공백이 아니다. `SW_TEST_SKIP` 만 남은 스위트는 무엇이 사라졌는지
+ *          모르는 채 초록이 되므로 실패다.
+ */
+SW_TEST_CASE( TestFrameworkTest, FeatureSkippedSuiteIsNotAnEmptySuite )
+{
+    SW_TEST_SUPPRESS_LOGS();
+
+    test::TestRegistry featureRegistry;
+    s_pProbeRegistry = &featureRegistry;
+    featureRegistry.getCatalog().addCase( "FeatureProbeTest", "One", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, skipForMissingDevelopmentFeature ) );
+    SW_EXPECT_EQUAL( 0, featureRegistry.runAllTests() );
+
+    test::TestRegistry environmentRegistry;
+    s_pProbeRegistry = &environmentRegistry;
+    environmentRegistry.getCatalog().addCase( "EnvironmentProbeTest", "One", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, skipForEnvironment ) );
+    SW_EXPECT_EQUAL( 1, environmentRegistry.runAllTests() );
+    s_pProbeRegistry = nullptr;
+}
+
+/**
+ * @brief [TestFrameworkTest] 부하 스위트는 기본 실행에서 빠지고 `--load_suites=only` 에서만 돈다
+ * @details 부하 · 시간 예산 검증은 몇 분씩 걸리고 혼자 돌아야 숫자가 뜻이 있다 — CI 의 `nogpu` 집합에 섞이면 안 된다.
+ */
+SW_TEST_CASE( TestFrameworkTest, LoadSuitesAreLeftOutByDefault )
+{
+    const test::TestCaseInfo loadCase{ "LoadProbeTest", "One", {} };
+    const test::TestCaseInfo plainCase{ "PlainProbeTest", "One", {} };
+
+    test::TestRegistry defaultRegistry;
+    defaultRegistry.getCatalog().addSuiteKind( "LoadProbeTest", test::SuiteKind::Load, "measures throughput" );
+    SW_EXPECT_FALSE( defaultRegistry.isSelected( loadCase ) );
+    SW_EXPECT_TRUE( defaultRegistry.isSelected( plainCase ) );
+
+    test::TestRegistry onlyRegistry;
+    onlyRegistry.getCatalog().addSuiteKind( "LoadProbeTest", test::SuiteKind::Load, "measures throughput" );
+    configureWithArgument( onlyRegistry, "--load_suites=only" );
+    SW_EXPECT_TRUE( onlyRegistry.isSelected( loadCase ) );
+    SW_EXPECT_FALSE( onlyRegistry.isSelected( plainCase ) );
+}
+
+/**
+ * @brief [TestFrameworkTest] 시간 예산은 `--enforce_budgets` 에서만 케이스를 지게 한다
+ * @details 부하가 겹친 기계의 숫자로 평소 실행이 지면 안 된다. 강제하는 실행(부하 검증 항목)에서는 넘은 케이스가 진다.
+ */
+SW_TEST_CASE( TestFrameworkTest, TimeBudgetFailsOnlyWhenEnforced )
+{
+    SW_TEST_SUPPRESS_LOGS();
+
+    test::TestRegistry reportRegistry;
+    reportRegistry.getCatalog().addCase( "BudgetProbeTest", "Sleeps", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, sleepPastTheBudget ) );
+    reportRegistry.getCatalog().addTimeBudget( "BudgetProbeTest", 1.0, "probe" );
+    SW_EXPECT_EQUAL( 0, reportRegistry.runAllTests() );
+
+    test::TestRegistry enforceRegistry;
+    enforceRegistry.getCatalog().addCase( "BudgetProbeTest", "Sleeps", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, sleepPastTheBudget ) );
+    enforceRegistry.getCatalog().addTimeBudget( "BudgetProbeTest", 1.0, "probe" );
+    configureWithArgument( enforceRegistry, "--enforce_budgets" );
+    SW_EXPECT_EQUAL( 1, enforceRegistry.runAllTests() );
+}
+
+/**
+ * @brief [TestFrameworkTest] 재현 인자는 진 케이스 · 스위트 종류 · 씨앗 · 엔진 인자를 담는다 — 섞은 실행은 원래 고른 집합과 순서 씨앗을 담는다
+ * @details 진 실행을 다시 만들 명령이 실행 요약에 바로 있어야 시드 · 백엔드 · 샤드를 손으로 맞추지 않는다.
+ */
+SW_TEST_CASE( TestFrameworkTest, ReproductionArgumentsRebuildTheRun )
+{
+    test::TestRunOptions plainOptions;
+    utf8                 programName[]      = "probe";
+    utf8                 hostArgument[]     = "--host_suites=exclude";
+    utf8                 engineArgument[]   = "-gv_rhiBackend=2";
+    utf8                 seedArgument[]     = "--test_seed=42";
+    utf8*                arrPlainArgument[] = { programName, hostArgument, engineArgument, seedArgument };
+    (void)plainOptions.parse( 4, arrPlainArgument ); // 남은 인자(엔진 명령줄)는 아래에서 `_listEngineArgument` 로 본다
+    const sw::string plain = plainOptions.makeReproductionArguments( "AlphaTest.One:BetaTest.Two", true );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( plain, "\"--test_filter=AlphaTest.One:BetaTest.Two\"" ), plain.c_str() );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( plain, "--host_suites=exclude" ), plain.c_str() );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( plain, "--test_seed=42" ), plain.c_str() );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( plain, "-gv_rhiBackend=2" ), plain.c_str() );
+
+    test::TestRunOptions shuffledOptions;
+    utf8                 filterArgument[]      = "--test_filter=AlphaTest.*";
+    utf8                 shardArgument[]       = "--test_shard=1/4";
+    utf8                 shuffleArgument[]     = "--test_shuffle=7";
+    utf8*                arrShuffledArgument[] = { programName, filterArgument, shardArgument, shuffleArgument };
+    (void)shuffledOptions.parse( 4, arrShuffledArgument ); // 엔진 인자가 없다
+    const sw::string shuffled = shuffledOptions.makeReproductionArguments( "AlphaTest.One", false );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( shuffled, "\"--test_filter=AlphaTest.*\"" ), shuffled.c_str() );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( shuffled, "--test_shard=1/4" ), shuffled.c_str() );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( shuffled, "--test_shuffle=7" ), shuffled.c_str() );
+}
+
+/**
+ * @brief [TestFrameworkTest] 추적(`ScopedTrace`)은 그 범위에서 진 단언에만 붙고, 겹치면 바깥부터 잇는다
+ * @details 한 케이스가 백엔드 넷을 돌 때 "어느 백엔드에서 졌나" 가 실패 줄에 없으면 재현을 백엔드마다 다시 해야 한다.
+ */
+SW_TEST_CASE( TestFrameworkTest, ScopedTraceIsAttachedToFailuresInsideIt )
+{
+    sw::vector<test::TestFailure> listFailure;
+    {
+        test::ScopedFailureCapture capture;
+        {
+            test::ScopedTrace outer( "backend=Vulkan" );
+            test::ScopedTrace inner( "seed=7" );
+            SW_EXPECT_TRUE( false );
+        }
+        SW_EXPECT_TRUE( false );
+        listFailure = capture.getListFailure();
+    }
+
+    SW_ASSERT_EQUAL( size_t{ 2 }, listFailure.size() );
+    SW_EXPECT_STREQ( "backend=Vulkan > seed=7", listFailure[0]._trace );
+    SW_EXPECT_TRUE( listFailure[1]._trace.empty() );
 }

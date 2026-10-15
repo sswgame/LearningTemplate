@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "TestFramework/TestHostRuntime.h"
+#include "TestFramework/Harness/TestHostRuntime.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
@@ -181,7 +181,7 @@ namespace test
         if ( TestRegistry::getInstance().isHelpRequested() )
         {
             // 도움말은 엔진 없이 찍는다 — 기동을 기다릴 까닭이 없고, `main` 이 종료 코드 0 으로 끝낸다.
-            TestRegistry::getInstance().printHelp();
+            TestRunOptions::printHelp();
             return false;
         }
         state._bBootstrapped = true;

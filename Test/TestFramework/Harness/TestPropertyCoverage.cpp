@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "TestFramework/TestPropertyCoverage.h"
+#include "TestFramework/Harness/TestPropertyCoverage.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"

@@ -8,8 +8,8 @@
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "TestFramework/Harness/TestStreamEndpointPair.h"
 #include "TestFramework/TestFramework.h"
-#include "TestFramework/TestStreamEndpointPair.h"
 
 #include <thread>
 

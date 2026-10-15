@@ -13,6 +13,7 @@
 #include "Engine/Scene/AuthorityGhost.h"
 #include "Engine/Scene/SceneStateHash.h"
 
+#include "TestFramework/Harness/TestProcessRun.h"
 #include "TestFramework/TestFramework.h"
 
 #include <chrono>
@@ -31,7 +32,7 @@ namespace
     constexpr const utf8* kReadyLine    = "Dedicated server ready";
     constexpr const utf8* kCompleteLine = "Dedicated server shutdown complete";
     /** @brief 서버 한 판의 시한(초) — 정상 종료 경로가 멈춘 결함을 CTest 시한(180 s) 전에 보이게. 횟수가 아니라 시간이다. */
-    constexpr int64 kRunTimeoutSeconds = 90;
+    constexpr uint32 kRunTimeoutSeconds = 90;
 
     /** @brief 한 판의 결과입니다. */
     struct ServerRun
@@ -59,42 +60,24 @@ namespace
 
     /**
      * @brief Server 를 @p arguments 로 띄우고 끝날 때까지 출력을 읽습니다. "ready" 줄을 처음 보면 @p onReady 를 한 번 부릅니다.
-     * @details 시한이 지나면 감시 스레드가 강제 종료한다(`Process::terminate` 는 다른 스레드가 읽는 중에 불러도 되는 것이 계약).
+     * @details 시한은 공용 하네스(`test::runProcessWithDeadline`)가 지킨다 — 넘으면 서버를 죽이고 `_bTimedOut` 이 선다.
      */
     template <typename TOnReady>
     ServerRun runServer( string_view arguments, const ProcessOptions& options, TOnReady&& onReady )
     {
         ServerRun    run;
         const string serverPath = findServerPath();
-        Process      process;
+        if ( serverPath.empty() )
+            return run;
 #if defined( SW_PLATFORM_WINDOWS )
         const string command = "\"" + serverPath + "\" " + string( arguments );
 #else
         // POSIX 는 `sh -c` 가 명령을 띄운다. `exec` 가 없으면(dash) sh 가 부모로 남아 SIGTERM 에 서버보다 먼저 죽고 종료 코드가 143 이 된다.
         const string command = "exec \"" + serverPath + "\" " + string( arguments );
 #endif
-        if ( serverPath.empty() || process.launch( command, options ) == false )
-            return run;
-        run._bLaunched = true;
-        atomic<uint32> finished{ 0 };
-        atomic<uint32> timedOut{ 0 };
-        std::thread    watchdog( [&process, &finished, &timedOut]()
+        const test::ProcessRunResult result =
+            test::runProcessWithDeadline( command, options, kRunTimeoutSeconds, [&run, &onReady]( Process& process, const string& line )
         {
-            const int64 deadline = MonotonicClock::nowNanoseconds() + kRunTimeoutSeconds * 1000000000LL;
-            while ( finished.load() == 0 && MonotonicClock::nowNanoseconds() < deadline )
-            {
-                std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
-            }
-            if ( finished.load() == 0 )
-            {
-                timedOut.store( 1 );
-                (void)process.terminate( 124 );
-            }
-        } );
-        string         line;
-        while ( process.readOutputLine( line ) )
-        {
-            run._output += line + "\n";
             if ( line.find( "[Error]" ) != string::npos && run._errorCount++ == 0 )
                 run._firstErrorLine = line;
             if ( run._bReadySeen == false && line.find( kReadyLine ) != string::npos )
@@ -102,11 +85,11 @@ namespace
                 run._bReadySeen = true;
                 onReady( process );
             }
-        }
-        run._exitCode = process.waitForExit();
-        finished.store( 1 );
-        watchdog.join();
-        run._bTimedOut = timedOut.load() != 0;
+        } );
+        run._bLaunched = result._bLaunched;
+        run._bTimedOut = result._bTimedOut;
+        run._exitCode  = result._exitCode;
+        run._output    = result._output;
         return run;
     }
 
@@ -595,14 +578,14 @@ SW_TEST_CASE( ServerBootTest, StateHashHistoryFindsTheFirstDivergentTick )
 #endif
 }
 
-// 권위 고스트는 개발 빌드 기능이라 Shipping 에는 본문(AuthorityGhost.cpp)이 없다. 건너뛰는 케이스 하나뿐인 스위트는
-// "아무것도 확인하지 않은 스위트" 로 지므로 Shipping 에서는 스위트를 등록하지 않는다.
-#if !defined( SW_SHIPPING )
 /**
  * @brief [AuthorityGhostTest] 서버 포즈 글을 읽고, 이름이 같은 오브젝트끼리 거리 차이를 구한다(서버 디버깅 S6의 순수 부분)
+ * @details 권위 고스트는 개발 빌드 기능이라 Shipping 에는 본문(AuthorityGhost.cpp)이 없다 — 구성 기능으로 선언해 건너뛰고(요약에 세어진다) 본문만 `#if` 로 감싼다.
  */
 SW_TEST_CASE( AuthorityGhostTest, ParsesPosesAndComputesDeltasByName )
 {
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild );
+#if !defined( SW_SHIPPING )
     vector<AuthorityPose> listServer;
     AuthorityGhost::parsePoses( "Hero Knight 1 2 3\nTree 10 0 0\nbad line\nOnlyServer 5 5 5\n", listServer );
     SW_ASSERT_EQUAL( 3u, static_cast<uint32>( listServer.size() ) );
@@ -615,8 +598,8 @@ SW_TEST_CASE( AuthorityGhostTest, ParsesPosesAndComputesDeltasByName )
     SW_EXPECT_TRUE( listDelta[0]._name == "Tree" );                 // 가장 어긋난 것이 먼저
     SW_EXPECT_TRUE( listDelta[0]._distance > 3.999f && listDelta[0]._distance < 4.001f );
     SW_EXPECT_TRUE( listDelta[1]._distance == 0.0f );
-}
 #endif
+}
 
 /**
  * @brief [ServerBootTest] 클라이언트의 로컬 포즈와 서버가 읽어 준 포즈의 차이가 서버에서 옮긴 거리와 같다(서버 디버깅 S6)

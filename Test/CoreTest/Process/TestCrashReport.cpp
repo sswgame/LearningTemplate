@@ -6,7 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
 
-#include "TestFramework/TestChildProcess.h"
+#include "TestFramework/Harness/TestChildProcess.h"
 #include "TestFramework/TestFramework.h"
 
 #include <cstdlib>
@@ -295,7 +295,7 @@ SW_TEST_CASE( CrashReportTest, EveryCrashKindLeavesAReport )
             {  "SW_CRASH_CHILD_KIND", kindText.c_str()},
             {"SW_CRASH_CHILD_FOLDER",           folder}
         };
-        const test::ChildRunResult child = test::runThisExecutableAsChild( "CrashReportTest.ChildProcessCrashesAsRequested", arrEnvironment, kCrashChildTimeoutSeconds );
+        const test::ProcessRunResult child = test::runThisExecutableAsChild( "CrashReportTest.ChildProcessCrashesAsRequested", arrEnvironment, kCrashChildTimeoutSeconds );
         SW_EXPECT_TRUE_MSG( child._bLaunched, crashCase._pName );
         SW_EXPECT_FALSE_MSG( child._bTimedOut, ( sw::string( crashCase._pName ) + " 크래시 자식이 시한 안에 끝나지 않았습니다 — 마지막 출력:" +
                                                  child.getOutputTail() )
@@ -346,7 +346,7 @@ SW_TEST_CASE( CrashReportTest, StuckReportStillEndsAndKeepsTheStackFile )
         {          "SW_CRASH_CHILD_FOLDER",           folder},
         {"SW_CRASH_CHILD_DEADLINE_SECONDS",              "2"},
     };
-    const test::ChildRunResult child = test::runThisExecutableAsChild( "CrashReportTest.ChildProcessCrashesAsRequested", arrEnvironment, 15 );
+    const test::ProcessRunResult child = test::runThisExecutableAsChild( "CrashReportTest.ChildProcessCrashesAsRequested", arrEnvironment, 15 );
     SW_ASSERT_TRUE( child._bLaunched );
     SW_EXPECT_FALSE_MSG( child._bTimedOut, ( "보고가 시한에 끝나지 않았습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
     if ( child._bTimedOut )
@@ -385,7 +385,7 @@ SW_TEST_CASE( CrashReportTest, FailedAssertNamesItsExpressionBeforeStopping )
         {  "SW_CRASH_CHILD_KIND", kindText.c_str()},
         {"SW_CRASH_CHILD_FOLDER",           folder},
     };
-    const test::ChildRunResult child = test::runThisExecutableAsChild( "CrashReportTest.ChildProcessCrashesAsRequested", arrEnvironment, 15 );
+    const test::ProcessRunResult child = test::runThisExecutableAsChild( "CrashReportTest.ChildProcessCrashesAsRequested", arrEnvironment, 15 );
     SW_ASSERT_TRUE( child._bLaunched );
     SW_EXPECT_FALSE_MSG( child._bTimedOut, ( "단언 자식이 끝나지 않았습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
     if ( child._bTimedOut )

@@ -38,13 +38,7 @@ namespace
         arguments += cookedDir;
         arguments += "\"";
 
-        Process process;
-        if ( test::AppTestUtil::launchApp( process, arguments ) == false )
-            return result;
-        result._bLaunched = true;
-
-        string line;
-        while ( process.readOutputLine( line ) )
+        const test::ProcessRunResult run = test::AppTestUtil::runApp( arguments, test::AppTestUtil::kAppRunTimeoutSeconds, [&result]( Process&, const string& line )
         {
             if ( line.find( "MissingComponent" ) != string::npos )
                 result._listMissingComponentLine.push_back( line );
@@ -52,8 +46,9 @@ namespace
             const bool bProblem = line.find( "[Error]" ) != string::npos || line.find( "[Warning]" ) != string::npos;
             if ( bProblem && line.find( "[ObjectValidation]" ) == string::npos )
                 result._listProblemLine.push_back( line );
-        }
-        result._exitCode = process.waitForExit();
+        } );
+        result._bLaunched                = run._bLaunched;
+        result._exitCode                 = run._bTimedOut ? -1 : run._exitCode;
         return result;
     }
 } // namespace

@@ -5,7 +5,7 @@
 
 #include "EngineTest/LoaderFuzzTargets.h"
 
-#include "TestFramework/TestHostRuntime.h"
+#include "TestFramework/Harness/TestHostRuntime.h"
 
 #include <cstdio>
 #include <cstdlib>
