@@ -52,6 +52,11 @@ namespace sw::editor
         void orbitTo( const float3& rotation );
         /** @brief 위치와 회전(도, 피치 · 요 · 롤)을 그대로 놓습니다(개발 명령 `camera.set` — 시나리오가 같은 시점에서 찍는다). 궤도 대상은 시선 앞 궤도 거리입니다. */
         void setPose( const float3& position, const float3& rotation );
+        /**
+         * @brief 포즈 · 투영을 새 에디터 세션의 값으로 되돌립니다(개발 명령 `camera.reset`). 마지막으로 쓴 카메라는 그대로 기억한다 —
+         *        새 객체로 바꾸면 다음 `applyToCamera` 가 그 카메라를 "앞 인스턴스가 놓은 카메라" 로 보고 옛 포즈를 이어받는다.
+         */
+        void resetToDefault();
 
         /** @brief 뷰 행렬을 ImGuizmo 배열로 계산합니다. */
         void getViewMatrix( float32* pOutMatrix ) const;

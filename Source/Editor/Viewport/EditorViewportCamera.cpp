@@ -8,6 +8,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -173,7 +174,10 @@ namespace sw::editor
         // 외부(개발 명령 bugitgo, teleport)가 에디터 카메라를 옮겼으면 씬 뷰가 그 위치와 시선을 이어받는다. 덮어쓰면 명령이 한 프레임도 유지되지 않는다.
         const bool bSameCamera   = _lastAppliedCameraID == pCamera->getComponentID();
         const bool bMovedOutside = bSameCamera && ( pCamera->getLocalPosition() - _lastAppliedPosition ).getLength() > EditorViewportCameraInternal::kExternalMoveTolerance;
-        if ( bMovedOutside )
+        // 이 씬 뷰가 처음 쓰는 카메라가 새로 만든 자리에 있지 않으면 앞 에디터 인스턴스가 놓은 것이다(백엔드 교체 · 에디터 리로드) — 기본 포즈로 덮지 않고 이어받는다.
+        const bool bFirstApply  = _lastAppliedCameraID == 0;
+        const bool bPlacedEarly = bFirstApply && ( pCamera->getLocalPosition() - EditorCamera::getSpawnPosition() ).getLength() > EditorViewportCameraInternal::kExternalMoveTolerance;
+        if ( bMovedOutside || bPlacedEarly )
         {
             const float3  forward = pCamera->getCameraForward();
             const float32 length  = forward.getLength();
@@ -226,6 +230,15 @@ namespace sw::editor
         _orbitTarget   = target;
         _orbitDistance = MathUtil::clamp( MathUtil::max( radius, 0.1f ) * 2.5f, 3.0f, 60.0f );
         _position      = _orbitTarget - EditorViewportCameraInternal::computeForward( _rotation ) * _orbitDistance;
+    }
+
+    void EditorViewportCamera::resetToDefault()
+    {
+        const uint64 lastAppliedCameraID = _lastAppliedCameraID;
+        const float3 lastAppliedPosition = _lastAppliedPosition;
+        *this                            = EditorViewportCamera{};
+        _lastAppliedCameraID             = lastAppliedCameraID;
+        _lastAppliedPosition             = lastAppliedPosition;
     }
 
     void EditorViewportCamera::setPose( const float3& position, const float3& rotation )

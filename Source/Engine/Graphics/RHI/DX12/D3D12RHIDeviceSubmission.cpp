@@ -188,6 +188,16 @@ namespace sw
         }
     }
 
+    bool D3D12RHIDevice::debugRemoveDevice()
+    {
+        Microsoft::WRL::ComPtr<ID3D12Device5> device5;
+        if ( _device == nullptr || FAILED( _device.As( &device5 ) ) )
+            return false;
+        SW_LOG_WARNING( "Removing the D3D12 device on request (rhi.removeDevice) - every later GPU call fails as after a TDR" );
+        device5->RemoveDevice();
+        return true;
+    }
+
     void D3D12RHIDevice::waitForPreviousFrame()
     {
         if ( _commandQueue == nullptr || _fence == nullptr )

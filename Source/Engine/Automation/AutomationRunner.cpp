@@ -16,10 +16,12 @@
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Automation/AutomationWindowSteps.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -345,6 +347,31 @@ namespace sw
                 return true;
             }
 
+            /** @brief 탐침 `Input.VirtualCursorEnabled` 입니다. 패드 가상 커서가 켜져 있으면 1 입니다(명령형 디렉터가 플레이 동안 켠다). */
+            [[nodiscard]] static bool readVirtualCursorEnabled( const GameObjectManager* pManager, float64& outValue )
+            {
+                (void)pManager;
+                if ( engine::areEngineServicesBound() == false )
+                    return false;
+                outValue = engine::getSubsystem<InputManager>().getVirtualCursor().isEnabled() ? 1.0 : 0.0;
+                return true;
+            }
+
+            /** @brief 탐침 `Terrain.WrittenEditCount` 입니다. 디스크에서 다시 읽은 뒤 높이나 스플랫을 쓴 지형 수입니다(저장하지 않은 편집이 교체 · 리로드를 넘었는지 본다). */
+            [[nodiscard]] static bool readTerrainWrittenEditCount( const GameObjectManager* pManager, float64& outValue )
+            {
+                if ( pManager == nullptr )
+                    return false;
+                uint32 count{ 0 };
+                for ( const TerrainComponent* pTerrain : pManager->getComponentRegistry().getAll<TerrainComponent>() )
+                {
+                    if ( pTerrain->hasWrittenEdits() )
+                        ++count;
+                }
+                outValue = static_cast<float64>( count );
+                return true;
+            }
+
             /** @brief 탐침 `Scene.ObjectCount` 입니다. 활성 씬의 오브젝트 수입니다(핫 리로드 · 백엔드 교체 앞뒤로 씬이 그대로인지 볼 때 씁니다). */
             [[nodiscard]] static bool readSceneObjectCount( const GameObjectManager* pManager, float64& outValue )
             {
@@ -386,7 +413,11 @@ namespace sw
 {
     SW_AUTOMATION_PROBE( inputOsDeviceInputBlocked, "Input.OsDeviceInputBlocked", "1 while unattended automation drops the person's mouse and keyboard window events",
                          &AutomationRunnerInternal::readOsDeviceInputBlocked );
+    SW_AUTOMATION_PROBE( inputVirtualCursorEnabled, "Input.VirtualCursorEnabled", "1 while the gamepad virtual cursor is on (command directors turn it on for play)",
+                         &AutomationRunnerInternal::readVirtualCursorEnabled );
     SW_AUTOMATION_PROBE( sceneObjectCount, "Scene.ObjectCount", "Objects in the active scene", &AutomationRunnerInternal::readSceneObjectCount );
+    SW_AUTOMATION_PROBE( terrainWrittenEditCount, "Terrain.WrittenEditCount", "Terrains whose heights or splat were written since they were last read from disk",
+                         &AutomationRunnerInternal::readTerrainWrittenEditCount );
     SW_AUTOMATION_PROBE( sceneTransitioning, "Scene.Transitioning", "1 while an asynchronous scene load or transition is in flight",
                          &AutomationRunnerInternal::readSceneTransitioning );
 #if SW_PROFILER_TRACE_ENABLED

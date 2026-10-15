@@ -80,7 +80,7 @@ namespace sw::editor
 
     void EditorViewportClient::resetCameraToDefault()
     {
-        _camera                       = EditorViewportCamera{};
+        _camera.resetToDefault();
         _toolbarSettings._cameraSpeed = getPreferences<EditorViewportPreferences>()._cameraSpeed;
     }
 

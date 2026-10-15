@@ -21,8 +21,9 @@ namespace sw::editor
         float2 _min{};
         float2 _max{};
         uint32 _itemID{ 0 };
-        uint32 _viewportID{ 0 }; ///< 위젯이 그려진 뷰포트. 떠 있는 창(자기 플랫폼 창)이면 마우스를 옮길 때 그 뷰포트를 "커서 아래" 로 알린다
-        uint32 _frame{ 0 };      ///< 기록한 ImGui 프레임 번호. 지난 프레임에 그려지지 않은 위젯을 누르지 않게 한다
+        uint32 _viewportID{ 0 };   ///< 위젯이 그려진 뷰포트. 떠 있는 창(자기 플랫폼 창)이면 마우스를 옮길 때 그 뷰포트를 "커서 아래" 로 알린다
+        uint32 _frame{ 0 };        ///< 기록한 ImGui 프레임 번호. 지난 프레임에 그려지지 않은 위젯을 누르지 않게 한다
+        bool   _bClipped{ false }; ///< 사각형이 그린 창의 보이는 영역 밖이다(스크롤 아래). 누르면 다른 위젯이 받으므로 클릭 · 드래그 단계가 실패로 알린다
     };
 } // namespace sw::editor
 

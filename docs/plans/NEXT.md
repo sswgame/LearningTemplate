@@ -23,21 +23,24 @@ main 은 `origin/main` 보다 184 커밋 앞서 있고 push 하지 않았습니�
 - `D:\w\visual`: 병합은 끝났습니다. 에디터 기능 캡처(`captures/`)와 미추적 시나리오(`Resource/engine/automation/vis/`)가 남아 있으니 필요한 것만 챙기고 `py -3 -m Scripts worktree-remove visual --force` 로 지웁니다.
 - `D:\w\perfbase` · `perfbase2` 는 성능 기준선이라 남깁니다.
 
-## 2. 새 세션의 첫 일: 검증
+## 2. 검증 상태와 남은 검증
 
-오늘 병합마다 Debug 전체 빌드는 경고 0 · 오류 0 으로 확인했지만, 병합된 전체의 테스트는 한 번도 돌리지 않았습니다. 순서는 다음과 같습니다.
+2026-10-15 `verify` 묶음이 병합된 전체(terrain2 · modgpu · fixnogpu · fixlint · cond · folders · structure 포함)를 검증했습니다. Debug · Shipping `all AllTests` 경고 0 · 오류 0,
+`lint` 68/68, Debug `nogpu` 49/49, Shipping `nogpu` 48/48, Debug · Shipping `hostgpu` 7/7(에디터 체인 네 백엔드 · 게임 팩 시나리오 × 네 백엔드 · 스모크)입니다.
+Shipping 키트는 STATIC 이고 내보내기 매크로가 빈 것을 산출물로 확인했습니다(키트 TU 246 개에 내보내기 정의 0, 정적 `GF_*.lib` 47 개의 `/EXPORT` 지시문 0).
+`rhiswap` 시나리오 셋(`swapbackends` · `terrainedits` · `removedevice`)은 AppScenarioTest 밖이라 손으로 돌렸고 모두 통과했습니다.
 
-1. `ctest --preset Ninja-Debug-nogpu` 와 `-lint`.
-2. Ninja-Shipping `all AllTests` 경고 0, Shipping `ctest -L nogpu`. Shipping 은 키트가 STATIC 이라 내보내기 매크로가 빈다는 것을 코드로만 확인했습니다.
-3. `ctest -L hostgpu` 직렬. Release 빌드와 네 백엔드 스크린샷 sha 대조(기준 `D:\w\perfbase`).
-4. 알려진 실패: `editor.uipreview` 가 속성 편집 단계(프레임 375)에서 DX12 · Vulkan · GL 모두 결정적으로 집니다. 포커스와 무관합니다. 의심 커밋은 `f46dc5fde` · `62bd5b3f7` · `999eef7d1` 이고 이분 탐색은 하지 않았습니다. `AppTest` 의 에디터 케이스가 이것 때문에 빨갛습니다. 백로그 A-1.
-5. Linux 전용 파일은 Windows 에서 컴파일되지 않아 기계적 치환만 하고 짓지 못했습니다(`PosixCrashHandler.cpp` · `EpollStreamTransport.cpp` · `FileUtil.cpp` 의 `st_mtim` 분기 · `HardwareProbe.cpp`). 사용자가 요청할 때만 WSL 로 확인합니다.
+남은 검증은 다음과 같습니다.
+
+1. Release 빌드와 네 백엔드 스크린샷 sha 대조(기준 `D:\w\perfbase`). 이번 묶음에서 돌리지 않았습니다.
+2. Linux 전용 파일은 Windows 에서 컴파일되지 않아 기계적 치환만 하고 짓지 못했습니다(`PosixCrashHandler.cpp` · `EpollStreamTransport.cpp` · `FileUtil.cpp` 의 `st_mtim` 분기 · `HardwareProbe.cpp`). 사용자가 요청할 때만 WSL 로 확인합니다.
+3. 열린 결함은 백로그 A-2(Vulkan 장치 손실 뒤 대기 — DX12 흉내로는 행 없음) · A-3 · A-4(D3D12 디버그 레이어의 `DrawInstanced` 정점 버퍼 부족 경고)와 관찰 E-11(netconditions DX11 1 회)입니다.
 
 ## 3. 계획한 큰 일 (순서대로)
 
 1. **구조 리팩토링과 데이터 주도의 나머지.** 백로그 `C-26` 에 순서대로 있습니다(4 절).
 2. **서브틱 활용 조사.** `PostUpdate` 로 옮긴 컴포넌트 41 개를 전수 분류합니다(5 절).
-3. **그 밖.** 지형 후속(식생 · 내비 재계산, 콜라이더 부분 갱신 측정), 다중 월드 잔여(프리팹 창, 창별 선택과 전역 선택 연결, 스카이), 캐릭터 편집 (a) 미리보기 씬 이관과 (c) 슬라이더, 서버 디버그 잔여(클라이언트 해시, 어긋난 오브젝트 짚기), `nogpu` 샤드 결정, `TaskNode` · PCH · 에디터 기동 시간 측정, 열린 결함 A-2(TDR 뒤 행).
+3. **그 밖.** 지형 후속(식생 · 내비 재계산, 콜라이더 부분 갱신 측정), 다중 월드 잔여(프리팹 창, 창별 선택과 전역 선택 연결, 스카이), 캐릭터 편집 (a) 미리보기 씬 이관과 (c) 슬라이더, 서버 디버그 잔여(클라이언트 해시, 어긋난 오브젝트 짚기), `nogpu` 샤드 결정, `TaskNode` · PCH · 에디터 기동 시간 측정, 열린 결함 A-2 · A-4.
 
 ## 4. 구조 리팩토링과 데이터 주도 (2026-10-15 묶음)
 
