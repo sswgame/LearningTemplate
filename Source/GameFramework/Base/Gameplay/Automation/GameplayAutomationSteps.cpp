@@ -184,7 +184,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief 탐침 `Schedule.Activity` 입니다. NPC 가 지금(가는 중이면 가서 할) 칸의 활동 이름이고, 없으면 `none` 입니다. */
+            /** @brief 탐침 `Schedule.Activity` 입니다. NPC 가 지금(가는 중이면 가서 할) 블록의 활동 이름이고, 없으면 `none` 입니다. */
             [[nodiscard]] static bool readScheduleActivity( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
             {
                 const ScheduleSystem* pSystem  = nullptr;
@@ -224,7 +224,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 탐침 `Schedule.DistanceToPlace` 입니다. NPC 의 일정상 자리에서 카탈로그 장소 `key` 까지의 지면 거리(m)입니다. */
+            /** @brief 탐침 `Schedule.DistanceToPlace` 입니다. NPC 의 일정상 위치에서 카탈로그 장소 `key` 까지의 지면 거리(m)입니다. */
             [[nodiscard]] static bool readScheduleDistanceToPlace( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
             {
                 const ScheduleSystem* pSystem  = nullptr;
@@ -241,7 +241,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 탐침 `Schedule.DistanceToTarget` 입니다. NPC 의 일정상 자리에서 지금 칸의 목표 자리까지 지면 거리(m)이며, 닿았으면 0 입니다. */
+            /** @brief 탐침 `Schedule.DistanceToTarget` 입니다. NPC 의 일정상 위치에서 지금 블록의 목표 위치까지 지면 거리(m)이며, 닿았으면 0 입니다. */
             [[nodiscard]] static bool readScheduleDistanceToTarget( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
             {
                 const ScheduleSystem* pSystem  = nullptr;

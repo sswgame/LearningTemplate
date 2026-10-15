@@ -2442,6 +2442,14 @@
    "source": "Source/Engine/Scene/AuthorityGhost.cpp"
   },
   {
+   "name": "gv_automationHashDump",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "Scene.TransformHash 를 읽을 때 오브젝트마다 이름 · 위치를 로그로 (1=켜기, 결정성 진단)",
+   "source": "Source/Engine/Automation/AutomationRunner.cpp"
+  },
+  {
    "name": "gv_benchAnimate",
    "type": "int32",
    "default": "1",

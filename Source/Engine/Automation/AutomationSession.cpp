@@ -148,7 +148,7 @@ namespace sw
 
     int32 AutomationSession::onFrameEnd( const EngineFrameContext& context )
     {
-        // 녹화는 시나리오보다 먼저 이 프레임을 적는다 — 시나리오가 이 프레임에 끝나도 마지막 프레임이 녹화에 든다.
+        // 녹화는 시나리오보다 먼저 이 프레임을 적는다 — 시나리오가 이 프레임에 끝나도 마지막 프레임이 녹화에 포함된다.
         if ( _recorder.isRecording() && context._pInput != nullptr )
             _recorder.update( *context._pInput, context._deltaSeconds );
         // `isActive` 가 아니라 `hasEnded` — 시작 프레임에서 진 시나리오(읽기 오류 · 시작 시한)도 여기서 끝맺고 그 코드로 끝난다.

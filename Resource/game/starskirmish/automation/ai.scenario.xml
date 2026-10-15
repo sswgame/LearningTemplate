@@ -9,7 +9,7 @@
 <Scenario name="starskirmish.ai" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" input="exclusive">
 	<At frame="0"><Variable name="gv_skirmishAutoPlay" value="0"/></At>
 	<At frame="10"><Expect probe="Skirmish.AITask" key="1" is="GatherIdle"/></At>
-	<!-- 20 초 안에 첫 일꾼을 만들고, 그 뒤 40 초 안에 보급 건물을 짓는다. -->
+	<!-- 20 초 안에 첫 일꾼을 만들고, 그 뒤 40 초 안에 보급 건물을 건설한다. -->
 	<At frame="11"><WaitUntil probe="Skirmish.AITask" key="1" is="TrainWorkers" timeoutSeconds="20"/></At>
 	<At after="1"><WaitUntil probe="Skirmish.AITask" key="1" is="BuildSupply" timeoutSeconds="40"/></At>
 	<At after="1">

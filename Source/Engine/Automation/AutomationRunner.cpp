@@ -35,6 +35,9 @@ namespace sw
 {
     SW_LOG_CALLER( "Automation" );
 
+    /** @brief 결정성이 깨졌을 때 원인 오브젝트를 찾는 진단 스위치입니다. 1 이면 `Scene.TransformHash` 를 읽을 때 오브젝트마다 이름과 위치를 로그로 남깁니다(두 실행의 로그를 비교한다). */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_automationHashDump, 0, "Scene.TransformHash 를 읽을 때 오브젝트마다 이름 · 위치를 로그로 (1=켜기, 결정성 진단)" );
+
     namespace
     {
         struct AutomationRunnerInternal
@@ -293,7 +296,7 @@ namespace sw
                 return checkAttributeNames( step, { "probe", "target", "key" }, outError ) && validateProbeReference( step, outError );
             }
 
-            /** @brief 쉼표로 가른 값 목록입니다(앞뒤 공백을 떼고 빈 항목은 버린다). */
+            /** @brief 쉼표로 가른 값 목록입니다(앞뒤 공백을 제거하고 빈 항목은 버린다). */
             static vector<string> splitList( string_view text )
             {
                 vector<string> listValue;
@@ -536,6 +539,8 @@ namespace sw
                     hash                           = HashUtil::combine( hash, static_cast<uint64>( static_cast<int64>( MathUtil::round( position._y * kHashUnitsPerMeter ) ) ) );
                     hash                           = HashUtil::combine( hash, static_cast<uint64>( static_cast<int64>( MathUtil::round( position._z * kHashUnitsPerMeter ) ) ) );
                     sum += static_cast<uint32>( HashUtil::mix64( hash ) );
+                    if ( gv_automationHashDump != 0 )
+                        SW_LOG_INFO( "[Scenario] hash item %# %# %# %#", pObject->getName().c_str(), position._x, position._y, position._z );
                 } );
                 outValue = static_cast<float64>( sum );
                 return true;
@@ -939,6 +944,14 @@ namespace sw
             const GameObjectManager* pManager = findActiveObjectManager();
             const bool               bBlocked = AutomationStepRegistry::isStartBlocked();
             const bool               bReady   = _scenario.getStartCondition() == AutomationStartCondition::Immediately || ( pManager != nullptr && pManager->hasBegunPlay() && bBlocked == false );
+            // 배타 시나리오는 시작 조건을 기다리는 프레임에도 사람의 장치를 버린다. 기다리는 동안 게임이 실제 마우스 위치를 읽으면(건설 커서 등)
+            // 그 값이 게임 상태에 남아 같은 시나리오가 실행마다 다른 결과를 낸다. 시작할 때 다시 붙여 가상 입력 프레임을 0 부터 센다.
+            const bool bBlockWhileWaiting = _scenario.getInputMode() == VirtualInputMode::Exclusive && input.getVirtualInput() != &_inputScript;
+            if ( bBlockWhileWaiting )
+            {
+                input.attachVirtualInput( &_inputScript, VirtualInputMode::Exclusive );
+                input.setOsDeviceInputBlocked( true );
+            }
             if ( bReady == false )
             {
                 if ( ++_waitFrameCount > _scenario.getStartTimeoutFrames() )

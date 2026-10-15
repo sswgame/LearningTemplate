@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  HarvestValley 자동 농부 AI — 판단 상태(AI.State)와 블랙보드 · 목표 도달을 단언한다. 아침 6 시, 갈린 칸이 없고 봄 씨앗 10 개로 시작하므로
-  첫 할 일은 갈기(Till)이고, 갈린 칸이 생기면 심기(Sow, 우선순위 3)가 갈기(2)보다 앞서고, 심은 칸은 물주기(Water, 4)가 앞선다.
-  자동 농부 조종자 오브젝트는 FarmAutoFarmer(자동 플레이를 켜면 디렉터가 세운다), 폰은 Farmer 다.
+  HarvestValley 자동 농부 AI — 판단 상태(AI.State)와 블랙보드 · 목표 도달을 단언한다. 아침 6 시, 갈린 타일이 없고 봄 씨앗 10 개로 시작하므로
+  첫 할 일은 갈기(Till)이고, 갈린 타일이 생기면 심기(Sow, 우선순위 3)가 갈기(2)보다 앞서고, 심은 타일은 물주기(Water, 4)가 앞선다.
+  자동 농부 조종자 오브젝트는 FarmAutoFarmer(자동 플레이를 켜면 디렉터가 스폰한다), 폰은 Farmer 다.
   App -game=HarvestValley -scenario=game/harvestvalley/automation/autofarmer.scenario.xml (종료 코드 0 = 통과)
 -->
 <Scenario name="harvestvalley.autofarmer" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" input="exclusive">
@@ -19,7 +19,7 @@
 		<ExpectVisited probe="AI.State" target="FarmAutoFarmer" sequence="Till, Sow, Water"/>
 		<ExpectVisited probe="AI.MoveStatus" target="FarmAutoFarmer" sequence="Moving, Idle"/>
 		<Expect probe="Farm.TilledCount" atLeast="1"/>
-		<!-- 일을 했으니 체력이 줄었다(최대 100 — 괭이 4 · 씨앗 1). 서려는 자리는 블랙보드에 있다. -->
+		<!-- 일을 했으니 체력이 줄었다(최대 100 — 괭이 4 · 씨앗 1). 서려는 위치는 블랙보드에 있다. -->
 		<Expect probe="AI.Blackboard" target="FarmAutoFarmer" key="Stamina" atMost="95"/>
 		<Expect probe="AI.Blackboard" target="FarmAutoFarmer" key="StandPosition" atLeast="0.5"/>
 		<Record probe="Farm.TilledCount"/>

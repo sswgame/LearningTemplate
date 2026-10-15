@@ -97,7 +97,7 @@ namespace
                     }
                     SW_EXPECT_TRUE_MSG( exitCode == 0, label.c_str() );
                     ++ranCount;
-                    // 결정적 재생: `<Record>` 줄은 백엔드마다 같아야 한다. 처음 돈 백엔드를 기준으로 견준다.
+                    // 결정적 재생: `<Record>` 줄은 백엔드마다 같아야 한다. 처음 돈 백엔드를 기준으로 비교한다.
                     const sw::vector<sw::string> listRecord = test::AppTestUtil::readReportRecords( test::AppTestUtil::makeReportPath( scenarioPath, pSwitch ) );
                     if ( pFirstSwitch == nullptr )
                     {
@@ -323,7 +323,7 @@ SW_TEST_CASE( AppScenarioTest, EveryGamePackScenarioPassesOnEveryBackend )
 /**
  * @brief [AppScenarioTest] 시나리오로 돌린 플레이를 녹화(`-scenario-record`)하고 그 녹화를 다시 돌리면 끝 프레임의 검사점이 같다 — 백엔드마다
  * @details 녹화는 시나리오가 낸 가상 입력과 끝 프레임의 탐침 값(`-scenario-record-probes`)을 담는다. 같은 입력 · 같은 고정 틱이면 같은 상태가 나와야 한다(결정적 재생).
- *          HarvestValley 팩의 `actions` 시나리오를 쓴다(농부 자리 · 간 칸 · 빙의). 팩을 짓지 않은 빌드(Shipping)는 건너뛴다.
+ *          HarvestValley 팩의 `actions` 시나리오를 쓴다(농부 위치, 간 타일 수, 빙의). 팩을 빌드하지 않은 구성(Shipping)은 건너뛴다.
  */
 SW_TEST_CASE( AppScenarioTest, RecordedPlayReplaysOnEveryBackend )
 {

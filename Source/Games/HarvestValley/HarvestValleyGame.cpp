@@ -29,7 +29,7 @@ namespace sw
         // 상태 스냅샷에 오르는 컴포넌트 — 저장 전에 상태를 싣고 세운 것을 걷으며, 복원 뒤 돌려준다.
         registerStatefulComponent<SessionStateComponent>(); // 공유 상태가 디렉터보다 먼저 돌아온다
         registerDirector<FarmDirectorComponent>();
-        registerDirector<FarmVillageDirectorComponent>(); // 농장 디렉터 뒤 — 같은 시계로 일정을 다시 세운다
+        registerDirector<FarmVillageDirectorComponent>(); // 농장 디렉터 뒤 — 같은 시계로 일정을 다시 만든다
     }
 
     HarvestValleyGame::~HarvestValleyGame() = default;

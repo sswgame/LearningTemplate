@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  HarvestValley 마을 사람 일정 — 판 상태의 시계를 감고(AdvanceGameTime) 그 시각에 NPC 가 있어야 할 자리 · 활동을 단언한다.
-  일정은 data/villagers.schedules.xml(ScheduleSystem), 몸은 Villager.<id>(FarmVillagerComponent 가 일정상 자리를 따라간다). 0 일은 월요일이고 6:00 에 시작한다.
+  HarvestValley 마을 사람 일정 — 판 상태의 시계를 감고(AdvanceGameTime) 그 시각에 NPC 가 있어야 할 위치와 활동을 단언한다.
+  일정은 data/villagers.schedules.xml(ScheduleSystem), 몸은 Villager.<id>(FarmVillagerComponent 가 일정상 위치를 따라간다). 0 일은 월요일이고 6:00 에 시작한다.
   pierre: 평일 9:00–17:00 가게(general_store 24,0,6) WorkAt, 17:00–19:00 광장 벤치 UseObject. harvey: 9:00–15:00 병원, 15:00–17:00 강가(river) GoTo, 그 뒤 집.
   App -game=HarvestValley -scenario=game/harvestvalley/automation/schedule.scenario.xml (종료 코드 0 = 통과)
 -->
 <Scenario name="harvestvalley.schedule" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" input="exclusive">
 	<At frame="0"><Variable name="gv_farmAutoPlay" value="0"/></At>
-	<!-- 6 시 — 모두 집에서 잔다. 몸은 집 자리(pierre_house 22,0,2)에 서 있다. -->
+	<!-- 6 시 — 모두 집에서 잔다. 몸은 집 위치(pierre_house 22,0,2)에 서 있다. -->
 	<At frame="10">
 		<Expect probe="Clock.Day" equals="0"/>
 		<Expect probe="Schedule.Activity" target="pierre" is="Sleep"/>
@@ -30,7 +30,7 @@
 		<Expect probe="Object.X" target="Villager.pierre" near="24" tolerance="1"/>
 		<Expect probe="Object.Z" target="Villager.pierre" near="6" tolerance="1"/>
 	</At>
-	<!-- 16 시 — harvey 는 강가로 갔다(낮에만 가는 칸). pierre 는 아직 가게. -->
+	<!-- 16 시 — harvey 는 강가로 갔다(낮에만 가는 블록). pierre 는 아직 가게. -->
 	<At after="1"><AdvanceGameTime toHour="16"/></At>
 	<At after="1">
 		<Expect probe="Schedule.Activity" target="harvey" is="GoTo"/>

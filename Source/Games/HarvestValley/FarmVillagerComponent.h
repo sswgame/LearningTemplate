@@ -1,6 +1,6 @@
 /**
  * @file FarmVillagerComponent.h
- * @brief 마을 사람 한 명의 모습 — 마을 디렉터가 적은 일정상 자리를 따라 자기 메시를 옮깁니다.
+ * @brief 마을 사람 한 명의 모습 — 마을 디렉터가 적은 일정상 위치를 따라 자기 메시를 옮깁니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

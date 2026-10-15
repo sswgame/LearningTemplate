@@ -45,6 +45,9 @@
 
 ## README
 
+### 엔진 모듈
+- [Automation](../Source/Engine/Automation/README.md) — 자동화 시나리오 형식, 단계와 탐침, 결정적 재생과 녹화
+
 ### 게임
 - [Source/Games](../Source/Games/README.md) — 게임을 더하는 법, 게임 목록
   - [AbilityArena](../Source/Games/AbilityArena/README.md), [HarvestValley](../Source/Games/HarvestValley/README.md), [MeadowVillage](../Source/Games/MeadowVillage/README.md), [NileCity](../Source/Games/NileCity/README.md),

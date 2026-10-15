@@ -308,3 +308,20 @@ SW_TEST_CASE( AutomationGameplayStepsTest, RecordingCarriesCheckpointsAndSynthet
     const sw::ScenarioRecordOutput withoutSynthetic = sw::ScenarioRecorder::toScenarioXML( listFrame, settings );
     SW_EXPECT_EQUAL( 0u, withoutSynthetic._writtenStepCount );
 }
+
+/**
+ * @brief [AutomationGameplayStepsTest] 배타 시나리오는 시작 조건을 기다리는 프레임에도 사람의 장치를 버리고 포인터를 (0, 0) 에 둔다
+ * @details 기다리는 동안 게임이 실제 마우스 위치를 읽으면 NileCity 건설 커서처럼 게임 상태에 남아 같은 시나리오가 실행마다 다른 해시를 냈다.
+ */
+SW_TEST_CASE( AutomationGameplayStepsTest, ExclusiveScenarioBlocksTheDevicesWhileWaiting )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::AutomationRunner runner;
+    SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="ScenePlaying" startTimeoutFrames="5"><At frame="1"><Pass/></At></Scenario>)" ) );
+    runner.onFrameBegin( input ); // 씬이 없으니 시작 조건을 기다린다
+    SW_EXPECT_TRUE( input.isVirtualInputAttached() );
+    SW_EXPECT_TRUE( input.isOsDeviceInputBlocked() );
+    SW_EXPECT_FALSE( runner.hasEnded() );
+    input.shutdown();
+}
