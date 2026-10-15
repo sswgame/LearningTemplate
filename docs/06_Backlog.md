@@ -190,10 +190,7 @@
 
 - `C-26` **구조 리팩토링 · 데이터 주도의 남은 것**(2026-10-15 묶음 뒤). 끝난 것: 온라인 키트 클라이언트 골격(`OnlineKitClient`), 열거자 이름 표 → `ENUM()` · `getEnumName`,
   위임 카탈로그 18 개 → `GameCatalog<TDef>` 직접 상속, 틱 시스템 밖 `tick` → `update` 와 개수 이름(`Naming/CountFirst`), 컴포넌트 아이콘 → `REFLECT( Meta = "Icon=…" )`,
-  머티리얼 사용 define · 서비스 지표 결과 라벨 → 열거자 이름, `InputMap` 의 `InputActionBuffer` 분리, 키트 서버 조립의 옵션 표(`readOptions`) · 메서드 표(`OnlineMethodTable`). 남은 것(순서대로):
-  ② **얇은 `Util`**: 조사에서 호출처 0~2 곳인 것 40 개 중 옮길 것 11 개(`.cpp` 안으로: `PluralRuleUtil` · `RHIInitResultUtil` · `EditorFrameStepUtil`,
-     한 타입의 메서드로: `BodyShapeUtil` · `BuoyancyUtil` · `SurfaceMaskUtil` · `PokerPotUtil` · `JSONWebTokenUtil` · `TradeInventoryUtil` · `EditorSubsystemRegistrationUtil`).
-     뒤쪽 일곱은 테스트만 부르므로 결정 기록 5-4 "테스트만 쓰는 공개 타입" 기준을 함께 적용한다. 카탈로그 중 다른 표를 함께 드는 것(`CropCatalog` · `VoxelBlockCatalog` · `AreaGraph`)은 그대로 둔다.
+  머티리얼 사용 define · 서비스 지표 결과 라벨 → 열거자 이름, `InputMap` 의 `InputActionBuffer` 분리, 키트 서버 조립의 옵션 표(`readOptions`) · 메서드 표(`OnlineMethodTable`), 얇은 `Util` 열 개 정리. 남은 것(순서대로):
   ③ **이름**: `add` / `register` / `append` 의 쓰임 기준(컨테이너에 넣기 · 콜백 등록 · 끝에 잇기)을 AGENTS.md 표로 정하고 어긋난 것을 고친다.
      `Settings` 중 `Config`(배포 · 프리셋) 31 개와 `Def`(저작 데이터) 27 개 후보를 하나씩 판정해 개명한다 — 리플렉션 타입 이름이 데이터에 적힌 곳은 데이터도 다시 쓴다.
   ④ **데이터 주도**: 게임 · 키트 튜닝 상수 → `PROPERTY` · 팩 설정, 작물 · 유닛 색 → `Def` 속성, `LoadBot` 동작 표 통합, 이벤트 필드 목록 → 필드 표 Emit 열,

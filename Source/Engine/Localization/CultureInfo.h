@@ -1,7 +1,7 @@
 /**
  * @file CultureInfo.h
  * @brief 문화권(culture) 데이터와 그 테이블(`*.cultures.json`)을 정의합니다. 복수형 규칙, 숫자와 날짜 형식, 쓰기 방향, 폰트 대체 목록을 담습니다.
- * @details 숫자 기호, 날짜 패턴, 월 이름, 폰트 목록은 데이터이고, 코드는 이름으로 고르는 복수형 규칙 레지스트리(`PluralRuleUtil`)만 가진다.
+ * @details 숫자 기호, 날짜 패턴, 월 이름, 폰트 목록은 데이터이고, 코드는 이름으로 고르는 복수형 규칙 표(`CultureInfo.cpp`)만 가진다.
  *          ICU 와 CLDR 를 들이지 않고 그 형식의 부분 집합을 따른다(패턴 기호는 y, M, d, H, h, m, s, a).
  */
 #pragma once
@@ -63,28 +63,8 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 복수형 규칙 하나입니다. 데이터(`pluralRule` · `ordinalRule`)가 이름으로 고르며, 고를 수 있는 이름은 `CultureInfo.cpp` 의 규칙 표에 있는 것뿐입니다. */
     using PluralRuleFunc = PluralCategory ( * )( const PluralOperands& operands );
-
-    /**
-     * @struct PluralRuleUtil
-     * @brief 이름으로 고르는 복수형 규칙 레지스트리와 범주 이름입니다. 데이터(`pluralRule`)가 고를 수 있는 이름은 여기 있는 것뿐이며, 모르는 이름은 로드 오류입니다.
-     * @details `none`(ko, ja, zh. other 하나), `english`(one: i=1, v=0), `french`(one: i=0,1), `russian`(ru, uk), `polish`, `czech`, `arabic` 이 있다.
-     */
-    struct SW_API PluralRuleUtil
-    {
-        /** @brief 규칙 이름의 함수입니다. 모르는 이름이면 nullptr 입니다. */
-        static PluralRuleFunc findRule( string_view ruleName );
-        /** @brief 등록된 규칙 이름을 모읍니다. */
-        static void collectRuleNames( vector<string>& outListName );
-        /** @brief 범주의 키워드(`one` …)입니다. */
-        static const utf8* getCategoryName( PluralCategory category );
-        /** @brief 서수 규칙 이름의 함수입니다(`selectordinal` 이 씁니다). 모르는 이름이면 nullptr 입니다. `none`(other 하나), `english`(1st · 2nd · 3rd · 4th), `french`(1er · 2e) 가 있습니다. */
-        static PluralRuleFunc findOrdinalRule( string_view ruleName );
-        /** @brief 등록된 서수 규칙 이름을 모읍니다. */
-        static void collectOrdinalRuleNames( vector<string>& outListName );
-        /** @brief 키워드를 범주로 읽습니다. 모르는 키워드면 false 입니다. */
-        [[nodiscard]] static bool tryParseCategory( string_view keyword, PluralCategory& outCategory );
-    };
 } // namespace sw
 
 namespace sw
@@ -146,6 +126,10 @@ namespace sw
         PluralCategory selectPlural( const PluralOperands& operands ) const;
         /** @brief 서수(1st · 2nd) 범주를 고릅니다. */
         PluralCategory selectOrdinal( const PluralOperands& operands ) const;
+        /** @brief 복수형 범주의 키워드(`one` …, ICU MessageFormat)입니다. */
+        static const utf8* getPluralKeyword( PluralCategory category );
+        /** @brief 키워드를 범주로 읽습니다. 모르는 키워드면 false 입니다. */
+        [[nodiscard]] static bool tryParsePluralKeyword( string_view keyword, PluralCategory& outCategory );
         /** @brief 의사 로컬라이제이션 문화권인지입니다. */
         bool isPseudo() const { return _pseudoMode != PseudoLocaleMode::None; }
 

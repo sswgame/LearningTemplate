@@ -138,7 +138,7 @@ namespace
             {
                 if ( index != 0 )
                     jwks += ",";
-                jwks += JSONWebTokenUtil::writeJwk( listKey[index]->_publicKey, listKey[index]->_keyID );
+                jwks += JwksKeyCache::writeJwk( listKey[index]->_publicKey, listKey[index]->_keyID );
             }
             return jwks + "]}";
         }
@@ -151,7 +151,7 @@ namespace
                 payload += string( ",\"nonce\":\"" ) + pNonce + "\"";
             payload += "}";
             string compact;
-            (void)JSONWebTokenUtil::makeSigned( NetSecurity::getProvider(), key._algorithm, key._keyID, payload, key._privateKeyPem, compact );
+            (void)JSONWebToken::makeSigned( NetSecurity::getProvider(), key._algorithm, key._keyID, payload, key._privateKeyPem, compact );
             return compact;
         }
 

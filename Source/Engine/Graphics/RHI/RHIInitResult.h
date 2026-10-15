@@ -22,17 +22,4 @@ namespace sw
 
     /** @brief App 이 "이 기계에서 그 백엔드를 못 돌린다" 로 끝날 때의 종료 코드입니다(automake · CTest `SKIP_RETURN_CODE` 의 건너뜀 관례). */
     inline constexpr int32 kRHIUnusableHereExitCode = 77;
-
-    /**
-     * @struct RHIInitResultUtil
-     * @brief `RHIInitResult` 에 대한 질문을 한 자리에 둡니다.
-     */
-    struct RHIInitResultUtil
-    {
-        /** @brief 이 기계 · 빌드가 그 백엔드를 못 돌린다는(환경) 결과면 true 입니다. 결함일 수 있는 `Failed` 는 false 입니다. */
-        static constexpr bool isUnusableHere( RHIInitResult result )
-        {
-            return result == RHIInitResult::BackendNotBuilt || result == RHIInitResult::DriverUnsupported;
-        }
-    };
 } // namespace sw

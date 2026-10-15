@@ -535,8 +535,8 @@ SW_TEST_CASE( SurfaceTransferTest, TransfersBodyMorphAndSkinWeightsToGarment )
                               1.0e-5f );
     }
     // 묶음은 모프를 건 몸을 따라간다 — 몸을 부풀리면 묶인 점도 같이.
-    BodyShapeUtil::applyMorphs( body, vector<BodyMorphWeight>{
-                                          BodyMorphWeight{ hashed_string( "Heavy" ), 1.0f }
+    body.applyMorphs( vector<BodyMorphWeight>{
+        BodyMorphWeight{ hashed_string( "Heavy" ), 1.0f }
     } );
     const float3 movedPoint = SurfaceTransferUtil::evaluatePoint( body, listBinding[0] );
     SW_EXPECT_NEAR_EQUAL( 0.06f, test::CharacterTestUtil::computeRadius( movedPoint ), 5.0e-4f );

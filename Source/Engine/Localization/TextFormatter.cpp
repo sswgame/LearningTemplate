@@ -335,7 +335,7 @@ namespace sw
                     if ( bExact && bPlural == false )
                         return fail( "'=N' is only for plural" );
                     PluralCategory category{ PluralCategory::Other };
-                    const bool     bUnknownPluralKeyword = bPlural && bExact == false && PluralRuleUtil::tryParseCategory( selector, category ) == false;
+                    const bool     bUnknownPluralKeyword = bPlural && bExact == false && CultureInfo::tryParsePluralKeyword( selector, category ) == false;
                     if ( bUnknownPluralKeyword )
                         return fail( "unknown plural keyword '" + string( selector ) + "'" );
                     skipSpace();
@@ -434,7 +434,7 @@ namespace sw
                                                   ? PluralOperands::makeInteger( static_cast<int64>( shown ) )
                                                   : PluralOperands::makeDecimal( shown, CultureInfo::countVisibleFraction( shown, 0, 3 ) );
                 const PluralCategory category = bOrdinal ? _pCulture->selectOrdinal( operands ) : _pCulture->selectPlural( operands );
-                return PluralRuleUtil::getCategoryName( category );
+                return CultureInfo::getPluralKeyword( category );
             }
 
             string formatPluralNumber( const TextArgument& argument, float64 shownValue ) const

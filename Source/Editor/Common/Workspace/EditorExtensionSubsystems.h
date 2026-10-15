@@ -29,18 +29,23 @@ namespace sw::editor
         unique_ptr<EditorSubsystem> ( *_pCreate )();
         bool ( *_pBind )( SubsystemScope& scope, EditorSubsystem& subsystem );
         void ( *_pUnbind )( SubsystemScope& scope );
-    };
-} // namespace sw::editor
 
-namespace sw::editor
-{
-    /** @brief 등록 항목이 가리키는 함수들입니다. */
-    template <typename TSubsystem>
-    struct EditorSubsystemRegistrationUtil
-    {
-        static unique_ptr<EditorSubsystem> create() { return make_unique<TSubsystem>(); }
-        static bool                        bind( SubsystemScope& scope, EditorSubsystem& subsystem ) { return scope.bind( static_cast<TSubsystem*>( &subsystem ) ); }
-        static void                        unbind( SubsystemScope& scope ) { scope.unbind<TSubsystem>(); }
+        /** @brief 등록 줄이 가리키는 함수들입니다(`SW_EDITOR_SUBSYSTEM` 이 채운다). */
+        template <typename TSubsystem>
+        static unique_ptr<EditorSubsystem> create()
+        {
+            return make_unique<TSubsystem>();
+        }
+        template <typename TSubsystem>
+        static bool bind( SubsystemScope& scope, EditorSubsystem& subsystem )
+        {
+            return scope.bind( static_cast<TSubsystem*>( &subsystem ) );
+        }
+        template <typename TSubsystem>
+        static void unbind( SubsystemScope& scope )
+        {
+            scope.unbind<TSubsystem>();
+        }
     };
 } // namespace sw::editor
 
@@ -92,7 +97,7 @@ namespace sw::editor
 } // namespace sw::editor
 
 /** @brief 확장의 에디터 서브시스템을 등록합니다. 서브시스템의 .cpp 에 한 줄 둡니다. 에디터가 만들어 에디터 범위에 걸고 `editor::findSubsystem<T>()` 로 찾습니다. */
-#define SW_EDITOR_SUBSYSTEM( TSubsystem, order )                                                                                                              \
-    SW_EDITOR_REGISTER( ::sw::editor::EditorSubsystemRegistration, Subsystem_##TSubsystem, { TSubsystem::kSubsystemName, order },                             \
-                        &::sw::editor::EditorSubsystemRegistrationUtil<TSubsystem>::create, &::sw::editor::EditorSubsystemRegistrationUtil<TSubsystem>::bind, \
-                        &::sw::editor::EditorSubsystemRegistrationUtil<TSubsystem>::unbind )
+#define SW_EDITOR_SUBSYSTEM( TSubsystem, order )                                                                                                      \
+    SW_EDITOR_REGISTER( ::sw::editor::EditorSubsystemRegistration, Subsystem_##TSubsystem, { TSubsystem::kSubsystemName, order },                     \
+                        &::sw::editor::EditorSubsystemRegistration::create<TSubsystem>, &::sw::editor::EditorSubsystemRegistration::bind<TSubsystem>, \
+                        &::sw::editor::EditorSubsystemRegistration::unbind<TSubsystem> )
