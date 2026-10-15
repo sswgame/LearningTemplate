@@ -242,9 +242,9 @@ namespace sw
             {
                 if ( validateProbeReference( step, outError ) == false )
                     return false;
-                if ( countComparisons( step, { "equals", "near", "atLeast", "atMost", "is" } ) == false )
+                if ( countComparisons( step, { "equals", "near", "atLeast", "atMost", "is", "sameAs", "differsFrom" } ) == false )
                 {
-                    outError = step.describe() + ": needs exactly one of equals · near · atLeast · atMost · is";
+                    outError = step.describe() + ": needs exactly one of equals · near · atLeast · atMost · is · sameAs · differsFrom";
                     return false;
                 }
                 float32 value = 0.0f;
@@ -255,7 +255,7 @@ namespace sw
 
             static bool validateExpect( const AutomationStep& step, string& outError )
             {
-                return checkAttributeNames( step, { "probe", "target", "key", "equals", "near", "tolerance", "atLeast", "atMost", "is" }, outError ) &&
+                return checkAttributeNames( step, { "probe", "target", "key", "equals", "near", "tolerance", "atLeast", "atMost", "is", "sameAs", "differsFrom" }, outError ) &&
                        validateProbeComparison( step, outError );
             }
 
@@ -264,8 +264,10 @@ namespace sw
             {
                 uint32  count   = 0;
                 float32 seconds = 0.0f;
-                if ( checkAttributeNames( step, { "probe", "target", "key", "equals", "near", "tolerance", "atLeast", "atMost", "is", "timeoutFrames", "timeoutSeconds" }, outError ) ==
-                     false )
+                if ( checkAttributeNames( step,
+                                          { "probe", "target", "key", "equals", "near", "tolerance", "atLeast", "atMost", "is", "sameAs", "differsFrom", "timeoutFrames",
+                                            "timeoutSeconds" },
+                                          outError ) == false )
                     return false;
                 if ( step.findAttribute( "timeoutFrames" ) != nullptr && step.findAttribute( "timeoutSeconds" ) != nullptr )
                 {
@@ -294,6 +296,13 @@ namespace sw
             static bool validateRecord( const AutomationStep& step, string& outError )
             {
                 return checkAttributeNames( step, { "probe", "target", "key" }, outError ) && validateProbeReference( step, outError );
+            }
+
+            /** @brief `Remember` 입니다. 탐침 값을 `as` 이름으로 기억합니다(뒤 단계의 `sameAs` · `differsFrom` 이 견준다). */
+            static bool validateRemember( const AutomationStep& step, string& outError )
+            {
+                return checkAttributeNames( step, { "probe", "target", "key", "as" }, outError ) && requireAttribute( step, "as", outError ) != nullptr &&
+                       validateProbeReference( step, outError );
             }
 
             /** @brief 쉼표로 가른 값 목록입니다(앞뒤 공백을 제거하고 빈 항목은 버린다). */
@@ -717,6 +726,12 @@ namespace sw
             return true;
         }
 
+        static bool runRemember( AutomationRunner& runner, const AutomationStep& step )
+        {
+            runner.runRemember( step );
+            return true;
+        }
+
         static bool runExpectLog( AutomationRunner& runner, const AutomationStep& step )
         {
             runner.runExpectLog( step );
@@ -836,6 +851,7 @@ namespace sw
                                    &AutomationRunnerEngineSteps::holdWaitUntil, false );
     SW_AUTOMATION_STEP( runnerExpectVisited, "ExpectVisited", &AutomationRunnerEngineSteps::runExpectVisited, &AutomationRunnerInternal::validateExpectVisited, false );
     SW_AUTOMATION_STEP( runnerRecord, "Record", &AutomationRunnerEngineSteps::runRecord, &AutomationRunnerInternal::validateRecord, false );
+    SW_AUTOMATION_STEP( runnerRemember, "Remember", &AutomationRunnerEngineSteps::runRemember, &AutomationRunnerInternal::validateRemember, false );
     SW_AUTOMATION_STEP( runnerExpectLog, "ExpectLog", &AutomationRunnerEngineSteps::runExpectLog, &AutomationRunnerInternal::validateExpectLog, false );
     SW_AUTOMATION_STEP( runnerScreenshot, "Screenshot", &AutomationRunnerEngineSteps::runScreenshot, &AutomationRunnerInternal::validateScreenshot, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( runnerExpectImage, "ExpectImage", &AutomationRunnerEngineSteps::runExpectImage, &AutomationRunnerInternal::validateExpectImage, nullptr,
@@ -858,6 +874,7 @@ namespace sw
         , _listFailure{}
         , _listPendingScreenshot{}
         , _listWatch{}
+        , _listRemembered{}
         , _outputDirectory{}
         , _finishReason{}
         , _pObjectManagerOverride{ nullptr }
@@ -1099,6 +1116,7 @@ namespace sw
                 return false;
         }
         prepareWatches();
+        _listRemembered.clear();
         _logCapture.start();
         return true;
     }
@@ -1191,11 +1209,33 @@ namespace sw
         float32      tolerance = 0.0f;
         bool         bOk       = true;
         string       rule;
-        const bool   bNumberRule = step.findAttribute( "is" ) == nullptr;
+        const bool   bNumberRule = step.findAttribute( "is" ) == nullptr && step.findAttribute( "sameAs" ) == nullptr && step.findAttribute( "differsFrom" ) == nullptr;
         if ( bNumberRule && value._bText )
         {
             outMessage = subject + " is text ('" + value._text + "') - compare it with is=\"…\"";
             return false;
+        }
+        const string* pSameAs      = step.findAttribute( "sameAs" );
+        const string* pDiffersFrom = step.findAttribute( "differsFrom" );
+        if ( pSameAs != nullptr || pDiffersFrom != nullptr )
+        {
+            // 기억한 값과는 글 그대로 견준다 — 64 비트 해시 같은 값이 수 비교(float32)에서 뭉개지지 않는다.
+            const string& name        = pSameAs != nullptr ? *pSameAs : *pDiffersFrom;
+            const string* pRemembered = nullptr;
+            for ( const RememberedValue& remembered : _listRemembered )
+            {
+                if ( remembered._name == name )
+                    pRemembered = &remembered._text;
+            }
+            if ( pRemembered == nullptr )
+            {
+                outMessage = subject + ": nothing was remembered as '" + name + "' (add <Remember as=\"" + name + "\"> before this step)";
+                return false;
+            }
+            bOk        = pSameAs != nullptr ? valueText == *pRemembered : valueText != *pRemembered;
+            outMatched = bOk;
+            outMessage = subject + ( pSameAs != nullptr ? " same as " : " differs from " ) + name + " ('" + *pRemembered + "'), got " + valueText;
+            return true;
         }
         if ( step.findAttribute( "is" ) != nullptr )
         {
@@ -1350,6 +1390,29 @@ namespace sw
             return;
         }
         addRecordLine( "frame " + to_string( _frameIndex ) + " " + message + " = " + AutomationRunnerInternal::makeValueText( value ) );
+    }
+
+    void AutomationRunner::runRemember( const AutomationStep& step )
+    {
+        AutomationProbeValue value{};
+        string               message;
+        if ( readProbeValue( step, value, message ) == false )
+        {
+            recordFailure( step, "Remember " + message );
+            return;
+        }
+        const string& name = *step.findAttribute( "as" );
+        string        text = AutomationRunnerInternal::makeValueText( value );
+        SW_LOG_INFO( "[Scenario] frame %# remember %# = %# (%#)", _frameIndex, name.c_str(), text.c_str(), message.c_str() );
+        for ( RememberedValue& remembered : _listRemembered )
+        {
+            if ( remembered._name == name )
+            {
+                remembered._text = std::move( text );
+                return;
+            }
+        }
+        _listRemembered.push_back( RememberedValue{ name, std::move( text ) } );
     }
 
     void AutomationRunner::runExpectLog( const AutomationStep& step )

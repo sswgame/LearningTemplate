@@ -69,9 +69,33 @@ namespace sw
                 }
                 const string* pBackend = step.findAttribute( "backend" );
                 RHIBackend    backend{};
-                if ( pBackend == nullptr || tryParseBackend( *pBackend, backend ) == false )
+                const bool    bRelative = pBackend != nullptr && ( *pBackend == kOtherBackend || *pBackend == kStartBackend );
+                if ( pBackend == nullptr || ( bRelative == false && tryParseBackend( *pBackend, backend ) == false ) )
                 {
-                    outError = step.describe() + ": needs backend=\"dx11|dx12|vulkan|opengl\"";
+                    outError = step.describe() + ": needs backend=\"dx11|dx12|vulkan|opengl|other|start\"";
+                    return false;
+                }
+                return true;
+            }
+
+            /** @brief `backend="other"` — 지금과 다른 백엔드(DirectX 12 가 아니면 DirectX 12, DirectX 12 면 DirectX 11)입니다. Windows 에서 늘 있는 둘이라 어느 백엔드로 시작해도 건넌다. */
+            static constexpr const utf8* kOtherBackend = "other";
+            /** @brief `backend="start"` — 시나리오가 시작할 때의 백엔드입니다. `other` 로 건넌 뒤 돌아와 체인의 다음 시나리오가 같은 백엔드에서 돌게 한다. */
+            static constexpr const utf8* kStartBackend = "start";
+
+            /** @brief 시나리오가 시작할 때의 백엔드입니다(준비 함수가 적는다). App 모듈은 백엔드 교체 · 모듈 리로드에서 내려가지 않는다. */
+            static RHIBackend& getStartBackend()
+            {
+                static RHIBackend s_backend{ RHIBackend::DirectX12 };
+                return s_backend;
+            }
+
+            static bool prepareSwapBackend( AutomationRunner& /*runner*/, const AutomationStep& /*step*/, string& outError )
+            {
+                const RHIBackendSwitcher* pSwitcher = RHIBackendSwitcher::findActive();
+                if ( pSwitcher == nullptr || pSwitcher->findCommittedBackend( getStartBackend() ) == false )
+                {
+                    outError = "SwapBackend: backend switching is not available in this process (no RHI)";
                     return false;
                 }
                 return true;
@@ -80,8 +104,6 @@ namespace sw
             /** @brief 교체를 요청합니다. 이미 그 백엔드이고 대기 중인 교체도 없으면 아무것도 하지 않습니다. 끝은 `RHI.SwapPending` 이 0 이 되는 것으로 봅니다. */
             static bool runSwapBackend( AutomationRunner& runner, const AutomationStep& step )
             {
-                RHIBackend backend{};
-                (void)tryParseBackend( *step.findAttribute( "backend" ), backend ); // 검사에서 확인했다
                 RHIBackendSwitcher* pSwitcher = RHIBackendSwitcher::findActive();
                 RHIBackend          committed{};
                 if ( pSwitcher == nullptr || pSwitcher->findCommittedBackend( committed ) == false )
@@ -89,6 +111,14 @@ namespace sw
                     runner.recordFailure( step, "backend switching is not available in this process (no RHI)" );
                     return true;
                 }
+                const string& requested = *step.findAttribute( "backend" );
+                RHIBackend    backend{};
+                if ( requested == kOtherBackend )
+                    backend = committed == RHIBackend::DirectX12 ? RHIBackend::DirectX11 : RHIBackend::DirectX12;
+                else if ( requested == kStartBackend )
+                    backend = getStartBackend();
+                else
+                    (void)tryParseBackend( requested, backend ); // 검사에서 확인했다
                 if ( committed == backend && pSwitcher->isSwapPending() == false )
                 {
                     SW_LOG_INFO( "%# -> already on %#", step.describe().c_str(), RHI::getBackendTypeName( backend ) );
@@ -150,7 +180,8 @@ namespace sw
 
     SW_DEV_COMMAND( rhiRemoveDevice, "rhi.removeDevice", "rhi.removeDevice", "Remove the GPU device as a TDR would (DirectX 12) to check that frames and shutdown do not hang",
                     &RHIBackendSwitcherAutomationInternal::runRemoveDevice );
-    SW_AUTOMATION_STEP( swapBackend, "SwapBackend", &RHIBackendSwitcherAutomationInternal::runSwapBackend, &RHIBackendSwitcherAutomationInternal::validateSwapBackend, false );
+    SW_AUTOMATION_STEP_WITH_HOOKS( swapBackend, "SwapBackend", &RHIBackendSwitcherAutomationInternal::runSwapBackend,
+                                   &RHIBackendSwitcherAutomationInternal::validateSwapBackend, &RHIBackendSwitcherAutomationInternal::prepareSwapBackend, nullptr, false );
     SW_AUTOMATION_PROBE( rhiBackend, "RHI.Backend", "Backend the device runs on: 0 DirectX11, 1 DirectX12, 2 Vulkan, 3 OpenGL",
                          &RHIBackendSwitcherAutomationInternal::readCommittedBackend );
     SW_AUTOMATION_PROBE( rhiSwapPending, "RHI.SwapPending", "1 from a backend swap request (SwapBackend, gv_rhiBackend) until the end-of-frame swap has run",

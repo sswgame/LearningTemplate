@@ -35,8 +35,10 @@
 #include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorExtensionRegistryDump.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -52,6 +54,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/CommandStack.h"
+#include "Engine/Utility/EditSessionState.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
@@ -137,6 +140,63 @@ namespace sw::editor
                 SW_LOG_TRACE( "Splash: reading ForwardPipeline.xml" );
                 if ( pPipeline->loadFromXMLFile( pEngineDefaultAssets->_defaultForwardPipeline ) == false )
                     SW_LOG_WARNING( "Splash: could not read %#", pEngineDefaultAssets->_defaultForwardPipeline.c_str() );
+            }
+
+            /** @brief 인스턴스가 내려가기 전에 선택 · 미저장 표시를 엔진(`EditSessionState`)에 맡깁니다. 다음 인스턴스가 `resumeEditSession` 으로 찾아갑니다. */
+            static void storeEditSession( EditorContext& context )
+            {
+                EditSessionState* pSession      = editor::findSubsystem<EditSessionState>();
+                SceneManager*     pSceneManager = editor::findSubsystem<SceneManager>();
+                if ( pSession == nullptr || pSceneManager == nullptr )
+                    return;
+                const EditorWorkspace&     workspace = context.getSubsystem<EditorWorkspace>();
+                const EditorSelection&     selection = context.getSubsystem<EditorSelection>();
+                EditSessionState::Snapshot snapshot{};
+                // 워크스페이스가 아직 이 세대를 보지 못했으면 선택 · 표시는 옛 씬의 것이다 — 세대를 그대로 적어 다음 인스턴스가 버리게 한다.
+                snapshot._sceneGeneration = workspace.getObservedSceneGeneration();
+                snapshot._bSceneDirty     = workspace.isSceneDirty();
+                for ( const GameObjectHandle& handle : selection.getSelectedHandles() )
+                {
+                    snapshot._listSelectedObjectID.push_back( handle.objectID() );
+                }
+                snapshot._listSelectedAsset = selection.getSelectedAssets();
+                pSession->store( std::move( snapshot ) );
+            }
+
+            /**
+             * @brief 앞선 인스턴스가 맡긴 선택 · 미저장 표시를 되찾습니다. 앞선 인스턴스가 있었으면 true 입니다(씬이 그 뒤에 바뀌었으면 값은 버리지만 true).
+             * @details 워크스페이스는 지금 씬 세대를 이미 본 것으로 둔다 — 새 인스턴스가 지금 씬을 "새 씬" 으로 여겨 엔진의 되돌리기 스택을 비우지 않게 한다
+             *          (`EditorSceneGenerationSync`). 씬 오브젝트는 같은 id 로 이어지므로(게임 상태 복원 · 같은 씬) 선택 id 와 되돌리기 명령이 그대로 맞는다.
+             */
+            static bool resumeEditSession( EditorContext& context )
+            {
+                EditSessionState* pSession      = editor::findSubsystem<EditSessionState>();
+                SceneManager*     pSceneManager = editor::findSubsystem<SceneManager>();
+                if ( pSession == nullptr || pSceneManager == nullptr )
+                    return false;
+                const bool       bResumed   = pSession->hasSnapshot();
+                const uint64     generation = pSceneManager->getSceneGeneration();
+                EditorWorkspace& workspace  = context.getSubsystem<EditorWorkspace>();
+                workspace.setObservedSceneGeneration( generation );
+                EditSessionState::Snapshot snapshot{};
+                if ( pSession->take( generation, snapshot ) == false )
+                    return bResumed;
+                if ( snapshot._bSceneDirty )
+                    workspace.markSceneDirty();
+                vector<GameObject*> listObject;
+                for ( const uint64 objectID : snapshot._listSelectedObjectID )
+                {
+                    if ( GameObject* pObject = editor::findGameObject( GameObjectHandle::make( objectID ) ) )
+                        listObject.push_back( pObject );
+                }
+                EditorSelection& selection = context.getSubsystem<EditorSelection>();
+                if ( listObject.empty() == false )
+                    selection.selectObjects( listObject, SelectionMode::Replace );
+                if ( snapshot._listSelectedAsset.empty() == false )
+                    selection.selectAssets( snapshot._listSelectedAsset, SelectionMode::Replace );
+                SW_LOG_INFO( "Resumed the edit session: %# selected object(s), %#", static_cast<uint32>( listObject.size() ),
+                             snapshot._bSceneDirty ? "unsaved changes" : "no unsaved changes" );
+                return true;
             }
 
             /**
@@ -574,6 +634,7 @@ namespace sw::editor
             EditorTransaction::bindObjectEditListener( *pCommandStack );
         EditorExtensionRegistryDump::dumpIfRequested();
         _dockLayout.loadPanelVisibility();
+        const bool bResumedSession = ImGuiEditorInternal::resumeEditSession( *_editorContext );
 
         // 모니터 DPI 에 맞춰 스타일과 글자를 키운다. 테마를 읽은 뒤에 해야 한다. 테마가 96 DPI 기준 크기를 기록하기 때문이다.
         // 모니터를 옮기면 글자와 플랫폼 창이 따라간다(ImGui 1.92 동적 폰트).
@@ -589,8 +650,9 @@ namespace sw::editor
 
         // `-gv_editorStartupScene=<경로>` 는 검증용이다. 기동 검증이 오브젝트를 순회하는 코드까지 실행하게 한다. 정의는 이 파일 위쪽에 있다.
         // 스위치가 있으면 그 값을 쓰고, 없으면 환경설정(General 의 시작 씬)을 쓴다.
+        // 앞선 인스턴스를 이어받았으면(백엔드 교체 · 에디터 모듈 리로드) 시작 씬을 열지 않는다 — 열면 편집 중인 씬과 미저장 편집을 버린다.
         const string startupScene = gv_editorStartupScene.empty() == false ? string( gv_editorStartupScene ) : getPreferences<EditorGeneralPreferences>()._startupScene;
-        if ( startupScene.empty() == false )
+        if ( startupScene.empty() == false && bResumedSession == false )
         {
             SW_LOG_INFO( "시작 씬을 엽니다: %#", startupScene.c_str() );
             if ( EditorSceneFileCommands::loadScene( startupScene ) == false )
@@ -605,6 +667,7 @@ namespace sw::editor
         ImGuiEditorInternal::releaseModuleUndoCommands();
         if ( _editorContext == nullptr )
             return;
+        ImGuiEditorInternal::storeEditSession( *_editorContext );
         _editorContext->getSubsystem<EditorRenderViews>().destroyViewTargets();
         _editorContext->getSubsystem<EditorPanelManager>().shutdownAllPanels( nullptr );
         _editorContext->getSubsystem<EditorPanelManager>().clear();
