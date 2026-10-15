@@ -17,6 +17,8 @@
 
 namespace sw
 {
+    SW_LOG_CALLER( "OrthoCameraRigComponent" );
+
     namespace
     {
         struct OrthoCameraRigComponentInternal
@@ -109,6 +111,7 @@ namespace sw
         , _director{}
         , _bOverride{ SW_FALSE }
         , _bOverrideApplied{ SW_FALSE }
+        , _bActionsChecked{ SW_FALSE }
         , _reserved{ 0 }
     {
         _overrideBlend._curve    = BlendCurve::EaseInOut;
@@ -141,6 +144,24 @@ namespace sw
         _bOverride            = SW_TRUE;
     }
 
+    void OrthoCameraRigComponent::warnMissingActions( const InputMap& inputMap )
+    {
+        _bActionsChecked                       = SW_TRUE;
+        const hashed_string* arrNeededAction[] = {
+            _panSpeed != 0.0f ? &_panAction : nullptr,
+            _rotateStep != 0.0f ? &_rotateAction : nullptr,
+            _zoomStep > 0.0f ? &_zoomAction : nullptr,
+        };
+        const GameObject* pOwner = getOwner();
+        for ( const hashed_string* pAction : arrNeededAction )
+        {
+            const bool bMissing = pAction != nullptr && pAction->empty() == false && inputMap.getActionHandle( *pAction ).isValid() == false;
+            if ( bMissing )
+                SW_LOG_WARNING( "Ortho camera rig '%#' reads action '%#', which the InputMap does not have - that control does nothing",
+                                pOwner != nullptr ? pOwner->getName().c_str() : "?", pAction->c_str() );
+        }
+    }
+
     void OrthoCameraRigComponent::applyInput( float32 deltaTime )
     {
         const InputManager* pInput = game::findSubsystem<InputManager>();
@@ -148,6 +169,8 @@ namespace sw
             return;
         // 장치는 입력 맵이 정한다(게임의 `Camera.Pan` · `Camera.Rotate` · `Camera.Zoom` — 맵에 없으면 움직이지 않는다).
         // 메뉴가 먹은 입력(왼쪽 스틱으로 메뉴를 옮기는 동안)과 모달 아래의 입력은 리그가 보지 않는다.
+        if ( _bActionsChecked == SW_FALSE )
+            warnMissingActions( pInput->getInputMap() );
         const UIInputMapView inputMap( pInput->getInputMap(), game::findSubsystem<UISystem>() );
         const float2         panInput     = inputMap.getVector2D( _panAction );
         const float32        forwardInput = panInput._y;
