@@ -9,6 +9,7 @@
 
 - Engine 안에서 `Graphics` 한 파일, `UI` 한 파일, `Object` 한 파일을 고쳤을 때 Release 증분 빌드 시간(컴파일 + 재링크)을 3 회씩 잽니다. 표는 [검증과 측정](../08_Verification.md) 형식입니다.
 - 분할 뒤 같은 세 경우와 비교합니다. 이득이 재링크 시간에서 나오지 않으면 3 단계(DLL 승격)는 하지 않습니다.
+- 2026-10-16 Debug 측정: `Engine.dll` 링크는 1.9 s 이고 `.cpp` 하나를 고친 증분은 임포트 라이브러리 갱신(`sw_keepImportLibraryIfUnchanged`)으로 5 s 가 됐습니다. 빌드 시간만 보면 DLL 승격의 근거가 없습니다([결정 기록](../09_Decisions.md) 3절).
 
 ## 0-3. Engine 폴더 재배치의 남은 판단
 

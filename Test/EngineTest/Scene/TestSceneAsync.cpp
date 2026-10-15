@@ -7,7 +7,9 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
+#include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
+#include "Engine/Scene/SceneManager.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
 

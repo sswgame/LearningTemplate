@@ -23,6 +23,7 @@
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAssetCache.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Scene/Scene.h"
 
 namespace sw
 {

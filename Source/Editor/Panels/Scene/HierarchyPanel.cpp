@@ -38,6 +38,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Scene/Scene.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>

@@ -2,6 +2,9 @@
 
 #include "GameFramework/Base/World/Environment/GravityComponent.h"
 
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+
 namespace sw
 {
     GravityComponent::GravityComponent()

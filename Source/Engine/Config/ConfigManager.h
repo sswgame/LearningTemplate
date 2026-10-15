@@ -20,6 +20,7 @@
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Config/IConfig.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 
 namespace sw
 {

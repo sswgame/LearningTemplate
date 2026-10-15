@@ -119,7 +119,7 @@
 
 - `C-1` **엔진 분할 — 계획은 [docs/plans/EnginePartition.md](plans/EnginePartition.md).** `Engine.dll` 을 티어 경계로 나누기 전에 의존 방향의 약한 고리를 푼다. 단위를 끝내면 계획 문서에서 지운다.
 
-- `C-2` **빌드 속도 — 계획은 [docs/plans/BuildSpeed.md](plans/BuildSpeed.md).** 남은 것은 5 단계(유니티 범위 — 한 쌍만 잼, 재측정 필요)와 6 단계(`Engine.cpp`)다. 범위 결정은 [결정 기록](09_Decisions.md) 5-2.
+- `C-2` **빌드 속도 — 계획은 [docs/plans/BuildSpeed.md](plans/BuildSpeed.md).** 남은 것은 12 단계(리플렉션 헤더 팬아웃 — 다음으로 큰 것), 5 단계(유니티 범위 — 한 쌍만 잼, 재측정 필요), 6 단계(`Engine.cpp`)다. 범위 결정은 [결정 기록](09_Decisions.md) 5-2.
 
 - `C-4` **GameFramework 구조 정리(2026-10-04 리뷰, 사용자 승인).** 남은 것 —
   - 중간: Overworld `TileMap` 의 칸 손셈(`indexOf` · `isInBounds` — 크기는 파일 스키마 `TileMapXMLData` 가 든다) · `Habitat`(CreatureLife) · NetConnection 메시지 버퍼 재사용 ·

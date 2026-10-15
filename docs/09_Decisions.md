@@ -153,6 +153,9 @@
   assert) · `MaterialPacking` 숫자 case(`-Wswitch-enum`) · DX12 상태 조회 · `TypeInfo` 생성자 · RLE · 콜스택 관문 · 셰이더 반사 D3D11/12(확인 중 — 백로그 `D2`) · Win32 마우스 case · include 묶음.
 - **콜드 · 워크트리용 프리셋 `Ninja-Debug-Cold`(PCH 끔 + 유니티)**(BuildSpeed 4 단계, 2026-10-11, PC `SW`, 풀 빌드 `--clean-first`): 캐시 없이 115.2 s(개발) 대 147.3 s,
   어느 구성도 이기지 못한다. PCH + 유니티는 145.2 s 로 개발보다 느리다.
+- **`Engine.dll` 을 층 DLL 로 쪼개 증분 빌드를 줄이는 안**(BuildSpeed 9, 2026-10-16, PC `SW`, Debug): `.cpp` 하나를 고친 증분 13.9 s 중 `Engine.dll` 링크는 1.9 s, 컴파일 1.6 s 였고 나머지 약 10 s 는
+  임포트 라이브러리 수정 시각 때문에 킷 · 게임 DLL 84 개가 다시 링크된 것이었다(`sw_keepImportLibraryIfUnchanged` 로 해결, 5 s). 헤더를 고친 비용은 DLL 경계가 아니라 PCH 에 든 헤더가 정하므로
+  (`GameObject.h` 가 TU 약 2,200 개) 분할로 줄지 않는다. 언리얼은 모듈 DLL 을 쪼개되 헤더는 모듈 공개 헤더로 좁혀 팬아웃을 줄이는 쪽이 본체로 알고 있다. 링크 단위 분할은 엔진 분할 계획 3 단계의 다른 이유가 생길 때만 한다.
 - **킷 밖 묶음의 PCH 공유**(BuildSpeed 3 단계, 2026-10-11): 컴파일 정의 차이를 `compile_commands.json` 에서 타깃별로 모으면 PCH 를 따로 짓는 것은
   시험 9(`SW_TEST_INTERNAL` 공통, EngineTest 는 `SW_GF_IMPORTS` · 킷 `FlagOps.gen.h` 강제 포함, EditorTest · EditorUITest 는 서드파티 정의가 더 붙는다) · RHI 백엔드 4(`<타깃>_EXPORTS` 만 다름) ·
   App · Server · ModuleHost 3 · 에디터 확장 · `SWGame` 이다. PCH 하나가 약 2.7 CPU 초라 다 합쳐도 16 스레드에서 2 ~ 3 s(측정 편차 ±3 s 안) — 킷(PCH 60 개 → 1, −20.6 s)만 했다.

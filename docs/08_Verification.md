@@ -217,6 +217,15 @@ cd build/Ninja-Debug/Bin
   `--clean-first` 교차 3 쌍으로 측정했다: 공유 117.5 · 115.2 · 111.7 s(중앙값 **115.2**) · PCH 없는 킷 137.3 · 135.8 · 133.2 s(중앙값 **135.8**) — −20.6 s(−15 %).
   에이전트 빌드가 겹친 측정은 편차가 ±40 s 라 쓸 수 없다(`busy_before` 로 겹침을 먼저 센다).
   `.ninja_log` 는 `--clean-first` 뒤에도 이전 실행 항목이 남아 CPU 합을 그대로 더하면 틀린다.
+- **임포트 라이브러리를 바뀔 때만 갱신한 효과**(2026-10-16, PC `SW`, Debug, 다른 빌드 없음): `.cpp` 하나(`GameObjectManager.cpp`)를 고친 증분 빌드가 **13.9 s(86 단계) → 4.9 · 5.2 · 5.5 s(3 단계)**.
+  이전 13.9 s 는 컴파일 1.6 s + `Engine.dll` 링크 1.9 s + 킷 · 게임 · 에디터 DLL 84 개 재링크(링크 풀 동시 4)였고, `Engine.lib` 는 바이트까지 같은데 수정 시각만 바뀌고 있었다(`Get-FileHash` 로 확인).
+  `Engine.dll` 을 층으로 쪼개는 안은 링크가 1.9 s 뿐이라 이 목적으로는 이득이 없다.
+- **PCH 에서 자주 바뀌는 헤더를 뺀 효과**(2026-10-16, PC `SW`, Debug, `Component.h` · `SceneComponent.h` · `GameObject.h` · `Scene.h` · `SceneManager.h` · `RHITypes.h` 를 `pch.h` 에서 뺌, 쓰는 파일 열한 개에 include 를 더함):
+  헤더를 건드린 증분 빌드(컴파일한 TU 수) — `GameObject.h` 131.6 → **68.6 s**(618), `Component.h` → **76.9 s**(662), `RHITypes.h` → **47.5 s**(332), `Scene.h` → **14.0 s**(59). 이전 값 131.6 s 는 Core 헤더 기준선과 같은 전체 재컴파일이다.
+  의존 TU 수(`/clang:-M`, 테스트 포함 3,230 중): `Component.h` 3,094 → 848, `GameObject.h` → 784, `RHITypes.h` → 512, `SceneComponent.h` → 403, `Scene.h` → 164, `SceneManager.h` → 143.
+  비용: 풀 빌드(`--clean-first`)는 원래 PCH 176 · 161 s 대 줄인 PCH 185 · 214 · 198 s 로 **약 +15 %**(이 PC 가 이날 기준선 131 s 보다 느려 절대값은 다르다 — 같은 날 번갈아 잰 값끼리만 견준다).
+  PCH 를 끈 CI 구성은 원래 이 헤더를 TU 마다 읽으므로 변화가 없다. Debug · Shipping `all AllTests` 경고 0 · 오류 0. 실패한 파일은 열한 개(include 누락)뿐이었다 — `ninja -k 0` 으로 한 번에 모았다.
+  남은 큰 팬아웃은 Reflection 헤더(`ReflectionTypes.h` · `TypeRegistry.h` · `ReflectionCore.h`, 후보 PCH 에서도 TU 1,150 ~ 1,250 개)다.
 - **구성별 풀 빌드**(2026-10-11, PC `SW`, Debug, 킷 PCH 공유 뒤, `build/Ninja-Debug-Bench` 에서 `--clean-first`, 세 슬롯을 잡고 다른 빌드 없음):
 
   | 구성 | 회차(s) | 중앙값(s) |

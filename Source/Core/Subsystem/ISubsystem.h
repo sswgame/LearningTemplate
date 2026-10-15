@@ -59,7 +59,10 @@ namespace sw
     class ISubsystem
     {
     public:
-        virtual ~ISubsystem() = default;
+        ISubsystem()                               = default;
+        virtual ~ISubsystem()                      = default;
+        ISubsystem( const ISubsystem& )            = delete;
+        ISubsystem& operator=( const ISubsystem& ) = delete;
 
         /** @brief 서브시스템을 세웁니다. 위상 순서로 불리고, 그동안 `getSubsystemMemoryTag` 가 걸립니다. */
         virtual SubsystemInitResult initializeSubsystem() = 0;

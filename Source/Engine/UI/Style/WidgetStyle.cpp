@@ -5,6 +5,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Reflection/ReflectionTypes.h"
+
 namespace sw
 {
     namespace

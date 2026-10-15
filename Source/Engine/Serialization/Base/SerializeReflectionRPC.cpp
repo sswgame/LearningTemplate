@@ -16,6 +16,7 @@
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/SlotHandle.h"
+#include "Core/String/TagID.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionRPC.h"

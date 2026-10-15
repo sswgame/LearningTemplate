@@ -12,7 +12,9 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Localization/LocText.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/Scene.h"
 
 #include <imgui.h>
 

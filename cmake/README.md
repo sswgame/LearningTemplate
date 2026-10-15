@@ -181,6 +181,12 @@ Dev 와 Shipping · Server 는 다른 갈래를 탄다 — 고친 갈래의 프�
 - **PCH 안 헤더의 include 하나가 TU 수를 정한다** — `RHITypes.h`(PCH)가 쓰지도 않는 `RHIBackendType.h` 를 들어 1987 TU 가 그 헤더에 의존했다(끊은 뒤 약 474).
   끊을 때 직접 include 를 받는 것은 그 이름의 **값**(`RHIBackend::DirectX12`)을 쓰는 파일뿐이다 — 타입 이름만 쓰는 헤더는 불투명 선언(`enum class RHIBackend : uint32;`)으로
   선다. 거쳐 받던 파일은 글자 include 그래프에서 그 간선을 끊어 후보를 좁힌 뒤 `-fsyntax-only`(PCH 없이)로 확인한다.
+- **PCH 에는 자주 바뀌는 헤더를 넣지 않는다** — `Component.h` · `SceneComponent.h` · `GameObject.h` · `Scene.h` · `SceneManager.h` · `RHITypes.h` 는 3 개월에 38 ~ 67 번 바뀌었고
+  PCH 안에 있으면 하나가 바뀔 때마다 TU 약 2,200 개가 다시 컴파일됐다(`GameObject.h` 를 건드린 증분 빌드 131 → 69 s, `Scene.h` 14 s). 쓰는 .cpp 가 직접 include 한다.
+  새 .cpp 가 이 타입을 쓰면서 include 를 빠뜨리면 "incomplete type" 으로 서고, PCH 를 끈 CI 구성에서는 원래 그렇게 지어진다. 어느 헤더가 PCH 때문에 모든 TU 에 걸리는지는
+  `ninja -t deps` 로 헤더별 TU 수를 세거나, 후보 `pch.h` 를 `-I` 맨 앞에 둔 `/clang:-M` 전처리로 미리 센다(측정은 [검증과 측정](../docs/08_Verification.md) "빌드 속도").
+- **SHARED 타깃의 `.lib` 는 내용이 바뀔 때만 갱신한다**(`sw_keepImportLibraryIfUnchanged`) — lld-link 는 내보내기가 같아도 `.lib` 를 다시 쓰고, 그러면 그것을 링크하는 DLL 이 전부 다시 링크된다.
+  링크가 `ImportLibraryStage/` 로 내보내고 POST_BUILD 가 `copy_if_different` 로 옮긴다. 새 SHARED 타깃은 `sw_addModuleLibrary` 를 거치면 저절로 적용된다.
 - **D3D · DXGI · D3DCompiler · MF · XAudio2 헤더는 PCH 에 넣지 않는다**(`EngineMinimal.h` 는 OS 헤더만, 쓰는 파일이 `EnginePlatformHeaders.h` 를 직접) — 넣으면
   1,654 TU 가 `d3d12.h` 를 파싱했다(뺀 뒤 약 43). `#if defined( SW_HAS_DXC_API )` 처럼 정의 여부로 읽는 매크로는 정의 헤더가 빠지면 **조용히** 꺼진다(테스트는 "컴파일러
   없음" 으로 건너뛴다) — `ShaderCompiler.cpp` 의 Windows `#error` 가 막는다.

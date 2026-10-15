@@ -9,6 +9,7 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Scene/Scene.h"
 
 namespace sw
 {

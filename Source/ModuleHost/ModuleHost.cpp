@@ -13,6 +13,8 @@
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Renderer/RenderThread.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/UI/UISystem.h"
 
 #include "ModuleHost/LiveReloadManager.h"
