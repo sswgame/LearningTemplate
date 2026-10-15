@@ -684,7 +684,7 @@ namespace sw
             pFace->setFacialRigPath( _settings._faceRig.c_str() );
             pFace->setLookAtTarget( lookAt );
             if ( bTalkClip )
-                (void)pFace->setExpressionWeight( hashed_string( _settings._faceExpression.c_str(), _settings._faceExpression.size() ), _settings._faceExpressionWeight );
+                (void)pFace->setExpressionWeight( hashed_string( _settings._faceExpression.c_str() ), _settings._faceExpressionWeight );
             else
                 (void)pFace->speak( _settings._faceVoice.c_str() );
             _listBenchExtra.push_back( pMesh->getHandle() );
