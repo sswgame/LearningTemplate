@@ -247,6 +247,22 @@ namespace sw::editor
                 return true;
             }
 
+            /**
+             * @brief 단계가 누를 레이블(`mark` · `toMark`)이 아직 그려지지 않았으면 시나리오 시계를 붙잡고 기다립니다(최대 `kMarkWaitFrames`). 넘기면 단계가 돌며 "no editor widget" 실패를 적습니다.
+             * @details 레이블은 직전 프레임에 그려져야 한다. 패널이 프레임을 건너뛰었거나(로딩 · 리사이즈) 콤보 팝업이 한 프레임 늦게 열리면 고정 프레임 단계가 가끔 진다(백로그 A-3 이던 것).
+             *          언리얼 Automation Driver 의 "보일 때까지 기다리기" · Playwright 의 자동 대기와 같다. 기다린 프레임은 `[Scenario] … held the clock` 로그로 남는다.
+             */
+            static AutomationStepHold holdUntilMarked( AutomationRunner& runner, const AutomationStep& step, InputManager& input )
+            {
+                constexpr uint32   kMarkWaitFrames = 60;
+                const string*      pMark           = step.findAttribute( "mark" );
+                const string*      pToMark         = step.findAttribute( "toMark" );
+                EditorSelfTestMark found{};
+                const bool         bMarkDrawn   = pMark == nullptr || EditorSelfTestMarks::find( *pMark, found );
+                const bool         bToMarkDrawn = pToMark == nullptr || EditorSelfTestMarks::find( *pToMark, found );
+                return runner.holdUntilReady( step, input, bMarkDrawn && bToMarkDrawn, kMarkWaitFrames );
+            }
+
             /** @brief 레이블 가운데(또는 `anchor` 위치)로 마우스를 옮기고 누른 뒤 뗍니다. ImGui 입력 큐가 누름과 뗌을 프레임에 나눠 넣습니다. 레이블이 없으면 실패를 기록합니다. */
             static bool runClick( AutomationRunner& runner, const AutomationStep& step )
             {
@@ -1512,9 +1528,12 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_AUTOMATION_STEP( editorClick, "EditorClick", &EditorScenarioStepsInternal::runClick, &EditorScenarioStepsInternal::validateClick, false );
-    SW_AUTOMATION_STEP( editorDrag, "EditorDrag", &EditorScenarioStepsInternal::runDrag, &EditorScenarioStepsInternal::validateDrag, false );
-    SW_AUTOMATION_STEP( editorHover, "EditorHover", &EditorScenarioStepsInternal::runHover, &EditorScenarioStepsInternal::validateHover, false );
+    SW_AUTOMATION_STEP_WITH_HOOKS( editorClick, "EditorClick", &EditorScenarioStepsInternal::runClick, &EditorScenarioStepsInternal::validateClick, nullptr,
+                                   &EditorScenarioStepsInternal::holdUntilMarked, false );
+    SW_AUTOMATION_STEP_WITH_HOOKS( editorDrag, "EditorDrag", &EditorScenarioStepsInternal::runDrag, &EditorScenarioStepsInternal::validateDrag, nullptr,
+                                   &EditorScenarioStepsInternal::holdUntilMarked, false );
+    SW_AUTOMATION_STEP_WITH_HOOKS( editorHover, "EditorHover", &EditorScenarioStepsInternal::runHover, &EditorScenarioStepsInternal::validateHover, nullptr,
+                                   &EditorScenarioStepsInternal::holdUntilMarked, false );
     SW_AUTOMATION_STEP( editorText, "EditorText", &EditorScenarioStepsInternal::runText, &EditorScenarioStepsInternal::validateText, false );
     SW_AUTOMATION_STEP( editorKey, "EditorKey", &EditorScenarioStepsInternal::runKey, &EditorScenarioStepsInternal::validateKey, false );
     SW_AUTOMATION_STEP( editorExpectObject, "EditorExpectObject", &EditorScenarioStepsInternal::runExpectObject,

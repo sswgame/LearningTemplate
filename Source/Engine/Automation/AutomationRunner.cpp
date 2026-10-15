@@ -1144,36 +1144,41 @@ namespace sw
             recordFailure( step, "Expect " + message );
     }
 
+    AutomationStepHold AutomationRunner::holdUntilReady( const AutomationStep& step, InputManager& input, bool bReady, uint32 timeoutFrames )
+    {
+        if ( bReady || _holdFrameCount >= timeoutFrames )
+        {
+            if ( bReady && _holdFrameCount > 0 )
+                SW_LOG_INFO( "[Scenario] %# held the clock for %# frame(s)", step.describe().c_str(), _holdFrameCount );
+            _holdFrameCount = 0;
+            return AutomationStepHold::Run;
+        }
+        ++_holdFrameCount;
+        // 이 프레임은 시나리오 프레임으로 세지 않는다. 다음 프레임에 낼 입력 이벤트부터 한 프레임씩 밀어 시나리오 프레임과 맞춘다.
+        _inputScript.delayEventsFrom( input.getVirtualFrameIndex(), 1 );
+        return AutomationStepHold::Hold;
+    }
+
     bool AutomationRunner::shouldHoldForCondition( const AutomationStep& step, InputManager& input )
     {
         bool       bMatched = false;
         string     message;
         const bool bHasValue = compareProbe( step, bMatched, message );
-        if ( bHasValue && bMatched )
-        {
-            if ( _holdFrameCount > 0 )
-                SW_LOG_INFO( "[Scenario] %# held the clock for %# frame(s)", step.describe().c_str(), _holdFrameCount );
-            _holdFrameCount = 0;
-            return false;
-        }
-        string  error;
-        uint32  timeoutFrames  = 0;
-        float32 timeoutSeconds = 0.0f;
+        const bool bReady    = bHasValue && bMatched;
+        string     error;
+        uint32     timeoutFrames  = 0;
+        float32    timeoutSeconds = 0.0f;
         (void)AutomationRunnerInternal::readUint( step, "timeoutFrames", AutomationRunnerInternal::kDefaultWaitTimeoutFrames, timeoutFrames,
                                                   error );                                                // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
         (void)AutomationRunnerInternal::readFloat( step, "timeoutSeconds", 0.0f, timeoutSeconds, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
         if ( step.findAttribute( "timeoutSeconds" ) != nullptr )
             timeoutFrames = convertSecondsToFrames( timeoutSeconds );
-        if ( _holdFrameCount >= timeoutFrames )
-        {
-            recordFailure( step, "WaitUntil gave up after " + to_string( _holdFrameCount ) + " frame(s): " + message );
-            _holdFrameCount = 0;
-            return false;
-        }
-        ++_holdFrameCount;
-        // 이 프레임은 시나리오 프레임으로 세지 않는다. 다음 프레임에 낼 입력 이벤트부터 한 프레임씩 밀어 시나리오 프레임과 맞춘다.
-        _inputScript.delayEventsFrom( input.getVirtualFrameIndex(), 1 );
-        return true;
+        const uint32 heldFrameCount = _holdFrameCount;
+        if ( holdUntilReady( step, input, bReady, timeoutFrames ) == AutomationStepHold::Hold )
+            return true;
+        if ( bReady == false )
+            recordFailure( step, "WaitUntil gave up after " + to_string( heldFrameCount ) + " frame(s): " + message );
+        return false;
     }
 
     bool AutomationRunner::readProbeValue( const AutomationStep& step, AutomationProbeValue& outValue, string& outMessage ) const

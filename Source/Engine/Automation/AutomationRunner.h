@@ -16,6 +16,8 @@
 
 namespace sw
 {
+    enum class AutomationStepHold : uint8;
+
     class GameObjectManager;
     class InputManager;
 
@@ -80,6 +82,12 @@ namespace sw
 
         /** @brief 단계 처리기가 실패를 적습니다(시나리오는 계속 진행하고 끝에서 Failed 가 됩니다). */
         void recordFailure( const AutomationStep& step, string_view message );
+        /**
+         * @brief 단계 차례 함수(`AutomationStepHoldFunction`)가 기다리는 대상이 아직이면(@p bReady 가 false) 시나리오 시계를 한 프레임 붙잡습니다.
+         * @details `WaitUntil` 과 같다 — 붙잡은 프레임은 세지 않고 뒤의 입력 이벤트를 한 프레임 민다. 준비되면 붙잡은 프레임 수를 로그로 남긴다.
+         * @return 붙잡았으면 Hold, 준비됐거나 @p timeoutFrames 를 다 기다렸으면 Run 입니다(그 단계가 돌며 실패를 적는다).
+         */
+        AutomationStepHold holdUntilReady( const AutomationStep& step, InputManager& input, bool bReady, uint32 timeoutFrames );
         /** @brief 시나리오를 바로 끝냅니다(`Pass`, `Fail`, `Skipped` 등). 실패가 적혀 있으면 Passed 는 Failed 가 됩니다. 이미 끝났으면 무시합니다. */
         void finish( AutomationResult result, string_view reason );
 
@@ -184,7 +192,7 @@ namespace sw
         uint32                 _screenshotRequestedCount;
         uint32                 _screenshotCompletedCount;
         uint32                 _imageWaitFrameCount; ///< `<ExpectImage>` 가 스크린샷을 기다린 프레임 수입니다.
-        uint32                 _holdFrameCount;      ///< 지금 `<WaitUntil>` 이 시나리오 시계를 붙잡은 프레임(그동안 `_frameIndex` 는 그대로다)
+        uint32                 _holdFrameCount;      ///< 지금 단계(`<WaitUntil>` · 마크를 기다리는 에디터 입력)가 시나리오 시계를 붙잡은 프레임(`holdUntilReady`, 그동안 `_frameIndex` 는 그대로다)
         AutomationResult       _result;
         uint8                  _bStarted : 1;
         uint8                  _bEnded   : 1;
