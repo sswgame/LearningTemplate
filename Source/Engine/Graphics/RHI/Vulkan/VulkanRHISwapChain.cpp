@@ -32,6 +32,8 @@ namespace sw
                 return VulkanSwapChainStatus::OutOfDate;
             if ( result == VK_ERROR_SURFACE_LOST_KHR )
                 return VulkanSwapChainStatus::SurfaceLost;
+            if ( result == VK_ERROR_DEVICE_LOST )
+                return VulkanSwapChainStatus::DeviceLost;
             return VulkanSwapChainStatus::Failed;
         }
     } // namespace
