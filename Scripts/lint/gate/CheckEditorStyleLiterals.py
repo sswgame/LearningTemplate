@@ -4,7 +4,7 @@
 Scripts/lint/gate/CheckEditorStyleLiterals.py
 
 에디터 코드(`Source/Editor/**` · `Source/GameFramework/PlugIn/Editor/**`)가 **숫자 리터럴로 색 · 스타일 값을 만들지 않게** 한다.
-색 · 간격 · 모서리는 테마 토큰(`Resource/editor/theme/*.tokens.json`)이 정본이고, 코드는 `EditorThemeUtil` 접근자로 읽는다(docs/plans/EditorUX.md).
+색 · 간격 · 모서리는 테마 토큰(`Resource/editor/theme/*.tokens.json`)이 원본이고, 코드는 `EditorThemeUtil` 접근자로 읽는다(docs/plans/EditorUX.md).
 숫자로 박은 색은 테마를 바꿔도(라이트 · 고대비) 그대로 남아 읽을 수 없게 된다.
 
 위반(주석 · 문자열은 가린 글에서 본다):
@@ -12,12 +12,12 @@ Scripts/lint/gate/CheckEditorStyleLiterals.py
   - `ImGui::PushStyleColor(` 의 값 인자에 숫자 리터럴이 있다
   - `ImGui::PushStyleVar(` 의 값 인자에 숫자 리터럴(`ImVec2(4, 4)` 포함)이 있다
 
-테마 구현 파일(`_kThemeSourcePrefix`)은 값을 만드는 자리라 보지 않는다.
+테마 구현 파일(`_kThemeSourcePrefix`)은 값을 만드는 곳이라 보지 않는다.
 
 기준선은 현재 건수다. 모드가 둘이다.
   - 커밋 훅(`--files`): 이번 커밋이 **추가한 줄**(`git diff --cached -U0` 의 + 줄)에 걸친 위반만 본다. 병합 커밋(`MERGE_HEAD`)은 건너뛴다.
     `--whole-files` 를 더하면 파일 전체를 본다.
-  - 전체 훑기(`--files` 없음, `ctest -L lint`): 건수를 `rules/CheckEditorStyleLiterals.toml` 의 `[baseline] total` 과 견주어 **늘면** 실패한다.
+  - 전체 훑기(`--files` 없음, `ctest -L lint`): 건수를 `rules/CheckEditorStyleLiterals.toml` 의 `[baseline] total` 과 비교해 **늘면** 실패한다.
     줄면 기준선을 낮추라는 참고만 찍는다. `--list` 는 위반 전부를 찍는다.
 
   python Scripts/lint/gate/CheckEditorStyleLiterals.py [--root <repo>] [--files a.cpp b.h] [--whole-files] [--baseline N] [--list]
@@ -67,7 +67,7 @@ class StyleLiteral:
 
 
 def findCallEndInternal(masked: str, open_: int) -> int:
-    """`masked[open_]` 가 `(` 일 때 짝 `)` 의 자리(없으면 -1)."""
+    """`masked[open_]` 가 `(` 일 때 짝 `)` 의 위치(없으면 -1)."""
     depth = 0
     for index in range(open_, len(masked)):
         if masked[index] in "([{":
@@ -96,7 +96,7 @@ def splitArgumentsInternal(inner: str) -> list[str]:
 
 
 def findStyleLiterals(text: str) -> list[StyleLiteral]:
-    """파일 하나에서 숫자 리터럴로 색 · 스타일 값을 만든 자리. 같은 줄은 하나로 센다."""
+    """파일 하나에서 숫자 리터럴로 색 · 스타일 값을 만든 위치. 같은 줄은 하나로 센다."""
     masked = blankCommentsAndLiterals(text)
     if len(masked) != len(text):
         return []
@@ -154,7 +154,7 @@ class CheckEditorStyleLiteralsGate(LintGate):
     violationHeader = "에디터 코드의 숫자 리터럴 색 · 스타일 값"
     ruleSchema = _kBaselineSchema
     maxNoteShown = 12
-    hint = ("  테마 토큰(EditorThemeUtil 접근자)을 쓴다 — 색 · 간격 · 모서리의 정본은 Resource/editor/theme/*.tokens.json 이다.\n"
+    hint = ("  테마 토큰(EditorThemeUtil 접근자)을 쓴다 — 색 · 간격 · 모서리의 원본은 Resource/editor/theme/*.tokens.json 이다.\n"
             "  없는 값이면 토큰을 더한다(docs/plans/EditorUX.md). 전체를 보려면 --whole-files 또는 --list.")
     selfTestCases = [
         {"name": "IM_COL32 와 숫자 ImVec4", "files": {"Source/Editor/Panels/A.cpp": "void f()\n{\n    auto c = IM_COL32(1, 2, 3, 255);\n    ImVec4 v = ImVec4(1.0f, 0.5f, 0, 1);\n}\n"},

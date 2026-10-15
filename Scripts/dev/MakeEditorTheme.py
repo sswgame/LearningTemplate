@@ -8,12 +8,12 @@
     py -3 -m Scripts editor-theme export-figma <tokens.json...> --out <파일>
     py -3 -m Scripts editor-theme check <tokens.json...> [--fail-on-warning]
 
-정본은 저장소의 tokens.json 이고 Figma 는 선택 입력이다(docs/plans/EditorUX.md). 인증 · 네트워크 없이 파일만 읽고 쓴다.
+원본은 저장소의 tokens.json 이고 Figma 는 선택 입력이다(docs/plans/EditorUX.md). 인증 · 네트워크 없이 파일만 읽고 쓴다.
 
 - `import-figma` 의 입력은 두 가지다. (a) Figma REST `GET /v1/files/:key/variables/local` 응답(`meta.variables` · `meta.variableCollections`,
   별칭 `VARIABLE_ALIAS` 를 따라간다), (b) W3C Design Tokens(DTCG) JSON(`$value` · `$type`, 중첩 그룹, 별칭 `{color.accent}`).
-  변수 이름 경로(`color/accent` · `color.accent`)는 아래 `kSchema` 표 하나로 토큰 키(`_color._accent`)에 대응시킨다.
-  표에 없는 변수는 경고로 보고하고 버린다. 출력 파일이 이미 있으면 그 위에 덮어쓰고(없는 키는 기존 값 유지), 없으면 다크 세트가 바탕이다.
+  변수 이름 경로(`color/accent` · `color.accent`)는 아래 `kSchema` 테이블 하나로 토큰 키(`_color._accent`)에 대응시킨다.
+  테이블에 없는 변수는 경고로 보고하고 버린다. 출력 파일이 이미 있으면 그 위에 덮어쓰고(없는 키는 기존 값 유지), 없으면 다크 세트가 바탕이다.
 - `export-figma` 는 tokens.json 들을 DTCG JSON 으로 쓴다. 최상위 키 = 세트(= Figma 모드), 값은 `$type: color | number`.
 - 출력 서식: CRLF, 들여쓰기 4, 색은 대문자 16진 `#RRGGBB` 또는 `#RRGGBBAA`.
 """
@@ -29,7 +29,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common import getProjectRoot  # noqa: E402
 
-#: 토큰 키의 정본 표 — 그룹 → 키 이름(앞 `_` 없이). 변수 이름 매핑 · 키 집합 검사 · 수 범위 검사가 모두 이 표를 쓴다.
+#: 토큰 키의 원본 표 — 그룹 → 키 이름(앞 `_` 없이). 변수 이름 매핑 · 키 집합 검사 · 수 범위 검사가 모두 이 표를 쓴다.
 #: 같은 키 집합이 C++ 쪽 구조체(리플렉션 멤버)와 다크 세트에도 있다 — 하나를 바꾸면 셋을 같이 바꾼다(검사 `check` 가 다크 세트와 견준다).
 kSchema: dict[str, tuple[str, ...]] = {
     "color": ("text", "textMuted", "accent", "windowBg", "panelBg", "headerBg", "frameBg", "border", "success", "warning", "error", "info",
@@ -101,7 +101,7 @@ def formatColor(red: float, green: float, blue: float, alpha: float = 1.0) -> st
 
 
 def parseColor(value: object) -> str | None:
-    """색 값(16진 문자열 · DTCG 색 오브젝트 · Figma {r,g,b,a})을 정본 형식으로. 읽을 수 없으면 None."""
+    """색 값(16진 문자열 · DTCG 색 오브젝트 · Figma {r,g,b,a})을 원본 형식으로. 읽을 수 없으면 None."""
     if isinstance(value, str):
         return value.upper() if _kAnyHexPattern.match(value) else None
     if isinstance(value, dict):
@@ -135,7 +135,7 @@ def parseNumber(value: object) -> float | None:
 
 
 def mapVariableName(name: str) -> tuple[str, str] | None:
-    """변수 이름 경로 → (그룹, 키). 그룹 없는 키는 ("", 키). 표에 없으면 None. 철자의 대소문자는 가리지 않는다."""
+    """변수 이름 경로 → (그룹, 키). 그룹 없는 키는 ("", 키). 테이블에 없으면 None. 철자의 대소문자는 가리지 않는다."""
     listPart = [part for part in re.split(r"[/.]", name.strip()) if part]
     if len(listPart) == 1:
         for key in kScalarKey:
@@ -154,7 +154,7 @@ def mapVariableName(name: str) -> tuple[str, str] | None:
 
 
 # ---------------------------------------------------------------------------------------------------------------------
-# 입력 읽기 — 둘 다 "변수 이름 경로 → 값(색은 문자열, 수는 수)" 평평한 표로 만든다.
+# 입력 읽기 — 둘 다 "변수 이름 경로 → 값(색은 문자열, 수는 수)" 평평한 테이블로 만든다.
 # ---------------------------------------------------------------------------------------------------------------------
 
 def figmaValueInternal(variables: dict, variable: dict, modeName: str | None, modeId: str, depth: int, listWarning: list[str]) -> object:
@@ -277,7 +277,7 @@ def extractDtcg(data: dict, setName: str | None, listWarning: list[str]) -> dict
 
 
 def extractVariables(data: dict, setName: str | None, modeName: str | None, listWarning: list[str]) -> dict[str, object]:
-    """입력 형식(Figma REST 또는 DTCG)을 알아보고 평평한 표로 만든다. DTCG 에서는 --mode 도 세트 이름으로 읽는다."""
+    """입력 형식(Figma REST 또는 DTCG)을 알아보고 평평한 테이블로 만든다. DTCG 에서는 --mode 도 세트 이름으로 읽는다."""
     meta = data.get("meta")
     if isinstance(meta, dict) and "variables" in meta or "variableCollections" in data:
         return extractFigmaRest(data, setName, modeName, listWarning)
@@ -296,7 +296,7 @@ def normalizeNumber(key: str, value: float) -> int | float:
 
 
 def applyVariables(base: dict, mapFlat: dict[str, object], listWarning: list[str]) -> list[str]:
-    """평평한 표를 `base` 에 덮어쓴다. 덮어쓴 키(`group.key`)의 목록을 돌려주고, 못 쓴 변수는 경고에 더한다."""
+    """평평한 테이블를 `base` 에 덮어쓴다. 덮어쓴 키(`group.key`)의 목록을 돌려주고, 못 쓴 변수는 경고에 더한다."""
     listApplied: list[str] = []
     for name, value in mapFlat.items():
         target = mapVariableName(name)
@@ -317,7 +317,7 @@ def applyVariables(base: dict, mapFlat: dict[str, object], listWarning: list[str
 
 
 def listExpectedKey() -> set[str]:
-    """정본 표의 키 집합 — `group.key` 와 그룹 없는 키."""
+    """원본 표의 키 집합 — `group.key` 와 그룹 없는 키."""
     setKey = {f"{group}.{key}" for group, listKey in kSchema.items() for key in listKey}
     return setKey | set(kScalarKey)
 
@@ -335,7 +335,7 @@ def listActualKey(data: dict) -> set[str]:
 
 
 def checkKeySet(data: dict) -> list[str]:
-    """키 집합이 정본 표(= 다크 세트)와 같은지. 어긋남을 문장 목록으로."""
+    """키 집합이 원본 표(= 다크 세트)와 같은지. 어긋남을 문장 목록으로."""
     expected = listExpectedKey()
     actual = listActualKey(data)
     listError = [f"missing key: {key}" for key in sorted(expected - actual)]
