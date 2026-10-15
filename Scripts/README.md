@@ -106,6 +106,7 @@ Scripts/
   │     │     ├── CheckCodeConventions.py     # C++ 엔진 코딩 컨벤션 — 진입점 · 파일 고르기 · 보고(규칙은 lint/conventions/, 맨이름 `out` 도 여기)
   │     │     ├── CheckLoopBraces.py          # 본문에 중괄호가 없는 for · while
   │     │     ├── CheckConditionParts.py      # if · while 조건이 && · || 로 세 부분 이상이면 이름 붙이기 (훅은 추가한 줄만 · 전체는 rules 기준선 0)
+  │     │     ├── CheckEditorStyleLiterals.py # 에디터 코드의 숫자 리터럴 색 · 스타일 값(IM_COL32 · ImVec4 · PushStyleColor/Var)은 테마 토큰으로 (훅은 추가한 줄만 · 전체는 rules 기준선 이하)
   │     │     ├── CheckDiscardReason.py       # 실패 가능 함수 결과를 (void) 로 버리는 자리의 이유 한 줄
   │     │     ├── CheckSuppressionReasons.py  # NOLINT · diagnostic ignored · CMake 경고 끄기의 검사 이름과 이유
   │     │     ├── CheckProductNames.py        # 제품 이름 식별자는 드라이버 · 제공자 · 백엔드 · 플랫폼 폴더 안에서만
@@ -213,6 +214,7 @@ Scripts/
   │     ├── RemoveWorktree.py         # 워크트리 지우기 — 나눠 쓰는 링크를 먼저 끊는다
   │     ├── ListCiJobs.py             # GitHub Actions 실행 · 잡 · 실패 주석을 공개 API 로(로그인 없이)
   │     ├── ListOutdatedDeps.py       # vcpkg 의존성의 지금 판 · 레지스트리 최신 판(오버레이 포함, docs/09 5-2)
+  │     ├── MakeEditorTheme.py        # 에디터 테마 토큰(tokens.json) ↔ Figma 변수 · DTCG: import-figma · export-figma · check (`py -3 -m Scripts editor-theme`)
   │     ├── MoveEditorState.py        # 체크아웃마다 한 번: 옛 자리(Config/Editor · 팩 gv 프리셋)의 에디터 로컬 상태를 Saved/Editor 로
   │     ├── RunTests.py               # 스위트 · 케이스 이름으로 테스트 실행 — 테스트까지 지은 뒤(`all` · `AllTests`) 그 케이스가 사는 실행 파일을 `Bin` 에서
   │     ├── RunBuildBaseline.py       # 빌드 시간 기준선(풀 · 헤더 수정 · .cpp 수정 · 워크트리 콜드, 각 3 회 중앙값, 머리에 PC · CPU)

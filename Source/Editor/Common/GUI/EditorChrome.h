@@ -137,8 +137,8 @@ namespace sw::editor
         float32     _viewportYFrac{ 0.28f };
         float32     _rounding{ 8.0f };
         float32     _borderSize{ 1.5f };
-        Color       _bgColor{ style::kOverlayBg.withAlpha( 0.96f ) };
-        Color       _borderColor{ 0.25f, 0.45f, 0.75f, 1.0f };
+        float32     _bgAlpha{ 0.96f };     ///< 바탕은 테마 오버레이 색(`getOverlayBgColor`)에 이 알파를 곱한다
+        float32     _borderAlpha{ 0.75f }; ///< 테두리는 테마 강조색에 이 알파를 곱한다
         bool*       _pFocusOnOpen{ nullptr };
     };
 } // namespace sw::editor

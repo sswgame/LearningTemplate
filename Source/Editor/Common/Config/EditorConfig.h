@@ -8,6 +8,8 @@
 #pragma once
 #include "Core/Container/string.h"
 
+#include "Editor/Common/Config/EditorThemeTokens.h"
+
 #include "Engine/Config/IConfig.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -23,26 +25,29 @@ namespace sw::editor
     {
         REFLECT_BODY();
 
+        /** @brief 덮어쓰지 않았다는 표시입니다. 강조색 · 둥글기가 이 값이면 토큰 파일의 값을 쓴다. */
+        static constexpr float32 kNotOverridden = -1.0f;
+
         PROPERTY()
-        string _themePreset{ "ModernDark" }; ///< 테마 프리셋 이름(테마 대화 상자의 목록)
+        string _themeName{ EditorThemeTokens::kDefaultName }; ///< 테마 토큰 벌 이름(`Resource/editor/theme/<이름>.tokens.json`)
 
-        PROPERTY( Min = 0.0, Max = 1.0 )
-        float32 _themeAccentR{ 0.27f }; ///< 강조색 R(0..1)
+        PROPERTY( Min = -1.0, Max = 1.0 )
+        float32 _themeAccentR{ kNotOverridden }; ///< 덮어쓴 강조색 R(0..1, 음수면 토큰 값)
 
-        PROPERTY( Min = 0.0, Max = 1.0 )
-        float32 _themeAccentG{ 0.57f }; ///< 강조색 G(0..1)
+        PROPERTY( Min = -1.0, Max = 1.0 )
+        float32 _themeAccentG{ kNotOverridden }; ///< 덮어쓴 강조색 G(0..1, 음수면 토큰 값)
 
-        PROPERTY( Min = 0.0, Max = 1.0 )
-        float32 _themeAccentB{ 1.0f }; ///< 강조색 B(0..1)
+        PROPERTY( Min = -1.0, Max = 1.0 )
+        float32 _themeAccentB{ kNotOverridden }; ///< 덮어쓴 강조색 B(0..1, 음수면 토큰 값)
 
-        PROPERTY( Min = 0.0 )
-        float32 _themeWindowRounding{ 4.0f }; ///< 창 모서리 둥글기(픽셀)
+        PROPERTY( Min = -1.0 )
+        float32 _themeWindowRounding{ kNotOverridden }; ///< 덮어쓴 창 모서리 둥글기(픽셀, 음수면 토큰 값)
 
-        PROPERTY( Min = 0.0 )
-        float32 _themeFrameRounding{ 3.0f }; ///< 입력 필드와 버튼의 모서리 둥글기(픽셀)
+        PROPERTY( Min = -1.0 )
+        float32 _themeFrameRounding{ kNotOverridden }; ///< 덮어쓴 입력 필드와 버튼의 모서리 둥글기(픽셀, 음수면 토큰 값)
 
-        PROPERTY( Min = 0.0 )
-        float32 _themeTabRounding{ 4.0f }; ///< 탭 모서리 둥글기(픽셀)
+        PROPERTY( Min = -1.0 )
+        float32 _themeTabRounding{ kNotOverridden }; ///< 덮어쓴 탭 모서리 둥글기(픽셀, 음수면 토큰 값)
 
         static void                setActive( const EditorConfig& config );
         static const EditorConfig& getActive();

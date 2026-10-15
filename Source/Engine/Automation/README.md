@@ -119,5 +119,6 @@ AI 의 상태를 시나리오에서 보려면 `AIControllerComponent` 파생의 
 | `ScenarioRecorder.cpp` | 녹화를 시나리오로 바꾸기 |
 | `GameFramework/Base/Gameplay/Automation/GameplayAutomationSteps.cpp` | 게임 시간, 일정, AI, 빙의, 탑승 |
 | `Test/AppTest/TestAppScenario.cpp` | 시나리오 × 백엔드 실행, 기록 비교, 녹화 왕복 |
+| `Editor/SelfTest/EditorCaptureSteps.cpp` | 에디터 UI 캡처 단계 `CaptureEditorUI`(패널 + 플로팅 창 PNG, 마젠타 비율 · 잘린 창 수 단언) |
 
 검증 절차는 [검증과 측정](../../../docs/08_Verification.md) 3절, 결정은 [결정 기록](../../../docs/09_Decisions.md) 에 있습니다.

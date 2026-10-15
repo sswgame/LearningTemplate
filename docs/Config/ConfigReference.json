@@ -1446,15 +1446,6 @@
        "description": "스프라이트 클립 패널의 기본 아틀라스(리소스 경로)"
       },
       {
-       "name": "_fontSize",
-       "type": "float32",
-       "default": "16.0",
-       "min": "6.0",
-       "max": "",
-       "units": "",
-       "description": "에디터 글꼴 크기(픽셀, DPI 배율 전)"
-      },
-      {
        "name": "_clearColor",
        "type": "float4",
        "default": "0.12, 0.15, 0.18, 1.0",
@@ -3464,6 +3455,22 @@
    "kind": "시험 · 배포본에도",
    "description": "연속으로 찍을 스크린샷 수 (기본 1)",
    "source": "Source/Engine/Renderer/RenderThread.cpp"
+  },
+  {
+   "name": "gv_screenshotEditor",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "에디터 UI 전체(ImGui 패널 + 플로팅 창)를 이 경로(.png)에 한 장 찍는다 (비면 사용 안 함)",
+   "source": "Source/Editor/Common/Backend/EditorUICapture.cpp"
+  },
+  {
+   "name": "gv_screenshotEditorFrame",
+   "type": "int32",
+   "default": "60",
+   "kind": "시험",
+   "description": "-gv_screenshotEditor 를 찍을 에디터 UI 프레임 번호 (기본 60)",
+   "source": "Source/Editor/Common/Backend/EditorUICapture.cpp"
   },
   {
    "name": "gv_screenshotFrame",

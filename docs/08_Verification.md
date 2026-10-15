@@ -361,6 +361,7 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
 - **D3D12 디버그 레이어 경고는 Debug DX12 로그의 `D3D12 debug layer (severity S, id N)` 줄이다**(앞 16 개만 적고 나머지는 센다 — `IRHIDevice::getValidationMessageCount`). 렌더 변경 뒤 이 줄이 0 인지 본다.
   테스트는 그리기 전후의 수를 비교해 단언한다(`CanvasDrawsOnEveryBackend` · `GPUTimestampsMarkUnwrittenSlotsAllBackends`).
 - **`-gv_screenshot` 은 PrintWindow 가 아니다** — PPM 이 원본이다. `-gv_screenshotFrame=N` 으로 프레임을, `-gv_screenshotAttachment=<이름>` 으로 첨부를 고른다.
+- **에디터 UI 는 `-gv_screenshotEditor=<경로>.png`**(`-gv_screenshotEditorFrame=N`) 나 시나리오 단계 `<CaptureEditorUI file="….png" maxMagentaFraction="0"/>` 로 찍는다. 주 출력이 아니라 ImGui 패널 · 플로팅 창까지 든 에디터 화면이고, 창 전경 · 가림과 무관하다(원리는 [에디터 UX 기반](plans/EditorUX.md) 6 절).
   "가끔 튄다" 는 한 장으로 안 잡힌다 — `-gv_screenshotCount=30 -gv_screenshotInterval=2` 로 연속으로 찍어(`_000` … 이 붙는다) 장을 나란히 본다.
 - **"조용한 프레임" 버그는 벤치가 가린다**(회전 큐브라 매 프레임 dirty). 에디터 정지 화면으로 본다: `-EnableEditor -gv_benchMeshes=1 -gv_screenshot -gv_screenshotFrame=60`.
   그리는 것이 의심스러우면 `-gv_gpuCulling=0` · `-gv_drawMerge=0` · `-gv_vertexPool=0` 으로 경로를 하나씩 뗀다.

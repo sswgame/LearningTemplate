@@ -39,7 +39,7 @@ py -3 -m Scripts worktree-make <이름> --base main
 - PPM 은 PNG 로 바꿔 Read 로 직접 보고, 본 것을 말로 적습니다. 로그가 초록이어도 그림이 틀릴 수 있습니다.
 - **앱 창을 전경으로 올려 화면을 복사하는 스크립트를 쓰지 않습니다.** `SetForegroundWindow` · `ShowWindow` · `CopyFromScreen` 방식은 사용자 화면에 창이 튀어나오고 포커스를 뺏으며
   작업표시줄 미리보기가 캡처에 섞입니다. 메모장 같은 편집기를 띄우는 명령(`notepad`, `Start-Process <파일>`, `Invoke-Item`)도 쓰지 않습니다. 로그는 Read 도구로 읽습니다.
-- `-gv_screenshot` 은 게임 뷰만 저장하고 에디터 UI 는 담지 못합니다. 에디터 UI 를 보려면 전경을 훔치지 않는 창 캡처가 필요하고, 아직 없습니다. 에디터 UI 확인은 못 했다고 보고합니다.
+- `-gv_screenshot` 은 게임 뷰만 저장하고 에디터 UI 는 담지 못합니다. 에디터 UI(패널 · 플로팅 창)는 `-gv_screenshotEditor=<경로>.png` 나 시나리오 단계 `<CaptureEditorUI file="….png"/>` 로 찍습니다(전경을 쓰지 않는다, [에디터 UX 기반](EditorUX.md) 6 절). 패널 전체는 `engine/automation/editor/uiaudit.scenario.xml` 입니다.
 - 에디터는 `-EnableEditor` 가 있어야 뜹니다. 실행 뒤 로그로 에디터 모듈이 로드됐는지 확인합니다.
 - 비결정적으로 보이는 실패는 한 번으로 확정하지 않고 3~5 회 다시 돌려 재현율을 적습니다.
 

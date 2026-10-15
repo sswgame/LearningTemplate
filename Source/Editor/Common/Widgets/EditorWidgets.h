@@ -64,7 +64,9 @@ namespace sw::editor
         /**
          * @brief 활성과 비활성에 따라 색이 바뀌는 토글 및 필터 칩 버튼을 그립니다. 클릭되면 true 를 반환합니다.
          */
-        static bool drawToggleButton( const utf8* pLabel, bool bActive, const Color& activeColor = style::kToggleActive );
+        static bool drawToggleButton( const utf8* pLabel, bool bActive, const Color& activeColor );
+        /** @brief 켜진 색이 테마 강조색인 토글입니다. */
+        static bool drawToggleButton( const utf8* pLabel, bool bActive );
         /**
          * @brief 켬/끔 아이콘 버튼(정사각, 한 줄 높이)을 그립니다. 눌렸으면 true 입니다. 툴팁은 상태에 따라 @p pTooltipOn 과 @p pTooltipOff 중 하나입니다.
          * @details 한 변이 `GetFrameHeight()` 이므로 글꼴과 DPI 배율이 함께 반영된다. 픽셀 상수로 폭을 주면 150 % 배율에서 글자가 잘린다.

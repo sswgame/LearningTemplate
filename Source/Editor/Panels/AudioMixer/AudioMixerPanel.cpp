@@ -64,10 +64,10 @@ namespace sw::editor
             static Color getMeterColor( float32 decibel )
             {
                 if ( decibel > kClipDb )
-                    return style::kError;
+                    return EditorThemeUtil::getErrorColor();
                 if ( decibel > kMeterWarnDb )
-                    return style::kWarn;
-                return style::kOk;
+                    return EditorThemeUtil::getWarningColor();
+                return EditorThemeUtil::getSuccessColor();
             }
 
             static void openPanel()
@@ -219,14 +219,14 @@ namespace sw::editor
         }
         pDrawList->AddRect( meterMin, meterMax, EditorColorUtil::toImU32( Color{ 0.35f, 0.35f, 0.40f, 1.0f } ) );
 
-        ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( status._bMuted ? style::kError : style::kToggleInactive ) );
+        ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( status._bMuted ? EditorThemeUtil::getErrorColor() : EditorThemeUtil::getToggleInactiveColor() ) );
         if ( ImGui::Button( "M", ImVec2{ 32.0f * dpi, 0.0f } ) )
             engine.setBusMuted( status._name, status._bMuted == false );
         ImGui::PopStyleColor();
         EditorSelfTestMarks::note( ( "audiomixer.mute." + name ).c_str() );
         EditorWidgets::drawTooltip( "Mute" );
         ImGui::SameLine();
-        ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( status._bSolo ? style::kWarn : style::kToggleInactive ) );
+        ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( status._bSolo ? EditorThemeUtil::getWarningColor() : EditorThemeUtil::getToggleInactiveColor() ) );
         if ( ImGui::Button( "S", ImVec2{ 32.0f * dpi, 0.0f } ) )
             engine.setBusSolo( status._name, status._bSolo == false );
         ImGui::PopStyleColor();

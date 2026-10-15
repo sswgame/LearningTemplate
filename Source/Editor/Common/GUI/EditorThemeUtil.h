@@ -45,10 +45,12 @@ namespace sw::editor
         /** @brief 현재 DPI 배율을 반환합니다. 96 DPI 가 1 입니다. */
         static float32 getDpiScale();
 
-        /** @brief 프리셋으로 테마를 바로 적용합니다. */
-        static void applyPreset( EditorThemePreset preset );
-        /** @brief 설정 파일에 기록하는 이름("ClassicDark", 대소문자 무시)으로 프리셋을 찾습니다. 없으면 false 입니다. */
-        [[nodiscard]] static bool findPresetByConfigID( string_view configID, EditorThemePreset& outPreset );
+        /** @brief 토큰 벌(`Resource/editor/theme/<이름>.tokens.json`, 대소문자 무시)을 적용합니다. 덮어쓴 강조색 · 둥글기는 버립니다. 없는 이름이면 false 입니다. */
+        [[nodiscard]] static bool applyThemeByName( string_view name );
+        /** @brief 읽어 둔 토큰 벌의 이름을 씁니다(이름순). */
+        static void listThemes( vector<string>& outListName );
+        /** @brief 토큰 파일을 모두 다시 읽고 지금 테마를 다시 적용합니다(핫 리로드). 사용자가 덮어쓴 값은 설정에서 다시 얹습니다. */
+        static void reloadThemes();
 
         /** @brief EditorConfig(JSON)에 저장된 테마 설정을 읽어 적용합니다. */
         static void loadFromConfig();
@@ -66,6 +68,7 @@ namespace sw::editor
         // 1) 테마 색상 접근자(Color)
         // ----------------------------------------------------------------------
         static const Color& getAccentColor();
+        static const Color& getTextColor();
         /** @brief 씬 뷰 호버 강조 색입니다. 강조색을 밝고 반투명하게 만든 색이며 선택 주황보다 약하고 테마를 따릅니다. */
         static Color        getViewportHoverColor();
         static const Color& getWindowBgColor();
@@ -79,6 +82,17 @@ namespace sw::editor
         static const Color& getErrorColor();
         static const Color& getInfoColor();
         static const Color& getTextMutedColor();
+        /** @brief 뷰포트 위 오버레이(검색 팝업 · 알림) 바탕입니다. 알파는 쓰는 곳이 정합니다. */
+        static const Color& getOverlayBgColor();
+        /** @brief 씬 뷰 선택 외곽선입니다. 강조색(파랑 계열)은 격자 · 카메라 프러스텀과 섞여 쓰지 않습니다. */
+        static const Color& getSelectionOutlineColor();
+        /** @brief 2D 미리보기 · 그래프에서 고른 칸 · 지금 프레임을 짚는 색입니다. */
+        static const Color& getHighlightColor();
+        /** @brief 꺼진 토글 단추 색입니다(켜진 것은 강조색). */
+        static const Color& getToggleInactiveColor();
+        static const Color& getAxisXColor();
+        static const Color& getAxisYColor();
+        static const Color& getAxisZColor();
 
         // ----------------------------------------------------------------------
         // 2) UI 텍스트와 스타일 헬퍼

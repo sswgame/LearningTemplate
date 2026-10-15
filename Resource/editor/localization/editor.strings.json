@@ -762,13 +762,13 @@
             ]
         },
         "EdCommon.ThemePreset": {
-            "source": "Choose the theme preset for the whole editor (Modern Dark, Deep Charcoal, Midnight Blue and more).",
+            "source": "Choose the editor theme (Dark, Light, High Contrast and more). Themes are token files under Resource/editor/theme.",
             "origins": [
                 "Source/Editor/Common/GUI/EditorThemeUtil.cpp"
             ]
         },
         "EdCommon.ThemeReset": {
-            "source": "Restore every theme setting to the Modern Dark defaults.",
+            "source": "Drop your accent and rounding changes and use the values of the current theme.",
             "origins": [
                 "Source/Editor/Common/GUI/EditorThemeUtil.cpp"
             ]
