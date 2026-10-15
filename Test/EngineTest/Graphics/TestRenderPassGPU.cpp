@@ -6943,6 +6943,8 @@ SW_TEST_CASE( RenderPassGPUTest, SoftwareAdapterSwitchStartsWarp )
         bool bSoftware = false;
         bool bReady    = false;
         {
+            // WARP 로 뜬 장치는 "timings are not representative" 경고를 낸다 — 이 테스트가 켠 상황이다.
+            SW_TEST_DEFENSIVE_SCOPE( "a device on the software adapter warns that its timings are not representative" );
             test::RHITestDevice device( backend );
             bReady    = device.isReady();
             bSoftware = bReady && device->isRunningOnSoftwareAdapter();
