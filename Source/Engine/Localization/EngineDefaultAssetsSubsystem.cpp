@@ -14,8 +14,8 @@ namespace sw
 {
     SW_LOG_CALLER( "EngineDefaultAssets" );
 
-    EngineDefaultAssetsSubsystem::EngineDefaultAssetsSubsystem( unique_ptr<EngineDefaultAssets> defaultAssets )
-        : _defaultAssets{ std::move( defaultAssets ) }
+    EngineDefaultAssetsSubsystem::EngineDefaultAssetsSubsystem()
+        : _defaultAssets{ make_unique<EngineDefaultAssets>( EngineDefaultAssets::ConstructKey{} ) }
     {
     }
 
@@ -24,13 +24,24 @@ namespace sw
     SubsystemInitResult EngineDefaultAssetsSubsystem::initializeSubsystem()
     {
         EngineDefaultAssets& defaultAssets = *_defaultAssets;
+        // 셰이더 · 파이프라인 경로는 데이터에만 있다 — 못 읽으면 대신 쓸 값이 없으므로 기동을 멈춘다(이유는 loadFromResource 가 남긴다).
         if ( defaultAssets.loadFromResource( path::kEngineDefaultAssets ) == false )
-            SW_LOG_WARNING( "Engine data could not be read - using built-in defaults" );
+        {
+            SW_LOG_ERROR( "Engine default assets could not be read - stopping startup" );
+            return SubsystemInitResult::Failed;
+        }
+        // 문화권 표 · 엔진 문자열은 필수 칸이다 — 못 읽으면 숫자 · 날짜 형식과 설정 메뉴 글이 없으므로 기동을 멈춘다(이유는 각 읽기가 남긴다).
         LocalizationManager& localization = engine::getSubsystem<LocalizationManager>();
-        if ( defaultAssets._cultureTable.empty() == false )
-            (void)localization.loadCultureTable( defaultAssets._cultureTable ); // 실패는 loadCultureTable 이 오류로 남긴다
-        if ( defaultAssets._localizationProject.empty() == false && localization.mountProject( defaultAssets._localizationProject, LocalizationScope::Engine ) == false )
-            SW_LOG_ERROR( "Engine localization project '%#' is not (fully) loaded", defaultAssets._localizationProject.c_str() );
+        if ( localization.loadCultureTable( defaultAssets._cultureTable.get() ) == false )
+        {
+            SW_LOG_ERROR( "Engine culture table '%#' could not be read - stopping startup", defaultAssets._cultureTable.c_str() );
+            return SubsystemInitResult::Failed;
+        }
+        if ( localization.mountProject( defaultAssets._localizationProject.get(), LocalizationScope::Engine ) == false )
+        {
+            SW_LOG_ERROR( "Engine localization project '%#' is not (fully) loaded - stopping startup", defaultAssets._localizationProject.c_str() );
+            return SubsystemInitResult::Failed;
+        }
         string commandLineLanguage;
         if ( engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::LANGUAGE, commandLineLanguage ) && localization.hasLanguage( commandLineLanguage ) )
             localization.setCurrentLanguage( commandLineLanguage );

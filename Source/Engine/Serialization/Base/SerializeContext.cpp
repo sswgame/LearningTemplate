@@ -15,6 +15,7 @@
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Base/BinaryStream.h"
+#include "Engine/Serialization/Base/DataPath.h"
 #include "Engine/Serialization/Base/SerializeReflectAny.h"
 
 namespace sw
@@ -441,6 +442,8 @@ namespace sw
                 return true;
             };
             context.registerTextHandler( hashed_string( "SlotHandle" ), packedWrite, packedRead );
+
+            DataPath::registerSerializeHandler( context );
 
             context.registerTextHandler(
                 hashed_string( "ComponentHandle" ),

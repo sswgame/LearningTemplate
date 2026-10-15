@@ -4,9 +4,12 @@
 
 #include "Editor/Common/Asset/VrmMaterialImporter.h"
 
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // VrmMaterialImporterTest — VRM 의 MToon 값(0.x materialProperties · 1.0 VRMC_materials_mtoon)이 엔진 툰 머티리얼 파라미터로 옮겨지는지.
@@ -213,7 +216,7 @@ SW_TEST_CASE( VrmMaterialImporterTest, MaterialXMLLoadsAsToonMaterial )
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     SW_ASSERT_TRUE( material->loadFromXML( sw::editor::VrmMaterialImporter::makeMaterialXML( desc, listTexturePath ) ) );
-    SW_EXPECT_STREQ( "engine/shaders/toon.hlsl", material->getShaderPath().c_str() );
+    SW_EXPECT_STREQ( test::getEngineDefaultAssets()._shaderToon.c_str(), material->getShaderPath().c_str() );
     float32 toony{ 0.0f };
     SW_EXPECT_TRUE( material->getScalarParameter( sw::hashed_string( "shadingToony" ), toony ) );
     SW_EXPECT_NEAR_EQUAL( 0.75f, toony, 1e-5f );

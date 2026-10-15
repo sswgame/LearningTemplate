@@ -149,11 +149,13 @@ namespace sw
                 }
             }
 
-            static void collectAllRequests( string_view rootDir, vector<ShaderCookRequest>& outListRequest )
+            [[nodiscard]] static bool collectAllRequests( string_view rootDir, vector<ShaderCookRequest>& outListRequest )
             {
-                EngineDefaultAssets engineDefaultAssets;
-                if ( engineDefaultAssets.loadFromResource() == false )
-                    SW_LOG_WARNING( "Engine data could not be read - cooking with the built-in default passes" );
+                // 엔진 셰이더 경로는 데이터(enginedefaultassets.xml)에만 있다 — 못 읽으면 쿠킹 목록을 만들 수 없다(이유는 loadFromResource 가 남긴다).
+                const unique_ptr<EngineDefaultAssets> loadedAssets = EngineDefaultAssets::load();
+                if ( loadedAssets == nullptr )
+                    return false;
+                const EngineDefaultAssets& engineDefaultAssets = *loadedAssets;
 
                 vector<MeshPassInfo>        listMeshPass;
                 vector<MaterialVariantInfo> listMaterialVariant;
@@ -254,7 +256,7 @@ namespace sw
                         continue;
                     if ( info.hasFlag( RenderPassTraitFlag::kCompute ) )
                     {
-                        appendRequestUnique( outListRequest, engineDefaultAssets.*info._pDefaultShader, getShaderStageInfo( ShaderStage::Compute )._pEntryPoint, ShaderStage::Compute, {} );
+                        appendRequestUnique( outListRequest, ( engineDefaultAssets.*info._pDefaultShader ).get(), getShaderStageInfo( ShaderStage::Compute )._pEntryPoint, ShaderStage::Compute, {} );
                         continue;
                     }
                     if ( FrameRendererUtil::drawsSceneMeshes( passType ) )
@@ -271,17 +273,17 @@ namespace sw
                         passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( passType );
                         listMeshPass.push_back( std::move( passInfo ) );
                     }
-                    appendRequestUnique( outListRequest, engineDefaultAssets.*info._pDefaultShader, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, {} );
-                    appendRequestUnique( outListRequest, engineDefaultAssets.*info._pDefaultShader, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, {} );
+                    appendRequestUnique( outListRequest, ( engineDefaultAssets.*info._pDefaultShader ).get(), getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, {} );
+                    appendRequestUnique( outListRequest, ( engineDefaultAssets.*info._pDefaultShader ).get(), getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, {} );
                 }
 
                 // 패스가 아닌 엔진 · 테스트 셰이더.
                 const vector<string> listEngineShader = {
-                    engineDefaultAssets._shaderFullscreenTriangle,
-                    "engine/shaders/sprite2d.hlsl",
-                    "engine/shaders/sprite2dlit.hlsl",
-                    "common/shaders/provokingvertex.hlsl",
-                    "common/shaders/instanceslotprobe.hlsl" };
+                    engineDefaultAssets._shaderFullscreenTriangle.get(),
+                    engineDefaultAssets._shaderSprite2D.get(),
+                    engineDefaultAssets._shaderSprite2DLit.get(),
+                    engineDefaultAssets._shaderProbeProvokingVertex.get(),
+                    engineDefaultAssets._shaderProbeInstanceSlot.get() };
                 for ( const string& path : listEngineShader )
                 {
                     appendRequestUnique( outListRequest, path, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, {} );
@@ -289,15 +291,15 @@ namespace sw
                 }
 
                 const vector<string> listEngineComputeShader = {
-                    "common/shaders/samplecompute.hlsl",
-                    "common/shaders/computetexturewrite.hlsl",
-                    "common/shaders/waterwaveprobe.hlsl" };
+                    engineDefaultAssets._shaderProbeSampleCompute.get(),
+                    engineDefaultAssets._shaderProbeComputeTextureWrite.get(),
+                    engineDefaultAssets._shaderProbeWaterWave.get() };
                 for ( const string& path : listEngineComputeShader )
                 {
                     appendRequestUnique( outListRequest, path, getShaderStageInfo( ShaderStage::Compute )._pEntryPoint, ShaderStage::Compute, {} );
                 }
                 // 기본이 아닌 컴퓨트 진입점(RHIDeviceTest.ComputeEntryPointOtherThanCSMainRuns).
-                appendRequestUnique( outListRequest, "common/shaders/computetexturewrite.hlsl", "csWriteSwapped", ShaderStage::Compute, {} );
+                appendRequestUnique( outListRequest, engineDefaultAssets._shaderProbeComputeTextureWrite.get(), "csWriteSwapped", ShaderStage::Compute, {} );
 
                 // 3) 머티리얼 에셋(.material)
                 vector<string> listMaterialFile;
@@ -372,6 +374,7 @@ namespace sw
                         }
                     }
                 }
+                return true;
             }
         };
     } // namespace
@@ -381,8 +384,8 @@ namespace sw
 {
     SW_LOG_CALLER( "ShaderCooker" );
 
-    void ShaderCookDriver::collectAllRequests( string_view rootDir, vector<ShaderCookRequest>& outListRequest )
+    bool ShaderCookDriver::collectAllRequests( string_view rootDir, vector<ShaderCookRequest>& outListRequest )
     {
-        ShaderCookRequestInternal::collectAllRequests( rootDir, outListRequest );
+        return ShaderCookRequestInternal::collectAllRequests( rootDir, outListRequest );
     }
 } // namespace sw

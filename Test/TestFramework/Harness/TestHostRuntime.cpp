@@ -92,18 +92,29 @@ namespace
         sw::SubsystemInitResult initializeSubsystem() override { return sw::SubsystemInitResult::Succeeded; }
     };
 
-    /** @brief 하네스는 엔진 데이터를 읽지 않는다 — 저장소가 만든 기본값을 소유만 한다. */
+    /**
+     * @brief 하네스는 엔진 기본 에셋 표만 읽는다(문화권 표 · 로컬라이제이션 프로젝트는 걸지 않는다).
+     * @details 셰이더 · 파이프라인 경로는 데이터(enginedefaultassets.xml)에만 있다 — 읽지 못하면 렌더 테스트가 쓸 경로가 없으므로 하네스 기동을 멈춘다.
+     */
     class TestEngineDefaultAssetsSubsystem final : public sw::EngineDefaultAssetsSubsystem
     {
     public:
         using sw::EngineDefaultAssetsSubsystem::EngineDefaultAssetsSubsystem;
 
-        sw::SubsystemInitResult initializeSubsystem() override { return sw::SubsystemInitResult::Succeeded; }
+        sw::SubsystemInitResult initializeSubsystem() override
+        {
+            return getDefaultAssets().loadFromResource() ? sw::SubsystemInitResult::Succeeded : sw::SubsystemInitResult::Failed;
+        }
     };
 } // namespace
 
 namespace test
 {
+    const sw::EngineDefaultAssets& getEngineDefaultAssets()
+    {
+        return sw::engine::getSubsystem<sw::EngineDefaultAssets>();
+    }
+
     const utf8* rebindEngineServices( const sw::ISubsystemLocator& subsystems )
     {
         // 이 파일이 호스트다(아래 `TestHostRuntime::start` 가 표를 묶는다). 테스트는 이 창구로만 표를 갈아 끼운다 — 하네스의 엔진 범위를 부모로 둔
@@ -269,7 +280,7 @@ namespace test
             SW_MEMORY_SCOPE( Asset );
             startup.addSubsystem( sw::make_unique<sw::AssetManager>() );
         }
-        const TestEngineDefaultAssetsSubsystem& defaultAssets = startup.addSubsystem( sw::make_unique<TestEngineDefaultAssetsSubsystem>( sw::make_unique<sw::EngineDefaultAssets>() ) );
+        const TestEngineDefaultAssetsSubsystem& defaultAssets = startup.addSubsystem( sw::make_unique<TestEngineDefaultAssetsSubsystem>() );
         (void)startup.bind( &defaultAssets.getDefaultAssets() ); // 새 범위 — 겹치지 않는다
         // 하네스의 오디오는 대역 타입이다 — 서비스 표가 찾는 인터페이스로도 건다.
         (void)startup.expose<sw::IAudioService>( startup.addSubsystem( sw::make_unique<TestAudioService>() ) ); // 새 범위 — 겹치지 않는다

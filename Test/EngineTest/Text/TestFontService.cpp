@@ -8,6 +8,7 @@
 #include "EngineTest/LocalizationTestUtil.h"
 #include "EngineTest/Text/FakeFontRasterizer.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // FontServiceTest — 글꼴 카탈로그 · 가족 고르기(굵기 · 가짜 굵게) · 문화권 대체 사슬 · 못 찾은 가족의 경고 한 번. 디바이스 없음(nogpu).
@@ -46,7 +47,7 @@ namespace
 SW_TEST_CASE( FontServiceTest, CatalogDefaultFamilyOpens )
 {
     sw::FontService fontService;
-    SW_ASSERT_TRUE( fontService.initialize( sw::EngineDefaultAssets{}._fontCatalog ) );
+    SW_ASSERT_TRUE( fontService.initialize( test::getEngineDefaultAssets()._fontCatalog.get() ) );
     SW_EXPECT_TRUE( fontService.isInitialized() );
     const sw::FontFaceChain chain = fontService.getFaceChain( sw::FontSpec{} );
     SW_ASSERT_TRUE( chain._faceCount >= 1 );
@@ -234,7 +235,7 @@ SW_TEST_CASE( FontServiceTest, SystemFallbackCoversHangulWhenInstalled )
 
     sw::FontService fontService( sw::IFontRasterizer::createDefault(), &localization );
     SW_TEST_DEFENSIVE_SCOPE( "fallback families not installed on this machine warn once" );
-    SW_ASSERT_TRUE( fontService.initialize( sw::EngineDefaultAssets{}._fontCatalog ) );
+    SW_ASSERT_TRUE( fontService.initialize( test::getEngineDefaultAssets()._fontCatalog.get() ) );
     const sw::FontFaceChain chain = fontService.getFaceChain( sw::FontSpec{} );
     SW_ASSERT_TRUE( chain._faceCount >= 2 );
     uint32               glyphIndex = 0;

@@ -169,8 +169,8 @@ namespace sw
             Texture2D* pTexture     = textures.acquire( borrowedPath, pRHI );
             if ( pTexture == nullptr )
             {
-                borrowedPath = engine::getSubsystem<EngineDefaultAssets>()._missingTexture;
-                pTexture     = borrowedPath.empty() ? nullptr : textures.acquire( borrowedPath, pRHI );
+                borrowedPath = engine::getSubsystem<EngineDefaultAssets>()._missingTexture.get();
+                pTexture     = textures.acquire( borrowedPath, pRHI );
                 if ( pTexture == nullptr )
                 {
                     SW_LOG_ERROR( "Material '%#': texture '%#' for '%#' could not be loaded and neither could the missing-texture checker — sampling falls back to white.",

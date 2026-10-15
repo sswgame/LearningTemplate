@@ -180,16 +180,16 @@ namespace sw
         const EngineDefaultAssets& engineDefaultAssets = engine::getSubsystem<EngineDefaultAssets>();
         RenderPipelineAssetCache&  rpm                 = *_renderPipelineAssetCache;
         if ( rpm.findRenderPass( hashed_string( FrameRendererUtil::kDefaultMainPassName ) ) == nullptr )
-            rpm.loadRenderPass( engineDefaultAssets._defaultRenderPass );
+            rpm.loadRenderPass( engineDefaultAssets._defaultRenderPass.get() );
 
         // 인자, `-gv_renderPipeline`, `-gv_deferred`, 게임 프리셋(GameConfig::_renderPipeline), EngineDefaultAssets 의 포워드 순서로 고른다.
         // 디퍼드 경로(와 그 위의 조명)를 측정하거나 검증하려면 `-gv_deferred=1` 을 준다.
         FrameRendererUtil::PipelineChoice choice{};
         choice._argumentPath               = pipelineXMLPath;
         choice._commandLinePath            = gv_renderPipeline;
-        choice._deferredPath               = engineDefaultAssets._defaultDeferredPipeline;
+        choice._deferredPath               = engineDefaultAssets._defaultDeferredPipeline.get();
         choice._gamePath                   = GameConfig::getActive()._renderPipeline;
-        choice._forwardPath                = engineDefaultAssets._defaultForwardPipeline;
+        choice._forwardPath                = engineDefaultAssets._defaultForwardPipeline.get();
         choice._bDeferred                  = gv_deferred;
         const string_view resolvedPipeline = FrameRendererUtil::computePipelinePath( choice );
 

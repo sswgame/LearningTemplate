@@ -2,6 +2,8 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/Support/RHIConstantBufferMirror.h"
@@ -15,6 +17,7 @@
 
 #include "EngineTest/RHIFakeDevice.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 namespace
@@ -188,8 +191,8 @@ SW_TEST_CASE( RHIReleaseQueueTest, ConcurrentTicksRunEachCallbackOnce )
 SW_TEST_CASE( RHIShaderRequestTest, ResolvesEntryPointsDefinesAndDepthOnly )
 {
     sw::RHIPipelineStateDesc desc{};
-    desc._vertexShaderPath = "engine/shaders/forwardlit.hlsl";
-    desc._pixelShaderPath  = "engine/shaders/forwardlit.hlsl";
+    desc._vertexShaderPath = test::getEngineDefaultAssets()._shaderForwardLit.get();
+    desc._pixelShaderPath  = test::getEngineDefaultAssets()._shaderForwardLit.get();
     desc._listShaderDefine = { "SW_FORWARD=1", "FOO" };
 
     // 1) 기본: 진입점 기본값, define 은 두 스테이지에, RT 1.

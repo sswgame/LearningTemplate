@@ -8,6 +8,7 @@
     #include "Core/File/FileUtil.h"
 
     #include "Engine/Common/EngineServices.h"
+    #include "Engine/Config/EngineDefaultAssets.h"
     #include "Engine/Graphics/Shader/Compile/ShaderRecompiler.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
@@ -15,6 +16,7 @@
     #include "Engine/Resource/ResourcePaths.h"
 
     #include "TestFramework/TestFramework.h"
+    #include "TestFramework/Harness/TestHostRuntime.h"
 
 // 셰이더 핫 리로드 — 디스크의 .hlsli 를 고치고 바이트코드가 실제로 다시 쿠킹되는지 본다.
 //
@@ -33,7 +35,7 @@ SW_TEST_REQUIRES_HOST( LiveShaderTest, "recompiles shaders with DXC and edits th
 SW_TEST_CASE( LiveShaderTest, ReloadTargetsComeFromShaderCache )
 {
     sw::ShaderCompileDesc vsDesc{};
-    vsDesc._filePath     = "engine/shaders/forwardlit.hlsl";
+    vsDesc._filePath     = test::getEngineDefaultAssets()._shaderForwardLit.get();
     vsDesc._entryPoint   = "VSMain";
     vsDesc._stage        = sw::ShaderStage::Vertex;
     vsDesc._targetFormat = sw::ShaderTargetFormat::DXBC_D3D11;

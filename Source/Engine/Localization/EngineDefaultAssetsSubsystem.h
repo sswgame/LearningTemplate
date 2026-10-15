@@ -23,8 +23,8 @@ namespace sw
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "EngineDefaultAssets";
 
-        /** @brief @p defaultAssets 를 넘겨받습니다. */
-        explicit EngineDefaultAssetsSubsystem( unique_ptr<EngineDefaultAssets> defaultAssets );
+        /** @brief 읽지 않은 표를 만들어 소유합니다. 값은 `initializeSubsystem` 이 데이터에서 읽는다(호스트는 그 전에 표를 범위에 `bind` 한다). */
+        EngineDefaultAssetsSubsystem();
         ~EngineDefaultAssetsSubsystem() override;
 
         EngineDefaultAssetsSubsystem( const EngineDefaultAssetsSubsystem& )            = delete;

@@ -4,11 +4,21 @@
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "EngineDefaultAssets" );
+
+    unique_ptr<EngineDefaultAssets> EngineDefaultAssets::load( string_view assetRelativePath )
+    {
+        unique_ptr<EngineDefaultAssets> assets = make_unique<EngineDefaultAssets>( ConstructKey{} );
+        if ( assets->loadFromResource( assetRelativePath ) == false )
+            return nullptr;
+        return assets;
+    }
 
     bool EngineDefaultAssets::loadFromResource( string_view assetRelativePath )
     {
@@ -19,17 +29,42 @@ namespace sw
         const TypeInfo* pTypeInfo = EngineDefaultAssets::StaticType();
         if ( pTypeInfo == nullptr )
         {
-            SW_LOG_WARNING( "EngineDefaultAssets TypeInfo 없음 — 내장 기본값을 씁니다." );
+            SW_LOG_ERROR( "EngineDefaultAssets TypeInfo is missing - cannot read %#", path );
             return false;
         }
 
-        // 파일에 없는 필드는 멤버 초기값이 그대로 남는다. loadFile 이 false 여도 그 앞까지 읽은 값은 이미
-        // 들어가 있다. 리소스 경로라 "없음" 과 "일부 실패" 를 여기서 가를 수 없으므로 둘 다 있는 그대로 로그에 남긴다.
+        // 파일에 없는 선택 칸은 멤버 초기값(스키마 기본값)이 그대로 남는다. 필수 칸은 초기값이 없으므로 아래에서 막는다.
         if ( XMLSerializer::loadFile( path, this, *pTypeInfo ) == false )
         {
-            SW_LOG_WARNING( "EngineDefaultAssets 를 읽지 못했거나 일부 필드가 어긋났습니다 — 읽힌 값은 쓰고 나머지는 내장 기본값입니다: %#", path );
+            SW_LOG_ERROR( "EngineDefaultAssets could not be read or has mismatched fields: %#", path );
             return false;
         }
+
+        // 필수 칸(셰이더 · 파이프라인 · 렌더 패스 경로)은 헤더에 값이 없다 — 데이터가 정본이다. 빠졌거나 가리키는 파일이 없으면
+        // 다른 경로로 대신하지 않고 읽기를 실패로 끝낸다(기동 · 쿠킹이 멈춘다). Shipping 팩에는 셰이더 소스(.hlsl)가 없으므로
+        // 파일 확인은 개발 빌드만 한다 — Shipping 은 쿠킹 스탬프(`cook.stamp`)가 소스와 바이너리의 짝을 지킨다.
+        bool bComplete = true;
+        for ( const PropertyInfo& prop : pTypeInfo->getPropertiesWithBase() )
+        {
+            if ( prop._metadata._bRequired == SW_FALSE )
+                continue;
+            const DataPath* pValue = prop.getValuePtr<DataPath>( this );
+            if ( pValue == nullptr || pValue->isSet() == false )
+            {
+                SW_LOG_ERROR( "%#: required field <%#> is missing", path, prop._name.c_str() );
+                bComplete = false;
+                continue;
+            }
+#if !defined( SW_SHIPPING )
+            if ( ResourceIO::hasResource( pValue->get() ) == false )
+            {
+                SW_LOG_ERROR( "%#: <%#> points to '%#', which does not exist", path, prop._name.c_str(), pValue->c_str() );
+                bComplete = false;
+            }
+#endif
+        }
+        if ( bComplete == false )
+            return false;
 
         SW_LOG_INFO( "Loaded from %#", path );
         return true;

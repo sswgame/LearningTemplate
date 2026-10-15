@@ -13,6 +13,7 @@
 #include "EngineTest/LocalizationTestUtil.h"
 
 #include "TestFramework/Harness/TestBench.h"
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // 시스템 한글 글꼴(malgun · Noto CJK)을 읽는다 — CI 러너 이미지에는 없다. 측정 탐침이라 호스트 스위트로 둔다(`--host_suites=only`).
@@ -60,7 +61,7 @@ SW_TEST_CASE( GlyphBenchTest, HangulFirstFrameRasterize )
 
     sw::FontService fontService( sw::IFontRasterizer::createDefault(), &localization );
     SW_TEST_DEFENSIVE_SCOPE( "fallback families not installed on this machine warn once" );
-    SW_ASSERT_TRUE( fontService.initialize( sw::EngineDefaultAssets{}._fontCatalog ) );
+    SW_ASSERT_TRUE( fontService.initialize( test::getEngineDefaultAssets()._fontCatalog.get() ) );
     const sw::FontFaceChain chain = fontService.getFaceChain( sw::FontSpec{} );
     // 대체 면을 미리 연다 — 판이 재는 것은 글리프마다의 일이지 글꼴 파일 열기가 아니다.
     uint32 warmGlyphIndex = 0;

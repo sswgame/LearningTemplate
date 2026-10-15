@@ -289,7 +289,7 @@ namespace sw
         if ( pPassDesc != nullptr && pPassDesc->_shaderPath.empty() == false )
             selection._shaderPath = pPassDesc->_shaderPath;
         else if ( info._pDefaultShader != nullptr )
-            selection._shaderPath = engineDefaultAssets.*info._pDefaultShader;
+            selection._shaderPath = ( engineDefaultAssets.*info._pDefaultShader ).get();
 
         if ( pPassDesc != nullptr )
             selection._listDefine = pPassDesc->_listPermutation;

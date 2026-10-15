@@ -46,7 +46,7 @@ namespace sw
                 // -gv_defaultMaterial 이 있으면 그것이 먼저다(선언은 이 파일 위쪽).
                 if ( gv_defaultMaterial.empty() == false )
                     return gv_defaultMaterial;
-                return pDefaultAssets != nullptr ? pDefaultAssets->_defaultMaterial : string{};
+                return pDefaultAssets != nullptr ? pDefaultAssets->_defaultMaterial.get() : string{};
             }
 
             /**

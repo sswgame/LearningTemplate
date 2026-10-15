@@ -146,7 +146,7 @@ namespace
         engineScope.addSubsystem( make_unique<AsyncFileIO>() );
         engineScope.addSubsystem( make_unique<ConfigManager>() );
         engineScope.addSubsystem( make_unique<AssetManager>() );
-        const EngineDefaultAssetsSubsystem& defaultAssets = engineScope.addSubsystem( sw::make_unique<EngineDefaultAssetsSubsystem>( sw::make_unique<EngineDefaultAssets>() ) );
+        const EngineDefaultAssetsSubsystem& defaultAssets = engineScope.addSubsystem( sw::make_unique<EngineDefaultAssetsSubsystem>() );
         (void)engineScope.bind( &defaultAssets.getDefaultAssets() ); // 새 범위 — 겹치지 않는다
         engineScope.addSubsystem( sw::make_unique<ModuleImagesSubsystem>() );
         engineScope.addSubsystem( sw::make_unique<ModuleTypesSubsystem>() );

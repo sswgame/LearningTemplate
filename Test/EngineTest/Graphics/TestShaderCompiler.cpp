@@ -2,11 +2,14 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 #include "Engine/Resource/ResourcePaths.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 #include <thread>
@@ -61,7 +64,7 @@ SW_TEST_CASE( ShaderCompilerTest, BasicCompileAndReflection )
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::ShaderCompileDesc desc{};
-    desc._filePath     = "engine/shaders/fullscreentriangle.hlsl";
+    desc._filePath     = test::getEngineDefaultAssets()._shaderFullscreenTriangle.get();
     desc._entryPoint   = "VSMain";
     desc._stage        = sw::ShaderStage::Vertex;
     desc._targetFormat = sw::ShaderTargetFormat::DXBC_D3D11;
@@ -99,7 +102,7 @@ SW_TEST_CASE( ShaderCompilerTest, MultiTargetCrossCompilation )
     for ( sw::ShaderTargetFormat targetFormat : targets )
     {
         sw::ShaderCompileDesc vsDesc{};
-        vsDesc._filePath     = "engine/shaders/fullscreentriangle.hlsl";
+        vsDesc._filePath     = test::getEngineDefaultAssets()._shaderFullscreenTriangle.get();
         vsDesc._entryPoint   = "VSMain";
         vsDesc._stage        = sw::ShaderStage::Vertex;
         vsDesc._targetFormat = targetFormat;
@@ -124,7 +127,7 @@ SW_TEST_CASE( ShaderCompilerTest, MultiTargetCrossCompilation )
         SW_EXPECT_FALSE( vsResult._bytecode.empty() );
 
         sw::ShaderCompileDesc psDesc{};
-        psDesc._filePath     = "engine/shaders/fullscreentriangle.hlsl";
+        psDesc._filePath     = test::getEngineDefaultAssets()._shaderFullscreenTriangle.get();
         psDesc._entryPoint   = "PSMain";
         psDesc._stage        = sw::ShaderStage::Pixel;
         psDesc._targetFormat = targetFormat;
@@ -170,7 +173,7 @@ SW_TEST_CASE( ShaderCompilerTest, DiskCacheHitAndClear )
     sw::ShaderCompiler::clearDiskCache();
 
     sw::ShaderCompileDesc desc{};
-    desc._filePath     = "engine/shaders/fullscreentriangle.hlsl";
+    desc._filePath     = test::getEngineDefaultAssets()._shaderFullscreenTriangle.get();
     desc._entryPoint   = "VSMain";
     desc._stage        = sw::ShaderStage::Vertex;
     desc._targetFormat = sw::ShaderTargetFormat::DXBC_D3D11;
@@ -207,7 +210,7 @@ SW_TEST_CASE( ShaderCompilerTest, MultiBackendShaderCacheIsolation )
     shaderCache.clearCache();
 
     sw::ShaderCompileDesc dx11Desc{};
-    dx11Desc._filePath     = "engine/shaders/fullscreentriangle.hlsl";
+    dx11Desc._filePath     = test::getEngineDefaultAssets()._shaderFullscreenTriangle.get();
     dx11Desc._entryPoint   = "VSMain";
     dx11Desc._stage        = sw::ShaderStage::Vertex;
     dx11Desc._targetFormat = sw::ShaderTargetFormat::DXBC_D3D11;
@@ -266,7 +269,7 @@ SW_TEST_CASE( ShaderCompilerTest, MultiBackendDiskCacheFileSeparation )
     sw::ShaderCompiler::clearDiskCache();
 
     sw::ShaderCompileDesc dx11Desc{};
-    dx11Desc._filePath     = "engine/shaders/fullscreentriangle.hlsl";
+    dx11Desc._filePath     = test::getEngineDefaultAssets()._shaderFullscreenTriangle.get();
     dx11Desc._entryPoint   = "VSMain";
     dx11Desc._stage        = sw::ShaderStage::Vertex;
     dx11Desc._targetFormat = sw::ShaderTargetFormat::DXBC_D3D11;

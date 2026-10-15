@@ -5,6 +5,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Resource/AssetDatabase.h"
@@ -18,6 +19,7 @@
 
 #include "EngineTest/HostTargetTestUtil.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 #include <fstream>
@@ -192,7 +194,7 @@ SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXML )
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     SW_EXPECT_TRUE( material->loadFromFile( tempPath ) );
     SW_EXPECT_EQUAL( sw::string( "CurrentMat" ), material->getName() );
-    SW_EXPECT_EQUAL( sw::string( "engine/shaders/forwardlit.hlsl" ), material->getShaderPath() );
+    SW_EXPECT_EQUAL( sw::string( test::getEngineDefaultAssets()._shaderForwardLit.get() ), material->getShaderPath() );
 }
 
 /**
