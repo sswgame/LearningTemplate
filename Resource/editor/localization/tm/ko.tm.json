@@ -262,6 +262,10 @@
             "text": "오른쪽 가운데"
         },
         {
+            "source": "Choose the editor theme (Dark, Light, High Contrast and more). Themes are token files under Resource/editor/theme.",
+            "text": "에디터 테마(Dark, Light, High Contrast 등)를 선택합니다. 테마는 Resource/editor/theme 의 토큰 파일입니다."
+        },
+        {
             "source": "Choose the theme preset for the whole editor (Modern Dark, Deep Charcoal, Midnight Blue and more).",
             "text": "에디터 전체의 테마 프리셋(Modern Dark, Deep Charcoal, Midnight Blue 등)을 선택합니다"
         },
@@ -524,6 +528,10 @@
         {
             "source": "Drop everything the selected process sends and receives for this many seconds",
             "text": "고른 프로세스가 보내고 받는 것을 이 시간(초) 동안 모두 버립니다"
+        },
+        {
+            "source": "Drop your accent and rounding changes and use the values of the current theme.",
+            "text": "강조색과 둥글기 변경을 버리고 현재 테마의 값을 씁니다"
         },
         {
             "source": "Edit the selected prefab on its own in isolation mode",
