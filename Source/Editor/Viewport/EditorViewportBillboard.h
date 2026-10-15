@@ -8,6 +8,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorExports.h"
+#include "Editor/Common/GUI/EditorComponentIcon.h"
 
 namespace sw
 {
@@ -21,15 +22,13 @@ namespace sw
 
 namespace sw::editor
 {
-    struct EditorComponentIconRow;
-
     /** @brief 이번 프레임에 화면에 보이는 빌보드 하나입니다. */
     struct EditorViewportBillboardItem
     {
-        GameObject*                   _pObject{ nullptr };
-        Component*                    _pComponent{ nullptr };
-        const EditorComponentIconRow* _pRow{ nullptr };
-        float2                        _screen{}; ///< 배지 가운데(캔버스 화면 좌표)
+        GameObject*            _pObject{ nullptr };
+        Component*             _pComponent{ nullptr };
+        EditorComponentIconRow _row{};    ///< 값으로 든다 — `findRow` 는 값을 돌려주므로 그 주소는 수집이 끝나면 무효다
+        float2                 _screen{}; ///< 배지 가운데(캔버스 화면 좌표)
     };
 } // namespace sw::editor
 
@@ -54,5 +53,10 @@ namespace sw::editor
         static uint32 findAt( const vector<EditorViewportBillboardItem>& listItem, const float2& point );
         /** @brief 배지 지름(픽셀 — 26 × DPI 배율)입니다. */
         static float32 getDiameter();
+        /**
+         * @brief 지난 그리기에서 @p object 의 배지에 실제로 넘긴 글리프의 코드 포인트입니다(탐침 `Editor.BillboardIcon`).
+         *        그리지 않았거나 글이 한 글자가 아니면(무효 메모리를 읽은 쓰레기 문자열) 0 입니다.
+         */
+        static uint32 findDrawnGlyph( const GameObject& object );
     };
 } // namespace sw::editor
