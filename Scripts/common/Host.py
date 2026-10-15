@@ -79,7 +79,8 @@ def listGitFilesInternal(projectRoot: Path, listGitArgument: list[str], extensio
     fileSet: set[Path] = set()
     gitResult = runGit(listGitArgument, cwd=projectRoot)
     if gitResult.returnCode != 0:
-        return fileSet
+        # 목록을 못 얻으면 "바뀐 파일 없음" 이 아니다 — 빈 목록이면 커밋 훅이 검사 없이 통과한다.
+        raise RuntimeError(f"git {' '.join(listGitArgument)} 실패: {gitResult.stderr.strip()}")
     for rawLine in gitResult.stdout.splitlines():
         if line := rawLine.strip():
             resolvedPath = (projectRoot / line).resolve()
@@ -104,14 +105,13 @@ def getMergeHeadRevisions(root: Path | None = None) -> list[str]:
     projectRoot = root or getProjectRoot()
     gitResult = runGit(["rev-parse", "--git-path", "MERGE_HEAD"], cwd=projectRoot)
     if gitResult.returnCode != 0:
-        return []
+        raise RuntimeError(f"git rev-parse --git-path MERGE_HEAD 실패: {gitResult.stderr.strip()}")
     mergeHeadPath = Path(gitResult.stdout.strip())
     if not mergeHeadPath.is_absolute():
         mergeHeadPath = projectRoot / mergeHeadPath
-    try:
-        text = mergeHeadPath.read_text(encoding="utf-8")
-    except OSError:
-        return []
+    if not mergeHeadPath.is_file():
+        return []   # 병합 중이 아니다
+    text = mergeHeadPath.read_text(encoding="utf-8")
     return [line.strip() for line in text.splitlines() if line.strip()]
 
 
@@ -120,7 +120,7 @@ def mapBlobByPathInternal(projectRoot: Path, listGitArgument: list[str], blobFie
     gitResult = runGit(listGitArgument, cwd=projectRoot)
     mapBlob: dict[str, str] = {}
     if gitResult.returnCode != 0:
-        return mapBlob
+        return mapBlob   # 대조할 수 없으면 아무 파일도 "부모와 같다" 로 빼지 않는다 — 모두 검사하는 쪽이다(listFilesUnlikeEveryParent)
     bIndex = listGitArgument[0] == "ls-files"
     for entry in gitResult.stdout.split("\0"):
         head, separator, relPath = entry.partition("\t")

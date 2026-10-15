@@ -95,10 +95,11 @@ class HardwareProfile:
 
     @property
     def bEmulated(self) -> bool:
-        return bool(self.data.get("emulated", False))
+        return bool(self.data["emulated"])
 
     def makeLimits(self) -> ProcessLimits:
-        return ProcessLimits(int(self.data.get("cpu_count", 0)), int(self.data.get("memory_mb", 0)))
+        # 프로필 키는 모두 필수다(Profiles.json — 0 · 빈 값이 "제한 없음" 을 뜻한다). 빠지면 KeyError.
+        return ProcessLimits(int(self.data["cpu_count"]), int(self.data["memory_mb"]))
 
 
 @dataclass
@@ -113,7 +114,8 @@ class RunMeasurement:
 
 
 def readJsonInternal(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+    """부하 표 하나 — 없거나 깨졌으면 멈춘다(빈 표로 돌면 시나리오 · 예산이 조용히 사라진다)."""
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def parseDeclaration(repositoryRoot: Path, name: str, relativePath: str, mapGameByPack: dict[str, str]) -> LoadDeclaration:
@@ -125,7 +127,9 @@ def parseDeclaration(repositoryRoot: Path, name: str, relativePath: str, mapGame
         parts = Path(relativePath).parts
         declaration.resourceID = Path(*parts[1:]).as_posix() if parts[0] == "Resource" else relativePath
         bGamePack = len(parts) > 2 and parts[1] == "game"
-        declaration.gameName = mapGameByPack.get(parts[2], parts[2]) if bGamePack else "Empty"
+        if bGamePack and parts[2] not in mapGameByPack:
+            raise ValueError(f"{relativePath}: no Config/Game preset has _packRoot game/{parts[2]}")
+        declaration.gameName = mapGameByPack[parts[2]] if bGamePack else "Empty"
     elif root.tag == "LoadScenario":
         declaration = LoadDeclaration(name, root.get("driver", ""), path, botScenario=root.get("botScenario", ""), testFilter=root.get("test", ""))
         if declaration.driver not in ("loadbot", "cluster"):
@@ -146,6 +150,8 @@ def parseDeclaration(repositoryRoot: Path, name: str, relativePath: str, mapGame
         raise ValueError(f"{relativePath}: <Load> needs durationSeconds > 0")
     if declaration.driver == "loadbot" and declaration.network:
         raise ValueError(f"{relativePath}: the loadbot driver has no network emulation (TCP) - remove network")
+    if declaration.driver == "cluster" and declaration.clientCount <= 0:
+        raise ValueError(f"{relativePath}: the cluster driver needs <Load clients> > 0")
     return declaration
 
 
@@ -156,15 +162,19 @@ class LoadCatalog:
         self.repositoryRoot = repositoryRoot
         folder = repositoryRoot / kLoadFolder
         self.suites = readJsonInternal(folder / "Suites.json")
-        self.profiles = readJsonInternal(folder / "Profiles.json").get("profiles", {})
+        self.profiles = readJsonInternal(folder / "Profiles.json")["profiles"]
         self.budgets = readJsonInternal(folder / "Budgets.json")
         self.baselinePath = folder / "Baselines.json"
-        self.baselines = readJsonInternal(self.baselinePath) or {"machines": {}}
-        self.mapGameByPack = {gameName.lower(): gameName for gameName in loadGameTable(repositoryRoot)["games"]}
-        self.mapGameByPack["themepark"] = "ThemeParkTycoon"
+        # 기준선은 처음 기록하기 전에는 없다 — 없음을 빈 기계 표로 적는다(깨진 파일은 멈춘다).
+        self.baselines = readJsonInternal(self.baselinePath) if self.baselinePath.is_file() else {"machines": {}}
+        # 팩 폴더 → 게임 이름의 정본은 게임 프리셋의 `_packRoot` 다(폴더 이름이 게임 이름과 다른 팩이 있다 — themepark).
+        self.mapGameByPack = {
+            str(json.loads(presetPath.read_text(encoding="utf-8"))["_packRoot"]).removeprefix("game/"): presetPath.stem
+            for presetPath in sorted((repositoryRoot / "Config/Game").glob("*.json"))
+        }
 
     def findDeclaration(self, name: str) -> LoadDeclaration:
-        mapScenario = self.suites.get("scenarios", {})
+        mapScenario = self.suites["scenarios"]
         if name not in mapScenario:
             raise KeyError(f"unknown load scenario '{name}' ({', '.join(sorted(mapScenario))})")
         return parseDeclaration(self.repositoryRoot, name, mapScenario[name], self.mapGameByPack)
@@ -175,7 +185,7 @@ class LoadCatalog:
         return HardwareProfile(name, self.profiles[name])
 
     def findBudget(self, scenario: str, profile: str) -> dict[str, float]:
-        entry = self.budgets.get("scenarios", {}).get(scenario, {})
+        entry = self.budgets["scenarios"].get(scenario, {})   # 예산이 없는 시나리오는 보고만 한다
         return {**entry.get("*", {}), **entry.get(profile, {})}
 
 
@@ -233,8 +243,8 @@ def readScalabilityPresetInternal(repositoryRoot: Path, quality: str) -> dict[st
     for scalability in root.iter("Scalability"):
         for preset in scalability.findall("Preset"):
             if preset.get("name") == quality:
-                mapValue = {value.get("setting", ""): value.get("value", "") for value in preset.findall("Value")}
-                return {scalability.get("setting", "graphics.quality"): quality, **mapValue}
+                mapValue = {value.attrib["setting"]: value.attrib["value"] for value in preset.findall("Value")}
+                return {scalability.attrib["setting"]: quality, **mapValue}
     raise ValueError(f"quality '{quality}' is not a preset in engine.settings.xml")
 
 
@@ -242,22 +252,23 @@ def makeAppArgumentsInternal(declaration: LoadDeclaration, profile: HardwareProf
     data = profile.data
     listArgument = [f"-game={declaration.gameName}", kBackendSwitch[backend], f"-scenario={declaration.resourceID}",
                     f"-gv_userSettingsFile={settingsPath.as_posix()}"]
-    listArgument += [argument for argument in gameTable["games"].get(declaration.gameName, {}).get("arguments", [])
+    listArgument += [argument for argument in gameTable["games"][declaration.gameName]["arguments"]
                      if not argument.startswith("-gv_benchAnimate")]  # 부하는 움직여야 한다(정지한 장면은 빠른 길만 잰다)
     if declaration.meshCount > 0:
         listArgument = [argument for argument in listArgument if not argument.startswith("-gv_benchMeshes")]
         listArgument.append(f"-gv_benchMeshes={declaration.meshCount}")
     if declaration.moverCount > 0:
         listArgument.append(f"-gv_benchTickMovers={declaration.moverCount}")
-    if data.get("width") and data.get("height"):
+    # 프로필 키는 필수다 — 0 · 빈 값이 "그 제한을 걸지 않는다" 이다(Profiles.json 머리말).
+    if data["width"] and data["height"]:
         listArgument += [f"-W={data['width']}", f"-H={data['height']}"]
-    if data.get("vram_mb"):
+    if data["vram_mb"]:
         listArgument.append(f"-gv_emulatedGPUMemoryMb={data['vram_mb']}")
-    if data.get("io_latency_ms"):
+    if data["io_latency_ms"]:
         listArgument.append(f"-gv_ioEmuReadLatencyMs={data['io_latency_ms']}")
-    if data.get("io_kilobytes_per_second"):
+    if data["io_kilobytes_per_second"]:
         listArgument.append(f"-gv_ioEmuReadKilobytesPerSecond={data['io_kilobytes_per_second']}")
-    network = declaration.network or data.get("network", "")
+    network = declaration.network or data["network"]
     if network:
         listArgument.append(f"-gv_netEmuPreset={network}")
     return listArgument
@@ -276,7 +287,7 @@ def runAppDriver(declaration: LoadDeclaration, profile: HardwareProfile, tree: B
         # 사용자 폴더를 건드리지 않는 임시 설정 파일. 품질이 정해진 프로필은 파일에 적어 기동 적용(다시 시작이 필요한 텍스처 품질 포함)으로 넣고,
         # `auto` 는 파일을 두지 않아 엔진이 흉내 낸 사양으로 고른다(첫 실행 자동 선택).
         settingsPath = Path(temporaryFolder) / "usersettings.json"
-        quality = qualityOverride or profile.data.get("quality", "")
+        quality = qualityOverride or profile.data["quality"]
         if quality and quality != "auto":
             settingsPath.write_text(json.dumps({"version": 1, "values": readScalabilityPresetInternal(getProjectRoot(), quality)}) + "\n", encoding="utf-8")
         listArgument = makeAppArgumentsInternal(declaration, profile, backend, gameTable, settingsPath) + list(listExtraArgument or [])
@@ -344,8 +355,9 @@ def runClusterDriver(declaration: LoadDeclaration, profile: HardwareProfile, tre
     if not testPath.is_file():
         measurement.skipReason = f"no EngineTest in {tree.testBinDir} (build --target AllTests)"
         return measurement
-    environment = {"SW_LOAD_CLIENTS": str(declaration.clientCount or 8), "SW_LOAD_RAMP_UP_SECONDS": str(declaration.rampUpSeconds),
-                   "SW_LOAD_DURATION_SECONDS": str(declaration.durationSeconds), "SW_LOAD_NETWORK": declaration.network or profile.data.get("network", "") or "off"}
+    # 클라이언트 수는 시나리오가 정한다(parseDeclaration 이 cluster 에 clients > 0 을 요구한다). 회선이 없으면 "off" 가 테스트 쪽 낱말이다.
+    environment = {"SW_LOAD_CLIENTS": str(declaration.clientCount), "SW_LOAD_RAMP_UP_SECONDS": str(declaration.rampUpSeconds),
+                   "SW_LOAD_DURATION_SECONDS": str(declaration.durationSeconds), "SW_LOAD_NETWORK": declaration.network or profile.data["network"] or "off"}
     listArgument = [f"--test_filter={declaration.testFilter}", "--load_suites=only", "--host_suites=all"]
     measurement.command = [f"{key}={value}" for key, value in environment.items()] + [str(testPath), *listArgument]
     result = runApp(testPath, listArgument, cwd=tree.binDir, timeoutSeconds=declaration.durationSeconds * 20.0 + 300.0, sampleIntervalSeconds=1.0,
@@ -471,10 +483,11 @@ def makeMachineKey() -> str:
 
 
 def readCommitInternal(repositoryRoot: Path) -> str:
-    try:
-        return runProcess(["git", "rev-parse", "--short", "HEAD"], cwd=repositoryRoot).stdout.strip()
-    except OSError:
-        return ""
+    # runProcess 는 OSError 를 던지지 않고 종료 코드로 말한다 — 실패를 빈 커밋으로 적지 않는다.
+    result = runProcess(["git", "rev-parse", "--short", "HEAD"], cwd=repositoryRoot)
+    if not result.bSucceeded:
+        raise RuntimeError(f"[Load] 커밋을 읽지 못했습니다: {result.stderr.strip()}")
+    return result.stdout.strip()
 
 
 # ------------------------------------------------------------------------------
@@ -517,7 +530,7 @@ def runCombination(catalog: LoadCatalog, scenarioName: str, profileName: str, tr
     listVerdictFailure = listFailure + (budgetFailure + baselineFailure if bJudged else [])
     result = {
         "scenario": scenarioName, "profile": profileName, "emulated": profile.bEmulated, "driver": declaration.driver, "backend": backend,
-        "quality": qualityOverride or profile.data.get("quality", ""), "build": tree.name, "build_type": buildType, "judged": bJudged,
+        "quality": qualityOverride or profile.data["quality"], "build": tree.name, "build_type": buildType, "judged": bJudged,
         "machine": machineKey, "commit": readCommitInternal(catalog.repositoryRoot), "time": datetime.datetime.now().isoformat(timespec="seconds"),
         "runs": len(listMeasurement), "command": listMeasurement[0].command, "metrics": summary, "budget": budget,
         "failures": listFailure, "budget_failures": budgetFailure, "baseline_regressions": baselineFailure, "notes": budgetNote + baselineNote,
@@ -586,13 +599,13 @@ def addRunArgumentsInternal(parser: argparse.ArgumentParser) -> None:
 
 
 def commandList(catalog: LoadCatalog) -> int:
-    for name, relativePath in catalog.suites.get("scenarios", {}).items():
+    for name, relativePath in catalog.suites["scenarios"].items():
         declaration = catalog.findDeclaration(name)
         print(f"scenario {name:<12} {declaration.driver:<8} {relativePath}  (duration {declaration.durationSeconds:g} s, clients {declaration.clientCount}, "
               f"meshes {declaration.meshCount}, network '{declaration.network}')")
     for name, data in catalog.profiles.items():
-        print(f"profile  {name:<12} {'emulated' if data.get('emulated') else 'native  '} {data.get('description', '')}")
-    for name, listPair in catalog.suites.get("suites", {}).items():
+        print(f"profile  {name:<12} {'emulated' if data['emulated'] else 'native  '} {data['description']}")
+    for name, listPair in catalog.suites["suites"].items():
         print(f"suite    {name:<12} {' '.join(f'{scenario}x{profile}' for scenario, profile in listPair)}")
     return 0
 
@@ -672,7 +685,7 @@ def main(listArgument: list[str] | None = None) -> int:
         if args.command == "run":
             return commandRun(catalog, [(args.scenario, profile) for profile in args.profile], args)
         if args.command == "suite":
-            listPair = catalog.suites.get("suites", {}).get(args.suite)
+            listPair = catalog.suites["suites"].get(args.suite)
             if listPair is None:
                 print(f"[Load] unknown suite '{args.suite}'", file=sys.stderr)
                 return 2

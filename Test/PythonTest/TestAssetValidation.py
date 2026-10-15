@@ -64,7 +64,7 @@ class AssetValidationFixture(unittest.TestCase):
         return super().run(result)
 
     def findMessages(self, ruleEntry: dict, listTarget: list[str] | None = None) -> list[str]:
-        listRule = parseRules({"rules": [ruleEntry]})
+        listRule = parseRules({"rules": [{"severity": "error", **ruleEntry}]})   # 규칙 표는 심각도를 늘 적는다 — 이 테스트들은 판정만 본다
         return [finding.message for finding in validate(listRule, self.root / "Resource", self.root, listTarget)]
 
 
@@ -75,24 +75,29 @@ class RuleTableTest(unittest.TestCase):
 
     def testUnknownKeyIsAnError(self) -> None:
         with self.assertRaises(RuleConfigError):
-            parseRules({"rules": [{"name": "x", "check": "texture", "max_sise": 4}]})
+            parseRules({"rules": [{"name": "x", "check": "texture", "severity": "error", "include_patterns": ["*"], "max_sise": 4}]})
 
     def testMissingRequiredKeyIsAnError(self) -> None:
         with self.assertRaisesRegex(RuleConfigError, "id_attribute"):
-            parseRules({"rules": [{"name": "x", "check": "catalog_reference", "reference_attributes": ["a"]}]})
+            parseRules({"rules": [{"name": "x", "check": "catalog_reference", "severity": "error", "include_patterns": ["*"], "reference_attributes": ["a"]}]})
 
     def testRepeatedNameIsAnError(self) -> None:
         with self.assertRaises(RuleConfigError):
-            parseRules({"rules": [{"name": "x", "check": "orphan"}, {"name": "x", "check": "orphan"}]})
+            parseRules({"rules": [{"name": "x", "check": "orphan", "severity": "error", "include_patterns": ["*"]},
+                                  {"name": "x", "check": "orphan", "severity": "error", "include_patterns": ["*"]}]})
 
     def testUnknownSeverityIsAnError(self) -> None:
         with self.assertRaises(RuleConfigError):
-            parseRules({"rules": [{"name": "x", "check": "orphan", "severity": "fatal"}]})
+            parseRules({"rules": [{"name": "x", "check": "orphan", "severity": "fatal", "include_patterns": ["*"]}]})
+
+    def testMissingSeverityIsAnError(self) -> None:
+        with self.assertRaisesRegex(RuleConfigError, "severity"):
+            parseRules({"rules": [{"name": "x", "check": "orphan", "include_patterns": ["*"]}]})
 
     def testExcludeWithoutReasonIsAnError(self) -> None:
         with self.assertRaises(RuleConfigError):
-            parseRules({"rules": [{"name": "x", "check": "orphan", "include_patterns": ["*.mesh"], "exclude_patterns": ["a/*.mesh"]}]})
-        parseRules({"rules": [{"name": "x", "check": "orphan", "include_patterns": ["*.mesh"], "exclude_patterns": ["a/*.mesh"],
+            parseRules({"rules": [{"name": "x", "check": "orphan", "severity": "error", "include_patterns": ["*.mesh"], "exclude_patterns": ["a/*.mesh"]}]})
+        parseRules({"rules": [{"name": "x", "check": "orphan", "severity": "error", "include_patterns": ["*.mesh"], "exclude_patterns": ["a/*.mesh"],
                                "exclude_reason": "시험"}]})
 
 

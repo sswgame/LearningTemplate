@@ -101,10 +101,7 @@ def findExternalHeaderRoots(repositoryRoot: Path) -> list[Path]:
 
 
 def scanExternalNamesInternal(path: Path) -> set[str]:
-    try:
-        text = path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return set()
+    text = path.read_text(encoding="utf-8", errors="replace")
     return {site.name for site in registry.iterateNameSites(text, registry.kAcronym, masked=text)}
 
 
@@ -327,12 +324,10 @@ def replaceWordsInternal(text: str, mapReplace: dict[str, str], wordRe: re.Patte
     return wordRe.sub(replace, text), count
 
 
-def readTextInternal(path: Path) -> str | None:
-    try:
-        with path.open("r", encoding="utf-8", errors="strict", newline="") as file:
-            return file.read()
-    except (OSError, UnicodeDecodeError):
-        return None
+def readTextInternal(path: Path) -> str:
+    # 못 읽는 파일(UTF-8 이 아님 · 잠김)은 멈춘다 — 건너뛰면 코드모드가 그 파일만 옛 철자로 남기고 끝난다.
+    with path.open("r", encoding="utf-8", errors="strict", newline="") as file:
+        return file.read()
 
 
 def writeTextInternal(path: Path, text: str) -> None:
@@ -356,8 +351,6 @@ def applyFiles(repositoryRoot: Path, acronyms: tuple[str, ...], bDryRun: bool) -
                                               excludedDirNames=kNotOurCodeDirNames)
         for path in listTextFile:
             text = readTextInternal(path)
-            if text is None:
-                continue
             newText, count = replaceWordsInternal(text, mapBaseName, baseNameRe)
             if count:
                 listLine.append(f"파일 이름 치환 {count}곳: {path.relative_to(repositoryRoot).as_posix()}")
@@ -367,8 +360,6 @@ def applyFiles(repositoryRoot: Path, acronyms: tuple[str, ...], bDryRun: bool) -
     # 2) 데이터 — 리플렉션 타입 · 속성 이름.
     for path in collectDataFiles(repositoryRoot):
         text = readTextInternal(path)
-        if text is None:
-            continue
         mapToken = {token: dataTokenRename(token, mapRename, setIdentifier, acronyms) for token in set(_kWordRe.findall(text))}
         mapToken = {old: new for old, new in mapToken.items() if old != new}
         if not mapToken:
@@ -459,8 +450,6 @@ def applyText(repositoryRoot: Path, acronyms: tuple[str, ...], bDryRun: bool, bS
         if relPath in _kTextExcludedRel:
             continue
         text = readTextInternal(path)
-        if text is None:
-            continue
         newText, listEdit = rewriteText(relPath, text, mapRename, setIdentifier, acronyms, path.suffix.lower() in registry.kCodeSuffix, bStrings)
         listAll += listEdit
         if not bDryRun and newText != text:
@@ -490,7 +479,7 @@ def buildFolderRenameTable(repositoryRoot: Path, acronyms: tuple[str, ...]) -> l
     setModule: set[str] = set()
     for cmakePath in collectRepositoryFiles(repositoryRoot, ("Source", "Test", "cmake"), fileNames=("CMakeLists.txt",), suffixes=(".cmake",),
                                             excludedDirNames=kNotOurCodeDirNames):
-        text = readTextInternal(cmakePath) or ""
+        text = readTextInternal(cmakePath)
         setModule.update(re.findall(r"\bGF_\w+", text))
     for rootRel in _kFolderScanRelDir:
         root = repositoryRoot / rootRel

@@ -396,9 +396,9 @@ def splitCommandInternal(entry: dict) -> list[str]:
     if isinstance(entry.get("arguments"), list):
         return list(entry["arguments"])
     if os.name != "nt":
-        return shlex.split(entry.get("command", ""), posix=True)
+        return shlex.split(entry["command"], posix=True)
     listToken: list[str] = []
-    for token in shlex.split(entry.get("command", ""), posix=False):
+    for token in shlex.split(entry["command"], posix=False):
         if len(token) >= 2 and token.startswith('"') and token.endswith('"'):
             token = token[1:-1]
         listToken.append(token.replace('\\"', '"'))
@@ -506,21 +506,21 @@ def runUnitInternal(entry: dict, sourceRoot: Path, listExtraDefine: tuple[str, .
     compilerPath, listArgument = makeParseArgumentsInternal(entry, listExtraDefine)
     libClangPath = findLibClangInternal(compilerPath) if compilerPath else None
     if libClangPath is None:
-        return json.dumps({"error": f"{entry.get('file')}: 컴파일러 옆에서 libclang 을 찾지 못했습니다 ({compilerPath})"},
+        return json.dumps({"error": f"{entry['file']}: 컴파일러 옆에서 libclang 을 찾지 못했습니다 ({compilerPath})"},
                           ensure_ascii=False) + "\n"
     resourceDir = findResourceDirInternal(compilerPath)
     if resourceDir is not None:
         listArgument = listArgument + ["-resource-dir", str(resourceDir)]
     request = {
-        "libclang": str(libClangPath), "arguments": listArgument, "file": str(entry.get("file", "")),
-        "directory": str(entry.get("directory", "")), "sourceRoot": str(sourceRoot),
+        "libclang": str(libClangPath), "arguments": listArgument, "file": str(entry["file"]),
+        "directory": str(entry["directory"]), "sourceRoot": str(sourceRoot),
     }
     completed = runProcess([sys.executable, Path(__file__).resolve(), "--parse-unit"], stdinText=json.dumps(request), timeoutSeconds=900)
     if completed.bTimedOut:
-        return json.dumps({"error": f"{entry.get('file')}: 시간 초과(900s)"}, ensure_ascii=False) + "\n"
+        return json.dumps({"error": f"{entry['file']}: 시간 초과(900s)"}, ensure_ascii=False) + "\n"
     if completed.returnCode != 0:
         lastLine = completed.stderr.strip().splitlines()[-1:] or ["(출력 없음)"]
-        return json.dumps({"error": f"{entry.get('file')}: 파서 프로세스 종료 코드 {completed.returnCode} — {lastLine[0]}"},
+        return json.dumps({"error": f"{entry['file']}: 파서 프로세스 종료 코드 {completed.returnCode} — {lastLine[0]}"},
                           ensure_ascii=False) + "\n"
     return completed.stdout
 
@@ -542,7 +542,7 @@ def makeProbeEntriesInternal(repositoryRoot: Path, listHeader: list[Path], listE
         bestEntry: dict | None = None
         bestLength = -1
         for entry in listEntry:
-            entryDir = normalizeSlashInternal(str(entry.get("file", ""))).lower().rsplit("/", 1)[0] + "/"
+            entryDir = normalizeSlashInternal(str(entry["file"])).lower().rsplit("/", 1)[0] + "/"
             length = len(os.path.commonprefix([entryDir, headerText]))
             if length > bestLength:
                 bestLength = length
@@ -553,7 +553,7 @@ def makeProbeEntriesInternal(repositoryRoot: Path, listHeader: list[Path], listE
         probePath.write_text(f'#include "{spelling}"\n', encoding="utf-8")
         probe = dict(bestEntry)
         # 빌린 TU 의 소스는 인자에서 떼고(`makeParseArgumentsInternal`) 탐침을 대신 파싱한다.
-        probe["seedFile"] = str(bestEntry.get("file", ""))
+        probe["seedFile"] = str(bestEntry["file"])
         probe["file"] = str(probePath)
         listProbe.append(probe)
     return listProbe
@@ -630,7 +630,7 @@ class RunPaddingReport(LintReport):
                 listHeader = [p for p in listPath if p.suffix == ".h" and p.is_file()]
                 listSource = {normalizeSlashInternal(str(p.resolve())).lower() for p in listPath if p.suffix == ".cpp"}
                 listUnit = [entry for entry in listEntry
-                            if normalizeSlashInternal(str(entry.get("file", ""))).lower() in listSource]
+                            if normalizeSlashInternal(str(entry["file"])).lower() in listSource]
                 listUnit += makeProbeEntriesInternal(repositoryRoot, listHeader, listEntry, Path(probeDirName))
             else:
                 listUnit = listEntry

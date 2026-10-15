@@ -29,9 +29,17 @@ def findBuildTreeInternal() -> BuildTree | None:
     return tree if (tree.path / "generated/sw/config/ConfigVars.cmake").is_file() else None
 
 
+def readActiveGameInternal(tree: BuildTree) -> str:
+    """그 빌드가 고른 게임 — 구성된 트리의 캐시에 늘 있다. 없으면 실패한다(다른 게임으로 대신 비교하지 않는다)."""
+    gameName = tree.readCacheValue("SW_ACTIVE_GAME")
+    if not gameName:
+        raise AssertionError(f"{tree.path}: CMakeCache 에 SW_ACTIVE_GAME 이 없다")
+    return gameName
+
+
 #: (생성기, 그 빌드의 산출물 이름들, 출력 앞에 붙는 인자를 만드는 함수) — configure 가 부르는 모양 그대로(cmake/Config · Engine · Environment).
 def listGeneratorInternal(tree: BuildTree) -> list[tuple[str, list[str], list[str]]]:
-    gameConfig = f"Config/Game/{tree.readCacheValue('SW_ACTIVE_GAME') or 'Empty'}.json"
+    gameConfig = f"Config/Game/{readActiveGameInternal(tree)}.json"
     return [
         ("GenerateCMakeConstants.py", ["ConfigVars.cmake"], []),
         ("GeneratePackFormat.py", ["PackFormat.gen.h"], []),
@@ -68,7 +76,7 @@ class GeneratorsTest(unittest.TestCase):
         tree = findBuildTreeInternal()
         if tree is None:
             self.skipTest("구성된 빌드 폴더가 없다")
-        gameName = tree.readCacheValue("SW_ACTIVE_GAME") or "Empty"
+        gameName = readActiveGameInternal(tree)
         with tempfile.TemporaryDirectory() as tempDir:
             result = subprocess.run([sys.executable, str(kRepositoryRoot / "Scripts/generate/GenerateConfigureFiles.py"), tempDir, "--game", gameName],
                                     cwd=kRepositoryRoot, capture_output=True, text=True, encoding="utf-8", errors="replace")

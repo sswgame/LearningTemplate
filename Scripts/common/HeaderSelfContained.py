@@ -70,11 +70,8 @@ _kPchSourceSuffixes = ("cmake_pch.cxx", "cmake_pch.c")
 
 
 def loadCompileDatabase(buildDir: Path) -> list[dict]:
-    """`compile_commands.json` 을 읽는다. 없거나 읽지 못하면 빈 목록(이유는 `findHeaderProbeProblem` 이 말한다)."""
-    try:
-        return BuildTree(buildDir).readCompileDatabase()
-    except BuildTreeError:
-        return []
+    """`compile_commands.json` 을 읽는다. 없거나 깨졌으면 BuildTreeError — 부르기 전에 `findHeaderProbeProblem` 으로 볼 것."""
+    return BuildTree(buildDir).readCompileDatabase()
 
 
 def findHeaderProbeProblem(buildDir: Path) -> str:
@@ -103,7 +100,7 @@ def makeSeedIndex(database: Sequence[dict], buildDir: Path | None = None, reposi
     rootPrefix = normalizePath(repositoryRoot.resolve()) + "/" if repositoryRoot is not None else ""
     listSeed: list[tuple[str, dict]] = []
     for entry in database:
-        filePath = entry.get("file", "").replace("\\", "/")
+        filePath = entry["file"].replace("\\", "/")
         if not filePath or filePath.endswith(_kPchSourceSuffixes):
             continue
         # 헤더 쪽은 resolve 한 경로로 찾는다 — 정션 · subst 로 짠 빌드의 DB 경로도 같은 모양으로 맞춘다(안 맞추면 엉뚱한 TU 의 플래그를 받는다).
@@ -213,7 +210,8 @@ def findHeadersNotSelfContained(repositoryRoot: Path, buildDir: Path, listHeader
     """
     listSeed = makeSeedIndex(loadCompileDatabase(buildDir), buildDir, repositoryRoot)
     if not listSeed:
-        return []
+        # 플래그를 빌려 올 TU 가 없으면 아무 헤더도 검사하지 못한다 — 빈 결과("모두 선다")로 돌려주지 않는다.
+        raise BuildTreeError(f"{normalizePath(buildDir)} 의 컴파일 DB 에 헤더 검사에 쓸 TU 가 없습니다")
 
     def checkOneHeader(headerPath: Path) -> tuple[str, str] | None:
         includeSpelling = makeIncludeSpelling(repositoryRoot, headerPath)

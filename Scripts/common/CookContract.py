@@ -83,10 +83,10 @@ class CookContractSpec:
     def __init__(self, spec: dict) -> None:
         self.listBackend: list[RhiBackendSpec] = [makeBackendInternal(row) for row in spec["rhi_backends"]]
         self.listCookSuffix: list[CookSuffixSpec] = [makeCookSuffixInternal(row) for row in spec["cook_suffixes"]]
-        self.listAssetKind: list[AssetKindSpec] = [makeAssetKindInternal(row) for row in spec.get("asset_kinds", [])]
+        self.listAssetKind: list[AssetKindSpec] = [makeAssetKindInternal(row) for row in spec["asset_kinds"]]
         #: 빌드 타깃 → 그 타깃이 빼는 종류 이름(표 순서).
         self.mapExcludedKindByTarget: dict[str, tuple[str, ...]] = {
-            str(row["target"]): tuple(str(kind) for kind in row["kinds"]) for row in spec.get("target_excluded_asset_kinds", [])
+            str(row["target"]): tuple(str(kind) for kind in row["kinds"]) for row in spec["target_excluded_asset_kinds"]
         }
         defaultName = str(spec["default_rhi_backend"])
         self.defaultBackend: RhiBackendSpec = next(
@@ -184,8 +184,8 @@ def makeCookSuffixInternal(row: dict) -> CookSuffixSpec:
 def makeAssetKindInternal(row: dict) -> AssetKindSpec:
     kind = AssetKindSpec(
         name=str(row["name"]),
-        listExtension=tuple(str(extension) for extension in row.get("extensions", [])),
-        listFolder=tuple(str(folder) for folder in row.get("folders", [])),
+        listExtension=tuple(str(extension) for extension in row["extensions"]),
+        listFolder=tuple(str(folder) for folder in row["folders"]),
     )
     if not _kIdentifierPattern.match(kind.name):
         raise ValueError(f"asset_kinds: '{kind.name}' 는 C++ 식별자가 아닙니다")

@@ -162,10 +162,7 @@ def inventoryPython(repositoryRoot: Path) -> dict[str, Any]:
                 mapBypass[relPath] = mapHit
         if "__main__" not in text:
             continue
-        try:
-            tree = ast.parse(text)
-        except SyntaxError:
-            continue
+        tree = ast.parse(text)   # 파싱이 안 되면 멈춘다 — 건너뛰면 목록에서 그 스크립트가 조용히 빠진다
         mapEntry[relPath] = {
             "main": mainSignatureInternal(tree),
             "common": isModuleLevelCommonImportInternal(tree),

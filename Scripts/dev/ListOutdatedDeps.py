@@ -63,7 +63,7 @@ def readBaselineInternal(vcpkgRoot: Path, revision: str) -> dict[str, dict]:
     result = runGit(["-C", str(vcpkgRoot), "show", f"{revision}:versions/baseline.json"])
     if not result.bSucceeded:
         sys.exit(f"[deps-outdated] cannot read versions/baseline.json at {revision}: {result.stderr.strip()}")
-    return json.loads(result.stdout).get("default", {})
+    return json.loads(result.stdout)["default"]
 
 
 def collectOverlayPortsInternal(projectRoot: Path) -> dict[str, Path]:
@@ -74,8 +74,8 @@ def collectOverlayPortsInternal(projectRoot: Path) -> dict[str, Path]:
 def collectDirectDepsInternal(manifest: dict) -> list[str]:
     """매니페스트의 직접 의존 이름(같은 이름이 플랫폼별로 여럿이면 하나)."""
     listName: list[str] = []
-    for dependency in manifest.get("dependencies", []):
-        name = dependency if isinstance(dependency, str) else dependency.get("name", "")
+    for dependency in manifest["dependencies"]:
+        name = dependency if isinstance(dependency, str) else dependency["name"]
         if name and name not in listName:
             listName.append(name)
     return listName

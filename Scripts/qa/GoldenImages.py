@@ -44,7 +44,7 @@ def captureInternal(appPath: Path, game: dict, table: dict, backend: str, workDi
     frame = int(game["screenshot_frame"])
     listArgument = [f"-W={table['capture_width']}", f"-H={table['capture_height']}", *game["arguments"],
                     f"-gv_profileFrames={max(30, frame)}", f"-gv_screenshotFrame={frame}", f"-gv_screenshot={screenshotPath}",
-                    kBackendSwitch[backend], *game.get("extra_arguments", [])]
+                    kBackendSwitch[backend], *game["extra_arguments"]]
     result = runApp(appPath, listArgument, timeoutSeconds=300.0)
     if result.bBackendUnusable:
         return "skip", "backend unusable on this machine"
@@ -70,12 +70,12 @@ def describeGpuInternal() -> dict:
         return {"gpu": "", "driver": ""}
     command = ("Get-CimInstance Win32_VideoController | Sort-Object AdapterRAM -Descending | Select-Object -First 1 Name,DriverVersion"
                " | ConvertTo-JSON")
-    output = runProcess(["powershell", "-NoProfile", "-Command", command], timeoutSeconds=30).stdout
-    try:
-        record = json.loads(output) if output.strip() else {}
-    except ValueError:
-        return {"gpu": "", "driver": ""}
-    return {"gpu": record.get("Name", "") or "", "driver": record.get("DriverVersion", "") or ""}
+    # 질의가 실패하면 멈춘다 — 빈 이름으로 적으면 기준 이미지가 어느 GPU 의 것인지 잃는다.
+    result = runProcess(["powershell", "-NoProfile", "-Command", command], timeoutSeconds=30)
+    if not result.bSucceeded or not result.stdout.strip():
+        raise RuntimeError(f"[GoldenImages] GPU 이름을 읽지 못했습니다: {result.stderr.strip()}")
+    record = json.loads(result.stdout)
+    return {"gpu": record["Name"], "driver": record["DriverVersion"]}
 
 
 def describeDeviceMismatchInternal(record: dict) -> str:
@@ -84,9 +84,9 @@ def describeDeviceMismatchInternal(record: dict) -> str:
     if not reference:
         return ""
     now = describeGpuInternal()
-    if reference.get("gpu") == now["gpu"] and reference.get("driver") == now["driver"]:
+    if reference["gpu"] == now["gpu"] and reference["driver"] == now["driver"]:
         return ""
-    return (f" (reference captured on {reference.get('gpu', '')} {reference.get('driver', '')}, this machine {now['gpu']} {now['driver']}"
+    return (f" (reference captured on {reference['gpu']} {reference['driver']}, this machine {now['gpu']} {now['driver']}"
             " - re-record here to tell a driver difference from a regression)")
 
 

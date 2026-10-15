@@ -178,9 +178,14 @@ def readPolicy(rootDir: Path) -> tuple[dict, list[str]]:
     if path.exists() is False:
         return {}, [f"{_kPolicyFile}: 파일이 없습니다 — 테스트 실행 파일의 라벨 · 샤드 · 시간을 정하는 곳입니다"]
     try:
-        return json.loads(path.read_text(encoding="utf-8")), []
+        policy = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as error:
         return {}, [f"{_kPolicyFile}: JSON 이 아닙니다 ({error})"]
+    # 필수 표 — 빠지면 위반으로 알리고 빈 정책으로 나머지를 본다(아래의 `.get(…, {})` 는 이미 알린 이 경우만 덮는다).
+    listMissing = [key for key in ("labels", "executables") if key not in policy]
+    if listMissing:
+        return {}, [f"{_kPolicyFile}: 필수 표 {listMissing} 가 없습니다"]
+    return policy, []
 
 
 def collectHostSplitFolders(policy: dict) -> set[str]:

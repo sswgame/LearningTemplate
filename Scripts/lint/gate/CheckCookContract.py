@@ -92,7 +92,9 @@ _kContractFixture = '''{
     ],
     "cook_suffixes": [
         { "source": ".scene.xml", "cooked": ".scene.bin", "kind": "Scene", "is_authoring_source": true }
-    ]
+    ],
+    "asset_kinds": [],
+    "target_excluded_asset_kinds": []
 }
 '''
 
@@ -119,7 +121,7 @@ def checkShaderFolderFilterInternal(cooker: ModuleType, spec: CookContractSpec) 
         for backend in spec.listBackend:
             relPath = f"shaders/bin/{backend.shaderFolder}/probe.vs.bin"
             bExpected = backend is target
-            bActual = bool(cooker.shouldIncludeFile(relPath, {}, target.shaderFolder))
+            bActual = bool(cooker.shouldIncludeFile(relPath, _kNoRulePackConfig, target.shaderFolder))
             if bActual != bExpected:
                 verdict = "넣는다" if bActual else "뺀다"
                 listViolation.append(f"shouldIncludeFile('{relPath}', targetRhi='{target.shaderFolder}') 가 {verdict} - 표는 반대다")
@@ -140,6 +142,10 @@ def checkTargetResolutionInternal(cooker: ModuleType, spec: CookContractSpec) ->
     return listViolation
 
 
+#: 쿠킹 표만의 판단을 보려고 팩 설정의 제외 규칙을 비운 설정 — 키는 PackConfig 와 같다(쿠커가 필수로 읽는다). 원시 HLSL 제외는 실제 설정과 같게 켠다.
+_kNoRulePackConfig: dict = {"global_exclude_directories": [], "global_exclude_patterns": [], "rules": [], "shader_cook": {"exclude_raw_hlsl": True}}
+
+
 def checkTargetExclusionInternal(cooker: ModuleType, spec: CookContractSpec) -> list[str]:
     """빌드 타깃이 빼는 종류(확장자 · 폴더마다 탐침 하나)는 그 타깃의 팩에서 빠지고, 빼지 않는 타깃(Game)에는 들어가는지."""
     listViolation: list[str] = []
@@ -150,8 +156,8 @@ def checkTargetExclusionInternal(cooker: ModuleType, spec: CookContractSpec) -> 
             listProbe = [f"probe/asset{extension}" for extension in kind.listExtension] + [f"{folder}/probe.bin" for folder in kind.listFolder]
             for relPath in listProbe:
                 try:
-                    bExcluded = not cooker.shouldIncludeFile(relPath, {}, "", buildTarget=target)
-                    bGameKept = bool(cooker.shouldIncludeFile(relPath, {}, "", buildTarget="Game"))
+                    bExcluded = not cooker.shouldIncludeFile(relPath, _kNoRulePackConfig, "", buildTarget=target)
+                    bGameKept = bool(cooker.shouldIncludeFile(relPath, _kNoRulePackConfig, "", buildTarget="Game"))
                 except TypeError:
                     listViolation.append("shouldIncludeFile 가 buildTarget 인자를 받지 않는다 - 빌드 타깃별 제외 표를 볼 수 없다")
                     return listViolation

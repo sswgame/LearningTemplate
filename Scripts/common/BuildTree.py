@@ -86,11 +86,9 @@ class BuildTree:
     def iterConfigured(cls, repositoryRoot: Path | None = None) -> Iterator[BuildTree]:
         """`CMakePresets.json` 의 configure 프리셋 순서대로, 구성된(CMakeCache.txt 가 있는) 폴더."""
         root = repositoryRoot or getProjectRoot()
-        presetsPath = root / "CMakePresets.json"
-        listName: list[str] = []
-        if presetsPath.is_file():
-            data = json.loads(presetsPath.read_text(encoding="utf-8"))
-            listName = [preset["name"] for preset in data.get("configurePresets", []) if not preset.get("hidden")]
+        # CMakePresets.json 은 저장소에 늘 있다 — 없거나 깨졌으면 멈춘다(빈 목록이면 "구성된 트리 없음" 으로 보인다).
+        data = json.loads((root / "CMakePresets.json").read_text(encoding="utf-8"))
+        listName = [preset["name"] for preset in data["configurePresets"] if not preset.get("hidden")]
         for name in listName:
             tree = cls.fromPreset(name, root)
             if tree.bConfigured:

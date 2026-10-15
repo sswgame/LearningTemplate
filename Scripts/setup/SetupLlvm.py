@@ -426,11 +426,7 @@ def setupLlvm(allowBootstrap: bool = False) -> str:
         )
         return ""
 
-    urls = search.get(kKeyLlvmDownloadUrls) or {}
-    url = urls.get(platformKey())
-    if not url:
-        sys.stderr.write(f"[SetupLlvm Error] No llvm_download_urls.{platformKey()} in search_paths.\n")
-        return ""
+    url = search[kKeyLlvmDownloadUrls][platformKey()]   # search_paths.defaults 의 필수 키 — 없으면 KeyError
 
     filename = url.rsplit("/", 1)[-1]
     if filename.lower().endswith(".exe") or not filename.endswith(

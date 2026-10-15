@@ -85,7 +85,7 @@ def splitCommandInternal(entry: dict) -> tuple[list[str], bool]:
     import shlex
 
     bIsWindows = os.name == "nt"
-    listToken = shlex.split(entry.get("command", ""), posix=not bIsWindows)
+    listToken = shlex.split(entry["command"], posix=not bIsWindows)
     return listToken, not bIsWindows
 
 

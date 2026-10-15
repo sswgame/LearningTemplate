@@ -267,10 +267,8 @@ class ValidationContext:
 def readMetaFile(path: Path) -> dict[str, str]:
     """`key=value` 줄로 된 `.meta` 를 읽습니다(# 주석 · 빈 줄은 넘깁니다)."""
     result: dict[str, str] = {}
-    try:
-        text = path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return result
+    # 못 읽으면 OSError 로 멈춘다 — 빈 사전으로 돌려주면 "guid 없음" 이라는 엉뚱한 위반이 된다.
+    text = path.read_text(encoding="utf-8", errors="replace")
     for line in text.splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
@@ -715,6 +713,9 @@ def checkComponentReferenceInternal(rule: Rule, relPath: str, context: Validatio
 
 #: 검사 이름 → (함수, 필수 키, 선택 키). 필수 키는 규칙 표에 반드시 적고(없으면 RuleConfigError) 검사는 `params[키]` 로 읽는다 —
 #: 코드에 기본값 리터럴을 두지 않는다. 선택 키는 "없으면 그 조건을 보지 않는다" 는 뜻일 때만 두고 `params.get(키)`(None)로 읽는다.
+#: 규칙 표의 자리(저장소 기준) — 게이트 · 검증 명령 · 설정 목록이 이 이름 하나를 쓴다.
+kAssetRuleConfigRelative = "Config/Editor/AssetValidationRules.json"
+
 _kCheckRegistry: dict[str, tuple[CheckFunction, frozenset[str], frozenset[str]]] = {
     "naming": (checkNamingInternal, frozenset(), frozenset({"name_pattern", "allowed_suffixes"})),
     "texture": (checkTextureInternal, frozenset(), frozenset({"max_size", "power_of_two", "require_mips", "allowed_formats"})),
@@ -758,7 +759,10 @@ def parseRules(data: dict) -> list[Rule]:
         uniqueName.add(name)
         if check not in _kCheckRegistry:
             raise RuleConfigError(f"rule '{name}' uses unknown check '{check}' (known: {', '.join(getCheckNames())})")
-        severity = entry.get("severity", "error")
+        # 심각도 · 대상 패턴은 규칙마다 적는다(코드 기본값 없음). 제외 패턴 · 이유는 선택 — 없으면 제외가 없다.
+        if "severity" not in entry or "include_patterns" not in entry:
+            raise RuleConfigError(f"rule '{name}' needs severity and include_patterns")
+        severity = entry["severity"]
         if severity not in kSeverityOrder:
             raise RuleConfigError(f"rule '{name}' has unknown severity '{severity}' ({', '.join(kSeverityOrder)})")
         _, requiredKey, optionalKey = _kCheckRegistry[check]
@@ -769,11 +773,11 @@ def parseRules(data: dict) -> list[Rule]:
         missingKey = sorted(requiredKey - set(params))
         if missingKey:
             raise RuleConfigError(f"rule '{name}' ({check}) is missing required key(s) {', '.join(missingKey)}")
-        listInclude = entry.get("include_patterns", ["*"])
+        listInclude = entry["include_patterns"]
         if not isinstance(listInclude, list) or not listInclude:
             raise RuleConfigError(f"rule '{name}' needs a non-empty include_patterns list")
-        listExclude = entry.get("exclude_patterns", [])
-        excludeReason = str(entry.get("exclude_reason", "")).strip()
+        listExclude = entry.get("exclude_patterns") or []
+        excludeReason = str(entry.get("exclude_reason") or "").strip()
         if listExclude and not excludeReason:
             raise RuleConfigError(f"rule '{name}' excludes {', '.join(listExclude)} without an exclude_reason - every exception carries its reason")
         listRule.append(Rule(name, check, severity, listInclude, listExclude, params, excludeReason))

@@ -83,10 +83,10 @@ def compareInternal(baseline: dict[str, dict[str, float]], measured: dict[str, d
             if actual is None:
                 listNote.append(f"{scope} {name}: not measured this time")
                 continue
-            limit = expected * (1.0 + tolerance.get(name, 0.2)) + floorMicro
+            limit = expected * (1.0 + tolerance[name]) + floorMicro   # 허용 비율이 없는 지표는 KeyError — 코드 기본 비율을 두지 않는다
             if actual > limit:
                 listRegression.append(f"{scope} {name}: {actual:.0f} us > {limit:.0f} us (baseline {expected:.0f})")
-            elif actual < expected * (1.0 - tolerance.get(name, 0.2)) - floorMicro:
+            elif actual < expected * (1.0 - tolerance[name]) - floorMicro:
                 listNote.append(f"{scope} {name}: faster {actual:.0f} us (baseline {expected:.0f}) - re-record to lock it in")
     return listRegression, listNote
 

@@ -161,9 +161,10 @@ def findWindowsSdkPath() -> tuple[str, str]:
     """
     if platform.system() != "Windows":
         return "", ""
-    if (envSdkDir := os.environ.get("WindowsSdkDir")) and Path(envSdkDir).exists():
-        version = os.environ.get("WindowsSDKVersion", "").strip("\\")
-        return normalizePath(envSdkDir), version
+    # 개발자 셸의 두 변수가 함께 있을 때만 쓴다 — 버전 없이 폴더만 돌려주면 쓰는 쪽이 판을 모른다. 아니면 레지스트리가 정본이다.
+    envSdkDir, envSdkVersion = os.environ.get("WindowsSdkDir"), os.environ.get("WindowsSDKVersion")
+    if envSdkDir and envSdkVersion and Path(envSdkDir).exists():
+        return normalizePath(envSdkDir), envSdkVersion.strip("\\")
     import winreg
 
     try:
@@ -220,10 +221,7 @@ def setupBuildToolInternal(toolName: str,
         resolvedExe = found if found.is_file() else (found / exeName if (found / exeName).is_file() else found)
         return recordEnginePath(f"{toolName.lower()}_path", resolvedExe)
 
-    url = (search.get(downloadUrlsKey) or {}).get(platformKey())
-    if not url:
-        logger.warning(f"[{toolName} Error] No {downloadUrlsKey}.{platformKey()}")
-        return ""
+    url = search[downloadUrlsKey][platformKey()]   # search_paths.defaults 의 필수 키 — 없으면 KeyError
 
     logger.info(f"[{toolName}] Downloading into {toolsDir}")
     toolsDir.mkdir(parents=True, exist_ok=True)

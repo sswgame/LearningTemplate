@@ -181,7 +181,7 @@ def autoBootstrapEnabled(force: bool,
     if force:
         return True
     searchConfig = search if search is not None else loadSearchPaths()
-    if bool(searchConfig.get(configKey, False)):
+    if bool(searchConfig[configKey]):   # search_paths.defaults 의 필수 키
         return True
     flag = os.environ.get(envKey, "").strip().lower()
     return flag in ("1", "true", "on", "yes")

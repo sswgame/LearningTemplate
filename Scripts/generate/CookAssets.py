@@ -121,11 +121,11 @@ def _deflateForReaderInternal(rawBytes: bytes) -> bytes:
     return zlib.compress(rawBytes, level=9)
 
 
-def resolveCompressionCodecInternal(packConfig: dict | None) -> tuple[int, int]:
-    """PackConfig 의 `compression` 을 (코덱 값, 레벨) 로 풉니다. 없으면 Zlib 기본입니다."""
-    section = (packConfig or {}).get("compression") or {}
-    name = str(section.get("codec", "Zlib"))
-    level = int(section.get("level", 0))
+def resolveCompressionCodecInternal(packConfig: dict) -> tuple[int, int]:
+    """PackConfig 의 `compression` 을 (코덱 값, 레벨) 로 풉니다. 필수 키 — 없으면 KeyError(코드에 기본 코덱을 두지 않는다)."""
+    section = packConfig["compression"]
+    name = str(section["codec"])
+    level = int(section["level"])
 
     if name not in _gPackFormat.mapCodec:
         known = ", ".join(sorted(_gPackFormat.mapCodec))
@@ -366,19 +366,20 @@ def shouldIncludeFile(relPath: str, config: dict, targetRhi: str = "dx12", build
     fileName = parts[-1]
     dirParts = parts[:-1]
 
-    for exDir in config.get(kKeyGlobalExcludeDirs, []):
+    # PackConfig 의 키는 필수다(없으면 KeyError) — 규칙 칸의 exclude_patterns 만 선택(없으면 패턴 제외 없음).
+    for exDir in config[kKeyGlobalExcludeDirs]:
         if exDir.lower() in dirParts:
             return False
 
-    for exPattern in config.get(kKeyGlobalExcludePatterns, []):
+    for exPattern in config[kKeyGlobalExcludePatterns]:
         pLower = exPattern.lower()
         if fnmatch.fnmatch(fileName, pLower) or fnmatch.fnmatch(normRel, pLower):
             return False
 
-    for rule in config.get(kKeyRules, []):
-        for exDir in rule.get(kKeyExcludeDirs, []):
+    for rule in config[kKeyRules]:
+        for exDir in rule[kKeyExcludeDirs]:
             exLower = exDir.lower()
-            isRecursive = rule.get(kKeyRecursive, True)
+            isRecursive = rule[kKeyRecursive]
             if isRecursive:
                 if exLower in dirParts:
                     return False
@@ -386,14 +387,13 @@ def shouldIncludeFile(relPath: str, config: dict, targetRhi: str = "dx12", build
                 if dirParts and dirParts[0] == exLower:
                     return False
 
-        for exPattern in rule.get(kKeyExcludePatterns, []):
+        for exPattern in rule.get(kKeyExcludePatterns) or ():
             pLower = exPattern.lower()
             if fnmatch.fnmatch(fileName, pLower) or fnmatch.fnmatch(normRel, pLower):
                 return False
 
     # 셰이더 전용 스마트 필터링
-    shaderCookCfg = config.get("shader_cook", {})
-    if shaderCookCfg.get("exclude_raw_hlsl", True):
+    if config["shader_cook"]["exclude_raw_hlsl"]:
         if fileName.endswith(".hlsl") or fileName.endswith(".hlsli"):
             return False
 
@@ -542,7 +542,7 @@ class PackWriter:
         return outPackPath.stat().st_size
 
 
-def collectPackFiles(sourceDir: Path, packConfig: dict | None, targetRhi: str = "dx12",
+def collectPackFiles(sourceDir: Path, packConfig: dict, targetRhi: str = "dx12",
                      buildTarget: str = "") -> tuple[list[tuple[str, Path]], list[str]]:
     """
     도메인 폴더에서 팩에 넣을 낱개 파일(상대 경로, 경로)과, 소스 트리에 남은 낡은 쿠킹 산출물 목록을 고릅니다 — `cookPack` 과 테스트가 같은 판단을 쓴다.
@@ -553,7 +553,7 @@ def collectPackFiles(sourceDir: Path, packConfig: dict | None, targetRhi: str = 
         if not filePath.is_file():
             continue
         rel = filePath.relative_to(sourceDir).as_posix()
-        if packConfig and not shouldIncludeFile(rel, packConfig, targetRhi=targetRhi, buildTarget=buildTarget):
+        if not shouldIncludeFile(rel, packConfig, targetRhi=targetRhi, buildTarget=buildTarget):
             continue
         if isCookedArtifact(rel):
             # 산출물은 스테이징에만 있다. 소스 트리에 남은 것은 낡은 쿠킹 잔재이고, Dev 런타임이 소스가
@@ -567,11 +567,11 @@ def collectPackFiles(sourceDir: Path, packConfig: dict | None, targetRhi: str = 
 def cookPack(
     sourceDir: Path,
     outPackPath: Path,
+    packConfig: dict,
+    compression: int,
+    compressionLevel: int,
     dlcAppID: int = 0,
-    compression: int | None = None,
-    compressionLevel: int = 0,
     stripDebugStrings: bool = True,
-    packConfig: dict | None = None,
     targetRhi: str = "dx12",
     extraEntries: list[tuple[str, bytes]] | None = None,
     stagedDir: Path | None = None,
@@ -590,7 +590,7 @@ def cookPack(
 
     writer = PackWriter(
         _gPackFormat,
-        compression=_gPackFormat.codecZlib if compression is None else compression,
+        compression=compression,
         compressionLevel=compressionLevel,
         dlcAppID=dlcAppID,
         bStripDebugStrings=stripDebugStrings,
@@ -621,8 +621,8 @@ def cookPack(
 def cookAllPacks(
     projectRoot: Path,
     outputDir: Path,
+    packConfig: dict,
     isShipping: bool = True,
-    packConfig: dict | None = None,
     targetRhi: str = "dx12",
     cookedDir: Path | None = None,
     buildTarget: str = "",
@@ -659,11 +659,13 @@ def cookAllPacks(
     for src, out, dlcId in targets:
         staged = cookedDir / src.relative_to(resourceDir)
         if any(src.rglob("*.meta")) and not hasStagedAssetRegistryInternal(staged):
-            # 레지스트리가 없으면 배포본의 GUID 참조가 전부 경로 폴백으로 간다(이름을 바꾼 에셋은 배포본에서만 못 찾는다).
-            print(f"[CookAssets Warning] {src.name}: 스테이징에 {_kAssetRegistryFileName} 이 없습니다 - 엔진 쿠킹 단계(--all 또는 --prefabs-only)를 먼저 돌리십시오.",
+            # 레지스트리가 없으면 배포본의 GUID 참조가 전부 경로로 대신 찾는다(이름을 바꾼 에셋은 배포본에서만 못 찾는다) — 경고로 넘기지 않고 이 팩을 실패로 한다.
+            print(f"[CookAssets Error] {src.name}: 스테이징에 {_kAssetRegistryFileName} 이 없습니다 - 엔진 쿠킹 단계(--all 또는 --prefabs-only)를 먼저 돌리십시오.",
                   file=sys.stderr)
-        success = cookPack(src, out, dlcAppID=dlcId, compression=packCompression, compressionLevel=packCompressionLevel,
-                           stripDebugStrings=isShipping, packConfig=packConfig, targetRhi=targetRhi,
+            allSuccess = False
+            continue
+        success = cookPack(src, out, packConfig, dlcAppID=dlcId, compression=packCompression, compressionLevel=packCompressionLevel,
+                           stripDebugStrings=isShipping, targetRhi=targetRhi,
                            stagedDir=staged, buildTarget=buildTarget)
         if not success:
             allSuccess = False
@@ -747,7 +749,7 @@ def cookInternal(args: argparse.Namespace) -> int:
         if args.build_target:
             listExcluded = _gCookContract.mapExcludedKindByTarget.get(args.build_target, ())
             print(f"[CookAssets] Build target: {args.build_target} (excluded asset kinds: {', '.join(listExcluded) or 'none'})")
-        success = cookAllPacks(projectRoot, outDir, isShipping=stripNames, packConfig=packConfig, targetRhi=targetRhi, cookedDir=cookedDir,
+        success = cookAllPacks(projectRoot, outDir, packConfig, isShipping=stripNames, targetRhi=targetRhi, cookedDir=cookedDir,
                                buildTarget=args.build_target)
         if not success:
             exitCode = 1
