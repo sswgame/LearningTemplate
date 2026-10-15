@@ -154,15 +154,15 @@ namespace sw
         return _dependencies._pRatingSource != nullptr ? _dependencies._pRatingSource->findRating( accountID, modeID ) : MatchQueueLimit::kDefaultRating;
     }
 
-    void MatchQueueService::tick( int64 nowMs )
+    void MatchQueueService::update( int64 nowMs )
     {
         if ( _dependencies._pRouter == nullptr )
             return;
         for ( auto& [modeID, state] : _mapModeState )
         {
             if ( _dependencies._pBus != nullptr )
-                tickLease( modeID, state, nowMs );
-            state._reader->tick( nowMs ); // 로비 배정은 권한이 없어도 서버를 고른다
+                updateLease( modeID, state, nowMs );
+            state._reader->update( nowMs ); // 로비 배정은 권한이 없어도 서버를 고른다
             if ( state._bAuthority != SW_FALSE )
                 placeMatches( state, nowMs );
         }
@@ -183,7 +183,7 @@ namespace sw
         }
     }
 
-    void MatchQueueService::tickLease( const string& modeID, ModeState& state, int64 nowMs )
+    void MatchQueueService::updateLease( const string& modeID, ModeState& state, int64 nowMs )
     {
         if ( state._leaseRequestID != 0 )
             return; // 응답을 기다린다

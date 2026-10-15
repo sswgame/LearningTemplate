@@ -116,7 +116,7 @@ namespace sw
         _pHost = &host;
         if ( _pService == nullptr )
             return;
-        _pService->tick( nowMs );
+        _pService->update( nowMs );
         flushServiceOutput( host );
     }
 

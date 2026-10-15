@@ -74,7 +74,7 @@ namespace sw
         /** @brief 계정이 떠나거나 제재됐을 때 부릅니다. 그 계정의 열린 거래를 닫으며 완료는 없고 변경만 발생합니다. */
         void closeForAccount( AccountID accountID, TradeCloseReason reason, int64 nowMs );
         /** @brief 아는 거래의 시한을 확인합니다. */
-        void tick( int64 nowMs );
+        void update( int64 nowMs );
 
         void drainCompletions( vector<TradeCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
         void drainUpdates( vector<TradeSnapshot>& outListUpdate ) { _updateBuffer.drainTo( outListUpdate ); }

@@ -147,7 +147,7 @@ namespace sw
         void               shutdown();
 
         /** @brief 자기 엔드포인트 모드에서는 전송, 엔드포인트, 요청 시한, 다시 연결을 돌립니다. 두 모드 모두 모은 요청의 시한을 봅니다. */
-        void tick( int64 nowMs );
+        void update( int64 nowMs );
 
         /** @brief 요청을 보내고 id 를 반환합니다. Hello 전이거나 문이 닫혀 있으면 모아 둡니다. id 는 콜백의 `_requestID` 와 같으며, 콜백은 정확히 한 번 불립니다. */
         uint64 sendRequest( uint16 method, const BitWriter& body, const NetRequestOptions& options, OnlineResponseDelegate onResponse );

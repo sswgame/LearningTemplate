@@ -189,7 +189,7 @@ namespace sw
         }
         // 도망 방향 바꾸기는 흡입이 이 타이머를 가지고 있다(update 는 흡입 중인 유령을 건너뛴다).
         GhostInstance* pStill = findGhostMutable( ghostID );
-        pStill->_timer.tick( deltaTime );
+        pStill->_timer.update( deltaTime );
         if ( pStill->_timer.isActive() == false )
         {
             pStill->_timer.restart( pStill->_pDef->_fleeInterval );
@@ -232,7 +232,7 @@ namespace sw
         {
             if ( ghost._state == GhostState::Caught || ghost._state == GhostState::Sucking )
                 continue;
-            ghost._timer.tick( deltaTime );
+            ghost._timer.update( deltaTime );
             if ( ghost._timer.isActive() )
                 continue;
             switch ( ghost._state )

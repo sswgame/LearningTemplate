@@ -222,7 +222,7 @@ namespace sw
         _nowMs = nowMs;
         if ( _bHostAttached == SW_FALSE )
             attachHost( host );
-        _pLoginService->tick( nowMs );
+        _pLoginService->update( nowMs );
         _listCompletionScratch.clear();
         _pLoginService->drainCompletions( _listCompletionScratch );
         for ( const LoginCompletion& completion : _listCompletionScratch )
@@ -237,7 +237,7 @@ namespace sw
             handleEvent( host, event );
         }
         publishRemoteRevocations( host );
-        _presence.tick( nowMs );
+        _presence.update( nowMs );
         if ( nowMs >= _nextPurgeMs )
         {
             _nextPurgeMs = nowMs + _settings._purgeIntervalMs;

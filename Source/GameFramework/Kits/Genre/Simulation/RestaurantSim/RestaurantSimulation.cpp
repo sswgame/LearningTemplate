@@ -630,7 +630,7 @@ namespace sw
     void RestaurantSimulation::stepFixed()
     {
         finishStaffWork();
-        tickPatience();
+        updatePatience();
         if ( _bOpen != SW_FALSE && _minutes < static_cast<float32>( _pCatalog->getCloseHour() - _pCatalog->getOpenHour() ) * RestaurantSimulationInternal::kMinutesPerHour )
             spawnArrivals();
         seatCustomers();
@@ -710,7 +710,7 @@ namespace sw
         }
     }
 
-    void RestaurantSimulation::tickPatience()
+    void RestaurantSimulation::updatePatience()
     {
         for ( RestaurantCustomer& customer : _listCustomer )
         {

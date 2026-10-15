@@ -197,7 +197,7 @@ SW_TEST_CASE( SurfaceStateTest, RegionChannelsSetAndDecay )
     SW_EXPECT_NEAR_EQUAL( 1.0f, state.getRegionValue( 1, hashed_string( "Wet" ) ), 1.0e-6f );
     SW_EXPECT_FALSE( state.setRegionValue( 1, hashed_string( "Mud" ), 1.0f ) );
     SW_EXPECT_FALSE( state.setRegionValue( 5, hashed_string( "Wet" ), 1.0f ) );
-    state.tick( 2.0f );
+    state.update( 2.0f );
     SW_EXPECT_NEAR_EQUAL( 0.8f, state.getRegionValue( 1, hashed_string( "Wet" ) ), 1.0e-5f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, state.getRegionValue( 0, hashed_string( "Wet" ) ), 1.0e-6f );
     vector<float32> listParameter;
@@ -238,7 +238,7 @@ SW_TEST_CASE( SurfaceStateTest, HitStampWritesUvMaskAndDecays )
     SW_EXPECT_NEAR_EQUAL( 0.0f, pBloodMask->sample( float2( 0.75f, 0.5f ) ), 1.0e-6f );  // 다른 채널의 자리
     SW_EXPECT_NEAR_EQUAL( 1.0f, state.getRegionValue( 1, hashed_string( "Blood" ) ), 1.0e-6f );
 
-    state.tick( 2.0f );
+    state.update( 2.0f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, pBloodMask->sample( float2( 0.25f, 0.5f ) ), 1.0e-5f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, pTearMask->sample( float2( 0.75f, 0.5f ) ), 1.0e-6f ); // 찢김은 그대로
 }

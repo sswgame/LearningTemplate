@@ -237,7 +237,7 @@ namespace sw
         GameDirectorComponent::onEndPlay();
     }
 
-    void ShooterDirectorComponent::tickGame( float32 deltaTime )
+    void ShooterDirectorComponent::updateGame( float32 deltaTime )
     {
         const float32 step = MathUtil::min( deltaTime, 0.1f );
         if ( gv_shooterMotionTrace.empty() == false )

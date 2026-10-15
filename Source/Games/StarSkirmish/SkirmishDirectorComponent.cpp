@@ -202,7 +202,7 @@ namespace sw
             SW_LOG_INFO( "[Skirmish] watching computer vs computer - arrows/WASD pan, wheel zoom, - = speed, P pause, F1 status" );
     }
 
-    void SkirmishDirectorComponent::tickGame( float32 deltaTime )
+    void SkirmishDirectorComponent::updateGame( float32 deltaTime )
     {
         if ( deltaTime <= 0.0f )
             return;

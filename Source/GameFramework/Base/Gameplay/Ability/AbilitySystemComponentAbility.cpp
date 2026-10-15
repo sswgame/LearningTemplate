@@ -469,14 +469,14 @@ namespace sw
         _abilityEndedMulticast.broadcast( ability, bWasCancelled );
     }
 
-    void AbilitySystemComponent::tickActiveAbilities( float32 deltaTime )
+    void AbilitySystemComponent::updateActiveAbilities( float32 deltaTime )
     {
         const size_t specCount = _listAbilitySpec.size();
         for ( size_t specIndex = 0; specIndex < specCount && specIndex < _listAbilitySpec.size(); ++specIndex )
         {
             AbilitySpec& spec = *_listAbilitySpec[specIndex];
             if ( spec._bPendingRemove == SW_FALSE && spec._pAbility->isActive() )
-                spec._pAbility->tickAbility( deltaTime );
+                spec._pAbility->updateAbility( deltaTime );
         }
     }
 

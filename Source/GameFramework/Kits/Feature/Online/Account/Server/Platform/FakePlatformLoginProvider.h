@@ -25,7 +25,7 @@ namespace sw
         const utf8* getName() const override { return _name.c_str(); }
         uint64      submitVerification( const vector<uint8>& ticketBytes, int64 nowMs ) override;
         int32       pollVerifications( vector<PlatformLoginVerification>& outListVerification ) override;
-        void        tick( int64 nowMs ) override;
+        void        update( int64 nowMs ) override;
 
         int32 getSubmittedCount() const { return _submittedCount; }
 

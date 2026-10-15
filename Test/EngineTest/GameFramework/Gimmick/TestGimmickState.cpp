@@ -56,7 +56,7 @@ SW_TEST_CASE( GimmickStateTest, BundleCollectsWritesAndRejectsCorruptBytes )
     GimmickCircuitComponent* pCircuit = GimmickStateTestInternal::spawnPlatform( manager, "Platform" );
     SW_ASSERT_NOT_NULL( pCircuit );
     manager.beginPlay();
-    test::tickFrames( manager, 90 );
+    test::updateFrames( manager, 90 );
 
     GimmickStateBundle bundle;
     bundle.collect( manager );
@@ -106,7 +106,7 @@ SW_TEST_CASE( GimmickStateTest, ApplyRewindsCircuitAndActuatorPose )
     SW_ASSERT_NOT_NULL( pCircuit );
     GameObject* pPlatform = pCircuit->getOwner();
     manager.beginPlay();
-    test::tickFrames( manager, 30 );
+    test::updateFrames( manager, 30 );
     manager.flushSceneTransforms();
     const float32 savedX    = GimmickStateTestInternal::getX( pPlatform );
     const uint64  savedHash = pCircuit->getCircuit().computeStateHash();
@@ -116,7 +116,7 @@ SW_TEST_CASE( GimmickStateTest, ApplyRewindsCircuitAndActuatorPose )
     vector<uint8> savedBytes;
     saved.write( savedBytes ); // 게임의 IRollbackGame::saveState 가 담는 바이트
 
-    test::tickFrames( manager, 60 );
+    test::updateFrames( manager, 60 );
     manager.flushSceneTransforms();
     SW_EXPECT_NOT_EQUAL( savedHash, pCircuit->getCircuit().computeStateHash() );
     SW_EXPECT_TRUE( MathUtil::abs( GimmickStateTestInternal::getX( pPlatform ) - savedX ) > 1.0f );
@@ -142,7 +142,7 @@ SW_TEST_CASE( GimmickStateTest, ReplicaFollowsAuthorityByObjectName )
     GimmickCircuitComponent* pAuthorityCircuit = GimmickStateTestInternal::spawnPlatform( authority, "Platform" );
     SW_ASSERT_NOT_NULL( pAuthorityCircuit );
     authority.beginPlay();
-    test::tickFrames( authority, 75 );
+    test::updateFrames( authority, 75 );
 
     GameObjectManager        replica; // 오브젝트 id 는 다르지만 이름이 같다
     GimmickCircuitComponent* pReplicaCircuit = GimmickStateTestInternal::spawnPlatform( replica, "Platform" );
@@ -167,8 +167,8 @@ SW_TEST_CASE( GimmickStateTest, ReplicaFollowsAuthorityByObjectName )
     SW_EXPECT_NEAR_EQUAL( GimmickStateTestInternal::getX( pAuthorityCircuit->getOwner() ), GimmickStateTestInternal::getX( pReplicaCircuit->getOwner() ), 0.05f );
 
     // 이어서 같은 걸음을 진행하면 두 기계가 같은 길을 간다(결정적).
-    test::tickFrames( authority, 30 );
-    test::tickFrames( replica, 30 );
+    test::updateFrames( authority, 30 );
+    test::updateFrames( replica, 30 );
     SW_EXPECT_EQUAL( pAuthorityCircuit->getCircuit().computeStateHash(), pReplicaCircuit->getCircuit().computeStateHash() );
 
     // 모르는 이름의 항목과 구조가 다른 회로의 항목은 적용하지 않고 센다.

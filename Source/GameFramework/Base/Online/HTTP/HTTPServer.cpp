@@ -61,7 +61,7 @@ namespace sw
         _bInitialized = SW_FALSE;
     }
 
-    void HTTPServer::tick()
+    void HTTPServer::update()
     {
         if ( _bInitialized == SW_FALSE )
             return;

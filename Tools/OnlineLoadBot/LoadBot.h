@@ -50,7 +50,7 @@ namespace sw
         void shutdown();
 
         /** @brief 단계를 진행합니다(기다림 · 응답 대기면 시한만 본다). 시나리오를 다 돌았거나 연결을 잃고 멈췄으면 false. */
-        bool tick( int64 nowMs );
+        bool update( int64 nowMs );
 
         // 실행기가 넘긴다 — 이 봇의 연결 사건
         void handleOpened( StreamMessageEndpoint* pEndpoint, NetRequestClient* pRequestClient, StreamConnectionHandle handle );

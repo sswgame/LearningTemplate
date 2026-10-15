@@ -93,7 +93,7 @@ namespace sw
         bool onBeforeModuleReload( const vector<string>& listModuleName );
 #endif
         LiveReloadManager* getLiveReloadManager() const;
-        void               tickOnce( float32 deltaSeconds );
+        void               updateOnce( float32 deltaSeconds );
         /** @brief 콘솔 명령 한 줄을 이 스레드(게임 스레드)에서 처리합니다. */
         void executeCommand( string_view line );
         /** @brief Dev 의 일시정지 명령(`pause` · `resume` · `step [N]`)이면 처리하고 true 입니다. Shipping 은 늘 false 입니다. */

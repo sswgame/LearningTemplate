@@ -411,7 +411,7 @@ namespace sw
     /**
      * @brief 백그라운드에서 끝난 비동기 로드 결과를 메인 스레드의 안전한 시점에 활성 씬으로 바꿔 넣습니다.
      */
-    void SceneManager::tickTransitions()
+    void SceneManager::updateTransitions()
     {
         SW_MEMORY_SCOPE( Scene );
         if ( _asyncLoad == nullptr || _asyncLoad->_bReady.load( std::memory_order_acquire ) == false )
@@ -513,13 +513,13 @@ namespace sw
     /**
      * @brief 활성 씬을 매 프레임 갱신합니다.
      */
-    void SceneManager::tick( float32 deltaTime )
+    void SceneManager::update( float32 deltaTime )
     {
         SW_MEMORY_SCOPE( Scene );
         if ( _pActiveScene == nullptr )
             return;
 
-        _pActiveScene->tick( deltaTime );
+        _pActiveScene->update( deltaTime );
     }
 
     namespace
@@ -642,7 +642,7 @@ namespace sw
         return nullptr;
     }
 
-    void SceneManager::tickPreviewScenes( float32 deltaTime )
+    void SceneManager::updatePreviewScenes( float32 deltaTime )
     {
         if ( _listPreviewScene.empty() )
             return;
@@ -651,7 +651,7 @@ namespace sw
         {
             if ( entry._policy._bTick == false )
                 continue;
-            entry._scene->tick( deltaTime * entry._policy._timeScale );
+            entry._scene->update( deltaTime * entry._policy._timeScale );
         }
     }
 

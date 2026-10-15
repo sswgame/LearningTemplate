@@ -75,7 +75,7 @@ namespace sw
         /** @brief 맡긴 저장소 작업은 저장소의 `shutdown` 과 `pollCompletions` 가 회수합니다. 이 객체는 그때까지 살아 있어야 합니다. */
         void shutdown();
         /** @brief 주기적인 다시 읽기와 경계 판정을 합니다. 저장소 완료는 호스트(또는 서버 루프)가 비웁니다. */
-        void tick( int64 nowMs );
+        void update( int64 nowMs );
         /** @brief 다른 서버가 바꿨음을 버스로 받았을 때 부릅니다. 다음 tick 에 다시 읽습니다. */
         void notifyChanged() { _bReloadRequested = SW_TRUE; }
         /** @brief 열린 이벤트 목록이 지난번 이후 바뀌었으면 true 입니다. 읽으면 표시를 지웁니다. */

@@ -83,8 +83,8 @@ namespace
             {
                 const int64 nowMs = tickCount * kTickMs;
                 runner.setManualClock( nowMs );
-                bRunning = runner.tick();
-                server.tick( kServerStartMs + nowMs );
+                bRunning = runner.update();
+                server.update( kServerStartMs + nowMs );
                 ++tickCount;
             }
             SW_EXPECT_FALSE( bRunning ); // 시한 전에 모두 끝났다

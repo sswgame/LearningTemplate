@@ -90,28 +90,28 @@ SW_TEST_CASE( GimmickGenreTest, PlatformerCrumbleLaunchConveyor )
     pBelt->addComponent<ConveyorComponent>();
 
     manager.beginPlay();
-    test::tickFrames( manager, 2 );
+    test::updateFrames( manager, 2 );
     SW_EXPECT_TRUE( pCrumble->getState() == CrumbleState::Solid );
     pPlayer->getPrimarySceneComponent()->setLocalPosition( float3{ 0.5f, 0.5f, 0.0f } );
-    test::tickFrames( manager, 3 );
+    test::updateFrames( manager, 3 );
     SW_EXPECT_TRUE( pCrumble->getState() == CrumbleState::Shaking );
-    test::tickFrames( manager, 31 );
+    test::updateFrames( manager, 31 );
     SW_EXPECT_TRUE( pCrumble->getState() == CrumbleState::Fallen );
     SW_EXPECT_FALSE( Internal::isBodyActive( pPlatform ) );
-    test::tickFrames( manager, 61 );
+    test::updateFrames( manager, 61 );
     SW_EXPECT_TRUE( pCrumble->getState() != CrumbleState::Fallen ); // 1 초 뒤 되살아났다
     SW_EXPECT_TRUE( Internal::isBodyActive( pPlatform ) );
 
     pPlayer->getPrimarySceneComponent()->setLocalPosition( float3{ 40.0f, 0.0f, 0.0f } );
-    test::tickFrames( manager, 2 );
+    test::updateFrames( manager, 2 );
     SW_EXPECT_EQUAL( 1, pSpring->getComponent<LaunchPadComponent>()->getLaunchCount() );
     SW_EXPECT_NEAR_EQUAL( 12.0f, pGravity->getVelocityY(), 1.0e-3f );
 
     pGravity->jump( 0.0f );
     pPlayer->getPrimarySceneComponent()->setLocalPosition( float3{ 60.0f, 0.0f, 0.0f } );
-    test::tickFrames( manager, 2 );
+    test::updateFrames( manager, 2 );
     const float32 before = Internal::getPosition( pPlayer )._x;
-    test::tickFrames( manager, 30 );
+    test::updateFrames( manager, 30 );
     SW_EXPECT_NEAR_EQUAL( before + 1.0f, Internal::getPosition( pPlayer )._x, 0.1f ); // 2 m/s × 0.5 초
     manager.endPlay();
 }
@@ -148,28 +148,28 @@ SW_TEST_CASE( GimmickGenreTest, PushBlockAndTorchPuzzle )
     SW_ASSERT_TRUE( pCircuit->rebuild() );
 
     manager.beginPlay();
-    test::tickFrames( manager, 2 );
+    test::updateFrames( manager, 2 );
     SW_EXPECT_TRUE( pPush->push( float3{ 3.0f, 0.0f, 0.4f } ) );  // X 축으로 맞춘다
     SW_EXPECT_FALSE( pPush->push( float3{ 1.0f, 0.0f, 0.0f } ) ); // 움직이는 중
-    test::tickFrames( manager, 20 );
+    test::updateFrames( manager, 20 );
     SW_EXPECT_NEAR_EQUAL( 1.0f, Internal::getPosition( pBlock )._x, 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, Internal::getPosition( pBlock )._z, 1.0e-4f );
-    test::tickFrames( manager, 2 );
+    test::updateFrames( manager, 2 );
     SW_EXPECT_TRUE( pPush->push( float3{ -1.0f, 0.0f, 0.0f } ) );
-    test::tickFrames( manager, 20 );
+    test::updateFrames( manager, 20 );
     SW_EXPECT_FALSE( pPush->push( float3{ -1.0f, 0.0f, 0.0f } ) ); // 벽 앞 칸에서 막힌다
     SW_EXPECT_NEAR_EQUAL( 0.0f, Internal::getPosition( pBlock )._x, 1.0e-4f );
 
     SW_EXPECT_TRUE( pTorchA->getComponent<ElementStatusComponent>()->applyStimulus( "Fire" ) );
-    test::tickFrames( manager, 10 );
+    test::updateFrames( manager, 10 );
     SW_EXPECT_NEAR_EQUAL( 0.0f, Internal::getPosition( pDoor )._y, 1.0e-4f ); // 하나만 켜졌다
     SW_EXPECT_TRUE( pTorchB->getComponent<ElementStatusComponent>()->applyStimulus( "Fire" ) );
-    test::tickFrames( manager, 10 );
+    test::updateFrames( manager, 10 );
     SW_EXPECT_NEAR_EQUAL( 4.0f, Internal::getPosition( pDoor )._y, 1.0e-4f );
-    test::tickFrames( manager, 120 );
+    test::updateFrames( manager, 120 );
     SW_EXPECT_TRUE( pTorchA->getComponent<ElementStatusComponent>()->hasStatus( "Burning" ) ); // 횃불은 다 타지 않는다
     SW_EXPECT_TRUE( pTorchA->getComponent<ElementStatusComponent>()->applyStimulus( "Water" ) );
-    test::tickFrames( manager, 10 );
+    test::updateFrames( manager, 10 );
     SW_EXPECT_NEAR_EQUAL( 0.0f, Internal::getPosition( pDoor )._y, 1.0e-4f );
     manager.endPlay();
 }
@@ -194,10 +194,10 @@ SW_TEST_CASE( GimmickGenreTest, ShooterBarrelsTurretCover )
     }
     manager.beginPlay();
     arrBarrel[0]->getComponent<GimmickSensorComponent>()->applyDamage( 40.0f );
-    test::tickFrames( manager, 1 );
+    test::updateFrames( manager, 1 );
     SW_EXPECT_TRUE( arrBarrel[0]->getComponent<ExplosiveBarrelComponent>()->hasExploded() );
     SW_EXPECT_FALSE( arrBarrel[1]->getComponent<ExplosiveBarrelComponent>()->hasExploded() ); // 사슬은 다음 걸음
-    test::tickFrames( manager, 2 );
+    test::updateFrames( manager, 2 );
     SW_EXPECT_TRUE( arrBarrel[1]->getComponent<ExplosiveBarrelComponent>()->hasExploded() );
     SW_EXPECT_FALSE( arrBarrel[2]->getComponent<ExplosiveBarrelComponent>()->hasExploded() );
 
@@ -217,7 +217,7 @@ SW_TEST_CASE( GimmickGenreTest, ShooterBarrelsTurretCover )
         SW_ASSERT_NOT_NULL( pTags );
         pTags->getValuePtr<TagContainer>( static_cast<void*>( pTurretLogic ) )->addTag( TagID::request( "Player" ) );
     }
-    test::tickFrames( manager, 120 );
+    test::updateFrames( manager, 120 );
     SW_EXPECT_TRUE( pTurretLogic->getTarget() == pFar->getHandle() ); // 가려진 가까운 쪽 대신 보이는 쪽
     SW_EXPECT_TRUE( pTurretLogic->getShotCount() >= 2 );
     SW_EXPECT_TRUE( pFar->getComponent<GimmickSensorComponent>()->consumeDamage() > 0.0f );
@@ -227,10 +227,10 @@ SW_TEST_CASE( GimmickGenreTest, ShooterBarrelsTurretCover )
     pCover->addComponent<GimmickSensorComponent>();
     DestructibleComponent* pDestructible = pCover->addComponent<DestructibleComponent>();
     pCover->getComponent<GimmickSensorComponent>()->applyDamage( 25.0f );
-    test::tickFrames( manager, 2 );
+    test::updateFrames( manager, 2 );
     SW_EXPECT_EQUAL( 1, pDestructible->getStage() );
     pCover->getComponent<GimmickSensorComponent>()->applyDamage( 30.0f );
-    test::tickFrames( manager, 2 );
+    test::updateFrames( manager, 2 );
     SW_EXPECT_TRUE( pDestructible->isDestroyed() );
     SW_EXPECT_FALSE( Internal::isBodyActive( pCover ) );
     manager.endPlay();
@@ -265,7 +265,7 @@ SW_TEST_CASE( GimmickGenreTest, RacingHorrorStealth )
         listA.push_back( pBoxA->getComponent<ItemBoxComponent>()->open( *pRacer ) );
         listB.push_back( pBoxB->getComponent<ItemBoxComponent>()->open( *pRacer ) );
         SW_EXPECT_FALSE( pBoxA->getComponent<ItemBoxComponent>()->isAvailable() );
-        test::tickFrames( manager, 181 ); // 3 초 뒤 되살아난다
+        test::updateFrames( manager, 181 ); // 3 초 뒤 되살아난다
         SW_EXPECT_TRUE( pBoxA->getComponent<ItemBoxComponent>()->isAvailable() );
     }
     bool bVaried = false;
@@ -298,10 +298,10 @@ SW_TEST_CASE( GimmickGenreTest, RacingHorrorStealth )
     pFloor->addComponent<GimmickSensorComponent>();
     NoiseEmitterComponent* pNoise  = pFloor->addComponent<NoiseEmitterComponent>();
     GameObject*            pWalker = Internal::spawnBox( manager, "Walker", float3{ 90.0f, 0.0f, 0.0f }, float2{ 0.5f, 0.5f }, false );
-    test::tickFrames( manager, 3 );
+    test::updateFrames( manager, 3 );
     SW_EXPECT_EQUAL( 0, pNoise->getEmitCount() );
     pWalker->getPrimarySceneComponent()->setLocalPosition( float3{ 80.0f, 0.0f, 0.0f } );
-    test::tickFrames( manager, 3 );
+    test::updateFrames( manager, 3 );
     SW_EXPECT_EQUAL( 1, pNoise->getEmitCount() );
 
     GameObject*          pBulb  = Internal::spawnAt( manager, "Bulb", float3{ 0.0f, 0.0f, 200.0f } );
@@ -314,7 +314,7 @@ SW_TEST_CASE( GimmickGenreTest, RacingHorrorStealth )
     SW_EXPECT_EQUAL( 0.0f, LightExposure::computeExposure( manager, float3{ 0.0f, 0.0f, 260.0f }, false ) ); // 반경 밖은 어둠
     (void)pPoint;
     Internal::spawnBox( manager, "Shade", float3{ 0.5f, 0.0f, 200.0f }, float2{ 0.2f, 3.0f }, false );
-    test::tickFrames( manager, 3 );
+    test::updateFrames( manager, 3 );
     SW_EXPECT_EQUAL( 0.0f, LightExposure::computeExposure( manager, float3{ 1.0f, 0.0f, 200.0f }, true ) ); // 가려졌다
     manager.endPlay();
 }
@@ -337,14 +337,14 @@ SW_TEST_CASE( GimmickGenreTest, AbilityGateAndGatheringNode )
     GameObject*             pNode   = Internal::spawnAt( manager, "Herbs", float3{ 50.0f, 0.0f, 0.0f } );
     GatheringNodeComponent* pGather = pNode->addComponent<GatheringNodeComponent>();
     manager.beginPlay();
-    test::tickFrames( manager, 3 );
+    test::updateFrames( manager, 3 );
     SW_EXPECT_FALSE( pGateLogic->isOpen() ); // 능력이 없다
     pHero->addTag( TagID::request( "Ability.Bomb" ) );
-    test::tickFrames( manager, 3 );
+    test::updateFrames( manager, 3 );
     SW_EXPECT_TRUE( pGateLogic->isOpen() );
     SW_EXPECT_FALSE( Internal::isBodyActive( pGate ) );
     pHero->getPrimarySceneComponent()->setLocalPosition( float3{ 30.0f, 0.0f, 0.0f } );
-    test::tickFrames( manager, 3 );
+    test::updateFrames( manager, 3 );
     SW_EXPECT_TRUE( pGateLogic->isOpen() ); // 한 번 열리면 남는다
 
     for ( int32 use = 0; use < 3; ++use )
@@ -353,7 +353,7 @@ SW_TEST_CASE( GimmickGenreTest, AbilityGateAndGatheringNode )
     }
     SW_EXPECT_TRUE( pGather->isDepleted() );
     SW_EXPECT_FALSE( pGather->gather( *pHero ) );
-    test::tickFrames( manager, 30 * 60 + 2 );
+    test::updateFrames( manager, 30 * 60 + 2 );
     SW_EXPECT_FALSE( pGather->isDepleted() );
     SW_EXPECT_EQUAL( 3, pGather->getUsesLeft() );
     manager.endPlay();

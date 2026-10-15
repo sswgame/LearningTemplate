@@ -61,7 +61,7 @@ namespace
         for ( int32 frame = 0; frame < 2000 && pfnDone( sceneManager, data ) == false; ++frame )
         {
             sw::engine::getSubsystem<sw::TaskManager>().waitAll();
-            sceneManager.tickTransitions();
+            sceneManager.updateTransitions();
             EditorPlaySession::update( data );
             if ( pfnDone( sceneManager, data ) == false )
                 std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );

@@ -252,7 +252,7 @@ namespace sw
         syncScreenSwitches();
         reopenClosedScreens();
         _subtitles.update( deltaSeconds );
-        tickScreens( deltaSeconds );
+        updateScreens( deltaSeconds );
         _notifications.update( deltaSeconds );
         applyPendingCloses();
         updateBindings();
@@ -261,11 +261,11 @@ namespace sw
             SW_PROFILE_SCOPE( "GT.UI.Animate" );
             for ( size_t index = 0; index < _listScreen.size(); ++index )
             {
-                _listScreen[index]->_animationPlayer.tick( deltaSeconds );
+                _listScreen[index]->_animationPlayer.update( deltaSeconds );
                 (void)UIStyleTransition::update( _listScreen[index]->getTree(), deltaSeconds ); // 스타일 전환: 새로 바뀐 것은 아래 스타일 단계가 시작한다
             }
-            _offscreen.tickAnimations( deltaSeconds ); // 에디터 미리보기가 튼 애니메이션(스택 밖 화면은 `Open` 을 틀지 않는다)
-            applyPendingCloses();                      // 닫기 애니메이션이 끝난 화면을 지운다
+            _offscreen.updateAnimations( deltaSeconds ); // 에디터 미리보기가 튼 애니메이션(스택 밖 화면은 `Open` 을 틀지 않는다)
+            applyPendingCloses();                        // 닫기 애니메이션이 끝난 화면을 지운다
         }
         refreshInputGlyphs();
         // 스타일: 스타일이 더티한 위젯만 계산된 스타일을 다시 정한다(레이아웃 앞이다. 여백과 글꼴이 크기를 바꾸기 때문이다).
@@ -856,7 +856,7 @@ namespace sw
         refreshActiveScreen();
     }
 
-    void UISystem::tickScreens( float32 deltaSeconds )
+    void UISystem::updateScreens( float32 deltaSeconds )
     {
         // 틱이 화면을 올리고 닫을 수 있으므로(확인 창, 키 바인딩 창) 번호로 돌며 매번 다시 찾는다.
         _listTickScratch.clear();

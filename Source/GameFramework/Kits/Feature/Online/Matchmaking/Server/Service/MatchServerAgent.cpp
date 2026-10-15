@@ -46,7 +46,7 @@ namespace sw
         return true;
     }
 
-    void MatchServerAgent::tick( int64 nowMs )
+    void MatchServerAgent::update( int64 nowMs )
     {
         for ( auto expectedIt = _mapAccountToExpected.begin(); expectedIt != _mapAccountToExpected.end(); )
         {

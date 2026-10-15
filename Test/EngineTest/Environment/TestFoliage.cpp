@@ -129,7 +129,7 @@ SW_TEST_CASE( FoliageTest, TerrainEditsRebuildPlacementAfterSettling )
     // 첫 틱들의 트랜스폼 전파로 지형 · 식생이 다시 읽힐 수 있다 — 가라앉은 뒤를 기준으로 본다.
     for ( uint32 frame = 0; frame < 40; ++frame )
     {
-        manager.tick( kFrame );
+        manager.update( kFrame );
     }
     const uint32 flatHalfCount = pFoliage->getInstanceCount();
     SW_ASSERT_TRUE( flatHalfCount > 200 );
@@ -139,11 +139,11 @@ SW_TEST_CASE( FoliageTest, TerrainEditsRebuildPlacementAfterSettling )
     rect.include( 0, 0 );
     rect.include( 64, 64 );
     SW_ASSERT_TRUE( pTerrain->writeHeights( listHeight, rect ) );
-    manager.tick( kFrame );
+    manager.update( kFrame );
     SW_EXPECT_EQUAL( flatHalfCount, pFoliage->getInstanceCount() ); // 아직 가라앉지 않았다
     for ( uint32 frame = 0; frame < 40; ++frame )
     {
-        manager.tick( kFrame );
+        manager.update( kFrame );
     }
     SW_EXPECT_TRUE( pFoliage->getInstanceCount() > flatHalfCount + flatHalfCount / 2 );
 }

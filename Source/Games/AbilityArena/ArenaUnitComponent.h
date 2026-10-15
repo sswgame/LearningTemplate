@@ -84,7 +84,7 @@ namespace sw
         /** @brief 다른 적과 겹친 만큼의 절반을 자기 쪽으로 밀어냅니다(상대도 같은 일을 한다 — 물리 없이, 유닛 수가 적다). */
         void separateFromEnemies( const ArenaDirectorComponent& director, float3& inoutPosition ) const;
         /** @brief 쓰러진 뒤 — 납작해지다가 디렉터가 걷는다. */
-        void tickDeath( float32 deltaTime, MeshComponent& mesh );
+        void updateDeath( float32 deltaTime, MeshComponent& mesh );
 
     private:
         PROPERTY( Category = "Arena", DisplayName = "Director", Tooltip = "Object with the ArenaDirectorComponent" )

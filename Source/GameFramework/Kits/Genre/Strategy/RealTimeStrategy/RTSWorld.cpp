@@ -332,7 +332,7 @@ namespace sw
             if ( unit._bAlive )
                 updateUnit( unit, deltaTime );
         }
-        _visionTimer.tick( deltaTime );
+        _visionTimer.update( deltaTime );
         if ( _visionTimer.isActive() == false )
         {
             _visionTimer.start( _settings._visionInterval );

@@ -217,7 +217,7 @@ namespace sw::editor
         }
         EditorChrome::endToolbar();
 
-        tickPreview( ImGui::GetIO().DeltaTime );
+        updatePreview( ImGui::GetIO().DeltaTime );
 
         // 끄는 동안에도 적용한다 — 시간 막대를 옮기면 뷰포트가 따라온다(언리얼 Sequencer · 유니티 Timeline 의 스크럽).
         ImGui::SetNextItemWidth( -1.0f );
@@ -660,7 +660,7 @@ namespace sw::editor
         _previewPlayer->setLoop( true );
     }
 
-    void SequencerPanel::tickPreview( float32 deltaSeconds )
+    void SequencerPanel::updatePreview( float32 deltaSeconds )
     {
         if ( _previewPlayer == nullptr || _previewPlayer->isPlaying() == false )
             return;

@@ -236,7 +236,7 @@ namespace sw
                      "P auto plan, Space pause, - = speed, F1 status" );
     }
 
-    void NileDirectorComponent::tickGame( float32 deltaTime )
+    void NileDirectorComponent::updateGame( float32 deltaTime )
     {
         if ( deltaTime <= 0.0f )
             return;

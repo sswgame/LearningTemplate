@@ -2911,14 +2911,14 @@ SW_TEST_CASE( ReflectionSerializationTest, UnknownTypeNamesInAFileAreNotInterned
     }
     SW_ASSERT_TRUE( bPatched );
 
-    const uint32       countBefore = sw::hashed_string::getInternedCount();
+    const uint32       previousCount = sw::hashed_string::getInternedCount();
     sw::AssetPathActor restored;
     {
         test::ScopedLogSuppressor suppressor;
         (void)sw::BinarySerializer::deserialize( &restored, *pActorType, bytes.data(), bytes.size() ); // 결과는 무관 — 아래 단언이 이름 표가 늘지 않았는지 본다
     }
     SW_EXPECT_TRUE_MSG( sw::hashed_string::findInterned( unknownName ).empty(), "파일의 모르는 타입 이름을 전역 이름 표에 넣었습니다" );
-    SW_EXPECT_EQUAL( countBefore, sw::hashed_string::getInternedCount() );
+    SW_EXPECT_EQUAL( previousCount, sw::hashed_string::getInternedCount() );
 }
 
 /**
@@ -2998,8 +2998,8 @@ SW_TEST_CASE( ReflectionSerializationTest, AssetTextDoesNotGrowTheNameTable )
     SW_ASSERT_NOT_NULL( pFlag );
     SW_ASSERT_NOT_NULL( pType );
 
-    const uint32 countBefore = sw::hashed_string::getInternedCount();
-    int64        value       = -1;
+    const uint32 previousCount = sw::hashed_string::getInternedCount();
+    int64        value         = -1;
     SW_EXPECT_TRUE( pRole->tryParse( "viewport", value ) && value == 1 ); // 대소문자를 가리지 않는 답은 그대로
     SW_EXPECT_TRUE( pFlag->tryParseText( "Read | write", value ) && value == 3 );
     SW_EXPECT_FALSE( pRole->tryParse( "R8NoSuchRole", value ) );
@@ -3014,7 +3014,7 @@ SW_TEST_CASE( ReflectionSerializationTest, AssetTextDoesNotGrowTheNameTable )
                                                   "<ComplexData _id=\"7\" R8NoSuchAttribute=\"1\"><R8NoSuchTagProbe>2</R8NoSuchTagProbe></ComplexData>",
                                                   &listOrphan );
     }
-    SW_EXPECT_EQUAL( countBefore, sw::hashed_string::getInternedCount() );
+    SW_EXPECT_EQUAL( previousCount, sw::hashed_string::getInternedCount() );
     SW_EXPECT_TRUE( sw::hashed_string::findInterned( "R8NoSuchAttribute" ).empty() );
 
     // 고아는 여전히 이름으로 찾는다 — 마이그레이션이 옛 이름을 물을 때 그 이름은 **그때** intern 되고, 고아는 해시로 맞춘다.

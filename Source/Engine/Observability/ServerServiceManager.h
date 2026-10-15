@@ -36,7 +36,7 @@ namespace sw
         /** @brief 시작의 반대 순서로 멈추고 인스턴스를 지웁니다. 두 번 불러도 됩니다. */
         void stopAll();
         /** @brief 돌고 있는 서비스마다 `tick` 을 부릅니다. */
-        void tick( int64 nowMs );
+        void update( int64 nowMs );
 
         bool  isRunning() const { return _bRunning == SW_TRUE; }
         int32 getRunningCount() const { return static_cast<int32>( _listRunning.size() ); }

@@ -74,7 +74,7 @@ namespace sw
         /** @brief 화면 @p handle 의 입력 방식을 정합니다(탐색이면 `:focus-visible` 상태가 켜진다). 방식이 바뀌면 스타일을 다시 맞춥니다. */
         void setNavigationMode( UIScreenHandle handle, bool bNavigationMode );
         /** @brief 재생 중인 애니메이션이 있는 화면의 애니메이션을 @p deltaSeconds 만큼 진행합니다(미리보기의 애니메이션 재생). */
-        void tickAnimations( float32 deltaSeconds );
+        void updateAnimations( float32 deltaSeconds );
         /** @brief 목록입니다. 테마와 시트, 문서 핫 리로드가 모든 화면을 돌 때 씁니다. */
         vector<UIOffscreenScreen>&       getScreens() { return _listOffscreen; }
         const vector<UIOffscreenScreen>& getScreens() const { return _listOffscreen; }

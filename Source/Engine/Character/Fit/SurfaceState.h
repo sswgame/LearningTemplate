@@ -124,7 +124,7 @@ namespace sw
         const SurfaceMask* findMask( uint32 part, const hashed_string& channel ) const;
 
         /** @brief 시간을 흘립니다. 채널마다 초당 감쇠만큼 영역 값과 마스크를 내립니다(감쇠가 0 인 채널, 즉 찢김은 그대로 둡니다). */
-        void tick( float32 deltaSeconds );
+        void update( float32 deltaSeconds );
 
     private:
         vector<SurfaceChannelDef> _listChannel;

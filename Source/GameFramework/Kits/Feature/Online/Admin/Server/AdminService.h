@@ -60,7 +60,7 @@ namespace sw
         void submitCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, int64 nowMs, ReplyDelegate onReply );
         /** @brief 서버 설정의 첫 관리자를 맡깁니다. 레코드가 없을 때만 넣으며 서버 조립 단계가 기동할 때 부릅니다. */
         void seedRole( AccountID accountID, AdminRole role, int64 nowMs );
-        void tick( int64 nowMs );
+        void update( int64 nowMs );
 
         // IOnlineHostService
         uint16 getMethodRange() const override { return OnlineMethodRange::kAdmin; }

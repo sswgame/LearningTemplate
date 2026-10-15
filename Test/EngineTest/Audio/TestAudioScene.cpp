@@ -152,7 +152,7 @@ SW_TEST_CASE( AudioSceneTest, ReverbZoneDrivesSnapshotIntensity )
     }
     // 존이 사라지면 세기가 빠진다.
     manager.destroyObject( pZoneObject );
-    manager.tick( 1.0f / 60.0f );
+    manager.update( 1.0f / 60.0f );
     manager.getSubsystem<sw::SceneAudio>().update( 1.0f / 60.0f, nullptr, nullptr );
     (void)test::AudioTestUtil::render( engine, sw::audio::kBlockFrameCount );
     SW_EXPECT_NEAR_EQUAL( 0.0f, engine.getSnapshotIntensity( sw::hashed_string( "Cave" ) ), 1e-4f );
@@ -259,7 +259,7 @@ SW_TEST_CASE( AudioSceneTest, RemovedEmitterKeepsItsLastPlace )
     SW_EXPECT_NEAR_EQUAL( 0.5f / 9.0f, before, 1e-3f );
 
     manager.destroyObject( pSource );
-    manager.tick( 1.0f / 60.0f );
+    manager.update( 1.0f / 60.0f );
     // 오브젝트가 사라질 때 끝 처리(`_bStopOnEndPlay`)는 플레이를 시작하지 않은 매니저라 돌지 않는다 — 소리는 이어진다.
     const float32 after = AudioSceneTestInternal::renderMean( engine, 0 );
     SW_EXPECT_NEAR_EQUAL( before, after, 1e-3f );

@@ -148,7 +148,7 @@ namespace sw
         logStatus( 0.0f, true );
     }
 
-    void ParkDirectorComponent::tickGame( float32 deltaTime )
+    void ParkDirectorComponent::updateGame( float32 deltaTime )
     {
         if ( deltaTime <= 0.0f )
             return;

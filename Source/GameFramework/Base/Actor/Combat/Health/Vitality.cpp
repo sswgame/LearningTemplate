@@ -206,7 +206,7 @@ namespace sw
     {
         if ( deltaTime <= 0.0f || _state == VitalityState::Dead )
             return;
-        _invulnerable.tick( deltaTime );
+        _invulnerable.update( deltaTime );
 
         if ( _state == VitalityState::Downed )
         {
@@ -234,7 +234,7 @@ namespace sw
             return;
         if ( isPoiseBroken() )
         {
-            if ( _poiseBreak.tick( deltaTime ) )
+            if ( _poiseBreak.update( deltaTime ) )
             {
                 _poise            = _settings._poiseMax;
                 _sincePoiseDamage = 0.0f;

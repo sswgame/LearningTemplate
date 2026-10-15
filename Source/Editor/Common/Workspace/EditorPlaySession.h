@@ -74,7 +74,7 @@ namespace sw::editor
         uint8            _bSimulate         : 1; ///< 월드만 실행한다. 게임 모듈 업데이트와 게임 입력이 없고 에디터 카메라를 유지한다(언리얼의 Simulate)
         uint8            _bStartAtPosition  : 1; ///< 다음 Play 를 `_startPosition` 에서 시작한다
         uint8            _bStartMovePending : 1; ///< 시작 위치로 한 번 더 옮긴다. 첫 프레임이 스폰 위치로 되돌린 것을 덮어쓴다
-        uint8            _bOptionsApplied   : 1; ///< 이 세션의 플레이 옵션(최대화)을 적용했다(`EditorPlayCommands::tick`)
+        uint8            _bOptionsApplied   : 1; ///< 이 세션의 플레이 옵션(최대화)을 적용했다(`EditorPlayCommands::update`)
         uint8            _bMaximizedForPlay : 1; ///< Maximize On Play 가 게임 뷰를 최대화했다. 멈추면 배치를 되돌린다
         uint8            _bEjected          : 1; ///< F8 로 조종을 놓았다. 다시 누르면 조종으로 돌아간다
 

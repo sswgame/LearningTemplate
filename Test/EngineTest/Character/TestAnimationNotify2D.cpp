@@ -161,7 +161,7 @@ SW_TEST_CASE( AnimationNotify2DTest, SpriteNotifiesDriveFootstepAndHitWindowIn2D
         // 칼날 구간(0.1 ~ 0.3 초) 동안 +X 로 움직인다 — 프레임마다 0.25 m.
         if ( frameIndex >= 7 && frameIndex <= 16 )
             pSelf->setWorldPosition( pSelf->getWorldPosition() + float3{ 0.25f, 0.0f, 0.0f } );
-        manager.tick( TestAnimationNotify2DInternal::kFrame );
+        manager.update( TestAnimationNotify2DInternal::kFrame );
         for ( const AnimationNotifyAction& action : pNotify->getActions() )
         {
             if ( action._notify == hashed_string( "Step" ) )

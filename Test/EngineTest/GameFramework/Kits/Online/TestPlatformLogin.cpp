@@ -236,8 +236,8 @@ namespace
             const uint64 verificationID = provider.submitVerification( TestPlatformLoginInternal::toBytes( ticket ), _nowMs );
             for ( int32 step = 0; step < 400; ++step )
             {
-                _server.tick();
-                provider.tick( _nowMs );
+                _server.update();
+                provider.update( _nowMs );
                 vector<PlatformLoginVerification> listVerification;
                 (void)provider.pollVerifications( listVerification );
                 for ( PlatformLoginVerification& verification : listVerification )
@@ -412,10 +412,10 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIDTokenWithNonce )
     vector<HTTPClientResponse>        listPage;
     for ( int32 step = 0; step < 600 && listResult.empty(); ++step )
     {
-        fixture._server.tick();
-        browserClient.tick( kNowMs );
+        fixture._server.update();
+        browserClient.update( kNowMs );
         (void)browserClient.pollResponses( listPage );
-        client.tick( kNowMs );
+        client.update( kNowMs );
         (void)client.pollResults( listResult );
     }
     SW_ASSERT_EQUAL( size_t( 1 ), listResult.size() );
@@ -440,10 +440,10 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIDTokenWithNonce )
     listResult.clear();
     for ( int32 step = 0; step < 600 && listResult.empty(); ++step )
     {
-        fixture._server.tick();
-        browserClient.tick( kNowMs );
+        fixture._server.update();
+        browserClient.update( kNowMs );
         (void)browserClient.pollResponses( listPage );
-        client.tick( kNowMs );
+        client.update( kNowMs );
         (void)client.pollResults( listResult );
     }
     SW_ASSERT_EQUAL( size_t( 1 ), listResult.size() );
@@ -454,7 +454,7 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIDTokenWithNonce )
     listResult.clear();
     (void)client.beginLogin( "apple", kNowMs );
     (void)client.beginLogin( "google", kNowMs );
-    client.tick( kNowMs + settings._timeoutMs );
+    client.update( kNowMs + settings._timeoutMs );
     (void)client.pollResults( listResult );
     SW_ASSERT_EQUAL( size_t( 2 ), listResult.size() );
     SW_EXPECT_TRUE( listResult[0]._bSucceeded == SW_FALSE );
@@ -485,8 +485,8 @@ SW_TEST_CASE( PlatformLoginTest, LoginServiceCreatesAnAccountFromAVerifiedIDToke
     vector<LoginCompletion> listCompletion;
     for ( int32 step = 0; step < 400 && listCompletion.empty(); ++step )
     {
-        fixture._server.tick();
-        service.tick( fixture._nowMs );
+        fixture._server.update();
+        service.update( fixture._nowMs );
         (void)store.pollCompletions();
         service.drainCompletions( listCompletion );
     }

@@ -204,7 +204,7 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
-    void TradeService::tick( int64 nowMs )
+    void TradeService::update( int64 nowMs )
     {
         for ( auto tradeIt = _mapTradeToDeadline.begin(); tradeIt != _mapTradeToDeadline.end(); )
         {

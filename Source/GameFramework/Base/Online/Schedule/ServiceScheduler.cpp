@@ -251,7 +251,7 @@ namespace sw
         return true;
     }
 
-    void ServiceScheduler::tick( int64 nowMs )
+    void ServiceScheduler::update( int64 nowMs )
     {
         if ( _pStore == nullptr )
             return;

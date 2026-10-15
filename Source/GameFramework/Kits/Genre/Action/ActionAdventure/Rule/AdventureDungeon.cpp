@@ -391,13 +391,13 @@ namespace sw
                 const bool                bTorchTimerRunning = def._kind == AdventureDeviceKind::TorchGroup && device._bActive == SW_FALSE && device._litCount > 0 && def._duration > 0.0f;
                 if ( def._kind == AdventureDeviceKind::TimedSwitch && device._bActive == SW_TRUE )
                 {
-                    device._timer.tick( deltaTime );
+                    device._timer.update( deltaTime );
                     if ( device._timer.isActive() == false )
                         setDeviceActive( dungeon, static_cast<int32>( deviceIndex ), false, flags );
                 }
                 else if ( bTorchTimerRunning )
                 {
-                    device._timer.tick( deltaTime );
+                    device._timer.update( deltaTime );
                     if ( device._timer.isActive() == false )
                     {
                         device._litCount = 0;

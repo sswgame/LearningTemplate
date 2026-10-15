@@ -367,12 +367,12 @@ namespace sw
     {
         using Internal         = TrampolineArenaInternal;
         TrampolinePlayer& body = _listPlayer[static_cast<size_t>( player )];
-        body._attackCooldown.tick( deltaTime );
-        body._stunTimer.tick( deltaTime );
-        body._invulnerableTimer.tick( deltaTime );
+        body._attackCooldown.update( deltaTime );
+        body._stunTimer.update( deltaTime );
+        body._invulnerableTimer.update( deltaTime );
         if ( body._heavyTimer.isActive() )
         {
-            if ( body._heavyTimer.tick( deltaTime ) )
+            if ( body._heavyTimer.update( deltaTime ) )
             {
                 body._knockbackTaken = 1.0f;
                 body._knockbackDealt = 1.0f;
@@ -399,7 +399,7 @@ namespace sw
                 const bool bNoPressYet = body._jumpPressTime < body._landTime - _judge.getEarliestWidth();
                 if ( body._input._bJumpPressed == SW_TRUE && bNoPressYet )
                     body._jumpPressTime = _time;
-                body._contactTimer.tick( deltaTime );
+                body._contactTimer.update( deltaTime );
                 if ( body._contactTimer.isActive() )
                     return;
                 // 눌림이 끝났다. 닿은 순간을 목표로 점프 입력을 판정한다.
@@ -443,7 +443,7 @@ namespace sw
 
         if ( body._attackTimer.isActive() )
         {
-            if ( body._attackTimer.tick( deltaTime ) )
+            if ( body._attackTimer.update( deltaTime ) )
             {
                 // 돌진이 끝나면 공중 이동 속도로 돌아온다.
                 const float32 speed = Internal::computeFlatLength( body._velocity );

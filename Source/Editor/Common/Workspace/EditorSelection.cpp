@@ -241,14 +241,14 @@ namespace sw::editor
 
     void EditorSelection::pruneInvalid()
     {
-        const size_t countBefore = _listSelectedObject.size();
+        const size_t previousCount = _listSelectedObject.size();
         _listSelectedObject.erase(
             std::remove_if( _listSelectedObject.begin(), _listSelectedObject.end(),
                             []( GameObjectHandle handle )
         { return editor::findGameObject( handle ) == nullptr; } ),
             _listSelectedObject.end() );
 
-        if ( _listSelectedObject.size() != countBefore )
+        if ( _listSelectedObject.size() != previousCount )
             notifyChanged();
     }
 

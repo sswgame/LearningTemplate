@@ -34,13 +34,13 @@ SW_TEST_CASE( DestructionShowcaseTest, FuseBarrelChainBreaksWallAndCrates )
     SW_ASSERT_NOT_NULL( pWallFracture );
 
     manager.beginPlay();
-    test::tickFrames( manager, 60 );
+    test::updateFrames( manager, 60 );
     SW_ASSERT_TRUE( pWallFracture->hasFractureData() );
     SW_EXPECT_EQUAL( 200u, pWallFracture->findAsset()->getPieceCount() );
     SW_EXPECT_FALSE( pWallFracture->isFractured() );
     SW_EXPECT_FALSE( pFuse->getComponent<sw::ExplosiveBarrelComponent>()->hasExploded() );
 
-    test::tickFrames( manager, 180 );
+    test::updateFrames( manager, 180 );
     SW_EXPECT_TRUE( pFuse->getComponent<sw::ExplosiveBarrelComponent>()->hasExploded() );
     SW_EXPECT_TRUE( pChain->getComponent<sw::ExplosiveBarrelComponent>()->hasExploded() );
     SW_EXPECT_TRUE( pWallFracture->isFractured() );

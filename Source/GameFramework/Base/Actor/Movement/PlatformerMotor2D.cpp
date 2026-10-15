@@ -275,14 +275,14 @@ namespace sw
         if ( bWasGrounded )
             _coyote.start( _settings._coyoteTime );
         else
-            _coyote.tick( deltaTime );
+            _coyote.update( deltaTime );
         if ( input._bJumpPressed )
             _jumpBuffer.start( _settings._jumpBufferTime );
         else
-            _jumpBuffer.tick( deltaTime );
-        _wallLock.tick( deltaTime );
-        _dashCooldown.tick( deltaTime );
-        _dropThrough.tick( deltaTime );
+            _jumpBuffer.update( deltaTime );
+        _wallLock.update( deltaTime );
+        _dashCooldown.update( deltaTime );
+        _dropThrough.update( deltaTime );
         if ( bWasGrounded )
         {
             _extraJumpsLeft = _settings._extraJumpCount;
@@ -330,7 +330,7 @@ namespace sw
 
         if ( _dash.isActive() )
         {
-            if ( _dash.tick( deltaTime ) )
+            if ( _dash.update( deltaTime ) )
                 _velocity = _velocity * 0.4f; // 대시 끝에 속도를 꺾는다
         }
         else if ( _bClimbing )

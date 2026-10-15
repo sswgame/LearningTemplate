@@ -355,7 +355,7 @@ SW_TEST_CASE( SceneTest, UpdateWithoutRHIIsSafe )
     SW_ASSERT_NOT_NULL( scene );
     scene->getObjectManager()->createGameObject( sw::hashed_string( "EmptyActor" ) );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( size_t( 1 ), scene->getObjectManager()->getAllGameObjects().size() );
 
     manager.shutdown();
@@ -381,7 +381,7 @@ SW_TEST_CASE( SceneTest, SceneEntityLifecycleAndShutdownCleanup )
     SW_EXPECT_EQUAL( 2u, sceneA->getObjectManager()->getAllGameObjects().size() );
 
     // 틱 실행 및 정상 상태 검증
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 2u, sceneA->getObjectManager()->getAllGameObjects().size() );
 
     // 셧다운 시 모든 씬 및 오브젝트 정리
@@ -544,7 +544,7 @@ SW_TEST_CASE( SceneTest, DirectionalLightLookupFollowsRegistry )
 
     // 파괴되면 등록이 풀린다 — 레지스트리에 죽은 포인터가 남으면 여기서 잡힌다.
     scene.getObjectManager()->destroyObject( pSun, true );
-    scene.getObjectManager()->tick( 0.016f );
+    scene.getObjectManager()->update( 0.016f );
     SW_EXPECT_NULL( scene.findActiveDirectionalLight() );
 }
 
@@ -2019,20 +2019,20 @@ SW_TEST_CASE( SceneTest, PreviewScenesTickByTheirOwnPolicy )
     SW_EXPECT_TRUE( pPlaying->getObjectManager()->hasBegunPlay() );
 
     // 미리보기 틱만 부르면 활성 씬은 서 있다(에디터 정지 중에도 창의 월드는 돈다).
-    manager.tickPreviewScenes( 0.016f );
-    manager.tickPreviewScenes( 0.016f );
+    manager.updatePreviewScenes( 0.016f );
+    manager.updatePreviewScenes( 0.016f );
     SW_EXPECT_EQUAL( 2, pTickingMesh->_tickCount );
     SW_EXPECT_EQUAL( 0, pStillMesh->_tickCount );
     SW_EXPECT_EQUAL( 0, pMainMesh->_tickCount );
 
     // 활성 씬 틱은 미리보기 씬을 건드리지 않는다.
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 1, pMainMesh->_tickCount );
     SW_EXPECT_EQUAL( 2, pTickingMesh->_tickCount );
 
     // 정책을 바꾸면 바로 적용된다.
     SW_EXPECT_TRUE( manager.setPreviewPolicy( pStill, ticking ) );
-    manager.tickPreviewScenes( 0.016f );
+    manager.updatePreviewScenes( 0.016f );
     SW_EXPECT_EQUAL( 1, pStillMesh->_tickCount );
     sw::ScenePreviewPolicy physical = ticking;
     physical._bPhysics              = true;
@@ -2047,7 +2047,7 @@ SW_TEST_CASE( SceneTest, PreviewScenesTickByTheirOwnPolicy )
     int32 endCount            = 0;
     auto* pPlayMesh           = pPlaying->getObjectManager()->createGameObject( sw::hashed_string( "D" ) )->addComponent<sw::MockMeshComponent>();
     pPlayMesh->_pEndPlayCount = &endCount;
-    manager.tickPreviewScenes( 0.016f ); // 플레이 중에 붙은 컴포넌트는 틱 앞에서 시작한다
+    manager.updatePreviewScenes( 0.016f ); // 플레이 중에 붙은 컴포넌트는 틱 앞에서 시작한다
     SW_EXPECT_EQUAL( 1, pPlayMesh->_beginPlayCount );
     SW_EXPECT_TRUE( manager.destroyPreviewScene( pPlaying ) );
     SW_EXPECT_EQUAL( 1, endCount );
@@ -2116,7 +2116,7 @@ SW_TEST_CASE( SceneTest, PreviewSceneTickScalesDeltaByPolicy )
     SW_ASSERT_NOT_NULL( pHalfMesh );
     SW_ASSERT_NOT_NULL( pFrozenMesh );
 
-    manager.tickPreviewScenes( 0.02f );
+    manager.updatePreviewScenes( 0.02f );
     SW_EXPECT_EQUAL( 1, pHalfMesh->_tickCount );
     SW_EXPECT_NEAR_EQUAL( 0.01f, pHalfMesh->_lastDeltaTime, 1e-6f );
     // 배율 0 이면 틱은 돌되 시간은 멈춘다.

@@ -30,7 +30,7 @@ namespace sw
      *          의도는 `quantize` 를 거쳐 폰에 넣으므로, 로컬 플레이어도 네트워크나 재생과 같은 값으로 움직인다.
      *          첫 폰이나 조종자가 등록될 때 `ensureFor` 가 매니저에 붙이고(매니저가 소유), 마지막 것이 빠질 때 `releaseIfUnused` 가 뗀다.
      *          GameFramework 모듈이 내려가기 전에 그 컴포넌트가 먼저 지워지므로, 매니저에 이 타입의 객체가 남지 않는다.
-     *          에디터가 씬을 멈추면 `GameObjectManager::tick` 이 돌지 않으므로 이 단계도 돌지 않는다.
+     *          에디터가 씬을 멈추면 `GameObjectManager::update` 이 돌지 않으므로 이 단계도 돌지 않는다.
      */
     class SW_GF_API ControlSystem final : public ISceneFrameSystem
     {

@@ -366,10 +366,10 @@ SW_TEST_CASE( AnimationLODTest, UpdateRateFromScreenSizeInterpolates )
         float32      previousYaw            = TestAnimationLODInternal::getRootYaw( *pUnit );
         for ( uint32 frame = 0; frame < 16; ++frame )
         {
-            const uint32 countBefore = pUnit->getPoseEvaluationCount();
+            const uint32 previousCount = pUnit->getPoseEvaluationCount();
             system.evaluate( 0.016f );
             const float32 yaw = TestAnimationLODInternal::getRootYaw( *pUnit );
-            if ( pUnit->getPoseEvaluationCount() == countBefore )
+            if ( pUnit->getPoseEvaluationCount() == previousCount )
             {
                 ++skippedFrameCount;
                 if ( MathUtil::abs( yaw - previousYaw ) > 1e-5f )

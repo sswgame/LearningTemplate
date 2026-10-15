@@ -204,10 +204,10 @@ SW_TEST_CASE( LeaderboardSeasonTest, ScheduledWindowRunsSettlementOnce )
     SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeSeasonBoard() ) ); // 다시 올려도 작업은 하나
     node.submitThirtyPlayers();
 
-    scheduler.tick( 1900 ); // 창 전
+    scheduler.update( 1900 ); // 창 전
     node.step();
     SW_EXPECT_EQUAL( Internal::countSeasonResults( database ), 0 );
-    scheduler.tick( 2100 ); // 창 안 — 차지 → 처리기 → 정산 → 회차 끝
+    scheduler.update( 2100 ); // 창 안 — 차지 → 처리기 → 정산 → 회차 끝
     node.step();
     SW_EXPECT_EQUAL( Internal::countSeasonResults( database ), 30 );
     SW_EXPECT_EQUAL( database.countRecords( ServiceMail::getMailTable() ), 10 );
@@ -215,7 +215,7 @@ SW_TEST_CASE( LeaderboardSeasonTest, ScheduledWindowRunsSettlementOnce )
     SW_EXPECT_EQUAL( node._service.getPendingCount(), 0 );
 
     const uint64 hashAfter = database.computeContentHash();
-    scheduler.tick( 2200 ); // 같은 회차는 다시 돌지 않는다
+    scheduler.update( 2200 ); // 같은 회차는 다시 돌지 않는다
     node.step();
     SW_EXPECT_EQUAL( database.computeContentHash(), hashAfter );
     node._service.shutdown();

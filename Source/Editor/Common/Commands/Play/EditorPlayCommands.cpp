@@ -66,7 +66,7 @@ namespace sw::editor
                        "저장된 활성 씬을 에디터 없이 새 창(별도 프로세스)으로 띄웁니다",
                        "Run the saved active scene in a separate game process", {}, &EditorPlayCommandsInternal::runLaunchStandalone, nullptr, "MainMenu/Play" );
 
-    void EditorPlayCommands::tick()
+    void EditorPlayCommands::update()
     {
         PlaySessionData* pData    = EditorPlaySession::findData();
         EditorContext*   pContext = EditorContext::get();

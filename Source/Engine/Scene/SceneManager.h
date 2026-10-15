@@ -130,9 +130,9 @@ namespace sw
         /** @brief 씬 저장이 막혀 있으면 true 입니다. */
         bool isSaveBlocked() const { return _saveBlockReason.empty() == false; }
         /** @brief 끝난 비동기 로드를 활성 씬으로 바꿔 넣습니다. 메인 스레드에서 프레임당 한 번 부르십시오. */
-        void tickTransitions();
+        void updateTransitions();
         /** @brief 활성 씬만 틱합니다. App 메인 루프가 부릅니다(게임 모듈에서 또 부르지 마십시오). */
-        void tick( float32 deltaTime );
+        void update( float32 deltaTime );
 
         /**
          * @brief 미리보기 씬(툴 창의 숨은 월드)을 만듭니다. 활성 씬 · 로드된 씬 목록과 따로 삽니다 — 저장 · 전환 · 영속 오브젝트에 끼지 않습니다.
@@ -164,7 +164,7 @@ namespace sw
          * @brief 정책이 틱을 켠 미리보기 씬을 `deltaTime * 시간 배율` 로 틱합니다. 전역 `GameTimeScale` 은 곱하지 않습니다(게임 월드 전용).
          * @details 활성 씬 틱과 별개로 프레임마다 한 번 부릅니다(`EngineLoop`). 틱 중에 미리보기 씬을 만들거나 내리지 마십시오.
          */
-        void tickPreviewScenes( float32 deltaTime );
+        void updatePreviewScenes( float32 deltaTime );
 
         /**
          * @brief 툴(인스펙터 · 선택 · 기즈모)이 겨누는 씬을 고릅니다. 로드된 씬이나 미리보기 씬이어야 하고, 아니면 false 입니다(바뀌지 않음).

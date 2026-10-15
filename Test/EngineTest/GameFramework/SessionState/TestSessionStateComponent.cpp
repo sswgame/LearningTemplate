@@ -55,7 +55,7 @@ namespace sw
             return true;
         }
         bool readState( Archive& archive ) override { return StateArchiveUtil::readHeader( archive, kStateTag, 1 ) && archive.getRemainingBytes() == 0; }
-        void tickGame( float32 deltaTime ) override
+        void updateGame( float32 deltaTime ) override
         {
             (void)deltaTime;
             SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
@@ -212,7 +212,7 @@ SW_TEST_CASE( SessionStateComponentTest, DirectorsOnTheStateObjectTickInAttachOr
 
     for ( int32 tickIndex = 1; tickIndex <= 3; ++tickIndex )
     {
-        pManager->tick( 1.0f );
+        pManager->update( 1.0f );
         SW_EXPECT_EQUAL( tickIndex * 2 - 1, pFirst->_lastSeen );
         SW_EXPECT_EQUAL( tickIndex * 2, pSecond->_lastSeen );                                         // 늘 첫 디렉터 바로 뒤
         SW_EXPECT_NEAR_EQUAL( 6.0f + static_cast<float32>( tickIndex ), pFirst->_lastHour, 1.0e-3f ); // 시계가 디렉터보다 먼저 흘렀다
@@ -234,14 +234,14 @@ SW_TEST_CASE( SessionStateComponentTest, SnapshotRestoresSharedStateBeforeTheDir
     SW_ASSERT_NOT_NULL( pState );
     pState->getWallet().add( "Gold", 150 ); // 100 + 150
     pState->getFlags().setFlag( "village.founded", 1 );
-    pManager->tick( 1.0f );
+    pManager->update( 1.0f );
 
     SessionStateProbeGameInstance instance;
     vector<uint8>                 snapshot;
     SW_ASSERT_TRUE( instance.captureSnapshot( snapshot ) );
     SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
     pManager->mergePendingAdds();
-    pManager->tick( 0.0f ); // 복원한 오브젝트가 시작한다 — 시계는 흐르지 않는다
+    pManager->update( 0.0f ); // 복원한 오브젝트가 시작한다 — 시계는 흐르지 않는다
 
     SessionStateComponent* pRestored = findSceneGameState( *pManager );
     SW_ASSERT_NOT_NULL( pRestored );

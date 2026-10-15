@@ -24,7 +24,7 @@ SW_TEST_CASE( SceneFrameStepTest, StepsRunInTableOrder )
     manager.setFrameStepObserver( sw::GameObjectManager::FrameStepObserver( [&listStep]( sw::SceneFrameStep step )
     { listStep.push_back( step ); } ) );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     const uint32 stepCount = static_cast<uint32>( sw::SceneFrameStep::Count );
     SW_ASSERT_EQUAL( static_cast<size_t>( stepCount ), listStep.size() );
@@ -37,7 +37,7 @@ SW_TEST_CASE( SceneFrameStepTest, StepsRunInTableOrder )
 
     // 관찰자를 풀면 더 부르지 않는다.
     manager.setFrameStepObserver( sw::GameObjectManager::FrameStepObserver{} );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( static_cast<size_t>( stepCount ), listStep.size() );
 }
 
@@ -60,7 +60,7 @@ SW_TEST_CASE( SceneFrameStepTest, PrePhysicsTickWritesLandInTheApplyStep )
     manager.setFrameStepObserver( sw::GameObjectManager::FrameStepObserver( [&listLocalX, pMover]( sw::SceneFrameStep step )
     { listLocalX[static_cast<size_t>( step )] = pMover->getLocalPosition()._x; } ) );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     SW_EXPECT_NEAR_EQUAL( 0.0f, listLocalX[static_cast<size_t>( sw::SceneFrameStep::TickPrePhysics )], 1e-5f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, listLocalX[static_cast<size_t>( sw::SceneFrameStep::ApplyPrePhysics )], 1e-5f );
@@ -123,7 +123,7 @@ SW_TEST_CASE( SceneFrameStepTest, FrameSystemsRunInOrderBeforeThePrePhysicsTick 
     SW_EXPECT_TRUE( manager.findFrameSystem( sw::hashed_string( "Second" ) ) != nullptr );
 
     // 첫 프레임: 첫째가 둘째를 떼지만 둘째는 이번 단계에서 이미 자리를 잃었다 — 첫째만 돈다. 떼인 칸은 단계 끝에 걷힌다.
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listCall.size() );
     SW_EXPECT_EQUAL( 1, listCall[0] );
     SW_EXPECT_TRUE( pRawFirst->getCallStep() == sw::SceneFrameStep::FrameSystems );
@@ -132,6 +132,6 @@ SW_TEST_CASE( SceneFrameStepTest, FrameSystemsRunInOrderBeforeThePrePhysicsTick 
     SW_EXPECT_TRUE( static_cast<uint32>( sw::SceneFrameStep::FrameSystems ) < static_cast<uint32>( sw::SceneFrameStep::TickPrePhysics ) );
 
     manager.removeFrameSystem( sw::hashed_string( "First" ) );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), listCall.size() );
 }

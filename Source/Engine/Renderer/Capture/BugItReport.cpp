@@ -365,7 +365,7 @@ namespace sw
                 outReply = "bugitgo: the scene '" + report._scenePath + "' did not load in time";
                 return false;
             }
-            sceneManager.tickTransitions();
+            sceneManager.updateTransitions();
             pScene = sceneManager.getActiveScene();
         }
         CameraComponent* pCamera = pScene != nullptr ? BugItReportInternal::findViewCamera( *pScene ) : nullptr;

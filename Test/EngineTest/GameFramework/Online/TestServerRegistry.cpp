@@ -61,7 +61,7 @@ namespace
         static void refreshFully( RegistryNode& node, ServerRegistryReader& reader, int64 nowMs )
         {
             reader.requestRefresh();
-            reader.tick( nowMs );
+            reader.update( nowMs );
             for ( int32 pumpIndex = 0; pumpIndex < 4 && reader.isRefreshing(); ++pumpIndex )
             {
                 (void)node._router.pump();
@@ -92,7 +92,7 @@ SW_TEST_CASE( ServerRegistryTest, RegisteredServerIsSeenAndExpiresWhenHeartbeatS
     ServerRegistration registration;
     SW_ASSERT_TRUE( registration.initialize( &gameNode._router, Internal::makeDescriptor( 1 ) ) );
     registration.setState( ServerState::Open );
-    registration.tick( 0 );
+    registration.update( 0 );
     (void)gameNode._router.pump();
 
     ServerRegistryReader reader;
@@ -103,8 +103,8 @@ SW_TEST_CASE( ServerRegistryTest, RegisteredServerIsSeenAndExpiresWhenHeartbeatS
     SW_EXPECT_TRUE( reader.getSnapshot()[0]._state == ServerState::Open );
     SW_EXPECT_TRUE( reader.getSnapshot()[0]._descriptor._address == "127.0.0.1" );
 
-    registration.tick( ServerRegistration::kHeartbeatPeriodMs - 1 ); // 주기 전 — 다시 쓰지 않는다
-    database.advanceTimeMs( ServerRegistration::kRecordTtlMs );      // 하트비트 없이 시한이 지났다
+    registration.update( ServerRegistration::kHeartbeatPeriodMs - 1 ); // 주기 전 — 다시 쓰지 않는다
+    database.advanceTimeMs( ServerRegistration::kRecordTtlMs );        // 하트비트 없이 시한이 지났다
     Internal::refreshFully( lobbyNode, reader, ServerRegistration::kRecordTtlMs );
     SW_EXPECT_EQUAL( reader.getSnapshot().size(), size_t( 0 ) );
     SW_EXPECT_EQUAL( Internal::countIndexMembers( lobbyNode ), size_t( 0 ) ); // 죽은 멤버를 색인에서 지웠다
@@ -125,7 +125,7 @@ SW_TEST_CASE( ServerRegistryTest, HeartbeatKeepsTheRecordAliveAndStateChangesAre
     for ( int64 nowMs = 0; nowMs <= 3 * ServerRegistration::kRecordTtlMs; nowMs += 1000 )
     {
         database.setManualTimeMs( nowMs );
-        registration.tick( nowMs );
+        registration.update( nowMs );
         (void)node._router.pump();
     }
     const int64 nowMs = 3 * ServerRegistration::kRecordTtlMs;
@@ -134,7 +134,7 @@ SW_TEST_CASE( ServerRegistryTest, HeartbeatKeepsTheRecordAliveAndStateChangesAre
 
     registration.setState( ServerState::Maintenance );
     registration.setLoad( 4 );
-    registration.tick( nowMs + 1 ); // 주기 전이어도 바뀐 것은 바로
+    registration.update( nowMs + 1 ); // 주기 전이어도 바뀐 것은 바로
     (void)node._router.pump();
     Internal::refreshFully( node, reader, nowMs + 1 );
     SW_ASSERT_EQUAL( reader.getSnapshot().size(), size_t( 1 ) );
@@ -155,8 +155,8 @@ SW_TEST_CASE( ServerRegistryTest, ShutdownRemovesImmediatelyAndPickAddsPendingLo
     SW_ASSERT_TRUE( second.initialize( &node._router, Internal::makeDescriptor( 2 ) ) );
     first.setState( ServerState::Open );
     second.setState( ServerState::Open );
-    first.tick( 0 );
-    second.tick( 0 );
+    first.update( 0 );
+    second.update( 0 );
     (void)node._router.pump();
 
     ServerRegistryReader reader;
@@ -189,12 +189,12 @@ SW_TEST_CASE( ServerRegistryTest, ReaderShutDownBeforeTheRouterIsNeverCalledBack
     RegistryNode            node( &database );
     ServerRegistration      registration;
     SW_ASSERT_TRUE( registration.initialize( &node._router, Internal::makeDescriptor( 1 ) ) );
-    registration.tick( 0 );
+    registration.update( 0 );
     (void)node._router.pump();
     {
         ServerRegistryReader reader;
         reader.initialize( &node._router, "game", 2000 );
-        reader.tick( 0 );
+        reader.update( 0 );
         SW_EXPECT_TRUE( reader.isRefreshing() );
     } // 읽기가 끝나기 전에 내려간다
     SW_EXPECT_EQUAL( node._router.getPendingCount(), 0 ); // 색인 읽기를 취소했다

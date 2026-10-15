@@ -115,7 +115,7 @@ namespace sw
             return;
         if ( _bViewsSpawned == SW_FALSE )
             scheduleFlush(); // 상태 저장 전에 걷었다(또는 처음) — 지금 상태대로 다시 세운다
-        tickGame( deltaTime );
+        updateGame( deltaTime );
         if ( _soundQueue.isEmpty() == false || hasPendingSpawn() )
             scheduleFlush();
     }

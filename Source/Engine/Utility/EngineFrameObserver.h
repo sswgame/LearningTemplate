@@ -58,7 +58,7 @@ namespace sw
         /** @brief 프레임 시작 — 입력 `beginFrame` 전입니다(가상 입력은 여기서 붙인다). */
         virtual void onFrameBegin( const EngineFrameContext& context ) = 0;
         /**
-         * @brief 씬 틱 뒤 — `Engine::tick` 이 씬 틱 · 물리 · 내비 디버그 그리기 뒤, 런타임 UI 갱신 · 렌더 패킷 앞, 헤드리스 return 뒤에서 부릅니다(헤드리스 루프에서는 불리지 않는다).
+         * @brief 씬 틱 뒤 — `Engine::update` 이 씬 틱 · 물리 · 내비 디버그 그리기 뒤, 런타임 UI 갱신 · 렌더 패킷 앞, 헤드리스 return 뒤에서 부릅니다(헤드리스 루프에서는 불리지 않는다).
          * @details 주의: 이 호출 자리를 옮기면 관찰자가 보는 시점(그 프레임의 게임 상태가 정해진 뒤)이 바뀝니다. 그 시점에 할 일(장면별 프레임 시간 기록 같은 것)이
          *          있는 관찰자만 덮어씁니다. 기본은 아무것도 하지 않습니다.
          */

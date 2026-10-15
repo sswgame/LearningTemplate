@@ -535,7 +535,7 @@ namespace sw
         const ConquestRules& rules = _pCatalog->getRules();
         if ( _commander._bAlive == SW_FALSE )
         {
-            _commander._respawnTimer.tick( deltaTime );
+            _commander._respawnTimer.update( deltaTime );
             const int32 home = findHomeSiteIndex();
             if ( _commander._respawnTimer.isActive() || home < 0 )
                 return;
@@ -551,7 +551,7 @@ namespace sw
             _commander._facing = _commander._moveAxis > 0.0f ? 1.0f : -1.0f;
             _commander._x      = clampMove( ConquestTeam::Player, _commander._x, _commander._x + _commander._moveAxis * rules._commanderSpeed * deltaTime );
         }
-        _commander._attackCooldown.tick( deltaTime );
+        _commander._attackCooldown.update( deltaTime );
         if ( _commander._attackCooldown.isActive() )
             return;
         const Target target = findNearestTarget( ConquestTeam::Player, _commander._x, rules._commanderRange, true, true );
@@ -571,7 +571,7 @@ namespace sw
         const ConquestUnitDef& def       = *unit._pDef;
         const float32          direction = ConquestWorldInternal::computeDirection( unit._team );
         const float32          stepSize  = def._speed * deltaTime;
-        unit._attackCooldown.tick( deltaTime );
+        unit._attackCooldown.update( deltaTime );
         const auto moveToward = [&]( float32 goalX )
         {
             const float32 delta = MathUtil::clamp( goalX - unit._x, -stepSize, stepSize );

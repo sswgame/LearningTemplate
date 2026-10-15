@@ -312,24 +312,24 @@ namespace sw
             }
 
             /**
-             * @brief @p node 를 읽어 방금 더한 바인딩(인덱스 @p countBefore)에 발화 시간 · 부호 뒤집기를 겁니다.
+             * @brief @p node 를 읽어 방금 더한 바인딩(인덱스 @p previousCount)에 발화 시간 · 부호 뒤집기를 겁니다.
              * @details 바인딩을 더하지 못했으면(모르는 키 등) 아무것도 하지 않는다. 없는 속성은 기본값(0 = 맵 값, false)이라 옛 파일은 그대로 읽힌다.
              */
-            static void readBindingModifier( InputMap& inputMap, const hashed_string& action, uint32 countBefore, XMLNode node )
+            static void readBindingModifier( InputMap& inputMap, const hashed_string& action, uint32 previousCount, XMLNode node )
             {
-                if ( inputMap.getBindingCount( action ) <= countBefore )
+                if ( inputMap.getBindingCount( action ) <= previousCount )
                     return;
                 const float32 triggerTime = node.getAttributeFloat( "time", 0.0f );
                 if ( triggerTime > 0.0f )
-                    (void)inputMap.setBindingTriggerTime( action, countBefore, triggerTime ); // 바로 위에서 바인딩이 있음을 확인했다
+                    (void)inputMap.setBindingTriggerTime( action, previousCount, triggerTime ); // 바로 위에서 바인딩이 있음을 확인했다
                 if ( node.getAttributeBool( "negate", false ) )
-                    (void)inputMap.setBindingNegate( action, countBefore, true ); // 바로 위에서 바인딩이 있음을 확인했다
+                    (void)inputMap.setBindingNegate( action, previousCount, true ); // 바로 위에서 바인딩이 있음을 확인했다
                 // MultiTap 횟수. 없으면 2 이고, 2~255 밖이면 잘라 넣는다(옛 파일에는 이 속성이 없다).
                 const int32 tapCount = node.getAttributeInt( "taps", 2 );
                 if ( tapCount != 2 )
                 {
                     const int32 clampedCount = ( tapCount < 2 ) ? 2 : ( ( tapCount > 255 ) ? 255 : tapCount );
-                    (void)inputMap.setBindingTapCount( action, countBefore, static_cast<uint8>( clampedCount ) ); // 바로 위에서 바인딩이 있음을 확인했다
+                    (void)inputMap.setBindingTapCount( action, previousCount, static_cast<uint8>( clampedCount ) ); // 바로 위에서 바인딩이 있음을 확인했다
                 }
             }
 
@@ -946,7 +946,7 @@ namespace sw
             }
 
             const hashed_string actionName( pAction );
-            const uint32        countBefore = getBindingCount( actionName );
+            const uint32        previousCount = getBindingCount( actionName );
             switch ( parsedKind )
             {
                 case BindingKind::Axis1DComposite:
@@ -1075,7 +1075,7 @@ namespace sw
                     break;
                 }
             }
-            InputMapSerializationInternal::readBindingModifier( *this, actionName, countBefore, bindNode );
+            InputMapSerializationInternal::readBindingModifier( *this, actionName, previousCount, bindNode );
         }
         return true;
     }

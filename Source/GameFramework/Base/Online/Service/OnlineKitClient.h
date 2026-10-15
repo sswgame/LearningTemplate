@@ -6,7 +6,7 @@
  *          - 응답 읽기는 `OnlineReplyUtil::readResponse` 규칙이다. 오류 코드면 `TProtocol::fromErrorCode`, 본문을 못 읽으면 결과가 `Unavailable` 이다.
  *            본문 읽기가 메서드를 받는 키트(채팅)는 `readReply( reader, method, reply )` 를 두면 그쪽을 부른다.
  *          - 성공 응답(본문을 읽었고 결과가 `Ok`)에 캐시를 고치는 키트는 `onCallSucceeded` 를 재정의한다. 콜백보다 먼저 불린다.
- *          - 콜백은 `OnlineServiceClient::tick` 스레드에서 요청마다 정확히 한 번 불린다.
+ *          - 콜백은 `OnlineServiceClient::update` 스레드에서 요청마다 정확히 한 번 불린다.
  *          언리얼 Online Services 의 인터페이스마다 `TOnlineAsyncOpHandle<T>` 를 돌려주는 공통 비동기 연산 틀과 같은 자리다(기억에 의존).
  */
 #pragma once

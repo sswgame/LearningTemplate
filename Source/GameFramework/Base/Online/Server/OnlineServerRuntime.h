@@ -81,7 +81,7 @@ namespace sw
         /** @brief 만든 역순으로 내립니다. 두 번 불러도 됩니다. */
         void shutdown();
         /** @brief 호스트, 예약 작업, 키트, 서버 등록 하트비트를 돌립니다. */
-        void tick( int64 nowMs );
+        void update( int64 nowMs );
 
         bool               isInitialized() const { return _bInitialized == SW_TRUE; }
         OnlineServiceHost& getHost();

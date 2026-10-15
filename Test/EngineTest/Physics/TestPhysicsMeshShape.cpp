@@ -241,7 +241,7 @@ SW_TEST_CASE( PhysicsMeshShapeTest, RigidBodyMeshShapeLoadsThroughEngineMeshCach
         // 컴포넌트는 종류를 바꿀 수 있게 바디를 만든다 — 삼각 메시도 Jolt 의 질량 단언 없이 만들어져야 한다.
         const test::ScopedLogCollector log;
         manager.beginPlay();
-        manager.tick( kMeshShapeStep );
+        manager.update( kMeshShapeStep );
         SW_EXPECT_TRUE_MSG( log.countContaining( "" ) == 0u, log.joined().c_str() );
     }
     SW_EXPECT_TRUE_MSG( pBody->getBodyHandle().isValid(), "a _meshPath shape must become a body without a test-installed load function" );

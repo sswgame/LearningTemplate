@@ -68,7 +68,7 @@ namespace sw
             return;
         if ( _deathTimer >= 0.0f || pAbilitySystem->hasMatchingTag( CombatAttributeSet::getDeadTag() ) )
         {
-            tickDeath( deltaTime, *pMesh );
+            updateDeath( deltaTime, *pMesh );
             return;
         }
         const ArenaDirectorComponent* pDirector = GameDirectorComponent::resolve<ArenaDirectorComponent>( *pManager, _director );
@@ -150,7 +150,7 @@ namespace sw
         }
     }
 
-    void ArenaUnitComponent::tickDeath( float32 deltaTime, MeshComponent& mesh )
+    void ArenaUnitComponent::updateDeath( float32 deltaTime, MeshComponent& mesh )
     {
         // 쓰러진 유닛은 납작해지다가 디렉터가 걷는다(같은 시간 — `ArenaDirectorComponent::kDeathLinger`).
         if ( _deathTimer < 0.0f )

@@ -185,10 +185,10 @@ namespace
                 _nowMs += 20;
                 for ( ClientSide* pClient : _listClient )
                 {
-                    pClient->_client.tick( _nowMs );
+                    pClient->_client.update( _nowMs );
                 }
                 if ( _server != nullptr )
-                    _server->_host.tick( _nowMs );
+                    _server->_host.update( _nowMs );
             }
         }
 

@@ -377,7 +377,7 @@ namespace sw
         /** @brief 닫기를 요청한 화면을 지웁니다. */
         void applyPendingCloses();
         /** @brief 닫는 중이 아닌 화면마다 `UIScreen::onTick` 을 부릅니다(틱이 화면을 올리고 닫아도 되도록 번호로 돕니다). */
-        void tickScreens( float32 deltaSeconds );
+        void updateScreens( float32 deltaSeconds );
         /** @brief 화면 @p index 를 바로 지웁니다(포인터와 포커스가 그 트리를 놓게 합니다). */
         void destroyScreenAt( uint32 index );
         /** @brief 활성 화면과 게임 정지를 다시 정합니다(화면을 올리고 지운 뒤 부릅니다). */

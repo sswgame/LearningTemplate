@@ -97,7 +97,7 @@ namespace sw::editor
                     return;
                 InputManager* pInput = findSubsystem<InputManager>();
                 if ( pInput != nullptr )
-                    s_recorder.tick( *pInput, ImGui::GetIO().DeltaTime );
+                    s_recorder.update( *pInput, ImGui::GetIO().DeltaTime );
             }
         };
     } // namespace

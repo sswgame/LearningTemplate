@@ -74,7 +74,7 @@ namespace sw
         SW_LOG_INFO( "[Voxel] world is ready - WASD move, mouse look, Space jump, Shift sprint, LMB hold to break, RMB place, 1-9 or wheel hotbar, Esc mouse" );
     }
 
-    void VoxelDirectorComponent::tickGame( float32 deltaTime )
+    void VoxelDirectorComponent::updateGame( float32 deltaTime )
     {
         if ( areViewsSpawned() == false )
             return; // 상태 저장 전에 걷었다 — 베이스가 청크를 다시 세운다(블록은 그대로)

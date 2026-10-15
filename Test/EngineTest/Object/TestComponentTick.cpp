@@ -64,7 +64,7 @@ SW_TEST_CASE( ComponentTickGroupTest, MultiLevelInheritanceTickGroupChronologica
     pCompRoot->_componentTag  = "0_PrePhysics_Root";
 
     // 틱 1회 실행
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     SW_EXPECT_EQUAL( static_cast<size_t>( 4 ), listTickOrder.size() );
     if ( listTickOrder.size() == 4 )
@@ -117,7 +117,7 @@ SW_TEST_CASE( ComponentTickGroupTest, ParentChildHierarchyHeterogeneousTickGroup
     pFlying->_pTickOrderLog  = &listTickOrder;
     pFlying->_componentTag   = "Stage3_GrandPostUpdate";
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     SW_EXPECT_EQUAL( static_cast<size_t>( 3 ), listTickOrder.size() );
     if ( listTickOrder.size() == 3 )
@@ -156,7 +156,7 @@ SW_TEST_CASE( ComponentTickGroupTest, DynamicTickGroupRuntimeMigration )
     pCompB->_componentTag  = "ActorB";
 
     // Frame 1: B -> A 순서로 실행되어야 함
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), listTickOrder.size() );
     if ( listTickOrder.size() == 2 )
     {
@@ -172,7 +172,7 @@ SW_TEST_CASE( ComponentTickGroupTest, DynamicTickGroupRuntimeMigration )
     pActorB->markTickOrderDirty();
 
     // Frame 2: 즉시 A -> B 순서로 역전되어 실행되어야 함
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), listTickOrder.size() );
     if ( listTickOrder.size() == 2 )
     {
@@ -207,7 +207,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, IntraComponentMultiSubTickPhaseAndPrio
     pComp->registerSubTick( sw::TickGroup::PostPhysics, kSubTickNormal, sw::TickPhase::Normal );
     pComp->registerSubTick( sw::TickGroup::PostPhysics, kSubTickEarly, sw::TickPhase::Early );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     // 검증:
     // 1. PrePhysics: 메인 틱 (Skeletal)
@@ -256,7 +256,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, InterComponentPrerequisiteDAGDependenc
     const bool bAdded = pRiderComp->addSubTickPrerequisite( kRiderTick, horseHandle );
     SW_EXPECT_EQUAL( true, bAdded );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     // Prerequisite DAG 위상 정렬에 의해 반드시 말(Horse)이 먼저 돌고 기수(Rider)가 돌아야 함!
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), listTickOrder.size() );
@@ -289,7 +289,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, SubTickDynamicLifecycleAndActiveToggle
     pComp->registerSubTick( sw::TickGroup::PostPhysics, kSubTick2, sw::TickPhase::Normal );
 
     // Frame 1: 메인 틱 + SubTick 1 + SubTick 2 실행
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( static_cast<size_t>( 3 ), listTickOrder.size() );
 
     // 동적 제어: SubTick 1 비활성화, SubTick 2 등록 해제
@@ -299,7 +299,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, SubTickDynamicLifecycleAndActiveToggle
     SW_EXPECT_EQUAL( true, bUnregistered );
 
     // Frame 2: 메인 틱만 실행되어야 함
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), listTickOrder.size() );
     if ( listTickOrder.size() == 1 )
         SW_EXPECT_EQUAL( "Actor", listTickOrder[0] );
@@ -309,7 +309,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, SubTickDynamicLifecycleAndActiveToggle
     pComp->setSubTickActive( kSubTick1, true );
 
     // Frame 3: 메인 틱 + SubTick 1 실행
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), listTickOrder.size() );
     if ( listTickOrder.size() == 2 )
     {
@@ -347,7 +347,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, CircularPrerequisiteDependencyCycleRes
     pCompB->addSubTickPrerequisite( 2, handleA );
 
     // 틱 실행: 무한루프나 크래시 없이 안전하게 실행 완료되어야 함
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), listTickOrder.size() );
 }
 
@@ -425,7 +425,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, DeepHierarchyMultiComponentMultiSubTic
     pCompC1->addSubTickPrerequisite( 101, hGP1_PostPhysLate );
     pCompP1->addSubTickPrerequisite( 2, hC1_PostPhysNormal );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     // 총 13개 틱 아이템 실행 검증 (메인틱 4개 + 서브틱 9개)
     SW_EXPECT_EQUAL( static_cast<size_t>( 13 ), listTickOrder.size() );
@@ -511,7 +511,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MidTickSubTickDeactivationAndCancellat
     pCompA->_selfSubTickToUnregister = 2;
 
     // Frame 1: A_1(Early) 실행 시 B_20과 A_2를 끔 -> B_20과 A_2는 스킵되고 B_21(Finalize)만 실행
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), listTickOrder.size() );
     if ( listTickOrder.size() == 2 )
@@ -526,7 +526,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MidTickSubTickDeactivationAndCancellat
     pCompA->_targetSubTickID = 0;
     pCompB->setSubTickActive( 20, true );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     // Frame 2에서는 A_1, B_20, B_21 세 개가 모두 정상 실행되어야 함 (A_2는 unregister되었으므로 미실행)
     SW_EXPECT_EQUAL( static_cast<size_t>( 3 ), listTickOrder.size() );
@@ -570,7 +570,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MidTickDeactivationAppliesToHighSubTic
     pCompA->_targetSubTickID         = 120;
     pCompA->_selfSubTickToUnregister = 101;
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), listTickOrder.size() );
     if ( listTickOrder.size() == 2 )
@@ -588,7 +588,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MidTickDeactivationAppliesToHighSubTic
     pCompB->setSubTickActive( 120, true );
     SW_EXPECT_TRUE( pCompB->isSubTickActive( 120 ) );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     SW_EXPECT_EQUAL( static_cast<size_t>( 3 ), listTickOrder.size() );
     if ( listTickOrder.size() == 3 )
@@ -638,27 +638,27 @@ SW_TEST_CASE( ComponentSubTickHybridTest, HierarchySubtreeDeactivationAndReparen
     SW_ASSERT_TRUE( pLeaf2->attachToParent( pBranch2 ) );
 
     // Frame 1: 5개 액터 전체 활성 (각 2개 서브틱 = 총 10개)
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( static_cast<size_t>( 10 ), listTickOrder.size() );
 
     // Frame 2: Branch1 비활성화 -> Branch1 및 Leaf1 서브트리 전체 틱 스킵 (Root, Branch2, Leaf2 = 총 6개)
     listTickOrder.clear();
     pBranch1->setActive( false );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( static_cast<size_t>( 6 ), listTickOrder.size() );
 
     // Frame 3: Leaf1을 비활성화된 Branch1에서 활성화된 Branch2 밑으로 Reparent
     listTickOrder.clear();
     SW_ASSERT_TRUE( pLeaf1->attachToParent( pBranch2 ) );
     SW_EXPECT_TRUE( pLeaf1->isActiveInHierarchy() );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     // Root, Branch2, Leaf2, Leaf1 = 총 8개 실행 (Branch1만 스킵)
     SW_EXPECT_EQUAL( static_cast<size_t>( 8 ), listTickOrder.size() );
 
     // Frame 4: Branch2 연쇄 삭제 (Branch2, Leaf2, Leaf1 삭제) -> Root만 남음 (2개)
     listTickOrder.clear();
     manager.destroyObject( pBranch2, true );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), listTickOrder.size() );
 }
 
@@ -762,7 +762,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MassiveSubTickStressAndMultiThreadedDA
     {
         globalTickSeq.store( 1, std::memory_order_relaxed );
 
-        manager.tick( 0.016f );
+        manager.update( 0.016f );
 
         // 모든 등록된 선행 의존성 엣지에 대해 선행 노드가 후행 노드보다 먼저 실행되었는지 검증
         for ( const DagEdge& edge : listDagEdge )
@@ -800,8 +800,8 @@ SW_TEST_CASE( ComponentTickGroupTest, OverridingOnTickIsWhatMakesAComponentTick 
     SW_EXPECT_FALSE( pMarker->canEverTick() );
     SW_EXPECT_FALSE( pMarker->hasTickWork() );
 
-    manager.tick( 0.016f );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 2, pSpinner->_tickCount );
     SW_EXPECT_EQUAL( 0, pOptOut->_tickCount );
     // 틱 항목은 돌 것 하나뿐이다.
@@ -832,7 +832,7 @@ SW_TEST_CASE( ComponentTickGroupTest, OutOfRangeTickGroupIsRejected )
     SW_EXPECT_FALSE( handle.isValid() );
     SW_EXPECT_TRUE( pComp->getAllSubTicks().empty() );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listTickOrder.size() );
     SW_EXPECT_EQUAL( "Root", listTickOrder[0] );
 }
@@ -856,7 +856,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, PriorityAboveTheBandStaysLastInItsPhas
     // 묶어도 다음 단계(Late)의 0 보다는 앞이다 — 단계를 넘어가면 안 된다.
     pComp->registerSubTick( sw::TickGroup::DuringPhysics, 3, sw::TickPhase::Late, 0 );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_ASSERT_EQUAL( static_cast<size_t>( 3 ), listTickOrder.size() );
     SW_EXPECT_EQUAL( "P_SubTick_2", listTickOrder[0] );
     SW_EXPECT_EQUAL( "P_SubTick_1", listTickOrder[1] );
@@ -900,7 +900,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, PrerequisiteInALaterGroupMovesTheDepen
     SW_EXPECT_TRUE( pRider->addSubTickPrerequisite( 20, horse ) );
     SW_EXPECT_TRUE( pLance->addSubTickPrerequisite( 30, rider ) );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_ASSERT_EQUAL( static_cast<size_t>( 4 ), listTickOrder.size() );
     SW_EXPECT_EQUAL( "Clock", listTickOrder[0] );
     SW_EXPECT_EQUAL( "Horse_SubTick_10", listTickOrder[1] );
@@ -1145,7 +1145,7 @@ SW_TEST_CASE( ComponentTickGroupTest, TickBatchRunsRegisteredTypeOutsideObjectEn
     MockRootComponent* pDoomedComp = pDoomed->addComponent<MockRootComponent>();
     pDoomedComp->_pTickOrderLog    = &listDoomedLog;
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     // (1) 항목 하나인 오브젝트 셋(Single · Inactive · Doomed)은 일괄 목록, 둘인 오브젝트와 파생은 칸 목록.
     const uint32                     group     = static_cast<uint32>( pSingle->getTickGroup() );
@@ -1165,7 +1165,7 @@ SW_TEST_CASE( ComponentTickGroupTest, TickBatchRunsRegisteredTypeOutsideObjectEn
 
     // (4) 파괴 — 목록에서 빠지고 남은 원소의 자리가 맞다(다음 틱이 둘을 돈다).
     manager.destroyObject( pDoomed );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), registry.getBatchLists( group ).size() );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), registry.getBatchLists( group )[0]._listElement.size() );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), listDoomedLog.size() );
@@ -1173,7 +1173,7 @@ SW_TEST_CASE( ComponentTickGroupTest, TickBatchRunsRegisteredTypeOutsideObjectEn
 
     // (5) 등록 해제 — 칸 목록으로 돌아가 그대로 돈다. 빈 일괄 목록은 걷힌다(내려간 함수를 들지 않는다).
     registration.reset();
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_TRUE( registry.getBatchLists( group ).empty() );
     SW_EXPECT_EQUAL( static_cast<size_t>( 4 ), registry.getEntries( group ).size() );
     SW_EXPECT_EQUAL( static_cast<size_t>( 3 ), listSingleLog.size() );
@@ -1214,7 +1214,7 @@ SW_TEST_CASE( ComponentTickGroupTest, TickBatchSettersMatchTheObjectPath )
         listReferenceComp.push_back( pReferenceComp );
     }
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     managerReference.flushSceneTransforms();
 
     const uint32 group = static_cast<uint32>( listTickComp[0]->getTickGroup() );

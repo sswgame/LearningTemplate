@@ -278,7 +278,7 @@ namespace sw
         return true;
     }
 
-    void UIAnimationPlayer::tick( float32 deltaSeconds )
+    void UIAnimationPlayer::update( float32 deltaSeconds )
     {
         // 재생 중에 움직임 줄이기를 켜면 남은 것은 모두 끝으로 간다(반복도 이번 바퀴에서 끝).
         const bool    bReduceMotion = gv_uiReduceMotion;

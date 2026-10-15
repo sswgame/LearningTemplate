@@ -120,7 +120,7 @@ SW_TEST_CASE( MemoryTagTest, AsyncSceneLoadOnWorkerIsTaggedScene )
     for ( int32 stepIndex = 0; stepIndex < 200 && manager.isTransitioning(); ++stepIndex )
     {
         sw::engine::getSubsystem<sw::TaskManager>().waitAll();
-        manager.tickTransitions();
+        manager.updateTransitions();
     }
     SW_EXPECT_TRUE( future.isReady() );
     SW_EXPECT_NOT_NULL( future.get() );

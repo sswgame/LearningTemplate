@@ -254,9 +254,9 @@ namespace sw
         if ( _kind == ActionRoomKind::None )
             return result;
 
-        _attackCooldown.tick( deltaTime );
-        _dashCooldown.tick( deltaTime );
-        _invulnerable.tick( deltaTime );
+        _attackCooldown.update( deltaTime );
+        _dashCooldown.update( deltaTime );
+        _invulnerable.update( deltaTime );
 
         if ( input._bDashPressed == SW_TRUE && _dashCooldown.isActive() == false )
         {
@@ -395,7 +395,7 @@ namespace sw
 
             if ( def._listShot.empty() )
                 continue;
-            actor._attackTimer.tick( deltaTime );
+            actor._attackTimer.update( deltaTime );
             if ( actor._attackTimer.isActive() )
                 continue;
             // 늦은 시간을 이어서 발사 빈도가 fps 에 묶이지 않게 한다(최대 한 간격까지만 이어 가므로, 멈춘 프레임 뒤에 몰아 쏘지 않는다).
@@ -431,7 +431,7 @@ namespace sw
                 continue;
             projectile._position._x += projectile._velocity._x * deltaTime;
             projectile._position._y += projectile._velocity._y * deltaTime;
-            projectile._life.tick( deltaTime );
+            projectile._life.update( deltaTime );
             if ( projectile._life.isActive() == false )
                 projectile._bAlive = SW_FALSE;
         }

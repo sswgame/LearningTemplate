@@ -77,7 +77,7 @@ namespace sw
         /** @brief 계정의 모든 기기에 보냅니다. 도배 제한에 걸리면 보내지 않고 false 를 반환합니다. */
         bool notifyAccount( AccountID accountID, const PushNotificationMessage& message, int64 nowMs );
         /** @brief 제공자의 결과를 회수하고, 백오프가 끝난 배달을 다시 보냅니다. 저장소 완료는 호스트(또는 서버 루프)가 비웁니다. */
-        void tick( int64 nowMs );
+        void update( int64 nowMs );
 
         // 기기 등록 함수들이며 바인딩이 부른다. 완료는 요청 태그로 받고, 태그가 0이면 완료가 없다
         void registerDevice( AccountID accountID, const PushDeviceRegistration& registration, uint64 requestTag );

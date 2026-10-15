@@ -174,7 +174,7 @@ SW_TEST_CASE( NavMeshLinkTest, LinkComponentBakesSignalsAndBlocks )
     pAgent->setMaxSpeed( 3.0f );
 
     manager.beginPlay();
-    test::tickFrames( manager, 2 );
+    test::updateFrames( manager, 2 );
     const sw::hashed_string agentType( "TestHumanoid" );
     SW_ASSERT_NOT_NULL( navigation.findNavMesh( agentType ) );
     const sw::float3 goal{ 14.0f, 0.0f, 2.0f };
@@ -182,7 +182,7 @@ SW_TEST_CASE( NavMeshLinkTest, LinkComponentBakesSignalsAndBlocks )
     bool bSawJump = false;
     for ( uint32 frame = 0; frame < 900 && pAgent->getMoveStatus() != sw::NavMoveStatus::Arrived; ++frame )
     {
-        manager.tick( 1.0f / 60.0f );
+        manager.update( 1.0f / 60.0f );
         bSawJump = bSawJump || ( pAgent->isOnOffMeshLink() && pAgent->getOffMeshLinkType() == sw::hashed_string( "Jump" ) );
     }
     SW_EXPECT_TRUE( bSawJump );
@@ -195,13 +195,13 @@ SW_TEST_CASE( NavMeshLinkTest, LinkComponentBakesSignalsAndBlocks )
     sw::NavPath      path;
     SW_EXPECT_TRUE( navigation.findPath( agentType, west, goal, path ) == sw::NavPathStatus::Complete );
     pLink->setLinkEnabled( false );
-    manager.tick( 1.0f / 60.0f );
+    manager.update( 1.0f / 60.0f );
     SW_EXPECT_TRUE( navigation.findPath( agentType, west, goal, path ) == sw::NavPathStatus::Partial );
     SW_EXPECT_EQUAL( 1u, navigation.rebakeAllNavMeshes() );
     SW_EXPECT_FALSE( navigation.isLoadedFromCooked( agentType ) );
     SW_EXPECT_TRUE( navigation.findPath( agentType, west, goal, path ) == sw::NavPathStatus::Partial );
     pLink->setLinkEnabled( true );
-    manager.tick( 1.0f / 60.0f );
+    manager.update( 1.0f / 60.0f );
     SW_EXPECT_TRUE( navigation.findPath( agentType, west, goal, path ) == sw::NavPathStatus::Complete );
     SW_EXPECT_EQUAL( pLink->computeCurrentLinkID(), path._listLinkCrossing.empty() ? 0u : path._listLinkCrossing.front()._linkID );
     manager.endPlay();

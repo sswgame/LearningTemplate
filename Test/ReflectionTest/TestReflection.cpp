@@ -143,8 +143,8 @@ SW_TEST_CASE( ReflectionComponentTest, ComponentLifecycle )
     SW_EXPECT_TRUE( pComp1->_beganPlay );
     SW_EXPECT_TRUE( pComp2->_beganPlay );
 
-    manager.tick( 1.0f );
-    manager.tick( 1.0f );
+    manager.update( 1.0f );
+    manager.update( 1.0f );
 
     SW_EXPECT_EQUAL( 2, pComp1->_tickCount );
     SW_EXPECT_EQUAL( 2, pComp2->_tickCount );
@@ -188,8 +188,8 @@ SW_TEST_CASE( ReflectionComponentTest, ComponentInheritanceMultiLevel )
     SW_EXPECT_TRUE( derivedComp->_beganPlay );
     SW_EXPECT_TRUE( grandChildComp->_beganPlay );
 
-    manager.tick( 0.016f );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
+    manager.update( 0.016f );
 
     baseComp       = baseObj->getComponent<sw::TestScriptComponent>();
     derivedComp    = derivedObj->getComponent<sw::TestDerivedScriptComponent>();

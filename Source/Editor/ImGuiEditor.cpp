@@ -883,7 +883,7 @@ namespace sw::editor
         // 씬을 여는 중에 누른 Play 는 미뤄 둔다. 로드가 끝난 프레임에 여기서 시작한다.
         EditorPlaySession::update();
         EditorPlaySession::consumePendingStep();
-        EditorPlayCommands::tick(); // Maximize On Play. 시작과 정지가 어디서 왔든 상태 전이를 여기서 확인한다
+        EditorPlayCommands::update(); // Maximize On Play. 시작과 정지가 어디서 왔든 상태 전이를 여기서 확인한다
     }
 
     bool ImGuiEditor::onWindowCloseQuery()

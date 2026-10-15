@@ -106,9 +106,9 @@ namespace sw
         _runtime->shutdown();
     }
 
-    void LoadBotLocalServer::tick( int64 nowMs )
+    void LoadBotLocalServer::update( int64 nowMs )
     {
-        _runtime->tick( nowMs );
+        _runtime->update( nowMs );
     }
 
     OnlineServiceHost& LoadBotLocalServer::getHost()

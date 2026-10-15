@@ -276,9 +276,9 @@ namespace
                 _nowMs += 10;
                 for ( ClientSide* pClient : _listClient )
                 {
-                    pClient->_client.tick( _nowMs );
+                    pClient->_client.update( _nowMs );
                 }
-                _host.tick( _nowMs );
+                _host.update( _nowMs );
             }
         }
 

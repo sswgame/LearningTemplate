@@ -679,13 +679,13 @@ SW_TEST_CASE( OpenWorldWesternTest, HorseMountGallopsOnStaminaBucksTheRiderAndCo
     int32 frame     = 0;
     for ( ; frame < 600 && pMovement->isGallopAllowed(); ++frame )
     {
-        manager.tick( kDeltaTime );
+        manager.update( kDeltaTime );
         bGalloped = bGalloped || pMovement->getGait() == MountGait::Gallop;
     }
     SW_EXPECT_TRUE( bGalloped );
     SW_EXPECT_TRUE( horse.getStamina().isExhausted() );
     SW_EXPECT_TRUE( frame > 100 && frame < 300 );
-    manager.tick( kDeltaTime );
+    manager.update( kDeltaTime );
     SW_EXPECT_TRUE( pMovement->getGait() == MountGait::Canter );
 
     // 겁: 같은 씨앗의 말은 언젠가 떨어뜨린다 — 그 순간 강제 하차, 조종자는 탑승자를 다시 쥔다.
@@ -705,7 +705,7 @@ SW_TEST_CASE( OpenWorldWesternTest, HorseMountGallopsOnStaminaBucksTheRiderAndCo
     pRiderAI->unpossess();
     for ( int32 settleFrame = 0; settleFrame < 90; ++settleFrame ) // 떨어뜨릴 때 달리던 말이 선다
     {
-        manager.tick( kDeltaTime );
+        manager.update( kDeltaTime );
     }
     pRider->getPrimarySceneComponent()->setWorldPosition( float3{ 4.0f, 0.0f, 0.0f } );
     pHorseObject->getPrimarySceneComponent()->setWorldPosition( float3{ 4.0f, 0.0f, -6.0f } ); // 따라가기 거리(8) 안 — 휘파람 없이는 안 온다
@@ -713,13 +713,13 @@ SW_TEST_CASE( OpenWorldWesternTest, HorseMountGallopsOnStaminaBucksTheRiderAndCo
     pMovement->setGallopAllowed( true );
     for ( int32 waitFrame = 0; waitFrame < 30; ++waitFrame )
     {
-        manager.tick( kDeltaTime );
+        manager.update( kDeltaTime );
     }
     SW_EXPECT_TRUE( pHorseObject->getPrimarySceneComponent()->getWorldPosition()._z < -5.5f );
     pHorseAI->whistle();
     for ( int32 comeFrame = 0; comeFrame < 300 && pHorseAI->isCalled(); ++comeFrame )
     {
-        manager.tick( kDeltaTime );
+        manager.update( kDeltaTime );
     }
     SW_EXPECT_FALSE( pHorseAI->isCalled() );
     const float3 horseAt = pHorseObject->getPrimarySceneComponent()->getWorldPosition();

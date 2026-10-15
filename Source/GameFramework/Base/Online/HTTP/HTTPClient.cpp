@@ -126,7 +126,7 @@ namespace sw
         return requestID;
     }
 
-    void HTTPClient::tick( int64 nowMs )
+    void HTTPClient::update( int64 nowMs )
     {
         if ( _bInitialized == SW_FALSE )
             return;

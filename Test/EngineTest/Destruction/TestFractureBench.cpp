@@ -47,7 +47,7 @@ namespace
         }
 
         /** @brief 남은 잎 셰이프가 0 이 될 때까지 짧은 프레임으로 돕니다. 돈 프레임 수를 반환하고, 가장 긴 프레임을 @p outWorstMicros 에 씁니다. */
-        static uint32 tickUntilWarm( sw::GameObjectManager& manager, const sw::vector<sw::FractureComponent*>& listFracture, int64& outWorstMicros )
+        static uint32 updateUntilWarm( sw::GameObjectManager& manager, const sw::vector<sw::FractureComponent*>& listFracture, int64& outWorstMicros )
         {
             outWorstMicros                = 0;
             uint32             frameCount = 0;
@@ -55,7 +55,7 @@ namespace
             while ( deadline.isExpired() == false && sumPendingLeafShapes( listFracture ) > 0 )
             {
                 const sw::Stopwatch stopwatch;
-                manager.tick( kWarmFrameSeconds );
+                manager.update( kWarmFrameSeconds );
                 const int64 micros = stopwatch.getElapsedNanoseconds() / 1000;
                 outWorstMicros     = micros > outWorstMicros ? micros : outWorstMicros;
                 ++frameCount;
@@ -68,7 +68,7 @@ namespace
         {
             wall.applyRadialDamageAtWorld( sw::float3{ 0.0f, 1.5f, 0.2f }, 1.5f, 2000.0f, 300.0f );
             const sw::Stopwatch stopwatch;
-            manager.tick( 1.0f / 60.0f );
+            manager.update( 1.0f / 60.0f );
             return stopwatch.getElapsedNanoseconds() / 1000;
         }
     };
@@ -92,7 +92,7 @@ SW_TEST_CASE( FractureBenchTest, ShowcaseBeginPlay )
         SW_ASSERT_TRUE( scene.instantiate( doc ) );
         const sw::Stopwatch stopwatch;
         scene.getObjectManager()->beginPlay();
-        scene.getObjectManager()->tick( 1.0f / 60.0f );
+        scene.getObjectManager()->update( 1.0f / 60.0f );
         listMicros.push_back( stopwatch.getElapsedNanoseconds() / 1000 );
         scene.getObjectManager()->endPlay();
     }
@@ -120,9 +120,9 @@ SW_TEST_CASE( FractureBenchTest, ShowcaseLeafShapeWarmUp )
         FractureBenchInternal::collectFractures( manager, listFracture );
         SW_ASSERT_EQUAL( static_cast<size_t>( 6 ), listFracture.size() );
         manager.beginPlay();
-        manager.tick( FractureBenchInternal::kWarmFrameSeconds );
+        manager.update( FractureBenchInternal::kWarmFrameSeconds );
         int64        worstMicros = 0;
-        const uint32 frameCount  = FractureBenchInternal::tickUntilWarm( manager, listFracture, worstMicros );
+        const uint32 frameCount  = FractureBenchInternal::updateUntilWarm( manager, listFracture, worstMicros );
         SW_EXPECT_EQUAL( 0u, FractureBenchInternal::sumPendingLeafShapes( listFracture ) );
         listWorstMicros.push_back( worstMicros );
         listFrameCount.push_back( static_cast<int64>( frameCount ) );
@@ -154,10 +154,10 @@ SW_TEST_CASE( FractureBenchTest, WallBreakFrameColdAndWarm )
         SW_ASSERT_FALSE( listFracture.empty() );
         sw::FractureComponent& wall = *listFracture[0];
         manager.beginPlay();
-        manager.tick( FractureBenchInternal::kWarmFrameSeconds );
+        manager.update( FractureBenchInternal::kWarmFrameSeconds );
         int64 worstMicros = 0;
         if ( bWarm )
-            (void)FractureBenchInternal::tickUntilWarm( manager, listFracture, worstMicros );
+            (void)FractureBenchInternal::updateUntilWarm( manager, listFracture, worstMicros );
         const int64 micros = FractureBenchInternal::breakWallFrame( manager, wall );
         SW_EXPECT_TRUE( wall.isFractured() );
         SW_EXPECT_EQUAL( 0u, wall.getPendingLeafShapeCount() );

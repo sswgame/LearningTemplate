@@ -55,7 +55,7 @@ namespace sw::editor
         /** @brief 미리보기 플레이어에 현재 그래프를 넣습니다. */
         void syncPreviewGraph();
         /** @brief 미리보기 재생을 한 틱 진행합니다. */
-        void tickPreview( float32 deltaSeconds );
+        void updatePreview( float32 deltaSeconds );
         /** @brief 미리보기가 상태를 옮겼으면 그 전이 링크에 흐름이 보이도록 기록합니다. */
         void notePreviewTransition();
         /** @brief 오른쪽의 상태와 전이 편집 영역을 그립니다. 이름이 곧 클립이며, 반복, 전이 조건, 블렌드를 편집합니다. */

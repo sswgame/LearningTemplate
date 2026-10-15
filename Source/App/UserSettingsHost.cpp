@@ -41,7 +41,7 @@ namespace sw
         _pWindow = nullptr;
     }
 
-    void UserSettingsHost::tick( float32 deltaSeconds )
+    void UserSettingsHost::update( float32 deltaSeconds )
     {
         if ( _pEngine == nullptr || engine::areEngineServicesBound() == false )
             return;

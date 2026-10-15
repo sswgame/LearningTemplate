@@ -69,7 +69,7 @@ namespace sw
         const RTSPlayer* pPlayer = _pWorld->findPlayer( _player );
         if ( pPlayer == nullptr || pPlayer->_bDefeated )
             return;
-        _thinkTimer.tick( deltaTime );
+        _thinkTimer.update( deltaTime );
         if ( _thinkTimer.isActive() )
             return;
         _thinkTimer.start( _settings._thinkInterval );

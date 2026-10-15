@@ -254,7 +254,7 @@ namespace sw
         const float32 deltaTime = _settings._step;
         if ( _phase == KartRacePhase::Countdown )
         {
-            _countdown.tick( deltaTime );
+            _countdown.update( deltaTime );
             if ( _countdown.isActive() == false )
             {
                 _phase = KartRacePhase::Racing;
@@ -287,8 +287,8 @@ namespace sw
                 pushEvent( KartRaceEvent::Kind::BoostPad, racer, -1, kart._lastBoostPad, _raceTime );
             kart._motor.discardEvents(); // 경기는 차 이벤트를 쓰지 않으므로 쌓이지 않게 비운다
 
-            kart._spinTime.tick( deltaTime );
-            kart._shieldTime.tick( deltaTime );
+            kart._spinTime.update( deltaTime );
+            kart._shieldTime.update( deltaTime );
             if ( kart._itemID.empty() == false )
                 kart._itemHeldTime += deltaTime;
             updateProgress( racer );
@@ -469,7 +469,7 @@ namespace sw
         {
             if ( _listItemBoxTimer[boxIndex].isActive() )
             {
-                _listItemBoxTimer[boxIndex].tick( deltaTime );
+                _listItemBoxTimer[boxIndex].update( deltaTime );
                 continue;
             }
             if ( _settings._bItems == SW_FALSE || _pItemCatalog == nullptr )

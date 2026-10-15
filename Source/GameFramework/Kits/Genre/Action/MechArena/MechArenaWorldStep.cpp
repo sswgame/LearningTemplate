@@ -87,15 +87,15 @@ namespace sw
             pilot._vitality.setInvulnerable( pMech->_wakeInvulnerable );
             pushEvent( MechArenaEvent::Kind::WokeUp, pilotIndex, -1, pMech->_wakeInvulnerable, hashed_string{} );
         }
-        pilot._staggerRemaining.tick( deltaTime );
-        pilot._transformCooldown.tick( deltaTime );
+        pilot._staggerRemaining.update( deltaTime );
+        pilot._transformCooldown.update( deltaTime );
         for ( WeaponState& weapon : pilot._listWeaponState )
         {
             weapon.update( deltaTime );
         }
         for ( Countdown& cooldown : pilot._listSpecialCooldown )
         {
-            cooldown.tick( deltaTime );
+            cooldown.update( deltaTime );
         }
         stepSkills( pilotIndex, deltaTime );
 
@@ -162,7 +162,7 @@ namespace sw
             if ( pilot._dashRemaining.isActive() )
             {
                 horizontal = pilot._dashDirection * pMech->_dashSpeed;
-                pilot._dashRemaining.tick( deltaTime );
+                pilot._dashRemaining.update( deltaTime );
             }
             else
             {
@@ -332,8 +332,8 @@ namespace sw
         for ( int32 index = 0; index < count; ++index )
         {
             Countdown& remaining = pilot._listSkillRemaining[static_cast<size_t>( index )];
-            pilot._listSkillCooldown[static_cast<size_t>( index )].tick( deltaTime );
-            if ( remaining.tick( deltaTime ) )
+            pilot._listSkillCooldown[static_cast<size_t>( index )].update( deltaTime );
+            if ( remaining.update( deltaTime ) )
                 pushEvent( MechArenaEvent::Kind::SkillEnded, pilotIndex, -1, 0.0f, pilot._listSkill[static_cast<size_t>( index )]->_id );
         }
         const int32 slot                       = pilot._input._skillSlot;
