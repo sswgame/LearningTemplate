@@ -66,7 +66,7 @@ namespace sw
 {
     /**
      * @brief 물리 설정 하나입니다. `PhysicsSystem` 이 기동할 때 읽어 모든 씬에 나눠 줍니다.
-     * @details 레이어 순서가 레이어 번호다(0..31). 레이어와 재질이 하나도 없으면 `Default` 하나씩을 채운다(`ensureDefaults`).
+     * @details 레이어 순서가 레이어 번호다(0..31). 레이어와 재질은 데이터가 하나 이상 적어야 한다 — 비면 `validate` 가 오류다(코드가 채우지 않는다).
      */
     REFLECT()
     struct SW_API PhysicsSettings
@@ -102,10 +102,8 @@ namespace sw
         [[nodiscard]] bool loadFromResource( string_view resourcePath );
         /** @brief XML 문자열을 읽고 검사합니다(테스트용). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText );
-        /** @brief 이름이 겹치지 않는지, 레이어가 32 개 이하인지, 충돌 목록의 이름이 모두 존재하는 레이어인지 검사합니다. 어긋나면 오류를 남기고 false 를 반환합니다. */
+        /** @brief 레이어 · 재질이 하나 이상인지, 이름이 겹치지 않는지, 레이어가 32 개 이하인지, 충돌 목록의 이름이 모두 존재하는 레이어인지 검사합니다. 어긋나면 오류를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool validate() const;
-        /** @brief 레이어와 재질이 비어 있으면 `Default` 하나씩을 채웁니다(Default 레이어는 자기 자신과 부딪힙니다). */
-        void ensureDefaults();
 
         /** @brief 레이어 이름의 번호를 찾습니다. 없으면 false 를 반환합니다. */
         [[nodiscard]] bool findLayerIndex( const hashed_string& name, uint8& outIndex ) const;

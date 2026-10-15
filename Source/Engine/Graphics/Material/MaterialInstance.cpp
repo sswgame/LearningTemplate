@@ -792,8 +792,11 @@ namespace sw
             for ( XMLNode item = keywords.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
                 MaterialInstanceDesc::KeywordOverride keywordItem{};
-                keywordItem._name     = MaterialUtil::fieldText( item, "name" );
-                keywordItem._bEnabled = MaterialUtil::parseBoolField( item, "bEnabled", true );
+                keywordItem._name = MaterialUtil::fieldText( item, "name" );
+                bool bEnabled{ false };
+                if ( MaterialUtil::parseOptionalBoolField( item, "bEnabled", true, bEnabled ) == false )
+                    return false;
+                keywordItem._bEnabled = bEnabled;
                 if ( keywordItem._name.empty() == false )
                     _desc._listKeyword.push_back( std::move( keywordItem ) );
             }
@@ -835,8 +838,8 @@ namespace sw
         {
             MaterialInstanceInternal::insertOrAssign( _listMultiCompileOverride, hashed_string( multiCompileItem._name.c_str() ), multiCompileItem._selected );
         }
-        if ( _desc._quality.empty() == false )
-            _qualityOverride = MaterialUtil::parseQuality( _desc._quality );
+        if ( _desc._quality.empty() == false && MaterialUtil::parseQuality( _desc._quality, _qualityOverride ) == false )
+            return false;
         _bGPUDirty = SW_TRUE;
         return true;
     }

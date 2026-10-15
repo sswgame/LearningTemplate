@@ -407,6 +407,31 @@ SW_TEST_CASE( UserSettingsTest, UserFileRoundTripKeepsOnlyChangedValues )
 }
 
 /**
+ * @brief [UserSettingsTest] 깨진 사용자 파일은 `.corrupt` 로 치우고 오류를 남긴다 — 조용히 기본값으로 덮지 않는다
+ */
+SW_TEST_CASE( UserSettingsTest, CorruptUserFileIsMovedAside )
+{
+    using Internal               = UserSettingsTestInternal;
+    const sw::string path        = Internal::makeTempPath( "sw_usersettingstest_corrupt.json" );
+    const sw::string corruptPath = path + ".corrupt";
+    (void)sw::FileUtil::tryRemoveFile( corruptPath ); // 앞 실행이 남긴 것 — 없어도 된다
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, "{ not json" ) );
+
+    sw::UserSettingsManager settings;
+    SW_ASSERT_TRUE( Internal::initializeWithSchema( settings ) );
+    test::ScopedLogCollector logs;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "corrupt user settings file" );
+        SW_EXPECT_FALSE( settings.loadUserFile( path ) );
+    }
+    SW_EXPECT_FALSE( sw::FileUtil::exists( path ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( corruptPath ) );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "could not be read" ) >= 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( corruptPath ) );
+    Internal::resetTestVariables();
+}
+
+/**
  * @brief [UserSettingsTest] 옛 판 파일은 버전 단계로 올리고, 모르는 키는 경고와 함께 버리고, 범위 밖 값은 맞춰 넣는다
  */
 SW_TEST_CASE( UserSettingsTest, UserFileUpgradeDropsUnknownAndClamps )

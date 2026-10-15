@@ -217,6 +217,7 @@ SW_TEST_CASE( NavMeshBakeTest, CookedAssetRoundTripsTilesByteForByte )
     SW_EXPECT_TRUE( sw::NavMeshAsset::makeCookedPath( "game/shooter3d/maps/Arena.scene.xml" ) == "game/shooter3d/maps/arena.navmesh" );
     SW_EXPECT_TRUE( sw::NavMeshAsset::makeCookedPath( "game/shooter3d/maps/arena.scene.bin" ) == "game/shooter3d/maps/arena.navmesh" );
     SW_EXPECT_TRUE( sw::NavMeshAsset::makeCookedPath( "game/shooter3d/models/crate.mesh" ).empty() );
+    SW_EXPECT_TRUE( sw::NavMeshAsset::makeCookedPath( "game/shooter3d/maps/arena.scene" ).empty() ); // 맨 `.scene` 은 씬 이름이 아니다(별칭 없음)
 }
 
 /**

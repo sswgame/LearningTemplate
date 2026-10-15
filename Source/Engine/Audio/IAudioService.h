@@ -42,7 +42,7 @@ namespace sw
     class SW_API IAudioService : public ISubsystem
     {
     public:
-        /** @brief 엔진의 기본 믹서 그래프 경로입니다. 없으면 코드의 기본 그래프(`AudioMixerDesc::makeDefault`)를 씁니다. */
+        /** @brief 엔진의 기본 믹서 그래프 경로입니다. 없거나 틀리면 `initialize` 가 실패합니다(코드 그래프로 대신하지 않습니다). */
         static constexpr utf8 kDefaultMixerPath[] = "engine/audio/default.audiomixer.xml";
 
         /** @brief 현재 플랫폼에 맞는 오디오 시스템 인스턴스를 생성합니다. */
@@ -58,8 +58,8 @@ namespace sw
         IAudioService( IAudioService&& )                 = delete;
         IAudioService& operator=( IAudioService&& )      = delete;
 
-        /** @brief 엔진을 만들고(기본 믹서 그래프) 출력 장치를 엽니다. 장치를 열지 못해도 성공이며, 오프라인으로 진행합니다. */
-        bool initialize();
+        /** @brief 엔진을 만들고(기본 믹서 그래프) 출력 장치를 엽니다. 믹서 그래프를 못 읽으면 실패입니다. 장치를 열지 못하는 것은 성공이며, 오프라인으로 진행합니다. */
+        [[nodiscard]] bool initialize();
         /** @brief 출력 장치를 닫고 엔진을 내립니다. */
         void shutdown();
 

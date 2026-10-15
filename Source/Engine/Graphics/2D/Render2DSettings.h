@@ -34,8 +34,8 @@ namespace sw
      *          순서가 뒤집히지 않습니다. 키 0 은 "기본(Default 레이어 · 순서 0)" 을 뜻하는 자리표입니다(레이어 안 순서를 ±32767 로 묶어
      *          유효한 키는 0 이 될 수 없습니다) — 메시 컴포넌트는 표를 읽지 않고 0 을 들고, 빌더가 표의 기본 키로 바꿉니다.
      *
-     *          파일은 엔진 기본(`engine/data/render2d.xml`)이고, 활성 게임 팩에 `data/render2d.xml` 이 있으면 그것이 **통째로** 대신합니다.
-     *          모르는 요소 · 속성 · 열거자, 같은 이름의 레이어 둘, `Default` 레이어가 없는 표는 읽기 오류입니다.
+     *          파일은 엔진의 `engine/data/render2d.xml` 하나가 정본입니다(게임 팩이 덮어쓰는 두 번째 경로는 없습니다). 렌더러 초기화가 읽고, 못 읽으면 초기화가 실패합니다.
+     *          모르는 요소 · 속성 · 열거자, 같은 이름의 레이어 둘, `<SortingLayers>` 나 `Default` 레이어가 없는 표는 읽기 오류입니다.
      *
      *          스레드: 활성 표(`getActive`)는 처음 부를 때 한 번 읽고, 그 뒤로는 읽기만 합니다. `reloadActive` 는 게임 스레드에서만 부릅니다.
      */
@@ -50,7 +50,7 @@ namespace sw
         /** @brief 정렬 레이어 수 상한입니다(키의 상위 16 비트). */
         static constexpr uint32 kMaxSortingLayerCount = 0xFFFF;
 
-        /** @brief `Default` 레이어 하나 · 정렬 Auto 인 표를 만듭니다(파일을 못 읽었을 때의 값). */
+        /** @brief 레이어가 없는 빈 표를 만듭니다(형식만 — 값은 `loadFromResource` · `loadFromXMLText` 가 채웁니다). 정렬은 `<TransparencySort>` 를 적지 않은 표의 값인 Auto 입니다. */
         Render2DSettings();
 
         /** @brief 리소스 경로의 XML 을 읽습니다. 실패하면 오류를 남기고 false 이며 표는 바뀌지 않습니다. */
@@ -89,12 +89,15 @@ namespace sw
         float3 computeTransparentSortAxis( bool bOrthographic, const float3& cameraForward ) const;
 
         /**
-         * @brief 활성 표입니다. 처음 부르면 활성 게임 팩의 `data/render2d.xml`, 없으면 `engine/data/render2d.xml` 을 읽습니다.
-         * @details 둘 다 못 읽으면 기본 표(`Default` 하나)이고 오류를 한 번 남깁니다.
+         * @brief 활성 표입니다. 보통 렌더러 초기화가 `reloadActive` 로 먼저 읽어 둡니다.
+         * @details 렌더러 없이 처음 부르면(도구 · 테스트) 그때 읽고, 못 읽으면 단언하고 빈 표(레이어 없음)입니다 — 기본 표를 지어내지 않습니다.
          */
         static const Render2DSettings& getActive();
-        /** @brief 활성 표를 파일에서 다시 읽습니다(설정 핫 리로드 · 게임 전환). 게임 스레드에서만 부릅니다. */
-        static void reloadActive();
+        /**
+         * @brief 활성 표를 엔진 파일에서 (다시) 읽습니다(렌더러 초기화 · 설정 핫 리로드). 게임 스레드에서만 부릅니다.
+         * @return 못 읽으면 오류를 남기고 false 이며 활성 표는 그대로입니다. 렌더러 초기화는 false 면 실패합니다.
+         */
+        [[nodiscard]] static bool reloadActive();
         /** @brief 엔진 기본 파일 경로입니다. */
         static string_view getEngineSettingsPath() { return "engine/data/render2d.xml"; }
 

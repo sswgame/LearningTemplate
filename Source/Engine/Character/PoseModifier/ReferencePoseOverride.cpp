@@ -91,17 +91,17 @@ namespace sw
                 boneOverride._bone = reader.readName( child, "name", true );
                 if ( CharacterDataReader::hasAttribute( child, "translation" ) )
                 {
-                    boneOverride._translation = reader.readFloat3( child, "translation", float3::Zero );
+                    boneOverride._translation = reader.readFloat3( child, "translation" );
                     boneOverride._fieldMask |= BoneOverride::kTranslationBit;
                 }
                 if ( CharacterDataReader::hasAttribute( child, "rotation" ) )
                 {
-                    boneOverride._rotation = reader.readRotation( child, "rotation", quaternion::Identity );
+                    boneOverride._rotation = reader.readRotation( child, "rotation" );
                     boneOverride._fieldMask |= BoneOverride::kRotationBit;
                 }
                 if ( CharacterDataReader::hasAttribute( child, "scale" ) )
                 {
-                    boneOverride._scale = reader.readFloat3( child, "scale", float3( 1.0f ) );
+                    boneOverride._scale = reader.readFloat3( child, "scale" );
                     boneOverride._fieldMask |= BoneOverride::kScaleBit;
                 }
                 if ( boneOverride._bone.empty() )

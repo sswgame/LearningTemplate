@@ -187,9 +187,7 @@ SW_TEST_CASE( AudioSceneTest, AmbientEmitterUsesTheNearestPoint )
  */
 SW_TEST_CASE( AudioSceneTest, PhysicsRaycastOcclusion )
 {
-    sw::PhysicsSettings settings;
-    settings.ensureDefaults();
-    sw::unique_ptr<sw::IPhysicsScene3D> pScene = sw::engine::getSubsystem<sw::PhysicsSystem>().createScene3D( settings );
+    sw::unique_ptr<sw::IPhysicsScene3D> pScene = sw::engine::getSubsystem<sw::PhysicsSystem>().createScene3D(); // 엔진 설정 표(physicssettings.xml)로
     SW_ASSERT_TRUE( pScene != nullptr );
     sw::PhysicsBodyDesc<sw::PhysicsDimension3D> wall;
     wall._type = sw::PhysicsBodyType::Static;

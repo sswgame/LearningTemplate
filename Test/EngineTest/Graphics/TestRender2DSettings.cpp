@@ -98,6 +98,7 @@ SW_TEST_CASE( Render2DSettingsTest, MalformedTablesAreLoadErrors )
         "<Render2DSettings><SortingLayers><Layer name=\"Default\" order=\"3\"/></SortingLayers></Render2DSettings>",
         "<Render2DSettings><SortingLayers><Group name=\"Default\"/></SortingLayers></Render2DSettings>",
         "<Render2DSettings><Layers/></Render2DSettings>",
+        "<Render2DSettings><TransparencySort mode=\"Auto\"/></Render2DSettings>", // 레이어 표가 없다 — 코드가 Default 를 지어내지 않는다
         "<SortingLayers/>",
     };
     for ( const utf8* pXML : arrBadXML )
@@ -132,7 +133,7 @@ SW_TEST_CASE( Render2DSettingsTest, ActiveTableKeepsItsAddressAcrossReload )
     const uint32                layerCount = active.getSortingLayerCount();
     SW_ASSERT_TRUE( layerCount > 1u );
 
-    sw::Render2DSettings::reloadActive();
+    SW_ASSERT_TRUE( sw::Render2DSettings::reloadActive() );
     const sw::Render2DSettings& reloaded = sw::Render2DSettings::getActive();
     SW_EXPECT_TRUE( &reloaded == &active );
     SW_EXPECT_EQUAL( layerCount, reloaded.getSortingLayerCount() );

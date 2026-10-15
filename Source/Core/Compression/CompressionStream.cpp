@@ -107,14 +107,12 @@ namespace sw
         if ( pSrc == nullptr || srcSize == 0 )
             return true;
 
+        // 요청한 코덱이 없으면 다른 코덱으로 바꾸지 않고 실패한다 — 부른 쪽은 그 코덱으로 압축됐다고 믿는다.
         ICompressionCodec* pCodec = CompressionStreamInternal::findCodec( codecType, pRegistry );
         if ( pCodec == nullptr )
         {
-            SW_LOG_WARNING( "Requested codec %# not found, falling back to Null codec", static_cast<uint8>( codecType ) );
-            pCodec = CompressionStreamInternal::findCodec( CompressionCodecType::None, pRegistry );
-            if ( pCodec == nullptr )
-                return false;
-            codecType = CompressionCodecType::None;
+            SW_LOG_ERROR( "Requested codec %# is not registered", static_cast<uint8>( codecType ) );
+            return false;
         }
 
         const size_t bound = pCodec->compressBound( srcSize );

@@ -77,13 +77,19 @@ namespace sw
         if ( _bInitialized )
             return true;
 
+        // 믹서 그래프는 엔진 데이터가 정본이다. 없거나 틀리면 코드 그래프로 대신하지 않고 기동이 실패한다.
         AudioMixerDesc mixerDesc;
-        if ( ResourceIO::hasResource( kDefaultMixerPath ) && mixerDesc.loadFromResource( kDefaultMixerPath ) )
-            _mixerPath = kDefaultMixerPath;
-        else
-            mixerDesc = AudioMixerDesc::makeDefault();
-        if ( _pEngine->initialize( mixerDesc ) == false && _pEngine->initialize( AudioMixerDesc::makeDefault() ) == false )
+        if ( mixerDesc.loadFromResource( kDefaultMixerPath ) == false )
+        {
+            SW_LOG_ERROR( "Audio mixer graph '%#' could not be loaded", kDefaultMixerPath );
             return false;
+        }
+        _mixerPath = kDefaultMixerPath;
+        if ( _pEngine->initialize( mixerDesc ) == false )
+        {
+            SW_LOG_ERROR( "Audio engine rejected the mixer graph '%#'", kDefaultMixerPath );
+            return false;
+        }
 
         // 설정 메뉴가 엔진보다 먼저 볼륨을 넣었을 수 있다. 가지고 있던 값을 다시 적용한다.
         _pEngine->setBusUserVolume( hashed_string( AudioBusNames::kMaster ), _masterVolume );

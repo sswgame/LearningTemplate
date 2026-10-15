@@ -45,6 +45,20 @@ SW_TEST_CASE( PhysicsSettingsTest, UnknownNamesAreLoadErrors )
 }
 
 /**
+ * @brief [PhysicsSettingsTest] 레이어 · 재질 표가 빈 설정은 읽기 오류다 — 코드가 `Default` 를 채우지 않는다
+ */
+SW_TEST_CASE( PhysicsSettingsTest, EmptyLayerOrMaterialTableIsLoadError )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "empty layer or material tables are rejected" );
+    sw::PhysicsSettings settings;
+    SW_EXPECT_FALSE( settings.loadFromXMLText( R"(<PhysicsSettings />)" ) );
+    SW_EXPECT_FALSE( settings.loadFromXMLText(
+        R"(<PhysicsSettings><_listLayer><PhysicsLayerDef _name="Default"><_listCollidesWith /></PhysicsLayerDef></_listLayer></PhysicsSettings>)" ) );
+    SW_EXPECT_TRUE( settings._listLayer.empty() == false ); // 읽은 그대로이고 채운 것이 없다
+    SW_EXPECT_TRUE( settings._listMaterial.empty() );
+}
+
+/**
  * @brief [PhysicsSettingsTest] 엔진의 설정 표(`engine/physics/physicssettings.xml`)가 읽히고 기본 레이어 · 재질을 담는다
  */
 SW_TEST_CASE( PhysicsSettingsTest, EngineSettingsFileLoads )

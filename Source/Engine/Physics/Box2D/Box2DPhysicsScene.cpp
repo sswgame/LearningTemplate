@@ -60,7 +60,6 @@ namespace sw
         , _listContactEvent{}
         , _bodyCount{ 0 }
     {
-        _settings.ensureDefaults();
         _layers = _settings.makeCollisionLayers();
 
         b2WorldDef worldDef = b2DefaultWorldDef();

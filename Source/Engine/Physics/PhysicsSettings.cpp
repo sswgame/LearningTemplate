@@ -7,18 +7,6 @@
 namespace sw
 {
     SW_LOG_CALLER( "PhysicsSettings" );
-
-    namespace
-    {
-        struct PhysicsSettingsInternal
-        {
-            static const hashed_string& getDefaultName()
-            {
-                static const hashed_string s_defaultName{ "Default" };
-                return s_defaultName;
-            }
-        };
-    } // namespace
 } // namespace sw
 
 namespace sw
@@ -31,7 +19,6 @@ namespace sw
             SW_LOG_ERROR( "Physics settings could not be read or hold unknown keys: %#", resourcePath );
             return false;
         }
-        ensureDefaults();
         return validate();
     }
 
@@ -43,13 +30,18 @@ namespace sw
             SW_LOG_ERROR( "Physics settings text could not be read or holds unknown keys" );
             return false;
         }
-        ensureDefaults();
         return validate();
     }
 
     bool PhysicsSettings::validate() const
     {
         bool bValid = true;
+        // 레이어 · 재질 표는 데이터가 정한다. 비었다고 코드가 `Default` 를 채우지 않는다 — 빈 표는 데이터 오류다.
+        if ( _listLayer.empty() || _listMaterial.empty() )
+        {
+            SW_LOG_ERROR( "Physics settings declare %# layers and %# materials - at least one of each is required", _listLayer.size(), _listMaterial.size() );
+            bValid = false;
+        }
         if ( _listLayer.size() > kMaxLayerCount )
         {
             SW_LOG_ERROR( "Physics settings declare %# layers - at most %# are supported", _listLayer.size(), kMaxLayerCount );
@@ -109,23 +101,6 @@ namespace sw
             }
         }
         return bValid;
-    }
-
-    void PhysicsSettings::ensureDefaults()
-    {
-        if ( _listLayer.empty() )
-        {
-            PhysicsLayerDef layer;
-            layer._name = PhysicsSettingsInternal::getDefaultName();
-            layer._listCollidesWith.push_back( PhysicsSettingsInternal::getDefaultName() );
-            _listLayer.push_back( layer );
-        }
-        if ( _listMaterial.empty() )
-        {
-            PhysicsMaterialDef material;
-            material._name = PhysicsSettingsInternal::getDefaultName();
-            _listMaterial.push_back( material );
-        }
     }
 
     bool PhysicsSettings::findLayerIndex( const hashed_string& name, uint8& outIndex ) const

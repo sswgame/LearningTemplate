@@ -21,7 +21,6 @@
 #include "Engine/Renderer/Cook/ShaderCookDriver.h"
 #include "Engine/Renderer/RHISubsystem.h"
 #include "Engine/Resource/AssetDatabase.h"
-#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneManager.h"
@@ -124,12 +123,12 @@ namespace sw
             uint32                        registryFailedCount = 0;
             [[maybe_unused]] const uint32 registryCount       = AssetDatabase::writeRegistryFiles( resourceRoot, cookedDir, registryFailedCount );
             // 정점 애니메이션(VAT) — 데이터가 고른 (메시, 클립)을 굽는다. 프레임율은 군중 표의 것이라 런타임 굽기와 같다.
-            AnimationCrowdSettings crowdSettings{};
-            if ( ResourceIO::hasResource( AnimationCrowdSettings::kResourcePath ) )
-                (void)crowdSettings.loadFromResource( AnimationCrowdSettings::kResourcePath ); // 실패는 loadFromResource 가 오류로 남기고 기본 프레임율로 굽는다
-            uint32                        vertexAnimationFailedCount = 0;
+            // 군중 표를 못 읽으면 코드 기본 프레임율로 굽지 않고 VAT 굽기를 실패로 센다.
+            AnimationCrowdSettings        crowdSettings{};
+            const bool                    bCrowdSettingsLoaded       = crowdSettings.loadFromResource( AnimationCrowdSettings::kResourcePath );
+            uint32                        vertexAnimationFailedCount = bCrowdSettingsLoaded ? 0u : 1u;
             [[maybe_unused]] const uint32 vertexAnimationCount =
-                VertexAnimationCooker::cookAll( resourceRoot, cookedDir, crowdSettings._vertexAnimationFramesPerSecond, vertexAnimationFailedCount );
+                bCrowdSettingsLoaded ? VertexAnimationCooker::cookAll( resourceRoot, cookedDir, crowdSettings._vertexAnimationFramesPerSecond, vertexAnimationFailedCount ) : 0u;
             // 내비메시 — 표면이 놓인 씬마다 런타임 베이크와 같은 함수로 `<씬>.navmesh` 를 쓴다.
             uint32                        navMeshFailedCount = 0;
             [[maybe_unused]] const uint32 navMeshCount       = SceneNavigationCooker::cookAll( resourceRoot, cookedDir, navMeshFailedCount );

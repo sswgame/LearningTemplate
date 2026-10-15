@@ -24,8 +24,8 @@ namespace sw
         struct NavMeshAssetInternal
         {
             static constexpr uint32 kMagic = FourCcUtil::make( "SWNV" );
-            /** @brief 씬 저작과 쿠킹 접미사입니다(긴 것부터 둡니다). */
-            static constexpr string_view kArrSceneSuffix[] = { ".scene.xml", ".scene.bin", ".scene" };
+            /** @brief 씬 저작본(`.scene.xml`)과 쿠킹본(`.scene.bin`) 접미사입니다. 파일이 하나도 없던 맨 `.scene` 은 별칭이라 두지 않습니다. */
+            static constexpr string_view kArrSceneSuffix[] = { ".scene.xml", ".scene.bin" };
             /** @brief 타일 베이크 한 덩어리입니다. 워커는 자기 구간의 슬롯만 씁니다. */
             struct BakeJob
             {

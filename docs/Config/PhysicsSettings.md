@@ -17,7 +17,7 @@ XML 속성(값 하나)과 자식 요소(목록, 구조체)의 이름은 아래 �
 
 ## 필드
 
-물리 설정 하나입니다. `PhysicsSystem` 이 기동할 때 읽어 모든 씬에 나눠 줍니다. 레이어 순서가 레이어 번호다(0..31). 레이어와 재질이 하나도 없으면 `Default` 하나씩을 채운다(`ensureDefaults`).
+물리 설정 하나입니다. `PhysicsSystem` 이 기동할 때 읽어 모든 씬에 나눠 줍니다. 레이어 순서가 레이어 번호다(0..31). 레이어와 재질은 데이터가 하나 이상 적어야 한다 — 비면 `validate` 가 오류다(코드가 채우지 않는다).
 
 원본: [`Source/Engine/Physics/PhysicsSettings.h`](../../Source/Engine/Physics/PhysicsSettings.h)
 

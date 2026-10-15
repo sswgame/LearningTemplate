@@ -8,7 +8,6 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Physics/Box2D/Box2DPhysicsBackend.h"
 #include "Engine/Physics/Jolt/JoltPhysicsBackend.h"
-#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -18,7 +17,6 @@ namespace sw
         : _settings{}
         , _bInitialized{ false }
     {
-        _settings.ensureDefaults();
     }
 
     PhysicsSystem::~PhysicsSystem()
@@ -38,23 +36,14 @@ namespace sw
             return true;
         SW_MEMORY_SCOPE( Physics );
 
-        string text;
-        if ( settingsPath.empty() == false && ResourceIO::readTextResource( settingsPath, text ) )
+        // 설정 표는 엔진 필수 데이터다. 없거나 틀리면 코드 기본 표로 대신하지 않고 기동이 실패한다.
+        PhysicsSettings settings;
+        if ( settings.loadFromResource( settingsPath ) == false )
         {
-            PhysicsSettings settings;
-            if ( settings.loadFromXMLText( text ) == false )
-            {
-                SW_LOG_ERROR( "Physics settings are invalid: %#", settingsPath );
-                return false;
-            }
-            _settings = settings;
+            SW_LOG_ERROR( "Physics settings '%#' could not be loaded", settingsPath );
+            return false;
         }
-        else
-        {
-            SW_LOG_WARNING( "Physics settings not found (%#) - using one Default layer and material", settingsPath );
-            _settings = PhysicsSettings{};
-            _settings.ensureDefaults();
-        }
+        _settings = settings;
 
         if ( JoltPhysicsBackend::initialize() == false )
             return false;
@@ -83,6 +72,8 @@ namespace sw
             SW_LOG_ERROR( "createScene3D: the physics system is not initialized" );
             return nullptr;
         }
+        if ( settings.validate() == false )
+            return nullptr;
         return JoltPhysicsBackend::createScene( settings );
     }
 
@@ -98,6 +89,8 @@ namespace sw
             SW_LOG_ERROR( "createScene2D: the physics system is not initialized" );
             return nullptr;
         }
+        if ( settings.validate() == false )
+            return nullptr;
         return Box2DPhysicsBackend::createScene( settings );
     }
 
@@ -115,11 +108,9 @@ namespace sw
 
     bool PhysicsSystem::setSettings( const PhysicsSettings& settings )
     {
-        PhysicsSettings candidate = settings;
-        candidate.ensureDefaults();
-        if ( candidate.validate() == false )
+        if ( settings.validate() == false )
             return false;
-        _settings = candidate;
+        _settings = settings;
         return true;
     }
 } // namespace sw

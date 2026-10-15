@@ -89,7 +89,7 @@ namespace sw
                     const string               prefab = context._entry.getTextParam( s_prefab );
                     float4x4                   world;
                     (void)context._component.findSocketWorldTransform( context._entry.getNameParam( s_socket ), world );
-                    const float3       offset   = context._entry.getVectorParam( s_offset, float3{} );
+                    const float3       offset   = context._entry.getVectorParam( s_offset );
                     const float3       position = float3::transform( offset, world );
                     GameObjectManager* pManager = context._owner.getManager();
                     AssetManager*      pAssets  = pManager != nullptr ? pManager->findAssetManager() : nullptr;
@@ -101,7 +101,7 @@ namespace sw
                         spawnWorld.setTranslation( position );
                         pScene->setWorldTransform( spawnWorld );
                         SceneComponent* pOwnerRoot = context._owner.getPrimarySceneComponent();
-                        if ( context._entry.getBoolParam( s_attach, false ) && pOwnerRoot != nullptr )
+                        if ( context._entry.getBoolParam( s_attach ) && pOwnerRoot != nullptr )
                             (void)pScene->attachToComponent( pOwnerRoot, AttachRule::KeepWorld ); // 붙일 수 없는 부모면 월드 위치에 따로 둔다.
                     }
                     record( context, hashed_string( prefab ), position, pSpawned != nullptr ? pSpawned->getObjectID() : 0, AnimationNotifyPhase::Instant );
@@ -127,7 +127,7 @@ namespace sw
                     static const hashed_string s_distance( "distance" );
                     static const hashed_string s_sound( "sound" );
                     const float3               foot     = context._component.findSocketWorldPosition( context._entry.getNameParam( s_socket ) );
-                    const float32              distance = MathUtil::max( context._entry.getFloatParam( s_distance, 0.5f ), 0.01f );
+                    const float32              distance = MathUtil::max( context._entry.getFloatParam( s_distance ), 0.01f );
                     // 발 위 반 거리에서 아래로 쏜다. 발이 바닥에 조금 묻혀 있어도 바닥을 맞힌다.
                     const float3    from = foot + float3{ 0.0f, distance * 0.5f, 0.0f };
                     const float3    to   = foot - float3{ 0.0f, distance, 0.0f };
@@ -148,9 +148,9 @@ namespace sw
 
             private:
                 static constexpr AnimationNotifyParamDef kArrParam[] = {
-                    {  "socket",  AnimationNotifyParamKind::Name,  true},
-                    {"distance", AnimationNotifyParamKind::Float, false},
-                    {   "sound",  AnimationNotifyParamKind::Text, false},
+                    { "socket", AnimationNotifyParamKind::Name, true },
+                    { "distance", AnimationNotifyParamKind::Float, false, 0.5f },
+                    { "sound", AnimationNotifyParamKind::Text, false },
                 };
             };
 
@@ -192,7 +192,7 @@ namespace sw
                     static const hashed_string s_samples( "samples" );
                     const float3               pointA      = context._component.findSocketWorldPosition( context._entry.getNameParam( s_socketA ) );
                     const float3               pointB      = context._component.findSocketWorldPosition( context._entry.getNameParam( s_socketB ) );
-                    const uint32               sampleCount = static_cast<uint32>( MathUtil::clamp( context._entry.getFloatParam( s_samples, 3.0f ), 2.0f, 16.0f ) );
+                    const uint32               sampleCount = static_cast<uint32>( MathUtil::clamp( context._entry.getFloatParam( s_samples ), 2.0f, 16.0f ) );
                     outListPoint.resize( sampleCount );
                     for ( uint32 sampleIndex = 0; sampleIndex < sampleCount; ++sampleIndex )
                     {
@@ -215,7 +215,7 @@ namespace sw
                 static void sweep( AnimationNotifyContext& context, AnimationNotifyStateData& state, const vector<float3>& listCurrent )
                 {
                     static const hashed_string s_radius( "radius" );
-                    const float32              radius = MathUtil::max( context._entry.getFloatParam( s_radius, 0.0f ), 0.0f );
+                    const float32              radius = MathUtil::max( context._entry.getFloatParam( s_radius ), 0.0f );
                     const bool                 bMoved = state._bHasPrevious == SW_TRUE && state._listPreviousPoint.size() == listCurrent.size();
                     for ( size_t pointIndex = 0; bMoved && pointIndex < listCurrent.size(); ++pointIndex )
                     {
@@ -236,20 +236,20 @@ namespace sw
                     if ( std::find( state._listHitObjectID.begin(), state._listHitObjectID.end(), targetID ) != state._listHitObjectID.end() )
                         return;
                     state._listHitObjectID.push_back( targetID );
-                    HitInfo hit = CharacterHitUtil::makeHitInfo( rayHit, &context._owner, to - from, context._entry.getFloatParam( s_damage, 1.0f ),
-                                                                 context._entry.getFloatParam( s_impulse, 0.0f ) );
+                    HitInfo hit = CharacterHitUtil::makeHitInfo( rayHit, &context._owner, to - from, context._entry.getFloatParam( s_damage ),
+                                                                 context._entry.getFloatParam( s_impulse ) );
                     hit._kind   = context._fired._name;
                     record( context, hit._zone, hit._point, targetID, context._fired._phase );
                     CharacterHitUtil::deliverHit( *rayHit._pObject, hit );
                 }
 
                 static constexpr AnimationNotifyParamDef kArrParam[] = {
-                    {"socketA",  AnimationNotifyParamKind::Name,  true},
-                    {"socketB",  AnimationNotifyParamKind::Name,  true},
-                    { "radius", AnimationNotifyParamKind::Float, false},
-                    { "damage", AnimationNotifyParamKind::Float, false},
-                    {"impulse", AnimationNotifyParamKind::Float, false},
-                    {"samples", AnimationNotifyParamKind::Float, false},
+                    { "socketA", AnimationNotifyParamKind::Name, true },
+                    { "socketB", AnimationNotifyParamKind::Name, true },
+                    { "radius", AnimationNotifyParamKind::Float, false },
+                    { "damage", AnimationNotifyParamKind::Float, false, 1.0f },
+                    { "impulse", AnimationNotifyParamKind::Float, false },
+                    { "samples", AnimationNotifyParamKind::Float, false, 3.0f },
                 };
             };
 
@@ -268,21 +268,21 @@ namespace sw
                     CameraShakeRequest         request;
                     request._origin         = context._component.findSocketWorldPosition( context._entry.getNameParam( s_socket ) );
                     request._sourceObjectID = context._owner.getObjectID();
-                    request._amplitude      = context._entry.getFloatParam( s_amplitude, request._amplitude );
-                    request._duration       = context._entry.getFloatParam( s_duration, request._duration );
-                    request._frequency      = context._entry.getFloatParam( s_frequency, request._frequency );
-                    request._falloffRadius  = context._entry.getFloatParam( s_radius, request._falloffRadius );
+                    request._amplitude      = context._entry.getFloatParam( s_amplitude );
+                    request._duration       = context._entry.getFloatParam( s_duration );
+                    request._frequency      = context._entry.getFloatParam( s_frequency );
+                    request._falloffRadius  = context._entry.getFloatParam( s_radius );
                     AnimationNotifyHandlerUtil::getCameraShakeRequested().broadcast( request );
                     record( context, hashed_string{}, request._origin, 0, AnimationNotifyPhase::Instant );
                 }
 
             private:
                 static constexpr AnimationNotifyParamDef kArrParam[] = {
-                    {"amplitude", AnimationNotifyParamKind::Float, false},
-                    { "duration", AnimationNotifyParamKind::Float, false},
-                    {"frequency", AnimationNotifyParamKind::Float, false},
-                    {   "radius", AnimationNotifyParamKind::Float, false},
-                    {   "socket",  AnimationNotifyParamKind::Name, false},
+                    { "amplitude", AnimationNotifyParamKind::Float, false, 0.1f },
+                    { "duration", AnimationNotifyParamKind::Float, false, 0.3f },
+                    { "frequency", AnimationNotifyParamKind::Float, false, 30.0f },
+                    { "radius", AnimationNotifyParamKind::Float, false },
+                    { "socket", AnimationNotifyParamKind::Name, false },
                 };
             };
 
@@ -342,9 +342,9 @@ namespace sw
                     window._target       = context._entry.getNameParam( s_target );
                     window._pClip        = context._fired._pSource;
                     window._endTime      = MathUtil::min( context._fired._time + context._fired._duration, context._fired._pSource->getPlayLength() );
-                    window._bTranslation = context._entry.getBoolParam( s_translation, true );
-                    window._bRotation    = context._entry.getBoolParam( s_rotation, true );
-                    window._bVertical    = context._entry.getBoolParam( s_vertical, false );
+                    window._bTranslation = context._entry.getBoolParam( s_translation );
+                    window._bRotation    = context._entry.getBoolParam( s_rotation );
+                    window._bVertical    = context._entry.getBoolParam( s_vertical );
                     pWarping->beginWindow( window );
                     record( context, window._target, context._component.findSocketWorldPosition( hashed_string{} ), 0, AnimationNotifyPhase::Begin );
                 }
@@ -358,10 +358,10 @@ namespace sw
 
             private:
                 static constexpr AnimationNotifyParamDef kArrParam[] = {
-                    {     "target", AnimationNotifyParamKind::Name,  true},
-                    {"translation", AnimationNotifyParamKind::Bool, false},
-                    {   "rotation", AnimationNotifyParamKind::Bool, false},
-                    {   "vertical", AnimationNotifyParamKind::Bool, false},
+                    { "target", AnimationNotifyParamKind::Name, true },
+                    { "translation", AnimationNotifyParamKind::Bool, false, 0.0f, true },
+                    { "rotation", AnimationNotifyParamKind::Bool, false, 0.0f, true },
+                    { "vertical", AnimationNotifyParamKind::Bool, false },
                 };
             };
         };

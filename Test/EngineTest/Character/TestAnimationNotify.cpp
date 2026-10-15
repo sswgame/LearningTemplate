@@ -206,8 +206,11 @@ SW_TEST_CASE( AnimationNotifyTest, TableRejectsUnknownHandlerAndArguments )
     const AnimationNotifyEntry* pSwing = table.findEntry( hashed_string( "Swing" ) );
     SW_ASSERT_NOT_NULL( pSwing );
     SW_EXPECT_TRUE( pSwing->_pHandler == registry.findHandler( hashed_string( "HitWindow" ) ) );
-    SW_EXPECT_NEAR_EQUAL( 10.0f, pSwing->getFloatParam( hashed_string( "damage" ), 0.0f ), 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 10.0f, pSwing->getFloatParam( hashed_string( "damage" ) ), 1e-6f );
     SW_EXPECT_TRUE( pSwing->getNameParam( hashed_string( "socketB" ) ) == hashed_string( "SwordTip" ) );
+    // 적지 않은 선택 인자는 읽을 때 선언의 "적지 않음" 값으로 채워진다 — 처리기가 대신할 값을 따로 들지 않는다.
+    SW_ASSERT_NOT_NULL( pSwing->findParam( hashed_string( "samples" ) ) );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, pSwing->getFloatParam( hashed_string( "samples" ) ), 1e-6f );
 
     AnimationNotifyTable bad;
     SW_EXPECT_FALSE( bad.loadFromXMLText( R"(<AnimationNotifies><Notify name="A" handler="NoSuchHandler"/></AnimationNotifies>)", "unknownHandler", registry ) );

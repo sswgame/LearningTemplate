@@ -56,27 +56,33 @@ namespace sw
 
         /**
          * @brief 머티리얼의 불리언 글(`true` · `false` · `1` · `0` · `yes` · `no` · `on` · `off`)을 읽습니다. 머티리얼의 불리언 글은 모두 여기를 지납니다.
-         * @details 비었으면 조용히 `fallback`, 불리언이 아닌 글이면 `name`(파라미터 · 필드 이름)과 함께 알리고 `fallback` 입니다.
-         *          주의: 읽지 못한 글을 말없이 false 로 읽으면 `bSrgb="ture"` 가 기본값(true)도 아닌 false 가 됩니다.
+         * @details 비었거나 불리언이 아닌 글이면 `name`(파라미터 · 필드 이름)과 함께 오류를 남기고 false 이며 @p outValue 는 그대로입니다.
+         *          대신할 값을 받지 않습니다 — 읽지 못한 글을 어떤 값으로 읽든 `bSrgb="ture"` 가 데이터와 다른 값이 됩니다.
          */
-        [[nodiscard]] static bool parseBoolToken( string_view token, string_view name, bool fallback );
+        [[nodiscard]] static bool parseBoolToken( string_view token, string_view name, bool& outValue );
         static bool               packPropertyIntoBuffer( MaterialProperty& prop, vector<uint8>& buffer );
 
         static string fieldText( XMLNode node, const utf8* pName );
-        /** @brief `fieldText` 를 `parseBoolToken` 으로 읽습니다. 필드가 없거나 비었으면 `defaultValue` 입니다. */
-        [[nodiscard]] static bool parseBoolField( XMLNode node, const utf8* pName, bool defaultValue );
-        static MaterialProperty   parsePropertyNode( XMLNode item );
+        /**
+         * @brief 선택 필드를 읽습니다. 필드가 없으면 @p absentValue(형식의 "적지 않음" 값)이고, 있는데 읽지 못하면 오류를 남기고 false 입니다.
+         * @details 쓰기(`appendBoolAttribute`)가 기본값과 같은 값을 적지 않는 필드만 이 함수로 읽습니다.
+         */
+        [[nodiscard]] static bool parseOptionalBoolField( XMLNode node, const utf8* pName, bool absentValue, bool& outValue );
+        /** @brief 프로퍼티 한 줄을 읽습니다. 읽지 못한 필드가 있으면 오류를 남기고 false 입니다. */
+        [[nodiscard]] static bool parsePropertyNode( XMLNode item, MaterialProperty& outProp );
 
         static void appendAttribute( XMLNode parent, const utf8* pName, string_view value );
         static void appendBoolAttribute( XMLNode parent, const utf8* pName, bool value );
 
-        static RHIBlendMode         parseBlendMode( string_view modeName );
-        static const utf8*          blendModeToString( RHIBlendMode mode );
-        static MaterialQualityLevel parseQuality( string_view qualityName );
-        static const utf8*          qualityToString( MaterialQualityLevel quality );
+        static RHIBlendMode parseBlendMode( string_view modeName );
+        static const utf8*  blendModeToString( RHIBlendMode mode );
+        /** @brief 품질 이름을 읽습니다. 모르는 이름이면 오류를 남기고 false 이며 @p outQuality 는 그대로입니다. */
+        [[nodiscard]] static bool parseQuality( string_view qualityName, MaterialQualityLevel& outQuality );
+        static const utf8*        qualityToString( MaterialQualityLevel quality );
 
-        static void parsePermutationNode( XMLNode root, MaterialPermutationDesc& outDesc );
-        static void appendPermutationNode( XMLNode root, const MaterialPermutationDesc& permutationDesc );
+        /** @brief 순열 설정을 읽습니다. 읽지 못한 불리언 필드가 있으면 오류를 남기고 false 입니다. */
+        [[nodiscard]] static bool parsePermutationNode( XMLNode root, MaterialPermutationDesc& outDesc );
+        static void               appendPermutationNode( XMLNode root, const MaterialPermutationDesc& permutationDesc );
 
         static void   appendUniqueDefine( vector<string>& outListDefine, string_view define );
         static void   appendUsageDefines( MaterialUsageFlags usage, vector<string>& outListDefine );

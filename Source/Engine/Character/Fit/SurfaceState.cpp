@@ -58,10 +58,10 @@ namespace sw
             reader.reportUnknownAttributes( child, SurfaceStateInternal::kArrChannelAttribute );
             SurfaceChannelDef channel;
             channel._name           = reader.readName( child, "name", true );
-            channel._decayPerSecond = reader.readFloat( child, "decayPerSecond", 0.0f );
-            channel._maxValue       = reader.readFloat( child, "max", 1.0f );
-            const int32 resolution  = reader.readInt( child, "maskResolution", 0 );
-            channel._bClip          = reader.readBool( child, "clip", false ) ? SW_TRUE : SW_FALSE;
+            channel._decayPerSecond = reader.readOptionalFloat( child, "decayPerSecond", 0.0f );
+            channel._maxValue       = reader.readOptionalFloat( child, "max", 1.0f );
+            const int32 resolution  = reader.readOptionalInt( child, "maskResolution", 0 );
+            channel._bClip          = reader.readOptionalBool( child, "clip", false ) ? SW_TRUE : SW_FALSE;
             if ( resolution < 0 || resolution > SurfaceStateInternal::kMaxMaskResolution )
                 reader.addError( child, "needs maskResolution in [0, 4096]" );
             else

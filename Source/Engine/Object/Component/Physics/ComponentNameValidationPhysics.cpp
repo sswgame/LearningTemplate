@@ -7,7 +7,6 @@
 #include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Reflection/ReflectionValidation.h"
-#include "Engine/Resource/ResourceIO.h"
 
 // ComponentNameValidation 의 물리 표 몫 — 컴포넌트 모델 코어(Object/Component)는 Physics 를 include 하지 않으므로 기능 폴더에 둔다.
 
@@ -17,13 +16,16 @@ namespace sw
     {
         struct ComponentNameValidationPhysicsInternal
         {
-            /** @brief 물리 설정 파일을 읽습니다. 못 읽으면 기본 표(`Default` 레이어 · 재질 하나)입니다. */
+            /**
+             * @brief 물리 설정 파일을 읽습니다. 못 읽으면 단언하고 빈 표입니다 — 기본 표를 지어내지 않으므로 모든 이름이 "표에 없음" 오류로 드러납니다.
+             */
             static PhysicsSettings loadSettingsFromFile()
             {
                 PhysicsSettings settings;
-                if ( ResourceIO::hasResource( PhysicsSystem::kSettingsPath ) == false || settings.loadFromResource( PhysicsSystem::kSettingsPath ) == false )
+                const bool      bLoaded = settings.loadFromResource( PhysicsSystem::kSettingsPath );
+                SW_LOG_ASSERT( bLoaded, "Physics settings '%#' could not be loaded for name validation", PhysicsSystem::kSettingsPath );
+                if ( bLoaded == false )
                     settings = PhysicsSettings{};
-                settings.ensureDefaults();
                 return settings;
             }
 

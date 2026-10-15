@@ -45,12 +45,18 @@ namespace sw
         Bool,     ///< 참과 거짓이다.
     };
 
-    /** @brief 처리기가 받는 인자 하나의 선언입니다. */
+    /**
+     * @brief 처리기가 받는 인자 하나의 선언입니다. 선택 인자의 "적지 않음" 값도 여기 한 곳에 둡니다.
+     * @details 테이블을 읽을 때 적지 않은 선택 인자는 이 선언의 값으로 채운다 — 그래서 처리기는 인자를 읽을 때 대신할 값을 넘기지 않는다.
+     *          이름 · 글 · 벡터의 "적지 않음" 은 빈 이름 · 빈 글 · 영벡터다.
+     */
     struct AnimationNotifyParamDef
     {
         const utf8*              _pName{ nullptr };
         AnimationNotifyParamKind _kind{ AnimationNotifyParamKind::Name };
         bool                     _bRequired{ false };
+        float32                  _absentNumber{ 0.0f }; ///< 적지 않은 선택 실수 인자의 값
+        bool                     _bAbsentBool{ false }; ///< 적지 않은 선택 참거짓 인자의 값
     };
 } // namespace sw
 
@@ -79,18 +85,21 @@ namespace sw
         vector<AnimationNotifyParam>   _listParam{};
         const IAnimationNotifyHandler* _pHandler{ nullptr };
 
-        /** @brief 이름의 인자입니다. 없으면 nullptr 입니다. */
+        /** @brief 이름의 인자입니다. 처리기가 선언하지 않은 이름이면 nullptr 입니다. */
         const AnimationNotifyParam* findParam( const hashed_string& name ) const;
-        /** @brief 이름 인자의 값입니다. 없으면 @p fallback 입니다. */
-        hashed_string getNameParam( const hashed_string& name, const hashed_string& fallback = hashed_string{} ) const;
-        /** @brief 글 인자의 값입니다. 없으면 빈 글입니다. */
-        string getTextParam( const hashed_string& name ) const;
-        /** @brief 실수 인자의 값입니다. 없으면 @p fallback 입니다. */
-        float32 getFloatParam( const hashed_string& name, float32 fallback ) const;
-        /** @brief 벡터 인자의 값입니다. 없으면 @p fallback 입니다. */
-        float3 getVectorParam( const hashed_string& name, const float3& fallback ) const;
-        /** @brief 참거짓 인자의 값입니다. 없으면 @p fallback 입니다. */
-        bool getBoolParam( const hashed_string& name, bool fallback ) const;
+        /**
+         * @brief 인자 값들입니다. 선언한 인자는 읽을 때 모두 채워지므로(적지 않은 선택 인자는 선언의 값) 늘 있습니다.
+         *        처리기가 선언하지 않은 이름을 물으면 단언하고 형식의 0 값입니다(처리기 코드의 결함).
+         */
+        hashed_string getNameParam( const hashed_string& name ) const;
+        string        getTextParam( const hashed_string& name ) const;
+        float32       getFloatParam( const hashed_string& name ) const;
+        float3        getVectorParam( const hashed_string& name ) const;
+        bool          getBoolParam( const hashed_string& name ) const;
+
+    private:
+        /** @brief 선언한 인자를 찾습니다. 없으면 단언합니다. */
+        const AnimationNotifyParam* findDeclaredParam( const hashed_string& name ) const;
     };
 } // namespace sw
 

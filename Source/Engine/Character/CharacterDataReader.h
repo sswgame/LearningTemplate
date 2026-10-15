@@ -23,8 +23,9 @@ namespace sw
 
     /**
      * @brief 파일 하나를 읽는 동안의 오류 모음과 필드 읽기 도우미입니다.
-     * @details 숫자와 벡터 필드는 비어 있으면 @p fallback 을 쓰고, 문자열이 숫자가 아니면 오류를 남기고 @p fallback 을 쓴다. 벡터는 공백이나 쉼표로 나눈 세 수이고,
-     *          회전은 도 단위 오일러(피치, 요, 롤)다. `quaternion::makeFromYawPitchRoll( float3 )` 과 같은 배치다.
+     * @details 필드 읽기는 둘로 나뉜다. `readXxx` 는 필수 필드라 없으면 오류이고, `readOptionalXxx` 는 선택 필드라 없으면 @p absentValue(형식의 "적지 않음" 값)다.
+     *          어느 쪽이든 숫자가 아닌 글은 오류다 — 오류가 하나라도 있으면 `finish` 가 실패해 로드가 멈추므로, 오류 뒤에 돌려주는 값은 쓰이지 않는다.
+     *          벡터는 공백이나 쉼표로 나눈 세 수이고, 회전은 도 단위 오일러(피치, 요, 롤)다. `quaternion::makeFromYawPitchRoll( float3 )` 과 같은 배치다.
      */
     class SW_API CharacterDataReader
     {
@@ -54,16 +55,22 @@ namespace sw
         /** @brief 모르는 자식 원소 하나를 오류로 남깁니다. */
         void reportUnknownElement( const XMLNode& node );
 
-        /** @brief 실수 필드를 읽습니다. */
-        float32 readFloat( const XMLNode& node, const utf8* pName, float32 fallback );
-        /** @brief 정수 필드를 읽습니다. */
-        int32 readInt( const XMLNode& node, const utf8* pName, int32 fallback );
-        /** @brief 불리언 필드를 읽습니다. */
-        [[nodiscard]] bool readBool( const XMLNode& node, const utf8* pName, bool fallback );
-        /** @brief 세 수 필드를 읽습니다("x y z"). */
-        float3 readFloat3( const XMLNode& node, const utf8* pName, const float3& fallback );
-        /** @brief 회전 필드를 읽습니다(도 단위 "피치 요 롤"). */
-        quaternion readRotation( const XMLNode& node, const utf8* pName, const quaternion& fallback );
+        /** @brief 필수 필드를 읽습니다. 없거나 읽지 못하면 오류입니다. */
+        float32            readFloat( const XMLNode& node, const utf8* pName );
+        int32              readInt( const XMLNode& node, const utf8* pName );
+        [[nodiscard]] bool readBool( const XMLNode& node, const utf8* pName );
+        /** @brief 세 수 필드를 읽습니다("x y z"). 필수입니다. */
+        float3 readFloat3( const XMLNode& node, const utf8* pName );
+        /** @brief 회전 필드를 읽습니다(도 단위 "피치 요 롤"). 필수입니다. */
+        quaternion readRotation( const XMLNode& node, const utf8* pName );
+
+        /** @brief 선택 필드를 읽습니다. 없으면 @p absentValue 이고, 있는데 읽지 못하면 오류입니다. */
+        float32            readOptionalFloat( const XMLNode& node, const utf8* pName, float32 absentValue );
+        int32              readOptionalInt( const XMLNode& node, const utf8* pName, int32 absentValue );
+        [[nodiscard]] bool readOptionalBool( const XMLNode& node, const utf8* pName, bool bAbsentValue );
+        float3             readOptionalFloat3( const XMLNode& node, const utf8* pName, const float3& absentValue );
+        /** @brief 회전 선택 필드를 읽습니다(도 단위 "피치 요 롤"). */
+        quaternion readOptionalRotation( const XMLNode& node, const utf8* pName, const quaternion& absentValue );
         /** @brief 이름 필드를 읽습니다. @p bRequired 인데 비어 있으면 오류입니다. */
         hashed_string readName( const XMLNode& node, const utf8* pName, bool bRequired );
         /** @brief 공백이나 쉼표로 나눈 이름 목록 필드를 읽습니다(비우고 채웁니다). */
@@ -92,6 +99,15 @@ namespace sw
         static string formatNameList( const vector<hashed_string>& listName );
 
     private:
+        /** @brief 필수 필드의 글입니다. 없으면 오류를 남기고 nullptr 입니다. */
+        const utf8* findRequiredText( const XMLNode& node, const utf8* pName );
+        /** @brief 글을 종류대로 풉니다. 풀지 못하면 오류를 남기고 형식의 0 값입니다(로드는 `finish` 에서 실패한다). */
+        float32            parseFloatText( const XMLNode& node, const utf8* pName, const utf8* pText );
+        int32              parseIntText( const XMLNode& node, const utf8* pName, const utf8* pText );
+        [[nodiscard]] bool parseBoolText( const XMLNode& node, const utf8* pName, const utf8* pText );
+        float3             parseFloat3Text( const XMLNode& node, const utf8* pName, const utf8* pText );
+        quaternion         parseRotationText( const XMLNode& node, const utf8* pName, const utf8* pText );
+
         void reportUnknownAttributes( const XMLNode& node, const utf8* const* ppKnown, size_t knownCount );
         /** @brief 루트 찾기 결과가 실패면 이유를 오류로 남깁니다. 찾았으면 true 입니다. */
         bool reportRootStatus( const XMLDocument& document, XMLRootStatus status, const utf8* pRootName );

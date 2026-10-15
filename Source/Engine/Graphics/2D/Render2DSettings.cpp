@@ -6,11 +6,9 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
-#include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/LifetimeScope.h"
 
-#include "Engine/Config/GameConfig.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -60,33 +58,25 @@ namespace sw
                 atomic<bool>     _bLoaded;
             };
 
-            /** @brief 활성 표의 저장소입니다. 엔진 수명이 끝난 뒤면 단언하고, 읽지 않은 기본 표를 돌려줍니다. */
+            /** @brief 활성 표의 저장소입니다. 엔진 수명이 끝난 뒤면 단언하고, 읽지 않은 빈 표를 돌려줍니다. */
             static ActiveStorage& getStorage();
 
-            /** @brief 활성 게임 팩의 파일, 없으면 엔진 파일을 읽어 @p outSettings 에 넣습니다. */
-            static void loadActive( Render2DSettings& outSettings )
+            /**
+             * @brief 엔진 파일(정본 하나)을 읽어 @p outSettings 에 넣습니다. 못 읽으면 오류를 남기고 false 이며 표는 그대로입니다.
+             * @details 첫 읽기가 리소스 루트를 잡기 전에 올 수 있다(엔진 기동 없이 도는 테스트) — 루트를 못 잡는 것도 실패다.
+             */
+            [[nodiscard]] static bool loadActive( Render2DSettings& outSettings )
             {
-                // 첫 읽기가 리소스 루트를 잡기 전에 올 수 있다(엔진 기동 없이 도는 테스트). 그대로 읽으면 기본 표가 프로세스 끝까지 남는다.
-                (void)ResourcePaths::initialize();
-                const string& packRoot = GameConfig::getActive()._packRoot;
-                if ( packRoot.empty() == false )
+                if ( ResourcePaths::initialize() == false )
                 {
-                    const string gamePath = FileUtil::joinPath( packRoot, "data/render2d.xml" );
-                    if ( ResourceIO::hasResource( gamePath ) )
-                    {
-                        Render2DSettings gameSettings;
-                        if ( gameSettings.loadFromResource( gamePath ) )
-                        {
-                            outSettings = gameSettings;
-                            return;
-                        }
-                    }
+                    SW_LOG_ERROR( "2D render settings cannot be read - resource paths are not initialized" );
+                    return false;
                 }
                 Render2DSettings engineSettings;
-                if ( engineSettings.loadFromResource( Render2DSettings::getEngineSettingsPath() ) )
-                    outSettings = engineSettings;
-                else
-                    outSettings = Render2DSettings{};
+                if ( engineSettings.loadFromResource( Render2DSettings::getEngineSettingsPath() ) == false )
+                    return false;
+                outSettings = engineSettings;
+                return true;
             }
         };
 
@@ -104,7 +94,7 @@ namespace sw
     } // namespace
 
     Render2DSettings::Render2DSettings()
-        : _listSortingLayer{ hashed_string( Render2DSettingsInternal::kDefaultLayerName ) }
+        : _listSortingLayer{}
         , _sortAxis{ 0.0f, 0.0f, 1.0f }
         , _defaultLayerIndex{ 0 }
         , _sortMode{ TransparencySortMode::Auto }
@@ -212,7 +202,10 @@ namespace sw
         }
 
         if ( bHasLayers == false )
-            loaded._listSortingLayer.push_back( hashed_string( Internal::kDefaultLayerName ) );
+        {
+            SW_LOG_ERROR( "%#: <SortingLayers> is missing (it must list at least 'Default')", sourceName );
+            return false;
+        }
         if ( loaded._listSortingLayer.size() > kMaxSortingLayerCount )
         {
             SW_LOG_ERROR( "%#: %# sorting layers exceed the limit %#", sourceName, loaded._listSortingLayer.size(), kMaxSortingLayerCount );
@@ -294,18 +287,23 @@ namespace sw
             std::lock_guard<mutex> lock( storage._loadMutex );
             if ( storage._bLoaded.load( std::memory_order_relaxed ) == false )
             {
-                Render2DSettingsInternal::loadActive( storage._settings );
+                // 렌더러 초기화(`reloadActive`)가 먼저 읽는다. 여기로 오는 것은 렌더러 없이 표를 보는 도구 · 테스트다.
+                // 못 읽으면 단언하고 빈 표(레이어 없음 — 이름 있는 레이어는 모두 "모르는 레이어" 오류)로 답한다. 기본 표를 지어내지 않는다.
+                const bool bLoaded = Render2DSettingsInternal::loadActive( storage._settings );
+                SW_LOG_ASSERT( bLoaded, "2D render settings '%#' could not be loaded", getEngineSettingsPath() );
                 storage._bLoaded.store( true, std::memory_order_release );
             }
         }
         return storage._settings;
     }
 
-    void Render2DSettings::reloadActive()
+    bool Render2DSettings::reloadActive()
     {
         Render2DSettingsInternal::ActiveStorage& storage = Render2DSettingsInternal::getStorage();
         std::lock_guard<mutex>                   lock( storage._loadMutex );
-        Render2DSettingsInternal::loadActive( storage._settings );
+        if ( Render2DSettingsInternal::loadActive( storage._settings ) == false )
+            return false;
         storage._bLoaded.store( true, std::memory_order_release );
+        return true;
     }
 } // namespace sw

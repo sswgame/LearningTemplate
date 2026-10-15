@@ -116,7 +116,6 @@ namespace sw
         , _reportMutex{}
         , _bodyCount{ 0 }
     {
-        _settings.ensureDefaults();
         _objectLayerPairFilter.setLayers( _settings.makeCollisionLayers() );
         _system.Init( JoltPhysicsSceneInternal::kMaxBodyCount, 0, JoltPhysicsSceneInternal::kMaxBodyPairCount, JoltPhysicsSceneInternal::kMaxContactCount,
                       _broadPhaseLayers, _objectVsBroadPhaseFilter, _objectLayerPairFilter );
