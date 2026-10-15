@@ -360,12 +360,15 @@ namespace sw::editor
             constexpr Color kTraceChip{ 0.40f, 0.40f, 0.45f, 1.0f };
 
             ImGui::SameLine();
-            if ( EditorWidgets::drawToggleButton( arrErrLabel.c_str(), _arrLevelEnabled[0], EditorThemeUtil::getErrorColor() ) )
+            // 0 건이면 경고색을 쓰지 않는다. 걸러 보이는 중이라는 뜻만 강조색으로 보인다(빨간 "Error (0)" 은 문제가 있다고 읽힌다).
+            const Color& errorChip = errorCount > 0 ? EditorThemeUtil::getErrorColor() : EditorThemeUtil::getAccentColor();
+            const Color& warnChip  = warnCount > 0 ? EditorThemeUtil::getWarningColor() : EditorThemeUtil::getAccentColor();
+            if ( EditorWidgets::drawToggleButton( arrErrLabel.c_str(), _arrLevelEnabled[0], errorChip ) )
                 _arrLevelEnabled[0] = ( _arrLevelEnabled[0] == false );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ShowErrors" ) );
 
             ImGui::SameLine();
-            if ( EditorWidgets::drawToggleButton( arrWarnLabel.c_str(), _arrLevelEnabled[1], EditorThemeUtil::getWarningColor() ) )
+            if ( EditorWidgets::drawToggleButton( arrWarnLabel.c_str(), _arrLevelEnabled[1], warnChip ) )
                 _arrLevelEnabled[1] = ( _arrLevelEnabled[1] == false );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ShowWarnings" ) );
 
