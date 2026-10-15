@@ -1,19 +1,61 @@
 #include "pch.h"
 
-#include "Engine/Input/Map/InputMap.h"
-
-/**
- * @file InputMapCombo.cpp
- * @brief 선입력 버퍼링과 격투 게임식 커맨드 시퀀스, 패턴 판정을 구현합니다.
- *
- *  - `bufferAction`, `consumeBufferedAction`: 공격 버튼을 살짝 일찍 눌러도 인정해 주는 선입력 유예 링 버퍼입니다.
- *  - `wasCommandSequenceTriggered`: 최근 트리거된 액션 이력(`_arrCommandHistory`)에서 주어진 순서가 시간 창 안에 나왔는지 검사합니다.
- *  - `wasCommandPatternTriggered`: "236P"(하, 우하, 우 + 펀치) 같은 넘패드 표기 문자열을 액션 이름 시퀀스로 바꾼 뒤 `wasCommandSequenceTriggered` 에 맡깁니다.
- */
+#include "Engine/Input/Map/InputActionBuffer.h"
 
 namespace sw
 {
-    void InputMap::bufferAction( const hashed_string& action, float32 expirationSeconds )
+    InputActionBuffer::InputActionBuffer()
+        : _arrBufferedAction{}
+        , _arrCommandHistory{}
+        , _elapsedSeconds{ 0.0f }
+        , _bufferedActionCount{ 0 }
+        , _bufferedActionHead{ 0 }
+        , _commandHistoryCount{ 0 }
+        , _commandHistoryHead{ 0 }
+    {
+    }
+
+    void InputActionBuffer::clear()
+    {
+        _elapsedSeconds      = 0.0f;
+        _bufferedActionCount = 0;
+        _bufferedActionHead  = 0;
+        _commandHistoryCount = 0;
+        _commandHistoryHead  = 0;
+    }
+
+    void InputActionBuffer::update( float32 deltaSeconds )
+    {
+        _elapsedSeconds += deltaSeconds;
+        for ( uint32 index = 0; index < _bufferedActionCount; ++index )
+        {
+            const uint32 idx = ( _bufferedActionHead + index ) % kMaxBufferedActions;
+            _arrBufferedAction[idx]._remainingTime -= deltaSeconds;
+        }
+        while ( _bufferedActionCount > 0 && _arrBufferedAction[_bufferedActionHead]._remainingTime <= 0.0f )
+        {
+            _bufferedActionHead = ( _bufferedActionHead + 1 ) % kMaxBufferedActions;
+            --_bufferedActionCount;
+        }
+        while ( _commandHistoryCount > 0 && ( _elapsedSeconds - _arrCommandHistory[_commandHistoryHead]._timestamp ) > kHistorySeconds )
+        {
+            _commandHistoryHead = ( _commandHistoryHead + 1 ) % kMaxCommandHistory;
+            --_commandHistoryCount;
+        }
+    }
+
+    void InputActionBuffer::recordTriggered( const hashed_string& action )
+    {
+        const uint32 insertIdx                   = ( _commandHistoryHead + _commandHistoryCount ) % kMaxCommandHistory;
+        _arrCommandHistory[insertIdx]._action    = action;
+        _arrCommandHistory[insertIdx]._timestamp = _elapsedSeconds;
+        if ( _commandHistoryCount < kMaxCommandHistory )
+            ++_commandHistoryCount;
+        else
+            _commandHistoryHead = ( _commandHistoryHead + 1 ) % kMaxCommandHistory;
+    }
+
+    void InputActionBuffer::bufferAction( const hashed_string& action, float32 expirationSeconds )
     {
         if ( action.empty() )
             return;
@@ -27,7 +69,7 @@ namespace sw
             _bufferedActionHead = ( _bufferedActionHead + 1 ) % kMaxBufferedActions;
     }
 
-    bool InputMap::consumeBufferedAction( const hashed_string& action )
+    bool InputActionBuffer::consumeBufferedAction( const hashed_string& action )
     {
         for ( uint32 index = 0; index < _bufferedActionCount; ++index )
         {
@@ -41,7 +83,7 @@ namespace sw
         return false;
     }
 
-    bool InputMap::wasCommandSequenceTriggered( const vector<hashed_string>& listSequence, float32 maxWindowSeconds ) const
+    bool InputActionBuffer::wasCommandSequenceTriggered( const vector<hashed_string>& listSequence, float32 maxWindowSeconds ) const
     {
         if ( listSequence.empty() || _commandHistoryCount < listSequence.size() )
             return false;
@@ -81,7 +123,7 @@ namespace sw
         return matchIdx == 0;
     }
 
-    bool InputMap::wasCommandPatternTriggered( const hashed_string& pattern, float32 maxWindowSeconds ) const
+    bool InputActionBuffer::wasCommandPatternTriggered( const hashed_string& pattern, float32 maxWindowSeconds ) const
     {
         string_view patternText = pattern.view();
         if ( patternText.empty() || _commandHistoryCount == 0 )

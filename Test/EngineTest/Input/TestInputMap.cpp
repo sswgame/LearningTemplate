@@ -429,14 +429,14 @@ SW_TEST_CASE( InputMapTest, RingBufferZeroAllocation )
     {
         sw::StringBuilder<sw::constant::kMaxBuffer32> sb;
         sb.append( "Action_" ).append( index );
-        inputMap.bufferAction( sw::hashed_string( sb.view() ), 0.5f );
+        inputMap.getActionBuffer().bufferAction( sw::hashed_string( sb.view() ), 0.5f );
     }
-    SW_EXPECT_TRUE( inputMap.consumeBufferedAction( "Action_19" ) );
-    SW_EXPECT_FALSE( inputMap.consumeBufferedAction( "Action_0" ) ); // 0번은 래핑으로 덮어씌워짐
+    SW_EXPECT_TRUE( inputMap.getActionBuffer().consumeBufferedAction( "Action_19" ) );
+    SW_EXPECT_FALSE( inputMap.getActionBuffer().consumeBufferedAction( "Action_0" ) ); // 0번은 래핑으로 덮어씌워짐
 
     // 2) 시간 경과 후 만료 테스트
     inputMap.update( 0.6f );
-    SW_EXPECT_FALSE( inputMap.consumeBufferedAction( "Action_19" ) );
+    SW_EXPECT_FALSE( inputMap.getActionBuffer().consumeBufferedAction( "Action_19" ) );
 }
 
 /**
@@ -473,8 +473,8 @@ SW_TEST_CASE( InputMapTest, CommandPatternFuzzyCombo )
     input.beginFrame( 0.05f );
     input.endFrame();
 
-    SW_EXPECT_TRUE( inputMap.wasCommandPatternTriggered( "236Punch", 0.5f ) );
-    SW_EXPECT_FALSE( inputMap.wasCommandPatternTriggered( "623Punch", 0.5f ) );
+    SW_EXPECT_TRUE( inputMap.getActionBuffer().wasCommandPatternTriggered( "236Punch", 0.5f ) );
+    SW_EXPECT_FALSE( inputMap.getActionBuffer().wasCommandPatternTriggered( "623Punch", 0.5f ) );
 
     input.shutdown();
 }
@@ -1104,7 +1104,7 @@ SW_TEST_CASE( InputMapTest, ComboParserRingBufferOverflowStress )
     input.endFrame();
 
     // 콤보 패턴 매칭 검증 (236P)
-    SW_EXPECT_TRUE( inputMap.wasCommandPatternTriggered( "236P", 0.5f ) );
+    SW_EXPECT_TRUE( inputMap.getActionBuffer().wasCommandPatternTriggered( "236P", 0.5f ) );
 
     input.shutdown();
 }
