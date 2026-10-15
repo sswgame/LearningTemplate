@@ -65,6 +65,8 @@ namespace sw
          * @return 요청했으면(이미 그 백엔드이면 요청 없이도) true 입니다. 변수를 찾지 못하면 false 입니다.
          */
         [[nodiscard]] bool requestSwap( RHIBackend backend );
+        /** @brief 지금 디바이스를 제거된 상태로 만듭니다(개발 명령 `rhi.removeDevice`, `IRHIDevice::debugRemoveDevice`). 할 수 없는 백엔드면 false 입니다. */
+        [[nodiscard]] bool removeDeviceForTest();
 
         // IEngineFrameObserver — 프레임 시작만 쓴다(`-gv_rhiSwapAtFrame` 진단). 나머지는 아무것도 하지 않고 종료를 정하지 않는다.
         /** @brief `-gv_rhiSwapAtFrame` 의 프레임이면 `gv_rhiBackend` 를 `-gv_rhiSwapTo` 로 바꿔 교체를 요청합니다(한 번만). Shipping 에서는 아무것도 하지 않습니다. */

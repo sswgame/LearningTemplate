@@ -46,6 +46,15 @@ namespace sw
             static constexpr uint32 kEditorMinClientHeight = 540;
         };
 
+        struct AppExitInternal
+        {
+            /** @brief 이 기계 · 빌드가 그 백엔드를 못 돌린다는(환경) 결과면 true 입니다. 결함일 수 있는 `Failed` 는 false 입니다. */
+            static constexpr bool isRHIUnusableHere( RHIInitResult result )
+            {
+                return result == RHIInitResult::BackendNotBuilt || result == RHIInitResult::DriverUnsupported;
+            }
+        };
+
         /** @brief 엔진 설정에서 프레임 시간 정책 값을 꺼냅니다(기본값의 출처는 `EngineConfig` 의 초기값 하나다). */
         struct AppTimeInternal
         {
@@ -469,7 +478,7 @@ namespace sw
     int32 App::getInitFailureExitCode() const
     {
         // 환경 탓(백엔드가 이 빌드에 없거나 드라이버가 기능을 주지 않음)은 테스트와 스크립트가 건너뜀으로 읽는 코드로 끝낸다. 그 밖은 결함일 수 있다.
-        return RHIInitResultUtil::isUnusableHere( _engine.getRHIInitResult() ) ? kRHIUnusableHereExitCode : -1;
+        return AppExitInternal::isRHIUnusableHere( _engine.getRHIInitResult() ) ? kRHIUnusableHereExitCode : -1;
     }
 
     int32 App::getExitCode() const

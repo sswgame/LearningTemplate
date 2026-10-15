@@ -11,6 +11,7 @@
 
 #if !defined( SW_SHIPPING )
 
+    #include "Core/Console/DevCommandRegistry.h"
     #include "Core/Container/StringUtil.h"
 
     #include "Engine/Automation/AutomationProbe.h"
@@ -102,6 +103,21 @@ namespace sw
                 return true;
             }
 
+            /** @brief 개발 명령 `rhi.removeDevice` — 장치 제거(TDR)를 흉내 낸다. 제거 뒤 프레임 · 종료가 멈추지 않는지 보는 데 쓴다. */
+            static bool runRemoveDevice( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                RHIBackendSwitcher* pSwitcher = RHIBackendSwitcher::findActive();
+                if ( pSwitcher == nullptr || pSwitcher->removeDeviceForTest() == false )
+                {
+                    outReply = "this backend cannot remove its device on request (DirectX 12 only)";
+                    return false;
+                }
+                outReply = "device removed";
+                return true;
+            }
+
             [[nodiscard]] static bool readCommittedBackend( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const RHIBackendSwitcher* pSwitcher = RHIBackendSwitcher::findActive();
@@ -132,6 +148,8 @@ namespace sw
         };
     } // namespace
 
+    SW_DEV_COMMAND( rhiRemoveDevice, "rhi.removeDevice", "rhi.removeDevice", "Remove the GPU device as a TDR would (DirectX 12) to check that frames and shutdown do not hang",
+                    &RHIBackendSwitcherAutomationInternal::runRemoveDevice );
     SW_AUTOMATION_STEP( swapBackend, "SwapBackend", &RHIBackendSwitcherAutomationInternal::runSwapBackend, &RHIBackendSwitcherAutomationInternal::validateSwapBackend, false );
     SW_AUTOMATION_PROBE( rhiBackend, "RHI.Backend", "Backend the device runs on: 0 DirectX11, 1 DirectX12, 2 Vulkan, 3 OpenGL",
                          &RHIBackendSwitcherAutomationInternal::readCommittedBackend );

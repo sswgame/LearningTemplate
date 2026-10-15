@@ -38,26 +38,22 @@ namespace sw
 
             bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                const string* pUnknown = entry.findUnknownOption( { "catalog", "board" } );
-                if ( pUnknown != nullptr )
+                string catalogPath;
+                if ( entry.readOptions( {
+                                            {"catalog",        catalogPath},
+                                            {  "board", _listInlineBoardID}
+                },
+                                        outError ) == false )
+                    return false;
+                if ( catalogPath.empty() == false && _catalog.loadFromResource( catalogPath ) == false )
                 {
-                    outError = "unknown option '" + *pUnknown + "'";
+                    outError = "the leaderboard catalog '" + catalogPath + "' could not be read";
                     return false;
                 }
-                const string* pCatalog = entry.findOption( "catalog" );
-                if ( pCatalog != nullptr && _catalog.loadFromResource( *pCatalog ) == false )
-                {
-                    outError = "the leaderboard catalog '" + *pCatalog + "' could not be read";
-                    return false;
-                }
-                entry.collectOptions( "board", _listInlineBoardID );
-                if ( pCatalog == nullptr && _listInlineBoardID.empty() )
+                if ( catalogPath.empty() && _listInlineBoardID.empty() )
                     SW_LOG_WARNING( "Leaderboard kit: neither a catalog nor a board option - no boards are registered" );
-                if ( context._pHost->registerHostService( &_server ) == false )
-                {
-                    outError = "the leaderboard method range is already taken";
+                if ( registerHostService( context, entry, &_server, outError ) == false )
                     return false;
-                }
                 return true;
             }
 

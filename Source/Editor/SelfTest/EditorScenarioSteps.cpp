@@ -234,6 +234,19 @@ namespace sw::editor
                 return true;
             }
 
+            /**
+             * @brief @p mark 가 그린 창의 보이는 영역 밖(스크롤 아래 · 접힌 위)이면 실패로 알리고 true 를 반환합니다.
+             * @details 잘린 위젯의 사각형을 누르면 그 자리에 보이는 다른 위젯이나 빈 곳이 받아, 단계는 성공하고 뒤의 기대만 엉뚱하게 진다.
+             */
+            static bool reportClippedMark( AutomationRunner& runner, const AutomationStep& step, const string& mark )
+            {
+                EditorSelfTestMark found{};
+                if ( EditorSelfTestMarks::find( mark, found ) == false || found._bClipped == false )
+                    return false;
+                runner.recordFailure( step, "editor widget '" + mark + "' is outside the visible area of its window (scroll it into view or collapse what is above it)" );
+                return true;
+            }
+
             /** @brief 레이블 가운데(또는 `anchor` 위치)로 마우스를 옮기고 누른 뒤 뗍니다. ImGui 입력 큐가 누름과 뗌을 프레임에 나눠 넣습니다. 레이블이 없으면 실패를 기록합니다. */
             static bool runClick( AutomationRunner& runner, const AutomationStep& step )
             {
@@ -244,6 +257,8 @@ namespace sw::editor
                     (void)StringUtil::parseInt( string_view{ *pButton }, button ); // 검사에서 봤다
                 float2 anchor{ 0.5f, 0.5f };
                 (void)readAnchor( step, anchor ); // 검사에서 봤다
+                if ( reportClippedMark( runner, step, mark ) )
+                    return true;
                 if ( EditorSelfTestInput::moveMouseToMark( mark, anchor ) == false )
                 {
                     runner.recordFailure( step, "no editor widget is marked '" + mark + "' (was it drawn in the last frame?)" );
@@ -326,6 +341,8 @@ namespace sw::editor
                     runner.recordFailure( step, "no editor widget is marked '" + mark + "' (was it drawn in the last frame?)" );
                     return true;
                 }
+                if ( reportClippedMark( runner, step, mark ) )
+                    return true;
                 float64 deltaX{ 0.0 };
                 float64 deltaY{ 0.0 };
                 float64 buttonNumber{ 0.0 };

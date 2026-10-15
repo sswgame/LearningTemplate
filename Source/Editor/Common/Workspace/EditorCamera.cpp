@@ -21,7 +21,7 @@ namespace sw::editor
             static CameraComponent* createEditorCamera( GameObjectManager* pObjectManager )
             {
                 return CameraComponent::findOrCreateNamed( pObjectManager, hashed_string{ kEditorCameraObjectName }, CameraRole::Viewport,
-                                                           float3( 2.15f, 1.55f, 2.65f ), float3( 0.0f, 0.0f, 0.0f ) );
+                                                           EditorCamera::getSpawnPosition(), float3( 0.0f, 0.0f, 0.0f ) );
             }
         };
     } // namespace

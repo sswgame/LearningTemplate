@@ -68,6 +68,21 @@ namespace sw::editor
     {
         struct ImGuiEditorInternal
         {
+            /**
+             * @brief 등록된 프레임 단계를 `_order` 순서로 모두 부릅니다.
+             * @details 개수와 항목을 매번 다시 읽는다. 단계가 모듈을 올리거나 내려 목록이 바뀌어도 지난 배열을 읽지 않는다.
+             */
+            static void runFrameSteps( EditorContext& context )
+            {
+                using Registry = EditorExtensionRegistry<EditorFrameStepRegistration>;
+                for ( uint32 index = 0; index < Registry::getCount(); ++index )
+                {
+                    const EditorFrameStepRegistration& registration = Registry::getAt( index );
+                    if ( registration._pfnRun != nullptr )
+                        registration._pfnRun( context );
+                }
+            }
+
             static constexpr Color kNotificationWindowBg{ 0.10f, 0.10f, 0.10f, 1.00f };
 
             /// @brief 글자 배율(모니터 DPI)과 테마 배율이 이 값보다 크게 다르면 테마 배율을 글자 배율에 맞춘다(beginFrame).
@@ -691,7 +706,7 @@ namespace sw::editor
         if ( _editorContext != nullptr )
         {
             SW_EDITOR_PROFILE_SCOPE( "GT.Editor.frameSteps" );
-            EditorFrameStepUtil::runAll( *_editorContext );
+            ImGuiEditorInternal::runFrameSteps( *_editorContext );
         }
 
         // 아래는 단계로 옮기지 않는다. ImGui 프레임을 닫고(Render) draw 스냅샷을 렌더 스레드에 넘기는 셸의 약속이라, 위치가 곧 뜻이다.

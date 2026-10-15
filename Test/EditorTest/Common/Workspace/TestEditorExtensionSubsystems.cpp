@@ -33,9 +33,9 @@ namespace
     {
         return EditorSubsystemRegistration{
             { ProbeExtensionSubsystem::kSubsystemName, 0 },
-            &EditorSubsystemRegistrationUtil<ProbeExtensionSubsystem>::create,
-            &EditorSubsystemRegistrationUtil<ProbeExtensionSubsystem>::bind,
-            &EditorSubsystemRegistrationUtil<ProbeExtensionSubsystem>::unbind
+            &EditorSubsystemRegistration::create<ProbeExtensionSubsystem>,
+            &EditorSubsystemRegistration::bind<ProbeExtensionSubsystem>,
+            &EditorSubsystemRegistration::unbind<ProbeExtensionSubsystem>
         };
     }
 } // namespace

@@ -69,14 +69,12 @@ namespace sw
 
             bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                const string* pUnknown = entry.findUnknownOption( { "seedAdmin" } );
-                if ( pUnknown != nullptr )
-                {
-                    outError = "unknown option '" + *pUnknown + "'";
-                    return false;
-                }
                 vector<string> listSeedText;
-                entry.collectOptions( "seedAdmin", listSeedText );
+                if ( entry.readOptions( {
+                                            { "seedAdmin", listSeedText }
+                },
+                                        outError ) == false )
+                    return false;
                 for ( const string& seedText : listSeedText )
                 {
                     AdminOnlineServerKitInternal::SeedAdmin seed;
@@ -87,11 +85,8 @@ namespace sw
                     }
                     _listSeed.push_back( seed );
                 }
-                if ( context._pHost->registerHostService( &_service ) == false )
-                {
-                    outError = "the admin method range is already taken";
+                if ( registerHostService( context, entry, &_service, outError ) == false )
                     return false;
-                }
                 return true;
             }
 

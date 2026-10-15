@@ -263,8 +263,8 @@ SW_TEST_CASE( ResolvedSocketTableTest, SocketsFollowBodyShape )
 
     // 체형: 배 모프 1 + 아래팔 길이 +0.1(본 비율).
     AppearanceGeometry shaped = body;
-    BodyShapeUtil::applyMorphs( shaped, vector<BodyMorphWeight>{
-                                            BodyMorphWeight{ hashed_string( "Belly" ), 1.0f }
+    shaped.applyMorphs( vector<BodyMorphWeight>{
+        BodyMorphWeight{ hashed_string( "Belly" ), 1.0f }
     } );
     table.applyShapedGeometry( 0, shaped );
     CharacterBoneArray shapedBones = bindBones;
@@ -433,7 +433,7 @@ SW_TEST_CASE( BodyShapeTest, BoneProportionLayersOverAnimationAndSkinsGeometry )
     AppearanceGeometry hand = test::CharacterTestUtil::makeCylinder( desc );
     test::CharacterTestUtil::skinToBone( hand, 3 );
     AppearanceGeometry posed;
-    BodyShapeUtil::skinToPose( hand, bindBones, animated, posed );
+    hand.skinToPose( bindBones, animated, posed );
     // 손 정점(바인드 y=1) → 손 본 자리.
     for ( uint32 vertex = 0; vertex < hand.getVertexCount(); ++vertex )
     {

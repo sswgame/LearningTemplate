@@ -262,7 +262,7 @@ SW_TEST_CASE( CardGameTest, PokerSidePotsGoToTheRightPlayersAndOddChipsSplitFrom
     const vector<int32> listContribution = { 50, 100, 200, 200 };
     const vector<uint8> listFolded       = { SW_FALSE, SW_FALSE, SW_FALSE, SW_TRUE };
     vector<PokerPot>    listPot;
-    PokerPotUtil::makePots( listContribution, listFolded, listPot );
+    PokerPot::makePots( listContribution, listFolded, listPot );
     SW_ASSERT_TRUE( listPot.size() == 3 );
     SW_EXPECT_EQUAL( listPot[0]._amount, 200 ); // 50 × 4
     SW_EXPECT_EQUAL( static_cast<int32>( listPot[0]._listEligibleSeat.size() ), 3 );
@@ -274,7 +274,7 @@ SW_TEST_CASE( CardGameTest, PokerSidePotsGoToTheRightPlayersAndOddChipsSplitFrom
     // 짧은 스택(0)이 가장 세면 메인 팟만, 사이드는 그다음 센 1 이, 꼭대기는 2 가 돌려받는다.
     const vector<uint32> listScore = { 900, 500, 100, 0 };
     vector<int32>        listWon;
-    PokerPotUtil::distributePots( listPot, listScore, 1, listWon );
+    PokerPot::distributePots( listPot, listScore, 1, listWon );
     SW_EXPECT_EQUAL( listWon[0], 200 );
     SW_EXPECT_EQUAL( listWon[1], 150 );
     SW_EXPECT_EQUAL( listWon[2], 200 );
@@ -285,7 +285,7 @@ SW_TEST_CASE( CardGameTest, PokerSidePotsGoToTheRightPlayersAndOddChipsSplitFrom
     listSplit[0]._amount           = 101;
     listSplit[0]._listEligibleSeat = { 0, 1, 2 };
     const vector<uint32> listTie   = { 700, 700, 300 };
-    PokerPotUtil::distributePots( listSplit, listTie, 1, listWon );
+    PokerPot::distributePots( listSplit, listTie, 1, listWon );
     SW_EXPECT_EQUAL( listWon[1], 51 );
     SW_EXPECT_EQUAL( listWon[0], 50 );
     SW_EXPECT_EQUAL( listWon[2], 0 );

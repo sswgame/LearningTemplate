@@ -71,6 +71,7 @@ namespace sw::editor
         mark._min        = float2{ ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y };
         mark._max        = float2{ ImGui::GetItemRectMax().x, ImGui::GetItemRectMax().y };
         mark._frame      = static_cast<uint32>( ImGui::GetFrameCount() );
+        mark._bClipped   = ImGui::IsItemVisible() == false;
         for ( EditorSelfTestInputInternal::NamedMark& named : state._listMark )
         {
             if ( named._key == pKey )

@@ -124,8 +124,8 @@ namespace sw
                                          static_cast<int32>( _signatureBytes.size() ) );
     }
 
-    bool JSONWebTokenUtil::makeSigned( INetSecurityProvider& provider, NetSignatureAlgorithm algorithm, string_view keyID, string_view payloadJSON,
-                                       const string& privateKeyPem, string& outCompact )
+    bool JSONWebToken::makeSigned( INetSecurityProvider& provider, NetSignatureAlgorithm algorithm, string_view keyID, string_view payloadJSON,
+                                   const string& privateKeyPem, string& outCompact )
     {
         using Internal            = JSONWebTokenInternal;
         const string header       = string( "{\"alg\":\"" ) + Internal::getAlgorithmName( algorithm ) + "\",\"typ\":\"JWT\",\"kid\":\"" + JSONDocument::escapeString( keyID ) + "\"}";
@@ -140,7 +140,7 @@ namespace sw
         return true;
     }
 
-    string JSONWebTokenUtil::writeJwk( const NetPublicKey& publicKey, string_view keyID )
+    string JwksKeyCache::writeJwk( const NetPublicKey& publicKey, string_view keyID )
     {
         string jwk = "{\"kid\":\"" + JSONDocument::escapeString( keyID ) + "\",\"use\":\"sig\",";
         if ( publicKey._algorithm == NetSignatureAlgorithm::RsaPkcs1Sha256 )

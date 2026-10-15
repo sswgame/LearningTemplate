@@ -15,16 +15,18 @@
 
 namespace sw
 {
-    float32 BuoyancyUtil::computeSubmergedFraction( float32 surfaceAboveCenter, float32 radius )
+    float32 BuoyancyPontoon::computeSubmergedFraction( float32 surfaceAboveCenter ) const
     {
+        const float32 radius = _radius;
         if ( radius <= 0.0f )
             return 0.0f;
         const float32 height = MathUtil::clamp( surfaceAboveCenter + radius, 0.0f, 2.0f * radius );
         return height * height * ( 3.0f * radius - height ) / ( 4.0f * radius * radius * radius );
     }
 
-    float32 BuoyancyUtil::computeBuoyantForce( float32 submergedFraction, float32 radius, float32 waterDensity, float32 gravityMagnitude )
+    float32 BuoyancyPontoon::computeBuoyantForce( float32 submergedFraction, float32 waterDensity, float32 gravityMagnitude ) const
     {
+        const float32 radius       = _radius;
         const float32 sphereVolume = 4.0f / 3.0f * MathUtil::kPi * radius * radius * radius;
         return waterDensity * gravityMagnitude * sphereVolume * submergedFraction;
     }
@@ -79,11 +81,11 @@ namespace sw
             float32             surfaceHeight{ 0.0f };
             if ( pWater == nullptr || pWater->computeSurfaceHeight( center._x, center._z, surfaceHeight ) == false )
                 continue;
-            const float32 fraction = BuoyancyUtil::computeSubmergedFraction( surfaceHeight - center._y, pontoon._radius );
+            const float32 fraction = pontoon.computeSubmergedFraction( surfaceHeight - center._y );
             if ( fraction <= 0.0f )
                 continue;
             ++_submergedPontoonCount;
-            const float32 buoyantForce  = BuoyancyUtil::computeBuoyantForce( fraction, pontoon._radius, _waterDensity, gravityMagnitude );
+            const float32 buoyantForce  = pontoon.computeBuoyantForce( fraction, _waterDensity, gravityMagnitude );
             const float3  pointVelocity = linearVelocity + angularVelocity.cross( offset );
             const float3  force         = up * buoyantForce - pointVelocity * ( _linearDrag * fraction );
             pScene->addImpulseAtPoint( body, force * fixedDeltaTime, center );

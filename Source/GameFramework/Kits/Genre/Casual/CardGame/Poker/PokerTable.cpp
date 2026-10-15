@@ -36,7 +36,7 @@ namespace sw
 
 namespace sw
 {
-    void PokerPotUtil::makePots( const vector<int32>& listContribution, const vector<uint8>& listFolded, vector<PokerPot>& outListPot )
+    void PokerPot::makePots( const vector<int32>& listContribution, const vector<uint8>& listFolded, vector<PokerPot>& outListPot )
     {
         outListPot.clear();
         vector<int32> listLevel;
@@ -72,7 +72,7 @@ namespace sw
         }
     }
 
-    void PokerPotUtil::distributePots( const vector<PokerPot>& listPot, const vector<uint32>& listScore, int32 firstSeat, vector<int32>& outListWon )
+    void PokerPot::distributePots( const vector<PokerPot>& listPot, const vector<uint32>& listScore, int32 firstSeat, vector<int32>& outListWon )
     {
         const int32 seatCount = static_cast<int32>( listScore.size() );
         outListWon.clear();
@@ -431,9 +431,9 @@ namespace sw
             }
             listScore.push_back( score );
         }
-        PokerPotUtil::makePots( listContribution, listFolded, _listLastPot );
+        PokerPot::makePots( listContribution, listFolded, _listLastPot );
         vector<int32> listWon;
-        PokerPotUtil::distributePots( _listLastPot, listScore, findNextSeat( _button, false ), listWon );
+        PokerPot::distributePots( _listLastPot, listScore, findNextSeat( _button, false ), listWon );
         for ( int32 seat = 0; seat < getSeatCount(); ++seat )
         {
             PokerSeat& pokerSeat = _listSeat[static_cast<size_t>( seat )];
@@ -455,7 +455,7 @@ namespace sw
             listContribution.push_back( _listSeat[static_cast<size_t>( seat )]._contributed );
             listFolded.push_back( seat == winnerSeat ? SW_FALSE : SW_TRUE );
         }
-        PokerPotUtil::makePots( listContribution, listFolded, _listLastPot );
+        PokerPot::makePots( listContribution, listFolded, _listLastPot );
         PokerSeat& winner = _listSeat[static_cast<size_t>( winnerSeat )];
         winner._won       = computePotTotal();
         winner._stack += winner._won;

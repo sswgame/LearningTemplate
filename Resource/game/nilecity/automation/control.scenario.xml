@@ -6,6 +6,7 @@
 -->
 <Scenario name="nilecity.control" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" input="exclusive">
 	<At frame="0"><Variable name="gv_nileAutoPlay" value="0"/></At>
+	<At frame="19"><Expect probe="Input.VirtualCursorEnabled" equals="1"/></At>
 	<At frame="20"><MousePosition x="0.5" y="0.5"/></At>
 	<At frame="22"><Tap slot="Gamepad.A" hold="1"/></At>
 	<At frame="26"><Tap slot="Gamepad.B" hold="1"/></At>

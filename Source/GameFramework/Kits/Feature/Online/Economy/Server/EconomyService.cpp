@@ -23,8 +23,6 @@ namespace sw
     {
         struct EconomyServiceInternal
         {
-            static constexpr const utf8* kArrMethodName[] = { "get_wallet", "get_history", "purchase", "redeem_receipt" };
-            static_assert( SW_COUNT_OF( kArrMethodName ) == static_cast<size_t>( EconomyMethod::kCount ), "method names must match EconomyMethod" );
             static constexpr int32 kWalletIndex   = EconomyMethod::toIndex( EconomyMethod::kGetWallet );
             static constexpr int32 kHistoryIndex  = EconomyMethod::toIndex( EconomyMethod::kGetHistory );
             static constexpr int32 kPurchaseIndex = EconomyMethod::toIndex( EconomyMethod::kPurchase );
@@ -133,7 +131,7 @@ namespace sw
 #endif
         _pStore   = pStore;
         _settings = settings;
-        _metrics.initialize<EconomyResult>( settings._pMetricRegistry, "economy", EconomyServiceInternal::kArrMethodName, EconomyMethod::kCount );
+        _metrics.initialize<EconomyMethodName, EconomyResult>( settings._pMetricRegistry, "economy" );
         return true;
     }
 

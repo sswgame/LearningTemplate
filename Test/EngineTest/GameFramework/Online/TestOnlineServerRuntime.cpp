@@ -105,9 +105,13 @@ namespace
         bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
         {
             (void)context;
-            (void)outError;
-            const string* pFail = entry.findOption( "fail" );
-            _bFailStart         = pFail != nullptr && *pFail == "start";
+            string failStage;
+            if ( entry.readOptions( {
+                                        { "fail", failStage }
+            },
+                                    outError ) == false )
+                return false;
+            _bFailStart = failStage == "start";
             OnlineServerRuntimeTestInternal::add( kName, "init" );
             return true;
         }
@@ -228,8 +232,33 @@ SW_TEST_CASE( OnlineServerRuntimeTest, OnlineConfigSitsNextToTheServerConfig )
     second._key                = "mode";
     second._value              = "duo";
     vector<string> listMode;
-    entry.collectOptions( "mode", listMode );
+    int32          maxPartySize = 4;
+    string         error;
+    SW_ASSERT_TRUE( entry.readOptions( {
+                                           {        "mode",     listMode},
+                                           {"maxPartySize", maxPartySize}
+    },
+                                       error ) );
     SW_ASSERT_EQUAL( listMode.size(), size_t( 2 ) );
     SW_EXPECT_TRUE( listMode[1] == "duo" );
-    SW_EXPECT_TRUE( entry.findOption( "missing" ) == nullptr );
+    SW_EXPECT_EQUAL( maxPartySize, 4 ); // 적지 않은 옵션은 칸의 기본값을 남긴다
+
+    // 표에 없는 키는 철자 실수이므로 기동 오류다.
+    SW_EXPECT_FALSE( entry.readOptions( {
+                                            { "maxPartySize", maxPartySize }
+    },
+                                        error ) );
+    SW_EXPECT_TRUE( error.find( "unknown option 'mode'" ) != string::npos );
+
+    // 칸의 타입이 읽는 법을 정한다 — 정수 칸에 정수가 아닌 값은 오류다.
+    OnlineServerKitEntry sized;
+    sized._name                    = "matchmaking";
+    OnlineServerOption& sizeOption = sized._listOption.emplace_back();
+    sizeOption._key                = "maxPartySize";
+    sizeOption._value              = "four";
+    SW_EXPECT_FALSE( sized.readOptions( {
+                                            { "maxPartySize", maxPartySize }
+    },
+                                        error ) );
+    SW_EXPECT_TRUE( error.find( "must be an integer" ) != string::npos );
 }

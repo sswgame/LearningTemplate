@@ -34,6 +34,42 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @class OnlineServerKitOptionField
+     * @brief 키트 옵션 표의 한 줄입니다 — 옵션 이름과 값을 읽어 넣을 칸. 칸의 타입이 읽는 법을 정합니다.
+     * @details 정수는 `StringUtil::parseInt`, 참거짓은 `1` · `true` · `0` · `false`, 글은 첫 값, 글 목록은 같은 키의 값 전부(적은 순서)입니다.
+     *          옵션이 없으면 칸을 그대로 두므로 기본값은 칸에 미리 넣어 둡니다. 칸은 `readOptions` 동안만 빌려 씁니다.
+     */
+    class SW_GF_API OnlineServerKitOptionField
+    {
+    public:
+        OnlineServerKitOptionField( const utf8* pKey, int32& target );
+        OnlineServerKitOptionField( const utf8* pKey, bool& target );
+        OnlineServerKitOptionField( const utf8* pKey, string& target );
+        OnlineServerKitOptionField( const utf8* pKey, vector<string>& listTarget );
+
+        const utf8* getKey() const { return _pKey; }
+
+        /** @brief 같은 키의 값 @p listValue (적은 순서)를 칸에 넣습니다. 형식이 틀리면 false 와 @p outError 입니다. */
+        [[nodiscard]] bool readValues( const vector<const string*>& listValue, const string& kitName, string& outError ) const;
+
+    private:
+        enum class Kind : uint8
+        {
+            Int,
+            Bool,
+            Text,
+            TextList,
+        };
+
+        const utf8* _pKey;
+        void*       _pTarget;
+        Kind        _kind;
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 띄울 키트 하나입니다. */
     REFLECT()
     struct SW_GF_API OnlineServerKitEntry
@@ -46,19 +82,11 @@ namespace sw
         PROPERTY()
         vector<OnlineServerOption> _listOption{};
 
-        /** @brief @p key 의 첫 값입니다. 없으면 nullptr 입니다. */
-        const string* findOption( string_view key ) const;
-        /** @brief @p key 의 값을 모두 @p outListValue 뒤에 붙입니다. */
-        void collectOptions( string_view key, vector<string>& outListValue ) const;
-        /** @brief @p listKnownKey 에 없는 첫 옵션 키입니다. 모두 알면 nullptr 입니다. 키트가 철자가 틀린 옵션을 조용히 넘기지 않게 기동 때 봅니다. */
-        const string* findUnknownOption( std::initializer_list<string_view> listKnownKey ) const;
         /**
-         * @brief @p key 가 있으면 정수로 읽어 @p inoutValue 에 넣습니다. 없으면 그대로 둡니다.
-         * @return 값이 정수가 아니면 false 와 @p outError 입니다.
+         * @brief 키트의 옵션 표 @p listField 로 옵션을 모두 읽습니다. 키트는 이 호출 하나로 옵션을 읽습니다(옵션이 없는 키트는 빈 표).
+         * @return 표에 없는 키(철자가 틀린 옵션을 조용히 넘기지 않는다)나 형식이 틀린 값이 있으면 false 와 @p outError 입니다.
          */
-        [[nodiscard]] bool readIntOption( string_view key, int32& inoutValue, string& outError ) const;
-        /** @brief @p key 가 있으면 `1` · `true` 는 참, `0` · `false` 는 거짓으로 읽습니다. 다른 값이면 false 와 @p outError 입니다. */
-        [[nodiscard]] bool readBoolOption( string_view key, bool& inoutValue, string& outError ) const;
+        [[nodiscard]] bool readOptions( std::initializer_list<OnlineServerKitOptionField> listField, string& outError ) const;
     };
 } // namespace sw
 

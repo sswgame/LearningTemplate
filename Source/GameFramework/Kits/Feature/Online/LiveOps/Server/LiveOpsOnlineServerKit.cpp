@@ -35,14 +35,11 @@ namespace sw
 
             bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                const string* pUnknown = entry.findUnknownOption( { "fakePush" } );
-                if ( pUnknown != nullptr )
-                {
-                    outError = "unknown option '" + *pUnknown + "'";
-                    return false;
-                }
                 bool bFakePush = false;
-                if ( entry.readBoolOption( "fakePush", bFakePush, outError ) == false )
+                if ( entry.readOptions( {
+                                            { "fakePush", bFakePush }
+                },
+                                        outError ) == false )
                     return false;
                 _dispatcher.initialize( context._pStore, PushDispatcherSettings{} );
                 if ( bFakePush )
@@ -58,11 +55,8 @@ namespace sw
                     }
 #endif
                 }
-                if ( context._pHost->registerHostService( &_server ) == false )
-                {
-                    outError = "the live ops method range is already taken";
+                if ( registerHostService( context, entry, &_server, outError ) == false )
                     return false;
-                }
                 return true;
             }
 

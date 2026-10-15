@@ -3,7 +3,7 @@
  * @brief 체형입니다. 축(홀쭉함과 뚱뚱함, 약함과 근육, 키) 데이터(`BodyShapeSet`, `*.bodyshape.xml`)와 본 비율 보정(`BoneProportion`)을 담습니다.
  * @details 같은 스켈레톤으로 여러 외형을 내는 두 가지 방법이다. 축 값(슬라이더)마다 양쪽과 음쪽에 모프 대상 하나와 본 비율 몇 줄을 적고, 값이
  *          그쪽 끝으로 갈수록 모프 가중치와 본 비율이 커진다. 본 비율은 **가산 층**이라 애니메이션이 정한 로컬 변환 위에 겹친다
- *          (스케일은 곱하고 오프셋은 더하며, 키와 팔다리 길이를 바꾼다). 모프는 통합 쪽이 GPU 모프 풀에 적용한다. 여기의 `BodyShapeUtil` 은 CPU 에서 같은 일을 해서,
+ *          (스케일은 곱하고 오프셋은 더하며, 키와 팔다리 길이를 바꾼다). 모프는 통합 쪽이 GPU 모프 풀에 적용한다. `AppearanceGeometry::applyMorphs` · `skinToPose` 는 CPU 에서 같은 일을 해서,
  *          피팅과 소켓 보정이 체형을 적용한 바인드 형상을 보게 한다.
  *
  *          XML 예:
@@ -160,21 +160,5 @@ namespace sw
 
     private:
         vector<BodyShapeAxis> _listAxis;
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 체형을 CPU 형상에 거는 도우미입니다(전부 static). */
-    struct SW_API BodyShapeUtil
-    {
-        /** @brief 모프 가중치를 형상 위치(와 법선)에 겁니다. 형상에 없는 모프는 건너뜁니다. */
-        static void applyMorphs( AppearanceGeometry& inoutGeometry, vector_reference<const BodyMorphWeight> listMorphWeight );
-        /**
-         * @brief 바인드 형상을 다른 포즈(본 비율을 적용한 레퍼런스 포즈나 애니메이션 포즈)로 선형 블렌드 스키닝합니다.
-         * @details 스킨 행렬 = 바인드 모델의 역 × 포즈 모델(행 벡터)이다. 스킨이 없는 형상은 그대로 복사한다. 법선도 같은 행렬로 돌린다.
-         */
-        static void skinToPose( const AppearanceGeometry& bindGeometry, const CharacterBoneArray& bindBones, const CharacterBoneArray& poseBones,
-                                AppearanceGeometry& outGeometry );
     };
 } // namespace sw

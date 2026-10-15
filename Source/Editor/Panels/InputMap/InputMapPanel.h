@@ -108,9 +108,10 @@ namespace sw::editor
         uint32                   _capturingBindIndex;
         int32                    _newActionValueType;
         int32                    _simKeyToInject;
-        uint8                    _bLoaded       : 1;
-        uint8                    _bCapturingKey : 1;
-        uint8                    _bPlotPaused   : 1;
-        [[maybe_unused]] uint8   _reserved      : 5;
+        uint8                    _bLoaded         : 1;
+        uint8                    _bCapturingKey   : 1;
+        uint8                    _bPlotPaused     : 1;
+        uint8                    _bSelectFirstTab : 1; ///< 새 인스턴스의 첫 그리기 — ImGui 가 탭 막대 id 로 기억한 앞 인스턴스의 탭이 아니라 Mappings 로 연다
+        [[maybe_unused]] uint8   _reserved        : 4;
     };
 } // namespace sw::editor

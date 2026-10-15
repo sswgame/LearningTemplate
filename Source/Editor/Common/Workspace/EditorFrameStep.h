@@ -51,31 +51,6 @@ namespace sw::editor
     };
 } // namespace sw::editor
 
-namespace sw::editor
-{
-    /**
-     * @struct EditorFrameStepUtil
-     * @brief 등록된 프레임 단계를 순서대로 부르는 창구입니다.
-     */
-    struct EditorFrameStepUtil
-    {
-        /**
-         * @brief 등록된 단계를 `_order` 순서로 모두 부릅니다.
-         * @details 개수와 항목을 매번 다시 읽는다. 단계가 모듈을 올리거나 내려 목록이 바뀌어도 지난 배열을 읽지 않는다.
-         */
-        static void runAll( EditorContext& context )
-        {
-            using Registry = EditorExtensionRegistry<EditorFrameStepRegistration>;
-            for ( uint32 index = 0; index < Registry::getCount(); ++index )
-            {
-                const EditorFrameStepRegistration& registration = Registry::getAt( index );
-                if ( registration._pfnRun != nullptr )
-                    registration._pfnRun( context );
-            }
-        }
-    };
-} // namespace sw::editor
-
 /** @code SW_EDITOR_FRAME_STEP( Panels, "panels", ::sw::editor::EditorFrameStepOrder::kPanels, &drawPanels ); @endcode */
 #define SW_EDITOR_FRAME_STEP( name, pID, order, pfnRun ) \
     SW_EDITOR_REGISTER( ::sw::editor::EditorFrameStepRegistration, FrameStep_##name, { pID, order }, pfnRun )
