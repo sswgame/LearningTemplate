@@ -69,6 +69,6 @@ CI가 무엇을 빌드하고 어떤 테스트를 돌리는지는 `.github/workfl
 - [문서 지도](docs/02_DocumentMap.md)는 문서마다 다루는 주제와 모든 모듈 README의 목록입니다.
 - [AGENTS.md](AGENTS.md)는 코드 규칙의 원본입니다. [코딩 규칙 예시](docs/04_CodingGuidelines.md)는 같은 규칙을 예시와 함께 한국어로 풀어 씁니다.
 - [설정](docs/07_Configuration.md)은 설정 값을 어느 파일에 두는지 설명합니다. 필드별 표는 생성 문서 [docs/Config](docs/Config/README.md)에 있습니다.
-- [백로그](docs/06_Backlog.md)는 남은 작업 목록입니다. 작업을 시작하기 전에 읽습니다.
+- [백로그](docs/backlog/README.md)는 영역별로 나눈 남은 작업 목록입니다. 작업을 시작하기 전에 읽습니다.
 - [검증과 측정](docs/08_Verification.md)은 작업을 끝내기 전에 돌릴 것과 측정 방법입니다. [결정 기록](docs/09_Decisions.md)은 정한 방향과 기각한 안입니다.
 - [문서 쓰기 지침](docs/10_WritingDocs.md)은 문서를 쓰거나 고칠 때 따르는 규칙입니다.

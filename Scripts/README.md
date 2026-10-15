@@ -58,6 +58,7 @@ Scripts/
   │     ├── AppRun.py                 # App 한 판 — 출력 모으기 · 못 도는 백엔드 판정 · 프로파일 표 읽기 · 밖에서 메모리 · 핸들 재기(qa/ 셋이 쓴다)
   │     ├── AssetValidation.py        # 에셋 검증 규칙 — 규칙 표(Config/Editor/AssetValidationRules.json)의 `check` 이름이 고르는 연산자들
   │     ├── EditorIconFont.py         # 에디터 아이콘 99 개의 그리기 함수 + 표준 라이브러리만으로 TrueType 폰트 · C++ 헤더 쓰기
+  │     ├── Backlog.py                # 영역별 백로그(docs/backlog) 항목 읽기 — 목록 명령(dev/ListBacklog.py)과 게이트(CheckBacklog)가 같이 쓴다
   │     ├── ReflectionAnnotationKeys.py # 편집기용 리플렉션 어노테이션 키 헤더 내용(AnnotationMeta.txt · 단위 표에서) — 생성기와 게이트가 같이 쓴다
   │     ├── ImageMetrics.py           # 스크린샷 비교 — PPM · PNG 읽기/쓰기, 축소, 배경을 뺀 지표 · 잡음 바닥에서 정한 허용 오차
   │     ├── XmlAssetMerge.py          # XML 에셋 의미 비교 · 3-way 병합(엔티티 id · 컴포넌트 · 속성 단위), 엔진 저장기와 같은 서식으로 쓰기
@@ -158,6 +159,7 @@ Scripts/
   │     │     ├── CheckCmakeConventions.py    # CMake 명명 규칙
   │     │     ├── CheckCmakeReadme.py         # cmake/README.md 가 가리키는 파일 · 함수가 실재하는지
   │     │     ├── CheckDocPaths.py            # 문서(.md)의 링크 · 앵커 · 저장소 경로가 실재하는지, 모든 README 가 문서 지도에 있는지
+  │     │     ├── CheckBacklog.py             # 백로그 항목 번호가 하나뿐인지, 상태 태그가 허용값인지, 백로그를 가리키는 글이 맞는 파일 · 항목을 가리키는지
   │     │     ├── CheckPythonConventions.py   # 파이썬 이름 · 모양 규칙
   │     │     ├── CheckScriptEntryPoints.py   # 진입점이 모듈 수준에서 common 을 import 하는지(콘솔 UTF-8) · main(argv) 로 인자를 받는지
   │     │     ├── CheckScriptCommonHelpers.py # common 의 한 자리(runProcess · BuildTree · writeGeneratedFile · 콘솔)를 비켜 가는 호출
@@ -214,6 +216,7 @@ Scripts/
   │     ├── MakeWorktree.py           # 작업 단위용 git 워크트리 + main 과 나눠 쓰는 도구 · vcpkg 폴더 링크(docs/11_Workflow.md)
   │     ├── RemoveWorktree.py         # 워크트리 지우기 — 나눠 쓰는 링크를 먼저 끊는다
   │     ├── ListCiJobs.py             # GitHub Actions 실행 · 잡 · 실패 주석을 공개 API 로(로그인 없이)
+  │     ├── ListBacklog.py            # 영역별 백로그를 상태 · 영역 · 번호로 골라 보인다(`py -3 -m Scripts backlog`, --id 는 항목 본문만)
   │     ├── ListOutdatedDeps.py       # vcpkg 의존성의 지금 판 · 레지스트리 최신 판(오버레이 포함, docs/09 5-2)
   │     ├── MakeEditorTheme.py        # 에디터 테마 토큰(tokens.json) ↔ Figma 변수 · DTCG: import-figma · export-figma · check (`py -3 -m Scripts editor-theme`)
   │     ├── MoveEditorState.py        # 체크아웃마다 한 번: 옛 자리(Config/Editor · 팩 gv 프리셋)의 에디터 로컬 상태를 Saved/Editor 로

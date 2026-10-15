@@ -22,7 +22,7 @@ Scripts/lint/gate/CheckDocPaths.py
 `.gitignore` 가 무시하는 자리(내려받은 도구 · 생성 파일 — `Config/Environment/toolchain_config.json`)와 설정 목록
 (`Scripts/common/ConfigCatalog.py`)이 `bOptional` 로 적은 설정 파일은 없어도 맞다.
 `<` · `*` · `{` · `…` · `$` 가 든 것은 모양이지 경로가 아니라 보지 않는다.
-`docs/06_Backlog.md` 와 `docs/plans/` 의 계획 문서는 규칙 1 만 본다 — 할 일 목록과 계획은 아직 없는 파일 · 옛 경로를 적는 자리다.
+백로그(`docs/backlog/`)와 `docs/plans/` 의 계획 문서는 규칙 1 만 본다 — 할 일 목록과 계획은 아직 없는 파일 · 옛 경로를 적는 자리다.
 """
 
 from __future__ import annotations
@@ -53,11 +53,8 @@ _kSourceFolderName: frozenset[str] = frozenset({"Core", "Engine", "Editor", "Gam
 #: 줄기만 적은 경로(`Graphics/RHI/IRenderSurface`)를 풀 때 붙여 보는 확장자.
 _kStemExtension: tuple[str, ...] = (".h", ".cpp", ".xxx", ".inl", ".py", ".md", ".cmake", ".json", ".xml", ".hlsl", ".hlsli")
 
-#: 규칙 1 만 보는 문서.
-_kLinkOnlyDocument: frozenset[str] = frozenset({"docs/06_Backlog.md"})
-
-#: 규칙 1 만 보는 폴더 — 다음 세션 계획(`docs/plans/`)은 만들 파일을 적는다.
-_kLinkOnlyFolder: tuple[str, ...] = ("docs/plans/",)
+#: 규칙 1 만 보는 폴더 — 백로그(`docs/backlog/`)와 다음 세션 계획(`docs/plans/`)은 만들 파일을 적는다.
+_kLinkOnlyFolder: tuple[str, ...] = ("docs/backlog/", "docs/plans/")
 
 #: 없어도 맞는 설정 파일 — 설정 목록(`ConfigCatalog`)이 `bOptional` 로 적은 줄(기본값과 다른 값이 있을 때만 만드는 파일 등).
 #: 목록이 원본이라 여기에 따로 적지 않는다.
@@ -182,7 +179,7 @@ class CheckDocPathsGate(LintGate):
         for documentPath in listDocument:
             relDocument = documentPath.relative_to(repositoryRoot).as_posix()
             documentDir = documentPath.parent
-            bLinkOnly = relDocument in _kLinkOnlyDocument or relDocument.startswith(_kLinkOnlyFolder)
+            bLinkOnly = relDocument.startswith(_kLinkOnlyFolder)
             listBaseDir = [documentDir, *[parent for parent in documentDir.parents if repositoryRoot in (parent, *parent.parents) and parent != repositoryRoot]]
             for baseDir in listBaseDir:
                 if baseDir not in mapChildDir:
