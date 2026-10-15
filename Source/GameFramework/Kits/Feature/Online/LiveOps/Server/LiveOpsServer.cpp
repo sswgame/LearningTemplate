@@ -121,7 +121,7 @@ namespace sw
             attachHost( host );
         if ( _pDispatcher != nullptr )
         {
-            _pDispatcher->tick( nowMs );
+            _pDispatcher->update( nowMs );
             _listDeviceCompletionScratch.clear();
             _pDispatcher->drainCompletions( _listDeviceCompletionScratch );
             for ( const PushDeviceCompletion& completion : _listDeviceCompletionScratch )
@@ -138,7 +138,7 @@ namespace sw
         }
         if ( _pService == nullptr )
             return;
-        _pService->tick( nowMs );
+        _pService->update( nowMs );
         if ( _pService->takeStateChange() )
             (void)host.sendPushToAll( LiveOpsMethod::kPushLiveState, BitWriter{} );
     }

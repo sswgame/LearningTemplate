@@ -202,7 +202,7 @@ namespace sw
         const ScopedListLock lock{ *this };
         _time += deltaTime;
         updateActiveEffects( deltaTime );
-        tickActiveAbilities( deltaTime );
+        updateActiveAbilities( deltaTime );
     }
 
     const AbilityCatalog* AbilitySystemComponent::findCatalog() const

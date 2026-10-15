@@ -107,20 +107,14 @@ namespace sw
      *        <Door id="crack" kind="Condition" requires="bombs>=1"/><Treasure id="c1" area="hall" item="SmallKey"/>
      *        <Device id="eye" kind="Switch"/><Device id="torches" kind="TorchGroup" torches="2" duration="6"/></Dungeon></AdventureDungeons>`
      */
-    class SW_KIT_API AdventureDungeonCatalog : public XMLCatalog<AdventureDungeonCatalog>
+    class SW_KIT_API AdventureDungeonCatalog : public XMLCatalog<AdventureDungeonCatalog>, public GameCatalog<AdventureDungeonDef>
     {
         friend class XMLCatalog<AdventureDungeonCatalog>;
 
     public:
-        const AdventureDungeonDef*         findDungeon( const hashed_string& id ) const { return _catalog.find( id ); }
-        int32                              findDungeonIndex( const hashed_string& id ) const { return _catalog.findIndex( id ); }
-        const vector<AdventureDungeonDef>& getDungeons() const { return _catalog.getAll(); }
-
     private:
         static constexpr const utf8* kXMLRootName = "AdventureDungeons"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
-
-        GameCatalog<AdventureDungeonDef> _catalog{};
     };
 } // namespace sw
 

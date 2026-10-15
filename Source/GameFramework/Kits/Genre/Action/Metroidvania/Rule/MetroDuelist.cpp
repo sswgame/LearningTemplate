@@ -56,7 +56,7 @@ namespace sw
         if ( deltaTime <= 0.0f )
             return;
         _time += deltaTime;
-        _riposteWindow.tick( deltaTime );
+        _riposteWindow.update( deltaTime );
         _vitality.update( deltaTime );
         _stamina.update( deltaTime );
     }

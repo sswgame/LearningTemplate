@@ -512,9 +512,9 @@ namespace sw
             const InFlight inFlight = found->second;
             _mapInFlight.erase( found );
             _mapSerialByRequest.erase( RequestKey{ token._handle.packed(), token._requestID } );
-            const auto countFound = _mapInFlightCount.find( token._handle.packed() );
-            if ( countFound != _mapInFlightCount.end() && --countFound->second <= 0 )
-                _mapInFlightCount.erase( countFound );
+            const auto foundCount = _mapInFlightCount.find( token._handle.packed() );
+            if ( foundCount != _mapInFlightCount.end() && --foundCount->second <= 0 )
+                _mapInFlightCount.erase( foundCount );
             if ( inFlight._bIdempotent == SW_TRUE )
             {
                 IdempotencyEntry& entry = _mapIdempotency[inFlight._scope];

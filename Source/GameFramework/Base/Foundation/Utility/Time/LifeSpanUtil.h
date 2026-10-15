@@ -12,7 +12,7 @@ namespace sw
      * @brief 흐른 시간(올라가는 값)과 수명으로 "다했나" · 흐림을 셉니다. 수명이 0 이하이면 끝이 없습니다(씬에 놓은 견본).
      * @details 흐른 시간은 컴포넌트가 저장하는 PROPERTY 입니다 — 상태를 다시 읽은 컴포넌트(플레이 중 되돌리기 · 핫 리로드)는 `onBeginPlay` 에서 그것을
      *          0 으로 돌리지 않고 남은 수명을 이어 갑니다(언리얼 `AActor::SetLifeSpan` 의 자리지만, 저기는 타이머라 상태를 넘지 않는다).
-     *          끝나는 경계는 `Countdown::tick` 과 같은 "수명 이상" 입니다.
+     *          끝나는 경계는 `Countdown::update` 과 같은 "수명 이상" 입니다.
      * @code
      *     if ( LifeSpanUtil::advance( _currentLife, _lifeTime, deltaTime ) )
      *         pOwner->destroy();

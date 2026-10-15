@@ -190,7 +190,7 @@ namespace sw
             attachHost( host );
         if ( _pSocialService == nullptr || _pGuildService == nullptr )
             return;
-        _pSocialService->tick( nowMs );
+        _pSocialService->update( nowMs );
 
         _listSocialScratch.clear();
         _pSocialService->drainCompletions( _listSocialScratch );

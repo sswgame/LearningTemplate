@@ -30,7 +30,7 @@ namespace sw
         void shutdown();
 
         /** @brief 카운트다운을 진행하고 쌓인 화면 요청을 적용합니다. */
-        void tick( float32 deltaSeconds );
+        void update( float32 deltaSeconds );
 
     private:
         void applyCommandLineSettings();

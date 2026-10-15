@@ -345,15 +345,9 @@ namespace sw
     }
 
     CameraPresetCatalog::CameraPresetCatalog()
-        : _catalog{}
-        , _listBlendRule{}
+        : _listBlendRule{}
         , _defaultBlend{}
     {
-    }
-
-    void CameraPresetCatalog::addPreset( const CameraPresetDef& def )
-    {
-        (void)_catalog.add( def ); // 빈 id 는 카탈로그가 거른다
     }
 
     void CameraPresetCatalog::addBlendRule( const CameraBlendRule& rule )
@@ -363,7 +357,7 @@ namespace sw
 
     void CameraPresetCatalog::clear()
     {
-        _catalog.clear();
+        GameCatalog<CameraPresetDef>::clear();
         _listBlendRule.clear();
         _defaultBlend = BlendCurveDef{};
     }
@@ -390,7 +384,7 @@ namespace sw
             return *pFromAny;
         if ( pToAny != nullptr )
             return *pToAny;
-        const CameraPresetDef* pTarget = findPreset( to );
+        const CameraPresetDef* pTarget = find( to );
         return pTarget != nullptr ? pTarget->_blendIn : _defaultBlend;
     }
 
@@ -417,7 +411,7 @@ namespace sw
                 def._id      = hashed_string( pID );
                 def._blendIn = _defaultBlend;
                 CameraPresetInternal::readPreset( node, def, sourceName );
-                addPreset( def );
+                add( def );
                 ++loadedCount;
             }
             else if ( StringUtil::equals( pName, "Blend", true ) )

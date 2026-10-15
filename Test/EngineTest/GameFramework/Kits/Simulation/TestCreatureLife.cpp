@@ -83,7 +83,7 @@ namespace
                 ItemDef item;
                 item._id       = hashed_string( pItemID );
                 item._maxStack = 99;
-                _items.addItem( item );
+                _items.add( item );
             }
             const bool bLoaded = _catalog.loadFromXMLText( kCreatureLifeTestXML, "CreatureLifeTest" ) &&
                                  _reputation.loadFromXMLText( kCreatureLifeTestReputationXML, "CreatureLifeTest" ) &&

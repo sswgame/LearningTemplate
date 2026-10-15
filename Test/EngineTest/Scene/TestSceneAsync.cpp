@@ -43,11 +43,11 @@ namespace sw
             for ( int32 stepIndex = 0; stepIndex < 200 && manager.isTransitioning(); ++stepIndex )
             {
                 tasks.waitAll();
-                manager.tickTransitions();
+                manager.updateTransitions();
                 if ( manager.isTransitioning() )
                     std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
             }
-            manager.tickTransitions();
+            manager.updateTransitions();
         }
 
         /** @brief 모듈의 코드젠이 만드는 것과 같은 모양의 TypeInfo(이름 · 크기 · 생성 함수)입니다. 표에 올리지는 않습니다. */
@@ -149,7 +149,7 @@ SW_TEST_CASE( SceneAsyncTest, AsyncRequestCompletes )
     SW_EXPECT_FALSE( manager.isTransitioning() );
     SW_ASSERT_NOT_NULL( manager.getActiveScene() );
     SW_EXPECT_STREQ( "AsyncTown", manager.getActiveScene()->getName() );
-    manager.getActiveScene()->getObjectManager()->tick( 0.0f );
+    manager.getActiveScene()->getObjectManager()->update( 0.0f );
     SW_EXPECT_EQUAL( size_t( 2 ), manager.getActiveScene()->getObjectManager()->getAllGameObjects().size() );
 
     manager.shutdown();
@@ -324,7 +324,7 @@ SW_TEST_CASE( SceneAsyncTest, AsyncWarpSequenceQueuesLatest )
     SW_ASSERT_NOT_NULL( manager.getActiveScene() );
     SW_EXPECT_STREQ( "TownB", manager.getActiveScene()->getName() );
     SW_EXPECT_EQUAL( size_t( 1 ), manager.getLoadedScenes().size() );
-    manager.getActiveScene()->getObjectManager()->tick( 0.0f );
+    manager.getActiveScene()->getObjectManager()->update( 0.0f );
     SW_EXPECT_EQUAL( size_t( 2 ), manager.getActiveScene()->getObjectManager()->getAllGameObjects().size() );
 
     manager.shutdown();

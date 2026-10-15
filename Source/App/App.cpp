@@ -413,7 +413,7 @@ namespace sw
             GameTimeScale::setUnscaledDeltaTime( frameTime._unscaledDeltaTime ); // 정지 메뉴와 페이드는 게임이 멈춰도 돈다.
 
             // 사용자 설정의 화면 변경(창 방식, 해상도, VSync)은 OS 리사이즈와 같은 시점인 프레임 시작 전에 처리한다.
-            _userSettingsHost.tick( frameTime._deltaTime );
+            _userSettingsHost.update( frameTime._deltaTime );
 
             _engine.beginFrame( frameTime._deltaTime );
             // 에디터 Play/Pause 상태를 여기서 한 번 고정한다. 아래 고정 스텝이 여러 번 돌아도 DLL 경계를 넘어 다시 묻지 않고,
@@ -455,7 +455,7 @@ namespace sw
             _moduleReload.update();
 
             const ModuleFrameState& frameState = _moduleHost->getFrameState();
-            _engine.tick( frameTime._deltaTime, frameState._views, _sceneViewCameraProvider, frameState._bTickScene == SW_TRUE );
+            _engine.update( frameTime._deltaTime, frameState._views, _sceneViewCameraProvider, frameState._bTickScene == SW_TRUE );
             _moduleHost->endEditorFrame();
 
             _backendSwap.applyIfPending();

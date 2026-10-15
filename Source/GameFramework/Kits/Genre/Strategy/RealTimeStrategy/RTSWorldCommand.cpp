@@ -17,7 +17,6 @@ namespace sw
     {
         struct RTSWorldCommandInternal
         {
-
             static bool isGround( const RTSUnit& unit ) { return unit._pDef->_bAir == SW_FALSE; }
         };
     } // namespace
@@ -150,7 +149,7 @@ namespace sw
         RTSUnit* pWorker = findUnitMutable( workerID );
         if ( pWorker == nullptr )
             return RTSCommandResult::InvalidUnit;
-        const RTSUnitDef* pDef         = _pCatalog->findUnit( buildingID );
+        const RTSUnitDef* pDef         = _pCatalog->find( buildingID );
         const bool        bCannotBuild = pDef == nullptr || pDef->_kind != RTSUnitKind::Building || pWorker->_pDef->_bWorker == SW_FALSE || pDef->_producedBy != pWorker->_pDef->_id;
         if ( bCannotBuild )
             return RTSCommandResult::CannotDo;
@@ -260,7 +259,7 @@ namespace sw
         RTSUnit* pBuilding = findUnitMutable( buildingID );
         if ( pBuilding == nullptr )
             return RTSCommandResult::InvalidUnit;
-        const RTSUnitDef* pDef         = _pCatalog->findUnit( unitID );
+        const RTSUnitDef* pDef         = _pCatalog->find( unitID );
         const bool        bCannotTrain = pDef == nullptr || pDef->isMobile() == false || pBuilding->isBuilding() == false || pBuilding->isConstructed() == false ||
                                   pDef->_producedBy != pBuilding->_pDef->_id;
         if ( bCannotTrain )
@@ -280,7 +279,7 @@ namespace sw
         RTSUnit* pBuilding = findUnitMutable( buildingID );
         if ( pBuilding == nullptr || pBuilding->_listProduction.empty() )
             return false;
-        const RTSUnitDef* pDef = _pCatalog->findUnit( pBuilding->_listProduction.back() );
+        const RTSUnitDef* pDef = _pCatalog->find( pBuilding->_listProduction.back() );
         if ( pBuilding->_listProduction.size() == 1 )
         {
             pBuilding->_productionTimer = 0.0f;

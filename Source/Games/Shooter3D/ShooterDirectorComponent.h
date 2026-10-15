@@ -118,7 +118,7 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive ) override;
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
-        void               tickGame( float32 deltaTime ) override;
+        void               updateGame( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         void               onViewsDespawned() override;
         /** @brief 스폰 요청이 쌓였거나 자동 플레이 스위치와 플레이어 폰의 조종자가 어긋났으면 true 를 반환합니다. 베이스가 틱 끝에 플러시를 잡습니다. */

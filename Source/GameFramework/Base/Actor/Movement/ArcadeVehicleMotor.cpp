@@ -148,7 +148,7 @@ namespace sw
         _velocity._z = newCos * newAhead - newSin * newSide;
 
         // 7) 부스트 시간.
-        if ( _boost.tick( deltaTime ) )
+        if ( _boost.update( deltaTime ) )
             pushEvent( ArcadeVehicleEvent::Kind::BoostEnded, 0 );
 
         // 8) 위치 · 위아래.

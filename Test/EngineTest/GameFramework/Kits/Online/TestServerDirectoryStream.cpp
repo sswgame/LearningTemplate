@@ -114,13 +114,13 @@ SW_TEST_CASE( ServerDirectoryStreamTest, ListBeforeLoginAssignAfterLoginAndMaint
     descriptor._capacity = 10;
     SW_ASSERT_TRUE( registration.initialize( server._host.getEphemeralRouter(), descriptor ) );
     registration.setState( ServerState::Open );
-    registration.tick( 0 );
+    registration.update( 0 );
 
     ServerDirectoryClient   directoryClient;
     test::OnlineTestClients clients( network );
     const int32             clientIndex = clients.connect( server._port, { &directoryClient } );
     directoryClient.initialize( &clients.getClient( clientIndex ) );
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
     SW_ASSERT_TRUE( clients.getClient( clientIndex ).isReady() );
 
     DirectoryRecorder recorder;
@@ -129,7 +129,7 @@ SW_TEST_CASE( ServerDirectoryStreamTest, ListBeforeLoginAssignAfterLoginAndMaint
     (void)directoryClient.requestServerList( "chat", ServerDirectoryClient::ServerListDelegate::create<&DirectoryRecorder::onServerList>( &recorder ) );
     (void)directoryClient.requestAssignment( Internal::makeRequest( "game" ),
                                              ServerDirectoryClient::AssignmentDelegate::create<&DirectoryRecorder::onAssignment>( &recorder ) );
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
     SW_ASSERT_EQUAL( recorder._listStatusError.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( recorder._listStatusError[0], OnlineError::kOk ); // 익명 메서드
     SW_ASSERT_EQUAL( recorder._listServerListError.size(), size_t( 2 ) );
@@ -141,10 +141,10 @@ SW_TEST_CASE( ServerDirectoryStreamTest, ListBeforeLoginAssignAfterLoginAndMaint
     SW_EXPECT_EQUAL( recorder._listAssignmentError[0], OnlineError::kUnauthenticated ); // 배정은 로그인 뒤
 
     clients.login( clientIndex, 500 );
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
     (void)directoryClient.requestAssignment( Internal::makeRequest( "game" ),
                                              ServerDirectoryClient::AssignmentDelegate::create<&DirectoryRecorder::onAssignment>( &recorder ) );
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
     SW_ASSERT_EQUAL( recorder._listAssignment.size(), size_t( 2 ) );
     SW_EXPECT_EQUAL( recorder._listAssignmentError[1], OnlineError::kOk );
     SW_EXPECT_TRUE( recorder._listAssignment[1]._result == ServerDirectoryResult::Ok );
@@ -156,14 +156,14 @@ SW_TEST_CASE( ServerDirectoryStreamTest, ListBeforeLoginAssignAfterLoginAndMaint
     window._scope      = MaintenanceWindow::kScopeAll;
     window._messageKey = "notice.maintenance";
     directory._service.setMaintenance( window, 1, "", 0, 1 );
-    test::tickAll( { &server }, clients, 10 );
+    test::updateAll( { &server }, clients, 10 );
     SW_ASSERT_EQUAL( directoryClient.getLastStatus()._listMaintenance.size(), size_t( 1 ) ); // 알림이 왔다
     SW_EXPECT_TRUE( directoryClient.getLastStatus()._listMaintenance[0]._messageKey == "notice.maintenance" );
     SW_EXPECT_EQUAL( directoryClient.getStatusRevision(), revisionBefore + 1 );
 
     (void)directoryClient.requestAssignment( Internal::makeRequest( "game" ),
                                              ServerDirectoryClient::AssignmentDelegate::create<&DirectoryRecorder::onAssignment>( &recorder ) );
-    test::tickAll( { &server }, clients, 10 );
+    test::updateAll( { &server }, clients, 10 );
     SW_ASSERT_EQUAL( recorder._listAssignment.size(), size_t( 3 ) );
     SW_EXPECT_TRUE( recorder._listAssignment[2]._result == ServerDirectoryResult::Maintenance ); // 점검은 오류가 아니라 답이다
 }
@@ -185,14 +185,14 @@ SW_TEST_CASE( ServerDirectoryStreamTest, MaintenanceSetOnAnotherServerIsPushedTo
     test::OnlineTestClients clients( network );
     const int32             clientIndex = clients.connect( second._port, { &directoryClient } ); // 두 번째 서버에 붙었다
     directoryClient.initialize( &clients.getClient( clientIndex ) );
-    test::tickAll( { &first, &second }, clients, 0 );
+    test::updateAll( { &first, &second }, clients, 0 );
     clients.login( clientIndex, 700 );
-    test::tickAll( { &first, &second }, clients, 0 );
+    test::updateAll( { &first, &second }, clients, 0 );
 
     MaintenanceWindow window;
     window._scope = "game";
     firstDirectory._service.setMaintenance( window, 1, "", 0, 1 ); // 첫 번째 서버의 GM 도구가 건다
-    test::tickAll( { &first, &second }, clients, 10, 10 );
+    test::updateAll( { &first, &second }, clients, 10, 10 );
     SW_ASSERT_EQUAL( directoryClient.getLastStatus()._listMaintenance.size(), size_t( 1 ) ); // 버스 → 다시 읽기 → 알림
     SW_EXPECT_TRUE( directoryClient.getLastStatus()._listMaintenance[0]._scope == "game" );
 }

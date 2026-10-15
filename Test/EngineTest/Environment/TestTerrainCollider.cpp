@@ -157,13 +157,13 @@ SW_TEST_CASE( TerrainColliderTest, CratesRestOnTheTerrainAndFallThroughHoles )
     SW_ASSERT_NOT_NULL( pSolid );
     SW_ASSERT_NOT_NULL( pHole );
 
-    manager.tick( Internal::kFrame );
+    manager.update( Internal::kFrame );
     SW_EXPECT_EQUAL( 0u, pCollider->getBodyCount() ); // 시작 전에는 바디가 없다
 
     manager.beginPlay();
     for ( uint32 frame = 0; frame < 180; ++frame )
     {
-        manager.tick( Internal::kFrame );
+        manager.update( Internal::kFrame );
     }
     SW_EXPECT_EQUAL( 1u, pCollider->getBodyCount() );
     SW_EXPECT_EQUAL( ( 16u * 16u - 16u ) * 2u, pCollider->getCollisionTriangleCount() );
@@ -178,7 +178,7 @@ SW_TEST_CASE( TerrainColliderTest, CratesRestOnTheTerrainAndFallThroughHoles )
     pSolid->setWorldPosition( float3{ 4.0f, 5.0f, 4.0f } );
     for ( uint32 frame = 0; frame < 180; ++frame )
     {
-        manager.tick( Internal::kFrame );
+        manager.update( Internal::kFrame );
     }
     SW_EXPECT_EQUAL( 1u, pCollider->getBodyCount() );
     SW_EXPECT_NEAR_EQUAL( 3.5f, pSolid->getWorldPosition()._y, 0.05f );
@@ -214,12 +214,12 @@ SW_TEST_CASE( TerrainColliderTest, WriteHeightsRebuildsOnlyTouchedChunkBodies )
     manager.beginPlay();
     for ( uint32 frame = 0; frame < 3; ++frame )
     {
-        manager.tick( Internal::kFrame );
+        manager.update( Internal::kFrame );
     }
     SW_ASSERT_EQUAL( 16u, pCollider->getBodyCount() );
     SW_EXPECT_EQUAL( 16u * 16u * 2u, pCollider->getCollisionTriangleCount() );
     const uint32 baseBuildCount = pCollider->getChunkBuildCount();
-    manager.tick( Internal::kFrame );
+    manager.update( Internal::kFrame );
     SW_EXPECT_EQUAL( baseBuildCount, pCollider->getChunkBuildCount() ); // 쓰지 않으면 다시 만들지 않는다
 
     vector<float32>   listHeight = pTerrain->getHeightfield().getHeightSamples();
@@ -238,7 +238,7 @@ SW_TEST_CASE( TerrainColliderTest, WriteHeightsRebuildsOnlyTouchedChunkBodies )
     SW_ASSERT_NOT_NULL( pCrate );
     for ( uint32 frame = 0; frame < 180; ++frame )
     {
-        manager.tick( Internal::kFrame );
+        manager.update( Internal::kFrame );
     }
     SW_EXPECT_EQUAL( baseBuildCount + 1u, pCollider->getChunkBuildCount() ); // 청크 (1, 1) 하나만
     SW_EXPECT_EQUAL( 16u, pCollider->getBodyCount() );
@@ -248,6 +248,6 @@ SW_TEST_CASE( TerrainColliderTest, WriteHeightsRebuildsOnlyTouchedChunkBodies )
     corner.include( 8, 8 ); // 청크 (1, 1) · (2, 1) · (1, 2) · (2, 2) 가 나눠 쓰는 샘플
     listHeight[8 * 17 + 8] = 3.0f;
     SW_ASSERT_TRUE( pTerrain->writeHeights( listHeight, corner ) );
-    manager.tick( Internal::kFrame );
+    manager.update( Internal::kFrame );
     SW_EXPECT_EQUAL( baseBuildCount + 5u, pCollider->getChunkBuildCount() );
 }

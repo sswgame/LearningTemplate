@@ -257,8 +257,8 @@ SW_TEST_CASE( ShooterTest, WeaponCatalogReadsXML )
 )";
     WeaponCatalog         catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kWeaponXML, "ShooterTest" ) );
-    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), catalog.getWeapons().size() );
-    const WeaponDef* pShotgun = catalog.findWeapon( "shotgun" );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), catalog.getAll().size() );
+    const WeaponDef* pShotgun = catalog.find( "shotgun" );
     SW_ASSERT_NOT_NULL( pShotgun );
     SW_EXPECT_EQUAL( 9, pShotgun->_pelletCount );
     SW_EXPECT_TRUE( pShotgun->_bAutomatic == SW_FALSE );

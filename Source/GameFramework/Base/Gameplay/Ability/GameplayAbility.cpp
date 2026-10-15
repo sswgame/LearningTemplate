@@ -230,7 +230,7 @@ namespace sw
         _bEnding = SW_FALSE;
     }
 
-    void GameplayAbility::tickAbility( float32 deltaTime )
+    void GameplayAbility::updateAbility( float32 deltaTime )
     {
         if ( isActive() == false )
             return;

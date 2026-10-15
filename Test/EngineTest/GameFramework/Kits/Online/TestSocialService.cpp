@@ -104,7 +104,7 @@ namespace
                     if ( message._originServerID != _bus.getServerID() )
                         _service.handleBusMessage( message._topic, message._bytes );
                 }
-                _service.tick( nowMs );
+                _service.update( nowMs );
                 (void)_pFront->pollCompletions();
                 (void)_router.pump();
             }

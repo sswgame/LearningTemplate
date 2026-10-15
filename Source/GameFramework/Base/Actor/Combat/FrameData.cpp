@@ -47,13 +47,7 @@ namespace sw
     // MoveCatalog
     // ------------------------------------------------------------------------------
     MoveCatalog::MoveCatalog()
-        : _catalog{}
     {
-    }
-
-    void MoveCatalog::addMove( const MoveFrameData& move )
-    {
-        (void)_catalog.add( move ); // 빈 id 는 카탈로그가 거른다
     }
 
     AttackHeight MoveCatalog::parseAttackHeight( string_view text, AttackHeight fallback )
@@ -130,7 +124,7 @@ namespace sw
                 move._listCancel.push_back( window );
             }
 
-            (void)_catalog.add( move );
+            (void)add( move );
             ++loadedCount;
         }
         if ( loadedCount == 0 )
@@ -328,7 +322,7 @@ namespace sw
         archive >> hitstopRemaining;
         archive >> bContact;
         archive >> bBlocked;
-        const MoveFrameData* pMove = catalog.findMove( moveID );
+        const MoveFrameData* pMove = catalog.find( moveID );
         if ( archive.isError() || pMove == nullptr )
             return false;
         return restoreState( *pMove, frame, hitstopRemaining, bContact == SW_TRUE, bBlocked == SW_TRUE );

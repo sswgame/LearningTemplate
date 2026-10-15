@@ -362,7 +362,7 @@ namespace sw
         }
         if ( _bInsideDirt == SW_FALSE )
         {
-            _drillSearchTimer.tick( deltaTime );
+            _drillSearchTimer.update( deltaTime );
             if ( _drillSearchTimer.isActive() == false )
             {
                 returnToMotor( _velocity * 0.5f );

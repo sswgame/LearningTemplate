@@ -52,7 +52,7 @@ namespace sw
         void               shutdown();
 
         /** @brief 호스트 틱 · 서버 등록 하트비트입니다. @p nowMs 는 서비스 시각(실제 실행은 UTC 밀리초, 테스트는 가짜 시각) — 캐시 만료도 이 시각으로 측정한다. */
-        void tick( int64 nowMs );
+        void update( int64 nowMs );
 
         OnlineServiceHost& getHost();
         uint16             getListenPort() const;

@@ -87,10 +87,10 @@ namespace
         }
 
         /** @brief 호스트가 하는 일 — 저장소 완료를 거둔 뒤 서비스 틱. */
-        void tick( int64 nowMs )
+        void update( int64 nowMs )
         {
             (void)_store.pollCompletions();
-            _service.tick( nowMs );
+            _service.update( nowMs );
         }
 
         EconomyCall makeCall( uint16 method, AccountID accountID = kPlayer ) const
@@ -110,7 +110,7 @@ SW_TEST_CASE( EconomyServiceTest, RepliesArriveOnlyOnStoreCompletion )
     EconomyServiceReplyCapture wallet;
     fixture._service.submitCall( fixture.makeCall( EconomyMethod::kGetWallet ), wallet.makeDelegate() );
     SW_EXPECT_EQUAL( wallet._count, 0 );
-    fixture.tick( 1000 );
+    fixture.update( 1000 );
     SW_ASSERT_EQUAL( wallet._count, 1 );
     SW_EXPECT_TRUE( wallet._reply._result == EconomyResult::Ok );
     SW_ASSERT_EQUAL( wallet._reply._listBalance.size(), size_t( 1 ) );
@@ -128,7 +128,7 @@ SW_TEST_CASE( EconomyServiceTest, SameKeyPurchaseChargesOnce )
     EconomyServiceReplyCapture second;
     fixture._service.submitCall( call, first.makeDelegate() );
     fixture._service.submitCall( call, second.makeDelegate() );
-    fixture.tick( 1000 );
+    fixture.update( 1000 );
     SW_EXPECT_TRUE( first._reply._result == EconomyResult::Ok );
     SW_EXPECT_TRUE( second._reply._result == EconomyResult::Ok );
     SW_EXPECT_TRUE( second._reply._bReplayed == SW_TRUE );
@@ -166,9 +166,9 @@ SW_TEST_CASE( EconomyServiceTest, ReceiptGoesThroughTheValidatorThenGrants )
     EconomyServiceReplyCapture capture;
     fixture._service.submitCall( call, capture.makeDelegate() );
     SW_EXPECT_EQUAL( fixture._fake.getPendingCount(), 1 );
-    fixture.tick( 1000 ); // 검증 결과를 거둬 지급 일을 맡긴다
+    fixture.update( 1000 ); // 검증 결과를 거둬 지급 일을 맡긴다
     SW_EXPECT_EQUAL( capture._count, 0 );
-    fixture.tick( 1001 ); // 지급 일의 완료
+    fixture.update( 1001 ); // 지급 일의 완료
     SW_ASSERT_EQUAL( capture._count, 1 );
     SW_EXPECT_TRUE( capture._reply._result == EconomyResult::Ok );
     SW_EXPECT_EQUAL( capture._reply._productID, string( "gem100" ) );

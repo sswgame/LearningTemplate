@@ -266,8 +266,8 @@ SW_TEST_CASE( CombatStateTest, MoveTimelinePhasesCancelWindowsHitstopAndFrameAdv
 {
     MoveCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kCombatStateMoveXML, "CombatStateTest" ) );
-    SW_EXPECT_EQUAL( 2u, catalog.getMoves().size() ); // id 없는 Move 는 버린다
-    const MoveFrameData* pJab = catalog.findMove( hashed_string( "jab" ) );
+    SW_EXPECT_EQUAL( 2u, catalog.getAll().size() ); // id 없는 Move 는 버린다
+    const MoveFrameData* pJab = catalog.find( hashed_string( "jab" ) );
     SW_ASSERT_NOT_NULL( pJab );
     SW_EXPECT_EQUAL( 26, pJab->getTotalFrames() ); // 9 + 2 + 15
     SW_EXPECT_TRUE( pJab->_height == AttackHeight::High );

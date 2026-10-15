@@ -58,7 +58,7 @@ namespace sw
     {
         if ( isFinished() )
             return;
-        _delay.tick( deltaTime );
+        _delay.update( deltaTime );
         if ( _delay.isActive() )
             return;
 

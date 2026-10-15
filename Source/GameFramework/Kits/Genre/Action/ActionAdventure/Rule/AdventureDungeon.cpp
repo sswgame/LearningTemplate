@@ -173,7 +173,7 @@ namespace sw
                 }
                 dungeon._listDevice.push_back( device );
             }
-            (void)_catalog.add( dungeon );
+            (void)add( dungeon );
             ++loadedCount;
         }
         return loadedCount;
@@ -193,10 +193,10 @@ namespace sw
         _eventBuffer.clear();
         if ( pCatalog == nullptr )
             return;
-        _listRuntime.resize( pCatalog->getDungeons().size() );
+        _listRuntime.resize( pCatalog->getAll().size() );
         for ( size_t index = 0; index < _listRuntime.size(); ++index )
         {
-            _listRuntime[index]._listDevice.resize( pCatalog->getDungeons()[index]._listDevice.size() );
+            _listRuntime[index]._listDevice.resize( pCatalog->getAll()[index]._listDevice.size() );
         }
     }
 
@@ -204,11 +204,11 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return nullptr;
-        const int32 index = _pCatalog->findDungeonIndex( dungeonID );
+        const int32 index = _pCatalog->findIndex( dungeonID );
         if ( index < 0 || static_cast<size_t>( index ) >= _listRuntime.size() )
             return nullptr;
         if ( ppOutDef != nullptr )
-            *ppOutDef = &_pCatalog->getDungeons()[static_cast<size_t>( index )];
+            *ppOutDef = &_pCatalog->getAll()[static_cast<size_t>( index )];
         return &_listRuntime[static_cast<size_t>( index )];
     }
 
@@ -287,7 +287,7 @@ namespace sw
     int32 AdventureDungeonState::revealMap( const hashed_string& dungeonID, AreaGraph& areaGraph ) const
     {
         const AdventureDungeonProgress* pProgress       = findProgress( dungeonID );
-        const AdventureDungeonDef*      pDungeon        = _pCatalog != nullptr ? _pCatalog->findDungeon( dungeonID ) : nullptr;
+        const AdventureDungeonDef*      pDungeon        = _pCatalog != nullptr ? _pCatalog->find( dungeonID ) : nullptr;
         const bool                      bMapUnavailable = pProgress == nullptr || pDungeon == nullptr || pProgress->_bMap == SW_FALSE;
         if ( bMapUnavailable )
             return 0;
@@ -299,7 +299,7 @@ namespace sw
     {
         outListTreasure.clear();
         const AdventureDungeonProgress* pProgress           = findProgress( dungeonID );
-        const AdventureDungeonDef*      pDungeon            = _pCatalog != nullptr ? _pCatalog->findDungeon( dungeonID ) : nullptr;
+        const AdventureDungeonDef*      pDungeon            = _pCatalog != nullptr ? _pCatalog->find( dungeonID ) : nullptr;
         const bool                      bCompassUnavailable = pProgress == nullptr || pDungeon == nullptr || pProgress->_bCompass == SW_FALSE;
         if ( bCompassUnavailable )
             return;
@@ -312,7 +312,7 @@ namespace sw
 
     void AdventureDungeonState::setDeviceActive( const AdventureDungeonDef& dungeon, int32 deviceIndex, bool bActive, GameFlags& flags )
     {
-        DungeonRuntime&           runtime = _listRuntime[static_cast<size_t>( _pCatalog->findDungeonIndex( dungeon._id ) )];
+        DungeonRuntime&           runtime = _listRuntime[static_cast<size_t>( _pCatalog->findIndex( dungeon._id ) )];
         DeviceRuntime&            device  = runtime._listDevice[static_cast<size_t>( deviceIndex )];
         const AdventureDeviceDef& def     = dungeon._listDevice[static_cast<size_t>( deviceIndex )];
         const uint8               bNew    = bActive ? SW_TRUE : SW_FALSE;
@@ -379,7 +379,7 @@ namespace sw
     {
         if ( _pCatalog == nullptr || deltaTime <= 0.0f )
             return;
-        const vector<AdventureDungeonDef>& listDungeon = _pCatalog->getDungeons();
+        const vector<AdventureDungeonDef>& listDungeon = _pCatalog->getAll();
         for ( size_t dungeonIndex = 0; dungeonIndex < _listRuntime.size(); ++dungeonIndex )
         {
             const AdventureDungeonDef& dungeon = listDungeon[dungeonIndex];
@@ -391,13 +391,13 @@ namespace sw
                 const bool                bTorchTimerRunning = def._kind == AdventureDeviceKind::TorchGroup && device._bActive == SW_FALSE && device._litCount > 0 && def._duration > 0.0f;
                 if ( def._kind == AdventureDeviceKind::TimedSwitch && device._bActive == SW_TRUE )
                 {
-                    device._timer.tick( deltaTime );
+                    device._timer.update( deltaTime );
                     if ( device._timer.isActive() == false )
                         setDeviceActive( dungeon, static_cast<int32>( deviceIndex ), false, flags );
                 }
                 else if ( bTorchTimerRunning )
                 {
-                    device._timer.tick( deltaTime );
+                    device._timer.update( deltaTime );
                     if ( device._timer.isActive() == false )
                     {
                         device._litCount = 0;
@@ -417,7 +417,7 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return nullptr;
-        const int32 index = _pCatalog->findDungeonIndex( dungeonID );
+        const int32 index = _pCatalog->findIndex( dungeonID );
         return index >= 0 && static_cast<size_t>( index ) < _listRuntime.size() ? &_listRuntime[static_cast<size_t>( index )]._progress : nullptr;
     }
 
@@ -425,10 +425,10 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return false;
-        const int32 dungeonIndex = _pCatalog->findDungeonIndex( dungeonID );
+        const int32 dungeonIndex = _pCatalog->findIndex( dungeonID );
         if ( dungeonIndex < 0 || static_cast<size_t>( dungeonIndex ) >= _listRuntime.size() )
             return false;
-        const int32 deviceIndex = _pCatalog->getDungeons()[static_cast<size_t>( dungeonIndex )].findDeviceIndex( deviceID );
+        const int32 deviceIndex = _pCatalog->getAll()[static_cast<size_t>( dungeonIndex )].findDeviceIndex( deviceID );
         return deviceIndex >= 0 && _listRuntime[static_cast<size_t>( dungeonIndex )]._listDevice[static_cast<size_t>( deviceIndex )]._bActive == SW_TRUE;
     }
 
@@ -436,10 +436,10 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return 0;
-        const int32 dungeonIndex = _pCatalog->findDungeonIndex( dungeonID );
+        const int32 dungeonIndex = _pCatalog->findIndex( dungeonID );
         if ( dungeonIndex < 0 || static_cast<size_t>( dungeonIndex ) >= _listRuntime.size() )
             return 0;
-        const int32 deviceIndex = _pCatalog->getDungeons()[static_cast<size_t>( dungeonIndex )].findDeviceIndex( deviceID );
+        const int32 deviceIndex = _pCatalog->getAll()[static_cast<size_t>( dungeonIndex )].findDeviceIndex( deviceID );
         return deviceIndex >= 0 ? _listRuntime[static_cast<size_t>( dungeonIndex )]._listDevice[static_cast<size_t>( deviceIndex )]._litCount : 0;
     }
 
@@ -457,7 +457,7 @@ namespace sw
 
     void AdventureDungeonState::writeState( Archive& outArchive ) const
     {
-        const vector<AdventureDungeonDef>* pListDungeon = _pCatalog != nullptr ? &_pCatalog->getDungeons() : nullptr;
+        const vector<AdventureDungeonDef>* pListDungeon = _pCatalog != nullptr ? &_pCatalog->getAll() : nullptr;
         outArchive << static_cast<uint32>( _listRuntime.size() );
         for ( size_t dungeonIndex = 0; dungeonIndex < _listRuntime.size(); ++dungeonIndex )
         {
@@ -493,10 +493,10 @@ namespace sw
             hashed_string dungeonID;
             if ( StateArchiveUtil::readName( archive, dungeonID ) == false )
                 return false;
-            const int32 dungeonIndex = _pCatalog->findDungeonIndex( dungeonID );
+            const int32 dungeonIndex = _pCatalog->findIndex( dungeonID );
             if ( dungeonIndex < 0 || static_cast<size_t>( dungeonIndex ) >= listRuntime.size() )
                 return false;
-            const AdventureDungeonDef& dungeon = _pCatalog->getDungeons()[static_cast<size_t>( dungeonIndex )];
+            const AdventureDungeonDef& dungeon = _pCatalog->getAll()[static_cast<size_t>( dungeonIndex )];
             DungeonRuntime&            runtime = listRuntime[static_cast<size_t>( dungeonIndex )];
             AdventureDungeonProgress   progress;
             uint32                     deviceCount = 0;

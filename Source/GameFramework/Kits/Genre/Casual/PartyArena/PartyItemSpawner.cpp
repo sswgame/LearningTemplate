@@ -117,7 +117,7 @@ namespace sw
         // 2) 새로 놓기: 슬롯이 차 있으면 타이머는 멈춰 있고, 빈 슬롯이 나면 곧 나온다.
         if ( _catalog.isEmpty() || static_cast<int32>( _listInstance.size() ) >= _settings._maxActive )
             return;
-        _spawnTimer.tick( deltaTime );
+        _spawnTimer.update( deltaTime );
         if ( _spawnTimer.isActive() )
             return;
         spawnOne();

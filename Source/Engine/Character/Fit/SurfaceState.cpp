@@ -257,7 +257,7 @@ namespace sw
         return nullptr;
     }
 
-    void CharacterSurfaceState::tick( float32 deltaSeconds )
+    void CharacterSurfaceState::update( float32 deltaSeconds )
     {
         if ( deltaSeconds <= 0.0f )
             return;

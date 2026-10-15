@@ -395,7 +395,7 @@ SW_TEST_CASE( AnimationNotifyTest, BuiltInHandlersFindSurfaceHitTargetsOnceAndRa
     pNotify->setNotifyTable( table );
 
     manager.beginPlay();
-    manager.tick( TestAnimationNotifyInternal::kFrame ); // 바디를 만든다
+    manager.update( TestAnimationNotifyInternal::kFrame ); // 바디를 만든다
 
     vector<CameraShakeRequest> listShake;
     const DelegateHandle       shakeHandle =

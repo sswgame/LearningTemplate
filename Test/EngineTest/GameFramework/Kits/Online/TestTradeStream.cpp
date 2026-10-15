@@ -155,9 +155,9 @@ namespace
             for ( int32 index = 0; index < count; ++index )
             {
                 _nowMs += 20;
-                _alice._client.tick( _nowMs );
-                _bob._client.tick( _nowMs );
-                _server->_host.tick( _nowMs );
+                _alice._client.update( _nowMs );
+                _bob._client.update( _nowMs );
+                _server->_host.update( _nowMs );
             }
         }
 
@@ -310,8 +310,8 @@ SW_TEST_CASE( TradeStreamTest, ConfirmRetriedWithTheSameKeyAfterADroppedStreamSe
     const int32             side = seen.findSideIndex( rig._bobID );
     SW_ASSERT_TRUE( side >= 0 );
     (void)rig._bob._trade.confirmSeen( tradeID, seen._arrSide[side]._offerRevision, seen._arrSide[1 - side]._offerRevision, key );
-    rig._bob._client.tick( rig._nowMs ); // 요청은 선에 올랐다
-    rig._server->_host.tick( rig._nowMs );
+    rig._bob._client.update( rig._nowMs ); // 요청은 선에 올랐다
+    rig._server->_host.update( rig._nowMs );
     rig._bob._transport->close( rig._bob._client.getConnection(), StreamCloseMode::Abort ); // 응답 전에 끊겼다
     rig.step( 2 );
     for ( int32 attempt = 0; attempt < 400 && rig._bob._account.isLoggedIn() == false; ++attempt )

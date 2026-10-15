@@ -158,12 +158,12 @@ namespace
         TComponent* pComponent = pObject->addComponent<TComponent>();
         if ( pComponent == nullptr )
             return false;
-        const size_t countBefore = pObject->getComponentCount();
-        manager.tick( 0.016f ); // 플레이 중에 붙은 컴포넌트는 다음 틱 단계에서 시작한다
-        manager.tick( 0.016f ); // 그 안에서 미룬 구조 변경까지 적용된다
+        const size_t previousCount = pObject->getComponentCount();
+        manager.update( 0.016f ); // 플레이 중에 붙은 컴포넌트는 다음 틱 단계에서 시작한다
+        manager.update( 0.016f ); // 그 안에서 미룬 구조 변경까지 적용된다
         const bool bBegun   = pComponent->hasBegunPlay();
         const bool bNoTag   = pObject->getComponent<TagComponent>() == nullptr;
-        const bool bNoExtra = pObject->getComponentCount() == countBefore;
+        const bool bNoExtra = pObject->getComponentCount() == previousCount;
         return bBegun && bNoTag && bNoExtra;
     }
 
@@ -815,9 +815,9 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSceneLoadEvents )
         for ( int32 stepIndex = 0; stepIndex < 200 && sceneManager.isTransitioning(); ++stepIndex )
         {
             tasks.waitAll();
-            sceneManager.tickTransitions();
+            sceneManager.updateTransitions();
         }
-        sceneManager.tickTransitions();
+        sceneManager.updateTransitions();
     };
 
     SceneGameInstance gameInstance;
@@ -1371,7 +1371,7 @@ SW_TEST_CASE( GameFrameworkTest, DontDestroyOnLoadComponentKeepsItsOwnerAcrossSc
     SW_ASSERT_NOT_NULL( pInventory->addComponent<DontDestroyOnLoadComponent>() );
     SW_ASSERT_NOT_NULL( pTown->getObjectManager()->createGameObject( hashed_string( "Villager" ) ) );
     // 플레이 중에 붙은 컴포넌트의 시작은 다음 틱 단계다.
-    sceneManager.tick( 0.016f );
+    sceneManager.update( 0.016f );
     SW_EXPECT_TRUE( sceneManager.isPersistent( pInventory ) );
     const uint64 inventoryID = pInventory->getObjectID();
 

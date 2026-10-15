@@ -118,9 +118,9 @@ namespace
                 {
                     _service.handleBusMessage( message._topic, message._bytes );
                 }
-                _service.tick( nowMs );
+                _service.update( nowMs );
                 (void)_store.pollCompletions();
-                _presence.tick();
+                _presence.update();
             }
             _service.drainCompletions( _listCompletion );
             _service.drainDeliveries( _listDelivery );

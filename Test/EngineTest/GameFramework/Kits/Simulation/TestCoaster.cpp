@@ -236,7 +236,7 @@ SW_TEST_CASE( CoasterTest, LayoutCatalogReadsPiecesAndSkipsUnknownOnes )
 )";
     CoasterLayoutCatalog  catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kLayoutXML, "CoasterTest" ) );
-    const CoasterLayoutDef* pLayout = catalog.findLayout( "mini" );
+    const CoasterLayoutDef* pLayout = catalog.find( "mini" );
     SW_ASSERT_NOT_NULL( pLayout );
     SW_EXPECT_EQUAL( static_cast<size_t>( 3 ), pLayout->_listPiece.size() );
     SW_EXPECT_NEAR_EQUAL( 2.0f, pLayout->_startHeight, 1.0e-4f );

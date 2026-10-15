@@ -125,12 +125,12 @@ SW_TEST_CASE( BehaviorMoveToTest, MoveToDrivesANavMeshAgent )
     blackboard.setVector( goalKey, goal );
 
     manager.beginPlay();
-    test::tickFrames( manager, 2 );
+    test::updateFrames( manager, 2 );
     sw::BehaviorStatus status = sw::BehaviorStatus::Running;
     for ( uint32 frame = 0; frame < 600 && status == sw::BehaviorStatus::Running; ++frame )
     {
         status = runner.tick( blackboard, pWalker, 1.0f / 60.0f );
-        manager.tick( 1.0f / 60.0f );
+        manager.update( 1.0f / 60.0f );
         SW_ASSERT_FALSE( navtest::isInsideCrates( pRoot->getWorldPosition() ) );
     }
     SW_EXPECT_TRUE( status == sw::BehaviorStatus::Success );

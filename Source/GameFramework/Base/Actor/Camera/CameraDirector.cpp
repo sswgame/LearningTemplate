@@ -144,7 +144,7 @@ namespace sw
 
     bool CameraDirector::activatePreset( const CameraPresetCatalog& catalog, const hashed_string& id )
     {
-        const CameraPresetDef* pDef = catalog.findPreset( id );
+        const CameraPresetDef* pDef = catalog.find( id );
         if ( pDef == nullptr )
             return false;
         const hashed_string fromID = hasActivePreset() ? getActivePresetID() : hashed_string{};
@@ -154,7 +154,7 @@ namespace sw
 
     bool CameraDirector::activatePreset( const CameraPresetCatalog& catalog, const hashed_string& id, const BlendCurveDef& blend )
     {
-        const CameraPresetDef* pDef = catalog.findPreset( id );
+        const CameraPresetDef* pDef = catalog.find( id );
         if ( pDef == nullptr )
             return false;
         activatePreset( *pDef, blend );
@@ -374,7 +374,7 @@ namespace sw
             if ( archive.isError() )
                 return false;
             layer._bFresh               = SW_FALSE;
-            const CameraPresetDef* pDef = layer._bFrozen == SW_TRUE ? nullptr : catalog.findPreset( id );
+            const CameraPresetDef* pDef = layer._bFrozen == SW_TRUE ? nullptr : catalog.find( id );
             if ( pDef != nullptr )
             {
                 layer._def = *pDef;

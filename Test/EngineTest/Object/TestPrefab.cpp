@@ -383,7 +383,7 @@ SW_TEST_CASE( PrefabTest, SpawnDuringTickKeepsThePrefabsState )
     pMock->_pTickSpawnManager = &objects;
     pMock->_tickSpawnPath     = xmlPath;
 
-    objects.tick( 0.016f );
+    objects.update( 0.016f );
 
     SW_ASSERT_NOT_NULL( pMock->_pTickSpawned );
     const sw::SceneComponent* pRoot = pMock->_pTickSpawned->getPrimarySceneComponent();

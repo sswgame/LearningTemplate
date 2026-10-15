@@ -94,7 +94,7 @@ namespace
                        _fighterCatalog.loadFromXMLText( kFightingFighterXML, _moveCatalog, "FightingTest" );
         }
 
-        const FighterDef* findTester() const { return _fighterCatalog.findFighter( "tester" ); }
+        const FighterDef* findTester() const { return _fighterCatalog.find( "tester" ); }
     };
 
     /** @brief 앞 기준 넘패드(6 = 상대 쪽)를 그 플레이어의 화면 방향으로 바꿉니다. 플레이어 1 은 오른쪽에 있어 뒤집힌다. */
@@ -362,9 +362,9 @@ SW_TEST_CASE( FightingTest, FrameAdvantageDecidesGuaranteedPunish )
     FightingFixture fixture;
     SW_ASSERT_TRUE( fixture._bLoaded );
     const FighterDef& tester = *fixture.findTester();
-    SW_EXPECT_EQUAL( -11, fixture._moveCatalog.findMove( "unsafe" )->computeFrameAdvantage( true ) );
-    SW_EXPECT_EQUAL( -8, fixture._moveCatalog.findMove( "safe" )->computeFrameAdvantage( true ) );
-    SW_EXPECT_EQUAL( 10, fixture._moveCatalog.findMove( "jab" )->_startup );
+    SW_EXPECT_EQUAL( -11, fixture._moveCatalog.find( "unsafe" )->computeFrameAdvantage( true ) );
+    SW_EXPECT_EQUAL( -8, fixture._moveCatalog.find( "safe" )->computeFrameAdvantage( true ) );
+    SW_EXPECT_EQUAL( 10, fixture._moveCatalog.find( "jab" )->_startup );
 
     // 막은 쪽은 가드 경직 중에 1 을 미리 넣는다(선입력) — 움직일 수 있는 첫 프레임에 10 프레임 잽이 나간다.
     const hashed_string arrMove[]   = { "unsafe", "safe" };

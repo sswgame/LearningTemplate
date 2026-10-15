@@ -230,31 +230,31 @@ SW_TEST_CASE( DelegateTest, DelegateFullCoverage )
 SW_TEST_CASE( DelegateTest, MulticastDelegateDeferredRemoveDuringBroadcast )
 {
     sw::MulticastDelegate<void()> multiDel;
-    int32                         countA = 0;
-    int32                         countB = 0;
+    int32                         firstCallCount  = 0;
+    int32                         secondCallCount = 0;
 
     sw::DelegateHandle handleA;
     sw::DelegateHandle handleB;
 
     handleA = multiDel.add( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&]()
     {
-        countA++;
+        firstCallCount++;
         // A 실행 중 B를 remove -> B는 unbind되어 이번 브로드캐스트 및 다음 브로드캐스트에서 실행되지 않아야 함
         multiDel.remove( handleB );
     } ) );
 
     handleB = multiDel.add( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&]()
     {
-        countB++;
+        secondCallCount++;
     } ) );
 
     multiDel.broadcast();
-    SW_EXPECT_EQUAL( 1, countA );
-    SW_EXPECT_EQUAL( 0, countB );
+    SW_EXPECT_EQUAL( 1, firstCallCount );
+    SW_EXPECT_EQUAL( 0, secondCallCount );
 
     multiDel.broadcast();
-    SW_EXPECT_EQUAL( 2, countA );
-    SW_EXPECT_EQUAL( 0, countB );
+    SW_EXPECT_EQUAL( 2, firstCallCount );
+    SW_EXPECT_EQUAL( 0, secondCallCount );
 }
 
 /**

@@ -266,7 +266,7 @@ namespace sw
         _bHasLastBeginFrame = false;
     }
 
-    void ScenarioRecorder::tick( const InputManager& input, float32 deltaTime )
+    void ScenarioRecorder::update( const InputManager& input, float32 deltaTime )
     {
         if ( _replay.isRecording() == false )
             return;

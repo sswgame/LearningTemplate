@@ -184,14 +184,14 @@ namespace sw
             _bFinished = SW_TRUE; // 시나리오가 끊지 않았는데 끊겼다(로그아웃 뒤 · 서버가 닫음) — 더 돌 수 없다
     }
 
-    bool LoadBot::tick( int64 nowMs )
+    bool LoadBot::update( int64 nowMs )
     {
         if ( _bFinished == SW_TRUE )
             return false;
         if ( _bConnecting == SW_TRUE )
             return true; // 열림 · 닫힘을 기다린다
         if ( _bConnectionOpen == SW_TRUE )
-            _client.tick( nowMs );
+            _client.update( nowMs );
         drainNotifications();
         pollAccountReplies();
         switch ( _awaitKind )

@@ -82,15 +82,3 @@ namespace sw
         uint64                   _serverID;
     };
 } // namespace sw
-
-namespace sw
-{
-    /** @brief 거래 레코드 코덱입니다. */
-    struct SW_KIT_SERVER_API TradeRecordUtil
-    {
-        static vector<uint8>      encodeSession( const TradeSnapshot& snapshot, uint64 ownerServerID );
-        [[nodiscard]] static bool decodeSession( const vector<uint8>& bytes, TradeSnapshot& outSnapshot, uint64& outOwnerServerID );
-        /** @brief 정산 분개 키를 만듭니다. */
-        [[nodiscard]] static bool makeJournalKey( uint64 tradeID, string& outKey );
-    };
-} // namespace sw

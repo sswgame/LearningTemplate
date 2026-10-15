@@ -49,7 +49,7 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         [[nodiscard]] bool readState( Archive& archive ) override;
         void               onGameStarted() override;
-        void               tickGame( float32 deltaTime ) override;
+        void               updateGame( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         void               onViewsDespawned() override;
         bool               hasPendingSpawn() const override { return _bViewsDirty == SW_TRUE; }

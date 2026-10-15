@@ -50,9 +50,9 @@ namespace sw
         return count;
     }
 
-    void OidcLoginProvider::tick( int64 nowMs )
+    void OidcLoginProvider::update( int64 nowMs )
     {
-        _pHTTPClient->tick( nowMs );
+        _pHTTPClient->update( nowMs );
         vector<HTTPClientResponse> listResponse;
         (void)_pHTTPClient->pollResponses( listResponse );
         for ( const HTTPClientResponse& response : listResponse )

@@ -134,12 +134,12 @@ namespace sw
         {
             for ( const hashed_string& itemID : { crop._seedItem, crop._produceItem } )
             {
-                if ( itemID.empty() || inoutItems.findItem( itemID ) != nullptr )
+                if ( itemID.empty() || inoutItems.find( itemID ) != nullptr )
                     continue;
                 ItemDef item;
                 item._id       = itemID;
                 item._maxStack = maxStack;
-                inoutItems.addItem( item );
+                inoutItems.add( item );
             }
         }
     }

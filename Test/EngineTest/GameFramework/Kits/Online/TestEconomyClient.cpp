@@ -158,8 +158,8 @@ namespace
         void step()
         {
             _nowMs += 20;
-            _player._client.tick( _nowMs );
-            _server._host.tick( _nowMs );
+            _player._client.update( _nowMs );
+            _server._host.update( _nowMs );
         }
 
         bool waitFor( const EconomyReplyCapture& capture )

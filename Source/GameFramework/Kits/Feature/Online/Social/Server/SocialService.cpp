@@ -334,7 +334,7 @@ namespace sw
         _dependencies = SocialServiceDependencies{};
     }
 
-    void SocialService::tick( int64 nowMs )
+    void SocialService::update( int64 nowMs )
     {
         for ( auto& [accountID, local] : _mapAccountToLocal ) // 접속 상태의 시한을 연장한다
         {

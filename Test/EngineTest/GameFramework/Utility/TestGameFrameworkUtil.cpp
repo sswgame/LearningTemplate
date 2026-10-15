@@ -69,7 +69,7 @@ namespace
         int32         count      = 0;
         for ( int32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
         {
-            cooldown.tick( deltaTime );
+            cooldown.update( deltaTime );
             if ( cooldown.isActive() )
                 continue;
             ++count;
@@ -171,29 +171,29 @@ SW_TEST_CASE( GameFrameworkUtilTest, CountdownEndsOnceAndRestartCarriesOneInterv
 {
     Countdown countdown;
     SW_EXPECT_FALSE( countdown.isActive() );
-    SW_EXPECT_FALSE( countdown.tick( 0.1f ) ); // 꺼진 채 흘려도 끝나지 않는다
+    SW_EXPECT_FALSE( countdown.update( 0.1f ) ); // 꺼진 채 흘려도 끝나지 않는다
     countdown.start( 1.0f );
-    SW_EXPECT_FALSE( countdown.tick( 0.6f ) );
+    SW_EXPECT_FALSE( countdown.update( 0.6f ) );
     SW_EXPECT_TRUE( countdown.isActive() );
     SW_EXPECT_NEAR_EQUAL( 0.4f, countdown.getRemaining(), 1.0e-5f );
-    SW_EXPECT_FALSE( countdown.tick( 0.0f ) ); // 0 걸음은 그대로
-    SW_EXPECT_TRUE( countdown.tick( 0.6f ) );  // 이번 걸음에 끝났다 — 0.2 지나쳤다
+    SW_EXPECT_FALSE( countdown.update( 0.0f ) ); // 0 걸음은 그대로
+    SW_EXPECT_TRUE( countdown.update( 0.6f ) );  // 이번 걸음에 끝났다 — 0.2 지나쳤다
     SW_EXPECT_FALSE( countdown.isActive() );
     SW_EXPECT_NEAR_EQUAL( 0.0f, countdown.getRemaining(), 1.0e-6f );
     countdown.restart( 1.0f );
     SW_EXPECT_NEAR_EQUAL( 0.8f, countdown.getRemaining(), 1.0e-5f ); // 늦은 0.2 를 뺐다
-    SW_EXPECT_FALSE( countdown.tick( 0.7f ) );
-    SW_EXPECT_TRUE( countdown.tick( 0.7f ) );
-    SW_EXPECT_FALSE( countdown.tick( 0.1f ) ); // 다시 걸지 않았다 — 늦음이 지워지고 다시 알리지 않는다
+    SW_EXPECT_FALSE( countdown.update( 0.7f ) );
+    SW_EXPECT_TRUE( countdown.update( 0.7f ) );
+    SW_EXPECT_FALSE( countdown.update( 0.1f ) ); // 다시 걸지 않았다 — 늦음이 지워지고 다시 알리지 않는다
     countdown.restart( 1.0f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, countdown.getRemaining(), 1.0e-6f ); // 쉰 시간은 잇지 않는다
 
     // 걸음이 간격보다 길면 잇는 몫은 한 간격까지 — 결과가 0 이어도 걸음마다 한 번이지 몰아 내지 않는다.
     countdown.start( 0.1f );
-    SW_EXPECT_TRUE( countdown.tick( 0.5f ) );
+    SW_EXPECT_TRUE( countdown.update( 0.5f ) );
     countdown.restart( 0.25f );
     SW_EXPECT_FALSE( countdown.isActive() );
-    SW_EXPECT_FALSE( countdown.tick( 0.5f ) );
+    SW_EXPECT_FALSE( countdown.update( 0.5f ) );
     SW_EXPECT_FALSE( countdown.isActive() );
 
     // 아직 남아 있을 때 다시 걸면 새로 거는 것과 같다.
@@ -240,7 +240,7 @@ SW_TEST_CASE( GameFrameworkUtilTest, CountdownTickRepeatKeepsTheHeldRate )
             int32       placeCount = 0;
             for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
             {
-                placeCount += placeCooldown.tickRepeat( deltaTime, 0.25f, true ) ? 1 : 0;
+                placeCount += placeCooldown.updateRepeat( deltaTime, 0.25f, true ) ? 1 : 0;
             }
             SW_EXPECT_NEAR_EQUAL( 41.0f, static_cast<float32>( placeCount ), 1.0f );
         }
@@ -252,11 +252,11 @@ SW_TEST_CASE( GameFrameworkUtilTest, CountdownTickRepeatKeepsTheHeldRate )
         int32 swingCount = 0;
         for ( int32 stepIndex = 0; stepIndex < 50; ++stepIndex ) // 5 초 사정거리 밖
         {
-            swingCount += swingCooldown.tickRepeat( 0.1f, 1.5f, false ) ? 1 : 0;
+            swingCount += swingCooldown.updateRepeat( 0.1f, 1.5f, false ) ? 1 : 0;
         }
         SW_EXPECT_EQUAL( 0, swingCount );
-        SW_EXPECT_TRUE( swingCooldown.tickRepeat( 0.1f, 1.5f, true ) ); // 들어온 걸음에 한 번
-        SW_EXPECT_FALSE( swingCooldown.tickRepeat( 0.1f, 1.5f, true ) );
+        SW_EXPECT_TRUE( swingCooldown.updateRepeat( 0.1f, 1.5f, true ) ); // 들어온 걸음에 한 번
+        SW_EXPECT_FALSE( swingCooldown.updateRepeat( 0.1f, 1.5f, true ) );
         SW_EXPECT_NEAR_EQUAL( 1.4f, swingCooldown.getRemaining(), 1.0e-4f );
     }
 }

@@ -310,14 +310,14 @@ SW_TEST_CASE( MailboxTest, ServiceClaimNeedsAKeyAndSweepsOnItsPeriod )
     MailboxReplyCapture claimed;
     service.submitCall( claimCall, claimed.makeDelegate() );
     (void)store.pollCompletions();
-    service.tick( 2000 );
+    service.update( 2000 );
     SW_ASSERT_EQUAL( claimed._count, 1 );
     SW_EXPECT_TRUE( claimed._reply._result == MailboxResult::Ok );
     SW_EXPECT_EQUAL( fixture.gold( MailFixture::kOwner ), int64( 7 ) );
 
     (void)fixture.send( "expire", LedgerHolder::makeMint(), 3, 1000, 4000 );
     (void)store.pollCompletions(); // 앞 틱의 쓸기 · 캠페인 일이 끝났다(호스트가 서비스 틱 전에 하는 일)
-    service.tick( 5000 );          // 주기 — 쓸기 일을 맡긴다
+    service.update( 5000 );        // 주기 — 쓸기 일을 맡긴다
     (void)store.pollCompletions();
     SW_EXPECT_EQUAL( fixture._database.countRecords( ServiceMail::getExpiryTable() ), 0 );
     SW_EXPECT_EQUAL( fixture._database.countRecords( ServiceMail::getMailTable() ), 1 ); // 받은 "svc" 만 남는다(받은 우편은 쓸기 대상이 아니다)

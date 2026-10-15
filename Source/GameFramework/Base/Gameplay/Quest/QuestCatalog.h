@@ -102,18 +102,13 @@ namespace sw
      *     </QuestCatalog>
      * @endcode
      */
-    class SW_GF_API QuestCatalog : public XMLCatalog<QuestCatalog>
+    class SW_GF_API QuestCatalog : public XMLCatalog<QuestCatalog>, public GameCatalog<QuestDef>
     {
         friend class XMLCatalog<QuestCatalog>;
 
     public:
-        const QuestDef*         findQuest( const hashed_string& id ) const { return _catalog.find( id ); }
-        const vector<QuestDef>& getQuests() const { return _catalog.getAll(); }
-
     private:
         static constexpr const utf8* kXMLRootName = "QuestCatalog"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
-
-        GameCatalog<QuestDef> _catalog{};
     };
 } // namespace sw

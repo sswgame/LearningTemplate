@@ -211,22 +211,15 @@ namespace sw
      * @brief `<CoasterCatalog><Layout id="..." name="..." startHeight="1"><Piece type="LiftHill" length="30" height="25"/>...` 를 읽습니다.
      * @details 모르는 조각 이름은 경고하고 그 조각만 건너뛴다. 같은 id 는 뒤의 것이 이긴다.
      */
-    class SW_KIT_API CoasterLayoutCatalog : public XMLCatalog<CoasterLayoutCatalog>
+    class SW_KIT_API CoasterLayoutCatalog : public XMLCatalog<CoasterLayoutCatalog>, public GameCatalog<CoasterLayoutDef>
     {
         friend class XMLCatalog<CoasterLayoutCatalog>;
 
     public:
         CoasterLayoutCatalog();
 
-        void addLayout( const CoasterLayoutDef& layout );
-
-        const CoasterLayoutDef*         findLayout( const hashed_string& id ) const { return _catalog.find( id ); }
-        const vector<CoasterLayoutDef>& getLayouts() const { return _catalog.getAll(); }
-
     private:
         static constexpr const utf8* kXMLRootName = "CoasterCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
-
-        GameCatalog<CoasterLayoutDef> _catalog; ///< 읽은 순서이며, 게임이 차례로 바꿔 탄다
     };
 } // namespace sw

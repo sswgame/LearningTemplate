@@ -73,14 +73,13 @@ namespace sw
      * @details `places` 를 적으면 테이블은 그 인원 기준이다. 실제 인원이 다르면 순위를 그 인원에 맞춰 늘려서 고른다(4명 경기의 4등은 8명 테이블의 8등).
      *          어느 구간에도 들지 않는 순위는 가장 가까운 구간의 테이블을 쓴다.
      */
-    class SW_KIT_API KartItemCatalog : public XMLCatalog<KartItemCatalog>
+    class SW_KIT_API KartItemCatalog : public XMLCatalog<KartItemCatalog>, public GameCatalog<KartItemDef>
     {
         friend class XMLCatalog<KartItemCatalog>;
 
     public:
         KartItemCatalog();
 
-        void addItem( const KartItemDef& def ) { (void)_catalog.add( def ); }
         /** @brief 순위 구간의 테이블을 추가합니다. @p listEntry 는 기반 전리품 항목(아이템과 가중치)입니다. */
         void addRankTable( int32 fromPlace, int32 toPlace, const vector<LootEntry>& listEntry );
         /** @brief 테이블이 기준으로 삼는 인원을 정합니다. 0 이면 순위를 늘리지 않습니다. */
@@ -93,17 +92,14 @@ namespace sw
         /** @brief 그 순위가 쓰는 테이블을 반환합니다. 없으면 nullptr 입니다. */
         const KartRankTable* findRankTable( int32 place, int32 racerCount ) const;
 
-        const KartItemDef*              findItem( const hashed_string& id ) const { return _catalog.find( id ); }
-        const GameCatalog<KartItemDef>& getItems() const { return _catalog; }
-        const LootCatalog&              getLootCatalog() const { return _lootCatalog; }
+        const LootCatalog& getLootCatalog() const { return _lootCatalog; }
 
     private:
         static constexpr const utf8* kXMLRootName = "KartItemCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
-        GameCatalog<KartItemDef> _catalog;
-        LootCatalog              _lootCatalog;
-        vector<KartRankTable>    _listRankTable;
-        int32                    _referencePlaceCount;
+        LootCatalog           _lootCatalog;
+        vector<KartRankTable> _listRankTable;
+        int32                 _referencePlaceCount;
     };
 } // namespace sw

@@ -88,7 +88,7 @@ namespace sw
         void shutdown();
 
         /** @brief 목록 읽기, 주기적인 다시 읽기, 기간 경계 판정을 합니다. 라우터와 저장소의 완료는 호스트(또는 서버 루프)가 비웁니다. */
-        void tick( int64 nowMs );
+        void update( int64 nowMs );
         /** @brief 다른 서버가 점검이나 공지를 바꿨음을 버스(`ServerDirectoryBus::kChangedTopic`)로 받았을 때 부릅니다. 다음 tick 에 다시 읽습니다. */
         void notifyChanged();
         /** @brief 보이는 상태가 지난번 이후 바뀌었으면 true 입니다. 읽으면 표시를 지웁니다. */

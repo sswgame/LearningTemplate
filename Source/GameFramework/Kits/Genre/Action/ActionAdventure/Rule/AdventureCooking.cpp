@@ -170,7 +170,7 @@ namespace sw
         // 이름이 있는 요리를 만든다. 재료가 똑같은 냄비 레시피가 있으면 기반 제작으로 만든다(수상한 요리는 이름이 없다).
         if ( outDish._bDubious == SW_FALSE )
         {
-            for ( const RecipeDef& recipe : recipes.getRecipes() )
+            for ( const RecipeDef& recipe : recipes.getAll() )
             {
                 const bool bSingleOutput   = recipe._outputs.getItems().size() == 1;
                 const bool bRecipeMismatch = ( recipe._station == _station ) == false || bSingleOutput == false || AdventureCookingInternal::isSameItems( recipe._inputs, pot ) == false;

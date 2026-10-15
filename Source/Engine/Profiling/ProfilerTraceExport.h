@@ -107,7 +107,7 @@ namespace sw
         /** @brief 긴 캡처가 진행 중이면 true 입니다. */
         static bool isRecording();
         /** @brief 긴 캡처의 시간이 다 됐으면 멈추고 저장합니다. 진행 중이 아니면 atomic 하나 읽고 돌아옵니다. 게임 스레드가 부릅니다. */
-        static void tickRecording( FrameProfiler& profiler );
+        static void updateRecording( FrameProfiler& profiler );
         /**
          * @brief 진행 중인 긴 캡처를 지금 멈추고 저장합니다. 게임 스레드가 부릅니다.
          * @return 파일을 썼으면 true(진행 중이 아니었거나 사건이 없거나 쓰기에 실패하면 false — 이유는 로그에)
@@ -129,7 +129,7 @@ namespace sw
          * @details 게임 스레드가 틱(프레임)을 마친 뒤 한 번 부릅니다. 꺼져 있으면 정수 하나 비교하고 돌아옵니다.
          *          Shipping 에는 없습니다 — 운영에서 쓰려면 Dev 구성 서버(`Ninja-Release`)를 씁니다(결정 기록).
          */
-        static void tickSlowFrameCapture( FrameProfiler& profiler, uint64 frameBeginNanos, uint64 frameEndNanos, string_view processName );
+        static void updateSlowFrameCapture( FrameProfiler& profiler, uint64 frameBeginNanos, uint64 frameEndNanos, string_view processName );
 
         /**
          * @brief 프로세스마다 저장한 트레이스 여럿을 한 타임라인으로 합칩니다(순수 함수).

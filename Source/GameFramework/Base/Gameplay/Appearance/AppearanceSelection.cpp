@@ -343,7 +343,7 @@ namespace sw
             AppearanceSlotRequest        accepted    = request;
             if ( request._itemID.empty() == false )
             {
-                const bool bMissing = pItemCatalog == nullptr || pItemCatalog->findItem( request._itemID ) == nullptr;
+                const bool bMissing = pItemCatalog == nullptr || pItemCatalog->find( request._itemID ) == nullptr;
                 const bool bLocked  = bMissing == false && pUnlockQuery != nullptr && pUnlockQuery->isItemUnlocked( request._itemID ) == false;
                 if ( bMissing || bLocked )
                 {
@@ -456,7 +456,7 @@ namespace sw
         vector<hashed_string> listItemID;
         if ( database.getItemCatalog() != nullptr )
         {
-            for ( const ItemDef& item : database.getItemCatalog()->getItems() )
+            for ( const ItemDef& item : database.getItemCatalog()->getAll() )
             {
                 listItemID.push_back( item._id );
             }

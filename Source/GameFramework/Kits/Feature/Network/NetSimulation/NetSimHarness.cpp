@@ -127,7 +127,7 @@ namespace sw
         getObjectManager().beginPlay();
     }
 
-    void NetSimWorld::tick( float32 deltaTime )
+    void NetSimWorld::update( float32 deltaTime )
     {
         _listUnhandled.clear();
         _listEvent.clear();
@@ -141,7 +141,7 @@ namespace sw
             _pSession->onTickBegin( *this, deltaTime );
         }
         // 씬의 `tick` 이 아니라 매니저를 직접 틱한다. 씬은 오디오 리스너와 에미터를 프로세스에 하나뿐인 오디오 엔진에 넣으므로, 월드가 여럿이면 서로 덮어쓴다.
-        getObjectManager().tick( deltaTime );
+        getObjectManager().update( deltaTime );
         if ( _pSession != nullptr )
             _pSession->onTickEnd( *this, deltaTime );
         ++_localTick;
@@ -157,7 +157,7 @@ namespace sw
         if ( manager.hasBegunPlay() )
         {
             manager.endPlay();
-            manager.tick( 0.0f ); // 끝난 플레이의 물리 바디를 해제한다
+            manager.update( 0.0f ); // 끝난 플레이의 물리 바디를 해제한다
         }
         _pSession.reset();
         _pScene.reset();
@@ -361,10 +361,10 @@ namespace sw
         ++_tick;
         _time                   = static_cast<float64>( _tick ) * _settings._tickInterval;
         const float32 deltaTime = static_cast<float32>( _settings._tickInterval );
-        _pServer->tick( deltaTime );
+        _pServer->update( deltaTime );
         for ( unique_ptr<NetSimWorld>& pWorld : _listClient )
         {
-            pWorld->tick( deltaTime );
+            pWorld->update( deltaTime );
         }
         updateNetwork();
         _bStepping = false;

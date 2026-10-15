@@ -108,7 +108,7 @@ namespace sw
         /** @brief 판이 열리고(복원과 첫 플러시 뒤) 한 번 불립니다. 조작 안내, 첫 상태 로그, 카메라 맞추기에 씁니다. */
         virtual void onGameStarted() {}
         /** @brief 판이 열린 뒤 매 틱에 불립니다(PrePhysics, 워커). 시간이 멈춘 프레임(@p deltaTime 0)에도 불립니다. */
-        virtual void tickGame( float32 deltaTime ) = 0;
+        virtual void updateGame( float32 deltaTime ) = 0;
         /**
          * @brief 틱 뒤 게임 스레드에서 쌓인 요청을 세웁니다. @p bRespawnViews 면 처음(또는 걷은 뒤)이라 지금 상태의 모습 전부를 세웁니다.
          * @details 쌓인 소리는 이 함수 뒤에 베이스가 냅니다.

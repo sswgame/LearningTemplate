@@ -138,7 +138,7 @@ SW_TEST_CASE( FractureComponentTest, WallBreaksIntoPiecesThatFlySettleAndBake )
     SW_ASSERT_NOT_NULL( pFracture );
     sw::GameObject* pWall = pFracture->getOwner();
     manager.beginPlay();
-    test::tickFrames( manager, 5 );
+    test::updateFrames( manager, 5 );
     SW_ASSERT_TRUE( pFracture->hasFractureData() );
     SW_EXPECT_FALSE( pFracture->isFractured() );
     SW_EXPECT_EQUAL( 0u, pFracture->getStaticBodyCount() );
@@ -146,7 +146,7 @@ SW_TEST_CASE( FractureComponentTest, WallBreaksIntoPiecesThatFlySettleAndBake )
 
     // 위쪽 가운데 폭발 — 위의 벽돌이 떨어져 나간다.
     pFracture->applyRadialDamageAtWorld( sw::float3{ 0.0f, 2.4f, 0.4f }, 1.2f, 400.0f, 300.0f );
-    test::tickFrames( manager, 2 );
+    test::updateFrames( manager, 2 );
     SW_ASSERT_TRUE( pFracture->isFractured() );
     SW_EXPECT_FALSE( pWall->getComponent<sw::MeshComponent>()->isVisible() && Internal::countSkinnedUnits( *pWall ) == 0 );
     SW_EXPECT_FALSE( pWall->getComponent<sw::RigidBodyComponent>()->isSelfActive() );
@@ -164,7 +164,7 @@ SW_TEST_CASE( FractureComponentTest, WallBreaksIntoPiecesThatFlySettleAndBake )
     }
 
     // 폭발에 밀린 조각은 날아간다 — 가장 멀리 간 조각이 처음 자리에서 0.5 m 넘게. 붙은 조각(그룹이 앵커)은 제자리다.
-    test::tickFrames( manager, 60 );
+    test::updateFrames( manager, 60 );
     float32                  maxMove = 0.0f;
     const sw::FractureAsset* pAsset  = pFracture->findAsset();
     for ( uint32 leaf = 0; leaf < 48; ++leaf )
@@ -179,11 +179,11 @@ SW_TEST_CASE( FractureComponentTest, WallBreaksIntoPiecesThatFlySettleAndBake )
     SW_EXPECT_TRUE( maxMove > 0.5f );
 
     // 쉬면 작은 파편은 바디를 빼거나 사라지고, 움직임이 멈추면 정적 그림으로 굽는다.
-    test::tickFrames( manager, 600 );
+    test::updateFrames( manager, 600 );
     SW_EXPECT_EQUAL( 0u, pFracture->getDynamicBodyCount() );
     SW_EXPECT_TRUE( pFracture->isBaked() );
     manager.endPlay();
-    manager.tick( Internal::kFrame );
+    manager.update( Internal::kFrame );
     SW_EXPECT_EQUAL( 0u, pFracture->getStaticBodyCount() );
 }
 
@@ -204,14 +204,14 @@ SW_TEST_CASE( FractureComponentTest, ReplayedEventLogGivesTheSameStateAndRaycast
     pClientWall->setAuthority( false );
     server.beginPlay();
     client.beginPlay();
-    test::tickFrames( server, 3 );
-    test::tickFrames( client, 3 );
+    test::updateFrames( server, 3 );
+    test::updateFrames( client, 3 );
 
     sw::float3 hitPoint{};
     SW_ASSERT_TRUE( sw::FractureComponentBase::applyRaycastDamage( server, sw::float3{ 0.5f, 1.2f, -5.0f }, sw::float3{ 0.0f, 0.0f, 1.0f }, 20.0f, 500.0f, 100.0f, &hitPoint ) );
     SW_EXPECT_NEAR_EQUAL( -0.15f, hitPoint._z, 0.05f );
     pServerWall->applyRadialDamageAtWorld( sw::float3{ -1.0f, 2.5f, 0.0f }, 1.0f, 300.0f, 200.0f );
-    test::tickFrames( server, 120 );
+    test::updateFrames( server, 120 );
     const sw::DestructionEventLog log = pServerWall->getEventLog();
     SW_ASSERT_TRUE( log._listEvent.size() >= 2 );
     SW_EXPECT_TRUE( pServerWall->isFractured() );
@@ -220,7 +220,7 @@ SW_TEST_CASE( FractureComponentTest, ReplayedEventLogGivesTheSameStateAndRaycast
     {
         pClientWall->applyDamage( event );
     }
-    test::tickFrames( client, 120 );
+    test::updateFrames( client, 120 );
     SW_EXPECT_EQUAL( pServerWall->getState().computeStateHash(), pClientWall->getState().computeStateHash() );
     SW_EXPECT_TRUE( pClientWall->isFractured() );
     server.endPlay();
@@ -245,7 +245,7 @@ SW_TEST_CASE( FractureComponentTest, HardImpactBreaksAFreeObject )
         pFracture->getOwner()->getComponent<sw::RigidBodyComponent>()->setBodyType( sw::PhysicsBodyType::Dynamic );
     }
     manager.beginPlay();
-    test::tickFrames( manager, 180 );
+    test::updateFrames( manager, 180 );
     SW_EXPECT_TRUE( pHigh->isFractured() );
     SW_EXPECT_TRUE( pHigh->getEventLog()._listEvent.empty() == false );
     SW_EXPECT_FALSE( pLow->isFractured() );
@@ -274,10 +274,10 @@ SW_TEST_CASE( FractureComponentTest, DebrisBudgetIsCountedPerScene )
         pLeft->setAnchorMode( sw::FractureAnchorMode::None );
         pRight->setAnchorMode( sw::FractureAnchorMode::None );
         manager.beginPlay();
-        test::tickFrames( manager, 2 );
+        test::updateFrames( manager, 2 );
         pLeft->applyRadialDamageAtWorld( sw::float3{ -5.0f, 1.5f, 0.0f }, 10.0f, 1000.0f, 0.0f );
         pRight->applyRadialDamageAtWorld( sw::float3{ 5.0f, 1.5f, 0.0f }, 10.0f, 1000.0f, 0.0f );
-        test::tickFrames( manager, 3 );
+        test::updateFrames( manager, 3 );
         arrBodyCount[world] = pLeft->getDynamicBodyCount() + pRight->getDynamicBodyCount();
         SW_EXPECT_EQUAL( arrBodyCount[world], manager.getSubsystem<sw::ScenePhysics>().getDebrisBodyCount() );
     }
@@ -308,17 +308,17 @@ SW_TEST_CASE( FractureComponentTest, NetworkSnapshotRebuildsTheBrokenState )
     pClientWall->setAuthority( false );
     server.beginPlay();
     client.beginPlay();
-    test::tickFrames( server, 2 );
-    test::tickFrames( client, 2 );
+    test::updateFrames( server, 2 );
+    test::updateFrames( client, 2 );
     pServerWall->applyRadialDamageAtWorld( sw::float3{ 0.0f, 2.4f, 0.4f }, 1.2f, 400.0f, 300.0f );
-    test::tickFrames( server, 20 );
+    test::updateFrames( server, 20 );
     SW_ASSERT_TRUE( pServerWall->isFractured() );
 
     sw::vector<uint8> bytes;
     pServerWall->makeNetworkSnapshot( bytes );
     pClientWall->applyNetworkSnapshot( bytes.data(), bytes.size() );
     SW_EXPECT_TRUE( pClientWall->hasPendingDamage() );
-    test::tickFrames( client, 1 );
+    test::updateFrames( client, 1 );
     SW_EXPECT_FALSE( pClientWall->hasPendingDamage() );
     SW_EXPECT_TRUE( pClientWall->isFractured() );
     SW_EXPECT_EQUAL( pServerWall->getState().computeStateHash(), pClientWall->getState().computeStateHash() );

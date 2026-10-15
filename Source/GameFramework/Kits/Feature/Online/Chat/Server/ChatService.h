@@ -142,7 +142,7 @@ namespace sw
         void shutdown();
 
         /** @brief 쌓인 기록을 저장소에 씁니다. */
-        void tick( int64 nowMs );
+        void update( int64 nowMs );
 
         // 클라이언트 요청이다. 결과는 같은 요청 태그로 drainCompletions 에서 받는다
         void joinChannel( AccountID accountID, string_view channelID, int64 nowMs, uint64 requestTag );

@@ -57,7 +57,7 @@ namespace sw
                 if ( pFaction != nullptr )
                     faction._listLink.push_back( ReputationLink{ hashed_string( pFaction ), child.getAttributeFloat( "ratio", 0.0f ) } );
             }
-            addFaction( faction );
+            add( faction );
             ++loadedCount;
         }
         return loadedCount;
@@ -84,7 +84,7 @@ namespace sw
             if ( entry._factionID == factionID )
                 return entry;
         }
-        const FactionDef* pFaction = _pCatalog != nullptr ? _pCatalog->findFaction( factionID ) : nullptr;
+        const FactionDef* pFaction = _pCatalog != nullptr ? _pCatalog->find( factionID ) : nullptr;
         _listEntry.push_back( Entry{ factionID, pFaction != nullptr ? pFaction->_startValue : 0 } );
         return _listEntry.back();
     }
@@ -104,7 +104,7 @@ namespace sw
 
     int32 ReputationState::applyDelta( const hashed_string& factionID, int32 delta )
     {
-        const FactionDef* pFaction = _pCatalog != nullptr ? _pCatalog->findFaction( factionID ) : nullptr;
+        const FactionDef* pFaction = _pCatalog != nullptr ? _pCatalog->find( factionID ) : nullptr;
         Entry&            entry    = acquireEntry( factionID );
         const int32       minValue = pFaction != nullptr ? pFaction->_minValue : ReputationInternal::kUnknownMin;
         const int32       maxValue = pFaction != nullptr ? pFaction->_maxValue : ReputationInternal::kUnknownMax;
@@ -127,7 +127,7 @@ namespace sw
     int32 ReputationState::changeValue( const hashed_string& factionID, int32 delta )
     {
         const int32       changed  = applyDelta( factionID, delta );
-        const FactionDef* pFaction = _pCatalog != nullptr ? _pCatalog->findFaction( factionID ) : nullptr;
+        const FactionDef* pFaction = _pCatalog != nullptr ? _pCatalog->find( factionID ) : nullptr;
         if ( pFaction != nullptr && changed != 0 )
         {
             for ( const ReputationLink& link : pFaction->_listLink )
@@ -149,7 +149,7 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return;
-        for ( const FactionDef& faction : _pCatalog->getFactions() )
+        for ( const FactionDef& faction : _pCatalog->getAll() )
         {
             if ( faction._dailyDecay <= 0 )
                 continue;
@@ -167,18 +167,18 @@ namespace sw
             if ( entry._factionID == factionID )
                 return entry._value;
         }
-        const FactionDef* pFaction = _pCatalog != nullptr ? _pCatalog->findFaction( factionID ) : nullptr;
+        const FactionDef* pFaction = _pCatalog != nullptr ? _pCatalog->find( factionID ) : nullptr;
         return pFaction != nullptr ? pFaction->_startValue : 0;
     }
 
     int32 ReputationState::getTierIndex( const hashed_string& factionID ) const
     {
-        return computeTierIndex( _pCatalog != nullptr ? _pCatalog->findFaction( factionID ) : nullptr, getValue( factionID ) );
+        return computeTierIndex( _pCatalog != nullptr ? _pCatalog->find( factionID ) : nullptr, getValue( factionID ) );
     }
 
     hashed_string ReputationState::getTierName( const hashed_string& factionID ) const
     {
-        const FactionDef* pFaction  = _pCatalog != nullptr ? _pCatalog->findFaction( factionID ) : nullptr;
+        const FactionDef* pFaction  = _pCatalog != nullptr ? _pCatalog->find( factionID ) : nullptr;
         const int32       tierIndex = computeTierIndex( pFaction, getValue( factionID ) );
         return tierIndex >= 0 ? pFaction->_listTier[static_cast<size_t>( tierIndex )]._name : hashed_string{};
     }

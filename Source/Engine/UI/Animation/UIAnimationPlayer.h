@@ -80,7 +80,7 @@ namespace sw
         uint32 getTweenCount() const { return static_cast<uint32>( _listTween.size() ); }
 
         /** @brief 시간을 @p deltaSeconds 만큼 진행해 값을 쓰고 이벤트를 보냅니다. 끝난 애니메이션과 트윈은 끝 값을 쓰고 뺍니다. */
-        void tick( float32 deltaSeconds );
+        void update( float32 deltaSeconds );
 
     private:
         /** @brief 해석한 트랙 하나입니다. 위젯 번호, 경로, 읽은 키 값을 가집니다. */

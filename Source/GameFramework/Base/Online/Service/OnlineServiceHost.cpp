@@ -160,7 +160,7 @@ namespace sw
         return true;
     }
 
-    void OnlineServiceHost::tick( int64 nowMs )
+    void OnlineServiceHost::update( int64 nowMs )
     {
         if ( _bInitialized == SW_FALSE )
             return;

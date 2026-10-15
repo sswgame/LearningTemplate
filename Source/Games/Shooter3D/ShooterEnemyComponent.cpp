@@ -173,9 +173,9 @@ namespace sw
         const float3         target      = pDirector->getPlayerFeet();
         const float3         toTarget    = float3{ target._x - _position._x, 0.0f, target._z - _position._z };
         const float32        distance    = toTarget.getLength();
-        // 휘두르기 간격 — 쫓는 동안 Attack 이 눌려 있으면 간격마다 한 번, 지나친 몫을 잇는다(`Countdown::tickRepeat`). 쿨다운은 어느 단계에서도 흐른다.
+        // 휘두르기 간격 — 쫓는 동안 Attack 이 눌려 있으면 간격마다 한 번, 지나친 몫을 잇는다(`Countdown::updateRepeat`). 쿨다운은 어느 단계에서도 흐른다.
         const bool bWantSwing = _phase == ShooterEnemyPhase::Chasing && bAttackHeld;
-        const bool bSwing     = _attackCooldown.tickRepeat( step, _attackInterval, bWantSwing );
+        const bool bSwing     = _attackCooldown.updateRepeat( step, _attackInterval, bWantSwing );
         switch ( _phase )
         {
             case ShooterEnemyPhase::Rising:

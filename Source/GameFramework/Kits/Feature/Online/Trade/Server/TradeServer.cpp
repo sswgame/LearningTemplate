@@ -171,7 +171,7 @@ namespace sw
                 _pTradeService->invite( lookup._accountID, found._identity._accountID, lookup._nowMs, tag );
             }
         }
-        _pTradeService->tick( nowMs );
+        _pTradeService->update( nowMs );
         _listCompletionScratch.clear();
         _pTradeService->drainCompletions( _listCompletionScratch );
         _mapTradeToLedger.clear();

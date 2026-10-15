@@ -236,7 +236,7 @@ namespace
         {
             const vector<uint8> ticket( reinterpret_cast<const uint8*>( ticketText.data() ), reinterpret_cast<const uint8*>( ticketText.data() ) + ticketText.size() );
             _service->platformLogin( provider, ticket, AccountClientInfo{}, 1, nowMs, _nextTag++ );
-            _service->tick( nowMs );
+            _service->update( nowMs );
             const LoginCompletion completion = settle();
             outGrant                         = completion._grant;
             return completion._result;
@@ -254,7 +254,7 @@ namespace
         {
             const vector<uint8> ticket( reinterpret_cast<const uint8*>( ticketText.data() ), reinterpret_cast<const uint8*>( ticketText.data() ) + ticketText.size() );
             _service->linkPlatform( token, provider, ticket, nowMs, _nextTag++ );
-            _service->tick( nowMs );
+            _service->update( nowMs );
             return settle()._result;
         }
 

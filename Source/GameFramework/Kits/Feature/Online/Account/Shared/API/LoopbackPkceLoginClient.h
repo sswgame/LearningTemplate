@@ -57,7 +57,7 @@ namespace sw
         void               shutdown();
 
         uint64 beginLogin( string_view provider, int64 nowMs ) override;
-        void   tick( int64 nowMs ) override;
+        void   update( int64 nowMs ) override;
         int32  pollResults( vector<PlatformLoginClientResult>& outListResult ) override;
 
         HTTPClient& getHTTPClient() { return _httpClient; }

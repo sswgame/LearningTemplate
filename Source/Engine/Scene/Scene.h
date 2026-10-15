@@ -69,7 +69,7 @@ namespace sw
          * @note 짝이 되는 `render()` 는 **없습니다.** 씬은 그리는 쪽을 모릅니다. 게임 스레드가 씬에서 스냅샷을 뽑아
          *       (`GPUSceneBuilder`) 패킷으로 넘기고, 렌더 스레드가 그것만 보고 그립니다.
          */
-        virtual void tick( float32 deltaTime );
+        virtual void update( float32 deltaTime );
         /**
          * @brief 활성 게임 카메라를 (다시) 고르고, 쓸 만한 게임 카메라가 하나도 없으면 GameCamera 를 만듭니다.
          * @details 게임 스레드가 프레임마다 부릅니다(카메라 레지스트리의 몇 개를 도는 값입니다). 직접 고른 카메라(`setActiveGameCamera`)가

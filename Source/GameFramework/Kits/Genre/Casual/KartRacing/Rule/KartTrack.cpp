@@ -438,7 +438,7 @@ namespace sw
                 SW_LOG_WARNING( "%#: track '%#' has fewer than 3 points - skipped", sourceName, pID );
                 continue;
             }
-            addTrack( def );
+            add( def );
             ++loadedCount;
         }
         if ( loadedCount == 0 )

@@ -90,7 +90,7 @@ namespace sw
 
         void onStateRestored( bool bRestored ) override { ++( bRestored ? _restoredCount : _rejectedCount ); }
 
-        void tickGame( float32 deltaTime ) override
+        void updateGame( float32 deltaTime ) override
         {
             (void)deltaTime;
             ++_tickCount;
@@ -212,7 +212,7 @@ SW_TEST_CASE( GameDirectorTest, StartsFlushesDespawnsAndRespawns )
     SW_EXPECT_TRUE( pManager->resolveGameObject( firstView ) != nullptr );
 
     pDirector->requestView();
-    pManager->tick( 1.0f / 60.0f );
+    pManager->update( 1.0f / 60.0f );
     SW_EXPECT_EQUAL( 1, pDirector->_tickCount );
     SW_EXPECT_EQUAL( 1, pDirector->_respawnCount ); // 서 있으니 다시 세우지 않는다
     SW_EXPECT_TRUE( pDirector->_lastView != firstView );
@@ -224,7 +224,7 @@ SW_TEST_CASE( GameDirectorTest, StartsFlushesDespawnsAndRespawns )
     SW_EXPECT_TRUE( pManager->resolveGameObject( firstView ) == nullptr );
     SW_EXPECT_TRUE( pManager->resolveGameObject( secondView ) == nullptr );
 
-    pManager->tick( 1.0f / 60.0f );
+    pManager->update( 1.0f / 60.0f );
     SW_EXPECT_EQUAL( 2, pDirector->_respawnCount ); // 걷혀 있었다 — 틱 뒤에 다시 세웠다
     SW_EXPECT_TRUE( pManager->resolveGameObject( pDirector->_lastView ) != nullptr );
 
@@ -293,7 +293,7 @@ SW_TEST_CASE( GameDirectorTest, RegisteredDirectorRidesTheSnapshot )
 
     SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
     pManager->mergePendingAdds();
-    pManager->tick( 1.0f / 60.0f ); // 복원한 디렉터가 시작하며(또는 다음 틱에) 지금 상태대로 다시 세운다
+    pManager->update( 1.0f / 60.0f ); // 복원한 디렉터가 시작하며(또는 다음 틱에) 지금 상태대로 다시 세운다
     MockGameDirectorComponent* pRestored = static_cast<MockGameDirectorComponent*>( pManager->resolveComponent( handle ) );
     SW_ASSERT_NOT_NULL( pRestored );
     SW_EXPECT_EQUAL( 99, pRestored->_value );
@@ -332,7 +332,7 @@ SW_TEST_CASE( GameDirectorTest, TickAfterOrdersDirectorsOnDifferentObjects )
     pManager->beginPlay();
     for ( int32 tick = 0; tick < 100; ++tick )
     {
-        pManager->tick( 1.0f / 60.0f );
+        pManager->update( 1.0f / 60.0f );
     }
     SW_EXPECT_EQUAL( 100, pBefore->_ruleTickCount.load() );
     SW_EXPECT_EQUAL( 100, pAfter->_ruleTickCount.load() ); // 규칙은 한 틱에 한 번(주 틱과 서브틱 둘 다 돌지 않는다)

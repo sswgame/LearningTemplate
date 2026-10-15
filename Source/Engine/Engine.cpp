@@ -593,7 +593,7 @@ namespace sw
         }
     }
 
-    void Engine::tick( float32 deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, bool bTickScene )
+    void Engine::update( float32 deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, bool bTickScene )
     {
         // 주 출력 — 게임 뷰가 있으면 그것(게임 카메라 · 화면 UI · 화면 사각형 뷰), 씬 뷰만 있으면 씬 뷰, 둘 다 없으면 백버퍼다.
         const HostViewTarget& mainOutput = views.getMainOutput();
@@ -629,7 +629,7 @@ namespace sw
             engine::getSubsystem<AssetStreamingQueue>().update();
 
             if ( _pSceneManager != nullptr )
-                _pSceneManager->tickTransitions();
+                _pSceneManager->updateTransitions();
             if ( _pEventDispatcher != nullptr )
                 _pEventDispatcher->processEvents();
             if ( _pAudioService != nullptr )
@@ -645,10 +645,10 @@ namespace sw
             if ( pTickScene != nullptr && pTickScene->getObjectManager() != nullptr )
                 pTickScene->getObjectManager()->getCameraRegistry().setViewportSize( vpWidth, vpHeight );
             if ( _pSceneManager != nullptr && bTickScene )
-                _pSceneManager->tick( deltaTime );
+                _pSceneManager->update( deltaTime );
             // 미리보기 씬은 활성 씬의 정지 · 재생과 무관하게 자기 정책으로 돈다(에디터가 멈춘 중에도 애니메이션 창은 돈다).
             if ( _pSceneManager != nullptr )
-                _pSceneManager->tickPreviewScenes( deltaTime );
+                _pSceneManager->updatePreviewScenes( deltaTime );
         }
 
         // 물리 · 내비 디버그 선 — 씬 틱이 이번 프레임의 바디 · 경로를 정한 **뒤**, 관찰자 · UI · 패킷 **앞**이다(이번 프레임에 넣은 선이 endFrame 에서 확정된다).
@@ -749,7 +749,7 @@ namespace sw
     {
         engine::getSubsystem<FrameProfiler>().endFrame();
 #if SW_PROFILER_TRACE_ENABLED
-        ProfilerTraceExport::tickRecording( engine::getSubsystem<FrameProfiler>() ); // `profile.trace record` 의 끝 시각 확인(진행 중이 아니면 atomic 하나)
+        ProfilerTraceExport::updateRecording( engine::getSubsystem<FrameProfiler>() ); // `profile.trace record` 의 끝 시각 확인(진행 중이 아니면 atomic 하나)
 #endif
         // 외부 프로파일러(Tracy)의 주 프레임 경계 — 게임 스레드 프레임이다.
         IProfilerBackend* pProfilerBackend = ProfilerBackend::getActiveBackend();

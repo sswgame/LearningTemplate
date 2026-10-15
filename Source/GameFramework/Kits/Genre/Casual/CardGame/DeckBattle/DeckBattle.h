@@ -58,25 +58,16 @@ namespace sw
      * @brief `<DeckBattleCatalog><Card id="strike" name="Strike" cost="1" effects="Damage:6"/></DeckBattleCatalog>` 를 읽습니다.
      *        `effects` 는 쉼표로 나눈 `종류:양`(Damage, Block, Draw, Energy)입니다.
      */
-    class SW_KIT_API DeckBattleCatalog : public XMLCatalog<DeckBattleCatalog>
+    class SW_KIT_API DeckBattleCatalog : public XMLCatalog<DeckBattleCatalog>, public GameCatalog<DeckBattleCardDef>
     {
         friend class XMLCatalog<DeckBattleCatalog>;
 
     public:
         DeckBattleCatalog();
 
-        int32 addCard( const DeckBattleCardDef& def ) { return _catalog.add( def ); }
-
-        const DeckBattleCardDef* findCard( const hashed_string& id ) const { return _catalog.find( id ); }
-        int32                    findIndex( const hashed_string& id ) const { return _catalog.findIndex( id ); }
-        const DeckBattleCardDef& getAt( int32 index ) const { return _catalog.getAt( static_cast<size_t>( index ) ); }
-        int32                    getCount() const { return static_cast<int32>( _catalog.getCount() ); }
-
     private:
         static constexpr const utf8* kXMLRootName = "DeckBattleCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
-
-        GameCatalog<DeckBattleCardDef> _catalog;
     };
 } // namespace sw
 

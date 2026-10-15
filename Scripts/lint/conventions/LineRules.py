@@ -107,6 +107,35 @@ class LoopVariableNameRule( ConventionRule ):
         return violations
 
 
+#: 정수 개수 변수 · 멤버 · 매개변수 선언에서 `count` 가 앞에 온 이름. 축 이름(`countX`), GPU 용어 `countBuffer*`, 열거형 Count 센티널 값(`_countValue`), 개수 필드의 자리(`countOffset`)는 개수가 아니라 뺀다.
+_kCountFirstRe = re.compile(r"\b(?:u?int(?:8|16|32|64)|size_t)\s+&?_?(count(?!(?:[XYZ]\d*|Buffer\w*|Value|\w*Offset)\b)[A-Z]\w*)\s*(?:=|;|\{|,|\))")
+
+
+class CountFirstNameRule( ConventionRule ):
+    """Naming/CountFirst — 개수를 담는 이름은 `xCount`(`itemCount`), `countX()` 는 훑어 세는 함수다(AGENTS.md "Function names")."""
+    category = "Naming/CountFirst"
+    badSampleFile = "Source/Probe/CountFirst.cpp"
+    badSample = '#include "pch.h"\n\nvoid probe()\n{\n    const int32 countItems = 0;\n    (void)countItems;\n}\n'
+
+    def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
+        if "count" not in ctx.line:
+            return []
+        match = _kCountFirstRe.search(ctx.line)
+        if match is None:
+            return []
+        name = match.group(1)
+        suggestion = name[5].lower() + name[6:] + "Count"
+        return [
+            ConventionViolation(
+                file_path=ctx.relPath,
+                line_number=ctx.lineNum,
+                rule_category=self.category,
+                message=f"개수 이름 '{name}' 은 명사를 앞에 둡니다('{suggestion}'). count 로 시작하는 이름은 훑어 세는 함수의 것입니다.",
+                snippet=ctx.trimmed,
+            )
+        ]
+
+
 class AutoOnLiteralRule( ConventionRule ):
     """Style/AutoUsage"""
     category = "Style/AutoUsage"

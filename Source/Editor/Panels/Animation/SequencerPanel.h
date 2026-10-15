@@ -49,7 +49,7 @@ namespace sw::editor
         void                applyAsset( const SequenceAsset& asset );
         SequenceAsset       captureAsset() const;
         void                syncPreviewPlayer();
-        void                tickPreview( float32 deltaSeconds );
+        void                updatePreview( float32 deltaSeconds );
         /** @brief 지금 프레임을 씬에 적용합니다(뷰포트 미리보기). */
         void previewCurrentFrame();
         /** @brief 고른 구간 항목의 이름 · 대상 칸을 그립니다. */

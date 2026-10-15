@@ -33,7 +33,7 @@ namespace sw
         /** @brief 버스 메시지 본문(`MatchmakingProtocol::writeFormed`)을 처리합니다. 손상됐으면 false 를 반환합니다. */
         [[nodiscard]] bool handleAssign( const vector<uint8>& bytes, int64 nowMs );
         /** @brief 시한이 지난 접속 예정자를 지웁니다. */
-        void tick( int64 nowMs );
+        void update( int64 nowMs );
 
         /** @brief 접속한 계정이 접속 예정자이면 경기 id 와 팀을 돌려줍니다. */
         bool findExpected( AccountID accountID, uint64& outMatchID, int32& outTeam ) const;

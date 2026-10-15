@@ -101,19 +101,19 @@ namespace
         }
 
         /** @brief 입력 한 프레임과 씬 한 프레임입니다. */
-        static void tick( GameObjectManager& manager, InputManager& input )
+        static void update( GameObjectManager& manager, InputManager& input )
         {
             input.beginFrame( kDeltaTime );
-            manager.tick( kDeltaTime );
+            manager.update( kDeltaTime );
             input.endFrame();
         }
 
         /** @brief 입력 → UI 입력(게임 틱 앞) → 씬 → UI 갱신 한 프레임입니다(Engine 와 같은 순서). */
-        static void tickWithUI( GameObjectManager& manager, InputManager& input, UISystem& ui )
+        static void updateWithUI( GameObjectManager& manager, InputManager& input, UISystem& ui )
         {
             input.beginFrame( kDeltaTime );
             ui.processInput( kDeltaTime );
-            manager.tick( kDeltaTime );
+            manager.update( kDeltaTime );
             ui.update( kDeltaTime, UIViewport{
                                        float2{ 1280.0f, 720.0f }
             } );
@@ -181,7 +181,7 @@ namespace
         {
             runner.onFrameBegin( input );
             input.beginFrame( ControlTestInternal::kDeltaTime );
-            manager.tick( ControlTestInternal::kDeltaTime );
+            manager.update( ControlTestInternal::kDeltaTime );
             const AutomationResult result = runner.onFrameEnd( input );
             input.endFrame();
             return result;
@@ -275,7 +275,7 @@ SW_TEST_CASE( ControlTest, PlayerAndAIWithTheSameIntentMoveTheSame )
 
         for ( uint32 frame = 0; frame < 60; ++frame )
         {
-            Internal::tick( manager, input );
+            Internal::update( manager, input );
             const float3 playerPosition = Internal::findPosition( *pPlayerPawn );
             const float3 aiPosition     = Internal::findPosition( *pAIPawn );
             SW_EXPECT_TRUE_MSG( playerPosition._x == aiPosition._x - 10.0f && playerPosition._z == aiPosition._z,
@@ -320,7 +320,7 @@ SW_TEST_CASE( ControlTest, PossessionMovesViewTargetAndInputLayer )
 
         pPlayer->setControlRotation( 0.5f, 0.1f );
         SW_ASSERT_TRUE( input.postRawEvent( RawInputEvent::makeKeyDown( Key::W ) ) );
-        Internal::tick( manager, input );
+        Internal::update( manager, input );
         const ControlIntent& walkerIntent = pWalker->getComponent<PawnComponent>()->getIntent();
         SW_EXPECT_NEAR_EQUAL( 1.0f, walkerIntent._move._y, 1.0e-6f );
         SW_EXPECT_NEAR_EQUAL( 0.5f, walkerIntent._controlYaw, 1.0f / ControlIntent::kAngleStepsPerRadian );
@@ -380,11 +380,11 @@ SW_TEST_CASE( ControlTest, AutoPossessTakesThePawnAtStart )
     pGuard->setAutoPossess( PawnAutoPossess::AI );
 
     // 플레이 전에는 쥐지 않는다.
-    manager.tick( Internal::kDeltaTime );
+    manager.update( Internal::kDeltaTime );
     SW_EXPECT_FALSE( pHero->isPossessed() );
 
     manager.beginPlay();
-    manager.tick( Internal::kDeltaTime );
+    manager.update( Internal::kDeltaTime );
     SW_ASSERT_TRUE( pHero->isPossessed() );
     const ComponentRegistry::View<PlayerControllerComponent> playerView = manager.getComponentRegistry().getAll<PlayerControllerComponent>();
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), playerView.size() );
@@ -394,7 +394,7 @@ SW_TEST_CASE( ControlTest, AutoPossessTakesThePawnAtStart )
     SW_EXPECT_FALSE( pStatue->isPossessed() );
 
     // 한 번 쥐었으면 다시 세우지 않는다.
-    manager.tick( Internal::kDeltaTime );
+    manager.update( Internal::kDeltaTime );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), manager.getComponentRegistry().getAll<PlayerControllerComponent>().size() );
 }
 
@@ -413,7 +413,7 @@ SW_TEST_CASE( ControlTest, SpawnedAIControllerGoesWithItsPawn )
     pPlaced->possess( *pStatueObject->getComponent<PawnComponent>() );
 
     manager.beginPlay();
-    manager.tick( Internal::kDeltaTime );
+    manager.update( Internal::kDeltaTime );
     SW_ASSERT_TRUE( pGuardObject->getComponent<PawnComponent>()->isPossessed() );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), manager.getComponentRegistry().getAll<ControllerComponent>().size() );
     SW_EXPECT_FALSE( pPlaced->isSpawnedForPawn() );
@@ -470,7 +470,7 @@ SW_TEST_CASE( ControlTest, PlayerAndNpcWalkTheSameOnTheCharacterController )
 
         for ( uint32 frame = 0; frame < 60; ++frame )
         {
-            Internal::tick( manager, input );
+            Internal::update( manager, input );
             const float3 playerFeet = Walk::findFeet( *pPlayerPawn );
             const float3 npcFeet    = Walk::findFeet( *pNpcPawn );
             SW_EXPECT_TRUE_MSG( MathUtil::abs( playerFeet._z - npcFeet._z ) <= 1.0e-3f,
@@ -504,7 +504,7 @@ SW_TEST_CASE( ControlTest, NpcRoutesAroundCratesThroughIntent )
     pNpc->possess( *pWalker->getComponent<PawnComponent>() );
     for ( uint32 frame = 0; frame < 10; ++frame )
     {
-        manager.tick( Internal::kDeltaTime );
+        manager.update( Internal::kDeltaTime );
     }
     pNpc->moveTo( float3{ 6.0f, 0.0f, 0.0f } );
     SW_EXPECT_TRUE( pNpc->getMoveStatus() == NavMoveStatus::Moving );
@@ -514,7 +514,7 @@ SW_TEST_CASE( ControlTest, NpcRoutesAroundCratesThroughIntent )
     float3  previousFeet   = Walk::findFeet( *pWalker );
     for ( uint32 frame = 0; frame < 900 && pNpc->getMoveStatus() == NavMoveStatus::Moving; ++frame )
     {
-        manager.tick( Internal::kDeltaTime );
+        manager.update( Internal::kDeltaTime );
         const float3  feet   = Walk::findFeet( *pWalker );
         const float32 deltaX = feet._x - previousFeet._x;
         const float32 deltaZ = feet._z - previousFeet._z;
@@ -548,7 +548,7 @@ SW_TEST_CASE( ControlTest, RecordedIntentsReplayTheSameTrajectory )
         for ( uint32 tick = 0; tick < Internal::kTickCount; ++tick )
         {
             Internal::setThrottle( *pAI, tick );
-            manager.tick( ControlTestInternal::kDeltaTime );
+            manager.update( ControlTestInternal::kDeltaTime );
             listRecordedPosition.push_back( ControlTestInternal::findPosition( *pPawn->getOwner() ) );
         }
         const ControlIntentHistory& history = ControlSystem::find( manager )->getHistory();
@@ -576,7 +576,7 @@ SW_TEST_CASE( ControlTest, RecordedIntentsReplayTheSameTrajectory )
         SW_ASSERT_EQUAL( Internal::kTickCount, pTrack->getTrackLength() );
         for ( uint32 tick = 0; tick < Internal::kTickCount; ++tick )
         {
-            manager.tick( ControlTestInternal::kDeltaTime );
+            manager.update( ControlTestInternal::kDeltaTime );
             const float3 position = ControlTestInternal::findPosition( *pPawn->getOwner() );
             const float3 recorded = listRecordedPosition[tick];
             SW_EXPECT_TRUE_MSG( position._x == recorded._x && position._y == recorded._y && position._z == recorded._z,
@@ -587,7 +587,7 @@ SW_TEST_CASE( ControlTest, RecordedIntentsReplayTheSameTrajectory )
         }
         // 끝난 뒤에는 멈춘 채 쥐고 있다(돌려주기를 걸지 않았다).
         SW_EXPECT_FALSE( pTrack->isPlaying() );
-        manager.tick( ControlTestInternal::kDeltaTime );
+        manager.update( ControlTestInternal::kDeltaTime );
         SW_EXPECT_TRUE( pPawn->getController() == pTrack->getHandle() );
         SW_EXPECT_NEAR_EQUAL( 0.0f, pPawn->getIntent()._move._y, 1.0e-6f );
         manager.endPlay();
@@ -691,7 +691,7 @@ SW_TEST_CASE( ControlTest, RemoteControllerReadsWindowBytes )
         Internal::setThrottle( *pAI, tick );
         if ( tick == 10 )
             pAI->pressButton( "Jump" );
-        localManager.tick( ControlTestInternal::kDeltaTime );
+        localManager.update( ControlTestInternal::kDeltaTime );
         listLocalPosition.push_back( ControlTestInternal::findPosition( *pLocalPawn->getOwner() ) );
         BitWriter intentWriter;
         pLocalPawn->getIntent().write( intentWriter );
@@ -705,7 +705,7 @@ SW_TEST_CASE( ControlTest, RemoteControllerReadsWindowBytes )
         if ( tick < kLagTicks )
             continue;
         const uint32 remoteTick = tick - kLagTicks;
-        remoteManager.tick( ControlTestInternal::kDeltaTime );
+        remoteManager.update( ControlTestInternal::kDeltaTime );
         const float3 remotePosition = ControlTestInternal::findPosition( *pRemotePawn->getOwner() );
         const float3 localPosition  = listLocalPosition[remoteTick];
         SW_EXPECT_TRUE_MSG( remotePosition._x == localPosition._x && remotePosition._z == localPosition._z,
@@ -720,10 +720,10 @@ SW_TEST_CASE( ControlTest, RemoteControllerReadsWindowBytes )
     // 더 받지 못한 틱까지 가면 마지막 의도를 되풀이한다(발동 비트는 지운다).
     while ( pRemote->getNextInputTick() < 90 )
     {
-        remoteManager.tick( ControlTestInternal::kDeltaTime );
+        remoteManager.update( ControlTestInternal::kDeltaTime );
     }
     const ControlIntent lastIntent = pRemotePawn->getIntent();
-    remoteManager.tick( ControlTestInternal::kDeltaTime );
+    remoteManager.update( ControlTestInternal::kDeltaTime );
     SW_EXPECT_EQUAL( 1u, pRemote->getMissingTickCount() );
     SW_EXPECT_TRUE( pRemotePawn->getIntent()._move._x == lastIntent._move._x && pRemotePawn->getIntent()._move._y == lastIntent._move._y );
     SW_EXPECT_EQUAL( 0u, pRemotePawn->getIntent()._buttonTriggered );
@@ -810,14 +810,14 @@ SW_TEST_CASE( ControlTest, FirstPersonCameraFollowsTheControlRotation )
         FirstPersonCameraComponent* pRig    = pViewer->getComponent<FirstPersonCameraComponent>();
         const PawnComponent*        pPawn   = pViewer->getComponent<PawnComponent>();
         const CameraComponent*      pCamera = pViewer->getComponent<CameraComponent>();
-        Internal::tick( manager, input );
+        Internal::update( manager, input );
         SW_EXPECT_NEAR_EQUAL( 0.0f, pRig->getLook().getYaw(), 1.0e-6f );
 
         // 마우스 오른쪽 10 px — Look 30 × 감도 = 조종 요, 카메라가 같은 틱(PrePhysics)에 그 값을 시점으로 둔다.
         SW_ASSERT_TRUE( input.postRawEvent( RawInputEvent::makeMouseRawDelta( 10.0f, 0.0f ) ) );
         input.beginFrame( Internal::kDeltaTime );
         const float32 lookX = input.getInputMap().getVector2D( "Look" )._x;
-        manager.tick( Internal::kDeltaTime );
+        manager.update( Internal::kDeltaTime );
         input.endFrame();
         SW_EXPECT_NEAR_EQUAL( 30.0f, lookX, 1.0e-4f );
         const float32 expectedYaw = lookX * pPlayer->getLookSensitivity();
@@ -828,15 +828,15 @@ SW_TEST_CASE( ControlTest, FirstPersonCameraFollowsTheControlRotation )
 
         // 코드가 정한 시점은 다음 틱부터 조종자의 값이다 — 카메라가 조종 회전으로 덮어써도 남는다.
         pRig->setAngles( 1.0f, -0.3f );
-        Internal::tick( manager, input );
+        Internal::update( manager, input );
         SW_EXPECT_NEAR_EQUAL( 1.0f, pPlayer->getControlYaw(), 1.0e-4f );
         SW_EXPECT_NEAR_EQUAL( -0.3f, pPlayer->getControlPitch(), 1.0e-4f );
         SW_EXPECT_NEAR_EQUAL( -0.3f, pRig->getLook().getPitch(), 1.0e-3f );
 
         // 반동은 오프셋으로 쌓여 한 번만 든다.
         pRig->addRecoil( 0.1f, 0.0f );
-        Internal::tick( manager, input );
-        Internal::tick( manager, input );
+        Internal::update( manager, input );
+        Internal::update( manager, input );
         SW_EXPECT_NEAR_EQUAL( -0.2f, pPlayer->getControlPitch(), 1.0e-3f );
         SW_EXPECT_NEAR_EQUAL( -0.2f, pRig->getLook().getPitch(), 1.0e-3f );
         manager.endPlay();
@@ -913,28 +913,28 @@ SW_TEST_CASE( ControlTest, PlayerControllerTogglesTheMouseLockOfItsPawn )
         // 잠금이 걸린 동안은 시선이 쌓인다.
         const float32 step = 40.0f * pPlayer->getLookSensitivity();
         SW_ASSERT_TRUE( input.postRawEvent( RawInputEvent::makeMouseRawDelta( 40.0f, 0.0f ) ) );
-        Internal::tick( manager, input );
+        Internal::update( manager, input );
         SW_EXPECT_NEAR_EQUAL( step, pPlayer->getControlYaw(), 1.0e-5f );
         // 개발 콘솔이 키보드를 쥐었다 — 잠금은 요청돼 있지만 쉬고 있으니 마우스를 움직여도 시점이 돌지 않는다(포커스 밖 · Alt 도 같은 조건).
         input.setKeyboardFocus( InputKeyboardFocus::DevConsole );
         SW_EXPECT_FALSE( input.isMouseLockActive() );
         SW_ASSERT_TRUE( input.postRawEvent( RawInputEvent::makeMouseRawDelta( 40.0f, 0.0f ) ) );
-        Internal::tick( manager, input );
+        Internal::update( manager, input );
         SW_EXPECT_NEAR_EQUAL( step, pPlayer->getControlYaw(), 1.0e-5f );
         input.setKeyboardFocus( InputKeyboardFocus::Game );
 
         // Esc — 풀린다. 한 번 더 — 다시 잠긴다.
         SW_ASSERT_TRUE( input.postRawEvent( RawInputEvent::makeKeyDown( Key::Escape ) ) );
-        Internal::tick( manager, input );
+        Internal::update( manager, input );
         SW_ASSERT_TRUE( input.postRawEvent( RawInputEvent::makeKeyUp( Key::Escape ) ) );
-        Internal::tick( manager, input );
+        Internal::update( manager, input );
         SW_EXPECT_FALSE( pPlayer->isMouseLockRequested() );
         SW_EXPECT_TRUE( input.getMouse()->getLockMode() == MouseLockMode::None );
         SW_EXPECT_TRUE( input.getMouse()->isCursorVisible() );
         SW_ASSERT_TRUE( input.postRawEvent( RawInputEvent::makeKeyDown( Key::Escape ) ) );
-        Internal::tick( manager, input );
+        Internal::update( manager, input );
         SW_ASSERT_TRUE( input.postRawEvent( RawInputEvent::makeKeyUp( Key::Escape ) ) );
-        Internal::tick( manager, input );
+        Internal::update( manager, input );
         SW_EXPECT_TRUE( pPlayer->isMouseLockRequested() );
         SW_EXPECT_TRUE( input.getMouse()->getLockMode() == MouseLockMode::LockedInCenter );
 
@@ -942,8 +942,8 @@ SW_TEST_CASE( ControlTest, PlayerControllerTogglesTheMouseLockOfItsPawn )
         VirtualInputScript script;
         script.addMouseDelta( 1, 40.0f, 0.0f );
         input.attachVirtualInput( &script, VirtualInputMode::Exclusive );
-        Internal::tick( manager, input );
-        Internal::tick( manager, input );
+        Internal::update( manager, input );
+        Internal::update( manager, input );
         input.detachVirtualInput();
         SW_EXPECT_NEAR_EQUAL( 2.0f * step, pPlayer->getControlYaw(), 1.0e-5f );
 
@@ -994,17 +994,17 @@ SW_TEST_CASE( ControlTest, UIConsumedInputDoesNotReachThePawn )
         const PawnComponent* pPawn = pPawnObject->getComponent<PawnComponent>();
         input.attachVirtualInput( &script, VirtualInputMode::Exclusive );
 
-        Internal::tickWithUI( manager, input, ui ); // 0 — 패드 연결
-        Internal::tickWithUI( manager, input, ui ); // 1 — A: 메뉴 클릭
+        Internal::updateWithUI( manager, input, ui ); // 0 — 패드 연결
+        Internal::updateWithUI( manager, input, ui ); // 1 — A: 메뉴 클릭
         SW_EXPECT_EQUAL( 1u, pButton->_clickCount );
         SW_EXPECT_TRUE( input.getInputMap().isActionDown( "Jump" ) );
         SW_EXPECT_FALSE( pPawn->getIntent().isDown( 0 ) );
-        Internal::tickWithUI( manager, input, ui ); // 2 — 누른 채
+        Internal::updateWithUI( manager, input, ui ); // 2 — 누른 채
         SW_EXPECT_FALSE( pPawn->getIntent().isDown( 0 ) );
-        Internal::tickWithUI( manager, input, ui ); // 3 — 뗌
+        Internal::updateWithUI( manager, input, ui ); // 3 — 뗌
         ui.closeScreen( menu );
-        Internal::tickWithUI( manager, input, ui ); // 4 — 메뉴 닫힘
-        Internal::tickWithUI( manager, input, ui ); // 5 — 다시 누름: 폰의 것
+        Internal::updateWithUI( manager, input, ui ); // 4 — 메뉴 닫힘
+        Internal::updateWithUI( manager, input, ui ); // 5 — 다시 누름: 폰의 것
         SW_EXPECT_TRUE( pPawn->getIntent().isDown( 0 ) );
 
         // 모달이 뜨면 이동 의도가 0 이다(W 를 누르고 있어도).
@@ -1012,8 +1012,8 @@ SW_TEST_CASE( ControlTest, UIConsumedInputDoesNotReachThePawn )
         modalDesc._layer  = UILayer::Modal;
         modalDesc._bModal = true;
         (void)ui.pushScreen( sw::make_unique<UIScreen>( modalDesc, sw::make_unique<uitest::TestPanelWidget>( "modalRoot" ) ) );
-        Internal::tickWithUI( manager, input, ui ); // 6
-        Internal::tickWithUI( manager, input, ui ); // 7 — W
+        Internal::updateWithUI( manager, input, ui ); // 6
+        Internal::updateWithUI( manager, input, ui ); // 7 — W
         SW_EXPECT_TRUE( input.getInputMap().getVector2D( "Move" )._y > 0.0f );
         SW_EXPECT_EQUAL( 0.0f, pPawn->getIntent()._move._y );
         SW_EXPECT_FALSE( pPawn->getIntent().isDown( 0 ) );
@@ -1046,7 +1046,7 @@ SW_TEST_CASE( ControlTest, PlaybackEntryReplaysAFileAndSkipsMissingPawns )
         {
             Internal::setThrottle( *pAI, tick );
             Internal::setThrottle( *pAIGone, tick );
-            manager.tick( ControlTestInternal::kDeltaTime );
+            manager.update( ControlTestInternal::kDeltaTime );
             listRecordedPosition.push_back( ControlTestInternal::findPosition( *pPawn->getOwner() ) );
         }
         SW_ASSERT_TRUE( ControlSystem::find( manager )->getHistory().saveToFile( path ) );
@@ -1066,7 +1066,7 @@ SW_TEST_CASE( ControlTest, PlaybackEntryReplaysAFileAndSkipsMissingPawns )
         SW_EXPECT_TRUE( pTrackObject->getComponent<IntentTrackControllerComponent>() != nullptr );
         for ( uint32 tick = 0; tick < Internal::kTickCount; ++tick )
         {
-            manager.tick( ControlTestInternal::kDeltaTime );
+            manager.update( ControlTestInternal::kDeltaTime );
             const float3 position = ControlTestInternal::findPosition( *pPawn->getOwner() );
             const float3 recorded = listRecordedPosition[tick];
             SW_EXPECT_TRUE( position._x == recorded._x && position._y == recorded._y && position._z == recorded._z );

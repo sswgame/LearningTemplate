@@ -110,7 +110,7 @@ namespace sw
             attachHost( host );
         if ( _pService == nullptr )
             return;
-        _pService->tick( nowMs );
+        _pService->update( nowMs );
         if ( _pService->takeStatusChange() == false )
             return;
         BitWriter body;

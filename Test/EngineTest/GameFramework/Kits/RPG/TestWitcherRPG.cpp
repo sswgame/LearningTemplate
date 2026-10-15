@@ -288,7 +288,7 @@ SW_TEST_CASE( WitcherRPGTest, SignsSpendStaminaScaleWithIntensityAndAlternateCas
     SW_ASSERT_TRUE( skillCatalog.loadFromXMLText( R"(<SkillTreeCatalog><Tree id="signs"><Skill id="firestream" maxRank="1" cost="1"/></Tree></SkillTreeCatalog>)",
                                                   "WitcherRPGTest" ) );
     SkillTreeState skills;
-    skills.initialize( skillCatalog.findTree( hashed_string( "signs" ) ) );
+    skills.initialize( skillCatalog.find( hashed_string( "signs" ) ) );
     StatBlock stats;
     stats.setValue( hashed_string( "signIntensity" ), 50.0f );
 
@@ -698,7 +698,7 @@ SW_TEST_CASE( WitcherRPGTest, SkillTreesCheckRequirementsTiersGroupsAndRefunds )
     SkillTreeCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kSkillTestXML, "WitcherRPGTest" ) );
     SkillTreeState state;
-    state.initialize( catalog.findTree( hashed_string( "combat" ) ) );
+    state.initialize( catalog.find( hashed_string( "combat" ) ) );
     state.addPoints( 5 );
     const hashed_string basic( "basic" );
     const hashed_string power( "power" );

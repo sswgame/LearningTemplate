@@ -28,13 +28,7 @@ namespace sw
     // WeaponCatalog
     // ------------------------------------------------------------------------------
     WeaponCatalog::WeaponCatalog()
-        : _catalog{}
     {
-    }
-
-    void WeaponCatalog::addWeapon( const WeaponDef& weapon )
-    {
-        (void)_catalog.add( weapon ); // 빈 id 는 카탈로그가 거른다
     }
 
     uint32 WeaponCatalog::loadRoot( const XMLNode& root, string_view sourceName )
@@ -70,7 +64,7 @@ namespace sw
             weapon._headshotMultiplier = MathUtil::max( 0.0f, node.getAttributeFloat( "headshotMultiplier", weapon._headshotMultiplier ) );
             const utf8* pAmmoID        = node.findAttribute( "ammo" );
             weapon._ammoID             = pAmmoID != nullptr ? hashed_string( pAmmoID ) : hashed_string{};
-            addWeapon( weapon );
+            add( weapon );
             ++loadedCount;
         }
         if ( loadedCount == 0 )
@@ -108,10 +102,10 @@ namespace sw
         if ( deltaTime <= 0.0f )
             return;
         // 이번 프레임 안에서 준비된 총만 늦은 몫을 든다. 이미 준비돼 있던 총(쉬는 중)은 0 에 머문다 — 쉰 시간을 다음 발로 잇지 않는다.
-        _cooldown.tick( deltaTime );
+        _cooldown.update( deltaTime );
         _currentSpread = MathUtil::max( _def._minSpread, _currentSpread - _def._spreadRecovery * deltaTime );
 
-        if ( _reload.tick( deltaTime ) )
+        if ( _reload.update( deltaTime ) )
         {
             // 재장전 끝 — 예비탄에서 빈 만큼만 옮긴다.
             const int32 needed = _def._magazineSize - _magazineAmmo;

@@ -68,7 +68,7 @@ SW_TEST_CASE( GameObjectTest, MultiSameComponentAttachment )
     SW_EXPECT_EQUAL( sw::string( "HeadMesh" ), firstMesh->_meshName );
     SW_EXPECT_EQUAL( mesh1, firstMesh );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 1, mesh1->_tickCount );
     SW_EXPECT_EQUAL( 1, mesh2->_tickCount );
     SW_EXPECT_EQUAL( 1, mesh3->_tickCount );
@@ -245,7 +245,7 @@ SW_TEST_CASE( GameObjectTest, ParallelComponentTicking )
             actors.push_back( actorPtr );
         }
 
-        manager.tick( 0.016f );
+        manager.update( 0.016f );
 
         for ( sw::GameObject* actor : actors )
         {
@@ -315,7 +315,7 @@ SW_TEST_CASE( HierarchicalActiveStateTest, SubtreeTickSkip )
     actor.setActive( false );
     SW_EXPECT_FALSE( actor.isActiveInHierarchy() );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     SW_EXPECT_EQUAL( 0, comp->_tickCount );
 }
@@ -555,7 +555,7 @@ SW_TEST_CASE( GameObjectTest, TickRemoveOtherSameTypeComponent )
     keeperMesh->_pTickRemoveOwner = victim;
     keeperMesh->_pTickRemoveComp  = victimMesh;
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 0u, victim->getComponentCount() );
     SW_EXPECT_EQUAL( 1u, keeper->getComponentCount() );
     SW_EXPECT_EQUAL( 1, keeperMesh->_tickCount );
@@ -588,7 +588,7 @@ SW_TEST_CASE( GameObjectTest, StructuralChangesDuringTickFollowOneRule )
     keeperMesh->_tickLoadXML     = ObjectStateSerializer::saveToXMLString( victim );
     {
         test::ScopedDefensiveTestLog expected( "a state load during the component tick" );
-        manager.tick( 0.016f );
+        manager.update( 0.016f );
     }
 
     SW_EXPECT_EQUAL( size_t( 2 ), keeperMesh->_componentCountAfterTickClear ); // 틱 안에서는 아직 그대로
@@ -618,7 +618,7 @@ SW_TEST_CASE( GameObjectTest, StructuralChangesDuringTickApplyInCallOrder )
     keeperMesh->_pTickAdoptChild  = child;
     keeperMesh->_pTickAdoptParent = parent;
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     SW_EXPECT_NOT_NULL( child->getPrimarySceneComponent() );
     SW_EXPECT_TRUE( child->getParent() == parent );
@@ -641,7 +641,7 @@ SW_TEST_CASE( GameObjectTest, TagComponentWritesDuringTickAreDeferred )
     SW_ASSERT_TRUE( pTags != nullptr && keeperMesh != nullptr );
     keeperMesh->_pTickTagComponent = pTags;
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     SW_EXPECT_FALSE( keeperMesh->_bTickTagVisibleInTick ); // 틱 안에서는 아직이다
     SW_EXPECT_TRUE( tagged->hasTag( "TickAdded"_tag ) );   // 틱 뒤에 적용됐다
@@ -665,7 +665,7 @@ SW_TEST_CASE( GameObjectTest, NameAndTickSettingsChangedDuringTickApplyAfterIt )
     keeperMesh->_pTickRenameTarget = target;
     keeperMesh->_pTickStopTicking  = targetMesh;
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     SW_EXPECT_FALSE( keeperMesh->_bTickRenameVisibleInTick );
     SW_EXPECT_FALSE( keeperMesh->_bTickStopVisibleInTick );
@@ -697,7 +697,7 @@ SW_TEST_CASE( GameObjectTest, SubTickChangesDuringTickApplyAfterIt )
     keeperMesh->_pTickSubTickTarget      = targetMesh;
     keeperMesh->_tickSubTickPrerequisite = prerequisite;
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     // 틱 안에서 목록은 넷 다 아직이다. 마스크는 바로 꺼졌다.
     SW_EXPECT_FALSE( keeperMesh->_bTickSubTickAddVisibleInTick );
@@ -733,7 +733,7 @@ SW_TEST_CASE( GameObjectTest, SameEntityComponentsBothTick )
     SW_ASSERT_NOT_NULL( mesh );
     SW_ASSERT_NOT_NULL( audio );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 1, mesh->_tickCount );
     SW_EXPECT_EQUAL( 1, audio->_playCount );
 }
@@ -755,14 +755,14 @@ SW_TEST_CASE( GameObjectHandleTest, SafeDestruction )
 
     // Destroy component only
     manager.destroyComponent( mesh );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     SW_EXPECT_TRUE( manager.resolveGameObject( objHandle ) == obj );     // Object is still alive
     SW_EXPECT_TRUE( manager.resolveComponent( compHandle ) == nullptr ); // Component handle no longer resolves
 
     // Destroy object
     manager.destroyObject( obj );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     SW_EXPECT_TRUE( manager.resolveGameObject( objHandle ) == nullptr ); // Object handle no longer resolves
 }
@@ -803,7 +803,7 @@ SW_TEST_CASE( GameObjectTest, DeferredComponentAdditionDuringTick )
         pAudio->_volume = 0.75f;
     } );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     sw::MockAudioComponent* pAudioComp = pObj->getComponent<sw::MockAudioComponent>();
     SW_ASSERT_NOT_NULL( pAudioComp );
@@ -848,7 +848,7 @@ SW_TEST_CASE( GameObjectTest, CascadingChildDestruction )
     SW_EXPECT_TRUE( pChild1->isPendingDestroy() );
     SW_EXPECT_TRUE( pChild2->isPendingDestroy() );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     // After tick, no handle resolves any more
     SW_EXPECT_TRUE( manager.resolveGameObject( parentHandle ) == nullptr );
@@ -1049,7 +1049,7 @@ SW_TEST_CASE( GameObjectTest, BeginPlayMayAddComponentsAndSpawn )
     sw::GameObject*        pSpawner = manager.createGameObject( sw::hashed_string( "Spawner" ) );
     sw::MockMeshComponent* pSpawn   = pSpawner->addComponent<sw::MockMeshComponent>();
     pSpawn->_pBeginPlaySpawnManager = &manager;
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     manager.beginPlay();
     SW_EXPECT_TRUE( pTagged->hasTag( "BeginPlayAdded"_tag ) );
@@ -1075,7 +1075,7 @@ SW_TEST_CASE( GameObjectTest, PlayLifecycleIsPairedAndExactlyOnce )
     sw::GameObject*        pActor = manager.createGameObject( sw::hashed_string( "PlayActor" ) );
     sw::MockMeshComponent* pFirst = pActor->addComponent<sw::MockMeshComponent>();
     pFirst->_pEndPlayCount        = &endCount;
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 0, pFirst->_beginPlayCount ); // 플레이 전에는 부르지 않는다
 
     manager.beginPlay();
@@ -1088,7 +1088,7 @@ SW_TEST_CASE( GameObjectTest, PlayLifecycleIsPairedAndExactlyOnce )
     pLate->_meshName             = "SetAfterAdd";
     pLate->_pEndPlayCount        = &endCount;
     SW_EXPECT_EQUAL( 0, pLate->_beginPlayCount );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 1, pLate->_beginPlayCount );
     SW_EXPECT_STREQ( "SetAfterAdd", pLate->_meshNameAtBeginPlay.c_str() );
 
@@ -1169,7 +1169,7 @@ SW_TEST_CASE( GameObjectTest, ComponentActiveBitIsIndependentOfOwner )
     pParent->addComponent<sw::SceneComponent>();
     pChild->addComponent<sw::SceneComponent>();
     SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     const int32 tickBaseline = pTicker->_tickCount;
 
     pTicker->setActive( false );
@@ -1179,7 +1179,7 @@ SW_TEST_CASE( GameObjectTest, ComponentActiveBitIsIndependentOfOwner )
     pParent->setActive( false );
     pParent->setActive( true );
     SW_EXPECT_FALSE( pTicker->isSelfActive() );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( tickBaseline, pTicker->_tickCount ); // 꺼 둔 것은 여전히 틱하지 않는다
 
     // 오브젝트를 끄면 실효값은 꺼지지만 자기 비트는 그대로다 — 다시 켜면 돌아온다.
@@ -1468,45 +1468,45 @@ SW_TEST_CASE( GameObjectTest, TickStagesRebuildOnlyWhenTickWorkChanges )
     sw::GameObjectManager manager;
     sw::RegisterMockComponents();
     sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( "StageGate" ) );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     const uint32 baseCount = manager.getTickStageBuildCount();
     SW_EXPECT_TRUE( baseCount >= 1 );
 
     // 틱하지 않는 컴포넌트 — 붙이고, 틱하고, 지우고, 틱해도 그대로.
     sw::MeshComponent* pMesh = pObj->addComponent<sw::MeshComponent>();
     SW_ASSERT_NOT_NULL( pMesh );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( baseCount, manager.getTickStageBuildCount() );
     manager.destroyComponent( pMesh );
     manager.processDeferredDestruction();
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( baseCount, manager.getTickStageBuildCount() );
 
     // 틱하는 컴포넌트 — 붙이면 한 번, 틱을 끄면 한 번, 지우면 한 번.
     sw::MockTickSceneComponent* pTick = pObj->addComponent<sw::MockTickSceneComponent>();
     SW_ASSERT_NOT_NULL( pTick );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( baseCount + 1, manager.getTickStageBuildCount() );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( baseCount + 1, manager.getTickStageBuildCount() );
     pTick->setCanEverTick( false );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( baseCount + 2, manager.getTickStageBuildCount() );
     pTick->setCanEverTick( true );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( baseCount + 3, manager.getTickStageBuildCount() );
     manager.destroyComponent( pTick );
     manager.processDeferredDestruction();
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( baseCount + 4, manager.getTickStageBuildCount() );
 
     // 오브젝트를 지우는 것도 틱하는 컴포넌트가 있을 때만.
     sw::GameObject* pQuiet = manager.createGameObject( sw::hashed_string( "QuietObj" ) );
     pQuiet->addComponent<sw::MeshComponent>();
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     manager.destroyObject( pQuiet, false );
     manager.processDeferredDestruction();
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( baseCount + 4, manager.getTickStageBuildCount() );
 }
 
@@ -1536,7 +1536,7 @@ SW_TEST_CASE( GameObjectTest, TickRegistryTracksMembershipPerObject )
     pRoot->registerSubTick( sw::TickGroup::PostPhysics, 7, sw::TickPhase::Late );
     pRoot->registerSubTick( sw::TickGroup::PostPhysics, 8, sw::TickPhase::Early );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     // (1) 그룹 목록 — 틱하지 않는 오브젝트는 어디에도 없다.
     const uint32 kDuring = static_cast<uint32>( sw::TickGroup::DuringPhysics );
@@ -1562,12 +1562,12 @@ SW_TEST_CASE( GameObjectTest, TickRegistryTracksMembershipPerObject )
     // (2) 서브틱을 끄면 그 오브젝트의 항목만 줄고, 다른 오브젝트는 다시 짓지 않는다(세대는 오른다).
     const uint32 buildBefore = manager.getTickStageBuildCount();
     pRoot->setSubTickActive( 7, false );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( buildBefore + 1, manager.getTickStageBuildCount() );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( pSub->getTickItems().size() ) );
     SW_EXPECT_EQUAL( 2, pMeshA->_tickCount );
     pRoot->unregisterSubTick( 8 );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( registry.getEntries( kPost ).size() ) );
 
     // (3) 선행 종속성 — 가진 항목만 스테이지로 가고(그 오브젝트의 칸에서 빠진다), 떼면 다시 오브젝트 경로.
@@ -1577,27 +1577,27 @@ SW_TEST_CASE( GameObjectTest, TickRegistryTracksMembershipPerObject )
     pOther->setCanEverTick( false );
     pOther->registerSubTick( sw::TickGroup::PostPhysics, 10, sw::TickPhase::Normal );
     pOther->addSubTickPrerequisite( 10, handleA );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_TRUE( registry.hasPrerequisites() );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( registry.getEntries( kPost ).size() ) );
     SW_EXPECT_EQUAL( pSub, registry.getEntries( kPost )[0]._pObject );
     SW_EXPECT_EQUAL( 1u, registry.getStageItemCount() );
     pOther->unregisterSubTick( 10 );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_FALSE( registry.hasPrerequisites() );
     SW_EXPECT_EQUAL( 0u, registry.getStageItemCount() );
 
     // (4) 파괴 — 목록에서 빠지고 남은 오브젝트가 계속 틱한다.
     sw::GameObject*        pTicker2 = manager.createGameObject( sw::hashed_string( "RegTicker2" ) );
     sw::MockMeshComponent* pMesh2   = pTicker2->addComponent<sw::MockMeshComponent>();
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( registry.getEntries( kDuring ).size() ) );
     manager.destroyObject( pTicker, false );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( registry.getEntries( kDuring ).size() ) );
     SW_EXPECT_EQUAL( pTicker2, registry.getEntries( kDuring )[0]._pObject );
     SW_EXPECT_EQUAL( 2, pMesh2->_tickCount );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 3, pMesh2->_tickCount );
 }
 
@@ -1624,14 +1624,14 @@ SW_TEST_CASE( GameObjectTest, TickListDropsInactiveObjectsAndRestoresThem )
     sw::MockMeshComponent* pOtherTick  = pOther->addComponent<sw::MockMeshComponent>();
     SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( registry.getEntries( kDuring ).size() ) );
     SW_EXPECT_EQUAL( 1, pParentTick->_tickCount );
     SW_EXPECT_EQUAL( 1, pChildTick->_tickCount );
 
     // 부모를 끄면 부모와 자식이 목록에서 빠진다(자식은 계층 활성으로 꺼진다).
     pParent->setActive( false );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( registry.getEntries( kDuring ).size() ) );
     SW_EXPECT_EQUAL( pOther, registry.getEntries( kDuring )[0]._pObject );
     SW_EXPECT_EQUAL( 1, pParentTick->_tickCount );
@@ -1640,20 +1640,20 @@ SW_TEST_CASE( GameObjectTest, TickListDropsInactiveObjectsAndRestoresThem )
 
     // 켜면 돌아온다.
     pParent->setActive( true );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( registry.getEntries( kDuring ).size() ) );
     SW_EXPECT_EQUAL( 2, pParentTick->_tickCount );
     SW_EXPECT_EQUAL( 2, pChildTick->_tickCount );
 
     // 컴포넌트 자기 비트를 끄면 목록에는 남고 그 컴포넌트만 돌지 않는다.
     pChildTick->setActive( false );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 3, pParentTick->_tickCount );
     SW_EXPECT_EQUAL( 2, pChildTick->_tickCount );
 
     // 파괴 표시된 오브젝트는 틱 전에 처리되어 목록에서 빠진다.
     manager.destroyObject( pOther, false );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( registry.getEntries( kDuring ).size() ) );
     SW_EXPECT_EQUAL( 4, pParentTick->_tickCount );
 }
@@ -1884,7 +1884,7 @@ SW_TEST_CASE( GameObjectTest, TickSettersQueueAndApplyAfterTick )
     pMoverComp->_tickMovePos          = sw::float3( 7.0f, 8.0f, 9.0f );
     pReferenceParentComp->setLocalPosition( pMoverComp->_tickMovePos );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     managerReference.flushSceneTransforms();
 
     SW_EXPECT_FALSE( manager.getTransformHierarchy().hasQueuedWrites() );
@@ -1906,7 +1906,7 @@ SW_TEST_CASE( GameObjectTest, TickSettersQueueAndApplyAfterTick )
     // 같은 값을 다시 쓰는 틱은 아무것도 바꾸지 않는다 — 세대 그대로.
     pMoverComp->_pTickMoveComp     = nullptr;
     const uint64 generationSettled = manager.getTransformGeneration();
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( generationSettled, manager.getTransformGeneration() );
     SW_EXPECT_FALSE( manager.hasDirtySceneTransforms() );
 }
@@ -2266,7 +2266,7 @@ SW_TEST_CASE( GameObjectTest, GameObjectMassiveCreationAndDestructionStressTest 
     SW_EXPECT_EQUAL( static_cast<size_t>( kObjectCount ), manager.getAllGameObjects().size() );
 
     // 2) 틱 실행 및 상태 갱신
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     // 3) 전수 지연 삭제 큐 등록 및 처리
     for ( sw::GameObject* pObj : listObject )
@@ -2312,7 +2312,7 @@ SW_TEST_CASE( GameObjectTest, ParallelTickStructuralMutationStressTest )
     }
 
     // 틱 수행 시 모든 지연 큐가 정상 flush 되어야 함
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     SW_EXPECT_EQUAL( 50u, postTickExecutedCount.load() );
     SW_EXPECT_EQUAL( 50u, transformUpdateExecutedCount.load() );
@@ -2404,7 +2404,7 @@ SW_TEST_CASE( GameObjectTest, DeepMultiComponentCascadeDestructionAndReparenting
     SW_EXPECT_EQUAL( static_cast<size_t>( kDepth ), manager.getAllGameObjects().size() );
 
     // 2) 틱 실행 시 모든 32개 노드의 MockMeshComponent가 1회씩 틱을 수행했는지 확인
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     for ( uint32 depthIndex = 0; depthIndex < kDepth; ++depthIndex )
     {
         sw::MockMeshComponent* pMesh = listNode[depthIndex]->getComponent<sw::MockMeshComponent>();
@@ -2444,7 +2444,7 @@ SW_TEST_CASE( GameObjectTest, DeepMultiComponentCascadeDestructionAndReparenting
     }
 
     // 5) 생존 노드들은 정상적으로 계속 틱 수행 가능
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     for ( uint32 depthIndex = 0; depthIndex < 16; ++depthIndex )
     {
         sw::MockMeshComponent* pMesh = listNode[depthIndex]->getComponent<sw::MockMeshComponent>();
@@ -2544,14 +2544,14 @@ SW_TEST_CASE( GameObjectTest, ChaoticHierarchyMutationAndActiveToggleStressTest 
         {
             manager.processDeferredDestruction();
             manager.flushSceneTransforms();
-            manager.tick( 0.016f );
+            manager.update( 0.016f );
         }
     }
 
     // 최종 상태 검증
     manager.processDeferredDestruction();
     manager.flushSceneTransforms();
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     // 남아있는 모든 오브젝트의 월드 좌표가 유효(NaN/Inf 없음)한지 검증
     for ( sw::GameObject* pObj : manager.getAllGameObjects() )
@@ -2669,7 +2669,7 @@ SW_TEST_CASE( GameObjectTest, MultiLevelComponentGameObjectPolymorphicLookup )
     SW_EXPECT_NULL( pObj->getComponent<sw::MockMeshComponent>() );
 
     // 2) 다단계 상속 계층의 가상 onTick 체인 연쇄 호출 검증
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 1, pFlying->_flyingTickCount );
     SW_EXPECT_EQUAL( 1, pFlying->_vehicleTickCount );
     SW_EXPECT_EQUAL( 1, pFlying->_pawnTickCount );

@@ -120,11 +120,11 @@ namespace sw
         return requestID;
     }
 
-    void LoopbackPkceLoginClient::tick( int64 nowMs )
+    void LoopbackPkceLoginClient::update( int64 nowMs )
     {
         _nowMs = nowMs;
-        _redirectServer.tick();
-        _httpClient.tick( nowMs );
+        _redirectServer.update();
+        _httpClient.update( nowMs );
         vector<HTTPClientResponse> listResponse;
         (void)_httpClient.pollResponses( listResponse );
         for ( const HTTPClientResponse& response : listResponse )

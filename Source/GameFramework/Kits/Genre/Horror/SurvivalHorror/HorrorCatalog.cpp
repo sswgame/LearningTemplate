@@ -115,7 +115,7 @@ namespace sw
     const RecipeDef* HorrorCatalog::findCombine( const hashed_string& firstItem, const hashed_string& secondItem ) const
     {
         const hashed_string station = getCombineStation();
-        for ( const RecipeDef& recipe : _recipeCatalog.getRecipes() )
+        for ( const RecipeDef& recipe : _recipeCatalog.getAll() )
         {
             if ( recipe._station != station || recipe._inputs.getTotalCount() != 2 )
                 continue;
@@ -179,7 +179,7 @@ namespace sw
             recipe._inputs.addItem( firstItem, 1 );
             recipe._inputs.addItem( secondItem, 1 );
             recipe._outputs.addItem( outItem, MathUtil::max( 1, node.getAttributeInt( "count", 1 ) ) );
-            _recipeCatalog.addRecipe( recipe );
+            _recipeCatalog.add( recipe );
             ++loadedCount;
         }
 

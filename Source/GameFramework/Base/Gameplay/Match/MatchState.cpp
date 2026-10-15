@@ -98,7 +98,7 @@ namespace sw
             MatchParticipant& participant = _listParticipant[index];
             if ( participant._bAlive || participant._bEliminated )
                 continue;
-            participant._respawnTimer.tick( deltaTime );
+            participant._respawnTimer.update( deltaTime );
             if ( participant._respawnTimer.isActive() == false )
             {
                 participant._bAlive = SW_TRUE;

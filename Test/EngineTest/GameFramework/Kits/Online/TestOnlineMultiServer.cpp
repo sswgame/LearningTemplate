@@ -157,11 +157,11 @@ namespace
             {
                 _nowMs += 20;
                 _cacheDatabase.advanceTimeMs( 20 );
-                _aliceOnA._client.tick( _nowMs );
-                _bobOnB._client.tick( _nowMs );
-                _aliceOnB._client.tick( _nowMs );
-                _serverA._host.tick( _nowMs );
-                _serverB._host.tick( _nowMs );
+                _aliceOnA._client.update( _nowMs );
+                _bobOnB._client.update( _nowMs );
+                _aliceOnB._client.update( _nowMs );
+                _serverA._host.update( _nowMs );
+                _serverB._host.update( _nowMs );
             }
         }
 

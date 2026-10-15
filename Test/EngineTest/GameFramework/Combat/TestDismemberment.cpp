@@ -130,7 +130,7 @@ SW_TEST_CASE( DismembermentRuntimeTest, FatalHeadHitSeversAndSpawnsPhysicsPiece 
     pDismember->setRegionTablePath( Internal::kRegionPath );
 
     manager.beginPlay();
-    test::tickFrames( manager, 2 );
+    test::updateFrames( manager, 2 );
     SW_ASSERT_NOT_NULL( pUnit->getMesh() );
     SW_ASSERT_TRUE( pUnit->getMesh()->hasSkin() );
     const uint32 vertexCountBefore = pUnit->getMesh()->getVertexCount();
@@ -168,7 +168,7 @@ SW_TEST_CASE( DismembermentRuntimeTest, FatalHeadHitSeversAndSpawnsPhysicsPiece 
     SW_EXPECT_TRUE( vertexCountAfter + pPieceMesh->getMesh()->getVertexCount() >= vertexCountBefore ); // 잘린 삼각형은 조각으로 갔다(+ 자른 자리가 있으면 캡)
     const float32 startY = pPieceBody->getWorldPosition()._y;
     SW_EXPECT_TRUE( startY > 1.0f ); // 머리 높이에서 시작한다
-    test::tickFrames( manager, 150 );
+    test::updateFrames( manager, 150 );
     SW_EXPECT_TRUE( pPieceBody->getWorldPosition()._y < startY - 0.5f ); // 떨어졌다
     SW_EXPECT_TRUE( pPieceBody->getWorldPosition()._y > 0.0f );          // 바닥 위
     SW_EXPECT_TRUE( pPieceBody->getWorldPosition()._z > 0.05f );         // 맞은 방향으로 밀렸다
@@ -183,7 +183,7 @@ SW_TEST_CASE( DismembermentRuntimeTest, FatalHeadHitSeversAndSpawnsPhysicsPiece 
 
     // 래그돌 한가운데(몸통 — 관절이 사방으로 걸린 바디)를 잘라도 관절이 함께 지워져 물리가 계속 돈다.
     SW_ASSERT_TRUE( pDismember->severRegion( hashed_string( "Torso" ), float3{} ) );
-    test::tickFrames( manager, 30 );
+    test::updateFrames( manager, 30 );
     SW_EXPECT_FALSE( pScene->isBodyEnabled( pRagdoll->getRagdoll()._listBody[static_cast<size_t>( chest )] ) );
     SW_EXPECT_FALSE( pRagdoll->getRagdoll()._listJoint[static_cast<size_t>( chest )].isValid() );
 
@@ -196,7 +196,7 @@ SW_TEST_CASE( DismembermentRuntimeTest, FatalHeadHitSeversAndSpawnsPhysicsPiece 
     DismembermentComponent* pTubeDismember = pTube->addComponent<DismembermentComponent>();
     pTubeDismember->setSeverableRegions( { hashed_string( "Upper" ) } );
     pTubeDismember->setRegionTablePath( regionPath );
-    test::tickFrames( manager, 2 );
+    test::updateFrames( manager, 2 );
     pTubeUnit->setSkeleton( make_shared<Skeleton>( test::makeChainSkeleton( 2 ) ) );
     pTubeUnit->setMesh( Internal::makeSkinnedTube() );
     const uint32 beforeTube = pTubeUnit->getMesh()->getVertexCount();

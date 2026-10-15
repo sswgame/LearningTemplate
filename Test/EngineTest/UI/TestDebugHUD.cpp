@@ -129,17 +129,17 @@ namespace
 SW_TEST_CASE( DebugHUDTest, RegistrarScopeIsTheModuleLifetime )
 {
     sw::DebugHUDRegistry& registry      = sw::DebugHUDRegistry::get();
-    const uint32          countBefore   = registry.getCount();
+    const uint32          previousCount = registry.getCount();
     const uint64          revisionStart = registry.getRevision();
     {
         static const sw::DebugHUDSectionRegistration kRegistration{ "testmodule", "Test Module", &DebugHUDTestUtil::writeTestSection, 1000, sw::DebugHUDSectionFlag::kNone };
         const sw::DebugHUDSectionRegistrar           registrar{ &kRegistration };
         SW_EXPECT_TRUE( registrar._bRegistered );
-        SW_EXPECT_EQUAL( countBefore + 1, registry.getCount() );
+        SW_EXPECT_EQUAL( previousCount + 1, registry.getCount() );
         SW_EXPECT_TRUE( registry.findSection( "TestModule" ) == &kRegistration ); // 대소문자 무시
         SW_EXPECT_TRUE( registry.getRevision() > revisionStart );
     }
-    SW_EXPECT_EQUAL( countBefore, registry.getCount() );
+    SW_EXPECT_EQUAL( previousCount, registry.getCount() );
     SW_EXPECT_TRUE( registry.findSection( "testmodule" ) == nullptr );
     SW_EXPECT_EQUAL( revisionStart + 2, registry.getRevision() );
 }

@@ -66,11 +66,11 @@ namespace
             return path.computeLength();
         }
 
-        static void tickAndFlush( sw::GameObjectManager& manager )
+        static void updateAndFlush( sw::GameObjectManager& manager )
         {
-            manager.tick( kFrame );
+            manager.update( kFrame );
             manager.getSubsystem<sw::SceneNavigation>().flushTileBakes();
-            manager.tick( kFrame );
+            manager.update( kFrame );
         }
     };
 } // namespace
@@ -86,7 +86,7 @@ SW_TEST_CASE( NavMeshDynamicTest, ObstacleRebakesOnlyTheTouchedTilesAndPathsFoll
     navigation.setSettings( navtest::makeSettings() );
     Internal::spawnFloorAndSurface( manager );
     manager.beginPlay();
-    manager.tick( Internal::kFrame );
+    manager.update( Internal::kFrame );
     const sw::INavMesh* pNavMesh = navigation.findNavMesh( sw::hashed_string( "TestHumanoid" ) );
     SW_ASSERT_NOT_NULL( pNavMesh );
     const uint32 tileCount = static_cast<uint32>( pNavMesh->getTileGrid().getTileCount() );
@@ -97,7 +97,7 @@ SW_TEST_CASE( NavMeshDynamicTest, ObstacleRebakesOnlyTheTouchedTilesAndPathsFoll
     sw::NavMeshObstacleComponent* pObstacle = pBlock->addComponent<sw::NavMeshObstacleComponent>();
     pObstacle->setHalfExtents( sw::float3{ 1.0f, 1.0f, 6.0f } );
     pObstacle->setCenter( sw::float3{ 0.0f, 1.0f, 0.0f } );
-    Internal::tickAndFlush( manager );
+    Internal::updateAndFlush( manager );
     const uint32  rebakedAfterPlace = navigation.getRebakedTileCount();
     const float32 detour            = Internal::findPathLength( navigation );
     SW_EXPECT_TRUE( rebakedAfterPlace > 0 );
@@ -106,21 +106,21 @@ SW_TEST_CASE( NavMeshDynamicTest, ObstacleRebakesOnlyTheTouchedTilesAndPathsFoll
 
     // 임계값(0.25 m)보다 작게 움직이면 그대로다.
     pRoot->setLocalPosition( sw::float3{ 0.1f, 0.0f, 0.0f } );
-    Internal::tickAndFlush( manager );
+    Internal::updateAndFlush( manager );
     SW_EXPECT_EQUAL( rebakedAfterPlace, navigation.getRebakedTileCount() );
 
     // 길 밖으로 비키면 옛 자리 · 새 자리만 다시 베이크하고 곧은 경로가 돌아온다.
     pRoot->setLocalPosition( sw::float3{ 0.0f, 0.0f, 12.0f } );
-    Internal::tickAndFlush( manager );
+    Internal::updateAndFlush( manager );
     SW_EXPECT_TRUE( navigation.getRebakedTileCount() > rebakedAfterPlace );
     SW_EXPECT_NEAR_EQUAL( 16.0f, Internal::findPathLength( navigation ), 0.1f );
 
     // 다시 길 위로 와서 사라지면 구멍도 사라진다.
     pRoot->setLocalPosition( sw::float3{ 0.0f, 0.0f, 0.0f } );
-    Internal::tickAndFlush( manager );
+    Internal::updateAndFlush( manager );
     SW_EXPECT_TRUE( Internal::findPathLength( navigation ) > 18.0f );
     manager.destroyObject( pBlock );
-    Internal::tickAndFlush( manager );
+    Internal::updateAndFlush( manager );
     SW_EXPECT_NEAR_EQUAL( 16.0f, Internal::findPathLength( navigation ), 0.1f );
     manager.endPlay();
 }
@@ -173,7 +173,7 @@ SW_TEST_CASE( NavMeshDynamicTest, DestructionRebakesTheBrokenWallTiles )
     manager.beginPlay();
     for ( uint32 frame = 0; frame < 60; ++frame )
     {
-        manager.tick( Internal::kFrame );
+        manager.update( Internal::kFrame );
     }
     const sw::INavMesh* pNavMesh = navigation.findNavMesh( sw::hashed_string{} );
     SW_ASSERT_NOT_NULL( pNavMesh );
@@ -181,7 +181,7 @@ SW_TEST_CASE( NavMeshDynamicTest, DestructionRebakesTheBrokenWallTiles )
 
     for ( uint32 frame = 0; frame < 240; ++frame )
     {
-        manager.tick( Internal::kFrame );
+        manager.update( Internal::kFrame );
     }
     navigation.flushTileBakes();
     const sw::GameObject* pWall = manager.findGameObjectByName( sw::hashed_string( "BrickWall" ) );

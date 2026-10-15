@@ -370,7 +370,7 @@ SW_TEST_CASE( MemoryProfilerTest, TagGrowthSinceBaselineNamesTheGrownTags )
     SW_EXPECT_TRUE( listGrowth[0]._tag == MemoryTag::Script );
     SW_EXPECT_EQUAL( int64{ 640 }, listGrowth[0]._byteDelta );
     SW_EXPECT_TRUE( listGrowth[1]._tag == MemoryTag::UI );
-    SW_EXPECT_EQUAL( int64{ 1 }, listGrowth[1]._countDelta );
+    SW_EXPECT_EQUAL( int64{ 1 }, listGrowth[1]._blockCountDelta );
 
     profiler.recordFree( pSmall, 64, MemoryTag::UI );
     profiler.recordFree( pLarge, 640, MemoryTag::Script );

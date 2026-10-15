@@ -2,7 +2,7 @@
  * @file SceneAudio.h
  * @brief 씬 하나의 오디오 묶기 — 리스너(리스너 컴포넌트, 없으면 게임 카메라) · 에미터 자리와 속도 · 레이캐스트 가림 · 리버브 존 세기를 프레임마다 엔진에 넣습니다.
  * @details 씬 서비스(`ISceneService`)입니다. 이 .cpp 의 `SW_SCENE_SERVICE` 줄로 매니저마다 하나 생깁니다(`manager.getSubsystem<sw::SceneAudio>()`).
- *          프레임 진행은 활성 게임 카메라가 필요해 프레임 단계 목록 밖에서 합니다 — 활성 씬의 틱이 끝난 뒤 `Scene::tick` 이 게임 스레드에서
+ *          프레임 진행은 활성 게임 카메라가 필요해 프레임 단계 목록 밖에서 합니다 — 활성 씬의 틱이 끝난 뒤 `Scene::update` 이 게임 스레드에서
  *          카메라 · 물리 씬을 받는 `update` 를 한 번 부르고, 단계 목록이 부르는 `update( deltaTime )` 은 아무것도 하지 않습니다.
  *          오디오 컴포넌트는 틱하지 않고 여기에 등록합니다. 엔진은 생성자로 받은 오디오 서비스의 것이고, 테스트는 `setAudioEngine` 으로 바꿉니다.
  *
@@ -63,7 +63,7 @@ namespace sw
          * @param pScene2D 3D 물리 씬이 없을 때 가림 레이캐스트를 쏠 2D 물리 씬입니다(월드 XY 평면). 둘 다 nullptr 이면 가림을 측정하지 않습니다 — 0 으로 둡니다.
          */
         void update( float32 deltaSeconds, const CameraComponent* pCamera, const IPhysicsQueryScene3D* pScene3D, const IPhysicsQueryScene2D* pScene2D = nullptr );
-        /** @brief 단계 목록이 부르는 진행입니다. 아무것도 하지 않습니다 — 진행은 카메라를 받는 위 `update` 를 `Scene::tick` 이 부른다. */
+        /** @brief 단계 목록이 부르는 진행입니다. 아무것도 하지 않습니다 — 진행은 카메라를 받는 위 `update` 를 `Scene::update` 이 부른다. */
         void update( float32 deltaTime ) override { (void)deltaTime; }
         /** @brief 씬을 비울 때 부릅니다. 등록은 컴포넌트가 스스로 풀므로 할 일이 없습니다. */
         void onSceneCleared() override {}

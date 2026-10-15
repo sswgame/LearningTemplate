@@ -462,13 +462,7 @@ namespace sw
     // CoasterLayoutCatalog
     // ------------------------------------------------------------------------------
     CoasterLayoutCatalog::CoasterLayoutCatalog()
-        : _catalog{}
     {
-    }
-
-    void CoasterLayoutCatalog::addLayout( const CoasterLayoutDef& layout )
-    {
-        (void)_catalog.add( layout );
     }
 
     uint32 CoasterLayoutCatalog::loadRoot( const XMLNode& root, string_view sourceName )
@@ -507,7 +501,7 @@ namespace sw
                 SW_LOG_WARNING( "%#: layout '%#' has no pieces - skipped", sourceName, pID );
                 continue;
             }
-            addLayout( layout );
+            add( layout );
             ++loadedCount;
         }
         if ( loadedCount == 0 )

@@ -106,7 +106,7 @@ SW_TEST_CASE( RagdollTest, KayKitHitboxesFollowThePose )
     RagdollComponent* pRagdoll = TestRagdollInternal::spawnSkeleton( manager, "Skeleton", float3{ 0.0f, 0.0f, 0.0f }, false );
     SW_ASSERT_NOT_NULL( pRagdoll );
     manager.beginPlay();
-    test::tickFrames( manager, 2 );
+    test::updateFrames( manager, 2 );
     SW_ASSERT_EQUAL( size_t( 16 ), pRagdoll->getRagdoll()._listBody.size() );
     SW_EXPECT_TRUE( pRagdoll->getState() == RagdollState::Animated );
     const int32 head = TestRagdollInternal::findBody( *pRagdoll, "head" );
@@ -114,7 +114,7 @@ SW_TEST_CASE( RagdollTest, KayKitHitboxesFollowThePose )
     SW_EXPECT_FALSE( pRagdoll->isBodyDynamic( static_cast<uint32>( head ) ) );
 
     pRagdoll->getOwner()->getPrimarySceneComponent()->setWorldPosition( float3{ 1.0f, 0.0f, 0.5f } );
-    test::tickFrames( manager, 2 );
+    test::updateFrames( manager, 2 );
     const float3 expected = TestRagdollInternal::getBoneWorldPosition( *pRagdoll, "head" );
     const float3 actual   = TestRagdollInternal::getBodyPosition( manager, *pRagdoll, head );
     SW_EXPECT_NEAR_EQUAL( 1.0f, expected._x, 1e-3f );
@@ -133,7 +133,7 @@ SW_TEST_CASE( RagdollTest, WeaponTraceResolvesHitZone )
     RagdollComponent* pShooter = TestRagdollInternal::spawnSkeleton( manager, "Shooter", float3{ 0.0f, 0.0f, -3.0f }, false );
     SW_ASSERT_TRUE( pTarget != nullptr && pShooter != nullptr );
     manager.beginPlay();
-    test::tickFrames( manager, 2 );
+    test::updateFrames( manager, 2 );
 
     const float3 headPosition = TestRagdollInternal::getBoneWorldPosition( *pTarget, "head" ) + float3{ 0.0f, 0.43f, 0.0f };
     HitInfo      hit;
@@ -187,7 +187,7 @@ SW_TEST_CASE( RagdollTest, FatalHitRagdollsSettlesAndGetsUp )
     SW_ASSERT_NOT_NULL( pRagdoll );
     pRagdoll->setGetUpClips( hashed_string( "Lie_StandUp" ), hashed_string{}, hashed_string( "Idle" ) );
     manager.beginPlay();
-    test::tickFrames( manager, 3 );
+    test::updateFrames( manager, 3 );
     const int32 chest = TestRagdollInternal::findBody( *pRagdoll, "chest" );
     SW_ASSERT_TRUE( chest >= 0 );
     const float32 standingChestY = TestRagdollInternal::getBodyPosition( manager, *pRagdoll, chest )._y;
@@ -199,7 +199,7 @@ SW_TEST_CASE( RagdollTest, FatalHitRagdollsSettlesAndGetsUp )
     hit._bFatal    = true;
     CharacterHitUtil::deliverHit( *pRagdoll->getOwner(), hit );
     SW_EXPECT_TRUE( pRagdoll->getState() == RagdollState::Ragdoll );
-    test::tickFrames( manager, 240 );
+    test::updateFrames( manager, 240 );
     SW_EXPECT_TRUE( pRagdoll->isBodyDynamic( static_cast<uint32>( chest ) ) );
     const float3 lyingChest = TestRagdollInternal::getBodyPosition( manager, *pRagdoll, chest );
     SW_EXPECT_TRUE( lyingChest._y < standingChestY * 0.6f ); // 쓰러졌다
@@ -218,7 +218,7 @@ SW_TEST_CASE( RagdollTest, FatalHitRagdollsSettlesAndGetsUp )
     const float3 root = pRagdoll->getOwner()->getPrimarySceneComponent()->getWorldPosition();
     SW_EXPECT_TRUE( lyingPlane.getLength() > 0.3f );
     SW_EXPECT_TRUE( ( float3{ root._x, 0.0f, root._z } - lyingPlane ).getLength() < lyingPlane.getLength() * 0.5f );
-    test::tickFrames( manager, 60 );
+    test::updateFrames( manager, 60 );
     SW_EXPECT_TRUE( pRagdoll->getState() == RagdollState::Animated );
     SW_EXPECT_FALSE( pRagdoll->isBodyDynamic( static_cast<uint32>( chest ) ) );
     manager.endPlay();
@@ -236,7 +236,7 @@ SW_TEST_CASE( RagdollTest, HitReactionAndPartialRagdollAffectOnlyTheSubtree )
     SW_ASSERT_NOT_NULL( pRagdoll );
     pRagdoll->setFlinchClip( hashed_string( "Hit_A" ) );
     manager.beginPlay();
-    test::tickFrames( manager, 3 );
+    test::updateFrames( manager, 3 );
     const int32 head     = TestRagdollInternal::findBody( *pRagdoll, "head" );
     const int32 chest    = TestRagdollInternal::findBody( *pRagdoll, "chest" );
     const int32 upperLeg = TestRagdollInternal::findBody( *pRagdoll, "upperleg.l" );
@@ -248,21 +248,21 @@ SW_TEST_CASE( RagdollTest, HitReactionAndPartialRagdollAffectOnlyTheSubtree )
     hit._impulse   = 10.0f;
     hit._point     = TestRagdollInternal::getBodyPosition( manager, *pRagdoll, head );
     CharacterHitUtil::deliverHit( *pRagdoll->getOwner(), hit );
-    test::tickFrames( manager, 2 );
+    test::updateFrames( manager, 2 );
     SW_EXPECT_TRUE( pRagdoll->isBodyDynamic( static_cast<uint32>( head ) ) );
     SW_EXPECT_FALSE( pRagdoll->isBodyDynamic( static_cast<uint32>( chest ) ) );
     SW_EXPECT_TRUE( pRagdoll->getBodyWeight( static_cast<uint32>( head ) ) > 0.0f );
-    test::tickFrames( manager, 40 );
+    test::updateFrames( manager, 40 );
     SW_EXPECT_FALSE( pRagdoll->isBodyDynamic( static_cast<uint32>( head ) ) );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pRagdoll->getBodyWeight( static_cast<uint32>( head ) ), 1e-6f );
 
     pRagdoll->startPartialRagdoll( 1.0f );
-    test::tickFrames( manager, 60 );
+    test::updateFrames( manager, 60 );
     SW_EXPECT_TRUE( pRagdoll->getState() == RagdollState::Partial );
     SW_EXPECT_TRUE( pRagdoll->isBodyDynamic( static_cast<uint32>( chest ) ) );
     SW_EXPECT_FALSE( pRagdoll->isBodyDynamic( static_cast<uint32>( upperLeg ) ) );
     pRagdoll->stopPartialRagdoll();
-    test::tickFrames( manager, 60 );
+    test::updateFrames( manager, 60 );
     SW_EXPECT_TRUE( pRagdoll->getState() == RagdollState::Animated );
     SW_EXPECT_FALSE( pRagdoll->isBodyDynamic( static_cast<uint32>( chest ) ) );
     manager.endPlay();
@@ -292,14 +292,14 @@ SW_TEST_CASE( RagdollTest, PhysicsAssetHotReloadRebuildsBodies )
     RagdollComponent* pRagdoll = TestRagdollInternal::spawnSkeleton( manager, "Reloaded", float3{}, false, path.c_str() );
     SW_ASSERT_NOT_NULL( pRagdoll );
     manager.beginPlay();
-    test::tickFrames( manager, 2 );
+    test::updateFrames( manager, 2 );
     SW_EXPECT_EQUAL( size_t( 2 ), pRagdoll->getRagdoll()._listBody.size() );
 
     SW_ASSERT_TRUE( FileUtil::writeTextFile( path, pThreeBodies ) );
     PhysicsAssetCache cache;
     SW_ASSERT_TRUE( cache.isCached( path ) );
     cache.reload( path, nullptr );
-    test::tickFrames( manager, 2 );
+    test::updateFrames( manager, 2 );
     SW_EXPECT_EQUAL( size_t( 3 ), pRagdoll->getRagdoll()._listBody.size() );
     manager.endPlay();
 }

@@ -767,8 +767,8 @@ SW_TEST_CASE( CardGameTest, DeckBattlePlaysATurnWithEnergyBlockExhaustAndReshuff
     DeckBattleCatalog     catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kDeckXML, "CardGameTest" ) );
     SW_EXPECT_EQUAL( catalog.getCount(), 3 );
-    SW_ASSERT_NOT_NULL( catalog.findCard( "prepare" ) );
-    SW_EXPECT_EQUAL( static_cast<int32>( catalog.findCard( "prepare" )->_listEffect.size() ), 2 );
+    SW_ASSERT_NOT_NULL( catalog.find( "prepare" ) );
+    SW_EXPECT_EQUAL( static_cast<int32>( catalog.find( "prepare" )->_listEffect.size() ), 2 );
 
     DeckBattleSettings settings;
     settings._drawPerTurn = 7;

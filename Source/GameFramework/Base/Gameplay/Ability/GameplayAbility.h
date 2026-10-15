@@ -187,7 +187,7 @@ namespace sw
         /** @brief 어빌리티를 끝냅니다. 작업을 정리하고, 컴포넌트에 알린 뒤 `onEndAbility` 를 부릅니다. */
         void finishActivation( bool bWasCancelled );
         /** @brief 작업과 `onTickAbility` 를 진행합니다. 컴포넌트의 시간 진행에서 부릅니다. */
-        void tickAbility( float32 deltaTime );
+        void updateAbility( float32 deltaTime );
         /** @brief 입력 상태를 기록하고, 실행 중이면 알립니다. */
         void setInputPressed( bool bPressed );
         /** @brief 끝난 작업을 지웁니다. 작업을 순회하는 중이면 지우기를 미룹니다. */

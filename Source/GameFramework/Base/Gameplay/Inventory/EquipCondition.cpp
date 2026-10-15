@@ -125,7 +125,7 @@ namespace sw
                     const bool       bSkipSlot = static_cast<int32>( slotIndex ) == selfSlotIndex || slot._item.isEmpty() || slot._bSuppressed == SW_TRUE;
                     if ( bSkipSlot )
                         continue;
-                    const ItemDef* pDef = catalog.findItem( slot._item._itemID );
+                    const ItemDef* pDef = catalog.find( slot._item._itemID );
                     if ( pDef != nullptr && pDef->hasTagUnder( condition._tag ) )
                         return true;
                 }
@@ -151,7 +151,7 @@ namespace sw
     bool EquipConditionUtil::findConditionCycle( const ItemCatalog& catalog, const IEquipSetLookup* pSetLookup, vector<hashed_string>& outListCycle )
     {
         outListCycle.clear();
-        const vector<ItemDef>& listItem = catalog.getItems();
+        const vector<ItemDef>& listItem = catalog.getAll();
         vector<uint8>          listState( listItem.size(), EquipConditionInternal::kVisitNone );
         vector<size_t>         listStack;
         for ( size_t index = 0; index < listItem.size(); ++index )

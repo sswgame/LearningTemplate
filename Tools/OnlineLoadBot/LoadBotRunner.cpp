@@ -119,7 +119,7 @@ namespace sw
         return rampUpMs * botIndex / std::max( 1, _scenario._botCount );
     }
 
-    bool LoadBotRunner::tick()
+    bool LoadBotRunner::update()
     {
         if ( _bInitialized == SW_FALSE )
             return false;
@@ -138,7 +138,7 @@ namespace sw
         int32 runningCount = 0;
         for ( int32 botIndex = 0; botIndex < _launchedCount; ++botIndex )
         {
-            runningCount += _listBot[static_cast<size_t>( botIndex )]->tick( nowMs ) ? 1 : 0;
+            runningCount += _listBot[static_cast<size_t>( botIndex )]->update( nowMs ) ? 1 : 0;
         }
 
         const int64 endMs     = static_cast<int64>( _scenario._rampUpSeconds + _scenario._durationSeconds ) * LoadBotRunnerInternal::kMillisecondsPerSecond;

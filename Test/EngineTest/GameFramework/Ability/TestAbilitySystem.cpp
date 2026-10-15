@@ -872,7 +872,7 @@ SW_TEST_CASE( AbilitySystemTest, EffectAppliedToAnotherObjectDuringTickIsDeferre
     pStriker->_pEffect = pDamage;
 
     manager.beginPlay();
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_TRUE( pStriker->_bHandleWasValid == SW_FALSE );
     SW_EXPECT_NEAR_EQUAL( 100.0f, pStriker->_healthSeenInTick, 0.001f );
     SW_EXPECT_NEAR_EQUAL( 85.0f, pTarget->getAttributeValue( CombatAttributes::health() ), 0.001f );

@@ -134,21 +134,14 @@ namespace sw
      *        minSellFactor="0.3" recovery="0.1" refuses="Quest,Key"><Stock item="potion" price="20" count="10" restock="10" requires="flagExpr"/>
      *        </Shop></ShopCatalog>` 를 읽습니다.
      */
-    class SW_GF_API ShopCatalog : public XMLCatalog<ShopCatalog>
+    class SW_GF_API ShopCatalog : public XMLCatalog<ShopCatalog>, public GameCatalog<ShopDef>
     {
         friend class XMLCatalog<ShopCatalog>;
 
     public:
-        void addShop( const ShopDef& def ) { (void)_catalog.add( def ); }
-
-        const ShopDef*         findShop( const hashed_string& id ) const { return _catalog.find( id ); }
-        const vector<ShopDef>& getShops() const { return _catalog.getAll(); }
-
     private:
         static constexpr const utf8* kXMLRootName = "ShopCatalog"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
-
-        GameCatalog<ShopDef> _catalog{};
     };
 } // namespace sw
 

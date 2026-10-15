@@ -87,15 +87,15 @@ namespace sw
             pilot._vitality.setInvulnerable( pMech->_wakeInvulnerable );
             pushEvent( MechArenaEvent::Kind::WokeUp, pilotIndex, -1, pMech->_wakeInvulnerable, hashed_string{} );
         }
-        pilot._staggerRemaining.tick( deltaTime );
-        pilot._transformCooldown.tick( deltaTime );
+        pilot._staggerRemaining.update( deltaTime );
+        pilot._transformCooldown.update( deltaTime );
         for ( WeaponState& weapon : pilot._listWeaponState )
         {
             weapon.update( deltaTime );
         }
         for ( Countdown& cooldown : pilot._listSpecialCooldown )
         {
-            cooldown.tick( deltaTime );
+            cooldown.update( deltaTime );
         }
         stepSkills( pilotIndex, deltaTime );
 
@@ -162,7 +162,7 @@ namespace sw
             if ( pilot._dashRemaining.isActive() )
             {
                 horizontal = pilot._dashDirection * pMech->_dashSpeed;
-                pilot._dashRemaining.tick( deltaTime );
+                pilot._dashRemaining.update( deltaTime );
             }
             else
             {
@@ -251,7 +251,7 @@ namespace sw
             if ( bPressedMelee == false || slotIndex < 0 )
                 return;
             const MechWeaponSlotDef& slot  = pilot.getMode()->_listWeapon[static_cast<size_t>( slotIndex - pilot.getMech()->computeSlotOffset( pilot._mode ) )];
-            const MoveFrameData*     pMove = slot._listMoveID.empty() ? nullptr : _pMoveCatalog->findMove( slot._listMoveID.front() );
+            const MoveFrameData*     pMove = slot._listMoveID.empty() ? nullptr : _pMoveCatalog->find( slot._listMoveID.front() );
             if ( pMove == nullptr )
                 return;
             (void)findLockTarget( pilotIndex );
@@ -269,7 +269,7 @@ namespace sw
                 pilot._bMeleeQueued = SW_TRUE;
             const int32          nextStage          = pilot._comboStage + 1;
             const bool           bHasNext           = nextStage < static_cast<int32>( slot._listMoveID.size() );
-            const MoveFrameData* pNext              = bHasNext ? _pMoveCatalog->findMove( slot._listMoveID[static_cast<size_t>( nextStage )] ) : nullptr;
+            const MoveFrameData* pNext              = bHasNext ? _pMoveCatalog->find( slot._listMoveID[static_cast<size_t>( nextStage )] ) : nullptr;
             const bool           bCanCancelIntoNext = pilot._bMeleeQueued == SW_TRUE && pNext != nullptr && pilot._melee.canCancelInto( pNext->_id );
             if ( bCanCancelIntoNext )
             {
@@ -332,8 +332,8 @@ namespace sw
         for ( int32 index = 0; index < count; ++index )
         {
             Countdown& remaining = pilot._listSkillRemaining[static_cast<size_t>( index )];
-            pilot._listSkillCooldown[static_cast<size_t>( index )].tick( deltaTime );
-            if ( remaining.tick( deltaTime ) )
+            pilot._listSkillCooldown[static_cast<size_t>( index )].update( deltaTime );
+            if ( remaining.update( deltaTime ) )
                 pushEvent( MechArenaEvent::Kind::SkillEnded, pilotIndex, -1, 0.0f, pilot._listSkill[static_cast<size_t>( index )]->_id );
         }
         const int32 slot                       = pilot._input._skillSlot;

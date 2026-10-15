@@ -109,7 +109,7 @@ SW_TEST_CASE( SocketBindingTest, BoundUnitFollowsHolderWithoutTicking )
     SW_EXPECT_TRUE( Internal::isNear( Internal::makeSocket() * rig._pHolderScene->getWorldMatrix(), rig._pUnitScene->getWorldMatrix(), 1.0e-4f ) );
 
     rig._pHolderScene->setLocalPosition( float3( -4.0f, 0.0f, 0.0f ) );
-    rig._manager.tick( 0.016f );
+    rig._manager.update( 0.016f );
     SW_EXPECT_TRUE( Internal::isNear( Internal::makeSocket() * rig._pHolderScene->getWorldMatrix(), rig._pUnitScene->getWorldMatrix(), 1.0e-4f ) );
     SW_EXPECT_FALSE( rig._pBinding->canEverTick() );
 
@@ -133,7 +133,7 @@ SW_TEST_CASE( SocketBindingTest, ReleaseKeepsBoundWorldTransform )
     SW_EXPECT_TRUE( rig._pBinding->getState() == SocketBindingState::ReleasedAnimated );
     SW_EXPECT_TRUE( rig._pUnitScene->getParent() == nullptr );
     SW_EXPECT_TRUE( Internal::isNear( boundWorld, rig._pUnitScene->getWorldMatrix(), 1.0e-4f ) );
-    rig._manager.tick( 0.016f );
+    rig._manager.update( 0.016f );
     SW_EXPECT_TRUE( Internal::isNear( boundWorld, rig._pUnitScene->getWorldMatrix(), 1.0e-4f ) );
     rig._pHolderScene->setLocalPosition( float3( 9.0f, 0.0f, 0.0f ) );
     SW_EXPECT_TRUE( Internal::isNear( boundWorld, rig._pUnitScene->getWorldMatrix(), 1.0e-4f ) );
@@ -157,10 +157,10 @@ SW_TEST_CASE( SocketBindingTest, PhysicsReleaseStartsBodyAtBoundTransform )
     SW_EXPECT_TRUE( Internal::isNear( boundWorld, body._startWorld, 1.0e-5f ) );
     SW_EXPECT_TRUE( rig._pBinding->canEverTick() );
 
-    rig._manager.tick( 0.016f ); // 바디가 아직 움직이지 않았다 — 첫 프레임은 붙어 있던 자리
+    rig._manager.update( 0.016f ); // 바디가 아직 움직이지 않았다 — 첫 프레임은 붙어 있던 자리
     SW_EXPECT_TRUE( Internal::isNear( boundWorld, rig._pUnitScene->getWorldMatrix(), 1.0e-4f ) );
     body.advance( 0.5f );
-    rig._manager.tick( 0.016f );
+    rig._manager.update( 0.016f );
     SW_EXPECT_TRUE( Internal::isNear( boundWorld.getTranslation() + float3( 0.0f, -1.0f, 0.0f ), rig._pUnitScene->getWorldPosition(), 1.0e-4f ) );
 
     // 되돌아가면 바디를 끝낸다.
@@ -188,14 +188,14 @@ SW_TEST_CASE( SocketBindingTest, ReturnBlendsFromCurrentTransformToSocket )
     SW_ASSERT_TRUE( rig._pBinding->returnToSocket() );
     SW_EXPECT_TRUE( rig._pBinding->getState() == SocketBindingState::Returning );
     SW_EXPECT_TRUE( Internal::isNear( startPosition, rig._pUnitScene->getWorldPosition(), 1.0e-5f ) ); // 켠 순간 튀지 않는다
-    rig._manager.tick( 0.5f );
+    rig._manager.update( 0.5f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, rig._pBinding->getReturnProgress(), 1.0e-5f );
     SW_EXPECT_TRUE( Internal::isNear( float3::lerp( startPosition, socketPosition, 0.5f ), rig._pUnitScene->getWorldPosition(), 1.0e-4f ) );
-    rig._manager.tick( 0.6f );
+    rig._manager.update( 0.6f );
     SW_EXPECT_TRUE( rig._pBinding->getState() == SocketBindingState::Bound );
     SW_EXPECT_TRUE( rig._pUnitScene->getParent() == rig._pHolderScene );
     SW_EXPECT_TRUE( Internal::isNear( socketPosition, rig._pUnitScene->getWorldPosition(), 1.0e-4f ) );
-    rig._manager.tick( 0.016f ); // 틱 끄기는 틱 뒤로 미뤄진다
+    rig._manager.update( 0.016f ); // 틱 끄기는 틱 뒤로 미뤄진다
     SW_EXPECT_FALSE( rig._pBinding->canEverTick() );
 }
 
@@ -224,7 +224,7 @@ SW_TEST_CASE( SocketBindingTest, TransferHandsUnitToNewHolderWithoutRespawn )
     SW_ASSERT_TRUE( rig._pBinding->transferTo( rig._pHolder, hashed_string( "HandR" ), Internal::makeSocket(), true ) );
     SW_EXPECT_TRUE( rig._pBinding->getState() == SocketBindingState::Returning );
     SW_EXPECT_TRUE( Internal::isNear( before, rig._pUnitScene->getWorldPosition(), 1.0e-4f ) );
-    rig._manager.tick( 1.0f );
+    rig._manager.update( 1.0f );
     SW_EXPECT_TRUE( rig._pBinding->getState() == SocketBindingState::Bound );
     SW_EXPECT_TRUE( rig._pUnitScene->getParent() == rig._pHolderScene );
 }

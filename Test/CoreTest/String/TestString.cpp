@@ -251,11 +251,11 @@ SW_TEST_CASE( StringTest, HashedStringFollowsFNameRules )
 
     // 찾기만 하는 조회는 철자를 새로 넣지 않는다 — 있는 철자면 그것, 없으면 그 이름의 첫 철자
     SW_EXPECT_STREQ( "fnamerulehero", sw::hashed_string::findInterned( "fnamerulehero" ).c_str() );
-    const uint32            countBefore = sw::hashed_string::getInternedCount();
-    const sw::hashed_string found       = sw::hashed_string::findInterned( "FNAMERULEHERO" );
+    const uint32            previousCount = sw::hashed_string::getInternedCount();
+    const sw::hashed_string found         = sw::hashed_string::findInterned( "FNAMERULEHERO" );
     SW_EXPECT_TRUE( found == upper );
     SW_EXPECT_STREQ( "FNameRuleHero", found.c_str() );
-    SW_EXPECT_EQUAL( countBefore, sw::hashed_string::getInternedCount() );
+    SW_EXPECT_EQUAL( previousCount, sw::hashed_string::getInternedCount() );
 
     // 해시 맵 키 — 철자가 달라도 같은 칸
     sw::unordered_map<sw::hashed_string, int32> mapNameToValue;

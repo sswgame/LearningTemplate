@@ -127,10 +127,10 @@ namespace
             inputMap.bind( "Exit", Key::F );
         }
 
-        static void tick( GameObjectManager& manager, InputManager& input )
+        static void update( GameObjectManager& manager, InputManager& input )
         {
             input.beginFrame( kDeltaTime );
-            manager.tick( kDeltaTime );
+            manager.update( kDeltaTime );
             input.endFrame();
         }
 
@@ -138,9 +138,9 @@ namespace
         static void tapKey( GameObjectManager& manager, InputManager& input, Key key )
         {
             (void)input.postRawEvent( RawInputEvent::makeKeyDown( key ) );
-            tick( manager, input );
+            update( manager, input );
             (void)input.postRawEvent( RawInputEvent::makeKeyUp( key ) );
-            tick( manager, input );
+            update( manager, input );
         }
 
         static float3 findPosition( const GameObject& object ) { return object.getPrimarySceneComponent()->getWorldPosition(); }
@@ -201,7 +201,7 @@ SW_TEST_CASE( MountTest, MountAndDismountRoundTrip )
         pPlayer->possess( *pRider->getComponent<PawnComponent>() );
         for ( uint32 frame = 0; frame < 5; ++frame )
         {
-            Internal::tick( manager, input );
+            Internal::update( manager, input );
         }
 
         Internal::tapKey( manager, input, Key::E );
@@ -219,10 +219,10 @@ SW_TEST_CASE( MountTest, MountAndDismountRoundTrip )
         (void)input.postRawEvent( RawInputEvent::makeKeyDown( Key::W ) );
         for ( uint32 frame = 0; frame < 30; ++frame )
         {
-            Internal::tick( manager, input );
+            Internal::update( manager, input );
         }
         (void)input.postRawEvent( RawInputEvent::makeKeyUp( Key::W ) );
-        Internal::tick( manager, input );
+        Internal::update( manager, input );
         const float3 carMoved = Internal::findPosition( *pVehicle );
         SW_EXPECT_NEAR_EQUAL( 5.0f, carMoved._z - carStart._z, 1.0e-3f );
         SW_EXPECT_NEAR_EQUAL( carMoved._z, Internal::findPosition( *pRider )._z, 1.0e-3f );
@@ -236,9 +236,9 @@ SW_TEST_CASE( MountTest, MountAndDismountRoundTrip )
         SW_EXPECT_TRUE_MSG( MathUtil::abs( standing._x - ( carMoved._x - 2.0f ) ) < 0.1f && MathUtil::abs( standing._z - carMoved._z ) < 0.1f,
                             ( "rider stands at " + std::to_string( standing._x ) + ", " + std::to_string( standing._z ) ).c_str() );
         // 놓인 차는 선다.
-        Internal::tick( manager, input );
+        Internal::update( manager, input );
         const float3 parked = Internal::findPosition( *pVehicle );
-        Internal::tick( manager, input );
+        Internal::update( manager, input );
         SW_EXPECT_NEAR_EQUAL( parked._z, Internal::findPosition( *pVehicle )._z, 1.0e-6f );
     }
     input.shutdown();
@@ -266,7 +266,7 @@ SW_TEST_CASE( MountTest, NpcMountsThroughTheSameFunction )
         manager.beginPlay();
         pPlayer->possess( *pPlayerRider->getComponent<PawnComponent>() );
         pNpc->possess( *pNpcRider->getComponent<PawnComponent>() );
-        Internal::tick( manager, input );
+        Internal::update( manager, input );
 
         SW_ASSERT_TRUE( MountUtil::mount( *pPlayerRider->getComponent<PawnComponent>(), *pPlayerCar->getComponent<VehicleSeatComponent>() ) == MountResult::Mounted );
         SW_ASSERT_TRUE( MountUtil::mount( *pNpcRider->getComponent<PawnComponent>(), *pNpcCar->getComponent<VehicleSeatComponent>() ) == MountResult::Mounted );
@@ -275,7 +275,7 @@ SW_TEST_CASE( MountTest, NpcMountsThroughTheSameFunction )
         (void)input.postRawEvent( RawInputEvent::makeKeyDown( Key::W ) );
         for ( uint32 frame = 0; frame < 30; ++frame )
         {
-            Internal::tick( manager, input );
+            Internal::update( manager, input );
             const float32 playerZ = Internal::findPosition( *pPlayerCar )._z;
             const float32 npcZ    = Internal::findPosition( *pNpcCar )._z;
             SW_EXPECT_TRUE_MSG( playerZ == npcZ, ( "frame " + std::to_string( frame ) + " player " + std::to_string( playerZ ) + " npc " + std::to_string( npcZ ) ).c_str() );
@@ -305,7 +305,7 @@ SW_TEST_CASE( MountTest, SeatTakenAndTooFarAreRefused )
     pFirstAI->possess( *pFirst->getComponent<PawnComponent>() );
     pSecondAI->possess( *pSecond->getComponent<PawnComponent>() );
     pFarAI->possess( *pFar->getComponent<PawnComponent>() );
-    manager.tick( Internal::kDeltaTime );
+    manager.update( Internal::kDeltaTime );
     VehicleSeatComponent& seat = *pVehicle->getComponent<VehicleSeatComponent>();
 
     // 조종자 없는 탑승자는 운전석에 앉지 못한다(넘길 빙의가 없다).
@@ -352,13 +352,13 @@ SW_TEST_CASE( MountTest, RiderStillTakesHitsWhileMounted )
         ControlSystem::ensureFor( manager ).setInputManager( &input );
         manager.beginPlay();
         pPlayer->possess( *pRider->getComponent<PawnComponent>() );
-        Internal::tick( manager, input );
+        Internal::update( manager, input );
         SW_ASSERT_TRUE( MountUtil::mount( *pRider->getComponent<PawnComponent>(), *pVehicle->getComponent<VehicleSeatComponent>() ) == MountResult::Mounted );
 
         (void)input.postRawEvent( RawInputEvent::makeKeyDown( Key::W ) );
         for ( uint32 frame = 0; frame < 30; ++frame )
         {
-            Internal::tick( manager, input );
+            Internal::update( manager, input );
         }
         const float3           feet   = Internal::findPosition( *pRider );
         const IPhysicsScene3D* pScene = manager.getSubsystem<sw::ScenePhysics>().findScene3D();
@@ -385,10 +385,10 @@ SW_TEST_CASE( MountTest, ForcedDismountWhenTheRiderGoesDown )
     auto*       pAI      = manager.createGameObject( hashed_string( "AI" ) )->addComponent<AIControllerComponent>();
     manager.beginPlay();
     pAI->possess( *pRider->getComponent<PawnComponent>() );
-    manager.tick( Internal::kDeltaTime );
+    manager.update( Internal::kDeltaTime );
     SW_ASSERT_TRUE( MountUtil::mount( *pRider->getComponent<PawnComponent>(), *pVehicle->getComponent<VehicleSeatComponent>() ) == MountResult::Mounted );
     SW_EXPECT_NOT_NULL( pRider->getComponent<RiderDownWatcherComponent>() );
-    manager.tick( Internal::kDeltaTime );
+    manager.update( Internal::kDeltaTime );
     const float3 seated = Internal::findPosition( *pRider );
 
     HealthChangedEvent hurt;
@@ -470,7 +470,7 @@ SW_TEST_CASE( MountTest, HorseGaitFollowsTheIntent )
     pRiderAI->moveTo( float3{ 0.0f, 0.0f, 1000.0f } );
     for ( uint32 frame = 0; frame < 120; ++frame )
     {
-        manager.tick( Internal::kDeltaTime );
+        manager.update( Internal::kDeltaTime );
     }
     SW_EXPECT_TRUE( pMovement->getGait() == MountGait::Canter );
     SW_EXPECT_NEAR_EQUAL( pMovement->computeGaitSpeed( MountGait::Canter ), pMovement->getForwardSpeed(), 1.0e-3f );
@@ -478,19 +478,19 @@ SW_TEST_CASE( MountTest, HorseGaitFollowsTheIntent )
     pRiderAI->holdButton( "Sprint", true );
     for ( uint32 frame = 0; frame < 60; ++frame )
     {
-        manager.tick( Internal::kDeltaTime );
+        manager.update( Internal::kDeltaTime );
     }
     SW_EXPECT_TRUE( pMovement->getGait() == MountGait::Gallop );
     SW_EXPECT_TRUE( pMovement->getForwardSpeed() > pMovement->computeGaitSpeed( MountGait::Canter ) );
 
     // 스태미나가 바닥났다(키트가 막는다) — 구보로 떨어진다.
     pMovement->setGallopAllowed( false );
-    manager.tick( Internal::kDeltaTime );
+    manager.update( Internal::kDeltaTime );
     SW_EXPECT_TRUE( pMovement->getGait() == MountGait::Canter );
     pMovement->setMaxGait( MountGait::Trot );
     for ( uint32 frame = 0; frame < 120; ++frame )
     {
-        manager.tick( Internal::kDeltaTime );
+        manager.update( Internal::kDeltaTime );
     }
     SW_EXPECT_TRUE( pMovement->getGait() == MountGait::Trot );
     SW_EXPECT_NEAR_EQUAL( pMovement->computeGaitSpeed( MountGait::Trot ), pMovement->getForwardSpeed(), 1.0e-3f );
@@ -526,7 +526,7 @@ SW_TEST_CASE( MountTest, PlayerAndNpcRideTheHorseTheSame )
         pHorseAI->possess( *pPlayerHorse->getComponent<PawnComponent>() ); // 탄 사람이 없을 때 말을 쥐는 말 AI
         for ( uint32 frame = 0; frame < 5; ++frame )
         {
-            Internal::tick( manager, input );
+            Internal::update( manager, input );
         }
 
         Internal::tapKey( manager, input, Key::E );
@@ -540,7 +540,7 @@ SW_TEST_CASE( MountTest, PlayerAndNpcRideTheHorseTheSame )
         (void)input.postRawEvent( RawInputEvent::makeKeyDown( Key::W ) );
         for ( uint32 frame = 0; frame < 90; ++frame )
         {
-            Internal::tick( manager, input );
+            Internal::update( manager, input );
             const float32 playerTravel = Internal::findPosition( *pPlayerHorse )._z - playerStart;
             const float32 npcTravel    = Internal::findPosition( *pNpcHorse )._z - npcStart;
             SW_EXPECT_TRUE_MSG( MathUtil::abs( playerTravel - npcTravel ) <= 1.0e-3f,
@@ -549,7 +549,7 @@ SW_TEST_CASE( MountTest, PlayerAndNpcRideTheHorseTheSame )
         SW_EXPECT_TRUE( pPlayerHorse->getComponent<MountMovementComponent>()->getGait() == MountGait::Canter );
         SW_EXPECT_TRUE( Internal::findPosition( *pPlayerHorse )._z - playerStart > 5.0f );
         (void)input.postRawEvent( RawInputEvent::makeKeyUp( Key::W ) );
-        Internal::tick( manager, input );
+        Internal::update( manager, input );
 
         Internal::tapKey( manager, input, Key::F );
         SW_EXPECT_TRUE( pPlayer->getPawn() == pPlayerRider->getComponent<PawnComponent>()->getHandle() );
@@ -586,7 +586,7 @@ SW_TEST_CASE( MountTest, ArcadeCarDrivesFromIntent )
     pDriver->moveTo( float3{ 0.0f, 0.0f, 1000.0f } );
     for ( uint32 frame = 0; frame < 60; ++frame )
     {
-        manager.tick( Internal::kDeltaTime );
+        manager.update( Internal::kDeltaTime );
     }
     SW_EXPECT_TRUE( pVehicle->getMotor().getForwardSpeed() > 5.0f );
     SW_EXPECT_TRUE( Internal::findPosition( *pCar )._z > 3.0f );
@@ -597,7 +597,7 @@ SW_TEST_CASE( MountTest, ArcadeCarDrivesFromIntent )
     pDriver->moveTo( float3{ 100.0f, 0.0f, Internal::findPosition( *pCar )._z + 100.0f } );
     for ( uint32 frame = 0; frame < 30; ++frame )
     {
-        manager.tick( Internal::kDeltaTime );
+        manager.update( Internal::kDeltaTime );
     }
     SW_EXPECT_TRUE( pVehicle->getMotor().getYaw() > 0.1f );
 }
@@ -624,7 +624,7 @@ SW_TEST_CASE( MountTest, PlayerAndAIDriveTheSameLine )
         manager.beginPlay();
         pPlayer->possess( *pPlayerRider->getComponent<PawnComponent>() );
         pAI->possess( *pAIRider->getComponent<PawnComponent>() );
-        Internal::tick( manager, input );
+        Internal::update( manager, input );
         Internal::tapKey( manager, input, Key::E );
         SW_ASSERT_TRUE( pPlayer->getPawn() == pPlayerKart->getComponent<PawnComponent>()->getHandle() );
         SW_ASSERT_TRUE( MountUtil::mount( *pAIRider->getComponent<PawnComponent>(), *pAIKart->getComponent<VehicleSeatComponent>() ) == MountResult::Mounted );
@@ -633,7 +633,7 @@ SW_TEST_CASE( MountTest, PlayerAndAIDriveTheSameLine )
         (void)input.postRawEvent( RawInputEvent::makeKeyDown( Key::W ) );
         for ( uint32 frame = 0; frame < 60; ++frame )
         {
-            Internal::tick( manager, input );
+            Internal::update( manager, input );
             const float3 playerAt = Internal::findPosition( *pPlayerKart );
             const float3 aiAt     = Internal::findPosition( *pAIKart );
             SW_EXPECT_TRUE_MSG( playerAt._z == aiAt._z && playerAt._x + 12.0f == aiAt._x,
@@ -681,13 +681,13 @@ SW_TEST_CASE( MountTest, PhysicsCarFromIntent )
     pDriver->possess( *pCar->getComponent<PawnComponent>() );
     for ( uint32 frame = 0; frame < 30; ++frame )
     {
-        manager.tick( Internal::kDeltaTime );
+        manager.update( Internal::kDeltaTime );
     }
 
     pDriver->moveTo( float3{ 0.0f, 0.0f, 1000.0f } );
     for ( uint32 frame = 0; frame < 120; ++frame )
     {
-        manager.tick( Internal::kDeltaTime );
+        manager.update( Internal::kDeltaTime );
     }
     SW_EXPECT_TRUE_MSG( pWheels->getVehicleState()._forwardSpeed > 5.0f, ( "speed " + std::to_string( pWheels->getVehicleState()._forwardSpeed ) ).c_str() );
 
@@ -696,7 +696,7 @@ SW_TEST_CASE( MountTest, PhysicsCarFromIntent )
     bool bReversed = false;
     for ( uint32 frame = 0; frame < 600 && bReversed == false; ++frame )
     {
-        manager.tick( Internal::kDeltaTime );
+        manager.update( Internal::kDeltaTime );
         bReversed = pWheels->getVehicleState()._forwardSpeed < -0.5f;
     }
     SW_EXPECT_TRUE( bReversed );

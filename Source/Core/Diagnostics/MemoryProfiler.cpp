@@ -534,10 +534,10 @@ namespace sw
         {
             const int64 byteDelta = static_cast<int64>( _arrStat[tagIndex]._currentAllocatedBytes.load( std::memory_order_relaxed ) ) -
                                     static_cast<int64>( _arrBaselineBytes[tagIndex] );
-            const int64 countDelta = static_cast<int64>( _arrStat[tagIndex]._currentAllocationCount.load( std::memory_order_relaxed ) ) -
-                                     static_cast<int64>( _arrBaselineCount[tagIndex] );
-            if ( byteDelta > 0 || countDelta > 0 )
-                listGrowth.push_back( MemoryTagGrowth{ static_cast<MemoryTag>( tagIndex ), byteDelta, countDelta } );
+            const int64 blockCountDelta = static_cast<int64>( _arrStat[tagIndex]._currentAllocationCount.load( std::memory_order_relaxed ) ) -
+                                          static_cast<int64>( _arrBaselineCount[tagIndex] );
+            if ( byteDelta > 0 || blockCountDelta > 0 )
+                listGrowth.push_back( MemoryTagGrowth{ static_cast<MemoryTag>( tagIndex ), byteDelta, blockCountDelta } );
         }
         std::sort( listGrowth.begin(), listGrowth.end(), []( const MemoryTagGrowth& lhs, const MemoryTagGrowth& rhs )
         { return lhs._byteDelta > rhs._byteDelta; } );
@@ -558,7 +558,7 @@ namespace sw
         for ( const MemoryTagGrowth& growth : listGrowth )
         {
             MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# - tag %# grew by %# bytes in %# blocks since the post-init baseline.", pPhase,
-                                                      getMemoryTagName( growth._tag ), growth._byteDelta, growth._countDelta );
+                                                      getMemoryTagName( growth._tag ), growth._byteDelta, growth._blockCountDelta );
         }
         return static_cast<uint32>( listGrowth.size() );
     }

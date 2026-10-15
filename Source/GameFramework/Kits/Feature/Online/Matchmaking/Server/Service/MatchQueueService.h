@@ -122,7 +122,7 @@ namespace sw
         /** @brief 기다리던 캐시 요청을 취소합니다. 임대는 놓지 않으며 TTL 이 지나면 넘어갑니다. */
         void shutdown();
         /** @brief 임대, 서버 목록, 매처, 배정, 낸 티켓의 시한을 처리합니다. */
-        void tick( int64 nowMs );
+        void update( int64 nowMs );
 
         void joinQueue( AccountID accountID, string_view modeID, string_view region, int64 nowMs, uint64 requestTag );
         void leaveQueue( AccountID accountID, uint64 requestTag );
@@ -188,7 +188,7 @@ namespace sw
 
         void               onPartyFound( uint64 lookupTag, MatchmakingResult result, const PartySnapshot& party );
         void               submitTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID );
-        void               tickLease( const string& modeID, ModeState& state, int64 nowMs );
+        void               updateLease( const string& modeID, ModeState& state, int64 nowMs );
         void               onLeaseReply( const EphemeralReply& reply );
         void               placeMatches( ModeState& state, int64 nowMs );
         [[nodiscard]] bool placeMatch( ModeState& state, const MatchFormed& match, MatchQueueOutcome failOutcome, int64 nowMs );

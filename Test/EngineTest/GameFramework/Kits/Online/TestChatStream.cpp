@@ -115,19 +115,19 @@ SW_TEST_CASE( ChatStreamTest, ChannelChatBetweenTwoClientsWithEchoAndErrors )
     aliceChat.initialize( &clients.getClient( alice ) );
     bobChat.initialize( &clients.getClient( bob ) );
     guestChat.initialize( &clients.getClient( guest ) );
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
     clients.login( alice, 1 );
     clients.login( bob, 2 );
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
 
     ChatReplyRecorder aliceRecorder;
     ChatReplyRecorder bobRecorder;
     ChatReplyRecorder guestRecorder;
     (void)aliceChat.join( "world.kr", aliceRecorder.makeDelegate() );
     (void)bobChat.join( "world.kr", bobRecorder.makeDelegate() );
-    test::tickAll( { &server }, clients, 10 );
+    test::updateAll( { &server }, clients, 10 );
     (void)aliceChat.send( "world.kr", "hello bob", aliceRecorder.makeDelegate() );
-    test::tickAll( { &server }, clients, 20 );
+    test::updateAll( { &server }, clients, 20 );
 
     SW_ASSERT_EQUAL( aliceRecorder._listReply.size(), size_t( 2 ) );
     SW_EXPECT_EQUAL( aliceRecorder._listReply[0]._method, ChatMethod::kJoin );
@@ -144,7 +144,7 @@ SW_TEST_CASE( ChatStreamTest, ChannelChatBetweenTwoClientsWithEchoAndErrors )
 
     (void)bobChat.send( "custom.nowhere", "hi", bobRecorder.makeDelegate() );
     (void)guestChat.join( "world.kr", guestRecorder.makeDelegate() ); // 로그인 없음
-    test::tickAll( { &server }, clients, 30 );
+    test::updateAll( { &server }, clients, 30 );
     SW_EXPECT_EQUAL( bobRecorder._listReply.back()._errorCode, OnlineError::kOk ); // 업무 결과는 답 몸으로
     SW_EXPECT_TRUE( bobRecorder._listReply.back()._reply._result == ChatResult::NotMember );
     SW_ASSERT_EQUAL( guestRecorder._listReply.size(), size_t( 1 ) );
@@ -152,7 +152,7 @@ SW_TEST_CASE( ChatStreamTest, ChannelChatBetweenTwoClientsWithEchoAndErrors )
     SW_EXPECT_TRUE( guestRecorder._listReply[0]._reply._result == ChatResult::NotSignedIn );
 
     clients.drop( bob ); // 끊김 → 호스트 onAccountLeft → 채널에서 빠짐
-    test::tickAll( { &server }, clients, 40 );
+    test::updateAll( { &server }, clients, 40 );
     SW_EXPECT_EQUAL( chat._service.getLocalMemberCount( "world.kr" ), 1 );
 }
 
@@ -179,15 +179,15 @@ SW_TEST_CASE( ChatStreamTest, WhisperHistoryAndMuteAcrossTwoServers )
     const int32             bob   = clients.connect( second._port, { &bobChat } );
     aliceChat.initialize( &clients.getClient( alice ) );
     bobChat.initialize( &clients.getClient( bob ) );
-    test::tickAll( { &first, &second }, clients, 0 );
+    test::updateAll( { &first, &second }, clients, 0 );
     clients.login( alice, 1 );
     clients.login( bob, 2 );
-    test::tickAll( { &first, &second }, clients, 0 );
+    test::updateAll( { &first, &second }, clients, 0 );
 
     ChatReplyRecorder aliceRecorder;
     ChatReplyRecorder bobRecorder;
     (void)aliceChat.whisper( 2, "hi bob", aliceRecorder.makeDelegate() );
-    test::tickAll( { &first, &second }, clients, 10, 10 );
+    test::updateAll( { &first, &second }, clients, 10, 10 );
     SW_ASSERT_EQUAL( aliceRecorder._listReply.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( aliceRecorder._listReply[0]._reply._result == ChatResult::Ok );
     vector<ChatMessage> listBobMessage;
@@ -199,7 +199,7 @@ SW_TEST_CASE( ChatStreamTest, WhisperHistoryAndMuteAcrossTwoServers )
     const string whisperKey = ChatChannelID::makeWhisper( 1, 2 );
     (void)aliceChat.requestHistory( whisperKey, "", 10, aliceRecorder.makeDelegate() );
     (void)bobChat.requestHistory( whisperKey, "", 10, bobRecorder.makeDelegate() ); // 다른 서버 — 같은 저장소
-    test::tickAll( { &first, &second }, clients, 20, 10 );
+    test::updateAll( { &first, &second }, clients, 20, 10 );
     SW_ASSERT_EQUAL( aliceRecorder._listReply.size(), size_t( 2 ) );
     SW_ASSERT_EQUAL( aliceRecorder._listReply[1]._reply._listHistory.size(), size_t( 1 ) );
     SW_ASSERT_EQUAL( bobRecorder._listReply.size(), size_t( 1 ) );
@@ -217,9 +217,9 @@ SW_TEST_CASE( ChatStreamTest, WhisperHistoryAndMuteAcrossTwoServers )
         body.writeVarUint( AccountID( 1 ) );
         gmBus.publish( ServiceSanctionBus::kChangedTopic, body.getBytes().data(), body.getByteCount() );
     }
-    test::tickAll( { &first, &second }, clients, 30 ); // 첫 서버가 버스로 받아 묵힌 제재를 버린다(60 초 안이다)
+    test::updateAll( { &first, &second }, clients, 30 ); // 첫 서버가 버스로 받아 묵힌 제재를 버린다(60 초 안이다)
     (void)aliceChat.whisper( 2, "can you hear me", aliceRecorder.makeDelegate() );
-    test::tickAll( { &first, &second }, clients, 40, 10 );
+    test::updateAll( { &first, &second }, clients, 40, 10 );
     SW_ASSERT_EQUAL( aliceRecorder._listReply.size(), size_t( 3 ) );
     SW_EXPECT_TRUE( aliceRecorder._listReply[2]._reply._result == ChatResult::Muted );
     SW_EXPECT_EQUAL( aliceRecorder._listReply[2]._reply._retryAfterMs, int64( 100000 - 40 ) );

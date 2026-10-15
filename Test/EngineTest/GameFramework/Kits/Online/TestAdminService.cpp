@@ -304,7 +304,7 @@ SW_TEST_CASE( AdminServiceTest, ServiceRevokesSessionsAfterSuspendOnce )
     service.submitCall( AdminFixture::kOperator, AdminMethod::kSetSanction, suspend, NetIdempotencyKey{ 1, 2 }, 5000, first.makeDelegate() );
     service.submitCall( AdminFixture::kOperator, AdminMethod::kSetSanction, suspend, NetIdempotencyKey{ 1, 2 }, 5000, retry.makeDelegate() );
     (void)store.pollCompletions();
-    service.tick( 5000 );
+    service.update( 5000 );
     SW_EXPECT_TRUE( first._reply._result == AdminResult::Ok );
     SW_EXPECT_TRUE( retry._reply._bReplayed == SW_TRUE );
     SW_ASSERT_EQUAL( sessions._listRevoked.size(), size_t( 1 ) ); // 재시도 응답에서 다시 끊지 않는다

@@ -77,15 +77,13 @@ namespace sw
      * @class RTSCatalog
      * @brief `<RTSCatalog supplyMax="200"><Unit id="worker" kind="Unit" hp="45" .../></RTSCatalog>` 를 읽습니다. 키는 `Resource/game/starskirmish/data/units.xml` 입니다.
      */
-    class SW_KIT_API RTSCatalog : public XMLCatalog<RTSCatalog>
+    class SW_KIT_API RTSCatalog : public XMLCatalog<RTSCatalog>, public GameCatalog<RTSUnitDef>
     {
         friend class XMLCatalog<RTSCatalog>;
 
     public:
         RTSCatalog();
 
-        const RTSUnitDef*         findUnit( const hashed_string& id ) const { return _catalog.find( id ); }
-        const vector<RTSUnitDef>& getUnits() const { return _catalog.getAll(); }
         /** @brief @p producerID 가 만드는(짓는) 정의를 읽은 순서대로 모읍니다. */
         void  findProducts( const hashed_string& producerID, vector<const RTSUnitDef*>& outListDef ) const;
         int32 getSupplyMax() const { return _supplyMax; }
@@ -94,7 +92,6 @@ namespace sw
         static constexpr const utf8* kXMLRootName = "RTSCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
-        GameCatalog<RTSUnitDef> _catalog;
-        int32                   _supplyMax;
+        int32 _supplyMax;
     };
 } // namespace sw

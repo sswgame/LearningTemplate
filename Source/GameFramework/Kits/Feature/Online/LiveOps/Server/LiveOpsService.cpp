@@ -156,7 +156,7 @@ namespace sw
         _dependencies._pBus = nullptr;
     }
 
-    void LiveOpsService::tick( int64 nowMs )
+    void LiveOpsService::update( int64 nowMs )
     {
         if ( _dependencies._pStore == nullptr )
             return;

@@ -14,15 +14,14 @@ namespace sw
     SW_LOG_CALLER( "RTSCatalog" );
 
     RTSCatalog::RTSCatalog()
-        : _catalog{}
-        , _supplyMax{ 200 }
+        : _supplyMax{ 200 }
     {
     }
 
     void RTSCatalog::findProducts( const hashed_string& producerID, vector<const RTSUnitDef*>& outListDef ) const
     {
         outListDef.clear();
-        for ( const RTSUnitDef& def : _catalog.getAll() )
+        for ( const RTSUnitDef& def : getAll() )
         {
             if ( def._producedBy == producerID )
                 outListDef.push_back( &def );
@@ -95,14 +94,14 @@ namespace sw
             def._bTargetsAir    = bAir ? SW_TRUE : SW_FALSE;
             if ( def._kind == RTSUnitKind::Building || def._kind == RTSUnitKind::Resource )
                 def._radius = static_cast<float32>( def._footprint ) * 0.5f;
-            (void)_catalog.add( def );
+            (void)add( def );
             ++loadedCount;
         }
-        for ( const RTSUnitDef& def : _catalog.getAll() )
+        for ( const RTSUnitDef& def : getAll() )
         {
-            if ( def._producedBy.empty() == false && _catalog.find( def._producedBy ) == nullptr )
+            if ( def._producedBy.empty() == false && find( def._producedBy ) == nullptr )
                 SW_LOG_WARNING( "%#: '%#' is produced by unknown '%#'", sourceName, def._id.c_str(), def._producedBy.c_str() );
-            if ( def._requires.empty() == false && _catalog.find( def._requires ) == nullptr )
+            if ( def._requires.empty() == false && find( def._requires ) == nullptr )
                 SW_LOG_WARNING( "%#: '%#' requires unknown '%#'", sourceName, def._id.c_str(), def._requires.c_str() );
         }
         return loadedCount;

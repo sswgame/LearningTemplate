@@ -41,7 +41,7 @@ namespace sw
         void shutdown();
 
         /** @brief 주기가 됐거나(또는 `requestRefresh`) 읽는 중이 아니면 새로 읽기 시작합니다. */
-        void tick( int64 nowMs );
+        void update( int64 nowMs );
         /** @brief 다음 `tick` 에 주기와 상관없이 읽습니다(읽는 중이면 끝난 뒤의 `tick` 에). */
         void requestRefresh();
 

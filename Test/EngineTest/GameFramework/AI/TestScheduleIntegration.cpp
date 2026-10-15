@@ -213,7 +213,7 @@ SW_TEST_CASE( ScheduleIntegrationTest, LocatorStateRoundTripsAndDropsGoneObjects
 
     // 첫 벤치가 사라지면 그 예약 둘은 버려진다.
     manager.destroyObject( pFirst );
-    manager.tick( 1.0f / 60.0f );
+    manager.update( 1.0f / 60.0f );
     SmartObjectScheduleLocator afterDestroy;
     afterDestroy.initialize( &manager );
     afterDestroy.restoreState( listState );

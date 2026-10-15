@@ -93,7 +93,7 @@ namespace sw
         /** @brief 빌드 버전 확인에 쓸 원격 설정을 지정합니다. 빌려 쓰는 포인터이며, 없으면 확인하지 않습니다. */
         void setRemoteConfig( const RemoteConfig* pRemoteConfig ) { _pRemoteConfig = pRemoteConfig; }
         /** @brief 외부 확인 결과를 회수합니다. 제공자의 `tick` 과 `pollVerifications` 를 부르며, 서비스 스레드의 틱마다 호출합니다. */
-        void tick( int64 nowMs );
+        void update( int64 nowMs );
 
         // 요청 함수들이다. 결과는 같은 @p requestTag 로 `drainCompletions` 에서 받는다. 시도 제한이나 빌드 버전에 걸리면 작업을 맡기지 않고 바로 완료를 쌓는다.
         void registerAccount( const LoginCredential& credential, int64 nowMs, uint64 requestTag );

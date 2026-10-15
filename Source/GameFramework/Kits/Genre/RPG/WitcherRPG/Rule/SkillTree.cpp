@@ -77,7 +77,7 @@ namespace sw
                         SW_LOG_WARNING( "%#: skill '%#' requires unknown '%#'", sourceName, skill._id.c_str(), requirement._skillID.c_str() );
                 }
             }
-            (void)_catalog.add( tree );
+            (void)add( tree );
             ++loadedCount;
         }
         return loadedCount;

@@ -254,7 +254,7 @@ namespace sw
         findProvider( delivery._device._providerID )->send( deliveryID, delivery._device._token, delivery._device._locale, delivery._message );
     }
 
-    void PushNotificationDispatcher::tick( int64 nowMs )
+    void PushNotificationDispatcher::update( int64 nowMs )
     {
         for ( IPushNotificationProvider* pProvider : _listProvider )
         {

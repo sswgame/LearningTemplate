@@ -90,7 +90,7 @@ SW_TEST_CASE( MatchmakingStreamTest, PartyLobbyAndQueueOverTheWire )
     descriptor._capacity = 10;
     SW_ASSERT_TRUE( registration.initialize( server._host.getEphemeralRouter(), descriptor ) );
     registration.setState( ServerState::Open );
-    registration.tick( 0 );
+    registration.update( 0 );
 
     MatchmakingClient       clientA;
     MatchmakingClient       clientB;
@@ -99,48 +99,48 @@ SW_TEST_CASE( MatchmakingStreamTest, PartyLobbyAndQueueOverTheWire )
     const int32             indexB = clients.connect( server._port, { &clientB } );
     clientA.initialize( &clients.getClient( indexA ) );
     clientB.initialize( &clients.getClient( indexB ) );
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
 
     MatchmakingRecorder recorderA;
     MatchmakingRecorder recorderB;
     (void)clientA.createParty( recorderA.makeDelegate() ); // 로그인 전
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
     SW_ASSERT_EQUAL( recorderA._listReply.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( recorderA._listReply[0]._errorCode, OnlineError::kUnauthenticated );
     SW_EXPECT_TRUE( recorderA._listReply[0]._reply._result == MatchmakingResult::Unavailable );
 
     clients.login( indexA, 1 );
     clients.login( indexB, 2 );
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
     (void)clientA.createParty( recorderA.makeDelegate() ); // 요청 번호는 쓰지 않는다 — 답은 recorder 로 확인한다
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
     SW_ASSERT_TRUE( recorderA._listReply.back()._reply._result == MatchmakingResult::Ok );
     const uint64 partyID = recorderA._listReply.back()._reply._party._partyID;
     SW_EXPECT_EQUAL( clientA.getParty()._partyID, partyID ); // 만든 사람에게도 파티 알림
 
     (void)clientA.inviteToParty( 2, recorderA.makeDelegate() );
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
     vector<PartyInvite> listInvite;
     clientB.drainInvites( listInvite );
     SW_ASSERT_EQUAL( listInvite.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( listInvite[0]._partyID, partyID );
     SW_EXPECT_EQUAL( listInvite[0]._inviterID, AccountID( 1 ) );
     (void)clientB.acceptPartyInvite( partyID, recorderB.makeDelegate() );
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
     SW_ASSERT_TRUE( recorderB._listReply.back()._reply._result == MatchmakingResult::Ok );
     SW_EXPECT_EQUAL( clientA.getParty()._listMemberID.size(), size_t( 2 ) );
     SW_EXPECT_EQUAL( clientB.getParty()._listMemberID.size(), size_t( 2 ) );
 
     (void)clientA.joinQueue( "pair", "kr", recorderA.makeDelegate() ); // 1 대 1 모드에 둘인 파티
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
     SW_EXPECT_TRUE( recorderA._listReply.back()._reply._result == MatchmakingResult::PartyTooLarge );
 
     (void)clientB.leaveParty( recorderB.makeDelegate() );
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
     SW_EXPECT_TRUE( clientB.getParty()._listMemberID.empty() );
     SW_EXPECT_EQUAL( clientA.getParty()._listMemberID.size(), size_t( 1 ) );
     (void)clientA.leaveParty( recorderA.makeDelegate() );
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
     SW_EXPECT_TRUE( clientA.getParty()._listMemberID.empty() );
 
     LobbySnapshot lobbyRequest;
@@ -148,19 +148,19 @@ SW_TEST_CASE( MatchmakingStreamTest, PartyLobbyAndQueueOverTheWire )
     lobbyRequest._modeID         = "pair";
     lobbyRequest._maxMemberCount = 2;
     (void)clientA.createLobby( lobbyRequest, recorderA.makeDelegate() ); // 요청 번호는 쓰지 않는다 — 답은 recorder 로 확인한다
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
     SW_ASSERT_TRUE( recorderA._listReply.back()._reply._result == MatchmakingResult::Ok );
     (void)clientB.listLobbies( "pair", recorderB.makeDelegate() );
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
     SW_ASSERT_EQUAL( recorderB._listReply.back()._reply._listLobby.size(), size_t( 1 ) );
     SW_EXPECT_STREQ( recorderB._listReply.back()._reply._listLobby[0]._name.c_str(), "after school" );
 
     (void)clientA.joinQueue( "pair", "kr", recorderA.makeDelegate() );
     (void)clientB.joinQueue( "pair", "kr", recorderB.makeDelegate() );
-    test::tickAll( { &server }, clients, 1000 );
+    test::updateAll( { &server }, clients, 1000 );
     SW_EXPECT_TRUE( recorderA._listReply.back()._reply._result == MatchmakingResult::Ok );
     SW_EXPECT_NOT_EQUAL( recorderA._listReply.back()._reply._ticketID, uint64( 0 ) );
-    test::tickAll( { &server }, clients, 1000 );
+    test::updateAll( { &server }, clients, 1000 );
     vector<MatchAssignment> listMatchA;
     vector<MatchAssignment> listMatchB;
     clientA.drainMatchResults( listMatchA );
@@ -191,26 +191,26 @@ SW_TEST_CASE( MatchmakingStreamTest, DroppedAccountLeavesThePartyAndTheQueue )
     const int32             indexB = clients.connect( server._port, { &clientB } );
     clientA.initialize( &clients.getClient( indexA ) );
     clientB.initialize( &clients.getClient( indexB ) );
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
     clients.login( indexA, 1 );
     clients.login( indexB, 2 );
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
 
     MatchmakingRecorder recorder;
     (void)clientA.createParty( recorder.makeDelegate() ); // 요청 번호는 쓰지 않는다 — 결과는 getParty 로 확인한다
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
     const uint64 partyID = clientA.getParty()._partyID;
     (void)clientA.inviteToParty( 2, recorder.makeDelegate() );
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
     (void)clientB.acceptPartyInvite( partyID, recorder.makeDelegate() );
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
     (void)clientB.joinQueue( "pair", "kr", recorder.makeDelegate() ); // 장이 아니다
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
     SW_EXPECT_TRUE( recorder._listReply.back()._reply._result == MatchmakingResult::NotPartyLeader );
     SW_EXPECT_EQUAL( clientB.getParty()._listMemberID.size(), size_t( 2 ) );
 
     clients.drop( indexA ); // 장이 끊김 — 파티에서 빠지고 B 가 장
-    test::tickAll( { &server }, clients, 0, 10 );
+    test::updateAll( { &server }, clients, 0, 10 );
     SW_ASSERT_EQUAL( clientB.getParty()._listMemberID.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( clientB.getParty().getLeaderID(), AccountID( 2 ) );
     SW_EXPECT_EQUAL( matchmaking._partyLobby.getPendingCount(), 0 );

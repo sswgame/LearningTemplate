@@ -153,7 +153,7 @@ SW_TEST_CASE( OnlineServerRuntimeTest, KitsStartInOrderShareInterfacesAndStopInR
         SW_EXPECT_TRUE( runtime.getContext()._pBus != nullptr && runtime.getContext()._pRouter != nullptr );
         health.markTick( 10 );
         SW_EXPECT_TRUE( health.isReady( 10 ) ); // 조립이 끝나면 online_services 검사가 Ok
-        runtime.tick( 1100 );
+        runtime.update( 1100 );
         runtime.shutdown();
         SW_EXPECT_FALSE( health.isReady( 10 ) ); // 내리면 다시 Failing
     }

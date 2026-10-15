@@ -175,7 +175,7 @@ SW_TEST_CASE( MotionWarpingTest, RootMotionMovesThroughCharacterController )
     manager.beginPlay();
     for ( uint32 frameIndex = 0; frameIndex < 120; ++frameIndex )
     {
-        manager.tick( TestMotionWarpingInternal::kFrame );
+        manager.update( TestMotionWarpingInternal::kFrame );
     }
     const float32 z = pController->getWorldPosition()._z;
     SW_EXPECT_TRUE( z > 0.5f );

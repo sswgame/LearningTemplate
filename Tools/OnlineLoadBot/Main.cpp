@@ -247,8 +247,8 @@ int32 main( int32 argc, utf8* argv[] )
     bool bRunning = true;
     while ( bRunning )
     {
-        localServer.tick( WallClock::nowUnixMilliseconds() );
-        bRunning = runner.tick();
+        localServer.update( WallClock::nowUnixMilliseconds() );
+        bRunning = runner.update();
         MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + Internal::kIdleSleepNs );
     }
 

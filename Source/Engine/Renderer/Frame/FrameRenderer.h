@@ -238,7 +238,7 @@ namespace sw
         RenderViewMode getViewMode() const;
         /**
          * @brief 에디터 씬 뷰의 보기 모드를 정합니다(씬 뷰 툴바). 게임 뷰에는 적용되지 않습니다.
-         * @details 씬 뷰가 호스트 타깃을 쓰는 추가 뷰이든, 게임 뷰가 가려져 주 출력이 되었든 이 값은 씬 뷰의 설정에 들어간다(`Engine::tick`).
+         * @details 씬 뷰가 호스트 타깃을 쓰는 추가 뷰이든, 게임 뷰가 가려져 주 출력이 되었든 이 값은 씬 뷰의 설정에 들어간다(`Engine::update`).
          */
         void setSceneViewMode( RenderViewMode viewMode );
         /** @brief 에디터 씬 뷰의 보기 모드입니다. */
