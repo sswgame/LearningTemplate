@@ -40,7 +40,7 @@ namespace
             for ( int32 round = 0; round < 3; ++round )
             {
                 (void)_store.pollCompletions();
-                _dispatcher.tick( nowMs );
+                _dispatcher.update( nowMs );
             }
             _dispatcher.drainCompletions( _listCompletion );
         }

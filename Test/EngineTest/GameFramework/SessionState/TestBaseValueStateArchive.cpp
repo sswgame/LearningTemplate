@@ -122,7 +122,7 @@ namespace
 SW_TEST_CASE( BaseValueStateArchiveTest, CountdownKeepsLatenessAndAccumulatorKeepsFraction )
 {
     Countdown countdown( 1.5f );
-    (void)countdown.tick( 2.0f ); // −0.5 — 이번 걸음에 끝나고 0.5 초 늦었다
+    (void)countdown.update( 2.0f ); // −0.5 — 이번 걸음에 끝나고 0.5 초 늦었다
     RateAccumulator accumulator;
     accumulator.add( 2.75f );
     (void)accumulator.takeOne();
@@ -291,7 +291,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, MoveTimelineReplaysAfterRestore )
     jab._active   = 2;
     jab._recovery = 6;
     MoveCatalog catalog;
-    catalog.addMove( jab );
+    catalog.add( jab );
 
     MoveTimeline timeline;
     timeline.start( jab );

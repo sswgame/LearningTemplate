@@ -638,7 +638,7 @@ namespace sw
         _listHistoryQueue.push_back( message );
     }
 
-    void ChatService::tick( int64 nowMs )
+    void ChatService::update( int64 nowMs )
     {
         const bool bNothingToFlush = _dependencies._pStore == nullptr || _bHistoryWriting == SW_TRUE || _listHistoryQueue.empty();
         if ( bNothingToFlush )

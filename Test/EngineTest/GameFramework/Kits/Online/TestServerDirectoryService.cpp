@@ -66,7 +66,7 @@ namespace
                     if ( message._originServerID != _bus.getServerID() )
                         _service.notifyChanged();
                 }
-                _service.tick( nowMs );
+                _service.update( nowMs );
                 (void)_store.pollCompletions();
                 (void)_router.pump();
                 _statusChangeCount += _service.takeStatusChange() ? 1 : 0;
@@ -88,7 +88,7 @@ namespace
             descriptor._capacity = 100;
             SW_EXPECT_TRUE( registration.initialize( &router, descriptor ) );
             registration.setState( state );
-            registration.tick( 0 );
+            registration.update( 0 );
             (void)router.pump();
         }
 
@@ -142,7 +142,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, AssignsOpenServerAndHonoursMaintenance
     SW_EXPECT_TRUE( assignment._messageKey == "notice.maintenance.weekly" );
 
     openServer.setState( ServerState::Maintenance ); // 점검 동안 모든 서버가 점검 상태
-    openServer.tick( 200 );
+    openServer.update( 200 );
     (void)node._router.pump();
     node.step( 2500 );                                                                                                             // 목록 다시 읽기(2 초 주기)
     SW_EXPECT_TRUE( node._service.assignServer( 900, Internal::makeRequest(), 2500 )._result == ServerDirectoryResult::Ok );       // 허용 계정은 점검 서버로

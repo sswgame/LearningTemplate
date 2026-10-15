@@ -170,7 +170,7 @@ SW_TEST_CASE( UIAnimationTest, TransformTrackDoesNotRelayout )
     uint32 measuredCount = fixture._layout.update(); // 첫 키 값을 쓴 것
     for ( uint32 frame = 0; frame < 2; ++frame )
     {
-        fixture._player.tick( 0.25f );
+        fixture._player.update( 0.25f );
         measuredCount += fixture._layout.update();
     }
     SW_EXPECT_EQUAL( 0u, measuredCount );
@@ -189,7 +189,7 @@ SW_TEST_CASE( UIAnimationTest, SizeTrackRelayouts )
     SW_ASSERT_TRUE( fixture._player.play( "Grow" ) );
     (void)fixture._layout.update();
 
-    fixture._player.tick( 0.5f );
+    fixture._player.update( 0.5f );
     SW_EXPECT_TRUE( fixture._layout.update() > 0u );
     SW_EXPECT_NEAR_EQUAL( 150.0f, fixture._pWidget->getGeometry()._size._x, Util::kTolerance );
 }
@@ -242,25 +242,25 @@ SW_TEST_CASE( UIAnimationTest, ReverseAndLoop )
     // 거꾸로 — 시작 값은 끝 키(1), 0.25 초 뒤 0.75
     SW_ASSERT_TRUE( fixture._player.playReverse( "Fade" ) );
     SW_EXPECT_NEAR_EQUAL( 1.0f, fixture._pWidget->getOpacity(), Util::kTolerance );
-    fixture._player.tick( 0.25f );
+    fixture._player.update( 0.25f );
     SW_EXPECT_NEAR_EQUAL( 0.75f, fixture._pWidget->getOpacity(), Util::kTolerance );
 
     // 재생 중 돌아서기 — 0.75 에서 다시 위로
     fixture._player.reverse( "Fade" );
-    fixture._player.tick( 0.1f );
+    fixture._player.update( 0.1f );
     SW_EXPECT_NEAR_EQUAL( 0.85f, fixture._pWidget->getOpacity(), Util::kTolerance );
-    fixture._player.tick( 1.0f );
+    fixture._player.update( 1.0f );
     SW_EXPECT_FALSE( fixture._player.isPlaying( "Fade" ) );
     SW_EXPECT_NEAR_EQUAL( 1.0f, fixture._pWidget->getOpacity(), Util::kTolerance );
 
     // 세 바퀴 — 바퀴마다 다시 0 에서, 셋째 바퀴 끝에서 멈춘다
     SW_ASSERT_TRUE( fixture._player.play( "Fade", 2.0f, 3 ) ); // 두 배속 — 한 바퀴 0.5 초
-    fixture._player.tick( 0.6f );                              // 둘째 바퀴의 0.2
+    fixture._player.update( 0.6f );                            // 둘째 바퀴의 0.2
     SW_EXPECT_TRUE( fixture._player.isPlaying( "Fade" ) );
     SW_EXPECT_NEAR_EQUAL( 0.2f, fixture._pWidget->getOpacity(), Util::kTolerance );
-    fixture._player.tick( 0.8f ); // 1.4 초 — 셋째 바퀴 0.8
+    fixture._player.update( 0.8f ); // 1.4 초 — 셋째 바퀴 0.8
     SW_EXPECT_TRUE( fixture._player.isPlaying( "Fade" ) );
-    fixture._player.tick( 0.2f );
+    fixture._player.update( 0.2f );
     SW_EXPECT_FALSE( fixture._player.isPlaying( "Fade" ) );
     SW_EXPECT_NEAR_EQUAL( 1.0f, fixture._pWidget->getOpacity(), Util::kTolerance );
 }
@@ -353,7 +353,7 @@ SW_TEST_CASE( UIAnimationTest, SeekPausesAtTheGivenTime )
     SW_EXPECT_NEAR_EQUAL( 0.5f, time, Util::kTolerance );
     SW_EXPECT_NEAR_EQUAL( 1.0f, duration, Util::kTolerance );
 
-    fixture._player.tick( 0.25f ); // 멈춘 동안은 시간이 가지 않는다
+    fixture._player.update( 0.25f ); // 멈춘 동안은 시간이 가지 않는다
     SW_EXPECT_NEAR_EQUAL( 0.5f, fixture._pWidget->getOpacity(), Util::kTolerance );
     SW_EXPECT_TRUE( fixture._player.isPlaying( "Fade" ) );
 
@@ -361,9 +361,9 @@ SW_TEST_CASE( UIAnimationTest, SeekPausesAtTheGivenTime )
     SW_EXPECT_NEAR_EQUAL( 1.0f, fixture._pWidget->getOpacity(), Util::kTolerance );
     SW_ASSERT_TRUE( fixture._player.seek( "Fade", 0.25f ) );
     fixture._player.setPaused( "Fade", false );
-    fixture._player.tick( 0.25f );
+    fixture._player.update( 0.25f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, fixture._pWidget->getOpacity(), Util::kTolerance );
-    fixture._player.tick( 1.0f ); // 끝까지 가면 끝 값을 쓰고 빠진다
+    fixture._player.update( 1.0f ); // 끝까지 가면 끝 값을 쓰고 빠진다
     SW_EXPECT_FALSE( fixture._player.isPlaying( "Fade" ) );
     SW_EXPECT_NEAR_EQUAL( 1.0f, fixture._pWidget->getOpacity(), Util::kTolerance );
 

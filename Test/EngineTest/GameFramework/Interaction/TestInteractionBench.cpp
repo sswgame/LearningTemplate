@@ -54,12 +54,12 @@ namespace
                 (void)pActor->addComponent<sw::InteractorComponent>();
             }
             manager.beginPlay();
-            manager.tick( 1.0f / 60.0f );
+            manager.update( 1.0f / 60.0f );
             outListMicro.clear();
             for ( uint32 frame = 0; frame < kFrameCount; ++frame )
             {
                 const sw::Stopwatch stopwatch;
-                manager.tick( 1.0f / 60.0f );
+                manager.update( 1.0f / 60.0f );
                 outListMicro.push_back( stopwatch.getElapsedMicroseconds() );
             }
             manager.endPlay();

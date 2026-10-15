@@ -83,7 +83,7 @@ namespace sw
             CraftingInternal::readItems( node, "In", recipe._inputs );
             CraftingInternal::readItems( node, "Tool", recipe._tools );
             CraftingInternal::readItems( node, "Out", recipe._outputs );
-            addRecipe( recipe );
+            add( recipe );
             ++loadedCount;
         }
         return loadedCount;
@@ -92,7 +92,7 @@ namespace sw
     void RecipeCatalog::findRecipesFor( const hashed_string& itemID, vector<const RecipeDef*>& outListRecipe ) const
     {
         outListRecipe.clear();
-        for ( const RecipeDef& recipe : _catalog.getAll() )
+        for ( const RecipeDef& recipe : getAll() )
         {
             if ( recipe._outputs.hasItem( itemID ) )
                 outListRecipe.push_back( &recipe );
@@ -119,13 +119,13 @@ namespace sw
 
     bool Crafter::isLearned( const hashed_string& recipeID ) const
     {
-        const RecipeDef* pRecipe = _pCatalog != nullptr ? _pCatalog->findRecipe( recipeID ) : nullptr;
+        const RecipeDef* pRecipe = _pCatalog != nullptr ? _pCatalog->find( recipeID ) : nullptr;
         return pRecipe != nullptr && ( pRecipe->_bStartsKnown || _uniqueLearnedRecipe.find( recipeID ) != _uniqueLearnedRecipe.end() );
     }
 
     CraftResult Crafter::evaluate( const hashed_string& recipeID, const Inventory& inventory, const hashed_string& station, int32 level, int32 count ) const
     {
-        const RecipeDef* pRecipe = _pCatalog != nullptr ? _pCatalog->findRecipe( recipeID ) : nullptr;
+        const RecipeDef* pRecipe = _pCatalog != nullptr ? _pCatalog->find( recipeID ) : nullptr;
         if ( pRecipe == nullptr || count <= 0 )
             return CraftResult::UnknownRecipe;
         if ( isLearned( recipeID ) == false )
@@ -148,7 +148,7 @@ namespace sw
     {
         if ( evaluate( recipeID, inventory, station, level, 1 ) != CraftResult::Ok )
             return 0;
-        const RecipeDef* pRecipe  = _pCatalog->findRecipe( recipeID );
+        const RecipeDef* pRecipe  = _pCatalog->find( recipeID );
         int32            maxCount = 9999;
         for ( const auto& item : pRecipe->_inputs.getItems() )
         {
@@ -162,7 +162,7 @@ namespace sw
         const CraftResult result = evaluate( recipeID, inventory, station, level, count );
         if ( result != CraftResult::Ok )
             return result;
-        const RecipeDef* pRecipe = _pCatalog->findRecipe( recipeID );
+        const RecipeDef* pRecipe = _pCatalog->find( recipeID );
         if ( _consumeInputs.isBound() )
         {
             // 재료는 다른 곳에서 가져온다. 되돌릴 방법이 없으므로 결과를 넣을 공간을 먼저 확인한다.
@@ -188,7 +188,7 @@ namespace sw
         const CraftResult result = evaluate( recipeID, inventory, station, level, count );
         if ( result != CraftResult::Ok )
             return result;
-        const RecipeDef* pRecipe = _pCatalog->findRecipe( recipeID );
+        const RecipeDef* pRecipe = _pCatalog->find( recipeID );
         if ( _consumeInputs.isBound() )
         {
             if ( _consumeInputs( pRecipe->_inputs, count ) == false )
@@ -211,7 +211,7 @@ namespace sw
         if ( index >= _listJob.size() )
             return false;
         const CraftJob&  job     = _listJob[index];
-        const RecipeDef* pRecipe = _pCatalog->findRecipe( job._recipeID );
+        const RecipeDef* pRecipe = _pCatalog->find( job._recipeID );
         if ( pRecipe != nullptr )
         {
             if ( CraftingInternal::hasRoomForOutputs( inventory, pRecipe->_inputs, job._count ) == false )
@@ -228,7 +228,7 @@ namespace sw
         while ( _listJob.empty() == false )
         {
             CraftJob&        job     = _listJob.front();
-            const RecipeDef* pRecipe = _pCatalog != nullptr ? _pCatalog->findRecipe( job._recipeID ) : nullptr;
+            const RecipeDef* pRecipe = _pCatalog != nullptr ? _pCatalog->find( job._recipeID ) : nullptr;
             if ( pRecipe == nullptr )
             {
                 _listJob.pop_front();

@@ -52,6 +52,6 @@ namespace sw
         /** @brief 끝난 확인을 @p outListVerification 뒤에 붙이고 붙인 개수를 반환합니다. */
         virtual int32 pollVerifications( vector<PlatformLoginVerification>& outListVerification ) = 0;
         /** @brief 진행 중인 작업(네트워크 I/O, 시한)을 처리합니다. 서비스 `tick` 이 부릅니다. */
-        virtual void tick( int64 nowMs ) { (void)nowMs; }
+        virtual void update( int64 nowMs ) { (void)nowMs; }
     };
 } // namespace sw

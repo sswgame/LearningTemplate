@@ -57,7 +57,7 @@ namespace sw
         void setManualClock( int64 nowMs );
 
         /** @brief 한 틱 — 전송 · 엔드포인트 · 요청 시한을 돌고, 늘리는 중이면 봇을 더 띄우고, 봇마다 다음 단계를 본다. 시나리오가 끝났으면 false. */
-        bool tick();
+        bool update();
 
         const LoadBotMetrics&  getMetrics() const { return _metrics; }
         const LoadBotScenario& getScenario() const { return _scenario; }

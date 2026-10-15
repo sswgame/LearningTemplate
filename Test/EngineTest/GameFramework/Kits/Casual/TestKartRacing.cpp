@@ -50,9 +50,9 @@ namespace
     [[nodiscard]] bool loadTestTrack( KartTrack& outTrack, int32 lapCount )
     {
         KartTrackCatalog catalog;
-        if ( catalog.loadFromXMLText( kTrackXML, "test" ) == false || catalog.findTrack( "oval" ) == nullptr )
+        if ( catalog.loadFromXMLText( kTrackXML, "test" ) == false || catalog.find( "oval" ) == nullptr )
             return false;
-        KartTrackDef def = *catalog.findTrack( "oval" );
+        KartTrackDef def = *catalog.find( "oval" );
         def._lapCount    = lapCount;
         return outTrack.initialize( def );
     }
@@ -139,7 +139,7 @@ SW_TEST_CASE( KartRacingTest, TrackSplineGatesAndOffroad )
 {
     KartTrackCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kTrackXML, "test" ) );
-    SW_EXPECT_TRUE( catalog.findTrack( "broken" ) == nullptr ); // 점 둘은 건너뛴다
+    SW_EXPECT_TRUE( catalog.find( "broken" ) == nullptr ); // 점 둘은 건너뛴다
 
     KartTrack track;
     SW_ASSERT_TRUE( loadTestTrack( track, 3 ) );
@@ -294,7 +294,7 @@ SW_TEST_CASE( KartRacingTest, ItemTablesFavorRacersBehind )
 {
     KartItemCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kKartRacingItemXML, "test" ) );
-    SW_EXPECT_EQUAL( static_cast<int32>( catalog.getItems().getCount() ), 6 );
+    SW_EXPECT_EQUAL( static_cast<int32>( catalog.getCount() ), 6 );
 
     // 8 명 기준 표 — 1 등은 바나나 · 녹색, 꼴찌는 1 등 공격까지.
     SW_EXPECT_NEAR_EQUAL( catalog.computeItemChance( 1, 8, "blue" ), 0.0f, 0.0001f );

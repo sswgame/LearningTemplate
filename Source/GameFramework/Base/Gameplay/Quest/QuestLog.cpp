@@ -51,13 +51,13 @@ namespace sw
     const QuestStage* QuestLog::findCurrentStage( const hashed_string& questID ) const
     {
         const QuestProgress* pProgress = findProgress( questID );
-        const QuestDef*      pQuest    = _pCatalog != nullptr ? _pCatalog->findQuest( questID ) : nullptr;
+        const QuestDef*      pQuest    = _pCatalog != nullptr ? _pCatalog->find( questID ) : nullptr;
         return pProgress != nullptr && pQuest != nullptr ? pQuest->findStage( pProgress->_stageID ) : nullptr;
     }
 
     QuestStartResult QuestLog::evaluateStart( const hashed_string& questID, int32 level ) const
     {
-        const QuestDef* pQuest = _pCatalog != nullptr ? _pCatalog->findQuest( questID ) : nullptr;
+        const QuestDef* pQuest = _pCatalog != nullptr ? _pCatalog->find( questID ) : nullptr;
         if ( pQuest == nullptr )
             return QuestStartResult::UnknownQuest;
         const QuestProgress* pProgress = findProgress( questID );
@@ -82,7 +82,7 @@ namespace sw
         const QuestStartResult result = evaluateStart( questID, level );
         if ( result != QuestStartResult::Ok )
             return result;
-        const QuestDef* pQuest    = _pCatalog->findQuest( questID );
+        const QuestDef* pQuest    = _pCatalog->find( questID );
         QuestProgress*  pProgress = findProgressMutable( questID );
         if ( pProgress == nullptr )
         {
@@ -143,7 +143,7 @@ namespace sw
 
     void QuestLog::tryAdvance( QuestProgress& progress )
     {
-        const QuestDef*   pQuest = _pCatalog->findQuest( progress._questID );
+        const QuestDef*   pQuest = _pCatalog->find( progress._questID );
         const QuestStage* pStage = pQuest != nullptr ? pQuest->findStage( progress._stageID ) : nullptr;
         if ( pStage == nullptr || progress._bAwaitingChoice )
             return;
@@ -214,7 +214,7 @@ namespace sw
         const bool     bNoPendingChoice = pProgress == nullptr || pProgress->_status != QuestStatus::Active || pProgress->_bAwaitingChoice == SW_FALSE;
         if ( bNoPendingChoice )
             return false;
-        const QuestDef*   pQuest = _pCatalog->findQuest( questID );
+        const QuestDef*   pQuest = _pCatalog->find( questID );
         const QuestStage* pStage = pQuest->findStage( pProgress->_stageID );
         for ( const QuestBranch& branch : pStage->_listBranch )
         {
@@ -341,7 +341,7 @@ namespace sw
             if ( bValid == false )
                 return false;
             progress._status  = static_cast<QuestStatus>( status );
-            const bool bKnown = _pCatalog == nullptr || _pCatalog->findQuest( progress._questID ) != nullptr;
+            const bool bKnown = _pCatalog == nullptr || _pCatalog->find( progress._questID ) != nullptr;
             if ( bKnown == false )
             {
                 SW_LOG_WARNING( "QuestLog: saved quest '%#' is not in the catalog - dropped", progress._questID.c_str() );

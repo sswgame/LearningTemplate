@@ -102,7 +102,7 @@ namespace sw
         return true;
     }
 
-    void MeadowTownDirectorComponent::tickGame( float32 deltaTime )
+    void MeadowTownDirectorComponent::updateGame( float32 deltaTime )
     {
         (void)deltaTime;
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );

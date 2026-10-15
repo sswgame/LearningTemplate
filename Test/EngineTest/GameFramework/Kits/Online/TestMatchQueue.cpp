@@ -40,7 +40,7 @@ namespace
             descriptor._capacity = 10;
             SW_EXPECT_TRUE( registration.initialize( &router, descriptor ) );
             registration.setState( ServerState::Open );
-            registration.tick( nowMs );
+            registration.update( nowMs );
             (void)router.pump();
         }
     };
@@ -106,7 +106,7 @@ namespace
                         _service.handleBusMessage( message._topic, message._bytes, nowMs );
                     }
                 }
-                _service.tick( nowMs );
+                _service.update( nowMs );
                 (void)_router.pump();
                 vector<LobbyStartRequest> listStart;
                 _partyLobby.drainLobbyStarts( listStart );
@@ -146,7 +146,7 @@ namespace
             {
                 SW_EXPECT_TRUE( _agent.handleAssign( message._bytes, nowMs ) );
             }
-            _agent.tick( nowMs );
+            _agent.update( nowMs );
         }
     };
 } // namespace

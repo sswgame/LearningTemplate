@@ -226,13 +226,13 @@ namespace sw
         _dependencies._pBus    = nullptr;
     }
 
-    void ServerDirectoryService::tick( int64 nowMs )
+    void ServerDirectoryService::update( int64 nowMs )
     {
         if ( _dependencies._pStore == nullptr || _dependencies._pRouter == nullptr )
             return;
         for ( unique_ptr<ServerRegistryReader>& reader : _listReader )
         {
-            reader->tick( nowMs );
+            reader->update( nowMs );
         }
         const bool bPeriodic = nowMs - _lastReloadMs >= _settings._reloadPeriodMs;
         if ( _bReloading == SW_FALSE && ( _bReloadRequested == SW_TRUE || bPeriodic ) )

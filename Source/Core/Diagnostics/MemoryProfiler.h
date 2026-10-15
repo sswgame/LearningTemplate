@@ -47,8 +47,8 @@ namespace sw
     struct MemoryTagGrowth
     {
         MemoryTag _tag{ MemoryTag::Unknown };
-        int64     _byteDelta{ 0 };  ///< 살아 있는 바이트의 차이
-        int64     _countDelta{ 0 }; ///< 살아 있는 블록 수의 차이
+        int64     _byteDelta{ 0 };       ///< 살아 있는 바이트의 차이
+        int64     _blockCountDelta{ 0 }; ///< 살아 있는 블록 수의 차이
     };
 } // namespace sw
 

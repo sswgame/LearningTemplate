@@ -87,32 +87,32 @@ SW_TEST_CASE( LiveOpsStreamTest, ClientRefreshesWhenOperationsPutAnEvent )
     test::OnlineTestClients clients( network );
     const int32             clientIndex = clients.connect( server._port, { &liveOpsClient } );
     liveOpsClient.initialize( &clients.getClient( clientIndex ) );
-    test::tickAll( { &server }, clients, 1000 );
+    test::updateAll( { &server }, clients, 1000 );
 
     LiveOpsRecorder recorder;
     (void)liveOpsClient.requestLiveState( "kr", 100, recorder.makeDelegate() ); // 로그인 전
-    test::tickAll( { &server }, clients, 1000 );
+    test::updateAll( { &server }, clients, 1000 );
     SW_ASSERT_EQUAL( recorder._listReply.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( recorder._listReply[0]._errorCode, OnlineError::kUnauthenticated );
 
     clients.login( clientIndex, 5 );
-    test::tickAll( { &server }, clients, 1000 );
+    test::updateAll( { &server }, clients, 1000 );
     LiveEventDefinition hidden = Internal::makeEvent( "server_only", "balance" );
     hidden._bClientVisible     = SW_FALSE;
     LiveEventDefinition future = Internal::makeEvent( "future_build", "preview" );
     future._minBuildVersion    = 200;
     liveOps._service.putEvent( hidden, 0, "", 1000, 1 );
     liveOps._service.putEvent( future, 0, "", 1000, 2 );
-    test::tickAll( { &server }, clients, 1000 );
+    test::updateAll( { &server }, clients, 1000 );
     (void)liveOpsClient.requestLiveState( "kr", 100, recorder.makeDelegate() );
-    test::tickAll( { &server }, clients, 1000 );
+    test::updateAll( { &server }, clients, 1000 );
     SW_ASSERT_TRUE( recorder._listReply.back()._reply._result == LiveOpsResult::Ok );
     SW_EXPECT_TRUE( liveOpsClient.getActiveEvents().empty() ); // 숨긴 것 · 빌드 판이 낮아 대상 밖
     const uint64 revisionBefore = liveOpsClient.getRevision();
 
     liveOps._service.putEvent( Internal::makeEvent( "halloween", "xp_boost" ), 0, "", 1000, 3 ); // 운영(GM 도구)
-    test::tickAll( { &server }, clients, 2000 );
-    test::tickAll( { &server }, clients, 2000 );
+    test::updateAll( { &server }, clients, 2000 );
+    test::updateAll( { &server }, clients, 2000 );
     SW_EXPECT_TRUE( liveOpsClient.getRevision() > revisionBefore ); // 알림 → 스스로 다시 받음
     SW_ASSERT_EQUAL( liveOpsClient.getActiveEvents().size(), size_t( 1 ) );
     SW_EXPECT_TRUE( liveOpsClient.hasEventKind( "xp_boost" ) );
@@ -143,9 +143,9 @@ SW_TEST_CASE( LiveOpsStreamTest, DeviceRegistrationOverTheWireReachesTheDispatch
     test::OnlineTestClients clients( network );
     const int32             clientIndex = clients.connect( server._port, { &liveOpsClient } );
     liveOpsClient.initialize( &clients.getClient( clientIndex ) );
-    test::tickAll( { &server }, clients, 1000 );
+    test::updateAll( { &server }, clients, 1000 );
     clients.login( clientIndex, 5 );
-    test::tickAll( { &server }, clients, 1000 );
+    test::updateAll( { &server }, clients, 1000 );
 
     LiveOpsRecorder        recorder;
     PushDeviceRegistration registration;
@@ -155,18 +155,18 @@ SW_TEST_CASE( LiveOpsStreamTest, DeviceRegistrationOverTheWireReachesTheDispatch
     (void)liveOpsClient.registerDevice( registration, recorder.makeDelegate() );
     registration._providerID = "Not Valid";
     (void)liveOpsClient.registerDevice( registration, recorder.makeDelegate() );
-    test::tickAll( { &server }, clients, 1000 );
+    test::updateAll( { &server }, clients, 1000 );
     SW_ASSERT_EQUAL( recorder._listReply.size(), size_t( 2 ) );
     SW_EXPECT_TRUE( recorder._listReply[0]._reply._result == LiveOpsResult::Invalid ); // 규칙 밖은 저장소에 맡기기 전에 답한다
     SW_EXPECT_TRUE( recorder._listReply[1]._reply._result == LiveOpsResult::Ok );
 
     SW_ASSERT_TRUE( dispatcher.notifyAccount( 5, PushNotificationMessage{}, 1000 ) ); // 우편 · 이벤트가 오프라인 계정에게
-    test::tickAll( { &server }, clients, 1000 );
+    test::updateAll( { &server }, clients, 1000 );
     SW_ASSERT_EQUAL( provider.getSent().size(), size_t( 1 ) );
     SW_EXPECT_STREQ( provider.getSent()[0]._deviceToken.c_str(), "device-token" );
 
     (void)liveOpsClient.unregisterDevice( "fake", "device-token", recorder.makeDelegate() );
-    test::tickAll( { &server }, clients, 1000 );
+    test::updateAll( { &server }, clients, 1000 );
     SW_EXPECT_TRUE( recorder._listReply.back()._reply._result == LiveOpsResult::Ok );
     binding.shutdown();
 }

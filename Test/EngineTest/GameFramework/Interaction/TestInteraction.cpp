@@ -122,12 +122,12 @@ namespace
             return def;
         }
 
-        static void tickFrames( GameObjectManager& manager, int32 frameCount, InteractorComponent* pInteractor, bool bHeld )
+        static void updateFrames( GameObjectManager& manager, int32 frameCount, InteractorComponent* pInteractor, bool bHeld )
         {
             for ( int32 frame = 0; frame < frameCount; ++frame )
             {
                 pInteractor->setInput( bHeld );
-                manager.tick( 1.0f / 60.0f );
+                manager.update( 1.0f / 60.0f );
             }
         }
     };
@@ -197,13 +197,13 @@ SW_TEST_CASE( InteractionTest, WorldLineOfSightSkipsBlockedTarget )
     pBox->setLocalPosition( float3{ 1.5f, 0.0f, 0.0f } );
 
     manager.beginPlay();
-    InteractionTestInternal::tickFrames( manager, 2, pInteractor, false );
+    InteractionTestInternal::updateFrames( manager, 2, pInteractor, false );
     SW_EXPECT_TRUE( pInteractor->getFocus() == pFar->getHandle() );
     SW_EXPECT_TRUE( pFar->getComponent<InteractableComponent>()->getHighlightRequest() == InteractionHighlight::Outline );
     SW_EXPECT_TRUE( pNear->getComponent<InteractableComponent>()->getHighlightRequest() == InteractionHighlight::None );
 
     pWall->getPrimarySceneComponent()->setLocalPosition( float3{ 0.0f, 20.0f, 0.0f } ); // 벽을 치운다
-    InteractionTestInternal::tickFrames( manager, 2, pInteractor, false );
+    InteractionTestInternal::updateFrames( manager, 2, pInteractor, false );
     SW_EXPECT_TRUE( pInteractor->getFocus() == pNear->getHandle() );
     SW_EXPECT_TRUE( pFar->getComponent<InteractableComponent>()->getHighlightRequest() == InteractionHighlight::None ); // 강조가 옮겨 갔다
     manager.endPlay();
@@ -293,25 +293,25 @@ SW_TEST_CASE( InteractionTest, CompletedInteractionDrivesGimmickAndCooldown )
     SW_ASSERT_TRUE( pCircuit->rebuild() );
 
     manager.beginPlay();
-    InteractionTestInternal::tickFrames( manager, 2, pInteractor, false );
+    InteractionTestInternal::updateFrames( manager, 2, pInteractor, false );
     SW_EXPECT_FALSE( pInteractor->getPrompt()._bVisible == SW_TRUE ); // 열쇠가 없다
     pPlayer->addTag( TagID::request( "Item.Key" ) );
-    InteractionTestInternal::tickFrames( manager, 2, pInteractor, false );
+    InteractionTestInternal::updateFrames( manager, 2, pInteractor, false );
     SW_EXPECT_TRUE( pInteractor->getPrompt()._bVisible == SW_TRUE );
     SW_EXPECT_TRUE( pInteractor->getPrompt()._mode == InteractionInputMode::Hold );
 
-    InteractionTestInternal::tickFrames( manager, 30, pInteractor, true ); // 반만 누르고
+    InteractionTestInternal::updateFrames( manager, 30, pInteractor, true ); // 반만 누르고
     SW_EXPECT_TRUE( pInteractor->isInteracting() );
-    InteractionTestInternal::tickFrames( manager, 2, pInteractor, false ); // 뗐다 — 취소
+    InteractionTestInternal::updateFrames( manager, 2, pInteractor, false ); // 뗐다 — 취소
     SW_EXPECT_FALSE( pInteractor->isInteracting() );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pDoor->getPrimarySceneComponent()->getWorldPosition()._y, 1.0e-4f );
 
-    InteractionTestInternal::tickFrames( manager, 70, pInteractor, true ); // 끝까지
-    InteractionTestInternal::tickFrames( manager, 12, pInteractor, false );
+    InteractionTestInternal::updateFrames( manager, 70, pInteractor, true ); // 끝까지
+    InteractionTestInternal::updateFrames( manager, 12, pInteractor, false );
     SW_EXPECT_NEAR_EQUAL( 2.0f, pDoor->getPrimarySceneComponent()->getWorldPosition()._y, 1.0e-4f ); // 회로의 문이 열렸다
     SW_EXPECT_TRUE( pLock->getComponent<InteractableComponent>()->getCooldownRemaining() > 0.0f );
     SW_EXPECT_FALSE( pInteractor->getPrompt()._bVisible == SW_TRUE ); // 쿨다운 동안은 고르지 않는다
-    InteractionTestInternal::tickFrames( manager, 60, pInteractor, false );
+    InteractionTestInternal::updateFrames( manager, 60, pInteractor, false );
     SW_EXPECT_TRUE( pInteractor->getPrompt()._bVisible == SW_TRUE );
     manager.endPlay();
 }
@@ -363,7 +363,7 @@ SW_TEST_CASE( InteractionTest, SmartObjectSlotClaimAndRelease )
 
     // 차지한 이가 사라지면 자리가 빈다.
     manager.destroyObject( pAIA );
-    manager.tick( 1.0f / 60.0f );
+    manager.update( 1.0f / 60.0f );
     SW_EXPECT_EQUAL( 0, pSmart->claimFreeSlot( *pPlayer, sit ) );
 }
 
@@ -467,9 +467,9 @@ SW_TEST_CASE( InteractionTest, BeginningInteractionSetsAlignmentWarpTarget )
     pDoor->addComponent<InteractableComponent>()->setDefinition( def );
 
     manager.beginPlay();
-    InteractionTestInternal::tickFrames( manager, 2, pInteractor, false );
+    InteractionTestInternal::updateFrames( manager, 2, pInteractor, false );
     SW_EXPECT_TRUE( pWarping->findWarpTarget( hashed_string( "Handle" ) ) == nullptr );
-    InteractionTestInternal::tickFrames( manager, 3, pInteractor, true );
+    InteractionTestInternal::updateFrames( manager, 3, pInteractor, true );
     SW_EXPECT_TRUE( pInteractor->isInteracting() );
     const MotionWarpTarget* pTarget = pWarping->findWarpTarget( hashed_string( "Handle" ) );
     SW_ASSERT_NOT_NULL( pTarget );
@@ -636,7 +636,7 @@ SW_TEST_CASE( InteractionTest, RegistryCandidatesMatchFullSceneScan )
     {
         pPlayerRoot->setLocalPosition( float3{ nextUnit() * 20.0f - 10.0f, 0.0f, nextUnit() * 20.0f - 10.0f } );
         pPlayerRoot->setLocalRotation( float3{ 0.0f, nextUnit() * 6.28f, 0.0f } );
-        InteractionTestInternal::tickFrames( manager, 1, pInteractor, false );
+        InteractionTestInternal::updateFrames( manager, 1, pInteractor, false );
         const GameObjectHandle expected = selectByScan();
         mismatches += pInteractor->getFocus() == expected ? 0u : 1u;
         focused += expected.isValid() ? 1u : 0u;

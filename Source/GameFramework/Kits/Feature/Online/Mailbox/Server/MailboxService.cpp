@@ -205,7 +205,7 @@ namespace sw
         startCall( call, pending );
     }
 
-    void MailboxService::tick( int64 nowMs )
+    void MailboxService::update( int64 nowMs )
     {
         _nowMs = nowMs;
         if ( _pStore == nullptr )
@@ -253,7 +253,7 @@ namespace sw
     void MailboxService::onServiceTick( OnlineServiceHost& host, int64 nowMs )
     {
         (void)host;
-        tick( nowMs );
+        update( nowMs );
     }
 
     void MailboxService::startCall( const MailboxCall& call, PendingCall pending )

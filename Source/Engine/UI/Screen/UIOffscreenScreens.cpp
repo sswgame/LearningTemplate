@@ -119,13 +119,13 @@ namespace sw
         }
     }
 
-    void UIOffscreenScreens::tickAnimations( float32 deltaSeconds )
+    void UIOffscreenScreens::updateAnimations( float32 deltaSeconds )
     {
         for ( UIOffscreenScreen& offscreen : _listOffscreen )
         {
             UIAnimationPlayer& player = offscreen._screen->getAnimationPlayer();
             if ( player.isAnyPlaying() )
-                player.tick( deltaSeconds );
+                player.update( deltaSeconds );
         }
     }
 

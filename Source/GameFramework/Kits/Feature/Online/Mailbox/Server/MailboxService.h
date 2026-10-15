@@ -72,7 +72,7 @@ namespace sw
 
         void submitCall( const MailboxCall& call, ReplyDelegate onReply );
         /** @brief 주기가 되면 만료 정리와 캠페인 다시 읽기 작업을 맡깁니다. 앞의 작업이 끝나지 않았으면 건너뜁니다. */
-        void tick( int64 nowMs );
+        void update( int64 nowMs );
         /** @brief 예약 작업이 부르는 만료 정리 한 번입니다. 주기와 별개이며 다음 `tick` 에 맡기고, 이미 돌고 있으면 무시합니다. */
         void requestSweep();
 

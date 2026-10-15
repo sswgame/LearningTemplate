@@ -217,7 +217,7 @@ namespace sw
         /** @brief 가상 소멸자. */
         virtual ~AbstractDemoBase() = default;
         /** @brief 추상 틱 훅. */
-        virtual void tickAbstract() = 0;
+        virtual void updateAbstract() = 0;
     };
 } // namespace sw
 
@@ -279,7 +279,7 @@ namespace sw
         /** @brief 가상 소멸자. */
         virtual ~AssignedAbstractBase() = default;
         /** @brief 추상 훅. */
-        virtual void tickAssigned() = 0;
+        virtual void updateAssigned() = 0;
     };
 } // namespace sw
 

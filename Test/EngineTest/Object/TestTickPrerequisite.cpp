@@ -54,7 +54,7 @@ SW_TEST_CASE( TickPrerequisiteTest, LaterStageReadsEarlierStageTransformInTheSam
     SW_ASSERT_TRUE( pLeader->attachToComponent( pParent ) );
     SW_ASSERT_TRUE( pFollower->addSubTickPrerequisite( kMove, leaderTick ) );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     SW_EXPECT_EQUAL( 1u, pLeader->_subTickCount );
     SW_EXPECT_EQUAL( 1u, pFollower->_subTickCount );
@@ -64,7 +64,7 @@ SW_TEST_CASE( TickPrerequisiteTest, LaterStageReadsEarlierStageTransformInTheSam
 
     // 다음 프레임에 리더가 옮기면 그 프레임에 따라온다(한 프레임 늦지 않는다).
     pLeader->_offset = sw::float3{ 7.0f, 0.0f, 0.0f };
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_TRUE( isNear( pFollower->_observedWorld, sw::float3{ 17.0f, 0.0f, 0.0f } ) );
     SW_EXPECT_TRUE( isNear( pFollower->getLocalPosition(), sw::float3{ 7.0f, 1.0f, 0.0f } ) );
 }
@@ -88,7 +88,7 @@ SW_TEST_CASE( TickPrerequisiteTest, ChainOfThreeSeesEveryEarlierStage )
     SW_ASSERT_TRUE( pB->addSubTickPrerequisite( kMove, tickA ) );
 
     const uint32 applyBefore = manager.getStageTransformApplyCount();
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     SW_EXPECT_TRUE( isNear( pB->_observedLocal, sw::float3{ 1.0f, 0.0f, 0.0f } ) );
     SW_EXPECT_TRUE( isNear( pC->_observedLocal, sw::float3{ 1.0f, 1.0f, 0.0f } ) );
@@ -125,7 +125,7 @@ SW_TEST_CASE( TickPrerequisiteTest, WritesAfterADeferredAttachApplyAfterIt )
     pWatcher->_bWriteOnSubTick              = SW_FALSE;
     SW_ASSERT_TRUE( pWatcher->addSubTickPrerequisite( kMove, childTick ) );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     SW_EXPECT_EQUAL( pParent, pChild->getParent() );
     // 계층 변경이 미뤄진 단계라 감시자 앞에서도 적용하지 않았다 — 감시자는 틱 전 값을 읽는다.
@@ -161,7 +161,7 @@ SW_TEST_CASE( TickPrerequisiteTest, ObjectsOutsideTheChainStayOnTheObjectPath )
     sw::MockSubTickMoverComponent* pFollower = createMover( manager, "PathFollower", sw::float3{ 0.0f, 1.0f, 0.0f }, pLeader, followerTick );
     SW_ASSERT_TRUE( pFollower->addSubTickPrerequisite( kMove, leaderTick ) );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     const uint32 kDuring = static_cast<uint32>( sw::TickGroup::DuringPhysics );
     SW_EXPECT_EQUAL( kMoverCount + 1u, static_cast<uint32>( registry.getEntries( kDuring ).size() ) );
@@ -183,9 +183,9 @@ SW_TEST_CASE( TickPrerequisiteTest, ObjectsOutsideTheChainStayOnTheObjectPath )
     const uint32    buildBefore = registry.getStageBuildCount();
     sw::GameObject* pSpawned    = manager.createGameObject( sw::hashed_string( "OutsideSpawn" ) );
     pSpawned->addComponent<sw::MockTickSceneComponent>();
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     manager.destroyObject( pSpawned );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( buildBefore, registry.getStageBuildCount() );
     SW_EXPECT_EQUAL( 3u, pFollower->_subTickCount );
 }
@@ -205,7 +205,7 @@ SW_TEST_CASE( TickPrerequisiteTest, ObjectPathPrerequisiteInALaterGroupMovesTheD
         createMover( manager, "EarlyFollower", sw::float3{ 1.0f, 0.0f, 0.0f }, pLeader, followerTick, sw::TickGroup::PrePhysics );
     SW_ASSERT_TRUE( pFollower->addSubTickPrerequisite( kMove, leaderTick ) );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( manager.getTickRegistry().getStages().size() ) );
     SW_EXPECT_EQUAL( static_cast<uint8>( sw::TickGroup::PostUpdate ), manager.getTickRegistry().getStages()[0]._group );
@@ -233,7 +233,7 @@ SW_TEST_CASE( TickPrerequisiteTest, DestroyedItemsLeaveTheChainSafely )
 
     // A 가 B 를 파괴한다 — B 는 같은 틱의 뒤 스테이지에 있지만 삭제 표시가 서서 돌지 않는다.
     pA->_pDestroyObject = pB->getOwner();
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 0u, pB->_subTickCount );
     SW_EXPECT_EQUAL( 1u, pC->_subTickCount );
 
@@ -241,8 +241,8 @@ SW_TEST_CASE( TickPrerequisiteTest, DestroyedItemsLeaveTheChainSafely )
     const uint32 buildBefore = manager.getTickRegistry().getStageBuildCount();
     pC->_pWatched            = nullptr;
     manager.destroyObject( pObjectA );
-    manager.tick( 0.016f );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 3u, pC->_subTickCount );
     SW_EXPECT_TRUE( manager.getTickRegistry().getStageBuildCount() > buildBefore );
     SW_EXPECT_TRUE( isNear( pC->getLocalPosition(), sw::float3{ 0.0f, 0.0f, 1.0f } ) );
@@ -263,18 +263,18 @@ SW_TEST_CASE( TickPrerequisiteTest, ChainSurvivesRebuildAndReplacedPrerequisite 
     sw::MockSubTickMoverComponent* pLeader   = createMover( manager, "ReloadLeader", sw::float3{ 2.0f, 0.0f, 0.0f }, nullptr, leaderTick );
     sw::MockSubTickMoverComponent* pFollower = createMover( manager, "ReloadFollower", sw::float3{ 0.0f, 1.0f, 0.0f }, pLeader, followerTick );
     SW_ASSERT_TRUE( pFollower->addSubTickPrerequisite( kMove, leaderTick ) );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     manager.markTickStagesDirty();
     pLeader->_offset = sw::float3{ 3.0f, 0.0f, 0.0f };
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_TRUE( isNear( pFollower->_observedLocal, sw::float3{ 3.0f, 0.0f, 0.0f } ) );
 
     // 리더 컴포넌트를 새로 만든다(새 컴포넌트 id). 옛 핸들의 선행 조건은 비고, 새 핸들을 걸면 다시 같은 프레임에 따라온다.
     sw::GameObject* pLeaderObj = pLeader->getOwner();
     pFollower->_pWatched       = nullptr;
     SW_ASSERT_TRUE( pLeaderObj->removeComponent( pLeader ) );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 3u, pFollower->_subTickCount );
 
     sw::MockSubTickMoverComponent* pNewLeader = pLeaderObj->addComponent<sw::MockSubTickMoverComponent>();
@@ -282,7 +282,7 @@ SW_TEST_CASE( TickPrerequisiteTest, ChainSurvivesRebuildAndReplacedPrerequisite 
     const sw::SubTickHandle newLeaderTick     = pNewLeader->registerSubTick( sw::TickGroup::DuringPhysics, kMove );
     pFollower->_pWatched                      = pNewLeader;
     SW_ASSERT_TRUE( pFollower->addSubTickPrerequisite( kMove, newLeaderTick ) );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_TRUE( isNear( pFollower->_observedLocal, sw::float3{ 5.0f, 0.0f, 0.0f } ) );
 }
 
@@ -308,7 +308,7 @@ SW_TEST_CASE( TickPrerequisiteTest, MainTickOfAnotherComponentIsAPrerequisite )
     SW_EXPECT_EQUAL( pLeaderObj->getObjectID(), leaderTick._objectID );
     SW_ASSERT_TRUE( pFollower->addSubTickPrerequisite( kMove, leaderTick ) );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 1u, registry.getStageItemCount() );
     SW_EXPECT_TRUE( isNear( pFollower->_observedLocal, sw::float3{ 8.0f, 0.0f, 0.0f } ) );
     SW_EXPECT_TRUE( isNear( pFollower->getLocalPosition(), sw::float3{ 8.0f, 0.0f, 1.0f } ) );
@@ -316,7 +316,7 @@ SW_TEST_CASE( TickPrerequisiteTest, MainTickOfAnotherComponentIsAPrerequisite )
     // 떼면 다시 보통 길 — 다른 오브젝트가 같은 그룹에서 쓴 값은 틱 전 값으로 읽힌다.
     SW_ASSERT_TRUE( pFollower->removeSubTickPrerequisite( kMove, leaderTick ) );
     pLeader->_tickLocalPos = sw::float3{ 9.0f, 0.0f, 0.0f };
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 0u, registry.getStageItemCount() );
     SW_EXPECT_TRUE( isNear( pFollower->_observedLocal, sw::float3{ 8.0f, 0.0f, 0.0f } ) );
     SW_EXPECT_FALSE( pFollower->removeSubTickPrerequisite( kMove, leaderTick ) );

@@ -65,7 +65,7 @@ namespace sw
         if ( _pCatalog == nullptr )
             return;
         const hashed_string current = getTierName();
-        const FactionDef*   pHonor  = _pCatalog->getHonorReputation().findFaction( hashed_string( WesternCatalog::kHonorFactionID ) );
+        const FactionDef*   pHonor  = _pCatalog->getHonorReputation().find( hashed_string( WesternCatalog::kHonorFactionID ) );
         if ( pHonor == nullptr )
             return;
         for ( const ReputationTier& tier : pHonor->_listTier )

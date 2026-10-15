@@ -53,14 +53,12 @@ namespace sw
      * @details 결과는 `ItemStackList` 에 추가하며 같은 아이템은 합친다. 테이블 안의 테이블은 8 단계까지만 따라간다. 서로를 참조하는 테이블에서 멈추기 위해서다.
      *          난수는 부르는 쪽이 넘긴다. 시드가 같으면 같은 전리품이 나오므로 리플레이와 테스트에 쓸 수 있다.
      */
-    class SW_GF_API LootCatalog : public XMLCatalog<LootCatalog>
+    class SW_GF_API LootCatalog : public XMLCatalog<LootCatalog>, public GameCatalog<LootTableDef>
     {
         friend class XMLCatalog<LootCatalog>;
 
     public:
         static constexpr int32 kMaxDepth = 8;
-
-        void addTable( const LootTableDef& table ) { (void)_catalog.add( table ); }
 
         /**
          * @brief 테이블을 굴려 @p outItems 에 추가합니다. 테이블이 없으면 false 입니다.
@@ -70,8 +68,6 @@ namespace sw
         /** @brief 아이템 하나가 나올 확률의 근삿값입니다. 한 번 굴릴 때를 기준으로 하고, 테이블 안의 테이블과 항상 주는 항목을 포함합니다. 도감과 툴팁에 씁니다. */
         float32 computeDropChance( const hashed_string& tableID, const hashed_string& itemID ) const;
 
-        const LootTableDef* findTable( const hashed_string& id ) const { return _catalog.find( id ); }
-
     private:
         static constexpr const utf8* kXMLRootName = "LootCatalog"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
@@ -79,7 +75,5 @@ namespace sw
         void                         giveEntry( const LootEntry& entry, GameRandom& random, ItemStackList& outItems, float32 luck, int32 depth ) const;
         float32                      computeEntryChance( const LootEntry& entry, const hashed_string& itemID, int32 depth ) const;
         float32                      computeTableChance( const LootTableDef& table, const hashed_string& itemID, int32 depth ) const;
-
-        GameCatalog<LootTableDef> _catalog{};
     };
 } // namespace sw

@@ -168,7 +168,7 @@ namespace sw
          * @brief 씬 한 프레임을 진행합니다 — 표(`SceneFrameStepList.xxx`)의 단계를 줄 순서대로 돕니다.
          * @details 순서와 각 단계가 하는 일은 그 표 하나에 있습니다. 단계마다 `GT.Scene.tick.*` 프로파일 스코프가 있습니다.
          */
-        void tick( float32 deltaTime );
+        void update( float32 deltaTime );
 
         using FrameStepObserver = Delegate<void( SceneFrameStep )>;
         /**

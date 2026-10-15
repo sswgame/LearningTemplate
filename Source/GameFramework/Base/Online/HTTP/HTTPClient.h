@@ -56,7 +56,7 @@ namespace sw
         /** @brief 요청을 맡깁니다. 0 이 아닌 요청 id 입니다(응답의 `_requestID`). 응답은 반드시 한 번 온다(실패도). */
         uint64 submitRequest( const HTTPClientRequest& request, int64 nowMs );
         /** @brief 전송을 돌리고(I/O 스레드가 없을 때) 시한을 봅니다. */
-        void tick( int64 nowMs );
+        void update( int64 nowMs );
         /** @brief 끝난 응답을 @p outListResponse 뒤에 붙입니다. 붙인 수입니다. */
         int32 pollResponses( vector<HTTPClientResponse>& outListResponse );
         int32 getPendingCount() const;

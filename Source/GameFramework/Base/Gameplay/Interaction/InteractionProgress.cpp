@@ -172,7 +172,7 @@ namespace sw
         const bool bSkillChecks = _pJudge != nullptr && _config._skillCheckInterval > 0.0f;
         if ( bSkillChecks && _bSkillCheckPending == SW_FALSE )
         {
-            _skillCheckCountdown.tick( deltaTime );
+            _skillCheckCountdown.update( deltaTime );
             if ( _skillCheckCountdown.isActive() == false )
             {
                 const int32 pick    = _random.nextInt( 0, participantCount - 1 );

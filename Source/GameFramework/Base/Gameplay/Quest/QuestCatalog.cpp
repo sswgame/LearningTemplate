@@ -104,7 +104,7 @@ namespace sw
                 SW_LOG_WARNING( "%#: quest '%#' has no stages", sourceName, pID );
                 continue;
             }
-            (void)_catalog.add( quest );
+            (void)add( quest );
             ++loadedCount;
         }
         return loadedCount;

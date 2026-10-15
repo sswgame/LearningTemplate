@@ -271,7 +271,7 @@ namespace sw
         logStatus( true );
     }
 
-    void FarmDirectorComponent::tickGame( float32 deltaTime )
+    void FarmDirectorComponent::updateGame( float32 deltaTime )
     {
         if ( deltaTime <= 0.0f )
             return;

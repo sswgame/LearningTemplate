@@ -64,11 +64,11 @@ namespace sw
         _bRunning = SW_FALSE;
     }
 
-    void ServerServiceManager::tick( int64 nowMs )
+    void ServerServiceManager::update( int64 nowMs )
     {
         for ( RunningService& running : _listRunning )
         {
-            running._service->tick( nowMs );
+            running._service->update( nowMs );
         }
     }
 

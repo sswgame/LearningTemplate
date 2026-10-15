@@ -80,7 +80,7 @@
   - 분해에서 남긴 것: 모달 · 결과 창 플래그와 이름 입력 버퍼(S19, ImGui 팝업 시점), `verifyModuleBindings` · `isBoundTo`(S20, 모든 컨텍스트 핸들을 함께 보는 검사), `ModuleShadowCopy` 인스턴스화(S20, 번호가 프로세스 전역이어야 섀도 폴더 이름이 겹치지 않음),
     `UserSettingsManager` 의 키 바인딩 겹침 · 품질 번들 맞추기(`setPendingAt` 상태 기계와 안 떨어짐), `SceneNavigation` 의 에이전트 루프 · 런타임 찾기 · 설정 로드, `App` 의 `updateShellActions` · 모듈 카탈로그 해석,
     `IRHIDevice` 의 `supportsNativeBindlessSampling` · `applyVSyncInternal`, `FractureComponentBase` 의 그룹 재구성 · 물리 어댑터(S15, 반쪽 이전), `FrameRenderer` 의 트랜지언트 계획(S16),
-    `Engine::tick` 의 백엔드 교체 · `pollShaderReloadHotkey` · `MaterialCache::initializePending` · 관찰자 루프(S13, 수명 계약 · 순서가 뜻).
+    `Engine::update` 의 백엔드 교체 · `pollShaderReloadHotkey` · `MaterialCache::initializePending` · 관찰자 루프(S13, 수명 계약 · 순서가 뜻).
   - S16 의 **동작 변화**: 엔진 서비스가 묶이지 않은 실행은 GPU 계측이 꺼집니다(전에는 단언).
 - **폴더 · 파일 구조는 기계적으로 합치지 않습니다**(2026-10-12 감사, R8). 25 줄 이하 파일이 97 / 2,932 개이고 큰 클래스를 나눈 가족 대부분이 파일마다 120 줄을 넘으며, 작은 조각(`EditorAssetTypeFocus.cpp` 36 줄)은 의존을 분리한 것입니다.
   합치면 층 규칙(`CheckEngineLayers`)과 그래픽스 구조 재편의 파일 분할 기준을 해칩니다. 한다면 `Scripts/lint/report/` 에 같은 접두 `.cpp` 가족과 줄 수를 보고하는 스크립트를 두고,

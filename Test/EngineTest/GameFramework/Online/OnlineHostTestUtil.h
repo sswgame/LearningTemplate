@@ -106,7 +106,7 @@ namespace test
         void setOffline( sw::AccountID accountID ) { _mapAccountToEntry.erase( accountID ); }
 
         /** @brief 쌓인 찾기 결과를 알립니다(서버 `tick` 이 부른다). */
-        void tick()
+        void update()
         {
             sw::vector<Pending> listPending = std::move( _listPending );
             _listPending.clear();
@@ -270,10 +270,10 @@ namespace test
         uint64 getServerID() const { return _bus.getServerID(); }
 
         /** @brief 호스트 틱(전송 · 저장소 완료 · 캐시 라우터 · 버스 · 서비스) 뒤 가짜 접속 상태의 결과를 알립니다. */
-        void tick( int64 nowMs )
+        void update( int64 nowMs )
         {
-            _host.tick( nowMs );
-            _presence.tick();
+            _host.update( nowMs );
+            _presence.update();
         }
     };
 } // namespace test
@@ -336,14 +336,14 @@ namespace test
 
         sw::OnlineServiceClient& getClient( int32 clientIndex ) { return *_listClient[static_cast<size_t>( clientIndex )]; }
 
-        void tick( int64 nowMs )
+        void update( int64 nowMs )
         {
             (void)_transport->pollIO( 0 );
             (void)_endpoint.pump( *this );
             _requestClient.update();
             for ( sw::unique_ptr<sw::OnlineServiceClient>& client : _listClient )
             {
-                client->tick( nowMs );
+                client->update( nowMs );
             }
         }
 
@@ -394,14 +394,14 @@ namespace test
     };
 
     /** @brief 클라이언트 묶음과 서버들을 번갈아 @p roundCount 번 돌립니다(요청 → 응답 · 알림 한 왕복에 넉넉한 수). */
-    inline void tickAll( std::initializer_list<OnlineTestServer*> listServer, OnlineTestClients& clients, int64 nowMs, int32 roundCount = 6 )
+    inline void updateAll( std::initializer_list<OnlineTestServer*> listServer, OnlineTestClients& clients, int64 nowMs, int32 roundCount = 6 )
     {
         for ( int32 round = 0; round < roundCount; ++round )
         {
-            clients.tick( nowMs );
+            clients.update( nowMs );
             for ( OnlineTestServer* pServer : listServer )
             {
-                pServer->tick( nowMs );
+                pServer->update( nowMs );
             }
         }
     }

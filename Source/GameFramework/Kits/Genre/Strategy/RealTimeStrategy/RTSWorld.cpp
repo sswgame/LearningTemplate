@@ -205,7 +205,7 @@ namespace sw
 
     RTSUnitID RTSWorld::spawnUnit( const hashed_string& defID, int32 owner, const float3& position )
     {
-        const RTSUnitDef* pDef = _pCatalog != nullptr ? _pCatalog->findUnit( defID ) : nullptr;
+        const RTSUnitDef* pDef = _pCatalog != nullptr ? _pCatalog->find( defID ) : nullptr;
         if ( pDef == nullptr || ( owner != kNoOwner && findPlayer( owner ) == nullptr ) )
             return RTSUnitID{};
         int2      cell = _grid.computeCell( position );
@@ -332,7 +332,7 @@ namespace sw
             if ( unit._bAlive )
                 updateUnit( unit, deltaTime );
         }
-        _visionTimer.tick( deltaTime );
+        _visionTimer.update( deltaTime );
         if ( _visionTimer.isActive() == false )
         {
             _visionTimer.start( _settings._visionInterval );

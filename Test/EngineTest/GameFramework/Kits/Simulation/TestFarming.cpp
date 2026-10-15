@@ -137,7 +137,7 @@ SW_TEST_CASE( FarmingTest, ShippingBinSellsFromTheBorrowedBagAtTheEndOfTheDay )
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kFarmingTestCropXML, "FarmingTest" ) );
     ItemCatalog items;
     catalog.fillItemCatalog( items, 99 );
-    SW_ASSERT_NOT_NULL( items.findItem( "turnip_seed" ) );
+    SW_ASSERT_NOT_NULL( items.find( "turnip_seed" ) );
     Inventory bag;
     bag.initialize( &items, 8 );
     Wallet          wallet;

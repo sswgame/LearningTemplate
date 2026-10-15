@@ -441,7 +441,7 @@ namespace sw
         return g_longRecording._bActive.load( std::memory_order_acquire );
     }
 
-    void ProfilerTraceExport::tickRecording( FrameProfiler& profiler )
+    void ProfilerTraceExport::updateRecording( FrameProfiler& profiler )
     {
         if ( g_longRecording._bActive.load( std::memory_order_acquire ) == false )
             return;
@@ -481,7 +481,7 @@ namespace sw
         return true;
     }
 
-    void ProfilerTraceExport::tickSlowFrameCapture( FrameProfiler& profiler, uint64 frameBeginNanos, uint64 frameEndNanos, string_view processName )
+    void ProfilerTraceExport::updateSlowFrameCapture( FrameProfiler& profiler, uint64 frameBeginNanos, uint64 frameEndNanos, string_view processName )
     {
         SlowFrameCapture& capture  = g_slowFrameCapture;
         ProfilerTimeline& timeline = profiler.getTimeline();

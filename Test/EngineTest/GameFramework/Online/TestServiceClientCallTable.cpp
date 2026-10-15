@@ -206,7 +206,7 @@ SW_TEST_CASE( ServiceClientCallTableTest, KitDestroyedDuringReadyNotificationIsS
     killer->_pReadyCount    = &readyCount;
     victim->_pReadyCount    = &readyCount;
     const int32 clientIndex = clients.connect( server._port, { killer.get(), victim.get() } );
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
 
     SW_EXPECT_TRUE( clients.getClient( clientIndex ).isReady() );
     SW_EXPECT_EQUAL( readyCount, 1 ); // 파괴한 쪽만 — 파괴된 키트는 부르지 않는다
@@ -236,7 +236,7 @@ SW_TEST_CASE( ServiceClientCallTableTest, ResponsesFindTheirOwnDelegateOverLoopb
     server.start();
     test::OnlineTestClients clients( network );
     const int32             clientIndex = clients.connect( server._port, {} );
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
     SW_ASSERT_TRUE( clients.getClient( clientIndex ).isReady() );
 
     CallTableClient tableClient;
@@ -250,7 +250,7 @@ SW_TEST_CASE( ServiceClientCallTableTest, ResponsesFindTheirOwnDelegateOverLoopb
     (void)tableClient.send( test::TestLoginService::kLoginMethod, badBody, DoneDelegate::create<&DoneRecorder::onDone>( &badRecorder ) );
     (void)tableClient.send( test::TestLoginService::kLoginMethod, goodBody, DoneDelegate::create<&DoneRecorder::onDone>( &goodRecorder ) );
     SW_EXPECT_EQUAL( tableClient._callTable.getCount(), size_t( 2 ) );
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
 
     SW_ASSERT_EQUAL( badRecorder._listErrorCode.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( badRecorder._listErrorCode[0], OnlineError::kInvalidRequest );
@@ -290,7 +290,7 @@ SW_TEST_CASE( ServiceClientCallTableTest, CancelledRequestsDropTheirAnswersWitho
     server.start();
     test::OnlineTestClients clients( network );
     const int32             clientIndex = clients.connect( server._port, {} );
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
     SW_ASSERT_TRUE( clients.getClient( clientIndex ).isReady() );
 
     // 키트 클라이언트가 응답 전에 사라진 모양 — 보낸 요청의 델리게이트 주인을 지운 뒤 응답이 온다.
@@ -302,7 +302,7 @@ SW_TEST_CASE( ServiceClientCallTableTest, CancelledRequestsDropTheirAnswersWitho
     (void)tableClient->send( test::TestLoginService::kLoginMethod, body, DoneDelegate::create<&DoneRecorder::onDone>( &recorder ) );
     clients.getClient( clientIndex ).cancelRequestsOf( OnlineMethodRange::kGame );
     tableClient.reset();
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
 
     SW_EXPECT_EQUAL( recorder._listErrorCode.size(), size_t( 0 ) );
     StreamConnectionHandle connection;

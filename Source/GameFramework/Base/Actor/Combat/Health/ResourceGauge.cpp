@@ -138,7 +138,7 @@ namespace sw
         if ( _overheatPenalty.isActive() )
         {
             // 과열 벌칙 — 이 시간 동안은 식지도 않는다. 벌칙이 끝난 걸음의 남은 몫은 버린다.
-            _overheatPenalty.tick( deltaTime );
+            _overheatPenalty.update( deltaTime );
             return;
         }
         _sinceUse += deltaTime;

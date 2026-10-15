@@ -6,7 +6,7 @@
  *            그동안 낸 세션 요청은 재접속 응답까지 모았다가 보낸다. 서버가 아직 주체를 모르는 순간에 요청이 닿지 않게 하려는 것이다. 재접속이 실패하면 모은 요청은 그 결과로 끝난다.
  *          - 밀려남 알림(`kPushRevoked`)을 받으면 토큰을 버리고 이벤트를 낸다. 서버가 곧 연결을 닫는다. 토큰을 디스크에 저장할지는 게임이 정한다(`getToken`, `setToken`).
  *          - 게스트 장치 비밀은 `AccountDeviceSecret`(로컬 저장소에 암호화해 봉인)이 만든다.
- *          - 모든 호출과 꺼내기는 `OnlineServiceClient::tick` 을 부르는 스레드에서 한다.
+ *          - 모든 호출과 꺼내기는 `OnlineServiceClient::update` 을 부르는 스레드에서 한다.
  */
 #pragma once
 #include "Core/Common/Types.h"

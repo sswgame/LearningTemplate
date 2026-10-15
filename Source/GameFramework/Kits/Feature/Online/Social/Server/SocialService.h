@@ -87,7 +87,7 @@ namespace sw
         /** @brief 기다리는 캐시 읽기를 취소하고 메모리를 비웁니다. 맡긴 저장소 작업은 호출하는 쪽이 먼저 회수해야 하며, 호스트와 저장소를 종료한 뒤에 합니다. */
         void shutdown();
         /** @brief 접속 상태의 시한을 연장합니다. */
-        void tick( int64 nowMs );
+        void update( int64 nowMs );
 
         // 관계 함수들은 비동기이며 완료는 요청 태그로 받는다
         void changeLink( SocialLinkOperation operation, AccountID accountID, AccountID otherID, int64 nowMs, uint64 requestTag );

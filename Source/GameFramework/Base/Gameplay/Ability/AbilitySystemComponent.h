@@ -389,7 +389,7 @@ namespace sw
         /** @brief 어빌리티가 끝났을 때를 처리합니다. 태그, 막기 해제, 알림이 해당합니다. */
         void handleAbilityEnded( GameplayAbility& ability, bool bWasCancelled );
         /** @brief 실행 중인 어빌리티들을 틱합니다. */
-        void tickActiveAbilities( float32 deltaTime );
+        void updateActiveAbilities( float32 deltaTime );
         /** @brief 제거할 스펙을 정리합니다. 취소하고 `onRemoved` 를 부른 뒤 제거 표시를 합니다. */
         void retireAbilitySpec( AbilitySpec& spec );
 

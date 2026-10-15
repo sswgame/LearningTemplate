@@ -45,7 +45,7 @@ namespace sw
         return count;
     }
 
-    void FakePlatformLoginProvider::tick( int64 nowMs )
+    void FakePlatformLoginProvider::update( int64 nowMs )
     {
         (void)nowMs;
         const string_view prefix{ FakePlatformLoginProviderInternal::kSubjectPrefix };

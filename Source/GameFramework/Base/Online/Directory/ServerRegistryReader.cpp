@@ -55,7 +55,7 @@ namespace sw
         _mapRequestToServer.clear();
     }
 
-    void ServerRegistryReader::tick( int64 nowMs )
+    void ServerRegistryReader::update( int64 nowMs )
     {
         if ( _pRouter == nullptr || _outstandingCount > 0 )
             return;

@@ -83,7 +83,7 @@ namespace
                     if ( message._originServerID != _bus.getServerID() )
                         _service.notifyChanged();
                 }
-                _service.tick( nowMs );
+                _service.update( nowMs );
                 (void)_store.pollCompletions();
                 _stateChangeCount += _service.takeStateChange() ? 1 : 0;
             }

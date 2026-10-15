@@ -126,7 +126,7 @@ SW_TEST_CASE( TerrainBenchTest, ColliderRebuildAfterBrushWrite )
         manager.beginPlay();
         for ( uint32 frame = 0; frame < 3; ++frame )
         {
-            manager.tick( Internal::kFrame ); // 첫 틱들의 다시 읽기(오너 트랜스폼 전파)를 측정 밖으로 뺀다
+            manager.update( Internal::kFrame ); // 첫 틱들의 다시 읽기(오너 트랜스폼 전파)를 측정 밖으로 뺀다
         }
 
         sw::vector<float32> listHeight = pTerrain->getHeightfield().getHeightSamples();
@@ -135,7 +135,7 @@ SW_TEST_CASE( TerrainBenchTest, ColliderRebuildAfterBrushWrite )
         for ( uint32 round = 0; round < 9; ++round )
         {
             const sw::Stopwatch idleWatch;
-            manager.tick( Internal::kFrame );
+            manager.update( Internal::kFrame );
             listIdle.push_back( idleWatch.getElapsedNanoseconds() / 1000 );
             sw::TerrainSampleRect rect;
             rect.include( 100 + round, 100 );
@@ -143,7 +143,7 @@ SW_TEST_CASE( TerrainBenchTest, ColliderRebuildAfterBrushWrite )
             listHeight[static_cast<size_t>( 102 ) * Internal::kResolution + 102 + round] += 0.5f;
             SW_ASSERT_TRUE( pTerrain->writeHeights( listHeight, rect ) );
             const sw::Stopwatch writeWatch;
-            manager.tick( Internal::kFrame );
+            manager.update( Internal::kFrame );
             listWrite.push_back( writeWatch.getElapsedNanoseconds() / 1000 );
         }
         test::logBenchSamples( chunkCells == 256u ? "terrain collider  one body: idle tick" : "terrain collider  chunk bodies: idle tick", listIdle );

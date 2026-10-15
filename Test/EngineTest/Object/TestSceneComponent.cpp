@@ -163,7 +163,7 @@ SW_TEST_CASE( SceneComponentTest, LargeWorldCoordinatesHierarchy )
     childSc->setLocalPosition( float3( 10.0f, 20.0f, 30.0f ) );
     grandChildSc->setLocalPosition( float3( 1.0f, 2.0f, 3.0f ) );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     const double3 rootLWC = rootSc->getWorldPositionLwc();
     SW_EXPECT_NEAR_EQUAL( 100.0, rootLWC._x, 0.0001 );
@@ -289,7 +289,7 @@ SW_TEST_CASE( SceneComponentTest, DetachInsideTickIsDeferredUntilAfterTheTick )
     SW_ASSERT_TRUE( pChildComp->getParent() == pParentComp );
 
     pChildComp->_bDetachOnTick = SW_TRUE;
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     SW_EXPECT_TRUE( pChildComp->_bParentKeptInTick == SW_TRUE );
     SW_EXPECT_TRUE( pChildComp->getParent() == nullptr );
@@ -313,7 +313,7 @@ SW_TEST_CASE( SceneComponentTest, ClearTagsInsideTickIsDeferredUntilAfterTheTick
 
     pComp->_probeTag         = kProbeTag;
     pComp->_bClearTagsOnTick = SW_TRUE;
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     SW_EXPECT_TRUE( pComp->_bProbeTagKeptInTick == SW_TRUE );
     SW_EXPECT_FALSE( pObj->hasTag( kProbeTag ) );
@@ -340,7 +340,7 @@ SW_TEST_CASE( SceneComponentTest, AttachInsideTickIsRejectedBeforeItIsDeferred )
     pChildComp->_bAttachAcceptedInTick = SW_TRUE;
     {
         test::ScopedDefensiveTestLog defensive( "attaching to another scene's object inside a tick" );
-        managerChild.tick( 0.016f );
+        managerChild.update( 0.016f );
     }
     SW_EXPECT_FALSE( pChildComp->_bAttachAcceptedInTick == SW_TRUE );
     SW_EXPECT_TRUE( pChild->getParent() == nullptr );
@@ -570,14 +570,14 @@ SW_TEST_CASE( SceneComponentTest, TickWriteToOwnSlotIsHiddenUntilAfterTheTick )
     pMeshMove->_pTickMoveComp  = pMesh;
     pMeshMove->_tickMovePos    = sw::float3( 0.0f, 3.0f, 0.0f );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_NEAR_EQUAL( 5.0f, pMover->getWorldPosition()._x, 1e-6f );
     SW_EXPECT_NEAR_EQUAL( 3.0f, pMesh->getWorldPosition()._y, 1e-6f );
 
     manager.getPrimitiveRegistry().clearDirty();
     pMover->_tickLocalPos   = sw::float3( 7.0f, 0.0f, 0.0f );
     pMeshMove->_tickMovePos = sw::float3( 0.0f, 4.0f, 0.0f );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     // 틱 중에 읽은 것은 틱 전 값(5)이다. 쓰는 쪽이 먼저 돌아 대기 자리에는 7 이 있었다.
     SW_EXPECT_NEAR_EQUAL( 5.0f, pWatcher->_watchedLocalPos._x, 1e-6f );

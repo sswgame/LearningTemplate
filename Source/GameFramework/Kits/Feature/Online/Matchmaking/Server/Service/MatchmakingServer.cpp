@@ -213,9 +213,9 @@ namespace sw
             attachHost( host );
         if ( _pPartyLobby == nullptr || _pQueue == nullptr )
             return;
-        _pQueue->tick( nowMs );
+        _pQueue->update( nowMs );
         if ( _pAgent != nullptr )
-            _pAgent->tick( nowMs );
+            _pAgent->update( nowMs );
 
         _listLobbyStartScratch.clear();
         _pPartyLobby->drainLobbyStarts( _listLobbyStartScratch );

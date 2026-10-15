@@ -133,7 +133,7 @@ namespace sw
 
     const ItemVisualDef* AppearanceDatabase::findItemVisual( const hashed_string& itemID ) const
     {
-        const ItemDef* pItem = _pItemCatalog != nullptr ? _pItemCatalog->findItem( itemID ) : nullptr;
+        const ItemDef* pItem = _pItemCatalog != nullptr ? _pItemCatalog->find( itemID ) : nullptr;
         return pItem != nullptr ? _visuals.findVisual( pItem->_visualID ) : nullptr;
     }
 
@@ -176,7 +176,7 @@ namespace sw
     {
         if ( _pItemCatalog == nullptr )
             return;
-        for ( const ItemDef& item : _pItemCatalog->getItems() )
+        for ( const ItemDef& item : _pItemCatalog->getAll() )
         {
             if ( item._visualID.empty() == false && _visuals.findVisual( item._visualID ) == nullptr )
                 _report.addError( "item '%#' names unknown visual '%#'", item._id.c_str(), item._visualID.c_str() );
@@ -200,7 +200,7 @@ namespace sw
             _report.addError( "equip conditions form a cycle: %#", chain );
         }
         // 공유 코드와 네트워크는 아이템, 외형, 프리셋 id 를 32 비트 해시로 싣는다.
-        const vector<ItemDef>& listItem = _pItemCatalog->getItems();
+        const vector<ItemDef>& listItem = _pItemCatalog->getAll();
         for ( size_t lhs = 0; lhs < listItem.size(); ++lhs )
         {
             for ( size_t rhs = lhs + 1; rhs < listItem.size(); ++rhs )
@@ -224,7 +224,7 @@ namespace sw
             _sets.collectSetItems( set._id, listItem );
             for ( const hashed_string& itemID : listItem )
             {
-                if ( _pItemCatalog != nullptr && _pItemCatalog->findItem( itemID ) == nullptr )
+                if ( _pItemCatalog != nullptr && _pItemCatalog->find( itemID ) == nullptr )
                     _report.addError( "set '%#' names unknown item '%#'", set._id.c_str(), itemID.c_str() );
             }
             if ( set._completeVisual.empty() == false && _visuals.findVisual( set._completeVisual ) == nullptr )
@@ -373,7 +373,7 @@ namespace sw
                     _report.addError( "%# slot '%#' shows unknown visual '%#'", where, slot._slot.c_str(), slot._visibleVisual.c_str() );
                 for ( const hashed_string& itemID : slot._listItem )
                 {
-                    const ItemDef*       pItem   = _pItemCatalog != nullptr ? _pItemCatalog->findItem( itemID ) : nullptr;
+                    const ItemDef*       pItem   = _pItemCatalog != nullptr ? _pItemCatalog->find( itemID ) : nullptr;
                     const ItemVisualDef* pVisual = pItem != nullptr ? _visuals.findVisual( pItem->_visualID ) : nullptr;
                     if ( _pItemCatalog != nullptr && pItem == nullptr )
                         _report.addError( "%# slot '%#' names unknown item '%#'", where, slot._slot.c_str(), itemID.c_str() );

@@ -74,7 +74,7 @@ SW_TEST_CASE( OnlineServerKitsTest, AccountMailboxTradeAndAdminAssembleAndShutDo
     SW_EXPECT_TRUE( listKitName[0] == "account" ); // 신원을 내놓는 키트가 먼저
     for ( int32 tickIndex = 0; tickIndex < 5; ++tickIndex )
     {
-        runtime.tick( Internal::kStartMs + tickIndex * 100 );
+        runtime.update( Internal::kStartMs + tickIndex * 100 );
     }
     runtime.shutdown();
 }

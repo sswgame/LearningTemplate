@@ -107,10 +107,10 @@ SW_TEST_CASE( RealTimeStrategyTest, CatalogReadsUnitsBuildingsAndResources )
 {
     RTSCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kRTSTestXML, "RealTimeStrategyTest" ) );
-    SW_EXPECT_EQUAL( 15, static_cast<int32>( catalog.getUnits().size() ) );
+    SW_EXPECT_EQUAL( 15, static_cast<int32>( catalog.getAll().size() ) );
     SW_EXPECT_EQUAL( 200, catalog.getSupplyMax() );
 
-    const RTSUnitDef* pBase = catalog.findUnit( hashed_string( "base" ) );
+    const RTSUnitDef* pBase = catalog.find( hashed_string( "base" ) );
     SW_ASSERT_NOT_NULL( pBase );
     SW_EXPECT_TRUE( pBase->_kind == RTSUnitKind::Building );
     SW_EXPECT_TRUE( pBase->_bDepot != SW_FALSE );
@@ -118,16 +118,16 @@ SW_TEST_CASE( RealTimeStrategyTest, CatalogReadsUnitsBuildingsAndResources )
     SW_EXPECT_NEAR_EQUAL( 2.0f, pBase->_radius, 1.0e-4f ); // 건물의 몸은 자리 반 변
     SW_EXPECT_NEAR_EQUAL( 0.0f, pBase->_speed, 1.0e-4f );
 
-    const RTSUnitDef* pMarine = catalog.findUnit( hashed_string( "marine" ) );
+    const RTSUnitDef* pMarine = catalog.find( hashed_string( "marine" ) );
     SW_ASSERT_NOT_NULL( pMarine );
     SW_EXPECT_TRUE( pMarine->_bTargetsGround != SW_FALSE && pMarine->_bTargetsAir != SW_FALSE );
     SW_EXPECT_TRUE( pMarine->canAttack() && pMarine->isMobile() );
-    const RTSUnitDef* pZealot = catalog.findUnit( hashed_string( "zealot" ) );
+    const RTSUnitDef* pZealot = catalog.find( hashed_string( "zealot" ) );
     SW_EXPECT_TRUE( pZealot->_bTargetsGround != SW_FALSE && pZealot->_bTargetsAir == SW_FALSE );
     SW_EXPECT_TRUE( pZealot->_requires == hashed_string( "academy" ) );
-    SW_EXPECT_TRUE( catalog.findUnit( hashed_string( "turret" ) )->_bTargetsGround == SW_FALSE );
-    SW_EXPECT_TRUE( catalog.findUnit( hashed_string( "geyser" ) )->_resourceType == RTSResourceType::Gas );
-    SW_EXPECT_TRUE( catalog.findUnit( hashed_string( "tank" ) )->_kind == RTSUnitKind::Unit ); // 모르는 종류는 유닛으로 읽는다
+    SW_EXPECT_TRUE( catalog.find( hashed_string( "turret" ) )->_bTargetsGround == SW_FALSE );
+    SW_EXPECT_TRUE( catalog.find( hashed_string( "geyser" ) )->_resourceType == RTSResourceType::Gas );
+    SW_EXPECT_TRUE( catalog.find( hashed_string( "tank" ) )->_kind == RTSUnitKind::Unit ); // 모르는 종류는 유닛으로 읽는다
 
     vector<const RTSUnitDef*> listProduct;
     catalog.findProducts( hashed_string( "barracks" ), listProduct );

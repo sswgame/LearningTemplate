@@ -34,7 +34,7 @@ namespace sw
         return result._requestID;
     }
 
-    void FakePlatformLoginClient::tick( int64 nowMs )
+    void FakePlatformLoginClient::update( int64 nowMs )
     {
         (void)nowMs;
         for ( PlatformLoginClientResult& result : _listPending )

@@ -59,23 +59,17 @@ namespace sw
      * @brief `<RecipeCatalog><Recipe id="potion" station="Alchemy" time="2" level="1" known="false"><In item="herb" count="2"/>
      *        <Tool item="mortar"/><Out item="potion" count="1"/></Recipe></RecipeCatalog>` 를 읽습니다.
      */
-    class SW_GF_API RecipeCatalog : public XMLCatalog<RecipeCatalog>
+    class SW_GF_API RecipeCatalog : public XMLCatalog<RecipeCatalog>, public GameCatalog<RecipeDef>
     {
         friend class XMLCatalog<RecipeCatalog>;
 
     public:
-        void addRecipe( const RecipeDef& recipe ) { (void)_catalog.add( recipe ); }
-
-        const RecipeDef*         findRecipe( const hashed_string& id ) const { return _catalog.find( id ); }
-        const vector<RecipeDef>& getRecipes() const { return _catalog.getAll(); }
         /** @brief @p itemID 를 만드는 레시피 목록입니다. 제작 화면의 "이걸 만들려면" 에 씁니다. */
         void findRecipesFor( const hashed_string& itemID, vector<const RecipeDef*>& outListRecipe ) const;
 
     private:
         static constexpr const utf8* kXMLRootName = "RecipeCatalog"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
-
-        GameCatalog<RecipeDef> _catalog{};
     };
 } // namespace sw
 

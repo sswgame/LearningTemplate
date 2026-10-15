@@ -102,7 +102,7 @@ namespace sw::editor
         updateFocusedDocument();
         ensureDocumentLoaded();
 
-        tickPreview( ImGui::GetIO().DeltaTime );
+        updatePreview( ImGui::GetIO().DeltaTime );
 
         drawGraphToolbar();
 
@@ -452,7 +452,7 @@ namespace sw::editor
         }
     }
 
-    void DialogueGraphPanel::tickPreview( float32 deltaSeconds )
+    void DialogueGraphPanel::updatePreview( float32 deltaSeconds )
     {
         if ( _bPreviewPlaying == SW_FALSE || _previewNodeID <= 0 )
             return;

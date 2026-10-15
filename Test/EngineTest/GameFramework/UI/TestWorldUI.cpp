@@ -176,7 +176,7 @@ SW_TEST_CASE( WorldUITest, SpawnedDamageNumberCarriesItsMarker )
     sw::GameObjectManager manager;
     manager.beginPlay();
     sw::DamageNumberComponent::spawnNumber( manager, sw::float3{ 1.0f, 2.0f, 3.0f }, 42 );
-    manager.tick( 0.016f ); // 플레이 중에 붙은 컴포넌트는 다음 틱 단계에서 시작한다
+    manager.update( 0.016f ); // 플레이 중에 붙은 컴포넌트는 다음 틱 단계에서 시작한다
     sw::DamageNumberComponent* pDamage = nullptr;
     manager.forEachComponentOfType<sw::DamageNumberComponent>( [&pDamage]( sw::DamageNumberComponent* pComponent )
     { pDamage = pComponent; } );

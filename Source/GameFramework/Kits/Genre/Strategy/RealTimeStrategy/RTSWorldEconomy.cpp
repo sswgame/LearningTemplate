@@ -129,7 +129,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     void RTSWorld::startConstruction( RTSUnit& worker, RTSOrder& order )
     {
-        const RTSUnitDef* pDef          = _pCatalog->findUnit( order._buildID );
+        const RTSUnitDef* pDef          = _pCatalog->find( order._buildID );
         const bool        bBuildAborted = pDef == nullptr || evaluateCost( worker._owner, *pDef ) != RTSCommandResult::Ok || canPlaceBuilding( order._buildID, order._buildCell, worker._id ) == false;
         if ( bBuildAborted )
         {
@@ -155,7 +155,7 @@ namespace sw
     {
         if ( order._targetUnit.isValid() == false )
         {
-            const RTSUnitDef* pDef = _pCatalog->findUnit( order._buildID );
+            const RTSUnitDef* pDef = _pCatalog->find( order._buildID );
             if ( pDef == nullptr )
             {
                 finishOrder( unit );
@@ -208,7 +208,7 @@ namespace sw
     {
         if ( building._listProduction.empty() )
             return;
-        const RTSUnitDef* pDef = _pCatalog->findUnit( building._listProduction.front() );
+        const RTSUnitDef* pDef = _pCatalog->find( building._listProduction.front() );
         if ( pDef == nullptr )
         {
             building._listProduction.pop_front();
@@ -243,7 +243,7 @@ namespace sw
         float3 position{};
         if ( findSpawnPosition( building, position ) == false )
             position = building._position;
-        const RTSUnitDef* pDef = _pCatalog->findUnit( defID );
+        const RTSUnitDef* pDef = _pCatalog->find( defID );
         if ( pDef != nullptr && pDef->_bAir )
             position = float3{ building._position._x, 0.0f, building._position._z };
         const RTSUnitID unitID = spawnUnit( defID, building._owner, position );

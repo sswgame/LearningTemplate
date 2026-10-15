@@ -92,7 +92,7 @@ SW_TEST_CASE( BuoyancyTest, CrateFloatsWhereBuoyancyMatchesItsWeight )
     manager.beginPlay();
     for ( uint32 frame = 0; frame < 300; ++frame )
     {
-        manager.tick( Internal::kFrame );
+        manager.update( Internal::kFrame );
     }
     SW_EXPECT_NEAR_EQUAL( 1.0f, pFloating->getWorldPosition()._y, 0.02f );
     SW_EXPECT_TRUE( pFloating->getOwner()->getComponent<BuoyancyComponent>()->isInWater() );

@@ -58,7 +58,7 @@ namespace sw
         /** @brief 빌린 것을 모두 돌려주고 멈춥니다. `initialize` 가 실패했어도 불립니다. */
         virtual void shutdown() = 0;
         /** @brief 서버 루프가 돌 때마다 불립니다. 게임 틱이 멈춰 있어도(Dev `pause`) 불립니다. @p nowMs 는 UTC 밀리초입니다. */
-        virtual void tick( int64 nowMs ) = 0;
+        virtual void update( int64 nowMs ) = 0;
         /** @brief 이 서비스가 받고 있는 연결 수입니다(지표 `server_service_connections`). */
         virtual int32 getConnectionCount() const { return 0; }
     };

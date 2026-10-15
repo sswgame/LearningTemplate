@@ -121,7 +121,7 @@ namespace sw
         // 먼저 도착한 목격자가 신고하면 같은 사건의 나머지는 지운다. 넣은 순서대로 확인하므로 결과가 항상 같다.
         for ( PendingReport& report : _listPending )
         {
-            report._remaining.tick( deltaTime );
+            report._remaining.update( deltaTime );
         }
         for ( size_t index = 0; index < _listPending.size(); )
         {

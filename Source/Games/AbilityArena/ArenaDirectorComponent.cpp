@@ -226,7 +226,7 @@ namespace sw
             SW_LOG_WARNING( "[Arena] the saved arena state does not match this build - starting from wave 1" );
     }
 
-    void ArenaDirectorComponent::tickGame( float32 deltaTime )
+    void ArenaDirectorComponent::updateGame( float32 deltaTime )
     {
         if ( _bUnitsRequested == SW_FALSE )
         {

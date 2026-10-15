@@ -19,6 +19,7 @@ calc = "compute"
 build = "make (값) / create (소유) / compute (계산) — 변경 이력·단계면 rebuild / populate"
 generate = "make / create / compute"
 construct = "make / create"
+tick = "update (한 프레임 · 시간 진행) — 틱 시스템과 행동 트리 안의 tick 은 도메인 용어로 예외 표에 둔다"
 
 # 함수 이름 안의 줄임말 → 풀어 쓴 낱말. 낱말 경계(뒤가 소문자가 아님)일 때만 본다(`Attribute` 는 걸리지 않는다).
 [abbreviation]
@@ -35,3 +36,7 @@ Attr = "Attribute"
 "BannedVerb:SurfaceBvh::build" = "도메인 용어 — BVH 구축(Embree · Jolt 와 같은 용어)"
 "BannedVerb:ThemePark::buildRide" = "도메인 용어 — 게임 안에서 놀이기구를 짓는 행동"
 "BannedVerb:ParkDirectorComponent::build*" = "도메인 용어 — 게임 안에서 놀이기구를 짓는 행동"
+"BannedVerb:SceneTickScheduler::tick*" = "도메인 용어 — 틱 시스템(틱 그룹 · 단계)이 컴포넌트 틱을 돌린다(언리얼 FTickFunction)"
+"BannedVerb:TickBatchRegistry::tick*" = "도메인 용어 — 틱 시스템의 일괄 틱"
+"BannedVerb:BehaviorTree::tick*" = "도메인 용어 — 행동 트리 노드 틱(언리얼 BTTask::TickTask)"
+"BannedVerb:RHIReleaseQueue::tick*" = "도메인 용어 — GPU 펜스 세대가 한 칸 넘어가는 것을 알리는 카운터"

@@ -42,7 +42,7 @@ SW_TEST_CASE( GameObjectManagerTest, CreationSearchAndDeferredDestruction )
     SW_ASSERT_NOT_NULL( hero );
     SW_ASSERT_NOT_NULL( enemy );
 
-    manager.tick( 0.0f );
+    manager.update( 0.0f );
     SW_EXPECT_EQUAL( size_t( 2 ), manager.getAllGameObjects().size() );
     SW_EXPECT_EQUAL( hero, manager.findGameObjectByName( hashed_string( "Hero" ) ) );
     SW_EXPECT_EQUAL( enemy, manager.findGameObjectByID( enemy->getObjectID() ) );
@@ -57,7 +57,7 @@ SW_TEST_CASE( GameObjectManagerTest, CreationSearchAndDeferredDestruction )
     SW_EXPECT_NULL( manager.findGameObjectByID( enemy->getObjectID() ) );
     SW_EXPECT_EQUAL( size_t( 2 ), manager.getAllGameObjects().size() );
 
-    manager.tick( 0.0f );
+    manager.update( 0.0f );
 
     SW_EXPECT_EQUAL( size_t( 1 ), manager.getAllGameObjects().size() );
     SW_EXPECT_NULL( manager.findGameObjectByName( hashed_string( "Enemy" ) ) );
@@ -79,7 +79,7 @@ SW_TEST_CASE( GameObjectManagerTest, OwnershipReleasedAfterDeferredDestroy )
 
     manager.destroyObject( first );
 
-    manager.tick( 0.0f );
+    manager.update( 0.0f );
 
     SW_EXPECT_NULL( manager.findGameObjectByName( hashed_string( "Owned" ) ) );
     SW_EXPECT_NULL( manager.findGameObjectByID( firstID ) );
@@ -107,11 +107,11 @@ SW_TEST_CASE( GameObjectManagerTest, SequentialAndParallelTick )
     MockMeshComponent* aMesh = a->getComponent<MockMeshComponent>();
     MockMeshComponent* bMesh = b->getComponent<MockMeshComponent>();
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( 1, aMesh->_tickCount );
     SW_EXPECT_EQUAL( 1, bMesh->_tickCount );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     aMesh = a->getComponent<MockMeshComponent>();
     bMesh = b->getComponent<MockMeshComponent>();
     SW_EXPECT_EQUAL( 2, aMesh->_tickCount );
@@ -144,13 +144,13 @@ SW_TEST_CASE( GameObjectManagerTest, ParallelTickReadsStableHierarchyTransforms 
     float3 observedDuringTick{ 0.0f, 0.0f, 0.0f };
     childComp->_pObservedWorld = &observedDuringTick;
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_NEAR_EQUAL( 15.0f, observedDuringTick._x, 1e-4f );
 
     // 틱 중 로컬 쓰기는 post-flush 이후에 보이며, 틱 중간 스냅샷에는 없을 수 있다.
     parentComp->_tickLocalPos      = float3( 20.0f, 0.0f, 0.0f );
     parentComp->_bWriteLocalOnTick = SW_TRUE;
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_NEAR_EQUAL( 25.0f, childComp->getWorldPosition()._x, 1e-4f );
 
     manager.clear();
@@ -168,11 +168,11 @@ SW_TEST_CASE( GameObjectManagerTest, ParallelTickLeavesTransformsCleanWhenUnchan
     SceneComponent* root = obj->addComponent<SceneComponent>();
     root->setLocalPosition( float3( 1.0f, 2.0f, 3.0f ) );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_TRUE( manager.hasDirtySceneTransforms() == false );
     SW_EXPECT_NEAR_EQUAL( 1.0f, root->getWorldPosition()._x, 1e-4f );
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_TRUE( manager.hasDirtySceneTransforms() == false );
 
     manager.clear();
@@ -201,7 +201,7 @@ SW_TEST_CASE( GameObjectManagerTest, DestroyDuringTickIsDeferredThenApplied )
     keeperMesh->_pTickDestroyManager = &manager;
     keeperMesh->_pTickDestroyObject  = victim;
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_NULL( manager.findGameObjectByName( hashed_string( "TickVictim" ) ) );
     SW_EXPECT_NOT_NULL( manager.findGameObjectByName( hashed_string( "TickKeeper" ) ) );
     SW_EXPECT_EQUAL( 1, keeperMesh->_tickCount );
@@ -229,7 +229,7 @@ SW_TEST_CASE( GameObjectManagerTest, DeferredTransformSkipsDestroyedComponent )
     keeperMesh->_pTickDestroyManager = &manager;
     keeperMesh->_pTickDestroyObject  = victim;
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_NULL( manager.findGameObjectByName( hashed_string( "TransformVictim" ) ) );
     SW_EXPECT_NOT_NULL( manager.findGameObjectByName( hashed_string( "TransformKeeper" ) ) );
 }
@@ -258,7 +258,7 @@ SW_TEST_CASE( GameObjectManagerTest, DeferredAttachDuringTickApplies )
     tickerMesh->_pTickAttachChild  = childSc;
     tickerMesh->_pTickAttachParent = parentSc;
 
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_EQUAL( parentSc, childSc->getParent() );
 }
 
@@ -297,7 +297,7 @@ SW_TEST_CASE( GameObjectManagerTest, TickDoesNotWaitForForeignTasks )
     {
         manager.createGameObject( hashed_string( "ForeignWaitTicker" ) )->addComponent<MockMeshComponent>();
     }
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     BlockingForeignTask task;
     TaskManager&        taskManager = sw::engine::getSubsystem<sw::TaskManager>();
@@ -312,7 +312,7 @@ SW_TEST_CASE( GameObjectManagerTest, TickDoesNotWaitForForeignTasks )
     SW_ASSERT_TRUE( task._bStarted.load( std::memory_order_acquire ) );
 
     const sw::Stopwatch tickStopwatch;
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     const int64 tickMilli = tickStopwatch.getElapsedMilliseconds();
     task._bRelease.store( true, std::memory_order_release );
     taskManager.waitAll();
@@ -334,7 +334,7 @@ SW_TEST_CASE( GameObjectManagerTest, PostTickWorkRunsOnAnEmptyScene )
         bRan = true;
         manager.createGameObject( hashed_string( "SpawnedFromEmpty" ) );
     } );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_EXPECT_TRUE( bRan );
     SW_EXPECT_NOT_NULL( manager.findGameObjectByName( hashed_string( "SpawnedFromEmpty" ) ) );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), manager.getAllGameObjects().size() );
@@ -355,7 +355,7 @@ SW_TEST_CASE( GameObjectManagerTest, PostTickOnComponentSkipsPendingDestroy )
     SW_ASSERT_NOT_NULL( pDying );
     pLive->addComponent<MockMeshComponent>();
     pDying->addComponent<MockMeshComponent>();
-    manager.tick( 0.0f );
+    manager.update( 0.0f );
     MockMeshComponent* pLiveMesh  = pLive->getComponent<MockMeshComponent>();
     MockMeshComponent* pDyingMesh = pDying->getComponent<MockMeshComponent>();
     SW_ASSERT_NOT_NULL( pLiveMesh );
@@ -374,7 +374,7 @@ SW_TEST_CASE( GameObjectManagerTest, PostTickOnComponentSkipsPendingDestroy )
     manager.executeOrDeferPostTickOnComponent<MockMeshComponent>( dyingHandle, []( MockMeshComponent& )
     { ++s_callCount; } );
     SW_EXPECT_EQUAL( 1, s_callCount );
-    manager.tick( 0.0f );
+    manager.update( 0.0f );
 }
 
 /**
@@ -385,13 +385,13 @@ SW_TEST_CASE( GameObjectManagerTest, SpawnAndDestroyInOneFrame )
 {
     sw::GameObjectManager manager;
     sw::GameObject*       pKeep = manager.createGameObject( hashed_string( "Keep" ) );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     sw::GameObject* pBrief  = manager.createGameObject( hashed_string( "Brief" ) );
     const uint64    briefID = pBrief->getObjectID();
     sw::GameObject* pAlso   = manager.createGameObject( hashed_string( "AlsoNew" ) );
     manager.destroyObject( pBrief );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     SW_EXPECT_TRUE( manager.findGameObjectByName( hashed_string( "Brief" ) ) == nullptr );
     SW_EXPECT_TRUE( manager.findGameObjectByID( briefID ) == nullptr );
@@ -632,7 +632,7 @@ SW_TEST_CASE( GameObjectManagerPoolTest, SceneClearAndPoolReuseLifecycle )
     }
 
     SW_EXPECT_EQUAL( static_cast<size_t>( kObjectCount ), manager.getAllGameObjects().size() );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     // 2) 씬 클리어 (풀 완전 초기화)
     manager.clear();
@@ -648,7 +648,7 @@ SW_TEST_CASE( GameObjectManagerPoolTest, SceneClearAndPoolReuseLifecycle )
     }
 
     SW_EXPECT_EQUAL( static_cast<size_t>( kObjectCount ), manager.getAllGameObjects().size() );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     // 씬 2의 모든 메시 컴포넌트가 1회 틱되었는지 검증
     for ( sw::GameObject* pObj : manager.getAllGameObjects() )

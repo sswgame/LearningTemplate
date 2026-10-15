@@ -103,7 +103,7 @@ namespace
             pFollower->registerSubTick( sw::TickGroup::DuringPhysics, sw::MockSubTickMoverComponent::kMoveSubTick );
             SW_EXPECT_TRUE( pFollower->addSubTickPrerequisite( sw::MockSubTickMoverComponent::kMoveSubTick, leaderTick ) );
         }
-        manager.tick( 0.016f );
+        manager.update( 0.016f );
 
         sw::vector<int64> listTick;
         for ( uint32 round = 0; round < 30; ++round )
@@ -116,7 +116,7 @@ namespace
                     pMover->_tickLocalPos._y = height;
             }
             const sw::Stopwatch stopwatch;
-            manager.tick( 0.016f );
+            manager.update( 0.016f );
             listTick.push_back( stopwatch.getElapsedMicroseconds() );
         }
         test::logBenchSamples( pLabel, listTick );
@@ -152,14 +152,14 @@ SW_TEST_CASE( GameObjectBenchTest, SpawnTickDestroy )
     [[maybe_unused]] const int64 spawnMicro = spawnStopwatch.getElapsedMicroseconds();
 
     const sw::Stopwatch firstTickStopwatch;
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     [[maybe_unused]] const int64 firstTickMicro = firstTickStopwatch.getElapsedMicroseconds();
 
     sw::vector<int64> listTick;
     for ( uint32 round = 0; round < 30; ++round )
     {
         const sw::Stopwatch stopwatch;
-        manager.tick( 0.016f );
+        manager.update( 0.016f );
         listTick.push_back( stopwatch.getElapsedMicroseconds() );
     }
 
@@ -263,7 +263,7 @@ SW_TEST_CASE( GameObjectBenchTest, SetActiveDeepChain )
             pRoot = pObj;
         pPrev = pObj;
     }
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     sw::vector<int64> listToggle;
     for ( uint32 round = 0; round < 20; ++round )
@@ -291,7 +291,7 @@ SW_TEST_CASE( GameObjectBenchTest, GetComponentHot )
     pObj->addComponent<sw::MockMeshComponent>();
     pObj->addComponent<sw::MockAudioComponent>();
     pObj->addComponent<sw::SceneComponent>();
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
 
     constexpr uint32    kIterationCount = 2000000;
     uintptr_t           sink            = 0;
@@ -321,7 +321,7 @@ SW_TEST_CASE( GameObjectBenchTest, FindByID )
         if ( pObj != nullptr )
             listObjectID.push_back( pObj->getObjectID() );
     }
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     SW_ASSERT_EQUAL( kObjectCount, static_cast<uint32>( listObjectID.size() ) );
 
     // 조회 순서를 흩는다. id 는 연속이라 순서대로 읽으면 캐시가 실제보다 좋다(곱셈 해시로 섞는다).
@@ -365,7 +365,7 @@ SW_TEST_CASE( GameObjectBenchTest, DeepChainMove )
     sw::RegisterMockComponents();
     sw::GameObject* pLeaf = nullptr;
     sw::GameObject* pRoot = buildDeepChain( manager, kChainDepth, pLeaf );
-    manager.tick( 0.016f );
+    manager.update( 0.016f );
     sw::SceneComponent* pRootScene = pRoot->getComponent<sw::SceneComponent>();
     sw::SceneComponent* pLeafScene = pLeaf->getComponent<sw::SceneComponent>();
     SW_ASSERT_NOT_NULL( pRootScene );
@@ -405,7 +405,7 @@ SW_TEST_CASE( GameObjectBenchTest, DeepChainLifecycle )
             sw::GameObject* pRoot = buildDeepChain( manager, kChainDepth, pLeaf );
 
             const sw::Stopwatch tickStopwatch;
-            manager.tick( 0.016f );
+            manager.update( 0.016f );
             listFirstTick.push_back( tickStopwatch.getElapsedMicroseconds() );
 
             const sw::Stopwatch destroyStopwatch;
@@ -419,7 +419,7 @@ SW_TEST_CASE( GameObjectBenchTest, DeepChainLifecycle )
             sw::RegisterMockComponents();
             sw::GameObject* pLeaf = nullptr;
             buildDeepChain( *pManager, kChainDepth, pLeaf );
-            pManager->tick( 0.016f );
+            pManager->update( 0.016f );
             const sw::Stopwatch teardownStopwatch;
             sw_delete( pManager );
             listTeardown.push_back( teardownStopwatch.getElapsedMicroseconds() );
@@ -464,7 +464,7 @@ SW_TEST_CASE( GameObjectBenchTest, SpawnCollidersDuringPlay )
         listSpawn.push_back( spawnStopwatch.getElapsedMicroseconds() );
 
         const sw::Stopwatch tickStopwatch;
-        manager.tick( 0.016f );
+        manager.update( 0.016f );
         listBeginTick.push_back( tickStopwatch.getElapsedMicroseconds() );
         componentCount = listObject.front() != nullptr ? listObject.front()->getComponentCount() : 0;
 

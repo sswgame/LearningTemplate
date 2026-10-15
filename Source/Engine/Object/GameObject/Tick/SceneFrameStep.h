@@ -8,7 +8,7 @@
 
 namespace sw
 {
-    /** @brief 씬 한 프레임(`GameObjectManager::tick`)의 단계입니다. 값은 표의 줄 순서이고, 그 순서로 돕니다. */
+    /** @brief 씬 한 프레임(`GameObjectManager::update`)의 단계입니다. 값은 표의 줄 순서이고, 그 순서로 돕니다. */
     enum class SceneFrameStep : uint8
     {
 #define SW_SCENE_FRAME_STEP( Name ) Name,

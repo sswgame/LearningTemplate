@@ -270,7 +270,7 @@ namespace sw
             // 1) 도는 중이면 시간을 흘리고, 다 돌면 내린다.
             if ( ride._listRider.empty() == false )
             {
-                ride._cycleTimer.tick( deltaTime );
+                ride._cycleTimer.update( deltaTime );
                 if ( ride._cycleTimer.isActive() )
                     continue;
 

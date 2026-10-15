@@ -102,7 +102,7 @@ namespace sw
          * @param sceneViewCameraProvider 씬 뷰를 그리는 호스트 카메라(에디터 카메라)를 돌려주는 델리게이트. 씬 뷰가 없으면 부르지 않습니다.
          * @param bTickScene false이면 씬 GameObject tick을 건너뜁니다 (에디터 Pause).
          */
-        void tick( float32 deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, bool bTickScene );
+        void update( float32 deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, bool bTickScene );
         /** @brief 입력 종료 등 프레임의 마지막 단계입니다. */
         void endFrame();
 

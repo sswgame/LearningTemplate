@@ -428,7 +428,7 @@ namespace sw
 
             // 서버 서비스는 게임 틱과 따로 돈다. 일시정지(Dev `pause`) 중에도 로그인이나 채팅 요청은 처리한다.
             if ( _serverServices != nullptr )
-                _serverServices->tick( WallClock::nowUnixMilliseconds() );
+                _serverServices->update( WallClock::nowUnixMilliseconds() );
             updateProcessMetrics( ServerAppInternal::nowMonotonicMs() );
 
             if ( _bPaused == SW_TRUE && _pendingStepCount == 0 )
@@ -441,13 +441,13 @@ namespace sw
             }
 
             const int64 tickStart = MonotonicClock::nowNanoseconds();
-            tickOnce( deltaSeconds );
+            updateOnce( deltaSeconds );
             const int64 tickTime = MonotonicClock::nowNanoseconds() - tickStart;
             _pTickHistogram->observe( static_cast<float64>( tickTime ) * 1.0e-9 );
 #if SW_PROFILER_TRACE_ENABLED
             // 느린 틱 자동 캡처(`-gv_traceSlowTickMs`)는 꺼져 있으면 정수 비교 하나다. Shipping 서버에는 없다(지표 `server_tick_seconds` 만 있다).
-            ProfilerTraceExport::tickSlowFrameCapture( engine::getSubsystem<FrameProfiler>(), static_cast<uint64>( tickStart ),
-                                                       static_cast<uint64>( tickStart + tickTime ), "Server" );
+            ProfilerTraceExport::updateSlowFrameCapture( engine::getSubsystem<FrameProfiler>(), static_cast<uint64>( tickStart ),
+                                                         static_cast<uint64>( tickStart + tickTime ), "Server" );
 #endif
             _healthRegistry->markTick( ServerAppInternal::nowMonotonicMs() );
             _statusTickSumNanoseconds += tickTime;
@@ -489,7 +489,7 @@ namespace sw
         }
     }
 
-    void ServerApp::tickOnce( float32 deltaSeconds )
+    void ServerApp::updateOnce( float32 deltaSeconds )
     {
         // App::run 의 한 프레임에서 창, 에디터, 사용자 설정, 백엔드 교체를 뺀 것이다. 한 틱은 고정 스텝 하나다.
         _engine.beginFrame( deltaSeconds );
@@ -514,7 +514,7 @@ namespace sw
         }
 #endif
         const ModuleFrameState& frameState = _moduleHost->getFrameState();
-        _engine.tick( deltaSeconds, HostViewTargets{}, ViewCameraProviderDelegate{}, frameState._bTickScene == SW_TRUE );
+        _engine.update( deltaSeconds, HostViewTargets{}, ViewCameraProviderDelegate{}, frameState._bTickScene == SW_TRUE );
         _engine.endFrame();
     }
 

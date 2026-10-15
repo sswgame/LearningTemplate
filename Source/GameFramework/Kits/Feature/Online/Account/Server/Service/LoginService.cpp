@@ -296,11 +296,11 @@ namespace sw
         return true;
     }
 
-    void LoginService::tick( int64 nowMs )
+    void LoginService::update( int64 nowMs )
     {
         for ( IPlatformLoginProvider* pProvider : _listPlatformProvider )
         {
-            pProvider->tick( nowMs );
+            pProvider->update( nowMs );
             _listVerificationScratch.clear();
             (void)pProvider->pollVerifications( _listVerificationScratch );
             for ( const PlatformLoginVerification& verification : _listVerificationScratch )

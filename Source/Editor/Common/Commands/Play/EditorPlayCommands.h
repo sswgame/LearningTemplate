@@ -21,7 +21,7 @@ namespace sw::editor
          * @brief 매 에디터 프레임에 부릅니다 — 세션이 시작된 첫 프레임에 "Maximize On Play" 면 게임 뷰를 최대화하고, 멈추면 되돌립니다.
          * @details 시작과 정지는 플레이 툴바 · 단축키 · 시나리오 어디서든 올 수 있어 상태 전이를 여기서 한 번에 본다.
          */
-        static void tick();
+        static void update();
         /** @brief F8 — 플레이어 조종 중이면 Simulate 로 바꾸고 씬 뷰를 앞으로(Eject), Eject 한 세션이면 다시 조종하고 게임 뷰를 앞으로 둡니다(Possess). */
         static void toggleEject();
         /** @brief 고른 오브젝트의 지금 상태를 Stop 뒤에도 남기게 적습니다. 적은 오브젝트 수입니다(플레이 중이 아니면 0). */

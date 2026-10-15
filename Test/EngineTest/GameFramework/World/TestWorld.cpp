@@ -84,8 +84,8 @@ SW_TEST_CASE( WorldTest, WeatherFollowsSeasonWeightsBlendsAndForecasts )
 {
     WeatherCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kWeatherTestXML, "WorldTest" ) );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, catalog.findWeather( hashed_string( "snow" ) )->computeWeight( hashed_string( "Spring" ) ), 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( 3.0f, catalog.findWeather( hashed_string( "clear" ) )->computeWeight( hashed_string( "Winter" ) ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, catalog.find( hashed_string( "snow" ) )->computeWeight( hashed_string( "Spring" ) ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, catalog.find( hashed_string( "clear" ) )->computeWeight( hashed_string( "Winter" ) ), 1.0e-6f );
 
     // 봄에는 눈이 오지 않는다.
     const hashed_string spring( "Spring" );

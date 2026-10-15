@@ -359,6 +359,6 @@ namespace sw
             action._delta = child.getAttributeInt( "delta", 0 );
             (void)_honorActionCatalog.add( action );
         }
-        _honorReputation.addFaction( faction );
+        _honorReputation.add( faction );
     }
 } // namespace sw

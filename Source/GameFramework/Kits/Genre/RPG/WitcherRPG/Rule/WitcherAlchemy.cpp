@@ -41,7 +41,7 @@ namespace sw
         const CraftResult result = _crafter.craft( recipeID, inoutInventory, station, level );
         if ( result != CraftResult::Ok )
             return result;
-        const RecipeDef* pRecipe = _pRecipeCatalog != nullptr ? _pRecipeCatalog->findRecipe( recipeID ) : nullptr;
+        const RecipeDef* pRecipe = _pRecipeCatalog != nullptr ? _pRecipeCatalog->find( recipeID ) : nullptr;
         if ( pRecipe == nullptr )
             return result;
         for ( const auto& output : pRecipe->_outputs.getItems() )
@@ -159,7 +159,7 @@ namespace sw
         for ( size_t index = _listEffect.size(); index > 0; --index )
         {
             WitcherActiveEffect& effect = _listEffect[index - 1];
-            effect._remaining.tick( deltaTime );
+            effect._remaining.update( deltaTime );
             if ( effect._remaining.isActive() == false )
                 _listEffect.erase( _listEffect.begin() + static_cast<ptrdiff_t>( index - 1 ) );
         }

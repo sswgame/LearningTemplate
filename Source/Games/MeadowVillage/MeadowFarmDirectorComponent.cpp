@@ -118,7 +118,7 @@ namespace sw
         SW_LOG_INFO( "[Meadow] the village is open - hold Space to fast-forward, E to talk to a visitor" );
     }
 
-    void MeadowFarmDirectorComponent::tickGame( float32 deltaTime )
+    void MeadowFarmDirectorComponent::updateGame( float32 deltaTime )
     {
         (void)deltaTime;
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );

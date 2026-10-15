@@ -108,7 +108,7 @@ namespace sw::editor
             _listRide.push_back( ride );
             if ( ride._bCoaster == false )
                 continue;
-            const CoasterLayoutDef* pLayout = catalog.findLayout( placement._layoutID );
+            const CoasterLayoutDef* pLayout = catalog.find( placement._layoutID );
             if ( pLayout == nullptr )
                 continue;
             CoasterTrackBuilder builder;

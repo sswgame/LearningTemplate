@@ -127,7 +127,7 @@ namespace sw
             GhostBooRuntime& boo = _listBoo[booIndex];
             if ( boo._state != GhostBooState::Revealed )
                 continue;
-            boo._timer.tick( deltaTime );
+            boo._timer.update( deltaTime );
             if ( boo._timer.isActive() == false )
                 moveBooAway( booIndex );
         }

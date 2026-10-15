@@ -279,7 +279,7 @@ namespace sw
 
         void stepFixed();
         void finishStaffWork();
-        void tickPatience();
+        void updatePatience();
         void spawnArrivals();
         void seatCustomers();
         void startCooking();

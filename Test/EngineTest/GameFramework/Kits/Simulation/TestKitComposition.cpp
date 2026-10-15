@@ -160,7 +160,7 @@ namespace sw
             return true;
         }
 
-        void tickGame( float32 deltaTime ) override
+        void updateGame( float32 deltaTime ) override
         {
             (void)deltaTime;
             SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
@@ -289,7 +289,7 @@ namespace sw
             return true;
         }
 
-        void tickGame( float32 deltaTime ) override
+        void updateGame( float32 deltaTime ) override
         {
             (void)deltaTime;
             SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
@@ -473,7 +473,7 @@ namespace sw
             return true;
         }
 
-        void tickGame( float32 deltaTime ) override
+        void updateGame( float32 deltaTime ) override
         {
             SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
             if ( pState == nullptr )
@@ -584,7 +584,7 @@ namespace sw
             return true;
         }
 
-        void tickGame( float32 deltaTime ) override
+        void updateGame( float32 deltaTime ) override
         {
             if ( ++_tickCount == 2 )
             {
@@ -727,7 +727,7 @@ namespace
     {
         for ( int32 tickIndex = 0; tickIndex < tickCount; ++tickIndex )
         {
-            manager.tick( KitCompositionTestInternal::kTickSeconds );
+            manager.update( KitCompositionTestInternal::kTickSeconds );
         }
     }
 
@@ -931,7 +931,7 @@ SW_TEST_CASE( KitCompositionTest, SaveFromAnotherRunRestoresBothKitsAndTheShared
     }
     SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
     pManager->mergePendingAdds();
-    pManager->tick( 0.0f ); // 복원한 오브젝트가 시작한다 — 시계는 흐르지 않는다
+    pManager->update( 0.0f ); // 복원한 오브젝트가 시작한다 — 시계는 흐르지 않는다
 
     KitCompositionDigest after;
     SW_ASSERT_TRUE( makeCompositionDigest( *pManager, after ) );
@@ -976,7 +976,7 @@ SW_TEST_CASE( KitCompositionTest, HotReloadSnapshotContinuesLikeAnUninterruptedR
         SW_ASSERT_TRUE( instance.captureSnapshot( snapshot ) );
         SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
         pManager->mergePendingAdds();
-        pManager->tick( 0.0f );
+        pManager->update( 0.0f );
         runCompositionTicks( *pManager, KitCompositionTestInternal::kHalfRunTicks );
         SW_ASSERT_TRUE( makeCompositionDigest( *pManager, reloaded ) );
         pManager->endPlay();
@@ -989,7 +989,7 @@ SW_TEST_CASE( KitCompositionTest, HotReloadSnapshotContinuesLikeAnUninterruptedR
         SW_ASSERT_NOT_NULL( pManager );
         pManager->beginPlay();
         runCompositionTicks( *pManager, KitCompositionTestInternal::kHalfRunTicks );
-        pManager->tick( 0.0f ); // 복원한 쪽과 같은 자리에 같은 빈 틱
+        pManager->update( 0.0f ); // 복원한 쪽과 같은 자리에 같은 빈 틱
         runCompositionTicks( *pManager, KitCompositionTestInternal::kHalfRunTicks );
         SW_ASSERT_TRUE( makeCompositionDigest( *pManager, straight ) );
         pManager->endPlay();
@@ -1074,7 +1074,7 @@ SW_TEST_CASE( KitCompositionTest, CityAndSkirmishSurviveSaveFromAnotherRun )
     }
     SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
     pManager->mergePendingAdds();
-    pManager->tick( 0.0f );
+    pManager->update( 0.0f );
 
     LandCompositionDigest after;
     SW_ASSERT_TRUE( makeLandCompositionDigest( *pManager, after ) );
@@ -1102,7 +1102,7 @@ SW_TEST_CASE( KitCompositionTest, CityAndSkirmishHotReloadContinuesLikeAnUninter
         SW_ASSERT_TRUE( instance.captureSnapshot( snapshot ) );
         SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
         pManager->mergePendingAdds();
-        pManager->tick( 0.0f );
+        pManager->update( 0.0f );
         runCompositionTicks( *pManager, LandCompositionTestInternal::kHalfRunTicks );
         SW_ASSERT_TRUE( makeLandCompositionDigest( *pManager, reloaded ) );
         pManager->endPlay();
@@ -1115,7 +1115,7 @@ SW_TEST_CASE( KitCompositionTest, CityAndSkirmishHotReloadContinuesLikeAnUninter
         SW_ASSERT_NOT_NULL( pManager );
         pManager->beginPlay();
         runCompositionTicks( *pManager, LandCompositionTestInternal::kHalfRunTicks / 2 );
-        pManager->tick( 0.0f );
+        pManager->update( 0.0f );
         runCompositionTicks( *pManager, LandCompositionTestInternal::kHalfRunTicks );
         SW_ASSERT_TRUE( makeLandCompositionDigest( *pManager, straight ) );
         pManager->endPlay();

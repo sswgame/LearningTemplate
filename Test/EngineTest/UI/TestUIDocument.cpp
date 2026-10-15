@@ -393,7 +393,7 @@ SW_TEST_CASE( UIDocumentTest, RoundTripSaveMatchesSource )
 
     sw::UIScreen* pScreen = fixture._ui.findScreen( fixture._ui.openScreen( kPausePath ) );
     SW_ASSERT_NOT_NULL( pScreen );
-    pScreen->getAnimationPlayer().tick( 1.0f ); // 여는 애니메이션(Open)이 끝난 값 — 문서에 적은 값과 같다
+    pScreen->getAnimationPlayer().update( 1.0f ); // 여는 애니메이션(Open)이 끝난 값 — 문서에 적은 값과 같다
     const sw::string written = sw::UIDocumentWriter::write( pScreen->getDesc(), {}, *pScreen->getTree().getRoot(), pScreen->getBindings(),
                                                             pScreen->getAnimationPlayer().getAnimations() );
     SW_EXPECT_STREQ( source.saveToString().c_str(), written.c_str() );

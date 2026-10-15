@@ -136,7 +136,7 @@ namespace sw
         /**
          * @brief GPU 에 제출된 작업이 모두 끝날 때까지 기다립니다.
          * @details **렌더 스레드가 실행 중일 때 다른 스레드에서 부르면, 먼저 렌더 스레드가 받은 작업을 모두 끝낼 때까지 기다린다**
-         *          (`setRenderThreadDrain`). 게임 스레드에서 부르는 쪽(비동기 씬 로드 완료인 `SceneManager::tickTransitions`, 텍스처와 머티리얼
+         *          (`setRenderThreadDrain`). 게임 스레드에서 부르는 쪽(비동기 씬 로드 완료인 `SceneManager::updateTransitions`, 텍스처와 머티리얼
          *          핫 리로드)도 이 순서를 따른다. 실제 대기는 백엔드의 `waitIdleInternal` 이 한다.
          * @warning 렌더 스레드가 프레임을 기록하거나 제출하는 도중에 펜스 Signal 과 해제 큐 비우기가 끼어들면, DX12 는 아직 실행 전인 커맨드
          *          얼로케이터를 재사용해 장치가 제거되고, Vulkan 은 큐 외부 동기화를 어긴다. 에디터 빌드는 UI 가 렌더 스레드를 먼저 비워

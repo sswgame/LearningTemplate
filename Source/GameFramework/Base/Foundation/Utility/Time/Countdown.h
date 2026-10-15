@@ -59,9 +59,9 @@ namespace sw
          *          손으로 `x -= dt; if ( want && x <= 0 ) x = interval;` 을 쓰면 지나친 몫을 버려서 빈도가 걸음 크기에 매인다.
          *          0.1 초 걸음에 0.25 초 간격이면 0.3 초마다 발생한다.
          */
-        constexpr bool tickRepeat( float32 deltaTime, float32 interval, bool bWant )
+        constexpr bool updateRepeat( float32 deltaTime, float32 interval, bool bWant )
         {
-            (void)tick( deltaTime ); // 끝난 걸음인지는 아래 isActive 로 본다. 원하지 않는 걸음에도 시간은 흐른다.
+            (void)update( deltaTime ); // 끝난 걸음인지는 아래 isActive 로 본다. 원하지 않는 걸음에도 시간은 흐른다.
             if ( bWant == false || isActive() )
                 return false;
             restart( interval );
@@ -81,7 +81,7 @@ namespace sw
          * @brief @p deltaTime 만큼 흘립니다. 남아 있던 시간이 이번에 0 이하가 됐으면 true 이며, 끝난 걸음에 한 번만 true 입니다.
          * @details 이미 끝나 있었으면 늦음을 지우고 false 를 반환한다. @p deltaTime 이 0 이하면(일시정지, 0 걸음) 아무것도 하지 않는다.
          */
-        constexpr bool tick( float32 deltaTime )
+        constexpr bool update( float32 deltaTime )
         {
             if ( deltaTime <= 0.0f )
                 return false;

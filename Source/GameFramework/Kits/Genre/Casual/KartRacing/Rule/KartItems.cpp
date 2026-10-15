@@ -65,8 +65,7 @@ namespace sw
     }
 
     KartItemCatalog::KartItemCatalog()
-        : _catalog{}
-        , _lootCatalog{}
+        : _lootCatalog{}
         , _listRankTable{}
         , _referencePlaceCount{ 0 }
     {
@@ -84,7 +83,7 @@ namespace sw
         LootTableDef table;
         table._id        = rank._tableID;
         table._listEntry = listEntry;
-        _lootCatalog.addTable( table );
+        _lootCatalog.add( table );
         for ( KartRankTable& existing : _listRankTable )
         {
             if ( existing._tableID == rank._tableID )
@@ -131,7 +130,7 @@ namespace sw
             return nullptr;
         vector<hashed_string> listItem;
         items.getItemIDs( listItem );
-        return findItem( listItem.front() );
+        return find( listItem.front() );
     }
 
     float32 KartItemCatalog::computeItemChance( int32 place, int32 racerCount, const hashed_string& itemID ) const
@@ -166,7 +165,7 @@ namespace sw
             def._shieldTime     = itemNode.getAttributeFloat( "shield", def._shieldTime );
             def._blastRadius    = itemNode.getAttributeFloat( "blastRadius", def._blastRadius );
             def._bIgnoresShield = itemNode.getAttributeBool( "ignoresShield", false ) ? SW_TRUE : SW_FALSE;
-            addItem( def );
+            add( def );
             ++loadedCount;
         }
         for ( XMLNode rankNode = root.findChild( "RankTable" ); rankNode; rankNode = rankNode.findNextSibling( "RankTable" ) )
@@ -175,7 +174,7 @@ namespace sw
             for ( XMLNode entryNode = rankNode.findChild( "Entry" ); entryNode; entryNode = entryNode.findNextSibling( "Entry" ) )
             {
                 const utf8* pItem = entryNode.findAttribute( "item" );
-                if ( pItem == nullptr || findItem( hashed_string( pItem ) ) == nullptr )
+                if ( pItem == nullptr || find( hashed_string( pItem ) ) == nullptr )
                 {
                     SW_LOG_WARNING( "%#: rank table entry names an unknown item '%#' - skipped", sourceName, pItem != nullptr ? pItem : "" );
                     continue;

@@ -202,7 +202,7 @@ namespace sw
             SW_LOG_INFO( "[Skirmish] watching computer vs computer - arrows/WASD pan, wheel zoom, - = speed, P pause, F1 status" );
     }
 
-    void SkirmishDirectorComponent::tickGame( float32 deltaTime )
+    void SkirmishDirectorComponent::updateGame( float32 deltaTime )
     {
         if ( deltaTime <= 0.0f )
             return;
@@ -609,7 +609,7 @@ namespace sw
     void SkirmishDirectorComponent::orderBuild( const utf8* pBuildingID, const float3& point )
     {
         RTSWorld&         world = _match.getWorld();
-        const RTSUnitDef* pDef  = _catalog.findUnit( hashed_string( pBuildingID ) );
+        const RTSUnitDef* pDef  = _catalog.find( hashed_string( pBuildingID ) );
         if ( pDef == nullptr )
             return;
         // 선택한 것 중 첫 일꾼이 짓는다. 정제소는 커서에 가까운 빈 간헐천에, 다른 건물은 커서가 중심이 되는 위치에 짓는다.
@@ -691,7 +691,7 @@ namespace sw
         {
             if ( event._player != 0 )
                 continue;
-            const RTSUnitDef*            pDef  = _catalog.findUnit( event._defID );
+            const RTSUnitDef*            pDef  = _catalog.find( event._defID );
             [[maybe_unused]] const utf8* pName = pDef != nullptr ? pDef->_name.c_str() : "?";
             switch ( event._kind )
             {
@@ -736,5 +736,4 @@ namespace sw
         const GameObject*  pRigObject = pManager != nullptr ? pManager->resolveGameObject( _cameraRig ) : nullptr;
         return pRigObject != nullptr ? pRigObject->getComponent<OrthoCameraRigComponent>() : nullptr;
     }
-
 } // namespace sw

@@ -58,14 +58,14 @@ namespace sw
             {
                 table._listAlways.push_back( LootTableInternal::readEntry( child ) );
             }
-            addTable( table );
+            add( table );
             ++loadedCount;
         }
-        for ( const LootTableDef& table : _catalog.getAll() )
+        for ( const LootTableDef& table : getAll() )
         {
             for ( const LootEntry& entry : table._listEntry )
             {
-                if ( entry._tableID.empty() == false && _catalog.find( entry._tableID ) == nullptr )
+                if ( entry._tableID.empty() == false && find( entry._tableID ) == nullptr )
                     SW_LOG_WARNING( "%#: table '%#' refers to unknown table '%#'", sourceName, table._id.c_str(), entry._tableID.c_str() );
             }
         }
@@ -74,7 +74,7 @@ namespace sw
 
     bool LootCatalog::roll( const hashed_string& tableID, GameRandom& random, ItemStackList& outItems, float32 luck ) const
     {
-        const LootTableDef* pTable = _catalog.find( tableID );
+        const LootTableDef* pTable = find( tableID );
         if ( pTable == nullptr )
             return false;
         rollTable( *pTable, random, outItems, MathUtil::max( 0.01f, luck ), 0 );
@@ -85,7 +85,7 @@ namespace sw
     {
         if ( entry._tableID.empty() == false )
         {
-            const LootTableDef* pTable = _catalog.find( entry._tableID );
+            const LootTableDef* pTable = find( entry._tableID );
             if ( pTable != nullptr && depth + 1 < kMaxDepth )
                 rollTable( *pTable, random, outItems, luck, depth + 1 );
             return;
@@ -130,7 +130,7 @@ namespace sw
     {
         if ( entry._tableID.empty() == false )
         {
-            const LootTableDef* pTable = _catalog.find( entry._tableID );
+            const LootTableDef* pTable = find( entry._tableID );
             return pTable != nullptr && depth + 1 < kMaxDepth ? computeTableChance( *pTable, itemID, depth + 1 ) : 0.0f;
         }
         return entry._itemID == itemID && entry._maxCount > 0 ? 1.0f : 0.0f;
@@ -163,7 +163,7 @@ namespace sw
 
     float32 LootCatalog::computeDropChance( const hashed_string& tableID, const hashed_string& itemID ) const
     {
-        const LootTableDef* pTable = _catalog.find( tableID );
+        const LootTableDef* pTable = find( tableID );
         return pTable != nullptr ? computeTableChance( *pTable, itemID, 0 ) : 0.0f;
     }
 } // namespace sw

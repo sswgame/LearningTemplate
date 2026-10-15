@@ -230,7 +230,7 @@ namespace sw
         friend class NetSimHarness;
 
         void start( INetSimGame* pGame );
-        void tick( float32 deltaTime );
+        void update( float32 deltaTime );
         void stop();
 
         NetSimTrafficCounter       _counter; ///< 호스트 → 카운터 → 흉내 → 루프백 엔드포인트 순서로 거친다

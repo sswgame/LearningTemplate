@@ -1721,13 +1721,13 @@ SW_TEST_CASE( ModuleAPITest, FullGameSceneAndComponentLifecycle )
         api.update( game, 0.016f );
         sw::Scene* pActive = sw::engine::getSubsystem<sw::SceneManager>().getActiveScene();
         if ( pActive != nullptr )
-            pActive->tick( 0.016f );
+            pActive->update( 0.016f );
     }
 
     SW_LOG_INFO( "[SmokeTest] Step 11: Shutting down..." );
 
     sw::engine::getSubsystem<sw::TaskManager>().waitAll();
-    sw::engine::getSubsystem<sw::SceneManager>().tickTransitions();
+    sw::engine::getSubsystem<sw::SceneManager>().updateTransitions();
 
     api.shutdown( game );
     api.destroy( game );
@@ -1950,11 +1950,11 @@ SW_TEST_CASE( ModuleAPITest, GameModuleRepeatedReloadCycle )
         for ( int32 frame = 0; frame < 20; ++frame )
         {
             std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-            sw::engine::getSubsystem<sw::SceneManager>().tickTransitions();
+            sw::engine::getSubsystem<sw::SceneManager>().updateTransitions();
             api.update( game, 0.016f );
         }
         sw::engine::getSubsystem<sw::TaskManager>().waitAll();
-        sw::engine::getSubsystem<sw::SceneManager>().tickTransitions();
+        sw::engine::getSubsystem<sw::SceneManager>().updateTransitions();
 
         api.shutdown( game );
         api.destroy( game );
@@ -2097,11 +2097,11 @@ SW_TEST_CASE( ModuleAPITest, UnloadChildReleasesTheChannelsItsImageCreated )
     for ( int32 frameIndex = 0; frameIndex < 20; ++frameIndex )
     {
         std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-        sw::engine::getSubsystem<sw::SceneManager>().tickTransitions();
+        sw::engine::getSubsystem<sw::SceneManager>().updateTransitions();
         api.update( game, 0.016f );
     }
     sw::engine::getSubsystem<sw::TaskManager>().waitAll();
-    sw::engine::getSubsystem<sw::SceneManager>().tickTransitions();
+    sw::engine::getSubsystem<sw::SceneManager>().updateTransitions();
     api.shutdown( game );
     api.destroy( game );
     if ( api.bindService != nullptr )

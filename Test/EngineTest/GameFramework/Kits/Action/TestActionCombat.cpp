@@ -148,11 +148,11 @@ namespace
     }
 
     /** @brief 유닛의 HP 가 @p hp 에서 바뀔 때까지(최대 @p maxFrame 번) @p deltaTime 씩 틱하고, 바뀐 프레임 번호를 돌려줍니다(안 바뀌면 -1). */
-    int32 tickUntilHpChanges( GameObjectManager& manager, const UnitStatsComponent& stats, int32 hp, float32 deltaTime, int32 maxFrame )
+    int32 updateUntilHpChanges( GameObjectManager& manager, const UnitStatsComponent& stats, int32 hp, float32 deltaTime, int32 maxFrame )
     {
         for ( int32 frameIndex = 0; frameIndex < maxFrame; ++frameIndex )
         {
-            manager.tick( deltaTime );
+            manager.update( deltaTime );
             if ( stats.getHp() != hp )
                 return frameIndex;
         }
@@ -220,7 +220,7 @@ SW_TEST_CASE( ActionCombatTest, ProjectileDamagesTheUnitItHitsOnceAndIsGoneAfter
 
     manager.beginPlay();
     // 지면 총알이 남았는지(지나쳤나 · 벽처럼 멈췄나)와 유닛의 HP 를 메시지에 남긴다.
-    const int32 hitFrame = tickUntilHpChanges( manager, *pTarget, 100, 0.1f, 20 );
+    const int32 hitFrame = updateUntilHpChanges( manager, *pTarget, 100, 0.1f, 20 );
     utf8        arrMissDetail[96]{};
     (void)std::snprintf( arrMissDetail, sizeof( arrMissDetail ), "the bullet never hit the unit: bullet alive %d, target hp %d",
                          manager.findGameObjectByID( bulletID ) != nullptr ? 1 : 0, pTarget->getHp() );
@@ -232,7 +232,7 @@ SW_TEST_CASE( ActionCombatTest, ProjectileDamagesTheUnitItHitsOnceAndIsGoneAfter
     // 더 흘려도 다시 깎이지 않는다.
     for ( int32 frameIndex = 0; frameIndex < 10; ++frameIndex )
     {
-        manager.tick( 0.1f );
+        manager.update( 0.1f );
     }
     SW_EXPECT_EQUAL( 80, pTarget->getHp() );
     manager.endPlay();
@@ -258,7 +258,7 @@ SW_TEST_CASE( ActionCombatTest, ProjectilePassesItsInstigatorAndWhatIsAttachedTo
     SW_EXPECT_TRUE( pProjectile->getInstigator() == pShooter->getOwner()->getHandle() );
 
     manager.beginPlay();
-    SW_ASSERT_TRUE_MSG( tickUntilHpChanges( manager, *pTarget, 100, 0.1f, 40 ) >= 0, "the bullet never reached the target" );
+    SW_ASSERT_TRUE_MSG( updateUntilHpChanges( manager, *pTarget, 100, 0.1f, 40 ) >= 0, "the bullet never reached the target" );
     SW_EXPECT_EQUAL( 100, pShooter->getHp() );
     SW_EXPECT_EQUAL( 90, pTarget->getHp() );
     manager.endPlay();
@@ -282,7 +282,7 @@ SW_TEST_CASE( ActionCombatTest, ProjectileIgnoresUnitsOnALayerItDoesNotCollideWi
     manager.beginPlay();
     for ( int32 frameIndex = 0; frameIndex < 10; ++frameIndex )
     {
-        manager.tick( 0.1f );
+        manager.update( 0.1f );
     }
     SW_EXPECT_EQUAL( 100, pAlly->getHp() );
     SW_EXPECT_TRUE( manager.findGameObjectByID( bulletID ) != nullptr );
@@ -308,7 +308,7 @@ SW_TEST_CASE( ActionCombatTest, FastProjectileHitsAThinUnitItCrossesInOneFrame )
 
     manager.beginPlay();
     SW_EXPECT_TRUE( pBulletBox->isContinuous() );
-    manager.tick( 1.0f / 60.0f );
+    manager.update( 1.0f / 60.0f );
     SW_EXPECT_EQUAL( 70, pTarget->getHp() );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), manager.getAllGameObjects().size() );
     manager.endPlay();
@@ -341,7 +341,7 @@ SW_TEST_CASE( ActionCombatTest, DamagePublishesAnEventWithInstigatorTargetAmount
 
     // 1) 틱 안의 피해 — 틱 직후로 미뤄지고, 이벤트는 그 틱이 끝나기 전에 온다.
     manager.beginPlay();
-    manager.tick( 0.1f );
+    manager.update( 0.1f );
     SW_EXPECT_EQUAL( 30, pStrike->_hpSeenInTick );
     SW_EXPECT_EQUAL( 10, pTarget->getHp() );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listReceived.size() );
@@ -355,7 +355,7 @@ SW_TEST_CASE( ActionCombatTest, DamagePublishesAnEventWithInstigatorTargetAmount
     ProjectileComponent* pProjectile = spawnBullet( manager, 0.0f, 0.0f, 6.0f, 25 );
     SW_ASSERT_NOT_NULL( pProjectile );
     pProjectile->setInstigator( pShooter->getHandle() );
-    SW_ASSERT_TRUE( tickUntilHpChanges( manager, *pTarget, 10, 0.1f, 20 ) >= 0 );
+    SW_ASSERT_TRUE( updateUntilHpChanges( manager, *pTarget, 10, 0.1f, 20 ) >= 0 );
     SW_ASSERT_EQUAL( static_cast<size_t>( 2 ), listReceived.size() );
     SW_EXPECT_TRUE( listReceived[1]._instigator == pShooter->getHandle() );
     SW_EXPECT_TRUE( listReceived[1]._target == pTarget->getOwner()->getHandle() );
@@ -379,7 +379,7 @@ SW_TEST_CASE( ActionCombatTest, TwoProjectilesInOneFrameRespectTheInvincibilityW
     SW_ASSERT_TRUE( pTarget != nullptr && pUpper != nullptr && pLower != nullptr );
 
     manager.beginPlay();
-    SW_ASSERT_TRUE( tickUntilHpChanges( manager, *pTarget, 100, 0.1f, 20 ) >= 0 );
+    SW_ASSERT_TRUE( updateUntilHpChanges( manager, *pTarget, 100, 0.1f, 20 ) >= 0 );
     SW_EXPECT_EQUAL( 90, pTarget->getHp() );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), manager.getAllGameObjects().size() );
     manager.endPlay();
@@ -404,7 +404,7 @@ SW_TEST_CASE( ActionCombatTest, WallsStopProjectilesButProjectilesPassEachOther 
     manager.beginPlay();
     for ( int32 frameIndex = 0; frameIndex < 10; ++frameIndex )
     {
-        manager.tick( 0.1f );
+        manager.update( 0.1f );
     }
     // 나란히 난 둘은 서로를 지나쳐 유닛에 닿았다(무적 0 이라 둘 다 깎는다). 벽 줄의 총알은 벽에서 멈췄다 — 남은 것은 벽과 유닛뿐이다.
     SW_EXPECT_EQUAL( 80, pTarget->getHp() );
@@ -429,7 +429,7 @@ SW_TEST_CASE( ActionCombatTest, PiercingProjectilePassesThroughAsManyUnitsAsItsP
     manager.beginPlay();
     for ( int32 frameIndex = 0; frameIndex < 20; ++frameIndex )
     {
-        manager.tick( 0.1f );
+        manager.update( 0.1f );
     }
     SW_EXPECT_EQUAL( 90, pFirst->getHp() );
     SW_EXPECT_EQUAL( 90, pSecond->getHp() );
@@ -465,7 +465,7 @@ SW_TEST_CASE( ActionCombatTest, AttackHitsEachUnitInItsHitboxOncePerSwing )
     SW_ASSERT_NOT_NULL( pWalkerBody );
 
     manager.beginPlay();
-    manager.tick( 0.1f ); // 판정이 몸 · 서 있는 유닛과의 겹침을 받는다 — 아직 휘두르지 않았다
+    manager.update( 0.1f ); // 판정이 몸 · 서 있는 유닛과의 겹침을 받는다 — 아직 휘두르지 않았다
     SW_EXPECT_EQUAL( 100, pStanding->getHp() );
 
     // 휘두르기 전부터 서 있던 유닛은 시작할 때 맞는다. 몸은 맞지 않는다.
@@ -477,25 +477,25 @@ SW_TEST_CASE( ActionCombatTest, AttackHitsEachUnitInItsHitboxOncePerSwing )
 
     // 휘두르는 동안 들어온 유닛은 들어올 때 맞고, 나갔다 다시 들어와도 다시 맞지 않는다.
     pWalkerBody->setLocalPosition( float3( 1.2f, 0.0f, 0.0f ) );
-    manager.tick( 0.1f );
+    manager.update( 0.1f );
     SW_EXPECT_EQUAL( 90, pWalker->getHp() );
     pWalkerBody->setLocalPosition( float3( 6.0f, 0.0f, 0.0f ) );
-    manager.tick( 0.1f );
+    manager.update( 0.1f );
     pWalkerBody->setLocalPosition( float3( 1.2f, 0.0f, 0.0f ) );
-    manager.tick( 0.1f );
+    manager.update( 0.1f );
     SW_EXPECT_EQUAL( 90, pWalker->getHp() );
     SW_EXPECT_EQUAL( 90, pStanding->getHp() );
 
     // 판정이 꺼진 뒤 들어온 유닛은 맞지 않는다.
     for ( int32 frameIndex = 0; frameIndex < 20 && pAttack->isAttackActive(); ++frameIndex )
     {
-        manager.tick( 0.1f );
+        manager.update( 0.1f );
     }
     SW_ASSERT_FALSE( pAttack->isAttackActive() );
     pWalkerBody->setLocalPosition( float3( 6.0f, 0.0f, 0.0f ) );
-    manager.tick( 0.1f );
+    manager.update( 0.1f );
     pWalkerBody->setLocalPosition( float3( 1.2f, 0.0f, 0.0f ) );
-    manager.tick( 0.1f );
+    manager.update( 0.1f );
     SW_EXPECT_EQUAL( 90, pWalker->getHp() );
     SW_EXPECT_EQUAL( 100, pAttacker->getHp() );
     manager.endPlay();
@@ -517,10 +517,10 @@ SW_TEST_CASE( ActionCombatTest, ProjectileHitsAUnitThatCrossesItsPathBetweenFram
     pCrosserBody->setLocalPosition( float3( 5.0f, -3.0f, 0.0f ) );
 
     manager.beginPlay();
-    manager.tick( 0.0f ); // 둘 다 제자리에서 첫 step — 출발점을 잡는다
+    manager.update( 0.0f ); // 둘 다 제자리에서 첫 step — 출발점을 잡는다
     // 한 프레임에 총알은 x 0 → 10, 유닛은 y -3 → 3 — 둘은 x 5 · y 0 에서 같은 때 만난다. 끝 자리는 서로 멀다.
     pCrosserBody->setLocalPosition( float3( 5.0f, 3.0f, 0.0f ) );
-    manager.tick( 1.0f / 60.0f );
+    manager.update( 1.0f / 60.0f );
     SW_EXPECT_EQUAL( 90, pCrosser->getHp() );
     manager.endPlay();
 }
@@ -542,7 +542,7 @@ SW_TEST_CASE( ActionCombatTest, ProjectilePassesTriggersAndHitsTheBodyBehind )
     pSensorOnly->getOwner()->getComponent<BoxCollider2DComponent>()->setTrigger( true );
 
     manager.beginPlay();
-    SW_ASSERT_TRUE_MSG( tickUntilHpChanges( manager, *pTarget, 100, 0.1f, 20 ) >= 0, "the bullet never reached the body behind the triggers" );
+    SW_ASSERT_TRUE_MSG( updateUntilHpChanges( manager, *pTarget, 100, 0.1f, 20 ) >= 0, "the bullet never reached the body behind the triggers" );
     SW_EXPECT_EQUAL( 90, pTarget->getHp() );
     SW_EXPECT_EQUAL( 100, pSensorOnly->getHp() );
     manager.endPlay();
@@ -594,7 +594,7 @@ SW_TEST_CASE( ActionCombatTest, InterceptorDestroysAnEnemyProjectileButPelletsPa
     manager.beginPlay();
     for ( int32 frameIndex = 0; frameIndex < 15; ++frameIndex )
     {
-        manager.tick( 0.1f );
+        manager.update( 0.1f );
     }
     SW_EXPECT_TRUE( manager.findGameObjectByID( enemyShotID ) == nullptr );
     SW_EXPECT_TRUE( manager.findGameObjectByID( interceptorID ) == nullptr );
@@ -631,7 +631,7 @@ SW_TEST_CASE( ActionCombatTest, DamageReachesSubscribersInTheSameFrame )
 
     // 겹침 전달에서 맞는다 — 그 틱이 끝나기 전에 둘 다 받았다.
     manager.beginPlay();
-    SW_ASSERT_TRUE( tickUntilHpChanges( manager, *pTarget, 100, 0.1f, 20 ) >= 0 );
+    SW_ASSERT_TRUE( updateUntilHpChanges( manager, *pTarget, 100, 0.1f, 20 ) >= 0 );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listComponentHp.size() );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listChannelHp.size() );
     SW_EXPECT_EQUAL( 90, listComponentHp[0] );
@@ -738,7 +738,7 @@ SW_TEST_CASE( ActionCombatTest, ObjectReferencesSurviveASceneRoundTripAsTheSameO
 
     // 플레이 중 한 번 휘둘러 판정 안의 유닛을 맞힌다 — 맞은 목록(`_listHitTarget`)에 그 유닛이 든 채로 저장한다.
     pObjects->beginPlay();
-    pObjects->tick( 0.1f );
+    pObjects->update( 0.1f );
     pAttack->beginAttack( 10, 5.0f );
     SW_ASSERT_EQUAL( 90, pVictim->getHp() );
     const GameObjectHandle oldShooter = pShooter->getOwner()->getHandle();
@@ -766,7 +766,7 @@ SW_TEST_CASE( ActionCombatTest, ObjectReferencesSurviveASceneRoundTripAsTheSameO
     SW_ASSERT_EQUAL( 90, pNewVictimStats->getHp() );
     SW_ASSERT_TRUE( pNewHitbox->getComponent<MeleeHitboxComponent>()->isAttackActive() );
     pReloadedObjects->beginPlay();
-    pReloadedObjects->tick( 0.1f );
+    pReloadedObjects->update( 0.1f );
     SW_EXPECT_EQUAL( 90, pNewVictimStats->getHp() );
     sceneManager.shutdown();
 }
@@ -903,17 +903,17 @@ SW_TEST_CASE( ActionCombatTest, AttackTracksEachContactAndForgetsUnitsThatDieIns
     pSensed->getOwner()->getComponent<BoxCollider2DComponent>()->setTrigger( true );
 
     manager.beginPlay();
-    manager.tick( 0.1f );
+    manager.update( 0.1f );
     SW_EXPECT_EQUAL( 3u, pAttack->getOverlapCount() ); // 운 나쁜 유닛 하나 · 쌍둥이 둘(감지 범위는 아니다)
 
     // 판정 안에서 사라지면 잊는다.
     manager.destroyObject( pDoomed->getOwner() );
-    manager.tick( 0.1f );
+    manager.update( 0.1f );
     SW_EXPECT_EQUAL( 2u, pAttack->getOverlapCount() );
 
     // 쌍둥이의 콜라이더 하나가 떨어져도 남은 하나로 맞는다.
     pTwinSecond->setOffsetPosition( float2( 0.0f, 20.0f ) );
-    manager.tick( 0.1f );
+    manager.update( 0.1f );
     SW_EXPECT_EQUAL( 1u, pAttack->getOverlapCount() );
     pAttack->beginAttack( 10, 1.0f );
     SW_EXPECT_EQUAL( 90, pTwin->getHp() );
@@ -921,7 +921,7 @@ SW_TEST_CASE( ActionCombatTest, AttackTracksEachContactAndForgetsUnitsThatDieIns
 
     // 휘두르는 동안 새로 들어온 유닛도 한 번 맞는다.
     pLate->getOwner()->getPrimarySceneComponent()->setLocalPosition( float3( 0.5f, 0.0f, 0.0f ) );
-    manager.tick( 0.1f );
+    manager.update( 0.1f );
     SW_EXPECT_EQUAL( 90, pLate->getHp() );
     SW_EXPECT_EQUAL( 2u, pAttack->getOverlapCount() );
     manager.endPlay();
@@ -1065,7 +1065,7 @@ SW_TEST_CASE( ActionCombatTest, HealthBarAddedAfterAHitStartsAtTheUnitsHealth )
 
     HealthBarComponent* pBar = pUnit->getOwner()->addComponent<HealthBarComponent>();
     SW_ASSERT_NOT_NULL( pBar );
-    manager.tick( 0.016f ); // 플레이 중에 붙인 컴포넌트는 다음 틱의 시작 단계에서 시작한다
+    manager.update( 0.016f ); // 플레이 중에 붙인 컴포넌트는 다음 틱의 시작 단계에서 시작한다
     SW_EXPECT_NEAR_EQUAL( 0.4f, pBar->getTargetRatio(), 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 0.4f, pBar->getRemainRatio(), 1e-4f ); // 흔적 없이
     manager.endPlay();

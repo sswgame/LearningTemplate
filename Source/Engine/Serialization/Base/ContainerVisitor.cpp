@@ -68,8 +68,8 @@ namespace sw
             [[nodiscard]] static ContainerReadResult readSequence( void* pContainer, const ISequenceContainerWrapper& sequence, const NestedContainerInfo& nested,
                                                                    IContainerReader& reader, const SerializeContext& context )
             {
-                size_t                    countHint{ 0 };
-                const ContainerReadResult opened = reader.beginSequence( countHint );
+                size_t                    expectedCount{ 0 };
+                const ContainerReadResult opened = reader.beginSequence( expectedCount );
                 if ( opened != ContainerReadResult::Read )
                     return opened;
 
@@ -83,8 +83,8 @@ namespace sw
                 }
 
                 sequence.clear( pContainer );
-                if ( countHint > 0 )
-                    sequence.reserve( pContainer, MathUtil::min( countHint, kMaxReserveElementCount ) );
+                if ( expectedCount > 0 )
+                    sequence.reserve( pContainer, MathUtil::min( expectedCount, kMaxReserveElementCount ) );
 
                 // 읽기는 형식이, 넣는 방법은 컨테이너가 정한다 — `set` 은 다 읽은 뒤 넣고, 고정 배열은 순번의 칸을 채운다.
                 return reader.forEachElement( SW_DELEGATE_LAMBDA( ContainerElementVisitDelegate, [&]( size_t elementIndex ) -> ContainerReadResult
@@ -107,8 +107,8 @@ namespace sw
             [[nodiscard]] static ContainerReadResult readMap( void* pContainer, const IMapContainerWrapper& map, const NestedContainerInfo& nested,
                                                               IContainerReader& reader, const SerializeContext& context )
             {
-                size_t                    countHint{ 0 };
-                const ContainerReadResult opened = reader.beginMap( countHint );
+                size_t                    expectedCount{ 0 };
+                const ContainerReadResult opened = reader.beginMap( expectedCount );
                 if ( opened != ContainerReadResult::Read )
                     return opened;
 

@@ -34,12 +34,12 @@ namespace sw
 
     void HorrorMatch::stepKiller( float32 deltaTime )
     {
-        _killer._attackCooldown.tick( deltaTime );
-        _killer._abilityCooldown.tick( deltaTime );
-        _killer._stunRemaining.tick( deltaTime );
+        _killer._attackCooldown.update( deltaTime );
+        _killer._abilityCooldown.update( deltaTime );
+        _killer._stunRemaining.update( deltaTime );
         if ( _killer._busyRemaining.isActive() == false )
             return;
-        if ( _killer._busyRemaining.tick( deltaTime ) == false )
+        if ( _killer._busyRemaining.update( deltaTime ) == false )
             return;
         if ( _killer._breakingPallet >= 0 )
         {
@@ -62,14 +62,14 @@ namespace sw
     {
         HorrorSurvivor&              survivor = _listSurvivor[static_cast<size_t>( survivorIndex )];
         const AsymmetricHorrorRules& rules    = _pCatalog->getRules();
-        survivor._hasteRemaining.tick( deltaTime );
-        survivor._noiseRemaining.tick( deltaTime );
+        survivor._hasteRemaining.update( deltaTime );
+        survivor._noiseRemaining.update( deltaTime );
         if ( survivor._noiseRemaining.isActive() == false )
             survivor._noiseRadius = 0.0f;
 
         if ( survivor._activity == SurvivorActivity::Vaulting )
         {
-            survivor._vaultRemaining.tick( deltaTime );
+            survivor._vaultRemaining.update( deltaTime );
             if ( survivor._vaultRemaining.isActive() == false )
             {
                 survivor._position       = survivor._vaultExit;
@@ -250,7 +250,7 @@ namespace sw
             const bool bHelpless = survivor._state == SurvivorState::Dying || survivor._state == SurvivorState::Carried || survivor._state == SurvivorState::Hooked;
             bSlowed              = bSlowed || bHelpless;
         }
-        _collapseRemaining.tick( deltaTime * ( bSlowed ? rules._collapseSlowScale : 1.0f ) );
+        _collapseRemaining.update( deltaTime * ( bSlowed ? rules._collapseSlowScale : 1.0f ) );
         if ( _collapseRemaining.isActive() )
             return;
         // 붕괴가 끝났다. 아직 남은 생존자는 모두 희생된다.

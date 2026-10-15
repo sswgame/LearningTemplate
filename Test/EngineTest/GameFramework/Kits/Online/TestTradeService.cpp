@@ -326,11 +326,11 @@ SW_TEST_CASE( TradeServiceTest, PartyLeavingAndIdleTimeoutCancel )
 
     const TradeCompletion idle = node.invite( kAlice, kBob, 2000 );
     SW_ASSERT_TRUE( idle._result == TradeResult::Ok );
-    (void)node.drainUpdates();                                         // 신청 알림
-    node._service->tick( 2000 + TradeConstant::kInviteTimeoutMs - 1 ); // 아직
+    (void)node.drainUpdates();                                           // 신청 알림
+    node._service->update( 2000 + TradeConstant::kInviteTimeoutMs - 1 ); // 아직
     (void)node.settle();
     SW_EXPECT_TRUE( node.drainUpdates().empty() );
-    node._service->tick( 2000 + TradeConstant::kInviteTimeoutMs );
+    node._service->update( 2000 + TradeConstant::kInviteTimeoutMs );
     (void)node.settle();
     listUpdate = node.drainUpdates();
     SW_ASSERT_EQUAL( size_t( 1 ), listUpdate.size() );

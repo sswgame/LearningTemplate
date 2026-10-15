@@ -19,7 +19,6 @@ namespace sw
     {
         struct MechArenaWorldInternal
         {
-
             static uint32 mixSeed( uint32 seed, int32 pilot, int32 slot )
             {
                 return GameHash::mix32( seed ^ GameHash::mix32( static_cast<uint32>( pilot ) * 0x9E3779B1u + static_cast<uint32>( slot ) ) );
@@ -321,7 +320,7 @@ namespace sw
         {
             for ( const MechWeaponSlotDef& slot : mode._listWeapon )
             {
-                const WeaponDef* pWeapon = _pWeaponCatalog != nullptr && slot._kind == MechWeaponKind::Shot ? _pWeaponCatalog->findWeapon( slot._weaponID ) : nullptr;
+                const WeaponDef* pWeapon = _pWeaponCatalog != nullptr && slot._kind == MechWeaponKind::Shot ? _pWeaponCatalog->find( slot._weaponID ) : nullptr;
                 if ( pWeapon != nullptr )
                     pilot._listWeaponState[static_cast<size_t>( slotIndex )].equip( *pWeapon, pWeapon->_maxReserveAmmo,
                                                                                     MechArenaWorldInternal::mixSeed( _settings._seed, pilotIndex, slotIndex ) );

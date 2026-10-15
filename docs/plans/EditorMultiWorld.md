@@ -7,9 +7,9 @@
 
 ### 1.1 프레임 경로 — 활성 씬 하나
 
-- `Source/Engine/Engine.h/.cpp` 의 `Engine::tick( deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate&, bool bTickScene )` 가 한 프레임을 돕니다.
+- `Source/Engine/Engine.h/.cpp` 의 `Engine::update( deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate&, bool bTickScene )` 가 한 프레임을 돕니다.
   씬을 고르는 곳은 모두 `_pSceneManager->getActiveScene()` 입니다(`makeFrameContext`, "Scene update" 블록, `SceneDebugDraw::update`, 패킷 단계).
-- 씬 틱은 `SceneManager::tick( deltaTime )` 하나입니다. `bTickScene` 이 false 면(에디터 정지) 건너뛰고 `_sceneDeltaSeconds` 는 0 입니다.
+- 씬 틱은 `SceneManager::update( deltaTime )` 하나입니다. `bTickScene` 이 false 면(에디터 정지) 건너뛰고 `_sceneDeltaSeconds` 는 0 입니다.
 - 패킷은 `RenderPacketBuilder::beginPacket` → `populateScene( packet, views, sceneViewCameraProvider, pActiveScene, … )` → `populateCanvas` → 렌더 스레드 제출 순서입니다.
   `populateScene` 은 씬 포인터를 **하나** 받습니다.
 
@@ -64,7 +64,7 @@
 - `SceneManager` 에 "활성 씬" 과 별도로 **미리보기 씬 목록**을 둡니다. 미리보기 씬은 저장 · 전환 · 영속 오브젝트(`markPersistent`)에 끼지 않습니다.
 - 씬마다 `SceneTickPolicy`(가칭): `{ bTick, timeScale, bPhysics, fixedStepOverride }`. 프리팹 창은 틱 안 함 · 물리 안 함, 애니메이션 창은 틱만, 래그돌 창은 물리까지.
 - 조명 환경: 미리보기 씬은 기본 환경 프리셋(방향광 하나 · 스카이 · 바닥)을 씬 안의 오브젝트로 스폰합니다. 별도 "조명 환경" 타입은 만들지 않습니다.
-- 시간: 전역 `GameTimeScale` 은 게임 월드 전용으로 두고, 미리보기 씬은 정책의 `timeScale` 을 곱한 값을 `SceneManager::tick` 에서 넘깁니다.
+- 시간: 전역 `GameTimeScale` 은 게임 월드 전용으로 두고, 미리보기 씬은 정책의 `timeScale` 을 곱한 값을 `SceneManager::update` 에서 넘깁니다.
 
 ### 2.2 월드별 렌더
 

@@ -87,60 +87,60 @@ SW_TEST_CASE( LeaderboardStreamTest, ClientSubmitOnlyOnOpenBoardsAndAchievementP
     test::OnlineTestClients clients( network );
     const int32             clientIndex = clients.connect( server._port, { &leaderboardClient } );
     leaderboardClient.initialize( &clients.getClient( clientIndex ) );
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
 
     LeaderboardRecorder recorder;
     (void)leaderboardClient.requestTop( "casual", 0, 10, recorder.makeDelegate() ); // 로그인 전
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
     SW_ASSERT_EQUAL( recorder._listReply.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( recorder.getLast()._errorCode, OnlineError::kUnauthenticated );
     SW_EXPECT_TRUE( recorder.getLast()._reply._result == LeaderboardResult::NotSignedIn );
 
     clients.login( clientIndex, 1 );
-    test::tickAll( { &server }, clients, 0 );
+    test::updateAll( { &server }, clients, 0 );
 
     // 점수 제출 — 서버만 내는 표는 거절, 열린 표는 받는다
     (void)leaderboardClient.submitScore( "kills", 5, recorder.makeDelegate() );
-    test::tickAll( { &server }, clients, 10 );
+    test::updateAll( { &server }, clients, 10 );
     SW_EXPECT_EQUAL( recorder.getLast()._errorCode, OnlineError::kOk );
     SW_EXPECT_TRUE( recorder.getLast()._reply._result == LeaderboardResult::NotAllowed );
     (void)leaderboardClient.submitScore( "casual", 42, recorder.makeDelegate() );
-    test::tickAll( { &server }, clients, 20 );
+    test::updateAll( { &server }, clients, 20 );
     SW_EXPECT_TRUE( recorder.getLast()._reply._result == LeaderboardResult::Ok );
     SW_EXPECT_EQUAL( recorder.getLast()._reply._score, int64( 42 ) );
 
     // 서버 로직이 다른 계정의 점수를 낸다 → 상위 · 내 둘레
     leaderboard._service.submitScore( "casual", 2, "bob", 50, 30, 0 );
-    test::tickAll( { &server }, clients, 30 );
+    test::updateAll( { &server }, clients, 30 );
     (void)leaderboardClient.requestTop( "casual", 0, 10, recorder.makeDelegate() );
-    test::tickAll( { &server }, clients, 40 );
+    test::updateAll( { &server }, clients, 40 );
     SW_ASSERT_EQUAL( recorder.getLast()._reply._listEntry.size(), size_t( 2 ) );
     SW_EXPECT_EQUAL( recorder.getLast()._reply._listEntry[0]._accountID, AccountID( 2 ) );
     SW_EXPECT_STREQ( recorder.getLast()._reply._listEntry[0]._displayName.c_str(), "bob" );
     SW_EXPECT_EQUAL( recorder.getLast()._reply._listEntry[1]._rank, 2 );
     (void)leaderboardClient.requestAround( "casual", 1, recorder.makeDelegate() );
-    test::tickAll( { &server }, clients, 50 );
+    test::updateAll( { &server }, clients, 50 );
     SW_ASSERT_EQUAL( recorder.getLast()._reply._listEntry.size(), size_t( 2 ) );
     SW_EXPECT_EQUAL( recorder.getLast()._reply._listEntry[1]._accountID, AccountID( 1 ) );
 
     // 통계가 업적 임계값을 넘음 → 그 계정의 연결에 알림, 조회에도 보인다
     leaderboard._service.changeStat( 1, "alice", "wins", 1, LeaderboardUpdate::Sum, 60, 0 );
-    test::tickAll( { &server }, clients, 60 );
+    test::updateAll( { &server }, clients, 60 );
     vector<AchievementState> listUnlock;
     leaderboardClient.drainAchievementUnlocks( listUnlock );
     SW_ASSERT_EQUAL( listUnlock.size(), size_t( 1 ) );
     SW_EXPECT_STREQ( listUnlock[0]._achievementID.c_str(), "first_win" );
     (void)leaderboardClient.requestAchievements( recorder.makeDelegate() );
-    test::tickAll( { &server }, clients, 70 );
+    test::updateAll( { &server }, clients, 70 );
     SW_EXPECT_EQUAL( recorder.getLast()._reply._listAchievement.size(), size_t( 1 ) );
     (void)leaderboardClient.requestStats( recorder.makeDelegate() );
-    test::tickAll( { &server }, clients, 80 );
+    test::updateAll( { &server }, clients, 80 );
     SW_ASSERT_EQUAL( recorder.getLast()._reply._listStat.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( recorder.getLast()._reply._listStat[0]._value, int64( 1 ) );
 
     // 다른 서버에 붙은 계정의 업적 — 접속 상태 창구로
     leaderboard._service.changeStat( 3, "carol", "wins", 1, LeaderboardUpdate::Sum, 90, 0 );
-    test::tickAll( { &server }, clients, 90 );
+    test::updateAll( { &server }, clients, 90 );
     SW_ASSERT_EQUAL( server._presence._listRemotePush.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( server._presence._listRemotePush[0]._accountID, AccountID( 3 ) );
     SW_EXPECT_EQUAL( server._presence._listRemotePush[0]._kind, LeaderboardMethod::kPushAchievement );

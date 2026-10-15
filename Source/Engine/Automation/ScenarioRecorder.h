@@ -50,7 +50,7 @@ namespace sw
         /** @brief 녹화를 시작합니다. 있던 녹화는 버립니다. */
         void start();
         /** @brief 입력 프레임마다 한 번 부릅니다. 같은 입력 프레임에 두 번 불러도 한 번만 기록합니다. */
-        void tick( const InputManager& input, float32 deltaTime );
+        void update( const InputManager& input, float32 deltaTime );
         /** @brief 녹화를 멈추고 시나리오 글로 바꿉니다. 녹화 중이 아니면 빈 결과입니다. */
         ScenarioRecordOutput stop( const ScenarioRecordSettings& settings );
 

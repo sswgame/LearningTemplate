@@ -64,7 +64,7 @@ SW_TEST_CASE( NavMeshAgentTest, AgentWalksAroundCratesToTheDestination )
     pAgent->setMaxSpeed( 4.0f );
 
     manager.beginPlay();
-    test::tickFrames( manager, 2 );
+    test::updateFrames( manager, 2 );
     const sw::INavMesh* pNavMesh = manager.getSubsystem<sw::SceneNavigation>().findNavMesh( sw::hashed_string( "TestHumanoid" ) );
     SW_ASSERT_NOT_NULL( pNavMesh );
     SW_EXPECT_TRUE( pNavMesh->getPolygonCount() > 0 );
@@ -75,7 +75,7 @@ SW_TEST_CASE( NavMeshAgentTest, AgentWalksAroundCratesToTheDestination )
     bool bEnteredCrates = false;
     for ( uint32 frame = 0; frame < 600 && pAgent->getMoveStatus() != sw::NavMoveStatus::Arrived; ++frame )
     {
-        manager.tick( Internal::kFrame );
+        manager.update( Internal::kFrame );
         bEnteredCrates = bEnteredCrates || navtest::isInsideCrates( pRoot->getWorldPosition() );
     }
     SW_EXPECT_TRUE( pAgent->getMoveStatus() == sw::NavMoveStatus::Arrived );
@@ -86,7 +86,7 @@ SW_TEST_CASE( NavMeshAgentTest, AgentWalksAroundCratesToTheDestination )
     SW_EXPECT_TRUE( mover.moveTo( sw::float3{ -6.0f, 0.0f, 2.0f } ) );
     for ( uint32 frame = 0; frame < 600 && mover.getMoveStatus() != sw::NavMoveStatus::Arrived; ++frame )
     {
-        manager.tick( Internal::kFrame );
+        manager.update( Internal::kFrame );
     }
     SW_EXPECT_TRUE( mover.getMoveStatus() == sw::NavMoveStatus::Arrived );
     SW_EXPECT_TRUE( ( mover.getMovePosition() - sw::float3{ -6.0f, 0.0f, 2.0f } ).getLength() < 0.6f );
@@ -109,12 +109,12 @@ SW_TEST_CASE( NavMeshAgentTest, AgentDrivesACharacterController )
     pAgent->setDriveMode( sw::NavAgentDriveMode::CharacterController );
 
     manager.beginPlay();
-    test::tickFrames( manager, 10 );
+    test::updateFrames( manager, 10 );
     pAgent->setDestination( sw::float3{ 6.0f, 0.0f, 0.0f } );
     bool bEnteredCrates = false;
     for ( uint32 frame = 0; frame < 900 && pAgent->getMoveStatus() != sw::NavMoveStatus::Arrived; ++frame )
     {
-        manager.tick( Internal::kFrame );
+        manager.update( Internal::kFrame );
         bEnteredCrates = bEnteredCrates || navtest::isInsideCrates( pController->getWorldPosition() );
     }
     SW_EXPECT_TRUE( pAgent->getMoveStatus() == sw::NavMoveStatus::Arrived );

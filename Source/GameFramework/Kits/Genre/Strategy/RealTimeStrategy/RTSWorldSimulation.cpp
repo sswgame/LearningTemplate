@@ -64,8 +64,8 @@ namespace sw
     // ------------------------------------------------------------------------------
     void RTSWorld::updateUnit( RTSUnit& unit, float32 deltaTime )
     {
-        unit._cooldown.tick( deltaTime );
-        unit._repathTimer.tick( deltaTime );
+        unit._cooldown.update( deltaTime );
+        unit._repathTimer.update( deltaTime );
         if ( unit.isResource() )
             return;
         if ( unit.isBuilding() )

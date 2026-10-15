@@ -286,8 +286,8 @@ namespace sw
 
         updateTarget( *pDirector, *pCamera );
         updateBreaking( step, *pCatalog, bBreak );
-        // 누르고 있으면 간격마다 하나 — 지나친 몫을 이어 놓기 빈도가 걸음 크기에 매이지 않는다(`Countdown::tickRepeat`).
-        if ( _placeCooldown.tickRepeat( step, _placeInterval, bPlace ) )
+        // 누르고 있으면 간격마다 하나 — 지나친 몫을 이어 놓기 빈도가 걸음 크기에 매이지 않는다(`Countdown::updateRepeat`).
+        if ( _placeCooldown.updateRepeat( step, _placeInterval, bPlace ) )
             placeBlock( *pDirector, *pCatalog );
         if ( _listPendingEdit.empty() == false || _soundQueue.isEmpty() == false )
             scheduleFlush();

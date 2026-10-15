@@ -54,7 +54,7 @@ namespace
             return true;
         }
         void  shutdown() override { ServerServiceTestLog::add( kName, "shutdown" ); }
-        void  tick( int64 nowMs ) override { ServerServiceTestLog::add( kName, nowMs > 0 ? "tick" : "tick0" ); }
+        void  update( int64 nowMs ) override { ServerServiceTestLog::add( kName, nowMs > 0 ? "tick" : "tick0" ); }
         int32 getConnectionCount() const override { return TIndex + 1; }
     };
 
@@ -75,7 +75,7 @@ SW_TEST_CASE( ServerServiceManagerTest, StartsInOrderAndStopsInReverse )
         SW_EXPECT_TRUE( manager.startAll( context ) );
         SW_EXPECT_TRUE( manager.isRunning() );
         SW_EXPECT_TRUE( manager.getConnectionCount() >= 3 ); // 1 + 2(다른 서비스는 연결이 없거나 더한다)
-        manager.tick( 5 );
+        manager.update( 5 );
         manager.stopAll();
         SW_EXPECT_FALSE( manager.isRunning() );
         SW_EXPECT_EQUAL( manager.getRunningCount(), 0 );

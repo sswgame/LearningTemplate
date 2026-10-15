@@ -152,10 +152,14 @@ reports keys that no longer match. The `on*` and spell-it-out rules are kept by 
   | get, creating on a miss | `getOrCreate` | `findOrAdd`, `ensure` that returns something |
   | make sure something exists, return nothing | `ensure*` | — |
   | work out a value from inputs | `compute` | `calculate`, `calc` |
-  | advance one frame / one fixed step / gather input | `update` · `step` · `poll` | — |
+  | advance one frame / one fixed step / gather input | `update` · `step` · `poll` | `tick` (outside the tick system) |
+  | move a clock by a given amount (`advance( seconds )`, `advanceDay()`) | `advance` | — |
 
-  Other spellings of get-or-create (`findOrAdd*`, an `ensure*` that returns) are aligned when their function is touched;
-  the ~120 frame-advance declarations are not renamed in bulk — a new one follows the row.
+  Other spellings of get-or-create (`findOrAdd*`, an `ensure*` that returns) are aligned when their function is touched.
+  `tick` names only the tick system itself (`SceneTickScheduler`, `TickBatchRegistry`, component `onTick`) and behavior-tree
+  node ticks, as Unreal's `FTickFunction` · `BTTask::TickTask`; everything else that advances a frame or a time is `update`
+  (`CheckFunctionVocabulary` `BannedVerb`, the domain uses sit in its exemption table).
+  A variable or member holding a count is `xCount` (`itemCount`, `_listenerCount`); `countX()` is a function that counts by scanning.
 - **Type suffixes say what the data is for.** `Def` — authored data definition (read from a file, shared, immutable);
   `Desc` — creation description handed to a `create*` call; `Spec` — a granted runtime instance in the Unreal GAS sense
   (`AbilitySpec` ↔ `FGameplayAbilitySpec`; the authored data is the `Def`); `Config` — preset or deployment configuration

@@ -228,10 +228,10 @@ namespace sw
     void EconomyService::onServiceTick( OnlineServiceHost& host, int64 nowMs )
     {
         (void)host;
-        tick( nowMs );
+        update( nowMs );
     }
 
-    void EconomyService::tick( int64 nowMs )
+    void EconomyService::update( int64 nowMs )
     {
         _nowMs = nowMs;
         if ( _pStore == nullptr )

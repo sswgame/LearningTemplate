@@ -21,7 +21,7 @@ namespace sw
 
     /**
      * @class IHTTPRequestHandler
-     * @brief 요청 하나에 답을 채웁니다(`HTTPServer::tick` 의 스레드).
+     * @brief 요청 하나에 답을 채웁니다(`HTTPServer::update` 의 스레드).
      */
     class IHTTPRequestHandler
     {
@@ -67,7 +67,7 @@ namespace sw
                                        IHTTPRequestHandler* pHandler );
         void               shutdown();
         /** @brief 전송을 돌리고(I/O 스레드가 없을 때) 모인 요청을 처리기에 넘겨 답합니다. */
-        void tick();
+        void update();
 
         uint16 getListenPort() const;
         int32  getHandledCount() const { return _handledCount; }

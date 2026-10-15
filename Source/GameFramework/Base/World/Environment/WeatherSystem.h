@@ -55,21 +55,18 @@ namespace sw
      *         <Values wetness="1" wind="0.4"/></Weather></WeatherCatalog>
      * @endcode
      */
-    class SW_GF_API WeatherCatalog : public XMLCatalog<WeatherCatalog>
+    class SW_GF_API WeatherCatalog : public XMLCatalog<WeatherCatalog>, public GameCatalog<WeatherDef>
     {
         friend class XMLCatalog<WeatherCatalog>;
 
     public:
-        const WeatherDef*         findWeather( const hashed_string& id ) const { return _catalog.find( id ); }
-        const vector<WeatherDef>& getWeathers() const { return _catalog.getAll(); }
-        float32                   getTransitionTime() const { return _transitionTime; }
+        float32 getTransitionTime() const { return _transitionTime; }
 
     private:
         static constexpr const utf8* kXMLRootName = "WeatherCatalog"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
-        GameCatalog<WeatherDef> _catalog{};
-        float32                 _transitionTime{ 60.0f };
+        float32 _transitionTime{ 60.0f };
     };
 } // namespace sw
 

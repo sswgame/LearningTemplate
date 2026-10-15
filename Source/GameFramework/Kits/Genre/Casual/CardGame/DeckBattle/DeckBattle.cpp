@@ -51,7 +51,6 @@ namespace sw
 namespace sw
 {
     DeckBattleCatalog::DeckBattleCatalog()
-        : _catalog{}
     {
     }
 
@@ -80,7 +79,7 @@ namespace sw
                 else
                     SW_LOG_WARNING( "%#: card '%#' has an unreadable effect '%#'", sourceName, pID, token );
             } );
-            if ( _catalog.add( def ) >= 0 )
+            if ( add( def ) >= 0 )
                 ++loadedCount;
         }
         return loadedCount;
@@ -141,7 +140,7 @@ namespace sw
     {
         if ( _pCatalog == nullptr || card._id >= _listDefIndex.size() )
             return nullptr;
-        return &_pCatalog->getAt( _listDefIndex[card._id] );
+        return &_pCatalog->getAt( static_cast<size_t>( _listDefIndex[card._id] ) );
     }
 
     void DeckBattle::startTurn()
@@ -260,7 +259,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listDefIndex.size() );
         for ( const int32 defIndex : _listDefIndex )
         {
-            StateArchiveUtil::writeName( outArchive, _pCatalog->getAt( defIndex )._id );
+            StateArchiveUtil::writeName( outArchive, _pCatalog->getAt( static_cast<size_t>( defIndex ) )._id );
         }
         _drawPile.writeState( outArchive );
         _hand.writeState( outArchive );

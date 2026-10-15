@@ -83,7 +83,6 @@ namespace sw
     // FighterCatalog
     // ------------------------------------------------------------------------------
     FighterCatalog::FighterCatalog()
-        : _catalog{}
     {
     }
 
@@ -108,7 +107,7 @@ namespace sw
         {
             FighterCatalogInternal::addStance( copy, move._enterStance );
         }
-        (void)_catalog.add( copy ); // 빈 id 는 카탈로그가 거른다
+        (void)add( copy ); // 빈 id 는 카탈로그가 거른다
     }
 
     uint32 FighterCatalog::loadRoot( const XMLNode& root, const MoveCatalog& moveCatalog, string_view sourceName )
@@ -153,7 +152,7 @@ namespace sw
                 if ( pMoveID == nullptr )
                     continue;
                 const string_view    framesID = child.getAttributeText( "frames" );
-                const MoveFrameData* pFrame   = moveCatalog.findMove( hashed_string( framesID.empty() ? string_view( pMoveID ) : framesID ) );
+                const MoveFrameData* pFrame   = moveCatalog.find( hashed_string( framesID.empty() ? string_view( pMoveID ) : framesID ) );
                 if ( pFrame == nullptr )
                 {
                     SW_LOG_WARNING( "%#: fighter '%#' move '%#' has no frame data in the MoveCatalog - skipped", sourceName, pID, pMoveID );

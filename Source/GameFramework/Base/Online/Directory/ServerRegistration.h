@@ -33,7 +33,7 @@ namespace sw
         void shutdown();
 
         /** @brief 하트비트 주기가 됐거나 상태 · 부하가 바뀌었으면 다시 씁니다. */
-        void tick( int64 nowMs );
+        void update( int64 nowMs );
 
         void setState( ServerState state );
         void setLoad( int32 load );

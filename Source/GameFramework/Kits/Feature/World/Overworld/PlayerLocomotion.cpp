@@ -25,7 +25,7 @@ namespace sw
     {
         if ( _stateTimer.isActive() == false )
             return;
-        if ( _stateTimer.tick( deltaTime ) == false )
+        if ( _stateTimer.update( deltaTime ) == false )
             return;
 
         if ( _state == LocomotionState::Walk || _state == LocomotionState::Interact )

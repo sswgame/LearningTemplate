@@ -186,7 +186,7 @@ namespace sw
         _pStore->submit( make_unique<AdminSeedWork>( this, accountID, role, nowMs ) );
     }
 
-    void AdminService::tick( int64 nowMs )
+    void AdminService::update( int64 nowMs )
     {
         _nowMs = nowMs;
         _metrics.setPendingStoreWorkCount( static_cast<int32>( _listPendingCall.size() ) );
@@ -209,7 +209,7 @@ namespace sw
     void AdminService::onServiceTick( OnlineServiceHost& host, int64 nowMs )
     {
         (void)host;
-        tick( nowMs );
+        update( nowMs );
     }
 
     void AdminService::completeCall( uint64 callID, AdminReply& inoutReply )

@@ -208,20 +208,13 @@ namespace sw
      *        <Offroad from="0.6" to="0.65" minOffset="-6" maxOffset="0" scale="0.4"/></Track></KartTrackCatalog>` 를 읽습니다.
      * @details 점이 3개보다 적은 트랙은 경고하고 건너뛴다. 같은 id 가 둘이면 뒤의 것이 이긴다.
      */
-    class SW_KIT_API KartTrackCatalog : public XMLCatalog<KartTrackCatalog>
+    class SW_KIT_API KartTrackCatalog : public XMLCatalog<KartTrackCatalog>, public GameCatalog<KartTrackDef>
     {
         friend class XMLCatalog<KartTrackCatalog>;
 
     public:
-        void addTrack( const KartTrackDef& def ) { (void)_catalog.add( def ); }
-
-        const KartTrackDef*              findTrack( const hashed_string& id ) const { return _catalog.find( id ); }
-        const GameCatalog<KartTrackDef>& getCatalog() const { return _catalog; }
-
     private:
         static constexpr const utf8* kXMLRootName = "KartTrackCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
-
-        GameCatalog<KartTrackDef> _catalog{};
     };
 } // namespace sw

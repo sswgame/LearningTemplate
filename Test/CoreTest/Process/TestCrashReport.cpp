@@ -120,9 +120,9 @@ SW_TEST_CASE( CrashReportTest, ContextStoreOverwritesKeyAndDropsOverflowSafely )
     SW_EXPECT_TRUE( store._arrEntry[0]._value.view() == sw::string_view( "DX11" ) );
 
     // 빈 키는 아무 일도 하지 않는다.
-    const uint32 countBefore = store._entryCount;
+    const uint32 previousCount = store._entryCount;
     store.set( "", "ignored" );
-    SW_EXPECT_EQUAL( countBefore, store._entryCount );
+    SW_EXPECT_EQUAL( previousCount, store._entryCount );
 
     store._entryCount = 0;
 }

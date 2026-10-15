@@ -45,7 +45,7 @@ namespace sw
         _pRouter = nullptr;
     }
 
-    void ServerRegistration::tick( int64 nowMs )
+    void ServerRegistration::update( int64 nowMs )
     {
         if ( _pRouter == nullptr )
             return;

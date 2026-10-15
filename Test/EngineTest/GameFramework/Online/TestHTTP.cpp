@@ -77,8 +77,8 @@ namespace
             for ( int32 step = 0; step < 400; ++step )
             {
                 if ( bServe )
-                    _server.tick();
-                _client.tick( nowMs );
+                    _server.update();
+                _client.update( nowMs );
                 vector<HTTPClientResponse> listResponse;
                 (void)_client.pollResponses( listResponse );
                 for ( HTTPClientResponse& response : listResponse )

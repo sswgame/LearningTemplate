@@ -106,7 +106,7 @@ namespace sw::editor
         updateFocusedDocument();
         ensureDocumentLoaded();
 
-        tickPreview( ImGui::GetIO().DeltaTime );
+        updatePreview( ImGui::GetIO().DeltaTime );
 
         drawAnimationToolbar();
 
@@ -427,7 +427,7 @@ namespace sw::editor
         _previewStateName = current;
     }
 
-    void AnimationGraphPanel::tickPreview( float32 deltaSeconds )
+    void AnimationGraphPanel::updatePreview( float32 deltaSeconds )
     {
         if ( _bPreviewPlaying == SW_FALSE )
             return;

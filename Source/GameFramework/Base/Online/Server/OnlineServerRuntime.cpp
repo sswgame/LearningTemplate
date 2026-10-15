@@ -367,7 +367,7 @@ namespace sw
         _parts.reset();
     }
 
-    void OnlineServerRuntime::tick( int64 nowMs )
+    void OnlineServerRuntime::update( int64 nowMs )
     {
         if ( _bInitialized == SW_FALSE )
             return;
@@ -375,16 +375,16 @@ namespace sw
         // 메모리 캐시의 만료(TTL)를 서비스와 같은 시계로 잰다 — 캐시가 제 단조 시계를 쓰면 가짜 시계에서 서버 등록 · 매칭 표가 서비스 시각보다 먼저 만료된다.
         if ( parts._bMemoryCache == SW_TRUE && parts._bManualCacheTime == SW_TRUE )
             parts._memoryCacheDatabase.setManualTimeMs( nowMs );
-        parts._host.tick( nowMs );
-        parts._scheduler.tick( nowMs );
+        parts._host.update( nowMs );
+        parts._scheduler.update( nowMs );
         for ( Parts::KitInstance& instance : parts._listKit )
         {
-            instance._kit->tick( nowMs );
+            instance._kit->update( nowMs );
         }
         if ( parts._bRegistered == SW_TRUE )
         {
             parts._registration.setLoad( parts._host.getConnectionCount() );
-            parts._registration.tick( nowMs );
+            parts._registration.update( nowMs );
         }
         if ( nowMs >= parts._nextRemoteConfigReloadMs )
         {
