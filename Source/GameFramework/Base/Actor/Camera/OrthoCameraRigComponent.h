@@ -19,6 +19,11 @@
 
 namespace sw
 {
+    class InputMap;
+} // namespace sw
+
+namespace sw
+{
     /** @brief 카메라 하나의 자리와 오일러 회전(피치, 요, 롤, 단위는 라디안)입니다. */
     struct OrthoCameraView
     {
@@ -113,6 +118,8 @@ namespace sw
 
     private:
         void applyInput( float32 deltaTime );
+        /** @brief 받는 조작(팬 · 회전 · 줌 — 빠르기나 칸이 0 이 아닌 것)의 액션이 입력 맵에 없으면 한 번 알립니다. 맵에 없는 액션 질의는 로그 없이 0 이다. */
+        void warnMissingActions( const InputMap& inputMap );
         /** @brief 리그 값으로 직교 프리셋(`OrthoTopDown`)을 만듭니다. 요는 모드 상태의 회전 요가 줍니다. */
         CameraPresetDef makeOrthoPreset() const;
         /** @brief 덮어쓴 시점으로 고정 프리셋(`Fixed`)을 만듭니다. */
@@ -169,6 +176,7 @@ namespace sw
         CameraDirector _director;
         uint8          _bOverride        : 1;
         uint8          _bOverrideApplied : 1; ///< 디렉터가 지금 덮어쓴 시점 프리셋을 켜 두었다
-        uint8          _reserved         : 6;
+        uint8          _bActionsChecked  : 1; ///< 받는 조작의 액션을 입력 맵에 대어 봤다(`warnMissingActions`, 한 번)
+        uint8          _reserved         : 5;
     };
 } // namespace sw

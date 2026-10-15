@@ -83,7 +83,7 @@ namespace sw
         const int32 targetSegment = _music._pDesc->findSegmentIndex( segment );
         if ( targetSegment < 0 )
         {
-            SW_LOG_WARNING( "Unknown music segment '%#'", segment.c_str() );
+            SW_LOG_ERROR( "Unknown music segment '%#'", segment.c_str() );
             return;
         }
 

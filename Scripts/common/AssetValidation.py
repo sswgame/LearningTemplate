@@ -17,7 +17,7 @@
   texture              DDS 머리 — 최대 크기 · 2 의 거듭제곱 · 밉 유무 · 허용 형식
   mesh_budget          `.mesh` 머리 — 삼각형 수 · 경계 반지름 예산
   xml_wellformed       XML 이 파싱되는가
-  missing_reference    XML 안의 리소스 경로(`engine/…` · `game/<팩>/…`)가 실제로 있는가
+  missing_reference    XML · JSON 안의 리소스 경로(`engine/…` · `game/<팩>/…`)가 실제로 있는가 — 이름이 `…Folder` 인 칸은 폴더가 있는가
   orphan               아무 데서도(리소스 · 소스 · 설정) 이름이 불리지 않는 파일
   material             셰이더 경로 · 블렌드 모드 · 정적 스위치 중복 · 키워드 프로퍼티와 스위치 대응 · 멀티 컴파일 선택값
   material_keywords    정적 스위치 키워드가 어느 셰이더 소스에라도 나오는가(안 나오면 죽은 퍼뮤테이션)
@@ -25,6 +25,10 @@
   entity_id            씬 엔티티 id 가 0 이 아니고 겹치지 않으며 `_attachOwnerID` 가 있는 엔티티를 가리키는가
   prefab_guid          프리팹 인스턴스의 `prefabGuid` 가 그 프리팹 `.meta` 의 guid 인가 · `.meta` 의 sourcePath · guid 중복
                        (`stale_path_only` 면 guid 로는 열리지만 경로가 낡은 인스턴스만 알린다)
+  component_reference  씬 · 프리팹 컴포넌트(기반 타입과 그 파생)의 이름 속성이 다른 표의 id 인가 — 물리 레이어 · 재질, 정렬 레이어,
+                       내비 영역, 입력 액션, 카탈로그 id. 표는 리소스 패턴(`{pack}` = 이 파일의 팩)이나 같은 원소의 카탈로그 경로 속성이 고른다.
+                       런타임은 이런 이름을 못 찾으면 기본값으로 대신하고(레이어 0 · 첫 재질 · Default 정렬 레이어) 로그만 남기므로,
+                       그 장면을 실제로 돌리기 전에는 드러나지 않는다 — 언리얼 Data Validation · 유니티 missing reference 검사처럼 저장 전에 잡는다.
   catalog_reference    카탈로그(팩 데이터) 안의 id 참조가 같은(또는 지정한) 파일의 id 를 가리키는가 — 팩마다 규칙을 둔다
 """
 
@@ -58,6 +62,10 @@ _kWordRe = re.compile(r"\w+")
 #: `REFLECT(` 뒤의 첫 class/struct 이름.
 #: 인자 안의 문자열(`Tooltip = "… (…) …"`)에 든 괄호는 건너뛴다.
 _kReflectTypeRe = re.compile(r'REFLECT\s*\((?:[^()"]|"[^"]*")*\)\s*(?:class|struct)\s+(?:SW_[A-Z_]+\s+)?([A-Za-z_][A-Za-z0-9_]*)')
+#: `class|struct [SW_*_API] 이름 [final] : public 기반` — 첫 기반만 본다(컴포넌트는 한 줄 상속이다).
+_kClassBaseRe = re.compile(r"\b(?:class|struct)\s+(?:SW_[A-Z_]+\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*(?:final\s*)?:\s*(?:public\s+)?([A-Za-z_][A-Za-z0-9_:]*)")
+#: 폴더를 가리키는 값 — 도메인으로 시작하고 확장자가 없다(`game/shooter3d/models/knight/clips`). 이름이 `…Folder` 인 속성만 이것으로 본다.
+_kResourceFolderRe = re.compile(r"^(engine|common|editor|game/[a-z0-9_]+)/[A-Za-z0-9_/\-]+$")
 
 #: DXGI 형식 번호 → 이름(검증에 쓰는 것만). 레거시 DDS 는 FourCC · 마스크에서 이름을 만든다.
 _kDxgiFormatName: dict[int, str] = {
@@ -123,6 +131,63 @@ class ValidationContext:
     _mapGuidByPath: dict[str, str] | None = None
     _shaderText: str | None = None
     _uniqueShaderWord: set[str] | None = None
+    _mapTypeParent: dict[str, str] | None = None
+    _uniqueDirectory: set[str] | None = None
+    _mapIdCache: dict[tuple[str, tuple[str, ...], str], set[str]] = field(default_factory=dict)
+    _mapPatternCache: dict[tuple[str, ...], list[str]] = field(default_factory=dict)
+
+    def collectMatchingPaths(self, listPattern: list[str]) -> list[str]:
+        """리소스 패턴 중 하나에 맞는 파일들(패턴 묶음마다 한 번만 훑는다)."""
+        key = tuple(listPattern)
+        if key not in self._mapPatternCache:
+            self._mapPatternCache[key] = [path for path in self.listAllPath if any(fnmatch.fnmatchcase(path, pattern) for pattern in listPattern)]
+        return self._mapPatternCache[key]
+
+    def hasDirectory(self, relPath: str) -> bool:
+        """`relPath` 아래에 파일이 하나라도 있는 폴더인가(소문자 비교)."""
+        if self._uniqueDirectory is None:
+            self._uniqueDirectory = set()
+            for path in self.listAllPath:
+                parts = path.lower().split("/")[:-1]
+                for depth in range(1, len(parts) + 1):
+                    self._uniqueDirectory.add("/".join(parts[:depth]))
+        return relPath.lower().rstrip("/") in self._uniqueDirectory
+
+    def getTypeParents(self) -> dict[str, str]:
+        """`Source/**/*.h` 의 `class|struct 이름 : public 기반` — 타입 이름 → 첫 기반 이름(이름공간은 뗀다)."""
+        if self._mapTypeParent is None:
+            self._mapTypeParent = {}
+            for headerPath in (self.repositoryRoot / "Source").rglob("*.h"):
+                text = headerPath.read_text(encoding="utf-8", errors="replace")
+                for name, base in _kClassBaseRe.findall(text):
+                    self._mapTypeParent.setdefault(name, base.rsplit("::", 1)[-1])
+        return self._mapTypeParent
+
+    def isDerivedFrom(self, typeName: str, uniqueBase: set[str]) -> bool:
+        """`typeName` 이 `uniqueBase` 의 어느 타입이거나 그 파생인가(헤더의 상속 선언을 따라 올라간다)."""
+        mapParent = self.getTypeParents()
+        current: str | None = typeName
+        for _ in range(64):
+            if current is None:
+                return False
+            if current in uniqueBase:
+                return True
+            current = mapParent.get(current)
+        return False
+
+    def collectIds(self, relPath: str, listElement: list[str], idAttribute: str) -> set[str]:
+        """XML 파일 하나에서 `listElement` 원소(비면 모든 원소)의 `idAttribute` 값들. 파싱하지 못하면 빈 집합이다."""
+        key = (relPath, tuple(listElement), idAttribute)
+        if key not in self._mapIdCache:
+            root = self.readXml(relPath)
+            unique: set[str] = set()
+            if root is not None:
+                for element in root.iter():
+                    value = element.get(idAttribute)
+                    if value and (not listElement or element.tag in listElement):
+                        unique.add(value)
+            self._mapIdCache[key] = unique
+        return self._mapIdCache[key]
 
     def hasResource(self, relPath: str) -> bool:
         # 리소스 id 는 찾을 때 소문자로 맞춘다(`ResourcePaths::normalizePath`) — 비교도 소문자로 한다.
@@ -364,12 +429,44 @@ def iterateXmlValuesInternal(root: ElementTree.Element) -> Iterator[tuple[Elemen
             yield element, None, element.text.strip()
 
 
+def iterateJsonStringsInternal(value: object, key: str = "") -> Iterator[tuple[str, str]]:
+    """(가장 가까운 키, 문자열 값) — JSON 의 모든 문자열 값을 냅니다(키 자체는 내지 않는다)."""
+    if isinstance(value, dict):
+        for childKey, child in value.items():
+            yield from iterateJsonStringsInternal(child, str(childKey))
+    elif isinstance(value, list):
+        for child in value:
+            yield from iterateJsonStringsInternal(child, key)
+    elif isinstance(value, str):
+        yield key, value
+
+
+def checkMissingJsonReferenceInternal(relPath: str, context: ValidationContext) -> list[str]:
+    try:
+        data = json.loads((context.resourceRoot / relPath).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        return [f"JSON does not parse: {error}"]
+    listMessage: list[str] = []
+    for key, value in iterateJsonStringsInternal(data):
+        if _kResourcePathRe.match(value) and not context.hasResource(value):
+            listMessage.append(f"\"{key}\" points at '{value}', which does not exist")
+        elif key.endswith("Folder") and _kResourceFolderRe.match(value) and not context.hasDirectory(value):
+            listMessage.append(f"\"{key}\" points at folder '{value}', which holds no file")
+    return listMessage
+
+
 def checkMissingReferenceInternal(rule: Rule, relPath: str, context: ValidationContext) -> list[str]:
+    if relPath.endswith(".json"):
+        return checkMissingJsonReferenceInternal(relPath, context)
     root = context.readXml(relPath)
     if root is None:
         return []
     listMessage: list[str] = []
     for element, name, value in iterateXmlValuesInternal(root):
+        if name is not None and name.endswith("Folder") and _kResourceFolderRe.match(value):
+            if not context.hasDirectory(value):
+                listMessage.append(f"{element.tag}@{name} points at folder '{value}', which holds no file")
+            continue
         if not _kResourcePathRe.match(value):
             continue
         if element.tag == "entity" and name == "prefab" and element.get("prefabGuid"):
@@ -569,6 +666,46 @@ def checkCatalogReferenceInternal(rule: Rule, relPath: str, context: ValidationC
     return listMessage
 
 
+def expandPackPatternsInternal(listPattern: list[str], relPath: str) -> list[str]:
+    """`{pack}` 을 이 파일의 팩(`game/<이름>`)으로 바꿉니다. 팩 밖(`common/` · `engine/`)의 파일은 어느 팩에서든 쓰이므로 `game/*` 로 바꿉니다."""
+    parts = relPath.split("/")
+    pack = "/".join(parts[:2]) if parts[0] == "game" and len(parts) > 2 else "game/*"
+    return [pattern.replace("{pack}", pack) for pattern in listPattern]
+
+
+def checkComponentReferenceInternal(rule: Rule, relPath: str, context: ValidationContext) -> list[str]:
+    """씬 · 프리팹 컴포넌트의 이름 속성이 다른 표(설정 · 카탈로그 · 입력 맵)의 id 인가."""
+    root = context.readXml(relPath)
+    if root is None:
+        return []
+    uniqueBase = set(rule.params.get("component_types", []))
+    listAttribute = rule.params.get("attributes", [])
+    listTargetElement = rule.params.get("target_elements", [])
+    idAttribute = rule.params.get("id_attribute", "id")
+    catalogAttribute = rule.params.get("catalog_attribute")
+    uniqueIgnored = set(rule.params.get("ignore_values", ["", "None"]))
+    listPattern = expandPackPatternsInternal(rule.params.get("target_patterns", []), relPath)
+    listTargetPath = context.collectMatchingPaths(listPattern)
+    listMessage: list[str] = []
+    for element in iterateComponentElementsInternal(root):
+        if uniqueBase and not context.isDerivedFrom(element.tag, uniqueBase):
+            continue
+        catalogPath = element.get(catalogAttribute, "") if catalogAttribute else ""
+        bOwnCatalog = catalogPath not in uniqueIgnored
+        listSearch = [catalogPath] if bOwnCatalog else listTargetPath
+        if bOwnCatalog and not context.hasResource(catalogPath):
+            continue  # 없는 카탈로그 파일은 `missing_reference` 가 알린다
+        for attribute in listAttribute:
+            value = element.get(attribute)
+            if value is None or value in uniqueIgnored:
+                continue
+            if any(value in context.collectIds(path, listTargetElement, idAttribute) for path in listSearch):
+                continue
+            where = catalogPath if bOwnCatalog else ", ".join(listPattern)
+            listMessage.append(f"{element.tag}@{attribute}='{value}' is not defined in {where}")
+    return listMessage
+
+
 _kCheckRegistry: dict[str, tuple[CheckFunction, frozenset[str]]] = {
     "naming": (checkNamingInternal, frozenset({"name_pattern", "allowed_suffixes"})),
     "texture": (checkTextureInternal, frozenset({"max_size", "power_of_two", "require_mips", "allowed_formats"})),
@@ -583,6 +720,9 @@ _kCheckRegistry: dict[str, tuple[CheckFunction, frozenset[str]]] = {
     "prefab_guid": (checkPrefabGuidInternal, frozenset({"stale_path_only"})),
     "catalog_reference": (checkCatalogReferenceInternal,
                           frozenset({"target_file", "id_attribute", "target_elements", "elements", "reference_attributes"})),
+    "component_reference": (checkComponentReferenceInternal,
+                            frozenset({"component_types", "attributes", "target_patterns", "target_elements", "id_attribute",
+                                       "catalog_attribute", "ignore_values"})),
 }
 
 #: 규칙 줄마다 공통 키.

@@ -133,6 +133,10 @@ namespace sw
         {
             if ( pawn.getInputLayer().empty() == false )
             {
+                // pushLayer 는 없는 레이어를 빈 레이어로 만들어 넣는다 — 이름이 틀리면 그 레이어의 액션이 켜지지 않는 것을 알 길이 없어 미는 쪽에서 알린다.
+                if ( _warnedPawn != pawn.getHandle() && pInput->getInputMap().hasLayer( pawn.getInputLayer() ) == false )
+                    SW_LOG_WARNING( "Pawn '%#' input layer '%#' is not in the InputMap - pushing it enables no action", pPawnOwner->getName().c_str(),
+                                    pawn.getInputLayer().c_str() );
                 pInput->getInputMap().pushLayer( pawn.getInputLayer() );
                 _pushedLayer = pawn.getInputLayer();
             }
@@ -183,6 +187,13 @@ namespace sw
         {
             if ( inputMap.getActionHandle( name ).isValid() == false )
                 SW_LOG_WARNING( "Pawn '%#' intent analog '%#' has no InputMap action - a player cannot drive it", pPawnName, name.c_str() );
+        }
+        // 축 액션 · 입력 레이어도 이름으로 묻는다 — 맵에 없으면 질의가 로그 없이 0 이라 그 조작이 영영 안 된다.
+        const hashed_string* arrAxisAction[] = { &pawn.getMoveAction(), &pawn.getLookAction(), &pawn.getUpAction() };
+        for ( const hashed_string* pAction : arrAxisAction )
+        {
+            if ( pAction->empty() == false && inputMap.getActionHandle( *pAction ).isValid() == false )
+                SW_LOG_WARNING( "Pawn '%#' axis action '%#' has no InputMap action - a player cannot drive it", pPawnName, pAction->c_str() );
         }
         const bool bMissingMouseLockAction = pawn.wantsMouseLock() && _mouseLockAction.empty() == false && inputMap.getActionHandle( _mouseLockAction ).isValid() == false;
         if ( bMissingMouseLockAction )

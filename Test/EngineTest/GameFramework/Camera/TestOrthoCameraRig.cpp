@@ -2,11 +2,14 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Input/InputManager.h"
+#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Base/Actor/Camera/OrthoCameraRigComponent.h"
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -205,4 +208,34 @@ SW_TEST_CASE( OrthoCameraRigTest, SetOrthoHeightStaysInTheZoomRange )
     SW_EXPECT_NEAR_EQUAL( 220.0f, pRig->getOrthoHeight(), 1.0e-6f ); // 기본 범위 25 ~ 220
     pRig->setOrthoHeight( 1.0f );
     SW_EXPECT_NEAR_EQUAL( 25.0f, pRig->getOrthoHeight(), 1.0e-6f );
+}
+
+/**
+ * @brief [OrthoCameraRigTest] 받는 조작(팬 · 회전 · 줌)의 액션이 입력 맵에 없으면 처음 입력을 읽을 때 한 번 알린다
+ * @details 맵에 없는 액션 질의는 로그 없이 0 이다 — 액션 이름을 바꾸면 리그가 조용히 멈춘다. 변이: `warnMissingActions` 를 빼면 진다.
+ */
+SW_TEST_CASE( OrthoCameraRigTest, MissingActionIsReportedOnce )
+{
+    InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    SubsystemScope        scope; // input 보다 먼저 사라진다(뒤에 선언)
+    game::ScopedGameScope activeScope( scope );
+    SW_EXPECT_TRUE( scope.bind( &input ) );
+    input.getInputMap().bindVector2D( "Camera.Pan", Key::W, Key::S, Key::A, Key::D );
+    input.getInputMap().bindMouseWheel( "Camera.Zoom" );
+
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "RigCamera" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    SW_ASSERT_NOT_NULL( pObject->addComponent<CameraComponent>() );
+    OrthoCameraRigComponent* pRig = pObject->addComponent<OrthoCameraRigComponent>();
+    SW_ASSERT_NOT_NULL( pRig );
+
+    test::ScopedLogCollector logs;
+    pRig->onTick( 0.016f );
+    pRig->onTick( 0.016f );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "reads action 'Camera.Rotate', which the InputMap does not have" ) == 1u, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "which the InputMap does not have" ) == 1u, logs.joined().c_str() ); // 팬 · 줌은 맵에 있다
+    scope.unbind<InputManager>();
+    input.shutdown();
 }
