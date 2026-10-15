@@ -38,18 +38,8 @@ namespace sw
     {
         struct ParkDirectorComponentInternal
         {
-            static constexpr float32 kRailSpacing    = 2.0f; ///< 레일 조각 간격(m)
-            static constexpr uint32  kStateTag       = FourCcUtil::make( "PARK" );
-            static constexpr uint32  kStateVersion   = 2;
-            static constexpr float32 kSupportSpacing = 8.0f; ///< 기둥 간격(m)
-            /**
-             * @brief Kenney Coaster Kit 모델의 배율입니다. 키트는 열차 폭 0.7 이고 이 공원의 차 폭은 1.4 다(차 · 레일 프리팹의 크기와 같다).
-             * @details 레일 조각은 시작점에서 +Z 로 4 만큼 뻗고, 레일 윗면이 원점보다 0.7 아래다(열차 바닥이 원점). 그래서 레일은 트랙 점에서
-             *          `_modelScale × 0.7` 만큼 올려 윗면을 트랙 점에 맞추고, 차는 바닥을 트랙 점에 둔다. 팔레트 텍스처라 늘려도 색이 번지지 않는다.
-             */
-            static constexpr float32 kRailPieceLength = 4.0f;
-            static constexpr float32 kRailTopDepth    = 0.7f;
-            static constexpr float32 kRailBottomDepth = 1.0f;
+            static constexpr uint32 kStateTag     = FourCcUtil::make( "PARK" );
+            static constexpr uint32 kStateVersion = 2;
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 themepark.audioevents.xml 이 정한다.
             static constexpr const utf8* kEventBlocked = "Blocked";
@@ -120,6 +110,11 @@ namespace sw
         , _rideEyeHeight{ 1.6f }
         , _rideFieldOfView{ 85.0f * MathUtil::kDegreeToRadian }
         , _rideFarPlane{ 600.0f }
+        , _railSpacing{ 2.0f }
+        , _supportSpacing{ 8.0f }
+        , _railPieceLength{ 4.0f }
+        , _railTopDepth{ 0.7f }
+        , _railBottomDepth{ 1.0f }
         , _simulation{}
         , _wallet{}
         , _layoutCatalog{}
@@ -537,14 +532,14 @@ namespace sw
 
         // 레일은 2m 마다 트랙 좌표계로 돌린 직선 레일 조각이다(조각 시작점이 원점). 기둥은 8m 마다 레일 밑에서 땅까지 세운다(뒤집힌 구간은 없다).
         // 스테이션 구간은 레일 옆에 승강장을 깐다.
-        const float3 railScale{ _modelScale, _modelScale, Internal::kRailSpacing * 1.05f / Internal::kRailPieceLength };
-        const float3 stationScale{ 2.0f, 2.0f, Internal::kRailSpacing * 1.05f };
+        const float3 railScale{ _modelScale, _modelScale, _railSpacing * 1.05f / _railPieceLength };
+        const float3 stationScale{ 2.0f, 2.0f, _railSpacing * 1.05f };
         float32      nextSupport = 0.0f;
-        for ( float32 distance = 0.0f; distance < track.getLength(); distance += Internal::kRailSpacing )
+        for ( float32 distance = 0.0f; distance < track.getLength(); distance += _railSpacing )
         {
             const CoasterTrackFrame frame    = track.sample( distance );
             const float3            rotation = OrientationUtil::computeEulerFromForwardUp( frame._forward, frame._up );
-            const float3            railLift = frame._up * ( _modelScale * Internal::kRailTopDepth );
+            const float3            railLift = frame._up * ( _modelScale * _railTopDepth );
             MeshComponent*          pRail    = Internal::placeMesh( spawnPrefab( manager, _railPrefab, "CoasterRail" ), frame._position + railLift, rotation );
             if ( pRail != nullptr )
                 pRail->setLocalScale( railScale );
@@ -555,11 +550,11 @@ namespace sw
                 if ( pStation != nullptr )
                     pStation->setLocalScale( stationScale );
             }
-            const float32 railBottom = frame._position._y - _modelScale * ( Internal::kRailBottomDepth - Internal::kRailTopDepth );
+            const float32 railBottom = frame._position._y - _modelScale * ( _railBottomDepth - _railTopDepth );
             const bool    bSupported = distance >= nextSupport && frame._up._y > 0.6f && railBottom > 1.5f;
             if ( bSupported )
             {
-                nextSupport             = distance + Internal::kSupportSpacing;
+                nextSupport             = distance + _supportSpacing;
                 MeshComponent* pSupport = Internal::placeMesh( spawnPrefab( manager, _supportPrefab, "CoasterSupport" ),
                                                                float3{ frame._position._x, 0.0f, frame._position._z }, float3{ 0.0f, 0.0f, 0.0f } );
                 if ( pSupport != nullptr )

@@ -11,6 +11,7 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -18,6 +19,7 @@
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/CommandStack.h"
 
 namespace sw::editor
@@ -63,9 +65,16 @@ namespace sw::editor
                         continue;
 
                     PlaySessionData::ObjectSnapshot entry;
-                    entry._identity   = ObjectStateSerializer::captureIdentity( pObj );
-                    entry._name       = pObj->getName().c_str();
-                    entry._prefabPath = pScene->getEntityPrefabPath( entry._identity._objectID );
+                    entry._identity                  = ObjectStateSerializer::captureIdentity( pObj );
+                    entry._name                      = pObj->getName().c_str();
+                    entry._prefabPath                = pScene->getEntityPrefabPath( entry._identity._objectID );
+                    const TerrainComponent* pTerrain = pObj->getComponent<TerrainComponent>();
+                    if ( pTerrain != nullptr && pTerrain->hasWrittenEdits() )
+                    {
+                        Archive archive;
+                        pTerrain->writeState( archive );
+                        entry._listTerrainEdit.assign( archive.getData(), archive.getData() + archive.getSize() );
+                    }
 
                     if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, entry._bytes ) )
                         data._listSnapshot.push_back( std::move( entry ) );
@@ -159,6 +168,17 @@ namespace sw::editor
                 // 스냅샷에서 먼저 나올 때 부모가 아직 없어 루트로 남는다. 이름으로 찾으면 플레이 중에 이름을 바꾼 오브젝트(A 가 B 의
                 // 이름을 가져간 경우)의 자식이 엉뚱한 쪽에 붙는다. 씬 로드(`Scene::instantiate`)와 같은 방식이다.
                 batch.finish();
+
+                // 4. 플레이 전에 칠한 지형 편집을 되돌려 쓴다. 다시 만든 지형 컴포넌트는 디스크 에셋을 읽은 상태다.
+                for ( PlaySessionData::ObjectSnapshot& snap : data._listSnapshot )
+                {
+                    if ( snap._listTerrainEdit.empty() )
+                        continue;
+                    GameObject*       pObj     = pObjects->findGameObjectByID( snap._identity._objectID );
+                    TerrainComponent* pTerrain = pObj != nullptr ? pObj->getComponent<TerrainComponent>() : nullptr;
+                    if ( pTerrain != nullptr )
+                        pTerrain->restoreState( std::move( snap._listTerrainEdit ) );
+                }
 
                 SW_LOG_TRACE( "Play snapshot restored (%# objects).",
                               static_cast<uint32>( data._listSnapshot.size() ) );

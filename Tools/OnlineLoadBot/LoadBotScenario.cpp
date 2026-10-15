@@ -68,9 +68,10 @@ namespace sw
             /** @brief 첫 칸(`_text`)으로 읽는 키 — 동작마다 많아야 하나다. */
             static constexpr string_view kArrTextKey[] = { "_channel", "_board", "_mode", "_kind", "_status" };
 
-            static constexpr int32 kMaxRepeatDepth        = 8;
-            static constexpr int64 kDefaultMatchTimeoutMs = 60000;
-            static constexpr int32 kDefaultRowCount       = 10;
+            /** @brief 동작이 받으면 반드시 적어야 하는 키 — 횟수 · 시간은 시나리오가 정한다(읽는 코드에 숨은 기본값이 없다). `_maxMs` 는 비면 `_minMs` 다(고정 대기). */
+            static constexpr string_view kArrRequiredKey[] = { "_count", "_timeoutMs", "_minMs" };
+
+            static constexpr int32 kMaxRepeatDepth = 8;
 
             /** @brief 동작마다 받는 칸입니다(`kArrAction`) — 그 밖의 칸은 오류. */
             static bool isKnownKey( LoadBotAction action, string_view key )
@@ -166,11 +167,20 @@ namespace sw
                 return false;
             }
         }
+        for ( const string_view key : kArrRequiredKey )
+        {
+            const bool bMissingRequired = isKnownKey( outStep._action, key ) && value.has( key, false ) == false;
+            if ( bMissingRequired )
+            {
+                outError = "action '" + actionName + "' needs '" + string( key ) + "'";
+                return false;
+            }
+        }
 
         const bool bRepeat = outStep._action == LoadBotAction::Repeat;
-        outStep._minMs     = value.get( "_minMs", false ).asInt( 0 );
-        outStep._maxMs     = value.get( "_maxMs", false ).asInt( outStep._minMs );
-        outStep._count     = static_cast<int32>( value.get( "_count", false ).asInt( bRepeat ? 1 : kDefaultRowCount ) );
+        outStep._minMs     = value.get( "_minMs", false ).asInt();
+        outStep._maxMs     = value.has( "_maxMs", false ) ? value.get( "_maxMs", false ).asInt() : outStep._minMs;
+        outStep._count     = value.has( "_count", false ) ? static_cast<int32>( value.get( "_count", false ).asInt() ) : 1;
         for ( const string_view key : kArrTextKey )
         {
             if ( value.has( key, false ) )
@@ -182,7 +192,7 @@ namespace sw
             outStep._secondText = value.get( "_activity", false ).asString();
         if ( outStep._action == LoadBotAction::WaitMatch )
         {
-            outStep._minMs = value.get( "_timeoutMs", false ).asInt( kDefaultMatchTimeoutMs );
+            outStep._minMs = value.get( "_timeoutMs", false ).asInt();
             outStep._maxMs = outStep._minMs;
         }
         const bool bInvalidStepTiming = outStep._minMs < 0 || outStep._maxMs < outStep._minMs || outStep._count <= 0;

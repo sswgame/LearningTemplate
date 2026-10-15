@@ -7,9 +7,12 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 
 #include "TestFramework/TestFramework.h"
+
+#include "sw/config/ShippingHostDefaults.h"
 
 // ProjectSettingsCatalog · ProjectSettingsDocument — 프로젝트 설정 창의 목록과 저장(ImGui 없음).
 
@@ -67,25 +70,26 @@ SW_TEST_CASE( ProjectSettingsCatalogTest, ExpandsWildcardsToFiles )
 }
 
 /**
- * @brief [ProjectSettingsDocumentTest] 파일에는 기본값과 다른 키만 쓰고, 기본값으로 되돌리면 키가 사라지며, 다시 열면 같은 값이다
+ * @brief [ProjectSettingsDocumentTest] 파일에는 기본값과 다른 키만 쓰고, 기본값으로 되돌리면 키가 사라지며, 다시 열면 같은 값이다(게임 프리셋 층)
  */
 SW_TEST_CASE( ProjectSettingsDocumentTest, SavesOnlyValuesThatDifferFromTheDefaults )
 {
-    if ( hasReflectedDefaultConstructor( *sw::EngineConfig::StaticType() ) == false )
-        SW_TEST_SKIP( "EngineConfig has no reflected $ctor, so the settings window cannot open it yet" );
-    const sw::string path = sw::FileUtil::joinPath( test::makeTempDirectory( "project_settings_document" ), "EngineConfig.json" );
+    if ( hasReflectedDefaultConstructor( *sw::GameConfig::StaticType() ) == false )
+        SW_TEST_SKIP( "GameConfig has no reflected $ctor, so the settings window cannot open it yet" );
+    const sw::string path = sw::FileUtil::joinPath( test::makeTempDirectory( "project_settings_document" ), "GameConfig.json" );
     (void)sw::FileUtil::removeFile( path ); // 임시 폴더는 실행마다 비워지지 않는다 — 이전 실행이 남긴 파일이 없는 것이 이 테스트의 출발점이다(없어도 괜찮다)
 
     sw::editor::ProjectSettingsDocument document;
-    SW_ASSERT_TRUE( document.open( *sw::EngineConfig::StaticType(), path ) == sw::ConfigReadResult::Missing );
+    SW_ASSERT_TRUE( document.open( *sw::GameConfig::StaticType(), path ) == sw::ConfigReadResult::Missing );
+    SW_EXPECT_FALSE( document.isBaseLayer() );
     SW_EXPECT_FALSE( document.hasFile() );
     SW_EXPECT_FALSE( document.isModified() );
     SW_EXPECT_EQUAL( 0u, document.countNonDefaultKeys() );
 
-    sw::EngineConfig* pConfig = static_cast<sw::EngineConfig*>( document.getInstance() );
+    sw::GameConfig* pConfig = static_cast<sw::GameConfig*>( document.getInstance() );
     SW_ASSERT_TRUE( pConfig != nullptr );
-    pConfig->_maxFrameDeltaTime = 0.25f;
-    pConfig->_window._width     = 800; // 구조체 칸 안의 값 — 키는 `_window` 아래에 중첩된다
+    pConfig->_windowTitle  = "Probe";
+    pConfig->_bUIPauseMenu = true;
     SW_EXPECT_TRUE( document.isModified() );
     SW_EXPECT_EQUAL( 2u, document.countNonDefaultKeys() );
     SW_ASSERT_TRUE( document.save() );
@@ -94,16 +98,14 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, SavesOnlyValuesThatDifferFromTheDefau
 
     sw::string fileText;
     SW_ASSERT_TRUE( sw::FileUtil::readTextFile( path, fileText ) );
-    SW_EXPECT_TRUE( fileText.find( "_maxFrameDeltaTime" ) != sw::string::npos );
-    SW_EXPECT_TRUE( fileText.find( "_width" ) != sw::string::npos );
-    SW_EXPECT_TRUE( fileText.find( "_height" ) == sw::string::npos ); // 기본값인 형제는 적지 않는다
-    SW_EXPECT_TRUE( fileText.find( "_fixedDeltaTime" ) == sw::string::npos );
+    SW_EXPECT_TRUE( fileText.find( "_windowTitle" ) != sw::string::npos );
+    SW_EXPECT_TRUE( fileText.find( "_bUIPauseMenu" ) != sw::string::npos );
+    SW_EXPECT_TRUE( fileText.find( "_packRoot" ) == sw::string::npos ); // 기본값인 형제는 적지 않는다
 
     sw::editor::ProjectSettingsDocument reopened;
-    SW_ASSERT_TRUE( reopened.open( *sw::EngineConfig::StaticType(), path ) == sw::ConfigReadResult::Loaded );
-    const sw::EngineConfig* pReopened = static_cast<const sw::EngineConfig*>( reopened.getInstance() );
-    SW_EXPECT_NEAR_EQUAL( 0.25f, pReopened->_maxFrameDeltaTime, 0.0001f );
-    SW_EXPECT_EQUAL( 800u, pReopened->_window._width );
+    SW_ASSERT_TRUE( reopened.open( *sw::GameConfig::StaticType(), path ) == sw::ConfigReadResult::Loaded );
+    const sw::GameConfig* pReopened = static_cast<const sw::GameConfig*>( reopened.getInstance() );
+    SW_EXPECT_TRUE( pReopened->_windowTitle == "Probe" );
     SW_EXPECT_FALSE( reopened.isModified() );
 
     // 기본값으로 되돌리면 키가 모두 사라진다 — 파일에 옛 값이 남아 코드의 기본값을 가리지 않게.
@@ -113,14 +115,49 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, SavesOnlyValuesThatDifferFromTheDefau
     SW_ASSERT_TRUE( reopened.save() );
     sw::string clearedText;
     SW_ASSERT_TRUE( sw::FileUtil::readTextFile( path, clearedText ) );
-    SW_EXPECT_TRUE( clearedText.find( "_maxFrameDeltaTime" ) == sw::string::npos );
+    SW_EXPECT_TRUE( clearedText.find( "_windowTitle" ) == sw::string::npos );
 
     // 편집을 버리면 파일 값으로 돌아온다.
-    sw::EngineConfig* pEdited      = static_cast<sw::EngineConfig*>( reopened.getInstance() );
-    pEdited->_maxFixedStepPerFrame = 3;
+    sw::GameConfig* pEdited = static_cast<sw::GameConfig*>( reopened.getInstance() );
+    pEdited->_packRoot      = "game/probe";
     SW_EXPECT_TRUE( reopened.isModified() );
     SW_EXPECT_TRUE( reopened.revert() == sw::ConfigReadResult::Loaded );
     SW_EXPECT_FALSE( reopened.isModified() );
+}
+
+/**
+ * @brief [ProjectSettingsDocumentTest] 바탕 층(`EngineConfig` — 값이 파일에만 있다)은 모든 키를 쓰고, 기본값으로 되돌리기는 파일 값으로 되돌리기다
+ */
+SW_TEST_CASE( ProjectSettingsDocumentTest, BaseLayerWritesEveryKey )
+{
+    if ( hasReflectedDefaultConstructor( *sw::EngineConfig::StaticType() ) == false )
+        SW_TEST_SKIP( "EngineConfig has no reflected $ctor, so the settings window cannot open it yet" );
+    const sw::string path = sw::FileUtil::joinPath( test::makeTempDirectory( "project_settings_base" ), "EngineConfig.json" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, sw::shipping_host::kEngineConfigJSON ) );
+
+    sw::editor::ProjectSettingsDocument document;
+    SW_ASSERT_TRUE( document.open( *sw::EngineConfig::StaticType(), path ) == sw::ConfigReadResult::Loaded );
+    SW_EXPECT_TRUE( document.isBaseLayer() );
+    sw::EngineConfig* pConfig   = static_cast<sw::EngineConfig*>( document.getInstance() );
+    const uint32      fileWidth = pConfig->_window._width;
+    pConfig->_window._width     = fileWidth + 16u;
+    pConfig->_maxFrameDeltaTime = 0.25f;
+    SW_EXPECT_TRUE( document.isModified() );
+    SW_ASSERT_TRUE( document.save() );
+
+    sw::string fileText;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( path, fileText ) );
+    for ( const utf8* pKey : { "_width", "_height", "_clearColor", "_maxFrameDeltaTime", "_fixedDeltaTime", "_maxFixedStepPerFrame", "_listResourcePriority" } )
+    {
+        SW_EXPECT_TRUE_MSG( fileText.find( pKey ) != sw::string::npos, pKey ); // 형제까지 모두 쓴다
+    }
+
+    // 되돌리기는 파일 값이다(빈 형식 0 으로 가지 않는다).
+    pConfig->_window._width = 1u;
+    document.resetToDefault();
+    const sw::EngineConfig* pReset = static_cast<const sw::EngineConfig*>( document.getInstance() );
+    SW_EXPECT_EQUAL( fileWidth + 16u, pReset->_window._width );
+    SW_EXPECT_FALSE( document.isModified() );
 }
 
 /**
@@ -131,13 +168,12 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, SavedFileIsReloadedByTheHostConfigMan
     if ( hasReflectedDefaultConstructor( *sw::EngineConfig::StaticType() ) == false )
         SW_TEST_SKIP( "EngineConfig has no reflected $ctor, so the settings window cannot open it yet" );
     const sw::string path = sw::FileUtil::joinPath( test::makeTempDirectory( "project_settings_reload" ), "EngineConfig.json" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, "{}" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, sw::shipping_host::kEngineConfigJSON ) );
 
     sw::ConfigManager manager;
     SW_ASSERT_TRUE( manager.loadConfig<sw::EngineConfig>( path ) );
     sw::EngineConfig* pHostConfig = manager.getConfig<sw::EngineConfig>();
     SW_ASSERT_TRUE( pHostConfig != nullptr );
-    SW_EXPECT_NEAR_EQUAL( 0.1f, pHostConfig->_maxFrameDeltaTime, 0.0001f );
 
     sw::editor::ProjectSettingsDocument document;
     SW_ASSERT_TRUE( document.open( *sw::EngineConfig::StaticType(), path ) == sw::ConfigReadResult::Loaded );

@@ -18,6 +18,7 @@
 #include "Engine/UI/Base/UIFocusManager.h"
 #include "Engine/UI/Base/UIPointerState.h"
 #include "Engine/UI/Base/WidgetTypes.h"
+#include "Engine/UI/Layout/UIResolutionPresetTable.h"
 #include "Engine/UI/Screen/UIScreen.h"
 
 namespace sw
@@ -121,6 +122,8 @@ namespace sw::editor
         void syncFocusedDocument();
         /** @brief 문서 · 뷰포트가 바뀌었으면 오프스크린 화면을 다시 열고(크기가 바뀌면 렌더 텍스처 경로도), 이번 프레임의 보기를 겁니다. */
         void syncPreview( UISystem& ui );
+        /** @brief 고른 해상도 견본입니다. 표를 처음 쓸 때 읽고, 읽지 못했으면 nullptr 입니다. */
+        const UIResolutionPreset* findSelectedResolution();
         /** @brief 화면 트리가 새로 지어졌으면(핫 리로드) 고른 위젯 · 포인터 · 포커스를 새 트리로 이어 갑니다. */
         void syncTree( UIScreen& screen );
         /** @brief 고른 언어에 맞는 문화권 관리자 사본을 만들고(게임 텍스트가 바뀌면 다시) 화면에 겁니다. */
@@ -226,7 +229,9 @@ namespace sw::editor
         uint32                          _slotDragOrdinal; ///< 슬롯 손잡이를 끄는 위젯의 문서 순서 번호
         uint32                          _paletteFrame;    ///< 팔레트를 마지막으로 모은 ImGui 프레임
         uint32                          _slotEditCount;   ///< 적용된 슬롯 편집 수(탐침)
+        UIResolutionPresetTable         _resolutionTable; ///< 해상도 견본 — 처음 쓸 때 한 번 읽는다
         uint32                          _resolutionIndex;
+        bool                            _bResolutionTableAttempted; ///< 표를 읽어 봤다(실패도 한 번만 알린다)
         float32                         _uiScale;
         float32                         _textScale;
         float32                         _safeZone;

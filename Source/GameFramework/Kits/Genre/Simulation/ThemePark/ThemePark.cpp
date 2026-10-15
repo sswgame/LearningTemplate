@@ -17,12 +17,8 @@ namespace sw
     {
         struct ThemeParkInternal
         {
-            static constexpr uint32  kMinRideStateBytes  = 64; ///< 놀이기구 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
-            static constexpr uint32  kMinGuestStateBytes = 80; ///< 손님 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
-            static constexpr float32 kLeaveEnergy        = 0.1f;
-            static constexpr float32 kLeaveHappiness     = 0.15f;
-            static constexpr float32 kNauseaPerRating    = 0.06f;  ///< 멀미 평가 1 이 손님 멀미에 더하는 양
-            static constexpr float32 kQueueUnhappiness   = 0.002f; ///< 줄에서 초당 줄어드는 행복
+            static constexpr uint32 kMinRideStateBytes  = 64; ///< 놀이기구 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
+            static constexpr uint32 kMinGuestStateBytes = 80; ///< 손님 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
 
             static float3 lerpPosition( const float3& from, const float3& to, float32 alpha )
             {
@@ -288,7 +284,7 @@ namespace sw
                         fun *= 0.5f;
                         pGuest->_thought = ParkGuestThought::TooTame;
                     }
-                    pGuest->_nausea = MathUtil::min( 1.0f, pGuest->_nausea + ride._nausea * ThemeParkInternal::kNauseaPerRating );
+                    pGuest->_nausea = MathUtil::min( 1.0f, pGuest->_nausea + ride._nausea * _settings._nauseaPerRating );
                     if ( pGuest->_nausea > pGuest->_nauseaTolerance )
                     {
                         fun -= 0.1f;
@@ -376,7 +372,7 @@ namespace sw
                 case ParkGuestState::Queuing:
                 {
                     guest._queueTime += deltaTime;
-                    guest._happiness = MathUtil::max( 0.0f, guest._happiness - ThemeParkInternal::kQueueUnhappiness * deltaTime );
+                    guest._happiness = MathUtil::max( 0.0f, guest._happiness - _settings._queueUnhappinessPerSecond * deltaTime );
                     if ( guest._queueTime > _settings._queuePatience )
                     {
                         leaveQueue( guest );
@@ -410,12 +406,12 @@ namespace sw
     void ThemeParkSimulation::chooseNextRide( ParkGuest& guest )
     {
         // 떠날 때인지 판단한다. 지쳤거나, 기분이 바닥이거나, 멀미가 심하거나, 돈이 바닥이면 떠난다.
-        if ( guest._energy < ThemeParkInternal::kLeaveEnergy )
+        if ( guest._energy < _settings._leaveEnergy )
         {
             sendHome( guest, ParkGuestThought::Tired );
             return;
         }
-        if ( guest._happiness < ThemeParkInternal::kLeaveHappiness )
+        if ( guest._happiness < _settings._leaveHappiness )
         {
             sendHome( guest, guest._thought );
             return;
@@ -440,7 +436,7 @@ namespace sw
                 lastReject = ParkGuestThought::TooIntense;
                 continue;
             }
-            if ( guest._nausea + ride._nausea * ThemeParkInternal::kNauseaPerRating > guest._nauseaTolerance )
+            if ( guest._nausea + ride._nausea * _settings._nauseaPerRating > guest._nauseaTolerance )
             {
                 lastReject = ParkGuestThought::Sick;
                 continue;

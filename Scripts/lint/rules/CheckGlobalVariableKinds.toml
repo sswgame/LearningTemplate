@@ -1,0 +1,21 @@
+# CheckGlobalVariableKinds 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckGlobalVariableKinds.py.
+
+# 배포본(Shipping)에 남는 테스트용 전역 변수(SW_TEST_GLOBAL_VARIABLE_SHIPPED)와 그 이유 — 배포 실행 파일을 스크립트 · 테스트가 조종하는 곳.
+# Release 는 Shipping 이 아니다(테스트용 변수가 등록된다). 측정 · 벤치 · 크래시 스위치는 여기 올리지 않는다.
+[shipped]
+gv_profileFrames = "AppSmokeTest(Shipping hostgpu) 가 N 프레임 뒤 스스로 끝나는 배포 실행 파일을 띄운다"
+gv_screenshot = "Scripts/qa/GoldenImages.py 가 배포본(백엔드 하나)으로도 캡처하고, AppSmokeTest.UnwritableScreenshotIsReported 가 Shipping 에서 돈다"
+gv_screenshotFrame = "Scripts/qa/GoldenImages.py 가 배포본 캡처 프레임을 고른다"
+gv_fixedFrameDelta = "AppScenarioTest(Shipping) 의 시나리오가 결정적 시간을 이름으로 건다(AutomationSession)"
+gv_uiDemo = "Shipping AppScenarioTest 가 도는 engine/automation/uidemo.scenario.xml 이 이름으로 켠다"
+gv_uiOptionsMenu = "Shipping AppScenarioTest 가 도는 engine/automation/uinavigation.scenario.xml 이 이름으로 켠다"
+gv_serverExitAfterTicks = "ServerTest 가 배포 전용 서버를 정해진 틱 뒤 끝낸다(TestServerBoot)"
+gv_arenaAutoPlay = "구운 게임의 팩 시나리오 · Test/QA/Games.json 골든이 배포본에서도 자동 플레이를 켠다"
+gv_farmAutoPlay = "구운 게임의 팩 시나리오 · Test/QA/Games.json 골든이 배포본에서도 자동 플레이를 켠다"
+gv_meadowAutoPlay = "Test/QA/Games.json 골든이 배포본에서도 자동 플레이를 켠다"
+gv_nileAutoPlay = "구운 게임의 팩 시나리오 · Test/QA/Games.json 골든이 배포본에서도 자동 플레이를 켠다"
+gv_parkAutoBuild = "구운 게임의 팩 시나리오 · Test/QA/Games.json 골든이 배포본에서도 자동 건설을 켠다"
+gv_shooterAutoPlay = "구운 게임의 팩 시나리오 · Test/QA/Games.json 골든이 배포본에서도 자동 플레이를 켠다"
+gv_skirmishAutoPlay = "구운 게임의 팩 시나리오 · Test/QA/Games.json 골든이 배포본에서도 자동 플레이를 켠다"
+gv_voxelAutoPlay = "구운 게임의 팩 시나리오 · Test/QA/Games.json 골든이 배포본에서도 자동 플레이를 켠다"
+gv_cameraPreset = "Test/QA/Games.json 골든이 배포본에서도 캡처 카메라를 고른다(Shooter3D)"

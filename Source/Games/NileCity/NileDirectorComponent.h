@@ -122,6 +122,16 @@ namespace sw
         bool        isAutoPlanOn() const;
         /** @brief 도시가 빌려 쓸 공유 상태(디렉터가 보관하는 금고)를 반환합니다. */
         SessionStateRefs makeRefs();
+        /** @brief 땅 모양 · 자동 계획 PROPERTY 를 플래너에 넘길 설정으로 모읍니다. */
+        NileCityLayout makeCityLayout() const;
+
+        float4 computeServiceColor( CityService service ) const;
+        /** @brief 모델에 곱할 색입니다. 서비스는 서비스 색을 흰색 쪽으로 반쯤 섞어 벽이 그 색으로 보이게 하고, 집, 나무, 화분은 팔레트 그대로입니다. */
+        float4 computeModelTint( const CityBuildingDef& def ) const;
+        /** @brief 내장 도형으로 남는 건물(밭 · 조각상)의 색입니다. 집은 늘 모델이라 단계 색을 쓰지 않는다. */
+        float4 computeBlockColor( const CityBuildingDef& def ) const;
+        float4 computeTerrainColor( CityTerrain terrain ) const;
+        float4 computeWalkerColor( CityWalkerKind kind, CityService service ) const;
 
     private:
         PROPERTY( Category = "Data", DisplayName = "City Data", AssetPath, Tooltip = "City catalog XML" )
@@ -146,6 +156,80 @@ namespace sw
         float32 _roadTileScale;
         PROPERTY( Category = "City", DisplayName = "Seconds Per Month", Tooltip = "Real seconds in one city month before the time scale", Min = 1.0, Units = s )
         float32 _secondsPerMonth;
+
+        PROPERTY( Category = "Map", DisplayName = "River Center X", Tooltip = "Average x of the river's middle (tiles)", Min = 0.0 )
+        float32 _riverCenterX;
+        PROPERTY( Category = "Map", DisplayName = "River Meander", Tooltip = "How far the river swings east and west (tiles)", Min = 0.0 )
+        float32 _riverMeander;
+        PROPERTY( Category = "Map", DisplayName = "River Meander Rate", Tooltip = "Phase of the river's swing per tile north to south", Units = rad )
+        float32 _riverMeanderRate;
+        PROPERTY( Category = "Map", DisplayName = "River Half Width", Tooltip = "Half the river's width (tiles)", Min = 0.0 )
+        float32 _riverHalfWidth;
+        PROPERTY( Category = "Map", DisplayName = "East Floodplain Width", Tooltip = "Floodplain east of the river, where the farms and the city stand (tiles)", Min = 0.0 )
+        float32 _eastFloodWidth;
+        PROPERTY( Category = "Map", DisplayName = "West Floodplain Width", Tooltip = "Floodplain west of the river (tiles)", Min = 0.0 )
+        float32 _westFloodWidth;
+        PROPERTY( Category = "Map", DisplayName = "Desert Dune Height", Tooltip = "How far the east desert's edge waves (tiles)", Min = 0.0 )
+        float32 _desertDuneHeight;
+        PROPERTY( Category = "Map", DisplayName = "Desert Dune Rate", Tooltip = "Phase of the desert edge's wave per tile north to south", Units = rad )
+        float32 _desertDuneRate;
+        PROPERTY( Category = "Map", DisplayName = "Desert Start X", Tooltip = "Tile x where the east desert begins", Min = 0 )
+        int32 _desertStartX;
+        PROPERTY( Category = "Map", DisplayName = "Rock Ridge X", Tooltip = "Tile x from which the east rock ridge runs", Min = 0 )
+        int32 _rockRidgeX;
+        PROPERTY( Category = "Auto Plan", DisplayName = "Road X", Tooltip = "Tile x of the north-south road between the floodplain farms and the city", Min = 0 )
+        int32 _roadX;
+        PROPERTY( Category = "Auto Plan", DisplayName = "Farm X", Tooltip = "Left tile x of the 3x3 farms; must be floodplain on every row", Min = 0 )
+        int32 _farmX;
+        PROPERTY( Category = "Auto Plan", DisplayName = "Second Block Population", Tooltip = "Population at which the auto plan starts the second block", Min = 0 )
+        int32 _secondBlockPeople;
+        PROPERTY( Category = "Auto Plan", DisplayName = "Third Block Population", Tooltip = "Population at which the auto plan starts the third block", Min = 0 )
+        int32 _thirdBlockPeople;
+
+        PROPERTY( Category = "Look", DisplayName = "Water Service Color", Tooltip = "Colour of the water service (walkers, blocks, half of the model tint)" )
+        float4 _waterServiceColor;
+        PROPERTY( Category = "Look", DisplayName = "Religion Service Color" )
+        float4 _religionServiceColor;
+        PROPERTY( Category = "Look", DisplayName = "Entertainment Service Color" )
+        float4 _entertainmentServiceColor;
+        PROPERTY( Category = "Look", DisplayName = "Health Service Color" )
+        float4 _healthServiceColor;
+        PROPERTY( Category = "Look", DisplayName = "Education Service Color" )
+        float4 _educationServiceColor;
+        PROPERTY( Category = "Look", DisplayName = "Tax Service Color" )
+        float4 _taxServiceColor;
+        PROPERTY( Category = "Look", DisplayName = "Producer Model Tint", Tooltip = "Tint multiplied into a producer's kit model" )
+        float4 _producerModelTint;
+        PROPERTY( Category = "Look", DisplayName = "Storage Model Tint" )
+        float4 _storageModelTint;
+        PROPERTY( Category = "Look", DisplayName = "Market Model Tint" )
+        float4 _marketModelTint;
+        PROPERTY( Category = "Look", DisplayName = "House Block Color", Tooltip = "Colour of a house drawn as a block" )
+        float4 _houseBlockColor;
+        PROPERTY( Category = "Look", DisplayName = "Field Block Color", Tooltip = "Colour of a producer that needs floodplain (a field)" )
+        float4 _fieldBlockColor;
+        PROPERTY( Category = "Look", DisplayName = "Workshop Block Color", Tooltip = "Colour of a producer that stands on any ground" )
+        float4 _workshopBlockColor;
+        PROPERTY( Category = "Look", DisplayName = "Storage Block Color" )
+        float4 _storageBlockColor;
+        PROPERTY( Category = "Look", DisplayName = "Market Block Color" )
+        float4 _marketBlockColor;
+        PROPERTY( Category = "Look", DisplayName = "Decoration Block Color" )
+        float4 _decorationBlockColor;
+        PROPERTY( Category = "Look", DisplayName = "Grass Color" )
+        float4 _grassColor;
+        PROPERTY( Category = "Look", DisplayName = "Sand Color" )
+        float4 _sandColor;
+        PROPERTY( Category = "Look", DisplayName = "Floodplain Color" )
+        float4 _floodplainColor;
+        PROPERTY( Category = "Look", DisplayName = "Water Color" )
+        float4 _waterColor;
+        PROPERTY( Category = "Look", DisplayName = "Rock Color" )
+        float4 _rockColor;
+        PROPERTY( Category = "Look", DisplayName = "Trader Color", Tooltip = "Colour of a trader walker" )
+        float4 _traderColor;
+        PROPERTY( Category = "Look", DisplayName = "Cart Color", Tooltip = "Colour of a cart walker" )
+        float4 _cartColor;
 
         CityCatalog                          _catalog;
         CitySimulation                       _city;

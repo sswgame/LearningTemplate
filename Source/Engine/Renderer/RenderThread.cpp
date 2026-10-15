@@ -79,7 +79,7 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::string, gv_screenshot, "", "화면에 나간 그림(Present 결과)을 PPM 으로 덤프할 경로 (비면 사용 안 함)" );
 
     /** @brief `-gv_screenshotAttachment=<이름>` 입니다. 덤프할 트랜지언트 첨부 이름이며, 비면 Present 캡처(없으면 Present 가 읽는 첨부)를 저장합니다. */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::string, gv_screenshotAttachment, "", "Present 결과 대신 덤프할 트랜지언트 이름 (비면 Present 결과)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_screenshotAttachment, "", "Present 결과 대신 덤프할 트랜지언트 이름 (비면 Present 결과)" );
 
     /**
      * @brief `-gv_screenshotFrame=<N>` 입니다. 몇 번째 프레임에서 찍을지 정합니다(기본 10이고, 10보다 작으면 10으로 봅니다).
@@ -93,8 +93,8 @@ namespace sw
      * @brief `-gv_screenshotCount=<N>` 과 `-gv_screenshotInterval=<K>` 입니다. 첫 장(`-gv_screenshotFrame`)부터 K 프레임마다 N 장을 찍습니다(움직임과 튐 확인용).
      * @details 두 장 이상이면 파일 이름의 확장자 앞에 `_000`, `_001` 등이 붙는다. 장마다 GPU 되읽기라 그 프레임은 느려진다.
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_screenshotCount, 1, "연속으로 찍을 스크린샷 수 (기본 1)" );
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_screenshotInterval, 1, "연속 스크린샷 사이 프레임 수 (기본 1)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_screenshotCount, 1, "연속으로 찍을 스크린샷 수 (기본 1)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_screenshotInterval, 1, "연속 스크린샷 사이 프레임 수 (기본 1)" );
 
     // 커맨드 리스트를 프레임 끝에 모아 한 번에 제출할지(기본), 잘릴 때마다 바로 제출할지 정한다. 이 파일이 프레임마다 디바이스로 전달한다.
     // 두 모드 모두 기록 순서가 곧 실행 순서다. 즉시 모드도 [세그먼트][리스트] 순서를 지켜 제출하고

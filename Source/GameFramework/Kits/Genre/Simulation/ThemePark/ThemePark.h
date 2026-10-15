@@ -130,7 +130,11 @@ namespace sw
         float32 _queuePatience{ 90.0f };         ///< 줄에서 이 시간(s)을 넘게 기다리면 줄에서 나온다
         float32 _energyDrainPerSecond{ 1.0f / 480.0f };
         float32 _nauseaRecoveryPerSecond{ 1.0f / 120.0f };
-        float32 _queueSpacing{ 0.6f }; ///< 줄에 선 손님의 간격(m)이다(그리기 위치)
+        float32 _queueSpacing{ 0.6f };                ///< 줄에 선 손님의 간격(m)이다(그리기 위치)
+        float32 _leaveEnergy{ 0.1f };                 ///< 기력이 이보다 낮으면 떠난다
+        float32 _leaveHappiness{ 0.15f };             ///< 행복이 이보다 낮으면 떠난다
+        float32 _nauseaPerRating{ 0.06f };            ///< 멀미 평가 1 이 손님 멀미에 더하는 양
+        float32 _queueUnhappinessPerSecond{ 0.002f }; ///< 줄에서 초당 줄어드는 행복
         int32   _maxGuests{ 150 };
         int32   _entryFee{ 0 };
         uint32  _randomSeed{ 12345u };

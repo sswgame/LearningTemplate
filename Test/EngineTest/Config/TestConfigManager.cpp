@@ -5,8 +5,11 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "TestFramework/TestFramework.h"
+
+#include "sw/config/ShippingHostDefaults.h"
 
 using namespace sw;
 
@@ -19,12 +22,20 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 창 크기만 바꾼 EngineConfig JSON 을 만듭니다. */
+    /**
+     * @brief 바탕 층 파일(구성 때 구운 `EngineConfig.json` 사본)에서 창 크기만 바꾼 JSON 을 만듭니다.
+     * @details `EngineConfig` 는 값이 파일에만 있어 일부 키만 적은 JSON 은 범위 검사에서 진다 — 테스트도 온전한 파일에서 시작한다.
+     */
     string makeEngineConfigJSON( uint32 width, uint32 height )
     {
-        utf8 arrBuffer[constant::kMaxBuffer256]{};
-        formatstring( arrBuffer, constant::kMaxBuffer256, "{ \"_window\": { \"_width\": %#, \"_height\": %# } }", width, height );
-        return string( arrBuffer );
+        JSONDocument document;
+        const bool   bParsed = document.parse( shipping_host::kEngineConfigJSON );
+        SW_LOG_ASSERT( bParsed, "the configure-time EngineConfig.json copy must parse" );
+        (void)bParsed;
+        const JSONValue window = document.getRoot().get( "_window", false );
+        window.set( "_width", false ).setUint( width );
+        window.set( "_height", false ).setUint( height );
+        return document.dump();
     }
 } // namespace
 
@@ -121,13 +132,18 @@ SW_TEST_CASE( ConfigManagerTest, MissingFileFallsBackToGeneratedThenCppDefaults 
         SW_EXPECT_EQUAL( 640u, pEngineConfig->_window._width );
     }
 
-    // 2) 생성된 JSON 도 없으면 C++ 기본값이다 — nullptr 이 아니다.
+    // 2) 생성된 JSON 도 없으면 C++ 형식이다. 값이 파일에만 있는 EngineConfig 는 형식이 범위 밖이라 기동이 멈춘다(조용히 0 크기 창이 되지 않는다).
     {
         ConfigManager manager;
-        EngineConfig* pEngineConfig = manager.ensureConfig<EngineConfig>( missingPath, nullptr );
-        SW_EXPECT_NOT_NULL( pEngineConfig );
-        SW_EXPECT_EQUAL( EngineConfig{}._window._width, pEngineConfig->_window._width );
-        SW_EXPECT_EQUAL( pEngineConfig, manager.getConfig<EngineConfig>() );
+        SW_EXPECT_NULL( manager.ensureConfig<EngineConfig>( missingPath, nullptr ) );
+        SW_EXPECT_NULL( manager.getConfig<EngineConfig>() );
+    }
+    // 기본값을 헤더에 두는 설정(GameConfig)은 C++ 기본값으로 선다 — nullptr 이 아니다.
+    {
+        ConfigManager manager;
+        GameConfig*   pGameConfig = manager.ensureConfig<GameConfig>( missingPath, nullptr );
+        SW_EXPECT_NOT_NULL( pGameConfig );
+        SW_EXPECT_EQUAL( pGameConfig, manager.getConfig<GameConfig>() );
     }
 
     // 3) 깨진 JSON 은 로드 실패다 — 절반만 채워 넣지 않는다.
@@ -227,8 +243,11 @@ SW_TEST_CASE( ConfigManagerTest, InvalidFileStopsAndNamesTheKey )
 SW_TEST_CASE( ConfigManagerTest, ValidFileWithNestedStructLoads )
 {
     ConfigManager manager;
-    SW_EXPECT_TRUE( manager.loadConfigFromJSON<EngineConfig>(
-        string( "{ \"_window\": { \"_width\": 800, \"_defaultRHI\": \"Vulkan\" }, \"_fixedDeltaTime\": 0.02 }" ), "test" ) );
+    JSONDocument  document;
+    SW_ASSERT_TRUE( document.parse( makeEngineConfigJSON( 800, 600 ) ) );
+    document.getRoot().get( "_window", false ).set( "_defaultRHI", false ).setString( "Vulkan" );
+    document.getRoot().set( "_fixedDeltaTime", false ).setFloat( 0.02 );
+    SW_EXPECT_TRUE( manager.loadConfigFromJSON<EngineConfig>( document.dump(), "test" ) );
     SW_ASSERT_NOT_NULL( manager.getConfig<EngineConfig>() );
     SW_EXPECT_EQUAL( 800u, manager.getConfig<EngineConfig>()->_window._width );
 }

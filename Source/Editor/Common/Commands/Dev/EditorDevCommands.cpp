@@ -28,7 +28,9 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Utility/DebugOverlayState.h"
 
@@ -294,6 +296,63 @@ namespace sw::editor
                 return addedCount > 0;
             }
 
+            /**
+             * @brief 고른 오브젝트(주 선택)를 임시 프리팹 파일로 저장하고 그 오브젝트를 프리팹 인스턴스로 잇습니다(유니티의 "오브젝트를 Project 로 끌어 프리팹 만들기").
+             * @details 경로는 `asset.open` 과 같은 임시 에셋 규칙(작업 폴더의 `Saved/Automation/` 아래, 리소스 트리 밖)이고 확장자(`.prefab.xml` · `.prefab.json`)가
+             *          형식을 정한다. 시나리오가 저장소 리소스를 바꾸지 않고 프리팹 만들기 · 고치기 · 적용을 밟는 길이다. 이미 있는 파일은 덮어쓴다(시나리오 반복).
+             */
+            static bool runCreatePrefab( const vector<string>& listArgument, string& outReply )
+            {
+                EditorContext* pContext = EditorContext::get();
+                string         absolutePath;
+                const bool     bInvalidArguments = listArgument.size() != 1 || pContext == nullptr || resolveTempAssetPath( listArgument[0], absolutePath, outReply ) == false;
+                if ( bInvalidArguments )
+                    return false;
+                GameObject* pObject = pContext->getSubsystem<EditorSelection>().getPrimaryObject();
+                if ( pObject == nullptr )
+                {
+                    outReply = "select the object to turn into a prefab first";
+                    return false;
+                }
+                (void)FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( absolutePath ) );
+                PrefabAsset asset;
+                asset.setFromGameObject( pObject );
+                if ( asset.saveToFile( absolutePath ) == false )
+                {
+                    outReply = "could not write the prefab '" + absolutePath + "'";
+                    return false;
+                }
+                // 같은 경로를 다시 만들면 캐시의 옛 내용으로 스폰하지 않게 다음 로드가 파일을 다시 읽게 한다.
+                if ( AssetManager* pResources = editor::findSubsystem<AssetManager>() )
+                    pResources->getAssetCache<PrefabCache>().reload( absolutePath, nullptr );
+                pContext->getSubsystem<EditorWorkspace>().setGameObjectPrefabPath( pObject->getObjectID(), absolutePath );
+                pContext->getSubsystem<EditorWorkspace>().markSceneDirty();
+                outReply = "created prefab " + absolutePath + " from " + pObject->getName().c_str();
+                return true;
+            }
+
+            /**
+             * @brief 프리팹 인스턴스 하나를 활성 씬 루트에 스폰하고 고릅니다(되돌리기 한 줄 — 콘텐츠 브라우저에서 끌어 놓기와 같은 길).
+             * @details `Saved/` 로 시작하는 경로는 `prefab.create` 가 만든 임시 프리팹(작업 폴더 기준)이고, 나머지는 리소스 id 다.
+             */
+            static bool runSpawnPrefab( const vector<string>& listArgument, string& outReply )
+            {
+                GameObjectManager* pManager = editor::getActiveObjectManager();
+                if ( listArgument.size() != 1 || pManager == nullptr )
+                    return false;
+                string path = listArgument[0];
+                if ( StringUtil::startsWith( path, "Saved/", true ) && resolveTempAssetPath( listArgument[0], path, outReply ) == false )
+                    return false;
+                const GameObject* pSpawned = EditorAssetCommands::spawnPrefab( pManager, path.c_str(), nullptr );
+                if ( pSpawned == nullptr )
+                {
+                    outReply = "could not spawn '" + path + "'";
+                    return false;
+                }
+                outReply = "spawned " + string( pSpawned->getName().c_str() );
+                return true;
+            }
+
             static bool runSelectTag( const vector<string>& listArgument, string& outReply )
             {
                 GameObjectManager* pManager = editor::getActiveObjectManager();
@@ -358,6 +417,10 @@ namespace sw::editor
                     &EditorDevCommandsInternal::runSelectType );
     SW_DEV_COMMAND( AddComponent, "component.add", "component.add <ComponentType>", "Add a component to every selected object (hidden test types too)",
                     &EditorDevCommandsInternal::runAddComponent );
+    SW_DEV_COMMAND( CreatePrefab, "prefab.create", "prefab.create <Saved/Automation/...prefab.xml>",
+                    "Save the selected object as a temp prefab under Saved/Automation/ and link the object to it as an instance", &EditorDevCommandsInternal::runCreatePrefab );
+    SW_DEV_COMMAND( SpawnPrefab, "prefab.spawn", "prefab.spawn <path.prefab.xml>", "Spawn a prefab instance at the scene root and select it (one undo step)",
+                    &EditorDevCommandsInternal::runSpawnPrefab );
     SW_DEV_COMMAND( SelectTag, "select.tag", "select.tag <Tag>", "Select every object with that tag (or a child tag)", &EditorDevCommandsInternal::runSelectTag );
     SW_DEV_COMMAND( DebugDrawDemo, "debugdraw.demo", "debugdraw.demo [seconds]", "Draw a box, sphere, arrow and text in front of the scene view camera",
                     &EditorDevCommandsInternal::runDebugDrawDemo );

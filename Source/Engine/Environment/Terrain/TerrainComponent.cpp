@@ -119,6 +119,7 @@ namespace sw
         , _splatRevision{ 0 }
         , _bOriginDirty{ false }
         , _bHeightsWritten{ false }
+        , _loadedHeightfieldPath{}
     {
         setCanEverTick( true );
         setTickGroup( TickGroup::PostUpdate );
@@ -165,8 +166,8 @@ namespace sw
             markChunksDirty();
             return;
         }
-        // 트랜스폼(위치)이 바뀐 것도 여기로 온다. 지형 원점이 따라 움직인다.
-        (void)reloadTerrain();
+        // 트랜스폼(위치)이 바뀐 것도 여기로 온다. 지형 원점이 따라 움직인다. 같은 에셋이면 저장하지 않은 편집은 넘긴다.
+        (void)reloadTerrainKeepingEdits();
     }
 
     void TerrainComponent::onOwnerActiveInHierarchyChanged()
@@ -201,7 +202,7 @@ namespace sw
             // 다시 읽기는 배치를 레지스트리에서 빼고 넣는 구조 변경이다. 틱 뒤로 미루고, 그 사이 사라졌을 수 있으니 핸들로 다시 찾는다.
             pManager->executeOrDeferPostTickOnComponent<TerrainComponent>( getHandle(), []( TerrainComponent& terrain )
             {
-                (void)terrain.reloadTerrain(); // 경로가 없으면 지형 없이 남고, 읽기 실패는 HeightfieldData 가 오류로 남긴다
+                (void)terrain.reloadTerrainKeepingEdits(); // 경로가 없으면 지형 없이 남고, 읽기 실패는 HeightfieldData 가 오류로 남긴다
             } );
             return;
         }
@@ -235,6 +236,23 @@ namespace sw
         _heightMax = heightMax;
     }
 
+    bool TerrainComponent::reloadTerrainKeepingEdits()
+    {
+        // 같은 에셋을 다시 읽으면 저장하지 않은 편집을 넘긴다(헤더 설명). 다시 읽은 크기가 맞지 않으면 restoreState 가 알리고 디스크 값으로 둔다.
+        vector<uint8> listCarriedEdit;
+        const bool    bCarryEdits = hasWrittenEdits() && _heightfieldPath == _loadedHeightfieldPath;
+        if ( bCarryEdits )
+        {
+            Archive archive;
+            writeState( archive );
+            listCarriedEdit.assign( archive.getData(), archive.getData() + archive.getSize() );
+        }
+        const bool bLoaded = reloadTerrain();
+        if ( bLoaded && listCarriedEdit.empty() == false )
+            restoreState( std::move( listCarriedEdit ) );
+        return bLoaded;
+    }
+
     bool TerrainComponent::reloadTerrain()
     {
         releaseChunks();
@@ -248,6 +266,7 @@ namespace sw
             return false;
 
         HeightfieldData data;
+        _loadedHeightfieldPath = _heightfieldPath;
         if ( data.loadFromResource( _heightfieldPath ) == false )
             return false;
         if ( _heightfield.initialize( data, getWorldPosition(), _size, _heightMin, _heightMax ) == false )

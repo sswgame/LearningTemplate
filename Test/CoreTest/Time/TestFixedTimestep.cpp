@@ -29,7 +29,7 @@ namespace
         std::this_thread::sleep_for( std::chrono::milliseconds( 300 ) );
     }
 
-    /** @brief 만들 때 넘기는 기본값(엔진에서는 `EngineConfig` 의 초기값)이다. 몫이 6 이 되게 둔다. */
+    /** @brief 만들 때 넘기는 정책(엔진에서는 `EngineConfig.json` 의 값)이다. 몫이 6 이 되게 둔다. */
     FixedTimestepParams makeTimestepDefaults()
     {
         return FixedTimestepParams{ 0.1f, 1.0f / 60.0f, 6 };
@@ -102,25 +102,25 @@ SW_TEST_CASE( FixedTimestepTest, TimeScaleMultipliesTheClampedDelta )
 }
 
 /**
- * @brief [FixedTimestepTest] 0 이하 설정은 만들 때 받은 기본값으로 되돌린다
- * @details 설정 파일 하나가 프레임 루프를 세우지 못하게 하는 자리다. 고정 델타가 0 이면
- *          스텝 수 계산이 0 으로 나누기가 된다.
+ * @brief [FixedTimestepTest] 정책 없이 만든 시간선은 설정 전이고, configure 한 값이 그대로 정책이다(다른 값으로 몰래 바꾸지 않는다)
+ * @details 값의 출처는 설정 파일 하나다. 범위 밖 값은 설정 로드(`Min`)가 막고, 여기 오는 값은 그대로 쓴다.
  */
-SW_TEST_CASE( FixedTimestepTest, NonPositiveConfigurationFallsBackToDefaults )
+SW_TEST_CASE( FixedTimestepTest, UnconfiguredTimelineWaitsForTheConfiguredPolicy )
 {
-    FixedTimestep timeline{ makeTimestepDefaults() };
-    timeline.configure( FixedTimestepParams{ -1.0f, 0.0f, 0 } );
+    FixedTimestep timeline;
+    SW_EXPECT_FALSE( timeline.isConfigured() );
+    timeline.configure( makeTimestepDefaults() );
+    SW_EXPECT_TRUE( timeline.isConfigured() );
     timeline.start();
 
     sleepLongerThanAnyClamp();
     const FrameTime frame = timeline.advance();
 
-    const FixedTimestepParams defaults = makeTimestepDefaults();
-    SW_EXPECT_NEAR_EQUAL( defaults._maxFrameDeltaTime, frame._deltaTime, 0.0001f );
-    SW_EXPECT_NEAR_EQUAL( defaults._fixedDeltaTime, frame._fixedDeltaTime, 0.0001f );
-    SW_EXPECT_TRUE_MSG( frame._fixedStepCount <= defaults._maxFixedStepPerFrame,
-                        "기본 상한을 넘겨 스텝을 돌렸다" );
-    // 기본값 둘의 몫은 6 이다 — 부동소수 나눗셈이라 5 로 떨어질 수 있어 아래를 열어 둔다.
+    const FixedTimestepParams policy = makeTimestepDefaults();
+    SW_EXPECT_NEAR_EQUAL( policy._maxFrameDeltaTime, frame._deltaTime, 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( policy._fixedDeltaTime, frame._fixedDeltaTime, 0.0001f );
+    SW_EXPECT_TRUE_MSG( frame._fixedStepCount <= policy._maxFixedStepPerFrame, "상한을 넘겨 스텝을 돌렸다" );
+    // 둘의 몫은 6 이다 — 부동소수 나눗셈이라 5 로 떨어질 수 있어 아래를 열어 둔다.
     SW_EXPECT_TRUE( frame._fixedStepCount >= 5u );
 }
 

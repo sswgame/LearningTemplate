@@ -1,0 +1,11 @@
+<!-- 화면 해상도 견본(물리 픽셀) — 에디터 UI 미리보기가 쓴다. 첫 줄이 처음 여는 견본이다(UIResolutionPresetTable). -->
+<UIResolutionPresetTable>
+	<_listResolution>
+		<UIResolutionPreset _name="1920x1080 (Full HD)" _width="1920" _height="1080" />
+		<UIResolutionPreset _name="1280x720 (HD)" _width="1280" _height="720" />
+		<UIResolutionPreset _name="2560x1440 (QHD)" _width="2560" _height="1440" />
+		<UIResolutionPreset _name="3840x2160 (4K)" _width="3840" _height="2160" />
+		<UIResolutionPreset _name="2560x1080 (21:9)" _width="2560" _height="1080" />
+		<UIResolutionPreset _name="1080x1920 (Portrait)" _width="1080" _height="1920" />
+	</_listResolution>
+</UIResolutionPresetTable>

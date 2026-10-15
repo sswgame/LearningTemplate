@@ -162,6 +162,21 @@ namespace sw
         float32 _rideFieldOfView;
         PROPERTY( Category = "Ride Camera", DisplayName = "Far Plane", Min = 1.0, Units = m )
         float32 _rideFarPlane;
+        PROPERTY( Category = "Coaster", DisplayName = "Rail Spacing", Tooltip = "Distance between rail pieces along the track", Min = 0.1, Units = m )
+        float32 _railSpacing;
+        PROPERTY( Category = "Coaster", DisplayName = "Support Spacing", Tooltip = "Distance between supports along the track", Min = 0.1, Units = m )
+        float32 _supportSpacing;
+        /**
+         * @brief Kenney Coaster Kit 레일 모델의 모양입니다(키트 단위, Model Scale 을 곱하기 전). 키트는 열차 폭 0.7 이고 이 공원의 차 폭은 1.4 다.
+         * @details 레일 조각은 시작점에서 +Z 로 Rail Piece Length 만큼 뻗고, 레일 윗면이 원점보다 Rail Top Depth 아래다(열차 바닥이 원점).
+         *          그래서 레일은 트랙 점에서 `Model Scale × Rail Top Depth` 만큼 올려 윗면을 트랙 점에 맞추고, 차는 바닥을 트랙 점에 둔다.
+         */
+        PROPERTY( Category = "Coaster", DisplayName = "Rail Piece Length", Tooltip = "Length of one rail model along +Z, in kit units", Min = 0.1 )
+        float32 _railPieceLength;
+        PROPERTY( Category = "Coaster", DisplayName = "Rail Top Depth", Tooltip = "How far the rail model's top sits below its origin, in kit units", Min = 0.0 )
+        float32 _railTopDepth;
+        PROPERTY( Category = "Coaster", DisplayName = "Rail Bottom Depth", Tooltip = "How far the rail model's bottom sits below its origin, in kit units", Min = 0.0 )
+        float32 _railBottomDepth;
 
         ThemeParkSimulation                _simulation;
         Wallet                             _wallet; ///< 공원 금고. 키트 하나만 쓰는 게임이라 디렉터가 보관하고 빌려 준다.

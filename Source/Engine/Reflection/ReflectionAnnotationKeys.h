@@ -162,6 +162,10 @@ namespace sw::reflect::attr
         static constexpr AnnotationKey SkipIfEmpty{};
         /** @brief flag.SkipIfEmpty — 단독 토큰 `skipIfEmpty` 또는 `skipIfEmpty = true`. 같은 필드의 철자: SkipIfEmpty, skipIfEmpty. 값이 비어 있으면 쓸 때 생략한다(읽기에는 영향 없음) */
         static constexpr AnnotationKey skipIfEmpty{};
+        /** @brief flag.Required — 단독 토큰 `Required` 또는 `Required = true`. 같은 필드의 철자: Required, required. 데이터 파일이 이 칸을 반드시 적어야 한다(빠지면 로드 오류 — 초기값은 형식일 뿐 기본값이 아니다) */
+        static constexpr AnnotationKey Required{};
+        /** @brief flag.Required — 단독 토큰 `required` 또는 `required = true`. 같은 필드의 철자: Required, required. 데이터 파일이 이 칸을 반드시 적어야 한다(빠지면 로드 오류 — 초기값은 형식일 뿐 기본값이 아니다) */
+        static constexpr AnnotationKey required{};
         /** @brief flag.HideInInspector — 단독 토큰 `HideInInspector` 또는 `HideInInspector = true`. 같은 필드의 철자: HideInInspector, hideInInspector, HiddenInInspector, EditorHidden. */
         static constexpr AnnotationKey HideInInspector{};
         /** @brief flag.HideInInspector — 단독 토큰 `hideInInspector` 또는 `hideInInspector = true`. 같은 필드의 철자: HideInInspector, hideInInspector, HiddenInInspector, EditorHidden. */
@@ -272,6 +276,8 @@ namespace sw::reflect::attr
         "nonSerialized",
         "SkipIfEmpty",
         "skipIfEmpty",
+        "Required",
+        "required",
         "HideInInspector",
         "hideInInspector",
         "HiddenInInspector",

@@ -48,8 +48,16 @@ namespace sw
         GameObjectHandle _director;
         PROPERTY( Category = "Tile", DisplayName = "Tile Index", Tooltip = "Row-major tile of the director field" )
         int32 _tileIndex;
+        /**
+         * @brief Kenney Nature Kit 모델은 키트 1 칸이 밭 1 칸이지만, 비스듬히 내려다보는 직교 카메라에서는 작물이 작아 보여 기본 1.6 배로 키운다(작물 폭 0.35 → 0.56 m).
+         * @details 키트 모델의 바닥은 원점보다 0.05 아래다(Model Floor). 흙 윗면(Soil Top)에 얹을 때 배율만큼 올린다.
+         */
         PROPERTY( Category = "Tile", DisplayName = "Model Scale", Tooltip = "Scale of the grown crop model", Min = 0.0 )
         float32 _modelScale;
+        PROPERTY( Category = "Tile", DisplayName = "Model Floor", Tooltip = "How far the kit model's base sits below its origin, per unit of scale", Min = 0.0, Units = m )
+        float32 _modelFloor;
+        PROPERTY( Category = "Tile", DisplayName = "Soil Top", Tooltip = "Height of the soil block's top the crop stands on", Min = 0.0, Units = m )
+        float32 _soilTop;
 
         int32 _cropState; ///< 지금 그린 작물 상태(−1 이면 아직 없다)
     };

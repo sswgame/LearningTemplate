@@ -6,6 +6,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Network/Transport/NetEmulation.h"
 
+#include "Engine/Config/NetEmulationPresetTable.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -346,10 +347,15 @@ namespace sw
             }
             else if ( name == "network" )
             {
-                NetEmulationConditions conditions;
-                if ( NetEmulationConditions::tryGetPreset( pText, conditions ) == false )
+                NetEmulationPresetTable presetTable;
+                if ( presetTable.loadFromResource() == false )
                 {
-                    outReason = string( "unknown network preset '" ) + pText + "' (off | lan | wifi | lte | badwifi)";
+                    outReason = string( "network presets could not be read (" ) + NetEmulationPresetTable::kResourcePath + ")";
+                    return false;
+                }
+                if ( presetTable.findPreset( pText ) == nullptr )
+                {
+                    outReason = string( "unknown network preset '" ) + pText + "' (" + presetTable.makePresetNames() + ")";
                     return false;
                 }
                 _load._network = pText;

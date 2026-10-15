@@ -9,10 +9,12 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "TestFramework/TestFramework.h"
 
 #include "sw/config/ConfigConstants.h"
+#include "sw/config/ShippingHostDefaults.h"
 
 using namespace sw;
 using namespace sw::editor;
@@ -28,11 +30,16 @@ SW_TEST_CASE( ConfigHotReloadTest, ChangedFileGoesToItsOwner )
     const string rootDir = test::makeTempPath( "sw_config_hot_reload" );
     const string path    = FileUtil::joinPath( rootDir, "HotEngineConfig.json" );
     FileUtil::ensureDirectoryExists( rootDir );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, "{ \"_maxFrameDeltaTime\": 0.25 }" ) );
+    // `EngineConfig` 는 값이 파일에만 있다 — 구성 때 구운 바탕 파일 사본에서 한 칸만 바꿔 쓴다.
+    JSONDocument document;
+    SW_ASSERT_TRUE( document.parse( shipping_host::kEngineConfigJSON ) );
+    document.getRoot().set( "_maxFrameDeltaTime", false ).setFloat( 0.25 );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, document.dump() ) );
 
     ConfigManager manager;
     SW_ASSERT_TRUE( manager.loadConfig<EngineConfig>( path ) );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, "{ \"_maxFrameDeltaTime\": 0.5 }" ) );
+    document.getRoot().set( "_maxFrameDeltaTime", false ).setFloat( 0.5 );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, document.dump() ) );
 
     SW_EXPECT_TRUE( ConfigHotReload::reloadChangedFile( &manager, path ) );
     SW_EXPECT_NEAR_EQUAL( 0.5f, manager.getConfig<EngineConfig>()->_maxFrameDeltaTime, 1e-6f );

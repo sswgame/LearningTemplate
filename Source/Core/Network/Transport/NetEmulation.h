@@ -46,16 +46,10 @@ namespace sw
         /**
          * @brief 전역 변수에서 읽습니다. `-gv_netEmuLatencyMs`, `-gv_netEmuJitterMs`, `-gv_netEmuLossPercent`, `-gv_netEmuDuplicatePercent`,
          *        `-gv_netEmuReorderPercent`, `-gv_netEmuBandwidthKilobytesPerSecond` 가 해당하며, 언리얼의 `PktLag`, `PktLagVariance`, `PktLoss`, `PktDup`, `PktOrder` 에 대응합니다.
+         * @details 이름 있는 회선 프리셋(`-gv_netEmuPreset`)은 Engine 의 프리셋 표(`NetEmulationPresetTable`)가 풀어 이 값 대신 씁니다.
          */
         static NetEmulationConditions makeFromGlobalVariables();
-        /**
-         * @brief 이름으로 회선 프리셋을 고릅니다(`off`, `lan`, `wifi`, `lte`, `badwifi`, `disconnected`). 모르는 이름이면 false 입니다.
-         * @details 값은 한 방향입니다. 언리얼 Net Emulation 프로필(Average · Bad), 유니티 Network Simulator 프리셋(Broadband · 4G · 3G)과 같은 자리이고,
-         *          에디터 회선 조절과 개발 명령이 같은 표를 씁니다(서버 디버깅 S4).
-         */
-        [[nodiscard]] static bool tryGetPreset( string_view presetName, NetEmulationConditions& outConditions );
-        /** @brief 프리셋 이름을 쉼표로 이은 글입니다(도움말 · 오류 문구). */
-        static const utf8* getPresetNames();
+
         /**
          * @brief `latencyMs=80 jitterMs=20 lossPercent=5 duplicatePercent=1 reorderPercent=2 bandwidthKBps=256` 같은 덮어쓰기를 @p inoutConditions 에 적용합니다.
          * @details 키는 전역 변수(`gv_netEmu*`)와 같은 단위입니다. 빈칸으로 나누며, 모르는 키나 음수 · 숫자가 아닌 값이면 false 와 @p outError 이고 아무것도 바꾸지 않습니다.

@@ -15,9 +15,9 @@
 #include "Engine/UI/Widgets/ImageWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
-SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchUiWidgets, 0, "UI 벤치 — 격자 셀 수(셀마다 테두리 · 아이콘 · 글, 대부분 스크롤 밖) (0=사용 안 함)" );
-SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchUiChurn, 0, "UI 벤치 — 프레임마다 글을 바꾸는 셀 수(앞쪽 보이는 셀 안에서 돈다)" );
-SW_TEST_GLOBAL_VARIABLE_SHIPPED( bool, gv_benchUiOpacityPulse, false, "UI 벤치 — 프레임마다 화면 루트 불투명도를 바꿔 보이는 자손 전체를 다시 칠하게 한다 (조상 kTransform 비용 측정)" );
+SW_TEST_GLOBAL_VARIABLE( int32, gv_benchUiWidgets, 0, "UI 벤치 — 격자 셀 수(셀마다 테두리 · 아이콘 · 글, 대부분 스크롤 밖) (0=사용 안 함)" );
+SW_TEST_GLOBAL_VARIABLE( int32, gv_benchUiChurn, 0, "UI 벤치 — 프레임마다 글을 바꾸는 셀 수(앞쪽 보이는 셀 안에서 돈다)" );
+SW_TEST_GLOBAL_VARIABLE( bool, gv_benchUiOpacityPulse, false, "UI 벤치 — 프레임마다 화면 루트 불투명도를 바꿔 보이는 자손 전체를 다시 칠하게 한다 (조상 kTransform 비용 측정)" );
 
 namespace sw
 {

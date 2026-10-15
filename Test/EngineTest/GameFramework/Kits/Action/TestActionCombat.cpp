@@ -107,6 +107,50 @@ namespace
         game::ScopedGameScope _activeScope; ///< 사는 동안 지금 게임 범위로 건다
     };
 
+    /** @brief 액션 룸 테스트의 두 종(grunt · boss)입니다. 룸 수치 테스트의 기대값은 이 데이터에서 나온다. */
+    constexpr const utf8* kRoomMonsterXML = "<MonsterCatalog>\n"
+                                            "  <Monster id=\"grunt\" name=\"Grunt\"><Stats hp=\"30\" maxHp=\"30\" atk=\"8\" def=\"0\" speed=\"1.8\" radius=\"0.32\"/></Monster>\n"
+                                            "  <Monster id=\"boss\" name=\"Boss\"><Stats hp=\"220\" maxHp=\"220\" atk=\"12\" def=\"16\" speed=\"0.9\" radius=\"0.7\"/>\n"
+                                            "    <AI coolTime=\"1.6\" firstDelay=\"1.2\"/>\n"
+                                            "    <Shot angle=\"0\" speed=\"4.5\" life=\"2.5\" radius=\"0.22\" damage=\"10\"/>\n"
+                                            "    <Shot angle=\"90\" speed=\"3.2\" life=\"1.8\" radius=\"0.22\" damage=\"10\"/>\n"
+                                            "  </Monster>\n"
+                                            "</MonsterCatalog>\n";
+
+    /** @brief 이 테스트 동안 `kRoomMonsterXML` 카탈로그를 게임 서비스로 겁니다. */
+    struct ScopedRoomMonsterCatalog
+    {
+        ScopedRoomMonsterCatalog()
+            : _catalog{}
+            , _bLoaded{ _catalog.loadFromXMLText( kRoomMonsterXML, "room_monsters" ) }
+            , _service{ _catalog }
+        {
+        }
+
+        MonsterCatalog              _catalog;
+        bool                        _bLoaded; ///< 테스트가 먼저 본다
+        ScopedMonsterCatalogService _service;
+    };
+
+    /** @brief 액션 룸 테스트의 배치입니다. 입구 그런트 둘, 홀 그런트 셋, 보스 하나입니다. */
+    ActionRoomLayout makeTestRoomLayout()
+    {
+        ActionRoomLayout layout;
+        layout._listEntranceSpawn = {
+            {"grunt", float2{ 6.0f, 3.0f }},
+            {"grunt", float2{ 8.0f, 5.0f }}
+        };
+        layout._listHallSpawn = {
+            {"grunt", float2{ 5.0f, 2.5f }},
+            {"grunt", float2{ 8.0f, 4.0f }},
+            {"grunt", float2{ 6.5f, 5.5f }}
+        };
+        layout._listBossSpawn = {
+            { "boss", float2{ 7.0f, 4.0f } }
+        };
+        return layout;
+    }
+
     /** @brief @p size 크기 콜라이더를 primary 씬 컴포넌트로 단 오브젝트를 (x, y) 에 만듭니다. */
     GameObject* spawnColliderObject( GameObjectManager& manager, const utf8* pName, float32 x, float32 y, const float2& size )
     {
@@ -947,8 +991,11 @@ SW_TEST_CASE( ActionCombatTest, ActionRoomAnnouncesGateClearAndDefeat )
     dispatcher.subscribe<ClearGateStateChangedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const ClearGateStateChangedEvent& )>, [&listGate]( const ClearGateStateChangedEvent& event )
     { listGate.push_back( event ); } ) );
 
+    const ScopedRoomMonsterCatalog scopedCatalog;
+    SW_ASSERT_TRUE( scopedCatalog._bLoaded );
     ActionRoom     room;
     ActionRoomSite site;
+    room.setLayout( makeTestRoomLayout() );
     site._mapPath       = "game/test/maps/dungeon.scene.xml";
     site._zoneID        = "zone_dungeon";
     site._returnMapPath = "game/test/maps/town.scene.xml";
@@ -1141,10 +1188,13 @@ SW_TEST_CASE( ActionCombatTest, BossFireRateDoesNotDependOnFrameRate )
 {
     EventDispatcher                    dispatcher;
     const ScopedEventDispatcherService scopedDispatcher{ dispatcher };
-    const float32                      design = 1.0f + ( 120.0f - 1.2f ) / 1.6f;
+    const ScopedRoomMonsterCatalog     scopedCatalog;
+    SW_ASSERT_TRUE( scopedCatalog._bLoaded );
+    const float32 design = 1.0f + ( 120.0f - 1.2f ) / 1.6f;
     for ( const float32 framesPerSecond : { 20.0f, 30.0f, 60.0f } )
     {
         ActionRoom room;
+        room.setLayout( makeTestRoomLayout() );
         room.beginBoss();
         ActionRoomFrameInput input;
         input._playerPos       = float2{ 7.0f, 60.0f }; // 멀리 서서 치지 않는다
@@ -1160,15 +1210,17 @@ SW_TEST_CASE( ActionCombatTest, BossFireRateDoesNotDependOnFrameRate )
 
 /**
  * @brief [ActionCombatTest] 액션 룸 적의 수치 — 그런트는 닿으면 8 · 한 번에 쓰러지고, 보스는 닿으면 12 · 탄 10 · 한 번에 18 씩 최대 220 이라 13 번째에 쓰러진다
- * @details 적의 수치를 코드 상수에서 몬스터 정의로 옮겨도 동작이 같은지 본다(내장 정의가 옛 상수와 같아야 한다). 피해는 프레임 결과로, HP 는 보스 게이지
- *          (`getBossHpFill`)와 살아 있는 적 수로 읽는다.
+ * @details 수치는 모두 카탈로그 데이터(`kRoomMonsterXML`)에서 온다. 피해는 프레임 결과로, HP 는 보스 게이지(`getBossHpFill`)와 살아 있는 적 수로 읽는다.
  */
 SW_TEST_CASE( ActionCombatTest, ActionRoomEnemyNumbersStayTheSame )
 {
     EventDispatcher                    dispatcher;
     const ScopedEventDispatcherService scopedDispatcher{ dispatcher };
-    ActionRoom                         room;
-    ActionRoomFrameInput               input;
+    const ScopedRoomMonsterCatalog     scopedCatalog;
+    SW_ASSERT_TRUE( scopedCatalog._bLoaded );
+    ActionRoom           room;
+    ActionRoomFrameInput input;
+    room.setLayout( makeTestRoomLayout() );
 
     // 1) 그런트 — 첫 그런트(5, 2.5) 위에 서면 닿은 피해 8.
     room.beginHall();
@@ -1235,6 +1287,7 @@ SW_TEST_CASE( ActionCombatTest, ActionRoomReadsItsMonstersFromTheCatalogService 
     const ScopedMonsterCatalogService scopedCatalog{ catalog };
     ActionRoom                        room;
     ActionRoomFrameInput              input;
+    room.setLayout( makeTestRoomLayout() );
 
     // 그런트 — 닿은 피해 5.
     room.beginHall();
@@ -1275,10 +1328,10 @@ SW_TEST_CASE( ActionCombatTest, ActionRoomReadsItsMonstersFromTheCatalogService 
 }
 
 /**
- * @brief [ActionCombatTest] 걸린 카탈로그에 룸의 종이 없으면 알리고 내장 정의로 세운다 — 한 싸움에 한 번 알린다
- * @details 데이터 오타가 조용히 내장 수치로 바뀌면 "카탈로그를 고쳤는데 그대로다" 를 찾을 길이 없다. 같은 종의 둘째 · 셋째는 그 싸움의 정의 목록에서 찾는다.
+ * @brief [ActionCombatTest] 걸린 카탈로그에 룸의 종이 없으면 오류를 남기고 그 적을 세우지 않는다 — 코드 폴백 정의가 없다
+ * @details 데이터 오타가 조용히 내장 수치로 바뀌면 "카탈로그를 고쳤는데 그대로다" 를 찾을 길이 없다. 카탈로그가 아예 없어도 같다.
  */
-SW_TEST_CASE( ActionCombatTest, ActionRoomWarnsWhenTheCatalogLacksItsMonster )
+SW_TEST_CASE( ActionCombatTest, ActionRoomReportsAMonsterMissingFromTheCatalog )
 {
     EventDispatcher                    dispatcher;
     const ScopedEventDispatcherService scopedDispatcher{ dispatcher };
@@ -1291,9 +1344,28 @@ SW_TEST_CASE( ActionCombatTest, ActionRoomWarnsWhenTheCatalogLacksItsMonster )
     SW_TEST_DEFENSIVE_SCOPE( "a monster missing from the catalog is reported" );
     test::ScopedLogCollector logCollector;
     ActionRoom               room;
+    room.setLayout( makeTestRoomLayout() );
     room.beginHall();
-    SW_EXPECT_EQUAL( 3, room.getAliveEnemyCount() );
-    SW_EXPECT_TRUE_MSG( logCollector.countContaining( "Monster 'grunt' is not in the monster catalog" ) == 1u, logCollector.joined().c_str() );
+    SW_EXPECT_EQUAL( 0, room.getAliveEnemyCount() );
+    SW_EXPECT_TRUE_MSG( logCollector.countContaining( "Monster 'grunt' is not in the monster catalog" ) == 3u, logCollector.joined().c_str() );
+}
+
+/**
+ * @brief [ActionCombatTest] 배치가 빈 룸 종류로 싸움을 시작하면 오류를 남기고 적 없이 시작한다 — 코드에 내장 배치가 없다
+ */
+SW_TEST_CASE( ActionCombatTest, ActionRoomReportsAnEmptyLayout )
+{
+    EventDispatcher                    dispatcher;
+    const ScopedEventDispatcherService scopedDispatcher{ dispatcher };
+    const ScopedRoomMonsterCatalog     scopedCatalog;
+    SW_ASSERT_TRUE( scopedCatalog._bLoaded );
+
+    SW_TEST_DEFENSIVE_SCOPE( "an empty room layout is reported" );
+    test::ScopedLogCollector logCollector;
+    ActionRoom               room;
+    room.beginBoss();
+    SW_EXPECT_EQUAL( 0, room.getAliveEnemyCount() );
+    SW_EXPECT_TRUE_MSG( logCollector.countContaining( "Action room layout has no boss spawns" ) == 1u, logCollector.joined().c_str() );
 }
 
 /**
@@ -1304,7 +1376,10 @@ SW_TEST_CASE( ActionCombatTest, StateRoundTripContinuesTheSameRoom )
 {
     EventDispatcher                    dispatcher;
     const ScopedEventDispatcherService scopedDispatcher{ dispatcher };
-    ActionRoom                         room;
+    const ScopedRoomMonsterCatalog     scopedCatalog;
+    SW_ASSERT_TRUE( scopedCatalog._bLoaded );
+    ActionRoom room;
+    room.setLayout( makeTestRoomLayout() );
     room.beginBoss();
     ActionRoomFrameInput strike;
     strike._playerPos      = float2{ 5.6f, 4.0f };

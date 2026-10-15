@@ -18,7 +18,7 @@ namespace sw
     SW_LOG_CALLER( "EnvironmentUtil" );
 
     /** @brief `-gv_environmentAnimate=0` 입니다. 바람과 파도 시간을 0 에서 멈춥니다(백엔드 스크린샷 비교와 결정적 측정에 씁니다). */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_environmentAnimate, 1, "바람 · 파도 시간이 흐른다 (0=멈춤, 스크린샷 비교용)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_environmentAnimate, 1, "바람 · 파도 시간이 흐른다 (0=멈춤, 스크린샷 비교용)" );
 
     bool EnvironmentUtil::isAnimationEnabled()
     {

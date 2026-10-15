@@ -20,9 +20,6 @@ namespace sw
     {
         struct FarmAutoFarmerAIComponentInternal
         {
-            /** @brief 칸에 도구를 쓸 때 칸 아래 자리에서 더 아래로 물러서는 거리 — 여기서 위로 걸어 들어가 위를 보고 선다. */
-            static constexpr float32 kApproachBack = 0.4f;
-
             /** @brief 할 일 하나입니다. */
             enum class TaskKind : uint8
             {
@@ -96,6 +93,7 @@ namespace sw
         , _cultivateLimit{ 32 }
         , _buyBatch{ 6 }
         , _standTolerance{ 0.2f }
+        , _approachBack{ 0.4f }
         , _director{}
         , _actionTimer{ 0.0f }
         , _buyRemaining{ 0 }
@@ -116,7 +114,6 @@ namespace sw
 
     bool FarmAutoFarmerAIComponent::walkUpTo( const FarmDirectorComponent& director, const float3& standPosition )
     {
-        using Internal          = FarmAutoFarmerAIComponentInternal;
         const float3& position  = director.getPlayerPosition();
         const bool    bFacingUp = director.getFacing()._z > 0.5f;
         const bool    bOnSpot   = float3::getHorizontalDistance( position, standPosition ) <= _standTolerance;
@@ -130,7 +127,7 @@ namespace sw
         if ( bInLane )
             moveTo( standPosition );
         else
-            moveTo( standPosition - float3{ 0.0f, 0.0f, Internal::kApproachBack } );
+            moveTo( standPosition - float3{ 0.0f, 0.0f, _approachBack } );
         return false;
     }
 

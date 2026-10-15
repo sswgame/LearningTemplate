@@ -57,6 +57,16 @@ Shipping 키트는 STATIC 이고 내보내기 매크로가 빈 것을 산출물�
 - 결정적 재생: 시나리오 끝의 `<Record>` 를 `AppScenarioTest` 가 네 백엔드끼리 비교하고, `RecordedPlayReplaysOnEveryBackend` 가 녹화(`-scenario-record`)를 다시 돌려 검사점을 봅니다.
 - 남은 것은 백로그 `D5-4`(탑승 단계 실물 확인, 시나리오 없는 게임 네 개, 같은 이름 오브젝트 고르기, 링크 앵커 정리)와 `D5-3`(마을 사람의 길 찾기 · 세이브)입니다.
 
+## 4-2. 에디터 흐름 시나리오 (2026-10-15 묶음 `wt/editorscn`)
+
+에디터 기능을 잇는 흐름 시나리오 다섯(`flowboundaries` · `flowprefab` · `flowterrain` · `flowedit` · `flowselection`)과 경계 전후 견주기(`Remember` · `sameAs`,
+`SwapBackend other/start`, 편집 상태 탐침)를 더했습니다. 기능 × 시나리오 표와 못 한 것은 [에디터 시나리오 표](EditorScenarios.md), 결정은 결정 기록 5-11 첫 네 줄입니다.
+흐름 시나리오가 드러낸 결함 여섯(백엔드 교체 · 에디터 리로드 뒤 되돌리기 · 선택 소실, 프리팹 적용 미전파, 에디터 문구 표 미적재, 지형 편집의 플레이 소실, 메시 끌어 놓기 무시,
+에디터 모듈 리로드가 게임을 내려 저장을 막음)은 고쳤습니다.
+
+- 남은 것은 백로그 `D3-11`(에셋 임포트 · 캐릭터 편집 → 씬 · 스케줄 창은 시나리오로 못 돌린다, 중첩 프리팹 부품 전파).
+- 새 흐름 시나리오는 체인(`AppScenarioTest.EditorScenariosPassOn<백엔드>`)에서 돈다. 백엔드 교체를 넣은 둘(`flowboundaries` · `flowterrain`)은 DX11 · DX12 가 있어야 한다.
+
 ## 5. 서브틱 활용 조사
 
 서브틱(`registerSubTick`)은 `GameDirectorComponent.cpp` 한 곳에서만 쓰이고, `TickPhase` 의 `Early` · `Late` · `Finalize` 는 정의 밖 사용이 0 입니다. 반면 `setTickGroup` 은 48 개 파일, `PostUpdate` 는 41 개 파일입니다.
@@ -85,6 +95,15 @@ Shipping 키트는 STATIC 이고 내보내기 매크로가 빈 것을 산출물�
   플레이 중 히치는 StarSkirmish 가 처음 짓는 유닛 모델을 게임 스레드에서 읽던 것(`MeshPreloadSet`), 할당은 워커 수가 아니라 `RTSWorld::findAutoTarget` 의 지역 목록이었습니다.
   남은 기동 열기(개발 배치에만 있는 DLL 섀도 복사 · 매니페스트 · 셰이더 원본 해시)와 렌더 벤치의 13 ~ 20 ms 한 프레임은 백로그 `C-29` ① ② 입니다.
 - 진단: `py -3 -m Scripts load run <시나리오> --app-arg=-gv_ioLogReads=1`(파일 열기마다 경로 · 스레드), `--app-arg=-gv_profileAllocSites=12`(Release 로도 콜스택).
+
+## 5-3. 유지보수성을 위한 데이터화 (2026-10-15, wt/datadriven)
+
+기준(사용자 결정)과 정한 모양은 결정 기록 5-4 "유지보수성을 위한 데이터화", 남은 일은 백로그 `C-30` 이다.
+
+- 들어간 것: 액션 룸 내장 몬스터 · 배치 삭제(카탈로그 · `ActionRoomLayout` 필수), `EngineConfig.json` 바탕 층(헤더는 형식만), 회선 프리셋 표(`NetEmulationPresetTable`), 그림자 맵 한 변(스키마 `targetValue`),
+  UI 미리보기 해상도 표, 부하 봇 필수 키, `PROPERTY( Required )` + `GameDataXML::readFields`(첫 적용 `ParkLayout`), 게임 튜닝값 PROPERTY(여덟 게임) · 벤치 설정(`benchscene.xml`), 린트 `CheckDataDrivenLiterals`.
+- 배포본 테스트용 변수: `SW_TEST_GLOBAL_VARIABLE_SHIPPED` 는 `CheckGlobalVariableKinds.toml` `[shipped]` 목록(이유 포함)에 있는 것만 둔다. 벤치 · 크래시 · 측정 스위치는 내렸다(Release 는 등록된다).
+- **에디터 모듈의 리플렉션 헤더는 `Source/Editor/CMakeLists.txt` 의 `REFLECTION_HEADERS` 목록이다** — 새 REFLECT 헤더를 넣지 않으면 링크 오류(`StaticType` 미정의)로 드러난다(EditorTest 는 에디터 소스를 따로 컴파일해 그 코드젠을 받지 못하므로, 둘이 같이 쓰는 데이터 타입은 Engine 에 둔다 — `UIResolutionPresetTable`).
 
 ## 6. 확정된 방침
 
