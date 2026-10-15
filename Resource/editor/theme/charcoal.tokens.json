@@ -1,0 +1,61 @@
+{
+    "_name": "charcoal",
+    "_displayName": "Deep Charcoal",
+    "_color": {
+        "_text": "#EBF0F7",
+        "_accent": "#59B2F2",
+        "_windowBg": "#141417",
+        "_panelBg": "#1C1C21",
+        "_headerBg": "#292930",
+        "_frameBg": "#212129",
+        "_border": "#33333D",
+        "_success": "#40CC66",
+        "_warning": "#E6BF33",
+        "_error": "#E64C4C",
+        "_info": "#59BFE6",
+        "_textMuted": "#808C99",
+        "_scrollbarBg": "#05050859",
+        "_dockingEmptyBg": "#0D0D12",
+        "_tableRowBgAlt": "#FFFFFF05",
+        "_overlayBg": "#1F1F24",
+        "_selectionOutline": "#FF9E26F2",
+        "_highlight": "#FFC83C",
+        "_toggleInactive": "#33384299",
+        "_axisX": "#D94040",
+        "_axisY": "#4CBF59",
+        "_axisZ": "#408CF2"
+    },
+    "_radius": {
+        "_window": 2,
+        "_frame": 2,
+        "_popup": 2,
+        "_tab": 2,
+        "_scrollbar": 4,
+        "_grab": 2
+    },
+    "_spacing": {
+        "_windowPaddingX": 8,
+        "_windowPaddingY": 8,
+        "_framePaddingX": 6,
+        "_framePaddingY": 4,
+        "_itemSpacingX": 6,
+        "_itemSpacingY": 4,
+        "_itemInnerSpacingX": 4,
+        "_itemInnerSpacingY": 4,
+        "_indent": 20,
+        "_scrollbarSize": 12,
+        "_grabMinSize": 8
+    },
+    "_stroke": {
+        "_window": 1,
+        "_child": 1,
+        "_popup": 1,
+        "_frame": 1,
+        "_tab": 0
+    },
+    "_typography": {
+        "_fontSize": 16,
+        "_iconScale": 1.0
+    },
+    "_density": 1.0
+}

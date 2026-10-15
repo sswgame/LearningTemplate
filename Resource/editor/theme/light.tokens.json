@@ -1,0 +1,61 @@
+{
+    "_name": "light",
+    "_displayName": "Light",
+    "_color": {
+        "_text": "#1A1C21",
+        "_accent": "#1C6BD9",
+        "_windowBg": "#EDF0F5",
+        "_panelBg": "#F7F7FA",
+        "_headerBg": "#D6DEEB",
+        "_frameBg": "#FFFFFF",
+        "_border": "#B8BFCC",
+        "_success": "#1A8C38",
+        "_warning": "#B27300",
+        "_error": "#CC291F",
+        "_info": "#0D73B2",
+        "_textMuted": "#616B7A",
+        "_scrollbarBg": "#0000000F",
+        "_dockingEmptyBg": "#DBDEE6",
+        "_tableRowBgAlt": "#00000008",
+        "_overlayBg": "#FAFAFC",
+        "_selectionOutline": "#FF9E26F2",
+        "_highlight": "#FFC83C",
+        "_toggleInactive": "#B2B8C299",
+        "_axisX": "#D94040",
+        "_axisY": "#4CBF59",
+        "_axisZ": "#408CF2"
+    },
+    "_radius": {
+        "_window": 4,
+        "_frame": 3,
+        "_popup": 4,
+        "_tab": 4,
+        "_scrollbar": 6,
+        "_grab": 3
+    },
+    "_spacing": {
+        "_windowPaddingX": 8,
+        "_windowPaddingY": 8,
+        "_framePaddingX": 6,
+        "_framePaddingY": 4,
+        "_itemSpacingX": 6,
+        "_itemSpacingY": 4,
+        "_itemInnerSpacingX": 4,
+        "_itemInnerSpacingY": 4,
+        "_indent": 20,
+        "_scrollbarSize": 12,
+        "_grabMinSize": 8
+    },
+    "_stroke": {
+        "_window": 1,
+        "_child": 1,
+        "_popup": 1,
+        "_frame": 1,
+        "_tab": 0
+    },
+    "_typography": {
+        "_fontSize": 16,
+        "_iconScale": 1.0
+    },
+    "_density": 1.0
+}
