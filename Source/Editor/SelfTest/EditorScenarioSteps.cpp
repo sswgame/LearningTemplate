@@ -752,9 +752,9 @@ namespace sw::editor
                 return true;
             }
 
-            [[nodiscard]] static bool readThemePreset( const GameObjectManager* /*pManager*/, float64& outValue )
+            [[nodiscard]] static bool readThemeName( const AutomationProbeQuery& /*query*/, AutomationProbeValue& outValue )
             {
-                outValue = static_cast<float64>( static_cast<uint32>( EditorThemeUtil::getActiveTheme()._preset ) );
+                outValue.setText( EditorThemeUtil::getActiveTheme()._name );
                 return true;
             }
 
@@ -1555,8 +1555,8 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readHierarchyVisibleRoots );
     SW_AUTOMATION_PROBE( editorNoSearchResultHintShown, "Editor.NoSearchResultHintShown", "1 when a panel drew its zero-results hint for a search this or last frame",
                          &EditorScenarioStepsInternal::readNoSearchResultHintShown );
-    SW_AUTOMATION_PROBE( editorThemePreset, "Editor.ThemePreset", "Active theme preset: 0 ModernDark, 1 DeepCharcoal, 2 MidnightBlue, 3 ClassicDark",
-                         &EditorScenarioStepsInternal::readThemePreset );
+    SW_AUTOMATION_QUERY_PROBE( editorThemeName, "Editor.ThemeName", "Active theme token set name (dark, light, highcontrast, ...)", &EditorScenarioStepsInternal::readThemeName,
+                               false, false );
     SW_AUTOMATION_PROBE( editorAccentColor, "Editor.AccentColor", "Accent color as 0xRRGGBB", &EditorScenarioStepsInternal::readAccentColor );
     SW_AUTOMATION_PROBE( editorSelectedIsEditorCamera, "Editor.SelectedIsEditorCamera", "1 when the primary selection is the viewport's editor camera",
                          &EditorScenarioStepsInternal::readSelectedIsEditorCamera );

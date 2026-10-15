@@ -41,7 +41,7 @@ namespace sw::editor
             if ( remainingTime < 0.5f )
                 alpha = remainingTime / 0.5f;
 
-            const Color bgColor = style::kOverlayBg.withAlpha( 0.92f * alpha );
+            const Color bgColor = EditorThemeUtil::getOverlayBgColor().withAlpha( 0.92f * alpha );
             Color       borderColor{ 0.3f, 0.3f, 0.3f, 0.8f * alpha };
             Color       titleColor{ 1.0f, 1.0f, 1.0f, 1.0f * alpha };
 

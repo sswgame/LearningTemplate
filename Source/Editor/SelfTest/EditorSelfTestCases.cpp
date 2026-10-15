@@ -87,9 +87,12 @@ namespace sw::editor
             {
                 const EditorThemeConfig savedTheme = EditorThemeUtil::getActiveTheme();
                 bool                    bAnyPresetDiffers{ false };
-                for ( uint8 presetIndex = 0; presetIndex < static_cast<uint8>( EditorThemePreset::Count ); ++presetIndex )
+                vector<string>          listThemeName;
+                EditorThemeUtil::listThemes( listThemeName );
+                (void)context.expect( listThemeName.size() >= 3, "fewer than three theme token sets were loaded (dark, light, highcontrast)" );
+                for ( const string& themeName : listThemeName )
                 {
-                    EditorThemeUtil::applyPreset( static_cast<EditorThemePreset>( presetIndex ) );
+                    (void)context.expect( EditorThemeUtil::applyThemeByName( themeName ), "a listed theme could not be applied" );
                     const EditorThemeConfig& active = EditorThemeUtil::getActiveTheme();
                     (void)context.expect( isSameColor( EditorThemeUtil::getWindowBgColor(), active._windowBg ), "getWindowBgColor does not follow the preset" );
                     (void)context.expect( isSameColor( EditorThemeUtil::getPanelBgColor(), active._panelBg ), "getPanelBgColor does not follow the preset" );
@@ -132,7 +135,7 @@ namespace sw::editor
                 const EditorThemeConfig savedTheme = EditorThemeUtil::getActiveTheme();
                 const float32           savedScale = EditorThemeUtil::getDpiScale();
                 const float32           probeScale = savedScale + 0.5f; // 배율 1 은 ScaleAllSizes 를 건너뛰어 거듭 곱해지는지 볼 수 없다. 그래서 모니터 배율과 무관하게 1 이 아닌 값을 쓴다
-                EditorThemeUtil::applyPreset( EditorThemePreset::ModernDark );
+                (void)context.expect( EditorThemeUtil::applyThemeByName( EditorThemeTokens::kDefaultName ), "the default theme token set is missing" );
                 EditorThemeUtil::setDpiScale( probeScale );
                 const EditorThemeConfig probeTheme = EditorThemeUtil::getActiveTheme();
                 for ( uint32 applyIndex = 0; applyIndex < 3; ++applyIndex )
