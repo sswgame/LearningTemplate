@@ -15,6 +15,28 @@ main 은 `origin/main` 과 같습니다(2026-10-16 push 했습니다). 원격 �
 
 **남은 워크트리.** `D:\w\perfbase` · `perfbase2` 는 성능 기준선이라 남깁니다. 그 밖의 것은 `git worktree list` 로 보고, 병합이 끝난 것은 `py -3 -m Scripts worktree-remove <이름>` 으로 지웁니다.
 
+## 1-1. 세션 사이에 남은 일 (2026-10-16, 새 세션은 여기부터)
+
+**A. 테스트 시간 줄이기 — `D:\w\testspeed`(에이전트 `aab0622613cb4ec2f`, 미커밋).** 이미 하던 것: `ctest` 항목에 `COST` 를 달아 긴 것부터 띄움, `gpuSlots: 2`, `hostResourceLock: AppBin`, 변경 파일로 테스트를 고르는 `Scripts/dev/SelectChangedTests.py`.
+사용자 지시로 더한 것(메시지로 전달, 결과 미확인): Debug 전용 라벨 `race`(스레드 경로를 지나는 최소 묶음 × 네 백엔드, 직렬 10 분 안쪽), 나머지 기능 시나리오는 Shipping `hostgpu` 가 기본, shard · `caseCosts` 재균형, `11_Workflow.md` 3절과 `08_Verification.md` 에 단계 규칙.
+새 세션이 처음 할 일: `git -C D:\w\testspeed status` 와 `ListAgents` 로 끝났는지 보고, 끝났으면 최신 main 을 받아 Debug · Shipping `all AllTests` 경고 0, `lint-suite`, `nogpu` 로 확인한 뒤 병합한다. 목표(race 10 분)를 실측으로 확인한다.
+
+- **근거(2026-10-16 `finalverify` 측정):** Debug `AppTest_HostOnly` 한 바퀴 = Shard1 1138 s + Shard2 1840 s(제한에 걸림) + Shard3 456 s ≈ 57 분, 같은 검증이 Shipping 에서는 65 s. 최종 검증이 3 시간 걸렸고 약 2 시간은 검증에서 나온 결함 8 건을 고치고 다시 도는 데 썼다.
+- **Shipping 으로 다 옮기지 않는 이유:** `DataRaceDetector` 는 `SW_DEBUG` 에서만 켜진다. 레이스 검사는 Debug 가 맡고, 리눅스 `CI-Debug-TSAN` 은 보조다.
+- 같은 PC 에서 빌드 · 테스트를 겹쳐 돌리면 시간 제한에 걸려 다시 돌게 된다. 검증을 돌리는 동안 다른 빌드를 하지 않는다.
+
+**B. `wt/finalverify` — 에이전트는 사용자가 멈췄고 커밋 8 개가 main 에 없다.** `8b01e350f`(현지화 `--check-text` 대상을 `stagedCultures` 로), `992ad77fa` · `a24d36587`(배포본 `<Load>` 테스트 · 설정 바탕 층 테스트를 개발 빌드 전용으로),
+`b81efafb0`(배포본이 캡처 인자를 버리면 골든 비교를 건너뜀), `614dc8459` · `e0a6934e9`(호스트 로그 게이트에 걸린 `RenderPassGPUTest` · DX12 장치 제거 `RHIDeviceTest` 의 의도한 경고), `f183207a4`(모듈 타입 등록 · 해제 전에 비동기 씬 로드를 기다림, A-5), `e420fa989`(`CheckResourceCasing` 15 초 시한).
+워크트리에 커밋하지 않은 `docs/06_Backlog.md` · `docs/plans/NEXT.md` 수정이 있다 — 이 파일의 1 절을 다시 썼으므로 **충돌한다.** 그 수정에서 백로그 갱신(B-3 · B-13 · C-25 · E-11 항목)만 골라 새 main 위에서 다시 적용하고 `NEXT.md` 수정은 버린다.
+A 의 새 규칙이 병합된 뒤 Shipping `hostgpu` + Debug `-L race` + Debug `nogpu` 로 검증해서 병합한다(전체 Debug `hostgpu` 는 마지막에 한 번). 병합이 끝나면 `py -3 -m Scripts worktree-remove finalverify`.
+
+**C. 문서 역할 정리(사용자 방향, 미착수).** `NEXT.md` 는 지금 상태 · 다음 할 일 3~5 개(백로그 번호) · 함정 · 시작 절차만 두고 약 2 KB 로 줄인다. 이력 절(4 ~ 5-4)은 백로그 · 결정 기록 · `git log` 와 대조해 없는 것만 옮기고 지운다.
+사용자는 남은 일을 영역별 문서로 나눠 중앙 백로그를 없애는 쪽을 보고 있다. 백로그는 120 개 항목 · 116 KB 이고 `D. 기능 로드맵`이 약 50 개로 가장 크다. 이 파일을 직접 읽는 것은 린트 `CheckDocPaths` · `RunDocStyle` 둘이고,
+링크하는 파일 약 12 개 · 본문 항목 번호 참조 15 곳이다. 항목 번호를 유지한 채 나누고 `lint-suite` 로 링크를 확인한다. 합의가 필요한 설계 선택이다 — 항목의 새 자리(영역 README 의 `남은 일` 절 / `plans/*.md`)와 전체 목록을 스크립트로 뽑을지를 사용자와 정한다.
+
+**D. 이번 세션에 이미 들어간 것(main).** SHARED 임포트 라이브러리 갱신 · PCH 에서 자주 바뀌는 헤더 제거(빌드 속도 10 · 11 단계), `CLAUDE.md` 읽기 지시(백로그는 분류표 + 내 항목, `AGENTS.md` 는 절만, 에이전트 지시문에 읽을 절을 적는다).
+개인 설정: `.claude/settings.local.json` 의 graphify 훅은 `Grep` 에만 남기고 낡은 허용 목록을 지웠다(추적 안 함). 사용자 메모리는 121 개에서 29 개로 줄였고 나머지는 `memory_archive_2026-10-16/` 에 있다.
+
 ## 2. 검증 상태와 남은 검증
 
 2026-10-15 `verify` 묶음이 병합된 전체(terrain2 · modgpu · fixnogpu · fixlint · cond · folders · structure 포함)를 검증했습니다. Debug · Shipping `all AllTests` 경고 0 · 오류 0,
