@@ -19,22 +19,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( GridPathResult result )
-    {
-        switch ( result )
-        {
-            case GridPathResult::Found:
-                return "Found";
-            case GridPathResult::Partial:
-                return "Partial";
-            case GridPathResult::NoPath:
-                return "NoPath";
-            case GridPathResult::InvalidStart:
-                return "InvalidStart";
-        }
-        return "?";
-    }
-
     GridPathfinder::GridPathfinder()
         : _listCostSoFar{}
         , _listParent{}

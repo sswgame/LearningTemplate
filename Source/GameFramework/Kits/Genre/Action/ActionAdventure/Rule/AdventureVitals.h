@@ -9,6 +9,8 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Actor/Combat/Health/ResourceGauge.h"
 #include "GameFramework/Base/Actor/Combat/Health/Vitality.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -52,6 +54,7 @@ namespace sw
     };
 
     /** @brief 스태미나 한 틱의 결과입니다. 게임이 그 행동을 어떻게 끝낼지 알려 줍니다. */
+    ENUM()
     enum class AdventureStaminaOutcome : uint8
     {
         Continue = 0,
@@ -59,8 +62,6 @@ namespace sw
         Fall, ///< 오르기나 활공 중 바닥나서 떨어진다
         Drown ///< 수영 중 바닥나서 피해를 입고 물가로 돌아간다(게임이 옮긴다)
     };
-
-    SW_KIT_API const utf8* toString( AdventureStaminaOutcome outcome );
 
     /**
      * @class AdventureVitals

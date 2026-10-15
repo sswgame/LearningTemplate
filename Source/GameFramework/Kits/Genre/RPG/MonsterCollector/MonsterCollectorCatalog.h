@@ -11,6 +11,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -52,6 +54,7 @@ namespace sw
     };
 
     /** @brief 상태이상입니다(한 번에 하나만 걸립니다). */
+    ENUM()
     enum class MonsterStatus : uint8
     {
         None = 0,
@@ -69,8 +72,6 @@ namespace sw
         Foe = 0,
         Self
     };
-
-    SW_KIT_API const utf8* toString( MonsterStatus status );
 
     /** @brief 레벨에 배우는 기술 하나입니다. */
     struct MonsterLearnEntry

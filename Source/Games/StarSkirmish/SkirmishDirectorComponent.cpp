@@ -14,6 +14,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/UI/Input/UIInputMapView.h"
@@ -632,7 +633,7 @@ namespace sw
             return;
         }
         [[maybe_unused]] const RTSCommandResult result = world.issueBuild( workerID, pDef->_id, cell );
-        SW_LOG_INFO( "[Skirmish] build %# at (%#, %#): %#", pDef->_name.c_str(), cell._x, cell._y, toString( result ) );
+        SW_LOG_INFO( "[Skirmish] build %# at (%#, %#): %#", pDef->_name.c_str(), cell._x, cell._y, getEnumName( result ) );
     }
 
     void SkirmishDirectorComponent::trainFromPrimary( int32 productIndex )
@@ -647,7 +648,7 @@ namespace sw
             return;
         const RTSUnitDef&                       product = *listProduct[static_cast<size_t>( productIndex )];
         [[maybe_unused]] const RTSCommandResult result  = world.train( pPrimary->_id, product._id );
-        SW_LOG_INFO( "[Skirmish] train %# at %#: %#", product._name.c_str(), pPrimary->_pDef->_name.c_str(), toString( result ) );
+        SW_LOG_INFO( "[Skirmish] train %# at %#: %#", product._name.c_str(), pPrimary->_pDef->_name.c_str(), getEnumName( result ) );
     }
 
     bool SkirmishDirectorComponent::findGroundPoint( const InputManager& input, float3& outPoint ) const

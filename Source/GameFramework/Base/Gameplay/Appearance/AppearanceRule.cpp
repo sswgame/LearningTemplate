@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
@@ -138,30 +139,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( AppearanceRuleActionKind kind )
-    {
-        switch ( kind )
-        {
-            case AppearanceRuleActionKind::HideTarget:
-                return "HideTarget";
-            case AppearanceRuleActionKind::HideItemTag:
-                return "HideItemTag";
-            case AppearanceRuleActionKind::HideRegion:
-                return "HideRegion";
-            case AppearanceRuleActionKind::ChooseVariant:
-                return "ChooseVariant";
-            case AppearanceRuleActionKind::SwapMesh:
-                return "SwapMesh";
-            case AppearanceRuleActionKind::SwapMaterial:
-                return "SwapMaterial";
-            case AppearanceRuleActionKind::ApplyMorph:
-                return "ApplyMorph";
-            case AppearanceRuleActionKind::OverrideSocket:
-                return "OverrideSocket";
-        }
-        return "Unknown";
-    }
-
     bool AppearanceRuleCondition::isSameQuestion( const AppearanceRuleCondition& other ) const
     {
         return _kind == other._kind && _target == other._target && _tag == other._tag && _listName == other._listName;
@@ -279,7 +256,7 @@ namespace sw
                         const bool bConflict = left.isHide() == false && left.hasSameTarget( right ) && left.hasSameValue( right ) == false;
                         if ( bConflict )
                             report.addError( "%#: rules '%#' and '%#' both %# '%#' differently at priority %# - give one a higher priority", sourceName, lhs._id.c_str(), rhs._id.c_str(),
-                                             toString( left._kind ), left._target.empty() ? left._name.c_str() : left._target.c_str(), lhs._priority );
+                                             getEnumName( left._kind ), left._target.empty() ? left._name.c_str() : left._target.c_str(), lhs._priority );
                     }
                 }
             }

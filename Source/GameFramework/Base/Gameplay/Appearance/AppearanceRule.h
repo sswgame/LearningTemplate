@@ -9,6 +9,8 @@
 #include "Core/String/TagID.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceTypes.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -28,6 +30,7 @@ namespace sw
     };
 
     /** @brief 규칙 동작의 종류입니다. */
+    ENUM()
     enum class AppearanceRuleActionKind : uint8
     {
         HideTarget = 0, ///< 슬롯(주인)의 부품을 모두 숨긴다
@@ -39,8 +42,6 @@ namespace sw
         ApplyMorph,     ///< 주인(비어 있으면 몸)에 모프를 적용한다
         OverrideSocket  ///< 소켓 하나를 옮기거나 새로 만든다
     };
-
-    SW_GF_API const utf8* toString( AppearanceRuleActionKind kind );
 
     /** @brief 조건 하나입니다. */
     struct SW_GF_API AppearanceRuleCondition

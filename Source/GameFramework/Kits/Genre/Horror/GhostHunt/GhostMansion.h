@@ -13,6 +13,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -43,6 +45,7 @@ namespace sw
     };
 
     /** @brief 가구 뒤지기의 결과입니다. */
+    ENUM()
     enum class GhostSearchResult : uint8
     {
         Found = 0, ///< 전리품을 굴렸다(빈 결과일 수도 있다. "없음" 가중치)
@@ -51,8 +54,6 @@ namespace sw
         BooFound,  ///< 부가 튀어나왔다(전리품은 다음에 나온다)
         UnknownFurniture
     };
-
-    SW_KIT_API const utf8* toString( GhostSearchResult result );
 
     /** @brief 부의 상태입니다. */
     enum class GhostBooState : uint8

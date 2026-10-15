@@ -11,6 +11,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Base/Online/Mail/ServiceMail.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
@@ -43,6 +45,7 @@ namespace sw
 namespace sw
 {
     /** @brief 우편함 결과입니다. 와이어 값이므로 새 값은 끝에만 추가합니다. */
+    ENUM( Count = Count )
     enum class MailboxResult : uint8
     {
         Ok = 0,
@@ -57,8 +60,6 @@ namespace sw
         Unavailable,
         Count
     };
-
-    SW_KIT_API const utf8* toString( MailboxResult result );
 } // namespace sw
 
 namespace sw

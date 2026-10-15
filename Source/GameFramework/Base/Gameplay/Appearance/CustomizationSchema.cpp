@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceTypes.h"
@@ -31,7 +32,7 @@ namespace sw
                 constexpr CustomizationKind kArrKind[] = { CustomizationKind::Slider, CustomizationKind::Color, CustomizationKind::Choice, CustomizationKind::Attachment };
                 for ( const CustomizationKind kind : kArrKind )
                 {
-                    if ( StringUtil::equals( pName, toString( kind ), true ) )
+                    if ( StringUtil::equals( pName, getEnumName( kind ), true ) )
                     {
                         outKind = kind;
                         return true;
@@ -46,7 +47,7 @@ namespace sw
                                                                 CustomizationDriveKind::MaterialColor, CustomizationDriveKind::DyeChannel, CustomizationDriveKind::PaletteSwap };
                 for ( const CustomizationDriveKind kind : kArrKind )
                 {
-                    if ( StringUtil::equals( text, string_view( toString( kind ) ), true ) )
+                    if ( StringUtil::equals( text, string_view( getEnumName( kind ) ), true ) )
                     {
                         outKind = kind;
                         return true;
@@ -104,7 +105,7 @@ namespace sw
                 const bool bFits        = ( inoutParam._kind == CustomizationKind::Slider && bSliderDrive ) || ( inoutParam._kind == CustomizationKind::Color && bSliderDrive == false );
                 if ( bFits == false || drive._target.empty() )
                 {
-                    report.addError( "%#: schema '%#' parameter '%#' cannot drive %# '%#'", sourceName, schemaID.c_str(), inoutParam._name.c_str(), toString( drive._kind ), drive._target.c_str() );
+                    report.addError( "%#: schema '%#' parameter '%#' cannot drive %# '%#'", sourceName, schemaID.c_str(), inoutParam._name.c_str(), getEnumName( drive._kind ), drive._target.c_str() );
                     return;
                 }
                 if ( drive._kind == CustomizationDriveKind::DyeChannel && ( drive._channel < 0 || drive._channel > kMaxDyeChannel ) )
@@ -233,42 +234,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( CustomizationKind kind )
-    {
-        switch ( kind )
-        {
-            case CustomizationKind::Slider:
-                return "Slider";
-            case CustomizationKind::Color:
-                return "Color";
-            case CustomizationKind::Choice:
-                return "Choice";
-            case CustomizationKind::Attachment:
-                return "Attachment";
-        }
-        return "Unknown";
-    }
-
-    const utf8* toString( CustomizationDriveKind kind )
-    {
-        switch ( kind )
-        {
-            case CustomizationDriveKind::Morph:
-                return "Morph";
-            case CustomizationDriveKind::BoneProportion:
-                return "BoneProportion";
-            case CustomizationDriveKind::MaterialScalar:
-                return "MaterialScalar";
-            case CustomizationDriveKind::MaterialColor:
-                return "MaterialColor";
-            case CustomizationDriveKind::DyeChannel:
-                return "DyeChannel";
-            case CustomizationDriveKind::PaletteSwap:
-                return "PaletteSwap";
-        }
-        return "Unknown";
-    }
-
     const CustomizationOptionDef* CustomizationParamDef::findOption( const hashed_string& option ) const
     {
         for ( const CustomizationOptionDef& entry : _listOption )

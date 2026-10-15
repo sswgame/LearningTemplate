@@ -10,6 +10,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -40,6 +42,7 @@ namespace sw
 namespace sw
 {
     /** @brief 계정 호출의 결과입니다. 와이어 형식이므로 값을 바꾸면 `AccountProtocol::kVersion` 을 올려야 하며, 새 값은 뒤에만 추가합니다. */
+    ENUM()
     enum class LoginResult : uint8
     {
         Ok = 0,
@@ -63,8 +66,6 @@ namespace sw
         NotLinked,           ///< 연동 해제에서 이 계정에 그 제공자가 연동돼 있지 않다
         InvalidRequest       ///< 본문이 깨졌거나 상한을 넘었다
     };
-
-    SW_KIT_API const utf8* toString( LoginResult result );
 
     /** @brief 세션이 끝난 이유입니다. 묘비와 알림에 남으며 와이어 형식입니다. */
     enum class LoginRevokeReason : uint8

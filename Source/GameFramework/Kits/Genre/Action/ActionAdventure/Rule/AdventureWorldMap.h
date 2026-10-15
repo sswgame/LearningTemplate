@@ -10,6 +10,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -46,14 +48,13 @@ namespace sw
     };
 
     /** @brief 증표 교환 결과입니다. */
+    ENUM()
     enum class AdventureExchangeResult : uint8
     {
         Ok = 0,
         NotEnoughOrbs,
         AtLimit ///< 하트나 스태미나가 이미 최대라서 교환하지 않았고, 증표는 그대로다
     };
-
-    SW_KIT_API const utf8* toString( AdventureExchangeResult result );
 
     /**
      * @class AdventureWorldMap

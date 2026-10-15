@@ -175,34 +175,6 @@ namespace sw
         return category.empty() == false && VectorUtil::contains( _listRefusedCategory, category );
     }
 
-    const utf8* toString( ShopResult result )
-    {
-        switch ( result )
-        {
-            case ShopResult::Ok:
-                return "Ok";
-            case ShopResult::UnknownShop:
-                return "UnknownShop";
-            case ShopResult::UnknownItem:
-                return "UnknownItem";
-            case ShopResult::InvalidCount:
-                return "InvalidCount";
-            case ShopResult::Locked:
-                return "Locked";
-            case ShopResult::OutOfStock:
-                return "OutOfStock";
-            case ShopResult::NotEnoughMoney:
-                return "NotEnoughMoney";
-            case ShopResult::NoRoom:
-                return "NoRoom";
-            case ShopResult::Refused:
-                return "Refused";
-            case ShopResult::NotOwned:
-                return "NotOwned";
-        }
-        return "Unknown";
-    }
-
     uint32 ShopCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;

@@ -227,6 +227,9 @@ namespace sw
                 return findType( typeFqn<T>() );
         }
 
+        /** @brief 컴파일러가 만든 enum FQN(`typeFqn<E>()`)으로 찾고, 없으면 마지막 이름(leaf)으로 찾습니다. 없으면 nullptr 입니다. */
+        const EnumInfo* findEnumByTypeFqn( const hashed_string& fqn ) const;
+
         /** @brief 템플릿 enum 타입 E의 EnumInfo를 조회합니다. */
         template <typename E>
         const EnumInfo* findEnum() const
@@ -378,26 +381,11 @@ namespace sw
         TaskValue invokeMethod( void* pInstance, const hashed_string& classFqn, const hashed_string& methodName, const TaskArgs& args = {} ) const;
 
     private:
-        /** @brief 템플릿 enum 의 FQN 이나 마지막 이름(leaf)으로 EnumInfo 를 찾습니다. */
+        /** @brief 템플릿 enum 의 EnumInfo 입니다. 찾는 규칙은 `findEnumByTypeFqn` 입니다. */
         template <typename E>
         const EnumInfo* findEnumOf() const
         {
-            const hashed_string fqn   = typeFqn<E>();
-            const EnumInfo*     pInfo = findEnum( fqn );
-            if ( pInfo != nullptr )
-                return pInfo;
-            const utf8* pCstr = fqn.c_str();
-            if ( pCstr == nullptr || *pCstr == 0 )
-                return nullptr;
-            const string_view fqnView{ pCstr };
-            const size_t      lastScope = fqnView.rfind( constant::reflection::kScopeDelimiter );
-            if ( lastScope != string_view::npos )
-            {
-                const size_t      delimiterLength = StringUtil::strlen( constant::reflection::kScopeDelimiter );
-                const string_view leaf            = fqnView.substr( lastScope + delimiterLength );
-                return findEnum( hashed_string( leaf.data(), static_cast<uint32>( leaf.size() ) ) );
-            }
-            return nullptr;
+            return findEnumByTypeFqn( typeFqn<E>() );
         }
 
         mutable std::shared_mutex _mutex;

@@ -5,6 +5,8 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/WallClock.h"
 
+#include "Engine/Reflection/EnumName.h"
+
 namespace sw::editor
 {
     namespace
@@ -111,7 +113,7 @@ namespace sw::editor
         _bLastReplayed = reply._reply._bReplayed == SW_TRUE;
 
         StringBuilder<constant::kMaxBuffer128> status;
-        status.appendFormat( "%#: %#", AdminToolSessionInternal::getMethodName( reply._method ), toString( reply._reply._result ) );
+        status.appendFormat( "%#: %#", AdminToolSessionInternal::getMethodName( reply._method ), getEnumName( reply._reply._result ) );
         if ( reply._errorCode != 0 )
             status.appendFormat( " (error %#)", reply._errorCode );
         _statusLine = string( status.view() );

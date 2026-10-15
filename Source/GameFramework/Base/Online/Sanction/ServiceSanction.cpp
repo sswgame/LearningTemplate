@@ -31,22 +31,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( ServiceSanctionKind kind )
-    {
-        switch ( kind )
-        {
-            case ServiceSanctionKind::ChatMute:
-                return "ChatMute";
-            case ServiceSanctionKind::Suspend:
-                return "Suspend";
-            case ServiceSanctionKind::Ban:
-                return "Ban";
-            case ServiceSanctionKind::Count:
-                return "Count";
-        }
-        return "Unknown";
-    }
-
     const hashed_string& ServiceSanction::getTable()
     {
         static const hashed_string s_table{ "service_sanction" };

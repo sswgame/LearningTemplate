@@ -11,6 +11,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
 #include "GameFramework/Base/World/Environment/WorldClock.h"
 #include "GameFramework/Base/World/Land/LandRegistry.h"
@@ -46,6 +48,7 @@ namespace sw
 namespace sw
 {
     /** @brief 대화와 선물의 결과입니다. */
+    ENUM()
     enum class CreatureInteractResult : uint8
     {
         Ok = 0,
@@ -55,6 +58,7 @@ namespace sw
     };
 
     /** @brief 부탁 받기의 결과입니다. */
+    ENUM()
     enum class CreatureRequestResult : uint8
     {
         Ok = 0,
@@ -65,6 +69,7 @@ namespace sw
     };
 
     /** @brief 능력 쓰기의 결과입니다. */
+    ENUM()
     enum class CreatureAbilityResult : uint8
     {
         Ok = 0,
@@ -77,6 +82,7 @@ namespace sw
     };
 
     /** @brief 집 배정의 결과입니다. */
+    ENUM()
     enum class CreatureHouseResult : uint8
     {
         Ok = 0,
@@ -84,11 +90,6 @@ namespace sw
         UnknownHouse,
         HouseFull
     };
-
-    SW_KIT_API const utf8* toString( CreatureInteractResult result );
-    SW_KIT_API const utf8* toString( CreatureRequestResult result );
-    SW_KIT_API const utf8* toString( CreatureAbilityResult result );
-    SW_KIT_API const utf8* toString( CreatureHouseResult result );
 
     /** @brief 격자 위에 생긴 서식지 하나입니다. */
     struct HabitatInstance

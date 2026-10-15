@@ -4,6 +4,7 @@
 
 #include "Core/Log/Logger.h"
 
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 SW_LOG_CALLER( "ReflectionInvoke" );
@@ -68,26 +69,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( const ReflectCallResult result )
-    {
-        switch ( result )
-        {
-            case ReflectCallResult::Ok:
-                return "Ok";
-            case ReflectCallResult::NotBound:
-                return "NotBound";
-            case ReflectCallResult::NullInstance:
-                return "NullInstance";
-            case ReflectCallResult::TooManyArguments:
-                return "TooManyArguments";
-            case ReflectCallResult::MissingArgument:
-                return "MissingArgument";
-            case ReflectCallResult::ArgumentMismatch:
-                return "ArgumentMismatch";
-        }
-        return "?";
-    }
-
     void EventInfo::setOps( const ReflectEventOps* pOps )
     {
         _pOps = pOps;
@@ -241,7 +222,7 @@ namespace sw
             const vector<ReflectValue> listPass( listArg.begin(), listArg.begin() + static_cast<ptrdiff_t>( passCount ) );
             const ReflectCallResult    result = call( *pCurrent, pTarget, listPass, nullptr );
             if ( result != ReflectCallResult::Ok )
-                SW_LOG_WARNING( "Event-bound call '%#::%#' failed: %#", pTargetType->_fullyQualifiedName.c_str(), functionName.c_str(), toString( result ) );
+                SW_LOG_WARNING( "Event-bound call '%#::%#' failed: %#", pTargetType->_fullyQualifiedName.c_str(), functionName.c_str(), getEnumName( result ) );
         };
         return bindEvent( event, pSource, ReflectEventHandler::create( forward ) );
     }

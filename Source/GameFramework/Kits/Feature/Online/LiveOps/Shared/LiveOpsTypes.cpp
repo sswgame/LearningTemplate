@@ -4,28 +4,6 @@
 
 namespace sw
 {
-    const utf8* toString( LiveOpsResult result )
-    {
-        switch ( result )
-        {
-            case LiveOpsResult::Ok:
-                return "Ok";
-            case LiveOpsResult::NotFound:
-                return "NotFound";
-            case LiveOpsResult::Invalid:
-                return "Invalid";
-            case LiveOpsResult::Unavailable:
-                return "Unavailable";
-            case LiveOpsResult::RateLimited:
-                return "RateLimited";
-            case LiveOpsResult::UnknownProvider:
-                return "UnknownProvider";
-            case LiveOpsResult::Count:
-                break;
-        }
-        return "Unknown";
-    }
-
     bool PushLimit::isValidProviderID( string_view providerID )
     {
         if ( providerID.empty() || providerID.size() > static_cast<size_t>( kMaxProviderIDSize ) )

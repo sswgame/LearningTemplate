@@ -9,6 +9,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -28,6 +30,7 @@ namespace sw
     };
 
     /** @brief 건물의 역할입니다. */
+    ENUM()
     enum class CityBuildingKind : uint8
     {
         House = 0, ///< 사람이 산다. 서비스와 물자를 받으면 단계가 오른다
@@ -59,7 +62,6 @@ namespace sw
 
     [[nodiscard]] SW_KIT_API bool parseCityService( string_view text, CityService& outService );
     SW_KIT_API const utf8*        toString( CityService service );
-    SW_KIT_API const utf8*        toString( CityBuildingKind kind );
     constexpr uint8               makeCityServiceBit( CityService service )
     {
         return static_cast<uint8>( 1u << static_cast<uint32>( service ) );

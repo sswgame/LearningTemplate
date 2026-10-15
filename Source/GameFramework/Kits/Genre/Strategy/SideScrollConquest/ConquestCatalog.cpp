@@ -91,20 +91,6 @@ namespace sw
         return ConquestCatalogInternal::kTeamTable.parse( text, outTeam );
     }
 
-    const utf8* toString( ConquestTeam team )
-    {
-        switch ( team )
-        {
-            case ConquestTeam::Neutral:
-                return "Neutral";
-            case ConquestTeam::Player:
-                return "Player";
-            case ConquestTeam::Enemy:
-                return "Enemy";
-        }
-        return "?";
-    }
-
     ConquestCatalog::ConquestCatalog()
         : _buildingCatalog{}
         , _unitCatalog{}

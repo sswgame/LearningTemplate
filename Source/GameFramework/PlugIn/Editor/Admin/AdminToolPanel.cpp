@@ -13,6 +13,8 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Reflection/EnumName.h"
+
 #include "GameFramework/PlugIn/Editor/Admin/AdminToolSession.h"
 
 #include <imgui.h>
@@ -191,7 +193,7 @@ namespace sw::editor
         for ( int32 kindIndex = 0; kindIndex < static_cast<int32>( ServiceSanctionKind::Count ); ++kindIndex )
         {
             const string state = AdminToolPanelInternal::formatSanction( lookup._sanction._arrUntilMs[kindIndex] );
-            ImGui::Text( "%s: %s", toString( static_cast<ServiceSanctionKind>( kindIndex ) ), state.c_str() );
+            ImGui::Text( "%s: %s", getEnumName( static_cast<ServiceSanctionKind>( kindIndex ) ), state.c_str() );
             if ( kindIndex + 1 < static_cast<int32>( ServiceSanctionKind::Count ) )
                 ImGui::SameLine();
         }
@@ -236,11 +238,11 @@ namespace sw::editor
 
         constexpr ServiceSanctionKind kArrKind[] = { ServiceSanctionKind::ChatMute, ServiceSanctionKind::Suspend, ServiceSanctionKind::Ban };
         ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
-        if ( ImGui::BeginCombo( "Kind", toString( _sanctionKind ) ) )
+        if ( ImGui::BeginCombo( "Kind", getEnumName( _sanctionKind ) ) )
         {
             for ( const ServiceSanctionKind kind : kArrKind )
             {
-                if ( ImGui::Selectable( toString( kind ), kind == _sanctionKind ) )
+                if ( ImGui::Selectable( getEnumName( kind ), kind == _sanctionKind ) )
                     _sanctionKind = kind;
             }
             ImGui::EndCombo();

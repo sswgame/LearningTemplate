@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Engine/Reflection/EnumName.h"
+
 #include "GameFramework/Kits/Feature/Online/Chat/Shared/ChatTypes.h"
 
 #include "TestFramework/TestFramework.h"
@@ -37,5 +39,5 @@ SW_TEST_CASE( ChatChannelIDTest, MakesGuildPartyAndOrderFreeWhisperIDs )
     SW_EXPECT_STREQ( whisper.c_str(), ChatChannelID::makeWhisper( 3, 9 ).c_str() );
     SW_EXPECT_STREQ( whisper.c_str(), "whisper.0000000000000003.0000000000000009" );
     SW_EXPECT_TRUE( ChatChannelID::parseKind( whisper, kind ) && kind == ChatChannelKind::Whisper );
-    SW_EXPECT_STREQ( toString( ChatResult::RateLimited ), "RateLimited" );
+    SW_EXPECT_STREQ( getEnumName( ChatResult::RateLimited ), "RateLimited" );
 }

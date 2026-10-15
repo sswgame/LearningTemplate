@@ -11,6 +11,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -23,6 +25,7 @@ namespace sw
     class WitcherCatalog;
 
     /** @brief 조사 결과입니다. */
+    ENUM()
     enum class WitcherClueResult : uint8
     {
         Found = 0,
@@ -32,8 +35,6 @@ namespace sw
         TooFar,
         Solved ///< 계약의 조사가 이미 끝났다
     };
-
-    SW_KIT_API const utf8* toString( WitcherClueResult result );
 
     /** @brief 조사에서 생긴 일입니다. */
     struct WitcherInvestigationEvent
@@ -101,6 +102,7 @@ namespace sw
 namespace sw
 {
     /** @brief 흥정 결과입니다. */
+    ENUM()
     enum class WitcherHaggleResult : uint8
     {
         Accepted = 0, ///< 받아들였다(흥정 끝)
@@ -108,8 +110,6 @@ namespace sw
         BrokenOff,    ///< 화가 나서 흥정을 끝냈다(처음 보상만 준다)
         Closed        ///< 이미 끝났다
     };
-
-    SW_KIT_API const utf8* toString( WitcherHaggleResult result );
 
     /**
      * @class WitcherHaggle

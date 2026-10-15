@@ -110,28 +110,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( HorrorPuzzleResult result )
-    {
-        switch ( result )
-        {
-            case HorrorPuzzleResult::Solved:
-                return "Solved";
-            case HorrorPuzzleResult::Progress:
-                return "Progress";
-            case HorrorPuzzleResult::Wrong:
-                return "Wrong";
-            case HorrorPuzzleResult::AlreadySolved:
-                return "AlreadySolved";
-            case HorrorPuzzleResult::LockedOut:
-                return "LockedOut";
-            case HorrorPuzzleResult::MissingItem:
-                return "MissingItem";
-            case HorrorPuzzleResult::Unknown:
-                return "Unknown";
-        }
-        return "?";
-    }
-
     HorrorSession::HorrorSession()
         : _sanity{}
         , _battery{}

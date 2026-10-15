@@ -9,6 +9,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -18,6 +20,7 @@ namespace sw
     class WitcherCatalog;
 
     /** @brief 슬롯에 끼우기 결과입니다. */
+    ENUM()
     enum class WitcherSlotResult : uint8
     {
         Ok = 0,
@@ -26,8 +29,6 @@ namespace sw
         AlreadyEquipped, ///< 그 스킬은 다른 슬롯에 있다
         UnknownMutagen
     };
-
-    SW_KIT_API const utf8* toString( WitcherSlotResult result );
 
     /**
      * @class WitcherMutagens

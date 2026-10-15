@@ -11,6 +11,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Foundation/Utility/Time/FixedStepTimer.h"
@@ -46,6 +48,7 @@ namespace sw
 namespace sw
 {
     /** @brief 건설과 도로 놓기의 결과입니다. */
+    ENUM()
     enum class CityPlaceResult : uint8
     {
         Ok = 0,
@@ -55,8 +58,6 @@ namespace sw
         NotEnoughMoney,
         UnknownBuilding
     };
-
-    SW_KIT_API const utf8* toString( CityPlaceResult result );
 
     /** @brief 일꾼의 종류입니다. */
     enum class CityWalkerKind : uint8

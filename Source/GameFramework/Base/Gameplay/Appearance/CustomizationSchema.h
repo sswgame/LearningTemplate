@@ -10,6 +10,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Data/CustomizationValueSet.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -19,6 +21,7 @@ namespace sw
     class XMLNode;
 
     /** @brief 매개변수 종류입니다. */
+    ENUM()
     enum class CustomizationKind : uint8
     {
         Slider = 0, ///< 범위 안의 수. 모프 가중치, 본 비율, 머티리얼 스칼라에 쓴다
@@ -28,6 +31,7 @@ namespace sw
     };
 
     /** @brief 슬라이더와 색이 움직이는 대상의 종류입니다. */
+    ENUM()
     enum class CustomizationDriveKind : uint8
     {
         Morph = 0,      ///< 모프 가중치(슬라이더)
@@ -37,9 +41,6 @@ namespace sw
         DyeChannel,     ///< 마스크 염색 채널 0..3(색)
         PaletteSwap     ///< 스프라이트 팔레트 슬롯(색, 2D 종이 인형)
     };
-
-    SW_GF_API const utf8* toString( CustomizationKind kind );
-    SW_GF_API const utf8* toString( CustomizationDriveKind kind );
 
     /** @brief 슬라이더와 색 값이 움직이는 대상 하나입니다. 슬라이더는 범위 [min, max] 를 [from, to] 로 옮겨서 씁니다. */
     struct CustomizationDriveDef

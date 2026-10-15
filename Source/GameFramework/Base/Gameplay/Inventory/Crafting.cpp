@@ -61,30 +61,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( CraftResult result )
-    {
-        switch ( result )
-        {
-            case CraftResult::Ok:
-                return "Ok";
-            case CraftResult::UnknownRecipe:
-                return "UnknownRecipe";
-            case CraftResult::NotLearned:
-                return "NotLearned";
-            case CraftResult::WrongStation:
-                return "WrongStation";
-            case CraftResult::LevelTooLow:
-                return "LevelTooLow";
-            case CraftResult::MissingInputs:
-                return "MissingInputs";
-            case CraftResult::MissingTools:
-                return "MissingTools";
-            case CraftResult::NoRoom:
-                return "NoRoom";
-        }
-        return "Unknown";
-    }
-
     // ------------------------------------------------------------------------------
     // RecipeCatalog
     // ------------------------------------------------------------------------------

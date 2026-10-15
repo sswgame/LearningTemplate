@@ -10,12 +10,15 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     /** @brief 순위표 업무 결과입니다. 응답 본문의 첫 값이며 와이어 값이므로 새 값은 끝에만 추가합니다. */
+    ENUM( Count = Count )
     enum class LeaderboardResult : uint8
     {
         Ok = 0,
@@ -28,8 +31,6 @@ namespace sw
         Conflict,     ///< 다시 해도 경합이 난다. 잠시 뒤에 시도한다
         Count
     };
-
-    SW_KIT_API const utf8* toString( LeaderboardResult result );
 } // namespace sw
 
 namespace sw

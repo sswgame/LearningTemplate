@@ -13,26 +13,6 @@ namespace sw
 {
     SW_LOG_CALLER( "QuestLog" );
 
-    const utf8* toString( QuestStartResult result )
-    {
-        switch ( result )
-        {
-            case QuestStartResult::Ok:
-                return "Ok";
-            case QuestStartResult::UnknownQuest:
-                return "UnknownQuest";
-            case QuestStartResult::AlreadyActive:
-                return "AlreadyActive";
-            case QuestStartResult::AlreadyDone:
-                return "AlreadyDone";
-            case QuestStartResult::RequirementMissing:
-                return "RequirementMissing";
-            case QuestStartResult::LevelTooLow:
-                return "LevelTooLow";
-        }
-        return "Unknown";
-    }
-
     QuestLog::QuestLog()
         : _listProgress{}
         , _eventBuffer{}

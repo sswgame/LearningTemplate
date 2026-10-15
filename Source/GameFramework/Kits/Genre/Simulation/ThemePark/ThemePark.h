@@ -15,6 +15,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/Base/Foundation/Utility/Time/FixedStepTimer.h"
@@ -74,6 +76,7 @@ namespace sw
     };
 
     /** @brief 손님의 마지막 생각입니다. 롤러코스터 타이쿤의 "생각" 말풍선에 해당하며, 게임이 세어서 보여 줍니다. */
+    ENUM()
     enum class ParkGuestThought : uint8
     {
         None = 0,
@@ -87,9 +90,6 @@ namespace sw
         OutOfCash,    ///< 돈이 없다
         NothingToRide ///< 탈 것이 없다
     };
-
-    /** @brief 생각 이름을 반환합니다(로그와 UI 용). */
-    SW_KIT_API const utf8* toString( ParkGuestThought thought );
 
     /** @brief 손님 한 명입니다. */
     struct ParkGuest

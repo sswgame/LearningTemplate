@@ -23,34 +23,6 @@ namespace sw
         };
     } // namespace
 
-    const utf8* toString( RTSCommandResult result )
-    {
-        switch ( result )
-        {
-            case RTSCommandResult::Ok:
-                return "Ok";
-            case RTSCommandResult::InvalidUnit:
-                return "InvalidUnit";
-            case RTSCommandResult::NotOwner:
-                return "NotOwner";
-            case RTSCommandResult::CannotDo:
-                return "CannotDo";
-            case RTSCommandResult::NotEnoughMinerals:
-                return "NotEnoughMinerals";
-            case RTSCommandResult::NotEnoughGas:
-                return "NotEnoughGas";
-            case RTSCommandResult::NotEnoughSupply:
-                return "NotEnoughSupply";
-            case RTSCommandResult::TechRequired:
-                return "TechRequired";
-            case RTSCommandResult::QueueFull:
-                return "QueueFull";
-            case RTSCommandResult::InvalidPlacement:
-                return "InvalidPlacement";
-        }
-        return "Unknown";
-    }
-
     RTSWorld::RTSWorld()
         : _grid{}
         , _airGrid{}

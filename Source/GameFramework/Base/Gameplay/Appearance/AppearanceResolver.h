@@ -10,6 +10,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceTypes.h"
 #include "GameFramework/Base/Gameplay/Appearance/ItemVisual.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -129,6 +131,7 @@ namespace sw
 namespace sw
 {
     /** @brief 해석 단계입니다. 설명을 단계별로 분류하는 데 씁니다. */
+    ENUM()
     enum class AppearanceTraceStep : uint8
     {
         Customization = 0,
@@ -138,8 +141,6 @@ namespace sw
         Rule,
         Output
     };
-
-    SW_GF_API const utf8* toString( AppearanceTraceStep step );
 
     /** @brief 설명 한 항목입니다. 무엇(규칙 id, 세트 id, 슬롯)이 무엇을 했는지 담으며, 편집 창의 "왜 이렇게 보이나" 에 씁니다. */
     struct AppearanceTraceEntry

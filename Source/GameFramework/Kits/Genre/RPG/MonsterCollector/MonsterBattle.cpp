@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Actor/Combat/Damage/ElementChart.h"
@@ -443,7 +444,7 @@ namespace sw
             target._statusTurns = _random.nextInt( 1, kMaxSleepTurns );
         else if ( status == MonsterStatus::Toxic )
             target._statusTurns = 1;
-        pushEvent( MonsterBattleEvent::Kind::StatusApplied, targetSide, static_cast<int32>( status ), hashed_string( toString( status ) ) );
+        pushEvent( MonsterBattleEvent::Kind::StatusApplied, targetSide, static_cast<int32>( status ), hashed_string( getEnumName( status ) ) );
     }
 
     void MonsterBattle::applyStatChange( int32 targetSide, MonsterStat stat, int32 stages )

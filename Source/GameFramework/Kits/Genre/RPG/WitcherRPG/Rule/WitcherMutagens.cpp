@@ -10,24 +10,6 @@
 
 namespace sw
 {
-    const utf8* toString( WitcherSlotResult result )
-    {
-        switch ( result )
-        {
-            case WitcherSlotResult::Ok:
-                return "Ok";
-            case WitcherSlotResult::InvalidSlot:
-                return "InvalidSlot";
-            case WitcherSlotResult::Locked:
-                return "Locked";
-            case WitcherSlotResult::AlreadyEquipped:
-                return "AlreadyEquipped";
-            case WitcherSlotResult::UnknownMutagen:
-                return "UnknownMutagen";
-        }
-        return "Unknown";
-    }
-
     WitcherMutagens::WitcherMutagens()
         : _listGroup{}
         , _pCatalog{ nullptr }

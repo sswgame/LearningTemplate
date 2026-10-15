@@ -10,6 +10,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -30,6 +31,7 @@ namespace sw
     };
 
     /** @brief 장착 조건이 깨질 때(세트 한 조각을 벗거나 태그를 잃을 때)의 처리 방식입니다. 아이템마다 데이터로 고릅니다. */
+    ENUM()
     enum class EquipBreakPolicy : uint8
     {
         UnequipTogether = 0, ///< 함께 벗는다(벗은 것은 호출한 쪽에 돌려준다)
@@ -37,7 +39,6 @@ namespace sw
         RefuseUnequip        ///< 조건을 깨뜨리는 벗기와 바꿔 끼기를 거부한다. 캐릭터 쪽 변화로 깨지면 숨김으로 둔다
     };
 
-    SW_GF_API const utf8* toString( EquipBreakPolicy policy );
     /** @brief 데이터 이름을 정책으로 읽습니다. 알 수 없는 이름이면 false 입니다. */
     [[nodiscard]] SW_GF_API bool parseEquipBreakPolicy( string_view text, EquipBreakPolicy& outPolicy );
 

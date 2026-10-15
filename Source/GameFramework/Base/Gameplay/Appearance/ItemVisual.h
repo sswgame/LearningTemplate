@@ -10,6 +10,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceTypes.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -19,6 +20,7 @@ namespace sw
     class XMLNode;
 
     /** @brief 부품 종류입니다. 해석기는 차원을 구분하지 않으므로 메시 부품과 스프라이트 부품이 같은 경로를 탑니다. */
+    ENUM()
     enum class AppearancePartKind : uint8
     {
         Skinned = 0,      ///< 캐릭터 스켈레톤을 따르는 메시(피팅과 병합을 거친다)
@@ -26,8 +28,6 @@ namespace sw
         BodyModification, ///< 몸 수정. 모프, 머티리얼 값, 숨김 영역을 바꾸며 직접 그려지는 것은 없다
         Sprite            ///< 2D 종이 인형 조각(스프라이트, 그리기 순서, 소켓 기준점)
     };
-
-    SW_GF_API const utf8* toString( AppearancePartKind kind );
 
     /** @brief 이름 붙은 변형입니다. 메시(또는 스프라이트)와 머티리얼을 바꿉니다. 비워 둔 항목은 기본값을 씁니다. */
     struct AppearancePartVariantDef

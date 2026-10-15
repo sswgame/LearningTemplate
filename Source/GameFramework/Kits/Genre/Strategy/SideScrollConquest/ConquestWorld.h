@@ -15,6 +15,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/Base/Foundation/Utility/Time/FixedStepTimer.h"
@@ -34,6 +36,7 @@ namespace sw
     };
 
     /** @brief 건설, 배정, 훈련의 결과입니다. */
+    ENUM()
     enum class ConquestResult : uint8
     {
         Ok = 0,
@@ -46,8 +49,6 @@ namespace sw
         CannotTrainHere,
         NoFreeWorkers
     };
-
-    SW_KIT_API const utf8* toString( ConquestResult result );
 
     /** @brief 거점의 현재 상태입니다. */
     struct ConquestSite

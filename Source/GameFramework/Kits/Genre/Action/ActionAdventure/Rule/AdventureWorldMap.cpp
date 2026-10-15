@@ -14,20 +14,6 @@ namespace sw
 {
     SW_LOG_CALLER( "AdventureWorldMap" );
 
-    const utf8* toString( AdventureExchangeResult result )
-    {
-        switch ( result )
-        {
-            case AdventureExchangeResult::Ok:
-                return "Ok";
-            case AdventureExchangeResult::NotEnoughOrbs:
-                return "NotEnoughOrbs";
-            case AdventureExchangeResult::AtLimit:
-                return "AtLimit";
-        }
-        return "Unknown";
-    }
-
     AdventureWorldMap::AdventureWorldMap()
         : _catalog{}
         , _listActivated{}

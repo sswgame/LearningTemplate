@@ -29,42 +29,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( WitcherClueResult result )
-    {
-        switch ( result )
-        {
-            case WitcherClueResult::Found:
-                return "Found";
-            case WitcherClueResult::UnknownClue:
-                return "UnknownClue";
-            case WitcherClueResult::AlreadyFound:
-                return "AlreadyFound";
-            case WitcherClueResult::OutOfOrder:
-                return "OutOfOrder";
-            case WitcherClueResult::TooFar:
-                return "TooFar";
-            case WitcherClueResult::Solved:
-                return "Solved";
-        }
-        return "Unknown";
-    }
-
-    const utf8* toString( WitcherHaggleResult result )
-    {
-        switch ( result )
-        {
-            case WitcherHaggleResult::Accepted:
-                return "Accepted";
-            case WitcherHaggleResult::Countered:
-                return "Countered";
-            case WitcherHaggleResult::BrokenOff:
-                return "BrokenOff";
-            case WitcherHaggleResult::Closed:
-                return "Closed";
-        }
-        return "Unknown";
-    }
-
     WitcherInvestigation::WitcherInvestigation()
         : _listFound{}
         , _eventBuffer{}

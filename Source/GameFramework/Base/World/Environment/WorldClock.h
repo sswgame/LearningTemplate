@@ -11,6 +11,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -37,6 +39,7 @@ namespace sw
 namespace sw
 {
     /** @brief 하루의 때(새벽, 낮, 해질녘, 밤)입니다. */
+    ENUM()
     enum class DayPhase : uint8
     {
         Night = 0,
@@ -44,8 +47,6 @@ namespace sw
         Day,
         Dusk
     };
-
-    SW_GF_API const utf8* toString( DayPhase phase );
 
     /** @brief 시계가 넘은 경계입니다. */
     struct WorldClockEvent

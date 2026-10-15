@@ -12,6 +12,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Actor/Navigation/FlowField.h"
 #include "GameFramework/Base/Actor/Navigation/GridPathfinder.h"
 #include "GameFramework/Base/Actor/Navigation/NavAgent.h"
@@ -79,6 +81,7 @@ namespace sw
 namespace sw
 {
     /** @brief 명령과 생산의 결과입니다. */
+    ENUM()
     enum class RTSCommandResult : uint8
     {
         Ok = 0,
@@ -92,8 +95,6 @@ namespace sw
         QueueFull,
         InvalidPlacement
     };
-
-    SW_KIT_API const utf8* toString( RTSCommandResult result );
 
     /** @brief 일꾼의 채취 단계입니다. */
     enum class RTSGatherPhase : uint8
