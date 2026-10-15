@@ -1,6 +1,8 @@
-name: Header self-containment (daily)
+name: Daily compile guards (headers · deadlock detection)
 
-# 헤더 하나하나를 혼자 컴파일한다(Scripts/lint/report/RunHeaderSelfContained.py). 전 트리 3~10 분이라 push 마다 돌리지 않고 하루 한 번 · 수동으로 돈다.
+# 매일 한 번 · 수동으로 도는 컴파일 검사 둘 — 어느 구성도 평소에 지키지 않아 썩기 쉽고, 전 트리를 다시 훑느라 push 마다 돌리기엔 길다. 한 번 지은 빌드를 둘이 나눠 쓴다.
+#  ① 헤더 하나하나를 혼자 컴파일한다(Scripts/lint/report/RunHeaderSelfContained.py, 3~10 분).
+#  ② 아무 프리셋도 켜지 않는 `SW_ENABLE_DEADLOCK_DETECTION` 구성이 컴파일되는지 본다(RunBuildWarnings.py, 약 14 분).
 # 커밋 훅은 빌드 폴더가 있는 PC 에서 staged 헤더만 본다(Scripts/lint/gate/CheckHeaderSelfContained.py) — 이 잡은 훅이 못 본 것(빌드 없이 한 커밋,
 # 다른 헤더를 정리해 생긴 깨짐)을 잡는다.
 #
@@ -22,7 +24,7 @@ env:
 
 jobs:
   header-self-contained:
-    name: Header self-containment (Windows clang-cl)
+    name: Compile guards (Windows clang-cl)
     runs-on: windows-2022
     timeout-minutes: 120
 
@@ -58,6 +60,16 @@ jobs:
       run: |
         $PY Scripts/dev/CiFailureReport.py build --log build/build.log
 
+    # 두 검사는 같은 빌드를 쓰므로 하나가 져도 다른 하나는 돈다.
     - name: Check that every header compiles on its own
+      id: headers
       run: |
         python Scripts/lint/report/RunHeaderSelfContained.py --preset CI-Debug --fail-on-violation
+
+    # `SW_ENABLE_DEADLOCK_DETECTION` 은 어느 프리셋도 켜지 않는 옵션이라 짓지 않으면 썩는다. 구성을 따로 짓지 않고, 방금 지은 컴파일 DB 의
+    # 모든 TU 를 그 정의를 더해 -fsyntax-only 로 돌린다(Windows Debug 에서 14 분 — push 마다 돌리기엔 길어 ci.yml 에서 옮겼다).
+    # 오류가 있거나 검사한 TU 가 없으면 진다(경고는 컴파일러 버전마다 달라 보고만 한다).
+    - name: Compile check with SW_ENABLE_DEADLOCK_DETECTION
+      if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+      run: |
+        python Scripts/lint/report/RunBuildWarnings.py --preset CI-Debug --define SW_ENABLE_DEADLOCK_DETECTION --fail-on error

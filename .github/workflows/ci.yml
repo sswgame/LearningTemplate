@@ -2,6 +2,8 @@ name: CI (Windows · Linux | clang-cl & Clang)
 
 # 문서만 바뀐 push · PR 도 린트 잡은 돈다(문서 경로 게이트 CheckDocPaths · 설정 참조 게이트가 .md 를 본다). 빌드 잡만 건너뛴다 —
 # 린트 잡의 `changes` 단계가 바뀐 파일이 문서 · 편집기 설정뿐인지 보고 `code` 를 낸다.
+# 이 파일은 push · PR 마다 도는 단계만 둔다(린트 → 구성 열 개의 빌드 + `-L nogpu`). 매일 · 야간 단계는 header-self-contained.yml · fuzz.yml · load.yml 이고,
+# 단계 분류표와 새 검사를 어디 둘지의 기준은 docs/08_Verification.md 4절이다. GPU · 창이 필요한 테스트(hostgpu · race)는 러너에 없어 로컬이 돌린다.
 on:
   push:
     branches: [ main, develop ]
@@ -181,12 +183,7 @@ jobs:
       run: |
         $PY Scripts/dev/CiFailureReport.py build --log build/build.log
 
-    # `SW_ENABLE_DEADLOCK_DETECTION` 은 어느 프리셋도 켜지 않는 옵션이라 짓지 않으면 썩는다. 구성을 따로 짓지 않고, 방금 지은 컴파일 DB 의
-    # 모든 TU 를 그 정의를 더해 -fsyntax-only 로 돌린다. 오류가 있거나 검사한 TU 가 없으면 진다(경고는 컴파일러 버전마다 달라 보고만 한다).
-    - name: Compile check with SW_ENABLE_DEADLOCK_DETECTION (Windows Debug)
-      if: runner.os == 'Windows' && matrix.preset == 'CI-Debug'
-      run: |
-        python Scripts/lint/report/RunBuildWarnings.py --preset ${{ matrix.preset }} --define SW_ENABLE_DEADLOCK_DETECTION --fail-on error
+    # (`SW_ENABLE_DEADLOCK_DETECTION` 컴파일 확인은 전 TU 를 다시 훑느라 이 잡의 14 분을 차지해 매일 도는 header-self-contained.yml 로 옮겼다.)
 
     # CheckSourceGlob 은 빌드 폴더의 compile_commands.json 과 소스 글롭을 대조한다(린트 잡은 빌드 폴더가 없어 건너뛴다). 구성마다 짓지 않는
     # 소스가 다르므로(플랫폼 · Shipping · 서버 타깃) 빌드 잡마다 그 구성으로 한 번 돌려, 새 .cpp 가 어느 구성에서 빌드 밖으로 빠졌는지 잡는다.
