@@ -10,6 +10,7 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourcePaths.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // 메시 컴포넌트 — 머티리얼 참조를 어떻게 푸는가.
@@ -22,7 +23,7 @@
 SW_TEST_CASE( MeshComponentTest, MissingMaterialUsesTheChecker )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    const sw::string& missingMaterial = sw::engine::getSubsystem<sw::EngineDefaultAssets>()._missingMaterial;
+    const sw::string& missingMaterial = test::getEngineDefaultAssets()._missingMaterial.get();
     SW_ASSERT_FALSE( missingMaterial.empty() );
 
     sw::GameObjectManager manager;

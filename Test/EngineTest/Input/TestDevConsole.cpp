@@ -16,6 +16,7 @@
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 using namespace sw;
@@ -67,7 +68,7 @@ namespace
         {
             if ( _input.initialize() == false || ResourcePaths::initialize() == false )
                 return false;
-            _pShellMap = Engine::createShellInputMap( EngineDefaultAssets{}._shellInputMap );
+            _pShellMap = Engine::createShellInputMap( test::getEngineDefaultAssets()._shellInputMap.get() );
             _pShellMap->setInputManager( &_input );
             _pShellMap->setLayerEnabled( InputMapDefaults::kTitleLayerName, false ); // `Engine::updateShellActions` 와 같다
             (void)_controller.initialize( &_input, nullptr );
@@ -555,7 +556,7 @@ SW_TEST_CASE( DevConsoleControllerTest, ShellRebindingsPersistPerPlayer )
     SW_EXPECT_TRUE( FileUtil::exists( path ) );
 
     // 새 맵은 기본 키로 시작하고, 파일을 읽으면 그 플레이어의 키가 된다.
-    unique_ptr<InputMap> fresh = Engine::createShellInputMap( EngineDefaultAssets{}._shellInputMap );
+    unique_ptr<InputMap> fresh = Engine::createShellInputMap( test::getEngineDefaultAssets()._shellInputMap.get() );
     InputSlot            slot{};
     SW_ASSERT_TRUE( fresh->findRebindSlot( toggle, 0, slot ) );
     SW_EXPECT_TRUE( slot == defaultSlot );

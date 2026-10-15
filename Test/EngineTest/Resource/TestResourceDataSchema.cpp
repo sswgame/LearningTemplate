@@ -71,6 +71,7 @@
 
 #include "EngineTest/HostTargetTestUtil.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // Resource/ 아래 데이터가 지금 코드의 이름만 쓰는지 — 모르는 키 · 타입 · 열거자가 하나도 없는지.
@@ -192,8 +193,7 @@ namespace
 
         [[nodiscard]] static bool loadEngineDefaultAssets( const sw::string& resourceID )
         {
-            sw::EngineDefaultAssets data;
-            return data.loadFromResource( resourceID );
+            return sw::EngineDefaultAssets::load( resourceID ) != nullptr;
         }
 
         /** @brief 시나리오는 형식(루트 · 루트 속성 · <At>)만 읽는다 — 단계 종류 · 탐침은 그 게임 모듈이 올라온 실기동(AppScenarioTest)이 본다. */
@@ -240,7 +240,7 @@ namespace
             sw::UserSettingsTargets targets;
             targets._pGlobalVariableManager = &sw::engine::getSubsystem<sw::GlobalVariableManager>();
             settings.initialize( targets );
-            const sw::string& engineSchema = sw::engine::getSubsystem<sw::EngineDefaultAssets>()._userSettingsSchema;
+            const sw::string& engineSchema = test::getEngineDefaultAssets()._userSettingsSchema.get();
             if ( resourceID != engineSchema && settings.loadSchema( engineSchema ) == false )
                 return false;
             return settings.loadSchema( resourceID );

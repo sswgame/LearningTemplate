@@ -976,7 +976,7 @@ namespace sw
         initialize( targets );
 
         const GameConfig& gameConfig = GameConfig::getActive();
-        if ( loadSchema( engine::getSubsystem<EngineDefaultAssets>()._userSettingsSchema ) && gameConfig._userSettingsSchema.empty() == false )
+        if ( loadSchema( engine::getSubsystem<EngineDefaultAssets>()._userSettingsSchema.get() ) && gameConfig._userSettingsSchema.empty() == false )
         {
             const string gameSchema = FileUtil::joinPath( FileUtil::trimTrailingSlashes( gameConfig._packRoot ), gameConfig._userSettingsSchema );
             if ( loadSchema( gameSchema ) == false )

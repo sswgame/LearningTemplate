@@ -101,7 +101,7 @@ namespace sw
     struct RenderPassTypeInfo
     {
         /** @brief 파이프라인 XML 이 `_shaderPath` 를 적지 않았을 때 쓰는 셰이더입니다(EngineDefaultAssets 의 항목). nullptr 이면 엔진 PSO 가 없습니다. */
-        string EngineDefaultAssets::* _pDefaultShader{ nullptr };
+        DataPath EngineDefaultAssets::* _pDefaultShader{ nullptr };
         /** @brief 패스가 셰이더에 추가하는 define 입니다. 파이프라인 XML 의 `_listPermutation` 뒤에 붙습니다. nullptr 이면 없습니다. */
         const utf8* _pPassDefine{ nullptr };
         /**

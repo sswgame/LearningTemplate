@@ -5,6 +5,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -15,6 +17,7 @@
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Resource/ResourcePaths.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 #include <thread>
@@ -371,13 +374,13 @@ SW_TEST_CASE( ShaderCacheStressTest, MultiThreadedCacheAccessStress )
                 sw::ShaderCompileDesc desc{};
                 const uint32          pathID = ( threadIndex + callIndex ) % 4;
                 if ( pathID == 0 )
-                    desc._filePath = "engine/shaders/fullscreentriangle.hlsl";
+                    desc._filePath = test::getEngineDefaultAssets()._shaderFullscreenTriangle.get();
                 else if ( pathID == 1 )
-                    desc._filePath = "engine/shaders/forwardlit.hlsl";
+                    desc._filePath = test::getEngineDefaultAssets()._shaderForwardLit.get();
                 else if ( pathID == 2 )
-                    desc._filePath = "engine/shaders/shadowdepth.hlsl";
+                    desc._filePath = test::getEngineDefaultAssets()._shaderShadowDepth.get();
                 else
-                    desc._filePath = "engine/shaders/tonemap.hlsl";
+                    desc._filePath = test::getEngineDefaultAssets()._shaderTonemap.get();
 
                 desc._entryPoint   = ( ( callIndex % 2 ) == 0 ) ? "VSMain" : "PSMain";
                 desc._stage        = ( ( callIndex % 2 ) == 0 ) ? sw::ShaderStage::Vertex : sw::ShaderStage::Pixel;
@@ -439,7 +442,7 @@ SW_TEST_CASE( ShaderCacheStressTest, MultiThreadedClearAndQueryStress )
             for ( uint32 index = 0; index < kIterations; ++index )
             {
                 sw::ShaderCompileDesc desc{};
-                desc._filePath              = "engine/shaders/fullscreentriangle.hlsl";
+                desc._filePath              = test::getEngineDefaultAssets()._shaderFullscreenTriangle.get();
                 desc._entryPoint            = "VSMain";
                 desc._stage                 = sw::ShaderStage::Vertex;
                 desc._targetFormat          = sw::ShaderTargetFormat::DXIL_D3D12;
@@ -574,7 +577,7 @@ SW_TEST_CASE( ShaderCookerTest, AttachmentFormatNameRoundTripsEveryRHIFormat )
 SW_TEST_CASE( ShaderCookerTest, CachePathCarriesPermutationHash )
 {
     sw::ShaderCompileDesc plain{};
-    plain._filePath     = "engine/shaders/forwardlit.hlsl";
+    plain._filePath     = test::getEngineDefaultAssets()._shaderForwardLit.get();
     plain._entryPoint   = "PSMain";
     plain._stage        = sw::ShaderStage::Pixel;
     plain._targetFormat = sw::ShaderTargetFormat::SPIRV_Vulkan;
@@ -614,7 +617,7 @@ SW_TEST_CASE( ShaderCookerTest, CachePathCarriesPermutationHash )
  */
 SW_TEST_CASE( ShaderCookStampTest, FreshnessIsJudgedByContentNotFileTime )
 {
-    const sw::string shaderPath = sw::ResourcePaths::getResourcePath( "engine/shaders/forwardlit.hlsl" );
+    const sw::string shaderPath = sw::ResourcePaths::getResourcePath( test::getEngineDefaultAssets()._shaderForwardLit.get() );
     const sw::string binDir     = sw::ResourcePaths::getResourcePath( "engine/shaders/bin/dx12" );
     // 쿠킹된 트리가 없는 환경(클린 체크아웃 직후)에서는 볼 것이 없다.
     if ( shaderPath.empty() || binDir.empty() )
@@ -659,7 +662,7 @@ SW_TEST_CASE( ShaderCookStampTest, FreshnessIsJudgedByContentNotFileTime )
  */
 SW_TEST_CASE( ShaderCookStampTest, HeaderInAnotherIncludeRootMakesOutputStale )
 {
-    const sw::string shaderPath       = sw::ResourcePaths::getResourcePath( "common/shaders/samplecompute.hlsl" );
+    const sw::string shaderPath       = sw::ResourcePaths::getResourcePath( test::getEngineDefaultAssets()._shaderProbeSampleCompute.get() );
     const sw::string binDir           = sw::ResourcePaths::getResourcePath( "common/shaders/bin/dx12" );
     const sw::string engineShadersDir = sw::ResourcePaths::getDomainFolderPath( "engine", "shaders" );
     // 쿠킹된 트리가 없는 환경(클린 체크아웃 직후)에서는 볼 것이 없다.

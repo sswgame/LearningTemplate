@@ -81,6 +81,7 @@
 #include "EngineTest/RHITestDevice.h"
 #include "EngineTest/RHITestImage.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 // 프레임 렌더러를 실제 디바이스 위에서 돌린다 — 패스 · 파이프라인 · 백엔드 패리티를 픽셀로 본다.
@@ -981,7 +982,7 @@ SW_TEST_CASE( RenderPassGPUTest, ShaderRecompileRebuildsPipelineStates )
 
     sw::ShaderCompileResult result{};
     result._bSuccess = true;
-    renderer.onShaderRecompiled( "engine/shaders/forwardlit.hlsl", result );
+    renderer.onShaderRecompiled( test::getEngineDefaultAssets()._shaderForwardLit.get(), result );
 
     const sw::RHIPipelineStateHandle afterForward = renderer.getEnginePSO( sw::RenderPassType::ForwardOpaque );
     SW_EXPECT_TRUE_MSG( afterForward != 0, "리로드 후 ForwardOpaque PSO 가 다시 만들어져야 한다" );
@@ -1029,7 +1030,7 @@ SW_TEST_CASE( RenderPassGPUTest, ShaderRecompileKeepsTaaHistory )
 
     sw::ShaderCompileResult result{};
     result._bSuccess = true;
-    renderer.onShaderRecompiled( "engine/shaders/forwardlit.hlsl", result );
+    renderer.onShaderRecompiled( test::getEngineDefaultAssets()._shaderForwardLit.get(), result );
 
     device->beginFrame( clear );
     SW_EXPECT_TRUE( renderer.execute( device.get(), &scene ) );
@@ -1498,7 +1499,7 @@ SW_TEST_CASE( RenderPassGPUTest, SpriteDrawsWithTheSpriteShader )
                     sw::RHIPipelineStateDesc batchDesc{};
                     SW_EXPECT_TRUE_MSG( renderer.findPSODesc( renderer.psoForBatch( passPSO, batches[0] ), batchDesc ),
                                         ( label + ": 스프라이트 배치 PSO 의 디스크립터를 찾을 수 없다" ).c_str() );
-                    SW_EXPECT_TRUE_MSG( batchDesc._pixelShaderPath.find( "sprite2d" ) != sw::string::npos,
+                    SW_EXPECT_TRUE_MSG( batchDesc._pixelShaderPath.find( test::getEngineDefaultAssets()._shaderSprite2D.get() ) != sw::string::npos,
                                         ( label + ": 스프라이트 배치가 스프라이트 셰이더가 아니다 — " + batchDesc._pixelShaderPath ).c_str() );
                 }
             }
@@ -4652,7 +4653,7 @@ SW_TEST_CASE( RenderPassGPUTest, MissingTextureSamplesTheChecker )
     SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/materials/benchtextured.material", xml ) );
     SW_ASSERT_TRUE( xml.find( kPresentTexture ) != sw::string::npos );
     xml                             = sw::StringUtil::replace( xml, kPresentTexture, kAbsentTexture );
-    const sw::string missingTexture = sw::engine::getSubsystem<sw::EngineDefaultAssets>()._missingTexture;
+    const sw::string missingTexture = test::getEngineDefaultAssets()._missingTexture.get();
     SW_ASSERT_FALSE( missingTexture.empty() );
 
     test::RHIBackendSweep sweep;
@@ -6982,7 +6983,7 @@ SW_TEST_CASE( RenderPassGPUTest, CameraCutResetsTaaHistory )
             const bool        bCut = caseIndex == 1;
             sw::FrameRenderer renderer;
             LitCubeScene      stage;
-            bOk = renderer.initialize( device.get(), sw::engine::getSubsystem<sw::EngineDefaultAssets>()._defaultDeferredPipeline ) && renderer.isReady() && stage.populate();
+            bOk = renderer.initialize( device.get(), test::getEngineDefaultAssets()._defaultDeferredPipeline.get() ) && renderer.isReady() && stage.populate();
             bOk = bOk && stage._material->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 0.02 0.02 1.0" );
             for ( uint32 frameIndex = 0; frameIndex < 4 && bOk; ++frameIndex )
             {
@@ -7337,7 +7338,7 @@ SW_TEST_CASE( RenderPassGPUTest, WaterWaveShaderMatchesCPU )
         texDesc._bIsUnorderedAccess              = SW_TRUE;
         const sw::RHITextureHandle       texture = pResource->createTexture2D( texDesc );
         const sw::RHIDescriptorIndex     uav     = texture != 0 ? pResource->registerBindlessTextureUav( texture ) : sw::kInvalidDescriptorIndex;
-        const sw::RHIPipelineStateHandle pso     = pResource->createComputePipelineState( "common/shaders/waterwaveprobe.hlsl" );
+        const sw::RHIPipelineStateHandle pso     = pResource->createComputePipelineState( test::getEngineDefaultAssets()._shaderProbeWaterWave.get() );
         SW_EXPECT_TRUE_MSG( texture != 0 && uav != sw::kInvalidDescriptorIndex && pso != 0, pName );
 
         const bool bResourcesReady = texture != 0 && uav != sw::kInvalidDescriptorIndex && pso != 0;

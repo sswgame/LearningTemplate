@@ -86,7 +86,7 @@ namespace sw
         _pDevice  = pDevice;
         _renderer = make_unique<FrameRenderer>();
         // 포워드 파이프라인 — TAA 가 없어(시간 누적 없음) 한 장으로 끝나는 그림이다.
-        if ( _renderer->initialize( pDevice, engine::getSubsystem<EngineDefaultAssets>()._defaultForwardPipeline ) == false )
+        if ( _renderer->initialize( pDevice, engine::getSubsystem<EngineDefaultAssets>()._defaultForwardPipeline.get() ) == false )
         {
             _renderer.reset();
             return false;

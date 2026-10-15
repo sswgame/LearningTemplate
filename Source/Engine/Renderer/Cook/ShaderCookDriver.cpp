@@ -63,7 +63,13 @@ namespace sw
 
         // 2) 렌더 파이프라인 에셋과 엔진 데이터로 요청을 한꺼번에 모은다
         vector<ShaderCookRequest> listRequest;
-        collectAllRequests( rootDir, listRequest );
+        if ( collectAllRequests( rootDir, listRequest ) == false )
+        {
+            SW_LOG_ERROR( "Shader cook requests could not be collected - engine default assets are missing or incomplete" );
+            ShaderCookSummary nothingCooked{};
+            nothingCooked._failedCount = 1; // 쿠킹하지 못했다 — 실패로 센다(`App --cook-shaders` 가 실패로 끝난다)
+            return nothingCooked;
+        }
 
         ShaderCookSummary summary{};
         // 컴파일에 실패한 소스(정규화한 절대 경로)를 RHI 폴더마다 적는다 — 그 소스는 스탬프에서 빼서 다음 쿠킹이 다시 시도한다.

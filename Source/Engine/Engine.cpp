@@ -332,7 +332,7 @@ namespace sw
                     SW_MEMORY_SCOPE( Asset );
                     _startup.addSubsystem( sw::make_unique<AssetManager>() );
                 }
-                const EngineDefaultAssetsSubsystem& defaultAssets = _startup.addSubsystem( sw::make_unique<EngineDefaultAssetsSubsystem>( sw::make_unique<EngineDefaultAssets>() ) );
+                const EngineDefaultAssetsSubsystem& defaultAssets = _startup.addSubsystem( sw::make_unique<EngineDefaultAssetsSubsystem>() );
                 (void)_startup.bind( &defaultAssets.getDefaultAssets() ); // 새 범위 — 겹치지 않는다
             }
             {
