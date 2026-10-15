@@ -55,6 +55,7 @@ namespace sw
         , _wateredColor{ 0.33f, 0.22f, 0.13f, 1.0f }
         , _tilledColor{ 0.58f, 0.40f, 0.24f, 1.0f }
         , _grassColor{ 0.40f, 0.62f, 0.28f, 1.0f }
+        , _tileSpacing{ 1.0f }
         , _field{}
         , _tintCache{}
         , _listTileView{}
@@ -213,7 +214,7 @@ namespace sw
                 MeshComponent*  pMesh = pView != nullptr ? pView->getComponent<MeshComponent>() : nullptr;
                 if ( pMesh == nullptr )
                     continue;
-                pMesh->setLocalPosition( float3{ ( static_cast<float32>( x ) + 0.5f ) * kTileSpacing, 0.05f, ( static_cast<float32>( y ) + 0.5f ) * kTileSpacing } );
+                pMesh->setLocalPosition( float3{ ( static_cast<float32>( x ) + 0.5f ) * _tileSpacing, 0.05f, ( static_cast<float32>( y ) + 0.5f ) * _tileSpacing } );
                 _tintCache.apply( *pMesh, MeadowFarmDirectorComponentInternal::findTileColor( *pTile, _readyColor, _wateredColor, _tilledColor, _grassColor ) );
                 _listTileView.push_back( pView->getHandle() );
             }

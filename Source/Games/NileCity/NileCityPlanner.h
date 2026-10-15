@@ -19,6 +19,31 @@ namespace sw
     class Wallet;
 
     /**
+     * @brief 땅 모양과 자동 계획의 튜닝값입니다. 값은 `NileDirectorComponent` 의 PROPERTY 가 채운다(기본값도 그 생성자에 있다).
+     * @details 길이 단위는 칸입니다. 계획표의 다른 좌표(구역 경계 · 집 줄)는 순서표 자체라 코드에 둔다.
+     */
+    struct NileCityLayout
+    {
+        float32 _riverCenterX{};      ///< 강 한가운데 x 의 평균(칸)
+        float32 _riverMeander{};      ///< 강이 좌우로 굽이치는 폭(칸)
+        float32 _riverMeanderRate{};  ///< y 한 칸마다 굽이 위상(라디안)
+        float32 _riverHalfWidth{};    ///< 강 반폭(칸)
+        float32 _eastFloodWidth{};    ///< 동쪽 범람원 폭 — 농장 · 도시가 이쪽에 선다
+        float32 _westFloodWidth{};    ///< 서쪽 범람원 폭
+        float32 _desertDuneHeight{};  ///< 사막 경계가 모래 언덕처럼 굽는 폭(칸)
+        float32 _desertDuneRate{};    ///< y 한 칸마다 언덕 위상(라디안)
+        int32   _desertStartX{};      ///< 동쪽 사막이 시작하는 x
+        int32   _rockRidgeX{};        ///< 이 x 부터 동쪽 끝 바위 능선
+        int32   _roadX{};             ///< 범람원 농장과 도시 사이 남북 도로
+        int32   _farmX{};             ///< 3×3 농장의 왼쪽 — 어느 줄에서나 범람원이어야 한다
+        int32   _secondBlockPeople{}; ///< 2 구역을 짓기 시작하는 인구
+        int32   _thirdBlockPeople{};  ///< 3 구역을 짓기 시작하는 인구
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class NileCityPlanner
      * @brief 나일 강가 땅을 칠하고, 자동 플레이의 짓기 순서표를 한 단계씩 실행합니다.
      */
@@ -31,12 +56,12 @@ namespace sw
         NileCityPlanner();
 
         /** @brief 강(남북으로 굽이친다) · 양쪽 범람원 · 서쪽과 동쪽 끝의 사막 · 사막의 바위를 칠합니다. 결정적입니다(난수 없음). */
-        static void paintTerrain( CitySimulation& city );
+        static void paintTerrain( CitySimulation& city, const NileCityLayout& layout );
         /** @brief 칸의 강 한가운데 x(실수)입니다 — 지형과 화면이 같은 곡선을 씁니다. */
-        static float32 computeRiverCenter( int32 y );
+        static float32 computeRiverCenter( const NileCityLayout& layout, int32 y );
 
-        /** @brief 순서표를 처음부터 다시 둡니다. */
-        void reset();
+        /** @brief 순서표를 @p layout 으로 처음부터 다시 짓습니다. 만든 직후에는 순서표가 비어 있습니다. */
+        void reset( const NileCityLayout& layout );
         /**
          * @brief 돈 · 인구가 되는 데까지 순서표를 실행합니다. 이번에 지은(또는 깐) 단계 수입니다.
          * @details 돈이 모자라거나 인구 임계값에 못 미치면 멈추고 다음 부름에 이어 갑니다. 놓을 수 없는 자리(겹침 · 땅)는 경고 없이 건너뜁니다.

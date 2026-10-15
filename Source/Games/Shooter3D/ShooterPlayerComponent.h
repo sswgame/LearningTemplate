@@ -77,6 +77,7 @@ namespace sw
         /** @brief 발 위치입니다(몸 이동의 위치이며, 없으면 처음 위치). */
         float3             getFeetPosition() const;
         float32            getHealth() const { return _vitality.getHealth(); }
+        float32            getMaxHealth() const { return _maxHealth; }
         bool               isAlive() const { return _vitality.isAlive(); }
         const WeaponState& getCurrentWeapon() const { return _arrWeapon[_weaponIndex]; }
         /** @brief 무기 슬롯 @p weaponIndex(0 소총, 1 산탄총, 2 권총)의 무기입니다. */
@@ -177,6 +178,14 @@ namespace sw
         float32 _tracerLifetime;
         PROPERTY( Category = "Effects", DisplayName = "Tracer Width", Min = 0.0, Units = m )
         float32 _tracerWidth;
+        PROPERTY( Category = "Effects", DisplayName = "Enemy Hit Color", Tooltip = "Colour of the hit sphere on an enemy" )
+        float4 _enemyHitColor;
+        PROPERTY( Category = "Effects", DisplayName = "Cover Hit Color", Tooltip = "Colour of the hit sphere on cover" )
+        float4 _coverHitColor;
+        PROPERTY( Category = "Effects", DisplayName = "Tracer Color", Tooltip = "HDR colour of a tracer (above 1 glows)" )
+        float4 _tracerColor;
+        PROPERTY( Category = "Effects", DisplayName = "Muzzle Flash Color", Tooltip = "HDR colour of the muzzle flash (above 1 glows)" )
+        float4 _muzzleFlashColor;
 
         WeaponState              _arrWeapon[kWeaponCount];
         Vitality                 _vitality;

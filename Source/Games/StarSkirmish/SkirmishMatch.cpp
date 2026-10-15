@@ -16,8 +16,6 @@ namespace sw
     {
         struct SkirmishMatchInternal
         {
-            static constexpr float32 kStatusInterval = 30.0f;
-
             /** @brief 성향별 AI 설정입니다 — 0 러시(일찍 작게) · 1 운영(일꾼 · 병영을 늘려 크게) · 2 사람 상대(그 사이). */
             static RTSCommanderAISettings makeAISettings( int32 style )
             {
@@ -287,7 +285,7 @@ namespace sw
             }
         }
         _statusTimer += deltaTime;
-        if ( _statusTimer >= SkirmishMatchInternal::kStatusInterval )
+        if ( _statusTimer >= _settings._statusIntervalSeconds )
         {
             _statusTimer = 0.0f;
             logStatus();

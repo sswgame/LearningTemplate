@@ -23,9 +23,6 @@ namespace sw
     {
         struct ShooterAvatarComponentInternal
         {
-            /** @brief 이보다 발이 느린 클립은 이동 클립이 아니다(맞음 · 쏘기 · 서기). 재생 속도를 맞추지 않는다. */
-            static constexpr float32 kMinLocomotionFootSpeed = 0.3f;
-
             /** @brief 이동 방향 · 앞 속도를 그래프의 `Move` 코드로 바꿉니다(앞은 빠르면 달리기). */
             static float32 computeMoveCode( LocomotionDirection direction, float32 forwardSpeed, float32 runThreshold )
             {
@@ -66,6 +63,7 @@ namespace sw
         , _rightFootBone{ "foot.r" }
         , _minPlayRate{ 0.6f }
         , _maxPlayRate{ 1.8f }
+        , _minLocomotionFootSpeed{ 0.3f }
         , _locomotion{ 0.25f }
         , _mapClipFootSpeed{}
         , _aimWeight{ 0.0f }
@@ -92,7 +90,6 @@ namespace sw
 
     float32 ShooterAvatarComponent::computeLocomotionPlayRate( const SkeletalAnimatorComponent& animator, LocomotionDirection direction, float32 moveSpeed )
     {
-        using Internal         = ShooterAvatarComponentInternal;
         const bool bLocomotion = direction != LocomotionDirection::Idle && direction != LocomotionDirection::Airborne;
         if ( bLocomotion == false )
             return 1.0f;
@@ -109,7 +106,7 @@ namespace sw
                                                                              LocomotionSpeedUtil::kDefaultSampleCount );
             found                   = _mapClipFootSpeed.emplace( pClip, footSpeed ).first;
         }
-        if ( found->second < Internal::kMinLocomotionFootSpeed )
+        if ( found->second < _minLocomotionFootSpeed )
             return 1.0f;
         return LocomotionSpeedUtil::computePlayRate( moveSpeed, found->second, _minPlayRate, _maxPlayRate );
     }

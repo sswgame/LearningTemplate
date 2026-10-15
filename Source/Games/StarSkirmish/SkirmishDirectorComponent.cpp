@@ -37,10 +37,9 @@ namespace sw
     {
         struct SkirmishDirectorComponentInternal
         {
-            static constexpr float32 kClickSlop        = 0.6f; ///< 이보다 짧게 끌면 클릭으로 본다.
-            static constexpr int32   kUnitLookCategory = 5;    ///< 0번 팀, 1번 팀, 주인 없음, 광물, 가스.
-            static constexpr uint32  kStateTag         = FourCcUtil::make( "RTMS" );
-            static constexpr uint32  kStateVersion     = 2;
+            static constexpr int32  kUnitLookCategory = 5; ///< 0번 팀, 1번 팀, 주인 없음, 광물, 가스.
+            static constexpr uint32 kStateTag         = FourCcUtil::make( "RTMS" );
+            static constexpr uint32 kStateVersion     = 2;
 
             // 사운드 이벤트 이름(starskirmish.audioevents.xml).
             static constexpr const utf8* kSoundSelect   = "Select";
@@ -159,6 +158,9 @@ namespace sw
         , _huntIntervalSeconds{ 4.0f }
         , _arrivedRadius{ 10.0f }
         , _startMinerals{ 50 }
+        , _statusLogInterval{ 30.0f }
+        , _clickSlop{ 0.6f }
+        , _maxSelectionCount{ 12 }
         , _playerZeroColor{ 0.25f, 0.45f, 0.95f, 1.0f }
         , _playerOneColor{ 0.9f, 0.25f, 0.2f, 1.0f }
         , _neutralColor{ 0.7f, 0.7f, 0.7f, 1.0f }
@@ -326,13 +328,14 @@ namespace sw
         }
         _bHuman = isAutoPlayOn() ? SW_FALSE : SW_TRUE;
         SkirmishMatchSettings matchSettings;
-        matchSettings._huntIntervalSeconds = _huntIntervalSeconds;
-        matchSettings._arrivedRadius       = _arrivedRadius;
-        matchSettings._startMinerals       = _startMinerals;
+        matchSettings._huntIntervalSeconds   = _huntIntervalSeconds;
+        matchSettings._arrivedRadius         = _arrivedRadius;
+        matchSettings._startMinerals         = _startMinerals;
+        matchSettings._statusIntervalSeconds = _statusLogInterval;
         _match.initialize( &_catalog, _bHuman == SW_TRUE, matchSettings );
         _selection.clear();
         _selection.setPlayer( 0 );
-        _selection.setMaxCount( 12 );
+        _selection.setMaxCount( _maxSelectionCount );
         _listEvent.clear();
         return true;
     }
@@ -597,7 +600,7 @@ namespace sw
         _bDragging            = SW_FALSE;
         const float3  end     = bPointValid ? point : _dragStart;
         const float32 dragged = MathUtil::max( MathUtil::abs( end._x - _dragStart._x ), MathUtil::abs( end._z - _dragStart._z ) );
-        if ( dragged < SkirmishDirectorComponentInternal::kClickSlop )
+        if ( dragged < _clickSlop )
         {
             const RTSUnitID pickedID = world.pickUnit( end );
             if ( pickedID.isValid() )

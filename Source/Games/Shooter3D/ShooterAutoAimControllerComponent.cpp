@@ -19,12 +19,8 @@ namespace sw
     {
         struct ShooterAutoAimControllerComponentInternal
         {
-            static constexpr float32     kAimTolerance  = 3.0f * MathUtil::kDegreeToRadian; ///< 이 조준 오차 안이면 쏜다
-            static constexpr float32     kChestHeight   = 0.55f;                            ///< 적 키에서 겨누는 높이의 비율
-            static constexpr float32     kCircleTangent = 0.08f;                            ///< 원을 도는 접선 성분(자리에 곱한다)
-            static constexpr float32     kCircleInward  = 0.04f;                            ///< 가운데로 끄는 성분(자리에 곱한다)
-            static constexpr const utf8* kFire          = "Fire";
-            static constexpr const utf8* kArrWeapon[2]  = { "Weapon1", "Weapon2" }; ///< 소총 · 산탄총
+            static constexpr const utf8* kFire         = "Fire";
+            static constexpr const utf8* kArrWeapon[2] = { "Weapon1", "Weapon2" }; ///< 소총 · 산탄총
         };
     } // namespace
 } // namespace sw
@@ -34,6 +30,10 @@ namespace sw
     ShooterAutoAimControllerComponent::ShooterAutoAimControllerComponent()
         : _engageDistance{ 7.0f }
         , _closeRangeDistance{ 8.0f }
+        , _aimTolerance{ 3.0f * MathUtil::kDegreeToRadian }
+        , _chestHeight{ 0.55f }
+        , _circleTangent{ 0.08f }
+        , _circleInward{ 0.04f }
     {
         // 사람처럼 돈다 — 표적이 바뀔 때 한 프레임에 수십 도 돌면 3인칭 몸 · 카메라가 튄다.
         setTurnRate( 3.0f );
@@ -58,7 +58,7 @@ namespace sw
         // 아레나 가운데를 도는 나선 — 접선으로 돌고 안쪽으로 조금 끈다. 가운데 가까이에서는 그 점이 도착 거리 안이라 선다.
         const float3 feet = pPlayer->getFeetPosition();
         const float3 circle =
-            float3{ -feet._z * Internal::kCircleTangent - feet._x * Internal::kCircleInward, 0.0f, feet._x * Internal::kCircleTangent - feet._z * Internal::kCircleInward };
+            float3{ -feet._z * _circleTangent - feet._x * _circleInward, 0.0f, feet._x * _circleTangent - feet._z * _circleInward };
         moveTo( float3{ feet._x + circle._x, 0.0f, feet._z + circle._z } );
 
         // 가장 가까운 적의 가슴.
@@ -69,7 +69,7 @@ namespace sw
         const ShooterEnemyView*         pView    = listView.data();
         for ( size_t viewIndex = 0; viewIndex < listView.size(); ++viewIndex )
         {
-            const float3  chest    = pView[viewIndex]._position + float3{ 0.0f, pView[viewIndex]._height * Internal::kChestHeight, 0.0f };
+            const float3  chest    = pView[viewIndex]._position + float3{ 0.0f, pView[viewIndex]._height * _chestHeight, 0.0f };
             const float32 distance = float3::getDistance( eye, chest );
             if ( distance < bestDistance )
             {
@@ -89,7 +89,7 @@ namespace sw
         const float3  toTarget  = aimPoint - eye;
         const float32 targetYaw = MathUtil::atan2( toTarget._x, toTarget._z );
         const float32 yawError  = MathUtil::wrapAngle( targetYaw - getControlYaw() );
-        const bool    bOnTarget = MathUtil::abs( yawError ) < Internal::kAimTolerance && bestDistance < _engageDistance;
+        const bool    bOnTarget = MathUtil::abs( yawError ) < _aimTolerance && bestDistance < _engageDistance;
         getBlackboard().setFloat( "TargetDistance", bestDistance );
         if ( bOnTarget )
         {
