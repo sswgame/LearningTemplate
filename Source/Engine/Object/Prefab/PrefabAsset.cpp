@@ -1126,6 +1126,29 @@ namespace sw
         return true;
     }
 
+    bool PrefabCache::updateInstance( GameObject* pInstance, string_view oldBaseStateXML, string_view assetRelativePath )
+    {
+        if ( pInstance == nullptr || oldBaseStateXML.empty() )
+            return false;
+        const PrefabAsset* pAsset = loadPrefab( assetRelativePath );
+        string             newBaseState;
+        const bool         bNoNewBase = pAsset == nullptr || pAsset->isValid() == false || PrefabOverrides::makeBaseState( *pAsset, newBaseState ) == false;
+        if ( bNoNewBase )
+            return false;
+        // 덮어쓴 것은 옛 원형과 견줘 뽑는다. 새 원형과 견주면 프리팹에서 바뀐 칸이 모두 "인스턴스가 덮어쓴 값" 으로 보여 퍼지지 않는다.
+        const string instanceState = ObjectStateSerializer::saveToXMLString( pInstance );
+        string       overrideXML;
+        string       newInstanceState;
+        const bool   bStateMade = PrefabOverrides::computeOverrides( instanceState, oldBaseStateXML, overrideXML ) &&
+                                PrefabOverrides::makeInstanceState( newBaseState, overrideXML, pInstance->getName().c_str(), newInstanceState );
+        if ( bStateMade == false )
+            return false;
+        const ObjectIdentity identity = ObjectStateSerializer::captureIdentity( pInstance );
+        ObjectLoadContext    context{};
+        context._pIdentity = &identity;
+        return ObjectStateSerializer::loadFromXMLString( pInstance, newInstanceState, context );
+    }
+
     GameObject* PrefabCache::spawn( GameObjectManager* pGameObjectManager, string_view assetRelativePath, const utf8* pInstanceName )
     {
         SW_MEMORY_SCOPE( Scene );

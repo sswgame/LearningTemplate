@@ -317,6 +317,29 @@ SW_TEST_CASE( ModuleHostTest, ReloadBatchKeepsTheGameWhenItsStateCannotBeCapture
 }
 
 /**
+ * @brief [ModuleHostTest] 에디터 모듈과 에디터 확장만의 리로드 배치는 게임을 내리지 않는다
+ * @details 변이: `onBeforeCommitBatch` 가 "EditorModule 이 아닌 이름" 으로 게임을 내리면 확장(`GF_EditorPlugIn_*`) 때문에 게임이 걷히고,
+ *          게임 리로드 콜백이 오지 않아 복원도 없이 씬 저장이 막힌 채 남는다(에디터 흐름 시나리오 `flowboundaries` 가 드러낸 결함).
+ */
+SW_TEST_CASE( ModuleHostTest, EditorOnlyReloadBatchKeepsTheGame )
+{
+    RHI              rhi;
+    EditorModuleHost host;
+    SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, false ) );
+    int32 gameToken = 0;
+    host.attachGameInstance( makeRecordingGameAPI(), &gameToken );
+    const vector<string> listBatch{ string{ "EditorModule" }, string{ "GF_EditorPlugIn_Base" } };
+
+    s_listGameCall.clear();
+    s_bGameSerializeSucceeds = true;
+    SW_EXPECT_TRUE( host.onBeforeCommitBatch( listBatch ) );
+    const bool bTornDown = hasCall( s_listGameCall, "serializeState" ) || hasCall( s_listGameCall, "shutdown" ) || hasCall( s_listGameCall, "destroy" );
+    SW_EXPECT_FALSE_MSG( bTornDown, "an editor-only reload batch tore the game down" );
+
+    host.shutdown();
+}
+
+/**
  * @brief [ModuleHostTest] 에디터와 게임 인스턴스를 같은 순서로 내린다 — 모듈 타입(과 그 컴포넌트)을 걷은 **뒤에** 서비스를 뗀다
  * @details 타입 등록 해제(`engine::unregisterModuleTypes`)는 그 모듈의 살아 있는 컴포넌트를 지운다. 소멸자는 모듈 코드라 서비스가 아직 붙어 있어야
  *          한다. 내리는 본문이 에디터 · 게임에 따로 적혀 있으면 한쪽만 순서가 바뀐다 — 각 모듈 이름으로 올린 탐침 변수가 서비스를 뗄 때 이미

@@ -80,6 +80,8 @@ namespace sw
 
         /**
          * @brief 높이장과 스플랫을 다시 읽고 청크를 다시 만듭니다. 등록 전이면 데이터만 읽습니다.
+         * @details 디스크 값으로 돌아간다 — 저장하지 않은 높이 · 스플랫 편집은 버린다. 트랜스폼 · 프로퍼티가 바뀌어 다시 읽을 때는 편집을 넘기는
+         *          `reloadTerrainKeepingEdits` 를 쓴다.
          * @return 높이장을 읽었으면 true 를 반환합니다(경로가 비었거나 읽지 못하면 false 이며, 그리지 않습니다).
          */
         [[nodiscard]] bool reloadTerrain();
@@ -118,7 +120,8 @@ namespace sw
          * @details 바뀐 샘플이 닿는 청크(노멀이 이웃 샘플을 읽으므로 한 샘플 바깥까지)의 바운드를 고치고 메시는 앞의 넷까지 지금, 나머지는 다음 틱들에 나눠 다시 만들고, `getHeightfieldGeneration` 과 바뀐 샘플을 쓰는
          *          청크의 `getChunkGenerations` 를 올려 그 청크의 물리 바디만 다시 만들어지게 한다. 되돌리기는 편집 전에 복사해 둔 사본과 같은 @p rect 로 이 함수를 다시 부르면 된다.
          *          틱 밖에서만 부른다(`reloadTerrain` 과 같다 — 락이 없다). 메시를 다시 만드는 것이라 스트로크마다가 아니라 프레임에 한 번 부른다.
-         *          이 지형을 읽어 만든 배치 결과(식생 등)는 다시 계산하지 않는다. 쓴 값은 저장(`saveHeightfield`)하기 전에 `reloadTerrain`(속성 변경 · 오너 이동)이 돌면 에셋 값으로 돌아간다.
+         *          이 지형을 읽어 만든 배치 결과(식생 등)는 다시 계산하지 않는다. 속성 변경 · 오너 이동의 다시 읽기는 쓴 값을 넘기고(`reloadTerrainKeepingEdits`),
+         *          `reloadTerrain` 을 직접 부르면 에셋 값으로 돌아간다.
          * @return 반영했으면 true 입니다(지형이 없거나 크기 · 범위가 틀리면 false 이고 아무것도 바꾸지 않습니다).
          */
         [[nodiscard]] bool writeHeights( const vector<float32>& listHeight, const TerrainSampleRect& rect );
@@ -189,6 +192,11 @@ namespace sw
         void markChunksDirty();
         /** @brief 청크 배치를 레지스트리에서 빼고 놓습니다. */
         void releaseChunks();
+        /**
+         * @brief 다시 읽되, 같은 높이장 경로면 저장하지 않은 높이 · 스플랫 편집을 `writeState` 로 들고 건너 되돌려 씁니다. 경로가 바뀌었으면 버립니다.
+         * @details 트랜스폼 · 프로퍼티 변경이 부른다 — 지형을 옮기거나 플레이를 시작하는 것이 칠한 것을 버리지 않는다(언리얼 랜드스케이프와 같다).
+         */
+        [[nodiscard]] bool reloadTerrainKeepingEdits();
         /** @brief 지금 LOD 로 청크 배치를 모두 만들어 등록합니다. */
         void createChunks();
         /** @brief 청크 하나의 메시를 현재 LOD 와 이웃 LOD 로 다시 만들어 배치에 적용합니다. */
@@ -243,5 +251,6 @@ namespace sw
         uint32              _splatRevision;         ///< `writeLayerWeights` 마다 오른다(`getSplatRevision`)
         atomic<bool>        _bOriginDirty;          ///< 오너가 움직여 지형 원점이 낡았다
         bool                _bHeightsWritten;       ///< 마지막 `reloadTerrain` 뒤에 `writeHeights` 가 성공했다(`writeState` 가 싣는다)
+        string              _loadedHeightfieldPath; ///< 마지막으로 읽은 높이장 경로 — 같은 경로를 다시 읽을 때만 편집을 넘긴다
     };
 } // namespace sw

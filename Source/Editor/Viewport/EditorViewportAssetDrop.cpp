@@ -21,7 +21,9 @@ namespace sw::editor
     void EditorViewportAssetDrop::processDrop( const float2& canvasPos, const float2& canvasSize, const float32* pView, const float32* pProj, bool b2DMode )
     {
         string droppedAssetPath;
-        if ( EditorWidgets::acceptAssetDrop( droppedAssetPath ) == false )
+        // 캔버스 사각형 전체가 타깃이다 — 캔버스 위에 그린 오버레이 · 기즈모 · HUD 아이템이 "마지막 아이템" 이 되어 놓은 것을 가로채지 않는다.
+        const float2 canvasMax{ canvasPos._x + canvasSize._x, canvasPos._y + canvasSize._y };
+        if ( EditorWidgets::acceptAssetDropInRect( canvasPos, canvasMax, "##ViewportAssetDrop", droppedAssetPath ) == false )
             return;
         if ( pView == nullptr || pProj == nullptr )
             return;
