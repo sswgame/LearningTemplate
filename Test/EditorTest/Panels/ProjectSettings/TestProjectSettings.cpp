@@ -130,6 +130,7 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, SavesOnlyValuesThatDifferFromTheDefau
  */
 SW_TEST_CASE( ProjectSettingsDocumentTest, BaseLayerWritesEveryKey )
 {
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // 바탕 층 표시(`ConfigBaseLayer`)는 속성 메타라 배포본에 없다 — 설정 창도 개발 빌드에만 있다
     if ( hasReflectedDefaultConstructor( *sw::EngineConfig::StaticType() ) == false )
         SW_TEST_SKIP( "EngineConfig has no reflected $ctor, so the settings window cannot open it yet" );
     const sw::string path = sw::FileUtil::joinPath( test::makeTempDirectory( "project_settings_base" ), "EngineConfig.json" );
