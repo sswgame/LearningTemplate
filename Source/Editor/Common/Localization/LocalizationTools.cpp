@@ -141,7 +141,8 @@ namespace sw
                 TranslationTable translation;
                 translation.setCulture( culture );
                 string error;
-                if ( FileUtil::exists( path ) && translation.loadFromFile( path, &error ) == false )
+                cultureReport._bShipped = FileUtil::exists( path );
+                if ( cultureReport._bShipped && translation.loadFromFile( path, &error ) == false )
                 {
                     inoutResult._report._listIssue.push_back( { path, error, true } );
                     return;
@@ -561,6 +562,31 @@ namespace sw
         }
     }
 
+    bool LocalizationTools::isCheckClean( const LocalizationGatherResult& result )
+    {
+        bool bClean{ true };
+        if ( result._bOutOfDate )
+        {
+            SW_LOG_ERROR( "[CheckText] project '%#': tables or translation memory are out of date - run App --gather-text and commit the result", result._projectName.c_str() );
+            bClean = false;
+        }
+        if ( result._report._listIssue.empty() == false )
+        {
+            SW_LOG_ERROR( "[CheckText] project '%#': %# gather issue(s) - see the lines above", result._projectName.c_str(), result._report._listIssue.size() );
+            bClean = false;
+        }
+        for ( const LocalizationCultureReport& culture : result._listCulture )
+        {
+            const bool bIncompleteShipped = culture._bShipped && culture.countIncomplete() > 0;
+            if ( bIncompleteShipped == false )
+                continue;
+            SW_LOG_ERROR( "[CheckText] project '%#' culture '%#': %# missing, %# stale, %# review - translate them (or --export-po / --import-po)", result._projectName.c_str(),
+                          culture._culture.c_str(), culture._missingCount, culture._staleCount, culture._reviewCount );
+            bClean = false;
+        }
+        return bClean;
+    }
+
     bool LocalizationTools::runGatherCommand( bool bCheckOnly, string_view projectArgument )
     {
         // 배포본은 속성 메타(Localizable)를 싣지 않아 UI 문서의 문구를 알아보지 못한다. 그대로 쓰면 원문 테이블에서 그 문구를 모두 지운다.
@@ -596,7 +622,7 @@ namespace sw
                 continue;
             }
             logGatherResult( result );
-            bSucceeded = bSucceeded && result._report.hasErrors() == false && ( bCheckOnly == false || result._bOutOfDate == false );
+            bSucceeded = bSucceeded && result._report.hasErrors() == false && ( bCheckOnly == false || isCheckClean( result ) );
         }
         return bSucceeded;
     }

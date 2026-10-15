@@ -870,7 +870,7 @@
             "sourceHash": "43ae64223b4dba7c"
         },
         "EditorConsole.CommandHint": {
-            "text": "> 명령 또는 gv_이름 [값] (Tab 자동 완성, 위/아래 기록, help)",
+            "text": "> 명령 또는 gv_name [value] (Tab 자동 완성, 위/아래 기록, help)",
             "sourceHash": "5c94d2fbf05bc3dc"
         },
         "EditorConsole.CopyAll": {

@@ -1,6 +1,10 @@
 {
     "culture": "ko",
     "entries": {
+        "/": {
+            "text": "/",
+            "sourceHash": "af63a24c860189fe"
+        },
         "Assault Blaster": {
             "text": "돌격 블래스터",
             "sourceHash": "9064a88c950f19f1"

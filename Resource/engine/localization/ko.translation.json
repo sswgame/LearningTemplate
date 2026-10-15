@@ -1,6 +1,38 @@
 {
     "culture": "ko",
     "entries": {
+        "Already used by": {
+            "text": "이미 사용 중:",
+            "sourceHash": "cbdae832bc5ce48d"
+        },
+        "Apply": {
+            "text": "적용",
+            "sourceHash": "b8f855b49234b81b"
+        },
+        "Cancel": {
+            "text": "취소",
+            "sourceHash": "2ceb11be2290bb1b"
+        },
+        "Close": {
+            "text": "닫기",
+            "sourceHash": "5e8250fb85d64c23"
+        },
+        "Corner": {
+            "text": "모서리",
+            "sourceHash": "d66afae9aedadcf0"
+        },
+        "Debug HUD": {
+            "text": "디버그 HUD",
+            "sourceHash": "e7b16707c98cf071"
+        },
+        "Defaults": {
+            "text": "기본값",
+            "sourceHash": "48022f6d5501d677"
+        },
+        "Discard": {
+            "text": "버리기",
+            "sourceHash": "c00a88b90cd60661"
+        },
         "EdAbilityDebug.ColumnActive": {
             "text": "실행 중",
             "sourceHash": "a45a194b58837e4f"
@@ -309,6 +341,78 @@
             "text": "지금 왜 이 행동인가",
             "sourceHash": "998a39497efff850"
         },
+        "Keep": {
+            "text": "유지",
+            "sourceHash": "d60a7dde73859828"
+        },
+        "Keep these display settings?": {
+            "text": "이 디스플레이 설정을 유지할까요?",
+            "sourceHash": "0048bd736e33dcdf"
+        },
+        "Loading": {
+            "text": "로딩 중",
+            "sourceHash": "b59d68ed12d46377"
+        },
+        "Opacity": {
+            "text": "불투명도",
+            "sourceHash": "ba64d8954d027206"
+        },
+        "Options": {
+            "text": "옵션",
+            "sourceHash": "463b8c4e92751ba5"
+        },
+        "Paused": {
+            "text": "일시 정지",
+            "sourceHash": "95bc8722b2708f8b"
+        },
+        "Press a key. Escape cancels; hold Escape for one second to bind it.": {
+            "text": "키를 누르세요. Esc 는 취소, Esc 를 1초 누르고 있으면 Esc 를 지정합니다.",
+            "sourceHash": "2fe6a469745a3551"
+        },
+        "Quit Game": {
+            "text": "게임 종료",
+            "sourceHash": "92aee0b2e93f7fd0"
+        },
+        "Resume": {
+            "text": "계속하기",
+            "sourceHash": "89118d3a7be870ca"
+        },
+        "Return to Title": {
+            "text": "타이틀로 돌아가기",
+            "sourceHash": "6769de3e1eac7922"
+        },
+        "Revert": {
+            "text": "되돌리기",
+            "sourceHash": "d89a2e529b31ef43"
+        },
+        "Reverting in": {
+            "text": "되돌리기까지",
+            "sourceHash": "9cef80c4c43e7e14"
+        },
+        "Sections": {
+            "text": "섹션",
+            "sourceHash": "0337d90cf703df0d"
+        },
+        "Show HUD (Ctrl+F3)": {
+            "text": "HUD 표시 (Ctrl+F3)",
+            "sourceHash": "8f553b077c9a458d"
+        },
+        "Some changes take effect after a restart.": {
+            "text": "일부 변경은 다시 시작한 뒤 적용됩니다.",
+            "sourceHash": "14441b823018dda4"
+        },
+        "Swap": {
+            "text": "맞바꾸기",
+            "sourceHash": "cf28302518a72dee"
+        },
+        "You have changes that are not applied.": {
+            "text": "적용하지 않은 변경이 있습니다.",
+            "sourceHash": "9ea9ff2b01f83378"
+        },
+        "[action=UI.Accept] Select": {
+            "text": "[action=UI.Accept] 선택",
+            "sourceHash": "484163e56235b950"
+        },
         "settings.accessibility.colorVision": {
             "text": "색각 보정",
             "sourceHash": "dbb8616605f92363"
@@ -352,6 +456,18 @@
         "settings.accessibility.uiScale": {
             "text": "UI 배율",
             "sourceHash": "deba5e3543cd9735"
+        },
+        "settings.accessibility.uiTheme": {
+            "text": "UI 테마",
+            "sourceHash": "ad5a6165f8ac74b6"
+        },
+        "settings.accessibility.uiTheme.default": {
+            "text": "기본",
+            "sourceHash": "11326fd2590f4e5e"
+        },
+        "settings.accessibility.uiTheme.highcontrast": {
+            "text": "고대비",
+            "sourceHash": "480fd2e6a8201911"
         },
         "settings.audio.ambientVolume": {
             "text": "환경음 음량",
@@ -408,6 +524,10 @@
         "settings.category.language": {
             "text": "언어",
             "sourceHash": "efcf950b3cc4fc3b"
+        },
+        "settings.category.privacy": {
+            "text": "개인 정보",
+            "sourceHash": "e78c02e9a98a0f47"
         },
         "settings.common.off": {
             "text": "끔",
@@ -485,6 +605,10 @@
             "text": "걸음 흔들림",
             "sourceHash": "6b009c84219aa0f8"
         },
+        "settings.gameplay.showTutorials": {
+            "text": "튜토리얼 표시",
+            "sourceHash": "f7f7f982c0020167"
+        },
         "settings.graphics.effectsQuality": {
             "text": "효과 품질",
             "sourceHash": "2f1d73eefe0d67e4"
@@ -552,6 +676,26 @@
         "settings.language.text": {
             "text": "표시 언어",
             "sourceHash": "8b38f66b7ca61de8"
+        },
+        "settings.privacy.crashReports": {
+            "text": "크래시 보고",
+            "sourceHash": "b4a986fd6964c2d3"
+        },
+        "settings.privacy.crashReports.ask": {
+            "text": "매번 묻기",
+            "sourceHash": "44254bb1ef85bac8"
+        },
+        "settings.privacy.crashReports.local": {
+            "text": "로컬에만 보관",
+            "sourceHash": "8b3c1bab8e4d3093"
+        },
+        "settings.privacy.crashReports.send": {
+            "text": "자동으로 보내기",
+            "sourceHash": "9fa9bb8c8057dbfa"
+        },
+        "settings.privacy.telemetry": {
+            "text": "사용 데이터 공유",
+            "sourceHash": "35369209785d4d0d"
         },
         "settings.restartRequired": {
             "text": "설정 {count}개는 다시 시작한 뒤에 적용됩니다.",
