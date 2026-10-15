@@ -1726,6 +1726,7 @@ SW_TEST_CASE( RHIDeviceTest, GPUTimestampsMarkUnwrittenSlotsAllBackends )
         // 엔진이 켜 주기 전에는 백엔드가 쿼리 자원조차 만들지 않는다 — 계측 비용을 안 내기 위해서다.
         pTimestamps->setTimestampEnabled( true );
 
+        const uint32          validationBefore = device->getValidationMessageCount();
         sw::RHITimestampFrame frame;
         bool                  bGotSample{ false };
         uint32                slotCount{ 0 };
@@ -1757,6 +1758,9 @@ SW_TEST_CASE( RHIDeviceTest, GPUTimestampsMarkUnwrittenSlotsAllBackends )
             if ( pTimestamps->readTimestamps( frame ) )
                 bGotSample = true;
         }
+        // 두 칸만 적은 프레임의 resolve 가 검증 오류를 내지 않는다(DX12 는 한 번도 적지 않은 쿼리를 Resolve 하면 오류 1319 다 — 적은 구간만 옮긴다).
+        SW_EXPECT_TRUE_MSG( device->getValidationMessageCount() == validationBefore,
+                            ( sw::string( pName ) + ": resolving the timestamps raised validation messages" ).c_str() );
         const sw::vector<float32>& listMicro = frame._listMicro;
 
         if ( bGotSample )

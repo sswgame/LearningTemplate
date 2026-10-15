@@ -246,21 +246,14 @@ namespace sw
         _device->CreateCommandSignature( &dispatchCmdSigDesc, nullptr, IID_PPV_ARGS( _dispatchCommandSignature.GetAddressOf() ) );
 
         {
-            const RHIVertex arrFullscreenVert[3] = {
-                // 화면 공간 삼각형이라 노멀은 쓰이지 않는다. 레이아웃을 채우려고 +Z 를 둔다.
-                // 셰이더는 SV_VertexID 로 UV 를 만들지만 레이아웃에 맞춰 같은 값을 실어 둔다.
-                {{ -1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f },  { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
-                { { 3.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f },  { 2.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
-                { { -1.0f, 3.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, -1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
-            };
 
             void* pMapped{ nullptr };
-            if ( createMappedUploadBuffer( sizeof( arrFullscreenVert ), _vertexBuffer, pMapped ) == false )
+            if ( createMappedUploadBuffer( sizeof( constant::arrFallbackVertex ), _vertexBuffer, pMapped ) == false )
             {
                 SW_LOG_ERROR( "Failed to create or map fullscreen vertex buffer." );
                 return false;
             }
-            Memory::copy( pMapped, arrFullscreenVert, sizeof( arrFullscreenVert ) );
+            Memory::copy( pMapped, constant::arrFallbackVertex, sizeof( constant::arrFallbackVertex ) );
             _vertexBuffer->Unmap( 0, nullptr );
         }
 
