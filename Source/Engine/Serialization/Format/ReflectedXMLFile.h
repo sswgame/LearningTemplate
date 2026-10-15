@@ -15,7 +15,6 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 
 namespace sw
@@ -37,7 +36,7 @@ namespace sw
         template <typename DescType>
         [[nodiscard]] static bool loadDesc( string_view assetRelativePath, DescType& outDesc )
         {
-            return loadDescInternal( assetRelativePath, &outDesc, engine::getSubsystem<TypeRegistry>().findType<DescType>() );
+            return loadDescInternal( assetRelativePath, &outDesc, DescType::StaticType() );
         }
 
         /**
@@ -48,7 +47,7 @@ namespace sw
         template <typename DescType>
         [[nodiscard]] static bool saveDesc( string_view assetRelativePath, const DescType& desc )
         {
-            return saveDescInternal( assetRelativePath, &desc, engine::getSubsystem<TypeRegistry>().findType<DescType>() );
+            return saveDescInternal( assetRelativePath, &desc, DescType::StaticType() );
         }
 
     private:

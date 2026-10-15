@@ -11,6 +11,7 @@
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
+#include "Engine/UI/Layout/UIResolutionPresetTable.h"
 #include "Engine/UI/Layout/UIScale.h"
 #include "Engine/UI/Layout/WidgetLayoutSlot.h"
 #include "Engine/UI/Screen/UIScreen.h"
@@ -29,12 +30,12 @@
 SW_TEST_CASE( UIPreviewLogicTest, ResolutionPresetMakesScaledViewport )
 {
     using sw::editor::UIPreviewLogic;
-    const sw::UIScaleSettings       settings{}; // 기준 1920 × 1080
-    sw::editor::UIPreviewResolution fullHD;
+    const sw::UIScaleSettings settings{}; // 기준 1920 × 1080
+    sw::UIResolutionPreset    fullHD;
     fullHD._name   = "1920x1080";
     fullHD._width  = 1920;
     fullHD._height = 1080;
-    sw::editor::UIPreviewResolution ultraHD;
+    sw::UIResolutionPreset ultraHD;
     ultraHD._name             = "3840x2160";
     ultraHD._width            = 3840;
     ultraHD._height           = 2160;
@@ -54,9 +55,9 @@ SW_TEST_CASE( UIPreviewLogicTest, ResolutionPresetMakesScaledViewport )
     SW_EXPECT_TRUE( UIPreviewLogic::makeTargetPath( full ) != UIPreviewLogic::makeTargetPath( uhd ) );
 
     // 패널의 견본은 데이터 표다 — 읽히고, 모든 줄이 이름과 양의 크기를 가진다.
-    sw::editor::UIPreviewResolutionTable table;
+    sw::UIResolutionPresetTable table;
     SW_ASSERT_TRUE( table.loadFromResource() );
-    for ( const sw::editor::UIPreviewResolution& resolution : table._listResolution )
+    for ( const sw::UIResolutionPreset& resolution : table._listResolution )
     {
         SW_EXPECT_TRUE_MSG( resolution._name.empty() == false && resolution._width > 0u && resolution._height > 0u, resolution._name.c_str() );
     }

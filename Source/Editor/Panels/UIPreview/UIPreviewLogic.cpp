@@ -26,6 +26,7 @@
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Layout/GridPanel.h"
+#include "Engine/UI/Layout/UIResolutionPresetTable.h"
 #include "Engine/UI/Layout/UIScale.h"
 #include "Engine/UI/Layout/WidgetLayoutSlot.h"
 #include "Engine/UI/Screen/UIScreen.h"
@@ -33,17 +34,10 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "UIPreview" );
-
     namespace
     {
         struct UIPreviewLogicInternal
         {
-            [[nodiscard]] static bool loadResolutionTable( const string& resourceID )
-            {
-                UIPreviewResolutionTable table;
-                return table.loadFromResource( resourceID );
-            }
             /// 의사 문화권 코드(정규 표기)입니다. 엔진 문화권 표(`LocalizationManager::normalizeLanguageCode`)가 쓰는 이름과 같다.
             static constexpr string_view kPseudoAccented = "qps_ploc";
             static constexpr string_view kPseudoMirrored = "qps_plocm";
@@ -82,34 +76,7 @@ namespace sw::editor
         };
     } // namespace
 
-    /** @brief 미리보기 해상도 표의 데이터 파일 종류입니다(스키마 테스트가 이 줄로 표를 읽어 본다). */
-    SW_RESOURCE_DATA_KIND( UIPreviewResolutions, "uipreviewresolutions", "editor/", nullptr, ".resolutions.xml", &UIPreviewLogicInternal::loadResolutionTable );
-
-    bool UIPreviewResolutionTable::loadFromResource( string_view path )
-    {
-        _listResolution.clear();
-        bool bOk = ReflectedXMLFile::loadDesc( path, *this );
-        if ( bOk && _listResolution.empty() )
-        {
-            SW_LOG_ERROR( "%#: no resolutions in <_listResolution>", path );
-            bOk = false;
-        }
-        for ( const UIPreviewResolution& resolution : _listResolution )
-        {
-            vector<string> listRangeError;
-            SerializerUtil::collectRangeErrors( *UIPreviewResolution::StaticType(), &resolution, resolution._name, listRangeError );
-            for ( const string& rangeError : listRangeError )
-            {
-                SW_LOG_ERROR( "%#: %#", path, rangeError.c_str() );
-                bOk = false;
-            }
-        }
-        if ( bOk == false )
-            _listResolution.clear();
-        return bOk;
-    }
-
-    UIViewport UIPreviewLogic::makeViewport( const UIScaleSettings& settings, const UIPreviewResolution& resolution, float32 userScale, float32 safeZoneRatio )
+    UIViewport UIPreviewLogic::makeViewport( const UIScaleSettings& settings, const UIResolutionPreset& resolution, float32 userScale, float32 safeZoneRatio )
     {
         const float2 physicalSize{ static_cast<float32>( resolution._width ), static_cast<float32>( resolution._height ) };
         // 창 OS 배율은 1 — 미리보기는 해상도 규칙과 사용자 배율만 본다(모니터 DPI 는 게임 창의 일).

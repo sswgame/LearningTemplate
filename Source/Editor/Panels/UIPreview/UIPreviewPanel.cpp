@@ -459,7 +459,7 @@ namespace sw::editor
         _error.clear();
     }
 
-    const UIPreviewResolution* UIPreviewPanel::findSelectedResolution()
+    const UIResolutionPreset* UIPreviewPanel::findSelectedResolution()
     {
         if ( _bResolutionTableAttempted == false )
         {
@@ -475,10 +475,10 @@ namespace sw::editor
 
     void UIPreviewPanel::syncPreview( UISystem& ui )
     {
-        const UIPreviewResolution* pResolution = findSelectedResolution();
+        const UIResolutionPreset* pResolution = findSelectedResolution();
         if ( pResolution == nullptr )
         {
-            _error = string( "UI preview resolutions could not be read (" ) + UIPreviewResolutionTable::kResourcePath + ")";
+            _error = string( "UI preview resolutions could not be read (" ) + UIResolutionPresetTable::kResourcePath + ")";
             return;
         }
         _viewport                        = UIPreviewLogic::makeViewport( ui.getScaleSettings(), *pResolution, _uiScale, _safeZone );
@@ -907,8 +907,8 @@ namespace sw::editor
                                     "changed the preview tree - Reload first." );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( 190.0f * EditorThemeUtil::getDpiScale() );
-        const UIPreviewResolution* pSelectedResolution = findSelectedResolution();
-        const bool                 bResolutionOpen     = ImGui::BeginCombo( "##uipreviewres", pSelectedResolution != nullptr ? pSelectedResolution->_name.c_str() : "-" );
+        const UIResolutionPreset* pSelectedResolution = findSelectedResolution();
+        const bool                bResolutionOpen     = ImGui::BeginCombo( "##uipreviewres", pSelectedResolution != nullptr ? pSelectedResolution->_name.c_str() : "-" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "ResolutionTip" ) );
         if ( bResolutionOpen )
         {

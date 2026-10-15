@@ -174,9 +174,9 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         note="Linux 는 `$XDG_CONFIG_HOME/swengine/<팩>/` · 자동화는 `-gv_userSettingsFile=<경로>`"),
     # --- 에디터 도구 --------------------------------------------------------------------------------------------------------
     ConfigFileEntry(
-        page="", pathPattern="Resource/editor/settings/uipreview.resolutions.xml", layer=kLayerEditor, fileFormat="xml",
-        reader="`UIPreviewResolutionTable::loadFromResource` (UI 미리보기 패널을 처음 그릴 때)", readWhen="패널을 처음 그릴 때",
-        shipping="없음(에디터 없음)", bCommitted=True, ownerDoc="Source/Editor/Panels/UIPreview/UIPreviewLogic.h"),
+        page="", pathPattern="Resource/engine/settings/uiresolutions.xml", layer=kLayerEditor, fileFormat="xml",
+        reader="`UIResolutionPresetTable::loadFromResource` (에디터 UI 미리보기 패널을 처음 그릴 때)", readWhen="패널을 처음 그릴 때",
+        shipping="엔진 팩에 실림(읽는 곳은 에디터뿐)", bCommitted=True, ownerDoc="Source/Engine/UI/Layout/UIResolutionPresetTable.h"),
     ConfigFileEntry(
         page="EditorToolDefaults", pathPattern="Config/Editor/editortooldefaults.json", layer=kLayerEditor, fileFormat="json",
         reader="`EditorToolDefaults::loadFromHostPath` (에디터 모듈 기동)", readWhen="에디터 기동 · 에디터 핫 리로드",
