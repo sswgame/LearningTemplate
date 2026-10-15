@@ -162,6 +162,14 @@ namespace sw
          */
         [[nodiscard]] bool revertInstance( GameObject* pInstance, string_view assetRelativePath );
         /**
+         * @brief 프리팹을 고친 뒤 이미 놓인 인스턴스 하나를 새 원형에 맞춥니다. 인스턴스가 옛 원형 위에 덮어쓴 것(`PrefabOverrides`)은 그대로 남깁니다.
+         * @details 유니티의 Apply 뒤 다른 인스턴스 갱신 · 언리얼의 블루프린트 컴파일 뒤 레벨 인스턴스 갱신과 같은 규칙이다 — 덮어쓰지 않은 칸만 새 값을 받는다.
+         *          씬을 다시 읽을 때(`Scene::instantiate`)와 같은 식(새 원형 + 덮어쓴 것)을 살아 있는 오브젝트에 쓴다. 오브젝트 · 컴포넌트 id 는 이어진다.
+         *          캐시는 이미 새 내용이어야 한다(`reload` 뒤).
+         * @param oldBaseStateXML 고치기 전 원형(`PrefabOverrides::makeBaseState`)입니다. 덮어쓴 것을 이것과 견줘 뽑습니다.
+         */
+        [[nodiscard]] bool updateInstance( GameObject* pInstance, string_view oldBaseStateXML, string_view assetRelativePath );
+        /**
          * @brief 프리팹을 스폰합니다.
          * @details 컴포넌트 틱 중이면 오브젝트는 바로 반환하고 프리팹 상태는 틱 직후(구조 변경 큐)에 채운다. 그때까지 오브젝트는 비어 있다.
          *          상태를 쓰지 못하면 그 오브젝트를 지운다. 틱 안에서 스폰하고 바로 초기화하려면 `executeOrDeferPostTick` 으로 감싼다.

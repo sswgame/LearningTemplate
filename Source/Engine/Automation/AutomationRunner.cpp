@@ -27,6 +27,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/IWindow.h"
@@ -513,6 +514,51 @@ namespace sw
                 return true;
             }
 
+            /**
+             * @brief 탐침 `Object.Property` 입니다. 대상 오브젝트의 컴포넌트 PROPERTY 값(`key="<컴포넌트 타입>.<프로퍼티>"`)입니다.
+             * @details 수(float32 · int32 · uint32)와 글(string)을 읽는다. 선택과 무관하게 이름으로 고르므로 여러 오브젝트를 한 프레임에 견줄 수 있다
+             *          (프리팹 인스턴스마다의 값, 플레이 전후의 값). 비트필드 bool 은 PROPERTY 주소가 없어 읽지 못한다.
+             */
+            [[nodiscard]] static bool readObjectProperty( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
+            {
+                if ( query._pTarget == nullptr )
+                    return false;
+                const size_t dot = query._key.find( '.' );
+                if ( dot == string_view::npos )
+                {
+                    outValue.setText( "key must be <ComponentType>.<property>" );
+                    return false;
+                }
+                const string componentName( query._key.substr( 0, dot ) );
+                const string propertyName( query._key.substr( dot + 1 ) );
+                Component*   pComponent = query._pTarget->findComponentByTypeName( hashed_string( componentName ) );
+                if ( pComponent == nullptr || pComponent->getTypeInfo() == nullptr )
+                {
+                    outValue.setText( "no " + componentName + " on the target" );
+                    return false;
+                }
+                const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( propertyName ) );
+                if ( pProperty == nullptr )
+                {
+                    outValue.setText( "no property " + propertyName );
+                    return false;
+                }
+                if ( pProperty->_typeName == hashed_string( "float32" ) )
+                    outValue.setNumber( static_cast<float64>( *pProperty->getValuePtr<float32>( pComponent ) ) );
+                else if ( pProperty->_typeName == hashed_string( "int32" ) )
+                    outValue.setNumber( static_cast<float64>( *pProperty->getValuePtr<int32>( pComponent ) ) );
+                else if ( pProperty->_typeName == hashed_string( "uint32" ) )
+                    outValue.setNumber( static_cast<float64>( *pProperty->getValuePtr<uint32>( pComponent ) ) );
+                else if ( pProperty->_typeName == hashed_string( "string" ) )
+                    outValue.setText( *pProperty->getValuePtr<string>( pComponent ) );
+                else
+                {
+                    outValue.setText( "property type " + string( pProperty->_typeName.c_str() ) + " is not readable here" );
+                    return false;
+                }
+                return true;
+            }
+
             /** @brief 탐침 `Object.DistanceTo` 입니다. 대상과 `key` 이름의 오브젝트 사이 월드 거리(m)입니다. */
             [[nodiscard]] static bool readObjectDistanceTo( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
             {
@@ -588,6 +634,8 @@ namespace sw
     SW_AUTOMATION_QUERY_PROBE( objectY, "Object.Y", "World Y of the target object (m)", &AutomationRunnerInternal::readObjectY, true, false );
     SW_AUTOMATION_QUERY_PROBE( objectZ, "Object.Z", "World Z of the target object (m)", &AutomationRunnerInternal::readObjectZ, true, false );
     SW_AUTOMATION_QUERY_PROBE( objectExists, "Object.Exists", "1 when the active scene has an object named target", &AutomationRunnerInternal::readObjectExists, true, false );
+    SW_AUTOMATION_QUERY_PROBE( objectProperty, "Object.Property", "Component property of the target object (key = <ComponentType>.<property>; numbers and strings)",
+                               &AutomationRunnerInternal::readObjectProperty, true, true );
     SW_AUTOMATION_QUERY_PROBE( objectDistanceTo, "Object.DistanceTo", "World distance from the target object to the object named key (m)",
                                &AutomationRunnerInternal::readObjectDistanceTo, true, true );
 #if SW_PROFILER_TRACE_ENABLED
