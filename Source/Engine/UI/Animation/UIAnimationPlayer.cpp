@@ -204,7 +204,7 @@ namespace sw
         Widget* pWidget = _pTree->findWidgetByName( track._widget );
         if ( pWidget == nullptr )
         {
-            SW_LOG_WARNING( "[UI] Animation '%#': no widget named '%#' — the track is skipped", animation._name.c_str(), track._widget.c_str() );
+            SW_LOG_ERROR( "[UI] Animation '%#': no widget named '%#' — the track is skipped", animation._name.c_str(), track._widget.c_str() );
             return false;
         }
         string error;

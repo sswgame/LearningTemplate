@@ -173,12 +173,12 @@ namespace sw
                 pTexture     = borrowedPath.empty() ? nullptr : textures.acquire( borrowedPath, pRHI );
                 if ( pTexture == nullptr )
                 {
-                    SW_LOG_WARNING( "Material '%#': texture '%#' for '%#' could not be loaded and neither could the missing-texture checker — sampling falls back to white.",
-                                    _desc._name.c_str(), prop._assetPath.c_str(), prop._name.c_str() );
+                    SW_LOG_ERROR( "Material '%#': texture '%#' for '%#' could not be loaded and neither could the missing-texture checker — sampling falls back to white.",
+                                  _desc._name.c_str(), prop._assetPath.c_str(), prop._name.c_str() );
                     continue;
                 }
-                SW_LOG_WARNING( "Material '%#': texture '%#' for '%#' could not be loaded — sampling the missing-texture checker '%#'.",
-                                _desc._name.c_str(), prop._assetPath.c_str(), prop._name.c_str(), borrowedPath.c_str() );
+                SW_LOG_ERROR( "Material '%#': texture '%#' for '%#' could not be loaded — sampling the missing-texture checker '%#'.",
+                              _desc._name.c_str(), prop._assetPath.c_str(), prop._name.c_str(), borrowedPath.c_str() );
             }
 
             const uint32 ordinal = static_cast<uint32>( _listMaterialTextureSrv.size() );

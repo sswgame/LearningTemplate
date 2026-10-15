@@ -64,7 +64,7 @@ namespace sw
     {
         if ( _catalog.findTheme( name ) == nullptr )
         {
-            SW_LOG_WARNING( "[UI] Unknown UI theme '%#'", name.c_str() );
+            SW_LOG_ERROR( "[UI] Unknown UI theme '%#'", name.c_str() );
             return false;
         }
         _themeName = name;
