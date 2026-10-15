@@ -3,23 +3,23 @@
     "SW|AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD": {
       "aiskirmish|HighEnd|dx12": {
         "build": "Ninja-Release",
-        "commit": "14c775c55",
+        "commit": "25f666dce",
         "emulated": true,
         "metrics": {
           "GPU.Frame.p50_us": {
             "max": 720.0,
-            "median": 655.0,
+            "median": 720.0,
             "min": 655.0,
             "runs": 3.0
           },
           "GPU.Frame.p99_us": {
-            "max": 786.0,
-            "median": 720.0,
-            "min": 720.0,
+            "max": 851.0,
+            "median": 786.0,
+            "min": 786.0,
             "runs": 3.0
           },
           "GT.Frame.p50_us": {
-            "max": 851.0,
+            "max": 786.0,
             "median": 786.0,
             "min": 786.0,
             "runs": 3.0
@@ -37,9 +37,9 @@
             "runs": 3.0
           },
           "GT.GPUScene.build.p99_us": {
-            "max": 18.0,
-            "median": 16.0,
-            "min": 16.0,
+            "max": 28.0,
+            "median": 26.0,
+            "min": 22.0,
             "runs": 3.0
           },
           "GT.Game.update.p50_us": {
@@ -49,7 +49,7 @@
             "runs": 3.0
           },
           "GT.Game.update.p99_us": {
-            "max": 2.0,
+            "max": 3.0,
             "median": 2.0,
             "min": 2.0,
             "runs": 3.0
@@ -57,7 +57,7 @@
           "GT.Scene.tick.p50_us": {
             "max": 81.0,
             "median": 81.0,
-            "min": 81.0,
+            "min": 73.0,
             "runs": 3.0
           },
           "GT.Scene.tick.p99_us": {
@@ -67,21 +67,21 @@
             "runs": 3.0
           },
           "RT.ExecutePacket.p50_us": {
-            "max": 196.0,
-            "median": 196.0,
-            "min": 196.0,
+            "max": 245.0,
+            "median": 229.0,
+            "min": 212.0,
             "runs": 3.0
           },
           "RT.ExecutePacket.p99_us": {
-            "max": 491.0,
-            "median": 458.0,
-            "min": 458.0,
+            "max": 589.0,
+            "median": 524.0,
+            "min": 524.0,
             "runs": 3.0
           },
           "RT.Frame.p50_us": {
             "max": 851.0,
-            "median": 786.0,
-            "min": 786.0,
+            "median": 851.0,
+            "min": 851.0,
             "runs": 3.0
           },
           "RT.Frame.p99_us": {
@@ -91,9 +91,9 @@
             "runs": 3.0
           },
           "alloc.per_frame": {
-            "max": 19.2,
-            "median": 19.0,
-            "min": 17.6,
+            "max": 5.5,
+            "median": 5.5,
+            "min": 5.5,
             "runs": 3.0
           },
           "gpu_memory_mb": {
@@ -109,60 +109,60 @@
             "runs": 3.0
           },
           "hitch.worst_us": {
-            "max": 14472.0,
-            "median": 14386.0,
-            "min": 12567.0,
+            "max": 14157.0,
+            "median": 14089.0,
+            "min": 6521.0,
             "runs": 3.0
           },
           "private_mb.max": {
-            "max": 204.0625,
-            "median": 202.89453125,
-            "min": 202.65234375,
+            "max": 204.84765625,
+            "median": 202.67578125,
+            "min": 202.47265625,
             "runs": 3.0
           },
           "startup_ms": {
-            "max": 661.0,
-            "median": 649.0,
-            "min": 644.0,
+            "max": 1093.0,
+            "median": 848.0,
+            "min": 618.0,
             "runs": 3.0
           },
           "wall.us_per_frame": {
-            "max": 909.0,
-            "median": 877.0,
-            "min": 872.0,
+            "max": 894.0,
+            "median": 890.0,
+            "min": 878.0,
             "runs": 3.0
           }
         },
-        "recorded": "2026-10-15T15:13:17",
+        "recorded": "2026-10-15T18:40:12",
         "runs": 3
       },
       "aiskirmish|LowEnd|dx12": {
         "build": "Ninja-Release",
-        "commit": "14c775c55",
+        "commit": "25f666dce",
         "emulated": true,
         "metrics": {
           "GPU.Frame.p50_us": {
-            "max": 360.0,
-            "median": 360.0,
-            "min": 360.0,
+            "max": 327.0,
+            "median": 327.0,
+            "min": 327.0,
             "runs": 3.0
           },
           "GPU.Frame.p99_us": {
-            "max": 425.0,
-            "median": 425.0,
-            "min": 425.0,
+            "max": 393.0,
+            "median": 393.0,
+            "min": 393.0,
             "runs": 3.0
           },
           "GT.Frame.p50_us": {
-            "max": 491.0,
+            "max": 458.0,
             "median": 458.0,
             "min": 458.0,
             "runs": 3.0
           },
           "GT.Frame.p99_us": {
             "max": 851.0,
-            "median": 786.0,
-            "min": 786.0,
+            "median": 851.0,
+            "min": 851.0,
             "runs": 3.0
           },
           "GT.GPUScene.build.p50_us": {
@@ -172,9 +172,9 @@
             "runs": 3.0
           },
           "GT.GPUScene.build.p99_us": {
-            "max": 11.0,
+            "max": 10.0,
             "median": 10.0,
-            "min": 9.0,
+            "min": 10.0,
             "runs": 3.0
           },
           "GT.Game.update.p50_us": {
@@ -190,15 +190,15 @@
             "runs": 3.0
           },
           "GT.Scene.tick.p50_us": {
-            "max": 57.0,
-            "median": 57.0,
-            "min": 57.0,
+            "max": 61.0,
+            "median": 61.0,
+            "min": 61.0,
             "runs": 3.0
           },
           "GT.Scene.tick.p99_us": {
-            "max": 655.0,
-            "median": 655.0,
-            "min": 655.0,
+            "max": 720.0,
+            "median": 720.0,
+            "min": 720.0,
             "runs": 3.0
           },
           "RT.ExecutePacket.p50_us": {
@@ -209,26 +209,26 @@
           },
           "RT.ExecutePacket.p99_us": {
             "max": 327.0,
-            "median": 294.0,
+            "median": 327.0,
             "min": 294.0,
             "runs": 3.0
           },
           "RT.Frame.p50_us": {
-            "max": 491.0,
-            "median": 491.0,
-            "min": 491.0,
+            "max": 458.0,
+            "median": 458.0,
+            "min": 458.0,
             "runs": 3.0
           },
           "RT.Frame.p99_us": {
             "max": 786.0,
-            "median": 720.0,
+            "median": 786.0,
             "min": 720.0,
             "runs": 3.0
           },
           "alloc.per_frame": {
-            "max": 60.8,
-            "median": 60.0,
-            "min": 58.0,
+            "max": 5.2,
+            "median": 5.2,
+            "min": 5.2,
             "runs": 3.0
           },
           "gpu_memory_mb": {
@@ -244,36 +244,36 @@
             "runs": 3.0
           },
           "hitch.worst_us": {
-            "max": 26516.0,
-            "median": 25153.0,
-            "min": 15918.0,
+            "max": 4322.0,
+            "median": 4136.0,
+            "min": 3909.0,
             "runs": 3.0
           },
           "private_mb.max": {
-            "max": 168.4375,
-            "median": 167.484375,
-            "min": 167.046875,
+            "max": 168.66015625,
+            "median": 168.0390625,
+            "min": 168.02734375,
             "runs": 3.0
           },
           "startup_ms": {
-            "max": 7012.0,
-            "median": 6893.0,
-            "min": 6850.0,
+            "max": 3580.0,
+            "median": 3550.0,
+            "min": 3550.0,
             "runs": 3.0
           },
           "wall.us_per_frame": {
-            "max": 518.0,
-            "median": 509.0,
-            "min": 506.0,
+            "max": 492.0,
+            "median": 485.0,
+            "min": 484.0,
             "runs": 3.0
           }
         },
-        "recorded": "2026-10-15T15:17:03",
+        "recorded": "2026-10-15T18:43:31",
         "runs": 3
       },
       "aiskirmish|Mid|dx12": {
         "build": "Ninja-Release",
-        "commit": "14c775c55",
+        "commit": "25f666dce",
         "emulated": true,
         "metrics": {
           "GPU.Frame.p50_us": {
@@ -283,9 +283,9 @@
             "runs": 3.0
           },
           "GPU.Frame.p99_us": {
-            "max": 589.0,
-            "median": 589.0,
-            "min": 589.0,
+            "max": 524.0,
+            "median": 524.0,
+            "min": 524.0,
             "runs": 3.0
           },
           "GT.Frame.p50_us": {
@@ -307,9 +307,9 @@
             "runs": 3.0
           },
           "GT.GPUScene.build.p99_us": {
-            "max": 13.0,
-            "median": 12.0,
-            "min": 12.0,
+            "max": 14.0,
+            "median": 14.0,
+            "min": 13.0,
             "runs": 3.0
           },
           "GT.Game.update.p50_us": {
@@ -331,8 +331,8 @@
             "runs": 3.0
           },
           "GT.Scene.tick.p99_us": {
-            "max": 786.0,
-            "median": 786.0,
+            "max": 851.0,
+            "median": 851.0,
             "min": 786.0,
             "runs": 3.0
           },
@@ -349,7 +349,7 @@
             "runs": 3.0
           },
           "RT.Frame.p50_us": {
-            "max": 655.0,
+            "max": 589.0,
             "median": 589.0,
             "min": 589.0,
             "runs": 3.0
@@ -361,9 +361,9 @@
             "runs": 3.0
           },
           "alloc.per_frame": {
-            "max": 34.8,
-            "median": 34.2,
-            "min": 32.3,
+            "max": 5.3,
+            "median": 5.3,
+            "min": 5.3,
             "runs": 3.0
           },
           "gpu_memory_mb": {
@@ -379,31 +379,31 @@
             "runs": 3.0
           },
           "hitch.worst_us": {
-            "max": 20545.0,
-            "median": 19192.0,
-            "min": 17608.0,
+            "max": 14655.0,
+            "median": 14301.0,
+            "min": 14281.0,
             "runs": 3.0
           },
           "private_mb.max": {
-            "max": 185.7578125,
-            "median": 185.3359375,
-            "min": 184.703125,
+            "max": 187.08203125,
+            "median": 186.375,
+            "min": 184.7421875,
             "runs": 3.0
           },
           "startup_ms": {
-            "max": 6441.0,
-            "median": 6329.0,
-            "min": 6211.0,
+            "max": 1134.0,
+            "median": 1114.0,
+            "min": 1110.0,
             "runs": 3.0
           },
           "wall.us_per_frame": {
-            "max": 682.0,
-            "median": 665.0,
-            "min": 659.0,
+            "max": 654.0,
+            "median": 653.0,
+            "min": 650.0,
             "runs": 3.0
           }
         },
-        "recorded": "2026-10-15T15:15:09",
+        "recorded": "2026-10-15T18:41:47",
         "runs": 3
       },
       "connect|HighEnd|-": {
@@ -1038,12 +1038,12 @@
       },
       "renderbench|LowEnd|dx12": {
         "build": "Ninja-Release",
-        "commit": "14c775c55",
+        "commit": "25f666dce",
         "emulated": true,
         "metrics": {
           "GPU.Frame.p50_us": {
             "max": 589.0,
-            "median": 589.0,
+            "median": 524.0,
             "min": 524.0,
             "runs": 3.0
           },
@@ -1060,7 +1060,7 @@
             "runs": 3.0
           },
           "GT.Frame.p99_us": {
-            "max": 1572.0,
+            "max": 1703.0,
             "median": 1441.0,
             "min": 1441.0,
             "runs": 3.0
@@ -1073,7 +1073,7 @@
           },
           "GT.GPUScene.build.p99_us": {
             "max": 720.0,
-            "median": 655.0,
+            "median": 720.0,
             "min": 655.0,
             "runs": 3.0
           },
@@ -1084,9 +1084,9 @@
             "runs": 3.0
           },
           "GT.Game.update.p99_us": {
-            "max": 5.0,
-            "median": 5.0,
-            "min": 5.0,
+            "max": 4.0,
+            "median": 4.0,
+            "min": 4.0,
             "runs": 3.0
           },
           "GT.Scene.tick.p50_us": {
@@ -1098,24 +1098,24 @@
           "GT.Scene.tick.p99_us": {
             "max": 851.0,
             "median": 851.0,
-            "min": 786.0,
+            "min": 851.0,
             "runs": 3.0
           },
           "RT.ExecutePacket.p50_us": {
-            "max": 458.0,
-            "median": 458.0,
-            "min": 425.0,
+            "max": 491.0,
+            "median": 491.0,
+            "min": 491.0,
             "runs": 3.0
           },
           "RT.ExecutePacket.p99_us": {
-            "max": 1703.0,
-            "median": 1179.0,
-            "min": 1179.0,
+            "max": 1835.0,
+            "median": 1310.0,
+            "min": 1310.0,
             "runs": 3.0
           },
           "RT.Frame.p50_us": {
-            "max": 655.0,
-            "median": 655.0,
+            "max": 720.0,
+            "median": 720.0,
             "min": 655.0,
             "runs": 3.0
           },
@@ -1144,70 +1144,70 @@
             "runs": 3.0
           },
           "hitch.worst_us": {
-            "max": 2943.0,
-            "median": 2899.0,
-            "min": 2269.0,
+            "max": 19852.0,
+            "median": 18667.0,
+            "min": 13465.0,
             "runs": 3.0
           },
           "private_mb.max": {
-            "max": 186.2421875,
-            "median": 186.015625,
-            "min": 185.45703125,
+            "max": 186.12109375,
+            "median": 185.90625,
+            "min": 185.5546875,
             "runs": 3.0
           },
           "startup_ms": {
-            "max": 6855.0,
-            "median": 6816.0,
-            "min": 6756.0,
+            "max": 3676.0,
+            "median": 3664.0,
+            "min": 3654.0,
             "runs": 3.0
           },
           "wall.us_per_frame": {
-            "max": 815.0,
-            "median": 802.0,
-            "min": 783.0,
+            "max": 844.0,
+            "median": 804.0,
+            "min": 796.0,
             "runs": 3.0
           }
         },
-        "recorded": "2026-10-15T15:11:43",
+        "recorded": "2026-10-15T18:45:50",
         "runs": 3
       },
       "renderbench|Mid|dx12": {
         "build": "Ninja-Release",
-        "commit": "14c775c55",
+        "commit": "25f666dce",
         "emulated": true,
         "metrics": {
           "GPU.Frame.p50_us": {
-            "max": 720.0,
-            "median": 720.0,
+            "max": 786.0,
+            "median": 786.0,
             "min": 720.0,
             "runs": 3.0
           },
           "GPU.Frame.p99_us": {
-            "max": 917.0,
-            "median": 917.0,
-            "min": 917.0,
-            "runs": 3.0
-          },
-          "GT.Frame.p50_us": {
             "max": 851.0,
             "median": 851.0,
             "min": 851.0,
             "runs": 3.0
           },
+          "GT.Frame.p50_us": {
+            "max": 917.0,
+            "median": 917.0,
+            "min": 917.0,
+            "runs": 3.0
+          },
           "GT.Frame.p99_us": {
-            "max": 1441.0,
-            "median": 1310.0,
-            "min": 1310.0,
+            "max": 1179.0,
+            "median": 1179.0,
+            "min": 1179.0,
             "runs": 3.0
           },
           "GT.GPUScene.build.p50_us": {
-            "max": 294.0,
-            "median": 294.0,
+            "max": 327.0,
+            "median": 327.0,
             "min": 294.0,
             "runs": 3.0
           },
           "GT.GPUScene.build.p99_us": {
-            "max": 524.0,
+            "max": 589.0,
             "median": 524.0,
             "min": 524.0,
             "runs": 3.0
@@ -1220,44 +1220,44 @@
           },
           "GT.Game.update.p99_us": {
             "max": 5.0,
-            "median": 5.0,
-            "min": 4.0,
+            "median": 4.0,
+            "min": 3.0,
             "runs": 3.0
           },
           "GT.Scene.tick.p50_us": {
-            "max": 212.0,
+            "max": 229.0,
             "median": 212.0,
             "min": 196.0,
             "runs": 3.0
           },
           "GT.Scene.tick.p99_us": {
-            "max": 425.0,
-            "median": 425.0,
-            "min": 393.0,
+            "max": 458.0,
+            "median": 458.0,
+            "min": 425.0,
             "runs": 3.0
           },
           "RT.ExecutePacket.p50_us": {
             "max": 425.0,
             "median": 425.0,
-            "min": 425.0,
+            "min": 393.0,
             "runs": 3.0
           },
           "RT.ExecutePacket.p99_us": {
             "max": 655.0,
-            "median": 655.0,
-            "min": 655.0,
+            "median": 589.0,
+            "min": 589.0,
             "runs": 3.0
           },
           "RT.Frame.p50_us": {
-            "max": 851.0,
-            "median": 851.0,
-            "min": 851.0,
+            "max": 917.0,
+            "median": 917.0,
+            "min": 917.0,
             "runs": 3.0
           },
           "RT.Frame.p99_us": {
-            "max": 1441.0,
-            "median": 1441.0,
-            "min": 1441.0,
+            "max": 1179.0,
+            "median": 1179.0,
+            "min": 1179.0,
             "runs": 3.0
           },
           "alloc.per_frame": {
@@ -1279,31 +1279,31 @@
             "runs": 3.0
           },
           "hitch.worst_us": {
-            "max": 3561.0,
-            "median": 2254.0,
-            "min": 2237.0,
+            "max": 14369.0,
+            "median": 14132.0,
+            "min": 14111.0,
             "runs": 3.0
           },
           "private_mb.max": {
-            "max": 204.1640625,
-            "median": 203.59765625,
-            "min": 202.8515625,
+            "max": 205.26171875,
+            "median": 204.6640625,
+            "min": 203.234375,
             "runs": 3.0
           },
           "startup_ms": {
-            "max": 6670.0,
-            "median": 6449.0,
-            "min": 6408.0,
+            "max": 1166.0,
+            "median": 1139.0,
+            "min": 1120.0,
             "runs": 3.0
           },
           "wall.us_per_frame": {
-            "max": 949.0,
-            "median": 946.0,
-            "min": 946.0,
+            "max": 987.0,
+            "median": 978.0,
+            "min": 965.0,
             "runs": 3.0
           }
         },
-        "recorded": "2026-10-15T15:10:20",
+        "recorded": "2026-10-15T18:44:37",
         "runs": 3
       },
       "renderbench|Native|dx12": {

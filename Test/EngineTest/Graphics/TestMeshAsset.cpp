@@ -3,10 +3,12 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
+#include "Engine/Graphics/Mesh/MeshPreloadSet.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -155,6 +157,36 @@ SW_TEST_CASE( MeshAssetTest, CacheSharesOneMeshPerPathAndReloadsInPlace )
         SW_EXPECT_FALSE( sw::MeshCache::reloadShared( path, nullptr ) );
     }
     SW_EXPECT_EQUAL( 9u, first->getVertexCount() );
+}
+
+/**
+ * @brief [MeshAssetTest] 미리 읽기 묶음은 읽은 메시를 쥐어 캐시에 남기고, 뒤의 acquire 는 그 메시를 받으며, clear 하면 놓는다
+ * @details 캐시는 약한 참조라 묶음이 쥐지 않으면 미리 읽은 메시가 바로 사라져 스폰이 다시 디스크를 읽는다(StarSkirmish 의 플레이 중 히치).
+ */
+SW_TEST_CASE( MeshAssetTest, PreloadSetHoldsMeshesUntilCleared )
+{
+    const sw::string pathA = test::makeTempPath( "preload_a.mesh" );
+    const sw::string pathB = test::makeTempPath( "preload_b.mesh" );
+    SW_ASSERT_TRUE( sw::MeshAssetFormat::saveToFile( pathA, makeTestTriangles( 1, 1.0f ) ) );
+    SW_ASSERT_TRUE( sw::MeshAssetFormat::saveToFile( pathB, makeTestTriangles( 2, 1.0f ) ) );
+
+    sw::MeshPreloadSet preload;
+    preload.request( { pathA, pathB } );
+    const sw::Stopwatch stopwatch;
+    while ( preload.isComplete() == false && stopwatch.getElapsedMilliseconds() < 10'000 )
+    {
+        std::this_thread::yield();
+    }
+    SW_ASSERT_TRUE( preload.isComplete() );
+    SW_EXPECT_EQUAL( 2u, preload.getLoadedCount() );
+
+    sw::MeshCache cache;
+    SW_EXPECT_TRUE( cache.isCached( pathA ) );
+    SW_EXPECT_EQUAL( 6u, sw::MeshCache::acquire( pathB )->getVertexCount() );
+
+    preload.clear();
+    SW_EXPECT_EQUAL( 0u, preload.getLoadedCount() );
+    SW_EXPECT_FALSE( cache.isCached( pathA ) );
 }
 
 /**

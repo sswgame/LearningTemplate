@@ -646,6 +646,7 @@ namespace sw
     {
         if ( FileUtilInternal::readRange( fileName, offset, maxReadCount, outBytes ) == false )
             return false;
+        PlatformFileUtil::noteFileOpenedForRead( fileName, outBytes.size() );
         PlatformFileUtil::emulateReadDelay( outBytes.size() );
         return true;
     }
@@ -654,6 +655,7 @@ namespace sw
     {
         if ( FileUtilInternal::readRange( fileName, 0, std::numeric_limits<uint64>::max(), outText ) == false )
             return false;
+        PlatformFileUtil::noteFileOpenedForRead( fileName, outText.size() );
         PlatformFileUtil::emulateReadDelay( outText.size() );
 
         // BOM 판정의 기준은 아래 skipUtf8Bom 이다. 여기서 바이트를 따로 세면 한쪽만 고쳤을 때 읽기 경로와

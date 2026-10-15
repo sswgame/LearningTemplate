@@ -27,6 +27,7 @@
 |---|---|---|---|---|---|
 | `gv_ioEmuReadKilobytesPerSecond` | `int32` | `0` | 시험 | 디스크 흉내: 파일 읽기 대역폭(KB/s, 0=제한 없음) | [PlatformFileUtil.cpp](../../Source/Core/File/PlatformFileUtil.cpp) |
 | `gv_ioEmuReadLatencyMs` | `int32` | `0` | 시험 | 디스크 흉내: 파일 읽기 한 번마다 더하는 지연(ms, 0=끔) | [PlatformFileUtil.cpp](../../Source/Core/File/PlatformFileUtil.cpp) |
+| `gv_ioLogReads` | `bool` | `false` | 시험 | 읽으려고 연 파일마다 경로 · 바이트 · 스레드를 로그로 남긴다(기동 · 히치의 동기 읽기 찾기) | [PlatformFileUtil.cpp](../../Source/Core/File/PlatformFileUtil.cpp) |
 
 ## `Source/Core/Network`
 

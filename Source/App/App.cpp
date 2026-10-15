@@ -7,6 +7,7 @@
 #include "App/EditorModuleHost.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/File/PlatformFileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -410,7 +411,8 @@ namespace sw
         // 시작 시간은 `initialize` 첫 줄부터 여기까지의 경과 시간이다. 표준 출력 로그는 에러가 아니면 버퍼에 머물러 있어 밖에서는 시각을 측정할 수 없다.
         [[maybe_unused]] const int64 startupMicro =
             MonotonicClock::nowMicroseconds() - _initializeStartMicro;
-        SW_LOG_INFO( "Entering App Main Loop (Thin Launcher)... startup %# ms", startupMicro / constant::kMicrosecondsPerMillisecond );
+        SW_LOG_INFO( "Entering App Main Loop (Thin Launcher)... startup %# ms, %# file opens", startupMicro / constant::kMicrosecondsPerMillisecond,
+                     PlatformFileUtil::getFileOpenCount() );
 
         _fixedTimestep.start();
         _devConsole.initialize( _window.get(), _bEnableEditor == SW_TRUE );
