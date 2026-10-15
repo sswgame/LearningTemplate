@@ -34,34 +34,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( ParkGuestThought thought )
-    {
-        switch ( thought )
-        {
-            case ParkGuestThought::None:
-                return "None";
-            case ParkGuestThought::GreatRide:
-                return "GreatRide";
-            case ParkGuestThought::TooIntense:
-                return "TooIntense";
-            case ParkGuestThought::TooTame:
-                return "TooTame";
-            case ParkGuestThought::TooExpensive:
-                return "TooExpensive";
-            case ParkGuestThought::QueueTooLong:
-                return "QueueTooLong";
-            case ParkGuestThought::Sick:
-                return "Sick";
-            case ParkGuestThought::Tired:
-                return "Tired";
-            case ParkGuestThought::OutOfCash:
-                return "OutOfCash";
-            case ParkGuestThought::NothingToRide:
-                return "NothingToRide";
-        }
-        return "Unknown";
-    }
-
     ThemeParkSimulation::ThemeParkSimulation()
         : _settings{}
         , _listRide{}

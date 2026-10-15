@@ -10,30 +10,6 @@
 
 namespace sw
 {
-    const utf8* toString( AdventureTargetingState state )
-    {
-        switch ( state )
-        {
-            case AdventureTargetingState::Free:
-                return "Free";
-            case AdventureTargetingState::Parallel:
-                return "Parallel";
-            case AdventureTargetingState::Locked:
-                return "Locked";
-            case AdventureTargetingState::StrafeLeft:
-                return "StrafeLeft";
-            case AdventureTargetingState::StrafeRight:
-                return "StrafeRight";
-            case AdventureTargetingState::Backflip:
-                return "Backflip";
-            case AdventureTargetingState::SideHopLeft:
-                return "SideHopLeft";
-            case AdventureTargetingState::SideHopRight:
-                return "SideHopRight";
-        }
-        return "Unknown";
-    }
-
     AdventureTargeting::AdventureTargeting()
         : _settings{}
         , _selector{}

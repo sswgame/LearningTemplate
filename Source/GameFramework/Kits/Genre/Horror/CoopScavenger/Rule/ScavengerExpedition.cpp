@@ -21,7 +21,6 @@ namespace sw
     {
         struct ScavengerExpeditionInternal
         {
-
             static uint32 makeDaySeed( uint32 seed, int32 dayIndex, uint32 salt ) { return GameHash::hashCoord( dayIndex, static_cast<int32>( salt ), seed ); }
         };
     } // namespace
@@ -29,30 +28,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( ScavengerActionResult result )
-    {
-        switch ( result )
-        {
-            case ScavengerActionResult::Ok:
-                return "Ok";
-            case ScavengerActionResult::WrongPhase:
-                return "WrongPhase";
-            case ScavengerActionResult::UnknownMoon:
-                return "UnknownMoon";
-            case ScavengerActionResult::NotEnoughCredits:
-                return "NotEnoughCredits";
-            case ScavengerActionResult::InvalidPlayer:
-                return "InvalidPlayer";
-            case ScavengerActionResult::Blocked:
-                return "Blocked";
-            case ScavengerActionResult::NotCompany:
-                return "NotCompany";
-            case ScavengerActionResult::NotOnShip:
-                return "NotOnShip";
-        }
-        return "Unknown";
-    }
-
     ScavengerExpedition::ScavengerExpedition()
         : _listCrew{}
         , _listShipScrap{}

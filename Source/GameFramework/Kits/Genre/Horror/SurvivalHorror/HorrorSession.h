@@ -14,6 +14,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Actor/Combat/Health/ResourceGauge.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -30,6 +32,7 @@ namespace sw
     class Inventory;
 
     /** @brief 퍼즐, 자물쇠, 추리의 결과입니다. */
+    ENUM()
     enum class HorrorPuzzleResult : uint8
     {
         Solved = 0,
@@ -40,8 +43,6 @@ namespace sw
         MissingItem,   ///< 열쇠가 없거나 추리에 쓸 단서가 없다
         Unknown        ///< 그런 정의가 없다
     };
-
-    SW_KIT_API const utf8* toString( HorrorPuzzleResult result );
 
     /** @brief 세이브 결과입니다. */
     enum class HorrorSaveResult : uint8

@@ -11,11 +11,14 @@
 #include "Core/Container/vector.h"
 #include "Core/Network/Message/NetStatsReport.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw::editor
 {
     class EditorNetPlaySession;
 
     /** @brief 표본 하나의 칸(그래프 하나)입니다. */
+    ENUM( Count = Count )
     enum class EditorNetProfilerChannel : uint8
     {
         SentBytesPerSecond = 0,   ///< 최근 1 초 보낸 바이트(연결 대역폭의 합)
@@ -27,8 +30,6 @@ namespace sw::editor
         LossPercent,              ///< 연결들이 잰 손실 중 가장 큰 값
         Count
     };
-
-    const utf8* toString( EditorNetProfilerChannel channel );
 } // namespace sw::editor
 
 namespace sw::editor

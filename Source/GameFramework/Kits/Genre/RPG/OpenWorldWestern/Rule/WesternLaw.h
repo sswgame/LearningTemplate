@@ -11,6 +11,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Actor/AI/AIPerception.h"
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -75,6 +77,7 @@ namespace sw
 namespace sw
 {
     /** @brief 현상금 지불 결과입니다. */
+    ENUM()
     enum class WesternPayResult : uint8
     {
         Ok = 0,
@@ -83,8 +86,6 @@ namespace sw
         ActivelyWanted, ///< 쫓기는 중에는 우체국에서 낼 수 없다
         NotEnoughMoney
     };
-
-    SW_KIT_API const utf8* toString( WesternPayResult result );
 
     /** @brief 법 쪽에서 생긴 일입니다. */
     struct WesternLawEvent

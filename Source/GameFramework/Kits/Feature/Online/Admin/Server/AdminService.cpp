@@ -6,6 +6,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Observability/MetricRegistry.h"
+#include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
@@ -250,7 +251,7 @@ namespace sw
     {
         --_pendingSeedCount;
         if ( result != AdminResult::Ok )
-            SW_LOG_ERROR( "AdminService could not seed the first administrator (%#)", toString( result ) );
+            SW_LOG_ERROR( "AdminService could not seed the first administrator (%#)", getEnumName( result ) );
     }
 
     void AdminService::finishCall( size_t pendingIndex, const AdminReply& reply )

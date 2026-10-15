@@ -35,6 +35,8 @@
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/Task/TaskFuture.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Framework/GameInstanceSubsystem.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -45,14 +47,13 @@ namespace sw
     class UDPNetTransport;
 
     /** @brief 게임 인스턴스의 네트워크 역할입니다. */
+    ENUM()
     enum class GameNetRole : uint8
     {
         None = 0, ///< 세션 없음(혼자 하는 게임)
         Server,   ///< 포트를 열고 클라이언트를 받는다(전용 서버 · 리슨 호스트)
         Client    ///< 서버에 붙는다
     };
-
-    SW_GF_API const utf8* toString( GameNetRole role );
 } // namespace sw
 
 namespace sw

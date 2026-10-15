@@ -10,12 +10,15 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     /** @brief 채팅 요청의 결과입니다. 응답 본문의 첫 값이며 0은 성공입니다. 와이어 형식이므로 순서를 바꾸지 않고 새 값은 끝에만 추가합니다. */
+    ENUM()
     enum class ChatResult : uint8
     {
         Ok = 0,
@@ -31,8 +34,6 @@ namespace sw
         TooManyChannels,
         NotSignedIn ///< 로그인하지 않은 연결이다(공통 오류 `kUnauthenticated`)
     };
-
-    SW_KIT_API const utf8* toString( ChatResult result );
 
     /** @brief 채널 종류입니다. 채널 id 의 접두어가 정합니다. */
     enum class ChatChannelKind : uint8

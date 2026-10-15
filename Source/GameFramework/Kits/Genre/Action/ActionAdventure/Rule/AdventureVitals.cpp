@@ -8,22 +8,6 @@
 
 namespace sw
 {
-    const utf8* toString( AdventureStaminaOutcome outcome )
-    {
-        switch ( outcome )
-        {
-            case AdventureStaminaOutcome::Continue:
-                return "Continue";
-            case AdventureStaminaOutcome::Stop:
-                return "Stop";
-            case AdventureStaminaOutcome::Fall:
-                return "Fall";
-            case AdventureStaminaOutcome::Drown:
-                return "Drown";
-        }
-        return "Unknown";
-    }
-
     AdventureVitals::AdventureVitals()
         : _settings{}
         , _health{}

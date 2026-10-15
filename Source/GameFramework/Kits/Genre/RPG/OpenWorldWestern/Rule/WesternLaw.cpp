@@ -24,24 +24,6 @@ namespace sw
         return _perception.canSee( witness._position, witness._forward, crimePosition, _pGrid, false );
     }
 
-    const utf8* toString( WesternPayResult result )
-    {
-        switch ( result )
-        {
-            case WesternPayResult::Ok:
-                return "Ok";
-            case WesternPayResult::UnknownRegion:
-                return "UnknownRegion";
-            case WesternPayResult::NoBounty:
-                return "NoBounty";
-            case WesternPayResult::ActivelyWanted:
-                return "ActivelyWanted";
-            case WesternPayResult::NotEnoughMoney:
-                return "NotEnoughMoney";
-        }
-        return "Unknown";
-    }
-
     WesternLawState::WesternLawState()
         : _listRecord{}
         , _listPending{}

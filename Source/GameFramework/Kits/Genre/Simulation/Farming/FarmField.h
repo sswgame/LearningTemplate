@@ -9,6 +9,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
 #include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -21,6 +23,7 @@ namespace sw
     class CropCatalog;
 
     /** @brief 밭 타일 하나에 무언가를 하려다 어떻게 됐는지 나타냅니다. UI 가 이유를 띄우고 테스트가 읽습니다. */
+    ENUM()
     enum class FarmActionResult : uint8
     {
         Done = 0,       ///< 했다
@@ -34,9 +37,6 @@ namespace sw
         UnknownSeed,    ///< 카탈로그에 없는 씨앗이다
         OutOfSeason     ///< 지금 계절에 자라지 않는 씨앗이다
     };
-
-    /** @brief 결과 이름을 반환합니다(로그와 UI 용). */
-    SW_KIT_API const utf8* toString( FarmActionResult result );
 
     /** @brief 밭 타일 하나입니다. */
     struct FarmTile

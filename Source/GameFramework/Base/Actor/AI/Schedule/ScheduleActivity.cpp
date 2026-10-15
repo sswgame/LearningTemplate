@@ -4,24 +4,6 @@
 
 namespace sw
 {
-    const utf8* toString( ScheduleActivityTarget target )
-    {
-        switch ( target )
-        {
-            case ScheduleActivityTarget::Place:
-                return "Place";
-            case ScheduleActivityTarget::Home:
-                return "Home";
-            case ScheduleActivityTarget::SmartObject:
-                return "SmartObject";
-            case ScheduleActivityTarget::Appointment:
-                return "Appointment";
-            case ScheduleActivityTarget::Wander:
-                return "Wander";
-        }
-        return "Unknown";
-    }
-
     ScheduleActivityRegistry::ScheduleActivityRegistry()
         : _registry{}
     {

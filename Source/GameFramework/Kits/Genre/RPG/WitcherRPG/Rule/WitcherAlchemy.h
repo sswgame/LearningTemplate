@@ -10,6 +10,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/Base/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -25,6 +27,7 @@ namespace sw
     class WitcherCatalog;
 
     /** @brief 연금술 물건 쓰기 결과입니다. */
+    ENUM()
     enum class WitcherUseResult : uint8
     {
         Ok = 0,
@@ -35,8 +38,6 @@ namespace sw
         TooToxic,       ///< 마시면 최대 독성을 넘는다
         AlreadyActive   ///< 같은 변이 혼합물이 이미 돌고 있다
     };
-
-    SW_KIT_API const utf8* toString( WitcherUseResult result );
 
     /** @brief 지금 돌고 있는 효과 하나입니다. */
     struct WitcherActiveEffect

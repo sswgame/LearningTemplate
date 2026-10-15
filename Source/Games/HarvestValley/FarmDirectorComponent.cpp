@@ -14,6 +14,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/GameAutoplay.h"
@@ -741,7 +742,7 @@ namespace sw
         if ( result == FarmActionResult::Done )
             _stamina -= cost;
         else if ( isAutoPlayOn() == false )
-            SW_LOG_INFO( "[Farm] %# at (%#, %#): %#", Internal::toToolName( _tool ), x, y, toString( result ) );
+            SW_LOG_INFO( "[Farm] %# at (%#, %#): %#", Internal::toToolName( _tool ), x, y, getEnumName( result ) );
     }
 
     int32 FarmDirectorComponent::shipAllProduce()

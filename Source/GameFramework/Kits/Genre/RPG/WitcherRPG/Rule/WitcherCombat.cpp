@@ -14,22 +14,6 @@
 
 namespace sw
 {
-    const utf8* toString( WitcherCombatResult result )
-    {
-        switch ( result )
-        {
-            case WitcherCombatResult::Ok:
-                return "Ok";
-            case WitcherCombatResult::UnknownSign:
-                return "UnknownSign";
-            case WitcherCombatResult::NotEnoughStamina:
-                return "NotEnoughStamina";
-            case WitcherCombatResult::AlternateLocked:
-                return "AlternateLocked";
-        }
-        return "Unknown";
-    }
-
     WitcherCombat::WitcherCombat()
         : _stamina{}
         , _random{}

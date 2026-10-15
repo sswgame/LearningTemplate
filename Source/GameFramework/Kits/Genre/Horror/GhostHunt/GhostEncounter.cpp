@@ -31,26 +31,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( GhostState state )
-    {
-        switch ( state )
-        {
-            case GhostState::Hidden:
-                return "Hidden";
-            case GhostState::Visible:
-                return "Visible";
-            case GhostState::Attacking:
-                return "Attacking";
-            case GhostState::Stunned:
-                return "Stunned";
-            case GhostState::Sucking:
-                return "Sucking";
-            case GhostState::Caught:
-                return "Caught";
-        }
-        return "Unknown";
-    }
-
     GhostEncounter::GhostEncounter()
         : _pCatalog{ nullptr }
         , _random{}

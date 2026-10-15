@@ -122,10 +122,10 @@ namespace
     /** @brief 응답 하나를 받아 둡니다. */
     struct EconomyReplyCapture
     {
-        EconomyClientReply _reply{};
-        int32              _count{ 0 };
+        EconomyClient::Reply _reply{};
+        int32                _count{ 0 };
 
-        void onReply( const EconomyClientReply& reply )
+        void onReply( const EconomyClient::Reply& reply )
         {
             _reply = reply;
             ++_count;

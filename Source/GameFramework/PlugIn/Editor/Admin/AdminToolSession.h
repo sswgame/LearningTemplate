@@ -74,7 +74,7 @@ namespace sw::editor
 
     private:
         void send( uint16 method, const AdminRequest& request, const NetIdempotencyKey& key );
-        void onReply( const AdminClientReply& reply );
+        void onReply( const AdminClient::Reply& reply );
 
         FakeAdminProvider      _fake;
         AdminClientProvider    _live;

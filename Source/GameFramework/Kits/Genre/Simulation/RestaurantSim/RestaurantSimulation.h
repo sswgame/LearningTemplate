@@ -12,6 +12,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/Base/Foundation/Utility/Time/FixedStepTimer.h"
@@ -59,14 +61,13 @@ namespace sw
 namespace sw
 {
     /** @brief 직원의 역할입니다. */
+    ENUM()
     enum class StaffRole : uint8
     {
         Cook = 0,
         Server,
         Cashier ///< 없으면 쉬는 서버가 계산한다
     };
-
-    SW_KIT_API const utf8* toString( StaffRole role );
 
     /** @brief 직원 하나입니다. */
     struct StaffMember

@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
@@ -52,28 +53,6 @@ namespace sw
 namespace sw
 {
     SW_LOG_CALLER( "MonsterCollectorCatalog" );
-
-    const utf8* toString( MonsterStatus status )
-    {
-        switch ( status )
-        {
-            case MonsterStatus::None:
-                return "None";
-            case MonsterStatus::Poison:
-                return "Poison";
-            case MonsterStatus::Toxic:
-                return "Toxic";
-            case MonsterStatus::Burn:
-                return "Burn";
-            case MonsterStatus::Paralysis:
-                return "Paralysis";
-            case MonsterStatus::Sleep:
-                return "Sleep";
-            case MonsterStatus::Freeze:
-                return "Freeze";
-        }
-        return "Unknown";
-    }
 
     bool MonsterSpeciesDef::hasType( const hashed_string& type ) const
     {
@@ -134,7 +113,7 @@ namespace sw
         for ( uint8 index = static_cast<uint8>( MonsterStatus::Poison ); index <= static_cast<uint8>( MonsterStatus::Freeze ); ++index )
         {
             const MonsterStatus status = static_cast<MonsterStatus>( index );
-            if ( StringUtil::equals( text, string_view( toString( status ) ), true ) )
+            if ( StringUtil::equals( text, string_view( getEnumName( status ) ), true ) )
             {
                 outStatus = status;
                 return true;

@@ -72,26 +72,6 @@ namespace sw
         return "None";
     }
 
-    const utf8* toString( CityBuildingKind kind )
-    {
-        switch ( kind )
-        {
-            case CityBuildingKind::House:
-                return "House";
-            case CityBuildingKind::Service:
-                return "Service";
-            case CityBuildingKind::Producer:
-                return "Producer";
-            case CityBuildingKind::Storage:
-                return "Storage";
-            case CityBuildingKind::Market:
-                return "Market";
-            case CityBuildingKind::Decoration:
-                return "Decoration";
-        }
-        return "?";
-    }
-
     CityCatalog::CityCatalog()
         : _buildingCatalog{}
         , _goodCatalog{}

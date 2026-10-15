@@ -10,6 +10,7 @@
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/FitSolver.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
@@ -748,7 +749,7 @@ namespace sw::editor
         for ( const AppearanceSelectionReport::SlotFallback& fallback : report._listSlotFallback )
         {
             ImGui::TextColored( ImVec4( 1.0f, 0.75f, 0.3f, 1.0f ), "Slot %s: %s -> %s (%s)", fallback._slot.c_str(), fallback._requestedItem.c_str(), fallback._fallbackItem.c_str(),
-                                toString( fallback._reason ) );
+                                getEnumName( fallback._reason ) );
         }
         if ( ImGui::BeginChild( "##RuleTrace", ImVec2( 0.0f, CharacterEditorPanelInternal::kExplanationListHeight ), ImGuiChildFlags_Borders ) )
         {
@@ -756,7 +757,7 @@ namespace sw::editor
                 ImGui::TextDisabled( "No rule fired." );
             for ( const AppearanceTraceEntry& entry : resolved._listTrace )
             {
-                ImGui::TextWrapped( "[%s] %s: %s", toString( entry._step ), entry._source.c_str(), entry._message.c_str() );
+                ImGui::TextWrapped( "[%s] %s: %s", getEnumName( entry._step ), entry._source.c_str(), entry._message.c_str() );
             }
         }
         ImGui::EndChild();

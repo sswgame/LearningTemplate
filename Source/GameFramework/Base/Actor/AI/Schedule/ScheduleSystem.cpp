@@ -108,32 +108,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( ScheduleLOD lod )
-    {
-        switch ( lod )
-        {
-            case ScheduleLOD::Near:
-                return "Near";
-            case ScheduleLOD::Far:
-                return "Far";
-        }
-        return "Unknown";
-    }
-
-    const utf8* toString( ScheduleNpcPhase phase )
-    {
-        switch ( phase )
-        {
-            case ScheduleNpcPhase::Traveling:
-                return "Traveling";
-            case ScheduleNpcPhase::Performing:
-                return "Performing";
-            case ScheduleNpcPhase::Interrupted:
-                return "Interrupted";
-        }
-        return "Unknown";
-    }
-
     const utf8* toString( ScheduleSegmentSource source )
     {
         switch ( source )

@@ -23,22 +23,6 @@ namespace sw
         };
     } // namespace
 
-    const utf8* toString( DayPhase phase )
-    {
-        switch ( phase )
-        {
-            case DayPhase::Night:
-                return "Night";
-            case DayPhase::Dawn:
-                return "Dawn";
-            case DayPhase::Day:
-                return "Day";
-            case DayPhase::Dusk:
-                return "Dusk";
-        }
-        return "Unknown";
-    }
-
     WorldClock::WorldClock()
         : _settings{}
         , _eventBuffer{}

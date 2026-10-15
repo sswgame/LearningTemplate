@@ -28,30 +28,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( EquipResult result )
-    {
-        switch ( result )
-        {
-            case EquipResult::Ok:
-                return "Ok";
-            case EquipResult::UnknownSlot:
-                return "UnknownSlot";
-            case EquipResult::UnknownItem:
-                return "UnknownItem";
-            case EquipResult::WrongSlot:
-                return "WrongSlot";
-            case EquipResult::InventoryFull:
-                return "InventoryFull";
-            case EquipResult::ConditionNotMet:
-                return "ConditionNotMet";
-            case EquipResult::RefusedByDependent:
-                return "RefusedByDependent";
-            case EquipResult::EmptySlot:
-                return "EmptySlot";
-        }
-        return "Unknown";
-    }
-
     Equipment::Equipment()
         : _listSlot{}
         , _context{}

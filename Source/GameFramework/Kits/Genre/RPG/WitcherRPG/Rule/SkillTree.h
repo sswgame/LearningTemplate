@@ -9,6 +9,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
@@ -82,6 +84,7 @@ namespace sw
 namespace sw
 {
     /** @brief 랭크 올리기의 결과입니다. */
+    ENUM()
     enum class SkillResult : uint8
     {
         Ok = 0,
@@ -94,8 +97,6 @@ namespace sw
         GroupTaken,     ///< 같은 그룹의 다른 스킬을 배웠다
         RequiredByOther ///< 내리기에서 쓴다. 다른 스킬이 이 랭크를 요구한다
     };
-
-    SW_KIT_API const utf8* toString( SkillResult result );
 
     /**
      * @class SkillTreeState

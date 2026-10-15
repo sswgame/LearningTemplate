@@ -10,6 +10,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -41,6 +43,7 @@ namespace sw
 namespace sw
 {
     /** @brief 경제 요청의 결과입니다. 와이어 값이므로 순서를 바꾸지 않고 새 값은 끝에만 추가합니다. */
+    ENUM( Count = Count )
     enum class EconomyResult : uint8
     {
         Ok = 0,
@@ -61,8 +64,6 @@ namespace sw
         Unavailable,     ///< 저장소나 전송을 쓸 수 없다. 적용됐는지 알 수 없으므로 같은 멱등 키로 다시 시도한다
         Count
     };
-
-    SW_KIT_API const utf8* toString( EconomyResult result );
 } // namespace sw
 
 namespace sw

@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
@@ -34,7 +35,7 @@ namespace sw
                 constexpr AppearancePartKind kArrKind[] = { AppearancePartKind::Skinned, AppearancePartKind::SocketPrefab, AppearancePartKind::BodyModification, AppearancePartKind::Sprite };
                 for ( const AppearancePartKind kind : kArrKind )
                 {
-                    if ( StringUtil::equals( text, string_view( toString( kind ) ), true ) )
+                    if ( StringUtil::equals( text, string_view( getEnumName( kind ) ), true ) )
                     {
                         outKind = kind;
                         return true;
@@ -68,7 +69,7 @@ namespace sw
                 for ( const utf8* pAttribute : kArrAssetAttribute )
                 {
                     if ( node.findAttribute( pAttribute ) != nullptr && ( pExpected == nullptr || StringUtil::equals( pAttribute, pExpected, true ) == false ) )
-                        report.addError( "%#: visual '%#' <%#> of kind %# cannot have '%#'", sourceName, visualID.c_str(), node.getName(), toString( kind ), pAttribute );
+                        report.addError( "%#: visual '%#' <%#> of kind %# cannot have '%#'", sourceName, visualID.c_str(), node.getName(), getEnumName( kind ), pAttribute );
                 }
             }
 
@@ -296,22 +297,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( AppearancePartKind kind )
-    {
-        switch ( kind )
-        {
-            case AppearancePartKind::Skinned:
-                return "Skinned";
-            case AppearancePartKind::SocketPrefab:
-                return "SocketPrefab";
-            case AppearancePartKind::BodyModification:
-                return "BodyModification";
-            case AppearancePartKind::Sprite:
-                return "Sprite";
-        }
-        return "Unknown";
-    }
-
     const AppearancePartVariantDef* AppearancePartDef::findVariant( const hashed_string& name ) const
     {
         for ( const AppearancePartVariantDef& variant : _listVariant )

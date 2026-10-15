@@ -12,28 +12,6 @@
 
 namespace sw
 {
-    const utf8* toString( WitcherUseResult result )
-    {
-        switch ( result )
-        {
-            case WitcherUseResult::Ok:
-                return "Ok";
-            case WitcherUseResult::UnknownItem:
-                return "UnknownItem";
-            case WitcherUseResult::WrongKind:
-                return "WrongKind";
-            case WitcherUseResult::NotInInventory:
-                return "NotInInventory";
-            case WitcherUseResult::NoCharges:
-                return "NoCharges";
-            case WitcherUseResult::TooToxic:
-                return "TooToxic";
-            case WitcherUseResult::AlreadyActive:
-                return "AlreadyActive";
-        }
-        return "Unknown";
-    }
-
     WitcherAlchemy::WitcherAlchemy()
         : _crafter{}
         , _listCharge{}

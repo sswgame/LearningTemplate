@@ -334,7 +334,7 @@ namespace sw
                     return;
                 }
                 _awaitKind = AwaitKind::Response;
-                (void)_socialClient.requestFriend( pOther->getAccountID(), SocialReplyDelegate::create<&LoadBot::onSocialReply>( this ) );
+                (void)_socialClient.requestFriend( pOther->getAccountID(), SocialClient::ReplyDelegate::create<&LoadBot::onSocialReply>( this ) );
                 return;
             }
             default:
@@ -406,17 +406,17 @@ namespace sw
             case LoadBotAction::SocialPresence:
             {
                 (void)_socialClient.setPresence( LoadBotInternal::findStatus( step._text ), step._secondText,
-                                                 SocialReplyDelegate::create<&LoadBot::onSocialReply>( this ) );
+                                                 SocialClient::ReplyDelegate::create<&LoadBot::onSocialReply>( this ) );
                 return true;
             }
             case LoadBotAction::LeaderboardTop:
             {
-                (void)_leaderboardClient.requestTop( step._text, 0, step._count, LeaderboardReplyDelegate::create<&LoadBot::onLeaderboardReply>( this ) );
+                (void)_leaderboardClient.requestTop( step._text, 0, step._count, LeaderboardClient::ReplyDelegate::create<&LoadBot::onLeaderboardReply>( this ) );
                 return true;
             }
             case LoadBotAction::LeaderboardAround:
             {
-                (void)_leaderboardClient.requestAround( step._text, step._count, LeaderboardReplyDelegate::create<&LoadBot::onLeaderboardReply>( this ) );
+                (void)_leaderboardClient.requestAround( step._text, step._count, LeaderboardClient::ReplyDelegate::create<&LoadBot::onLeaderboardReply>( this ) );
                 return true;
             }
             case LoadBotAction::MatchmakingQueue:
@@ -490,7 +490,7 @@ namespace sw
         for ( const SocialNotification& notification : _listSocialNotification )
         {
             if ( notification._kind == SocialNotificationKind::FriendRequested ) // 받은 신청은 바로 수락한다(측정하지 않는다)
-                (void)_socialClient.respondFriend( notification._otherID, true, SocialReplyDelegate::create<&LoadBot::onFriendAccepted>( this ) );
+                (void)_socialClient.respondFriend( notification._otherID, true, SocialClient::ReplyDelegate::create<&LoadBot::onFriendAccepted>( this ) );
         }
     }
 
@@ -558,7 +558,7 @@ namespace sw
         finishWithResult( errorCode, 0 );
     }
 
-    void LoadBot::onFriendAccepted( const SocialClientReply& reply )
+    void LoadBot::onFriendAccepted( const SocialClient::Reply& reply )
     {
         (void)reply;
     }

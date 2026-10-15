@@ -12,6 +12,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -63,6 +65,7 @@ namespace sw
     };
 
     /** @brief 거래 호출의 결과입니다. 와이어 값입니다. */
+    ENUM()
     enum class TradeResult : uint8
     {
         Ok = 0,
@@ -80,8 +83,6 @@ namespace sw
         Unavailable, ///< 저장소를 쓸 수 없다. 같은 멱등 키로 다시 시도한다
         Invalid
     };
-
-    SW_KIT_API const utf8* toString( TradeResult result );
 } // namespace sw
 
 namespace sw

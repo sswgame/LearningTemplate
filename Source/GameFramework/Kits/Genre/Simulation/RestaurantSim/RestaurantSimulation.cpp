@@ -48,20 +48,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( StaffRole role )
-    {
-        switch ( role )
-        {
-            case StaffRole::Cook:
-                return "Cook";
-            case StaffRole::Server:
-                return "Server";
-            case StaffRole::Cashier:
-                return "Cashier";
-        }
-        return "Unknown";
-    }
-
     RestaurantSimulation::RestaurantSimulation()
         : _listStaff{}
         , _listCustomer{}

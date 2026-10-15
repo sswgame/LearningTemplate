@@ -9,11 +9,13 @@
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/ReflectValue.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 
 namespace sw
 {
     /** @brief 리플렉션 호출 · 이벤트 부르기의 결과입니다. */
+    ENUM()
     enum class ReflectCallResult : uint8
     {
         Ok,
@@ -23,9 +25,6 @@ namespace sw
         MissingArgument,  ///< 기본 인자가 없는 인자를 빼먹었다
         ArgumentMismatch, ///< 인자를 그 타입으로 바꿀 수 없다
     };
-
-    /** @brief 결과의 이름(로그 · 콘솔 출력용)입니다. */
-    SW_API const utf8* toString( ReflectCallResult result );
 
     /** @brief 이벤트가 불릴 때 받는 쪽입니다. 인자는 이벤트 시그니처 순서대로, 각자 자기 타입 이름을 달고 옵니다. */
     using ReflectEventHandler = Delegate<void( const vector<ReflectValue>& listArg )>;

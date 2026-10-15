@@ -13,6 +13,7 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/UI/Input/UIInputMapView.h"
@@ -721,7 +722,7 @@ namespace sw
             // 도로는 끌어서 깐다. 이미 도로인 타일은 조용히 넘어간다.
             const CityPlaceResult result = _city.placeRoad( _cursorTile._x, _cursorTile._y );
             if ( result == CityPlaceResult::NotEnoughMoney || result == CityPlaceResult::BadTerrain )
-                SW_LOG_INFO( "[Nile] cannot lay road at (%#, %#): %#", _cursorTile._x, _cursorTile._y, toString( result ) );
+                SW_LOG_INFO( "[Nile] cannot lay road at (%#, %#): %#", _cursorTile._x, _cursorTile._y, getEnumName( result ) );
             return;
         }
         const CityPlaceResult result = _city.placeBuilding( pDef->_id, _cursorTile._x, _cursorTile._y );
@@ -732,7 +733,7 @@ namespace sw
         }
         else
         {
-            SW_LOG_INFO( "[Nile] cannot build %# at (%#, %#): %#", pDef->_name.c_str(), _cursorTile._x, _cursorTile._y, toString( result ) );
+            SW_LOG_INFO( "[Nile] cannot build %# at (%#, %#): %#", pDef->_name.c_str(), _cursorTile._x, _cursorTile._y, getEnumName( result ) );
             getSoundQueue().queueEvent( NileDirectorComponentInternal::kEventBlocked );
         }
     }

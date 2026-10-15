@@ -20,7 +20,7 @@ namespace sw::editor
             {
                 if ( onReply.isBound() == false )
                     return;
-                AdminClientReply clientReply;
+                AdminClient::Reply clientReply;
                 clientReply._reply          = reply;
                 clientReply._idempotencyKey = key;
                 clientReply._requestID      = 0;

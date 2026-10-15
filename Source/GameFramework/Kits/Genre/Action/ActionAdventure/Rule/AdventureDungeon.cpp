@@ -85,26 +85,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( AdventureDoorResult result )
-    {
-        switch ( result )
-        {
-            case AdventureDoorResult::Opened:
-                return "Opened";
-            case AdventureDoorResult::AlreadyOpen:
-                return "AlreadyOpen";
-            case AdventureDoorResult::UnknownDoor:
-                return "UnknownDoor";
-            case AdventureDoorResult::NeedSmallKey:
-                return "NeedSmallKey";
-            case AdventureDoorResult::NeedBossKey:
-                return "NeedBossKey";
-            case AdventureDoorResult::ConditionNotMet:
-                return "ConditionNotMet";
-        }
-        return "Unknown";
-    }
-
     const AdventureDoorDef* AdventureDungeonDef::findDoor( const hashed_string& id ) const
     {
         for ( const AdventureDoorDef& door : _listDoor )

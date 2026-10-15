@@ -12,6 +12,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Actor/Combat/LockOnSelector.h"
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -19,6 +21,7 @@
 namespace sw
 {
     /** @brief 주목 상태입니다. */
+    ENUM()
     enum class AdventureTargetingState : uint8
     {
         Free = 0,    ///< 주목하지 않는다
@@ -30,8 +33,6 @@ namespace sw
         SideHopLeft, ///< 왼쪽 옆 뛰기(회피)
         SideHopRight ///< 오른쪽 옆 뛰기(회피)
     };
-
-    SW_KIT_API const utf8* toString( AdventureTargetingState state );
 
     /** @brief 주목 설정입니다. 시간 단위는 초입니다. */
     struct AdventureTargetingSettings

@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
@@ -285,7 +286,7 @@ namespace sw
             for ( const AppearanceRuleAction& action : rule._listAction )
             {
                 if ( action._target.empty() == false && isOwnerName( action._target ) == false )
-                    _report.addError( "rule '%#' %# names unknown target '%#'", rule._id.c_str(), toString( action._kind ), action._target.c_str() );
+                    _report.addError( "rule '%#' %# names unknown target '%#'", rule._id.c_str(), getEnumName( action._kind ), action._target.c_str() );
                 if ( action._kind == AppearanceRuleActionKind::ChooseVariant && isVariantDeclared( action._name ) == false )
                     _report.addError( "rule '%#' chooses variant '%#' no visual declares", rule._id.c_str(), action._name.c_str() );
                 if ( action._part.empty() == false && isPartDeclared( action._part ) == false )
@@ -347,7 +348,7 @@ namespace sw
                 const bool bOptionKind = pParam->_kind == CustomizationKind::Choice || pParam->_kind == CustomizationKind::Attachment;
                 const bool bFits       = ( pParam->_kind == CustomizationKind::Slider && value._bHasNumber == SW_TRUE ) || ( pParam->_kind == CustomizationKind::Color && value._listColor.empty() == false ) || ( bOptionKind && value._listOption.empty() == false );
                 if ( bFits == false )
-                    _report.addError( "%# value '%#' does not fit its %# parameter", where, value._parameter.c_str(), toString( pParam->_kind ) );
+                    _report.addError( "%# value '%#' does not fit its %# parameter", where, value._parameter.c_str(), getEnumName( pParam->_kind ) );
                 for ( const hashed_string& option : value._listOption )
                 {
                     if ( bOptionKind && pParam->findOption( option ) == nullptr )

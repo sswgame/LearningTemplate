@@ -8,42 +8,6 @@
 
 namespace sw
 {
-    const utf8* toString( TradeResult result )
-    {
-        switch ( result )
-        {
-            case TradeResult::Ok:
-                return "Ok";
-            case TradeResult::NotFound:
-                return "NotFound";
-            case TradeResult::NotParty:
-                return "NotParty";
-            case TradeResult::AlreadyTrading:
-                return "AlreadyTrading";
-            case TradeResult::PeerOffline:
-                return "PeerOffline";
-            case TradeResult::PeerBusy:
-                return "PeerBusy";
-            case TradeResult::WrongState:
-                return "WrongState";
-            case TradeResult::StaleOffer:
-                return "StaleOffer";
-            case TradeResult::NotTradable:
-                return "NotTradable";
-            case TradeResult::TooManyLegs:
-                return "TooManyLegs";
-            case TradeResult::InsufficientFunds:
-                return "InsufficientFunds";
-            case TradeResult::CapExceeded:
-                return "CapExceeded";
-            case TradeResult::Unavailable:
-                return "Unavailable";
-            case TradeResult::Invalid:
-                return "Invalid";
-        }
-        return "Unknown";
-    }
-
     int32 TradeSnapshot::findSideIndex( AccountID accountID ) const
     {
         if ( accountID == kInvalidAccountID )

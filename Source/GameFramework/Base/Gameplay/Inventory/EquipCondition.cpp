@@ -4,6 +4,8 @@
 
 #include "Core/Container/StringUtil.h"
 
+#include "Engine/Reflection/EnumName.h"
+
 #include "GameFramework/Base/Gameplay/Inventory/Equipment.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 
@@ -88,26 +90,12 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( EquipBreakPolicy policy )
-    {
-        switch ( policy )
-        {
-            case EquipBreakPolicy::UnequipTogether:
-                return "UnequipTogether";
-            case EquipBreakPolicy::KeepHidden:
-                return "KeepHidden";
-            case EquipBreakPolicy::RefuseUnequip:
-                return "RefuseUnequip";
-        }
-        return "Unknown";
-    }
-
     bool parseEquipBreakPolicy( string_view text, EquipBreakPolicy& outPolicy )
     {
         constexpr EquipBreakPolicy kArrPolicy[] = { EquipBreakPolicy::UnequipTogether, EquipBreakPolicy::KeepHidden, EquipBreakPolicy::RefuseUnequip };
         for ( const EquipBreakPolicy policy : kArrPolicy )
         {
-            if ( StringUtil::equals( text, string_view( toString( policy ) ), true ) )
+            if ( StringUtil::equals( text, string_view( getEnumName( policy ) ), true ) )
             {
                 outPolicy = policy;
                 return true;

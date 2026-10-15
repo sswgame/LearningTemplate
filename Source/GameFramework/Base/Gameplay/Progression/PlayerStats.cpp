@@ -7,6 +7,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -51,22 +52,6 @@ namespace sw
             }
         }
         return false;
-    }
-
-    const utf8* toString( StatKind kind )
-    {
-        switch ( kind )
-        {
-            case StatKind::Counter:
-                return "Counter";
-            case StatKind::Max:
-                return "Max";
-            case StatKind::Min:
-                return "Min";
-            case StatKind::Time:
-                return "Time";
-        }
-        return "Unknown";
     }
 
     // ------------------------------------------------------------------------------
@@ -218,7 +203,7 @@ namespace sw
         }
         if ( pDef->_kind != expectedKind && pDef->_kind != alternateKind )
         {
-            SW_LOG_WARNING( "Stat '%#' is a %# stat - %# is not how it takes values", id.c_str(), toString( pDef->_kind ), toString( expectedKind ) );
+            SW_LOG_WARNING( "Stat '%#' is a %# stat - %# is not how it takes values", id.c_str(), getEnumName( pDef->_kind ), getEnumName( expectedKind ) );
             return nullptr;
         }
         return pDef;

@@ -9,12 +9,15 @@
 #include "Core/Container/string.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     /** @brief 제재 종류입니다. 저장 값이라 순서를 바꾸지 않는다. */
+    ENUM( Count = Count )
     enum class ServiceSanctionKind : uint8
     {
         ChatMute = 0, ///< 채팅 금지
@@ -22,8 +25,6 @@ namespace sw
         Ban,          ///< 영구 정지
         Count
     };
-
-    SW_GF_API const utf8* toString( ServiceSanctionKind kind );
 } // namespace sw
 
 namespace sw

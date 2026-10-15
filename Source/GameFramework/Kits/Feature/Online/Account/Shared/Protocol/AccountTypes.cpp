@@ -35,54 +35,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( LoginResult result )
-    {
-        switch ( result )
-        {
-            case LoginResult::Ok:
-                return "Ok";
-            case LoginResult::InvalidName:
-                return "InvalidName";
-            case LoginResult::InvalidPassword:
-                return "InvalidPassword";
-            case LoginResult::NameTaken:
-                return "NameTaken";
-            case LoginResult::WrongCredentials:
-                return "WrongCredentials";
-            case LoginResult::AccountLocked:
-                return "AccountLocked";
-            case LoginResult::RateLimited:
-                return "RateLimited";
-            case LoginResult::InvalidToken:
-                return "InvalidToken";
-            case LoginResult::Expired:
-                return "Expired";
-            case LoginResult::Revoked:
-                return "Revoked";
-            case LoginResult::AlreadyLoggedIn:
-                return "AlreadyLoggedIn";
-            case LoginResult::StoreUnavailable:
-                return "StoreUnavailable";
-            case LoginResult::AlreadyLinked:
-                return "AlreadyLinked";
-            case LoginResult::AccountSuspended:
-                return "AccountSuspended";
-            case LoginResult::UpdateRequired:
-                return "UpdateRequired";
-            case LoginResult::ProviderUnavailable:
-                return "ProviderUnavailable";
-            case LoginResult::ProviderRejected:
-                return "ProviderRejected";
-            case LoginResult::LastLoginMethod:
-                return "LastLoginMethod";
-            case LoginResult::NotLinked:
-                return "NotLinked";
-            case LoginResult::InvalidRequest:
-                return "InvalidRequest";
-        }
-        return "Unknown";
-    }
-
     void LoginSessionToken::writeBytes( uint8 ( &outBytes )[LoginConstant::kTokenWireSize] ) const
     {
         for ( int32 byteIndex = 0; byteIndex < 8; ++byteIndex )

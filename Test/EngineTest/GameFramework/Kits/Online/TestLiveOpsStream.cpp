@@ -19,9 +19,9 @@ namespace
 {
     struct LiveOpsRecorder
     {
-        vector<LiveOpsClientReply> _listReply{};
+        vector<LiveOpsClient::Reply> _listReply{};
 
-        void onReply( const LiveOpsClientReply& reply ) { _listReply.push_back( reply ); }
+        void onReply( const LiveOpsClient::Reply& reply ) { _listReply.push_back( reply ); }
 
         LiveOpsClient::ReplyDelegate makeDelegate() { return LiveOpsClient::ReplyDelegate::create<&LiveOpsRecorder::onReply>( this ); }
     };

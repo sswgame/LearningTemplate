@@ -11,12 +11,15 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     /** @brief 친구 키트의 업무 결과입니다. 응답 본문의 첫 값입니다. 와이어 값이므로 새 값은 끝에만 추가합니다. */
+    ENUM( Count = Count )
     enum class SocialResult : uint8
     {
         Ok = 0,
@@ -42,8 +45,6 @@ namespace sw
         StorageNotEmpty,   ///< 길드 창고에 남은 것이 있어 길드를 해산할 수 없다(먼저 꺼낸다)
         Count
     };
-
-    SW_KIT_API const utf8* toString( SocialResult result );
 } // namespace sw
 
 namespace sw

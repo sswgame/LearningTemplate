@@ -40,32 +40,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( ConquestResult result )
-    {
-        switch ( result )
-        {
-            case ConquestResult::Ok:
-                return "Ok";
-            case ConquestResult::UnknownDef:
-                return "UnknownDef";
-            case ConquestResult::InvalidBuilding:
-                return "InvalidBuilding";
-            case ConquestResult::SiteNotOwned:
-                return "SiteNotOwned";
-            case ConquestResult::NoBuildSlot:
-                return "NoBuildSlot";
-            case ConquestResult::NotEnoughResources:
-                return "NotEnoughResources";
-            case ConquestResult::PopulationCap:
-                return "PopulationCap";
-            case ConquestResult::CannotTrainHere:
-                return "CannotTrainHere";
-            case ConquestResult::NoFreeWorkers:
-                return "NoFreeWorkers";
-        }
-        return "?";
-    }
-
     ConquestWorld::ConquestWorld()
         : _listSite{}
         , _listBuilding{}

@@ -20,9 +20,9 @@ namespace
 {
     struct MatchmakingRecorder
     {
-        vector<MatchmakingClientReply> _listReply{};
+        vector<MatchmakingClient::Reply> _listReply{};
 
-        void onReply( const MatchmakingClientReply& reply ) { _listReply.push_back( reply ); }
+        void onReply( const MatchmakingClient::Reply& reply ) { _listReply.push_back( reply ); }
 
         MatchmakingClient::ReplyDelegate makeDelegate() { return MatchmakingClient::ReplyDelegate::create<&MatchmakingRecorder::onReply>( this ); }
     };

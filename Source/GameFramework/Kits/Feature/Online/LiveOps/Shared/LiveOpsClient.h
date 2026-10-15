@@ -10,24 +10,11 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Delegate/Delegate.h"
 
+#include "GameFramework/Base/Online/Service/OnlineKitClient.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
-#include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
-#include "GameFramework/Base/Online/Service/ServiceClientCallTable.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Shared/LiveOpsProtocol.h"
-
-namespace sw
-{
-    /** @brief 라이브 운영 클라이언트 응답 하나입니다. */
-    struct LiveOpsClientReply
-    {
-        LiveOpsReply _reply{};
-        uint64       _requestID{ 0 };
-        uint16       _errorCode{ 0 }; ///< 전송 오류나 공통 오류(`OnlineError`)이다. 0이 아니면 `_reply._result` 는 그 코드에 대응하는 결과이다
-    };
-} // namespace sw
 
 namespace sw
 {
@@ -35,15 +22,10 @@ namespace sw
      * @class LiveOpsClient
      * @brief 연결 하나의 라이브 운영 클라이언트입니다.
      */
-    class SW_KIT_API LiveOpsClient final : public IOnlineClientService
+    class SW_KIT_API LiveOpsClient final : public OnlineKitClient<LiveOpsProtocol, LiveOpsReply>
     {
     public:
-        using ReplyDelegate = Delegate<void( const LiveOpsClientReply& )>;
-
         LiveOpsClient();
-
-        /** @brief @p pClient 는 빌려 씁니다. `registerClientService( this )` 는 호출하는 쪽이 초기화하기 전에 부릅니다. */
-        void initialize( OnlineServiceClient* pClient );
 
         /** @brief 열린 이벤트를 받습니다. 로그인한 뒤에 부릅니다. 지역과 빌드 버전은 보관했다가 변경 알림이 올 때 다시 씁니다. */
         uint64 requestLiveState( string_view region, uint32 buildVersion, const ReplyDelegate& onReply );
@@ -62,15 +44,12 @@ namespace sw
         void   onServicePush( uint16 kind, BitReader& body ) override;
 
     private:
-        uint64 send( uint16 method, const BitWriter& body, const ReplyDelegate& onReply );
-        void   onResponse( const OnlineResponse& response );
+        void onCallSucceeded( const Call& call, const LiveOpsReply& reply ) override;
 
-        ServiceClientCallTable<ReplyDelegate> _callTable;
-        vector<LiveEventState>                _listEvent;
-        string                                _region;
-        OnlineServiceClient*                  _pClient;
-        uint64                                _revision;
-        uint32                                _buildVersion;
-        uint8                                 _bRequested; ///< 한 번이라도 받았다. 알림이 오면 다시 받는다
+        vector<LiveEventState> _listEvent;
+        string                 _region;
+        uint64                 _revision;
+        uint32                 _buildVersion;
+        uint8                  _bRequested; ///< 한 번이라도 받았다. 알림이 오면 다시 받는다
     };
 } // namespace sw

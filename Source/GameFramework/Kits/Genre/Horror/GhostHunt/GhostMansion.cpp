@@ -18,24 +18,6 @@
 
 namespace sw
 {
-    const utf8* toString( GhostSearchResult result )
-    {
-        switch ( result )
-        {
-            case GhostSearchResult::Found:
-                return "Found";
-            case GhostSearchResult::AlreadySearched:
-                return "AlreadySearched";
-            case GhostSearchResult::WrongMode:
-                return "WrongMode";
-            case GhostSearchResult::BooFound:
-                return "BooFound";
-            case GhostSearchResult::UnknownFurniture:
-                return "UnknownFurniture";
-        }
-        return "Unknown";
-    }
-
     GhostMansion::GhostMansion()
         : _encounter{}
         , _random{}
