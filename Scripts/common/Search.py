@@ -331,9 +331,9 @@ def platformSearchRoots(search: dict[str, Any], rootsKey: str) -> list[str]:
 
     `*` 가 든 항목은 실제 디렉터리로 펼쳐진다(자연순 내림차순).
     """
-    raw = search.get(rootsKey, [])
+    raw = search[rootsKey]   # search_paths.defaults 의 필수 키 — 플랫폼 표면 이 플랫폼 칸도 필수
     if isinstance(raw, dict):
-        return expandSearchRootGlobsInternal(list(raw.get(platformKey(), []) or []))
+        return expandSearchRootGlobsInternal(list(raw[platformKey()]))
     if isinstance(raw, list):
         return expandSearchRootGlobsInternal([str(item) for item in raw])
     return []

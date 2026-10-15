@@ -108,7 +108,7 @@ class CheckLintsAreAliveGate(LintGate):
         listResult.sort(key=lambda result: result[0])
         for index, code, output in listResult:
             script, case = listJob[index]
-            caseName = case.get("name", "?")
+            caseName = case["name"]
             if args.verbose:
                 print(f"  [{script.name}/{caseName}] exit={code}")
             if code == 0:

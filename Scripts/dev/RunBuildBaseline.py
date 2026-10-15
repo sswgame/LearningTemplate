@@ -97,6 +97,9 @@ def findBusyProcesses() -> list[str]:
     else:
         result = runProcess(["ps", "-eo", "comm="])
         listName = [line.strip().lower() for line in result.stdout.splitlines()]
+    if not result.bSucceeded:
+        # 목록을 못 얻으면 "도는 빌드 없음" 이 아니다 — 겹친 측정을 기준선으로 남기지 않게 멈춘다.
+        raise RuntimeError(f"프로세스 목록을 읽지 못했습니다: {result.stderr.strip()}")
     return sorted({name for name in listName if name in kBusyProcessNames})
 
 
@@ -154,7 +157,7 @@ def measureLocalScenarios(repositoryRoot: Path, preset: str, listScenario: list[
 
 def measureWorktreeScenario(repositoryRoot: Path, preset: str, args: argparse.Namespace, listTarget: list[str]) -> ScenarioResult:
     """같은 커밋의 새 워크트리에서 구성 + 빌드. 첫 회는 데우기라 세지 않는다."""
-    commit = runGit(["rev-parse", "HEAD"], cwd=repositoryRoot).stdout.strip()
+    commit = readHeadInternal(repositoryRoot, [])
     # worktree-make 은 main 체크아웃의 부모 아래에 만든다 — 이 스크립트를 워크트리에서 불러도 같은 자리를 본다.
     worktreeRoot = findMainRoot(repositoryRoot).parent / kWorktreeFolderName / kWorktreeName
     scriptsCommand = [sys.executable, "-m", "Scripts"]
@@ -175,12 +178,21 @@ def measureWorktreeScenario(repositoryRoot: Path, preset: str, args: argparse.Na
             print(f"[Baseline] {preset} worktree #{repeat}: {elapsed:.1f} s", flush=True)
     finally:
         if not args.keep_worktree:
+            # 청소다 — 측정은 이미 끝났고, 지우지 못한 워크트리는 worktree-remove 가 스스로 알린다.
             runProcess([*scriptsCommand, "worktree-remove", kWorktreeName, "--force"], cwd=repositoryRoot, bCapture=False)
     return result
 
 
+def readHeadInternal(repositoryRoot: Path, listOption: list[str]) -> str:
+    """HEAD 커밋 — 못 읽으면 멈춘다(빈 커밋으로 기준선을 적지 않는다)."""
+    result = runGit(["rev-parse", *listOption, "HEAD"], cwd=repositoryRoot)
+    if not result.bSucceeded:
+        raise RuntimeError(f"HEAD 를 읽지 못했습니다: {result.stderr.strip()}")
+    return result.stdout.strip()
+
+
 def formatTable(listResult: list[ScenarioResult], args: argparse.Namespace, listTarget: list[str], repositoryRoot: Path) -> str:
-    commit = runGit(["rev-parse", "--short", "HEAD"], cwd=repositoryRoot).stdout.strip()
+    commit = readHeadInternal(repositoryRoot, ["--short"])
     today = datetime.date.today().isoformat()
     listLine = [
         f"# 빌드 기준선 — {describeMachine()}",

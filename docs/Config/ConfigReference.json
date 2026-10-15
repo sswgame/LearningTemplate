@@ -181,8 +181,8 @@
      "fields": [
       {
        "name": "_defaultMaterial",
-       "type": "string",
-       "default": "engine/materials/defaultmaterial.material",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -190,26 +190,26 @@
       },
       {
        "name": "_missingMaterial",
-       "type": "string",
-       "default": "engine/materials/missingmaterial.material",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
-       "description": "못 읽은 머티리얼 대신 쓰는 마젠타 체커(비어 있으면 씬 기본)"
+       "description": "못 읽은 머티리얼 대신 쓰는 마젠타 체커"
       },
       {
        "name": "_missingTexture",
-       "type": "string",
-       "default": "engine/textures/missing.dds",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
-       "description": "못 읽은 텍스처 대신 샘플하는 마젠타 체커(비어 있으면 흰색)"
+       "description": "못 읽은 텍스처 대신 샘플하는 마젠타 체커"
       },
       {
        "name": "_shellInputMap",
-       "type": "string",
-       "default": "engine/input/default.input.xml",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -217,8 +217,8 @@
       },
       {
        "name": "_uiInputMap",
-       "type": "string",
-       "default": "engine/input/ui.input.xml",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -226,8 +226,8 @@
       },
       {
        "name": "_userSettingsSchema",
-       "type": "string",
-       "default": "engine/settings/engine.settings.xml",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -235,8 +235,8 @@
       },
       {
        "name": "_telemetrySchema",
-       "type": "string",
-       "default": "engine/telemetry/engine.telemetry.xml",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -244,8 +244,8 @@
       },
       {
        "name": "_cultureTable",
-       "type": "string",
-       "default": "engine/localization/engine.cultures.json",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -253,8 +253,8 @@
       },
       {
        "name": "_localizationProject",
-       "type": "string",
-       "default": "engine/localization/engine.locproject.json",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -262,8 +262,8 @@
       },
       {
        "name": "_fontCatalog",
-       "type": "string",
-       "default": "engine/fonts/fontcatalog.xml",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -271,8 +271,8 @@
       },
       {
        "name": "_uiScaleSettings",
-       "type": "string",
-       "default": "engine/ui/uiscale.xml",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -280,8 +280,8 @@
       },
       {
        "name": "_uiThemes",
-       "type": "string",
-       "default": "engine/ui/uithemes.xml",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -289,8 +289,8 @@
       },
       {
        "name": "_uiOptionsMenu",
-       "type": "string",
-       "default": "engine/ui/options.ui.xml",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -298,8 +298,8 @@
       },
       {
        "name": "_uiPauseMenu",
-       "type": "string",
-       "default": "engine/ui/pause.ui.xml",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -307,8 +307,8 @@
       },
       {
        "name": "_defaultForwardPipeline",
-       "type": "string",
-       "default": "engine/pipeline/forwardpipeline.xml",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -316,8 +316,8 @@
       },
       {
        "name": "_defaultDeferredPipeline",
-       "type": "string",
-       "default": "engine/pipeline/deferredpipeline.xml",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -325,8 +325,8 @@
       },
       {
        "name": "_defaultRenderPass",
-       "type": "string",
-       "default": "engine/renderpass/defaultrenderpass.xml",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -334,8 +334,8 @@
       },
       {
        "name": "_shaderShadowDepth",
-       "type": "string",
-       "default": "engine/shaders/shadowdepth.hlsl",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -343,8 +343,8 @@
       },
       {
        "name": "_shaderForwardLit",
-       "type": "string",
-       "default": "engine/shaders/forwardlit.hlsl",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -352,8 +352,8 @@
       },
       {
        "name": "_shaderGBuffer",
-       "type": "string",
-       "default": "engine/shaders/gbuffer.hlsl",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -361,8 +361,8 @@
       },
       {
        "name": "_shaderDeferredLighting",
-       "type": "string",
-       "default": "engine/shaders/deferredlighting.hlsl",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -370,8 +370,8 @@
       },
       {
        "name": "_shaderPostBloom",
-       "type": "string",
-       "default": "engine/shaders/postbloom.hlsl",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -379,8 +379,8 @@
       },
       {
        "name": "_shaderPostOutline",
-       "type": "string",
-       "default": "engine/shaders/postoutline.hlsl",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -388,8 +388,8 @@
       },
       {
        "name": "_shaderFullscreenBlit",
-       "type": "string",
-       "default": "engine/shaders/fullscreenblit.hlsl",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -397,8 +397,8 @@
       },
       {
        "name": "_shaderGPUCull",
-       "type": "string",
-       "default": "engine/shaders/gpucull.hlsl",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -406,8 +406,8 @@
       },
       {
        "name": "_shaderInstanceAnimation",
-       "type": "string",
-       "default": "engine/shaders/instanceanimation.hlsl",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -415,8 +415,8 @@
       },
       {
        "name": "_shaderMeshMorph",
-       "type": "string",
-       "default": "engine/shaders/meshmorph.hlsl",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -424,8 +424,8 @@
       },
       {
        "name": "_shaderMeshSkin",
-       "type": "string",
-       "default": "engine/shaders/meshskin.hlsl",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -433,8 +433,8 @@
       },
       {
        "name": "_shaderInstanceSort",
-       "type": "string",
-       "default": "engine/shaders/instancesort.hlsl",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -442,8 +442,8 @@
       },
       {
        "name": "_shaderFullscreenTriangle",
-       "type": "string",
-       "default": "engine/shaders/fullscreentriangle.hlsl",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -451,8 +451,8 @@
       },
       {
        "name": "_shaderSsao",
-       "type": "string",
-       "default": "engine/shaders/ssao.hlsl",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -460,8 +460,8 @@
       },
       {
        "name": "_shaderTaa",
-       "type": "string",
-       "default": "engine/shaders/taa.hlsl",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -469,8 +469,8 @@
       },
       {
        "name": "_shaderTonemap",
-       "type": "string",
-       "default": "engine/shaders/tonemap.hlsl",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -478,8 +478,8 @@
       },
       {
        "name": "_shaderToon",
-       "type": "string",
-       "default": "engine/shaders/toon.hlsl",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
@@ -487,12 +487,75 @@
       },
       {
        "name": "_shaderCanvas",
-       "type": "string",
-       "default": "engine/shaders/canvas.hlsl",
+       "type": "DataPath",
+       "default": "",
        "min": "",
        "max": "",
        "units": "",
        "description": "화면 2D(UI · 월드 글자) 사각형 — 사각형 하나 = 인스턴스 하나, SDF 모양 · 글리프"
+      },
+      {
+       "name": "_shaderSprite2D",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "스프라이트(2D) 머티리얼 셰이더 — 머티리얼 없이 쿠킹 목록에도 든다"
+      },
+      {
+       "name": "_shaderSprite2DLit",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "빛 받는 스프라이트(2D 빛 · 그림자) 머티리얼 셰이더 — 머티리얼 없이 쿠킹 목록에도 든다"
+      },
+      {
+       "name": "_shaderProbeProvokingVertex",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "프로브: 플랫 보간이 첫 정점 값을 쓰는가(RHIDeviceTest)"
+      },
+      {
+       "name": "_shaderProbeInstanceSlot",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "프로브: 인스턴스 슬롯 스트림이 네 API 에서 같은가(RHIDeviceTest)"
+      },
+      {
+       "name": "_shaderProbeSampleCompute",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "프로브: 컴퓨트 쿠킹 · 리플렉션(ShaderTest)"
+      },
+      {
+       "name": "_shaderProbeComputeTextureWrite",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "프로브: 컴퓨트 RW 텍스처 쓰기 · 기본이 아닌 진입점(RHIDeviceTest)"
+      },
+      {
+       "name": "_shaderProbeWaterWave",
+       "type": "DataPath",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "프로브: 거스트너 파도 셰이더 식이 CPU 와 같은가(RenderPassGPUTest)"
       }
      ]
     }
@@ -4245,12 +4308,8 @@
    "choices": [],
    "description": "대형 라이브러리 타겟에 CMake UNITY_BUILD(여러 소스를 합쳐 컴파일) 사용",
    "presets": [
-    "CI-Debug",
-    "CI-Debug-ASAN",
-    "CI-Debug-TSAN",
     "CI-Fuzz",
-    "CI-Release",
-    "CI-Shipping"
+    "base-ci"
    ]
   },
   {
@@ -4312,9 +4371,7 @@
    "choices": [],
    "description": "배포용 단일 실행 파일 정적 링크 빌드 (Editor 모듈 제외 및 최고 성능 최적화)",
    "presets": [
-    "CI-Shipping",
-    "Ninja-Shipping",
-    "WSL-Shipping"
+    "base-shipping"
    ]
   },
   {
@@ -4342,13 +4399,10 @@
    ],
    "description": "빌드 타깃 종류: Game | Client | Server (비우면 Shipping=Client, 그 밖=Game)",
    "presets": [
-    "CI-Shipping",
     "CI-Shipping-Server",
     "Ninja-Debug-Server",
-    "Ninja-Shipping",
     "Ninja-Shipping-Server",
     "WSL-Debug-Server",
-    "WSL-Shipping",
     "WSL-Shipping-Server"
    ]
   },

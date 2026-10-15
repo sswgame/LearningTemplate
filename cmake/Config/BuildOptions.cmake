@@ -57,8 +57,8 @@ endif()
 # 배포 빌드가 Engine 에 정적으로 넣는 RHI 백엔드 하나 — 쿠킹 표(Config/Engine/CookContract.json rhi_backends)의 이름 그대로(별칭 · 소문자는 구성 실패).
 # 기본은 표의 default_rhi_backend, Windows 밖은 Vulkan(project() 전이라 WIN32 대신 CMAKE_HOST_WIN32 — 교차 컴파일은 지원하지 않는다).
 # Dev 는 백엔드 넷을 모두 모듈로 짓고 이 값을 읽지 않는다. 이 플랫폼에 없는 백엔드면 구성이 선다(cmake/Engine/RhiBackends.cmake).
-file(READ "${CMAKE_CURRENT_LIST_DIR}/../../Config/Engine/CookContract.json" swCookContractText)
-string(JSON swContractDefaultRhi GET "${swCookContractText}" default_rhi_backend)
+include("${CMAKE_CURRENT_LIST_DIR}/JsonValue.cmake")
+sw_requireJsonValue(swContractDefaultRhi "${CMAKE_CURRENT_LIST_DIR}/../../Config/Engine/CookContract.json" default_rhi_backend)
 
 if(CMAKE_HOST_WIN32)
 	set(SW_SHIPPING_RHI_BACKEND "${swContractDefaultRhi}" CACHE STRING "Shipping 이 Engine 에 정적 링크할 RHI 백엔드(쿠킹 표 이름)")

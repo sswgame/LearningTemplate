@@ -302,7 +302,7 @@ namespace sw
         // 문맥은 파일마다 첫 줄 — 크래시 보고 · 로그와 같은 세션 id, 심볼과 짝지을 빌드 id.
         const GameConfig&    gameConfig   = GameConfig::getActive();
         UserSettingsManager& userSettings = engine::getSubsystem<UserSettingsManager>();
-        const string&        engineSchema = engine::getSubsystem<EngineDefaultAssets>()._telemetrySchema;
+        const string&        engineSchema = engine::getSubsystem<EngineDefaultAssets>()._telemetrySchema.get();
         TelemetryContext     context;
         context._sessionID   = CrashHandler::getSessionID();
         context._buildConfig = build::kConfigName;

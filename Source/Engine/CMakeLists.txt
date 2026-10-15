@@ -156,9 +156,9 @@ elseif(SW_SHIPPING_BUILD)
 	# 주의: 여기서 백엔드를 못 고른 채 지나가면 Engine 은 백엔드 없이 링크되고 실행에서야 "백엔드 없음" 으로 진다(RHIBackendRegistry.cpp 의 #error 가 다음 방어선).
 	sw_resolveShippingRhiBackend("${SW_SHIPPING_RHI_BACKEND}" swShippingBackend)
 	# EngineConfig 가 다른 백엔드를 고르면 알린다 — 배포본은 링크한 하나만 띄운다.
-	file(READ "${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_ENGINE_CONFIG}" swEngineConfigText)
-	string(JSON swEngineConfigRhi ERROR_VARIABLE swEngineConfigRhiError GET "${swEngineConfigText}" _window _defaultRHI)
-	if(NOT swEngineConfigRhiError AND NOT swEngineConfigRhi STREQUAL swShippingBackend)
+	# `_defaultRHI` 는 선택 키다 — 기본값과 다를 때만 적는다(정본은 쿠킹 표, docs/09_Decisions.md 5-4).
+	sw_readOptionalJsonValue(swEngineConfigRhi "${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_ENGINE_CONFIG}" _window _defaultRHI)
+	if(DEFINED swEngineConfigRhi AND NOT swEngineConfigRhi STREQUAL swShippingBackend)
 		message(WARNING "${SW_FILE_RUNTIME_ENGINE_CONFIG} picks _defaultRHI='${swEngineConfigRhi}' but Shipping links only '${swShippingBackend}'")
 	endif()
 

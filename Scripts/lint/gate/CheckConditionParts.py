@@ -200,7 +200,7 @@ class CheckConditionPartsGate(LintGate):
         if bFiles:
             return GateResult(listViolation=[describe(item) for item in listAll], summary=summary)
 
-        baseline = args.baseline if args.baseline is not None else self.readRules(self.name, self.ruleSchema)["baseline"].get("total", 0)
+        baseline = args.baseline if args.baseline is not None else self.readRules(self.name, self.ruleSchema)["baseline"]["total"]
         mapPerFile: dict[str, int] = {}
         for relative, _, _ in listAll:
             mapPerFile[relative] = mapPerFile.get(relative, 0) + 1

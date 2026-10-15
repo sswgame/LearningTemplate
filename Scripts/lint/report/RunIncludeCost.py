@@ -68,12 +68,9 @@ class TraceSummary:
 
 
 def readTraceSummary(tracePath: Path) -> TraceSummary:
-    """`-ftime-trace` 의 JSON 에서 `Source` 구간을 헤더별로 더하고 합계 사건을 읽는다(읽지 못하면 빈 요약)."""
+    """`-ftime-trace` 의 JSON 에서 `Source` 구간을 헤더별로 더하고 합계 사건을 읽는다(읽지 못하면 멈춘다 — 빈 요약은 "비용 0" 으로 보인다)."""
     summary = TraceSummary()
-    try:
-        data = json.loads(tracePath.read_text(encoding="utf-8", errors="replace"))
-    except (OSError, ValueError):
-        return summary
+    data = json.loads(tracePath.read_text(encoding="utf-8", errors="replace"))
     # `Source` 는 비동기 사건 쌍(`ph` 가 `b` → `e`)으로 적힌다 — clang 은 구간 하나를 끝낼 때 두 줄을 이어 쓰므로 바로 다음 `e` 가 짝이다.
     pendingDetail = ""
     pendingStart = 0
@@ -159,13 +156,13 @@ class RunIncludeCostReport(LintReport):
 
         def measureUnitInternal(indexedEntry: tuple[int, dict]) -> tuple[str, TraceSummary, str | None]:
             index, entry = indexedEntry
-            sourcePath = Path(str(entry.get("file", "")))
+            sourcePath = Path(str(entry["file"]))
             if not sourcePath.is_absolute():
-                sourcePath = Path(str(entry.get("directory", ""))) / sourcePath
+                sourcePath = Path(str(entry["directory"])) / sourcePath
             tracePath = traceDir / f"{index:05d}_{sourcePath.stem}.json"
             # 드라이버는 `-fsyntax-only` 에 `-ftime-trace` 를 넘기지 않는다(출력 파일이 없는 작업) — cc1 에 바로 준다(clang · clang-cl 공통).
             listFlag = ["-Xclang", f"-ftime-trace=\"{tracePath}\"", "-Xclang", f"-ftime-trace-granularity={args.granularity_us}"]
-            failure = runSyntaxOnly(entry, sourcePath, Path(str(entry.get("directory", tree.path))), listFlag)
+            failure = runSyntaxOnly(entry, sourcePath, Path(str(entry["directory"])), listFlag)
             return sourcePath.as_posix(), readTraceSummary(tracePath), failure
 
         # 결과가 문자열이 아니라 요약이라 `sweep.run`(출력 이어 붙이기) 대신 동시 실행만 빌려 쓴다.

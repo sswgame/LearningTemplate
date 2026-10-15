@@ -336,11 +336,13 @@ namespace sw
     void LocalizationTools::collectProjectPaths( vector<string>& outListProjectPath, bool bAllGames )
     {
         outListProjectPath.clear();
-        // 에디터 모듈은 엔진 서비스를 서비스 테이블로만 접근한다. EngineServices.h 는 Engine, App, 테스트 전용이다. 테이블이 없으면(테스트) 기본값을 쓴다.
+        // 에디터 모듈은 엔진 서비스를 서비스 테이블로만 접근한다. EngineServices.h 는 Engine, App, 테스트 전용이다.
+        // 엔진 문자열 프로젝트 경로는 데이터에서 읽은 표에만 있다 — 표가 없으면 대신 쓸 값이 없으므로 오류로 알리고 엔진 프로젝트를 빼고 모은다.
         const EngineDefaultAssets* pDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
-        const string               engineProject  = pDefaultAssets != nullptr ? pDefaultAssets->_localizationProject : EngineDefaultAssets{}._localizationProject;
-        if ( engineProject.empty() == false )
-            outListProjectPath.push_back( LocalizationToolsInternal::resolveAbsolutePath( engineProject ) );
+        if ( pDefaultAssets != nullptr )
+            outListProjectPath.push_back( LocalizationToolsInternal::resolveAbsolutePath( pDefaultAssets->_localizationProject.get() ) );
+        else
+            SW_LOG_ERROR( "Engine default assets are not loaded - the engine localization project is left out" );
         outListProjectPath.push_back( LocalizationToolsInternal::resolveAbsolutePath( editor::EditorPaths::kLocalizationProject ) ); // 에디터 UI 문구
 
         const string   localizationFolder = FileUtil::joinPath( path::kDataFolder, path::kLocalizationFolder );

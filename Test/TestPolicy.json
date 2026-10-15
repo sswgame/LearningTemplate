@@ -4,11 +4,15 @@
     "cmake/Engine/TestTargets.cmake 의 sw_addTestExecutable 이 실행 파일 이름으로 줄을 읽고, Scripts/lint/gate/CheckTestSuites.py 가 폴더 · 라벨 · 비용표를 대조한다.",
     "seconds 는 부하가 걸린 이 PC(16 스레드, 실행 파일 다섯을 함께 돌림)의 Debug 한 실행 시간이다. 샤드 수 = ceil(seconds / targetShardSeconds),",
     "제한 시간 = max(minimumTimeoutSeconds, timeoutHeadroom × max(seconds / 샤드 수, 가장 비싼 케이스)). 제한 시간은 멈춤을 잡는 그물이고 느려짐 판정은 SW_TEST_TIME_BUDGET 이 한다.",
-    "caseCosts 는 느린 케이스의 초 — 샤드를 비용으로 고르게 나누는 데 쓴다(--test_costs). 스위트가 크게 느려지면 seconds 와 caseCosts 를 다시 잰다.",
-    "hostSplit 이면 <타깃>_NoGPU(nogpu) · <타깃>_HostOnly(hostgpu, 직렬, hostSeconds · hostShards) 로 가른다. loadSeconds 가 있으면 <타깃>_Load(load, 직렬, --load_suites=only --enforce_budgets)를 더한다.",
+    "caseCosts 는 느린 케이스의 초 — 샤드를 비용으로 고르게 나누는 데 쓴다(--test_costs). hostCaseCosts 는 _HostOnly 조각의 같은 표다(분 단위 호스트 케이스가 nogpu 제한 시간을 늘리지 않게 나눈다). 스위트가 크게 느려지면 seconds 와 비용표를 다시 잰다.",
+    "ctest 항목마다 COST(조각 하나의 예상 초)를 달아 병렬 실행이 긴 항목부터 띄운다(실행 기록이 없는 CI 도 같다).",
+    "hostSplit 이면 <타깃>_NoGPU(nogpu) · <타깃>_HostOnly(hostgpu, GPU 칸 하나 — gpuSlots, hostSeconds · hostShards, hostResourceLock) 로 가른다. loadSeconds 가 있으면 <타깃>_Load(load, 직렬, --load_suites=only --enforce_budgets)를 더한다.",
+    "raceCases 가 있으면 Debug 에서만 <타깃>_Race(race, --host_suites=all, 그 케이스 · 스위트만)를 더한다. raceSeconds 는 그 한 실행의 Debug 초이고, hostSplit 이면 호스트 조각과 같은 GPU 칸 · 잠금을 받는다.",
     "shards 는 계산한 샤드 수를 덮는다 — 이유를 _shardsReason 에 적는다. 새 실행 파일은 여기 한 줄을 더하고 폴더 이름을 실행 파일 이름과 같게 둔다(CheckTestSuites).",
     "timeoutScale 은 위 제한 시간에 곱하는 배율이다. 새니타이저 구성은 sanitizer 하나만, 아니면 리눅스는 linux 를 곱한다(곱을 겹치지 않는다). 테스트가 띄우는 자식 프로세스의 시한도 같은 배율이다(test::ProcessDeadlineWatch)."
   ],
+  "gpuSlots": 2,
+  "_gpuSlotsReason": "hostgpu 항목이 동시에 받는 GPU 칸 수(ctest 자원 gpu). 결정적 기능 확인은 GPU 공유 잠금(shared-lock gpu --shared)과 같은 두 프로세스까지 겹쳐도 된다 — 결정 기록 5-2.",
   "timeoutHeadroom": 4,
   "minimumTimeoutSeconds": 60,
   "targetShardSeconds": 30,
@@ -20,7 +24,8 @@
   "labels": {
     "unit": "C++ 테스트 실행 파일의 항목 전부",
     "nogpu": "CI 러너가 돌릴 수 있다 — GPU · 창 · DXC 가 필요 없다",
-    "hostgpu": "GPU · 창이 있는 PC 에서만 — CI 가 돌리지 않는다(직렬)",
+    "hostgpu": "GPU · 창이 있는 PC 에서만 — CI 가 돌리지 않는다(GPU 칸 gpuSlots 개까지 동시). 기능 확인은 Shipping 이 기본이고 Debug 전체는 큰 단계 끝에 한 번",
+    "race": "Debug 전용 레이스 묶음 — DataRaceDetector(SW_DEBUG)가 켜진 구성에서 스레드 경로(잡 · 비동기 씬 로드 · 렌더 스레드 · 물리 · 네트워크 · 모듈 리로드)를 지나는 최소 케이스(raceCases)를 네 백엔드로. 직렬 합 10 분 안쪽",
     "load": "부하 · 시간 예산 검증 — 기본 집합에서 빠지고 -L load 로 고른다(직렬, --enforce_budgets)",
     "lint": "Scripts/lint 의 게이트와 자기 검사",
     "python": "파이썬 도구의 단위 테스트",
@@ -41,9 +46,35 @@
       "area": "app",
       "seconds": 9,
       "hostSplit": true,
-      "hostSeconds": 1380,
-      "hostShards": 3,
-      "_hostShardsReason": "실기동 스모크 + 자동화 시나리오(시나리오 수 × 백엔드 넷). 에디터 시나리오만 백엔드마다 4~5 분이라 한 실행(약 23 분)을 조각 셋으로 나눈다."
+      "hostSeconds": 2260,
+      "hostShards": 5,
+      "_hostShardsReason": "실기동 스모크 + 자동화 시나리오(시나리오 수 × 백엔드 넷). Debug 한 실행 2254 s(2026-10-16) 중 에디터 시나리오가 백엔드마다 5~8 분이라, 가장 비싼 케이스(497 s) 하나가 한 조각이 되게 다섯으로 나눈다. 조각은 AppBin 잠금으로 서로 직렬이라 나누는 것은 조각마다 제한 시간을 주기 위해서다.",
+      "hostResourceLock": "AppBin",
+      "_hostResourceLockReason": "App 을 같은 Bin 에서 띄워 Saved/Automation/<시나리오>/ 산출물 · 에디터 상태 · assetmanage 가 고치는 리소스가 겹친다 — 조각끼리 · QaGoldenImages 와 동시에 돌지 않는다(EngineTest 호스트 조각과는 겹친다).",
+      "hostCaseCosts": {
+        "AppScenarioTest.EditorScenariosPassOnOpenGL": 497,
+        "AppScenarioTest.EditorScenariosPassOnVulkan": 444,
+        "AppScenarioTest.EditorScenariosPassOnDirectX12": 395,
+        "AppScenarioTest.EditorScenariosPassOnDirectX11": 321,
+        "AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend": 286,
+        "AppScenarioTest.EveryScenarioPassesOnEveryBackend": 98,
+        "AppSmokeTest.BenchFrameMatchesGoldenImage": 26,
+        "AppSmokeTest.BackendSwapRebuildsGameBeforeEditor": 25,
+        "AppScenarioTest.RecordedPlayReplaysOnEveryBackend": 24,
+        "AppScenarioTest.ChainedScenariosShareOneProcess": 16,
+        "AppUITest.DemoScreenMatchesAcrossBackends": 16,
+        "AppSmokeTest.EveryBackendStartsRendersAndExitsCleanly": 14,
+        "AppSmokeTest.EditorSelfTestsPassInsideTheEditor": 13,
+        "AppSmokeTest.BackendSwapFollowsTheNewDevice": 11
+      },
+      "raceCases": [
+        "AppSmokeTest.EveryBackendStartsRendersAndExitsCleanly",
+        "AppSmokeTest.BackendSwapFollowsTheNewDevice",
+        "AppScenarioTest.ChainedScenariosShareOneProcess",
+        "AppScenarioTest.RecordedPlayReplaysOnEveryBackend"
+      ],
+      "raceSeconds": 70,
+      "_raceCasesReason": "네 백엔드마다 App 을 띄워 렌더 스레드 · 잡 시스템 · 기동 씬 로드, 렌더 스레드를 내렸다 다시 세우는 백엔드 교체, 렌더 중 게임 모듈 리로드 두 번, 게임플레이 녹화 · 재생을 지난다. 에디터 시나리오(케이스마다 5~8 분)는 넣지 않는다 — 측정 2026-10-16 Debug 합 65 s."
     },
     "CoreTest": {
       "area": "core",
@@ -54,7 +85,10 @@
         "StreamTransportTest.PlatformManyConnectionsEchoConcurrently": 3,
         "CrashReportTest.EveryCrashKindLeavesAReport": 3,
         "CrashReportTest.StuckReportStillEndsAndKeepsTheStackFile": 3
-      }
+      },
+      "raceCases": [ "TaskManagerTest.*", "ThreadTest.*", "DataRaceDetectorTest.*", "NetworkThreadTest.*", "StreamTransportTest.*", "AsyncFileIOTest.*" ],
+      "raceSeconds": 10,
+      "_raceCasesReason": "잡 시스템 · 스레드 · 레이스 검출기 자체 · 네트워크 스레드 · 소켓 전송 · 비동기 파일 IO. 측정 2026-10-16 Debug 9 s."
     },
     "EditorTest": {
       "area": "editor",
@@ -94,7 +128,10 @@
         "ResourceDataSchemaTest.EveryResourceDataFileLoadsWithoutUnknownNames": 3,
         "SceneTest.RepositoryScenesAndPrefabsKeepComponentNames": 3,
         "SerializationRoundTripTest.EveryResourceComponentRewritesToTheSameBytes": 3
-      }
+      },
+      "raceCases": [ "TaskTest.*", "SceneAsyncTest.*", "PhysicsScene3DTest.*", "NetClientServerTest.*" ],
+      "raceSeconds": 5,
+      "_raceCasesReason": "엔진 잡 · 비동기 씬 로드 · 물리(Jolt 잡) · 클라이언트-서버 복제. 측정 2026-10-16 Debug 1 s."
     },
     "ReflectionTest": {
       "area": "reflection",
@@ -116,6 +153,9 @@
       "seconds": 31,
       "shards": 1,
       "_shardsReason": "모듈을 실제로 올렸다 내리는 케이스가 앞 케이스의 모듈 상태 위에서 돈다 — 순서를 가르지 않는다.",
+      "raceCases": [ "ModuleHostTest.*", "ModuleAPITest.*" ],
+      "raceSeconds": 5,
+      "_raceCasesReason": "모듈 리로드 · 백그라운드 모듈 컴파일(Dev). 측정 2026-10-16 Debug 3 s.",
       "asanOptions": [ "report_globals=0" ],
       "_asanOptionsReason": "이 ASan 런타임은 DLL 을 내려도 전역 등록을 지우지 않아, 다음 모듈이 그 주소에 매핑되면 자기 전역을 읽어도 global-buffer-overflow 로 보고된다. 전역 검사만 끈다."
     }

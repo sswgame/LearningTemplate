@@ -126,13 +126,11 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
     isHeader = filePath.suffix.lower() in kCppHeaderExtensions
     isSource = filePath.suffix.lower() in kCppSourceExtensions
 
+    # 못 읽으면(OSError) 멈춘다 — 빈 위반 목록으로 돌려주면 검사를 건너뛴 것이 통과로 보인다.
     try:
         content = readSourceTextInternal(filePath, "utf-8-sig")
     except UnicodeDecodeError:
-        try:
-            content = readSourceTextInternal(filePath, "latin-1")
-        except Exception:
-            return violations
+        content = readSourceTextInternal(filePath, "latin-1")   # latin-1 은 어떤 바이트도 읽는다
 
     lines = content.splitlines()
 

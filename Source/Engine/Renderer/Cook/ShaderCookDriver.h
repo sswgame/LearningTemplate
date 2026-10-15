@@ -55,7 +55,8 @@ namespace sw
          * @details 런타임이 만드는 퍼뮤테이션과 여기서 만드는 요청이 어긋나면 Shipping 이 매니페스트 미스로
          *          떨어집니다. 그래서 define 을 합치는 규칙과 패스 기본 셰이더를 고르는 규칙이 런타임과 같은 자리
          *          (`RenderPassTypeInfo` 표 · `selectRenderPassShader` · `FrameRendererUtil`)를 봅니다. 그것이 이 함수가 렌더러 층에 있는 이유입니다.
+         * @return 엔진 기본 에셋(`EngineDefaultAssets`)을 읽지 못하면 false 입니다 — 엔진 셰이더 경로가 그 데이터에만 있다.
          */
-        static void collectAllRequests( string_view rootDir, vector<ShaderCookRequest>& outListRequest );
+        [[nodiscard]] static bool collectAllRequests( string_view rootDir, vector<ShaderCookRequest>& outListRequest );
     };
 } // namespace sw

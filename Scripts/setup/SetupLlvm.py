@@ -426,11 +426,7 @@ def setupLlvm(allowBootstrap: bool = False) -> str:
         )
         return ""
 
-    urls = search.get(kKeyLlvmDownloadUrls) or {}
-    url = urls.get(platformKey())
-    if not url:
-        sys.stderr.write(f"[SetupLlvm Error] No llvm_download_urls.{platformKey()} in search_paths.\n")
-        return ""
+    url = search[kKeyLlvmDownloadUrls][platformKey()]   # search_paths.defaults 의 필수 키 — 없으면 KeyError
 
     filename = url.rsplit("/", 1)[-1]
     if filename.lower().endswith(".exe") or not filename.endswith(
@@ -442,30 +438,27 @@ def setupLlvm(allowBootstrap: bool = False) -> str:
         )
         return ""
 
+    # 부트스트랩을 허락받은 뒤의 받기 · 풀기 실패는 "LLVM 없음" 이 아니라 오류다 — 예외 그대로 멈춘다
+    # (빈 문자열로 돌려주면 configure 가 LLVM 없이 다음 단계로 가서 엉뚱한 자리에서 깨진다).
     print(f"[SetupLlvm] Bootstrapping minimal kit into {tools}")
     tools.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        archive = ensureCachedDownload(
-            url, toolsCacheDir() / filename, minSize=50_000_000, label="SetupLlvm"
-        )
-        extractTarMinimalInternal(archive, tools)
-        print(f"[SetupLlvm] Pruning to clang-cl/libclang kit under {tools}")
-        pruneBinInternal(tools)
-        pruneLibIncludeInternal(tools)
-        if not isMinimalLlvmRoot(str(tools)):
-            sys.stderr.write(f"[SetupLlvm] Minimal kit check failed under {tools}.\n")
-            return ""
-        print(f"[SetupLlvm] Minimal kit ready: {tools}")
+    archive = ensureCachedDownload(
+        url, toolsCacheDir() / filename, minSize=50_000_000, label="SetupLlvm"
+    )
+    extractTarMinimalInternal(archive, tools)
+    print(f"[SetupLlvm] Pruning to clang-cl/libclang kit under {tools}")
+    pruneBinInternal(tools)
+    pruneLibIncludeInternal(tools)
+    if not isMinimalLlvmRoot(str(tools)):
+        raise RuntimeError(f"[SetupLlvm] Minimal kit check failed under {tools}")
+    print(f"[SetupLlvm] Minimal kit ready: {tools}")
 
-        # 헤더가 바뀌었으니 이 툴체인으로 만든 PCH 는 전부 못 쓴다 (헬퍼 독스트링 참고).
-        staleCount = invalidatePrecompiledHeadersInternal(getProjectRoot())
-        if staleCount > 0:
-            print(f"[SetupLlvm] Invalidated {staleCount} stale precompiled-header file(s) under build/")
+    # 헤더가 바뀌었으니 이 툴체인으로 만든 PCH 는 전부 못 쓴다 (헬퍼 독스트링 참고).
+    staleCount = invalidatePrecompiledHeadersInternal(getProjectRoot())
+    if staleCount > 0:
+        print(f"[SetupLlvm] Invalidated {staleCount} stale precompiled-header file(s) under build/")
 
-        return recordInternal(tools)
-    except Exception as exc:
-        sys.stderr.write(f"[SetupLlvm Error] {exc}\n")
-        return ""
+    return recordInternal(tools)
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(

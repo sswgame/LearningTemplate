@@ -7,8 +7,10 @@ clang-format 을 찾고, 고정 버전이 없으면 설치합니다. **포맷을
 toolchain 이 시스템 LLVM(21.x)을 가리키는 PC 는 고정 버전(`Tools/LLVM/bin`, 20.1.8)이 설치돼 있어도 다른 판으로 포맷한다.
 그래서 고정본을 먼저 보는 규칙이 여기 하나뿐이고, `setup` 도 이 모듈을 부른다(`common` 은 `setup` 을 import 하지 않는다).
 
-  resolveClangFormat()   포맷을 돌릴 clang-format — 고정본 우선, 없으면 설치, 그래도 없으면 경고와 함께 아무 것
+  resolveClangFormat()   포맷을 돌릴 clang-format — 고정본, 없으면 설치, 그래도 없으면 RuntimeError
   ensureClangFormat()    설치까지 하는 같은 규칙(부트스트랩이 부른다)
+
+고정본을 못 구했을 때 "아무 clang-format" 으로 대신하지 않는다 — 판이 다르면 포맷이 달라져 두 PC 의 커밋이 서로를 되돌린다.
 """
 
 from __future__ import annotations
@@ -34,8 +36,8 @@ def clangFormatFileNameInternal() -> str:
 
 
 def pinnedClangFormatVersion() -> str:
-    """search_paths.json 이 고정한 clang-format 버전입니다."""
-    return str(loadSearchPaths().get(kKeyClangFormatVersion, "")).strip()
+    """search_paths.json 이 고정한 clang-format 버전입니다(필수 키 — 없으면 KeyError)."""
+    return str(loadSearchPaths()[kKeyClangFormatVersion]).strip()
 
 
 def clangFormatVersionOf(path: Path | str) -> str:
@@ -68,16 +70,6 @@ def findClangFormatPath(llvmPath: str = "") -> str:
 
     for candidate in listCandidate:
         if candidate.is_file() and clangFormatVersionOf(candidate) == want:
-            return normalizePath(candidate)
-    return ""
-
-
-def findAnyRunnableClangFormatInternal() -> str:
-    """버전을 가리지 않고 실행만 되는 clang-format 을 찾습니다 (고정본을 못 구했을 때의 마지막 수단)."""
-    name = clangFormatFileNameInternal()
-    tools = resolveToolsSubdir(kKeyLlvmToolsSubdir, loadSearchPaths())
-    for candidate in (tools / "bin" / name, shutil.which("clang-format")):
-        if candidate and Path(candidate).is_file() and clangFormatVersionOf(candidate):
             return normalizePath(candidate)
     return ""
 
@@ -151,15 +143,14 @@ def ensureClangFormat(llvmPath: str = "", *, allowDownload: bool = True) -> str:
     `clang_format_version` 이 고정한 clang-format 을 확보합니다 (없으면 PyPI 휠로 설치).
 
     Returns:
-        clang-format 실행 파일의 절대 경로 (실패 시 빈 문자열 "")
+        clang-format 실행 파일의 절대 경로. 고정본을 찾지도 설치하지도 못하면 RuntimeError.
     """
     if found := findClangFormatPath(llvmPath):
         return found
 
     version = pinnedClangFormatVersion()
     if not version:
-        sys.stderr.write(f"[ClangFormat] search_paths.json 에 {kKeyClangFormatVersion} 이 없습니다.\n")
-        return findAnyRunnableClangFormatInternal()
+        raise RuntimeError(f"[ClangFormat] search_paths 의 {kKeyClangFormatVersion} 이 비어 있습니다")
 
     if allowDownload:
         destBin = resolveToolsSubdir(kKeyLlvmToolsSubdir, loadSearchPaths()) / "bin"
@@ -172,14 +163,8 @@ def ensureClangFormat(llvmPath: str = "", *, allowDownload: bool = True) -> str:
         else:
             sys.stderr.write(f"[ClangFormat] clang-format {version} 휠을 이 플랫폼에서 찾지 못했습니다.\n")
 
-    # 고정본을 못 구했다 — 있는 것으로라도 돌리되, 결과가 달라질 수 있음을 분명히 알린다.
-    if fallback := findAnyRunnableClangFormatInternal():
-        sys.stderr.write(
-            f"[ClangFormat] 고정 버전({version})을 구하지 못해 {clangFormatVersionOf(fallback)} "
-            f"을 씁니다 — 포맷 결과가 다른 PC 와 달라질 수 있습니다.\n"
-        )
-        return fallback
-    return ""
+    raise RuntimeError(f"[ClangFormat] 고정 버전 clang-format {version} 을 찾지도 설치하지도 못했습니다 "
+                       f"(위 줄이 이유다) — 'py -3 Scripts/setup/SetupEnvironment.py' 로 설치하십시오")
 
 
 def resolveClangFormat(llvmPath: str = "", *, allowDownload: bool = True) -> str:

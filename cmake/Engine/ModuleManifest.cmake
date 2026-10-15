@@ -22,17 +22,18 @@ if(NOT CMAKE_MINIMUM_REQUIRED_VERSION)
 	message(FATAL_ERROR "[Module] include ModuleManifest.cmake after cmake_minimum_required() — script mode (cmake -P) otherwise runs it under OLD policies")
 endif()
 
+include("${CMAKE_CURRENT_LIST_DIR}/../Config/JsonValue.cmake")
+
 # 매니페스트 키 · 종류 낱말(런타임 `ModuleCatalogInternal` 과 같은 표).
 set(SW_MODULE_MANIFEST_KEYS _name _version _kind _description _listDependency _listPlatform _listConfiguration _listTarget _bEnabledByDefault _listModuleOverride)
 set(SW_MODULE_KINDS GameFramework Kit Game Editor RHI EditorExtension)
 
 # 매니페스트 하나를 읽어 전역 속성 `SW_MODULE_<이름>_*` 에 담는다. 형식이 틀리면 구성을 세운다.
 function(sw_readModuleManifest MANIFEST_PATH)
-	file(READ "${MANIFEST_PATH}" swJson)
-	string(JSON swName ERROR_VARIABLE swError GET "${swJson}" _name)
+	sw_requireJsonValue(swName "${MANIFEST_PATH}" _name)
 
-	if(swError OR swName STREQUAL "")
-		message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: _name is missing (${swError})")
+	if(swName STREQUAL "")
+		message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: _name is empty")
 	endif()
 
 	get_filename_component(swFileName "${MANIFEST_PATH}" NAME)
@@ -41,41 +42,41 @@ function(sw_readModuleManifest MANIFEST_PATH)
 		message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: the file must be named '${swName}.module.json'")
 	endif()
 
-	string(JSON swKeyCount LENGTH "${swJson}")
+	sw_requireJsonValue(swKeyCount "${MANIFEST_PATH}" LENGTH)
 	math(EXPR swLastKey "${swKeyCount} - 1")
 
 	foreach(swKeyIndex RANGE ${swLastKey})
-		string(JSON swKey MEMBER "${swJson}" ${swKeyIndex})
+		sw_requireJsonValue(swKey "${MANIFEST_PATH}" MEMBER ${swKeyIndex})
 
 		if(NOT swKey IN_LIST SW_MODULE_MANIFEST_KEYS)
 			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: unknown key '${swKey}'")
 		endif()
 	endforeach()
 
-	string(JSON swVersion ERROR_VARIABLE swError GET "${swJson}" _version)
+	sw_requireJsonValue(swVersion "${MANIFEST_PATH}" _version)
 
-	if(swError OR NOT swVersion MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
+	if(NOT swVersion MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
 		message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: _version must be 'major.minor.patch'")
 	endif()
 
-	string(JSON swKind ERROR_VARIABLE swError GET "${swJson}" _kind)
+	sw_requireJsonValue(swKind "${MANIFEST_PATH}" _kind)
 
-	if(swError OR NOT swKind IN_LIST SW_MODULE_KINDS)
+	if(NOT swKind IN_LIST SW_MODULE_KINDS)
 		message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: unknown _kind '${swKind}' (one of ${SW_MODULE_KINDS})")
 	endif()
 
 	foreach(swListKey _listPlatform _listConfiguration _listTarget)
 		set(swValues "")
-		string(JSON swCount ERROR_VARIABLE swError LENGTH "${swJson}" ${swListKey})
+		sw_requireJsonValue(swCount "${MANIFEST_PATH}" LENGTH ${swListKey})
 
-		if(swError OR swCount EQUAL 0)
+		if(swCount EQUAL 0)
 			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: ${swListKey} must be a non-empty array")
 		endif()
 
 		math(EXPR swLast "${swCount} - 1")
 
 		foreach(swIndex RANGE ${swLast})
-			string(JSON swValue GET "${swJson}" ${swListKey} ${swIndex})
+			sw_requireJsonValue(swValue "${MANIFEST_PATH}" ${swListKey} ${swIndex})
 			list(APPEND swValues ${swValue})
 		endforeach()
 
@@ -100,35 +101,26 @@ function(sw_readModuleManifest MANIFEST_PATH)
 		endif()
 	endforeach()
 
-	# 에디터 확장은 Dev 전용이고 EditorModule 에 의존한다(언리얼 Type "Editor" 모듈과 같다) — 런타임 `ModuleCatalog::parseManifest` 와 같은 검사.
-	if(swKind STREQUAL "EditorExtension")
-		if(NOT swValues__listConfiguration STREQUAL "Dev")
-			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: an EditorExtension module is built for Dev only (_listConfiguration [\"Dev\"])")
-		endif()
-		string(FIND "${swJson}" "\"EditorModule\"" swEditorDependencyAt)
-		if(swEditorDependencyAt EQUAL -1)
-			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: an EditorExtension module must list EditorModule in _listDependency")
-		endif()
-	endif()
+	# 선택 키 셋(`_bEnabledByDefault` · `_listDependency` · `_minVersion`)은 매니페스트 형식의 기본값이다 — 설정 파일에는 기본값과 다른 값만 적는다
+	# (docs/09_Decisions.md 5-4). 같은 기본값을 런타임 `ModuleCatalog::parseManifest` 가 들고, `ModuleCatalogTest.BuildAndRuntimeAgree` 가 두 해석을 견준다.
+	sw_readOptionalJsonValue(swEnabled "${MANIFEST_PATH}" _bEnabledByDefault)
 
-	string(JSON swEnabled ERROR_VARIABLE swError GET "${swJson}" _bEnabledByDefault)
-
-	if(swError)
+	if(NOT DEFINED swEnabled)
 		set(swEnabled ON)
 	endif()
 
 	set(swDependencyNames "")
 	set(swDependencyMinVersions "")
-	string(JSON swCount ERROR_VARIABLE swError LENGTH "${swJson}" _listDependency)
+	sw_readOptionalJsonValue(swCount "${MANIFEST_PATH}" LENGTH _listDependency)
 
-	if(NOT swError AND swCount GREATER 0)
+	if(DEFINED swCount AND swCount GREATER 0)
 		math(EXPR swLast "${swCount} - 1")
 
 		foreach(swIndex RANGE ${swLast})
-			string(JSON swDependency GET "${swJson}" _listDependency ${swIndex} _name)
-			string(JSON swMinVersion ERROR_VARIABLE swMinError GET "${swJson}" _listDependency ${swIndex} _minVersion)
+			sw_requireJsonValue(swDependency "${MANIFEST_PATH}" _listDependency ${swIndex} _name)
+			sw_readOptionalJsonValue(swMinVersion "${MANIFEST_PATH}" _listDependency ${swIndex} _minVersion)
 
-			if(swMinError)
+			if(NOT DEFINED swMinVersion)
 				set(swMinVersion "0.0.0")
 			endif()
 
@@ -137,11 +129,22 @@ function(sw_readModuleManifest MANIFEST_PATH)
 		endforeach()
 	endif()
 
+	# 에디터 확장은 Dev 전용이고 EditorModule 에 의존한다(언리얼 Type "Editor" 모듈과 같다) — 런타임 `ModuleCatalog::parseManifest` 와 같은 검사.
+	if(swKind STREQUAL "EditorExtension")
+		if(NOT swValues__listConfiguration STREQUAL "Dev")
+			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: an EditorExtension module is built for Dev only (_listConfiguration [\"Dev\"])")
+		endif()
+
+		if(NOT "EditorModule" IN_LIST swDependencyNames)
+			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: an EditorExtension module must list EditorModule in _listDependency")
+		endif()
+	endif()
+
 	set(swOverrideNames "")
 	set(swOverrideValues "")
-	string(JSON swCount ERROR_VARIABLE swError LENGTH "${swJson}" _listModuleOverride)
+	sw_readOptionalJsonValue(swCount "${MANIFEST_PATH}" LENGTH _listModuleOverride)
 
-	if(NOT swError)
+	if(DEFINED swCount)
 		if(NOT swKind STREQUAL "Game")
 			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: only a Game module (the project) has _listModuleOverride")
 		endif()
@@ -150,8 +153,8 @@ function(sw_readModuleManifest MANIFEST_PATH)
 			math(EXPR swLast "${swCount} - 1")
 
 			foreach(swIndex RANGE ${swLast})
-				string(JSON swOverrideName GET "${swJson}" _listModuleOverride ${swIndex} _name)
-				string(JSON swOverrideValue GET "${swJson}" _listModuleOverride ${swIndex} _bEnabled)
+				sw_requireJsonValue(swOverrideName "${MANIFEST_PATH}" _listModuleOverride ${swIndex} _name)
+				sw_requireJsonValue(swOverrideValue "${MANIFEST_PATH}" _listModuleOverride ${swIndex} _bEnabled)
 				list(APPEND swOverrideNames ${swOverrideName})
 				list(APPEND swOverrideValues ${swOverrideValue})
 			endforeach()
@@ -222,21 +225,20 @@ endfunction()
 # 함께 짓는 게임 팩(활성 게임이 아닌 것)의 매니페스트에서 의존 이름만 읽어 `SW_GAME_PACK_<게임>_DEPENDENCIES` 에 둔다.
 # 모듈 표(`SW_MODULE_NAMES`)에는 넣지 않는다 — 게임 모듈 이름은 모두 SWGame 이고, 이 빌드의 켜기/끄기 표는 활성 게임의 것이다.
 function(sw_readGamePackManifest MANIFEST_PATH GAME_NAME)
-	file(READ "${MANIFEST_PATH}" swJson)
-	string(JSON swKind ERROR_VARIABLE swError GET "${swJson}" _kind)
+	sw_requireJsonValue(swKind "${MANIFEST_PATH}" _kind)
 
-	if(swError OR NOT swKind STREQUAL "Game")
+	if(NOT swKind STREQUAL "Game")
 		message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: a game pack manifest must have _kind Game")
 	endif()
 
 	set(swDependencyNames "")
-	string(JSON swCount ERROR_VARIABLE swError LENGTH "${swJson}" _listDependency)
+	sw_readOptionalJsonValue(swCount "${MANIFEST_PATH}" LENGTH _listDependency)
 
-	if(NOT swError AND swCount GREATER 0)
+	if(DEFINED swCount AND swCount GREATER 0)
 		math(EXPR swLast "${swCount} - 1")
 
 		foreach(swIndex RANGE ${swLast})
-			string(JSON swDependency GET "${swJson}" _listDependency ${swIndex} _name)
+			sw_requireJsonValue(swDependency "${MANIFEST_PATH}" _listDependency ${swIndex} _name)
 			list(APPEND swDependencyNames ${swDependency})
 		endforeach()
 	endif()

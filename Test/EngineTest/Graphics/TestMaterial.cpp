@@ -5,12 +5,14 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Material/MaterialUtil.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 #include "Engine/Resource/ResourcePaths.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestEnvironment.h"
 #include "TestFramework/TestFramework.h"
 
@@ -31,7 +33,7 @@ SW_TEST_CASE( MaterialTest, MaterialLoadAndSave )
     SW_EXPECT_TRUE( loadOk );
 
     SW_EXPECT_EQUAL( sw::string( "DefaultMaterial" ), material->getName() );
-    SW_EXPECT_EQUAL( sw::string( "engine/shaders/forwardlit.hlsl" ), material->getShaderPath() );
+    SW_EXPECT_EQUAL( sw::string( test::getEngineDefaultAssets()._shaderForwardLit.get() ), material->getShaderPath() );
 
     const float32* color = reinterpret_cast<const float32*>( material->getParameterData( "color" ) );
     SW_EXPECT_TRUE( color != nullptr );

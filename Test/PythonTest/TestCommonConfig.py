@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""common.Config — JSON 읽기(못 읽으면 빈 사전 + 한 줄), 깊은 병합, `${key}` 자기 참조 풀기. 지금 정의 그대로의 동작을 고정한다."""
+"""common.Config — 필수 · 선택 설정 읽기(없거나 깨지면 멈춘다, 선택이 없으면 None), 깊은 병합, `${key}` 자기 참조 풀기."""
 
 from __future__ import annotations
 
-import contextlib
-import io
 import sys
 import tempfile
 import unittest
@@ -13,30 +11,45 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Scripts"))
 
-from common.Config import expandSelfReferencesInternal, mergeJsonDictInternal, readJsonDictInternal  # noqa: E402
+from common.Config import (  # noqa: E402
+    ConfigError,
+    expandSelfReferencesInternal,
+    mergeJsonDictInternal,
+    readOptionalConfig,
+    requireConfig,
+)
 
 
 class CommonConfigTest(unittest.TestCase):
-    def testMissingFileIsEmptyAndSilent(self) -> None:
-        stream = io.StringIO()
-        with contextlib.redirect_stderr(stream):
-            self.assertEqual(readJsonDictInternal(Path("no/such/file.json"), "없는 파일"), {})
-        self.assertEqual(stream.getvalue(), "")
+    def testRequiredMissingFileStops(self) -> None:
+        with self.assertRaisesRegex(ConfigError, "없는 파일"):
+            requireConfig(Path("no/such/file.json"), "없는 파일")
 
-    def testBrokenJsonIsEmptyWithOneLine(self) -> None:
+    def testOptionalMissingFileIsNone(self) -> None:
+        self.assertIsNone(readOptionalConfig(Path("no/such/file.json"), "없는 파일"))
+
+    def testBrokenJsonStopsEvenWhenOptional(self) -> None:
         with tempfile.TemporaryDirectory() as tempDir:
             path = Path(tempDir) / "broken.json"
             path.write_text("{ not json", encoding="utf-8")
-            stream = io.StringIO()
-            with contextlib.redirect_stderr(stream):
-                self.assertEqual(readJsonDictInternal(path, "broken.json"), {})
-            self.assertIn("[Config] Failed to read broken.json", stream.getvalue())
+            with self.assertRaisesRegex(ConfigError, "broken.json"):
+                requireConfig(path, "broken.json")
+            with self.assertRaisesRegex(ConfigError, "broken.json"):
+                readOptionalConfig(path, "broken.json")
 
-    def testNonObjectJsonIsEmpty(self) -> None:
+    def testNonObjectJsonStops(self) -> None:
         with tempfile.TemporaryDirectory() as tempDir:
             path = Path(tempDir) / "list.json"
             path.write_text("[1, 2]", encoding="utf-8")
-            self.assertEqual(readJsonDictInternal(path, "list.json"), {})
+            with self.assertRaises(ConfigError):
+                requireConfig(path, "list.json")
+
+    def testObjectIsReturned(self) -> None:
+        with tempfile.TemporaryDirectory() as tempDir:
+            path = Path(tempDir) / "ok.json"
+            path.write_text('{"a": 1}', encoding="utf-8")
+            self.assertEqual(requireConfig(path, "ok.json"), {"a": 1})
+            self.assertEqual(readOptionalConfig(path, "ok.json"), {"a": 1})
 
     def testMergeIsDeepForDictsAndReplacesEverythingElse(self) -> None:
         base = {"a": {"x": 1, "y": 2}, "list": [1, 2], "keep": True}

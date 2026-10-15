@@ -4,7 +4,7 @@
 에셋 검증 규칙 — `Config/Editor/AssetValidationRules.json` 의 규칙 표를 `Resource/` 에 돌려 (파일, 규칙, 심각도, 메시지) 목록을 만든다.
 
 **규칙은 데이터, 검사는 이름으로 고르는 연산자다.** 표의 줄 하나가 규칙 하나이고 `check` 이름이 아래 `_kCheckRegistry` 의 연산자를
-고른다. 모르는 `check` · 모르는 키는 규칙 표를 읽는 단계의 오류다(조용히 안 도는 규칙이 없게). 언리얼 Data Validation 의
+고른다. 모르는 `check` · 모르는 키 · 빠진 필수 키는 규칙 표를 읽는 단계의 오류다(조용히 안 도는 규칙이 없게, 코드 기본값으로 도는 규칙이 없게). 언리얼 Data Validation 의
 `UEditorValidatorBase` 하나 = 여기 연산자 하나, 유니티 Asset Validation 의 규칙 자산 = 여기 표 한 줄에 해당한다.
 
 **왜 파이썬인가(App 이 아니라).** 이 검사들은 모두 텍스트 · 파일 머리 수준이다(XML 속성 · DDS 머리 · `.mesh` 머리 · `.meta`).
@@ -267,10 +267,8 @@ class ValidationContext:
 def readMetaFile(path: Path) -> dict[str, str]:
     """`key=value` 줄로 된 `.meta` 를 읽습니다(# 주석 · 빈 줄은 넘깁니다)."""
     result: dict[str, str] = {}
-    try:
-        text = path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return result
+    # 못 읽으면 OSError 로 멈춘다 — 빈 사전으로 돌려주면 "guid 없음" 이라는 엉뚱한 위반이 된다.
+    text = path.read_text(encoding="utf-8", errors="replace")
     for line in text.splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
@@ -492,8 +490,7 @@ def checkMaterialInternal(rule: Rule, relPath: str, context: ValidationContext) 
     if root is None:
         return []
     listMessage: list[str] = []
-    shaderPath = root.get("shaderPath", "")
-    if not shaderPath:
+    if not root.get("shaderPath"):
         listMessage.append("has no shaderPath")
     allowedBlend = rule.params.get("allowed_blend_modes")
     if allowedBlend and root.get("blendMode") not in allowedBlend:
@@ -505,7 +502,10 @@ def checkMaterialInternal(rule: Rule, relPath: str, context: ValidationContext) 
         uniqueSwitchName: set[str] = set()
         switches = permutations.find("_staticSwitches")
         for item in (switches.findall("item") if switches is not None else []):
-            name, keyword = item.get("name", ""), item.get("keyword", "")
+            name, keyword = item.get("name"), item.get("keyword")
+            if not name:
+                listMessage.append(f"static switch with keyword '{keyword}' has no name")
+                continue
             if name in uniqueSwitchName:
                 listMessage.append(f"static switch '{name}' is declared twice")
             uniqueSwitchName.add(name)
@@ -521,13 +521,13 @@ def checkMaterialInternal(rule: Rule, relPath: str, context: ValidationContext) 
                 listMessage.append(f"multi compile '{item.get('name')}' has no options")
             elif selected and selected not in listOption:
                 listMessage.append(f"multi compile '{item.get('name')}' selects '{selected}', which is not one of its options")
-    elif rule.params.get("require_permutations", False):
+    elif rule.params["require_permutations"]:
         listMessage.append("has no _permutations block (every backend falls back differently without it)")
 
     properties = root.find("_properties")
     for item in (properties.findall("item") if properties is not None else []):
         if item.get("type") == "Keyword":
-            keyword = item.get("shaderKeyword", "")
+            keyword = item.get("shaderKeyword")
             if keyword and keyword not in listSwitchKeyword:
                 listMessage.append(f"keyword property '{item.get('name')}' drives '{keyword}', which no static switch declares")
     return listMessage
@@ -578,8 +578,10 @@ def checkEntityIdInternal(rule: Rule, relPath: str, context: ValidationContext) 
     listMessage: list[str] = []
     uniqueId: set[str] = set()
     for entity in root.iter("entity"):
-        entityID = entity.get("id", "")
-        if not entityID.isdigit() or int(entityID) == 0:
+        entityID = entity.get("id")
+        if entityID is None:
+            listMessage.append(f"entity '{entity.get('name')}' has no id")
+        elif not entityID.isdigit() or int(entityID) == 0:
             listMessage.append(f"entity '{entity.get('name')}' has id '{entityID}' (needs a non-zero integer)")
         elif entityID in uniqueId:
             listMessage.append(f"entity id {entityID} is used twice")
@@ -595,7 +597,7 @@ def checkEntityIdInternal(rule: Rule, relPath: str, context: ValidationContext) 
 def checkPrefabGuidInternal(rule: Rule, relPath: str, context: ValidationContext) -> list[str]:
     listMessage: list[str] = []
     mapGuid = context.getGuidByPath()
-    bStalePathOnly = rule.params.get("stale_path_only", False)
+    bStalePathOnly = rule.params["stale_path_only"]
     if relPath.endswith(".meta"):
         if bStalePathOnly:
             return listMessage
@@ -603,8 +605,10 @@ def checkPrefabGuidInternal(rule: Rule, relPath: str, context: ValidationContext
         sourcePath = meta.get("sourcePath")
         if sourcePath and sourcePath != relPath[:-len(".meta")]:
             listMessage.append(f"sourcePath '{sourcePath}' does not match the file next to it")
-        guid = meta.get("guid", "")
-        if not re.fullmatch(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", guid):
+        guid = meta.get("guid")
+        if guid is None:
+            listMessage.append("has no guid")
+        elif not re.fullmatch(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", guid):
             listMessage.append(f"guid '{guid}' is not a lowercase UUID")
         listOwner = sorted(path for path, otherGuid in mapGuid.items() if otherGuid == guid)
         if len(listOwner) > 1:
@@ -643,11 +647,12 @@ def checkCatalogReferenceInternal(rule: Rule, relPath: str, context: ValidationC
     root = context.readXml(relPath)
     if root is None:
         return []
-    targetPath = rule.params.get("target_file", relPath)
+    # target_file 이 없으면 "이 파일이 제 카탈로그" 라는 뜻이다(규칙 하나가 여러 팩의 파일을 각자 검사한다).
+    targetPath = rule.params.get("target_file") or relPath
     targetRoot = context.readXml(targetPath)
     if targetRoot is None:
         return [f"target catalog '{targetPath}' does not parse or does not exist"]
-    idAttribute = rule.params.get("id_attribute", "id")
+    idAttribute = rule.params["id_attribute"]
     listTargetElement = rule.params.get("target_elements") or [element.tag for element in targetRoot]
     uniqueId = {element.get(idAttribute) for element in targetRoot.iter() if element.tag in listTargetElement and element.get(idAttribute)}
     listMessage: list[str] = []
@@ -655,7 +660,7 @@ def checkCatalogReferenceInternal(rule: Rule, relPath: str, context: ValidationC
     for element in root.iter():
         if listSourceElement and element.tag not in listSourceElement:
             continue
-        for attribute in rule.params.get("reference_attributes", []):
+        for attribute in rule.params["reference_attributes"]:
             value = element.get(attribute)
             if value is None:
                 continue
@@ -678,13 +683,13 @@ def checkComponentReferenceInternal(rule: Rule, relPath: str, context: Validatio
     root = context.readXml(relPath)
     if root is None:
         return []
-    uniqueBase = set(rule.params.get("component_types", []))
-    listAttribute = rule.params.get("attributes", [])
-    listTargetElement = rule.params.get("target_elements", [])
-    idAttribute = rule.params.get("id_attribute", "id")
+    uniqueBase = set(rule.params.get("component_types") or ())   # 없으면 모든 컴포넌트
+    listAttribute = rule.params["attributes"]
+    listTargetElement = rule.params["target_elements"]
+    idAttribute = rule.params["id_attribute"]
     catalogAttribute = rule.params.get("catalog_attribute")
-    uniqueIgnored = set(rule.params.get("ignore_values", ["", "None"]))
-    listPattern = expandPackPatternsInternal(rule.params.get("target_patterns", []), relPath)
+    uniqueIgnored = set(rule.params["ignore_values"])
+    listPattern = expandPackPatternsInternal(rule.params["target_patterns"], relPath)
     listTargetPath = context.collectMatchingPaths(listPattern)
     listMessage: list[str] = []
     for element in iterateComponentElementsInternal(root):
@@ -706,23 +711,29 @@ def checkComponentReferenceInternal(rule: Rule, relPath: str, context: Validatio
     return listMessage
 
 
-_kCheckRegistry: dict[str, tuple[CheckFunction, frozenset[str]]] = {
-    "naming": (checkNamingInternal, frozenset({"name_pattern", "allowed_suffixes"})),
-    "texture": (checkTextureInternal, frozenset({"max_size", "power_of_two", "require_mips", "allowed_formats"})),
-    "mesh_budget": (checkMeshBudgetInternal, frozenset({"max_triangles", "max_bounding_radius"})),
-    "xml_wellformed": (checkXmlWellFormedInternal, frozenset()),
-    "missing_reference": (checkMissingReferenceInternal, frozenset()),
-    "orphan": (checkOrphanInternal, frozenset()),
-    "material": (checkMaterialInternal, frozenset({"allowed_blend_modes", "require_permutations"})),
-    "material_keywords": (checkMaterialKeywordsInternal, frozenset()),
-    "component_type": (checkComponentTypeInternal, frozenset()),
-    "entity_id": (checkEntityIdInternal, frozenset()),
-    "prefab_guid": (checkPrefabGuidInternal, frozenset({"stale_path_only"})),
+#: 검사 이름 → (함수, 필수 키, 선택 키). 필수 키는 규칙 표에 반드시 적고(없으면 RuleConfigError) 검사는 `params[키]` 로 읽는다 —
+#: 코드에 기본값 리터럴을 두지 않는다. 선택 키는 "없으면 그 조건을 보지 않는다" 는 뜻일 때만 두고 `params.get(키)`(None)로 읽는다.
+#: 규칙 표의 자리(저장소 기준) — 게이트 · 검증 명령 · 설정 목록이 이 이름 하나를 쓴다.
+kAssetRuleConfigRelative = "Config/Editor/AssetValidationRules.json"
+
+_kCheckRegistry: dict[str, tuple[CheckFunction, frozenset[str], frozenset[str]]] = {
+    "naming": (checkNamingInternal, frozenset(), frozenset({"name_pattern", "allowed_suffixes"})),
+    "texture": (checkTextureInternal, frozenset(), frozenset({"max_size", "power_of_two", "require_mips", "allowed_formats"})),
+    "mesh_budget": (checkMeshBudgetInternal, frozenset(), frozenset({"max_triangles", "max_bounding_radius"})),
+    "xml_wellformed": (checkXmlWellFormedInternal, frozenset(), frozenset()),
+    "missing_reference": (checkMissingReferenceInternal, frozenset(), frozenset()),
+    "orphan": (checkOrphanInternal, frozenset(), frozenset()),
+    "material": (checkMaterialInternal, frozenset({"require_permutations"}), frozenset({"allowed_blend_modes"})),
+    "material_keywords": (checkMaterialKeywordsInternal, frozenset(), frozenset()),
+    "component_type": (checkComponentTypeInternal, frozenset(), frozenset()),
+    "entity_id": (checkEntityIdInternal, frozenset(), frozenset()),
+    "prefab_guid": (checkPrefabGuidInternal, frozenset({"stale_path_only"}), frozenset()),
     "catalog_reference": (checkCatalogReferenceInternal,
-                          frozenset({"target_file", "id_attribute", "target_elements", "elements", "reference_attributes"})),
+                          frozenset({"id_attribute", "reference_attributes"}),
+                          frozenset({"target_file", "target_elements", "elements"})),
     "component_reference": (checkComponentReferenceInternal,
-                            frozenset({"component_types", "attributes", "target_patterns", "target_elements", "id_attribute",
-                                       "catalog_attribute", "ignore_values"})),
+                            frozenset({"attributes", "target_patterns", "target_elements", "id_attribute", "ignore_values"}),
+                            frozenset({"component_types", "catalog_attribute"})),
 }
 
 #: 규칙 줄마다 공통 키.
@@ -748,19 +759,25 @@ def parseRules(data: dict) -> list[Rule]:
         uniqueName.add(name)
         if check not in _kCheckRegistry:
             raise RuleConfigError(f"rule '{name}' uses unknown check '{check}' (known: {', '.join(getCheckNames())})")
-        severity = entry.get("severity", "error")
+        # 심각도 · 대상 패턴은 규칙마다 적는다(코드 기본값 없음). 제외 패턴 · 이유는 선택 — 없으면 제외가 없다.
+        if "severity" not in entry or "include_patterns" not in entry:
+            raise RuleConfigError(f"rule '{name}' needs severity and include_patterns")
+        severity = entry["severity"]
         if severity not in kSeverityOrder:
             raise RuleConfigError(f"rule '{name}' has unknown severity '{severity}' ({', '.join(kSeverityOrder)})")
-        allowedKey = _kCheckRegistry[check][1]
+        _, requiredKey, optionalKey = _kCheckRegistry[check]
         params = {key: value for key, value in entry.items() if key not in _kCommonRuleKey}
-        unknownKey = sorted(set(params) - allowedKey)
+        unknownKey = sorted(set(params) - requiredKey - optionalKey)
         if unknownKey:
             raise RuleConfigError(f"rule '{name}' ({check}) has unknown key(s) {', '.join(unknownKey)}")
-        listInclude = entry.get("include_patterns", ["*"])
+        missingKey = sorted(requiredKey - set(params))
+        if missingKey:
+            raise RuleConfigError(f"rule '{name}' ({check}) is missing required key(s) {', '.join(missingKey)}")
+        listInclude = entry["include_patterns"]
         if not isinstance(listInclude, list) or not listInclude:
             raise RuleConfigError(f"rule '{name}' needs a non-empty include_patterns list")
-        listExclude = entry.get("exclude_patterns", [])
-        excludeReason = str(entry.get("exclude_reason", "")).strip()
+        listExclude = entry.get("exclude_patterns") or []
+        excludeReason = str(entry.get("exclude_reason") or "").strip()
         if listExclude and not excludeReason:
             raise RuleConfigError(f"rule '{name}' excludes {', '.join(listExclude)} without an exclude_reason - every exception carries its reason")
         listRule.append(Rule(name, check, severity, listInclude, listExclude, params, excludeReason))

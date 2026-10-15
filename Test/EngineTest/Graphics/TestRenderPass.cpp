@@ -7,6 +7,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -35,6 +36,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Window/IWindow.h"
 
+#include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
 #include <fstream>
@@ -477,7 +479,7 @@ SW_TEST_CASE( RenderPassTest, DeferredBloomBrightIsComputedAtHalfResolution )
             downsampleIndex = static_cast<int32>( passIndex );
             SW_ASSERT_TRUE( pass._listResolvedOutput.size() == 1 );
             SW_EXPECT_TRUE( pass._listResolvedOutput[0].view() == "BloomBright" );
-            const sw::RenderPassShaderSelection shader = sw::selectRenderPassShader( pass._resolvedType, &pass, sw::EngineDefaultAssets{} );
+            const sw::RenderPassShaderSelection shader = sw::selectRenderPassShader( pass._resolvedType, &pass, test::getEngineDefaultAssets() );
             SW_EXPECT_TRUE( std::find( shader._listDefine.begin(), shader._listDefine.end(), sw::string( sw::kPassBloomDownsampleDefine ) ) != shader._listDefine.end() );
         }
         if ( pass._resolvedType == sw::RenderPassType::Bloom )
@@ -926,7 +928,7 @@ SW_TEST_CASE( RenderPassTest, PipelineEmptyStagesSkipped )
     sw::RenderGraphPassDesc pass{};
     pass._name             = "CompactPass";
     pass._type             = "ForwardOpaque";
-    pass._shaderPath       = "engine/shaders/forwardlit.hlsl";
+    pass._shaderPath       = test::getEngineDefaultAssets()._shaderForwardLit.get();
     pass._vertexEntryPoint = "VSMain";
     pass._pixelEntryPoint  = "PSMain";
     // _computeEntryPoint, _geometryEntryPoint 등은 비어 있음

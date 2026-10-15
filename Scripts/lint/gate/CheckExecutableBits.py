@@ -30,7 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # Scripts — comm
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # Scripts/lint — LintGate
 
 from common import kNotOurDirNames, runProcess  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
+from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 kExecutableMode = "100755"
 kRegularModes = ("100644", "100755")
@@ -43,7 +43,8 @@ def readGitModesInternal(repositoryRoot: Path) -> dict[str, str] | None:
         return None
     listed = runProcess(["git", "ls-files", "-s", "-z"], cwd=repositoryRoot)
     if not listed.bSucceeded:
-        return None
+        # 작업 트리 루트인데 인덱스를 못 읽었다 — 파일 시스템 비트로 대신 보지 않는다(Windows 는 비트가 없어 모두 통과로 보인다).
+        raise GateError(f"git ls-files 가 실패했습니다: {listed.stderr.strip()}")
 
     mapMode: dict[str, str] = {}
     for entry in listed.stdout.split("\0"):
@@ -60,11 +61,8 @@ def readFileModeInternal(path: Path) -> str:
 
 
 def isScriptInternal(path: Path) -> bool:
-    try:
-        with path.open("rb") as file:
-            return file.read(2) == b"#!"
-    except OSError:
-        return False
+    with path.open("rb") as file:   # 못 읽으면 멈춘다 — "스크립트 아님" 으로 보면 검사를 건너뛴다
+        return file.read(2) == b"#!"
 
 
 def isOurPathInternal(relativePath: str) -> bool:

@@ -23,17 +23,16 @@ endfunction()
 # 1) Doxygen — SW_BUILD_DOCS일 때만 GenerateDocs
 # ------------------------------------------------------------------------------
 if(SW_BUILD_DOCS)
-	find_program(DOXYGEN_EXECUTABLE doxygen)
-	set(doxyfile "${CMAKE_SOURCE_DIR}/Doxyfile")
+	# 문서를 켰으면 doxygen 과 Doxyfile 은 필수다 — 없으면 타깃 없이 조용히 지나가지 않고 구성을 세운다.
+	find_program(DOXYGEN_EXECUTABLE doxygen REQUIRED)
 
-	if(DOXYGEN_EXECUTABLE AND EXISTS "${doxyfile}")
-		sw_addRepoPythonTarget(GenerateDocs "${SW_SCRIPT_GENERATE_DOCS}"
-			COMMENT "Generating Doxygen Documentation..."
-		)
-		message(STATUS "[Docs] Doxygen Documentation Target Enabled.")
-	else()
-		message(STATUS "[Docs] Skipping docs target (doxygen or Doxyfile missing).")
+	if(NOT EXISTS "${CMAKE_SOURCE_DIR}/Doxyfile")
+		message(FATAL_ERROR "[Docs] SW_BUILD_DOCS=ON but ${CMAKE_SOURCE_DIR}/Doxyfile is missing")
 	endif()
+
+	sw_addRepoPythonTarget(GenerateDocs "${SW_SCRIPT_GENERATE_DOCS}"
+		COMMENT "Generating Doxygen Documentation..."
+	)
 endif()
 
 # ------------------------------------------------------------------------------

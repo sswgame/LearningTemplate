@@ -14,8 +14,19 @@
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
 
+namespace sw
+{
+    struct EngineDefaultAssets;
+} // namespace sw
+
 namespace test
 {
+    /**
+     * @brief 하네스가 데이터(enginedefaultassets.xml)에서 읽은 엔진 기본 에셋 표입니다 — 테스트가 셰이더 · 파이프라인 · 글꼴 경로를 얻는 창구다.
+     * @details 표는 기본 생성할 수 없다(`EngineDefaultAssets::ConstructKey`). 경로를 리터럴로 다시 적지 말고 여기서 읽는다.
+     */
+    [[nodiscard]] const sw::EngineDefaultAssets& getEngineDefaultAssets();
+
     /** @class TestHostRuntime @brief 하네스 하나 — 프로세스에 하나만 세운다(엔진 서비스 표가 전역이다). */
     class TestHostRuntime
     {

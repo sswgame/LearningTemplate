@@ -102,10 +102,10 @@ def readManifestPortsInternal(manifestPath: str, triplet: str) -> set[str]:
     with open(manifestPath, "r", encoding="utf-8") as handle:
         manifest = json.load(handle)
     setPort: set[str] = set()
-    for dependency in manifest.get("dependencies", []):
+    for dependency in manifest["dependencies"]:
         if isinstance(dependency, str):
             setPort.add(dependency)
-        elif evaluatePlatformInternal(dependency.get("platform", ""), triplet):
+        elif evaluatePlatformInternal(dependency.get("platform") or "", triplet):   # platform 은 vcpkg 형식의 선택 칸(없으면 모든 플랫폼)
             setPort.add(dependency["name"])
     return setPort
 

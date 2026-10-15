@@ -122,7 +122,7 @@ class CheckSourceGlobGate(LintGate):
 
         # Unity 빌드는 소스를 unity_N_cxx.cxx 로 묶어 컴파일하므로 개별 .cpp 가 DB 에 없다.
         # 그 빌드 트리에서는 이 검사가 성립하지 않는다 — 없다고 답하는 대신 성립하지 않는다고 말한다.
-        if any("unity_" in entry.get("file", "") for entry in data):
+        if any("unity_" in entry["file"] for entry in data):
             return GateResult(
                 listViolation=violations,
                 listNote=[f"{tree.name} 은 Unity 빌드라 개별 소스가 DB 에 없습니다 — 검사를 건너뜁니다"],
@@ -138,7 +138,7 @@ class CheckSourceGlobGate(LintGate):
 
         compiledFiles: set[str] = set()
         for entry in data:
-            filePath = Path(entry.get("file", "")).resolve()
+            filePath = Path(entry["file"]).resolve()
             try:
                 compiledFiles.add(filePath.relative_to(repositoryRoot).as_posix().lower())
             except ValueError:

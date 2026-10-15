@@ -23,10 +23,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common import getProjectRoot  # noqa: E402
-from common.AssetValidation import RuleConfigError, getCheckNames, kSeverityOrder, loadRules, validate  # noqa: E402
+from common.AssetValidation import RuleConfigError, getCheckNames, kAssetRuleConfigRelative, kSeverityOrder, loadRules, validate  # noqa: E402
 
 #: 규칙 표의 기본 자리(저장소 루트 기준).
-kDefaultRulePath = "Config/Editor/AssetValidationRules.json"
+kDefaultRulePath = kAssetRuleConfigRelative
 
 
 def toResourcePathInternal(rawPath: str, repositoryRoot: Path, resourceRoot: Path) -> str:

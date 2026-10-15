@@ -40,7 +40,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 
 from common import kNotOurDirNames, runProcess  # noqa: E402
 from common.ConfigCatalog import kListConfigFile  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
+from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 경로로 읽는 최상위 폴더.
 _kRootFolderName: frozenset[str] = frozenset(
@@ -266,6 +266,8 @@ class CheckDocPathsGate(LintGate):
             # `-z` 로 NUL 로 가른다 — 줄바꿈으로 가르면 Windows 글 모드의 표준 입력이 줄 끝을 CRLF 로 바꿔 경로에 `\r` 이 붙는다.
             completed = runProcess(["git", "-C", str(repositoryRoot), "check-ignore", "--no-index", "--stdin", "-z"],
                                    stdinText="\0".join(query for path in listRelative if path for query in (path, path + "/_")) + "\0")
+            if completed.returnCode > 1:   # 0 = 무시되는 것 있음, 1 = 없음, 그 밖은 git 오류 — 오류를 "무시 없음" 으로 읽지 않는다
+                raise GateError(f"git check-ignore 가 실패했습니다: {completed.stderr.strip()}")
             setIgnored = {path for path in completed.stdout.split("\0") if path}
             for (where, written, _), relative in zip(listPending, listRelative):
                 if relative and (relative in setIgnored or relative + "/_" in setIgnored):   # `/_` — 아직 없는 폴더도 `Layouts/` 꼴 규칙에 걸리게

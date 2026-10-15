@@ -47,6 +47,7 @@
        - `sw_addTestExecutable(<이름>)` 은 `Test/<이름>/` 에 있고 정책에 같은 이름의 줄이 있다. 줄만 있고 실행 파일이 없어도 실패다.
        - 줄의 영역(`area`)과 스크립트 테스트의 `LABELS` 는 정책의 `labels` 표에 있다(모르는 라벨은 `ctest -L` 로 고를 수 없다).
        - 비용표(`caseCosts`)가 가리키는 케이스는 그 폴더에 있다(이름을 바꾸면 비용이 조용히 사라져 샤드가 기운다).
+       - 레이스 묶음(`raceCases`, `Suite.Case` · `Suite.*`)이 가리키는 케이스 · 스위트도 그 폴더에 있다.
 
   9) 부하 스위트(`SW_TEST_LOAD_SUITE( 스위트, "이유" );`)는 자기 파일을 혼자 쓰고, 그 폴더의 정책 줄에 `loadSeconds` 가 있다
      (없으면 `<타깃>_Load` 항목이 없어 그 스위트는 어디서도 돌지 않는다).
@@ -178,9 +179,14 @@ def readPolicy(rootDir: Path) -> tuple[dict, list[str]]:
     if path.exists() is False:
         return {}, [f"{_kPolicyFile}: 파일이 없습니다 — 테스트 실행 파일의 라벨 · 샤드 · 시간을 정하는 곳입니다"]
     try:
-        return json.loads(path.read_text(encoding="utf-8")), []
+        policy = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as error:
         return {}, [f"{_kPolicyFile}: JSON 이 아닙니다 ({error})"]
+    # 필수 표 — 빠지면 위반으로 알리고 빈 정책으로 나머지를 본다(아래의 `.get(…, {})` 는 이미 알린 이 경우만 덮는다).
+    listMissing = [key for key in ("labels", "executables") if key not in policy]
+    if listMissing:
+        return {}, [f"{_kPolicyFile}: 필수 표 {listMissing} 가 없습니다"]
+    return policy, []
 
 
 def collectHostSplitFolders(policy: dict) -> set[str]:
@@ -217,9 +223,15 @@ def checkPolicy(rootDir: Path, policy: dict, cases: list[tuple[str, str, str]]) 
         area = row.get("area")
         if area not in labels:
             errors.append(f"{_kPolicyFile}: `{name}` 의 영역 `{area}` 이 labels 표에 없습니다")
-        for caseName in row.get("caseCosts", {}):
+        for caseName in [*row.get("caseCosts", {}), *row.get("hostCaseCosts", {})]:
             if caseName not in casesByFolder.get(f"{_kTestRoot}/{name}", set()):
                 errors.append(f"{_kPolicyFile}: `{name}` 의 비용표가 없는 케이스 `{caseName}` 을 가리킵니다 — 이름을 바꿨으면 비용표도 바꾸세요")
+        folderCases = casesByFolder.get(f"{_kTestRoot}/{name}", set())
+        folderSuites = {caseName.split(".", 1)[0] for caseName in folderCases}
+        for pattern in row.get("raceCases", []):
+            bKnown = pattern[:-2] in folderSuites if pattern.endswith(".*") else pattern in folderCases
+            if not bKnown:
+                errors.append(f"{_kPolicyFile}: `{name}` 의 레이스 묶음(raceCases)이 없는 케이스 `{pattern}` 을 가리킵니다 — 이름을 바꿨으면 묶음도 바꾸세요")
     return errors
 
 
@@ -556,6 +568,14 @@ class CheckTestSuitesGate(LintGate):
             "files": {
                 **_kCleanFixture,
                 "Test/TestPolicy.json": _kCleanPolicy.replace('"hostSplit": true}', '"hostSplit": true, "caseCosts": {"PlainProbeTest.Renamed": 9}}'),
+            },
+        },
+        {
+            # 레이스 묶음도 이름을 바꾸면 그 케이스가 Debug 레이스 검사에서 조용히 빠진다.
+            "name": "레이스 묶음이 없는 스위트를 가리킴",
+            "files": {
+                **_kCleanFixture,
+                "Test/TestPolicy.json": _kCleanPolicy.replace('"hostSplit": true}', '"hostSplit": true, "raceCases": ["RenamedProbeTest.*"]}'),
             },
         },
         {

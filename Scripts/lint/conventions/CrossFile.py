@@ -185,11 +185,9 @@ def checkHeaderMemberInitializersInternal(filesToScan: list[Path], projectRoot: 
     for headerPath, cppPath in mapCppToHeader.items():
         if not cppPath.is_file():
             continue
-        try:
-            headerContent = readSourceTextInternal(headerPath, "utf-8", "ignore")
-            cppContent = readSourceTextInternal(cppPath, "utf-8", "ignore")
-        except OSError:
-            continue
+        # 못 읽으면 OSError 로 멈춘다 — 건너뛰면 그 짝의 검사 누락이 통과로 보인다.
+        headerContent = readSourceTextInternal(headerPath, "utf-8", "ignore")
+        cppContent = readSourceTextInternal(cppPath, "utf-8", "ignore")
         ctorClasses = findCtorInitListClassesInternal(cppContent)
         if not ctorClasses:
             continue
@@ -524,10 +522,7 @@ def collectCrossFileFactsInternal(filePath: Path, projectRoot: Path) -> CrossFil
     """파일 하나에서 교차 파일 검사 다섯이 쓰는 것을 모읍니다. 읽기 · 디코드는 검사들과 같다(`utf-8` · `ignore`)."""
     facts = CrossFileFacts(relPath=relPathOfInternal(filePath, projectRoot))
     suffix = filePath.suffix.lower()
-    try:
-        content = readSourceTextInternal(filePath, "utf-8", "ignore")
-    except OSError:
-        return facts
+    content = readSourceTextInternal(filePath, "utf-8", "ignore")   # 못 읽으면 멈춘다(빈 사실 = 위반 없음으로 보인다)
 
     if suffix == ".cpp":
         for match in _kAnonHelperStructRe.finditer(content):

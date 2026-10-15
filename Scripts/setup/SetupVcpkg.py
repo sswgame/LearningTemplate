@@ -59,12 +59,10 @@ def resolveVcpkgCommitInternal(search: dict) -> str:
     explicit = str(search.get(kKeyVcpkgGitCommit, "")).strip()
     if explicit:
         return explicit
+    # 고정본의 정본은 vcpkg.json 의 builtin-baseline 이다 — 못 읽거나 없으면 멈춘다(빈 값이면 최신 vcpkg 로 조용히 간다).
     manifestPath = Path(__file__).resolve().parents[2] / "vcpkg.json"
-    try:
-        manifest = json.loads(manifestPath.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return ""
-    return str(manifest.get("builtin-baseline", "")).strip()
+    manifest = json.loads(manifestPath.read_text(encoding="utf-8"))
+    return str(manifest["builtin-baseline"]).strip()
 
 
 def pinVcpkgCommitInternal(vcpkgRoot: Path, commit: str, gitExe: str) -> None:

@@ -82,10 +82,10 @@ namespace sw
             if ( pMaterial == nullptr )
             {
                 // 못 읽은 머티리얼은 마젠타 체커로 보인다 — 씬 기본(흰색)이면 화면에서 빠진 것을 알 수 없다.
-                const string& missingPath = engine::getSubsystem<EngineDefaultAssets>()._missingMaterial;
+                const string& missingPath = engine::getSubsystem<EngineDefaultAssets>()._missingMaterial.get();
                 SW_LOG_ERROR( "Material '%#' could not be acquired - the mesh uses the missing-material checker '%#'", path.c_str(), missingPath.c_str() );
-                borrowedPath = missingPath.empty() ? hashed_string{} : hashed_string( missingPath.c_str() );
-                pMaterial    = borrowedPath.empty() ? nullptr : cache.acquire( borrowedPath.c_str(), nullptr );
+                borrowedPath = hashed_string( missingPath.c_str() );
+                pMaterial    = cache.acquire( borrowedPath.c_str(), nullptr );
             }
             if ( pMaterial != nullptr )
                 cache.requestInitialize( borrowedPath.c_str() );

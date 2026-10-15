@@ -38,6 +38,12 @@ def requestAdminElevation() -> None:
     sys.exit(0)
 
 
+def runPowerShellInternal(command: str) -> None:
+    """PowerShell 명령 하나 — 실패하면 멈춘다(관리자 권한이 없으면 Add-MpPreference 가 진다, 그때 "성공" 을 찍지 않는다)."""
+    if not runProcess(["powershell", "-NoProfile", "-Command", command], bCapture=False).bSucceeded:
+        raise RuntimeError(f"PowerShell 명령이 실패했습니다(관리자 권한으로 실행했는지 보십시오): {command}")
+
+
 def addDefenderExclusions() -> None:
     """Windows Defender 제외 경로/프로세스를 등록하고 Unblock-File을 수행합니다."""
     projectRoot = getProjectRoot()
@@ -51,7 +57,7 @@ def addDefenderExclusions() -> None:
     # 1. 제외 경로 등록
     print("[*] 1/4. 프로젝트 및 빌드 출력 디렉터리 실시간 감시 제외 등록 중...")
     cmdPath = f'Add-MpPreference -ExclusionPath @("{projectDir}", "{projectDir}\\build")'
-    runProcess(["powershell", "-NoProfile", "-Command", cmdPath], bCapture=False)
+    runPowerShellInternal(cmdPath)
 
     # 2. 프로세스 제외 등록
     print("[*] 2/4. 빌드 및 엔진 도구 프로세스 제외 등록 중...")
@@ -68,17 +74,17 @@ def addDefenderExclusions() -> None:
     ]
     procListStr = "@(" + ", ".join(f"'{p}'" for p in processes) + ")"
     cmdProc = f"Add-MpPreference -ExclusionProcess {procListStr}"
-    runProcess(["powershell", "-NoProfile", "-Command", cmdProc], bCapture=False)
+    runPowerShellInternal(cmdProc)
 
     # 3. DLL 및 바이너리 확장자 제외 등록 (RHI 모듈 / 엔진 DLL 등)
     print("[*] 3/4. RHI 백엔드 및 엔진 DLL / 아카이브 확장자 제외 등록 중...")
     cmdExt = 'Add-MpPreference -ExclusionExtension @("dll", "pdb", "pack", "pak", "rhi")'
-    runProcess(["powershell", "-NoProfile", "-Command", cmdExt], bCapture=False)
+    runPowerShellInternal(cmdExt)
 
     # 4. 다운로드 및 빌드된 바이너리 잠금 해제
     print("[*] 4/4. 프로젝트 내부 파일 및 DLL 잠금 해제 (Unblock-File) 중...")
     cmdUnblock = f'Get-ChildItem -Path "{projectDir}" -Recurse -ErrorAction SilentlyContinue | Unblock-File'
-    runProcess(["powershell", "-NoProfile", "-Command", cmdUnblock], bCapture=False)
+    runPowerShellInternal(cmdUnblock)
 
     print("\n" + "=" * 60)
     print("  [성공] Windows Defender 예외 등록이 모두 완료되었습니다!")

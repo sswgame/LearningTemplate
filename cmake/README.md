@@ -9,12 +9,13 @@ cmake/
 ├── Config/                      [1계층: 전역 설정 및 프로젝트 옵션]
 │   ├── BuildOptions.cmake       — SW_* 빌드 기능 옵션 및 프로젝트 메타데이터 정의
 │   ├── LoadConfigConstants.cmake — Constants.py 의 상수를 SW_* 변수로 (상수만 필요한 곳은 이것만 include)
+│   ├── JsonValue.cmake          — JSON 값 읽기 둘뿐: 필수 sw_requireJsonValue(없으면 구성 실패) · 선택 sw_readOptionalJsonValue(없으면 변수 미정의)
 │   ├── GenerateConfigConstants.cmake — configure 생성기 다섯을 한 프로세스로(GenerateConfigureFiles.py) · 상수 읽기 · 게임 프리셋 경로 · ConfigConstants.h (한 번)
 │   └── ConfigConstants.h.in     — C++ 헤더 템플릿
 │
 ├── Environment/                 [2계층: 개발 환경 및 툴체인 주입 (project() 이전)]
 │   ├── DetectToolchain.cmake    — toolchain_config.json 파싱 & LLVM/Ninja 바인딩
-│   ├── FindLlvmBin.cmake        — clang-cl / clang 이 있는 LLVM bin 찾기 (vcpkg 포트 툴체인도 쓴다)
+│   ├── FindLlvmBin.cmake        — vcpkg 포트 툴체인의 LLVM bin: toolchain_config.json 의 llvm_path 하나(탐색은 SetupLlvm.py 가 한다)
 │   ├── ToolchainBinaries.cmake  — 아카이버를 "지금 쓰는 컴파일러 옆" 에서 고정 (LTO 비트코드를 읽어야 한다)
 │   ├── FindWindowsTools.cmake   — lib.exe / mt.exe 탐색 및 clang-cl 아카이버 재바인딩
 │   ├── WindowsToolSearch.cmake  — MSVC lib.exe · SDK mt.exe 폴더 탐색 (본 프로젝트와 vcpkg 포트 툴체인이 함께 쓴다)
@@ -171,6 +172,9 @@ Dev 와 Shipping · Server 는 다른 갈래를 탄다 — 고친 갈래의 프�
   `configure_file` 은 빈 값을 조용히 넣는다. `toolchain_config.json` 은 CMake 가 파싱하지 않는다(`GenerateToolchainCMake.py` → `SW_TOOLCHAIN_<KEY>`) — 예외는 vcpkg 가 부르는
   `FindLlvmBin.cmake` · `VcpkgPortsToolchain.cmake` 둘이고, 거기서 `CMAKE_SOURCE_DIR` 은 vcpkg scripts 폴더다. 상수만 필요한 CMake 는 `LoadConfigConstants.cmake` 를 **파일
   스코프에서** include 한다(함수 안에서 처음 include 하면 상수가 그 함수에만 생긴다).
+- **CMake 가 JSON 을 읽는 곳은 `sw_requireJsonValue` · `sw_readOptionalJsonValue`(`cmake/Config/JsonValue.cmake`) 둘뿐이다** — `string(JSON … ERROR_VARIABLE …)` 를
+  직접 쓰면 오류 변수를 안 읽거나 오류 뒤에 기본값을 넣는 모양이 되풀이됐다. 선택 읽기에는 기본값 인자가 없다(없음 = 변수 미정의, 없을 때의 뜻은 부르는 쪽이 적는다).
+  필수 도구(doxygen — `SW_BUILD_DOCS=ON` 일 때 · LLD · 리눅스 X11/xcb/GL/Vulkan · Windows 아카이버/mt)는 못 찾으면 구성을 세운다 — 경고만 남기고 링크에서 서지 않는다.
 - **`sw_addVcpkgPackage` 는 못 찾으면 구성을 세운다(REQUIRED)** — 설정 파일이 없는 헤더 전용 포트는 `sw_addVcpkgHeaderOnly`(PROBE 헤더 확인). 서드파티 폴더 목록은 없다(폴더 훑기).
   OBJECT 라이브러리(`Core_objects`)는 링크를 전파하지 않는다 — 외부 라이브러리는 `Core` 와 `Engine` 양쪽에. vcpkg 업스트림 결함은 `ThirdParty/<pkg>/vcpkg-port/` 오버레이로
   (`.gitattributes` 의 `*.patch -text`).

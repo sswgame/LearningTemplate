@@ -122,6 +122,8 @@ def main(listArgument: list[str] | None = None) -> int:
             if not bSceneExisted:
                 scenePath.unlink(missing_ok=True)
         changed = runProcess(["git", "status", "--porcelain", "--untracked-files=no", "--", "Resource"], cwd=repositoryRoot)
+        if not changed.bSucceeded:
+            raise RuntimeError(f"[SceneLoadBench] git status 가 실패했습니다: {changed.stderr.strip()}")
         if changed.stdout.strip():
             print("[SceneLoadBench] note: cooking rewrote tracked files under Resource — check `git status`:\n" + changed.stdout, flush=True)
 

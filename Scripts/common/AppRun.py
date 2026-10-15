@@ -122,8 +122,12 @@ def findUsableBackends(tree: BuildTree) -> list[str]:
     """그 빌드의 App 이 받는 백엔드 — Dev 는 넷 다(모듈), Shipping 은 링크한 하나뿐이다(다른 스위치는 기동 오류다)."""
     if not tree.bShipping:
         return list(kBackendSwitch)
-    backend = CookContractSpec.load().findBackend(tree.readCacheValue("SW_SHIPPING_RHI_BACKEND") or "")
-    return [backend.commandLineName] if backend else []
+    # Shipping 트리는 이 캐시 값을 늘 갖는다 — 없거나 표에 없는 이름이면 멈춘다(빈 목록이면 QA 가 모든 백엔드를 조용히 건너뛴다).
+    name = tree.readCacheValue("SW_SHIPPING_RHI_BACKEND")
+    backend = CookContractSpec.load().findBackend(name or "")
+    if backend is None:
+        raise RuntimeError(f"{tree.path}: SW_SHIPPING_RHI_BACKEND '{name}' 가 쿠킹 표의 백엔드가 아닙니다")
+    return [backend.commandLineName]
 
 
 def loadGameTable(repositoryRoot: Path) -> dict:

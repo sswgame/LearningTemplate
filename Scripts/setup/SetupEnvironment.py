@@ -17,7 +17,7 @@ import platform
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 # Scripts/ → sys.path (common 패키지 부트스트랩)
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -53,7 +53,8 @@ from common import (
     loadSearchPaths,
     loadToolchainConfig,
     normalizePath,
-    readJsonDictInternal,
+    readOptionalConfig,
+    requireConfig,
 )
 from setup.HostTools import (
     findDxcDlls,
@@ -128,13 +129,8 @@ class EnvironmentSetupManager:
         if not self.force_refresh:
             self.existing_config = loadToolchainConfig()
 
-    def safeCallInternal(self, name: str, callback: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
-        try:
-            return callback(*args, **kwargs)
-        except Exception as exception:
-            self.logger.warning(f"[{name}] Warning/Skipped: {exception}")
-            return None
-
+    # 도구 탐색 함수는 "없음" 을 빈 값으로 돌려준다. 예외는 탐색 중 실패(받기 · 풀기 · 잘못된 설정)이므로 삼키지 않고 멈춘다 —
+    # 경고 한 줄로 넘기면 빈 경로가 toolchain_config 에 적혀 다음 configure 가 엉뚱한 자리에서 깨진다.
     def resolveLlvmInternal(self) -> tuple[str, str]:
         cachedLlvm = self.existing_config.get(kKeyLlvmPath, "")
         if cachedLlvm and isMinimalLlvmRoot(cachedLlvm):
@@ -142,14 +138,14 @@ class EnvironmentSetupManager:
         else:
             from setup.SetupLlvm import setupLlvm
 
-            path = self.safeCallInternal("SetupLlvm", setupLlvm, allowBootstrap=False)
+            path = setupLlvm(allowBootstrap=False)
             llvmPath = normalizePath(path or "")
 
         libclangPath = getOrFindCached(
             self.existing_config, kKeyLibclangDllPath, findLibClangDllPath, llvmPath
         )
         if llvmPath:
-            self.safeCallInternal("EnsureClangFormat", ensureClangFormat, llvmPath, allowDownload=True)
+            ensureClangFormat(llvmPath, allowDownload=True)
         return llvmPath, libclangPath
 
     def resolveWindowsSdkInternal(self) -> tuple[str, str, str, str, str]:
@@ -178,37 +174,26 @@ class EnvironmentSetupManager:
                 kEnvSwVcpkgAutoBootstrap,
                 search=loadSearchPaths(),
             )
-            path = self.safeCallInternal("SetupVcpkg", setupVcpkg, allowBootstrap=allowBootstrap)
+            path = setupVcpkg(allowBootstrap=allowBootstrap)
             vcpkgPath = normalizePath(str(path)) if path else ""
 
-        ninjaFound = self.safeCallInternal(
-            "SetupNinja",
-            getOrFindCached,
-            self.existing_config,
-            kKeyNinjaPath,
-            lambda: normalizePath(setupNinja() or ""),
-        )
+        ninjaFound = getOrFindCached(self.existing_config, kKeyNinjaPath, lambda: normalizePath(setupNinja() or ""))
         ninjaPath = normalizePath(str(ninjaFound)) if ninjaFound else ""
 
         return vcpkgPath, ninjaPath
 
     def runLinuxSetupInternal(self) -> None:
         if platform.system() == "Linux":
-            try:
-                from setup.SetupLinuxDevEnvironment import setupLinuxDevEnvironment
+            from setup.SetupLinuxDevEnvironment import setupLinuxDevEnvironment
 
-                setupLinuxDevEnvironment()
-            except Exception as exception:
-                self.logger.warning(f"SetupLinuxDevEnvironment skipped: {exception}")
+            setupLinuxDevEnvironment()
 
     def installPreCommitHookInternal(self) -> None:
-        try:
-            from setup.InstallGitHooks import installPreCommitHook
+        # 훅 설치 실패를 경고로 넘기면 커밋 검사 없이 커밋하게 된다 — 멈춘다.
+        from setup.InstallGitHooks import installPreCommitHook
 
-            if installPreCommitHook(self.project_root):
-                self.logger.info("[SetupEnvironment] Installed git pre-commit hook (Scripts/lint/PreCommitLint.py).")
-        except Exception as exception:
-            self.logger.warning(f"[SetupEnvironment] Failed to install pre-commit hook: {exception}")
+        if installPreCommitHook(self.project_root):
+            self.logger.info("[SetupEnvironment] Installed git pre-commit hook (Scripts/lint/PreCommitLint.py).")
 
     def run(self) -> EngineConfig:
         llvmPath, libclangPath = self.resolveLlvmInternal()
@@ -265,20 +250,11 @@ class EnvironmentSetupManager:
         (예: `flag_ops_marker` 가 바뀌면 옛 로컬 값 때문에 FlagOps 우산이 비어 Engine 빌드가 깨진다). 파서도 같은 규칙으로 읽는다
         (ParserConfig::load — 다른 키는 경고하고 버린다). 나머지는 모두 parser_config.defaults.json 에서 온다.
         """
-        defaultsFile = self.project_root / kDirConfigEnv / kFileParserDefaults
-        if not defaultsFile.is_file():
-            self.logger.error(f"[SetupEnvironment] Required defaults config not found: {defaultsFile}")
-            raise FileNotFoundError(f"Required defaults config not found: {defaultsFile}")
-
-        seedRaw = readJsonDictInternal(defaultsFile, kFileParserDefaults)
-        if not seedRaw:
-            self.logger.error(f"[SetupEnvironment] Failed to load or parse defaults from {defaultsFile}")
-            raise RuntimeError(f"Failed to load or parse defaults from {defaultsFile}")
-
-        localRaw = readJsonDictInternal(self.parser_config_file, kFileParserConfig)
+        seedRaw = requireConfig(self.project_root / kDirConfigEnv / kFileParserDefaults, kFileParserDefaults)
+        localRaw = readOptionalConfig(self.parser_config_file, kFileParserConfig)
 
         seed = normalizeParserConfigInternal(seedRaw)
-        local = normalizeParserConfigInternal(localRaw)
+        local = normalizeParserConfigInternal({} if localRaw is None else localRaw)   # 로컬 오버라이드는 처음엔 없다
 
         seedArgs = asDictInternal(seed.get(kKeyParserArgsSection))
         localArgs = asDictInternal(local.get(kKeyParserArgsSection))

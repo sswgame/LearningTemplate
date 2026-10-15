@@ -41,7 +41,7 @@ def findCMakePresetViolations(repositoryRoot: Path, listGame: list[str]) -> list
     """CMake 프리셋이 정한 `SW_ACTIVE_GAME` 이 있는 게임인지 봅니다."""
     presetPath = repositoryRoot / "CMakePresets.json"
     if presetPath.is_file() is False:
-        return []
+        return ["[Game Preset] CMakePresets.json 이 없습니다 — 프리셋이 고르는 게임을 검사할 수 없습니다"]
     try:
         data = json.loads(presetPath.read_text(encoding="utf-8"))
     except ValueError as error:
