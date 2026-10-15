@@ -7,7 +7,7 @@
 # 2. VCPKG_TARGET_TRIPLET 자동 결정
 # 3. install 게이트 — 스탬프(매니페스트 해시)가 같으면 바로 skip, 다르면 `vcpkg install --dry-run` 계획으로:
 #    지을 것이 없으면 skip, 이미 깔린 포트를 지우게 되면 멈추고 경고(공유 설치 폴더), 빠진 포트가 있을 때만 install
-# 4. sw_toolchain_vcpkg INTERFACE (include 경로 + SW_VCPKG)
+# 4. sw_toolchain_vcpkg INTERFACE (SW_VCPKG 정의만 — 서드파티 include 는 각 라이브러리 타깃이 준다)
 #
 # project() 이후 루트가 sw_vcpkgWriteManifestStamp() 를 호출해
 # 다음 configure에서 불필요한 재설치를 건너뛴다.
@@ -494,26 +494,15 @@ if(DEFINED sw_vcpkg_root AND NOT sw_vcpkg_root STREQUAL "")
 endif()
 
 # ------------------------------------------------------------------------------
-# 7) sw_toolchain_vcpkg INTERFACE — include 경로 + SW_VCPKG
+# 7) sw_toolchain_vcpkg INTERFACE — SW_VCPKG 정의만
 # sw_flag_libraries에 넣어 sw_add_* 타겟이 PRIVATE 링크
+# 주의: vcpkg include 폴더를 여기서 모든 타깃에 걸지 않는다. 서드파티 헤더는 그 라이브러리 타깃(ThirdParty/<이름>)을 링크해 얻는다.
+#   이 블록은 project() 전에 돌고 매니페스트 설치는 project() 안에서 일어나므로, 폴더가 있을 때만 걸면 새 러너(CI)의 첫 구성에는 빠지고
+#   설치가 남아 있는 PC 에는 걸린다 — 로컬에서만 통과하는 include 누락(EngineTest 의 stb_image.h)이 그렇게 생겼다.
 # ------------------------------------------------------------------------------
 if(NOT TARGET sw_toolchain_vcpkg)
     add_library(sw_toolchain_vcpkg INTERFACE)
 endif()
-
-set(vcpkgIncCandidates
-    "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/include"
-)
-
-if(DEFINED sw_vcpkg_root)
-    list(APPEND vcpkgIncCandidates "${sw_vcpkg_root}/installed/${VCPKG_TARGET_TRIPLET}/include")
-endif()
-
-foreach(inc IN LISTS vcpkgIncCandidates)
-    if(EXISTS "${inc}")
-        target_include_directories(sw_toolchain_vcpkg SYSTEM INTERFACE "${inc}")
-    endif()
-endforeach()
 
 target_compile_definitions(
     sw_toolchain_vcpkg

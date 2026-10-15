@@ -129,6 +129,7 @@ sw_addTestExecutable(EditorTest
 		Microsoft::DirectXTex
 		cgltf
 		meshoptimizer
+		stb
 	LABELS
 		"unit;editor;nogpu"
 	# 케이스 하나(ModelImporterTest.SkinnedModelImportsSkeletonClipsAndAttachments — VRM 스킨 모델을 Debug 로 임포트)가 혼자 31 초다

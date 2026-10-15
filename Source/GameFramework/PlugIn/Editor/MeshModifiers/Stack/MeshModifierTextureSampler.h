@@ -2,7 +2,7 @@
  * @file MeshModifierTextureSampler.h
  * @brief 모디파이어가 정점마다 텍스처를 읽도록 이미지 파일을 CPU 로 디코드해 캐시하고 이중선형으로 표본합니다.
  * @details Displace · Displace Render Target · Displace Web Cam 처럼 텍스처를 쓰는 모디파이어의 `IMeshModifierInputs::trySampleTexture` 뒤에 있습니다.
- *          디코드는 stb_image 를 이 번역 단위 안에 정적으로 둡니다(Editor 의 `ImageUtil` 은 확장 모듈 · EngineTest 가 링크할 수 없습니다).
+ *          디코드는 Editor 의 `ImageUtil`(stb_image)에 맡깁니다. EngineTest 는 EditorModule 을 링크하지 않아 `ImageUtil.cpp` 를 직접 컴파일합니다.
  *          픽셀은 텍셀마다 float4 로 보관해 HDR(.hdr) 도 클램프 없이 그대로 읽습니다. 8 비트 원본은 0..1 로 나눕니다.
  *          메모리 상한은 두지 않았습니다 — 텍셀당 16 바이트이므로 4096² 한 장이 256 MB 입니다. 큰 이미지를 자주 쓰게 되면 8 비트 보관이나 상한을 더합니다.
  */

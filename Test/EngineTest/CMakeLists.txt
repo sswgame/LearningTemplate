@@ -48,6 +48,7 @@ list(APPEND swEngineTestExtensionSource ${swMeshModifierSource})
 file(GLOB swCharacterEditorModelSource CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Source/GameFramework/PlugIn/Editor/CharacterEditor/Model/*.cpp")
 list(APPEND swEngineTestExtensionSource ${swCharacterEditorModelSource})
 # 텍스처 표본기가 이미지 디코드를 맡기는 Editor 의 ImageUtil(stb_image 를 감싼다)도 직접 컴파일한다 - EditorModule 은 링크하지 않는다.
+# stb include 는 `stb` 타깃을 직접 링크해 얻는다(아래 LIBS) — 다른 타깃이 끌어오는 vcpkg include 폴더는 구성마다 있거나 없다.
 list(APPEND swEngineTestExtensionSource "${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ImageUtil.cpp")
 
 sw_addTestExecutable(EngineTest
@@ -61,6 +62,7 @@ sw_addTestExecutable(EngineTest
 		GameFramework
 		${swEngineTestKit}
 		${swEngineTestTool}
+		stb
 	LABELS
 		"unit;engine"
 	TIMEOUT
