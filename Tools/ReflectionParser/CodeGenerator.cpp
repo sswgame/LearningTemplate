@@ -757,7 +757,7 @@ namespace sw
                     //
                     // 여기서 코드젠을 실패시키면 중첩 열거형이 `ENUM( Flags )` 를 쓸 수 없다. `|` · `&` 를 쓰면 그 자리에서
                     // 컴파일이 막히므로 조용히 잘못될 여지는 없다 — 조치할 것이 없으니 Warning 이 아니라 Info 다.
-                    SW_LOG_INFO( "ENUM(Flags) nested in a class: bit operators are not generated (the registry still marks it as flags): %#", enumInfo._fullyQualifiedName );
+                    SW_LOG_INFO( "ENUM(Flags) 가 클래스 안에 있어 비트 연산자는 코드젠하지 않습니다 (등록부의 비트플래그 표시는 유지): %#", enumInfo._fullyQualifiedName );
                     continue;
                 }
                 if ( enumInfo._underlyingType.empty() )

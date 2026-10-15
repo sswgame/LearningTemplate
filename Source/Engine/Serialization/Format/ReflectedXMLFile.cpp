@@ -27,13 +27,13 @@ namespace sw
         string text;
         if ( ResourceIO::readTextResource( assetRelativePath, text ) == false && FileUtil::readTextFile( assetRelativePath, text ) == false )
         {
-            SW_LOG_ERROR( "XML 로드 실패: %# (%#) - file not found", assetRelativePath, pTypeInfo->_name.c_str() );
+            SW_LOG_ERROR( "XML 로드 실패: %# (%#) — 파일을 찾지 못했습니다", assetRelativePath, pTypeInfo->_name.c_str() );
             return false;
         }
         vector<SchemaOrphanValue> listOrphan;
         if ( XMLSerializer::deserializeSoft( pDesc, *pTypeInfo, text, &listOrphan ) == false )
         {
-            SW_LOG_ERROR( "XML 로드 실패: %# (%#) - not a <%#> document", assetRelativePath, pTypeInfo->_name.c_str(), pTypeInfo->_name.c_str() );
+            SW_LOG_ERROR( "XML 로드 실패: %# (%#) — <%#> 문서가 아닙니다", assetRelativePath, pTypeInfo->_name.c_str(), pTypeInfo->_name.c_str() );
             return false;
         }
         for ( const SchemaOrphanValue& orphan : listOrphan )

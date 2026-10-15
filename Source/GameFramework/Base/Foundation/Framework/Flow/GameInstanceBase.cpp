@@ -439,7 +439,7 @@ namespace sw
         // 로드할 때까지 아무도 모른다. 빈 섹션은 그대로 쓰되 단서는 남긴다(지원하는 사용법이라 Warning 이 아니라 Info).
         vector<uint8> bytesScene;
         if ( serializeSceneObjects( bytesScene ) == false )
-            SW_LOG_INFO( "Scene object snapshot is empty (no active scene or game services not bound) - only the custom state is saved" );
+            SW_LOG_INFO( "씬 오브젝트 스냅샷이 비었습니다 — 활성 씬이 없거나 게임 서비스가 바인딩되지 않았습니다. 커스텀 상태만 저장됩니다." );
         arch.writeSection( bytesScene.data(), static_cast<uint32>( bytesScene.size() ) );
 
         // 2) 파생 클래스 커스텀 리플렉션 상태 스냅샷
@@ -453,7 +453,7 @@ namespace sw
             vector<uint8> bytesState;
             BinarySerializer::serialize( pStateInstance, *pStateTypeInfo, bytesState );
             if ( bytesState.empty() )
-                SW_LOG_INFO( "Custom state '%#' serialized empty - loading it restores the defaults", pStateTypeInfo->_name.c_str() );
+                SW_LOG_INFO( "'%#' 의 커스텀 상태가 빈 채로 직렬화되었습니다 — 로드하면 기본값이 됩니다.", pStateTypeInfo->_name.c_str() );
             arch.writeSection( bytesState.data(), static_cast<uint32>( bytesState.size() ) );
         }
         else
