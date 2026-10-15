@@ -16,8 +16,6 @@ namespace sw
     MonsterCatalog::MonsterCatalog()
         : _mapMonster{}
     {
-        // 읽기 전에도 비어 있지 않게 한다. 데이터가 늦게 오거나 오지 않아도 `findMonster` 가 널만 반환하지 않는다.
-        seedFallback();
     }
 
     MonsterCatalog::~MonsterCatalog()
@@ -25,35 +23,13 @@ namespace sw
         clear();
     }
 
-    void MonsterCatalog::seedFallback()
-    {
-        _mapMonster.clear();
-
-        MonsterDef defaultMonster;
-        defaultMonster._id             = "default_monster";
-        defaultMonster._name           = "Default Monster";
-        defaultMonster._archetype      = MonsterArchetype::MeleePatrol;
-        defaultMonster._hp             = 100;
-        defaultMonster._maxHp          = 100;
-        defaultMonster._atk            = 10;
-        defaultMonster._def            = 0;
-        defaultMonster._speed          = 3.0f;
-        defaultMonster._patrolRange    = 4.0f;
-        defaultMonster._detectRange    = 8.0f;
-        defaultMonster._attackRange    = 1.0f;
-        defaultMonster._attackCoolTime = 1.5f;
-
-        _mapMonster[hashed_string( defaultMonster._id.c_str() )] = defaultMonster;
-    }
-
     bool MonsterCatalog::loadFromResource( string_view assetRelativePath )
     {
         clear();
         if ( XMLCatalog<MonsterCatalog>::loadFromResource( assetRelativePath ) )
             return true;
-        // 파일이나 루트가 없거나 `<Monster>` 가 하나도 없는 경우다(읽는 쪽이 이미 원인을 알렸다). 폴백을 채운다.
-        SW_LOG_WARNING( "%# gave no monster definitions — using fallback monster definitions.", assetRelativePath );
-        seedFallback();
+        // 파일이나 루트가 없거나 `<Monster>` 가 하나도 없는 경우다(읽는 쪽이 이미 원인을 알렸다). 코드 폴백 없이 빈 카탈로그로 둔다.
+        SW_LOG_ERROR( "%# gave no monster definitions - the monster catalog stays empty", assetRelativePath );
         return false;
     }
 
