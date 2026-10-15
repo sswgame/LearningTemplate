@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-코드 · 실행 인자 · 시나리오가 **이름으로** 부르는 전역 변수와 입력 액션이 정의돼 있는지 봅니다.
+코드 · 실행 인자 · 시나리오가 **이름으로** 부르는 전역 변수 · 입력 액션 · 오디오 이벤트가 정의돼 있는지 봅니다.
 
 런타임은 모르는 이름을 오류로 멈추지 않는다.
 - 명령줄의 `-gv_<이름>` 은 모듈이 나중에 등록할 수 있어 보류표에 남고, 아무도 가져가지 않으면 App 이 기동 뒤에 경고 한 줄만 남긴다.
@@ -17,6 +17,9 @@
 - `NameReference/InputAction`: 입력 맵 질의(`wasActionTriggered` · `isActionDown` · `getVector2D` …)에 문자열로 적은 액션 이름과
   `k…Action` 상수(배열 포함)의 값이 입력 맵(`*.input.xml` 의 `<action name>`)에 있다. `Source/Games/<게임>` 은 엔진 맵 + 그 게임 팩의 맵만,
   나머지 코드는 엔진 맵 + 모든 팩의 맵에서 찾는다. 게임의 팩은 그 폴더 코드가 가장 많이 부르는 `game/<팩>/` 이다.
+- `NameReference/AudioEvent`: `postEvent` · `postEventAt` 에 문자열로 적은 이벤트 이름이 `*.audioevents.xml` 의 `<AudioEventDesc _name>` 에 있다
+  (팩 범위는 입력 액션과 같다). 런타임은 모르는 이벤트를 오류 한 줄로 알리고 소리를 내지 않는다.
+코드 쪽 두 규칙은 주석을 지운 글만 본다(문서 주석의 예는 코드가 아니다). 이름 종류는 `_kListCodeNameKind` 의 한 줄이다.
 
   python Scripts/lint/gate/CheckNameReferences.py [--root <repo>]
 """
@@ -28,6 +31,7 @@ import collections
 import re
 import sys
 import xml.etree.ElementTree as ElementTree
+from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
@@ -42,6 +46,7 @@ _kDefinitionCallRe = re.compile(r"(?:registerVariable\s*\(\s*|addArgument\s*<[^>
 #: 실행 인자로 쓴 이름. 뒤에 `*` 가 붙으면 묶음 표기다.
 _kArgumentUseRe = re.compile(r"(?<![A-Za-z0-9_])-(gv_[A-Za-z0-9_]+)(?![A-Za-z0-9_*])")
 _kCppStringRe = re.compile(r'"(?:\\.|[^"\\\n])*"')
+_kStringOrCommentRe = re.compile(r'"(?:\\.|[^"\\\n])*"|//[^\n]*|/\*.*?\*/', re.S)
 #: 시나리오의 전역 변수 단계.
 _kScenarioVariableRe = re.compile(r"<Variable\b[^>]*\bname\s*=\s*\"(gv_\w+)\"")
 
@@ -53,6 +58,8 @@ _kActionQueryRe = re.compile(
 _kActionConstantRe = re.compile(r"\bk[A-Z]\w*Action(?:Name)?\s*(?:\[\s*\])?\s*=\s*(\{[^}]*\}|\"[^\"]*\")")
 #: 액션 이름의 모양(`Move` · `Park.Build`) — 같은 이름 꼴의 상수 중 데이터 낱말(`"action"` · `"discarded"`)은 액션이 아니다.
 _kActionNameRe = re.compile(r"[A-Z][A-Za-z0-9]*(?:\.[A-Z][A-Za-z0-9]*)*")
+#: 이름으로 오디오 이벤트를 올리는 호출(`GameSound::postEvent` · `AudioEngine::postEvent` · `postEventAt`).
+_kAudioEventCallRe = re.compile(r"\bpostEvent(?:At)?\s*\(\s*(?:hashed_string\s*\(\s*)?\"([^\"]+)\"")
 _kQuotedRe = re.compile(r"\"([^\"]*)\"")
 _kPackRe = re.compile(r"\bgame/([a-z0-9_]+)/")
 
@@ -96,80 +103,120 @@ def collectGlobalVariableUses(repositoryRoot: Path) -> list[tuple[str, str]]:
     return listUse
 
 
-def collectInputActions(repositoryRoot: Path) -> tuple[set[str], dict[str, set[str]]]:
-    """(엔진 맵의 액션, 팩 → 그 팩 맵의 액션)."""
+@dataclass(frozen=True)
+class CodeNameKind:
+    """코드가 문자열로 부르는 이름 한 종류 — 어느 호출 · 상수에서 줍고, 어느 데이터 파일의 어느 원소 · 속성에 정의되는가."""
+
+    rule: str
+    label: str
+    listCodeRe: tuple[re.Pattern[str], ...]   # 첫 그룹이 이름 하나
+    constantRe: re.Pattern[str] | None       # 첫 그룹이 `"X"` 또는 `{ "A", "B" }`
+    dataGlob: str
+    element: str
+    attribute: str
+    marker: str                               # 이 글이 없는 파일은 읽지 않는다
+
+
+_kListCodeNameKind: tuple[CodeNameKind, ...] = (
+    CodeNameKind(rule="InputAction", label="입력 맵 액션", listCodeRe=(_kActionQueryRe,), constantRe=_kActionConstantRe,
+                 dataGlob="*.input.xml", element="action", attribute="name", marker="Action"),
+    CodeNameKind(rule="AudioEvent", label="오디오 이벤트", listCodeRe=(_kAudioEventCallRe,), constantRe=None,
+                 dataGlob="*.audioevents.xml", element="AudioEventDesc", attribute="_name", marker="Event"),
+)
+
+
+def collectDataNames(repositoryRoot: Path, kind: CodeNameKind) -> tuple[set[str], dict[str, set[str]]]:
+    """(팩 밖 데이터의 이름, 팩 → 그 팩 데이터의 이름)."""
     resourceRoot = repositoryRoot / "Resource"
-    engineActions: set[str] = set()
-    mapPackAction: dict[str, set[str]] = collections.defaultdict(set)
-    for path in sorted(resourceRoot.rglob("*.input.xml")):
+    uniqueShared: set[str] = set()
+    mapPackName: dict[str, set[str]] = collections.defaultdict(set)
+    for path in sorted(resourceRoot.rglob(kind.dataGlob)):
         try:
             root = ElementTree.parse(path).getroot()
         except ElementTree.ParseError as error:
-            raise GateError(f"{path}: 입력 맵을 읽지 못했습니다 — {error}") from error
-        names = {element.get("name", "") for element in root.iter("action")} - {""}
+            raise GateError(f"{path}: {kind.label} 데이터를 읽지 못했습니다 — {error}") from error
+        names = {element.get(kind.attribute, "") for element in root.iter(kind.element)} - {""}
         parts = path.relative_to(resourceRoot).parts
         if parts[0] == "game" and len(parts) > 2:
-            mapPackAction[parts[1]] |= names
+            mapPackName[parts[1]] |= names
         else:
-            engineActions |= names
-    return engineActions, mapPackAction
+            uniqueShared |= names
+    return uniqueShared, mapPackName
 
 
-def collectActionNamesInCode(text: str) -> list[str]:
-    """코드 한 파일에서 액션 이름으로 쓰인 문자열."""
-    listName = list(_kActionQueryRe.findall(text))
-    for value in _kActionConstantRe.findall(text):
-        listName += [name for name in _kQuotedRe.findall(value) if _kActionNameRe.fullmatch(name)]
+def stripCommentsInternal(text: str) -> str:
+    """C++ 주석을 지웁니다(문자열 안의 `//` 는 남긴다). 문서 주석의 예(`postEvent( "Footstep" )`)는 코드가 아니다."""
+    return _kStringOrCommentRe.sub(lambda match: match.group(0) if match.group(0).startswith('"') else " ", text)
+
+
+def collectCodeNames(text: str, kind: CodeNameKind) -> list[str]:
+    """코드 한 파일(주석을 지운 글)에서 이 종류의 이름으로 쓰인 문자열."""
+    listName: list[str] = []
+    for codeRe in kind.listCodeRe:
+        listName += codeRe.findall(text)
+    if kind.constantRe is not None:
+        for value in kind.constantRe.findall(text):
+            listName += [name for name in _kQuotedRe.findall(value) if _kActionNameRe.fullmatch(name)]
     return listName
 
 
-def findInputActionViolations(repositoryRoot: Path) -> tuple[list[str], int]:
-    engineActions, mapPackAction = collectInputActions(repositoryRoot)
-    allActions = engineActions.union(*mapPackAction.values()) if mapPackAction else set(engineActions)
-    listViolation: list[str] = []
-    checkedCount = 0
+def collectSourceByGame(repositoryRoot: Path) -> dict[str, list[tuple[str, str]]]:
+    """게임 폴더 이름(게임 밖은 "") → (위치, 글) 목록."""
     gamesRoot = repositoryRoot / "Source" / "Games"
-    listPath = collectSourceFiles([repositoryRoot / "Source"], _kCppSuffixes)
     mapGameText: dict[str, list[tuple[str, str]]] = collections.defaultdict(list)
-    for path, text in LintGate.readFiles(listPath):
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
+    for path, text in LintGate.readFiles(collectSourceFiles([repositoryRoot / "Source"], _kCppSuffixes)):
         try:
             gameName = path.relative_to(gamesRoot).parts[0]
         except ValueError:
             gameName = ""
-        mapGameText[gameName].append((relative, text))
-    for gameName, listFile in sorted(mapGameText.items()):
-        known = allActions
-        scope = "어느 입력 맵"
-        if gameName:
-            packCounter: collections.Counter[str] = collections.Counter()
-            for _, text in listFile:
-                packCounter.update(_kPackRe.findall(text))
-            pack = packCounter.most_common(1)[0][0] if packCounter else ""
-            known = engineActions | mapPackAction.get(pack, set())
-            scope = f"엔진 입력 맵과 game/{pack} 의 입력 맵"
-        for relative, text in listFile:
-            if "Action" not in text:
-                continue
-            for name in collectActionNamesInCode(text):
-                checkedCount += 1
-                if name not in known:
-                    listViolation.append(f"[NameReference/InputAction] {relative}: 액션 '{name}' 이(가) {scope}에 없습니다")
-    return listViolation, checkedCount
+        mapGameText[gameName].append((normalizePath(str(path.relative_to(repositoryRoot))), text))
+    return mapGameText
+
+
+def findPackOfGame(listFile: list[tuple[str, str]]) -> str:
+    """게임 폴더 코드가 가장 많이 부르는 `game/<팩>/` 의 팩 이름."""
+    packCounter: collections.Counter[str] = collections.Counter()
+    for _, text in listFile:
+        packCounter.update(_kPackRe.findall(text))
+    return packCounter.most_common(1)[0][0] if packCounter else ""
+
+
+def findCodeNameViolations(repositoryRoot: Path) -> tuple[list[str], dict[str, int]]:
+    mapGameText = collectSourceByGame(repositoryRoot)
+    listViolation: list[str] = []
+    mapCheckedCount: dict[str, int] = {}
+    for kind in _kListCodeNameKind:
+        uniqueShared, mapPackName = collectDataNames(repositoryRoot, kind)
+        uniqueAll = uniqueShared.union(*mapPackName.values()) if mapPackName else set(uniqueShared)
+        checkedCount = 0
+        for gameName, listFile in sorted(mapGameText.items()):
+            known, scope = uniqueAll, f"어느 {kind.dataGlob}"
+            if gameName:
+                pack = findPackOfGame(listFile)
+                known, scope = uniqueShared | mapPackName.get(pack, set()), f"팩 밖과 game/{pack} 의 {kind.dataGlob}"
+            for relative, text in listFile:
+                if kind.marker not in text:
+                    continue
+                for name in collectCodeNames(stripCommentsInternal(text), kind):
+                    checkedCount += 1
+                    if name not in known:
+                        listViolation.append(f"[NameReference/{kind.rule}] {relative}: {kind.label} '{name}' 이(가) {scope}에 없습니다")
+        mapCheckedCount[kind.rule] = checkedCount
+    return listViolation, mapCheckedCount
 
 
 class CheckNameReferencesGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있다."""
 
-    description = "코드 · 실행 인자 · 시나리오가 이름으로 부르는 전역 변수와 입력 액션이 정의돼 있는지 검사"
-    buildComment = "Checking that global variable and input action names used by code, arguments and scenarios are defined..."
+    description = "코드 · 실행 인자 · 시나리오가 이름으로 부르는 전역 변수 · 입력 액션 · 오디오 이벤트가 정의돼 있는지 검사"
+    buildComment = "Checking that global variable, input action and audio event names used by code, arguments and scenarios are defined..."
     timeoutSeconds = 60
     preCommitPattern = ("*.h", "*.cpp", "*.inl", "*.py", "*.json", "*.xml", "*.cmake", "*.txt", "*.yml", "*.ps1")
     preCommitFileArgument = ""
     violationHeader = "정의되지 않은 이름"
     hint = (
         "  전역 변수: 정의(SW_*GLOBAL_VARIABLE)의 이름으로 고치거나, 지운 스위치면 그 인자 · 시나리오 줄을 지웁니다.\n"
-        "  입력 액션: 그 팩의 *.input.xml 에 <action name> 을 더하거나 코드의 이름을 맵의 이름으로 고칩니다."
+        "  입력 액션 · 오디오 이벤트: 그 팩의 *.input.xml · *.audioevents.xml 에 이름을 더하거나 코드의 이름을 데이터의 이름으로 고칩니다."
     )
     selfTestCases = [
         {
@@ -202,6 +249,13 @@ class CheckNameReferencesGate(LintGate):
                 "Source/Engine/Probe.cpp": "constexpr const char* kArrGroupAction[] = { \"Group0\", \"Group1\" };\n",
             },
         },
+        {
+            "name": "코드가 라이브러리에 없는 오디오 이벤트를 올린다",
+            "files": {
+                "Resource/engine/audio/probe.audioevents.xml": "<AudioEventLibrary><AudioEventDesc _name=\"Hit\"/></AudioEventLibrary>\n",
+                "Source/Engine/Probe.cpp": "// postEvent( \"Commented\" ) 는 보지 않는다\nvoid f() { (void)GameSound::postEvent( \"Hti\" ); }\n",
+            },
+        },
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
@@ -212,10 +266,10 @@ class CheckNameReferencesGate(LintGate):
         listUse = collectGlobalVariableUses(repositoryRoot)
         listViolation = [f"[NameReference/GlobalVariable] {location}: 전역 변수 '{name}' 의 정의가 없습니다"
                          for location, name in listUse if name not in uniqueDefined]
-        actionViolation, actionCount = findInputActionViolations(repositoryRoot)
-        listViolation += actionViolation
+        codeViolation, mapCheckedCount = findCodeNameViolations(repositoryRoot)
+        listViolation += codeViolation
         return GateResult(listViolation=sorted(set(listViolation)),
-                          summary=f"전역 변수 정의 {len(uniqueDefined)}개 · 이름 사용 {len(listUse)}곳, 코드의 입력 액션 이름 {actionCount}곳")
+                          summary=f"전역 변수 정의 {len(uniqueDefined)}개 · 이름 사용 {len(listUse)}곳, 코드의 이름 " + ", ".join(f"{rule} {count}곳" for rule, count in mapCheckedCount.items()))
 
 
 main = CheckNameReferencesGate.run

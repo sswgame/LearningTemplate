@@ -124,7 +124,7 @@ Scripts/
   │     │     ├── CheckControlBoundary.py     # 입력을 읽는 파일은 플레이어 조종자 · 플레이어 뷰 · 명령 디렉터만(폰은 의도만)
   │     │     ├── CheckLogViewArgument.py     # 로그 인자의 string_view::data()
   │     │     ├── CheckGlobalVariableKinds.py # 전역 변수 정의와 extern 참조의 종류 일치
-  │     │     ├── CheckNameReferences.py      # 실행 인자 · 시나리오의 -gv_ 이름과 코드가 묻는 입력 액션 이름이 정의돼 있는지
+  │     │     ├── CheckNameReferences.py      # 실행 인자 · 시나리오의 -gv_ 이름과 코드가 부르는 입력 액션 · 오디오 이벤트 이름이 정의돼 있는지
   │     │     ├── CheckRenderOwnership.py     # 렌더 스냅샷 소유 규칙
   │     │     ├── CheckTestSuites.py          # 스위트 명명 · 한 파일 한 스위트 · CI 경계 표식 · CoreTest 는 엔진을 직접 쓰지 않음
   │     │     ├── CheckFallibleNodiscard.py   # 실패를 bool 로 알리는 함수 선언의 `[[nodiscard]]`
