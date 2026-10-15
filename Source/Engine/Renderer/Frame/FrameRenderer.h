@@ -199,7 +199,7 @@ namespace sw
          */
         string_view getPresentedAttachmentName() const;
         /**
-         * @brief 그림자 맵 한 변의 텍셀 수입니다. 그림자 품질(`gv_shadowQuality` 0~3)이 1024, 1536, 2048, 4096 중 하나를 고릅니다.
+         * @brief 그림자 맵 한 변의 텍셀 수(`gv_shadowMapResolution`)입니다. 품질 단계마다의 값은 설정 스키마(`engine.settings.xml` 의 `graphics.shadowQuality`)가 정합니다.
          * @details 그림자 맵 크기는 화면 크기를 따르지 않는다. 정사각 볼륨을 1280×720 에 담으면 텍셀이 한 축으로 1.8배 늘어나고,
          *          출력이 작은 에디터 게임 뷰에서는 그림자 맵도 같이 작아지기 때문이다. 게임 스레드(그림자 행렬의 텍셀 스냅)와 렌더 스레드(첨부 할당)가 같은 값을 쓴다.
          */

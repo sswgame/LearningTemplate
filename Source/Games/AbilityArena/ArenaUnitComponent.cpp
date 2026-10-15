@@ -66,14 +66,14 @@ namespace sw
         const bool              bMissingComponents = pManager == nullptr || pMesh == nullptr || pAbilitySystem == nullptr || pPawn == nullptr || deltaTime <= 0.0f;
         if ( bMissingComponents )
             return;
-        if ( _deathTimer >= 0.0f || pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) )
-        {
-            updateDeath( deltaTime, *pMesh );
-            return;
-        }
         const ArenaDirectorComponent* pDirector = GameDirectorComponent::resolve<ArenaDirectorComponent>( *pManager, _director );
         if ( pDirector == nullptr )
             return;
+        if ( _deathTimer >= 0.0f || pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) )
+        {
+            updateDeath( deltaTime, *pMesh, pDirector->getDeathLinger() );
+            return;
+        }
 
         // (1) 바라보는 쪽 — 어빌리티(투사체 방향)가 이번 틱의 쪽을 보게 버튼보다 먼저.
         const ControlIntent& intent = pPawn->getIntent();
@@ -150,16 +150,16 @@ namespace sw
         }
     }
 
-    void ArenaUnitComponent::updateDeath( float32 deltaTime, MeshComponent& mesh )
+    void ArenaUnitComponent::updateDeath( float32 deltaTime, MeshComponent& mesh, float32 deathLinger )
     {
-        // 쓰러진 유닛은 납작해지다가 디렉터가 걷는다(같은 시간 — `ArenaDirectorComponent::kDeathLinger`).
+        // 쓰러진 유닛은 납작해지다가 디렉터가 걷는다(같은 시간 — 디렉터의 Death Linger).
         if ( _deathTimer < 0.0f )
         {
-            _deathTimer = ArenaDirectorComponent::kDeathLinger;
+            _deathTimer = deathLinger;
             _deathScale = mesh.getLocalScale();
         }
         _deathTimer          = MathUtil::max( 0.0f, _deathTimer - deltaTime );
-        const float32 squash = MathUtil::max( 0.05f, _deathTimer / ArenaDirectorComponent::kDeathLinger );
+        const float32 squash = MathUtil::max( 0.05f, _deathTimer / deathLinger );
         mesh.setLocalScale( float3{ _deathScale._x, _deathScale._y * squash, _deathScale._z } );
     }
 } // namespace sw

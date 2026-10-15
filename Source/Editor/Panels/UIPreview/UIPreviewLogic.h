@@ -15,6 +15,7 @@ namespace sw
 {
     struct PropertyInfo;
     struct TypeInfo;
+    struct UIResolutionPreset;
     struct UIScaleSettings;
     struct WidgetLayoutSlot;
 
@@ -85,17 +86,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 해상도 견본 하나입니다(물리 픽셀). */
-    struct UIPreviewResolution
-    {
-        const utf8* _pName{ "" };
-        uint32      _width{ 0 };
-        uint32      _height{ 0 };
-    };
-} // namespace sw::editor
-
-namespace sw::editor
-{
     /** @brief 위젯 트리 목록의 줄 하나입니다(문서 순서). */
     struct UIPreviewWidgetRow
     {
@@ -113,14 +103,11 @@ namespace sw::editor
      */
     struct UIPreviewLogic
     {
-        /** @brief 해상도 견본 수와 @p index 의 견본입니다 — 1280×720 · 1920×1080 · 2560×1440 · 3840×2160 · 21:9 · 세로. */
-        static uint32                     getResolutionCount();
-        static const UIPreviewResolution& getResolution( uint32 index );
         /**
-         * @brief 견본 @p index 를 게임과 같은 배율 규칙(@p settings)으로 UI 뷰포트로 만듭니다 — 사용자 배율 @p userScale 을 곱하고 각 변을 물리 크기의
-         *        @p safeZoneRatio 만큼 안쪽으로(안전 영역 보기). 범위 밖 견본은 첫 견본입니다.
+         * @brief 견본 @p resolution 을 게임과 같은 배율 규칙(@p settings)으로 UI 뷰포트로 만듭니다 — 사용자 배율 @p userScale 을 곱하고 각 변을 물리 크기의
+         *        @p safeZoneRatio 만큼 안쪽으로(안전 영역 보기). 견본은 엔진 표(`UIResolutionPresetTable`)의 한 줄입니다.
          */
-        static UIViewport makeViewport( const UIScaleSettings& settings, uint32 index, float32 userScale, float32 safeZoneRatio );
+        static UIViewport makeViewport( const UIScaleSettings& settings, const UIResolutionPreset& resolution, float32 userScale, float32 safeZoneRatio );
         /** @brief 크기 @p imageSize 의 그림을 @p available 안에 비율을 지켜 맞춘 크기입니다(늘리지 않는다 — 1 배가 상한). */
         static float2 fitImage( const float2& imageSize, const float2& available );
         /** @brief 그린 그림 위의 점 @p imagePoint(그림 왼쪽 위 원점, 그린 크기 @p drawSize)를 UI 단위 점으로 옮깁니다. */

@@ -15,9 +15,9 @@ namespace sw
 {
     ParkLayout::ParkLayout()
         : _listPlacement{}
-        , _gatePosition{ 0.0f, 0.0f, -30.0f }
+        , _gatePosition{}
         , _entryFee{ 0 }
-        , _startingCash{ 12000 }
+        , _startingCash{ 0 }
     {
     }
 
@@ -33,61 +33,70 @@ namespace sw
 
     bool ParkLayout::loadRoot( const XMLNode& root, const CoasterLayoutCatalog& layouts, string_view sourceName )
     {
-        _gatePosition = float3{ root.getAttributeFloat( "gateX", 0.0f ), 0.0f, root.getAttributeFloat( "gateZ", -30.0f ) };
-        _entryFee     = MathUtil::max( 0, root.getAttributeInt( "entryFee", 0 ) );
-        _startingCash = root.getAttributeInt( "startingCash", _startingCash );
+        // 형식 · 필수 · 범위는 스키마(ParkLayoutRootDef · ParkFlatRideDef · ParkCoasterDef)가 정한다. 여기에는 기본값 리터럴이 없다.
+        ParkLayoutRootDef rootDef;
+        bool              bOk = GameDataXML::readFields( root, rootDef, sourceName );
+        _gatePosition         = float3{ rootDef._gateX, 0.0f, rootDef._gateZ };
+        _entryFee             = rootDef._entryFee;
+        _startingCash         = rootDef._startingCash;
 
         _listPlacement.clear();
+        const float4 opaqueWhite{ 1.0f, 1.0f, 1.0f, 1.0f }; // 색의 알파를 적지 않으면 불투명이다(색 형식의 규칙)
         for ( XMLNode node = root.findChild( "FlatRide" ); node; node = node.findNextSibling( "FlatRide" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
+            ParkFlatRideDef def;
+            if ( GameDataXML::readFields( node, def, sourceName, { "color" } ) == false )
+            {
+                bOk = false;
                 continue;
+            }
             ParkRidePlacement placement;
             ParkRide&         ride     = placement._ride;
-            ride._id                   = hashed_string( pID );
-            const utf8* pName          = node.findAttribute( "name" );
-            ride._name                 = pName != nullptr ? pName : pID;
-            ride._excitement           = node.getAttributeFloat( "excitement", ride._excitement );
-            ride._intensity            = node.getAttributeFloat( "intensity", ride._intensity );
-            ride._nausea               = node.getAttributeFloat( "nausea", ride._nausea );
-            ride._cycleTime            = MathUtil::max( 5.0f, node.getAttributeFloat( "cycleTime", ride._cycleTime ) );
-            ride._capacity             = MathUtil::max( 1, node.getAttributeInt( "capacity", ride._capacity ) );
-            ride._price                = MathUtil::max( 0, node.getAttributeInt( "price", ride._price ) );
-            ride._runningCostPerMinute = MathUtil::max( 0, node.getAttributeInt( "runningCost", ride._runningCostPerMinute ) );
-            placement._position        = float3{ node.getAttributeFloat( "x", 0.0f ), 0.0f, node.getAttributeFloat( "z", 0.0f ) };
-            const float32 sizeZ        = node.getAttributeFloat( "sizeZ", 4.0f );
-            ride._entrance             = float3{ node.getAttributeFloat( "entranceX", placement._position._x ), 0.0f,
-                                     node.getAttributeFloat( "entranceZ", placement._position._z - 4.0f - sizeZ * 0.5f ) };
-            placement._buildCost       = MathUtil::max( 0, node.getAttributeInt( "cost", placement._buildCost ) );
-            const utf8* pShape         = node.findAttribute( "shape" );
-            placement._shape           = pShape != nullptr ? pShape : "Cylinder";
-            placement._size            = float3{ node.getAttributeFloat( "sizeX", 4.0f ), node.getAttributeFloat( "sizeY", 1.0f ), sizeZ };
-            placement._color           = GameDataXML::parseFloat4( node.getAttributeText( "color" ), placement._color );
-            placement._spin            = node.getAttributeFloat( "spin", 0.0f );
+            ride._id                   = hashed_string( def._id );
+            ride._name                 = def._name;
+            ride._excitement           = def._excitement;
+            ride._intensity            = def._intensity;
+            ride._nausea               = def._nausea;
+            ride._cycleTime            = def._cycleTime;
+            ride._capacity             = def._capacity;
+            ride._price                = def._price;
+            ride._runningCostPerMinute = def._runningCost;
+            ride._entrance             = float3{ def._entranceX, 0.0f, def._entranceZ };
+            placement._position        = float3{ def._x, 0.0f, def._z };
+            placement._buildCost       = def._cost;
+            placement._shape           = def._shape;
+            placement._size            = float3{ def._sizeX, def._sizeY, def._sizeZ };
+            placement._color           = GameDataXML::parseFloat4( node.getAttributeText( "color" ), opaqueWhite );
+            placement._spin            = def._spin;
             _listPlacement.push_back( placement );
         }
         for ( XMLNode node = root.findChild( "Coaster" ); node; node = node.findNextSibling( "Coaster" ) )
         {
-            const utf8*             pLayoutID = node.findAttribute( "layout" );
-            const CoasterLayoutDef* pLayout   = StringUtil::isNullOrEmpty( pLayoutID ) ? nullptr : layouts.find( hashed_string( pLayoutID ) );
+            ParkCoasterDef def;
+            if ( GameDataXML::readFields( node, def, sourceName, { "color" } ) == false )
+            {
+                bOk = false;
+                continue;
+            }
+            const CoasterLayoutDef* pLayout = layouts.find( hashed_string( def._layout ) );
             if ( pLayout == nullptr )
             {
-                SW_LOG_WARNING( "%#: <Coaster> layout '%#' is not in the coaster catalog - skipped", sourceName, pLayoutID != nullptr ? pLayoutID : "" );
+                SW_LOG_ERROR( "%#: <Coaster> layout '%#' is not in the coaster catalog - skipped", sourceName, def._layout.c_str() );
+                bOk = false;
                 continue;
             }
             ParkRidePlacement placement;
             placement._layoutID       = pLayout->_id;
             placement._ride._id       = pLayout->_id;
             placement._ride._name     = pLayout->_name;
-            placement._ride._capacity = MathUtil::max( 1, node.getAttributeInt( "capacity", 24 ) );
-            placement._position       = float3{ node.getAttributeFloat( "x", 0.0f ), 0.0f, node.getAttributeFloat( "z", 0.0f ) };
-            placement._heading        = node.getAttributeFloat( "heading", 0.0f );
-            placement._loadTime       = MathUtil::max( 0.0f, node.getAttributeFloat( "loadTime", 15.0f ) );
-            placement._buildCost      = MathUtil::max( 0, node.getAttributeInt( "cost", 5000 ) );
-            placement._color          = GameDataXML::parseFloat4( node.getAttributeText( "color" ), placement._color );
+            placement._ride._capacity = def._capacity;
+            placement._position       = float3{ def._x, 0.0f, def._z };
+            placement._heading        = def._heading;
+            placement._loadTime       = def._loadTime;
+            placement._buildCost      = def._cost;
+            placement._color          = GameDataXML::parseFloat4( node.getAttributeText( "color" ), opaqueWhite );
             _listPlacement.push_back( placement );
         }
-        return _listPlacement.empty() == false;
+        return bOk && _listPlacement.empty() == false;
     }
 } // namespace sw

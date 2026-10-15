@@ -32,11 +32,10 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32  kStateTag     = FourCcUtil::make( "MVFM" );
-        static constexpr uint32  kStateVersion = 1;
-        static constexpr int32   kFieldWidth   = 4;
-        static constexpr int32   kFieldHeight  = 2;
-        static constexpr float32 kTileSpacing  = 1.0f; ///< 칸 사이(m)
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "MVFM" );
+        static constexpr uint32 kStateVersion = 1;
+        static constexpr int32  kFieldWidth   = 4;
+        static constexpr int32  kFieldHeight  = 2;
 
         MeadowFarmDirectorComponent();
         virtual ~MeadowFarmDirectorComponent() override;
@@ -75,6 +74,8 @@ namespace sw
         float4 _tilledColor;
         PROPERTY( Category = "Look", DisplayName = "Grass Color", Tooltip = "Tile tint before it is tilled" )
         float4 _grassColor;
+        PROPERTY( Category = "Look", DisplayName = "Tile Spacing", Tooltip = "Distance between field tiles", Min = 0.01, Units = m )
+        float32 _tileSpacing;
 
         FarmField                _field;
         MaterialTintCache        _tintCache;

@@ -208,9 +208,9 @@ namespace sw
 
     uint32 FrameRenderer::getShadowMapResolution()
     {
-        constexpr uint32 kArrResolution[] = { 1024u, 1536u, 2048u, 4096u };
-        const int32      quality          = MathUtil::clamp( static_cast<int32>( gv_shadowQuality ), 0, 3 );
-        return kArrResolution[quality];
+        // 값의 출처는 설정 스키마 하나다. 여기서는 텍스처를 만들 수 있는 범위만 지킨다(1 미만 · 밉 상한을 넘는 한 변은 첨부를 만들지 못한다).
+        constexpr int32 kMaxResolution = static_cast<int32>( 1u << ( constant::kMaxTextureMipCount - 1 ) );
+        return static_cast<uint32>( MathUtil::clamp( static_cast<int32>( gv_shadowMapResolution ), 1, kMaxResolution ) );
     }
 
     bool FrameRenderer::markAttachmentCleared( const hashed_string& key )

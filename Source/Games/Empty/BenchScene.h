@@ -15,6 +15,8 @@
 
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 
+#include "Games/Empty/BenchSceneSettings.h"
+
 namespace sw
 {
     class CameraComponent;
@@ -42,7 +44,8 @@ namespace sw
 
         /**
          * @brief `-gv_benchMeshes=N` 이 주어졌으면 벤치 씬을 만듭니다.
-         * @details 다시 불러도 된다. 상태 복원(모듈 리로드, RHI 교체)이 씬을 교체한 뒤 EmptyGame 이
+         * @details 배치 · 튜닝 값은 `benchscene.xml`(`BenchSceneSettings`)에서 읽는다. 못 읽으면 오류를 남기고 아무것도 세우지 않는다.
+         *          다시 불러도 된다. 상태 복원(모듈 리로드, RHI 교체)이 씬을 교체한 뒤 EmptyGame 이
          *          다시 부른다. 벤치 오브젝트는 스냅샷 직전에 despawn 으로 정리되므로 복원 뒤 씬에 없다.
          * @return 실제로 만들었으면 true 를 반환합니다. 플래그가 없거나 0 이면 false 입니다.
          */
@@ -76,13 +79,13 @@ namespace sw
         /** @brief 캐릭터 줄이 화면에 차도록 씬의 카메라를 맞춥니다(허리 높이를 봅니다). 격자면 앞 위에서 내려다봅니다. */
         void frameCharacterCameras( Scene* pScene, float32 halfExtent );
         /** @brief 캐릭터 줄(격자면 한 행)의 반폭입니다. */
-        static float32 computeCharacterHalfExtent( uint32 characterCount );
+        float32 computeCharacterHalfExtent( uint32 characterCount ) const;
         /** @brief `-gv_benchFaces=N`: 테스트 머리 N 개를 한 줄로 스폰합니다(표정, 립싱크, 깜빡임, 시선). */
         void spawnFaces( uint32 faceCount );
         /** @brief 머리 줄을 정면에서 보도록 카메라를 맞춥니다. */
         void frameFaceCameras( Scene* pScene );
         /** @brief 머리 줄이 화면 폭에 차는 카메라 거리(m)입니다. */
-        static float32 computeFaceCameraDistance( uint32 faceCount );
+        float32 computeFaceCameraDistance( uint32 faceCount ) const;
         /**
          * @brief `-gv_benchRig=N`: 후처리 리그를 적용한 KayKit 기사 N 명을 경사면 위에 스폰합니다(BenchSceneRig.cpp). 발 디딤, 머리 시선,
          *        무기 손잡이 왼손 IK, 망토 스프링 본을 확인합니다. 무기와 망토는 각자 유닛(자식 오브젝트)이고 리그가 몸의 본을 따릅니다.
@@ -114,7 +117,7 @@ namespace sw
         /**
          * @brief `-gv_benchUiNameplates=K`: 큐브 @p index 가 앞쪽 K 개 안이면 RTS 이름표(이름 글 + HP 막대)를 붙이고 true 를 반환합니다(BenchSceneProbes.cpp).
          */
-        [[nodiscard]] static bool attachNameplate( GameObject& object, uint32 index );
+        [[nodiscard]] bool attachNameplate( GameObject& object, uint32 index ) const;
         /**
          * @brief 벤치 프레임을 세고, `-gv_benchProbeFrame` 프레임에 한 번 일어나는 탐침(`-gv_benchUiHangulGlyphs` 새 한글 글리프, `-gv_benchSceneLoadPath` 비동기 씬 로드)을 겁니다.
          */
@@ -154,6 +157,8 @@ namespace sw
         uint32 nextChurnRandom();
 
     private:
+        /** @brief `benchscene.xml` 에서 읽은 배치 · 튜닝 값입니다(`spawnFromGlobals` 가 채웁니다). */
+        BenchSceneSettings _settings;
         /**
          * @brief 벤치 큐브의 핸들입니다. 씬이 큐브를 소유하므로 여기에는 주소가 없습니다.
          * @details 주의: 생포인터를 보관하면 RHI 교체 때 죽는다. 새 게임 인스턴스가 onInitialize 에서 큐브를

@@ -149,6 +149,10 @@ namespace sw
         , _autoBattleAIPrefab{}
         , _arenaHalfSize{ 14.0f }
         , _waveRadius{ 11.0f }
+        , _baseGruntCount{ 2u }
+        , _wavesPerCaster{ 2u }
+        , _wavesPerLevel{ 2u }
+        , _deathLinger{ 0.8f }
         , _playerRespawnDelay{ 2.5f }
         , _playerTint{ 0.55f, 0.75f, 1.0f, 1.0f }
         , _gruntTint{ 1.0f, 0.5f, 0.45f, 1.0f }
@@ -401,10 +405,10 @@ namespace sw
         if ( bAdvance || _wave == 0 )
             ++_wave;
         getSoundQueue().queueEvent( ArenaDirectorComponentInternal::kEventWave );
-        const uint32 gruntCount  = 2u + _wave;
-        const uint32 casterCount = _wave / 2u;
+        const uint32 gruntCount  = _baseGruntCount + _wave;
+        const uint32 casterCount = _wave / _wavesPerCaster;
         const uint32 totalCount  = gruntCount + casterCount;
-        const int32  level       = 1 + static_cast<int32>( ( _wave - 1u ) / 2u );
+        const int32  level       = 1 + static_cast<int32>( ( _wave - 1u ) / _wavesPerLevel );
         for ( uint32 spawnIndex = 0; spawnIndex < totalCount; ++spawnIndex )
         {
             const float32       angle = 2.0f * MathUtil::kPi * static_cast<float32>( spawnIndex ) / static_cast<float32>( totalCount );
@@ -597,7 +601,7 @@ namespace sw
             }
             if ( unit._deathTimer < 0.0f && pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) )
             {
-                unit._deathTimer = kDeathLinger;
+                unit._deathTimer = _deathLinger;
                 if ( unit._kind == ArenaUnitKind::Player )
                 {
                     SW_LOG_INFO( "[Arena] the player fell on wave %# after %# kills", _wave, _killCount );

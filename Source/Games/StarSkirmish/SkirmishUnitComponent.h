@@ -59,6 +59,10 @@ namespace sw
         GameObjectHandle _director;
         PROPERTY( Category = "Unit", DisplayName = "Air Height", Tooltip = "Flying units hover this high", Units = m )
         float32 _airHeight;
+        PROPERTY( Category = "Unit", DisplayName = "Footprint Fill", Tooltip = "A building model is scaled to this fraction of the tiles it covers", Min = 0.0, Units = ratio )
+        float32 _footprintFill;
+        PROPERTY( Category = "Unit", DisplayName = "Unit Fill", Tooltip = "A unit model is scaled to this many times its collision diameter (a bit larger reads as a ship from above)", Min = 0.0 )
+        float32 _unitFill;
 
         float3      _lastPosition; ///< 지난 프레임 자리(움직인 쪽으로 돌린다)
         SlotHandle  _unitID;

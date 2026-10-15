@@ -10,6 +10,8 @@
 #include "Engine/Config/Server/ServerConfig.h"
 #include "Engine/Profiling/MemoryBudgetMonitor.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -43,6 +45,62 @@ namespace
             return true;
         }
 
+        /** @brief 바탕 층 파일에서 빠져도 되는 키와 이유입니다. 값의 출처가 다른 정본 하나다. */
+        static constexpr const utf8* kArrBaseLayerExemptKey[] = {
+            "_window._defaultRHI", // 쿠킹 표 `default_rhi_backend` 가 정본 — 파일에 적으면 두 곳이 된다
+        };
+
+        /** @brief @p shape 의 키마다(객체는 안으로 들어간다) @p file 에 없으면 경로를 담습니다. */
+        static void collectMissingKeys( const sw::JSONValue& shape, const sw::JSONValue& file, const sw::string& prefix, sw::vector<sw::string>& outListKey )
+        {
+            for ( const sw::string& key : shape.getMemberNames() )
+            {
+                const sw::string    path      = prefix.empty() ? key : sw::string( prefix + "." + key );
+                const sw::JSONValue fileValue = file.get( key, false );
+                if ( fileValue.isValid() == false )
+                {
+                    bool bExempt = false;
+                    for ( const utf8* pExemptKey : kArrBaseLayerExemptKey )
+                    {
+                        bExempt = bExempt || path == pExemptKey;
+                    }
+                    if ( bExempt == false )
+                        outListKey.push_back( path );
+                    continue;
+                }
+                const sw::JSONValue shapeValue = shape.get( key, false );
+                if ( shapeValue.isObject() )
+                    collectMissingKeys( shapeValue, fileValue, path, outListKey );
+            }
+        }
+
+        /**
+         * @brief 바탕 층(값의 정본이 파일이고 헤더는 형식만인 설정 — `EngineConfig`)을 엄격하게 읽고, 모든 키를 적었는지 봅니다.
+         * @details 언리얼 `BaseEngine.ini` 와 같은 층이라 "기본값과 다른 값만" 규칙 대신 "빠짐없이" 규칙이다. 빠진 키는 헤더의 빈 형식(0)이 되어 버린다.
+         */
+        template <typename T>
+        [[nodiscard]] static bool loadBaseLayer( const sw::string& absolutePath )
+        {
+            T config{};
+            if ( sw::ConfigManager::readConfigFile( config, absolutePath ) != sw::ConfigReadResult::Loaded )
+                return false;
+            sw::string text;
+            if ( sw::FileUtil::readTextFile( absolutePath, text ) == false )
+                return false;
+            sw::JSONDocument fileDocument;
+            sw::JSONDocument shapeDocument;
+            const T          shape{};
+            if ( fileDocument.parse( text ) == false || shapeDocument.parse( sw::JSONSerializer::serialize( &shape, *T::StaticType() ) ) == false )
+                return false;
+            sw::vector<sw::string> listMissingKey;
+            collectMissingKeys( shapeDocument.getRoot(), fileDocument.getRoot(), sw::string(), listMissingKey );
+            for ( const sw::string& key : listMissingKey )
+            {
+                SW_EXPECT_TRUE_MSG( false, absolutePath + ": '" + key + "' is missing - this file is the base layer, the header has only the shape" );
+            }
+            return listMissingKey.empty();
+        }
+
         [[nodiscard]] static bool loadMemoryBudget( const sw::string& absolutePath )
         {
             sw::string text;
@@ -59,17 +117,17 @@ namespace
 
         /** @brief 앞의 줄이 먼저 맞습니다. `Config/Editor/` 는 EditorTest(`EditorConfigFileSchemaTest`)가 본다. 짝은 `Scripts/common/ConfigCatalog.py` 다. */
         static constexpr ConfigKind kArrKind[] = {
-            {    "Config/Engine/EngineConfig.json",                                          "", &loadStrict<sw::EngineConfig>},
-            {    "Config/Engine/MemoryBudget.json",                                          "",             &loadMemoryBudget},
-            {                       "Config/Game/",                                          "",   &loadStrict<sw::GameConfig>},
-            {"Config/Server/chat_banned_words.txt",  "ChatWordFilterTest (word list, not keys)",                       nullptr},
-            {                     "Config/Server/",                                          "", &loadStrict<sw::ServerConfig>},
-            {    "Config/Engine/CookContract.json",                "CheckCookContract (python)",                       nullptr},
-            {      "Config/Engine/PackFormat.json",            "GeneratePackFormat (configure)",                       nullptr},
-            {      "Config/Engine/PackConfig.json",                       "CookAssets (python)",                       nullptr},
-            {                "Config/Environment/", "SetupEnvironment (python) - machine-local",                       nullptr},
-            {                     "Config/Editor/",   "EditorConfigFileSchemaTest (EditorTest)",                       nullptr},
-            {                   "Config/README.md",                              "not a config",                       nullptr},
+            {    "Config/Engine/EngineConfig.json",                                          "", &loadBaseLayer<sw::EngineConfig>},
+            {    "Config/Engine/MemoryBudget.json",                                          "",                &loadMemoryBudget},
+            {                       "Config/Game/",                                          "",      &loadStrict<sw::GameConfig>},
+            {"Config/Server/chat_banned_words.txt",  "ChatWordFilterTest (word list, not keys)",                          nullptr},
+            {                     "Config/Server/",                                          "",    &loadStrict<sw::ServerConfig>},
+            {    "Config/Engine/CookContract.json",                "CheckCookContract (python)",                          nullptr},
+            {      "Config/Engine/PackFormat.json",            "GeneratePackFormat (configure)",                          nullptr},
+            {      "Config/Engine/PackConfig.json",                       "CookAssets (python)",                          nullptr},
+            {                "Config/Environment/", "SetupEnvironment (python) - machine-local",                          nullptr},
+            {                     "Config/Editor/",   "EditorConfigFileSchemaTest (EditorTest)",                          nullptr},
+            {                   "Config/README.md",                              "not a config",                          nullptr},
         };
 
         static const ConfigKind* findKind( sw::string_view relativePath )

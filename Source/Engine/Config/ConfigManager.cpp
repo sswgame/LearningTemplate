@@ -9,6 +9,7 @@
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
+#include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -52,70 +53,6 @@ namespace sw
                         outListKey.push_back( path );
                 }
             }
-
-            /** @brief 숫자 칸의 값을 float64 로 읽습니다. 숫자 타입이 아니면 false 입니다. */
-            [[nodiscard]] static bool readNumber( const PropertyInfo& prop, const void* pInstance, float64& outValue )
-            {
-                const void* const pValue   = prop.getRawPtr( pInstance );
-                const string_view typeName = prop._typeName.view();
-                if ( typeName == "float32" || typeName == "float" )
-                    outValue = static_cast<float64>( *static_cast<const float32*>( pValue ) );
-                else if ( typeName == "float64" || typeName == "double" )
-                    outValue = *static_cast<const float64*>( pValue );
-                else if ( typeName == "int32" || typeName == "int" )
-                    outValue = static_cast<float64>( *static_cast<const int32*>( pValue ) );
-                else if ( typeName == "uint32" )
-                    outValue = static_cast<float64>( *static_cast<const uint32*>( pValue ) );
-                else if ( typeName == "int64" )
-                    outValue = static_cast<float64>( *static_cast<const int64*>( pValue ) );
-                else if ( typeName == "uint64" )
-                    outValue = static_cast<float64>( *static_cast<const uint64*>( pValue ) );
-                else if ( typeName == "int16" )
-                    outValue = static_cast<float64>( *static_cast<const int16*>( pValue ) );
-                else if ( typeName == "uint16" )
-                    outValue = static_cast<float64>( *static_cast<const uint16*>( pValue ) );
-                else if ( typeName == "int8" )
-                    outValue = static_cast<float64>( *static_cast<const int8*>( pValue ) );
-                else if ( typeName == "uint8" )
-                    outValue = static_cast<float64>( *static_cast<const uint8*>( pValue ) );
-                else
-                    return false;
-                return true;
-            }
-
-            /**
-             * @brief `Min`/`Max` 밖 숫자 칸마다 "경로 = 값 is outside [아래, 위]" 한 줄을 모읍니다.
-             * @details 구조체 칸은 들어가 본다. 컨테이너 · 비트필드 · 접근자 칸은 보지 않는다(원소 검사는 타입의 validate 몫).
-             */
-            static void collectRangeErrors( const TypeInfo& typeInfo, const void* pInstance, const string& prefix, vector<string>& outListError )
-            {
-                for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
-                {
-                    const bool bSkipProperty = prop._bIsBitField == SW_TRUE || prop._bIsContainer == SW_TRUE || prop.hasValueAccessor();
-                    if ( bSkipProperty )
-                        continue;
-                    const string    path    = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
-                    const TypeInfo* pNested = engine::getSubsystem<TypeRegistry>().findType( prop._typeName );
-                    if ( pNested != nullptr && pNested->isPrimitive() == false )
-                    {
-                        collectRangeErrors( *pNested, prop.getRawPtr( pInstance ), path, outListError );
-                        continue;
-                    }
-                    const PropertyMetadata& meta = prop._metadata;
-                    if ( meta._bHasMinRange == SW_FALSE && meta._bHasMaxRange == SW_FALSE )
-                        continue;
-                    float64 value{ 0.0 };
-                    if ( readNumber( prop, pInstance, value ) == false )
-                        continue;
-                    const bool bBelow = meta._bHasMinRange == SW_TRUE && value < static_cast<float64>( meta._minRange );
-                    const bool bAbove = meta._bHasMaxRange == SW_TRUE && value > static_cast<float64>( meta._maxRange );
-                    if ( bBelow == false && bAbove == false )
-                        continue;
-                    const string lower = meta._bHasMinRange == SW_TRUE ? to_string( meta._minRange ) : string( "-" );
-                    const string upper = meta._bHasMaxRange == SW_TRUE ? to_string( meta._maxRange ) : string( "-" );
-                    outListError.push_back( path + " = " + to_string( value ) + " is outside [" + lower + ", " + upper + "]" );
-                }
-            }
         };
     } // namespace
 } // namespace sw
@@ -139,13 +76,19 @@ namespace sw
             SW_LOG_ERROR( "Config %#: key '%#' is unknown to %# or its value %# cannot be read", pSourceLabel, pName, typeInfo._fullyQualifiedName.c_str(),
                           orphan._text.c_str() );
         }
+        const bool bWithinRange = isWithinRange( pInstance, typeInfo, pSourceLabel );
+        return listOrphan.empty() && bWithinRange;
+    }
+
+    bool ConfigManager::isWithinRange( const void* pInstance, const TypeInfo& typeInfo, const utf8* pSourceLabel )
+    {
         vector<string> listRangeError;
-        ConfigManagerInternal::collectRangeErrors( typeInfo, pInstance, string(), listRangeError );
+        SerializerUtil::collectRangeErrors( typeInfo, pInstance, string(), listRangeError );
         for ( const string& rangeError : listRangeError )
         {
-            SW_LOG_ERROR( "Config %#: %#", pSourceLabel, rangeError.c_str() );
+            SW_LOG_ERROR( "Config %# (%#): %#", pSourceLabel, typeInfo._fullyQualifiedName.c_str(), rangeError.c_str() );
         }
-        return listOrphan.empty() && listRangeError.empty();
+        return listRangeError.empty();
     }
 
     bool ConfigManager::collectEqualKeys( const void* pLeft, const void* pRight, const TypeInfo& typeInfo, string_view jsonStr, vector<string>& outListKey )

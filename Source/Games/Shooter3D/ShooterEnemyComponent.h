@@ -71,7 +71,9 @@ namespace sw
         float32       getRadius() const { return _radius; }
         float32       getHeight() const { return _height; }
         /** @brief 휘두르기를 시작하고 맞히는 거리입니다(AI 조종자가 `Attack` 을 누르는 거리). */
-        float32          getReach() const { return _reach; }
+        float32 getReach() const { return _reach; }
+        /** @brief 손 닿는 거리의 이 비율 안이면 멈춰 섭니다(내비 에이전트 정지 거리와 AI 조종자가 같이 읽습니다). */
+        float32          getStopFraction() const { return _stopFraction; }
         GameObjectHandle getDirector() const { return _director; }
 
     private:
@@ -90,6 +92,8 @@ namespace sw
         float32 _height;
         PROPERTY( Category = "Enemy", DisplayName = "Reach", Tooltip = "Starts a swing inside this distance", Min = 0.0, Units = m )
         float32 _reach;
+        PROPERTY( Category = "Enemy", DisplayName = "Stop Fraction", Tooltip = "Fraction of the reach at which the enemy stops walking (navmesh stopping distance and AI stop)", Min = 0.0, Max = 1.0, Units = ratio )
+        float32 _stopFraction;
         PROPERTY( Category = "Enemy", DisplayName = "Damage", Tooltip = "Damage per swing that lands", Min = 0.0 )
         float32 _damage;
         PROPERTY( Category = "Enemy", DisplayName = "Attack Interval", Tooltip = "Seconds between swings", Min = 0.0, Units = s )

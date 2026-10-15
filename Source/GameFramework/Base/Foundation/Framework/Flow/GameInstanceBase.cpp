@@ -176,7 +176,7 @@ namespace sw
      * @details 에디터 없이 다른 씬(환경 쇼케이스 등)을 띄워 볼 때 쓴다.
      * @note PowerShell 은 점이 든 인자를 쪼개므로 따옴표로 감싸야 한다.
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::string, gv_firstScene, "", "팩 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_firstScene, "", "팩 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함)" );
 
     const string& GameInstanceBase::getFirstScene() const
     {

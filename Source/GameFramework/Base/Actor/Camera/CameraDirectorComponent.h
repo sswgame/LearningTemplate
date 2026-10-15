@@ -25,6 +25,7 @@ namespace sw
 {
     class Archive;
     class ICameraCollisionProbe;
+    class InputMap;
 
     /**
      * @class CameraDirectorComponent
@@ -134,6 +135,11 @@ namespace sw
         CameraTarget computeTarget() const;
         /** @brief 이번 프레임 입력을 `InputManager` 에서 모읍니다. 켠 프리셋이 받는 것만 쓰입니다. */
         void gatherInput( float32 deltaTime );
+        /**
+         * @brief 켠 프리셋이 받는 조작(둘러보기 · 줌 · 팬 · 회전)의 액션이 입력 맵에 없으면 프리셋마다 한 번 알립니다.
+         * @details 맵에 없는 액션 질의는 로그 없이 0 이다 — 액션 이름을 바꾸면 그 프리셋의 조작이 조용히 죽는다. 받지 않는 조작의 액션은 없어도 된다.
+         */
+        void warnMissingPresetActions( const InputMap& inputMap, const CameraInputDef& inputDef );
         /** @brief 포토 모드 입력을 모아 자유 카메라에 넣습니다. 이동(`_panAction`), 둘러보기(`_lookAction`), 줌(`_zoomAction`)은 게임 카메라와 같은 액션을 씁니다. */
         void gatherPhotoModeInput( float32 unscaledDeltaTime );
         /** @brief 미뤄 둔 포즈 계산과 쓰기를 합니다. 틱 뒤 게임 스레드에서 돕니다. */
@@ -201,6 +207,7 @@ namespace sw
         CameraDirector               _director;
         vector<uint8>                _pendingStateBytes; ///< 시작 전에 받은 상태(`restoreState`) — 카탈로그를 읽은 뒤 적용한다
         const ICameraCollisionProbe* _pExternalProbe;
-        float32                      _pendingDeltaTime; ///< 틱이 모은 시간 — 미룬 계산이 쓴다
+        hashed_string                _inputCheckedPresetID; ///< 액션을 입력 맵에 대어 본 마지막 프리셋(`warnMissingPresetActions`)
+        float32                      _pendingDeltaTime;     ///< 틱이 모은 시간 — 미룬 계산이 쓴다
     };
 } // namespace sw

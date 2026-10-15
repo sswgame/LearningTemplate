@@ -51,9 +51,6 @@ namespace sw
                                                               "Farm.Use", "Farm.Ship", "Farm.Buy", "Farm.Sleep", "Farm.Status" };
             static_assert( sizeof( kArrButtonName ) / sizeof( kArrButtonName[0] ) == static_cast<size_t>( FarmButton::Count ), "one name per farm button" );
 
-            static constexpr float3 kDefaultShippingBinPosition{ 13.4f, 0.0f, 1.0f };
-            static constexpr float3 kDefaultShopPosition{ -1.6f, 0.0f, 5.0f };
-
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 harvestvalley.audioevents.xml 이 정한다.
             static constexpr const utf8* kEventSelect  = "ToolSelect";
             static constexpr const utf8* kEventPlant   = "Plant";
@@ -62,21 +59,6 @@ namespace sw
 
             /** @brief 공유 시계의 계절 이름입니다(시계 설정과 작물 카탈로그가 함께 씁니다). */
             static vector<hashed_string> makeSeasons() { return { hashed_string( "Spring" ), hashed_string( "Summer" ), hashed_string( "Fall" ), hashed_string( "Winter" ) }; }
-
-            static int32 getToolStaminaCost( FarmTool tool )
-            {
-                switch ( tool )
-                {
-                    case FarmTool::Hoe:
-                        return 4;
-                    case FarmTool::WateringCan:
-                        return 2;
-                    case FarmTool::Seeds:
-                    case FarmTool::Hand:
-                        return 1;
-                }
-                return 1;
-            }
 
             static const utf8* toToolName( FarmTool tool )
             {
@@ -203,6 +185,16 @@ namespace sw
         , _maxStamina{ 100 }
         , _startingGold{ 500 }
         , _secondsPerDay{ 144.0f }
+        , _daysPerSeason{ 28 }
+        , _wakeHour{ 6.0f }
+        , _passOutHour{ 2.0f }
+        , _shippingBinFallback{ 13.4f, 0.0f, 1.0f }
+        , _shopFallback{ -1.6f, 0.0f, 5.0f }
+        , _hoeStaminaCost{ 4 }
+        , _wateringStaminaCost{ 2 }
+        , _handStaminaCost{ 1 }
+        , _startingSeedCount{ 10 }
+        , _itemStackSize{ 99 }
         , _cropCatalog{}
         , _itemCatalog{}
         , _field{}
@@ -214,17 +206,17 @@ namespace sw
         , _arrSoilLook{}
         , _plainCropLook{}
         , _witheredCropLook{}
-        , _playerPosition{ 6.0f, 0.0f, -1.2f }
+        , _playerPosition{ _playerStart }
         , _facing{ 0.0f, 0.0f, 1.0f }
-        , _shippingBinPosition{ FarmDirectorComponentInternal::kDefaultShippingBinPosition }
-        , _shopPosition{ FarmDirectorComponentInternal::kDefaultShopPosition }
+        , _shippingBinPosition{ _shippingBinFallback }
+        , _shopPosition{ _shopFallback }
         , _random{ 0x2545f491u }
         , _autoFarmerObject{}
         , _stamina{ _maxStamina }
         , _selectedSeedIndex{ 0 }
         , _lastLoggedHour{ -1 }
         , _dayStarted{ 0 }
-        , _hourOfDay{ 6.0f }
+        , _hourOfDay{ _wakeHour }
         , _tool{ FarmTool::Hoe }
         , _bRaining{ SW_FALSE }
         , _bPossessionDirty{ SW_FALSE }
@@ -260,7 +252,7 @@ namespace sw
         {
             const WorldClock& clock = pState->getClock();
             _hourOfDay              = clock.getHour();
-            const bool bPassedOut   = _dayStarted < clock.getDay() && 2.0f <= clock.getHour();
+            const bool bPassedOut   = _dayStarted < clock.getDay() && _passOutHour <= clock.getHour();
             if ( bPassedOut )
             {
                 SW_LOG_INFO( "[Farm] it is 2 AM - the farmer passed out" );
@@ -405,12 +397,12 @@ namespace sw
             return false;
         }
         _itemCatalog = ItemCatalog{};
-        _cropCatalog.fillItemCatalog( _itemCatalog, 99 );
+        _cropCatalog.fillItemCatalog( _itemCatalog, _itemStackSize );
         SessionStateSettings settings;
         settings._clock._listSeason    = FarmDirectorComponentInternal::makeSeasons();
         settings._clock._secondsPerDay = _secondsPerDay;
-        settings._clock._startHour     = 6.0f;
-        settings._clock._daysPerSeason = 28;
+        settings._clock._startHour     = _wakeHour;
+        settings._clock._daysPerSeason = _daysPerSeason;
         settings._pItemCatalog         = &_itemCatalog;
         settings._inventorySlotCount   = kBagSlotCount;
         const bool bFresh              = pState->initialize( settings ) == SessionStateInitResult::Fresh;
@@ -425,13 +417,13 @@ namespace sw
         if ( bFresh )
         {
             pState->getWallet().add( _shipment.getCurrency(), _startingGold );
-            (void)pState->getInventory().addItem( _cropCatalog.getCrops().front()._seedItem, 10 );
+            (void)pState->getInventory().addItem( _cropCatalog.getCrops().front()._seedItem, _startingSeedCount );
         }
         _dayStarted = pState->getClock().getDay();
         _hourOfDay  = pState->getClock().getHour();
         // 씬에 놓인 출하함과 가게가 있으면 그 위치를 쓴다. 에디터에서 옮기면 농부가 서는 위치가 따라온다.
-        _shippingBinPosition = findObjectPosition( _shippingBin, FarmDirectorComponentInternal::kDefaultShippingBinPosition );
-        _shopPosition        = findObjectPosition( _shop, FarmDirectorComponentInternal::kDefaultShopPosition );
+        _shippingBinPosition = findObjectPosition( _shippingBin, _shippingBinFallback );
+        _shopPosition        = findObjectPosition( _shop, _shopFallback );
         _playerPosition      = _playerStart;
         _facing              = float3{ 0.0f, 0.0f, 1.0f };
         _stamina             = _maxStamina;
@@ -658,7 +650,7 @@ namespace sw
         int32 y        = 0;
         if ( findTargetTile( x, y ) == false )
             return;
-        const int32 cost = Internal::getToolStaminaCost( _tool );
+        const int32 cost = getToolStaminaCost( _tool );
         if ( _stamina < cost )
         {
             SW_LOG_INFO( "[Farm] too tired - press Z to sleep" );
@@ -779,7 +771,7 @@ namespace sw
         WorldClock&                  clock        = pState->getClock();
         [[maybe_unused]] const int32 earned       = _shipment.settleShipping( _cropCatalog, pState->getWallet() );
         const hashed_string          seasonBefore = clock.getSeasonName();
-        clock.advanceToHour( 6.0f ); // 수면. 다음 날 아침이 된다.
+        clock.advanceToHour( _wakeHour ); // 수면. 다음 날 아침이 된다.
         _dayStarted                               = clock.getDay();
         _hourOfDay                                = clock.getHour();
         [[maybe_unused]] const bool bSeasonChange = clock.getSeasonName() != seasonBefore;
@@ -854,6 +846,21 @@ namespace sw
         if ( _listSeed.empty() )
             return kNoSeed;
         return _listSeed[static_cast<size_t>( MathUtil::clamp( _selectedSeedIndex, 0, static_cast<int32>( _listSeed.size() ) - 1 ) )];
+    }
+
+    int32 FarmDirectorComponent::getToolStaminaCost( FarmTool tool ) const
+    {
+        switch ( tool )
+        {
+            case FarmTool::Hoe:
+                return _hoeStaminaCost;
+            case FarmTool::WateringCan:
+                return _wateringStaminaCost;
+            case FarmTool::Seeds:
+            case FarmTool::Hand:
+                return _handStaminaCost;
+        }
+        return _handStaminaCost;
     }
 
     float3 FarmDirectorComponent::findObjectPosition( GameObjectHandle handle, const float3& fallback ) const

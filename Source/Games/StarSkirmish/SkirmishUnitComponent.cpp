@@ -18,13 +18,7 @@ namespace sw
     {
         struct SkirmishUnitComponentInternal
         {
-            /**
-             * @brief Kenney Space Kit 모델을 맵 칸에 맞추는 비율입니다. 키트 모델은 크기가 제각각이라(안테나 0.75 · 격납고 3.3) 모델마다 가로 폭을
-             *        표에 두고, 건물은 차지하는 칸(footprint)의 0.9 배, 유닛은 충돌 지름의 1.6 배(위에서 내려다볼 때 원보다 조금 커야 배 모양이 읽힌다)로 늘린다.
-             */
-            static constexpr float32 kFootprintFill = 0.9f;
-            static constexpr float32 kUnitFill      = 1.6f;
-
+            /** @brief Kenney Space Kit 모델의 가로 폭 표입니다. 키트 모델은 크기가 제각각이라(안테나 0.75 · 격납고 3.3) 모델마다 폭을 두고 Footprint Fill · Unit Fill 로 늘린다. */
             static constexpr SkirmishUnitModel kArrUnitModel[] = {
                 {      "minerals",     "rock_crystals", 0.85f},
                 { "rich_minerals",     "rock_crystals", 0.85f},
@@ -55,6 +49,8 @@ namespace sw
     SkirmishUnitComponent::SkirmishUnitComponent()
         : _director{}
         , _airHeight{ 2.5f }
+        , _footprintFill{ 0.9f }
+        , _unitFill{ 1.6f }
         , _lastPosition{ 0.0f, 0.0f, 0.0f }
         , _unitID{}
         , _pShownLook{ nullptr }
@@ -112,7 +108,6 @@ namespace sw
 
     void SkirmishUnitComponent::onTick( float32 deltaTime )
     {
-        using Internal = SkirmishUnitComponentInternal;
         Component::onTick( deltaTime );
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
@@ -130,7 +125,7 @@ namespace sw
         float3            scale{};
         if ( pUnit->isResource() || pUnit->isBuilding() )
         {
-            const float32 size   = static_cast<float32>( def._footprint ) * Internal::kFootprintFill / _modelWidth;
+            const float32 size   = static_cast<float32>( def._footprint ) * _footprintFill / _modelWidth;
             float32       height = 1.0f;
             if ( pUnit->isResource() && def._resourceType != RTSResourceType::Gas )
                 height = 0.4f + 0.6f * ( def._resourceAmount > 0 ? static_cast<float32>( pUnit->_resourceLeft ) / static_cast<float32>( def._resourceAmount ) : 1.0f );
@@ -141,7 +136,7 @@ namespace sw
         }
         else
         {
-            const float32 size = def._radius * 2.0f * Internal::kUnitFill / _modelWidth;
+            const float32 size = def._radius * 2.0f * _unitFill / _modelWidth;
             scale              = float3{ size, size, size };
             position           = float3{ pUnit->_position._x, def._bAir != SW_FALSE ? _airHeight : 0.0f, pUnit->_position._z };
         }

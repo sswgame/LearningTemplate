@@ -65,9 +65,6 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        /** @brief 쓰러진 뒤 정리하기까지의 시간(s)입니다. 그동안 유닛이 납작해집니다. */
-        static constexpr float32 kDeathLinger = 0.8f;
-
         ArenaDirectorComponent();
         virtual ~ArenaDirectorComponent() override;
 
@@ -102,7 +99,9 @@ namespace sw
         GameObjectHandle getPlayerObject() const { return _playerObject; }
         float32          getArenaHalfSize() const { return _arenaHalfSize; }
         uint32           getWave() const { return _wave; }
-        uint32           getKillCount() const { return _killCount; }
+        /** @brief 쓰러진 뒤 정리하기까지의 시간(s)입니다. 그동안 유닛 뷰가 납작해집니다. */
+        float32 getDeathLinger() const { return _deathLinger; }
+        uint32  getKillCount() const { return _killCount; }
         /** @brief 이 판에서 플레이어 편이 쏜 투사체 수입니다(시나리오 프로브). */
         uint32 getPlayerShotCount() const { return _playerShotCount; }
         /** @brief 플레이어 폰을 지금 자동 전투 AI 가 조종하고 있으면 true 를 반환합니다(시나리오 프로브). */
@@ -200,6 +199,14 @@ namespace sw
         float32 _arenaHalfSize;
         PROPERTY( Category = "Arena", DisplayName = "Wave Radius", Tooltip = "Radius of the circle the enemies spawn on", Min = 0.0, Units = m )
         float32 _waveRadius;
+        PROPERTY( Category = "Arena", DisplayName = "Base Grunt Count", Tooltip = "Grunts in a wave on top of the wave number (wave N has this + N grunts)" )
+        uint32 _baseGruntCount;
+        PROPERTY( Category = "Arena", DisplayName = "Waves Per Caster", Tooltip = "One caster joins every this many waves", Min = 1 )
+        uint32 _wavesPerCaster;
+        PROPERTY( Category = "Arena", DisplayName = "Waves Per Level", Tooltip = "Enemy level rises by one every this many waves", Min = 1 )
+        uint32 _wavesPerLevel;
+        PROPERTY( Category = "Arena", DisplayName = "Death Linger", Tooltip = "Seconds a fallen unit stays (squashing) before it is removed", Min = 0.01, Units = s )
+        float32 _deathLinger;
         PROPERTY( Category = "Arena", DisplayName = "Player Respawn Delay", Tooltip = "Seconds before a fallen player stands up again", Min = 0.0, Units = s )
         float32 _playerRespawnDelay;
         PROPERTY( Category = "Look", DisplayName = "Player Tint", Meta = "Color", Tooltip = "Multiplies the palette texture of the player model" )

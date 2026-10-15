@@ -36,9 +36,10 @@ namespace sw
     /** @brief 한 판의 규칙 수치입니다. 디렉터의 PROPERTY 가 채웁니다. */
     struct SkirmishMatchSettings
     {
-        float32 _huntIntervalSeconds{ 4.0f }; ///< 적 시작 지점에 닿아 노는 병력을 남은 적 건물로 보내는 주기
-        float32 _arrivedRadius{ 10.0f };      ///< 적 시작 지점에서 이 안이면 "닿았다"(m)
-        int32   _startMinerals{ 50 };         ///< 플레이어마다 시작 광물
+        float32 _huntIntervalSeconds{ 4.0f };    ///< 적 시작 지점에 닿아 노는 병력을 남은 적 건물로 보내는 주기
+        float32 _arrivedRadius{ 10.0f };         ///< 적 시작 지점에서 이 안이면 "닿았다"(m)
+        int32   _startMinerals{ 50 };            ///< 플레이어마다 시작 광물
+        float32 _statusIntervalSeconds{ 30.0f }; ///< 판 상황 로그 주기
     };
 } // namespace sw
 

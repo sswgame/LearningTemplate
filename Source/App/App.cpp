@@ -56,7 +56,7 @@ namespace sw
             }
         };
 
-        /** @brief 엔진 설정에서 프레임 시간 정책 값을 꺼냅니다(기본값의 출처는 `EngineConfig` 의 초기값 하나다). */
+        /** @brief 엔진 설정에서 프레임 시간 정책 값을 꺼냅니다(값의 출처는 `Config/Engine/EngineConfig.json` 하나다). */
         struct AppTimeInternal
         {
             static FixedTimestepParams makeFixedTimestepParams( const EngineConfig& config )
@@ -91,7 +91,7 @@ namespace sw
         , _devConsole{}
         , _moduleHost{ nullptr }
         , _window{ nullptr }
-        , _fixedTimestep{ AppTimeInternal::makeFixedTimestepParams( EngineConfig{} ) }
+        , _fixedTimestep{}
         , _backendSwap{}
         , _userSettingsHost{}
         , _sceneViewCameraProvider{}

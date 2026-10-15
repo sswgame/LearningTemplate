@@ -110,6 +110,11 @@ SW_TEST_CASE( OnlineLoadBotTest, ScenarioRejectsUnknownActionsKeysAndValues )
     SW_EXPECT_FALSE( LoadBotScenario::loadText( R"({ "_botCount": 1, "_listStep": [ { "_action": "login", "_mode": "magic" } ] })", scenario, error ) );
     SW_EXPECT_FALSE( LoadBotScenario::loadText( R"({ "_botCount": 1, "_listStep": [ { "_action": "wait", "_minMs": 20, "_maxMs": 10 } ] })", scenario, error ) );
     SW_EXPECT_FALSE( LoadBotScenario::loadText( R"({ "_botCount": 1, "_listStep": [] })", scenario, error ) );
+    // 횟수 · 시간은 시나리오가 적는다 — 빠지면 읽는 코드가 숨은 기본값으로 채우지 않고 오류다.
+    SW_EXPECT_FALSE( LoadBotScenario::loadText( R"({ "_botCount": 1, "_listStep": [ { "_action": "chat_history", "_channel": "world" } ] })", scenario, error ) );
+    SW_EXPECT_TRUE( error.find( "_count" ) != string::npos );
+    SW_EXPECT_FALSE( LoadBotScenario::loadText( R"({ "_botCount": 1, "_listStep": [ { "_action": "wait_match" } ] })", scenario, error ) );
+    SW_EXPECT_TRUE( error.find( "_timeoutMs" ) != string::npos );
     SW_ASSERT_TRUE_MSG( LoadBotScenario::loadText( R"({ "_botCount": 2, "_listStep": [ { "_action": "repeat", "_count": 3,
                                                           "_listStep": [ { "_action": "wait", "_minMs": 10, "_maxMs": 20 } ] } ] })",
                                                    scenario, error ),

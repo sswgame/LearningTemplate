@@ -36,5 +36,7 @@ namespace sw
     private:
         PROPERTY( Category = "AI", DisplayName = "Retarget Distance", Tooltip = "The path is asked again when the player moved this far", Min = 0.0, Units = m )
         float32 _retargetDistance;
+        PROPERTY( Category = "AI", DisplayName = "Focus Height", Tooltip = "Height above the player's feet the enemy looks at", Min = 0.0, Units = m )
+        float32 _focusHeight;
     };
 } // namespace sw

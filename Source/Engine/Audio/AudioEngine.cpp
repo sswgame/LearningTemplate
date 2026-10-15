@@ -323,7 +323,7 @@ namespace sw
         }
         if ( pEvent == nullptr )
         {
-            SW_LOG_WARNING( "Unknown audio event '%#'", eventName.c_str() );
+            SW_LOG_ERROR( "Unknown audio event '%#'", eventName.c_str() );
             return 0;
         }
         for ( const AudioClipEntry& clip : pEvent->_listClip )

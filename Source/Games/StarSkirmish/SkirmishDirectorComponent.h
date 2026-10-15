@@ -128,6 +128,12 @@ namespace sw
         float32 _arrivedRadius;
         PROPERTY( Category = "Rules", DisplayName = "Start Minerals", Min = 0 )
         int32 _startMinerals;
+        PROPERTY( Category = "Debug", DisplayName = "Status Log Interval", Tooltip = "Seconds between match status log lines", Min = 0.1, Units = s )
+        float32 _statusLogInterval;
+        PROPERTY( Category = "Input", DisplayName = "Click Slop", Tooltip = "A drag shorter than this counts as a click", Min = 0.0, Units = m )
+        float32 _clickSlop;
+        PROPERTY( Category = "Input", DisplayName = "Max Selection", Tooltip = "Most units one selection holds", Min = 1 )
+        int32 _maxSelectionCount;
         PROPERTY( Category = "Look", DisplayName = "Player 0 Color", Tooltip = "Tint of player 0's units (multiplies the kit's white body)" )
         float4 _playerZeroColor;
         PROPERTY( Category = "Look", DisplayName = "Player 1 Color" )

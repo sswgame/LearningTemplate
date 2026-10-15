@@ -342,6 +342,40 @@ SW_TEST_CASE( ControlTest, PossessionMovesViewTargetAndInputLayer )
 }
 
 /**
+ * @brief [ControlTest] 빙의할 때 폰이 묻는 축 액션 · 입력 레이어가 맵에 없으면 알린다
+ * @details 맵에 없는 액션 질의는 로그 없이 0 이고, `pushLayer` 는 없는 레이어를 빈 레이어로 만든다 — 이름이 틀려도 조작이 조용히 죽는다.
+ *          폰의 기본 둘러보기 액션은 `Look` 인데 이 맵에는 없다. 변이: `warnMissingActions` 의 축 액션 검사나 `onPossessed` 의 레이어 검사를 빼면 진다.
+ */
+SW_TEST_CASE( ControlTest, PossessionWarnsAboutAxisActionsAndLayersTheMapLacks )
+{
+    using Internal = ControlTestInternal;
+    InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    input.getInputMap().bindVector2D( "Move", Key::W, Key::S, Key::A, Key::D, 0.0f, "OnFoot" );
+    input.getInputMap().bind( "Jump", Key::Space );
+    {
+        GameObjectManager manager;
+        GameObject*       pWalker = Internal::spawnPawn( manager, "Walker", float3{} );
+        GameObject*       pRider  = Internal::spawnPawn( manager, "Rider", float3{ 5.0f, 0.0f, 0.0f } );
+        pWalker->getComponent<PawnComponent>()->setInputLayer( "OnFoot" );
+        pRider->getComponent<PawnComponent>()->setInputLayer( "Horse" );
+        PlayerControllerComponent* pPlayer = manager.createGameObject( hashed_string( "Player" ) )->addComponent<PlayerControllerComponent>();
+        ControlSystem::ensureFor( manager ).setInputManager( &input );
+        manager.beginPlay();
+
+        test::ScopedLogCollector logs;
+        pPlayer->possess( *pWalker->getComponent<PawnComponent>() );
+        SW_EXPECT_TRUE_MSG( logs.countContaining( "axis action 'Look' has no InputMap action" ) == 1u, logs.joined().c_str() );
+        SW_EXPECT_TRUE_MSG( logs.countContaining( "axis action 'Move'" ) == 0u, logs.joined().c_str() );     // 이동 액션은 맵에 있다
+        SW_EXPECT_TRUE_MSG( logs.countContaining( "is not in the InputMap" ) == 0u, logs.joined().c_str() ); // OnFoot 레이어는 맵에 있다
+        pPlayer->possess( *pRider->getComponent<PawnComponent>() );
+        SW_EXPECT_TRUE_MSG( logs.countContaining( "input layer 'Horse' is not in the InputMap" ) == 1u, logs.joined().c_str() );
+        manager.endPlay();
+    }
+    input.shutdown();
+}
+
+/**
  * @brief [ControlTest] 남이 쥔 폰을 쥐면 그 조종자가 놓는다 — 폰 하나에 조종자 하나, 조종자를 지우면 폰이 풀린다
  */
 SW_TEST_CASE( ControlTest, PossessingATakenPawnReleasesTheOtherController )

@@ -79,6 +79,8 @@ namespace sw
         float32 _minPlayRate;
         PROPERTY( Category = "Avatar", DisplayName = "Max Play Rate", Tooltip = "Fastest play rate speed matching may choose", Min = 0.0 )
         float32 _maxPlayRate;
+        PROPERTY( Category = "Avatar", DisplayName = "Min Locomotion Foot Speed", Tooltip = "A clip whose feet move slower than this is not a locomotion clip and keeps its play rate", Min = 0.0, Units = "m/s" )
+        float32 _minLocomotionFootSpeed;
 
         LocomotionDirectionFilter                    _locomotion;
         unordered_map<const AnimationClip*, float32> _mapClipFootSpeed; ///< 클립마다 한 번 측정한 발 속도(m/s)

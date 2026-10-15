@@ -15,27 +15,18 @@ namespace sw
     {
         struct NileCityPlannerInternal
         {
-            static constexpr float32 kRiverHalfWidth    = 1.5f; ///< 강 반폭(칸)
-            static constexpr float32 kEastFloodWidth    = 8.0f; ///< 동쪽 범람원 폭 — 농장 · 도시가 이쪽에 선다
-            static constexpr float32 kWestFloodWidth    = 3.0f;
-            static constexpr int32   kRoadX             = 17; ///< 범람원 농장과 도시 사이 남북 도로
-            static constexpr int32   kFarmX             = 14; ///< 3×3 농장의 왼쪽 — x 13..16 은 어느 줄에서나 범람원이다
-            static constexpr int32   kDesertStartX      = 40;
-            static constexpr int32   kSecondBlockPeople = 60;
-            static constexpr int32   kThirdBlockPeople  = 160;
-
             /** @brief 동쪽 사막이 시작하는 x(실수)입니다 — 모래 언덕처럼 굽는다. */
-            static float32 computeDesertEdge( int32 y )
+            static float32 computeDesertEdge( const NileCityLayout& layout, int32 y )
             {
-                return static_cast<float32>( kDesertStartX ) + 1.5f * MathUtil::sin( static_cast<float32>( y ) * 0.3f );
+                return static_cast<float32>( layout._desertStartX ) + layout._desertDuneHeight * MathUtil::sin( static_cast<float32>( y ) * layout._desertDuneRate );
             }
 
-            /** @brief 사막의 바위 — 흩어진 돌과 동쪽 끝 능선입니다. */
-            static bool isRock( int32 x, int32 y )
+            /** @brief 사막의 바위 — 흩어진 돌(결정적 무늬)과 동쪽 끝 능선입니다. */
+            static bool isRock( const NileCityLayout& layout, int32 x, int32 y )
             {
                 if ( ( x * 7 + y * 3 ) % 13 == 0 )
                     return true;
-                return x >= 45 && ( y / 4 ) % 3 == 0;
+                return x >= layout._rockRidgeX && ( y / 4 ) % 3 == 0;
             }
         };
     } // namespace
@@ -48,7 +39,6 @@ namespace sw
         , _nextStep{ 0 }
         , _skippedCount{ 0 }
     {
-        reset();
     }
 
     void NileCityPlanner::writeState( Archive& outArchive ) const
@@ -72,29 +62,29 @@ namespace sw
         return true;
     }
 
-    float32 NileCityPlanner::computeRiverCenter( int32 y )
+    float32 NileCityPlanner::computeRiverCenter( const NileCityLayout& layout, int32 y )
     {
-        return 9.0f + 2.0f * MathUtil::sin( static_cast<float32>( y ) * 0.22f );
+        return layout._riverCenterX + layout._riverMeander * MathUtil::sin( static_cast<float32>( y ) * layout._riverMeanderRate );
     }
 
-    void NileCityPlanner::paintTerrain( CitySimulation& city )
+    void NileCityPlanner::paintTerrain( CitySimulation& city, const NileCityLayout& layout )
     {
         for ( int32 y = 0; y < city.getHeight(); ++y )
         {
-            const float32 river  = computeRiverCenter( y );
-            const float32 desert = NileCityPlannerInternal::computeDesertEdge( y );
+            const float32 river  = computeRiverCenter( layout, y );
+            const float32 desert = NileCityPlannerInternal::computeDesertEdge( layout, y );
             for ( int32 x = 0; x < city.getWidth(); ++x )
             {
                 const float32 offset  = static_cast<float32>( x ) + 0.5f - river;
                 CityTerrain   terrain = CityTerrain::Grass;
-                if ( MathUtil::abs( offset ) <= NileCityPlannerInternal::kRiverHalfWidth )
+                if ( MathUtil::abs( offset ) <= layout._riverHalfWidth )
                     terrain = CityTerrain::Water;
-                else if ( offset > 0.0f && offset <= NileCityPlannerInternal::kRiverHalfWidth + NileCityPlannerInternal::kEastFloodWidth )
+                else if ( offset > 0.0f && offset <= layout._riverHalfWidth + layout._eastFloodWidth )
                     terrain = CityTerrain::Floodplain;
-                else if ( offset < 0.0f && offset >= -( NileCityPlannerInternal::kRiverHalfWidth + NileCityPlannerInternal::kWestFloodWidth ) )
+                else if ( offset < 0.0f && offset >= -( layout._riverHalfWidth + layout._westFloodWidth ) )
                     terrain = CityTerrain::Floodplain;
                 else if ( offset < 0.0f || static_cast<float32>( x ) + 0.5f >= desert )
-                    terrain = NileCityPlannerInternal::isRock( x, y ) && offset > 0.0f ? CityTerrain::Rock : CityTerrain::Sand;
+                    terrain = NileCityPlannerInternal::isRock( layout, x, y ) && offset > 0.0f ? CityTerrain::Rock : CityTerrain::Sand;
                 city.setTerrain( x, y, terrain );
             }
         }
@@ -119,9 +109,8 @@ namespace sw
         _listStep.push_back( step );
     }
 
-    void NileCityPlanner::reset()
+    void NileCityPlanner::reset( const NileCityLayout& layout )
     {
-        using Internal = NileCityPlannerInternal;
         _listStep.clear();
         _nextStep              = 0;
         _skippedCount          = 0;
@@ -134,14 +123,14 @@ namespace sw
         };
 
         // 1 구역(x 18..26, y 5..13) — 도로 고리 · 우물 · 농장 · 창고 · 바자 · 집 · 신전.
-        addRoad( int2{ Internal::kRoadX, 4 }, int2{ 27, 4 }, 0 );
-        addRoad( int2{ Internal::kRoadX, 4 }, int2{ Internal::kRoadX, 14 }, 0 );
+        addRoad( int2{ layout._roadX, 4 }, int2{ 27, 4 }, 0 );
+        addRoad( int2{ layout._roadX, 4 }, int2{ layout._roadX, 14 }, 0 );
         addRoad( int2{ 27, 4 }, int2{ 27, 14 }, 0 );
-        addRoad( int2{ Internal::kRoadX, 14 }, int2{ 27, 14 }, 0 );
+        addRoad( int2{ layout._roadX, 14 }, int2{ 27, 14 }, 0 );
         addBuilding( "well", 19, 11, 0 );
         addBuilding( "well", 23, 11, 0 );
-        addBuilding( "grain_farm", Internal::kFarmX, 5, 0 );
-        addBuilding( "grain_farm", Internal::kFarmX, 8, 0 );
+        addBuilding( "grain_farm", layout._farmX, 5, 0 );
+        addBuilding( "grain_farm", layout._farmX, 8, 0 );
         addBuilding( "granary", 18, 5, 0 );
         addBuilding( "bazaar", 21, 5, 0 );
         addHouseRow( 18, 26, 13, 0 );
@@ -156,10 +145,10 @@ namespace sw
         addBuilding( "tax_collector", 18, 8, 20 );
         addBuilding( "juggler", 24, 5, 40 );
         addBuilding( "apothecary", 18, 10, 60 );
-        addBuilding( "fig_farm", Internal::kFarmX, 11, 60 );
+        addBuilding( "fig_farm", layout._farmX, 11, 60 );
 
         // 2 구역(x 28..36, y 5..13) — 물 공급 · 공방 · 저장 마당 · 두 번째 바자 · 학교.
-        const int32 second = Internal::kSecondBlockPeople;
+        const int32 second = layout._secondBlockPeople;
         addRoad( int2{ 27, 4 }, int2{ 37, 4 }, second );
         addRoad( int2{ 37, 4 }, int2{ 37, 14 }, second );
         addRoad( int2{ 27, 14 }, int2{ 37, 14 }, second );
@@ -180,14 +169,14 @@ namespace sw
         addBuilding( "garden", 33, 9, second + 60 );
 
         // 3 구역(y 15..23) — 농장을 늘리고 집 네 줄 · 광장 · 둘째 서비스.
-        const int32 third = Internal::kThirdBlockPeople;
-        addRoad( int2{ Internal::kRoadX, 14 }, int2{ Internal::kRoadX, 24 }, third );
+        const int32 third = layout._thirdBlockPeople;
+        addRoad( int2{ layout._roadX, 14 }, int2{ layout._roadX, 24 }, third );
         addRoad( int2{ 27, 14 }, int2{ 27, 24 }, third );
         addRoad( int2{ 37, 14 }, int2{ 37, 24 }, third );
-        addRoad( int2{ Internal::kRoadX, 24 }, int2{ 37, 24 }, third );
-        addBuilding( "grain_farm", Internal::kFarmX, 15, third );
-        addBuilding( "fig_farm", Internal::kFarmX, 18, third );
-        addBuilding( "grain_farm", Internal::kFarmX, 21, third );
+        addRoad( int2{ layout._roadX, 24 }, int2{ 37, 24 }, third );
+        addBuilding( "grain_farm", layout._farmX, 15, third );
+        addBuilding( "fig_farm", layout._farmX, 18, third );
+        addBuilding( "grain_farm", layout._farmX, 21, third );
         addBuilding( "well", 20, 18, third );
         addBuilding( "well", 30, 18, third );
         addBuilding( "well", 34, 18, third );
