@@ -571,9 +571,6 @@
   같은 래스터라이저를 고를 수 있다. 2026-10-06 이 PC 의 WARP(DX12 · DX11)로 `RenderPassGPUTest.*` 71 개 픽셀 테스트이 모두 통과했다(Vulkan 은 CPU 디바이스가
   없어 빠지고 GL 은 하드웨어) — WARP 자체는 컴퓨트 컬링 · 인디렉트를 한다. 러너 쪽(WARP 판 · 창 없는 세션)을 다음 CI 실패의 주석으로 가른다.
 
-- `E-9` **Windows Shipping `CrashBundleTest.RealCrashLeavesABundle` 의 `crash.dmp` 가 0 바이트**(CI 실행 38439985866, `TestCrashBundle.cpp:370`, 그 앞 38421186200 은 통과).
-  로컬 Ninja-Shipping 3 회는 통과해 재현되지 않았다. 2026-10-14 로컬 Shipping `nogpu` 병렬 실행에서 한 번 같은 증상(단독 3 회는 통과). 의심: 자식 프로세스가 덤프를 쓰기 전에 끝남(덤프 쓰기 시점) · dbghelp 로드. 크래시 핸들러가 서브시스템으로 다시 쓰인 뒤 새 기준에서 다시 본다. 2026-10-15 wt/structure Shipping: 병렬 nogpu 에서 1 회, 단독 7 회 중 2 회 실패(다른 작업자의 빌드 · 테스트가 겹친 때) — 부하에 따라 난다. 같은 때 옛 main Shipping 빌드는 단독 3/3 통과.
-
 - `E-10` **Linux Shipping `EngineTest_NoGPU_Shard5` 가 종료에서 멈춰 180 초 시간 초과**(CI 실행 38439985866). 케이스는 모두 통과하고 요약까지 찍힌 뒤
   `[TestHost] stopping: destroying objects`(`TestHostRuntime::stop` 의 `destroyAll`)에서 끝나지 않았다. 같은 실행의 오디오 디코드 태스크 수명 결함(해제된 `AudioClipCache` 를 워커가 씀 — 고쳤다)이
   워커를 망가뜨려 태스크 매니저 join 이 멈춘 것인지 미확정. 종료 경로가 서브시스템 분해로 다시 쓰인 뒤 새 기준에서 다시 본다.
