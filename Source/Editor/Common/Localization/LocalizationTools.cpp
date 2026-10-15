@@ -141,8 +141,7 @@ namespace sw
                 TranslationTable translation;
                 translation.setCulture( culture );
                 string error;
-                cultureReport._bShipped = FileUtil::exists( path );
-                if ( cultureReport._bShipped && translation.loadFromFile( path, &error ) == false )
+                if ( FileUtil::exists( path ) && translation.loadFromFile( path, &error ) == false )
                 {
                     inoutResult._report._listIssue.push_back( { path, error, true } );
                     return;
@@ -520,6 +519,7 @@ namespace sw
         for ( const string& culture : project._listCulture )
         {
             LocalizationToolsInternal::updateTranslation( absolute, culture, mapSource, bWrite, outResult );
+            outResult._listCulture.back()._bStaged = project.isStagedCulture( culture );
         }
         return true;
     }
@@ -577,8 +577,8 @@ namespace sw
         }
         for ( const LocalizationCultureReport& culture : result._listCulture )
         {
-            const bool bIncompleteShipped = culture._bShipped && culture.countIncomplete() > 0;
-            if ( bIncompleteShipped == false )
+            const bool bIncompleteStaged = culture._bStaged && culture.countIncomplete() > 0;
+            if ( bIncompleteStaged == false )
                 continue;
             SW_LOG_ERROR( "[CheckText] project '%#' culture '%#': %# missing, %# stale, %# review - translate them (or --export-po / --import-po)", result._projectName.c_str(),
                           culture._culture.c_str(), culture._missingCount, culture._staleCount, culture._reviewCount );

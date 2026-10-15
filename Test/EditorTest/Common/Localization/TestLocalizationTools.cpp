@@ -164,17 +164,24 @@ SW_TEST_CASE( LocalizationGatherTest, RepositoryProjectsAreUpToDate )
 }
 
 /**
- * @brief [LocalizationGatherTest] 확인 모드는 번역 테이블이 있는 문화권의 빠진 번역을 실패로 본다 — 테이블이 없는 문화권(PO 만 낸 것)은 개수만 센다
+ * @brief [LocalizationGatherTest] 확인 모드는 출시 문화권(`stagedCultures`)의 빠진 번역을 실패로 본다 — 목록 밖 문화권(PO 만 낸 것)은 개수만 센다
+ * @details 판정은 번역 테이블 파일이 있는지가 아니라 프로젝트 목록이다. 목록에 있는데 테이블이 없으면 전부 빠진 번역으로 진다.
  */
-SW_TEST_CASE( LocalizationGatherTest, CheckFailsOnMissingTranslationOfAShippedCulture )
+SW_TEST_CASE( LocalizationGatherTest, CheckFailsOnMissingTranslationOfAStagedCulture )
 {
-    const sw::string repositoryRoot = test::makeTempDirectory( "loc_check_shipped" );
+    sw::LocalizationProject project;
+    sw::string              error;
+    SW_TEST_DEFENSIVE_SCOPE( "staged cultures: a list outside cultures is rejected and missing staged translations fail --check-text" );
+    SW_EXPECT_FALSE( project.loadFromJSONText( R"({ "name": "p", "sourceCulture": "en", "cultures": [ "ko" ], "stagedCultures": [ "ja" ], "stringTables": [ "a" ] })", "p", &error ) );
+    SW_EXPECT_TRUE( error.find( "stagedCultures" ) != sw::string::npos );
+
+    const sw::string repositoryRoot = test::makeTempDirectory( "loc_check_staged" );
     const sw::string codeFolder     = sw::FileUtil::joinPath( repositoryRoot, "Code" );
     SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( codeFolder ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( codeFolder, "Menu.cpp" ),
                                                  R"(auto a = SW_LOCTEXT( "Menu", "Start", "Start" ); auto b = SW_LOCTEXT( "Menu", "Quit", "Quit" );)" ) );
     const sw::string locFolder   = sw::FileUtil::joinPath( repositoryRoot, "Loc" );
-    const sw::string projectPath = LocalizationTestUtil::writeProject( locFolder, "en", R"([ "ko", "ja" ])", R"("codeRoots": [ "Code" ])" );
+    const sw::string projectPath = LocalizationTestUtil::writeProject( locFolder, "en", R"([ "ko", "ja" ])", R"("stagedCultures": [ "ko" ], "codeRoots": [ "Code" ])" );
     LocalizationTestUtil::writeSourceTable( locFolder, "en", R"("Menu.Start": { "source": "Start", "origins": [ "Code/Menu.cpp" ] }, "Menu.Quit": { "source": "Quit", "origins": [ "Code/Menu.cpp" ] })" );
     LocalizationTestUtil::writeTranslation( locFolder, "ko", R"("Menu.Start": { "text": "시작" })" );
 
@@ -184,19 +191,22 @@ SW_TEST_CASE( LocalizationGatherTest, CheckFailsOnMissingTranslationOfAShippedCu
     SW_ASSERT_TRUE( sw::LocalizationTools::gatherProject( projectPath, repositoryRoot, false, result ) );
     SW_EXPECT_FALSE( result._bOutOfDate );
     SW_ASSERT_EQUAL( size_t( 2 ), result._listCulture.size() );
-    SW_EXPECT_TRUE( result._listCulture[0]._bShipped );
+    SW_EXPECT_TRUE( result._listCulture[0]._bStaged );
     SW_EXPECT_EQUAL( uint32( 1 ), result._listCulture[0]._missingCount );
-    SW_EXPECT_FALSE( result._listCulture[1]._bShipped );
+    SW_EXPECT_FALSE( result._listCulture[1]._bStaged );
     SW_EXPECT_EQUAL( uint32( 2 ), result._listCulture[1]._missingCount );
-    {
-        SW_TEST_DEFENSIVE_SCOPE( "a shipped culture with a missing translation fails --check-text" );
-        SW_EXPECT_FALSE( sw::LocalizationTools::isCheckClean( result ) );
-    }
+    SW_EXPECT_FALSE( sw::LocalizationTools::isCheckClean( result ) ); // ko 의 Menu.Quit
 
     LocalizationTestUtil::writeTranslation( locFolder, "ko", R"("Menu.Start": { "text": "시작" }, "Menu.Quit": { "text": "종료" })" );
     SW_ASSERT_TRUE( sw::LocalizationTools::gatherProject( projectPath, repositoryRoot, true, result ) );
     SW_ASSERT_TRUE( sw::LocalizationTools::gatherProject( projectPath, repositoryRoot, false, result ) );
-    SW_EXPECT_TRUE( sw::LocalizationTools::isCheckClean( result ) ); // ja 는 테이블이 없어 빠진 번역 둘을 세기만 한다
+    SW_EXPECT_TRUE( sw::LocalizationTools::isCheckClean( result ) ); // ja 는 목록 밖이라 빠진 번역 둘을 세기만 한다
+
+    // ja 를 출시 목록에 넣으면 번역 테이블이 없어도 빠진 번역 둘로 진다.
+    (void)LocalizationTestUtil::writeProject( locFolder, "en", R"([ "ko", "ja" ])", R"("stagedCultures": [ "ko", "ja" ], "codeRoots": [ "Code" ])" );
+    SW_ASSERT_TRUE( sw::LocalizationTools::gatherProject( projectPath, repositoryRoot, false, result ) );
+    SW_EXPECT_TRUE( result._listCulture[1]._bStaged );
+    SW_EXPECT_FALSE( sw::LocalizationTools::isCheckClean( result ) );
 }
 
 /**

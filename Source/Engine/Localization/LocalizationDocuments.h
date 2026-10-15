@@ -163,6 +163,8 @@ namespace sw
      *            "codeRoots": [ "Source/Engine" ], "assetRoots": [ "engine/settings" ] }` 형태이며, 테이블 이름은 프로젝트 파일 옆의 상대 경로, `codeRoots` 는 저장소 상대 경로,
      *          `assetRoots` 는 리소스 경로다. 수집기는 첫 테이블(`stringTables[0]`)에 쓴다. 번역 테이블은 문화권마다 `<culture>.translation.json`,
      *          번역 메모리는 `tm/<culture>.tm.json`, 교환 파일은 `po/<culture>.po` 이다. 파일을 훑지 않고 이름으로 읽으므로 팩 안에서도 같다.
+     *          `stagedCultures` 는 출시하는 문화권이다(언리얼 패키징 설정의 Cultures to Stage). `cultures` 의 부분 집합이어야 하고, `--check-text` 는 이 문화권의
+     *          빠지거나 낡은 번역을 실패로 본다. 목록 밖 문화권은 번역 중으로 보고 개수만 보고한다.
      */
     class SW_API LocalizationProject
     {
@@ -176,10 +178,13 @@ namespace sw
         static string makeSiblingPath( string_view projectPath, string_view fileName );
         /** @brief 문화권 번역 테이블 경로(`<폴더>/<culture>.translation.json`)입니다. */
         static string makeTranslationPath( string_view projectPath, string_view culture );
+        /** @brief @p culture 가 출시 문화권(`stagedCultures`)이면 true 입니다. */
+        bool isStagedCulture( string_view culture ) const;
 
         string                        _name;
         string                        _sourceCulture;
         vector<string>                _listCulture;
+        vector<string>                _listStagedCulture;
         vector<string>                _listStringTable;
         vector<string>                _listCodeRoot;
         vector<string>                _listAssetRoot;

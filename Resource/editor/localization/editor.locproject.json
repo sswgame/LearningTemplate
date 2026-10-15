@@ -2,6 +2,7 @@
     "name": "editor",
     "sourceCulture": "en",
     "cultures": [ "ko" ],
+    "stagedCultures": [ "ko" ],
     "stringTables": [ "editor.strings.json" ],
     "codeRoots": [ "Source/Editor" ],
     "assetRoots": []
