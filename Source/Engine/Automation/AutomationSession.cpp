@@ -8,7 +8,12 @@
 
 #include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationScenarioChain.h"
+#include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
+#include "Engine/Window/IWindow.h"
 
 namespace sw
 {
@@ -17,6 +22,9 @@ namespace sw
     AutomationSession::AutomationSession()
         : _pRunner{ nullptr }
         , _pChain{ nullptr }
+        , _recorder{}
+        , _listRecordProbe{}
+        , _recordPath{}
         , _reportPath{}
         , _workingFolder{}
         , _screenshotBaseline{ 0 }
@@ -30,6 +38,65 @@ namespace sw
         // 실행기가 로그 리스너 · 입력을 빌려 쓴다 — 엔진 서비스가 사라지기 전에 비운다.
         _pRunner.reset();
         _pChain.reset();
+        _recordPath.clear();
+    }
+
+    bool AutomationSession::beginRecording( string_view outputPath, string_view probeList )
+    {
+        if ( ScenarioRecorder::isAllowedOutputPath( outputPath ) == false )
+        {
+            SW_LOG_ERROR( "[ScenarioRecord] the output must be a relative path under Saved/Automation/ ending in .scenario.xml, got '%#'", string( outputPath ).c_str() );
+            return false;
+        }
+        _recordPath      = string( outputPath );
+        _listRecordProbe = AutomationScenarioChain::splitList( probeList );
+        SW_LOG_INFO( "[ScenarioRecord] recording the play into %# (%# checkpoint(s))", _recordPath.c_str(), static_cast<uint32>( _listRecordProbe.size() ) );
+        return true;
+    }
+
+    void AutomationSession::startRecordingWhenReady()
+    {
+        if ( _recordPath.empty() || _recorder.isRecording() )
+            return;
+        Scene*                   pScene   = engine::getSubsystem<SceneManager>().getActiveScene();
+        const GameObjectManager* pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
+        const bool               bReady   = pManager != nullptr && pManager->hasBegunPlay() && AutomationStepRegistry::isStartBlocked() == false;
+        if ( bReady )
+            _recorder.start();
+    }
+
+    void AutomationSession::finishRecording()
+    {
+        if ( _recorder.isRecording() == false )
+            return;
+        ScenarioRecordSettings settings;
+        settings._name                    = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( _recordPath ) ) ); // a.scenario.xml → a
+        settings._fixedDelta              = _pRunner != nullptr ? _pRunner->getScenario().getFixedDelta() : settings._fixedDelta;
+        settings._firstFrame              = 0;
+        settings._bIncludeSynthetic       = true;
+        settings._bStartWhenScenePlaying  = true;
+        const IWindow* pWindow            = IWindow::getActiveWindow();
+        settings._clientWidth             = pWindow != nullptr ? pWindow->getWidth() : 0;
+        settings._clientHeight            = pWindow != nullptr ? pWindow->getHeight() : 0;
+        Scene*                   pScene   = engine::getSubsystem<SceneManager>().getActiveScene();
+        const GameObjectManager* pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
+        for ( const string& spec : _listRecordProbe )
+        {
+            ScenarioRecordCheckpoint checkpoint;
+            string                   error;
+            if ( ScenarioRecorder::readCheckpoint( spec, pManager, checkpoint, error ) )
+                settings._listCheckpoint.push_back( std::move( checkpoint ) );
+            else
+                SW_LOG_WARNING( "[ScenarioRecord] checkpoint %# skipped: %#", spec.c_str(), error.c_str() );
+        }
+        const ScenarioRecordOutput output = _recorder.stop( settings );
+        if ( FileUtil::ensureParentDirectoryExists( _recordPath ) == false || FileUtil::writeTextFile( _recordPath, output._xmlText ) == false )
+        {
+            SW_LOG_ERROR( "[ScenarioRecord] could not write %#", _recordPath.c_str() );
+            return;
+        }
+        SW_LOG_INFO( "[ScenarioRecord] wrote %# (%# step(s), %# checkpoint(s), %# event(s) skipped)", _recordPath.c_str(), output._writtenStepCount,
+                     static_cast<uint32>( settings._listCheckpoint.size() ), output._skippedEventCount );
     }
 
     bool AutomationSession::begin( string_view scenarioArgument, string_view reportPath, bool bKeepGoing, uint32 completedScreenshotCount )
@@ -74,12 +141,16 @@ namespace sw
 
     void AutomationSession::onFrameBegin( const EngineFrameContext& context )
     {
+        startRecordingWhenReady();
         if ( _pRunner != nullptr && context._pInput != nullptr )
             _pRunner->onFrameBegin( *context._pInput );
     }
 
     int32 AutomationSession::onFrameEnd( const EngineFrameContext& context )
     {
+        // 녹화는 시나리오보다 먼저 이 프레임을 적는다 — 시나리오가 이 프레임에 끝나도 마지막 프레임이 녹화에 든다.
+        if ( _recorder.isRecording() && context._pInput != nullptr )
+            _recorder.update( *context._pInput, context._deltaSeconds );
         // `isActive` 가 아니라 `hasEnded` — 시작 프레임에서 진 시나리오(읽기 오류 · 시작 시한)도 여기서 끝맺고 그 코드로 끝난다.
         const bool bNoRunnerToUpdate = _pRunner == nullptr || _pRunner->hasEnded() || context._pInput == nullptr;
         if ( bNoRunnerToUpdate )
@@ -89,7 +160,10 @@ namespace sw
         const AutomationResult result = _pRunner->onFrameEnd( *context._pInput );
         if ( result == AutomationResult::Running )
             return kRunning;
-        return onStageEnded( static_cast<int32>( result ), completedScreenshotCount );
+        const int32 exitCode = onStageEnded( static_cast<int32>( result ), completedScreenshotCount );
+        if ( exitCode != kRunning )
+            finishRecording();
+        return exitCode;
     }
 
     int32 AutomationSession::onStageEnded( int32 resultCode, uint32 completedScreenshotCount )
@@ -120,6 +194,7 @@ namespace sw
 
     int32 AutomationSession::onWindowClosed( const EngineFrameContext& context )
     {
+        finishRecording();
         // 이미 끝난 세션은 정하지 않는다 — 종료 코드는 끝낸 프레임(`onStageEnded`)이 체인 전체의 결과로 정했다. 여기서 러너의 결과를 돌려주면
         // 마지막 단계의 결과(통과 0)가 앞 단계의 실패(10)를 덮는다(엔진 루프는 창 닫힘 관찰자의 코드를 앞선 종료 요청보다 앞세운다).
         if ( _pRunner == nullptr || _pRunner->hasEnded() )

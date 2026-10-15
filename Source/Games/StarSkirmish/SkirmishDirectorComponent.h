@@ -59,8 +59,9 @@ namespace sw
         void writeState( Archive& outArchive ) const override;
 
         // ---- 뷰가 읽는 것(PostUpdate. 디렉터가 쓰지 않는 그룹) ----
-        const RTSWorld& getWorld() const { return _match.getWorld(); }
-        bool            isSelected( RTSUnitID unitID ) const { return _selection.isSelected( unitID ); }
+        const RTSWorld&      getWorld() const { return _match.getWorld(); }
+        const SkirmishMatch& getMatch() const { return _match; }
+        bool                 isSelected( RTSUnitID unitID ) const { return _selection.isSelected( unitID ); }
         /** @brief 유닛 주인(또는 자원 종류)과 선택 여부를 반환합니다. 아직 없으면 비어 있습니다. */
         const shared_ptr<MaterialInstance>& findUnitLook( const RTSUnit& unit, bool bSelected ) const;
         /** @brief 끌어서 선택하는 중이면 true 를 반환하고, 땅 위 상자의 중심과 크기를 채웁니다. */

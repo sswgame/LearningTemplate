@@ -2,6 +2,7 @@
 
 #include "Engine/Automation/AutomationRunner.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
@@ -10,6 +11,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Automation/AutomationActionSteps.h"
 #include "Engine/Automation/AutomationEnvironmentSteps.h"
 #include "Engine/Automation/AutomationImageMetric.h"
 #include "Engine/Automation/AutomationProbe.h"
@@ -20,6 +22,8 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/RawInputEvent.h"
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
@@ -207,20 +211,37 @@ namespace sw
                 return true;
             }
 
-            /** @brief 탐침 단계(`Expect`, `WaitUntil`)의 공통 부분입니다. 탐침이 있고 비교가 정확히 하나이며 수로 읽혀야 합니다. */
-            static bool validateProbeComparison( const AutomationStep& step, string& outError )
+            /** @brief 탐침 이름과 그 탐침이 꼭 받아야 하는 `target` · `key` 를 봅니다. */
+            static bool validateProbeReference( const AutomationStep& step, string& outError )
             {
                 const string* pProbe = requireAttribute( step, "probe", outError );
                 if ( pProbe == nullptr )
                     return false;
-                if ( AutomationProbes::find( *pProbe ) == nullptr )
+                const AutomationProbeRegistration* pRegistration = AutomationProbes::find( *pProbe );
+                if ( pRegistration == nullptr )
                 {
                     outError = step.describe() + ": unknown probe '" + *pProbe + "' (is the game that registers it running?)";
                     return false;
                 }
-                if ( countComparisons( step, { "equals", "near", "atLeast", "atMost" } ) == false )
+                const bool bQueryOnlyAttribute = pRegistration->_pQueryFunction == nullptr && ( step.findAttribute( "target" ) != nullptr || step.findAttribute( "key" ) != nullptr );
+                if ( bQueryOnlyAttribute )
                 {
-                    outError = step.describe() + ": needs exactly one of equals · near · atLeast · atMost";
+                    outError = step.describe() + ": probe '" + *pProbe + "' takes no target or key";
+                    return false;
+                }
+                if ( pRegistration->_bNeedsTarget && requireAttribute( step, "target", outError ) == nullptr )
+                    return false;
+                return pRegistration->_bNeedsKey == false || requireAttribute( step, "key", outError ) != nullptr;
+            }
+
+            /** @brief 탐침 단계(`Expect`, `WaitUntil`)의 공통 부분입니다. 탐침이 있고 비교가 정확히 하나이며 수 비교는 수로 읽혀야 합니다(`is` 는 글 비교). */
+            static bool validateProbeComparison( const AutomationStep& step, string& outError )
+            {
+                if ( validateProbeReference( step, outError ) == false )
+                    return false;
+                if ( countComparisons( step, { "equals", "near", "atLeast", "atMost", "is" } ) == false )
+                {
+                    outError = step.describe() + ": needs exactly one of equals · near · atLeast · atMost · is";
                     return false;
                 }
                 float32 value = 0.0f;
@@ -231,16 +252,64 @@ namespace sw
 
             static bool validateExpect( const AutomationStep& step, string& outError )
             {
-                return checkAttributeNames( step, { "probe", "equals", "near", "tolerance", "atLeast", "atMost" }, outError ) && validateProbeComparison( step, outError );
+                return checkAttributeNames( step, { "probe", "target", "key", "equals", "near", "tolerance", "atLeast", "atMost", "is" }, outError ) &&
+                       validateProbeComparison( step, outError );
             }
 
             /** @brief `WaitUntil` 입니다. 그 프레임에 혼자 있는지는 준비 함수(`AutomationRunnerEngineSteps::prepareWaitUntil`)가 시나리오 전체를 보고 확인합니다. */
             static bool validateWaitUntil( const AutomationStep& step, string& outError )
             {
-                uint32 count = 0;
-                return checkAttributeNames( step, { "probe", "equals", "near", "tolerance", "atLeast", "atMost", "timeoutFrames" }, outError ) &&
-                       readUint( step, "timeoutFrames", kDefaultWaitTimeoutFrames, count, outError ) && validateProbeComparison( step, outError );
+                uint32  count   = 0;
+                float32 seconds = 0.0f;
+                if ( checkAttributeNames( step, { "probe", "target", "key", "equals", "near", "tolerance", "atLeast", "atMost", "is", "timeoutFrames", "timeoutSeconds" }, outError ) ==
+                     false )
+                    return false;
+                if ( step.findAttribute( "timeoutFrames" ) != nullptr && step.findAttribute( "timeoutSeconds" ) != nullptr )
+                {
+                    outError = step.describe() + ": give timeoutFrames or timeoutSeconds, not both";
+                    return false;
+                }
+                return readUint( step, "timeoutFrames", kDefaultWaitTimeoutFrames, count, outError ) && readFloat( step, "timeoutSeconds", 0.0f, seconds, outError ) &&
+                       validateProbeComparison( step, outError );
             }
+
+            /** @brief `ExpectVisited` 입니다. `is`(그 값을 한 번이라도 거쳤다) 또는 `sequence`(쉼표로 적은 값을 이 순서로 거쳤다) 하나와 `since`(프레임) 입니다. */
+            static bool validateExpectVisited( const AutomationStep& step, string& outError )
+            {
+                uint32 since = 0;
+                if ( checkAttributeNames( step, { "probe", "target", "key", "is", "sequence", "since" }, outError ) == false || validateProbeReference( step, outError ) == false )
+                    return false;
+                if ( countComparisons( step, { "is", "sequence" } ) == false )
+                {
+                    outError = step.describe() + ": needs exactly one of is · sequence";
+                    return false;
+                }
+                return readUint( step, "since", 0, since, outError );
+            }
+
+            /** @brief `Record` 입니다. 탐침 값을 보고의 `records` 에 남깁니다. */
+            static bool validateRecord( const AutomationStep& step, string& outError )
+            {
+                return checkAttributeNames( step, { "probe", "target", "key" }, outError ) && validateProbeReference( step, outError );
+            }
+
+            /** @brief 쉼표로 가른 값 목록입니다(앞뒤 공백을 떼고 빈 항목은 버린다). */
+            static vector<string> splitList( string_view text )
+            {
+                vector<string> listValue;
+                while ( text.empty() == false )
+                {
+                    const size_t      comma = text.find( ',' );
+                    const string_view value = StringUtil::trim( text.substr( 0, comma ) );
+                    if ( value.empty() == false )
+                        listValue.emplace_back( value );
+                    text = comma == string_view::npos ? string_view{} : text.substr( comma + 1 );
+                }
+                return listValue;
+            }
+
+            /** @brief 탐침 값의 글입니다(수는 끝의 0 을 정리한다). */
+            static string makeValueText( const AutomationProbeValue& value ) { return value._bText ? value._text : formatNumber( value._number ); }
 
             static bool validateExpectLog( const AutomationStep& step, string& outError )
             {
@@ -396,6 +465,85 @@ namespace sw
                 return true;
             }
 
+            /** @brief 질의 탐침의 대상 오브젝트 월드 위치입니다. 대상이 없으면 이유를 적고 false 입니다. */
+            [[nodiscard]] static bool readTargetPosition( const AutomationProbeQuery& query, float3& outPosition, AutomationProbeValue& outValue )
+            {
+                const SceneComponent* pScene = query._pTarget != nullptr ? query._pTarget->getPrimarySceneComponent() : nullptr;
+                if ( pScene == nullptr )
+                {
+                    outValue.setText( query._pTarget == nullptr ? "no object named '" + string( query._target ) + "'" : "'" + string( query._target ) + "' has no transform" );
+                    return false;
+                }
+                outPosition = pScene->getWorldPosition();
+                return true;
+            }
+
+            /** @brief 탐침 `Object.X` · `Object.Y` · `Object.Z` 의 몸통입니다. */
+            [[nodiscard]] static bool readObjectAxis( const AutomationProbeQuery& query, uint32 axis, AutomationProbeValue& outValue )
+            {
+                float3 position{};
+                if ( readTargetPosition( query, position, outValue ) == false )
+                    return false;
+                outValue.setNumber( static_cast<float64>( axis == 0 ? position._x : ( axis == 1 ? position._y : position._z ) ) );
+                return true;
+            }
+
+            [[nodiscard]] static bool readObjectX( const AutomationProbeQuery& query, AutomationProbeValue& outValue ) { return readObjectAxis( query, 0, outValue ); }
+            [[nodiscard]] static bool readObjectY( const AutomationProbeQuery& query, AutomationProbeValue& outValue ) { return readObjectAxis( query, 1, outValue ); }
+            [[nodiscard]] static bool readObjectZ( const AutomationProbeQuery& query, AutomationProbeValue& outValue ) { return readObjectAxis( query, 2, outValue ); }
+
+            /** @brief 탐침 `Object.Exists` 입니다. 활성 씬에 그 이름의 오브젝트가 있으면 1 입니다. */
+            [[nodiscard]] static bool readObjectExists( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
+            {
+                if ( query._pManager == nullptr )
+                    return false;
+                outValue.setNumber( query._pTarget != nullptr ? 1.0 : 0.0 );
+                return true;
+            }
+
+            /** @brief 탐침 `Object.DistanceTo` 입니다. 대상과 `key` 이름의 오브젝트 사이 월드 거리(m)입니다. */
+            [[nodiscard]] static bool readObjectDistanceTo( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
+            {
+                float3 position{};
+                if ( readTargetPosition( query, position, outValue ) == false )
+                    return false;
+                AutomationProbeQuery otherQuery = query;
+                otherQuery._target              = query._key;
+                otherQuery._pTarget             = query._pManager != nullptr ? query._pManager->findGameObjectByName( hashed_string( query._key ) ) : nullptr;
+                float3 otherPosition{};
+                if ( readTargetPosition( otherQuery, otherPosition, outValue ) == false )
+                    return false;
+                outValue.setNumber( static_cast<float64>( float3::getDistance( position, otherPosition ) ) );
+                return true;
+            }
+
+            /**
+             * @brief 탐침 `Scene.TransformHash` 입니다. 활성 씬 오브젝트마다 (이름, 1 mm 로 자른 월드 위치)를 해시해 더한 32 비트 값입니다.
+             * @details 오브젝트 순서 · id 와 무관하다(합). 같은 시나리오를 같은 고정 틱으로 돌리면 백엔드와 상관없이 같아야 한다 — 게임 상태는 CPU 에서만 정해진다.
+             *          32 비트라 `float64` 에 정확히 담기고 `equals` · `<Record>` 로 견줄 수 있다.
+             */
+            [[nodiscard]] static bool readSceneTransformHash( const GameObjectManager* pManager, float64& outValue )
+            {
+                if ( pManager == nullptr )
+                    return false;
+                uint32 sum = 0;
+                pManager->forEachGameObject( [&sum]( GameObject* pObject )
+                {
+                    const SceneComponent* pScene   = pObject->getPrimarySceneComponent();
+                    const float3          position = pScene != nullptr ? pScene->getWorldPosition() : float3{};
+                    uint64                hash     = static_cast<uint64>( pObject->getName().getHash() );
+                    hash                           = HashUtil::combine( hash, static_cast<uint64>( static_cast<int64>( MathUtil::round( position._x * kHashUnitsPerMeter ) ) ) );
+                    hash                           = HashUtil::combine( hash, static_cast<uint64>( static_cast<int64>( MathUtil::round( position._y * kHashUnitsPerMeter ) ) ) );
+                    hash                           = HashUtil::combine( hash, static_cast<uint64>( static_cast<int64>( MathUtil::round( position._z * kHashUnitsPerMeter ) ) ) );
+                    sum += static_cast<uint32>( HashUtil::mix64( hash ) );
+                } );
+                outValue = static_cast<float64>( sum );
+                return true;
+            }
+
+            /** @brief `Scene.TransformHash` 가 위치를 자르는 단위(1 mm)입니다. */
+            static constexpr float32 kHashUnitsPerMeter = 1000.0f;
+
 #if SW_PROFILER_TRACE_ENABLED
             /** @brief 탐침 `Profiler.TraceRecording` 입니다. 긴 캡처(`profile.trace record`)가 아직 모으는 중이면 1 입니다. */
             [[nodiscard]] static bool readTraceRecording( const GameObjectManager* pManager, float64& outValue )
@@ -420,6 +568,14 @@ namespace sw
                          &AutomationRunnerInternal::readTerrainWrittenEditCount );
     SW_AUTOMATION_PROBE( sceneTransitioning, "Scene.Transitioning", "1 while an asynchronous scene load or transition is in flight",
                          &AutomationRunnerInternal::readSceneTransitioning );
+    SW_AUTOMATION_PROBE( sceneTransformHash, "Scene.TransformHash", "Order-independent hash of every object's name and world position (1 mm) - equal across backends",
+                         &AutomationRunnerInternal::readSceneTransformHash );
+    SW_AUTOMATION_QUERY_PROBE( objectX, "Object.X", "World X of the target object (m)", &AutomationRunnerInternal::readObjectX, true, false );
+    SW_AUTOMATION_QUERY_PROBE( objectY, "Object.Y", "World Y of the target object (m)", &AutomationRunnerInternal::readObjectY, true, false );
+    SW_AUTOMATION_QUERY_PROBE( objectZ, "Object.Z", "World Z of the target object (m)", &AutomationRunnerInternal::readObjectZ, true, false );
+    SW_AUTOMATION_QUERY_PROBE( objectExists, "Object.Exists", "1 when the active scene has an object named target", &AutomationRunnerInternal::readObjectExists, true, false );
+    SW_AUTOMATION_QUERY_PROBE( objectDistanceTo, "Object.DistanceTo", "World distance from the target object to the object named key (m)",
+                               &AutomationRunnerInternal::readObjectDistanceTo, true, true );
 #if SW_PROFILER_TRACE_ENABLED
     // 긴 캡처는 벽시계로 끝난다. 시나리오는 고정 프레임이 아니라 이 탐침을 `WaitUntil` 로 기다린다(빠른 백엔드는 몇 백 프레임이 0.3 초 안에 돈다).
     SW_AUTOMATION_PROBE( profilerTraceRecording, "Profiler.TraceRecording", "1 while a profile.trace record capture is still collecting",
@@ -544,6 +700,18 @@ namespace sw
             return true;
         }
 
+        static bool runExpectVisited( AutomationRunner& runner, const AutomationStep& step )
+        {
+            runner.runExpectVisited( step );
+            return true;
+        }
+
+        static bool runRecord( AutomationRunner& runner, const AutomationStep& step )
+        {
+            runner.runRecord( step );
+            return true;
+        }
+
         static bool runExpectLog( AutomationRunner& runner, const AutomationStep& step )
         {
             runner.runExpectLog( step );
@@ -661,6 +829,8 @@ namespace sw
     SW_AUTOMATION_STEP( runnerExpect, "Expect", &AutomationRunnerEngineSteps::runExpect, &AutomationRunnerInternal::validateExpect, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( runnerWaitUntil, "WaitUntil", nullptr, &AutomationRunnerInternal::validateWaitUntil, &AutomationRunnerEngineSteps::prepareWaitUntil,
                                    &AutomationRunnerEngineSteps::holdWaitUntil, false );
+    SW_AUTOMATION_STEP( runnerExpectVisited, "ExpectVisited", &AutomationRunnerEngineSteps::runExpectVisited, &AutomationRunnerInternal::validateExpectVisited, false );
+    SW_AUTOMATION_STEP( runnerRecord, "Record", &AutomationRunnerEngineSteps::runRecord, &AutomationRunnerInternal::validateRecord, false );
     SW_AUTOMATION_STEP( runnerExpectLog, "ExpectLog", &AutomationRunnerEngineSteps::runExpectLog, &AutomationRunnerInternal::validateExpectLog, false );
     SW_AUTOMATION_STEP( runnerScreenshot, "Screenshot", &AutomationRunnerEngineSteps::runScreenshot, &AutomationRunnerInternal::validateScreenshot, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( runnerExpectImage, "ExpectImage", &AutomationRunnerEngineSteps::runExpectImage, &AutomationRunnerInternal::validateExpectImage, nullptr,
@@ -682,9 +852,11 @@ namespace sw
         , _reportWriter{}
         , _listFailure{}
         , _listPendingScreenshot{}
+        , _listWatch{}
         , _outputDirectory{}
         , _finishReason{}
         , _pObjectManagerOverride{ nullptr }
+        , _pInputManager{ nullptr }
         , _exitDeadlineSeconds{ 0.0 }
         , _nextStepIndex{ 0 }
         , _frameIndex{ 0 }
@@ -698,6 +870,7 @@ namespace sw
         , _bEnded{ SW_FALSE }
         , _reserved{ 0 }
     {
+        AutomationActionSteps::ensureLinked();
         AutomationEnvironmentSteps::ensureLinked();
         AutomationWindowSteps::ensureLinked();
     }
@@ -772,6 +945,7 @@ namespace sw
                     finish( AutomationResult::TimedOut, "the start condition never became true" );
                 return;
             }
+            _pInputManager = &input;
             string error;
             if ( prepare( error ) == false )
             {
@@ -800,6 +974,7 @@ namespace sw
     {
         if ( _result == AutomationResult::Running && _bStarted == SW_TRUE )
         {
+            sampleWatches();
             const vector<AutomationStep>& listStep = _scenario.getSteps();
             // `<=` 이므로 스크린샷을 기다리느라 밀린 단계는 다음 프레임에 이어서 돈다.
             while ( true )
@@ -910,6 +1085,7 @@ namespace sw
             if ( pRegistration->_pPrepare != nullptr && pRegistration->_pPrepare( *this, step, outError ) == false )
                 return false;
         }
+        prepareWatches();
         _logCapture.start();
         return true;
     }
@@ -936,10 +1112,14 @@ namespace sw
             _holdFrameCount = 0;
             return false;
         }
-        string error;
-        uint32 timeoutFrames = 0;
+        string  error;
+        uint32  timeoutFrames  = 0;
+        float32 timeoutSeconds = 0.0f;
         (void)AutomationRunnerInternal::readUint( step, "timeoutFrames", AutomationRunnerInternal::kDefaultWaitTimeoutFrames, timeoutFrames,
-                                                  error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
+                                                  error );                                                // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
+        (void)AutomationRunnerInternal::readFloat( step, "timeoutSeconds", 0.0f, timeoutSeconds, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
+        if ( step.findAttribute( "timeoutSeconds" ) != nullptr )
+            timeoutFrames = convertSecondsToFrames( timeoutSeconds );
         if ( _holdFrameCount >= timeoutFrames )
         {
             recordFailure( step, "WaitUntil gave up after " + to_string( _holdFrameCount ) + " frame(s): " + message );
@@ -952,51 +1132,211 @@ namespace sw
         return true;
     }
 
-    bool AutomationRunner::compareProbe( const AutomationStep& step, bool& outMatched, string& outMessage ) const
+    bool AutomationRunner::readProbeValue( const AutomationStep& step, AutomationProbeValue& outValue, string& outMessage ) const
     {
         const string&                      probeName     = *step.findAttribute( "probe" );
         const AutomationProbeRegistration* pRegistration = AutomationProbes::find( probeName );
-        float64                            value         = 0.0;
-        outMatched                                       = false;
         // 모듈을 언로드했다 로드하면 탐침이 빠질 수 있다. 시작 때 있었어도 다시 찾는다.
-        if ( pRegistration == nullptr || pRegistration->_pFunction( findActiveObjectManager(), value ) == false )
+        if ( pRegistration == nullptr )
         {
-            outMessage = pRegistration == nullptr ? probeName + " is no longer registered" : probeName + " has no value (no target in the scene)";
+            outMessage = probeName + " is no longer registered";
             return false;
         }
-        string  error;
-        float32 expected  = 0.0f;
-        float32 tolerance = 0.0f;
-        bool    bOk       = true;
-        string  rule;
-        if ( step.findAttribute( "equals" ) != nullptr )
+        const string*        pTarget = step.findAttribute( "target" );
+        const string*        pKey    = step.findAttribute( "key" );
+        AutomationProbeQuery query{};
+        query._pManager = findActiveObjectManager();
+        query._target   = pTarget != nullptr ? string_view{ *pTarget } : string_view{};
+        query._key      = pKey != nullptr ? string_view{ *pKey } : string_view{};
+        query._pTarget  = query._pManager != nullptr && pTarget != nullptr ? query._pManager->findGameObjectByName( hashed_string( *pTarget ) ) : nullptr;
+        string subject  = probeName;
+        if ( pTarget != nullptr )
+            subject += "(" + *pTarget + ( pKey != nullptr ? ", " + *pKey : string() ) + ")";
+        else if ( pKey != nullptr )
+            subject += "(" + *pKey + ")";
+        if ( AutomationProbes::read( *pRegistration, query, outValue ) == false )
         {
-            (void)AutomationRunnerInternal::readFloat( step, "equals", 0.0f, expected, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            bOk  = value == static_cast<float64>( expected );
+            const string reason = outValue._bText && outValue._text.empty() == false ? outValue._text : string( "no target in the scene" );
+            outMessage          = subject + " has no value (" + reason + ")";
+            return false;
+        }
+        outMessage = subject;
+        return true;
+    }
+
+    bool AutomationRunner::compareProbe( const AutomationStep& step, bool& outMatched, string& outMessage ) const
+    {
+        using Internal = AutomationRunnerInternal;
+        AutomationProbeValue value{};
+        outMatched = false;
+        if ( readProbeValue( step, value, outMessage ) == false )
+            return false;
+        const string valueText = Internal::makeValueText( value );
+        const string subject   = outMessage;
+        string       error;
+        float32      expected  = 0.0f;
+        float32      tolerance = 0.0f;
+        bool         bOk       = true;
+        string       rule;
+        const bool   bNumberRule = step.findAttribute( "is" ) == nullptr;
+        if ( bNumberRule && value._bText )
+        {
+            outMessage = subject + " is text ('" + value._text + "') - compare it with is=\"…\"";
+            return false;
+        }
+        if ( step.findAttribute( "is" ) != nullptr )
+        {
+            bOk  = valueText == *step.findAttribute( "is" );
+            rule = "is '" + *step.findAttribute( "is" ) + "'";
+        }
+        else if ( step.findAttribute( "equals" ) != nullptr )
+        {
+            (void)Internal::readFloat( step, "equals", 0.0f, expected, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
+            bOk  = value._number == static_cast<float64>( expected );
             rule = "== " + *step.findAttribute( "equals" );
         }
         else if ( step.findAttribute( "near" ) != nullptr )
         {
-            (void)AutomationRunnerInternal::readFloat( step, "near", 0.0f, expected, error );          // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            (void)AutomationRunnerInternal::readFloat( step, "tolerance", 1.0e-4f, tolerance, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            bOk  = value >= static_cast<float64>( expected ) - static_cast<float64>( tolerance ) && value <= static_cast<float64>( expected ) + static_cast<float64>( tolerance );
-            rule = "near " + *step.findAttribute( "near" );
+            (void)Internal::readFloat( step, "near", 0.0f, expected, error );          // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
+            (void)Internal::readFloat( step, "tolerance", 1.0e-4f, tolerance, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
+            const float64 lower = static_cast<float64>( expected ) - static_cast<float64>( tolerance );
+            const float64 upper = static_cast<float64>( expected ) + static_cast<float64>( tolerance );
+            bOk                 = lower <= value._number && value._number <= upper;
+            rule                = "near " + *step.findAttribute( "near" );
         }
         else if ( step.findAttribute( "atLeast" ) != nullptr )
         {
-            (void)AutomationRunnerInternal::readFloat( step, "atLeast", 0.0f, expected, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            bOk  = value >= static_cast<float64>( expected );
+            (void)Internal::readFloat( step, "atLeast", 0.0f, expected, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
+            bOk  = value._number >= static_cast<float64>( expected );
             rule = ">= " + *step.findAttribute( "atLeast" );
         }
         else
         {
-            (void)AutomationRunnerInternal::readFloat( step, "atMost", 0.0f, expected, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-            bOk  = value <= static_cast<float64>( expected );
+            (void)Internal::readFloat( step, "atMost", 0.0f, expected, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
+            bOk  = value._number <= static_cast<float64>( expected );
             rule = "<= " + *step.findAttribute( "atMost" );
         }
         outMatched = bOk;
-        outMessage = probeName + " " + rule + ", got " + AutomationRunnerInternal::formatNumber( value );
+        outMessage = subject + " " + rule + ", got " + valueText;
         return true;
+    }
+
+    uint32 AutomationRunner::convertSecondsToFrames( float32 seconds ) const
+    {
+        return static_cast<uint32>( seconds / _scenario.getFixedDelta() + 0.5f );
+    }
+
+    void AutomationRunner::addRecordLine( string line )
+    {
+        SW_LOG_INFO( "[Scenario] record %#", line.c_str() );
+        _reportWriter.addRecordLine( std::move( line ) );
+    }
+
+    void AutomationRunner::prepareWatches()
+    {
+        _listWatch.clear();
+        for ( const AutomationStep& step : _scenario.getSteps() )
+        {
+            if ( string_view{ step._kind } != "ExpectVisited" )
+                continue;
+            const string* pTarget = step.findAttribute( "target" );
+            const string* pKey    = step.findAttribute( "key" );
+            ProbeWatch    watch{};
+            watch._probe  = *step.findAttribute( "probe" );
+            watch._target = pTarget != nullptr ? *pTarget : string();
+            watch._key    = pKey != nullptr ? *pKey : string();
+            bool bKnown   = false;
+            for ( const ProbeWatch& existing : _listWatch )
+            {
+                bKnown = bKnown || ( existing._probe == watch._probe && existing._target == watch._target && existing._key == watch._key );
+            }
+            if ( bKnown == false )
+                _listWatch.push_back( std::move( watch ) );
+        }
+    }
+
+    void AutomationRunner::sampleWatches()
+    {
+        for ( ProbeWatch& watch : _listWatch )
+        {
+            AutomationStep step{};
+            step._kind = "ExpectVisited";
+            step._listAttribute.push_back( AutomationAttribute{ "probe", watch._probe } );
+            if ( watch._target.empty() == false )
+                step._listAttribute.push_back( AutomationAttribute{ "target", watch._target } );
+            if ( watch._key.empty() == false )
+                step._listAttribute.push_back( AutomationAttribute{ "key", watch._key } );
+            AutomationProbeValue value{};
+            string               message;
+            if ( readProbeValue( step, value, message ) == false )
+                continue;
+            string text = AutomationRunnerInternal::makeValueText( value );
+            if ( watch._listValue.empty() == false && watch._listValue.back() == text )
+                continue;
+            watch._listValue.push_back( std::move( text ) );
+            watch._listFrame.push_back( _frameIndex );
+        }
+    }
+
+    void AutomationRunner::runExpectVisited( const AutomationStep& step )
+    {
+        const string*     pTarget = step.findAttribute( "target" );
+        const string*     pKey    = step.findAttribute( "key" );
+        const string_view probe   = *step.findAttribute( "probe" );
+        const string_view target  = pTarget != nullptr ? string_view{ *pTarget } : string_view{};
+        const string_view key     = pKey != nullptr ? string_view{ *pKey } : string_view{};
+        const ProbeWatch* pWatch  = nullptr;
+        for ( const ProbeWatch& watch : _listWatch )
+        {
+            const bool bSame = watch._probe == probe && watch._target == target && watch._key == key;
+            if ( bSame )
+                pWatch = &watch;
+        }
+        string error;
+        uint32 since = 0;
+        (void)AutomationRunnerInternal::readUint( step, "since", 0, since, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
+        const string*        pIs      = step.findAttribute( "is" );
+        const vector<string> listWant = pIs != nullptr ? vector<string>{ *pIs } : AutomationRunnerInternal::splitList( *step.findAttribute( "sequence" ) );
+        // `since` 프레임에 이미 들어 있던 값(그 앞의 마지막 바뀜)도 거친 것으로 본다.
+        size_t first = 0;
+        for ( size_t index = 0; pWatch != nullptr && index < pWatch->_listFrame.size(); ++index )
+        {
+            if ( pWatch->_listFrame[index] <= since )
+                first = index;
+        }
+        size_t wantIndex = 0;
+        string seen;
+        for ( size_t index = first; pWatch != nullptr && index < pWatch->_listValue.size(); ++index )
+        {
+            seen += seen.empty() ? "" : " > ";
+            seen += pWatch->_listValue[index] + "@" + to_string( pWatch->_listFrame[index] );
+            if ( wantIndex < listWant.size() && pWatch->_listValue[index] == listWant[wantIndex] )
+                ++wantIndex;
+        }
+        if ( wantIndex == listWant.size() )
+            return;
+        string want;
+        for ( const string& value : listWant )
+        {
+            want += want.empty() ? string( value ) : " > " + value;
+        }
+        string subject = string( probe );
+        if ( target.empty() == false || key.empty() == false )
+            subject += "(" + string( target ) + ( target.empty() || key.empty() ? "" : ", " ) + string( key ) + ")";
+        recordFailure( step, subject + " never went through '" + want + "' since frame " + to_string( since ) + " (missing '" + listWant[wantIndex] +
+                                 "'), saw: " + ( seen.empty() ? string( "no value" ) : seen ) );
+    }
+
+    void AutomationRunner::runRecord( const AutomationStep& step )
+    {
+        AutomationProbeValue value{};
+        string               message;
+        if ( readProbeValue( step, value, message ) == false )
+        {
+            recordFailure( step, "Record " + message );
+            return;
+        }
+        addRecordLine( "frame " + to_string( _frameIndex ) + " " + message + " = " + AutomationRunnerInternal::makeValueText( value ) );
     }
 
     void AutomationRunner::runExpectLog( const AutomationStep& step )

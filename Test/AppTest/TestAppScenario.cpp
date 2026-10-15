@@ -63,21 +63,28 @@ namespace
             return collectScenarioPaths( listFolder );
         }
 
+        /** @brief 돌릴 백엔드 스위치(`-dx12` …)입니다. 배포본은 백엔드를 하나만 링크하므로 스위치 없이 "이 빌드가 가진 것" 하나입니다(AppSmokeTest 와 같다). */
+        static sw::vector<const utf8*> collectBackendSwitches()
+        {
+#if defined( SW_SHIPPING )
+            return sw::vector<const utf8*>{ "" };
+#else
+    #define SW_APP_SCENARIO_BACKEND_SWITCH( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) "-" CommandLineName,
+            return sw::vector<const utf8*>{ SW_RHI_BACKEND_TABLE( SW_APP_SCENARIO_BACKEND_SWITCH ) };
+    #undef SW_APP_SCENARIO_BACKEND_SWITCH
+#endif
+        }
+
         /** @brief 시나리오를 백엔드마다 돌려 종료 코드 0 을 단언합니다. 돌린(건너뛰지 않은) 수를 돌려줍니다. */
         static uint32 runEveryBackend( const sw::vector<sw::string>& listScenario, sw::string_view extraArguments )
         {
-#if defined( SW_SHIPPING )
-            // 배포본은 백엔드를 하나만 링크한다 — 스위치 없이 "이 빌드가 가진 것" 으로 돌린다(AppSmokeTest 와 같다).
-            constexpr const utf8* kArrBackendSwitch[] = { "" };
-#else
-    #define SW_APP_SCENARIO_BACKEND_SWITCH( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) "-" CommandLineName,
-            constexpr const utf8* kArrBackendSwitch[] = { SW_RHI_BACKEND_TABLE( SW_APP_SCENARIO_BACKEND_SWITCH ) };
-    #undef SW_APP_SCENARIO_BACKEND_SWITCH
-#endif
-            uint32 ranCount = 0;
+            const sw::vector<const utf8*> listBackendSwitch = collectBackendSwitches();
+            uint32                        ranCount          = 0;
             for ( const sw::string& scenarioPath : listScenario )
             {
-                for ( const utf8* pSwitch : kArrBackendSwitch )
+                sw::vector<sw::string> listFirstRecord;
+                const utf8*            pFirstSwitch = nullptr;
+                for ( const utf8* pSwitch : listBackendSwitch )
                 {
                     sw::string       scenarioLines;
                     const int32      exitCode = test::AppTestUtil::runScenario( scenarioPath, pSwitch, scenarioLines, extraArguments );
@@ -90,9 +97,38 @@ namespace
                     }
                     SW_EXPECT_TRUE_MSG( exitCode == 0, label.c_str() );
                     ++ranCount;
+                    // 결정적 재생: `<Record>` 줄은 백엔드마다 같아야 한다. 처음 돈 백엔드를 기준으로 견준다.
+                    const sw::vector<sw::string> listRecord = test::AppTestUtil::readReportRecords( test::AppTestUtil::makeReportPath( scenarioPath, pSwitch ) );
+                    if ( pFirstSwitch == nullptr )
+                    {
+                        pFirstSwitch    = pSwitch;
+                        listFirstRecord = listRecord;
+                        continue;
+                    }
+                    SW_EXPECT_TRUE_MSG( compareRecords( listFirstRecord, listRecord, pFirstSwitch, pSwitch, scenarioPath ),
+                                        ( scenarioPath + ": records differ between " + pFirstSwitch + " and " + pSwitch ).c_str() );
                 }
             }
             return ranCount;
+        }
+
+        /** @brief 두 백엔드의 기록 줄이 같으면 true 입니다. 다르면 다른 줄마다 로그를 남깁니다(어느 프레임의 어느 탐침이 어떻게 달랐는지). */
+        static bool compareRecords( const sw::vector<sw::string>& listExpected, const sw::vector<sw::string>& listActual, const utf8* pExpectedSwitch,
+                                    const utf8* pActualSwitch, const sw::string& scenarioPath )
+        {
+            bool         bSame     = listExpected.size() == listActual.size();
+            const size_t lineCount = listExpected.size() > listActual.size() ? listExpected.size() : listActual.size();
+            for ( size_t index = 0; index < lineCount; ++index )
+            {
+                const sw::string expected = index < listExpected.size() ? listExpected[index] : sw::string( "(none)" );
+                const sw::string actual   = index < listActual.size() ? listActual[index] : sw::string( "(none)" );
+                if ( expected == actual )
+                    continue;
+                bSame = false;
+                SW_LOG_ERROR( "[AppScenarioTest] %# record %#: %# '%#' vs %# '%#'", scenarioPath.c_str(), static_cast<uint32>( index ), pExpectedSwitch, expected.c_str(),
+                              pActualSwitch, actual.c_str() );
+            }
+            return bSame;
         }
     };
 
@@ -285,22 +321,49 @@ SW_TEST_CASE( AppScenarioTest, EveryGamePackScenarioPassesOnEveryBackend )
 }
 
 /**
+ * @brief [AppScenarioTest] 시나리오로 돌린 플레이를 녹화(`-scenario-record`)하고 그 녹화를 다시 돌리면 끝 프레임의 검사점이 같다 — 백엔드마다
+ * @details 녹화는 시나리오가 낸 가상 입력과 끝 프레임의 탐침 값(`-scenario-record-probes`)을 담는다. 같은 입력 · 같은 고정 틱이면 같은 상태가 나와야 한다(결정적 재생).
+ *          HarvestValley 팩의 `actions` 시나리오를 쓴다(농부 자리 · 간 칸 · 빙의). 팩을 짓지 않은 빌드(Shipping)는 건너뛴다.
+ */
+SW_TEST_CASE( AppScenarioTest, RecordedPlayReplaysOnEveryBackend )
+{
+    const sw::vector<sw::string> listGame = test::AppTestUtil::collectBuiltGamePacks();
+    if ( std::find( listGame.begin(), listGame.end(), sw::string( "HarvestValley" ) ) == listGame.end() )
+        SW_TEST_SKIP( "the HarvestValley game pack is not built (Shipping or SW_GAMES)" );
+    constexpr const utf8* kSource  = "game/harvestvalley/automation/actions.scenario.xml";
+    constexpr const utf8* kProbes  = "Farm.FarmerX,Farm.TilledCount,Object.Z@Farmer,Pawn.Controller@Farmer";
+    uint32                ranCount = 0;
+    for ( const utf8* pSwitch : AppScenarioTestInternal::collectBackendSwitches() )
+    {
+        const sw::string backend      = pSwitch[0] == '-' ? sw::string( pSwitch + 1 ) : sw::string( "default" );
+        const sw::string recordedPath = "Saved/Automation/Recorded/roundtrip_" + backend + ".scenario.xml";
+        (void)sw::FileUtil::tryRemoveFile( recordedPath ); // 지난 실행의 녹화를 읽지 않게 지운다
+        sw::string  sourceLines;
+        const int32 sourceExit = test::AppTestUtil::runScenario( kSource, pSwitch, sourceLines,
+                                                                 "-game=HarvestValley -scenario-record=" + recordedPath + " -scenario-record-probes=" + kProbes );
+        if ( test::AppTestUtil::isSkippedExitCode( sourceExit ) )
+            continue;
+        SW_EXPECT_TRUE_MSG( sourceExit == 0, ( sw::string( kSource ) + " " + pSwitch + " -> exit " + sw::to_string( sourceExit ) + "\n" + sourceLines ).c_str() );
+        SW_EXPECT_TRUE_MSG( sw::FileUtil::exists( recordedPath ), ( recordedPath + " was not written" ).c_str() );
+        sw::string  replayLines;
+        const int32 replayExit = test::AppTestUtil::runScenario( recordedPath, pSwitch, replayLines, "-game=HarvestValley" );
+        SW_EXPECT_TRUE_MSG( replayExit == 0, ( recordedPath + " " + pSwitch + " -> exit " + sw::to_string( replayExit ) + "\n" + replayLines ).c_str() );
+        ++ranCount;
+    }
+    if ( ranCount == 0 )
+        SW_TEST_SKIP( "no backend could run the round trip on this machine" );
+}
+
+/**
  * @brief [AppScenarioTest] 시나리오를 한 프로세스에서 이어 돌린다 — 게임 모듈 리로드 → 렌더 확인 → 다시 리로드가 모든 백엔드에서 통과하고, 단계마다 보고가 남는다
  * @details 체인은 앞 단계의 씬 · 모듈 상태를 이어받는다(`-scenario=a,b,c`). 두 번째 리로드가 첫 번째의 완료 수에 속지 않고(`Module.ReloadPending`) 제 리로드를 기다리는지, 사이의 렌더 시나리오가
  *          리로드 뒤 새 이미지로 그리는지 본다. 프로세스는 백엔드마다 하나다. 개발 명령이 없는 구성(Shipping)은 13 으로 건너뛴다.
  */
 SW_TEST_CASE( AppScenarioTest, ChainedScenariosShareOneProcess )
 {
-#if defined( SW_SHIPPING )
-    constexpr const utf8* kArrBackendSwitch[] = { "" };
-#else
-    #define SW_APP_SCENARIO_CHAIN_BACKEND_SWITCH( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) "-" CommandLineName,
-    constexpr const utf8* kArrBackendSwitch[] = { SW_RHI_BACKEND_TABLE( SW_APP_SCENARIO_CHAIN_BACKEND_SWITCH ) };
-    #undef SW_APP_SCENARIO_CHAIN_BACKEND_SWITCH
-#endif
     const sw::vector<sw::string> listScenario{ "engine/automation/hotreload.scenario.xml", "engine/automation/runner.scenario.xml", "engine/automation/hotreload.scenario.xml" };
     uint32                       ranCount = 0;
-    for ( const utf8* pSwitch : kArrBackendSwitch )
+    for ( const utf8* pSwitch : AppScenarioTestInternal::collectBackendSwitches() )
     {
         sw::string       scenarioLines;
         const int32      exitCode = test::AppTestUtil::runScenarioChain( listScenario, "reload_render_reload", pSwitch, scenarioLines );

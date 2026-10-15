@@ -351,7 +351,7 @@ SW_TEST_CASE( AutomationScenarioTest, RegistriesRejectDuplicateNames )
 {
     using Internal = TestAutomationScenarioInternal;
     SW_TEST_DEFENSIVE_SCOPE( "duplicate registrations are reported" );
-    static const sw::AutomationProbeRegistration kDuplicateProbe{ "Test.SwitchCount", "duplicate", &Internal::readNothing };
+    static const sw::AutomationProbeRegistration kDuplicateProbe{ "Test.SwitchCount", "duplicate", &Internal::readNothing, nullptr, false, false };
     SW_EXPECT_FALSE( sw::AutomationProbes::registerProbe( &kDuplicateProbe ) );
     float64 value = -1.0;
     SW_EXPECT_TRUE( sw::AutomationProbes::find( "Test.SwitchCount" )->_pFunction( nullptr, value ) ); // 앞 등록이 남아 있다

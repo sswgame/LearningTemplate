@@ -27,7 +27,7 @@ namespace sw
     /**
      * @class AutomationReportWriter
      * @brief 보고 경로와 지표 줄을 모아 두었다가 시나리오가 끝나면 JSON 보고를 씁니다(`AutomationRunner` 의 값 멤버).
-     * @details 보고 형식: `name` · `result` · `exitCode` · `frames` · `reason` · `failures[]` · `metrics[]`. 경로가 비어 있으면 쓰지 않는다.
+     * @details 보고 형식: `name` · `result` · `exitCode` · `frames` · `reason` · `failures[]` · `metrics[]` · `records[]`. 경로가 비어 있으면 쓰지 않는다.
      */
     class SW_API AutomationReportWriter
     {
@@ -40,6 +40,9 @@ namespace sw
         void addMetricLine( string line ) { _listMetricLine.push_back( std::move( line ) ); }
         /** @brief 지금까지 더한 지표 값 줄입니다. */
         const vector<string>& getMetricLines() const { return _listMetricLine; }
+        /** @brief 기록 값 줄 하나를 더합니다(`frame 300 Scene.TransformHash = 12345` — `<Record>`). 같은 시나리오는 백엔드마다 같은 줄을 내야 합니다. */
+        void                  addRecordLine( string line ) { _listRecordLine.push_back( std::move( line ) ); }
+        const vector<string>& getRecordLines() const { return _listRecordLine; }
 
         /** @brief 보고 파일을 씁니다. 경로가 비어 있으면 아무것도 하지 않고, 쓰지 못하면 경고를 남깁니다. */
         void write( const AutomationReportParams& params ) const;
@@ -47,5 +50,6 @@ namespace sw
     private:
         string         _reportPath;
         vector<string> _listMetricLine; ///< 보고에 적는 지표 값입니다.
+        vector<string> _listRecordLine; ///< 보고에 적는 기록 값입니다(결정성 대조).
     };
 } // namespace sw

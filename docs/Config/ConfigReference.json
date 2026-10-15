@@ -4020,6 +4020,22 @@
    "description": "시나리오 여럿(`-scenario=a,b,c`)에서 한 단계가 실패해도 다음 단계를 돌려 실패를 한꺼번에 모은다(기본은 첫 실패에서 멈춘다). 건너뜀(13)은 실패로 세지 않고 이어 간다."
   },
   {
+   "name": "SCENARIO_RECORD",
+   "spellings": [
+    "scenario-record"
+   ],
+   "value": "글 값(`-이름=값`)",
+   "description": "플레이를 시나리오로 녹화한다 — 값은 `Saved/Automation/` 아래의 `.scenario.xml`. 씬 플레이 첫 프레임부터 입력을 적고 끝날 때 쓴다(`-scenario` 와 함께면 그 가상 입력도 적는다)."
+  },
+  {
+   "name": "SCENARIO_RECORD_PROBES",
+   "spellings": [
+    "scenario-record-probes"
+   ],
+   "value": "글 값(`-이름=값`)",
+   "description": "녹화 끝 프레임의 검사점 — 쉼표로 가른 `탐침`, `탐침@대상`, `탐침@대상@키`. 값이 녹화 끝에 `<Expect>` 로 실린다."
+  },
+  {
    "name": "RENDERDOC",
    "spellings": [
     "renderdoc"

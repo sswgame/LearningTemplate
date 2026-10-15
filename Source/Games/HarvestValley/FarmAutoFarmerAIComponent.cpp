@@ -54,6 +54,37 @@ namespace sw
                 }
                 return FarmButton::Tool4;
             }
+
+            /**
+             * @brief 할 일의 상태 이름입니다(탐침 `AI.State` 가 읽는다). 칸 일은 도구로 가른다 — `Till` · `Water` · `Sow` · `Harvest`.
+             * @details 이름은 시나리오의 데이터다(`<ExpectVisited probe="AI.State" sequence="Till,Sow,Water"/>`). 바꾸면 시나리오도 함께 고친다.
+             */
+            static const utf8* getStateName( const Task& task )
+            {
+                switch ( task._kind )
+                {
+                    case TaskKind::None:
+                        return "Sleep";
+                    case TaskKind::Ship:
+                        return "Ship";
+                    case TaskKind::Shop:
+                        return "Shop";
+                    case TaskKind::Tile:
+                        break;
+                }
+                switch ( task._tool )
+                {
+                    case FarmTool::Hoe:
+                        return "Till";
+                    case FarmTool::WateringCan:
+                        return "Water";
+                    case FarmTool::Seeds:
+                        return "Sow";
+                    case FarmTool::Hand:
+                        return "Harvest";
+                }
+                return "Harvest";
+            }
         };
     } // namespace
 } // namespace sw
@@ -129,6 +160,7 @@ namespace sw
         const bool  bShouldBuySeeds   = _buyRemaining > 0 && bLastBuyFailed == false && director.isNearShop();
         if ( bShouldBuySeeds )
         {
+            setStateName( "Buy" );
             stopMoving();
             pressButton( hashed_string( FarmDirectorComponent::getButtonName( FarmButton::Buy ) ) );
             _seedCountAtBuy = selectedSeedCount;
@@ -235,13 +267,17 @@ namespace sw
             task._kind          = Internal::TaskKind::Ship;
             task._standPosition = director.getShippingBinPosition() + float3{ -1.0f, 0.0f, 0.0f };
         }
+        setStateName( hashed_string( Internal::getStateName( task ) ) );
+        getBlackboard().setInt( "Stamina", director.getStamina() );
         if ( task._kind == Internal::TaskKind::None )
         {
+            getBlackboard().clearValue( "StandPosition" );
             stopMoving();
             pressButton( hashed_string( FarmDirectorComponent::getButtonName( FarmButton::Sleep ) ) );
             return;
         }
 
+        getBlackboard().setVector( "StandPosition", task._standPosition );
         const bool bStanding = task._kind == Internal::TaskKind::Tile ? walkUpTo( director, task._standPosition ) : walkTo( director, task._standPosition );
         if ( bStanding == false || _actionTimer > 0.0f )
             return;

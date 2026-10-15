@@ -44,5 +44,7 @@
 | `-scenario` | 글 값(`-이름=값`) | 자동화 시나리오 — 값은 시나리오 파일(리소스 경로 `game/<팩>/automation/x.scenario.xml` 또는 절대 경로). 끝나면 결과를 종료 코드로 낸다 (0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 초과 · 13 건너뜀). 형식은 `Source/Engine/Automation/` 의 헤더 주석. | `SCENARIO` |
 | `-scenario-report` | 글 값(`-이름=값`) | 시나리오 결과 JSON 을 쓸 경로(비면 쓰지 않는다). | `SCENARIO_REPORT` |
 | `-scenario-keep-going` | 플래그(`-이름`) | 시나리오 여럿(`-scenario=a,b,c`)에서 한 단계가 실패해도 다음 단계를 돌려 실패를 한꺼번에 모은다(기본은 첫 실패에서 멈춘다). 건너뜀(13)은 실패로 세지 않고 이어 간다. | `SCENARIO_KEEP_GOING` |
+| `-scenario-record` | 글 값(`-이름=값`) | 플레이를 시나리오로 녹화한다 — 값은 `Saved/Automation/` 아래의 `.scenario.xml`. 씬 플레이 첫 프레임부터 입력을 적고 끝날 때 쓴다(`-scenario` 와 함께면 그 가상 입력도 적는다). | `SCENARIO_RECORD` |
+| `-scenario-record-probes` | 글 값(`-이름=값`) | 녹화 끝 프레임의 검사점 — 쉼표로 가른 `탐침`, `탐침@대상`, `탐침@대상@키`. 값이 녹화 끝에 `<Expect>` 로 실린다. | `SCENARIO_RECORD_PROBES` |
 | `-renderdoc` | 플래그(`-이름`) | RenderDoc 을 RHI 디바이스보다 먼저 설치 경로에서 올린다(Dev 만 — `RenderDocCapture`). 없어도 RenderDoc UI 로 띄운 실행이면 캡처할 수 있다. | `RENDERDOC` |
 | `-unattended` | 플래그(`-이름`) | 사람이 지켜보지 않는 실행이다 — 에디터를 켜도 단언 대화상자를 걸지 않는다(Debug 단언은 지금처럼 멈춘다). App 을 띄우는 테스트 · 스크립트가 준다. | `UNATTENDED` |

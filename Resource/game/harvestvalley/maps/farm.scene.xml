@@ -758,6 +758,11 @@
 					                       _autoFarmerPrefab="game/harvestvalley/prefabs/autofarmer.prefab.xml"
 					                       _playerStart="6,0,-1.2"
 					                       _bAutoPlay="false" />
+					<FarmVillageDirectorComponent _componentName="FarmVillageDirectorComponent"
+					                              _bActive="true"
+					                              _scheduleDataPath="game/harvestvalley/data/villagers.schedules.xml"
+					                              _villagerPrefab="game/harvestvalley/prefabs/villager.prefab.xml"
+					                              _bAutoPlay="false" />
 				</_listComponent>
 			</GameObject>
 		</entity>
