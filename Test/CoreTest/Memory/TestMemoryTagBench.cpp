@@ -12,6 +12,9 @@
 #include "TestFramework/Harness/TestBench.h"
 #include "TestFramework/TestFramework.h"
 
+SW_TEST_LOAD_SUITE( MemoryTagBenchTest, "allocation overhead with memory tag tracking off and on" );
+SW_TEST_TIME_BUDGET( MemoryTagBenchTest, 1000, "Release 케이스 최대 143 ms(2026-10-15, Ryzen 7 6800H, 세 번 중 최대)의 네 배 — CI 러너 여유" );
+
 SW_LOG_CALLER( "MemoryTagBench" );
 
 namespace

@@ -1,6 +1,6 @@
 /**
  * @file Main.cpp
- * @brief 온라인 부하 테스트 봇 — `OnlineLoadBot --scenario=<json> (--server=<ip:port> [--tls[=<신뢰 PEM>]] | --local-server[=<port>]) [--bots=N] [--report=<json>]
+ * @brief 온라인 부하 테스트 봇 — `OnlineLoadBot --scenario=<json> (--server=<ip:port> [--tls[=<신뢰 PEM>]] | --local-server[=<port>]) [--bots=N] [--ramp-up-seconds=S] [--duration-seconds=S] [--report=<json>]
  *        [--max-error-percent=N] [--light-hash]`.
  * @details - `--local-server` 는 같은 프로세스에 서버 조립(`LoadBotLocalServer` — 전용 서버와 같은 `OnlineServerRuntime`)을 띄우고 루프백 TCP(플랫폼 전송, 평문)로 붙는다.
  *            서버 시각은 UTC 벽시계, 봇 지연은 `MonotonicClock`.
@@ -12,6 +12,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Module/ModuleImageUtil.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
@@ -73,6 +74,8 @@ namespace sw
             string _serverAddress{};
             string _tlsTrustFile{}; ///< `--tls=<PEM>` — 비면 Dev 개발용 인증서를 신뢰한다
             int32  _botCount{ 0 };
+            int32  _rampUpSeconds{ -1 };   ///< `--ramp-up-seconds` — 0 이상이면 시나리오 값을 덮는다(부하 검증 `<Load rampUpSeconds>`)
+            int32  _durationSeconds{ -1 }; ///< `--duration-seconds` — 0 이상이면 시나리오 값을 덮는다(`<Load durationSeconds>`)
             int32  _maxErrorPercent{ 1 };
             uint16 _localServerPort{ 0 };
             uint8  _bLocalServer{ SW_FALSE };
@@ -90,6 +93,23 @@ namespace sw
             static constexpr int64  kIdleSleepNs          = 200000; ///< 틱 사이 — 전송을 I/O 스레드 없이 돌리므로 짧게
             static constexpr int32  kPercentScale         = 100;
             static constexpr int32  kSpareConnectionCount = 16;
+            /** @brief 서버 조립(`--local-server`)이 쓰는 서버 키트 모듈 — 실행 파일이 그 심볼을 쓰지 않아 링커가 import 를 버리므로 이름으로 올린다. */
+            static constexpr const utf8* kArrServerKitModule[] = { "GF_Server_Account", "GF_Server_Chat", "GF_Server_Leaderboard", "GF_Server_LiveOps",
+                                                                   "GF_Server_Matchmaking", "GF_Server_ServerDirectory", "GF_Server_Social" };
+
+            /** @brief 서버 키트 모듈을 올려 정적 등록자가 서버 조립 레지스트리에 오르게 합니다. 하나라도 못 올리면 false 와 그 이름입니다. 프로세스가 끝날 때까지 내리지 않는다. */
+            [[nodiscard]] static bool loadServerKitModules( string& outError )
+            {
+                for ( const utf8* pModule : kArrServerKitModule )
+                {
+                    if ( ModuleImageUtil::loadDynamicLibrary( ModuleImageUtil::findModuleLibraryPath( pModule ) ) == nullptr )
+                    {
+                        outError = string( "cannot load the server kit module " ) + pModule;
+                        return false;
+                    }
+                }
+                return true;
+            }
 
             [[nodiscard]] static bool readValue( string_view argument, string_view key, string& outValue )
             {
@@ -113,6 +133,14 @@ namespace sw
                     if ( readValue( argument, "--bots=", value ) )
                     {
                         bNumberOk = StringUtil::parseInt( value, outOptions._botCount ) && outOptions._botCount > 0;
+                    }
+                    else if ( readValue( argument, "--ramp-up-seconds=", value ) )
+                    {
+                        bNumberOk = StringUtil::parseInt( value, outOptions._rampUpSeconds ) && outOptions._rampUpSeconds >= 0;
+                    }
+                    else if ( readValue( argument, "--duration-seconds=", value ) )
+                    {
+                        bNumberOk = StringUtil::parseInt( value, outOptions._durationSeconds ) && outOptions._durationSeconds > 0;
                     }
                     else if ( readValue( argument, "--max-error-percent=", value ) )
                     {
@@ -196,6 +224,11 @@ int32 main( int32 argc, utf8* argv[] )
         return Internal::kExitUsage;
     }
 
+    if ( options._rampUpSeconds >= 0 )
+        scenario._rampUpSeconds = options._rampUpSeconds;
+    if ( options._durationSeconds > 0 )
+        scenario._durationSeconds = options._durationSeconds;
+
     LoadBotRunnerSettings runnerSettings;
     runnerSettings._botCountOverride = options._botCount;
     const int32 botCount             = options._botCount > 0 ? options._botCount : scenario._botCount;
@@ -204,6 +237,11 @@ int32 main( int32 argc, utf8* argv[] )
     LoadBotLocalServer           localServer;
     if ( options._bLocalServer == SW_TRUE )
     {
+        if ( Internal::loadServerKitModules( error ) == false )
+        {
+            SW_LOG_ERROR( "OnlineLoadBot: %#", error );
+            return Internal::kExitUsage;
+        }
         serverTransport = StreamTransportFactory::createPlatformTransport();
         LoadBotLocalServerSettings serverSettings;
         serverSettings._port               = options._localServerPort;

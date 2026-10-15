@@ -558,12 +558,14 @@ namespace sw
 
     string FileUtil::getBinaryDirectory()
     {
+        // 키트 DLL 을 링크하는 실행 파일(테스트 `TestBin`, 개발 도구 `ToolBin` — OnlineLoadBot)은 그 DLL 사본과 함께 따로 나오고 작업 폴더는 `Bin` 이다.
         static constexpr string_view kTestBinaryFolder = "TestBin";
+        static constexpr string_view kToolBinaryFolder = "ToolBin";
         static constexpr string_view kBinaryFolder     = "Bin";
         string                       binaryDir         = getDirectoryPart( getExecutablePath() );
         string_view                  folderName;
         getFileNamePart( binaryDir, folderName );
-        if ( folderName == kTestBinaryFolder )
+        if ( folderName == kTestBinaryFolder || folderName == kToolBinaryFolder )
         {
             const string siblingBinary = joinPath( getDirectoryPart( binaryDir ), kBinaryFolder );
             if ( isDirectory( siblingBinary ) )
@@ -642,13 +644,17 @@ namespace sw
 
     bool FileUtil::readFile( string_view fileName, vector<uint8>& outBytes, const uint64 offset, const uint64 maxReadCount )
     {
-        return FileUtilInternal::readRange( fileName, offset, maxReadCount, outBytes );
+        if ( FileUtilInternal::readRange( fileName, offset, maxReadCount, outBytes ) == false )
+            return false;
+        PlatformFileUtil::emulateReadDelay( outBytes.size() );
+        return true;
     }
 
     bool FileUtil::readTextFile( string_view fileName, string& outText )
     {
         if ( FileUtilInternal::readRange( fileName, 0, std::numeric_limits<uint64>::max(), outText ) == false )
             return false;
+        PlatformFileUtil::emulateReadDelay( outText.size() );
 
         // BOM 판정의 기준은 아래 skipUtf8Bom 이다. 여기서 바이트를 따로 세면 한쪽만 고쳤을 때 읽기 경로와
         // 질의 경로가 서로 다른 답을 준다.

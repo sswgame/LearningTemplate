@@ -6,6 +6,8 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Common/PlatformOsHeaders.h"
+#elif defined( SW_PLATFORM_LINUX )
+    #include <sched.h>
 #endif
 
 namespace sw
@@ -75,6 +77,30 @@ namespace sw
         _thread.join();
         ThreadInternal::notify( &ILockObserver::recordLockAcquired, pKey );
         ThreadInternal::notify( &ILockObserver::recordLockReleased, pKey );
+    }
+
+    uint32 thread::getUsableProcessorCount()
+    {
+        uint32 count = 0;
+#if defined( SW_PLATFORM_WINDOWS )
+        DWORD_PTR processMask = 0;
+        DWORD_PTR systemMask  = 0;
+        if ( GetProcessAffinityMask( GetCurrentProcess(), &processMask, &systemMask ) != FALSE )
+        {
+            for ( uint64 mask = static_cast<uint64>( processMask ); mask != 0; mask &= mask - 1 )
+            {
+                ++count;
+            }
+        }
+#elif defined( SW_PLATFORM_LINUX )
+        cpu_set_t set;
+        CPU_ZERO( &set );
+        if ( sched_getaffinity( 0, sizeof( set ), &set ) == 0 )
+            count = static_cast<uint32>( CPU_COUNT( &set ) );
+#endif
+        if ( count == 0 )
+            count = std::thread::hardware_concurrency();
+        return count == 0 ? 1 : count;
     }
 
     void thread::notifyStarted()

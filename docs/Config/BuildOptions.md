@@ -23,7 +23,7 @@ configure 때 정한다(`cmake --preset <프리셋>` 또는 `-D<이름>=<값>`).
 | `SW_ENABLE_TESTING` | BOOL | `ON` |  | 단위/통합 테스트 프로젝트 빌드 및 CTest 등록 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_ENABLE_TIME_TRACE` | BOOL | `OFF` |  | Clang 컴파일 시간 프로파일링(-ftime-trace JSON 출력) |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_ENABLE_TRACY` | BOOL | `${swTracyDefault}` |  | Tracy 프로파일러 클라이언트 링크(개발 빌드, Shipping 은 무시) |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
-| `SW_ENABLE_UNITY_BUILD` | BOOL | `OFF` |  | 대형 라이브러리 타겟에 CMake UNITY_BUILD(여러 소스를 합쳐 컴파일) 사용 | CI-Debug, CI-Debug-ASAN, CI-Debug-TSAN 외 2 | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
+| `SW_ENABLE_UNITY_BUILD` | BOOL | `OFF` |  | 대형 라이브러리 타겟에 CMake UNITY_BUILD(여러 소스를 합쳐 컴파일) 사용 | CI-Debug, CI-Debug-ASAN, CI-Debug-TSAN 외 3 | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_GAMES` | STRING | `` |  | 활성 게임과 함께 지을 게임 팩(Dev 전용): 비움 \| ALL \| 이름 목록 | Ninja-Debug, Ninja-Debug-Lean | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_LLVM_AUTO_BOOTSTRAP` | BOOL | `ON` |  | LLVM이 없을 때 SetupLlvm.py를 통해 Tools/LLVM에 최소 clang-cl+libclang 키트 자동 다운로드 허용 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_RELEASE_DEBUG_INFO` | STRING | `lines` | `lines` · `full` · `none` | Release/Shipping debug info: lines \| full \| none |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |

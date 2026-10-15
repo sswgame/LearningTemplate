@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  부하 시나리오 — 렌더 벤치: 벤치 큐브 8000 개, 큐브마다 틱에서 움직이는 컴포넌트 하나(게임 스레드 틱 경로 + GPU 장면 갱신 + 드로우).
+  <Load> 가 있으면 시나리오가 시작한 프레임에 측정 창(durationSeconds)을 열고, 창이 닫히면 측정 보고와 함께 끝난다(<Pass/> 를 두지 않는다).
+  메시 · 무버 수는 실행기가 명령줄로 넘긴다(-gv_benchMeshes · -gv_benchTickMovers) — 그래서 이 폴더(automation/load)는 AppScenarioTest 가 줍지 않는다.
+  실행: py -3 -m Scripts load run renderbench, 프로필 Mid   (Release, 예산 Test/Load/Budgets.json)
+-->
+<Scenario name="load.renderbench" fixedDelta="0.0166667" startAfter="ScenePlaying" startTimeoutFrames="1800" input="exclusive">
+	<Load durationSeconds="20" meshes="8000" movers="1"/>
+</Scenario>

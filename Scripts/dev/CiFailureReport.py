@@ -8,6 +8,7 @@
     python Scripts/dev/CiFailureReport.py configure --log build/configure.log         # 구성 실패: vcpkg 가 가리킨 로그들의 끝
     python Scripts/dev/CiFailureReport.py build --log build/build.log                 # 빌드 실패: 오류 줄(컴파일 · 링크)과 앞뒤 몇 줄, 없으면 끝 60 줄
     python Scripts/dev/CiFailureReport.py fuzz --log fuzz/Material/log.txt --target Material   # 퍼징 실패: 새니타이저 보고 · 스택 · 재현 입력(Base64)
+    python Scripts/dev/CiFailureReport.py load --results build/CI-Release/LoadResults/nightly.json  # 부하 실패: 조합마다 병목 갈래 · 예산 · 회귀 · 지표 · 재현 명령
 
 크래시 스택은 테스트 실행 파일의 크래시 핸들러가 로그 폴더(`Bin/Saved/Logs/crash_<세션>.stack.txt`)에 남긴 것입니다.
 진 테스트마다 제목에 결과를 붙입니다. `Timeout` 은 ctest 가 한도(`TIMEOUT` 속성, `ctest --show-only=json-v1` 로 읽음)에서 죽인 것이고,
@@ -193,6 +194,26 @@ def reportFuzz(logPath: Path, target: str) -> int:
     return 0
 
 
+def reportLoad(resultsPath: Path) -> int:
+    """부하 검증(`Scripts/qa/Load.py`)의 결과 JSON 에서 진 조합마다 주석 하나 — 병목 갈래가 붙은 예산 실패 · 기준선 회귀 · 실행 실패, 주요 지표, 재현 명령."""
+    try:
+        listResult = json.loads(readTextInternal(resultsPath) or "{}").get("results", [])
+    except ValueError:
+        listResult = []
+    if not listResult:
+        emitErrorInternal("load", f"no load results in {resultsPath} - the load run did not finish")
+        return 0
+    for result in listResult[:_kMaxTestCount]:
+        if result.get("verdict") != "fail":
+            continue
+        listMetric = [f"{name} {values['median']:.1f} ({values['min']:.1f}..{values['max']:.1f})" for name, values in result.get("metrics", {}).items()
+                      if name.endswith("p99_us") or name in ("error_percent", "converged", "private_mb.max", "hitch.worst_us")][:20]
+        body = (["--- failures:"] + result.get("failures", []) + result.get("budget_failures", []) + result.get("baseline_regressions", []) +
+                ["--- metrics (median, min..max over runs):"] + listMetric + ["--- command:", " ".join(result.get("command", []))])
+        emitErrorInternal(f"load {result.get('scenario')} x {result.get('profile')}{' (emulated)' if result.get('emulated') else ''}", kNewline.join(body))
+    return 0
+
+
 def main(listArgument: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="CI 실패를 GitHub 주석으로 올린다")
     listSub = parser.add_subparsers(dest="kind", required=True)
@@ -205,11 +226,15 @@ def main(listArgument: list[str] | None = None) -> int:
     fuzz = listSub.add_parser("fuzz", help="libFuzzer 대상 하나의 크래시 · 타임아웃")
     fuzz.add_argument("--log", type=Path, required=True)
     fuzz.add_argument("--target", required=True)
+    load = listSub.add_parser("load", help="부하 검증(py -3 -m Scripts load)의 진 조합")
+    load.add_argument("--results", type=Path, required=True)
     args = parser.parse_args(listArgument)
     if args.kind == "tests":
         return reportTests(args.ctest_dir)
     if args.kind == "fuzz":
         return reportFuzz(args.log, args.target)
+    if args.kind == "load":
+        return reportLoad(args.results)
     return reportBuild(args.log) if args.kind == "build" else reportConfigure(args.log)
 
 

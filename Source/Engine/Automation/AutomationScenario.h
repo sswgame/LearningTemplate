@@ -49,6 +49,28 @@ namespace sw
 
 namespace sw
 {
+    class XMLNode;
+
+    /**
+     * @struct AutomationLoad
+     * @brief 부하 시나리오의 부하 선언(루트 아래 `<Load>` 한 줄)입니다. 부하 검증(`py -3 -m Scripts load`)이 같은 줄로 App · 온라인 봇 · 루프백 클러스터를 돌린다.
+     * @details 엔진이 쓰는 값은 `_durationSeconds` 뿐이다 — 시나리오가 시작한 프레임에 그 시간만큼 프레임 측정 창(`gv_profileSeconds`)을 연다. 나머지는 실행기
+     *          (`Scripts/qa/Load.py`)가 명령줄로 옮긴다(메시 수 → `-gv_benchMeshes`, 회선 → `-gv_netEmu*`). 형식을 한 곳에서 검사하려고 엔진도 읽는다.
+     */
+    struct AutomationLoad
+    {
+        string  _network{};               ///< 회선 프리셋 이름(`NetEmulationConditions::tryGetPreset` — off · lan · wifi · lte · badwifi), 비면 흉내 없음
+        float32 _durationSeconds{ 0.0f }; ///< 측정 창(초, 워밍업 60 프레임 뒤). 0 보다 커야 한다
+        float32 _rampUpSeconds{ 0.0f };   ///< 클라이언트를 이 시간에 걸쳐 늘린다(봇 · 클러스터)
+        uint32  _clientCount{ 0 };        ///< 동시 클라이언트 수(봇 · 클러스터). App 하나는 0
+        uint32  _meshCount{ 0 };          ///< 벤치 메시 수(`-gv_benchMeshes`), 0 이면 건드리지 않는다
+        uint32  _moverCount{ 0 };         ///< 메시마다 틱에서 움직이는 컴포넌트 수(`-gv_benchTickMovers`) — 틱 오브젝트 수 = 메시 × 이 값
+        bool    _bDeclared{ false };      ///< 시나리오에 `<Load>` 가 있으면 true 입니다
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class AutomationScenario
      * @brief 시나리오 파일 하나를 읽은 값입니다. 단계는 프레임 순이며 같은 프레임은 파일 순입니다.
@@ -75,9 +97,15 @@ namespace sw
         /** @brief 새 프로세스에서만 도는 시나리오입니다(루트 `isolated="true"`). 시작 상태를 전제하거나 환경(창 크기 · 테마 · 세션)을 크게 바꿔 체인(`-scenario=a,b,c`)에 넣지 않는다. 실행기는 이 값을 쓰지 않고 테스트가 고른다. */
         bool                          isIsolated() const { return _bIsolated; }
         const vector<AutomationStep>& getSteps() const { return _listStep; }
+        /** @brief 부하 선언입니다(`<Load>` 가 없으면 `_bDeclared` 가 false). 부하 시나리오는 `<Pass/>` 를 두지 않고 측정 창이 끝내며, `timeoutFrames` 를 보지 않는다. */
+        const AutomationLoad& getLoad() const { return _load; }
 
     private:
+        /** @brief `<Load>` 요소를 읽습니다. 모르는 속성 · 틀린 값이면 false 와 이유입니다. */
+        [[nodiscard]] bool parseLoad( const XMLNode& node, string& outReason );
+
         vector<AutomationStep>   _listStep;
+        AutomationLoad           _load;
         string                   _name;
         string                   _sourcePath;
         float32                  _fixedDelta;
