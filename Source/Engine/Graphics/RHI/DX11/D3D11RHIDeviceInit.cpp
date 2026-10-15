@@ -175,19 +175,12 @@ namespace sw
         // (RHIDeviceTest.OffscreenDrawIsReadable 이 픽셀로 잡는다). 좌표는 다른 백엔드와 같은 NDC 큰 삼각형이다.
         // fullscreentriangle.hlsl 이 변환 없이 그대로 쓴다.
         {
-            const RHIVertex arrFullscreenVert[3] = {
-                // 화면 공간 삼각형이라 노멀은 쓰이지 않는다. 레이아웃을 채우려고 +Z 를 둔다.
-                // 셰이더는 SV_VertexID 로 UV 를 만들지만 레이아웃에 맞춰 같은 값을 실어 둔다.
-                {{ -1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f },  { 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
-                { { 3.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f },  { 2.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
-                { { -1.0f, 3.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, -1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }},
-            };
             D3D11_BUFFER_DESC vbDesc{};
             vbDesc.Usage     = D3D11_USAGE_IMMUTABLE;
-            vbDesc.ByteWidth = static_cast<UINT>( sizeof( arrFullscreenVert ) );
+            vbDesc.ByteWidth = static_cast<UINT>( sizeof( constant::arrFallbackVertex ) );
             vbDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
             D3D11_SUBRESOURCE_DATA vbData{};
-            vbData.pSysMem = arrFullscreenVert;
+            vbData.pSysMem = constant::arrFallbackVertex;
             if ( FAILED( _device->CreateBuffer( &vbDesc, &vbData, _vertexBuffer.GetAddressOf() ) ) )
                 SW_LOG_WARNING( "Failed to create the fullscreen triangle vertex buffer." );
         }

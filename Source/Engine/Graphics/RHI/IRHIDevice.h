@@ -155,10 +155,15 @@ namespace sw
         /** @brief 백엔드 해제 큐에서 아직 불리지 않은 해제 수입니다. `waitIdle` 과 `shutdown` 뒤에는 0 이어야 합니다(`shutdown` 이 단언한다). */
         virtual uint32 getPendingReleaseCount() const = 0;
         /**
-         * @brief 장치 제거(TDR)를 흉내 냅니다(개발 명령 `rhi.removeDevice`). 할 수 있는 백엔드만 true 를 반환합니다(DX12 — `ID3D12Device5::RemoveDevice`).
+         * @brief 장치 제거(TDR)를 흉내 냅니다(개발 명령 `rhi.removeDevice`). 할 수 있는 백엔드만 true 를 반환합니다(DX12 — `ID3D12Device5::RemoveDevice`, Vulkan — 제거 API 가 없어 `VK_ERROR_DEVICE_LOST` 를 처음 본 뒤의 상태로 둔다).
          * @details 실제 TDR 은 되풀이하면 어댑터가 망가지므로, 제거 뒤의 대기 · 종료 경로가 멈추지 않는지는 이것으로 확인한다. 어느 스레드에서 불러도 된다.
          */
         virtual bool debugRemoveDevice() { return false; }
+        /**
+         * @brief 검증 레이어가 이 디바이스에 알린 경고 · 오류 수입니다. Debug 의 DX12 만 셉니다(D3D12 디버그 레이어, 메시지가 난 자리에서 로그로도 남긴다). 다른 백엔드와 배포본은 0 입니다.
+         * @details 디버그 레이어의 메시지 큐는 장치 실패 때만 비우므로 평소 로그에 보이지 않는다. 테스트가 "이 그리기는 검증 경고를 내지 않는다" 를 단언할 때 쓴다.
+         */
+        virtual uint32 getValidationMessageCount() const { return 0; }
 
         /** @brief 렌더 스레드가 받은 작업을 모두 끝낼 때까지 기다리는 함수의 타입입니다. 호출하는 쪽은 렌더 스레드가 아닙니다. */
         using RenderThreadDrainFunction = void ( * )( void* pContext );

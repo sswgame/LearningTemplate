@@ -281,7 +281,7 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
 - **판정.** 여러 판(기본 3)의 가운데 값으로만 견주고 최소..최대를 같이 적습니다. 기준선은 p50 15 % · p99 35 % + 바닥(150 us · 32 MB)을 넘으면 회귀이고, max · 히치 수는 기준선과 견주지 않고 예산으로만 봅니다.
   Release 가 아니면 숫자만 적고 판정하지 않습니다(`--allow-debug` 로 덮는다). 판마다의 출력 전체는 `<빌드>/LoadResults/logs/`, 결과는 `<빌드>/LoadResults/<시각>.json` 입니다.
 - **병목 갈래**는 같은 판의 하위 구간 비율로 가릅니다 — `RT.BeginFrame` 이 `RT.Frame` 의 절반을 넘으면 GPU(펜스 대기), `GT.Packet.submit` 이 `GT.Frame` 의 절반을 넘으면 게임 스레드가 렌더 스레드를 기다린 것, 아니면 가장 무거운 `GT.*` 구간을 붙입니다.
-- **측정하기 전에** 다른 빌드 · GPU 실행이 없는지 봅니다 — `py -3 -m Scripts shared-lock acquire gpu --owner <이름>` 을 쥐고 재며, 다른 에이전트의 빌드가 돌면 기다립니다. VSync 는 기본으로 꺼져 있습니다(`display.vsync`).
+- **측정하기 전에** 다른 빌드 · GPU 실행이 없는지 봅니다 — `py -3 -m Scripts shared-lock acquire gpu --owner <이름>`(독점 — 공유 보유자가 다 놓을 때까지 기다린다)을 쥐고 재며, 다른 에이전트의 빌드가 돌면 기다립니다. VSync 는 기본으로 꺼져 있습니다(`display.vsync`).
 - **디스크 흉내는 장치 하나 · 큐 깊이 1 입니다**(고해상도 마감 대기 — `sleep_for` 는 Windows 타이머 주기 15.6 ms 로 반올림돼 1 ms 와 8 ms 를 구분하지 못했다). 기동은 대략 `Native 기동 + 열기 수 × 지연` 이고,
   열기 수는 결과의 `startup_file_opens`(로그 `startup … ms, … file opens`)입니다. 어디서 읽는지는 `--app-arg=-gv_ioLogReads=1` 로 돌려 판 로그의 `[IO] open <경로> bytes=… thread=…` 를 봅니다(측정 창 안의 줄이 히치 후보).
 - **`--app-arg` 로 진단 스위치를 App 에 더 넘깁니다** — `-gv_ioLogReads=1`, `-gv_profileAllocSites=12`(Release 로도 콜스택이 나온다). 진단을 켠 판은 기준선을 남기지(`--record`) 않습니다.
@@ -358,6 +358,8 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
   4 백엔드 대조는 Debug 로(Shipping 은 `SW_SHIPPING_RHI_BACKEND` 하나만 링크하고 `-vk` 를 거절한다).
 - **픽셀 지표는 튼튼하게.** "특정 색 픽셀 수" 는 클리어 색 · 톤맵에 무너진다 — 모서리 기준 배경 제거 + 평균(R−B) 대소, 또는 "고유 색 ≥ 2". sin(시간) 구동
   지표는 "달라진 픽셀 수" 로. define 이 GPU 에 닿았는지는 PSO 디스크립터가 아니라 픽셀로 본다. 막히면 PPM 을 덤프한다.
+- **D3D12 디버그 레이어 경고는 Debug DX12 로그의 `D3D12 debug layer (severity S, id N)` 줄이다**(앞 16 개만 적고 나머지는 센다 — `IRHIDevice::getValidationMessageCount`). 렌더 변경 뒤 이 줄이 0 인지 본다.
+  테스트는 그리기 전후의 수를 비교해 단언한다(`CanvasDrawsOnEveryBackend` · `GPUTimestampsMarkUnwrittenSlotsAllBackends`).
 - **`-gv_screenshot` 은 PrintWindow 가 아니다** — PPM 이 원본이다. `-gv_screenshotFrame=N` 으로 프레임을, `-gv_screenshotAttachment=<이름>` 으로 첨부를 고른다.
   "가끔 튄다" 는 한 장으로 안 잡힌다 — `-gv_screenshotCount=30 -gv_screenshotInterval=2` 로 연속으로 찍어(`_000` … 이 붙는다) 장을 나란히 본다.
 - **"조용한 프레임" 버그는 벤치가 가린다**(회전 큐브라 매 프레임 dirty). 에디터 정지 화면으로 본다: `-EnableEditor -gv_benchMeshes=1 -gv_screenshot -gv_screenshotFrame=60`.
@@ -376,7 +378,8 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
   테스트를 돌리지 말 것.
 - **간헐 실패를 다룰 때** — `ConsoleLogOutput` 은 Error 만 flush 해서 ctest `--output-on-failure` 의 마지막 `[ RUN ]` 은 크래시 위치가 아니다. 같은 명령을 직접 돌려 파일로
   받는다. 테스트 실행 파일에도 크래시 핸들러가 있다(`Test/TestFramework/main.cpp`). 단독으로 통과하고 스위트에서만 지면 전역 상태 오염부터(VFS 는 `GlobalVfsScope`).
-- **검증은 한 번에 하나만 돌린다.** 빌드 · 스모크 · 벤치 · GPU 스위트를 겹치면 가짜 실패(파일 잠김 · CMake 프로브 레이스 `LNK1107`)와 수치 오염이 난다.
+- **측정은 혼자, 기능 확인은 둘까지.** 빌드 · 스모크 · 벤치 · GPU 스위트를 마구 겹치면 가짜 실패(파일 잠김 · CMake 프로브 레이스 `LNK1107`)와 수치 오염이 난다.
+  결정적 설정으로 기능만 보는 시나리오 · `hostgpu` 는 GPU 공유 잠금(`--shared`, 두 프로세스)으로 백엔드를 나눠 함께 돌려도 되고, 성능 측정 · 부하 기준선 · 장치 제거 실험은 독점으로 혼자 돌린다.
   샤드를 동시에 돌려도(`ctest -j3`) 시간 제한이 가짜로 진다 — 의심되면 그 샤드 하나만 다시 돌린다. 백그라운드 셸은
   `taskkill /T` 로 트리째 내린다. 창을 만드는 GPU 테스트를 Bash 로 돌리면 타임아웃에 걸린 것처럼 보인다 — PowerShell `Start-Process`.
 - **Shipping 에서만 나는 것** — Info 로그 · `SW_ASSERT` 가 사라지고(반응이 로그 한 줄뿐인 기능은 배포본에서 없는 것과 같다), 리소스는 팩에만 있고 `.hlsl` 원본이 없으며,
@@ -400,7 +403,7 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
   ② 같은 명령을 `-gv_validateBindlessIndex=2` 로 다시 돌려 `[BindlessIndex]` 줄을 셉니다. `is not a live` 오류가 있으면 그 패스 · 필드가 원인 후보 1 순위이고, 없으면 `= absent` 목록에서 손실 패스의 필드를 고릅니다.
   ③ 후보 하나만 셰이더에서 바꿔(첨자를 배열 안으로 자르기, 값을 상수로) 3 회 이상 다시 돌려 재현율을 견줍니다. 셰이더는 개발 빌드에서 라이브 컴파일되므로 다시 빌드할 필요가 없고, 끝나면 `App --cook-shaders` 로 다시 굽습니다.
 - **백엔드 교체 · 장치 제거는 `engine/automation/rhiswap/` 시나리오로 본다**(네 백엔드가 모두 있는 PC 에서만 통과해 AppScenarioTest 가 줍지 않는다). `swapbackends`(네 백엔드 건너기),
-  `terrainedits`(저장하지 않은 지형 편집 · 씬 뷰 카메라가 교체를 넘는지), `removedevice`(개발 명령 `rhi.removeDevice` 로 DX12 장치를 제거한 뒤 프레임 · 종료가 멈추지 않는지).
+  `terrainedits`(저장하지 않은 지형 편집 · 씬 뷰 카메라가 교체를 넘는지), `removedevice`(개발 명령 `rhi.removeDevice` 로 DX12 장치를 제거하거나 Vulkan 장치를 손실 상태로 둔 뒤 프레임 · 종료가 멈추지 않는지 — `-dx12` · `-vk` 로 돌린다).
   교체 전후 그림을 견줄 때는 한 번 먼저 건너 도킹 배치를 안정시킨다 — imgui.ini 가 노드 크기를 정수로 저장해 첫 리로드에서 씬 뷰 너비가 1 픽셀 바뀔 수 있다.
 
 ## 4. CI

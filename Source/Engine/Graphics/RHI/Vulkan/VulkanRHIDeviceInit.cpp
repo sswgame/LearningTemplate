@@ -541,7 +541,7 @@ namespace sw
 
     bool VulkanRHIDevice::recreateSwapChain()
     {
-        const bool bCannotRecreateSwapChain = _device == nullptr || _width == 0 || _height == 0;
+        const bool bCannotRecreateSwapChain = _device == nullptr || _width == 0 || _height == 0 || isDeviceLost();
         if ( bCannotRecreateSwapChain )
             return false;
         {
@@ -596,7 +596,8 @@ namespace sw
 
     bool VulkanRHIDevice::recreateSurfaceAndSwapChain()
     {
-        if ( _device == nullptr || _instance == nullptr )
+        const bool bCannotRecreateSurface = _device == nullptr || _instance == nullptr || isDeviceLost();
+        if ( bCannotRecreateSurface )
             return false;
         {
             std::scoped_lock<mutex> queueLock{ _queueMutex };

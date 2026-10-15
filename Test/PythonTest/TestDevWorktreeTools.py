@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+import argparse
+import os
 import sys
 import tempfile
 import unittest
@@ -35,6 +37,34 @@ class SharedLockTest(unittest.TestCase):
             self.assertTrue(SharedLock.tryAcquire(lockDirectory, "gone", "install", 0, 1000.0))  # pid 0 은 살아 있지 않다
             self.assertFalse(SharedLock.tryAcquire(lockDirectory, "b", "install", 2, 1000.0 + 60))
             self.assertTrue(SharedLock.tryAcquire(lockDirectory, "b", "install", 2, 1000.0 + SharedLock.kStaleSeconds + 1))
+
+    @staticmethod
+    def makeArgs(owner: str) -> argparse.Namespace:
+        return argparse.Namespace(resource="gpu", owner=owner, purpose="test", pid=os.getpid(), slots=2, wait=0)
+
+    def testSharedSlotsAdmitTwoAndBlockExclusive(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.assertEqual(0, SharedLock.acquireShared(root, self.makeArgs("a")))
+            self.assertEqual(0, SharedLock.acquireShared(root, self.makeArgs("b")))
+            self.assertEqual(3, SharedLock.acquireShared(root, self.makeArgs("c")))  # 칸 둘이 찼다
+            # 독점은 잡더라도 공유 보유자가 놓을 때까지 기다린다(시한 0 이면 바로 진다)
+            exclusive = SharedLock.getLockDirectory(root, "gpu")
+            self.assertTrue(SharedLock.tryAcquire(exclusive, "x", "measure", os.getpid(), 1000.0))
+            self.assertFalse(SharedLock.waitForSharedHolders(root, self.makeArgs("x"), 0.0))
+            SharedLock.releaseShared(root, self.makeArgs("a"))
+            SharedLock.releaseShared(root, self.makeArgs("b"))
+            self.assertTrue(SharedLock.waitForSharedHolders(root, self.makeArgs("x"), 0.0))
+
+    def testSharedWaitsWhileExclusiveIsHeld(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            exclusive = SharedLock.getLockDirectory(root, "gpu")
+            self.assertTrue(SharedLock.tryAcquire(exclusive, "x", "measure", os.getpid(), 1000.0))
+            self.assertEqual(3, SharedLock.acquireShared(root, self.makeArgs("a")))
+            self.assertFalse(any(slot.is_dir() for slot in SharedLock.getSharedSlotDirectories(root, "gpu", 2)))  # 물러난 칸은 남기지 않는다
+            self.assertTrue(SharedLock.release(exclusive, "x"))
+            self.assertEqual(0, SharedLock.acquireShared(root, self.makeArgs("a")))
 
     def testResourceNameMustBeFolderSafe(self) -> None:
         for name in ("", "a/b", ".."):

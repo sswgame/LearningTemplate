@@ -65,6 +65,8 @@ namespace sw
         , _bBlitMismatchLogged{ SW_FALSE }
         , _bOnlineHeapExhaustedLogged{ SW_FALSE }
         , _bTimestampEnabled{ SW_FALSE }
+        , _validationMessageCount{ 0 }
+        , _validationCallbackCookie{ 0 }
         , _frameStreamState{}
         , _listRegisteredBindless{}
         , _listFreeBindless{}
@@ -360,6 +362,21 @@ namespace sw
         pResource->SetName( arrName );
     }
     #endif
+
+    void CALLBACK D3D12RHIDevice::onValidationMessage( D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID id,
+                                                       LPCSTR pDescription, void* pContext )
+    {
+        (void)category;
+        D3D12RHIDevice* pDevice = static_cast<D3D12RHIDevice*>( pContext );
+        if ( pDevice == nullptr || severity > D3D12_MESSAGE_SEVERITY_WARNING )
+            return;
+        // 같은 결함은 드로우마다 되풀이된다. 앞의 몇 개만 적고 나머지는 센다(테스트는 수로 본다).
+        constexpr uint32 kMaxLoggedMessages = 16;
+        const uint32     count              = pDevice->_validationMessageCount.fetch_add( 1, std::memory_order_relaxed ) + 1;
+        if ( count <= kMaxLoggedMessages )
+            SW_LOG_WARNING( "D3D12 debug layer (severity %#, id %#): %#", static_cast<int32>( severity ), static_cast<int32>( id ),
+                            pDescription != nullptr ? pDescription : "" );
+    }
 
     void D3D12RHIDevice::flushDebugMessages( const utf8* pStage )
     {

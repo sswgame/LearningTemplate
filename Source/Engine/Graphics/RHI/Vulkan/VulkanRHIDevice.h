@@ -185,6 +185,13 @@ namespace sw
         /** @brief 이번 프레임이 제출할 세대(`_frameFenceCounter + 1`)로 해제 큐에 넣습니다. */
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
+        /**
+         * @brief 장치를 잃은 상태로 둡니다(개발 명령 `rhi.removeDevice`). Vulkan 에는 장치를 제거하는 API 가 없어, 큐 호출이 `VK_ERROR_DEVICE_LOST` 를 처음 돌려준
+         *        뒤와 같은 상태(`isDeviceLost`)를 만든다. 그 뒤로 제출 · 대기 · 표시를 하지 않고 프레임을 건너뛰며, 종료는 기다리지 않고 끝난다.
+         */
+        bool debugRemoveDevice() override;
+        /** @brief 큐 호출이 `VK_ERROR_DEVICE_LOST` 를 돌려줬거나 `debugRemoveDevice` 가 불렸으면 true 입니다. 어느 스레드에서 읽어도 된다. */
+        bool isDeviceLost() const { return _bDeviceLost.load( std::memory_order_acquire ) != SW_FALSE; }
 
         /** @brief 크기를 기록하고, 스왑체인 재생성은 beginFrame 까지 미룹니다. */
         void resizeInternal( uint32 width, uint32 height ) override;
@@ -724,7 +731,11 @@ namespace sw
         /// @brief 제출 순서에 마지막으로 들어간 패스 이름입니다(디바이스 손실 로그용). `_submittedMarkerMutex` 가 지킵니다.
         fixed_string<constant::kMaxBuffer64> _lastSubmittedEventMarker;
         mutable mutex                        _submittedMarkerMutex;
-        /// @brief 디바이스 손실의 결함 정보를 이미 남겼는가. 손실 뒤의 모든 호출이 같은 덤프를 반복하지 않게 한다.
-        atomic<uint8> _bDeviceLostReported;
+        /**
+         * @brief 장치를 잃었는가(`isDeviceLost`). 처음 세운 쪽만 결함 정보를 남긴다 — 손실 뒤의 모든 호출이 같은 덤프를 반복하지 않게 한다.
+         * @details 세운 뒤에는 펜스 · 큐 · 장치 대기를 부르지 않는다. 사양은 손실 뒤의 대기가 유한 시간에 돌아온다고 하지만 TDR 중의 드라이버 안 대기는
+         *          그 보장 밖이다(DX12 가 `GetDeviceRemovedReason` 을 보고 대기를 건너뛰는 것과 같다).
+         */
+        atomic<uint8> _bDeviceLost;
     };
 } // namespace sw

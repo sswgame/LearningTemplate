@@ -235,7 +235,7 @@ namespace sw
             return;
         D3D12_VERTEX_BUFFER_VIEW vbv{};
         vbv.BufferLocation = _pDevice->_vertexBuffer->GetGPUVirtualAddress();
-        vbv.SizeInBytes    = static_cast<UINT>( sizeof( RHIVertex ) * 3 );
+        vbv.SizeInBytes    = static_cast<UINT>( sizeof( constant::arrFallbackVertex ) );
         vbv.StrideInBytes  = static_cast<UINT>( sizeof( RHIVertex ) );
         commandListForRecord()->IASetVertexBuffers( 0, 1, &vbv );
     }
