@@ -86,6 +86,8 @@ namespace sw
         void setTime( int32 day, float32 hour );
         /** @brief 다음 @p hour 시까지 건너뜁니다. 잠에 씁니다. 지나간 경계는 알립니다. */
         void advanceToHour( float32 hour );
+        /** @brief 게임 시간 @p gameMinutes 분을 바로 흘립니다(멈춤 · 배율과 무관). 빨리 감기와 자동화 단계 `AdvanceGameTime` 에 씁니다. 지나간 경계는 알립니다. */
+        void advanceMinutes( float32 gameMinutes );
 
         float32       getHour() const;
         int32         getHourInt() const { return static_cast<int32>( getHour() ); }

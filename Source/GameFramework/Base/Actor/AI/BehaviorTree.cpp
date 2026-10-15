@@ -246,6 +246,7 @@ namespace sw
         , _listMoveTarget{}
         , _elapsedTime{ 0.0f }
         , _activeLeaf{ -1 }
+        , _lastSucceededLeaf{ -1 }
     {
     }
 
@@ -260,20 +261,23 @@ namespace sw
         _listActive.assign( nodeCount, SW_FALSE );
         _listLastCondition.assign( nodeCount, SW_FALSE );
         _listMoveTarget.assign( nodeCount, float3{} );
-        _elapsedTime = 0.0f;
-        _activeLeaf  = -1;
+        _elapsedTime       = 0.0f;
+        _activeLeaf        = -1;
+        _lastSucceededLeaf = -1;
     }
 
     void BehaviorTreeRunner::reset()
     {
         if ( _pTree != nullptr && _pTree->getNodeCount() > 0 )
             abortNode( 0 );
-        _activeLeaf = -1;
+        _activeLeaf        = -1;
+        _lastSucceededLeaf = -1;
     }
 
     const utf8* BehaviorTreeRunner::getActiveLeafName() const
     {
-        return _pTree != nullptr && _activeLeaf >= 0 ? _pTree->getNode( _activeLeaf )._name.c_str() : "";
+        const int32 leaf = _activeLeaf >= 0 ? _activeLeaf : _lastSucceededLeaf;
+        return _pTree != nullptr && leaf >= 0 ? _pTree->getNode( leaf )._name.c_str() : "";
     }
 
     BehaviorStatus BehaviorTreeRunner::tick( Blackboard& blackboard, void* pOwner, float32 deltaTime )
@@ -287,7 +291,8 @@ namespace sw
         _context._deltaTime   = deltaTime;
         if ( pollHigherPriorityTrigger() )
             abortNode( 0 ); // 우선순위 높은 가지가 깨어났다 — 처음부터 다시 고른다
-        _activeLeaf = -1;
+        _activeLeaf        = -1;
+        _lastSucceededLeaf = -1;
         return tickNode( 0 );
     }
 
@@ -481,6 +486,8 @@ namespace sw
                 status                 = node._function( _context );
                 if ( status == BehaviorStatus::Running )
                     _activeLeaf = index;
+                else if ( status == BehaviorStatus::Success )
+                    _lastSucceededLeaf = index;
                 break;
             }
             case BehaviorNodeType::Wait:

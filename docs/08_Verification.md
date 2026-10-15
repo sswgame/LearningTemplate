@@ -319,6 +319,9 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
   손 확인 목록을 백로그에 적지 말고 시나리오를 쓴다 — 못 쓰는 것만 이유와 함께 손 확인으로. 값을 보려면 `Expect probe`(게임 .cpp 의
   `SW_AUTOMATION_PROBE` 한 줄), 그림은 `Screenshot` + `ExpectImage`(지표 값은 보고 JSON 에 늘 적힌다).
   문서를 여는 시나리오는 `WaitUntil` 이 기본 문서와 **구별되는** 값을 기다려야 한다 — 기본 문서와 같은 값을 기다리면 파일이 뒤늦게 열려 클릭이 어긋난다.
+- **게임 로직은 기반 탐침으로 단언하고 결정성은 백엔드끼리 비교한다** — 입력은 액션 이름(`Action` · `ActionAxis`), NPC 일정은 `AdvanceGameTime` + `Schedule.*`, AI 는 `AI.State` + `ExpectVisited`,
+  "N 초 안에" 는 `WaitUntil timeoutSeconds`. 시나리오 끝에 `<Record probe="Scene.TransformHash"/>` 같은 기록을 두면 `AppScenarioTest` 가 네 백엔드의 `records` 를 비교해 다른 줄을 로그로 낸다.
+  녹화(`-scenario-record` · `-scenario-record-probes`)를 다시 돌려 같은 검사점이 나오는지는 `AppScenarioTest.RecordedPlayReplaysOnEveryBackend` 가 본다. 형식은 `Source/Engine/Automation/README.md`.
   `materialpreview` 가 GL 체인에서 한 번 진 적이 있다(미리보기 평균 R-B 가 옛 값 — 이후 0/23 재현 없음). 다시 지면 탐침 `Editor.MaterialDocumentIsProbeAsset` · `Editor.MaterialSwitchPending` 의 값으로 문서가 안 바뀐 것인지 계산이 안 따라온 것인지 가른다.
 - **ThreadSanitizer 는 이 리눅스 환경의 clang 18 에 런타임이 없다** — clang 으로 `-fsanitize=thread` 컴파일하고 링크만 gcc 의
   `/usr/lib/x86_64-linux-gnu/libtsan.so.2` 를 직접 붙이면 돈다(`setarch -R` 으로 ASLR 을 끈다). 일부러 만든 경합을 잡는 것까지 확인했다(2026-10-03,

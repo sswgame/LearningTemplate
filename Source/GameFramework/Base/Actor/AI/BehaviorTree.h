@@ -174,7 +174,7 @@ namespace sw
      * @class BehaviorTreeRunner
      * @brief 행위자 하나의 트리 실행 상태입니다. 매 틱 뿌리부터 내려가되, 도는 중인(Running) 가지는 그 자리에서 이어갑니다.
      * @details 뿌리가 끝나면(성공이든 실패든) 다음 틱에 처음부터 다시 돈다.
-     *          `getActiveLeafName` 은 디버그 표시에 쓴다. 언리얼 BT 디버거에서 깜빡이는 노드와 같다.
+     *          `getActiveLeafName` 은 디버그 표시와 자동화 탐침에 쓴다. 언리얼 BT 디버거에서 깜빡이는 노드와 같다.
      */
     class SW_GF_API BehaviorTreeRunner
     {
@@ -189,7 +189,12 @@ namespace sw
         /** @brief 도는 작업을 모두 중단하고 처음 상태로 돌립니다. */
         void reset();
 
-        int32       getActiveLeaf() const { return _activeLeaf; }
+        /** @brief 도는 중(Running)인 잎입니다. 없으면 −1 입니다. */
+        int32 getActiveLeaf() const { return _activeLeaf; }
+        /**
+         * @brief 지난 틱이 머문 잎의 이름입니다. 도는 잎이 있으면 그것, 없으면 그 틱에 마지막으로 성공한 작업입니다. 둘 다 없으면 빈 글입니다.
+         * @details 한 틱에 끝나는 작업만 있는 트리(경제 AI 처럼 작업마다 성공 강제)는 도는 잎이 늘 없다. 그때 "이번 틱에 실제로 한 일" 을 보여 준다.
+         */
         const utf8* getActiveLeafName() const;
         bool        isNodeActive( int32 index ) const { return index >= 0 && index < static_cast<int32>( _listActive.size() ) && _listActive[static_cast<size_t>( index )] != SW_FALSE; }
         float32     getElapsedTime() const { return _elapsedTime; }
@@ -216,5 +221,6 @@ namespace sw
         vector<float3>      _listMoveTarget;    ///< 이동 노드가 마지막으로 건 목적지
         float32             _elapsedTime;
         int32               _activeLeaf;
+        int32               _lastSucceededLeaf; ///< 이번 틱에 마지막으로 성공한 작업(`getActiveLeafName` 의 대신 값)
     };
 } // namespace sw

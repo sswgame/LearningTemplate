@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 액션 단계 — "점프하고 앞으로 달린다" 를 입력 맵 액션 이름(Jump · Move · Weapon2 · Weapon3)으로 낸다. 키보드 바인딩(Space · WASD)이 기본이고,
+  두 번째 점프는 패드 바인딩(A)으로 낸다(device="gamepad" — 가상 패드를 연결하고 같은 액션을 낸다). 플레이어는 (0, 1.6, -16) 에서 시작하며 눈 높이가 1.6 m 이다.
+  App -game=Shooter3D -scenario=game/shooter3d/automation/actions.scenario.xml -dx12 (종료 코드 0 = 통과)
+-->
+<Scenario name="shooter3d.actions" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<At frame="0"><Variable name="gv_shooterAutoPlay" value="0"/></At>
+	<At frame="10">
+		<Expect probe="Object.Y" target="Player" near="1.6" tolerance="0.05"/>
+		<Expect probe="Object.Z" target="Player" near="-16" tolerance="0.05"/>
+		<Expect probe="Pawn.Controller" target="Player" is="PlayerController"/>
+	</At>
+	<!-- 점프 — 0.1 초 뒤에는 떠 있고, 0.2 초 뒤 앞으로 0.5 초 달린다(공중에서도 움직인다). -->
+	<At frame="11"><Action name="Jump"/></At>
+	<At afterSeconds="0.1"><Expect probe="Object.Y" target="Player" atLeast="1.9"/></At>
+	<At afterSeconds="0.1"><ActionAxis name="Move" y="1" seconds="0.5"/></At>
+	<At afterSeconds="0.4"><Expect probe="Object.Z" target="Player" atLeast="-14.5"/></At>
+	<!-- 내려앉을 때까지 기다린다(1 초 안). -->
+	<At after="1"><WaitUntil probe="Object.Y" target="Player" atMost="1.61" timeoutSeconds="1"/></At>
+	<!-- 패드 A 로 다시 점프 — 같은 액션의 다른 바인딩. -->
+	<At after="10"><Action name="Jump" device="gamepad"/></At>
+	<At afterSeconds="0.1"><Expect probe="Object.Y" target="Player" atLeast="1.9"/></At>
+	<!-- 무기: 숫자 바인딩 액션으로 산탄총 → 권총. -->
+	<At after="1"><Action name="Weapon2"/></At>
+	<At after="5"><Expect probe="Shooter3D.WeaponIndex" equals="1"/></At>
+	<At after="1"><Action name="Weapon3"/></At>
+	<At after="5">
+		<Expect probe="Shooter3D.WeaponIndex" equals="2"/>
+		<Expect probe="Shooter3D.PlayerAlive" equals="1"/>
+		<Record probe="Object.X" target="Player"/>
+		<Record probe="Object.Z" target="Player"/>
+		<Pass/>
+	</At>
+</Scenario>

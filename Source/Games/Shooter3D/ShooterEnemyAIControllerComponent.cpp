@@ -21,6 +21,25 @@ namespace sw
             static constexpr const utf8* kAttack       = "Attack";
             static constexpr float32     kStopFraction = 0.85f; ///< 손 닿는 거리의 이 비율 안이면 멈춰 선다
             static constexpr float32     kFocusHeight  = 1.0f;  ///< 플레이어 발에서 바라보는 높이
+
+            /** @brief 몸의 단계를 판단 상태 이름으로 바꿉니다(탐침 `AI.State`). */
+            static const utf8* getStateName( ShooterEnemyPhase phase )
+            {
+                switch ( phase )
+                {
+                    case ShooterEnemyPhase::Rising:
+                        return "Rise";
+                    case ShooterEnemyPhase::Chasing:
+                        return "Chase";
+                    case ShooterEnemyPhase::Attacking:
+                        return "Attack";
+                    case ShooterEnemyPhase::Staggered:
+                        return "Stagger";
+                    case ShooterEnemyPhase::Dying:
+                        return "Die";
+                }
+                return "Chase";
+            }
         };
     } // namespace
 } // namespace sw
@@ -58,6 +77,7 @@ namespace sw
         holdButton( attack, distance < pEnemy->getReach() && pDirector->isPlayerAlive() );
 
         const ShooterEnemyPhase phase = pEnemy->getPhase();
+        setStateName( hashed_string( Internal::getStateName( phase ) ) );
         if ( phase != ShooterEnemyPhase::Chasing )
         {
             // 일어남 · 휘두름 · 움찔 · 쓰러짐 — 몸이 멈춰 있다. 휘두르는 동안은 플레이어 쪽으로 돈다.

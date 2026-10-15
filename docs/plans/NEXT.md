@@ -49,6 +49,14 @@ Shipping 키트는 STATIC 이고 내보내기 매크로가 빈 것을 산출물�
   키트 서버 조립은 옵션 표(`OnlineServerKitEntry::readOptions`) 한 번과 메서드 표(`OnlineMethodTable`)를 씁니다. 확장자 → 에디터 종류의 정본은 `EditorAssetType.cpp` 이고 엔진 포맷은 `kExtension` 을 듭니다.
 - `FrameRenderer` 의 이미지 꺼내기는 `getCapture()`(`FrameCapture`), 진단 덮어쓰기는 `setDebugOverrides( FrameDebugOverrides )`(배포본에 없음), 캔버스 렌더 텍스처 대상은 `CanvasRenderer` 입니다.
 
+## 4-1. 게임 로직 자동화 (2026-10-15 묶음 `wt/automation`)
+
+시나리오가 입력 맵 액션(`Action` · `ActionAxis`), 게임 시간(`AdvanceGameTime`), NPC 일정(`Schedule.*`), AI 상태 · 블랙보드(`AI.*`, `ExpectVisited`), 빙의 · 탑승(`Pawn.*`, `Mount`)을 데이터로 다룹니다.
+형식과 함정은 `Source/Engine/Automation/README.md`, 결정은 [결정 기록](../09_Decisions.md) 5-6 끝의 다섯 줄입니다. HarvestValley 에 마을 사람(일정 시스템의 첫 사용처)이 생겼습니다.
+
+- 결정적 재생: 시나리오 끝의 `<Record>` 를 `AppScenarioTest` 가 네 백엔드끼리 비교하고, `RecordedPlayReplaysOnEveryBackend` 가 녹화(`-scenario-record`)를 다시 돌려 검사점을 봅니다.
+- 남은 것은 백로그 `D5-4`(탑승 단계 실물 확인, 시나리오 없는 게임 네 개, 같은 이름 오브젝트 고르기, 링크 앵커 정리)와 `D5-3`(마을 사람의 길 찾기 · 세이브)입니다.
+
 ## 5. 서브틱 활용 조사
 
 서브틱(`registerSubTick`)은 `GameDirectorComponent.cpp` 한 곳에서만 쓰이고, `TickPhase` 의 `Early` · `Late` · `Finalize` 는 정의 밖 사용이 0 입니다. 반면 `setTickGroup` 은 48 개 파일, `PostUpdate` 는 41 개 파일입니다.

@@ -3,6 +3,7 @@
 #include "Games/StarSkirmish/SkirmishDirectorComponent.h"
 
 #include "Core/Common/FourCcUtil.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
@@ -111,6 +112,27 @@ namespace sw
         {
             return countSelected( pManager, true, outValue );
         }
+
+        /** @brief 탐침 `Skirmish.AITask` 입니다. 플레이어 `key`(0 · 1)를 맡은 컴퓨터 상대의 행동 트리가 도는 잎(`GatherIdle` · `TrainWorkers` · `Defend` …)입니다. */
+        [[nodiscard]] bool readAITask( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
+        {
+            const SkirmishDirectorComponent* pDirector = findProbeDirector( query._pManager );
+            int32                            player    = -1;
+            if ( pDirector == nullptr || StringUtil::parseInt( query._key, player ) == false )
+            {
+                outValue.setText( pDirector == nullptr ? string( "no skirmish director" ) : "key must be a player index, got '" + string( query._key ) + "'" );
+                return false;
+            }
+            const RTSCommanderAI* pAI = pDirector->getMatch().findAI( player );
+            if ( pAI == nullptr )
+            {
+                outValue.setText( "player " + string( query._key ) + " is not played by the AI" );
+                return false;
+            }
+            const utf8* pTask = pAI->getActiveTaskName();
+            outValue.setText( pTask != nullptr && pTask[0] != '\0' ? string_view{ pTask } : string_view{ "none" } );
+            return true;
+        }
     } // namespace
 
     /**
@@ -122,6 +144,7 @@ namespace sw
 
     SW_AUTOMATION_PROBE( skirmishSelectedCount, "Skirmish.SelectedCount", "Units in the human selection", &readSelectedCount );
     SW_AUTOMATION_PROBE( skirmishSelectedMovingCount, "Skirmish.SelectedMovingCount", "Selected units whose current order is a move", &readSelectedMovingCount );
+    SW_AUTOMATION_QUERY_PROBE( skirmishAITask, "Skirmish.AITask", "Active behavior tree task of the AI commander playing player key (0 or 1)", &readAITask, false, true );
 } // namespace sw
 
 namespace sw

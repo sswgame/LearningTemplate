@@ -335,7 +335,7 @@ namespace sw
         const TickRegistry& getTickRegistry() const { return _tickScheduler.getTickRegistry(); }
 
         /** @brief 핸들이 가리키는 컴포넌트를 찾습니다. 삭제 예정이면 nullptr 입니다. */
-        Component* resolveComponent( ComponentHandle handle ) { return _store.resolveComponent( handle ); }
+        Component* resolveComponent( ComponentHandle handle ) const { return _store.resolveComponent( handle ); }
 
         /** @brief 핸들이 가리키는 오브젝트를 찾습니다. 파괴됐거나 삭제 대기면 nullptr 입니다. 락을 잡지 않습니다(`findGameObjectByID`). */
         GameObject* resolveGameObject( GameObjectHandle handle ) const { return _store.resolveGameObject( handle ); }

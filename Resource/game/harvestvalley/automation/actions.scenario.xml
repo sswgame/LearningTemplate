@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  HarvestValley 액션 단계 — 키 대신 입력 맵 액션 이름(data/farm.input.xml)으로 조작한다: Farm.Move 축으로 걷고, Farm.Tool1 로 괭이를 들고,
+  위로 걸어 밭 앞에 서서 Farm.Use 로 간다. 키 배치를 바꿔도 이 시나리오는 그대로다. 농부는 X 6, Z -1.2 에서 시작하고 걷는 빠르기는 4 m/s 이다.
+  끝 상태(농부 위치, 간 타일 수)를 기록한다. 같은 입력이면 네 백엔드가 같은 값을 내야 한다(AppScenarioTest 가 비교한다).
+  App -game=HarvestValley -scenario=game/harvestvalley/automation/actions.scenario.xml (종료 코드 0 = 통과)
+-->
+<Scenario name="harvestvalley.actions" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" input="exclusive">
+	<At frame="0"><Variable name="gv_farmAutoPlay" value="0"/></At>
+	<At frame="10"><Expect probe="Farm.FarmerX" near="6" tolerance="0.01"/><Expect probe="Farm.FarmerTool" equals="0"/></At>
+	<!-- 오른쪽으로 0.5 초(2 m), 물뿌리개를 들었다가 괭이로 돌아온다(연속 액션). -->
+	<At frame="11"><ActionAxis name="Farm.Move" x="1" seconds="0.5"/></At>
+	<At afterSeconds="0.6"><Expect probe="Farm.FarmerX" near="8" tolerance="0.2"/></At>
+	<At after="1"><Action name="Farm.Tool2"/></At>
+	<At after="4"><Expect probe="Farm.FarmerTool" equals="1"/></At>
+	<At after="1"><Action name="Farm.Tool1"/></At>
+	<At after="4"><Expect probe="Farm.FarmerTool" equals="0"/></At>
+	<!-- 위로 0.5 초 걸어 밭(Z 0 부터) 앞 타일을 바라보고 선다 — 그리고 사용(괭이로 갈기, 체력 4). -->
+	<At after="1"><ActionAxis name="Farm.Move" y="1" seconds="0.45"/></At>
+	<At afterSeconds="0.6"><Action name="Farm.Use"/></At>
+	<At after="5">
+		<Expect probe="Farm.TilledCount" equals="1"/>
+		<Record probe="Farm.FarmerX"/>
+		<Record probe="Object.Z" target="Farmer"/>
+		<Record probe="Farm.TilledCount"/>
+		<Pass/>
+	</At>
+</Scenario>

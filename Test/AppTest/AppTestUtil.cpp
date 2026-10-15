@@ -115,6 +115,44 @@ namespace test
                                     kScenarioTimeoutSeconds );
     }
 
+    sw::string AppTestUtil::makeReportPath( const sw::string& scenarioPath, const utf8* pBackendSwitch )
+    {
+        const sw::string backend = pBackendSwitch[0] == '-' ? sw::string( pBackendSwitch + 1 ) : sw::string( "default" );
+        return "Saved/Automation/" + AppTestUtilInternal::getScenarioStem( scenarioPath ) + "_" + backend + ".json";
+    }
+
+    sw::vector<sw::string> AppTestUtil::readReportRecords( const sw::string& reportPath )
+    {
+        sw::vector<sw::string> listRecord;
+        sw::string             json;
+        if ( sw::FileUtil::readTextFile( reportPath, json ) == false )
+            return listRecord;
+        const size_t key = json.find( "\"records\"" );
+        if ( key == sw::string::npos )
+            return listRecord;
+        const size_t end = json.find( ']', key );
+        size_t       at  = json.find( '[', key );
+        // 줄은 `"…"` 이고 안의 `\"` · `\\` 만 풀면 된다(보고 작성기가 그 둘과 줄바꿈만 바꾼다).
+        while ( at != sw::string::npos && at < end )
+        {
+            const size_t open = json.find( '"', at + 1 );
+            if ( open == sw::string::npos || open > end )
+                break;
+            sw::string line;
+            size_t     cursor = open + 1;
+            while ( cursor < json.size() && json[cursor] != '"' )
+            {
+                if ( json[cursor] == '\\' && cursor + 1 < json.size() )
+                    ++cursor;
+                line.push_back( json[cursor] );
+                ++cursor;
+            }
+            listRecord.push_back( std::move( line ) );
+            at = cursor;
+        }
+        return listRecord;
+    }
+
     int32 AppTestUtil::runScenarioChain( const sw::vector<sw::string>& listScenarioPath, const sw::string& chainName, const utf8* pBackendSwitch,
                                          sw::string& outScenarioLines, sw::string_view extraArguments )
     {

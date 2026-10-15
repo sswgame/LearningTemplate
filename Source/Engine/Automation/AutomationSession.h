@@ -6,9 +6,11 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Automation/ScenarioRecorder.h"
 #include "Engine/Utility/EngineFrameObserver.h"
 
 namespace sw
@@ -53,6 +55,16 @@ namespace sw
          * @return 돌릴 시나리오가 하나라도 있으면 true 입니다(없으면 아무것도 하지 않고 체인도 남기지 않는다).
          */
         [[nodiscard]] bool begin( string_view scenarioArgument, string_view reportPath, bool bKeepGoing, uint32 completedScreenshotCount );
+        /**
+         * @brief 플레이를 시나리오로 녹화합니다(`-scenario-record=<Saved/Automation/...scenario.xml>`). 활성 씬이 플레이를 시작한 첫 프레임부터 입력을 적고,
+         *        시나리오가 끝나거나 창이 닫힐 때 파일을 씁니다.
+         * @param probeList `-scenario-record-probes=` 값 — 쉼표로 가른 검사점(`탐침`, `탐침@대상`, `탐침@대상@키`). 끝 프레임의 값이 `<Expect>` 로 실려 녹화가 스스로를 검증한다.
+         * @details 시나리오와 함께 돌리면(`-scenario`) 시나리오가 낸 가상 입력도 적는다 — 시나리오 → 녹화 → 재생의 왕복으로 결정적 재생을 확인한다. 시작 조건은 시나리오의 `ScenePlaying` 과 같은 프레임이다.
+         * @return 경로가 `Saved/Automation/` 아래의 `.scenario.xml` 이 아니면 false 입니다.
+         */
+        [[nodiscard]] bool beginRecording( string_view outputPath, string_view probeList );
+        /** @brief 시나리오나 녹화가 돌고 있으면 true 입니다(프레임 관찰자로 붙일지 런처가 본다). */
+        bool isBusy() const { return _pRunner != nullptr || _recordPath.empty() == false; }
 
         /** @brief 프레임 시작(입력 `beginFrame` 전)입니다. 지금 단계의 시작 조건 · 가상 입력 붙이기 · 입력 전 단계를 돌립니다. 입력이 없으면 아무것도 하지 않습니다. */
         void onFrameBegin( const EngineFrameContext& context ) override;
@@ -74,9 +86,16 @@ namespace sw
         void startStage( uint32 completedScreenshotCount );
         /** @brief 단계 하나가 끝났을 때 부릅니다(`AutomationResult` 값). 통과했고 다음 단계가 있으면 그것을 시작하고 `kRunning`, 아니면 체인의 종료 코드입니다. */
         [[nodiscard]] int32 onStageEnded( int32 resultCode, uint32 completedScreenshotCount );
+        /** @brief 녹화를 시작할 프레임인지 보고(활성 씬이 플레이 중이고 시작 차단이 없다) 시작합니다. */
+        void startRecordingWhenReady();
+        /** @brief 녹화를 멈추고 검사점을 읽어 파일을 씁니다. 녹화 중이 아니면 아무것도 하지 않습니다. */
+        void finishRecording();
 
         unique_ptr<AutomationRunner>        _pRunner;
         unique_ptr<AutomationScenarioChain> _pChain;
+        ScenarioRecorder                    _recorder;
+        vector<string>                      _listRecordProbe;    ///< `-scenario-record-probes` 의 검사점
+        string                              _recordPath;         ///< `-scenario-record` 경로(비면 녹화하지 않는다)
         string                              _reportPath;         ///< `-scenario-report` 원본(단계마다 `AutomationScenarioChain::makeStageReportPath`)
         string                              _workingFolder;      ///< 시작할 때의 작업 폴더(단계마다 이 폴더에서 시작한다)
         uint32                              _screenshotBaseline; ///< 단계가 시작할 때 렌더 스레드가 이미 쓴 스크린샷 수

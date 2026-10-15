@@ -11,12 +11,14 @@
 #include "Engine/Navigation/INavMover.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Base/Actor/AI/Blackboard.h"
 #include "GameFramework/Base/Actor/Control/Controller/ControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
+    class BehaviorTreeRunner;
     class NavMeshAgentComponent;
 
     /**
@@ -60,6 +62,19 @@ namespace sw
         float32       getArriveDistance() const { return _arriveDistance; }
         void          setArriveDistance( float32 distance ) { _arriveDistance = distance; }
 
+        /**
+         * @brief 판단의 지금 상태 이름입니다(상태 머신의 상태 · 고른 할 일). 파생이 `think` 에서 상태가 바뀔 때 부릅니다.
+         * @details 디버그 표시와 자동화 탐침 `AI.State` 가 읽는다(`<ExpectVisited probe="AI.State" sequence="Till,Plant"/>`). 언리얼 Gameplay Debugger 의 BT · 상태 줄과 같은 자리다.
+         */
+        void                 setStateName( const hashed_string& stateName ) { _stateName = stateName; }
+        const hashed_string& getStateName() const { return _stateName; }
+        /** @brief 이 조종자의 블랙보드입니다(언리얼 `AAIController` 의 Blackboard 컴포넌트). 행동 트리 · 판단이 쓰고 탐침 `AI.Blackboard` 가 읽습니다. */
+        Blackboard&       getBlackboard() { return _blackboard; }
+        const Blackboard& getBlackboard() const { return _blackboard; }
+        /** @brief 판단이 행동 트리로 돌면 그 실행기입니다(탐침 `AI.BehaviorTask` 가 도는 잎 이름을 읽는다). 실행기는 파생이 소유하고, 내리기 전에 nullptr 로 돌립니다. */
+        void                      setBehaviorTreeRunner( const BehaviorTreeRunner* pRunner ) { _pBehaviorTreeRunner = pRunner; }
+        const BehaviorTreeRunner* getBehaviorTreeRunner() const { return _pBehaviorTreeRunner; }
+
     protected:
         /** @brief 판단 — 파생이 덮습니다. 기본은 아무것도 하지 않습니다(이미 건 목적지 · 초점은 그대로 따른다). */
         virtual void think( const ControlFrameContext& context, const PawnComponent& pawn )
@@ -80,16 +95,19 @@ namespace sw
         PROPERTY( Category = "AI", DisplayName = "Arrive Distance", Min = 0.0, Tooltip = "Stops inside this distance of the destination when there is no navmesh agent", Units = m )
         float32 _arriveDistance;
 
-        ControlIntent          _pending; ///< 이번 틱에 쌓인 버튼 발동 · 아날로그
-        float3                 _destination;
-        float3                 _focusPoint;
-        uint32                 _heldButtonMask; ///< `holdButton` 으로 누르고 있는 버튼
-        NavMoveStatus          _moveStatus;     ///< 내비 에이전트가 없을 때의 상태
-        uint8                  _bHasDestination  : 1;
-        uint8                  _bHasFocus        : 1;
-        uint8                  _bDestinationSent : 1; ///< 지금 목적지를 내비 에이전트에 걸었다
-        uint8                  _bStopPending     : 1; ///< 다음 틱에 내비 에이전트를 멈춘다
-        uint8                  _bWarnedDriveMode : 1; ///< 내비 에이전트가 SteerOnly 가 아니라고 경고했다
-        [[maybe_unused]] uint8 _reserved         : 3;
+        Blackboard                _blackboard;
+        hashed_string             _stateName;           ///< 판단의 지금 상태(`setStateName`)
+        const BehaviorTreeRunner* _pBehaviorTreeRunner; ///< 판단이 쓰는 행동 트리 실행기(없으면 nullptr)
+        ControlIntent             _pending;             ///< 이번 틱에 쌓인 버튼 발동 · 아날로그
+        float3                    _destination;
+        float3                    _focusPoint;
+        uint32                    _heldButtonMask; ///< `holdButton` 으로 누르고 있는 버튼
+        NavMoveStatus             _moveStatus;     ///< 내비 에이전트가 없을 때의 상태
+        uint8                     _bHasDestination  : 1;
+        uint8                     _bHasFocus        : 1;
+        uint8                     _bDestinationSent : 1; ///< 지금 목적지를 내비 에이전트에 걸었다
+        uint8                     _bStopPending     : 1; ///< 다음 틱에 내비 에이전트를 멈춘다
+        uint8                     _bWarnedDriveMode : 1; ///< 내비 에이전트가 SteerOnly 가 아니라고 경고했다
+        [[maybe_unused]] uint8    _reserved         : 3;
     };
 } // namespace sw

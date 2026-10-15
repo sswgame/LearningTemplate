@@ -307,18 +307,25 @@ namespace sw
 
     void App::startAutomationSession( const CommandLineManager& commandLineManager )
     {
+        string recordPath;
+        string recordProbes;
+        if ( commandLineManager.getArgument( CommandLineArgument::SCENARIO_RECORD, recordPath ) && recordPath.empty() == false )
+        {
+            (void)commandLineManager.getArgument( CommandLineArgument::SCENARIO_RECORD_PROBES, recordProbes ); // 없으면 검사점 없이 입력만 녹화한다
+            (void)_pAutomationSession->beginRecording( recordPath, recordProbes );                             // 거절하면 이유를 로그로 남기고 녹화 없이 돈다
+        }
         string scenarioPath;
-        if ( commandLineManager.getArgument( CommandLineArgument::SCENARIO, scenarioPath ) == false || scenarioPath.empty() )
-            return;
         string reportPath;
         (void)commandLineManager.getArgument( CommandLineArgument::SCENARIO_REPORT, reportPath ); // 없으면 보고 파일을 쓰지 않는다
         RenderThread* pRenderThread = _engine.getRenderThread();
         const bool    bKeepGoing    = commandLineManager.isArgumentProvided( CommandLineArgument::SCENARIO_KEEP_GOING );
-        if ( _pAutomationSession->begin( scenarioPath, reportPath, bKeepGoing, pRenderThread != nullptr ? pRenderThread->getCompletedScenarioScreenshotCount() : 0u ) == false )
-            return;
-        if ( pRenderThread != nullptr )
+        const bool    bScenario     = commandLineManager.getArgument( CommandLineArgument::SCENARIO, scenarioPath ) && scenarioPath.empty() == false;
+        const bool    bStarted =
+            bScenario && _pAutomationSession->begin( scenarioPath, reportPath, bKeepGoing, pRenderThread != nullptr ? pRenderThread->getCompletedScenarioScreenshotCount() : 0u );
+        if ( bStarted && pRenderThread != nullptr )
             pRenderThread->setScenarioCaptureEnabled( true );
-        _engine.registerFrameObserver( _pAutomationSession );
+        if ( _pAutomationSession->isBusy() )
+            _engine.registerFrameObserver( _pAutomationSession );
     }
 
     void App::bindHostCallbacks()

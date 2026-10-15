@@ -85,6 +85,12 @@
 |---|---|---|---|---|---|
 | `gv_dumpReflection` | `string` | — | 시험 | 첫 프레임에 이 이름들(쉼표로 여럿)의 리플렉션 등록 내용을 로그로 남긴다 — 타입 · enum (비우면 사용 안 함) | [Engine.cpp](../../Source/Engine/Engine.cpp) |
 
+## `Source/Engine/Automation`
+
+| 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
+|---|---|---|---|---|---|
+| `gv_automationHashDump` | `int32` | `0` | 시험 | Scene.TransformHash 를 읽을 때 오브젝트마다 이름 · 위치를 로그로 (1=켜기, 결정성 진단) | [AutomationRunner.cpp](../../Source/Engine/Automation/AutomationRunner.cpp) |
+
 ## `Source/Engine/Destruction`
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |

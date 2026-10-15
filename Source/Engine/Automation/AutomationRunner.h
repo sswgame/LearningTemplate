@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Automation/AutomationLogCapture.h"
+#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationReportWriter.h"
 #include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Input/Virtual/VirtualInputScript.h"
@@ -104,10 +105,41 @@ namespace sw
         /** @brief 활성 씬 대신 @p pManager 를 봅니다(테스트와 도구용이며, 씬 없이 매니저를 손으로 돌릴 때 씁니다). nullptr 이면 활성 씬입니다. */
         void setObjectManager( GameObjectManager* pManager ) { _pObjectManagerOverride = pManager; }
 
+        /** @brief 입력 단계가 이벤트를 넣는 가상 입력 원천입니다. 다른 모듈의 입력 단계(액션 단계)도 준비 함수에서 씁니다. */
+        VirtualInputScript& getInputScript() { return _inputScript; }
+        /** @brief 시나리오를 돌리는 입력 관리자입니다(시작 프레임부터, 그 전에는 nullptr). 액션 단계가 입력 맵의 바인딩을 읽습니다. */
+        InputManager* getInputManager() const { return _pInputManager; }
+        /** @brief 초를 시나리오 프레임 수로 바꿉니다(고정 프레임 시간으로 반올림). 단계의 `seconds` · `timeoutSeconds` 속성이 씁니다. */
+        uint32 convertSecondsToFrames( float32 seconds ) const;
+        /** @brief 탐침 값 한 줄을 보고의 `records` 에 남깁니다(`<Record>`). 백엔드끼리 같아야 하는 값이다(AppScenarioTest 가 견준다). */
+        void                  addRecordLine( string line );
+        const vector<string>& getRecordLines() const { return _reportWriter.getRecordLines(); }
+
         /** @brief 결과 이름(`PASS`, `FAIL`, `LOAD ERROR`, `TIMEOUT`, `SKIP`)입니다. */
         static const utf8* getResultName( AutomationResult result );
 
     private:
+        /**
+         * @struct ProbeWatch
+         * @brief `<ExpectVisited>` 가 보는 탐침 하나(탐침 · 대상 · 키)의 값 이력입니다. 시작 프레임부터 프레임마다 읽어 값이 바뀔 때만 적습니다.
+         */
+        struct ProbeWatch
+        {
+            vector<string> _listValue{}; ///< 바뀐 값(끝의 0 을 정리한 글)
+            vector<uint32> _listFrame{}; ///< 그 값이 처음 보인 시나리오 프레임
+            string         _probe{};
+            string         _target{};
+            string         _key{};
+        };
+
+        /** @brief 단계의 탐침 · 대상 · 키를 읽어 값을 냅니다. 없으면 false 이고 @p outMessage 에 이유를 씁니다. */
+        [[nodiscard]] bool readProbeValue( const AutomationStep& step, AutomationProbeValue& outValue, string& outMessage ) const;
+        /** @brief 시작할 때 `<ExpectVisited>` 가 보는 탐침마다 이력을 만듭니다. */
+        void prepareWatches();
+        /** @brief 이력마다 이번 프레임 값을 읽어 바뀌었으면 적습니다(씬 틱 뒤, 단계 전). */
+        void sampleWatches();
+        void runExpectVisited( const AutomationStep& step );
+        void runRecord( const AutomationStep& step );
         /** @brief 엔진 단계(`AutomationRunner.cpp`, 레지스트리에 등록)는 가상 입력 원천 · 스크린샷 대기열 · 종료 시한을 직접 만진다. */
         friend struct AutomationRunnerEngineSteps;
 
@@ -139,9 +171,11 @@ namespace sw
         AutomationReportWriter _reportWriter;          ///< 보고 경로 · 지표 줄 · JSON 보고 쓰기
         vector<string>         _listFailure;           ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
         vector<string>         _listPendingScreenshot; ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로입니다.
+        vector<ProbeWatch>     _listWatch;             ///< `<ExpectVisited>` 가 보는 탐침 이력
         string                 _outputDirectory;
         string                 _finishReason;
         GameObjectManager*     _pObjectManagerOverride; ///< `setObjectManager` 로 정한 매니저입니다(nullptr 이면 활성 씬).
+        InputManager*          _pInputManager;          ///< 시작 프레임에 받은 입력 관리자(`onFrameBegin`)
         float64                _exitDeadlineSeconds;    ///< `ExpectExitWithin` 이 정한 벽시계 시한입니다(단조 시계 초). 0 이면 기다리지 않습니다.
         float64                _loadDeadlineSeconds;    ///< 부하 시나리오(`<Load>`)의 멈춤 그물 — 측정 창이 이때까지 끝내지 못하면 시간 초과다(단조 시계 초). 0 이면 부하 시나리오가 아니다.
         size_t                 _nextStepIndex;
