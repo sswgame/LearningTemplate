@@ -44,9 +44,19 @@ jobs:
         cmake --preset CI-Debug
 
     # 단독 컴파일은 생성 헤더(리플렉션 FlagOps.gen.h · *.gen.h)가 있어야 가짜 오류가 안 난다 — 구성만 한 폴더는 자리 표시자다.
+    # 출력을 파일로도 받아 실패하면 오류 줄을 주석으로 올린다(ci.yml 의 Build 단계와 같다) — 작업 로그는 밖에서 403 이다.
     - name: Build
+      id: build
+      shell: pwsh
       run: |
-        cmake --build --preset CI-Debug
+        cmake --build --preset CI-Debug -- -k 0 2>&1 | Tee-Object -FilePath build/build.log
+        exit $LASTEXITCODE
+
+    - name: Report build failure as annotations
+      if: failure() && steps.build.outcome == 'failure'
+      shell: bash
+      run: |
+        $PY Scripts/dev/CiFailureReport.py build --log build/build.log
 
     - name: Check that every header compiles on its own
       run: |
