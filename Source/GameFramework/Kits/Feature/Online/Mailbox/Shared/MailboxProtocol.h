@@ -23,20 +23,30 @@ namespace sw
     class BitReader;
     class BitWriter;
 
-    /** @brief 우편함 메서드 번호입니다. 와이어 값이므로 바꾸면 `MailboxProtocol::kVersion` 을 올려야 합니다. */
-    struct MailboxMethod
+    /** @brief 우편함 메서드 이름입니다. 열거자 순서가 와이어 번호(`OnlineMethodTable`)이고, 이름의 snake_case 가 지표 라벨입니다. 새 메서드는 `Count` 앞에만 더합니다. */
+    ENUM( Count = Count )
+    enum class MailboxMethodName : uint8
     {
-        static constexpr uint16 kList     = OnlineMethodRange::kMailbox + 0x01;
-        static constexpr uint16 kMarkRead = OnlineMethodRange::kMailbox + 0x02;
-        static constexpr uint16 kClaim    = OnlineMethodRange::kMailbox + 0x03; ///< 멱등 키가 필수이다
-        static constexpr uint16 kClaimAll = OnlineMethodRange::kMailbox + 0x04; ///< 멱등 키가 필수이다
-        static constexpr uint16 kDelete   = OnlineMethodRange::kMailbox + 0x05;
-        static constexpr int32  kCount    = 5;
+        List,
+        MarkRead,
+        Claim,
+        ClaimAll,
+        Delete,
+        Count,
+    };
+} // namespace sw
 
-        static_assert( OnlineMethodRange::isInRange( kDelete, OnlineMethodRange::kMailbox ) && OnlineMethodRange::isMethod( kDelete ) );
+namespace sw
+{
+    /** @brief 우편함 메서드 번호입니다. 와이어 값이므로 바꾸면 `MailboxProtocol::kVersion` 을 올려야 합니다. */
+    struct MailboxMethod : OnlineMethodTable<MailboxMethodName, OnlineMethodRange::kMailbox>
+    {
+        static constexpr uint16 kList     = toMethod( MailboxMethodName::List );
+        static constexpr uint16 kMarkRead = toMethod( MailboxMethodName::MarkRead );
+        static constexpr uint16 kClaim    = toMethod( MailboxMethodName::Claim );    ///< 멱등 키가 필수이다
+        static constexpr uint16 kClaimAll = toMethod( MailboxMethodName::ClaimAll ); ///< 멱등 키가 필수이다
+        static constexpr uint16 kDelete   = toMethod( MailboxMethodName::Delete );
 
-        /** @brief 0부터 시작하는 번호입니다. 지표의 인덱스로 씁니다. 모르는 메서드이면 -1 입니다. */
-        static constexpr int32 toIndex( uint16 method ) { return kList <= method && method < kList + kCount ? static_cast<int32>( method - kList ) : -1; }
         /** @brief 상태를 바꾸는 수령이면 true 입니다. 멱등 키가 필수입니다. */
         static constexpr bool isClaim( uint16 method ) { return method == kClaim || method == kClaimAll; }
     };

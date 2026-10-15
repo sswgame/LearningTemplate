@@ -75,15 +75,16 @@ namespace sw
             bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
                 using Internal [[maybe_unused]] = AccountOnlineServerKitInternal;
-                const string* pUnknown          = entry.findUnknownOption( { "ticketKeySecretEnvironment", "attemptBurst", "lightPasswordHash" } );
-                if ( pUnknown != nullptr )
-                {
-                    outError = "unknown option '" + *pUnknown + "'";
-                    return false;
-                }
                 LoginSettings loginSettings;
                 bool          bLightHash = false;
-                if ( entry.readIntOption( "attemptBurst", loginSettings._attemptBurst, outError ) == false || entry.readBoolOption( "lightPasswordHash", bLightHash, outError ) == false )
+                string        ticketKeyEnvironment;
+                const bool    bOptionOk = entry.readOptions( {
+                                                              {"ticketKeySecretEnvironment",        ticketKeyEnvironment},
+                                                              {              "attemptBurst", loginSettings._attemptBurst},
+                                                              {         "lightPasswordHash",                  bLightHash}
+                },
+                                                             outError );
+                if ( bOptionOk == false )
                     return false;
                 if ( bLightHash )
                 {
@@ -96,18 +97,15 @@ namespace sw
 #endif
                 }
                 uint8 arrTicketKey[LoginTicketAuthority::kMasterKeySize];
-                if ( readTicketKey( entry, arrTicketKey, outError ) == false )
+                if ( readTicketKey( ticketKeyEnvironment, arrTicketKey, outError ) == false )
                     return false;
                 _loginService.initialize( context._pStore, &_crypto, loginSettings, arrTicketKey );
                 Memory::set( arrTicketKey, 0, sizeof( arrTicketKey ) );
                 _bLoginStarted = true;
                 _loginService.setRemoteConfig( context._pRemoteConfig );
                 _accountServer.initialize( &_loginService, AccountServerSettings{} );
-                if ( context._pHost->registerHostService( &_accountServer ) == false )
-                {
-                    outError = "the account method range is already taken";
+                if ( registerHostService( context, entry, &_accountServer, outError ) == false )
                     return false;
-                }
                 context._pAccountDirectory = &_loginService;
                 context._pPresence         = _accountServer.getPresence();
                 context._pSessionControl   = &_accountServer;
@@ -136,10 +134,9 @@ namespace sw
 
         private:
             /** @brief 옵션의 환경 변수에서 주 키를 읽습니다. 변수를 정하지 않았으면 Dev 는 개발용 키(경고), Shipping 은 실패입니다. */
-            [[nodiscard]] static bool readTicketKey( const OnlineServerKitEntry& entry, uint8 ( &outArrKey )[LoginTicketAuthority::kMasterKeySize], string& outError )
+            [[nodiscard]] static bool readTicketKey( const string& environment, uint8 ( &outArrKey )[LoginTicketAuthority::kMasterKeySize], string& outError )
             {
-                const string* pEnvironment = entry.findOption( "ticketKeySecretEnvironment" );
-                if ( pEnvironment == nullptr || pEnvironment->empty() )
+                if ( environment.empty() )
                 {
 #if defined( SW_SHIPPING )
                     outError = "the game ticket master key is required - set the ticketKeySecretEnvironment option";
@@ -151,9 +148,9 @@ namespace sw
 #endif
                 }
                 string secret;
-                if ( ServerSecret::read( *pEnvironment, secret ) == false || secret.empty() )
+                if ( ServerSecret::read( environment, secret ) == false || secret.empty() )
                 {
-                    outError = "the game ticket master key environment variable '" + *pEnvironment + "' is not set";
+                    outError = "the game ticket master key environment variable '" + environment + "' is not set";
                     return false;
                 }
                 const bool bParsed = AccountOnlineServerKitInternal::parseTicketKey( secret, outArrKey );

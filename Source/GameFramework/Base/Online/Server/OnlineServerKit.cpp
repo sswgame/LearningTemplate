@@ -2,6 +2,9 @@
 
 #include "GameFramework/Base/Online/Server/OnlineServerKit.h"
 
+#include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
+#include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
+
 namespace sw
 {
     namespace
@@ -22,6 +25,14 @@ namespace sw
 
 namespace sw
 {
+    bool IOnlineServerKit::registerHostService( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, IOnlineHostService* pService, string& outError )
+    {
+        if ( context._pHost->registerHostService( pService ) )
+            return true;
+        outError = "the method range of kit '" + entry._name + "' is already taken";
+        return false;
+    }
+
     void OnlineServerKitRegistry::registerFactory( OnlineServerKitFactory* pFactory )
     {
         if ( pFactory == nullptr || pFactory->_pCreate == nullptr )

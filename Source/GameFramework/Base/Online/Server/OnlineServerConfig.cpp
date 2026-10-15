@@ -18,68 +18,110 @@ namespace sw
 
 namespace sw
 {
-    const string* OnlineServerKitEntry::findOption( string_view key ) const
+    OnlineServerKitOptionField::OnlineServerKitOptionField( const utf8* pKey, int32& target )
+        : _pKey{ pKey }
+        , _pTarget{ &target }
+        , _kind{ Kind::Int }
     {
-        for ( const OnlineServerOption& option : _listOption )
-        {
-            if ( option._key == key )
-                return &option._value;
-        }
-        return nullptr;
     }
 
-    void OnlineServerKitEntry::collectOptions( string_view key, vector<string>& outListValue ) const
+    OnlineServerKitOptionField::OnlineServerKitOptionField( const utf8* pKey, bool& target )
+        : _pKey{ pKey }
+        , _pTarget{ &target }
+        , _kind{ Kind::Bool }
     {
-        for ( const OnlineServerOption& option : _listOption )
-        {
-            if ( option._key == key )
-                outListValue.push_back( option._value );
-        }
     }
 
-    const string* OnlineServerKitEntry::findUnknownOption( std::initializer_list<string_view> listKnownKey ) const
+    OnlineServerKitOptionField::OnlineServerKitOptionField( const utf8* pKey, string& target )
+        : _pKey{ pKey }
+        , _pTarget{ &target }
+        , _kind{ Kind::Text }
+    {
+    }
+
+    OnlineServerKitOptionField::OnlineServerKitOptionField( const utf8* pKey, vector<string>& listTarget )
+        : _pKey{ pKey }
+        , _pTarget{ &listTarget }
+        , _kind{ Kind::TextList }
+    {
+    }
+
+    bool OnlineServerKitOptionField::readValues( const vector<const string*>& listValue, const string& kitName, string& outError ) const
+    {
+        if ( listValue.empty() )
+            return true;
+        const string& first = *listValue.front();
+        switch ( _kind )
+        {
+            case Kind::Int:
+            {
+                if ( StringUtil::parseInt( first, *static_cast<int32*>( _pTarget ) ) )
+                    return true;
+                outError = "option '" + string( _pKey ) + "' of kit '" + kitName + "' must be an integer (got '" + first + "')";
+                return false;
+            }
+            case Kind::Bool:
+            {
+                bool& target = *static_cast<bool*>( _pTarget );
+                if ( first == "1" || first == "true" )
+                {
+                    target = true;
+                    return true;
+                }
+                if ( first == "0" || first == "false" )
+                {
+                    target = false;
+                    return true;
+                }
+                outError = "option '" + string( _pKey ) + "' of kit '" + kitName + "' must be 0 or 1 (got '" + first + "')";
+                return false;
+            }
+            case Kind::Text:
+            {
+                *static_cast<string*>( _pTarget ) = first;
+                return true;
+            }
+            case Kind::TextList:
+            {
+                vector<string>& target = *static_cast<vector<string>*>( _pTarget );
+                for ( const string* pValue : listValue )
+                {
+                    target.push_back( *pValue );
+                }
+                return true;
+            }
+        }
+        return true;
+    }
+
+    bool OnlineServerKitEntry::readOptions( std::initializer_list<OnlineServerKitOptionField> listField, string& outError ) const
     {
         for ( const OnlineServerOption& option : _listOption )
         {
             bool bKnown = false;
-            for ( const string_view knownKey : listKnownKey )
+            for ( const OnlineServerKitOptionField& field : listField )
             {
-                bKnown = bKnown || option._key == knownKey;
+                bKnown = bKnown || option._key == field.getKey();
             }
             if ( bKnown == false )
-                return &option._key;
+            {
+                outError = "unknown option '" + option._key + "' of kit '" + _name + "'";
+                return false;
+            }
         }
-        return nullptr;
-    }
-
-    bool OnlineServerKitEntry::readIntOption( string_view key, int32& inoutValue, string& outError ) const
-    {
-        const string* pValue = findOption( key );
-        if ( pValue == nullptr )
-            return true;
-        if ( StringUtil::parseInt( *pValue, inoutValue ) )
-            return true;
-        outError = "option '" + string( key ) + "' of kit '" + _name + "' must be an integer (got '" + *pValue + "')";
-        return false;
-    }
-
-    bool OnlineServerKitEntry::readBoolOption( string_view key, bool& inoutValue, string& outError ) const
-    {
-        const string* pValue = findOption( key );
-        if ( pValue == nullptr )
-            return true;
-        if ( *pValue == "1" || *pValue == "true" )
+        vector<const string*> listValue;
+        for ( const OnlineServerKitOptionField& field : listField )
         {
-            inoutValue = true;
-            return true;
+            listValue.clear();
+            for ( const OnlineServerOption& option : _listOption )
+            {
+                if ( option._key == field.getKey() )
+                    listValue.push_back( &option._value );
+            }
+            if ( field.readValues( listValue, _name, outError ) == false )
+                return false;
         }
-        if ( *pValue == "0" || *pValue == "false" )
-        {
-            inoutValue = false;
-            return true;
-        }
-        outError = "option '" + string( key ) + "' of kit '" + _name + "' must be 0 or 1 (got '" + *pValue + "')";
-        return false;
+        return true;
     }
 
     string OnlineServerConfig::makeConfigPath( string_view serverConfigPath )

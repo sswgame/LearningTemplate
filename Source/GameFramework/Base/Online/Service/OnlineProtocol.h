@@ -41,6 +41,35 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 키트 요청 메서드의 표입니다. @p TMethodName 은 `ENUM( Count = Count )` 열거형이고, 열거자 순서가 와이어 번호(@p RangeBase + 1 부터 연속)입니다.
+     * @details 키트의 `XxxMethod` 가 이 표를 상속해 와이어 상수를 `toMethod` 로 만들고, 서비스 지표(`ServiceMetrics::initialize`)는 열거자 이름의 snake_case 를 메서드 라벨로 씁니다.
+     *          새 메서드는 열거형 끝(`Count` 앞)에만 더합니다 — 순서가 와이어 값입니다.
+     */
+    template <typename TMethodName, uint16 RangeBase>
+    struct OnlineMethodTable
+    {
+        using MethodName = TMethodName;
+
+        static constexpr int32  kCount       = static_cast<int32>( TMethodName::Count );
+        static constexpr uint16 kFirstMethod = static_cast<uint16>( RangeBase + 1 );
+
+        static constexpr uint16 toMethod( TMethodName name ) { return static_cast<uint16>( kFirstMethod + static_cast<uint16>( name ) ); }
+        /** @brief 0부터 시작하는 번호입니다(열거자 순서). 지표와 표의 인덱스로 씁니다. 모르는 메서드이면 -1 입니다. */
+        static constexpr int32 toIndex( uint16 method )
+        {
+            const int32 index = static_cast<int32>( method ) - static_cast<int32>( kFirstMethod );
+            return 0 <= index && index < kCount ? index : -1;
+        }
+
+        static_assert( OnlineMethodRange::isInRange( static_cast<uint16>( kFirstMethod + kCount - 1 ), RangeBase ) &&
+                           OnlineMethodRange::isMethod( static_cast<uint16>( kFirstMethod + kCount - 1 ) ),
+                       "the method table must fit in the method half of its range" );
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 호스트 자신의 메서드입니다. */
     struct OnlineHostMethod
     {
