@@ -174,6 +174,8 @@ namespace sw
         const hashed_string& getSelectedSeed() const;
         /** @brief 핸들의 오브젝트 위치를 반환합니다. 대상을 찾지 못하면 @p fallback 을 반환합니다. */
         float3 findObjectPosition( GameObjectHandle handle, const float3& fallback ) const;
+        /** @brief 도구를 한 번 쓸 때 드는 기력입니다(PROPERTY). */
+        int32 getToolStaminaCost( FarmTool tool ) const;
 
     private:
         PROPERTY( Category = "Data", DisplayName = "Crop Data", AssetPath, Tooltip = "Crop catalog XML" )
@@ -218,6 +220,26 @@ namespace sw
         int32 _startingGold;
         PROPERTY( Category = "Time", DisplayName = "Seconds Per Day", Tooltip = "Real seconds in one game day (1 s = 10 game minutes)", Min = 1.0, Units = s )
         float32 _secondsPerDay;
+        PROPERTY( Category = "Time", DisplayName = "Days Per Season", Min = 1 )
+        int32 _daysPerSeason;
+        PROPERTY( Category = "Time", DisplayName = "Wake Hour", Tooltip = "Hour of day a new game and every morning after sleep start at", Min = 0.0, Max = 24.0 )
+        float32 _wakeHour;
+        PROPERTY( Category = "Time", DisplayName = "Pass Out Hour", Tooltip = "Hour past midnight at which a farmer still awake passes out", Min = 0.0, Max = 24.0 )
+        float32 _passOutHour;
+        PROPERTY( Category = "Scene", DisplayName = "Shipping Bin Fallback", Tooltip = "Shipping bin position when no Shipping Bin object is set", Units = m )
+        float3 _shippingBinFallback;
+        PROPERTY( Category = "Scene", DisplayName = "Shop Fallback", Tooltip = "Seed shop position when no Shop object is set", Units = m )
+        float3 _shopFallback;
+        PROPERTY( Category = "Farmer", DisplayName = "Hoe Stamina Cost", Min = 0 )
+        int32 _hoeStaminaCost;
+        PROPERTY( Category = "Farmer", DisplayName = "Watering Stamina Cost", Min = 0 )
+        int32 _wateringStaminaCost;
+        PROPERTY( Category = "Farmer", DisplayName = "Hand Stamina Cost", Tooltip = "Stamina for planting seeds or using bare hands", Min = 0 )
+        int32 _handStaminaCost;
+        PROPERTY( Category = "Economy", DisplayName = "Starting Seeds", Tooltip = "Seeds of the first crop a new game starts with", Min = 0 )
+        int32 _startingSeedCount;
+        PROPERTY( Category = "Economy", DisplayName = "Item Stack Size", Tooltip = "Most seeds or produce one bag slot holds", Min = 1 )
+        int32 _itemStackSize;
 
         CropCatalog                  _cropCatalog;
         ItemCatalog                  _itemCatalog; ///< 작물 카탈로그가 채운 씨앗과 수확물(공유 가방의 겹침 수).
