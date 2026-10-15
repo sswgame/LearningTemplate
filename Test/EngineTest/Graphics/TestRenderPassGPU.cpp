@@ -3984,7 +3984,11 @@ SW_TEST_CASE( RenderPassGPUTest, InstanceConstantBufferIsRecreatedWhenLayoutGrow
             var._size   = 16;
             cb._listVariable.push_back( var );
             reflection._listConstantBuffer.push_back( cb );
-            (void)parent->syncPropertiesFromReflection( reflection );
+            {
+                // 키운 레이아웃에는 grownTail 만 있다 — 원래 프로퍼티(color · roughness)가 리플렉션에 없다는 경고는 이 상황의 정상 반응이다.
+                SW_TEST_DEFENSIVE_SCOPE( "the grown reflection lists only grownTail" );
+                (void)parent->syncPropertiesFromReflection( reflection );
+            }
             SW_ASSERT_TRUE( parent->getBuffer().size() > firstSize );
 
             // 파라미터를 건드려 인스턴스를 더럽힌다 — 이것이 실제로 겹치는 조합이다.
@@ -7029,7 +7033,8 @@ SW_TEST_CASE( RenderPassGPUTest, CameraCutResetsTaaHistory )
  */
 SW_TEST_CASE( RenderPassGPUTest, PortraitRendererDrawsAPrefabInIsolation )
 {
-    constexpr const utf8* kPrefab = "game/abilityarena/prefabs/player.prefab.xml";
+    // 엔진 · 기반 타입만 든 프리팹이다 — 게임 컴포넌트를 든 프리팹은 EngineTest 에 그 게임 모듈이 없어 MissingComponent 경고를 낸다.
+    constexpr const utf8* kPrefab = "common/prefabs/gimmicks/adventure/pushblock3d.prefab.xml";
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
     {
@@ -7073,7 +7078,7 @@ SW_TEST_CASE( RenderPassGPUTest, PortraitRendererDrawsAPrefabInIsolation )
             }
         }
         SW_LOG_INFO( "%#portrait center drawn %# / 2304, border drawn %#", label, centerDrawn, borderDrawn );
-        // 사람 모양이라 가로로 좁다 — 가운데 사분의 일(2304 픽셀)의 일부를 채운다.
+        // 경계 구에 맞춘 상자다 — 가운데 사분의 일(2304 픽셀)의 일부를 채운다.
         SW_EXPECT_TRUE_MSG( centerDrawn > 150, ( label + "대상이 가운데에 없다 (" + sw::to_string( centerDrawn ) + ")" ).c_str() );
         SW_EXPECT_TRUE_MSG( borderDrawn < 20, ( label + "대상이 화면을 넘친다 (" + sw::to_string( borderDrawn ) + ")" ).c_str() );
     }
