@@ -2957,7 +2957,7 @@
    "type": "string",
    "default": "",
    "kind": "시험",
-   "description": "탐침 Editor.HierarchyRowIcon 이 볼 오브젝트 이름 (시나리오용)",
+   "description": "탐침 Editor.HierarchyRowIcon · Editor.BillboardIcon 이 볼 오브젝트 이름 (시나리오용)",
    "source": "Source/Editor/SelfTest/EditorScenarioSteps.cpp"
   },
   {
