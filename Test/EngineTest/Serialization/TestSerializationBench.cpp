@@ -19,6 +19,8 @@
 #include "TestFramework/Harness/TestBench.h"
 #include "TestFramework/TestFramework.h"
 
+SW_TEST_LOAD_SUITE( SerializationBenchTest, "largest scene load and object state round trip in three formats" );
+
 namespace
 {
     struct SerializationBenchInternal

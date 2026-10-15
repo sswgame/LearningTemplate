@@ -35,6 +35,8 @@
 
 #include <thread>
 
+SW_TEST_LOAD_SUITE( PackReadBenchTest, "reading a big synthetic pack serially, in parallel and streamed" );
+
 SW_LOG_CALLER( "PackReadBench" );
 
 namespace

@@ -25,6 +25,8 @@
 
 #include <cstring>
 
+SW_TEST_LOAD_SUITE( NetCompressionBenchTest, "packet codec ratio and time on replication, destruction and chat packets" );
+
 SW_LOG_CALLER( "NetCompressionBench" );
 
 using namespace sw;

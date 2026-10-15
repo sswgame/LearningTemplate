@@ -25,6 +25,8 @@
 #include "TestFramework/Harness/TestBench.h"
 #include "TestFramework/TestFramework.h"
 
+SW_TEST_LOAD_SUITE( TaskManagerBenchTest, "task manager dispatch floor, fork-join latency, throughput and speedup" );
+
 SW_LOG_CALLER( "TaskManagerBench" );
 
 namespace

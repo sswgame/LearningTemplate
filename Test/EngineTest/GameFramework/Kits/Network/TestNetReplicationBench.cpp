@@ -12,6 +12,8 @@
 #include "TestFramework/Harness/TestBench.h"
 #include "TestFramework/TestFramework.h"
 
+SW_TEST_LOAD_SUITE( NetReplicationBenchTest, "16 clients and 1000 replicated entities at 60 Hz" );
+
 SW_LOG_CALLER( "NetReplicationBench" );
 
 using namespace sw;

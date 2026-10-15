@@ -28,6 +28,8 @@
 #include "TestFramework/Harness/TestBench.h"
 #include "TestFramework/TestFramework.h"
 
+SW_TEST_LOAD_SUITE( GameObjectBenchTest, "game object spawn, tick, destroy, activation and component lookup cost" );
+
 SW_LOG_CALLER( "GameObjectBench" );
 
 namespace
