@@ -20,7 +20,7 @@ set(swEngineTestExclude "")
 if(TARGET OnlineLoadBotCore)
 	list(APPEND swEngineTestTool OnlineLoadBotCore)
 else()
-	list(APPEND swEngineTestExclude "/TestOnlineLoadBot\\.cpp$")
+	list(APPEND swEngineTestExclude "/TestOnlineLoadBot(Load)?\\.cpp$")
 endif()
 
 # 에디터 확장(GF_EditorPlugIn_Admin)의 화면 없는 부분(제공자 · 세션)은 ImGui 를 몰라 EngineTest 가 직접 컴파일한다 — 확장 DLL 은 링크하지 않는다.

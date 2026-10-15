@@ -19,6 +19,26 @@
 
 namespace
 {
+    /** @brief 테스트 호스트가 걸어 둔 관찰자(교착 검출기, `DiagnosticsSubsystem`)를 이 범위 동안 뗍니다 — 관찰자는 하나뿐이라 그대로면 케이스가 자기 것을 걸지 못한다. */
+    struct ScopedHostLockObserverRemoval
+    {
+        ScopedHostLockObserverRemoval()
+            : _pPrevious{ sw::mutex::getLockObserver() }
+        {
+            if ( _pPrevious != nullptr )
+                sw::mutex::unregisterLockObserver( _pPrevious );
+        }
+        ~ScopedHostLockObserverRemoval()
+        {
+            if ( _pPrevious != nullptr )
+                sw::mutex::registerLockObserver( _pPrevious );
+        }
+        ScopedHostLockObserverRemoval( const ScopedHostLockObserverRemoval& )            = delete;
+        ScopedHostLockObserverRemoval& operator=( const ScopedHostLockObserverRemoval& ) = delete;
+
+        sw::ILockObserver* _pPrevious;
+    };
+
     /** @brief 받은 사건을 차례로 적는 관찰자입니다(스레드 · 종류 · 키). */
     class RecordingLockObserver final : public sw::ILockObserver
     {
@@ -70,9 +90,8 @@ namespace
  */
 SW_TEST_CASE( ThreadTest, JoinIsAWaitOnTheThreadsJoinKey )
 {
-    RecordingLockObserver observer;
-    if ( sw::mutex::getLockObserver() != nullptr )
-        SW_TEST_SKIP( "another lock observer is registered" );
+    const ScopedHostLockObserverRemoval hostObserverRemoval;
+    RecordingLockObserver               observer;
     sw::mutex::registerLockObserver( &observer );
 
     std::thread::id workerID;
@@ -81,7 +100,13 @@ SW_TEST_CASE( ThreadTest, JoinIsAWaitOnTheThreadsJoinKey )
     worker.join();
     sw::mutex::unregisterLockObserver( &observer );
 
-    const sw::vector<RecordingLockObserver::Event> listEvent = observer.takeEvents();
+    // 그동안 다른 스레드(태스크 워커)가 잡은 mutex 사건도 들어올 수 있다 — 합류 키(홀수)만 본다.
+    sw::vector<RecordingLockObserver::Event> listEvent;
+    for ( const RecordingLockObserver::Event& event : observer.takeEvents() )
+    {
+        if ( ( reinterpret_cast<uintptr_t>( event._pKey ) & 1 ) == 1 )
+            listEvent.push_back( event );
+    }
     SW_ASSERT_EQUAL( size_t( 5 ), listEvent.size() );
     void* const pKey = listEvent[0]._pKey;
     SW_EXPECT_TRUE( ( reinterpret_cast<uintptr_t>( pKey ) & 1 ) == 1 ); // 정렬된 mutex 주소와 겹치지 않는다
@@ -110,9 +135,8 @@ SW_TEST_CASE( ThreadTest, JoinIsAWaitOnTheThreadsJoinKey )
 SW_TEST_CASE( ThreadTest, JoinWhileHoldingALockTheThreadWaitsForIsADeadlock )
 {
     SW_TEST_REQUIRES_FEATURE( DebugAsserts );
-    if ( sw::mutex::getLockObserver() != nullptr )
-        SW_TEST_SKIP( "another lock observer is registered" );
-    sw::DeadlockDetector detector;
+    const ScopedHostLockObserverRemoval hostObserverRemoval;
+    sw::DeadlockDetector                detector;
     detector.initialize();
     test::ScopedAssertCapture capture;
 
