@@ -9,6 +9,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Base/WidgetTypes.h"
 
 namespace sw
@@ -86,11 +87,40 @@ namespace sw::editor
 namespace sw::editor
 {
     /** @brief 해상도 견본 하나입니다(물리 픽셀). */
+    REFLECT()
     struct UIPreviewResolution
     {
-        const utf8* _pName{ "" };
-        uint32      _width{ 0 };
-        uint32      _height{ 0 };
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _name{}; ///< 목록에 보이는 이름
+
+        PROPERTY( Min = 1 )
+        uint32 _width{};
+
+        PROPERTY( Min = 1 )
+        uint32 _height{};
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @brief 미리보기 해상도 견본 표(`editor/settings/uipreview.resolutions.xml`)입니다. 첫 줄이 패널을 열 때의 견본입니다.
+     * @details 유니티 Game 뷰의 해상도 목록 · UMG 디자이너의 화면 크기 목록과 같은 자리입니다. 코드에 내장 견본이 없습니다 — 표를 읽지 못하면 오류이고 목록이 빕니다.
+     */
+    REFLECT()
+    struct UIPreviewResolutionTable
+    {
+        REFLECT_BODY();
+
+        static constexpr const utf8* kResourcePath = "editor/settings/uipreview.resolutions.xml";
+
+        PROPERTY()
+        vector<UIPreviewResolution> _listResolution;
+
+        /** @brief @p path 의 표를 읽습니다. 범위 밖 값이나 빈 표면 오류를 남기고 false 이며 표가 빕니다. */
+        [[nodiscard]] bool loadFromResource( string_view path = kResourcePath );
     };
 } // namespace sw::editor
 
@@ -113,14 +143,11 @@ namespace sw::editor
      */
     struct UIPreviewLogic
     {
-        /** @brief 해상도 견본 수와 @p index 의 견본입니다 — 1280×720 · 1920×1080 · 2560×1440 · 3840×2160 · 21:9 · 세로. */
-        static uint32                     getResolutionCount();
-        static const UIPreviewResolution& getResolution( uint32 index );
         /**
-         * @brief 견본 @p index 를 게임과 같은 배율 규칙(@p settings)으로 UI 뷰포트로 만듭니다 — 사용자 배율 @p userScale 을 곱하고 각 변을 물리 크기의
-         *        @p safeZoneRatio 만큼 안쪽으로(안전 영역 보기). 범위 밖 견본은 첫 견본입니다.
+         * @brief 견본 @p resolution 을 게임과 같은 배율 규칙(@p settings)으로 UI 뷰포트로 만듭니다 — 사용자 배율 @p userScale 을 곱하고 각 변을 물리 크기의
+         *        @p safeZoneRatio 만큼 안쪽으로(안전 영역 보기). 견본은 표(`UIPreviewResolutionTable`)의 한 줄입니다.
          */
-        static UIViewport makeViewport( const UIScaleSettings& settings, uint32 index, float32 userScale, float32 safeZoneRatio );
+        static UIViewport makeViewport( const UIScaleSettings& settings, const UIPreviewResolution& resolution, float32 userScale, float32 safeZoneRatio );
         /** @brief 크기 @p imageSize 의 그림을 @p available 안에 비율을 지켜 맞춘 크기입니다(늘리지 않는다 — 1 배가 상한). */
         static float2 fitImage( const float2& imageSize, const float2& available );
         /** @brief 그린 그림 위의 점 @p imagePoint(그림 왼쪽 위 원점, 그린 크기 @p drawSize)를 UI 단위 점으로 옮깁니다. */

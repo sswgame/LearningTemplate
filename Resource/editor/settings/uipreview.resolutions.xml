@@ -1,0 +1,11 @@
+<!-- UI 미리보기 패널의 해상도 견본(물리 픽셀). 첫 줄이 패널을 열 때의 견본이다(UIPreviewResolutionTable). -->
+<UIPreviewResolutionTable>
+	<_listResolution>
+		<UIPreviewResolution _name="1920x1080 (Full HD)" _width="1920" _height="1080" />
+		<UIPreviewResolution _name="1280x720 (HD)" _width="1280" _height="720" />
+		<UIPreviewResolution _name="2560x1440 (QHD)" _width="2560" _height="1440" />
+		<UIPreviewResolution _name="3840x2160 (4K)" _width="3840" _height="2160" />
+		<UIPreviewResolution _name="2560x1080 (21:9)" _width="2560" _height="1080" />
+		<UIPreviewResolution _name="1080x1920 (Portrait)" _width="1080" _height="1920" />
+	</_listResolution>
+</UIPreviewResolutionTable>
