@@ -65,7 +65,7 @@ namespace sw
      *          이동 컴포넌트로 걷는 길입니다(언리얼 `RequestDirectMove` · 유니티 "에이전트로 조향 · 컨트롤러로 이동"). 진행 방향으로 몸을 돌리는 것은
      *          `_bUpdateRotation` 입니다.
      */
-    REFLECT( Category = "Navigation", DisplayName = "NavMesh Agent", Tooltip = "Walks the navmesh to a destination with crowd avoidance; drives the transform or a character controller" )
+    REFLECT( Category = "Navigation", DisplayName = "NavMesh Agent", Tooltip = "Walks the navmesh to a destination with crowd avoidance; drives the transform or a character controller", Meta = "Icon=Navigation, IconColor=Navigation" )
     class SW_API NavMeshAgentComponent : public Component
     {
     public:

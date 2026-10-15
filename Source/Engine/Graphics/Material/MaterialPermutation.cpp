@@ -5,6 +5,7 @@
 
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialUtil.h"
+#include "Engine/Reflection/EnumName.h"
 
 namespace sw
 {
@@ -41,26 +42,16 @@ namespace sw
 
     void MaterialUtil::appendUsageDefines( MaterialUsageFlags usage, vector<string>& outListDefine )
     {
-        if ( EnumUtil::hasFlag( usage, MaterialUsageFlags::StaticMesh ) )
-            MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_STATIC_MESH" );
-        if ( EnumUtil::hasFlag( usage, MaterialUsageFlags::SkeletalMesh ) )
-            MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_SKELETAL_MESH" );
-        if ( EnumUtil::hasFlag( usage, MaterialUsageFlags::Instanced ) )
-            MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_INSTANCED" );
-        if ( EnumUtil::hasFlag( usage, MaterialUsageFlags::Particles ) )
-            MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_PARTICLES" );
-        if ( EnumUtil::hasFlag( usage, MaterialUsageFlags::Decal ) )
-            MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_DECAL" );
-        if ( EnumUtil::hasFlag( usage, MaterialUsageFlags::UI ) )
-            MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_UI" );
-        if ( EnumUtil::hasFlag( usage, MaterialUsageFlags::PostProcess ) )
-            MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_POSTPROCESS" );
-        if ( EnumUtil::hasFlag( usage, MaterialUsageFlags::LightFunction ) )
-            MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_LIGHTFUNCTION" );
-        if ( EnumUtil::hasFlag( usage, MaterialUsageFlags::MorphTargets ) )
-            MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_MORPHTARGETS" );
-        if ( EnumUtil::hasFlag( usage, MaterialUsageFlags::SplineMesh ) )
-            MaterialUtil::appendUniqueDefine( outListDefine, "MATERIAL_USAGE_SPLINEMESH" );
+        // define 이름은 열거자 이름에서 만든다(`PostProcess` → `MATERIAL_USAGE_POST_PROCESS`) — 셰이더 쪽 철자의 정본은 MaterialUsageFlags 하나다.
+        for ( uint32 bit = 0; bit < sizeof( MaterialUsageFlags ) * 8; ++bit )
+        {
+            const MaterialUsageFlags flag = static_cast<MaterialUsageFlags>( 1u << bit );
+            if ( EnumUtil::hasFlag( usage, flag ) == false )
+                continue;
+            const utf8* pName = getEnumName( flag );
+            SW_ASSERT( StringUtil::equals( pName, "Unknown" ) == false ); // 비트마다 ENUM 이름이 있어야 define 이 생긴다
+            MaterialUtil::appendUniqueDefine( outListDefine, string( "MATERIAL_USAGE_" ) + StringUtil::toSnakeCase( pName, true ) );
+        }
     }
 
     void MaterialUtil::appendQualityDefines( MaterialQualityLevel quality, vector<string>& outListDefine )

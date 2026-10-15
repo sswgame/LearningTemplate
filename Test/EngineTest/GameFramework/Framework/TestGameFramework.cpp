@@ -1828,9 +1828,9 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_ActionBufferAndCommandSequence )
     InputMap map;
 
     // 1) 선입력 버퍼링 (0.2s)
-    map.bufferAction( "Attack", 0.2f );
-    SW_EXPECT_TRUE( map.consumeBufferedAction( "Attack" ) );
-    SW_EXPECT_FALSE( map.consumeBufferedAction( "Attack" ) ); // 1회 소비 후 소멸
+    map.getActionBuffer().bufferAction( "Attack", 0.2f );
+    SW_EXPECT_TRUE( map.getActionBuffer().consumeBufferedAction( "Attack" ) );
+    SW_EXPECT_FALSE( map.getActionBuffer().consumeBufferedAction( "Attack" ) ); // 1회 소비 후 소멸
 
     // 2) 커맨드 시퀀스
     vector<sw::hashed_string> listHadouken;
@@ -1839,7 +1839,7 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_ActionBufferAndCommandSequence )
     listHadouken.push_back( "Right" );
     listHadouken.push_back( "Attack" );
 
-    SW_EXPECT_FALSE( map.wasCommandSequenceTriggered( listHadouken, 0.35f ) );
+    SW_EXPECT_FALSE( map.getActionBuffer().wasCommandSequenceTriggered( listHadouken, 0.35f ) );
 }
 
 /**

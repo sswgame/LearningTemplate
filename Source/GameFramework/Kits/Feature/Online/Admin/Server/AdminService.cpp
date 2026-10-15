@@ -26,10 +26,7 @@ namespace sw
         {
             static constexpr const utf8* kArrMethodName[] = { "lookup_account", "adjust_asset", "set_sanction", "send_mail",
                                                               "bulk_mail", "create_campaign", "list_audit", "set_role" };
-            static constexpr const utf8* kArrResultName[] = { "ok", "not_signed_in", "forbidden", "invalid_request", "unknown_account",
-                                                              "insufficient_funds", "cap_exceeded", "busy", "unavailable" };
             static_assert( SW_COUNT_OF( kArrMethodName ) == static_cast<size_t>( AdminMethod::kCount ), "method names must match AdminMethod" );
-            static_assert( SW_COUNT_OF( kArrResultName ) == static_cast<size_t>( AdminResult::Count ), "result names must match AdminResult" );
         };
 
         /** @brief GM 명령 하나의 저장소 왕복입니다. */
@@ -107,8 +104,7 @@ namespace sw
         }
         _pStore   = pStore;
         _settings = settings;
-        _metrics.initialize( settings._pMetricRegistry, "admin", AdminServiceInternal::kArrMethodName, AdminMethod::kCount, AdminServiceInternal::kArrResultName,
-                             static_cast<int32>( AdminResult::Count ) );
+        _metrics.initialize<AdminResult>( settings._pMetricRegistry, "admin", AdminServiceInternal::kArrMethodName, AdminMethod::kCount );
         return true;
     }
 

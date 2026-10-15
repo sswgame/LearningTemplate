@@ -55,7 +55,7 @@ namespace sw
      *          - 단계: 시간(타이머 · 말하기 시각, 워커) → 후처리(가중치 · 눈 본, 워커 — 기본 포즈 뒤라 애니메이터 커브가 이미 있다) → 게임 스레드(목표를 모델
      *            공간으로 옮겨 둔다 — 한 프레임 늦다).
      */
-    REFLECT( Category = "Animation 3D", DisplayName = "Facial Animation Component", Tooltip = "Expression curves, lip sync, blink and gaze on the sibling skeletal mesh" )
+    REFLECT( Category = "Animation 3D", DisplayName = "Facial Animation Component", Tooltip = "Expression curves, lip sync, blink and gaze on the sibling skeletal mesh", Meta = "Icon=Animation" )
     class SW_API FacialAnimationComponent : public Component
     {
         friend class FacialAnimationBinding;

@@ -21,7 +21,7 @@ namespace sw
      * @class AudioReverbZoneComponent
      * @brief 상자 · 구 모양의 리버브 존입니다. 모양은 이 컴포넌트의 월드 위치가 가운데이고 축 정렬입니다.
      */
-    REFLECT( Category = "Audio", DisplayName = "Audio Reverb Zone", Tooltip = "Applies a mix snapshot (reverb) while the listener is inside" )
+    REFLECT( Category = "Audio", DisplayName = "Audio Reverb Zone", Tooltip = "Applies a mix snapshot (reverb) while the listener is inside", Meta = "Icon=AudioZone, IconColor=Audio, Billboard" )
     class SW_API AudioReverbZoneComponent : public SceneComponent
     {
     public:

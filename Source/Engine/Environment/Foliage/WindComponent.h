@@ -30,7 +30,7 @@ namespace sw
      * @class WindComponent
      * @brief 전역 바람 하나입니다(유니티 WindZone 의 방향성 바람, 언리얼 WindDirectionalSource). 여럿이면 처음 찾은 것이 이깁니다.
      */
-    REFLECT( Category = "Environment", DisplayName = "Wind", Tooltip = "Global directional wind read by foliage" )
+    REFLECT( Category = "Environment", DisplayName = "Wind", Tooltip = "Global directional wind read by foliage", Meta = "Icon=Wind, IconColor=Environment, Billboard" )
     class SW_API WindComponent : public Component
     {
     public:

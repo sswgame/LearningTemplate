@@ -123,6 +123,11 @@ namespace sw
         static string toLower( const utf8* pInput );
         /** @brief UTF-16 문자열 전체를 소문자로 변환합니다. */
         static wstring toLower( const utf16* pInput );
+        /**
+         * @brief PascalCase 식별자를 밑줄로 낱말을 가른 이름으로 바꿉니다(ASCII). `NotSignedIn` → `not_signed_in`, `HTTPMethod` → `http_method`, `UI` → `ui`.
+         * @details 열거자 이름에서 지표 라벨 · 셰이더 define 을 만들 때 씁니다. @p bUpper 이면 `NOT_SIGNED_IN` 입니다.
+         */
+        static string toSnakeCase( string_view pascalName, bool bUpper );
 
         /** @brief 편집 전후 텍스트의 공통 접두 · 접미를 빼고 바뀐 가운데 부분만 남깁니다. */
         static StringChangeSpan makeChangeSpan( string_view before, string_view after );

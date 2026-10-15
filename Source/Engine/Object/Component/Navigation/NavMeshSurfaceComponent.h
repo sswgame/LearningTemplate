@@ -34,7 +34,7 @@ namespace sw
 namespace sw
 {
     /** @class NavMeshSurfaceComponent @brief 파일 머리말 참고. */
-    REFLECT( Category = "Navigation", DisplayName = "NavMesh Surface", Tooltip = "Bakes the scene navmesh for agent types from render meshes or physics colliders" )
+    REFLECT( Category = "Navigation", DisplayName = "NavMesh Surface", Tooltip = "Bakes the scene navmesh for agent types from render meshes or physics colliders", Meta = "Icon=Navigation, IconColor=Navigation" )
     class SW_API NavMeshSurfaceComponent : public Component
     {
     public:

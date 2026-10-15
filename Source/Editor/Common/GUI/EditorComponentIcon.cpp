@@ -18,90 +18,63 @@ namespace sw::editor
     {
         struct EditorComponentIconInternal
         {
-            static constexpr Color kLight{ 1.00f, 0.83f, 0.30f, 1.0f };
-            static constexpr Color kCamera{ 0.45f, 0.70f, 1.00f, 1.0f };
-            static constexpr Color kAudio{ 0.45f, 0.90f, 0.60f, 1.0f };
-            static constexpr Color kPhysics{ 1.00f, 0.60f, 0.30f, 1.0f };
-            static constexpr Color kNavigation{ 0.35f, 0.85f, 0.85f, 1.0f };
-            static constexpr Color kEnvironment{ 0.55f, 0.80f, 0.95f, 1.0f };
             static constexpr Color kNeutral{ 0.85f, 0.87f, 0.90f, 1.0f };
 
-            /** @brief 타입 이름 표 — 파생 타입이 기반보다 먼저 맞는다(찾기가 타입 자신부터 부모로 올라간다). */
-            static constexpr EditorComponentIconRow kArrTypeRow[] = {
-                {               "CameraComponent",           editoricon::kCamera,      kCamera,  true},
-                {     "DirectionalLightComponent", editoricon::kLightDirectional,       kLight,  true},
-                {           "PointLightComponent",       editoricon::kLightPoint,       kLight,  true},
-                {            "SpotLightComponent",        editoricon::kLightSpot,       kLight,  true},
-                {                "LightComponent",       editoricon::kLightPoint,       kLight,  true},
-                {         "PointLight2DComponent",       editoricon::kLightPoint,       kLight,  true},
-                {        "GlobalLight2DComponent",      editoricon::kLightGlobal,       kLight,  true},
-                {         "AudioEmitterComponent",     editoricon::kAudioEmitter,       kAudio,  true},
-                {  "AudioAmbientEmitterComponent",     editoricon::kAudioEmitter,       kAudio,  true},
-                {        "AudioListenerComponent",    editoricon::kAudioListener,       kAudio,  true},
-                {      "AudioReverbZoneComponent",        editoricon::kAudioZone,       kAudio,  true},
-                {                 "WindComponent",             editoricon::kWind, kEnvironment,  true},
-                {                 "MeshComponent",             editoricon::kCube,     kNeutral, false},
-                {         "SkeletalMeshComponent",         editoricon::kSkeleton,     kNeutral, false},
-                {               "SpriteComponent",           editoricon::kSprite,     kNeutral, false},
-                {       "SpriteAnimatorComponent",        editoricon::kAnimation,     kNeutral, false},
-                {     "SkeletalAnimatorComponent",        editoricon::kAnimation,     kNeutral, false},
-                {      "FacialAnimationComponent",        editoricon::kAnimation,     kNeutral, false},
-                {      "TileMapRendererComponent",          editoricon::kTileMap,     kNeutral, false},
-                {        "BoxCollider2DComponent",         editoricon::kCollider,     kPhysics, false},
-                {            "RigidBodyComponent",          editoricon::kPhysics,     kPhysics, false},
-                {          "RigidBody2DComponent",          editoricon::kPhysics,     kPhysics, false},
-                {              "PhysicsComponent",          editoricon::kPhysics,     kPhysics, false},
-                {  "CharacterControllerComponent",        editoricon::kCharacter,     kNeutral, false},
-                {"CharacterController2DComponent",        editoricon::kCharacter,     kNeutral, false},
-                {         "NavMeshAgentComponent",       editoricon::kNavigation,  kNavigation, false},
-                {      "NavMeshObstacleComponent",       editoricon::kNavigation,  kNavigation, false},
-                {       "NavMeshSurfaceComponent",       editoricon::kNavigation,  kNavigation, false},
-                {      "NavMeshModifierComponent",       editoricon::kNavigation,  kNavigation, false},
-                {            "WaterBodyComponent",            editoricon::kWater, kEnvironment, false},
-                {              "FoliageComponent",          editoricon::kFoliage, kEnvironment, false},
-                {              "TerrainComponent",      editoricon::kHeightfield, kEnvironment, false},
-                {       "WheeledVehicleComponent",          editoricon::kVehicle,     kNeutral, false},
-                {             "FractureComponent",         editoricon::kFracture,     kNeutral, false},
-                {           "Fracture2DComponent",         editoricon::kFracture,     kNeutral, false},
-                {       "SequencePlayerComponent",         editoricon::kSequence,     kNeutral, false},
-                {               "WidgetComponent",           editoricon::kWidget,     kNeutral, false},
-                {                  "TagComponent",              editoricon::kTag,     kNeutral, false},
-                {              "MissingComponent",          editoricon::kMissing,     kNeutral, false},
-                {                "SceneComponent",             editoricon::kAxes,     kNeutral, false},
+            /** @brief `IconColor` 메타 이름 → 색입니다. */
+            struct NamedColor
+            {
+                const utf8* _pName;
+                Color       _color;
             };
 
-            /** @brief 리플렉션 Category 표 — 타입 이름 표에 없는 컴포넌트(키트 · 게임)가 여기서 맞는다. */
-            static constexpr EditorComponentIconRow kArrCategoryRow[] = {
-                {      "Camera",     editoricon::kCamera,      kCamera, false},
-                {       "Audio",      editoricon::kAudio,       kAudio, false},
-                {     "Physics",    editoricon::kPhysics,     kPhysics, false},
-                {  "Physics 2D",    editoricon::kPhysics,     kPhysics, false},
-                {  "Navigation", editoricon::kNavigation,  kNavigation, false},
-                {   "Character",  editoricon::kCharacter,     kNeutral, false},
-                {   "Animation",  editoricon::kAnimation,     kNeutral, false},
-                {"Animation 2D",  editoricon::kAnimation,     kNeutral, false},
-                {"Animation 3D",  editoricon::kAnimation,     kNeutral, false},
-                {"Rendering 3D",       editoricon::kCube,     kNeutral, false},
-                {"Rendering 2D",     editoricon::kSprite,     kNeutral, false},
-                {          "UI",     editoricon::kWidget,     kNeutral, false},
-                {      "Layout",     editoricon::kWidget,     kNeutral, false},
-                {     "Control", editoricon::kController,     kNeutral, false},
-                { "Environment",      editoricon::kGlobe, kEnvironment, false},
-                {     "Vehicle",    editoricon::kVehicle,     kNeutral, false},
-                { "Interaction",    editoricon::kTrigger,     kNeutral, false},
-                {     "Gimmick",    editoricon::kTrigger,     kNeutral, false},
-                {  "Cinematics",   editoricon::kSequence,     kNeutral, false},
-                {    "Gameplay",    editoricon::kAbility,     kNeutral, false},
+            static constexpr NamedColor kArrNamedColor[] = {
+                {      "Light", { 1.00f, 0.83f, 0.30f, 1.0f }},
+                {     "Camera", { 0.45f, 0.70f, 1.00f, 1.0f }},
+                {      "Audio", { 0.45f, 0.90f, 0.60f, 1.0f }},
+                {    "Physics", { 1.00f, 0.60f, 0.30f, 1.0f }},
+                { "Navigation", { 0.35f, 0.85f, 0.85f, 1.0f }},
+                {"Environment", { 0.55f, 0.80f, 0.95f, 1.0f }},
             };
 
-            static constexpr EditorComponentIconRow kDefaultRow{ "", editoricon::kComponent, kNeutral, false };
-            static constexpr EditorComponentIconRow kObjectRow{ "", editoricon::kGameObject, kNeutral, false };
+            /** @brief 리플렉션 Category 표 — `Icon` 메타가 없는 컴포넌트(키트 · 게임)가 여기서 맞는다. */
+            struct CategoryRow
+            {
+                const utf8* _pCategory;
+                const utf8* _pGlyph;
+                const utf8* _pColorName;
+            };
 
-            /** @brief 타입 → 줄 캐시입니다. 뷰포트 빌보드가 프레임마다 모든 컴포넌트를 묻는다(오브젝트 8000 개면 글 비교가 수백만 번). 타입 표 세대가 바뀌면 비운다. */
+            static constexpr CategoryRow kArrCategoryRow[] = {
+                {      "Camera",     editoricon::kCamera,      "Camera"},
+                {       "Audio",      editoricon::kAudio,       "Audio"},
+                {     "Physics",    editoricon::kPhysics,     "Physics"},
+                {  "Physics 2D",    editoricon::kPhysics,     "Physics"},
+                {  "Navigation", editoricon::kNavigation,  "Navigation"},
+                {   "Character",  editoricon::kCharacter,            ""},
+                {   "Animation",  editoricon::kAnimation,            ""},
+                {"Animation 2D",  editoricon::kAnimation,            ""},
+                {"Animation 3D",  editoricon::kAnimation,            ""},
+                {"Rendering 3D",       editoricon::kCube,            ""},
+                {"Rendering 2D",     editoricon::kSprite,            ""},
+                {          "UI",     editoricon::kWidget,            ""},
+                {      "Layout",     editoricon::kWidget,            ""},
+                {     "Control", editoricon::kController,            ""},
+                { "Environment",      editoricon::kGlobe, "Environment"},
+                {     "Vehicle",    editoricon::kVehicle,            ""},
+                { "Interaction",    editoricon::kTrigger,            ""},
+                {     "Gimmick",    editoricon::kTrigger,            ""},
+                {  "Cinematics",   editoricon::kSequence,            ""},
+                {    "Gameplay",    editoricon::kAbility,            ""},
+            };
+
+            static constexpr EditorComponentIconRow kDefaultRow{ editoricon::kComponent, kNeutral, false };
+            static constexpr EditorComponentIconRow kObjectRow{ editoricon::kGameObject, kNeutral, false };
+
+            /** @brief 타입 → 줄 캐시입니다. 뷰포트 빌보드가 프레임마다 모든 컴포넌트를 묻는다(오브젝트 8000 개면 메타 조회가 수백만 번). 타입 표 세대가 바뀌면 비운다. */
             struct RowCache
             {
-                unordered_map<const TypeInfo*, const EditorComponentIconRow*> _mapRow;
-                uint32                                                        _generation{ invalid_index::kUint32 };
+                unordered_map<const TypeInfo*, EditorComponentIconRow> _mapRow;
+                uint32                                                 _generation{ invalid_index::kUint32 };
             };
 
             static RowCache& getRowCache()
@@ -110,23 +83,37 @@ namespace sw::editor
                 return s_cache;
             }
 
-            static const EditorComponentIconRow& findRowUncached( const TypeInfo* pType )
+            static Color findColor( string_view colorName )
+            {
+                for ( const NamedColor& namedColor : kArrNamedColor )
+                {
+                    if ( colorName == namedColor._pName )
+                        return namedColor._color;
+                }
+                return kNeutral;
+            }
+
+            static EditorComponentIconRow findRowUncached( const TypeInfo* pType )
             {
                 for ( const TypeInfo* pCurrent = pType; pCurrent != nullptr; pCurrent = pCurrent->getParentType() )
                 {
-                    const string_view name{ pCurrent->_name.c_str() };
-                    for ( const EditorComponentIconRow& row : kArrTypeRow )
-                    {
-                        if ( name == row._pKey )
-                            return row;
-                    }
+                    const string* pIcon = pCurrent->findCustomMeta( "Icon" );
+                    if ( pIcon == nullptr )
+                        continue;
+                    const utf8* pGlyph = EditorComponentIcon::findGlyph( *pIcon );
+                    if ( pGlyph == nullptr )
+                        continue; // 모르는 이름은 테스트가 막는다 — 여기서는 부모 · Category 로 넘어간다
+                    const string* pColor     = pCurrent->findCustomMeta( "IconColor" );
+                    const bool    bBillboard = pCurrent->findCustomMeta( "Billboard" ) != nullptr;
+                    const Color   iconColor  = pColor != nullptr ? findColor( *pColor ) : kNeutral;
+                    return EditorComponentIconRow{ pGlyph, iconColor, bBillboard };
                 }
                 if ( pType != nullptr && pType->getCategory().empty() == false )
                 {
-                    for ( const EditorComponentIconRow& row : kArrCategoryRow )
+                    for ( const CategoryRow& row : kArrCategoryRow )
                     {
-                        if ( pType->getCategory() == row._pKey )
-                            return row;
+                        if ( pType->getCategory() == row._pCategory )
+                            return EditorComponentIconRow{ row._pGlyph, findColor( row._pColorName ), false };
                     }
                 }
                 return kDefaultRow;
@@ -134,7 +121,7 @@ namespace sw::editor
         };
     } // namespace
 
-    const EditorComponentIconRow& EditorComponentIcon::findRow( const TypeInfo* pType )
+    EditorComponentIconRow EditorComponentIcon::findRow( const TypeInfo* pType )
     {
         const TypeRegistry* pRegistry = editor::findSubsystem<TypeRegistry>();
         if ( pType == nullptr || pRegistry == nullptr )
@@ -149,33 +136,43 @@ namespace sw::editor
         }
         const auto iter = cache._mapRow.find( pType );
         if ( iter != cache._mapRow.end() )
-            return *iter->second;
-        const EditorComponentIconRow& row = EditorComponentIconInternal::findRowUncached( pType );
-        cache._mapRow.emplace( pType, &row );
+            return iter->second;
+        const EditorComponentIconRow row = EditorComponentIconInternal::findRowUncached( pType );
+        cache._mapRow.emplace( pType, row );
         return row;
     }
 
-    const EditorComponentIconRow& EditorComponentIcon::findObjectRow( const GameObject& object )
+    EditorComponentIconRow EditorComponentIcon::findObjectRow( const GameObject& object )
     {
         for ( const Component* pComponent : object.getComponents() )
         {
             if ( pComponent == nullptr )
                 continue;
-            const EditorComponentIconRow& row = findRow( pComponent->getTypeInfo() );
+            const EditorComponentIconRow row = findRow( pComponent->getTypeInfo() );
             if ( row._bBillboard )
                 return row;
         }
         return EditorComponentIconInternal::kObjectRow;
     }
 
-    uint32 EditorComponentIcon::getTypeRowCount()
+    const utf8* EditorComponentIcon::findGlyph( string_view iconName )
     {
-        return static_cast<uint32>( sizeof( EditorComponentIconInternal::kArrTypeRow ) / sizeof( EditorComponentIconInternal::kArrTypeRow[0] ) );
+        for ( const editoricon::NamedIcon& namedIcon : editoricon::kArrNamedIcon )
+        {
+            if ( iconName == namedIcon._pName )
+                return namedIcon._pGlyph;
+        }
+        return nullptr;
     }
 
-    const EditorComponentIconRow& EditorComponentIcon::getTypeRow( uint32 index )
+    bool EditorComponentIcon::isKnownColorName( string_view colorName )
     {
-        return EditorComponentIconInternal::kArrTypeRow[index < getTypeRowCount() ? index : 0];
+        for ( const EditorComponentIconInternal::NamedColor& namedColor : EditorComponentIconInternal::kArrNamedColor )
+        {
+            if ( colorName == namedColor._pName )
+                return true;
+        }
+        return false;
     }
 
     uint32 EditorComponentIcon::decodeGlyph( const utf8* pGlyph )

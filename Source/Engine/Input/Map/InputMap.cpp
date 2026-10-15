@@ -145,12 +145,7 @@ namespace sw
         , _listActionName{}
         , _listLayerName{}
         , _listLayerStack{}
-        , _arrBufferedAction{}
-        , _bufferedActionCount{ 0 }
-        , _bufferedActionHead{ 0 }
-        , _arrCommandHistory{}
-        , _commandHistoryCount{ 0 }
-        , _commandHistoryHead{ 0 }
+        , _actionBuffer{}
         , _nextGeneration{ 1 }
         , _defaultLayerName{ InputMapDefaults::kDefaultLayerName }
         , _mouseSensitivity{ 1.0f, 1.0f }
@@ -183,10 +178,7 @@ namespace sw
         _listActionName.clear();
         _listLayerName.clear();
         _listLayerStack.clear();
-        _bufferedActionCount    = 0;
-        _bufferedActionHead     = 0;
-        _commandHistoryCount    = 0;
-        _commandHistoryHead     = 0;
+        _actionBuffer.clear();
         _defaultLayerName       = hashed_string( InputMapDefaults::kDefaultLayerName );
         _doubleClickTime        = InputMapDefaults::kDoubleClickTime;
         _doubleClickMaxDistance = InputMapDefaults::kDoubleClickMaxDistance;

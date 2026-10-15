@@ -15,7 +15,7 @@
 namespace sw
 {
     /** @class NavMeshModifierComponent @brief 파일 머리말 참고. */
-    REFLECT( Category = "Navigation", DisplayName = "NavMesh Modifier", Tooltip = "Leaves this object out of the navmesh bake or gives its geometry an area" )
+    REFLECT( Category = "Navigation", DisplayName = "NavMesh Modifier", Tooltip = "Leaves this object out of the navmesh bake or gives its geometry an area", Meta = "Icon=Navigation, IconColor=Navigation" )
     class SW_API NavMeshModifierComponent : public Component
     {
     public:

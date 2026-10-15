@@ -21,7 +21,7 @@ namespace sw
      *       까닭: 전방 +Z 를 쓰면 카메라 쪽으로 쏴 화면이 통째로 하얘져 "스폿인지" 를 알 수 없습니다.
      * @note 그림자는 켤 때만 드리웁니다(`_bCastShadow`, 기본 끔). 그림자 아틀라스의 칸 하나에 바깥 원뿔을 덮는 원근으로 그립니다(`ShadowSetupUtil`).
      */
-    REFLECT( Category = "Rendering 3D", DisplayName = "Spot Light", Tooltip = "Cone-shaped light with inner/outer falloff" )
+    REFLECT( Category = "Rendering 3D", DisplayName = "Spot Light", Tooltip = "Cone-shaped light with inner/outer falloff", Meta = "Icon=LightSpot, IconColor=Light, Billboard" )
     class SW_API SpotLightComponent : public LightComponent
     {
     public:

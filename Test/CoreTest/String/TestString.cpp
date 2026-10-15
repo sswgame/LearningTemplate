@@ -16,6 +16,17 @@
 #include <sstream>
 
 /**
+ * @brief [StringTest] PascalCase 를 밑줄 낱말로 — 소문자 뒤 대문자, 대문자 줄 끝의 새 낱말(HTTPMethod), 약어만인 이름(UI)
+ */
+SW_TEST_CASE( StringTest, SnakeCaseSplitsPascalWords )
+{
+    SW_EXPECT_STREQ( sw::StringUtil::toSnakeCase( "NotSignedIn", false ).c_str(), "not_signed_in" );
+    SW_EXPECT_STREQ( sw::StringUtil::toSnakeCase( "HTTPMethod", false ).c_str(), "http_method" );
+    SW_EXPECT_STREQ( sw::StringUtil::toSnakeCase( "UI", true ).c_str(), "UI" );
+    SW_EXPECT_STREQ( sw::StringUtil::toSnakeCase( "PostProcess", true ).c_str(), "POST_PROCESS" );
+}
+
+/**
  * @brief [StringTest] 넓은 문자가 하위 한 바이트로 잘리지 않는다
  * @details 부호 확장을 막으려고 `uint8` 로 **고정**하면 안 된다. 이 해시 템플릿은 `utf16`
  *          으로도 불리는데(`std::hash<fixed_wstring>`), 그러면 넓은 문자가 하위 한 바이트만 남는다 —

@@ -84,7 +84,7 @@ namespace sw
      *          `kTerrainSettleSeconds` 동안 그대로이면(브러시 드래그가 끝나면) 틱 뒤에 배치를 다시 계산한다 — 칠하는 프레임마다 숲 전체를 다시 뿌리지 않는다.
      *          스레드: 배치 다시 만들기(`rebuildFoliage`)는 틱 밖에서만 호출한다. 틱은 자기 배치와 자기 머티리얼 인스턴스만 쓴다.
      */
-    REFLECT( Category = "Environment", DisplayName = "Foliage", Tooltip = "Rule-placed GPU-instanced grass and trees with wind" )
+    REFLECT( Category = "Environment", DisplayName = "Foliage", Tooltip = "Rule-placed GPU-instanced grass and trees with wind", Meta = "Icon=Foliage, IconColor=Environment" )
     class SW_API FoliageComponent : public SceneComponent
     {
     public:

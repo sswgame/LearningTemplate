@@ -35,7 +35,7 @@ namespace sw
      * @details 차체 바디가 생긴 뒤 첫 물리 프레임에 차를 만들고, 바디가 다시 지어지면 차도 다시 짓습니다. 운전 입력(`setDriverInput`)은 어느 틱에서든
      *          불러도 되고(잠금 아래 적어 둔다) 물리 프레임 시작에 백엔드로 넘어갑니다. 2D 물리에는 없습니다. 바퀴 메시를 바퀴 자세로 옮기는 것은 아직 없다.
      */
-    REFLECT( Category = "Physics", DisplayName = "Wheeled Vehicle", Tooltip = "Four wheels, suspension, engine and gearbox on this object's dynamic rigid body" )
+    REFLECT( Category = "Physics", DisplayName = "Wheeled Vehicle", Tooltip = "Four wheels, suspension, engine and gearbox on this object's dynamic rigid body", Meta = "Icon=Vehicle" )
     class SW_API WheeledVehicleComponent : public PhysicsComponent
     {
     public:
