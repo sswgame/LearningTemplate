@@ -284,7 +284,7 @@ namespace sw::editor
             }
 
             // --------------------------------------------------------------------------------------------------
-            // input.classicDarkSwatch: Classic Dark 프리셋에서 테마 대화상자의 스와치를 누르면 액센트가 바뀐다. 끝나면 원래 테마로 되돌린다
+            // input.themeSwatch: 기본이 아닌 테마(라이트)에서 테마 대화상자의 스와치를 누르면 액센트가 바뀐다. 끝나면 원래 테마로 되돌린다
             // --------------------------------------------------------------------------------------------------
             /** @brief 테스트 앞의 테마와 에디터 설정 파일 바이트입니다. 스와치 클릭은 설정 파일을 다시 쓰므로(saveToConfig), 끝나면 바이트째 되돌립니다. */
             struct SwatchProbe
@@ -302,7 +302,7 @@ namespace sw::editor
 
             static string getEditorConfigPath() { return EditorPreferencesStore::getDefaultFilePath(); }
 
-            static EditorSelfTestStep runClassicDarkSwatch( EditorSelfTestContext& context )
+            static EditorSelfTestStep runThemeSwatch( EditorSelfTestContext& context )
             {
                 const Color violet{ 0.65f, 0.35f, 0.95f, 1.0f }; // EditorThemeUtil 의 세 번째 스와치(Neon Violet)와 같은 값이다
                 switch ( context.getStepIndex() )
@@ -314,7 +314,7 @@ namespace sw::editor
                         // 파일이 없을 수 있다. Saved/Editor 는 git 이 무시하므로 새 체크아웃에는 없다. 없으면 읽지 않는다. readFile 은 없는 파일을 오류로 남기기 때문이다.
                         const string configPath = getEditorConfigPath();
                         probe._bConfigExisted   = FileUtil::isRegularFile( configPath ) && FileUtil::readFile( configPath, probe._configBytes );
-                        EditorThemeUtil::applyPreset( EditorThemePreset::ClassicDark );
+                        (void)context.expect( EditorThemeUtil::applyThemeByName( "light" ), "the light theme token set is missing" );
                         EditorMenuBar::openThemeDialog();
                         return EditorSelfTestStep::Continue;
                     }
@@ -347,9 +347,8 @@ namespace sw::editor
                     {
                         const Color& accent       = EditorThemeUtil::getAccentColor();
                         const bool   bIsVioletNow = accent._r == violet._r && accent._g == violet._g && accent._b == violet._b;
-                        (void)context.expect( bIsVioletNow, "clicking a swatch in the Classic Dark theme dialog did not change the accent" );
-                        (void)context.expect( EditorThemeUtil::getActiveTheme()._preset == EditorThemePreset::ClassicDark,
-                                              "the swatch switched the preset away from Classic Dark" );
+                        (void)context.expect( bIsVioletNow, "clicking a swatch in the light theme dialog did not change the accent" );
+                        (void)context.expect( EditorThemeUtil::getActiveTheme()._name == "light", "the swatch switched the theme away from light" );
                         break;
                     }
                 }
@@ -484,7 +483,7 @@ namespace sw::editor
 
     SW_EDITOR_SELF_TEST( HierarchySearchTyping, "input.hierarchySearchTyping", 1000, &EditorSelfTestInputCasesInternal::runHierarchySearchTyping );
     SW_EDITOR_SELF_TEST( TooltipOnHover, "input.tooltipOnHover", 1010, &EditorSelfTestInputCasesInternal::runTooltipOnHover );
-    SW_EDITOR_SELF_TEST( ClassicDarkSwatch, "input.classicDarkSwatch", 1020, &EditorSelfTestInputCasesInternal::runClassicDarkSwatch );
+    SW_EDITOR_SELF_TEST( ThemeSwatch, "input.themeSwatch", 1020, &EditorSelfTestInputCasesInternal::runThemeSwatch );
     SW_EDITOR_SELF_TEST( VisibilityToggleFits, "hierarchy.visibilityToggleFits", 1030, &EditorSelfTestInputCasesInternal::runVisibilityToggleFits );
     SW_EDITOR_SELF_TEST( SelectedRowToggle, "hierarchy.selectedRowLeavesTheToggleVisible", 1040,
                          &EditorSelfTestInputCasesInternal::runSelectedRowLeavesTheToggleVisible );

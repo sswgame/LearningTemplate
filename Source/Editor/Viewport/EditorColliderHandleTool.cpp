@@ -7,6 +7,7 @@
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/EditorColor.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -208,7 +209,7 @@ namespace sw::editor
             const float2 half{ Internal::kHandleHalfSize + ( bHighlight ? 2.0f : 0.0f ), Internal::kHandleHalfSize + ( bHighlight ? 2.0f : 0.0f ) };
             const ImVec2 min{ screen.x - half._x, screen.y - half._y };
             const ImVec2 max{ screen.x + half._x, screen.y + half._y };
-            args._pDrawList->AddRectFilled( min, max, EditorColorUtil::toImU32( bHighlight ? style::kSelectionOutline : Color{ 1.0f, 1.0f, 1.0f, 0.95f } ) );
+            args._pDrawList->AddRectFilled( min, max, EditorColorUtil::toImU32( bHighlight ? EditorThemeUtil::getSelectionOutlineColor() : EditorThemeUtil::getTextColor().withAlpha( 0.95f ) ) );
             args._pDrawList->AddRect( min, max, EditorColorUtil::toImU32( Color{ 0.05f, 0.05f, 0.05f, 1.0f } ) );
         }
 

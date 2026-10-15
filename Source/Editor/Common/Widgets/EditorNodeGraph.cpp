@@ -194,7 +194,7 @@ namespace sw::editor
                 }
                 else
                 {
-                    ed::RejectNewItem( EditorColorUtil::toImVec4( style::kError ), 2.0f );
+                    ed::RejectNewItem( EditorColorUtil::toImVec4( EditorThemeUtil::getErrorColor() ), 2.0f );
                     ed::Suspend();
                     ImGui::SetTooltip( "%s", pReason );
                     ed::Resume();
@@ -228,7 +228,7 @@ namespace sw::editor
 
     void EditorNodeGraph::drawNodeIssues() const
     {
-        const ImU32      color   = EditorColorUtil::toImU32( style::kError );
+        const ImU32      color   = EditorColorUtil::toImU32( EditorThemeUtil::getErrorColor() );
         const ed::NodeId hovered = ed::GetHoveredNode();
         for ( const EditorGraphNodeIssue& issue : _listNodeIssue )
         {

@@ -23,16 +23,23 @@ namespace sw::editor
         {
             static bool runTheme( const vector<string>& listArgument, string& outReply )
             {
-                EditorThemePreset preset = EditorThemePreset::ModernDark;
                 if ( listArgument.size() != 1 )
                     return false;
-                if ( EditorThemeUtil::findPresetByConfigID( listArgument[0], preset ) == false )
+                // 적용만 한다 — 설정 파일에 쓰지 않는다(테스트 · 시나리오가 사용자 설정을 바꾸지 않게). 대화상자에서 고르면 저장된다.
+                if ( EditorThemeUtil::applyThemeByName( listArgument[0] ) == false )
                 {
-                    outReply = "unknown theme preset '" + listArgument[0] + "' (ModernDark, DeepCharcoal, MidnightBlue, ClassicDark)";
+                    vector<string> listName;
+                    EditorThemeUtil::listThemes( listName );
+                    outReply = "unknown theme '" + listArgument[0] + "' (";
+                    for ( size_t nameIndex = 0; nameIndex < listName.size(); ++nameIndex )
+                    {
+                        if ( nameIndex > 0 )
+                            outReply += ", ";
+                        outReply += listName[nameIndex];
+                    }
+                    outReply += ")";
                     return false;
                 }
-                // 적용만 한다 — 설정 파일에 쓰지 않는다(테스트 · 시나리오가 사용자 설정을 바꾸지 않게). 대화상자에서 고르면 저장된다.
-                EditorThemeUtil::applyPreset( preset );
                 outReply = "theme " + listArgument[0];
                 return true;
             }
@@ -105,7 +112,7 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_DEV_COMMAND( Theme, "editor.theme", "editor.theme <preset>", "Apply an editor theme preset for this session (ModernDark, DeepCharcoal, MidnightBlue, ClassicDark)",
+    SW_DEV_COMMAND( Theme, "editor.theme", "editor.theme <name>", "Apply an editor theme token set (Resource/editor/theme/<name>.tokens.json) for this session",
                     &EditorUIDevCommandsInternal::runTheme );
     SW_DEV_COMMAND( LayoutSave, "layout.save", "layout.save <name>", "Save the dock layout and panel visibility under a name",
                     &EditorUIDevCommandsInternal::runLayoutSave );
