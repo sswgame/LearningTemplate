@@ -84,7 +84,9 @@ namespace sw
         uint8                           _bIsContainer  : 1;
         uint8                           _bTransient    : 1;
         /** @brief 값이 비어 있으면 직렬화에서 생략합니다(PROPERTY(SkipIfEmpty)). */
-        uint8 _bSkipIfEmpty     : 1;
+        uint8 _bSkipIfEmpty : 1;
+        /** @brief 데이터 파일이 반드시 적어야 하는 칸입니다(PROPERTY(Required)). */
+        uint8 _bRequired        : 1;
         uint8 _bHideInInspector : 1;
         /**
          * @brief 값이 객체 밖에 있습니다 — `PROPERTY` 가 필드가 아니라 값 참조(`T&`)를 돌려주는 인자 없는 메서드에 붙었습니다.
@@ -139,6 +141,7 @@ namespace sw
             , _bIsContainer{ SW_FALSE }
             , _bTransient{ SW_FALSE }
             , _bSkipIfEmpty{ SW_FALSE }
+            , _bRequired{ SW_FALSE }
             , _bHideInInspector{ SW_FALSE }
             , _bIsAccessor{ SW_FALSE }
             , _bReplicated{ SW_FALSE }
