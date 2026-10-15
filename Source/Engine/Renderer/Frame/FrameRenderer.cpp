@@ -84,8 +84,9 @@ namespace sw
         , _passCbRing{}
         , _arrView{}
         , _deform{}
-        , _drawMergeOverride{ -1 }
-        , _vertexPoolOverride{ -1 }
+#if !defined( SW_SHIPPING )
+        , _debugOverrides{}
+#endif
         , _indirectDrawCallCount{ 0 }
         , _gpuPassTimeline{}
         , _lastIndirectDrawCallCount{ 0 }
@@ -95,11 +96,9 @@ namespace sw
         , _transparentRankPlaceholder{}
         , _psoCache{}
         , _outputRenderTarget{ 0 }
-        , _presentCapture{}
+        , _capture{ _pDevice, _mainView._transientPool, _pipelineResource }
         , _canvasRenderer{}
         , _canvasFrame{}
-        , _listCanvasTarget{}
-        , _lastDrawnCanvasTargetCount{ 0 }
         , _pLastSwapchainWriter{ nullptr }
         , _pMainOutputCanvasView{ nullptr }
         , _listScenePreviewRenderer{}
@@ -368,7 +367,11 @@ namespace sw
 
     bool FrameRenderer::isDrawMergeEnabled() const
     {
-        return ( ( _drawMergeOverride >= 0 ) ? _drawMergeOverride : gv_drawMerge ) != 0;
+#if !defined( SW_SHIPPING )
+        if ( _debugOverrides._drawMerge >= 0 )
+            return _debugOverrides._drawMerge != 0;
+#endif
+        return gv_drawMerge != 0;
     }
 
     bool FrameRenderer::submitGraph( IRHIDevice* pDevice )
@@ -404,7 +407,7 @@ namespace sw
         dispatchMeshSkin();
         dispatchCullAndSort( animationInstanceCount );
         // 월드 공간 UI 의 렌더 텍스처다. 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트(같은 큐)로 그린다.
-        drawCanvasTargets();
+        _canvasRenderer.drawTargets( *_pCmd, *pDevice, _canvasFrame, _psoCache, getEnginePSO( RenderPassType::Canvas ) );
 
 #if SW_PROFILE_COMPILED
         if ( bWriteGPUTime )
@@ -650,7 +653,12 @@ namespace sw
         _gpuScene.setIndirectCountsFilledByGPU( usesGPUGeneratedCommands() );
         // 모프 풀 오프셋은 배치 테이블에 실려 업로드 시점에 완성되어 있어야 한다.
         prepareMeshMorphPool();
-        _gpuScene.setVertexPoolEnabled( ( ( _vertexPoolOverride >= 0 ) ? _vertexPoolOverride : gv_vertexPool ) != 0 );
+        int32 vertexPool = gv_vertexPool;
+#if !defined( SW_SHIPPING )
+        if ( _debugOverrides._vertexPool >= 0 )
+            vertexPool = _debugOverrides._vertexPool;
+#endif
+        _gpuScene.setVertexPoolEnabled( vertexPool != 0 );
         _gpuScene.upload( pDevice );
         // 추가 뷰의 투명 순서(스냅샷)를 뷰 자원에 옮긴다. 컬링과 정렬 디스패치, 기록보다 먼저 한다.
         for ( unique_ptr<ViewTarget>& pView : _listExtraView )
@@ -669,7 +677,6 @@ namespace sw
         ensureMaterialPSOs();
 
         // 캔버스의 아틀라스 텍스처, 사각형 버퍼, 렌더 텍스처 대상도 기록 전에 갖춘다(Canvas 패스와 대상 그리기는 그리기만 한다).
-        prepareCanvasTargets();
         _canvasRenderer.prepareFrame( *pDevice, _canvasFrame );
 
         if ( prepareCommandList( pDevice, pCallerName ) == false )

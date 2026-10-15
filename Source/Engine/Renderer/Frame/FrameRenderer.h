@@ -14,7 +14,7 @@
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Canvas/CanvasRenderer.h"
-#include "Engine/Renderer/Frame/Capture/PresentCaptureTarget.h"
+#include "Engine/Renderer/Frame/Capture/FrameCapture.h"
 #include "Engine/Renderer/Frame/FrameMeshDeformState.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Resource/FrameResourceRegistry.h"
@@ -60,6 +60,34 @@ namespace sw
         Failed             ///< initialize 나 loadPipeline 이 실패했다(getStatusMessage 참고).
     };
 
+    /**
+     * @brief 진단 · 테스트가 코드에서 전역 변수(`gv_morphDiag` · `gv_drawMerge` · `gv_vertexPool`)와 렌더러 시계를 덮어쓰는 값 하나입니다.
+     * @details 음수는 "덮어쓰지 않음" 이라 전역 변수(시각은 렌더러 시계)를 따른다. 언리얼 뷰 패밀리의 `FEngineShowFlags` 처럼 값 하나로 주고받는다(기억에 의존한 비교).
+     *          배포본의 렌더러는 이 값을 갖지 않고(`FrameRenderer::setDebugOverrides` 가 없다) 늘 전역 변수를 따른다.
+     */
+    struct FrameDebugOverrides
+    {
+        /**
+         * @brief GPU 메시 모프 진단 모드입니다. 값 체계는 `-gv_morphDiag` 와 같습니다(0 평소 / 1 강제 켬 / 2 디스패치 생략 / 3 번호표).
+         * @details 모드 2는 컴퓨트 없이 레스트 버퍼를 정점 셰이더에 물리며, 정답은 레스트 포즈와 같은 이미지다. 그래서 이 모드 하나로
+         *          "정점 셰이더의 풀 읽기가 네 백엔드에서 같은가" 를 픽셀로 단언할 수 있다. OpenGL 드라이버가 early-return 형태의
+         *          `swComputeMorphElement` 를 잘못 컴파일해 원소를 하나 어긋나게 읽으면 이 단언에 걸린다(binding.hlsli 주석 참고).
+         */
+        int32 _meshMorphDiag{ -1 };
+        /// @brief 1 이면 같은 PSO 와 머티리얼의 연속 배치를 멀티 드로우 하나로 묶고, 0 이면 배치마다 드로우를 부릅니다(`gv_drawMerge`). 멀티 드로우가 없는 백엔드(DX11)는 늘 배치마다입니다.
+        int32 _drawMerge{ -1 };
+        /// @brief 1 이면 씬 메시 정점을 한 풀 버퍼에 모으고, 0 이면 메시마다 자기 정점 버퍼로 그립니다(`gv_vertexPool`, 진단과 A/B 비교용).
+        int32 _vertexPool{ -1 };
+        /**
+         * @brief 시간으로 구동하는 컴퓨트(인스턴스 애니메이션, 메시 모프)가 읽는 절대 시간(초)을 고정합니다.
+         * @details 모프 변위는 sin(시간)이라 벽시계로 캡처하면 시각에 따라 이미지가 달라지고, 부하가 걸린 실행에서 픽셀 단언이 흔들린다.
+         */
+        float32 _animationTime{ -1.0f };
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class FrameRenderer
      * @brief 프레임 경로를 담당합니다. RenderPipeline XML 에서 RenderGraph 를 만들고, GPUScene 과 MeshComponent 를 IRHIDevice 로 그립니다.
@@ -125,28 +153,10 @@ namespace sw
         bool isReady() const { return _status == FrameRendererStatus::Ready; }
 
 #if !defined( SW_SHIPPING )
-        // 진단 · 테스트 세터다. 배포본에서는 빼고, 덮어쓴 값이 없으므로 전역 변수(`gv_morphDiag` · `gv_drawMerge` · `gv_vertexPool`)를 따른다.
-
-        /**
-         * @brief GPU 메시 모프 진단 모드를 코드에서 고릅니다. 값 체계는 `-gv_morphDiag` 와 같고, 음수면 전역 변수를 따릅니다.
-         * @details 테스트가 쓴다. 모드 2는 컴퓨트 없이 레스트 버퍼를 정점 셰이더에 물리며, 정답은 레스트 포즈와 같은 이미지다.
-         *          그래서 이 모드 하나로 "정점 셰이더의 풀 읽기가 네 백엔드에서 같은가" 를 픽셀로 단언할 수 있다.
-         *          OpenGL 드라이버가 early-return 형태의 `swComputeMorphElement` 를 잘못 컴파일해 원소를 하나 어긋나게 읽으면 이 단언에 걸린다(binding.hlsli 주석 참고).
-         */
-        void setMeshMorphDiag( int32 mode ) { _deform._meshMorphDiagOverride = mode; }
-        /**
-         * @brief 같은 PSO 와 머티리얼의 연속 배치를 멀티 드로우 하나로 묶을지 정합니다. 기본은 켬이고 전역 `gv_drawMerge` 를 덮어씁니다.
-         * @details 끄면 배치마다 드로우를 한 번씩 부른다. 백엔드가 멀티 드로우를 지원하지 않으면(DX11) 어차피 그렇게 동작한다. 테스트가 켠 경우와 끈 경우의 이미지를 비교한다.
-         */
-        void setDrawMergeEnabled( bool bEnabled ) { _drawMergeOverride = bEnabled ? 1 : 0; }
-        /** @brief 정점 풀을 쓸지 정합니다. 기본은 켬이고 전역 `gv_vertexPool` 을 덮어씁니다. 끄면 메시마다 자기 정점 버퍼를 씁니다(진단과 A/B 비교용). */
-        void setVertexPoolEnabled( bool bEnabled ) { _vertexPoolOverride = bEnabled ? 1 : 0; }
-        /**
-         * @brief 시간으로 구동하는 컴퓨트(인스턴스 애니메이션, 메시 모프)가 읽는 절대 시간(초)을 고정합니다. 음수면 렌더러 시계(`_animationTimer`)를 따르며 기본값입니다.
-         * @details 테스트가 쓴다. 모프 변위는 sin(시간)이라 벽시계로 캡처하면 시각에 따라 이미지가 달라지고, 부하가 걸린 실행에서 픽셀 단언이 흔들린다.
-         *          테스트 전용이므로 배포본에서는 바꿀 수 없게 뺀다.
-         */
-        void setAnimationTimeOverride( float32 seconds ) { _deform._animationTimeOverride = seconds; }
+        /** @brief 진단 · 테스트 덮어쓰기를 통째로 바꿉니다. 다음 프레임부터 적용됩니다. 배포본에는 없습니다(늘 전역 변수를 따른다). */
+        void setDebugOverrides( const FrameDebugOverrides& overrides ) { _debugOverrides = overrides; }
+        /** @brief 지금의 진단 · 테스트 덮어쓰기입니다. */
+        const FrameDebugOverrides& getDebugOverrides() const { return _debugOverrides; }
 #endif
         /** @brief 마지막 프레임에서 씬이 낸 간접 드로우 호출 수입니다(모든 패스 합). 배치 수보다 작으면 묶인 호출이 있다는 뜻입니다. */
         uint32 getLastIndirectDrawCallCount() const { return _lastIndirectDrawCallCount; }
@@ -168,40 +178,19 @@ namespace sw
         /** @brief 셰이더 핫 리로드를 알립니다. 그 셰이더의 바인딩 레이아웃을 무효화하고 패스 PSO 를 모두 다시 만듭니다. */
         void onShaderRecompiled( string_view shaderPath, const ShaderCompileResult& result );
         /**
-         * @brief 트랜지언트 첨부를 CPU 로 읽어 파일로 저장합니다. 확장자가 `.png` 면 PNG, 아니면 PPM(P6)으로 씁니다. 백엔드별 시각 검증용입니다.
-         * @details 프레임 경로가 아니다(GPU 를 기다린다). 창 캡처는 백엔드마다 되기도 하고 안 되기도 하므로, 네 백엔드를 같은 기준으로 비교하려면 이 함수를 쓴다.
+         * @brief 이 렌더러의 캡처 · 되읽기입니다. Present 결과 캡처(`-gv_screenshot`, 테스트의 최종 화면 비교), 트랜지언트 첨부와 임의 텍스처를 CPU 로 읽거나 파일로 씁니다.
+         * @details 읽기는 GPU 를 기다리므로 프레임 경로에서 부르지 않는다.
          */
-        bool dumpTransientToFile( string_view attachmentName, string_view outFilePath );
-        /**
-         * @brief 임의의 2D 텍스처(첫 밉)를 CPU 로 읽어 파일로 저장합니다. 확장자 규칙은 `dumpTransientToFile` 과 같습니다.
-         * @details 에디터 씬 뷰 RT 처럼 주 출력이 아닌 렌더 타깃을 저장할 때 쓴다. 프레임 경로가 아니다(GPU 를 기다린다).
-         */
-        bool dumpTextureToFile( RHITextureHandle texture, RHIFormat format, string_view outFilePath );
-
-        /**
-         * @brief Present 결과를 텍스처로도 받아 둘지 정합니다. `-gv_screenshot` 으로 실행할 때만 씁니다.
-         * @details 켜면 Present 가 백버퍼 대신 캡처 텍스처에 그리고, 그 텍스처를 백버퍼로 복사한다.
-         *          전체 화면 복사가 한 번 더 들어가므로 평소에는 꺼 둔다.
-         */
-        void setPresentCaptureEnabled( bool bEnabled );
-        /** @brief 이 렌더러가 Present 결과를 받아 두고 있으면 true 입니다. */
-        bool isPresentCaptureEnabled() const { return _presentCapture.isActive(); }
-        /**
-         * @brief 받아 둔 Present 결과, 즉 화면에 나간 이미지를 CPU 로 읽습니다.
-         * @details 포맷은 항상 `constant::kBackBufferFormat` 이다. 테스트가 **최종 화면**을 픽셀로 비교하는 유일한 경로다.
-         *          백버퍼는 핸들이 없어 읽을 수 없고 트랜지언트만 읽을 수 있기 때문이다.
-         */
-        bool readbackPresentCapture( vector<uint8>& outByte, RHITextureMipSpan& outLayout );
-        /** @brief 받아 둔 Present 결과(화면에 나간 이미지)를 파일로 씁니다. 확장자가 `.png` 면 PNG, 아니면 PPM 으로 씁니다. */
-        bool dumpPresentCaptureToFile( string_view outFilePath );
+        FrameCapture&       getCapture() { return _capture; }
+        const FrameCapture& getCapture() const { return _capture; }
         /**
          * @brief 다음 프레임부터 그릴 캔버스(화면 2D)를 받습니다. 렌더러가 가진 것과 맞바꾸므로 버퍼 용량은 서로 넘어갑니다.
          * @details 패킷 경로에서는 `executePacket` 이 패킷의 `_canvas` 로 같은 일을 한다. 씬 직접 경로(에디터, 테스트)는 이 함수로 넣으며, 바꾸기 전까지 매 프레임
          *          그 목록을 그린다. 아틀라스 업로드는 한 번만 반영하고 반영한 뒤에는 비운다.
          */
         void setCanvasFrame( CanvasFrameData& inoutFrame );
-        /** @brief 마지막 프레임에 다시 그린 캔버스 렌더 텍스처 대상 수입니다. 내용 번호가 같은 대상은 다시 그리지 않습니다(테스트와 진단용). */
-        uint32 getLastDrawnCanvasTargetCount() const { return _lastDrawnCanvasTargetCount; }
+        /** @brief 캔버스(화면 2D · 렌더 텍스처 대상) 렌더러입니다. 다시 그린 대상 수 같은 진단 값을 읽을 때 씁니다. */
+        const CanvasRenderer& getCanvasRenderer() const { return _canvasRenderer; }
 
         /**
          * @brief 화면에 나간 첨부의 이름입니다. Present 패스가 입력으로 받는 첨부이며, 없으면 빈 문자열입니다.
@@ -221,11 +210,6 @@ namespace sw
          *          매 프레임 부를 필요는 없다.
          */
         void publishRenderTargets() const;
-        /**
-         * @brief 트랜지언트 첨부를 CPU 로 읽어 옵니다(밉 0). 테스트가 백엔드 사이의 픽셀을 비교할 때 쓰며, GPU 를 기다립니다.
-         * @param outFormat 첨부의 RHIFormat 입니다. 채널 순서를 해석할 때 씁니다.
-         */
-        bool readbackTransient( string_view attachmentName, vector<uint8>& outBytes, RHITextureMipSpan& outLayout, RHIFormat& outFormat );
 
         /**
          * @brief 주 출력(게임 창, 에디터 게임 뷰)의 보기 모드를 정합니다. `-gv_viewMode` 와 테스트가 씁니다.
@@ -461,15 +445,6 @@ namespace sw
         void releaseViewTransients( ViewTarget& view );
         /** @brief 추가 뷰 하나를 통째로 해제합니다. 트랜지언트, 컬링 상수 버퍼, 리스트, 빌린 렌더 텍스처가 해당합니다. */
         void releaseExtraView( ViewTarget& view );
-        /**
-         * @brief 이번 캔버스의 렌더 텍스처 대상을 빌리고, 사라진 대상은 돌려줍니다. 렌더 타깃은 `TextureCache` 에서 빌리며 크기는 목록의 대상 크기입니다.
-         *        **기록 전에** 불러야 합니다. 텍스처 생성과 bindless 등록은 기록 중에 할 수 없습니다.
-         */
-        void prepareCanvasTargets();
-        /** @brief 렌더 텍스처 대상을 지우고 그립니다(프리패스 리스트이므로 장면 뷰보다 먼저 실행). 내용 번호와 텍스처가 지난번과 같은 대상은 건너뜁니다. */
-        void drawCanvasTargets();
-        /** @brief 빌린 렌더 텍스처 대상을 모두 돌려줍니다. 디바이스를 해제하거나 종료할 때 부릅니다. */
-        void releaseCanvasTargets();
         /**
          * @brief 이번 프레임의 추가 뷰 요청을 뷰 상태에 반영합니다. 새 뷰를 만들고, 사라진 뷰를 해제하고, 출력 텍스처, 풀 크기, 컬링 입력을 맞추고,
          *        GPUScene 의 컬링 슬롯 수를 정합니다. **업로드 전에**(셋업 단계) 불러야 합니다. 버퍼와 텍스처 생성은 기록 중에 할 수 없습니다.
@@ -782,10 +757,10 @@ namespace sw
 
         /// @brief 정점 변형(인스턴스 애니메이션, 모프, 스킨, VAT) 컴퓨트의 상수 버퍼, 풀, 스크래치, 시계입니다.
         FrameMeshDeformState _deform;
-        /// @brief `setDrawMergeEnabled` 로 받은 값입니다. 음수면 전역 변수 `gv_drawMerge` 를 따릅니다.
-        int32 _drawMergeOverride;
-        /// @brief `setVertexPoolEnabled` 로 받은 값입니다. 음수면 전역 변수 `gv_vertexPool` 을 따릅니다.
-        int32 _vertexPoolOverride;
+#if !defined( SW_SHIPPING )
+        /// @brief `setDebugOverrides` 로 받은 값입니다. 음수인 칸은 전역 변수(시각은 `_deform._animationTimer`)를 따릅니다.
+        FrameDebugOverrides _debugOverrides;
+#endif
         /// @brief 이번 프레임의 씬 간접 드로우 호출 수입니다. 패스를 병렬로 기록하므로 atomic 으로 둡니다.
         atomic<uint32> _indirectDrawCallCount;
         /**
@@ -883,24 +858,12 @@ namespace sw
         RenderPSOCache                       _psoCache;
         unordered_map<hashed_string, uint32> _mapPassNameToIndex;
         RHITextureHandle                     _outputRenderTarget;
-        /// @brief Present 결과를 받아 두는 텍스처입니다(`-gv_screenshot`). 스크린샷이 **최종 화면**을 읽는 경로이며, 크기는 주 출력을 따릅니다.
-        PresentCaptureTarget _presentCapture;
-        /// @brief 캔버스(화면 2D) 렌더러입니다. 아틀라스 사본, 사각형 버퍼, 일괄 드로우를 렌더 스레드에서 처리합니다.
+        /// @brief 캡처 · 되읽기입니다. Present 결과 텍스처(`-gv_screenshot`, 크기는 주 출력)를 소유하고 `_pDevice` · 주 시점 풀 · 파이프라인을 빌려 씁니다(그래서 그 셋보다 뒤에 선언한다).
+        FrameCapture _capture;
+        /// @brief 캔버스(화면 2D) 렌더러입니다. 아틀라스 사본, 사각형 버퍼, 일괄 드로우, 렌더 텍스처 대상(월드 공간 UI)을 렌더 스레드에서 처리합니다.
         CanvasRenderer _canvasRenderer;
         /// @brief 그릴 캔버스입니다. 패킷과 `setCanvasFrame` 에서 맞바꾸기로 받으며, 기록 중에는 읽기만 합니다.
         CanvasFrameData _canvasFrame;
-        /** @brief 캔버스 렌더 텍스처 대상 하나의 상태입니다. 빌린 텍스처와 마지막으로 그린 내용 번호와 텍스처를 가집니다. */
-        struct CanvasTargetState
-        {
-            hashed_string    _path{};
-            Texture2D*       _pTexture{ nullptr }; ///< 캐시가 소유하며, 돌려줄 때까지 빌려 쓴다.
-            uint64           _drawnRevision{ 0 };  ///< 마지막으로 그린 내용 번호(0이면 그린 적 없음)
-            RHITextureHandle _drawnTexture{ 0 };   ///< 그때의 텍스처(다시 만들어졌으면 내용이 없으므로 다시 그린다)
-            uint8            _bSeen{ SW_FALSE };   ///< 이번 프레임 목록에 있다.
-        };
-        /// @brief 캔버스 렌더 텍스처 대상(월드 공간 UI)들입니다. 이번 캔버스 목록과 순서가 같지 않으므로 경로로 찾습니다.
-        vector<CanvasTargetState> _listCanvasTarget;
-        uint32                    _lastDrawnCanvasTargetCount;
         /// @brief Swapchain 을 쓰는 마지막 패스입니다. 선언 순서 기준이며, 그래프가 같은 출력에 대한 쓰기를 선언 순서로 연결합니다. 콜백을 바인딩할 때 정합니다.
         const RenderGraphPassDesc* _pLastSwapchainWriter;
         /**

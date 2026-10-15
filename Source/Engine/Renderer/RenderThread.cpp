@@ -390,7 +390,7 @@ namespace sw
         if ( _pFrameRenderer != nullptr )
         {
             const bool bRequestedPresent = _requestedScreenshotPath.empty() == false && _requestedScreenshotTexture == 0;
-            _pFrameRenderer->setPresentCaptureEnabled( gv_screenshot.empty() == false || _bScenarioCaptureEnabled.load( std::memory_order_acquire ) || bRequestedPresent );
+            _pFrameRenderer->getCapture().setPresentEnabled( gv_screenshot.empty() == false || _bScenarioCaptureEnabled.load( std::memory_order_acquire ) || bRequestedPresent );
         }
 
         // 렌더 스레드 전체다. `GT.Packet.submit` 이 크면 GT 가 여기를 기다린다는 뜻이다.
@@ -559,7 +559,7 @@ namespace sw
                 // 중간 단계를 보고 싶다고 첨부 이름을 지정했으면 그 첨부를, 아니면 화면에 나간 이미지를 덤프한다.
                 // 실패는 경로와 함께 알린다(시나리오 경로와 같다). 읽기와 쓰기 실패 로그만으로는 어느 촬영이 빠졌는지 알 수 없다.
                 const string_view attachment{ gv_screenshotAttachment };
-                const bool        bWritten = attachment.empty() == false ? _pFrameRenderer->dumpTransientToFile( attachment, path ) : writePresentedImage( path );
+                const bool        bWritten = attachment.empty() == false ? _pFrameRenderer->getCapture().dumpTransientToFile( attachment, path ) : writePresentedImage( path );
                 if ( bWritten == false )
                     SW_LOG_WARNING( "Screenshot was not written: %#", path.c_str() );
             }
@@ -585,13 +585,13 @@ namespace sw
     {
         // 기본은 **Present 결과 캡처**, 곧 화면에 나간 이미지다. 캡처가 없으면 Present 가 읽는 첨부로 대체한다.
         // 첨부 이름을 리터럴로 고정하지 않는다. 그 이름이 없는 파이프라인(디퍼드)에서는 한 장도 찍히지 않는다.
-        if ( _pFrameRenderer->dumpPresentCaptureToFile( path ) )
+        if ( _pFrameRenderer->getCapture().dumpPresentToFile( path ) )
             return true;
         // 캡처가 없으면(오프스크린 출력 등) Present 가 **읽는** 첨부를 찍는다. 그 이미지에는 Present 패스가 한 일(톤맵 등)이 들어 있지 않다.
         string_view fallback = _pFrameRenderer->getPresentedAttachmentName();
         if ( fallback.empty() )
             fallback = string_view{ FrameRendererUtil::Attachment::kSceneColor };
-        return _pFrameRenderer->dumpTransientToFile( fallback, path );
+        return _pFrameRenderer->getCapture().dumpTransientToFile( fallback, path );
     }
 
     void RenderThread::requestScreenshot( string_view filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat )
@@ -644,7 +644,7 @@ namespace sw
         (void)FileUtil::ensureParentDirectoryExists( _requestedScreenshotPath ); // 실패하면 아래 쓰기가 경로와 함께 알린다.
         const bool bWritten = _requestedScreenshotTexture == 0
                                 ? writePresentedImage( _requestedScreenshotPath )
-                                : _pFrameRenderer->dumpTextureToFile( _requestedScreenshotTexture, _requestedScreenshotFormat, _requestedScreenshotPath );
+                                : _pFrameRenderer->getCapture().dumpTextureToFile( _requestedScreenshotTexture, _requestedScreenshotFormat, _requestedScreenshotPath );
         if ( bWritten )
             SW_LOG_INFO( "Screenshot saved: %#", _requestedScreenshotPath.c_str() );
         else

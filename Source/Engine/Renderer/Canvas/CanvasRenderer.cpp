@@ -14,6 +14,7 @@
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 #include "Engine/Resource/AssetManager.h"
 
 namespace sw
@@ -57,6 +58,8 @@ namespace sw
         , _uploadedRevision{ 0 }
         , _uploadedQuadCount{ 0 }
         , _lastUploadCallCount{ 0 }
+        , _lastDrawnTargetCount{ 0 }
+        , _bTargetPSOMissingLogged{ SW_FALSE }
     {
     }
 
@@ -64,6 +67,7 @@ namespace sw
 
     void CanvasRenderer::prepareFrame( IRHIDevice& device, CanvasFrameData& inoutFrame )
     {
+        prepareTargets( device, inoutFrame );
         SW_PROFILE_SCOPE( "RT.Canvas.Upload" );
         _lastUploadCallCount = 0;
 
@@ -217,9 +221,67 @@ namespace sw
             }
         }
         _listPathTexture.clear();
+        if ( engine::areEngineServicesBound() )
+        {
+            TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
+            for ( const TargetState& state : _listTarget )
+            {
+                if ( state._pTexture != nullptr )
+                    textures.release( state._path.view(), pDevice );
+            }
+        }
+        _listTarget.clear();
         _quadBuffer.release( pDevice );
         _uploadedRevision  = 0;
         _uploadedQuadCount = 0;
+    }
+
+    void CanvasRenderer::drawTargets( IRHICommandList& cmd, IRHIDevice& device, const CanvasFrameData& frame, const RenderPSOCache& psoCache,
+                                      RHIPipelineStateHandle fallbackPSO )
+    {
+        _lastDrawnTargetCount = 0;
+        for ( uint32 targetIndex = 0; targetIndex < static_cast<uint32>( frame._listTarget.size() ); ++targetIndex )
+        {
+            const CanvasTargetDrawList& target                 = frame._listTarget[targetIndex];
+            TargetState*                pState                 = findTarget( target._targetPath );
+            const bool                  bUnusableCanvasTexture = pState == nullptr || pState->_pTexture == nullptr || pState->_pTexture->isRHIValid() == false;
+            if ( bUnusableCanvasTexture )
+                continue;
+            // 텍스처는 그린 것을 지킨다 — 내용이 같고 같은 텍스처면 다시 그리지 않는다.
+            const RHITextureHandle texture          = pState->_pTexture->getHandle();
+            const bool             bCanvasUnchanged = target._contentRevision != 0 && target._contentRevision == pState->_drawnRevision && texture == pState->_drawnTexture;
+            if ( bCanvasUnchanged )
+                continue;
+            const uint32           width  = pState->_pTexture->getWidth();
+            const uint32           height = pState->_pTexture->getHeight();
+            RHIPipelineStateHandle pso{ 0 };
+            if ( psoCache.findOutputPSO( RenderPassType::Canvas, pState->_pTexture->getFormat(), pso ) == false )
+            {
+                pso = fallbackPSO;
+                if ( _bTargetPSOMissingLogged == SW_FALSE )
+                {
+                    _bTargetPSOMissingLogged = SW_TRUE;
+                    SW_LOG_ERROR( "Canvas target has no PSO for format %# from setup - add the format to FrameRenderer::createOutputPSOVariants",
+                                  static_cast<uint32>( pState->_pTexture->getFormat() ) );
+                }
+            }
+            const bool bInvalidCanvasTarget = pso == 0 || width == 0 || height == 0;
+            if ( bInvalidCanvasTarget )
+                continue;
+            RHIRenderPassBeginInfo beginInfo{};
+            beginInfo.setColorTarget( texture, target._clearColor, RHIRenderPassLoadOp::Clear );
+            beginInfo._bBindColor = SW_TRUE;
+            beginInfo._width      = width;
+            beginInfo._height     = height;
+            cmd.beginRenderPass( beginInfo );
+            (void)drawList( cmd, target._list, getTargetQuadBase( targetIndex ), pso, width, height, device.supportsNativeBindlessSampling() );
+            cmd.endRenderPass();
+            // 그린 텍스처는 셰이더가 읽는다(머티리얼 · 에디터 ImGui 이미지) — 카메라 렌더 텍스처 출력과 같이 읽기 상태로 둔다(Vulkan 레이아웃).
+            cmd.prepareTextureForShaderRead( texture );
+            pState->_drawnRevision = target._contentRevision;
+            pState->_drawnTexture  = texture;
+            ++_lastDrawnTargetCount;
+        }
     }
 
     void CanvasRenderer::mergeUploadRegions( vector<GlyphAtlasRect>& inoutListRegion, uint32 maxRegionCount )
@@ -342,6 +404,63 @@ namespace sw
             ++_lastUploadCallCount;
         }
         page._listDirty.clear();
+    }
+
+    void CanvasRenderer::prepareTargets( IRHIDevice& device, const CanvasFrameData& frame )
+    {
+        for ( TargetState& state : _listTarget )
+        {
+            state._bSeen = SW_FALSE;
+        }
+        const bool bServices = engine::areEngineServicesBound();
+        for ( const CanvasTargetDrawList& target : frame._listTarget )
+        {
+            TargetState* pState = findTarget( target._targetPath );
+            if ( pState == nullptr )
+            {
+                pState        = &_listTarget.emplace_back();
+                pState->_path = target._targetPath;
+            }
+            pState->_bSeen = SW_TRUE;
+            if ( bServices == false )
+                continue;
+            const uint32  width    = static_cast<uint32>( target._list._targetSize._x );
+            const uint32  height   = static_cast<uint32>( target._list._targetSize._y );
+            TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
+            if ( pState->_pTexture != nullptr )
+            {
+                // 위젯이 그리기 크기를 바꿨으면 텍스처를 그 크기로 다시 만든다(같은 객체, 새 GPU 자원). 다시 만든 텍스처는 비어 있으므로 다시 그린다.
+                const bool bResized = width > 0 && height > 0 && ( pState->_pTexture->getWidth() != width || pState->_pTexture->getHeight() != height );
+                if ( bResized && textures.resizeRenderTarget( target._targetPath.view(), width, height, &device ) )
+                    pState->_drawnRevision = 0;
+                continue;
+            }
+            // 머티리얼과 같은 경로로 캐시에서 빌린다 — 처음 만드는 크기는 위젯의 그리기 크기다.
+            textures.declareRenderTarget( target._targetPath.view(), width, height );
+            pState->_pTexture      = textures.acquire( target._targetPath.view(), &device );
+            pState->_drawnRevision = 0;
+        }
+
+        // 이번 목록에 없는 대상(위젯 컴포넌트가 사라졌다)은 돌려준다.
+        for ( size_t index = _listTarget.size(); index > 0; --index )
+        {
+            TargetState& state = _listTarget[index - 1];
+            if ( state._bSeen == SW_TRUE )
+                continue;
+            if ( state._pTexture != nullptr && bServices )
+                engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().release( state._path.view(), &device );
+            _listTarget.erase( _listTarget.begin() + static_cast<ptrdiff_t>( index - 1 ) );
+        }
+    }
+
+    CanvasRenderer::TargetState* CanvasRenderer::findTarget( const hashed_string& path )
+    {
+        for ( TargetState& state : _listTarget )
+        {
+            if ( state._path == path )
+                return &state;
+        }
+        return nullptr;
     }
 
     RHIDescriptorIndex CanvasRenderer::findTextureSrv( const CanvasTextureRef& texture ) const
