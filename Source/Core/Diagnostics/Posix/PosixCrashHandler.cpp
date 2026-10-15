@@ -146,6 +146,7 @@ namespace sw
         if ( s_bInstalled.exchange( true ) )
             return;
 
+        (void)getCrashSessionID(); // 크래시 경로에서 만들지 않게 지금 만든다(makeSessionID 설명)
         CallStackCapture::initialize();
 
         // 스택 오버플로에서도 핸들러가 돌 수 있도록 이 스레드에 먼저 대체 스택을 깐다. 다른 스레드는 시작할 때 `ThreadCrashStack::initializeCurrentThread` 로 깐다.

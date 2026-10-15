@@ -167,7 +167,17 @@ namespace sw
             {
                 bWritten = pfnWrite( GetCurrentProcess(), GetCurrentProcessId(), hFile, kMiniDumpType, pException, nullptr, nullptr );
             }
+            const DWORD dumpError = ( bWritten != FALSE ) ? ERROR_SUCCESS : GetLastError();
             CloseHandle( hFile );
+            if ( bWritten == FALSE )
+            {
+                // 실패 원인을 크래시 출력에 남긴다(stdio 를 거치지 않는다 — reportCrash 의 시한 메시지와 같은 이유).
+                utf8        arrMessage[256]{};
+                const int32 length  = std::snprintf( arrMessage, sizeof( arrMessage ), "\n[CrashHandler] MiniDumpWriteDump failed (snapshot %d, error 0x%08x)\n",
+                                                    bSnapshot ? 1 : 0, static_cast<uint32>( dumpError ) );
+                DWORD       written = 0;
+                WriteFile( GetStdHandle( STD_ERROR_HANDLE ), arrMessage, static_cast<DWORD>( length > 0 ? length : 0 ), &written, nullptr );
+            }
             return bWritten != FALSE;
         }
 
@@ -376,6 +386,7 @@ namespace sw
         if ( s_bInstalled.exchange( true ) )
             return;
 
+        (void)getCrashSessionID(); // 크래시 경로에서 만들지 않게 지금 만든다(makeSessionID 설명)
         CallStackCapture::initialize();
         ThreadCrashStack::initializeCurrentThread();
 

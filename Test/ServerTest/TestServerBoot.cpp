@@ -595,14 +595,14 @@ SW_TEST_CASE( ServerBootTest, StateHashHistoryFindsTheFirstDivergentTick )
 #endif
 }
 
+// 권위 고스트는 개발 빌드 기능이라 Shipping 에는 본문(AuthorityGhost.cpp)이 없다. 건너뛰는 케이스 하나뿐인 스위트는
+// "아무것도 확인하지 않은 스위트" 로 지므로 Shipping 에서는 스위트를 등록하지 않는다.
+#if !defined( SW_SHIPPING )
 /**
  * @brief [AuthorityGhostTest] 서버 포즈 글을 읽고, 이름이 같은 오브젝트끼리 거리 차이를 구한다(서버 디버깅 S6의 순수 부분)
  */
 SW_TEST_CASE( AuthorityGhostTest, ParsesPosesAndComputesDeltasByName )
 {
-#if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the authority ghost is a development-build feature" );
-#else
     vector<AuthorityPose> listServer;
     AuthorityGhost::parsePoses( "Hero Knight 1 2 3\nTree 10 0 0\nbad line\nOnlyServer 5 5 5\n", listServer );
     SW_ASSERT_EQUAL( 3u, static_cast<uint32>( listServer.size() ) );
@@ -615,8 +615,8 @@ SW_TEST_CASE( AuthorityGhostTest, ParsesPosesAndComputesDeltasByName )
     SW_EXPECT_TRUE( listDelta[0]._name == "Tree" );                 // 가장 어긋난 것이 먼저
     SW_EXPECT_TRUE( listDelta[0]._distance > 3.999f && listDelta[0]._distance < 4.001f );
     SW_EXPECT_TRUE( listDelta[1]._distance == 0.0f );
-#endif
 }
+#endif
 
 /**
  * @brief [ServerBootTest] 클라이언트의 로컬 포즈와 서버가 읽어 준 포즈의 차이가 서버에서 옮긴 거리와 같다(서버 디버깅 S6)

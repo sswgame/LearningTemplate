@@ -96,29 +96,41 @@ namespace sw
             void onProbe() override {}
         };
 
-        /**
-         * @brief 세션 ID 를 한 번 만듭니다. 시각과 난수를 섞은 16진수 문자열입니다.
-         * @details GUID API 를 쓰지 않는 이유는 플랫폼마다 헤더가 다르고, 여기서 필요한 것은 "이 실행을 다른 실행과 구분하는 것"
-         *          뿐이기 때문입니다. 로그 파일 이름에도 같은 값이 들어갑니다.
-         */
-        const utf8* makeSessionID()
+        /** @brief 세션 ID 글자입니다(16 자리 16진수 + 널). */
+        struct SessionIDText
         {
-            static utf8 s_arrSession[24]{};
-            if ( s_arrSession[0] != '\0' )
-                return s_arrSession;
+            utf8 _arrText[24]{};
+        };
 
+        /** @brief 시각과 난수를 섞은 16진수 세션 ID 를 새로 만듭니다. */
+        SessionIDText buildSessionIDInternal()
+        {
             const uint64       nowTicks    = static_cast<uint64>( MonotonicClock::nowNanoseconds() );
             const uint64       wallSeconds = static_cast<uint64>( WallClock::nowUnixMilliseconds() );
             std::random_device randomDevice;
             const uint64       mixed = nowTicks ^ ( wallSeconds << 16 ) ^ ( static_cast<uint64>( randomDevice() ) << 32 );
 
             static const utf8 kHex[] = "0123456789abcdef";
+            SessionIDText     session{};
             for ( uint32 digit = 0; digit < 16; ++digit )
             {
-                s_arrSession[digit] = kHex[( mixed >> ( digit * 4 ) ) & 0xFu];
+                session._arrText[digit] = kHex[( mixed >> ( digit * 4 ) ) & 0xFu];
             }
-            s_arrSession[16] = '\0';
-            return s_arrSession;
+            return session;
+        }
+
+        /**
+         * @brief 세션 ID 를 한 번 만듭니다. 로그 파일 이름과 크래시 파일 이름에 같은 값이 들어갑니다.
+         * @details GUID API 를 쓰지 않는 이유는 플랫폼마다 헤더가 다르고, 여기서 필요한 것은 "이 실행을 다른 실행과 구분하는 것"
+         *          뿐이기 때문입니다.
+         *          주의: 처음 부르는 스레드가 여럿일 수 있다(로그 워커가 파일을 여는 순간과 보고 스레드가 덤프 경로를 만드는 순간).
+         *          검사 후 채우는 정적 버퍼로 두면 두 스레드가 다른 값을 섞어 써, 덤프와 컨텍스트 파일이 서로 다른 세션 이름을
+         *          가진다. 함수 지역 정적 초기화(스레드 안전)로 한 값만 보이게 하고, 설치 때 미리 불러 크래시 경로에서 만들지 않는다.
+         */
+        const utf8* makeSessionID()
+        {
+            static const SessionIDText s_session = buildSessionIDInternal();
+            return s_session._arrText;
         }
         /**
          * @brief 버퍼 뒤에 포맷한 한 줄을 이어 붙입니다. **할당하지 않습니다.**
