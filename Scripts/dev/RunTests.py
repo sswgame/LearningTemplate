@@ -25,12 +25,15 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import BuildTree, addBuildTreeArguments, mapConcurrent, runProcess  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import ListChangedTests  # noqa: E402
+from common import BuildTree, addBuildTreeArguments, getCpuCount, getProjectRoot, mapConcurrent, runGit, runProcess  # noqa: E402
 
 #: `--test_list` 가 고른 케이스를 찍는 줄(`  Suite.Case`).
 _kListedCaseRe = re.compile(r"^  ([A-Z]\w*Test)\.(\w+)\s*$")
@@ -51,9 +54,105 @@ def listSelectedCases(executable: Path, workingDir: Path, pattern: str) -> list[
     return [f"{match.group(1)}.{match.group(2)}" for line in result.stdout.splitlines() if (match := _kListedCaseRe.match(line))]
 
 
+def listChangedFiles(root: Path, base: str | None) -> list[str] | None:
+    """기준과 갈라진 곳부터 지금 작업 트리까지 바뀐 파일(커밋 · 스테이징 · 작업 중 · 추적 안 하는 새 파일). 기준을 못 찾으면 None.
+    기준을 주지 않으면 main 이 아닌 브랜치는 `main`, main 은 `origin/main`(아직 내보내지 않은 것)이다."""
+    if base is None:
+        branch = runGit(["rev-parse", "--abbrev-ref", "HEAD"], cwd=root).stdout.strip()
+        base = "origin/main" if branch == "main" else "main"
+    mergeBase = runGit(["merge-base", base, "HEAD"], cwd=root)
+    if not mergeBase.bSucceeded:
+        return None
+    setPath = set(runGit(["diff", "--name-only", mergeBase.stdout.strip()], cwd=root).stdout.splitlines())
+    setPath |= set(runGit(["ls-files", "--others", "--exclude-standard"], cwd=root).stdout.splitlines())
+    return sorted(path for path in setPath if path)
+
+
+def selectCtestEntries(tree: BuildTree, selection: ListChangedTests.TestSelection, bGpu: bool) -> list[str]:
+    """고른 실행 파일 · 라벨에 해당하는 ctest 항목 이름. 린트는 늘 든다."""
+    listing = runProcess(["ctest", "--test-dir", str(tree.path), "-N", "--show-only=json-v1"])
+    if not listing.bSucceeded:
+        raise ListChangedTests.ChangedTestsError([f"`ctest --test-dir {tree.path} -N` 가 졌다 — 빌드 폴더를 구성하고 다시:\n{listing.output[-2000:]}"])
+    data = json.loads(listing.stdout)
+    setLabelWanted = {"lint", "nogpu"} | ({"hostgpu"} if bGpu else set())
+    listName: list[str] = []
+    for test in data.get("tests", []):
+        setLabel = {label for prop in test.get("properties", []) if prop.get("name") == "LABELS" for label in prop.get("value", [])}
+        listCommand = test.get("command") or [""]
+        executable = Path(listCommand[0]).stem
+        bScript = len(listCommand) > 1 and Path(listCommand[1]).suffix == ".py"
+        if "lint" in setLabel:
+            listName.append(test["name"])
+        elif not setLabel & setLabelWanted:
+            continue
+        elif selection.bFull:
+            listName.append(test["name"])
+        elif bScript:
+            if selection.bPython and "python" in setLabel:
+                listName.append(test["name"])
+        elif executable in selection.setExecutable:
+            listName.append(test["name"])
+    return listName
+
+
+def runChangedInternal(tree: BuildTree, args: argparse.Namespace, listExtra: list[str]) -> int:
+    """`--changed` — 바뀐 파일이 닿는 테스트만. 실행 파일 단위는 ctest 로(조각 · 제한 시간 그대로), 스위트 단위는 실행 파일을 직접 돌린다."""
+    root = getProjectRoot()
+    listChanged = listChangedFiles(root, args.base)
+    if listChanged is None:
+        print(f"[RunTests] 기준 '{args.base}' 를 찾지 못했습니다", file=sys.stderr)
+        return 2
+    policy = json.loads((root / "Test" / "TestPolicy.json").read_text(encoding="utf-8"))
+    setTestExecutable = set(policy["executables"])
+    # 해석하지 못하면 전체 · 일부로 물러서지 않고 까닭을 보이며 멈춘다(ListChangedTests 머리말).
+    try:
+        bNeedsGraph = any(ListChangedTests.classifyPath(path) == "source" for path in listChanged)
+        graph = ListChangedTests.readBuildGraph(tree.path, root) if bNeedsGraph else None
+        selection = ListChangedTests.selectTests(listChanged, root, setTestExecutable, graph)
+        listEntry = selectCtestEntries(tree, selection, args.bGpu)
+    except ListChangedTests.ChangedTestsError as error:
+        print(f"[RunTests] 바뀐 파일 {len(listChanged)} 개를 테스트로 옮기지 못했습니다:", file=sys.stderr)
+        for reason in error.listReason:
+            print(f"    {reason}", file=sys.stderr)
+        return 2
+    print(f"[RunTests] 바뀐 파일 {len(listChanged)} 개 → " + ("전체" if selection.bFull else
+          f"실행 파일 {sorted(selection.setExecutable)} · 스위트 {dict((key, sorted(value)) for key, value in selection.mapExecutableSuite.items())}"
+          f"{' · 파이썬' if selection.bPython else ''} (+ 린트)"))
+    for reason in selection.listReason[:10]:
+        print(f"    전체인 까닭: {reason}")
+
+    bFailed = False
+    if listEntry:
+        # `-j` 를 주지 않으면(0) 이 PC 의 스레드 수다 — 값이 없을 때의 대체가 아니라 옵션의 뜻이다(도우미는 -j 2 를 준다).
+        jobCount = args.jobs or getCpuCount()
+        regex = "^(" + "|".join(re.escape(name) for name in listEntry) + ")$"
+        command = ["ctest", "--test-dir", str(tree.path), "-R", regex, "-j", str(jobCount), "--output-on-failure", "-FS", "SWTestBinaries"]
+        print(f"[RunTests] ctest 항목 {len(listEntry)} 개(-j {jobCount})", flush=True)
+        bFailed = runProcess(command, bCapture=False).returnCode != 0
+
+    workingDir, listExecutable = findTestExecutables(tree)
+    mapPath = {path.stem: path for path in listExecutable}
+    for executable, setSuite in sorted(selection.mapExecutableSuite.items()):
+        if executable not in mapPath:
+            print(f"[RunTests] 고른 실행 파일 {executable} 이 {tree.path} 에 없습니다(이 구성에서 짓지 않는 실행 파일인지 본다)", file=sys.stderr)
+            bFailed = True
+            continue
+        hostArgument = "--host_suites=all" if args.bGpu else "--host_suites=exclude"
+        command = [str(mapPath[executable]), "--test_filter=" + ":".join(f"{suite}.*" for suite in sorted(setSuite)), hostArgument,
+                   "--allow_empty_suite", *listExtra]
+        print(f"\n[RunTests] ({workingDir}) {' '.join(command)}", flush=True)
+        bFailed = runProcess(command, cwd=workingDir, bCapture=False).returnCode != 0 or bFailed
+    print("\n[RunTests] " + ("실패가 있습니다" if bFailed else "모두 통과"))
+    return 1 if bFailed else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="스위트 · 케이스 이름으로 시험을 그 케이스가 사는 실행 파일 · 폴더에서 돌린다")
-    parser.add_argument("pattern", help="--test_filter 패턴(예: SceneTest.* · \"A.*,B.Case\" · \"*\")")
+    parser.add_argument("pattern", nargs="?", help="--test_filter 패턴(예: SceneTest.* · \"A.*,B.Case\" · \"*\")")
+    parser.add_argument("--changed", action="store_true", help="패턴 대신 바뀐 파일이 닿는 테스트만 돌린다(모르면 전체)")
+    parser.add_argument("--base", default=None, help="--changed 의 기준(기본: main 브랜치면 origin/main, 아니면 main)")
+    parser.add_argument("--gpu", dest="bGpu", action="store_true", help="--changed 에 hostgpu 항목 · 호스트 스위트까지 넣는다")
+    parser.add_argument("-j", "--jobs", type=int, default=0, help="--changed 의 ctest 동시 실행 수(기본: 코어 수)")
     addBuildTreeArguments(parser)
     parser.add_argument("--repeat", type=int, default=0, help="고른 케이스를 N 번 되풀이한다(--test_repeat)")
     parser.add_argument("--shuffle", nargs="?", const="random", default=None, help="순서를 섞는다 — 씨앗을 주면 그 순서를 다시 만든다")
@@ -61,6 +160,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-build", dest="bBuild", action="store_false", help="시험 빌드(all · AllTests)를 건너뛰고 있는 실행 파일로 돌린다")
     # 모르는 인자는 실행 파일 몫이다. 위치 인자 REMAINDER 로 받으면 패턴 뒤의 --list · --repeat 까지 삼킨다.
     args, listPassthrough = parser.parse_known_args(argv)
+    if bool(args.pattern) == args.changed:
+        parser.error("패턴 하나 또는 --changed 하나를 준다")
 
     tree = BuildTree.fromArguments(args)
     if args.bBuild:
@@ -73,6 +174,8 @@ def main(argv: list[str] | None = None) -> int:
         if not buildResult.bSucceeded:
             print("[RunTests] 시험 빌드가 졌습니다" if buildResult.bLaunched else "[RunTests] cmake 를 찾지 못했습니다 (PATH)", file=sys.stderr)
             return 2
+    if args.changed:
+        return runChangedInternal(tree, args, [argument for argument in listPassthrough if argument != "--"])
     workingDir, listExecutable = findTestExecutables(tree)
     if not listExecutable:
         print(f"[RunTests] {tree.path} 에 테스트 실행 파일이 없습니다 — 먼저 빌드하세요 (cmake --build --preset {tree.name} --target all AllTests)", file=sys.stderr)

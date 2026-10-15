@@ -136,6 +136,7 @@ cd build/Ninja-Debug/Bin
 py -3 -m Scripts test "SceneTest.*,ResourceTest.Ensure*" --list   # 어느 실행 파일에 어떤 케이스가 있나
 py -3 -m Scripts test ResourceTest.* --preset Ninja-Shipping
 py -3 -m Scripts test ProcessTest.* --repeat 20 --shuffle
+py -3 -m Scripts test --changed                                    # main 과 갈라진 뒤 바뀐 파일이 닿는 테스트만(모르면 전체)
 ```
 
 이 스크립트가 모르는 인자(`--host_suites=all` 등)는 실행 파일에 그대로 넘어갑니다. 고른 케이스가 어디에도 없으면 종료 코드 1로 끝납니다. 오타 난 패턴이 "통과"로 보이지 않게 하기 위해서입니다.
@@ -159,7 +160,11 @@ py -3 -m Scripts test ProcessTest.* --repeat 20 --shuffle
 **샤드와 제한 시간은 한 실행 시간(`seconds`)에서 계산합니다.** 샤드 수는 `ceil(seconds / targetShardSeconds)`(30 초), 제한 시간은
 `max(60, 4 × max(조각 하나의 초, 가장 비싼 케이스의 초))` 입니다. 샤드는 `<타깃>_Shard1..n` 으로 등록되고 각각 `--test_shard=<k>/<n>` 으로 돕니다.
 케이스는 비용으로 고르게 나뉩니다. 정책의 `caseCosts`(느린 케이스의 초)가 `--test_costs=` 로 넘어가고, 비싼 케이스부터 가장 가벼운 조각에 놓입니다(LPT).
-비용이 없는 케이스는 차례로 돌며 놓여 한 스위트가 한 조각에 몰리지 않습니다. `hostShards` 는 `_HostOnly` 를 나눕니다.
+비용이 없는 케이스는 차례로 돌며 놓여 한 스위트가 한 조각에 몰리지 않습니다. `hostShards` 는 `_HostOnly` 를 나눕니다(호스트 케이스의 비용은 `hostCaseCosts` — 분 단위 케이스가 nogpu 조각의 제한 시간을 늘리지 않게 따로 둡니다).
+`_HostOnly` 는 직렬이 아니라 GPU 칸(`gpuSlots`) 하나를 받아 둘까지 겹쳐 돌고, 같은 `Bin` 에 산출물을 쓰는 실행끼리는 `hostResourceLock` 으로 비켜 갑니다.
+
+**`race` 는 Debug 전용 레이스 묶음입니다.** `DataRaceDetector` 가 `SW_DEBUG` 에서만 켜지므로, 스레드 경로를 지나는 케이스만 골라(`raceCases`) Debug 에 `<타깃>_Race` 로 등록합니다.
+기능 확인(`hostgpu`)은 Shipping 이 기본이고, 단계마다 무엇을 도는지는 [작업 방식](../docs/11_Workflow.md) 3절 표에 있습니다. 묶음을 바꾸면 `ctest -L race` 의 직렬 합이 10 분 안쪽인지 다시 잽니다.
 
 - **제한 시간은 멈춤을 잡는 그물입니다.** 이 PC 는 빌드가 겹치면 같은 케이스가 두세 배 느려지므로, 제한 시간은 부하 없는 시간의 네 배로 잡습니다.
   느려짐은 시간 예산(`SW_TEST_TIME_BUDGET`)이 따로 판정합니다.
