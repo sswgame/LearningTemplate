@@ -48,6 +48,29 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 지난 그리기에서 오브젝트마다 넘긴 글리프입니다(탐침이 그린 값을 본다 — 수집 결과가 아니라). */
+            struct DrawnGlyph
+            {
+                const GameObject* _pObject{ nullptr };
+                uint32            _codePoint{ 0 };
+            };
+
+            static vector<DrawnGlyph>& getDrawnList()
+            {
+                static vector<DrawnGlyph> s_listDrawn;
+                return s_listDrawn;
+            }
+
+            /** @brief 한 글자짜리 UTF-8 글의 코드 포인트입니다. 두 글자 이상이면 0 입니다. */
+            static uint32 decodeSingleGlyph( const utf8* pGlyph )
+            {
+                const uint32 codePoint = EditorComponentIcon::decodeGlyph( pGlyph );
+                if ( codePoint == 0 )
+                    return 0;
+                const size_t sequenceLength = codePoint < 0x80 ? 1u : ( codePoint < 0x800 ? 2u : 3u );
+                return std::char_traits<utf8>::length( pGlyph ) == sequenceLength ? codePoint : 0u;
+            }
+
             /** @brief 빌보드를 그립니다(배지 + 글리프, 이름 `viewport.billboard.<오브젝트 이름>`). */
             static void draw( const EditorViewportVisualizerArgs& args )
             {
@@ -60,15 +83,17 @@ namespace sw::editor
                 const float32 radius   = EditorViewportBillboard::getDiameter() * 0.5f;
                 ImFont*       pFont    = ImGui::GetFont();
                 const float32 fontSize = radius * 1.15f;
+                getDrawnList().clear();
                 for ( const EditorViewportBillboardItem& item : listItem )
                 {
-                    const Color& color = item._pRow->_color;
+                    getDrawnList().push_back( DrawnGlyph{ item._pObject, decodeSingleGlyph( item._row._pGlyph ) } );
+                    const Color& color = item._row._color;
                     const ImVec2 center{ item._screen._x, item._screen._y };
                     args._pDrawList->AddCircleFilled( center, radius, EditorColorUtil::toImU32( EditorViewportBillboardInternal::kBadgeBackground ) );
                     args._pDrawList->AddCircle( center, radius, EditorColorUtil::toImU32( color.withAlpha( 0.9f ) ), 0, 1.5f );
-                    const ImVec2 glyphSize = pFont->CalcTextSizeA( fontSize, FLT_MAX, 0.0f, item._pRow->_pGlyph );
+                    const ImVec2 glyphSize = pFont->CalcTextSizeA( fontSize, FLT_MAX, 0.0f, item._row._pGlyph );
                     args._pDrawList->AddText( pFont, fontSize, ImVec2{ center.x - glyphSize.x * 0.5f, center.y - glyphSize.y * 0.5f },
-                                              EditorColorUtil::toImU32( color.withAlpha( 1.0f ) ), item._pRow->_pGlyph );
+                                              EditorColorUtil::toImU32( color.withAlpha( 1.0f ) ), item._row._pGlyph );
                     if ( EditorSelfTestMarks::isEnabled() )
                     {
                         // 상호작용 없는 항목으로 자리만 남긴다 — 캔버스의 누름(피킹)을 뺏지 않는다.
@@ -103,10 +128,10 @@ namespace sw::editor
                 if ( item._pObject == pObject )
                     return; // 오브젝트마다 하나 — 빛과 카메라가 같이 있어도 배지가 겹치지 않게
             }
-            const EditorComponentIconRow& row = EditorComponentIcon::findRow( pComponent->getTypeInfo() );
-            float3                        position{};
-            ImVec2                        screen{};
-            const bool                    bBillboardNotProjectable = row._bBillboard == false || EditorViewportBillboardInternal::findWorldPosition( *pObject, *pComponent, position ) == false ||
+            const EditorComponentIconRow row = EditorComponentIcon::findRow( pComponent->getTypeInfo() );
+            float3                       position{};
+            ImVec2                       screen{};
+            const bool                   bBillboardNotProjectable = row._bBillboard == false || EditorViewportBillboardInternal::findWorldPosition( *pObject, *pComponent, position ) == false ||
                                                   EditorViewportProjectionUtil::projectPoint( viewProj, position, canvasPos, canvasSize, screen ) == false;
             if ( bBillboardNotProjectable )
                 return;
@@ -114,7 +139,7 @@ namespace sw::editor
                 screen.x >= canvasPos._x && screen.y >= canvasPos._y && screen.x <= canvasPos._x + canvasSize._x && screen.y <= canvasPos._y + canvasSize._y;
             if ( bInside )
                 outListItem.push_back( EditorViewportBillboardItem{
-                    pObject, pComponent, &row, float2{ screen.x, screen.y }
+                    pObject, pComponent, row, float2{ screen.x, screen.y }
                 } );
         };
         // 씬 전체를 훑지 않고 레지스트리만 본다(오브젝트 수가 아니라 그 종류의 수만큼 든다).
@@ -155,6 +180,16 @@ namespace sw::editor
     float32 EditorViewportBillboard::getDiameter()
     {
         return EditorViewportBillboardInternal::kDiameter * EditorThemeUtil::getDpiScale();
+    }
+
+    uint32 EditorViewportBillboard::findDrawnGlyph( const GameObject& object )
+    {
+        for ( const EditorViewportBillboardInternal::DrawnGlyph& drawn : EditorViewportBillboardInternal::getDrawnList() )
+        {
+            if ( drawn._pObject == &object )
+                return drawn._codePoint;
+        }
+        return 0;
     }
 
     SW_EDITOR_VISUALIZER( Billboard, EditorViewportBillboard::kVisualizerID, 50, editoricon::kLightPoint, "Icons", "빛 · 카메라 · 오디오처럼 메시가 없는 컴포넌트를 아이콘으로 표시하고 눌러 고르게 합니다", true,
