@@ -72,7 +72,7 @@
 	<At frame="490"><EditorClick mark="uipreview.nav.down"/></At>
 	<At frame="505"><Expect probe="Editor.UIPreviewFocusedOrdinal" atLeast="0"/></At>
 	<At frame="510"><EditorClick mark="uipreview.nav.accept"/></At>
-	<At frame="525"><ExpectLog contains="is not handled by screen" atLeast="1"/></At>
+	<At frame="525"><ExpectLog contains="is not wired in this preview" atLeast="1"/></At>
 	<At frame="530"><EditorClick mark="uipreview.interact"/></At>
 	<!-- 5) 애니메이션: Play 가 Open 을 끝까지 틀고, 시간 막대는 그 시각에서 멈춘다 -->
 	<At frame="545"><EditorClick mark="uipreview.widget.Window"/></At>

@@ -182,10 +182,15 @@ namespace test
             arguments += extraArguments;
         }
 
-        const test::ProcessRunResult result = runApp( arguments, timeoutSeconds, [&outScenarioLines]( sw::Process&, const sw::string& line )
-        {
-            if ( line.find( "[Scenario]" ) != sw::string::npos )
+        // 실패 줄은 여러 줄이다(`[Scenario] FAIL …` 다음에 들여 쓴 실패 이유가 이어진다) — 들여 쓴 줄도 함께 모은다.
+        bool                         bInScenarioBlock = false;
+        const test::ProcessRunResult result           = runApp( arguments, timeoutSeconds, [&outScenarioLines, &bInScenarioBlock]( sw::Process&, const sw::string& line )
+                  {
+            const bool bScenarioLine = line.find( "[Scenario]" ) != sw::string::npos;
+            const bool bContinuation = bInScenarioBlock && sw::StringUtil::startsWith( line, "    " );
+            if ( bScenarioLine || bContinuation )
                 outScenarioLines += line + "\n";
+            bInScenarioBlock = bScenarioLine || bContinuation;
         } );
         if ( result._bLaunched == false )
             return kNotLaunchedExitCode;

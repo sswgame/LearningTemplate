@@ -28,6 +28,7 @@ namespace sw
         , _lastFocused{ kInvalidWidgetID }
         , _pushOrder{ 0 }
         , _bClosing{ SW_FALSE }
+        , _bReportsUnhandledCommands{ SW_TRUE }
     {
         _tree._pScreen = this;
         _tree.setRoot( std::move( root ) );
@@ -125,8 +126,13 @@ namespace sw
     {
         if ( command.empty() )
             return;
-        if ( onCommand( command, source ) == false && ( _pUISystem == nullptr || _pUISystem->getGlobalCommands().tryExecute( command, source ) == false ) )
-            SW_LOG_WARNING( "[UI] Command '%#' from widget '%#' is not handled by screen %# (%#)", command.c_str(), source.getName().c_str(), _handle,
-                            _documentPath.empty() ? "built in code" : _documentPath.c_str() );
+        const bool bHandled = onCommand( command, source ) || ( _pUISystem != nullptr && _pUISystem->getGlobalCommands().tryExecute( command, source ) );
+        if ( bHandled )
+            return;
+        const utf8* pOrigin = _documentPath.empty() ? "built in code" : _documentPath.c_str();
+        if ( _bReportsUnhandledCommands == SW_TRUE )
+            SW_LOG_WARNING( "[UI] Command '%#' from widget '%#' is not handled by screen %# (%#)", command.c_str(), source.getName().c_str(), _handle, pOrigin );
+        else
+            SW_LOG_INFO( "[UI] Command '%#' from widget '%#' is not wired in this preview (%#)", command.c_str(), source.getName().c_str(), pOrigin );
     }
 } // namespace sw

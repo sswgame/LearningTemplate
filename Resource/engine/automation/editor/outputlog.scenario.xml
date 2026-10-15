@@ -12,7 +12,7 @@
 	<At frame="70"><EditorClick mark="console.filter"/></At>
 	<At frame="80"><EditorText value="outputlog-collapse-probe"/></At>
 	<At frame="90"><DevCommand line="log.repeat 10 warning outputlog-collapse-probe"/></At>
-	<At frame="110"><Expect probe="Editor.OutputLogVisibleRows" equals="10"/></At>
+	<At frame="110"><Expect probe="Editor.OutputLogVisibleRows" equals="10"/><ExpectLog contains="outputlog-collapse-probe" atLeast="10"/></At>
 	<At frame="115"><EditorClick mark="console.collapse"/></At>
 	<At frame="130"><Expect probe="Editor.OutputLogVisibleRows" equals="1"/></At>
 	<At frame="135"><EditorClick mark="console.clear"/></At>

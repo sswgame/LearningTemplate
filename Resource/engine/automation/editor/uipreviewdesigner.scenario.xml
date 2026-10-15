@@ -9,6 +9,8 @@
 <Scenario name="editor.uipreviewdesigner" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="Immediately" input="exclusive">
 	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
 	<At frame="25"><DevCommand line="layout.reset"/></At>
+	<!-- 체인에서는 앞 시나리오(uipreview)가 고친 채 둔 문서를 이 시나리오가 다른 문서를 열며 버린다 — 그 경고는 체인에서만 난다 -->
+	<At frame="26"><ExpectLog contains="UI Preview: unsaved edits of" atLeast="0"/></At>
 	<!-- 1) 슬롯 손잡이 -->
 	<At frame="60"><EditorKey key="Ctrl+P"/></At>
 	<At frame="75"><EditorText value="pause.ui.xml"/></At>

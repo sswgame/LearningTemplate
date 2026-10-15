@@ -98,6 +98,14 @@ namespace sw
             {
                 infoQueue->SetBreakOnSeverity( D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE );
                 infoQueue->SetBreakOnSeverity( D3D12_MESSAGE_SEVERITY_ERROR, FALSE );
+                // 생성 때 준 최적 클리어 값과 다른 색으로 지우면 "느릴 수 있다" 는 성능 안내뿐이다(지우기는 맞게 된다). 렌더 타깃을 여러 클리어 색으로 다시 쓰는
+                // 그래프 · 에디터 뷰에서 늘 나므로 언리얼 D3D12RHI 처럼 거른다.
+                D3D12_MESSAGE_ID        arrDeniedID[] = { D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE, D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE };
+                D3D12_INFO_QUEUE_FILTER filter{};
+                filter.DenyList.NumIDs  = static_cast<UINT>( std::size( arrDeniedID ) );
+                filter.DenyList.pIDList = arrDeniedID;
+                if ( FAILED( infoQueue->PushStorageFilter( &filter ) ) )
+                    SW_LOG_INFO( "D3D12 debug layer storage filter was not applied" );
             }
             // 큐는 장치 실패 때만 비운다(flushDebugMessages). 경고가 나는 그 자리에서 보이게 콜백을 단다(Windows 11 의 디버그 레이어부터 있다).
             Microsoft::WRL::ComPtr<ID3D12InfoQueue1> infoQueue1;

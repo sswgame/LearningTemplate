@@ -148,6 +148,11 @@ namespace sw
         virtual bool onCommand( const hashed_string& command, Widget& source );
         /** @brief 트리의 위젯 @p source 가 명령(버튼 클릭)을 냅니다. `onCommand` 로 보내고, 처리하지 않으면 UI 시스템의 전역 명령 표(`UISystem::getGlobalCommands`)로 보내며, 거기서도 없으면 경고합니다. 빈 명령은 무시합니다. */
         void dispatchCommand( const hashed_string& command, Widget& source );
+        /**
+         * @brief 처리하지 않은 명령을 경고로 남길지 정합니다(기본 true).
+         * @details 게임 코드 없이 문서만 띄우는 화면(에디터 UI 미리보기)은 명령을 받을 쪽이 원래 없으므로 끈다 — 그때는 Info 로 남긴다.
+         */
+        void setReportsUnhandledCommands( bool bReport ) { _bReportsUnhandledCommands = bReport ? SW_TRUE : SW_FALSE; }
 
         /**
          * @brief `UI.Back` 을 아무 위젯도 처리하지 않았을 때 불립니다. 처리했으면 true 입니다.
@@ -185,5 +190,6 @@ namespace sw
         WidgetID                                                                 _lastFocused; ///< 다른 화면에 덮일 때의 포커스 위젯입니다. 다시 활성이 되면 돌려줍니다.
         uint32                                                                   _pushOrder;   ///< 같은 레이어 안의 쌓인 순서입니다(클수록 위).
         uint8                                                                    _bClosing;
+        uint8                                                                    _bReportsUnhandledCommands; ///< 처리하지 않은 명령을 경고로 남긴다(`setReportsUnhandledCommands`)
     };
 } // namespace sw

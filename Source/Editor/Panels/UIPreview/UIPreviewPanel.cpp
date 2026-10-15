@@ -484,7 +484,11 @@ namespace sw::editor
             _targetPath = targetPath;
         }
         if ( _screen != kInvalidUIScreenHandle )
+        {
             ui.setOffscreenView( _screen, _viewport, _textScale, _theme );
+            if ( UIScreen* pScreen = ui.getOffscreenScreens().findScreen( _screen ) )
+                pScreen->setReportsUnhandledCommands( false ); // 미리보기에는 게임 코드가 없어 명령을 받을 쪽이 없다
+        }
     }
 
     void UIPreviewPanel::syncTree( UIScreen& screen )
