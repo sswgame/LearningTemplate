@@ -24,9 +24,38 @@ endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/../Config/JsonValue.cmake")
 
-# 매니페스트 키 · 종류 낱말(런타임 `ModuleCatalogInternal` 과 같은 표).
+# 매니페스트 키(런타임 `ModuleCatalogInternal` 과 같은 표).
 set(SW_MODULE_MANIFEST_KEYS _name _version _kind _description _listDependency _listPlatform _listConfiguration _listTarget _bEnabledByDefault _listModuleOverride)
-set(SW_MODULE_KINDS GameFramework Kit Game Editor RHI EditorExtension)
+
+# 종류 · 플랫폼 · 구성 · 대상 낱말은 런타임 열거형(`Source/Engine/Module/ModuleCatalog.h` 의 `ModuleKind` · `ModulePlatform` ·
+# `ModuleConfiguration` · `ModuleTarget`)의 열거자 이름이 정본이다 — 매니페스트를 리플렉션으로 읽는 C++ 이 받는 낱말이 곧 그 이름이라,
+# CMake 가 따로 표를 들면 한쪽에만 더한 낱말이 빌드와 App 에서 갈린다. 헤더의 열거형 몸통에서 줄 머리의 이름을 뽑는다.
+set(SW_MODULE_CATALOG_HEADER "${CMAKE_CURRENT_LIST_DIR}/../../Source/Engine/Module/ModuleCatalog.h")
+if(NOT CMAKE_SCRIPT_MODE_FILE)
+	set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${SW_MODULE_CATALOG_HEADER}")
+endif()
+
+# 열거형 ENUM_NAME 의 열거자 이름들(OUT_VAR). 열거형을 찾지 못하거나 비어 있으면 구성을 세운다.
+function(sw_readModuleEnumNames OUT_VAR ENUM_NAME)
+	file(READ "${SW_MODULE_CATALOG_HEADER}" swHeaderText)
+	string(REGEX MATCH "enum class ${ENUM_NAME}[^{]*{([^}]*)}" swMatch "${swHeaderText}")
+	set(swNames "")
+	string(REPLACE "\n" ";" swLines "${CMAKE_MATCH_1}")
+	foreach(swLine IN LISTS swLines)
+		if(swLine MATCHES "^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*[,=]")
+			list(APPEND swNames "${CMAKE_MATCH_1}")
+		endif()
+	endforeach()
+	if(NOT swNames)
+		message(FATAL_ERROR "[Module] ${SW_MODULE_CATALOG_HEADER}: enum class ${ENUM_NAME} not found or empty — the manifest words are read from it")
+	endif()
+	set(${OUT_VAR} ${swNames} PARENT_SCOPE)
+endfunction()
+
+sw_readModuleEnumNames(SW_MODULE_KINDS ModuleKind)
+sw_readModuleEnumNames(SW_MODULE_PLATFORMS ModulePlatform)
+sw_readModuleEnumNames(SW_MODULE_CONFIGURATIONS ModuleConfiguration)
+sw_readModuleEnumNames(SW_MODULE_TARGETS ModuleTarget)
 
 # 매니페스트 하나를 읽어 전역 속성 `SW_MODULE_<이름>_*` 에 담는다. 형식이 틀리면 구성을 세운다.
 function(sw_readModuleManifest MANIFEST_PATH)
@@ -84,20 +113,20 @@ function(sw_readModuleManifest MANIFEST_PATH)
 	endforeach()
 
 	foreach(swPlatform IN LISTS swValues__listPlatform)
-		if(NOT swPlatform MATCHES "^(Windows|Linux)$")
-			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: unknown platform '${swPlatform}'")
+		if(NOT swPlatform IN_LIST SW_MODULE_PLATFORMS)
+			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: unknown platform '${swPlatform}' (one of ${SW_MODULE_PLATFORMS})")
 		endif()
 	endforeach()
 
 	foreach(swConfiguration IN LISTS swValues__listConfiguration)
-		if(NOT swConfiguration MATCHES "^(Dev|Shipping)$")
-			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: unknown configuration '${swConfiguration}'")
+		if(NOT swConfiguration IN_LIST SW_MODULE_CONFIGURATIONS)
+			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: unknown configuration '${swConfiguration}' (one of ${SW_MODULE_CONFIGURATIONS})")
 		endif()
 	endforeach()
 
 	foreach(swTarget IN LISTS swValues__listTarget)
-		if(NOT swTarget MATCHES "^(Client|Server)$")
-			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: unknown target '${swTarget}' (Client | Server)")
+		if(NOT swTarget IN_LIST SW_MODULE_TARGETS)
+			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: unknown target '${swTarget}' (one of ${SW_MODULE_TARGETS})")
 		endif()
 	endforeach()
 

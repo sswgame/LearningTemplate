@@ -42,7 +42,6 @@ cmake = ".cmake CMakeLists.txt"
 [exemption]
 "AssetPathLiteral:Source/Engine/Common/EngineDefines.h" = "부트스트랩 경로(enginedefaultassets.xml) — 다른 경로를 데이터에서 읽기 전에 정해져야 하는 첫 파일"
 "AssetPathLiteral:Source/Editor/SelfTest/*" = "에디터 자가 테스트의 조각 — 테스트 기대값으로 고른 실제 에셋이다"
-"SilentFallback:Scripts/setup/*" = "설치 단계는 하나가 실패해도 다음 단계를 이어 가야 하는 경계다 — 삼킨 예외를 경고로 알린다(AGENTS.md Python 절)"
 
 # 전체 훑기의 기준선 — "<종류>:<경로>" = 지금 남은 줄 수. 파일 하나라도 넘으면 실패, 줄면 낮추라고 알린다.
 # 0 으로 수렴해야 한다. 고친 뒤 `py -3 Scripts/lint/gate/CheckDataDrivenStructure.py --print-baseline` 으로 다시 적는다.
@@ -190,9 +189,7 @@ cmake = ".cmake CMakeLists.txt"
 "DiscardedLoadResult:Source/GameFramework/PlugIn/Editor/CharacterEditor/CharacterEditorPanel.cpp" = 1
 "DiscardedLoadResult:Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifierSession.cpp" = 3
 "DiscardedLoadResult:Source/ModuleHost/ModuleShadowCopy.cpp" = 2
-"SilentFallback:Scripts/common/Config.py" = 1
 "SilentFallback:Scripts/lint/PreCommitLint.py" = 1
-"SilentFallback:Scripts/lint/conventions/FileScan.py" = 1
 "SilentFallback:Source/Core/Compression/CompressionStream.cpp" = 1
 "SilentFallback:Source/Core/Container/StringUtil.cpp" = 1
 "SilentFallback:Source/Core/Container/StringUtil.h" = 1
@@ -275,4 +272,3 @@ cmake = ".cmake CMakeLists.txt"
 "SilentFallback:Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.cpp" = 1
 "SilentFallback:Source/GameFramework/Kits/Genre/Strategy/TacticsSRPG/Catalog/SRPGCatalog.cpp" = 2
 "SilentFallback:Source/GameFramework/Kits/Genre/Strategy/TacticsSRPG/Catalog/SRPGCatalog.h" = 1
-"SilentFallback:cmake/Engine/TestTargets.cmake" = 2

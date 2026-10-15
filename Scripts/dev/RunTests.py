@@ -33,10 +33,21 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ListChangedTests  # noqa: E402
-from common import BuildTree, addBuildTreeArguments, getCpuCount, getProjectRoot, mapConcurrent, runGit, runProcess  # noqa: E402
+from common import BuildTree, ProcessResult, addBuildTreeArguments, getCpuCount, getProjectRoot, mapConcurrent, runGit, runProcess  # noqa: E402
 
 #: `--test_list` 가 고른 케이스를 찍는 줄(`  Suite.Case`).
 _kListedCaseRe = re.compile(r"^  ([A-Z]\w*Test)\.(\w+)\s*$")
+
+
+class RunTestsError(RuntimeError):
+    """부른 프로세스(실행 파일의 `--test_list` · git)가 졌다 — 결과를 빈 목록으로 읽지 않고 멈춘다(`main` 이 찍고 2 를 돌려준다)."""
+
+
+def requireSucceededInternal(result: ProcessResult, what: str) -> ProcessResult:
+    """result 가 성공이면 그대로, 아니면 출력 끝을 담아 RunTestsError."""
+    if not result.bSucceeded:
+        raise RunTestsError(f"{what} 가 졌다(종료 코드 {result.returnCode}):\n{result.output[-2000:]}")
+    return result
 
 
 def findTestExecutables(tree: BuildTree) -> tuple[Path, list[Path]]:
@@ -49,8 +60,9 @@ def findTestExecutables(tree: BuildTree) -> tuple[Path, list[Path]]:
 
 
 def listSelectedCases(executable: Path, workingDir: Path, pattern: str) -> list[str]:
-    """그 실행 파일에서 패턴이 고르는 케이스 이름들(`Suite.Case`)."""
-    result = runProcess([executable, "--test_list", f"--test_filter={pattern}"], cwd=workingDir)
+    """그 실행 파일에서 패턴이 고르는 케이스 이름들(`Suite.Case`). `--test_list` 는 고른 것이 없어도 0 이라, 지면 진짜 실패다(기동 실패 · 크래시)."""
+    result = requireSucceededInternal(runProcess([executable, "--test_list", f"--test_filter={pattern}"], cwd=workingDir),
+                                      f"`{executable.name} --test_list`")
     return [f"{match.group(1)}.{match.group(2)}" for line in result.stdout.splitlines() if (match := _kListedCaseRe.match(line))]
 
 
@@ -58,13 +70,13 @@ def listChangedFiles(root: Path, base: str | None) -> list[str] | None:
     """기준과 갈라진 곳부터 지금 작업 트리까지 바뀐 파일(커밋 · 스테이징 · 작업 중 · 추적 안 하는 새 파일). 기준을 못 찾으면 None.
     기준을 주지 않으면 main 이 아닌 브랜치는 `main`, main 은 `origin/main`(아직 내보내지 않은 것)이다."""
     if base is None:
-        branch = runGit(["rev-parse", "--abbrev-ref", "HEAD"], cwd=root).stdout.strip()
+        branch = requireSucceededInternal(runGit(["rev-parse", "--abbrev-ref", "HEAD"], cwd=root), "git rev-parse").stdout.strip()
         base = "origin/main" if branch == "main" else "main"
     mergeBase = runGit(["merge-base", base, "HEAD"], cwd=root)
     if not mergeBase.bSucceeded:
         return None
-    setPath = set(runGit(["diff", "--name-only", mergeBase.stdout.strip()], cwd=root).stdout.splitlines())
-    setPath |= set(runGit(["ls-files", "--others", "--exclude-standard"], cwd=root).stdout.splitlines())
+    setPath = set(requireSucceededInternal(runGit(["diff", "--name-only", mergeBase.stdout.strip()], cwd=root), "git diff").stdout.splitlines())
+    setPath |= set(requireSucceededInternal(runGit(["ls-files", "--others", "--exclude-standard"], cwd=root), "git ls-files").stdout.splitlines())
     return sorted(path for path in setPath if path)
 
 
@@ -146,36 +158,8 @@ def runChangedInternal(tree: BuildTree, args: argparse.Namespace, listExtra: lis
     return 1 if bFailed else 0
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="스위트 · 케이스 이름으로 시험을 그 케이스가 사는 실행 파일 · 폴더에서 돌린다")
-    parser.add_argument("pattern", nargs="?", help="--test_filter 패턴(예: SceneTest.* · \"A.*,B.Case\" · \"*\")")
-    parser.add_argument("--changed", action="store_true", help="패턴 대신 바뀐 파일이 닿는 테스트만 돌린다(모르면 전체)")
-    parser.add_argument("--base", default=None, help="--changed 의 기준(기본: main 브랜치면 origin/main, 아니면 main)")
-    parser.add_argument("--gpu", dest="bGpu", action="store_true", help="--changed 에 hostgpu 항목 · 호스트 스위트까지 넣는다")
-    parser.add_argument("-j", "--jobs", type=int, default=0, help="--changed 의 ctest 동시 실행 수(기본: 코어 수)")
-    addBuildTreeArguments(parser)
-    parser.add_argument("--repeat", type=int, default=0, help="고른 케이스를 N 번 되풀이한다(--test_repeat)")
-    parser.add_argument("--shuffle", nargs="?", const="random", default=None, help="순서를 섞는다 — 씨앗을 주면 그 순서를 다시 만든다")
-    parser.add_argument("--list", action="store_true", help="돌리지 않고 어느 실행 파일에 어떤 케이스가 있는지만 찍는다")
-    parser.add_argument("--no-build", dest="bBuild", action="store_false", help="시험 빌드(all · AllTests)를 건너뛰고 있는 실행 파일로 돌린다")
-    # 모르는 인자는 실행 파일 몫이다. 위치 인자 REMAINDER 로 받으면 패턴 뒤의 --list · --repeat 까지 삼킨다.
-    args, listPassthrough = parser.parse_known_args(argv)
-    if bool(args.pattern) == args.changed:
-        parser.error("패턴 하나 또는 --changed 하나를 준다")
-
-    tree = BuildTree.fromArguments(args)
-    if args.bBuild:
-        if not tree.bConfigured:
-            print(f"[RunTests] {tree.path} 가 구성되지 않았습니다 — 먼저 cmake --preset {tree.name}", file=sys.stderr)
-            return 2
-        buildCommand = tree.buildCommand()
-        print(f"[RunTests] {' '.join(buildCommand)}", flush=True)
-        buildResult = runProcess(buildCommand, bCapture=False)
-        if not buildResult.bSucceeded:
-            print("[RunTests] 시험 빌드가 졌습니다" if buildResult.bLaunched else "[RunTests] cmake 를 찾지 못했습니다 (PATH)", file=sys.stderr)
-            return 2
-    if args.changed:
-        return runChangedInternal(tree, args, [argument for argument in listPassthrough if argument != "--"])
+def runPatternInternal(tree: BuildTree, args: argparse.Namespace, listPassthrough: list[str]) -> int:
+    """패턴 — 그 케이스가 사는 실행 파일마다 직접 돌린다."""
     workingDir, listExecutable = findTestExecutables(tree)
     if not listExecutable:
         print(f"[RunTests] {tree.path} 에 테스트 실행 파일이 없습니다 — 먼저 빌드하세요 (cmake --build --preset {tree.name} --target all AllTests)", file=sys.stderr)
@@ -216,6 +200,43 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     print(f"[RunTests] 모두 통과 ({len(listSelection)} 실행 파일)")
     return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="스위트 · 케이스 이름으로 시험을 그 케이스가 사는 실행 파일 · 폴더에서 돌린다")
+    parser.add_argument("pattern", nargs="?", help="--test_filter 패턴(예: SceneTest.* · \"A.*,B.Case\" · \"*\")")
+    parser.add_argument("--changed", action="store_true", help="패턴 대신 바뀐 파일이 닿는 테스트만 돌린다(모르면 전체)")
+    parser.add_argument("--base", default=None, help="--changed 의 기준(기본: main 브랜치면 origin/main, 아니면 main)")
+    parser.add_argument("--gpu", dest="bGpu", action="store_true", help="--changed 에 hostgpu 항목 · 호스트 스위트까지 넣는다")
+    parser.add_argument("-j", "--jobs", type=int, default=0, help="--changed 의 ctest 동시 실행 수(기본: 코어 수)")
+    addBuildTreeArguments(parser)
+    parser.add_argument("--repeat", type=int, default=0, help="고른 케이스를 N 번 되풀이한다(--test_repeat)")
+    parser.add_argument("--shuffle", nargs="?", const="random", default=None, help="순서를 섞는다 — 씨앗을 주면 그 순서를 다시 만든다")
+    parser.add_argument("--list", action="store_true", help="돌리지 않고 어느 실행 파일에 어떤 케이스가 있는지만 찍는다")
+    parser.add_argument("--no-build", dest="bBuild", action="store_false", help="시험 빌드(all · AllTests)를 건너뛰고 있는 실행 파일로 돌린다")
+    # 모르는 인자는 실행 파일 몫이다. 위치 인자 REMAINDER 로 받으면 패턴 뒤의 --list · --repeat 까지 삼킨다.
+    args, listPassthrough = parser.parse_known_args(argv)
+    if bool(args.pattern) == args.changed:
+        parser.error("패턴 하나 또는 --changed 하나를 준다")
+
+    tree = BuildTree.fromArguments(args)
+    if args.bBuild:
+        if not tree.bConfigured:
+            print(f"[RunTests] {tree.path} 가 구성되지 않았습니다 — 먼저 cmake --preset {tree.name}", file=sys.stderr)
+            return 2
+        buildCommand = tree.buildCommand()
+        print(f"[RunTests] {' '.join(buildCommand)}", flush=True)
+        buildResult = runProcess(buildCommand, bCapture=False)
+        if not buildResult.bSucceeded:
+            print("[RunTests] 시험 빌드가 졌습니다" if buildResult.bLaunched else "[RunTests] cmake 를 찾지 못했습니다 (PATH)", file=sys.stderr)
+            return 2
+    try:
+        if args.changed:
+            return runChangedInternal(tree, args, [argument for argument in listPassthrough if argument != "--"])
+        return runPatternInternal(tree, args, listPassthrough)
+    except RunTestsError as error:
+        print(f"[RunTests] {error}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":
