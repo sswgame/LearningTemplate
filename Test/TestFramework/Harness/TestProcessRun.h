@@ -3,7 +3,7 @@
  * @brief 테스트가 띄우는 프로세스 한 판 — 시한(넘으면 죽인다) · 출력 모으기 · 줄마다 부르기를 한 자리에서
  * @details 자식 테스트 실행 파일(`TestChildProcess.h`), 실제 App(`AppTestUtil`), 전용 서버(`ServerTest`)가 같은 틀을 쓴다. 시한 없이 기다리면
  *          멈춘 프로세스 하나가 테스트 실행 파일 전체를 CTest 시한까지 세워 두고, 어디까지 갔는지도 남지 않는다.
- *          새니타이저 빌드는 시한을 열 배로 늘린다(CTest 시한과 같은 규칙 — `sw_applySanitizerTestProperties`).
+ *          시한에는 CTest 제한 시간과 같은 배율을 곱한다(`Test/TestPolicy.json` 의 timeoutScale — 새니타이저 · 리눅스).
  */
 #pragma once
 #include "Core/Process/Process.h"
@@ -46,7 +46,7 @@ namespace test
         /** @brief 시한을 넘겨 죽였는가. */
         bool isTimedOut() const;
 
-        /** @brief 이 빌드에서 쓰는 시한 — 새니타이저 빌드는 열 배. */
+        /** @brief 이 빌드에서 쓰는 시한 — 정책의 구성별 배율(`SW_TEST_TIMEOUT_SCALE`)을 곱한다. */
         static uint32 scaleTimeoutSeconds( uint32 timeoutSeconds );
 
     private:

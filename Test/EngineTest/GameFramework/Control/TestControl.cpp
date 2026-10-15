@@ -900,8 +900,10 @@ SW_TEST_CASE( ControlTest, ScenarioPossessStepMovesPossession )
         SW_ASSERT_TRUE( runner.startFromText( "<Scenario name=\"control.possess\">"
                                               "<At frame=\"5\"><Possess controller=\"Player\" pawn=\"Horse\"/></At>"
                                               "<At frame=\"8\"><Possess controller=\"Player\"/></At>"
-                                              // 입력 맵이 없는 테스트 폰이라 빙의할 때 버튼마다 한 번 경고한다 — 시나리오가 기대한 줄로 선언한다
-                                              "<At frame=\"10\"><ExpectLog contains=\"has no InputMap action\" count=\"1\"/><Pass/></At>"
+                                              // 입력 맵이 빈 테스트라 Horse 에 빙의할 때 맵에 없는 액션마다 한 번 경고한다(버튼 Jump, 축 Move · Look) — 시나리오가 기대한 줄로 선언한다
+                                              "<At frame=\"10\"><ExpectLog contains=\"Pawn 'Horse' intent button 'Jump' has no InputMap action\" count=\"1\"/>"
+                                              "<ExpectLog contains=\"Pawn 'Horse' axis action\" count=\"2\"/>"
+                                              "<ExpectLog contains=\"has no InputMap action\" count=\"3\"/><Pass/></At>"
                                               "</Scenario>" ) );
         AutomationResult result = AutomationResult::Running;
         for ( uint32 frame = 0; frame < 30 && result == AutomationResult::Running; ++frame )

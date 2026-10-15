@@ -60,7 +60,26 @@ function(sw_computeTestTimeout OUT_VAR TOTAL_SECONDS SHARD_COUNT MAX_CASE_SECOND
 	if(swTimeout LESS swMinimum)
 		set(swTimeout ${swMinimum})
 	endif()
+	# 새니타이저 배율은 `sw_applySanitizerTestProperties` 가 곱한다 — 여기서는 플랫폼 배율만(둘을 겹치지 않는다).
+	if(NOT SW_ENABLE_SANITIZER)
+		sw_getTestTimeoutScale(swScale)
+		math(EXPR swTimeout "${swTimeout} * ${swScale}")
+	endif()
 	set(${OUT_VAR} ${swTimeout} PARENT_SCOPE)
+endfunction()
+
+# ------------------------------------------------------------------------------
+# sw_getTestTimeoutScale — 이 구성의 제한 시간 배율(정책 `timeoutScale`). 새니타이저면 sanitizer, 아니면 리눅스는 linux, 그 밖은 1.
+#   CTest 제한 시간과 테스트가 띄우는 자식 프로세스의 시한(`SW_TEST_TIMEOUT_SCALE` → `test::ProcessDeadlineWatch`)이 같은 값을 쓴다.
+# ------------------------------------------------------------------------------
+function(sw_getTestTimeoutScale OUT_VAR)
+	set(swScale 1)
+	if(SW_ENABLE_SANITIZER)
+		sw_getTestPolicyValue(swScale 10 timeoutScale sanitizer)
+	elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+		sw_getTestPolicyValue(swScale 1 timeoutScale linux)
+	endif()
+	set(${OUT_VAR} ${swScale} PARENT_SCOPE)
 endfunction()
 
 # ------------------------------------------------------------------------------
@@ -98,12 +117,13 @@ function(sw_applySanitizerTestProperties TEST_NAME)
 	endif()
 
 	# ASan 은 실행을 한 자릿수 배로 늦춘다. 평시 기준을 그대로 쓰면 테스트가 전부 타임아웃으로
-	# 떨어져 결함처럼 보인다. 테스트가 띄우는 자식 프로세스의 시한도 같은 배수다(`test::ProcessDeadlineWatch`).
+	# 떨어져 결함처럼 보인다. 배율은 정책 `timeoutScale.sanitizer` 이고 테스트가 띄우는 자식 프로세스의 시한도 같은 배수다(`test::ProcessDeadlineWatch`).
 	get_test_property(${TEST_NAME} TIMEOUT swCurrentTimeout)
 	if(NOT swCurrentTimeout)
 		set(swCurrentTimeout 30)
 	endif()
-	math(EXPR swCurrentTimeout "${swCurrentTimeout} * 10")
+	sw_getTestTimeoutScale(swScale)
+	math(EXPR swCurrentTimeout "${swCurrentTimeout} * ${swScale}")
 
 	# ODR 검사는 **아예 끈다(0).** 처음에는 1 로 두려 했다 — 크기가 다른 중복만 보고하니 진짜 ODR
 	# 버그는 남는다는 계산이었다. 그런데 레벨 1 도 등록된 전역 전체를 훑는 비용은 그대로 치른다.

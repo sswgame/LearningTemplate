@@ -140,7 +140,8 @@ namespace sw
             return result;
         }
 
-        // 4) sw:: 최상위 엔진 네임스페이스 접두사 제거 후 재검색 (Linux Clang이 내부 타입을 FQN으로 내보내는 문제 대응)
+        // 4) sw:: 로 시작하면 엔진 타입이다. libclang 16 미만(리눅스 CI)은 한정 없이 적은 타입도 FQN(`sw::editor::Foo`)으로 내보내고,
+        //    16 이상은 적힌 그대로(`Foo`)다. 런타임은 FQN 과 짧은 이름만 찾으므로 하위 네임스페이스가 남으면(`editor::Foo`) 잎 이름으로 맞춘다.
         constexpr string_view kSwPrefix = "sw::";
         if ( StringUtil::startsWith( result, kSwPrefix ) )
         {
@@ -148,6 +149,8 @@ namespace sw
             const auto itStripped = _mapAliasToCanonical.find( result );
             if ( itStripped != _mapAliasToCanonical.end() )
                 result = itStripped->second;
+            else
+                result = string{ ParserUtil::scopeLeaf( result ) };
             return result;
         }
 

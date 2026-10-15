@@ -207,6 +207,12 @@ class CiFailureReportTest(unittest.TestCase):
         self.assertEqual(CiFailureReport.describeTestResult(crashed, None), "no exit line after 4.0 s")
         self.assertEqual(CiFailureReport.describeTestResult("", 180.0), "no elapsed time")
 
+    def testMultiLineMessageKeepsItsContinuationLines(self) -> None:
+        listOutput = ["  [FAILED] /x/TestSmoke.cpp:1912", "    Condition: child._exitCode == 0", "    Message  : property check failed:",
+                      "sw::editor::Def::_stroke (editor::StrokeDef)", "sw::editor::Def::_typography (editor::TypographyDef)", "",
+                      "[2026-10-15 14:19:13] [Test] [Info] - unloading", "not part of the message"]
+        self.assertEqual(CiFailureReport.collectMarkedLinesInternal(listOutput), listOutput[:5])
+
 
 if __name__ == "__main__":
     unittest.main()

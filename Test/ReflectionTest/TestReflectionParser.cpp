@@ -1209,6 +1209,51 @@ SW_TEST_CASE( ReflectionParserTest, PunctuationInsideAnnotationStringIsNotADecla
 }
 
 /**
+ * @brief [ReflectionParserTest] `sw` 하위 네임스페이스의 구조체를 담은 PROPERTY 의 타입 이름은 잎 이름이다 — 런타임이 찾는 이름(짧은 이름 · FQN)과 맞는다
+ * @details libclang 16 미만(리눅스 CI)은 한정 없이 적은 타입도 FQN(`sw::sub::Inner`)으로 내보낸다. `sw::` 만 떼면 `sub::Inner` 가 남아
+ *          런타임이 그 타입을 못 찾고, 설정 읽기와 직렬화가 그 칸을 버린다. 여기서는 FQN 으로 적어 Windows 에서도 같은 철자를 만든다.
+ */
+SW_TEST_CASE( ReflectionParserTest, NestedNamespaceStructPropertyUsesTheLeafName )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+
+    const ParserRunResult run = runParserOnTempHeader( parserExe, "NestedNamespaceSample",
+                                                       "#pragma once\n"
+                                                       "#include \"Core/Container/vector.h\"\n"
+                                                       "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                       "namespace sw::nestedsample\n"
+                                                       "{\n"
+                                                       "\tREFLECT()\n"
+                                                       "\tstruct NestedSampleInner\n"
+                                                       "\t{\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\t\tPROPERTY()\n"
+                                                       "\t\tint32 _value{ 0 };\n"
+                                                       "\t};\n"
+                                                       "}\n"
+                                                       "namespace sw::nestedsample\n"
+                                                       "{\n"
+                                                       "\tREFLECT()\n"
+                                                       "\tstruct NestedSampleOuter\n"
+                                                       "\t{\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\t\tPROPERTY()\n"
+                                                       "\t\tsw::nestedsample::NestedSampleInner _inner{};\n"
+                                                       "\t\tPROPERTY()\n"
+                                                       "\t\tsw::vector<sw::nestedsample::NestedSampleInner> _listInner{};\n"
+                                                       "\t};\n"
+                                                       "}\n" );
+    SW_EXPECT_TRUE_MSG( run._exitCode == 0, run._log.c_str() );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), run._listGeneratedCpp.size() );
+    const sw::string& generated = run._listGeneratedCpp[0];
+    SW_EXPECT_TRUE_MSG( generated.find( "::sw::hashed_string( \"NestedSampleInner\" )," ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "\"nestedsample::NestedSampleInner\"" ) == sw::string::npos, generated.c_str() );
+}
+
+/**
  * @brief [ReflectionParserTest] 별칭(`using`)으로 적은 기반도 실제 클래스로 읽는다 — 부모 FQN 과 컴포넌트 팩토리를 잃지 않는다
  * @details 베이스 지정자의 선언을 그대로 물으면 별칭 선언이 나온다. 그러면 부모 FQN 이 별칭 이름이 되어 실행 중에 부모를 못 찾고, 컴포넌트 판별이 별칭에서
  *          멈춰 팩토리가 생기지 않는다(씬에서 그 컴포넌트를 만들 수 없다).

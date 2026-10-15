@@ -6,10 +6,27 @@
 
 #include "Engine/Common/EngineServices.h"
 
+#include <algorithm>
+#include <thread>
+
+namespace sw
+{
+    namespace
+    {
+        struct JoltJobSystemInternal
+        {
+            /** @brief 이 스레드가 지금 태스크로 잡을 실행 중이면 그 실행 칸 번호, 아니면 -1 입니다(잡 안에서 스텝을 기다릴 때 자기 칸을 건너뛴다). */
+            static thread_local int32 t_executingSlot;
+        };
+        thread_local int32 JoltJobSystemInternal::t_executingSlot{ -1 };
+    } // namespace
+} // namespace sw
+
 namespace sw
 {
     JoltJobSystem::JoltJobSystem( uint32 maxJobCount, uint32 maxBarrierCount )
         : JPH::JobSystemWithBarrier{ maxBarrierCount }
+        , _arrExecutorSlot{}
         , _jobs{}
         , _listQueuedJob{}
         , _queueMutex{}
@@ -106,12 +123,43 @@ namespace sw
         _jobs.DestructObject( pJob );
     }
 
+    void JoltJobSystem::WaitForJobs( Barrier* pBarrier )
+    {
+        JPH::JobSystemWithBarrier::WaitForJobs( pBarrier );
+        // 장벽에 붙기 전에 끝난 잡은 장벽이 기다리지 않는다. 지금 실행 중인 칸마다 그 실행이 나올 때까지 기다려 선후를 맺는다(파일 머리말 주의).
+        for ( uint32 slotIndex = 0; slotIndex < kMaxExecutorSlotCount; ++slotIndex )
+        {
+            if ( static_cast<int32>( slotIndex ) == JoltJobSystemInternal::t_executingSlot )
+                continue;
+            const ExecutorSlot& slot         = _arrExecutorSlot[slotIndex];
+            const uint64        enteredCount = slot._enterCount.load( std::memory_order_acquire );
+            while ( slot._exitCount.load( std::memory_order_acquire ) < enteredCount )
+            {
+                std::this_thread::yield();
+            }
+        }
+    }
+
     void JoltJobSystem::runQueuedJob()
     {
         Job* pJob = popQueuedJob();
         if ( pJob != nullptr )
         {
-            pJob->Execute();
+            if ( engine::areEngineServicesBound() )
+            {
+                const uint32  slotIndex                = std::min( engine::getSubsystem<TaskManager>().getCurrentThreadScratchSlot(), kMaxExecutorSlotCount - 1 );
+                ExecutorSlot& slot                     = _arrExecutorSlot[slotIndex];
+                const int32   previousSlot             = JoltJobSystemInternal::t_executingSlot;
+                JoltJobSystemInternal::t_executingSlot = static_cast<int32>( slotIndex );
+                slot._enterCount.fetch_add( 1, std::memory_order_acq_rel );
+                pJob->Execute();
+                slot._exitCount.fetch_add( 1, std::memory_order_release );
+                JoltJobSystemInternal::t_executingSlot = previousSlot;
+            }
+            else
+            {
+                pJob->Execute();
+            }
             pJob->Release();
         }
         if ( engine::areEngineServicesBound() )

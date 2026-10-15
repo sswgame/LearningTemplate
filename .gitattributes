@@ -24,3 +24,6 @@ Resource/**/localization/** -text
 # uipreview 시나리오가 에디터로 저장하는 픽스처 — 에디터는 LF 로 쓰므로 체크아웃도 LF 여야 저장 뒤 작업 트리가 더러워지지 않는다
 Resource/engine/automation/editor/uipreview/*.ui.xml text eol=lf
 Resource/engine/automation/editor/animgraphedit/*.animgraph.json text eol=lf
+
+# 에디터 테마 토큰은 `editor-theme` 도구가 CRLF 로 쓴다(Scripts/dev/MakeEditorTheme.py 머리말) — 리눅스 체크아웃도 CRLF 여야 도구 출력과 바이트로 같다
+Resource/editor/theme/*.tokens.json text eol=crlf
