@@ -9,6 +9,7 @@
 #include "pch.h"
 
 #include "Editor/Common/Asset/EditorAssetValidation.h"
+#include "Editor/Common/Backend/EditorUICapture.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/EditorPaths.h"
@@ -75,6 +76,7 @@ namespace sw::editor
         _scope.addSubsystem( make_unique<EditorRenderViews>() );
         _scope.addSubsystem( make_unique<EditorPlaySessionState>() );
         _scope.addSubsystem( make_unique<EditorTheme>() );
+        _scope.addSubsystem( make_unique<EditorUICapture>() );
         _scope.addSubsystem( make_unique<EditorExtensionSubsystems>( _scope ) ); // 확장이 기여한 서브시스템(SW_EDITOR_SUBSYSTEM) — 프레임 앞 syncExtensionRegistrations 가 만든다
         // 확장 모듈이 언로드되기 전에 그 모듈의 등록 줄로 만든 인스턴스를 지운다 — 훑는 매니저들에 의존하므로 그들보다 먼저 내려간다.
         _scope.addSubsystem( make_unique<EditorModuleUnloadListener>( *this ) );

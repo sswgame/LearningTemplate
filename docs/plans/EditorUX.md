@@ -131,20 +131,34 @@ Figma 값이 필요하면 사용자가 변수 JSON을 내려받아 `import-figma
 1. **프레임을 읽습니다.** MCP의 `get_design_context` 로 구조와 스타일을, `get_variable_defs` 로 쓰인 변수를, `get_screenshot` 으로 기준 이미지를 얻습니다.
 2. **토큰으로 옮깁니다.** 변수가 토큰 이름(`color/accent` 등)과 맞으면 변수 JSON으로 `import-figma` 를 돌립니다. 경고로 나온 모르는 변수는 토큰을 새로 더할지 사람에게 묻습니다. 임의로 키를 만들지 않습니다.
 3. **패널을 고칩니다.** 색, 간격, 모서리는 `EditorThemeUtil` 접근자로만 읽습니다. 필요한 값이 토큰에 없으면 토큰 파일 다섯 개와 접근자에 같은 커밋에서 키를 더합니다.
-4. **캡처로 확인합니다.** `App --EnableEditor -gv_screenshotEditor=<경로>.png` 로 에디터 UI를 PNG로 저장합니다. 자동 시나리오에서는 단계 `<CaptureEditorUI file="..."/>` 를 씁니다.
-   두 이름은 통합 담당이 만드는 기능의 이름이며 이 문서를 쓴 시점에는 구현되어 있지 않습니다. GPU와 창을 쓰므로 GPU 잠금을 잡고 실행합니다(`gpu-verifier` 에이전트가 맡을 수 있습니다).
+4. **캡처로 확인합니다.** `App -EnableEditor -gv_screenshotEditor=<경로>.png`(`-gv_screenshotEditorFrame=N`, 기본 60)로 에디터 UI를 PNG로 저장합니다.
+   자동 시나리오에서는 단계 `<CaptureEditorUI file="..." maxMagentaFraction="0" maxClippedWindows="N"/>` 를 씁니다(6절). 패널 전체를 한 번에 찍으려면
+   `engine/automation/editor/uiaudit.scenario.xml` 을 돌립니다. GPU와 창을 쓰므로 GPU 잠금(공유)을 잡고 실행합니다(`gpu-verifier` 에이전트가 맡을 수 있습니다).
 5. **점검을 시킵니다.** `ux-reviewer` 에이전트에 캡처 경로와 패널 이름을 줍니다. 보고는 `우선순위 | 패널 | 캡처 파일 | 결함 | 근거(좌표/영역) | 제안` 테이블입니다.
    P0과 P1은 고치고 다시 4로 돌아갑니다.
 6. **마무리합니다.** `editor-theme check` 와 `CheckEditorStyleLiterals` 가 통과하는지 봅니다.
 
-## 6. 린트: 숫자 리터럴 색 차단
+## 6. 에디터 UI 캡처의 원리
+
+`-gv_screenshot` 과 `<Screenshot>` 은 주 출력(게임 · 씬 뷰 그림)만 담고 그 위의 ImGui 는 담지 못합니다. 창을 전경으로 올려 화면을 복사하는 방식은 사용자 화면을 훔치고
+다른 창이 섞이므로 쓰지 않습니다. 그래서 렌더 스레드가 그 프레임의 **최종 ImGui 그리기 목록**을 오프스크린 렌더 타깃에 한 번 더 그려 읽습니다(`EditorUICapture`).
+
+- **플로팅 창까지 담습니다.** 멀티 뷰포트에서는 모든 그리기 목록의 정점이 OS 화면 좌표라, 메인과 플로팅 뷰포트의 목록을 한 그리기 데이터로 이어 붙이고 표시 영역을 모두를
+  감싸는 사각형으로 둡니다. 플로팅 창은 마지막으로 앞에 온 순서로 위에 쌓입니다. 창 사이의 바탕 화면 자리는 검정입니다.
+- **네 백엔드가 같습니다.** 네 백엔드가 같은 ImGui 렌더러 백엔드로 같은 목록을 그리고, 대상 포맷은 백버퍼 포맷입니다. OpenGL 은 FBO 의 0 행이 아래쪽이라 읽은 뒤 뒤집습니다.
+- **창 위치 · 가림 · 포커스와 무관합니다.** 화면이 아니라 그리기 목록을 그리기 때문입니다. 창이 다른 창에 가려 있어도 같은 그림이 나옵니다.
+- **지표 둘.** `maxMagentaFraction` 은 마젠타(R≥230 · B≥230 · G≤40) 픽셀 비율 상한입니다. 빠진 텍스처 · 디버그 색을 잡습니다. `maxClippedWindows` 는 내용이 창보다 큰데
+  그 방향 스크롤바가 없는 창(내용이 잘려 안 보인다)의 수 상한이고, 실패 줄과 로그 `Editor UI capture` 에 창 이름이 남습니다.
+- **골든(그림 비교)은 하지 않습니다.** 글꼴 래스터와 DPI 가 기계마다 다르기 때문입니다. 같은 기계 · 같은 설정에서의 전후 비교는 PNG 를 사람이나 `ux-reviewer` 가 봅니다.
+
+## 6-1. 린트: 숫자 리터럴 색 차단
 
 `Scripts/lint/gate/CheckEditorStyleLiterals.py` 가 `Source/Editor/**` 와 `Source/GameFramework/PlugIn/Editor/**` 의 `.cpp`, `.h` 를 봅니다.
 
 - 막는 것: `IM_COL32(`, 첫 인자가 숫자인 `ImVec4(` 와 `Color{`, `Color(`, `Color::fromBytes(`, 값에 숫자 리터럴이 들어간 `ImGui::PushStyleColor(` 와 `ImGui::PushStyleVar(`(`ImVec2(4, 4)` 포함). 주석과 문자열은 보지 않습니다.
 - 제외하는 것: 테마를 구현하는 파일(`EditorThemeUtil`, `EditorColorUtil`, `EditorThemeTokens`). 값을 만드는 곳이기 때문입니다.
 - 커밋 훅은 그 커밋이 추가한 줄만 검사하고 병합 커밋은 건너뜁니다. 전체 훑기(`ctest -L lint`, `lint-suite`)는 건수가 기준선보다 늘면 실패합니다.
-- 기준선은 `Scripts/lint/rules/CheckEditorStyleLiterals.toml` 의 `total` 이고 현재 174건입니다. 기존 위반을 토큰으로 옮겨 건수가 줄면 기준선도 같이 낮춥니다.
+- 기준선은 `Scripts/lint/rules/CheckEditorStyleLiterals.toml` 의 `total` 이고 현재 171건입니다. 기존 위반을 토큰으로 옮겨 건수가 줄면 기준선도 같이 낮춥니다.
 
 ## 7. 함정과 주의
 
