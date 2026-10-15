@@ -18,7 +18,7 @@ kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 
 from common import BuildTree  # noqa: E402
-from common.AppRun import computeSlopePerMinute, findUsableBackends, loadGameTable, parseProfileTable, parseProfileWall  # noqa: E402
+from common.AppRun import AppRunResult, computeSlopePerMinute, findUsableBackends, loadGameTable, parseProfileTable, parseProfileWall  # noqa: E402
 from common.ImageMetrics import (RgbImage, compareMetrics, computeMetrics, decodePng, deriveTolerance, downscale,  # noqa: E402
                                  encodePng, parsePpm)
 from qa.PerfRegression import compareInternal  # noqa: E402
@@ -132,6 +132,11 @@ class UsableBackendTest(unittest.TestCase):
             self.assertEqual({"dx12", "dx11", "vk", "gl"}, set(findUsableBackends(BuildTree(Path(tempDir)))))
             cachePath.write_text("SW_SHIPPING_BUILD:BOOL=ON\nSW_SHIPPING_RHI_BACKEND:STRING=Vulkan\n", encoding="utf-8")
             self.assertEqual(["vk"], findUsableBackends(BuildTree(Path(tempDir))))
+
+    def testIgnoredGlobalsAreFoundFromTheWarningLine(self) -> None:
+        result = AppRunResult(listLine=["[2026-10-16 0:53:20] [Engine] [App] [Warning] - gv_benchMeshes: 그런 전역 변수가 없습니다. 무시됩니다",
+                                        "[Info] - gv_benchAnimate: set"])
+        self.assertEqual(["gv_benchMeshes"], result.findIgnoredGlobals(["-gv_benchMeshes=8", "-gv_benchAnimate=0", "-dx12"]))
 
 
 class PerfCompareTest(unittest.TestCase):
