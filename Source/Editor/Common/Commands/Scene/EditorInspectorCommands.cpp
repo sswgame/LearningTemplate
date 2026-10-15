@@ -32,18 +32,17 @@ namespace sw::editor
         if ( pObj == nullptr || prefabPath.empty() )
             return false;
 
-        AssetManager*  pResources = editor::findSubsystem<AssetManager>();
-        EditorContext* pContext   = EditorContext::get();
-        if ( pResources == nullptr || pContext == nullptr )
-            return false;
-        PrefabCache& prefabCache = pResources->getAssetCache<PrefabCache>();
+        // 에셋 관리자와 에디터 컨텍스트가 없으면(도구 · 테스트) 파일만 쓴다 — 캐시도 다른 인스턴스도 없다.
+        AssetManager*  pResources   = editor::findSubsystem<AssetManager>();
+        EditorContext* pContext     = EditorContext::get();
+        PrefabCache*   pPrefabCache = pResources != nullptr ? &pResources->getAssetCache<PrefabCache>() : nullptr;
 
         // 고치기 전 원형과 파일 글 — 다른 인스턴스의 덮어쓴 값을 옛 원형과 견줘 뽑고, 되돌리기가 파일을 되돌린다.
         const string       filePath = ResourcePaths::getWritePath( prefabPath );
         string             oldFileText;
         string             oldBaseState;
-        const PrefabAsset* pOldPrefab = prefabCache.loadPrefab( prefabPath );
-        const bool         bHadFile   = FileUtil::readTextFile( filePath, oldFileText );
+        const bool         bHadFile   = FileUtil::exists( filePath ) && FileUtil::readTextFile( filePath, oldFileText );
+        const PrefabAsset* pOldPrefab = ( bHadFile && pPrefabCache != nullptr ) ? pPrefabCache->loadPrefab( prefabPath ) : nullptr;
         if ( pOldPrefab == nullptr || PrefabOverrides::makeBaseState( *pOldPrefab, oldBaseState ) == false )
             oldBaseState.clear();
 
@@ -55,9 +54,12 @@ namespace sw::editor
         string newFileText;
         (void)FileUtil::readTextFile( filePath, newFileText ); // 방금 쓴 파일이다 — 못 읽으면 다시 실행이 파일을 쓰지 않을 뿐이다
 
-        // 캐시된 옛 내용으로 스폰하지 않게 다음 로드가 파일을 다시 읽도록 한다.
-        prefabCache.reload( prefabPath, nullptr );
         SW_LOG_INFO( "Saved prefab changes to %#", string{ prefabPath }.c_str() );
+        if ( pPrefabCache == nullptr || pContext == nullptr )
+            return true;
+        // 캐시된 옛 내용으로 스폰하지 않게 다음 로드가 파일을 다시 읽도록 한다.
+        PrefabCache& prefabCache = *pPrefabCache;
+        prefabCache.reload( prefabPath, nullptr );
 
         // 같은 프리팹의 다른 인스턴스에 퍼뜨린다(덮어쓴 값은 남긴다). 파일 쓰기와 인스턴스 갱신을 되돌리기 하나로 묶는다.
         EditorWorkspace&    workspace = pContext->getSubsystem<EditorWorkspace>();
