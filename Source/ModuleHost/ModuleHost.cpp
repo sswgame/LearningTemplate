@@ -113,8 +113,7 @@ namespace sw
         _pLiveReloadManager->setOnBeforeReload( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &ModuleHost::onBeforeGameReload, this ) );
         _pLiveReloadManager->setOnReloadFault( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnReloadFaultDelegate, &ModuleHost::onGameReloadFault, this ) );
         _pLiveReloadManager->setOnValidateImage( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnValidateImageDelegate, &ModuleHost::isGameImageUsable, this ) );
-        _listGameScopeModule = listGameModule;
-        _listGameScopeModule.push_back( sw::config::kTargetGameModule );
+        _listGameScopeModule = listGameModule; // SWGame 은 이름으로 따로 본다(onBeforeCommitBatch)
         if ( _pLiveReloadManager->registerModule( sw::config::kTargetGameModule, listGameModule ) == false )
         {
             SW_LOG_ERROR( "SWGame module register failed" );
@@ -305,7 +304,7 @@ namespace sw
 #if !defined( SW_SHIPPING )
         for ( const string& name : listModuleName )
         {
-            const bool bGameScope = std::find( _listGameScopeModule.begin(), _listGameScopeModule.end(), name ) != _listGameScopeModule.end();
+            const bool bGameScope = name == sw::config::kTargetGameModule || std::find( _listGameScopeModule.begin(), _listGameScopeModule.end(), name ) != _listGameScopeModule.end();
             if ( bGameScope )
             {
                 // 게임 상태는 새 이미지가 넘겨받을 유일한 것이다. 저장하지 못했으면 언로드하지 않는다. 옛 게임이 그대로 돈다.

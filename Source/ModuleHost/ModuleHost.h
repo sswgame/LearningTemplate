@@ -274,7 +274,7 @@ namespace sw
 
         // 핫 리로드 때 게임 상태를 보존하는 재사용 버퍼.
         vector<uint8> _listGameSavedState;
-        /** @brief 게임 인스턴스와 함께 내려야 하는 모듈 이름(SWGame · GameFramework · 키트)입니다. `loadModuleImages` 가 채웁니다. */
+        /** @brief 게임 인스턴스와 함께 내려야 하는 모듈 이름(GameFramework · 키트, SWGame 은 이름으로 따로 본다)입니다. `loadModuleImages` 가 채웁니다. */
         vector<string> _listGameScopeModule;
 
         /** @brief 이번 프레임에 고정한 모듈 상태입니다. */
