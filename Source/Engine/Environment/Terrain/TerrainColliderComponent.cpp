@@ -5,11 +5,13 @@
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
 #include "Engine/Environment/Terrain/TerrainMeshBuilder.h"
+#include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsDesc.h"
+#include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
 {
@@ -207,5 +209,18 @@ namespace sw
         }
         _listBuiltGeneration.assign( _listBuiltGeneration.size(), 0u );
         _listTriangleCount.assign( _listTriangleCount.size(), 0u );
+    }
+} // namespace sw
+
+namespace sw
+{
+    void TerrainColliderComponent::validateLayer( ValidationContext& context ) const
+    {
+        ComponentNameValidation::validatePhysicsLayer( context, "_layer", _layer );
+    }
+
+    void TerrainColliderComponent::validateMaterial( ValidationContext& context ) const
+    {
+        ComponentNameValidation::validatePhysicsMaterial( context, "_material", _material );
     }
 } // namespace sw

@@ -7,10 +7,12 @@
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
 {
@@ -240,5 +242,13 @@ namespace sw
             _barBatch.setEntry( 3, SpriteInstanceBatch::makeQuadWorld( float3{ eye._x, eye._y + offsetY, barZ }, 2.0f * ( halfWidth + overlap ), barHeight ), fullUv,
                                 black );
         }
+    }
+} // namespace sw
+
+namespace sw
+{
+    void PixelPerfectCameraComponent::validateBarSortingLayer( ValidationContext& context ) const
+    {
+        ComponentNameValidation::validateSortingLayer( context, "_barSortingLayer", _barSortingLayer );
     }
 } // namespace sw

@@ -206,8 +206,7 @@ _열린 결함 없음._ 간헐 실패는 다시 보이면 E 에 적는다.
   남은 것: 새 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 를 네 백엔드로 아직 안 돌렸다(DX12 직접 실행으로 10 시나리오 통과만 확인).
 
 - `C-30` **이름 참조 감사(2026-10-15)의 남은 것.** 데이터 쪽은 에셋 검증 `component_reference` 규칙, 코드 · 시나리오 쪽은 린트 `CheckNameReferences` 가 본다. 아직 정적으로 못 보는 것:
-  ① 컴포넌트 생성자 기본값의 이름(`FractureComponentBase` 의 레이어 기본값, `PawnComponent` 의 `Move` · `Look`) — 데이터에 없으면 규칙이 못 본다. `PROPERTY( Validate = fn )` 로 물리 레이어 ·
-  재질 · 정렬 레이어 · 내비 영역 이름을 설정 표에 대는 검증 함수를 붙이면 로드 · 인스펙터 · `ResourceDataSchemaTest` 가 기본값까지 본다(언리얼 `IsDataValid`).
+  ① 입력 액션 이름의 생성자 기본값(`PawnComponent` 의 `Move` · `Look`, 카메라 액션)은 게임마다 맵이 달라 검증 함수로 못 본다 — 빙의 · 프리셋 때 런타임 경고가 본다.
   ② 카탈로그 안 id 참조는 팩 둘(`starskirmish-unit-tree` · `nilecity-goods`)만 규칙이 있다 — 나머지 키트 카탈로그는 로더 경고(스키마 테스트)에 기댄다.
   ③ 시나리오 `<DevCommand line="editor <명령>">` 의 에디터 명령 id(`EditorCommandRegistry` 는 실행 중 등록), UI 바인딩 경로(`UIBindingSet::bind` 오류 로그), 동적으로 지은 액션 이름은 런타임 경고 게이트(logwarn)에 맡긴다.
 

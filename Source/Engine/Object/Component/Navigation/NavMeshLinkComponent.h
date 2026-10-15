@@ -25,6 +25,8 @@ namespace sw
     struct NavMeshSettings;
     struct NavOffMeshLink;
 
+    class ValidationContext;
+
     /** @class NavMeshLinkComponent @brief 파일 머리말 참고. */
     REFLECT( Category = "Navigation", DisplayName = "NavMesh Link", Tooltip = "Off-mesh link between two points the navmesh does not join (ladder, jump, door)" )
     class SW_API NavMeshLinkComponent : public Component
@@ -68,6 +70,10 @@ namespace sw
         void setLinkEnabled( bool bEnabled );
 
     private:
+        /** @brief `_areaName` 가 내비 영역 표에 있는지 봅니다(`ComponentNameValidation`). */
+        void validateAreaName( ValidationContext& context ) const;
+
+    private:
         friend class SceneNavigation;
 
         /** @brief 지금 위치의 타일과 마지막으로 알린 위치의 타일을 다시 베이크하게 합니다. */
@@ -79,7 +85,7 @@ namespace sw
         float3 _endOffset;
         PROPERTY( Category = "Link", Min = 0.05, Tooltip = "How far each end may be from the navmesh and still connect", Units = m )
         float32 _width;
-        PROPERTY( Category = "Link", DisplayName = "Area", Tooltip = "Navigation area of the link (empty = the object's area)" )
+        PROPERTY( Category = "Link", DisplayName = "Area", Tooltip = "Navigation area of the link (empty = the object's area)", Validate = validateAreaName )
         hashed_string _areaName;
         PROPERTY( Category = "Link", DisplayName = "Link Type", Tooltip = "Name agents report while crossing (Ladder, Jump, Door) - the animation picks its move from it" )
         hashed_string _linkType;

@@ -14,6 +14,11 @@
 
 namespace sw
 {
+    class ValidationContext;
+} // namespace sw
+
+namespace sw
+{
     /** @class NavMeshModifierComponent @brief 파일 머리말 참고. */
     REFLECT( Category = "Navigation", DisplayName = "NavMesh Modifier", Tooltip = "Leaves this object out of the navmesh bake or gives its geometry an area", Meta = "Icon=Navigation, IconColor=Navigation" )
     class SW_API NavMeshModifierComponent : public Component
@@ -32,7 +37,11 @@ namespace sw
         void                 setAreaName( const hashed_string& areaName ) { _areaName = areaName; }
 
     private:
-        PROPERTY( Category = "Modifier", DisplayName = "Area", Tooltip = "Navigation area of this object's geometry (empty = keep)" )
+        /** @brief `_areaName` 가 내비 영역 표에 있는지 봅니다(`ComponentNameValidation`). */
+        void validateAreaName( ValidationContext& context ) const;
+
+    private:
+        PROPERTY( Category = "Modifier", DisplayName = "Area", Tooltip = "Navigation area of this object's geometry (empty = keep)", Validate = validateAreaName )
         hashed_string _areaName;
         PROPERTY( Category = "Modifier", DisplayName = "Ignore From Build", Tooltip = "Leave this object and its children out of the bake" )
         bool _bIgnoreFromBuild;
