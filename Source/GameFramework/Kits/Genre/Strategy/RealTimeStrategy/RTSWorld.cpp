@@ -480,13 +480,12 @@ namespace sw
         return computeEdgeDistance( unit, target ) <= reach;
     }
 
-    RTSUnitID RTSWorld::findAutoTarget( const RTSUnit& unit, float32 radius ) const
+    RTSUnitID RTSWorld::findAutoTarget( const RTSUnit& unit, float32 radius )
     {
-        vector<RTSUnitID> listCandidate;
-        queryUnits( unit._position, radius + ( unit.isMobile() ? unit._pDef->_radius : 0.0f ), listCandidate );
+        queryUnits( unit._position, radius + ( unit.isMobile() ? unit._pDef->_radius : 0.0f ), _listQueryScratch );
         RTSUnitID bestID{};
         float32   bestScore = MathUtil::kMaxFloat;
-        for ( const RTSUnitID candidateID : listCandidate )
+        for ( const RTSUnitID candidateID : _listQueryScratch )
         {
             const RTSUnit* pCandidate = findUnit( candidateID );
             if ( pCandidate == nullptr || canAttack( unit, *pCandidate ) == false )

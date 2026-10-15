@@ -360,11 +360,12 @@ namespace sw
         void             finishOrder( RTSUnit& unit );
         void             clearOrders( RTSUnit& unit );
         /** @brief 목표 쪽으로 걷습니다. 목표가 움직이면 간격을 두고 경로를 다시 구합니다. */
-        void      approach( RTSUnit& unit, const float3& target, bool bForce );
-        bool      isWithinReach( const RTSUnit& unit, const RTSUnit& target, float32 reach ) const;
-        float32   computeEdgeDistance( const RTSUnit& unit, const RTSUnit& target ) const;
-        bool      canAttack( const RTSUnit& attacker, const RTSUnit& target ) const;
-        RTSUnitID findAutoTarget( const RTSUnit& unit, float32 radius ) const;
+        void    approach( RTSUnit& unit, const float3& target, bool bForce );
+        bool    isWithinReach( const RTSUnit& unit, const RTSUnit& target, float32 reach ) const;
+        float32 computeEdgeDistance( const RTSUnit& unit, const RTSUnit& target ) const;
+        bool    canAttack( const RTSUnit& attacker, const RTSUnit& target ) const;
+        /** @brief 반경 안의 가장 먼저 칠 목표입니다. 후보는 `_listQueryScratch` 에 모은다(프레임마다 유닛마다 불려 지역 목록이면 그만큼 할당한다). */
+        RTSUnitID findAutoTarget( const RTSUnit& unit, float32 radius );
         void      dealDamage( RTSUnit& attacker, RTSUnit& target );
         void      killUnit( RTSUnit& unit, RTSUnitID killerID );
         void      placeFootprint( const RTSUnit& unit, bool bBlocked );

@@ -105,8 +105,20 @@ namespace sw
         /**
          * @brief 디스크 흉내(`-gv_ioEmuReadLatencyMs` · `-gv_ioEmuReadKilobytesPerSecond`, 부하 검증의 하드웨어 프로필)가 켜져 있으면 읽기 한 번만큼 이 스레드를 재웁니다.
          * @details 읽기 경로(`readNativeFileAt` · `FileUtil::readFile` · `readTextFile`)가 부릅니다. 꺼져 있으면(기본, 배포본은 늘) 아무것도 하지 않습니다.
-         *          느린 디스크의 지연 · 대역폭을 소프트웨어로 흉내 낸 것이라 OS 캐시 · 큐 깊이는 흉내 내지 않습니다.
+         *          느린 디스크의 지연 · 대역폭을 소프트웨어로 흉내 낸 것이라 OS 캐시는 흉내 내지 않습니다. 장치는 하나이고 큐 깊이는 1 입니다 —
+         *          여러 스레드의 읽기가 줄을 서므로 읽기를 나눠 부른다고 빨라지지 않습니다. 대기는 고해상도 마감(`MonotonicClock::sleepUntilNanoseconds`)이라
+         *          1 ms 가 Windows 기본 타이머 주기(약 15.6 ms)로 늘지 않습니다.
          */
         static void emulateReadDelay( size_t byteCount );
+
+        /**
+         * @brief 파일 하나를 읽으려고 열 때 부릅니다(`FileUtil::readFile` · `readTextFile` · `openNativeFileForRead`). 연 횟수를 세고,
+         *        `-gv_ioLogReads=1` 이면 경로 · 바이트 · 스레드를 로그로 남깁니다(언리얼 `-FileOpenLog` 와 같은 진단).
+         * @param byteCount 읽은 바이트. 핸들만 연 경우(뒤에 위치 지정 읽기가 온다)는 0 입니다.
+         */
+        static void noteFileOpenedForRead( string_view filePath, size_t byteCount );
+
+        /** @brief 프로세스 시작부터 `noteFileOpenedForRead` 가 센 열기 횟수입니다(기동 보고 `startup … ms, … file opens`). */
+        [[nodiscard]] static uint64 getFileOpenCount();
     };
 } // namespace sw
