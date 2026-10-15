@@ -282,10 +282,10 @@ namespace sw
 
 namespace sw
 {
-    uint32 SurfaceMaskUtil::markTornTriangles( const AppearanceGeometry& geometry, const SurfaceMask& mask, float32 threshold, vector<uint8>& outListTorn )
+    uint32 SurfaceMask::markTornTriangles( const AppearanceGeometry& geometry, float32 threshold, vector<uint8>& outListTorn ) const
     {
         outListTorn.assign( geometry.getTriangleCount(), SW_FALSE );
-        if ( geometry._listUv.size() != geometry._listPosition.size() || mask.getResolution() == 0 )
+        if ( geometry._listUv.size() != geometry._listPosition.size() || getResolution() == 0 )
             return 0;
         uint32 tornCount = 0;
         for ( uint32 triangle = 0; triangle < geometry.getTriangleCount(); ++triangle )
@@ -294,7 +294,7 @@ namespace sw
             const float2& uvB = geometry._listUv[geometry._listIndex[triangle * 3 + 1]];
             const float2& uvC = geometry._listUv[geometry._listIndex[triangle * 3 + 2]];
             const float2  centroid( ( uvA._x + uvB._x + uvC._x ) / 3.0f, ( uvA._y + uvB._y + uvC._y ) / 3.0f );
-            const bool    bTorn = mask.sample( uvA ) >= threshold && mask.sample( uvB ) >= threshold && mask.sample( uvC ) >= threshold && mask.sample( centroid ) >= threshold;
+            const bool    bTorn = sample( uvA ) >= threshold && sample( uvB ) >= threshold && sample( uvC ) >= threshold && sample( centroid ) >= threshold;
             if ( bTorn == false )
                 continue;
             outListTorn[triangle] = SW_TRUE;

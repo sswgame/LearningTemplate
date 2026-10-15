@@ -140,6 +140,28 @@ namespace sw
             static constexpr const utf8* kArrCategoryName[] = { "zero", "one", "two", "few", "many", "other" };
             static_assert( SW_COUNT_OF( kArrCategoryName ) == static_cast<size_t>( PluralCategory::Count ), "kArrCategoryName must name every PluralCategory" );
 
+            /** @brief 규칙 이름의 함수입니다. 모르는 이름이면 nullptr 입니다. */
+            static PluralRuleFunc findRule( string_view ruleName )
+            {
+                for ( const RuleRow& row : kArrRule )
+                {
+                    if ( ruleName == row._pName )
+                        return row._pRule;
+                }
+                return nullptr;
+            }
+
+            /** @brief 서수 규칙 이름의 함수입니다(`selectordinal`). 모르는 이름이면 nullptr 입니다. */
+            static PluralRuleFunc findOrdinalRule( string_view ruleName )
+            {
+                for ( const RuleRow& row : kArrOrdinalRule )
+                {
+                    if ( ruleName == row._pName )
+                        return row._pRule;
+                }
+                return nullptr;
+            }
+
             static constexpr const utf8* kArrCultureField[] = { "parent", "nativeName", "pluralRule", "ordinalRule", "rightToLeft",
                                                                 "digits", "decimalSeparator", "groupSeparator", "percentPattern", "currencyCode",
                                                                 "currencyPattern", "datePatterns", "timePatterns", "monthNames", "monthAbbreviations",
@@ -231,7 +253,7 @@ namespace sw
                 if ( pluralRule.isValid() )
                 {
                     const string   ruleName = pluralRule.asString();
-                    PluralRuleFunc pRule    = PluralRuleUtil::findRule( ruleName );
+                    PluralRuleFunc pRule    = CultureInfoInternal::findRule( ruleName );
                     if ( pRule == nullptr )
                     {
                         outError = "unknown pluralRule '" + ruleName + "'";
@@ -244,7 +266,7 @@ namespace sw
                 if ( ordinalRule.isValid() )
                 {
                     const string   ruleName = ordinalRule.asString();
-                    PluralRuleFunc pRule    = PluralRuleUtil::findOrdinalRule( ruleName );
+                    PluralRuleFunc pRule    = CultureInfoInternal::findOrdinalRule( ruleName );
                     if ( pRule == nullptr )
                     {
                         outError = "unknown ordinalRule '" + ruleName + "'";
@@ -368,51 +390,13 @@ namespace sw
         return operands;
     }
 
-    PluralRuleFunc PluralRuleUtil::findRule( string_view ruleName )
-    {
-        for ( const CultureInfoInternal::RuleRow& row : CultureInfoInternal::kArrRule )
-        {
-            if ( ruleName == row._pName )
-                return row._pRule;
-        }
-        return nullptr;
-    }
-
-    void PluralRuleUtil::collectRuleNames( vector<string>& outListName )
-    {
-        outListName.clear();
-        for ( const CultureInfoInternal::RuleRow& row : CultureInfoInternal::kArrRule )
-        {
-            outListName.push_back( row._pName );
-        }
-    }
-
-    PluralRuleFunc PluralRuleUtil::findOrdinalRule( string_view ruleName )
-    {
-        for ( const CultureInfoInternal::RuleRow& row : CultureInfoInternal::kArrOrdinalRule )
-        {
-            if ( ruleName == row._pName )
-                return row._pRule;
-        }
-        return nullptr;
-    }
-
-    void PluralRuleUtil::collectOrdinalRuleNames( vector<string>& outListName )
-    {
-        outListName.clear();
-        for ( const CultureInfoInternal::RuleRow& row : CultureInfoInternal::kArrOrdinalRule )
-        {
-            outListName.push_back( row._pName );
-        }
-    }
-
-    const utf8* PluralRuleUtil::getCategoryName( PluralCategory category )
+    const utf8* CultureInfo::getPluralKeyword( PluralCategory category )
     {
         const size_t index = static_cast<size_t>( category );
         return index < SW_COUNT_OF( CultureInfoInternal::kArrCategoryName ) ? CultureInfoInternal::kArrCategoryName[index] : "other";
     }
 
-    bool PluralRuleUtil::tryParseCategory( string_view keyword, PluralCategory& outCategory )
+    bool CultureInfo::tryParsePluralKeyword( string_view keyword, PluralCategory& outCategory )
     {
         for ( size_t index = 0; index < SW_COUNT_OF( CultureInfoInternal::kArrCategoryName ); ++index )
         {
@@ -445,8 +429,8 @@ namespace sw
         , _listMonthAbbreviation{}
         , _listDayPeriod{}
         , _listFont{}
-        , _pPluralRule{ PluralRuleUtil::findRule( "none" ) }
-        , _pOrdinalRule{ PluralRuleUtil::findOrdinalRule( "none" ) }
+        , _pPluralRule{ CultureInfoInternal::findRule( "none" ) }
+        , _pOrdinalRule{ CultureInfoInternal::findOrdinalRule( "none" ) }
         , _numeralSystem{ NumeralSystem::Latin }
         , _pseudoMode{ PseudoLocaleMode::None }
         , _bRightToLeft{ false }

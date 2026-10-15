@@ -254,7 +254,7 @@ SW_TEST_CASE( SurfaceStateTest, TornTrianglesLeaveTheVisibleMask )
     tearMask.initialize( 64 );
     (void)tearMask.stampCircle( float2( 0.5f, 0.5f ), 0.2f, 1.0f );
     vector<uint8> listTorn;
-    const uint32  tornCount = SurfaceMaskUtil::markTornTriangles( sleeve, tearMask, 0.5f, listTorn );
+    const uint32  tornCount = tearMask.markTornTriangles( sleeve, 0.5f, listTorn );
     SW_EXPECT_TRUE( tornCount > 0 );
     for ( uint32 triangle = 0; triangle < sleeve.getTriangleCount(); ++triangle )
     {

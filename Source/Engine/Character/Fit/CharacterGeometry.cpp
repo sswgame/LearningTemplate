@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Character/Fit/BodyShape.h"
+
 namespace sw
 {
     int32 SkinInfluence::findDominantJoint() const
@@ -284,6 +286,76 @@ namespace sw
         for ( float3& normal : outListNormal )
         {
             normal = makeUnitOr( normal, float3::UnitY );
+        }
+    }
+} // namespace sw
+
+namespace sw
+{
+    void AppearanceGeometry::applyMorphs( vector_reference<const BodyMorphWeight> listMorphWeight )
+    {
+        const uint32 vertexCount     = getVertexCount();
+        bool         bNormalsChanged = false;
+        for ( const BodyMorphWeight& morphWeight : listMorphWeight )
+        {
+            const GeometryMorphTarget* pMorph     = findMorph( morphWeight._morph );
+            const bool                 bSkipMorph = pMorph == nullptr || pMorph->_listPositionDelta.size() != vertexCount || morphWeight._weight == 0.0f;
+            if ( bSkipMorph )
+                continue;
+            for ( uint32 vertex = 0; vertex < vertexCount; ++vertex )
+            {
+                _listPosition[vertex] += pMorph->_listPositionDelta[vertex] * morphWeight._weight;
+            }
+            if ( pMorph->_listNormalDelta.size() == vertexCount && _listNormal.size() == vertexCount )
+            {
+                for ( uint32 vertex = 0; vertex < vertexCount; ++vertex )
+                {
+                    _listNormal[vertex] += pMorph->_listNormalDelta[vertex] * morphWeight._weight;
+                }
+                bNormalsChanged = true;
+            }
+        }
+        if ( bNormalsChanged == false )
+            return;
+        for ( float3& normal : _listNormal )
+        {
+            normal = CharacterGeometryUtil::makeUnitOr( normal, float3::UnitY );
+        }
+    }
+
+    void AppearanceGeometry::skinToPose( const CharacterBoneArray& bindBones, const CharacterBoneArray& poseBones, AppearanceGeometry& outGeometry ) const
+    {
+        outGeometry = *this;
+        if ( isSkinned() == false || bindBones.getBoneCount() != poseBones.getBoneCount() )
+            return;
+        vector<float4x4> listSkinMatrix( bindBones.getBoneCount() );
+        for ( uint32 boneIndex = 0; boneIndex < bindBones.getBoneCount(); ++boneIndex )
+        {
+            listSkinMatrix[boneIndex] = bindBones._listModel[boneIndex].invert() * poseBones._listModel[boneIndex];
+        }
+        const bool bHasNormal = _listNormal.size() == _listPosition.size();
+        for ( uint32 vertex = 0; vertex < getVertexCount(); ++vertex )
+        {
+            const SkinInfluence& influence = _listSkin[vertex];
+            float3               position  = float3::Zero;
+            float3               normal    = float3::Zero;
+            float32              total     = 0.0f;
+            for ( uint32 slot = 0; slot < CharacterGeometryConstant::kMaxSkinInfluence; ++slot )
+            {
+                const float32 weight = influence._arrWeight[slot];
+                const uint16  joint  = influence._arrJoint[slot];
+                if ( weight <= 0.0f || joint >= listSkinMatrix.size() )
+                    continue;
+                position += float3::transform( _listPosition[vertex], listSkinMatrix[joint] ) * weight;
+                if ( bHasNormal )
+                    normal += float3::transformVector( _listNormal[vertex], listSkinMatrix[joint] ) * weight;
+                total += weight;
+            }
+            if ( total <= 0.0f )
+                continue;
+            outGeometry._listPosition[vertex] = position * ( 1.0f / total );
+            if ( bHasNormal )
+                outGeometry._listNormal[vertex] = CharacterGeometryUtil::makeUnitOr( normal, _listNormal[vertex] );
         }
     }
 } // namespace sw

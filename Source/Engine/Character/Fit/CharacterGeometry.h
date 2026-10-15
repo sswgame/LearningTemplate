@@ -50,6 +50,9 @@ namespace sw
 
 namespace sw
 {
+    struct BodyMorphWeight;
+    struct CharacterBoneArray;
+
     /**
      * @brief 외형 계산의 형상입니다. 바인드 공간(유닛 루트 기준)의 위치, 법선, UV, 삼각형 인덱스와 선택 필드들을 담습니다.
      * @details 선택 필드는 비어 있으면 없는 것이다. 스킨(`_listSkin`, 비면 강체 부품), 칠한 정점 그룹(`_listVertexGroup` 이 `_listGroupName` 의
@@ -81,6 +84,13 @@ namespace sw
         const GeometryMorphTarget* findMorph( const hashed_string& name ) const;
         /** @brief 위치에서 면적 가중 정점 법선을 다시 계산합니다. */
         void computeVertexNormals();
+        /** @brief 체형의 모프 가중치를 위치(와 법선)에 겁니다. 형상에 없는 모프는 건너뜁니다. GPU 모프 풀과 같은 일을 CPU 에서 해 피팅 · 소켓 보정이 체형을 본다. */
+        void applyMorphs( vector_reference<const BodyMorphWeight> listMorphWeight );
+        /**
+         * @brief 이 바인드 형상을 다른 포즈(본 비율을 적용한 레퍼런스 포즈나 애니메이션 포즈)로 선형 블렌드 스키닝해 @p outGeometry 에 씁니다.
+         * @details 스킨 행렬 = 바인드 모델의 역 × 포즈 모델(행 벡터)이다. 스킨이 없는 형상은 그대로 복사한다. 법선도 같은 행렬로 돌린다.
+         */
+        void skinToPose( const CharacterBoneArray& bindBones, const CharacterBoneArray& poseBones, AppearanceGeometry& outGeometry ) const;
         /** @brief 정점과 삼각형을 모두 비웁니다. */
         void clear();
     };

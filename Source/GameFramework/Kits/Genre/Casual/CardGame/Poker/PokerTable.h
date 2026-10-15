@@ -67,18 +67,11 @@ namespace sw
 namespace sw
 {
     /** @brief 팟 하나(메인 또는 사이드)입니다. */
-    struct PokerPot
+    struct SW_KIT_API PokerPot
     {
         vector<int32> _listEligibleSeat{}; ///< 이 팟을 가져갈 수 있는 자리이다(폴드하지 않았고 이만큼 냈다)
         int32         _amount{ 0 };
-    };
-} // namespace sw
 
-namespace sw
-{
-    /** @brief 팟 계산과 분배를 담당합니다. 테이블 없이도 쓸 수 있습니다. */
-    struct SW_KIT_API PokerPotUtil
-    {
         /**
          * @brief 자리별로 낸 금액에서 메인 팟과 사이드 팟을 만듭니다. 폴드한 자리의 칩은 팟에 들어가지만 가져갈 수 없습니다.
          * @details 가져갈 사람이 같은 이웃 팟은 하나로 합친다. 아무도 가져갈 수 없는 꼭대기(폴드한 사람만 낸 몫)는 아래 팟에 붙는다.

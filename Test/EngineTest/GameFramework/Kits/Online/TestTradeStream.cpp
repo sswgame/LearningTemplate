@@ -22,7 +22,6 @@
 #include "GameFramework/Kits/Feature/Online/Account/Shared/API/AccountClient.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeServer.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Shared/TradeClient.h"
-#include "GameFramework/Kits/Feature/Online/Trade/Shared/TradeInventoryUtil.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -412,12 +411,12 @@ SW_TEST_CASE( TradeStreamTest, InventorySlotsBecomeLegs )
     }
     SW_ASSERT_EQUAL( size_t( 2 ), listPotionSlot.size() );
     vector<TradeLeg> listLeg;
-    SW_ASSERT_TRUE( TradeInventoryUtil::makeLegs( inventory, listPotionSlot, &isTradableItem, listLeg ) == TradeResult::Ok );
+    SW_ASSERT_TRUE( TradeClient::makeLegs( inventory, listPotionSlot, &isTradableItem, listLeg ) == TradeResult::Ok );
     SW_ASSERT_EQUAL( size_t( 1 ), listLeg.size() ); // 같은 아이템 칸은 한 다리로
     SW_EXPECT_EQUAL( string( "item.potion" ), listLeg[0]._assetID );
     SW_EXPECT_EQUAL( int64( 12 ), listLeg[0]._amount );
-    SW_EXPECT_TRUE( TradeInventoryUtil::makeLegs( inventory, { questSlot }, &isTradableItem, listLeg ) == TradeResult::NotTradable );
-    SW_EXPECT_TRUE( TradeInventoryUtil::makeLegs( inventory, { swordSlot }, &isTradableItem, listLeg ) == TradeResult::NotTradable ); // 외형 피해 = 인스턴스 상태
-    SW_EXPECT_TRUE( TradeInventoryUtil::makeLegs( inventory, { firstPotion, firstPotion }, &isTradableItem, listLeg ) == TradeResult::Invalid );
-    SW_EXPECT_TRUE( TradeInventoryUtil::makeLegs( inventory, { 99 }, &isTradableItem, listLeg ) == TradeResult::Invalid );
+    SW_EXPECT_TRUE( TradeClient::makeLegs( inventory, { questSlot }, &isTradableItem, listLeg ) == TradeResult::NotTradable );
+    SW_EXPECT_TRUE( TradeClient::makeLegs( inventory, { swordSlot }, &isTradableItem, listLeg ) == TradeResult::NotTradable ); // 외형 피해 = 인스턴스 상태
+    SW_EXPECT_TRUE( TradeClient::makeLegs( inventory, { firstPotion, firstPotion }, &isTradableItem, listLeg ) == TradeResult::Invalid );
+    SW_EXPECT_TRUE( TradeClient::makeLegs( inventory, { 99 }, &isTradableItem, listLeg ) == TradeResult::Invalid );
 }

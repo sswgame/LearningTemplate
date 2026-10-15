@@ -23,21 +23,14 @@ namespace sw
         float3 _localPosition{};
         PROPERTY( Min = 0.01, Tooltip = "Sphere radius", Units = m )
         float32 _radius{ 0.5f };
-    };
-} // namespace sw
 
-namespace sw
-{
-    /** @brief 폰툰 하나의 부력 계산입니다. 컴포넌트와 테스트가 같은 식을 씁니다. */
-    struct SW_API BuoyancyUtil
-    {
         /**
-         * @brief 반지름 @p radius 인 구가 잠긴 부피의 비율(0..1)입니다. 수면이 구 중심보다 @p surfaceAboveCenter 만큼 위에 있습니다(아래면 음수).
+         * @brief 이 구가 잠긴 부피의 비율(0..1)입니다. 수면이 구 중심보다 @p surfaceAboveCenter 만큼 위에 있습니다(아래면 음수).
          * @details 잠긴 높이 h = clamp( surfaceAboveCenter + r, 0, 2r ) 의 구 캡 부피 πh²(3r − h) / 3 을 구 부피로 나눈 h²(3r − h) / (4r³) 이다.
          */
-        static float32 computeSubmergedFraction( float32 surfaceAboveCenter, float32 radius );
-        /** @brief 잠긴 비율 @p submergedFraction 인 구가 받는 부력의 크기(N)입니다. 물 밀도 × 중력 크기 × 잠긴 부피입니다. */
-        static float32 computeBuoyantForce( float32 submergedFraction, float32 radius, float32 waterDensity, float32 gravityMagnitude );
+        float32 computeSubmergedFraction( float32 surfaceAboveCenter ) const;
+        /** @brief 잠긴 비율 @p submergedFraction 인 이 구가 받는 부력의 크기(N)입니다. 물 밀도 × 중력 크기 × 잠긴 부피입니다. */
+        float32 computeBuoyantForce( float32 submergedFraction, float32 waterDensity, float32 gravityMagnitude ) const;
     };
 } // namespace sw
 

@@ -19,6 +19,13 @@ namespace
 {
     struct TestBuoyancyInternal
     {
+        static BuoyancyPontoon makePontoon( float32 radius )
+        {
+            BuoyancyPontoon pontoon;
+            pontoon._radius = radius;
+            return pontoon;
+        }
+
         static constexpr float32 kFrame  = 1.0f / 60.0f;
         static constexpr float32 kRadius = 0.5f;
 
@@ -51,17 +58,17 @@ namespace
  */
 SW_TEST_CASE( BuoyancyTest, SubmergedFractionIsTheSphereCapVolume )
 {
-    SW_EXPECT_NEAR_EQUAL( 0.0f, BuoyancyUtil::computeSubmergedFraction( -2.0f, 1.0f ), 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, BuoyancyUtil::computeSubmergedFraction( -1.0f, 1.0f ), 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( 0.5f, BuoyancyUtil::computeSubmergedFraction( 0.0f, 1.0f ), 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, BuoyancyUtil::computeSubmergedFraction( 1.0f, 1.0f ), 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, BuoyancyUtil::computeSubmergedFraction( 5.0f, 1.0f ), 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( 5.0f / 32.0f, BuoyancyUtil::computeSubmergedFraction( -1.0f, 2.0f ), 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, BuoyancyUtil::computeSubmergedFraction( 0.0f, 0.0f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, TestBuoyancyInternal::makePontoon( 1.0f ).computeSubmergedFraction( -2.0f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, TestBuoyancyInternal::makePontoon( 1.0f ).computeSubmergedFraction( -1.0f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, TestBuoyancyInternal::makePontoon( 1.0f ).computeSubmergedFraction( 0.0f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, TestBuoyancyInternal::makePontoon( 1.0f ).computeSubmergedFraction( 1.0f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, TestBuoyancyInternal::makePontoon( 1.0f ).computeSubmergedFraction( 5.0f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 5.0f / 32.0f, TestBuoyancyInternal::makePontoon( 2.0f ).computeSubmergedFraction( -1.0f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, TestBuoyancyInternal::makePontoon( 0.0f ).computeSubmergedFraction( 0.0f ), 1.0e-6f );
 
     // 반지름 0.5 구가 다 잠기면 1000 × 9.81 × (4/3)π(0.125) ≈ 5136.3 N.
-    SW_EXPECT_NEAR_EQUAL( 5136.3f, BuoyancyUtil::computeBuoyantForce( 1.0f, 0.5f, 1000.0f, 9.81f ), 0.5f );
-    SW_EXPECT_NEAR_EQUAL( 2568.2f, BuoyancyUtil::computeBuoyantForce( 0.5f, 0.5f, 1000.0f, 9.81f ), 0.5f );
+    SW_EXPECT_NEAR_EQUAL( 5136.3f, TestBuoyancyInternal::makePontoon( 0.5f ).computeBuoyantForce( 1.0f, 1000.0f, 9.81f ), 0.5f );
+    SW_EXPECT_NEAR_EQUAL( 2568.2f, TestBuoyancyInternal::makePontoon( 0.5f ).computeBuoyantForce( 0.5f, 1000.0f, 9.81f ), 0.5f );
 }
 
 /**

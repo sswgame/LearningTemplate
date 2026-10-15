@@ -4,7 +4,7 @@
  * @details 채널은 데이터 테이블(`SurfaceChannelTable`, `*.surfacechannels.xml`)의 항목 하나씩이며, 이름, 초당 감쇠, 최댓값, UV 마스크 해상도,
  *          알파 잘라 내기(찢김)를 가진다. 영역 값은 머티리얼 파라미터로 올리고(영역마다 채널 순서의 벡터), UV 마스크는 텍스처로 올린다(통합 쪽 일이다).
  *          찢김 채널은 머티리얼이 알파로 잘라 구멍을 내고, 다 찢긴 삼각형은 잘라 내기와 같은 보임 마스크 경로(`FitPartResult::hideTriangles`)로
- *          조립된 메시에서 뺀다(`SurfaceMaskUtil::markTornTriangles`).
+ *          조립된 메시에서 뺀다(`SurfaceMask::markTornTriangles`).
  *
  *          XML 예:
  *          @code
@@ -90,6 +90,11 @@ namespace sw
         uint16 getResolution() const { return _resolution; }
         /** @brief 셀 값들을 반환합니다(행 우선, v 가 행). 텍스처로 올릴 때 읽습니다. */
         const vector<float32>& getTexels() const { return _listTexel; }
+        /**
+         * @brief @p geometry 에서 다 찢긴 삼각형(세 정점 UV 와 무게중심 UV 의 마스크 값이 모두 @p threshold 이상)을 표시합니다(비우고 채움).
+         * @return 표시한 수입니다. 형상에 UV 가 없으면 0 입니다.
+         */
+        uint32 markTornTriangles( const AppearanceGeometry& geometry, float32 threshold, vector<uint8>& outListTorn ) const;
 
     private:
         vector<float32> _listTexel;
@@ -132,18 +137,5 @@ namespace sw
         vector<SurfaceMask>       _listMask;        /**< 부품 × 채널 마스크다(행은 부품). 마스크가 없는 채널은 해상도가 0 이다. */
         uint32                    _regionCount{ 0 };
         uint32                    _partCount{ 0 };
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 마스크 → 형상 도우미입니다(전부 static). */
-    struct SW_API SurfaceMaskUtil
-    {
-        /**
-         * @brief 다 찢긴 삼각형(세 정점 UV 와 무게중심 UV 의 마스크 값이 모두 @p threshold 이상)을 표시합니다(비우고 채움).
-         * @return 표시한 수입니다. 형상에 UV 가 없으면 0 입니다.
-         */
-        static uint32 markTornTriangles( const AppearanceGeometry& geometry, const SurfaceMask& mask, float32 threshold, vector<uint8>& outListTorn );
     };
 } // namespace sw
