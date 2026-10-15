@@ -1,0 +1,5 @@
+# CheckEditorStyleLiterals 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckEditorStyleLiterals.py, 규칙은 docs/plans/EditorUX.md(색 · 스타일 값은 테마 토큰으로).
+
+# 전체 훑기의 기준선 — 지금 있는 건수다(테마 토큰으로 옮기며 낮춘다). 늘면 실패한다(커밋 훅은 추가한 줄만 본다).
+[baseline]
+total = 174
