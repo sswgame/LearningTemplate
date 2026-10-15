@@ -128,13 +128,12 @@ namespace sw
         // 팩이면 쿠커가 만든 assetregistry.txt 를 도메인마다 읽고(배포본은 .meta 를 싣지 않는다), 없으면(느슨한 트리) .meta 를 훑는다.
         // 유니티의 GUID 표, 언리얼의 AssetRegistry 가 하는 일이다.
         uint32       registered{ 0 };
-        const string gameRoot      = GameConfig::getActive()._packRoot;
-        const string arrRegistry[] = { "engine/assetregistry.txt", "common/assetregistry.txt",
-                                       gameRoot.empty() ? string{} : gameRoot + "/assetregistry.txt" };
-        for ( const string& registryPath : arrRegistry )
+        const string gameRoot    = GameConfig::getActive()._packRoot;
+        const string arrDomain[] = { "engine", "common", gameRoot };
+        for ( const string& domain : arrDomain )
         {
-            if ( registryPath.empty() == false )
-                registered += _assetDatabase.loadRegistry( registryPath );
+            if ( domain.empty() == false )
+                registered += _assetDatabase.loadRegistry( domain + "/assetregistry.txt" );
         }
         // 어느 경로로 채웠는지 같이 적는다. 팩과 느슨한 트리가 둘 다 있는 자리에서 "5 항목" 만으로는 구분이 안 된다.
         if ( registered > 0 )
@@ -143,7 +142,12 @@ namespace sw
         }
         else if ( ResourcePaths::getRootFolderPath().empty() == false )
         {
-            registered = _assetDatabase.scanMetaFiles( ResourcePaths::getRootFolderPath() );
+            // 쿠킹한 팩과 같은 도메인만 훑는다 — 다른 게임 팩의 .meta 는 이 게임이 닿지 않는다(느린 디스크에서 파일 하나가 읽기 한 번이다).
+            for ( const string& domain : arrDomain )
+            {
+                if ( domain.empty() == false )
+                    registered += _assetDatabase.scanMetaFiles( FileUtil::joinPath( ResourcePaths::getRootFolderPath(), domain ) );
+            }
             SW_LOG_INFO( "에셋 레지스트리 %# 항목 (.meta 스캔)", registered );
         }
         return registered;

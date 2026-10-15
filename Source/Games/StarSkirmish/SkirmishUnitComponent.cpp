@@ -98,6 +98,18 @@ namespace sw
         return string( "game/starskirmish/models/" ) + pName + string( MeshAssetFormat::kExtension );
     }
 
+    vector<string> SkirmishUnitComponent::makeAllModelPaths()
+    {
+        vector<string> listPath;
+        for ( const SkirmishUnitModel& entry : SkirmishUnitComponentInternal::kArrUnitModel )
+        {
+            string path = makeModelPath( entry._pModel );
+            if ( std::find( listPath.begin(), listPath.end(), path ) == listPath.end() )
+                listPath.push_back( std::move( path ) );
+        }
+        return listPath;
+    }
+
     void SkirmishUnitComponent::onTick( float32 deltaTime )
     {
         using Internal = SkirmishUnitComponentInternal;

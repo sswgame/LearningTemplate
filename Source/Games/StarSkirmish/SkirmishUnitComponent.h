@@ -7,6 +7,7 @@
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
@@ -50,6 +51,8 @@ namespace sw
         /** @brief 유닛 정의의 모델입니다. 그리지 않는 유닛이면 nullptr 입니다. */
         static const SkirmishUnitModel* findUnitModel( const hashed_string& unitID );
         static string                   makeModelPath( const utf8* pName );
+        /** @brief 모델 표의 모든 모델 경로입니다(겹치는 모델은 한 번). 판을 열 때 미리 읽는다. */
+        static vector<string> makeAllModelPaths();
 
     private:
         PROPERTY( Category = "Unit", DisplayName = "Director", Tooltip = "Object with the SkirmishDirectorComponent" )
