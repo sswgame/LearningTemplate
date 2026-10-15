@@ -94,6 +94,8 @@ set_target_properties(Engine PROPERTIES FOLDER "Source/Engine")
 # ------------------------------------------------------------------------------
 # 애니메이션 압축(ACL · RTM, 헤더만). 헤더는 `Animation/Codec/ACL/` 에서만 include 한다 — 코덱 인터페이스(`AnimationCodec.h`) 뒤에 감춘다.
 target_link_libraries(Engine PRIVATE acl)
+# OGG Vorbis 디코드(stb_vorbis, 헤더만). `Audio/AudioVorbisDecode.cpp` 한 곳에서만 include 한다.
+target_link_libraries(Engine PRIVATE stb)
 
 if(TARGET sw_third_party_includes)
 	target_link_libraries(Engine PRIVATE sw_third_party_includes)

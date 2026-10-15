@@ -30,7 +30,7 @@ sw_addModuleLibrary(EditorModule
 	LOG_TAG "Editor"
 	FOLDER "Source/Editor"
 	SOURCES ${listEditorSource}
-	LINK_PRIVATE Engine RuntimeAPI imgui imgui_nodeeditor imgui_notify imguizmo implot Microsoft::DirectXTex cgltf meshoptimizer sw_graphics_libs
+	LINK_PRIVATE Engine RuntimeAPI imgui imgui_nodeeditor imgui_notify imguizmo implot Microsoft::DirectXTex cgltf meshoptimizer stb sw_graphics_libs
 	UNITY_BATCH 8
 	REFLECTION_HEADERS
 		"${CMAKE_CURRENT_SOURCE_DIR}/Common/Config/EditorConfig.h"
