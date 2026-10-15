@@ -118,7 +118,7 @@ namespace sw
         , _resourceImpl{ nullptr }
         , _lastSubmittedEventMarker{}
         , _submittedMarkerMutex{}
-        , _bDeviceLostReported{ SW_FALSE }
+        , _bDeviceLost{ SW_FALSE }
     {
         _resourceImpl       = sw::make_unique<VulkanRHIResourceFactory>( this );
         _pTimestampProvider = this;

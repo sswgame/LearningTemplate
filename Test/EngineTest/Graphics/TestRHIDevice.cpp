@@ -2086,6 +2086,36 @@ SW_TEST_CASE( RHIDeviceTest, EnqueuedGPUReleaseRunsOnceAfterItsFrame )
 }
 
 /**
+ * @brief [RHIDeviceTest] Vulkan — 장치를 잃은 뒤(`debugRemoveDevice`, 개발 명령 `rhi.removeDevice`)에는 프레임이 GPU 완료를 기다리거나 주장하지 않고, `waitIdle` 은 기다리지 않고 해제 큐를 비운다
+ * @details 손실 뒤에도 펜스를 기다리면 TDR 중의 드라이버 안에서 멈출 수 있다(백로그 A-2 이던 것). 손실 뒤에 맡긴 해제는 프레임을 몇 번 돌려도 불리지 않아야 하고(완료를 본 프레임이 없다),
+ *          `waitIdle` 이 부른다. 변이: `VulkanRHIDevice::beginFrame` 의 손실 검사를 빼면 손실 뒤 제출하지 않은 프레임 펜스를 끝없이 기다려 멈춘다(CTest 시한이 끊는다) — 실제 TDR 뒤 행과 같은 모양이다.
+ */
+SW_TEST_CASE( RHIDeviceTest, VulkanLostDeviceStopsWaitingOnTheGPU )
+{
+    test::RHITestDevice device( sw::RHIBackend::Vulkan );
+    if ( device.isReady() == false )
+        SW_TEST_SKIP( "Vulkan device unavailable" );
+    device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+    device->endFrame( false, false );
+    device->waitIdle(); // 손실 전에 GPU 를 비운다 — 손실 뒤의 종료는 기다리지 않고 자원을 부순다
+    SW_ASSERT_TRUE( device->debugRemoveDevice() );
+
+    uint32  callCount{ 0 };
+    uint32* pCallCount = &callCount;
+    device->enqueueGPURelease( SW_DELEGATE_LAMBDA( sw::RHIResourceReleaseDelegate, [pCallCount]()
+    { ++( *pCallCount ); } ) );
+    constexpr uint32 kFrameCount = sw::constant::kGPUReleaseFrameLatency + sw::constant::kMaxFrameCountInFlight;
+    for ( uint32 frame = 0; frame < kFrameCount; ++frame )
+    {
+        device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+        device->endFrame( false, true );
+    }
+    SW_EXPECT_TRUE_MSG( callCount == 0, "a frame after the device loss waited on a fence and released GPU work" );
+    device->waitIdle();
+    SW_EXPECT_TRUE_MSG( callCount == 1, "waitIdle on a lost device did not flush the release queue" );
+}
+
+/**
  * @brief [RHIDeviceTest] 텍스처 · 버퍼를 만들면 GPU 메모리 장부의 그 줄이 크기만큼 오르고, 지운 뒤 해제 지연을 지나면 원래대로 돌아온다(네 백엔드)
  * @details 샘플링 텍스처는 Texture, 렌더 타깃은 RenderTarget, 트랜지언트 풀 표시가 붙은 것은 TransientPool, 구조버퍼는 Buffer 줄이다. 오른 양은
  *          적어도 논리 크기(너비 × 높이 × 텍셀 바이트)다 — DX12 · Vulkan 은 드라이버의 할당 크기라 더 클 수 있다. 장부는 자원을 **실제로 놓을 때**

@@ -62,6 +62,10 @@ namespace sw
         const VkResult vkResult = static_cast<VkResult>( result );
         if ( vkResult == VK_SUCCESS )
             return;
+        // 장치 손실은 처음 본 쪽만 알린다. 그 뒤의 호출은 모두 같은 값을 돌려주므로 프레임마다 로그가 쌓인다.
+        const bool bDeviceLost = vkResult == VK_ERROR_DEVICE_LOST;
+        if ( bDeviceLost && _bDeviceLost.exchange( SW_TRUE ) == SW_TRUE )
+            return;
 
         fixed_string<constant::kMaxBuffer64> lastMarker;
         {
@@ -70,9 +74,20 @@ namespace sw
         }
         SW_LOG_ERROR( "%#: VkResult=%# (%#) — last pass put in the submission order: '%#'", pWhere != nullptr ? pWhere : "<queue>", result,
                       VulkanRHIDeviceSubmissionInternal::getResultName( vkResult ), lastMarker.empty() ? "<none>" : lastMarker.c_str() );
-        if ( vkResult != VK_ERROR_DEVICE_LOST || _bDeviceLostReported.exchange( SW_TRUE ) == SW_TRUE )
+        if ( bDeviceLost == false )
             return;
+        SW_LOG_ERROR( "Vulkan device lost - submits, waits and presents stop; frames are skipped until shutdown" );
         reportDeviceFault();
+    }
+
+    bool VulkanRHIDevice::debugRemoveDevice()
+    {
+        if ( _device == VK_NULL_HANDLE )
+            return false;
+        SW_LOG_WARNING( "Marking the Vulkan device lost on request (rhi.removeDevice) - Vulkan cannot remove a device, so this is the state after the first "
+                        "VK_ERROR_DEVICE_LOST: no more submits, waits or presents" );
+        _bDeviceLost.store( SW_TRUE, std::memory_order_release );
+        return true;
     }
 
     void VulkanRHIDevice::noteSubmittedEventMarker( const utf8* pMarker )
@@ -139,10 +154,11 @@ namespace sw
 
     void VulkanRHIDevice::waitIdleInternal()
     {
-        if ( _device )
+        // 잃은 장치는 기다리지 않는다 — 끝나지 않을 일을 기다리게 되거나(TDR 중의 드라이버) 같은 손실만 다시 듣는다.
+        if ( _device && isDeviceLost() == false )
         {
             std::scoped_lock<mutex> queueLock{ _queueMutex };
-            vkDeviceWaitIdle( _device );
+            reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "waitIdle: vkDeviceWaitIdle" );
         }
         _releaseQueue.flushAll();
     }
@@ -271,7 +287,9 @@ namespace sw
         // 앞 프레임이 시작되지 못해 버려진 리스트가 있었으면 그 리스트가 앞서 바꾼 레이아웃 기록부터 되돌린다.
         restoreDroppedFrameLayouts();
         _bFrameStarted = SW_FALSE;
-        if ( _width == 0 || _height == 0 )
+        // 장치를 잃었으면 프레임을 시작하지 않는다(펜스 · 이미지 대기도, 스왑체인 다시 만들기도 하지 않는다). endFrame 은 시작하지 않은 프레임을 건너뛴다.
+        const bool bCannotStartFrame = _width == 0 || _height == 0 || isDeviceLost();
+        if ( bCannotStartFrame )
             return;
 
         // 재생성이 성공할 때만 표시를 내린다. 실패해도 내리면 복원 도중 한 번 실패한 뒤 스왑체인 없이 프레임을 **영영** 건너뛴다
@@ -325,6 +343,11 @@ namespace sw
                     return;
                 }
                 status = _swapChain.acquireNextImage( _device, _currentFrame );
+            }
+            if ( status == VulkanSwapChainStatus::DeviceLost )
+            {
+                reportQueueResult( static_cast<int32>( VK_ERROR_DEVICE_LOST ), "beginFrame: vkAcquireNextImageKHR" );
+                return;
             }
             if ( status == VulkanSwapChainStatus::OutOfDate || status == VulkanSwapChainStatus::Suboptimal )
             {
@@ -456,16 +479,20 @@ namespace sw
         if ( _frameStreamContext != nullptr )
             noteSubmittedEventMarker( _frameStreamContext->getLastEventMarker() );
         std::unique_lock<mutex> queueLock{ _queueMutex };
-        const VkResult          submitResult = vkQueueSubmit( _graphicsQueue, 1, &submitInfo, _listInFlightFence[_currentFrame] );
+        // 기록하는 사이에 장치를 잃었으면(다른 스레드의 손실 · rhi.removeDevice) 내지 않는다. 버퍼는 위에서 닫았다.
+        const bool     bDeviceLost  = isDeviceLost();
+        const VkResult submitResult = bDeviceLost ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &submitInfo, _listInFlightFence[_currentFrame] );
         reportQueueResult( static_cast<int32>( submitResult ), "endFrame: vkQueueSubmit" );
         // 이 링 슬롯의 쿼리 구간은 이제 "리셋 + 제출" 을 한 번은 거쳤다. 그 전에 읽으면 미정의다.
         if ( _bTimestampEnabled != SW_FALSE && _timestampPool != VK_NULL_HANDLE )
             _arrTimestampSubmitted[_currentFrame] = SW_TRUE;
 
-        if ( bPresent )
+        if ( bPresent && isDeviceLost() == false )
         {
             const VulkanSwapChainStatus presentStatus = _swapChain.present( _graphicsQueue ); // 큐 락 안(위의 queueLock)
-            if ( presentStatus == VulkanSwapChainStatus::OutOfDate || presentStatus == VulkanSwapChainStatus::Suboptimal )
+            if ( presentStatus == VulkanSwapChainStatus::DeviceLost )
+                reportQueueResult( static_cast<int32>( VK_ERROR_DEVICE_LOST ), "endFrame: vkQueuePresentKHR" );
+            else if ( presentStatus == VulkanSwapChainStatus::OutOfDate || presentStatus == VulkanSwapChainStatus::Suboptimal )
             {
                 // 다음 beginFrame 에서 스왑체인을 다시 만든다.
                 _bSwapChainDirty = 1;
@@ -636,7 +663,7 @@ namespace sw
         submitInfo.pCommandBuffers    = &listBuffer;
         noteSubmittedEventMarker( pList->getLastEventMarker() );
         std::scoped_lock<mutex> queueLock{ _queueMutex };
-        VkResult                queueResult = vkQueueSubmit( _graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE );
+        VkResult                queueResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE );
         if ( queueResult == VK_SUCCESS )
             queueResult = vkQueueWaitIdle( _graphicsQueue );
         reportQueueResult( static_cast<int32>( queueResult ), "executeCommandListImmediate" );
@@ -691,7 +718,7 @@ namespace sw
             }
             {
                 std::scoped_lock<mutex> queueLock{ _queueMutex };
-                const VkResult          flushResult = vkQueueSubmit( _graphicsQueue, 1, &flushInfo, VK_NULL_HANDLE );
+                const VkResult          flushResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &flushInfo, VK_NULL_HANDLE );
                 reportQueueResult( static_cast<int32>( flushResult ), "executeCommandList: vkQueueSubmit (immediate)" );
             }
             _listPendingSubmit.clear();
