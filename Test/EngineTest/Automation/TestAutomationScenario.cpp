@@ -396,14 +396,24 @@ SW_TEST_CASE( AutomationScenarioTest, LoadScenarioOpensTheMeasureWindowAndIgnore
         SW_EXPECT_TRUE_MSG( error.find( "Load" ) != sw::string::npos || error.find( "Pass" ) != sw::string::npos, error.c_str() );
     }
 
-    sw::GlobalVariableManager& variables      = sw::engine::getSubsystem<sw::GlobalVariableManager>();
-    const sw::string           profileSeconds = variables.findVariable( "gv_profileSeconds" ) != nullptr ? variables.findVariable( "gv_profileSeconds" )->getValueAsString() : "0";
+    sw::GlobalVariableManager& variables = sw::engine::getSubsystem<sw::GlobalVariableManager>();
+    sw::InputManager           input;
+    SW_ASSERT_TRUE( input.initialize() );
+    if ( variables.findVariable( "gv_profileSeconds" ) == nullptr )
+    {
+        // 프레임 프로파일러가 없는 구성(Shipping)은 측정 창을 열 수 없으니 <Load> 를 읽기 오류로 끝낸다.
+        SW_TEST_DEFENSIVE_SCOPE( "a build without the frame profiler rejects <Load>" );
+        sw::AutomationRunner runner;
+        SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately" timeoutFrames="8"><Load durationSeconds="2.2"/><At frame="1"><TestMark/></At></Scenario>)" ) );
+        SW_EXPECT_TRUE( Internal::run( runner, input, 30 ) == sw::AutomationResult::LoadError );
+        input.shutdown();
+        return;
+    }
+    const sw::string profileSeconds = variables.findVariable( "gv_profileSeconds" )->getValueAsString();
     SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [profileSeconds]()
     {
         (void)sw::engine::getSubsystem<sw::GlobalVariableManager>().setValueFromString( "gv_profileSeconds", profileSeconds ); // 원래 값으로 — 실패해도 다음 케이스가 이 변수를 읽지 않는다
     } ) );
-    sw::InputManager input;
-    SW_ASSERT_TRUE( input.initialize() );
     {
         sw::AutomationRunner runner;
         SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately" timeoutFrames="8"><Load durationSeconds="2.2"/><At frame="1"><TestMark/></At></Scenario>)" ) );
