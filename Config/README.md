@@ -21,6 +21,7 @@
 ## 함정과 주의
 
 **파일에는 기본값과 다른 값만 적습니다.** 언리얼의 `Default*.ini` 와 같은 방식이고, 기본값은 생성 문서에서 볼 수 있습니다.
+예외는 바탕 층 `Engine/EngineConfig.json` 입니다. 언리얼 `BaseEngine.ini` 처럼 값의 정본이라 모든 키를 적고, 헤더(`EngineConfig.h`)는 형식만 정합니다.
 기본값을 다시 적으면 나중에 코드의 기본값을 바꿔도 이 파일이 예전 값을 계속 씁니다. `ConfigFileSchemaTest` 가 이런 키를 막습니다(`ConfigManager::collectDefaultEchoKeys`). 앱이 통째로 쓰는 상태는 검사에서 뺍니다.
 
 **틀린 설정 파일은 엔진 시작을 멈춥니다.** 모르는 키, 대소문자만 다른 키, `Min`/`Max` 범위를 벗어난 값은 키 이름과 함께 오류를 냅니다.

@@ -57,11 +57,15 @@ namespace sw
     class SW_API FixedTimestep
     {
     public:
-        /** @brief @p defaults 를 기본값이자 첫 정책으로 둡니다. 값은 모두 0 보다 커야 합니다. */
-        explicit FixedTimestep( const FixedTimestepParams& defaults );
+        /** @brief 정책 없이 만듭니다. 설정을 읽은 뒤 `configure` 하기 전에는 `start` · `advance` 할 수 없습니다(값의 출처는 설정 파일 하나). */
+        FixedTimestep();
+        /** @brief @p params 를 정책으로 두고 만듭니다. 값은 모두 0 보다 커야 합니다. */
+        explicit FixedTimestep( const FixedTimestepParams& params );
 
-        /** @brief 시간 정책을 설정합니다. 0 이하의 값은 만들 때 받은 기본값으로 되돌립니다. */
+        /** @brief 시간 정책을 설정합니다. 값은 모두 0 보다 커야 합니다(설정 로드가 `Min` 으로 이미 본다 — 여기서 다른 값으로 바꾸지 않는다). */
         void configure( const FixedTimestepParams& params );
+        /** @brief 정책을 받았으면 true 입니다. */
+        bool isConfigured() const { return _params._fixedDeltaTime > 0.0f; }
         /** @brief 타이머와 누산기를 0 에서 다시 시작합니다. 루프 진입 직전에 한 번 부릅니다. */
         void start();
 
@@ -75,7 +79,6 @@ namespace sw
 
     private:
         GameTimer           _timer;
-        FixedTimestepParams _defaults;
         FixedTimestepParams _params;
         /** @brief 아직 고정 스텝으로 쓰지 못한 남은 시간(초)입니다. */
         float32 _accumulator;

@@ -187,10 +187,22 @@ namespace sw::editor
         return _readResult;
     }
 
+    bool ProjectSettingsDocument::isBaseLayer() const
+    {
+        return _pType != nullptr && _pType->_metadata.findCustomMeta( hashed_string( kBaseLayerMeta ) ) != nullptr;
+    }
+
     void ProjectSettingsDocument::resetToDefault()
     {
         if ( _pType == nullptr || _pCurrent == nullptr )
             return;
+        // 바탕 층은 값의 정본이 파일이다 — 기본값으로 되돌리기는 파일 값으로 되돌리기다(헤더의 형식은 값이 아니다).
+        const bool bRevertToFile = isBaseLayer() && FileUtil::isRegularFile( _path );
+        if ( bRevertToFile )
+        {
+            (void)revert(); // 읽지 못하면 revert 가 상태를 Invalid 로 남기고 저장을 막는다
+            return;
+        }
         void* pFresh = createInstance( *_pType );
         if ( pFresh == nullptr )
             return;
@@ -209,6 +221,9 @@ namespace sw::editor
         JSONDocument fullDocument;
         if ( fullDocument.parse( fullText ) == false || fullDocument.getRoot().isObject() == false )
             return {};
+        // 바탕 층(`ConfigBaseLayer`)은 파일이 값의 정본이라 모든 키를 쓴다(언리얼 `BaseEngine.ini` 와 같은 층).
+        if ( isBaseLayer() )
+            return fullDocument.dump( 4 );
         vector<string> listEqual;
         if ( _pDefault != nullptr && ConfigManager::collectEqualKeys( _pCurrent, _pDefault, *_pType, fullText, listEqual ) == false )
             return {};

@@ -64,6 +64,7 @@ class ConfigFileEntry:
     ownerDoc: str = ""            #: 칸 표 대신 원본 문서(파이썬이 원본인 계약 · 따로 문서가 있는 형식)
     bOptional: bool = False       #: 맞는 파일이 하나도 없어도 된다(게임 팩의 덮어쓰기 · 아직 없는 서버 설정)
     bOutsideRepo: bool = False    #: 저장소 밖 파일(사용자 폴더) — 대조하지 않는다
+    bBaseLayer: bool = False      #: 값의 정본이 이 파일이고 헤더는 형식만이다(언리얼 `BaseEngine.ini`) — 기본값 칸을 파일에서 읽는다
     note: str = ""                #: 색인에 붙일 한 줄
 
 
@@ -75,7 +76,8 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         reader="`ConfigManager::ensureConfig<EngineConfig>` (`Engine` Config 단계)",
         readWhen="기동 · 에디터 핫 리로드(창 크기 · 백엔드처럼 기동 때만 쓰는 값은 다음 실행부터)",
         shipping="configure 때 exe 에 구워 넣음(`ShippingHostDefaults.h`) — 디스크의 파일은 읽지 않는다", bCommitted=True,
-        typeName="EngineConfig", header="Source/Engine/Config/EngineConfig.h", keyStyle=kKeyStyleJsonMember),
+        typeName="EngineConfig", header="Source/Engine/Config/EngineConfig.h", keyStyle=kKeyStyleJsonMember, bBaseLayer=True,
+        note="바탕 층 — 모든 키를 적는다(헤더는 형식만, `_window._defaultRHI` 는 쿠킹 표가 정본)"),
     ConfigFileEntry(
         page="MemoryBudget", pathPattern="Config/Engine/MemoryBudget.json", layer=kLayerEngineDefault, fileFormat="json",
         reader="`MemoryBudgetMonitor::loadBudgetFile` (`Engine` Config 단계)", readWhen="기동",
@@ -91,6 +93,11 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         reader="`PhysicsSettings::loadFromResource` (`PhysicsSystem`)", readWhen="기동(씬 물리를 처음 세울 때)",
         shipping="엔진 팩에 실림", bCommitted=True,
         typeName="PhysicsSettings", header="Source/Engine/Physics/PhysicsSettings.h", keyStyle=kKeyStyleXmlMember),
+    ConfigFileEntry(
+        page="", pathPattern="Resource/engine/settings/netemulation.presets.xml", layer=kLayerEngineDefault, fileFormat="xml",
+        reader="`NetEmulationPresetTable::loadFromResource` (개발 명령 `net.emulation` · 에디터 Multiplayer · 부하 시나리오 `<Load network>`)",
+        readWhen="쓸 때마다", shipping="엔진 팩에 실림(회선 흉내는 Dev 전용)", bCommitted=True,
+        ownerDoc="Source/Engine/Config/NetEmulationPresetTable.h"),
     ConfigFileEntry(
         page="NavMeshSettings", pathPattern="Resource/engine/navigation/navmeshsettings.xml", layer=kLayerEngineDefault, fileFormat="xml",
         reader="`NavMeshSettings` (`ResourceCatalog`)", readWhen="처음 쓸 때 · 내비메시 쿠킹",
@@ -166,6 +173,10 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         shipping="플레이어 PC 에 생긴다 — 배포된 플레이어 데이터(이름을 바꾸면 스키마 `<Upgrade>`)", bCommitted=False, bOutsideRepo=True,
         note="Linux 는 `$XDG_CONFIG_HOME/swengine/<팩>/` · 자동화는 `-gv_userSettingsFile=<경로>`"),
     # --- 에디터 도구 --------------------------------------------------------------------------------------------------------
+    ConfigFileEntry(
+        page="", pathPattern="Resource/editor/settings/uipreview.resolutions.xml", layer=kLayerEditor, fileFormat="xml",
+        reader="`UIPreviewResolutionTable::loadFromResource` (UI 미리보기 패널을 처음 그릴 때)", readWhen="패널을 처음 그릴 때",
+        shipping="없음(에디터 없음)", bCommitted=True, ownerDoc="Source/Editor/Panels/UIPreview/UIPreviewLogic.h"),
     ConfigFileEntry(
         page="EditorToolDefaults", pathPattern="Config/Editor/editortooldefaults.json", layer=kLayerEditor, fileFormat="json",
         reader="`EditorToolDefaults::loadFromHostPath` (에디터 모듈 기동)", readWhen="에디터 기동 · 에디터 핫 리로드",

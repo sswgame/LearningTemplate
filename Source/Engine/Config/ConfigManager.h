@@ -171,8 +171,11 @@ namespace sw
                 return getConfig<T>();
             }
 
-            unique_ptr<T> fallback        = make_unique<T>();
-            T* const      pRaw            = fallback.get();
+            // 파일도 생성 JSON 도 없으면 C++ 형식이다. 값이 파일에만 있는 설정(`EngineConfig`)은 형식이 범위를 넘으므로 여기서 기동이 멈춘다.
+            unique_ptr<T> fallback = make_unique<T>();
+            if ( isWithinRange( fallback.get(), *T::StaticType(), "cpp defaults" ) == false )
+                return nullptr;
+            T* const pRaw                 = fallback.get();
             _mapConfig[getConfigKey<T>()] = std::move( fallback );
             SW_LOG_WARNING( "%# using cpp defaults", pTypeName );
             return pRaw;
@@ -197,6 +200,8 @@ namespace sw
          *          구조체 필드 안의 모르는 키는 바깥 필드 이름과 본문으로 표시된다.
          */
         [[nodiscard]] static bool readConfigJSON( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr, const utf8* pSourceLabel );
+        /** @brief 숫자 칸이 모두 `Min`/`Max` 안이면 true 이고, 밖이면 칸마다 오류를 남기고 false 입니다. */
+        [[nodiscard]] static bool isWithinRange( const void* pInstance, const TypeInfo& typeInfo, const utf8* pSourceLabel );
 
         /** @brief `readConfigJSON` 의 타입 지정 버전입니다. */
         template <typename T>

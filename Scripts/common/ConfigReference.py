@@ -710,6 +710,35 @@ def makeFieldTableInternal(typeDoc: TypeDoc) -> list[str]:
     return lines
 
 
+def formatBaseValueInternal(value: object) -> str:
+    """바탕 층 파일의 JSON 값을 기본값 칸 글로 씁니다(목록은 쉼표, 참거짓은 소문자)."""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, list):
+        return ", ".join(formatBaseValueInternal(item) for item in value)
+    return str(value)
+
+
+def applyBaseLayerDefaultsInternal(repositoryRoot: Path, entry: ConfigFileEntry, listTypeDoc: list[TypeDoc]) -> None:
+    """바탕 층(값의 정본이 파일이고 헤더는 형식만)이면 기본값 칸을 그 파일의 값으로 채웁니다. 구조체 칸은 그 타입 절에 씁니다."""
+    if not entry.bBaseLayer or not listTypeDoc:
+        return
+    root = json.loads((repositoryRoot / entry.pathPattern).read_text(encoding="utf-8"))
+    mapTypeValue: dict[str, dict] = {listTypeDoc[0].name: root}
+    for typeDoc in listTypeDoc:
+        values = mapTypeValue.get(typeDoc.name)
+        if values is None:
+            continue
+        for fieldDoc in typeDoc.listField:
+            if fieldDoc.name not in values:
+                continue
+            value = values[fieldDoc.name]
+            if isinstance(value, dict):
+                mapTypeValue[fieldDoc.typeName] = value
+                continue
+            fieldDoc.defaultText = formatBaseValueInternal(value)
+
+
 def collectReferencedNamesInternal(typeName: str) -> list[str]:
     """타입 글에 든 식별자들(`vector<PhysicsLayerDef>` → `vector`, `PhysicsLayerDef`)입니다."""
     return re.findall(r"[A-Za-z_]\w*", typeName)
@@ -754,6 +783,7 @@ def makeEntryPage(repositoryRoot: Path, entry: ConfigFileEntry, index: SourceInd
         typeDoc = parseKeyTableInternal(repositoryRoot, entry.keyTableSource, tableName)
         if typeDoc is not None:
             listTypeDoc.append(typeDoc)
+    applyBaseLayerDefaultsInternal(repositoryRoot, entry, listTypeDoc)
 
     for typeIndex, typeDoc in enumerate(listTypeDoc):
         title = "필드" if typeIndex == 0 else f"`{typeDoc.name}`"

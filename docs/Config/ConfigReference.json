@@ -31,7 +31,7 @@
       {
        "name": "_fixedDeltaTime",
        "type": "float32",
-       "default": "1.0 / 60.0",
+       "default": "0.016666668",
        "min": "0.001",
        "max": "",
        "units": "s",
@@ -95,7 +95,7 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "명령줄이 고르지 않았을 때 쓸 백엔드(기본값은 쿠킹 표 `default_rhi_backend`)"
+       "description": "명령줄이 고르지 않았을 때 쓸 백엔드(값의 출처는 쿠킹 표 `default_rhi_backend` — 파일에 적으면 그것이 이긴다)"
       },
       {
        "name": "_bVSync",
@@ -3254,8 +3254,8 @@
    "type": "string",
    "default": "",
    "kind": "시험",
-   "description": "네트워크 흉내: 회선 프리셋(off · lan · wifi · lte · badwifi — 비면 위 값들, 있으면 위 값들을 무시)",
-   "source": "Source/Core/Network/Transport/NetEmulation.cpp"
+   "description": "네트워크 흉내: 회선 프리셋 이름(engine/settings/netemulation.presets.xml — 비면 gv_netEmu* 낱값)",
+   "source": "Source/GameFramework/Base/Foundation/Framework/Net/GameNetSession.cpp"
   },
   {
    "name": "gv_netEmuReorderPercent",
@@ -3490,11 +3490,11 @@
    "source": "Source/Server/ServerApp.cpp"
   },
   {
-   "name": "gv_shadowQuality",
+   "name": "gv_shadowMapResolution",
    "type": "int32",
-   "default": "2",
+   "default": "2048",
    "kind": "일반",
-   "description": "그림자 품질 0~3 (사용자 설정 graphics.shadowQuality)",
+   "description": "그림자 맵 한 변 텍셀 수 (사용자 설정 graphics.shadowQuality 의 targetValue)",
    "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
   },
   {

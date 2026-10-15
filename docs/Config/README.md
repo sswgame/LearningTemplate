@@ -16,10 +16,11 @@
 
 | 파일 | 읽는 곳과 시점 | 배포본 | 커밋 | 문서 |
 |---|---|---|---|---|
-| `Config/Engine/EngineConfig.json` | `ConfigManager::ensureConfig<EngineConfig>` (`Engine` Config 단계) — 기동 · 에디터 핫 리로드(창 크기 · 백엔드처럼 기동 때만 쓰는 값은 다음 실행부터) | configure 때 exe 에 구워 넣음(`ShippingHostDefaults.h`) — 디스크의 파일은 읽지 않는다 | 한다 | [EngineConfig](EngineConfig.md) |
+| `Config/Engine/EngineConfig.json` | `ConfigManager::ensureConfig<EngineConfig>` (`Engine` Config 단계) — 기동 · 에디터 핫 리로드(창 크기 · 백엔드처럼 기동 때만 쓰는 값은 다음 실행부터). 바탕 층 — 모든 키를 적는다(헤더는 형식만, `_window._defaultRHI` 는 쿠킹 표가 정본) | configure 때 exe 에 구워 넣음(`ShippingHostDefaults.h`) — 디스크의 파일은 읽지 않는다 | 한다 | [EngineConfig](EngineConfig.md) |
 | `Config/Engine/MemoryBudget.json` | `MemoryBudgetMonitor::loadBudgetFile` (`Engine` Config 단계) — 기동 | 읽지 않음(배포본에는 메모리 프로파일러가 없다) | 한다 | [MemoryBudget](MemoryBudget.md) |
 | `Resource/engine/data/enginedefaultassets.xml` | `EngineDefaultAssets::loadFromResource` (`Engine` 엔진 셸 단계) — 기동 | 엔진 팩에 실림 | 한다 | [EngineDefaultAssets](EngineDefaultAssets.md) |
 | `Resource/engine/physics/physicssettings.xml` | `PhysicsSettings::loadFromResource` (`PhysicsSystem`) — 기동(씬 물리를 처음 세울 때) | 엔진 팩에 실림 | 한다 | [PhysicsSettings](PhysicsSettings.md) |
+| `Resource/engine/settings/netemulation.presets.xml` | `NetEmulationPresetTable::loadFromResource` (개발 명령 `net.emulation` · 에디터 Multiplayer · 부하 시나리오 `<Load network>`) — 쓸 때마다 | 엔진 팩에 실림(회선 흉내는 Dev 전용) | 한다 | [형식 설명](../../Source/Engine/Config/NetEmulationPresetTable.h) |
 | `Resource/engine/navigation/navmeshsettings.xml` | `NavMeshSettings` (`ResourceCatalog`) — 처음 쓸 때 · 내비메시 쿠킹 | 엔진 팩에 실림 | 한다 | [NavMeshSettings](NavMeshSettings.md) |
 | `Resource/engine/animation/lipsync.json` | `LipSyncSettings::loadFromResource` (`FacialAnimationComponent::speak` · `App --import-lipsync`) — 처음 말할 때 · 립싱크 임포트. 비즘 이름은 얼굴 리그(`*.facial.json`)의 `_listViseme` 와 맞춘다 | 엔진 팩에 실림 | 한다 | [LipSyncSettings](LipSyncSettings.md) |
 | `Resource/engine/data/render2d.xml` | `Render2DSettings::getActive` (손으로 읽음 — 모르는 요소 · 속성은 오류) — 처음 쓸 때 · `reloadActive`. 활성 게임 팩의 `data/render2d.xml` 이 있으면 통째로 대신한다 | 엔진 팩에 실림 | 한다 | [형식 설명](../../Source/Engine/Graphics/2D/Render2DSettings.h) |
@@ -54,6 +55,7 @@
 
 | 파일 | 읽는 곳과 시점 | 배포본 | 커밋 | 문서 |
 |---|---|---|---|---|
+| `Resource/editor/settings/uipreview.resolutions.xml` | `UIPreviewResolutionTable::loadFromResource` (UI 미리보기 패널을 처음 그릴 때) — 패널을 처음 그릴 때 | 없음(에디터 없음) | 한다 | [형식 설명](../../Source/Editor/Panels/UIPreview/UIPreviewLogic.h) |
 | `Config/Editor/editortooldefaults.json` | `EditorToolDefaults::loadFromHostPath` (에디터 모듈 기동) — 에디터 기동 · 에디터 핫 리로드. 기본값과 다른 값이 있을 때만 만든다 — 없으면 기본값 | 없음(에디터 없음) | 한다 | [EditorToolDefaults](EditorToolDefaults.md) |
 | `Saved/Editor/EditorPreferences.json` | `EditorPreferencesStore::loadAll` · `saveAll` — 에디터 기동 · 환경설정 창에서 값을 바꾼 0.5 초 뒤 · 테마 저장 때 **앱이 통째로 다시 쓴다**. 환경설정 섹션(`SW_EDITOR_SETTINGS`)마다 기본과 다른 값만 — 앱이 쓰는 상태(`Saved/`, git 무시) | 없음(에디터 없음) | 안 한다 |  |
 | `Config/Editor/TextureImportConfig.json` | `TextureImportConfig::loadFromFile` (손으로 읽음) — 텍스처 임포트(에디터 · `App --import-textures`) | 없음(임포트는 Dev 만) | 한다 | [TextureImportConfig](TextureImportConfig.md) |

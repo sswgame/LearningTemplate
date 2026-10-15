@@ -38,7 +38,6 @@
 | `gv_netEmuJitterMs` | `int32` | `0` | 시험 | 네트워크 흉내: ± 흔들림(ms) — PktLagVariance | [NetEmulation.cpp](../../Source/Core/Network/Transport/NetEmulation.cpp) |
 | `gv_netEmuLatencyMs` | `int32` | `0` | 시험 | 네트워크 흉내: 한쪽 지연(ms) — 언리얼 PktLag | [NetEmulation.cpp](../../Source/Core/Network/Transport/NetEmulation.cpp) |
 | `gv_netEmuLossPercent` | `int32` | `0` | 시험 | 네트워크 흉내: 손실(%) — PktLoss | [NetEmulation.cpp](../../Source/Core/Network/Transport/NetEmulation.cpp) |
-| `gv_netEmuPreset` | `string` | — | 시험 | 네트워크 흉내: 회선 프리셋(off · lan · wifi · lte · badwifi — 비면 위 값들, 있으면 위 값들을 무시) | [NetEmulation.cpp](../../Source/Core/Network/Transport/NetEmulation.cpp) |
 | `gv_netEmuReorderPercent` | `int32` | `0` | 시험 | 네트워크 흉내: 순서 뒤바뀜(%) — PktOrder | [NetEmulation.cpp](../../Source/Core/Network/Transport/NetEmulation.cpp) |
 
 ## `Source/Editor`
@@ -217,7 +216,7 @@
 | `gv_postQuality` | `int32` | `2` | 일반 | 후처리 품질 0~3 (사용자 설정 graphics.postQuality) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_reduceFlashing` | `bool` | `false` | 일반 | 번쩍임 줄이기 (사용자 설정 accessibility.reduceFlashing) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_renderScale` | `float32` | `1.0` | 일반 | 3D 렌더 해상도 배율 0.5~1 (사용자 설정 graphics.renderScale, 렌더러 미구현) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
-| `gv_shadowQuality` | `int32` | `2` | 일반 | 그림자 품질 0~3 (사용자 설정 graphics.shadowQuality) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
+| `gv_shadowMapResolution` | `int32` | `2048` | 일반 | 그림자 맵 한 변 텍셀 수 (사용자 설정 graphics.shadowQuality 의 targetValue) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_subtitleBackgroundOpacity` | `float32` | `0.5` | 일반 | 자막 배경 불투명도 0~1 (사용자 설정 accessibility.subtitleBackground) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_subtitles` | `bool` | `true` | 일반 | 자막 표시 (사용자 설정 accessibility.subtitles) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_subtitleSize` | `int32` | `1` | 일반 | 자막 크기 0 작게 1 보통 2 크게 (사용자 설정 accessibility.subtitleSize) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
@@ -244,6 +243,7 @@
 | `gv_cameraPreset` | `string` | — | 시험 · 배포본에도 | 카메라 디렉터의 시작 프리셋 id (캡처 카메라 제외, 비우면 데이터대로) | [CameraDirectorComponent.cpp](../../Source/GameFramework/Base/Actor/Camera/CameraDirectorComponent.cpp) |
 | `gv_firstScene` | `string` | — | 시험 · 배포본에도 | 팩 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함) | [GameInstanceBase.cpp](../../Source/GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.cpp) |
 | `gv_netConnectAddress` | `string` | — | 시험 | 클라이언트로 붙을 게임 서버 주소 (주소:포트, 비면 끄기) | [GameNetSession.cpp](../../Source/GameFramework/Base/Foundation/Framework/Net/GameNetSession.cpp) |
+| `gv_netEmuPreset` | `string` | — | 시험 | 네트워크 흉내: 회선 프리셋 이름(engine/settings/netemulation.presets.xml — 비면 gv_netEmu* 낱값) | [GameNetSession.cpp](../../Source/GameFramework/Base/Foundation/Framework/Net/GameNetSession.cpp) |
 | `gv_netListenPort` | `int32` | `0` | 시험 | 게임 네트워크 서버로 열 UDP 포트 (0=끄기) | [GameNetSession.cpp](../../Source/GameFramework/Base/Foundation/Framework/Net/GameNetSession.cpp) |
 | `gv_netLoopbackOnly` | `bool` | `true` | 시험 | 게임 UDP 소켓을 127.0.0.1 에만 묶는다 (0=모든 인터페이스, 다른 기계와 붙을 때) | [GameNetSession.cpp](../../Source/GameFramework/Base/Foundation/Framework/Net/GameNetSession.cpp) |
 | `gv_scheduleTrace` | `string` | — | 시험 | Schedule: log the why-am-I-here trace and today's timeline of this NPC id (* = all) when the value changes | [ScheduleSystemDebug.cpp](../../Source/GameFramework/Base/Actor/AI/Schedule/ScheduleSystemDebug.cpp) |
