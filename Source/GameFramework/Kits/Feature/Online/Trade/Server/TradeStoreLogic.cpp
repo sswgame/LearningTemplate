@@ -22,6 +22,30 @@ namespace sw
             static constexpr uint64 kSettleAuditUnique = 0x5E771Eull; ///< 정산 감사 기록은 거래당 하나이다. 재시도가 둘을 만들지 않게 한다
             static constexpr int32  kMaxRecoverCount   = 256;
 
+            static vector<uint8> encodeSession( const TradeSnapshot& snapshot, uint64 ownerServerID )
+            {
+                BitWriter writer;
+                writer.writeBits( kRecordFormat, 8 );
+                writer.writeVarUint( ownerServerID );
+                TradeWire::writeSnapshot( writer, snapshot );
+                return writer.releaseBytes();
+            }
+
+            [[nodiscard]] static bool decodeSession( const vector<uint8>& bytes, TradeSnapshot& outSnapshot, uint64& outOwnerServerID )
+            {
+                BitReader reader{ bytes.data(), static_cast<int32>( bytes.size() ) };
+                if ( reader.readBits( 8 ) != kRecordFormat )
+                    return false;
+                outOwnerServerID = reader.readVarUint();
+                return TradeWire::readSnapshot( reader, outSnapshot );
+            }
+
+            /** @brief 정산 분개 키를 만듭니다. */
+            [[nodiscard]] static bool makeJournalKey( uint64 tradeID, string& outKey )
+            {
+                return LedgerJournalKey::makeFromToken( "trade", ServiceKeyUtil::makeHex64( tradeID ), outKey );
+            }
+
             static uint64 mixSeed( uint64 value )
             {
                 return HashUtil::mix64( value + HashUtil::kGoldenRatio64 );
@@ -153,7 +177,7 @@ namespace sw
                     closedTradeID        = stale._snapshot._tradeID;
                     TradeSnapshot closed = stale._snapshot;
                     TradeStateMachine::close( closed, TradeState::Cancelled, TradeCloseReason::Timeout, nowMs );
-                    transaction.put( getSessionTable(), ServiceKeyUtil::makeHex64( closed._tradeID ), TradeRecordUtil::encodeSession( closed, stale._ownerServerID ),
+                    transaction.put( getSessionTable(), ServiceKeyUtil::makeHex64( closed._tradeID ), TradeStoreLogicInternal::encodeSession( closed, stale._ownerServerID ),
                                      stale._version );
                     transaction.erase( getOwnerTable(), Internal::makeOwnerKey( stale._ownerServerID, closed._tradeID ) );
                 }
@@ -168,7 +192,7 @@ namespace sw
             // 쓰기 번호 0과 1이 두 활성 링크이다. Conflict 번호로 누가 바쁜지 구분한다
             transaction.put( getActiveTable(), ServiceKeyUtil::makeHex64( fromID ), Internal::encodeID( tradeID ), arrLinkVersion[0] );
             transaction.put( getActiveTable(), ServiceKeyUtil::makeHex64( toID ), Internal::encodeID( tradeID ), arrLinkVersion[1] );
-            transaction.put( getSessionTable(), ServiceKeyUtil::makeHex64( tradeID ), TradeRecordUtil::encodeSession( trade, _serverID ), ServiceRecord::kAbsentVersion );
+            transaction.put( getSessionTable(), ServiceKeyUtil::makeHex64( tradeID ), TradeStoreLogicInternal::encodeSession( trade, _serverID ), ServiceRecord::kAbsentVersion );
             transaction.put( getOwnerTable(), Internal::makeOwnerKey( _serverID, tradeID ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
             ServiceCommitInfo        info;
             const ServiceStoreResult committed = _connection.commit( transaction, &info );
@@ -231,7 +255,7 @@ namespace sw
             bool                  bStaged = false;
             if ( bSettle )
             {
-                if ( TradeRecordUtil::makeJournalKey( tradeID, request._journalKey ) == false )
+                if ( TradeStoreLogicInternal::makeJournalKey( tradeID, request._journalKey ) == false )
                     return TradeResult::Invalid;
                 request._reason    = "trade.settle";
                 request._pPolicy   = _pLedgerPolicy;
@@ -287,7 +311,7 @@ namespace sw
             }
             else
             {
-                transaction.put( getSessionTable(), ServiceKeyUtil::makeHex64( tradeID ), TradeRecordUtil::encodeSession( next, session._ownerServerID ), session._version );
+                transaction.put( getSessionTable(), ServiceKeyUtil::makeHex64( tradeID ), TradeStoreLogicInternal::encodeSession( next, session._ownerServerID ), session._version );
             }
 
             const ServiceStoreResult committed = _connection.commit( transaction );
@@ -418,7 +442,7 @@ namespace sw
             return TradeResult::NotFound;
         if ( read != ServiceStoreResult::Ok )
             return TradeResult::Unavailable;
-        if ( TradeRecordUtil::decodeSession( raw._bytes, outSession._snapshot, outSession._ownerServerID ) == false )
+        if ( TradeStoreLogicInternal::decodeSession( raw._bytes, outSession._snapshot, outSession._ownerServerID ) == false )
         {
             SW_LOG_ERROR( "trade record %# is corrupt", ServiceKeyUtil::makeHex64( tradeID ).c_str() );
             return TradeResult::Unavailable;
@@ -429,7 +453,7 @@ namespace sw
 
     void TradeStoreLogic::stageClose( const SessionRead& session, const TradeSnapshot& closed, ServiceTransaction& inoutTransaction )
     {
-        inoutTransaction.put( getSessionTable(), ServiceKeyUtil::makeHex64( closed._tradeID ), TradeRecordUtil::encodeSession( closed, session._ownerServerID ),
+        inoutTransaction.put( getSessionTable(), ServiceKeyUtil::makeHex64( closed._tradeID ), TradeStoreLogicInternal::encodeSession( closed, session._ownerServerID ),
                               session._version );
         for ( const TradeSide& side : closed._arrSide )
         {
@@ -449,28 +473,5 @@ namespace sw
                 return TradeResult::InsufficientFunds;
         }
         return TradeResult::Ok;
-    }
-
-    vector<uint8> TradeRecordUtil::encodeSession( const TradeSnapshot& snapshot, uint64 ownerServerID )
-    {
-        BitWriter writer;
-        writer.writeBits( TradeStoreLogicInternal::kRecordFormat, 8 );
-        writer.writeVarUint( ownerServerID );
-        TradeWire::writeSnapshot( writer, snapshot );
-        return writer.releaseBytes();
-    }
-
-    bool TradeRecordUtil::decodeSession( const vector<uint8>& bytes, TradeSnapshot& outSnapshot, uint64& outOwnerServerID )
-    {
-        BitReader reader{ bytes.data(), static_cast<int32>( bytes.size() ) };
-        if ( reader.readBits( 8 ) != TradeStoreLogicInternal::kRecordFormat )
-            return false;
-        outOwnerServerID = reader.readVarUint();
-        return TradeWire::readSnapshot( reader, outSnapshot );
-    }
-
-    bool TradeRecordUtil::makeJournalKey( uint64 tradeID, string& outKey )
-    {
-        return LedgerJournalKey::makeFromToken( "trade", ServiceKeyUtil::makeHex64( tradeID ), outKey );
     }
 } // namespace sw
