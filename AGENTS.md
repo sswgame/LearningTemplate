@@ -64,8 +64,10 @@ cmake --build --preset Ninja-Debug
   (`bool`, `int32`, `float32`, `sw::string` or a reflected enum). Runtime settings someone would change in the editor use
   `SW_GLOBAL_VARIABLE( type, name, default, desc )`. Bench, automation and diagnostic switches use `SW_TEST_GLOBAL_VARIABLE`: they
   stay settable with `-gv_*` but are hidden from the editor panel and presets and are **not registered in Shipping**. Use
-  `SW_TEST_GLOBAL_VARIABLE_SHIPPED` only when scripts must drive the shipped executable with it
-  (`gv_profileFrames`, `gv_screenshot*`, `gv_crashTest`, `gv_bench*`). An `extern` is `SW_EXTERN_GLOBAL_VARIABLE( type, name )` for
+  `SW_TEST_GLOBAL_VARIABLE_SHIPPED` only when scripts must drive the shipped executable with it — the list and the reason per variable
+  live in `Scripts/lint/rules/CheckGlobalVariableKinds.toml` `[shipped]`, and a SHIPPED definition outside it stops the gate. Release is not
+  Shipping: test variables stay registered in Release, so measurement and bench switches (`gv_bench*`) and crash switches (`gv_crashTest`)
+  are plain `SW_TEST_GLOBAL_VARIABLE`. An `extern` is `SW_EXTERN_GLOBAL_VARIABLE( type, name )` for
   every kind; `CheckGlobalVariableKinds.py` blocks a type that differs from the definition.
 - Static variables: `s_camelCase`; private statics: `_s_camelCase`.
 - Macros: `SW_SCREAMING_CASE`.

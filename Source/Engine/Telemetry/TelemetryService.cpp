@@ -28,7 +28,7 @@
 namespace sw
 {
     /** @brief `-gv_telemetryFolder=<경로>`: 텔레메트리 스풀 폴더입니다(자동화 — 사용자 폴더를 건드리지 않는다). 비면 사용자 설정 파일 옆의 `telemetry/`. */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::string, gv_telemetryFolder, "", "텔레메트리 스풀 폴더 (비면 사용자 폴더의 telemetry/)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_telemetryFolder, "", "텔레메트리 스풀 폴더 (비면 사용자 폴더의 telemetry/)" );
 } // namespace sw
 
 namespace sw

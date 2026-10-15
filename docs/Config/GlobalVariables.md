@@ -17,9 +17,9 @@
 | `gv_rhiSwapAtFrame` | `int32` | `0` | 시험 | 이 프레임에 백엔드 교체를 요청한다 (0=사용 안 함) | [RHIBackendSwitcher.cpp](../../Source/App/RHIBackendSwitcher.cpp) |
 | `gv_rhiSwapTo` | `RHIBackend` | `DirectX12` | 시험 | gv_rhiSwapAtFrame 에 바꿀 백엔드 | [RHIBackendSwitcher.cpp](../../Source/App/RHIBackendSwitcher.cpp) |
 | `gv_standardInputCommands` | `int32` | `0` | 시험 | 표준 입력의 줄을 명령으로 받는다 (quit=종료, 1=켜기) | [DevConsoleHost.cpp](../../Source/App/DevConsoleHost.cpp) |
-| `gv_userSettingsApply` | `string` | — | 시험 · 배포본에도 | 사용자 설정을 메뉴와 같은 길로 바꾼다: "id=value;id=value" (자동화) | [UserSettingsHost.cpp](../../Source/App/UserSettingsHost.cpp) |
-| `gv_userSettingsApplyFrame` | `int32` | `30` | 시험 · 배포본에도 | gv_userSettingsApply 를 적용할 프레임 | [UserSettingsHost.cpp](../../Source/App/UserSettingsHost.cpp) |
-| `gv_userSettingsAutoConfirm` | `bool` | `true` | 시험 · 배포본에도 | gv_userSettingsApply 의 화면 변경을 바로 확인한다 (false 면 카운트다운이 되돌린다) | [UserSettingsHost.cpp](../../Source/App/UserSettingsHost.cpp) |
+| `gv_userSettingsApply` | `string` | — | 시험 | 사용자 설정을 메뉴와 같은 길로 바꾼다: "id=value;id=value" (자동화) | [UserSettingsHost.cpp](../../Source/App/UserSettingsHost.cpp) |
+| `gv_userSettingsApplyFrame` | `int32` | `30` | 시험 | gv_userSettingsApply 를 적용할 프레임 | [UserSettingsHost.cpp](../../Source/App/UserSettingsHost.cpp) |
+| `gv_userSettingsAutoConfirm` | `bool` | `true` | 시험 | gv_userSettingsApply 의 화면 변경을 바로 확인한다 (false 면 카운트다운이 되돌린다) | [UserSettingsHost.cpp](../../Source/App/UserSettingsHost.cpp) |
 
 ## `Source/Core/File`
 
@@ -102,7 +102,7 @@
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
-| `gv_environmentAnimate` | `int32` | `1` | 시험 · 배포본에도 | 바람 · 파도 시간이 흐른다 (0=멈춤, 스크린샷 비교용) | [EnvironmentUtil.cpp](../../Source/Engine/Environment/EnvironmentUtil.cpp) |
+| `gv_environmentAnimate` | `int32` | `1` | 시험 | 바람 · 파도 시간이 흐른다 (0=멈춤, 스크린샷 비교용) | [EnvironmentUtil.cpp](../../Source/Engine/Environment/EnvironmentUtil.cpp) |
 
 ## `Source/Engine/Graphics`
 
@@ -132,7 +132,7 @@
 | `gv_memoryTracking` | `int32` | `-1` | 시험 | 메모리 태그 추적 (-1=구성 기본, 0=끄기, 1=켜기) | [MemoryBudgetMonitor.cpp](../../Source/Engine/Profiling/MemoryBudgetMonitor.cpp) |
 | `gv_profileAllocSites` | `int32` | `0` | 시험 | 측정 구간의 할당을 콜스택별로 세어 상위 N 곳을 보고 (0=끄기) | [FrameProfileSession.cpp](../../Source/Engine/Profiling/FrameProfileSession.cpp) |
 | `gv_profileFrames` | `int32` | `0` | 시험 · 배포본에도 | 프레임 프로파일 측정 프레임 수 (0=사용 안 함) | [FrameProfileSession.cpp](../../Source/Engine/Profiling/FrameProfileSession.cpp) |
-| `gv_profileSeconds` | `int32` | `0` | 시험 · 배포본에도 | 프레임 프로파일 측정 시간(초, 0=사용 안 함) | [FrameProfileSession.cpp](../../Source/Engine/Profiling/FrameProfileSession.cpp) |
+| `gv_profileSeconds` | `int32` | `0` | 시험 | 프레임 프로파일 측정 시간(초, 0=사용 안 함) | [FrameProfileSession.cpp](../../Source/Engine/Profiling/FrameProfileSession.cpp) |
 | `gv_profileTracePath` | `string` | — | 시험 | 측정 창 전체를 이 경로에 트레이스로 저장 (비면 끄기) | [FrameProfileSession.cpp](../../Source/Engine/Profiling/FrameProfileSession.cpp) |
 | `gv_traceSaveOnExit` | `string` | — | 시험 | 종료할 때 최근 프레임의 타임라인을 이 경로에 트레이스로 저장 (비면 끄기) | [ProfilerTraceExport.cpp](../../Source/Engine/Profiling/ProfilerTraceExport.cpp) |
 | `gv_traceSlowTickMs` | `int32` | `0` | 시험 | 틱 본문이 N ms 를 넘으면 앞뒤 프레임을 트레이스로 저장 (0=끄기) | [ProfilerTraceExport.cpp](../../Source/Engine/Profiling/ProfilerTraceExport.cpp) |
@@ -144,7 +144,7 @@
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
 | `gv_canvasTestPattern` | `bool` | `false` | 시험 | 주 출력에 캔버스(화면 2D) 시험 그림을 그린다 — 사각형 · 자르기 · 그림자 · 글자 | [RenderPacketBuilder.cpp](../../Source/Engine/Renderer/Frame/Packet/RenderPacketBuilder.cpp) |
-| `gv_crashTest` | `int32` | `0` | 시험 · 배포본에도 | 일부러 크래시를 내 리포트 경로를 검증합니다 (1=널 쓰기 2=스택 오버플로 3=작업 스레드 스택 오버플로 4=abort 5=순수 가상 호출) | [RHISubsystem.cpp](../../Source/Engine/Renderer/RHISubsystem.cpp) |
+| `gv_crashTest` | `int32` | `0` | 시험 | 일부러 크래시를 내 리포트 경로를 검증합니다 (1=널 쓰기 2=스택 오버플로 3=작업 스레드 스택 오버플로 4=abort 5=순수 가상 호출) | [RHISubsystem.cpp](../../Source/Engine/Renderer/RHISubsystem.cpp) |
 | `gv_deferred` | `bool` | `false` | 일반 | 기본 파이프라인을 디퍼드로 (기본 포워드) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
 | `gv_drawMerge` | `int32` | `1` | 일반 | 씬 배치 멀티 드로우 묶기 (0=배치마다 호출, 진단용) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
 | `gv_dumpRenderGraph` | `bool` | `false` | 시험 | 렌더 그래프를 컴파일할 때마다 레벨 · 패스 · 읽고 쓰는 자원을 로그로 남긴다 | [FrameRendererPassExecute.cpp](../../Source/Engine/Renderer/Frame/FrameRendererPassExecute.cpp) |
@@ -154,10 +154,10 @@
 | `gv_renderViewBudget` | `int32` | `4` | 일반 | 한 프레임에 그리는 추가 뷰(CCTV · 백미러 · PiP)의 최대 수 (0 = 제한 없음) | [RenderViewCollector.cpp](../../Source/Engine/Renderer/Frame/View/RenderViewCollector.cpp) |
 | `gv_rhiImmediateSubmit` | `bool` | `false` | 일반 | RHI 커맨드 리스트를 프레임 끝에 모아 제출하지 않고 즉시 제출 (디버깅용, 오버헤드 큼) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
 | `gv_screenshot` | `string` | — | 시험 · 배포본에도 | 화면에 나간 그림(Present 결과)을 PPM 으로 덤프할 경로 (비면 사용 안 함) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
-| `gv_screenshotAttachment` | `string` | — | 시험 · 배포본에도 | Present 결과 대신 덤프할 트랜지언트 이름 (비면 Present 결과) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
-| `gv_screenshotCount` | `int32` | `1` | 시험 · 배포본에도 | 연속으로 찍을 스크린샷 수 (기본 1) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
+| `gv_screenshotAttachment` | `string` | — | 시험 | Present 결과 대신 덤프할 트랜지언트 이름 (비면 Present 결과) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
+| `gv_screenshotCount` | `int32` | `1` | 시험 | 연속으로 찍을 스크린샷 수 (기본 1) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
 | `gv_screenshotFrame` | `int32` | `10` | 시험 · 배포본에도 | 스크린샷을 찍을 프레임 번호 (기본 10) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
-| `gv_screenshotInterval` | `int32` | `1` | 시험 · 배포본에도 | 연속 스크린샷 사이 프레임 수 (기본 1) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
+| `gv_screenshotInterval` | `int32` | `1` | 시험 | 연속 스크린샷 사이 프레임 수 (기본 1) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
 | `gv_useRenderThread` | `bool` | `true` | 일반 | 전용 RenderThread 사용 (false = 게임 스레드 인라인 submit) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
 | `gv_vertexPool` | `int32` | `1` | 일반 | 씬 메시 정점 풀 (0=메시마다 정점 버퍼, 진단용) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
 | `gv_viewMode` | `int32` | `0` | 일반 | 주 출력 보기 모드 (0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw / 6 LightingOnly) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
@@ -167,7 +167,7 @@
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
 | `gv_assetLoadProfile` | `int32` | `1` | 일반 | 에셋 로드 시간 · 바이트 기록 (0=끄기) | [AssetLoadProfiler.cpp](../../Source/Engine/Resource/AssetLoadProfiler.cpp) |
-| `gv_assetLoadReport` | `int32` | `0` | 시험 · 배포본에도 | 엔진 종료 때 에셋 로드 표를 로그로 (1=켜기) | [AssetLoadProfiler.cpp](../../Source/Engine/Resource/AssetLoadProfiler.cpp) |
+| `gv_assetLoadReport` | `int32` | `0` | 시험 | 엔진 종료 때 에셋 로드 표를 로그로 (1=켜기) | [AssetLoadProfiler.cpp](../../Source/Engine/Resource/AssetLoadProfiler.cpp) |
 
 ## `Source/Engine/Scene`
 
@@ -183,15 +183,15 @@
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
-| `gv_telemetryFolder` | `string` | — | 시험 · 배포본에도 | 텔레메트리 스풀 폴더 (비면 사용자 폴더의 telemetry/) | [TelemetryService.cpp](../../Source/Engine/Telemetry/TelemetryService.cpp) |
+| `gv_telemetryFolder` | `string` | — | 시험 | 텔레메트리 스풀 폴더 (비면 사용자 폴더의 telemetry/) | [TelemetryService.cpp](../../Source/Engine/Telemetry/TelemetryService.cpp) |
 
 ## `Source/Engine/UI`
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
-| `gv_benchUiChurn` | `int32` | `0` | 시험 · 배포본에도 | UI 벤치 — 프레임마다 글을 바꾸는 셀 수(앞쪽 보이는 셀 안에서 돈다) | [UIBenchScreen.cpp](../../Source/Engine/UI/Debug/UIBenchScreen.cpp) |
-| `gv_benchUiOpacityPulse` | `bool` | `false` | 시험 · 배포본에도 | UI 벤치 — 프레임마다 화면 루트 불투명도를 바꿔 보이는 자손 전체를 다시 칠하게 한다 (조상 kTransform 비용 측정) | [UIBenchScreen.cpp](../../Source/Engine/UI/Debug/UIBenchScreen.cpp) |
-| `gv_benchUiWidgets` | `int32` | `0` | 시험 · 배포본에도 | UI 벤치 — 격자 셀 수(셀마다 테두리 · 아이콘 · 글, 대부분 스크롤 밖) (0=사용 안 함) | [UIBenchScreen.cpp](../../Source/Engine/UI/Debug/UIBenchScreen.cpp) |
+| `gv_benchUiChurn` | `int32` | `0` | 시험 | UI 벤치 — 프레임마다 글을 바꾸는 셀 수(앞쪽 보이는 셀 안에서 돈다) | [UIBenchScreen.cpp](../../Source/Engine/UI/Debug/UIBenchScreen.cpp) |
+| `gv_benchUiOpacityPulse` | `bool` | `false` | 시험 | UI 벤치 — 프레임마다 화면 루트 불투명도를 바꿔 보이는 자손 전체를 다시 칠하게 한다 (조상 kTransform 비용 측정) | [UIBenchScreen.cpp](../../Source/Engine/UI/Debug/UIBenchScreen.cpp) |
+| `gv_benchUiWidgets` | `int32` | `0` | 시험 | UI 벤치 — 격자 셀 수(셀마다 테두리 · 아이콘 · 글, 대부분 스크롤 밖) (0=사용 안 함) | [UIBenchScreen.cpp](../../Source/Engine/UI/Debug/UIBenchScreen.cpp) |
 | `gv_debugHUDProbeSection` | `string` | — | 시험 | 자동화 탐침 DebugHUD.SectionShown 이 볼 디버그 HUD 섹션 이름 | [DebugHUD.cpp](../../Source/Engine/UI/Debug/DebugHUD.cpp) |
 | `gv_uiDebugSafeZone` | `float32` | `0.0` | 시험 | UI 안전 영역 흉내 — 각 변을 화면 크기의 이 비율(0..0.1)만큼 안쪽으로 민다 | [UIScale.cpp](../../Source/Engine/UI/Layout/UIScale.cpp) |
 | `gv_uiDemo` | `bool` | `false` | 시험 · 배포본에도 | UI 시험 화면을 띄운다 — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 필드 · 그리기 견본(둥근 상자 · 자르기 · 9-슬라이스 · 오른쪽에서 왼쪽 글) | [UIDemoScreen.cpp](../../Source/Engine/UI/Debug/UIDemoScreen.cpp) |
@@ -226,7 +226,7 @@
 | `gv_uiTextScale` | `float32` | `1.0` | 일반 | 게임 UI 글자 크기 배율 (사용자 설정 accessibility.textSize) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_uiTheme` | `string` | `default` | 일반 | 게임 UI 테마 이름 default · highcontrast (사용자 설정 accessibility.uiTheme) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_upscaler` | `int32` | `0` | 일반 | 업스케일러 (0 끔, 사용자 설정 graphics.upscaler) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
-| `gv_userSettingsFile` | `string` | — | 시험 · 배포본에도 | 사용자 설정 파일 경로 (비면 사용자 폴더의 usersettings.json) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
+| `gv_userSettingsFile` | `string` | — | 시험 | 사용자 설정 파일 경로 (비면 사용자 폴더의 usersettings.json) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_viewDistanceScale` | `float32` | `1.0` | 일반 | 시야 거리 배율 (사용자 설정 graphics.viewDistance) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 
 ## `Source/Engine/Utility`
@@ -241,7 +241,7 @@
 |---|---|---|---|---|---|
 | `gv_aiDirectorTrace` | `int32` | `0` | 시험 | AIDirector: log every phase change, spawn, encounter and reward (1=on) | [AIDirector.cpp](../../Source/GameFramework/Base/Actor/AI/Director/AIDirector.cpp) |
 | `gv_cameraPreset` | `string` | — | 시험 · 배포본에도 | 카메라 디렉터의 시작 프리셋 id (캡처 카메라 제외, 비우면 데이터대로) | [CameraDirectorComponent.cpp](../../Source/GameFramework/Base/Actor/Camera/CameraDirectorComponent.cpp) |
-| `gv_firstScene` | `string` | — | 시험 · 배포본에도 | 팩 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함) | [GameInstanceBase.cpp](../../Source/GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.cpp) |
+| `gv_firstScene` | `string` | — | 시험 | 팩 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함) | [GameInstanceBase.cpp](../../Source/GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.cpp) |
 | `gv_netConnectAddress` | `string` | — | 시험 | 클라이언트로 붙을 게임 서버 주소 (주소:포트, 비면 끄기) | [GameNetSession.cpp](../../Source/GameFramework/Base/Foundation/Framework/Net/GameNetSession.cpp) |
 | `gv_netEmuPreset` | `string` | — | 시험 | 네트워크 흉내: 회선 프리셋 이름(engine/settings/netemulation.presets.xml — 비면 gv_netEmu* 낱값) | [GameNetSession.cpp](../../Source/GameFramework/Base/Foundation/Framework/Net/GameNetSession.cpp) |
 | `gv_netListenPort` | `int32` | `0` | 시험 | 게임 네트워크 서버로 열 UDP 포트 (0=끄기) | [GameNetSession.cpp](../../Source/GameFramework/Base/Foundation/Framework/Net/GameNetSession.cpp) |
@@ -258,7 +258,7 @@
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
-| `gv_benchAnimate` | `int32` | `1` | 시험 · 배포본에도 | 벤치의 시간 구동 변화(회전·상하 이동·스케일) (0=멈춤, 픽셀 비교 검증용) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
+| `gv_benchAnimate` | `int32` | `1` | 시험 | 벤치의 시간 구동 변화(회전·상하 이동·스케일) (0=멈춤, 픽셀 비교 검증용) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchCharacterColumns` | `int32` | `0` | 시험 | 벤치 캐릭터를 N 열 격자로 세운다 (0=한 줄) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchCharacters` | `int32` | `0` | 시험 | 벤치 스킨드 캐릭터 수 (0=사용 안 함, KayKit 기사 · Idle/Walking_A) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchCharacterStagger` | `int32` | `0` | 시험 | 벤치 캐릭터 시작 시각을 흩는다 (0=모두 0 초) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
@@ -273,22 +273,22 @@
 | `gv_benchMaterialChurnAdd` | `int32` | `0` | 시험 | 프레임당 새로 붙이거나 떼어낼 머티리얼 인스턴스 수 (0=사용 안 함) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchMaterialChurnKeyword` | `int32` | `0` | 시험 | N 프레임마다 키워드·멀티컴파일을 흔듭니다 (0=사용 안 함) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchMaterialInstances` | `int32` | `0` | 시험 | 벤치 큐브마다 MaterialInstance 부여 (배치를 큐브 수만큼 가른다) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
-| `gv_benchMeshes` | `int32` | `0` | 시험 · 배포본에도 | 시작 시 생성할 벤치 큐브 수 (0=사용 안 함) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
+| `gv_benchMeshes` | `int32` | `0` | 시험 | 시작 시 생성할 벤치 큐브 수 (0=사용 안 함) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchMeshMorph` | `int32` | `0` | 시험 | 벤치 도형의 정점을 GPU 가 매 프레임 변형합니다 (0=사용 안 함) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchMeshShapes` | `int32` | `1` | 시험 | 벤치가 섞어 쓸 도형 수 (1=큐브만 · 최대 5: 큐브·구·실린더·캡슐·원뿔) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchMeshVariants` | `int32` | `1` | 시험 | 벤치 메시 종류 수 (= 배치 수, 드로우 경로 측정용) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchMovePercent` | `int32` | `100` | 시험 | 프레임마다 위치·스케일을 다시 쓰는 큐브의 비율 (퍼센트, 기본 100) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
-| `gv_benchProbeFrame` | `int32` | `180` | 시험 · 배포본에도 | 한 번 일어나는 벤치 탐침(한글 글 · 씬 로드)을 거는 프레임(측정 창 워밍업 60 뒤) | [BenchSceneProbes.cpp](../../Source/Games/Empty/BenchSceneProbes.cpp) |
-| `gv_benchRig` | `int32` | `0` | 시험 · 배포본에도 | 후처리 리그 데모 기사 수 (0=사용 안 함, 발 디딤 · 시선 · 왼손 IK · 망토 스프링) | [BenchSceneRig.cpp](../../Source/Games/Empty/BenchSceneRig.cpp) |
-| `gv_benchRigEnabled` | `int32` | `1` | 시험 · 배포본에도 | 리그 데모의 PoseModifierComponent 를 켤지 (0=대조군) | [BenchSceneRig.cpp](../../Source/Games/Empty/BenchSceneRig.cpp) |
-| `gv_benchRigView` | `int32` | `0` | 시험 · 배포본에도 | 리그 데모 카메라 (0 왼쪽 앞 · 1 정면 · 2 오른쪽 옆 · 3 오른쪽 뒤) | [BenchSceneRig.cpp](../../Source/Games/Empty/BenchSceneRig.cpp) |
-| `gv_benchSceneLoadPath` | `string` | — | 시험 · 배포본에도 | 탐침 프레임에 이 씬을 비동기로 연다(로드 중 최악 프레임 측정, 비우면 사용 안 함) | [BenchSceneProbes.cpp](../../Source/Games/Empty/BenchSceneProbes.cpp) |
+| `gv_benchProbeFrame` | `int32` | `180` | 시험 | 한 번 일어나는 벤치 탐침(한글 글 · 씬 로드)을 거는 프레임(측정 창 워밍업 60 뒤) | [BenchSceneProbes.cpp](../../Source/Games/Empty/BenchSceneProbes.cpp) |
+| `gv_benchRig` | `int32` | `0` | 시험 | 후처리 리그 데모 기사 수 (0=사용 안 함, 발 디딤 · 시선 · 왼손 IK · 망토 스프링) | [BenchSceneRig.cpp](../../Source/Games/Empty/BenchSceneRig.cpp) |
+| `gv_benchRigEnabled` | `int32` | `1` | 시험 | 리그 데모의 PoseModifierComponent 를 켤지 (0=대조군) | [BenchSceneRig.cpp](../../Source/Games/Empty/BenchSceneRig.cpp) |
+| `gv_benchRigView` | `int32` | `0` | 시험 | 리그 데모 카메라 (0 왼쪽 앞 · 1 정면 · 2 오른쪽 옆 · 3 오른쪽 뒤) | [BenchSceneRig.cpp](../../Source/Games/Empty/BenchSceneRig.cpp) |
+| `gv_benchSceneLoadPath` | `string` | — | 시험 | 탐침 프레임에 이 씬을 비동기로 연다(로드 중 최악 프레임 측정, 비우면 사용 안 함) | [BenchSceneProbes.cpp](../../Source/Games/Empty/BenchSceneProbes.cpp) |
 | `gv_benchSpawnChurn` | `int32` | `0` | 시험 | 프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만든다 (스폰·파괴·틱 레지스트리 측정) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchTickMovers` | `int32` | `0` | 시험 | 큐브마다 틱 무버 컴포넌트 N 개 — 첫 번째가 틱 안에서 위치를 쓴다 (0=배치 쓰기) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
-| `gv_benchTransparent` | `int32` | `25` | 시험 · 배포본에도 | 벤치 큐브 중 투명으로 만들 비율 (퍼센트) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
-| `gv_benchUiHangulGlyphs` | `int32` | `0` | 시험 · 배포본에도 | 탐침 프레임에 서로 다른 한글 음절 N 개의 긴 글을 띄운다(새 글리프 첫 프레임 측정, 0=사용 안 함) | [BenchSceneProbes.cpp](../../Source/Games/Empty/BenchSceneProbes.cpp) |
-| `gv_benchUiMarkers` | `int32` | `0` | 시험 · 배포본에도 | 앞쪽 벤치 큐브 K 개에 화면 마커(숫자 글)를 붙인다 (0=사용 안 함) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
-| `gv_benchUiNameplates` | `int32` | `0` | 시험 · 배포본에도 | 앞쪽 벤치 큐브 K 개에 RTS 이름표(이름 글 + HP 막대)를 붙인다 (0=사용 안 함) | [BenchSceneProbes.cpp](../../Source/Games/Empty/BenchSceneProbes.cpp) |
+| `gv_benchTransparent` | `int32` | `25` | 시험 | 벤치 큐브 중 투명으로 만들 비율 (퍼센트) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
+| `gv_benchUiHangulGlyphs` | `int32` | `0` | 시험 | 탐침 프레임에 서로 다른 한글 음절 N 개의 긴 글을 띄운다(새 글리프 첫 프레임 측정, 0=사용 안 함) | [BenchSceneProbes.cpp](../../Source/Games/Empty/BenchSceneProbes.cpp) |
+| `gv_benchUiMarkers` | `int32` | `0` | 시험 | 앞쪽 벤치 큐브 K 개에 화면 마커(숫자 글)를 붙인다 (0=사용 안 함) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
+| `gv_benchUiNameplates` | `int32` | `0` | 시험 | 앞쪽 벤치 큐브 K 개에 RTS 이름표(이름 글 + HP 막대)를 붙인다 (0=사용 안 함) | [BenchSceneProbes.cpp](../../Source/Games/Empty/BenchSceneProbes.cpp) |
 | `gv_benchViews` | `int32` | `0` | 시험 | 격자를 둘러보는 캡처 카메라(렌더 텍스처 512²) 수 (0=사용 안 함) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 
 ## `Source/Games/HarvestValley`

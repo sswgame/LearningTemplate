@@ -66,7 +66,7 @@ namespace sw
      * @brief `-gv_benchMeshes=N`: 시작할 때 만들 벤치 큐브 수입니다. 0 이면 만들지 않습니다.
      * @details 이 값이 0 이 아니면 `EmptyGame` 은 `GameConfig` 의 시작 씬 대신 벤치 씬을 만든다.
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchMeshes, 0, "시작 시 생성할 벤치 큐브 수 (0=사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchMeshes, 0, "시작 시 생성할 벤치 큐브 수 (0=사용 안 함)" );
 
     /**
      * @brief `-gv_benchCharacters=N`: 스킨드 캐릭터(KayKit 기사) N 명을 한 줄로 세워 짝수는 Idle, 홀수는 Walking_A 를 재생합니다.
@@ -128,7 +128,7 @@ namespace sw
      *          지나지 않는다. 투명 큐브는 **소수의 머티리얼 인스턴스를 나눠 쓰므로** 한 배치에 투명
      *          인스턴스가 여럿 들어간다. 그래야 배치 안의 정렬이 실제로 검사된다.
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchTransparent, 25, "벤치 큐브 중 투명으로 만들 비율 (퍼센트)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchTransparent, 25, "벤치 큐브 중 투명으로 만들 비율 (퍼센트)" );
 
     /**
      * @brief `-gv_benchMaterialChurn=N`: 매 프레임 머티리얼 인스턴스 N 개의 **값**을 무작위로 바꿉니다.
@@ -187,14 +187,14 @@ namespace sw
      *          손대지 않은 대조군이 움직이면 하니스를 먼저 의심할 것. 회전만 멈추면 부족하다(사인파가 남아
      *          0.05% 흔들린다).
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchAnimate, 1, "벤치의 시간 구동 변화(회전·상하 이동·스케일) (0=멈춤, 픽셀 비교 검증용)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchAnimate, 1, "벤치의 시간 구동 변화(회전·상하 이동·스케일) (0=멈춤, 픽셀 비교 검증용)" );
 
     /**
      * @brief `-gv_benchUiMarkers=K`: 앞쪽 큐브 K 개에 화면 마커(`WidgetComponent` Screen, 숫자 글자)를 붙입니다(데미지 숫자가 많이 뜨는 경우를 재현합니다).
      * @details 마커는 프레임마다 월드 좌표를 화면에 투영해 배치한다. 위젯 벤치(`-gv_benchUiWidgets`, 엔진 `UIBenchScreen`)와 함께 `GT.UI.*` 로 측정한다.
      *          큐브 수(`-gv_benchMeshes`)보다 크면 큐브 수만큼 붙인다.
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchUiMarkers, 0, "앞쪽 벤치 큐브 K 개에 화면 마커(숫자 글)를 붙인다 (0=사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchUiMarkers, 0, "앞쪽 벤치 큐브 K 개에 화면 마커(숫자 글)를 붙인다 (0=사용 안 함)" );
 
     /**
      * @brief `-gv_benchMovePercent=<퍼센트>`: 프레임마다 위치와 스케일을 다시 쓰는 큐브의 비율입니다(기본값 100 은 전부).

@@ -34,4 +34,4 @@ SW_GLOBAL_VARIABLE( sw::string, gv_debugHUDSections, "", "디버그 HUD 섹션 �
 SW_GLOBAL_VARIABLE( int32, gv_debugHUDCorner, 0, "디버그 HUD 모서리 0 왼위 1 오위 2 왼아래 3 오아래 (사용자 설정 debug.hudCorner)" );
 SW_GLOBAL_VARIABLE( float32, gv_debugHUDOpacity, 0.85f, "디버그 HUD 불투명도 0.2~1 (사용자 설정 debug.hudOpacity)" );
 
-SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::string, gv_userSettingsFile, "", "사용자 설정 파일 경로 (비면 사용자 폴더의 usersettings.json)" );
+SW_TEST_GLOBAL_VARIABLE( sw::string, gv_userSettingsFile, "", "사용자 설정 파일 경로 (비면 사용자 폴더의 usersettings.json)" );
