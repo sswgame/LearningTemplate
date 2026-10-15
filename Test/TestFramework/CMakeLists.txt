@@ -20,5 +20,8 @@ target_link_libraries(TestFramework
 )
 
 target_compile_definitions(TestFramework PRIVATE "SW_LOG_TAG=\"Test\"")
+# 자식 프로세스 시한의 배율 — CTest 제한 시간과 같은 정책 값(`Test/TestPolicy.json` 의 timeoutScale, `sw_getTestTimeoutScale`)이다.
+sw_getTestTimeoutScale(swTestTimeoutScale)
+target_compile_definitions(TestFramework PRIVATE "SW_TEST_TIMEOUT_SCALE=${swTestTimeoutScale}")
 sw_configurePch(TestFramework "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 set_target_properties(TestFramework PROPERTIES FOLDER "Test")

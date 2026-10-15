@@ -7,17 +7,9 @@
 #include <mutex>
 #include <thread>
 
-namespace test
-{
-    namespace
-    {
-        struct TestProcessRunInternal
-        {
-            /** @brief 새니타이저 빌드의 시한 배수 — CTest 시한 배수(`sw_applySanitizerTestProperties`)와 같다. */
-            static constexpr uint32 kSanitizerTimeoutScale = 10;
-        };
-    } // namespace
-} // namespace test
+#ifndef SW_TEST_TIMEOUT_SCALE
+    #error "SW_TEST_TIMEOUT_SCALE comes from Test/TestFramework/CMakeLists.txt (Test/TestPolicy.json timeoutScale)"
+#endif
 
 namespace test
 {
@@ -90,12 +82,7 @@ namespace test
 
     uint32 ProcessDeadlineWatch::scaleTimeoutSeconds( uint32 timeoutSeconds )
     {
-#if defined( SW_SANITIZER_ADDRESS ) || defined( SW_SANITIZER_THREAD )
-        return timeoutSeconds * TestProcessRunInternal::kSanitizerTimeoutScale;
-#else
-        (void)TestProcessRunInternal::kSanitizerTimeoutScale;
-        return timeoutSeconds;
-#endif
+        return timeoutSeconds * SW_TEST_TIMEOUT_SCALE;
     }
 
     ProcessRunResult runProcessWithDeadline( sw::string_view command, const sw::ProcessOptions& options, uint32 timeoutSeconds )

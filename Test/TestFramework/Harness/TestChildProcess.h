@@ -20,7 +20,7 @@ namespace test
      * @brief 이 실행 파일을 자식 프로세스로 띄워 `--test_filter=<caseFullName>` 하나만 돌린다.
      * @param caseFullName    `Suite.Case` — 보통 그 케이스는 환경 변수가 없으면 스스로 건너뛰는 "자식 역할" 케이스다.
      * @param listEnvironment 자식에게만 보일 환경 변수(띄우는 동안만 걸고 되돌린다).
-     * @param timeoutSeconds  넘으면 자식을 죽이고 `_bTimedOut` 을 세운다(새니타이저 빌드는 열 배).
+     * @param timeoutSeconds  넘으면 자식을 죽이고 `_bTimedOut` 을 세운다(구성별 배율은 `Test/TestPolicy.json` 의 timeoutScale).
      * @details 프로세스마다 한 번뿐인 상태(지연 로드된 DLL 의 등록 귀속)나 프로세스를 죽이는 일(크래시 보고)을 측정하는 케이스가
      *          쓴다. 시한을 넘기면 자식을 죽이고 그 케이스가 진다 — 출력 꼬리를 실패 메시지에 붙일 수 있다.
      */
