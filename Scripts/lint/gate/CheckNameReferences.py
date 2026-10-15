@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-코드 · 실행 인자 · 시나리오가 **이름으로** 부르는 전역 변수 · 입력 액션 · 오디오 이벤트가 정의돼 있는지 봅니다.
+코드 · 실행 인자 · 시나리오가 **이름으로** 부르는 전역 변수 · 입력 액션 · 오디오 이벤트 · 시나리오 단계 · 탐침 · 개발 명령이 정의돼 있는지 봅니다.
 
 런타임은 모르는 이름을 오류로 멈추지 않는다.
 - 명령줄의 `-gv_<이름>` 은 모듈이 나중에 등록할 수 있어 보류표에 남고, 아무도 가져가지 않으면 App 이 기동 뒤에 경고 한 줄만 남긴다.
@@ -20,6 +20,9 @@
 - `NameReference/AudioEvent`: `postEvent` · `postEventAt` 에 문자열로 적은 이벤트 이름이 `*.audioevents.xml` 의 `<AudioEventDesc _name>` 에 있다
   (팩 범위는 입력 액션과 같다). 런타임은 모르는 이벤트를 오류 한 줄로 알리고 소리를 내지 않는다.
 코드 쪽 두 규칙은 주석을 지운 글만 본다(문서 주석의 예는 코드가 아니다). 이름 종류는 `_kListCodeNameKind` 의 한 줄이다.
+- `NameReference/ScenarioStep` · `ScenarioProbe` · `DevCommand`: 시나리오(`*.scenario.xml`)의 `<At>` 안 단계 이름, `probe` 속성,
+  `<DevCommand line>` 의 첫 낱말이 `SW_AUTOMATION_STEP` · `SW_AUTOMATION_PROBE` · `SW_DEV_COMMAND` 로 등록된 이름이다. 실행기는 이것을
+  시나리오를 올린 실기동(hostgpu 의 AppScenarioTest)에서야 오류로 낸다 — CI(nogpu)는 단계 · 명령 이름을 바꿔도 통과했다.
 
   python Scripts/lint/gate/CheckNameReferences.py [--root <repo>]
 """
@@ -60,6 +63,12 @@ _kActionConstantRe = re.compile(r"\bk[A-Z]\w*Action(?:Name)?\s*(?:\[\s*\])?\s*=\
 _kActionNameRe = re.compile(r"[A-Z][A-Za-z0-9]*(?:\.[A-Z][A-Za-z0-9]*)*")
 #: 이름으로 오디오 이벤트를 올리는 호출(`GameSound::postEvent` · `AudioEngine::postEvent` · `postEventAt`).
 _kAudioEventCallRe = re.compile(r"\bpostEvent(?:At)?\s*\(\s*(?:hashed_string\s*\(\s*)?\"([^\"]+)\"")
+#: 시나리오 단계 · 탐침 · 개발 명령의 등록 — 둘째 인자가 이름(리터럴 또는 `k…Kind` 상수)이다.
+_kStepRegistrationRe = re.compile(r'SW_AUTOMATION_STEP(?:_WITH_HOOKS)?\s*\(\s*\w+\s*,\s*"([^"]+)"')
+_kStepRegistrationByConstantRe = re.compile(r"SW_AUTOMATION_STEP(?:_WITH_HOOKS)?\s*\(\s*\w+\s*,\s*(?:\w+::)?(k\w+Kind)\b")
+_kStepKindConstantRe = re.compile(r'\b(k\w+Kind)\s*(?:\[\s*\])?\s*=\s*"([^"]+)"')
+_kProbeRegistrationRe = re.compile(r'SW_AUTOMATION_(?:QUERY_)?PROBE\s*\(\s*\w+\s*,\s*"([^"]+)"')
+_kDevCommandRegistrationRe = re.compile(r'SW_DEV_COMMAND\s*\(\s*\w+\s*,\s*"([^"]+)"')
 _kQuotedRe = re.compile(r"\"([^\"]*)\"")
 _kPackRe = re.compile(r"\bgame/([a-z0-9_]+)/")
 
@@ -205,18 +214,69 @@ def findCodeNameViolations(repositoryRoot: Path) -> tuple[list[str], dict[str, i
     return listViolation, mapCheckedCount
 
 
+def collectAutomationNames(repositoryRoot: Path) -> tuple[set[str], set[str], set[str]]:
+    """(등록된 시나리오 단계 종류, 탐침 이름, 개발 명령 이름) — `Source` 의 등록 매크로에서 줍는다(종류 상수 `k…Kind` 도 푼다)."""
+    uniqueStep: set[str] = set()
+    uniqueProbe: set[str] = set()
+    uniqueCommand: set[str] = set()
+    mapKindConstant: dict[str, str] = {}
+    listKindIdentifier: list[str] = []
+    for _, text in LintGate.readFiles(collectSourceFiles([repositoryRoot / "Source"], _kCppSuffixes)):
+        mapKindConstant.update(dict(_kStepKindConstantRe.findall(text)))
+        if "SW_AUTOMATION_" in text:
+            uniqueStep.update(_kStepRegistrationRe.findall(text))
+            listKindIdentifier += _kStepRegistrationByConstantRe.findall(text)
+            uniqueProbe.update(_kProbeRegistrationRe.findall(text))
+        if "SW_DEV_COMMAND" in text:
+            uniqueCommand.update(_kDevCommandRegistrationRe.findall(text))
+    uniqueStep.update(mapKindConstant[name] for name in listKindIdentifier if name in mapKindConstant)
+    return uniqueStep, uniqueProbe, uniqueCommand
+
+
+def findScenarioViolations(repositoryRoot: Path) -> tuple[list[str], int]:
+    """시나리오의 `<At>` 단계 · `probe` · `<DevCommand line>` 첫 낱말이 등록된 이름인가."""
+    uniqueStep, uniqueProbe, uniqueCommand = collectAutomationNames(repositoryRoot)
+    bAutomationEngine = (repositoryRoot / "Source" / "Engine" / "Automation").is_dir()
+    if bAutomationEngine and not uniqueStep:
+        raise GateError("등록된 시나리오 단계를 하나도 찾지 못했습니다 — SW_AUTOMATION_STEP 모양이 바뀌었나요?")
+    listViolation: list[str] = []
+    scenarioCount = 0
+    resourceRoot = repositoryRoot / "Resource"
+    for path in sorted(resourceRoot.rglob("*.scenario.xml")):
+        relative = normalizePath(str(path.relative_to(repositoryRoot)))
+        try:
+            root = ElementTree.parse(path).getroot()
+        except ElementTree.ParseError:
+            continue  # XML 이 깨진 것은 에셋 검증 규칙 xml-parses 가 알린다
+        scenarioCount += 1
+        for at in root.iter("At"):
+            for step in at:
+                if step.tag not in uniqueStep:
+                    listViolation.append(f"[NameReference/ScenarioStep] {relative}: 단계 <{step.tag}> 가 등록돼 있지 않습니다(SW_AUTOMATION_STEP)")
+        for element in root.iter():
+            probe = element.get("probe")
+            if probe and probe not in uniqueProbe:
+                listViolation.append(f"[NameReference/ScenarioProbe] {relative}: 탐침 '{probe}' 가 등록돼 있지 않습니다(SW_AUTOMATION_PROBE)")
+        for element in root.iter("DevCommand"):
+            listToken = element.get("line", "").split()
+            if listToken and listToken[0] not in uniqueCommand:
+                listViolation.append(f"[NameReference/DevCommand] {relative}: 개발 명령 '{listToken[0]}' 이(가) 등록돼 있지 않습니다(SW_DEV_COMMAND)")
+    return listViolation, scenarioCount
+
+
 class CheckNameReferencesGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있다."""
 
-    description = "코드 · 실행 인자 · 시나리오가 이름으로 부르는 전역 변수 · 입력 액션 · 오디오 이벤트가 정의돼 있는지 검사"
-    buildComment = "Checking that global variable, input action and audio event names used by code, arguments and scenarios are defined..."
+    description = "코드 · 실행 인자 · 시나리오가 이름으로 부르는 전역 변수 · 입력 액션 · 오디오 이벤트 · 시나리오 단계 · 탐침 · 개발 명령이 정의돼 있는지 검사"
+    buildComment = "Checking that names used by code, arguments and scenarios (global variables, input actions, audio events, steps, probes, dev commands) are defined..."
     timeoutSeconds = 60
     preCommitPattern = ("*.h", "*.cpp", "*.inl", "*.py", "*.json", "*.xml", "*.cmake", "*.txt", "*.yml", "*.ps1")
     preCommitFileArgument = ""
     violationHeader = "정의되지 않은 이름"
     hint = (
         "  전역 변수: 정의(SW_*GLOBAL_VARIABLE)의 이름으로 고치거나, 지운 스위치면 그 인자 · 시나리오 줄을 지웁니다.\n"
-        "  입력 액션 · 오디오 이벤트: 그 팩의 *.input.xml · *.audioevents.xml 에 이름을 더하거나 코드의 이름을 데이터의 이름으로 고칩니다."
+        "  입력 액션 · 오디오 이벤트: 그 팩의 *.input.xml · *.audioevents.xml 에 이름을 더하거나 코드의 이름을 데이터의 이름으로 고칩니다.\n"
+        "  시나리오: 단계 · 탐침 · 개발 명령의 이름을 등록된 이름(SW_AUTOMATION_STEP · SW_AUTOMATION_PROBE · SW_DEV_COMMAND)으로 고칩니다."
     )
     selfTestCases = [
         {
@@ -256,6 +316,23 @@ class CheckNameReferencesGate(LintGate):
                 "Source/Engine/Probe.cpp": "// postEvent( \"Commented\" ) 는 보지 않는다\nvoid f() { (void)GameSound::postEvent( \"Hti\" ); }\n",
             },
         },
+        {
+            "name": "시나리오가 등록되지 않은 개발 명령을 부른다",
+            "files": {
+                "Source/Engine/ProbeSteps.cpp": ("SW_AUTOMATION_STEP( devCommand, AutomationEnvironmentSteps::kDevCommandKind, &run, &validate, false );\n"
+                                                 "SW_DEV_COMMAND( Bugit, \"bugit\", \"\", \"\", &run );\n"),
+                "Source/Engine/ProbeSteps.h": "static constexpr const utf8* kDevCommandKind = \"DevCommand\";\n",
+                "Resource/engine/automation/probe.scenario.xml": "<Scenario><At frame=\"1\"><DevCommand line=\"bugitt now\"/></At></Scenario>\n",
+            },
+        },
+        {
+            "name": "시나리오가 등록되지 않은 탐침을 본다",
+            "files": {
+                "Source/Engine/ProbeSteps.cpp": ("SW_AUTOMATION_STEP( expect, \"Expect\", &run, &validate, false );\n"
+                                                 "SW_AUTOMATION_PROBE( count, \"Probe.Count\", \"\", &count );\n"),
+                "Resource/engine/automation/probe.scenario.xml": "<Scenario><At frame=\"1\"><Expect probe=\"Probe.Cuont\" equals=\"1\"/></At></Scenario>\n",
+            },
+        },
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
@@ -268,8 +345,11 @@ class CheckNameReferencesGate(LintGate):
                          for location, name in listUse if name not in uniqueDefined]
         codeViolation, mapCheckedCount = findCodeNameViolations(repositoryRoot)
         listViolation += codeViolation
+        scenarioViolation, scenarioCount = findScenarioViolations(repositoryRoot)
+        listViolation += scenarioViolation
+        codeSummary = ", ".join(f"{rule} {count}곳" for rule, count in mapCheckedCount.items())
         return GateResult(listViolation=sorted(set(listViolation)),
-                          summary=f"전역 변수 정의 {len(uniqueDefined)}개 · 이름 사용 {len(listUse)}곳, 코드의 이름 " + ", ".join(f"{rule} {count}곳" for rule, count in mapCheckedCount.items()))
+                          summary=f"전역 변수 정의 {len(uniqueDefined)}개 · 이름 사용 {len(listUse)}곳, 코드의 이름 {codeSummary}, 시나리오 {scenarioCount}개")
 
 
 main = CheckNameReferencesGate.run
