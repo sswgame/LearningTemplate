@@ -26,7 +26,7 @@ namespace sw
      *          `REFLECT( Abstract )` 라 만들 수 없고 컴포넌트 팩토리도 없습니다. 색 · 세기 PROPERTY(`_color` · `_intensity`)는 저장된 씬 ·
      *          바이너리 · 기본값이 이름으로 묶입니다.
      */
-    REFLECT( Abstract, Category = "Rendering 3D", DisplayName = "Light", Tooltip = "Common part of every light kind" )
+    REFLECT( Abstract, Category = "Rendering 3D", DisplayName = "Light", Tooltip = "Common part of every light kind", Meta = "Icon=LightPoint, IconColor=Light, Billboard" )
     class SW_API LightComponent : public SceneComponent
     {
     public:

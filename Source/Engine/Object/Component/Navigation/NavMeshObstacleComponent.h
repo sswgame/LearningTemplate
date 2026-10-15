@@ -30,7 +30,7 @@ namespace sw
     class SceneNavigation;
 
     /** @class NavMeshObstacleComponent @brief 파일 머리말 참고. */
-    REFLECT( Category = "Navigation", DisplayName = "NavMesh Obstacle", Tooltip = "Carves a moving hole in the navmesh; only the touched tiles rebake" )
+    REFLECT( Category = "Navigation", DisplayName = "NavMesh Obstacle", Tooltip = "Carves a moving hole in the navmesh; only the touched tiles rebake", Meta = "Icon=Navigation, IconColor=Navigation" )
     class SW_API NavMeshObstacleComponent : public Component
     {
     public:

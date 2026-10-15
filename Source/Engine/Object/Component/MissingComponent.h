@@ -19,7 +19,7 @@ namespace sw
      *          다른 형식으로 저장될 때(플레이 스냅샷 · 되돌리기 = 바이너리)는 이 컴포넌트 자체가 저장되고, 다시 원래 형식으로 저장할 때 원문이 돌아간다.
      *          틱하지 않고 그리지 않습니다. 모듈이 올라온 뒤 씬을 다시 열면 원래 컴포넌트로 읽힙니다.
      */
-    REFLECT( Category = "Core", DisplayName = "Missing Component", Tooltip = "A component whose type is not loaded; its saved data is kept and written back" )
+    REFLECT( Category = "Core", DisplayName = "Missing Component", Tooltip = "A component whose type is not loaded; its saved data is kept and written back", Meta = "Icon=Missing" )
     class SW_API MissingComponent : public Component
     {
     public:

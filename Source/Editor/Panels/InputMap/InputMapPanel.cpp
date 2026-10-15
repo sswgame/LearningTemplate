@@ -606,7 +606,7 @@ namespace sw::editor
         EditorWidgets::drawTextField( "Pattern (numpad notation)", _testComboPattern, 150.0f );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "PatternTip" ) );
         ImGui::SameLine();
-        if ( _inputMap.wasCommandPatternTriggered( sw::hashed_string( _testComboPattern.c_str() ), 0.8f ) )
+        if ( _inputMap.getActionBuffer().wasCommandPatternTriggered( sw::hashed_string( _testComboPattern.c_str() ), 0.8f ) )
             EditorThemeUtil::textSuccess( "MATCHED" );
         else
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorInputMap", "WaitingForInput" ) );

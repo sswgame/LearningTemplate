@@ -25,24 +25,7 @@ namespace sw
         _totalElapsedTime += deltaSeconds;
         _lastDeltaSeconds = deltaSeconds;
 
-        // 1) 선입력 버퍼를 갱신한다(링 버퍼, O(1) 정리)
-        for ( uint32 index = 0; index < _bufferedActionCount; ++index )
-        {
-            const uint32 idx = ( _bufferedActionHead + index ) % kMaxBufferedActions;
-            _arrBufferedAction[idx]._remainingTime -= deltaSeconds;
-        }
-        while ( _bufferedActionCount > 0 && _arrBufferedAction[_bufferedActionHead]._remainingTime <= 0.0f )
-        {
-            _bufferedActionHead = ( _bufferedActionHead + 1 ) % kMaxBufferedActions;
-            --_bufferedActionCount;
-        }
-
-        // 2) 2.0초가 지난 커맨드 이력을 지운다(링 버퍼, O(1) 정리)
-        while ( _commandHistoryCount > 0 && ( _totalElapsedTime - _arrCommandHistory[_commandHistoryHead]._timestamp ) > 2.0f )
-        {
-            _commandHistoryHead = ( _commandHistoryHead + 1 ) % kMaxCommandHistory;
-            --_commandHistoryCount;
-        }
+        _actionBuffer.update( deltaSeconds ); // 선입력 만료 · 오래된 커맨드 이력 정리
 
         if ( _pInput == nullptr )
             return;
@@ -214,17 +197,9 @@ namespace sw
             if ( actionEntry._bPressed == SW_TRUE && actionEntry._bToggleMode == SW_TRUE )
                 actionEntry._bToggleState = ( actionEntry._bToggleState == SW_TRUE ) ? SW_FALSE : SW_TRUE;
 
-            // 커맨드 이력 기록(링 버퍼)
+            // 커맨드 이력 기록
             if ( actionEntry._bTriggered == SW_TRUE )
-            {
-                const uint32 insertIdx                   = ( _commandHistoryHead + _commandHistoryCount ) % kMaxCommandHistory;
-                _arrCommandHistory[insertIdx]._action    = actionName;
-                _arrCommandHistory[insertIdx]._timestamp = _totalElapsedTime;
-                if ( _commandHistoryCount < kMaxCommandHistory )
-                    ++_commandHistoryCount;
-                else
-                    _commandHistoryHead = ( _commandHistoryHead + 1 ) % kMaxCommandHistory;
-            }
+                _actionBuffer.recordTriggered( actionName );
 
             // 델리게이트 이벤트 디스패치(Triggered)
             if ( actionEntry._bTriggered == SW_TRUE )

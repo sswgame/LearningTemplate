@@ -86,7 +86,7 @@ namespace sw
      * @class CameraComponent
      * @brief GameObject 에 붙는 카메라입니다. 트랜스폼은 SceneComponent 에서 가져옵니다.
      */
-    REFLECT( Category = "Camera", DisplayName = "Camera Component", Tooltip = "Perspective / Orthographic Viewport Camera" )
+    REFLECT( Category = "Camera", DisplayName = "Camera Component", Tooltip = "Perspective / Orthographic Viewport Camera", Meta = "Icon=Camera, IconColor=Camera, Billboard" )
     class SW_API CameraComponent : public SceneComponent
     {
     public:

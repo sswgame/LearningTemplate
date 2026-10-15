@@ -23,7 +23,7 @@ namespace sw
      *       면(+X −X +Y −Y +Z −Z)마다 90° 원근으로 그립니다(큐브맵 대신 2D 아틀라스 — 유니티 URP · Godot 과 같은 방식, `ShadowSetupUtil`).
      *       칸이 모자라면 앞의 빛부터 받고 나머지는 그림자 없이 비춥니다.
      */
-    REFLECT( Category = "Rendering 3D", DisplayName = "Point Light", Tooltip = "Omnidirectional light with a finite radius" )
+    REFLECT( Category = "Rendering 3D", DisplayName = "Point Light", Tooltip = "Omnidirectional light with a finite radius", Meta = "Icon=LightPoint, IconColor=Light, Billboard" )
     class SW_API PointLightComponent : public LightComponent
     {
     public:

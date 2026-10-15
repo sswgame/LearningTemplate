@@ -4,7 +4,7 @@
  * @details `ActionBinding` 하나로 단일 슬롯, 1D/2D 합성 축, 스틱, 조합 키를 모두 표현한다.
  *          액션은 `ActionPhase` 상태 머신(Started, Ongoing, Triggered, Completed, Canceled)으로 평가하고,
  *          모디파이어 파이프라인(데드존, 축 반전, 감도 배율, 바인딩마다 부호 뒤집기)을 거친다. 시간을 쓰는 트리거는 바인딩마다 시간을 둘 수 있다.
- *          그 밖에 LIFO 컨텍스트 스택, 이벤트 델리게이트 디스패치, 선입력 버퍼링, 격투 커맨드 시퀀스, XML 직렬화를 제공한다.
+ *          그 밖에 LIFO 컨텍스트 스택, 이벤트 델리게이트 디스패치, XML 직렬화를 제공한다. 선입력 버퍼링과 격투 커맨드 판정은 `InputActionBuffer`(`getActionBuffer`)가 맡는다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -20,6 +20,7 @@
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Input/Map/InputActionBuffer.h"
 
 namespace sw
 {
@@ -428,14 +429,10 @@ namespace sw
         void setNavRepeatRate( float32 rate ) { _navRepeatRate = rate; }
 
         // ------------------------------------------------------------------------------
-        // 6) 액션 선입력 버퍼링, 격투 커맨드 판정
+        // 6) 액션 선입력 버퍼링, 격투 커맨드 판정 — 트리거된 액션은 `update` 가 이력에 남긴다
         // ------------------------------------------------------------------------------
-        void bufferAction( const hashed_string& action, float32 expirationSeconds = 0.2f );
-        bool consumeBufferedAction( const hashed_string& action );
-
-        /** @brief 지정한 시간 창 안에 커맨드 시퀀스(예: ["Down", "DownRight", "Right", "Attack"])가 이어서 입력됐는지 검사합니다. */
-        bool wasCommandSequenceTriggered( const vector<hashed_string>& listSequence, float32 maxWindowSeconds = 0.35f ) const;
-        bool wasCommandPatternTriggered( const hashed_string& pattern, float32 maxWindowSeconds = 0.8f ) const;
+        InputActionBuffer&       getActionBuffer() { return _actionBuffer; }
+        const InputActionBuffer& getActionBuffer() const { return _actionBuffer; }
 
         // ------------------------------------------------------------------------------
         // 7) UI 글리프 조회, 게임 안 키 리매핑 직렬화
@@ -644,21 +641,6 @@ namespace sw
                 , _bToggleState{ SW_FALSE } {}
         };
 
-        static constexpr size_t kMaxBufferedActions = 16;
-        static constexpr size_t kMaxCommandHistory  = 32;
-
-        struct BufferedActionItem
-        {
-            hashed_string _action{};
-            float32       _remainingTime{ 0.0f };
-        };
-
-        struct CommandHistoryEntry
-        {
-            hashed_string _action{};
-            float32       _timestamp{ 0.0f };
-        };
-
         const ActionEntry* getActionFromHandle( ActionHandle handle ) const;
 
         string getGlyphForActionInternal( const hashed_string& action, InputGlyphStyle device ) const;
@@ -711,12 +693,7 @@ namespace sw
         vector<hashed_string>                _listActionName;
         vector<hashed_string>                _listLayerName;
         vector<hashed_string>                _listLayerStack;
-        BufferedActionItem                   _arrBufferedAction[kMaxBufferedActions];
-        uint32                               _bufferedActionCount;
-        uint32                               _bufferedActionHead;
-        CommandHistoryEntry                  _arrCommandHistory[kMaxCommandHistory];
-        uint32                               _commandHistoryCount;
-        uint32                               _commandHistoryHead;
+        InputActionBuffer                    _actionBuffer;
         uint32                               _nextGeneration;
         hashed_string                        _defaultLayerName;
         float2                               _mouseSensitivity;

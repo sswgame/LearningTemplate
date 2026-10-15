@@ -19,11 +19,8 @@ namespace sw
         struct MailboxServiceInternal
         {
             static constexpr const utf8* kArrMethodName[]   = { "list", "mark_read", "claim", "claim_all", "delete" };
-            static constexpr const utf8* kArrResultName[]   = { "ok", "not_signed_in", "invalid_request", "not_found", "already_claimed",
-                                                                "expired", "has_attachments", "cap_exceeded", "busy", "unavailable" };
             static constexpr const utf8* kArrExpiryAction[] = { "discarded", "returned", "removed" };
             static_assert( SW_COUNT_OF( kArrMethodName ) == static_cast<size_t>( MailboxMethod::kCount ), "method names must match MailboxMethod" );
-            static_assert( SW_COUNT_OF( kArrResultName ) == static_cast<size_t>( MailboxResult::Count ), "result names must match MailboxResult" );
         };
 
         /** @brief 우편함 요청 하나의 저장소 왕복입니다. */
@@ -171,8 +168,7 @@ namespace sw
         }
         _pStore   = pStore;
         _settings = settings;
-        _metrics.initialize( settings._pMetricRegistry, "mailbox", MailboxServiceInternal::kArrMethodName, MailboxMethod::kCount, MailboxServiceInternal::kArrResultName,
-                             static_cast<int32>( MailboxResult::Count ) );
+        _metrics.initialize<MailboxResult>( settings._pMetricRegistry, "mailbox", MailboxServiceInternal::kArrMethodName, MailboxMethod::kCount );
         if ( settings._pMetricRegistry != nullptr )
         {
             for ( int32 actionIndex = 0; actionIndex < static_cast<int32>( SW_COUNT_OF( _arrExpiredCounter ) ); ++actionIndex )

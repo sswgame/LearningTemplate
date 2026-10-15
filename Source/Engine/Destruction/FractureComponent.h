@@ -41,7 +41,7 @@ namespace sw
 
 namespace sw
 {
-    REFLECT( Category = "Physics", DisplayName = "Fracture", Tooltip = "Pre-fractured destructible mesh (.fracture): breaks into physics pieces under damage" )
+    REFLECT( Category = "Physics", DisplayName = "Fracture", Tooltip = "Pre-fractured destructible mesh (.fracture): breaks into physics pieces under damage", Meta = "Icon=Fracture" )
     class SW_API FractureComponent : public FractureComponentBase
     {
     public:

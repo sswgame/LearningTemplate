@@ -23,7 +23,7 @@ namespace sw
      *          `jump` 가 수직 속도를 줍니다. 자리는 마지막 두 스텝 사이를 보간해 씁니다. 코드가 트랜스폼을 옮기면 순간이동입니다.
      *          이동 요청은 어느 틱에서든 부를 수 있습니다(다음 물리 프레임에 든다).
      */
-    REFLECT( Category = "Physics", DisplayName = "Character Controller", Tooltip = "Capsule character mover: slides on walls, climbs steps, blocked by steep slopes" )
+    REFLECT( Category = "Physics", DisplayName = "Character Controller", Tooltip = "Capsule character mover: slides on walls, climbs steps, blocked by steep slopes", Meta = "Icon=Character" )
     class SW_API CharacterControllerComponent : public PhysicsComponent
     {
     public:

@@ -1117,10 +1117,31 @@ def buildHeader(listNamed: list[tuple[str, int]]) -> str:
         sys.path.insert(0, lintDir)
     import AcronymRegistry as acronymRegistry
     width = max(len(name) for name, code in listNamed) + 1
+    listConstant: list[str] = []
     for name, code in listNamed:
         # 약어는 레지스트리의 강제 약어만 대문자로(`ai` → `kAI`) — 코드모드가 헤더에 쓰는 철자와 같아야 다시 만들어도 그대로다.
         constant = acronymRegistry.respellName("k" + name[0].upper() + name[1:], tuple(sorted(acronymRegistry.kEnforced)))
+        listConstant.append(constant)
         lines.append('    inline constexpr const utf8* %s = "%s"; ///< U+%04X' % (constant.ljust(width), utf8Literal(code), code))
+    # 이름 → 글리프 표 — 리플렉션 메타(`REFLECT( Meta = "Icon=LightPoint" )`)가 아이콘을 이름으로 고른다. 이름은 상수에서 `k` 를 뗀 것이다.
+    lines += [
+        "",
+        "    /** @brief 아이콘 이름(상수에서 `k` 를 뗀 것)과 글리프입니다. 컴포넌트의 `REFLECT( Meta = \"Icon=<이름>\" )` 이 이 이름으로 찾습니다. */",
+        "    struct NamedIcon",
+        "    {",
+        "        const utf8* _pName;",
+        "        const utf8* _pGlyph;",
+        "    };",
+        "",
+        "    // clang-format off",
+        "    inline constexpr NamedIcon kArrNamedIcon[] = {",
+    ]
+    for constant in listConstant:
+        lines.append('        { "%s", %s },' % (constant[1:], constant))
+    lines += [
+        "    };",
+        "    // clang-format on",
+    ]
     first, last = listNamed[0][1], listNamed[-1][1]
     listRange = [(first, last)] + [(code, code) for code in sorted(kMapNotifyCodepoint)]
     rangeText = ", ".join("0x%04X, 0x%04X" % r for r in listRange)

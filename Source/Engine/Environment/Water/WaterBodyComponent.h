@@ -59,7 +59,7 @@ namespace sw
      *          강 경로는 현재 점 목록이다. 스플라인 컴포넌트가 생기면 그것을 경로로 받도록 바꾼다.
      *          스레드: 질의는 읽기만 한다. 메시 다시 만들기(`rebuildSurface`)는 틱 밖에서만 호출한다.
      */
-    REFLECT( Category = "Environment", DisplayName = "Water Body", Tooltip = "Lake or river surface with Gerstner waves and surface queries" )
+    REFLECT( Category = "Environment", DisplayName = "Water Body", Tooltip = "Lake or river surface with Gerstner waves and surface queries", Meta = "Icon=Water, IconColor=Environment" )
     class SW_API WaterBodyComponent : public SceneComponent
     {
     public:

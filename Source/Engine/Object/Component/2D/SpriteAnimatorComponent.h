@@ -76,7 +76,7 @@ namespace sw
      *          루트를 덮어쓰면 게임 코드와 물리가 옮긴 오브젝트 위치가 매 틱 키 값으로 되돌아간다. 키로 움직일 스프라이트는 루트 아래에 둔다
      *          (언리얼은 루트 모션을 켜지 않으면 애니메이션이 액터 루트를 옮기지 않고, 유니티 2D 도 움직이는 스프라이트를 자식에 둔다).
      */
-    REFLECT( Category = "Animation 2D", DisplayName = "Sprite Animator Component", Tooltip = "2D Sprite frame animation controller" )
+    REFLECT( Category = "Animation 2D", DisplayName = "Sprite Animator Component", Tooltip = "2D Sprite frame animation controller", Meta = "Icon=Animation" )
     class SW_API SpriteAnimatorComponent : public SceneComponent
     {
         friend class SpriteAnimatorClipSource;

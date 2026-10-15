@@ -38,7 +38,7 @@ namespace sw
         Count
     };
 
-    REFLECT( Abstract, Category = "Physics", DisplayName = "Physics Component", Tooltip = "Base of rigid body, joint and character components" )
+    REFLECT( Abstract, Category = "Physics", DisplayName = "Physics Component", Tooltip = "Base of rigid body, joint and character components", Meta = "Icon=Physics, IconColor=Physics" )
     class SW_API PhysicsComponent : public SceneComponent
     {
         friend class ScenePhysics; ///< 등록 자리(`_physicsIndex`)를 적고 단계 콜백을 부른다

@@ -19,7 +19,7 @@ namespace sw
     class GameObjectManager;
     class PhysicsOverlapWorld;
 
-    REFLECT( Category = "Physics 2D", DisplayName = "Box Collider 2D", Tooltip = "2D Box collision volume" )
+    REFLECT( Category = "Physics 2D", DisplayName = "Box Collider 2D", Tooltip = "2D Box collision volume", Meta = "Icon=Collider, IconColor=Physics" )
     class SW_API BoxCollider2DComponent : public SceneComponent
     {
         friend class SceneOverlapWorld2D; ///< step 직전에 바디를 맞추고(`syncPhysicsBody`) 목록 자리(`_colliderIndex`)를 적는다

@@ -92,7 +92,7 @@ namespace sw
      *            옮기기 전에 고치는 쪽(`IRootMotionModifier`. 모션 워핑)이 월드 이동과 회전을 바꿀 수 있고, 같은 오브젝트에 캐릭터 컨트롤러가 있으면
      *            이동은 컨트롤러가 질의로 처리합니다(`_bRootMotionThroughController`. 중력은 컨트롤러가 더합니다). 회전은 트랜스폼에 씁니다.
      */
-    REFLECT( Category = "Animation 3D", DisplayName = "Skeletal Animator Component", Tooltip = "Plays skeletal clips and an animation graph on the sibling skeletal mesh" )
+    REFLECT( Category = "Animation 3D", DisplayName = "Skeletal Animator Component", Tooltip = "Plays skeletal clips and an animation graph on the sibling skeletal mesh", Meta = "Icon=Animation" )
     class SW_API SkeletalAnimatorComponent : public Component
     {
         friend class SkeletalAnimatorBinding;

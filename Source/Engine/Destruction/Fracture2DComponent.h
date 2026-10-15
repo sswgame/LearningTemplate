@@ -18,7 +18,7 @@
 
 namespace sw
 {
-    REFLECT( Category = "Physics", DisplayName = "Fracture 2D", Tooltip = "Destructible 2D shape: polygon Voronoi-fractured at start, Box2D pieces" )
+    REFLECT( Category = "Physics", DisplayName = "Fracture 2D", Tooltip = "Destructible 2D shape: polygon Voronoi-fractured at start, Box2D pieces", Meta = "Icon=Fracture" )
     class SW_API Fracture2DComponent : public FractureComponentBase
     {
     public:

@@ -174,8 +174,7 @@
 
 - `C-17` **다음 이름 점검**(2026-10-13 이름 점검에서 남긴 것). 기준은 [AGENTS.md](../AGENTS.md) "Class suffixes" 절과 [결정 기록](09_Decisions.md) 5-1 이다. 아직 보지 않은 것:
   ① `Context` 접미어 타입이 무엇을 담는지, ② `*Util` 정적 클래스 중 한 타입의 메서드가 된 것이 나은 것,
-  ③ `Unit` 계열(812 회), ④ 남은 지역 · 멤버 변수 단독 `value` 약 50 곳,
-  ⑤ `Settings` · `Config` 접미어(`NetHostSettings` 등)를 고르는 기준.
+  ③ `Unit` 계열(812 회), ④ 남은 지역 · 멤버 변수 단독 `value` 약 50 곳. `Settings` · `Config` 기준은 `C-26` ③.
 
 - `C-18` **100 줄 넘는 함수 정리.** 분해는 총량을 줄이지 않는다. 중복을 먼저 없애고, 그래도 문제면 본다. 목록이 필요하면 여러 줄 시그니처를 중괄호 깊이로 측정하는 스크립트로
   뽑는다(단순 정규식은 틀린다).
@@ -187,6 +186,23 @@
     검증: 그 로더의 기존 테스트, `ResourceDataSchemaTest`, 설정 · 리소스 스키마 게이트.
   - **씬 · UI 쪽의 엔진 창구 직접 읽기**: `SceneEngineServices` 주입(S10)과 같은 패턴이 범위 밖에 남았다 — `WidgetComponent`(`engine::findSubsystem<UISystem>()`) · `UISystem` · `FontService`,
     `SceneCooker` · `SceneNavigationCooker` · `PortraitRenderer` 의 인자 없는 `Scene` 생성. 서비스 클래스가 초기화 때 의존 서브시스템 포인터를 멤버로 받는 것(언리얼 `InitializeDependency`)은 고칠 때 함께 한다.
+
+- `C-26` **구조 리팩토링 · 데이터 주도의 남은 것**(2026-10-15 묶음 뒤). 끝난 것: 온라인 키트 클라이언트 골격(`OnlineKitClient`), 열거자 이름 표 → `ENUM()` · `getEnumName`,
+  위임 카탈로그 18 개 → `GameCatalog<TDef>` 직접 상속, 틱 시스템 밖 `tick` → `update` 와 개수 이름(`Naming/CountFirst`), 컴포넌트 아이콘 → `REFLECT( Meta = "Icon=…" )`,
+  머티리얼 사용 define · 서비스 지표 결과 라벨 → 열거자 이름, `InputMap` 의 `InputActionBuffer` 분리. 남은 것(순서대로):
+  ① **온라인 키트 서버 쪽 골격**: `XxxOnlineServerKit` 열한 개의 옵션 읽기(`findUnknownOption` + 오류 글) · `registerHostService` · `_bStarted` 를 표 하나(옵션 이름 · 읽는 칸)로.
+     `XxxMethod::toIndex` · `kCount` 와 서비스의 `kArrMethodName` 지표 이름도 메서드 표 하나에서 만든다. 계정 · 거래 클라이언트는 응답 모양이 달라 `OnlineKitClient` 밖이다.
+  ② **얇은 `Util`**: 조사에서 호출처 0~2 곳인 것 40 개 중 옮길 것 11 개(`.cpp` 안으로: `PluralRuleUtil` · `RHIInitResultUtil` · `EditorFrameStepUtil`,
+     한 타입의 메서드로: `BodyShapeUtil` · `BuoyancyUtil` · `SurfaceMaskUtil` · `PokerPotUtil` · `JSONWebTokenUtil` · `TradeInventoryUtil` · `EditorSubsystemRegistrationUtil`).
+     뒤쪽 일곱은 테스트만 부르므로 결정 기록 5-4 "테스트만 쓰는 공개 타입" 기준을 함께 적용한다. 카탈로그 중 다른 표를 함께 드는 것(`CropCatalog` · `VoxelBlockCatalog` · `AreaGraph`)은 그대로 둔다.
+  ③ **이름**: `add` / `register` / `append` 의 쓰임 기준(컨테이너에 넣기 · 콜백 등록 · 끝에 잇기)을 AGENTS.md 표로 정하고 어긋난 것을 고친다.
+     `Settings` 중 `Config`(배포 · 프리셋) 31 개와 `Def`(저작 데이터) 27 개 후보를 하나씩 판정해 개명한다 — 리플렉션 타입 이름이 데이터에 적힌 곳은 데이터도 다시 쓴다.
+  ④ **데이터 주도**: 게임 · 키트 튜닝 상수 → `PROPERTY` · 팩 설정, 작물 · 유닛 색 → `Def` 속성, `LoadBot` 동작 표 통합, 이벤트 필드 목록 → 필드 표 Emit 열,
+     확장자 → 종류 정본 하나(에디터 `EditorAssetType` 의 확장자 표 · 엔진 포맷 `kExtension` · 쿠킹 경로 · `ResourceDataKind`를 한 표로, 계약 테스트는 그 표로),
+     `UIStyleField` 서술자 표. 손 이름 표가 남은 열거형(`TelemetryUploadResult` · `CrashReport*` · `AIDirector*` 등 표가 함수 밖에 있어 이번 자동 변환이 못 본 것)도 `ENUM()` 으로.
+  ⑤ **큰 클래스 분할**: `FrameRenderer`(129, GPU 검증 필요) · `AbilitySystemComponent`(109) · `UISystem`(100) · `InputManager`(97) · `GameObjectManager`(66) — 책임이 갈리는 묶음부터.
+     `InputMap` 은 리바인딩(rebind · reset · 충돌 판정)도 따로 갈 수 있다(언리얼 `UEnhancedInputUserSettings`).
+  ⑥ **입력 커맨드 둘**: Engine `InputActionBuffer`(실시간 액션 이력)와 GameFramework `InputCommandBuffer`(틱 단위 결정적 격투 커맨드)가 같은 일을 다른 단위로 한다. 하나로 모을지 판정한다.
 
 - `C-22` **작은 정리 후보(2026-10-13 병합 검토에서 모음).** `IPhysicsScene3D/2D` 전방 선언용 `*Fwd.h`, Core → Log 예외 다섯 파일(티어마다 필요한 것이 달라 함수 포인터 하나로 풀리지 않는다), 프렐류드 예외 제거(184 파일).
 
@@ -564,7 +580,7 @@
   없어 빠지고 GL 은 하드웨어) — WARP 자체는 컴퓨트 컬링 · 인디렉트를 한다. 러너 쪽(WARP 판 · 창 없는 세션)을 다음 CI 실패의 주석으로 가른다.
 
 - `E-9` **Windows Shipping `CrashBundleTest.RealCrashLeavesABundle` 의 `crash.dmp` 가 0 바이트**(CI 실행 38439985866, `TestCrashBundle.cpp:370`, 그 앞 38421186200 은 통과).
-  로컬 Ninja-Shipping 3 회는 통과해 재현되지 않았다. 2026-10-14 로컬 Shipping `nogpu` 병렬 실행에서 한 번 같은 증상(단독 3 회는 통과). 의심: 자식 프로세스가 덤프를 쓰기 전에 끝남(덤프 쓰기 시점) · dbghelp 로드. 크래시 핸들러가 서브시스템으로 다시 쓰인 뒤 새 기준에서 다시 본다.
+  로컬 Ninja-Shipping 3 회는 통과해 재현되지 않았다. 2026-10-14 로컬 Shipping `nogpu` 병렬 실행에서 한 번 같은 증상(단독 3 회는 통과). 의심: 자식 프로세스가 덤프를 쓰기 전에 끝남(덤프 쓰기 시점) · dbghelp 로드. 크래시 핸들러가 서브시스템으로 다시 쓰인 뒤 새 기준에서 다시 본다. 2026-10-15 wt/structure Shipping: 병렬 nogpu 에서 1 회, 단독 7 회 중 2 회 실패(다른 작업자의 빌드 · 테스트가 겹친 때) — 부하에 따라 난다. 같은 때 옛 main Shipping 빌드는 단독 3/3 통과.
 
 - `E-10` **Linux Shipping `EngineTest_NoGPU_Shard5` 가 종료에서 멈춰 180 초 시간 초과**(CI 실행 38439985866). 케이스는 모두 통과하고 요약까지 찍힌 뒤
   `[TestHost] stopping: destroying objects`(`TestHostRuntime::stop` 의 `destroyAll`)에서 끝나지 않았다. 같은 실행의 오디오 디코드 태스크 수명 결함(해제된 `AudioClipCache` 를 워커가 씀 — 고쳤다)이
@@ -675,7 +691,7 @@
 | 1-6 | 게임프레임워크 · 킷 · 게임 | `C-4`, `C-5`, `D1-4`, `D3-7`, `D4-2`, `D4-3`, `D4-4`, `D4-5`, `D4-6`, `D4-7`, `D4-8`, `D4-9`, `D4-10`, `D4-11`, `D4-12`, `D4-13`, `D5-1`, `D5-2`, `D5-3`, `D6-1`, `D6-2`, `D6-3`, `D6-4`, `D6-5`, `D6-6`, `G-2`, `H-1` |
 | 1-7 | Core · 태스크 · 네트워크 | `B-9`, `B-10`, `D7-1`, `D7-2`, `D7-3`, `D7-5`, `D7-6` |
 | 1-8 | 성능 | `C-7`, `C-8`, `C-9` |
-| 1-9 | 빌드 · 린트 · CI · 테스트 | `B-5`, `C-11`, `C-12`, `C-13`, `C-14`, `C-15`, `C-16`, `C-17`, `E-2` |
+| 1-9 | 빌드 · 린트 · CI · 테스트 | `B-5`, `C-11`, `C-12`, `C-13`, `C-14`, `C-15`, `C-16`, `C-17`, `C-26`, `E-2` |
 | 1-10 | 관찰 중 | `B-6`, `B-7`, `E-1`, `E-3`, `E-4`, `E-5`, `E-6`, `E-7`, `E-8` |
 | 1-11 | 결정이 필요한 것 | `F-1`, `H-2` |
 | 1-12 | 낮은 우선순위 | `B-8`, `C-18`, `G-3`, `G-4`, `G-5`, `G-6`, `G-7`, `G-8`, `G-9`, `G-10`, `G-11`, `G-12` |

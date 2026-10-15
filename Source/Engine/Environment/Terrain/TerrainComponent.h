@@ -56,7 +56,7 @@ namespace sw
      *
      *          스레드: 질의(`findHeightAt` 등)는 읽기만 하므로 병렬 틱과 배치 계산이 동시에 호출해도 된다. 다시 읽기(`reloadTerrain`)는 틱 밖에서만 호출한다.
      */
-    REFLECT( Category = "Environment", DisplayName = "Terrain", Tooltip = "Heightfield terrain with LOD chunks and splat-painted layers" )
+    REFLECT( Category = "Environment", DisplayName = "Terrain", Tooltip = "Heightfield terrain with LOD chunks and splat-painted layers", Meta = "Icon=Heightfield, IconColor=Environment" )
     class SW_API TerrainComponent : public SceneComponent
     {
     public:
