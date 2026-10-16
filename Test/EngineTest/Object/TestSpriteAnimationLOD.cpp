@@ -27,15 +27,15 @@ namespace
         {
             const string clipPath = test::makeTempPath( "walker.sprite.json" );
             const bool   bWritten = FileUtil::writeTextFile( clipPath, R"({
-  "atlas": "engine/textures/test/quadrants.dds",
-  "frames": [
-    { "u": 0.0, "v": 0.0, "w": 0.5, "h": 0.5, "durationMs": 100 },
-    { "u": 0.5, "v": 0.0, "w": 0.5, "h": 0.5, "durationMs": 100 },
-    { "u": 0.0, "v": 0.5, "w": 0.5, "h": 0.5, "durationMs": 100 },
-    { "u": 0.5, "v": 0.5, "w": 0.5, "h": 0.5, "durationMs": 100 }
+  "_atlasPath": "engine/textures/test/quadrants.dds",
+  "_listFrame": [
+    { "_uvRect": "0.0,0.0,0.5,0.5", "_durationMs": 100 },
+    { "_uvRect": "0.5,0.0,0.5,0.5", "_durationMs": 100 },
+    { "_uvRect": "0.0,0.5,0.5,0.5", "_durationMs": 100 },
+    { "_uvRect": "0.5,0.5,0.5,0.5", "_durationMs": 100 }
   ],
-  "transformKeys": [],
-  "animations": [ { "name": "all", "start": 0, "count": 4, "loop": true } ]
+  "_listKey": [],
+  "_listAnimation": [ { "_name": "all", "_firstFrame": 0, "_frameCount": 4, "_bLoop": 1 } ]
 })" );
             return bWritten ? clipPath : string{};
         }

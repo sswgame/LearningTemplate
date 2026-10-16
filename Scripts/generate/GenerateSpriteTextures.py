@@ -43,6 +43,16 @@ def makeDdsBytes(width: int, height: int, rgbaBytes: bytes | bytearray) -> bytes
     return b"DDS " + header + bytes(rgbaBytes)
 
 
+def formatFloat2Internal(*listValue: float) -> str:
+    """엔진의 벡터 칸 글(`"0,0.5"`)을 만듭니다 — 숫자는 가장 짧은 표기이고 정수 값은 소수점이 없습니다(`std::to_chars`)."""
+    return ",".join(str(int(value)) if float(value).is_integer() else repr(float(value)) for value in listValue)
+
+
+def makeFrameInternal(u: float, v: float) -> dict:
+    """칸 하나(반 폭 · 반 높이, 250 ms, 테두리 없음)인 프레임입니다. 키 순서는 `SpriteClipFrame` 의 PROPERTY 순서입니다."""
+    return {"_uvRect": formatFloat2Internal(u, v, 0.5, 0.5), "_borderPixels": formatFloat2Internal(0, 0, 0, 0), "_durationMs": 250}
+
+
 def makeQuadrantTextureInternal() -> tuple[int, int, bytearray, list[dict]]:
     """네 칸 테스트 텍스처의 픽셀과, 칸마다 한 프레임(250 ms)인 클립 프레임 목록을 만듭니다."""
     half = kQuadrantSize // 2
@@ -51,12 +61,7 @@ def makeQuadrantTextureInternal() -> tuple[int, int, bytearray, list[dict]]:
         for x in range(kQuadrantSize):
             quadrant = (1 if x >= half else 0) + (2 if y >= half else 0)
             pixels += bytes(kQuadrantColors[quadrant])
-    listFrame = [
-        {"u": 0.0, "v": 0.0, "w": 0.5, "h": 0.5, "durationMs": 250},
-        {"u": 0.5, "v": 0.0, "w": 0.5, "h": 0.5, "durationMs": 250},
-        {"u": 0.5, "v": 0.5, "w": 0.5, "h": 0.5, "durationMs": 250},
-        {"u": 0.0, "v": 0.5, "w": 0.5, "h": 0.5, "durationMs": 250},
-    ]
+    listFrame = [makeFrameInternal(0.0, 0.0), makeFrameInternal(0.5, 0.0), makeFrameInternal(0.5, 0.5), makeFrameInternal(0.0, 0.5)]
     return kQuadrantSize, kQuadrantSize, pixels, listFrame
 
 
@@ -71,11 +76,9 @@ def makeMissingTextureInternal() -> tuple[int, int, bytearray]:
 
 
 def makeClipText(atlasPath: str, listFrame: list, listAnimation: list) -> str:
-    """`SpriteClipAsset::toJSON` 과 같은 키 · 순서의 클립 글을 만듭니다(atlas · frames · transformKeys · 있으면 animations)."""
-    clip = {"atlas": atlasPath, "frames": listFrame, "transformKeys": []}
-    if listAnimation:
-        clip["animations"] = listAnimation
-    return json.dumps(clip, indent=2) + "\n"
+    """`SpriteClipAsset::toJSON` 과 같은 키 · 순서의 클립 글을 만듭니다(PROPERTY 순서, 들여쓰기 2). 아틀라스 크기는 테두리가 없어 0 입니다."""
+    clip = {"_atlasPath": atlasPath, "_atlasPixelSize": formatFloat2Internal(0, 0), "_listFrame": listFrame, "_listKey": [], "_listAnimation": listAnimation}
+    return json.dumps(clip, indent=2)  # 엔진이 쓰는 글처럼 끝 줄바꿈이 없다 — 읽고 다시 저장해도 바이트가 같다
 
 
 def writeFileInternal(path: Path, data: bytes) -> None:
@@ -90,7 +93,7 @@ def generate(repositoryRoot: str) -> None:
 
     width, height, pixels, listFrame = makeQuadrantTextureInternal()
     writeFileInternal(resourceRoot / kQuadrantsTexturePath, makeDdsBytes(width, height, pixels))
-    listAnimation = [{"name": "cycle", "start": 0, "count": 4, "loop": True}]
+    listAnimation = [{"_name": "cycle", "_listNotify": [], "_firstFrame": 0, "_frameCount": 4, "_bLoop": 1}]
     writeFileInternal(resourceRoot / "engine/textures/test/quadrants.sprite.json",
                       makeClipText(kQuadrantsTexturePath, listFrame, listAnimation).encode("utf-8"))
     width, height, pixels = makeMissingTextureInternal()
