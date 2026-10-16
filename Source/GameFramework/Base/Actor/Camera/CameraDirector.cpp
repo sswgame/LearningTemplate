@@ -135,6 +135,7 @@ namespace sw
         , _fieldOfViewKickListener{}
         , _emptyState{}
         , _outputPose{}
+        , _userSettings{}
         , _pProbe{ nullptr }
         , _bHasPose{ SW_FALSE }
         , _bCutQueued{ SW_FALSE }
@@ -253,10 +254,14 @@ namespace sw
     {
         if ( inoutLayer._bFrozen == SW_TRUE )
             return;
-        const CameraPose evaluated = evaluateCameraMode( inoutLayer._def, target, deltaTime, inoutLayer._state, _pProbe );
-        inoutLayer._dampedPose     = inoutLayer._bFresh == SW_TRUE ? evaluated : dampPose( inoutLayer._dampedPose, evaluated, inoutLayer._def._damping, deltaTime );
-        inoutLayer._bFresh         = SW_FALSE;
-        inoutLayer._pose           = applyCameraShake( inoutLayer._dampedPose, computeCameraNoise( inoutLayer._def._noise, inoutLayer._state._time ) );
+        const CameraPresetDef& def       = inoutLayer._def;
+        const CameraPose       evaluated = _userSettings.applyFieldOfView( def._view._mode, evaluateCameraMode( def, target, deltaTime, inoutLayer._state, _pProbe ) );
+        inoutLayer._dampedPose           = inoutLayer._bFresh == SW_TRUE ? evaluated : dampPose( inoutLayer._dampedPose, evaluated, def._damping, deltaTime );
+        inoutLayer._bFresh               = SW_FALSE;
+        CameraShakeOffset shake          = computeCameraNoise( def._noise, inoutLayer._state._time ) * _userSettings._shakeScale;
+        if ( _userSettings._bHeadBob )
+            shake += computeCameraHeadBob( def._headBob, target._focus, deltaTime, inoutLayer._state );
+        inoutLayer._pose = applyCameraShake( inoutLayer._dampedPose, shake );
     }
 
     const CameraPose& CameraDirector::step( float32 deltaTime, const CameraTarget& target )
@@ -288,7 +293,7 @@ namespace sw
 
         // 충격은 섞인 포즈 위에 마지막으로 — 블렌드가 흔들림을 고정해 출발점에 싣지 않게.
         _impulseListener.step( elapsed );
-        _outputPose = _impulseListener.isActive() ? applyCameraShake( blended, _impulseListener.computeOffset( blended._position ) ) : blended;
+        _outputPose = _impulseListener.isActive() ? applyCameraShake( blended, _impulseListener.computeOffset( blended._position ) * _userSettings._shakeScale ) : blended;
         // 시야각 킥도 섞인 포즈 위에 — 블렌드 출발점에 킥이 고정되지 않게.
         _fieldOfViewKickListener.step( elapsed );
         if ( _fieldOfViewKickListener.isActive() )

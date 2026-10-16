@@ -40,7 +40,6 @@ namespace sw
             static constexpr const utf8* kArrCollisionAttribute[] = { "radius", "minDistance", "recoverTime" };
             static constexpr const utf8* kArrNoiseAttribute[]     = { "position", "rotation", "frequency", "seed" };
             static constexpr const utf8* kArrSweepAttribute[]     = { "yaw", "period", "phase" };
-
             struct BlendKeyTimeLess
             {
                 bool operator()( const BlendCurveKey& lhs, const BlendCurveKey& rhs ) const { return lhs._time < rhs._time; }
@@ -254,9 +253,11 @@ namespace sw
                 outDamping._orientationTime = MathUtil::max( 0.0f, node.getAttributeFloat( "orientation", outDamping._orientationTime ) );
             }
 
-            static void readPreset( const XMLNode& node, CameraPresetDef& inoutDef, string_view sourceName )
+            /** @brief 프리셋 하나를 읽습니다. 스키마로 엄격하게 읽는 섹션(`<HeadBob>`)에 오류가 있으면 false 입니다(오류는 `readFields` 가 이름과 함께 알린다). */
+            [[nodiscard]] static bool readPreset( const XMLNode& node, CameraPresetDef& inoutDef, string_view sourceName )
             {
                 warnUnknownAttributes( node, kArrPresetAttribute, sourceName );
+                bool bValid = true;
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
                     const utf8* pName = child.getName();
@@ -297,6 +298,11 @@ namespace sw
                     {
                         readNoise( child, inoutDef._noise, sourceName );
                     }
+                    else if ( StringUtil::equals( pName, "HeadBob", true ) )
+                    {
+                        // 스키마(Def 의 초기값 · Min)가 기본값과 범위를 정한다. 모르는 속성 · 범위 밖 값은 오류다.
+                        bValid = GameDataXML::readFields( child, inoutDef._headBob, sourceName ) && bValid;
+                    }
                     else if ( StringUtil::equals( pName, "Sweep", true ) )
                     {
                         readSweep( child, inoutDef._sweep, sourceName );
@@ -314,6 +320,7 @@ namespace sw
                         SW_LOG_WARNING( "%#: preset '%#' has unknown section <%#>", sourceName, inoutDef._id.c_str(), pName );
                     }
                 }
+                return bValid;
             }
         };
     } // namespace
@@ -410,7 +417,12 @@ namespace sw
                 CameraPresetDef def;
                 def._id      = hashed_string( pID );
                 def._blendIn = _defaultBlend;
-                CameraPresetInternal::readPreset( node, def, sourceName );
+                if ( CameraPresetInternal::readPreset( node, def, sourceName ) == false )
+                {
+                    // 틀린 값으로 반쯤 읽은 프리셋을 쓰지 않는다 — 켜려는 쪽이 없는 id 로 알게 된다.
+                    SW_LOG_ERROR( "%#: preset '%#' has invalid fields - skipped", sourceName, pID );
+                    continue;
+                }
                 add( def );
                 ++loadedCount;
             }

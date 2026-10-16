@@ -395,6 +395,39 @@ namespace sw
         return pose;
     }
 
+    CameraShakeOffset computeCameraHeadBob( const CameraHeadBobDef& headBob, const float3& focus, float32 deltaTime, CameraModeState& inoutState )
+    {
+        CameraShakeOffset offset{};
+        const bool        bEnabled = headBob._verticalAmplitude > 0.0f || headBob._lateralAmplitude > 0.0f;
+        if ( bEnabled == false )
+            return offset;
+        if ( inoutState._bHasBobFocus == SW_TRUE )
+        {
+            const float3  moved    = focus - inoutState._bobPreviousFocus;
+            const float32 distance = float2{ moved._x, moved._z }.getLength();
+            // 한 평가에 한 주기보다 멀리 갔으면 순간 이동이다 — 위상 · 빠르기에 넣지 않는다.
+            if ( distance < headBob._strideLength )
+            {
+                inoutState._bobPhase = MathUtil::wrapAngle( inoutState._bobPhase + distance / headBob._strideLength * MathUtil::kTwoPi );
+                inoutState._bobDistance += distance;
+            }
+        }
+        inoutState._bobPreviousFocus = focus;
+        inoutState._bHasBobFocus     = SW_TRUE;
+        if ( deltaTime > 0.0f )
+        {
+            const float32 speed        = inoutState._bobDistance / deltaTime;
+            const float32 targetWeight = MathUtil::saturate( speed / MathUtil::max( MathUtil::kEpsilon, headBob._referenceSpeed ) );
+            inoutState._bobDistance    = 0.0f;
+            inoutState._bobWeight += ( targetWeight - inoutState._bobWeight ) * computeDampingAlpha( headBob._blendTime, deltaTime );
+        }
+        // 한 주기(두 걸음)에 위아래는 두 번, 좌우는 한 번 — 발이 땅을 디딜 때마다 내려간다.
+        offset._position = float3{ MathUtil::sin( inoutState._bobPhase ) * headBob._lateralAmplitude, MathUtil::sin( inoutState._bobPhase * 2.0f ) * headBob._verticalAmplitude,
+                                   0.0f } *
+                           inoutState._bobWeight;
+        return offset;
+    }
+
     CameraPose evaluatePreset( const CameraPresetDef& def, const CameraTarget& target )
     {
         CameraModeState state;

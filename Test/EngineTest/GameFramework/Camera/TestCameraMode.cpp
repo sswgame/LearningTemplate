@@ -1,7 +1,10 @@
 #include "pch.h"
 
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Subsystem/SubsystemScope.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -14,7 +17,9 @@
 #include "GameFramework/Base/Actor/Camera/CameraMode.h"
 #include "GameFramework/Base/Actor/Camera/CameraPreset.h"
 #include "GameFramework/Base/Actor/Camera/CameraShake.h"
+#include "GameFramework/Base/Actor/Camera/CameraUserSettings.h"
 #include "GameFramework/Base/Actor/Camera/OrthoCameraRigComponent.h"
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -753,4 +758,168 @@ SW_TEST_CASE( CameraModeTest, OrthoRigStartsAtItsYawAndFollowsTheFocus )
     pRig->updateCamera( 0.016f );
     const OrthoCameraView view = OrthoCameraRigMath::computeView( float3{ 1.0f, 0.0f, 0.0f }, pRig->getYaw(), 30.0f * MathUtil::kDegreeToRadian, 250.0f );
     SW_EXPECT_NEAR_EQUAL( view._position._x, pCamera->getWorldPosition()._x, 1.0e-2f );
+}
+
+/**
+ * @brief [CameraModeTest] 머리 흔들림은 걸은 거리로 위상이 가고(한 주기에 위아래 두 번), 빠르기에 따라 커지며, 멈추면 0 으로 돌아오고 순간 이동은 넣지 않는다
+ * @details 4 m/s(기준 빠르기)로 2 초 걸으면 크기 비율이 1 에 붙어 위아래 흔들림의 최대가 진폭이다. 시간이 흐르지 않은 평가(틱 밖에서 눈 자리를 넣음)를 끼워도
+ *          위상은 간 거리만큼만 간다 — 위상이 평가 횟수로 가면 같은 프레임에 두 번 부를 때 두 배로 흔들린다.
+ */
+SW_TEST_CASE( CameraModeTest, HeadBobFollowsTheDistanceWalkedAndSettlesWhenStopped )
+{
+    CameraHeadBobDef bob;
+    bob._verticalAmplitude  = 0.05f;
+    bob._lateralAmplitude   = 0.02f;
+    bob._strideLength       = 1.6f;
+    bob._referenceSpeed     = 4.0f;
+    bob._blendTime          = 0.1f;
+    constexpr float32 kStep = 1.0f / 60.0f;
+
+    CameraModeState state;
+    float3          focus{};
+    float32         peakVertical = 0.0f;
+    (void)computeCameraHeadBob( bob, focus, 0.0f, state );
+    for ( int32 frameIndex = 0; frameIndex < 120; ++frameIndex )
+    {
+        focus._z += 4.0f * kStep;
+        const CameraShakeOffset offset = computeCameraHeadBob( bob, focus, kStep, state );
+        peakVertical                   = MathUtil::max( peakVertical, offset._position._y );
+        SW_EXPECT_TRUE( MathUtil::abs( offset._position._x ) <= bob._lateralAmplitude + 1.0e-5f );
+    }
+    SW_EXPECT_NEAR_EQUAL( 1.0f, state._bobWeight, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( bob._verticalAmplitude, peakVertical, 2.0e-3f );
+    // 8 m 를 걸었다 — 위상은 8 / 1.6 = 다섯 주기, 곧 0(감싼 각) 곁이다.
+    SW_EXPECT_NEAR_EQUAL( 0.0f, MathUtil::sin( state._bobPhase ), 1.0e-3f );
+
+    // 같은 거리를 시간 없는 평가 둘 + 시간 있는 평가 하나로 나눠도 위상은 같다.
+    CameraModeState split      = state;
+    CameraModeState whole      = state;
+    float3          splitFocus = focus;
+    splitFocus._z += 0.03f;
+    (void)computeCameraHeadBob( bob, splitFocus, 0.0f, split );
+    splitFocus._z += 0.03f;
+    (void)computeCameraHeadBob( bob, splitFocus, kStep, split );
+    (void)computeCameraHeadBob( bob, focus + float3{ 0.0f, 0.0f, 0.06f }, kStep, whole );
+    SW_EXPECT_NEAR_EQUAL( whole._bobPhase, split._bobPhase, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( whole._bobWeight, split._bobWeight, 1.0e-5f );
+
+    // 순간 이동(한 주기보다 먼 한 걸음)은 위상을 옮기지 않는다.
+    const float32 phaseBefore = state._bobPhase;
+    focus._z += 50.0f;
+    (void)computeCameraHeadBob( bob, focus, 0.0f, state );
+    SW_EXPECT_NEAR_EQUAL( phaseBefore, state._bobPhase, 1.0e-6f );
+
+    // 멈추면 1 초 안에 0 으로 돌아온다.
+    CameraShakeOffset settled{};
+    for ( int32 frameIndex = 0; frameIndex < 60; ++frameIndex )
+    {
+        settled = computeCameraHeadBob( bob, focus, kStep, state );
+    }
+    SW_EXPECT_TRUE( state._bobWeight < 1.0e-3f );
+    SW_EXPECT_TRUE( settled._position.getLength() < 1.0e-4f );
+
+    // 진폭이 0 이면(기본) 흔들림도 상태 변화도 없다.
+    CameraModeState untouched;
+    SW_EXPECT_TRUE( computeCameraHeadBob( CameraHeadBobDef{}, float3{ 1.0f, 0.0f, 0.0f }, kStep, untouched )._position.getLength() == 0.0f );
+    SW_EXPECT_TRUE( untouched._bHasBobFocus == SW_FALSE );
+}
+
+/**
+ * @brief [CameraModeTest] 사용자 설정 — 시야각은 1인칭 · 3인칭에만 기본 시야각 대비 반각의 tan 비율로 걸리고, 흔들림 배율 0 은 손떨림을, 머리 흔들림 끔은 걷기 흔들림을 없앤다
+ * @details 디렉터는 전역 변수를 읽지 않고 넣은 값(`setUserSettings`)만 쓴다. 궤도 · 고정 같은 저작 카메라의 렌즈는 그대로다.
+ */
+SW_TEST_CASE( CameraModeTest, DirectorAppliesTheUserFieldOfViewShakeAndHeadBobSettings )
+{
+    CameraUserSettings wide;
+    wide._fieldOfViewScale = 1.5f;
+    const float32 authored = 0.8f;
+    const float32 expected = 2.0f * MathUtil::atan2( MathUtil::tan( authored * 0.5f ) * 1.5f, 1.0f );
+
+    CameraPresetDef third      = CameraModeTestInternal::makeThirdPerson();
+    third._collision._bEnabled = false;
+    third._lens._fieldOfViewY  = authored;
+    CameraPresetDef orbit      = third;
+    orbit._id                  = hashed_string( "orbit" );
+    orbit._view._mode          = CameraPresetMode::Orbit;
+    BlendCurveDef cut;
+    cut._curve = BlendCurve::Cut;
+
+    CameraDirector director;
+    director.setUserSettings( wide );
+    director.activatePreset( third, cut );
+    SW_EXPECT_NEAR_EQUAL( expected, director.step( 0.016f, CameraTarget{} )._fieldOfViewY, 1.0e-5f );
+    director.activatePreset( orbit, cut );
+    SW_EXPECT_NEAR_EQUAL( authored, director.step( 0.016f, CameraTarget{} )._fieldOfViewY, 1.0e-5f );
+
+    // 흔들림 배율 0 — 손떨림이 있는 프리셋도 감쇠한 자리 그대로다.
+    CameraPresetDef shaky           = orbit;
+    shaky._id                       = hashed_string( "shaky" );
+    shaky._noise._positionAmplitude = float3{ 0.5f, 0.5f, 0.5f };
+    shaky._noise._frequency         = 2.0f;
+    CameraUserSettings calm;
+    calm._shakeScale = 0.0f;
+    CameraDirector still;
+    still.setUserSettings( calm );
+    still.activatePreset( shaky, cut );
+    const CameraPose calmPose = still.step( 0.3f, CameraTarget{} );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, ( calmPose._position - evaluatePreset( shaky, CameraTarget{} )._position ).getLength(), 1.0e-4f );
+
+    // 머리 흔들림 끔 — 걷는 1인칭 프리셋이 눈 자리에서 움직이지 않는다.
+    CameraPresetDef walker;
+    walker._id                         = hashed_string( "walker" );
+    walker._view._mode                 = CameraPresetMode::FirstPerson;
+    walker._headBob._verticalAmplitude = 0.05f;
+    CameraUserSettings noBob;
+    noBob._bHeadBob = false;
+    CameraDirector bobbing;
+    CameraDirector steady;
+    steady.setUserSettings( noBob );
+    bobbing.activatePreset( walker, cut );
+    steady.activatePreset( walker, cut );
+    CameraTarget target;
+    float32      maxBob    = 0.0f;
+    float32      maxSteady = 0.0f;
+    for ( int32 frameIndex = 0; frameIndex < 60; ++frameIndex )
+    {
+        target._focus._z += 4.0f / 60.0f;
+        maxBob    = MathUtil::max( maxBob, MathUtil::abs( bobbing.step( 1.0f / 60.0f, target )._position._y ) );
+        maxSteady = MathUtil::max( maxSteady, MathUtil::abs( steady.step( 1.0f / 60.0f, target )._position._y ) );
+    }
+    SW_EXPECT_TRUE( maxBob > 0.03f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, maxSteady, 1.0e-6f );
+}
+
+/**
+ * @brief [CameraModeTest] 사용자 설정은 엔진 전역 변수(`gv_cameraFieldOfView` · `gv_cameraShakeScale` · `gv_cameraHeadBob`)에서 읽고, 시야각 비율의 기준은 변수의 기본값이다
+ * @details 게임 서비스에 엔진의 전역 변수 관리자를 걸어 게임 모듈이 보는 길로 읽는다. 기본값 그대로면 비율이 1 이라 저작한 화면 그대로다.
+ */
+SW_TEST_CASE( CameraModeTest, UserSettingsAreReadFromTheEngineGlobalVariables )
+{
+    GlobalVariableManager& variables = engine::getSubsystem<GlobalVariableManager>();
+    GlobalVariableInfo*    pFov      = variables.findVariable( "gv_cameraFieldOfView" );
+    GlobalVariableInfo*    pShake    = variables.findVariable( "gv_cameraShakeScale" );
+    GlobalVariableInfo*    pBob      = variables.findVariable( "gv_cameraHeadBob" );
+    SW_ASSERT_TRUE( pFov != nullptr && pShake != nullptr && pBob != nullptr );
+    SubsystemScope scope;
+    (void)scope.bind( &variables ); // 새 범위 — 겹치지 않는다
+    const game::ScopedGameScope guard( scope );
+
+    const CameraUserSettings neutral = CameraUserSettings::makeFromGlobalVariables();
+    SW_EXPECT_NEAR_EQUAL( 1.0f, neutral._fieldOfViewScale, 1.0e-6f );
+
+    const float32 reference = std::get<float32>( pFov->_defaultValue ) * MathUtil::kDegreeToRadian;
+    SW_ASSERT_TRUE( pFov->setValueAsFloat( 90.0f ) );
+    SW_ASSERT_TRUE( pShake->setValueAsFloat( 0.25f ) );
+    SW_ASSERT_TRUE( pBob->setValueAsBool( false ) );
+    const CameraUserSettings chosen = CameraUserSettings::makeFromGlobalVariables();
+    pFov->resetToDefault();
+    pShake->resetToDefault();
+    pBob->resetToDefault();
+    SW_EXPECT_NEAR_EQUAL( MathUtil::tan( 45.0f * MathUtil::kDegreeToRadian ) / MathUtil::tan( reference * 0.5f ), chosen._fieldOfViewScale, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.25f, chosen._shakeScale, 1.0e-6f );
+    SW_EXPECT_FALSE( chosen._bHeadBob );
+    // 기본 시야각의 렌즈를 사용자 90 도로 넓히면 정확히 90 도다.
+    CameraPose pose;
+    pose._fieldOfViewY = reference;
+    SW_EXPECT_NEAR_EQUAL( 90.0f * MathUtil::kDegreeToRadian, chosen.applyFieldOfView( CameraPresetMode::FirstPerson, pose )._fieldOfViewY, 1.0e-4f );
 }
