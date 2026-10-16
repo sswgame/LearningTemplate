@@ -17,41 +17,38 @@ namespace sw
 
     namespace
     {
-        struct WildWestHorseComponentInternal
+        /** @brief 말 사건을 한 줄 로그로 남깁니다(유대 단계 · 능력 · 지침 · 겁). */
+        void logHorseEvent( const utf8* pHorseName, const WesternHorseEvent& horseEvent )
         {
-            /** @brief 말 사건을 한 줄 로그로 남깁니다(유대 단계 · 능력 · 지침 · 겁). */
-            static void logEvent( const utf8* pHorseName, const WesternHorseEvent& horseEvent )
+            switch ( horseEvent._kind )
             {
-                switch ( horseEvent._kind )
+                case WesternHorseEvent::Kind::BondLevelUp:
                 {
-                    case WesternHorseEvent::Kind::BondLevelUp:
-                    {
-                        SW_LOG_INFO( "[WildWest] %# bond level %#", pHorseName, horseEvent._value );
-                        break;
-                    }
-                    case WesternHorseEvent::Kind::AbilityUnlocked:
-                    {
-                        SW_LOG_INFO( "[WildWest] %# learned %#", pHorseName, horseEvent._ability.c_str() );
-                        break;
-                    }
-                    case WesternHorseEvent::Kind::Exhausted:
-                    {
-                        SW_LOG_INFO( "[WildWest] %# is out of breath - no gallop until it recovers", pHorseName );
-                        break;
-                    }
-                    case WesternHorseEvent::Kind::Spooked:
-                    {
-                        SW_LOG_INFO( "[WildWest] %# rears up", pHorseName );
-                        break;
-                    }
-                    case WesternHorseEvent::Kind::ThrewRider:
-                    {
-                        SW_LOG_INFO( "[WildWest] %# threw its rider", pHorseName );
-                        break;
-                    }
+                    SW_LOG_INFO( "[WildWest] %# bond level %#", pHorseName, horseEvent._value );
+                    break;
+                }
+                case WesternHorseEvent::Kind::AbilityUnlocked:
+                {
+                    SW_LOG_INFO( "[WildWest] %# learned %#", pHorseName, horseEvent._ability.c_str() );
+                    break;
+                }
+                case WesternHorseEvent::Kind::Exhausted:
+                {
+                    SW_LOG_INFO( "[WildWest] %# is out of breath - no gallop until it recovers", pHorseName );
+                    break;
+                }
+                case WesternHorseEvent::Kind::Spooked:
+                {
+                    SW_LOG_INFO( "[WildWest] %# rears up", pHorseName );
+                    break;
+                }
+                case WesternHorseEvent::Kind::ThrewRider:
+                {
+                    SW_LOG_INFO( "[WildWest] %# threw its rider", pHorseName );
+                    break;
                 }
             }
-        };
+        }
     } // namespace
 } // namespace sw
 
@@ -110,7 +107,7 @@ namespace sw
         const GameObject* pOwner = getOwner();
         for ( const WesternHorseEvent& horseEvent : listEvent )
         {
-            WildWestHorseComponentInternal::logEvent( pOwner != nullptr ? pOwner->getName().c_str() : "?", horseEvent );
+            logHorseEvent( pOwner != nullptr ? pOwner->getName().c_str() : "?", horseEvent );
         }
     }
 

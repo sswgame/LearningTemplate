@@ -79,7 +79,13 @@
 					                    _bLockRotation="false"
 					                    _bInterpolate="false">
 						<_listShape>
-							<PhysicsShapeDesc3D _type="Box" _halfExtents="80,0.5,80" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+							<PhysicsShapeDesc3D _type="Box"
+							                    _halfExtents="80,0.5,80"
+							                    _radius="0.5"
+							                    _halfHeight="0.5"
+							                    _localPosition="0,0,0"
+							                    _localRotation="0,0,0"
+							                    _material="None">
 								<_listPoint />
 								<_listIndex />
 							</PhysicsShapeDesc3D>
@@ -387,9 +393,7 @@
 					                      _exitOffset="-1.6,0,0"
 					                      _enterDistance="2.5"
 					                      _bDriverSeat="true" />
-					<VehicleExitComponent _componentName="VehicleExitComponent"
-					                      _bActive="true"
-					                      _exitButton="West.Interact" />
+					<VehicleExitComponent _componentName="VehicleExitComponent" _bActive="true" _exitButton="West.Interact" />
 					<WesternHorseMountComponent _componentName="WesternHorseMountComponent"
 					                            _bActive="true"
 					                            _gallopAbility="None"
@@ -595,9 +599,7 @@
 					                      _exitOffset="-1.6,0,0"
 					                      _enterDistance="2.5"
 					                      _bDriverSeat="true" />
-					<VehicleExitComponent _componentName="VehicleExitComponent"
-					                      _bActive="true"
-					                      _exitButton="West.Interact" />
+					<VehicleExitComponent _componentName="VehicleExitComponent" _bActive="true" _exitButton="West.Interact" />
 					<WesternHorseMountComponent _componentName="WesternHorseMountComponent"
 					                            _bActive="true"
 					                            _gallopAbility="None"
