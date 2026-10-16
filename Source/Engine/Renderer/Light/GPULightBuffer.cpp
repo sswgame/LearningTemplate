@@ -19,18 +19,15 @@ namespace sw
 
     namespace
     {
-        struct GPULightBufferInternal
+        /** @brief 그림자를 켠 점광 · 스폿이면 true 입니다(방향광은 씬이 하나 고른다). */
+        bool castsLocalShadow( const LightComponent& light )
         {
-            /** @brief 그림자를 켠 점광 · 스폿이면 true 입니다(방향광은 씬이 하나 고른다). */
-            static bool castsLocalShadow( const LightComponent& light )
-            {
-                if ( light.getLightType() == shaderslot::kLightTypePoint )
-                    return static_cast<const PointLightComponent&>( light ).castsShadow();
-                if ( light.getLightType() == shaderslot::kLightTypeSpot )
-                    return static_cast<const SpotLightComponent&>( light ).castsShadow();
-                return false;
-            }
-        };
+            if ( light.getLightType() == shaderslot::kLightTypePoint )
+                return static_cast<const PointLightComponent&>( light ).castsShadow();
+            if ( light.getLightType() == shaderslot::kLightTypeSpot )
+                return static_cast<const SpotLightComponent&>( light ).castsShadow();
+            return false;
+        }
     } // namespace
 
     void collectSceneLights( const Scene* pScene, vector<GPULight>& outList, vector<uint32>* pOutListShadowLightIndex )
@@ -59,7 +56,7 @@ namespace sw
                 if ( pLight == pShadowLight )
                     light._params._x = 1.0f;
                 // 그림자를 드리우는 점광 · 스폿은 번호만 적는다 — 아틀라스 칸(`_params.x` · `_params.w`)은 칸 수를 아는 쪽이 나눠 준다(ShadowSetupUtil).
-                if ( pOutListShadowLightIndex != nullptr && GPULightBufferInternal::castsLocalShadow( *pLight ) )
+                if ( pOutListShadowLightIndex != nullptr && castsLocalShadow( *pLight ) )
                     pOutListShadowLightIndex->push_back( static_cast<uint32>( outList.size() ) );
                 outList.push_back( light );
             }

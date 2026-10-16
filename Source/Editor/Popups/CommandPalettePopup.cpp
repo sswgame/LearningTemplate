@@ -23,30 +23,27 @@ namespace sw::editor
 {
     namespace
     {
-        struct CommandPalettePopupInternal
+        bool fuzzyMatch( string_view text, string_view pattern )
         {
-            static bool fuzzyMatch( string_view text, string_view pattern )
-            {
-                if ( pattern.empty() )
-                    return true;
-                if ( text.empty() )
-                    return false;
-
-                size_t patternIdx = 0;
-                for ( size_t textIdx = 0; textIdx < text.size(); ++textIdx )
-                {
-                    const utf8 tc = StringUtil::toLowerChar( text[textIdx] );
-                    const utf8 pc = StringUtil::toLowerChar( pattern[patternIdx] );
-                    if ( tc == pc )
-                    {
-                        ++patternIdx;
-                        if ( patternIdx == pattern.size() )
-                            return true;
-                    }
-                }
+            if ( pattern.empty() )
+                return true;
+            if ( text.empty() )
                 return false;
+
+            size_t patternIdx = 0;
+            for ( size_t textIdx = 0; textIdx < text.size(); ++textIdx )
+            {
+                const utf8 tc = StringUtil::toLowerChar( text[textIdx] );
+                const utf8 pc = StringUtil::toLowerChar( pattern[patternIdx] );
+                if ( tc == pc )
+                {
+                    ++patternIdx;
+                    if ( patternIdx == pattern.size() )
+                        return true;
+                }
             }
-        };
+            return false;
+        }
     } // namespace
 } // namespace sw::editor
 
@@ -208,8 +205,8 @@ namespace sw::editor
             const string_view                  pattern{ _searchBuffer.c_str() };
             for ( const CommandPaletteEntry& entry : _listAllCommand )
             {
-                const bool bMatchesPattern = CommandPalettePopupInternal::fuzzyMatch( entry._label, pattern ) || CommandPalettePopupInternal::fuzzyMatch( entry._category, pattern ) ||
-                                             CommandPalettePopupInternal::fuzzyMatch( entry._detail, pattern );
+                const bool bMatchesPattern = fuzzyMatch( entry._label, pattern ) || fuzzyMatch( entry._category, pattern ) ||
+                                             fuzzyMatch( entry._detail, pattern );
                 if ( bMatchesPattern )
                     listFiltered.push_back( &entry );
             }

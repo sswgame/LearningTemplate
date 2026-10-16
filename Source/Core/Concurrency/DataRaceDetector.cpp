@@ -19,19 +19,16 @@ namespace sw
         static constexpr uint32 kCountMask      = 0xFFFF;
         static constexpr uint32 kWriterUnit     = 1u << kWriterBitShift;
 
-        struct DataRaceDetectorInternal
+        /**
+         * @brief 현재 스레드를 가리키는 0 이 아닌 값입니다.
+         * @details 0 은 "주인 없음" 을 뜻하므로 쓸 수 없습니다. 해시가 0 으로 나오는 드문 경우에는 1 로 바꿉니다. 어떤 값이든
+         *          스레드마다 다르기만 하면 되기 때문입니다.
+         */
+        uint64 currentThreadID()
         {
-            /**
-             * @brief 현재 스레드를 가리키는 0 이 아닌 값입니다.
-             * @details 0 은 "주인 없음" 을 뜻하므로 쓸 수 없습니다. 해시가 0 으로 나오는 드문 경우에는 1 로 바꿉니다. 어떤 값이든
-             *          스레드마다 다르기만 하면 되기 때문입니다.
-             */
-            static uint64 currentThreadID()
-            {
-                const uint64 id = static_cast<uint64>( std::hash<std::thread::id>{}( std::this_thread::get_id() ) );
-                return ( id != 0 ) ? id : 1;
-            }
-        };
+            const uint64 id = static_cast<uint64>( std::hash<std::thread::id>{}( std::this_thread::get_id() ) );
+            return ( id != 0 ) ? id : 1;
+        }
 #endif
     } // namespace
 } // namespace sw
@@ -47,7 +44,7 @@ namespace sw
     bool RaceDetectContext::isOwnedByCurrentThread() const
     {
         const uint64 ownerID = _ownerThreadID.load( std::memory_order_relaxed );
-        return ownerID != 0 && ownerID == DataRaceDetectorInternal::currentThreadID();
+        return ownerID != 0 && ownerID == currentThreadID();
     }
 
     /**
@@ -64,7 +61,7 @@ namespace sw
         {
             // 처음 들어온 스레드가 주인이 된다. 읽기끼리는 서로 보고하지 않으므로 누가 주인이어도 상관없다.
             if ( readers == 0 )
-                _ownerThreadID.store( DataRaceDetectorInternal::currentThreadID(), std::memory_order_relaxed );
+                _ownerThreadID.store( currentThreadID(), std::memory_order_relaxed );
             return;
         }
 
@@ -97,7 +94,7 @@ namespace sw
 
         if ( writers == 0 && readers == 0 )
         {
-            _ownerThreadID.store( DataRaceDetectorInternal::currentThreadID(), std::memory_order_relaxed );
+            _ownerThreadID.store( currentThreadID(), std::memory_order_relaxed );
             return;
         }
 

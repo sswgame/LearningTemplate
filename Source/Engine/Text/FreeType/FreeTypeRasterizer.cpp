@@ -16,11 +16,11 @@ namespace sw
 
     namespace
     {
-        struct FreeTypeRasterizerInternal
+        /** @brief 26.6 고정소수점을 픽셀로 바꿉니다. */
+        float32 fromFixed26Dot6( FT_Pos value )
         {
-            /** @brief 26.6 고정소수점을 픽셀로 바꿉니다. */
-            static float32 fromFixed26Dot6( FT_Pos value ) { return static_cast<float32>( value ) / 64.0f; }
-        };
+            return static_cast<float32>( value ) / 64.0f;
+        }
     } // namespace
 } // namespace sw
 
@@ -179,7 +179,7 @@ namespace sw
                 return false;
             }
             FT_GlyphSlot pSlot   = pFace->glyph;
-            outBitmap._advancePx = FreeTypeRasterizerInternal::fromFixed26Dot6( pSlot->advance.x );
+            outBitmap._advancePx = fromFixed26Dot6( pSlot->advance.x );
             outBitmap._bytes.clear();
             outBitmap._width         = 0;
             outBitmap._height        = 0;

@@ -10,22 +10,19 @@ namespace sw::editor
 {
     namespace
     {
-        struct MapCheckRowsInternal
+        /** @brief 오류가 먼저, 그다음 오브젝트 이름 · 타입 · 프로퍼티 · 메시지 순입니다. */
+        bool isRowBefore( const ValidationIssue& left, const ValidationIssue& right )
         {
-            /** @brief 오류가 먼저, 그다음 오브젝트 이름 · 타입 · 프로퍼티 · 메시지 순입니다. */
-            static bool isRowBefore( const ValidationIssue& left, const ValidationIssue& right )
-            {
-                if ( left._severity != right._severity )
-                    return left._severity == ValidationSeverity::Error;
-                if ( left._sourceLabel != right._sourceLabel )
-                    return left._sourceLabel < right._sourceLabel;
-                if ( left._typeName.isEqual( right._typeName, NameCase::CaseSensitive ) == false )
-                    return HashedStringLexicalLess{}( left._typeName, right._typeName );
-                if ( left._propertyName.isEqual( right._propertyName, NameCase::CaseSensitive ) == false )
-                    return HashedStringLexicalLess{}( left._propertyName, right._propertyName );
-                return left._message < right._message;
-            }
-        };
+            if ( left._severity != right._severity )
+                return left._severity == ValidationSeverity::Error;
+            if ( left._sourceLabel != right._sourceLabel )
+                return left._sourceLabel < right._sourceLabel;
+            if ( left._typeName.isEqual( right._typeName, NameCase::CaseSensitive ) == false )
+                return HashedStringLexicalLess{}( left._typeName, right._typeName );
+            if ( left._propertyName.isEqual( right._propertyName, NameCase::CaseSensitive ) == false )
+                return HashedStringLexicalLess{}( left._propertyName, right._propertyName );
+            return left._message < right._message;
+        }
     } // namespace
 } // namespace sw::editor
 
@@ -59,6 +56,6 @@ namespace sw::editor
             if ( bMatched )
                 outListRow.push_back( issue );
         }
-        std::stable_sort( outListRow.begin(), outListRow.end(), &MapCheckRowsInternal::isRowBefore );
+        std::stable_sort( outListRow.begin(), outListRow.end(), &isRowBefore );
     }
 } // namespace sw::editor

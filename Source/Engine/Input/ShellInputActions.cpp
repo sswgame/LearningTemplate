@@ -19,20 +19,15 @@ namespace sw
 
     namespace
     {
-        struct ShellInputActionsInternal
-        {
-            static constexpr const utf8* kRootElement  = "ShellBindings";
-            static constexpr const utf8* kBindElement  = "bind";
-            static constexpr const utf8* kActionAttr   = "action";
-            static constexpr const utf8* kIndexAttr    = "index";
-            static constexpr const utf8* kSlotAttr     = "slot";
-            static constexpr int32       kMaxBindIndex = 16; ///< 한 액션이 가질 수 있는 바인딩 번호의 상한입니다(잘못된 파일이 큰 번호를 주지 못하게).
+        constexpr const utf8* kRootElement  = "ShellBindings";
+        constexpr const utf8* kBindElement  = "bind";
+        constexpr const utf8* kActionAttr   = "action";
+        constexpr const utf8* kIndexAttr    = "index";
+        constexpr const utf8* kSlotAttr     = "slot";
+        constexpr int32       kMaxBindIndex = 16; ///< 한 액션이 가질 수 있는 바인딩 번호의 상한입니다(잘못된 파일이 큰 번호를 주지 못하게).
 
-            /** @brief 지금 도는 셸 액션입니다(엔진 루프가 값 멤버로 가진다). 개발 명령이 엔진 루프를 모르고 찾는 길입니다. */
-            static ShellInputActions* s_pActive;
-        };
-
-        ShellInputActions* ShellInputActionsInternal::s_pActive = nullptr;
+        /** @brief 지금 도는 셸 액션입니다(엔진 루프가 값 멤버로 가진다). 개발 명령이 엔진 루프를 모르고 찾는 길입니다. */
+        ShellInputActions* s_pActive = nullptr;
     } // namespace
 
     ShellInputActions::ShellInputActions()
@@ -44,13 +39,13 @@ namespace sw
 
     ShellInputActions::~ShellInputActions()
     {
-        if ( ShellInputActionsInternal::s_pActive == this )
-            ShellInputActionsInternal::s_pActive = nullptr;
+        if ( s_pActive == this )
+            s_pActive = nullptr;
     }
 
     ShellInputActions* ShellInputActions::findActive()
     {
-        return ShellInputActionsInternal::s_pActive;
+        return s_pActive;
     }
 
     void ShellInputActions::update( InputManager& inputManager, float32 deltaTime )
@@ -62,7 +57,7 @@ namespace sw
             // 플레이어가 셸 키(콘솔 여는 키 …)를 바꿨으면 리소스의 기본 위에 입힌다. 읽지 못한 파일은 로그가 알리고 기본 키로 돈다.
             if ( _userBindingsPath.empty() == false )
                 (void)loadUserBindings( *_mapDebugAction, _userBindingsPath ); // 실패는 loadUserBindings 가 경고로 남긴다
-            ShellInputActionsInternal::s_pActive = this;
+            s_pActive = this;
         }
 
         // _mapDebugAction 은 위에서 처음 한 번 만든 뒤로 계속 있으므로 nullptr 일 수 없다.
@@ -77,8 +72,8 @@ namespace sw
     {
         _mapDebugAction.reset();
         _bBound = false;
-        if ( ShellInputActionsInternal::s_pActive == this )
-            ShellInputActionsInternal::s_pActive = nullptr;
+        if ( s_pActive == this )
+            s_pActive = nullptr;
     }
 
     unique_ptr<InputMap> ShellInputActions::createInputMap( string_view inputMapPath )
@@ -111,12 +106,11 @@ namespace sw
 
     bool ShellInputActions::saveUserBindings( const InputMap& map, string_view filePath )
     {
-        using Internal = ShellInputActionsInternal;
         if ( filePath.empty() )
             return false;
 
         XMLDocument doc;
-        XMLNode     root         = doc.appendRoot( Internal::kRootElement );
+        XMLNode     root         = doc.appendRoot( kRootElement );
         uint32      changedCount = 0;
         for ( const hashed_string& action : map.getActionNames() )
         {
@@ -133,10 +127,10 @@ namespace sw
                 const string slotText = InputSlotUtil::toText( current );
                 if ( slotText.empty() )
                     continue; // 키보드, 마우스, 패드가 아닌 슬롯은 문자열로 적을 수 없다
-                XMLNode bindNode = root.appendChild( Internal::kBindElement );
-                bindNode.appendAttribute( Internal::kActionAttr, action.c_str() );
-                bindNode.appendAttribute( Internal::kIndexAttr, static_cast<int32>( bindIndex ) );
-                bindNode.appendAttribute( Internal::kSlotAttr, slotText.c_str() );
+                XMLNode bindNode = root.appendChild( kBindElement );
+                bindNode.appendAttribute( kActionAttr, action.c_str() );
+                bindNode.appendAttribute( kIndexAttr, static_cast<int32>( bindIndex ) );
+                bindNode.appendAttribute( kSlotAttr, slotText.c_str() );
                 ++changedCount;
             }
         }
@@ -151,7 +145,6 @@ namespace sw
 
     bool ShellInputActions::loadUserBindings( InputMap& map, string_view filePath )
     {
-        using Internal = ShellInputActionsInternal;
         if ( filePath.empty() || FileUtil::exists( filePath ) == false )
             return true;
 
@@ -161,19 +154,19 @@ namespace sw
             SW_LOG_WARNING( "Shell user bindings '%#' could not be read - the default keys are used", filePath );
             return false;
         }
-        const XMLNode root = doc.getRoot( Internal::kRootElement );
+        const XMLNode root = doc.getRoot( kRootElement );
         if ( root.isValid() == false )
         {
-            SW_LOG_WARNING( "Shell user bindings '%#' has no <%#> root - the default keys are used", filePath, Internal::kRootElement );
+            SW_LOG_WARNING( "Shell user bindings '%#' has no <%#> root - the default keys are used", filePath, kRootElement );
             return false;
         }
-        for ( XMLNode bindNode = root.findChild( Internal::kBindElement ); bindNode.isValid(); bindNode = bindNode.findNextSibling( Internal::kBindElement ) )
+        for ( XMLNode bindNode = root.findChild( kBindElement ); bindNode.isValid(); bindNode = bindNode.findNextSibling( kBindElement ) )
         {
-            const string_view actionText = bindNode.getAttributeText( Internal::kActionAttr );
-            const string_view slotText   = bindNode.getAttributeText( Internal::kSlotAttr );
+            const string_view actionText = bindNode.getAttributeText( kActionAttr );
+            const string_view slotText   = bindNode.getAttributeText( kSlotAttr );
             int32             bindIndex  = 0;
             InputSlot         slot{};
-            const bool        bUnreadableBind = actionText.empty() || bindNode.tryGetAttributeIntInRange( Internal::kIndexAttr, 0, 0, Internal::kMaxBindIndex, bindIndex ) == false ||
+            const bool        bUnreadableBind = actionText.empty() || bindNode.tryGetAttributeIntInRange( kIndexAttr, 0, 0, kMaxBindIndex, bindIndex ) == false ||
                                          InputSlotUtil::tryParse( slotText, slot ) == false;
             if ( bUnreadableBind )
             {

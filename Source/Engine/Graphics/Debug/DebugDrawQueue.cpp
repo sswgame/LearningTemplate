@@ -273,39 +273,36 @@ namespace sw
 {
     namespace
     {
-        struct DebugDrawQueueDevCommandsInternal
+        bool runDebugDrawCategory( const vector<string>& listArgument, string& outReply )
         {
-            static bool runDebugDrawCategory( const vector<string>& listArgument, string& outReply )
+            if ( engine::areEngineServicesBound() == false )
+                return false;
+            DebugDrawQueue& queue = engine::getSubsystem<DebugDrawQueue>();
+            if ( listArgument.empty() )
             {
-                if ( engine::areEngineServicesBound() == false )
-                    return false;
-                DebugDrawQueue& queue = engine::getSubsystem<DebugDrawQueue>();
-                if ( listArgument.empty() )
+                vector<hashed_string> listCategory;
+                queue.collectCategories( listCategory );
+                outReply = "categories:";
+                for ( const hashed_string& category : listCategory )
                 {
-                    vector<hashed_string> listCategory;
-                    queue.collectCategories( listCategory );
-                    outReply = "categories:";
-                    for ( const hashed_string& category : listCategory )
-                    {
-                        outReply += ' ';
-                        outReply += category.c_str();
-                        outReply += queue.isCategoryEnabled( category ) ? "(on)" : "(off)";
-                    }
-                    return true;
+                    outReply += ' ';
+                    outReply += category.c_str();
+                    outReply += queue.isCategoryEnabled( category ) ? "(on)" : "(off)";
                 }
-                if ( listArgument.size() != 2 )
-                    return false;
-                bool bOn{ false };
-                if ( StringUtil::tryParseBool( listArgument[1], bOn ) == false )
-                    return false;
-                queue.setCategoryEnabled( hashed_string( listArgument[0] ), bOn );
-                outReply = listArgument[0] + ( bOn ? " on" : " off" );
                 return true;
             }
-        };
+            if ( listArgument.size() != 2 )
+                return false;
+            bool bOn{ false };
+            if ( StringUtil::tryParseBool( listArgument[1], bOn ) == false )
+                return false;
+            queue.setCategoryEnabled( hashed_string( listArgument[0] ), bOn );
+            outReply = listArgument[0] + ( bOn ? " on" : " off" );
+            return true;
+        }
     } // namespace
 
     SW_DEV_COMMAND( DebugDrawCategory, "debugdraw.category", "debugdraw.category [<name> <on|off>]", "List or toggle DebugDrawQueue categories",
-                    &DebugDrawQueueDevCommandsInternal::runDebugDrawCategory );
+                    &runDebugDrawCategory );
 } // namespace sw
 #endif

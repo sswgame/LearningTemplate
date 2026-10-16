@@ -19,63 +19,60 @@ namespace sw
 
     namespace
     {
-        struct TerrainColliderInternal
+        /** @brief 셀 사각형 [@p cellMinX, @p cellEndX) × [@p cellMinZ, @p cellEndZ) 를 삼각형 메시로 만듭니다. 점은 그 셀들의 샘플만이고 샘플 (0, 0) 기준입니다. */
+        bool makeCellMesh( const TerrainHeightfield& heightfield, uint32 cellMinX, uint32 cellMinZ, uint32 cellEndX, uint32 cellEndZ, PhysicsShapeDesc3D& outShape )
         {
-            /** @brief 셀 사각형 [@p cellMinX, @p cellEndX) × [@p cellMinZ, @p cellEndZ) 를 삼각형 메시로 만듭니다. 점은 그 셀들의 샘플만이고 샘플 (0, 0) 기준입니다. */
-            static bool makeCellMesh( const TerrainHeightfield& heightfield, uint32 cellMinX, uint32 cellMinZ, uint32 cellEndX, uint32 cellEndZ, PhysicsShapeDesc3D& outShape )
+            outShape           = PhysicsShapeDesc3D{};
+            outShape._type     = PhysicsShapeType3D::TriangleMesh;
+            const bool bEmpty  = cellEndX <= cellMinX || cellEndZ <= cellMinZ;
+            const bool bInside = heightfield.isValid() && cellEndX < heightfield.getResolution() && cellEndZ < heightfield.getResolution();
+            if ( bEmpty || bInside == false )
+                return false;
+
+            const float3& origin  = heightfield.getOrigin();
+            const uint32  columns = cellEndX - cellMinX + 1; // 점 한 줄의 수
+            outShape._listPoint.reserve( static_cast<size_t>( columns ) * ( cellEndZ - cellMinZ + 1 ) );
+            for ( uint32 sampleZ = cellMinZ; sampleZ <= cellEndZ; ++sampleZ )
             {
-                outShape           = PhysicsShapeDesc3D{};
-                outShape._type     = PhysicsShapeType3D::TriangleMesh;
-                const bool bEmpty  = cellEndX <= cellMinX || cellEndZ <= cellMinZ;
-                const bool bInside = heightfield.isValid() && cellEndX < heightfield.getResolution() && cellEndZ < heightfield.getResolution();
-                if ( bEmpty || bInside == false )
-                    return false;
-
-                const float3& origin  = heightfield.getOrigin();
-                const uint32  columns = cellEndX - cellMinX + 1; // 점 한 줄의 수
-                outShape._listPoint.reserve( static_cast<size_t>( columns ) * ( cellEndZ - cellMinZ + 1 ) );
-                for ( uint32 sampleZ = cellMinZ; sampleZ <= cellEndZ; ++sampleZ )
+                for ( uint32 sampleX = cellMinX; sampleX <= cellEndX; ++sampleX )
                 {
-                    for ( uint32 sampleX = cellMinX; sampleX <= cellEndX; ++sampleX )
-                    {
-                        outShape._listPoint.push_back( heightfield.getSamplePosition( sampleX, sampleZ ) - origin );
-                    }
+                    outShape._listPoint.push_back( heightfield.getSamplePosition( sampleX, sampleZ ) - origin );
                 }
-
-                outShape._listIndex.reserve( static_cast<size_t>( cellEndX - cellMinX ) * ( cellEndZ - cellMinZ ) * 6 );
-                for ( uint32 cellZ = cellMinZ; cellZ < cellEndZ; ++cellZ )
-                {
-                    for ( uint32 cellX = cellMinX; cellX < cellEndX; ++cellX )
-                    {
-                        if ( heightfield.isHoleCell( cellX, cellZ ) )
-                            continue;
-                        // a = (x, z), b = (x+1, z), c = (x, z+1), d = (x+1, z+1). 대각선 a–d 로 나눠 (a, d, b) · (a, c, d) — 둘 다 (b−a)×(c−a) 가 +Y 다.
-                        const uint32 a = ( cellZ - cellMinZ ) * columns + ( cellX - cellMinX );
-                        const uint32 b = a + 1;
-                        const uint32 c = a + columns;
-                        const uint32 d = c + 1;
-                        outShape._listIndex.push_back( a );
-                        outShape._listIndex.push_back( d );
-                        outShape._listIndex.push_back( b );
-                        outShape._listIndex.push_back( a );
-                        outShape._listIndex.push_back( c );
-                        outShape._listIndex.push_back( d );
-                    }
-                }
-                if ( outShape._listIndex.empty() )
-                {
-                    outShape._listPoint.clear();
-                    return false;
-                }
-                return true;
             }
-        };
+
+            outShape._listIndex.reserve( static_cast<size_t>( cellEndX - cellMinX ) * ( cellEndZ - cellMinZ ) * 6 );
+            for ( uint32 cellZ = cellMinZ; cellZ < cellEndZ; ++cellZ )
+            {
+                for ( uint32 cellX = cellMinX; cellX < cellEndX; ++cellX )
+                {
+                    if ( heightfield.isHoleCell( cellX, cellZ ) )
+                        continue;
+                    // a = (x, z), b = (x+1, z), c = (x, z+1), d = (x+1, z+1). 대각선 a–d 로 나눠 (a, d, b) · (a, c, d) — 둘 다 (b−a)×(c−a) 가 +Y 다.
+                    const uint32 a = ( cellZ - cellMinZ ) * columns + ( cellX - cellMinX );
+                    const uint32 b = a + 1;
+                    const uint32 c = a + columns;
+                    const uint32 d = c + 1;
+                    outShape._listIndex.push_back( a );
+                    outShape._listIndex.push_back( d );
+                    outShape._listIndex.push_back( b );
+                    outShape._listIndex.push_back( a );
+                    outShape._listIndex.push_back( c );
+                    outShape._listIndex.push_back( d );
+                }
+            }
+            if ( outShape._listIndex.empty() )
+            {
+                outShape._listPoint.clear();
+                return false;
+            }
+            return true;
+        }
     } // namespace
 
     bool TerrainCollisionUtil::makeCollisionMesh( const TerrainHeightfield& heightfield, PhysicsShapeDesc3D& outShape )
     {
         const uint32 last = heightfield.isValid() ? heightfield.getResolution() - 1 : 0u;
-        return TerrainColliderInternal::makeCellMesh( heightfield, 0, 0, last, last, outShape );
+        return makeCellMesh( heightfield, 0, 0, last, last, outShape );
     }
 
     bool TerrainCollisionUtil::makeChunkCollisionMesh( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ,
@@ -88,7 +85,7 @@ namespace sw
             return false;
         }
         const uint32 cells = layout._chunkCells;
-        return TerrainColliderInternal::makeCellMesh( heightfield, chunkX * cells, chunkZ * cells, ( chunkX + 1 ) * cells, ( chunkZ + 1 ) * cells, outShape );
+        return makeCellMesh( heightfield, chunkX * cells, chunkZ * cells, ( chunkX + 1 ) * cells, ( chunkZ + 1 ) * cells, outShape );
     }
 } // namespace sw
 

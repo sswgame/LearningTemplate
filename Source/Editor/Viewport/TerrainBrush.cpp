@@ -10,24 +10,21 @@ namespace sw::editor
 {
     namespace
     {
-        struct TerrainBrushInternal
+        /** @brief 레이어 @p index 성분의 주소입니다(0..3 밖이면 마지막 성분). */
+        float32& getComponent( float4& value, uint32 index )
         {
-            /** @brief 레이어 @p index 성분의 주소입니다(0..3 밖이면 마지막 성분). */
-            static float32& getComponent( float4& value, uint32 index )
+            switch ( index )
             {
-                switch ( index )
-                {
-                    case 0:
-                        return value._x;
-                    case 1:
-                        return value._y;
-                    case 2:
-                        return value._z;
-                    default:
-                        return value._w;
-                }
+                case 0:
+                    return value._x;
+                case 1:
+                    return value._y;
+                case 2:
+                    return value._z;
+                default:
+                    return value._w;
             }
-        };
+        }
     } // namespace
 
     float32 TerrainBrush::computeFalloffWeight( float32 distance, const TerrainBrushSettings& settings )
@@ -120,7 +117,7 @@ namespace sw::editor
                 continue;
             float4&       weight = inOutListWeight[static_cast<size_t>( sample._sampleZ ) * resolution + sample._sampleX];
             const float32 amount = MathUtil::saturate( settings._strength * sample._weight * deltaTime );
-            float32&      target = TerrainBrushInternal::getComponent( weight, settings._layerIndex );
+            float32&      target = getComponent( weight, settings._layerIndex );
             if ( amount <= 0.0f || target >= 1.0f )
                 continue;
             // 목표 레이어를 1 쪽으로 amount 만큼 당기고, 나머지 레이어는 같은 비율로 줄여 합 1 을 지킨다.
@@ -128,7 +125,7 @@ namespace sw::editor
             const float32 scale  = others > 0.0f ? ( 1.0f - ( target + ( 1.0f - target ) * amount ) ) / others : 0.0f;
             for ( uint32 layer = 0; layer < 4; ++layer )
             {
-                float32& component = TerrainBrushInternal::getComponent( weight, layer );
+                float32& component = getComponent( weight, layer );
                 component          = layer == settings._layerIndex ? target + ( 1.0f - target ) * amount : component * scale;
             }
             bChanged = true;

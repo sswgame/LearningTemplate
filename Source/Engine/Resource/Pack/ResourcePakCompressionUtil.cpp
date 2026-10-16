@@ -10,30 +10,23 @@ namespace sw
 {
     namespace
     {
-        /**
-         * @struct ResourcePakCompressionUtilInternal
-         * @brief 활성 레지스트리가 없을 때 쓰는, 엔진 코덱을 모두 올린 레지스트리입니다.
-         */
-        struct ResourcePakCompressionUtilInternal
+        /** @brief 활성 레지스트리가 없을 때 쓰는, 내장 둘 + 엔진 코덱을 모두 올린 레지스트리를 한 번 만들어 둡니다. */
+        CompressionCodecRegistry& getEngineCodecRegistry()
         {
-            /** @brief 내장 둘 + 엔진 코덱을 올린 레지스트리를 한 번 만들어 둡니다. */
-            static CompressionCodecRegistry& getEngineCodecRegistry()
+            struct EngineCodecRegistry
             {
-                struct EngineCodecRegistry
+                EngineCodecRegistry()
+                    : _registry{}
                 {
-                    EngineCodecRegistry()
-                        : _registry{}
-                    {
-                        _registry.initialize();
-                        EngineCompressionCodecUtil::registerAll( _registry );
-                    }
+                    _registry.initialize();
+                    EngineCompressionCodecUtil::registerAll( _registry );
+                }
 
-                    CompressionCodecRegistry _registry;
-                };
-                static EngineCodecRegistry s_engineCodecRegistry;
-                return s_engineCodecRegistry._registry;
-            }
-        };
+                CompressionCodecRegistry _registry;
+            };
+            static EngineCodecRegistry s_engineCodecRegistry;
+            return s_engineCodecRegistry._registry;
+        }
     } // namespace
 } // namespace sw
 
@@ -60,7 +53,7 @@ namespace sw
         CompressionCodecRegistry* pActive = CompressionCodecRegistry::getActive();
         ICompressionCodec*        pCodec  = ( pActive != nullptr ) ? pActive->getCodec( codecType ) : nullptr;
         if ( pCodec == nullptr )
-            pCodec = ResourcePakCompressionUtilInternal::getEngineCodecRegistry().getCodec( codecType );
+            pCodec = getEngineCodecRegistry().getCodec( codecType );
         return pCodec;
     }
 } // namespace sw

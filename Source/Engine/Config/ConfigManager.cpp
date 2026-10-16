@@ -29,31 +29,28 @@ namespace sw
         /** @brief 호스트가 알린 표입니다(`ConfigManager::setPrimary`). */
         ConfigManager* s_pPrimaryConfigManager = nullptr;
 
-        struct ConfigManagerInternal
+        /** @brief @p fileObject 의 키마다 두 쪽 값이 같은 JSON 이면 경로를 담습니다. 파일 쪽이 객체면 안으로 들어간다(구조체 칸). */
+        void collectEqualMembers( const JSONValue& fileObject, const JSONValue& left, const JSONValue& right, const string& prefix,
+                                  vector<string>& outListKey )
         {
-            /** @brief @p fileObject 의 키마다 두 쪽 값이 같은 JSON 이면 경로를 담습니다. 파일 쪽이 객체면 안으로 들어간다(구조체 칸). */
-            static void collectEqualMembers( const JSONValue& fileObject, const JSONValue& left, const JSONValue& right, const string& prefix,
-                                             vector<string>& outListKey )
+            for ( const string& key : fileObject.getMemberNames() )
             {
-                for ( const string& key : fileObject.getMemberNames() )
+                const string    path       = prefix.empty() ? key : string( prefix + "." + key );
+                const JSONValue fileValue  = fileObject.get( key, false );
+                const JSONValue leftValue  = left.get( key, false );
+                const JSONValue rightValue = right.get( key, false );
+                if ( leftValue.isValid() == false || rightValue.isValid() == false )
+                    continue;
+                const bool bRecurseIntoMembers = fileValue.isObject() && leftValue.isObject() && rightValue.isObject() && fileValue.getMemberNames().empty() == false;
+                if ( bRecurseIntoMembers )
                 {
-                    const string    path       = prefix.empty() ? key : string( prefix + "." + key );
-                    const JSONValue fileValue  = fileObject.get( key, false );
-                    const JSONValue leftValue  = left.get( key, false );
-                    const JSONValue rightValue = right.get( key, false );
-                    if ( leftValue.isValid() == false || rightValue.isValid() == false )
-                        continue;
-                    const bool bRecurseIntoMembers = fileValue.isObject() && leftValue.isObject() && rightValue.isObject() && fileValue.getMemberNames().empty() == false;
-                    if ( bRecurseIntoMembers )
-                    {
-                        collectEqualMembers( fileValue, leftValue, rightValue, path, outListKey );
-                        continue;
-                    }
-                    if ( leftValue.dump() == rightValue.dump() )
-                        outListKey.push_back( path );
+                    collectEqualMembers( fileValue, leftValue, rightValue, path, outListKey );
+                    continue;
                 }
+                if ( leftValue.dump() == rightValue.dump() )
+                    outListKey.push_back( path );
             }
-        };
+        }
     } // namespace
 } // namespace sw
 
@@ -100,7 +97,7 @@ namespace sw
                                   rightDoc.parse( JSONSerializer::serialize( pRight, typeInfo ) ) == false;
         if ( bParseFailed )
             return false;
-        ConfigManagerInternal::collectEqualMembers( fileDoc.getRoot(), leftDoc.getRoot(), rightDoc.getRoot(), string(), outListKey );
+        collectEqualMembers( fileDoc.getRoot(), leftDoc.getRoot(), rightDoc.getRoot(), string(), outListKey );
         return true;
     }
 

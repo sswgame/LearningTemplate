@@ -15,23 +15,20 @@ namespace sw
 
     namespace
     {
-        struct RigInstanceInternal
+        /** @brief 본 모델 변환 위에 본 기준 오프셋을 적용합니다(행 벡터이므로 오프셋이 먼저). @p bScaled 면 오프셋 이동에 본 스케일을 곱합니다. */
+        void composeOnBone( RigPoseBuffer& pose, uint32 bone, const float3& offsetPosition, const quaternion& offsetRotation, bool bScaled,
+                            float3& outPosition, quaternion& outRotation )
         {
-            /** @brief 본 모델 변환 위에 본 기준 오프셋을 적용합니다(행 벡터이므로 오프셋이 먼저). @p bScaled 면 오프셋 이동에 본 스케일을 곱합니다. */
-            static void composeOnBone( RigPoseBuffer& pose, uint32 bone, const float3& offsetPosition, const quaternion& offsetRotation, bool bScaled,
-                                       float3& outPosition, quaternion& outRotation )
+            const quaternion boneRotation = pose.getModelRotation( bone );
+            float3           local        = offsetPosition;
+            if ( bScaled )
             {
-                const quaternion boneRotation = pose.getModelRotation( bone );
-                float3           local        = offsetPosition;
-                if ( bScaled )
-                {
-                    const float3 scale = pose.getModelScale( bone );
-                    local              = float3{ local._x * scale._x, local._y * scale._y, local._z * scale._z };
-                }
-                outPosition = pose.getModelPosition( bone ) + float3::transform( local, boneRotation );
-                outRotation = ( boneRotation * offsetRotation ).normalize();
+                const float3 scale = pose.getModelScale( bone );
+                local              = float3{ local._x * scale._x, local._y * scale._y, local._z * scale._z };
             }
-        };
+            outPosition = pose.getModelPosition( bone ) + float3::transform( local, boneRotation );
+            outRotation = ( boneRotation * offsetRotation ).normalize();
+        }
     } // namespace
 } // namespace sw
 
@@ -191,7 +188,7 @@ namespace sw
         if ( bone >= 0 )
         {
             const BoneTransform& offset = _listTargetOffset[targetIndex];
-            RigInstanceInternal::composeOnBone( pose, static_cast<uint32>( bone ), offset._translation, offset._rotation, true, outPosition, outRotation );
+            composeOnBone( pose, static_cast<uint32>( bone ), offset._translation, offset._rotation, true, outPosition, outRotation );
             return true;
         }
         const RigTargetValue& value = _listTargetValue[targetIndex];
@@ -199,7 +196,7 @@ namespace sw
             return false;
         if ( 0 <= value._relativeBone && static_cast<uint32>( value._relativeBone ) < pose.getBoneCount() )
         {
-            RigInstanceInternal::composeOnBone( pose, static_cast<uint32>( value._relativeBone ), value._position, value._rotation, false, outPosition, outRotation );
+            composeOnBone( pose, static_cast<uint32>( value._relativeBone ), value._position, value._rotation, false, outPosition, outRotation );
             return true;
         }
         outPosition = value._position;

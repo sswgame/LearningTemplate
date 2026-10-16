@@ -14,32 +14,29 @@ namespace sw
 {
     namespace
     {
-        struct CanvasTestPatternInternal
+        /** @brief 글 한 줄을 왼쪽에서 오른쪽으로 칠합니다(셰이핑 · 커닝 없음 — 배치 단계가 생기기 전의 테스트 그림). */
+        void drawLine( CanvasPainter& painter, FontService& fontService, string_view text, const float2& origin, const CanvasGlyphStyle& style,
+                       uint64 frameIndex )
         {
-            /** @brief 글 한 줄을 왼쪽에서 오른쪽으로 칠합니다(셰이핑 · 커닝 없음 — 배치 단계가 생기기 전의 테스트 그림). */
-            static void drawLine( CanvasPainter& painter, FontService& fontService, string_view text, const float2& origin, const CanvasGlyphStyle& style,
-                                  uint64 frameIndex )
+            const FontFaceChain chain      = fontService.getFaceChain( FontSpec{} );
+            CanvasGlyphStyle    glyphStyle = style;
+            glyphStyle._bFauxBold          = chain._bFauxBold;
+            glyphStyle._bFauxItalic        = chain._bFauxItalic;
+            float32 penX                   = origin._x;
+            size_t  offset                 = 0;
+            while ( offset < text.size() )
             {
-                const FontFaceChain chain      = fontService.getFaceChain( FontSpec{} );
-                CanvasGlyphStyle    glyphStyle = style;
-                glyphStyle._bFauxBold          = chain._bFauxBold;
-                glyphStyle._bFauxItalic        = chain._bFauxItalic;
-                float32 penX                   = origin._x;
-                size_t  offset                 = 0;
-                while ( offset < text.size() )
-                {
-                    const uint32     codepoint  = StringUtil::decodeUtf8( text, offset );
-                    uint32           glyphIndex = 0;
-                    const FontFaceID face       = fontService.findFaceForCodepoint( chain, codepoint, glyphIndex );
-                    if ( face == kInvalidFontFaceID )
-                        continue;
-                    (void)painter.drawGlyph( float2{ penX, origin._y }, face, glyphIndex, glyphStyle, fontService.getGlyphCache(), frameIndex );
-                    GlyphMetrics metrics{};
-                    if ( fontService.getRasterizer().findGlyphMetrics( face, glyphIndex, metrics ) )
-                        penX += metrics._advance * style._fontSize;
-                }
+                const uint32     codepoint  = StringUtil::decodeUtf8( text, offset );
+                uint32           glyphIndex = 0;
+                const FontFaceID face       = fontService.findFaceForCodepoint( chain, codepoint, glyphIndex );
+                if ( face == kInvalidFontFaceID )
+                    continue;
+                (void)painter.drawGlyph( float2{ penX, origin._y }, face, glyphIndex, glyphStyle, fontService.getGlyphCache(), frameIndex );
+                GlyphMetrics metrics{};
+                if ( fontService.getRasterizer().findGlyphMetrics( face, glyphIndex, metrics ) )
+                    penX += metrics._advance * style._fontSize;
             }
-        };
+        }
     } // namespace
 } // namespace sw
 
@@ -86,13 +83,13 @@ namespace sw
         CanvasGlyphStyle title{};
         title._fontSize = 40.0f;
         title._color    = float4{ 1.0f, 1.0f, 1.0f, 1.0f };
-        CanvasTestPatternInternal::drawLine( painter, *pFontService, "Canvas AaBb 0123", float2{ 48.0f, 230.0f }, title, frameIndex );
+        drawLine( painter, *pFontService, "Canvas AaBb 0123", float2{ 48.0f, 230.0f }, title, frameIndex );
         CanvasGlyphStyle outlined{};
         outlined._fontSize     = 32.0f;
         outlined._color        = float4{ 1.0f, 0.85f, 0.3f, 1.0f };
         outlined._outlineColor = float4{ 0.0f, 0.0f, 0.0f, 1.0f };
         outlined._outlineWidth = 2.0f;
         // 한글은 저장소 글꼴(라틴)에 없어 문화권 대체 사슬의 시스템 글꼴로 간다(없으면 두부).
-        CanvasTestPatternInternal::drawLine( painter, *pFontService, "UI 가나다 SDF", float2{ 48.0f, 290.0f }, outlined, frameIndex );
+        drawLine( painter, *pFontService, "UI 가나다 SDF", float2{ 48.0f, 290.0f }, outlined, frameIndex );
     }
 } // namespace sw

@@ -8,21 +8,18 @@ namespace sw::editor
 {
     namespace
     {
-        struct SourceControlProviderInternal
+        /** @brief 명령줄 인자 하나를 큰따옴표로 감쌉니다. 경로 안의 큰따옴표는 파일 이름에 쓸 수 없으므로 빼 버립니다. */
+        string quoteArgument( string_view value )
         {
-            /** @brief 명령줄 인자 하나를 큰따옴표로 감쌉니다. 경로 안의 큰따옴표는 파일 이름에 쓸 수 없으므로 빼 버립니다. */
-            static string quoteArgument( string_view value )
+            string quoted{ "\"" };
+            for ( const utf8 character : value )
             {
-                string quoted{ "\"" };
-                for ( const utf8 character : value )
-                {
-                    if ( character != '"' )
-                        quoted += character;
-                }
-                quoted += "\"";
-                return quoted;
+                if ( character != '"' )
+                    quoted += character;
             }
-        };
+            quoted += "\"";
+            return quoted;
+        }
     } // namespace
 
     string GitLfsSourceControlProvider::makeProbeCommand()
@@ -75,11 +72,11 @@ namespace sw::editor
 
     string GitLfsSourceControlProvider::makeLockCommand( string_view repositoryPath ) const
     {
-        return "git lfs lock " + SourceControlProviderInternal::quoteArgument( repositoryPath );
+        return "git lfs lock " + quoteArgument( repositoryPath );
     }
 
     string GitLfsSourceControlProvider::makeUnlockCommand( string_view repositoryPath ) const
     {
-        return "git lfs unlock " + SourceControlProviderInternal::quoteArgument( repositoryPath );
+        return "git lfs unlock " + quoteArgument( repositoryPath );
     }
 } // namespace sw::editor

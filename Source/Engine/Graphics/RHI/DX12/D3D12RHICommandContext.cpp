@@ -17,29 +17,26 @@ namespace sw
 {
     namespace
     {
-        struct D3D12RHICommandContextInternal
+        D3D12_RESOURCE_STATES toD3D12BufferState( RHIBufferState state )
         {
-            static D3D12_RESOURCE_STATES toD3D12BufferState( RHIBufferState state )
+            switch ( state )
             {
-                switch ( state )
-                {
-                    case RHIBufferState::UnorderedAccess:
-                        return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-                    case RHIBufferState::ShaderResource:
-                        return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-                    case RHIBufferState::IndirectArgument:
-                        return D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
-                    case RHIBufferState::CopyDest:
-                        return D3D12_RESOURCE_STATE_COPY_DEST;
-                    case RHIBufferState::VertexOrConstant:
-                        return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-                    case RHIBufferState::Index:
-                        return D3D12_RESOURCE_STATE_INDEX_BUFFER;
-                    case RHIBufferState::Common:
-                        return D3D12_RESOURCE_STATE_COMMON;
-                }
+                case RHIBufferState::UnorderedAccess:
+                    return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+                case RHIBufferState::ShaderResource:
+                    return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+                case RHIBufferState::IndirectArgument:
+                    return D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
+                case RHIBufferState::CopyDest:
+                    return D3D12_RESOURCE_STATE_COPY_DEST;
+                case RHIBufferState::VertexOrConstant:
+                    return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+                case RHIBufferState::Index:
+                    return D3D12_RESOURCE_STATE_INDEX_BUFFER;
+                case RHIBufferState::Common:
+                    return D3D12_RESOURCE_STATE_COMMON;
             }
-        };
+        }
     } // namespace
 } // namespace sw
 
@@ -934,7 +931,7 @@ namespace sw
         if ( pResource == nullptr )
             return;
 
-        const D3D12_RESOURCE_STATES stateAfter = D3D12RHICommandContextInternal::toD3D12BufferState( newState );
+        const D3D12_RESOURCE_STATES stateAfter = toD3D12BufferState( newState );
         D3D12_RESOURCE_STATES       stateBefore;
         {
             std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };

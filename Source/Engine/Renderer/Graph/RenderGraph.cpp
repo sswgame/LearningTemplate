@@ -17,26 +17,23 @@ namespace sw
 {
     namespace
     {
-        struct RenderGraphInternal
+        void recordRenderPass( RenderGraphNode* pNode, IRHICommandList* pCmdList, bool bAlreadyBegun )
         {
-            static void recordRenderPass( RenderGraphNode* pNode, IRHICommandList* pCmdList, bool bAlreadyBegun )
-            {
-                const bool bNodeNotRecordable = pNode == nullptr || pCmdList == nullptr || pNode->_execute.isBound() == false;
-                if ( bNodeNotRecordable )
-                    return;
+            const bool bNodeNotRecordable = pNode == nullptr || pCmdList == nullptr || pNode->_execute.isBound() == false;
+            if ( bNodeNotRecordable )
+                return;
 
-                // 레벨의 첫 리스트는 렌더 스레드가 이미 열어 배리어를 앞머리에 기록해 뒀다. 이어서 기록한다.
-                if ( bAlreadyBegun == false )
-                    pCmdList->beginCommandList();
-                RenderGraphPassContext passContext;
-                passContext._passName     = pNode->_name;
-                passContext._pListInputs  = &pNode->_listInput;
-                passContext._pListOutputs = &pNode->_listOutput;
-                passContext._pCmdList     = pCmdList;
-                pNode->_execute( passContext );
-                pCmdList->endCommandList();
-            }
-        };
+            // 레벨의 첫 리스트는 렌더 스레드가 이미 열어 배리어를 앞머리에 기록해 뒀다. 이어서 기록한다.
+            if ( bAlreadyBegun == false )
+                pCmdList->beginCommandList();
+            RenderGraphPassContext passContext;
+            passContext._passName     = pNode->_name;
+            passContext._pListInputs  = &pNode->_listInput;
+            passContext._pListOutputs = &pNode->_listOutput;
+            passContext._pCmdList     = pCmdList;
+            pNode->_execute( passContext );
+            pCmdList->endCommandList();
+        }
     } // namespace
 } // namespace sw
 
@@ -58,7 +55,7 @@ namespace sw
         /// @brief 렌더 스레드가 이미 열고 레벨 배리어를 기록한 리스트인지 나타냅니다(레벨의 첫 엔트리입니다).
         bool _bAlreadyBegun{ false };
 
-        void record() { RenderGraphInternal::recordRenderPass( _pNode, _pPassCmdList, _bAlreadyBegun ); }
+        void record() { recordRenderPass( _pNode, _pPassCmdList, _bAlreadyBegun ); }
     };
 } // namespace sw
 

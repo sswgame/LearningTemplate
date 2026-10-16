@@ -17,24 +17,21 @@ namespace sw
 
     namespace
     {
-        struct UIThemeControllerInternal
+        /** @brief 시트를 캐시에서 읽습니다(읽지 못한 것은 오류를 남기고 제외합니다). */
+        void appendStyleSheets( UIStyleSheetCache& styleSheetCache, const vector<string>& listPath, vector<shared_ptr<const UIStyleSheetAsset>>& inoutListSheet )
         {
-            /** @brief 시트를 캐시에서 읽습니다(읽지 못한 것은 오류를 남기고 제외합니다). */
-            static void appendStyleSheets( UIStyleSheetCache& styleSheetCache, const vector<string>& listPath, vector<shared_ptr<const UIStyleSheetAsset>>& inoutListSheet )
+            for ( const string& path : listPath )
             {
-                for ( const string& path : listPath )
+                string                                    error;
+                const shared_ptr<const UIStyleSheetAsset> sheet = styleSheetCache.findOrLoad( path, error );
+                if ( sheet == nullptr )
                 {
-                    string                                    error;
-                    const shared_ptr<const UIStyleSheetAsset> sheet = styleSheetCache.findOrLoad( path, error );
-                    if ( sheet == nullptr )
-                    {
-                        SW_LOG_ERROR( "[UI] Style sheet is not loaded: %#", error.c_str() );
-                        continue;
-                    }
-                    inoutListSheet.push_back( sheet );
+                    SW_LOG_ERROR( "[UI] Style sheet is not loaded: %#", error.c_str() );
+                    continue;
                 }
+                inoutListSheet.push_back( sheet );
             }
-        };
+        }
     } // namespace
 } // namespace sw
 
@@ -93,8 +90,8 @@ namespace sw
         vector<shared_ptr<const UIStyleSheetAsset>> listSheet;
         const UIThemeDesc*                          pTheme = findTheme( themeName );
         if ( pTheme != nullptr )
-            UIThemeControllerInternal::appendStyleSheets( styleSheetCache, pTheme->_listStyleSheet, listSheet );
-        UIThemeControllerInternal::appendStyleSheets( styleSheetCache, screen._listStyleSheet, listSheet );
+            appendStyleSheets( styleSheetCache, pTheme->_listStyleSheet, listSheet );
+        appendStyleSheets( styleSheetCache, screen._listStyleSheet, listSheet );
         if ( screen._styleSet == nullptr )
             screen._styleSet = make_unique<UIStyleSet>();
         screen._styleSet->setSheets( std::move( listSheet ) );

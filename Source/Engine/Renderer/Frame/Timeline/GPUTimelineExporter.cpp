@@ -11,20 +11,17 @@ namespace sw
 {
     namespace
     {
-        struct GPUTimelineExporterInternal
+        /** @brief 칸 하나의 값을 GPU 시계 나노초로 바꿉니다. 음수(안 적힌 칸)면 false 입니다. */
+        bool findSlotNanos( const RHITimestampFrame& frame, uint32 slot, int64& outNanos )
         {
-            /** @brief 칸 하나의 값을 GPU 시계 나노초로 바꿉니다. 음수(안 적힌 칸)면 false 입니다. */
-            static bool findSlotNanos( const RHITimestampFrame& frame, uint32 slot, int64& outNanos )
-            {
-                if ( slot >= frame._listMicro.size() )
-                    return false;
-                const float32 micro = frame._listMicro[slot];
-                if ( micro < 0.0f )
-                    return false;
-                outNanos = frame._originNanos + static_cast<int64>( static_cast<float64>( micro ) * constant::kNanosecondsPerMicrosecond + 0.5 );
-                return true;
-            }
-        };
+            if ( slot >= frame._listMicro.size() )
+                return false;
+            const float32 micro = frame._listMicro[slot];
+            if ( micro < 0.0f )
+                return false;
+            outNanos = frame._originNanos + static_cast<int64>( static_cast<float64>( micro ) * constant::kNanosecondsPerMicrosecond + 0.5 );
+            return true;
+        }
     } // namespace
 } // namespace sw
 
@@ -90,16 +87,16 @@ namespace sw
             int64        beginNanos{ 0 };
             int64        endNanos{ 0 };
             const uint32 beginSlot = static_cast<uint32>( passIndex * 2u );
-            const bool   bWritten  = listPassSite[passIndex] != nullptr && GPUTimelineExporterInternal::findSlotNanos( frame, beginSlot, beginNanos ) &&
-                                  GPUTimelineExporterInternal::findSlotNanos( frame, beginSlot + 1u, endNanos ) && endNanos >= beginNanos;
+            const bool   bWritten  = listPassSite[passIndex] != nullptr && findSlotNanos( frame, beginSlot, beginNanos ) &&
+                                  findSlotNanos( frame, beginSlot + 1u, endNanos ) && endNanos >= beginNanos;
             if ( bWritten )
                 _listScratchSpan.push_back( Span{ beginNanos, endNanos, listPassSite[passIndex] } );
         }
         {
             int64      beginNanos{ 0 };
             int64      endNanos{ 0 };
-            const bool bWritten = GPUTimelineExporterInternal::findSlotNanos( frame, FrameRendererUtil::kGPUTimestampSlotComputeBegin, beginNanos ) &&
-                                  GPUTimelineExporterInternal::findSlotNanos( frame, FrameRendererUtil::kGPUTimestampSlotComputeEnd, endNanos ) &&
+            const bool bWritten = findSlotNanos( frame, FrameRendererUtil::kGPUTimestampSlotComputeBegin, beginNanos ) &&
+                                  findSlotNanos( frame, FrameRendererUtil::kGPUTimestampSlotComputeEnd, endNanos ) &&
                                   endNanos >= beginNanos;
             if ( bWritten )
                 _listScratchSpan.push_back( Span{ beginNanos, endNanos, &computeSite } );
@@ -122,7 +119,7 @@ namespace sw
 
         // 3) 프레임 구간 = 프레임 첫 명령 ~ 가장 늦은 끝. 첫 명령 칸이 없으면 가장 이른 시작으로 둔다.
         int64 frameBegin{ 0 };
-        if ( GPUTimelineExporterInternal::findSlotNanos( frame, FrameRendererUtil::kGPUTimestampSlotFrameBegin, frameBegin ) == false )
+        if ( findSlotNanos( frame, FrameRendererUtil::kGPUTimestampSlotFrameBegin, frameBegin ) == false )
             frameBegin = _listScratchSpan.front()._beginNanos;
         int64 frameEnd = frameBegin;
         for ( const Span& span : _listScratchSpan )

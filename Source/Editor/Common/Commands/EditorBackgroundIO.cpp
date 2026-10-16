@@ -11,22 +11,19 @@ namespace sw::editor
 {
     namespace
     {
-        struct EditorBackgroundIOInternal
+        /** @brief TaskManager 가 없으면(테스트·초기화 전) 같은 스레드에서 바로 돌립니다. */
+        void submitOrRun( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args )
         {
-            /** @brief TaskManager 가 없으면(테스트·초기화 전) 같은 스레드에서 바로 돌립니다. */
-            static void submitOrRun( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args )
+            TaskManager* pTaskManager = editor::findSubsystem<TaskManager>();
+            if ( pTaskManager == nullptr )
             {
-                TaskManager* pTaskManager = editor::findSubsystem<TaskManager>();
-                if ( pTaskManager == nullptr )
-                {
-                    delegate( args );
-                    return;
-                }
-
-                TaskHandle handle = pTaskManager->emplaceTask( name, delegate, args );
-                handle.submit();
+                delegate( args );
+                return;
             }
-        };
+
+            TaskHandle handle = pTaskManager->emplaceTask( name, delegate, args );
+            handle.submit();
+        }
     } // namespace
 } // namespace sw::editor
 
@@ -44,9 +41,9 @@ namespace sw::editor
         input._bRecursive = recursive;
 
         const uint32 generation = beginRequest( std::move( input ) );
-        EditorBackgroundIOInternal::submitOrRun( "EditorFileCollect",
-                                                 SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorFileCollectJob::runJob ),
-                                                 MakeTaskArgs( _pState, generation ) );
+        submitOrRun( "EditorFileCollect",
+                     SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorFileCollectJob::runJob ),
+                     MakeTaskArgs( _pState, generation ) );
     }
 
     void EditorFileCollectJob::runJob( const TaskArgs& args )
@@ -71,9 +68,9 @@ namespace sw::editor
     void EditorLocalizationLoadJob::request( string_view projectPath )
     {
         const uint32 generation = beginRequest( string( projectPath ) );
-        EditorBackgroundIOInternal::submitOrRun( "EditorLocalizationLoad",
-                                                 SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorLocalizationLoadJob::runJob ),
-                                                 MakeTaskArgs( _pState, generation ) );
+        submitOrRun( "EditorLocalizationLoad",
+                     SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorLocalizationLoadJob::runJob ),
+                     MakeTaskArgs( _pState, generation ) );
     }
 
     void EditorLocalizationLoadJob::runJob( const TaskArgs& args )
@@ -99,9 +96,9 @@ namespace sw::editor
     void EditorGameDataScanJob::request()
     {
         const uint32 generation = beginRequest( {} );
-        EditorBackgroundIOInternal::submitOrRun( "EditorGameDataScan",
-                                                 SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorGameDataScanJob::runJob ),
-                                                 MakeTaskArgs( _pState, generation ) );
+        submitOrRun( "EditorGameDataScan",
+                     SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorGameDataScanJob::runJob ),
+                     MakeTaskArgs( _pState, generation ) );
     }
 
     void EditorGameDataScanJob::runJob( const TaskArgs& args )
@@ -126,9 +123,9 @@ namespace sw::editor
     void EditorResourceIndexJob::request()
     {
         const uint32 generation = beginRequest( {} );
-        EditorBackgroundIOInternal::submitOrRun( "EditorResourceIndex",
-                                                 SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorResourceIndexJob::runJob ),
-                                                 MakeTaskArgs( _pState, generation ) );
+        submitOrRun( "EditorResourceIndex",
+                     SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorResourceIndexJob::runJob ),
+                     MakeTaskArgs( _pState, generation ) );
     }
 
     void EditorResourceIndexJob::runJob( const TaskArgs& args )
@@ -157,9 +154,9 @@ namespace sw::editor
         input._bRecursive = bRecursive;
 
         const uint32 generation = beginRequest( std::move( input ) );
-        EditorBackgroundIOInternal::submitOrRun( "EditorFolderListing",
-                                                 SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorFolderListingJob::runJob ),
-                                                 MakeTaskArgs( _pState, generation ) );
+        submitOrRun( "EditorFolderListing",
+                     SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorFolderListingJob::runJob ),
+                     MakeTaskArgs( _pState, generation ) );
     }
 
     void EditorFolderListingJob::runJob( const TaskArgs& args )
@@ -184,9 +181,9 @@ namespace sw::editor
     void EditorReferenceIndexJob::request( string_view resourceRoot )
     {
         const uint32 generation = beginRequest( string{ resourceRoot } );
-        EditorBackgroundIOInternal::submitOrRun( "EditorReferenceIndex",
-                                                 SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorReferenceIndexJob::runJob ),
-                                                 MakeTaskArgs( _pState, generation ) );
+        submitOrRun( "EditorReferenceIndex",
+                     SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorReferenceIndexJob::runJob ),
+                     MakeTaskArgs( _pState, generation ) );
     }
 
     void EditorReferenceIndexJob::runJob( const TaskArgs& args )
@@ -211,9 +208,9 @@ namespace sw::editor
     void EditorResourceCatalogJob::request()
     {
         const uint32 generation = beginRequest( {} );
-        EditorBackgroundIOInternal::submitOrRun( "EditorResourceCatalog",
-                                                 SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorResourceCatalogJob::runJob ),
-                                                 MakeTaskArgs( _pState, generation ) );
+        submitOrRun( "EditorResourceCatalog",
+                     SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorResourceCatalogJob::runJob ),
+                     MakeTaskArgs( _pState, generation ) );
     }
 
     void EditorResourceCatalogJob::runJob( const TaskArgs& args )

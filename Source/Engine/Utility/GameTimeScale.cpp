@@ -65,26 +65,23 @@ namespace sw
 {
     namespace
     {
-        struct GameTimeScaleDevCommandsInternal
+        bool runTimeScale( const vector<string>& listArgument, string& outReply )
         {
-            static bool runTimeScale( const vector<string>& listArgument, string& outReply )
+            if ( listArgument.size() > 1 )
+                return false;
+            if ( listArgument.size() == 1 )
             {
-                if ( listArgument.size() > 1 )
+                float32 scale = 1.0f;
+                if ( StringUtil::parseFloat( listArgument[0], scale ) == false )
                     return false;
-                if ( listArgument.size() == 1 )
-                {
-                    float32 scale = 1.0f;
-                    if ( StringUtil::parseFloat( listArgument[0], scale ) == false )
-                        return false;
-                    GameTimeScale::set( scale );
-                }
-                outReply = "time scale = " + to_string( GameTimeScale::get() );
-                return true;
+                GameTimeScale::set( scale );
             }
-        };
+            outReply = "time scale = " + to_string( GameTimeScale::get() );
+            return true;
+        }
     } // namespace
 
     SW_DEV_COMMAND( TimeScale, "timescale", "timescale [scale]", "Show or set the game time scale (gv_timeScale, 0 = frozen)",
-                    &GameTimeScaleDevCommandsInternal::runTimeScale );
+                    &runTimeScale );
 } // namespace sw
 #endif

@@ -12,45 +12,42 @@ namespace sw
 {
     namespace
     {
-        struct PropertyEditConditionInternal
+        /** @brief 보는 프로퍼티의 값을 정수로 읽습니다(bool · 비트필드 · 정수 · 열거형). 읽을 수 없는 타입이면 false 입니다. */
+        [[nodiscard]] bool readSubjectValue( const PropertyEditConditionExpr& expr, const void* pInstance, int64& outValue )
         {
-            /** @brief 보는 프로퍼티의 값을 정수로 읽습니다(bool · 비트필드 · 정수 · 열거형). 읽을 수 없는 타입이면 false 입니다. */
-            [[nodiscard]] static bool readSubjectValue( const PropertyEditConditionExpr& expr, const void* pInstance, int64& outValue )
+            const PropertyInfo& subject = *expr._pSubject;
+            if ( subject._bIsBitField == SW_TRUE )
             {
-                const PropertyInfo& subject = *expr._pSubject;
-                if ( subject._bIsBitField == SW_TRUE )
-                {
-                    outValue = subject.getValue<bool>( pInstance ) ? 1 : 0;
-                    return true;
-                }
-                const void* pValue = subject.getRawPtr( pInstance );
-                if ( expr._pEnum != nullptr )
-                {
-                    outValue = expr._pEnum->readValueFromMemory( pValue );
-                    return true;
-                }
-                const string_view typeName = subject._typeName.view();
-                if ( typeName == "bool" )
-                    outValue = *static_cast<const bool*>( pValue ) ? 1 : 0;
-                else if ( typeName == "int8" )
-                    outValue = *static_cast<const int8*>( pValue );
-                else if ( typeName == "uint8" )
-                    outValue = *static_cast<const uint8*>( pValue );
-                else if ( typeName == "int16" )
-                    outValue = *static_cast<const int16*>( pValue );
-                else if ( typeName == "uint16" )
-                    outValue = *static_cast<const uint16*>( pValue );
-                else if ( typeName == "int32" )
-                    outValue = *static_cast<const int32*>( pValue );
-                else if ( typeName == "uint32" )
-                    outValue = *static_cast<const uint32*>( pValue );
-                else if ( typeName == "int64" || typeName == "uint64" )
-                    outValue = *static_cast<const int64*>( pValue );
-                else
-                    return false;
+                outValue = subject.getValue<bool>( pInstance ) ? 1 : 0;
                 return true;
             }
-        };
+            const void* pValue = subject.getRawPtr( pInstance );
+            if ( expr._pEnum != nullptr )
+            {
+                outValue = expr._pEnum->readValueFromMemory( pValue );
+                return true;
+            }
+            const string_view typeName = subject._typeName.view();
+            if ( typeName == "bool" )
+                outValue = *static_cast<const bool*>( pValue ) ? 1 : 0;
+            else if ( typeName == "int8" )
+                outValue = *static_cast<const int8*>( pValue );
+            else if ( typeName == "uint8" )
+                outValue = *static_cast<const uint8*>( pValue );
+            else if ( typeName == "int16" )
+                outValue = *static_cast<const int16*>( pValue );
+            else if ( typeName == "uint16" )
+                outValue = *static_cast<const uint16*>( pValue );
+            else if ( typeName == "int32" )
+                outValue = *static_cast<const int32*>( pValue );
+            else if ( typeName == "uint32" )
+                outValue = *static_cast<const uint32*>( pValue );
+            else if ( typeName == "int64" || typeName == "uint64" )
+                outValue = *static_cast<const int64*>( pValue );
+            else
+                return false;
+            return true;
+        }
     } // namespace
 } // namespace sw
 
@@ -125,7 +122,7 @@ namespace sw
         if ( expr._pSubject == nullptr || pInstance == nullptr )
             return true;
         int64 value{ 0 };
-        if ( PropertyEditConditionInternal::readSubjectValue( expr, pInstance, value ) == false )
+        if ( readSubjectValue( expr, pInstance, value ) == false )
             return true;
         const bool bHolds = expr._bCompare ? ( value == expr._compareValue ) : ( value != 0 );
         return expr._bNegate ? ( bHolds == false ) : bHolds;

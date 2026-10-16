@@ -12,18 +12,15 @@ namespace sw
 
     namespace
     {
-        struct UIResolutionPresetTableInternal
+        [[nodiscard]] bool loadTable( const string& resourceID )
         {
-            [[nodiscard]] static bool loadTable( const string& resourceID )
-            {
-                UIResolutionPresetTable table;
-                return table.loadFromResource( resourceID );
-            }
-        };
+            UIResolutionPresetTable table;
+            return table.loadFromResource( resourceID );
+        }
     } // namespace
 
     /** @brief 해상도 견본 표의 데이터 파일 종류입니다(스키마 테스트가 이 줄로 표를 읽어 본다). */
-    SW_RESOURCE_DATA_KIND( UIResolutionPresets, "uiresolutions", "engine/", nullptr, "/settings/uiresolutions.xml", &UIResolutionPresetTableInternal::loadTable );
+    SW_RESOURCE_DATA_KIND( UIResolutionPresets, "uiresolutions", "engine/", nullptr, "/settings/uiresolutions.xml", &loadTable );
 } // namespace sw
 
 namespace sw

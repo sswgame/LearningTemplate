@@ -13,17 +13,14 @@ namespace sw
 
     namespace
     {
-        struct XMLNameCheckInternal
+        /** @brief 모르는 이름 한 줄을 남깁니다(@p pWhat 은 `attribute 'x'` · `element <x>` 꼴로 이미 지은 글). Error 가 아니면 Warning 이다. */
+        void logUnknown( LogLevel level, string_view sourceName, const utf8* pOwnerName, const string& what )
         {
-            /** @brief 모르는 이름 한 줄을 남깁니다(@p pWhat 은 `attribute 'x'` · `element <x>` 꼴로 이미 지은 글). Error 가 아니면 Warning 이다. */
-            static void logUnknown( LogLevel level, string_view sourceName, const utf8* pOwnerName, const string& what )
-            {
-                if ( level == LogLevel::Error )
-                    SW_LOG_ERROR( "%#: <%#> has unknown %#", sourceName, pOwnerName, what );
-                else
-                    SW_LOG_WARNING( "%#: <%#> has unknown %#", sourceName, pOwnerName, what );
-            }
-        };
+            if ( level == LogLevel::Error )
+                SW_LOG_ERROR( "%#: <%#> has unknown %#", sourceName, pOwnerName, what );
+            else
+                SW_LOG_WARNING( "%#: <%#> has unknown %#", sourceName, pOwnerName, what );
+        }
     } // namespace
 } // namespace sw
 
@@ -76,7 +73,7 @@ namespace sw
             return true;
         for ( const utf8* pName : listName )
         {
-            XMLNameCheckInternal::logUnknown( level, sourceName, node.getName(), string( "attribute '" ) + pName + "'" );
+            logUnknown( level, sourceName, node.getName(), string( "attribute '" ) + pName + "'" );
         }
         return false;
     }
@@ -88,7 +85,7 @@ namespace sw
             return true;
         for ( const utf8* pName : listName )
         {
-            XMLNameCheckInternal::logUnknown( level, sourceName, node.getName(), string( "element <" ) + pName + ">" );
+            logUnknown( level, sourceName, node.getName(), string( "element <" ) + pName + ">" );
         }
         return false;
     }

@@ -10,15 +10,12 @@ namespace sw
 
     namespace
     {
-        struct ServiceFactoryListInternal
+        bool isOrderedBefore( const ServiceFactoryNode* pLeft, const ServiceFactoryNode* pRight )
         {
-            static bool isOrderedBefore( const ServiceFactoryNode* pLeft, const ServiceFactoryNode* pRight )
-            {
-                if ( pLeft->_order != pRight->_order )
-                    return pLeft->_order < pRight->_order;
-                return string_view( pLeft->_pName ) < string_view( pRight->_pName );
-            }
-        };
+            if ( pLeft->_order != pRight->_order )
+                return pLeft->_order < pRight->_order;
+            return string_view( pLeft->_pName ) < string_view( pRight->_pName );
+        }
     } // namespace
 } // namespace sw
 
@@ -126,7 +123,7 @@ namespace sw
                 outListNode.push_back( pNode );
             }
         }
-        std::sort( outListNode.begin(), outListNode.end(), &ServiceFactoryListInternal::isOrderedBefore );
+        std::sort( outListNode.begin(), outListNode.end(), &isOrderedBefore );
     }
 
     int32 ServiceFactoryList::getCount() const

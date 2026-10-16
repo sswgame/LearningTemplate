@@ -11,15 +11,12 @@ namespace sw::editor
 
     namespace
     {
-        struct EditorExtensionRegistryInternal
+        /** @brief 종류 이름 → 목록입니다. 종류는 열 개 안팎이라 줄 찾기로 충분하다. 함수 정적이라 다른 TU 의 정적 등록자보다 늦게 만들어질 걱정이 없다. */
+        vector<unique_ptr<EditorExtensionRegistrationList>>& getLists()
         {
-            /** @brief 종류 이름 → 목록입니다. 종류는 열 개 안팎이라 줄 찾기로 충분하다. 함수 정적이라 다른 TU 의 정적 등록자보다 늦게 만들어질 걱정이 없다. */
-            static vector<unique_ptr<EditorExtensionRegistrationList>>& getLists()
-            {
-                static vector<unique_ptr<EditorExtensionRegistrationList>> s_listList;
-                return s_listList;
-            }
-        };
+            static vector<unique_ptr<EditorExtensionRegistrationList>> s_listList;
+            return s_listList;
+        }
     } // namespace
 } // namespace sw::editor
 
@@ -73,7 +70,7 @@ namespace sw::editor
 
     EditorExtensionRegistrationList& getEditorExtensionRegistrationList( const utf8* pKindName )
     {
-        vector<unique_ptr<EditorExtensionRegistrationList>>& listList = EditorExtensionRegistryInternal::getLists();
+        vector<unique_ptr<EditorExtensionRegistrationList>>& listList = getLists();
         for ( const unique_ptr<EditorExtensionRegistrationList>& pList : listList )
         {
             if ( StringUtil::equals( pList->getKindName(), pKindName, false ) )

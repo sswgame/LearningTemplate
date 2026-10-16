@@ -104,11 +104,7 @@ namespace sw
                 }
                 return pLatest != nullptr && FileUtil::copyFile( *pLatest, destination );
             }
-        };
 
-#if SW_DEV_COMMANDS_ENABLED
-        struct BugItCommandsInternal
-        {
             /** @brief `bugit [메모…]` — 낱말을 공백으로 다시 이은 것이 메모다. */
             static bool runBugIt( const vector<string>& listArgument, string& outReply )
             {
@@ -142,6 +138,8 @@ namespace sw
                 return BugItReport::goTo( engine::getSubsystem<SceneManager>(), listArgument.empty() ? string_view{} : string_view( listArgument[0] ), outReply );
             }
         };
+
+#if SW_DEV_COMMANDS_ENABLED
 #endif
     } // namespace
 } // namespace sw
@@ -386,8 +384,8 @@ namespace sw
 namespace sw
 {
     SW_DEV_COMMAND( BugIt, "bugit", "bugit [note...]", "Collect a bug report (info, screenshot, log, scene copy, repro) under Saved/BugIt/<time>",
-                    &BugItCommandsInternal::runBugIt );
+                    &BugItReportInternal::runBugIt );
     SW_DEV_COMMAND( BugItGo, "bugitgo", "bugitgo [folder]", "Open the scene of a BugIt folder (default: the latest) and move the view camera there",
-                    &BugItCommandsInternal::runBugItGo );
+                    &BugItReportInternal::runBugItGo );
 } // namespace sw
 #endif

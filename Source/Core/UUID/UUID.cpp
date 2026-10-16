@@ -11,19 +11,16 @@ namespace sw
 {
     namespace
     {
-        struct UUIDInternal
+        int32 hexNibble( utf8 c )
         {
-            static int32 hexNibble( utf8 c )
-            {
-                if ( c >= '0' && c <= '9' )
-                    return c - '0';
-                if ( c >= 'a' && c <= 'f' )
-                    return 10 + ( c - 'a' );
-                if ( c >= 'A' && c <= 'F' )
-                    return 10 + ( c - 'A' );
-                return -1;
-            }
-        };
+            if ( c >= '0' && c <= '9' )
+                return c - '0';
+            if ( c >= 'a' && c <= 'f' )
+                return 10 + ( c - 'a' );
+            if ( c >= 'A' && c <= 'F' )
+                return 10 + ( c - 'A' );
+            return -1;
+        }
     } // namespace
 } // namespace sw
 
@@ -67,8 +64,8 @@ namespace sw
                 continue;
             if ( charIndex + 1 >= text.size() )
                 return false;
-            const int32 hi              = UUIDInternal::hexNibble( text[charIndex] );
-            const int32 lo              = UUIDInternal::hexNibble( text[charIndex + 1] );
+            const int32 hi              = hexNibble( text[charIndex] );
+            const int32 lo              = hexNibble( text[charIndex + 1] );
             const bool  bInvalidHexPair = hi < 0 || lo < 0 || byteIndex >= 16;
             if ( bInvalidHexPair )
                 return false;

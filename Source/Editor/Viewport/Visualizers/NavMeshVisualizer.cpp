@@ -15,26 +15,23 @@ namespace sw::editor
 {
     namespace
     {
-        struct NavMeshVisualizerInternal
+        /**
+         * @brief 마련한 내비메시마다 폴리곤 테두리를 긋습니다.
+         * @details 베이크하지 않은 씬은 그릴 메시가 없어 아무 선도 나오지 않는다 — 이 시각화는 베이크를 일으키지 않는다(`ensureNavMesh` 를 부르지 않는다).
+         */
+        void drawNavMesh( const EditorViewportVisualizerArgs& args )
         {
-            /**
-             * @brief 마련한 내비메시마다 폴리곤 테두리를 긋습니다.
-             * @details 베이크하지 않은 씬은 그릴 메시가 없어 아무 선도 나오지 않는다 — 이 시각화는 베이크를 일으키지 않는다(`ensureNavMesh` 를 부르지 않는다).
-             */
-            static void draw( const EditorViewportVisualizerArgs& args )
-            {
-                EditorShapeVisualizerStats& stats = EditorShapeVisualizerStats::get();
-                stats._navMeshSegmentCount        = 0;
-                if ( args._pObjectManager == nullptr || args._pViewProj == nullptr )
-                    return;
-                const SceneNavigation&      navigation = static_cast<const GameObjectManager*>( args._pObjectManager )->getSubsystem<SceneNavigation>();
-                EditorProjectedLineRenderer renderer{ args._pDrawList, *args._pViewProj, args._canvasPos, args._canvasSize };
-                navigation.drawDebug( renderer, NavDebugDrawFlag::kMesh );
-                stats._navMeshSegmentCount = renderer.getDrawnSegmentCount();
-            }
-        };
+            EditorShapeVisualizerStats& stats = EditorShapeVisualizerStats::get();
+            stats._navMeshSegmentCount        = 0;
+            if ( args._pObjectManager == nullptr || args._pViewProj == nullptr )
+                return;
+            const SceneNavigation&      navigation = static_cast<const GameObjectManager*>( args._pObjectManager )->getSubsystem<SceneNavigation>();
+            EditorProjectedLineRenderer renderer{ args._pDrawList, *args._pViewProj, args._canvasPos, args._canvasSize };
+            navigation.drawDebug( renderer, NavDebugDrawFlag::kMesh );
+            stats._navMeshSegmentCount = renderer.getDrawnSegmentCount();
+        }
     } // namespace
 
     SW_EDITOR_VISUALIZER( NavMesh, "navmesh", 120, editoricon::kNavigation, "Nav", "베이크한 내비메시의 폴리곤 테두리를 표시합니다(Build > Bake Navigation 으로 베이크)", false,
-                          &NavMeshVisualizerInternal::draw );
+                          &drawNavMesh );
 } // namespace sw::editor

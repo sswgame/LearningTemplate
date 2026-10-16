@@ -6,15 +6,12 @@ namespace sw
 {
     namespace
     {
-        struct BuiltInAssetCacheInternal
+        /** @brief 등록 줄 목록. 함수 정적이라 다른 .cpp 의 정적 초기화가 먼저 와도 비어 있는 채로 만들어진다. */
+        vector<const BuiltInAssetCacheRegistration*>& getBuiltInAssetCacheRegistrations()
         {
-            /** @brief 등록 줄 목록. 함수 정적이라 다른 .cpp 의 정적 초기화가 먼저 와도 비어 있는 채로 만들어진다. */
-            static vector<const BuiltInAssetCacheRegistration*>& getRegistrations()
-            {
-                static vector<const BuiltInAssetCacheRegistration*> s_listRegistration;
-                return s_listRegistration;
-            }
-        };
+            static vector<const BuiltInAssetCacheRegistration*> s_listRegistration;
+            return s_listRegistration;
+        }
     } // namespace
 } // namespace sw
 
@@ -24,7 +21,7 @@ namespace sw
     {
         if ( pRegistration == nullptr )
             return;
-        vector<const BuiltInAssetCacheRegistration*>& listRegistration = BuiltInAssetCacheInternal::getRegistrations();
+        vector<const BuiltInAssetCacheRegistration*>& listRegistration = getBuiltInAssetCacheRegistrations();
         for ( const BuiltInAssetCacheRegistration* pExisting : listRegistration )
         {
             if ( pExisting == pRegistration )
@@ -35,7 +32,7 @@ namespace sw
 
     const vector<const BuiltInAssetCacheRegistration*>& BuiltInAssetCacheRegistry::getAll()
     {
-        return BuiltInAssetCacheInternal::getRegistrations();
+        return getBuiltInAssetCacheRegistrations();
     }
 
     BuiltInAssetCacheRegistrar::BuiltInAssetCacheRegistrar( const BuiltInAssetCacheRegistration* pRegistration )

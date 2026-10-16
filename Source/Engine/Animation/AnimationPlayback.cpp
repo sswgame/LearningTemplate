@@ -8,18 +8,15 @@ namespace sw
 {
     namespace
     {
-        struct AnimationNotifyTrackInternal
+        /** @brief 울린 알림의 순서입니다. 시각이 이르면 먼저이고, 시각이 같으면 끝이 먼저입니다. */
+        bool isFiredBefore( const AnimationFiredNotify& lhs, const AnimationFiredNotify& rhs )
         {
-            /** @brief 울린 알림의 순서입니다. 시각이 이르면 먼저이고, 시각이 같으면 끝이 먼저입니다. */
-            static bool isFiredBefore( const AnimationFiredNotify& lhs, const AnimationFiredNotify& rhs )
-            {
-                if ( lhs._time != rhs._time )
-                    return lhs._time < rhs._time;
-                const bool bLhsEnd = lhs._phase == AnimationNotifyPhase::End;
-                const bool bRhsEnd = rhs._phase == AnimationNotifyPhase::End;
-                return bLhsEnd && bRhsEnd == false;
-            }
-        };
+            if ( lhs._time != rhs._time )
+                return lhs._time < rhs._time;
+            const bool bLhsEnd = lhs._phase == AnimationNotifyPhase::End;
+            const bool bRhsEnd = rhs._phase == AnimationNotifyPhase::End;
+            return bLhsEnd && bRhsEnd == false;
+        }
     } // namespace
 } // namespace sw
 
@@ -150,6 +147,6 @@ namespace sw
         }
         // 시각 순서로 정렬한다. 같은 시각이면 끝이 먼저다(앞 구간이 닫힌 뒤 다음 구간이 열린다).
         std::stable_sort( outListFired.begin() + static_cast<ptrdiff_t>( firstAdded ), outListFired.end(),
-                          AnimationNotifyTrackInternal::isFiredBefore );
+                          isFiredBefore );
     }
 } // namespace sw

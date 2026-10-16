@@ -6,14 +6,11 @@ namespace sw::editor
 {
     namespace
     {
-        struct EditorUIContextInternal
+        EditorUIContextState& getState()
         {
-            static EditorUIContextState& getState()
-            {
-                static EditorUIContextState s_state{};
-                return s_state;
-            }
-        };
+            static EditorUIContextState s_state{};
+            return s_state;
+        }
     } // namespace
 } // namespace sw::editor
 
@@ -21,8 +18,8 @@ namespace sw::editor
 {
     void EditorUIContext::publish( const EditorUIContextState& state )
     {
-        EditorUIContextInternal::getState() = state;
-        using BinderRegistry                = EditorExtensionRegistry<EditorUIBinderRegistration>;
+        getState()           = state;
+        using BinderRegistry = EditorExtensionRegistry<EditorUIBinderRegistration>;
         for ( uint32 index = 0; index < BinderRegistry::getCount(); ++index )
         {
             const EditorUIBinderRegistration& registration = BinderRegistry::getAt( index );
@@ -33,6 +30,6 @@ namespace sw::editor
 
     const EditorUIContextState& EditorUIContext::getCurrent()
     {
-        return EditorUIContextInternal::getState();
+        return getState();
     }
 } // namespace sw::editor

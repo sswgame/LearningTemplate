@@ -20,15 +20,12 @@ namespace sw::editor
 {
     namespace
     {
-        struct EditorNodeGraphInternal
+        /** @brief 가장 최근에 그린 그래프의 노드 수 — 탐침이 읽는다(그래프 패널은 RTTI 없이 찾을 수 없다). */
+        uint32& getDrawnNodeCountSlot()
         {
-            /** @brief 가장 최근에 그린 그래프의 노드 수 — 탐침이 읽는다(그래프 패널은 RTTI 없이 찾을 수 없다). */
-            static uint32& getDrawnNodeCountSlot()
-            {
-                static uint32 s_nodeCount{ 0 };
-                return s_nodeCount;
-            }
-        };
+            static uint32 s_nodeCount{ 0 };
+            return s_nodeCount;
+        }
     } // namespace
 
     EditorNodeGraph::EditorNodeGraph()
@@ -251,12 +248,12 @@ namespace sw::editor
 
     void EditorNodeGraph::noteDrawnNodeCount( uint32 nodeCount )
     {
-        EditorNodeGraphInternal::getDrawnNodeCountSlot() = nodeCount;
+        getDrawnNodeCountSlot() = nodeCount;
     }
 
     uint32 EditorNodeGraph::getDrawnNodeCount()
     {
-        return EditorNodeGraphInternal::getDrawnNodeCountSlot();
+        return getDrawnNodeCountSlot();
     }
 
     bool EditorNodeGraph::bind() const

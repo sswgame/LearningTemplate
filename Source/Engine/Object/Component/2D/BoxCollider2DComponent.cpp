@@ -14,16 +14,13 @@ namespace sw
 {
     namespace
     {
-        struct BoxCollider2DComponentInternal
+        AABB makeColliderAABB( const float2& minB, const float2& maxB )
         {
-            static AABB makeColliderAABB( const float2& minB, const float2& maxB )
-            {
-                AABB box;
-                box._min = float3( minB._x, minB._y, 0.0f );
-                box._max = float3( maxB._x, maxB._y, 0.0f );
-                return box;
-            }
-        };
+            AABB box;
+            box._min = float3( minB._x, minB._y, 0.0f );
+            box._max = float3( maxB._x, maxB._y, 0.0f );
+            return box;
+        }
     } // namespace
 } // namespace sw
 
@@ -143,8 +140,8 @@ namespace sw
         float2 aMin{}, aMax{}, bMin{}, bMax{};
         getBounds( aMin, aMax );
         pOther->getBounds( bMin, bMax );
-        return queryOverlaps( BoxCollider2DComponentInternal::makeColliderAABB( aMin, aMax ), static_cast<uint8>( _colliderType ),
-                              BoxCollider2DComponentInternal::makeColliderAABB( bMin, bMax ), static_cast<uint8>( pOther->_colliderType ), layers );
+        return queryOverlaps( makeColliderAABB( aMin, aMax ), static_cast<uint8>( _colliderType ),
+                              makeColliderAABB( bMin, bMax ), static_cast<uint8>( pOther->_colliderType ), layers );
     }
 
     bool BoxCollider2DComponent::containsPoint( const float2& point ) const
@@ -189,7 +186,7 @@ namespace sw
         getBounds( minB, maxB );
 
         PhysicsBodyState state{};
-        state._aabb        = BoxCollider2DComponentInternal::makeColliderAABB( minB, maxB );
+        state._aabb        = makeColliderAABB( minB, maxB );
         state._layer       = static_cast<uint8>( _colliderType );
         state._bContinuous = _bContinuous ? SW_TRUE : SW_FALSE;
         state._bTrigger    = _bTrigger ? SW_TRUE : SW_FALSE;

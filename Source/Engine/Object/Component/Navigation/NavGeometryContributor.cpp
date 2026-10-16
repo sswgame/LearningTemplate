@@ -6,15 +6,12 @@ namespace sw
 {
     namespace
     {
-        struct NavGeometryContributorInternal
+        /** @brief 등록 줄 목록. 함수 정적이라 다른 .cpp 의 정적 초기화가 먼저 와도 비어 있는 채로 만들어진다. */
+        vector<const NavGeometryContribution*>& getContributions()
         {
-            /** @brief 등록 줄 목록. 함수 정적이라 다른 .cpp 의 정적 초기화가 먼저 와도 비어 있는 채로 만들어진다. */
-            static vector<const NavGeometryContribution*>& getContributions()
-            {
-                static vector<const NavGeometryContribution*> s_listContribution;
-                return s_listContribution;
-            }
-        };
+            static vector<const NavGeometryContribution*> s_listContribution;
+            return s_listContribution;
+        }
     } // namespace
 } // namespace sw
 
@@ -25,7 +22,7 @@ namespace sw
         const bool bInvalidContribution = pContribution == nullptr || pContribution->_pGetType == nullptr || pContribution->_pContribute == nullptr;
         if ( bInvalidContribution )
             return;
-        vector<const NavGeometryContribution*>& listContribution = NavGeometryContributorInternal::getContributions();
+        vector<const NavGeometryContribution*>& listContribution = getContributions();
         for ( const NavGeometryContribution* pExisting : listContribution )
         {
             if ( pExisting == pContribution )
@@ -36,7 +33,7 @@ namespace sw
 
     const vector<const NavGeometryContribution*>& NavGeometryContributorRegistry::getAll()
     {
-        return NavGeometryContributorInternal::getContributions();
+        return getContributions();
     }
 } // namespace sw
 

@@ -16,21 +16,18 @@ namespace sw
 {
     namespace
     {
-        struct DialogueGraphAssetInternal
+        /** @brief 특성 테이블이 타입 값 순서대로인지 확인합니다. `findNodeInfo` 가 값으로 바로 찾습니다. */
+        constexpr bool isInfoTableOrdered()
         {
-            /** @brief 특성 테이블이 타입 값 순서대로인지 확인합니다. `findNodeInfo` 가 값으로 바로 찾습니다. */
-            static constexpr bool isInfoTableOrdered()
+            for ( size_t index = 0; index < SW_COUNT_OF( kArrDialogueNodeInfo ); ++index )
             {
-                for ( size_t index = 0; index < SW_COUNT_OF( kArrDialogueNodeInfo ); ++index )
-                {
-                    if ( kArrDialogueNodeInfo[index]._type != static_cast<DialogueAssetNodeType>( index ) )
-                        return false;
-                }
-                return true;
+                if ( kArrDialogueNodeInfo[index]._type != static_cast<DialogueAssetNodeType>( index ) )
+                    return false;
             }
-        };
+            return true;
+        }
 
-        static_assert( DialogueGraphAssetInternal::isInfoTableOrdered(), "kArrDialogueNodeInfo must be ordered by DialogueAssetNodeType" );
+        static_assert( isInfoTableOrdered(), "kArrDialogueNodeInfo must be ordered by DialogueAssetNodeType" );
     } // namespace
 } // namespace sw
 

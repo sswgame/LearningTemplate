@@ -16,15 +16,12 @@ namespace sw
 
     namespace
     {
-        struct RigAssetInternal
+        /** @brief 다음 내용 번호입니다(0 은 "읽지 않음"). */
+        uint64 allocateContentID()
         {
-            /** @brief 다음 내용 번호입니다(0 은 "읽지 않음"). */
-            static uint64 allocateContentID()
-            {
-                static atomic<uint64> s_nextContentID{ 1 };
-                return s_nextContentID.fetch_add( 1, std::memory_order_relaxed );
-            }
-        };
+            static atomic<uint64> s_nextContentID{ 1 };
+            return s_nextContentID.fetch_add( 1, std::memory_order_relaxed );
+        }
     } // namespace
 
     RigNodeRegistry& RigNodeRegistry::getInstance()
@@ -117,7 +114,7 @@ namespace sw
         }
         if ( parseRoot( document.getRoot(), sourceLabel ) )
         {
-            _contentID = RigAssetInternal::allocateContentID();
+            _contentID = allocateContentID();
             return true;
         }
         clear();

@@ -14,20 +14,17 @@ namespace sw
 
     namespace
     {
-        struct WidgetTreeInternal
+        void collectRecursive( Widget& widget, vector<Widget*>& inoutListWidget )
         {
-            static void collectRecursive( Widget& widget, vector<Widget*>& inoutListWidget )
+            inoutListWidget.push_back( &widget );
+            const PanelWidget* pPanel = castTo<const PanelWidget>( &widget );
+            if ( pPanel == nullptr )
+                return;
+            for ( uint32 index = 0; index < pPanel->getChildCount(); ++index )
             {
-                inoutListWidget.push_back( &widget );
-                const PanelWidget* pPanel = castTo<const PanelWidget>( &widget );
-                if ( pPanel == nullptr )
-                    return;
-                for ( uint32 index = 0; index < pPanel->getChildCount(); ++index )
-                {
-                    collectRecursive( *pPanel->getChild( index ), inoutListWidget );
-                }
+                collectRecursive( *pPanel->getChild( index ), inoutListWidget );
             }
-        };
+        }
     } // namespace
 } // namespace sw
 
@@ -155,7 +152,7 @@ namespace sw
     {
         outListWidget.clear();
         if ( _root != nullptr )
-            WidgetTreeInternal::collectRecursive( *_root, outListWidget );
+            collectRecursive( *_root, outListWidget );
     }
 
     void WidgetTree::registerWidget( Widget& widget )
