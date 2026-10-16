@@ -2,17 +2,17 @@
 
 런타임 UI, 글자 렌더링, 접근성, DPI 의 남은 일입니다. 상태 태그의 뜻, 일을 고르는 순서, 새 항목을 쓰는 법은 [백로그 안내](README.md)에 있습니다.
 
-- `B-8` [검증대기] **150 % 모니터 실물 확인** — 대체 테스트(`dpi.monitorScaleFollows`: 창 DPI 질의를 +0.5 로 바꿔 끼움 · WM_DPICHANGED)이 글자 · 여백 · 창 · 백버퍼를 본다.
-  남은 것은 글자 래스터 선명도 — 150 % 모니터에서 에디터를 띄워 눈으로 한 번(2026-10-06 이 PC 의 기동 로그가 `Editor UI scale 1.5 (monitor DPI)` 였다).
+- `G-13` [조건부] **화면 마커의 투영 · 컬링을 컴퓨트로 옮긴다** — 이름표 2,000 개의 남은 게임 스레드 몫 `GT.UI.Markers` p50 0.49 ~ 0.52 ms(마커마다 월드 위치 읽기 · 투영 · 앵커 쓰기,
+  위치 · 배율 적용은 이미 GPU 앵커다 — [결정 기록](../09_Decisions.md) 5-7). 조건: 게임 HUD 에서 마커가 2,000 개를 넘거나 이 구간이 0.5 ms 를 꾸준히 넘을 때. 컴퓨트가 GPUScene 변환을 읽어
+  앵커 표를 쓰는 모양이다(마커 ↔ GPU 인스턴스 대응이 필요하다). 데미지 숫자처럼 시간 함수로만 움직이는 UI 의 GPU 애니메이션도 같은 길이다.
+  측정: Release `App -gv_benchMeshes=2000 -gv_benchUiNameplates=2000 -gv_profileFrames=600` 의 `GT.UI.Markers` · `GT.UI.Paint`.
 
-- `C-8` [정리] **월드 공간 UI 를 대량으로 그리는 비용을 재고, 넘으면 GPU 로 옮긴다.** RTS 이름 · HP 바 2,000 개는 Release `App -gv_benchMeshes=2000 -gv_benchUiNameplates=2000 -gv_profileFrames=600` 으로 잰다
-  (게임 스레드 `GT.UI.*`, 렌더 스레드 `RT.Canvas.*`). 게임 스레드가 0.5 ms 를 넘으면 위치 투영 · 컬링 · 간접 드로우를 컴퓨트로 옮긴다(메시의 GPU 커맨드 생성과 같은 구조; 언리얼은 대량
-  머리 위 표시를 Niagara 로 권한다). 데미지 숫자처럼 시간 함수로만 움직이는 UI 의 GPU 애니메이션도 같은 측정으로 본다.
-  2026-10-13 Release dx12 측정(이름표 2000): 게임 스레드 `GT.UI.Layout` p50 1.18 ms + `GT.UI.Paint` p50 1.97 ms = 약 3.1 ms 로 기준 0.5 ms 를 넘는다 — 옮기는 조건에 해당한다.
-
-- `C-9` [정리] **글리프 SDF 를 컴퓨트로 만들지 재고 정한다.** 한글 장문을 처음 띄우는 프레임은 Release `App -gv_benchMeshes=100 -gv_benchUiHangulGlyphs=400 -gv_profileFrames=600`(`GT.Frame` · `RT.Canvas.Upload` 의 max),
-  CPU 몫만은 `EngineTest --test_filter=GlyphBenchTest.*` 로 잰다. 히치가 4 ms 를 넘으면 FreeType 은 외곽선만 읽고 SDF 는 컴퓨트(점프 플러딩)로 만든다.
-  2026-10-13 Release 측정: `GlyphBenchTest` 새 글리프 400 개 CPU 약 0.89 s(글리프당 약 2.2 ms). App `hangulGlyphs` 첫 프레임은 4 ms 넘는 히치가 드러나지 않았다 — 이 PC 에 시스템 한글 글꼴(`Noto Sans`)이 없어 글리프가 실제로 안 만들어졌을 수 있으니 글꼴을 갖춘 환경에서 다시 본다.
+- `C-9` [정리] **새 글리프 래스터화 히치를 없앤다(SDF 를 컴퓨트로 만들지 포함).** 2026-10-17 Release 측정(PC SW, AMD Family 25, `-lang=ko` — 영어 문화권 대체 글꼴 사슬에는 한글 글꼴이 없어 두부만 그려졌다):
+  App `-lang=ko -gv_benchMeshes=100 -gv_benchUiHangulGlyphs=400` 탐침 프레임 `GT.Frame` max 784 ms(`GT.UI.Paint` 766 ms, `Text.GlyphsRasterized` 401), `RT.Canvas.Upload` max 4.6 ms.
+  `GlyphBenchTest` 새 글리프 400 개 CPU p50 0.93 s(글리프당 약 2.3 ms, FreeType `sdf` 렌더러 — 외곽선에서 정확한 거리). 기준 4 ms 를 크게 넘는다.
+  판단: SDF 만 컴퓨트(점프 플러딩)로 옮겨도 커버리지 래스터화(FreeType 보통 렌더)는 CPU 에 남아 400 개가 한 프레임이면 여전히 기준을 넘는다 — 둘 다 필요하다:
+  (1) 새 글리프를 프레임 예산 안에서만 만들고 나머지는 다음 프레임(만들어지기 전엔 그리지 않음), (2) SDF 를 비트맵 → 거리 변환(FreeType `bsdf` 또는 컴퓨트 JFA)으로 바꿔 글리프당 비용을 줄인다.
+  먼저 `bsdf` 의 글리프당 비용과 화질을 `GlyphBenchTest` 로 재서 컴퓨트가 필요한지 정한다. 탐침 오브젝트에 씬 컴포넌트가 없어 마커가 접혀 측정이 비어 있던 것은 고쳤다(`WidgetComponent` 가 시작할 때 오류를 남긴다).
 
 - `D6-1` [기능] **런타임 UI 전환의 남은 것**(`Engine/UI/README.md`). 상태별 브러시(단추 호버 · 누름 · 꺼짐)는 전환이 읽지 않고 기본 브러시를 쓴다.
   "키 사이 사건 말고 곡선 위 사건" 은 뜻이 불분명해 하지 않았다 — 쓰는 곳이 생기면 뜻을 정한다. 그림 캐시가 조상 변환에 자손까지 다시 칠하는 문제는 `D6-6`.

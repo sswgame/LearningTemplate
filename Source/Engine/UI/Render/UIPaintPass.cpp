@@ -100,18 +100,25 @@ namespace sw
 
 namespace sw
 {
+    bool UIPaintPass::canReuseOutput( const WidgetTree& tree, const UIPaintContext& context, const float2& targetSize )
+    {
+        if ( tree._paintOutput == nullptr )
+            return false;
+        const bool bSameScaleAndAtlas = tree._paintUIScale == context._uiScale && tree._paintAtlasGeneration == context._atlasGeneration;
+        return tree._bPaintOutputStale == SW_FALSE && bSameScaleAndAtlas && tree._paintOutput->_targetSize == targetSize;
+    }
+
     uint32 UIPaintPass::paint( WidgetTree& tree, const UIPaintContext& context, CanvasPainter& painter, CanvasDrawList& outCanvas )
     {
-        const bool bScaleChanged   = tree._paintUIScale != context._uiScale;
-        const bool bAtlasChanged   = tree._paintAtlasGeneration != context._atlasGeneration;
-        tree._paintUIScale         = context._uiScale;
-        tree._paintAtlasGeneration = context._atlasGeneration;
-
         // 지난 순회 뒤 트리에 무효화가 하나도 없고 배율과 아틀라스도 그대로면 순회하지 않고 지난 목록을 낸다(멈춘 HUD 나 메뉴는 위젯 수와 무관하게 이어 붙이기 한 번으로 끝난다).
+        const bool bReusePaintOutput = canReuseOutput( tree, context, outCanvas._targetSize );
+        const bool bScaleChanged     = tree._paintUIScale != context._uiScale;
+        const bool bAtlasChanged     = tree._paintAtlasGeneration != context._atlasGeneration;
+        tree._paintUIScale           = context._uiScale;
+        tree._paintAtlasGeneration   = context._atlasGeneration;
         if ( tree._paintOutput == nullptr )
             tree._paintOutput = make_unique<CanvasDrawList>();
-        CanvasDrawList& output            = *tree._paintOutput;
-        const bool      bReusePaintOutput = tree._bPaintOutputStale == SW_FALSE && bScaleChanged == false && bAtlasChanged == false && output._targetSize == outCanvas._targetSize;
+        CanvasDrawList& output = *tree._paintOutput;
         if ( bReusePaintOutput )
         {
             outCanvas.appendDrawList( output );
@@ -175,6 +182,13 @@ namespace sw
         WidgetPaintCache& cache        = *widget._paintCache;
         uint32            paintedCount = 0;
 
+        // 화면 앵커 — 이 아래 사각형은 앵커 점 기준이다. 대상 픽셀의 가위는 앵커를 따라가지 않으므로 앵커 위와 아래에 자르기가 없어야 한다.
+        const uint32 previousAnchor = painter.getAnchor();
+        if ( widget._paintAnchor != invalid_index::kUint32 )
+        {
+            SW_ASSERT( painter.hasClip() == false );
+            painter.setAnchor( widget._paintAnchor );
+        }
         painter.pushOpacity( widget.computeEffectiveOpacity() );
         if ( bSelfDirty )
         {
@@ -188,6 +202,7 @@ namespace sw
         if ( pPanel != nullptr && pPanel->getChildCount() > 0 )
         {
             const bool bClip = pPanel->clipsChildren();
+            SW_ASSERT( bClip == false || painter.getAnchor() == invalid_index::kUint32 );
             if ( bClip )
             {
                 painter.pushTransform( makeWidgetTransform( widget.getGeometry() ) );
@@ -240,6 +255,7 @@ namespace sw
         if ( cache._over.isEmpty() == false )
             outCanvas.appendDrawList( cache._over );
         painter.popOpacity();
+        painter.setAnchor( previousAnchor );
         widget._dirtyFlags &= ~Internal::kClearBits;
         return paintedCount;
     }

@@ -28,7 +28,7 @@ struct CanvasQuad
 	uint   kind;
 	uint   textureSlot;  // 일괄 텍스처 번호(0..3), 없음 = kInvalidIndex
 	uint   flags;
-	uint   padding0;
+	uint   anchor;       // 화면 앵커 번호, 없음 = kInvalidIndex — 앵커는 버퍼 맨 앞 원소들이고 rect 가 (x, y, 배율, -) 다(C++ CanvasAnchor)
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( CanvasQuad, g_SwCanvasQuads, SW_SLOT_CANVAS_QUAD_SRV );
@@ -91,7 +91,13 @@ PSInput VSMain( SwVertexInput input, uint vertexId : SV_VertexID, uint instanceI
 	else if ( quad.kind == kCanvasQuadShadow )
 		expand = quad.params.y * 2.0f + 1.0f;
 	const float2 local  = lerp( float2( -expand, -expand ), quad.rect.zw + expand, corner );
-	const float2 screen = quad.rect.xy + local.x * quad.axis.xy + local.y * quad.axis.zw;
+	float2       screen = quad.rect.xy + local.x * quad.axis.xy + local.y * quad.axis.zw;
+	// 화면 마커 — 사각형은 앵커 점 기준으로 칠했다. 앵커가 움직여도 사각형 버퍼는 그대로다(앵커 원소만 올린다).
+	if ( quad.anchor != kInvalidIndex )
+	{
+		const float4 anchor = g_SwCanvasQuads[quad.anchor].rect;
+		screen              = anchor.xy + screen * anchor.z;
+	}
 	output.position     = float4( screen.x / SW_ROOT( g_SwCanvasTargetWidth ) * 2.0f - 1.0f, 1.0f - screen.y / SW_ROOT( g_SwCanvasTargetHeight ) * 2.0f, 0.0f, 1.0f );
 	output.local        = local;
 	output.uv           = lerp( quad.uvRect.xy, quad.uvRect.zw, local / max( quad.rect.zw, float2( 1e-5f, 1e-5f ) ) );

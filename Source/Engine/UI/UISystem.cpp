@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -102,8 +103,13 @@ namespace sw
         , _canvas{}
         , _canvasScratch{}
         , _canvasRevision{ 1 }
+        , _listPaintedTree{}
+        , _bLastCanvasReusable{ SW_FALSE }
         , _activeScreen{ kInvalidUIScreenHandle }
         , _markerScreen{ kInvalidUIScreenHandle }
+        , _listMarkerAnchor{}
+        , _listCanvasAnchor{}
+        , _listFreeMarkerAnchor{}
         , _listWidgetComponent{}
         , _listTickScratch{}
         , _listSwitchScreen{}
@@ -152,6 +158,9 @@ namespace sw
         }
         _listWidgetComponent.clear();
         _markerScreen = kInvalidUIScreenHandle;
+        _listMarkerAnchor.clear();
+        _listFreeMarkerAnchor.clear();
+        _listCanvasAnchor.clear();
         _listSwitchScreen.clear();
         _input.getFocusManager().clearFocus();
         while ( _listScreen.empty() == false )
@@ -281,9 +290,13 @@ namespace sw
             SW_PROFILE_COUNT( "UI.StyleWidgets", restyledCount );
         }
         // 화면 마커: 게임 틱과 트랜스폼 적용 뒤의 월드 점을 이번 뷰포트로 투영한다(레이아웃 앞이므로 같은 프레임에 배치된다).
-        for ( WidgetComponent* pComponent : _listWidgetComponent )
         {
-            pComponent->updateScreenMarker( _viewport );
+            SW_PROFILE_SCOPE( "GT.UI.Markers" );
+            WidgetMarkerView view{}; // 카메라와 뷰 · 투영은 관리자마다 한 번 구한다
+            for ( WidgetComponent* pComponent : _listWidgetComponent )
+            {
+                pComponent->updateScreenMarker( _viewport, view );
+            }
         }
         // 레이아웃: 화면 트리마다 더티한 루트만 다시 측정한다. 화면마다 뷰포트 전체가 루트 사각형이다.
         {
@@ -934,7 +947,22 @@ namespace sw
             pMarkers          = findScreen( _markerScreen );
         }
         PanelWidget* pRoot = castTo<PanelWidget>( pMarkers->getTree().getRoot() );
-        return pRoot != nullptr ? pRoot->addChild( std::move( widget ) )->getID() : kInvalidWidgetID;
+        if ( pRoot == nullptr )
+            return kInvalidWidgetID;
+        // 앵커 번호를 준다(뗀 마커의 번호부터). 첫 위치는 붙인 쪽이 정한다 — 그 전에는 위젯이 접혀 있다.
+        uint32 anchor = static_cast<uint32>( _listMarkerAnchor.size() );
+        if ( _listFreeMarkerAnchor.empty() == false )
+        {
+            anchor = _listFreeMarkerAnchor.back();
+            _listFreeMarkerAnchor.pop_back();
+            _listMarkerAnchor[anchor] = CanvasAnchor{};
+        }
+        else
+        {
+            _listMarkerAnchor.emplace_back();
+        }
+        widget->setPaintAnchor( anchor );
+        return pRoot->addChild( std::move( widget ) )->getID();
     }
 
     void UISystem::removeScreenMarker( WidgetID widget )
@@ -944,11 +972,38 @@ namespace sw
         PanelWidget* pRoot    = pWidget != nullptr ? pWidget->getParent() : nullptr;
         if ( pRoot == nullptr )
             return;
+        _listFreeMarkerAnchor.push_back( pWidget->getPaintAnchor() );
         (void)pRoot->removeChild( pWidget ); // 부모에서 찾은 위젯이므로 항상 제거된다
         if ( pRoot->getChildCount() == 0 )
         {
             closeScreen( _markerScreen );
             _markerScreen = kInvalidUIScreenHandle;
+            _listMarkerAnchor.clear();
+            _listFreeMarkerAnchor.clear();
+        }
+    }
+
+    void UISystem::setScreenMarkerAnchor( uint32 anchor, const float2& position, float32 scale )
+    {
+        SW_ASSERT( anchor < _listMarkerAnchor.size() ); // 마커 위젯이 살아 있는 동안만 부른다(번호는 `addScreenMarker` 가 줬다)
+        if ( anchor >= _listMarkerAnchor.size() )
+            return;
+        CanvasAnchor& entry = _listMarkerAnchor[anchor];
+        entry._position     = position; // UI 단위 — 물리 픽셀은 그리기 단계가 그 프레임 배율로 바꾼다(`publishCanvasAnchors`)
+        entry._scale        = scale;
+    }
+
+    void UISystem::publishCanvasAnchors()
+    {
+        // 앵커는 물리 픽셀이다(칠하기와 같은 배율). 정수로 맞춰야 앵커 기준으로 맞춘 사각형 가장자리가 픽셀에 남는다(글자가 흐려지지 않는다).
+        const float32 uiScale = _viewport._uiScale > 0.0f ? _viewport._uiScale : 1.0f;
+        _listCanvasAnchor.resize( _listMarkerAnchor.size() );
+        for ( size_t index = 0; index < _listMarkerAnchor.size(); ++index )
+        {
+            const CanvasAnchor& source = _listMarkerAnchor[index];
+            CanvasAnchor&       target = _listCanvasAnchor[index];
+            target._position           = float2{ MathUtil::round( source._position._x * uiScale ), MathUtil::round( source._position._y * uiScale ) };
+            target._scale              = source._scale;
         }
     }
 
@@ -1032,6 +1087,29 @@ namespace sw
     {
         SW_PROFILE_SCOPE( "GT.UI.Paint" );
         const UIPaintContext context = makePaintContext();
+        // 지난 프레임과 같은 화면이 같은 순서이고 트리마다 지난 출력을 그대로 낼 수 있으며 포커스 테두리가 없으면, 목록은 지난 것과 같다 —
+        // 이어 붙이기와 같은 내용 비교(사각형 수 × 144 바이트씩)를 건너뛴다. 움직이는 화면 마커만 있는 프레임이 이 길이다(앵커만 바뀐다).
+        const bool bFocusRingMode = _input.getInputMode() == UIInputMode::Navigation && _input.getFocusManager().getFocusedTree() != nullptr;
+        bool       bUnchanged     = _bLastCanvasReusable == SW_TRUE && bFocusRingMode == false && _bOnScreenSuppressed == SW_FALSE &&
+                          _listPaintedTree.size() == _listScreen.size() && _canvas._targetSize == _viewport._physicalSize;
+        for ( size_t index = 0; bUnchanged && index < _listScreen.size(); ++index )
+        {
+            const WidgetTree& tree = _listScreen[index]->getTree();
+            bUnchanged             = _listPaintedTree[index] == &tree && UIPaintPass::canReuseOutput( tree, context, _viewport._physicalSize );
+        }
+        if ( bUnchanged )
+        {
+            SW_PROFILE_COUNT( "UI.PaintWidgets", 0 );
+            SW_PROFILE_COUNT( "UI.CanvasQuads", _canvas._listQuad.size() );
+            publishCanvasAnchors();
+            return;
+        }
+        _listPaintedTree.clear();
+        for ( const unique_ptr<UIScreen>& screen : _listScreen )
+        {
+            _listPaintedTree.push_back( &screen->getTree() );
+        }
+        _bLastCanvasReusable = ( bFocusRingMode == false && _bOnScreenSuppressed == SW_FALSE ) ? SW_TRUE : SW_FALSE;
         _canvasScratch.clear();
         _canvasScratch._targetSize = _viewport._physicalSize;
         CanvasPainter painter( _canvasScratch, context._uiScale );
@@ -1051,6 +1129,7 @@ namespace sw
         }
         SW_PROFILE_COUNT( "UI.PaintWidgets", paintedCount );
         SW_PROFILE_COUNT( "UI.CanvasQuads", _canvasScratch._listQuad.size() );
+        publishCanvasAnchors(); // 앵커는 사각형과 따로 프레임마다 낸다(움직인 마커가 그리기 목록 번호를 올리지 않는다)
         if ( _canvasScratch.isSameContent( _canvas ) )
             return;
         // 바뀐 목록은 맞바꾼다(복사하지 않는다). 다음 프레임은 지난 목록을 비우고 칠하기 목록으로 쓴다.

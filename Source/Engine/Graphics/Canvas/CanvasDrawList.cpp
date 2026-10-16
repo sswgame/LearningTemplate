@@ -146,6 +146,7 @@ namespace sw
         _mainOutput.clear();
         _listTarget.clear();
         _listAtlasUpload.clear();
+        _listAnchor.clear();
         _contentRevision = 0;
         _colorVisionMode = 0;
     }

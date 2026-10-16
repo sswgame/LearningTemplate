@@ -110,6 +110,7 @@ namespace sw
         , _listClip{}
         , _listOpacity{}
         , _uiScale{ uiScale }
+        , _anchor{ invalid_index::kUint32 }
     {
     }
 
@@ -358,6 +359,7 @@ namespace sw
             batch._bScissor    = bHasScissor ? SW_TRUE : SW_FALSE;
         }
         quad._textureSlot = selectBatch( pTexture );
+        quad._anchor      = _anchor;
         _pDrawList->_listQuad.push_back( quad );
         ++_pDrawList->_listBatch.back()._quadCount;
     }

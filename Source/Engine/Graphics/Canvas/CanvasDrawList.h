@@ -61,7 +61,7 @@ namespace sw
         uint32 _kind{ 0 };                             ///< `CanvasQuadKind`
         uint32 _textureSlot{ invalid_index::kUint32 }; ///< 일괄 텍스처의 번호(0..3). 없으면 invalid_index::kUint32
         uint32 _flags{ 0 };                            ///< `CanvasQuadFlag`
-        uint32 _padding0{ 0 };
+        uint32 _anchor{ invalid_index::kUint32 };      ///< 화면 앵커 번호(`CanvasFrameData::_listAnchor`). 있으면 `_rect` 위치는 앵커 기준이다. 없으면 invalid_index::kUint32
     };
     static_assert( sizeof( CanvasQuad ) == 144, "CanvasQuad must match SwCanvasQuad in canvas.hlsl" );
 } // namespace sw
@@ -143,12 +143,29 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 화면 앵커 하나입니다. 앵커를 가리키는 사각형(`CanvasQuad::_anchor`)은 셰이더가 `_position + 배율 × 사각형 위치` 에 놓습니다.
+     * @details 월드 점을 따라가는 화면 마커(`WidgetComponent` Screen)가 쓴다. 마커가 움직여도 사각형은 그대로이고 앵커만 바뀌므로,
+     *          게임 스레드가 마커마다 다시 배치 · 칠하지 않고 렌더러가 사각형 버퍼를 다시 올리지 않는다.
+     */
+    struct CanvasAnchor
+    {
+        float2  _position{};     ///< 앵커 점(대상 물리 픽셀, 정수로 맞춘다)
+        float32 _scale{ 1.0f };  ///< 앵커 점을 기준으로 한 배율(거리 배율)
+        float32 _unused{ 0.0f }; ///< 셰이더 float4 의 w(쓰지 않는다)
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 한 프레임의 캔버스 전부입니다. 렌더 프레임 패킷이 가지고 있습니다. */
     struct SW_API CanvasFrameData
     {
         CanvasDrawList               _mainOutput{};      ///< 주 출력(백버퍼, 게임 뷰 RT, 스크린샷 캡처)에 Present 뒤 그리는 목록
         vector<CanvasTargetDrawList> _listTarget{};      ///< 렌더 텍스처 대상 목록(장면 앞에서 그리며 월드 공간 UI 에 해당한다)
         vector<GlyphAtlasUpload>     _listAtlasUpload{}; ///< 지난 프레임 뒤 바뀐 글리프 아틀라스 구간(`GlyphAtlas::takeUploads`)
+        /** @brief 주 출력 사각형의 `_anchor` 가 가리키는 앵커입니다. 프레임마다 바뀌어도 `_contentRevision` 을 올리지 않습니다(렌더러가 앵커 구간만 올린다). */
+        vector<CanvasAnchor> _listAnchor{};
         /**
          * @brief 사각형이나 일괄 내용이 바뀔 때만 오르는 번호입니다. 렌더러는 지난 프레임과 같으면 사각형 버퍼를 다시 올리지 않습니다.
          * @details 0은 "모른다" 는 뜻이라 항상 올립니다(테스트와 개발 테스트 이미지).

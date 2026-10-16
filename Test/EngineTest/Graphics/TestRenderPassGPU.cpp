@@ -8492,3 +8492,84 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasColorVisionChangesRedGreen )
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the canvas color vision test" );
 }
+
+/**
+ * @brief [RenderPassGPUTest] 화면 앵커 — 앵커 기준으로 칠한 빨간 사각형(−20, −10 에서 40 × 20)이 앵커 점 (100, 80) 둘레에 그려지고, 같은 내용 번호로 앵커만
+ *        (200, 120) · 배율 2 로 옮기면 사각형을 다시 올리지 않아도 새 자리에 두 배로 그려진다 — 4 백엔드
+ * @details 화면 마커(`WidgetComponent` Screen)의 길이다. 앵커는 사각형 버퍼 맨 앞 원소이고 주 출력은 그 뒤다(`CanvasRenderer::getMainQuadBase`).
+ *          변이: canvas.hlsl 이 앵커를 더하지 않으면 사각형이 왼쪽 위 구석 밖이라 진다. `CanvasRenderer` 가 같은 내용일 때 앵커를 올리지 않으면 둘째 프레임이 옛 자리라 진다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, CanvasAnchorMovesQuadsWithoutReupload )
+{
+    auto isRed = []( const test::Rgba8& pixel )
+    { return pixel._r >= 240 && pixel._g <= 16 && pixel._b <= 16; };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer renderer;
+        LitCubeScene      stage;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
+        renderer.getCapture().setPresentEnabled( true );
+        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        sw::vector<uint8>     bytesFirst;
+        sw::RHITextureMipSpan layoutFirst{};
+        bOk = bOk && renderer.getCapture().readbackPresent( bytesFirst, layoutFirst );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "첫 프레임" ).c_str() );
+        if ( bOk == false )
+        {
+            renderer.shutdown();
+            continue;
+        }
+        test::RHITestImage first;
+        first.assign( std::move( bytesFirst ), layoutFirst, sw::constant::kBackBufferFormat );
+
+        struct AnchorStep
+        {
+            sw::float2 _anchor;
+            float32    _scale;
+            uint32     _insideX; ///< 사각형 안(앵커 오른쪽, 배율을 곱한 반너비 안)
+        };
+        const AnchorStep arrStep[] = {
+            { sw::float2{ 100.0f, 80.0f }, 1.0f, 115},
+            {sw::float2{ 200.0f, 120.0f }, 2.0f, 235}
+        };
+        for ( const AnchorStep& step : arrStep )
+        {
+            sw::CanvasFrameData canvas{};
+            canvas._mainOutput._targetSize = sw::float2{ static_cast<float32>( first.getWidth() ), static_cast<float32>( first.getHeight() ) };
+            canvas._contentRevision        = 7; // 두 프레임 내용이 같다 — 둘째 프레임은 앵커만 올라간다
+            {
+                sw::CanvasPainter painter( canvas._mainOutput, 1.0f );
+                painter.setAnchor( 0 );
+                sw::CanvasBrush brush{};
+                brush._color = sw::float4{ 1.0f, 0.0f, 0.0f, 1.0f };
+                painter.fillRect( sw::float2{ -20.0f, -10.0f }, sw::float2{ 40.0f, 20.0f }, brush );
+            }
+            sw::CanvasAnchor anchor{};
+            anchor._position = step._anchor;
+            anchor._scale    = step._scale;
+            canvas._listAnchor.push_back( anchor );
+            renderer.setCanvasFrame( canvas );
+            sw::vector<uint8>     bytes;
+            sw::RHITextureMipSpan layout{};
+            const bool            bFrame    = renderSceneFrame( renderer, device.get(), stage._scene, clear ) && renderer.getCapture().readbackPresent( bytes, layout );
+            const sw::string      stepLabel = label + "앵커 (" + sw::to_string( step._anchor._x ) + ", " + sw::to_string( step._anchor._y ) + ") ";
+            SW_EXPECT_TRUE_MSG( bFrame, ( stepLabel + "프레임" ).c_str() );
+            if ( bFrame == false )
+                continue;
+            test::RHITestImage image;
+            image.assign( std::move( bytes ), layout, sw::constant::kBackBufferFormat );
+            const uint32 anchorX = static_cast<uint32>( step._anchor._x );
+            const uint32 anchorY = static_cast<uint32>( step._anchor._y );
+            SW_EXPECT_TRUE_MSG( isRed( image.getPixel( anchorX, anchorY ) ), ( stepLabel + "앵커 점이 빨갛지 않다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( isRed( image.getPixel( step._insideX, anchorY ) ), ( stepLabel + "배율을 곱한 사각형 안이 빨갛지 않다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( isRed( image.getPixel( 10, 10 ) ) == false, ( stepLabel + "왼쪽 위 구석이 빨갛다 — 앵커가 더해지지 않았다" ).c_str() );
+        }
+        SW_EXPECT_EQUAL( 1u, renderer.getCanvasRenderer().getMainQuadBase() );
+        renderer.shutdown();
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the canvas anchor test" );
+}

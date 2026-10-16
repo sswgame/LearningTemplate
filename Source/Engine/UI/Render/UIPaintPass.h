@@ -71,6 +71,8 @@ namespace sw
          * @return 이번에 다시 칠한 위젯 수입니다(`Widget::paint` 호출 수이며 프로파일 카운터 UI.PaintWidgets).
          */
         static uint32 paint( WidgetTree& tree, const UIPaintContext& context, CanvasPainter& painter, CanvasDrawList& outCanvas );
+        /** @brief @p tree 가 순회 없이 지난 출력을 그대로 낼 수 있으면 true 입니다(무효화가 없고 배율 · 아틀라스 세대 · 대상 크기 @p targetSize 가 같다). */
+        static bool canReuseOutput( const WidgetTree& tree, const UIPaintContext& context, const float2& targetSize );
         /** @brief 포커스 테두리를 @p widget 둘레에 칠합니다(캐시하지 않고 지금 목록에 바로 칠합니다). 탐색 입력 방식일 때 `UISystem` 이 부릅니다. */
         static void paintFocusRing( const Widget& widget, CanvasPainter& painter );
         /** @brief 위젯 기하(로컬에서 화면 UI 단위)를 칠하기 변환으로 바꿉니다. */
