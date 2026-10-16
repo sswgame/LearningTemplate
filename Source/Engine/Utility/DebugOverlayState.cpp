@@ -3,6 +3,7 @@
 #include "Engine/Utility/DebugOverlayState.h"
 
 #include "Core/Common/Defines.h"
+#include "Core/Container/CompareUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/String/fixed_string.h"
 
@@ -61,7 +62,6 @@ namespace sw
             if ( value.empty() == false )
                 outListRow.push_back( DebugOverlayRow{ string( key.c_str() ), value } );
         }
-        std::sort( outListRow.begin(), outListRow.end(), []( const DebugOverlayRow& left, const DebugOverlayRow& right )
-        { return left._key < right._key; } );
+        std::sort( outListRow.begin(), outListRow.end(), Ascending<&DebugOverlayRow::_key>{} );
     }
 } // namespace sw

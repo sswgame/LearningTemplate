@@ -2,6 +2,8 @@
 
 #include "Engine/Object/Component/Component.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -105,19 +107,16 @@ namespace sw
         { self.registerSubTick( group, subTickID, phase, priority ); } ) ) )
             return makeTickHandle( subTickID );
 
-        for ( SubTickInfo& info : _listSubTick )
+        if ( SubTickInfo* pInfo = VectorUtil::findBy<&SubTickInfo::_subTickID>( _listSubTick, subTickID ) )
         {
-            if ( info._subTickID == subTickID )
-            {
-                info._group    = group;
-                info._phase    = phase;
-                info._priority = priority;
-                info._bActive  = SW_TRUE;
-                setSubTickRunnable( subTickID, true );
-                if ( _pOwner != nullptr )
-                    _pOwner->markTickOrderDirty();
-                return makeTickHandle( subTickID );
-            }
+            pInfo->_group    = group;
+            pInfo->_phase    = phase;
+            pInfo->_priority = priority;
+            pInfo->_bActive  = SW_TRUE;
+            setSubTickRunnable( subTickID, true );
+            if ( _pOwner != nullptr )
+                _pOwner->markTickOrderDirty();
+            return makeTickHandle( subTickID );
         }
 
         SubTickInfo newInfo{};
@@ -148,17 +147,13 @@ namespace sw
         { (void)self.unregisterSubTick( subTickID ); } ) ) )
             return true;
 
-        for ( size_t index = 0; index < _listSubTick.size(); ++index )
-        {
-            if ( _listSubTick[index]._subTickID == subTickID )
-            {
-                _listSubTick.erase( _listSubTick.begin() + static_cast<ptrdiff_t>( index ) );
-                if ( _pOwner != nullptr )
-                    _pOwner->markTickOrderDirty();
-                return true;
-            }
-        }
-        return false;
+        const std::optional<size_t> index = VectorUtil::findIndexBy<&SubTickInfo::_subTickID>( _listSubTick, subTickID );
+        if ( index.has_value() == false )
+            return false;
+        _listSubTick.erase( _listSubTick.begin() + static_cast<ptrdiff_t>( *index ) );
+        if ( _pOwner != nullptr )
+            _pOwner->markTickOrderDirty();
+        return true;
     }
 
     bool Component::addSubTickPrerequisite( uint32 subTickID, const SubTickHandle& prerequisiteHandle )
@@ -179,22 +174,15 @@ namespace sw
         { (void)self.addSubTickPrerequisite( subTickID, prerequisiteHandle ); } ) ) )
             return true;
 
-        for ( SubTickInfo& info : _listSubTick )
-        {
-            if ( info._subTickID == subTickID )
-            {
-                for ( const SubTickHandle& existing : info._listPrerequisite )
-                {
-                    if ( existing == prerequisiteHandle )
-                        return true;
-                }
-                info._listPrerequisite.push_back( prerequisiteHandle );
-                if ( _pOwner != nullptr )
-                    _pOwner->markTickOrderDirty();
-                return true;
-            }
-        }
-        return false;
+        SubTickInfo* pInfo = VectorUtil::findBy<&SubTickInfo::_subTickID>( _listSubTick, subTickID );
+        if ( pInfo == nullptr )
+            return false;
+        if ( VectorUtil::contains( pInfo->_listPrerequisite, prerequisiteHandle ) )
+            return true;
+        pInfo->_listPrerequisite.push_back( prerequisiteHandle );
+        if ( _pOwner != nullptr )
+            _pOwner->markTickOrderDirty();
+        return true;
     }
 
     bool Component::removeSubTickPrerequisite( uint32 subTickID, const SubTickHandle& prerequisiteHandle )
@@ -235,26 +223,18 @@ namespace sw
         { self.setSubTickActive( subTickID, bActive ); } ) ) )
             return;
 
-        for ( SubTickInfo& info : _listSubTick )
+        if ( SubTickInfo* pInfo = VectorUtil::findBy<&SubTickInfo::_subTickID>( _listSubTick, subTickID ) )
         {
-            if ( info._subTickID == subTickID )
-            {
-                info._bActive = bActive ? SW_TRUE : SW_FALSE;
-                if ( _pOwner != nullptr )
-                    _pOwner->markTickOrderDirty();
-                break;
-            }
+            pInfo->_bActive = bActive ? SW_TRUE : SW_FALSE;
+            if ( _pOwner != nullptr )
+                _pOwner->markTickOrderDirty();
         }
     }
 
     bool Component::isSubTickActiveSlow( uint32 subTickID ) const
     {
-        for ( const SubTickInfo& info : _listSubTick )
-        {
-            if ( info._subTickID == subTickID )
-                return info.isRunnable();
-        }
-        return false;
+        const SubTickInfo* pInfo = VectorUtil::findBy<&SubTickInfo::_subTickID>( _listSubTick, subTickID );
+        return pInfo != nullptr && pInfo->isRunnable();
     }
 
     void Component::setSubTickRunnable( uint32 subTickID, bool bRunnable )
@@ -268,14 +248,8 @@ namespace sw
             return;
         }
         // 틱 중에는 목록의 모양이 얼어 있다(구조 변경은 미룬다) — 다른 워커가 원소의 원자 칸만 쓴다.
-        for ( SubTickInfo& info : _listSubTick )
-        {
-            if ( info._subTickID == subTickID )
-            {
-                info.setRunnable( bRunnable );
-                return;
-            }
-        }
+        if ( SubTickInfo* pInfo = VectorUtil::findBy<&SubTickInfo::_subTickID>( _listSubTick, subTickID ) )
+            pInfo->setRunnable( bRunnable );
     }
 
     void Component::onDestroy()

@@ -7,6 +7,8 @@
  *          Shipping 런타임은 쿠킹된 바이너리(PFB2 등)를 로드합니다.
  */
 #pragma once
+#include "Core/Common/HashUtil.h"
+
 #include "Engine/EngineMinimal.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -127,19 +129,12 @@ namespace sw
             {
                 return _kind == other._kind && _fromVersion == other._fromVersion;
             }
+
+            /** @brief 키의 해시입니다(`unordered_map` 의 기본 해시 `DefaultHash` 가 부릅니다). */
+            [[nodiscard]] uint64 computeHash() const { return HashUtil::makeHash( _kind, _fromVersion ); }
         };
 
-        /// @brief MigratorKey 해시입니다.
-        struct MigratorKeyHash
-        {
-            /** @brief 키의 해시를 반환합니다. */
-            size_t operator()( const MigratorKey& key ) const
-            {
-                return ( static_cast<size_t>( key._kind ) << 16 ) ^ static_cast<size_t>( key._fromVersion );
-            }
-        };
-
-        unordered_map<MigratorKey, XMLAssetMigrator, MigratorKeyHash> _mapMigrator;
-        bool                                                          _bBuiltins{ false };
+        unordered_map<MigratorKey, XMLAssetMigrator> _mapMigrator;
+        bool                                         _bBuiltins{ false };
     };
 } // namespace sw

@@ -3,6 +3,7 @@
 #include "Engine/Object/Component/TagSystem.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/VectorUtil.h"
 
 namespace sw
 {
@@ -11,8 +12,7 @@ namespace sw
     {
         _listTag.reserve( tags.size() );
         _listTag.assign( tags.begin(), tags.end() );
-        std::sort( _listTag.begin(), _listTag.end() );
-        _listTag.erase( std::unique( _listTag.begin(), _listTag.end() ), _listTag.end() );
+        VectorUtil::sortUnique( _listTag );
     }
 
     void TagContainer::addTag( TagID tag )

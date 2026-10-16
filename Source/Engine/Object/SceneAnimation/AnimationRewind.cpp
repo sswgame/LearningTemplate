@@ -3,6 +3,7 @@
 #include "Engine/Object/SceneAnimation/AnimationRewind.h"
 
 #include "Core/Container/LittleEndianUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #if SW_ANIMATION_REWIND_ENABLED
 
@@ -130,11 +131,8 @@ namespace sw
     AnimationRewindTrack& AnimationRewindRecorder::acquireTrack( const Component& target, AnimationRewindKind kind )
     {
         const ComponentHandle handle = target.getHandle();
-        for ( AnimationRewindTrack& track : _listTrack )
-        {
-            if ( track._target == handle )
-                return track;
-        }
+        if ( AnimationRewindTrack* pFound = VectorUtil::findBy<&AnimationRewindTrack::_target>( _listTrack, handle ) )
+            return *pFound;
         AnimationRewindTrack track{};
         track._target = handle;
         track._kind   = kind;
@@ -206,9 +204,8 @@ namespace sw
                 --track._count;
             }
         }
-        _listTrack.erase( std::remove_if( _listTrack.begin(), _listTrack.end(), []( const AnimationRewindTrack& track )
-        { return track._count == 0; } ),
-                          _listTrack.end() );
+        VectorUtil::removeIf( _listTrack, []( const AnimationRewindTrack& track )
+        { return track._count == 0; } );
     }
 
     void AnimationRewindRecorder::setScrubTime( float64 time )
@@ -241,12 +238,7 @@ namespace sw
 
     const AnimationRewindTrack* AnimationRewindRecorder::findTrack( const ComponentHandle& target ) const
     {
-        for ( const AnimationRewindTrack& track : _listTrack )
-        {
-            if ( track._target == target )
-                return &track;
-        }
-        return nullptr;
+        return VectorUtil::findBy<&AnimationRewindTrack::_target>( _listTrack, target );
     }
 
     uint64 AnimationRewindRecorder::getByteCount() const
