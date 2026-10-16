@@ -169,11 +169,24 @@ namespace sw
         static uint32 countLocalTiles( const vector<GPULight>& listLight, const vector<uint32>& listShadowLightIndex );
 
         /**
-         * @brief 점광 · 스폿에 아틀라스 칸을 앞에서부터 나눠 줍니다. 칸이 모자란 빛은 그림자 없이 비춥니다.
-         * @details 칸을 받은 빛 원소에 `_params.x = 1`, `_params.w = 첫 타일 원소의 상대 번호` 를 쓰고, 타일마다 라이트 버퍼 원소 둘(아틀라스 자리를 접은 뷰-투영,
+         * @brief 점광 · 스폿에 아틀라스 칸을 우선순위 순서로 나눠 줍니다. 칸이 모자란 빛은 그림자 없이 비춥니다.
+         * @details 우선순위는 화면 크기의 대리값(경계 구 반경 / 카메라 깊이)이 큰 빛부터다 — 언리얼이 그림자 해상도 · 아틀라스 자리를 투영한 화면 반경으로
+         *          고르는 것과 같은 기준이다. @p pPriorityViewProj 가 없으면(카메라 없음) 목록 순서다. 값이 같으면 목록 순서를 지킨다.
+         *          칸을 받은 빛 원소에 `_params.x = 1`, `_params.w = 첫 타일 원소의 상대 번호` 를 쓰고, 타일마다 라이트 버퍼 원소 둘(아틀라스 자리를 접은 뷰-투영,
          *          칸 사각형 · 바이어스), 그릴 타일, 경계 구를 더한다. 점광의 면은 +X −X +Y −Y +Z −Z 순서이고 시야각은 90°에 PCF 여유 텍셀을 더한 것이다.
+         * @param pPriorityViewProj 주 시점 카메라의 뷰-투영(우선순위의 기준). nullptr 이면 목록 순서다.
          */
-        static void populateLocalShadows( const ShadowAtlasLayout& layout, const vector<uint32>& listShadowLightIndex, vector<GPULight>& inoutListLight, FrameShadowData& outFrame );
+        static void populateLocalShadows( const ShadowAtlasLayout& layout, const float4x4* pPriorityViewProj, const vector<uint32>& listShadowLightIndex,
+                                          vector<GPULight>& inoutListLight, FrameShadowData& outFrame );
+
+        /**
+         * @brief 점광 · 스폿 그림자 하나의 아틀라스 우선순위입니다 — 경계 구 반경 / 카메라 깊이(클립 w). 클수록 먼저 칸을 받습니다.
+         * @details 카메라가 구 안이거나 아주 가까우면 깊이를 반경의 `kLocalPriorityMinDepthFraction` 로 막아 값이 끝없이 커지지 않는다. 구 전체가 카메라 뒤면 0 이다.
+         */
+        static float32 computeLocalShadowPriority( const GPULight& light, const float4x4& viewProj );
+
+        /// @brief 우선순위 깊이의 하한 — 반경의 이 비율. 카메라가 빛 구 안에 있는 빛들은 반경이 큰 쪽이 먼저다.
+        static constexpr float32 kLocalPriorityMinDepthFraction = 0.1f;
 
         /** @brief 방향광 투영 하나를 뷰 그림자 값으로 옮깁니다. 컬링 절두체는 투영의 빛 공간 상자에 @p listLocalBound 를 더한 것입니다. */
         static ViewShadowData makeViewShadow( const DirectionalShadowProjection& projection, const ShadowAtlasLayout& layout, const vector<float4>& listLocalBound );
