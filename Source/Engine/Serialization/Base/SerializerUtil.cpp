@@ -64,6 +64,46 @@ namespace sw
     {
         struct SerializerUtilInternal
         {
+            /** @brief 숫자 칸 하나를 float64 로 읽습니다. 숫자 타입이 아니면 false 입니다(범위 검사가 보지 않는 칸). */
+            [[nodiscard]] static bool readRangeNumber( const string_view typeName, const void* pValue, float64& outValue )
+            {
+                if ( typeName == "float32" || typeName == "float" )
+                    outValue = static_cast<float64>( *static_cast<const float32*>( pValue ) );
+                else if ( typeName == "float64" || typeName == "double" )
+                    outValue = *static_cast<const float64*>( pValue );
+                else if ( typeName == "int32" || typeName == "int" )
+                    outValue = static_cast<float64>( *static_cast<const int32*>( pValue ) );
+                else if ( typeName == "uint32" )
+                    outValue = static_cast<float64>( *static_cast<const uint32*>( pValue ) );
+                else if ( typeName == "int64" )
+                    outValue = static_cast<float64>( *static_cast<const int64*>( pValue ) );
+                else if ( typeName == "uint64" )
+                    outValue = static_cast<float64>( *static_cast<const uint64*>( pValue ) );
+                else if ( typeName == "int16" )
+                    outValue = static_cast<float64>( *static_cast<const int16*>( pValue ) );
+                else if ( typeName == "uint16" )
+                    outValue = static_cast<float64>( *static_cast<const uint16*>( pValue ) );
+                else if ( typeName == "int8" )
+                    outValue = static_cast<float64>( *static_cast<const int8*>( pValue ) );
+                else if ( typeName == "uint8" )
+                    outValue = static_cast<float64>( *static_cast<const uint8*>( pValue ) );
+                else
+                    return false;
+                return true;
+            }
+
+            /** @brief @p value 가 @p meta 의 `Min` · `Max` 밖이면 "경로 = 값 is outside [아래, 위]" 한 줄을 더합니다. */
+            static void appendRangeError( const string& path, const float64 value, const PropertyMetadata& meta, vector<string>& outListError )
+            {
+                const bool bBelow = meta._bHasMinRange == SW_TRUE && value < static_cast<float64>( meta._minRange );
+                const bool bAbove = meta._bHasMaxRange == SW_TRUE && value > static_cast<float64>( meta._maxRange );
+                if ( bBelow == false && bAbove == false )
+                    return;
+                const string lower = meta._bHasMinRange == SW_TRUE ? to_string( meta._minRange ) : string( "-" );
+                const string upper = meta._bHasMaxRange == SW_TRUE ? to_string( meta._maxRange ) : string( "-" );
+                outListError.push_back( path + " = " + to_string( value ) + " is outside [" + lower + ", " + upper + "]" );
+            }
+
             /** @brief uint32 하나를 리틀 엔디언 그대로 덧붙입니다. */
             static void appendUint32( vector<uint8>& buffer, uint32 value )
             {
@@ -939,55 +979,48 @@ namespace sw
         } );
     }
 
-    void SerializerUtil::collectRangeErrors( const TypeInfo& typeInfo, const void* pInstance, const string& prefix, vector<string>& outListError )
+    void SerializerUtil::collectRangeErrors( const TypeInfo& typeInfo, const void* pInstance, const string& prefix, vector<string>& outListError,
+                                             const RangeCheckScope scope )
     {
+        using Internal = SerializerUtilInternal;
         for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
         {
-            const bool bSkipProperty = prop._bIsBitField == SW_TRUE || prop._bIsContainer == SW_TRUE || prop.hasValueAccessor();
+            const bool bSkipProperty = prop._bIsBitField == SW_TRUE || prop.hasValueAccessor();
             if ( bSkipProperty )
                 continue;
-            const string    path    = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
+            const string      path   = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
+            const void* const pValue = prop.getRawPtr( pInstance );
+            if ( prop._bIsContainer == SW_TRUE )
+            {
+                // 시퀀스 원소만 본다. 맵과 중첩 컨테이너는 원소 경로를 하나로 정할 수 없어 보지 않는다.
+                const bool bNestedContainer = prop._nestedContainer != nullptr && prop._nestedContainer->_elementNested != nullptr;
+                const bool bSequence        = prop._containerWrapper != nullptr && prop._containerWrapper->asSequence() != nullptr && bNestedContainer == false;
+                if ( scope == RangeCheckScope::FieldsOnly || bSequence == false )
+                    continue;
+                ISequenceContainerWrapper* pSequence    = prop._containerWrapper->asSequence();
+                const TypeInfo*            pElement     = findNestedObjectType( prop._elementTypeName, SerializeContext::getDefault() );
+                const size_t               elementCount = pSequence->getSize( pValue );
+                for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
+                {
+                    const string      elementPath   = path + "[" + to_string( elementIndex ) + "]";
+                    const void* const pElementValue = pSequence->getElementConst( pValue, elementIndex );
+                    float64           value         = 0.0;
+                    if ( pElement != nullptr )
+                        collectRangeErrors( *pElement, pElementValue, elementPath, outListError, scope );
+                    else if ( Internal::readRangeNumber( prop._elementTypeName.view(), pElementValue, value ) )
+                        Internal::appendRangeError( elementPath, value, prop._metadata, outListError );
+                }
+                continue;
+            }
             const TypeInfo* pNested = findNestedObjectType( prop._typeName, SerializeContext::getDefault() );
             if ( pNested != nullptr )
             {
-                collectRangeErrors( *pNested, prop.getRawPtr( pInstance ), path, outListError );
+                collectRangeErrors( *pNested, pValue, path, outListError, scope );
                 continue;
             }
-            const PropertyMetadata& meta = prop._metadata;
-            if ( meta._bHasMinRange == SW_FALSE && meta._bHasMaxRange == SW_FALSE )
-                continue;
-            float64           value    = 0.0;
-            const void* const pValue   = prop.getRawPtr( pInstance );
-            const string_view typeName = prop._typeName.view();
-            if ( typeName == "float32" || typeName == "float" )
-                value = static_cast<float64>( *static_cast<const float32*>( pValue ) );
-            else if ( typeName == "float64" || typeName == "double" )
-                value = *static_cast<const float64*>( pValue );
-            else if ( typeName == "int32" || typeName == "int" )
-                value = static_cast<float64>( *static_cast<const int32*>( pValue ) );
-            else if ( typeName == "uint32" )
-                value = static_cast<float64>( *static_cast<const uint32*>( pValue ) );
-            else if ( typeName == "int64" )
-                value = static_cast<float64>( *static_cast<const int64*>( pValue ) );
-            else if ( typeName == "uint64" )
-                value = static_cast<float64>( *static_cast<const uint64*>( pValue ) );
-            else if ( typeName == "int16" )
-                value = static_cast<float64>( *static_cast<const int16*>( pValue ) );
-            else if ( typeName == "uint16" )
-                value = static_cast<float64>( *static_cast<const uint16*>( pValue ) );
-            else if ( typeName == "int8" )
-                value = static_cast<float64>( *static_cast<const int8*>( pValue ) );
-            else if ( typeName == "uint8" )
-                value = static_cast<float64>( *static_cast<const uint8*>( pValue ) );
-            else
-                continue;
-            const bool bBelow = meta._bHasMinRange == SW_TRUE && value < static_cast<float64>( meta._minRange );
-            const bool bAbove = meta._bHasMaxRange == SW_TRUE && value > static_cast<float64>( meta._maxRange );
-            if ( bBelow == false && bAbove == false )
-                continue;
-            const string lower = meta._bHasMinRange == SW_TRUE ? to_string( meta._minRange ) : string( "-" );
-            const string upper = meta._bHasMaxRange == SW_TRUE ? to_string( meta._maxRange ) : string( "-" );
-            outListError.push_back( path + " = " + to_string( value ) + " is outside [" + lower + ", " + upper + "]" );
+            float64 value = 0.0;
+            if ( Internal::readRangeNumber( prop._typeName.view(), pValue, value ) )
+                Internal::appendRangeError( path, value, prop._metadata, outListError );
         }
     }
 } // namespace sw

@@ -10,14 +10,16 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class BitReader;
-    class BitWriter;
+    class ValidationContext;
 
-    /** @brief 라운드 시리즈의 단계입니다. 상태 바이트에 번호로 저장되므로 뒤에만 추가합니다. */
+    /** @brief 라운드 시리즈의 단계입니다. 값이 상태에 번호로 저장되므로 뒤에만 추가합니다. */
+    ENUM()
     enum class RoundSeriesPhase : uint8
     {
         Waiting = 0, ///< `start` 전
@@ -72,11 +74,15 @@ namespace sw
      * @details 같은 라운드 점수는 같은 순위이고 같은 순위 점수를 받는다. 무승부 라운드는 모두 1 위이다. 목표 점수에 닿은 참가자 중 총점이 가장 높은 한 명이 우승하고,
      *          그 총점이 같으면 `_tieRule` 을 따른다. 라운드 번호는 0 부터 시작하고, 라운드 목록(미니 게임, 무대)은 키트가 번호로 고른다.
      *          알림은 내지 않는다. 반환한 결과(`RoundSeriesOutcome`, `RoundSeriesTick`)를 보고 키트가 자기 이벤트를 낸다. 격투 이벤트는 롤백 상태에 포함되지 않기 때문이다.
-     *          상태 바이트(`writeState`)는 단계, 라운드 번호, 남은 라운드 시간, 남은 대기, 우승자, 참가자 수, 총점 순서이고, 롤백 키트가 자기 상태에 그대로 싣는다.
+     *          상태(총점, 라운드 번호, 남은 라운드 시간, 남은 대기, 우승자, 단계)는 리플렉션 프로퍼티 한 벌이다. 손 코덱은 두지 않는다.
+     *          롤백 키트는 고정 배치형(`FixedLayout`)으로, 세이브는 자기 기술형(`BinarySerializer`)으로 싣는다.
+     *          설정(`_settings`)은 `initialize` 가 주는 값이라 싣지 않는다. 참가자 수 대조는 싣는 키트가 한다.
      */
+    REFLECT( Validate = validateState )
     class SW_GF_API RoundSeries
     {
     public:
+        REFLECT_BODY();
         static constexpr int32 kNoWinner = -1; ///< 우승자 없음을 뜻한다(끝나지 않았거나 무승부). `reportRoundWinner` 에서는 무승부 라운드를 뜻한다
 
         RoundSeries();
@@ -91,10 +97,6 @@ namespace sw
         [[nodiscard]] RoundSeriesOutcome reportRound( const vector<int32>& listRoundScore );
         /** @brief 이긴 쪽 하나는 1 위이고 나머지는 2 위입니다. @p winner 가 `kNoWinner` 이면 무승부 라운드이며 모두 1 위입니다. */
         [[nodiscard]] RoundSeriesOutcome reportRoundWinner( int32 winner );
-
-        void writeState( BitWriter& outWriter ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 복원합니다. 같은 참가자 수로 시작한 시리즈여야 하고, 깨졌거나 맞지 않으면 false 를 반환하고 상태는 바뀌지 않습니다. */
-        [[nodiscard]] bool readState( BitReader& reader );
 
         /** @brief 라운드 점수로 매긴 순위(1 부터)입니다. 1 에 나보다 점수가 높은 참가자 수를 더한 값이며, 같은 점수는 같은 순위입니다. 범위 밖이면 0 입니다. */
         static int32 computeRank( const vector<int32>& listRoundScore, int32 participant );
@@ -113,6 +115,8 @@ namespace sw
         int32 getWinner() const { return _winner; }
         int32 getParticipantCount() const { return static_cast<int32>( _listTotal.size() ); }
         int32 getTotal( int32 participant ) const;
+        /** @brief 읽은 우승자가 참가자 안에 있는지 봅니다(`REFLECT( Validate )`). */
+        void validateState( ValidationContext& context ) const;
 
     private:
         bool               isValidParticipant( int32 participant ) const { return 0 <= participant && participant < getParticipantCount(); }
@@ -120,11 +124,17 @@ namespace sw
         RoundSeriesOutcome finishRound();
 
         RoundSeriesSettings _settings;
-        vector<int32>       _listTotal;
-        int32               _roundIndex;
-        int32               _roundTicksRemaining;
-        int32               _intermissionTicksRemaining;
-        int32               _winner;
-        RoundSeriesPhase    _phase;
+        PROPERTY( MaxCount = 64 )
+        vector<int32> _listTotal; ///< 참가자마다 총점. 64 는 고정 배치형이 싣는 참가자 수의 상한이다
+        PROPERTY( Min = 0 )
+        int32 _roundIndex;
+        PROPERTY( Min = 0 )
+        int32 _roundTicksRemaining;
+        PROPERTY( Min = 0 )
+        int32 _intermissionTicksRemaining;
+        PROPERTY( Min = -1 )
+        int32 _winner;
+        PROPERTY()
+        RoundSeriesPhase _phase;
     };
 } // namespace sw

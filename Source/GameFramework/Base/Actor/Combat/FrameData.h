@@ -16,6 +16,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -35,6 +37,7 @@ namespace sw
     };
 
     /** @brief 맞는 쪽의 가드 자세입니다. */
+    ENUM()
     enum class GuardStance : uint8
     {
         None = 0, ///< 가드하지 않는다(공격 · 후딜 중, 또는 앞으로 걷는 중)
@@ -160,10 +163,14 @@ namespace sw
      *          기술 정의는 복사해 들고 있어서 카탈로그가 바뀌어도 진행 중인 기술은 그대로이다.
      *          히트스톱이 남아 있으면 `advanceFrame` 은 프레임을 넘기지 않고 히트스톱만 줄인다.
      *          맞은 쪽도 같은 수만큼 멈추므로 히트스톱은 프레임 이득에 들지 않는다.
+     *          진행 상태(프레임, 히트스톱, 재생, 닿음, 막힘)는 리플렉션 프로퍼티라서 롤백 키트가 고정 배치형(`FixedLayout`)으로 싣는다.
+     *          기술 정의(`_move`)는 카탈로그의 것이라 싣지 않는다. 읽은 쪽이 기술을 찾아 `restoreState` 로 다시 붙인다.
      */
+    REFLECT()
     class SW_GF_API MoveTimeline
     {
     public:
+        REFLECT_BODY();
         MoveTimeline();
 
         /** @brief 기술을 시작합니다. 지금 프레임은 1 이며, 첫 프레임이 화면에 나온 상태입니다. */
@@ -228,10 +235,15 @@ namespace sw
 
     private:
         MoveFrameData _move;
-        int32         _frame;
-        int32         _hitstopRemaining;
-        uint8         _bPlaying;
-        uint8         _bContact;
-        uint8         _bBlocked;
+        PROPERTY( Min = 0 )
+        int32 _frame;
+        PROPERTY( Min = 0 )
+        int32 _hitstopRemaining;
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bPlaying;
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bContact;
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bBlocked;
     };
 } // namespace sw

@@ -1,9 +1,9 @@
 // 철권 류 격투 키트 — 커맨드 우선도 · 스트링 창 · 자세 · 조건, 가드 높이(하단 · 상단 회피), 프레임 이득 확정 반격, 띄우기 저글 감쇠 · 스크류 1회 · 다운 추가타 · 벽꽝,
-// 잡기 풀기 창, 횡이동 대 직선 · 추적, 라운드(시간 초과 · K.O. · 레이지 · 무승부), 롤백 저장 → 복원 → 재진행 결정성, 롤백 상태 바이트 형식 · 라운드 시간 · 대기 프레임 수.
+// 잡기 풀기 창, 횡이동 대 직선 · 추적, 라운드(시간 초과 · K.O. · 레이지 · 무승부), 롤백 저장 → 복원 → 재진행 결정성, 롤백(고정 배치형) 옮기기 · 거절, 세이브(자기 기술형) 왕복, 라운드 시간 · 대기 프레임 수.
 #include "pch.h"
 
-#include "Core/Network/BitStream.h"
-
+#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Actor/Combat/FrameData.h"
@@ -161,66 +161,50 @@ namespace
         runFrames( match, waitFrames, makeInput( 0, 5 ), input1, inoutListEvent );
     }
 
-    /**
-     * @brief 롤백 상태 바이트를 테스트 쪽에서 따로 적습니다(버전 2) — `saveState` 와 바이트가 같아야 합니다.
-     * @details 라운드 사이 대기의 남은 프레임은 시나리오가 아는 값(@p roundOverFramesRemaining)으로 넣습니다. 라운드 묶음(`RoundSeries`)은 맨 뒤입니다.
-     */
-    vector<uint8> writeExpectedFightingState( const FightingMatch& match, int32 roundOverFramesRemaining )
+    /** @brief @p source 의 세이브를 같은 캐릭터로 새로 연 대전이 읽는지 반환합니다. 읽지 못하면 그 대전의 롤백 바이트가 그대로인지도 봅니다. */
+    bool readsSaveOf( const FightingMatch& source, const FighterDef& fighterDef )
     {
-        BitWriter writer;
-        writer.writeUint32( 0x54484746u ); // "FGHT"
-        writer.writeVarInt( 2 );
-        writer.writeVarInt( match.getFrame() );
-        writer.writeVarInt( match.getLastRoundWinner() );
-        for ( int32 player = 0; player < FightingMatch::kPlayerCount; ++player )
+        Archive written;
+        source.writeState( written );
+        vector<uint8> bytes;
+        written.writeData( bytes );
+        FightingMatch target;
+        target.initialize( fighterDef, fighterDef );
+        vector<uint8> bytesBefore;
+        target.saveState( bytesBefore );
+        Archive    reader( bytes.data(), bytes.size() );
+        const bool bRead = target.readState( reader );
+        if ( bRead == false )
         {
-            const FighterRuntime& fighter = match.getFighter( player );
-            writer.writeVarUint( fighter._pDef->_listMove.size() );
-            const float32 arrFloat[] = { fighter._x, fighter._z, fighter._y, fighter._dirX, fighter._dirZ,
-                                         fighter._velocityY, fighter._gravity, fighter._carryX, fighter._carryZ };
-            for ( const float32 value : arrFloat )
-            {
-                writer.writeFloat( value );
-            }
-            const int32 arrCounter[] = { fighter._health, fighter._stateFrames, fighter._hitstop, fighter._moveIndex, fighter._bufferedMove,
-                                         fighter._bufferedAge, fighter._stanceIndex, fighter._stanceFrames, fighter._comboHits, fighter._airHits,
-                                         fighter._heatFrames, fighter._sidestepSign, fighter._side, fighter._breakButtons };
-            for ( const int32 counter : arrCounter )
-            {
-                writer.writeVarInt( counter );
-            }
-            writer.writeVarUint( static_cast<uint64>( fighter._state ) );
-            writer.writeVarUint( static_cast<uint64>( fighter._posture ) );
-            writer.writeVarUint( static_cast<uint64>( fighter._guard ) );
-            const uint8 arrFlag[] = { fighter._bAirborne, fighter._bScrewUsed, fighter._bBoundUsed, fighter._bWallSplatUsed,
-                                      fighter._bRage, fighter._bRageUsed, fighter._bHeatUsed, fighter._bThrowAttempted };
-            for ( const uint8 flag : arrFlag )
-            {
-                writer.writeBool( flag == SW_TRUE );
-            }
-            writer.writeBool( fighter._timeline.isPlaying() );
-            writer.writeBool( fighter._timeline.hasContact() );
-            writer.writeBool( fighter._timeline.wasBlocked() );
-            writer.writeVarInt( fighter._timeline.getFrame() );
-            writer.writeVarInt( fighter._timeline.getHitstopRemaining() );
-            writer.writeVarInt( fighter._inputBuffer.getFrameCount() );
-            for ( int32 framesAgo = fighter._inputBuffer.getFrameCount() - 1; framesAgo >= 0; --framesAgo )
-            {
-                writer.writeBits( FightingMatch::encodeInput( fighter._inputBuffer.getFrame( framesAgo ) ), 8 );
-            }
+            vector<uint8> bytesAfter;
+            target.saveState( bytesAfter );
+            SW_EXPECT_TRUE( bytesAfter == bytesBefore );
         }
-        const RoundSeries& series = match.getSeries();
-        writer.writeVarUint( static_cast<uint64>( series.getPhase() ) );
-        writer.writeVarInt( series.getRoundIndex() );
-        writer.writeVarInt( series.getRoundTicksRemaining() );
-        writer.writeVarInt( roundOverFramesRemaining );
-        writer.writeVarInt( series.getWinner() );
-        writer.writeVarUint( static_cast<uint64>( series.getParticipantCount() ) );
-        for ( int32 player = 0; player < series.getParticipantCount(); ++player )
-        {
-            writer.writeVarInt( series.getTotal( player ) );
-        }
-        return writer.releaseBytes();
+        return bRead;
+    }
+
+    /**
+     * @brief @p match 의 롤백 바이트를 같은 캐릭터로 새로 연 대전에 읽혀, 같은 상태(같은 필드, 같은 바이트, 같은 라운드 시계)가 되는지 봅니다.
+     * @details 필드 순서와 인코딩은 생성 코덱이 정하므로 바이트 배치를 테스트가 따로 적지 않습니다.
+     */
+    void expectRollbackTransfer( const FightingMatch& match, const FighterDef& fighterDef, const FightingSettings& settings )
+    {
+        vector<uint8> bytes;
+        match.saveState( bytes );
+        SW_EXPECT_TRUE( bytes.empty() == false );
+        FightingMatch copy;
+        copy.initialize( fighterDef, fighterDef, settings );
+        SW_EXPECT_TRUE( copy.loadState( bytes ) );
+        SW_EXPECT_TRUE( FixedLayout::equals( match, copy ) );
+        vector<uint8> copyBytes;
+        copy.saveState( copyBytes );
+        SW_EXPECT_TRUE( copyBytes == bytes );
+        SW_EXPECT_TRUE( copy.getPhase() == match.getPhase() );
+        SW_EXPECT_EQUAL( match.getFrame(), copy.getFrame() );
+        SW_EXPECT_EQUAL( match.getRound(), copy.getRound() );
+        SW_EXPECT_EQUAL( match.getRoundFramesRemaining(), copy.getRoundFramesRemaining() );
+        SW_EXPECT_EQUAL( match.getSeries().getIntermissionTicksRemaining(), copy.getSeries().getIntermissionTicksRemaining() );
+        SW_EXPECT_EQUAL( match.getLastRoundWinner(), copy.getLastRoundWinner() );
     }
 
     /** @brief 240 프레임 라운드 · 2 선승 · 대기 10 프레임 — 아래 두 테스트가 같은 수치를 씁니다. */
@@ -706,56 +690,73 @@ SW_TEST_CASE( FightingTest, RollbackSaveLoadResimulatesIdentically )
 }
 
 /**
- * @brief [FightingTest] 롤백 상태 바이트의 형식 — 머리는 바이트 그대로, 전체는 테스트가 따로 적은 형식과 같다(라운드 중 · 대기 중 · 다음 라운드 · 대전 끝)
- * @details 형식을 바꾸면 `writeExpectedFightingState` 와 머리 바이트를 같은 커밋에서 고치고 `kStateVersion` 을 올린다.
+ * @brief [FightingTest] 롤백 상태(고정 배치형)가 라운드 중 · 대기 중 · 다음 라운드 · 대전 끝에서 새로 연 대전으로 그대로 옮겨 간다.
+ *        다른 캐릭터의 대전과 잘린 바이트는 거절하고 상태를 바꾸지 않는다
  */
-SW_TEST_CASE( FightingTest, RollbackStateBytesKeepTheirLayout )
+SW_TEST_CASE( FightingTest, RollbackStateMovesToAFreshMatchAndRejectsForeignBytes )
 {
     FightingFixture fixture;
     SW_ASSERT_TRUE( fixture._bLoaded );
-    const FighterDef&     tester   = *fixture.findTester();
-    const InputFrame      neutral0 = makeInput( 0, 5 );
-    const InputFrame      neutral1 = makeInput( 1, 5 );
-    FightingMatch         match;
-    vector<FightingEvent> listEvent;
-    vector<uint8>         bytes;
-    match.initialize( tester, tester, makeRoundPinSettings() );
-
-    // 머리 — "FGHT" · 버전 2 · 프레임 0 · 지난 라운드 −1. 라운드 묶음은 맨 뒤(형식은 RoundSeriesTest.PlacementPointsAndStateBytes).
-    match.saveState( bytes );
-    const uint8 arrHeader[] = { 0x46, 0x47, 0x48, 0x54, 0x04, 0x00, 0x01 };
-    SW_ASSERT_TRUE( bytes.size() > sizeof( arrHeader ) );
-    for ( size_t index = 0; index < sizeof( arrHeader ); ++index )
-    {
-        SW_EXPECT_EQUAL( static_cast<int32>( arrHeader[index] ), static_cast<int32>( bytes[index] ) );
-    }
-    SW_EXPECT_TRUE( bytes == writeExpectedFightingState( match, 0 ) );
+    const FighterDef&      tester   = *fixture.findTester();
+    const InputFrame       neutral0 = makeInput( 0, 5 );
+    const InputFrame       neutral1 = makeInput( 1, 5 );
+    const FightingSettings settings = makeRoundPinSettings();
+    FightingMatch          match;
+    vector<FightingEvent>  listEvent;
+    match.initialize( tester, tester, settings );
+    expectRollbackTransfer( match, tester, settings );
 
     // 1 라운드 시간 초과(체력이 많은 0 승) 바로 뒤 — 대기 10.
     match.setFighterHealth( 1, 90 );
     runFrames( match, 240, neutral0, neutral1, listEvent );
     SW_ASSERT_TRUE( match.getPhase() == RoundSeriesPhase::Intermission );
     SW_EXPECT_EQUAL( 10, match.getSeries().getIntermissionTicksRemaining() );
-    match.saveState( bytes );
-    SW_EXPECT_TRUE( bytes == writeExpectedFightingState( match, 10 ) );
+    expectRollbackTransfer( match, tester, settings );
 
     // 대기 6 프레임 뒤 — 4 남음.
     runFrames( match, 6, neutral0, neutral1, listEvent );
-    match.saveState( bytes );
-    SW_EXPECT_TRUE( bytes == writeExpectedFightingState( match, 4 ) );
+    SW_EXPECT_EQUAL( 4, match.getSeries().getIntermissionTicksRemaining() );
+    expectRollbackTransfer( match, tester, settings );
 
     // 2 라운드 시작.
     runFrames( match, 4, neutral0, neutral1, listEvent );
     SW_ASSERT_TRUE( match.getPhase() == RoundSeriesPhase::RoundActive );
-    match.saveState( bytes );
-    SW_EXPECT_TRUE( bytes == writeExpectedFightingState( match, 0 ) );
+    expectRollbackTransfer( match, tester, settings );
 
     // 2 라운드도 0 승 → 대전 끝(끝날 때는 대기를 걸지 않는다).
     match.setFighterHealth( 1, 90 );
     runFrames( match, 240, neutral0, neutral1, listEvent );
     SW_ASSERT_TRUE( match.getPhase() == RoundSeriesPhase::Finished );
+    expectRollbackTransfer( match, tester, settings );
+
+    // 다른 캐릭터(id 가 다른 정의)로 연 대전은 같은 바이트를 거절하고 그대로다.
+    vector<uint8> bytes;
     match.saveState( bytes );
-    SW_EXPECT_TRUE( bytes == writeExpectedFightingState( match, 0 ) );
+    FighterDef impostorDef = tester;
+    impostorDef._id        = hashed_string( "impostor" );
+    FightingMatch impostor;
+    impostor.initialize( impostorDef, impostorDef, settings );
+    vector<uint8> impostorBefore;
+    impostor.saveState( impostorBefore );
+    SW_EXPECT_FALSE( impostor.loadState( bytes ) );
+    vector<uint8> impostorAfter;
+    impostor.saveState( impostorAfter );
+    SW_EXPECT_TRUE( impostorAfter == impostorBefore );
+
+    // 잘린 바이트(빈 것, 한 바이트, 절반, 한 바이트 모자란 것)는 거절하고 그대로다.
+    FightingMatch target;
+    target.initialize( tester, tester, settings );
+    vector<uint8> targetBefore;
+    target.saveState( targetBefore );
+    const size_t arrLength[] = { 0, 1, bytes.size() / 2, bytes.size() - 1 };
+    for ( const size_t length : arrLength )
+    {
+        const vector<uint8> prefix( bytes.begin(), bytes.begin() + static_cast<ptrdiff_t>( length ) );
+        SW_EXPECT_FALSE( target.loadState( prefix ) );
+    }
+    vector<uint8> targetAfter;
+    target.saveState( targetAfter );
+    SW_EXPECT_TRUE( targetAfter == targetBefore );
 }
 
 /**
@@ -831,8 +832,8 @@ SW_TEST_CASE( FightingTest, RoundClockIntermissionAndMatchEndCountExactFrames )
 }
 
 /**
- * @brief [FightingTest] 세이브(Archive) 왕복 — 롤백 코덱의 바이트를 길이 붙은 본문으로 실어, 새로 연 대전이 같은 롤백 바이트로 돌아오고 같은 입력을 더 넣어도 같다.
- *        잘린 바이트는 거절하고 그대로 둔다
+ * @brief [FightingTest] 세이브(Archive) 왕복 — 버전 머리가 붙은 자기 기술형 본문으로 실어, 새로 연 대전이 같은 롤백 바이트로 돌아오고 같은 입력을 더 넣어도 같다.
+ *        세이브 본문은 롤백 바이트가 아니다. 잘린 본문과 다른 캐릭터의 대전은 거절하고 그대로 둔다
  */
 SW_TEST_CASE( FightingTest, StateRoundTripContinuesTheSameMatch )
 {
@@ -868,7 +869,18 @@ SW_TEST_CASE( FightingTest, StateRoundTripContinuesTheSameMatch )
     match.writeState( written );
     vector<uint8> archiveBytes;
     written.writeData( archiveBytes );
-    SW_EXPECT_EQUAL( static_cast<int32>( codecBytes.size() + sizeof( uint32 ) ), static_cast<int32>( archiveBytes.size() ) ); // 길이 + 코덱 바이트 그대로
+    // 세이브 본문은 버전 머리(uint32 리틀 엔디언)로 시작하고, 롤백 스트림의 머리인 고정 배치형 스키마 해시도, 롤백 바이트도 싣지 않는다.
+    SW_ASSERT_TRUE( archiveBytes.size() > sizeof( uint32 ) );
+    uint32 headerVersion = 0;
+    std::memcpy( &headerVersion, archiveBytes.data(), sizeof( uint32 ) );
+    SW_EXPECT_EQUAL( FightingMatch::kStateVersion, headerVersion );
+    const uint64 schemaHash = FixedLayout::getSchemaHash<FightingMatch>();
+    uint8        arrHashByte[sizeof( uint64 )];
+    std::memcpy( arrHashByte, &schemaHash, sizeof( uint64 ) );
+    SW_ASSERT_TRUE( codecBytes.size() > sizeof( uint64 ) );
+    SW_EXPECT_TRUE( std::equal( std::begin( arrHashByte ), std::end( arrHashByte ), codecBytes.begin() ) ); // 롤백 스트림은 해시로 시작한다
+    SW_EXPECT_TRUE( std::search( archiveBytes.begin(), archiveBytes.end(), std::begin( arrHashByte ), std::end( arrHashByte ) ) == archiveBytes.end() );
+    SW_EXPECT_TRUE( std::search( archiveBytes.begin(), archiveBytes.end(), codecBytes.begin(), codecBytes.end() ) == archiveBytes.end() );
 
     FightingMatch restored;
     restored.initialize( tester, tester );
@@ -891,4 +903,52 @@ SW_TEST_CASE( FightingTest, StateRoundTripContinuesTheSameMatch )
     Archive cut( archiveBytes.data(), archiveBytes.size() - 1 );
     SW_EXPECT_FALSE( truncated.readState( cut ) );
     SW_EXPECT_EQUAL( 0, truncated.getFrame() );
+
+    FighterDef impostorDef = tester;
+    impostorDef._id        = hashed_string( "impostor" );
+    FightingMatch impostor;
+    impostor.initialize( impostorDef, impostorDef );
+    Archive foreignReader( archiveBytes.data(), archiveBytes.size() );
+    SW_EXPECT_FALSE( impostor.readState( foreignReader ) );
+    SW_EXPECT_EQUAL( 0, impostor.getFrame() );
+}
+
+/**
+ * @brief [FightingTest] 범위 밖 값이 든 세이브는 거절하고 상태를 바꾸지 않는다.
+ * @details 자기 기술형 읽기는 `Min` · `Max` 를 보지 않으므로 `readState` 가 직접 본다. 최상위 칸(지난 라운드 결과), 배열 원소의 칸(기술 인덱스),
+ *          값으로 든 구조체의 칸(고리 버퍼 다음 자리), vector 원소의 칸(입력 방향)을 하나씩 망가뜨린다. 망가뜨리지 않은 세이브는 읽힌다.
+ */
+SW_TEST_CASE( FightingTest, SaveStateWithOutOfRangeValuesIsRejected )
+{
+    FightingFixture fixture;
+    SW_ASSERT_TRUE( fixture._bLoaded );
+    const FighterDef& tester = *fixture.findTester();
+    FightingMatch     source;
+    source.initialize( tester, tester );
+    SW_EXPECT_TRUE( readsSaveOf( source, tester ) );
+
+    const PropertyInfo* pLastWinner = FightingMatch::StaticType()->findProperty( "_lastRoundWinner" );
+    const PropertyInfo* pHead       = InputCommandBuffer::StaticType()->findProperty( "_head" );
+    const PropertyInfo* pFrameList  = InputCommandBuffer::StaticType()->findProperty( "_listFrame" );
+    SW_ASSERT_TRUE( pLastWinner != nullptr );
+    SW_ASSERT_TRUE( pHead != nullptr );
+    SW_ASSERT_TRUE( pFrameList != nullptr );
+
+    FightingMatch lastWinnerCase                        = source;
+    *pLastWinner->getValuePtr<int32>( &lastWinnerCase ) = 3; // [−1, 2] 밖
+    SW_EXPECT_FALSE( readsSaveOf( lastWinnerCase, tester ) );
+
+    FightingMatch moveIndexCase                                             = source;
+    const_cast<FighterRuntime&>( moveIndexCase.getFighter( 1 ) )._moveIndex = -2; // 배열 원소의 칸, 최소 −1 밖
+    SW_EXPECT_FALSE( readsSaveOf( moveIndexCase, tester ) );
+
+    FightingMatch headCase                                                                              = source;
+    *pHead->getValuePtr<int32>( &const_cast<FighterRuntime&>( headCase.getFighter( 0 ) )._inputBuffer ) = -1;
+    SW_EXPECT_FALSE( readsSaveOf( headCase, tester ) );
+
+    FightingMatch       directionCase = source;
+    vector<InputFrame>* pListFrame    = pFrameList->getValuePtr<vector<InputFrame>>( &const_cast<FighterRuntime&>( directionCase.getFighter( 0 ) )._inputBuffer );
+    SW_ASSERT_TRUE( pListFrame != nullptr && pListFrame->empty() == false );
+    ( *pListFrame )[0]._direction = 12; // vector 원소의 칸, 최대 9 밖
+    SW_EXPECT_FALSE( readsSaveOf( directionCase, tester ) );
 }

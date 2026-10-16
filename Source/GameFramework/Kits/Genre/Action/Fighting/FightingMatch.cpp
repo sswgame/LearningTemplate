@@ -2,59 +2,39 @@
 
 #include "GameFramework/Kits/Genre/Action/Fighting/FightingMatch.h"
 
-#include "Core/Common/FourCcUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Reflection/ReflectionValidation.h"
+#include "Engine/Serialization/Base/SerializerUtil.h"
+#include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/BinarySerializer.h"
 
 namespace sw
 {
+    SW_LOG_CALLER( "FightingMatch" );
+
     namespace
     {
         struct FightingMatchInternal
         {
-            static constexpr uint32  kStateTag      = FourCcUtil::make( "FGHT" );
-            static constexpr int32   kStateVersion  = 2;
-            static constexpr uint16  kButtonMask    = 0x0F; ///< 1바이트 입력에 담는 버튼 4개
-            static constexpr int32   kMaxCounter    = 1 << 20;
+            static constexpr uint16  kButtonMask    = 0x0F;    ///< 1바이트 입력에 담는 버튼 4개
             static constexpr float32 kRoundingSlack = 1.0e-3f; ///< 0.55 × 10 같은 반올림 경계가 부동소수 오차 때문에 내려가지 않게 하는 여유값
-            static constexpr int32   kStateCount    = static_cast<int32>( FighterState::Knockout ) + 1;
 
             static bool isGuardDirectionBack( uint8 relativeDirection ) { return relativeDirection == 4 || relativeDirection == 7; }
 
             static bool isCrouchDirection( uint8 relativeDirection ) { return 1 <= relativeDirection && relativeDirection <= 3; }
 
-            static void writeCounter( BitWriter& writer, int32 value ) { writer.writeVarInt( value ); }
-
-            static int32 readCounter( BitReader& reader )
+            /** @brief 재생 중인 타임라인에 지금 기술의 정의를 다시 붙입니다. 기술이 없거나 프레임이 그 기술 밖이면 false 이고 타임라인은 그대로입니다. */
+            [[nodiscard]] static bool relinkTimeline( FighterRuntime& fighter )
             {
-                const int64 value = reader.readVarInt();
-                return static_cast<int32>( MathUtil::clamp<int64>( value, -kMaxCounter, kMaxCounter ) );
-            }
-
-            /** @brief 타임라인을 쓰고 읽습니다. 기술은 캐릭터의 기술 인덱스로 따로 저장합니다. */
-            static void writeTimeline( BitWriter& writer, const MoveTimeline& timeline )
-            {
-                writer.writeBool( timeline.isPlaying() );
-                writer.writeBool( timeline.hasContact() );
-                writer.writeBool( timeline.wasBlocked() );
-                writeCounter( writer, timeline.getFrame() );
-                writeCounter( writer, timeline.getHitstopRemaining() );
-            }
-
-            /** @brief 타임라인을 복원합니다. 기술은 기반 `MoveTimeline::restoreState` 가 다루지 않으므로 호출하는 쪽이 찾아서 넘깁니다. */
-            [[nodiscard]] static bool readTimeline( BitReader& reader, const FighterMove* pMove, MoveTimeline& outTimeline )
-            {
-                const bool  bPlaying = reader.readBool();
-                const bool  bContact = reader.readBool();
-                const bool  bBlocked = reader.readBool();
-                const int32 frame    = readCounter( reader );
-                const int32 hitstop  = readCounter( reader );
-                outTimeline.cancel();
-                if ( bPlaying == false )
+                MoveTimeline& timeline = fighter._timeline;
+                if ( timeline.isPlaying() == false )
                     return true;
-                return pMove != nullptr && outTimeline.restoreState( pMove->_frame, frame, hitstop, bContact, bBlocked );
+                const FighterMove* pMove = fighter.findCurrentMove();
+                return pMove != nullptr &&
+                       timeline.restoreState( pMove->_frame, timeline.getFrame(), timeline.getHitstopRemaining(), timeline.hasContact(), timeline.wasBlocked() );
             }
 
             /** @brief 격투의 라운드 규칙입니다. 라운드 승은 1위가 1점이고(순위 점수 목록은 없다), 둘이 함께 선승 조건에 닿으면 무승부입니다. 시간과 대기는 최소 1프레임입니다. */
@@ -107,9 +87,10 @@ namespace sw
         const FighterDef* arrDef[kPlayerCount] = { &fighter0, &fighter1 };
         for ( int32 player = 0; player < kPlayerCount; ++player )
         {
-            _arrFighter[player]       = FighterRuntime{};
-            _arrFighter[player]._pDef = arrDef[player];
-            _arrFighter[player]._side = player == 0 ? 1 : -1;
+            _arrFighter[player]                = FighterRuntime{};
+            _arrFighter[player]._pDef          = arrDef[player];
+            _arrFighter[player]._fighterIDHash = arrDef[player]->_id.getHash();
+            _arrFighter[player]._side          = player == 0 ? 1 : -1;
             _arrFighter[player]._inputBuffer.clear();
         }
         _series.initialize( FightingMatchInternal::makeSeriesSettings( settings ) );
@@ -1090,140 +1071,93 @@ namespace sw
     void FightingMatch::saveState( vector<uint8>& outBuffer ) const
     {
         // 롤백은 프레임마다, 되감아 다시 돌 때마다 상태를 저장한다. 링 슬롯의 버퍼를 이어받아 쓰고 돌려주므로 새로 할당하지 않는다.
-        BitWriter writer{ std::move( outBuffer ) };
-        writer.writeUint32( FightingMatchInternal::kStateTag );
-        writer.writeVarInt( FightingMatchInternal::kStateVersion );
-        FightingMatchInternal::writeCounter( writer, _frame );
-        FightingMatchInternal::writeCounter( writer, _lastRoundWinner );
-        for ( const FighterRuntime& fighter : _arrFighter )
+        BitWriter  writer{ std::move( outBuffer ) };
+        const bool bWritten = FixedLayout::write( *this, writer );
+        outBuffer           = writer.releaseBytes();
+        if ( bWritten == false )
         {
-            writer.writeVarUint( fighter._pDef != nullptr ? fighter._pDef->_listMove.size() : 0 ); // 같은 캐릭터인지 대조하는 값
-            writer.writeFloat( fighter._x );
-            writer.writeFloat( fighter._z );
-            writer.writeFloat( fighter._y );
-            writer.writeFloat( fighter._dirX );
-            writer.writeFloat( fighter._dirZ );
-            writer.writeFloat( fighter._velocityY );
-            writer.writeFloat( fighter._gravity );
-            writer.writeFloat( fighter._carryX );
-            writer.writeFloat( fighter._carryZ );
-            const int32 arrCounter[] = { fighter._health, fighter._stateFrames, fighter._hitstop, fighter._moveIndex, fighter._bufferedMove,
-                                         fighter._bufferedAge, fighter._stanceIndex, fighter._stanceFrames, fighter._comboHits, fighter._airHits,
-                                         fighter._heatFrames, fighter._sidestepSign, fighter._side, fighter._breakButtons };
-            for ( const int32 counter : arrCounter )
-            {
-                FightingMatchInternal::writeCounter( writer, counter );
-            }
-            writer.writeVarUint( static_cast<uint64>( fighter._state ) );
-            writer.writeVarUint( static_cast<uint64>( fighter._posture ) );
-            writer.writeVarUint( static_cast<uint64>( fighter._guard ) );
-            const uint8 arrFlag[] = { fighter._bAirborne, fighter._bScrewUsed, fighter._bBoundUsed, fighter._bWallSplatUsed,
-                                      fighter._bRage, fighter._bRageUsed, fighter._bHeatUsed, fighter._bThrowAttempted };
-            for ( const uint8 flag : arrFlag )
-            {
-                writer.writeBool( flag == SW_TRUE );
-            }
-            FightingMatchInternal::writeTimeline( writer, fighter._timeline );
-            // 입력 버퍼는 오래된 것부터 쓴다(복원할 때 같은 순서로 다시 쌓는다).
-            FightingMatchInternal::writeCounter( writer, fighter._inputBuffer.getFrameCount() );
-            for ( int32 framesAgo = fighter._inputBuffer.getFrameCount() - 1; framesAgo >= 0; --framesAgo )
-            {
-                writer.writeBits( encodeInput( fighter._inputBuffer.getFrame( framesAgo ) ), 8 );
-            }
+            // 범위 밖 값은 시뮬레이션의 결함이다. 잘라 쓰지 않고, 읽는 쪽이 거절하도록 빈 바이트를 남긴다.
+            SW_LOG_ERROR( "Fighting rollback state has a value outside its declared range at frame %# - the state is not saved", _frame );
+            SW_ASSERT( bWritten );
+            outBuffer.clear();
         }
-        // 라운드 상태는 맨 뒤에 쓴다. 복원할 때 마지막에 읽으므로, 모두 맞을 때만 바뀌어서 `loadState` 가 통째로 원자적이다.
-        _series.writeState( writer );
-        outBuffer = writer.releaseBytes();
     }
 
     bool FightingMatch::loadState( const vector<uint8>& buffer )
     {
-        BitReader reader( buffer.data(), static_cast<int32>( buffer.size() ) );
-        if ( reader.readUint32() != FightingMatchInternal::kStateTag || reader.readVarInt() != FightingMatchInternal::kStateVersion )
-            return false;
-        const int32 frame           = FightingMatchInternal::readCounter( reader );
-        const int32 lastRoundWinner = FightingMatchInternal::readCounter( reader );
-
-        FighterRuntime arrLoaded[kPlayerCount] = { _arrFighter[0], _arrFighter[1] };
-        for ( FighterRuntime& fighter : arrLoaded )
+        const FixedReadResult result = FixedLayout::read( buffer.data(), static_cast<int32>( buffer.size() ), *this );
+        if ( result != FixedReadResult::Ok )
         {
-            if ( fighter._pDef == nullptr || reader.readVarUint() != fighter._pDef->_listMove.size() )
-                return false;
-            fighter._x          = reader.readFloat();
-            fighter._z          = reader.readFloat();
-            fighter._y          = reader.readFloat();
-            fighter._dirX       = reader.readFloat();
-            fighter._dirZ       = reader.readFloat();
-            fighter._velocityY  = reader.readFloat();
-            fighter._gravity    = reader.readFloat();
-            fighter._carryX     = reader.readFloat();
-            fighter._carryZ     = reader.readFloat();
-            int32* arrCounter[] = { &fighter._health, &fighter._stateFrames, &fighter._hitstop, &fighter._moveIndex, &fighter._bufferedMove,
-                                    &fighter._bufferedAge, &fighter._stanceIndex, &fighter._stanceFrames, &fighter._comboHits, &fighter._airHits,
-                                    &fighter._heatFrames, &fighter._sidestepSign, &fighter._side };
-            for ( int32* pCounter : arrCounter )
-            {
-                *pCounter = FightingMatchInternal::readCounter( reader );
-            }
-            fighter._breakButtons    = static_cast<uint16>( FightingMatchInternal::readCounter( reader ) & 0xFFFF );
-            const uint64 state       = reader.readVarUint();
-            const uint64 posture     = reader.readVarUint();
-            const uint64 guard       = reader.readVarUint();
-            const int32  moveCount   = static_cast<int32>( fighter._pDef->_listMove.size() );
-            const int32  stanceCount = static_cast<int32>( fighter._pDef->_listStance.size() );
-            const bool   bBadEnum    = state >= static_cast<uint64>( FightingMatchInternal::kStateCount ) ||
-                                  posture > static_cast<uint64>( FighterPosture::Stance ) || guard > static_cast<uint64>( GuardStance::Crouching );
-            const bool bBadIndex = fighter._moveIndex < -1 || fighter._moveIndex >= moveCount || fighter._bufferedMove < -1 ||
-                                   fighter._bufferedMove >= moveCount || fighter._stanceIndex < -1 || fighter._stanceIndex >= stanceCount;
-            if ( bBadEnum || bBadIndex )
-                return false;
-            fighter._state   = static_cast<FighterState>( state );
-            fighter._posture = static_cast<FighterPosture>( posture );
-            fighter._guard   = static_cast<GuardStance>( guard );
-            uint8* arrFlag[] = { &fighter._bAirborne, &fighter._bScrewUsed, &fighter._bBoundUsed, &fighter._bWallSplatUsed,
-                                 &fighter._bRage, &fighter._bRageUsed, &fighter._bHeatUsed, &fighter._bThrowAttempted };
-            for ( uint8* pFlag : arrFlag )
-            {
-                *pFlag = reader.readBool() ? SW_TRUE : SW_FALSE;
-            }
-            if ( FightingMatchInternal::readTimeline( reader, fighter.findCurrentMove(), fighter._timeline ) == false )
-                return false;
-            const int32 inputCount = FightingMatchInternal::readCounter( reader );
-            if ( inputCount < 0 || inputCount > fighter._inputBuffer.getCapacity() )
-                return false;
-            fighter._inputBuffer.clear();
-            for ( int32 index = 0; index < inputCount; ++index )
-            {
-                fighter._inputBuffer.push( decodeInput( static_cast<uint8>( reader.readBits( 8 ) ) ) );
-            }
+            SW_LOG_WARNING( "Fighting rollback state was rejected (%#) - the match keeps its current state", FixedLayout::toString( result ) );
+            return false;
         }
-        if ( reader.hasOverflowed() )
-            return false;
-        // 라운드 상태는 맨 뒤에 있고 맞을 때만 바뀌므로, 이 뒤에는 실패할 일이 없다.
-        if ( _series.readState( reader ) == false )
-            return false;
-
-        _arrFighter[0]   = arrLoaded[0];
-        _arrFighter[1]   = arrLoaded[1];
-        _frame           = frame;
-        _lastRoundWinner = lastRoundWinner;
-        _eventBuffer.clear();
+        completeLoad();
         return true;
     }
 
-    // 세이브(Archive)는 롤백 코덱의 바이트를 그대로 쓴다. 같은 상태를 두 형식으로 따로 쓰지 않기 위해서다.
     void FightingMatch::writeState( Archive& outArchive ) const
     {
-        vector<uint8> bytes;
-        saveState( bytes );
-        outArchive.writeSection( bytes.data(), static_cast<uint32>( bytes.size() ) );
+        BinarySerializer::serializeVersioned( kStateVersion, this, *StaticType(), outArchive );
     }
 
     bool FightingMatch::readState( Archive& archive )
     {
-        vector<uint8> bytes;
-        if ( archive.readSection( bytes ) == false )
+        // 세이브에 없는 필드(정의 포인터, 설정)는 이 복사본에서 이어지고, 끝까지 맞을 때만 옮긴다.
+        FightingMatch loaded  = *this;
+        uint32        version = 0;
+        if ( BinarySerializer::deserializeVersioned( version, &loaded, *StaticType(), archive, kStateVersion ) == false )
             return false;
-        return loadState( bytes ); // 롤백 코덱으로 읽는다(임시 객체에 읽어서 끝까지 맞을 때만 바꾼다)
+        // 자기 기술형 읽기는 `Min` · `Max` 를 보지 않으므로, 롤백 코덱이 지키는 범위를 두 캐릭터 배열 · 고리 버퍼 원소까지 여기서 본다.
+        vector<string> listRangeError;
+        SerializerUtil::collectRangeErrors( *StaticType(), &loaded, string(), listRangeError, RangeCheckScope::IncludeSequenceElements );
+        if ( listRangeError.empty() == false )
+        {
+            SW_LOG_WARNING( "Fighting save state has %# value(s) outside the declared range (first: %#) - the match keeps its current state",
+                            static_cast<int32>( listRangeError.size() ), listRangeError.front().c_str() );
+            return false;
+        }
+        // 롤백 읽기와 같은 검증(이 타입과 값으로 든 고리 버퍼 · 라운드 시리즈의 `Validate`)을 돌린다.
+        ValidationContext context;
+        (void)ReflectionValidation::validateObject( *StaticType(), &loaded, context ); // 결과는 context 의 오류로 본다
+        if ( context.hasError() )
+            return false;
+        loaded.completeLoad();
+        *this = std::move( loaded );
+        return true;
+    }
+
+    void FightingMatch::validateState( ValidationContext& context ) const
+    {
+        for ( const FighterRuntime& fighter : _arrFighter )
+        {
+            if ( fighter._pDef == nullptr )
+            {
+                context.addError( "fighter has no definition - initialize the match before loading a state" );
+                continue;
+            }
+            if ( fighter._fighterIDHash != fighter._pDef->_id.getHash() )
+                context.addError( "state belongs to another fighter" );
+            const int32 moveCount   = static_cast<int32>( fighter._pDef->_listMove.size() );
+            const int32 stanceCount = static_cast<int32>( fighter._pDef->_listStance.size() );
+            const bool  bBadIndex   = fighter._moveIndex >= moveCount || fighter._bufferedMove >= moveCount || fighter._stanceIndex >= stanceCount;
+            if ( bBadIndex )
+                context.addError( "move or stance index is outside the fighter definition" );
+            FighterRuntime relinked = fighter; // 붙여 볼 수 있는지만 본다
+            if ( FightingMatchInternal::relinkTimeline( relinked ) == false )
+                context.addError( "playing timeline does not fit the current move" );
+        }
+        if ( _series.getParticipantCount() != kPlayerCount )
+            context.addError( "round series does not have two participants" );
+    }
+
+    void FightingMatch::completeLoad()
+    {
+        for ( FighterRuntime& fighter : _arrFighter )
+        {
+            const bool bRelinked = FightingMatchInternal::relinkTimeline( fighter );
+            SW_ASSERT( bRelinked ); // validateState 가 같은 함수로 미리 봤다
+            (void)bRelinked;
+        }
+        _eventBuffer.clear();
     }
 } // namespace sw
