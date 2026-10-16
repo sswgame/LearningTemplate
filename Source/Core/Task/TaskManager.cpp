@@ -649,6 +649,11 @@ namespace sw
 
     void TaskManager::runParallelByCost( uint32 count, const ParallelBlockDelegate& body )
     {
+        runParallelByCostWithClock( count, body, &MonotonicClock::nowNanoseconds );
+    }
+
+    void TaskManager::runParallelByCostWithClock( uint32 count, const ParallelBlockDelegate& body, NanosecondClock pClock )
+    {
         if ( count == 0 || body.isBound() == false )
             return;
         if ( _bInitialized == false || getWorkerCount() == 0 )
@@ -667,8 +672,8 @@ namespace sw
         uint32 done = 0;
         {
             const ParallelTaskScope bodyScope{};
-            const Stopwatch         probe;
-            uint32                  chunk = 1;
+            const int64             startNanos = pClock();
+            uint32                  chunk      = 1;
             while ( true )
             {
                 const uint32 end = MathUtil::min( count, done + chunk );
@@ -676,7 +681,7 @@ namespace sw
                 done = end;
                 if ( done == count )
                     return;
-                const int64 elapsed = probe.getElapsedNanoseconds();
+                const int64 elapsed = pClock() - startNanos;
                 if ( elapsed >= kCostProbeNanos )
                 {
                     const int64 estimateRest = elapsed * static_cast<int64>( count - done ) / static_cast<int64>( done );
