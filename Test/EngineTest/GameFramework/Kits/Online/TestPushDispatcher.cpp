@@ -57,22 +57,18 @@ namespace
         }
     };
 
-    struct PushDispatcherTestInternal
+    PushNotificationMessage makePushMessage()
     {
-        static PushNotificationMessage makeMessage()
-        {
-            PushNotificationMessage message;
-            message._titleKey = "push.mail.title";
-            message._bodyKey  = "push.mail.body";
-            message._deepLink = "mailbox";
-            return message;
-        }
-    };
+        PushNotificationMessage message;
+        message._titleKey = "push.mail.title";
+        message._bodyKey  = "push.mail.body";
+        message._deepLink = "mailbox";
+        return message;
+    }
 } // namespace
 
 SW_TEST_CASE( PushDispatcherTest, SendsToEveryDeviceAndDropsInvalidTokens )
 {
-    using Internal = PushDispatcherTestInternal;
     MemoryServiceDatabase database;
     PushNode              node( &database );
     node.registerDevice( 1, "fake", "token-phone", 0 );
@@ -82,13 +78,13 @@ SW_TEST_CASE( PushDispatcherTest, SendsToEveryDeviceAndDropsInvalidTokens )
     SW_EXPECT_EQUAL( database.countRecords( hashed_string( "liveops_device" ) ), 3 );
     node._provider.scriptResult( "token-tablet", PushDeliveryStatus::InvalidToken );
 
-    SW_ASSERT_TRUE( node._dispatcher.notifyAccount( 1, Internal::makeMessage(), 100 ) );
+    SW_ASSERT_TRUE( node._dispatcher.notifyAccount( 1, makePushMessage(), 100 ) );
     node.step( 100 );
     SW_EXPECT_EQUAL( node._provider.getSent().size(), size_t( 2 ) );
     SW_EXPECT_EQUAL( node._dispatcher.getStats()._invalidTokenCount, uint64( 1 ) );
     SW_EXPECT_EQUAL( database.countRecords( hashed_string( "liveops_device" ) ), 2 );
 
-    SW_ASSERT_TRUE( node._dispatcher.notifyAccount( 1, Internal::makeMessage(), 200 ) );
+    SW_ASSERT_TRUE( node._dispatcher.notifyAccount( 1, makePushMessage(), 200 ) );
     node.step( 200 );
     SW_EXPECT_EQUAL( node._provider.getSent().size(), size_t( 3 ) ); // 태블릿은 지워졌다
     SW_EXPECT_STREQ( node._provider.getSent().back()._deviceToken.c_str(), "token-phone" );
@@ -99,12 +95,11 @@ SW_TEST_CASE( PushDispatcherTest, SendsToEveryDeviceAndDropsInvalidTokens )
 
 SW_TEST_CASE( PushDispatcherTest, TransientFailuresBackOffThenGiveUp )
 {
-    using Internal = PushDispatcherTestInternal;
     MemoryServiceDatabase database;
     PushNode              node( &database );
     node.registerDevice( 1, "fake", "token-a", 0 );
     node._provider.scriptResult( "token-a", PushDeliveryStatus::Transient, 2 );
-    SW_ASSERT_TRUE( node._dispatcher.notifyAccount( 1, Internal::makeMessage(), 0 ) );
+    SW_ASSERT_TRUE( node._dispatcher.notifyAccount( 1, makePushMessage(), 0 ) );
     node.step( 0 ); // 1 차 실패 → 1 초 뒤
     node.step( 999 );
     SW_EXPECT_EQUAL( node._provider.getSent().size(), size_t( 1 ) );
@@ -116,7 +111,7 @@ SW_TEST_CASE( PushDispatcherTest, TransientFailuresBackOffThenGiveUp )
     SW_EXPECT_EQUAL( node._dispatcher.getStats()._deliveredCount, uint64( 1 ) );
 
     node._provider.scriptResult( "token-a", PushDeliveryStatus::RateLimited, 1, 5000 ); // 제공자가 늦추라 한 시간이 물러남보다 길면 그만큼
-    SW_ASSERT_TRUE( node._dispatcher.notifyAccount( 1, Internal::makeMessage(), 4000 ) );
+    SW_ASSERT_TRUE( node._dispatcher.notifyAccount( 1, makePushMessage(), 4000 ) );
     node.step( 4000 );
     node.step( 8999 );
     SW_EXPECT_EQUAL( node._provider.getSent().size(), size_t( 4 ) );
@@ -124,7 +119,7 @@ SW_TEST_CASE( PushDispatcherTest, TransientFailuresBackOffThenGiveUp )
     SW_EXPECT_EQUAL( node._provider.getSent().size(), size_t( 5 ) );
 
     node._provider.scriptResult( "token-a", PushDeliveryStatus::Transient, 99 );
-    SW_ASSERT_TRUE( node._dispatcher.notifyAccount( 1, Internal::makeMessage(), 10000 ) );
+    SW_ASSERT_TRUE( node._dispatcher.notifyAccount( 1, makePushMessage(), 10000 ) );
     for ( int64 nowMs = 10000; nowMs <= 60000; nowMs += 1000 )
     {
         node.step( nowMs );
@@ -136,18 +131,17 @@ SW_TEST_CASE( PushDispatcherTest, TransientFailuresBackOffThenGiveUp )
 
 SW_TEST_CASE( PushDispatcherTest, AccountRateLimit )
 {
-    using Internal = PushDispatcherTestInternal;
     MemoryServiceDatabase database;
     PushNode              node( &database );
     node.registerDevice( 1, "fake", "token-a", 0 );
     for ( int32 index = 0; index < 6; ++index )
     {
-        SW_EXPECT_TRUE( node._dispatcher.notifyAccount( 1, Internal::makeMessage(), 0 ) );
+        SW_EXPECT_TRUE( node._dispatcher.notifyAccount( 1, makePushMessage(), 0 ) );
     }
-    SW_EXPECT_FALSE( node._dispatcher.notifyAccount( 1, Internal::makeMessage(), 0 ) );
+    SW_EXPECT_FALSE( node._dispatcher.notifyAccount( 1, makePushMessage(), 0 ) );
     SW_EXPECT_EQUAL( node._dispatcher.getStats()._rateLimitedCount, uint64( 1 ) );
-    SW_EXPECT_TRUE( node._dispatcher.notifyAccount( 2, Internal::makeMessage(), 0 ) ); // 계정마다 따로
-    SW_EXPECT_TRUE( node._dispatcher.notifyAccount( 1, Internal::makeMessage(), PushDispatcherConfig{}._accountRefillIntervalMs ) );
+    SW_EXPECT_TRUE( node._dispatcher.notifyAccount( 2, makePushMessage(), 0 ) ); // 계정마다 따로
+    SW_EXPECT_TRUE( node._dispatcher.notifyAccount( 1, makePushMessage(), PushDispatcherConfig{}._accountRefillIntervalMs ) );
     node.step( 0 );
     SW_EXPECT_EQUAL( node._provider.getSent().size(), size_t( 7 ) ); // 계정 2 는 기기가 없다
 }

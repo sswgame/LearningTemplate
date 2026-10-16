@@ -9,17 +9,14 @@ using namespace sw::editor;
 
 namespace
 {
-    struct TestEditorViewportOverlayLayoutInternal
+    EditorOverlayBarState makeBar( const utf8* pID, EditorOverlayDock dock, float32 fractionX, float32 fractionY )
     {
-        static EditorOverlayBarState makeBar( const utf8* pID, EditorOverlayDock dock, float32 fractionX, float32 fractionY )
-        {
-            EditorOverlayBarState state{};
-            state._id       = pID;
-            state._dock     = dock;
-            state._fraction = float2{ fractionX, fractionY };
-            return state;
-        }
-    };
+        EditorOverlayBarState state{};
+        state._id       = pID;
+        state._dock     = dock;
+        state._fraction = float2{ fractionX, fractionY };
+        return state;
+    }
 } // namespace
 
 /**
@@ -27,7 +24,7 @@ namespace
  */
 SW_TEST_CASE( EditorViewportOverlayLayoutTest, PositionStaysInsideWhenTheViewShrinks )
 {
-    const EditorOverlayBarState bar   = TestEditorViewportOverlayLayoutInternal::makeBar( "tools", EditorOverlayDock::Bottom, 1.0f, 0.0f );
+    const EditorOverlayBarState bar   = makeBar( "tools", EditorOverlayDock::Bottom, 1.0f, 0.0f );
     const float2                large = EditorViewportOverlayLayout::computePosition( bar, float2{ 100.0f, 30.0f }, float2{ 800.0f, 600.0f } );
     SW_EXPECT_NEAR_EQUAL( 700.0f, large._x, 0.01f );
     SW_EXPECT_NEAR_EQUAL( 570.0f, large._y, 0.01f ); // 아래에 붙었다 — y 비율은 1 로 고정
@@ -43,7 +40,7 @@ SW_TEST_CASE( EditorViewportOverlayLayoutTest, PositionStaysInsideWhenTheViewShr
  */
 SW_TEST_CASE( EditorViewportOverlayLayoutTest, DropSnapsToTheNearestEdge )
 {
-    EditorOverlayBarState bar = TestEditorViewportOverlayLayoutInternal::makeBar( "view", EditorOverlayDock::Top, 0.0f, 0.0f );
+    EditorOverlayBarState bar = makeBar( "view", EditorOverlayDock::Top, 0.0f, 0.0f );
     const float2          barSize{ 100.0f, 30.0f };
     const float2          viewSize{ 800.0f, 600.0f };
     EditorViewportOverlayLayout::applyDrop( bar, float2{ 350.0f, 280.0f }, barSize, viewSize, 16.0f );
@@ -65,7 +62,7 @@ SW_TEST_CASE( EditorViewportOverlayLayoutTest, DropSnapsToTheNearestEdge )
 SW_TEST_CASE( EditorViewportOverlayLayoutTest, SaveLoadAndReset )
 {
     EditorViewportOverlayLayout saved;
-    saved.registerBar( TestEditorViewportOverlayLayoutInternal::makeBar( "view", EditorOverlayDock::Top, 0.0f, 0.0f ) );
+    saved.registerBar( makeBar( "view", EditorOverlayDock::Top, 0.0f, 0.0f ) );
     EditorOverlayBarState* pView = saved.findBar( "view" );
     SW_ASSERT_NOT_NULL( pView );
     pView->_dock       = EditorOverlayDock::Left;
@@ -77,7 +74,7 @@ SW_TEST_CASE( EditorViewportOverlayLayoutTest, SaveLoadAndReset )
 
     EditorViewportOverlayLayout loaded;
     loaded.readFrom( "scene", mapData );
-    loaded.registerBar( TestEditorViewportOverlayLayoutInternal::makeBar( "view", EditorOverlayDock::Top, 0.0f, 0.0f ) );
+    loaded.registerBar( makeBar( "view", EditorOverlayDock::Top, 0.0f, 0.0f ) );
     const EditorOverlayBarState* pLoaded = loaded.findBar( "view" );
     SW_ASSERT_NOT_NULL( pLoaded );
     SW_EXPECT_TRUE( pLoaded->_dock == EditorOverlayDock::Left );

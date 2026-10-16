@@ -14,23 +14,20 @@
 
 namespace
 {
-    struct NavMeshBakeTestInternal
+    /** @brief x 축으로 오르는 경사면(폭 4 m, 길이 @p length, 높이 @p height) — 아래 바닥 · 위 단과 이어진다. */
+    void addRampScene( sw::NavMeshGeometry& geometry, float32 length, float32 height )
     {
-        /** @brief x 축으로 오르는 경사면(폭 4 m, 길이 @p length, 높이 @p height) — 아래 바닥 · 위 단과 이어진다. */
-        static void addRampScene( sw::NavMeshGeometry& geometry, float32 length, float32 height )
-        {
-            navtest::addFloor( geometry, -6.0f, 0.0f, 0.0f, 4.0f );
-            const sw::float3 arrPoint[4] = {
-                sw::float3{  0.0f,   0.0f, 0.0f},
-                sw::float3{  0.0f,   0.0f, 4.0f},
-                sw::float3{length, height, 4.0f},
-                sw::float3{length, height, 0.0f},
-            };
-            const uint32 arrIndex[6] = { 0, 1, 2, 0, 2, 3 };
-            geometry.addTriangles( arrPoint, 4, arrIndex, 6, sw::float4x4{}, 0 );
-            navtest::addBox( geometry, sw::float3{ length, height - 0.2f, 0.0f }, sw::float3{ length + 6.0f, height, 4.0f } );
-        }
-    };
+        navtest::addFloor( geometry, -6.0f, 0.0f, 0.0f, 4.0f );
+        const sw::float3 arrPoint[4] = {
+            sw::float3{  0.0f,   0.0f, 0.0f},
+            sw::float3{  0.0f,   0.0f, 4.0f},
+            sw::float3{length, height, 4.0f},
+            sw::float3{length, height, 0.0f},
+        };
+        const uint32 arrIndex[6] = { 0, 1, 2, 0, 2, 3 };
+        geometry.addTriangles( arrPoint, 4, arrIndex, 6, sw::float4x4{}, 0 );
+        navtest::addBox( geometry, sw::float3{ length, height - 0.2f, 0.0f }, sw::float3{ length + 6.0f, height, 4.0f } );
+    }
 } // namespace
 
 /**
@@ -107,14 +104,13 @@ SW_TEST_CASE( NavMeshBakeTest, StepsWithinClimbHeightAreWalkableAndTallLedgesAre
  */
 SW_TEST_CASE( NavMeshBakeTest, SlopesSteeperThanTheMaximumAreNotWalkable )
 {
-    using Internal                     = NavMeshBakeTestInternal;
     const sw::NavMeshSettings settings = navtest::makeSettings();
     const sw::NavQueryFilter  filter   = settings.makeDefaultFilter();
     const float32             gentle   = 4.0f * sw::MathUtil::tan( 30.0f * sw::MathUtil::kPi / 180.0f );
     const float32             steep    = 4.0f * sw::MathUtil::tan( 60.0f * sw::MathUtil::kPi / 180.0f );
     {
         sw::NavMeshGeometry geometry;
-        Internal::addRampScene( geometry, 4.0f, gentle );
+        addRampScene( geometry, 4.0f, gentle );
         sw::unique_ptr<sw::INavMesh> pNavMesh = navtest::bake( settings, geometry );
         SW_ASSERT_NOT_NULL( pNavMesh.get() );
         sw::NavPath path;
@@ -123,7 +119,7 @@ SW_TEST_CASE( NavMeshBakeTest, SlopesSteeperThanTheMaximumAreNotWalkable )
     }
     {
         sw::NavMeshGeometry geometry;
-        Internal::addRampScene( geometry, 4.0f, steep );
+        addRampScene( geometry, 4.0f, steep );
         sw::unique_ptr<sw::INavMesh> pNavMesh = navtest::bake( settings, geometry );
         SW_ASSERT_NOT_NULL( pNavMesh.get() );
         sw::NavLocation onRamp;

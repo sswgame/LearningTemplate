@@ -28,25 +28,22 @@ using namespace sw;
 
 namespace
 {
-    struct TestPhysicsWiringInternal
-    {
 
-        static RigidBodyComponent* spawnBox( GameObjectManager& manager, const utf8* pName, const float3& position, const float3& halfExtents, PhysicsBodyType type,
-                                             const utf8* pLayer )
-        {
-            GameObject*         pObject = manager.createGameObject( hashed_string( pName ) );
-            RigidBodyComponent* pBody   = pObject != nullptr ? pObject->addComponent<RigidBodyComponent>() : nullptr;
-            if ( pBody == nullptr )
-                return nullptr;
-            PhysicsShapeDesc3D box;
-            box._halfExtents = halfExtents;
-            pBody->setShape( box );
-            pBody->setBodyType( type );
-            pBody->setLayer( hashed_string( pLayer ) );
-            pBody->setLocalPosition( position );
-            return pBody;
-        }
-    };
+    RigidBodyComponent* spawnBox( GameObjectManager& manager, const utf8* pName, const float3& position, const float3& halfExtents, PhysicsBodyType type,
+                                  const utf8* pLayer )
+    {
+        GameObject*         pObject = manager.createGameObject( hashed_string( pName ) );
+        RigidBodyComponent* pBody   = pObject != nullptr ? pObject->addComponent<RigidBodyComponent>() : nullptr;
+        if ( pBody == nullptr )
+            return nullptr;
+        PhysicsShapeDesc3D box;
+        box._halfExtents = halfExtents;
+        pBody->setShape( box );
+        pBody->setBodyType( type );
+        pBody->setLayer( hashed_string( pLayer ) );
+        pBody->setLocalPosition( position );
+        return pBody;
+    }
 } // namespace
 
 /**
@@ -55,12 +52,12 @@ namespace
 SW_TEST_CASE( PhysicsWiringTest, SocketReleaseDropsRigidBodyAndReturns )
 {
     GameObjectManager manager;
-    SW_ASSERT_NOT_NULL( TestPhysicsWiringInternal::spawnBox( manager, "Floor", float3{ 0.0f, -0.5f, 0.0f }, float3{ 20.0f, 0.5f, 20.0f }, PhysicsBodyType::Static, "Static" ) );
+    SW_ASSERT_NOT_NULL( spawnBox( manager, "Floor", float3{ 0.0f, -0.5f, 0.0f }, float3{ 20.0f, 0.5f, 20.0f }, PhysicsBodyType::Static, "Static" ) );
     GameObject* pHolder = manager.createGameObject( hashed_string( "Holder" ) );
     SW_ASSERT_NOT_NULL( pHolder );
     SceneComponent* pHolderScene = pHolder->addComponent<SceneComponent>();
     pHolderScene->setLocalPosition( float3{ 0.0f, 0.0f, 0.0f } );
-    RigidBodyComponent* pSword = TestPhysicsWiringInternal::spawnBox( manager, "Sword", float3{}, float3{ 0.05f, 0.4f, 0.05f }, PhysicsBodyType::Dynamic, "Debris" );
+    RigidBodyComponent* pSword = spawnBox( manager, "Sword", float3{}, float3{ 0.05f, 0.4f, 0.05f }, PhysicsBodyType::Dynamic, "Debris" );
     SW_ASSERT_NOT_NULL( pSword );
     SocketBindingComponent* pBinding = pSword->getOwner()->addComponent<SocketBindingComponent>();
     SW_ASSERT_NOT_NULL( pBinding );
@@ -105,10 +102,10 @@ SW_TEST_CASE( PhysicsWiringTest, SocketReleaseDropsRigidBodyAndReturns )
 SW_TEST_CASE( PhysicsWiringTest, WorldQueryAndCameraProbeSeeRigidBodies )
 {
     GameObjectManager   manager;
-    RigidBodyComponent* pWall   = TestPhysicsWiringInternal::spawnBox( manager, "Wall", float3{ 0.0f, 1.0f, 5.0f }, float3{ 3.0f, 1.0f, 0.2f }, PhysicsBodyType::Static,
-                                                                       "Static" );
-    RigidBodyComponent* pViewer = TestPhysicsWiringInternal::spawnBox( manager, "Viewer", float3{ 0.0f, 1.0f, 0.0f }, float3{ 0.3f, 0.3f, 0.3f },
-                                                                       PhysicsBodyType::Kinematic, "Default" );
+    RigidBodyComponent* pWall   = spawnBox( manager, "Wall", float3{ 0.0f, 1.0f, 5.0f }, float3{ 3.0f, 1.0f, 0.2f }, PhysicsBodyType::Static,
+                                            "Static" );
+    RigidBodyComponent* pViewer = spawnBox( manager, "Viewer", float3{ 0.0f, 1.0f, 0.0f }, float3{ 0.3f, 0.3f, 0.3f },
+                                            PhysicsBodyType::Kinematic, "Default" );
     SW_ASSERT_TRUE( pWall != nullptr && pViewer != nullptr );
     GameObject*           pPlatform2D = manager.createGameObject( hashed_string( "Platform2D" ) );
     RigidBody2DComponent* pBody2D     = pPlatform2D->addComponent<RigidBody2DComponent>();
@@ -149,8 +146,8 @@ SW_TEST_CASE( PhysicsWiringTest, GrabberHoldsRigidBodyKinematicAndThrows )
     GameObject*       pPlayer = manager.createGameObject( hashed_string( "Player" ) );
     pPlayer->addComponent<SceneComponent>();
     GrabberComponent*   pGrabber = pPlayer->addComponent<GrabberComponent>();
-    RigidBodyComponent* pCrate   = TestPhysicsWiringInternal::spawnBox( manager, "Crate", float3{ 0.0f, 0.5f, 1.0f }, float3{ 0.25f, 0.25f, 0.25f },
-                                                                        PhysicsBodyType::Dynamic, "Default" );
+    RigidBodyComponent* pCrate   = spawnBox( manager, "Crate", float3{ 0.0f, 0.5f, 1.0f }, float3{ 0.25f, 0.25f, 0.25f },
+                                             PhysicsBodyType::Dynamic, "Default" );
     SW_ASSERT_TRUE( pGrabber != nullptr && pCrate != nullptr );
     manager.beginPlay();
     test::updateFrames( manager, 2 );
@@ -174,8 +171,8 @@ SW_TEST_CASE( PhysicsWiringTest, PressurePlateWeighsRigidBodyMass )
     GameObject*       pPlate = manager.createGameObject( hashed_string( "Plate" ) );
     pPlate->addComponent<SceneComponent>();
     GimmickSensorComponent* pSensor = pPlate->addComponent<GimmickSensorComponent>();
-    RigidBodyComponent*     pHeavy  = TestPhysicsWiringInternal::spawnBox( manager, "Heavy", float3{ 0.0f, 3.0f, 0.0f }, float3{ 0.5f, 0.5f, 0.5f },
-                                                                           PhysicsBodyType::Dynamic, "Default" );
+    RigidBodyComponent*     pHeavy  = spawnBox( manager, "Heavy", float3{ 0.0f, 3.0f, 0.0f }, float3{ 0.5f, 0.5f, 0.5f },
+                                                PhysicsBodyType::Dynamic, "Default" );
     SW_ASSERT_TRUE( pSensor != nullptr && pHeavy != nullptr );
     pHeavy->setMass( 30.0f );
     GameObject* pPlain = manager.createGameObject( hashed_string( "Plain" ) );
@@ -196,8 +193,8 @@ SW_TEST_CASE( PhysicsWiringTest, PressurePlateWeighsRigidBodyMass )
 SW_TEST_CASE( PhysicsWiringTest, ControllerTakesLaunchAndConveyorVelocity )
 {
     GameObjectManager manager;
-    SW_ASSERT_NOT_NULL( TestPhysicsWiringInternal::spawnBox( manager, "Floor", float3{ 0.0f, -0.5f, 0.0f }, float3{ 30.0f, 0.5f, 30.0f }, PhysicsBodyType::Static, "Static" ) );
-    SW_ASSERT_NOT_NULL( TestPhysicsWiringInternal::spawnBox( manager, "Wall", float3{ 2.0f, 1.0f, -5.0f }, float3{ 0.2f, 1.0f, 2.0f }, PhysicsBodyType::Static, "Static" ) );
+    SW_ASSERT_NOT_NULL( spawnBox( manager, "Floor", float3{ 0.0f, -0.5f, 0.0f }, float3{ 30.0f, 0.5f, 30.0f }, PhysicsBodyType::Static, "Static" ) );
+    SW_ASSERT_NOT_NULL( spawnBox( manager, "Wall", float3{ 2.0f, 1.0f, -5.0f }, float3{ 0.2f, 1.0f, 2.0f }, PhysicsBodyType::Static, "Static" ) );
     GameObject*                   pHero       = manager.createGameObject( hashed_string( "Hero" ) );
     CharacterControllerComponent* pController = pHero->addComponent<CharacterControllerComponent>();
     SW_ASSERT_NOT_NULL( pController );

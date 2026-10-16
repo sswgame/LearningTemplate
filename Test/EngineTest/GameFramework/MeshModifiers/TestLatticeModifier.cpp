@@ -14,21 +14,18 @@ using namespace sw::editor;
 
 namespace
 {
-    struct LatticeModifierTestInternal
+    const float3* getSamples( size_t& outCount )
     {
-        static const float3* getSamples( size_t& outCount )
-        {
-            static const float3 s_arrSample[] = {
-                float3{ 0.0f, 0.0f,  0.0f},
-                float3{ 1.0f, 1.0f,  1.0f},
-                float3{0.25f, 0.5f, 0.75f},
-                float3{ 0.9f, 0.1f,  0.4f},
-                float3{-0.3f, 1.2f,  0.5f}
-            };
-            outCount = sizeof( s_arrSample ) / sizeof( s_arrSample[0] );
-            return s_arrSample;
-        }
-    };
+        const float3 s_arrSample[] = {
+            float3{ 0.0f, 0.0f,  0.0f},
+            float3{ 1.0f, 1.0f,  1.0f},
+            float3{0.25f, 0.5f, 0.75f},
+            float3{ 0.9f, 0.1f,  0.4f},
+            float3{-0.3f, 1.2f,  0.5f}
+        };
+        outCount = sizeof( s_arrSample ) / sizeof( s_arrSample[0] );
+        return s_arrSample;
+    }
 } // namespace
 
 SW_TEST_CASE( LatticeModifierTest, IdentityLatticeKeepsEveryPointIncludingOutside )
@@ -37,7 +34,7 @@ SW_TEST_CASE( LatticeModifierTest, IdentityLatticeKeepsEveryPointIncludingOutsid
     {
         const LatticeModifier lattice( resolution );
         size_t                count    = 0;
-        const float3*         pSamples = LatticeModifierTestInternal::getSamples( count );
+        const float3*         pSamples = getSamples( count );
         for ( size_t index = 0; index < count; ++index )
         {
             SW_EXPECT_TRUE( ( lattice.deformNormalized( pSamples[index] ) - pSamples[index] ).getLength() < 1e-5f );
@@ -55,7 +52,7 @@ SW_TEST_CASE( LatticeModifierTest, MovingEveryPointTranslatesEverything )
         lattice.moveControlPoint( index, delta );
     }
     size_t        count    = 0;
-    const float3* pSamples = LatticeModifierTestInternal::getSamples( count );
+    const float3* pSamples = getSamples( count );
     for ( size_t index = 0; index < count; ++index )
     {
         SW_EXPECT_TRUE( ( lattice.deformNormalized( pSamples[index] ) - ( pSamples[index] + delta ) ).getLength() < 1e-5f );
@@ -83,7 +80,7 @@ SW_TEST_CASE( LatticeModifierTest, RaisingResolutionPreservesTheDeformation )
     lattice.moveControlPoint( lattice.getControlPointIndex( 1, 1, 0 ), float3{ 0.2f, 0.3f, -0.1f } );
     lattice.moveControlPoint( lattice.getControlPointIndex( 0, 1, 1 ), float3{ -0.1f, 0.0f, 0.4f } );
     size_t         count    = 0;
-    const float3*  pSamples = LatticeModifierTestInternal::getSamples( count );
+    const float3*  pSamples = getSamples( count );
     vector<float3> listBefore;
     for ( size_t index = 0; index < count; ++index )
     {
@@ -108,7 +105,7 @@ SW_TEST_CASE( LatticeModifierTest, LoweringResolutionKeepsIdentityAndClamps )
     SW_EXPECT_EQUAL( LatticeModifier::kMaxResolution, lattice.getResolutionY() );
     SW_EXPECT_EQUAL( 3, lattice.getResolutionZ() );
     size_t        count    = 0;
-    const float3* pSamples = LatticeModifierTestInternal::getSamples( count );
+    const float3* pSamples = getSamples( count );
     for ( size_t index = 0; index < count; ++index )
     {
         SW_EXPECT_TRUE( ( lattice.deformNormalized( pSamples[index] ) - pSamples[index] ).getLength() < 1e-4f );

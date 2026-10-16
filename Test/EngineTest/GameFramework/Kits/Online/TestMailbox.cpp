@@ -89,10 +89,10 @@ namespace
         int64 getBalanceCap( string_view assetID ) const override { return assetID == "cur.gold" ? 50 : 0; }
     };
 
-    struct TestMailboxInternal
+    void claimOnce( MailFixture* pFixture, const string* pMailKey, MailboxResult* pOutResult )
     {
-        static void claimOnce( MailFixture* pFixture, const string* pMailKey, MailboxResult* pOutResult ) { *pOutResult = pFixture->claim( *pMailKey ); }
-    };
+        *pOutResult = pFixture->claim( *pMailKey );
+    }
 
     struct MailboxReplyCapture
     {
@@ -147,7 +147,7 @@ SW_TEST_CASE( MailboxTest, ConcurrentClaimsMoveTheLedgerOnce )
     std::thread   arrThread[6];
     for ( int32 threadIndex = 0; threadIndex < 6; ++threadIndex )
     {
-        arrThread[threadIndex] = std::thread( &TestMailboxInternal::claimOnce, &fixture, &mailKey, &arrResult[threadIndex] );
+        arrThread[threadIndex] = std::thread( &claimOnce, &fixture, &mailKey, &arrResult[threadIndex] );
     }
     for ( std::thread& thread : arrThread )
     {

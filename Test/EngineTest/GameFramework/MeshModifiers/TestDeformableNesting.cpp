@@ -12,32 +12,29 @@ using namespace sw::editor;
 
 namespace
 {
-    struct DeformableNestingTestInternal
+    /** @brief root[0] = 묶음 { twist, 묶음 { bend } }, root[1] = scale 인 스택입니다. */
+    void buildNested( MeshModifierStack& root )
     {
-        /** @brief root[0] = 묶음 { twist, 묶음 { bend } }, root[1] = scale 인 스택입니다. */
-        static void buildNested( MeshModifierStack& root )
-        {
-            const int32 outerIndex = root.addModifier( "deformable" );
-            (void)root.addModifier( "scale" );
-            DeformableModifier* pOuter = DeformableModifier::findFrom( *root.findModifier( outerIndex ) );
-            if ( pOuter == nullptr )
-                return;
-            const int32 twistIndex = pOuter->getStack().addModifier( "twist" );
-            const int32 innerIndex = pOuter->getStack().addModifier( "deformable" );
-            test::MeshModifierTestUtil::fillParams( *pOuter->getStack().findModifier( twistIndex ), 3u );
-            DeformableModifier* pInner = DeformableModifier::findFrom( *pOuter->getStack().findModifier( innerIndex ) );
-            if ( pInner == nullptr )
-                return;
-            const int32 bendIndex = pInner->getStack().addModifier( "bend" );
-            test::MeshModifierTestUtil::fillParams( *pInner->getStack().findModifier( bendIndex ), 5u );
-        }
-    };
+        const int32 outerIndex = root.addModifier( "deformable" );
+        (void)root.addModifier( "scale" );
+        DeformableModifier* pOuter = DeformableModifier::findFrom( *root.findModifier( outerIndex ) );
+        if ( pOuter == nullptr )
+            return;
+        const int32 twistIndex = pOuter->getStack().addModifier( "twist" );
+        const int32 innerIndex = pOuter->getStack().addModifier( "deformable" );
+        test::MeshModifierTestUtil::fillParams( *pOuter->getStack().findModifier( twistIndex ), 3u );
+        DeformableModifier* pInner = DeformableModifier::findFrom( *pOuter->getStack().findModifier( innerIndex ) );
+        if ( pInner == nullptr )
+            return;
+        const int32 bendIndex = pInner->getStack().addModifier( "bend" );
+        test::MeshModifierTestUtil::fillParams( *pInner->getStack().findModifier( bendIndex ), 5u );
+    }
 } // namespace
 
 SW_TEST_CASE( DeformableNestingTest, FindByPathFollowsGroupsAndRejectsBadPaths )
 {
     MeshModifierStack root;
-    DeformableNestingTestInternal::buildNested( root );
+    buildNested( root );
 
     SW_EXPECT_TRUE( DeformableModifier::findByPath( root, { 0 } ) == root.findModifier( 0 ) );
     SW_EXPECT_TRUE( DeformableModifier::findByPath( root, { 1 } ) == root.findModifier( 1 ) );
@@ -60,7 +57,7 @@ SW_TEST_CASE( DeformableNestingTest, FindByPathFollowsGroupsAndRejectsBadPaths )
 SW_TEST_CASE( DeformableNestingTest, OwningStackIsTheStackThatEditsApplyTo )
 {
     MeshModifierStack root;
-    DeformableNestingTestInternal::buildNested( root );
+    buildNested( root );
 
     SW_EXPECT_TRUE( DeformableModifier::findOwningStack( root, { 1 } ) == &root );
     MeshModifierStack* pOuterStack = DeformableModifier::findOwningStack( root, { 0, 1 } );
@@ -81,7 +78,7 @@ SW_TEST_CASE( DeformableNestingTest, OwningStackIsTheStackThatEditsApplyTo )
 SW_TEST_CASE( DeformableNestingTest, TwoLevelNestingSurvivesDocumentRoundTrip )
 {
     MeshModifierStack root;
-    DeformableNestingTestInternal::buildNested( root );
+    buildNested( root );
     const string text = root.makeJSONText( 2 );
 
     MeshModifierStack reread;
@@ -103,7 +100,7 @@ SW_TEST_CASE( DeformableNestingTest, TwoLevelNestingSurvivesDocumentRoundTrip )
 SW_TEST_CASE( DeformableNestingTest, EditingNestedModifierChangesTheResult )
 {
     MeshModifierStack root;
-    DeformableNestingTestInternal::buildNested( root );
+    buildNested( root );
     const MeshModifierMesh source = test::MeshModifierTestUtil::makeBoxMesh( 3 );
     MeshModifierMesh       before = source;
     root.apply( before, MeshModifierEvaluation{} );

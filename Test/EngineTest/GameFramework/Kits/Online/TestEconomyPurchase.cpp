@@ -96,10 +96,10 @@ namespace
         }
     };
 
-    struct TestEconomyPurchaseInternal
+    void buyStarter( PurchaseFixture* pFixture, uint64 keyLow, EconomyResult* pOutResult )
     {
-        static void buyStarter( PurchaseFixture* pFixture, uint64 keyLow, EconomyResult* pOutResult ) { *pOutResult = pFixture->buy( "starter", 1, keyLow ); }
-    };
+        *pOutResult = pFixture->buy( "starter", 1, keyLow );
+    }
 } // namespace
 
 SW_TEST_CASE( EconomyPurchaseTest, BuyChargesPriceAndGrantsFromMint )
@@ -195,7 +195,7 @@ SW_TEST_CASE( EconomyPurchaseTest, LimitHoldsUnderConcurrentPurchases )
     std::thread   arrThread[8];
     for ( int32 threadIndex = 0; threadIndex < 8; ++threadIndex )
     {
-        arrThread[threadIndex] = std::thread( &TestEconomyPurchaseInternal::buyStarter, &fixture, static_cast<uint64>( 100 + threadIndex ), &arrResult[threadIndex] );
+        arrThread[threadIndex] = std::thread( &buyStarter, &fixture, static_cast<uint64>( 100 + threadIndex ), &arrResult[threadIndex] );
     }
     for ( std::thread& thread : arrThread )
     {

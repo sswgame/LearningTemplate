@@ -85,18 +85,15 @@ namespace
         bool                _bWrite;
     };
 
-    struct TestServiceStoreSQLiteInternal
+    void settle( IServiceStore& store, const int32& completedCount, int32 expectedCount )
     {
-        static void settle( IServiceStore& store, const int32& completedCount, int32 expectedCount )
+        const Deadline deadline = Deadline::afterMilliseconds( 10000 );
+        while ( completedCount < expectedCount && deadline.isExpired() == false )
         {
-            const Deadline deadline = Deadline::afterMilliseconds( 10000 );
-            while ( completedCount < expectedCount && deadline.isExpired() == false )
-            {
-                if ( store.pollCompletions() == 0 )
-                    std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
-            }
+            if ( store.pollCompletions() == 0 )
+                std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
         }
-    };
+    }
 } // namespace
 
 SW_SERVICE_STORE_CONTRACT_SUITE( ServiceStoreSQLiteTest, SQLiteStoreFixture )
@@ -114,19 +111,19 @@ SW_TEST_CASE( ServiceStoreSQLiteTest, DataAndVersionsSurviveARestart )
         SQLServiceStore store;
         SW_ASSERT_TRUE_MSG( store.initialize( "sqlite", settings, SQLServiceStore::kMigrationFolder, 0, error ), error.c_str() );
         store.submit( make_unique<SQLiteStorePutWork>( true, &record, &result, &completedCount ) );
-        TestServiceStoreSQLiteInternal::settle( store, completedCount, 1 );
+        settle( store, completedCount, 1 );
         SW_EXPECT_TRUE( result == ServiceStoreResult::Ok );
         store.shutdown();
     }
     SQLServiceStore store; // 다시 띄운다 — 마이그레이션은 이미 적용됐고 데이터는 그대로다
     SW_ASSERT_TRUE_MSG( store.initialize( "sqlite", settings, SQLServiceStore::kMigrationFolder, 0, error ), error.c_str() );
     store.submit( make_unique<SQLiteStorePutWork>( false, &record, &result, &completedCount ) );
-    TestServiceStoreSQLiteInternal::settle( store, completedCount, 2 );
+    settle( store, completedCount, 2 );
     SW_EXPECT_TRUE( result == ServiceStoreResult::Ok );
     SW_EXPECT_TRUE( record._bytes == vector<uint8>{ 7 } );
     SW_EXPECT_TRUE( record._version != ServiceRecord::kAbsentVersion );
     store.submit( make_unique<SQLiteStorePutWork>( true, &record, &result, &completedCount ) );
-    TestServiceStoreSQLiteInternal::settle( store, completedCount, 3 );
+    settle( store, completedCount, 3 );
     SW_EXPECT_TRUE( result == ServiceStoreResult::Conflict ); // "없어야 함" 이 이미 있는 키에 진다
     store.shutdown();
 }
